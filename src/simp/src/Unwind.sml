@@ -126,14 +126,26 @@ fun find_var_value var =
  *
  *------------------------------------------------------------------------*)
 
-fun MOVE_EXISTS_RIGHT_CONV tm =
-  if (is_exists tm) then
-    let val (curvar,  subterm) = dest_exists tm in
-      if (is_exists subterm) then
-        (SWAP_VARS_CONV THENC BINDER_CONV MOVE_EXISTS_RIGHT_CONV) tm
-      else REFL tm
+fun MOVE_EXISTS_RIGHT_CONV tm = let
+  val (vs, body) = strip_exists tm
+in
+  case vs of
+    [] => failwith "MOVE_EXISTS_RIGHT_CONV"
+  | [_] => ALL_CONV tm
+  | v::others => let
+      val new_order_vs = others @ [v]
+      val new_rhs  = list_mk_exists(new_order_vs, body)
+    in
+      prove(mk_eq(tm, new_rhs),
+            EQ_TAC THENL [
+              DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN vs) ASSUME_TAC) THEN
+              MAP_EVERY EXISTS_TAC new_order_vs THEN POP_ASSUM ACCEPT_TAC,
+              DISCH_THEN (EVERY_TCL (map X_CHOOSE_THEN new_order_vs)
+                                    ASSUME_TAC) THEN
+              MAP_EVERY EXISTS_TAC vs THEN POP_ASSUM ACCEPT_TAC
+            ])
     end
- else failwith "MOVE_EXISTS_RIGHT_CONV";
+end
 
 fun MOVE_FORALL_RIGHT_CONV tm =
   if (is_forall tm) then
@@ -190,7 +202,6 @@ fun CONJ_TO_FRONT_CONV conj term =
 	val rhs = list_mk_conj (e::(front @ back))
     in CONJ_ACI (mk_eq(term,rhs))
     end;
-
 
 (*-------------------------------------------------------------------
  * IMP_TO_FRONT_CONV
