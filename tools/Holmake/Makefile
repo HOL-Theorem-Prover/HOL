@@ -1,6 +1,6 @@
 # Unix makefile for holdep
 
-MOSMLDIR=/local/scratch/kxs/143
+MOSMLDIR=/local/scratch/kxs/144
 MOSMLLEX=${MOSMLDIR}/bin/mosmllex
 MOSMLYACC=${MOSMLDIR}/bin/mosmlyac
 MOSMLC=${MOSMLDIR}/bin/mosmlc
@@ -31,5 +31,5 @@ Parser.sml Parser.sig : Parser.grm        ; $(MOSMLYACC) Parser.grm
 Lexer.sml             : Lexer.lex         ; $(MOSMLLEX) Lexer.lex
 
 clean:
-	${REMOVE} *.u? holdep Holmake
+	${REMOVE} *.u? holdep Holmake {Lexer,Parser}.{sml,sig}
 
