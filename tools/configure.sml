@@ -187,6 +187,9 @@ val _ =
      val bin       = fullPath [holdir,   "bin/Holmake"]
      val lexer     = fullPath [mosmldir, "bin/mosmllex"]
      val yaccer    = fullPath [mosmldir, "bin/mosmlyac"]
+     val systeml   = fn clist => if systeml clist <> Process.success then
+                                   raise Fail ""
+                                 else ()
   in
     fill_holes (src,target)
        ["val HOLDIR0 ="
@@ -217,7 +220,8 @@ val _ =
     mk_xable bin;
     FileSys.chDir cdir
   end
-handle _ => (print "Couldn't build Holmake\n"; Process.exit Process.failure)
+handle _ => (print "*** Couldn't build Holmake\n";
+             Process.exit Process.failure)
 
 (*---------------------------------------------------------------------------
     Instantiate tools/build.src, compile it, and put it in bin/build.
@@ -247,8 +251,10 @@ val _ =
                                               quote GNUMAKE,";\n"],
      "val EXECUTABLE = _;\n" --> String.concat["val EXECUTABLE = ",
                                           quote(xable_string bin),";\n"]];
-   systeml [fullPath [mosmldir, "bin/mosmlc"], "-o", bin,
-            "-I", holmakedir, target];
+   if systeml [fullPath [mosmldir, "bin/mosmlc"], "-o", bin,
+               "-I", holmakedir, target] = Process.success then ()
+   else (print "*** Failed to build build executable.\n";
+         Process.exit Process.failure) ;
    FileSys.remove (fullPath [holdir,"tools/build.ui"]);
    FileSys.remove (fullPath [holdir,"tools/build.uo"]);
    mk_xable bin
