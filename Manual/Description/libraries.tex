@@ -249,11 +249,11 @@ The most common binders are \verb+!+, \verb+?+, \verb+?!+, and
 \verb+@+. Sometimes one wants to iterate applications of the same
 binder, \eg,
 \begin{alltt}
-  !x. !y. ?p. ?q. ?r. \term.
+   !x. !y. ?p. ?q. ?r. \term.
 \end{alltt}
 This can instead be rendered
 \begin{alltt}
-  !x y. ?p q r. \term.
+   !x y. ?p q r. \term.
 \end{alltt}
 
 \paragraph{Infixes}
@@ -268,11 +268,11 @@ meaning.)  The precedence ordering for the initial set of infixes is
   \theoryimp{pairTheory} has been loaded.}). Moreover, all of these
 constants are right associative. Thus
 \begin{verbatim}
-     X /\ Y ==> C \/ D, P = E, Q
+   X /\ Y ==> C \/ D, P = E, Q
 \end{verbatim}
  is equal to
 \begin{verbatim}
-     ((X /\ Y) ==> (C \/ D)), ((P = E), Q).
+   ((X /\ Y) ==> (C \/ D)), ((P = E), Q).
 \end{verbatim}
 
 \noindent An expression
@@ -1187,8 +1187,8 @@ in two ways:
 \begin{itemize}
 \item When simplifying the goal, the provided \simpset{} is augmented
   not only with the theorems explicitly passed in the second argument,
-  but also with all of the appropriate rewrite rules from the system's
-  \ml{TypeBase}, and also with the goal's assumptions.
+  but also with all of the rewrite rules from the \ml{TypeBase}, and
+  also with the goal's assumptions.
 %
   \index{TypeBase@\ml{TypeBase}}
 \item \ml{RW\_TAC} also does more than just perform simplification.

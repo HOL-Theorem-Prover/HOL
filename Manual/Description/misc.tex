@@ -33,7 +33,7 @@ the parsers for \HOL\ types and terms.
 
  \begin{description}
 
- \item [MoscowML help.] This is uniformly excellent. Information for
+ \item [Moscow~ML help.] This is uniformly excellent. Information for
    library routines is available, whether the library is loaded or not
    via \verb+help "Lib"+.
 
@@ -77,16 +77,14 @@ Therefore the following example queries can be made:
 \section{Maintaining \texttt{HOL} Formalizations with \holmake}
 \label{Holmake}
 
-The purpose of \holmake\footnote{\holmake{} was first written by Ken
-  Larsen and then extended by Michael Norrish.} is to maintain
-dependencies in a \HOL{} source directory. A single invocation of
-\holmake{} will compute dependencies between files, (re)compile plain
-ML code, (re)compile and execute theory scripts, and (re)compile the
-resulting theory modules. \holmake{} does not require the user to
-provide any dependency information,\eg, a Makefile. \holmake{} can be
-very convenient to use, but there are some conventions and
-restrictions on it that must be followed, which we will describe in
-the sequel.
+The purpose of \holmake{} is to maintain dependencies in a \HOL{}
+source directory. A single invocation of \holmake{} will compute
+dependencies between files, (re)compile plain ML code, (re)compile and
+execute theory scripts, and (re)compile the resulting theory modules.
+\holmake{} does not require the user to provide any explicit
+dependency information themselves. \holmake{} can be very convenient
+to use, but there are some conventions and restrictions on it that
+must be followed, described below.
 
 
 
@@ -123,9 +121,9 @@ useful libraries. In the course of building the theory, the user keeps
 track of the ML---which, for example, establishes context, makes
 definitions, builds and invokes tactics, and saves theorems---in a
 text file. This file is used to achieve inter-session persistence of
-the theory being constructed, i.e., the text file resulting from
-session $n$ is ``\verb+use+''d to start session $n+1$; after that,
-theory construction resumes.
+the theory being constructed.  For example, the text file resulting
+from session $n$ is ``\verb+use+''-d to start session $n+1$; after
+that, theory construction resumes.
 
 Once the user finishes the perhaps long and arduous task of constructing
 a theory, the user should
@@ -155,20 +153,19 @@ compilation environment also provides these structures.  In the common
 case, this is simple; one must only add, at the head of the theory
 script, the following ``boilerplate'':
 \begin{verbatim}
-    open HolKernel Parse boolLib;
+   open HolKernel Parse boolLib;
 \end{verbatim}
 This will duplicate the starting environment that one obtains with
-\verb+<holdir>/bin/hol.bare+ and
-\verb+<holdir>/bin/hol.bare.unquote+.  If the script was developed
-interactively with \texttt{hol} or \texttt{hol.unquote}, then one must
-also add
+\verb+hol.bare+ and \verb+hol.bare.noquote+.  If the script was
+developed interactively with \texttt{hol} or \texttt{hol.noquote},
+then one must also add
 \begin{verbatim}
-    open bossLib
+   open bossLib
 \end{verbatim}
 Now the script should be separately compilable. Invoke \holmake{}
-to check; MoscowML will flag any unaccounted-for identifiers it finds.
+to check; Moscow~ML will flag any unaccounted-for identifiers it finds.
 The user has to resolve these, either by using the `dot' notation to
-locate the identifier for the compiler, or by \verb+open+ing the
+locate the identifier for the compiler, or by \verb+open+-ing the
 relevant module. This ``compile/resolve-identifier'' loop should
 continue until \holmake{} succeeds in compiling the module.
 
@@ -181,7 +178,7 @@ The following notes may be of some further help.
   invocation of \holmake, the files \texttt{xTheory.sig} and
   \texttt{xTheory.sml} will be generated and then compiled.
 
-\item In the MoscowML batch compiler, modules are not allowed to have
+\item In the Moscow~ML batch compiler, modules are not allowed to have
   unbound top-level expressions. Hence, something like the following
   is not allowed:
 \begin{verbatim}
@@ -262,7 +259,7 @@ special targets that can be used:
 with the following command-line options:
 \begin{description}
 \item[\tt -I <directory>] Look in specified directory for additional
-  MoscowML object files, including other HOL theories.  This option
+  Moscow~ML object files, including other HOL theories.  This option
   can be repeated, with multiple {\tt -I}'s to allow for multiple
   directories to be referenced.
 \item[\tt -d <file>] Ignore the given file and don't try to build it.
@@ -313,7 +310,7 @@ with the following command-line options:
 \item[\texttt{--no\_sigobj}] Do not link against HOL system's
   directory of HOL system files.  Use of this option goes some way
   towards turning
-  \holmake{} into a general MoscowML \textsf{make} system.  However,
+  \holmake{} into a general Moscow~ML \textsf{make} system.  However,
   it will still attempt to do ``HOL things'' with files whose names
   end in \texttt{Script} and \texttt{Theory}.  This option implies
   \texttt{--no\_overlay}.
@@ -332,7 +329,7 @@ with the following command-line options:
   it needs to.
 \end{description}
 
-\noindent \holmake{} should never exit with the MoscowML message ``Uncaught
+\noindent \holmake{} should never exit with the Moscow~ML message ``Uncaught
 exception''.  Such behaviour is a bug, please report it!
 
 
@@ -555,7 +552,7 @@ its value.
 \texttt{HOLDIR} & the root of the HOL distribution\\
 \texttt{SIGOBJ} & \varref{HOLDIR}\texttt{/sigobj}, where HOL object
 code is stored\\
-\texttt{MOSMLDIR} & the root of the MoscowML distribution\\
+\texttt{MOSMLDIR} & the root of the Moscow~ML distribution\\
 \texttt{MOSMLCOMP} & \varref{MOSMLDIR}\texttt{/bin/mosmlc}\\
 \texttt{UNQUOTE} & the location of the quotation-filter executable\\
 \end{tabular}
@@ -675,34 +672,39 @@ parsers take {\it quotations\/}.  A quotation \mbox{{\tt `}$\ldots${\tt `}} is
 much like an SML string, except that it can span several lines without
 requiring awkward backslashes, as an ML string
 would.\footnote{Quotations were a feature in the original LCF
-system. See the MoscowML User's Manual for more information.}
+system. See the Moscow~ML User's Manual for more information.}
 
-For added convenience, the \HOL\ system distribution includes an
-executable that features a {\it combined parser\/} that accepts both
-types and terms. Enclosing some object language concrete syntax
-between occurrences of \verb+``+ will result in the correct parser
-being invoked. For example
+For added convenience, \HOL's standard executables feature a
+\emph{combined parser} that accepts both types and terms. Enclosing
+some object language concrete syntax between occurrences of \verb+``+
+will result in the correct parser being invoked. For example
 
+\begin{hol}
 \begin{verbatim}
-    ``x /\ y /\ z ==> ?p. p``
+   ``x /\ y /\ z ==> ?p. p``
 \end{verbatim}
-
-\noindent will parse as a term while
-
+\end{hol}
+%
+will parse as a term while
+\begin{hol}
 \begin{verbatim}
-    ``:'a -> ('b -> 'h) -> bool``
+   ``:'a -> ('b -> 'h) -> bool``
 \end{verbatim}
-
-\noindent parses as an HOL type. Note that the concrete syntax given in
-the quotation for a type needs to provide a hint: the type parser will
-only be called if the first character after the leading {\tt ``} is a
-colon (\verb+:+).
+\end{hol}
+%
+parses as an HOL type. Note that the concrete syntax given in the
+quotation for a type needs to provide a hint: the type parser will
+only be called if the first (non-whitespace) character after the
+leading {\tt ``} is a colon (\verb+:+), and if the next character
+after this is a letter, white-space, a left-parenthesis or an
+apostrophe.
 
 Knowledgable ML programmers will notice that the idiom {\tt
   ``}$\ldots$ {\tt ``} is not ML-typable; for that reason, it is
-implemented as a pre-processor to ML, thanks to work by Richard
-Boulton. Users who wish to use the pre-processor should invoke
-\texttt{hol.unquote} in the distributions \texttt{bin} directory.
+implemented as a pre-processor to ML. Users who do not wish to use the
+pre-processor should use \texttt{hol.noquote} in the distribution's
+\texttt{bin} directory.
+
 \holmake{} will accept source files having occurrences of \verb+``+.
 
 
