@@ -173,8 +173,8 @@ val lib_thms =
 
 
 fun comp_rws cst_rws lhs_thms rhs_thms =
-  let val rw_lhs = from_list lhs_thms
-      val rw_rhs = from_list initial_thms
+  let val rw_lhs = new_compset lhs_thms
+      val rw_rhs = new_compset initial_thms
       val _ = add_thms (rhs_thms@lhs_thms@lib_thms@cst_rws) rw_rhs in
   (rw_lhs, rw_rhs)
   end;
