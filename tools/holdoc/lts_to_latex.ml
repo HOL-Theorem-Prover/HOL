@@ -15,12 +15,32 @@
 
 - all sorts of spacing issues
 
+- do transition labels more nicely
+
+- add spacing after (some) constructors; or if not followed by ( or separator.
+
+- ditto for library functions
+
+- fancy typesetting for context conditions like F_context FC
+
+- Charter has a particularly ugly underscore, eg in print_endline_flush.
+
+- allow empty side conditions; don't force T.
+
+- compute binders in set comprehension somehow (see note below).
+
+- convert ~(m.src IN MARTIAN) to m.src \notin MARTIAN.
+
+- spacing in curried functions, eg append in delivery_loopback_udp_2,
+  between first and second args.
+
  *)
 
 open Hollex
 
 exception Trailing (* there is trailing info in the file *)
 exception BadLabel
+exception BadDirective (* ill-positioned directive *)
 
 (* build a fast stream of tokens from lexed stdin *)
 let tokstream =
@@ -42,13 +62,21 @@ let isIndent t =
     Indent(n) -> true
   | _         -> false
 
-let render_token t =
+let isDirEnd t =
   match t with
-    Ident(s,_) -> "I:"^s
-  | Indent(n)  -> "\nN:"^(String.make n '>')
-  | White(s)   -> "W:"^s
-  | Comment(s) -> "C:(*"^s^"*)-C"
-  | Sep(s)     -> "S:"^s
+    DirEnd    -> true
+  | _         -> false
+
+let rec render_token t =
+  match t with
+    Ident(s,_)   -> "I:"^s
+  | Indent(n)    -> "\nN:"^(String.make n '>')
+  | White(s)     -> "W:"^s
+  | Comment(s)   -> "C:(*"^s^"*)-C"
+  | DirBeg       -> "D+"
+  | DirEnd       -> "-D"
+  | DirBlk(n,ts) -> "D:"^n^": "^(String.concat " " (List.map render_token ts))^" :D"
+  | Sep(s)       -> "S:"^s
 
 let print_tokenline toks =
     let f t = print_string ((render_token t)^" ")
@@ -113,27 +141,47 @@ and optcomm = parser
   | [<>]              -> None
 
 and sp1 = parser
-    [< 'White(s)  ; s1 = sp >] -> White(s)   :: s1
-  | [< 'Comment(c); s1 = sp >] -> Comment(c) :: s1
+    [< 'White(s)                  ; s1 = sp >] -> White(s)     :: s1
+  | [< 'Comment(c)                ; s1 = sp >] -> Comment(c)   :: s1
+  | [< 'DirBeg; (n,ts) = dir_block; s1 = sp >] -> DirBlk(n,ts) :: s1
                                                  
 and sp = parser
-    [< 'White(s)  ; s1 = sp >] -> White(s)   :: s1
-  | [< 'Comment(c); s1 = sp >] -> Comment(c) :: s1
-  | [<>]                       -> []
+    [< 'White(s)                  ; s1 = sp >] -> White(s)     :: s1
+  | [< 'Comment(c)                ; s1 = sp >] -> Comment(c)   :: s1
+  | [< 'DirBeg; (n,ts) = dir_block; s1 = sp >] -> DirBlk(n,ts) :: s1
+  | [<>]                                   -> []
 
 and wopt = parser
     [< 'White(s)  ; s1 = wopt >] -> White(s)   :: s1
   | [<>]                         -> []
 
 and sp' = parser
-    [< 'White(s)  ; s1 = sp' >] -> White(s)   :: s1
-  | [< 'Indent(n) ; s1 = sp' >] -> Indent(n)  :: s1
-  | [< 'Comment(c); s1 = sp' >] -> Comment(c) :: s1
-  | [<>]                        -> []
+    [< 'White(s)                  ; s1 = sp' >] -> White(s)     :: s1
+  | [< 'Indent(n)                 ; s1 = sp' >] -> Indent(n)    :: s1
+  | [< 'Comment(c)                ; s1 = sp' >] -> Comment(c)   :: s1
+  | [< 'DirBeg; (n,ts) = dir_block; s1 = sp' >] -> DirBlk(n,ts) :: s1
+  | [<>]                                    -> []
 
 and optind = parser
     [< 'Indent(n) ; is = optind >] -> Indent(n) :: is
   | [<>]                           -> []
+
+and dir_block = parser
+    [< _ = wopt; 'Ident(n,_); ts = dir_block1 >] -> (n,ts)
+and dir_block1 = parser
+    [< 't when not (isDirEnd t) ; ts = dir_block1 >] -> t :: ts
+  | [< 'DirEnd >]                                    -> []
+
+and dir_var_vars ts =
+  let rec go ts =
+    match ts with
+      (White(_)::ts)   -> go ts
+    | (Comment(_)::ts) -> go ts
+    | (Ident(s,_)::ts) -> s :: go ts
+    | (_::ts)          -> raise BadDirective
+    | []               -> []
+  in
+  go ts
 
 (* and parse_rule = parser [<>] -> Rule([],"","",None,[],[],[],[],None) *)
 
@@ -172,10 +220,12 @@ and parse_rule1 = parser
   | [<>] -> raise (Stream.Error("!"));
 
 and rule_vars = parser
-    [< 'White(_)  ; r = rule_vars >] -> r
-  | [< 'Comment(_); r = rule_vars >] -> r
-  | [< 'Ident(s,_); r = rule_vars >] -> s :: r
-  | [<>]                             -> []
+    [< 'White(_)                  ; r = rule_vars >] -> r
+  | [< 'Comment(_)                ; r = rule_vars >] -> r
+  | [< 'DirBeg; (n,ts) = dir_block; r = rule_vars >] -> if n = "VARS" then dir_var_vars ts @ r
+                                                                      else r
+  | [< 'Ident(s,_)                ; r = rule_vars >] -> s :: r
+  | [<>]                                         -> []
 
 and rule_name = parser
     [< 'Indent(_); 'Ident(n,_) ?? "rule name"; _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; 'Ident(cat,_) ?? "category"; _ = wopt;
@@ -419,6 +469,7 @@ let is_lib s = List.mem s  (* lib not constructor, as special case *)
 
 let is_aux s = List.mem s  (* based on Net_auxfnsScript.sml *)
   [ "enqueue"
+  ; "dequeue"
   ; "outroute"
   ; "dosend"
   ; "unused"
@@ -432,6 +483,7 @@ let is_aux s = List.mem s  (* based on Net_auxfnsScript.sml *)
   ; "fc_sc"
   ; "fc_oq"
   ; "fc_oqf"
+  ; "lookup"
   (* omit SC_unused, FC_unused as overloaded on unused *)
   ; "autobind"
   ; "socks"
@@ -458,6 +510,9 @@ let is_aux s = List.mem s  (* based on Net_auxfnsScript.sml *)
   ; "host_ok"
   ; "valid_ip_string"
   ; "ipstr_to_ip"
+  ; "localhost"
+  (* Net_host_safetyScript.sml *)
+  ; "OP2"
   (* added by hand *)
   ; "string_size"
   ; "OP"
@@ -501,6 +556,7 @@ let is_holop s = List.mem s
   ; "LIST_TO_SET"
   ; "CARD"
   ; "LENGTH"
+  ; "Num"
   ] 
 
 (* translations for symbols and particular identifiers; these take precedence over is_foo *)
@@ -539,6 +595,10 @@ let holids =
   ; ("SUBSET","\\subseteq ")
   ; ("T","\\Mtrue ")
   ; ("F","\\Mfalse ")
+  ; ("if","\\Mif ")
+  ; ("then","\\Mthen ")
+  ; ("else","\\Melse ")
+  ; ("EXP","\\Mexp ")
   ] 
 
 (* dump an unrecognised string to stderr *)
@@ -590,6 +650,9 @@ let mtok v t =
   | Indent(n)      -> mindent n
   | White(s)       -> s
   | Comment(s)     -> "\\text{\\small(*"^s^"*)}"
+  | DirBlk(_,_)    -> ""
+  | DirBeg         -> raise BadDirective
+  | DirEnd         -> raise BadDirective
   | Sep(s)         -> texify s
 
 let rec munges v ls = (* munge a list of lines *)
@@ -625,6 +688,28 @@ and mungelab v s = (* munge the label *)
 (* get a list of the potential variables in a rule, ie, all idents
    that are bound somewhere *)
 
+(* note that we can't find the binders in a set comprehension, *very*
+   annoyingly.  See this from Michael:
+   
+   Subject: Typesetting HOL
+   From: Michael Norrish <Michael.Norrish@cl.cam.ac.uk>
+   Date: Thu, 5 Jul 2001 12:59:09 +0100
+   To: Keith Wansbrough <Keith.Wansbrough@cl.cam.ac.uk>
+   
+   [..]
+   > * in set comprehension notation { foo | bar }, how can I determine the 
+   > set of bound variables?
+   
+   You can't.  It's a long-standing problem with the syntax.  The parser
+   resolves the ambiguity by taking the intersection of variables on the
+   left and right-hand sides, unless there are none on one or other side,
+   when it just takes the free-vars on the other side to all be bound.
+   It's a hideous hack.
+   
+   Michael.
+ 
+*)
+
 let hol_binders =
   [ "!"
   ; "?"
@@ -645,18 +730,22 @@ let potential_vars (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
       | []               -> []
     and bdrs ts =        (* we've hit a binder; read vars until separator *)
       match ts with
-        (Ident(s,_)::ts) -> s :: bdrs ts
-      | (White(s)::ts)   -> bdrs ts
-      | (Indent(s)::ts)  -> bdrs ts
-      | (Comment(s)::ts) -> bdrs ts
-      | (Sep(s)::ts)     -> pot_l ts
-      | []               -> [] in
+        (Ident(s,_)::ts)       -> s :: bdrs ts
+      | (White(s)::ts)         -> bdrs ts
+      | (Indent(s)::ts)        -> bdrs ts
+      | (Comment(s)::ts)       -> bdrs ts
+      | (DirBlk("VARS",s)::ts) -> dir_var_vars s @ bdrs ts
+      | (DirBlk(_,s)::ts)      -> bdrs ts
+      | (DirBeg::ts)           -> bdrs ts
+      | (DirEnd::ts)           -> bdrs ts
+      | (Sep(s)::ts)           -> pot_l ts
+      | []                     -> [] in
     let rec pot_s ls =       (* binders in lines *)
       match ls with
         (l::ls) -> pot_l l @ pot_s ls
       | []      -> [] in
-    v
-    @ pot_t desc
+    v              (* bound at top *)
+    @ pot_t desc   (* bound in each bit... *)
     @ pot_s lhs
     @ pot_l lab
     @ pot_s rhs

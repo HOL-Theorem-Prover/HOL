@@ -3,13 +3,16 @@
 
 open Hollex
 
-let render_token t =
+let rec render_token t =
   match t with
-    Ident(s,_) -> "I:"^s
-  | Indent(n)  -> "\nN:"^(String.make n '>')
-  | White(s)   -> "W:"^s
-  | Comment(s) -> "C:(*"^s^"*)-C"
-  | Sep(s)     -> "S:"^s
+    Ident(s,_)   -> "I:"^s
+  | Indent(n)    -> "\nN:"^(String.make n '>')
+  | White(s)     -> "W:"^s
+  | Comment(s)   -> "C:(*"^s^"*)-C"
+  | DirBeg       -> "D+"
+  | DirEnd       -> "-D"
+  | DirBlk(n,ts) -> "D:"^n^": "^(String.concat " " (List.map render_token ts))^" :D"
+  | Sep(s)       -> "S:"^s
 
 let _ =
   let lexbuf = Lexing.from_channel stdin in

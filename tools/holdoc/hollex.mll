@@ -13,6 +13,9 @@ type token =
   | Indent of int
   | White of string
   | Comment of string
+  | DirBeg  (* delimiters for holdoc parsing directives *)
+  | DirEnd  (* ditto *)
+  | DirBlk of string * token list (* nonterminal: directive name and body *)
   | Sep of string
 
 let indent_width s = 
@@ -56,6 +59,9 @@ let startcom = "(*"
 let incomm   = [^ '(' '*'] | '(' [^ '*'] | '*' [^ ')']
 let stopcom  = "*)"
 
+let startdir = "(*["
+let enddir   = "]*)"
+
 
 (* now some rules *)
 
@@ -77,6 +83,8 @@ and
              | specnonagg) { Ident (Lexing.lexeme lexbuf,false) }
   | newline white*         { Indent (indent_width (Lexing.lexeme lexbuf)) }
   | white+                 { White (Lexing.lexeme lexbuf) }
+  | startdir               { DirBeg }
+  | enddir                 { DirEnd }
   | startcom               { comments := [];
                              comment lexbuf;
                              Comment (String.concat "" (List.rev !comments))}
