@@ -51,7 +51,7 @@ do
 done
 
 echo Also removing Buddy documentation from distribution
-cd /tmp/hol98
+cd /tmp/
 mv src/muddy/muddyC/buddy/doc/*.ps .
 
 
