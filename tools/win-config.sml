@@ -104,10 +104,6 @@ val _ = print "Configuring the system\n";
 val _ = FileSys.mkDir (fullPath [holdir, "src", "0"]) handle _ => ()
 val _ = Process.system ("mosml < \"" ^ config_dest ^ "\"")
 
-val _ = print "Setting up Globals.sml file\n";
-val _ = fill_holes(fullPath [holdir, "src", "0", "Globals.sml"],
-                   fullPath [holdir, "sigobj", "Globals.sml"]) []
-
 val _ = FileSys.chDir (fullPath [holdir, "sigobj"])
 val _ = Systeml.systeml [fullPath [holdir, "bin", "Holmake"],
                          "Globals.uo"]
