@@ -919,6 +919,19 @@ val MOD_ADD_1 = store_thm("MOD_ADD_1",
 
 (* -------------------------------------------------------- *)
 
+val _ = 
+ let open Drop 
+ in 
+   exportML("bits", 
+    MLSIG    "type num = numML.num" ::
+    MLSTRUCT "type num = numML.num" ::
+    map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+        [TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def, 
+         DIVMOD_2EXP, SBIT_def, BITS_def, 
+         BITV_def, BIT_def, SLICE_def,LSBn_def, 
+         SIGN_EXTEND_def])
+ end;;
+
 val _ = export_theory();
 val _ = export_doc_theorems();
 

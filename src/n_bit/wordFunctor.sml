@@ -2514,27 +2514,26 @@ val HS_EVAL = store_thm("HS_EVAL",
 
 (* -------------------------------------------------------- *)
 
-val _ = overload_on ("<", Term`word_lt`);
+val _ = overload_on ("<",  Term`word_lt`);
 val _ = overload_on ("<=", Term`word_le`);
-val _ = overload_on (">", Term`word_gt`);
+val _ = overload_on (">",  Term`word_gt`);
 val _ = overload_on (">=", Term`word_ge`);
 
-val _ = overload_on ("<.", Term`word_lo`);
+val _ = overload_on ("<.",  Term`word_lo`);
 val _ = overload_on ("<=.", Term`word_ls`);
-val _ = overload_on (">.", Term`word_hi`);
+val _ = overload_on (">.",  Term`word_hi`);
 val _ = overload_on (">=.", Term`word_hs`);
 
-val _ = add_infix("<.",450,HOLgrammars.RIGHT);
+val _ = add_infix("<.", 450,HOLgrammars.RIGHT);
 val _ = add_infix("<=.",450,HOLgrammars.RIGHT);
-val _ = add_infix(">.",450,HOLgrammars.RIGHT);
+val _ = add_infix(">.", 450,HOLgrammars.RIGHT);
 val _ = add_infix(">=.",450,HOLgrammars.RIGHT);
 
 (* -------------------------------------------------------- *)
 
-(* For generating ML ... not ready yet.
+(* STOP; *)
 
-ConstMapML.apply equality;
-val _ = Drop.exportML("word"^sbits,
+val _ = 
  let open numeral_bitsTheory bitsTheory Drop
      val THE_WL = SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def
      val MOD_WL_EVAL = REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def
@@ -2548,25 +2547,18 @@ val _ = Drop.exportML("word"^sbits,
      val LS_EVAL = REWRITE_RULE [MOD_WL_EVAL] LS_EVAL
      val HI_EVAL = REWRITE_RULE [MOD_WL_EVAL] HI_EVAL
      val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL
-   in
-    DATATYPE (ParseDatatype.parse [QUOTE ("word"^sbits^" = n2w of num")])
-    :: map DEFN
-    [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
-     LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
-     THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
-     MOD_WL_EVAL, w2n_EVAL,
-     OR_def, AND_def, EOR_def, TWO_COMP_def, ONE_COMP_def, RRX_def,MSB_def,
-     ADD_EVAL, MUL_EVAL, word_sub_def,
-     ONE_COMP_EVAL, TWO_COMP_EVAL,
-     AND_EVAL, OR_EVAL, EOR_EVAL,
-     LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL,
-     WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
-     MSB_EVAL, LSB_EVAL,
-     iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, SIGN_EXTEND_def,
-     DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP,TIMES_2EXP_def,
-     MSBn_def, LSBn_def, BITV_def, SBIT_def, BITS_def, BIT_def, SLICE_def]
-   end);
-*)
+ in exportML("word"^sbits,
+    ABSDATATYPE ([],ParseDatatype.parse [QUOTE ("word"^sbits^" = n2w of num")])
+    :: map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
+     [THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
+      MSBn_def, MSB_EVAL,  LSB_EVAL, MOD_WL_EVAL, w2n_EVAL,
+      OR_def, OR_EVAL, AND_def, AND_EVAL, EOR_def, EOR_EVAL, 
+      TWO_COMP_def, TWO_COMP_EVAL, ONE_COMP_def, ONE_COMP_EVAL, 
+      ADD_EVAL, MUL_EVAL, word_sub_def,
+      LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
+      WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
+      LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL, LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL])
+ end;
 
 val _ = export_theory();
 val _ = export_theory_as_docfiles(fullPath[Systeml.HOLDIR,"src","n_bit","help","thms","wordn"]);

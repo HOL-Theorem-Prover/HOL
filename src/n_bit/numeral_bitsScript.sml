@@ -24,11 +24,11 @@ val iBITWISE_def = Define `iBITWISE = BITWISE`;
 val SIMP_BIT1 = (GSYM o SIMP_RULE arith_ss []) BIT1;
 
 val iBITWISE = prove(
-  `(!op a b. iBITWISE 0 op a b = ZERO) /\
-   (!x op a b.
-     iBITWISE (SUC x) op a b =
-       let w = iBITWISE x op (DIV2 a) (DIV2 b) in
-       if op (ODD a) (ODD b) then BIT1 w else iDUB w)`,
+  `(!opr a b. iBITWISE 0 opr a b = ZERO) /\
+   (!x opr a b.
+     iBITWISE (SUC x) opr a b =
+       let w = iBITWISE x opr (DIV2 a) (DIV2 b) in
+       if opr (ODD a) (ODD b) then BIT1 w else iDUB w)`,
   RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_BIT1,SBIT_def,EXP,
                    LSB_ODD,GSYM DIV2_def,BITWISE_EVAL,LET_THM]
     THEN REWRITE_TAC [BITWISE_def,ALT_ZERO]
@@ -37,10 +37,10 @@ val iBITWISE = prove(
 val iBITWISE = save_thm("iBITWISE", SUC_RULE iBITWISE);
 
 val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
-  `(!x op a. BITWISE x op 0 0 = NUMERAL (iBITWISE x op 0 0)) /\
-   (!x op a. BITWISE x op (NUMERAL a) 0 = NUMERAL (iBITWISE x op (NUMERAL a) 0)) /\
-   (!x op b. BITWISE x op 0 (NUMERAL b) = NUMERAL (iBITWISE x op 0 (NUMERAL b))) /\
-    !x op a b. BITWISE x op (NUMERAL a) (NUMERAL b) = NUMERAL (iBITWISE x op (NUMERAL a) (NUMERAL b))`,
+  `(!x opr a. BITWISE x opr 0 0 = NUMERAL (iBITWISE x opr 0 0)) /\
+   (!x opr a. BITWISE x opr (NUMERAL a) 0 = NUMERAL (iBITWISE x opr (NUMERAL a) 0)) /\
+   (!x opr b. BITWISE x opr 0 (NUMERAL b) = NUMERAL (iBITWISE x opr 0 (NUMERAL b))) /\
+    !x opr a b. BITWISE x opr (NUMERAL a) (NUMERAL b) = NUMERAL (iBITWISE x opr (NUMERAL a) (NUMERAL b))`,
   REWRITE_TAC [iBITWISE_def,NUMERAL_DEF]
 );
 
@@ -130,6 +130,16 @@ val iMOD_2EXP = save_thm("iMOD_2EXP",CONJ MOD_2EXP_ZERO iMOD_2EXP);
 val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 
 (* -------------------------------------------------------- *)
+
+val _ = 
+ let open Drop
+ in exportML("numeral_bits", 
+        MLSIG    "type num = numML.num" ::
+        MLSTRUCT "type num = numML.num" ::
+    map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+        [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE,
+         NUMERAL_MOD_2EXP,iMOD_2EXP, NUMERAL_DIV_2EXP])
+ end;
 
 val _ = export_theory();
 val _ = export_doc_theorems();
