@@ -27,9 +27,9 @@ val (Round_def, Round_ind) = Defn.tprove
       then (case keys 
              of [key] -> AddRoundKey key (ShiftRows (SubBytes state)))
       else (case keys
-             of k0::rst -> Round (n-1) rst
-                               (AddRoundKey k0 (MixColumns 
-                                     (ShiftRows (SubBytes state)))))`,
+             of k::rst -> Round (n-1) rst
+                             (AddRoundKey k (MixColumns 
+                                 (ShiftRows (SubBytes state)))))`,
   WF_REL_TAC `measure FST`);
 
 (*---------------------------------------------------------------------------*)
@@ -43,7 +43,7 @@ val (Round_def, Round_ind) = Defn.tprove
 
 val (InvRound_def,InvRound_ind) = Defn.tprove
  (Hol_defn 
-   "Inv_Round"
+   "InvRound"
    `InvRound n keys state =
       if n=0 
        then (case keys 
@@ -122,7 +122,8 @@ val preCrypt_def = Define
    let sched = mk_keysched key in
    let isched = REVERSE sched 
    in
-     ((from_state o Round 9 (TL sched) o AddRoundKey (HD sched) o to_state),
+     ((from_state o Round 9 (TL sched) 
+                  o AddRoundKey (HD sched) o to_state),
       (from_state o InvRound 9 (TL isched) 
                   o AddRoundKey (HD isched) o to_state))`;
 

@@ -34,7 +34,7 @@ val InvMixify_def = Define
 
 val (EqInvRound_def,EqInvRound_ind) = Defn.tprove
  (Hol_defn 
-   "EqInv_Round"
+   "EqInvRound"
    `EqInvRound n keys state =
       if n=0 
        then (case keys 
@@ -64,12 +64,11 @@ val [AddRoundKey]   = decls "AddRoundKey";
 
 val Equiv_lemma = Q.prove
 (`!sched sched' : state list.
-     (LENGTH sched = 11) /\ 
-     (sched' = InvMixify sched)
-     ==>
-    (EqInvRound 9 (TL sched') o AddRoundKey (HD sched')
-        =
-     InvRound 9 (TL sched) o AddRoundKey (HD sched))`,
+      (LENGTH sched = 11) /\ (sched' = InvMixify sched)
+      ==> 
+       (EqInvRound 9 (TL sched') o AddRoundKey (HD sched')
+         =
+        InvRound 9 (TL sched) o AddRoundKey (HD sched))`,
   RW_TAC std_ss [] THEN CONV_TAC FUN_EQ_CONV THEN GEN_TAC 
     THEN POP_ASSUM MP_TAC 
     THEN RW_TAC std_ss [length_11]
@@ -93,7 +92,8 @@ val preCryptAlt_def = Define
    let sched = mk_keysched key in
    let isched = InvMixify (REVERSE sched)
    in
-     ((from_state o Round 9 (TL sched) o AddRoundKey (HD sched) o to_state),
+     ((from_state o Round 9 (TL sched) 
+                  o AddRoundKey (HD sched) o to_state),
       (from_state o EqInvRound 9 (TL isched) 
                   o AddRoundKey (HD isched) o to_state))`;
 
