@@ -1,0 +1,48 @@
+\DOC clear_overloads_on
+
+\TYPE {Parse.clear_overloads_on : string -> unit}
+
+\SYNOPSIS
+Clears all overloading on the specified operator.
+
+\KEYWORDS
+Parsing, pretty-printing, overloading.
+
+\LIBRARY Parse
+
+\DESCRIBE
+This function removes all overloading associated with the given
+string.  Not only are all possible overloading resolutions for that
+string removed, but the string is not even recorded as something that
+might be later overloaded (using {overload_on}).  If a new set of
+overloading possibilities is desired for the string, the function
+{allow_for_overloading_on} will need to be called first.
+
+\FAILURE
+Never fails.  If a string is not overloaded, this function simply has
+no effect.
+
+\EXAMPLE
+{
+- load "realTheory";
+> val it = () : unit
+- realTheory.REAL_INV_LT1;
+> val it = |- !x. 0 < x /\ x < 1 ==> 1 < inv x : Thm.thm
+- clear_overloads_on "<";
+> val it = () : unit
+- realTheory.REAL_INV_LT1;
+> val it = |- !x. 0 real_lt x /\ x real_lt 1 ==> 1 real_lt inv x : Thm.thm
+- clear_overloads_on "&";
+> val it = () : unit
+- realTheory.REAL_INV_LT1;
+> val it = |- !x. 0r real_lt x /\ x real_lt 1r ==> 1r real_lt inv x : Thm.thm
+}
+
+\USES
+If overloading gets too confusing, this function should help to clear
+away one layer of supposedly helpful obfuscation.
+
+\SEEALSO
+allow_for_overloading_on, overload_on
+
+\ENDDOC

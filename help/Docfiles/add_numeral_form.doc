@@ -25,7 +25,7 @@ this character specifies {s} as the ``injection function'' which is to
 be applied to the natural number denoted by the preceding digits.
 
 Secondly, the constant denoted by the {s} argument is overloaded to be
-one of the possible resolutions of the overloaded operator {fromNum}.
+one of the possible resolutions of the overloaded operator {&}.
 When a numeral doesn't have a character suffix, this means that it has
 been made an argument to the function {fromNum}, and so might take on
 different types, depending on the context.
@@ -47,9 +47,9 @@ loaded, one can write numerals and have them parse (and print) as
 natural numbers.  However, later in the development, in
 {integerTheory}, numeral forms for integers are also introduced:
 {
-   val _ = add_numeral_form(#"i", SOME "&");
+   val _ = add_numeral_form(#"i", SOME "int_of_num");
 }
-\noindent The string {&} is the name of the function which injects
+\noindent Here {int_of_num} is the name of the function which injects
 natural numbers into integers.  After this call is made, numeral strings
 can be treated as integers or natural numbers, depending on the
 context.
@@ -63,10 +63,9 @@ context.
    > val it = `:int` : Type.hol_type
 }
 \noindent The parser has chosen to give the string ``3'' integer type
-(generally, it will prefer the most recently specified possibility, in
-common with much overloading, but this probably shouldn't be relied
-on).  However, numerals can appear with natural number type in
-appropriate contexts:
+(it will prefer the most recently specified possibility, in common
+with overloading in general).  However, numerals can appear with
+natural number type in appropriate contexts:
 {
    - Term`(SUC 3, 4 + ~x)`;
    > val it = `(SUC 3,4 + ~x)` : Term.term
