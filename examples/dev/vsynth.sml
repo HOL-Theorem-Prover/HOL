@@ -216,9 +216,9 @@ val DtypevDef =
 (*****************************************************************************)
 (* Boolean positive edge triggered flip-flop starting in state 1             *)
 (*****************************************************************************)
-val FlipFlopTvDef =
+val DtypeTvDef =
 "// Boolean positive edge triggered flip-flop starting in state 1\n\
-\module FlipFlopT (clk,d,q);\n\
+\module DtypeT (clk,d,q);\n\
 \ input clk,d;\n\
 \ output q;\n\
 \ reg q;\n\
@@ -233,9 +233,9 @@ val FlipFlopTvDef =
 (*****************************************************************************)
 (* Boolean positive edge triggered flip-flop starting in state 0             *)
 (*****************************************************************************)
-val FlipFlopFvDef =
+val DtypeFvDef =
 "// Boolean positive edge triggered flip-flop starting in state 0\n\
-\module FlipFlopF (clk,d,q);\n\
+\module DtypeF (clk,d,q);\n\
 \ input clk,d;\n\
 \ output q;\n\
 \ reg q;\n\
@@ -583,52 +583,52 @@ fun termToVerilog_Dtype (out:string->unit) tm =
   else raise ERR "termToVerilog_Dtype" "bad component term";
 
 (*****************************************************************************)
-(* Print an instance of a FlipFlopT                                          *)
+(* Print an instance of a DtypeT                                             *)
 (*****************************************************************************)
-val FlipFlopTvInst_count = ref 0;
-fun FlipFlopTvInst (out:string->unit) [] [clk_name,in_name,out_name] =
- let val count = !FlipFlopTvInst_count
-     val _ = (FlipFlopTvInst_count := count+1);
-     val inst_name = "FlipFlopT" ^ "_" ^ Int.toString count
+val DtypeTvInst_count = ref 0;
+fun DtypeTvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+ let val count = !DtypeTvInst_count
+     val _ = (DtypeTvInst_count := count+1);
+     val inst_name = "DtypeT" ^ "_" ^ Int.toString count
  in
- (out " FlipFlopT        "; out inst_name;
+ (out " DtypeT        "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
   out "\n\n")
  end;
 
-fun termToVerilog_FlipFlopT (out:string->unit) tm =
+fun termToVerilog_DtypeT (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "FlipFlopT")
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DtypeT")
      andalso is_pair(rand tm)
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
-  then FlipFlopTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_FlipFlopT" "bad component term";
+  then DtypeTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_DtypeT" "bad component term";
 
 (*****************************************************************************)
-(* Print an instance of a FlipFlopF                                          *)
+(* Print an instance of a DtypeF                                             *)
 (*****************************************************************************)
-val FlipFlopFvInst_count = ref 0;
-fun FlipFlopFvInst (out:string->unit) [] [clk_name,in_name,out_name] =
- let val count = !FlipFlopFvInst_count
-     val _ = (FlipFlopFvInst_count := count+1);
-     val inst_name = "FlipFlopF" ^ "_" ^ Int.toString count
+val DtypeFvInst_count = ref 0;
+fun DtypeFvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+ let val count = !DtypeFvInst_count
+     val _ = (DtypeFvInst_count := count+1);
+     val inst_name = "DtypeF" ^ "_" ^ Int.toString count
  in
- (out " FlipFlopF        "; out inst_name;
+ (out " DtypeF        "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
   out "\n\n")
  end;
 
-fun termToVerilog_FlipFlopF (out:string->unit) tm =
+fun termToVerilog_DtypeF (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "FlipFlopF")
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DtypeF")
      andalso is_pair(rand tm)
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
-  then FlipFlopFvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_FlipFlopF" "bad component term";
+  then DtypeFvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_DtypeF" "bad component term";
 
 
 (*****************************************************************************)
@@ -783,8 +783,8 @@ fun termToVerilog out tm =
  termToVerilog_DEL out tm        handle _ =>
  termToVerilog_DFF out tm        handle _ =>
  termToVerilog_Dtype out tm      handle _ =>
- termToVerilog_FlipFlopT out tm  handle _ =>
- termToVerilog_FlipFlopF out tm  handle _ =>
+ termToVerilog_DtypeT out tm     handle _ =>
+ termToVerilog_DtypeF out tm     handle _ =>
  termToVerilog_CONSTANT out tm   handle _ =>
  termToVerilog_ADD out tm        handle _ =>
  termToVerilog_SUB out tm        handle _ =>
@@ -817,11 +817,11 @@ MUXvInst out [("size","15")] ["sw","inB1","inB2","outB"];
 DtypevInst out [("size","31")] ["clk1","in1","out1"];
 DtypevInst out [("size","15")] ["clk2","in2","out2"];
 
-FlipFlopTvInst out [] ["clk1","in1","out1"];
-FlipFlopTvInst out [] ["clk2","in2","out2"];
+DtypeTvInst out [] ["clk1","in1","out1"];
+DtypeTvInst out [] ["clk2","in2","out2"];
 
-FlipFlopFvInst out [] ["clk1","in1","out1"];
-FlipFlopFvInst out [] ["clk2","in2","out2"];
+DtypeFvInst out [] ["clk1","in1","out1"];
+DtypeFvInst out [] ["clk2","in2","out2"];
 
 ADDvInst out [("size","31")] ["inA1","inA2","outA"];
 ADDvInst out [("size","15")] ["inB1","inB2","outB"];
@@ -855,8 +855,8 @@ val _ =
   [("DEL",       (DELvDef,        DELvInst)),
    ("DFF",       (DFFvDef,        DFFvInst)),
    ("Dtype",     (DtypevDef,      DtypevInst)),
-   ("FlipFlopT", (FlipFlopTvDef,  FlipFlopTvInst)),
-   ("FlipFlopF", (FlipFlopFvDef,  FlipFlopFvInst)),
+   ("DtypeT",    (DtypeTvDef,     DtypeTvInst)),
+   ("DtypeF",    (DtypeFvDef,     DtypeFvInst)),
    ("TRUE",      (TRUEvDef,       TRUEvInst)),
    ("NOT",       (NOTvDef,        NOTvInst)),
    ("AND",       (ANDvDef,        ANDvInst)),
@@ -1086,11 +1086,11 @@ fun MAKE_SIMULATION name thm maxtime period stimulus dump_all out =
   out(" wire " ^ clk_name ^ ";\n");
   out(" reg " ^ load_name ^ ";\n");
   map 
-   (fn v => out(" reg [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
+   (fn v => out(" reg [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
    inpl;
   out(" wire " ^ done_name ^ ";\n");
   map 
-   (fn v => out(" wire [0:" ^ var2size v ^ "] " ^ var_name v ^ ";\n")) 
+   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
    outl;
   out "\n";
   out(" initial #maxtime $finish;\n\n");
@@ -1350,17 +1350,17 @@ fun SIMULATE thm inputs =
      val iverilog_command = ((!iverilog_path) ^ " -o " ^ vvp_file ^ " " ^ name ^ ".vl")
      val code1 = Process.system iverilog_command
      val _ = if isSuccess code1
-              then ()
+              then print(iverilog_command ^ "\n")
               else print("Warning:\n Process.system reports failure signal returned by\n " ^ iverilog_command ^ "\n")
      val vvp_command = ((!vvp_path) ^ " " ^ vvp_file)
      val code2 = Process.system vvp_command
      val _ = if isSuccess code2
-              then ()
+              then print(vvp_command ^ "\n")
               else print("Warning:\n Process.system reports failure signal returned by\n " ^ vvp_command ^ "\n")
-     val gtkwave_command = ((!gtkwave_path) ^ " -a " ^ vcd_file)
+     val gtkwave_command = ((!gtkwave_path) ^ " -a " ^ vcd_file ^ "&")
      val code3 = Process.system gtkwave_command
      val _ = if isSuccess code3
-              then ()
+              then print(gtkwave_command ^ "\n")
               else print("Warning:\n Process.system reports failure signal returned by\n " ^ gtkwave_command ^ "\n")
  in
   ()

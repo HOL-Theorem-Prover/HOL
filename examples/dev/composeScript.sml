@@ -351,7 +351,7 @@ val SEQ_def =
 (*****************************************************************************)
 (* Data flip-flop                                                            *)
 (*****************************************************************************)
-val DFF_def = Define `DFF (d,clk,q) = (!t. q (t+1) = (POSEDGE clk (t+1) =>
+val DFF_def = Define `DFF (d,sel,q) = (!t. q (t+1) = (POSEDGE sel (t+1) =>
                                                      d (t+1) | q t))`
 
 
@@ -397,7 +397,7 @@ val PAR_def = Define `PAR f g (load,inp,done,out) =
            |          |        |          |        | 
          |--------|   |        |   |--------|      |
          | d      |   |        |   |      d |      |
-         | q  clk |---|        |---| clk  q |      |
+         | q  sel |---|        |---| sel  q |      |
          |--------|   |        |   |--------|      |
            |          |        |          |        |
            |        |------------|        |        |
@@ -688,8 +688,8 @@ val SAFE_SEQ =
 
 
 val DFF_SUC = Q.store_thm("DFF_SUC",
-              `DFF (d,clk,q) ==> 
-                (!t. t > 0 ==> (q t = (POSEDGE clk t => d t | q (t-1))))`,
+              `DFF (d,sel,q) ==> 
+                (!t. t > 0 ==> (q t = (POSEDGE sel t => d t | q (t-1))))`,
               RW_TAC arith_ss [] 
               THEN Cases_on `t`
               THENL [(* `~(0 > 0)` by RW_TAC arith_ss [],*)
@@ -700,17 +700,17 @@ val DFF_SUC = Q.store_thm("DFF_SUC",
 
 
 val DFF_INTERVAL = Q.store_thm("DFF_INTERVAL",
-     `(DFF(d,clk,q) /\ POSEDGE clk t0 /\ 
-       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> clk t)) ==>  
+     `(DFF(d,sel,q) /\ POSEDGE sel t0 /\ 
+       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> sel t)) ==>  
        (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> (q t = d t0))`,
       STRIP_TAC
-      THEN `clk t0` by PROVE_TAC [POSEDGE_def]
-      THEN `!t. 0 < t0 /\ t0 <= t /\ t <= t1 ==> clk t` by RW_TAC arith_ss []
+      THEN `sel t0` by PROVE_TAC [POSEDGE_def]
+      THEN `!t. 0 < t0 /\ t0 <= t /\ t <= t1 ==> sel t` by RW_TAC arith_ss []
       THENL [Cases_on `t=t0`
         THENL [PROVE_TAC [],
           `0 < t0 /\ t0 < t /\ t <= t1` by RW_TAC arith_ss []
            THEN PROVE_TAC []],
-          `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE clk t)` by 
+          `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE sel t)` by 
                RW_TAC arith_ss [POSEDGE_def]
           THEN Induct_on `t1`
           THENL [RW_TAC arith_ss [], (* base *)
@@ -718,15 +718,15 @@ val DFF_INTERVAL = Q.store_thm("DFF_INTERVAL",
             THEN Cases_on `t < SUC t1`
             THENL [RW_TAC arith_ss [],
             `t = t1+1` by RW_TAC arith_ss []
-            THEN `~POSEDGE clk (t1+1)` by PROVE_TAC [POSEDGE]
+            THEN `~POSEDGE sel (t1+1)` by PROVE_TAC [POSEDGE]
             THEN `q (t1+1) = q t1` by PROVE_TAC [DFF_def]
             THEN Cases_on `t0 < t1`
             THENL [`t0 < t1 /\ t1 <= t1` by RW_TAC arith_ss []
               THEN `!t. t0 < t /\ t <= t1 ==> 
-                   ~POSEDGE clk t` by RW_TAC arith_ss []
-              THEN `!t. t0 <= t /\ t <= t1 ==> clk t` 
+                   ~POSEDGE sel t` by RW_TAC arith_ss []
+              THEN `!t. t0 <= t /\ t <= t1 ==> sel t` 
                    by RW_TAC arith_ss []
-              THEN `!t. t0 < t /\ t <= t1 ==> clk t` 
+              THEN `!t. t0 < t /\ t <= t1 ==> sel t` 
                    by RW_TAC arith_ss []
               THEN `!t. (t0 < t /\ t <= t1) ==> (q t = d t0)`
                    by PROVE_TAC []
@@ -747,11 +747,11 @@ val DFF_INTERVAL = Q.store_thm("DFF_INTERVAL",
 
 
 val DFF_INTERVAL2 = Q.store_thm("DFF_INTERVAL2",
-     `(DFF(d,clk,q) /\ POSEDGE clk t0 /\ 
-       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(clk t))) ==>  
+     `(DFF(d,sel,q) /\ POSEDGE sel t0 /\ 
+       (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(sel t))) ==>  
        (!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> (q t = d t0))`,
           STRIP_TAC
-          THEN `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE clk t)` by 
+          THEN `!t. 0 < t0 /\ t0 < t /\ t <= t1 ==> ~(POSEDGE sel t)` by 
                RW_TAC arith_ss [POSEDGE_def]
           THEN Induct_on `t1`
           THENL [RW_TAC arith_ss [], (* base *)
@@ -759,13 +759,13 @@ val DFF_INTERVAL2 = Q.store_thm("DFF_INTERVAL2",
             THEN Cases_on `t < SUC t1`
             THENL [RW_TAC arith_ss [],
             `t = t1+1` by RW_TAC arith_ss []
-            THEN `~POSEDGE clk (t1+1)` by PROVE_TAC [POSEDGE]
+            THEN `~POSEDGE sel (t1+1)` by PROVE_TAC [POSEDGE]
             THEN `q (t1+1) = q t1` by PROVE_TAC [DFF_def]
             THEN Cases_on `t0 < t1`
             THENL [`t0 < t1 /\ t1 <= t1` by RW_TAC arith_ss []
               THEN `!t. t0 < t /\ t <= t1 ==> 
-                   ~POSEDGE clk t` by RW_TAC arith_ss []
-              THEN `!t. t0 < t /\ t <= t1 ==> ~(clk t)`
+                   ~POSEDGE sel t` by RW_TAC arith_ss []
+              THEN `!t. t0 < t /\ t <= t1 ==> ~(sel t)`
                    by RW_TAC arith_ss []
               THEN `!t. (t0 < t /\ t <= t1) ==> (q t = d t0)`
                    by PROVE_TAC []

@@ -9,7 +9,8 @@ devScript.sml.............. definition and theorems on liveness
 compileScript.sml ......... definitions and theorems to support compiler
 compile.sml ............... convert to combinators and compile to circuits
 vsynth.sml ................ convert a circuit made with MAKE_CIRCUIT to Verilog
-FactScript.sml ............ an example
+FactScript.sml ............ synthesise naive factorial and dump Verilog
+Fact.ml ................... synthesise and simulate factorial and run gtkwave
 dff ....................... Melham's temporal abstraction theory
 Holmakefile ............... instructions for Holmake
 
@@ -63,26 +64,25 @@ where:
 The sequential components are then implemented in terms of clocked reqisters:
 
   |- Dtype     (ck,d,q) = !t. q (t+1) = (if Rise ck t then d t else q t)
-  |- FlipFlopT (ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)
-  |- FlipFlopF (ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)
+  |- DtypeT (ck,d,q)    = (q 0 = T) /\ Dtype(ck,d,q)
+  |- DtypeF (ck,d,q)    = (q 0 = F) /\ Dtype(ck,d,q)
 
 where:
 
  |- Rise s t = ~(s t) /\ s(t+1)
 
-The implementation of DEL, DELT, DELF, DFF in terms of Dtype,
-FlipFlopT and FlipFlopF involves a temporal abstraction, since Dtype
-and the flip-flops are edge-triggered on a clock, but DEL, DELT, DELF,
-DFF are not.  The refinement from the unclocked level of abstraction
-to the clocked circuit level is implemented formally using
-infrastructure from Melham's theory of temporal abstraction in the
-directory dff:
+The implementation of DEL, DELT, DELF, DFF in terms of Dtype, DtypeT
+and DtypeF involves a temporal abstraction, since Dtype and the
+flip-flops are edge-triggered on a clock, but DEL, DELT, DELF, DFF are
+not.  The refinement from the unclocked level of abstraction to the
+clocked circuit level is implemented formally using infrastructure
+from Melham's theory of temporal abstraction in the directory dff:
 
 Using Melham's dff theories it is proved in compileScript.sml that:
 
- |- InfRise clk ==> !d q. Dtype (clk,d,q)     ==> DEL (d at clk,q at clk)
- |- InfRise clk ==> !d q. FlipFlopT (clk,d,q) ==> DELT (d at clk,q at clk)
- |- InfRise clk ==> !d q. FlipFlopF (clk,d,q) ==> DELF (d at clk,q at clk)
+ |- InfRise clk ==> !d q. Dtype (clk,d,q)  ==> DEL (d at clk,q at clk)
+ |- InfRise clk ==> !d q. DtypeT (clk,d,q) ==> DELT (d at clk,q at clk)
+ |- InfRise clk ==> !d q. DtypeF (clk,d,q) ==> DELF (d at clk,q at clk)
 
 Where
 

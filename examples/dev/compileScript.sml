@@ -891,14 +891,14 @@ val Inf_Rise_POSEDGE =
 (*****************************************************************************)
 (* Flip-flop that powers up outputting T                                     *)
 (*****************************************************************************)
-val FlipFlopT_def =
- Define `FlipFlopT(ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)`;
+val DtypeT_def =
+ Define `DtypeT(ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)`;
 
 (*****************************************************************************)
 (* Flip-flop that powers up outputting F                                     *)
 (*****************************************************************************)
-val FlipFlopF_def =
- Define `FlipFlopF(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)`;
+val DtypeF_def =
+ Define `DtypeF(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)`;
 
 (*****************************************************************************)
 (* Abstract on rising edge ("s at clk" analogous to PSL's "s@clk")           *)
@@ -963,9 +963,9 @@ val IstimeofTimeof0 =
 val DELT_IMP =
  store_thm
   ("DELT_IMP",
-   ``InfRise clk ==> !d q. FlipFlopT(clk,d,q) ==> DELT(d at clk, q at clk)``,
+   ``InfRise clk ==> !d q. DtypeT(clk,d,q) ==> DELT(d at clk, q at clk)``,
    RW_TAC std_ss[PURE_REWRITE_RULE[GSYM DEL_def]DELT_def,
-                 Del,FlipFlopT_def,DEL_IMP,Istimeof_thm7,InfRise_def]
+                 Del,DtypeT_def,DEL_IMP,Istimeof_thm7,InfRise_def]
     THEN RW_TAC std_ss [at_def,when,Timeof]
     THEN `?t. Istimeof 0 (Rise clk) t` by PROVE_TAC[]
     THEN IMP_RES_TAC Dtype0
@@ -975,9 +975,9 @@ val DELT_IMP =
 val DELF_IMP =
  store_thm
   ("DELF_IMP",
-   ``InfRise clk ==> !d q. FlipFlopF(clk,d,q) ==> DELF(d at clk, q at clk)``,
+   ``InfRise clk ==> !d q. DtypeF(clk,d,q) ==> DELF(d at clk, q at clk)``,
    RW_TAC std_ss[PURE_REWRITE_RULE[GSYM DEL_def]DELF_def,
-                 Del,FlipFlopF_def,DEL_IMP,Istimeof_thm7,InfRise_def]
+                 Del,DtypeF_def,DEL_IMP,Istimeof_thm7,InfRise_def]
     THEN RW_TAC std_ss [at_def,when,Timeof]
     THEN `?t. Istimeof 0 (Rise clk) t` by PROVE_TAC[]
     THEN IMP_RES_TAC Dtype0

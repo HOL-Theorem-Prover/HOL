@@ -1140,7 +1140,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
             (goal,
              REWRITE_TAC[COMB_def,CONSTANT_def,FUN_EQ_THM] 
               THEN GEN_BETA_TAC 
-              THEN REWRITE_TAC[])
+              THEN REWRITE_TAC[]
+              THEN PROVE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1152,7 +1153,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
             (goal,
              REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
               THEN GEN_BETA_TAC 
-              THEN REWRITE_TAC[])
+              THEN REWRITE_TAC[]
+              THEN PROVE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1175,7 +1177,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
              REWRITE_TAC[COMB_def,BUS_CONCAT_def,CONSTANT_def] 
              THEN GEN_BETA_TAC 
              THEN Ho_Rewrite.REWRITE_TAC[PAIR_EQ,FORALL_AND_THM]
-             THEN Ho_Rewrite.REWRITE_TAC[GSYM FUN_EQ_THM])
+             THEN Ho_Rewrite.REWRITE_TAC[GSYM FUN_EQ_THM]
+             THEN PROVE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1195,7 +1198,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
              THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
              THEN REWRITE_TAC[PAIR_EQ]
              THEN EQ_TAC
-             THEN RW_TAC bool_ss [])
+             THEN RW_TAC bool_ss []
+             THEN PROVE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1213,7 +1217,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
               REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
                THEN GEN_BETA_TAC 
                THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
-               THEN REWRITE_TAC[])
+               THEN REWRITE_TAC[]
+               THEN PROVE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n";
@@ -1239,7 +1244,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
              THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
              THEN REWRITE_TAC[PAIR_EQ]
              THEN EQ_TAC
-             THEN RW_TAC bool_ss [])
+             THEN RW_TAC bool_ss []
+             THEN PROVE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1264,7 +1270,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
               THEN GEN_BETA_TAC 
               THEN REWRITE_TAC[UNCURRY]
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
-              THEN REWRITE_TAC[])
+              THEN REWRITE_TAC[]
+              THEN PROVE_TAC[])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1421,7 +1428,7 @@ fun bus_split tm =
     else
      let val vl1 = mapcount 
                     (fn n => fn vty => 
-                      mk_var((name^Int.toString n),``:^ty1->^vty``)) 
+                      bus_split(mk_var((name^Int.toString n),``:^ty1->^vty``)))
                     tyl
          val (v1::vl2) = rev vl1
      in
@@ -1503,7 +1510,7 @@ val MAKE_CIRCUIT =
  SIMP_RULE std_ss [UNCURRY]                                                o
  Ho_Rewrite.REWRITE_RULE
   [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def
-   (*DEL_IMP_def,GSYM DEL_IMP_THM*)]                                           o
+   (*DEL_IMP_def,GSYM DEL_IMP_THM*)]                                       o
  DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                         o
  Ho_Rewrite.REWRITE_RULE
    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
@@ -1520,12 +1527,3 @@ val MAKE_CIRCUIT =
    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
    (*GSYM DEL_IMP_THM,DEL_IMP_def,*)
    Ite_def,Par_def,Seq_def,o_THM];
-
-
-
-
-
-
-
-
-
