@@ -1982,7 +1982,7 @@ fun AC_CONV(associative,commutative) tm =
                   in
                     TRANS eqv (INST[x |-> l, y |-> l', z |-> r'] asc)
                   end
-          else raise CONV_ERR"AC_CONV.bubble" ""
+          else raise CONV_ERR"AC_CONV" "bubble"
           end
 
        fun asce {lhs,rhs} =
@@ -1997,12 +1997,16 @@ fun AC_CONV(associative,commutative) tm =
                                       (asce{lhs=rand lhs, rhs=rand rt}))
                              (SYM beq)
                     end
-               else raise CONV_ERR"AC_CONV.asce" ""
+               else raise CONV_ERR"AC_CONV" "asce"
                end
    in
      EQT_INTRO (EQ_MP (SYM init) (asce (dest_eq gl)))
    end
-   handle HOL_ERR _ => raise CONV_ERR "AC_CONV" "";
+   handle (x as HOL_ERR{origin_function,origin_structure,message}) =>
+     if origin_structure = "Conv" andalso origin_function = "AC_CONV" then
+       raise x
+     else
+       raise CONV_ERR "AC_CONV" (origin_function^": "^message);
 
 (*-----------------------------------------------------------------------*)
 (* GSYM - General symmetry rule                                          *)
