@@ -532,7 +532,7 @@ fun iterate p f =
 (*****************************************************************************)
 (*   |- f 0 s = ... s ...     |- !n. f (SUC n) s = ... f n ... s ...         *)
 (*   ---------------------------------------------------------------         *)
-(*                     vm ``f i s`` |--> bi                                  *)
+(*       (vm ``f i s`` |--> bi, vm ``f (SUC i) s`` |--> bsuci)               *)
 (*                                                                           *)
 (* where i is the first number such that |- f (SUC i) s = f i s              *)
 (* and the function                                                          *)
@@ -552,16 +552,15 @@ exception computeFixedpointError;
 fun computeFixedpoint report vm (th0,thsuc) =
  let val tb0 = eqToTermBdd (fn tm => raise computeFixedpointError) vm th0
      fun f n (tb,tb') =  
-      (report n tb';
-       let val tb'' =
-        BddApConv
-         computeLib.EVAL_CONV
-         (eqToTermBdd (BddApSubst tb') vm (SPEC (intToTerm n) thsuc))
-       in
-        (tb',tb'')
-       end)
+      let val tb'simp = BddApConv computeLib.EVAL_CONV tb'
+          val _ = report n tb'simp
+          val tb'' = 
+           eqToTermBdd (BddApSubst tb'simp) vm (SPEC (intToTerm n) thsuc)
+      in
+       (tb'simp,tb'')
+      end
  in
-  fst(iterate (uncurry BddEqualTest) f (tb0,tb0))
+  iterate (uncurry BddEqualTest) f (tb0,tb0)
  end;
 
 (*****************************************************************************)
