@@ -379,6 +379,8 @@ val FDOM_FINITE = store_thm(
    HO_MATCH_MP_TAC fmap_SIMPLE_INDUCT THEN
    SRW_TAC [][FDOM_FEMPTY, FDOM_FUPDATE]);
 
+val _ = export_rewrites ["FDOM_FINITE"]
+
 (* ===================================================================== *)
 (* Cardinality                                                           *)
 (*                                                                       *)
@@ -1034,7 +1036,23 @@ val FDOM_DOMSUB = store_thm(
   ``!fm k. FDOM (fm \\ k) = FDOM fm DELETE k``,
   SRW_TAC [][fmap_domsub, FDOM_DRESTRICT, pred_setTheory.EXTENSION]);
 
-val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB"]
+val DOMSUB_FAPPLY = store_thm(
+  "DOMSUB_FAPPLY",
+  ``!fm k. (fm \\ k) ' k = FEMPTY ' k``,
+  SRW_TAC [][fmap_domsub, DRESTRICT_DEF]);
+
+val DOMSUB_FAPPLY_NEQ = store_thm(
+  "DOMSUB_FAPPLY_NEQ",
+  ``!fm k1 k2. ~(k1 = k2) ==> ((fm \\ k1) ' k2 = fm ' k2)``,
+  SRW_TAC [][fmap_domsub, DRESTRICT_DEF, NOT_FDOM_FAPPLY_FEMPTY]);
+
+val DOMSUB_FAPPLY_THM = store_thm(
+  "DOMSUB_FAPPLY_THM",
+  ``!fm k1 k2. (fm \\ k1) ' k2 = if k1 = k2 then FEMPTY ' k2 else fm ' k2``,
+  SRW_TAC [] [DOMSUB_FAPPLY, DOMSUB_FAPPLY_NEQ]);
+
+val _ = export_rewrites ["DOMSUB_FEMPTY", "DOMSUB_FUPDATE", "FDOM_DOMSUB",
+                         "DOMSUB_FAPPLY"]
 
 (* ----------------------------------------------------------------------
     Iterated updates
