@@ -53,7 +53,7 @@ local
   val SIGOBJ = toString(fromString(concat(HOLDIR, "sigobj")))
   val docdirs = __
 in
-  val () = indexfiles := HELP"HOLdbase" :: !indexfiles ;
+  val () = indexfiles := HELP"HOL.Help" :: !indexfiles ;
   val () = helpdirs := docdirs @ (SIGOBJ  :: !helpdirs)
   val () = Help.specialfiles :=
         {file = "README.Hol98", term = "hol", title = "Hol98 Overview"}

@@ -1,0 +1,51 @@
+all: makebase Doc2Html
+
+makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo \
+    Printbase.uo Texsigs.uo makebase.uo
+	HOLMOSMLC -o makebase makebase.uo
+
+makebase.uo: Keepers.uo Htmlsigs.uo \
+             Database.ui Printbase.uo Parsspec.uo makebase.sml
+	HOLMOSMLC -c makebase.sml
+
+Doc2Html : Doc2Html.uo
+	HOLMOSMLC -o Doc2Html Doc2Html.uo
+
+Doc2Html.uo : Doc2Html.sml
+	HOLMOSMLC -c Doc2Html.sml
+
+Hasht.uo: Hasht.sml Hasht.ui
+	HOLMOSMLC -c Hasht.sml
+
+Asynt.uo: Asynt.sml
+	HOLMOSMLC -c Asynt.sml
+
+Parser.uo: Parser.sml Asynt.uo Parser.ui
+	HOLMOSMLC -c Parser.sml
+
+Lexer.uo: Parser.uo Stack.uo Hasht.uo Lexer.sml
+	HOLMOSMLC -c Lexer.sml
+
+Texsigs.uo: Texsigs.sml Texsigs.ui Database.uo
+	HOLMOSMLC -c Texsigs.sml
+
+Stack.uo: Stack.sml Stack.ui
+	HOLMOSMLC -c Stack.sml
+
+Printbase.uo: Database.uo Printbase.sml
+	HOLMOSMLC -c Printbase.sml
+
+Parsspec.uo: Asynt.uo Parser.uo Lexer.uo Database.uo Parsspec.sml
+	HOLMOSMLC -c Parsspec.sml
+
+Htmlsigs.uo: Database.uo Htmlsigs.ui Htmlsigs.sml
+	HOLMOSMLC -c Htmlsigs.sml
+
+Database.uo: Database.sml Database.ui
+	HOLMOSMLC -c Database.sml
+
+Lexer.sml: Lexer.lex
+	HOLMOSMLLEX Lexer.lex
+
+Parser.sml: Parser.grm
+	HOLMOSMLYAC Parser.grm

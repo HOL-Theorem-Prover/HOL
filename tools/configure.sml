@@ -13,8 +13,8 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir = 
-val holdir   = 
+val mosmldir = "/home/kxs/200";
+val holdir   = "/home/kxs/kanan";
 
 val OS       = "linux";   (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
@@ -68,9 +68,11 @@ val SRCDIRS =
   "src/finite_map", "src/hol88", "src/real", "src/bag", "src/ring/src",
   "src/temporal/src", "src/temporal/smv.2.4.3", "src/prob"]
   @
-  (if OS="linux" orelse OS="solaris"
-   then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
-   else []);
+   (if OS="linux" orelse OS="solaris"
+    then ["src/muddy/muddyC", "src/muddy", "src/HolBdd"]
+    else [])
+  @
+   ["help/src"];
 
 (*---------------------------------------------------------------------------
           String and path operations.
@@ -397,39 +399,19 @@ val _ =
   end;
 
 (*---------------------------------------------------------------------------
-    Configure the help database.
+           Configure the help database
  ---------------------------------------------------------------------------*)
 
-val _ = print "Building help database\n";
-
 val _ =
- let val dir_0    = FileSys.getDir()
-     val dir_1    = fullPath [holdir, "tools", "helpdb"]
-     val compiler = fullPath [mosmldir, "bin/mosmlc"]
-     val lexer    = fullPath [mosmldir, "bin/mosmllex"]
-     val yaccer   = fullPath [mosmldir, "bin/mosmlyac"]
-     val binary   = fullPath [dir_1,    "build_db"]
-     val text     = fullPath [dir_1,    "textdb"]
-     val dbase    = fullPath [holdir, "help", "HOLdbase"]
+ let val _ = echo "Setting up the help Makefile."
+     val src    = fullPath [holdir, "tools", "Holmakefile.help.src"]
+     val target = fullPath [holdir, "help", "src", "Holmakefile"]
+     val lexer  = fullPath [mosmldir, "bin/mosmllex"]
+     val yaker  = fullPath [mosmldir, "bin/mosmlyac"]
  in
-   if not (FileSys.access (text, [FileSys.A_READ]))
-     then (print "No text database for help system found!\n";
-           print "We assume you know what you're doing.\n")
-     else
-       (FileSys.chDir dir_1;
-        systeml [compiler, "-c", "Database.sig"];
-        systeml [compiler, "-c", "Database.sml"];
-        systeml [lexer,          "DBtokens.lex"];
-        systeml [yaccer,         "DBparse.grm"];
-        systeml [compiler, "-c", "DBparse.sig"];
-        systeml [compiler, "-c", "DBparse.sml"];
-        systeml [compiler, "-c", "DBtokens.sig"];
-        systeml [compiler, "-c", "DBtokens.sml"];
-        systeml [compiler, "-c", "build_db.sml"];
-        systeml [compiler, "-o", binary, "build_db.uo"];
-        mk_xable binary;
-        systeml [binary, text, dbase];
-        FileSys.chDir dir_0)
+  fill_holes (src,target)
+   ["\tHOLMOSMLLEX Lexer.lex\n"  --> String.concat["\t",lexer," Lexer.lex\n"],
+    "\tHOLMOSMLYAC Parser.grm\n" --> String.concat["\t",yaker," Parser.grm\n"]]
  end;
 
 val _ = print "\nFinished configuration!\n";

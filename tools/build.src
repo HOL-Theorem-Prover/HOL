@@ -155,9 +155,32 @@ fun clean_sigobj() =
      map_dir (rem_file o normPath o Path.concat) SIGOBJ
   end;
 
+
+fun build_help () =
+ let val dir = Path.concat(Path.concat (HOLDIR,"help"),"src")
+     val _ = FileSys.chDir dir
+     val _ = print ("Working in directory "^dir^"\n");
+     val _ = build_dir dir
+     val doc2html = fullPath [dir,"Doc2Html"]
+     val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
+     val htmlpath = fullPath [docpath, "html"]
+     val cmd1     = String.concat [doc2html, " ",docpath, " ", htmlpath]
+     val cmd2     = fullPath [dir,"makebase"]
+ in
+   if Process.system cmd1 = Process.success then ()
+   else (print ("Build failed in directory "^dir^"\n");
+        raise Fail "Couldn't make html versions of Docfiles")
+ ;
+   if Process.system cmd2 = Process.success then ()
+   else (print ("Build failed in directory "^dir^"\n");
+        raise Fail "Couldn't make help database")
+ end;
+
+
 fun build_hol symlink =
   let val _ = clean_sigobj()
       val _ = build_src symlink
+      val _ = build_help()
   in
     print "\nHol built successfully.\n"
   end;
@@ -226,6 +249,7 @@ val _ =
     | [_,"-symlink"]  => build_hol true  (*    symbolic linking *)
     | [_,"-clean"]    => clean_dirs cleandir
     | [_,"-cleanAll"] => clean_dirs cleanAlldir
-    | [_,"clean"]    => clean_dirs cleandir
-    | [_,"cleanAll"] => clean_dirs cleanAlldir
+    | [_,"clean"]     => clean_dirs cleandir
+    | [_,"cleanAll"]  => clean_dirs cleanAlldir
+    | [_,"help"]      => build_help()
     |     _           => errmsg help_mesg
