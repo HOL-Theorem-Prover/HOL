@@ -139,14 +139,14 @@ val ORvDef =
 (* Abstract delay element                                                    *)
 (*****************************************************************************)
 val DELvDef =
-"// Abstract delay, transparent on intialisation\n\
+"// Abstract delay, initialises outputting 0\n\
 \module DEL (inp,out);\n\
 \ parameter size = 31;\n\
 \ input  [size:0] inp;\n\
 \ output [size:0] out;\n\
 \ reg    [size:0] out;\n\
 \\n\
-\ initial out = inp;\n\
+\ initial out = 0;\n\
 \\n\
 \ always  out = #1 inp;\n\
 \\n\
@@ -157,13 +157,15 @@ val DELvDef =
 (* Abstract edge-triggered clocked flipflop                                  *)
 (*****************************************************************************)
 val DFFvDef =
-"// Abstract edge triggered flipflop\n\
+"// Abstract edge triggered flipflop, initialises with 0\n\
 \module DFF (d,clk,q);\n\
 \ parameter size = 31;\n\
 \ input clk;\n\
 \ input  [size:0] d;\n\
 \ output [size:0] q;\n\
 \ reg    [size:0] q;\n\
+\\n\
+\ initial q = 0;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
@@ -181,6 +183,8 @@ val DtypevDef =
 \ input  [size:0] d;\n\
 \ output [size:0] q;\n\
 \ reg    [size:0] q;\n\
+\\n\
+\ initial q = 0;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
