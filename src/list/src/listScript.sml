@@ -32,7 +32,7 @@ val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 (*---------------------------------------------------------------------------
  * Open structures used in the body.
  *---------------------------------------------------------------------------*)
-open HolKernel Parse basicHol90Lib Num_conv ConstrProofs;
+open HolKernel Parse basicHol90Lib Num_conv ;
 infix THEN ORELSE THENL THENC ORELSEC  |->;
 
 type thm = Thm.thm;
@@ -393,11 +393,10 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 val list_CASES = save_thm("list_CASES", prove_cases_thm list_INDUCT);
 
 (* CONS11:  |- !h t h' t'. (CONS h t = CONS h' t') = (h = h') /\ (t = t') *)
-val CONS_11 = save_thm("CONS_11",
-   ConstrProofs.prove_constructors_one_one list_Axiom);
+val CONS_11 = save_thm("CONS_11", prove_constructors_one_one list_Axiom);
 
 val NOT_NIL_CONS = save_thm("NOT_NIL_CONS",
-   ConstrProofs.prove_constructors_distinct list_Axiom);
+                            prove_constructors_distinct list_Axiom);
 
 val NOT_CONS_NIL = save_thm("NOT_CONS_NIL",
    CONV_RULE(ONCE_DEPTH_CONV SYM_CONV) NOT_NIL_CONS);
@@ -556,14 +555,14 @@ val _ = adjoin_to_theory
 val WF_LIST_PRED = store_thm("WF_LIST_PRED",
 Term`WF \L1 L2. ?h:'a. L2 = CONS h L1`,
 REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
-  THEN CONV_TAC CONTRAPOS_CONV 
+  THEN CONV_TAC CONTRAPOS_CONV
   THEN Ho_rewrite.REWRITE_TAC
          [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
   THEN REWRITE_TAC [GSYM IMP_DISJ_THM] THEN STRIP_TAC
-  THEN LIST_INDUCT_TAC THENL [ALL_TAC,GEN_TAC] 
+  THEN LIST_INDUCT_TAC THENL [ALL_TAC,GEN_TAC]
   THEN STRIP_TAC THEN RES_TAC
   THEN RULE_ASSUM_TAC(REWRITE_RULE[NOT_NIL_CONS,CONS_11])
-  THENL [FIRST_ASSUM ACCEPT_TAC, 
+  THENL [FIRST_ASSUM ACCEPT_TAC,
          PAT_ASSUM (Term`x /\ y`) (SUBST_ALL_TAC o CONJUNCT2) THEN RES_TAC]);
 
 val _ = export_theory();

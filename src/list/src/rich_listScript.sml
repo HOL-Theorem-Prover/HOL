@@ -22,7 +22,7 @@ struct
 local open operatorTheory listTheory in end;
 
 open HolKernel Parse basicHol90Lib Num_conv Num_induct Let_conv
-     Prim_rec Type_def_support ConstrProofs;
+     Prim_rec Type_def_support ;
 
 infix THEN THENL ORELSE;
 type thm = Thm.thm
@@ -41,8 +41,8 @@ fun new_list_rec_definition (name,tm) =
 
 fun chk_var vl v = (is_var v andalso (mem v vl)) ;
 
-val FORALL_PERM_CONV = 
-  let val forall_perm_rule = 
+val FORALL_PERM_CONV =
+  let val forall_perm_rule =
               fn tms => fn thm => GENL tms (SPEC_ALL thm)
   in
    fn tms => fn tm =>
@@ -55,12 +55,12 @@ val FORALL_PERM_CONV =
              in IMP_ANTISYM_RULE th1 th2
              end
         else raise HOL_ERR{origin_structure = "",
-                           origin_function = "FORALL_PERM_CONV", 
+                           origin_function = "FORALL_PERM_CONV",
                            message = "not all variables are quantified"}
      end
   end;
 
-val FORALL_PERM_TAC = 
+val FORALL_PERM_TAC =
   fn tms => fn (asm,gl) =>
     CONV_TAC (FORALL_PERM_CONV tms) (asm,gl);
 
@@ -206,11 +206,11 @@ val num_CONV = Num_conv.num_CONV;
 (* Definitions of NULL, HD and TL.					 *)
 (* --------------------------------------------------------------------- *)
 
-val NULL_DEF = store_thm("NULL_DEF", 
---`(NULL ([]:'a list) = T) /\ 
+val NULL_DEF = store_thm("NULL_DEF",
+--`(NULL ([]:'a list) = T) /\
    !(x:'a) l. NULL (CONS x l) = F`--,
  REWRITE_TAC[listTheory.NULL_DEF]);
- 
+
 val HD = store_thm("HD",   --`!(x:'a) l. HD (CONS x l) = x`--,
    REWRITE_TAC[listTheory.HD]);
 
@@ -290,7 +290,7 @@ val REVERSE = new_list_rec_definition ("REVERSE",
 (*  	 [x0;...;xn-1;x'0;...;x'm-1] 				*)
 (*--------------------------------------------------------------*)
 
-val APPEND = store_thm("APPEND", 
+val APPEND = store_thm("APPEND",
   --`(!l:'a list.    APPEND [] l = l) /\
      (!l1 l2 (x:'a). APPEND (CONS x l1) l2 = CONS x (APPEND l1 l2))`--,
   REWRITE_TAC[listTheory.APPEND]);
@@ -302,8 +302,8 @@ val APPEND = store_thm("APPEND",
 (*		[x00;...;x0n-1;...;xp-10;...;xp-1n-1]		*)
 (*--------------------------------------------------------------*)
 
-val FLAT = store_thm("FLAT", 
- --`((FLAT:'a list list -> 'a list) [] = []) /\ 
+val FLAT = store_thm("FLAT",
+ --`((FLAT:'a list list -> 'a list) [] = []) /\
     (!(x:'a list) l. FLAT (CONS x l) = APPEND x (FLAT l))`--,
  REWRITE_TAC[listTheory.FLAT]);
 
@@ -313,8 +313,8 @@ val FLAT = store_thm("FLAT",
 (*  LENGTH [x0;...;xn-1] = n	    				*)
 (*--------------------------------------------------------------*)
 
-val LENGTH = store_thm("LENGTH", 
- --`(           LENGTH ([]:'a list) = 0) /\ 
+val LENGTH = store_thm("LENGTH",
+ --`(           LENGTH ([]:'a list) = 0) /\
     (!(x:'a) l. LENGTH (CONS x l) = SUC (LENGTH l))`--,
  REWRITE_TAC[listTheory.LENGTH]);
 
@@ -324,8 +324,8 @@ val LENGTH = store_thm("LENGTH",
 (*  MAP f [x0;...;xn-1] = [f x0;...; f xn-1]			*)
 (*--------------------------------------------------------------*)
 
-val MAP = store_thm("MAP", 
- --`(!(f:'a -> 'b). MAP f [] = []) /\ 
+val MAP = store_thm("MAP",
+ --`(!(f:'a -> 'b). MAP f [] = []) /\
     (!f (x:'a) l. MAP f (CONS x l) = CONS ((f x):'b) (MAP f l))`--,
  REWRITE_TAC[listTheory.MAP]);
 
@@ -343,7 +343,7 @@ val MAP = store_thm("MAP",
 (* [TFM 92.04.21]							*)
 (* ---------------------------------------------------------------------*)
 
-val MAP2 = store_thm("MAP2", 
+val MAP2 = store_thm("MAP2",
  --`(!(f:'a->'b->'c). MAP2 f [] [] = []) /\
     (!(f:'a->'b->'c) x1 l1 x2 l2.
        MAP2 f(CONS x1 l1)(CONS x2 l2) = CONS(f x1 x2)(MAP2 f l1 l2))`--,
@@ -358,7 +358,7 @@ val MAP2 = store_thm("MAP2",
 (* Same as "EVERY" in "list" theory *)
 val ALL_EL = new_recursive_definition
       {name = "ALL_EL",
-       fixity = Prefix, 
+       fixity = Prefix,
        rec_axiom = list_Axiom,
        def = --`(!P:'a->bool. ALL_EL P NIL = T)  /\
                 (!P x l. ALL_EL P (CONS x l) = (P x /\ ALL_EL P l))`--};
@@ -437,7 +437,7 @@ val BUTFIRSTN =
 (*- Spec:    	    	    	    				-*)
 (*- 	SEG m k [x0,...xk,...xk+m-1,...,xn] = [xk,...,xk+m-1]   -*)
 (*----------------------------------------------------------------*)
-val SEG = 
+val SEG =
     let val SEG_exists = prove(
     (--`?SEG. (!k (l:'a list). SEG 0 k l = []) /\
        (!m x l. SEG (SUC m) 0 (CONS x l) = CONS x (SEG m 0 l)) /\
@@ -505,7 +505,7 @@ val LASTN =
                      }
    end;
 
-val BUTLASTN = 
+val BUTLASTN =
     let val thm1 = prove_rec_fn_exists num_Axiom
     	(--`(butlastn 0 l = (l:('a)list)) /\
          (butlastn (SUC n) l = butlastn n (BUTLAST l))`--)
@@ -529,14 +529,14 @@ val BUTLASTN =
 (*--------------------------------------------------------------*)
 
 
-val EL = store_thm("EL", 
+val EL = store_thm("EL",
 --`(!l:'a list. EL 0 l = HD l) /\
    (!n (l:'a list). EL (SUC n) l = EL n (TL l))`--,
   REWRITE_TAC[listTheory.EL]);
 
 val ELL = new_recursive_definition
       {name = "ELL",
-       fixity = Prefix, 
+       fixity = Prefix,
        rec_axiom = num_Axiom,
        def = --`(!l:'a list. ELL 0 (l:'a list) = LAST l) /\
                 (!l:'a list. ELL (SUC n) l = ELL n (BUTLAST l))`--};
@@ -568,7 +568,7 @@ val IS_PREFIX =
 	    (x1 = x2) /\ (fn l1 l2))`--),
         let val th = prove_rec_fn_exists list_Axiom
     	    (--`(fn l [] = T) /\
-    	     (fn (l:'a list) (CONS x t) = 
+    	     (fn (l:'a list) (CONS x t) =
     	    	((NULL l) => F | (((HD l) = x) /\ (fn (TL l) t))))`--)
         in
     	STRIP_ASSUME_TAC th THEN EXISTS_TAC (--`fn:'a list -> 'a list -> bool`--)
@@ -708,7 +708,7 @@ val IS_SUBLIST =
 
 val SPLITP = new_recursive_definition
       {name = "SPLITP",
-       fixity = Prefix, 
+       fixity = Prefix,
        rec_axiom = list_Axiom,
        def = --`(!P. SPLITP P [] = ([],[])) /\
                 (!P x l. SPLITP P (CONS (x:'a) l) =
@@ -730,7 +730,7 @@ val SUFFIX_DEF = new_definition("SUFFIX_DEF",
 (*  UNZIP_SND [(x0,y0;...;(xn-1,yn-1)] = [y0;...;yn-1] 		*)
 (*--------------------------------------------------------------*)
 
-val ZIP = 
+val ZIP =
     let val lemma = prove(
     (--`?ZIP. (ZIP ([], []) = []) /\
        (!(x1:'a) l1 (x2:'b) l2.
@@ -755,7 +755,7 @@ val ZIP =
 
 val UNZIP = new_list_rec_definition("UNZIP",
     (--`(UNZIP [] = ([], [])) /\
-     (!x l. UNZIP (CONS (x:'a # 'b) l) = 
+     (!x l. UNZIP (CONS (x:'a # 'b) l) =
 	(CONS (FST x) (FST (UNZIP l)),
          CONS (SND x) (SND (UNZIP l))))`--));
 
@@ -776,7 +776,7 @@ val UNZIP_SND_DEF = new_definition("UNZIP_SND_DEF",
 (*  SUM [x0;...;xn-1] = x0 + ... + xn-1				*)
 (*--------------------------------------------------------------*)
 
-val SUM = store_thm("SUM", 
+val SUM = store_thm("SUM",
 --`(SUM [] = 0) /\ (!x l. SUM (CONS x l) = x + SUM l)`--,
  REWRITE_TAC[listTheory.SUM]);
 
@@ -811,17 +811,17 @@ val NULL = store_thm ("NULL",
    REWRITE_TAC [listTheory.NULL]);
 
 
-val list_CASES = store_thm ("list_CASES", 
+val list_CASES = store_thm ("list_CASES",
  --`!l:'a list. (l = []) \/ (?l' x. l = CONS x l')`--,
    REWRITE_TAC[listTheory.list_CASES]);
 
 
-val CONS_11 = store_thm("CONS_11", 
+val CONS_11 = store_thm("CONS_11",
  --`!(x:'a) l x' l'. (CONS x l = CONS x' l') = (x = x') /\ (l = l')`--,
  REWRITE_TAC[listTheory.CONS_11]);
 
 
-val NOT_NIL_CONS = store_thm("NOT_NIL_CONS", 
+val NOT_NIL_CONS = store_thm("NOT_NIL_CONS",
  --`!(x:'a) l. ~([] = CONS x l)`--,
  REWRITE_TAC[listTheory.NOT_NIL_CONS]);
 
@@ -860,10 +860,10 @@ val MAP_APPEND = save_thm("MAP_APPEND", listTheory.MAP_APPEND);
 (*    LENGTH_MAP |- !l f. LENGTH (MAP f l) = LENGTH l *)
 val LENGTH_MAP = save_thm("LENGTH_MAP", listTheory.LENGTH_MAP);
 
-(* Deleted by Paul Curzon, for some reason 
+(* Deleted by Paul Curzon, for some reason
  * (*    EVERY_EL |- !l P. EVERY P l = (!n. n < LENGTH l ==> P (EL n l)) *)
  * val EVERY_EL = save_thm("EVERY_EL", listTheory.EVERY_EL);
- * 
+ *
  * (*    EVERY_CONJ |- !l. EVERY (\x. P x /\ Q x) l = EVERY P l /\ EVERY Q l *)
  * val EVERY_CONJ = save_thm("EVERY_CONJ", listTheory.EVERY_CONJ);
  *****************************************************************************)
@@ -872,14 +872,14 @@ val LENGTH_MAP = save_thm("LENGTH_MAP", listTheory.LENGTH_MAP);
 val LENGTH_NIL = save_thm("LENGTH_NIL", listTheory.LENGTH_NIL);
 
 val LENGTH_CONS = store_thm("LENGTH_CONS",
- --`!l n. (LENGTH l = SUC n) = 
-          ?x:'a. ?l'. (LENGTH l' = n) /\ (l = CONS x l')`--, 
+ --`!l n. (LENGTH l = SUC n) =
+          ?x:'a. ?l'. (LENGTH l' = n) /\ (l = CONS x l')`--,
  REWRITE_TAC[listTheory.LENGTH_CONS]);
 
 (*
 val LENGTH_EQ_SUC = store_thm("LENGTH_EQ_SUC",
- --`!(P:'a list->bool)  (n:num). 
-      (!l. (LENGTH l = SUC n) ==> P l) =  
+ --`!(P:'a list->bool)  (n:num).
+      (!l. (LENGTH l = SUC n) ==> P l) =
       (!l. (LENGTH l = n) ==> (\l. !x:'a. P (CONS x l)) l)`--,
     CONV_TAC (ONCE_DEPTH_CONV BETA_CONV) THEN
     REPEAT GEN_TAC THEN EQ_TAC THENL
@@ -892,7 +892,7 @@ val LENGTH_EQ_SUC = store_thm("LENGTH_EQ_SUC",
       REPEAT STRIP_TAC THEN RES_THEN MATCH_ACCEPT_TAC]]);
 *)
 
-(* val LENGTH_EQ_CONS = save_thm("LENGTH_EQ_CONS", 
+(* val LENGTH_EQ_CONS = save_thm("LENGTH_EQ_CONS",
                               listTheory.LENGTH_EQ_CONS);
 *)
 
@@ -1108,7 +1108,7 @@ val FILTER_FOLDR = store_thm("FILTER_FOLDR",
     THEN CONV_TAC (DEPTH_CONV BETA_CONV) THEN ASM_REWRITE_TAC[]);
 
 val FILTER_SNOC = store_thm("FILTER_SNOC",
-    (--`!P (x:'a) l. FILTER P (SNOC x l) = 
+    (--`!P (x:'a) l. FILTER P (SNOC x l) =
     	(P x => SNOC x (FILTER P l) | FILTER P l)`--),
     GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[FILTER,SNOC]
@@ -1147,7 +1147,7 @@ val LENGTH_SEG = store_thm("LENGTH_SEG",
       REWRITE_TAC[SEG,LENGTH],
       LIST_INDUCT_TAC THENL[
     	REWRITE_TAC[LENGTH,ADD_0,LESS_OR_EQ,NOT_SUC,NOT_LESS_0],
-        REWRITE_TAC[SEG,LENGTH,ADD,LESS_EQ_MONO,INV_SUC_EQ] 
+        REWRITE_TAC[SEG,LENGTH,ADD,LESS_EQ_MONO,INV_SUC_EQ]
     	THEN FIRST_ASSUM (MATCH_ACCEPT_TAC o (SPEC (--`0`--)))],
       LIST_INDUCT_TAC THENL[
     	REWRITE_TAC[LENGTH,ADD,LESS_OR_EQ,NOT_SUC,NOT_LESS_0],
@@ -1229,7 +1229,7 @@ val APPEND_LENGTH_EQ = store_thm("APPEND_LENGTH_EQ",
     	LIST_INDUCT_TAC THEN ASM_REWRITE_TAC [APPEND,CONS_11])
     and EQ_LENGTH_INDUCT_TAC =
     	LIST_INDUCT_TAC THENL[
-         LIST_INDUCT_TAC THENL[ 
+         LIST_INDUCT_TAC THENL[
     	  REPEAT (CONV_TAC FORALL_IMP_CONV) THEN DISCH_THEN (fn t => ALL_TAC),
           REWRITE_TAC[LENGTH,SUC_NOT]],
     	 GEN_TAC THEN LIST_INDUCT_TAC
@@ -1377,7 +1377,7 @@ val IS_PREFIX_APPEND = store_thm("IS_PREFIX_APPEND",
     LIST_INDUCT_TAC THENL[
      LIST_INDUCT_TAC THENL[
       REWRITE_TAC[IS_PREFIX,APPEND]
-      THEN EXISTS_TAC (--`[]:'a list`--) THEN REFL_TAC, 
+      THEN EXISTS_TAC (--`[]:'a list`--) THEN REFL_TAC,
       REWRITE_TAC[IS_PREFIX,APPEND,GSYM NOT_CONS_NIL]],
      GEN_TAC THEN LIST_INDUCT_TAC THENL[
       REWRITE_TAC[IS_PREFIX,APPEND]
@@ -1420,15 +1420,15 @@ val IS_SUBLIST_APPEND = store_thm("IS_SUBLIST_APPEND",
 (* **list_Axiom** variable dependancy *)
 (*     	THEN MAP_EVERY EXISTS_TAC [(--`[h]:'a list`--), (--`l1:'a list`--)] *)
         THEN MATCH_ACCEPT_TAC CONS_APPEND,
-    	GEN_TAC THEN REWRITE_TAC[IS_SUBLIST] THEN EQ_TAC 
+    	GEN_TAC THEN REWRITE_TAC[IS_SUBLIST] THEN EQ_TAC
         THEN ONCE_ASM_REWRITE_TAC[IS_PREFIX_APPEND] THENL[
     	  STRIP_TAC THENL[
     	    MAP_EVERY EXISTS_TAC [(--`[]:'a list`--), (--`l:'a list`--)]
     	    THEN ASM_REWRITE_TAC[APPEND],
-    	    MAP_EVERY EXISTS_TAC [(--`(CONS x l):'a list`--), 
+    	    MAP_EVERY EXISTS_TAC [(--`(CONS x l):'a list`--),
                                   (--`l':'a list`--)]
 (* **list_Axiom** variable dependancy *)
-(*    	    MAP_EVERY EXISTS_TAC [(--`(CONS h l):'a list`--), 
+(*    	    MAP_EVERY EXISTS_TAC [(--`(CONS h l):'a list`--),
                                   (--`l':'a list`--)] *)
     	    THEN ONCE_ASM_REWRITE_TAC[APPEND] THEN REFL_TAC],
           CONV_TAC LEFT_IMP_EXISTS_CONV THEN LIST_INDUCT_TAC THENL[
@@ -1480,7 +1480,7 @@ val IS_PREFIX_REVERSE = store_thm("IS_PREFIX_REVERSE",
 val IS_SUFFIX_REVERSE = save_thm("IS_SUFFIX_REVERSE",
  (* `!l1 l2:'a list. IS_SUFFIX (REVERSE l1) (REVERSE l2) = IS_PREFIX l1 l2` *)
     GEN_ALL(SYM (REWRITE_RULE[REVERSE_REVERSE]
-    (SPECL [(--`REVERSE(l1:'a list)`--), (--`REVERSE(l2:'a list)`--)] 
+    (SPECL [(--`REVERSE(l1:'a list)`--), (--`REVERSE(l2:'a list)`--)]
            IS_PREFIX_REVERSE))));
 
 val IS_SUBLIST_REVERSE = store_thm("IS_SUBLIST_REVERSE",
@@ -1557,7 +1557,7 @@ val COMM_MONOID_FOLDR = store_thm("COMM_MONOID_FOLDR",
                 let val th_assoc = CONJUNCT1 th_assoc_etc
     	    	    val th_ident = CONJUNCT2(CONJUNCT2 th_assoc_etc)
                 in
-            	GEN_TAC THEN LIST_INDUCT_TAC 
+            	GEN_TAC THEN LIST_INDUCT_TAC
     	        THEN PURE_ONCE_REWRITE_TAC[FOLDR] THENL[
                  PURE_ONCE_REWRITE_TAC[th_sym]
     	         THEN MATCH_ACCEPT_TAC (GSYM th_ident),
@@ -1570,10 +1570,10 @@ val COMM_MONOID_FOLDR = store_thm("COMM_MONOID_FOLDR",
 
 
 val FCOMM_FOLDR_APPEND = store_thm("FCOMM_FOLDR_APPEND",
---`!(g:'a->'a->'a) (f:'b->'a->'a). 
-   FCOMM g f 
-   ==> !e. LEFT_ID g e 
-       ==> !l1 l2. FOLDR f e (APPEND l1 l2) 
+--`!(g:'a->'a->'a) (f:'b->'a->'a).
+   FCOMM g f
+   ==> !e. LEFT_ID g e
+       ==> !l1 l2. FOLDR f e (APPEND l1 l2)
                  = g (FOLDR f e l1) (FOLDR f e l2)`--,
     REWRITE_TAC[FCOMM_DEF,LEFT_ID_DEF] THEN REPEAT GEN_TAC
     THEN REPEAT DISCH_TAC THEN GEN_TAC THEN DISCH_TAC
@@ -1621,39 +1621,39 @@ val FOLDL_SNOC_NIL = store_thm("FOLDL_SNOC_NIL",
     THEN BETA_TAC THEN REWRITE_TAC[]);
 
 val FOLDR_FOLDL_REVERSE = store_thm("FOLDR_FOLDL_REVERSE",
-    (--`!(f:'a->'b->'b) e l. 
+    (--`!(f:'a->'b->'b) e l.
        FOLDR f e l = FOLDL (\x y. f y x) e (REVERSE l)`--),
     GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[FOLDR,FOLDL,REVERSE,FOLDL_SNOC]
     THEN BETA_TAC THEN REWRITE_TAC[]);
 
 val FOLDL_FOLDR_REVERSE = store_thm("FOLDL_FOLDR_REVERSE",
-    (--`!(f:'a->'b->'a) e l. 
+    (--`!(f:'a->'b->'a) e l.
        FOLDL f e l = FOLDR (\x y. f y x) e (REVERSE l)`--),
     GEN_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
     THEN ASM_REWRITE_TAC[REVERSE,FOLDR,FOLDL,REVERSE_SNOC,FOLDR_SNOC]
     THEN BETA_TAC THEN ASM_REWRITE_TAC[FOLDL_SNOC]);
 
 val FOLDR_REVERSE = store_thm("FOLDR_REVERSE",
-    (--`!(f:'a->'b->'b) e l. 
+    (--`!(f:'a->'b->'b) e l.
        FOLDR f e (REVERSE l) = FOLDL (\x y. f y x) e l`--),
     REWRITE_TAC[FOLDR_FOLDL_REVERSE,REVERSE_REVERSE]);
 
 val FOLDL_REVERSE = store_thm("FOLDL_REVERSE",
-    (--`!(f:'a->'b->'a) e l. 
+    (--`!(f:'a->'b->'a) e l.
        FOLDL f e (REVERSE l) = FOLDR (\x y. f y x) e l`--),
     REWRITE_TAC[FOLDL_FOLDR_REVERSE,REVERSE_REVERSE]);
 
 
 val FOLDR_MAP = store_thm("FOLDR_MAP",
-    (--`!(f:'a->'a->'a) e (g:'b ->'a) l. 
+    (--`!(f:'a->'a->'a) e (g:'b ->'a) l.
        FOLDR f e (MAP g l) = FOLDR (\x y. f (g x) y) e l`--),
     GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[FOLDL,MAP,FOLDR] THEN BETA_TAC
     THEN REWRITE_TAC[]);
 
 val FOLDL_MAP = store_thm("FOLDL_MAP",
-    (--`!(f:'a->'a->'a) e (g:'b ->'a) l. 
+    (--`!(f:'a->'a->'a) e (g:'b ->'a) l.
        FOLDL f e (MAP g l) = FOLDL (\x y. f x (g y)) e l`--),
     GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
     THEN ASM_REWRITE_TAC[MAP,FOLDL,FOLDL_SNOC,MAP_SNOC,FOLDR]
@@ -1703,14 +1703,14 @@ val SOME_EL_FOLDL_MAP = store_thm("SOME_EL_FOLDL_MAP",
 
 
 val FOLDR_FILTER = store_thm("FOLDR_FILTER",
-    (--`!(f:'a->'a->'a) e (P:'a -> bool) l. 
+    (--`!(f:'a->'a->'a) e (P:'a -> bool) l.
        FOLDR f e (FILTER P l) = FOLDR (\x y. P x => f x y  | y) e l`--),
     GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[FOLDL, FILTER, FOLDR] THEN BETA_TAC
     THEN GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[FOLDR]);
 
 val FOLDL_FILTER = store_thm("FOLDL_FILTER",
-    (--`!(f:'a->'a->'a) e (P:'a -> bool) l. 
+    (--`!(f:'a->'a->'a) e (P:'a -> bool) l.
        FOLDL f e (FILTER P l) = FOLDL (\x y. P y => f x y | x) e l`--),
      GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
      THEN ASM_REWRITE_TAC[FOLDL,FOLDR_SNOC,FOLDL_SNOC,FILTER,FOLDR,FILTER_SNOC]
@@ -1931,7 +1931,7 @@ val BUTLASTN_BUTLAST = store_thm("BUTLASTN_BUTLAST",
     THEN RES_TAC);
 
 val LENGTH_BUTLASTN = store_thm("LENGTH_BUTLASTN",
-    (--`!n (l:('a)list). (n <= LENGTH l) ==> 
+    (--`!n (l:('a)list). (n <= LENGTH l) ==>
      (LENGTH (BUTLASTN n l) = LENGTH l - n)`--),
     INDUCT_TAC THEN SNOC_INDUCT_TAC
     THEN REWRITE_TAC[BUTLASTN,SUB_0] THENL[
@@ -1965,7 +1965,7 @@ val APPEND_BUTLASTN_LASTN = store_thm ("APPEND_BUTLASTN_LASTN",
 
 
 val APPEND_FIRSTN_LASTN = store_thm("APPEND_FIRSTN_LASTN",
-  (--`!m n (l:'a list). ((m + n) = (LENGTH l)) ==> 
+  (--`!m n (l:'a list). ((m + n) = (LENGTH l)) ==>
          (APPEND (FIRSTN n l) (LASTN m l) = l)`--),
     let val ADD_EQ_LESS_EQ = prove((--`!m n p. ((n + m) = p) ==> (m <= p)`--),
       REPEAT GEN_TAC THEN DISCH_THEN (SUBST1_TAC o SYM)
@@ -2010,7 +2010,7 @@ val LASTN_LENGTH_APPEND = store_thm("LASTN_LENGTH_APPEND",
     THEN ASM_REWRITE_TAC[BUTLAST,LAST,SNOC_APPEND]);
 
 val BUTLASTN_CONS = store_thm("BUTLASTN_CONS",
-    (--`!n l. (n <= (LENGTH l)) ==> 
+    (--`!n l. (n <= (LENGTH l)) ==>
      (!x:'a. BUTLASTN n(CONS x l) = CONS x(BUTLASTN n l))`--),
     INDUCT_TAC THEN SNOC_INDUCT_TAC
     THEN REWRITE_TAC[LENGTH,NOT_SUC_LESS_EQ_0,BUTLASTN,GSYM(CONJUNCT2 SNOC)]
@@ -2018,7 +2018,7 @@ val BUTLASTN_CONS = store_thm("BUTLASTN_CONS",
 
 (*  |- !l x. BUTLASTN(LENGTH l)(CONS x l) = [x] *)
 val BUTLASTN_LENGTH_CONS = save_thm("BUTLASTN_LENGTH_CONS",
-    let val thm1 = 
+    let val thm1 =
      SPECL [(--`LENGTH (l:'a list)`--),(--`l:'a list`--)] BUTLASTN_CONS
     in
     GEN_ALL(REWRITE_RULE[LESS_EQ_REFL,BUTLASTN_LENGTH_NIL] thm1)
@@ -2040,7 +2040,7 @@ val BUTLASTN_LASTN_NIL = store_thm("BUTLASTN_LASTN_NIL",
 val LASTN_BUTLASTN = store_thm("LASTN_BUTLASTN",
     (--`!n m. !l:'a list. ((n + m) <= LENGTH l) ==>
      (LASTN n (BUTLASTN m l) = BUTLASTN m (LASTN (n + m) l))`--),
-    let val ADD_SUC_SYM = GEN_ALL (SYM (TRANS 
+    let val ADD_SUC_SYM = GEN_ALL (SYM (TRANS
     	(SPEC_ALL(CONJUNCT2 ADD)) (SPEC_ALL ADD_SUC)))
     in
     REPEAT INDUCT_TAC THEN SNOC_INDUCT_TAC
@@ -2204,10 +2204,10 @@ val LASTN_SEG = store_thm("LASTN_SEG",
        prove((--`!k m. (m < k) ==> (k - m = SUC (k - SUC m))`--),
       REPEAT GEN_TAC THEN
       SUBST_TAC[SYM(SPECL[(--`k:num`--),(--`m:num`--)]SUB_MONO_EQ)]
-      THEN DISCH_THEN (fn thm =>  
+      THEN DISCH_THEN (fn thm =>
                let val thm' = MATCH_MP  LESS_SUC_NOT thm
                in
-               ACCEPT_TAC (REWRITE_RULE [thm'] 
+               ACCEPT_TAC (REWRITE_RULE [thm']
                       (SPECL [(--`k:num`--),(--`SUC m`--)] (CONJUNCT2 SUB)))
                end))
     in
@@ -2221,7 +2221,7 @@ val LASTN_SEG = store_thm("LASTN_SEG",
     	THEN FIRST_ASSUM ACCEPT_TAC,
     	FIRST_ASSUM SUBST1_TAC THEN REWRITE_TAC[SUB_EQUAL_0]
     	THEN SUBST1_TAC(SYM(SPECL[(--`x:'a`--),(--`l:'a list`--)]
-                                 (CONJUNCT2 LENGTH))) 
+                                 (CONJUNCT2 LENGTH)))
 (* **list_Axiom** variable dependancy *)
 (*    	THEN SUBST1_TAC(SYM(SPECL[(--`h:'a`--),(--`l:'a list`--)]
                                  (CONJUNCT2 LENGTH))) *)
@@ -2257,7 +2257,7 @@ val BUTFIRSTN_SNOC = store_thm("BUTFIRSTN_SNOC",
 val APPEND_BUTLASTN_BUTFIRSTN = store_thm("APPEND_BUTLASTN_BUTFIRSTN",
     (--`!m n (l:'a list). ((m + n) = (LENGTH l)) ==>
      (APPEND (BUTLASTN m l) (BUTFIRSTN n l) = l)`--),
-    let val ADD_EQ_LESS_EQ = 
+    let val ADD_EQ_LESS_EQ =
      prove((--`!m n p. ((m+n)=p) ==> (m<=p)`--),
       REPEAT STRIP_TAC THEN POP_ASSUM(ASSUME_TAC o SYM) THEN
       ASM_REWRITE_TAC[LESS_EQ_ADD])
@@ -2290,7 +2290,7 @@ val SEG_SEG = store_thm("SEG_SEG",
     (--`!n1 m1 n2 m2 (l:'a list).
      (((n1 + m1) <= (LENGTH l)) /\ ((n2 + m2) <= n1)) ==>
      (SEG n2 m2 (SEG n1 m1 l) = SEG n2 (m1 + m2) l)`--),
-    REPEAT INDUCT_TAC THEN LIST_INDUCT_TAC 
+    REPEAT INDUCT_TAC THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[LENGTH,SEG,NOT_LESS_0,NOT_SUC_LESS_EQ_0,ADD,ADD_0]
     THENL[
     	GEN_TAC THEN REWRITE_TAC[LESS_EQ_MONO,CONS_11]
@@ -2315,7 +2315,7 @@ val SEG_SEG = store_thm("SEG_SEG",
 val SEG_APPEND1 = store_thm("SEG_APPEND1",
     (--`!n m (l1:'a list). ((n + m) <= LENGTH l1) ==>
      (!l2. SEG n m (APPEND l1 l2) = SEG n m l1)`--),
-    REPEAT INDUCT_TAC THEN LIST_INDUCT_TAC 
+    REPEAT INDUCT_TAC THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[LENGTH,SEG,NOT_LESS_0,NOT_SUC_LESS_EQ_0,ADD,ADD_0]
     THEN GEN_TAC THEN REWRITE_TAC[LESS_EQ_MONO,APPEND,SEG,CONS_11] THENL[
     	DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC
@@ -2447,7 +2447,7 @@ val FCOMM_FOLDL_FLAT = store_thm("FCOMM_FOLDL_FLAT",
      (! e. RIGHT_ID g e ==>
        (!l. FOLDL f e (FLAT l) = FOLDL g e (MAP (FOLDL f e) l)))`--),
     GEN_TAC THEN GEN_TAC THEN DISCH_TAC THEN GEN_TAC
-    THEN DISCH_TAC THEN SNOC_INDUCT_TAC 
+    THEN DISCH_TAC THEN SNOC_INDUCT_TAC
     THEN ASM_REWRITE_TAC[FLAT_SNOC,MAP_SNOC,MAP,FLAT,FOLDL_SNOC,FOLDL]
     THEN IMP_RES_TAC FCOMM_FOLDL_APPEND THEN ASM_REWRITE_TAC[]);
 
@@ -2489,7 +2489,7 @@ val FOLDR_MAP_REVERSE = store_thm("FOLDR_MAP_REVERSE",
 val FOLDR_FILTER_REVERSE = store_thm("FOLDR_FILTER_REVERSE",
     (--`!(f:'a->'a->'a).
       (!a b c. f a (f b c) = f b (f a c)) ==>
-       (!e (P:'a->bool) l. 
+       (!e (P:'a->bool) l.
            FOLDR f e (FILTER P (REVERSE l)) = FOLDR f e (FILTER P l))`--),
     GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[REVERSE, FOLDR, FOLDR_SNOC,FILTER,FILTER_SNOC]
@@ -2524,7 +2524,7 @@ val COMM_ASSOC_LEM2 = prove(
     THEN REWRITE_TAC[]);
 
 val COMM_ASSOC_FOLDR_REVERSE = store_thm("COMM_ASSOC_FOLDR_REVERSE",
-    (--`!f:'a->'a->'a. 
+    (--`!f:'a->'a->'a.
          COMM f ==> ASSOC f
           ==> !e l. FOLDR f e (REVERSE l) = FOLDR f e l`--),
     REPEAT STRIP_TAC THEN MATCH_MP_TAC FOLDR_REVERSE2
@@ -2576,7 +2576,7 @@ val ELL_CONS = store_thm("ELL_CONS",
     	THEN FIRST_ASSUM MATCH_ACCEPT_TAC]
     end);
 
-val ELL_LENGTH_CONS = store_thm("ELL_LENGTH_CONS", 
+val ELL_LENGTH_CONS = store_thm("ELL_LENGTH_CONS",
     (--`!l:'a list. !x. (ELL (LENGTH l) (CONS x l) = x)`--),
     let val LAST_EL = (* (--`!x:'a. LAST [x] = x`--) *)
     GEN_ALL(REWRITE_RULE[SNOC](SPECL[(--`x:'a`--),(--`[]:'a list`--)]LAST))
@@ -2587,7 +2587,7 @@ val ELL_LENGTH_CONS = store_thm("ELL_LENGTH_CONS",
       THEN POP_ASSUM ACCEPT_TAC]
     end);
 
-val ELL_LENGTH_SNOC = store_thm("ELL_LENGTH_SNOC", 
+val ELL_LENGTH_SNOC = store_thm("ELL_LENGTH_SNOC",
     (--`!l:'a list. !x. (ELL (LENGTH l) (SNOC x l) = (NULL l => x | HD l))`--),
     LIST_INDUCT_TAC THENL[
       REWRITE_TAC[ELL_0_SNOC,LENGTH,NULL],
@@ -2595,7 +2595,7 @@ val ELL_LENGTH_SNOC = store_thm("ELL_LENGTH_SNOC",
 
 val ELL_APPEND2 = store_thm("ELL_APPEND2",
     (--`!n l2. n < LENGTH l2 ==> !l1:'a list. ELL n (APPEND l1 l2) = ELL n l2`--),
-    INDUCT_TAC THEN SNOC_INDUCT_TAC 
+    INDUCT_TAC THEN SNOC_INDUCT_TAC
     THEN REWRITE_TAC[LENGTH,NOT_LESS_0]
     THEN REWRITE_TAC[APPEND_SNOC,ELL_0_SNOC,ELL_SUC_SNOC,
     	LENGTH_SNOC,LESS_MONO_EQ] THEN FIRST_ASSUM MATCH_ACCEPT_TAC);
@@ -2614,7 +2614,7 @@ val ELL_PRE_LENGTH = store_thm("ELL_PRE_LENGTH",
     LIST_INDUCT_TAC THEN REWRITE_TAC[LENGTH,PRE]
     THEN REPEAT STRIP_TAC THEN REWRITE_TAC[ELL_LENGTH_CONS,HD]);
 
-val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC", 
+val EL_LENGTH_SNOC = store_thm("EL_LENGTH_SNOC",
     (--`!l:'a list. !x. EL (LENGTH l) (SNOC x l) = x`--),
     LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[EL,SNOC,HD,TL,LENGTH]);
 
@@ -2674,7 +2674,7 @@ val ELL_EL = store_thm("ELL_EL",
     THENL[
         REWRITE_TAC[SUB_0,ELL_0_SNOC,LENGTH_SNOC,PRE,EL_LENGTH_SNOC],
     	REWRITE_TAC[LENGTH_SNOC,ELL_SUC_SNOC,SUB_MONO_EQ,LESS_MONO_EQ]
-    	THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC 
+    	THEN REPEAT STRIP_TAC THEN RES_THEN SUBST1_TAC
     	THEN MATCH_MP_TAC (GSYM EL_SNOC)
     	THEN IMP_RES_TAC lem THEN ASM_REWRITE_TAC[PRE]]
     end);
@@ -2684,7 +2684,7 @@ val ELL_MAP = store_thm("ELL_MAP",
     INDUCT_TAC THEN SNOC_INDUCT_TAC THEN REWRITE_TAC[LENGTH,NOT_LESS_0]
     THENL[
         REWRITE_TAC[ELL_0_SNOC,MAP_SNOC],
-        REWRITE_TAC[LENGTH_SNOC,ELL_SUC_SNOC,MAP_SNOC,LESS_MONO_EQ] 
+        REWRITE_TAC[LENGTH_SNOC,ELL_SUC_SNOC,MAP_SNOC,LESS_MONO_EQ]
     	THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
 
 val LENGTH_BUTLAST = store_thm("LENGTH_BUTLAST",
@@ -2727,7 +2727,7 @@ val MAP_COND = prove(
    REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`c:bool`--) THEN ASM_REWRITE_TAC[]);
 
 val MAP_FILTER = store_thm("MAP_FILTER",
-   (--`!(f:'a -> 'a) P l. 
+   (--`!(f:'a -> 'a) P l.
         (!x. P (f x) = P x) ==>
              (MAP f (FILTER P l) = FILTER P (MAP f l))`--),
    GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[MAP,FILTER]
@@ -2773,7 +2773,7 @@ val ALL_EL_SEG = store_thm("ALL_EL_SEG",
       THENL[
         ASM_REWRITE_TAC[]
         THEN RES_THEN
-            (ASSUME_TAC o 
+            (ASSUME_TAC o
              (REWRITE_RULE[ADD_CLAUSES]) o
              (SPECL [(--`0`--),(--`m:num`--)]))
     	THEN DISCH_TAC THEN RES_TAC,
@@ -2799,7 +2799,7 @@ val ALL_EL_BUTFIRSTN = store_thm("ALL_EL_BUTFIRSTN",
     THEN MATCH_ACCEPT_TAC LESS_EQ_REFL);
 
 val SOME_EL_SEG = store_thm("SOME_EL_SEG",
-    (--`!m k (l:'a list). (m + k) <= (LENGTH l) ==> 
+    (--`!m k (l:'a list). (m + k) <= (LENGTH l) ==>
      !P. SOME_EL P (SEG m k l) ==> SOME_EL P l`--),
     REPEAT INDUCT_TAC THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[SOME_EL,SEG,LENGTH,ADD,ADD_0,NOT_SUC_LESS_EQ_0]
@@ -2843,7 +2843,7 @@ val SOME_EL_BUTLASTN = store_thm("SOME_EL_BUTLASTN",
 
 val IS_EL_REVERSE = store_thm("IS_EL_REVERSE",
     (--`!(x:'a) l. IS_EL x (REVERSE l) = IS_EL x l`--),
-    GEN_TAC THEN LIST_INDUCT_TAC 
+    GEN_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[REVERSE,IS_EL,IS_EL_SNOC]);
 
 val IS_EL_FILTER = store_thm("IS_EL_FILTER",
@@ -2862,7 +2862,7 @@ val IS_EL_SEG = store_thm("IS_EL_SEG",
     	SEG,LESS_EQ_MONO] THEN GEN_TAC THENL[
     	DISCH_TAC THEN FIRST_ASSUM (IMP_RES_TAC o
     	    (REWRITE_RULE[ADD_0]) o (SPEC(--`0`--)))
-    	THEN GEN_TAC THEN DISCH_THEN (DISJ_CASES_THEN2 
+    	THEN GEN_TAC THEN DISCH_THEN (DISJ_CASES_THEN2
     	    (fn t => DISJ1_TAC THEN ACCEPT_TAC t)
     	    (fn t => DISJ2_TAC THEN ASSUME_TAC t THEN RES_TAC)),
     	let val lem = (GEN_ALL
@@ -2899,7 +2899,7 @@ val IS_EL_LASTN = store_thm("IS_EL_LASTN",
 
 val ZIP_SNOC = store_thm("ZIP_SNOC",
     (--`!l1 l2. (LENGTH l1 = LENGTH l2) ==>
-     !(x1:'a) (x2:'b). 
+     !(x1:'a) (x2:'b).
       ZIP((SNOC x1 l1), (SNOC x2 l2)) = SNOC (x1,x2) (ZIP(l1,l2))`--),
     LIST_INDUCT_TAC THEN REPEAT (FILTER_GEN_TAC (--`l2:'b list`--))
     THEN LIST_INDUCT_TAC THEN REWRITE_TAC[SNOC,ZIP,LENGTH,NOT_SUC,SUC_NOT]
@@ -3051,7 +3051,7 @@ val ELL_REVERSE_EL = store_thm("ELL_REVERSE_EL",
     	EL,ELL,HD,TL,LAST,BUTLAST,NOT_LESS_0,LESS_MONO_EQ,SUB_0]);
 
 
-val LESS_EQ_SPLIT = 
+val LESS_EQ_SPLIT =
     let val asm_thm = ASSUME (--`(m + n) <= p`--)
     in
     GEN_ALL(DISCH_ALL
@@ -3065,11 +3065,11 @@ val LESS_EQ_SPLIT =
 val SUB_GREATER_EQ_ADD = prove(
     (--`!p n m. (p >= n) ==> (((p - n) >= m) = (p >= (m + n)))`--),
     REWRITE_TAC[
-      SYM (SPEC (--`n:num`--) (SPEC (--`p-n`--) (SPEC (--`m:num`--) 
+      SYM (SPEC (--`n:num`--) (SPEC (--`p-n`--) (SPEC (--`m:num`--)
            (REWRITE_RULE[GSYM GREATER_EQ] LESS_EQ_MONO_ADD_EQ))))]
     THEN REPEAT STRIP_TAC
     THEN POP_ASSUM (fn th => ASSUME_TAC
-      (MP (SPEC (--`n:num`--) (SPEC (--`p:num`--) SUB_ADD)) 
+      (MP (SPEC (--`n:num`--) (SPEC (--`p:num`--) SUB_ADD))
           (REWRITE_RULE[SPEC (--`n:num`--) (SPEC (--`p:num`--) GREATER_EQ)] th)))
     THEN SUBST_TAC[(SPEC_ALL ADD_SYM)] THEN ASM_REWRITE_TAC[]);
 
@@ -3118,10 +3118,10 @@ val BUTFIRSTN_LASTN = store_thm("BUTFIRSTN_LASTN",
 
 val SUB_ADD_lem = prove(
     (--`!l n m. (n + m) <= l ==> ((l - (n + m)) + n = l - m)`--),
-    REPEAT INDUCT_TAC 
+    REPEAT INDUCT_TAC
     THEN REWRITE_TAC[ADD,ADD_0,SUB_0,NOT_SUC_LESS_EQ_0] THENL[
         MATCH_ACCEPT_TAC SUB_ADD,
-    	PURE_ONCE_REWRITE_TAC [GSYM(CONJUNCT2 ADD)] 
+    	PURE_ONCE_REWRITE_TAC [GSYM(CONJUNCT2 ADD)]
     	THEN SUBST1_TAC (SYM (SPECL[(--`SUC n`--),(--`m:num`--)]ADD_SUC))
     	THEN REWRITE_TAC[SUB_MONO_EQ,LESS_EQ_MONO]
     	THEN FIRST_ASSUM MATCH_ACCEPT_TAC]);
@@ -3138,7 +3138,7 @@ val SEG_LASTN_BUTLASTN = store_thm("SEG_LASTN_BUTLASTN",
         (SPECL[(--`LENGTH(l:'a list)`--),(--`m:num`--),(--`n:num`--)]SUB_LESS_EQ_ADD)] th2)
         val th4 = PURE_ONCE_REWRITE_RULE[ADD_SYM](REWRITE_RULE[
     	UNDISCH_ALL(SPECL[(--`LENGTH(l:'a list)`--),(--`n:num`--),(--`m:num`--)]SUB_ADD_lem),
-    	SUB_LESS_EQ] 
+    	SUB_LESS_EQ]
     	(PURE_ONCE_REWRITE_RULE[ADD_SYM](SPECL
     	[(--`n:num`--),(--`(LENGTH (l:'a list)) - (n + m)`--),(--`l:'a list`--)]LASTN_BUTLASTN)))
     in
@@ -3154,19 +3154,19 @@ val SEG_LASTN_BUTLASTN = store_thm("SEG_LASTN_BUTLASTN",
 val BUTFIRSTN_REVERSE = store_thm("BUTFIRSTN_REVERSE",
     (--`!n (l:'a list). n <= (LENGTH l) ==>
      (BUTFIRSTN n (REVERSE l) = REVERSE(BUTLASTN n l))`--),
-    INDUCT_TAC THEN SNOC_INDUCT_TAC THEN ASM_REWRITE_TAC[NOT_SUC_LESS_EQ_0, 
+    INDUCT_TAC THEN SNOC_INDUCT_TAC THEN ASM_REWRITE_TAC[NOT_SUC_LESS_EQ_0,
     	LENGTH,LENGTH_SNOC,BUTFIRSTN,BUTLASTN,LESS_EQ_MONO,REVERSE_SNOC]);
 
 val BUTLASTN_REVERSE = store_thm("BUTLASTN_REVERSE",
     (--`!n (l:'a list). n <= (LENGTH l) ==>
      (BUTLASTN n (REVERSE l) = REVERSE(BUTFIRSTN n l))`--),
-    INDUCT_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[NOT_SUC_LESS_EQ_0, 
+    INDUCT_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[NOT_SUC_LESS_EQ_0,
     	LENGTH,BUTFIRSTN,BUTLASTN,LESS_EQ_MONO,REVERSE]);
-    
+
 val LASTN_REVERSE = store_thm("LASTN_REVERSE",
     (--`!n (l:'a list). n <= (LENGTH l) ==>
      (LASTN n (REVERSE l) = REVERSE(FIRSTN n l))`--),
-    INDUCT_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[NOT_SUC_LESS_EQ_0, 
+    INDUCT_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[NOT_SUC_LESS_EQ_0,
     	LENGTH,FIRSTN,LASTN,LESS_EQ_MONO,REVERSE,SNOC_11]);
 
 val FIRSTN_REVERSE = store_thm("FIRSTN_REVERSE",
@@ -3180,7 +3180,7 @@ val SEG_REVERSE = store_thm("SEG_REVERSE",
     (--`!n m (l:'a list). ((n + m) <= (LENGTH l)) ==>
      (SEG n m (REVERSE l) =  REVERSE(SEG n (LENGTH l - (n + m)) l))`--),
     let val LEN_REV = (SPEC(--`l:'a list`--) LENGTH_REVERSE)
-    val SUB_LE_ADD = 
+    val SUB_LE_ADD =
     	SPECL[(--`LENGTH(l:'a list)`--),(--`m:num`--),(--`n:num`--)]SUB_LESS_EQ_ADD
     val SEG_lem = REWRITE_RULE[SUB_LESS_EQ](PURE_ONCE_REWRITE_RULE[ADD_SYM]
     	(SUBS[UNDISCH_ALL(SPEC_ALL(SPEC(--`LENGTH(l:'a list)`--) SUB_ADD_lem))]
@@ -3195,7 +3195,7 @@ val SEG_REVERSE = store_thm("SEG_REVERSE",
     	o (SUBS[SYM LEN_REV]))
     THEN IMP_RES_TAC LESS_EQ_SPLIT
     THEN IMP_RES_THEN SUBST1_TAC (SPECL[(--`m:num`--),(--`l:'a list`--)]BUTFIRSTN_REVERSE)
-    THEN FIRST_ASSUM 
+    THEN FIRST_ASSUM
     	(ASSUME_TAC o (MP(SPECL[(--`m:num`--),(--`(l:'a list)`--)]LENGTH_BUTLASTN)))
     THEN FIRST_ASSUM (fn t =>  ASSUME_TAC (SUBS[t]
     	(SPECL[(--`n:num`--),(--`BUTLASTN m (l:'a list)`--)]FIRSTN_REVERSE)))
