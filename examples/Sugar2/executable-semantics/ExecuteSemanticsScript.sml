@@ -292,15 +292,6 @@ val CONCAT_is_CONCAT = prove
    ++ Induct_on `x`
    ++ RW_TAC std_ss [FinitePathTheory.CONCAT_def, regexpTheory.CONCAT_def]);
 
-val unclocked_def = Define
-  `(unclocked (S_BOOL b) = T) /\
-   (unclocked (S_CAT (r1, r2)) = unclocked r1 /\ unclocked r2) /\
-   (unclocked (S_FUSION (r1, r2)) = unclocked r1 /\ unclocked r2) /\
-   (unclocked (S_OR (r1, r2)) = unclocked r1 /\ unclocked r2) /\
-   (unclocked (S_AND (r1, r2)) = unclocked r1 /\ unclocked r2) /\
-   (unclocked (S_REPEAT r) = unclocked r) /\
-   (unclocked (S_CLOCK (r, b)) = F)`;
-
 val sere2regexp_def = Define
   `(sere2regexp (S_BOOL b) = Atom (\l. B_SEM l b)) /\
    (sere2regexp (S_CAT (r1, r2)) = Cat (sere2regexp r1) (sere2regexp r2)) /\
@@ -310,11 +301,11 @@ val sere2regexp_def = Define
    (sere2regexp (S_REPEAT r) = Repeat (sere2regexp r))`;
 
 val sere2regexp = prove
-  (``!r l. unclocked r ==> (US_SEM l r = amatch (sere2regexp r) l)``,
+  (``!r l. S_CLOCK_FREE r ==> (US_SEM l r = amatch (sere2regexp r) l)``,
    SIMP_TAC std_ss [amatch]
    ++ INDUCT_THEN sere_induct ASSUME_TAC
    ++ RW_TAC std_ss
-      [US_SEM_def, sem_def, sere2regexp_def, ELEM_EL, EL, unclocked_def]
+      [US_SEM_def, sem_def, sere2regexp_def, ELEM_EL, EL, S_CLOCK_FREE_def]
    ++ CONV_TAC (DEPTH_CONV ETA_CONV)
    ++ RW_TAC std_ss [CONCAT_is_CONCAT]);
 
@@ -322,7 +313,7 @@ val EVAL_US_SEM = store_thm
   ("EVAL_US_SEM",
    ``!l r.
        US_SEM l r =
-       if unclocked r then amatch (sere2regexp r) l else US_SEM l r``,
+       if S_CLOCK_FREE r then amatch (sere2regexp r) l else US_SEM l r``,
    RW_TAC std_ss [GSYM sere2regexp]);
 
 (* Some examples of using EVAL
