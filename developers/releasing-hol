@@ -1,4 +1,4 @@
-# this shell script can be used to create a hol98 tar ball.
+# this -*- shell-script -*- can be used to create a hol98 tar ball.
 
 if [ $# -ne 2 ]
 then
@@ -13,11 +13,24 @@ mosmldir=/local/scratch/mn200/Work/mosml
 cd /tmp
 
 # use -r release-name for known release
-if [ "$name" = "today" ]
+echo "Getting copy of CVS repository from SourceForge"
+echo -n "Progress: "
+linecount=0
+(if [ "$name" = "today" ]
 then
   cvs -d:ext:${userid}@cvs.hol.sf.net:/cvsroot/hol export -D tomorrow hol98
 else
   cvs -d:ext:${userid}@cvs.hol.sf.net:/cvsroot/hol export -r $name hol98
+fi) 2>&1 | tee /tmp/cvs-export.log |
+  while read foo
+  do  linecount=$[ $linecount + 1 ]
+      if [ $[ $linecount % 20 ] -eq 0 ] ; then echo -n . ; fi
+  done
+
+if [ $? -ne 0 ] ; then
+  echo ; echo "CVS export failed, consult /tmp/cvs-export.log" ; exit 1
+else
+  echo
 fi
 
 sed "s|^val mosmldir.*\$|val mosmldir = \"$mosmldir\"|" \
@@ -31,7 +44,11 @@ find hol98 -name .cvsignore -exec /bin/rm \{} \;
 
 echo "Running configure script (original in /tmp)"
 cd /tmp/hol98
-$mosmldir/bin/mosml < tools/configure.sml
+$mosmldir/bin/mosml < tools/configure.sml > /tmp/config-log 2>&1
+if [ $? -ne 0 ] ; then
+  echo "HOL configuration failed, consult /tmp/config.log" ; exit 1
+fi
+
 
 echo Now building Doc2Tex
 cd help/src
@@ -43,7 +60,10 @@ do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo Making $man_name
     cd /tmp/hol98/Manual/$man_name
-    make all
+    if make all > /tmp/$man_name-latex.log 2>&1
+    then :
+    else echo Build failed ; exit 1
+    fi
     for i in .dvi .ps .pdf
     do
         mv $lcname$i /tmp/$name-$lcname$i
@@ -54,11 +74,41 @@ echo Also removing Buddy documentation from distribution
 cd /tmp/
 mv hol98/src/muddy/muddyC/buddy/doc/*.ps .
 
+echo Building HolBddLib documentation
+cd /tmp/hol98/src/HolBdd/Manual
+if (latex HolBdd ; bibtex HolBdd ; latex HolBdd ; latex HolBdd ;
+    dvips -G0 -Ppdf HolBdd ; ps2pdf HolBdd.ps) > /tmp/holbdd-latex.log 2>&1
+then
+   :
+else
+   echo Build failed
+   exit 1
+fi
+for i in .dvi .ps .pdf
+do
+    mv HolBdd$i /tmp/$name-HolBdd$i
+done
+
+echo Building HolSatLib documentation
+cd /tmp/hol98/src/HolSat/doc
+if (latex HolSatLib ; latex HolSatLib ; dvips -G0 -Ppdf HolSatLib ;
+    ps2pdf HolSatLib) > /tmp/holsat-latex.log 2>&1
+then
+   :
+else
+   echo "Build failed, see /tmp/holsat-latex.log" ; exit 1
+fi
+for i in .dvi .ps .pdf
+do
+    mv HolSatLib$i /tmp/$name-HolSatLib$i
+done
 
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
 /bin/rm -rf developers
 /bin/rm -rf Manual
+/bin/rm -rf src/HolBdd/Manual
+/bin/rm -rf src/HolSat/doc
 mv /tmp/configure.sml tools
 
 mv bin/README ../bin-README
@@ -75,7 +125,7 @@ mv ../bin-README bin/README
 cd /tmp
 
 echo "Creating tar file"
-tar cvzf $name.tar.gz hol98
+tar czf $name.tar.gz hol98
 
 if [ "$name" != "today" ]
 then
