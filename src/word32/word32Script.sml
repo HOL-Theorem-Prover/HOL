@@ -1,5 +1,1 @@
-structure word32Script =
-struct
-  local structure ignore = wordFunctor.wordFunctor(val bits = 31)
-  in end
-end
+structure word32Script = wordFunctor(val bits = 32);
