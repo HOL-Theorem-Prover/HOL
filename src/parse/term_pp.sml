@@ -766,7 +766,7 @@ fun pp_term (G : grammar) TyG = let
             begin_block CONSISTENT 0;
             add_string "{"; begin_block CONSISTENT 0;
             pr_term l Top Top Top (depth - 1);
-            spacep true; add_string "|"; spacep true;
+            add_string " |"; spacep true;
             pr_term r Top Top Top (depth - 1);
             end_block(); add_string "}"; end_block(); raise SimpleExit
           end handle HOL_ERR _ => ()
