@@ -15,7 +15,7 @@ fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
   | itstrings f (h::t) = f h (itstrings f t);
-fun fullPath slist = normPath 
+fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
 val Holmake = fullPath [HOLDIR, "bin/Holmake"]
@@ -29,8 +29,8 @@ fun quote s = String.concat["\"", s, "\""];
 fun build_dir dir =
   let val _ = FileSys.chDir dir
       val _ = print ("Working in directory "^dir^"\n")
-  in 
-     if Process.system Holmake = Process.success 
+  in
+     if Process.system Holmake = Process.success
      then ()
      else (print ("Build failed in directory "^dir^"\n");
            raise Fail "Couldn't make directory")
@@ -38,16 +38,16 @@ fun build_dir dir =
 
 
 (*---------------------------------------------------------------------------
-      Arrange for all executables and relevant .sig files 
+      Arrange for all executables and relevant .sig files
       to reside in a common directory.
  ---------------------------------------------------------------------------*)
 
 fun map_dir f dir =  (* map a function over the files in a directory *)
   let val dstrm = FileSys.openDir dir
       fun loop() =
-        case FileSys.readDir dstrm
-         of ""   => FileSys.closeDir dstrm
-          | file => (f (dir,file) ; loop())
+        case FileSys.readDir dstrm of
+          NONE => FileSys.closeDir dstrm
+        | SOME file => (f (dir,file) ; loop())
   in loop()
   end;
 
@@ -61,16 +61,16 @@ fun copy file path =  (* Dead simple file copy *)
   in loop()
   end;
 
-fun link s1 s2 = 
+fun link s1 s2 =
   let open Process
-  in if system (String.concat[LN_S," ",s1," ",s2]) = success then () 
-     else (print ("Unable to link file "^quote s1^" to file "^quote s2^".\n"); 
+  in if system (String.concat[LN_S," ",s1," ",s2]) = success then ()
+     else (print ("Unable to link file "^quote s1^" to file "^quote s2^".\n");
            raise Fail "link")
   end;
 
 fun transfer_file symlink targetdir (df as (dir,file)) =
   let val cp = if symlink then link else copy
-      fun mv s1 s2 = 
+      fun mv s1 s2 =
         let val s1' = normPath s1
             val s2' = normPath s2
         in
@@ -87,32 +87,32 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
   end;
 
 (*---------------------------------------------------------------------------
-        Transport a compiled directory to another location. The 
+        Transport a compiled directory to another location. The
         symlink argument says whether this is via a symbolic link,
-        or by copying. The ".uo", ".ui", and ".sig" files are 
+        or by copying. The ".uo", ".ui", and ".sig" files are
         transported.
  ---------------------------------------------------------------------------*)
 
-fun upload (src,target,symlink) = 
+fun upload (src,target,symlink) =
   (print ("Uploading files to "^target^"\n");
    map_dir (transfer_file symlink target) src);
 
 
 (*---------------------------------------------------------------------------
     For each element in SRCDIRS, build it, then upload it to SIGOBJ.
-    This allows us to have the build process only occur w.r.t. SIGOBJ 
+    This allows us to have the build process only occur w.r.t. SIGOBJ
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
-fun build_src symlink = 
-   List.app (fn s => (build_dir s; upload(s,SIGOBJ,symlink))) 
+fun build_src symlink =
+   List.app (fn s => (build_dir s; upload(s,SIGOBJ,symlink)))
             SRCDIRS;
 
-fun rem_file f = 
- FileSys.remove f 
+fun rem_file f =
+ FileSys.remove f
    handle _ => (print ("Trouble with removing file "^f^"?\n"); ());
 
 
-fun clean_sigobj() = 
+fun clean_sigobj() =
   let val _ = print ("Cleaning out "^SIGOBJ^"\n")
   in
     map_dir (rem_file o normPath o Path.concat) SIGOBJ
@@ -121,7 +121,7 @@ fun clean_sigobj() =
 fun build_hol symlink =
   let val _ = clean_sigobj()
       val _ = build_src symlink
-  in 
+  in
     print "\nHol built successfully.\n"
   end;
 
@@ -138,32 +138,32 @@ fun suffixCheck s =
  in (("Script" = String.extract(s,len-lenScript,NONE)) orelse raise Subscript)
     handle Subscript
     =>  let val suffix = String.extract(s,len - lenTheory_ext, NONE)
-        in (len > 10 
+        in (len > 10
             andalso ((suffix = "Theory.sig") orelse (suffix = "Theory.sml")))
            orelse raise Subscript
          end
         handle Subscript => false
   end
 end;
-  
-fun cleandir dir = 
-  let fun efile s = 
+
+fun cleandir dir =
+  let fun efile s =
         case Path.ext s
          of SOME "ui" => true
           | SOME "uo" => true
           |    _      => suffixCheck s
       fun del (d,f) = if efile f then rem_file (fullPath [d,f]) else ()
-  in 
+  in
     map_dir del dir
   end;
 
 fun cleanAlldir dir = (* clean directory d and also remove d/DEPDIR *)
   let val _ = cleandir dir
       val depdir = Path.concat(dir,DEPDIR)
-  in 
+  in
     if (FileSys.isDir depdir handle _ => false)
     then (map_dir (rem_file o normPath o Path.concat) depdir;
-          FileSys.rmDir depdir handle e 
+          FileSys.rmDir depdir handle e
            => (print ("Unable to remove directory "^depdir^"\n"); raise e))
     else ()
   end;
@@ -175,8 +175,8 @@ val help_mesg = "Usage: build_hol\n\
                                 \  or: build_hol -symlink\n\
                                 \  or: build_hol -clean\n\
                                 \  or: build_hol -cleanAll.";
-val _ = 
-  case Mosml.argv () 
+val _ =
+  case Mosml.argv ()
    of [_]             => build_hol false (* no symbolic linking *)
     | [_,"-symlink"]  => build_hol true  (*    symbolic linking *)
     | [_,"-clean"]    => clean_dirs cleandir
