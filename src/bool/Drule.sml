@@ -122,7 +122,7 @@ end;
 
 fun SPEC_VAR th =
    let val (Bvar,_) = dest_forall (concl th)
-       val bv' = variant (HOLset.listItems (hyp_frees th)) Bvar
+       val bv' = prim_variant (HOLset.listItems (hyp_frees th)) Bvar
    in (bv', SPEC bv' th)
    end;
 
