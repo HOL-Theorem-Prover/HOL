@@ -26,18 +26,15 @@ Hol_datatype `arith = C     of num                   (* constant *)
  ---------------------------------------------------------------------------*)
 
 val CBN_defn = Hol_fun "CBN_CBNh"
-
-val stem = "CBN_CBNh";
-val eqs0 = Term
-     `(CBN (C n) y z         = C n)
- /\   (CBN (V x) y z         = if x=y then CBNh z else V x)
- /\   (CBN (Plus a1 a2) y z  = Plus (CBN a1 y z) (CBN a2 y z))
- /\   (CBN (Apply B v M) y z = CBN (CBN B v M) y z)
+     `(CBN (C n, y, z)         = C n)
+ /\   (CBN (V x, y, z)         = if x=y then CBNh z else V x)
+ /\   (CBN (Plus a1 a2, y, z)  = Plus (CBN(a1,y,z)) (CBN(a2,y,z)))
+ /\   (CBN (Apply B v M, y, z) = CBN (CBN(B,v,M), y, z))
 
  /\   (CBNh (C n) = C n)
  /\   (CBNh (V x) = V x)
  /\   (CBNh (Plus a1 a2)  = Plus (CBNh a1) (CBNh a2))
- /\   (CBNh (Apply B v M) = CBN B v M)`;
+ /\   (CBNh (Apply B v M) = CBN (B,v,M))`;
 
 
 val CBN_eqns      = Defn.eqns_of CBN_defn;
