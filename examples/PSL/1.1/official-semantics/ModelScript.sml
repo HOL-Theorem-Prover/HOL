@@ -1,4 +1,5 @@
 
+
 (*****************************************************************************)
 (* Create "ModelTheory" containing definition of models for OBE semantics.   *)
 (* PSL version 1.1                                                           *)
@@ -28,17 +29,19 @@ loadPath                                  (* Add official-semantics to path  *)
  :=
  "../../path" :: !loadPath;
 map load 
- ["pred_setLib",
+ ["pred_setLib","res_quanTools", "rich_listTheory", "pairLib",
   "FinitePathTheory", "PathTheory"];
-open pred_setLib 
-     FinitePathTheory PathTheory;
+open pred_setLib res_quanTools rich_listTheory pred_setTheory
+     FinitePathTheory PathTheory pairLib;
 quietdec := false;                        (* Restore output                  *)
 *)
 
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib pred_setLib FinitePathTheory PathTheory;
+open HolKernel Parse boolLib bossLib pred_setLib 
+     res_quanTools rich_listTheory pred_setTheory pairLib
+     FinitePathTheory PathTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -48,6 +51,15 @@ open HolKernel Parse boolLib bossLib pred_setLib FinitePathTheory PathTheory;
 * Start a new theory called ModelTheory
 ******************************************************************************)
 val _ = new_theory "Model";
+
+(******************************************************************************
+* A simpset fragment to rewrite away quantifiers restricted with :: LESS
+******************************************************************************)
+val resq_SS =
+ simpLib.merge_ss
+  [res_quanTools.resq_SS,
+   rewrites
+    [LESS_def,LENGTH_def,IN_LESS,IN_LESSX]];
 
 (******************************************************************************
 * Stop ``S`` parsing to the S-combinator
@@ -66,21 +78,35 @@ val model_def =
        P: 'prop -> bool;
        L: 'state -> ('prop -> bool) |>`;
 
+val MODEL_def =
+ Define
+  `MODEL M =
+    M.S0 SUBSET M.S /\
+    (!s s'. (s,s') IN M.R ==> s IN M.S /\ s' IN M.S) /\
+    (!s. s IN M.S ==> !p. p IN M.L s ==> p IN M.P)`;
+
 (******************************************************************************
 * A useful special case (possibly the only one we'll need) is to identify 
 * propositions with predicates on states, then we just need to specify the 
 * set of initial states B:'state->bool and 
 * transition relation R:'state#'state->bool, then:
-* MAKE_SIMPLE_MODEL B R : :('a, 'a -> bool) model
+* SIMPLE_MODEL B R : :('a, 'a -> bool) model
 *******************************************************************************)
-val MAKE_SIMPLE_MODEL =
+val SIMPLE_MODEL_def =
  Define
-  `MAKE_SIMPLE_MODEL (B:'state -> bool) (R:'state#'state->bool) = 
+  `SIMPLE_MODEL (B:'state -> bool) (R:'state#'state->bool) = 
     <| S  := {s | T};
        S0 := B;
        R  := R; 
        P  := {p | T}; 
        L  := (\(s:'state). {f:'state -> bool | f s}) |>`;
+
+val MODEL_SIMPLE_MODEL =
+ store_thm
+  ("MODEL_SIMPLE_MODEL",
+   ``MODEL(SIMPLE_MODEL B R)``,
+   RW_TAC list_ss [MODEL_def,SIMPLE_MODEL_def]
+    THEN RW_TAC (srw_ss()) [SUBSET_UNIV]);
 
 (******************************************************************************
 * Product of two models
@@ -95,9 +121,9 @@ val MAKE_SIMPLE_MODEL =
 *       {p in (P1 U P2) | if (p in P1) then (p in L1 s1) else (p in L2 s2)}
 *    )
 ******************************************************************************)
-val PROD_def =
+val MODEL_PROD_def =
  Define 
-  `PROD (M1:('state1, 'prop1) model) (M2:('state2, 'prop2) model) =
+  `MODEL_PROD (M1:('state1, 'prop1) model) (M2:('state2, 'prop2) model) =
     <| S  := {(s1,s2) | s1 IN M1.S  /\ s2 IN M2.S};
        S0 := {(s1,s2) | s1 IN M1.S0 /\ s2 IN M2.S0};
        R  := {((s1,s2),(s1',s2')) | (s1,s1') IN M1.R /\ (s2,s2') IN M2.R};
@@ -106,8 +132,20 @@ val PROD_def =
               {p | if ISL p then OUTL p IN M1.L s1 else OUTR p IN M2.L s2} |>`;
 
 val _ = set_fixity "||" (Infixl 650);
-val _ = overload_on ("||", ``PROD``);
+val _ = overload_on ("||", ``MODEL_PROD``);
 
+val MODEL_MODEL_PROD =
+ store_thm
+  ("MODEL_MODEL_PROD",
+   ``!M1 M2. MODEL M1 /\ MODEL M2 ==> MODEL(M1 || M2)``,
+   RW_TAC list_ss [MODEL_def,MODEL_PROD_def]
+    THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
+    THEN RW_TAC list_ss []
+    THEN RES_TAC
+    THEN FULL_SIMP_TAC list_ss []
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(GEN_BETA_RULE(el 4 thl)))
+    THEN FULL_SIMP_TAC (srw_ss()) []
+    THEN PROVE_TAC[]);
 
 (******************************************************************************
 * A letter is either TOP, or BOTTOM
@@ -145,7 +183,7 @@ val INFINITE_LETTER_IN_def =
     ?i s. (f i = STATE s) /\ p IN s` ;
 
 (*****************************************************************************)
-(* Conversion of a path to a machine (Kripke structure)                      *)
+(* Conversion of a path to a model (Kripke structure)                        *)
 (*****************************************************************************)
 val PATH_TO_MODEL_def =
  Define
@@ -154,27 +192,43 @@ val PATH_TO_MODEL_def =
        S0 := {0};
        R  := {(n,n') | n < LENGTH l /\ n' < LENGTH l /\ (n' = n+1)};
        P  := {p:'prop | FINITE_LETTER_IN p l};
-       L  := \n. {p | L_SEM (EL n l) p} |>)
+       L  := \n. {p | n < LENGTH l /\ FINITE_LETTER_IN p l /\ L_SEM (EL n l) p} |>)
    /\
    (PATH_TO_MODEL(INFINITE f) = 
     <| S  := {n | T};
        S0 := {0};
        R  := {(n,n') | n' = n+1};
        P  := {p:'prop | INFINITE_LETTER_IN p f};
-       L  := \n. {p | L_SEM (f n) p} |>)`;
+       L  := \n. {p | INFINITE_LETTER_IN p f /\ L_SEM (f n) p} |>)`;
+
+val MODEL_PATH_TO_MODEL =
+ store_thm
+  ("MODEL_PATH_TO_MODEL",
+   ``!p. 0 < LENGTH p ==>  MODEL(PATH_TO_MODEL p)``,
+   GEN_TAC
+    THEN Cases_on `p`
+    THEN RW_TAC list_ss [MODEL_def,PATH_TO_MODEL_def]   
+    THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_UNIV,LENGTH_def,LS]);
 
 (*****************************************************************************)
-(* Definition of an automation                                               *)
+(* Definition of an automation: ``: ('label,'state)automaton``               *)
 (* (e.g. Clarke/Grumberg/Peled "Model Checking" Chapter 9)                   *)
 (*****************************************************************************)
 val automaton_def =
  Hol_datatype
   `automaton = 
-    <| Sigma: 'letter -> bool;
+    <| Sigma: 'label -> bool;
        Q:     'state -> bool;
-       Delta: 'state # 'letter # 'state -> bool;
+       Delta: 'state # 'label # 'state -> bool;
        Q0:    'state -> bool;
        F:     'state -> bool |>`;
+
+val AUTOMATON_def =
+ Define
+  `AUTOMATON A =
+    A.Q0 SUBSET A.Q /\
+    (!s a s'. (s,a,s') IN A.Delta ==> s IN A.Q /\ a IN A.Sigma /\ s' IN A.Q) /\
+    (!s. s IN A.F ==> s IN A.Q)`;
 
 (*****************************************************************************)
 (* Convert a model to an automaton                                           *)
@@ -192,6 +246,77 @@ val MODEL_TO_AUTOMATON_def =
        Q0    := {NONE :  ('state)option};
        F     := {SOME s : ('state)option | s IN M.S} UNION {NONE} |>`;
 
+val AUTOMATON_MODEL_TO_AUTOMATON =
+ store_thm
+  ("AUTOMATON_MODEL_TO_AUTOMATON",
+   ``!M. MODEL M ==> AUTOMATON(MODEL_TO_AUTOMATON M)``,
+   RW_TAC list_ss [MODEL_def,AUTOMATON_def,MODEL_TO_AUTOMATON_def]
+    THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
+    THEN RW_TAC list_ss []
+    THEN PROVE_TAC[]);
+
+(*****************************************************************************)
+(* Product of a model with an automaton                                      *)
+(*                                                                           *)
+(*  S is the cross product of the states of M with the states of A. That     *)
+(*  is, the set of states (s,t) such that s is a state in M and t a state    *)
+(*  in A. So is the set of states (s,t) such that s is in the initial        *)
+(*  states of M and t is in the initial states of A. R((s,t),(s',t')) iff    *)
+(*  (s,s') is in the relation of M, and (t,a,t') is in the relation of A,    *)
+(*  where a is the labeling of s. P are the propositions of M and            *)
+(*  L(s,t) = L(s).                                                           *)
+(*****************************************************************************) 
+val AUTOMATON_MODEL_PROD_def =
+ Define 
+  `AUTOMATON_MODEL_PROD 
+    (A:('prop -> bool, 'state1) automaton) (M:('state2, 'prop) model) =
+    <| S  := {(s,t) | s IN M.S  /\ t IN A.Q};
+       S0 := {(s,t) | s IN M.S0 /\ t IN A.Q0};
+       R  := {((s,t),(s',t')) | 
+              ?a. (a = M.L s) /\ (s,s') IN M.R /\ (t,a,t') IN A.Delta};
+       P  := M.P;
+       L  := \(s,t). M.L s |>`;
+
+val _ = overload_on ("||", ``AUTOMATON_MODEL_PROD``);
+
+val MODEL_AUTOMATON_MODEL_PROD =
+ store_thm
+  ("MODEL_AUTOMATON_MODEL_PROD",
+   ``!A M. AUTOMATON A /\ MODEL M ==> MODEL(A || M)``,
+   RW_TAC list_ss [MODEL_def,AUTOMATON_def,AUTOMATON_MODEL_PROD_def]
+    THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
+    THEN RW_TAC list_ss []
+    THEN RES_TAC
+    THEN FULL_SIMP_TAC list_ss []);
+
+(*****************************************************************************)
+(* Product of automata                                                       *)
+(*****************************************************************************)
+val AUTOMATON_PROD_def =
+ Define
+  `AUTOMATON_PROD
+   (A1:('label1,'state1)automaton) (A2:('label2,'state2)automaton) =
+    <| Sigma := {(a1,a2) | a1 IN A1.Sigma  /\ a2 IN A2.Sigma };
+       Q     := {(q1,q2) | q1 IN A1.Q  /\ q2 IN A2.Q};
+       Delta := {((q1,q2),(a1,a2),(q1',q2')) | 
+                 q1  IN A1.Q     /\ q2  IN A2.Q     /\
+                 a1  IN A1.Sigma /\ a2  IN A2.Sigma /\
+                 q1' IN A1.Q     /\ q2' IN A2.Q     /\
+                 (q1,a1,q1') IN A1.Delta            /\ 
+                 (q2,a2,q2') IN A2.Delta};
+       Q0    := {(q1,q2) | q1 IN A1.Q0  /\ q2 IN A2.Q0};
+       F     := {(q1,q2) | q1 IN A1.F  /\ q2 IN A2.F} |>`;
+
+val _ = overload_on ("||", ``AUTOMATON_PROD``);
+
+val AUTOMATON_AUTOMATON_PROD =
+ store_thm
+  ("AUTOMATON_AUTOMATON_PROD",
+   ``!A1 A2. AUTOMATON A1 /\ AUTOMATON A2 ==> AUTOMATON(A1 || A2)``,
+   RW_TAC list_ss [AUTOMATON_def,AUTOMATON_PROD_def]
+    THEN FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
+    THEN RW_TAC list_ss []);
+
 (* Examples
 
 SIMP_CONV (srw_ss()) [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def]
@@ -201,7 +326,7 @@ SIMP_CONV (srw_ss()) [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def]
 ``MODEL_TO_AUTOMATON(PATH_TO_MODEL(FINITE l))``;
 
 SIMP_CONV (srw_ss()) 
-  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
+  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,MODEL_PROD_def]
   ``(PATH_TO_MODEL(FINITE l) || 
      <| S  := states;
         S0 := initial_states;
@@ -210,7 +335,7 @@ SIMP_CONV (srw_ss())
         L  := val_fn |>)``;
 
 SIMP_CONV (srw_ss()) 
-  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,PROD_def]
+  [MODEL_TO_AUTOMATON_def,PATH_TO_MODEL_def,MODEL_PROD_def]
   ``MODEL_TO_AUTOMATON
     (PATH_TO_MODEL(FINITE l) || 
      <| S  := states;
@@ -219,30 +344,80 @@ SIMP_CONV (srw_ss())
         P  := props;
         L  := val_fn |>)``;
 
-This is not right:
-(*****************************************************************************)
-(* Convert an automation to a model.                                         *)
-(*****************************************************************************)
-val AUTOMATON_TO_MODEL_def =
- Define
-  `AUTOMATON_TO_MODEL (A : ('prop, 'state option)automaton) =
-    <| S  := {s | ?q. q IN A.Q /\ (q = SOME s)};
-       S0 := {s | ?q a. (q = SOME s) /\ (NONE, a, q) IN A.Delta};
-       R  := {(s,s') | ?q a q'. (q = SOME s) /\ (q' = SOME s') 
-                                /\ (q,a,q') IN A.Delta};
-       P  := {p:'prop | T};
-       L  := \s. {p:'prop | T}  |>`;
+SIMP_CONV (srw_ss()) 
+  [AUTOMATON_MODEL_PROD_def,SIMPLE_MODEL_def]
+  ``<| Sigma := alphabet;
+       Q     := states;
+       Delta := delta;
+       Q0    := initial_states;
+       F     := final_states |>
+    ||
+    SIMPLE_MODEL initial_states (\(s,s'). ?a. delta(s,a,s'))``;
 
-val MODEL_AUTOMATON_MODEL =
- store_thm
-  ("MODEL_AUTOMATON_MODEL",
-   ``MODEL_TO_AUTOMATON
-      (AUTOMATON_TO_MODEL 
-        <| Sigma:=sig; Q:=q; Delta:=del; Q0:=q0; F:=f |>) = 
-      <| Sigma:=sig; Q:=q; Delta:=del; Q0:=q0; F:=f |>``,
-   RW_TAC list_ss [MODEL_TO_AUTOMATON_def,AUTOMATON_TO_MODEL_def]
+SIMP_CONV (srw_ss()) 
+  [AUTOMATON_MODEL_PROD_def,SIMPLE_MODEL_def,MODEL_TO_AUTOMATON_def]
+  ``MODEL_TO_AUTOMATON
+     (<| Sigma := alphabet;
+        Q     := states;
+        Delta := delta;
+        Q0    := initial_states;
+        F     := final_states |>
+     ||
+     SIMPLE_MODEL initial_states (\(s,s'). ?a. delta(s,a,s')))``;
 
 *)
+
+(******************************************************************************
+* PATH M s is true of path p iff p is a computation path of model M
+******************************************************************************)
+val PATH_def = 
+ Define 
+  `(PATH M s (FINITE l) = 
+    (LENGTH l > 0) /\ (s = HD l) /\ s IN M.S /\
+    (!n :: (LESS(LENGTH l - 1)). 
+      EL n l IN M.S /\ EL (SUC n) l IN M.S /\ (EL n l, EL (SUC n) l) IN M.R) /\
+    ~(?s. s IN M.S /\ (EL (LENGTH l - 1) l, s) IN M.R))
+   /\
+   (PATH M s (INFINITE f) = 
+     (s = f 0) /\ !n. f n IN M.S /\ (f n, f(SUC n)) IN M.R)`;
+
+(******************************************************************************
+* LANGUAGE A p is true of path p iff p is a computation path of model M
+******************************************************************************)
+val LANGUAGE_def = 
+ Define 
+  `(LANGUAGE A (FINITE l) = 
+    (LENGTH l > 0)                                                         /\
+    EL 0 l IN A.Q0                                                         /\
+    (!n :: (LESS(LENGTH l - 1)). ?a. (EL n l, a, EL (SUC n) l) IN A.Delta) /\
+    ~(?a s. s IN A.Q /\ (EL (LENGTH l - 1) l, a, s) IN A.Delta))
+   /\
+   (LANGUAGE A (INFINITE f) = 
+     f 0 IN A.Q0 /\ 
+     !n. ?a. f n IN A.Q /\ f(SUC n) IN A.Q /\ (f n, a, f(SUC n)) IN A.Delta)`;
+
+(*****************************************************************************)
+(* MODEL_TO_AUTOMATON adds a value -- "iota" in Clarke/Grumberg/Peled -- to  *)
+(* the states of M.  STRIP_IOTA removes iotas.                               *)
+(* Not sure if this is needed.                                               *)
+(*****************************************************************************)
+val STRIP_IOTA_def =
+ Define `STRIP_IOTA(SOME x) = x`;
+
+val PATH_STRIP_IOTA_def =
+ Define
+  `(PATH_STRIP_IOTA(FINITE l) = FINITE(MAP STRIP_IOTA l))
+   /\
+   (PATH_STRIP_IOTA(INFINITE f) = INFINITE(STRIP_IOTA o f))`;
+
+(*****************************************************************************)
+(* Add iotas to a path                                                       *)
+(*****************************************************************************)
+val PATH_ADD_IOTA_def =
+ Define
+  `(PATH_ADD_IOTA(FINITE l) = FINITE(MAP SOME l))
+   /\
+   (PATH_ADD_IOTA(INFINITE f) = INFINITE(SOME o f))`;
 
 val _ = export_theory();
 

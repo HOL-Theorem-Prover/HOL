@@ -187,18 +187,10 @@ val TOP_OMEGA_def =
 (******************************************************************************
 * LESS m is predicate to test if a number is less than m
 * LESS : num -> num -> bool
-******************************************************************************)
-val LESS_def =
- Define `LESS (m:num) (n:num) = n < m`;
-
-(******************************************************************************
 * LESSX m is predicate to test if a number is less than extended number m
 * LESSX : xnum -> num -> bool
+* Now defined in PathTheory
 ******************************************************************************)
-val LESSX_def =
- Define `LESSX (m:xnum) (n:num) = n < m`;
-
-val _ = overload_on ("LESS", Term`LESSX`);   
 
 (******************************************************************************
 * UF_SEM v f means "v |= f"  in the unclocked semantics
@@ -305,16 +297,9 @@ val UF_SEM =
    RW_TAC std_ss [UF_SEM_def]);
 
 (******************************************************************************
-* PATH M s is true of p iff p is a comnputationn path of M
+* PATH M s is true of p iff p is a computation path of M
+* (now defined in ModelTheory)
 ******************************************************************************)
-val PATH_def = 
- Define 
-  `(PATH M s (FINITE l) = 
-    (LENGTH l > 0)                                        /\
-    (!n :: (LESS(LENGTH l - 1)). M.R(EL n l, EL (n+1) l)) /\
-    ~(?s. M.R(EL (LENGTH l - 1) l, s)))
-   /\
-   (PATH M s (INFINITE f) = !n. M.R(f n, f(n+1)))`;
 
 (******************************************************************************
 * O_SEM M s f means "M, s |= f" 
