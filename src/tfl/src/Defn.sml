@@ -1216,17 +1216,26 @@ fun Hol_Rdefn bindstem Rquote eqs_quote =
         Goalstack-based interface to termination proof.
  ---------------------------------------------------------------------------*)
 
+fun mangle th [] = th
+  | mangle th [h] = DISCH h th
+  | mangle th (h::rst) =
+      Rewrite.PURE_ONCE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
+         (DISCH h (mangle th rst));
+
+
+(*---------------------------------------------------------------------------
+    Have to take care with how the assumptions are discharged. Hence mangle.
+ ---------------------------------------------------------------------------*)
+
 fun TC_TAC defn =
- let open Resolve Rewrite Drule Tactical
+ let open Resolve Drule Tactical
      infix THEN
      val E = eqns_of defn
      val I = Option.valOf (ind_of defn)
-     val tac = MATCH_MP_TAC
-                (PURE_REWRITE_RULE [boolTheory.AND_IMP_INTRO]
-                   (GEN_ALL(DISCH_ALL (CONJ E I))))
-               THEN PURE_REWRITE_TAC [Conv.GSYM boolTheory.CONJ_ASSOC]
-     val goal = ([],Psyntax.mk_conj(concl E, concl I))
- in 
+     val th = CONJ E I
+     val tac = MATCH_MP_TAC (GEN_ALL (mangle th (hyp th)))
+     val goal = ([],concl th)
+ in
    case tac goal
     of ([([],g)],validation) => (([],g), fn th => validation [th])
      | _  => raise ERR "TC_TAC" "unexpected output"
