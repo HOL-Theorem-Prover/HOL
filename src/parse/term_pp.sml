@@ -220,10 +220,17 @@ exception DoneExit
 
 fun symbolic s = List.all HOLsym (String.explode s)
 
-fun has_name s tm =
-  (is_const tm andalso fst(dest_const tm) = s) orelse
-  (is_var tm andalso fst(dest_var tm) = s)
-
+(* term tm can be seen to have name s according to grammar G *)
+fun has_name G s tm = let
+  val oinfo = term_grammar.overload_info G
+in
+  if is_const tm then
+    case Overload.overloading_of_term oinfo tm of
+      SOME s' => s' = s
+    | NONE => false
+  else if is_var tm then fst (dest_var tm) = s
+  else false
+end
 
 datatype bvar
     = Simple of term
@@ -385,7 +392,7 @@ fun pp_term (G : grammar) TyG = let
                 in
                   case dest_term Rator of
                     COMB(rator1, rand1) =>
-                    if has_name s rator1 andalso my_is_abs Rand then let
+                    if has_name G s rator1 andalso my_is_abs Rand then let
                         val (bv, body) = my_dest_abs Rand
                       in
                         (Restricted{Bvar = bv, Restrictor = rand1}, body)
@@ -401,7 +408,7 @@ fun pp_term (G : grammar) TyG = let
           case (dest_term t) of
             COMB(Rator,Rand) => let
             in
-              if has_name s Rator andalso my_is_abs Rand then let
+              if has_name G s Rator andalso my_is_abs Rand then let
                   val (bv, body) = my_dest_abs Rand
                 in
                   (Simple bv, body)
@@ -413,7 +420,7 @@ fun pp_term (G : grammar) TyG = let
                   in
                     case (dest_term Rator) of
                       COMB(rator1, rand1) =>
-                      if has_name s rator1 andalso my_is_abs Rand then let
+                      if has_name G s rator1 andalso my_is_abs Rand then let
                           val (bv, body) = my_dest_abs Rand
                         in
                             (Restricted{Bvar = bv, Restrictor = rand1}, body)
@@ -1147,7 +1154,7 @@ fun pp_term (G : grammar) TyG = let
               val head = hd args
               val tail = List.nth(args, 1)
             in
-              if has_name nilstr tail then
+              if has_name G nilstr tail then
                 (* last element *)
                 pr_term head Top Top Top (depth - 1)
               else let
@@ -1354,12 +1361,12 @@ fun pp_term (G : grammar) TyG = let
           fun pr_atomf fname =
            let val candidate_rules = lookup_term fname
                fun is_list (r as {nilstr, cons, ...}) tm =
-                    (has_name nilstr tm)
+                    (has_name G nilstr tm)
                     orelse
                     is_comb tm andalso
                       let val (t0, tail) = dest_comb tm
                       in is_list r tail andalso is_comb t0
-                         andalso has_name cons (rator t0)
+                         andalso has_name G cons (rator t0)
                       end
                val restr_binder =
                   find_partial (fn (b,s) => if s=fname then SOME b else NONE)
