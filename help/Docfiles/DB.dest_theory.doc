@@ -11,15 +11,15 @@ theory.
 \DESCRIBE
 An invocation {dest_theory s} returns a structure
 {
-   THEORY(s,{{types, consts, parents, axioms, definitions, theorems}})
+   THEORY(s,{types, consts, parents, axioms, definitions, theorems})
 }
-where {types} is a list of {(string,int)} pairs that contains 
-all the type operators declared in {s}, {consts} is a 
-list of {(string,hol_type)} pairs enumerating all the term constants 
-declared in {s}, {parents} is a  list of strings denoting the parents 
+where {types} is a list of {(string,int)} pairs that contains
+all the type operators declared in {s}, {consts} is a
+list of {(string,hol_type)} pairs enumerating all the term constants
+declared in {s}, {parents} is a  list of strings denoting the parents
 of {s}, {axioms} is a list of {(string,thm)} pairs denoting the axioms
-asserted in {s}, {definitions} is a list of {(string,thm)} pairs denoting 
-the definitions of {s}, and {theorems} is a list of {(string,thm)} 
+asserted in {s}, {definitions} is a list of {(string,thm)} pairs denoting
+the definitions of {s}, and {theorems} is a list of {(string,thm)}
 pairs denoting the theorems proved and stored in {s}.
 
 The call {dest_theory "-"} may be used to access the contents of the
@@ -33,14 +33,14 @@ If {s} is not the name of a loaded theory.
 - dest_theory "option";
 > val it =
     Theory: option
-    
+
     Parents:
         sum
         one
-    
+
     Type constants:
         option 1
-    
+
     Term constants:
         option_case    :'b -> ('a -> 'b) -> 'a option -> 'b
         NONE    :'a option
@@ -52,7 +52,7 @@ If {s} is not the name of a loaded theory.
         THE    :'a option -> 'a
         OPTION_JOIN    :'a option option -> 'a option
         OPTION_MAP    :('a -> 'b) -> 'a option -> 'b option
-    
+
     Definitions:
         option_TY_DEF  |- ?rep. TYPE_DEFINITION (\x. T) rep
         option_REP_ABS_DEF
@@ -70,7 +70,7 @@ If {s} is not the name of a loaded theory.
         THE_DEF  |- !x. THE (SOME x) = x
         OPTION_JOIN_DEF
         |- (OPTION_JOIN NONE = NONE) /\ !x. OPTION_JOIN (SOME x) = x
-    
+
     Theorems:
         option_Axiom  |- !e f. ?fn. (!x. fn (SOME x) = f x) /\ (fn NONE = e)
         option_induction  |- !P. P NONE /\ (!a. P (SOME a)) ==> !x. P x
