@@ -287,7 +287,7 @@ val st0_valid_state = prove (Term`valid_state st0`,
 val nextstate_valid_state = 
 Count.apply prove  
   (Term`!event. valid_state st ==> valid_state (nextstate st event)`,
-   Induct 
+   Cases
      THEN ZAP_TAC (ap_ss && tran_defs) []);
 
 
@@ -304,7 +304,7 @@ val reachable_in_def =
 
 
 (*---------------------------------------------------------------------------*
- * Every reachable state is valid_state.                                     *
+ * Every reachable state is valid.                                           *
  *---------------------------------------------------------------------------*)
 
 val reachable_valid_state = prove
