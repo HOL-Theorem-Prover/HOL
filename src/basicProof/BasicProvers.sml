@@ -24,22 +24,24 @@ local val EXPAND_COND_CONV =
            simpLib.SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []
       val EXPAND_COND_TAC = CONV_TAC EXPAND_COND_CONV
       val EXPAND_COND = CONV_RULE EXPAND_COND_CONV
+      val NORM_RULE = CONV_RULE (EXPAND_COND_CONV THENC
+                                 REWRITE_CONV [markerTheory.Abbrev_def])
 in
 fun PROVE thl tm = Tactical.prove (tm,
-  EXPAND_COND_TAC THEN mesonLib.MESON_TAC (map EXPAND_COND thl))
+  EXPAND_COND_TAC THEN mesonLib.MESON_TAC (map NORM_RULE thl))
 
 fun PROVE_TAC thl (asl, w) = let
   val working = LLABEL_RESOLVE thl asl
 in
   EXPAND_COND_TAC THEN CONV_TAC (DEST_LABELS_CONV) THEN
-  mesonLib.MESON_TAC (map EXPAND_COND working)
+  mesonLib.MESON_TAC (map NORM_RULE working)
 end (asl, w)
 
 fun GEN_PROVE_TAC x y z thl (asl, w) = let
   val working = LLABEL_RESOLVE thl asl
 in
   EXPAND_COND_TAC THEN CONV_TAC (DEST_LABELS_CONV) THEN
-  mesonLib.GEN_MESON_TAC x y z (map EXPAND_COND working)
+  mesonLib.GEN_MESON_TAC x y z (map NORM_RULE working)
 end (asl, w)
 
 end; (* local *)
@@ -276,10 +278,12 @@ fun PRIM_NORM_TAC ss =
 fun STP_TAC ss finisher
   = PRIM_STP_TAC (rev_itlist add_simpls (tyinfol()) ss) finisher
 
-fun RW_TAC ss thl = STP_TAC (ss && thl) NO_TAC
+fun RW_TAC ss thl = Q.ABBRS_THEN (fn thl => STP_TAC (ss && thl) NO_TAC) thl
 
-fun NORM_TAC ss thl
-  = PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl))
+fun NORM_TAC ss thl =
+    Q.ABBRS_THEN
+      (fn thl => PRIM_NORM_TAC (rev_itlist add_simpls (tyinfol()) (ss && thl)))
+      thl
 
 val bool_ss = boolSimps.bool_ss;
 
@@ -323,8 +327,13 @@ fun srw_ss () = initialise_srw_ss();
 fun SRW_TAC ssdl thl = let
   val ss = foldl (fn (ssd, ss) => ss ++ ssd) (srw_ss()) ssdl
 in
-  PRIM_STP_TAC (ss && thl) NO_TAC
+  Q.ABBRS_THEN (fn thl => PRIM_STP_TAC (ss && thl) NO_TAC) thl
 end;
+
+fun Abbr q =
+    case q of
+      [QUOTE s] => REFL (mk_var(s, mk_vartype "'abbrev"))
+    | _ => raise mk_HOL_ERR "BasicProvers" "Abbr" "Ill-formed quotation"
 
 (*---------------------------------------------------------------------------
        Make some additions to the srw_ss persistent

@@ -260,6 +260,7 @@ fun UNDISCH_ALL th =
 
 val truth_tm = boolSyntax.T
 val false_tm = boolSyntax.F
+val Abbrev_tm = prim_mk_const {Name = "Abbrev", Thy = "marker"}
 val x_eq_false = SPEC (mk_eq(genvar bool, false_tm)) FALSITY
 
 fun IMP_EQ_CANON thm =
@@ -296,6 +297,11 @@ fun IMP_EQ_CANON thm =
         else if conc = truth_tm then
           (trace(2,IGNORE ("pointless rewrite",thm)); [])
         else if (conc = false_tm) then [MP x_eq_false undisch_thm]
+        else if is_comb conc andalso same_const (rator conc) Abbrev_tm then
+          if is_eq (rand conc) then
+            IMP_EQ_CANON
+              (SYM (CONV_RULE (REWR_CONV markerTheory.Abbrev_def) undisch_thm))
+          else []
         else [EQT_INTRO undisch_thm]
    in
       map (CONJ_DISCH conditions) undisch_rewrites

@@ -45,9 +45,13 @@ sig
   val prove                 : tmquote * tactic -> thm
   val ABBREV_TAC            : tmquote -> tactic
   val UNABBREV_TAC          : tmquote -> tactic
+  val UNABBREV_ALL_TAC      : tactic
+  val RM_ABBREV_TAC        : tmquote -> tactic
+  val RM_ALL_ABBREVS_TAC   : tactic
   val PAT_ABBREV_TAC        : tmquote -> tactic
   val MATCH_ABBREV_TAC      : tmquote -> tactic
   val HO_MATCH_ABBREV_TAC   : tmquote -> tactic
+  val ABBRS_THEN            : (thm list -> tactic) -> thm list -> tactic
   val INST                  : (tmquote, tmquote) subst -> thm -> thm
   val new_definition        : string * tmquote -> thm
   val new_infixl_definition : string * tmquote * int -> thm

@@ -13,6 +13,8 @@ open HolKernel boolLib Parse
       SingleStep mesonLib Rsyntax Prim_rec simpLib
       boolSimps pairSimps combinSimps optionSimps numSimps listSimps;
 
+open BasicProvers
+
 local open listTheory optionTheory pairTheory in end;
 
 val is_pair = pairSyntax.is_pair
@@ -260,19 +262,16 @@ val lbuild_rep_CONS = prove(
 
 val lbuild_rep_ok = prove(
   ``!f x. lrep_ok (lbuild_rep f x)``,
-  SIMP_TAC bool_ss [lrep_ok] THEN
-  REPEAT GEN_TAC THEN
-  Q.ABBREV_TAC `n = LENGTH l` THEN
-  POP_ASSUM MP_TAC THEN
-  MAP_EVERY Q.ID_SPEC_TAC [`f`, `x`, `x'`, `l`, `n`] THEN
-  numLib.INDUCT_TAC THENL [
+  SIMP_TAC bool_ss [lrep_ok] THEN REPEAT GEN_TAC THEN
+  Q.ID_SPEC_TAC `x'` THEN Induct_on `LENGTH l` THEN
+  ONCE_REWRITE_TAC [EQ_SYM_EQ] THENL [
     SIMP_TAC hol_ss [listTheory.LENGTH_NIL] THEN MESON_TAC [lrep_take],
     SIMP_TAC hol_ss [listTheory.LENGTH_CONS] THEN
-    CONV_TAC (REDEPTH_CONV LEFT_IMP_EXISTS_CONV) THEN
-    SIMP_TAC hol_ss [] THEN REPEAT STRIP_TAC THEN
+    SIMP_TAC (hol_ss ++ boolSimps.DNF_ss) [] THEN
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN REPEAT STRIP_TAC THEN
     IMP_RES_TAC lbuild_rep_CONS THEN ELIM_TAC THEN
     `?m. lrep_take (lbuild_rep f x) m = SOME front`
-       by ASM_MESON_TAC [] THEN
+       by PROVE_TAC [] THEN
     Q.EXISTS_TAC `SUC m` THEN ASM_SIMP_TAC hol_ss [lrep_take]
   ]);
 
@@ -371,7 +370,7 @@ val llist_CASES = store_thm(
       ASM_SIMP_TAC hol_ss [],
       SIMP_TAC hol_ss [] THEN
       Q.SUBGOAL_THEN `lrep_ok f` ASSUME_TAC THENL [
-        ELIM_TAC THEN SIMP_TAC hol_ss [llist_repabs, llist_absrep],
+        Q.UNABBREV_TAC `f` THEN SIMP_TAC hol_ss [llist_repabs, llist_absrep],
         ALL_TAC
       ] THEN
       COND_CASES_TAC THENL [
@@ -603,14 +602,14 @@ val LTAKE_EQ = store_thm(
              CONV_RULE (RAND_CONV (Q.X_FUN_EQ_CONV `pfx`))) THEN
   Q.ABBREV_TAC `f = llist_rep ll1` THEN
   Q.ABBREV_TAC `g = llist_rep ll2` THEN
-  `lrep_ok f` by ASM_MESON_TAC [llist_absrep, llist_repabs] THEN
-  `lrep_ok g` by ASM_MESON_TAC [llist_absrep, llist_repabs] THEN
+  `lrep_ok f` by PROVE_TAC [llist_absrep, llist_repabs] THEN
+  `lrep_ok g` by PROVE_TAC [llist_absrep, llist_repabs] THEN
   Cases_on `f pfx` THEN Cases_on `g pfx` THEN
   RULE_ASSUM_TAC (SIMP_RULE hol_ss []) THEN TRY (FIRST_ASSUM ACCEPT_TAC) THEN
   `?gm. lrep_take f (SUC gm) = SOME (APPEND pfx [x])` by
     ASM_MESON_TAC [lrep_ok'] THEN
-  `f pfx = SOME x` by ASM_MESON_TAC [lrep_ok'] THEN
-  `g pfx = SOME x` by ASM_MESON_TAC [lrep_ok'] THEN
+  `f pfx = SOME x` by PROVE_TAC [lrep_ok'] THEN
+  `g pfx = SOME x` by PROVE_TAC [lrep_ok'] THEN
   FULL_SIMP_TAC hol_ss []);
 
 val LLIST_BISIMULATION = store_thm(
@@ -949,9 +948,9 @@ val LFINITE_MAP = store_thm(
   "LFINITE_MAP",
   ``!f (ll:'a llist). LFINITE (LMAP f ll) = LFINITE ll``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
-    STRIP_TAC THEN Q.ABBREV_TAC `ll1 = LMAP f ll` THEN
-    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll` THEN
-    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll1` THEN
+    Q_TAC SUFF_TAC `!ll1. LFINITE ll1 ==>
+                          !ll. (ll1 = LMAP f ll) ==> LFINITE ll`
+          THEN1 SRW_TAC [][] THEN
     HO_MATCH_MP_TAC LFINITE_INDUCTION THEN REPEAT STRIP_TAC THEN
     REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll` llist_CASES) THEN
     FULL_SIMP_TAC hol_ss [LMAP, LCONS_NOT_NIL, LFINITE_THM, LCONS_11],
@@ -963,9 +962,10 @@ val LFINITE_APPEND = store_thm(
   "LFINITE_APPEND",
   ``!ll1 ll2. LFINITE (LAPPEND ll1 ll2) = LFINITE ll1 /\ LFINITE ll2``,
   REPEAT GEN_TAC THEN EQ_TAC THENL [
-    STRIP_TAC THEN Q.ABBREV_TAC `ll0 = LAPPEND ll1 ll2` THEN
-    POP_ASSUM MP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`ll1`, `ll2`] THEN
-    POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `ll0` THEN
+    Q_TAC SUFF_TAC `!ll0. LFINITE ll0 ==>
+                          !ll1 ll2. (LAPPEND ll1 ll2 = ll0) ==>
+                                    LFINITE ll1 /\ LFINITE ll2`
+          THEN1 PROVE_TAC [] THEN
     HO_MATCH_MP_TAC LFINITE_STRONG_INDUCTION THEN REPEAT STRIP_TAC THEN
     REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `ll1` llist_CASES) THEN
     FULL_SIMP_TAC hol_ss [LFINITE_THM, LAPPEND, LCONS_NOT_NIL, LCONS_11] THEN

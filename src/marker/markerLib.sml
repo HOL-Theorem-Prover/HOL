@@ -62,7 +62,7 @@ fun move_disj_right P = stmark_disjunct P THENC move_stmarked_disj_right
 (* Dealing with simplifier directives encoded as tags on theorems.           *)
 (*---------------------------------------------------------------------------*)
 
-fun AC th1 th2 = 
+fun AC th1 th2 =
   EQ_MP (SYM (SPECL [concl th1, concl th2] markerTheory.AC_DEF))
         (CONJ th1 th2);
 
@@ -76,5 +76,6 @@ fun unCong th = PURE_REWRITE_RULE [Cong_def] th;
 
 val AC_tm = prim_mk_const{Name="AC",Thy="marker"}
 val Cong_tm = prim_mk_const{Name="Cong",Thy="marker"};
+
 
 end

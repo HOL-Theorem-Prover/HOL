@@ -1509,9 +1509,7 @@ val residual1_pointwise_union = store_thm(
    (n_posns 0 y1' = BIGUNION (IMAGE f (n_posns 0 x1'))) /\
    (n_posns 0 y2' = BIGUNION (IMAGE f (n_posns 0 x2')))` by PROVE_TAC [] THEN
   ASM_REWRITE_TAC [] THEN
-  Q.PAT_ASSUM `Y = x'` (SUBST_ALL_TAC o SYM) THEN
-  Q.PAT_ASSUM `Y = x1'` (SUBST_ALL_TAC o SYM) THEN
-  Q.PAT_ASSUM `Y = x2'` (SUBST_ALL_TAC o SYM) THEN
+  MAP_EVERY Q.UNABBREV_TAC [`x'`, `x1'`, `x2'`] THEN
   SIMP_TAC (srw_ss()) [n_posns_nlabel] THEN
   REPEAT (POP_ASSUM (K ALL_TAC)) THEN
   REWRITE_TAC [EXTENSION] THEN
@@ -1746,7 +1744,7 @@ val labelled_redn_det = store_thm(
             !L. labelled_redn beta M r L = (L = N)``,
   REPEAT STRIP_TAC THEN SRW_TAC [][EQ_IMP_THM] THEN
   Q.ABBREV_TAC `M' = null_labelling M` THEN
-  `M = strip_label M'` by SRW_TAC [][strip_null_labelling] THEN
+  `M = strip_label M'` by SRW_TAC [][strip_null_labelling, Abbr`M'`] THEN
   Q.ABBREV_TAC `N' = lift_redn M' r N` THEN
   Q.ABBREV_TAC `L' = lift_redn M' r L` THEN
   `lrcc (beta0 RUNION beta1) M' r N' /\ (strip_label N' = N) /\
@@ -2291,9 +2289,7 @@ val WF_wterm_ordering = store_thm(
 
 val weighing_at_def = Define`weighing_at l w = w o APPEND l`;
 
-val GSPEC_OR = prove(
-  ``!P Q. { x | P x \/ Q x} = {x | P x} UNION {x | Q x}``,
-  SRW_TAC [][EXTENSION]);
+val GSPEC_OR = pred_setTheory.GSPEC_OR
 
 val GSPEC_EQ = prove(
   ``!e. ({x | x = e} = {e}) /\ ({x | e = x} = {e})``,
@@ -3015,7 +3011,7 @@ val weighted_reduction_reduces_ordering = store_thm(
           `p2 IN var_posns (strip_label t)`
               by PROVE_TAC [bv_posns_at_SUBSET_var_posns] THEN
           Q.ABBREV_TAC `fw = \p. w0 (Lt::In::p)` THEN
-          `w0 (Lt::In::p2) = fw p2` by SRW_TAC [][] THEN
+          `w0 (Lt::In::p2) = fw p2` by SRW_TAC [][Abbr`fw`] THEN
           ` _ = weight_at p2 fw (strip_label t)`
               by PROVE_TAC [weight_at_var_posn] THEN
           POP_ASSUM SUBST_ALL_TAC THEN
@@ -3069,7 +3065,7 @@ val weighted_reduction_reduces_ordering = store_thm(
         CONJ_TAC THENL [
           MATCH_MP_TAC CARD_SUM_IMAGE_LE THEN
           `vpset SUBSET v_posns v (strip_label t)`
-             by SRW_TAC [][pred_setTheory.SUBSET_DEF] THEN
+             by SRW_TAC [][pred_setTheory.SUBSET_DEF, Abbr`vpset`] THEN
           `FINITE vpset` by PROVE_TAC [pred_setTheory.SUBSET_FINITE,
                                        v_posns_FINITE] THEN
           ASM_REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
@@ -3085,6 +3081,7 @@ val weighted_reduction_reduces_ordering = store_thm(
              by PROVE_TAC [n_posn_valid_posns] THEN
           ASM_SIMP_TAC (srw_ss()) [weight_at_SUM_IMAGE] THEN
           MATCH_MP_TAC pred_setTheory.SUM_IMAGE_SUBSET_LE THEN
+          Q.UNABBREV_ALL_TAC THEN
           SRW_TAC [][pred_setTheory.SUBSET_DEF] THENL [
             MATCH_MP_TAC (MATCH_MP pred_setTheory.SUBSET_FINITE
                                    (Q.SPEC `strip_label t`
@@ -3488,7 +3485,7 @@ val corollary11_2_22i = store_thm(
             Q.SPEC_THEN `p` MP_TAC residuals_def THEN
             ASM_REWRITE_TAC [first_strip_path_label] THEN
             DISCH_THEN (Q.SPEC_THEN `ps` STRIP_ASSUME_TAC o GSYM) THEN
-            ASM_REWRITE_TAC []) THEN
+            ASM_SIMP_TAC bool_ss []) THEN
     POP_ASSUM SUBST_ALL_TAC THEN
     Q.PAT_ASSUM `last x = y` MP_TAC THEN
     ASM_SIMP_TAC (srw_ss()) [lift_path_strip_path_label] THEN
@@ -3942,7 +3939,7 @@ val lemma11_2_28i = store_thm(
          by PROVE_TAC [pred_setTheory.NOT_IN_EMPTY, lrcc_lcompat_closure,
                        beta0_n_posns] THEN
       `Cpl x' = x'` by PROVE_TAC [lterm_cpl_unique] THEN
-      SRW_TAC [][strip_label_nlabel],
+      SRW_TAC [][strip_label_nlabel, Abbr`x'`],
       MAP_EVERY Q.X_GEN_TAC [`x`,`y`,`z`] THEN REPEAT STRIP_TAC THEN
       Q.ISPEC_THEN `fd_grandbeta` (MATCH_MP_TAC o CONJUNCT2)
                    relationTheory.TC_RULES THEN
@@ -3955,11 +3952,11 @@ val lemma11_2_28i = store_thm(
       Q.ABBREV_TAC `M' = nlabel 0 x {pos}` THEN
       Q.ABBREV_TAC `N' = lift_redn M' pos y` THEN
       `lrcc (beta0 RUNION beta1) M' pos N' /\ (y = strip_label N')` by
-          PROVE_TAC [lift_redn_def, strip_label_nlabel] THEN
+          METIS_TAC [lift_redn_def, strip_label_nlabel] THEN
       `pos IN redex_posns x`
          by (SRW_TAC [][redex_posns_redex_occurrence,
                         is_redex_occurrence_def] THEN PROVE_TAC []) THEN
-      `pos IN n_posns 0 M'` by SRW_TAC [][n_posns_nlabel] THEN
+      `pos IN n_posns 0 M'` by SRW_TAC [][n_posns_nlabel, Abbr`M'`] THEN
       `lrcc beta0 M' pos N'` by PROVE_TAC [pick_a_beta] THEN
       `!n. n_posns n N' = {}` by PROVE_TAC [beta0_reduce_at_single_label] THEN
       `RTC (lcompat_closure beta0) M' N'`
@@ -3981,7 +3978,7 @@ val lemma11_2_28i = store_thm(
       FULL_SIMP_TAC (srw_ss()) [lcompat_closure_RUNION_distrib] THEN
       `RTC (compat_closure beta) (strip_label M') (strip_label (Cpl M'))` by
         PROVE_TAC [lemma11_1_6ii, reduction_def] THEN
-      VAR_EQ_TAC THEN FULL_SIMP_TAC (srw_ss()) [strip_label_nlabel],
+      Q.UNABBREV_TAC `M'` THEN FULL_SIMP_TAC (srw_ss()) [strip_label_nlabel],
       PROVE_TAC [relationTheory.RTC_RTC]
     ]
   ]);

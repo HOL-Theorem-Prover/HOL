@@ -548,6 +548,7 @@ val FOL_NORM_TAC =
    THEN CCONTR_TAC
    THEN REPEAT (POP_ASSUM MP_TAC)
    THEN SELECT_TAC
+   THEN REMOVE_ABBR_TAC
    THEN REPEAT FOL_STRIP_TAC);
 
 (* A flexible tactic that performs normalization of theorems and goal. *)

@@ -267,8 +267,14 @@ val INST_TYPE = Thm.INST_TYPE o mk_type_rsubst;
 
    ---------------------------------------------------------------------- *)
 
+fun Abbrev_wrap eqth =
+    EQ_MP (SYM (Thm.SPEC (concl eqth) markerTheory.Abbrev_def)) eqth
+
+val DeAbbrev = CONV_RULE (REWR_CONV markerTheory.Abbrev_def)
+
 fun ABB l r =
-    CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN ASSUME_TAC th)
+    CHOOSE_THEN (fn th => SUBST_ALL_TAC th THEN
+                          ASSUME_TAC (Abbrev_wrap (SYM th)))
                 (Thm.EXISTS(mk_exists(l, mk_eq(r, l)), r) (Thm.REFL r))
 
 fun ABBREV_TAC q (g as (asl,w)) =
@@ -277,13 +283,6 @@ fun ABBREV_TAC q (g as (asl,w)) =
  in
     ABB lhs rhs g
  end;
-
-fun UNABBREV_TAC q (g as (asl, w))= let
-  val v = Parse.parse_in_context (free_varsl (w::asl)) q
-in
-  FIRST_X_ASSUM(SUBST_ALL_TAC o SYM o assert(equal v o rhs o concl)) THEN
-  BETA_TAC
-end g
 
 fun PAT_ABBREV_TAC q (g as (asl, w)) =
     let val fv_set = FVL (w::asl) empty_tmset
@@ -325,5 +324,49 @@ in
   CONV_TAC (K unbeta_goal) THEN MAP_EVERY ABB' tminst
 end g
 
+fun UNABBREV_TAC q (g as (asl, w))= let
+  val v = Parse.parse_in_context (free_varsl (w::asl)) q
+in
+  FIRST_X_ASSUM(SUBST_ALL_TAC o assert(equal v o lhs o concl) o DeAbbrev)
+end g
+
+val UNABBREV_ALL_TAC = let
+  fun ttac th0 = let
+    val th = DeAbbrev th0
+  in
+    SUBST_ALL_TAC th ORELSE ASSUME_TAC th
+  end
+in
+  REPEAT (FIRST_X_ASSUM ttac)
+end
+
+fun RM_ABBREV_TAC q (g as (asl, w)) = let
+  val v = Parse.parse_in_context (free_varsl (w::asl)) q
+in
+  FIRST_X_ASSUM (K ALL_TAC o assert (equal v o lhs o concl) o DeAbbrev)
+end g
+
+val RM_ALL_ABBREVS_TAC = REPEAT (FIRST_X_ASSUM (K ALL_TAC o DeAbbrev))
+
+(* ----------------------------------------------------------------------
+    ABBRS_THEN
+   ---------------------------------------------------------------------- *)
+
+fun ABBRS_THEN ttac thl = let
+  fun abbr_check th = let
+    val (l,r,ty) = dest_eq_ty (concl th)
+    val vname = dest_vartype ty
+  in
+    vname = "'abbrev" andalso #1 (dest_var l) = #1 (dest_var r)
+  end handle HOL_ERR _ => false
+  val (abbrs, rest) = List.partition abbr_check thl
+  fun do_unabbr th = let
+    val (s,_) = dest_var(lhs (concl th))
+  in
+    UNABBREV_TAC [QUOTE s]
+  end
+in
+  MAP_EVERY do_unabbr abbrs THEN ttac rest
+end
 
 end; (* Q *)

@@ -1,3 +1,6 @@
+structure chap2Script =
+struct
+
 open HolKernel Parse boolLib
 
 open bossLib ncLib
@@ -7,6 +10,8 @@ open swapTheory BasicProvers
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
+
+structure Q = struct open Q open OldAbbrevTactics end;
 
 val _ = new_theory "chap2";
 
@@ -974,3 +979,4 @@ val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 
 
 val _ = export_theory()
+end; (* struct *)

@@ -18,7 +18,7 @@ app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
           "Defn", "TotalDefn", "metisLib"];
 *)
 open HolKernel Parse boolLib Prim_rec pairLib numLib
-     pairTheory numTheory prim_recTheory arithmeticTheory 
+     pairTheory numTheory prim_recTheory arithmeticTheory
     BasicProvers SingleStep metisLib mesonLib simpLib boolSimps;
 
 val AP = numLib.ARITH_PROVE
@@ -114,7 +114,7 @@ val GSPECIFICATION = new_specification
 
 val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
 
-val SET_SPEC_ss = SIMPSET 
+val SET_SPEC_ss = SIMPSET
                     {ac=[], congs=[], dprocs=[], filter=NONE, rewrs=[],
                      convs = [{conv = K (K SET_SPEC_CONV),
                                key = SOME([], ``x IN GSPEC f``),
@@ -1330,7 +1330,7 @@ val INJ_DELETE = Q.store_thm
 RW_TAC bool_ss [INJ_DEF, DELETE_DEF] THENL
 [`~(e = x)` by FULL_SIMP_TAC bool_ss
                  [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN
-  FULL_SIMP_TAC bool_ss [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN 
+  FULL_SIMP_TAC bool_ss [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN
   METIS_TAC [],
 METIS_TAC [IN_DIFF]]);
 
@@ -1415,11 +1415,11 @@ val BIJ_COMPOSE =
      REPEAT STRIP_TAC THENL
      [IMP_RES_TAC INJ_COMPOSE,IMP_RES_TAC SURJ_COMPOSE]);
 
-val BIJ_DELETE = Q.store_thm 
+val BIJ_DELETE = Q.store_thm
 ("BIJ_DELETE",
- `!s t f. BIJ f s t ==> !e. e IN s ==> BIJ f (s DELETE e) (t DELETE (f e))`, 
+ `!s t f. BIJ f s t ==> !e. e IN s ==> BIJ f (s DELETE e) (t DELETE (f e))`,
 RW_TAC bool_ss [BIJ_DEF, SURJ_DEF, INJ_DELETE, DELETE_DEF, INJ_DEF] THENL
-[FULL_SIMP_TAC bool_ss [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN 
+[FULL_SIMP_TAC bool_ss [DIFF_DEF,DIFF_INSERT, DIFF_EMPTY, IN_DELETE] THEN
   METIS_TAC [],
   `?y. y IN s /\ (f y = x)` by METIS_TAC [IN_DIFF] THEN
   Q.EXISTS_TAC `y` THEN RW_TAC bool_ss [] THEN
@@ -2016,12 +2016,12 @@ val CARD_PSUBSET =
      ASM_REWRITE_TAC [LESS_EQ] THEN
      REPEAT STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
-val SUBSET_EQ_CARD = Q.store_thm 
+val SUBSET_EQ_CARD = Q.store_thm
 ("SUBSET_EQ_CARD",
- `!s. FINITE s ==> !t. FINITE t /\ (CARD s = CARD t) /\ s SUBSET t ==> (s=t)`, 
+ `!s. FINITE s ==> !t. FINITE t /\ (CARD s = CARD t) /\ s SUBSET t ==> (s=t)`,
 SET_INDUCT_TAC THEN RW_TAC bool_ss [EXTENSION] THENL
 [PROVE_TAC [CARD_DEF, CARD_EQ_0], ALL_TAC] THEN
- EQ_TAC THEN RW_TAC bool_ss [] THENL 
+ EQ_TAC THEN RW_TAC bool_ss [] THENL
  [FULL_SIMP_TAC bool_ss [SUBSET_DEF], ALL_TAC] THEN
  Q.PAT_ASSUM `!t. FINITE t /\ (CARD s = CARD t) /\ s SUBSET t ==> (s = t)`
             (MP_TAC o Q.SPEC `t DELETE e`) THEN
@@ -2120,11 +2120,11 @@ val LESS_CARD_DIFF =
      IMP_RES_TAC (PURE_ONCE_REWRITE_RULE [GSYM NOT_LESS] th4)
      end);
 
-val FINITE_BIJ_CARD_EQ = Q.store_thm 
+val FINITE_BIJ_CARD_EQ = Q.store_thm
 ("FINITE_BIJ_CARD_EQ",
  `!S. FINITE S ==> !t f. BIJ f S t /\ FINITE t ==> (CARD S = CARD t)`,
 SET_INDUCT_TAC THEN RW_TAC bool_ss [BIJ_EMPTY, CARD_EMPTY] THEN
-`BIJ f s (t DELETE (f e))` by 
+`BIJ f s (t DELETE (f e))` by
      METIS_TAC [DELETE_NON_ELEMENT, IN_INSERT, DELETE_INSERT, BIJ_DELETE] THEN
 RW_TAC bool_ss [CARD_INSERT] THEN
 Q.PAT_ASSUM `$! m` (MP_TAC o Q.SPECL [`t DELETE f e`, `f`]) THEN
@@ -2138,7 +2138,7 @@ RW_TAC arith_ss []);
 
 val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",
-  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x) 
+  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x)
        ==> !x. FINITE x ==> P x`,
   GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ((BETA_RULE o
@@ -3203,7 +3203,7 @@ val COMMUTING_ITSET_INSERT = store_thm(
       `s = y INSERT t` by PROVE_TAC [NOT_IN_EMPTY, CHOICE_INSERT_REST] THEN
       `x IN t` by PROVE_TAC [IN_INSERT] THEN
       Q.ABBREV_TAC `u = t DELETE x` THEN
-      `t = x INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
+      `t = x INSERT u` by SRW_TAC [][INSERT_DELETE, Abbr`u`] THEN
       `~(x IN u)` by PROVE_TAC [IN_DELETE] THEN
       `s = x INSERT (y INSERT u)` by SRW_TAC [][INSERT_COMM] THEN
       POP_ASSUM SUBST_ALL_TAC THEN
@@ -3225,12 +3225,11 @@ val COMMUTING_ITSET_INSERT = store_thm(
   `x IN t /\ y IN s` by PROVE_TAC [IN_INSERT] THEN
   Q.ABBREV_TAC `u = s DELETE y` THEN
   `~(y IN u)` by PROVE_TAC [IN_DELETE] THEN
-  `s = y INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
+  `s = y INSERT u` by SRW_TAC [][INSERT_DELETE, Abbr`u`] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   FULL_SIMP_TAC bool_ss [IN_INSERT, FINITE_INSERT, CARD_INSERT,
                          DELETE_INSERT, delete_non_element] THEN
-  Q.PAT_ASSUM `CHOICE s = y` (K ALL_TAC) THEN
-  Q.PAT_ASSUM `REST s = t` (K ALL_TAC) THEN
+  Q.RM_ALL_ABBREVS_TAC THEN
   `t = x INSERT u` by
      (FULL_SIMP_TAC bool_ss [EXTENSION, IN_INSERT] THEN PROVE_TAC []) THEN
   ASM_SIMP_TAC arith_ss [delete_non_element]);
@@ -3268,6 +3267,8 @@ val SUM_IMAGE_DEF = new_definition(
   "SUM_IMAGE_DEF",
   ``SUM_IMAGE f s = ITSET (\e acc. f e + acc) s 0``);
 
+val _ = overload_on ("SIGMA", ``SUM_IMAGE``)
+
 val SUM_IMAGE_THM = store_thm(
   "SUM_IMAGE_THM",
   ``!f. (SUM_IMAGE f {} = 0) /\
@@ -3280,9 +3281,9 @@ val SUM_IMAGE_THM = store_thm(
     Q.ABBREV_TAC `g = \e acc. f e + acc` THEN
     Q_TAC SUFF_TAC `ITSET g (e INSERT s) 0 =
                     g e (ITSET g (s DELETE e) 0)` THEN1
-       SRW_TAC [][] THEN
+       SRW_TAC [][Abbr`g`] THEN
     MATCH_MP_TAC COMMUTING_ITSET_RECURSES THEN
-    SRW_TAC [numSimps.ARITH_ss][]
+    SRW_TAC [numSimps.ARITH_ss][Abbr`g`]
   ]);
 
 val SUM_IMAGE_SING = store_thm(
@@ -3301,7 +3302,7 @@ val SUM_IMAGE_SUBSET_LE = store_thm(
   SIMP_TAC (srw_ss()) [SUM_IMAGE_THM, delete_non_element] THEN
   REPEAT STRIP_TAC THEN Cases_on `e IN t` THENL [
     Q.ABBREV_TAC `u = t DELETE e` THEN
-    `t = e INSERT u` by SRW_TAC [][INSERT_DELETE] THEN
+    `t = e INSERT u` by SRW_TAC [][INSERT_DELETE, Abbr`u`] THEN
     `FINITE u` by PROVE_TAC [FINITE_DELETE, SUBSET_FINITE, FINITE_INSERT] THEN
     `~(e IN u)` by PROVE_TAC [IN_DELETE] THEN
     ASM_SIMP_TAC arith_ss [SUM_IMAGE_THM, delete_non_element] THEN
@@ -3406,35 +3407,38 @@ val SUM_IMAGE_upper_bound = store_thm(
   PROVE_TAC [LESS_EQ_LESS_EQ_MONO, ADD_COMM]);
 
 val DISJ_BIGUNION_CARD = Q.prove (
-`!P. FINITE P 
+`!P. FINITE P
      ==> (!s. s IN P ==> FINITE s) /\
-         (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t) 
+         (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t)
      ==> (CARD (BIGUNION P) = SUM_IMAGE CARD P)`,
-SET_INDUCT_TAC THEN 
-RW_TAC bool_ss [CARD_EMPTY,BIGUNION_EMPTY,SUM_IMAGE_THM,BIGUNION_INSERT] THEN
-`FINITE (BIGUNION s) /\ FINITE e` by METIS_TAC [FINITE_BIGUNION, IN_INSERT] THEN
-`!s'. s' IN s ==> DISJOINT e s'`  by METIS_TAC [IN_INSERT] THEN
-`CARD (e INTER (BIGUNION s)) = 0` by METIS_TAC [DISJOINT_DEF,DISJOINT_BIGUNION,CARD_EMPTY] THEN
-`CARD (e UNION BIGUNION s) = CARD (e UNION BIGUNION s) + 
-                             CARD (e INTER (BIGUNION s))` 
-  by RW_TAC arith_ss [] THEN
-ONCE_ASM_REWRITE_TAC [] THEN
-FULL_SIMP_TAC arith_ss [CARD_UNION, DELETE_NON_ELEMENT] THEN
-METIS_TAC [IN_INSERT]);
+  SET_INDUCT_TAC THEN
+  RW_TAC bool_ss [CARD_EMPTY,BIGUNION_EMPTY,SUM_IMAGE_THM,
+                  BIGUNION_INSERT] THEN
+  `FINITE (BIGUNION s) /\ FINITE e`
+     by METIS_TAC [FINITE_BIGUNION, IN_INSERT] THEN
+  `!s'. s' IN s ==> DISJOINT e s'`  by METIS_TAC [IN_INSERT] THEN
+  `CARD (e INTER (BIGUNION s)) = 0`
+     by METIS_TAC [DISJOINT_DEF,DISJOINT_BIGUNION,CARD_EMPTY] THEN
+  `CARD (e UNION BIGUNION s) = CARD (e UNION BIGUNION s) +
+                               CARD (e INTER (BIGUNION s))`
+    by RW_TAC arith_ss [] THEN
+  ONCE_ASM_REWRITE_TAC [] THEN
+  FULL_SIMP_TAC arith_ss [CARD_UNION, DELETE_NON_ELEMENT] THEN
+  METIS_TAC [IN_INSERT]);
 
-val SUM_SAME_IMAGE = Q.store_thm 
+val SUM_SAME_IMAGE = Q.store_thm
 ("SUM_SAME_IMAGE",
- `!P. FINITE P 
-     ==> !f p. p IN P /\ (!q. q IN P ==> (f p = f q)) 
+ `!P. FINITE P
+     ==> !f p. p IN P /\ (!q. q IN P ==> (f p = f q))
                ==> (SUM_IMAGE f P = CARD P * f p)`,
-SET_INDUCT_TAC THEN
-RW_TAC arith_ss [CARD_EMPTY, SUM_IMAGE_THM, CARD_INSERT] THEN
-FULL_SIMP_TAC arith_ss [DELETE_NON_ELEMENT,
-                        arithmeticTheory.RIGHT_ADD_DISTRIB,
-                        Q.prove (`(SUC x) = 1 + x`, RW_TAC arith_ss [])] THEN
-Cases_on `s = {}` THENL
-[RW_TAC arith_ss [SUM_IMAGE_THM, CARD_EMPTY, COMPONENT],
-METIS_TAC [COMPONENT, IN_INSERT, MEMBER_NOT_EMPTY]]);
+  SET_INDUCT_TAC THEN
+  RW_TAC arith_ss [CARD_EMPTY, SUM_IMAGE_THM, CARD_INSERT] THEN
+  FULL_SIMP_TAC arith_ss [DELETE_NON_ELEMENT,
+                          arithmeticTheory.RIGHT_ADD_DISTRIB,
+                          Q.prove (`(SUC x) = 1 + x`, RW_TAC arith_ss [])] THEN
+  Cases_on `s = {}` THENL
+  [RW_TAC arith_ss [SUM_IMAGE_THM, CARD_EMPTY, COMPONENT],
+  METIS_TAC [COMPONENT, IN_INSERT, MEMBER_NOT_EMPTY]]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -3691,24 +3695,24 @@ val partition_elements_interrelate = store_thm(
   SIMP_TAC (srw_ss()) [partition_def, GSYM LEFT_FORALL_IMP_THM] THEN
   PROVE_TAC [equiv_on_def]);
 
-val partition_SUBSET = Q.store_thm 
+val partition_SUBSET = Q.store_thm
 ("partition_SUBSET",
- `!R s t. R equiv_on s /\ t IN (partition R s) ==> t SUBSET s`, 
+ `!R s t. R equiv_on s /\ t IN (partition R s) ==> t SUBSET s`,
 RW_TAC bool_ss [partition_def, GSPECIFICATION, SUBSET_DEF] THEN
 FULL_SIMP_TAC bool_ss [GSPECIFICATION,pairTheory.PAIR_EQ]);
 
-val FINITE_partition = Q.store_thm 
+val FINITE_partition = Q.store_thm
 ("FINITE_partition",
- `!R s. R equiv_on s /\ FINITE s 
-       ==> FINITE (partition R s) /\ 
+ `!R s. R equiv_on s /\ FINITE s
+       ==> FINITE (partition R s) /\
            !t. t IN (partition R s) ==> FINITE t`,
-METIS_TAC [FINITE_BIGUNION_EQ, partition_SUBSET, 
+METIS_TAC [FINITE_BIGUNION_EQ, partition_SUBSET,
            SUBSET_FINITE, BIGUNION_partition]);
 
-val partition_CARD = Q.store_thm 
+val partition_CARD = Q.store_thm
 ("partition_CARD",
- `!R s. R equiv_on s /\ FINITE s 
-          ==> 
+ `!R s. R equiv_on s /\ FINITE s
+          ==>
         (CARD s = SUM_IMAGE CARD (partition R s))`,
 METIS_TAC [FINITE_partition, BIGUNION_partition, DISJ_BIGUNION_CARD,
            partition_elements_disjoint, FINITE_BIGUNION, partition_def]);

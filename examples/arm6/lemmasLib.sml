@@ -4,6 +4,8 @@ open HolKernel boolLib bossLib Q computeLib
      arithmeticTheory pairTheory onestepTheory word32Theory
      armTheory coreTheory lemmasTheory;
 
+open OldAbbrevTactics
+
 val std_ss = std_ss ++ boolSimps.LET_ss
 val arith_ss = arith_ss ++ boolSimps.LET_ss
 

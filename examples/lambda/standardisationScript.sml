@@ -1,3 +1,5 @@
+structure standardisationScript =
+struct
 open HolKernel Parse boolLib bossLib BasicProvers metisLib
 
 open boolSimps
@@ -14,6 +16,8 @@ open pathTheory
 local open containerTheory in end
 
 val _ = new_theory "standardisation"
+
+structure Q = struct open Q open OldAbbrevTactics end
 
 val RUNION_def = relationTheory.RUNION
 
@@ -2404,3 +2408,4 @@ val corollary11_4_8 = store_thm(
   ]);
 
 val _ = export_theory()
+end (* struct *)

@@ -270,7 +270,7 @@ val swap_vsubst = store_thm(
     Q_TAC (NEW_TAC "z") `{u; v; v'; x; y} UNION FV t` THEN
     `LAM v t = LAM z ([VAR z/v] t)` by SRW_TAC [][ALPHA] THEN
     Q.ABBREV_TAC `M = [VAR z/v] t` THEN
-    `size M = size t` by SRW_TAC [][] THEN
+    `size M = size t` by SRW_TAC [][Abbr`M`] THEN
     ASM_SIMP_TAC (srw_ss()) [SUB_THM] THEN
     `swap u v' (LAM z ([VAR x/y] M)) =
        LAM z ([VAR (swapstr u v' x)/swapstr u v' y] (swap u v' M))`
@@ -367,7 +367,7 @@ val swap_subst = store_thm(
     Q_TAC (NEW_TAC "z") `{v; v'; x; y} UNION FV M UNION FV N` THEN
     `LAM v M = LAM z ([VAR z/v] M)` by SRW_TAC [][ALPHA] THEN
     Q.ABBREV_TAC `M' = [VAR z/v] M` THEN
-    `size M' = size M` by SRW_TAC [][] THEN
+    `size M' = size M` by SRW_TAC [][Abbr`M'`] THEN
     ASM_SIMP_TAC (srw_ss()) [SUB_THM] THEN
     ASM_SIMP_TAC (srw_ss()) [swap_thm] THEN
     `~(z IN FV (swap x y N))` by SRW_TAC [][] THEN
@@ -618,8 +618,9 @@ val swap_RECURSION_pgeneric = store_thm(
             DISCH_THEN (Q.X_CHOOSE_THEN `z` STRIP_ASSUME_TAC) THEN
             `LAM v t = LAM z ([VAR z/v] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
             Q.ABBREV_TAC `M = [VAR z/v] t` THEN
-            `size t = size M` by SRW_TAC [][] THEN
-            POP_ASSUM SUBST_ALL_TAC THEN POP_ASSUM (K ALL_TAC) THEN
+            `size t = size M` by SRW_TAC [][Abbr`M`] THEN
+            Q.RM_ABBREV_TAC `M` THEN
+            POP_ASSUM SUBST_ALL_TAC THEN
             POP_ASSUM SUBST_ALL_TAC THEN
             `hom (swap x y (LAM z M)) p =
                rswap x y (lam (hom M) z M (pswap x y p))`

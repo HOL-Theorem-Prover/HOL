@@ -45,7 +45,7 @@ in
   Q.ABBREV_TAC `^asm` THEN
   MAP_EVERY (ASSUME_TAC o prove_ind) inds THEN
   MAP_EVERY (ASSUME_TAC o prove_set) sets THEN
-  FIRST_X_ASSUM (K ALL_TAC o assert (is_eq o concl))
+  Q.RM_ABBREV_TAC `^var`
 end
 
 (* ----------------------------------------------------------------------

@@ -1489,7 +1489,7 @@ val BAG_IN_FINITE_BAG_IMAGE = store_thm(
   SRW_TAC [][BAG_IMAGE_DEF] THEN EQ_TAC THEN STRIP_TAC THENL [
     FULL_SIMP_TAC (srw_ss()) [BAG_IN, BAG_INN] THEN
     Q.ABBREV_TAC `bf = BAG_FILTER (\e0. f e0 = x) b` THEN
-    `FINITE_BAG bf` by SRW_TAC [][] THEN
+    `FINITE_BAG bf` by (Q.UNABBREV_TAC `bf` THEN SRW_TAC [][]) THEN
     `0 < BAG_CARD bf` by SRW_TAC [numSimps.ARITH_ss][] THEN
     `?m. BAG_CARD bf = SUC m`
         by PROVE_TAC [arithmeticTheory.num_CASES,

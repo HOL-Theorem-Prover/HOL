@@ -46,7 +46,7 @@ fun appconv (c,UNBOUNDED) tm     = c tm
   | appconv (c,BOUNDED r) tm     = c tm before Portable.dec r;
 
 fun dest_tagged_rewrite thm =
-   (UNBOUNDED, DEST_UNBOUNDED thm) 
+   (UNBOUNDED, DEST_UNBOUNDED thm)
  handle _ =>
    let val (th,n) = DEST_BOUNDED thm
    in (BOUNDED (ref n), th)
@@ -55,10 +55,10 @@ fun dest_tagged_rewrite thm =
 fun mk_rewr_convdata thm =
  let val (tag,thm') = dest_tagged_rewrite thm
      val th = SPEC_ALL thm'
- in 
+ in
    {name   = "<rewrite>",
      key   = SOME (free_varsl (hyp th), lhs(#2 (strip_imp(concl th)))),
-     trace = 100, (* no need to provide extra tracing here; 
+     trace = 100, (* no need to provide extra tracing here;
                      COND_REWR_CONV provides enough tracing itself *)
      conv  = appconv (COND_REWR_CONV th, tag)}
  end;
@@ -159,9 +159,9 @@ with
   * mk_simpset
   * ---------------------------------------------------------------------*)
 
-  fun mk_ac p A = 
-     let val (a,b,c) = Drule.MK_AC_LCOMM p 
-     in a::b::c::A 
+  fun mk_ac p A =
+     let val (a,b,c) = Drule.MK_AC_LCOMM p
+     in a::b::c::A
      end handle HOL_ERR _ => A;
 
   fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
@@ -194,7 +194,7 @@ with
   fun rewriter_for_ss (SS{mk_rewrs,travrules,initial_net,...}) =
     let fun addcontext (context,thms) =
           let val net = (raise context) handle CONVNET net => net
-          in CONVNET (net_add_convs net 
+          in CONVNET (net_add_convs net
                          (map mk_rewr_convdata
                            (flatten (map mk_rewrs thms))))
           end
@@ -221,7 +221,7 @@ local open markerLib
    fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
    fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
-  fun process_tags ss thl = 
+  fun process_tags ss thl =
     let val (Congs,rst) = Lib.partition is_Cong thl
         val (ACs,rst') = Lib.partition is_AC rst
     in
@@ -230,19 +230,19 @@ local open markerLib
                         convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
     end
 in
-fun SIMP_CONV ss l = 
+fun SIMP_CONV ss l =
   let val (ss', l') = process_tags ss l
   in TRY_CONV (SIMP_QCONV ss' l')
   end;
 
-fun SIMP_PROVE ss l = 
+fun SIMP_PROVE ss l =
   let val (ss', l') = process_tags ss l
   in EQT_ELIM o SIMP_QCONV ss' l'
   end;
 
 infix &&;
 
-fun (ss && thl) = 
+fun (ss && thl) =
   let val (ss',thl') = process_tags ss thl
   in ss' ++ rewrites thl'
   end;
@@ -260,9 +260,9 @@ end;
 (* These tactics never fail, though they may diverge.                        *)
 (* --------------------------------------------------------------------------*)
 
-fun SIMP_TAC ss l = CONV_TAC (SIMP_CONV ss l);
+fun SIMP_TAC ss l = Q.ABBRS_THEN (CONV_TAC o SIMP_CONV ss) l
 
-fun ASM_SIMP_TAC ss l (asms,gl) = 
+fun ASM_SIMP_TAC ss l (asms,gl) =
   let val working = labelLib.LLABEL_RESOLVE l asms
   in
     SIMP_TAC ss working (asms,gl)

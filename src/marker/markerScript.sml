@@ -2,9 +2,14 @@ open HolKernel Parse boolLib
 
 val _ = new_theory "marker";
 
-(* stmarker stands for "short term marker"; use this constant to mark
-   sub-terms for a short period (within a conversion, say) and be sure
-   to remove the marker soon after use. *)
+(* ----------------------------------------------------------------------
+    stmarker
+
+    stmarker stands for "short term marker"; use this constant to mark
+    sub-terms for a short period (within a conversion, say) and be sure
+    to remove the marker soon after use.
+   ---------------------------------------------------------------------- *)
+
 val stmarker_def = new_definition("stmarker_def", ``stmarker (x:'a) = x``);
 
 (* the following move_<dir>_<op> theorems will loop if more than one term
@@ -55,19 +60,37 @@ val move_right_disj = store_thm(
      (t1 /\ t2) /\ ...
 *)
 
-(* unint stands for "uninterpreted", and can be used to mark and/or
-   breakup terms that represent "bad" situations.  One can be sure
-   that unint terms will never be written away, so that they will
-   persist and act as a signal to the user that something has gone wrong.
+(* ----------------------------------------------------------------------
+    unint
 
-   Just make sure that unint never appears on the LHS of a rewrite rule.
-   (Idea and name taken from Joe Hurd's development of the positive reals
-   with an infinity.)
-*)
+    unint stands for "uninterpreted", and can be used to mark and/or
+    breakup terms that represent "bad" situations.  One can be sure
+    that unint terms will never be written away, so that they will
+    persist and act as a signal to the user that something has gone wrong.
+
+    Just make sure that unint never appears on the LHS of a rewrite rule.
+    (Idea and name taken from Joe Hurd's development of the positive reals
+    with an infinity.)
+   ---------------------------------------------------------------------- *)
 
 val unint_def = new_definition(
   "unint_def",
   ``unint (x:'a) = x``);
+
+(* ----------------------------------------------------------------------
+    Abbrev
+
+    For wrapping up abbreviations in the assumption list.  This tag
+    protects equalities so that they can appear in assumptions and not
+    be eliminated or unduly messed with by other tactics
+   ---------------------------------------------------------------------- *)
+
+val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
+
+val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
+                  pp_elements = [BreakSpace(5,2), TOK "Abbrev"],
+                  fixity = Suffix 1, paren_style = OnlyIfNecessary,
+                  term_name = "Abbrev"}
 
 
 (*---------------------------------------------------------------------------*)

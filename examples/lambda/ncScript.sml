@@ -1106,12 +1106,16 @@ val size_isub = store_thm(
     SRW_TAC [][ISUB_APP, size_def],
     REPEAT STRIP_TAC THEN
     Q.ABBREV_TAC `avds = FVS R UNION DOM R UNION FV t` THEN
-    `FINITE avds` by SRW_TAC [][FINITE_FVS, FINITE_DOM, FINITE_FV] THEN
+    `FINITE avds`
+       by (Q.UNABBREV_TAC `avds` THEN
+           SRW_TAC [][FINITE_FVS, FINITE_DOM, FINITE_FV]) THEN
     Q.ABBREV_TAC `z = NEW avds` THEN
-    `~(z IN avds)` by SRW_TAC [][NEW_FRESH_string] THEN
+    `~(z IN avds)`
+        by (Q.UNABBREV_TAC `z` THEN SRW_TAC [][NEW_FRESH_string]) THEN
     `~(z IN FVS R) /\ ~(z IN DOM R) /\ ~(z IN FV t)`
-        by (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
-    REPEAT (FIRST_X_ASSUM (K ALL_TAC o assert (is_eq o concl))) THEN
+        by (Q.UNABBREV_TAC `z` THEN Q.UNABBREV_TAC `avds` THEN
+            SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    REPEAT (Q.PAT_ASSUM `Abbrev X` (K ALL_TAC)) THEN
     `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
     SRW_TAC [][ISUB_LAM] THEN
     ASM_SIMP_TAC bool_ss [size_def] THEN
