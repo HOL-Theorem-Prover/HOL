@@ -13,14 +13,14 @@
           BEGIN user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val mosmldir =
-val holdir   =
+val mosmldir = 
+val holdir   = 
 
 val OS       = "linux";    (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT"        *)
 
 val CC       = "gcc";      (* C compiler                                   *)
-val GNUMAKE  = "gnumake";  (* for bdd library and SMV                      *)
+val GNUMAKE  = "make";     (* for bdd library and SMV                      *)
 
 val DEPDIR   = ".HOLMK";   (* local dir. where Holmake dependencies kept   *)
 val LN_S     = "ln -s";    (* only change if you are a HOL developer.      *)
@@ -45,22 +45,25 @@ fun fullPath slist = normPath
      Load in OS-dependent stuff.
  ---------------------------------------------------------------------------*)
 
-(* first load in systeml functions *)
-val holmakedir = fullPath [holdir, "tools", "Holmake"];
-val _ =
-  if FileSys.access(fullPath [holmakedir, "Systeml.uo"],
-                    [FileSys.A_READ]) andalso
-     FileSys.access(fullPath [holmakedir, "Systeml.ui"], [FileSys.A_READ])
-  then let
-    val oldloadpath = !loadPath
-    val _ = loadPath := !loadPath @ [holmakedir]
-  in
-    load (fullPath [holmakedir, "Systeml"]);
-    loadPath := oldloadpath
-  end
-  else
-    use (fullPath [holmakedir, "Systeml.sml"]);
 
+val holmakedir = fullPath [holdir, "tools", "Holmake"];
+val compiler = fullPath [mosmldir, "bin", "mosmlc"];
+
+(*---------------------------------------------------------------------------
+         First load in systeml functions 
+ ---------------------------------------------------------------------------*)
+
+val _ =
+  if FileSys.access(fullPath [holmakedir, "Systeml.uo"],[FileSys.A_READ]) 
+     andalso
+     FileSys.access(fullPath [holmakedir, "Systeml.ui"], [FileSys.A_READ])
+  then let val oldloadpath = !loadPath
+           val _ = loadPath := !loadPath @ [holmakedir]
+       in
+         load (fullPath [holmakedir, "Systeml"]);
+         loadPath := oldloadpath
+       end
+  else use (fullPath [holmakedir, "Systeml.sml"]);
 
 open Systeml;
 
@@ -69,16 +72,17 @@ in
 val _ = use (fullPath [holdir,"tools/config-"^OSkind^".sml"])
 end;
 
-(* now compile Systeml.sml; if necessary *)
-val compiler = fullPath [mosmldir, "bin", "mosmlc"];
+(*---------------------------------------------------------------------------
+     Now compile Systeml.sml; if necessary 
+ ---------------------------------------------------------------------------*)
 
-if not (FileSys.access("Holmake/Systeml.uo", [FileSys.A_READ])) then let
-  val cd = FileSys.getDir()
-in
-  FileSys.chDir (fullPath [holdir, "tools", "Holmake"]);
-  systeml [compiler, "-c", "Systeml.sml"];
-  FileSys.chDir cd
-end else ();
+if not (FileSys.access("Holmake/Systeml.uo", [FileSys.A_READ])) 
+ then let val dir_0 = FileSys.getDir()
+      in FileSys.chDir holmakedir;
+         systeml [compiler, "-c", "Systeml.sml"];
+         FileSys.chDir dir_0
+      end 
+ else ();
 
 
 (*---------------------------------------------------------------------------
@@ -156,15 +160,6 @@ fun fill_holes (src,target) repls =
 infix -->
 fun (x --> y) = (x,y);
 
-fun full_paths (ind,holdir) =
-  let fun ext s = Path.concat(holdir,s)
-      fun plist [] = raise Fail "plist: empty"
-        | plist  [x] = [quote (ext x), "];\n"]
-        | plist (h::t) = quote (ext h)::",\n"::ind::plist  t
-  in
-   String.concat o plist
-  end;
-
 val _ = echo "\nBeginning configuration.";
 
 (*---------------------------------------------------------------------------
@@ -228,15 +223,24 @@ val _ =
      val src    = fullPath [holdir, "tools/build.src"]
      val target = fullPath [holdir, "tools/build.sml"]
      val bin    = fullPath [holdir, "bin/build"]
+     val full_paths =
+      let fun ext s = fullPath [holdir,s]
+          fun plist [] = raise Fail "plist: empty"
+            | plist  [x] = [quote (ext x), "];\n"]
+            | plist (h::t) = quote (ext h)::",\n     "::plist  t
+      in String.concat o plist
+      end
   in
    fill_holes (src,target)
     ["val OS =" --> String.concat["val OS = ", quote OS, ";\n"],
      "val HOLDIR = _;\n" --> String.concat["val HOLDIR = ",quote holdir,";\n"],
      "val DEPDIR = _;\n" --> String.concat["val DEPDIR = ",quote DEPDIR,";\n"],
      "val SRCDIRS = _;\n" --> String.concat["val SRCDIRS = \n","    [",
-                                          full_paths("     ",holdir) SRCDIRS],
+                                          full_paths SRCDIRS],
      "val GNUMAKE = _;\n" --> String.concat["val GNUMAKE = ",
-                                              quote GNUMAKE,";\n"]];
+                                              quote GNUMAKE,";\n"],
+     "val EXECUTABLE = _;\n" --> String.concat["val EXECUTABLE = ",
+                                          quote(xable_string bin),";\n"]];
    systeml [fullPath [mosmldir, "bin/mosmlc"], "-o", bin,
             "-I", holmakedir, target];
    FileSys.remove (fullPath [holdir,"tools/build.ui"]);

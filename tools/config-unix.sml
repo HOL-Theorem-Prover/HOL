@@ -4,6 +4,7 @@ local
   open Process
 in
 
+  fun xable_string s = s
   val MK_XABLE_RHS = "(unix_systeml [\"chmod\", \"a+x\", file]; file)"
   val systeml = unix_systeml
   val SYSTEML_NAME = "unix_systeml"

@@ -2,21 +2,6 @@
                 An ML script for building HOL
  ---------------------------------------------------------------------------*)
 
-(* The following lines are written at configuration time. *)
-
-open Systeml;
-
-val OS = _;
-val HOLDIR = _;
-val DEPDIR = _;
-val SRCDIRS = _;
-val GNUMAKE = _;
-
-val SYSTEML = if OS = "winNT" then winnt_systeml else unix_systeml;
-
-
-val SIGOBJ = Path.concat(HOLDIR, "sigobj");
-
 fun normPath s = Path.toString(Path.fromString s)
 fun itstrings f [] = raise Fail "itstrings: empty list"
   | itstrings f [x] = x
@@ -26,16 +11,30 @@ fun fullPath slist = normPath
 
 fun quote s = String.concat["\"", s, "\""];
 
-local val Holmake_path = fullPath [HOLDIR, "bin/Holmake"]
-in
+(*---------------------------------------------------------------------------
+     The following lines are written at configuration time.
+ ---------------------------------------------------------------------------*)
+
+val OS = _;
+val HOLDIR = _;
+val DEPDIR = _;
+val SRCDIRS = _;
+val GNUMAKE = _;
+val EXECUTABLE = _;
+
+val SIGOBJ = fullPath [HOLDIR, "sigobj"];
+val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
+
+open Systeml;
+val SYSTEML = if OS = "winNT" then winnt_systeml else unix_systeml;
+
 fun Holmake dir =
-  if SYSTEML [Holmake_path, "--qof"] = Process.success then ()
+  if SYSTEML [HOLMAKE, "--qof"] = Process.success then ()
   else (print ("Build failed in directory "^dir^"\n");
-        raise Fail "Couldn't make directory")
-end;
+        raise Fail "Couldn't make directory");
 
 
-fun gnumake dir =
+fun Gnumake dir =
   if SYSTEML [GNUMAKE] = Process.success then ()
   else (print ("Build failed in directory "^dir
                 ^" ("^GNUMAKE^" failed).\n");
@@ -77,7 +76,6 @@ fun bincopy file path =  (* Dead simple file copy - binary version *)
          | NONE    => (closeIn istrm; flushOut ostrm; closeOut ostrm)
   in loop()
   end;
-
 
 
 fun link s1 s2 =
@@ -137,12 +135,12 @@ in
         "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
                                       "muddy.so"])
                            (fullPath [HOLDIR, "sigobj", "muddy.so"])
-      | _ => gnumake dir handle _ =>
+      | _ => Gnumake dir handle _ =>
                            print(String.concat
                                  ["\nmuddyLib has NOT been built!! ",
                                   "(continuing anyway).\n\n"])
     end
-  | "smv.2.4.3" => (gnumake dir
+  | "smv.2.4.3" => (Gnumake dir
                     handle _ => print(String.concat
                                       ["\nCompilation of SMV fails!!",
                                        " temporal Lib has NOT been built!! ",
@@ -215,13 +213,14 @@ fun build_help () =
         raise Fail "Couldn't make help database")
  end;
 
-fun make_buildstamp () = let
-  val stamp_filename = Path.concat(HOLDIR, "build-stamp")
-  val stamp_stream = TextIO.openOut stamp_filename
-  val date_string = Date.toString (Date.fromTimeLocal (Time.now()))
-in
-  TextIO.output(stamp_stream, " (built "^date_string^")");
-  TextIO.closeOut stamp_stream
+fun make_buildstamp () = 
+ let open Path TextIO
+     val stamp_filename = concat(HOLDIR, concat("tools","build-stamp"))
+     val stamp_stream = openOut stamp_filename
+     val date_string = Date.toString (Date.fromTimeLocal (Time.now()))
+ in
+    output(stamp_stream, " (built "^date_string^")");
+    closeOut stamp_stream
 end
 
 
@@ -291,13 +290,17 @@ fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
 val help_mesg = "Usage: build\n\
                                 \  or: build -symlink\n\
                                 \  or: build -clean\n\
-                                \  or: build -cleanAll.";
+                                \  or: build -cleanAll\n\
+                                \  or: build symlink\n\
+                                \  or: build clean\n\
+                                \  or: build cleanAll\n\
+                                \  or: build help.";
+
 val _ = let
-  open OS.FileSys Time
-  val mytime = modTime (fullPath (HOLDIR ^ "/bin/build"))
-  val cfgtime = modTime (fullPath (HOLDIR ^ "/tools/configure.sml"))
+  open Time
+  val cfgtime = FileSys.modTime (fullPath [HOLDIR, "tools","configure.sml"])
 in
-  if mytime < cfgtime then
+  if FileSys.modTime EXECUTABLE < cfgtime then
     (print "WARNING! WARNING!\n";
      print "  The build file is older than the configure.sml script;\n";
      print "  this suggests you should reconfigure the system.\n";

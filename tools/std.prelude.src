@@ -74,7 +74,7 @@ end;
 
 
 (*---------------------------------------------------------------------------*
- * Set up the the help paths.                                                *
+ * Set up the help paths.                                                    *
  *---------------------------------------------------------------------------*)
 
 local
@@ -122,13 +122,13 @@ end
  * Print a banner.                                                           *
  *---------------------------------------------------------------------------*)
 
-val build_stamp = let
-  val stampstr = TextIO.openIn (Path.concat(HOLDIR, "build-stamp"))
-  val stamp = TextIO.inputAll stampstr
-  val _ = TextIO.closeIn stampstr
-in
-  stamp
-end handle _ => ""
+val build_stamp = 
+ let open TextIO Path
+     val stampstr = openIn (concat(HOLDIR, concat("tools", "build-stamp")))
+     val stamp = inputAll stampstr before closeIn stampstr
+ in
+     stamp
+ end handle _ => "";
 
 val _ =
 TextIO.output(TextIO.stdOut,
