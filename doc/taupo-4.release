@@ -24,6 +24,10 @@ New features:
     certain set of known constants, and not have parses go awry
     because the logical context has actually been extended with new
     constants.
+  * The set theories (pred_setTheory and setTheory) have been extended
+    with treatments of BIGUNION (union of a set of sets) and set
+    cross-product.  A variety of new theorems about these and
+    treatments of finiteness have been added as well.
 
 New theories:
 -------------
