@@ -136,7 +136,7 @@ val APPEND = new_recursive_definition
        def = --`(!l:'a list. APPEND [] l = l) /\
                   (!l1 l2 h. APPEND (h::l1) l2 = h::APPEND l1 l2)`--};
 
-val _ = set_fixity "++" (Infixl 500);
+val _ = set_fixity "++" (Infixl 440);
 val _ = overload_on ("++", Term`APPEND`);
 
 val FLAT = new_recursive_definition
@@ -240,11 +240,11 @@ val MAP2 =
   end
 
 val MAP2_FAIL = Q.prove
-(`(!f h t. 
-   (MAP2 (f:'a->'b->'c) [] (h::t) = 
+(`(!f h t.
+   (MAP2 (f:'a->'b->'c) [] (h::t) =
     FAIL MAP2 ^(mk_var("unequal length lists",bool)) f [] (h::t))) /\
   !f h t.
-    (MAP2 (f:'a->'b->'c) (h::t) [] = 
+    (MAP2 (f:'a->'b->'c) (h::t) [] =
      FAIL MAP2 ^(mk_var("unequal length lists",bool)) f (h::t) [])`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
@@ -742,9 +742,9 @@ val ZIP =
     end;
 
 val ZIP_FAIL = Q.prove
-(`(!(h:'b) t. ZIP ([]:'a list,h::t) = 
+(`(!(h:'b) t. ZIP ([]:'a list,h::t) =
          FAIL ZIP ^(mk_var("unequal length lists",bool)) ([],h::t)) /\
-  (!(h:'a) t. ZIP (h::t,[]:'b list) = 
+  (!(h:'a) t. ZIP (h::t,[]:'b list) =
               FAIL ZIP ^(mk_var("unequal length lists",bool)) (h::t,[]))`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
@@ -993,12 +993,12 @@ val _ = export_rewrites ["IN_LIST_TO_SET"]
 
 val _ = Defn.def_suffix := "_DEF";
 
-val LEN_DEF = Define 
-  `(LEN [] n = n) /\ 
+val LEN_DEF = Define
+  `(LEN [] n = n) /\
    (LEN (h::t) n = LEN t (n+1))`;
 
-val REV_DEF = Define 
-  `(REV [] acc = acc) /\ 
+val REV_DEF = Define
+  `(REV [] acc = acc) /\
    (REV (h::t) acc = REV t (h::acc))`;
 
 val LEN_LENGTH_LEM = Q.store_thm
@@ -1070,15 +1070,15 @@ val _ = BasicProvers.export_rewrites
 val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
 val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};
 
-fun dest_cons M = 
-  case strip_comb M 
+fun dest_cons M =
+  case strip_comb M
    of (c,[p,q]) => if Term.same_const c cons_tm then (p,q)
-                   else raise ERR "listScript" "dest_cons" 
+                   else raise ERR "listScript" "dest_cons"
     | otherwise => raise ERR "listScript" "dest_cons" ;
 
-fun dest_list M = 
+fun dest_list M =
    case total dest_cons M
-    of NONE => if same_const nil_tm M then [] 
+    of NONE => if same_const nil_tm M then []
                else raise ERR "dest_list" "not terminated with nil"
      | SOME(h,t) => h::dest_list t
 
@@ -1099,7 +1099,7 @@ val _ = adjoin_to_theory
   let val S = PP.add_string ppstrm
       fun NL() = PP.add_newline ppstrm
   in S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"CONS\",Thy=\"list\"});";
-     NL(); 
+     NL();
      S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"NIL\",Thy=\"list\"});";
      NL(); NL()
   end)};
@@ -1123,8 +1123,8 @@ val ZIP_THM = let val [a,b] = CONJUNCTS ZIP
                in LIST_CONJ [a,c,d,b]
                end;
 
-val _ = 
- let open EmitML 
+val _ =
+ let open EmitML
  in exportML("list",
          MLSIG "type num = numML.num"
          :: OPEN ["num"]
@@ -1133,7 +1133,7 @@ val _ =
              [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
               MEM, FILTER, FOLDR, FOLDL, EVERY_DEF,
               EXISTS_DEF, MAP2_THM, ZIP_THM, UNZIP_THM, REVERSE_DEF,
-              CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS, 
+              CONJ LAST_NIL LAST_CONS, CONJ FRONT_NIL FRONT_CONS,
               ALL_DISTINCT, EL_compute, LENGTH_THM, LEN_DEF, REV_DEF])
  end;
 

@@ -135,10 +135,8 @@ val fnsum_def = new_definition(
   "fnsum_def",
   ``fnsum f1 f2 X = f1 X UNION f2 X``);
 
-val _ = add_rule {block_style = (AroundSameName, (PP.INCONSISTENT, 0)),
-                  paren_style = OnlyIfNecessary,
-                  pp_elements = [HardSpace 1, TOK "++", BreakSpace(1,2)],
-                  fixity = Infixl 500, term_name = "fnsum"};
+val _ = set_fixity "++" (Infixl 440)
+val _ = overload_on ("++", ``fnsum``);
 
 val fnsum_monotone = store_thm(
   "fnsum_monotone",
