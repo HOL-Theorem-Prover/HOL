@@ -5,7 +5,7 @@
 structure mesonLib :> mesonLib =
 struct
 
-open HolKernel boolLib Parse liteLib Ho_Rewrite Canon_Port tautLib;
+open HolKernel boolLib liteLib Ho_Rewrite Canon_Port tautLib;
 
 infix THEN THENC ORELSE ORELSE_TCL;
 
@@ -126,7 +126,7 @@ local
         (vcounter := m; n)
     end
   fun hol_of_var v =
-     case (assoc2 v (!vstore))
+     case assoc2 v (!vstore)
       of NONE => assoc2 v (!gstore)
        | x => x
   fun hol_of_bumped_var v =
@@ -163,7 +163,7 @@ in
   fun reset_consts () = (cstore := [(the_false, 1)]; ccounter := 2)
   fun fol_of_const c =
     let val currentconsts = !cstore
-    in case (assoc1 c currentconsts)
+    in case assoc1 c currentconsts
         of SOME x => x
          | NONE =>
             let val n = !ccounter
@@ -173,7 +173,7 @@ in
             end
     end
   fun hol_of_const c =
-     case (assoc2 c (!cstore))
+     case assoc2 c (!cstore)
       of SOME x => x
        | NONE => failwith "hol_of_const"
 end;
@@ -261,6 +261,7 @@ val fol_frees =
 (*---------------------------------------------------------------------------*
  * Short-cutting function applications of various sorts.                     *
  *---------------------------------------------------------------------------*)
+
 local exception Unchanged
       fun qmap f =
         let fun app [] = raise Unchanged
@@ -630,8 +631,7 @@ val fol_of_hol_clauses =
        of [] => sofar
         | h::t =>
             let val new = ((map mk_negated (used @ t),h),(n,th))
-            in
-              mk_contraposes (n + 1) th (used@[h]) t (new::sofar)
+            in mk_contraposes (n + 1) th (used@[h]) t (new::sofar)
             end
     fun fol_of_hol_clause th =
       let

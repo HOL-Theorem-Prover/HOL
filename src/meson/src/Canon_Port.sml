@@ -1,7 +1,7 @@
 structure Canon_Port :> Canon_Port =
 struct
 
-open Parse HolKernel boolLib liteLib Ho_Rewrite tautLib;
+open HolKernel boolLib liteLib Ho_Rewrite tautLib;
 
 val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
 fun -- q x = Term q
@@ -23,11 +23,7 @@ val RIGHT_IMP_EXISTS_THM = GSYM RIGHT_EXISTS_IMP_THM;
 
 fun freesl tml = itlist (union o free_vars) tml [];;
 
-fun is_eqc tm = 
- (case Term.dest_thy_const tm
-   of {Name="=",Thy="min",...} => true 
-    | other => false) 
-  handle HOL_ERR _ => false;
+fun is_eqc tm = same_const equality tm
 
 local fun get_heads lconsts tm (sofar as (cheads,vheads)) =
         let val (v,bod) = dest_forall tm
@@ -154,9 +150,16 @@ val NNFC_CONV =
 end
 
 
+fun has_abs tm = 
+  case dest_term tm
+   of LAMB _ => true
+    | COMB(M,N) => if is_const M andalso is_abs N  (* binder *)
+                    then has_abs (body N)
+                    else has_abs N orelse has_abs M
+    | other => false
+
 val DELAMB_CONV =
-  let
-    val pth = prove(
+  let val pth = prove(
       --`(((\x. s x) = t) = (!x:'a. s x:'b = t x)) /\
          ((s = \x. t x) = (!x. s x = t x))`--,
       CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN
@@ -167,7 +170,7 @@ val DELAMB_CONV =
                          (GEN_REWRITE_CONV ONCE_DEPTH_QCONV [pth],
                           TRY_CONV(TOP_DEPTH_QCONV BETA_CONV))))
   in
-    TRY_CONV qconv
+    fn tm => if has_abs tm then TRY_CONV qconv tm else ALL_CONV tm
   end;
 
 val PROP_CNF_CONV =
@@ -199,9 +202,24 @@ val SKOLEM_CONV =
       LEFT_OR_EXISTS_THM,
       SKOLEM_THM];
 
+local fun STRIP conv tm opt = 
+        let val (vlist,M) = strip_binder opt tm
+        in GEN_ABS opt vlist (conv M)
+        end
+in
+fun STRIP_BINDER_CONV conv tm =
+  let val Z = STRIP conv tm
+  in if is_abs tm then Z NONE else
+     if is_forall tm  then Z (SOME boolSyntax.universal) else
+     if is_exists tm  then Z (SOME boolSyntax.existential) else
+     if is_select tm  then Z (SOME boolSyntax.select) else
+     if is_exists1 tm then Z (SOME boolSyntax.exists1)
+                      else failwith "STRIP_BINDER_CONV"
+  end
+end;
+
 val PRENEX_CONV =
-  let val PRENEX1_QCONV =
-      GEN_REWRITE_CONV I
+ let val PRENEX1_QCONV = GEN_REWRITE_CONV I
       [NOT_FORALL_THM, NOT_EXISTS_THM,
        AND_FORALL_THM, LEFT_AND_FORALL_THM, RIGHT_AND_FORALL_THM,
        LEFT_OR_FORALL_THM, RIGHT_OR_FORALL_THM,
@@ -209,39 +227,36 @@ val PRENEX_CONV =
        LEFT_AND_EXISTS_THM, RIGHT_AND_EXISTS_THM,
        OR_EXISTS_THM, LEFT_OR_EXISTS_THM, RIGHT_OR_EXISTS_THM,
        LEFT_IMP_EXISTS_THM, RIGHT_IMP_EXISTS_THM]
-      fun PRENEX2_QCONV tm =
-	  THENCQC (PRENEX1_QCONV, BINDER_CONV PRENEX2_QCONV) tm
-      fun PRENEX_QCONV tm =
-	  let val (lop,r) = dest_comb tm
-	      exception DEST_CONST
-	  in let val cname = name_of_const lop
-                              handle HOL_ERR _ => raise DEST_CONST
-	     in if cname = ("!","bool") orelse cname = ("?","bool") then
-		 AP_TERM lop (ABS_CONV PRENEX_QCONV r)
-		else if cname = ("~","bool") then
-		    (THENQC (RAND_CONV PRENEX_QCONV, PRENEX2_QCONV)) tm
-		     else failwith "unchanged"
-	     end
-	     handle DEST_CONST =>
-	     let val (oper,l) = dest_comb lop
-		 val cname = name_of_const oper
-	     in if cname = ("/\\","bool") orelse cname = ("\\/","bool")
-                  orelse cname = ("==>","min") then
-		 let val th =
-		     let val lth = PRENEX_QCONV l
-		     in let val rth = PRENEX_QCONV r
-			in MK_COMB(AP_TERM oper lth,rth)
-			end handle HOL_ERR _ => AP_THM (AP_TERM oper lth) r
-		     end handle HOL_ERR _ => AP_TERM lop (PRENEX_QCONV r)
-		     val tm' = rand(concl th)
-		     val th' = PRENEX2_QCONV tm'
-		 in TRANS th th'
-		 end
-	         handle HOL_ERR _ => PRENEX2_QCONV tm
-		else failwith "unchanged"
-	     end
-	  end
-  in fn tm => TRY_CONV PRENEX_QCONV tm
-  end;
+     fun PRENEX2_QCONV tm = THENCQC(PRENEX1_QCONV,BINDER_CONV PRENEX2_QCONV) tm
+     fun PRENEX_QCONV tm =
+       let val (lop,r) = dest_comb tm
+       in if is_const lop
+          then if same_const lop boolSyntax.universal orelse
+                  same_const lop boolSyntax.existential
+               then STRIP_BINDER_CONV PRENEX_QCONV tm
+(*               then AP_TERM lop (ABS_CONV PRENEX_QCONV r) *)
+               else if same_const lop boolSyntax.negation
+                    then THENQC (RAND_CONV PRENEX_QCONV, PRENEX2_QCONV) tm
+                    else failwith "unchanged"
+          else let val (oper,l) = dest_comb lop
+               in if same_const oper boolSyntax.conjunction orelse
+                     same_const oper boolSyntax.disjunction orelse
+                     same_const oper boolSyntax.implication
+                  then let val th = 
+                         (let val lth = PRENEX_QCONV l
+                          in let val rth = PRENEX_QCONV r
+                             in MK_COMB(AP_TERM oper lth,rth)
+                             end handle HOL_ERR _ => AP_THM(AP_TERM oper lth) r
+                          end handle HOL_ERR _ => AP_TERM lop (PRENEX_QCONV r)
+                         ) handle HOL_ERR _ => REFL tm
+                       in 
+                          TRANS th (PRENEX2_QCONV (rand(concl th)))
+                       end
+                  else failwith "unchanged"
+               end
+       end
+ in 
+   fn tm => TRY_CONV PRENEX_QCONV tm
+ end;
 
 end;
