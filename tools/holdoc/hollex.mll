@@ -31,6 +31,12 @@ let indent_width s =
 
 } 
 
+(* some classes *)
+let white    = [' ' '\r' '\t' '\012']
+let newline  = '\n'
+
+let backtick = '`'
+
 (* these patterns delimit the scanned "body" area *)
 let startpat = "Net_Hol_reln" (white | newline)* backtick
 let stoppat  = newline backtick
@@ -42,11 +48,6 @@ let dollar = '$'
 let punctchar = ['!' '"' '#' '%' '&' '*' '+' '-' '/' ':' ';' '<' '=' '>' '?' '@' '\\' '^' '|']
   (* everything else except '`' ; I'm not sure about '\\' and '"' but hey... *)
 let idorpunctchar = idchar | punctchar
-
-let white    = [' ' '\r' '\t' '\012']
-let newline  = '\n'
-
-let backtick = '`'
 
 let startcom = "(*"
 let incomm   = [^ '(' '*'] | '(' [^ '*'] | '*' [^ ')']
