@@ -198,6 +198,7 @@ TeX command.  Note that commas within an argument are converted to
 "}{", but the extra TeX args introduced this way do not count towards
 the number specified in this directive.  An argument is a (possibly
 qualified using dot notation) id, or a balanced-paren subsequence.
+The outer parentheses are stripped if present.
 
 
 The last two are a bit different.
