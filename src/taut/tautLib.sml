@@ -37,7 +37,7 @@
 structure tautLib :> tautLib =
 struct
 
-open HolKernel Parse boolLib Abbrev Rsyntax;
+open HolKernel Parse boolLib Abbrev QConv Rsyntax;
 
 infix THEN THENL THENC ## |->;
 
