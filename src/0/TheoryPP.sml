@@ -292,6 +292,16 @@ end;
  *  Print a theory as a module.
  *---------------------------------------------------------------------------*)
 
+val swap_fregs_defq = `
+fun swap_grefs () = let
+  val tmpvalue = !internal_grammar_ref
+in
+  internal_grammar_ref := (Parse.type_grammar(), Parse.term_grammar());
+  Parse.temp_set_grammars tmpvalue
+end
+`
+val [QUOTE swap_fregs_def] = swap_fregs_defq
+
 fun pp_theory_struct ppstrm info_record = let
   open Term
    val {theory as (name,i1,i2), parents,
@@ -437,6 +447,9 @@ fun pp_theory_struct ppstrm info_record = let
       add_newline();
       add_string"val U = Type.mk_vartype"; add_newline();
       add_newline();
+      add_string "val internal_grammar_ref = ref (Parse.pop_theory_grammar())";
+      add_newline();
+      add_string swap_fregs_def;
       pblock ("Parents", add_string o pparent, thid_sort parents);
       add_newline();
       pp_incorporate theory parents types constants; add_newline();
