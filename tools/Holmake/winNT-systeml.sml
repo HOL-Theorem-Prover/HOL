@@ -1,4 +1,4 @@
-structure Systeml : Systeml = struct
+structure Systeml :> Systeml = struct
 
 (* This is the WINDOWS implementation of the Systeml functionality.
    It is the very first thing compiled by the HOL build process so it
@@ -40,7 +40,8 @@ fun emit_hol_script target mosml std_prelude qend =
     output  "rem The bare hol98 script\n\n";
     output (String.concat["call ", q mosml, " -P full ", q std_prelude,
                           " %* ", q qend, "\n"]);
-    TextIO.closeOut ostrm
+    TextIO.closeOut ostrm;
+    target
  end
 
 
@@ -54,7 +55,8 @@ fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
                           " -P full ",
                             q std_prelude, " ", q qinit, " %* ",
                             q qend, "\n"]);
-    TextIO.closeOut ostrm
+    TextIO.closeOut ostrm;
+    target
  end
 end
 
