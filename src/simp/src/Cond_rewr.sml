@@ -16,7 +16,7 @@ val stack_limit = ref 4;
  *                                                                        *
  * Based on some code in Isabelle.                                        *
  *                                                                        *
- * a strict (not reflexive) linear well-founded AC-compatible ordering    *
+ * A strict (not reflexive) linear well-founded AC-compatible ordering    *
  * for terms.                                                             *
  *                                                                        *
  * Modified by DRS to have certain AC properties.  Vars are always        *
@@ -33,7 +33,7 @@ fun size_of_term tm =
        | _ => 1
 
 
-   fun ac_term_ord(tm1,tm2) =
+fun ac_term_ord(tm1,tm2) =
    case (dest_term tm1, dest_term tm2) of
       (VAR _,CONST _) => GREATER
     | (VAR _, COMB (Rator,Rand)) => if is_comb Rator then LESS else GREATER
@@ -143,7 +143,6 @@ fun loops th =
  *------------------------------------------------------------------------*)
 
 
-
 val CONJ_DISCH =
   let val IMP_CONJ_RULE =
       let val [t1,t2,t3] = fst(strip_forall(concl AND_IMP_INTRO))
@@ -245,8 +244,9 @@ fun QUANTIFY_CONDITIONS thm =
 
 fun IMP_CANON th =
  let val w = concl th
- in if (is_conj w)
-    then IMP_CANON (CONJUNCT1 th) @ IMP_CANON (CONJUNCT2 th) else
+ in if is_conj w 
+      then IMP_CANON (CONJUNCT1 th) @ IMP_CANON (CONJUNCT2 th) 
+    else
     if is_imp w
     then
     let val (ant,c) = dest_imp w
@@ -277,9 +277,8 @@ fun IMP_CANON th =
             to prove P.  Instead, convert to |- ~P *)
        else map (DISCH ant) (IMP_CANON (UNDISCH th))
     end
-    else if (is_forall w) then IMP_CANON (SPEC_ALL th) else [th]
+    else if is_forall w then IMP_CANON (SPEC_ALL th) else [th]
  end;
-
 
 infix oo;
 fun f oo g = fn x => flatten (map f (g x));

@@ -15,9 +15,8 @@
     * In these cases the rewrite will only get applied if the ordering
     * of the variables in the term is not in strictly ascending order,
     * according to a term_lt function which places a total ordering
-    * on terms.  (Nb. term_lt is broken in hol90.7, so I have to
-    * work with my own version here, which is not so efficient.  Also,
-    * the term ordering needs to be "AC" compatible - see Termord).
+    * on terms.  (Nb. The term ordering needs to be "AC" compatible
+    * - see Termord). 
     *
     * FAILURE CONDITIONS
     *
@@ -25,13 +24,15 @@
     * or if the term does not match the rewrite in the first place.
     * ---------------------------------------------------------------------*)
 
-signature Cond_rewr = sig
+signature Cond_rewr = 
+sig
 
   include Abbrev
 
-    val mk_cond_rewrs  : thm -> thm list
-    val IMP_EQ_CANON   : thm -> thm list
-    val COND_REWR_CONV : thm -> (term list -> term -> thm) -> term list -> conv
-    val QUANTIFY_CONDITIONS : thm -> thm list
-    val stack_limit : int ref
-end (* sig *)
+   val mk_cond_rewrs  : thm -> thm list
+   val IMP_EQ_CANON   : thm -> thm list
+   val COND_REWR_CONV : thm -> (term list -> term -> thm) -> term list -> conv
+   val QUANTIFY_CONDITIONS : thm -> thm list
+   val stack_limit : int ref
+
+end

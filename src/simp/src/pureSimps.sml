@@ -1,13 +1,13 @@
 structure pureSimps :> pureSimps =
 struct
 
-  open simpLib Cond_rewr
+  open simpLib 
 
   val PURE_ss = SIMPSET
     {convs = [],
      rewrs = [],
      congs = [],
-     filter = SOME mk_cond_rewrs,
+     filter = SOME Cond_rewr.mk_cond_rewrs,
      ac = [],
      dprocs = []}
 

@@ -1,103 +1,44 @@
-(* =====================================================================
- * FILE          : simpLib.sml
- * DESCRIPTION   : A programmable, contextual, conditional simplifier
- *
- * AUTHOR        : Donald Syme
- *                 Based loosely on original HOL rewriting by
- *                 Larry Paulson et al,
- *                 and not-so-loosely on the Isabelle simplifier.
- * ===================================================================== *)
+(*===========================================================================*)
+(* FILE          : simpLib.sml                                               *)
+(* DESCRIPTION   : A programmable, contextual, conditional simplifier        *)
+(*                                                                           *)
+(* AUTHOR        : Donald Syme                                               *)
+(*                 Based loosely on original HOL rewriting by                *)
+(*                 Larry Paulson et al,                                      *)
+(*                 and not-so-loosely on the Isabelle simplifier.            *)
+(*===========================================================================*)
 
 structure simpLib :> simpLib =
 struct
+
+infix |> oo;
 
 open HolKernel boolLib liteLib Trace Cond_rewr Travrules Traverse Ho_Net;
 
 local open labelTheory in end;
 
-infix |>;
-
 fun ERR x      = STRUCT_ERR "simpLib" x ;
 fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
-
-val equality = boolSyntax.equality
 
 fun option_cases f e (SOME x) = f x
   | option_cases f e NONE = e;
 
-infix oo;
 fun f oo g = fn x => flatten (map f (g x));
 
 (*---------------------------------------------------------------------------*)
-(* Left commutativity is automatically generated for use in permutative      *)
-(* rewriting                                                                 *)
+(* Representation of conversions manipulated by the simplifier.              *)
 (*---------------------------------------------------------------------------*)
 
-fun PROVE_LCOMM (assoc,sym) =
-  let val a' = SPEC_ALL assoc
-      val s' = SPEC_ALL sym
-      val thm1 = CONV_RULE (RAND_CONV(RATOR_CONV(RAND_CONV(REWR_CONV s')))) a'
-   in CONV_RULE (RAND_CONV(REWR_CONV (GSYM a'))) thm1
-  end;
+type convdata = {name  : string,
+                 key   : (term list * term) option,
+                 trace : int,
+                 conv  : (term list -> term -> thm) -> term list -> conv};
 
+(*---------------------------------------------------------------------------*)
+(* Make a rewrite rule into a conversion.                                    *)
+(*---------------------------------------------------------------------------*)
 
- (*--------------------------------------------------------------------------*)
- (*  Faffing about to handle the variety of ways in which AC theorems could  *)
- (* be given as input.                                                       *)
- (*--------------------------------------------------------------------------*)
-
- val (comm_tm,assoc_tm) =
-    let val f = mk_var("f",Type.alpha --> Type.alpha --> Type.alpha)
-        val x = mk_var("x",Type.alpha)
-        val y = mk_var("y",Type.alpha)
-        val z = mk_var("z",Type.alpha)
-   in (mk_eq (list_mk_comb(f,[x,y]),list_mk_comb(f,[y,x])),
-       mk_eq (list_mk_comb(f,[x,list_mk_comb(f,[y,z])]),
-              list_mk_comb(f,[list_mk_comb(f,[x,y]),z])))
-   end;
-
-  val is_comm = can (match_term comm_tm);
-  val is_assoc = can (match_term assoc_tm);
-
- fun norm_ac (th1,th2) =
-   let val th1' = SPEC_ALL th1
-       val th2' = SPEC_ALL th2
-       val tm1 = concl th1'
-       val tm2 = concl th2'
-   in if is_comm tm2
-         then if is_assoc tm1 then (th1,th2) else
-              let val th1a = GSYM th1
-              in if is_assoc (concl (SPEC_ALL th1a)) then (th1a,th2)
-                 else (HOL_MESG "unable to AC-normalize input";
-                       ERR ("norm_ac", "failed"))
-              end
-         else if is_comm tm1
-                 then if is_assoc tm2 then (th2,th1) else
-                      let val th2a = GSYM th2
-                      in if is_assoc (concl (SPEC_ALL th2a)) then (th2a,th1)
-                         else (HOL_MESG "unable to AC-normalize input";
-                               ERR ("norm_ac", "failed"))
-                      end
-         else (HOL_MESG "unable to AC-normalize input";
-               ERR ("norm_ac", "failed"))
-    end;
-
- fun mk_ac (th1,th2) A =
-   let val (a,c) = norm_ac(th1,th2)
-       val lcomm = PROVE_LCOMM (a,c)
-   in
-     GSYM a::c::lcomm::A
-   end
-   handle HOL_ERR _ => A;
-
- fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
-
- type convdata = {name: string,
-                  key: (term list * term) option,
-                  trace: int,
-                  conv: (term list -> term -> thm) -> term list -> conv};
-
- fun mk_rewr_convdata thm =
+fun mk_rewr_convdata thm =
    let val th = SPEC_ALL thm
    in
       {name="<rewrite>",
@@ -108,28 +49,34 @@ fun PROVE_LCOMM (assoc,sym) =
        conv=COND_REWR_CONV th}
      end;
 
+(*---------------------------------------------------------------------------*)
+(* Composable simpset fragments                                              *)
+(*---------------------------------------------------------------------------*)
 
- datatype ssdata = SIMPSET of
-   {convs: convdata list,
-    rewrs: thm list,
-    ac: (thm * thm) list,
-    filter: (thm -> thm list) option,
-    dprocs: Traverse.reducer list,
-    congs: thm list};
+datatype ssdata = SIMPSET of
+   {convs  : convdata list,
+    rewrs  : thm list,
+    ac     : (thm * thm) list,
+    filter : (thm -> thm list) option,
+    dprocs : Traverse.reducer list,
+    congs  : thm list};
 
+(*---------------------------------------------------------------------------*)
+(* Operation on ssdata values                                                *)
+(*---------------------------------------------------------------------------*)
 
- fun rewrites rewrs =
+fun rewrites rewrs =
    SIMPSET {convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
 
- fun dproc_ss dproc =
+fun dproc_ss dproc =
    SIMPSET {convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
 
- fun ac_ss aclist =
+fun ac_ss aclist =
    SIMPSET {convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
 
- fun D (SIMPSET s) = s;
+fun D (SIMPSET s) = s;
 
- fun merge_ss s =
+fun merge_ss (s:ssdata list) =
     SIMPSET {convs=flatten (map (#convs o D) s),
              rewrs=flatten (map (#rewrs o D) s),
             filter=SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
@@ -138,22 +85,20 @@ fun PROVE_LCOMM (assoc,sym) =
 	    dprocs=flatten (map (#dprocs o D) s),
 	     congs=flatten (map (#congs o D) s)};
 
- (* ---------------------------------------------------------------------
-  * simpsets and basic operations on them
-  *
-  * Simpsets contain enough information to spark off term traversal
-  * quickly and efficiently.  In theory the net need not be stored
-  * (and the code would look neater if it wasn't), but in practice
-  * it has to be.
-  * ---------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Simpsets and basic operations on them. Simpsets contain enough            *)
+(* information to spark off term traversal quickly and efficiently. In       *)
+(* theory the net need not be stored (and the code would look neater if it   *)
+(* wasn't), but in practice it has to be.                                    *)
+(* --------------------------------------------------------------------------*)
 
- type net = ((term list -> term -> thm) -> term list -> conv) net;
+type net = ((term list -> term -> thm) -> term list -> conv) net;
 
 abstype simpset =
-     SS of {mk_rewrs: (thm -> thm list),
+     SS of {mk_rewrs    : (thm -> thm list),
             initial_net : net,
-            dprocs: reducer list,
-            travrules: travrules}
+            dprocs      : reducer list,
+            travrules   : travrules}
 with
 
  val empty_ss = SS {mk_rewrs=fn x => [x],
@@ -200,6 +145,14 @@ with
   * mk_simpset
   * ---------------------------------------------------------------------*)
 
+  fun mk_ac p A = 
+     let val (a,b,c) = Drule.MK_AC_LCOMM p 
+     in a::b::c::A 
+     end handle HOL_ERR _ => A;
+
+  fun ac_rewrites aclist = Lib.itlist mk_ac aclist [];
+
+
  fun add_to_ss
     (SIMPSET {convs,rewrs,filter,ac,dprocs,congs},
      SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'})
@@ -239,39 +192,73 @@ with
 		  apply=apply}
       end;
 
-   fun SIMP_QCONV (ss as (SS ssdata)) =
+  fun SIMP_QCONV (ss as (SS ssdata)) =
       TRAVERSE {rewriters=[rewriter_for_ss ss],
 		dprocs= #dprocs ssdata,
-		relation= equality,
+		relation= boolSyntax.equality,
 		travrules= merge_travrules [EQ_tr,#travrules ssdata]};
 
 end (* abstype for SS *)
 
-  fun SIMP_CONV ss l = TRY_CONV (SIMP_QCONV ss l);
-  fun SIMP_PROVE ss l = EQT_ELIM o SIMP_QCONV ss l;
+val Cong = markerLib.Cong
+val AC   = markerLib.AC;
 
-   (* ---------------------------------------------------------------------
-    * SIMP_TAC : simpset -> tactic
-    * ASM_SIMP_TAC : simpset -> tactic
-    * FULL_SIMP_TAC : simpset -> tactic
-    *
-    * FAILURE CONDITIONS
-    *
-    * These tactics never fail, though they may diverge.
-    * ---------------------------------------------------------------------*)
+local open markerLib
+   fun is_AC thm = same_const(fst(strip_comb(concl thm))) AC_tm
+   fun is_Cong thm = same_const(fst(strip_comb(concl thm))) Cong_tm
 
-   fun SIMP_TAC ss l = CONV_TAC (SIMP_CONV ss l);
-   fun ASM_SIMP_TAC ss l (asms,gl) = let
-     val working = labelLib.LLABEL_RESOLVE l asms
-   in
-     SIMP_TAC ss working (asms,gl)
-   end
+  fun process_tags ss thl = 
+    let val (Congs,rst) = Lib.partition is_Cong thl
+        val (ACs,rst') = Lib.partition is_AC rst
+    in
+     if null Congs andalso null ACs then (ss,thl)
+     else ((ss ++ SIMPSET{ac=map unAC ACs, congs=map unCong Congs,
+                        convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
+    end
+in
+fun SIMP_CONV ss l = 
+  let val (ss', l') = process_tags ss l
+  in TRY_CONV (SIMP_QCONV ss' l')
+  end;
 
-   fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
-   fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
+fun SIMP_PROVE ss l = 
+  let val (ss', l') = process_tags ss l
+  in EQT_ELIM o SIMP_QCONV ss' l'
+  end;
+
+infix &&;
+
+fun (ss && thl) = 
+  let val (ss',thl') = process_tags ss thl
+  in ss' ++ rewrites thl'
+  end;
+
+end;
 
 
-   fun FULL_SIMP_TAC ss l =
+(*---------------------------------------------------------------------------*)
+(*   SIMP_TAC      : simpset -> tactic                                       *)
+(*   ASM_SIMP_TAC  : simpset -> tactic                                       *)
+(*   FULL_SIMP_TAC : simpset -> tactic                                       *)
+(*                                                                           *)
+(* FAILURE CONDITIONS                                                        *)
+(*                                                                           *)
+(* These tactics never fail, though they may diverge.                        *)
+(* --------------------------------------------------------------------------*)
+
+fun SIMP_TAC ss l = CONV_TAC (SIMP_CONV ss l);
+
+fun ASM_SIMP_TAC ss l (asms,gl) = 
+  let val working = labelLib.LLABEL_RESOLVE l asms
+  in
+    SIMP_TAC ss working (asms,gl)
+  end
+
+fun SIMP_RULE ss l = CONV_RULE (SIMP_CONV ss l);
+
+fun ASM_SIMP_RULE ss l th = SIMP_RULE ss (l@map ASSUME (hyp th)) th;
+
+fun FULL_SIMP_TAC ss l =
        let fun drop n (asms,g) =
 	   let val l = length asms
 	       fun f asms =
@@ -292,9 +279,9 @@ end (* abstype for SS *)
        end
 
 
-   (* ---------------------------------------------------------------------
-    * Pretty printer for Simpsets
-    * ---------------------------------------------------------------------*)
+(* ---------------------------------------------------------------------
+ * Pretty printer for Simpsets
+ * ---------------------------------------------------------------------*)
 
 (*
  open PP

@@ -5,13 +5,6 @@
  * AUTHOR      : Donald Syme
  *               Based loosely on original HOL rewriting by 
  *               Larry Paulson et al, and on the Isabelle simplifier.
- * ===================================================================== *)
-
-(* =====================================================================
- * The Simplifier
- *
- * Simplification is traversal/reduction under equality.  This
- * is mainly about rewriting and applying conversions.
  * =====================================================================*)
 
 
@@ -22,7 +15,7 @@ sig
    (* ---------------------------------------------------------------------
     * type simpset
     *
-    * A Simpset contains:
+    * A simpset contains:
     *    - a collection of rewrite rules
     *    - a collection of equational conversions
     *    - a traversal strategy for applying them
@@ -52,7 +45,7 @@ sig
   type convdata = { name: string,
                      key: (term list * term) option,
                    trace: int,
-                    conv: (term list -> term -> thm) -> term list -> conv};
+                    conv: (term list -> term -> thm) -> term list -> conv}
 
   datatype ssdata = SIMPSET of
     { convs: convdata list,
@@ -65,6 +58,9 @@ sig
   (*------------------------------------------------------------------------*)
   (* Easy building of common kinds of ssdata objects                        *)
   (*------------------------------------------------------------------------*)
+
+  val Cong     : thm -> thm
+  val AC       : thm -> thm -> thm
 
   val rewrites : thm list -> ssdata
   val dproc_ss : Traverse.reducer -> ssdata
@@ -88,6 +84,7 @@ sig
   val empty_ss   : simpset
   val mk_simpset : ssdata list -> simpset
   val ++         : simpset * ssdata -> simpset  (* infix *)
+  val &&         : simpset * thm list -> simpset  (* infix *)
 
    (* ---------------------------------------------------------------------
     * SIMP_CONV : simpset -> conv
