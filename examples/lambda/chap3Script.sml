@@ -31,11 +31,6 @@ val (compat_closure_rules, compat_closure_ind, compat_closure_cases) =
              (!x y v. compat_closure R x y ==>
                  compat_closure R (LAM v x) (LAM v y))`
 
-val swap_ALPHA = store_thm(
-  "swap_ALPHA",
-  ``~(v IN FV M) ==> (LAM v (swap v u M) = LAM u M)``,
-  SRW_TAC [][GSYM fresh_var_swap, GSYM SIMPLE_ALPHA]);
-
 (* Barendregt definition 3.1.14 *)
 val substitutive_def = Define`
   substitutive R = !M M'. R M M' ==> !N v. R ([N/v]M) ([N/v]M')
@@ -71,11 +66,11 @@ val swap_eq_3substs = store_thm(
   ``~(z IN FV M) /\ ~(x = z) /\ ~(y = z) ==>
     (swap x y M = [VAR y/z] ([VAR x/y] ([VAR z/x] M)))``,
   SRW_TAC [][fresh_var_swap] THEN
-  `~(x IN FV (swap z x M))` by SRW_TAC [][FV_swap, IN_swapset] THEN
+  `~(x IN FV (swap z x M))` by SRW_TAC [][swapstr_def] THEN
   SRW_TAC [][fresh_var_swap] THEN
   ONCE_REWRITE_TAC [swap_swap] THEN
   SRW_TAC [][swapstr_def] THEN
-  `~(y IN FV (swap z y (swap x y M)))` by SRW_TAC [][FV_swap, IN_swapset] THEN
+  `~(y IN FV (swap z y (swap x y M)))` by SRW_TAC [][swapstr_def] THEN
   SRW_TAC [][fresh_var_swap]);
 
 val substitutive_implies_permutative = store_thm(
@@ -909,7 +904,7 @@ val eta_normal_form_enf = store_thm(
                          FORALL_AND_THM] THEN PROVE_TAC []) THEN
   CONJ_TAC THENL [
     HO_MATCH_MP_TAC nc_INDUCTION THEN
-    SRW_TAC [][enf_thm] THENL [
+    SRW_TAC [][] THENL [
       PROVE_TAC [can_reduce_rules],
       PROVE_TAC [can_reduce_rules],
       PROVE_TAC [can_reduce_rules, lemma14a],
@@ -920,8 +915,8 @@ val eta_normal_form_enf = store_thm(
       FULL_SIMP_TAC (srw_ss()) [rand_thm, rator_thm] THEN PROVE_TAC []
     ],
     HO_MATCH_MP_TAC can_reduce_ind THEN
-    SRW_TAC [][enf_thm, redex_def, eta_def] THEN
-    SRW_TAC [][enf_thm, is_comb_thm, rand_thm, rator_thm]
+    SRW_TAC [][redex_def, eta_def] THEN
+    SRW_TAC [][]
   ]);
 
 val no_eta_thm = store_thm(

@@ -15,7 +15,8 @@ structure ncScript =
 struct
 
 open HolKernel Parse boolLib
-     bossLib arithmeticTheory pred_setTheory dBTheory;
+     bossLib arithmeticTheory pred_setTheory dBTheory
+     BasicProvers
 
 val _ = new_theory "nc";
 
@@ -230,7 +231,7 @@ STRIP_ASSUME_TAC WRAP_DB_EXISTS
   THEN RW_TAC OK_ss [lemma,LAM,SUB_DEF,VARR]);
 
 
-val ABS = new_specification ("ABS_DEF", ["ABS"], ABS_EXISTS);
+val ABS_DEF = new_specification ("ABS_DEF", ["ABS"], ABS_EXISTS);
 
 (* ********************************************************************* *)
 (* End of characterization.                                              *)
@@ -241,7 +242,7 @@ val ABS = new_specification ("ABS_DEF", ["ABS"], ABS_EXISTS);
 (* --------------------------------------------------------------------- *)
 
 val (ALT_FV,ALT_SUB_THM,ALT_ALPHA,ALT_ITERATOR)
-  = let val f = REWRITE_RULE [GSYM ABS]
+  = let val f = REWRITE_RULE [GSYM ABS_DEF]
     in
        (f FV_THM, f SUB_THM, f ALPHAa, f nc_ITERATOR)
     end;
@@ -389,7 +390,7 @@ val lemma =
     val th1 = BETA_RULE (SPECL [con,var,app,lam] instth)
     val th2 = CONJUNCT2 (CONV_RULE EXISTS_UNIQUE_CONV th1)
     val th3 = BETA_RULE (Q.SPEC `\x:'a nc.x` th2)
-    val th4 = REWRITE_RULE [ABS] th3
+    val th4 = REWRITE_RULE [ABS_DEF] th3
     val th5 = GSYM (UNDISCH (SPEC_ALL th4))
   in
     GEN_ALL (DISCH_ALL th5)
@@ -405,7 +406,7 @@ val COPY_ID = Q.prove(
     (hom = \x.x)`,
 GEN_TAC THEN EQ_TAC THEN STRIP_TAC
   THENL [MATCH_MP_TAC lemma, ALL_TAC]
-  THEN RW_TAC std_ss [ABS]);
+  THEN RW_TAC std_ss [ABS_DEF]);
 
 val messy_lemma = Q.prove(
 `!p:('a nc -> 'a nc) # ('a nc -> 'b).
@@ -512,11 +513,11 @@ val BODY_DEF =
 
 val ABS_BODY = Q.store_thm("ABS_BODY",
  `!x u. ABS(BODY(LAM x u)) = LAM x u`,
-REWRITE_TAC [ABS,BODY_DEF]);
+REWRITE_TAC [ABS_DEF,BODY_DEF]);
 
 val BODY_ABS = Q.store_thm("BODY_ABS",
  `!x u. BODY(ABS(\y. [VAR y/x]u)) = \y. [VAR y/x]u`,
-REWRITE_TAC [ABS,BODY_DEF]);
+REWRITE_TAC [ABS_DEF,BODY_DEF]);
 
 
 (* ===================================================================== *)
@@ -586,11 +587,12 @@ val nc_INDUCTION =
      val th5 = GEN_ALL (REWRITE_RULE [] (BETA_RULE th4))
  in
     GEN_ALL
-      (REWRITE_RULE [ABS,DECIDE (Term`(A = B \/ A) = (B ==> A)`)]
+      (REWRITE_RULE [ABS_DEF,DECIDE (Term`(A = B \/ A) = (B ==> A)`)]
                     (DISCH_ALL th5))
  end;
 
 val _ = save_thm("nc_INDUCTION", nc_INDUCTION);
+
 
 (* --------------------------------------------------------------------- *)
 (* The induction tactic.                                                 *)
@@ -670,6 +672,18 @@ nc_INDUCT_TAC THEN RW_TAC std_ss [SUB_THM] THENL
         THEN Q.PAT_ASSUM `$! M` (ASSUME_TAC o GSYM)
         THEN RW_TAC std_ss [ALPHA_LEMMA]]]);
 
+(* can now prove a simple version of induction, where you don't want that
+   extra strength in the LAM case *)
+val simple_induction = store_thm(
+  "simple_induction",
+  ``!P. (!s. P (VAR s)) /\ (!k. P (CON k)) /\
+        (!t u. P t /\ P u ==> P(t @@ u)) /\
+        (!v t. P t ==> P (LAM v t)) ==>
+        (!t. P t)``,
+  GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION THEN
+  PROVE_TAC [lemma14a]);
+
+
 (* --------------------------------------------------------------------- *)
 (* Andy has observed that lemma14a plus weak alpha gives strong alpha.   *)
 (* --------------------------------------------------------------------- *)
@@ -691,6 +705,7 @@ nc_INDUCT_TAC
    THEN RW_TAC std_ss
          [FV_THM,FINITE_EMPTY,FINITE_SING,FINITE_UNION,FINITE_DELETE]
    THEN PROVE_TAC [lemma14a]);
+val _ = export_rewrites ["FINITE_FV"]
 
 
 (* ===================================================================== *)
@@ -737,6 +752,17 @@ val INJECTIVITY_LEMMA3 = Q.store_thm("INJECTIVITY_LEMMA3",
    ==>
    (LAM x u = LAM x' u1)`,
 PROVE_TAC [SIMPLE_ALPHA]);
+
+val LAM_INJ_ALPHA_FV = store_thm(
+  "LAM_INJ_ALPHA_FV",
+  ``!M N x y. (LAM x M = LAM y N) /\ ~(x = y) ==>
+              ~(x IN FV N) /\ ~(y IN FV M)``,
+  REPEAT STRIP_TAC THENL [
+    `x IN FV (LAM y N)` by SRW_TAC [][FV_THM] THEN
+    `x IN FV (LAM x M)` by PROVE_TAC [],
+    `y IN FV (LAM x M)` by SRW_TAC [][FV_THM] THEN
+    `y IN FV (LAM y N)` by PROVE_TAC []
+  ] THEN FULL_SIMP_TAC (srw_ss()) [FV_THM]);
 
 (* ===================================================================== *)
 (* Andy's second induction theorem -- follows easily.                    *)
@@ -911,12 +937,14 @@ val FINITE_DOM = Q.store_thm("FINITE_DOM",
  `!ss. FINITE (DOM ss)`,
 Induct THENL [ALL_TAC, Cases]
    THEN RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]);
+val _ = export_rewrites ["FINITE_DOM"]
 
 
 val FINITE_FVS = Q.store_thm("FINITE_FVS",
 `!ss. FINITE (FVS ss)`,
 Induct THENL [ALL_TAC, Cases]
    THEN RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]);
+val _ = export_rewrites ["FINITE_FVS"]
 
 
 (* --------------------------------------------------------------------- *)
@@ -1044,6 +1072,67 @@ val NEW_ELIM_RULE_SUBSET = store_thm(
             P (NEW X)``,
   PROVE_TAC [dBTheory.NEW_FRESH_string, pred_setTheory.SUBSET_DEF]);
 
+val FV_SUB = store_thm(
+  "FV_SUB",
+  ``!t u v. FV ([t/v] u) = if v IN FV u then FV t UNION (FV u DELETE v)
+                           else FV u``,
+  PROVE_TAC [lemma14b, lemma14c]);
+
+val nc_RECURSION2 = save_thm(
+  "nc_RECURSION2",
+  (SIMP_RULE bool_ss [ABS_DEF] o
+   Q.INST [`lam` |-> `\r t. let v = NEW (FV (ABS t) UNION X)
+                            in lam (r v) v (t v)`] o
+   SPEC_ALL) nc_RECURSION)
+
+val size_def = new_specification (
+  "size", ["size"],
+  (CONJUNCT1 o
+   CONV_RULE EXISTS_UNIQUE_CONV o
+   SIMP_RULE bool_ss [pred_setTheory.UNION_EMPTY] o
+   Q.INST [`con` |-> `\x. 1`, `var` |-> `\s. 1`,
+           `app` |-> `\rt ru t u. rt + ru + 1`,
+           `lam` |-> `\rt v t. rt + 1`,
+           `X` |-> `{}`] o
+   INST_TYPE [beta |-> numSyntax.num]) nc_RECURSION2)
+
+val size_isub = store_thm(
+  "size_isub",
+  ``!t R. RENAMING R ==> (size (t ISUB R) = size t)``,
+  HO_MATCH_MP_TAC nc_INDUCTION THEN REPEAT CONJ_TAC THENL [
+    SRW_TAC [][ISUB_CON, size_def],
+    SRW_TAC [][ISUB_VAR_RENAME, size_def],
+    SRW_TAC [][ISUB_APP, size_def],
+    REPEAT STRIP_TAC THEN
+    Q.ABBREV_TAC `avds = FVS R UNION DOM R UNION FV t` THEN
+    `FINITE avds` by SRW_TAC [][FINITE_FVS, FINITE_DOM, FINITE_FV] THEN
+    Q.ABBREV_TAC `z = NEW avds` THEN
+    `~(z IN avds)` by SRW_TAC [][NEW_FRESH_string] THEN
+    `~(z IN FVS R) /\ ~(z IN DOM R) /\ ~(z IN FV t)`
+        by (SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
+    REPEAT (FIRST_X_ASSUM (K ALL_TAC o assert (is_eq o concl))) THEN
+    `LAM x t = LAM z ([VAR z/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
+    SRW_TAC [][ISUB_LAM] THEN
+    ASM_SIMP_TAC bool_ss [size_def] THEN
+    ONCE_REWRITE_TAC [SUB_ISUB_SINGLETON] THEN
+    ASM_SIMP_TAC bool_ss [ISUB_APPEND,RENAMING_DEF, RENAMING_LEMMA] THEN
+    SRW_TAC [][]
+  ]);
+
+val size_vsubst = store_thm(
+  "size_vsubst",
+  ``size ([VAR v/u] t) = size t``,
+  SRW_TAC [][size_isub, SUB_ISUB_SINGLETON, RENAMING_DEF]);
+val _ = BasicProvers.export_rewrites ["size_vsubst"]
+
+val size_thm = save_thm(
+  "size_thm",
+  SIMP_RULE (srw_ss()) [size_vsubst] size_def);
+
+val size_nonzero = store_thm(
+  "size_nonzero",
+  ``!t. 0 < size t``,
+  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
 
 val _ = export_theory();
 

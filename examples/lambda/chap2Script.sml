@@ -3,6 +3,7 @@ open HolKernel Parse boolLib
 open bossLib ncLib
 
 open ncTheory fixedPointTheory pred_setTheory pred_setLib
+open swapTheory BasicProvers
 
 val _ = new_theory "chap2";
 
@@ -163,12 +164,6 @@ val GENERAL_SUB_COMMUTE = store_thm(
       SRW_TAC [][lemma14c, lemma14b]
     ]
   ]);
-
-val FV_SUB = store_thm(
-  "FV_SUB",
-  ``!t u v. FV ([t/v] u) = if v IN FV u then FV t UNION (FV u DELETE v)
-                           else FV u``,
-  PROVE_TAC [lemma14b, lemma14c]);
 
 val NOT_IN_FV_SUB = store_thm(
   "NOT_IN_FV_SUB",
@@ -811,52 +806,58 @@ val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
       PROVE_TAC [stdlam_beta, stdlam_trans, stdlam_sym] THEN
   PROVE_TAC [stdlam_trans, stdlam_sym]);
 
-val (size_thm, _) = define_recursive_term_function
-  `(size (VAR s) = 1) /\
-   (size (CON k) = 1) /\
-   (size (t1 @@ t2) = size t1 + size t2 + 1) /\
-   (size (LAM v t) = size t + 1)`;
-
-val size_nonzero = store_thm(
-  "size_nonzero",
-  ``!t. 0 < size t``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
 
 val (is_abs_thm, _) = define_recursive_term_function
   `(is_abs (VAR s) = F) /\
    (is_abs (CON k) = F) /\
    (is_abs (t1 @@ t2) = F) /\
    (is_abs (LAM v t) = T)`;
+val _ = export_rewrites ["is_abs_thm"]
 
 val (is_comb_thm, _) = define_recursive_term_function
   `(is_comb (VAR s) = F) /\
    (is_comb (CON k) = F) /\
    (is_comb (t1 @@ t2) = T) /\
    (is_comb (LAM v t) = F)`;
+val _ = export_rewrites ["is_comb_thm"]
 
 val (is_var_thm, _) = define_recursive_term_function
   `(is_var (VAR s) = T) /\
    (is_var (CON k) = F) /\
    (is_var (t1 @@ t2) = F) /\
    (is_var (LAM v t) = F)`;
+val _ = export_rewrites ["is_var_thm"]
 
 val (is_const_thm,_) = define_recursive_term_function
   `(is_const (VAR s) = F) /\
    (is_const (CON k) = T) /\
    (is_const (t @@ u) = F) /\
    (is_const (LAM v t) = F)`;
+val _ = export_rewrites ["is_const_thm"]
 
 val (dest_const_thm, _) =
     define_recursive_term_function `dest_const (CON k:'a nc) = k`;
+val _ = export_rewrites ["dest_const_thm"]
 
 val (bnf_thm, _) = define_recursive_term_function
   `(bnf (VAR s) = T) /\
    (bnf (CON k) = T) /\
    (bnf (t1 @@ t2) = bnf t1 /\ bnf t2 /\ ~is_abs t1) /\
    (bnf (LAM v t) = bnf t)`;
+val _ = export_rewrites ["bnf_thm"]
 
 val (rand_thm, _) = define_recursive_term_function `rand (t1 @@ t2) = t2`;
+val _ = export_rewrites ["rand_thm"]
+
 val (rator_thm, _) = define_recursive_term_function `rator (t1 @@ t2) = t1`;
+val _ = export_rewrites ["rator_thm"]
+
+val swap_is_const2 = store_thm(
+  "swap_is_const2",
+  ``is_const t ==> (swap x y t = t)``,
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
+  SRW_TAC [][swap_thm, is_const_thm]);
+val _ = export_rewrites ["swap_is_const2"]
 
 val is_comb_APP_EXISTS = store_thm(
   "is_comb_APP_EXISTS",
@@ -875,31 +876,6 @@ val rand_subst_commutes = store_thm(
   REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS, SUB_THM, rand_thm]);
 
-val LAM_INJ_ALPHA_FV = store_thm(
-  "LAM_INJ_ALPHA_FV",
-  ``!M N x y. (LAM x M = LAM y N) /\ ~(x = y) ==>
-              ~(x IN FV N) /\ ~(y IN FV M)``,
-  REPEAT STRIP_TAC THENL [
-    `x IN FV (LAM y N)` by SRW_TAC [][FV_THM] THEN
-    `x IN FV (LAM x M)` by PROVE_TAC [],
-    `y IN FV (LAM x M)` by SRW_TAC [][FV_THM] THEN
-    `y IN FV (LAM y N)` by PROVE_TAC []
-  ] THEN FULL_SIMP_TAC (srw_ss()) [FV_THM]);
-
-val VSUB_EQ_VAR = store_thm(
-  "VSUB_EQ_VAR",
-  ``!t v1 v2 x.
-      ([VAR v1/x] t = VAR v2) = (t = VAR x) /\ (v1 = v2) \/
-                                (t = VAR v2) /\ ~(v2 = x)``,
-  GEN_TAC THEN
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][SUB_THM, SUB_VAR] THENL [
-    PROVE_TAC [],
-    PROVE_TAC [],
-    Q_TAC (NEW_TAC "z") `FV u UNION {x';x;v1}` THEN
-    `LAM x u = LAM z ([VAR z/x] u)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][SUB_THM]
-  ]);
 
 val extra_LAM_DISJOINT = store_thm(
   "extra_LAM_DISJOINT",
@@ -915,77 +891,15 @@ val extra_LAM_DISJOINT = store_thm(
   ] THEN
   `LAM u b = LAM z ([VAR z/u] b)` by SRW_TAC [][SIMPLE_ALPHA] THEN
   SRW_TAC [][SUB_THM, ISUB_LAM]);
+val _ = export_rewrites ["extra_LAM_DISJOINT"]
 
-val _ = augment_srw_ss [rewrites [extra_LAM_DISJOINT]]
-
-val RENAMING_EQ_VAR = store_thm(
-  "RENAMING_EQ_VAR",
-  ``!t R v. RENAMING R ==> ((t ISUB R = VAR v) =
-                            ?x. (t = VAR x) /\ (v = RENAME R x))``,
-  GEN_TAC THEN
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, ISUB_CON, ISUB_APP, ISUB_VAR_RENAME] THEN
-  PROVE_TAC []);
-
-val enf_var = ``\s:string. T``;
-val enf_con = ``\k:'a. T``;
-val enf_app = ``\(t1: 'a nc) (t2: 'a nc) b1 b2. b1 /\ b2``;
-val enf_lam = ``\(tf: string -> 'a nc) (rf: string -> bool).
-                     let v = NEW (FV (ABS tf)) in
-                          rf v /\
-                          (is_comb (tf v) ==> (rand (tf v) = VAR v) ==>
-                           v IN FV (rator (tf v)))``
-val enf_def = new_specification (
-  "enf_def", ["enf"],
-  SIMP_RULE bool_ss [ABS_DEF]
-            (ISPECL [enf_con, enf_var, enf_app, enf_lam]
-                    nc_RECURSION_WEAK));
-
-val RENAME_X_EQ_RANGE = store_thm(
-  "RENAME_X_EQ_RANGE",
-  ``!R x y z.
-          ((x = RENAME ((VAR x,y)::R) z) =
-           (z = y) /\ (RENAME R x = x) \/
-           ~(z = y) /\ (x = RENAME R z))``,
-  SRW_TAC [][RENAME_def, VNAME_DEF] THEN PROVE_TAC []);
-
-val RENAME_ID = store_thm(
-  "RENAME_ID",
-  ``!R. RENAMING R ==>
-        !x. ~(x IN DOM R) ==> (RENAME R x = x)``,
-  HO_MATCH_MP_TAC RENAMING_ind THEN
-  SRW_TAC [][RENAME_def, VNAME_DEF, DOM_def]);
-
-val RENAME_APPEND_DROP_ARG1 = store_thm(
-  "RENAME_APPEND_DROP_ARG1",
-  ``!R. RENAMING R ==>
-        !x. ~(x IN DOM R) ==> (!R2. RENAME (APPEND R R2) x = RENAME R2 x)``,
-  HO_MATCH_MP_TAC RENAMING_ind THEN
-  SRW_TAC [][RENAME_def, VNAME_DEF, DOM_def]);
-
-val RENAME_DROP_LAST = store_thm(
-  "RENAME_DROP_LAST",
-  ``!R. RENAMING R ==>
-        !x y z. ~(x = y) /\ ~(y IN FVS R) ==>
-                (RENAME (APPEND R [(VAR z, y)]) x = RENAME R x)``,
-  HO_MATCH_MP_TAC RENAMING_ind THEN
-  SRW_TAC [][RENAME_def, VNAME_DEF, FVS_def] THEN
-  COND_CASES_TAC THEN SRW_TAC [][]);
-
-val RENAME_LAST_ID = store_thm(
-  "RENAME_LAST_ID",
-  ``!R. RENAMING R ==> !x. RENAME (APPEND R [(VAR x,x)]) = RENAME R``,
-  HO_MATCH_MP_TAC RENAMING_ind THEN
-  SRW_TAC [][FUN_EQ_THM, RENAME_def, VNAME_DEF] THEN PROVE_TAC []);
-
-
-val RENAME_NOT_EQ = store_thm(
-  "RENAME_NOT_EQ",
-  ``!R. RENAMING R ==>
-        !x y. ~(x = y) /\ ~(y IN FVS R) ==> ~(RENAME R x = y)``,
-  HO_MATCH_MP_TAC RENAMING_ind THEN
-  SRW_TAC [][RENAME_def, VNAME_DEF, FVS_def] THEN
-  PROVE_TAC []);
+val (enf_thm, _) = define_recursive_term_function
+  `(enf (VAR s) = T) /\
+   (enf (CON k) = T) /\
+   (enf (t @@ u) = enf t /\ enf u) /\
+   (enf (LAM v t) = enf t /\ (is_comb t /\ (rand t = VAR v) ==>
+                              v IN FV (rator t)))`
+val _ = export_rewrites ["enf_thm"]
 
 val FV_RENAMING = store_thm(
   "FV_RENAMING",
@@ -994,90 +908,6 @@ val FV_RENAMING = store_thm(
   HO_MATCH_MP_TAC RENAMING_ind THEN
   SRW_TAC [][RENAME_def, VNAME_DEF, EXTENSION, ISUB_def] THEN EQ_TAC THEN
   SRW_TAC [][FV_SUB] THEN PROVE_TAC []);
-
-val NONEQ_SING_DELETE = store_thm(
-  "NONEQ_SING_DELETE",
-  ``!x y. ~(x = y) ==> ({x} DELETE y = {x})``,
-  SRW_TAC [][EXTENSION] THEN PROVE_TAC []);
-
-
-
-val enf_body_lemma = store_thm(
-  "enf_body_lemma",
-  ``(let v = NEW (FV (LAM x t))
-     in
-       enf ([VAR v/x] t) /\
-       (is_comb ([VAR v/x] t) ==>
-        (rand ([VAR v/x] t) = VAR v) ==>
-        v IN FV (rator ([VAR v/x] t)))) =
-    (let v = NEW (FV (LAM x t))
-     in
-       enf ([VAR v/x] t) /\
-       (is_comb t ==> (rand t = VAR x) ==> x IN FV (rator t)))``,
-  SRW_TAC [][] THEN NEW_ELIM_TAC THEN Q.X_GEN_TAC `y` THEN
-  REPEAT STRIP_TAC THEN
-  SRW_TAC [][lemma14a] THEN EQ_TAC THEN SRW_TAC [][] THEN
-  FULL_SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS] THEN
-  SRW_TAC [][] THEN
-  FULL_SIMP_TAC (srw_ss() ++ boolSimps.COND_elim_ss)
-                [rand_thm, rator_thm, SUB_THM, FV_SUB, VSUB_EQ_VAR] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
-
-val enf_def = SIMP_RULE bool_ss [enf_body_lemma] enf_def
-
-val enf_renaming_invariant = store_thm(
-  "enf_renaming_invariant",
-  ``!t R. RENAMING R ==> (enf (t ISUB R) = enf t)``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
-  SRW_TAC [][enf_def, ISUB_APP, ISUB_VAR_RENAME, ISUB_CON] THEN
-  Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THEN NEW_ELIM_TAC THEN
-  Q.X_GEN_TAC `nv` THEN (* bound variable of right hand term *)
-  SRW_TAC [][] THENL [
-    Q_TAC (NEW_TAC "z") `y INSERT FV t UNION FVS R UNION DOM R` THEN
-    `LAM y t = LAM z ([VAR z/y] t)` by SRW_TAC [][SIMPLE_ALPHA],
-    Q_TAC (NEW_TAC "z") `nv INSERT FV t UNION FVS R UNION DOM R` THEN
-    `LAM nv t = LAM z ([VAR z/nv] t)` by SRW_TAC [][SIMPLE_ALPHA]
-  ] THEN
-  SRW_TAC [][ISUB_LAM, SUB_ISUB_SINGLETON, ISUB_APPEND, RENAMING_THM,
-             enf_def] THEN SRW_TAC [][] THEN
-  EQ_TAC THEN SRW_TAC [][lemma14a] THEN
-  Q.PAT_ASSUM `RENAMING R` ASSUME_TAC THEN
-  Q.PAT_ASSUM `is_comb t` ASSUME_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [is_comb_APP_EXISTS] THEN
-  POP_ASSUM SUBST_ALL_TAC THEN
-  Q.PAT_ASSUM `~(z IN DOM R)` ASSUME_TAC THENL [
-    FULL_SIMP_TAC (srw_ss()) [rand_thm, rator_thm,
-                              ISUB_APP, RENAMING_EQ_VAR, RENAMING_THM,
-                              RENAME_def, VNAME_DEF, RENAME_ID] THEN
-    SRW_TAC [][] THEN
-    FULL_SIMP_TAC (srw_ss()) [FV_RENAMING, RENAMING_THM, RENAME_def,
-                              VNAME_DEF] THEN
-    PROVE_TAC [RENAME_NOT_EQ],
-
-    FULL_SIMP_TAC (srw_ss()) [rand_thm, rator_thm,
-                              ISUB_APP, RENAMING_EQ_VAR, RENAMING_THM,
-                              RENAME_def, VNAME_DEF, FV_RENAMING] THEN
-    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    PROVE_TAC [RENAME_NOT_EQ],
-
-    FULL_SIMP_TAC (srw_ss()) [rand_thm, rator_thm,
-                              ISUB_APP, RENAMING_EQ_VAR, RENAMING_THM,
-                              RENAME_def, VNAME_DEF, RENAME_ID,
-                              FV_RENAMING] THEN
-    PROVE_TAC [RENAME_NOT_EQ],
-
-    FULL_SIMP_TAC (srw_ss()) [rand_thm, rator_thm,
-                              ISUB_APP, RENAMING_EQ_VAR, RENAMING_THM,
-                              VNAME_DEF, RENAME_def, RENAME_ID,
-                              FV_RENAMING] THEN
-    SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-    PROVE_TAC [RENAME_NOT_EQ]
-  ]);
-
-val enf_thm = save_thm(
-  "enf_thm",
-  SIMP_RULE (srw_ss()) [RENAMING_THM, SUB_ISUB_SINGLETON, ISUB_APPEND,
-                        enf_renaming_invariant] enf_def);
 
 val benf_def = Define`benf t = bnf t /\ enf t`;
 
@@ -1098,8 +928,5 @@ val has_bnf_def = Define`has_bnf t = ?t'. t == t' /\ bnf t'`;
 
 val has_benf_def = Define`has_benf t = ?t'. t == t' /\ benf t'`;
 
-val _ = BasicProvers.export_rewrites
-          ["bnf_thm", "enf_thm", "is_comb_thm", "rator_thm",
-           "rand_thm", "is_abs_thm", "extra_LAM_DISJOINT"]
 
 val _ = export_theory()

@@ -4,84 +4,13 @@ struct
 open HolKernel Parse boolLib
 open BasicProvers SingleStep simpLib
 
-open ncTheory
-val (Type,Term) = parse_from_grammars ncTheory.nc_grammars
+open ncTheory swapTheory NEWLib
+val (Type,Term) = parse_from_grammars swapTheory.swap_grammars
 
 fun ERR f msg = raise (HOL_ERR {origin_function = f,
                                 origin_structure = "ncLib",
                                 message = msg})
 
-infix |-> THEN
-infixr -->
-infix 8 by
-
-val FRESH_STRING = prove(
-  ``!X Y. FINITE (X:string set) /\ Y SUBSET X ==> ~(NEW X IN Y)``,
-  PROVE_TAC [pred_setTheory.SUBSET_DEF, dBTheory.NEW_FRESH_string]);
-
-val FRESH_STRING_eq = prove(
-  ``!X x. FINITE (X:string set) /\ x IN X ==> ~(NEW X = x)``,
-  PROVE_TAC [pred_setTheory.SUBSET_DEF, dBTheory.NEW_FRESH_string]);
-
-fun NEW_TAC vname t = let
-  val var = mk_var(vname, ``:string``)
-  val new_t = mk_comb(``NEW:string set -> string``, t)
-  val asm = mk_eq(var, new_t)
-  fun union_inds (sets, inds) t = let
-    val (f, args) = strip_comb t
-  in
-    if same_const f pred_setSyntax.union_tm then
-      union_inds (union_inds (sets, inds) (hd args)) (hd (tl args))
-    else if same_const f pred_setSyntax.insert_tm then
-      union_inds (sets, hd args::inds) (hd (tl args))
-    else if same_const f pred_setSyntax.empty_tm then (sets, inds)
-    else (t::sets, inds)
-  end
-  val (sets, inds) = union_inds ([], []) t
-  val munge = UNDISCH o CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))
-  fun mk_IN (v,s) = let
-    val ty = type_of v
-  in
-    list_mk_comb(inst [alpha |-> ty] pred_setSyntax.in_tm, [v,s])
-  end
-  fun prove_ind i =
-      munge (SIMP_PROVE (srw_ss()) [FRESH_STRING_eq, FINITE_FV,
-                                    FINITE_DOM, FINITE_FVS]
-                        (mk_imp(asm, mk_neg(mk_eq(var, i)))))
-  fun prove_set s =
-      munge (prove(mk_imp(asm, mk_neg(mk_IN(var, s))),
-                   DISCH_THEN SUBST_ALL_TAC THEN
-                   MATCH_MP_TAC FRESH_STRING THEN
-                   SIMP_TAC (srw_ss()) [FINITE_FV, FINITE_DOM,
-                                        FINITE_FVS,
-                                        pred_setTheory.SUBSET_DEF]))
-in
-  Q.ABBREV_TAC `^asm` THEN
-  MAP_EVERY (ASSUME_TAC o prove_ind) inds THEN
-  MAP_EVERY (ASSUME_TAC o prove_set) sets THEN
-  FIRST_X_ASSUM (K ALL_TAC o assert (is_eq o concl))
-end
-
-(* ----------------------------------------------------------------------
-    NEW_ELIM_TAC
-   ---------------------------------------------------------------------- *)
-
-fun UNBETA_CONV to_elim t = let
-  (* find all instances of to_elim in t, and convert t
-     to (\v. t[v/to_elim]) to_elim
-     v can be a genvar because we expect to get rid of it later. *)
-  val gv = genvar (type_of to_elim)
-  val newbody = Term.subst [to_elim |-> gv] t
-in
-  SYM (BETA_CONV (mk_comb(mk_abs(gv,newbody), to_elim)))
-end
-
-fun NEW_ELIM_TAC (asl, w) = let
-  val newt = find_term (can (match_term ``NEW (X:string set)``)) w
-in
-  CONV_TAC (UNBETA_CONV newt) THEN MATCH_MP_TAC NEW_ELIM_RULE THEN
-  SIMP_TAC (srw_ss()) [FINITE_FV]
-end (asl, w)
 
 
 (* ----------------------------------------------------------------------
@@ -100,8 +29,11 @@ end (asl, w)
     to prove that such a function actually exists.  The RHS of any
     LAMBDA clause comes in for particular attention because this might
     attempt a recursion that is not be justified.  This function
-    attempts to prove that the given definition is invariant under any
-    renaming, if a recursion occurs in the LAM clause.
+    attempts to use the simplifier and the stateful simpset (srw_ss()) to
+    prove that the side-conditions on either
+       swapTheory.swap_RECURSION_generic
+    or
+       swapTheory.swap_RECURSION_simple
 
    ---------------------------------------------------------------------- *)
 
@@ -169,6 +101,136 @@ val renaming_goal_form =
 val SIMPLE_LET = prove(``!(t:'a) (v:'b). (let x = v in t) = t``,
                        REWRITE_TAC [LET_THM]);
 
+val string_ty = stringSyntax.string_ty
+fun gennc_ty ty = mk_type("nc", [ty])
+
+val var_functor = mk_var("var", string_ty --> beta)
+val con_functor = mk_var("con", alpha --> beta)
+val app_functor = mk_var("app", beta --> beta -->
+                                     gennc_ty alpha --> gennc_ty alpha -->
+                                     beta)
+val lam_functor = mk_var("lam", beta --> string_ty --> gennc_ty alpha --> beta)
+
+val FV_t = mk_const("FV", ``:'a nc -> string set``)
+val swap_t = mk_const("swap", ``:string -> string -> 'a nc -> 'a nc``)
+val nc_info =
+    {nullfv = (``LAM "" (VAR "")``,
+                   prove(``FV (LAM "" (VAR "")) = {}``,
+                         SRW_TAC [][])),
+     fv = (FV_t, FV_THM),
+     swap = (swap_t, swap_thm),
+     recursion = SIMP_RULE (srw_ss()) []
+                           (Q.INST [`X` |-> `{}`]
+                                   swapTheory.swap_RECURSION_generic),
+     swapping = nc_swapping}
+
+val null_fv = ``\x:'a. {} : string set``
+val null_swap = ``\x:string y:string z:'a. z``
+val null_info = {nullfv = (mk_arb alpha,
+                            prove(``^null_fv ^(mk_arb alpha) = {}``,
+                                  SRW_TAC [][])),
+                 fv = (null_fv, TRUTH),
+                 swap = (null_swap, TRUTH),
+                 recursion = swapTheory.swap_RECURSION_simple,
+                 swapping = null_swapping}
+
+val database = let
+  val empty = Binarymap.mkDict String.compare
+in
+  Binarymap.insert(empty, "nc", nc_info)
+end
+
+
+fun inst_info dest_ty {nullfv, fv, swap, recursion, swapping} = let
+  val inst_val = Type.match_type (type_of (fst nullfv)) dest_ty
+  val local_inst = inst inst_val
+in
+  {nullfv = let val (t, th) = nullfv in (local_inst t, th) end,
+   fv = let val (t, th) = fv in (local_inst t, th) end,
+   swap = let val(t, th) = swap in (local_inst t, th) end,
+   recursion = recursion,
+   swapping = swapping}
+end
+
+exception InfoProofFailed of thm
+fun with_info_prove_recn_exists f nc_ty lookup info = let
+  val nc_arg_ty = hd (#Args (dest_thy_type nc_ty))
+  val {nullfv, fv, swap, recursion, swapping} = info
+  val (nullfv_t, nullfv_thm) = nullfv
+  val rhs_ty = type_of nullfv_t
+  val (fv_t, fv_thm) = fv
+  val (rswap_t, rswap_thm) = swap
+  val swap_null = SIMP_RULE bool_ss [GSYM rswap_thm]
+                            (MATCH_MP swapping_implies_empty_swap
+                                      (CONJ swapping nullfv_thm))
+  fun mk_simple_abstraction (c, (cargs, r)) = list_mk_abs(cargs, r)
+  val varcase =
+      case lookup var_con of
+        NONE => mk_abs(genvar string_ty, nullfv_t)
+      | SOME x => mk_simple_abstraction x
+  val concase =
+      case lookup con_con of
+        NONE => mk_abs(genvar nc_arg_ty, nullfv_t)
+      | SOME x => mk_simple_abstraction x
+  val appcase =
+      case lookup app_con of
+        NONE => list_mk_abs([genvar rhs_ty, genvar rhs_ty,
+                             genvar nc_ty, genvar nc_ty], nullfv_t)
+      | SOME (c, (cargs, r)) => let
+          val t1 = hd cargs
+          val t2 = hd (tl cargs)
+          val t1v = variant [t1,t2,f] (mk_var("t1f", rhs_ty))
+          val t2v = variant [t1v,t1,t2,f] (mk_var("t2f", rhs_ty))
+          val ft1 = mk_comb(f, t1)
+          val ft2 = mk_comb(f, t2)
+        in
+          list_mk_abs([t1v,t2v,t1,t2],
+                      Term.subst [ft1 |-> t1v, ft2 |-> t2v] r)
+        end
+  val lamcase =
+      case lookup lam_con of
+        NONE => list_mk_abs([genvar rhs_ty,
+                             genvar string_ty,
+                             genvar nc_ty],
+                            nullfv_t)
+      | SOME (c, (cargs, r)) => let
+          val uvar = hd cargs
+          val bodyvar = hd (tl cargs)
+          val body_result_var =
+              variant [uvar, bodyvar, f] (mk_var("brv", rhs_ty))
+          val fbody = mk_comb(f, bodyvar)
+        in
+          list_mk_abs([body_result_var, uvar, bodyvar],
+                      Term.subst [fbody |-> body_result_var] r)
+        end
+  val instantiation = [alpha |-> nc_arg_ty, beta |-> rhs_ty]
+  fun i t = inst instantiation t
+  val recursion_exists0 =
+      INST [i con_functor |-> concase,
+            i var_functor |-> varcase,
+            i app_functor |-> appcase,
+            i lam_functor |-> lamcase,
+            i ``rFV : 'b -> string set`` |-> fv_t,
+            i ``rswap : string -> string -> 'b -> 'b`` |-> rswap_t]
+           (INST_TYPE instantiation recursion)
+  val recursion_exists =
+      CONV_RULE (RAND_CONV
+                   (BINDER_CONV
+                      (EVERY_CONJ_CONV
+                         (STRIP_QUANT_CONV (RAND_CONV LIST_BETA_CONV))) THENC
+                      RAND_CONV (ALPHA_CONV f)))
+                   recursion_exists0
+  val precondition_discharged =
+      CONV_RULE
+        (LAND_CONV (SIMP_CONV (srw_ss()) [fv_thm, GSYM rswap_thm, swapping,
+                                          swap_null, GSYM swap_thm]))
+        recursion_exists
+in
+  MP precondition_discharged TRUTH
+     handle HOL_ERR _ => raise InfoProofFailed precondition_discharged
+end;
+
+
 
 fun prove_recursive_term_function_exists0 tm = let
   val (f, conjs) = check_for_errors tm
@@ -195,123 +257,27 @@ fun prove_recursive_term_function_exists0 tm = let
   end
   (* order of keys is order of clauses in original definition request *)
   val alist = List.foldl insert_eqn [] conjs
-  fun mk_simple_abstraction (c, (cargs, r)) = let
-    val result = list_mk_abs(cargs, r)
-    val fvs = FVL [result] empty_tmset
-  in
-    if HOLset.isEmpty fvs then result
-    else ERR "prove_recursive_term_function_exists"
-         ("Illegal free variables: " ^
-          String.concat
-          (HOLset.foldl (fn (v,l) => (#1 (dest_var v)^" ")::l) [] fvs)^
-          "on RHS of rule for " ^ #1 (dest_const c))
-  end
-  val varcase =
-      case lookup var_con alist of
-        NONE => mk_abs(genvar stringSyntax.string_ty, mk_arb rhs_ty)
-      | SOME x => mk_simple_abstraction x
-  val concase =
-      case lookup con_con alist of
-        NONE => mk_abs(genvar nc_arg_ty, mk_arb rhs_ty)
-      | SOME x => mk_simple_abstraction x
-  val appcase =
-      case lookup app_con alist of
-        NONE => list_mk_abs([genvar nc_ty, genvar nc_ty,
-                             genvar rhs_ty, genvar rhs_ty], mk_arb rhs_ty)
-      | SOME (c, (cargs, r)) => let
-          val t1 = hd cargs
-          val t2 = hd (tl cargs)
-          val t1v = variant [t1,t2,f] (mk_var("t1f", rhs_ty))
-          val t2v = variant [t1v,t1,t2,f] (mk_var("t2f", rhs_ty))
-          val ft1 = mk_comb(f, t1)
-          val ft2 = mk_comb(f, t2)
-        in
-          list_mk_abs([t1,t2,t1v,t2v],
-                      Term.subst [ft1 |-> t1v, ft2 |-> t2v] r)
-        end
-  val lamcase =
-      case lookup lam_con alist of
-        NONE => list_mk_abs([genvar (stringSyntax.string_ty --> nc_ty),
-                             genvar (stringSyntax.string_ty --> rhs_ty)],
-                            mk_arb rhs_ty)
-      | SOME (c, (cargs, r)) => let
-          val string_ty = stringSyntax.string_ty
-          val uvar = hd cargs
-          val bodyvar = hd (tl cargs)
-          (* "term function variable" *)
-          val tfv = variant [f] (mk_var("tf", string_ty --> nc_ty))
-          (* "result function variable" *)
-          val rfv = variant [f,tfv] (mk_var("rf", string_ty --> rhs_ty))
-          val newv = variant [f,tfv,rfv] (mk_var("v", string_ty))
-          val fbody = mk_comb(f, bodyvar)
-          val absv = mk_comb(inst[alpha |-> nc_arg_ty]abs_con, tfv)
-          val newbody =
-              Term.subst [bodyvar |-> mk_comb(tfv, newv)]
-                         (Term.subst [fbody |-> mk_comb(rfv, newv),
-                                      uvar |-> newv] r)
-          val inst_fv = inst[alpha |-> nc_arg_ty]fv_con
-          val attach_let = mk_let(mk_abs(newv, newbody),
-                                  mk_comb(new_con, mk_comb(inst_fv, absv)))
-        in
-          list_mk_abs([tfv, rfv], attach_let)
-        end
-  val recursion_exists0 =
-      SPECL [concase, varcase, appcase, lamcase]
-            (INST_TYPE [alpha |-> nc_arg_ty, beta |-> rhs_ty]
-                       ncTheory.nc_RECURSION_WEAK)
-  val recursion_exists =
-      CONV_RULE (BINDER_CONV
-                   (EVERY_CONJ_CONV
-                      (STRIP_QUANT_CONV (RAND_CONV LIST_BETA_CONV))) THENC
-                 RAND_CONV (ALPHA_CONV f))
-                recursion_exists0
-
-  val (_, eqns) = dest_exists (concl recursion_exists)
-  val homv = mk_var("hom", type_of f)
-  val renaming_goal =
-      Term.subst [homv |-> f]
-                 (Term.inst [alpha |-> nc_arg_ty, beta |-> rhs_ty]
-                            renaming_goal_form)
-  val eqns_assumed = ASSUME eqns
-
-  val (renaming_proved0, have_renaming) =
-      (default_prover(mk_imp(eqns, renaming_goal),
-                      STRIP_TAC THEN
-                      HO_MATCH_MP_TAC ncTheory.nc_INDUCTION2 THEN
-                      SRW_TAC [][ISUB_CON, ISUB_VAR_RENAME, ISUB_APP,
-                                 ABS_DEF] THEN
-                      Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THEN
-                      Q_TAC (NEW_TAC "z") `FVS R UNION DOM R UNION FV t` THEN
-                      `LAM y t = LAM z ([VAR z/y] t)` by SRW_TAC [][ALPHA] THEN
-                      SRW_TAC [][ISUB_LAM, SUB_ISUB_SINGLETON, ISUB_APPEND,
-                                 RENAMING_THM, LET_THM]), true)
-      handle HOL_ERR _ => (TRUTH, false)
-  val renaming_proved = if have_renaming then UNDISCH renaming_proved0
-                        else TRUTH
-  val single_sub_proved0 =
-      if have_renaming then
-        simpLib.SIMP_RULE (srw_ss()) [RENAMING_THM, ISUB_def]
-                          (Q.INST [`R` |-> `[(VAR y,x)]`]
-                                  (SPEC_ALL renaming_proved))
-      else TRUTH
-  val single_sub_proved = GEN_ALL single_sub_proved0
-  val new_eqns_assumed  =
-      CONV_RULE (RAND_CONV
-                 (RAND_CONV
-                  (RAND_CONV
-                   (STRIP_QUANT_CONV
-                    (RAND_CONV
-                     (SIMP_CONV bool_ss [SIMPLE_LET, single_sub_proved,
-                                         ABS_DEF]))))))
-                eqns_assumed
-  val final_conclusion =
-      LIST_CONJ [new_eqns_assumed, renaming_proved,
-                 single_sub_proved]
-  val final_exists =
-      EXISTS(mk_exists(f, concl final_conclusion), f) final_conclusion
+  fun find_eqn c = lookup c alist
+  val null_info = inst_info rhs_ty null_info
+  val callthis = with_info_prove_recn_exists f nc_ty find_eqn
 in
-  CHOOSE(f, recursion_exists) final_exists
-end;
+  case Lib.total dest_type rhs_ty of
+    SOME (tyop, args) => let
+    in
+      case Binarymap.peek(database, tyop) of
+        NONE => callthis null_info
+      | SOME i => callthis (inst_info rhs_ty i)
+        handle InfoProofFailed th =>
+               (HOL_WARNING
+                  "ncLib"
+                  "prove_recursive_term_function_exists"
+                  ("Couldn't prove function with swap over range - \n\
+                   \goal was "^thm_to_string th^"\n\
+                   \trying null range assumption");
+                callthis null_info)
+    end
+  | NONE => callthis null_info
+end
 
 fun strip_tyannote acc (Absyn.TYPED(_, a, ty)) = strip_tyannote (ty::acc) a
   | strip_tyannote acc x = (List.rev acc, x)
@@ -334,7 +300,10 @@ fun prove_recursive_term_function_exists tm = let
   val result = EQT_ELIM (SIMP_CONV bool_ss [defining_body] tm)
 in
   CHOOSE (f_v, f_thm) (EXISTS (mk_exists(f_v, tm), f_v) result)
-end
+end handle InfoProofFailed th =>
+           raise ERR "prove_recursive_term_function_exists"
+                     ("Couldn't prove function with swap over range - \n\
+                      \goal was "^thm_to_string th)
 
 fun define_recursive_term_function q = let
   val a = Absyn q
@@ -380,27 +349,15 @@ fun define_recursive_term_function q = let
                                         SIMP_TAC bool_ss [f_def]))
               else f_def
   val f_invariants =
-      if have_renamings then
-        SOME (save_thm(fstr^"_vsubst_invariant",
-                       hd (List.rev (CONJUNCTS f_def))),
-              save_thm(fstr^"_renaming_invariant",
-                       hd (tl (List.rev (CONJUNCTS f_def)))))
+      if have_renamings then let
+          val interesting_bit = CONJUNCT2 f_def
+          val th = CONJUNCT1 interesting_bit
+              handle HOL_ERR _ => interesting_bit
+        in
+          SOME (save_thm(fstr^"_swap_invariant", th)) before
+          BasicProvers.export_rewrites [fstr^"_swap_invariant"]
+        end
       else NONE
-  val _ = if have_renamings then let
-              val (th1, th2) = valOf f_invariants
-            in
-              augment_srw_ss [rewrites [th1, th2]];
-              adjoin_to_theory
-              {sig_ps = NONE,
-               struct_ps =
-               SOME (fn pp =>
-                        PP.add_string pp
-                                      ("val _ = BasicProvers.augment_srw_ss "^
-                                       "[simpLib.rewrites ["^
-                                       fstr^"_vsubst_invariant,"^
-                                       fstr^"_renaming_invariant]]\n"))}
-            end
-          else ()
 in
   (f_thm, f_invariants)
 end
