@@ -598,12 +598,16 @@ and rendertexdoc_content : texdoc_content -> unit
 and rendertexdoc_content_pvs : pvars -> texdoc_content -> unit
     = fun pvs0 (t,_) -> match t with
     TexContent s -> print_string s
-  | TexHol(TexHolLR,d) ->
+  | TexHol((ld,rd),d) ->
       local_set !curmodals.iNDENT false
-        (wrap (!hOLDELIMOPEN) (!hOLDELIMCLOSE) (renderholdoc_pvs pvs0)) d
-  | TexHol(TexHolMath,d) ->
-      local_set !curmodals.iNDENT false
-        (wrap "" "" (renderholdoc_pvs pvs0)) d
+        (wrap
+           (match ld with
+           | TexHolLR   -> !hOLDELIMOPEN
+           | TexHolMath -> "")
+           (match rd with
+           | TexHolLR   -> !hOLDELIMCLOSE
+           | TexHolMath -> "")
+           (renderholdoc_pvs pvs0)) d
   | TexDir d -> texrenderdirective d
 
 and texrenderdirective : directive -> unit

@@ -19,11 +19,11 @@ type parser_info = {
 
 let check_close pi got lexbuf =
   if pi.expected = got then
-    From
+    From got
   else if !hOLDELIMUNBAL &&
           ((pi.expected = DelimHolTex && got = DelimHolTexMath) ||
            (pi.expected = DelimHolTexMath && got = DelimHolTex)) then
-    From
+    From got
   else
     raise (Mismatch ("Mismatched delimiters: "^(delim_info pi.expected).sopen^" closed by "^(delim_info got).sclose ^ " at " ^ pretty_pos lexbuf))
 
@@ -399,9 +399,9 @@ let print_token eds t =
   | Content(s) -> (s                     , eds)
   | ToMosml(d) | ToHol(d) | ToText(d) | ToTex(d) | ToDir(d)
                -> ((delim_info d).sopen  , d::eds)
-  | From       -> (match eds with
-                     (ed::eds') -> ((delim_info ed).sclose, eds')
-                   | []         -> ((delim_info DelimEOF).sclose, []))
+  | From(d)    -> (match eds with
+                     (ed::eds') -> ((delim_info d).sclose, eds')
+                   | []         -> ((delim_info d).sclose, []))
   | CLASS_LIST | CLASS | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
   | HOL_SYM_ALIST | HOL_SYM_BOL_ALIST | HOL_IOPEN_LIST | HOL_ICLOSE_LIST
@@ -428,7 +428,7 @@ let render_token t =
   | Content(s) -> "{C:"^s^":C}"
   | ToMosml(d) | ToHol(d) | ToText(d) | ToTex(d) | ToDir(d)
                -> "{D:"^render_mode (to_token_mode t)^(delim_info d).sopen
-  | From       -> ":D}"
+  | From(d)    -> (delim_info d).sclose^":D}"
   | CLASS_LIST | CLASS | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
   | HOL_SYM_ALIST | HOL_SYM_BOL_ALIST | HOL_IOPEN_LIST | HOL_ICLOSE_LIST
@@ -546,7 +546,7 @@ let token lst =
       lst.curparser <- modeparser mode;
       lst.curpi     <- { expected = delim; backtick = backtick };
       t1
-  | From ->
+  | From (delim) ->
       (match lst.stack with
         [] ->
 (*          print_string ("\nPOP - hit bottom\n");*)

@@ -40,6 +40,12 @@ let loc_n : int -> 'a -> 'a located
    = fun n x ->
    (x,(rhs_start_pos n, rhs_end_pos n))
 
+let delimmode_of_delim : Holparsesupp.delim -> texholdelimmode
+    = function
+      | DelimHolTex     -> TexHolLR
+      | DelimHolTexMath -> TexHolMath
+      | _ -> raise (NeverHappen "tex_content")
+
 %}
 
 /* content */
@@ -61,7 +67,7 @@ let loc_n : int -> 'a -> 'a located
 %token < Holparsesupp.delim >  ToText
 %token < Holparsesupp.delim >  ToTex
 %token < Holparsesupp.delim >  ToDir
-%token                         From
+%token < Holparsesupp.delim >  From
 
 /* directives */
 %token CLASS
@@ -134,10 +140,7 @@ tex_parse_rev :
 
 tex_content :
   Content                 { loc (TexContent $1) }
-| ToHol hol_parse From    { loc (TexHol ((match $1 with
-                                           DelimHolTex     -> TexHolLR
-                                         | DelimHolTexMath -> TexHolMath
-                                         | _ -> raise (NeverHappen "tex_content")),
+| ToHol hol_parse From    { loc (TexHol ((delimmode_of_delim $1, delimmode_of_delim $3),
                                          $2)) }
 | ToDir directive From    { loc (TexDir $2) }
 

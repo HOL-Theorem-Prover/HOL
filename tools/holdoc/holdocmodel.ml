@@ -4,7 +4,9 @@ type 'a located = 'a * (Lexing.position * Lexing.position)  (* start, end+1 *)
 
 type texdoc = texdoc_content list
 
-and texholmode = TexHolLR | TexHolMath
+and texholdelimmode = TexHolLR | TexHolMath
+
+and texholmode = texholdelimmode * texholdelimmode  (* left mode, right mode *)
 
 and texdoc_content = texdoc_content0 located
 

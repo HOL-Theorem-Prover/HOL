@@ -17,9 +17,15 @@ let rec dumptexdoc cs = dolist dumptexdoc_content cs
 and dumptexdoc_content = fun (x,_) ->
   match x with
     TexContent s -> s
-  | TexHol(TexHolLR,d) -> "[[" ^ dumpholdoc d ^ "]]"
-  | TexHol(TexHolMath,d) -> "<[" ^ dumpholdoc d ^ "]>"
-  | TexDir d -> dumpdirective d
+  | TexHol((ld,rd),d) -> 
+      (match ld with
+      | TexHolLR -> "[["
+      | TexHolMath -> "<[") ^
+      dumpholdoc d ^
+      (match rd with
+      | TexHolLR -> "]]"
+      | TexHolMath -> "]>")
+   | TexDir d -> dumpdirective d
 
 and dumptextdoc cs = dolist dumptextdoc_content cs
 
