@@ -6,6 +6,7 @@
 # put begin and end verbatim in separate lines                  [WW  93.07.20]
 /^\\KEYWORDS/,/^ *$/d
 /^\\LIBRARY/,/^ *$/d
+/^\\STRUCTURE/,/^ *$/d
 s/qr/qqr/g; s/~/pqr/g;
 s/{{/~/g; s/\(~*\){/{\1/g; s/~/<<<<<</g;
 s/pqr/~/g; s/qqr/qr/g;
