@@ -1,3 +1,4 @@
+
 (*---------------------------------------------------------------------------*)
 (*                                                                           *)
 (*  Invoked with, e.g.,                                                      *)
@@ -200,25 +201,34 @@ fun encode #"<" = "&lt;"
 fun del_bslash #"\\" = ""
   | del_bslash c     = String.str c;
 
+(* Location of style sheet *)
+val cssURL = "doc.css";
+
 fun html (name,sectionl) ostrm =
  let fun outss ss = TextIO.output(ostrm, Substring.translate encode ss)
      fun out s = TextIO.output(ostrm,s)
      fun markout PARA = out "\n<P>\n"
-       | markout (TEXT ss) = outss ss
+       | markout (TEXT ss) = 
+            (out "<SPAN class = \"TEXT\">";
+             outss ss;
+             out "</SPAN>")
        | markout (BRKT ss) = 
-           (out "<FONT size = \"-1\" color = \"crimson\"><KBD>";
+           (out "<SPAN class = \"BRKT\">";
             outss (elim_double_braces ss); 
-            out "</KBD></FONT>")
+            out "</SPAN>")
        | markout (XMPL ss) = 
-           (out "<FONT size = \"-1\"><PRE>";
+           (out "<PRE><DIV class = \"XMPL\">";
             outss (elim_double_braces ss); 
-            out "</PRE></FONT>")
+            out "</DIV></PRE>\n")
 
      fun markout_section (FIELD ("KEYWORDS", _)) = ()
        | markout_section (FIELD (tag, ss))
-           = (out "<DT><STRONG>"; out tag; out "</STRONG>\n";
-              out "<DD>"; List.app markout ss;
-              out "<P>\n")
+           = (out "<DT><SPAN class = \"FIELD-NAME\">"; 
+              out tag; 
+              out "</SPAN></DT>\n";
+              out "<DD><DIV class = \"FIELD-BODY\">"; 
+              List.app markout ss;
+              out "</DIV></DD>\n")
        | markout_section (SEEALSO sslist)
            = let fun drop_qual ss =
                  case tokens (equal #".") ss
@@ -235,28 +245,35 @@ fun html (name,sectionl) ostrm =
                                         out","; out "&nbsp;&nbsp;\n"; 
                                         outlinks t)
              in
-                out "<DT><STRONG>SEEALSO</STRONG>&nbsp;&nbsp;";
-                outlinks sslist
+               (out "<DT><SPAN class = \"FIELD-NAME\"><DT>SEEALSO</DT></SPAN>\n";
+                out "<SPAN class = \"FIELD-BODY\"><DD>"; 
+                outlinks sslist;
+                out "</DD></SPAN>\n")
              end
        | markout_section (TYPE _) = raise Fail "markout_section: TYPE"
 
-     fun front_matter (TYPE ss) =
-           (out "<HTML><HEAD></HEAD>\n";
-            out "<BODY BGCOLOR=\"#fbf2e7\">\n\n";
-            out "<H1>";
-            out "<FONT size = \"+1\" color = \"crimson\"><STRONG><PRE>";
+     fun front_matter name (TYPE ss) =
+           (out "<HTML>\n";
+            out "<HEAD>\n";
+            out "<TITLE>"; out name; out "</TITLE>\n";
+            out "<LINK REL = \"STYLESHEET\" HREF = \"../";
+            out cssURL;
+            out "\" TYPE = \"text/css\">";
+            out "</HEAD>\n";
+            out "<BODY>\n\n";
+            out "<PRE><DIV class = \"TYPE\">";
             outss ss; 
-            out "</PRE></STRONG></FONT></H1>\n\n")
-       | front_matter _ = raise Fail "front_matter: expected TYPE"
+            out "</DIV></PRE>\n\n")
+       | front_matter _ _ = raise Fail "front_matter: expected TYPE"
 
      fun back_matter (www,release) =
       (out "<BR>\n";
-       out "<EM><A HREF=\""; out www; 
+       out "<SPAN class = \"HOL\"><A HREF=\""; out www; 
        out"\">HOL</A>&nbsp;&nbsp;";
-       out release; out "</EM>\n</BODY></HTML>\n")
+       out release; out "</BODY></HTML>\n")
 
   in
-     front_matter (hd sectionl);
+     front_matter name (hd sectionl);
      out "<DL>\n";
      List.app markout_section (tl sectionl);
      out "</DL>\n\n";
