@@ -39,7 +39,7 @@ fun ctlCheck I1 R1 state vm apl ksname init_cache ctlf  =
 	    if Option.isSome init_cache andalso Option.isSome (fst (Option.valOf init_cache))
 		then (Option.valOf(fst(Option.valOf init_cache)),snd(Option.valOf init_cache))
 	    else let val RTm = if Option.isSome init_cache andalso (Option.isSome (snd (Option.valOf init_cache))) 
-				   then let val (_,_,_,RTm) = Option.valOf(fst(Option.valOf (snd (Option.valOf init_cache))))
+				   then let val (_,_,_,RTm) = Option.valOf(#1(Option.valOf (snd (Option.valOf init_cache))))
 					in SOME RTm end 
 			       else NONE (* pick up RTm from init_cache; rest of model needs to be recreated from scratch *)
 		     val (apl,cks_def,totth,RTm,Rthm) = mk_ctlKS I1 R1 RTm state apl vm ksname (* make ctl model *)
@@ -52,10 +52,14 @@ fun ctlCheck I1 R1 state vm apl ksname init_cache ctlf  =
 		     val c2mm = (MATCH_MP CTL2MU_MODEL (LIST_CONJ [totth,wfKS_ks,finS])) (* translation theorem at model level *)
 		     val abs_init_cache_snd = 
 			 if Option.isSome init_cache andalso (Option.isSome (snd (Option.valOf init_cache))) 
-			     then let val (a,b,c,d,e,_,f) = Option.valOf(snd(Option.valOf (snd (Option.valOf init_cache))))
+			     then  #2(Option.valOf (snd (Option.valOf init_cache)))
+			 else NONE
+		     val abs_init_cache_thd = 
+			 if Option.isSome init_cache andalso (Option.isSome (snd (Option.valOf init_cache))) 
+			     then let val (a,b,c,d,e,_,f) = Option.valOf(#3(Option.valOf (snd (Option.valOf init_cache))))
 				  in SOME (a,b,c,d,e,(TRUTH,TRUTH,TRUTH),f) end 
 			 else NONE
-		 in ((c2m,c2mm),SOME (SOME (apl,ks_def,wfKS_ks,RTm),abs_init_cache_snd)) end
+		 in ((c2m,c2mm),SOME (SOME (apl,ks_def,wfKS_ks,RTm),abs_init_cache_snd,abs_init_cache_thd)) end
 	val Ric = is_conj R1
 	val mf_thm = ctl2mu_CONV ctlf (* translate property to mu *)
 	val mf = rhs(concl mf_thm)

@@ -92,7 +92,7 @@ fun totalise state state' Rtb vm R1 =
 	val _ = DMSG (ST "totalise done\n") (dbgctlt)(*DBG*)
     in (R1t,totth,Rtb2) end
 
-(* create ks:('state,'prop) kripke_structure, making sure R is total (totalise if necessary); also return term-bdd of R for model checker*)
+(* create ks:('prop,'state) kripke_structure, making sure R is total (totalise if necessary); also return term-bdd of R for model checker*)
 fun mk_ctlKS I1 R1 RTm state apl vm ksname = 
     let 
 	val _ = DMSG (ST "mk_ctlKS\n") (dbgctlt)(*DBG*)

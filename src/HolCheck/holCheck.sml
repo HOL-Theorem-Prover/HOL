@@ -26,9 +26,17 @@ fun DMSG m v = if v then let val _ = print "holCheck: " val _ = holCheckTools.DM
 datatype hcinit = 
     CTL_INIT of ((thm * thm) option * 
 		 ((term list * thm * thm * (string,term_bdd) dict) option *
+		  ((thm list * (thm * term_bdd option * term) *
+		    (thm * (thm * thm) * term list * (term_bdd * term_bdd) list) *
+		    (thm * thm * thm * thm * term * term * term * term * term list *
+		     hol_type)) * term * thm list) option *
 		  ((term * thm * (int, thm) dict * thm * term_bdd) * term * term * term *
 		   (string * term_bdd) array * (thm * thm * thm) * int) option) option) option
-  | ABS_INIT of ((term list * thm * thm * (string,term_bdd) dict) option *
+  | ABS_INIT of ((term list * thm * thm * (string,term_bdd) dict) option * 
+		 ((thm list * (thm * term_bdd option * term) *
+		   (thm * (thm * thm) * term list * (term_bdd * term_bdd) list) *
+		   (thm * thm * thm * thm * term * term * term * term * term list *
+		    hol_type)) * term * thm list) option *
 		 ((term * thm * (int, thm) dict * thm * term_bdd) * term * term * term * 
 		  (string * term_bdd) array * (thm * thm * thm) * int) option) option
 
@@ -42,20 +50,22 @@ fun merge_init_caches ctlic absic =
 	val (ctlic,absic) = 
 	    if (Option.isSome cic) then 
 		if (Option.isSome aic) then (ctlic,absic) (* both caches already init'd *)
-		else let val absicsnd  = snd(Option.valOf(snd(Option.valOf cic)))					 
-			 val (_,_,_,RTm) = Option.valOf(fst(Option.valOf(snd(Option.valOf cic))))
+		else let val (absicsnd,absicthd) = (#2(Option.valOf(snd(Option.valOf cic))),#3(Option.valOf(snd(Option.valOf cic))))
+			 val (_,_,_,RTm) = Option.valOf(#1(Option.valOf(snd(Option.valOf cic))))
 		     in (ctlic,SOME (ABS_INIT (SOME (SOME ([],TRUTH,TRUTH,RTm),
-						     if Option.isSome absicsnd then (* only if abstraction took place *)
-							 let val (a,b,c,d,e,_,f) = Option.valOf absicsnd 
+						     absicsnd,
+						     if Option.isSome absicthd then (* only if abstraction took place *)
+							 let val (a,b,c,d,e,_,f) = Option.valOf absicthd
 							 in SOME (a,b,c,d,e,(TRUTH,TRUTH,TRUTH),f) end 
 						     else NONE))))
 		     end (* ctl's abs's shareables given to abs *)
 	    else if (Option.isSome aic) 
-	    then let val absicsnd = snd(Option.valOf aic)
-		     val (_,_,_,RTm) = Option.valOf(fst(Option.valOf aic))
+	    then let val (absicsnd,absicthd) = (#2(Option.valOf aic),#3(Option.valOf aic))
+		     val (_,_,_,RTm) = Option.valOf(#1(Option.valOf aic))
 		 in (SOME (CTL_INIT (SOME (NONE,SOME (SOME ([],TRUTH,TRUTH,RTm),
-						      if Option.isSome absicsnd then (* only if abstraction took place *)
-							  let val (a,b,c,d,e,_,f) = Option.valOf absicsnd 
+						      absicsnd,
+						      if Option.isSome absicthd then (* only if abstraction took place *)
+							  let val (a,b,c,d,e,_,f) = Option.valOf absicthd 
 							  in SOME (a,b,c,d,e,(TRUTH,TRUTH,TRUTH),f) end 
 						      else NONE)))),absic) 
 		 end (* abs's shareables given to ctl*)
@@ -69,11 +79,11 @@ fun get_ks_defs (ctlic,absic)  =
 	val aic = get_abs_init (Option.valOf absic)
 	val ksd = 
 	    (if (Option.isSome cic) then 
-		 let val (_,ks_def,_,_) =  Option.valOf(fst(Option.valOf(snd(Option.valOf cic)))) in 
+		 let val (_,ks_def,_,_) =  Option.valOf(#1(Option.valOf(snd(Option.valOf cic)))) in 
 		     if (Term.compare(concl ks_def,T)=EQUAL) then NONE else SOME ks_def end (* aic may have been stuffed by cic*)       
 	     else NONE,
 	     if (Option.isSome aic) then 
-		 let val (_,ks_def,_,_) =  Option.valOf(fst(Option.valOf aic)) 
+		 let val (_,ks_def,_,_) =  Option.valOf(#1(Option.valOf aic)) 
 		 in  if (Term.compare(concl ks_def,T)=EQUAL) then NONE else SOME ks_def end (* aic may have been stuffed by cic*)
    	     else NONE)
 	val _ = DMSG (ST "get_ks_def done\n") (dbghc)(*DBG*)

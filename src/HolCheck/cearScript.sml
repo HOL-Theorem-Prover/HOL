@@ -301,7 +301,7 @@ val lem1 = prove(``!h q. h(q,@qh. h(q,qh)) = ?qh. h(q,qh)``,
  THEN SPEC_TAC(``QP2 (h :'a # 'b -> bool) (q :'a)``,``Q:'b->bool``)
  THEN  REWRITE_TAC [SELECT_THM]);
 
-val ABS_CONS_LEM = save_thm("ABS_CONS_LEM",prove(``!(f:'prop mu) h (ks:('state,'prop) KS) s sh (e:string -> 'state -> bool) (eh:string -> 'astate -> bool).
+val ABS_CONS_LEM = save_thm("ABS_CONS_LEM",prove(``!(f:'prop mu) h (ks:('prop,'state) KS) s sh (e:string -> 'state -> bool) (eh:string -> 'astate -> bool).
 wfKS ks ==>
 (!Q. ~SUBFORMULA (~RV Q) (NNF f)) ==>
 (!s. ?sh. h(s,sh)) ==>
@@ -351,7 +351,7 @@ THEN PAT_ASSUM ``!a b c d e g. t`` (fn t => ALL_TAC)
 THEN POP_ASSUM (fn t => POP_ASSUM (fn t' => ASSUME_TAC t THEN ASSUME_TAC (SPEC ``q:'state``  (SPEC ``@qh. h((q:'state),(qh:'astate))`` t'))))
 THEN PAT_ASSUM ``!q. (?s' s''. ks.T a (s',s'') /\ h (s',sh) /\ h (s'',q)) ==>
             q IN STATES (NNF f) (ABS_KS ks h) eh`` (fn t =>  ASSUME_TAC (SPEC ``@qh. h((q:'state),(qh:'astate))`` t))
-THEN (SUBGOAL_THEN ``(?(s':'state) s''. (ks:('state,'prop) KS).T a (s',s'') /\ h (s',(sh:'astate)) /\ h (s'',@qh. h (q,qh)))`` ASSUME_TAC) THENL [
+THEN (SUBGOAL_THEN ``(?(s':'state) s''. (ks:('prop,'state) KS).T a (s',s'') /\ h (s',(sh:'astate)) /\ h (s'',@qh. h (q,qh)))`` ASSUME_TAC) THENL [
  MAP_EVERY Q.EXISTS_TAC [`s:'state`,`q:'state`]
  THEN ASM_REWRITE_TAC [lem1],
  ASSUM_LIST metisLib.METIS_TAC
@@ -362,16 +362,16 @@ THEN IMP_RES_TAC IMF_MU_MU
 THEN FULL_SIMP_TAC std_ss [SUB_DMD_MU,SUB_AP_MU,SUB_RV_MU]
 THEN RES_TAC
 THEN POP_ASSUM (fn t => NTAC 5 (POP_ASSUM (fn _ => ALL_TAC)) THEN ASSUME_TAC t)
-THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``(sh:'astate) IN FP (NNF f) Q (ABS_KS (ks:('state,'prop) KS) h) eh[[[Q<--{}]]] n``,``s IN FP (NNF f) Q (ks:('state,'prop) KS) e[[[Q<--{}]]] n``))))) ASSUME_TAC) THENL [
+THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``(sh:'astate) IN FP (NNF f) Q (ABS_KS (ks:('prop,'state) KS) h) eh[[[Q<--{}]]] n``,``s IN FP (NNF f) Q (ks:('prop,'state) KS) e[[[Q<--{}]]] n``))))) ASSUME_TAC) THENL [
  Induct_on `n` THENL [
   SIMP_TAC std_ss [STATES_def,ENV_EVAL,NOT_IN_EMPTY],
   SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
   THEN POP_ASSUM (fn t => ASSUME_TAC t THEN UNDISCH_TAC (concl t))
-  THEN SPEC_TAC (``FP (NNF f) Q (ABS_KS (ks:('state,'prop) KS) (h :'state # 'astate -> bool)) eh[[[Q<--{}]]] n``,``X:'astate -> bool``)
-  THEN SPEC_TAC (``FP (NNF f) Q (ks:('state,'prop) KS) e[[[Q<--{}]]] n``,``Y:'state->bool``)
+  THEN SPEC_TAC (``FP (NNF f) Q (ABS_KS (ks:('prop,'state) KS) (h :'state # 'astate -> bool)) eh[[[Q<--{}]]] n``,``X:'astate -> bool``)
+  THEN SPEC_TAC (``FP (NNF f) Q (ks:('prop,'state) KS) e[[[Q<--{}]]] n``,``Y:'state->bool``)
   THEN REPEAT GEN_TAC
   THEN STRIP_TAC
-  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h:'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF f) (ABS_KS (ks:('state,'prop) KS) h) eh ==> s IN STATES (NNF f) (ks:('state,'prop) KS) e`` ASSUME_TAC) THENL [
+  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h:'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF f) (ABS_KS (ks:('prop,'state) KS) h) eh ==> s IN STATES (NNF f) (ks:('prop,'state) KS) e`` ASSUME_TAC) THENL [
    NTAC 3 (POP_ASSUM (fn _ => ALL_TAC))
    THEN PAT_ASSUM ``!Q s sh.  h (s,sh) ==> (sh IN eh Q ==> s IN e Q)`` (fn _ => ALL_TAC)
    THEN PAT_ASSUM ``h (s,sh)`` (fn _ => ALL_TAC)
@@ -406,16 +406,16 @@ THEN IMP_RES_TAC IMF_MU_MU
 THEN FULL_SIMP_TAC std_ss [SUB_DMD_NU,SUB_AP_NU,SUB_RV_NU]
 THEN RES_TAC
 THEN POP_ASSUM (fn t => NTAC 5 (POP_ASSUM (fn _ => ALL_TAC)) THEN ASSUME_TAC t)
-THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``sh IN FP (NNF f) Q (ABS_KS (ks:('state,'prop) KS) h) eh[[[Q<--(ABS_KS (ks:('state,'prop) KS) (h:'state # 'astate -> bool)).S]]] n``,``s IN FP (NNF f) Q (ks:('state,'prop) KS) e[[[Q<--ks.S]]] n``))))) ASSUME_TAC) THENL [
+THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``sh IN FP (NNF f) Q (ABS_KS (ks:('prop,'state) KS) h) eh[[[Q<--(ABS_KS (ks:('prop,'state) KS) (h:'state # 'astate -> bool)).S]]] n``,``s IN FP (NNF f) Q (ks:('prop,'state) KS) e[[[Q<--ks.S]]] n``))))) ASSUME_TAC) THENL [
  Induct_on `n` THENL [
   FULL_SIMP_TAC std_ss [STATES_def,ENV_EVAL,wfKS_def,wf_absKS,IN_UNIV],
   SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
   THEN POP_ASSUM (fn t => ASSUME_TAC t THEN UNDISCH_TAC (concl t))
-  THEN SPEC_TAC (``FP (NNF f) Q (ABS_KS (ks:('state,'prop) KS) (h :'state # 'astate -> bool)) eh[[[Q<--(ABS_KS (ks:('state,'prop) KS) h).S]]] n``,``X:'astate -> bool``)
-  THEN SPEC_TAC (``FP (NNF f) Q (ks:('state,'prop) KS) e[[[Q<--ks.S]]] n``,``Y:'state->bool``)
+  THEN SPEC_TAC (``FP (NNF f) Q (ABS_KS (ks:('prop,'state) KS) (h :'state # 'astate -> bool)) eh[[[Q<--(ABS_KS (ks:('prop,'state) KS) h).S]]] n``,``X:'astate -> bool``)
+  THEN SPEC_TAC (``FP (NNF f) Q (ks:('prop,'state) KS) e[[[Q<--ks.S]]] n``,``Y:'state->bool``)
   THEN REPEAT GEN_TAC
   THEN STRIP_TAC
-  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h:'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF f) (ABS_KS ks h) eh ==> s IN STATES (NNF f) (ks:('state,'prop) KS) e`` ASSUME_TAC) THENL [
+  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h:'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF f) (ABS_KS ks h) eh ==> s IN STATES (NNF f) (ks:('prop,'state) KS) e`` ASSUME_TAC) THENL [
    NTAC 2 (POP_ASSUM (fn _ => ALL_TAC))
    THEN PAT_ASSUM ``!Q s sh.  h (s,sh) ==> sh IN eh Q ==> s IN e Q`` (fn _ => ALL_TAC)
    THEN PAT_ASSUM ``h (s,sh)`` (fn _ => ALL_TAC)
@@ -460,7 +460,7 @@ THEN FULL_SIMP_TAC std_ss [wfKS_def,IN_UNIV]
 THEN FULL_SIMP_TAC std_ss [ABS_KS_def,KS_accfupds,combinTheory.K_DEF,IN_UNIV,BIGUNION]
 THEN WEAKEN_TAC (fn t => Term.compare(t,T)=EQUAL)
 THEN FULL_SIMP_TAC std_ss [SET_SPEC]
-THEN POP_ASSUM (fn t => ASSUME_TAC (SPEC ``(ks:('state,'prop) KS).L (s:'state)`` t))
+THEN POP_ASSUM (fn t => ASSUME_TAC (SPEC ``(ks:('prop,'state) KS).L (s:'state)`` t))
 THEN FULL_SIMP_TAC std_ss []
 THEN POP_ASSUM (fn t => ASSUME_TAC (SPEC ``s:'state`` t))
 THEN FULL_SIMP_TAC std_ss [], (* ~AP *)
@@ -476,7 +476,7 @@ THEN POP_ASSUM (fn t => POP_ASSUM (fn t' => NTAC 2 (POP_ASSUM (fn _ => ALL_TAC))
 THEN PAT_ASSUM ``!a b c d e g. t`` (fn t => ALL_TAC)
 THEN POP_ASSUM (fn t => ASSUME_TAC (SPEC ``q:'state`` (SPEC ``@qh. h((q:'state),(qh:'astate))`` t)))
 THEN POP_ASSUM (fn t => POP_ASSUM (fn t' => POP_ASSUM (fn t''' => POP_ASSUM (fn t'' => ASSUME_TAC t THEN ASSUME_TAC t' THEN ASSUME_TAC t''' THEN ASSUME_TAC (SPEC ``@qh. h((q:'state),(qh:'astate))`` t'')))))
-THEN (SUBGOAL_THEN ``(?(s':'state) s''. (ks:('state,'prop) KS).T a (s',s'') /\ h (s',(sh:'astate)) /\ h (s'',@qh. h (q,qh)))`` ASSUME_TAC) THENL [
+THEN (SUBGOAL_THEN ``(?(s':'state) s''. (ks:('prop,'state) KS).T a (s',s'') /\ h (s',(sh:'astate)) /\ h (s'',@qh. h (q,qh)))`` ASSUME_TAC) THENL [
  MAP_EVERY EXISTS_TAC [``s:'state``,``q:'state``]
  THEN ASM_REWRITE_TAC [lem1],
  ASSUM_LIST metisLib.METIS_TAC
@@ -489,16 +489,16 @@ THEN IMP_RES_TAC IMF_MU_MU
 THEN FULL_SIMP_TAC std_ss [SUB_DMD_NU,SUB_AP_NEG_MU,SUB_RV_NU]
 THEN RES_TAC
 THEN POP_ASSUM (fn t => NTAC 5 (POP_ASSUM (fn _ => ALL_TAC)) THEN ASSUME_TAC t)
-THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``sh IN FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('state,'prop) KS) (h :'state # 'astate -> bool)) eh[[[Q<--(ABS_KS (ks:('state,'prop) KS) h).S]]] n``,``s IN FP (NNF (RVNEG Q ~f)) Q (ks:('state,'prop) KS) e[[[Q<--ks.S]]] n``))))) ASSUME_TAC) THENL [
+THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``sh IN FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('prop,'state) KS) (h :'state # 'astate -> bool)) eh[[[Q<--(ABS_KS (ks:('prop,'state) KS) h).S]]] n``,``s IN FP (NNF (RVNEG Q ~f)) Q (ks:('prop,'state) KS) e[[[Q<--ks.S]]] n``))))) ASSUME_TAC) THENL [
  Induct_on `n` THENL [
   FULL_SIMP_TAC std_ss [STATES_def,ENV_EVAL,wfKS_def,wf_absKS,IN_UNIV],
   SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
   THEN POP_ASSUM (fn t => ASSUME_TAC t THEN UNDISCH_TAC (concl t))
-  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('state,'prop) KS) (h :'state # 'astate -> bool) ) eh[[[Q<--(ABS_KS (ks:('state,'prop) KS) h).S]]] n``,``X:'astate -> bool``)
-  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ks:('state,'prop) KS) e[[[Q<--ks.S]]] n``,``Y:'state->bool``)
+  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('prop,'state) KS) (h :'state # 'astate -> bool) ) eh[[[Q<--(ABS_KS (ks:('prop,'state) KS) h).S]]] n``,``X:'astate -> bool``)
+  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ks:('prop,'state) KS) e[[[Q<--ks.S]]] n``,``Y:'state->bool``)
   THEN REPEAT GEN_TAC
   THEN STRIP_TAC
-  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h :'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF (RVNEG Q ~f)) (ABS_KS ks h) eh ==> s IN STATES (NNF (RVNEG Q ~f)) (ks:('state,'prop) KS) e`` ASSUME_TAC) THENL [
+  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h :'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF (RVNEG Q ~f)) (ABS_KS ks h) eh ==> s IN STATES (NNF (RVNEG Q ~f)) (ks:('prop,'state) KS) e`` ASSUME_TAC) THENL [
    NTAC 2 (POP_ASSUM (fn _ => ALL_TAC))
    THEN PAT_ASSUM ``!Q s sh.  h (s,sh) ==> sh IN eh Q ==> s IN e Q`` (fn _ => ALL_TAC)
    THEN PAT_ASSUM ``h (s,sh)`` (fn _ => ALL_TAC)
@@ -533,16 +533,16 @@ THEN IMP_RES_TAC IMF_MU_MU
 THEN FULL_SIMP_TAC std_ss [SUB_DMD_MU,SUB_AP_NEG_NU,SUB_RV_MU]
 THEN RES_TAC
 THEN POP_ASSUM (fn t => NTAC 5 (POP_ASSUM (fn _ => ALL_TAC)) THEN ASSUME_TAC t)
-THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``sh IN FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('state,'prop) KS) (h :'state # 'astate -> bool)) eh[[[Q<--{}]]] n``,``s IN FP (NNF (RVNEG Q ~f)) Q (ks:('state,'prop) KS) e[[[Q<--{}]]] n``))))) ASSUME_TAC) THENL [
+THEN (SUBGOAL_THEN (mk_forall(``n:num``,list_mk_forall([``sh:'astate``,``s:'state``],mk_imp(``(h :'state # 'astate -> bool)(s,sh)``,mk_imp(``sh IN FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('prop,'state) KS) (h :'state # 'astate -> bool)) eh[[[Q<--{}]]] n``,``s IN FP (NNF (RVNEG Q ~f)) Q (ks:('prop,'state) KS) e[[[Q<--{}]]] n``))))) ASSUME_TAC) THENL [
  Induct_on `n` THENL [
   SIMP_TAC std_ss [STATES_def,ENV_EVAL,NOT_IN_EMPTY],
   SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
   THEN POP_ASSUM (fn t => ASSUME_TAC t THEN UNDISCH_TAC (concl t))
-  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('state,'prop) KS) (h :'state # 'astate -> bool)) eh[[[Q<--{}]]] n``,``X:'astate -> bool``)
-  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ks:('state,'prop) KS) e[[[Q<--{}]]] n``,``Y:'state->bool``)
+  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ABS_KS (ks:('prop,'state) KS) (h :'state # 'astate -> bool)) eh[[[Q<--{}]]] n``,``X:'astate -> bool``)
+  THEN SPEC_TAC (``FP (NNF (RVNEG Q ~f)) Q (ks:('prop,'state) KS) e[[[Q<--{}]]] n``,``Y:'state->bool``)
   THEN REPEAT GEN_TAC
   THEN STRIP_TAC
-  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h :'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF (RVNEG Q ~f)) (ABS_KS ks h) eh ==> s IN STATES (NNF(RVNEG Q ~f) ) (ks:('state,'prop) KS) e`` ASSUME_TAC) THENL [
+  THEN (SUBGOAL_THEN ``!e eh sh s. (!Q s (sh:'astate). (h :'state # 'astate -> bool)(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> h(s,sh) ==> sh IN STATES (NNF (RVNEG Q ~f)) (ABS_KS ks h) eh ==> s IN STATES (NNF(RVNEG Q ~f) ) (ks:('prop,'state) KS) e`` ASSUME_TAC) THENL [
    PAT_ASSUM ``!Q s sh.  h (s,sh) ==> (sh IN eh Q ==> s IN e Q)`` (fn _ => ALL_TAC)
    THEN PAT_ASSUM ``h (s,sh)`` (fn _ => ALL_TAC)
    THEN RES_TAC
@@ -620,9 +620,9 @@ THEN CONJ_TAC THENL [
  ]
 ]));
 
-val IS_ABS_FUN_def = Define `IS_ABS_FUN (ks:('state,'prop) KS) e h = (!s. ?(sh:'astate). h(s,sh)) /\ (!s1 s2 (sh:'astate). h(s1,sh) /\ h(s2,sh) ==> !p. p IN ks.ap ==> (s1 IN STATES (AP p) ks e = s2 IN STATES (AP p) ks e))`;
+val IS_ABS_FUN_def = Define `IS_ABS_FUN (ks:('prop,'state) KS) e h = (!s. ?(sh:'astate). h(s,sh)) /\ (!s1 s2 (sh:'astate). h(s1,sh) /\ h(s2,sh) ==> !p. p IN ks.ap ==> (s1 IN STATES (AP p) ks e = s2 IN STATES (AP p) ks e))`;
 
-val ABS_CONS_MODEL = save_thm("ABS_CONS_MODEL",prove(``!f h (ks:('state,'prop) KS) (e:string -> 'state -> bool) (eh:string -> 'astate -> bool). wfKS ks ==> (!Q. ~SUBFORMULA (~RV Q) (NNF f)) ==> (!a g. ~SUBFORMULA (<<a>> g) (NNF f)) ==> (!p. SUBFORMULA (AP p) f ==> p IN ks.ap) ==> IS_ABS_FUN (ks:('state,'prop) KS) e h ==> (!Q s sh. h(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> MU_MODEL_SAT f (ABS_KS ks h) eh ==> MU_MODEL_SAT f ks e``,
+val ABS_CONS_MODEL = save_thm("ABS_CONS_MODEL",prove(``!f h (ks:('prop,'state) KS) (e:string -> 'state -> bool) (eh:string -> 'astate -> bool). wfKS ks ==> (!Q. ~SUBFORMULA (~RV Q) (NNF f)) ==> (!a g. ~SUBFORMULA (<<a>> g) (NNF f)) ==> (!p. SUBFORMULA (AP p) f ==> p IN ks.ap) ==> IS_ABS_FUN (ks:('prop,'state) KS) e h ==> (!Q s sh. h(s,sh) ==> (sh IN eh Q ==> s IN e Q)) ==> MU_MODEL_SAT f (ABS_KS ks h) eh ==> MU_MODEL_SAT f ks e``,
 REPEAT STRIP_TAC
 THEN FULL_SIMP_TAC std_ss [MU_MODEL_SAT_def,MU_SAT_def,IS_ABS_FUN_def]
 THEN REPEAT STRIP_TAC

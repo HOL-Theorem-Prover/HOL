@@ -62,7 +62,7 @@ val ctl_def =
        | C_EG          of ctl`;                  (* EG f                     *)
 
 (******************************************************************************
-* ``: ('state,'prop)kripke_structure``
+* ``: ('prop,'state)kripke_structure``
 ******************************************************************************)
 val kripke_structure_def =
  Hol_datatype

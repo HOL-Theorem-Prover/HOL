@@ -32,7 +32,7 @@ open ksTheory
 open holCheckTools
 open boolTheory
 
-val dbgkt = holCheckTools.dbgall
+val dbgkt = true; (* holCheckTools.dbgall*)
 
 fun DMSG m v = if v then let val _ = print "ksTools: " val _ = holCheckTools.DMSG m v in () end else ()
 
@@ -157,7 +157,7 @@ fun mk_Tth ks_def ksname msd2 msb2 state' state_type prop_type =
     let 
 	val _ = DMSG (ST ("(make_Tth)\n")) (dbgkt)(*DBG*)
         val ksT = mk_comb(``KS_T:^(ty_antiq(list_mk_fun([type_of ksname,``:string``,mk_prod(state_type,state_type)],bool)))``,ksname)  
-    in (PURE_ONCE_REWRITE_RULE [GEN_ALL (hd(tl(CONJUNCTS(SPEC_ALL EQ_CLAUSES))))] 
+    val (Tth,(dmdth,boxth)) =  (PURE_ONCE_REWRITE_RULE [GEN_ALL (hd(tl(CONJUNCTS(SPEC_ALL EQ_CLAUSES))))] 
 	(((REWRITE_CONV [ks_def,DB.fetch "ks" "KS_accfupds",combinTheory.K_DEF]) 
 	  THENC (DEPTH_CONV BETA_CONV) 
 	  THENC (REWRITE_CONV []))				
@@ -168,7 +168,11 @@ fun mk_Tth ks_def ksname msd2 msb2 state' state_type prop_type =
 		     THENC SWAP_PFORALL_CONV)) msd2),
 	 CONV_RULE (STRIP_QUANT_CONV (RHS_CONV holCheckTools.ELIM_TUPLED_QUANT_CONV)) 
 	((CONV_RULE ((STRIP_QUANT_CONV (RHS_CONV (GEN_PALPHA_CONV state'))) 
-		     THENC SWAP_PFORALL_CONV)) msb2))) end
+		     THENC SWAP_PFORALL_CONV)) msb2))) 
+    val _ = DMSG (TH Tth) (dbgkt) val _ = DMSG (ST "Tth") (dbgkt)
+    val _ = DMSG (TH dmdth) (dbgkt) val _ = DMSG (ST "dmdth") (dbgkt)
+    val _ = DMSG (TH boxth) (dbgkt) val _ = DMSG (ST "boxth") (dbgkt)
+    in (Tth,(dmdth,boxth)) end
 
 fun mk_state I1 (T1:(string * term) list) = 
     let val R1 = list_mk_conj (List.map snd T1) (* whether conj or disj doesn't matter for our purposes here *)

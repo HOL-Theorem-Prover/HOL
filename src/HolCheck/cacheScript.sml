@@ -30,122 +30,122 @@ fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end
 
 (* thms for environment-invariant satisfiability *)
 
-val MU_SAT_RV_ENV_EQ = save_thm("MU_SAT_RV_ENV_EQ",prove(``!(ks: ('state,'prop) KS) . wfKS ks ==> (!s Q e e' X. ((MU_SAT (RV Q) ks e s = X) /\ (e Q = e' Q)) ==> (MU_SAT (RV Q) ks e' s = X))``,SIMP_TAC std_ss [wfKS_def,MU_SAT_def,STATES_def,MU_SAT_RV]))
+val MU_SAT_RV_ENV_EQ = save_thm("MU_SAT_RV_ENV_EQ",prove(``!(ks: ('prop,'state) KS) . wfKS ks ==> (!s Q e e' X. ((MU_SAT (RV Q) ks e s = X) /\ (e Q = e' Q)) ==> (MU_SAT (RV Q) ks e' s = X))``,SIMP_TAC std_ss [wfKS_def,MU_SAT_def,STATES_def,MU_SAT_RV]))
 
-val SAT_T_ENV_INV = save_thm("SAT_T_ENV_INV", GENL [``ks: ('state,'prop) KS``,``e:string -> 'state -> bool``,``e':string -> 'state -> bool``] (EXT (GEN ``s:'state`` (SPEC_ALL (prove(``!(ks: ('state,'prop) KS)  e e' s. MU_SAT T ks e s = MU_SAT T ks e' s``,SIMP_TAC std_ss [MU_SAT_def,STATES_def]))))))
+val SAT_T_ENV_INV = save_thm("SAT_T_ENV_INV", GENL [``ks: ('prop,'state) KS``,``e:string -> 'state -> bool``,``e':string -> 'state -> bool``] (EXT (GEN ``s:'state`` (SPEC_ALL (prove(``!(ks: ('prop,'state) KS)  e e' s. MU_SAT T ks e s = MU_SAT T ks e' s``,SIMP_TAC std_ss [MU_SAT_def,STATES_def]))))))
 
-val SAT_F_ENV_INV = save_thm("SAT_F_ENV_INV", GENL [``ks: ('state,'prop) KS``,``e:string -> 'state -> bool``,``e':string -> 'state -> bool``] (EXT (GEN ``s:'state`` (SPEC_ALL (prove(``!(ks: ('state,'prop) KS)  e e' s. MU_SAT F ks e s = MU_SAT F ks e' s``,SIMP_TAC std_ss [MU_SAT_def,STATES_def]))))))
+val SAT_F_ENV_INV = save_thm("SAT_F_ENV_INV", GENL [``ks: ('prop,'state) KS``,``e:string -> 'state -> bool``,``e':string -> 'state -> bool``] (EXT (GEN ``s:'state`` (SPEC_ALL (prove(``!(ks: ('prop,'state) KS)  e e' s. MU_SAT F ks e s = MU_SAT F ks e' s``,SIMP_TAC std_ss [MU_SAT_def,STATES_def]))))))
 
-val SAT_AP_ENV_INV = save_thm("SAT_AP_ENV_INV", GENL [``ks: ('state,'prop) KS``,``p:'prop``,``e:string -> 'state -> bool``,``e':string -> 'state -> bool``] (EXT (GEN ``s:'state`` (SPEC_ALL (prove(``!(ks: ('state,'prop) KS)  (p:'prop) e e' s. MU_SAT (AP p) ks e s = MU_SAT (AP p) ks e' s``,SIMP_TAC std_ss [MU_SAT_def,STATES_def]))))))
+val SAT_AP_ENV_INV = save_thm("SAT_AP_ENV_INV", GENL [``ks: ('prop,'state) KS``,``p:'prop``,``e:string -> 'state -> bool``,``e':string -> 'state -> bool``] (EXT (GEN ``s:'state`` (SPEC_ALL (prove(``!(ks: ('prop,'state) KS)  (p:'prop) e e' s. MU_SAT (AP p) ks e s = MU_SAT (AP p) ks e' s``,SIMP_TAC std_ss [MU_SAT_def,STATES_def]))))))
 
-val SAT_RV_ENV_INV = save_thm("SAT_RV_ENV_INV",prove(``!(ks: ('state,'prop) KS)  Q e e'. (e Q = e' Q) ==> (MU_SAT (RV Q) ks e = MU_SAT (RV Q) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [MU_SAT_def,STATES_def,MU_SAT_RV]))
+val SAT_RV_ENV_INV = save_thm("SAT_RV_ENV_INV",prove(``!(ks: ('prop,'state) KS)  Q e e'. (e Q = e' Q) ==> (MU_SAT (RV Q) ks e = MU_SAT (RV Q) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [MU_SAT_def,STATES_def,MU_SAT_RV]))
 
-val SAT_ENV_INV_META = prove(``(!e e'. MU_SAT (f:'prop mu) (ks : ('state,'prop) KS) e = MU_SAT (f:'prop mu) (ks : ('state,'prop) KS) e') = (!e e' (s:'state).  MU_SAT (f:'prop mu) (ks : ('state,'prop) KS) e s = MU_SAT (f:'prop mu) (ks : ('state,'prop) KS) e' s)``,SIMP_TAC std_ss [GEN_ALL (FUN_EQ_CONV ``MU_SAT (f :'prop mu) (ks :('state,'prop) KS) (e: string -> 'state -> bool)= MU_SAT f ks (e' :string -> 'state -> bool)``)])
+val SAT_ENV_INV_META = prove(``(!e e'. MU_SAT (f:'prop mu) (ks : ('prop,'state) KS) e = MU_SAT (f:'prop mu) (ks : ('prop,'state) KS) e') = (!e e' (s:'state).  MU_SAT (f:'prop mu) (ks : ('prop,'state) KS) e s = MU_SAT (f:'prop mu) (ks : ('prop,'state) KS) e' s)``,SIMP_TAC std_ss [GEN_ALL (FUN_EQ_CONV ``MU_SAT (f :'prop mu) (ks :('prop,'state) KS) (e: string -> 'state -> bool)= MU_SAT f ks (e' :string -> 'state -> bool)``)])
 
-val SAT_ENV_INV_META2=FUN_EQ_CONV ``MU_SAT (f:'prop mu) (ks : ('state,'prop) KS) e = MU_SAT (f:'prop mu) (ks : ('state,'prop) KS) e'``
+val SAT_ENV_INV_META2=FUN_EQ_CONV ``MU_SAT (f:'prop mu) (ks : ('prop,'state) KS) e = MU_SAT (f:'prop mu) (ks : ('prop,'state) KS) e'``
 
-val SAT_NEG_ENV_INV = save_thm("SAT_NEG_ENV_INV", prove(``!(ks:('state,'prop) KS) . wfKS ks ==> (!(f:'prop mu) e e'. ((!e e'. MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (~f) ks e = MU_SAT (~f) ks e')))``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,wfKS_def,UNIV_DEF,DIFF_DEF,SET_SPEC] THEN FULL_SIMP_TAC std_ss [IN_DEF]))
+val SAT_NEG_ENV_INV = save_thm("SAT_NEG_ENV_INV", prove(``!(ks:('prop,'state) KS) . wfKS ks ==> (!(f:'prop mu) e e'. ((!e e'. MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (~f) ks e = MU_SAT (~f) ks e')))``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,wfKS_def,UNIV_DEF,DIFF_DEF,SET_SPEC] THEN FULL_SIMP_TAC std_ss [IN_DEF]))
 
 
-val SAT_NEG_ENV_INV2 = save_thm("SAT_NEG_ENV_INV2", prove(``!(ks:('state,'prop) KS) . wfKS ks ==> (!(f:'prop mu) e e'. ((MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (~f) ks e = MU_SAT (~f) ks e')))``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,wfKS_def,UNIV_DEF,DIFF_DEF,SET_SPEC]))
+val SAT_NEG_ENV_INV2 = save_thm("SAT_NEG_ENV_INV2", prove(``!(ks:('prop,'state) KS) . wfKS ks ==> (!(f:'prop mu) e e'. ((MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (~f) ks e = MU_SAT (~f) ks e')))``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,wfKS_def,UNIV_DEF,DIFF_DEF,SET_SPEC]))
 
-val SAT_CONJ_ENV_INV = save_thm("SAT_CONJ_ENV_INV", prove(``!(ks:('state,'prop) KS)  (f:'prop mu) (g:'prop mu) e e'. ((!e e'. MU_SAT f ks e = MU_SAT f ks e') /\ (!e e'. MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f /\ g) ks e = MU_SAT (f /\ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,INTER_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_CONJ_ENV_INV = save_thm("SAT_CONJ_ENV_INV", prove(``!(ks:('prop,'state) KS)  (f:'prop mu) (g:'prop mu) e e'. ((!e e'. MU_SAT f ks e = MU_SAT f ks e') /\ (!e e'. MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f /\ g) ks e = MU_SAT (f /\ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,INTER_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
-val SAT_CONJ_ENV_INV2 = save_thm("SAT_CONJ_ENV_INV2", prove(``!(ks:('state,'prop) KS)  f (g:'prop mu) e e'. ((MU_SAT f ks e = MU_SAT f ks e') /\ (MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f /\ g) ks e = MU_SAT (f /\ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,INTER_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_CONJ_ENV_INV2 = save_thm("SAT_CONJ_ENV_INV2", prove(``!(ks:('prop,'state) KS)  f (g:'prop mu) e e'. ((MU_SAT f ks e = MU_SAT f ks e') /\ (MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f /\ g) ks e = MU_SAT (f /\ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,INTER_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
-val SAT_DISJ_ENV_INV = save_thm("SAT_DISJ_ENV_INV", prove(``!(ks:('state,'prop) KS)  f (g:'prop mu) e e'. ((!e e'. MU_SAT f ks e = MU_SAT f ks e') /\ (!e e'. MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f \/ g) ks e = MU_SAT (f \/ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,UNION_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_DISJ_ENV_INV = save_thm("SAT_DISJ_ENV_INV", prove(``!(ks:('prop,'state) KS)  f (g:'prop mu) e e'. ((!e e'. MU_SAT f ks e = MU_SAT f ks e') /\ (!e e'. MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f \/ g) ks e = MU_SAT (f \/ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,UNION_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
-val SAT_DISJ_ENV_INV2 = save_thm("SAT_DISJ_ENV_INV2", prove(``!(ks:('state,'prop) KS)  f (g:'prop mu) e e'. ((MU_SAT f ks e = MU_SAT f ks e') /\ (MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f \/ g) ks e = MU_SAT (f \/ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,UNION_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_DISJ_ENV_INV2 = save_thm("SAT_DISJ_ENV_INV2", prove(``!(ks:('prop,'state) KS)  f (g:'prop mu) e e'. ((MU_SAT f ks e = MU_SAT f ks e') /\ (MU_SAT g ks e = MU_SAT g ks e')) ==> (MU_SAT (f \/ g) ks e = MU_SAT (f \/ g) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,UNION_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
-val SAT_DMD_ENV_INV = save_thm("SAT_DMD_ENV_INV", prove(``!(ks:('state,'prop) KS)  a f e e'. (!e e'. MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (<<a>> f) ks e = MU_SAT (<<a>> f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_DMD_ENV_INV = save_thm("SAT_DMD_ENV_INV", prove(``!(ks:('prop,'state) KS)  a f e e'. (!e e'. MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (<<a>> f) ks e = MU_SAT (<<a>> f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
-val SAT_DMD_ENV_INV2 = save_thm("SAT_DMD_ENV_INV2", prove(``!(ks:('state,'prop) KS)  a f e e'. (MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (<<a>> f) ks e = MU_SAT (<<a>> f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,UNION_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_DMD_ENV_INV2 = save_thm("SAT_DMD_ENV_INV2", prove(``!(ks:('prop,'state) KS)  a f e e'. (MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT (<<a>> f) ks e = MU_SAT (<<a>> f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,UNION_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
-val SAT_BOX_ENV_INV = save_thm("SAT_BOX_ENV_INV", prove(``!(ks:('state,'prop) KS)  a f e e'. (!e e'. MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT ([[a]] f) ks e = MU_SAT ([[a]] f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_BOX_ENV_INV = save_thm("SAT_BOX_ENV_INV", prove(``!(ks:('prop,'state) KS)  a f e e'. (!e e'. MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT ([[a]] f) ks e = MU_SAT ([[a]] f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META,MU_SAT_def,STATES_def,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
-val SAT_BOX_ENV_INV2 = save_thm("SAT_BOX_ENV_INV2", prove(``!(ks:('state,'prop) KS)  a f e e'. (MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT ([[a]] f) ks e = MU_SAT ([[a]] f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,INTER_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
+val SAT_BOX_ENV_INV2 = save_thm("SAT_BOX_ENV_INV2", prove(``!(ks:('prop,'state) KS)  a f e e'. (MU_SAT f ks e = MU_SAT f ks e') ==> (MU_SAT ([[a]] f) ks e = MU_SAT ([[a]] f) ks e')``,REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,INTER_DEF,SET_SPEC] THEN ASSUM_LIST PROVE_TAC))
 
 val SAT_LFP_ENV_INV =
     save_thm("SAT_LFP_ENV_INV",
-	     prove(``!(ks:('state,'prop) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
+	     prove(``!(ks:('prop,'state) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
 		      ==> (MU_SAT (mu Q.. f) ks e s = MU_SAT (mu Q .. f) ks e' s)``,
 		      SIMP_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC]
 		      THEN REPEAT STRIP_TAC
 		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
-		      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('state,'prop) KS)
+		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+		      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('prop,'state) KS)
 								  (e' :string -> 'state -> bool)[[[Q<--{}]]] n``
 								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
 		      THEN Induct_on `n`
 		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
+			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
 										     (e :string -> 'state -> bool)[[[Q<--{}]]]
 										     (n :num)``,``FP (f :'prop mu) (Q :string)
-										     (ks :('state,'prop) KS)
+										     (ks :('prop,'state) KS)
 										     (e':string -> 'state -> bool)[[[Q<--{}]]]
 										     (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 
 val SAT_LFP_ENV_INV2 =
     save_thm("SAT_LFP_ENV_INV2",
-	     prove(``!(ks:('state,'prop) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
+	     prove(``!(ks:('prop,'state) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
 		      ==> (MU_SAT (mu Q.. f) ks e = MU_SAT (mu Q .. f) ks e')``,
 		      REPEAT STRIP_TAC
 		      THEN CONV_TAC FUN_EQ_CONV
 		      THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,SET_SPEC]
 		      THEN REPEAT STRIP_TAC
 		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
-		      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('state,'prop) KS)
+		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+		      (e :string -> 'state -> bool)[[[Q<--{}]]] n = s IN FP f Q (ks: ('prop,'state) KS)
 								  (e' :string -> 'state -> bool)[[[Q<--{}]]] n``
 								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
 		      THEN Induct_on `n`
 		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
+			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
 										     (e :string -> 'state -> bool)[[[Q<--{}]]]
 										     (n :num)``,``FP (f :'prop mu) (Q :string)
-										     (ks :('state,'prop) KS)
+										     (ks :('prop,'state) KS)
 										     (e':string -> 'state -> bool)[[[Q<--{}]]]
 										     (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 
 val SAT_GFP_ENV_INV =
     save_thm("SAT_GFP_ENV_INV",
-	     prove(``!(ks:('state,'prop) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
+	     prove(``!(ks:('prop,'state) KS)  s Q f e e'. (!s X e e'. MU_SAT f ks e[[[Q<--X]]] s = MU_SAT f ks e'[[[Q<--X]]] s)
 		      ==> (MU_SAT (nu Q.. f) ks e s = MU_SAT (nu Q .. f) ks e' s)``,
 		      SIMP_TAC std_ss [MU_SAT_def,STATES_def,SET_SPEC]
 		      THEN REPEAT STRIP_TAC
 		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
-		      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('state,'prop) KS)
+		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+		      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('prop,'state) KS)
 								  (e' :string -> 'state -> bool)[[[Q<--ks.S]]] n``
 								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
 		      THEN Induct_on `n`
 		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
+			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
 										   (e :string -> 'state -> bool)[[[Q<--ks.S]]]
 										   (n :num)``,``FP (f :'prop mu) (Q :string)
-										   (ks :('state,'prop) KS)
+										   (ks :('prop,'state) KS)
 										   (e':string -> 'state -> bool)[[[Q<--ks.S]]]
 										   (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 
 val SAT_GFP_ENV_INV2 =
     save_thm("SAT_GFP_ENV_INV2",
-	     prove(``!(ks:('state,'prop) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
+	     prove(``!(ks:('prop,'state) KS)  Q f e e'. (!X. MU_SAT f ks e[[[Q<--X]]] = MU_SAT f ks e'[[[Q<--X]]])
 		      ==> (MU_SAT (nu Q.. f) ks e = MU_SAT (nu Q .. f) ks e')``,
 		      REPEAT STRIP_TAC
 		      THEN CONV_TAC FUN_EQ_CONV
 		      THEN FULL_SIMP_TAC std_ss [SAT_ENV_INV_META2,MU_SAT_def,STATES_def,SET_SPEC]
 		      THEN REPEAT STRIP_TAC
 		      THEN (SUBGOAL_THEN ``!(n:num) (s: 'state) . (s :'state) IN
-		      FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
-		      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('state,'prop) KS)
+		      FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
+		      (e :string -> 'state -> bool)[[[Q<--ks.S]]] n = s IN FP f Q (ks: ('prop,'state) KS)
 								  (e' :string -> 'state -> bool)[[[Q<--ks.S]]] n``
 								  (fn th => ASSUM_LIST (fn t => PROVE_TAC (th::t))))
 		      THEN Induct_on `n`
 		      THENL [SIMP_TAC std_ss [STATES_def,ENV_UPDATE_def,NOT_IN_EMPTY],
-			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('state,'prop) KS)
+			     FULL_SIMP_TAC std_ss [IN_DEF,STATES_def,SYM (ISPECL [`` FP (f :'prop mu) (Q :string) (ks :('prop,'state) KS)
 										   (e :string -> 'state -> bool)[[[Q<--ks.S]]]
 										   (n :num)``,``FP (f :'prop mu) (Q :string)
-										   (ks :('state,'prop) KS)
+										   (ks :('prop,'state) KS)
 										   (e':string -> 'state -> bool)[[[Q<--ks.S]]]
 										   (n :num)``] FUN_EQ_THM),ENV_UPDATE]]))
 

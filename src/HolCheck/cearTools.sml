@@ -864,13 +864,13 @@ fun ref_abs atr ctr state RTm astate h =
 	val n = List.foldl (fn (v,n) => if Term.compare(v,T)=EQUAL then 2*n else 2*n+1) 0 as1
   in (n,dead,bad) end
 
-fun absCheck_aux I1 T1 RTm Ric state (apl,ks_def,wfKS_ks) astate hd_def af ath_lem1 ath_lem2 iaf env aenv Ree k mf =
+fun absCheck_aux I1 T1 RTm Ric state (apl,ks_def,wfKS_ks) astate hd_def af ath_lem1 ath_lem2 iaf env aenv Ree k mf mu_init_cache_snd =
     let 
 	val _ = DMSG (ST "absCheck_aux\n") (dbgceart)(*DBG*)
 	val (aI1,aT1,aItb,abs_aks,(abpl,aks_def,wfKS_aks,aRTm)) = mk_abs_ks I1 T1 RTm state Ric af NONE (apl,ks_def,wfKS_ks) hd_def
 	val vm'' = PrimitiveBddRules.getVarmap (Binarymap.find(aRTm,"."))
 	val ((tb,tbth,ace),mu_init_cache) = muCheck.muCheck Ree aI1 aT1 astate vm'' Ric (ref NONE) ((SOME af), SOME aItb) 
-	                                         (SOME (abpl,aks_def,wfKS_aks,aRTm),NONE) mf
+	                                         (SOME (abpl,aks_def,wfKS_aks,aRTm),mu_init_cache_snd) mf
 	val cth = if (not (Option.isSome ace)) (* final success theorem *)
 		      then let val acm = mk_abs_cons_thm mf (apl,ks_def,wfKS_ks) env aenv hd_def iaf
 			   in  SOME (MP acm (REWRITE_RULE [abs_aks] (Option.valOf tbth))) end
@@ -878,11 +878,12 @@ fun absCheck_aux I1 T1 RTm Ric state (apl,ks_def,wfKS_ks) astate hd_def af ath_l
 	val cce = if (Option.isSome ace)  (* concrete counter example (or prefix if ace was spurious) *)
 		  then check_ace (Option.valOf ace) I1 T1 state Ric astate af 
 		  else NONE
-    in if (Option.isSome cth) then (tb,cth,NONE) (* success *)
-       else if (List.length (Option.valOf cce)) = (List.length (Option.valOf ace)) then (tb,NONE,cce) (* failure *)
+    in if (Option.isSome cth) then ((tb,cth,NONE),snd(mu_init_cache)) (* success *)
+       else if (List.length (Option.valOf cce)) = (List.length (Option.valOf ace)) then ((tb,NONE,cce),snd(mu_init_cache)) (* failure *)
 	    else let val (idx,dead,bad) = ref_abs (Option.valOf ace) (Option.valOf cce) state RTm astate af (* refine *) 
 		     val (af,ath_lem1,astate,hd_def,iaf)=mk_ref_abs_fun af state astate ks_def ath_lem1 ath_lem2 hd_def idx dead bad k
-               in absCheck_aux I1 T1 RTm Ric state (apl,ks_def,wfKS_ks) astate hd_def af ath_lem1 ath_lem2 iaf env aenv Ree (k+1) mf end
+               in absCheck_aux I1 T1 RTm Ric state (apl,ks_def,wfKS_ks) astate 
+		   hd_def af ath_lem1 ath_lem2 iaf env aenv Ree (k+1) mf NONE end
     end
 
 (* property independent theorems and data that needs to be initialised only once per model *)
@@ -899,31 +900,49 @@ fun init_abs T1 state vm (apl,ks_def,wfKS_ks,RTm) =
 
 (* given concrete model M and a formula f, returns M |= f where the model checking has been done on an abstracted version of M *) 
 (* NOTE: our abstraction framework is only for universal properties; the second check is because if all AP are state vars then 
-	 there is not abstraction anyway so avoid waste of time; this check will change once non-bool state vars are supported *)
+	 there is no abstraction anyway so avoid waste of time; this check will change once non-bool state vars are supported *)
 (* this function just computes the init data (or picks it from the init_cache); the real action takes place in absCheck_aux *)
-fun absCheck I1 T1 state Ric vm apl ksname init_cache mf = 
+(* FIXME: can the horrible type annotation to init_cache be got rid of? *)
+fun absCheck I1 T1 state Ric vm apl ksname 
+    (init_cache:((term list * thm * thm * (string,term_bdd) dict) option * 
+		 ((thm list * (thm * term_bdd option * term) * 
+		   (thm * (thm * thm) * term list * (term_bdd * term_bdd) list) *
+		   (thm * thm * thm * thm * term * term * term * term * term list * 
+		    hol_type)) * term * thm list) option * 
+		 ((term * thm * (int, thm) dict * thm * term_bdd) * term * term * term *  
+		  (string * term_bdd) array * (thm * thm * thm) * int) option) option) 
+    mf = 
     let 
-	val (apl,ks_def,wfKS_ks,RTm) = if Option.isSome init_cache andalso Option.isSome (fst (Option.valOf init_cache))
-					   then let val (apl',ks_def,wfKS_ks,RTm) = Option.valOf (fst (Option.valOf init_cache))
+	val (apl,ks_def,wfKS_ks,RTm) = if Option.isSome init_cache andalso Option.isSome (#1(Option.valOf init_cache))
+					   then let val (apl',ks_def,wfKS_ks,RTm) = Option.valOf (#1(Option.valOf init_cache))
 						in if List.null apl' then  mk_wfKS I1 T1 (SOME RTm) state vm Ric apl NONE ksname
 						   else  (apl',ks_def,wfKS_ks,RTm) end
-				       else  mk_wfKS I1 T1 NONE state vm Ric apl NONE ksname
+				       else mk_wfKS I1 T1 NONE state vm Ric apl NONE ksname
     in if is_existential mf orelse (List.foldl (fn (ap,t) => t andalso (is_var(pbody ap))) true apl) 
-	   then (fst(muCheck (Array.fromList []) I1 T1 state vm Ric (ref NONE) (NONE,NONE) (SOME (apl,ks_def,wfKS_ks,RTm),NONE) mf),
-	      SOME (SOME (apl,ks_def,wfKS_ks,RTm),NONE))  
+	   then let val mu_init_cache_snd =  if Option.isSome init_cache andalso Option.isSome (#2 (Option.valOf init_cache))
+						 then  #2(Option.valOf init_cache) else NONE
+		    val (res,mu_init_cache) = muCheck (Array.fromList []) I1 T1 state vm Ric (ref NONE) (NONE,NONE) 
+	                                                                     (SOME (apl,ks_def,wfKS_ks,RTm),mu_init_cache_snd) mf 
+		in (res,SOME (SOME (apl,ks_def,wfKS_ks,RTm),snd(mu_init_cache),NONE)) end  
        else let val ((astate,abst_def,hR_thms_,hd_def,af),state,env,aenv,Ree,(ath_lem1,ath_lem2,iaf),k) = 
-	   if Option.isSome init_cache andalso Option.isSome (snd(Option.valOf init_cache)) 
-	       then Option.valOf(snd(Option.valOf init_cache))
+	   if Option.isSome init_cache andalso Option.isSome (#3(Option.valOf init_cache)) 
+	       then Option.valOf(#3(Option.valOf init_cache))
 	   else init_abs T1 state vm (apl,ks_def,wfKS_ks,RTm) 
 		val (ath_lem1,ath_lem2,iaf) = if (Term.compare(concl ath_lem1,T)=EQUAL) 
 					      then mk_is_abs_fun_thm af state astate hR_thms_ abst_def (apl,ks_def,wfKS_ks) hd_def
 					      else (ath_lem1,ath_lem2,iaf)
-	    in (absCheck_aux I1 T1 RTm Ric state (apl,ks_def,wfKS_ks) astate hd_def af ath_lem1 ath_lem2 iaf env aenv Ree k mf,
-		(SOME (SOME (apl,ks_def,wfKS_ks,RTm),
-		       SOME ((astate,abst_def,hR_thms_,hd_def,af),state,env,aenv,Ree,(ath_lem1,ath_lem2,iaf),k)))) 
+		val mu_init_cache_snd = if Option.isSome init_cache andalso Option.isSome (#2(Option.valOf init_cache)) 
+					then #2(Option.valOf init_cache) else NONE
+	    in let val (res,mu_init_cache_snd) = absCheck_aux I1 T1 RTm Ric state (apl,ks_def,wfKS_ks) 
+		                             astate hd_def af ath_lem1 ath_lem2 iaf env aenv Ree k mf mu_init_cache_snd
+	       in (res,	
+		   (SOME(SOME (apl,ks_def,wfKS_ks,RTm),
+			 mu_init_cache_snd, 
+			 SOME ((astate,abst_def,hR_thms_,hd_def,af),state,env,aenv,Ree,(ath_lem1,ath_lem2,iaf),k)))) 
+	       end
 	    end
     end
-
+	
 end
 end
 

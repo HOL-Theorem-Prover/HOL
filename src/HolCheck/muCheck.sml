@@ -53,6 +53,7 @@ open cacheTheory
 open ksTools
 
 val dbgmc = holCheckTools.dbgall
+val dbginit = true
 
 fun DMSG m v = if v then let val _ = print "muCheck: " val _ = holCheckTools.DMSG m v in () end else ()
 
@@ -80,7 +81,8 @@ fun mk_imf_thms mf seth tysimps =
 fun mk_gen_ap_thm ksname state msa mf = 
     let 
 	val _ = DMSG (ST "(make_gen_ap)\n") (dbgmc)(*DBG*)
-	val _ = DMSG (TM mf) (dbgmc)  val _ = DMSG (ST  "mf\n") (dbgmc) val _ = DMSG (TH  msa) (dbgmc) val _ = DMSG (ST  "msa\n") (dbgmc)(*DBG*)
+	val _ = DMSG (TM mf) (dbgmc)  val _ = DMSG (ST  "mf\n") (dbgmc) 
+	val _ = DMSG (TH  msa) (dbgmc) val _ = DMSG (ST  "msa\n") (dbgmc)(*DBG*)
         val ap = snd(dest_comb mf)
 	val _ = DMSG (TM  ap) (dbgmc) val _ = DMSG (ST  " ap\n") (dbgmc)(*DBG*)
         val apth = GSYM(PBETA_RULE (SPEC ap ((CONV_RULE SWAP_VARS_CONV) msa))) 
@@ -135,8 +137,10 @@ fun mk_gen_thms T (apl,ks_def,wfKS_ks) state state' st vm =
        val i2ap = Vector.fromList (List.map (fn ap => BddVar true vm ap) st)
        val apnm2ix =fst(Vector.foldl (fn(nm,(bm,ix)) => (Binarymap.insert(bm,term_to_string2(getTerm(nm)),ix),ix+1)) 
 				      (Binarymap.mkDict String.compare,0) i2ap)
-       (*val _ = DMSG (ST ("vector i2ap\n")) (dbgmc) val _ = Vector.app (fn nm => DMSG (ST ("("^(term_to_string(getTerm nm))^")")) (dbgmc)) i2ap(*DBG*)
-       val _ = DMSG (ST ("mapnm2ix\n")) (dbgmc) val _ =Binarymap.app (fn(nm,ix)=> DMSG (ST ("("^nm^","^(int_to_string ix)^")"))) (dbgmc) apnm2ix(*DBG*)*)
+       (*val _ = DMSG (ST ("vector i2ap\n")) (dbgmc) 
+         val _ = Vector.app (fn nm => DMSG (ST ("("^(term_to_string(getTerm nm))^")")) (dbgmc)) i2ap(*DBG*)
+         val _ = DMSG (ST ("mapnm2ix\n")) (dbgmc) 
+         val _ =Binarymap.app (fn(nm,ix)=> DMSG (ST ("("^nm^","^(int_to_string ix)^")"))) (dbgmc) apnm2ix(*DBG*)*)
        val state_type = type_of state
        val stpset_ty = mk_type("fun",[mk_prod(state_type,state_type),bool])
        val env_ty = list_mk_fun([``:string``,state_type],bool)
@@ -189,12 +193,12 @@ fun mk_rv_tb ee (_,_,_,_,ix,_,_,_,_,_) mf sth  =
     let 
 	val _ = DMSG (ST  " mk_rv_tb\n") (dbgmc)(*DBG*)
 	(*val _ = DMSG (TH  sth) (dbgmc)(*DBG*) 
-	val _ =DMSG (ST  "rv tb sth\n") (dbgmc)(*DBG*) 
+	val _ = DMSG (ST  "rv tb sth\n") (dbgmc)(*DBG*) 
 	val _ = DMSG (ST  (int_to_string ix)) (dbgmc)(*DBG*)
 	val _ = DMSG (ST  " ix\n") (dbgmc)(*DBG*)  
 	val _ = DMSG (ST  (int_to_string (Array.length ee))) (dbgmc)(*DBG*) 
 	val _ = DMSG (ST  " ee length\n") (dbgmc)(*DBG*) 
-	val _ =DMSG (TM  (getTerm (snd(Array.sub(ee,ix))))) (dbgmc)(*DBG*)
+	val _ = DMSG (TM  (getTerm (snd(Array.sub(ee,ix))))) (dbgmc)(*DBG*)
 	val _ = DMSG (ST  "rv tb\n") (dbgmc)(*DBG*)*)
 	val res = BddEqMp sth (snd(Array.sub(ee,ix))) 
 	(*val _ = DMSG (TM  (getTerm res)) (dbgmc)(*DBG*)*)
@@ -209,7 +213,8 @@ fun mk_rv_spec_thm msr seth msreq ie ee (tb,gth,sth,env,ix,rsc,ithm,abthm,_,_) d
 	(*val _ = DMSG (TM  bv) (dbgmc) val _ = DMSG (ST  " bv \n") (dbgmc)(*DBG*)*)
 	val v = fromHOLstring(bv) 
 	(*val _ = DMSG (TH  msr) (dbgmc) val _ = DMSG (ST  "msr\n") (dbgmc)(*DBG*)
-	val _ = if (Option.isSome sth) then DMSG (TH  (Option.valOf sth)) (dbgmc) else DMSG (ST  " NONE") (dbgmc)  val _ = DMSG (ST  "\nsth\n") (dbgmc)(*DBG*)
+	val _ = if (Option.isSome sth) then DMSG (TH  (Option.valOf sth)) (dbgmc) else DMSG (ST  " NONE") (dbgmc)  
+	val _ = DMSG (ST  "\nsth\n") (dbgmc)(*DBG*)
 	val _ = DMSG (TM  ie) (dbgmc) val _ = DMSG (ST  " ie\n") (dbgmc)(*DBG*)
         val _ = List.app (fn th => let val _ = DMSG (TH  th) (dbgmc) val _ = DMSG (ST  "seth\n") (dbgmc) in () end)(*DBG*)
 			 ((List.map snd (Binarymap.listItems(Binarymap.find(seth,v))))@[ENV_UPDATE_def,BETA_THM])(*DBG*)*)
@@ -218,11 +223,13 @@ fun mk_rv_spec_thm msr seth msreq ie ee (tb,gth,sth,env,ix,rsc,ithm,abthm,_,_) d
 		      Option.valOf sth
 		  else (* otherwise not innermost bound var so must account for change in environment *)
 		      let 
-			  (*val _ = DMSG (ST  "else\n") (dbgmc) val _ = DMSG (TH  (ISPECL [ie,fromMLstring v] msr)) (dbgmc) val _ = DMSG (ST  " msr1\n") (dbgmc)(*DBG*)
-			  val _ = List.app (fn th => let val _ = DMSG (TH  th) (dbgmc) val _ = DMSG (ST  " seths\n") (dbgmc) in () end)(*DBG*)
+			  (*val _ = DMSG (ST  "else\n") (dbgmc) val _ = DMSG (TH  (ISPECL [ie,fromMLstring v] msr)) (dbgmc) 
+                            val _ = DMSG (ST  " msr1\n") (dbgmc)(*DBG*)
+			    val _ = List.app (fn th => let val _ = DMSG (TH  th) (dbgmc) 
+                            val _ = DMSG (ST  " seths\n") (dbgmc) in () end)(*DBG*)
 			      (List.map snd (Binarymap.listItems(Binarymap.find(seth,v))))(*DBG*)
-			  val _ = DMSG (TH  (eval_env ie ie bv seth [])) (dbgmc)(*DBG*)
-			  val _ = DMSG (ST  " env_eval thm\n") (dbgmc)(*DBG*)*)
+			    val _ = DMSG (TH  (eval_env ie ie bv seth [])) (dbgmc)(*DBG*)
+			    val _ = DMSG (ST  " env_eval thm\n") (dbgmc)(*DBG*)*)
 		      in SYM (CONV_RULE (RHS_CONV (PURE_ONCE_REWRITE_CONV [eval_env ie ie bv seth []])) (ISPECL [ie,bv] msr)) end
 	(*val _ = DMSG (TH  th) (dbgmc) val _ = DMSG (ST  "rv spec thm\n") (dbgmc)(*DBG*)*)
 	val _ = DMSG (ST  "mk_rv_spec_thm done\n") (dbgmc)
@@ -236,7 +243,8 @@ fun get_spec_thm ie spec_func gth mf =
     in if is_RV mf (* RV case *)
        then spec_func mf (* this calls mk_rv_spec_thm *)
        else let 
-               (*val _ = DMSG (ST  "not RV \n") (dbgmc) val _ = DMSG (ST _type (type_of ie)) (dbgmc) val _ = DMSG (ST  " ie type\n") (dbgmc)(*DBG*)	
+               (*val _ = DMSG (ST  "not RV \n") (dbgmc) val _ = DMSG (ST _type (type_of ie)) (dbgmc) 
+                 val _ = DMSG (ST  " ie type\n") (dbgmc)(*DBG*)	
                  val _ = (with_flag (show_types,true) DMSG (TH  gth) (dbgmc) val _ = DMSG (ST  " gth with type\n") (dbgmc)(*DBG*)*)
 	    in SPEC ie gth end
     end
@@ -386,13 +394,13 @@ fun cache_get cch ie tb_func gth_func dp nodes mf seth state =
 		   
 fun get_abthms mf f1 f2 cch = 
     let (*FIXME: don't do the extra work if f1 and f2 are the same *)
-	val (_,_,_,_,_,_,_,abthm,_,_) = !cch    
+	val abthm = #8(!cch)    
 	val abthm = Option.valOf abthm
 	val abthnm = lhs(concl abthm)  
 	val mf1 = List.hd(snd(strip_comb mf))
 	val mf2 = List.last(snd(strip_comb mf))
-	val (_,_,_,_,_,_,_,cab1,_,_) = get_cache_entry mf1 f1
-	val (_,_,_,_,_,_,_,cab2,_,_) = get_cache_entry mf2 f2 
+	val cab1 = #8(get_cache_entry mf1 f1)
+	val cab2 = #8(get_cache_entry mf2 f2) 
 	val cab1 = Option.valOf cab1
 	val cab1nm = lhs(concl cab1) 
 	val cab2 = Option.valOf cab2
@@ -778,6 +786,7 @@ in (ie,(msr,seth,msreq,ee2),mfml,imf_thms,frv_thms,qd,sqd) end
 fun init I1 T1 state vm Ric ce mf ee absf (model_data,init_data) =
     let val (apl,ks_def,wfKS_ks,RTm) = if Option.isSome model_data then Option.valOf model_data 
 				       else init_model I1 T1 state vm Ric 
+	val _ = if Option.isSome init_data then DMSG (ST "isSome") (dbginit) else DMSG (ST "no init data") (dbginit)
 	val ((msp,(msa,absf,ksname),(Tth,(dmdth,boxth),st',s2s'),
 	      (finS,pextth,rvtt,mssth,fps,eus,Ss,ess,st,prop_ty)),state,githms) =
 	if Option.isSome init_data then Option.valOf init_data else init_thms (apl,ks_def,wfKS_ks) T1 state vm Ric absf
