@@ -1124,12 +1124,24 @@ val SIMPLE_ISO_EXPAND_RULE = CONV_RULE(REWR_CONV ISO);
 fun REWRITE_FUN_EQ_RULE thl = SIMP_RULE bool_ss (Ho_theorems.FUN_EQ_THM::thl)
 
 
-fun get_nestedty_info tyname =
+fun get_nestedty_info tyname = let
+  fun hol98_to_jrh_ind ind0 = let
+    fun CONJUNCTS_CONV c tm =
+      if is_conj tm then BINOP_CONV (CONJUNCTS_CONV c) tm
+      else c tm
+  in
+    CONV_RULE (STRIP_QUANT_CONV
+               (RATOR_CONV (RAND_CONV
+                            (CONJUNCTS_CONV
+                             (REDEPTH_CONV RIGHT_IMP_FORALL_CONV))))) ind0
+  end
+in
   case TypeBase.read tyname of
     SOME tyinfo => SOME (length (TypeBase.constructors_of tyinfo),
-                         TypeBase.induction_of tyinfo,
+                         hol98_to_jrh_ind (TypeBase.induction_of tyinfo),
                          TypeBase.axiom_of tyinfo)
   | NONE => NONE
+end
 
 (* JRH's package returns the list type's induction theorem as:
       !P. P [] /\ (!h t. P t ==> P (h::t)) ==> !l. P l
