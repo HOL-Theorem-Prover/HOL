@@ -35,10 +35,6 @@ open Term HolKernel Portable term_grammar HOLtokens HOLgrammars
         ["Polyhash", "Psyntax", "term_grammar", "type_pp"]
 *)
 
-val consume_prefix_spaces = ref false;
-val parenthesise_pairs = ref true;
-val space_in_pairs = ref false;
-
 fun PP_ERR f mesg = HOL_ERR {origin_structure = "term_pp",
                              origin_function = f,
                              message = mesg}
@@ -681,7 +677,7 @@ fun pp_term (G : grammar) TyG = let
       add_string "(ty_antiq(";
       add_break(0,0);
       add_string "`:";
-      type_pp.pp_type TyG pps ty type_pp.Top (depth - 1);
+      type_pp.pp_type_with_depth TyG pps (depth - 1) ty;
       add_string "`))";
       end_block()
     end
@@ -697,7 +693,7 @@ fun pp_term (G : grammar) TyG = let
           fun add_type () = let
           in
             add_string (" "^type_intro); add_break (0,0);
-            type_pp.pp_type TyG pps Ty type_pp.Top (depth - 1)
+            type_pp.pp_type_with_depth TyG pps (depth - 1) Ty
           end
           val new_freevar =
             showtypes andalso (not (mem tm (!fvars_seen))) andalso

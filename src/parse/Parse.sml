@@ -153,8 +153,7 @@ end
 fun pp_type pps ty = let
   val _ = update_type_fns()
 in
-  Portable.add_string pps ":";
-  (!type_printer) pps ty type_pp.Top 100
+  Portable.add_string pps ":"; (!type_printer) pps ty
 end
 
 val type_to_string = Portable.pp_to_string 75 pp_type

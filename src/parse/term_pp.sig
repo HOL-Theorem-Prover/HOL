@@ -4,10 +4,6 @@ local
   open HolKernel
 in
 
-val consume_prefix_spaces : bool ref
-val parenthesise_pairs : bool ref
-val space_in_pairs : bool ref
-
 val pp_term :
   term_grammar -> type_grammar -> Portable.ppstream -> term -> unit
 

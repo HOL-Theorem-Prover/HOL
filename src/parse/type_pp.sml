@@ -6,7 +6,7 @@ datatype mygrav =
 
 datatype single_rule = SR | IR of (associativity * string)
 
-fun pp_type (G:grammar) = let
+fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
     fun recurse [] = NONE
       | recurse (x::xs) = let
@@ -88,9 +88,9 @@ fun pp_type (G:grammar) = let
                   case grav of
                     Sfx n => (n > prec)
                   | Lfx (n, s) => if s = printthis then assoc <> LEFT
-                                  else (n > prec)
+                                  else (n >= prec)
                   | Rfx (n, s) => if s = printthis then assoc <> RIGHT
-                                  else (n > prec)
+                                  else (n >= prec)
                   | _ => false
               in
                 begin_block INCONSISTENT 0;
@@ -109,6 +109,18 @@ fun pp_type (G:grammar) = let
   end
 in
   pr_ty
+end
+
+fun pp_type G = let
+  val baseprinter = pp_type0 G
+in
+  (fn pps => fn ty => baseprinter pps ty Top (!Globals.max_print_depth))
+end
+
+fun pp_type_with_depth G = let
+  val baseprinter = pp_type0 G
+in
+  (fn pps => fn depth => fn ty => baseprinter pps ty Top depth)
 end
 
 (* testing
