@@ -9,7 +9,7 @@ Return the definitions in the current theory segment.
 definition, theory.
 
 \DESCRIBE
-An invocation {current_definitions ()} returns the list of definitions
+An invocation {current_definitions()} returns the list of definitions
 stored in the current theory segment. Every definition is automatically
 stored in the current segment by the primitive definition principles.
 
@@ -26,6 +26,6 @@ Theory.current_theory, Theory.new_theory,
 Theory.current_axioms, Theory.current_theorems, 
 Theory.constants, Theory.types, Theory.parents,
 Definition.new_definition, Definition.new_specification, 
-Definition.new_type_definition, bossLib.Define, IndDefLib.Hol_reln.
+Definition.new_type_definition, TotalDefn.Define, IndDefLib.Hol_reln.
 
 \ENDDOC

@@ -1,0 +1,118 @@
+\DOC Hol_datatype
+
+\TYPE {Hol_datatype : type quotation -> unit}
+
+\SYNOPSIS
+Define a concrete datatype.
+
+\KEYWORDS
+type, concrete, definition.
+
+\DESCRIBE
+Many formalizations require the definition of new types.  For
+example, ML-style datatypes are commonly used to model the abstract
+syntax of programming languages and the state-space of elaborate
+transition systems.  In HOL, such datatypes (at least, those that are
+inductive, or, alternatively, have a model in an initial algebra) may be
+specified using the invocation {Hol_datatype `<spec>`}, where
+{<spec>} should conform with the following grammar:
+{
+   spec ::= [ <binding> ;]* <binding>
+
+   binding ::= <ident> = <constr>
+            |  <ident> = <record>
+
+   constr ::= [<clause> | ]* <clause>
+
+   clause ::= <ident>
+           | <ident> of [<type> => ]* <type>
+
+   record ::= <| [<ident> : <type> ;]* <ident> : <type> |>
+}
+When a datatype is successfully defined, a number of standard theorems
+are automatically proved about the new type: the constructors of the type
+are proved to be injective and disjoint, induction and case analysis
+theorems are proved, and each type also has a `size' function defined
+for it. All these theorems are added to a database accessed via the 
+functions in {TypeBase}.
+
+\FAILURE
+If a model meeting the description of {spec} cannot be constructed.
+
+\EXAMPLE
+In the following, we shall show how some important types may be defined.
+To begin, we can define a type of binary trees where the leaves
+are numbers.
+{
+    - Hol_datatype `tree = Leaf of num 
+                         | Node of tree => tree`;
+}
+Next, we change the tree to one that has polymorphic values at internal
+nodes.
+{
+    - Hol_datatype `tree = Leaf
+                         | Node of tree => 'a => tree`;
+}
+Arbitrarily branching trees may be defined by allowing a node to hold
+the list of its subtrees. In such a case, leaf nodes do not need to be
+explicitly declared.
+{
+    - Hol_datatype `tree = Node of 'a => tree list`;
+}
+Mutally recursive types may also be defined. The following, due to
+Elsa Gunter, captures a subset of Core ML.
+{
+   - Hol_datatype
+        `atexp = var_exp of string
+               | let_exp of dec => exp ;
+
+           exp = aexp    of atexp
+               | app_exp of exp => atexp
+               | fn_exp  of match ;
+
+         match = match  of rule
+               | matchl of rule => match ;
+
+          rule = rule of pat => exp ;
+
+           dec = val_dec   of valbind
+               | local_dec of dec => dec
+               | seq_dec   of dec => dec ;
+
+       valbind = bind  of pat => exp
+               | bindl of pat => exp => valbind
+               | rec_bind of valbind ;
+ 
+           pat = wild_pat
+               | var_pat of string`
+}
+Datatype specifications allow the use of record types, which may be
+recursive. For example, the following datatype declarations could be
+used to formalize a simple file system.
+{
+   Hol_datatype `file = Text of string 
+                      | Dir of directory 
+                   ;
+           directory = <| owner : string ; files : (string * file) list |>`
+}
+
+\COMMENTS
+The notation used to declare datatypes is, unfortunately, not the same
+as that of ML. An ML declaration
+{
+   datatype ('a,'b) btree = Leaf of 'a 
+                          | Node of 'b * ('a,'b) btree * ('a,'b) btree
+}
+would be declared in HOL as
+{
+   Hol_datatype btree = Leaf of 'a 
+                      | Node of 'b => btree => btree
+}
+The {=>} notation is intended to replace {*} in an ML description, and
+highlights the fact that, in HOL, constructors are by default curried.
+
+\SEEALSO
+Definition.new_type_definition, TotalDefn.Define, IndDefLib.Hol_reln.
+
+\ENDDOC
+
