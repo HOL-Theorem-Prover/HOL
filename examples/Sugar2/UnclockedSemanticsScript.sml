@@ -206,7 +206,9 @@ val UF_SEM_def =
 (******************************************************************************
 * PATH M p is true iff p is a path with respect to transition relation M.R
 ******************************************************************************)
-val PATH_def = Define `PATH M p = !n. M.R(ELEM p n, ELEM p (n+1))`;
+val PATH_def = 
+ Define 
+  `PATH M p = !n :: (1 to LENGTH p). M.R(ELEM p (n-1), ELEM p n)`;
 
 (******************************************************************************
 * O_SEM M s f means "M, s |= f" 

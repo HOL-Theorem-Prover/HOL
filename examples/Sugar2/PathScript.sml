@@ -156,13 +156,6 @@ val FINITE_TL =
     THEN RW_TAC list_ss [REST_def]);
 
 (******************************************************************************
-* LENGTH(FINITE l) = LENGTH l
-* LENGTH is not specified on infinite paths, but LEN (defined below) is.
-******************************************************************************)
-val LENGTH_def = 
- Define `LENGTH (FINITE l)   = list$LENGTH l`;
-
-(******************************************************************************
 * Extended numbers.
 ******************************************************************************)
 val xnum_def =
