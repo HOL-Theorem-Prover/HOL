@@ -1840,7 +1840,7 @@ val _ = set_fixity "DIV" (Infixl 600);
 val MOD_ONE = store_thm("MOD_ONE",
 --`!k. k MOD (SUC 0) = 0`--,
    STRIP_TAC THEN
-   MP_TAC (CONJUNCT2 (SPEC (--`k:num`--) 
+   MP_TAC (CONJUNCT2 (SPEC (--`k:num`--)
             (REWRITE_RULE [LESS_SUC_REFL] (SPEC (--`SUC 0`--) DIVISION)))) THEN
    REWRITE_TAC [LESS_THM,NOT_LESS_0]);
 
@@ -2346,6 +2346,24 @@ val SUC_ELIM_THM = store_thm(
       FIRST_ASSUM (MP_TAC o SPEC (--`n+1`--)) THEN
       SIMP_TAC bool_ss [GSYM ADD1, SUC_SUB1, LESS_0]
     ]);
+
+val SUC_ELIM_NUMERALS = store_thm(
+  "SUC_ELIM_NUMERALS",
+  ``!f g. (!n. g (SUC n) = f n (SUC n)) =
+          (!n. g (NUMERAL (NUMERAL_BIT1 n)) =
+               f (NUMERAL (NUMERAL_BIT1 n) - 1) (NUMERAL (NUMERAL_BIT1 n))) /\
+          (!n. g (NUMERAL (NUMERAL_BIT2 n)) =
+               f (NUMERAL (NUMERAL_BIT1 n)) (NUMERAL (NUMERAL_BIT2 n)))``,
+  REPEAT GEN_TAC THEN EQ_TAC THEN
+  SIMP_TAC bool_ss [NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2, ALT_ZERO,
+                    ADD_CLAUSES, SUB_MONO_EQ, SUB_0] THEN
+  REPEAT STRIP_TAC THEN
+  Q.SPEC_THEN `n` STRIP_ASSUME_TAC EVEN_OR_ODD THEN
+  POP_ASSUM (Q.X_CHOOSE_THEN `m` SUBST_ALL_TAC o
+             REWRITE_RULE [EVEN_EXISTS, ODD_EXISTS, TIMES2]) THEN
+  ASM_REWRITE_TAC []);
+
+
 
 val ADD_SUBR2 = prove
  (Term `!m n. m - (m + n) = 0`,
