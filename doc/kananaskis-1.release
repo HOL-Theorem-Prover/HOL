@@ -6,11 +6,11 @@ Documentation
 
 There is an improved interface to documentation:
 
-   * The A single HTML page gives organized access to 
+   * The A single HTML page gives organized access to
       * libraries (source)
       * theories (proved theorems and scripts)
       * proof support (documentation and source)
-      * an index of all identifiers in the system, with pointers to 
+      * an index of all identifiers in the system, with pointers to
         source
 
    * Much new documentation has been written, especially for heavily
@@ -63,7 +63,7 @@ New theories
     and gcdTheory.
 
   * A theory of 32-bit machine arithmetic, due to Anthony Fox,
-    available under the name word32Theory.  The theory defines many 
+    available under the name word32Theory.  The theory defines many
     of the `integer' operations found in computer architectures.  It
     was developed in modelling the ARM instruction set.  The operations
     can be grouped as follows:
@@ -81,14 +81,14 @@ New theories
     rules are also provided, and these support fairly efficient term
     evaluation using WORD_CONV.
 
-    Although the word size and operations are fixed, the script 
+    Although the word size and operations are fixed, the script
     src/word32/word32Script.sml can be used as a basis for defining
     bespoke word theories.  (The word length is given by a constant, WL.)
 
   * A new theory of strings over an alphabet of (256) characters has
     been provided. String literals are no longer an infinite set of
-    constants, given meaning by mk_thm; instead, they are constructed 
-    terms. This removes the last use of mk_thm in the HOL system. Of 
+    constants, given meaning by mk_thm; instead, they are constructed
+    terms. This removes the last use of mk_thm in the HOL system. Of
     course, mk_oracle_thm is still available for users.
 
 
@@ -190,6 +190,12 @@ Behaviours changed:
     substitutions and instantiations.  (Remember also that the infix
     |-> function can be used to construct such records.)
 
+  * The parser now lets you create an ambiguous grammar for terms'
+    concrete syntax.  In doing so, it will warn you that you have done
+    so, but will otherwise attempt to do its best to parse inputs.
+    The system's parsing and printing behaviour may become
+    unpredictable, but generous uses of parentheses should allow most
+    reasonable uses of the parser.
 
 Bugs fixed:
 -----------
