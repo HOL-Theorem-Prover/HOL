@@ -1004,13 +1004,16 @@ fun parse_term (G : grammar) typeparser = let
       if input_term = STD_HOL_TOK ")" then
           require NONE >-
           (fn s =>
-              require (SOME "(") >>
-              shift >> pop >> invstructp >- (return o #1 o hd) >-
-              (fn vstate =>
-                  if vstate <> VSRES_VS then
-                    push (NonTerminal (VAR s), Token (Ident "XXX"))
-                  else
-                    push (NonTermVS [SIMPLE s], Token (Ident "XXX"))))
+              if s = ")" orelse s = "(" then
+                fail  (* don't want to paren-escape "())" or  "(()" *)
+              else
+                require (SOME "(") >>
+                shift >> pop >> invstructp >- (return o #1 o hd) >-
+                (fn vstate =>
+                    if vstate <> VSRES_VS then
+                      push (NonTerminal (VAR s), Token (Ident "XXX"))
+                    else
+                      push (NonTermVS [SIMPLE s], Token (Ident "XXX"))))
       else fail
     end
     val usual_action =
