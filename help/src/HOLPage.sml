@@ -89,74 +89,6 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
 	    (prtree f t1;
 	     prentries (List.mapPartial f entries);
 	     prtree f t2)
-
-        (*------------------------------------------------------*
-         * Generate index for Docfiles                          *
-         *------------------------------------------------------*)
-(*
-        val _ = let val docfileIndex = normPath
-                        [HOLpath, "help/Docfiles/HTML/docfileIndex.html"]
-                  val ostrm = TextIO.openOut docfileIndex
-                  fun out s = TextIO.output(ostrm, s)
-                  fun href anchor target = 
-                      app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
-                  fun subheader txt = app out ["\n<H2>", txt, "</H2>\n"]
-                  val lastc1 = ref #" "
-                  fun separator k1 = 
-                   let val c1 = Char.toUpper k1
-                   in if Char.isAlpha c1 andalso c1 <> !lastc1 then 
-		         (lastc1 := c1;
-                          app out ["\n</UL>\n\n<A NAME=\"", str c1, "\">"];
-                          subheader (str c1);
-                          out "</A>\n<UL>")
-                      else ()
-                   end
-                 fun mkalphaindex () =
-	           let fun letterlink c = 
-                        if c > #"Z" then ()
-                         else (href (str c) ("#" ^ str c); 
-                               out "&nbsp;&nbsp;"; 
-                               letterlink (Char.succ c))
-                   in 
-                      out "<HR>\n<CENTER><B>"; letterlink #"A"; 
-                      out "</B></CENTER><HR>\n" 
-                   end
-
-                  fun dest_id s = 
-                   case String.tokens (equal #".") s
-                    of [strName,vName] => vName
-                     | other => s
-
-                  fun docfile_of {comp=Term(id,SOME "HOL"),file,line} =
-                       (case find_most_appealing HOLpath file
-                         of SOME path => SOME (dest_id id, path)
-                          | NONE => NONE)
-                    | docfile_of otherwise = NONE
-
-                  fun prentries [] = ()
-	            | prentries ((anchor,path)::rst) = 
-                        (separator (String.sub(anchor, 0));
-                         out "<LI>"; href anchor path; out "\n";
-                         prentries rst)
-                  fun prtree Empty = ()
-	            | prtree (Node(key, entries, t1, t2)) = 
-	               (prtree t1;
-	                prentries (List.mapPartial docfile_of entries);
-	                prtree t2)
-                in
-                  out "<HTML><HEAD><TITLE>\
-                      \Documented Functions and Values</TITLE></HEAD>\n";
-	          out "<BODY BGCOLOR=\""; out bgcolor; out "\">\n";
-	          out "<H1>Documented Functions and Values</H1>\n";
-                  mkalphaindex();
-                  subheader "Symbolic identifiers";
-                  out "<UL>"; prtree db; out "</UL>";
-                  mkalphaindex();
-                  out "<BR><EM>"; out version; out "</EM>";
-	          out "</BODY></HTML>\n";
-	          TextIO.closeOut ostrm
-                end
-*)
     in 
 	out "<HTML>\
 	 \<HEAD><TITLE>HOL Reference Page</TITLE></HEAD>\n";
@@ -170,6 +102,9 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
         out "<P>";
 
         out"<DT><STRONG>THEORIES</STRONG>";
+        out "&nbsp;&nbsp;&nbsp;";
+        href "(Theory Graph)" 
+             (normPath [HOLpath,"/help/theorygraph/theories.html"]);
         out"<DD>"; prtree theory_of db;
         out "<P>";
 
@@ -177,13 +112,6 @@ fun printHOLPage version bgcolor HOLpath idIndex TheoryIndex (dbfile, outfile)
         out "<DD>"; prtree misc_struct_of db;
         out "<P>";
 
-(*
-        out"<DT><STRONG>";
-        href "DOCUMENTED FUNCTIONS AND VALUES" 
-            (Path.concat(HOLpath,"help/Docfiles/HTML/docfileIndex.html"));
-        out "</STRONG>";
-        out "<P>";
-*)
         out"<DT><STRONG>SYNTAX</STRONG>";
         out"<DD>"; prtree syntax_of db;
         out "<P>";

@@ -22,7 +22,7 @@ val keepers =
      "Drule.sig", "Tactical.sig", "Tactic.sig", "Thm_cont.sig",
      "Conv.sig", "QConv.sig", "Ho_Net.sig", "Ho_Rewrite.sig",
      "Rewrite.sig", "Rsyntax.sig", "Psyntax.sig",
-     "TypeBase.sig", "DefnBase.sig", "Prim_rec.sig",
+     "TypeBase.sig", "TypeBasePure.sig", "DefnBase.sig", "Prim_rec.sig",
 
      (* jrh ind_defs *)
      "IndDefLib.sig", "InductiveDefinition.sig", "IndDefRules.sig",
@@ -98,7 +98,7 @@ val keepers =
 
      (* pred_set *)
      "pred_setLib.sig",
-     "pred_setTheory.sig", "pred_setSimps.sig",
+     "pred_setTheory.sig", "pred_setSyntax.sig", "pred_setSimps.sig",
 
      (* probability *)
      "probLib.sig", "probTheory.sig",
