@@ -65,11 +65,15 @@ theorems:
 reference:
 	latex reference.tex
 
+pdf:
+	pdflatex reference.tex
+
 index:
 	${MAKEINDEX}  reference.idx
 
 all:
 	make clean; make tex; make reference; make index; make reference
+	make pdf
 
 thmdoc:
 	(cd $(THMDIR)axioms;    make thmdoc) ;
