@@ -196,6 +196,7 @@ fun UNDISCH_ALL th =
 
 val truth_tm = boolSyntax.T
 val false_tm = boolSyntax.F
+val x_eq_false = SPEC (mk_eq(genvar bool, false_tm)) FALSITY
 
 fun IMP_EQ_CANON thm =
    let val conditions = #1 (strip_imp (concl thm))
@@ -217,10 +218,9 @@ fun IMP_EQ_CANON thm =
              then if (is_eq (dest_neg conc))
                   then [EQF_INTRO undisch_thm, EQF_INTRO (GSYM undisch_thm)]
                   else [EQF_INTRO undisch_thm]
-        else if conc = truth_tm
-        then (trace(2,IGNORE ("pointless rewrite",thm)); [])
-        else if (conc = false_tm)
-        then (trace(2,IGNORE("contradictory rewrite (for safety)",thm)); [])
+        else if conc = truth_tm then
+          (trace(2,IGNORE ("pointless rewrite",thm)); [])
+        else if (conc = false_tm) then [MP x_eq_false undisch_thm]
         else [EQT_INTRO undisch_thm]
    in
       map (CONJ_DISCH conditions) undisch_rewrites
