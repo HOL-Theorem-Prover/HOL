@@ -55,8 +55,12 @@ val prod_TY_DEF = new_type_definition
                     {name = "prod",
                      pred = --`IS_PAIR`--,
                      inhab_thm = PAIR_EXISTS};
-val _ = add_infix_type {Prec = 70, ParseName = SOME "#", Name = "prod",
-                        Assoc = HOLgrammars.RIGHT};
+
+val _ = add_infix_type 
+         {Prec = 70, 
+          ParseName = SOME "#", 
+          Name = "prod",
+          Assoc = HOLgrammars.RIGHT};
 
 val ABS_REP_prod =
  define_new_type_bijections
@@ -147,7 +151,7 @@ REPEAT GEN_TAC
  THEN REWRITE_TAC[SND_DEF]
  THEN MATCH_MP_TAC (BETA_RULE
         (SPECL [Term`\y':'b. ?x'. (x,y) = (x',y')`, Term`y:'b`]
-           (INST_TYPE [Type`:'a` |-> Type`:'b`] SELECT_UNIQUE)))
+           (INST_TYPE [Type.alpha |-> Type.beta] SELECT_UNIQUE)))
  THEN GEN_TAC THEN REWRITE_TAC[PAIR_EQ]
  THEN EQ_TAC THEN STRIP_TAC
  THEN ASM_REWRITE_TAC[]
@@ -330,7 +334,7 @@ val _ = save_thm("PEXISTS_THM",PEXISTS_THM);
 
 
 val pair_Axiom = store_thm("pair_Axiom",
---`!f:'a -> 'b -> 'c. ?!fn. !x y. fn (x,y) = f x y`--,
+--`!f:'a->'b->'c. ?!fn. !x y. fn (x,y) = f x y`--,
 GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
  [EXISTS_TAC(--`UNCURRY f :'a#'b ->'c`--) THEN REWRITE_TAC[UNCURRY_DEF],
   REPEAT STRIP_TAC THEN CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN GEN_TAC
@@ -341,7 +345,10 @@ GEN_TAC THEN CONV_TAC EXISTS_UNIQUE_CONV THEN CONJ_TAC THENL
 val UNCURRY_CONG =
   save_thm("UNCURRY_CONG", Prim_rec.case_cong_thm ABS_PAIR_THM UNCURRY_DEF);
 
-(* For TFL support. *)
+(*---------------------------------------------------------------------------
+    For TFL support.
+ ---------------------------------------------------------------------------*)
+
 val pair_case_def =
   new_definition("pair_case_def", Term`pair_case = UNCURRY`);
 
@@ -473,6 +480,23 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
          THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
          THEN REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC
          THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[]]);
+
+
+(*---------------------------------------------------------------------------
+        Distribution laws for LET. The first should go in boolTheory.
+ ---------------------------------------------------------------------------*)
+
+val LET_DISTRIB = store_thm("LET_DISTRIB",
+Term`!P M N. P (let (x:'a) = M in N x) = (let x = M in P (N x))`,
+REWRITE_TAC[boolTheory.LET_DEF] THEN BETA_TAC THEN REWRITE_TAC[]);
+
+val LET_DISTRIB2 = store_thm("LET_DISTRIB2",
+Term`!(P:'c->'d) (M:'a#'b) N.
+    P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))`,
+REWRITE_TAC[boolTheory.LET_DEF] THEN REPEAT GEN_TAC THEN BETA_TAC
+ THEN REPEAT_TCL CHOOSE_THEN SUBST_ALL_TAC
+       (SPEC (Term `M:'a#'b`) ABS_PAIR_THM)
+ THEN REWRITE_TAC[UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
 
 
 val _ = export_theory();
