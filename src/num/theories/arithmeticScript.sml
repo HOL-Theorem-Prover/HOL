@@ -2621,6 +2621,137 @@ GEN_TAC THEN EQ_TAC THENL
             THENL [IMP_RES_TAC LESS_LESS_SUC, ASM_REWRITE_TAC[]]]]],
   REPEAT STRIP_TAC THEN EXISTS_TAC (Term`x:num`) THEN ASM_REWRITE_TAC[]]);
 
+(* ----------------------------------------------------------------------
+    least n satisfying P
+   ---------------------------------------------------------------------- *)
+
+open optionTheory
+val iterate_def =
+    new_recursive_definition
+    { def = ``(iterate 0 P g h x = NONE) /\
+              (iterate (SUC n) P g h x = if P x then SOME (g x)
+                                         else iterate n P g h (h x))``,
+      name = "iterate_def",
+      rec_axiom = num_Axiom};
+
+val EXISTS_NUM = store_thm(
+  "EXISTS_NUM",
+  ``!P. (?n. P n) = P 0 \/ (?m. P (SUC m))``,
+  GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN PROVE_TAC [num_CASES]);
+
+val tail_recursion_principle = store_thm(
+  "tail_recursion_principle",
+  ``!P g h. ?f. !x. f x = if P x then g x else f (h x)``,
+  REPEAT GEN_TAC THEN
+  Q.EXISTS_TAC `\x. if ?y n. iterate n P g h x = SOME y then
+                      @y. ?n. iterate n P g h x = SOME y
+                    else ARB` THEN BETA_TAC THEN
+  GEN_TAC THEN COND_CASES_TAC THENL [
+    POP_ASSUM STRIP_ASSUME_TAC THEN
+    COND_CASES_TAC THENL [
+      Ho_Rewrite.ONCE_REWRITE_TAC [EXISTS_NUM] THEN
+      SRW_TAC [][iterate_def],
+      CONV_TAC (LAND_CONV (Ho_Rewrite.ONCE_REWRITE_CONV [EXISTS_NUM])) THEN
+      SRW_TAC [][iterate_def] THEN
+      POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss []) THEN
+      Q.SPEC_THEN `n` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) num_CASES THEN
+      FULL_SIMP_TAC (srw_ss()) [iterate_def]
+    ],
+    POP_ASSUM (ASSUME_TAC o CONV_RULE SWAP_VARS_CONV o
+               SIMP_RULE bool_ss []) THEN
+    POP_ASSUM (ASSUME_TAC o CONV_RULE SWAP_VARS_CONV o
+               SIMP_RULE (srw_ss() ++ COND_elim_ss) [iterate_def] o
+               GEN_ALL o SPEC ``SUC n``) THEN
+    Q.SUBGOAL_THEN `~ P x` ASSUME_TAC THENL [
+      POP_ASSUM (Q.SPEC_THEN `g x` MP_TAC) THEN SIMP_TAC bool_ss [],
+      ALL_TAC
+    ] THEN
+    FULL_SIMP_TAC bool_ss []
+  ]);
+
+
+val search_from_def = new_specification (
+  "search_from_def", ["search_from"],
+  prove(``?f. !n P. f n P = if P n then n else f (n + 1) P``,
+        STRIP_ASSUME_TAC
+        (CONV_RULE SKOLEM_CONV
+                   (GEN_ALL
+                      (BETA_RULE
+                         (ISPECL [``P : num -> bool``, ``(\x:num. x)``,
+                                  ``\x. x + 1``]
+                                 tail_recursion_principle)))) THEN
+        Q.EXISTS_TAC `\n P. f P n` THEN BETA_TAC THEN
+        REPEAT GEN_TAC THEN POP_ASSUM MATCH_ACCEPT_TAC));
+
+
+val LEAST_DEF = new_definition("LEAST_DEF", ``LEAST P = search_from 0 P``);
+
+val _ = set_fixity "LEAST" Binder;
+
+val LEAST_INTRO = store_thm(
+  "LEAST_INTRO",
+  ``!P x. P x ==> P ($LEAST P)``,
+  GEN_TAC THEN SIMP_TAC (srw_ss()) [LEAST_DEF] THEN
+  Q_TAC SUFF_TAC `!m x n. (m + n = x) /\ P x ==>
+                          P (search_from n P)`
+  THENL [
+    SRW_TAC [][] THEN
+    FIRST_X_ASSUM (Q.SPECL_THEN [`x`,`0`] MP_TAC) THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES],
+    ALL_TAC
+  ] THEN
+  INDUCT_TAC THENL [
+    ONCE_REWRITE_TAC [search_from_def] THEN
+    ASM_SIMP_TAC bool_ss [ADD_CLAUSES],
+    FULL_SIMP_TAC bool_ss [ADD_CLAUSES] THEN
+    REPEAT STRIP_TAC THEN
+    ONCE_REWRITE_TAC [search_from_def] THEN
+    COND_CASES_TAC THENL [
+      ASM_REWRITE_TAC [],
+      FIRST_X_ASSUM MATCH_MP_TAC THEN
+      ASM_SIMP_TAC (srw_ss()) [GSYM ADD1, ADD_CLAUSES]
+    ]
+  ]);
+
+val LESS_LEAST = store_thm(
+  "LESS_LEAST",
+  ``!P m. m < $LEAST P ==> ~ P m``,
+  GEN_TAC THEN
+  Q.ASM_CASES_TAC `?x. P x` THENL [
+    POP_ASSUM STRIP_ASSUME_TAC THEN
+    REWRITE_TAC [LEAST_DEF] THEN
+    Q_TAC SUFF_TAC `!y n. n + y < search_from n P ==> ~P(n + y)` THENL [
+      STRIP_TAC THEN GEN_TAC THEN
+      POP_ASSUM (Q.SPECL_THEN [`m`, `0`] MP_TAC) THEN
+      SIMP_TAC bool_ss [ADD_CLAUSES],
+      ALL_TAC
+    ] THEN
+    INDUCT_TAC THENL [
+      ONCE_REWRITE_TAC [search_from_def] THEN GEN_TAC THEN
+      COND_CASES_TAC THEN ASM_REWRITE_TAC [LESS_REFL, ADD_CLAUSES],
+      GEN_TAC THEN
+      Q.SUBGOAL_THEN `n + SUC y = SUC n + y` SUBST_ALL_TAC THEN1
+        PROVE_TAC [ADD_CLAUSES] THEN
+      STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+      RULE_ASSUM_TAC (ONCE_REWRITE_RULE [search_from_def]) THEN
+      Q.ASM_CASES_TAC `P n` THEN FULL_SIMP_TAC bool_ss [GSYM ADD1] THEN
+      Q.SUBGOAL_THEN `SUC n + y = n + SUC y` SUBST_ALL_TAC THEN1
+        PROVE_TAC [ADD_CLAUSES] THEN
+      PROVE_TAC [LESS_ADD_SUC, LESS_TRANS, LESS_REFL]
+    ],
+    PROVE_TAC []
+  ]);
+
+val FULL_LEAST_INTRO = store_thm(
+  "FULL_LEAST_INTRO",
+  ``!x. P x ==> P ($LEAST P) /\ $LEAST P <= x``,
+  PROVE_TAC [LEAST_INTRO, NOT_LESS, LESS_LEAST]);
+
+val LEAST_ELIM = store_thm(
+  "LEAST_ELIM",
+  ``!Q P. (?n. P n) /\ (!n. (!m. m < n ==> ~ P m) /\ P n ==> Q n) ==>
+          Q ($LEAST P)``,
+  PROVE_TAC [LEAST_INTRO, LESS_LEAST]);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
