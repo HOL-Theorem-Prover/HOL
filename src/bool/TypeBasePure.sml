@@ -29,6 +29,7 @@ datatype tyinfo =
                      case_const   : term,
                      constructors : term list,
                      size         : (term * shared_thm) option,
+                     boolify      : (term * shared_thm) option,
                      distinct     : thm option,
                      one_one      : thm option,
                      simpls       : thm list};
@@ -55,6 +56,10 @@ fun size_of0 (FACTS(_,{size,...})) = size;
 fun size_of (FACTS(_,{size=NONE,...})) = NONE
   | size_of (FACTS(_,{size=SOME(tm,def),...})) = SOME(tm,thm_of def);
 
+fun boolify_of0(FACTS(_,{boolify,...})) = boolify;
+fun boolify_of(FACTS(_,{boolify=NONE,...})) = NONE
+  | boolify_of(FACTS(_,{boolify=SOME(tm,def),...})) = SOME(tm,thm_of def)
+
 
 (*---------------------------------------------------------------------------
                     Making alterations
@@ -62,39 +67,50 @@ fun size_of (FACTS(_,{size=NONE,...})) = NONE
 
 fun put_nchotomy th (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size}))
+  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=induction, nchotomy=th, distinct=distinct,
-            one_one=one_one, simpls=simpls, size=size})
+            one_one=one_one, simpls=simpls, size=size, boolify=boolify})
 
 fun put_simpls thl (FACTS(s,
  {axiom, case_const, case_cong, case_def, constructors,
-  induction, nchotomy, distinct, one_one, simpls, size}))
+  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=thl, size=size});
+            one_one=one_one, simpls=thl, size=size, boolify=boolify});
 
 fun put_induction th (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size}))
+  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=th, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls, size=size})
+            one_one=one_one, simpls=simpls, size=size, boolify=boolify})
 
 fun put_size (size_tm,size_rw) (FACTS(s,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, simpls, size}))
+  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
   =
   FACTS(s, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, simpls=simpls, size=SOME(size_tm,size_rw)});
+            one_one=one_one, simpls=simpls, size=SOME(size_tm,size_rw),
+            boolify=boolify});
+
+fun put_boolify (boolify_tm,boolify_rw) (FACTS(s,
+ {axiom, case_const,case_cong,case_def,constructors,
+  induction, nchotomy, distinct, one_one, simpls, size, boolify}))
+  =
+  FACTS(s, {axiom=axiom, case_const=case_const,
+            case_cong=case_cong,case_def=case_def,constructors=constructors,
+            induction=induction, nchotomy=nchotomy, distinct=distinct,
+            one_one=one_one, simpls=simpls, 
+            size=size, boolify=SOME(boolify_tm,boolify_rw)});
 
 
 (*---------------------------------------------------------------------------*
@@ -124,7 +140,7 @@ val defn_const =
  *---------------------------------------------------------------------------*)
 
 fun mk_tyinfo {ax,case_def,case_cong,induction,
-               nchotomy,size,one_one,distinct} =
+               nchotomy,size,boolify,one_one,distinct} =
   let val (ty_name,constructors) = basic_info case_def
       val inj = case one_one of NONE => [] | SOME x => [x]
       val D  = case distinct of NONE => [] | SOME x => CONJUNCTS x
@@ -140,6 +156,7 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
       distinct     = distinct,
       simpls       = case_def :: (D@map GSYM D@inj),
       size         = size,
+      boolify      = boolify,
       axiom        = ax})
   end;
 
@@ -147,7 +164,7 @@ fun mk_tyinfo {ax,case_def,case_cong,induction,
 local fun mk_ti (n,ax,ind)
                 (cdef::cds) (ccong::cgs) (oo::oos) (d::ds) (nch::nchs) =
             mk_tyinfo{ax=COPY(n,ax), induction=COPY(n,ind), case_def=cdef,
-                      case_cong=ccong, nchotomy=nch, size=NONE,
+                      case_cong=ccong, nchotomy=nch, size=NONE, boolify=NONE,
                       one_one=oo, distinct=d}
             :: mk_ti (n,ax,ind) cds cgs oos ds nchs
         | mk_ti _ [] [] [] [] [] = []
@@ -167,7 +184,7 @@ fun gen_tyinfo {ax, ind, case_defs} =
      val tyinfo_1 = mk_tyinfo
            {ax=ORIG ax, induction=ORIG ind,
             case_def=hd case_defs, case_cong=hd case_congs,
-            nchotomy=hd nchotomyl, size=NONE,
+            nchotomy=hd nchotomyl, size=NONE, boolify=NONE,
             one_one=hd one_ones, distinct=hd distincts}
  in
    if length nchotomyl = 1 then [tyinfo_1]
@@ -187,7 +204,7 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
      val pp_term = Parse.pp_term ppstrm
      val pp_thm = Parse.pp_thm ppstrm
      val {constructors, case_const, case_def, case_cong, induction,
-          nchotomy, one_one, distinct, simpls, size, axiom} = recd
+          nchotomy, one_one, distinct, simpls, size, boolify, axiom} = recd
  in
    begin_block CONSISTENT 0;
      begin_block INCONSISTENT 0;
@@ -211,6 +228,18 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
         (begin_block CONSISTENT 1;
          add_string "Size:"; add_break (1,0);
          (case size_def
+           of COPY(s,th) => add_string ("see "^Lib.quote s)
+            | ORIG th    => if is_const tm
+                            then pp_thm th else pp_term tm); end_block();
+         add_break(1,0));
+
+   add_break(1,0);
+   case boolify
+    of NONE => ()
+     | SOME (tm,boolify_def) =>
+        (begin_block CONSISTENT 1;
+         add_string "Boolification:"; add_break (1,0);
+         (case boolify_def
            of COPY(s,th) => add_string ("see "^Lib.quote s)
             | ORIG th    => if is_const tm
                             then pp_thm th else pp_term tm); end_block();
@@ -304,5 +333,20 @@ fun type_size db ty =
    in typeValue (theta,tysize_env db,K0) ty
    end
 end
+
+(*
+local fun tyboolify_env db = Option.map fst o 
+                             Option.composePartial (boolify_of,get db)
+      fun list ty  = mk_thy_type{Tyop="num",Thy="num",Args=[]}
+      fun Zero() = mk_thy_const{Name="0",Thy="num", Ty=num()}
+        handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
+      fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
+in
+fun type_boolify db ty =
+   let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
+   in typeValue (theta,tysize_env db,K0) ty
+   end
+end
+*)
 
 end

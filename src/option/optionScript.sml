@@ -302,6 +302,7 @@ val _ = adjoin_to_theory
     S "      induction=TypeBasePure.ORIG option_induction,"; NL();
     S "      nchotomy=option_nchotomy,";                     NL();
     S "      size=NONE,";                                    NL();
+    S "      boolify=NONE,";                                 NL();
     S "      one_one=SOME SOME_11,";                         NL();
     S "      distinct=SOME NOT_NONE_SOME});";                NL();
     NL();

@@ -20,6 +20,7 @@ sig
                           case_cong : thm,
                           nchotomy  : thm,
                           size      : (term * shared_thm) option,
+                          boolify   : (term * shared_thm) option,
                           one_one   : thm option,
                           distinct  : thm option} -> tyinfo
 
@@ -35,10 +36,12 @@ sig
    val one_one_of      : tyinfo -> thm option
    val simpls_of       : tyinfo -> thm list
    val size_of         : tyinfo -> (term * thm) option
+   val boolify_of         : tyinfo -> (term * thm) option
 
    val axiom_of0       : tyinfo -> shared_thm
    val induction_of0   : tyinfo -> shared_thm
    val size_of0        : tyinfo -> (term * shared_thm) option
+   val boolify_of0        : tyinfo -> (term * shared_thm) option
 
    val pp_tyinfo       : ppstream -> tyinfo -> unit
 
@@ -46,6 +49,7 @@ sig
    val put_simpls      : thm list -> tyinfo -> tyinfo
    val put_induction   : shared_thm -> tyinfo -> tyinfo
    val put_size        : term * shared_thm -> tyinfo -> tyinfo
+   val put_boolify     : term * shared_thm -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 

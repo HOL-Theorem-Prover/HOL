@@ -2538,6 +2538,7 @@ val _ = adjoin_to_theory
    S "      induction=TypeBasePure.ORIG numTheory.INDUCTION,";
    S "      nchotomy=num_CASES,";
    S "      size=SOME(Parse.Term`\\x:num. x`, TypeBasePure.ORIG boolTheory.REFL_CLAUSE),";
+   S "      boolify=NONE,";
    S "      one_one=SOME prim_recTheory.INV_SUC_EQ,";
    S "      distinct=SOME numTheory.NOT_SUC});"
  end)};

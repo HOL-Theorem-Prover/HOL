@@ -426,6 +426,7 @@ val _ = adjoin_to_theory
       S "      induction=TypeBasePure.ORIG pair_induction,"; NL();
       S "      nchotomy=ABS_PAIR_THM,";                      NL();
       S "      size=NONE,";                                  NL();
+      S "      boolify=NONE,";                               NL();
       S "      one_one=SOME CLOSED_PAIR_EQ,";                NL();
       S "      distinct=NONE});"
   end)};

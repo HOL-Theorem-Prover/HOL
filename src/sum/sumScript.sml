@@ -381,6 +381,7 @@ val _ = adjoin_to_theory
       S "      induction=TypeBasePure.ORIG sum_INDUCT,";    NL();
       S "      nchotomy=sum_CASES,";                        NL();
       S "      size=NONE,";                                 NL();
+      S "      boolify=NONE,";                              NL();
       S "      one_one=SOME INR_INL_11,";                   NL();
       S "      distinct=SOME sum_distinct});";              NL();
       NL();

@@ -341,6 +341,7 @@ fun enum_type_to_tyinfo (ty, constrs) = let
                   case_cong = case_cong,
                   nchotomy = nchotomy,
                   size = size,
+                  boolify = NONE,
                   one_one = NONE,
                   distinct = distinct }
 in

@@ -26,9 +26,11 @@ sig
    val one_one_of         : string -> thm
    val simpls_of          : string -> thm list
    val size_of            : string -> term * thm
+   val boolify_of         : string -> term * thm
 
    val axiom_of0          : string -> shared_thm
    val induction_of0      : string -> shared_thm
    val size_of0           : string -> (term * shared_thm) option
+   val boolify_of0        : string -> (term * shared_thm) option
 
 end;

@@ -415,8 +415,9 @@ end (* local *)
 
  ---------------------------------------------------------------------------*)
 
-fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
-           record_rw_names =
+fun adjoin {ax,case_def,case_cong,induction,nchotomy,
+            one_one,distinct,boolify,size} record_rw_names 
+  =
  adjoin_to_theory
    {sig_ps = NONE,
     struct_ps = SOME
@@ -429,6 +430,14 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
                      ["(", term_to_string c, ") ",type_to_string (type_of c)]
                    val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
                in S ("         size="^line); NL();
+                  S ("                   "^s^"),")
+               end
+          fun do_boolify NONE = (S "         boolify = NONE,"; NL())
+            | do_boolify (SOME (c,s)) =
+               let val strc = String.concat
+                     ["(", term_to_string c, ") ",type_to_string (type_of c)]
+                   val line = String.concat ["SOME(Parse.Term`", strc, "`,"]
+               in S ("         boolify="^line); NL();
                   S ("                   "^s^"),")
                end
           fun do_simpls() = (S "["; app S (Lib.commafy record_rw_names); S "]")
@@ -446,6 +455,7 @@ fun adjoin {ax,case_def,case_cong,induction,nchotomy,size,one_one,distinct}
         S ("         induction="^induction^",");          NL();
         S ("         nchotomy="^nchotomy^",");            NL();
         do_size size;                                     NL();
+        do_boolify boolify;                               NL();
         S ("         one_one="^one_one^",");              NL();
         S ("         distinct="^distinct^"}");            NL();
         S "   in";                                        NL();
@@ -500,6 +510,15 @@ fun write_tyinfo (tyinfo, record_rw_names) =
          | SOME (tm, COPY(s,def))
             => SOME (tm, "COPY ("^Lib.quote s^","^s^"_size_def)")
        end
+     val boolify_info =
+       let val sd_name = name"_to_bool_def"
+       in
+       case boolify_of0 tyinfo
+        of NONE => NONE
+         | SOME (tm, ORIG def) => SOME (tm, "ORIG "^sd_name)
+         | SOME (tm, COPY(s,def))
+            => SOME (tm, "COPY ("^Lib.quote s^","^s^"_to_bool_def)")
+       end
  in
   adjoin{ax        = axiom_name,
          induction = induction_name,
@@ -507,6 +526,7 @@ fun write_tyinfo (tyinfo, record_rw_names) =
          case_cong = case_cong_name,
          nchotomy  = nchotomy_name,
          size      = size_info,
+         boolify   = boolify_info,
          one_one   = one_one_name,
          distinct  = distinct_name}
      record_rw_names

@@ -367,6 +367,7 @@ val _ = adjoin_to_theory
    S "      induction=TypeBasePure.ORIG STRING_INDUCT_THM,";
    S "      nchotomy=STRING_CASES,";
    S "      size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),";
+   S "      boolify=NONE,";
    S "      one_one=SOME STRING_11,";
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)});";
    S " ";
