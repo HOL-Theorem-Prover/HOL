@@ -553,17 +553,19 @@ local
     | _ => ()
   end
 in
-  fun parse_in_context0 FVs q = let
-    val ptm = Preterm q
+  fun parse_preterm_in_context0 FVs ptm = let
   in
     typecheck_phase1 (SOME(term_to_string, type_to_string)) ptm;
     give_types_to_fvs FVs [] ptm;
     remove_case_magic (to_term (overloading_resolution ptm))
   end
 
-  fun parse_in_context FVs q =
+  fun parse_preterm_in_context FVs ptm =
     Lib.with_flag (Globals.notify_on_tyvar_guess,false)
-                  (parse_in_context0 FVs) q
+                  (parse_preterm_in_context0 FVs) ptm
+
+  fun parse_in_context FVs q = parse_preterm_in_context FVs (Preterm q)
+
 end
 
 
