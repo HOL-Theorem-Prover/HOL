@@ -285,6 +285,7 @@ and
                      fun _  -> Content s }
   | startcom       { fun _  -> ToText(DelimText) }
   | stopcom        { fun pi -> check_close pi DelimText lexbuf }
+  | endtex         { fun pi -> check_close pi DelimTex lexbuf }  (* always an error *)
   | eof            { fun pi -> check_close pi DelimEOF lexbuf }
   | backtick       { fun pi -> if pi.backtick then
                                  Content (Lexing.lexeme lexbuf)
@@ -305,6 +306,7 @@ and
     tstarthol      { fun _  -> ToHol(DelimHolTex) }
   | tstarthol0     { fun _  -> ToHol(DelimHolTexMath) }
   | endtex         { fun pi -> check_close pi DelimTex lexbuf }
+  | stopcom        { fun pi -> check_close pi DelimText lexbuf }  (* always an error *)
   | tstartdir      { fun _  -> ToDir(DelimDir) }  (* recognised as an alias; closedelim is the same *)
   | startdir       { fun _  -> ToDir(DelimDir) }
 
