@@ -168,10 +168,10 @@ fun hash_const c = Polyhash.hash (#Name(dest_thy_const c));
 
 fun mkCSET CSET tyl = 
  let fun inCSET tm = 
-       case PolyHash.peek CSET tm
+       case Polyhash.peek CSET tm
         of NONE => false
          | SOME _ => true
-     fun addCSET c = PolyHash.insert CSET (c,c)
+     fun addCSET c = Polyhash.insert CSET (c,c)
      fun add_constr tyinfo = 
          List.app addCSET (TypeBasePure.constructors_of tyinfo)
      val _ = List.app add_constr tyl
@@ -191,7 +191,7 @@ fun mkCSET CSET tyl =
 
 fun PRIM_STP_TAC ss finisher =
  let val has_constr_eqn = 
-       mkCSET (PolyHash.mkTable (hash_const, uncurry same_const)
+       mkCSET (Polyhash.mkTable (hash_const, uncurry same_const)
                                 (31, ERR "CSET" "not found"))
               (TypeBasePure.listItems (TypeBase.theTypeBase()))
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
@@ -237,7 +237,7 @@ fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
 
 fun PRIM_NORM_TAC ss =
  let val has_constr_eqn = 
-       mkCSET (PolyHash.mkTable (hash_const, uncurry same_const)
+       mkCSET (Polyhash.mkTable (hash_const, uncurry same_const)
                                 (31, ERR "CSET" "not found"))
               (TypeBasePure.listItems (TypeBase.theTypeBase()))
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
