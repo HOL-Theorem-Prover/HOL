@@ -2170,8 +2170,10 @@ Figures~\ref{bits-slice} and~\ref{bitwise}.
 \caption{\ml{BITWISE l f a b}. Here $x\diamond y = (f(x)(y) \Rightarrow 1 \mid 0)$.\label{bitwise}}
 \end{figure}
 
-The \ml{numeral\_bits} theory provides a group of theorems which allow the \ml{bits} theory functions to be evaluated more efficiently.
-This is done be working with \HOL's internal representation of numerals \ie{} in terms of \ml{ALT\_ZERO}, \ml{NUMERAL\_BIT1} and \ml{NUMERAL\_BIT2}.
+The \ml{numeral\_bits} theory provides a group of theorems which allow
+the \ml{bits} theory functions to be evaluated more efficiently.  This
+is done be working with \HOL's internal representation of numerals
+\ie{} in terms of \holtxt{ZERO}, \holtxt{BIT1} and \holtxt{BIT2}.
 
 Some of the most significant (useful) theorems in \ml{bits} theory are presented (in Cartesian form) below:
 \begin{eqnarray*}
@@ -2667,7 +2669,7 @@ the infix operator {\small\verb|++|}; thus the expression
 The concatenation of a list of lists into a list is achieved by
 {\small\verb+FLAT+}.
 %
-{\small
+\begin{hol}
 \begin{verbatim}
    APPEND
      |- (!l. APPEND [] l = l) /\
@@ -2675,7 +2677,7 @@ The concatenation of a list of lists into a list is achieved by
    FLAT
      |- (FLAT [] = []) /\ (!h t. FLAT(h::t) = h ++ FLAT t)
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph {Numbers and lists}
 \index{LENGTH, the HOL constant@\ml{LENGTH}, the \HOL{} constant}
@@ -2689,7 +2691,7 @@ $f:\alpha\to\konst{num}$), while the length of the list ignores the
 size of each list element. The alternate length definition
 (\holtxt{LEN}) is tail-recursive.
 %
-{\small
+\begin{hol}
 \begin{verbatim}
    LENGTH
      |- (LENGTH [] = 0) /\ (!h t. LENGTH (h::t) = SUC(LENGTH t))
@@ -2701,7 +2703,7 @@ size of each list element. The alternate length definition
    EL
      |- (!l. EL 0 l = HD l) /\ (!l n. EL (SUC n) l = EL n (TL l))
 \end{verbatim}
-}
+\end{hol}
 
 \noindent
 Note that the extraction of the $n$th element (\holtxt{EL}) of a
@@ -3062,12 +3064,12 @@ There always is such an element, and the defining equations are
 On the other hand, the \texttt{last} function does not always have a
 well-specified value, though it still has nice characterising
 equations:
-{\small
+\begin{hol}
 \begin{verbatim}
    last_thm   |- (last (stopped_at x) = x) /\
                  (last (pcons x l p) = last p)
 \end{verbatim}
-}
+\end{hol}
 
 The theorem for \texttt{finite} has a similar feel, but has a definite
 value (\texttt{F}, or \emph{false}) on infinite paths), whereas the
@@ -3219,10 +3221,9 @@ Such an expression is translated to
 
 \paragraph {Length and concatenation}
 
-The length of a string ({\small\verb+STRLEN+}) is defined by primitive
-recursion. The concatenation of strings ({\small\verb+STRCAT+}) may be
-expressed recursively ({\small\verb+STRCAT_EQNS+})or as a fold
-({\small\verb+STRCAT_EXPLODE+}):
+The length of a string (\ml{STRLEN}) is defined by primitive
+recursion. The concatenation of strings (\ml{STRCAT}) may be expressed
+recursively (\ml{STRCAT\_EQNS}) or as a fold (\ml{STRCAT\_EXPLODE}):
 \begin{hol}
 \begin{verbatim}
    STRLEN_DEF
@@ -3465,12 +3466,12 @@ explicitly include constraints about finiteness. For example the
 following theorem relating cardinality and subsets is only true
 for finite sets.
 %
-{\small
+\begin{hol}
 \begin{verbatim}
- CARD_PSUBSET
-   |- !s. FINITE s ==> !t. t PSUBSET s ==> CARD t < CARD s
+   CARD_PSUBSET
+     |- !s. FINITE s ==> !t. t PSUBSET s ==> CARD t < CARD s
 \end{verbatim}
-}
+\end{hol}
 %
 An extensive suite of theorems dealing with finiteness and cardinality
 is available in {\small\verb+pred_set+}.
@@ -3479,20 +3480,20 @@ is available in {\small\verb+pred_set+}.
 The product of two sets ({\small\verb+CROSS+}, infix) is defined
 with a set comprehension.
 %
-{\small
+\begin{hol}
 \begin{verbatim}
-  CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
+   CROSS_DEF   |- !P Q. P CROSS Q = {p | FST p IN P /\ SND p IN Q}
 \end{verbatim}
-}
+\end{hol}
 %
 \noindent Cardinality and cross product are related by the following theorem:
-{\small
+\begin{hol}
 \begin{verbatim}
- CARD_CROSS
-   |- !P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)
+   CARD_CROSS
+     |- !P Q. FINITE P /\ FINITE Q ==> (CARD (P CROSS Q) = CARD P * CARD Q)
 \end{verbatim}
-}
-%
+\end{hol}
+
 \paragraph{Recursive functions on sets}
 
 Recursive functions on sets may be defined by wellfounded
@@ -3503,33 +3504,31 @@ Provided a function $f:\alpha\to\beta\to\beta$ obeys a condition
 known as \emph{left-commutativity}, namely, $f\;x\;(f\;y\;z) =
 f\;y\;(f\;x\;z)$, then $f$ can be applied by folding it on the set
 in a tail-recursive fashion.
-%
-{\small
+\begin{hol}
 \begin{verbatim}
- ITSET_EMPTY
-   |- !f b. ITSET f {} b = b
- COMMUTING_ITSET_INSERT
-   |- !f s. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
-            !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
+   ITSET_EMPTY
+     |- !f b. ITSET f {} b = b
+   COMMUTING_ITSET_INSERT
+     |- !f s. (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
+              !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)
 \end{verbatim}
-}
-%
-\noindent A recursive version is also available:
-{\small
+\end{hol}
+A recursive version is also available:
+\begin{hol}
 \begin{verbatim}
- COMMUTING_ITSET_RECURSES
-   |- !f e s b.
-        (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
-        (ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b))
+   COMMUTING_ITSET_RECURSES
+     |- !f e s b.
+          (!x y z. f x (f y z) = f y (f x z)) /\ FINITE s ==>
+          (ITSET f (e INSERT s) b = f e (ITSET f (s DELETE e) b))
 \end{verbatim}
-}
-%
+\end{hol}
 For the full derivation, see the sources of {\small\verb+pred_set+}.
 The definition of {\small\verb+ITSET+} allows, for example, the
-definition of summing the results of a function on a finite set of elements,
-from which a recursive characterization and other useful theorems are derived.
+definition of summing the results of a function on a finite set of
+elements, from which a recursive characterization and other useful
+theorems are derived.
 %
-{\small
+\begin{hol}
 \begin{verbatim}
    SUM_IMAGE_DEF
      |- !f s. SIGMA f s = ITSET (\e acc. f e + acc) s 0
@@ -3538,7 +3537,7 @@ from which a recursive characterization and other useful theorems are derived.
             !e s. FINITE s ==>
                   (SIGMA f (e INSERT s) = f e + SIGMA f (s DELETE e))
 \end{verbatim}
-}
+\end{hol}
 
 \paragraph{Other definitions and theorems}
 
@@ -3553,23 +3552,23 @@ ways to formulate this theorem, depending on how the notion of tree is
 formalized. In {\small\verb+pred_set+}, finite branching is defined as
 a predicate on a relation.
 %
-{\small
+\begin{hol}
 \begin{verbatim}
    finite_branching_def
     |- !R. finitely_branching R = !x. FINITE {y | R x y}
 \end{verbatim}
-}
+\end{hol}
 %
 \noindent From this, the following version of Koenig's Lemma is stated and
 proved:
-{\small
+\begin{hol}
 \begin{verbatim}
    KoenigsLemma
     |- finitely_branching R ==>
          !x. ~FINITE {y | RTC R x y} ==>
               ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))
 \end{verbatim}
-}
+\end{hol}
 
 
 \subsubsection{Syntax for sets}\index{set theory notation}

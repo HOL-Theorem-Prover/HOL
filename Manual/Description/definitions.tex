@@ -1,6 +1,7 @@
 \chapter{Advanced Definition Principles}\label{HOLdefinitions}
 
 \section{Datatype definition}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
 
 There are several useful consequences of an object logic datatype
 definition: structural induction, rewrite rules for constructors,
@@ -306,13 +307,17 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 % A definition of mutually recursives types results in the above theorems and
 % definitions being added for each of the defined types.
 
-There is an underlying database of datatype facts that is augmented
-by the results of a \verb+Hol_datatype+ declaration.  This database
-supports various high-level proof tools. When the \HOL{} system starts
-up, this database already contains the relevant entries for the types
-\verb+bool+, \verb+prod+, \verb+num+, \verb+option+, and \verb+list+.
-When a datatype is defined by \verb+Hol_datatype+, the following
-information is derived and stored in the database.
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!maintenance of TypeBase@maintenance of \ml{TypeBase}}
+\index{TypeBase@\ml{TypeBase}}
+%
+\HOL{} maintains an underlying database of datatype facts called the
+\ml{TypeBase}.  This database is used to support various high-level
+proof tools (see Section~\ref{sec:bossLib}), and is augmented whenever
+a \verb+Hol_datatype+ declaration is made.  When the \HOL{} system
+starts up, the \ml{TypeBase} already contains the relevant entries for
+the types \holtxt{bool}, \holtxt{prod}, \holtxt{num}, \holtxt{option},
+and \holtxt{list}.  When a datatype is defined by \verb+Hol_datatype+,
+the following information is derived and stored in the database.
 
 \begin{itemize}
 \item initiality theorem for the type
@@ -328,45 +333,47 @@ information is derived and stored in the database.
 The \texttt{Hol\_datatype} function can be used to define types that
 are parametrically polymorphic.  For example, the type of lists is
 defined as
-{\small
+\begin{hol}
 \begin{verbatim}
    Hol_datatype `list = NIL | CONS of 'a => list`;
 \end{verbatim}
-}
+\end{hol}
 \noindent Although the new \texttt{list} type is polymorphic, the
 specification passed to \texttt{Hol\_datatype} does not explicitly
 provide arguments for the new operator.  Contrast with SML, where one
 would write
-{\small
+\begin{hol}
 \begin{verbatim}
    datatype 'a list = nil | cons of 'a * 'a list
 \end{verbatim}
-}
+\end{hol}
 \noindent In \HOL{} neither occurrence of the new operator has its
 arguments provided.  When defining a type that is polymorphic in more
 than one argument, this raises the question of what the order of the
 new operator's arguments will be.  For example, if one defines
-{\small
+\begin{hol}
 \begin{verbatim}
    Hol_datatype `sum = Left of 'left | Right of 'right`;
 \end{verbatim}
-}
-\noindent and then writes \ml{('a,'b)sum}, will the \ml{'a} value be
-under the \ml{Left} or \ml{Right} constructor?  The system chooses to
-make the arguments corresponding to variables appear in the order
-given by the dictionary ordering of the variables' names.  Thus, in
-the example given, the \ml{'a} of \ml{('a,'b)sum} will be the
-\ml{Left} argument because \ml{left} comes before \ml{right} in the
-standard (ASCII) dictionary ordering.
+\end{hol}
+%
+and then writes \ml{('a,'b)sum}, will the \ml{'a} value be under the
+\ml{Left} or \ml{Right} constructor?  The system chooses to make the
+arguments corresponding to variables appear in the order given by the
+dictionary ordering of the variables' names.  Thus, in the example
+given, the \ml{'a} of \ml{('a,'b)sum} will be the \ml{Left} argument
+because \ml{left} comes before \ml{right} in the standard (ASCII)
+dictionary ordering.
 
 \section{Record types}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!record types}
 
 Record types are convenient ways of bundling together a number of
 component types, and giving those components names so as to facilitate
 access to them.  Record types are semantically equivalent to big pair
-(cross-product) types, but the ability to label the fields with names
-of one's own choosing is a great convenience.  Record types as
-implemented in \HOL{} are similar to C's {\tt struct} types and to
+(product) types, but the ability to label the fields with names of
+one's own choosing is a great convenience.  Record types as
+implemented in \HOL{} are similar to C's \texttt{struct} types and to
 Pascal's records.
 
 Done correctly, record types provide useful maintainability features.
@@ -464,12 +471,14 @@ Thus,
 
 As well as defining the type and the functions described above, record
 type definition also proves a suite of useful theorems.  These are all
-are saved (using {\tt save\_thm}) in the current segment.  Some are
-also added to the \texttt{TypeBase}'s simplifications for the type, so
-they will be automatically applied when simplifying with the
-\texttt{srw\_ss()} simpset, or with the tactics \texttt{RW\_TAC} and
-\texttt{SRW\_TAC} (see Sections~\ref{sec:automated-reasoners}
-and~\ref{sec:simpLib}).
+are saved (using {\tt save\_thm}) in the current segment.  %
+%
+\index{TypeBase@\ml{TypeBase}}
+%
+Some are also added to the \ml{TypeBase}'s simplifications for the
+type, so they will be automatically applied when simplifying with the
+\ml{srw\_ss()} simpset, or with the tactics \ml{RW\_TAC} and
+\ml{SRW\_TAC} (see Section~\ref{sec:simpLib}).
 
 All of the theorems are saved under names that begin with the name of
 the type.  The list below is a sample of the theorems proved.  The
@@ -535,10 +544,12 @@ The pretty-printing of big records can be controlled with the
 wellfounded recursion theorem which is proved in \theoryimp{relation},
 discussed in Section \ref{relation}.
 
+\index{Define@\ml{Define}}
+\index{xDefine@\ml{xDefine}}
 \begin{verbatim}
-    Define   : term quotation -> thm
-    xDefine  : string -> term quotation -> thm
-    Hol_defn : string -> term quotation -> Defn.defn
+   Define   : term quotation -> thm
+   xDefine  : string -> term quotation -> thm
+   Hol_defn : string -> term quotation -> Defn.defn
 \end{verbatim}
 
 The \texttt{Define} function is a general-purpose function definition
@@ -549,110 +560,113 @@ accepts the following syntax:
 
 \begin{enumerate}
 
-\item Non-recursive definition, varstructs allowed on lhs.
+\item Non-recursive definition, varstructs allowed on left-hand side.
 \begin{verbatim}
-         Define `f w (x, y, z) = x + y / w + z`;
+   Define `f w (x, y, z) = x + y / w + z`;
 \end{verbatim}
 
 \item Primitive recursive (or non-recursive) over known datatype.
+\label{enum:prim-recursive}
 
 \begin{verbatim}
- Define
-     `(fold b f [] = b) /\
-      (fold b f (h::t) = f h (fold b f t))`;
-
+   Define
+       `(fold b f [] = b) /\
+        (fold b f (h::t) = f h (fold b f t))`;
 \end{verbatim}
 
 \item Non-recursive definition, over complex patterns:
 
 \begin{verbatim}
-Define
-    `(g (0,x,y,z) = 1)
-  /\ (g (w,0,y,z) = 2)
-  /\ (g (w,x,0,z) = 3)
-  /\ (g (w,x,y,0) = 4)`;
+   Define
+       `(g (0,x,y,z) = 1)
+     /\ (g (w,0,y,z) = 2)
+     /\ (g (w,x,0,z) = 3)
+     /\ (g (w,x,y,0) = 4)`;
 \end{verbatim}
 
-\item Recursions (not mutual or nested) that aren't handled by 2.
+\item Recursions (not mutual or nested) that aren't handled
+  by~\ref{enum:prim-recursive}.
 
 \begin{verbatim}
-  Define `(flatten  []           = [])
-     /\   (flatten ([]::rst)     = flatten rst)
-     /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
+   Define `(flatten  []           = [])
+      /\   (flatten ([]::rst)     = flatten rst)
+      /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
 \end{verbatim}
 
 \item Nested recursions.
 \begin{verbatim}
- Define `N x = if x>100 then x-10 else N(N(x+11))`;
+   Define `N x = if x>100 then x-10 else N(N(x+11))`;
 \end{verbatim}
 
 \item Mutual recursion.
 \begin{verbatim}
-  xDefine "even_odd"
-     `(even 0 = T)
-  /\  (even (SUC n) = odd n)
-  /\  (odd 0 = F)
-  /\  (odd (SUC n) = even n)`;
+   xDefine "even_odd"
+      `(even 0 = T)
+   /\  (even (SUC n) = odd n)
+   /\  (odd 0 = F)
+   /\  (odd (SUC n) = even n)`;
 \end{verbatim}
 
 \item Schematic definitions (mutual and nested recursive schemata are
          accepted).
 \begin{verbatim}
-      Define `While s = if B s then While (C s) else s`;
+   Define `While s = if B s then While (C s) else s`;
 \end{verbatim}
 \end{enumerate}
 
-For complex recursions, {\small\verb+Define+} attempts to find a measure
-under which recursive calls become smaller (and to prove that they do
-indeed become smaller). Currently, it examines the domain type of the
-function being defined and synthesizes a ``size'' measure.  Then it does
-some basic simplifications and then attempts to automatically prove the
-termination constraints.  If this termination proof fails, then the
-definition attempt fails. If the termination proof succeeds, an
-induction theorem for the function is also automatically derived and
-stored in the current theory.
+For complex recursions, \ml{Define} attempts to find a measure under
+which recursive calls become smaller (and to prove that they do indeed
+become smaller). Currently, it examines the domain type of the
+function being defined and synthesizes a ``size'' measure.  Then it
+does some basic simplifications and then attempts to automatically
+prove the termination constraints.  If this termination proof fails,
+then the definition attempt fails. If the termination proof succeeds,
+an induction theorem for the function is also automatically derived
+and stored in the current theory.
 
-\noindent {\bf Example.} Invoking
+\paragraph{Example.} Invoking
 \begin{verbatim}
-      Define
-        `(gcd 0 y = y)
-    /\   (gcd (SUC x) 0 = SUC x)
-    /\   (gcd (SUC x) (SUC y) =
-             if y <= x then gcd (x-y)   (SUC y)
-                       else gcd (SUC x) (y-x))`;
+     Define
+       `(gcd 0 y = y)
+   /\   (gcd (SUC x) 0 = SUC x)
+   /\   (gcd (SUC x) (SUC y) =
+            if y <= x then gcd (x-y)   (SUC y)
+                      else gcd (SUC x) (y-x))`;
 \end{verbatim}
 proves all termination conditions and stores the theorem
 \begin{verbatim}
-      |- (gcd 0 y = y)           /\
-         (gcd (SUC x) 0 = SUC x) /\
-         (gcd (SUC x) (SUC y) =
-              if y <= x then gcd (x - y) (SUC y)
-                        else gcd (SUC x) (y - x))
+   |- (gcd 0 y = y)           /\
+      (gcd (SUC x) 0 = SUC x) /\
+      (gcd (SUC x) (SUC y) =
+           if y <= x then gcd (x - y) (SUC y)
+                     else gcd (SUC x) (y - x))
 \end{verbatim}
-\noindent in the current theory under the name \verb+"gcd_def"+ and
-also stores the theorem
+in the current theory under the name \ml{"gcd\_def"} and also stores
+the theorem
 \begin{verbatim}
-          !P. (!y. P 0 y)       /\
-              (!x. P (SUC x) 0) /\
-              (!x y. (~(y <= x) ==> P (SUC x) (y - x)) /\
-                       (y <= x  ==> P (x - y) (SUC y))
-                        ==> P (SUC x) (SUC y))
-                 ==>
-                   !v v1. P v v1.
+   !P. (!y. P 0 y)       /\
+       (!x. P (SUC x) 0) /\
+       (!x y. (~(y <= x) ==> P (SUC x) (y - x)) /\
+                (y <= x  ==> P (x - y) (SUC y))
+                 ==> P (SUC x) (SUC y))
+          ==>
+            !v v1. P v v1.
 \end{verbatim}
-\noindent in the current theory under the name \verb+"gcd_ind"+ before
+in the current theory under the name \ml{"gcd\_ind"} before
 returning the requested recursion equations.
 
 Recall that, if the termination proof fails, an invocation of
-\verb+Define+  (or \verb+xDefine+) fails. In such situations, the \ML\
-function \verb+Hol_defn+ should be used.
+\ml{Define}  (or \ml{xDefine}) fails. In such situations, the \ML{}
+function \ml{Hol\_defn} should be used.
+%
+\index{Hol_defn@\ml{Hol\_defn}}
 
 \begin{verbatim}
    Hol_defn     : string -> term quotation -> Defn.defn
-   WF_REL_TAC   : Defn.defn -> term quotation -> tactic
+   WF_REL_TAC   : term quotation -> tactic
 \end{verbatim}
 
-\verb+Hol_defn+ makes the requested definition, but defers the proof of
+\ml{Hol\_defn} makes the requested definition, but defers the proof of
 termination to the user. For setting up termination proofs, there are
 several useful entrypoints, namely
 
@@ -660,93 +674,94 @@ several useful entrypoints, namely
    Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
    Defn.tprove : Defn.defn * tactic -> thm * thm
 \end{verbatim}
+\ml{Defn.tgoal} is analogous to \ml{set\_goal} and \ml{Defn.tprove} is
+analogous to \ml{prove}.
 
-{\small\verb+Defn.tgoal+} is analogous to {\small\verb+set_goal+} and
-{\small\verb+Defn.tprove+} is analogous to {\small\verb+prove+}.
-
-\noindent {\bf Example.} An invocation of {\small\verb+Define+} on
+\paragraph{Example.} An invocation of {\small\verb+Define+} on
 the following equations for Quicksort will currently fail, since the
 termination proof is beyond the capabilities of our naive termination
 prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 
+\setcounter{sessioncount}{0}
+\begin{session}
 \begin{verbatim}
-    val qsort_def =
-      Hol_defn "qsort"
-        `(qsort r [] = []) /\
-         (qsort r (h::t) =
-             APPEND (qsort r (FILTER (\x. r x h) t))
-               (h :: qsort r (FILTER (\x. ~(r x h)) t)))`;
+val qsort_def =
+  Hol_defn "qsort"
+    `(qsort r [] = []) /\
+     (qsort r (h::t) =
+         APPEND (qsort r (FILTER (\x. r x h) t))
+           (h :: qsort r (FILTER (\x. ~(r x h)) t)))`;
 \end{verbatim}
-which returns a {\small\verb+defn+}, but does not try to prove
+\end{session}
+which returns a value of type \ml{defn}, but does not try to prove
 termination. Although it is possible to directly work with elements of
-type {\small\verb+defn+}, it is more convenient to invoke
-`{\small\tt Defn.tgoal qsort\_def}', which sets up a termination
-proof in a goalstack. The goal is just to get the unrestricted recursion
-equations and induction theorem.
+type \ml{defn}, it is more convenient to invoke \ml{Defn.tgoal
+  qsort\_def}, which sets up a termination proof in a goalstack. The
+goal is just to get the unrestricted recursion equations and induction
+theorem.
 
+\begin{session}
 \begin{verbatim}
 Defn.tgoal qsort_def;
 
 > val it =
->    Proof manager status: 1 proof.
->    1. Incomplete:
->         Initial goal:
->         ((qsort r [] = []) /\
->          (qsort r (h::t) =
->           APPEND (qsort r (FILTER (\x. r x h) t))
->             (h::qsort r (FILTER (\x. ~r x h) t)))) /\
->         !P.
->           (!r. P r []) /\
->           (!r h t. P r (FILTER (\x. r x h) t) /\
->                    P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
->           ==> !v v1. P v v1
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         ?R.
+           (!t h r. R (r,FILTER (\x. ~r x h) t) (r,h::t)) /\
+           (!t h r. R (r,FILTER (\x. r x h) t) (r,h::t)) /\ WF R
 \end{verbatim}
+\end{session}
 
-How to proceed? The function {\small\verb+WF_REL_TAC+} now shows its
-utility. When given a {\small\verb+defn+} and a quotation denoting a
-termination relation for the function, {\small\verb+WF_REL_TAC+}
-initiates the termination proof. For our example, we obtain two subgoals
-both of which are easy to prove.
+How to proceed? The function \ml{WF\_REL\_TAC} now shows its utility.
+When given a \ml{defn} and a quotation denoting a termination relation
+for the function, \ml{WF\_REL\_TAC} initiates the termination proof.
+For our example, we obtain two subgoals both of which are easy to
+prove.
 
+\begin{session}
 \begin{verbatim}
-    - e (WF_REL_TAC qsort_def `measure (LENGTH o SND)`
->   OK..
->
->   2 subgoals:
->   val it =
->      !t h r. LENGTH (FILTER (\x. r x h) t) < LENGTH (h::t)
->
->
->      !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
+- e (WF_REL_TAC `measure (LENGTH o SND)`);
+OK..
+2 subgoals:
+> val it =
+    !t h r. LENGTH (FILTER (\x. r x h) t) < LENGTH (h::t)
+
+
+    !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
 \end{verbatim}
+\end{session}
 
 
-Both goals are provable; once the proof is completed, we can encapsulate
-it with {\small\verb+Defn.tprove+}, which takes a
-{\small\verb+defn+}, builds a termination goal from it, applies the
-given tactic, and, if the initial goal is proved, returns a pair
-comprising the requested equations and the induction theorem.
+Both goals are provable; once the proof is completed, we can
+encapsulate it with \ml{Defn.tprove}, which takes a \ml{defn}, builds
+a termination goal from it, applies the given tactic, and, if the
+initial goal is proved, returns a pair comprising the requested
+equations and the induction theorem.
 
+\begin{session}
 \begin{verbatim}
-   val (qsort_eqns,qsort_ind) =
-      Defn.tprove
+- val (qsort_eqns,qsort_ind) =
+     Defn.tprove
        (qsort_def,
-        WF_REL_TAC qsort_def `measure (LENGTH o SND)`
+        WF_REL_TAC `measure (LENGTH o SND)`
         THEN ...);
 
-   > val qsort_eqns =
-   >  |- (qsort r [] = []) /\
-   >     (qsort r (h::t) =
-   >        APPEND (qsort r (FILTER (\x. r x h) t))
-   >           (h::qsort r (FILTER (\x. ~r x h) t)))  : thm
+> val qsort_eqns =
+    |- (qsort r [] = []) /\
+       (qsort r (h::t) =
+          APPEND (qsort r (FILTER (\x. r x h) t))
+             (h::qsort r (FILTER (\x. ~r x h) t)))  : thm
 
-   >  val qsort_ind =
-   >   |- !P.
-   >      (!r. P r []) /\
-   >      (!r h t. P r (FILTER (\x. r x h) t) /\
-   >               P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
-   >      ==> !v v1. P v v1
+  val qsort_ind =
+     |- !P.
+        (!r. P r []) /\
+        (!r h t. P r (FILTER (\x. r x h) t) /\
+                 P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
+        ==> !v v1. P v v1  : thm
 \end{verbatim}
+\end{session}
 
 %%% Local Variables:
 %%% mode: latex

@@ -751,32 +751,29 @@ application of \HOL's underlying functionality:
    Induct_on    : term quotation -> tactic
 \end{verbatim}
 
-\begin{itemize}
+\index{type_rws@\ml{type\_rws}}
+\index{TypeBase@\ml{TypeBase}}
+%
+The function \ml{type\_rws} will search for the given type by name in
+the underlying \ml{TypeBase} database and return useful rewrite rules
+for that type. The rewrite rules of the datatype are built from the
+injectivity and distinctness theorems, along with the case constant
+definition. The simplification tactics \ml{RW\_TAC}, \ml{SRW\_TAC},
+and the \simpset{} \ml{(srw\_ss())} automatically include these
+theorems.  Other tactics used with other \simpset{}s will need these
+theorems to be manually added.
 
-\item
-The function \ml{type\_rws} will search for the given type
-by name in the underlying database and return useful
-rewrite rules for that type. The rewrite rules of the
-datatype are built from the injectivity and distinctness theorems, along
-with the case constant definition. The pre-existing rewrite rules in the
-database are already integrated into the simplification sets provided
-by \bossLib; however rewrite rules arising from an invocation of
-\ml{Hol\_datatype}, or which come from a user-defined theory, will have
-to be manually added into the \simpset{}s used by the simplifier.
-
-\item
 The \ml{Induct} tactic makes it convenient to invoke
 induction. When it is applied to a goal, the leading universal
 quantifier is examined; if its type is that of a known datatype, the
 appropriate structural induction tactic is extracted and applied.
 
-\item
 The \ml{Cases} tactic makes it convenient to invoke case
 analysis. The leading universal quantifier in the goal is examined; if
 its type is that of a known datatype, the appropriate structural
 case analysis theorem is extracted and applied.
 
-\item The \ml{Cases\_on} tactic takes a quotation, which is
+The \ml{Cases\_on} tactic takes a quotation, which is
 parsed into a term $M$, and then $M$ is searched for in the goal. If $M$
 is a variable, then a variable with the same name is searched for. Once
 the term to split over is known, its type and the associated facts are
@@ -788,20 +785,19 @@ least contain some free variables already appearing in the goal. Note
 that the \ml{Cases\_on} tactic is more general than \ml{Cases}, but
 it does require an explicit term to be given.
 
-\item The \ml{Induct\_on} tactic takes a quotation, which is
-parsed into a term $M$, and then $M$ is searched for in the goal. If $M$
-is a variable, then a variable with the same name is searched for. Once
-the term to induct on is known, its type and the associated facts are
-obtained from the underlying database and used to perform the induction.
-If $M$ is not a variable, a new variable $v$ not already occurring in
-the goal is created, and used to build a term $v = M$ which the goal is
-made conditional on before the induction is performed. First however,
-all terms containing free variables from $M$ are moved from the
-assumptions to the conclusion of the goal, and all free variables of $M$
-are universally quantified. \ml{Induct\_on} is more general than
-\ml{Induct}, but it does require an explicit term to be given.
-
-\end{itemize}
+The \ml{Induct\_on} tactic takes a quotation, which is parsed into a
+term $M$, and then $M$ is searched for in the goal. If $M$ is a
+variable, then a variable with the same name is searched for. Once the
+term to induct on is known, its type and the associated facts are
+obtained from the underlying database and used to perform the
+induction.  If $M$ is not a variable, a new variable $v$ not already
+occurring in the goal is created, and used to build a term $v = M$
+which the goal is made conditional on before the induction is
+performed. First however, all terms containing free variables from $M$
+are moved from the assumptions to the conclusion of the goal, and all
+free variables of $M$ are universally quantified. \ml{Induct\_on} is
+more general than \ml{Induct}, but it does require an explicit term to
+be given.
 
 Two supplementary entrypoints have been provided for more exotic
 inductions:
@@ -866,28 +862,30 @@ handles statements of linear arithmetic.
    srw_ss   : unit -> simpset
 \end{verbatim}
 
-The rewriting tactic \ml{RW\_TAC} works by first adding the given
-theorems into the given \simpset; then it simplifies the goal as much
-as possible; then it performs case splits on any conditional
-expressions in the goal; then it repeatedly (1) eliminates all
-hypotheses of the form $v = M$ or $M = v$ where $v$ is a variable not
-occurring in $M$, (2) breaks down any equations between constructor
-terms occurring anywhere in the goal. Finally, \ml{RW\_TAC} lifts
-\holtxt{let}-expressions within the goal so that the binding equations
-appear as abbreviations\index{abbreviations!tactic-based proof} in the
+\index{RW_TAC@\ml{RW\_TAC}} The rewriting tactic \ml{RW\_TAC} works by
+first adding the given theorems into the given \simpset; then it
+simplifies the goal as much as possible; then it performs case splits
+on any conditional expressions in the goal; then it repeatedly (1)
+eliminates all hypotheses of the form $v = M$ or $M = v$ where $v$ is
+a variable not occurring in $M$, (2) breaks down any equations between
+constructor terms occurring anywhere in the goal. Finally,
+\ml{RW\_TAC} lifts \holtxt{let}-expressions within the goal so that
+the binding equations appear as
+abbreviations\index{abbreviations!tactic-based proof} in the
 assumptions.
 
-The tactic \ml{SRW\_TAC} is similar to \ml{RW\_TAC}, but works
-with respect to an underlying \simpset{} (accessible through the
-function \ml{srw\_ss}) that is updated as new context is loaded.
-This \simpset{} can be augmented through the addition of ``\simpset{}
-fragments'' (\ml{ssdata} values) and theorems.  In situations
-where there are many large types stored in the system,
-\ml{RW\_TAC}'s performance can suffer because it repeatedly adds
-all of the rewrite theorems for the known types into a \simpset{}
-before attacking the goal.  On the other hand, \ml{SRW\_TAC} loads
-rewrites into the \simpset{} underneath \ml{srw\_ss()} just once,
-making for faster operation in this situation.
+\index{SRW_TAC@\ml{SRW\_TAC}} The tactic \ml{SRW\_TAC} is similar to
+\ml{RW\_TAC}, but works with respect to an underlying \simpset{}
+(accessible through the function \ml{srw\_ss}) that is updated as new
+context is loaded.  This \simpset{} can be augmented through the
+addition of ``\simpset{} fragments'' (\ml{ssdata} values) and
+theorems.  In situations where there are many large types stored in
+the system, \ml{RW\_TAC}'s performance can suffer because it
+repeatedly adds all of the rewrite theorems for the known types into a
+\simpset{} before attacking the goal.  On the other hand,
+\ml{SRW\_TAC} loads rewrites into the \simpset{} underneath
+\ml{srw\_ss()} just once, making for faster operation in this
+situation.
 
 \ml{bossLib} provides a number of simplification sets. The
 simpset for pure logic, sums, pairs, and the \ml{option} type is
@@ -983,10 +981,10 @@ it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 \label{sec:simpLib}
 \index{simplification|(}
 
-The \ml{simp} library implements \HOL's most sophisticated rewriting
-engine, the simplifier.  It is recommended as a general purpose
-work-horse during interactive theorem-proving.  As a rewriting tool,
-the simplifier's general role is to apply theorems of the general form
+The simplifier is \HOL's most sophisticated rewriting engine.  It is
+recommended as a general purpose work-horse during interactive
+theorem-proving.  As a rewriting tool, the simplifier's general role
+is to apply theorems of the general form
 \[
 \vdash l = r
 \]
@@ -1060,26 +1058,18 @@ the simplifier to goals (alternatively, to perform tactic-based proofs
 with the simplifier), \HOL{} provides five tactics, all of which are
 available in \ml{bossLib}.
 
-\begin{boxed}
+\subsubsection{\ml{SIMP\_TAC : simpset -> thm list -> tactic}}
 \index{SIMP_TAC@\ml{SIMP\_TAC}}
-\begin{verbatim}
-   SIMP_TAC : simpset -> thm list -> tactic
-\end{verbatim}
-\end{boxed}
-\noindent
+
 \ml{SIMP\_TAC} is the simplest simplification tactic: it attempts to
 simplify the current goal (ignoring the assumptions) using the given
 \simpset{} and the additional theorems.  It is no more than the
 lifting of the underlying \ml{SIMP\_CONV} conversion to the tactic
 level through the use of the standard function \ml{CONV\_TAC}.
 
-\begin{boxed}
+\subsubsection{\ml{ASM\_SIMP\_TAC : simpset -> thm list -> tactic}}
 \index{ASM_SIMP_TAC@\ml{ASM\_SIMP\_TAC}}
-\begin{verbatim}
-   ASM_SIMP_TAC : simpset -> thm list -> tactic
-\end{verbatim}
-\end{boxed}
-\noindent
+
 Like \ml{SIMP\_TAC}, \ml{ASM\_SIMP\_TAC} simplifies the current goal
 (leaving the assumptions untouched), but includes the goal's
 assumptions as extra rewrite rules.  Thus:
@@ -1105,26 +1095,25 @@ OK..
 \noindent
 In this example, \ml{ASM\_SIMP\_TAC} used \holtxt{x = 3} as an
 additional rewrite rule, and replaced the \holtxt{x} of \holtxt{P x}
-with \holtxt{3}.
+with \holtxt{3}.  When an assumption is used by \ml{ASM\_SIMP\_TAC} it
+is converted into rewrite rules in the same way as theorems passed in
+the list given as the tactic's second argument.  For example, an
+assumption \holtxt{\~{}P} will be treated as the rewrite \holtxt{|- P = F}.
 
-\begin{boxed}
+\subsubsection{\ml{FULL\_SIMP\_TAC : simpset -> thm list -> tactic}}
 \index{FULL_SIMP_TAC@\ml{FULL\_SIMP\_TAC}}
-\begin{verbatim}
-   FULL_SIMP_TAC : simpset -> thm list -> tactic
-\end{verbatim}
-\end{boxed}
 
 \noindent
 The tactic \ml{FULL\_SIMP\_TAC} simplifies not only a goal's
 conclusion but its assumptions as well.  It proceeds by simplifying
-each assumption in turn, additionally assuming earlier assumptions to
-help in the simplification of later assumptions.  Each assumption is
-added back into the goal's assumption list with the tactic
-\ml{STRIP\_ASSUME\_TAC}.  This means that assumptions that become
-conjunctions will have each conjunct assumed separately.  Assumptions
-that become disjunctions, will cause one new sub-goal to be created
-for each disjunct.  If an assumption is simplified to false, this will
-solve the goal.
+each assumption in turn, additionally using earlier assumptions in the
+simplification of later assumptions.  After being simplified, each
+assumption is added back into the goal's assumption list with the
+tactic \ml{STRIP\_ASSUME\_TAC}.  This means that assumptions that
+become conjunctions will have each conjunct assumed separately.
+Assumptions that become disjunctions will cause one new sub-goal to be
+created for each disjunct.  If an assumption is simplified to false,
+this will solve the goal.
 
 \ml{FULL\_SIMP\_TAC} attacks the assumptions in the order in which
 they appear in the list of terms that represent the goal's
@@ -1132,6 +1121,119 @@ assumptions.  Typically then, the first assumption to be simplified
 will be the assumption most recently added.  Viewed in the light of
 \ml{goalstackLib}'s printing of goals, \ml{FULL\_SIMP\_TAC} works its
 way up the list of assumptions, from bottom to top.
+
+The following demonstrates a simple use of \ml{FULL\_SIMP\_TAC}:
+\begin{session}
+\begin{verbatim}
+    x + y < z
+    ------------------------------------
+      0.  f x < 10
+      1.  x = 4
+     : goalstack
+
+- e (FULL_SIMP_TAC bool_ss []);
+OK..
+1 subgoal:
+> val it =
+    4 + y < z
+    ------------------------------------
+      0.  f 4 < 10
+      1.  x = 4
+     : goalstack
+\end{verbatim}
+\end{session}
+In this example, the assumption \holtxt{x = 4} caused the \holtxt{x}
+in the assumption \holtxt{f x < 10} to be replaced by \holtxt{4}.  The
+\holtxt{x} in the goal was similarly replaced.  If the assumptions had
+appeared in the opposite order, only the \holtxt{x} of the goal would
+have changed.
+
+The next session more demonstrates more interesting behaviour:
+\begin{session}
+\begin{verbatim}
+> val it =
+    f x + 1 < 10
+    ------------------------------------
+      x <= 4
+     : goalstack
+
+- e (FULL_SIMP_TAC bool_ss [arithmeticTheory.LESS_OR_EQ]);
+OK..
+2 subgoals:
+> val it =
+    f 4 + 1 < 10
+    ------------------------------------
+      x = 4
+
+    f x + 1 < 10
+    ------------------------------------
+      x < 4
+     : goalstack
+\end{verbatim}
+\end{session}
+In this example, the goal was rewritten with the theorem stating \[
+\vdash x \leq y \equiv x < y \lor x = y
+\]
+Turning the assumption into a disjunction resulted in two sub-goals.
+In the second of these, the assumption \holtxt{x = 4} further
+simplified the rest of the goal.
+
+\subsubsection{\ml{RW\_TAC : simpset -> thm list -> tactic}}
+\index{RW_TAC@\ml{RW\_TAC}}
+
+Though its type is the same as the simplification tactics already
+described, \ml{RW\_TAC} is an ``augmented'' tactic.  It is augmented
+in two ways:
+\begin{itemize}
+\item When simplifying the goal, the provided \simpset{} is augmented
+  not only with the theorems explicitly passed in the second argument,
+  but also with all of the appropriate rewrite rules from the system's
+  \ml{TypeBase}, and also with the goal's assumptions.
+%
+  \index{TypeBase@\ml{TypeBase}}
+\item \ml{RW\_TAC} also does more than just perform simplification.
+  It also repeatedly ``strips'' the goal.  For example, it moves the
+  antecedents of implications into the assumptions, splits
+  conjunctions, and case-splits on conditional expressions.  This
+  behaviour can rapidly remove a lot of syntactic complexity from
+  goals, revealing the kernel of the problem.  On the other hand, this
+  aggressive splitting can also result in a large number of
+  sub-goals.  \ml{RW\_TAC}'s augmented behaviours are intertwined with
+  phases of simplification in a way that is difficult to describe.
+\end{itemize}
+
+\subsubsection{\ml{SRW\_TAC : ssdata list -> thm list -> tactic}}
+\index{SRW_TAC@\ml{SRW\_TAC}}
+
+The tactic \ml{SRW\_TAC} has a different type from the other
+simplification tactics.  It does not take a \simpset{} as an
+argument.  Instead its operation always builds on the built-in
+\simpset{} \ml{srw\_ss()} (further described in
+Section~\ref{sec:srw_ss}).  The theorems provided as \ml{SRW\_TAC}'s
+second argument are treated in the same way as the by the other
+simplification tactics.  Finally, the list of \simpset{} fragments
+(the \ml{ssdata} values), are merged into the underlying \simpset{},
+allowing the user to merge in additional simplification capabilities
+if desired.
+
+For example, to include the Presburger decision procedure, one could
+write
+\begin{verbatim}
+   SRW_TAC [ARITH_ss][]
+\end{verbatim}
+\HOL's standard \simpset{} fragments are described below in
+Section~\ref{sec:simpset-fragments}.
+
+\ml{SRW\_TAC} performs the same mixture of simplification and
+goal-splitting as does \ml{RW\_TAC}.  The main differences between the
+two tactics lie in the fact that the latter can be inefficient when
+working with a large \ml{TypeBase}, and in the fact that working with
+\ml{SRW\_TAC} saves one from having to explicitly construct
+\simpset{}s that include all of the current context's ``appropriate''
+rewrites.  The latter ``advantage'' is based on the assumption that
+\ml{(srw\_ss())} never includes inappropriate rewrites.  The presence
+of unused rewrites is never a concern: the presence of rewrites that
+do the wrong thing can be a major irritation.
 
 \subsection{The standard \simpset{}s}
 \label{sec:standard-simpsets}
@@ -1298,7 +1400,8 @@ efficient, but less general than the simplifier.  For example:
 \end{verbatim}
 \end{session}
 
-\subsubsection{The ``stateful'' \simpset---\texttt{srw\_ss()}}
+\subsubsection{The ``stateful'' \simpset---\ml{srw\_ss()}}
+\label{sec:srw_ss}
 \index{srw_ss@\ml{srw\_ss}}
 
 The last \simpset{} exported by \ml{bossLib} is hidden behind a
@@ -1338,8 +1441,9 @@ This versatility is illustrated in the following example:
 > val it = |- x IN {y | y < 6} = x < 6 : thm
 \end{verbatim}
 \end{session}
-
+%
 Users can augment the stateful \simpset{} themselves with the function
+%
 \begin{boxed}
 \index{export_rewrites@\ml{export\_rewrites}}
 \begin{verbatim}
@@ -1377,6 +1481,7 @@ performance, so the \simpset{} fragments containing these procedures
 should be added manually to those simplification invocations that need them.
 
 \subsection{\Simpset{} fragments}
+\label{sec:simpset-fragments}
 
 \subsection{Rewriting with the simplifier}
 \label{sec:simplifier-rewriting}
