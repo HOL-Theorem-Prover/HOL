@@ -336,12 +336,19 @@ fun is_enum_type_spec astl =
     Build a tyinfo list for an enumerated type.
    ---------------------------------------------------------------------- *)
 
-fun build_enum_tyinfo (tyname, ast) =
- let open EnumType
- in case ast
-     of Constructors clist => (enum_type_to_tyinfo (tyname, map #1 clist))
-      | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
- end
+fun build_enum_tyinfo (tyname, ast) = let
+  open EnumType
+in
+  case ast of
+    Constructors clist => let
+      val constructors = map #1 clist
+    in
+      case duplicate_names constructors of
+        NONE => (enum_type_to_tyinfo (tyname, constructors))
+      | SOME s => raise ERR "build_enum" ("Duplicate constructor name: "^s)
+    end
+  | otherwise => raise ERR "build_enum_tyinfo" "Should never happen"
+end
 
 fun build_enum_tyinfos astl = map build_enum_tyinfo astl
 
@@ -382,7 +389,185 @@ in
         of NONE => (HOL_MESG "Couldn't define size function"; tyinfol)
       | SOME s => insert_size s tyinfol
     end;
-end;
+end
+
+val bigrec_subdivider_string = "__brss__"
+
+fun pretype_ops acc ptysl =
+    case ptysl of
+      [] => acc
+    | (ptys :: rest) => let
+      in
+        case ptys of
+          [] => pretype_ops acc rest
+        | (pty :: more_ptys) => let
+          in
+            case pty of
+              dTyop {Args, Thy, Tyop} =>
+              pretype_ops (HOLset.add(acc, Tyop)) (Args :: more_ptys :: rest)
+            | _ => pretype_ops acc (more_ptys :: rest)
+          end
+      end
+
+fun toLists a = let
+  open Array2
+  val (m, n) = dimensions a
+  fun foldthis (i,j,v,acc) =
+      if j = n - 1 then
+        if i = m - 1 then
+          List.rev (List.rev (v :: hd acc) :: tl acc)
+        else
+          List.rev (v :: hd acc) :: tl acc
+      else if j = 0 then [v] :: acc
+      else (v :: hd acc) :: tl acc
+in
+  foldi RowMajor foldthis [] {base = a, row = 0, col = 0, nrows = NONE,
+                              ncols = NONE}
+end
+
+fun build_reference_matrix astl = let
+  val newnames = map #1 astl
+  val n = length newnames
+  exception NoDex
+  fun dex s [] = raise NoDex
+    | dex s (h::t) = if s = h then 0 else 1 + dex s t
+  val array = Array2.array(n,n,false)
+  fun refers_to ast =
+      case ast of
+        Record flds => let
+          fun foldthis ((_, pty), acc) = pretype_ops acc [[pty]]
+        in
+          foldl foldthis (HOLset.empty String.compare) flds
+        end
+      | Constructors cs => let
+          fun foldthis ((_, ptys), acc) = pretype_ops acc [ptys]
+        in
+          foldl foldthis (HOLset.empty String.compare) cs
+        end
+  fun record_refs (tyname, ast) = let
+    val i = dex tyname newnames
+    fun appthis s = Array2.update(array, i, dex s newnames, true)
+                    handle NoDex => ()
+  in
+    HOLset.app appthis (refers_to ast)
+  end
+in
+  app record_refs astl ;
+  array
+end
+
+fun calculate_transitive_closure a = let
+  open Array2
+  nonfix via
+  val n = nCols a
+  fun check i =
+      modifyi RowMajor
+              (fn (j,k,v) => v orelse (sub(a,j,i) andalso sub(a,i,k)))
+              { base = a, row = 0, col = 0, nrows = NONE, ncols = NONE}
+  fun via i =
+      if i = n then ()
+      else (check i ; via (i + 1))
+in
+  via 0
+end
+
+fun topo_sort a = let
+  (* return the elements of the graph in a topological order,
+     treating elements in loops as equivalent.  Function returns a list of
+     lists of integers, where the integers index the nodes.  Lists are
+     never empty.  If not singleton, this represents a loop *)
+  open Array2
+  val n = nRows a
+  fun findloops () = let
+    (* return a list of lists,  not sorted topologically, but which
+       encompasses loop structure *)
+    val done = Array.array(n, false)
+    fun check_row i = let
+      fun findothers acc j =
+          if j = n then List.rev acc
+          else if sub(a, i, j) andalso sub(a, j, i) andalso i <> j then
+            (Array.update(done, j, true);
+             findothers (j::acc) (j + 1))
+          else findothers acc (j + 1)
+    in
+      findothers [i] 0
+    end
+    fun check_rows i =
+        if i = n then []
+        else if Array.sub(done, i) then check_rows (i + 1)
+        else (check_row i :: check_rows (i + 1))
+  in
+    check_rows 0
+  end
+  val blocks = findloops()
+  fun zero_column j =
+      modifyi ColMajor (fn _ => false)
+              {base = a, col = j, row = 0, nrows = NONE, ncols = SOME 1}
+  fun pull_out_next bs =
+      case bs of
+        [] => raise Fail "Can't happen"
+      | [b] => (List.app zero_column b; (b, []))
+      | b :: rest => let
+          val i = hd b
+          fun check j =
+              (* j and later indices are ok iff : *)
+              j = n orelse
+              ((not (sub(a, i, j)) orelse mem j b) andalso
+               check (j + 1))
+        in
+          if check 0 then (List.app zero_column b; (b, rest))
+          else let
+              val (best, rest') = pull_out_next rest
+            in
+              (best, (b :: rest'))
+            end
+        end
+  fun pull_out_oks blist =
+      case blist of
+        [] => []
+      | _ => let
+          val (b, rest) = pull_out_next blist
+        in
+          b :: pull_out_oks rest
+        end
+in
+  pull_out_oks blocks
+end
+
+
+
+
+(*
+fun really_handle_big_record (tyname, fields) = let
+  fun split_fields fldlist = let
+    val len = length fldlist
+  in
+    if len <= 20 then let
+        val (l1, l2) = split_after (len div 2) fldlist
+      in
+        [l1, l2]
+      end
+    else let
+        val (pfx, sfx) = split_after 10 fldlist
+      in
+        pfx :: split_fields sfx
+      end
+  end
+in
+  ()
+end
+
+fun handle_big_record ast =
+    case ast of
+      (tyname, Constructors _) => ast
+    | (tyname, Record fields) => if length fields > 10 then
+                                   really_handle_big_record (tyname, fields)
+                                 else ast
+
+fun handle_big_records astl =
+    map handle_big_record astl
+
+*)
 
 local fun add_record_facts (tyinfo, NONE) = (tyinfo, "")
         | add_record_facts (tyinfo, SOME fields) =
@@ -390,16 +575,40 @@ local fun add_record_facts (tyinfo, NONE) = (tyinfo, "")
       fun field_names_of (_,Record l) = SOME (map fst l)
         | field_names_of _ = NONE
 in
+fun prim_define_type_from_astl db astl =
+  if is_enum_type_spec astl then
+    build_enum_tyinfos astl
+  else map add_record_facts
+           (zip (build_tyinfos db (new_asts_datatype astl))
+                (map field_names_of astl))
+end (* local *)
+
+fun sort_astl astl = let
+  val adjs = build_reference_matrix astl
+  val _ = calculate_transitive_closure adjs
+  val sorted = topo_sort adjs
+  fun dex_to_astl i = List.nth(astl, i)
+in
+  map (map dex_to_astl) sorted
+end
+
+fun define_type_from_astl db astl = let
+  val sorted_astll = sort_astl astl
+  fun foldthis (astl, (db, tyinfo_acc)) = let
+    val new_tyinfos = prim_define_type_from_astl db astl
+    fun foldthis' ((tyi, _), db) = TypeBasePure.add db tyi
+  in
+    (List.foldl foldthis' db new_tyinfos, tyinfo_acc @ new_tyinfos)
+  end
+in
+  #2 (List.foldl foldthis (db, []) sorted_astll)
+end
+
 fun primHol_datatype db q =
  let val astl = ParseDatatype.parse q handle (e as HOL_ERR _) => Raise e
  in
-    if is_enum_type_spec astl
-      then build_enum_tyinfos astl
-      else map add_record_facts
-                 (zip (build_tyinfos db (new_asts_datatype astl))
-                      (map field_names_of astl))
+   define_type_from_astl db astl
  end
-end (* local *)
 
 
 
