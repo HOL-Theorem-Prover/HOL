@@ -6,6 +6,11 @@ Bugs fixed:
   * Hol_datatype didn't allow a constructor of a new type "ty" to be
     "mk_ty".
 
+  * Konrad fixed numerous TFL bugs but hasn't put anything here about
+    them yet.
+
+  * numLib.REDUCE_CONV failed to reduce terms of the form ``0 >= x``.
+
 New theories:
 -------------
 
@@ -14,4 +19,5 @@ New tools:
   * A new decision procedure for Presburger arithmetic over the
     integers and natural numbers.  This is an implementation of
     Cooper's algorithm, and is complete.  It allows any alternation of
-    quantifiers including ?! (exists unique).
+    quantifiers including ?! (exists unique).  It is not very
+    efficient, but proves many results in a few seconds.
