@@ -1,34 +1,11 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
+     seqTheory pred_setTheory ind_typeTheory listTheory
+     rich_listTheory pairTheory combinTheory realLib probTools
+     boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
+     prob_extraTools prob_canonTheory prob_canonTools
+     prob_algebraTheory;
 
 val _ = new_theory "prob";
-
-(* interactive mode
-if !show_assums then () else
- (load "bossLib";
-  load "realLib";
-  load "arithmeticTheory";
-  load "pred_setTheory";
-  load "ind_typeTheory";
-  load "rich_listTheory";
-  load "pairTheory";
-  load "combinTheory";
-  load "probUtil";
-  load "booleanSequenceTheory";
-  load "booleanSequenceTools";
-  load "prob_extraTheory";
-  load "prob_extraTools";
-  load "prob_canonTheory";
-  load "prob_canonTools";
-  load "prob_algebraTheory";
-  show_assums := true);
-*)
-
-open bossLib arithmeticTheory realTheory seqTheory pred_setTheory
-     ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
-     probTools boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
-     prob_extraTools prob_canonTheory prob_canonTools prob_algebraTheory;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >>;
@@ -38,6 +15,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of probability.                                            *)
@@ -540,7 +518,7 @@ val PROB_STL = store_thm
 val PROB_SDROP = store_thm
   ("PROB_SDROP",
    ``!n p. measurable p ==> (prob (p o SDROP n) = prob p)``,
-   Induct >> RW_TAC std_ss [o_DEF, I_THM, SDROP_def]
+   Induct >> RW_TAC std_ss' [o_DEF, I_THM, SDROP_def]
    ++ RW_TAC std_ss [o_ASSOC, SDROP_def]
    ++ KNOW_TAC `measurable (p o SDROP n)` >> PROVE_TAC [MEASURABLE_SDROP]
    ++ PROVE_TAC [PROB_STL]);
@@ -550,7 +528,7 @@ val PROB_INTER_HALVES = store_thm
    ``!p. measurable p
          ==> (prob ((\x. SHD x = T) INTER p) + prob ((\x. SHD x = F) INTER p)
 	      = prob p)``,
-   RW_TAC std_ss []
+   RW_TAC std_ss' []
    ++ SUFF_TAC `prob (SHD INTER p UNION (\x. ~SHD x) INTER p)
                 = prob (SHD INTER p) + prob ((\x. ~SHD x) INTER p)`
    >> (SUFF_TAC `SHD INTER p UNION (\x. ~SHD x) INTER p  = p`
@@ -559,7 +537,7 @@ val PROB_INTER_HALVES = store_thm
        ++ PROVE_TAC [])
    ++ MATCH_MP_TAC PROB_ADDITIVE
    ++ MP_TAC (Q.SPEC `p` MEASURABLE_INTER_HALVES)
-   ++ RW_TAC std_ss []
+   ++ RW_TAC std_ss' []
    ++ PSET_TAC []
    ++ PROVE_TAC []);
 

@@ -1,37 +1,11 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
+     seqTheory pred_setTheory ind_typeTheory listTheory
+     rich_listTheory pairTheory combinTheory realLib probTools
+     boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
+     prob_extraTools prob_canonTheory prob_canonTools
+     prob_algebraTheory probTheory state_transformerTheory;
 
 val _ = new_theory "prob_indep";
-
-(* interactive mode
-if !show_assums then () else
- (load "bossLib";
-  load "realLib";
-  load "arithmeticTheory";
-  load "pred_setTheory";
-  load "ind_typeTheory";
-  load "rich_listTheory";
-  load "pairTheory";
-  load "combinTheory";
-  load "probTools";
-  load "boolean_sequenceTheory";
-  load "boolean_sequenceTools";
-  load "prob_extraTheory";
-  load "prob_extraTools";
-  load "prob_canonTheory";
-  load "prob_canonTools";
-  load "prob_algebraTheory";
-  load "probTheory";
-  load "state_transformerTheory";
-  show_assums := true);
-*)
-
-open bossLib arithmeticTheory realTheory seqTheory pred_setTheory
-     ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
-     probTools boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
-     prob_extraTools prob_canonTheory prob_canonTools prob_algebraTheory
-     probTheory state_transformerTheory;
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >>;
@@ -41,6 +15,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (* ------------------------------------------------------------------------- *)
 (* The definition of independence.                                           *)
@@ -210,7 +185,7 @@ val ALG_COVER_SET_CASES_THM = store_thm
          POP_ASSUM (MP_TAC o Q.SPEC `SCONS F v`)
          ++ PSET_TAC [ALGEBRA_EMBED_TLS]])
     ++ MATCH_MP_TAC ALG_SORTED_PREFIXFREE_EQUALITY
-    ++ RW_TAC std_ss [] <<
+    ++ RW_TAC std_ss' [] <<
     [RW_TAC list_ss [APPEND_MEM]
      ++ REVERSE EQ_TAC >> PROVE_TAC [MEM_FILTER]
      ++ Cases_on `x` >> RW_TAC std_ss []
@@ -401,13 +376,14 @@ val ALG_COVER_TAIL_MEASURABLE = store_thm
               = measurable q)``,
    HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ CONJ_TAC
-   >> PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
+   >> (PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
+       ++ RW_TAC std_ss' [])
    ++ RW_TAC std_ss []
    ++ MP_TAC (Q.SPECL [`l1`, `l2`, `q`] ALG_COVER_TAIL_STEP)
    ++ MP_TAC MEASURABLE_HALVES
    ++ MP_TAC (Q.SPEC `T` MEASURABLE_INTER_SHD)
    ++ MP_TAC (Q.SPEC `F` MEASURABLE_INTER_SHD)
-   ++ RW_TAC std_ss []
+   ++ RW_TAC std_ss' []
    ++ RW_TAC std_ss [o_ASSOC]);
 
 val ALG_COVER_TAIL_PROB = store_thm
@@ -417,7 +393,8 @@ val ALG_COVER_TAIL_PROB = store_thm
      ==> (prob (q o (\x. SDROP (LENGTH (alg_cover l x)) x)) = prob q)``,
    HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ CONJ_TAC
-   >> PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
+   >> (PSET_TAC [ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, o_DEF, I_THM]
+       ++ RW_TAC std_ss' [])
    ++ RW_TAC std_ss []
    ++ MP_TAC (Q.SPECL [`l1`, `l2`, `q`] ALG_COVER_TAIL_STEP)
    ++ RW_TAC std_ss []
@@ -430,16 +407,16 @@ val ALG_COVER_TAIL_PROB = store_thm
 	  + prob ((\x. ~SHD x) INTER q
 		  o (\x. SDROP (LENGTH (alg_cover l2 x)) x) o STL)` <<
    [RES_TAC
-    ++ RW_TAC std_ss []
+    ++ RW_TAC std_ss' []
     ++ MP_TAC (Q.SPECL [`T`, `q o (\x. SDROP (LENGTH (alg_cover l1 x)) x)`]
 	       PROB_INTER_SHD)
     ++ MP_TAC (Q.SPECL [`F`, `q o (\x. SDROP (LENGTH (alg_cover l2 x)) x)`]
 	       PROB_INTER_SHD)
-    ++ RW_TAC std_ss [ALG_COVER_TAIL_MEASURABLE, o_ASSOC, X_HALF_HALF],
+    ++ RW_TAC std_ss' [ALG_COVER_TAIL_MEASURABLE, o_ASSOC, X_HALF_HALF],
     MATCH_MP_TAC PROB_ADDITIVE
     ++ MP_TAC (Q.SPEC `T` MEASURABLE_INTER_SHD)
     ++ MP_TAC (Q.SPEC `F` MEASURABLE_INTER_SHD)
-    ++ RW_TAC std_ss [o_ASSOC, ALG_COVER_TAIL_MEASURABLE]
+    ++ RW_TAC std_ss' [o_ASSOC, ALG_COVER_TAIL_MEASURABLE]
     ++ PSET_TAC []
     ++ PROVE_TAC []]);
 
@@ -452,8 +429,9 @@ val INDEP_INDEP_SET_LEMMA = store_thm
           = (1 / 2) pow LENGTH x * prob q)``,
    HO_MATCH_MP_TAC ALG_COVER_SET_INDUCTION
    ++ REPEAT STRIP_TAC
-   >> PSET_TAC [MEM, ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, I_THM, o_DEF,
-		ALG_EMBED_BASIC, pow, REAL_MUL_LID]
+   >> (PSET_TAC [MEM, ALG_COVER_UNIV, K_DEF, LENGTH, SDROP_def, I_THM, o_DEF,
+                 ALG_EMBED_BASIC, pow, REAL_MUL_LID]
+       ++ RW_TAC std_ss' [])
    ++ RW_TAC std_ss []
    ++ MP_TAC ALG_COVER_TAIL_STEP
    ++ RW_TAC std_ss []
@@ -463,7 +441,7 @@ val INDEP_INDEP_SET_LEMMA = store_thm
    ++ RW_TAC std_ss [ALG_EMBED_BASIC]
    ++ MP_TAC HALVES_INTER
    ++ Cases_on `h` <<
-   [RW_TAC std_ss []
+   [RW_TAC std_ss' []
     ++ RW_TAC std_ss [GSYM INTER_ASSOC]
     ++ KNOW_TAC `(SHD INTER alg_embed t o STL) INTER (\x. ~SHD x)
                  = (SHD INTER (\x. ~SHD x)) INTER alg_embed t o STL`
@@ -483,14 +461,14 @@ val INDEP_INDEP_SET_LEMMA = store_thm
                          (alg_cover l1 x)) x)`] PROB_INTER_SHD)
     ++ SUFF_TAC `measurable (alg_embed t INTER q o (\x. SDROP (LENGTH
                          (alg_cover l1 x)) x))`
-    >> RW_TAC std_ss []
+    >> RW_TAC std_ss' []
     ++ MATCH_MP_TAC MEASURABLE_INTER
     ++ RW_TAC std_ss [ALG_COVER_TAIL_MEASURABLE]
     ++ KILL_ALL_TAC
     ++ RW_TAC std_ss [measurable_def]
     ++ Q.EXISTS_TAC `[t]`
     ++ PSET_TAC [algebra_embed_def],
-    RW_TAC std_ss []
+    RW_TAC std_ss' []
     ++ RW_TAC std_ss [GSYM INTER_ASSOC]
     ++ KNOW_TAC `((\x. ~SHD x) INTER alg_embed t o STL) INTER SHD
                  = (SHD INTER (\x. ~SHD x)) INTER alg_embed t o STL`
@@ -541,7 +519,7 @@ val INDEP_INDEP_SET = store_thm
        indep f /\ measurable q ==> indep_set (p o FST o f) (q o SND o f)``,
    RW_TAC std_ss [indep_def, o_DEF]
    ++ RW_TAC std_ss []
-   ++ RW_TAC std_ss [GSYM o_DEF, o_ASSOC, ALG_COVER_HEAD]
+   ++ RW_TAC std_ss' [GSYM o_DEF, o_ASSOC, ALG_COVER_HEAD]
    ++ MATCH_MP_TAC INDEP_SET_LIST
    ++ RW_TAC std_ss [] <<
    [PROVE_TAC [alg_cover_set_def, ALG_SORTED_FILTER],
@@ -676,7 +654,7 @@ val INDEP_MEASURABLE1 = store_thm
        indep f ==> measurable (p o FST o f)``,
    RW_TAC std_ss [indep_def]
    ++ RW_TAC std_ss [o_DEF]
-   ++ RW_TAC std_ss [GSYM o_DEF, o_ASSOC]
+   ++ RW_TAC std_ss' [GSYM o_DEF, o_ASSOC]
    ++ RW_TAC std_ss [ALG_COVER_HEAD]
    ++ RW_TAC std_ss [MEASURABLE_ALGEBRA]);
 

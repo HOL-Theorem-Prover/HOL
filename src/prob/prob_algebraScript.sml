@@ -1,35 +1,10 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
+open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
+     seqTheory pred_setTheory ind_typeTheory listTheory
+     rich_listTheory pairTheory combinTheory realLib probTools
+     boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
+     prob_extraTools prob_canonTheory prob_canonTools numSyntax;
 
 val _ = new_theory "prob_algebra";
-
-(* interactive mode
-if !show_assums then () else (
-  load "bossLib";
-  load "numLib";
-  load "realLib";
-  load "arithmeticTheory";
-  load "pred_setTheory";
-  load "ind_typeTheory";
-  load "rich_listTheory";
-  load "pairTheory";
-  load "combinTheory";
-  load "probTools";
-  load "boolean_sequenceTheory";
-  load "boolean_sequenceTools";
-  load "prob_extraTheory";
-  load "prob_extraTools";
-  load "prob_canonTheory";
-  load "prob_canonTools";
-  show_assums := true
-);
-*)
-
-open bossLib arithmeticTheory realTheory seqTheory pred_setTheory
-     ind_typeTheory listTheory rich_listTheory pairTheory combinTheory realLib
-     probTools boolean_sequenceTheory boolean_sequenceTools prob_extraTheory
-     prob_extraTools prob_canonTheory prob_canonTools numSyntax;
 
 infixr 0 ++ << || ORELSEC ## -->;
 infix 1 >> |->;
@@ -39,6 +14,7 @@ val op++ = op THEN;
 val op<< = op THENL;
 val op|| = op ORELSE;
 val op>> = op THEN1;
+val std_ss' = simpLib.++ (std_ss, boolSimps.ETA_ss);
 
 (* ------------------------------------------------------------------------- *)
 (* Definition of the embedding function from boolean list lists to boolean   *)
@@ -442,7 +418,7 @@ val MEASURABLE_STL = store_thm
 val MEASURABLE_SDROP = store_thm
   ("MEASURABLE_SDROP",
    ``!n p. measurable (p o SDROP n) = measurable p``,
-   Induct >> RW_TAC std_ss [SDROP_def, o_DEF, I_THM]
+   Induct >> RW_TAC std_ss' [SDROP_def, o_DEF, I_THM]
    ++ RW_TAC std_ss [SDROP_def, o_ASSOC, MEASURABLE_STL]);
 
 val MEASURABLE_INTER_HALVES = store_thm
