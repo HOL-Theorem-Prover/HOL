@@ -21,20 +21,13 @@ struct
   val << = String.<
 
 
-open Arith_cons;
-open Qconv; infix THENC;
-open Solve;
-open Exists_arith;
-open Sub_and_cond;
-open Prenex;
-open Instance;
 open HolKernel boolLib Rsyntax;
+open Arith_cons Solve Exists_arith Sub_and_cond Prenex Instance
+open Qconv; infix THENC;
 
 val REWRITE_CONV = Rewrite.REWRITE_CONV;
 
-fun failwith function = raise HOL_ERR{origin_structure = "Gen_arith",
-                                      origin_function = function,
-                                      message = ""};
+fun failwith function = raise (mk_HOL_ERR "Gen_arith" function "");
 
 
 (*---------------------------------------------------------------------------*)

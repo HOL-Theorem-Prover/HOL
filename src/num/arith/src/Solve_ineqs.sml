@@ -17,35 +17,15 @@
 
 structure Solve_ineqs :> Solve_ineqs =
 struct
-  open Arbint
-  val << = String.<
-  infix <<
+  open Arbint HolKernel boolLib
+       Int_extra Arith_cons Term_coeffs Qconv Theorems Thm_convs
+       Norm_arith Norm_ineqs reduceLib;
 
+val << = String.<
+infix << THENC ##;
 
 val num_CONV = Num_conv.num_CONV;
-open Feedback;
-open Int_extra;
-open Arith_cons;
-open Term_coeffs;
-open Qconv; infix THENC;
-open Theorems;
-open Thm_convs;
-open Norm_arith;
-open Norm_ineqs;
-open reduceLib;
-open Term;
-open boolSyntax;
-open Thm;
-open Drule;
-open Lib;
-
-infix ##;
 val MATCH_MP = Drule.MATCH_MP;
-
-
-   type term = Term.term
-   type thm  = Thm.thm
-   type conv = Abbrev.conv
 
 fun failwith function = raise HOL_ERR{origin_structure = "Solve_ineqs",
                                       origin_function = function,

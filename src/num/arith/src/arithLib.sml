@@ -1,10 +1,7 @@
 structure arithLib :> arithLib =
 struct
 
-  open Arith
-  type term = Term.term
-  type thm  = Thm.thm
-  type conv = Abbrev.conv
+  open Abbrev Arith
 
   val ARITH_PROVE = Drule.EQT_ELIM o ARITH_CONV
 

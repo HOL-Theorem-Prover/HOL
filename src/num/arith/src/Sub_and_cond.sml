@@ -18,12 +18,12 @@
 
 structure Sub_and_cond :> Sub_and_cond =
 struct
-  open Arbint HolKernel boolLib Qconv Thm_convs Parse Rsyntax;
+  open Arbint HolKernel Parse boolLib Qconv Thm_convs Rsyntax;
 
 val COND_ABS       = boolTheory.COND_ABS;
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;
 
-infix THENC; infix ORELSEC; infix |->
+infix THENC ORELSEC |->;
 
 fun failwith function =
    raise HOL_ERR{origin_structure = "Sub_and_cond",
@@ -36,11 +36,11 @@ fun failwith function =
 (*---------------------------------------------------------------------------*)
 
 fun COND_ABS_CONV tm =
- (let val {Bvar = v,Body = bdy} = dest_abs tm
-      val {cond,larm = x,rarm = y} = Rsyntax.dest_cond bdy
+ (let val {Bvar=v,Body=bdy} = dest_abs tm
+      val {cond,larm=x,rarm=y} = Rsyntax.dest_cond bdy
       val b = assert (not o Lib.mem v o free_vars) cond
-      val xf = mk_abs{Bvar = v,Body = x}
-      and yf = mk_abs{Bvar = v,Body = y}
+      val xf = mk_abs{Bvar=v,Body=x}
+      and yf = mk_abs{Bvar=v,Body=y}
       val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
       val th2 = SPECL [b,xf,yf] th1
   in  CONV_RULE (RATOR_CONV (RAND_CONV (ABS_CONV

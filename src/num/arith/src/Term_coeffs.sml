@@ -24,10 +24,7 @@ struct
   val << = String.<
   infix << ##;
 
-fun failwith function = raise
- Feedback.HOL_ERR{origin_structure = "Term_coeffs",
-                   origin_function = function,
-                          message = ""};
+fun failwith function = raise (mk_HOL_ERR "Term_coeffs" function "");
 
 
 (*===========================================================================*)
@@ -135,8 +132,8 @@ fun vars_of_coeffs coeffsl =
 (*---------------------------------------------------------------------------*)
 
 fun var_of_prod tm =
- (#Name (dest_var tm)) handle _ =>
- (#Name (dest_var (rand tm))) handle _ =>
+ (#Name (dest_var tm)) handle HOL_ERR _ =>
+ (#Name (dest_var (rand tm))) handle HOL_ERR _ =>
  failwith "var_of_prod";
 
 (*---------------------------------------------------------------------------*)
@@ -159,13 +156,13 @@ fun coeffs_of_arith tm =
           (let val (prod,rest) = dest_plus tm
            in  (var_of_prod prod,coeff prod)::(coeffs rest)
            end
-          ) handle _ => [(var_of_prod tm,coeff tm)]
+          ) handle HOL_ERR _ => [(var_of_prod tm,coeff tm)]
    in  (let val (const,rest) = dest_plus tm
         in  (int_of_term const,coeffs rest)
         end)
-       handle _ => (int_of_term tm,[])
-       handle _ => (zero,coeffs tm)
-       handle _ => failwith "coeffs_of_arith"
+       handle HOL_ERR _ => (int_of_term tm,[])
+       handle HOL_ERR _ => (zero,coeffs tm)
+       handle HOL_ERR _ => failwith "coeffs_of_arith"
    end;
 
 (*---------------------------------------------------------------------------*)
@@ -190,7 +187,7 @@ fun coeffs_of_leq tm =
         and coeffs2 = coeffs_of_arith tm2
     in  merge_coeffs coeffs1 coeffs2
     end
-   ) handle _ => failwith "coeffs_of_leq";
+   ) handle HOL_ERR _ => failwith "coeffs_of_leq";
 
 (*---------------------------------------------------------------------------*)
 (* coeffs_of_leq_set : term -> (int * (string * int) list) list              *)
@@ -200,7 +197,9 @@ fun coeffs_of_leq tm =
 (*---------------------------------------------------------------------------*)
 
 fun coeffs_of_leq_set tm =
- map coeffs_of_leq (strip_conj tm) handle _ => failwith "coeffs_of_leq_set";
+ map coeffs_of_leq (strip_conj tm) 
+     handle HOL_ERR _ => 
+ failwith "coeffs_of_leq_set";
 
 (*===========================================================================*)
 (* Constructing terms from coefficients and variable names                   *)
@@ -227,8 +226,8 @@ fun build_arith (const,bind) = let
   fun build bind =
     if (null bind) then zero_tm
     else let
-      val (name,coeff) = hd bind
-      and rest = build (tl bind)
+      val (name,coeff) = Lib.trye hd bind
+      and rest = build (Lib.trye tl bind)
     in
       if (coeff = zero) then rest
       else let
@@ -244,7 +243,7 @@ in
   if is_zero rest then c
   else if (const = zero) then rest
        else mk_plus (c,rest)
-end) handle _ => failwith "build_arith"
+end) handle HOL_ERR _ => failwith "build_arith"
 end;
 
 (*---------------------------------------------------------------------------*)

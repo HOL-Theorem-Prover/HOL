@@ -17,26 +17,16 @@
 
 structure Norm_ineqs :> Norm_ineqs =
 struct
-  open Arbint
-  val << = String.<
-  infix <<
 
 
-open Arith_cons;
-open Term_coeffs;
-open Qconv; infix THENC;
-open Thm_convs;
-open Norm_bool;
-open Norm_arith;
-open HolKernel;
+open Arbint HolKernel Arith_cons Term_coeffs Qconv 
+     Thm_convs Norm_bool Norm_arith;
 
-  type term = Term.term
-  type conv = Abbrev.conv
+val << = String.<
 
+infix THENC <<;
 
-fun failwith f =
-  raise HOL_ERR{origin_structure = "Norm_ineqs",
-                origin_function = f, message = ""};
+fun failwith f = raise (mk_HOL_ERR "Norm_ineqs" f "")
 
 
 (*===========================================================================*)
@@ -106,9 +96,9 @@ val LESS_OR_EQ_GATHER_CONV =
  let fun subtract_common_terms bind1 bind2 =
         if (null bind1) then ([],[],bind2)
         else if (null bind2) then ([],bind1,[])
-        else (let val (name1:string,coeff1:int) = hd bind1
-                  and (name2,coeff2) = hd bind2
-              in  if (name1 = name2) then
+        else let val (name1:string,coeff1:int) = hd bind1
+                 and (name2,coeff2) = hd bind2
+             in  if (name1 = name2) then
                      (let val (c,b1,b2) =
                              subtract_common_terms (tl bind1) (tl bind2)
                       in  if (coeff1 = coeff2) then ((name1,coeff1)::c,b1,b2)
@@ -127,7 +117,7 @@ val LESS_OR_EQ_GATHER_CONV =
                                subtract_common_terms bind1 (tl bind2)
                         in  (c,b1,(name2,coeff2)::b2)
                         end)
-              end)
+             end
  in fn tm =>
  (let val (tm1,tm2) = dest_leq tm
       val (const1,bind1) = coeffs_of_arith tm1

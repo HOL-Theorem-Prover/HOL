@@ -17,11 +17,7 @@
 
 structure Int_extra :> Int_extra =
 struct
-  open Arbint
-  val << = String.<
-
-
-open Feedback;
+  open Arbint Feedback;
 
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Greatest Common Divisor of two integers.          *)

@@ -17,15 +17,9 @@
 
 structure Thm_convs :> Thm_convs =
 struct
-  open Arbint
-  val << = String.<
-
-
-open HolKernel boolTheory Drule Theorems Parse;
+open Arbint HolKernel Parse boolTheory Drule Theorems;
 
 infix |->;
-val alpha = Type.alpha
-and beta  = Type.beta;
 
 val GSYM      = Conv.GSYM;
 val REWR_CONV = Conv.REWR_CONV;
@@ -197,8 +191,8 @@ val SUB_NORM_CONV =
 (* Conversions for normalising and eliminating conditionals                  *)
 (*===========================================================================*)
 
-val COND_RATOR_CONV = REWR_CONV COND_RATOR;
-val COND_RAND_CONV = REWR_CONV COND_RAND;
+val COND_RATOR_CONV  = REWR_CONV COND_RATOR
+val COND_RAND_CONV   = REWR_CONV COND_RAND
 val COND_EXPAND_CONV = REWR_CONV COND_EXPAND;
 
 end

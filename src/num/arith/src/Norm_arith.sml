@@ -17,8 +17,8 @@
 
 structure Norm_arith :> Norm_arith =
 struct
-  open Arbint Arith_cons Term_coeffs Qconv Theorems Thm_convs 
-       reduceLib HolKernel boolLib Rsyntax;
+  open Arbint HolKernel boolLib Rsyntax
+       Arith_cons Term_coeffs Qconv Theorems Thm_convs reduceLib;
 
 
   val << = String.<
@@ -27,11 +27,7 @@ struct
 
 val num_CONV = Num_conv.num_CONV;
 
-
-fun failwith function = raise
-            HOL_ERR{origin_structure = "Norm_arith",
-                    origin_function = function,
-                            message = ""};
+fun failwith function = raise (mk_HOL_ERR "Norm_arith" function "");
 
 (*===========================================================================*)
 (* Conversions for normalizing arithmetic                                    *)
@@ -107,7 +103,7 @@ fun NUM_RELN_NORM_CONV arith_conv leq_conv tm =
              leq_conv)
          else if (is_geq tm) then (GEQ_NORM_CONV THENC leq_conv)
          else failwith "fail")) tm
- ) handle (Feedback.HOL_ERR _) => failwith "NUM_RELN_NORM_CONV";
+ ) handle e => raise (wrap_exn "Norm_arith" "NUM_RELN_NORM_CONV" e);
 
 (*---------------------------------------------------------------------------*)
 (* MULT_CONV : conv                                                          *)

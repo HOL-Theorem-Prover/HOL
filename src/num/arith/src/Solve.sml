@@ -23,10 +23,7 @@ struct
 
 infix THENC;
 
-fun failwith function = raise
- HOL_ERR{origin_structure = "Solve",
-         origin_function = function,
-                  message = ""};
+fun failwith function = raise (mk_HOL_ERR "Solve" function  "")
 
 
 (*---------------------------------------------------------------------------*)

@@ -17,27 +17,12 @@
 
 structure Norm_bool :> Norm_bool =
 struct
-  open Arbint
-  val << = String.<
 
-
-open Arith_cons;
-open Thm_convs;
-open HolKernel boolSyntax
-open Qconv;
-
-type conv = Abbrev.conv;
-type term = Term.term;
+open Arbint HolKernel boolSyntax Arith_cons Thm_convs Qconv;
 
 infix THENC;
 
-fun failwith function = raise
-           HOL_ERR{origin_structure = "Norm_bool",
-                    origin_function = function,
-                            message = ""};
-
-val rand = Term.rand;
-
+fun failwith function = raise (mk_HOL_ERR "Norm_bool" function "");
 
 (*===========================================================================*)
 (* Conversions for normalizing Boolean terms                                 *)

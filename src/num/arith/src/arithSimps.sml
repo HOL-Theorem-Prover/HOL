@@ -20,6 +20,10 @@ val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 fun -- q x = Term q
 fun == q x = Type q
 
+
+val zero_tm  = numSyntax.zero_tm
+val dest_suc = numSyntax.dest_suc;
+
 (* ---------------------------------------------------------------------*
  * LIN: Linear arithmetic expressions                                   *
  * ---------------------------------------------------------------------*)
@@ -27,7 +31,7 @@ fun == q x = Type q
 val mk_numeral = term_of_int;
 val dest_numeral = int_of_term;
 
-datatype lin = LIN of ((term * int) list * int);
+datatype lin = LIN of (term * int) list * int;
 
 fun term_ord (t1,t2) =
     if is_var t1 then
@@ -53,12 +57,6 @@ fun term_ord (t1,t2) =
 	     | x => x
 	else LESS
     else failwith "term_ord";
-
-val zero_tm = (--`0`--);
-
-fun dest_SUC tm =
-    if (fst(dest_const(rator tm)) = "SUC") then rand tm else fail();
-
 
 val mk_lin =
   let fun tmord ((term1,n1:int),(term2,n2)) =
@@ -90,7 +88,6 @@ fun is_neg_tm (tm,n) = n < zero
 fun term_of_tm (tm,n) =
    if (abs n = one) then tm
    else mk_mult (mk_numeral (abs n),tm);
-
 
 val list_mk_plus = end_foldr mk_plus;
 val list_mk_mult = end_foldr mk_mult;
@@ -134,7 +131,7 @@ fun lin_of_term tm =
   end
 (*
   handle HOL_ERR _ =>
-  let val (l1,k1) = dest_lin(lin_of_term (dest_SUC tm))
+  let val (l1,k1) = dest_lin(lin_of_term (dest_suc tm))
   in LIN(l1,k1+1)
   end
 *)
@@ -260,10 +257,10 @@ fun CTXT_ARITH thms tm =
     else failwith "CTXT_ARITH: not applicable";
 
 val (CACHED_ARITH,arith_cache) = let
-  fun check tm = let
-    val ty = type_of tm
-  in
-    ty = num_ty orelse (ty=Type.bool andalso (is_arith tm orelse tm = F))
+  fun check tm = 
+    let val ty = type_of tm
+    in ty = num_ty orelse 
+       (ty=Type.bool andalso (is_arith tm orelse tm = F))
   end;
 in
   CACHE (check,CTXT_ARITH)
@@ -329,14 +326,14 @@ val SUC = --`SUC`--
 val x = Psyntax.mk_var("x", num_ty)
 val y = Psyntax.mk_var("y", num_ty)
 
-fun reducer t = let
-  open numSyntax
-  val (_, args) = strip_comb t
-  fun reducible t =
-    is_numeral t orelse (is_SUC t andalso reducible (snd (dest_comb t)))
-in
-  if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
-end
+fun reducer t = 
+ let open numSyntax
+     val (_, args) = strip_comb t
+     fun reducible t =
+       is_numeral t orelse (is_suc t andalso reducible (snd (dest_comb t)))
+ in
+   if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
+ end
 
 fun mk_redconv0 pat = {name = "REDUCE_CONV (arithmetic reduction)", trace = 2,
                        key = SOME([], pat), conv = K (K reducer)}
