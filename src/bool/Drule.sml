@@ -2142,25 +2142,26 @@ fun norm_ac (th1,th2) =
      val th2' = SPEC_ALL th2
      val tm1 = concl th1'
      val tm2 = concl th2'
- in if is_comm tm2
-    then if is_assoc tm1 then (regen th1',regen th2') else
-          let val th1a = SYM th1'
-          in if is_assoc (concl th1a)
-             then (regen th1a,regen th2')
-             else (HOL_MESG "unable to AC-normalize input";
-                   raise ERR "norm_ac" "failed")
-          end
-    else if is_comm tm1
-         then if is_assoc tm2 then (regen th2,regen th1) else
-               let val th2a = SYM th2'
-               in if is_assoc (concl th2a)
-                  then (regen th2a,regen th1')
-                  else (HOL_MESG "unable to AC-normalize input";
-                        raise ERR "norm_ac" "failed")
-               end
-         else (HOL_MESG "unable to AC-normalize input";
-               raise ERR "norm_ac" "failed")
-    end;
+ in if is_comm tm2 then
+      if is_assoc tm1 then (regen th1',regen th2')
+      else
+        let val th1a = SYM th1'
+        in if is_assoc (concl th1a)
+           then (regen th1a,regen th2')
+           else (HOL_MESG "unable to AC-normalize input";
+                 raise ERR "norm_ac" "failed")
+        end
+    else if is_comm tm1 then
+      if is_assoc tm2 then (regen th2',regen th1')
+      else
+        let val th2a = SYM th2'
+        in if is_assoc (concl th2a) then (regen th2a,regen th1')
+           else (HOL_MESG "unable to AC-normalize input";
+                 raise ERR "norm_ac" "failed")
+        end
+    else (HOL_MESG "unable to AC-normalize input";
+          raise ERR "norm_ac" "failed")
+ end;
 
 (*---------------------------------------------------------------------------*)
 (* Take an AC pair, normalize them, then prove left-commutativity            *)
