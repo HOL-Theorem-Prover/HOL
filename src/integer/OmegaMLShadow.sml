@@ -1,4 +1,4 @@
-structure OmegaMLShadow =
+structure OmegaMLShadow :> OmegaMLShadow =
 struct
 
 (* ----------------------------------------------------------------------
@@ -217,6 +217,7 @@ datatype derivation =
        | REAL_COMBIN of int * derivation * derivation
        | GCD_CHECK of derivation
        | DIRECT_CONTR of derivation * derivation
+type dfactoid = (factoid * derivation)
 
 datatype result = CONTR of derivation
                 | SATISFIABLE of Arbint.int PIntMap.t
@@ -283,6 +284,8 @@ fun fkassoc k alist =
 
 fun lookup_fkey (ptree,w) fk =
   fkassoc fk (PIntMap.find (keyhash fk) ptree)
+
+type cstdb = ((factoid * derivation) list) PIntMap.t * int
 
 fun dbempty i = (PIntMap.empty, i)
 
@@ -766,7 +769,7 @@ fun one_step ptree em nextstage kont =
       end
 
 (* ----------------------------------------------------------------------
-    toplevel ptree em
+    toplevel ptree em kont
 
    ---------------------------------------------------------------------- *)
 
@@ -779,6 +782,12 @@ in
     throwaway_redundant_factoids ptree after_throwaway kont
 end
 
+(* ----------------------------------------------------------------------
+    work ptree kont
+
+   ---------------------------------------------------------------------- *)
+
+fun work ptree k = toplevel ptree EXACT k
 
 (* ----------------------------------------------------------------------
    simple tests

@@ -10,6 +10,9 @@ val (Type, Term) = parse_from_grammars int_arith_grammars
 
 fun c1 THENC c2 = THENQC c1 c2
 fun c1 ORELSEC c2 = ORELSEQC c1 c2
+val ALL_CONV = ALL_QCONV
+val BINOP_CONV = BINOP_QCONV
+val TRY_CONV = TRY_QCONV
 
 fun ERR f msg = HOL_ERR { origin_structure = "OmegaMath",
                           origin_function = f,
@@ -129,11 +132,11 @@ fun gcd_check tm =
 
     if t (of integer type and not a numeral itself) does not have a
     numeral as its 'rand, then return thm |- t = t + 0, otherwise
-    ALL_QCONV.
+    ALL_CONV.
    ---------------------------------------------------------------------- *)
 
 fun addzero t =
-    if is_int_literal t orelse  is_int_literal (rand t) then ALL_QCONV t
+    if is_int_literal t orelse  is_int_literal (rand t) then ALL_CONV t
     else SYM (SPEC t INT_ADD_RID)
 
 
@@ -156,17 +159,16 @@ val RLIB_INT_NORM_CONV = let
     REPEAT STRIP_TAC THEN REWRITE_TAC [GSYM INT_ADD_ASSOC, INT_EQ_LADD] THEN
     MATCH_ACCEPT_TAC INT_ADD_COMM);
   fun put_in_times1 t =
-      if is_plus t then BINOP_QCONV put_in_times1 t
+      if is_plus t then BINOP_CONV put_in_times1 t
       else if is_var t then SYM (SPEC t INT_MUL_LID)
       else if is_negated t andalso is_var (rand t) then
         SPEC (rand t) INT_NEG_MINUS1
-      else ALL_QCONV t
+      else ALL_CONV t
 in
-  Profile.profile "INC.ringLib" integerRingLib.INT_NORM_CONV THENC
-  Profile.profile "INC.rewriting"
-    (REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC,
-                   move_numeral_right]) THENC
-  Profile.profile "INC.final" (addzero THENC put_in_times1)
+  integerRingLib.INT_NORM_CONV THENC
+  REWRITE_CONV [int_sub, INT_NEG_LMUL, INT_ADD_ASSOC,
+                move_numeral_right] THENC
+  addzero THENC put_in_times1
 end
 
 (* ----------------------------------------------------------------------
@@ -207,7 +209,8 @@ val NAIVE_INT_NORM_CONV = let
   end tm
 
 in
-  REWRITE_CONV [INT_LDISTRIB, INT_RDISTRIB, INT_MUL_ASSOC] THENC
+  REWRITE_CONV [INT_LDISTRIB, INT_RDISTRIB, INT_MUL_ASSOC, INT_NEG_ADD,
+                INT_NEG_LMUL] THENC
   REDUCE_CONV THENC
   (* to this point have expanded all multiplications, and have reduced
      all coefficients; still need to collect vars together *)
@@ -258,7 +261,149 @@ in
          raise ERR "INT_EQ_CONV" "Terms don't reduce to equal terms"
 end
 
+(* ----------------------------------------------------------------------
+    LASSOC_ADD_CONV tm
 
+    left-associates a single addition, turning a + (b + c) into
+    (a + b) + c
+   ---------------------------------------------------------------------- *)
+
+val LASSOC_ADD_CONV = REWR_CONV INT_ADD_ASSOC
+
+(* ----------------------------------------------------------------------
+    RASSOC_ADD_CONV tm
+
+    right-associates a single addition, turning (a + b) + c into
+    a + (b + c)
+   ---------------------------------------------------------------------- *)
+
+val RASSOC_ADD_CONV = let
+  val th = GSYM INT_ADD_ASSOC
+in
+  REWR_CONV th
+end
+
+(* ----------------------------------------------------------------------
+    RTOP_TWO_CONV c tm
+
+    applies conversion c to the term a + b, where a and b are the
+    two rightmost summands of tm.  The term is reassociated to present
+    these two terms this way if necessary, and then put back into left-
+    associative afterwards if necessary.  c should produce at most an
+    addition of two terms.
+   ---------------------------------------------------------------------- *)
+
+fun RTOP_TWO_CONV c tm = let
+  val (l,r) = dest_plus tm
+in
+  if is_plus l then
+    RASSOC_ADD_CONV THENC RAND_CONV c THENC
+    TRY_CONV LASSOC_ADD_CONV
+  else
+    c
+end tm
+
+(* ----------------------------------------------------------------------
+    PAIRWISE_GATHER_CONV tm
+
+    given that tm = tm1 + tm2, returns an equation of the form
+      tm1 + tm2 = result
+    where result is a "gathering" transformation as per
+    SORT_AND_GATHER1_CONV below
+   ---------------------------------------------------------------------- *)
+
+val SYM_RDISTRIB = GSYM INT_RDISTRIB
+fun PAIRWISE_GATHER_CONV tm = let
+  val (tm1,tm2) = dest_plus tm
+in
+  if is_int_literal tm1 then
+    if is_int_literal tm2 then REDUCE_CONV
+    else (* is_mult tm2 *) REWR_CONV INT_ADD_COMM
+  else (* is_mult tm1 *)
+    if is_int_literal tm2 then ALL_CONV
+    else (* is_mult tm2 *) let
+        val (c1,v1) = dest_mult tm1
+        val (c2,v2) = dest_mult tm2
+      in
+        case Term.compare(v1,v2) of
+          LESS => ALL_CONV
+        | EQUAL => REWR_CONV SYM_RDISTRIB THENC LAND_CONV REDUCE_CONV
+        | GREATER => REWR_CONV INT_ADD_COMM
+      end
+end tm
+
+(* ----------------------------------------------------------------------
+    CHECK_ZERO_CONV tm
+
+    checks for summands of tm being of the form
+       0 * y
+    and eliminates them.  Assume that tm is left-associated, and with
+    a numeral as its rightmost summand.
+   ---------------------------------------------------------------------- *)
+
+val CHECK_RZERO_CONV = let
+  fun recurse tm = let
+    val (l,r) = dest_plus tm
+  in
+    case total dest_plus l of
+      SOME(ll, lr) => let
+        val (c,v) = dest_mult lr
+      in
+        if c = zero_tm then
+          LAND_CONV (RAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
+                     REWR_CONV INT_ADD_RID) THENC recurse
+        else LAND_CONV recurse
+      end
+    | NONE => let
+        val (c,v) = dest_mult l
+      in
+        if c = zero_tm then LAND_CONV (REWR_CONV INT_MUL_LZERO) THENC
+                            REWR_CONV INT_ADD_LID
+        else ALL_CONV
+      end
+  end tm
+in
+  TRY_CONV recurse
+end
+
+(* ----------------------------------------------------------------------
+    SORT_AND_GATHER1_CONV tm
+
+    effectively does one step of an insertion sort on tm.  Taking a term
+    of the form
+        x + y
+    where y is not itself an addition, and where x is already in normal
+    form, this function transforms the input by moving y left "into" x
+    until it comes to the appropriate resting place.
+
+    Transformations and continuations are
+
+     ... + num1 + num2       --> ... + num               stop
+     ... + c * v + num       --> ... + c * v + num       stop
+     ... + num + c * v       --> ... + c * v + num       cont
+     ... + c1 * v1 + c2 * v2 --> ... + c1 * v1 + c2 * v2 stop (if v1 < v2)
+     ... + c1 * v1 + c2 * v1 --> ... + (c1 + c2) * v1    stop
+     ... + c1 * v1 + c2 * v2 --> ... + c2 * v2 + c1 * v1 cont (if v2 < v1)
+
+   ---------------------------------------------------------------------- *)
+
+fun SORT_AND_GATHER1_CONV tm =
+    (RTOP_TWO_CONV PAIRWISE_GATHER_CONV THENC
+     TRY_CONV (LAND_CONV SORT_AND_GATHER1_CONV) THENC
+     CHECK_RZERO_CONV) tm
+
+
+(* ----------------------------------------------------------------------
+    NEG_SUM_CONV tm
+
+    tm of form ~(cv + dv + ev + n)
+   ---------------------------------------------------------------------- *)
+
+fun NEG_SUM_CONV tm =
+    ((REWR_CONV INT_NEG_ADD THENC BINOP_CONV NEG_SUM_CONV) ORELSEC
+     (REWR_CONV INT_NEG_LMUL THENC
+      TRY_CONV (LAND_CONV (REWR_CONV INT_NEGNEG))) ORELSEC
+     TRY_CONV (REWR_CONV INT_NEGNEG)) tm
 
 
 

@@ -1,15 +1,18 @@
 signature OmegaMath =
 sig
   include Abbrev
-  val gcd_eq_check        : conv
-  val gcd_le_check        : conv
-  val gcd_check           : conv
+  val gcd_eq_check          : conv
+  val gcd_le_check          : conv
+  val gcd_check             : conv
 
-  val INT_NORM_CONV       : conv
-  val NAIVE_INT_NORM_CONV : conv
-  val RLIB_INT_NORM_CONV  : conv
+  val INT_NORM_CONV         : conv
+  val NAIVE_INT_NORM_CONV   : conv
+  val RLIB_INT_NORM_CONV    : conv
 
-  val INT_EQ_CONV         : conv
+  val INT_EQ_CONV           : conv
+
+  val SORT_AND_GATHER1_CONV : conv
+  val NEG_SUM_CONV          : conv
 
 end;
 
@@ -53,6 +56,14 @@ end;
    normalising both sides of the equation.  Returns the equation as
    the theorem; *not* |- (t1 = t2) = T  (which is what things like
    integerRingLib.INT_RING_CONV and AC_CONV do).
+
+   [SORT_AND_GATHER1_CONV] performs one step of an "insertion sort";
+   modifying a term of the form x + y, with x a normalised sum, and y
+   a singleton summand, so that y is inserted into x, merging with
+   any appropriate other summands, and possibly cancelling others out.
+
+   [NEG_SUM_CONV] simplifies ~(c1*v1 + c2 * v2 .. + cn * vn + n), by
+   pushing the negation inwards.
 
 *)
 
