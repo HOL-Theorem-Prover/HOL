@@ -13,6 +13,10 @@ Bugs fixed:
     its choice of type variables when type variables in the definition
     appeared underneath a type operator.  Thanks to Trent Larson for
     discovery and fix of this bug.
+  * A library module (Canon.sml) was not using a fixed grammar for its
+    invocation of the parser as it loaded, causing buggy behaviour in
+    some circumstances.  Thanks to Dan Zhou for finding those obscure
+    circumstances.
 
 New features:
 -------------
