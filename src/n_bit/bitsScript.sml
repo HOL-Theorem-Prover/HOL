@@ -923,8 +923,8 @@ val _ =
  let open Drop 
  in 
    exportML("bits", 
-    MLSIG    "type num = numML.num" ::
-    MLSTRUCT "type num = numML.num" ::
+    MLSIG    "type num = numML.num" :: OPEN ["num"] 
+    ::
     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
         [TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def, 
          DIVMOD_2EXP, SBIT_def, BITS_def, 

@@ -2531,14 +2531,11 @@ val _ = add_infix(">=.",450,HOLgrammars.RIGHT);
 
 (* -------------------------------------------------------- *)
 
-(* STOP; *)
-
-val _ =
- let open Drop
+val _ = 
+ let open numeral_bitsTheory bitsTheory Drop
      val THE_WL = SIMP_RULE arith_ss [HB_def,arithmeticTheory.ADD1] WL_def
      val MOD_WL_EVAL = REWRITE_RULE [THE_WL,GSYM MOD_2EXP_def] MOD_WL_def
-     val RRX_EVAL2 = GEN_ALL (REWRITE_RULE
-                         [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def] RRX_EVAL)
+     val MOD_WL_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] MOD_WL_EVAL
      val LT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LT_EVAL
      val LE_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] LE_EVAL
      val GT_EVAL = REWRITE_RULE [MSBn_def,THE_WL,MOD_WL_EVAL] GT_EVAL
@@ -2547,21 +2544,93 @@ val _ =
      val LS_EVAL = REWRITE_RULE [MOD_WL_EVAL] LS_EVAL
      val HI_EVAL = REWRITE_RULE [MOD_WL_EVAL] HI_EVAL
      val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL
- in exportML("word"^sbits,
-    ABSDATATYPE ([],ParseDatatype.parse [QUOTE ("word"^sbits^" = n2w of num")])
+     val MSB_EVAL_THM = SIMP_RULE arith_ss 
+            [MSBn_def,HB_def,BIT_def,BITS_def,DIV_2EXP_def,MOD_2EXP_def,
+             GSYM ODD_MOD2_LEM] MSB_EVAL
+     val LSB_EVAL_THM = REWRITE_RULE [LSB_ODD] LSB_EVAL
+     val word_H_thm = SIMP_RULE arith_ss [HB_def] word_H_def
+     val word_T_thm = SIMP_RULE arith_ss [THE_WL] word_T
+     val w2n_THM  = REWRITE_RULE [MOD_WL_EVAL_THM] w2n_EVAL
+     val ONE_COMP_THM = SIMP_RULE arith_ss [MOD_WL_EVAL_THM,THE_WL] ONE_COMP_def
+     val TWO_COMP_THM = SIMP_RULE arith_ss [MOD_WL_EVAL_THM,THE_WL] TWO_COMP_def
+     val ASR_EVAL = SIMP_RULE arith_ss [THE_WL,MSBn_def,BIT_def,BITS_def,SUC_SUB,
+                 MOD_2EXP_def,GSYM ODD_MOD2_LEM,DIV_2EXP_def,HB_def] ASR_THM
+     val ROR_EVAL = SIMP_RULE arith_ss [HB_def,THE_WL,BITS_def,DIV_2EXP_def] ROR_THM
+     val RRX_EVAL2 = SIMP_RULE arith_ss 
+           [GSYM DIV2_def,RRXn_def,LSR_ONE_def,HB_def,MOD_WL_EVAL_THM,SBIT_def] RRX_EVAL
+     val RRX_EVAL3 = CONJ (SIMP_RULE arith_ss [] (Thm.SPEC T (Q.ID_SPEC RRX_EVAL2)))
+                          (SIMP_RULE arith_ss [] (Thm.SPEC F (Q.ID_SPEC RRX_EVAL2)))
+     val LT_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] LT_EVAL
+     val LE_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] LE_EVAL
+     val GT_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] GT_EVAL
+     val GE_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def,HB_def] GE_EVAL
+     val LO_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] LO_EVAL
+     val LS_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] LS_EVAL
+     val HI_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] HI_EVAL
+     val HS_EVAL_THM = SIMP_RULE arith_ss [MOD_2EXP_def] HS_EVAL
+     val wordn = "word"^sbits
+ in exportML(wordn,
+    OPEN ["num", "bits", "numeral_bits"]
+    :: EQDATATYPE ([],ParseDatatype.parse [QUOTE (wordn^" = n2w of num")])
+    :: MLSIG "type num = numML.num"
+    :: MLSTRUCT "nonfix - + * < > <= >= ;"
     :: map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
-     [THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
-      MSBn_def, MSB_EVAL,  LSB_EVAL, MOD_WL_EVAL, w2n_EVAL,
-      OR_def, OR_EVAL, AND_def, AND_EVAL, EOR_def, EOR_EVAL,
-      TWO_COMP_def, TWO_COMP_EVAL, ONE_COMP_def, ONE_COMP_EVAL,
-      ADD_EVAL, MUL_EVAL, word_sub_def,
-      LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
-      WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
-      LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL, LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL])
+       [THE_WL, HB_def, word_0, word_1, word_L_def, word_H_thm, word_T_thm,
+        w2n_THM, MOD_WL_EVAL_THM, MSB_EVAL_THM,  LSB_EVAL_THM, 
+        WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
+        OR_def, AND_def, EOR_def, ONE_COMP_THM, TWO_COMP_THM, 
+        OR_EVAL, AND_EVAL, EOR_EVAL, ONE_COMP_EVAL, TWO_COMP_EVAL, 
+        ADD_EVAL2, MUL_EVAL2, word_sub_def,
+        LSL_EVAL, LSR_THM, ASR_EVAL, ROR_EVAL, RRX_EVAL3,
+        LT_EVAL_THM, LE_EVAL_THM, GT_EVAL_THM, GE_EVAL_THM, 
+        LO_EVAL_THM, LS_EVAL_THM, HI_EVAL_THM, HS_EVAL_THM]
+     @ 
+     [MLSIG (String.concat["val fromNum : num -> ",wordn]),
+      MLSIG (String.concat["val toNum : ",wordn," -> num"]),
+      MLSIG (String.concat["val fromBinString : string -> ",wordn]),
+      MLSIG (String.concat["val fromOctString : string -> ",wordn]),
+      MLSIG (String.concat["val fromDecString : string -> ",wordn]),
+      MLSIG (String.concat["val fromHexString : string -> ",wordn]),
+      MLSIG (String.concat["val toBinString : ",wordn, " -> string"]),
+      MLSIG (String.concat["val toOctString : ",wordn, " -> string"]),
+      MLSIG (String.concat["val toDecString : ",wordn, " -> string"]),
+      MLSIG (String.concat["val toHexString : ",wordn, " -> string"]),
+      MLSIG (String.concat["val ppBin : ppstream -> ",wordn, " -> unit"]),
+      MLSIG (String.concat["val ppOct : ppstream -> ",wordn, " -> unit"]),
+      MLSIG (String.concat["val ppDec : ppstream -> ",wordn, " -> unit"]),
+      MLSIG (String.concat["val ppHex : ppstream -> ",wordn, " -> unit"]),
+      MLSTRUCT "\n\
+\ (*---------------------------------------------------------------------------*) \n\
+\ (* Supplementary ML, not generated from HOL theorems, aimed at supporting    *) \n\
+\ (* parsing and pretty printing of numerals.                                  *) \n\
+\ (*---------------------------------------------------------------------------*) \n\
+\ \n\
+\ local val k = EXP TWO WL \n\
+\ in \n\
+\ fun fromNum n = n2w (MOD n k) \n\
+\ end; \n\
+\  \n\
+\ val toNum = w2n; \n\
+\  \n\
+\ val fromBinString = fromNum o numML.fromBinString \n\
+\ val fromOctString = fromNum o numML.fromOctString \n\
+\ val fromDecString = fromNum o numML.fromDecString \n\
+\ val fromHexString = fromNum o numML.fromHexString; \n\
+\  \n\
+\ val toBinString = numML.toBinString o toNum; \n\
+\ val toOctString = numML.toOctString o toNum; \n\
+\ val toDecString = numML.toDecString o toNum; \n\
+\ val toHexString = numML.toHexString o toNum; \n\
+\  \n\
+\ fun ppBin ppstrm w = numML.ppBin ppstrm (toNum w); \n\
+\ fun ppOct ppstrm w = numML.ppOct ppstrm (toNum w); \n\
+\ fun ppDec ppstrm w = numML.ppDec ppstrm (toNum w); \n\
+\ fun ppHex ppstrm w = numML.ppHex ppstrm (toNum w); \n\n"])
  end;
 
 val _ = export_theory();
-val _ = export_theory_as_docfiles(fullPath[Systeml.HOLDIR,"src","n_bit","help","thms","wordn"]);
+val _ = export_theory_as_docfiles
+          (fullPath[Systeml.HOLDIR,"src","n_bit","help","thms","wordn"]);
 
 (* -------------------------------------------------------- *)
 

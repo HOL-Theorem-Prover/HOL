@@ -134,11 +134,11 @@ val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 val _ = 
  let open Drop
  in exportML("numeral_bits", 
-        MLSIG    "type num = numML.num" ::
-        MLSTRUCT "type num = numML.num" ::
-    map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-        [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE,
-         NUMERAL_MOD_2EXP,iMOD_2EXP, NUMERAL_DIV_2EXP])
+     MLSIG  "type num = numML.num" :: OPEN ["num"] 
+     ::
+     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+         [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE,
+          NUMERAL_MOD_2EXP,iMOD_2EXP, NUMERAL_DIV_2EXP])
  end;
 
 val _ = export_theory();
