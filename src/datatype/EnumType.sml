@@ -294,10 +294,10 @@ fun define_case initiality =
                      (EXISTS(exists_tm,gfun) gclause_thms)
      val case_const_name = tyname^"_case"
  in
-  new_specification
-    {consts=[{const_name=case_const_name,fixity=Prefix}],
-     name = case_const_name^"_def",
-     sat_thm = gexists}
+    new_specification
+      {consts=[{const_name=case_const_name,fixity=Prefix}],
+       name = case_const_name^"_def",
+       sat_thm = gexists}
  end;
 
 
@@ -401,11 +401,15 @@ fun enum_type_to_tyinfo (ty, constrs) = let
       else SOME (prove_distinctness_thm simpls constrs)
   val initiality = prove_initiality_thm (#REPconst result) TYPE constrs simpls
   val case_def = define_case initiality
+  val case_defs = let val (V,_) = strip_forall(concl case_def)
+                      val thl = CONJUNCTS (SPEC_ALL case_def)
+                  in LIST_CONJ (map (GENL V) thl)
+                  end
   open TypeBase TypeBase.TypeInfo
   val tyinfo0 =
       mk_tyinfo { ax = ORIG initiality,
                   induction = ORIG induction,
-                  case_def = case_def,
+                  case_def = case_defs,
                   case_cong = case_cong_thm nchotomy case_def,
                   nchotomy = nchotomy,
                   size = size,
@@ -431,6 +435,12 @@ val {TYPE,constrs,defs, ABSconst, REPconst,
   = define_enum_type
             ("colour", ["red", "green", "blue", "brown", "white"],
              "num2colour", "colour2num");
+
+val initiality =
+  Count.apply (prove_initiality_thm REPconst TYPE constrs) simpls;
+val case_def = Count.apply define_case initiality;
+val nchotomy = Count.apply (prove_cases_thm ABS_ONTO) (rev defs);
+val case_cong = Count.apply (case_cong_thm nchotomy) case_def;
 
 val {TYPE,constrs,defs, ABSconst, REPconst,
      ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
