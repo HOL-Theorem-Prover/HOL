@@ -177,7 +177,7 @@ fun showVarmap () = Binarymap.listItems(!global_varmap);
 exception termToTermBddError;
 
 val termToTermBddFun = 
- ref(fn (tm:term) => (raise termToTermBddError):term_bdd);
+ ref(fn (tm:term) => (raise termToTermBddError));
 
 fun termToTermBdd tm =
  let val vl = rev(all_vars tm)     (* all_vars returns vars in reverse order *)
@@ -203,7 +203,7 @@ fun termToTermBdd tm =
 (*****************************************************************************)
 
 val iterateReport = 
- ref(fn n => fn (tb:term_bdd) => (print(Int.toString n); print " "));
+ ref(fn n => fn (tb) => (print(Int.toString n); print " "));
 
 fun iterateToFixedpoint f =
  let fun iter n tb =

@@ -72,15 +72,11 @@ in
 (* TermBdd should not be exported from this module.                          *)
 (*****************************************************************************)
 
-(* commented out during development
 local
-*)
 
 datatype term_bdd = TermBdd of varmap * term * bdd.bdd;
 
-(* commented out during development
 in
-*)
 
 (*****************************************************************************)
 (* Destructors for term_bdd                                                  *)
@@ -484,6 +480,4 @@ end;
 
 end;
 
-(* commented out during development
 end;
-*)

@@ -1,10 +1,9 @@
 (*
-load "Varmap";
-load "PrimitiveBddRules";
-load "DerivedBddRules";
+load "HolBdd";
+load "StateEnum";
 *)
 
-open Varmap PrimitiveBddRules DerivedBddRules;
+open HolBdd StateEnum BddRules;
 
 
 (*****************************************************************************)
