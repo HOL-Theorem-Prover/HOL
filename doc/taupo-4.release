@@ -9,6 +9,21 @@ Bugs fixed:
     to hide the constant being redefined from the parser (using
     "hide") to be able to generate a term where the name of the
     constant corresponds to a variable.
+  * The datatype axiom produced by Hol_datatype was slightly wrong in
+    its choice of type variables when type variables in the definition
+    appeared underneath a type operator.  Thanks to Trent Larson for
+    discovery and fix of this bug.
+
+New features:
+-------------
+  * The list of constants known to the parser is now stored on a per
+    grammar basis.  The functions hide and reveal affect the global
+    grammar, but if one switches to a different grammar instead, this
+    grammar's notion of what should be treated as a constant takes
+    precedence.  This is useful where one wants to parse over a
+    certain set of known constants, and not have parses go awry
+    because the logical context has actually been extended with new
+    constants.
 
 New theories:
 -------------
