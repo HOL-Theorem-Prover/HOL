@@ -8,7 +8,7 @@ OCAMLC=$(OCAMLPATH)/ocamlc $(OCAMLPPFLAGS)
 OCAMLOPT=$(OCAMLPATH)/ocamlopt $(OCAMLPPFLAGS)
 OCAMLLEX=$(OCAMLPATH)/ocamllex
 OCAMLYACC=${OCAMLPATH}/ocamlyacc
-OCAMLDEP=$(OCAMLPATH)/ocamldep $(OCAMLPPFLAGS)
+OCAMLDEP=$(OCAMLPATH)/ocamldep -native $(OCAMLPPFLAGS)
 
 LATEX=latex
 DVIPS=dvips
@@ -16,8 +16,9 @@ DVIPS=dvips
 # files:
 
 MLSOURCES=hol_to_latex.ml holdoc_init.ml holdoc_munge.ml holparsesupp.ml \
-	lts_to_latex.ml mng_to_latex.ml simpledump.ml simpletexdump.ml simplemosmldump.ml simplemngdump.ml
-MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli
+	lts_to_latex.ml mng_to_latex.ml simpledump.ml simpletexdump.ml simplemosmldump.ml simplemngdump.ml \
+	holdocmodel.ml
+MLISOURCES=holdoc_init.mli holdoc_munge.mli holparsesupp.mli hollex.mli 
 OTHERSOURCES=hollex.mll holparse.mly
 GENMLSOURCES=hollex.ml holparse.ml
 GENMLISOURCES=holparse.mli

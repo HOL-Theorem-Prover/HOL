@@ -471,6 +471,7 @@ let holtokstream = tokstream ModeHol
 
 let textokstream = tokstream ModeTex
 
+(* eds is stack of enclosing delimiters *)
 let print_token eds t =
   match t with
   | Ident(s,b) -> (s                     , eds)
@@ -489,6 +490,14 @@ let print_token eds t =
   | From       -> (match eds with
                      (ed::eds') -> ((delim_info ed).sclose, eds')
                    | []         -> ((delim_info DelimEOF).sclose, []))
+  | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
+  | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | HOL_OP_LIST
+  | HOL_SYM_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
+  | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS
+  | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | NEWMODE | MODE
+  | SPECIAL | VARS
+               -> (List.assoc t (List.map (fun (x,y) -> (y,x)) directive_alist),
+                   eds)
 
 
 let render_token t =
@@ -507,6 +516,13 @@ let render_token t =
   | ToMosml(d) | ToHol(d) | ToText(d) | ToTex(d) | ToDir(d)
                -> "{D:"^render_mode (to_token_mode t)^(delim_info d).sopen
   | From       -> ":D}"
+  | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
+  | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | HOL_OP_LIST
+  | HOL_SYM_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
+  | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS
+  | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | NEWMODE | MODE
+  | SPECIAL | VARS
+               -> "R:" ^ List.assoc t (List.map (fun (x,y) -> (y,x)) directive_alist)
 
 }
 
