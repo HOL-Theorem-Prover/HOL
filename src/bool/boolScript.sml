@@ -3708,6 +3708,37 @@ val (RES_FORALL_THM, RES_EXISTS_THM, RES_EXISTS_UNIQUE_THM, RES_SELECT_THM) =
        save_thm("RES_SELECT_THM", mk_eq RES_SELECT_DEF))
     end
 
+
+(* (!x::P. T) = T *)
+val RES_FORALL_TRUE = let
+  val x = mk_var("x", alpha)
+  val T = concl TRUTH
+  val KT = mk_abs(x, T)
+  val P = mk_var("P", alpha --> bool)
+  val th0 = SPECL[P,KT] RES_FORALL_THM
+  val th1 = CONV_RULE (RAND_CONV (QUANT_CONV (RAND_CONV BETA_CONV))) th0
+  val xINP_t = (rand o rator o #2 o dest_forall o rhs o concl) th1
+  val timpT_th = List.nth(CONJUNCTS (SPEC xINP_t IMP_CLAUSES), 1)
+  val th2 = CONV_RULE (RAND_CONV (QUANT_CONV (K timpT_th))) th1
+in
+  save_thm("RES_FORALL_TRUE", TRANS th2 (SPEC T FORALL_SIMP))
+end
+
+(* (?x::P. F) = F *)
+val RES_EXISTS_FALSE = let
+  val x = mk_var("x", alpha)
+  val F = prim_mk_const{Thy = "bool", Name = "F"}
+  val KF = mk_abs(x, F)
+  val P = mk_var("P", alpha --> bool)
+  val th0 = SPECL [P, KF] RES_EXISTS_THM
+  val th1 = CONV_RULE (RAND_CONV (QUANT_CONV (RAND_CONV BETA_CONV))) th0
+  val xINP_t = (rand o rator o #2 o dest_exists o rhs o concl) th1
+  val tandF_th = List.nth(CONJUNCTS (SPEC xINP_t AND_CLAUSES), 3)
+  val th2 = CONV_RULE (RAND_CONV (QUANT_CONV (K tandF_th))) th1
+in
+  save_thm("RES_EXISTS_FALSE", TRANS th2 (SPEC F EXISTS_SIMP))
+end
+
 (*---------------------------------------------------------------------------
      From Joe Hurd : case analysis on the (4) functions in the
      type :bool -> bool.
