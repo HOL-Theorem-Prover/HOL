@@ -32,29 +32,11 @@ lower-level libraries).
 
 First, we start the system. We will use make use of the quotation
 pre-processor in the example, so we invoke
-\ml{.../<holdir>/bin/hol.unquote}.
-\setcounter{sessioncount}{1}
-\begin{session}
-\begin{verbatim}
-Moscow ML version 1.44 (August 1999)
-Enter `quit();' to quit.
-
------------------------------------------------------------
-           HOL98 [Taupo 1]
-
-   For introductory HOL help, type: help "hol";
------------------------------------------------------------
-
-[closing file "/local/scratch/mn200/Work/hol98/tools/end-init.sml"]
--
-\end{verbatim}
-\end{session}
-
-Then we load and open \ml{bossLib}. This library provides high-level
-support for interactive proof.  We also open the theory of arithmetic,
-since we will use some of its theorems.  Finally, the function \ml{by}
-from \ml{bossLib} needs to be declared as infix before it can be used
-as such.
+\ml{.../<holdir>/bin/hol.unquote}.  Then we load and open
+\ml{bossLib}. This library provides high-level support for interactive
+proof.  We also open the theory of arithmetic, since we will use some
+of its theorems.  Finally, the function \ml{by} from \ml{bossLib}
+needs to be declared as infix before it can be used as such.
 
 \begin{session}
 \begin{verbatim}
@@ -1618,14 +1600,7 @@ directory that we created, we can demonstrate:
 \begin{session}
 \begin{alltt}
 \$ ../../bin/hol.unquote
-Moscow ML version 1.44 (August 1999)
-Enter `quit();' to quit.
-
------------------------------------------------------------
-           HOL98 [Taupo 1]
-
-   For introductory HOL help, type: help "hol";
------------------------------------------------------------
+[...]
 
 [closing file "/local/scratch/mn200/Work/hol98/tools/end-init.sml"]
 - load "euclidTheory";
