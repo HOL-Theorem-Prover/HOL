@@ -22,7 +22,7 @@ In particular, when stripping a conjunctive theorem {A'|- u /\ v}, the tactic
 {
    ttac(u|-u) THEN ttac(v|-v)
 }
-\noindent resulting from applying {ttac} to the conjuncts, is applied to the
+resulting from applying {ttac} to the conjuncts, is applied to the
 goal.  When stripping a disjunctive theorem {A'|- u \/ v}, the tactics
 resulting from applying {ttac} to the disjuncts, are applied to split the goal
 into two cases. That is, if
@@ -31,13 +31,13 @@ into two cases. That is, if
    =========  ttac (u|-u)    and    =========  ttac (v|-v)
     A ?- t1                          A ?- t2
 }
-\noindent then:
+then:
 {
          A ?- t
    ================== PSTRIP_THM_THEN ttac (A'|- u \/ v)
     A ?- t1  A ?- t2
 }
-\noindent When stripping a paired existentially quantified theorem
+When stripping a paired existentially quantified theorem
 {A'|- ?p. u}, the tactic resulting from applying {ttac} to the
 body of the paired existential quantification, {ttac(u|-u)},
 is applied to the goal.  
@@ -47,7 +47,7 @@ That is, if:
    =========  ttac (u|-u)
     A ?- t1
 }
-\noindent then:
+then:
 {
       A ?- t
    =============  PSTRIP_THM_THEN ttac (A'|- ?p. u)

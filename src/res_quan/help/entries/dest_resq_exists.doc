@@ -12,7 +12,7 @@ quantification:
 {
    dest_resq_exists "?var::P. t"
 }
-\noindent returns {("var","P","t")}.
+returns {("var","P","t")}.
 
 \FAILURE
 Fails with {dest_resq_exists} if the term is not a restricted

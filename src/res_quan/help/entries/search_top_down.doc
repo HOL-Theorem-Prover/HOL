@@ -45,7 +45,7 @@ Never fails.
    [([("y <= p", "y"); ("x <= p", "x")], [(":bool", ":*")])]
    : ((term # term) list # (type # type) list) list
 }
-\noindent The first example above shows the entire {tm2} matching {tm1}.
+The first example above shows the entire {tm2} matching {tm1}.
 The second example shows the two terms match exactly. No
 instantiation is required. The last example shows that a subterm of
 {tm2} can be instantiated to match {tm1}.

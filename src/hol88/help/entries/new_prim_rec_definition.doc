@@ -24,14 +24,14 @@ Evaluating
         (fun x_1 ... (SUC n) ... x_i =
                  f_2[fun t_1 ... n ... t_i, x_1, ..., n, ..., x_i])`--);
 }
-\noindent where all the free variables in the terms {t_1}, ..., {t_i} are
+where all the free variables in the terms {t_1}, ..., {t_i} are
 contained in {{{n, x_1, ..., x_i}}}, automatically proves the theorem:
 {
    |-  ?fun. !x_1 ... x_i. fun x_1 ... 0 ... x_i = f_1[x_1, ..., x_i] /\
              !x_1 ... x_i. fun (SUC n) x_1 ... x_i =
                                f_2[fun t_1 ... n ... t_i, x_1, ..., n, ...,x_i]
 }
-\noindent and then declares a new constant {fun} with this property as its
+and then declares a new constant {fun} with this property as its
 specification. This constant specification is returned as a theorem by
 {new_prim_rec_definition} and is saved with name {fun_DEF} in the
 current theory segment.
@@ -58,7 +58,7 @@ recursion on its first argument:
    =                (plus (SUC m) n = SUC(plus m n))`--));
    PLUS = |- (!n. plus 0 n = n) /\ (!m n. plus(SUC m)n = SUC(plus m n))
 }
-\noindent or by primitive recursion on its second argument:
+or by primitive recursion on its second argument:
 {
    - val PLUS = new_prim_rec_definition
    =            (`PLUS`,
@@ -66,7 +66,7 @@ recursion on its first argument:
    =                 (plus m (SUC n) = SUC(plus m n))`--));
    PLUS = |- (!m. plus m 0 = m) /\ (!m n. plus m(SUC n) = SUC(plus m n))
 }
-\noindent A decrement function {DEC}, whose value is specified for only
+A decrement function {DEC}, whose value is specified for only
 positive natural numbers, can be defined using {new_prim_rec_definition}
 as follows
 {
@@ -74,7 +74,7 @@ as follows
    =            (`DEC`, (--`DEC (SUC n) = n`--));
    DEC = |- !n. DEC(SUC n) = n
 }
-\noindent This definition specifies the value of the function {DEC} only for
+This definition specifies the value of the function {DEC} only for
 positive natural numbers. In particular, the value of {DEC 0} is left
 unspecified, and the only non-trivial property that can be proved to hold of
 the constant {DEC} is the property stated by the theorem returned by the

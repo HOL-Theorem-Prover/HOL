@@ -24,7 +24,7 @@ goal {(A ?- u)}:
    =========  f ({{u[q/p]}} |- u[q/p])
     A ?- t1
 }
-\noindent then applying {(P_PCHOOSE_THEN "q" f (A1 |- ?p. u))} to the
+then applying {(P_PCHOOSE_THEN "q" f (A1 |- ?p. u))} to the
 goal {(A ?- t)} produces the subgoal:
 {
     A ?- t

@@ -20,7 +20,7 @@ quantifier. Note that {PSTRIP_TAC} will strip off paired quantifications.
    ==============  PSTRIP_TAC
     A ?- u[p'/p]
 }
-\noindent where {p'} is a primed variant of the pair {p} that does not contain
+where {p'} is a primed variant of the pair {p} that does not contain
 any variables that appear free in the assumptions {A}.  If {t} is a
 conjunction, then {PSTRIP_TAC} simply splits the conjunction into two subgoals:
 {
@@ -28,7 +28,7 @@ conjunction, then {PSTRIP_TAC} simply splits the conjunction into two subgoals:
    =================  PSTRIP_TAC
     A ?- v   A ?- w
 }
-\noindent If {t} is an implication, {PSTRIP_TAC} moves the antecedent into the
+If {t} is an implication, {PSTRIP_TAC} moves the antecedent into the
 assumptions, stripping conjunctions, disjunctions and existential
 quantifiers according to the following rules:
 {
@@ -40,7 +40,7 @@ quantifiers according to the following rules:
    =====================
     A u {{w[p'/p]}} ?- v
 }
-\noindent where {p'} is a primed variant of the pair {p} that does not appear
+where {p'} is a primed variant of the pair {p} that does not appear
 free in {A}. Finally, a negation {~t} is treated as the implication {t ==> F}.
 
 \FAILURE

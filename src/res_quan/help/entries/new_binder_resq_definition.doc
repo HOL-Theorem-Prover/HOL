@@ -30,7 +30,7 @@ This constant specification is returned as a theorem with the form
 {
    |- !x_i::P_i. ... !x_j::P_j. !x_k .... B x_1 ... x_n = t
 }
-\noindent where the variables {x_k} are the free variables occurring on
+where the variables {x_k} are the free variables occurring on
 the left hand side of the definition and are not restricted
 quantified. This theorem is saved in the current theory under
 (the name) {name}. 

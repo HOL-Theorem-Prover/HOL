@@ -9,7 +9,7 @@ Iteratively constructs a restricted universal quantification.
 {
    list_mk_resq_forall([("x1","P1");...;("xn","Pn")],"t")
 }
-\noindent returns {"!x1::P1. ... !xn::Pn. t"}.
+returns {"!x1::P1. ... !xn::Pn. t"}.
 
 \FAILURE
 Fails with {list_mk_resq_forall} if the first terms {xi} in the pairs are

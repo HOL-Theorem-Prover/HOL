@@ -18,12 +18,12 @@ If variables from {p} are free in {t} but none are in {u}, then the theorem:
 {
    |- (?p. t ==> u) = (!p. t) ==> u
 }
-\noindent is returned.  If variables from {p} are free in {u} but none are in
+is returned.  If variables from {p} are free in {u} but none are in
 {t}, then the result is:
 {
    |- (?p. t ==> u) = t ==> (?p. u)
 }
-\noindent And if no variable from {p} is free in either {t} nor {u},
+And if no variable from {p} is free in either {t} nor {u},
 then the result is:
 {
    |- (?p. t ==> u) = (!p. t) ==> (?p. u)

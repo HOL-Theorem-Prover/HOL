@@ -16,7 +16,7 @@ the theorem
 {
    A,P1 u1,...,Pn un |- t[u1/x1]...[un/xn]
 }
-\noindent where the substitutions are made
+where the substitutions are made
 sequentially left-to-right in the same way as for {RESQ_SPEC}, with the same
 sort of alpha-conversions applied to {t} if necessary to ensure that no
 variables which are free in {ui} become bound after substitution.
@@ -25,7 +25,7 @@ variables which are free in {ui} become bound after substitution.
    --------------------------------------------  RESQ_SPECL "[u1;...;un]"
      A,P1 u1, ..., Pn un |- t[u1/x1]...[un/xn]
 }
-\noindent It is permissible for the term-list to be empty, in which case
+It is permissible for the term-list to be empty, in which case
 the application of {RESQ_SPECL} has no effect.
 
 \FAILURE

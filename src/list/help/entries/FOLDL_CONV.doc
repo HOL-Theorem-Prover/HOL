@@ -14,11 +14,11 @@ conversion, list.
 {
    FOLDL f e [x0;...xn]
 }
-\noindent It returns the theorem
+It returns the theorem
 {
    |- FOLDL f e [x0;...xn] = tm'
 }
-\noindent where {tm'} is the result of applying the function {f} iteratively to
+where {tm'} is the result of applying the function {f} iteratively to
 the successive elements of the list and the result of the previous
 application starting from the tail end of the list. During each
 iteration, an expression {f ei xi} is evaluated. The user supplied
@@ -26,7 +26,7 @@ conversion {conv} is used to derive a theorem
 {
    |- f ei xi = e(i+1)
 }
-\noindent which is used in the next iteration.
+which is used in the next iteration.
 
 \FAILURE
 {FOLDL_CONV conv tm} fails if {tm} is not of the form described above.
@@ -39,12 +39,12 @@ To sum the elements of a list,  one can use
    - FOLDL_CONV Num_lib.ADD_CONV (--`FOLDL $+ 0 [0;1;2;3]`--);
    |- FOLDL $+ 0[0;1;2;3] = 6
 }
-\noindent In general, if the function {f} is an explicit lambda abstraction
+In general, if the function {f} is an explicit lambda abstraction
 {(\x x'. t[x,x'])}, the conversion should be in the form
 {
    ((RATOR_CONV BETA_CONV) THENC BETA_CONV THENC conv'))
 }
-\noindent  where {conv'} applied to {t[x,x']} returns the theorem
+where {conv'} applied to {t[x,x']} returns the theorem
 {
    |-t[x,x'] = e''.
 }

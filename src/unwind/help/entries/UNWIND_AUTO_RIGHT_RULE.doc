@@ -15,7 +15,7 @@ specification.
    ----------------------------------------------------
     A |- !z1 ... zr. t = ?l1 ... lm. t1' /\ ... /\ tn'
 }
-\noindent where {tj'} is {tj} rewritten with equations selected from the
+where {tj'} is {tj} rewritten with equations selected from the
 {ti}'s.
 
 The function decides which equations to use for rewriting by performing a loop

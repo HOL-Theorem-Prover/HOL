@@ -18,7 +18,7 @@ Given these arguments, {P_PSKOLEM_CONV} returns the theorem:
 {
    |- (!p1...pn. ?q. t) = (?f. !p1...pn. tm[f p1 ... pn/q])
 }
-\noindent which expresses the fact that a skolem function {f} of the
+which expresses the fact that a skolem function {f} of the
 universally quantified variables {p1...pn} may be introduced in place of the
 the existentially quantified pair {p}.
 

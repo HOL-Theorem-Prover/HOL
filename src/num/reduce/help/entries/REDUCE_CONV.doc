@@ -18,7 +18,7 @@ suitable redexes, one of the following conversions from the {reduce} library
    MUL_CONV  NEQ_CONV  NOT_CONV    OR_CONV
    PRE_CONV  SBC_CONV  SUC_CONV
 }
-\noindent In particular, it will prove the appropriate reduction for an
+In particular, it will prove the appropriate reduction for an
 arbitrarily complicated expression constructed from numerals and the boolean
 constants {T} and {F}.
 

@@ -13,7 +13,7 @@ The conversion {PBETA_CONV} maps a paired beta-redex {"(\p.t)q"} to the theorem
 {
    |- (\p.t)q = t[q/p]
 }
-\noindent where {u[q/p]} denotes the result of substituting {q} for all free
+where {u[q/p]} denotes the result of substituting {q} for all free
 occurrences of {p} in {t}, after renaming sufficient bound variables to avoid
 variable capture.
 Unlike {PAIRED_BETA_CONV}, {PBETA_CONV} does not require that the structure

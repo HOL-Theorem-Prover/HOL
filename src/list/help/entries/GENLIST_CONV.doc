@@ -13,11 +13,11 @@ For an arbitrary  function {f}, numeral constant {n} and conversion to evaluate 
 {
    GENLIST_CONV conv (--`GENLIST f n`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- GENLIST f x = [x0;x1...xi...x(n-1)]
 }
-\noindent where each {xi} is the result of evaluating {conv (--`f i`--)}
+where each {xi} is the result of evaluating {conv (--`f i`--)}
 
 \EXAMPLE
 Evaluating {GENLIST_CONV BETA_CONV (--`GENLIST (\n . n) 4`--)} will return

@@ -15,7 +15,7 @@ The input theorem should be an implication of the following form
    !x1 ... xn. P1[xi] ==> ... ==> !y1 ... ym. Pr[xi,yi] ==>
      (!z1 ... zk. u[xi,yi,zi] = v[xi,yi,zi])
 }
-\noindent where each antecedent {Pi} itself may be a conjunction or
+where each antecedent {Pi} itself may be a conjunction or
 disjunction. The output theorem will have all universal quantifications
 moved to the outer most level with possible renaming to prevent
 variable capture, and have all antecedents which are a conjunction

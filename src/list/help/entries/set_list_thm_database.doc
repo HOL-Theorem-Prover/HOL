@@ -21,7 +21,7 @@ The  following is an example of a fold definition in the database:
 {
    |- !l. SUM l = FOLDR $+ 0 l
 }
-\noindent Here {$+} is the step function and 0 is the base element of the
+Here {$+} is the step function and 0 is the base element of the
 definition. Definitions are initially held for the following system operators:
 {APPEND}, {FLAT}, {LENGTH}, {NULL}, {REVERSE}, {MAP}, {FILTER}, {ALL_EL},
 {SUM}, {SOME_EL}, {IS_EL}, {AND_EL}, {OR_EL}, {PREFIX}, {SUFFIX}, {SNOC} and
@@ -31,7 +31,7 @@ The following is an example of an auxiliary theorem:
 {
    |- MONOID $+ 0
 }
-\noindent Auxiliary theorems stored include monoid, commutativity,
+Auxiliary theorems stored include monoid, commutativity,
 associativity, binary function commutativity, left identity and right identity
 theorems.
 
@@ -54,7 +54,7 @@ theorems about {SUM}.
      {{Fold_thms = [theorem "list" "SUM_FOLDR"],
       Aux_thms = [theorem "arithmetic" "MONOID_ADD_0"]}};
 }
-\noindent The following shows a new definition being added which multiplies
+The following shows a new definition being added which multiplies
 the elements of a list. {LIST_CONV} is then called to prove the recursive
 clause.
 {

@@ -12,7 +12,7 @@ Deletes one existential quantifier.
 {
    |- (?x. t) = t
 }
-\noindent provided {x} is not free in {t}.
+provided {x} is not free in {t}.
 
 \FAILURE
 Fails if the argument term is not an existential quantification or if {x} is

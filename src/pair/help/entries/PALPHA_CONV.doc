@@ -17,7 +17,7 @@ returns the theorem:
 {
    |- (\p.t) = (\q'. t[q'/p])
 }
-\noindent where the pair {q':ty} is a primed variant of {q} chosen so
+where the pair {q':ty} is a primed variant of {q} chosen so
 that none of its components are free in {"\p.t"}.
 The pairs {p} and {q} need not have the same structure, but they must
 be of the same type.

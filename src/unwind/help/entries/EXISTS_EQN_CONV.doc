@@ -12,7 +12,7 @@ Proves the existence of a line that has a non-recursive equation.
 {
    |- (?l. !y1 ... ym. l x1 ... xn = t) = T
 }
-\noindent provided {l} is not free in {t}. Both {m} and {n} may be zero.
+provided {l} is not free in {t}. Both {m} and {n} may be zero.
 
 \FAILURE
 Fails if the argument term is not of the specified form or if {l} appears free

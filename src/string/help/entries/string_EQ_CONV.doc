@@ -13,7 +13,7 @@ the conversion {string_EQ_CONV} returns:
 {
    |- (lhs = rhs) = T
 }
-\noindent if {lhs} and {rhs} are identical character strings.  Otherwise, the
+if {lhs} and {rhs} are identical character strings.  Otherwise, the
 conversion returns:
 {
    |- (lhs = rhs) = F

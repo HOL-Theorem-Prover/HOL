@@ -21,7 +21,7 @@ maps a term of the form {"{{t1,...,tn}} UNION s"} to the theorem
 {
    |- t UNION {{t1,...,tn}} = ti INSERT ... (tj INSERT s)
 }
-\noindent where {{{ti,...,tj}}} is the set of all terms {t} that occur as
+where {{{ti,...,tj}}} is the set of all terms {t} that occur as
 elements of {{{t1,...,tn}}} for which the conversion {IN_CONV conv} fails to
 prove that {|- (t IN s) = T} (that is, either by proving {|- (t IN s) = F}
 instead, or by failing outright).
@@ -34,12 +34,12 @@ finite set {{{1,2,3}}} of the union in the second finite set {{{SUC 0,3,4}}}.
    #UNION_CONV num_EQ_CONV "{{1,2,3}} UNION {{SUC 0,3,4}}";;
    |- {{1,2,3}} UNION {{SUC 0,3,4}} = {{2,SUC 0,3,4}}
 }
-\noindent The result is {{{2,SUC 0,3,4}}}, rather than {{{1,2,SUC 0,3,4}}},
+The result is {{{2,SUC 0,3,4}}}, rather than {{{1,2,SUC 0,3,4}}},
 because {UNION_CONV} is able by means of a call to 
 {
    IN_CONV num_EQ_CONV "1 IN {{SUC 0,3,4}}"
 }
-\noindent to prove that {1} is already an element of the set {{{SUC 0,3,4}}}.
+to prove that {1} is already an element of the set {{{SUC 0,3,4}}}.
 
 The conversion supplied to {UNION_CONV} need not actually prove equality of
 elements, if simplification of the resulting set is not desired.  For example:
@@ -47,13 +47,13 @@ elements, if simplification of the resulting set is not desired.  For example:
    #UNION_CONV NO_CONV "{{1,2,3}} UNION {{SUC 0,3,4}}";;
    |- {{1,2,3}} UNION {{SUC 0,3,4}} = {{1,2,SUC 0,3,4}}
 }
-\noindent In this case, the resulting set is just left unsimplified. Moreover,
+In this case, the resulting set is just left unsimplified. Moreover,
 the second set argument to {UNION} need not be a finite set:
 {
    #UNION_CONV NO_CONV "{{1,2,3}} UNION s";;
    |- {{1,2,3}} UNION s = 1 INSERT (2 INSERT (3 INSERT s))
 }
-\noindent And, of course, in this case the conversion argument to {UNION_CONV}
+And, of course, in this case the conversion argument to {UNION_CONV}
 is irrelevant.
 
 \FAILURE 

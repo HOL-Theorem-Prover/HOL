@@ -22,7 +22,7 @@ will strip off paired universal quantifications.
    ==============  PSTRIP_GOAL_THEN ttac
     A ?- u[p'/p]
 }
-\noindent where {p'} is a primed variant that contains no variables that
+where {p'} is a primed variant that contains no variables that
 appear free in the assumptions {A}.  If {t} is a conjunction,
 then {PSTRIP_GOAL_THEN} simply splits
 the conjunction into two subgoals:
@@ -31,19 +31,19 @@ the conjunction into two subgoals:
    =================  PSTRIP_GOAL_THEN ttac
     A ?- v   A ?- w
 }
-\noindent If {t} is an implication {"u ==> v"} and if:
+If {t} is an implication {"u ==> v"} and if:
 {
       A ?- v
   ===============  ttac (u |- u)
      A' ?- v'
 }
-\noindent then:
+then:
 {
       A ?- u ==> v
   ====================  PSTRIP_GOAL_THEN ttac
         A' ?- v'
 }
-\noindent Finally, a negation {~t} is treated as the implication {t ==> F}.
+Finally, a negation {~t} is treated as the implication {t ==> F}.
 
 \FAILURE
 {PSTRIP_GOAL_THEN ttac (A,t)} fails if {t} is not a paired universally

@@ -13,12 +13,12 @@ If {m} and {n} are both numerals (e.g. {0}, {1}, {2}, {3},...), then
 {
    |- (m > n) = T
 }
-\noindent if the natural number denoted by {m} is greater than that denoted by
+if the natural number denoted by {m} is greater than that denoted by
 {n}, or
 {
    |- (m > n) = F
 }
-\noindent otherwise.
+otherwise.
 
 \FAILURE
 {GT_CONV tm} fails unless {tm} is of the form {"m > n"}, where {m} and {n}

@@ -14,7 +14,7 @@ When applied to a term of the form {?x::P. Q[x]}, the conversion
 {
    |- ?x::P. Q[x] = (?x. P x /\ Q[x])
 }
-\noindent which is the underlying semantic representation of the restricted
+which is the underlying semantic representation of the restricted
 existential quantification.
 
 \FAILURE

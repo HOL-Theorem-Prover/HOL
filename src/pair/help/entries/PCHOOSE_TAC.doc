@@ -21,7 +21,7 @@ normally {p'} is just {p}.
    ====================  CHOOSE_TAC (A' |- ?q. t)
     A u {{t[p'/p]}} ?- u
 }
-\noindent Unless {A'} is a subset of {A}, this is not a valid tactic.
+Unless {A'} is a subset of {A}, this is not a valid tactic.
 
 \FAILURE
 Fails unless the given theorem is a paired existential quantification.

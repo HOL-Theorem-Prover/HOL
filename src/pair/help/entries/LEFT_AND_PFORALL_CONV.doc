@@ -14,7 +14,7 @@ When applied to a term of the form {(!p. t) /\ u}, the conversion
 {
    |- (!p. t) /\ u = (!p'. t[p'/p] /\ u)
 }
-\noindent where {p'} is a primed variant of {p} that does not appear free in
+where {p'} is a primed variant of {p} that does not appear free in
 the input term.
 
 \FAILURE

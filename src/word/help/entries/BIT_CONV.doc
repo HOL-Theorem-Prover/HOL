@@ -15,11 +15,11 @@ For any word of the form {WORD[b(n-1);...;bk;...;b0]}, the result of evaluating
 {
    BIT_CONV "BIT k (WORD [b(n-1);...;bk;...;b0])"
 }
-\noindent is the theorem
+is the theorem
 {
    |- BIT k (WORD [b(n-1);...;bk;...;b0]) = bk
 }
-\noindent The bits are indexed form the end of the list and starts
+The bits are indexed form the end of the list and starts
 from 0.
 
 \FAILURE

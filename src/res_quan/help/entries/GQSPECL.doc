@@ -22,7 +22,7 @@ The two kinds of universal quantification can be mixed.
    --------------------------------------------------  GQSPECL "[u1;...;un]"
     A,P1 u1,...,Pn un |- t[u1/x1]...[uk/xk]...[un/xn]
 }
-\noindent It is permissible for the term-list to be empty, in which case
+It is permissible for the term-list to be empty, in which case
 the application of {GQSPECL} has no effect.
 
 \FAILURE

@@ -14,7 +14,7 @@ the theorem
 {
    A |- ?x. P x /\ t
 }
-\noindent i.e., it transforms the restricted existential
+i.e., it transforms the restricted existential
 quantification to its underlying semantic representation.
 {
       A |- ?x::P. t

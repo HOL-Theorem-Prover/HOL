@@ -12,7 +12,7 @@ Iteratively breaks apart paired universal quantifications.
 {
    strip_pforall(list_mk_pforall(["p1";...;"pn"],"t"))
 }
-\noindent will not return {(["p1";...;"pn"],"t")} if {t} is a paired universal
+will not return {(["p1";...;"pn"],"t")} if {t} is a paired universal
 quantification.
 
 \FAILURE

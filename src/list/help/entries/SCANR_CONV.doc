@@ -14,11 +14,11 @@ conversion, list.
 {
    SCANR f e0 [xn;...;x1]
 }
-\noindent It returns the theorem
+It returns the theorem
 {
    |- SCANR f e0 [xn;...;x1] = [en; ...;e1;e0]
 }
-\noindent where {ei} is the result of applying the function {f} to
+where {ei} is the result of applying the function {f} to
 the result of the previous iteration and the current element, i.e.,
 {ei = f e(i-1) xi}. The iteration starts from the right-hand side (the
 tail) of the list. 
@@ -26,7 +26,7 @@ The user supplied conversion {conv} is used to derive a theorem
 {
    |- f e(i-1) xi = ei
 }
-\noindent which is used in the next iteration.
+which is used in the next iteration.
 
 \FAILURE
 {SCANR_CONV conv tm} fails if {tm} is not of the form described above,
@@ -40,12 +40,12 @@ To sum the elements of a list and save the result at each step, one can use
    - SCANR_CONV Num_lib.ADD_CONV (--`SCANR $+ 0 [1;2;3]`--);
    |- SCANR $+ 0[1;2;3] = [6;5;3;0]
 }
-\noindent In general, if the function {f} is an explicit lambda abstraction
+In general, if the function {f} is an explicit lambda abstraction
 {(\x x'. t[x,x'])}, the conversion should be in the form
 {
    ((RATOR_CONV BETA_CONV) THENC BETA_CONV THENC conv'))
 }
-\noindent  where {conv'} applied to {t[x,x']} returns the theorem
+where {conv'} applied to {t[x,x']} returns the theorem
 {
    |-t[x,x'] = e''.
 }

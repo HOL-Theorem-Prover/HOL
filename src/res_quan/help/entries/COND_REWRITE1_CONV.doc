@@ -14,7 +14,7 @@ conversion {COND_REWR_CONV}. The input theorem should be in the following form
 {
    A |- !x11 ... . P1 ==> ... !xm1 ... . Pm ==> (!x ... . Q = R)
 }
-\noindent where each antecedent {Pi} itself may be a conjunction or
+where each antecedent {Pi} itself may be a conjunction or
 disjunction.  This theorem is transformed to a standard form expected
 by {COND_REWR_CONV} which carries out the actual rewriting.  The
 transformation is performed by {COND_REWR_CANON}. The search function
@@ -24,7 +24,7 @@ to derive a theorem
 {
   A' |- tm = tm[R'/Q']
 }
-\noindent where the right hand side of the equation is obtained by rewriting
+where the right hand side of the equation is obtained by rewriting
 the input term {tm} with an instance of the conclusion of the input theorem.
 The theorems in the list {ths} are used to discharge the assumptions
 generated from the antecedents of the input theorem.
@@ -56,7 +56,7 @@ input theorem.
    |- 2 MOD 3 = 2
 
 }
-\noindent In the first example, an empty theorem list is supplied to
+In the first example, an empty theorem list is supplied to
 {COND_REWRITE1_CONV} so the resulting theorem has an assumption
 {2 < 3}. In the second example, a list containing a theorem {|- 2 < 3}
 is supplied, the resulting theorem has no assumptions.

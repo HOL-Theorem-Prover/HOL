@@ -17,7 +17,7 @@ When applied to a term of the form {(?p. t) \/ u}, the conversion
 {
    |- (?p. t) \/ u = (?p'. t[p'/p] \/ u)
 }
-\noindent where {p'} is a primed variant of the pair {p} that does not 
+where {p'} is a primed variant of the pair {p} that does not 
 contain any variables free in the input term.
 
 \FAILURE

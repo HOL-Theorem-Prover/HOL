@@ -13,7 +13,7 @@ instantiate, the call
 {
    inst_type [(t1',t1),...,(tn',tn)] ty
 }
-\noindent will appropriately instantiate the type {ty}. The
+will appropriately instantiate the type {ty}. The
 instantiations will be performed in parallel. If several of the type
 instantiations are applicable, the choice is undefined. The {t1...tn}
 need not be type variables, but those that aren't will not be

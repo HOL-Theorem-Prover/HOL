@@ -14,7 +14,7 @@ following theorem:
    |- (!x1 ... xm. t1) /\ ... /\ (!x1 ... xm. tn) =
       !x1 ... xm. t1 /\ ... /\ tn
 }
-\noindent where the original term can be an arbitrary tree of conjunctions. The
+where the original term can be an arbitrary tree of conjunctions. The
 structure of the tree is retained in both sides of the equation.
 
 \FAILURE

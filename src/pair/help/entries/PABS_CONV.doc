@@ -17,7 +17,7 @@ of the form:
 {
    |- (\p.t) = (\p.t')
 }
-\noindent That is, {ABS_CONV c "\p.t"} applies {p} to the body of the paired
+That is, {ABS_CONV c "\p.t"} applies {p} to the body of the paired
 abstraction {"\p.t"}.
 
 \FAILURE

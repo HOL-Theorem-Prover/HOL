@@ -15,11 +15,11 @@ evaluating
 {
    REPLICATE_CONV (--`REPLICATE n x`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- REPLICATE n x = [x;x;...;x]
 }
-\noindent where the list{[x;x;...;x]} is of length {n}.
+where the list{[x;x;...;x]} is of length {n}.
 
 \EXAMPLE
 Evaluating {REPLICATE_CONV (--`REPLICATE 3 [0;1;2;3]`--)} will return

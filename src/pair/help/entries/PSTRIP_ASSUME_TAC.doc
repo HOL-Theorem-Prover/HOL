@@ -29,7 +29,7 @@ the following rules are applied:
    ====================  PSTRIP_ASSUME_TAC (A' |- ?p. v)
     A u {{v[p'/p]}} ?- t
 }
-\noindent where {p'} is a variant of the pair {p}.
+where {p'} is a variant of the pair {p}.
 
 If the conclusion of {th} is not a conjunction, a disjunction or a paired
 existentially quantified term, the whole theorem {th} is added to the

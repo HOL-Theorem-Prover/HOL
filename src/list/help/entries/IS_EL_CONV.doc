@@ -14,11 +14,11 @@ conversion, list.
 {
    IS_EL x [x0;...xn]
 }
-\noindent It returns the theorem
+It returns the theorem
 {
    |- IS_EL x [x0;...xn] = F
 }
-\noindent if for every {xi} occurred in the list, {conv (--`x = xi`--)}
+if for every {xi} occurred in the list, {conv (--`x = xi`--)}
 returns a theorem {|- P xi = F}, otherwise, if for at least one {xi},
 evaluating {conv (--`P xi`--)} returns the theorem {|- P xi = T}, then it
 returns the theorem 
@@ -35,7 +35,7 @@ Evaluating
 {
    IS_EL_CONV bool_EQ_CONV (--`IS_EL T [T;F;T]`--);
 }
-\noindent returns the following theorem:
+returns the following theorem:
 {
    |- IS_EL($= T)[F;F] = F
 }

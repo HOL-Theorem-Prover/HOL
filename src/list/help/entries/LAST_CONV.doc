@@ -14,7 +14,7 @@ the result of evaluating
 {
    LAST_CONV (--`LAST [x0;...;x(n-1)]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- LAST [x0;...;x(n-1)] = x(n-1)
 }

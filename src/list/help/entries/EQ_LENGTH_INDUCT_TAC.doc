@@ -30,7 +30,7 @@ subgoal for the step case.  The specification of {EQ_LENGTH_INDUCT_TAC} is:
 {
    !x y . (LENGTH x = LENGTH y) ==> t[x,y]
 }
-\noindent  where the variables {x} and {y}
+where the variables {x} and {y}
  have types {(xty)list} and {(yty)list} for some types {xty} and {yty}.
  It also fails if either of the variables {x} or {y} appear free in the
  assumptions. 

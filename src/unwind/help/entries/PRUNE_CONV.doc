@@ -14,7 +14,7 @@ returns a theorem of the form:
    |- (?l1 ... lr. t1 /\ ... /\ eqn1 /\ ... /\ eqnr /\ ... /\ tp) =
       (t1 /\ ... /\ tp)
 }
-\noindent where each {eqni} has the form {"!y1 ... ym. li x1 ... xn = b"} and
+where each {eqni} has the form {"!y1 ... ym. li x1 ... xn = b"} and
 {li} does not appear free in any of the other conjuncts or in {b}. The
 conversion works if one or more of the {eqni}'s are not present, that is if
 {li} is not free in any of the conjuncts, but does not work if {li} appears

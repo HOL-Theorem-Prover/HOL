@@ -14,7 +14,7 @@ tactic {COND_REWR_TAC}. The input theorem should be in the following form
 {
    A |- !x11 ... . P1 ==> ... !xm1 ... . Pm ==> (!x ... . Q = R)
 }
-\noindent where each antecedent {Pi} itself may be a conjunction or disjunction.
+where each antecedent {Pi} itself may be a conjunction or disjunction.
 This theorem is transformed to a standard form expected by
 {COND_REWR_TAC} which carries out the actual rewriting.
 The transformation is performed by {COND_REWR_CANON}. The search function
@@ -43,14 +43,14 @@ We use the built-in theorem {LESS_MOD} as the input theorem.
 
    |- !n k. k < n ==> (k MOD n = k)
 }
-\noindent We set up a goal
+We set up a goal
 {
    #g"2 MOD 3 = 2";;
    "2 MOD 3 = 2"
 
    () : void
 }
-\noindent and then apply the tactic
+and then apply the tactic
 {
    #e(COND_REWRITE1_TAC LESS_MOD);;
    OK..

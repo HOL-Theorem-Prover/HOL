@@ -12,21 +12,21 @@ Prunes several hidden variables.
 {
    "?l1 ... lr. t1 /\ ... /\ eqni1 /\ ... /\ eqnik /\ ... /\ tp"
 }
-\noindent returns a theorem of the form:
+returns a theorem of the form:
 {
    |- (?l1 ... lr. t1 /\ ... /\ eqni1 /\ ... /\ eqnik /\ ... /\ tp) =
       (?li(k+1) ... lir. t1 /\ ... /\ tp)
 }
-\noindent where for {1 <= j <= k}, each {eqnij} has the form:
+where for {1 <= j <= k}, each {eqnij} has the form:
 {
    "!y1 ... ym. lij x1 ... xn = b"
 }
-\noindent and {lij} does not appear free in any of the other conjuncts or in
+and {lij} does not appear free in any of the other conjuncts or in
 {b}. The {li}'s are related by the equation:
 {
    {{li1,...,lik}} u {{li(k+1),...,lir}} = {{l1,...,lr}}
 }
-\noindent The conversion works if one or more of the {eqnij}'s are not present,
+The conversion works if one or more of the {eqnij}'s are not present,
 that is if {lij} is not free in any of the conjuncts, but does not work if
 {lij} appears free in more than one of the conjuncts. {p} may be zero, that is,
 all the conjuncts may be {eqnij}'s. In this case the body of the result will be

@@ -14,11 +14,11 @@ For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
 {
    OR_EL_CONV (--`OR_EL [x1;x2;...;xn]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- OR_EL [x1;x2;...;xn] = b
 }
-\noindent where {b} is either the boolean constant that denotes the
+where {b} is either the boolean constant that denotes the
 disjunction of the elements of the list, or  a disjunction of those {xi} that
 are not boolean constants.
 

@@ -15,11 +15,11 @@ For any word of the form {WORD[b(n-1);...;bk;...;b0]}, the result of evaluating
 {
    WSEG_CONV "WSEG m k (WORD [b(n-1);...;bk;...;b0])",
 }
-\noindent where {m} and {k} must be numeric constants, is the theorem
+where {m} and {k} must be numeric constants, is the theorem
 {
    |- WSEG m k (WORD [b(n-1);...;bk;...;b0]) = [b(m+k-1);...;bk]
 }
-\noindent The bits are indexed form the end of the list and starts
+The bits are indexed form the end of the list and starts
 from 0.
 
 \FAILURE

@@ -11,12 +11,12 @@ of the form:
 {
    "ASCII a1 a2 a3 a4 a5 a6 a7 a8 = ASCII b1 b2 b3 b4 b5 b6 b7 b8"
 }
-\noindent where each of {a1},...,{a8},{b1},...,{b8} is either the constant {T}
+where each of {a1},...,{a8},{b1},...,{b8} is either the constant {T}
 or the constant {F}.  Given such a term, the conversion returns:
 {
    |- (ASCII a1 a2 a3 a4 a5 a6 a7 a8 = ASCII b1 b2 b3 b4 b5 b6 b7 b8) = T
 }
-\noindent if {ai} is identical to {bi} for i from 1 to 8.  Otherwise, 
+if {ai} is identical to {bi} for i from 1 to 8.  Otherwise, 
 {ascii_EQ_CONV} returns:
 {
    |- (ASCII a1 a2 a3 a4 a5 a6 a7 a8 = ASCII b1 b2 b3 b4 b5 b6 b7 b8) = F

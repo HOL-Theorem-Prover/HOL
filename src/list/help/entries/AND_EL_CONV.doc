@@ -15,11 +15,11 @@ For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
 {
    AND_EL_CONV (--`AND_EL [x1;x2;...;xn]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- AND_EL [x1;x2;...;xn] = b
 }
-\noindent where {b} is either the boolean constant that denotes the
+where {b} is either the boolean constant that denotes the
 conjunction of the elements of the list, or a conjunction of those {xi} that
 are not boolean constants.
 

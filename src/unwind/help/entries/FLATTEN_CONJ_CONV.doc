@@ -12,7 +12,7 @@ Flattens a `tree' of conjunctions.
 {
    |- t1 /\ ... /\ tn = u1 /\ ... /\ un
 }
-\noindent where the right-hand side of the equation is a flattened version of
+where the right-hand side of the equation is a flattened version of
 the left-hand side.
 
 \FAILURE

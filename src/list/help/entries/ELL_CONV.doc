@@ -15,11 +15,11 @@ the result of evaluating
 {
    ELL_CONV (--`ELL k [xn-1;...;xk;...;x0]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- ELL k [xn-1;...;xk;...;x0] = xk
 }
-\noindent where {k} must not be greater then the length of the list.
+where {k} must not be greater then the length of the list.
 Note that {ELL} indexes the list elements from the tail end.
 
 \FAILURE

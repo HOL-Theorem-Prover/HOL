@@ -14,7 +14,7 @@ When applied to a term of the form {!x::P. !y::Q. R}, the conversion
 {
    |- (!x::P. !y::Q. R) =  !y::Q. !x::P. R
 }
-\noindent providing that {x} does not occur free in {Q} and {y} does not
+providing that {x} does not occur free in {Q} and {y} does not
 occur free in {P}.
 
 \FAILURE

@@ -16,7 +16,7 @@ When applied to an argument of the form {!p1...pn. ?q. tm}, the conversion
 {
    |- (!p1...pn. ?q. tm) = (?q'. !p1...pn. tm[q' p1 ... pn/yq)
 }
-\noindent where {q'} is a primed variant of the pair {q} not free in the
+where {q'} is a primed variant of the pair {q} not free in the
 input term.
 
 \FAILURE

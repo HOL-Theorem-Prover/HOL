@@ -15,12 +15,12 @@ When {E} is just a variable {v}, the conversion returns:
 {
    |- t IN {{v | P}} = P[t/v]
 }
-\noindent and when {E} is not a variable but some other expression, the theorem
+and when {E} is not a variable but some other expression, the theorem
 returned is:
 {
    |- t IN {{E | P}} = ?x1...xn. (t = E) /\ P
 }
-\noindent where {x1}, ..., {xn} are the variables that occur free both in
+where {x1}, ..., {xn} are the variables that occur free both in
 the expression {E} and in the proposition {P}.
 
 \EXAMPLE

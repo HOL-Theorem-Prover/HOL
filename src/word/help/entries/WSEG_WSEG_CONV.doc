@@ -16,12 +16,12 @@ For any word {w} of size {n}, the result of evaluating
 {
    WSEG_WSEG_CONV "n" "WSEG m2 k2 (WSEG m1 k1 w)"
 }
-\noindent where {m2}, {k2}, {m1} and {k1} must be numeric constants,
+where {m2}, {k2}, {m1} and {k1} must be numeric constants,
 is the theorem
 {
    PWORDLEN n w |- WSEG m2 k2 (WSEG m1 k1 w) = WSEG m2 k w
 }
-\noindent where {k} is a numeric constant whose value is the sum of
+where {k} is a numeric constant whose value is the sum of
 {k1} and {k2}.
 
 \FAILURE

@@ -17,12 +17,12 @@ list. When applied to a term {--`f ti`--}, this conversion should return a theor
 of the form {|- (f ti) = ri}, where {ri} is the result of applying the function
 {f} to the element {ti}. 
 
-\noindent Given an appropriate {conv}, the conversion {MAP_CONV conv} takes a
+Given an appropriate {conv}, the conversion {MAP_CONV conv} takes a
 term of the form {--`MAP f [t1;...;tn]`--} to the theorem
 {
    |- MAP f [t1;...;tn] = [r1;...;rn] 
 } 
-\noindent where {conv (--`f ti`--)} returns {|- (f ti) = ri} for {i} from {1} to {n}.
+where {conv (--`f ti`--)} returns {|- (f ti) = ri} for {i} from {1} to {n}.
 
 \EXAMPLE
 
@@ -32,7 +32,7 @@ applications of the function being mapped down a list:
    - MAP_CONV ALL_CONV (--`MAP SUC [1;2;1;4]`--);
    |- MAP SUC[1;2;1;4] = [SUC 1;SUC 2;SUC 1;SUC 4]
 }
-\noindent The result just contains applications of {SUC}, since the supplied 
+The result just contains applications of {SUC}, since the supplied 
 conversion {ALL_CONV} does no evaulation.
 
 We now construct a conversion that maps {SUC n} for any numeral {n} to the
@@ -46,7 +46,7 @@ numeral standing for the successor of {n}:
          end;
    SUC_CONV = - : conv
 }
-\noindent The result is a conversion that inverts {num_CONV}:
+The result is a conversion that inverts {num_CONV}:
 {
    - num_CONV (--`4`--);
    |- 4 = SUC 3
@@ -54,7 +54,7 @@ numeral standing for the successor of {n}:
    - SUC_CONV (--`SUC 3`--);
    |- SUC 3 = 4
 }
-\noindent The conversion {SUC_CONV} can then be used to compute the
+The conversion {SUC_CONV} can then be used to compute the
 result of mapping the successor function down a list of numerals:
 {
    - MAP_CONV SUC_CONV (--`MAP SUC [1;2;1;4]`--);

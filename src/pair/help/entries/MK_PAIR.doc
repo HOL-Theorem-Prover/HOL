@@ -21,6 +21,4 @@ rule {MK_PAIR} returns the theorem {A1 u A2 |- (a,b) = (x,y)}.
 \FAILURE
 Fails unless both theorems are equational.
 
-\SEEALSO
-
 \ENDDOC

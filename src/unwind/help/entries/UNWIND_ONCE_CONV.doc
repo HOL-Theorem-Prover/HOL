@@ -15,24 +15,24 @@ associative-commutative reordering to:
 {
    t1 /\ t2 /\ ... /\ tn
 }
-\noindent {p} is used to partition the terms {ti} for {1 <= i <= n} into two
+{p} is used to partition the terms {ti} for {1 <= i <= n} into two
 disjoint sets:
 {
    REW = {{ti | p ti}}
    OBJ = {{ti | ~p ti}}
 }
-\noindent The terms {ti} for which {p} is true are then used as a set of
+The terms {ti} for which {p} is true are then used as a set of
 rewrite rules (thus they should be equations) to do a single top-down parallel
 rewrite of the remaining terms. The rewritten terms take the place of the
 original terms in the input conjunction. For example, if {tm} is:
 {
    t1 /\ t2 /\ t3 /\ t4
 }
-\noindent and {REW = {{t1,t3}}} then the result is:
+and {REW = {{t1,t3}}} then the result is:
 {
    |- t1 /\ t2 /\ t3 /\ t4 = t1 /\ t2' /\ t3 /\ t4'
 }
-\noindent where {ti'} is {ti} rewritten with the equations {REW}.
+where {ti'} is {ti} rewritten with the equations {REW}.
 
 \FAILURE
 Never fails.

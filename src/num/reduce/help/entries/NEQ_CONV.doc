@@ -13,11 +13,11 @@ If {m} and {n} are both numerals (e.g. {0}, {1}, {2}, {3},...), then
 {
    |- (m = n) = T
 }
-\noindent if {m} and {n} are identical, or
+if {m} and {n} are identical, or
 {
    |- (m = n) = F
 }
-\noindent if {m} and {n} are distinct.
+if {m} and {n} are distinct.
 
 \FAILURE
 {NEQ_CONV tm} fails unless {tm} is of the form {"m = n"}, where {m} and {n}

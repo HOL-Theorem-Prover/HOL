@@ -21,24 +21,24 @@ Apply {tl} three times to a list:
    - funpow 3 tl [1,2,3,4,5];
    [4, 5] : int list
 }
-\noindent Apply {tl} zero times:
+Apply {tl} zero times:
 {
    - funpow 0 tl [1,2,3,4,5];
    [1, 2, 3, 4, 5] : int list
 }
-\noindent Apply {tl} six times to a list of only five elements:
+Apply {tl} six times to a list of only five elements:
 {
    - funpow 6 tl [1,2,3,4,5];
    uncaught exception Tl
 }
-\noindent Next, an application of {funpow} in which the integer argument is
+Next, an application of {funpow} in which the integer argument is
 negative. Since the function cannot be applied to the argument an arbitrary
 number of times, the application of {funpow} fails.
 {
    - funpow ~1 tl [1,2,3,4,5];
    uncaught exception Tl
 }
-\noindent An example that causes indefinite looping:
+An example that causes indefinite looping:
 {
    - funpow ~1 I [1,2,3,4,5];
 }

@@ -15,12 +15,12 @@ For any term {tm} of type {:(*)word}, the result of evaluating
 {
    PWORDLEN_CONV tms "PWORDLEN n tm"
 }
-\noindent where {n} must be a numeric constant,
+where {n} must be a numeric constant,
 is the theorem
 {
    A |- PWORDLEN n tm = T
 }
-\noindent where the new assumption(s) {A} depends on the actual form
+where the new assumption(s) {A} depends on the actual form
 of the term {tm}.
 
 If {tm} is an application of the unary bitwise operator {WNOT}, i.e.,

@@ -16,7 +16,7 @@ When applied to a term of the form {~(!p. t)}, the conversion
 {
    |- ~(!p. t) = (?p. ~t)
 }
-\noindent It is irrelevant whether any variables in {p} occur free in {t}.
+It is irrelevant whether any variables in {p} occur free in {t}.
 
 \FAILURE
 Fails if applied to a term not of the form {~(!p. t)}.

@@ -13,12 +13,12 @@ possible.
 {
    "t1 /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn"
 }
-\noindent returns a theorem of the form:
+returns a theorem of the form:
 {
    |- t1  /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn =
       t1' /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn'
 }
-\noindent where {ti'} (for {1 <= i <= n}) is {ti} rewritten with the equations
+where {ti'} (for {1 <= i <= n}) is {ti} rewritten with the equations
 {eqni} ({1 <= i <= m}). These equations are those conjuncts with line name not
 in {l} (and which are equations).
 

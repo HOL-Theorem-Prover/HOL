@@ -14,7 +14,7 @@ the result of evaluating
 {
    EL_CONV (--`EL k [x0;...xk;...;xn]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- EL k [x0;...;xk;...;xn] = xk
 }

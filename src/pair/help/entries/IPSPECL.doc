@@ -17,7 +17,7 @@ Specializes a theorem zero or more times, with type instantiation if necessary.
    ----------------------------  IPSPECL ["q1",...,"qn"]
     A |- t[q1,...qn/p1,...,pn]
 }
-\noindent (where {qi} is free for {pi} in {tm}).
+(where {qi} is free for {pi} in {tm}).
 
 \FAILURE
 {IPSPECL} fails if the list of terms is longer than the number of

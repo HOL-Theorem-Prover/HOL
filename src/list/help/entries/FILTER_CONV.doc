@@ -14,11 +14,11 @@ conversion, list.
 {
    FILTER P [x0;...xn]
 }
-\noindent It returns the theorem
+It returns the theorem
 {
    |- FILTER P [x0;...xn] = [...xi...]
 }
-\noindent where for every {xi} occurring in the right-hand side of the resulting theorem, {conv (--`P xi`--)} returns a theorem {|- P xi = T}.
+where for every {xi} occurring in the right-hand side of the resulting theorem, {conv (--`P xi`--)} returns a theorem {|- P xi = T}.
 
 \FAILURE
 {FILTER_CONV conv tm} fails if {tm} is not of the form described above.
@@ -28,11 +28,11 @@ Evaluating
 {
    FILTER_CONV bool_EQ_CONV (--`FILTER ($= T) [T;F;T]`--);
 }
-\noindent returns the following theorem:
+returns the following theorem:
 {
    |- FILTER($= T)[T;F;T] = [T;T]
 }
-\noindent   In general, if the predicate {P} is an explicit lambda abstraction
+In general, if the predicate {P} is an explicit lambda abstraction
 {(\x. P x)}, the conversion should be in the form
 {
    (BETA_CONV THENC conv')

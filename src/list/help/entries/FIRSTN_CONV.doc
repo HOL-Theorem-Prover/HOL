@@ -14,7 +14,7 @@ the result of evaluating
 {
    FIRSTN_CONV (--`FIRSTN k [x0;...x(n-k);...;x(n-1)]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- FIRSTN k [x0;...;x(n-k);...;x(n-1)] = [x0;...;x(n-k)]
 }

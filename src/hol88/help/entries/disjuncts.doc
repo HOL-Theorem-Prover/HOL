@@ -14,7 +14,7 @@ list. Note that
 {
    disjuncts(list_mk_disj([(--`t1`--),...,(--`tn`--)]))
 }
-\noindent will not return {[(--`t1`--),...,(--`tn`--)]} if any of {t1},...,{tn} are
+will not return {[(--`t1`--),...,(--`tn`--)]} if any of {t1},...,{tn} are
 disjunctions.
 
 \FAILURE

@@ -12,7 +12,7 @@ Given such a term, for example `abc`, the conversion returns the theorem:
 {
    |- `abc` = STRING(ASCII F T T F F F F T)`bc`
 }
-\noindent where {(ASCII F T T F F F F T)} is the ascii character code for
+where {(ASCII F T T F F F F T)} is the ascii character code for
 the first character in the supplied string (in this case {`a`}).
 
 \FAILURE

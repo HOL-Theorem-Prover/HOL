@@ -12,12 +12,12 @@ Prunes a specified hidden variable.
 {
    "?l1 ... lj ... lr. t1 /\ ... /\ ti /\ eq /\ t(i+1) /\ ... /\ tp"
 }
-\noindent returns a theorem of the form:
+returns a theorem of the form:
 {
    |- (?l1 ... lj ... lr. t1 /\ ... /\ ti /\ eq /\ t(i+1) /\ ... /\ tp) =
       (?l1 ... l(j-1) l(j+1) ... lr. t1 /\ ... /\ ti /\ t(i+1) /\ ... /\ tp)
 }
-\noindent where {eq} has the form {"!y1 ... ym. lj x1 ... xn = b"} and {lj}
+where {eq} has the form {"!y1 ... ym. lj x1 ... xn = b"} and {lj}
 does not appear free in the {ti}'s or in {b}. The conversion works if {eq} is
 not present, that is if {lj} is not free in any of the conjuncts, but does not
 work if {lj} appears free in more than one of the conjuncts. Each of {m}, {n}

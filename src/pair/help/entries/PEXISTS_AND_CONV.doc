@@ -18,12 +18,12 @@ If {p} contains variables free in {t} but none in {u}, then the theorem:
 {
    |- (?p. t /\ u) = (?p. t) /\ u
 }
-\noindent is returned.  If {p} contains variables free in {u} but none in {t},
+is returned.  If {p} contains variables free in {u} but none in {t},
 then the result is:
 {
    |- (?p. t /\ u) = t /\ (?x. u)
 }
-\noindent And if {p} does not contain any variable free in either {t} nor {u},
+And if {p} does not contain any variable free in either {t} nor {u},
 then the result is:
 {
    |- (?p. t /\ u) = (?x. t) /\ (?x. u)

@@ -14,12 +14,12 @@ term:
 {
    "?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn"
 }
-\noindent returns a theorem of the form:
+returns a theorem of the form:
 {
    B |- (?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn) =
         (?li(k+1) ... lim. t1' /\ ... /\ tn')
 }
-\noindent where each {ti'} is the result of rewriting {ti} with the theorems in
+where each {ti'} is the result of rewriting {ti} with the theorems in
 {thl}. The set of assumptions {B} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to a
 conjunct, it is unchanged. Those conjuncts that after rewriting are equations

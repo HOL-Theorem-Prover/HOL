@@ -14,7 +14,7 @@ theorem of the form:
    |- t1  /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn =
       t1' /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn'
 }
-\noindent where {ti'} (for {1 <= i <= n}) is {ti} rewritten with the equations
+where {ti'} (for {1 <= i <= n}) is {ti} rewritten with the equations
 {eqni} ({1 <= i <= m}). These equations are the conjuncts for which the
 predicate {p} is true. The {ti} terms are the conjuncts for which {p} is false.
 The rewriting is repeated until no changes take place.

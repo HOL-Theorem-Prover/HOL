@@ -14,11 +14,11 @@ For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
 {
    LENGTH_CONV (--`LENGTH [x1;x2;...;xn]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- LENGTH [x1;x2;...;xn] = n
 }
-\noindent where {n} is the numeral constant that denotes the length of the
+where {n} is the numeral constant that denotes the length of the
 list.
 
 \FAILURE

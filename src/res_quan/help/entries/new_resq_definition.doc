@@ -23,14 +23,14 @@ Let {x_1,...,x_n} be distinct variables.  Evaluating
    new_resq_definition (`name`,
     "!x_i::P_i. ... !x_j::P_j. C x_1 ... x_n = t")
 } 
-\noindent where {C} is not already a constant, {i} is greater or equal to 1 and
+where {C} is not already a constant, {i} is greater or equal to 1 and
 {i <= j <= n}, declares {C} to be a new constant in the current theory
 with this definition as its specification. 
 This constant specification is returned as a theorem with the form
 {
    |- !x_i::P_i. ... !x_j::P_j. !x_k .... C x_1 ... x_n = t
 }
-\noindent where the variables {x_k} are the free variables occurring on
+where the variables {x_k} are the free variables occurring on
 the left hand side of the definition and are not restricted
 quantified. This theorem is saved in the current theory under
 (the name) {name}. 

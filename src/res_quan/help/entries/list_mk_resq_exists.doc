@@ -9,7 +9,7 @@ Iteratively constructs a restricted existential quantification.
 {
    list_mk_resq_exists([("x1","P1");...;("xn","Pn")],"t")
 }
-\noindent returns {"?x1::P1. ... ?xn::Pn. t"}.
+returns {"?x1::P1. ... ?xn::Pn. t"}.
 
 \FAILURE
 Fails with {list_mk_resq_exists} if the first terms {xi} in the pairs are

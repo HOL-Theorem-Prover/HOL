@@ -13,7 +13,7 @@ If {n} is a numeral (e.g. {0}, {1}, {2}, {3},...), then
 {
    |- SUC n = s
 }
-\noindent where {s} is the numeral that denotes the successor of the natural
+where {s} is the numeral that denotes the successor of the natural
 number denoted by {n}.
 
 \FAILURE

@@ -20,7 +20,7 @@ produces the theorem {A1 u A2 |- t}.
    ------------------------------------  PCHOOSE ("q",(A1 |- ?q. s))
                A1 u A2 |- t
 }
-\noindent Where no variable in the paired variable structure {q} is free in
+Where no variable in the paired variable structure {q} is free in
 {A1}, {A2} or {t}.
 
 \FAILURE

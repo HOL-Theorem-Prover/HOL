@@ -56,9 +56,9 @@ type) which need to be instantiated may be free in the assumptions, eg:
    type variable(s) in assumptions would be instantiated in concl
 
 }
-\noindent In fact, for instantiating a theorem, {PART_MATCH} is usually easier.
+In fact, for instantiating a theorem, {PART_MATCH} is usually easier.
 
-\noindent Why is {match} in Compat? Because {match} is not provided in hol90;
+Why is {match} in Compat? Because {match} is not provided in hol90;
 the more accurate name {match_term} is used. Also, hol90 provides {match_type}.
 
 \SEEALSO

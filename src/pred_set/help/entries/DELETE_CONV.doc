@@ -22,12 +22,12 @@ theorem
 {
    |- {{t1,...,tn}} DELETE t = {{ti,...,tj}}
 }
-\noindent where {{{ti,...,tj}}} is the subset of {{{t1,...,tn}}} for which
+where {{{ti,...,tj}}} is the subset of {{{t1,...,tn}}} for which
 the supplied equality conversion {conv} proves
 {
    |- (ti = t) = F, ..., |- (tj = t) = F
 }
-\noindent and for all the elements {tk} in {{{t1,...,tn}}} but not in
+and for all the elements {tk} in {{{t1,...,tn}}} but not in
 {{{ti,...,tj}}}, either {conv} proves {|- (tk = t) = T} or {tk} is
 alpha-equivalent to {t}.  That is, the reduced set {{{ti,...,tj}}} comprises
 all those elements of the original set that are provably not equal to the

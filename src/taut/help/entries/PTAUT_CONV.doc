@@ -18,7 +18,7 @@ theorems is returned:
    |- (!x1 ... xn. t) = T
    |- (!x1 ... xn. t) = F
 }
-\noindent This conversion also accepts propositional terms that are not fully
+This conversion also accepts propositional terms that are not fully
 universally quantified. However, for such a term, the conversion will only
 succeed if the term is valid.
 

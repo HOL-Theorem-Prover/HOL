@@ -19,7 +19,7 @@ Suppose that {th} is the following theorem
 {
    A |- !x::P. Q[x] = R[x])
 }
-\noindent Applying the tactic {RESQ_REWRITE1_TAC th} to a goal {(asml,gl)}
+Applying the tactic {RESQ_REWRITE1_TAC th} to a goal {(asml,gl)}
 will return a main subgoal {(asml',gl')} where {gl'} is obtained by
 substituting instances of {R[x'/x]} for corresponding instances of
 {Q[x'/x]} in the original goal {gl}. All instances of {P x'} which

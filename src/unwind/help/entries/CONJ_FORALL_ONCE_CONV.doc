@@ -12,7 +12,7 @@ Moves a single universal quantifier up through a tree of conjunctions.
 {
    |- (!x. t1) /\ ... /\ (!x. tn) = !x. t1 /\ ... /\ tn
 }
-\noindent where the original term can be an arbitrary tree of conjunctions. The
+where the original term can be an arbitrary tree of conjunctions. The
 structure of the tree is retained in both sides of the equation.
 
 \FAILURE

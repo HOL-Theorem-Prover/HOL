@@ -14,7 +14,7 @@ When applied to a term of the form {!x::P. Q}, the conversion
 {
    |- !x::P. Q = (!x. P x ==> Q)
 }
-\noindent which is the underlying semantic representation of the restricted
+which is the underlying semantic representation of the restricted
 universal quantification.
 
 \FAILURE

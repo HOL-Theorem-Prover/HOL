@@ -12,9 +12,9 @@ combinator, duplicate.
 Never fails, unless the hol88 library has not been loaded.
 
 \COMMENTS
-Not in hol90, since it was never used in the implementation. 
+Not in hol90, since it was never used in the implementation.
 
 \SEEALSO
-\#\#, B, C, CB, Co, I, K, KI, o, oo, S.
+##, B, C, CB, Co, I, K, KI, o, oo, S.
 
 \ENDDOC

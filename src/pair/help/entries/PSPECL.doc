@@ -20,7 +20,7 @@ sequentially left-to-right in the same way as for {PSPEC}.
    --------------------------  SPECL "[q1;...;qn]"
      A |- t[q1/p1]...[qn/pn]
 }
-\noindent It is permissible for the term-list to be empty, in which case
+It is permissible for the term-list to be empty, in which case
 the application of {PSPECL} has no effect.
 
 \FAILURE

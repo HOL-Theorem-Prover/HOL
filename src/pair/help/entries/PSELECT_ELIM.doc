@@ -23,7 +23,7 @@ of the premises excepting {P p}.
    -------------------------------------  PSELECT_ELIM th1 (p ,th2)
               A1 u A2 |- t
 }
-\noindent where {p} is not free in {A2}. If {p} appears in the conclusion of
+where {p} is not free in {A2}. If {p} appears in the conclusion of
 {th2}, the epsilon term will NOT be eliminated, and the conclusion will be
 {t[$@ P/p]}.
 

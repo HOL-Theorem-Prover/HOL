@@ -3,7 +3,7 @@
 \TYPE {Compat.oo :('a * 'b -> 'c) * (('d -> 'a) * ('d -> 'b)) -> 'd -> 'c}
 
 \SYNOPSIS
-An infix operator that composes a function over a pair of functions: 
+An infix operator that composes a function over a pair of functions:
 {(f oo (g,h)) x} = {f (g x, h x)}.
 
 \KEYWORDS
@@ -13,6 +13,6 @@ combinator.
 Never fails, unless the {hol88} library has not been loaded.
 
 \SEEALSO
-\#\#, B, C, CB, Co, I, K, KI, o, S, W.
+##, B, C, CB, Co, I, K, KI, o, S, W.
 
 \ENDDOC

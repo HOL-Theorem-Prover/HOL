@@ -13,12 +13,14 @@ conversion, list.
 {
    ALL_EL P [x0;...xn]
 }
-\noindent It returns the theorem
+It returns the theorem
 {
    |- ALL_EL P [x0;...xn] = T
 }
-\noindent if for every {xi} occurring in the list, {conv (--`P xi`--)} returns a theorem {|- P xi = T}, otherwise, if for at least one {xi}, evaluating 
-{conv (--`P xi`--)} returns the theorem {|- P xi = F}, then it returns the theorem
+if for every {xi} occurring in the list, {conv (--`P xi`--)} returns a
+theorem {|- P xi = T}, otherwise, if for at least one {xi}, evaluating
+{conv (--`P xi`--)} returns the theorem {|- P xi = F}, then it returns
+the theorem
 {
    |- ALL_EL P [x0;...xn] = F
 }
@@ -32,11 +34,11 @@ Evaluating
 {
    ALL_EL_CONV bool_EQ_CONV (--`ALL_EL ($= T) [T;F;T]`--);
 }
-\noindent returns the following theorem:
+returns the following theorem:
 {
    |- ALL_EL($= T)[T;F;T] = F
 }
-\noindent   In general, if the predicate {P} is an explicit lambda abstraction
+In general, if the predicate {P} is an explicit lambda abstraction
 {(\x. P x)}, the conversion should be in the form
 {
    (BETA_CONV THENC conv')

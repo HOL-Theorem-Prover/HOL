@@ -13,7 +13,7 @@ If {m} and {n} are numerals (e.g. {0}, {1}, {2}, {3},...), then
 {
    |- m - n = s
 }
-\noindent where {s} is the numeral that denotes the difference of the natural
+where {s} is the numeral that denotes the difference of the natural
 numbers denoted by {m} and {n}.
 
 \FAILURE

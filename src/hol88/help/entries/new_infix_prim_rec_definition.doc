@@ -16,20 +16,20 @@ formal proof from an instance of the theorem {num_Axiom}:
 {
    |- !e f. ?! fn. (fn 0 = e) /\ (!n. fn(SUC n) = f(fn n)n)
 }
-\noindent Evaluating
+Evaluating
 {
    new_infix_prim_rec_definition
     ("fun_DEF",
      (--`(fun 0 x = f_1[x]) /\
          (fun (SUC n) x = f_2[fun n x', n, x])`--));;
 }
-\noindent where all the free variables in the term {x'} are
+where all the free variables in the term {x'} are
 contained in {{{n, x}}}, automatically proves the theorem:
 {
    |-  ?fun. !x. fun 0 x = f_1[x] /\
              !x. fun (SUC n) x = f_2[fun n x', n, x]
 }
-\noindent and then declares a new constant {fun} with this property and infix
+and then declares a new constant {fun} with this property and infix
 status as its specification. This constant specification is returned as a
 theorem and is saved with name {fun_DEF} in the current theory segment.
 
@@ -56,7 +56,7 @@ Here is the recursive definition of the constant {+} used by the system:
      (--`($+ 0 n = n) /\
          ($+ (SUC m) n = SUC($+ m n))`--))
 }
-\noindent The {$}'s are there (as documentation) to indicate that the constant
+The {$}'s are there (as documentation) to indicate that the constant
 {+} is being declared to be an infix.  Evaluating this ML expression will
 create the following constant specification in the current theory segment:
 {

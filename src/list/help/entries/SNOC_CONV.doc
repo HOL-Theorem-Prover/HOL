@@ -13,11 +13,11 @@ conversion, list.
 {
    SNOC x [x0;...xn]
 }
-\noindent It returns the theorem
+It returns the theorem
 {
    |- SNOC x [x0;...xn] = [x0;...xn;x]
 }
-\noindent where the right-hand side is the list in the canonical form,
+where the right-hand side is the list in the canonical form,
 i.e., constructed with only the constructor {CONS}.
 
 \FAILURE
@@ -28,7 +28,7 @@ Evaluating
 {
    SNOC_CONV (--`SNOC 5[0;1;2;3;4]`--);
 }
-\noindent returns the following theorem:
+returns the following theorem:
 {
    |- SNOC 5[0;1;2;3;4] = [0;1;2;3;4;5]
 }

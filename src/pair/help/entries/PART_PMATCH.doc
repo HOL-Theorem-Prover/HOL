@@ -16,7 +16,7 @@ term:
 {
    PART_MATCH fn (A |- !p1...pn. t) tm
 }
-\noindent the function {PART_PMATCH} applies {fn} to {t'} (the result
+the function {PART_PMATCH} applies {fn} to {t'} (the result
 of specializing universally quantified pairs in the conclusion of
 the theorem), and attempts to match the resulting term to the argument term
 {tm}. If it succeeds, the appropriately instantiated version of the theorem is

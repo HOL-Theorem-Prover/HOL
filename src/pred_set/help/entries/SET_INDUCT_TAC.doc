@@ -13,7 +13,7 @@ sets.  When applied to a goal of the form
 {
    !s. FINITE s ==> P[s]
 }
-\noindent {SET_INDUCT_TAC} reduces this goal to proving that the property
+{SET_INDUCT_TAC} reduces this goal to proving that the property
 {\s.P[s]} holds of the empty set and is preserved by insertion of an element
 into an arbitrary finite set.  Since every finite set can be built up from the
 empty set {"{{}}"} by repeated insertion of values, these subgoals imply that
@@ -26,7 +26,7 @@ The tactic specification of {SET_INDUCT_TAC} is:
      A |- P[{{}}/s]
      A u {{FINITE s', P[s'/s], ~e IN s'}} ?- P[e INSERT s'/s]
 }
-\noindent where {e} is a variable chosen so as not to appear free in the
+where {e} is a variable chosen so as not to appear free in the
 assumptions {A}, and {s'} is a primed variant of {s} that does not appear free
 in {A} (usually, {s'} is just {s}).
 

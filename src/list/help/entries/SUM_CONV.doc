@@ -14,11 +14,11 @@ For any object language list of the form {--`[x1;x2;...;xn]`--}, where {x1},
 {
    SUM_CONV (--`SUM [x1;x2;...;xn]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- SUM [x1;x2;...;xn] = n
 }
-\noindent where {n} is the numeral constant that denotes the sum of the elements of the list.
+where {n} is the numeral constant that denotes the sum of the elements of the list.
 
 \EXAMPLE
 Evaluating {SUM_CONV (--`SUM [0;1;2;3]`--)} will return

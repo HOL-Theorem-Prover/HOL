@@ -18,7 +18,7 @@ it differs from it in also instantiating the type if needed:
   -----------------------  IPSPEC "q:ty'"
       A |- tm[q/p]
 }
-\noindent (where {q} is free for {p} in {tm}, and {ty'} is an instance
+(where {q} is free for {p} in {tm}, and {ty'} is an instance
 of {ty}).
 
 \FAILURE

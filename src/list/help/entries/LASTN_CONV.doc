@@ -14,7 +14,7 @@ the result of evaluating
 {
    LASTN_CONV (--`LASTN k [x0;...x(n-k);...;x(n-1)]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- LASTN k [x0;...;x(n-k);...;x(n-1)] = [x(n-k);...;x(n-1)]
 }

@@ -17,11 +17,11 @@ result of evaluating
 {
    PWORDLEN_bitop_CONV  "PWORDLEN n tm"
 }
-\noindent is the theorem
+is the theorem
 {
    ..., PWORDLEN n vi, ... |- PWORDLEN n tm = T
 }
-\noindent Each free variable occurred in {tm} will have a corresponding
+Each free variable occurred in {tm} will have a corresponding
 clause in the assumption. This conversion recursively descends into
 the subterms of {tm} until it reaches all simple variables.
 

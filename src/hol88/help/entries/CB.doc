@@ -13,6 +13,6 @@ combinator.
 Never fails, unless the {hol88} library is not loaded.
 
 \SEEALSO
-\#\#, B, C, Co, I, K, KI, o, oo, S, W.
+##, B, C, Co, I, K, KI, o, oo, S, W.
 
 \ENDDOC

@@ -28,7 +28,7 @@ The goal:
 {
    ?- ?(x,y). (x,y)=(1,2)
 }
-\noindent can be solved by:
+can be solved by:
 {
    PEXISTS_TAC "(1,2)" THEN REFL_TAC
 }

@@ -12,7 +12,7 @@ Deletes existential quantifiers.
 {
    |- (?x1 ... xn. t) = t
 }
-\noindent provided {x1,...,xn} are not free in {t}.
+provided {x1,...,xn} are not free in {t}.
 
 \FAILURE
 Fails if any of the {x}'s appear free in {t}. The function does not perform a

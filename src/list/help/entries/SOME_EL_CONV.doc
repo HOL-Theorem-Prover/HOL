@@ -14,11 +14,11 @@ conversion, list.
 {
    SOME_EL P [x0;...xn]
 }
-\noindent It returns the theorem
+It returns the theorem
 {
    |- SOME_EL P [x0;...xn] = F
 }
-\noindent if for every {xi} occurred in the list, {conv (--`P xi`--)}
+if for every {xi} occurred in the list, {conv (--`P xi`--)}
 returns a theorem {|- P xi = F}, otherwise, if for at least one {xi},
 evaluating {conv (--`P xi`--)} returns the theorem {|- P xi = T}, then it returns the theorem
 {
@@ -34,11 +34,11 @@ Evaluating
 {
    SOME_EL_CONV bool_EQ_CONV (--`SOME_EL ($= T) [T;F;T]`--);
 }
-\noindent returns the following theorem:
+returns the following theorem:
 {
    |- SOME_EL($= T)[T;F;T] = T
 }
-\noindent   In general, if the predicate {P} is an explicit lambda abstraction
+In general, if the predicate {P} is an explicit lambda abstraction
 {(\x. P x)}, the conversion should be in the form
 {
    (BETA_CONV THENC conv')

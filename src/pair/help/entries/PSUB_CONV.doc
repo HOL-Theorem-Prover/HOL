@@ -18,7 +18,7 @@ abstraction {"\p.t"} to the theorem:
 {
    |- (\p.t) = (\p.t')
 }
-\noindent That is, {PSUB_CONV c "\p.t"} applies {c} to the body of the
+That is, {PSUB_CONV c "\p.t"} applies {c} to the body of the
 paired abstraction {"\p.t"}.
 If {c} is a conversion that maps {"t1"} to the theorem
 {|- t1 = t1'} and {"t2"} to the theorem {|- t2 = t2'}, then the conversion
@@ -26,7 +26,7 @@ If {c} is a conversion that maps {"t1"} to the theorem
 {
    |- (t1 t2) = (t1' t2')
 }
-\noindent That is, {PSUB_CONV c "t1 t2"} applies {c} to the both the operator
+That is, {PSUB_CONV c "t1 t2"} applies {c} to the both the operator
 {t1} and the operand {t2} of the application {"t1 t2"}.  Finally, for any
 conversion {c}, the function returned by {PSUB_CONV c} acts as the identity
 conversion on variables and constants.  That is, if {"t"} is a variable or

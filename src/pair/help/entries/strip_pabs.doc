@@ -12,7 +12,7 @@ Iteratively breaks apart paired abstractions.
 {
    strip_pabs(list_mk_abs(["p1";...;"pn"],"t"))
 }
-\noindent will not return {(["p1";...;"pn"],"t")} if {t} is
+will not return {(["p1";...;"pn"],"t")} if {t} is
 a paired abstraction.
 
 \FAILURE

@@ -14,7 +14,7 @@ the result of evaluating
 {
    BUTLAST_CONV (--`BUTLAST [x0;...;x(n-1)]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- BUTLAST [x0;...;x(n-1)] = [x0;...; x(n-2)]
 }

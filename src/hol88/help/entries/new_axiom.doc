@@ -11,7 +11,7 @@ theorem
 {
    |- !x1..xn. tm
 }
-\noindent and stores it away in the theory file. Note that all free variables
+and stores it away in the theory file. Note that all free variables
 in {tm} are generalized automatically before the axiom is set up.
 
 \FAILURE

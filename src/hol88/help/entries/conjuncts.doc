@@ -16,7 +16,7 @@ of a list. Note that
 {
    conjuncts(list_mk_conj([t1,...,tn]))
 }
-\noindent will not return {[t1,...,tn]} if any of {t1},...,{tn} are
+will not return {[t1,...,tn]} if any of {t1},...,{tn} are
 conjunctions.
 
 \FAILURE

@@ -52,17 +52,17 @@ is in the subset but is not valid.
 \EXAMPLE
 A simple example containing a free variable:
 {
-   #ARITH_CONV "m < SUC m";;
-   |- m < (SUC m) = T
+   - ARITH_CONV ``m < SUC m``;
+   > val it = |- m < (SUC m) = T : thm
 }
-\noindent A more complex example with subtraction and universal quantifiers,
-and which is not initially in prenex normal form:
+A more complex example with subtraction and universal quantifiers, and
+which is not initially in prenex normal form:
 {
    #ARITH_CONV
    # "!m p. p < m ==> !q r. (m < (p + q) + r) ==> ((m - p) < q + r)";;
    |- (!m p. p < m ==> (!q r. m < ((p + q) + r) ==> (m - p) < (q + r))) = T
 }
-\noindent Two examples with existential quantifiers:
+Two examples with existential quantifiers:
 {
    #ARITH_CONV "?m n. m < n";;
    |- (?m n. m < n) = T
@@ -70,19 +70,19 @@ and which is not initially in prenex normal form:
    #ARITH_CONV "?m n. (2 * m) + (3 * n) = 10";;
    |- (?m n. (2 * m) + (3 * n) = 10) = T
 }
-\noindent An instance of a universally quantified formula involving a conditional
+An instance of a universally quantified formula involving a conditional
 statement and subtraction:
 {
    #ARITH_CONV
    # "((p + 3) <= n) ==> (!m. ((m EXP 2 = 0) => (n - 1) | (n - 2)) > p)";;
    |- (p + 3) <= n ==> (!m. ((m EXP 2 = 0) => n - 1 | n - 2) > p) = T
 }
-\noindent Failure due to mixing quantifiers:
+Failure due to mixing quantifiers:
 {
    #ARITH_CONV "!m. ?n. m < n";;
    evaluation failed     ARITH_CONV -- formula not in the allowed subset
 }
-\noindent Failure because the truth of the formula relies on the fact that the
+Failure because the truth of the formula relies on the fact that the
 variables cannot have fractional values:
 {
    #ARITH_CONV "!m n. ~(SUC (2 * m) = 2 * n)";;

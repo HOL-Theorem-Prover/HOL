@@ -15,6 +15,6 @@ This is the combinator dual to {K}.
 Never fails, unless the {hol88} library has not been loaded.
 
 \SEEALSO
-\#\#, B, C, CB, Co, I, K, o, oo, S, W.
+##, B, C, CB, Co, I, K, o, oo, S, W.
 
 \ENDDOC

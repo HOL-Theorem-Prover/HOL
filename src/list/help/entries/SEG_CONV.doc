@@ -14,7 +14,7 @@ the result of evaluating
 {
    SEG_CONV (--`SEG m k [x0;...;x(n-1)]`--)
 }
-\noindent is the theorem
+is the theorem
 {
    |- SEG m k [x0;...;x(n-1)] = [xk;...;x(m+k-1)]
 }
@@ -29,7 +29,7 @@ Evaluating the expression
 {
    SEG_CONV (--`SEG 2 3[0;1;2;3;4;5]`--);
 }
-\noindent returns the following theorem
+returns the following theorem
 {
    |- SEG 2 3[0;1;2;3;4;5] = [3;4]
 }

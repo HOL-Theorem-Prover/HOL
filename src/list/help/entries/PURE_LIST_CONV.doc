@@ -14,7 +14,7 @@ conversion, list.
 {
    CONST1 ... (CONST2 ...) ...                                       
 }
-\noindent where {CONST1} and {CONST2} are operators on lists and {CONST2}
+where {CONST1} and {CONST2} are operators on lists and {CONST2}
 returns a list result. It can be one of {NIL}, {CONS}, {SNOC}, {APPEND},
 {FLAT} or {REVERSE}. The form of the resulting theorem depends on {CONST1} and
 {CONST2}. Some auxiliary theorems must be provided about {CONST1}.
@@ -24,13 +24,13 @@ in terms of {FOLDR} or {FOLDL}. The definition should have the form:
 {
    |- CONST1 ...l... = fold f e l
 }
-\noindent where {fold} is either {FOLDR} or {FOLDL}, {f} is a function, {e} a
+where {fold} is either {FOLDR} or {FOLDL}, {f} is a function, {e} a
 base element and {l} a list variable. For example, a suitable theorem for
 {SUM} is
 {
    |- SUM l = FOLDR $+ 0 l
 }
-\noindent Given this theorem, no auxiliary theorems and the term
+Given this theorem, no auxiliary theorems and the term
 {--`SUM (CONS x l)`--}, a call to {PURE_LIST_CONV} returns the theorem:
 {
    |- SUM (CONS x l) = x + (SUM l)                                            
@@ -41,12 +41,12 @@ with respect to {FOLDR} or {FOLDL}. For example, given the theorem:
 {                                                                           
    |- MONOID $+ 0                                                             
 }                                                                           
-\noindent and given the term {--`SUM (APPEND l1 l2)`--}, a call to
+and given the term {--`SUM (APPEND l1 l2)`--}, a call to
 {PURE_LIST_CONV} returns the theorem   
 {
    |- SUM (APPEND l1 l2) = (SUM l1) + (SUM l2)                                
 }                                                                         
-\noindent The following table shows the form of the theorem returned and the
+The following table shows the form of the theorem returned and the
 auxiliary theorems needed if {CONST1} is defined in terms of {FOLDR}.
 {
     CONST2       |  side conditions               | tm2 in result |- tm1 = tm2
@@ -63,7 +63,7 @@ auxiliary theorems needed if {CONST1} is defined in terms of {FOLDR}.
    REVERSE l     | f == (\x l. h (g x) l)         |                           
                  | |- COMM h, |- ASSOC h          | CONST1 l                  
 }
-\noindent The following table shows the form of the theorem returned and the
+The following table shows the form of the theorem returned and the
 auxiliary theorems needed if {CONST1} is defined in terms of {FOLDL}.
 {
     CONST2       |  side conditions               | tm2 in result |- tm1 = tm2
@@ -80,7 +80,7 @@ auxiliary theorems needed if {CONST1} is defined in terms of {FOLDL}.
    REVERSE l     | f == (\l x. h l (g x))         |                           
                  | |- COMM h, |- ASSOC h          | CONST1 l                  
 }                                                                           
-\noindent  {|- MONOID f e} can be used instead of  {|- FCOMM f f},
+{|- MONOID f e} can be used instead of  {|- FCOMM f f},
 {|- LEFT_ID f} or {|- RIGHT_ID f}. {|- ASSOC f} can also be used in place of
 {|- FCOMM f f}.                                                              
 

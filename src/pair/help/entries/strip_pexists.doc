@@ -12,7 +12,7 @@ Iteratively breaks apart paired existential quantifications.
 {
    strip_pexists(list_mk_pexists(["[p1";...;"pn"],"t"))
 }
-\noindent will not return {(["p1";...;"pn"],"t")} if {t} is a paired
+will not return {(["p1";...;"pn"],"t")} if {t} is a paired
 existential quantification.
 
 \FAILURE

@@ -16,7 +16,7 @@ solves it if the conversion {PWORDLEN_CONV tms} returns a theorem
 {
    A' |- PWORDLEN n tm
 }
-\noindent where {A'} is either empty or every clause in it occurs in the
+where {A'} is either empty or every clause in it occurs in the
 assumption of the goal {A}.
 Otherwise, each clause in {A'} which does not appear in {A} becomes a new
 subgoal.

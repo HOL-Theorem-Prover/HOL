@@ -14,7 +14,7 @@ If {m} and {n} are numerals (e.g. {0}, {1}, {2}, {3},...), then
 {
    |- m EXP n = s
 }
-\noindent where {s} is the numeral that denotes the result of raising the
+where {s} is the numeral that denotes the result of raising the
 natural number denoted by {m} to the power of the natural number denoted
 by {n}.
 

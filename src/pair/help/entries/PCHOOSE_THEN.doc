@@ -25,13 +25,13 @@ components free in the assumption list of the goal. Thus if:
    =========  ttac (t[q'/q] |- t[q'/q])
     B ?- s2
 }
-\noindent then
+then
 {
     A ?- s1
    ==========  CHOOSE_THEN ttac (A' |- ?q. t)
     B ?- s2
 }
-\noindent This is invalid unless {A'} is a subset of {A}.
+This is invalid unless {A'} is a subset of {A}.
 
 \FAILURE
 Fails unless the given theorem is a paired existential quantification,

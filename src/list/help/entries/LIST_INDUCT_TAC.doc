@@ -18,7 +18,7 @@ subgoal for the step case.  The specification of {LIST_INDUCT_TAC} is:
    =====================================================  LIST_INDUCT_TAC
     A |- P[NIL/l]   A u {{P[l'/l]}} ?- !h. P[CONS h l'/l]
 }
-\noindent where {l'} is a primed variant of {l} that does not appear free in
+where {l'} is a primed variant of {l} that does not appear free in
 the assumptions {A} (usually, {l'} is just {l}). When {LIST_INDUCT_TAC} is
 applied to a goal of the form {!l.P}, where {l} does not appear free in {P},
 the subgoals are just {A ?- P} and {A u {{P}} ?- !h.P}.

@@ -15,11 +15,11 @@ The conversion {LIST_PBETA_CONV} maps terms of the form
 {
    "(\p1 p2 ... pn. t) q1 q2 ... qn"
 }
-\noindent to the theorems of the form
+to the theorems of the form
 {
    |- (\p1 p2 ... pn. t) q1 q2 ... qn = t[q1/p1][q2/p2] ... [qn/pn]
 }
-\noindent where {t[qi/pi]} denotes the result of substituting {qi} for all free
+where {t[qi/pi]} denotes the result of substituting {qi} for all free
 occurrences of {pi} in {t}, after renaming sufficient bound variables to avoid
 variable capture.
 

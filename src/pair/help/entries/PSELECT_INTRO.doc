@@ -19,7 +19,7 @@ of the original operand {x}.
    --------------  PSELECT_INTRO
     A |- P($@ P)
 }
-\noindent The returned theorem asserts that {$@ P} denotes some value
+The returned theorem asserts that {$@ P} denotes some value
 at which {P} holds.
 
 \FAILURE

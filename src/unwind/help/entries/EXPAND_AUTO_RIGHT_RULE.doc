@@ -15,7 +15,7 @@ Unfolds, then unwinds as much as possible, then prunes the unwound lines.
    -------------------------------------------------------------------
       B u A |- !z1 ... zr. t = ?li(k+1) ... lim. t1' /\ ... /\ tn'
 }
-\noindent where each {ti'} is the result of rewriting {ti} with the theorems in
+where each {ti'} is the result of rewriting {ti} with the theorems in
 {thl}. The set of assumptions {B} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to a
 conjunct, it is unchanged. After rewriting, the function decides which of the
@@ -32,7 +32,7 @@ The {li}'s are related by the equation:
 {
    {{li1,...,lik}} u {{li(k+1),...,lim}} = {{l1,...,lm}}
 }
-\noindent The loop analysis allows the term to be unwound as much as possible
+The loop analysis allows the term to be unwound as much as possible
 without the risk of looping. The user is left to deal with the recursive
 equations.
 

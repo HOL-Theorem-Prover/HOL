@@ -15,7 +15,7 @@ quantifications in the following form
 {
    !x1::P1. ... !xn::Pn. u[xi] = v[xi])
 }
-\noindent Other variables occurring in {u} and {v} may be universally quantified.
+Other variables occurring in {u} and {v} may be universally quantified.
 The output theorem will have all ordinary universal quantifications
 moved to the outer most level with possible renaming to prevent
 variable capture, and have all restricted universal quantifications
