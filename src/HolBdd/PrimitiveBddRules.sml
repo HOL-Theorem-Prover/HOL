@@ -138,21 +138,6 @@ fun name v =
   else (print_term v; print " is not a boolean variable\n"; raise nameError);
 
 (*****************************************************************************)
-(* DISCH for term_bdd                                                        *)
-(*****************************************************************************)
-
-exception BddDischError;
-
-fun BddDisch (TermBdd(tg1,ass1,vm1,tm1,b1))  (TermBdd(tg,ass,vm,tm,b)) = 
-    if Varmap.eq(vm1,vm)
-	then TermBdd(Tag.merge tg1 tg,
-	             HOLset.union(HOLset.delete(ass,tm1),ass1) handle HOLset.NotFound => HOLset.union(ass,ass1),
-		     vm,
-		     mk_imp(tm1,tm),
-		     bdd.IMP(b1,b))
-    else (print "different varmaps\n"; raise BddDischError)
-
-(*****************************************************************************)
 (* Oracle function                                                           *)
 (*                                                                           *)
 (*   ass vm t |--> TRUE                                                      *)
@@ -576,6 +561,17 @@ if Varmap.eq(vm1,vm2)
               termApply t1 t2 bddop, 
               bdd.apply b1 b2 bddop)
  else (print "different varmaps\n"; raise BddOpError);
+
+(*****************************************************************************)
+(* DISCH for term_bdd                                                        *)
+(*****************************************************************************)
+
+exception BddDischError;
+
+fun BddDisch (TermBdd(tg1,ass1,vm1,tm1,b1))  (TermBdd(tg,ass,vm,tm,b)) = 
+    BddOp(Imp,
+	  TermBdd(tg1,ass1,vm1,tm1,b1),
+	  TermBdd(tg,HOLset.delete(ass,tm1) handle HOLset.NotFound => ass,vm,tm,b))
 
 (*****************************************************************************)
 (*    ass vm t |--> b   ass1 vm t1 |--> b1   ass2 vm t2 |--> b2              *)
