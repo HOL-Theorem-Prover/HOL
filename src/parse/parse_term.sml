@@ -93,7 +93,9 @@ fun mk_prec_matrix G = let
     | (SOME oldv, _) => if oldv <> v then
                           (Polyhash.insert matrix (k, LESS);
                            complained_this_iteration := true;
-                           if not (!complained_already) then
+                           if not (!complained_already) andalso
+                              !Globals.interactive
+                           then
                              (Feedback.HOL_WARNING
                                 "Parse" "Term"
                                 ("Grammar ambiguous on token pair "^
