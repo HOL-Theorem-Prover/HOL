@@ -27,9 +27,6 @@ default:
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
           entries.tex theorems.tex
-	@echo "\begin{theindex}" > index.tex
-	@echo "\mbox{}" >> index.tex
-	@echo "\end{theindex}" >> index.tex
 
 tex: theorems functions
 	@echo "TeX files made"
