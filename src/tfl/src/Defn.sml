@@ -1234,10 +1234,12 @@ fun tgoal0 defn =
 fun tprove0 (defn,tactic) =
   let val _ = tgoal0 defn
       val _ = goalstackLib.expand tactic  (* should finish proof off *)
-      val th = goalstackLib.top_thm ()
-      val _ = goalstackLib.drop()
+      val th  = goalstackLib.top_thm ()
+      val _   = goalstackLib.drop()
+      val eqns = CONJUNCT1 th
+      val ind  = CONJUNCT2 th
   in
-      (CONJUNCT1 th, CONJUNCT2 th)
+      computeLib.add_funs [eqns]; (eqns, ind)
   end
   handle e => (goalstackLib.drop(); raise (wrap_exn "Defn" "tprove" e))
 
