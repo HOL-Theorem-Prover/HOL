@@ -19,6 +19,10 @@ Bugs fixed:
   * The datatype parser invoked by define_type and Hol_datatype was
     refusing constructor names with apostrophes (primes) in them.
     Thanks to Steve Brackin for the report of this bug.
+  * The record type package was failing to prove the "record
+    theorems", causing Hol_datatype to raise an exception, if the name
+    of the record type began with an "x" or a "z".  Thanks to Steve
+    Brackin for the report of this bug.
 
 New features:
 -------------
