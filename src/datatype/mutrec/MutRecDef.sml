@@ -1412,7 +1412,7 @@ val pre_case_induct_thm = prove
 ((mk_imp {ant = concl new_ty_induct_assum, conseq = inter_case_assum}),
  ((REWRITE_TAC (map (#cons_elim_thm) elim_cons_thms)) THEN
   STRIP_TAC THEN
-  (utilsLib.MP_IMP_TAC (BETA_RULE (SPEC (rand new_ty_induct_prop) JointInduct))) THEN
+  (elsaUtils.MP_IMP_TAC (BETA_RULE (SPEC (rand new_ty_induct_prop) JointInduct))) THEN
   (ASM_REWRITE_TAC (rep_abs_eq_simps @ not_rep_abs_thms)) THEN
   (REPEAT CONJ_TAC) THEN (REPEAT GEN_TAC) THEN STRIP_TAC THEN
   (fn g as (ams,gl) =>
@@ -1421,9 +1421,9 @@ val pre_case_induct_thm = prove
        val tac = itlist (fn t1 => fn t2 => t1 THEN t2) eqs ALL_TAC
    in (STRIP_TAC THEN tac) g end) THEN
   (FIRST_ASSUM
-   (fn th => utilsLib.MATCH_MP_IMP_TAC (SPEC (#Bvar(dest_forall(concl th))) th))) THEN
+   (fn th => elsaUtils.MATCH_MP_IMP_TAC (SPEC (#Bvar(dest_forall(concl th))) th))) THEN
   (REPEAT CONJ_TAC) THEN
-  (FIRST_ASSUM utilsLib.MATCH_MP_IMP_TAC) THEN (FIRST_ASSUM ACCEPT_TAC)))
+  (FIRST_ASSUM elsaUtils.MATCH_MP_IMP_TAC) THEN (FIRST_ASSUM ACCEPT_TAC)))
 
 val New_Ty_Induct_Thm = itlist (fn ty_name => fn th =>
                                   GEN (new_ty_Prop ty_name) th)
@@ -1464,7 +1464,7 @@ val pre_unique_thm = prove(unique_goal,
   (fn g as (asm,gl) =>
    let val eq_preds = map rand (strip_conj gl)
        val induct = BETA_RULE (SPECL eq_preds New_Ty_Induct_Thm)
-   in utilsLib.MP_IMP_TAC induct g
+   in elsaUtils.MP_IMP_TAC induct g
    end) THEN
   (REPEAT STRIP_TAC) THEN
   (ASM_REWRITE_TAC [])))
