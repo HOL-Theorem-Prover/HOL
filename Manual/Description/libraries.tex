@@ -349,17 +349,20 @@ record type package increases as the square of the number of fields in
 the record.  (In particular, the update canonicalisation and
 \texttt{acc\_fupd} theorems have this property.) To avoid inefficieny
 with big records, the implementation of record types uses a more
-efficient underlying representation when the number of fields is eight
-or more.
+efficient underlying representation when the number of fields grows
+too large.  The exact point at which this optimisation is applied is
+controlled by the reference variable
+\texttt{Datatype.big\_record\_size}.  This value is initialised to 20,
+but users can change it as they choose.
 
-Unfortunately, this representation has the drawback that every update
-and accessor function has two forms: different terms that are printed
-the same.  One form is a simple constant, and is the form produced
-when a term is parsed.  The other is more complicated, but allows for
-the use of smaller theorems when record values are simplified.
-Therefore, it is recommended that new, user-proved theorems that
-mention big records' fields or field updates be passed through a phase
-of simplification (\texttt{SIMP\_RULE}), applying the
+Unfortunately, the big record representation has the drawback that
+every update and accessor function has two forms: different terms that
+are printed the same.  One form is a simple constant, and is the form
+produced when a term is parsed.  The other is more complicated, but
+allows for the use of smaller theorems when record values are
+simplified.  Therefore, it is recommended that new, user-proved
+theorems that mention big records' fields or field updates be passed
+through a phase of simplification (\texttt{SIMP\_RULE}), applying the
 \texttt{TypeBase}'s rewrites, before they are saved.
 
 The pretty-printing of big records can be controlled with the

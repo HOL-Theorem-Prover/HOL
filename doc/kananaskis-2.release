@@ -75,10 +75,11 @@ New features:
     example).  See the DESCRIPTION for more details.
 
   * Performance when defining large record types (where the number of
-    fields is greater than 10), is now much improved.  Part of this
-    change was to remove update functions as separate constants (they
-    are now encoded using functional update functions), though the
-    concrete syntax remains.  See the DESCRIPTION for more details.
+    fields is greater than a user-adjustable reference variable), is
+    now much improved.  Part of this change was to remove update
+    functions as separate constants (they are now encoded using
+    functional update functions), though the concrete syntax remains.
+    See the DESCRIPTION for more details.
 
   * In addition to the traditional $-prefix for making identifiers
     ignore their status as special forms in the grammar, HOL now
