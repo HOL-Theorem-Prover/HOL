@@ -65,7 +65,7 @@ type thy_addon = {sig_ps    : (ppstream -> unit) option,
                   struct_ps : (ppstream -> unit) option}
 
 
-(* This reference is set in course of loading parsing library *)
+(* This reference is set in course of loading the parsing library *)
 
 val pp_thm = ref (fn _:ppstream => fn _:thm => ())
 
@@ -88,12 +88,20 @@ with
   local val mk_time = Portable.mk_time
   in fun make_thyid(s,i1,i2) = UID{name=s, timestamp=mk_time{sec=i1,usec=i2}}
   end;
-end;
 
-val min_thyid = new_thyid "min";    (* Ur-theory *)
+  fun thyid_to_string (UID{name,timestamp}) = 
+     String.concat["(",Lib.quote name,",",Time.toString timestamp,")"]
+
+  val min_thyid = UID{name="min",timestamp=Time.zeroTime};    (* Ur-theory *)
+
+end;
 
 fun thyid_assoc x [] = raise ERR "thyid_assoc" "not found"
   | thyid_assoc x ((a,b)::t) = if thyid_eq x a then b else thyid_assoc x t;
+
+fun thyname_assoc x [] = raise ERR "thyname_assoc" "not found"
+  | thyname_assoc x ((a,b)::t) = if x = thyid_name a then b 
+                                 else thyname_assoc x t;
 
 
 (*---------------------------------------------------------------------------
@@ -157,8 +165,8 @@ fun drop_Axkind (Axiom rth) = rth
  * Also lacks a field for the theory graph, which is held in Graph.          *
  *---------------------------------------------------------------------------*)
 
-type segment = {thid : thyid,                                  (* unique id  *)
-                facts: (string * thmkind) list,     (* stored ax,def,and thm *)
+type segment = {thid  : thyid,                                 (* unique id  *)
+                facts : (string * thmkind) list,    (* stored ax,def,and thm *)
                 con_wrt_disk : bool,                (* consistency with disk *)
                 overwritten  : bool,                   (* parts overwritten? *)
                 adjoin       : thy_addon list}         (*  extras for export *)
@@ -180,7 +188,6 @@ fun fresh_segment s :segment =
 local val CT = ref (fresh_segment "scratch")
 in
   fun theCT() = !CT
-(*  fun makeCT seg = (CT := seg; theCT()) *)
   fun makeCT seg = CT := seg
 end;
 
@@ -574,14 +581,6 @@ fun scrub () =
    end
 end;
 
-(*
-fun scrubCT() =
- (if !Globals.show_scrub
-  then (Lib.say("Scrubbing "^CTname()^": "); Lib.time scrub()) else scrub()
-  ;
-  theCT());
-*)
-
 fun scrubCT() = (scrub(); theCT());
 
 
@@ -636,26 +635,27 @@ end;
 fun set_diff a b = gather (fn x => not (Lib.op_mem thyid_eq x b)) a;
 fun node_set_eq S1 S2 = null(set_diff S1 S2) andalso null(set_diff S2 S1);
 
-fun link_parents thy p =
+fun link_parents thy plist =
  let val node = make_thyid thy
-     val parents = map make_thyid p
+     val parents = map make_thyid plist
  in
  if Lib.all Graph.isin parents
  then if Graph.isin node
-     then if node_set_eq parents (Graph.parents_of node) then ()
-          else (HOL_MESG
-                 "link_parents: the theory has two unequal sets of parents";
-                raise ERR "link_parents" "")
-     else Graph.add (node,parents)
+      then if node_set_eq parents (Graph.parents_of node) then ()
+           else (HOL_MESG
+                  "link_parents: the theory has two unequal sets of parents";
+                 raise ERR "link_parents" "")
+      else Graph.add (node,parents)
  else let val baddies = Lib.filter (not o Graph.isin) parents
-          val names = map thyid_name baddies
+          val names = map thyid_to_string baddies
     in HOL_MESG (String.concat
         ["link_parents: the following parents of ", 
          Lib.quote (thyid_name node), 
-         "are not in the graph: ", String.concat (commafy names)]);
-       raise ERR"link_parents" ""
+         "\n  should already be in the theory graph (but aren't): ", 
+         String.concat (commafy names)]);
+       raise ERR "link_parents" ""
     end
-  end;
+ end;
 
 fun incorporate_types thy tys =
   let fun itype (s,a) = (install_type(s,a,thy);()) 
@@ -691,6 +691,7 @@ val utd_consts = Lib.gather uptodate_term;
 val utd_thms   = Lib.gather uptodate_thm;
 
 (* automatically reverses the list, which is what is needed. *)
+
 fun unadjzip [] A = A
   | unadjzip ({sig_ps,struct_ps}::t) (l1,l2) =
        unadjzip t (sig_ps::l1, struct_ps::l2)
@@ -702,6 +703,7 @@ fun unadjzip [] A = A
     *not* empty, i.e., the user made some definitions, or stored some
     theorems or whatnot, then the initial theory will be exported.
  ----------------------------------------------------------------------------*)
+
 local val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
 in
 fun export_theory () = 

@@ -300,7 +300,7 @@ fun pp_struct info_record ppstrm =
  let open Term
      val {theory as (name,i1,i2), parents=parents0,
         axioms,definitions,theorems,types,constants,struct_ps} = info_record
-     val parents = filter (fn (s,_,_) => not ("min"=s)) parents0
+     val parents1 = filter (fn (s,_,_) => not ("min"=s)) parents0
      val {add_string,add_break,begin_block,end_block, add_newline,
           flush_ppstream,...} = Portable.with_ppstream ppstrm
      val pp_tm = pp_raw ppstrm
@@ -455,9 +455,9 @@ fun pp_struct info_record ppstrm =
    (*   add_string("val _ = print \"Loading theory: "^Thry name^"\\n\""); *)
       add_newline();
       pblock ("Parents", add_string o pparent, 
-              thid_sort parents);
+              thid_sort parents1);
       add_newline();
-      pp_incorporate theory parents types constants; add_newline();
+      pp_incorporate theory parents0 types constants; add_newline();
       bind_theorems (); add_newline();
       dblist(); add_newline();
       pr_psl struct_ps;

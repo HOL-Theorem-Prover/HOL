@@ -127,9 +127,7 @@ fun type_vars_in_term tm = tyV tm Lib.I
 end;
 
 (*---------------------------------------------------------------------------*
- * The free variables of a lambda term. This could be implemented more       *
- * efficiently, but that would probably break subsequent code.               *
- * Tail recursive (from Ken Larsen).                                         *
+ * The free variables of a lambda term. Tail recursive (from Ken Larsen).    *
  *---------------------------------------------------------------------------*)
 
 local fun FV (v as Fv _) A k   = k (Lib.insert v A)
