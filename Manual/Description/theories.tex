@@ -1730,8 +1730,8 @@ introduced by the following definitions:
 \begin{verbatim}
    NUMERAL_DEF |- !x. NUMERAL x = x
 
-   BIT1        |- !x. BIT1 n = n + (n + SUC 0)
-   BIT2        |- !x. BIT2 n = n + (n + SUC(SUC 0))
+   BIT1        |- !n. BIT1 n = n + (n + SUC 0)
+   BIT2        |- !n. BIT2 n = n + (n + SUC(SUC 0))
 
    ALT_ZERO    |- ZERO = 0
 \end{verbatim}

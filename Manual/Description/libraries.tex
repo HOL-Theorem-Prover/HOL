@@ -71,9 +71,9 @@ types and terms through the \ml{Parse} structure.
 
 The term parser supports type inference, overloading, binders, and
 various fixity declaration (infix, prefix, postfix, and
-combinations). There are also many flags for controlling the behaviour
+combinations). There are also flags for controlling the behaviour
 of the parser. Further, the structure of the parser is exposed so that
-new parsers can be quickly altered to support applications.
+new parsers can be quickly constructed to support applications.
 
 The parser is parameterized by grammars for types and terms. The
 behaviour of the parser is therefore usually altered by grammar
@@ -92,11 +92,14 @@ see the current grammar for types.
 
 \subsection{Parsing Terms}
 
-The HOL grammar gets extended when a new constant is introduced. The
-introduction of new constants is discussed in
-Sections~\ref{sec:constant-definitions} and \ref{conspec}.
+Usually, the HOL grammar gets extended when a new definition or
+constant specification is made. However, any identifier can have a
+parsing status attached. The introduction of new constants is
+discussed in Sections~\ref{sec:constant-definitions} and
+\ref{conspec}.
 
-\subsection{Type constraints}
+
+\subsubsection{Type constraints}
 
 A term can be constrained to be of a certain type.  For example,
 \verb+X:bool+ constrains the variable \verb+X+ to have type
@@ -158,7 +161,7 @@ assign type variables for you, the global variable
 existence of unassigned type variables at the end of type inference
 will raise an exception.
 
-\subsection{Overloading}
+\subsubsection{Overloading}
 
 A limited amount of overloading resolution is performed by the quotation
 parser for terms. For example, the tilde symbol (\holtxt{\~{}})
@@ -212,6 +215,8 @@ the other two occurrences are the additive inverse operation for integers.
 For more information on how to set up and use overloading, consult
 \REFERENCE.
 
+\subsubsection{Fixities}
+
 In order to provide some notational flexibility, constants come in
 various flavours or {\it fixities}: besides being an ordinary constant
 (with a fixity of {\sf Prefix}), constants can also be {\it binders},
@@ -226,7 +231,7 @@ the tighter the binding.  For example, when introduced, \verb-+- has a
 precedence of 500, while the tighter binding multiplication (\verb+*+)
 has a precedence of 600.
 
-\subsubsection{Binders}
+\paragraph{Binders}
 
 A binder is a construct that binds a variable; for example, the
 universal quantifier. In HOL, this is represented using a trick that
@@ -247,7 +252,7 @@ This can instead be rendered
   !x y. ?p q r. \term.
 \end{alltt}
 
-\subsubsection{Infixes}
+\paragraph{Infixes}
 
 Infix constants can associate in one of three different ways: right,
 left or not at all.  (If \holtxt{+} were non-associative, then
@@ -275,7 +280,7 @@ is internally represented as
 ((\holtxt{<infix>}\; \term)\; \term)
 \]
 
-\subsubsection{True prefixes}
+\paragraph{True prefixes}
 
 Where infixes appear between their arguments, true prefixes appear
 before theirs.  This might initially appear to be the same thing as
@@ -295,7 +300,7 @@ defined as a true prefix, if only to allow one to write \[ {\it
   negop}\,{\it negop}\,3
 \] (whatever {\it negop} happened to be) without needing extra parentheses.
 
-\subsubsection{Suffixes}
+\paragraph{Suffixes}
 
 Suffixes appear after their arguments.  There are no suffixes
 introduced into the standard theories available in HOL, but users are
@@ -320,7 +325,7 @@ s,\;i,\;p & ((\verb+p+\;t_1)\;\verb+i+\;t_2)\;\verb+s+\\
 \end{array}
 \]
 
-\subsubsection{Closefixes}
+\paragraph{Closefixes}
 
 Closefix terms are operators that completely enclose their arguments.
 An example one might use in the development of a theory of
@@ -329,115 +334,21 @@ facilities can be configured to allow one to write \holtxt{denotation x}
 as \holtxt{[| x |]}.  Closefixes are not associated with precedences
 because they can not compete for arguments with other operators.
 
-\subsection{Hiding constants}
-\label{hidden}
+\paragraph{Mix-fix syntax for {\it if-then-else}:}
 
-\index{parsing, of HOL logic@parsing, of \HOL{} logic!hiding constant status in|(}
-\index{HOL system@\HOL\ system!hiding constants in|(}
-The following function can be used to hide
+The first step in bringing this about is to look at the general shape
+of expressions of this form.  In this case, it will be:
 %
-\index{constants, in HOL logic@constants, in \HOL\ logic!hiding status of|(}
-%
-the constant status of a name from the quotation parser.
-
-\begin{boxed}
-\index{hide@\ml{hide}|pin}
-\begin{verbatim}
-   val hide : string -> ({Name : string, Thy : string} list *
-                         {Name : string, Thy : string} list)
-\end{verbatim}
-\end{boxed}
-
-\noindent Evaluating \ml{hide "$x$"}
-makes the quotation parser treat $x$ as a variable (lexical rules
-permitting), even if $x$ is the name of a constant in the current
-theory (constants and variables can have the same name).  This is
-useful if one wants to use variables
-%
-\index{variables, in HOL logic@variables, in \HOL\ logic!with constant names}
-%
-with the same names as previously declared (or built-in) constants
-(\eg\ \holtxt{o}, \holtxt{I}, \holtxt{S} \etc).  The name $x$ is still
-a constant for the constructors, theories, etc; \ml{hide} affects only
-parsing.  See the \REFERENCE{} entry for \ml{hide} for more details,
-including an explanation of the return type.
-
-The function
-
-\begin{boxed}
-\index{reveal@\ml{reveal}|pin}
-\begin{verbatim}
-   reveal : string -> unit
-\end{verbatim}
-\end{boxed}
-\noindent undoes hiding.
-
-The function
-
-\begin{boxed}
-\index{hidden@\ml{hidden}|pin}
-\begin{verbatim}
-   hidden : string -> bool
-\end{verbatim}
-\end{boxed}
-
-\noindent tests whether a string is the name of a hidden constant.
-\index{HOL system@\HOL{} system!adjustment of user interface of|)}
-\index{HOL system@\HOL{} system!hiding constants in|)}
-\index{parsing, of HOL logic@parsing, of \HOL{} logic!hiding constant status in|)}
-
-\subsection{Adjusting the pretty-print depth}
-
-The following \ML{} reference  can be used to adjust the maximum depth of
-printing
-%
-\index{printing, in HOL logic@printing, in \HOL{} logic!limiting depth of printing}.
-
-\begin{boxed}
-\index{max_print_depth@\ml{max\_print\_depth}|pin}
-\begin{verbatim}
-   max_print_depth : int ref
-\end{verbatim}
-\end{boxed}
-
-\index{default print depth, for HOL logic@default print depth, for \HOL{} logic|(}
-\noindent The default print depth is $-1$, which is interpreted as
-meaning no maximum.  Subterms nested more deeply than the maximum
-print depth are printed as \holtxt{...}. For example:
-
-\setcounter{sessioncount}{1}
-\begin{session}
-\begin{verbatim}
-- ADD_CLAUSES;
-> val it =
-    |- (0 + m = m) /\ (m + 0 = m) /\ (SUC m + n = SUC (m + n)) /\
-       (m + SUC n = SUC (m + n)) : thm
-
-- max_print_depth := 3;
-> val it = () : unit
-- ADD_CLAUSES;
-> val it = |- (... + ... = m) /\ (... = ...) /\ ... /\ ... : thm
-\end{verbatim}
-\end{session}
-\index{default print depth, for HOL logic@default print depth, for \HOL{} logic|)}
-
-\subsection{Parser tricks and magic}
-
-Here we describe how to achieve some useful effects with the
-parser in \HOL{}.
-
-\begin{description}
-\item [Mix-fix syntax for {\it if-then-else}:] The first step in
-  bringing this about is to look at the general shape of expressions
-  of this form.  In this case, it will be:
-  \[
+\[
   \holtxt{if}\;\; \dots \;\;\holtxt{then}\;\;\dots\;\;
   \holtxt{else}\;\;\dots
   \]
-  Because there needs to be a ``dangling'' term to the right, the
-  appropriate fixity is \ml{TruePrefix}.  Knowing that the
-  underlying term constant is called \holtxt{COND}, the simplest way
-  to achieve the desired syntax is:
+%
+ Because there needs to be a ``dangling'' term to the right, the
+  appropriate fixity is \ml{TruePrefix}.  Knowing that the underlying
+  term constant is called \holtxt{COND}, the simplest way to achieve
+  the desired syntax is:
+
 \begin{verbatim}
 val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
                  pp_elements = [TOK "if", BreakSpace(1,0), TM,
@@ -449,11 +360,12 @@ val _ = add_rule{term_name = "COND", fixity = TruePrefix 70,
                  block_style =
                    (AroundEachPhrase, (PP.CONSISTENT, 0))};
 \end{verbatim}
-  \noindent The actual rule is slightly more complicated, and is
-  in \texttt{src/bool/boolScript.sml}.
+\noindent The actual rule is slightly more complicated, and 
+may be found in the sources for the theory \theoryimp{bool}.
 
+\paragraph{Mix-fix syntax for term substitution:}
 
-\item[Mix-fix syntax for term substitution:] Here the desire is to be able
+ Here the desire is to be able
   to write something like:
   \[
   \mbox{\texttt{[}}\,t_1\,\mbox{\texttt{/}}\,t_2\,\mbox{\texttt{]}}\,t_3
@@ -484,6 +396,13 @@ val _ = add_rule {term_name = "SUB", fixity = Closefix,
                   block_style =
                     (AroundEachPhrase, (PP.INCONSISTENT, 2))};
 \end{verbatim}
+
+\subsubsection{Parser tricks and magic}
+
+Here we describe how to achieve some useful effects with the
+parser in \HOL{}.
+
+\begin{description}
 
 \item[Aliasing] If one wants a special syntax to be an ``alias'' for a
   normal HOL form, this is easy to achieve; both examples so far have
