@@ -259,16 +259,17 @@ then we would synthesise a theorem:
 \vspace*{-2mm}
 
 \noindent and then refine the occurrence of $\DEF{Dev}(\times)$
-to \texttt{(...)}.  Thus we can incrementally develop a
-circuit top-down. To manage such developments we have
+to \texttt{(...)}. To manage such top-down developments we have
 implemented operators for combining refinements analogous to rewriting
 operators \cite{paulson83}.
 
-For simplicity (though unrealistically), let us continue the example
-using a combinational implementation of multiplication. We add
-${\times}$ to the list of combinationally-implementable functions and
-then our system will automatically prove a theorem of the form shown
-below (we have omitted parts of the circuit to save space, but hope
+Alternatively, we could add
+${\times}$ to the list of combinationally-implementable functions.
+
+Whether we refine $\DEF{Dev}(\times)$, or specify $\times$ to be
+combinational, our system will generate a theorem of the form shown
+below (this is actually from an example where $\DEF{Dev}(\times)$ is
+refined: we have omitted parts of the circuit to save space, but hope
 what remains is enough to give an idea).
 
 \vspace*{-2mm}
@@ -305,7 +306,7 @@ clocked registers. This involves converting from an abstract `cycle
 based' model to a clocked synchronous model. The particular theory of
 doing this that we use was developed by Melham \cite{Mel93}. We have
 incorporated his theory (and even some of his old HOL88 code) in
-our compiler. Applied to our factorial implementation (actually one that uses a sequential multiplier),
+our compiler. Applied to our factorial implementation.
 we get:
 
 %\vspace*{-1.5mm}
