@@ -82,6 +82,12 @@ val path_cases = store_thm(
                        pairTheory.FORALL_PROD] THEN
   PROVE_TAC [pairTheory.ABS_PAIR_THM, llistTheory.llist_CASES]);
 
+val FORALL_path = store_thm(
+  "FORALL_path",
+  ``!P. (!p. P p) = (!x. P (stopped_at x)) /\ (!x r p. P (pcons x r p))``,
+  GEN_TAC THEN EQ_TAC THEN SRW_TAC [][] THEN
+  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN SRW_TAC [][]);
+
 val first_thm = store_thm(
   "first_thm",
   ``(!x. first (stopped_at x : ('a,'b) path) = x) /\
@@ -416,6 +422,13 @@ val PL_stopped_at = store_thm(
 val PL_thm = save_thm("PL_thm", CONJ PL_stopped_at PL_pcons);
 val _ = BasicProvers.export_rewrites ["PL_thm"]
 
+val PL_0 = store_thm(
+  "PL_0",
+  ``!p. 0 IN PL p``,
+  CONV_TAC (HO_REWR_CONV FORALL_path) THEN SRW_TAC [][])
+val _ = BasicProvers.export_rewrites ["PL_0"]
+
+
 val PL_downward_closed = store_thm(
   "PL_downward_closed",
   ``!i p. i IN PL p ==> !j. j < i ==> j IN PL p``,
@@ -450,11 +463,6 @@ val firstP_at_thm = save_thm(
   "firstP_at_thm",
   CONJ firstP_at_stopped firstP_at_pcons);
 
-val FORALL_path = store_thm(
-  "FORALL_path",
-  ``!P. (!p. P p) = (!x. P (stopped_at x)) /\ (!x r p. P (pcons x r p))``,
-  GEN_TAC THEN EQ_TAC THEN SRW_TAC [][] THEN
-  Q.SPEC_THEN `p` STRUCT_CASES_TAC path_cases THEN SRW_TAC [][]);
 
 
 val firstP_at_zero = store_thm(
@@ -1050,15 +1058,6 @@ val plink_def = new_specification(
 
 val _ = BasicProvers.export_rewrites ["plink_def"]
 
-val plink_okpath = store_thm(
-  "plink_okpath",
-  ``!R p1. okpath R p1 /\ finite p1 ==>
-           !p2. okpath R p2 /\ (last p1 = first p2) ==>
-                okpath R (plink p1 p2)``,
-  GEN_TAC THEN HO_MATCH_MP_TAC finite_okpath_ind THEN
-  SRW_TAC [][] THEN
-  Q.ISPEC_THEN `p` (REPEAT_TCL STRIP_THM_THEN ASSUME_TAC) path_cases THEN
-  FULL_SIMP_TAC (srw_ss()) []);
 
 val finite_plink = store_thm(
   "finite_plink",
@@ -1094,6 +1093,19 @@ val last_plink = store_thm(
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][]);
 val _ = BasicProvers.export_rewrites ["last_plink"]
 
+
+val okpath_plink = store_thm(
+  "okpath_plink",
+  ``!R p1 p2. finite p1 /\ (last p1 = first p2) ==>
+              (okpath R (plink p1 p2) = okpath R p1 /\ okpath R p2)``,
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC
+        `!p1. finite p1 ==>
+              !p2. (last p1 = first p2) ==>
+                   (okpath R (plink p1 p2) = okpath R p1 /\ okpath R p2)`
+        THEN1 PROVE_TAC [] THEN
+  HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN PROVE_TAC []);
+val _ = BasicProvers.export_rewrites ["okpath_plink"]
 
 val okpath_take = store_thm(
   "okpath_take",
