@@ -56,9 +56,10 @@ val MultIterRecThm =  (* proof adapted from similar one from KXS *)
   ("MultIterRecThm",
    Q.prove
     (`!m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc`,
-     recInduct MultIter_ind THEN RW_TAC arith_ss []
-      THEN RW_TAC arith_ss [Once MultIter,MULT,RIGHT_SUB_DISTRIB]
-      THEN Cases_on `m` THEN FULL_SIMP_TAC arith_ss [MULT]));
+     recInduct MultIter_ind THEN RW_TAC std_ss []
+      THEN RW_TAC arith_ss [Once MultIter]
+      THEN Cases_on `m` 
+      THEN FULL_SIMP_TAC arith_ss [MULT]));
 
 (*****************************************************************************)
 (* Create an implementation of a multiplier from MultIter                    *)
@@ -76,9 +77,7 @@ val MultThm =
  store_thm
   ("MultThm",
    ``Mult = UNCURRY $*``,
-   CONV_TAC FUN_EQ_CONV
-    THEN Cases_on `p`
-    THEN RW_TAC arith_ss [UNCURRY,Mult,MultIterRecThm]);
+   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm])
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
