@@ -193,7 +193,7 @@ Note that in TeX, you should usually append a space, thus:
 
 in case the next character is not a backslash or other delimiter!
 
-(*[ HOL_CURRIED_ALIST id "\TeXery" 2 true id "\moreTexery" 3 false false ]*)
+(*[ HOL_CURRIED_ALIST id "\TeXery" 2 true false id "\moreTexery" 3 false false ]*)
 adds the named identifiers to the list of "curried HOL identifier",
 which have the specified number of arguments, which are passed to the
 specified TeX command.  If the first flag is true, commas within an argument

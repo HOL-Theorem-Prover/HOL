@@ -1,6 +1,6 @@
-OCAMLPATH=/home/pes20/bin
+OCAMLPATH=/usr/groups/netsem/ocaml/bin
 
-OCAMLC=$(OCAMLPATH)/ocamlc
+OCAMLC=$(OCAMLPATH)/ocamlc -pp camlp4o
 # add -pp camlp4o for ocaml version 3.03a and above, apparently
 
 OCAMLLEX=$(OCAMLPATH)/ocamllex
@@ -54,7 +54,7 @@ hostlts.dvi : hostlts.tex Net_hostLTSScript.tex ltsmunge.sty
 clean:
 	rm -f simpledump simpletexdump lts_to_latex hollex.ml *.cm[iox] *~ '#*#' \
               .depend Net_hostLTSScript.tex hostlts.{dvi,ps} \
-              *.{aux,log} hol_to_latex mng_to_latex 
+              *.{aux,log} hol_to_latex mng_to_latex
 
 depend:	.depend
 
