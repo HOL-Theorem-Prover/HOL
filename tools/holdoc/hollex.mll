@@ -82,7 +82,8 @@ let startpat = "Net_Hol_reln" (white | newline)* backtick
 (* the character classes of HOL *)
 let idchar = ['A'-'Z' 'a'-'z' '0'-'9' '_' '\'']
 let symbol = ['|' '!' '#' '%' '&' ')' '-' '=' '+' '[' ']' '{'
-                 '}' ';' ':' '@' '~' '\\' ',' '.' '<' '>' '?' '/']
+                 '}' ';' ':' '@' '~' '\\' ',' '.' '<' '>' '?' '/'
+                 '^' (* not in HOL *) ]
 let nonparen = symbol | '*'
 let nonstar = symbol | '('
 let anysymb = idchar* | nonparen* '(' |  ( nonparen | '(' nonstar )+
