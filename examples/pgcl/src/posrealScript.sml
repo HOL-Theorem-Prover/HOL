@@ -1359,6 +1359,41 @@ val lin_le_max = store_thm
        ++ RW_TAC std_ss [sub_add2, mul_lone, le_refl]]);
 
 (* ------------------------------------------------------------------------- *)
+(* 1-boundedness                                                             *)
+(* ------------------------------------------------------------------------- *)
+
+val bound1_def = Define `bound1 (x:posreal) = if x <= 1 then x else 1`;
+
+val bound1 = store_thm
+  ("bound1",
+   ``!x. bound1 x <= 1``,
+   RW_TAC std_ss [bound1_def, le_refl]);
+
+val bound1_basic = store_thm
+  ("bound1_basic",
+   ``(bound1 0 = 0) /\ (bound1 1 = 1) /\ (bound1 (1 / 2) = 1 / 2) /\
+     (bound1 (1 / 3) = 1 / 3) /\ (bound1 (2 / 3) = 2 / 3)``,
+   RW_TAC std_ss [bound1_def, zero_le, half_between, thirds_between]);
+
+val bound1_cancel = store_thm
+  ("bound1_cancel",
+   ``!x. bound1 x + (1 - bound1 x) = 1``,
+   GEN_TAC
+   ++ MATCH_MP_TAC sub_add2
+   ++ RW_TAC std_ss [bound1]
+   ++ METIS_TAC [posreal_of_num_not_infty, infty_le, le_trans, bound1]);
+
+val bound1_cancel2 = store_thm
+  ("bound1_cancel2",
+   ``!x. (1 - bound1 x) + bound1 x = 1``,
+   METIS_TAC [bound1_cancel, add_comm]);
+
+val bound1_min = store_thm
+  ("bound1_min",
+   ``!x. bound1 x = min x 1``,
+   RW_TAC std_ss [bound1_def, preal_min_def]);
+
+(* ------------------------------------------------------------------------- *)
 (* Supremums and infimums (these are always defined on posreals)             *)
 (* ------------------------------------------------------------------------- *)
 

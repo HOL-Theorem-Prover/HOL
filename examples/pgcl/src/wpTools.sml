@@ -7,7 +7,7 @@ struct
 
 open HolKernel Parse boolLib bossLib simpLib metisLib intLib
      integerTheory stringTheory combinTheory listTheory
-     posrealLib expectationTheory wpTheory;
+     posrealTheory posrealLib expectationTheory wpTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Automatic tool for calculating wlp verification conditions.               *)
@@ -175,7 +175,7 @@ local
   fun assume_tac th ths =
     let
       (*val () = print ("\nthm = " ^ thm_to_string th ^ "\n");*)
-      val th1 = SIMP_RULE arith_ss ([STRING_11, CHR_11, wlp_assign] @ ths) th
+      val th1 = SIMP_RULE arith_ss ([STRING_11, CHR_11, assign_def] @ ths) th
       val th2 = SIMP_RULE int_ss int_simps th1
       val th3 = SIMP_RULE posreal_reduce_ss [] th2
       val th4 = SIMP_RULE (simpLib.++ (bool_ss, boolSimps.COND_elim_ss)) [] th3
@@ -188,7 +188,7 @@ end;
 
 local
   fun simps ths = ths @
-    [wlp_demon_def, wlp_prob_def, wlp_cond_def, o_THM, magic_alt, wlp_assign];
+    [wlp_min_def, prob_def, cond_def, o_THM, magic_alt, assign_def];
 in
   val leq_tac =
     CONV_TAC (REWR_CONV Leq_def)
@@ -200,7 +200,7 @@ in
     THEN REPEAT (if_cases_tac wlp_assume_tac)
     THEN elim_redundant_lam_tac
     THEN RW_TAC posreal_ss []
-    THEN RW_TAC posreal_reduce_ss [probify_def];
+    THEN RW_TAC posreal_reduce_ss [bound1_def];
 end;
 
 local

@@ -40,7 +40,7 @@ val prob_then_demon = Count.apply prove
    [wp_def, Probchoice_def, Probs_def, Demonchoice_def,
     Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
    ++ FULL_SIMP_TAC int_ss []
-   ++ FULL_SIMP_TAC posreal_reduce_ss [probify_def]);
+   ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
 
 val demon_then_prob = Count.apply prove
   (``wp (Seq (Demonchoice "j" [0; 1]) (Probchoice "i" [0; 1]))
@@ -49,7 +49,7 @@ val demon_then_prob = Count.apply prove
    [wp_def, Probchoice_def, Probs_def, Demonchoice_def,
     Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
    ++ FULL_SIMP_TAC int_ss []
-   ++ FULL_SIMP_TAC posreal_reduce_ss [probify_def]);
+   ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
 
 val partial_demon_then_prob = Count.apply prove
   (``Leq (\v. 1 / 2)
@@ -156,11 +156,11 @@ val montyhall = Count.apply prove
    ++ RW_TAC list_ss [monty_choose_def, wp_def, Probchoice_def, Probs_def,
                       CHR_11]
    ++ RW_TAC int_ss []
-   ++ RW_TAC posreal_ss [probify_basic, Zero_def]
+   ++ RW_TAC posreal_ss [bound1_basic, Zero_def]
    ++ RW_TAC std_ss [wp_incognito_def]
    ++ RW_TAC int_ss [monty_hide_def, MAP, wp_def, Demonchoice_def,
                      Demons_def, Min_def]
-   ++ RW_TAC posreal_reduce_ss [probify_def]);
+   ++ RW_TAC posreal_reduce_ss [bound1_def]);
   
 (* ------------------------------------------------------------------------- *)
 (* The random walker                                                         *)
@@ -178,7 +178,7 @@ val lurch_once = Count.apply prove
        (\v.
           (1 / 2) * r (\w. if w = "n" then v"n" - 1 else v w) +
           (1 / 2) * r (\w. if w = "n" then v"n" + 1 else v w))``,
-   RW_TAC posreal_ss [wp_def, lurch_def, probify_basic, COND_RAND]
+   RW_TAC posreal_ss [wp_def, lurch_def, bound1_basic, COND_RAND]
    ++ RW_TAC posreal_reduce_ss []);
 
 val lurch_once_home = Count.apply prove

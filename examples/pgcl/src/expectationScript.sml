@@ -227,6 +227,17 @@ val expect1_max = store_thm
    RW_TAC std_ss [expect1_def, Max_def, max_le]);
 
 (* ------------------------------------------------------------------------- *)
+(* More complicated operations on expectations                               *)
+(* ------------------------------------------------------------------------- *)
+
+val prob_def = Define
+  `prob p (a : 'a expect) b s =
+   let x = bound1 (p s) in x * a s + (1 - x) * b s`;
+
+val cond_def = Define
+  `cond c (a : 'a expect) b s = if c s then a s else b s`;
+
+(* ------------------------------------------------------------------------- *)
 (* Fundamental properties of expectation transformers                        *)
 (* ------------------------------------------------------------------------- *)
 
