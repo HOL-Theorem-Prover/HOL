@@ -1,10 +1,9 @@
+structure CooperCore :> CooperCore =
+struct
 open HolKernel boolLib
-
-open integerTheory int_arithTheory intSimps
-
-open intSyntax CooperSyntax CooperMath CooperThms
-
-open Profile
+     integerTheory int_arithTheory intSimps
+     intSyntax CooperSyntax CooperMath CooperThms
+     Profile
 
 infix ## ORELSEC THENC |->
 infixr -->
@@ -1222,3 +1221,5 @@ in
 end
 
 val phase5_CONV = profile "phase5" phase5_CONV
+
+end

@@ -1,7 +1,9 @@
-open HolKernel boolLib integerTheory Parse
-     arithmeticTheory intSyntax int_arithTheory intSimps;
+structure CooperShell :> CooperShell = 
+struct
 
-open CooperSyntax CooperThms CooperMath
+open HolKernel boolLib integerTheory Parse
+     arithmeticTheory intSyntax int_arithTheory intSimps
+     CooperSyntax CooperThms CooperMath;
 
 val lhand = rand o rator
 
@@ -754,3 +756,4 @@ end tm
 
 *)
 
+end
