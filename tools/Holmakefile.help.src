@@ -1,3 +1,5 @@
+OPTIONS = NO_OVERLAY
+
 all: makebase Doc2Html
 
 makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo Texsigs.uo makebase.uo
@@ -6,47 +8,53 @@ makebase : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.uo T
 makebase.uo: Keepers.uo Htmlsigs.uo HOLPage.uo Database.ui Printbase.uo Parsspec.uo Symbolic.uo makebase.sml
 	HOLMOSMLC -c makebase.sml
 
-Doc2Html : Doc2Html.uo 
+Doc2Html : Doc2Html.uo ParseDoc.uo
 (2)
 
-Doc2Html.uo : Doc2Html.sml Symbolic.uo
-	HOLMOSMLC -c Doc2Html.sml
+Doc2Html.uo : Doc2Html.sml Symbolic.uo ParseDoc.ui
+	MOSMLC -c Doc2Html.sml
 
 Hasht.uo: Hasht.sml Hasht.ui
-	HOLMOSMLC -c Hasht.sml
+	MOSMLC -c Hasht.sml
 
 Asynt.uo: Asynt.sml
-	HOLMOSMLC -c Asynt.sml
+	MOSMLC -c Asynt.sml
 
 Parser.uo: Parser.sml Asynt.uo Parser.ui
-	HOLMOSMLC -c Parser.sml
+	MOSMLC -c Parser.sml
 
 Lexer.uo: Parser.uo Stack.uo Hasht.uo Lexer.sml
-	HOLMOSMLC -c Lexer.sml
+	MOSMLC -c Lexer.sml
 
 Texsigs.uo: Texsigs.sml Texsigs.ui Database.uo
-	HOLMOSMLC -c Texsigs.sml
+	MOSMLC -c Texsigs.sml
 
 Stack.uo: Stack.sml Stack.ui
-	HOLMOSMLC -c Stack.sml
+	MOSMLC -c Stack.sml
 
 Printbase.uo: Database.uo Printbase.sml
-	HOLMOSMLC -c Printbase.sml
+	MOSMLC -c Printbase.sml
 
 Parsspec.uo: Asynt.uo Parser.uo Lexer.uo Database.uo Parsspec.sml
-	HOLMOSMLC -c Parsspec.sml
+	MOSMLC -c Parsspec.sml
 
 Htmlsigs.uo: Database.uo Htmlsigs.ui Htmlsigs.sml
-	HOLMOSMLC -c Htmlsigs.sml
+	MOSMLC -c Htmlsigs.sml
 
 Database.uo: Database.sml Database.ui
-	HOLMOSMLC -c Database.sml
+	MOSMLC -c Database.sml
 
 Symbolic.uo: Symbolic.sml Symbolic.ui
-	HOLMOSMLC -c Symbolic.sml
+	MOSMLC -c Symbolic.sml
 
 Lexer.sml: Lexer.lex
 	MOSMLLEX Lexer.lex
 
 Parser.sml: Parser.grm
 	MOSMLYAC Parser.grm
+
+ParseDoc.ui: ParseDoc.sig
+	MOSMLC -c ParseDoc.sig
+
+ParseDoc.uo: ParseDoc.sml
+	MOSMLC -c ParseDoc.sml
