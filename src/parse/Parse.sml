@@ -5,8 +5,7 @@ fun ERROR f msg =
            origin_function = f,
            message = msg};
 
-fun munge s = String.translate (fn c => if c = #"\\" then "\\\\" else str c) s
-fun quote s = "\""^munge s^"\""
+val quote = Lib.quote
 
 datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
 
