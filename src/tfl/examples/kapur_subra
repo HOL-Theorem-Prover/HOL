@@ -93,9 +93,9 @@ val TC1thms =
    (EQ_MP (SPEC_ALL CBVTerminates_def)
         (ASSUME (lhs(concl(SPEC_ALL CBVTerminates_def)))));
 
-val CBN_eqns' = itlist PROVE_HYP TC0thms CBN_eqns;
+val CBN_eqns' = itlist PROVE_HYP TC0thms (LIST_CONJ CBN_eqns);
 val CBN_ind'  = itlist PROVE_HYP TC0thms CBN_ind;
-val CBV_eqns' = itlist PROVE_HYP TC1thms CBV_eqns;
+val CBV_eqns' = itlist PROVE_HYP TC1thms (LIST_CONJ CBV_eqns);
 
 
 (*---------------------------------------------------------------------------
@@ -123,8 +123,8 @@ val tm1 = Term `\N. !env. CBV (CBNh N, env) = CBV(N,env)`;
 
 val [P0,P1] = fst(strip_forall(concl CBN_ind'));
 val ind0 = SPEC_ALL CBN_ind';
-val ind1 = CONV_RULE (DEPTH_CONV Let_conv.GEN_BETA_CONV)
-              (Rsyntax.INST [P0 |-> tm, P1 |-> tm1] ind0);
+val ind1 = CONV_RULE (DEPTH_CONV pairLib.GEN_BETA_CONV)
+              (INST [P0 |-> tm, P1 |-> tm1] ind0);
 val [ind2a, _] = CONJUNCTS (UNDISCH ind1);
 val ind3 = REWRITE_RULE pairTheory.pair_rws
              (SPEC (Term`(x,y,N):'a arith#'a#'a arith`) ind2a);
@@ -140,7 +140,7 @@ val ind4 = DISCH (fst(dest_imp(concl ind1)))
 
 val R1' = mk_var("R1", type_of R1);;
 
-val CBV_eqns'' = UNDISCH (Rsyntax.INST [R1 |-> R1'] (DISCH_ALL CBV_eqns'));
+val CBV_eqns'' = UNDISCH (INST [R1 |-> R1'] (DISCH_ALL CBV_eqns'));
 
 
 (*---------------------------------------------------------------------------
@@ -229,40 +229,84 @@ val R = Term
 `inv_image ($< LEX $<)
   (\x:'a arith#'a#'a arith + 'a arith. (JointAppCount x, JointStdSize x))`;
 
-val Fn_def = 
- Define 
-  `Fn = CBN_UNION_aux ^R`;
+(*---------------------------------------------------------------------------
+     Set the termination relation of CBN_defn
+ ---------------------------------------------------------------------------*)
 
-val SOME Un = Defn.union_defn CBN_defn;
-val SOME Aux = Defn.aux_defn Un;
-val AuxR = Defn.set_reln Aux R;
+val defnR = Defn.set_reln CBN_defn R;
+val tcs as [tc1,tc2,nested,tc3,tc4,tc5,tc6,tc7,tc8] = Defn.tcs_of defnR;
 
-val basic_tcs = prove(list_mk_conj (Defn.tcs_of AuxR),
+(*---------------------------------------------------------------------------
+    Prove the easy termination conditions
+ ---------------------------------------------------------------------------*)
+
+val easy_tcs = prove(list_mk_conj [tc1,tc2,tc3,tc4,tc5,tc6,tc7,tc8],
  TotalDefn.TC_SIMP_TAC [] 
     [JointAppCount_def,JointStdSize_def,
      AppCount_def,definition "arith_size_def"]);
 
-val AuxR' = Defn.elim_tcs AuxR (CONJUNCTS basic_tcs);
-val eqns  = REWRITE_RULE [basic_tcs,SYM Fn_def] (Defn.eqns_of AuxR');
-val ind   = REWRITE_RULE [basic_tcs,SYM Fn_def] (valOf(Defn.ind_of AuxR'));
-val (_::_::_::eq4::_) = CONJUNCTS eqns;
+(*---------------------------------------------------------------------------
+       And eliminate them from the definition
+ ---------------------------------------------------------------------------*)
 
-val AppCount_lem = Q.prove
+val defnR_1 = Defn.elim_tcs defnR (CONJUNCTS easy_tcs);
+
+(*---------------------------------------------------------------------------
+    Fetch the equations for the auxiliary definition
+ ---------------------------------------------------------------------------*)
+
+val SOME Un = Defn.union_defn defnR_1;
+val SOME Aux_defn = Defn.aux_defn Un;
+
+(*---------------------------------------------------------------------------
+    Remove the easy termination constraints from the equations and
+    the provisional induction theorem.
+ ---------------------------------------------------------------------------*)
+
+val eqns = map (REWRITE_RULE [easy_tcs]) (Defn.eqns_of Aux_defn);
+val ind = REWRITE_RULE [easy_tcs] (valOf (Defn.ind_of Aux_defn));
+
+(*---------------------------------------------------------------------------
+     An abbreviation to make the goal more readable.
+ ---------------------------------------------------------------------------*)
+
+val Fn_def = Define `Fn = CBN_UNION_aux ^R`;
+
+(*---------------------------------------------------------------------------
+    Apply the abbreviation to the equations and provisional ind. thm.
+ ---------------------------------------------------------------------------*)
+
+val [e1,e2,e3,e4,e5,e6,e7,e8] = map (REWRITE_RULE [GSYM Fn_def]) eqns;
+val Fn_ind = REWRITE_RULE [GSYM Fn_def] ind;
+
+(*---------------------------------------------------------------------------
+     e4 is the nested equation and has a remaining tc on its assumptions
+ ---------------------------------------------------------------------------*)
+
+val eqn4 = REWRITE_RULE [GSYM Fn_def] (DISCH_ALL e4);
+
+(*---------------------------------------------------------------------------
+   CBN_UNION_aux, and therefore CBN, removes all App nodes from a term
+ ---------------------------------------------------------------------------*)
+
+val AppCountLem = Q.prove
 (`!e. AppCount (Fn e) = 0`,
- recInduct ind
-  THEN RW_TAC arith_ss [eqns,AppCount_def]
-  THEN Q.SUBGOAL_THEN `inv_image ($< LEX $<) 
-        (\x. (JointAppCount x,JointStdSize x))
-        (INL (Fn (INL (B,v,M)),y,N)) (INL (App B v M,y,N))` ASSUME_TAC
-  THENL
-    [Q.PAT_ASSUM `x ==> y` (K ALL_TAC)
-       THEN TotalDefn.TC_SIMP_TAC []
-               [JointAppCount_def, JointStdSize_def,AppCount_def],
-     PROVE_TAC [eq4]]);
+ recInduct Fn_ind
+   THEN RW_TAC arith_ss (AppCount_def::[e1,e2,e3,e5,e6,e7,e8]) THEN 
+   Q.SUBGOAL_THEN 
+     `inv_image ($< LEX $<) (\x. (JointAppCount x,JointStdSize x))
+        (INL (Fn (INL (B,v,M)),y,N)) (INL (App B v M,y,N))` ASSUME_TAC THENL 
+   [WEAKEN_TAC is_imp 
+      THEN TotalDefn.TC_SIMP_TAC []
+             [JointAppCount_def, JointStdSize_def,AppCount_def],
+    PROVE_TAC [eqn4]]);
 
+(*---------------------------------------------------------------------------
+     Termination of CBN
+ ---------------------------------------------------------------------------*)
 
 val (CBN_eqns, CBN_ind) = 
 Defn.tprove(CBN_defn,
-  EXISTS_TAC R THEN REWRITE_TAC [SYM Fn_def, basic_tcs]
+  EXISTS_TAC R THEN REWRITE_TAC [SYM Fn_def, easy_tcs]
    THEN TotalDefn.TC_SIMP_TAC [] 
-          [JointAppCount_def,JointStdSize_def, AppCount_def,AppCount_lem]);
+          [JointAppCount_def,JointStdSize_def, AppCount_def,AppCountLem]);

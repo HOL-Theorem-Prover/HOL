@@ -40,7 +40,7 @@ val lam_count_def =
  ---------------------------------------------------------------------------*)
 
 val DEL1 = 
-   Define 
+   DefineSchema 
       `(DEL1 [] = []) /\
        (DEL1 (h::t) = if x=h then t else h::DEL1 t)`;
 
@@ -130,14 +130,14 @@ val subst_defn =
            
  ---------------------------------------------------------------------------*)
 
-val subst_tcs as [tc1,nested_tc,tc3,tc4,tc5,tc6] = Defn.tcs_of subst_defn;
+val subst_tcs as [tc1,tc2,nested_tc,tc4,tc5,tc6] = Defn.tcs_of subst_defn;
 
 (*---------------------------------------------------------------------------
           Prove non-nested TCs and eliminate them from subst_defn
  ---------------------------------------------------------------------------*)
 
 val non_nested_tcs = prove
-(list_mk_conj [tc1,tc3,tc4,tc5,tc6],
+(list_mk_conj [tc1,tc2,tc4,tc5,tc6],
  TotalDefn.TC_SIMP_TAC [] [lam_count_def]);
 
 val subst_defn1 = Defn.elim_tcs subst_defn (CONJUNCTS non_nested_tcs);

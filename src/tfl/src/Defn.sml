@@ -73,8 +73,8 @@ fun indSuffix s = (s ^ !ind_suffix);
 fun defSuffix s = (s ^ !def_suffix);
 fun defPrim s   = defSuffix(s^"_primitive");
 fun defExtract(s,n) = defSuffix(s^"_extract"^Lib.int_to_string n);
-fun argMunge s = defSuffix(s^"_arg_munge");
-fun auxStem stem   = stem^"_aux";
+fun argMunge s = defSuffix(s^"_CURRIED");
+fun auxStem stem   = stem^"_AUX";
 fun unionStem stem = stem^"_UNION";
 
 val imp_elim =
@@ -330,10 +330,13 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
    eqns and induction theorem. A more advanced implementation would
    write things out so that, when the exported theory is reloaded, the
    defn datastructure is rebuilt. This would give a seamless view of
-   things. I really should do this.
+   things.
 
    Note that we would need to save union and aux info only when
    termination has not been proved for a nested recursion.
+
+   Another (easier) way to look at it would be to require termination
+   and suchlike to be taken care of in the theory.
  ---------------------------------------------------------------------------*)
 
 fun been_stored s =
@@ -352,21 +355,12 @@ fun store(stem,eqs,ind) =
         ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
   end;
 
-fun handle_nested (stem,eqs,ind) =
-  if null(hyp ind)
-  then store(stem,LIST_CONJ eqs,ind)
-  else raise ERR "store_defn"
-   "Nested recursive function with unproven termination conditions";
-
 fun save_defn (ABBREV {bind, ...}) = been_stored bind
   | save_defn (PRIMREC{bind, ...}) = been_stored bind
   | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
   | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ eqs,ind)
-  | save_defn (MUTREC {eqs, ind, stem, union, ...})
-      = (case union
-          of NESTREC _ => handle_nested (stem,eqs,ind)
-           | otherwise => store(stem,LIST_CONJ eqs,ind))
-  | save_defn (NESTREC{eqs,ind,stem, ...}) = handle_nested (stem,eqs,ind);
+  | save_defn (MUTREC {eqs,ind,stem,union, ...}) = store(stem,LIST_CONJ eqs,ind)
+  | save_defn (NESTREC{eqs,ind,stem, ...}) = store(stem,LIST_CONJ eqs,ind)
 
 
 (*---------------------------------------------------------------------------
@@ -757,7 +751,7 @@ fun mutrec thy bindstem eqns =
       fun inform (f,(doml,rng)) =
         let val s = fst(dest_atom f)
         in if 1<length doml
-            then (f, (mk_var(s^"_tupled",list_mk_prod_type doml --> rng),doml))
+            then (f, (mk_var(s^"_TUPLED",list_mk_prod_type doml --> rng),doml))
             else (f, (f,doml))
          end
       val eqns' = tuple_args (map inform lhs_info1) eqns
@@ -834,7 +828,8 @@ fun mutrec thy bindstem eqns =
       val (defns,theory2,Uout_map) =
             itlist mk_def (Lib.enumerate 0 fnvar_map) ([],theory1,[])
       fun apply_outmap th =
-         let fun matches (pat,_) = Lib.can (match_term pat) (lhs (concl th))
+         let fun matches (pat,_) = Lib.can (Term.match_term pat) 
+                                           (lhs (concl th))
              val (_,outf) = Lib.first matches Uout_map
          in AP_TERM outf th
          end

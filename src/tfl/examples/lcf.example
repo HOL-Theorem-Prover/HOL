@@ -24,10 +24,8 @@
 
 load "bossLib"; open bossLib;
 
-val G_def = Define `G x = if b1 x then G (g x) else x`
-val H_def = Define `H x = if b1 x \/ b2 x then H (g x) else x`;
-
-infix 8 by;
+val G_def = DefineSchema `G x = if b1 x then G (g x) else x`
+val H_def = DefineSchema `H x = if b1 x \/ b2 x then H (g x) else x`;
 
 val THM = Q.prove 
 (`WF R /\ (!x. b1 x \/ b2 x ==> R (g x) x)

@@ -33,7 +33,7 @@ show_assums := true;
      The variables p and g are parameters.
  ---------------------------------------------------------------------------*)
 
-val H_def = Define `H x = if p x then x else H (H (g x))`;
+val H_def = TotalDefn.DefineSchema `H x = if p x then x else H (H (g x))`;
 
 
 (*---------------------------------------------------------------------------

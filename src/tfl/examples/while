@@ -8,7 +8,7 @@ app load ["bossLib", "Q"]; open bossLib;
 
 
 val While_scheme = 
- Define
+ TotalDefn.DefineSchema
     `While s = if B s then While (C s) else s`;
 
 
