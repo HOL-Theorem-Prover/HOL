@@ -107,15 +107,27 @@ fun transfer_file symlink targetdir (df as (dir,file)) =
         in
           if symlink then link s1' s2' else FileSys.rename {old=s1', new=s2'}
         end
-      fun transfer f (dir,file) = f (fullPath [dir,file])
-                                    (fullPath [targetdir,file])
+      fun transfer f (dir,file1,file2) = 
+               f (fullPath [dir,file1])
+                 (fullPath [targetdir,file2])
+      fun idtransfer f (dir,file) = transfer f (dir,file,file)
+      fun digest file =
+        let val b = Path.base file
+        in if (String.extract(b,String.size b -4,NONE) = "-sig" 
+               handle _ => false)
+           then SOME (String.extract(b,0,SOME (String.size b - 4)) ^".sig")
+           else NONE
+        end
   in
    case Path.ext file
-    of SOME"ui"     => transfer mv df
-     | SOME"uo"     => transfer mv df
-     | SOME"so"     => transfer mv df   (* for dynlibs *)
-     | SOME"xable"  => transfer mv df   (* for executables *)
-     | SOME"sig"    => transfer cp df
+    of SOME"ui"     => idtransfer mv df
+     | SOME"uo"     => idtransfer mv df
+     | SOME"so"     => idtransfer mv df   (* for dynlibs *)
+     | SOME"xable"  => idtransfer mv df   (* for executables *)
+     | SOME"sig"    => idtransfer cp df
+     | SOME"sml"    => (case digest file
+                         of NONE => ()
+                          | SOME file' => transfer cp (dir,file,file'))
      |    _         => ()
   end;
 
