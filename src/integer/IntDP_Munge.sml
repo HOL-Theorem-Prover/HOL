@@ -7,7 +7,13 @@ open HolKernel boolLib intSyntax boolSyntax CooperSyntax integerTheory
 infix THEN THENC THENL |-> ## ORELSEC
 infixr -->
 
-val ERR = mk_HOL_ERR "Cooper";
+open QConv
+nonfix THENQC ORELSEQC
+val THENQC = uncurry THENQC
+val ORELSEQC = uncurry ORELSEQC
+infix ORELSEQC THENQC
+
+val ERR = mk_HOL_ERR "IntDP_Munge";
 
 val normalise_mult = OmegaMath.NORMALISE_MULT
 
@@ -110,6 +116,43 @@ fun nat_nonpresburgers tm =
         else empty_tmset
       end
 
+val x_var = mk_var("x", int_ty)
+val c_var = mk_var("c", int_ty)
+fun elim_div_mod0 t = let
+  val divmods =
+      HOLset.listItems (find_free_terms (fn t => is_mod t orelse is_div t) t)
+  fun elim_t to_elim = let
+    val ((num,divisor), thm) = (dest_div to_elim, INT_DIV_P)
+        handle HOL_ERR _ => (dest_mod to_elim, INT_MOD_P)
+    val div_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(divisor, zero_tm))))
+    val abs_div = REDUCE_CONV (mk_absval divisor)
+    val rwt = MP (Thm.INST [x_var |-> num, c_var |-> divisor] (SPEC_ALL thm))
+                 div_nzero
+  in
+    UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
+    STRIP_QUANT_CONV (RAND_CONV (FORK_CONV (REDUCE_CONV, BETA_CONV)))
+  end
+in
+  EVERY_QCONV (map elim_t divmods) t
+end
+
+fun elim_div_mod t = let
+  (* can't just apply elim_div_mod to a term with quantifiers because the
+     elimination of x/c relies on x being free.  So we need to traverse
+     the term underneath the quantifiers.  It may also help to get the
+     quantifiers to have scope over as little of the term as possible. *)
+  fun recurse tm = let
+  in
+    if is_exists tm orelse is_forall tm then BINDER_CONV recurse
+    else
+      elim_div_mod0 THENQC
+      SUB_QCONV recurse
+  end tm
+in
+  recurse t
+end
+
+
 fun decide_fv_presburger DPname DP tm = let
   fun is_int_const tm = type_of tm = int_ty andalso is_const tm
   val fvs = free_vars tm @ (Lib.mk_set (find_terms is_int_const tm))
@@ -121,14 +164,16 @@ fun decide_fv_presburger DPname DP tm = let
     in
       mk_forall(gv, subst [bv |-> gv] t)
     end
+  val preprocess = elim_div_mod THENQC REWRITE_CONV [INT_ABS]
+  val doit = preprocess THENQC DP
 in
-  if null fvs then DP tm
+  if null fvs then doit tm
   else let
     val newtm = List.foldr gen tm fvs   (* as there are no non-presburger
                                            sub-terms, all these variables
                                            will be of integer type *)
   in
-    EQT_INTRO (SPECL fvs (EQT_ELIM (DP newtm)))
+    EQT_INTRO (SPECL fvs (EQT_ELIM (doit newtm)))
   end handle HOL_ERR _ =>
     raise ERR DPname
       ("Tried to prove generalised goal (generalising "^
@@ -157,6 +202,7 @@ in
         BINDER_CONV (RAND_CONV BETA_CONV)
     in
       BINDER_CONV (abs_inj inj_bvar) THENC rewrite_qaway THENC
+      RENAME_VARS_CONV [#1 (dest_var bvar)] THENC
       BINDER_CONV eliminate_nat_quants
     end
     else

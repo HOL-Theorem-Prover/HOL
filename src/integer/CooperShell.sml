@@ -747,47 +747,11 @@ in
   | SOME ((th,()),_) => th
 end
 
-val x_var = mk_var("x", int_ty)
-val c_var = mk_var("c", int_ty)
-fun elim_div_mod0 t = let
-  val divmods =
-      HOLset.listItems (find_free_terms (fn t => is_mod t orelse is_div t) t)
-  fun elim_t to_elim = let
-    val ((num,divisor), thm) = (dest_div to_elim, INT_DIV_P)
-        handle HOL_ERR _ => (dest_mod to_elim, INT_MOD_P)
-    val div_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(divisor, zero_tm))))
-    val abs_div = REDUCE_CONV (mk_absval divisor)
-    val rwt = MP (Thm.INST [x_var |-> num, c_var |-> divisor] (SPEC_ALL thm))
-                 div_nzero
-  in
-    UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
-    STRIP_QUANT_CONV (RAND_CONV (FORK_CONV (REDUCE_CONV, BETA_CONV)))
-  end
-in
-  EVERY_QCONV (map elim_t divmods) t
-end
-
-fun elim_div_mod t = let
-  (* can't just apply elim_div_mod to a term with quantifiers because the
-     elimination of x/c relies on x being free.  So we need to traverse
-     the term underneath the quantifiers.  It may also help to get the
-     quantifiers to have scope over as little of the term as possible. *)
-  fun recurse tm = let
-  in
-    if is_exists tm orelse is_forall tm then BINDER_CONV recurse
-    else
-      elim_div_mod0 THENQC
-      SUB_QCONV recurse
-  end tm
-in
-  recurse t
-end
 
 fun decide_pure_presburger_term tm = let
   (* no free variables allowed *)
   val phase0_CONV =
-    (* rewrites out conditional expression and absolute value terms *)
-    elim_div_mod THENQC REWRITE_CONV [INT_ABS] THENQC
+    (* rewrites out conditional expression terms *)
     Sub_and_cond.COND_ELIM_CONV
 
   fun mainwork tm = let
