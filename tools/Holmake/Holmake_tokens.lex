@@ -14,6 +14,8 @@
 
 let newline = "\r\n" | `\n` | `\r`
 let whitespace = `\r` | `\t` | `\n` | ` `
+let alpha = [ `A` - `Z`  `a` - `z` ]
+let number = [`0` - `9`]
 rule token =
   parse `:` { COLON }
       | `=` { EQUALS }
@@ -22,14 +24,18 @@ rule token =
       | "PRE_INCLUDES" { PRE_INCLUDES }
       | "OPTIONS"  { OPTIONS }
       | "EXTRA_CLEANS" { EXTRA_CLEANS }
-      | `\\` newline { token lexbuf }
+      | (`\\` newline | ` ` | "\\\t" ) + { WS }
       | newline { NEWLINE }
       | `#`    { comment lexbuf; token lexbuf }
-      | ([^ `\\` `\r` `\t` `\n` ` ` `#` `:` `=`] | (`\\` _))+ {
+      | "$(" alpha (alpha | number) * `)` {
+           let val lb = Lexing.getLexeme lexbuf in
+             VARREF (String.extract(lb, 2, SOME (String.size lb - 3)))
+           end
+        }
+      | ([^ `\\` `\r` `\t` `\n` ` ` `#` `:` `=` `$`] | (`\\` _))+ {
             ID (fromEscapedString (Lexing.getLexeme lexbuf))
         }
       | eof { EOF }
-      | ` ` { token lexbuf }
       | _ { raise Fail ("Unexpected character "^Lexing.getLexeme lexbuf) }
 and comment =
   parse newline { () }

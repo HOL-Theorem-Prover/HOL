@@ -257,15 +257,25 @@ val hmakefile_doc =
      Holmake_rules.parse_from_file hmakefile)
   else Holmake_types.empty_doc
 
+fun environment s =
+    case s of
+      "HOLDIR" => HOLDIR
+    | "SIGOBJ" => Path.concat(HOLDIR, "sigobj")
+    | _ => raise Fail ("Unknown makefile variable "^s)
+fun interpret id = id environment
+val interpret_list = map interpret
+
 val hmake_prelims = #preliminaries hmakefile_doc
-val hmake_includes = #includes hmake_prelims
+val hmake_includes = interpret_list (#includes hmake_prelims)
+val hmake_options = interpret_list (#options hmake_prelims)
 val additional_includes =
   includify (remove_duplicates (cline_additional_includes @ hmake_includes))
 
-val hmake_preincludes = includify (#pre_includes hmake_prelims)
-val hmake_no_overlay = member "NO_OVERLAY" (#options hmake_prelims)
-val hmake_no_sigobj = member "NO_SIGOBJ" (#options hmake_prelims)
-val extra_cleans = #extra_cleans hmake_prelims
+val hmake_preincludes =
+    includify (interpret_list (#pre_includes hmake_prelims))
+val hmake_no_overlay = member "NO_OVERLAY" hmake_options
+val hmake_no_sigobj = member "NO_SIGOBJ" hmake_options
+val extra_cleans = interpret_list (#extra_cleans hmake_prelims)
 
 val actual_overlay =
   if no_overlay orelse hmake_no_overlay then NONE
@@ -281,7 +291,12 @@ val actual_overlay =
       end
 
 
-val extra_rules = #rules hmakefile_doc
+
+fun interpret_rule {commands, dependencies, target} =
+    {commands = map interpret_list commands,
+     dependencies = interpret_list dependencies,
+     target = interpret target}
+val extra_rules = map interpret_rule (#rules hmakefile_doc)
 
 fun extra_deps t =
   Option.map #dependencies (List.find (fn r => #target r = t) extra_rules)
