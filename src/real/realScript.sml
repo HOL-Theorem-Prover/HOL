@@ -2646,8 +2646,8 @@ val REAL_NEG_THIRD = store_thm
    THEN DISJ2_TAC
    THEN numLib.ARITH_TAC);
 
-val REAL_DIV_CANCEL2 = store_thm
-  ("REAL_DIV_CANCEL2",
+val REAL_DIV_DENOM_CANCEL = store_thm
+  ("REAL_DIV_DENOM_CANCEL",
    ``!x y z : real. ~(x = 0) ==> ((y / x) / (z / x) = y / z)``,
    RW_TAC boolSimps.bool_ss [real_div]
    THEN (Cases_on `y = 0` THEN1 RW_TAC boolSimps.bool_ss [REAL_MUL_LZERO])
@@ -2660,18 +2660,18 @@ val REAL_DIV_CANCEL2 = store_thm
    THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
    THEN RW_TAC boolSimps.bool_ss [REAL_MUL_LINV, REAL_MUL_RID]);
 
-val REAL_DIV2_CANCEL2 = save_thm
-  ("REAL_DIV2_CANCEL2",
+val REAL_DIV_DENOM_CANCEL2 = save_thm
+  ("REAL_DIV_DENOM_CANCEL2",
    SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(2n = 0)``, REAL_INJ]
-   (Q.SPEC `2` REAL_DIV_CANCEL2));
+   (Q.SPEC `2` REAL_DIV_DENOM_CANCEL));
 
-val REAL_DIV3_CANCEL2 = save_thm
-  ("REAL_DIV3_CANCEL2",
+val REAL_DIV_DENOM_CANCEL3 = save_thm
+  ("REAL_DIV_DENOM_CANCEL3",
    SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(3n = 0)``, REAL_INJ]
-   (Q.SPEC `3` REAL_DIV_CANCEL2));
+   (Q.SPEC `3` REAL_DIV_DENOM_CANCEL));
 
-val REAL_DIV_MUL_CANCEL = store_thm
-  ("REAL_DIV_MUL_CANCEL",
+val REAL_DIV_INNER_CANCEL = store_thm
+  ("REAL_DIV_INNER_CANCEL",
    ``!x y z : real. ~(x = 0) ==> ((y / x) * (x / z) = y / z)``,
    RW_TAC boolSimps.bool_ss [real_div]
    THEN (KNOW_TAC ``!a b c d : real. a * b * (c * d) = (a * d) * (b * c)``
@@ -2679,15 +2679,44 @@ val REAL_DIV_MUL_CANCEL = store_thm
    THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
    THEN RW_TAC boolSimps.bool_ss [REAL_MUL_LINV, REAL_MUL_RID]);
 
-val REAL_DIV2_MUL_CANCEL = save_thm
-  ("REAL_DIV2_MUL_CANCEL",
+val REAL_DIV_INNER_CANCEL2 = save_thm
+  ("REAL_DIV_INNER_CANCEL2",
    SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(2n = 0)``, REAL_INJ]
-   (Q.SPEC `2` REAL_DIV_MUL_CANCEL));
+   (Q.SPEC `2` REAL_DIV_INNER_CANCEL));
 
-val REAL_DIV3_MUL_CANCEL = save_thm
-  ("REAL_DIV3_MUL_CANCEL",
+val REAL_DIV_INNER_CANCEL3 = save_thm
+  ("REAL_DIV_INNER_CANCEL3",
    SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(3n = 0)``, REAL_INJ]
-   (Q.SPEC `3` REAL_DIV_MUL_CANCEL));
+   (Q.SPEC `3` REAL_DIV_INNER_CANCEL));
+
+val REAL_DIV_OUTER_CANCEL = store_thm
+  ("REAL_DIV_OUTER_CANCEL",
+   ``!x y z : real. ~(x = 0) ==> ((x / y) * (z / x) = z / y)``,
+   RW_TAC boolSimps.bool_ss [real_div]
+   THEN (KNOW_TAC ``!a b c d : real. a * b * (c * d) = (a * d) * (c * b)``
+         THEN1 metisLib.METIS_TAC [REAL_MUL_SYM, REAL_MUL_ASSOC])
+   THEN DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   THEN RW_TAC boolSimps.bool_ss [REAL_MUL_RINV, REAL_MUL_LID]);
+
+val REAL_DIV_OUTER_CANCEL2 = save_thm
+  ("REAL_DIV_OUTER_CANCEL2",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(2n = 0)``, REAL_INJ]
+   (Q.SPEC `2` REAL_DIV_OUTER_CANCEL));
+
+val REAL_DIV_OUTER_CANCEL3 = save_thm
+  ("REAL_DIV_OUTER_CANCEL3",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(3n = 0)``, REAL_INJ]
+   (Q.SPEC `3` REAL_DIV_OUTER_CANCEL));
+
+val REAL_DIV_REFL2 = save_thm
+  ("REAL_DIV_REFL2",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(2n = 0)``, REAL_INJ]
+   (Q.SPEC `2` REAL_DIV_REFL));
+
+val REAL_DIV_REFL3 = save_thm
+  ("REAL_DIV_REFL3",
+   SIMP_RULE boolSimps.bool_ss [numLib.ARITH_PROVE ``~(3n = 0)``, REAL_INJ]
+   (Q.SPEC `3` REAL_DIV_REFL));
 
 val REAL_HALF_BETWEEN = store_thm
   ("REAL_HALF_BETWEEN",
