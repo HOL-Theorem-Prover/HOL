@@ -214,7 +214,7 @@ process in it."
                       (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
       (goto-char initial-point)
-      (concat " (*#loc " row " " col " *)"))))
+      (format " (*#loc %d %d *)" row col))))
 
 (defun copy-region-as-hol-tactic (start end arg)
   "Send selected region to HOL process as tactic."
