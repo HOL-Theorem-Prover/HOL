@@ -669,6 +669,10 @@ fun unadjzip [] A = A
     *not* empty, i.e., the user made some definitions, or stored some
     theorems or whatnot, then the initial theory will be exported.
  ----------------------------------------------------------------------------*)
+val new_theory_time = ref (Timer.checkCPUTimer Globals.hol_clock)
+
+val report_times = ref true
+val _ = Feedback.register_btrace ("report_thy_times", report_times)
 
 local val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
 in
@@ -704,6 +708,9 @@ fun export_theory () =
     of [] =>
        (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
             val ostrm2 = Portable.open_out(concat["./",name,".sml"])
+            val time_now = #usr (Timer.checkCPUTimer Globals.hol_clock)
+            val time_since = Time.-(time_now, #usr (!new_theory_time))
+            val tstr = Time.toString time_since
         in
           mesg ("Exporting theory "^Lib.quote thyname^" ... ");
           theory_out (TheoryPP.pp_sig (!pp_thm) sigthry)
@@ -711,7 +718,11 @@ fun export_theory () =
           theory_out (TheoryPP.pp_struct structthry)
                      {name=name, style="structure"} ostrm2;
           set_ct_consistency true;
-          mesg "done.\n"
+          mesg "done.\n";
+          if !report_times then
+            mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ "s to build\n")
+          else ()
+
         end
         handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
 
@@ -763,6 +774,7 @@ fun new_theory str =
       val thyname = thyid_name thid
       fun mk_thy () = (HOL_MESG ("Created theory "^Lib.quote str);
                         makeCT(fresh_segment str); initialize thyname)
+      val _ = new_theory_time := Timer.checkCPUTimer Globals.hol_clock
   in
    if str=thyname
       then (HOL_MESG("Restarting theory "^Lib.quote str);

@@ -529,6 +529,9 @@ fun unadjzip [] A = A
 
 val new_theory_time = ref (Timer.checkCPUTimer Globals.hol_clock)
 
+val report_times = ref true
+val _ = Feedback.register_btrace ("report_thy_times", report_times)
+
 local val mesg = Lib.with_flag(Feedback.MESG_to_string, Lib.I) HOL_MESG
 in
 fun export_theory () = let
@@ -558,20 +561,17 @@ fun export_theory () = let
      [] =>
      (let val ostrm1 = Portable.open_out(concat["./",name,".sig"])
           val ostrm2 = Portable.open_out(concat["./",name,".sml"])
-          val logfile = TextIO.openAppend (Path.concat(Globals.HOLDIR,
-                                                       "time-logging"))
           val time_now = #usr (Timer.checkCPUTimer Globals.hol_clock)
           val time_since = Time.-(time_now, #usr (!new_theory_time))
           val tstr = Time.toString time_since
       in
         mesg ("Exporting theory "^Lib.quote thyname^" ... ");
-        TextIO.output(logfile, StringCvt.padRight #" " 30 thyname);
-        TextIO.output(logfile, StringCvt.padLeft #" " 10 tstr ^ "\n");
-        (* Profile.output_profile_results logfile (Profile.results()); *)
-        TextIO.closeOut logfile;
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct structthry) ostrm2;
-        mesg "done.\n"
+        mesg "done.\n";
+        if !report_times then
+          mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ "s to build\n")
+        else ()
       end
         handle e => (Lib.say "\nFailure while writing theory!\n"; raise e))
 
