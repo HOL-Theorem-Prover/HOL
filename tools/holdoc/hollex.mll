@@ -233,7 +233,7 @@ let tokstream p chan =
                                Ident(s,true)
                              else
                                TeXNormal(s)
-                | None    -> (let tok = !lex lexbuf in print_string (render_token tok) ; tok) in
+                | None    -> !lex lexbuf in
   let push s  = match !pending with
                   (* failure here would be an internal error *)
                   None    -> if s = "" then
