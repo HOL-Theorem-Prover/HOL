@@ -4,28 +4,30 @@ structure Systeml :> Systeml = struct
    It is the very first thing compiled by the HOL build process so it
    absolutely can not depend on any other HOL source code. *)
 
-fun dquote s = concat ["\"", s, "\""];
-  fun concat_wspaces munge acc strl =
+fun dquote s = concat ["\"", s, "\""]
+fun concat_wspaces munge acc strl =
     case strl of
       [] => concat (List.rev acc)
     | [x] => concat (List.rev (munge x :: acc))
     | (x::xs) => concat_wspaces munge (" " :: munge x :: acc) xs
-  open Process
+open Process
 
-  fun systeml l = let
-    val command = "call "^concat_wspaces dquote [] l
-  in
-    Process.system command
-  end
+fun systeml l = let
+  val command = "call "^concat_wspaces dquote [] l
+in
+  Process.system command
+end
 
-  fun xable_string s = s^".exe"
-  fun mk_xable file =   (* returns the name of the executable *)
-      let val exe = file^".exe"
-          val _ = FileSys.remove exe handle _ => ()
-      in
-        FileSys.rename{old=file, new=exe};
-        exe
-      end
+val protect = dquote
+
+fun xable_string s = s^".exe"
+fun mk_xable file =   (* returns the name of the executable *)
+    let val exe = file^".exe"
+        val _ = FileSys.remove exe handle _ => ()
+    in
+      FileSys.rename{old=file, new=exe};
+      exe
+    end
 
 fun normPath s = Path.toString(Path.fromString s)
 

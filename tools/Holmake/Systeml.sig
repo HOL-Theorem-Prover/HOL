@@ -2,6 +2,7 @@ signature Systeml =
 sig
 
   val systeml : string list -> Process.status
+  val protect : string -> string
   val xable_string : string -> string
   val mk_xable : string -> string
 

@@ -17,6 +17,7 @@ local
 in
 
   val systeml = system o concat_wspaces unix_quote []
+  val protect = unix_quote
 
   fun xable_string s = s
 
