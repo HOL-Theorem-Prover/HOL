@@ -530,6 +530,7 @@ or at level 10 with a bare prefix. "
                     (t (make-comint "HOL98" hol98-executable)))))
     (setq hol-buffer-name (buffer-name buf))
     (switch-to-buffer buf)
+    (setq comint-prompt-regexp "^- ")
     (setq hol-buffer-name (buffer-name buf))
     (setq comint-scroll-show-maximum-output t)))
 
