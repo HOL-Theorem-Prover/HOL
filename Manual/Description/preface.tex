@@ -59,20 +59,36 @@ is not the classical one due to Church, but an equivalent formulation
 influenced by \LCF.
 
 An enhanced and rationalized version of \HOL, called \HOL 88, was
-released (in 1988), after the original \HOL\ system had been in use for
-several years.  \HOL 90 (released in 1990) was a port of \HOL 88 to SML
-\cite{sml} by Konrad Slind at the University of Calgary. It has been
-further developed through the 1990's. \HOL 98 is the latest version of
-\HOL, and is also implemented in SML; it features a number of novelties
-compared to its predecessors.  \HOL 98 is intended to serve as a stable
-platform for a number of research projects and technology transfer
-activities that are in progress at Cambridge, and elsewhere, at the time
-of writing.  It is also the supported version of the system for the
-international \HOL\ community.  The main differences between the various
-versions and releases of \HOL\ are described in Appendix~\ref{appendix}.
+released (in 1988), after the original \HOL\ system had been in use
+for several years.  \HOL 90 (released in 1990) was a port of \HOL 88
+to SML \cite{sml} by Konrad Slind at the University of Calgary. It has
+been further developed through the 1990's. \HOL{} 4 is the latest
+version of \HOL, and is also implemented in SML; it features a number
+of novelties compared to its predecessors.  \HOL{} 4 is also the
+supported version of the system for the international \HOL\ community.
+
+We have retroactively decided to number \HOL{} implementations in the
+following way
+\begin{enumerate}
+\item \HOL88 and earlier: implementations based on a Lisp substrate,
+  with Classic ML.
+\item \HOL90: implementations in Standard ML, principally using the
+  SML/NJ implementation.
+\item \HOL98 (Athabasca and Taupo releases): implementations using
+  Moscow ML, and with a new library and theory mechanism.
+\item \HOL{} (Kananaskis releases)
+\end{enumerate}
+Therefore, with \HOL{}~4, we do away with the habit of associating
+implementations with year numbers.  Individual releases within
+\HOL{}~4 will retain the \textit{lake-number} naming scheme.
 
 In this document, the acronym `\HOL' refers to both the interactive theorem
 proving system and to the version of higher order logic that the system
 supports; where there is serious ambiguity, the former is called `the \HOL\
 system' and the latter `the \HOL\ logic'.
 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
