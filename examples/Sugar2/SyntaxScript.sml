@@ -1,8 +1,11 @@
 
 (*****************************************************************************)
-(* Create "SyntaxTheory" representing abstract syntax of Sugar 2 in HOL      *)
+(* IPSL is an attempt to make Accellera PSL (Sugar) closer to ITL by         *)
+(* defining SEREs as formulas via a chop operator.                           *)
 (*                                                                           *)
-(* Created Wed Dec 25 23:02:12 GMT 2002                                      *)
+(* Create "SyntaxTheory" representing abstract syntax of IPSL                *)
+(*                                                                           *)
+(* Created Thu Feb  6 10:01:51 GMT 2003                                      *)
 (*****************************************************************************)
 
 (*****************************************************************************)

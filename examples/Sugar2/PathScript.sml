@@ -52,12 +52,6 @@ val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 val _ = new_theory "Path";
 
 (******************************************************************************
-* Infix list concatenation
-******************************************************************************)
-val _ = set_fixity "<>" (Infixl 500);
-val _ = overload_on ("<>", Term`APPEND`);
-
-(******************************************************************************
 * A path is finite or infinite
 ******************************************************************************)
 val path_def =
@@ -248,6 +242,31 @@ val _ = overload_on("<", ``LS_xnum_num``);
 val _ = overload_on("<", ``LS_xnum_xnum``);
 
 (******************************************************************************
+* Extend less-than-or-equal predicate (<=) to extended numbers
+******************************************************************************)
+val LE_num_xnum_def =
+ Define 
+  `($LE_num_xnum (m:num) (XNUM (n:num)) = (m:num) <= (n:num))
+   /\
+   ($LE_num_xnum (m:num) INFINITY = T)`;
+
+val LE_xnum_num_def =
+ Define 
+  `($LE_xnum_num (XNUM (m:num)) (n:num) = (m:num) <= (n:num))
+   /\
+   ($LE_xnum_num INFINITY (n:num) = F)`;
+
+val LE_xnum_xnum_def =
+ Define `$LE_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) <= (n:num)`;
+
+val LE = 
+ save_thm("LE",LIST_CONJ[LE_num_xnum_def,LE_xnum_num_def,LE_xnum_xnum_def]);
+
+val _ = overload_on("<=", ``LE_num_xnum``);
+val _ = overload_on("<=", ``LE_xnum_num``);
+val _ = overload_on("<=", ``LE_xnum_xnum``);
+
+(******************************************************************************
 * Extend greater-than predicate (>) to extended numbers
 ******************************************************************************)
 val GT_num_xnum_def =
@@ -274,6 +293,34 @@ val GT =
 val _ = overload_on(">", ``GT_num_xnum``);
 val _ = overload_on(">", ``GT_xnum_num``);
 val _ = overload_on(">", ``GT_xnum_xnum``);
+
+(******************************************************************************
+* Extend greater-than-or-equal predicate (>=) to extended numbers
+******************************************************************************)
+val GE_num_xnum_def =
+ Define `$GE_num_xnum (m:num) (XNUM (n:num)) = (m:num) >= (n:num)`;
+
+val GE_num_xnum_def =
+ Define 
+  `($GE_num_xnum (m:num) (XNUM (n:num)) = (m:num) >= (n:num))
+   /\
+   ($GE_num_xnum (m:num) INFINITY = F)`;
+
+val GE_xnum_num_def =
+ Define 
+  `($GE_xnum_num (XNUM (m:num)) (n:num) = (m:num) >= (n:num))
+   /\
+   ($GE_xnum_num INFINITY (n:num) = T)`;
+
+val GE_xnum_xnum_def =
+ Define `$GE_xnum_xnum (XNUM (m:num)) (XNUM (n:num)) = (m:num) >= (n:num)`;
+
+val GE = 
+ save_thm("GE",LIST_CONJ[GE_num_xnum_def,GE_xnum_num_def,GE_xnum_xnum_def]);
+
+val _ = overload_on(">=", ``GE_num_xnum``);
+val _ = overload_on(">=", ``GE_xnum_num``);
+val _ = overload_on(">=", ``GE_xnum_xnum``);
 
 (******************************************************************************
 * LENGTH(FINITE l)   = XNUM(LENGTH l)
@@ -539,6 +586,24 @@ val CAT_def =
    /\ 
    (CAT((x::w), p) = CONS(x, CAT(w,p)))`;
 
+(******************************************************************************
+* Append paths
+******************************************************************************)
+val PATH_APPEND_def =
+ Define
+  `(PATH_APPEND (FINITE l1) (FINITE l2) = FINITE(APPEND l1 l2))
+   /\
+   (PATH_APPEND (FINITE l) p = CAT(l, p))
+   /\
+   (PATH_APPEND (INFINITE f) _ = INFINITE f)`;
+
+(******************************************************************************
+* Infix list concatenation
+******************************************************************************)
+val _ = set_fixity "<>" (Infixl 500);
+val _ = overload_on ("<>", Term`APPEND`);
+val _ = overload_on ("<>", Term`PATH_APPEND`);
+
 val IS_INFINITE_CAT =
  store_thm
   ("IS_INFINITE_CAT",
@@ -603,7 +668,7 @@ val SEL_APPEND_SINGLETON_IMP =
      ==>
      (SEL p (i,j) = APPEND w [l]) ==> (SEL p (i,j-1) = w) /\ (ELEM p j = l)``,
    REPEAT DISCH_TAC
-    THEN IMP_RES_TAC(DECIDE ``j > i ==> (i <= (j-1) /\ (j-1) < j)``)
+    THEN IMP_RES_TAC(DECIDE ``j:num > i:num ==> (i <= (j-1) /\ (j-1) < j)``)
     THEN IMP_RES_TAC(DECIDE``j:num > i:num ==> (j - 1 + 1 = j)``)
     THEN IMP_RES_TAC(ISPEC ``p :'a path`` SEL_SPLIT)
     THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
@@ -623,7 +688,7 @@ val SEL_APPEND_SINGLETON =
    REPEAT STRIP_TAC
     THEN EQ_TAC
     THEN ZAP_TAC std_ss [SEL_APPEND_SINGLETON_IMP]
-    THEN IMP_RES_TAC(DECIDE ``j > i ==> i <= j - 1 /\ j - 1 < j``)
+    THEN IMP_RES_TAC(DECIDE ``j:num > i:num ==> i <= j - 1 /\ j - 1 < j``)
     THEN IMP_RES_TAC
           (ISPECL [``p :'a path``,``j:num-1``,``i:num``,``j:num``] SEL_SPLIT)
     THEN POP_ASSUM(ASSUME_TAC o SPEC_ALL)
@@ -676,7 +741,7 @@ val TL_SEL_SUC =
     THEN RW_TAC list_ss 
           [SEL_def,SEL_REC_def,GSYM arithmeticTheory.ADD1,
            ELEM_def,RESTN_def]
-    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> ((SUC (j - SUC i)) = (j-i))``)
+    THEN IMP_RES_TAC(DECIDE ``SUC i:num <= j:num ==> ((SUC (j - SUC i)) = (j-i))``)
     THEN RW_TAC arith_ss []
     THEN ASSUM_LIST
           (fn thl => 
@@ -684,11 +749,11 @@ val TL_SEL_SUC =
             (GSYM
              (Q.GEN `p`
               (SIMP_RULE arith_ss thl (Q.SPECL [`p`,`i`,`j`] SEL_def)))))
-    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> (SUC (j - i) = j + 1 - i)``)
+    THEN IMP_RES_TAC(DECIDE ``SUC i:num <= j:num ==> (SUC (j - i) = j + 1 - i)``)
     THEN RW_TAC arith_ss []
-    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> i <= j-1``)
+    THEN IMP_RES_TAC(DECIDE ``SUC i:num <= j:num ==> i <= j-1``)
     THEN RES_TAC
-    THEN IMP_RES_TAC(DECIDE ``SUC i <= j ==> (SUC(j-1)=j)``)
+    THEN IMP_RES_TAC(DECIDE ``SUC i:num <= j:num ==> (SUC(j-1)=j)``)
     THEN ASSUM_LIST
           (fn thl => ASSUME_TAC(SIMP_RULE std_ss [el 1 thl] (el 2 thl)))
     THEN RW_TAC arith_ss [SEL_def]);
@@ -698,7 +763,7 @@ val TL_SEL =
   ("TL_SEL",
    ``!i j p. i < j ==> (TL(SEL p (i,j)) = SEL (REST p) (i,j-1))``,
    RW_TAC std_ss []
-    THEN IMP_RES_TAC(DECIDE ``i < j ==> i <= j-1``)
+    THEN IMP_RES_TAC(DECIDE ``i:num < j:num ==> i <= j-1``)
     THEN IMP_RES_TAC TL_SEL_SUC
     THEN IMP_RES_TAC(DECIDE ``i:num < j:num ==> (SUC(j-1)=j)``)
     THEN ASSUM_LIST
@@ -758,3 +823,6 @@ val SEL_RESTN =
    RW_TAC arith_ss [SEL_def,SEL_REC_RESTN]);
 
 val _ = export_theory();
+
+
+

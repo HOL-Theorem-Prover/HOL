@@ -108,7 +108,7 @@ val US_SEM_def =
 val UF_SEM_def =
  Define
    `(UF_SEM w (F_BOOL b) = 
-      B_SEM (ELEM w 0) b)
+      LENGTH w > 0 /\ B_SEM (ELEM w 0) b)
     /\
     (UF_SEM w (F_NOT f) = 
       ~(UF_SEM w f)) 
