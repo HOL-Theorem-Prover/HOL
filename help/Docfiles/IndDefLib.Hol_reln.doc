@@ -1,6 +1,6 @@
-\DOC Hol_reln
+\DOC
 
-\TYPE {IndDefLib.Hol_reln : term quotation -> (thm * thm * thm)}
+\TYPE {Hol_reln : term quotation -> (thm * thm * thm)}
 
 \SYNOPSIS
 Defines inductive relations.
