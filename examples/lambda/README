@@ -10,7 +10,10 @@ ncScript.sml : builds a theory of name-carrying terms, where terms are
                  Andy Gordon and Tom Melham,
                  Proceedings of TPHOLs'96, Springer LNCS 1125.
 
-The remaining files are the basis of the development described in
+          --------------------------------------------------
+
+Most of the remaining files are the basis of the development described
+in
 
                 "Mechanising Hankin and Barendregt using the
                  Gordon-Melham axioms"
@@ -53,3 +56,12 @@ raw_syntaxScript.sml :
                reduction can indeed be collapsed into the type of
                terms from ncTheory.
 
+          --------------------------------------------------
+
+sttScript.sml :
+               A proof that a typing relation for the simply typed
+               lambda calculus (the details of which are sketched)
+               satisfies a weakening property: if a term has a type in
+               a context G, then it has the same type in a "wider"
+               context G'.  Thanks to Randy Pollack for the suggestion
+               to try this proof.
