@@ -13,11 +13,11 @@ HOL98 Frequently Asked Questions
      You can test that this is the problem by running hol, and then
      trying
 <PRE>
-     - load "HolBdd";
+   - load "HolBdd";
 </PRE>
 
      This should fail with an error message about not being able to
-     load muddy.so.
+     load <code>muddy.so</code>.
 
 <P>
 
@@ -43,58 +43,62 @@ HOL98 Frequently Asked Questions
 <DD> Antiquoting types works as you would expect when parsing types,
      so that it is fine to write:
 <PRE>
-         - val ty = Type`:bool`;
+   - val ty = Type`:bool`;
 </PRE>
      and then
 <PRE>
-         - Type`:num -> ^ty`;
+   - Type`:num -> ^ty`;
 </PRE>
      However, you may wish to also introduce type antiquotations into
      term parses (as a type constraint on a variable for example).
-     The problem is that you can't just write ^ty in this context,
-     because the parsing function's type insists that all antiquotes
-     be of type term.  You must use the ty_antiq function, which
-     magically makes a type appear as a term:
+     The problem is that you can't just write <code>^ty</code> in this
+     context, because the parsing function's type insists that all
+     antiquotes be of type term.  You must use the
+     <code>ty_antiq</code> function, which magically makes a type
+     appear as a term:
 <PRE>
-         - val antity = ty_antiq ty;
-         > val antity = `(ty_antiq(`:bool`))` : term
+   - val antity = ty_antiq ty;
+   > val antity = `(ty_antiq(`:bool`))` : term
 </PRE>
      Then:
 <PRE>
-         - val x = Term `x:^antity`;
+   - val x = Term `x:^antity`;
 </PRE>
-     It's quite easy to figure out when and why ty_antiq is required
-     if one understands the type of the parsing functions.  For
-     example, Term and (fn q => -- q --) have type
+     It's quite easy to figure out when and why <code>ty_antiq</code>
+     is required if one understands the type of the parsing functions.
+     For example, <code>Term</code> and <code>(fn q => -- q --)</code>
+     have type
 <PRE>
-         term frag list -> term
+   term frag list -> term
 </PRE>
-     While Type and (fn q => == q ==) have type
+     While <code>Type</code> and <code>(fn q => == q ==)</code> have type
 <PRE>
-       hol_type frag list -> hol_type
+   hol_type frag list -> hol_type
 </PRE>
-     The frag list refers to the fact that there is a quotation being
-     consumed.  A quotation is something that appears between
-     back-quotes.  A quotation consists of strings and antiquotations.
-     A term frag list must have antiquotations that are of type term.
-     A hol_type frag list must have antiquotations that are of type
-     hol_type.
-<P>
-     So, if you use Term to parse a term, you can't directly antiquote
+     The <code>frag list</code> refers to the fact that there is a
+     quotation being consumed.  A quotation is something that appears
+     between back-quotes.  A quotation consists of strings and
+     antiquotations.  A <code>term frag list</code> must have
+     antiquotations that are of type <code>term</code>.  A
+     <code>hol_type frag list</code> must have antiquotations that are
+     of type <code>hol_type</code>.  Thus, if you use
+     <code>Term</code> to parse a term, you can't directly antiquote
      in types, because this would violate the typing rules (you can
-     only antiquote in terms if you call Term, because it requires a
-     term frag list).
+     only antiquote in terms if you call <code>Term</code>, because it
+     requires a <code>term frag list</code>).
 <P>
-     So, in order to accomplish this there is a bit of magic called
-     ty_antiq, which if you look at its type (hol_type -> term) turns
-     a type into a term.  The term formed is completely bogus in a
-     logical sense (it's actually a var with a special name and the
-     given type), but can be pushed into the parsing function Term so
-     as to give the effect of antiquoting a type.
+     So, in order to qntiquote types into terms there is a bit of
+     magic called <code>ty_antiq</code>, which if you look at its type
+     (<code>hol_type -> term</code>) turns a type into a term.  The
+     term formed is completely bogus in a logical sense (it's actually
+     a variable with a special name and the given type), but can be
+     pushed into the parsing function <code>Term</code> so as to give
+     the effect of antiquoting a type.
 <P>
-     The function Hol_datatype takes a hol_type frag list, so if you
-     want to antiquote a type into the quotations it takes, you will
-     not need to ty_antiq it.
+     The function <code>Hol_datatype</code> takes a <code>hol_type
+     frag list</code>, so if you want to antiquote a type into the
+     quotations it takes, you will not need to use
+     <code>ty_antiq</code>.
 <P>
 
 <DT><strong> Are error messages during the build like the following a
@@ -109,46 +113,53 @@ source for concern? </strong>(2)
 <DD> No.  Nor is the following sort of output, when configuring the
      system before building:
 <PRE>
-     > /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
+   > /local/scratch/kxs/144/bin/mosmlyac: 4 shift/reduce conflicts.
 </PRE>
 <P>
 
-<DT><strong>Why can't I write ``MAP ~ x``?</strong> (1)
+<DT><strong>Why can't I write <code>``MAP ~ x``</code>?</strong> (1)
 
 <DD> When you attempt this, you will get the error message
 <PRE>
-       No rule for [~]
+   No rule for [~]
 </PRE>
      meaning that the parser wants to do a reduction involving just
-     the special symbol ~, and it can't find a rule that allows this.
-     The rule in the grammar is TM ::= ~ TM.
+     the special symbol <code>~</code>, and it can't find a rule that allows this.
+     The rule in the grammar is
+<pre>
+   TM ::= ~ TM
+</pre>
 <P>
-     ~ is treated specially, and not just as a function that you'd
-     apply to arguments normally, for two reasons:
+     <code>~</code> is treated specially, and not just as a function
+     that you'd apply to arguments normally, for two reasons:
 <UL>
 <LI> it can have precedence weaker than just function
-          application.  This means that when you write ~f x, this is
-          parsed as ~(f x).
+          application.  This means that when you write <code>~f
+          x</code>, this is parsed as <code>~(f x)</code>.
 <P>
 <LI> it can group without needing extra parentheses, so you can
-          write ~~b; you don't need to write ~(~b).
+          write <code>~~b</code>; you don't need to write
+          <code>~(~b)</code>.
 </UL>
 <P>
-     To make ~ lose its special status, you should prefix it with a
-     $.  ``MAP $~ x`` will work in the example, assuming that x has
-     type :bool list.
+     To make <code>~</code> lose its special status, you should prefix
+     it with a <code>$</code>.  <code>``MAP $~ x``</code> will work in
+     the example, assuming that <code>x</code> has type <code>:bool
+     list</code>.
 <P>
 
 <DT><strong> How do I prove strings equal or inequal?</strong> (1)
 
-<DD> Use stringLib.string_EQ_CONV, which reduces equalities over
+<DD> Use <code>stringLib.string_EQ_CONV</code>, which reduces
+equalities over
      string literals to either T or F.  For example, to demonstrate
-     that ``(if "foo" = "bar" then 3 else 1) = 1``, you could write:
+     that <code>``(if "foo" = "bar" then 3 else 1) = 1``</code>, you
+     could write:
 <PRE>
-     - val t = ``(if "foo" = "bar" then 3 else 1)``;
-     > val t = ``(if "foo" = "bar" then 3 else 1)`` : Term.term
-     - (DEPTH_CONV stringLib.string_EQ_CONV THENC REWRITE_CONV []) t;
-     > val it = |- (if "foo" = "bar" then 3 else 1) = 1 : Thm.thm
+   - val t = ``(if "foo" = "bar" then 3 else 1)``;
+   > val t = ``(if "foo" = "bar" then 3 else 1)`` : Term.term
+   - (DEPTH_CONV stringLib.string_EQ_CONV THENC REWRITE_CONV []) t;
+   > val it = |- (if "foo" = "bar" then 3 else 1) = 1 : Thm.thm
 </PRE>
 <P>
 
@@ -159,11 +170,11 @@ source for concern? </strong>(2)
      alter its parsing information.  These changes can be made to
      persist when the current theory is exported.  For example:
 <PRE>
-       - load "listTheory";
-       - set_fixity "MEM" (Infixr 450);
-       > val it = () : unit
-       - listTheory.MEM;
-       > val it =
+   - load "listTheory";
+   - set_fixity "MEM" (Infixr 450);
+   > val it = () : unit
+   - listTheory.MEM;
+   > val it =
            |- (!x. x MEM [] = F) /\ !x h t. x MEM (h::t) = (x = h) \/ x MEM t
            : thm
 </PRE>
@@ -172,14 +183,15 @@ source for concern? </strong>(2)
 <DT><strong> How do I get a datatype's axiom after using
              Hol_datatype?</strong> (1)
 
-<DD> Use TypeBase.axiom_of (valOf (TypeBase.read "mytypename")).
-     Hopefully you won't need to do this very much because many of the
+<DD> Use <pre>
+   TypeBase.axiom_of (valOf (TypeBase.read "mytypename"))
+</pre> Hopefully you won't need to do this very much because many of the
      contexts in which you previously needed the axiom will be dealt
      with more smoothly.  For example, cases, induction, one-one and
      distinctness theorems are now proved automatically, and are
      available from the TypeBase.  For example,
 <PRE>
-     TypeBase.one_one_of (valOf (TypeBase.read "mytypename"))
+   TypeBase.one_one_of (valOf (TypeBase.read "mytypename"))
 </PRE>
 <P>
 
@@ -191,11 +203,103 @@ scripts take <code>-I &lt;dir&gt;</code> flags to indicate that the
 system should look in the specified directories for object files
 (whether theories or libraries).  You can rebuild theories in later
 directories by calling <code>Holmake</code> with the appropriate
-<code>-I</code> flags.
+<code>-I</code> flags.<p>
+
+<DT><strong>How do I put hol98 in a state so that theorem assumptions are
+   printed?</strong> (1)
+
+<DD> Use
+<PRE>
+   show_assums := true;
+</PRE>
+<P>
+     This flag, along with several others that control HOL behaviour can
+     be found in the <code>Globals</code> structure.<p>
+
+
+<dt><strong>I want to have the parser transform the concrete syntax
+<code>``P[e/v]``</code> into <code>``(\v. P) e``</code>.  Can I do
+this? </strong> (1)
+
+<dd>
+First a warning: this is not likely to do  what you want. For example, you wouldn't get any nice
+way of stating the Hoare assignment axiom.
+<pre>
+   { P[e/v] } v := e { P }
+</pre>
+In order to state the above, you'd need to actually write
+<pre>
+   { (P v)[e/v] } v := e { P v }
+</pre>
+to make it clear that v might exist in the post-condition.<p>
+
+And given this, you might as well write:
+<pre>
+   { P e } v := e { P v }
+</pre>
+(The problem boils down to the fact that the literal HOL term
+<pre>
+   ``(\v. P) x``
+</pre>
+where P is a variable, reduces under beta-conversion to <code>P</code>.)<p>
+
+Incidentally, if this is the sort of thing you are doing, you might be
+interested in looking at Peter Homeier's Sunrise system which
+implements a VCG in HOL.  This is available <a
+href="http://www.cis.upenn.edu/~hol/sunrise/index.html">here</a>.<p>
+
+If you really do want to implement your parsing trick above (turning
+<code>``P[e/v]``</code> into <code>``(\v. P) e``</code>), you could do
+this by implementing your own parser.  Moreover, this might not be
+impossibly difficult, because the various phases of the existing
+parser can be called independently.  Here's a sketch of what you'd
+need to do:
+
+<ol>
+<li>  add a rule to the grammar corresponding to your concrete syntax
+      above.  Map the syntax to some arbitrary identifier, "foo" say
+      (see the Reference entry for <code>add_rule</code>).  Note that
+      your particular choice of syntax, involving square brackets and
+      / will conflict with the use of these symbols in the theories of
+      lists and integers.  The best way around these problems is to
+      explicitly load these theories, remove their syntax (see
+      <code>remove_termtok</code>), and then install your own. This
+      will ensure that things won't break if someone loads your
+      theory/library and then later loads lists and/or integers.
+
+<li> The first phase of your new parser will be to call
+    <code>Absyn</code>, which
+      will turn <code>P[e/v]</code> into abstract syntax corresponding
+      to
+        <blockquote><code>``foo P e v``</code></blockquote>
+      You then traverse the term looking for this pattern and turning
+      it into <code>(\v. P) e</code>.  You would also raise an error
+      at this stage if <code>v</code> wasn't a variable.
+
+<li>  You would then pass your modified abstract syntax "term" onto
+      the next stages of the built-in parser (type-checking etc).  To
+      do this, you would use
+         <blockquote><pre>
+   Parse.absyn_to_term (term_grammar())
+         </pre></blockquote>
+</ol>
+
+I hope this makes sense.  The definition of the standard parser from
+Parse.sml is just
+
+<pre>
+   fun Term q = absyn_to_term (term_grammar()) (Absyn q)
+</pre>
+
+So all you are doing is inserting an extra phase into the process
+after calling Absyn, but before calling absyn_to_term.
+
+<p>
+
 
 <DT><strong> How to rewrite with a theorem the other way round?</strong> (0)
 
-<DD> Use GSYM
+<DD> Use <code>GSYM</code>.
 <P>
 
 <DT><strong> What's with all this "cut looping" stuff?</strong> (0)
@@ -208,18 +312,11 @@ directories by calling <code>Holmake</code> with the appropriate
      exception? </strong>(0)
 
 <DD> If expression e is causing the grief, then write
-        (e) handle E => Raise E
-     (Often the parentheses around e will not be required.)
+<pre>
+     (e) handle E => Raise E
+</pre>
+     (Often the parentheses around <code>e</code> will not be required.)
 
-<DT><strong>How do I put hol98 in a state so that theorem assumptions are
-   printed?</strong> (1)
-
-<DD><PRE>show_assums := true; </PRE>
-<P>
-     This flag, along with several others that control HOL behaviour can
-     be found in the Globals structure.
-
-</DL>
-<P>
+</dl>
 
 </BODY></HTML>
