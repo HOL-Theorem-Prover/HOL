@@ -490,7 +490,9 @@ val NEXT_RISE_RESTN =
 * Structural induction rule for FL formulas
 ******************************************************************************)
 val fl_induct =
-  (Q.GEN
+ save_thm
+  ("fl_induct",
+   Q.GEN
     `P`
     (MATCH_MP
      (DECIDE ``(A ==> (B1 /\ B2 /\ B3)) ==> (A ==> B1)``)
@@ -603,33 +605,32 @@ val F_SEM_TRUE_EQ =
       (* F_NEXT f *)
       INIT_TAC,
       (* F_UNTIL(f1,f2) f *)
+(* Proof for original semantics
       Cases_on `p`
        THENL
         [INIT_TAC
           THEN RW_TAC arith_ss
-                [PL_EXISTS_FORALL_LEMMA,FINITE_PATH_NONEMPTY,IS_FINITE_PATH_def]
-          THEN EQ_TAC
-          THEN RW_TAC std_ss []
-          THENL
-           [Q.EXISTS_TAC `x`
-             THEN RW_TAC std_ss []
-             THEN Cases_on `!x'. PL (FINITE_PATH p') x' ==> ~(x <= x')`
-             THEN RW_TAC std_ss []
-             THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
-             THEN PROVE_TAC[],
-            Q.EXISTS_TAC `x`
-             THEN ZAP_TAC std_ss []
-             THEN RES_TAC
-             THENL
-              [PROVE_TAC[],
-               `~(x'' <= x)` by PROVE_TAC[]
-                THEN `F` by DECIDE_TAC],
-            Q.EXISTS_TAC `x`
-             THEN RW_TAC std_ss []
-             THEN RES_TAC
-             THEN`F` by DECIDE_TAC],
-         INFINITE_TAC
-          THEN RW_TAC std_ss [Cooper.COOPER_PROVE``(!x''. ~(x' <= x'')) = F``]],
+                [PL_EXISTS_FORALL_LEMMA,FINITE_PATH_NONEMPTY,IS_FINITE_PATH_def],
+         INFINITE_TAC],
+*)
+      INIT_TAC
+       THEN RW_TAC arith_ss 
+             [DECIDE``A/\B/\C/\D = A/\(B/\C)/\D``,
+              DECIDE ``~(m <= n) = n < m``,
+              DECIDE ``(m >= n) = n <= m``,
+              NEXT_RISE_TRUE_COR,FORALL_NOT_PL]
+       THEN EQ_TAC
+       THEN RW_TAC arith_ss []
+       THEN FULL_SIMP_TAC arith_ss []
+       THENL
+        [Q.EXISTS_TAC `x'`
+          THEN RW_TAC arith_ss [],
+         Q.EXISTS_TAC `0`
+          THEN RW_TAC arith_ss [PL0]
+          THEN Q.EXISTS_TAC `x'`
+          THEN RW_TAC arith_ss []
+          THEN PROVE_TAC[DECIDE``~(n < n)``],
+         PROVE_TAC[DECIDE``~(n < n)``]],
       (* F_SUFFIX_IMP(s,f) *)
       INIT_TAC,
       (* F_STRONG_IMP(s1,s2) *)
@@ -726,7 +727,8 @@ val UF_SEM_def =
       \/
       ?j :: PL p. 0 < j
         /\
-        ?p'. UF_SEM M (RESTN p j) (F_BOOL b) /\ 
+        ?p'. (* IS_INFINITE_PATH p'          /\ *)
+             UF_SEM M (RESTN p j) (F_BOOL b) /\ 
              UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)`;
 
 (******************************************************************************
@@ -774,7 +776,8 @@ val UF_SEM =
        \/
        ?j :: PL p. 0 < j 
         /\
-        ?p'. UF_SEM M (RESTN p j) (F_BOOL b) /\ 
+        ?p'. (* IS_INFINITE_PATH p'          /\ *)
+             UF_SEM M (RESTN p j) (F_BOOL b) /\ 
              UF_SEM M (PATH_CAT(PATH_SEG p (0,j-1),p')) f)``,
    SIMP_TAC std_ss [UF_SEM_def]);
 
@@ -911,24 +914,17 @@ val F_SEM_STRONG_FREE_TRUE_LEMMA =
          Q.EXISTS_TAC `1`
           THEN RW_TAC arith_ss [NEXT_RISE_TRUE]],
       (* F_UNTIL(f1,f2) f *)
-      INIT_TAC 
-       THEN RW_TAC std_ss 
-             [DECIDE ``A /\ B /\ C /\ D = A /\ (B /\ C) /\ D``,
-              Cooper.COOPER_PROVE``(!k. ~(x <= k) \/ ~(k < x')) = x' <= x``,
-              NEXT_RISE_LESS,B_SEM_def]
+      INIT_TAC THEN RW_TAC std_ss [B_SEM_def]
        THEN EQ_TAC
        THEN RW_TAC std_ss []
        THENL
-        [`x=x'` by DECIDE_TAC
-          THEN RW_TAC arith_ss []
-          THEN Q.EXISTS_TAC `x`
+        [Q.EXISTS_TAC `x'`
           THEN RW_TAC std_ss []
-          THEN RES_TAC
-          THEN IMP_RES_TAC(DECIDE``m <= n ==> n <= m ==> (m=n)``)
-          THEN PROVE_TAC[],
-         Q.EXISTS_TAC `x`
+          THEN FULL_SIMP_TAC std_ss [DECIDE ``0 <= n``],
+         Q.EXISTS_TAC `0`
           THEN RW_TAC std_ss [FINITE_PATH_NONEMPTY]
-          THEN PROVE_TAC[DECIDE``m<=m``]],
+          THEN Q.EXISTS_TAC `x`
+          THEN RW_TAC arith_ss []],
       (* F_SUFFIX_IMP(s,f) *)
       INIT_TAC THEN RW_TAC std_ss [S_SEM_TRUE],
       (* F_STRONG_IMP(s1,s2) *)
@@ -1747,9 +1743,14 @@ val F_CLOCK_COMP_def =
     (F_CLOCK_COMP (STRONG_CLOCK c) (F_NEXT f) = 
       F_U_CLOCK c (F_NEXT(F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f))))
     /\
+(*
     (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
       F_UNTIL(F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f1),
               F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f2)))
+*)
+    (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_U_CLOCK c (F_UNTIL(F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f1),
+                           F_U_CLOCK c (F_CLOCK_COMP (STRONG_CLOCK c) f2))))
     /\
     (F_CLOCK_COMP (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
       F_U_CLOCK c (F_SUFFIX_IMP(S_CLOCK_COMP c r, 
@@ -1759,7 +1760,6 @@ val F_CLOCK_COMP_def =
       F_U_CLOCK c (F_STRONG_IMP (S_CLOCK_COMP c r1,
                                  S_CLOCK_COMP c r2)))
     /\
-
     (F_CLOCK_COMP (STRONG_CLOCK c) (F_WEAK_IMP(r1,r2)) = 
       F_U_CLOCK c (F_OR
                     (F_STRONG_IMP(S_CLOCK_COMP c r1, S_CLOCK_COMP c r2),
@@ -1792,9 +1792,14 @@ val F_CLOCK_COMP_def =
     (F_CLOCK_COMP (WEAK_CLOCK c) (F_NEXT f) = 
       F_W_CLOCK c (F_NEXT(F_U_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f))))
     /\
+(*
     (F_CLOCK_COMP (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
       F_UNTIL(F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f1), 
               F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f2)))
+*)
+    (F_CLOCK_COMP (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
+      F_W_CLOCK c (F_UNTIL(F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f1),
+                           F_W_CLOCK c (F_CLOCK_COMP (WEAK_CLOCK c) f2))))
     /\
     (F_CLOCK_COMP (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
       F_W_CLOCK c (F_SUFFIX_IMP(S_CLOCK_COMP c r, 
@@ -1842,8 +1847,173 @@ val F_CLOCK_COMP_CLOCK_FREE =
     THEN RW_TAC std_ss [F_CLOCK_COMP_CLOCK_FREE_LEMMA]);
 
 (******************************************************************************
-* Compiled strong clocking with T equal to compiled weak clocking with T:
+* Some legacy proofs, now superceded
+*
+*
+(******************************************************************************
+* Compiled strong clocking with T equal to compiled weak clocking with T
+* for infinite paths
 ******************************************************************************)
+local
+
+val INIT_TAC =
+ RW_TAC std_ss
+  [UF_SEM,FIRST_RISE_TRUE,B_SEM_def,RES_FORALL,RES_EXISTS,IN_DEF,PL0,
+   NEXT_RISE_TRUE_EXISTS,RESTN_def,IS_FINITE_PATH_RESTN,RESTN_RESTN,
+   F_CLOCK_COMP_def,F_U_CLOCK_def,F_OR_def,F_F_def,
+   F_G_def,F_W_def,F_W_CLOCK_def,NOT_IS_INFINITE_PATH,
+   RES_FORALL,RES_EXISTS,IN_DEF,FORALL_NOT_PL]
+ THEN TRY(PROVE_TAC[]);
+
+val TAC2 =
+ INIT_TAC
+  THEN EQ_TAC
+  THEN RW_TAC std_ss []
+  THEN Q.EXISTS_TAC `x`
+  THEN RW_TAC std_ss []
+  THEN TRY(PROVE_TAC[IS_INFINITE_PATH_CAT,NOT_IS_INFINITE_PATH]);
+
+in
+
+val F_SEM_INFINITE_CLOCK_COMP_TRUE_EQ =
+ store_thm
+  ("F_SEM_INFINITE_CLOCK_COMP_TRUE_EQ",
+   ``!f M p.
+      IS_INFINITE_PATH p
+      ==>
+      (UF_SEM M p (F_CLOCK_COMP (STRONG_CLOCK B_TRUE) f) =
+        UF_SEM M p (F_CLOCK_COMP (WEAK_CLOCK B_TRUE) f))``,
+   REWRITE_TAC[NOT_IS_INFINITE_PATH]
+    THEN INDUCT_THEN fl_induct ASSUME_TAC
+    THENL
+     [(* F_BOOL b *)
+      INIT_TAC,
+      (* F_NOT b *)
+      INIT_TAC,
+      (* F_AND (f1,f2) *)
+      INIT_TAC,
+      (* F_NEXT f *)
+      TAC2,
+      (* F_UNTIL(f1,f2) f *)
+      REPEAT GEN_TAC
+       THEN Cases_on `IS_FINITE_PATH p`
+       THEN INIT_TAC
+       THEN RW_TAC arith_ss
+             [PL_def,IN_DEF,PL_EXISTS_FORALL_LEMMA,FINITE_PATH_NONEMPTY,
+              IS_FINITE_PATH_def,IS_FINITE_PATH_RESTN]
+       THEN TAC2,
+      (* F_SUFFIX_IMP(s,f) *)
+       TAC2,
+      (* F_STRONG_IMP(s1,s2) *)
+       TAC2,
+      (* F_WEAK_IMP(s1,s2) *)
+       TAC2,
+      (* F_ABORT(f,b)) *)
+       TAC2,
+      (* F_WEAK_CLOCK(f,c) *)
+      INIT_TAC,
+      (* F_STRONG_CLOCK(f,c) *)
+      INIT_TAC]);
+
+end;
+
+(******************************************************************************
+* F_UNTIL_FREE f means f contains no until statements
+******************************************************************************)
+val F_UNTIL_FREE_def =
+ Define
+  `(F_UNTIL_FREE (F_BOOL b)            = T)
+   /\
+   (F_UNTIL_FREE (F_NOT f)             = F_UNTIL_FREE f) 
+   /\
+   (F_UNTIL_FREE (F_AND(f1,f2))        = F_UNTIL_FREE f1 /\ F_UNTIL_FREE f2)
+   /\
+   (F_UNTIL_FREE (F_NEXT f)            = F_UNTIL_FREE f)
+   /\
+   (F_UNTIL_FREE (F_UNTIL(f1,f2))      = F)
+   /\
+   (F_UNTIL_FREE (F_SUFFIX_IMP(r,f))   = F_UNTIL_FREE f)
+   /\
+   (F_UNTIL_FREE (F_STRONG_IMP(r1,r2)) = T)
+   /\
+   (F_UNTIL_FREE (F_WEAK_IMP(r1,r2))   = T)
+   /\
+   (F_UNTIL_FREE (F_ABORT (f,b))       = F_UNTIL_FREE f)
+   /\
+   (F_UNTIL_FREE (F_WEAK_CLOCK v)      = T)
+   /\
+   (F_UNTIL_FREE (F_STRONG_CLOCK v)    = T)`;
+
+(******************************************************************************
+* Compiled strong clocking with T equal to compiled weak clocking with T
+* for all paths and formulas except [f1 U f2]
+******************************************************************************)
+local
+
+val INIT_TAC =
+ RW_TAC std_ss 
+  [UF_SEM,FIRST_RISE_TRUE,B_SEM_def,RES_FORALL,RES_EXISTS,IN_DEF,PL0,
+   NEXT_RISE_TRUE_EXISTS,RESTN_def,IS_FINITE_PATH_RESTN,RESTN_RESTN,
+   F_CLOCK_COMP_def,F_U_CLOCK_def,F_OR_def,F_F_def,
+   F_G_def,F_W_def,F_W_CLOCK_def,NOT_IS_INFINITE_PATH,
+   RES_FORALL,RES_EXISTS,IN_DEF,FORALL_NOT_PL,F_UNTIL_FREE_def]
+ THEN TRY(PROVE_TAC[]);
+
+val TAC2 =
+ INIT_TAC
+  THEN EQ_TAC
+  THEN RW_TAC std_ss []
+  THEN Q.EXISTS_TAC `x`
+  THEN RW_TAC std_ss []
+  THEN FULL_SIMP_TAC std_ss [F_UNTIL_FREE_def]
+  THEN PROVE_TAC[];
+
+in
+
+val F_SEM_CLOCK_COMP_TRUE_EQ =
+ store_thm
+  ("F_SEM_CLOCK_COMP_TRUE_EQ",
+   ``!f M p. 
+      F_UNTIL_FREE f
+      ==>
+      (UF_SEM M p (F_CLOCK_COMP (STRONG_CLOCK B_TRUE) f) = 
+        UF_SEM M p (F_CLOCK_COMP (WEAK_CLOCK B_TRUE) f))``,
+   INDUCT_THEN fl_induct ASSUME_TAC
+    THENL
+     [(* F_BOOL b *)
+      INIT_TAC,
+      (* F_NOT b *)
+      INIT_TAC,
+      (* F_AND (f1,f2) *)
+      INIT_TAC,
+      (* F_NEXT f *)
+      TAC2,
+      (* F_UNTIL(f1,f2) f *)
+      TAC2,
+      (* F_SUFFIX_IMP(s,f) *)
+      TAC2,
+      (* F_STRONG_IMP(s1,s2) *)
+      TAC2,
+      (* F_WEAK_IMP(s1,s2) *)
+      TAC2,
+      (* F_ABORT(f,b)) *)
+      TAC2,
+      (* F_WEAK_CLOCK(f,c) *)
+      INIT_TAC,
+      (* F_STRONG_CLOCK(f,c) *)
+      INIT_TAC]);
+
+end;
+*
+*
+* End of legacy proofs
+******************************************************************************)
+
+(******************************************************************************
+* Compiled strong clocking with T equal to compiled weak clocking with T
+* for all paths and formulas except [f1 U f2]
+******************************************************************************)
+
 local
 
 val INIT_TAC =
@@ -1888,21 +2058,40 @@ val F_SEM_CLOCK_COMP_TRUE_EQ =
        THEN RW_TAC arith_ss
              [PL_def,IN_DEF,PL_EXISTS_FORALL_LEMMA,FINITE_PATH_NONEMPTY,
               IS_FINITE_PATH_def,IS_FINITE_PATH_RESTN]
-       THEN TAC2,
+       THEN EQ_TAC
+       THEN RW_TAC std_ss []
+       THENL
+        [Q.EXISTS_TAC`x`
+          THEN ZAP_TAC std_ss []
+          THEN Q.EXISTS_TAC`x'`
+          THEN ZAP_TAC std_ss []
+          THEN REWRITE_TAC [DISJ_ASSOC]
+          THEN Cases_on `~(x''' < PATH_LENGTH (RESTN p x)) \/ ~(x''' < x')`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss []
+          THEN PROVE_TAC[],
+         Q.EXISTS_TAC`x`
+          THEN ZAP_TAC std_ss []
+          THEN Q.EXISTS_TAC`x'`
+          THEN ZAP_TAC std_ss []
+          THEN PROVE_TAC[],
+         PROVE_TAC[],
+         PROVE_TAC[]],
       (* F_SUFFIX_IMP(s,f) *)
-       TAC2,
+      TAC2,
       (* F_STRONG_IMP(s1,s2) *)
-       TAC2,
+      TAC2,
       (* F_WEAK_IMP(s1,s2) *)
-       TAC2,
+      TAC2,
       (* F_ABORT(f,b)) *)
-       TAC2,
+      TAC2,
       (* F_WEAK_CLOCK(f,c) *)
       INIT_TAC,
       (* F_STRONG_CLOCK(f,c) *)
       INIT_TAC]);
 
 end;
+
 
 (******************************************************************************
 * CLOCK_COMP_CORRECT f  =  (p |=k= f  <==>  p |= (F_CLOCK_COMP k f))
@@ -2365,6 +2554,202 @@ val F_ABORT_CLOCK_COMP_ELIM =
           THEN `x + (x' - 1) = x + x' - 1` by DECIDE_TAC
           THEN PROVE_TAC[],
          PROVE_TAC[]]]);
+
+(******************************************************************************
+* Old version
+*
+val F_ABORT_CLOCK_COMP_ELIM =
+ store_thm
+  ("F_ABORT_CLOCK_COMP_ELIM",
+   ``!M b f. CLOCK_COMP_CORRECT M f
+             ==> CLOCK_COMP_CORRECT M (F_ABORT(f,b))``,
+   RW_TAC arith_ss 
+    [CLOCK_COMP_CORRECT_def,F_SEM_def,UF_SEM,F_CLOCK_COMP_def,
+     F_W_CLOCK_def,F_U_CLOCK_def,PATH_EL_RESTN,L_def,
+     UF_SEM_F_W,UF_SEM_F_G,
+     UF_SEM,B_SEM_def,FIRST_RISE,IS_FINITE_PATH_def,
+     RES_FORALL,RES_EXISTS,PL_def,IN_DEF,NOT_IS_INFINITE_PATH]
+    THEN Cases_on `IS_INFINITE_PATH p`
+    THEN FULL_SIMP_TAC std_ss [NOT_IS_INFINITE_PATH]
+    THEN RW_TAC std_ss []
+    THENL
+     [EQ_TAC
+       THEN RW_TAC std_ss []
+       THENL
+        [PROVE_TAC[],
+         Q.EXISTS_TAC `x`
+          THEN RW_TAC std_ss []
+          THEN Cases_on `UF_SEM M (RESTN p x) (F_CLOCK_COMP (STRONG_CLOCK c) f)`
+          THEN RW_TAC std_ss [IS_FINITE_PATH_RESTN]
+          THEN `0 < x'-x` by DECIDE_TAC
+          THEN `x + (x'-x) = x'` by DECIDE_TAC
+          THEN `x + ((x'-x) - 1) = x' - 1` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `x'-x`
+          THEN RW_TAC arith_ss [PATH_SEG_RESTN]
+          THEN FULL_SIMP_TAC arith_ss [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN PROVE_TAC[],
+         PROVE_TAC[],
+         Q.EXISTS_TAC `x`
+          THEN RW_TAC std_ss []
+          THEN Cases_on `UF_SEM M (RESTN p x) (F_CLOCK_COMP (STRONG_CLOCK c) f)`
+          THEN RW_TAC arith_ss [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN `x < x + x'` by DECIDE_TAC
+          THEN FULL_SIMP_TAC arith_ss [PATH_SEG_RESTN]
+          THEN PROVE_TAC[DECIDE``(x+x') - 1 = x + x' - 1``]],
+      EQ_TAC
+       THEN RW_TAC std_ss []
+       THENL
+        [PROVE_TAC[],
+         Q.EXISTS_TAC `x`
+          THEN RW_TAC std_ss []
+          THEN Cases_on `UF_SEM M (RESTN p x) (F_CLOCK_COMP (STRONG_CLOCK c) f)`
+          THEN RW_TAC std_ss [IS_FINITE_PATH_RESTN]
+          THEN `PATH_LENGTH (RESTN p x) = PATH_LENGTH p - x` by PROVE_TAC[PATH_LENGTH_RESTN]
+          THEN `PATH_LENGTH (RESTN p x') = PATH_LENGTH p - x'` by PROVE_TAC[PATH_LENGTH_RESTN]
+          THEN FULL_SIMP_TAC arith_ss [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN `IS_FINITE_PATH p ==> 0 < PATH_LENGTH (RESTN p x')` by RW_TAC arith_ss []
+          THEN `x'-x < PATH_LENGTH (RESTN p x)` by DECIDE_TAC
+          THEN `0 < x'-x` by DECIDE_TAC
+          THEN `x + (x'-x) = x'` by DECIDE_TAC
+          THEN `x + ((x'-x) - 1) = x' - 1` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `x'-x`
+          THEN RW_TAC arith_ss [PATH_SEG_RESTN]
+          THEN PROVE_TAC[IS_INFINITE_PATH_CAT,NOT_IS_INFINITE_PATH],
+         `!j. j < x ==> ~B_SEM M (getL M (PATH_EL p j)) c` by RW_TAC arith_ss []
+          THEN PROVE_TAC[],
+         `!j. j < x ==> ~B_SEM M (getL M (PATH_EL p j)) c` by RW_TAC arith_ss []
+          THEN Q.EXISTS_TAC `x`
+          THEN RW_TAC std_ss []
+          THEN Cases_on `UF_SEM M (RESTN p x) (F_CLOCK_COMP (STRONG_CLOCK c) f)`
+          THEN RW_TAC arith_ss [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN FULL_SIMP_TAC std_ss [IS_FINITE_PATH_RESTN]
+          THEN `PATH_LENGTH (RESTN p x) = PATH_LENGTH p - x` by PROVE_TAC[PATH_LENGTH_RESTN]
+          THEN `x' < PATH_LENGTH (RESTN p x)` by PROVE_TAC[]
+          THEN `x + x' < PATH_LENGTH p` by DECIDE_TAC
+          THEN `x < x + x'` by DECIDE_TAC
+          THEN FULL_SIMP_TAC arith_ss [PATH_SEG_RESTN]
+          THEN RW_TAC arith_ss [FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN]
+          THEN PROVE_TAC[]],
+      EQ_TAC
+       THEN RW_TAC std_ss []
+       THENL
+        [Cases_on `!x. ~B_SEM M (getL M (PATH_EL p x)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC(SIMP_RULE std_ss [] (Q.ISPEC `\x. ^(concl(el 1 thl))` WOP)))
+          THEN `?n. B_SEM M (getL M (PATH_EL p n)) c /\
+                    !m. m < n ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+               by PROVE_TAC[]
+          THEN Q.EXISTS_TAC `n`
+          THEN RW_TAC std_ss [RESTN_RESTN,IS_FINITE_PATH_RESTN,PATH_SEG_RESTN]
+          THEN Cases_on `UF_SEM M (RESTN p n) (F_CLOCK_COMP (WEAK_CLOCK c) f)`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC arith_ss 
+                [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN ASSUM_LIST(fn thl => FULL_SIMP_TAC std_ss [el 7 thl])
+          THEN `?x''. n < x'' /\
+                      ?p'. (B_SEM M (getL M (PATH_EL p x'')) c /\
+                            B_SEM M (getL M (PATH_EL p x'')) b) /\
+                           UF_SEM M (PATH_CAT (PATH_SEG p (n,x'' - 1),p'))
+                            (F_CLOCK_COMP (WEAK_CLOCK c) f)` by PROVE_TAC[]
+          THEN `UF_SEM M (RESTN p n) (F_CLOCK_COMP (WEAK_CLOCK c) f) \/
+                ?x''. n < x'' /\
+                      ?p'. ~IS_FINITE_PATH p' /\
+                           (B_SEM M (getL M (PATH_EL p x'')) c /\
+                            B_SEM M (getL M (PATH_EL p x'')) b) /\
+                           UF_SEM M (PATH_CAT (PATH_SEG p (n,x'' - 1),p'))
+                             (F_CLOCK_COMP (WEAK_CLOCK c) f)`
+               by ASSUM_LIST(fn thl => MATCH_MP_TAC(el 10 thl) THEN PROVE_TAC[])
+          THENL[RES_TAC,ALL_TAC]
+          THEN `0 < x''' - n` by DECIDE_TAC
+          THEN `(n + (x''' -n) = x''') /\ (n + ((x''' - n) - 1) = x''' - 1)` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `x'''-n`
+          THEN RW_TAC std_ss [IS_FINITE_PATH_RESTN,PATH_SEG_RESTN]
+          THEN PROVE_TAC[IS_INFINITE_PATH_CAT,NOT_IS_INFINITE_PATH],
+         Cases_on `x' < x` 
+          THEN Cases_on `x < x'`
+          THEN RW_TAC std_ss []
+          THEN RES_TAC
+          THEN `x = x'` by DECIDE_TAC
+          THEN RW_TAC std_ss [],
+         Cases_on `UF_SEM M (RESTN p x'') (F_CLOCK_COMP (WEAK_CLOCK c) f)`
+          THEN RW_TAC arith_ss [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN Cases_on `x'' < x` 
+          THEN Cases_on `x < x''`
+          THEN RW_TAC std_ss []
+          THEN RES_TAC
+          THEN `x = x''` by DECIDE_TAC
+          THEN RW_TAC std_ss []
+          THEN Q.EXISTS_TAC `x+x'`
+          THEN RW_TAC arith_ss []
+          THEN FULL_SIMP_TAC arith_ss [PATH_SEG_RESTN]
+          THEN `x + (x' - 1) = x + x' - 1` by DECIDE_TAC
+          THEN PROVE_TAC[],
+         PROVE_TAC[]],
+      EQ_TAC
+       THEN RW_TAC std_ss []
+       THENL
+        [Cases_on `!x. x < PATH_LENGTH p ==> ~B_SEM M (getL M (PATH_EL p x)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC
+                            (SIMP_RULE std_ss [] 
+                              (Q.ISPEC `\x. ^(concl(el 2 thl)) /\ ^(concl(el 1 thl))` WOP)))
+          THEN `?n. n < PATH_LENGTH p /\ B_SEM M (getL M (PATH_EL p n)) c /\
+                    !m. m < PATH_LENGTH p ==> m < n ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+               by PROVE_TAC[]
+          THEN Q.EXISTS_TAC `n`
+          THEN RW_TAC std_ss [RESTN_RESTN,IS_FINITE_PATH_RESTN,PATH_SEG_RESTN]
+          THEN FULL_SIMP_TAC arith_ss 
+                [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN Cases_on `UF_SEM M (RESTN p n) (F_CLOCK_COMP (WEAK_CLOCK c) f)`
+          THEN RW_TAC std_ss []
+          THEN ASSUM_LIST(fn thl => FULL_SIMP_TAC std_ss [el 9 thl] THEN ASSUME_TAC(el 9 thl))
+          THEN `!j. j < n ==> j < PATH_LENGTH p` by DECIDE_TAC
+          THEN `!j. j < n ==> ~B_SEM M (getL M (PATH_EL p j)) c`
+                by PROVE_TAC[]
+          THEN `!x. 0 < PATH_LENGTH(RESTN p x)` by PROVE_TAC[IS_FINITE_PATH_RESTN,FINITE_PATH_NONEMPTY]
+          THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+          THEN ASSUM_LIST
+                (fn thl => 
+                  STRIP_ASSUME_TAC(SIMP_RULE std_ss (map(fn n=>el n thl)[1,4,6,7]) (Q.SPEC `n` (el 11 thl))))
+          THEN `PATH_LENGTH (RESTN p n) = PATH_LENGTH p - n` by PROVE_TAC[PATH_LENGTH_RESTN]
+          THEN `x'' - n < PATH_LENGTH (RESTN p n) /\ 0 < x'' - n` by RW_TAC arith_ss []
+          THEN Q.EXISTS_TAC `x'' - n`
+          THEN RW_TAC arith_ss []
+          THEN PROVE_TAC[],
+         Cases_on `x' < x` 
+          THEN Cases_on `x < x'`
+          THEN RW_TAC std_ss []
+          THEN RES_TAC
+          THEN `x = x'` by DECIDE_TAC
+          THEN PROVE_TAC[]
+          THEN RW_TAC std_ss [],
+         Cases_on `UF_SEM M (RESTN p x'') (F_CLOCK_COMP (WEAK_CLOCK c) f)`
+          THEN RW_TAC arith_ss [IS_FINITE_PATH_RESTN,intLib.COOPER_PROVE``(!j. ~(j < x''))=(x''=0)``]
+          THEN Cases_on `x'' < x` 
+          THEN Cases_on `x < x''`
+          THEN RW_TAC std_ss []
+          THEN RES_TAC
+          THEN `x = x''` by DECIDE_TAC
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC arith_ss [PATH_SEG_RESTN,IS_FINITE_PATH_RESTN]
+          THEN RW_TAC std_ss []
+          THEN `x' < PATH_LENGTH (RESTN p x)` by PROVE_TAC[]
+          THEN `PATH_LENGTH (RESTN p x) = PATH_LENGTH p - x` by PROVE_TAC[PATH_LENGTH_RESTN]
+          THEN `x + x' < PATH_LENGTH p` by DECIDE_TAC
+          THEN `x < x + x'` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `x+x'`
+          THEN RW_TAC arith_ss []
+          THEN `x + (x' - 1) = x + x' - 1` by DECIDE_TAC
+          THEN PROVE_TAC[],
+         PROVE_TAC[]]]);
+*
+* End of old version
+******************************************************************************)
 
 val F_STRONG_IMP_STRONG_CLOCK_COMP_ELIM =
  store_thm
@@ -2867,7 +3252,6 @@ val UF_WEAK_IMP_STRONG_CLOCK_LEMMA =
           THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(MATCH_MP (el 1 thl) (el 3 thl)))
           THEN `x + x' + x''' = x + (x' + x''')` by DECIDE_TAC
           THEN PROVE_TAC[],
-
          ASSUM_LIST(fn thl => (STRIP_ASSUME_TAC(SIMP_RULE arith_ss [] (Q.SPEC `0` (el 1 thl)))))
           THEN `?x'. x' < PATH_LENGTH(RESTN p 0) /\ B_SEM M (getL M (PATH_EL p x')) c`
                by ZAP_TAC arith_ss [FINITE_PATH_NONEMPTY,PATH_LENGTH_RESTN]
@@ -3589,7 +3973,7 @@ val F_NEXT_CLOCK_COMP_ELIM =
     THEN REWRITE_TAC[CLOCK_COMP_CORRECT_def]
     THEN PROVE_TAC[F_NEXT_WEAK_CLOCK_COMP_ELIM,F_NEXT_STRONG_CLOCK_COMP_ELIM]);
 
-val UF_SEM_STRONG_INFINITE_UNTIL_LEMMA =
+val UF_SEM_STRONG_INFINITE_UNTIL_LEMMA0 =
  prove
   (``~(IS_FINITE_PATH p)
      ==>
@@ -3630,6 +4014,154 @@ val UF_SEM_STRONG_INFINITE_UNTIL_LEMMA =
            THEN Q.EXISTS_TAC `k'-j`
            THEN RW_TAC arith_ss []]]);
 
+val UF_SEM_STRONG_INFINITE_F_U_CLOCK_UNTIL_LEMMA1 =
+ prove
+  (``~(IS_FINITE_PATH p)
+     ==>
+     (UF_SEM M p (F_U_CLOCK c (F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2))) =
+      ?i.
+        FIRST_RISE M p c i /\
+        ?l.
+          (?k.
+             l <= k /\ NEXT_RISE M p c (i + l,i + k) /\
+             UF_SEM M (RESTN p (i + k)) f2) /\
+          !j.
+            j < l ==>
+            ?k.
+              j <= k /\ NEXT_RISE M p c (i + j,i + k) /\
+              UF_SEM M (RESTN p (i + k)) f1)``,
+   RW_TAC
+    (arith_ss++resq_SS)
+    [UF_SEM_STRONG_INFINITE_UNTIL_LEMMA0,UF_SEM_F_U_CLOCK,IS_FINITE_PATH_RESTN,
+     IN_DEF,PL_def,NEXT_RISE_RESTN,RESTN_RESTN]);
+
+val UF_SEM_STRONG_INFINITE_F_U_CLOCK_UNTIL_LEMMA2 =
+ prove
+  (``~(IS_FINITE_PATH p)
+     ==>
+     (UF_SEM M p (F_U_CLOCK c (F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2))) =
+      ?i.
+        FIRST_RISE M p c i /\
+        ?l. i <= l /\
+          (?k. 
+             l <= k /\ NEXT_RISE M p c (l,k) /\
+             UF_SEM M (RESTN p k) f2) /\
+          !j.
+            i <= j /\ j < l 
+            ==>
+            ?k.
+              j <= k /\ NEXT_RISE M p c (j,k) /\
+              UF_SEM M (RESTN p k) f1)``,
+   RW_TAC (arith_ss++resq_SS)
+    [UF_SEM_STRONG_INFINITE_F_U_CLOCK_UNTIL_LEMMA1]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN Q.EXISTS_TAC `i`
+    THEN RW_TAC std_ss []
+    THENL
+     [Q.EXISTS_TAC `i+l`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Q.EXISTS_TAC `i+k`
+          THEN RW_TAC arith_ss [],
+         `j-i < l` by DECIDE_TAC
+          THEN RES_TAC
+          THEN Q.EXISTS_TAC `i+k'`
+          THEN RW_TAC arith_ss []
+          THEN `i + (j-i) = j` by DECIDE_TAC
+          THEN PROVE_TAC[]],
+      Q.EXISTS_TAC `l-i`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Q.EXISTS_TAC `k-i`
+          THEN RW_TAC arith_ss [],
+         `i <= j+i /\ j+i < l` by DECIDE_TAC
+          THEN RES_TAC
+          THEN Q.EXISTS_TAC `k'-i`
+          THEN RW_TAC arith_ss []
+          THEN PROVE_TAC[DECIDE``i+j=j+i``]]]);
+
+val UF_SEM_STRONG_INFINITE_F_U_CLOCK_UNTIL_LEMMA3 =
+ time prove
+  (``~(IS_FINITE_PATH p)
+     ==>
+     (UF_SEM M p (F_U_CLOCK c (F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2))) =
+      ?i k. k >= i                            /\
+            FIRST_RISE M p c i                /\
+            UF_SEM M (RESTN p k) (F_BOOL c)   /\  
+            UF_SEM M (RESTN p k) f2           /\
+            !j. i <= j /\ j < k /\ 
+                UF_SEM M (RESTN p j) (F_BOOL c) 
+                ==>
+                UF_SEM M (RESTN p j) f1)``,
+   RW_TAC (arith_ss++resq_SS)
+    [UF_SEM_STRONG_INFINITE_F_U_CLOCK_UNTIL_LEMMA2,
+     UF_SEM,B_SEM_def,IN_DEF,PL_def,IS_FINITE_PATH_RESTN,
+     FIRST_RISE_RESTN,NEXT_RISE_TRUE,PATH_EL_RESTN,
+     CONJ_ASSOC,NEXT_RISE_LESS,L_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN `k >= i` by DECIDE_TAC
+       THEN Q.EXISTS_TAC `k`
+       THEN RW_TAC std_ss []
+       THEN Cases_on `l <= j`
+       THEN ZAP_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [DECIDE``~(l <= j) = j < l``]
+       THEN RES_TAC
+       THEN Cases_on `j=k''`
+       THEN RW_TAC std_ss []
+       THEN `j < k''` by DECIDE_TAC
+       THEN PROVE_TAC[DECIDE``j <= j``],
+      Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [FIRST_RISE]
+       THEN RW_TAC std_ss []
+       THEN Cases_on `i = k`
+       THEN RW_TAC arith_ss []
+       THEN FULL_SIMP_TAC arith_ss []
+       THENL
+        [Q.EXISTS_TAC `i`
+          THEN RW_TAC arith_ss []
+          THEN Q.EXISTS_TAC `i`
+          THEN RW_TAC arith_ss [],
+         `i < k` by DECIDE_TAC]
+       THEN `0 < k-i` by DECIDE_TAC
+       THEN `?n. 0 < n /\ B_SEM M (getL M (PATH_EL p (k-n))) c` by PROVE_TAC[DECIDE``i < k ==> (k-(k-i)=i)``]
+       THEN ASSUM_LIST
+             (fn thl => ASSUME_TAC(SIMP_RULE std_ss [] 
+                         (Q.ISPEC `\n. ^(concl(el 1 thl)) /\ ^(concl(el 2 thl))` WOP)))
+       THEN `?n. (B_SEM M (getL M (PATH_EL p (k - n))) c /\ 0 < n) /\
+                 !m. 0 < m /\  m < n ==> ~B_SEM M (getL M (PATH_EL p (k - m))) c`
+            by PROVE_TAC[]
+       THEN Cases_on `k - n' < i`
+       THEN ZAP_TAC std_ss []
+       THEN `i <= (k-n')+1` by DECIDE_TAC
+       THEN Q.EXISTS_TAC `(k-n')+1`
+       THEN RW_TAC std_ss []
+       THENL
+        [`k - n' + 1 <= k` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `k`
+          THEN RW_TAC std_ss []
+          THEN PROVE_TAC
+                [DECIDE``k' < k ==>  k - n' + 1 <= k' ==> 0 < k-k' /\ k-k' < n' /\ (k-(k-k')=k')``],
+         `j <= k - n'` by PROVE_TAC[DECIDE ``j < k - n' + 1 ==> j <= k - n'``]
+          THEN `?n. j <= n /\ B_SEM M (getL M (PATH_EL p n)) c` by PROVE_TAC[]
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC(SIMP_RULE std_ss [] 
+                            (Q.ISPEC `\n''. ^(concl(el 1 thl)) /\ ^(concl(el 2 thl))` WOP)))
+          THEN `?n. (B_SEM M (getL M (PATH_EL p n)) c /\ j <= n) /\
+                    !m. j <= m /\ m < n ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+               by PROVE_TAC[]
+          THEN Q.EXISTS_TAC `n'''`
+          THEN RW_TAC std_ss []
+          THEN Cases_on `k-n' < n'''`
+          THEN ZAP_TAC std_ss []
+          THEN `n''' < k` by PROVE_TAC[DECIDE``~(k - n' < n''') ==> i < k ==>  0 < n' ==> n''' < k``]
+          THEN PROVE_TAC[DECIDE``i <= j ==> j <= n''' ==> i <= n'''``]]]);
+
 val F_UNTIL_STRONG_CLOCK_COMP_INFINITE_ELIM =
  prove
   (``!M f1 f2. ~(IS_FINITE_PATH p) /\ CLOCK_COMP_CORRECT M f1 /\ CLOCK_COMP_CORRECT M f2 ==> 
@@ -3638,8 +4170,268 @@ val F_UNTIL_STRONG_CLOCK_COMP_INFINITE_ELIM =
    RW_TAC (arith_ss ++ resq_SS)
     [CLOCK_COMP_CORRECT_def,F_SEM_def,RESTN_RESTN,
      FIRST_RISE,PATH_EL_RESTN,L_def,B_SEM_def,IN_DEF,PL_def,IS_FINITE_PATH_RESTN,
-     UF_SEM_STRONG_INFINITE_UNTIL_LEMMA,F_CLOCK_COMP_def,GSYM F_U_CLOCK_def]);
+     UF_SEM_STRONG_INFINITE_F_U_CLOCK_UNTIL_LEMMA3,F_CLOCK_COMP_def,GSYM F_U_CLOCK_def,
+     Cooper.COOPER_PROVE``(!j. ~(j < i)) = (i=0)``,UF_SEM]);
 
+val UF_SEM_STRONG_FINITE_UNTIL_LEMMA0 =
+ prove
+  (``IS_FINITE_PATH p
+     ==>
+     (UF_SEM M p (F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2)) =
+      ?i :: PL p. (?k :: PL p. i <= k /\ NEXT_RISE M p c (i,k) /\ UF_SEM M (RESTN p k) f2)
+          /\
+          !j :: PL p. j < i ==>
+              ?k :: PL p. j <= k /\ NEXT_RISE M p c (j,k) /\ UF_SEM M (RESTN p k) f1)``,
+   RW_TAC
+    (arith_ss++resq_SS)
+    [UF_SEM,RESTN_RESTN,PL0,PL_def,FIRST_RISE_RESTN,
+     F_U_CLOCK_def,F_W_CLOCK_def,F_W_def,F_OR_def,FIRST_RISE_TRUE,NEXT_RISE_TRUE,
+     PATH_EL_RESTN,L_def,B_SEM_def,IN_DEF,IS_FINITE_PATH_RESTN,NEXT_RISE_RESTN,NEXT_RISE,
+     DECIDE``A /\ B /\ C /\ D = A /\ (B /\ C) /\ D``,NEXT_RISE_LESS]
+     THEN EQ_TAC
+     THEN RW_TAC std_ss []
+     THENL
+      [Q.EXISTS_TAC `k`
+        THEN RW_TAC std_ss []
+        THEN `PATH_LENGTH (RESTN p k) =  PATH_LENGTH p - k` by PROVE_TAC[PATH_LENGTH_RESTN]
+        THENL
+         [Q.EXISTS_TAC `k+k'`
+           THEN `k+k' < PATH_LENGTH p` by DECIDE_TAC
+           THEN RW_TAC arith_ss []
+           THEN `k''-k < k'` by DECIDE_TAC
+           THEN `(k''-k) + k = k''` by DECIDE_TAC
+           THEN `k''-k < PATH_LENGTH(RESTN p k)` by DECIDE_TAC
+           THEN PROVE_TAC[],
+          RES_TAC
+           THEN Q.EXISTS_TAC `j+k''`
+           THEN `PATH_LENGTH (RESTN p j) =  PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
+           THEN `j + k'' < PATH_LENGTH p` by DECIDE_TAC
+           THEN RW_TAC arith_ss []
+           THEN `k'''-j < k''` by DECIDE_TAC
+           THEN `j + (k'''-j) = k'''` by DECIDE_TAC
+           THEN `k'''-j < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
+           THEN PROVE_TAC[]],
+        Q.EXISTS_TAC `i`
+         THEN RW_TAC arith_ss []
+         THENL
+         [Q.EXISTS_TAC `k-i`
+           THEN `PATH_LENGTH (RESTN p i) =  PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
+           THEN `k-i <  PATH_LENGTH (RESTN p i)` by DECIDE_TAC
+           THEN RW_TAC arith_ss [],
+          RES_TAC
+           THEN Q.EXISTS_TAC `k'-j`
+           THEN `PATH_LENGTH (RESTN p j) =  PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
+           THEN `k-j <  PATH_LENGTH (RESTN p j)` by DECIDE_TAC
+           THEN RW_TAC arith_ss []]]);
+
+val UF_SEM_STRONG_FINITE_F_U_CLOCK_UNTIL_LEMMA1 =
+ prove
+  (``IS_FINITE_PATH p
+     ==>
+     (UF_SEM M p (F_U_CLOCK c (F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2))) =
+      ?i :: PL p.
+        FIRST_RISE M p c i /\
+        ?l :: PL(RESTN p i).
+          (?k :: PL(RESTN p i).
+             l <= k /\ NEXT_RISE M p c (i + l,i + k) /\
+             UF_SEM M (RESTN p (i + k)) f2) /\
+          !j :: PL(RESTN p i).
+            j < l ==>
+            ?k :: PL(RESTN p i).
+              j <= k /\ NEXT_RISE M p c (i + j,i + k) /\
+              UF_SEM M (RESTN p (i + k)) f1)``,
+   RW_TAC
+    (arith_ss++resq_SS)
+    [UF_SEM_STRONG_FINITE_UNTIL_LEMMA0,UF_SEM_F_U_CLOCK,IS_FINITE_PATH_RESTN,
+     IN_DEF,PL_def,NEXT_RISE_RESTN,RESTN_RESTN]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []);
+
+val UF_SEM_STRONG_FINITE_F_U_CLOCK_UNTIL_LEMMA2 =
+ prove
+  (``IS_FINITE_PATH p
+     ==>
+     (UF_SEM M p (F_U_CLOCK c (F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2))) =
+      ?i :: PL p.
+        FIRST_RISE M p c i /\
+        ?l :: PL p. i <= l /\
+          (?k :: PL p. 
+             l <= k /\ NEXT_RISE M p c (l,k) /\
+             UF_SEM M (RESTN p k) f2) /\
+          !j :: PL p.
+            i <= j /\ j < l 
+            ==>
+            ?k :: PL p.
+              j <= k /\ NEXT_RISE M p c (j,k) /\
+              UF_SEM M (RESTN p k) f1)``,
+   RW_TAC (arith_ss++resq_SS)
+    [UF_SEM_STRONG_FINITE_F_U_CLOCK_UNTIL_LEMMA1,IS_FINITE_PATH_RESTN,
+     IN_DEF,PL_def,NEXT_RISE_RESTN,RESTN_RESTN]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN Q.EXISTS_TAC `i`
+    THEN RW_TAC std_ss []
+    THENL
+     [Q.EXISTS_TAC `i+l`
+       THEN `PATH_LENGTH (RESTN p i) =  PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
+       THEN RW_TAC arith_ss []
+       THENL
+        [Q.EXISTS_TAC `i+k`
+          THEN RW_TAC arith_ss [],
+         `j-i < l` by DECIDE_TAC
+          THEN `j - i < PATH_LENGTH (RESTN p i)` by DECIDE_TAC
+          THEN RES_TAC
+          THEN Q.EXISTS_TAC `i+k'`
+          THEN RW_TAC arith_ss []
+          THEN `i + (j-i) = j` by DECIDE_TAC
+          THEN PROVE_TAC[]],
+      Q.EXISTS_TAC `l-i`
+       THEN `PATH_LENGTH (RESTN p i) =  PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
+       THEN RW_TAC arith_ss []
+       THENL
+        [Q.EXISTS_TAC `k-i`
+          THEN RW_TAC arith_ss [],
+         `i <= j+i /\ j+i < l /\ j+i < PATH_LENGTH p` by DECIDE_TAC
+          THEN RES_TAC
+          THEN Q.EXISTS_TAC `k'-i`
+          THEN RW_TAC arith_ss []
+          THEN ONCE_REWRITE_TAC[DECIDE``i+j=j+i``]
+          THEN ASM_REWRITE_TAC[]]]);
+
+
+val UF_SEM_STRONG_FINITE_F_U_CLOCK_UNTIL_LEMMA3 =
+ time prove
+  (``IS_FINITE_PATH p
+     ==>
+     (UF_SEM M p (F_U_CLOCK c (F_UNTIL(F_U_CLOCK c f1, F_U_CLOCK c f2))) =
+      ?i k :: PL p. k >= i                            /\
+            FIRST_RISE M p c i                /\
+            UF_SEM M (RESTN p k) (F_BOOL c)   /\  
+            UF_SEM M (RESTN p k) f2           /\
+            !j :: PL p. i <= j /\ j < k /\ 
+                UF_SEM M (RESTN p j) (F_BOOL c) 
+                ==>
+                UF_SEM M (RESTN p j) f1)``,
+   RW_TAC (arith_ss++resq_SS)
+    [UF_SEM_STRONG_FINITE_F_U_CLOCK_UNTIL_LEMMA2,
+     UF_SEM,B_SEM_def,IN_DEF,PL_def,IS_FINITE_PATH_RESTN,
+     FIRST_RISE_RESTN,NEXT_RISE_TRUE,PATH_EL_RESTN,
+     DECIDE``A /\ B /\ C /\ D = A /\ (B /\ C) /\ D``,NEXT_RISE_LESS,L_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THENL
+     [Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN `k >= i` by DECIDE_TAC
+       THEN Q.EXISTS_TAC `k`
+       THEN RW_TAC std_ss []
+       THEN Cases_on `l <= j`
+       THEN ZAP_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [DECIDE``~(l <= j) = j < l``]
+       THEN `?k.
+               k < PATH_LENGTH p /\
+               (j <= k /\
+                (!k'.
+                   j <= k' /\ k' < k ==>
+                   ~B_SEM M (getL M (PATH_EL p k')) c) /\
+                B_SEM M (getL M (PATH_EL p k)) c) /\ UF_SEM M (RESTN p k) f1`
+            by RW_TAC std_ss []
+       THEN Cases_on `j=k'`
+       THEN RW_TAC std_ss []
+       THEN `j < k'` by DECIDE_TAC
+       THEN PROVE_TAC[DECIDE``j <= j``],
+      Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [FIRST_RISE]
+       THEN RW_TAC std_ss []
+       THEN Cases_on `i = k`
+       THEN RW_TAC arith_ss []
+       THEN FULL_SIMP_TAC arith_ss []
+       THENL
+        [Q.EXISTS_TAC `i`
+          THEN RW_TAC arith_ss []
+          THEN Q.EXISTS_TAC `i`
+          THEN RW_TAC arith_ss [],
+         `i < k` by DECIDE_TAC]
+       THEN `0 < k-i` by DECIDE_TAC
+       THEN `?n. 0 < n /\ B_SEM M (getL M (PATH_EL p (k-n))) c` by PROVE_TAC[DECIDE``i < k ==> (k-(k-i)=i)``]
+       THEN ASSUM_LIST
+             (fn thl => ASSUME_TAC(SIMP_RULE std_ss [] 
+                         (Q.ISPEC `\n. ^(concl(el 1 thl)) /\ ^(concl(el 2 thl))` WOP)))
+       THEN `?n. (B_SEM M (getL M (PATH_EL p (k - n))) c /\ 0 < n) /\
+                 !m. 0 < m /\  m < n ==> ~B_SEM M (getL M (PATH_EL p (k - m))) c`
+            by PROVE_TAC[]
+       THEN Cases_on `k - n' < i`
+       THEN ZAP_TAC std_ss []
+       THEN `i <= (k-n')+1` by DECIDE_TAC
+       THEN `k-n'+1 < PATH_LENGTH p` by DECIDE_TAC
+       THEN Q.EXISTS_TAC `(k-n')+1`
+       THEN RW_TAC std_ss []
+       THENL
+        [`k - n' + 1 <= k` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `k`
+          THEN RW_TAC std_ss []
+          THEN PROVE_TAC
+                [DECIDE``k' < k ==>  k - n' + 1 <= k' ==> 0 < k-k' /\ k-k' < n' /\ (k-(k-k')=k')``],
+         `j <= k - n'` by PROVE_TAC[DECIDE ``j < k - n' + 1 ==> j <= k - n'``]
+          THEN `k - n' < PATH_LENGTH p` by PROVE_TAC[DECIDE``k - n' + 1 < r ==> k - n' < r``]
+          THEN `?n. j <= n /\ n < PATH_LENGTH p /\ B_SEM M (getL M (PATH_EL p n)) c` by PROVE_TAC[]
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC(SIMP_RULE std_ss [] 
+                            (Q.ISPEC `\n''. ^(concl(el 1 thl)) /\ ^(concl(el 2 thl)) /\ ^(concl(el 3 thl))` WOP)))
+          THEN `?n. (B_SEM M (getL M (PATH_EL p n)) c /\ n < PATH_LENGTH p /\ j <= n) /\
+                    !m. m < n ==> ~B_SEM M (getL M (PATH_EL p m)) c \/ ~(m < PATH_LENGTH p) \/ ~(j <= m)`
+               by POP_ASSUM(fn th => MATCH_MP_TAC th THEN PROVE_TAC[])
+          THEN Q.EXISTS_TAC `n'''`
+          THEN RW_TAC std_ss []
+          THEN Cases_on `k-n' < n'''`
+          THEN ZAP_TAC std_ss []
+          THEN `n''' < k` by PROVE_TAC[DECIDE``~(k - n' < n''') ==> i < k ==>  0 < n' ==> n''' < k``]
+          THENL
+           [`k' < PATH_LENGTH p` 
+             by PROVE_TAC
+                 [DECIDE``k'<n''' ==> n'''<k ==> k < PATH_LENGTH p ==> k'<PATH_LENGTH p``]
+             THEN PROVE_TAC[],
+            `i <= n'''` by PROVE_TAC[DECIDE``i<=j ==> j<=n''' ==> i<=n'''``]
+              THEN PROVE_TAC[]]]]);
+
+
+val F_UNTIL_STRONG_CLOCK_COMP_FINITE_ELIM =
+ prove
+  (``!M f1 f2. IS_FINITE_PATH p /\ CLOCK_COMP_CORRECT M f1 /\ CLOCK_COMP_CORRECT M f2 ==> 
+           (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) =
+            UF_SEM M p (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1, f2))))``,
+   RW_TAC (arith_ss ++ resq_SS)
+    [CLOCK_COMP_CORRECT_def,F_SEM_def,RESTN_RESTN,FINITE_PATH_NONEMPTY,
+     FIRST_RISE,PATH_EL_RESTN,L_def,B_SEM_def,IN_DEF,PL_def,IS_FINITE_PATH_RESTN,
+     UF_SEM_STRONG_FINITE_F_U_CLOCK_UNTIL_LEMMA3,F_CLOCK_COMP_def,GSYM F_U_CLOCK_def,
+     Cooper.COOPER_PROVE``(!j. ~(j < i)) = (i=0)``,UF_SEM]);
+
+val F_UNTIL_STRONG_CLOCK_COMP_ELIM =
+ prove
+  (``!M f1 f2. 
+       CLOCK_COMP_CORRECT M f1 /\ CLOCK_COMP_CORRECT M f2 ==> 
+        (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) =
+         UF_SEM M p (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1, f2))))``,
+   Cases_on `IS_FINITE_PATH p`
+    THEN PROVE_TAC[F_UNTIL_STRONG_CLOCK_COMP_INFINITE_ELIM,F_UNTIL_STRONG_CLOCK_COMP_FINITE_ELIM]);
+
+(*
+ (SIMP_CONV
+  (std_ss++resq_SS)
+  [UF_SEM_F_W_CLOCK,UF_SEM_def]
+  THENC
+   SIMP_CONV 
+    (arith_ss++resq_SS) 
+    [UF_SEM_WEAK_INFINITE_UNTIL_LEMMA0,UF_SEM_F_U_CLOCK,
+     IS_FINITE_PATH_RESTN,RESTN_RESTN,NEXT_RISE_RESTN,UF_SEM_F_G,IN_DEF,PL_def,
+     CONJ_ASSOC,NEXT_RISE_LESS,PATH_EL_RESTN])
+  ``~(IS_FINITE_PATH p)
+   ==>
+   (UF_SEM M p (F_W_CLOCK c (F_UNTIL(F_W_CLOCK c f1, F_W_CLOCK c f2))))``;
+*)
+
+(* Old semantics version
 val UF_SEM_STRONG_FINITE_UNTIL_LEMMA =
  prove
   (``IS_FINITE_PATH p
@@ -3695,6 +4487,7 @@ val UF_SEM_STRONG_FINITE_UNTIL_LEMMA =
            THEN `k' - j < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
            THEN RW_TAC arith_ss []]]);
 
+
 val F_UNTIL_STRONG_CLOCK_COMP_FINITE_ELIM =
  prove
   (``!M f1 f2. IS_FINITE_PATH p /\ CLOCK_COMP_CORRECT M f1 /\ CLOCK_COMP_CORRECT M f2 ==> 
@@ -3708,13 +4501,15 @@ val F_UNTIL_STRONG_CLOCK_COMP_FINITE_ELIM =
 val F_UNTIL_STRONG_CLOCK_COMP_ELIM =
  prove
   (``!M f1 f2. 
+
        CLOCK_COMP_CORRECT M f1 /\ CLOCK_COMP_CORRECT M f2 ==> 
         (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) =
          UF_SEM M p (F_CLOCK_COMP (STRONG_CLOCK c) (F_UNTIL(f1, f2))))``,
    Cases_on `IS_FINITE_PATH p`
-    THEN PROVE_TAC[F_UNTIL_STRONG_CLOCK_COMP_INFINITE_ELIM,F_UNTIL_STRONG_CLOCK_COMP_FINITE_ELIM]);
+    THEN PROVE_TAC[F_UNTIL_STRONG_CLOCK_COMP_FINITE_ELIM,F_UNTIL_STRONG_CLOCK_COMP_FINITE_ELIM]);
+*)
 
-val UF_SEM_WEAK_INFINITE_UNTIL_LEMMA =
+val UF_SEM_WEAK_INFINITE_UNTIL_LEMMA0 =
  prove
   (``~(IS_FINITE_PATH p)
      ==>
@@ -3808,41 +4603,214 @@ val UF_SEM_WEAK_INFINITE_UNTIL_LEMMA =
 
 local
 
-val ADD_FORALL_LEMMA1 =
- prove
-  (``!P n. (!m. P(m+n)) = !m. n <= m ==> P m``,
-   REPEAT GEN_TAC
-    THEN EQ_TAC
-    THEN RW_TAC arith_ss []
-    THEN `(m-n)+n = m` by DECIDE_TAC
-    THEN PROVE_TAC[]);
-
-val ADD_FORALL_LEMMA2 =
- prove
-  (``!P n. (!m. P(n+m)) = !m. n <= m ==> P m``,
-   REPEAT GEN_TAC
-    THEN EQ_TAC
-    THEN RW_TAC arith_ss []
-    THEN `(m-n)+n = m` by DECIDE_TAC
-    THEN PROVE_TAC[]);
-
 val Lemma1 =
- SIMP_RULE
-  std_ss
-  []
-  (ISPEC
-    ``\m. UF_SEM (M:'a # 'b # 'c # ('d -> bool) # ('e -> 'd -> bool)) (RESTN p m) (F_BOOL (B_NOT c))``
-    ADD_FORALL_LEMMA1);
+ (SIMP_CONV
+  (std_ss++resq_SS)
+  [UF_SEM_F_W_CLOCK,UF_SEM_def]
+  THENC
+   SIMP_CONV 
+    (arith_ss++resq_SS) 
+    [UF_SEM_WEAK_INFINITE_UNTIL_LEMMA0,UF_SEM_F_U_CLOCK,
+     IS_FINITE_PATH_RESTN,RESTN_RESTN,NEXT_RISE_RESTN,UF_SEM_F_G,IN_DEF,PL_def,
+     CONJ_ASSOC,NEXT_RISE_LESS,PATH_EL_RESTN])
+  ``~(IS_FINITE_PATH p)
+   ==>
+   (UF_SEM M p (F_W_CLOCK c (F_UNTIL(F_W_CLOCK c f1, F_W_CLOCK c f2))))``;
 
-val Lemma2 =
- SIMP_RULE
-  std_ss
-  []
-  (ISPEC
-    ``\m. UF_SEM (M:'a # 'b # 'c # ('d -> bool) # ('e -> 'd -> bool)) (RESTN p m) (F_BOOL (B_NOT c))``
-    ADD_FORALL_LEMMA2);
+val Lemma2 = 
+ REWRITE_RULE[DECIDE ``(A ==> B = A ==> C) = (A ==> (B = C))``]Lemma1;
 
 in
+
+val UF_SEM_WEAK_INFINITE_F_W_CLOCK_UNTIL_LEMMA1 =
+ prove
+  (``~(IS_FINITE_PATH p)
+     ==>
+     (UF_SEM M p (F_W_CLOCK c (F_UNTIL(F_W_CLOCK c f1, F_W_CLOCK c f2))) =
+       (?i.
+          FIRST_RISE M p c i /\
+          ?l.
+            ((?k.
+                ((l <= k /\
+                  !k'.
+                    l <= k' /\ k' < k ==>
+                    ~B_SEM M (getL M (PATH_EL p (i + k'))) c) /\
+                 B_SEM M (getL M (PATH_EL p (i + k))) c) /\
+                UF_SEM M (RESTN p (i + k)) f2) \/
+             !m. UF_SEM M (RESTN p (i + (l + m))) (F_BOOL (B_NOT c))) /\
+            !j.
+              j < l ==>
+              (?k.
+                 ((j <= k /\
+                   !k'.
+                     j <= k' /\ k' < k ==>
+                     ~B_SEM M (getL M (PATH_EL p (i + k'))) c) /\
+                  B_SEM M (getL M (PATH_EL p (i + k))) c) /\
+                 UF_SEM M (RESTN p (i + k)) f1) \/
+              !m. UF_SEM M (RESTN p (i + (m + j))) (F_BOOL (B_NOT c))) \/
+       !i. ~B_SEM M (L M (PATH_EL p i)) c)``,
+   RW_TAC std_ss [Lemma2]);
+
+end;
+
+val UF_SEM_WEAK_INFINITE_F_W_CLOCK_UNTIL_LEMMA2 =
+ prove
+  (``~IS_FINITE_PATH p ==>
+      (UF_SEM M p (F_W_CLOCK c (F_UNTIL (F_W_CLOCK c f1,F_W_CLOCK c f2))) =
+       (?i.
+          FIRST_RISE M p c i /\
+          ?l.
+            i <= l /\
+            ((?k.
+                ((l <= k /\
+                  !k'.
+                    l <= k' /\ k' < k ==>
+                    ~B_SEM M (getL M (PATH_EL p k')) c) /\
+                 B_SEM M (getL M (PATH_EL p k)) c) /\
+                UF_SEM M (RESTN p k) f2) \/
+             !m. l <= m ==> UF_SEM M (RESTN p m) (F_BOOL (B_NOT c))) /\
+            !j.
+              i <= j /\ j < l ==>
+              (?k.
+                 ((j <= k /\
+                   !k'.
+                     j <= k' /\ k' < k ==>
+                     ~B_SEM M (getL M (PATH_EL p k')) c) /\
+                  B_SEM M (getL M (PATH_EL p k)) c) /\
+                 UF_SEM M (RESTN p k) f1) \/
+              !m. j <= m ==> UF_SEM M (RESTN p m) (F_BOOL (B_NOT c))) \/
+       !i. ~B_SEM M (L M (PATH_EL p i)) c)``,
+   RW_TAC std_ss [UF_SEM_WEAK_INFINITE_F_W_CLOCK_UNTIL_LEMMA1]
+    THEN FULL_SIMP_TAC arith_ss [UF_SEM,B_SEM_def,PATH_EL_RESTN,L_def]
+    THEN EQ_TAC
+    THEN ZAP_TAC arith_ss []
+    THENL
+     [Cases_on `!i. ~B_SEM M (getL M (PATH_EL p i)) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `i+l`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Cases_on `!m. i + l <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN Q.EXISTS_TAC `i+k`
+          THEN RW_TAC arith_ss []
+          THEN `k'-i < k` by DECIDE_TAC
+          THEN `l <= k'-i` by DECIDE_TAC
+          THEN `i+(k'-i) = k'` by DECIDE_TAC
+          THEN PROVE_TAC[],
+         Cases_on `!m. j <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `j-i < l` by DECIDE_TAC
+          THEN RES_TAC
+          THENL
+           [Q.EXISTS_TAC `i+k'`
+             THEN RW_TAC arith_ss []
+             THEN `k''-i < k'` by DECIDE_TAC
+             THEN `j-i <= k''-i` by DECIDE_TAC
+             THEN `i+(k''-i) = k''` by DECIDE_TAC
+             THEN PROVE_TAC[],
+            `!m. i + (j - i + m) = j+m` by DECIDE_TAC
+             THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+             THEN `j+(m-j) = m` by DECIDE_TAC
+             THEN PROVE_TAC[]]],
+      Cases_on `!i. ~B_SEM M (getL M (PATH_EL p i)) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC arith_ss []
+       THEN Q.EXISTS_TAC `i+l`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Cases_on `!m. i + l <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `i + (l + (m - (i+l))) = m` by DECIDE_TAC
+          THEN PROVE_TAC[],
+         Cases_on `!m. j <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `j-i < l` by DECIDE_TAC
+          THEN RES_TAC
+          THENL
+           [Q.EXISTS_TAC `i+k`
+             THEN RW_TAC arith_ss []
+             THEN `j-i <= k'-i` by DECIDE_TAC
+             THEN `k'-i < k` by DECIDE_TAC
+             THEN `i+(k'-i) = k'` by DECIDE_TAC
+             THEN PROVE_TAC[],
+            `i + (j - i + (m - j)) = m` by DECIDE_TAC
+             THEN PROVE_TAC[]]],
+      Cases_on `!i. ~B_SEM M (getL M (PATH_EL p i)) c`    
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `l-i`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Cases_on `!m. ~B_SEM M (getL M (PATH_EL p (l + m))) c`    
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `i + (k-i) = k` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `k-i`
+          THEN RW_TAC std_ss []
+          THEN `i + k'' < k` by DECIDE_TAC
+          THEN PROVE_TAC[],
+         Cases_on `!m. ~B_SEM M (getL M (PATH_EL p (i + (j + m)))) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `j+i < l` by DECIDE_TAC
+          THEN `i <= j+i` by DECIDE_TAC
+          THEN RES_TAC
+          THEN TRY(PROVE_TAC[])
+          THENL
+           [Q.EXISTS_TAC `k'-i`
+             THEN RW_TAC arith_ss [],
+            `j+i <= i + (j + m)` by DECIDE_TAC
+             THEN PROVE_TAC[]]],
+      Cases_on `!i. ~B_SEM M (getL M (PATH_EL p i)) c`    
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `l-i`
+       THEN RW_TAC arith_ss []
+       THEN Cases_on `!m. ~B_SEM M (getL M (PATH_EL p (i + (j + m)))) c`    
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN `j+i < l` by DECIDE_TAC
+       THEN `i <= j+i` by DECIDE_TAC
+       THEN RES_TAC
+       THEN TRY(PROVE_TAC[])
+       THENL
+        [Q.EXISTS_TAC `k'-i`
+          THEN RW_TAC arith_ss [],
+         `j+i <= i + (j + m)` by DECIDE_TAC
+          THEN PROVE_TAC[]]]);
+
+val UF_SEM_WEAK_INFINITE_F_W_CLOCK_UNTIL_LEMMA3 =
+ prove
+  (``~IS_FINITE_PATH p ==>
+      (UF_SEM M p (F_W_CLOCK c (F_UNTIL (F_W_CLOCK c f1,F_W_CLOCK c f2))) =
+       (?i.
+          FIRST_RISE M p c i /\
+          ?l.
+            i <= l /\
+            ((?k. l <= k /\ NEXT_RISE M p c (l,k) /\ UF_SEM M (RESTN p k) f2) \/
+             !m. l <= m ==> UF_SEM M (RESTN p m) (F_BOOL (B_NOT c))) /\
+            !j.
+              i <= j /\ j < l ==>
+              (?k. j <= k /\ NEXT_RISE M p c (j,k) /\ UF_SEM M (RESTN p k) f1) \/
+              !m. j <= m ==> UF_SEM M (RESTN p m) (F_BOOL (B_NOT c))) \/
+       !i. ~B_SEM M (L M (PATH_EL p i)) c)``,
+   RW_TAC (std_ss++resq_SS) 
+    [IN_DEF,PL_def,UF_SEM_WEAK_INFINITE_F_W_CLOCK_UNTIL_LEMMA2,CONJ_ASSOC,NEXT_RISE_LESS]);
+
 
 val F_UNTIL_WEAK_CLOCK_COMP_INFINITE_ELIM =
  prove
@@ -3850,31 +4818,28 @@ val F_UNTIL_WEAK_CLOCK_COMP_INFINITE_ELIM =
            (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) =
             UF_SEM M p (F_CLOCK_COMP (WEAK_CLOCK c) (F_UNTIL(f1, f2))))``,
    RW_TAC (arith_ss ++ resq_SS)
-    [CLOCK_COMP_CORRECT_def,F_SEM_def,FIRST_RISE_RESTN,NEXT_RISE_TRUE,
-     DECIDE ``(m = n + m) = (n=0)``,IN_DEF,PL0,PATH_EL_RESTN,PL_def,
-     F_CLOCK_COMP_def,UF_SEM_WEAK_INFINITE_UNTIL_LEMMA,PATH_LENGTH_RESTN,
-     IS_FINITE_PATH_RESTN,UF_SEM_F_G,RESTN_RESTN,Lemma1,Lemma2]
-    THEN RW_TAC arith_ss [UF_SEM,PATH_EL_RESTN]);
+    [CLOCK_COMP_CORRECT_def,F_SEM_def,RESTN_RESTN,
+     FIRST_RISE,PATH_EL_RESTN,L_def,B_SEM_def,IN_DEF,PL_def,IS_FINITE_PATH_RESTN,
+     UF_SEM_WEAK_INFINITE_F_W_CLOCK_UNTIL_LEMMA3,F_CLOCK_COMP_def,GSYM F_W_CLOCK_def,
+     Cooper.COOPER_PROVE``(!j. ~(j < i)) = (i=0)``,UF_SEM]);
 
-end;
-
-val UF_SEM_WEAK_FINITE_UNTIL_LEMMA =
+val UF_SEM_WEAK_FINITE_UNTIL_LEMMA0 =
  prove
   (``IS_FINITE_PATH p
      ==>
      (UF_SEM M p (F_UNTIL(F_W_CLOCK c f1, F_W_CLOCK c f2)) =
-      ?i :: PL p.
-        ((?k :: PL p. i <= k /\ NEXT_RISE M p c (i,k) /\ UF_SEM M (RESTN p k) f2)
-         \/
-         UF_SEM M (RESTN p i) (F_G (F_BOOL (B_NOT c))))
-        /\
-        !j :: PL p. j < i ==>
-          ((?k :: PL p. j <= k /\ NEXT_RISE M p c (j,k) /\ UF_SEM M (RESTN p k) f1)
-           \/
-           UF_SEM M (RESTN p j) (F_G (F_BOOL (B_NOT c)))))``,
+      ?i :: PL p. ((?k :: PL p. i <= k /\ NEXT_RISE M p c (i,k) /\ UF_SEM M (RESTN p k) f2)
+                  \/
+                  UF_SEM M (RESTN p i) (F_G (F_BOOL (B_NOT c))))
+                 /\
+                 !j :: PL p. 
+                     j < i ==>
+                     ((?k :: PL p. j <= k /\ NEXT_RISE M p c (j,k) /\ UF_SEM M (RESTN p k) f1)
+                      \/
+                      UF_SEM M (RESTN p j) (F_G (F_BOOL (B_NOT c)))))``,
    RW_TAC
     (arith_ss++resq_SS)
-    [UF_SEM,RESTN_RESTN,PL0,PL_def,FIRST_RISE_RESTN,CONJ_ASSOC,
+    [UF_SEM,RESTN_RESTN,PL0,PL_def,FIRST_RISE_RESTN,DECIDE``A/\B/\C/\D = A/\(B/\C)/\D``,
      F_U_CLOCK_def,F_W_CLOCK_def,F_W_def,F_OR_def,FIRST_RISE_TRUE,NEXT_RISE_TRUE,
      PATH_EL_RESTN,L_def,B_SEM_def,IN_DEF,IS_FINITE_PATH_RESTN,NEXT_RISE_RESTN,NEXT_RISE,
      NEXT_RISE_LESS,UF_SEM_F_G]
@@ -3882,100 +4847,323 @@ val UF_SEM_WEAK_FINITE_UNTIL_LEMMA =
      THEN RW_TAC std_ss []
      THENL
       [Q.EXISTS_TAC `k`
+        THEN `PATH_LENGTH(RESTN p k) = PATH_LENGTH p - k` by PROVE_TAC[PATH_LENGTH_RESTN]
         THEN RW_TAC std_ss []
         THENL
-         [Cases_on `!i'. i' < PATH_LENGTH (RESTN p k) ==> ~B_SEM M (getL M (PATH_EL p (k + i'))) c`
+         [Cases_on 
+           `!i'. i' < PATH_LENGTH p - k ==>
+                 ~B_SEM M (getL M (PATH_EL p (k + i'))) c`
            THEN RW_TAC std_ss []
-           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
-           THEN `PATH_LENGTH (RESTN p k) = PATH_LENGTH p - k` by PROVE_TAC[PATH_LENGTH_RESTN]
-           THEN `k+k' < PATH_LENGTH p` by DECIDE_TAC
+           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,GSYM DISJ_ASSOC,DECIDE``~A\/B = A==>B``]
            THEN Q.EXISTS_TAC `k+k'`
-           THEN RW_TAC arith_ss [NEXT_RISE]
+           THEN RW_TAC arith_ss []
            THEN `k''-k < k'` by DECIDE_TAC
-           THEN `(k''-k) + k = k''` by DECIDE_TAC
            THEN `k''-k < PATH_LENGTH (RESTN p k)` by DECIDE_TAC
+           THEN `(k''-k) + k = k''` by DECIDE_TAC
            THEN PROVE_TAC[],
-          Cases_on `!i'. i' < PATH_LENGTH (RESTN p j) ==> ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
+          Cases_on 
+           `!i'. i' < PATH_LENGTH (RESTN p j) ==>
+                 ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
            THEN RW_TAC std_ss []
-           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
+           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,GSYM DISJ_ASSOC,DECIDE``~A\/B = A==>B``]
+           THEN `PATH_LENGTH(RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
            THEN RES_TAC
            THENL
-            [`PATH_LENGTH (RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
-              THEN RW_TAC std_ss [DECIDE``((A/\B)/\C)/\D=A/\(B/\C)/\D``,NEXT_RISE_LESS]
-              THEN `j+k'' < PATH_LENGTH p` by DECIDE_TAC
-              THEN Q.EXISTS_TAC `j+k''`
+            [Q.EXISTS_TAC `j+k''`
               THEN RW_TAC arith_ss []
               THEN `k'''-j < k''` by DECIDE_TAC
-              THEN `j + (k'''-j) = k'''` by DECIDE_TAC
-              THEN `PATH_LENGTH (RESTN p k) = PATH_LENGTH p - k` by PROVE_TAC[PATH_LENGTH_RESTN]
               THEN `k'''-j < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
+              THEN `j + (k'''-j) = k'''` by DECIDE_TAC
               THEN PROVE_TAC[],
              RES_TAC]],
        Q.EXISTS_TAC `k`
         THEN RW_TAC std_ss []
         THENL
-         [Cases_on `!i'. i' < PATH_LENGTH (RESTN p k) ==> ~B_SEM M (getL M (PATH_EL p (k + i'))) c`
+         [Cases_on 
+           `!i'. i' < PATH_LENGTH (RESTN p k) ==>
+                 ~B_SEM M (getL M (PATH_EL p (k + i'))) c`
            THEN RW_TAC std_ss []
-           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
+           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``,GSYM DISJ_ASSOC]
            THEN PROVE_TAC[ADD_SYM],
-          Cases_on `!i'. i' < PATH_LENGTH (RESTN p j) ==> ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
+          Cases_on 
+           `!i'. i' < PATH_LENGTH (RESTN p j) ==>
+                 ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
            THEN RW_TAC std_ss []
-           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
+           THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``,GSYM DISJ_ASSOC]
+           THEN `PATH_LENGTH(RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
            THEN RES_TAC
            THENL
-            [RW_TAC std_ss [NEXT_RISE_LESS,DECIDE``((A/\B)/\C)/\D= A/\(B/\C)/\D``]
-              THEN `PATH_LENGTH (RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
-              THEN `j+k' < PATH_LENGTH p` by DECIDE_TAC
-              THEN Q.EXISTS_TAC `j+k'`
+            [Q.EXISTS_TAC `j+k'`
               THEN RW_TAC arith_ss []
               THEN `k''-j < k'` by DECIDE_TAC
-              THEN `j + (k''-j) = k''` by DECIDE_TAC
               THEN `k''-j < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
+              THEN `j + (k''-j) = k''` by DECIDE_TAC
               THEN PROVE_TAC[],
              RES_TAC]],
        Q.EXISTS_TAC `i`
-        THEN RW_TAC arith_ss []
-        THEN FULL_SIMP_TAC std_ss [DECIDE``~A\/B = A==>B``]
+        THEN RW_TAC arith_ss [DECIDE``~A\/B = A==>B``,GSYM DISJ_ASSOC]
         THENL
-        [Cases_on `!i'. i' < PATH_LENGTH (RESTN p i) ==> ~B_SEM M (getL M (PATH_EL p (i + i'))) c`
+        [Cases_on 
+          `!i'. i' < PATH_LENGTH (RESTN p i) ==>
+                ~B_SEM M (getL M (PATH_EL p (i + i'))) c`
           THEN RW_TAC std_ss []
-          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
-          THEN `PATH_LENGTH (RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
-          THEN `k-i < PATH_LENGTH (RESTN p i)` by DECIDE_TAC
+          THEN `PATH_LENGTH(RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
           THEN Q.EXISTS_TAC `k-i`
-          THEN IMP_RES_TAC NEXT_RISE
-          THEN SIMP_TAC std_ss [DECIDE``(A==>~B)\/C = A ==> B ==> C``]
-          THEN RW_TAC arith_ss [],
+          THEN RW_TAC arith_ss [FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN],
          RES_TAC
           THENL
-           [Cases_on `!i'. i' < PATH_LENGTH (RESTN p j) ==> ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
+           [Cases_on 
+             `!i'. i' < PATH_LENGTH (RESTN p j) ==>
+                   ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
              THEN RW_TAC std_ss []
-             THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
-             THEN `PATH_LENGTH (RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
-             THEN `k'-j < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
+             THEN `PATH_LENGTH(RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
              THEN Q.EXISTS_TAC `k'-j`
-             THEN IMP_RES_TAC NEXT_RISE
-             THEN RW_TAC arith_ss []
-             THEN SIMP_TAC std_ss [DECIDE``(A==>~B)\/C = A ==> B ==> C``]
              THEN RW_TAC arith_ss [],
-            Cases_on `!i'. i' < PATH_LENGTH (RESTN p j) ==> ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
+            Cases_on 
+             `!i'. i' < PATH_LENGTH (RESTN p j) ==>
+                   ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
              THEN RW_TAC std_ss []
-             THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
              THEN RES_TAC]],
        Q.EXISTS_TAC `i`
-        THEN ZAP_TAC arith_ss []
-        THEN Cases_on `!i. ~(i < PATH_LENGTH (RESTN p j)) \/ ~B_SEM M (getL M (PATH_EL p (i + j))) c`
+        THEN RW_TAC arith_ss [DECIDE``~A\/B = A==>B``,GSYM DISJ_ASSOC]
+        THEN Cases_on 
+              `!i'. (i' < PATH_LENGTH (RESTN p i)) ==>
+                    ~B_SEM M (getL M (PATH_EL p (i + i'))) c`
         THEN RW_TAC std_ss []
-        THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,DECIDE``~A\/B = A==>B``]
         THEN RES_TAC
+        THEN `PATH_LENGTH(RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
+        THEN Cases_on
+              `!i'. i' < PATH_LENGTH (RESTN p j) ==>
+                    ~B_SEM M (getL M (PATH_EL p (i' + j))) c`
+        THEN RW_TAC std_ss []
+        THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
         THENL
-         [`PATH_LENGTH (RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
-           THEN `k-j < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
-           THEN SIMP_TAC std_ss [DECIDE``(A==>~B)\/C = A ==> B ==> C``]
-           THEN IMP_RES_TAC NEXT_RISE
-           THEN Q.EXISTS_TAC `k-j`
-           THEN RW_TAC arith_ss [DECIDE``(A==>~B)\/C = A ==> B ==> C``],
-          RES_TAC]]);
+         [Q.EXISTS_TAC `k-j`
+           THEN RW_TAC arith_ss [],
+          RES_TAC
+           THEN PROVE_TAC[]]]);
+
+
+local
+
+val Lemma1 =
+ (SIMP_CONV
+  (std_ss)
+  [UF_SEM_F_W_CLOCK,UF_SEM_def]
+  THENC
+   SIMP_CONV 
+    (arith_ss) 
+    [UF_SEM_WEAK_FINITE_UNTIL_LEMMA0,UF_SEM_F_U_CLOCK,
+     IS_FINITE_PATH_RESTN,RESTN_RESTN,NEXT_RISE_RESTN,UF_SEM_F_G,IN_DEF,PL_def,
+     DECIDE``A/\B/\C/\D = A/\(B/\C)/\D``,NEXT_RISE_LESS,PATH_EL_RESTN])
+  ``IS_FINITE_PATH p
+   ==>
+   (UF_SEM M p (F_W_CLOCK c (F_UNTIL(F_W_CLOCK c f1, F_W_CLOCK c f2))))``;
+
+val Lemma2 = 
+ REWRITE_RULE[DECIDE ``(A ==> B = A ==> C) = (A ==> (B = C))``]Lemma1;
+
+in
+
+val UF_SEM_WEAK_FINITE_F_W_CLOCK_UNTIL_LEMMA1 =
+ prove
+  (``IS_FINITE_PATH p
+     ==>
+     (UF_SEM M p (F_W_CLOCK c (F_UNTIL(F_W_CLOCK c f1, F_W_CLOCK c f2))) =
+        (?i::PL p.
+           FIRST_RISE M p c i /\
+           ?i'::PL (RESTN p i).
+             ((?k::PL (RESTN p i).
+                 i' <= k /\ NEXT_RISE M p c (i + i',i + k) /\
+                 UF_SEM M (RESTN p (i + k)) f2) \/
+              !i''::PL (RESTN p (i + i')).
+                UF_SEM M (RESTN p (i + (i' + i''))) (F_BOOL (B_NOT c))) /\
+             !j::PL (RESTN p i).
+               j < i' ==>
+               (?k::PL (RESTN p i).
+                  j <= k /\ NEXT_RISE M p c (i + j,i + k) /\
+                  UF_SEM M (RESTN p (i + k)) f1) \/
+               !i''::PL (RESTN p (i + j)).
+                 UF_SEM M (RESTN p (i + (i'' + j))) (F_BOOL (B_NOT c))) \/
+        !i::PL p. ~B_SEM M (L M (PATH_EL p i)) c)``,
+   RW_TAC std_ss [Lemma2]);
+
+end;
+
+
+val UF_SEM_WEAK_FINITE_F_W_CLOCK_UNTIL_LEMMA2 =
+ prove
+  (``IS_FINITE_PATH p ==>
+      (UF_SEM M p (F_W_CLOCK c (F_UNTIL (F_W_CLOCK c f1,F_W_CLOCK c f2))) =
+        (?i :: PL p.
+           FIRST_RISE M p c i /\
+           ?l :: PL p. i <= l /\
+             ((?k :: PL p. 
+                 l <= k /\ NEXT_RISE M p c (l,k) /\
+                 UF_SEM M (RESTN p k) f2) \/
+              !m :: PL p. l <= m ==> UF_SEM M (RESTN p m) (F_BOOL (B_NOT c))) /\
+             !j :: PL p. 
+               i <= j /\ j < l 
+               ==>
+               (?k :: PL p. j <= k /\ NEXT_RISE M p c (j,k) /\ UF_SEM M (RESTN p k) f1) \/
+               !m :: PL p. j <= m ==> UF_SEM M (RESTN p m) (F_BOOL (B_NOT c))) \/
+        !i :: PL p. ~B_SEM M (L M (PATH_EL p i)) c)``,
+   RW_TAC (std_ss++resq_SS) 
+    [UF_SEM_WEAK_FINITE_F_W_CLOCK_UNTIL_LEMMA1,
+     IN_DEF,PL_def,IS_FINITE_PATH_RESTN]
+    THEN FULL_SIMP_TAC arith_ss [UF_SEM,B_SEM_def,PATH_EL_RESTN,L_def]
+    THEN EQ_TAC
+    THEN RW_TAC arith_ss []
+    THENL
+     [Cases_on `!i. i < PATH_LENGTH p ==> ~B_SEM M (getL M (PATH_EL p i)) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN `PATH_LENGTH(RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
+       THEN Q.EXISTS_TAC `i+i'`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Cases_on 
+          `!m. m < PATH_LENGTH p ==> i + i' <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN Q.EXISTS_TAC `i+k`
+          THEN RW_TAC arith_ss [],
+         Cases_on `!m. m < PATH_LENGTH p ==> j <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `j-i < i'` by DECIDE_TAC
+          THEN `j-i < PATH_LENGTH p - i` by DECIDE_TAC
+          THEN RES_TAC
+          THENL
+           [Q.EXISTS_TAC `i+k'`
+             THEN `i + (j - i) = j` by DECIDE_TAC
+             THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+             THEN RW_TAC arith_ss [],
+            `i + (j - i) = j` by DECIDE_TAC
+             THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+             THEN `!m. i + (m + (j - i)) = m + j` by DECIDE_TAC
+             THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+             THEN `PATH_LENGTH(RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
+             THEN `m-j < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
+             THEN `(m-j)+j = m` by DECIDE_TAC
+             THEN PROVE_TAC[]]],
+      Cases_on `!i. i < PATH_LENGTH p ==> ~B_SEM M (getL M (PATH_EL p i)) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC arith_ss []
+       THEN Q.EXISTS_TAC `i+i'`
+       THEN `PATH_LENGTH(RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
+       THEN RW_TAC arith_ss []
+       THENL
+        [Cases_on `!m. m < PATH_LENGTH p ==> i + i' <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `i+i' < PATH_LENGTH p` by DECIDE_TAC
+          THEN `PATH_LENGTH(RESTN p (i+i')) = PATH_LENGTH p - (i+i')` by PROVE_TAC[PATH_LENGTH_RESTN]
+          THEN `i + (i' + (m - (i+i'))) = m` by DECIDE_TAC
+          THEN `m - (i+i') < PATH_LENGTH (RESTN p (i + i'))` by DECIDE_TAC
+          THEN PROVE_TAC[],
+         Cases_on `!m. m < PATH_LENGTH p ==> j <= m ==> ~B_SEM M (getL M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `j-i < i'` by DECIDE_TAC
+          THEN `j-i < PATH_LENGTH p - i` by DECIDE_TAC
+          THEN RES_TAC
+          THENL
+           [Q.EXISTS_TAC `i+k`
+             THEN `i + (j - i) = j` by DECIDE_TAC
+             THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+             THEN DECIDE_TAC,
+            `i + (j - i) = j` by DECIDE_TAC
+             THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+             THEN `!m. i + (m + (j - i)) = m+j` by DECIDE_TAC
+             THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+             THEN `(m-j) + j = m` by DECIDE_TAC
+             THEN `PATH_LENGTH(RESTN p j) = PATH_LENGTH p - j` by PROVE_TAC[PATH_LENGTH_RESTN]
+             THEN `(m-j) < PATH_LENGTH (RESTN p j)` by DECIDE_TAC
+             THEN PROVE_TAC[]]],
+      PROVE_TAC[],
+      Cases_on `!i. i < PATH_LENGTH p ==> ~B_SEM M (getL M (PATH_EL p i)) c`    
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN `PATH_LENGTH(RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
+       THEN Q.EXISTS_TAC `l-i`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Cases_on 
+          `!i''. i'' < PATH_LENGTH (RESTN p l) ==>
+                 ~B_SEM M (getL M (PATH_EL p (i'' + l))) c`    
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `i + (k-i) = k` by DECIDE_TAC
+          THEN Q.EXISTS_TAC `k-i`
+          THEN RW_TAC arith_ss [],
+         Cases_on 
+          `!i''. i'' < PATH_LENGTH (RESTN p (i + j)) ==>
+                 ~B_SEM M (getL M (PATH_EL p (i + (i'' + j)))) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `j+i < l` by DECIDE_TAC
+          THEN `i <= j+i` by DECIDE_TAC
+          THEN `j+i < PATH_LENGTH p` by DECIDE_TAC
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC(MATCH_MP(Q.SPEC `j+i` (el 11 thl))(el 1 thl)))
+          THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(MATCH_MP (el 1 thl) (CONJ(el 3 thl)(el 4 thl))))
+          THENL
+           [Q.EXISTS_TAC`k'-i`
+             THEN RW_TAC arith_ss []
+             THEN PROVE_TAC[ADD_SYM],
+            `j+i <= i + (i'' + j)` by DECIDE_TAC
+             THEN `PATH_LENGTH(RESTN p (i+j)) = PATH_LENGTH p - (i+j)` by PROVE_TAC[PATH_LENGTH_RESTN,ADD_SYM]
+             THEN `i + (i'' + j) < PATH_LENGTH p` by DECIDE_TAC
+             THEN PROVE_TAC[]]],
+      Cases_on
+       `!i. i < PATH_LENGTH p ==> ~B_SEM M (getL M (PATH_EL p i)) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN `PATH_LENGTH(RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
+       THEN Q.EXISTS_TAC `l-i`
+       THEN RW_TAC arith_ss []
+       THENL
+        [Cases_on
+          `!i''. i'' < PATH_LENGTH (RESTN p l) ==>
+                 ~B_SEM M (getL M (PATH_EL p (i'' + l))) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `PATH_LENGTH(RESTN p l) = PATH_LENGTH p - l` by PROVE_TAC[PATH_LENGTH_RESTN]
+          THEN `i'' + l < PATH_LENGTH p` by DECIDE_TAC
+          THEN `l <= i'' + l` by DECIDE_TAC
+          THEN PROVE_TAC[],
+        Cases_on
+          `!i''. i'' < PATH_LENGTH (RESTN p (i + j)) ==>
+                 ~B_SEM M (getL M (PATH_EL p (i + (i'' + j)))) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN `j+i < l` by DECIDE_TAC
+          THEN `i <= j+i` by DECIDE_TAC
+          THEN `j+i < l` by DECIDE_TAC
+          THEN `j+i < PATH_LENGTH p` by DECIDE_TAC
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC(MATCH_MP(Q.SPEC `j+i` (el 11 thl))(el 1 thl)))
+          THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(MATCH_MP (el 1 thl) (CONJ(el 3 thl)(el 4 thl))))
+          THENL
+           [Q.EXISTS_TAC`k-i`
+             THEN `i + (k - i) = k` by DECIDE_TAC
+             THEN RW_TAC arith_ss []
+             THEN PROVE_TAC[ADD_SYM],
+            `i+j < PATH_LENGTH p` by DECIDE_TAC
+             THEN `PATH_LENGTH(RESTN p (i+j)) = PATH_LENGTH p - (i+j)` by PROVE_TAC[PATH_LENGTH_RESTN]
+             THEN `i + (i'' + j) < PATH_LENGTH p` by DECIDE_TAC
+             THEN `j+i <= i + (i'' + j)` by DECIDE_TAC
+             THEN PROVE_TAC[]]],
+      PROVE_TAC[]]);
 
 val UF_SEM_RESTN_F_G =
  prove
@@ -4007,46 +5195,102 @@ val F_UNTIL_WEAK_CLOCK_COMP_FINITE_ELIM =
             UF_SEM M p (F_CLOCK_COMP (WEAK_CLOCK c) (F_UNTIL(f1, f2))))``,
    RW_TAC (std_ss++resq_SS)
     [CLOCK_COMP_CORRECT_def,F_SEM_def,IN_DEF,FIRST_RISE_RESTN,IN_DEF,PL_def,PL0,
-     F_CLOCK_COMP_def,UF_SEM_RESTN_F_G,UF_SEM_WEAK_FINITE_UNTIL_LEMMA,
-     UF_SEM_F_G,RESTN_RESTN,UF_SEM_F_G,IS_FINITE_PATH_RESTN,PATH_EL_RESTN]
+     F_CLOCK_COMP_def,UF_SEM_RESTN_F_G,UF_SEM_WEAK_FINITE_F_W_CLOCK_UNTIL_LEMMA2,
+     RESTN_RESTN,UF_SEM_F_G,IS_FINITE_PATH_RESTN,PATH_EL_RESTN]
     THEN RW_TAC arith_ss
           [UF_SEM,PATH_EL_RESTN,NEXT_RISE_TRUE,FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN,
            DECIDE``(k = i + k) = (i=0)``]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THENL
-     [Q.EXISTS_TAC `i`
-       THEN ZAP_TAC std_ss [UF_SEM_RESTN_F_G]
-       THEN Cases_on
-             `!i'. i' < PATH_LENGTH p ==>
-                   j <= i' ==>
-                   B_SEM M (L M (PATH_EL p i')) (B_NOT c)`
+     [Cases_on
+       `!i. i < PATH_LENGTH p ==> ~B_SEM M (L M (PATH_EL p i)) c`
        THEN RW_TAC std_ss []
        THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
-       THEN RES_TAC,
-      Q.EXISTS_TAC `i`
-       THEN ZAP_TAC std_ss [UF_SEM_RESTN_F_G]
-       THEN Cases_on
-             `!i'. i' < PATH_LENGTH (RESTN p i) ==>
-                   B_SEM M (L M (PATH_EL p (i + i'))) (B_NOT c)`
+       THEN Q.EXISTS_TAC `i`
        THEN RW_TAC std_ss []
-       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
-       THEN `PATH_LENGTH (RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
-       THEN `i+i' < PATH_LENGTH p` by DECIDE_TAC
-       THEN `i <= i+i'` by DECIDE_TAC
+       THEN Q.EXISTS_TAC `l`
+       THEN RW_TAC std_ss []
        THEN PROVE_TAC[],
-      Q.EXISTS_TAC `i`
-       THEN ZAP_TAC std_ss [UF_SEM_RESTN_F_G],
-      Q.EXISTS_TAC `i`
-       THEN ZAP_TAC std_ss [UF_SEM_RESTN_F_G]
-       THEN Cases_on
-             `!k. k < PATH_LENGTH p ==> i <= k ==> B_SEM M (L M (PATH_EL p k)) (B_NOT c)`
+      Cases_on
+       `!i. i < PATH_LENGTH p ==> ~B_SEM M (L M (PATH_EL p i)) c`
        THEN RW_TAC std_ss []
        THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
-       THEN `PATH_LENGTH (RESTN p i) = PATH_LENGTH p - i` by PROVE_TAC[PATH_LENGTH_RESTN]
-       THEN `k-i < PATH_LENGTH (RESTN p i)` by DECIDE_TAC
-       THEN `i + (k-i) = k` by DECIDE_TAC
-       THEN PROVE_TAC[]]);
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `l`
+       THEN RW_TAC std_ss []
+       THEN PROVE_TAC[],
+      Cases_on
+       `!i. i < PATH_LENGTH p ==> ~B_SEM M (L M (PATH_EL p i)) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THENL
+        [RW_TAC std_ss [FIRST_RISE]
+          THENL
+           [ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC`j` (el 4 thl)))
+             THEN `j < PATH_LENGTH p` by DECIDE_TAC
+             THEN FULL_SIMP_TAC arith_ss [DECIDE``!n. (j = j + n) = (n = 0)``,B_SEM_def]
+             THEN PROVE_TAC[FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN],
+            PROVE_TAC[L_def]],
+         Q.EXISTS_TAC`i`  
+          THEN RW_TAC arith_ss [L_def]
+          THEN Cases_on
+                `!m. m < PATH_LENGTH p ==>
+                     i <= m ==> B_SEM M (getL M (PATH_EL p m)) (B_NOT c)`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+          THEN FULL_SIMP_TAC arith_ss [B_SEM_def,DECIDE``!n. (j = j + n) = (n = 0)``]
+          THEN PROVE_TAC[FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN,L_def]],
+      RW_TAC arith_ss 
+       [DECIDE``!n. (j = j + n) = (n = 0)``,FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN,B_SEM_def]
+       THEN Cases_on `!i'. i' < PATH_LENGTH p ==> ~B_SEM M (L M (PATH_EL p i')) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `l`
+       THEN RW_TAC std_ss []
+       THENL
+        [Cases_on `!m. m < PATH_LENGTH p ==> l <= m ==> ~B_SEM M (L M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,L_def]
+          THEN PROVE_TAC[],
+         Cases_on `!m. m < PATH_LENGTH p ==> j <= m ==> ~B_SEM M (L M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,L_def]
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC(MATCH_MP(Q.SPEC `j` (el 9 thl))(el 6 thl)))
+          THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(MATCH_MP (el 1 thl) (CONJ(el 6 thl)(el 5 thl))))
+          THENL
+           [Q.EXISTS_TAC `k'`
+             THEN RW_TAC arith_ss [],
+            PROVE_TAC[DECIDE``m<=m``,B_SEM_def]]],
+      RW_TAC arith_ss 
+       [DECIDE``!n. (j = j + n) = (n = 0)``,FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN,B_SEM_def]
+       THEN Cases_on `!i'. i' < PATH_LENGTH p ==> ~B_SEM M (L M (PATH_EL p i')) c`
+       THEN RW_TAC std_ss []
+       THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM]
+       THEN Q.EXISTS_TAC `i`
+       THEN RW_TAC std_ss []
+       THEN Q.EXISTS_TAC `l`
+       THEN RW_TAC std_ss []
+       THENL
+        [Cases_on `!m. m < PATH_LENGTH p ==> l <= m ==> ~B_SEM M (L M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,L_def]
+          THEN PROVE_TAC[DECIDE``m<=m``,B_SEM_def],
+         Cases_on `!m. m < PATH_LENGTH p ==> j <= m ==> ~B_SEM M (L M (PATH_EL p m)) c`
+          THEN RW_TAC std_ss []
+          THEN FULL_SIMP_TAC std_ss [NOT_FORALL_THM,L_def,B_SEM_def]
+          THEN ASSUM_LIST
+                (fn thl => ASSUME_TAC(MATCH_MP(Q.SPEC `j` (el 9 thl))(el 6 thl)))
+          THEN ASSUM_LIST(fn thl => STRIP_ASSUME_TAC(MATCH_MP (el 1 thl) (CONJ(el 6 thl)(el 5 thl))))
+          THEN PROVE_TAC[DECIDE``m<=m``]],
+      RW_TAC arith_ss 
+       [DECIDE``!n. (j = j + n) = (n = 0)``,FINITE_PATH_NONEMPTY,IS_FINITE_PATH_RESTN,B_SEM_def]]);
 
 val F_UNTIL_WEAK_CLOCK_COMP_ELIM =
  prove

@@ -290,7 +290,6 @@ val F_SEM_defn =
                   ?j :: PL p. i < j         /\ 
                     NEXT_RISE M p c (i+1,j) /\
                     F_SEM M (RESTN p j) (STRONG_CLOCK c) f)
-(*
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
       ?i k :: PL p. k >= i                                               /\
@@ -301,8 +300,8 @@ val F_SEM_defn =
                           F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c) 
                           ==>
                           F_SEM M (RESTN p j) (STRONG_CLOCK c) f1)
-*)
     /\
+(*
     (F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2)) = 
       ?i :: PL p. (?k :: PL p. i <= k                /\ 
                                NEXT_RISE M p c (i,k) /\ 
@@ -312,7 +311,7 @@ val F_SEM_defn =
                               ?k :: PL p. j <= k                /\ 
                                           NEXT_RISE M p c (j,k) /\ 
                                           F_SEM M (RESTN p k) (STRONG_CLOCK c) f1)
-    /\
+*)
     (F_SEM M p (STRONG_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
       ?i :: PL p. FIRST_RISE M p c i /\ 
                   !j :: PL p. i <= j /\ S_SEM M (LHAT M (PATH_SEG p (i,j))) c r
@@ -337,7 +336,8 @@ val F_SEM_defn =
                   (F_SEM M (RESTN p i) (STRONG_CLOCK c) f 
                    \/
                    ?j :: PL p. i < j 
-                    /\ ?p'. F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b))) /\ 
+                    /\ ?p'. (* IS_INFINITE_PATH p'                                       /\ *)
+                            F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b))) /\ 
                             F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (STRONG_CLOCK c) f))
     /\
     (F_SEM M p (STRONG_CLOCK c) (F_WEAK_CLOCK(f,c1)) =   
@@ -367,8 +367,20 @@ val F_SEM_defn =
                   ?j :: PL p. i < j         /\
                     NEXT_RISE M p c (i+1,j) /\
                     F_SEM M (RESTN p j) (WEAK_CLOCK c) f)
-(*
     /\
+    (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
+     (?i :: PL p. FIRST_RISE M p c i /\
+          ?l :: PL p.
+            i <= l /\
+            ((?k :: PL p. l <= k /\ NEXT_RISE M p c (l,k) /\ F_SEM M (RESTN p k) (WEAK_CLOCK c) f2) \/
+             !m :: PL p. l <= m ==> F_SEM M (RESTN p m) (WEAK_CLOCK B_TRUE) (F_BOOL (B_NOT c))) /\
+            !j :: PL p.
+              i <= j /\ j < l ==>
+              (?k :: PL p. j <= k /\ NEXT_RISE M p c (j,k) /\ F_SEM M (RESTN p k) (WEAK_CLOCK c) f1) \/
+              !m :: PL p. j <= m ==> F_SEM M (RESTN p m) (WEAK_CLOCK B_TRUE) (F_BOOL (B_NOT c))) \/
+       !i :: PL p. F_SEM M (RESTN p i) (WEAK_CLOCK B_TRUE) (F_BOOL (B_NOT c)))
+    /\
+(*
     (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
       F_SEM M p (STRONG_CLOCK c) (F_UNTIL(f1,f2))  
       \/
@@ -381,7 +393,6 @@ val F_SEM_defn =
                     F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL c)
                     ==>
                     F_SEM M (RESTN p j) (WEAK_CLOCK c) f1))
-*)
     /\
     (F_SEM M p (WEAK_CLOCK c) (F_UNTIL(f1,f2)) = 
       ?i :: PL p. ((?k :: PL p. i <= k                /\ 
@@ -400,7 +411,7 @@ val F_SEM_defn =
                               !k :: PL p. j <= k
                                           ==>
                                           F_SEM M (RESTN p k) (WEAK_CLOCK B_TRUE) (F_BOOL(B_NOT c)))
-    /\
+*)
     (F_SEM M p (WEAK_CLOCK c) (F_SUFFIX_IMP(r,f)) = 
       !i :: PL p. FIRST_RISE M p c i ==>
                   !j :: PL p. i <= j /\ S_SEM M (LHAT M (PATH_SEG p (i,j))) c r
@@ -433,7 +444,8 @@ val F_SEM_defn =
                   (F_SEM M (RESTN p i) (WEAK_CLOCK c) f 
                    \/
                    ?j :: PL p. i < j /\ 
-                     ?p'. F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b)))
+                     ?p'. (* IS_INFINITE_PATH p' /\ *)
+                          F_SEM M (RESTN p j) (WEAK_CLOCK B_TRUE) (F_BOOL(B_AND(c,b)))
                           /\
                           F_SEM M (PATH_CAT(PATH_SEG p (i,j-1),p')) (WEAK_CLOCK c) f))
     /\
