@@ -14,6 +14,7 @@ Contents
 - Makefile magic
 - Syntax
 - Directives
+- Known bugs
 
 
 Makefile magic
@@ -224,6 +225,14 @@ One for MNG source:
 embeds the command \showrule{\selectXD} in the source at that point.
 This is useful for including rules.  I've shown the TeX form of the
 directive, but of course the leading % may be omitted.
+
+
+Known bugs
+~~~~~~~~~~
+
+* a space is required between \[ and <[, because Keith didn't subtract
+  his regular expressions correctly in Hollex.tnormal.  Assistance
+  welcomed.
 
 
  --==[ THE END ]==--
