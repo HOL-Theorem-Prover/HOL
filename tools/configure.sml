@@ -15,7 +15,7 @@
 
 val mosmldir = ;
 val holdir   = ;
-val OS       = "linux"           (* Operating system; choices are:
+val OS       = ;          (* Operating system; choices are:
                                 "linux", "solaris", "unix", "winNT" *)
 
 val CC       = "gcc";     (* C compiler (for building quote filter)        *)
@@ -68,8 +68,9 @@ val SRCDIRS =
   "src/integer", "src/res_quan/src", "src/set/src", "src/pred_set/src",
   "src/string/theories", "src/string/src",
   "src/word/theories", "src/word/src", "src/BoyerMoore",
-  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src",
-  "src/muddy", "src/HolBdd"];
+  "src/hol90", "src/finite_map", "src/real", "src/bag", "src/ring/src"] @
+ (if OS = "linux" orelse OS = "solaris" then ["src/muddy", "src/HolBdd"]
+  else []);
 
 
 (*---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ fun emit_hol_script target mosml std_prelude qend =
        fun output s = TextIO.output(ostrm, s)
    in
       output  "rem The bare hol98 script\n\n";
-      output (String.concat[mosml," -quietdec -P full ", std_prelude,
+      output (String.concat[mosml," -P full ", std_prelude,
                             " %* ", qend, "\n"]);
       TextIO.closeOut ostrm
    end;
@@ -41,11 +41,11 @@ fun emit_hol_script target mosml std_prelude qend =
 fun emit_hol_unquote_script target qfilter mosml std_prelude qinit qend =
    let val ostrm = fopen(target^".bat")
        fun output s = TextIO.output(ostrm, s)
-       fun munge s = String.translate (fn #"/" => "\\\\" | c => str c) s
+       fun munge s = String.translate (fn #"/" => "\\" | c => str c) s
    in
       output  "rem The hol98 script (with quote preprocessing)\n\n";
-      output  (String.concat [munge qfilter, " | ", mosml,
-                              " -quietdec -P full ",
+      output  (String.concat [munge qfilter " | ", munge mosml,
+                              " -P full ",
                               std_prelude, " ", qinit, " %* ", qend, "\n"]);
       TextIO.closeOut ostrm
    end
