@@ -78,7 +78,8 @@ val FIRST_EXISTS_THM = prove
    THEN FULL_SIMP_TAC list_ss [EXISTS_DEF] THEN RW_TAC list_ss []
    THENL [MAP_EVERY Q.EXISTS_TAC [`[]`, `h`, `L`] THEN RW_TAC list_ss [],
           RES_TAC THEN Cases_on `P h` THENL
-          [MAP_EVERY Q.EXISTS_TAC [`[]`, `h`, `L`] THEN RW_TAC list_ss [],
+          [MAP_EVERY Q.EXISTS_TAC [`[]`, `h`, `prefix <> [w] <> suffix`]
+           THEN RW_TAC list_ss [],
            MAP_EVERY Q.EXISTS_TAC [`h::prefix`, `w`, `suffix`] THEN 
            RW_TAC list_ss [combinTheory.o_DEF]]]);
     

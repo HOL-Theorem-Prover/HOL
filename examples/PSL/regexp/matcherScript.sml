@@ -737,6 +737,7 @@ val na_match_concat = lemma
    REPEAT GEN_TAC
    ++ Introduce `regexp2na r1 = (i1, t1, a1)`
    ++ Introduce `regexp2na r2 = (i2, t2, a2)`
+   ++ NTAC 2 (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def])
    ++ RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def]
    ++ REPEAT (Q.PAT_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th]))
    ++ Suff
@@ -807,7 +808,7 @@ val na_match_fuse = lemma
    REPEAT GEN_TAC
    ++ Introduce `regexp2na r1 = (i1, t1, a1)`
    ++ Introduce `regexp2na r2 = (i2, t2, a2)`
-   ++ RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def]
+   ++ NTAC 2 (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def])
    ++ REPEAT (Q.PAT_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th]))
    ++ Suff
       `!k.
@@ -879,7 +880,7 @@ val na_match_or = lemma
    REPEAT GEN_TAC
    ++ Introduce `regexp2na r1 = (i1, t1, a1)`
    ++ Introduce `regexp2na r2 = (i2, t2, a2)`
-   ++ RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def]
+   ++ NTAC 2 (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def])
    ++ REPEAT (Q.PAT_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th]))
    ++ Cases_on `l` >> RW_TAC std_ss [na_step_def]
    ++ RW_TAC std_ss [na_step_def]
@@ -956,7 +957,7 @@ val na_match_and = lemma
    REPEAT GEN_TAC
    ++ Introduce `regexp2na r1 = (i1, t1, a1)`
    ++ Introduce `regexp2na r2 = (i2, t2, a2)`
-   ++ RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def]
+   ++ NTAC 2 (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def])
    ++ REPEAT (Q.PAT_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th]))
    ++ Suff
       `!j k.
@@ -1012,7 +1013,7 @@ val na_match_repeat = lemma
        !l. na_accepts (regexp2na (Repeat r)) l = sem (Repeat r) l``,
    REPEAT GEN_TAC
    ++ Introduce `regexp2na r = (i, t, a)`
-   ++ (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def]
+   ++ (NTAC 2 (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def])
        ++ (REPEAT o Q.PAT_ASSUM `!x. P x`)
           (fn th => REWRITE_TAC [GSYM (MATCH_MP EQ_EXT th)]))
    >> (HO_MATCH_MP_TAC
@@ -1139,7 +1140,7 @@ val na_match_prefix = lemma
        !l. na_accepts (regexp2na (Prefix r)) l = sem (Prefix r) l``,
    REPEAT GEN_TAC
    ++ Introduce `regexp2na r = (i, t, a)`
-   ++ (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def]
+   ++ (NTAC 2 (RW_TAC std_ss [regexp2na_def, sem_def, na_accepts_def])
        ++ (REPEAT o Q.PAT_ASSUM `!x. P x`)
           (fn th => REWRITE_TAC [GSYM (MATCH_MP EQ_EXT th)]))
    ++ Suff
@@ -1259,9 +1260,10 @@ val initial_regexp2na = store_thm
    Introduce `regexp2na r1 = (i1,t1,a1)`
    ++ Introduce `regexp2na r2 = (i2,t2,a2)`
    ++ Introduce `regexp2na r = (i,t,a)`
-   ++ RW_TAC std_ss
-      [regexp2na_def, initial_def, accept_def,
-       initial_regexp2na_def, accept_regexp2na_def]);
+   ++ NTAC 2
+      (RW_TAC std_ss
+       [regexp2na_def, initial_def, accept_def,
+        initial_regexp2na_def, accept_regexp2na_def]));
 
 val accept_regexp2na = store_thm
   ("accept_regexp2na",
@@ -1294,11 +1296,11 @@ val accept_regexp2na = store_thm
    Introduce `regexp2na r1 = (i1,t1,a1)`
    ++ Introduce `regexp2na r2 = (i2,t2,a2)`
    ++ Introduce `regexp2na r = (i,t,a)`
-   ++ RW_TAC std_ss
-      [regexp2na_def, initial_def, accept_def,
-       initial_regexp2na_def, accept_regexp2na_def]
+   ++ NTAC 2
+      (RW_TAC std_ss
+       [regexp2na_def, initial_def, accept_def,
+        initial_regexp2na_def, accept_regexp2na_def])
    >> METIS_TAC []
-   ++ RW_TAC std_ss [dijkstra1]
    ++ Know `exists_transition_regexp2na r = \s s'. ?x. t s x s'`
    >> RW_TAC std_ss
       [exists_transition_regexp2na_def, FUN_EQ_THM,
@@ -1313,7 +1315,8 @@ val accept_regexp2na = store_thm
            METIS_TAC [regexp2na_acc],
            RW_TAC std_ss [dijkstra_def]
            ++ Suff `!l. partition (\s'. ?x. t s x s') l = ([],l)`
-           >> RW_TAC std_ss [EXISTS_DEF, APPEND, dijkstra_def]
+           >> (DISCH_THEN (fn th => FULL_SIMP_TAC std_ss [th])
+               ++ RW_TAC std_ss [EXISTS_DEF, APPEND, dijkstra_def])
            ++ Induct
            ++ RW_TAC std_ss [partition_def]
            ++ METIS_TAC [regexp2na_trans]])
@@ -1378,9 +1381,10 @@ val transition_regexp2na = store_thm
    Introduce `regexp2na r1 = (i1,t1,a1)`
    ++ Introduce `regexp2na r2 = (i2,t2,a2)`
    ++ Introduce `regexp2na r = (i,t,a)`
-   ++ RW_TAC std_ss
-      [regexp2na_def, initial_def, accept_def, transition_def,
-       initial_regexp2na_def, accept_regexp2na_def, transition_regexp2na_def]
+   ++ NTAC 2
+      (RW_TAC std_ss
+       [regexp2na_def, initial_def, accept_def, transition_def,
+        initial_regexp2na_def, accept_regexp2na_def, transition_regexp2na_def])
    << [METIS_TAC [],
        MP_TAC (Q.SPECL [`SUC i1`, `r1`, `s - (i2 + 1)`, `x`, `i1`, `t1`, `a1`]
                transition_regexp2na_fuse)
@@ -1404,6 +1408,8 @@ val eval_accepts = prove
   (``!r l. eval_accepts r l = EXISTS (accept_regexp2na r) l``,
    Cases
    ++ RW_TAC std_ss [eval_accepts_def]
+   ++ normalForms.REMOVE_ABBR_TAC
+   ++ RW_TAC std_ss []
    ++ Introduce `r' = r`
    ++ Introduce `regexp2na r = (i,t,a)`
    ++ RW_TAC std_ss [dijkstra]
@@ -1501,6 +1507,7 @@ val amatch = store_thm
    ``!r l. amatch r l = sem r l``,
    RW_TAC std_ss
    [GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da, amatch_def]
+   ++ normalForms.REMOVE_ABBR_TAC
    ++ RW_TAC std_ss [initial_regexp2na_def]
    ++ Suff `!k. astep r k l = da_step (na2da (regexp2na r)) (set_of_list k) l`
    >> RW_TAC std_ss []
@@ -1519,11 +1526,14 @@ val acheck = store_thm
        !n. n < LENGTH l /\ sem r (FIRSTN (SUC n) l) ==> f (BUTFIRSTN n l)``,
    RW_TAC std_ss
    [acheck_def, GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da]
+   ++ normalForms.REMOVE_ABBR_TAC
    ++ RW_TAC std_ss [initial_regexp2na_def]
    ++ Q.SPEC_TAC (`[initial (regexp2na r)]`, `k`)
    ++ Q.SPEC_TAC (`[]`, `h`)
    ++ Induct_on `l` >> RW_TAC arith_ss [acheckpt_def, LENGTH]
    ++ ONCE_REWRITE_TAC [acheckpt_def]
+   ++ RW_TAC std_ss []
+   ++ normalForms.REMOVE_ABBR_TAC
    ++ RW_TAC std_ss []
    ++ HO_MATCH_MP_TAC
       (METIS_PROVE [num_CASES]
