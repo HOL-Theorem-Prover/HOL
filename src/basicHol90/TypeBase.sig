@@ -9,10 +9,7 @@ sig
   type tyinfo
   type typeBase
 
-  val gen_tyinfo : {ax:thm,
-                    case_def: thm,
-                    one_one : thm option,
-                    distinct: thm option} -> tyinfo
+  val gen_tyinfo : {ax:thm, case_def: thm} -> tyinfo
 
   val mk_tyinfo : {ax:thm, case_def:thm,case_cong:thm,
                    induction:thm,nchotomy:thm, size: (term * thm) option,
@@ -44,7 +41,7 @@ sig
   val get       : typeBase -> string -> tyinfo option
   val listItems : typeBase -> tyinfo list
 
-  val tysize    : (hol_type -> term option) * (string -> term option) 
+  val tysize    : (hol_type -> term option) * (string -> term option)
                     -> hol_type -> term
   val type_size : typeBase -> hol_type -> term
 

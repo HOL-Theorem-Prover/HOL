@@ -112,12 +112,9 @@ val defn_const =
 
 
 (*---------------------------------------------------------------------------*
- * The 11 theorem and distinctness theorem have to be given (currently)      *
- * because the routines for proving them use numbers, which might be         *
- * unnecessary in some formalizations. The size field is not filled by       *
- * mk_tyinfo, since that operation requires access to the current fact       *
- * database, and also assumes that numbers are in the context, which is not  *
- * necessarily true.                                                         *
+ * The size field is not filled by mk_tyinfo, since that operation           *
+ * requires access to the current fact database, and also assumes that       *
+ * numbers are in the context, which is not necessarily true.                *
  *---------------------------------------------------------------------------*)
 
 fun mk_tyinfo {ax,case_def,case_cong,induction,
@@ -195,16 +192,19 @@ fun pp_tyinfo ppstrm (FACTS(ty_name,recd)) =
 end;
 
 
-fun gen_tyinfo {ax, case_def, one_one, distinct} =
-  let val induct_thm = prove_induction_thm ax
-      val nchotomy   = prove_cases_thm induct_thm
-      val case_cong  = case_cong_thm nchotomy case_def
-  in
-    mk_tyinfo {ax=ax,case_def=case_def,case_cong=case_cong,
-               induction=induct_thm,nchotomy=nchotomy, size = NONE,
-               one_one=one_one,distinct=distinct}
-
-  end;
+fun gen_tyinfo {ax, case_def} = let
+  val induct_thm = prove_induction_thm ax
+  val nchotomy   = prove_cases_thm induct_thm
+  val case_cong  = case_cong_thm nchotomy case_def
+  val one_one = SOME (prove_constructors_one_one ax)
+    handle HOL_ERR _ => NONE
+  val distinct = SOME (prove_constructors_distinct ax)
+    handle HOL_ERR _ => NONE
+in
+  mk_tyinfo {ax=ax,case_def=case_def,case_cong=case_cong,
+             induction=induct_thm,nchotomy=nchotomy, size = NONE,
+             one_one=one_one,distinct=distinct}
+end;
 
 (*---------------------------------------------------------------------------*
  * Databases of facts.                                                       *
@@ -221,8 +221,8 @@ val listItems = Binaryset.listItems;
 
 
 (*---------------------------------------------------------------------------
-       Computing the size of a type as a term. "tysize" is the more 
-       general function. It takes a couple of environments 
+       Computing the size of a type as a term. "tysize" is the more
+       general function. It takes a couple of environments
        (theta,gamma); theta maps type variables to size functions, and
        gamma maps type operators to size functions.
  ---------------------------------------------------------------------------*)
@@ -230,7 +230,7 @@ val listItems = Binaryset.listItems;
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty));
       fun Zero() = mk_const{Name="0",Ty= mk_type{Tyop="num",Args=[]}}
-                   handle HOL_ERR _ => 
+                   handle HOL_ERR _ =>
                      raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs{Bvar=mk_var{Name="v",Ty=ty}, Body=Zero()};
       fun join f g x =
@@ -309,12 +309,7 @@ val bool_case_def =
    CONJ (gen thmT') (gen thmF')
   end;
 
-val bool_info =
-   gen_tyinfo
-        {ax = boolAxiom,
-         case_def = bool_case_def,
-         distinct = SOME (CONJUNCT1 BOOL_EQ_DISTINCT),
-         one_one = (NONE:thm option)};
+val bool_info = gen_tyinfo {ax = boolAxiom, case_def = bool_case_def};
 
 val _ = write bool_info;
 
