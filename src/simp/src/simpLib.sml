@@ -16,16 +16,15 @@ type thm = Thm.thm;
 type conv = Abbrev.conv;
 type tactic = Abbrev.tactic;
 
-open ho_matchLib;
 open HolKernel Parse Drule Tactical Tactic Thm_cont Conv Psyntax
 open liteLib Trace Cond_rewr Travrules Traverse Ho_net;
+
+infix |>;
+infix THEN
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
 fun == q x = Type q
-
-   infix |>;
-   infix THEN
 
 fun ERR x = STRUCT_ERR "simpLib" x ;
 fun WRAP_ERR x = STRUCT_WRAP "simpLib" x;
@@ -275,15 +274,3 @@ fun op ++ (ss,ssdata) = add_to_ss (ssdata,ss);
 *)
 
 end (* struct *)
-
-
-(*
-
-val CC = SIMP_PROVE bool_ss []
-           (--`(P = P') /\ (x = x') ==> ((P x = P' x') = T)`--);
-SIMP_PROVE arith_ss [CC] (--`P (x + 2) = P (2 + x)`--);
-SIMP_CONV arith_ss [CC]
-            (--`y >= z ==> z >= y ==> (P y (x + 2) = P z (2 + x))`--);
-
-
-*)

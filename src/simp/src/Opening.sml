@@ -1,8 +1,7 @@
 structure Opening :>  Opening =
 struct
 
-open HolKernel Parse ho_matchLib
-     Drule Conv liteLib Trace Psyntax;
+open HolKernel Parse Drule Conv liteLib Trace Psyntax;
 
 val match_term = Ho_match.match_term;
 

@@ -68,9 +68,8 @@
 structure Unwind :> Unwind =
 struct
 
-open refuteLib ho_matchLib;
-open HolKernel Parse basicHol90Lib Psyntax liteLib;
-open Ho_resolve Trace AC Ho_theorems Ho_rewrite;
+open refuteLib HolKernel Parse basicHol90Lib Psyntax liteLib;
+open Ho_resolve Ho_boolTheory Trace AC Ho_rewrite;
 infix THEN THENC;
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars

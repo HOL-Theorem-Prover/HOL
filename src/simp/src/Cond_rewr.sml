@@ -1,7 +1,7 @@
 structure Cond_rewr :> Cond_rewr = struct
 
-open HolKernel Parse Drule Conv
-     Psyntax liteLib Trace Ho_match Ho_rewrite Ho_theorems;
+open HolKernel Parse Drule Conv boolTheory
+     Psyntax liteLib Trace Ho_match Ho_rewrite;
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q

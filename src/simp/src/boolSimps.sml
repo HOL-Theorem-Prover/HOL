@@ -1,9 +1,10 @@
 structure boolSimps :> boolSimps =
 struct
 
-open HolKernel Parse simpLib
-     basicHol90Lib liteLib Ho_theorems pureSimps Ho_rewrite;
-infix THEN THENQC ++;
+open HolKernel Parse simpLib basicHol90Lib liteLib pureSimps 
+     Ho_rewrite Ho_boolTheory;
+
+infix THEN ORELSE THENL THENQC ++;
 
 val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
 fun -- q x = Term q
@@ -30,6 +31,21 @@ fun comb_ETA_CONV t =
               orelse Dsyntax.is_select t)) then
          RAND_CONV ETA_CONV
      else NO_CONV) t
+
+val COND_BOOL_CLAUSES = 
+  prove(Term`(!b e. (if b then T else e) = (b \/ e)) /\
+             (!b t. (if b then t else T) = (b ==> t)) /\
+             (!b e. (if b then F else e) = (~b /\ e)) /\
+             (!b t. (if b then t else F) = (b /\ t))`,
+REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
+ THEN TRY (ACCEPT_TAC TRUTH ORELSE FIRST_ASSUM ACCEPT_TAC)
+ THENL [DISJ1_TAC THEN ACCEPT_TAC TRUTH,
+        DISJ2_TAC THEN FIRST_ASSUM ACCEPT_TAC,
+        FIRST_ASSUM MATCH_MP_TAC THEN ACCEPT_TAC TRUTH,
+        POP_ASSUM (K ALL_TAC) THEN 
+        POP_ASSUM (MP_TAC o EQ_MP (el 2 (CONJUNCTS (SPEC_ALL NOT_CLAUSES))))
+        THEN ACCEPT_TAC
+             (EQT_ELIM (el 4 (CONJUNCTS (SPEC(Term`F`) IMP_CLAUSES))))]);
 
 val BOOL_ss = SIMPSET
   {convs=[{name="BETA_CONV (beta reduction)",
@@ -63,7 +79,7 @@ val BOOL_ss = SIMPSET
           EXCLUDED_MIDDLE,
           ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE,
           NOT_AND, ONCE_REWRITE_RULE [CONJ_COMM] EXCLUDED_MIDDLE,
-          SELECT_REFL, Ho_theorems.SELECT_REFL_2],
+          SELECT_REFL, SELECT_REFL_2],
    congs = [], filter = NONE, ac = [], dprocs = []};
 
 val CONG_ss = SIMPSET
