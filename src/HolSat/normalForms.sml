@@ -456,14 +456,29 @@ fun conj_cnf defs tm =
   if is_conj tm then sub_cnf conj_cnf conjunction defs (dest_conj tm)
   else disj_cnf defs tm;
 
-val one_point_rewr = HO_REWR_CONV UNWIND_THM2;
+(* Natural rule
+val ONE_POINT_CONV = HO_REWR_CONV UNWIND_THM2;
+*)
+
+(* An attempt to soup it up
+*)
+fun ONE_POINT_CONV tm =
+  let
+    val (v, t) = dest_exists tm
+    val (q, b) = dest_conj t
+    val (_, d) = dest_eq q
+    val th = SPEC d (ISPEC (mk_abs (v, b)) UNWIND_THM2)
+  in
+    CONV_RULE
+    (LAND_CONV (QUANT_CONV (RAND_CONV BETA_CONV)) THENC RAND_CONV BETA_CONV) th
+  end;
 
 fun PURE_DEF_CNF_CONV tm =
   let
     val (defs, tm) = conj_cnf [] tm
     val (vs, eqs) = unzip (map (fn (v, d) => (v, mk_eq (v, d))) (rev defs))
     val tm = list_mk_exists (vs, foldl mk_conj tm eqs)
-    fun push c = QUANT_CONV c THENC one_point_rewr
+    fun push c = QUANT_CONV c THENC ONE_POINT_CONV
     val th = funpow (length defs) push ALL_CONV tm
   in
     SYM th
@@ -745,19 +760,21 @@ show_assums := true;
 app load ["normalFormsTest"];
 open normalFormsTest;
 
+val DEF_CNF_CONV' =
+  (time o try)
+  (time DEF_NNF_CONV THENC
+   time PURE_DEF_CNF_CONV THENC
+   time CLEAN_DEF_CNF_CONV);
+
 (* Large formulas *)
 
 val valid1 = time (mk_neg o Term) valid_1;
 
-val tm1 = time (rhs o concl o DEF_NNF_CONV) valid1;
-val tm2 = time (rhs o concl o PURE_DEF_CNF_CONV) tm1;
-val tm3 = (try o time) (rhs o concl o CLEAN_DEF_CNF_CONV) tm2;
-
-val _ = time DEF_CNF_CONV valid1;
+val _ = DEF_CNF_CONV' valid1;
 
 (* The pigeon-hole principle *)
 
-val test = K () o time DEF_CNF_CONV o time (mk_neg o var_pigeon);
+val test = K () o DEF_CNF_CONV' o time (mk_neg o var_pigeon);
 
 test 8;
 test 9;
