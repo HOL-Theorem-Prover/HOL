@@ -1,6 +1,7 @@
 (* ===================================================================== *)
 (* FILE          : Globals.sml                                           *)
 (* DESCRIPTION   : Contains global flags for hol98.                      *)
+(*                 Generated from tools/Globals.src ... edit that!       *)
 (*                                                                       *)
 (* AUTHOR        : (c) Konrad Slind, University of Calgary               *)
 (* DATE          : August 26, 1991                                       *)
@@ -25,22 +26,6 @@ val HOLDIR = _;
 
 val release = "Kananaskis";
 val version = 0;
-
-(*-------------------------------------------------------------------------*
- * Bogus hack for defining strings                                         *
- *-------------------------------------------------------------------------*)
-
-local val defined = ref false
-in
-fun strings_defined() = !defined
-fun assert_strings_defined() = defined := true
-end;
-
-(*---------------------------------------------------------------------------*
- * Controlling the display of exceptions                                     *
- *---------------------------------------------------------------------------*)
-
-val print_exceptions = ref true;
 
 (*---------------------------------------------------------------------------*
  * For showing assumptions in theorems                                       *
