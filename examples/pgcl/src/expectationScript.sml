@@ -832,4 +832,47 @@ val healthy_sub = store_thm
    ++ CONV_TAC (DEPTH_CONV ETA_CONV)
    ++ RW_TAC std_ss []);
 
+(* ------------------------------------------------------------------------- *)
+(* Relational semantics                                                      *)
+(* ------------------------------------------------------------------------- *)
+
+(* Prelude: basic measure theory a la examples/miller. *)
+(* In time, needs its own theory. For now, just a stub. *)
+
+val () = type_abbrev
+  ("measure_space", Type `:(('a -> bool) -> bool) # (('a -> bool) -> posreal)`);
+
+val measure_space_def = Define `measure_space (m : 'a measure_space) = T`;
+
+val measurable_def = Define `measurable ((e,_) : 'a measure_space) = e`;
+
+val measure_def = Define `measure ((_,mu) : 'a measure_space) = mu`;
+
+val integrate_def = Define
+  `integrate (m : 'a measure_space) (e : 'a expect) = 0p`;
+
+val subprobability_def = Define
+  `subprobability p = measure_space p /\ measure p UNIV <= 1`;
+
+(* Relational semantics in terms of the measure theory above *)
+
+val rel_def = Define
+  `rel (r : 'a -> 'a measure_space -> bool) = !s p. r s p ==> subprobability p`;
+
+val wp_rel_def = Define
+  `wp_rel (r : 'a -> 'a measure_space -> bool) =
+   \e s. inf {x | ?p. r s p /\ (integrate p e = x)}`;
+
+val healthy_rel_def = Define `healthy_rel t = ?r. rel r /\ (t = wp_rel r)`;
+
+(* What we'd really like to prove is that this definition of a healthy *)
+(* transformer in terms of relations is the same as the previous *)
+(* definition in terms of feasibility, sublinearity and up-continuity. *)
+
+(*
+val healthy_rel = prove
+  (``!t. healthy_rel t = healthy t``,
+   DESIRABLE_TAC);
+*)
+
 val _ = export_theory();
