@@ -481,9 +481,12 @@ fun only_P_disjs P (asl, g) =
       fun my_mk_disj [] = Term`F`
         | my_mk_disj x = list_mk_disj x
       val new_g = mk_disj(my_mk_disj P_disjs, my_mk_disj rest)
+      val rewrites =
+        tautLib.TAUT_PROVE (Term`!p. (p \/ F = p) /\ (F \/ p = p)`)
       val new_g_eq_thm = prove(
         mk_eq(g, new_g),
-        RWT THEN CONV_TAC (AC_CONV (DISJ_ASSOC, DISJ_SYM)))
+        PURE_REWRITE_TAC [rewrites] THEN
+        CONV_TAC (AC_CONV (DISJ_ASSOC, DISJ_SYM)))
   in
       CONV_TAC (REWR_CONV new_g_eq_thm) THEN DISJ1_TAC
   end (asl, g)
