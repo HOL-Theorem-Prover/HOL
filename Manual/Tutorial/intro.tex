@@ -2,65 +2,42 @@
 \label{install}
 
 This chapter describes how to get the \HOL\ system and how to install
-it.  There is also a discussion of the optional Licence Agreement.  It
-is assumed that a Sun workstation running Unix is being used, but the
-instructions that follow should apply {\it mutatis mutandis\/} to
-other platforms.  Unix is not, however, a pre-requisite for using the
-system. \HOL\ may be run PCs running Windows NT, and we are always
-interested in ports to other platforms.  See Section~\ref{performance}
-for details of \HOL's performance on various systems.
+it.  It is generally assumed that some sort of Unix system is being
+used, but the instructions that follow should apply {\it mutatis
+  mutandis\/} to other platforms.  Unix is not a pre-requisite for
+using the system. \HOL\ may be run PCs running Windows NT, and we are
+always interested in ports to other platforms.
+
+\newcommand\holn{\textsf{\textbf{hol98}}}
 
 \section{Getting HOL}
 
-The \HOL\ system can either be obtained on tape from:
-
-\vspace*{6pt plus1pt minus1pt}
-
-\begin{tabular}{@{\qquad}l@{\qquad}l}
-Mike Gordon & \verb|hol-support%cam.sri.com|\\
-University of Cambridge & \verb|hol-support@cl.cam.ac.uk|\\
-Computer Laboratory & \mbox{} \\
-New Museums Site & \mbox{} \\
-Pembroke Street & \mbox {} \\
-Cambridge CB2 3QG, UK. & \mbox {}\\
-\end{tabular}
-
-\vspace*{6pt plus1pt minus1pt}
-
-\noindent or on tape or by anonymous FTP from:
-
-\vspace*{6pt plus1pt minus1pt}
-
-\begin{tabular}{@{\qquad}l@{\qquad}l}
-Phil Windley & \verb|windley@cs.uidaho.edu|\\
-Department of Computer Science & \mbox{}\\
-University of Idaho & \mbox{} \\
-Moscow, ID 83843, USA. & \mbox{} \\
-\end{tabular}
-
-\vspace*{6pt plus1pt minus1pt}
-
-\noindent To obtain \HOL\ sources on tape, send a 450 foot Sun cassette or a
-600 foot standard magnetic tape to one of the above contacts, {\it together
-with sufficient funds to pay the cost of return postage\/}.
-\HOL\ is available via anonymous FTP at \verb|ted.cs.uidaho.edu| (129.101.100.20)
-in the directory \verb|~ftp/pub/hol|.
+The \HOL\ system can be downloaded from
+\mbox{\texttt{http://www.ftp.cl.cam.ac.uk/ftp/hvg/}}.  This page on
+the World-wide Web contains a number of sub-directories.  The system
+discussed in this tutorial is \holn, so the \texttt{hol98}
+sub-directory contains the appropriate source files.  The naming
+scheme for \holn{} releases is $\langle${\it
+  name}$\rangle$-$\langle${\it number}$\rangle$; the release
+described here is Taupo-1.
 
 \section{The {\tt info-hol} mailing list}
 
 Phil Windley has started a mailing list:
-{\small\verb%info-hol@iris.eecs.ucdavis.edu%} which he set up to serve as a
+{\small\verb%info-hol@jaguar.cs.byu.edu%} which he set up to serve as a
 forum
 for discussing \HOL\ and disseminating news about it.  If you wish to be on
 this list (which is recommended for all users of \HOL), or know of other
 people who should be included, email to:
-{\small\verb%info-hol-request@iris.eecs.ucdavis.edu%}.
+{\small\verb%info-hol-request@jaguar.cs.byu.edu%}.
 
 \section{Installing HOL}
 
-It is assumed that the \HOL\ sources have been obtained and placed on
-a directory \ml{hol}. The contents of this directory are likely to
-change over time, but it should contain the following:
+It is assumed that the \HOL\ sources have been obtained and the
+\texttt{tar} file unpacked into a directory \ml{hol98}.\footnote{You may
+  choose another name if you want; it is not important.} The contents
+of this directory are likely to change over time, but it should
+contain the following:
 
 
 \begin{center}
@@ -69,428 +46,191 @@ change over time, but it should contain the following:
 \multicolumn{3}{|c|}{\bf Principal Files on the HOL Distribution Directory} \\
 \multicolumn{3}{|c|}{ } \\
 {\it File name} & {\it Description} & {\it File type}  \\ \hline
-{\tt READ-ME} & Description of directory {\tt hol} & Text\\
-{\tt Licence}& \LaTeX\ source for optional \HOL\ licence & Directory\\
-{\tt Versions.2.01} & Changes file since {\tt HOL88.2.0} & Text\\
-{\tt Versions} & Previous changes files since {\tt HOL88.1.0} & Directory\\
-{\tt Makefile} & Unix makefile for {\tt hol} & Text\\
-{\tt lisp} & Lisp sources of \HOL & Directory\\
-{\tt ml} & \ML\ sources of \HOL & Directory\\
-{\tt theories} & Built-in theories and files to construct them& Directory\\
-{\tt Library} & \HOL\ system library & Directory\\
+{\tt README} & Description of directory {\tt hol} & Text\\
+{\tt COPYRIGHT}& A copyright notice & Text\\
+{\tt install.txt} & Installation instructions & Text\\
+{\tt tools} & Source code for building the system & Directory\\
+{\tt bin} & Directory for HOL executables & Directory\\
+{\tt sigobj} & Directory for \ML\ object files & Directory\\
+{\tt src} & \ML\ sources of \HOL & Directory\\
 {\tt Manual} & Files for \HOL\ system documentation & Directory\\
-{\tt Training} & Course material and exercises & Directory\\
 {\tt help} & Help files for \HOL\ system & Directory\\
-{\tt contrib} & Misc. contributed \HOL\ software & Directory\\
-{\tt hol} & Executable {\tt hol} system (may be absent) & Executable\\
-{\tt LOG} & Log of a successful make (may be absent)& Text\\ \hline
+{\tt examples} & Example source files & Directory\\
+\hline
 \end{tabular}
 \end{center}
 
 The session in the box below shows a typical distribution directory.
-The \HOL\ distribution has been mounted on a Sun running Unix on the
-directory {\small\tt /usr/groups/hol/sun3\_sos}.
+The \HOL\ distribution has been placed on a PC running Linux in the
+directory {\small\tt /local/scratch/mn200/hol98/}.
 
-All sessions in this documentation will be displayed in boxes with  a number in
-the top right hand corner.  This number indicates whether the session  is a new
-one (when the number will be {\small\sl  1}) or  the continuation  of a session
-started in an earlier box.  Consecutively numbered boxes are assumed to be part
-of a single continuous session.  The Unix prompt for the sessions is
-{\small\verb+%+}, so lines beginning with this prompt  were typed  by the user.
-  After entering the \HOL\ system (see below), the user is prompted
-  with
-{\small\verb%#%} for an expression  or command of the  \HOL\ meta-language \ML;
-lines beginning with this are thus \ML\ expressions or declarations.  Lines not
-beginning with  {\small\verb+%+}  or {\small\verb%#%}  are system  output.  The
-meta-language \ML\ is introduced in Chapter~\ref{ML}.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-% pwd
-/usr/groups/hol/sun3_sos
-% ls -F
-LOG             Manual/         Versions/       hol*            theories/
-Library/        READ-ME         basic-hol*      hol-lcf*
-Licence/        Training/       contrib/        lisp/
-Makefile        Version.2.01    help/           ml/
-% ls -lF hol
--rwxrwxr-x  1 tfm       3555997 May 18 20:18 hol*
-\end{verbatim}\end{session}
-
-If there is a suitable executable file {\small\tt hol} in your
-distribution directory (as there is in the directory shown above),
-then it should be tried to see if it works. This is illustrated by
-continuing the session started above. The executable files
-{\small\verb%hol-lcf%} and {\small\verb%basic-hol%} are intermediate
-states in the construction of {\small\verb%hol%} and can be deleted
-(see {\small\verb%Makefile%} for more information).
-
-\begin{session}\begin{verbatim}
-% hol
-
-           __  _     _    __   __  _   __     _  _   __   _
-   |___   |    |    /_\  |__  |__  |  |       |__|  |  |  |
-   |      |__  |__ /   \  __|  __| |  |__     |  |  |__|  |__
-
-          HOL88 Version 2.01 (Sun3/Franz), built on May 18 1992
-
-#
-\end{verbatim}\end{session}
-
-\noindent Note the \ML\ prompt symbol {\small\verb%#%}. Simple experiments with
-\HOL\ can now be done directly, but for various theorem proving activities the
-system needs to be configured so that it knows where to find theory files and
-libraries. If the location of {\small\tt hol} on your machine is, say:
-
-\begin{hol}\begin{verbatim}
-   /usr/users/fred/dir1/dir2/hol
-\end{verbatim}\end{hol}
-
-\noindent then \HOL\ can be configured to know about this directory by
-typing:
-
-\begin{hol}\begin{verbatim}
-   install `/usr/users/fred/dir1/dir2/hol`;;
-\end{verbatim}\end{hol}
-
-\noindent to the running system.  This is illustrated by continuing
-the session started above:
-
-\begin{session}\begin{verbatim}
-#install `/usr/users/fred/dir1/dir2/hol`;;
-HOL installed (`/usr/users/fred/dir1/dir2/hol`)
-() : void
-
-#
-\end{verbatim}\end{session}
-
-\noindent An alternative to using the \ml{install} command is
-to set the environment variable {\small\verb%HOLPATH% in the shell.
-This variable contains the name of the directory in which the system
-is installed in much the same form as that expected by {\small\tt install}.
-So, if this alternative method was being used to tell our existing system
-where its new installation area was, the following command would be
-required before invoking the system (C-shell is assumed):
-
-\begin{hol}\begin{verbatim}
-   % setenv HOLPATH /usr/users/fred/dir1/dir2/hol
-\end{verbatim}\end{hol}
-
-\noindent To eliminate the need to install the {\small\tt hol}
-directory every time the system is used, an executable image can be
-saved with the installation already done. This is done by executing:
-
-{\small\begin{alltt}
-   save `\(name\)`;;
-\end{alltt}}
-
-\noindent which will create a (large) executable file called
-{\small $name$} containing
-a saved state of the \HOL\ system.
-
-\begin{session}\begin{verbatim}
-#save `my-hol`;;
-() : void
-
-#quit();;
-% ls -l my-hol
--rwxr-xr-x  1 hol       3601861 May 19 20:36 my-hol*
-%
-\end{verbatim}\end{session}
-
-\noindent This session also shows how to get out of \HOL\ by typing:
-
-\begin{hol}\begin{verbatim}
-   quit();;
-\end{verbatim}\end{hol}
-
-\noindent After saving a copy of \HOL, the new system ({\small\tt my-hol} in the
-session above) can be used to run \HOL\ without having to install local path
-names.
+All sessions in this documentation will be displayed in boxes with a
+number in the top right hand corner.  This number indicates whether
+the session is a new one (when the number will be {\small\sl 1}) or
+the continuation of a session started in an earlier box.
+Consecutively numbered boxes are assumed to be part of a single
+continuous session.  The Unix prompt for the sessions is
+\texttt{\small \$}, so lines beginning with this prompt were typed by
+the user.  After entering the \HOL\ system (see below), the user is
+prompted with {\small\verb|-|} for an expression or command of the
+\HOL\ meta-language \ML; lines beginning with this are thus \ML\
+expressions or declarations.  Lines not beginning with \texttt{\small
+  \$} or {\small\verb|-|} are system output.  The meta-language \ML\
+is introduced in Chapter~\ref{ML}.
 
 \setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-% my-hol
-
-           __  _     _    __   __  _   __     _  _   __   _
-   |___   |    |    /_\  |__  |__  |  |       |__|  |  |  |
-   |      |__  |__ /   \  __|  __| |  |__     |  |  |__|  |__
-
-          HOL88 Version 2.01 (Sun3/Franz), built on May 18 1992
-
-#
-\end{verbatim}\end{session}
-
-Alas, the scenario sketched above does not always work:
-\begin{enumerate}
-\item There may not be a file {\small\tt hol} on
-your distribution.
-\item There may be a file {\small\tt hol}, but it is not executable on your machine.
-\item The file {\small\tt hol} might execute, but the attempt to save a new version
-with local path names may fail (this is usually due to incompatibility between
-different versions of Unix).
-\end{enumerate}
-
-In case 1 or 2 you will need to rebuild \HOL\ from sources
-(see Section~\ref{build}). In case 3, it is probably best to eventually
-rebuild \HOL, but you can survive for a while without doing this
-by always setting {\small\verb%HOLPATH%} or by typing:
-{\small\verb%install `%}{\small$path$}{\small\verb%/hol`;;%}
-whenever you start (for a suitable string {\small $path$}), \eg\
-{\small\tt /usr/users/fred/dir1/dir2}. If \ml{install} is
-being used, as an alternative to this is to create a file
-called {\small\tt hol-init.ml} in your home directory
-that contains the above \ml{install} command. When \HOL\ is run, the first thing it
-does is to look for a file called {\small\tt hol-init.ml} and if one is found
-any commands in it are executed.
-
-\setcounter{sessioncount}{1}
-\begin{session}\begin{verbatim}
-% echo 'install `/usr/users/fred/dir1/dir2/hol`;;' > ~/hol-init.ml
-% cat ~/hol-init.ml
-install `/usr/users/fred/dir1/dir2/hol`;;
-% hol
-
-           __  _     _    __   __  _   __     _  _   __   _
-   |___   |    |    /_\  |__  |__  |  |       |__|  |  |  |
-   |      |__  |__ /   \  __|  __| |  |__     |  |  |__|  |__
-
-          HOL88 Version 2.01 (Sun3/Franz), built on May 18 1992
-
-
-HOL installed (`/usr/users/fred/dir1/dir2/hol`)
-() : void
-
-
-File hol-init loaded
-() : void
-
-#
-\end{verbatim}\end{session}
-
-\noindent Note that {\small\tt hol} not {\small\tt my-hol} was used, and the
-installation was done automatically.
-
-
-\begin{itemize}
-\item{\bf N.B.} In order to be able to
-{\it compile\/} \ML\ files (see the section
-`Compiling \ML\ files' in \DESCRIPTION) it is also necessary
-to install a suitable Lisp system and compiler (called `Liszt' for Franz Lisp).
-This is unlikely to be necessary for normal users of \HOL. How to do this
-installation
-is described in Section~\ref{build} below.
-\end{itemize}
-
-\section{Building HOL from sources}
-\label{build}
-
-Under Unix, the \HOL\ system is normally built using a makefile
-({\small\tt hol/Makefile} in the distribution).
-If you are not using a Unix machine, then see the directory
-{\small\tt hol/contrib/non-unix} for instructions on proceeding.
-
-
-The rest of  this section  explains how  to build  the \HOL\  system under Unix
-using the {\small\tt make} program.  It is suggested  that if  you are familiar
-with this program then you should  read {\small\tt  hol/Makefile}.   If you are
-not familiar with {\small\tt make}, then the instructions that follow should be
-sufficient (unless something unexpected goes wrong).
-
-\subsection{Steps to make HOL under Unix}
-
-The text that used to be in this section of the \TUTORIAL\ is
-completely out of date and meaningless.  It needs to be redone for
-hol98.
-
-\section{Other HOL users}
-
-Users interested in research projects that make use of \HOL\ are directed
-to the directory {\small\tt hol/contrib/hol\_users}.  The \LaTeX\ source for a list
-of short project descriptions is located there.  The list does not represent
-all ongoing research, but only those projects for which users of the system
-have supplied us with a {\it pr\'{e}cis}.  We encourage new users of the
-system to inform us regarding its application so that we may update this list.
-
-\section{HOL performance} \label{performance}
-
-The following table contains the results of running the \HOL\ benchmark found
-in the directory {\small\tt hol/contrib/benchmark} on a variety of platforms
-using different lisps.
-
-\begin{center}
-\begin{tabular}{|l|l|c|c|r|}
-\hline
-\multicolumn{5}{|c|}{\bf Benchmark Results} \\
-\multicolumn{1}{|c}{\sf Machine} &
-\multicolumn{1}{c}{\sf Lisp} &
-\multicolumn{1}{c}{\sf Memory} &
-\multicolumn{1}{c}{\sf Window System} &
-\multicolumn{1}{c|}{\sf Run Time} \\
-\hline
-Sun3/260       & Franz Lisp (38.92) &  16Mb  &    NONE       & 147.6 sec \\
-Sun3/80        & Franz Lisp (38.92) &  12Mb  &    X (R4)     & 256.4 sec \\
-Sun3/260       & AKCL               &  16Mb  &    NONE       & 538.6 sec \\
-Sun3/80        & AKCL               &  12Mb  &    X (R4)     & 830.5 sec \\
-Sparc SLC      & Allegro            &  16Mb  &    X (R4)     & 214.4 sec \\
-Sparc SLC      & AKCL               &  16Mb  &    X (R4)     & 278.2 sec \\
-Sparc IPC      & Allegro            &  16Mb  &    X (R4)     & 174.9 sec \\
-Sparc IPC      & AKCL               &  16Mb  &    X (R4)     & 235.2 sec \\
-Sparc1         & Allegro            &  16Mb  &   SunView     & 223.5 sec \\
-Sparc1         & Allegro            &  16Mb  &    X (R4)     & 229.6 sec \\
-Sparc1         & AKCL               &  16Mb  &   SunView     & 280.4 sec \\
-Sparc1+        & Allegro            &  28Mb  &    NONE       & 182.4 sec \\
-Sparc1+        & AKCL               &  28Mb  &    NONE       & 233.1 sec \\
-SparcServ      & Lucid              &  64Mb  &    NONE       & 102.7 sec \\
-SparcServ      & AKCL               &  64Mb  &    NONE       & 238.4 sec \\
-Sparc2         & Allegro            &  32Mb  &   SunView     & 124.1 sec \\
-Sparc2         & AKCL               &  32Mb  &   SunView     & 148.0 sec \\
-HP9000/750     & AKCL               &  32Mb  &    HP VUE     & 83.2 sec \\
-DS5000/200     & KCL                &  48Mb  &    NONE       & 287.6 sec \\
-33MHz 486 PC   & Procyon 3.0        &   8Mb  &   Windows 3.0 & 151.9 sec \\
-Macintosh IIfx & Procyon 2.1        &   8Mb  &   Mac OS      & 302.5 sec \\
-Macintosh IIci & Procyon 2.1        &   8Mb  &   Mac OS      & 371.6 sec \\
-\hline
-\end{tabular}
-\end{center}
-
-\section{The HOL licence}
-
-\HOL\ is a public domain system and is available free. The bulk of the system
-is based on code written, in alphabetical order, by Mike Gordon,
-Gerard Huet (and others at Inria), Tom Melham, Robin Milner, Lockwood
-Morris, Malcolm Newey, Larry Paulson and Chris Wadsworth. Many others
-have supplied parts of the system, bugfixes etc.
-
-Some users have asked to be issued with a \HOL\ licence.  This is to
-legitimate their use of the system for commercial purposes and to
-guarantee continued access.  After consultation with Robin Milner and
-the Cambridge University computing service (who have experience with
-software licencing), the licence agreement given below was produced
-(the \LaTeX\ source for a typeset version is in the directory {\tt
-Licence} at the top of the \HOL\ distribution tape).  The primary aims
-of the licence are:
-
-\begin{myenumerate}
-\item to prevent us being `ripped off' or sued;
-\item to prevent people claiming to have done a proof using \HOL\ when
-in fact they used their own insecure modifications of it
-(in this case the licence merely requires the system to be called
-something else, it does not prevent such modifications being made).
-\end{myenumerate}
-
-The signing of the licence is optional, but encouraged. Users of \HOL\ are
-free to redistribute the system to others provided they let Mike Gordon know
-in writing. The simplest way to do this is to ask the party to whom \HOL\ is
-given to sign the licence and send it to Mike.
-
-\section{The REFERENCE browser}
-
-There is an X-windows documentation browser available with \HOL, written by
-Sara Kalvala.  This is not part of the \HOL{} system,
-but is distributed with the sources in {\small\verb+hol/contrib/Xhelp+}; it
-provides convenient access to the reference manual \REFERENCE{} and is
-likely to be very useful to new users.
-
-
-\newpage
-
-\begin{footnotesize}
-\begin{center}\normalsize\bf
-\mbox{}\\
-\mbox{}\\
-Distribution Agreement
-for the
-HOL System
-\end{center}
-
-\bigskip
-\bigskip
-
-\noindent The University of Cambridge Computer Laboratory
-is prepared
-to make available to:
-
-
-\begin{flushleft}
-\begin{tabular}{@{}|c@{}|@{}}\hline
-\begin{minipage}{\hsbw}
-{\small\baselineskip\HOLSpacing\begin{alltt}
-
-
-\( \)
-
-
-
-\end{alltt}}
-\end{minipage}\\ \hline
-\end{tabular}
-\end{flushleft}
-
-\noindent hereafter referred to as `the User',
-the HOL proof assistant system, hereafter referred to as
-`the Software', subject to the following terms:
-
-\begin{enumerate}
-
-\item
-The University of Edinburgh, the
-University of Cambridge and Inria, hereafter referred to as `the Developers',
-retain the copyright and all other legal
-rights to those parts of the software that they respectively
-developed, and they confirm that the sum of such parts constitute the whole.
-The User will ensure that the software in all its derivations
-carries a copyright notice of the form:
-\begin{center}
-\copyright\ University of Edinburgh,
-\copyright\ University of Cambridge,
-\copyright\ Inria
-\end{center}
-
-
-\item The User may employ the Software for any personal or internal purpose,
-but not as part or whole of any system to be distributed for commercial gain.
-The User shall be entitled to develop derivations of the Software and to make
-the Software and its derivations available to others, without charge, for
-research and for evaluating products developed by the User.
-
-\item The User shall not declare theorems to have been proved using HOL unless
-they were proved with an authorized version of the HOL system.  An executable
-binary file supplied by the Developers, or built using a Makefile supplied by
-them, constitutes an authorized version of HOL. Versions of HOL developed by
-the User are not authorized unless so designated, in writing, by the
-Developers.
-
-\item The User will notify the University of Cambridge Computer
-Laboratory, in writing, of any significant derivations of
-the Software made by
-the User. The User will also notify the University of Cambridge Computer
-Laboratory, in writing, of all persons or organizations to whom such
-derivations are distributed.
-
-\item The Software is made available on an {\it as is\/} basis; no guarantee
-of maintenance or reliability is provided by the Developers.
-
-\item The User shall not hold the Developers
-liable for any consequences arising from use of the
-Software whether by himself or by any other party.
-The User shall indemnify the Developers and their staff against any claim by
-any third party arising from or in connection with the use of the Software,
-other than a claim for copyright infringement.
-\end{enumerate}
-
-
-\bigskip
-
-\noindent{\bf Signed:}\dotfill\mbox{}
-
-\bigskip
-
-\noindent{\bf Position:}\dotfill\mbox{}
-
-\bigskip
-
-\noindent{\bf Date:}\dotfill\mbox{}
-\end{footnotesize}
-
-
+\begin{session}
+\begin{verbatim}
+$ pwd
+/local/scratch/mn200/hol98
+$ ls -F
+COPYRIGHT    README       examples/    install.txt  src/
+Manual/      bin/         help/        sigobj/      tools/
+\end{verbatim}
+\end{session}
+
+Now you will need to rebuild \HOL\ from the sources.\footnote{It is
+  possible that pre-built systems may soon be available from the
+  web-page mentioned above.}
+
+Before beginning you must have a current version of MoscowML.  In
+particular, you must have version 1.44 or later.  MoscowML is
+available on the web from \linebreak
+\texttt{http://www.dina.kvl.dk/\~sestoft/mosml.html}.
+
+The first step of the installation process is to edit the file
+\texttt{tools/configure.sml}.  At the top of the file are the
+parameters that need to be set.
+
+\begin{session}
+\begin{verbatim}
+$ cd tools/
+$ head -30 configure.sml
+(*---------------------------------------------------------------------------
+              HOL98 configuration script
+
+   First, edit the following user-settable parameters. Then execute this
+   file by going
+
+      mosml < configure.sml
+
+ ---------------------------------------------------------------------------*)
+
+
+(*---------------------------------------------------------------------------
+          BEGIN user-settable parameters
+ ---------------------------------------------------------------------------*)
+
+val mosmldir = _
+val holdir   = _
+val OS       = _         (* Operating system; choices are:
+                                "linux", "solaris", "unix", "winNT" *)
+
+val CC       = "gcc";     (* C compiler (for building quote filter)        *)
+val GNUMAKE  = "gnumake"; (* for robdd library                             *)
+
+val DEPDIR   = ".HOLMK";  (* local dir. where Holmake dependencies kept    *)
+val LN_S     = "ln -s";   (* only change if you are a HOL developer.       *)
+
+(*---------------------------------------------------------------------------
+          END user-settable parameters
+ ---------------------------------------------------------------------------*)
+\end{verbatim}
+\end{session}
+
+The first three parameters \emph{must} be set to sensible values.  The
+\texttt{mosmldir} value must be the name of the directory where the
+MoscowML implementation is on your machine.  The \texttt{holdir} value
+must be the name of the top-level directory listed in the first
+session above.  The \texttt{OS} value should be one of the strings
+specified in the accompanying comment.   All three strings must be
+enclosed in double quotes.
+
+The next two values (\texttt{CC} and \texttt{GNUMAKE}) are needed for
+``optional'' components of the system.  The first gives a string
+suitable for invoking the system's C compiler, and the second
+specifies a \textsf{make} program.
+
+After editing, \texttt{tools/configure.sml} the lines above will look
+something like:
+
+\begin{session}
+\begin{verbatim}
+$ more configure.sml
+
+  .... < some output elided > ....
+
+val mosmldir = "/usr/groups/hol/mosml.144";
+val holdir   = "/local/scratch/mn200/hol98";
+val OS       = "linux"       (* Operating system; choices are:
+                                "linux", "solaris", "unix", "winNT" *)
+
+val CC       = "gcc";     (* C compiler (for building quote filter)        *)
+val GNUMAKE  = "gnumake"; (* for robdd library                             *)
+
+
+  .... < some output elided > ....
+
+$
+\end{verbatim}
+\end{session}
+
+\noindent Now, at either this level (in the \texttt{tools} directory)
+or at the level above, the \texttt{configure.sml} script must be piped
+into the MoscowML interpreter (called \texttt{mosml}).  This process
+creates a suite of useful tools that will be used to build the full
+system.  In particular, it will compile \textsf{Holmake} and
+\textsf{build}.
+
+\begin{session}
+\begin{verbatim}
+$ /usr/groups/hol/mosml.144/bin/mosml < configure.sml
+Moscow ML version 1.44 (August 1999)
+Enter `quit();' to quit.
+- > val mosmldir = "/usr/groups/hol/mosml.144" : string
+- > val holdir = "/local/scratch/mn200/hol98" : string
+- > val OS = "linux" : string
+  val CC = "gcc" : string
+
+  .... < some output elided > ....
+
+Beginning configuration.
+- Making bin/Holmake.
+- Making bin/build.
+- Making hol98-mode.el (for Emacs)
+- Setting up the standard prelude.
+- Setting up src/0/Globals.sml.
+- Generating bin/hol.
+- Attempting to compile quote filter ... successful.
+Generating bin/hol.unquote.
+- Setting up the robdd library Makefile.
+- Setting up the muddy library Makefile.
+-
+Finished configuration!
+-
+$
+\end{verbatim}
+\end{session}
+
+The next step is to run the \textsf{build} program.  This should
+result in a great deal of output, and the eventual construction of a
+\HOL{} system in the \texttt{bin/} directory.  The \textsf{build}
+executable is in the \texttt{bin/} directory already, so should be run
+as follows:
+
+\begin{session}
+\begin{verbatim}
+$ ../bin/build
+
+  .... < a great deal of output elided > ....
+
+$
+\end{verbatim}
+\end{session}
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "tutorial"
+%%% End:
