@@ -134,12 +134,8 @@ The logical constants
 \holtxt{T}~(truth),
 %
 \index{truth values, in HOL logic@truth values, in \HOL{} logic!constants for}
-\index{T@\holtxt{T}!defined in terms of primitives}
 %
 \holtxt{F}~(falsity),
-%
-\index{F@\holtxt{F}!defined in terms of primitives}
-%
 \holtxt{\~{}}~(negation),
 %
 \index{ negation, in HOL logic@\holtxt{\~{}} (negation, in \HOL{} logic)}
@@ -147,27 +143,22 @@ The logical constants
 \holtxt{/\bs} (conjunction),
 %
 \index{ conjunction, in HOL logic@\holtxt{/\bs} (conjunction, in \HOL{} logic)}
-\index{conjunction, in HOL logic@conjunction, in \HOL{} logic!defined in terms of primitives}
 %
 \holtxt{\bs/} (disjunction),
 %
 \index{ disjunction, in HOL logic@\holtxt{\bs/} (disjunction, in \HOL{} logic)}
-\index{disjunction, in HOL logic@disjunction, in \HOL{} logic!defined in terms of primitives}
 %
 \holtxt{!} (universal quantification),
 %
 \index{ universal quantifier, in HOL logic@\holtxt{"!} (universal quantifier, in \HOL{} logic)}
-\index{universal quantifier, in HOL logic@universal quantifier, in \HOL{} logic!defined in terms of primitives}
 %
 \holtxt{?} (existential quantification),
 %
 \index{ existential quantifier, in HOL logic@\holtxt{?} (existential quantifier, in \HOL{} logic)}
-\index{existential quantifier, in HOL logic@existential quantifier, in \HOL{} logic!defined in terms of primitives}
 %
 and \holtxt{?!} (unique existence quantifier)
 %
 \index{ exists unique, in HOL logic@\holtxt{?"!} (exists unique, in \HOL{} logic)}
-\index{exists unique, in HOL logic@exists unique, in \HOL{} logic!defined in terms of primitives}
 %
 can all be defined in terms of equality,
 %
@@ -184,18 +175,9 @@ sometimes build on earlier ones.
 \index{conjunction, in HOL logic@conjunction, in \HOL{} logic!definitional axiom for}
 \index{iff, in HOL logic@iff, in \HOL{} logic!definitional axiom for}
 \index{negation, in HOL logic@negation, in \HOL{} logic!definitional axiom for}
-\index{exists unique, in HOL logic@exists unique, in \HOL{} logic}
 \index{ exists unique, in HOL logic@\holtxt{?"!} (exists unique, in \HOL{} logic)}
 \index{F@\holtxt{F}!axiom for}
 \index{F@\holtxt{F}!definitional axiom for}
-\index{T_DEF@\ml{T\_DEF}}
-\index{FORALL_DEF@\ml{FORALL\_DEF}}
-\index{EXISTS_DEF@\ml{EXISTS\_DEF}}
-\index{AND_DEF@\ml{AND\_DEF}}
-\index{OR_DEF@\ml{OR\_DEF}}
-\index{F_DEF@\ml{F\_DEF}}
-\index{NOT_DEF@\ml{NOT\_DEF}}
-\index{EXISTS_UNIQUE_DEF@\ml{EXISTS\_UNIQUE\_DEF}}
 \index{conjunction, in HOL logic@conjunction, in \HOL{} logic!definitional axiom for}
 \index{disjunction, in HOL logic@disjunction, in \HOL{} logic!definitional axiom for}
 \index{equality, in HOL logic@equality, in \HOL{} logic!primitive axiom for}
@@ -304,10 +286,8 @@ proving their consistency.
 The theory \theoryimp{bool} also supplies the definitions of a number of
 useful constants.
 \begin{hol}
-\index{LET_DEF@\ml{LET\_DEF}}
-\index{COND_DEF@\ml{COND\_DEF}}
-\index{COND@\holtxt{COND}}
-\index{LET@\ml{LET}}
+\index{COND, the HOL constant@\holtxt{COND}, the \HOL{} constant}
+\index{LET, the HOL constant@\ml{LET}, the \HOL{} constant}
 \index{conditional predicate, in HOL logic@conditional predicate, in \HOL{} logic!definitional axiom for}
 \index{conditionals, in HOL logic@conditionals, in \HOL{} logic}
 \begin{verbatim}
@@ -319,12 +299,12 @@ useful constants.
 
 The constant \holtxt{LET}
 %
-\index{let-terms, in HOL logic@\ml{let}-terms, in \HOL{} logic!constant for}
+\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!constant for}
 %
 is used in representing terms containing local variable bindings (\ie\
 \holtxt{let}-terms).
 %
-\index{let-terms, in HOL logic@\ml{let}-terms,in \HOL{} logic!definitional axiom for}
+\index{let-terms, in HOL logic@\holtxt{let}-terms, in \HOL{} logic!definitional axiom for}
 %
 For example, the concrete syntax \holtxt{let v = M in N} is translated
 by the parser to the term \holtxt{LET (\bs{}v.N) M}. For the full
@@ -668,22 +648,17 @@ contains the definitions of function composition (infixed \ml{o})
 \index{ function composition operator, in HOL logic@\ml{o} (function composition operator), in \HOL{} logic|(}
 and the combinators
 \ml{S},
-\index{S, constant in HOL logic@\ml{S}, constant in \HOL{} logic}
+\index{S, the HOL constant@\ml{S}, the \HOL{} constant}
 \ml{K},
-\index{K, constant in HOL logic@\ml{K}, constant in \HOL{} logic}
+\index{K, the HOL constant@\ml{K}, the \HOL{} constant}
 \ml{I},
-\index{I, constant in HOL logic@\ml{I}, constant in \HOL{} logic}
+\index{I, the HOL constant@\ml{I}, the \HOL{} constant}
 \ml{W},
-\index{W, constant in HOL logic@\ml{W}, constant in \HOL{} logic}
+\index{W, the HOL constant@\ml{W}, the \HOL{} constant}
 and \ml{C},
-\index{C, constant in HOL logic@\ml{C}, constant in \HOL{} logic}
+\index{C, the HOL constant@\ml{C}, the \HOL{} constant}
 
 \begin{hol}
-\index{K_DEF@\ml{K\_DEF}}
-\index{S_DEF@\ml{S\_DEF}}
-\index{I_DEF@\ml{I\_DEF}}
-\index{W_DEF@\ml{W\_DEF}}
-\index{C_DEF@\ml{C\_DEF}}
 {\small
 \begin{verbatim}
    o_DEF |- f o g = (\x. f(g x))
@@ -705,23 +680,19 @@ and \ml{C},
 \ml{combin}:
 
 \begin{hol}
-\index{K_THM@\ml{K\_THM}}
-\index{S_THM@\ml{S\_THM}}
-\index{I_THM@\ml{I\_THM}}
-\index{I_o_ID@\ml{I\_o\_ID}} %
 \begin{verbatim}
-  o_THM   |- !f g x. (f o g) x = f(g x)
-  o_ASSOC |- !f g h. f o (g o h) = (f o g) o h
+   o_THM   |- !f g x. (f o g) x = f(g x)
+   o_ASSOC |- !f g h. f o (g o h) = (f o g) o h
 
-  K_THM   |- !x y. K x y = x
-  S_THM   |- !f g x. S f g x = f x (g x)
-  I_THM   |- !x. I x = x
-  W_THM   |- !f x. W f x = f x x
-  C_THM   |- !f x y. C f x y = f y x
+   K_THM   |- !x y. K x y = x
+   S_THM   |- !f g x. S f g x = f x (g x)
+   I_THM   |- !x. I x = x
+   W_THM   |- !f x. W f x = f x x
+   C_THM   |- !f x y. C f x y = f y x
 
-  I_o_ID  |- !f. (I o f = f) /\ (f o I = f)
+   I_o_ID  |- !f. (I o f = f) /\ (f o I = f)
 
-  K_o_THM |- (!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))
+   K_o_THM |- (!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))
 \end{verbatim}
 \end{hol}
 
@@ -860,18 +831,18 @@ to be an application of the abstraction function. Subsequently, two
 crucial theorems are proved: {\small\verb+PAIR_EQ+} asserts that equal
 pairs have equal components and {\small\verb+ABS_PAIR_THM+} shows that
 every term having a product type can be decomposed into a pair of terms.
-\begin{hol}\index{COMMA_DEF@\ml{COMMA\_DEF}}
+\begin{hol}
 \index{COMMA_DEF@\ml{COMMA\_DEF}}
 \index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic!definition of}
 \index{PAIR_EQ@\ml{PAIR\_EQ}}
 \index{ABS_PAIR_THM@\ml{ABS\_PAIR\_THM}}
 {\small
 \begin{verbatim}
-  COMMA_DEF    |- !x y. $, x y = ABS_prod (\a b. (a = x) /\(b = y))
+   COMMA_DEF    |- !x y. $, x y = ABS_prod (\a b. (a = x) /\(b = y))
 
-  PAIR_EQ      |- ((x,y) = (a,b)) = (x=a) /\ (y=b)
+   PAIR_EQ      |- ((x,y) = (a,b)) = (x=a) /\ (y=b)
 
-  ABS_PAIR_THM |- !x. ?q r. x = (q,r)
+   ABS_PAIR_THM |- !x. ?q r. x = (q,r)
 \end{verbatim}
 }
 \end{hol}
@@ -882,11 +853,9 @@ are proved.
 %
 \begin{hol}
 \index{PAIR@\ml{PAIR}}
-\index{FST_DEF@\ml{FST\_DEF}}
-\index{SND_DEF@\ml{SND\_DEF}}
-\index{FST, the constant in HOL logic@\ml{FST}, the constant in \HOL{} logic!definition of}
-\index{SND, the constant in HOL logic@\ml{SND}, the constant in \HOL{} logic!definition of}
-\index{selectors, in HOL logic@selectors, in \HOL{} logic}
+\index{FST, the HOL constant@\ml{FST}, the \HOL{} constant!definition of}
+\index{SND, the HOL constant@\ml{SND}, the \HOL{} constant!definition of}
+\index{selectors, in HOL logic@selectors, in \HOL{} logic!for pairs}
 \begin{verbatim}
    PAIR     |- !x. (FST x,SND x) = x
    FST      |- !x y. FST(x,y) = x
@@ -901,20 +870,19 @@ are proved.
 
 In \HOL{}, a function of type $\alpha \# \beta\to\gamma$ always has a
 counterpart of type $\alpha\to\beta\to\gamma$, and \emph{vice versa}.
-This conversion is accomplished by the functions {\small\verb+CURRY+}
-and {\small\verb+UNCURRY+}. These functions are inverses.
+This conversion is accomplished by the functions \holtxt{CURRY} and
+\holtxt{UNCURRY}. These functions are inverses.
 %
 \begin{hol}
-\index{CURRY@\ml{CURRY}}
-\index{CURRY_DEF@\ml{CURRY\_DEF}}
-\index{UNCURRY_DEF@\ml{UNCURRY\_DEF}}
+\index{CURRY, the HOL constant@\ml{CURRY}, the \HOL{} constant}
+\index{UNCURRY, the HOL constant@\ml{UNCURRY}, the \HOL{} constant}
 {\small
 \begin{verbatim}
-  CURRY_DEF    |- !f x y. CURRY f x y = f (x,y)
-  UNCURRY_DEF  |- !f x y. UNCURRY f (x,y) = f x y
+   CURRY_DEF    |- !f x y. CURRY f x y = f (x,y)
+   UNCURRY_DEF  |- !f x y. UNCURRY f (x,y) = f x y
 
-  CURRY_UNCURRY_THM |- !f. CURRY (UNCURRY f) = f
-  UNCURRY_CURRY_THM |- !f. UNCURRY (CURRY f) = f
+   CURRY_UNCURRY_THM |- !f. CURRY (UNCURRY f) = f
+   UNCURRY_CURRY_THM |- !f. UNCURRY (CURRY f) = f
 \end{verbatim}
 }
 \end{hol}
@@ -927,7 +895,8 @@ applied component-wise ({\small\verb+##+}, infix) over a pair of type
 $\alpha \# \beta$ to obtain a pair of type $\gamma_1 \# \gamma_2$.
 %
 \begin{hol}
-\index{PAIR_MAP_THM@\ml{PAIR\_MAP\_THM}}
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for pairs}
+\index{ PAIR_MAP function@\ml{\#\#} (\holtxt{PAIR\_MAP} function)}
 {\small
 \begin{verbatim}
   PAIR_MAP_THM  |- !f g x y. (f ## g) (x,y) = (f x,g y)
@@ -1156,38 +1125,39 @@ the surface syntax.
 \index{terms, in HOL logic@terms, in \HOL{} logic!syntax of|)}
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!special forms in|)}
 
-\subsection{Disjoint sums}\label{sum}
+\subsection{Disjoint sums}
+\label{sum}
+\index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|(}
+\index{sums (disjoint unions), the HOL theory of@sums (disjoint unions), the \HOL{} theory of|(}
 
-The theory \theoryimp{sum}\index{sum@\ml{sum}} defines the binary  disjoint
-union
-%
-\index{disjoint union theory, in HOL logic@disjoint union theory, in \HOL{} logic|(}
-%
-type operator \holtxt{sum}.
-A type  {\small\verb%(%}$\sigma_1${\small\verb%,%}$\sigma_2${\small\verb%)sum%}
-denotes the  disjoint  union  of  types  $\sigma_1$  and $\sigma_2$.   The type
-operator {\small\verb%sum%} can be defined, just as {\small\verb%prod%} was, but
-the details are omitted here.\footnote{The definition of disjoint  unions in
-the HOL system is due to Tom Melham. The technical details of this definition can
-be found in~\cite{Melham-banff}.}  The \HOL{} parser
+
+The theory \theoryimp{sum} defines the binary disjoint union type
+operator \holtxt{sum}.  A type \holtxt{($\sigma_1$,$\sigma_2$)sum}
+denotes the disjoint union of types $\sigma_1$ and $\sigma_2$.  The
+type operator \holtxt{sum} can be defined, just as \holtxt{prod} was,
+but the details are omitted here.\footnote{The definition of disjoint
+  unions in the HOL system is due to Tom Melham. The technical details
+  of this definition can be found in~\cite{Melham-banff}.}  The \HOL{}
+parser
 %
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!of sum types}
-converts
-\ml{":}$\sigma_1${\small\verb%+%}$\sigma_2$\ml{"}\index{ disjoint union
-type operator, in HOL logic@\ml{+} (disjoint union
-type operator, in HOL logic)} into
-\ml{(}$\sigma_1$\ml{,}$\sigma_2$\ml{)sum}, and the printer inverts this.
+%
+converts \holtxt{``:$\sigma_1$+$\sigma_2$``}
+%
+\index{ disjoint union type operator, in HOL logic@\ml{+} (disjoint union type operator, in HOL logic)}
+%
+into \holtxt{``:($\sigma_1$,$\sigma_2$)sum``}, and the printer inverts
+this.
 
 The standard operations on sums are:
 
 \begin{hol}
-\index{disjoint union theory, in HOL logic@disjoint union theory, in \HOL{} logic|)}
-\index{INL, the constant in HOL logic@\ml{INL}, the constant in \HOL{} logic}
-\index{INR, the constant in HOL logic@\ml{INR}, the constant in \HOL{} logic}
-\index{ISL, the constant in HOL logic@\ml{ISL}, the constant in \HOL{} logic}
-\index{ISR, the constant in HOL logic@\ml{ISR}, the constant in \HOL{} logic}
-\index{OUTL, the constant in HOL logic@\ml{OUTL}, the constant in \HOL{} logic}
-\index{OUTR, the constant in HOL logic@\ml{OUTR}, the constant in \HOL{} logic}
+\index{INL, the HOL constant@\ml{INL}, the \HOL{} constant}
+\index{INR, the HOL constant@\ml{INR}, the \HOL{} constant}
+\index{ISL, the HOL constant@\ml{ISL}, the \HOL{} constant}
+\index{ISR, the HOL constant@\ml{ISR}, the \HOL{} constant}
+\index{OUTL, the HOL constant@\ml{OUTL}, the \HOL{} constant}
+\index{OUTR, the HOL constant@\ml{OUTR}, the \HOL{} constant}
 {\small
 \begin{verbatim}
    INL  : 'a -> 'a + 'b
@@ -1211,7 +1181,6 @@ complete and abstract characterization of the disjoint sum type.
 
 \begin{hol}
 \index{sum_Axiom@\ml{sum\_Axiom}}
-\index{sum_axiom@\ml{sum\_axiom}}
 \begin{verbatim}
   sum_Axiom  |- !f g. ?! h. (!x. h(INL x) = f x) /\ (!x. h(INR x) = g x)
 \end{verbatim}
@@ -1221,9 +1190,6 @@ complete and abstract characterization of the disjoint sum type.
 do with the discriminator functions \ml{ISL} and \ml{ISR}:
 
 \begin{hol}
-\index{ISL, the theorem in HOL logic@\ml{ISL}, the theorem in \HOL{} logic}
-\index{ISR, the theorem in HOL logic@\ml{ISR}, the theorem in \HOL{} logic}
-\index{ISL_OR_ISR@\ml{ISL\_OR\_ISR}}
 \begin{verbatim}
    ISL         |- (!x. ISL(INL x)) /\ (!y. ~ISL(INR y))
    ISR         |- (!x. ISR(INR x)) /\ (!y. ~ISR(INL y))
@@ -1246,6 +1212,10 @@ relating the projection functions and the discriminators.
 \end{verbatim}
 }
 \end{hol}
+
+\index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|}
+\index{sums (disjoint unions), the HOL theory of@sums (disjoint unions), the \HOL{} theory of|)}
+
 
 \subsection{The one-element type}%
 \index{one, the HOL theory@\ml{one}, the \HOL{} theory}%
@@ -1322,6 +1292,8 @@ with definition
 }
 \noindent
 Another useful function maps a function over an option:
+%
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for options}
 {\small
 \begin{verbatim}
    OPTION_MAP_DEF  |- (OPTION_MAP f NONE = NONE) /\
@@ -1388,14 +1360,21 @@ logic these must be taken as primitive.  Note also that
 could not be stated as a single axiom in first order logic because
 predicates (\eg\ \holtxt{P}) cannot be quantified.
 
-\subsubsection{The theory \theoryimp{prim\_rec}}\label{prim_rec}
+\subsubsection{The theory \theoryimp{prim\_rec}}
+\label{prim_rec}
 
-\index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL{} logic!automated|(}
 \index{primitive recursion theorem!for numbers|(}
 \index{prim_rec@\ml{prim\_rec}|(}
-In classical logic, unlike domain theory logics such as \PPL\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system},
-arbitrary recursive definitions\index{recursive definitions, in classical logics} are not allowed. For example, there is no
-function $f$ (of type \ml{num->num}) such that
+In classical logic, unlike domain theory logics such as \PPL,
+%
+\index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system}
+%
+arbitrary recursive definitions
+%
+\index{recursive definitions, in classical logics}
+%
+are not allowed. For example, there is no function $f$ (of type
+\ml{num->num}) such that
 
 \begin{alltt}
    !\(x\). \(f\) \(x\) = (\(f\) \(x\)) + 1
@@ -1465,7 +1444,7 @@ contains {\small\verb%m%} but not {\small\verb%n%}.
 \label{num-prim-rec}
 
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!primitive recursive|(}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated, for numbers|(}
+\index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated, for numbers}
 \index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL{} system|(}
 The primitive
 \index{primitive recursive definitions, in HOL logic@primitive recursive definitions, in \HOL{} logic!justification of}
@@ -1624,20 +1603,20 @@ functions are also proved in \theoryimp{prim\_rec}.
 
 
 \subsection{Arithmetic}
-
-The built-in theory {\small\verb%arithmetic%}
 \index{number theory, in HOL logic@number theory, in \HOL{} logic}
-\index{arithmetic@\ml{arithmetic}}
-contains primitive recursive definitions of the following standard
-arithmetic operators.
+\index{arithmeticTheory@\ml{arithmeticTheory}}
+
+The \HOL{} theory \theoryimp{arithmetic} contains primitive recursive
+definitions of the following standard arithmetic operators.
 
 \begin{hol}
 \index{ADD@\ml{ADD}}
 \index{SUB@\ml{SUB}}
 \index{MULT@\ml{MULT}}
-\index{EXP@\ml{EXP}}
-\index{ subtraction, in HOL logic@\ml{-} (subtraction, in \HOL{} logic)}
-\index{ multiplication, in HOL logic@\ml{*} (multiplication, in \HOL{} logic)}
+\index{EXP, the HOL constant@\holtxt{EXP}, the \HOL{} constant}
+\index{ subtraction, in HOL logic@\holtxt{-} (subtraction, in \HOL{} logic)}
+\index{ multiplication, in HOL logic@\holtxt{*} (multiplication, in \HOL{} logic)}
+\index{ exponentiation, in HOL logic@\holtxt{**} (exponentiation, in \HOL{} logic)}
 {\small
 \begin{verbatim}
    ADD    |- (!n. 0 + n = n) /\
@@ -1655,9 +1634,9 @@ arithmetic operators.
 }
 \end{hol}
 %
-Note that {\small\verb+EXP+} is an infix. The infix notation
-{\verb+**+} may be used in place of {\small\verb+EXP+}. Thus
-({\small\verb+x EXP y+}) means $x^y$, and so does ({\verb+x ** y+}).
+Note that \holtxt{EXP} is an infix. The infix notation
+\holtxt{**} may be used in place of \holtxt{EXP}. Thus
+(\holtxt{x EXP y}) means $x^y$, and so does (\holtxt{x ** y}).
 
 \paragraph{Comparison operators}
 
@@ -1683,8 +1662,8 @@ A constant specification is used to introduce division ({\small\verb+DIV+}, infi
 modulus ({\small\verb+MOD+}, infix) operators, together with their
 characterizing property.
 \begin{hol}
-\index{MOD@\ml{MOD}}
-\index{DIV@\ml{DIV}}
+\index{MOD, the HOL constant@\ml{MOD}, the \HOL{} constant}
+\index{DIV, the HOL constant@\ml{DIV}, the \HOL{} constant}
 {\small
 \begin{verbatim}
    DIVISION
@@ -1698,8 +1677,8 @@ characterizing property.
 The properties of a number being even or odd are defined recursively.
 %
 \begin{hol}
-\index{EVEN@\ml{EVEN}}
-\index{ODD@\ml{ODD}}
+\index{EVEN, the HOL constant@\ml{EVEN}, the \HOL{} constant}
+\index{ODD, the HOL constant@\ml{ODD}, the \HOL{} constant}
 {\small
 \begin{verbatim}
    EVEN |- (EVEN 0 = T) /\ !n. EVEN (SUC n) = ~EVEN n
@@ -1714,8 +1693,8 @@ The properties of a number being even or odd are defined recursively.
 The minimum and maximum of two numbers are defined in the usual way.
 %
 \begin{hol}
-\index{MIN@\ml{MIN}}
-\index{MAX@\ml{MAX}}
+\index{MIN, the HOL constant@\ml{MIN}, the \HOL{} constant}
+\index{MAX, the HOL constant@\ml{MAX}, the \HOL{} constant}
 {\small
 \begin{verbatim}
    MAX_DEF |- !m n. MAX m n = (if m < n then n else m)
@@ -1725,12 +1704,11 @@ The minimum and maximum of two numbers are defined in the usual way.
 \end{hol}
 
 \paragraph{Factorial}
-\index{FACT@\ml{FACT}}
+\index{FACT, the HOL constant@\ml{FACT}, the \HOL{} constant}
 
 The factorial of a number is a primitive recursive definition.
 %
 \begin{hol}
-\index{FACT@\ml{FACT}}
 {\small
 \begin{verbatim}
    FACT |- (FACT 0 = 1) /\ !n. FACT (SUC n) = SUC n * FACT n
@@ -1868,7 +1846,7 @@ operations, using the usual names for the operations, \eg \verb|+|,
 Simple digit sequences are parsed as decimal numbers, but the parser
 also supports the input of numbers in binary, octal and hexadecimal
 notation.  Numbers may be written in binary and hexadecimal form by
-prefixing them with the strings \ml{0b} and \ml{0x} respectively.  The
+prefixing them with the strings \holtxt{0b} and \holtxt{0x} respectively.  The
 `digits' A--F in hexadecimal numbers may be written in upper or lower
 case.  Binary numbers have their most significant digits left-most. In
 the interests of backwards compatibility, octal numbers are not
@@ -1899,9 +1877,9 @@ Thus
 
 \paragraph{Numerals and Peano numbers}
 
-Numerals are related to numbers built from {\small\verb+0+} and
-{\small\verb+SUC+} via the derived inference rule
-\ml{num\_CONV}, found in the \ml{numLib} library.
+Numerals are related to numbers built from \holtxt{0} and \holtxt{SUC}
+via the derived inference rule \ml{num\_CONV}, found in the
+\ml{numLib} library.
 
 \begin{boxed}
 \index{num_CONV@\ml{num\_CONV}|pin}
@@ -1982,7 +1960,9 @@ literals with character suffixes other than {\small\verb+n+}. For
 information on how to install new character suffixes, consult the
 \ml{add\_numeral\_info} entry in \REFERENCE.
 
-\subsection{Integers}\label{integers}
+\subsection{Integers}
+\label{integers}
+\index{integers, the HOL theory of@integers, the \HOL{} theory of}
 
 There is an extensive theory of integers in \HOL. The type of integers
 is constructed as a quotient on pairs of natural numbers. A standard
@@ -2030,6 +2010,7 @@ Term `1i = &(1n + 0n)`;
 
 
 \subsection{Real numbers}
+\index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|(}
 
 There is an extensive collection of theories that make up the
 development of real numbers and analysis in HOL, due to John Harrison
@@ -2082,6 +2063,7 @@ gauge integral the fundamental theorem of calculus, and McLaurin's
 theorem.
 
 \end{description}
+\index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
 
 \subsection{Theories of $n$-bit words}
 
@@ -2094,11 +2076,9 @@ paths, and finite strings.
 
 \subsection{Lists}\label{avra_list}
 \index{list, the type operator in HOL logic@\ml{list}, the type operator in \HOL{} logic}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated for lists|(}
 \index{types, in HOL logic@types, in \HOL{} logic!tools for construction of}
-\index{lists, in HOL logic@lists, in \HOL{} logic|(}
-\index{list theory, in HOL logic@\ml{list} theory, in \HOL{} logic|(}
-\index{ lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL{} logic)|(}
+\index{lists, the HOL theory of@lists, the \HOL{} theory of|(}
+\index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|(}
 
 \HOL{} lists are inductively defined finite sequences where each
 element in a list has the same type. The theory \ml{list} introduces
@@ -2137,7 +2117,6 @@ are proved and stored in the theory \ml{list}.
 \begin{hol}
 \index{list_Axiom@\ml{list\_Axiom}}
 \index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
-\index{axioms!in list theory@in \ml{list} theory}
 \index{list_INDUCT@\ml{list\_INDUCT}}
 \index{list_CASES@\ml{list\_CASES}}
 \index{CONS_11@\ml{CONS\_{11}}}
@@ -2168,7 +2147,7 @@ recursion theorem
 %
 on the natural numbers discussed above in Section~\ref{num-prim-rec}.
 It states the validity of primitive recursive definitions on lists,
-and can be used to justify any such definition.  The \ML\ function
+and can be used to justify any such definition.  The \ML{} function
 \ml{new\_recursive\_definition} uses this theorem to do
 automatic
 %
@@ -2189,15 +2168,16 @@ the theorems {\small\verb+NOT_NIL_CONS+} and {\small\verb+NOT_CONS_NIL+} show th
 cannot give rise to the same structure. Together, these three theorems
 are used for equational reasoning about lists.
 
-The predicate \ml{NULL} and the selectors \ml{HD} and \ml{TL} are
-defined
-\index{list definitions, in HOL logic@list definitions, in \HOL{} logic}
-in the theory \ml{list} by
+The predicate \ml{NULL} and the selectors
+%
+\index{selectors, in HOL logic@selectors, in \HOL{} logic!for lists}
+%
+\ml{HD} and \ml{TL} are defined in the theory \theoryimp{list} by
 %
 \begin{hol}
-\index{NULL, the definition in HOL logic@\ml{NULL}, the definition in \HOL{} logic}
-\index{HD, the definition in HOL logic@\ml{HD}, the definition in \HOL{} logic}
-\index{TL, the definition in HOL logic@\ml{TL}, the definition in \HOL{} logic}
+\index{NULL, the HOL constant@\ml{NULL}, the \HOL{} constant}
+\index{HD, the HOL constant@\ml{HD}, the \HOL{} constant}
+\index{TL, the HOL constant@\ml{TL}, the \HOL{} constant}
 {\small
 \begin{verbatim}
    NULL |- NULL [] /\ (!h t. ~NULL(h::t))
@@ -2209,32 +2189,6 @@ in the theory \ml{list} by
 
 \noindent The following functions on lists are also defined in the theory \ml{list}.
 %
-\index{SUM, the theorem in HOL logic@\ml{SUM}, the theorem in \HOL{} logic}
-\index{APPEND, the theorem in HOL logic@\ml{APPEND}, the theorem in \HOL{} logic}
-\index{concatenation, of lists!in HOL logic@in \HOL{} logic}
-\index{FLAT, the theorem in HOL logic@\ml{FLAT}, the theorem in \HOL{} logic}
-\index{LENGTH, the theorem in HOL logic@\ml{LENGTH}, the theorem in \HOL{} logic}
-\index{MAP, the theorem in HOL logic@\ml{MAP}, the theorem in \HOL{} logic}
-\index{EL, the theorem in HOL logic@\ml{EL}, the theorem in \HOL{} logic}
-\index{SUM, the constant in HOL logic@\ml{SUM}, the constant in \HOL{} logic}
-\index{APPEND, the constant in HOL logic@\ml{APPEND}, the constant in \HOL{} logic}
-\index{FLAT, the constant in HOL logic@\ml{FLAT}, the constant in \HOL{} logic}
-\index{LENGTH, the constant in HOL logic@\ml{LENGTH}, the constant in \HOL{} logic}
-\index{MAP, the constant in HOL logic@\ml{MAP}, the constant in \HOL{} logic}
-\index{EL, the constant in HOL logic@\ml{EL}, the constant in \HOL{} logic}
-\index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
-\index{EVERY_DEF@\ml{EVERY\_DEF}}
-\index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
-\index{EXISTS_DEF@\ml{EXISTS\_DEF}}
-\index{EXISTS, the HOL constant@\ml{EXISTS}, the \HOL{} constant}
-\index{FILTER@\ml{FILTER}}
-\index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
-\index{FOLDL@\ml{FOLDL}}
-\index{FOLDL, the HOL constant@\ml{FOLDL}, the \HOL{} constant}
-\index{FOLDR@\ml{FOLDR}}
-\index{FOLDR, the HOL constant@\ml{FOLDR}, the \HOL{} constant}
-\index{MEM@\ml{MEM}}
-\index{MEM, the HOL constant@\ml{MEM}, the \HOL{} constant}
 %
 \paragraph{Case expressions}
 
@@ -2261,6 +2215,7 @@ $\konst{list\_case}\ e_2\ (\lambda h\; t.\ e_3)\ e_1$ where the constant
 }
 
 \paragraph{List membership}
+\index{MEM, the HOL constant@\ml{MEM}, the \HOL{} constant}
 
 Membership in a list, \ml{MEM}, is defined as follows:
 %
@@ -2272,6 +2227,9 @@ Membership in a list, \ml{MEM}, is defined as follows:
 }
 
 \paragraph {Concatenation of lists}
+\index{APPEND, the HOL constant@\ml{APPEND}, the \HOL{} constant}
+\index{concatenation, of lists!in HOL logic@in \HOL{} logic}
+\index{FLAT, the HOL constant@\ml{FLAT}, the \HOL{} constant}
 
 Binary list concatenation ({\small\verb+APPEND+}) may also be denoted by
 the infix operator {\small\verb|++|}; thus the expression
@@ -2290,13 +2248,16 @@ The concatenation of a list of lists into a list is achieved by
 }
 
 \paragraph {Numbers and lists}
+\index{LENGTH, the HOL constant@\ml{LENGTH}, the \HOL{} constant}
+\index{EL, the HOL constant@\ml{EL}, the \HOL{} constant}
+\index{list_size, the HOL constant@\ml{list\_size}, the \HOL{} constant}
 
-The length ({\small\verb+LENGTH+}) and size ({\small\verb+list_size+})
-of a list are suported notions. The size of a list takes account of
-the size of each element of the list (given by parameter
+The length (\holtxt{LENGTH}) and size (\holtxt{list\_size}) of a list
+are suported notions. The size of a list takes account of the size of
+each element of the list (given by parameter
 $f:\alpha\to\konst{num}$), while the length of the list ignores the
 size of each list element. The alternate length definition
-({\small\verb+LEN+}) is tail-recursive.
+(\holtxt{LEN}) is tail-recursive.
 %
 {\small
 \begin{verbatim}
@@ -2317,6 +2278,9 @@ Note that the extraction of the $n$th element (\holtxt{EL}) of a
 list starts its indexing from 0.
 
 \paragraph {Mapping functions over lists}
+\index{MAP, the HOL constant@\ml{MAP}, the \HOL{} constant}
+\index{MAP2, the HOL constant@\ml{MAP2}, the \HOL{} constant}
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for lists}
 
 There are functions for mapping a function $f : \alpha \to \beta$ over
 a single list (\holtxt{MAP}) or a function $f : \alpha \to \beta
@@ -2337,13 +2301,17 @@ The behaviour of \holtxt{MAP2} in the two cases when it is given
 one empty list and one non-empty list is unspecified.
 
 \paragraph {Predicates over lists}
+\index{FILTER, the HOL constant@\ml{FILTER}, the \HOL{} constant}
+\index{EVERY, the HOL constant@\ml{EVERY}, the \HOL{} constant}
+\index{EXISTS, the HOL constant (over lists)@\ml{EXISTS}, the \HOL{}
+  constant (over lists)}
 
 Predicates can be applied to lists in a universal sense (the predicate
 must hold of every element in the list) or an existential sense (the
 predicate must hold of some element in the list). This functionality
-is supported by {\small\verb+EVERY+} and {\small\verb+EXISTS+},
-respectively. The elimination of all elements in list not satisfying
-a given predicate is performed by {\small\verb+FILTER+}.
+is supported by \holtxt{EVERY} and \holtxt{EXISTS}, respectively. The
+elimination of all elements in list not satisfying a given predicate
+is performed by \holtxt{FILTER}.
 %
 {\small
 \begin{verbatim}
@@ -2366,6 +2334,8 @@ The predicate \holtxt{ALL\_DISTINCT} holds on a list  just
 in case no element in the list is equal to any other.
 
 \paragraph {Folding}
+\index{FOLDL, the HOL constant@\ml{FOLDL}, the \HOL{} constant}
+\index{FOLDR, the HOL constant@\ml{FOLDR}, the \HOL{} constant}
 
 Applying a binary function $f : \alpha\to\beta\to\beta$ pairwise
 through a list and accumulating the result is known as
@@ -2463,15 +2433,12 @@ are unspecified on empty lists.
 {\small\verb+list+}, see \REFERENCE.  Further development of list
 theory can be found in \theoryimp{rich\_list}.
 
-\index{list theorems, in HOL logic@list theorems, in \HOL{} logic|)}
-\index{ lists, in HOL logic@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, in \HOL{} logic)|)}
-\index{list theory, in HOL logic@\ml{list} theory, in \HOL{} logic|)}
-\index{lists, in HOL logic@lists, in \HOL{} logic|)}
-\index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated for lists|)}
+\index{lists, the HOL theory of@lists, the \HOL{} theory of|)}
+\index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|)}
 
 \subsection{Possibly infinite sequences (\theoryimp{llist})}
 
-\index{lazy lists@``lazy'' lists!\HOL{} theory of|(}
+\index{lazy lists@``lazy'' lists!the \HOL{} theory of|(}
 The theory \theoryimp{llist} contains the definition of a type of
 possibly infinite sequences.  This type is similar to the ``lazy
 lists'' of programming languages like Haskell, hence the name of the
@@ -2523,6 +2490,8 @@ functions that map into the \ml{llist} type.  This axiom has the name
 Other constants in the theory \theoryimp{llist} include \texttt{LTAKE},
 \texttt{LDROP}, \texttt{LMAP}, \texttt{LFINITE} and
 \texttt{LFILTER}. Their types are
+%
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for possibly infinite sequences}
 {\small
 \begin{verbatim}
    LTAKE   : num -> 'a llist -> 'a list
@@ -2600,13 +2569,13 @@ relation $R$ such that
 Of course, a possible $R$ would be equality itself, but the strength
 of this theorem is that other, more convenient relations can also be
 used.
-\index{lazy lists@``lazy'' lists!\HOL{} theory of|)}
+\index{lazy lists@``lazy'' lists!the \HOL{} theory of|)}
 
 \subsection{Labelled paths (\theoryimp{path})}
 
 The theory \theoryimp{path}
-\index{labelled paths!\HOL{} theory of|(}
-\index{reduction sequences!\HOL{} theory of|(}
+\index{labelled paths!the \HOL{} theory of|(}
+\index{reduction sequences!the \HOL{} theory of|(}
 defines a binary type operator $(\alpha,\beta)\texttt{path}$, which
 stands for possibly infinite paths of the following form
 \[
@@ -2641,6 +2610,9 @@ x \stackrel{l}{\longrightarrow}
   \stackrel{l_2}{\longrightarrow} \cdots\quad}_p
 \]
 Other constants defined in theory \theoryimp{path} include
+%
+\index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for labelled paths}
+%
 {\small
 \begin{verbatim}
    finite  : ('a,'b) path -> bool
@@ -2721,8 +2693,8 @@ finite $R$-paths:
       !p. okpath R p /\ finite p ==> P p
 \end{verbatim}
 }
-\index{labelled paths!\HOL{} theory of|)}
-\index{reduction sequences!\HOL{} theory of|)}
+\index{labelled paths!the \HOL{} theory of|)}
+\index{reduction sequences!the \HOL{} theory of|)}
 
 
 \subsection{Character strings (\theoryimp{string})}
@@ -2891,11 +2863,16 @@ Several different notions of a collection of elements are available in
 \HOL: sets, multisets, relations, and finite maps.
 
 \subsection{Sets (\theoryimp{pred\_set})}
+\index{sets, the HOL theory of@sets, the \HOL{} theory of}
 
 An extensive development of set theory is available in the theory
-{\small\verb+pred_set+}. Sets are represented by functions of the type
+\theoryimp{pred\_set}. Sets are represented by functions of the type
 $\alpha \to \konst{bool}$, \ie, they are so-called characteristic
-functions. One can use the type abbreviation $\alpha\; \konst{set}$
+functions.
+%
+\index{characteristic functions!as basis for \HOL{} theory of sets}
+%
+One can use the type abbreviation $\alpha\; \konst{set}$
 instead of $\alpha \to \konst{bool}$. Sets may be finite or
 infinite. All of the elements in a set must have the same type.
 

@@ -931,39 +931,46 @@ system, with hypotheses\footnote{Note that `hypotheses' and
   `conclusion' are also used for the components of sequents.} $L$ and
 conclusion $(\Gamma,t)$.
 
-A formula\index{formulas as terms, in HOL logic@formulas as terms, in
-  \HOL{} logic} in the abstract is represented concretely in \HOL{} by a
-term whose \HOL{} type is {\small\verb+:bool+}.  Therefore, a
-term
+A formula
+%
+\index{formulas as terms, in HOL logic@formulas as terms, in \HOL{} logic}
+%
+in the abstract is represented concretely in \HOL{} by a term whose
+\HOL{} type is \holtxt{:bool}.  Therefore, a term
+%
 \index{terms, in HOL logic@terms, in \HOL{} logic!as logical formulas}
-of type {\small\verb+:bool+} is used to represent a
-member of the set of hypotheses of a sequent; and likewise to
-represent the conclusion of a sequent.  Sets in this context are
-represented by an implementation of the \ML{} signature \ml{HOLset}
-supporting operations such as \ml{member} and
-\ml{union}.
+%
+of type \holtxt{:bool} is used to represent a member of the set of
+hypotheses of a sequent; and likewise to represent the conclusion of a
+sequent.  Sets in this context are represented by an implementation of
+the \ML{} signature \ml{HOLset} supporting operations such as
+\ml{member} and \ml{union}.
+%
 \index{sequents!representation of, in HOL logic@representation of, in \HOL{} logic}
 
-A theorem in the abstract is represented concretely in the \HOL\
-system by a value with the \ML\ abstract type
-{\small\verb+thm+}
-\index{thm@\ml{thm}}.
-The type {\verb+thm+} has a destructor function
+A theorem in the abstract is represented concretely in the \HOL{}
+system by a value with the \ML{} abstract type \ml{thm}.
+%
+\index{thm (ML type)@\ml{thm} (\ML{} type)}
+%
+The type \ml{thm} has a destructor function
 
 \begin{boxed}
 \index{dest_thm@\ml{dest\_thm}|pin}
 \begin{verbatim}
    dest_thm : thm -> (term list * term)
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 \noindent which returns a pair consisting of a list of the
 hypotheses
 \index{hypotheses!of theorems}
-and the conclusion
-\index{conclusions!of theorems}, respectively, of a theorem.
-The order of assumptions in the list should not be relied on.  A
-theorem's hypotheses are also available in the set form with the
-function
+and the conclusion,
+\index{conclusions!of theorems}
+%
+respectively, of a theorem.  The order of assumptions in the list
+should not be relied on.  A theorem's hypotheses are also available in
+the set form with the function
 
 \begin{boxed}
 \index{hyp_set@\ml{hyp\_set}}
