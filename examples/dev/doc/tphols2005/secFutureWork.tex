@@ -1,13 +1,36 @@
 
-The compiler described here has only just been completed and is still
-being tested (e.g. by simulating circuits and viewing the resulting
-waveforms). In the immediate future we plan to ruggedise and debug the
-existing code.  In parallel with this we are already undertaking some
-subtantial case studies, as described in
-Section~\ref{secCaseStudy}. We plan to study the hardware we compile
-and to work on making the compiler produce better designs.
 
-At present all data-refinement (e.g. from numbers or enumerated types
+A first version of the compiler described here has only just been
+completed and is still being tested (e.g. by simulating circuits and
+viewing the resulting waveforms: we use Icarus Verilog and GTKWave,
+with are both public domain).  The source code for our compiler and
+the current state of various examples (including the Booth multiplier
+and AES) can be inspected at
+SourceForge\footnote{\url{http://cvs.sourceforge.net/viewcvs.py/hol/hol98/examples/dev/}}
+
+Although we have a flow from higher
+order logic to Verilog, there are still some unresolved issues. The
+most urgent of these is that it appears that on some examples the
+circuits we generate do not initialise properly under simulation!  We
+think there may be an inadequacy in our high level models, as they
+assume all bits are $1$ or $0$, so do not represent the possibility of
+uninitialised states (\texttt{x}~in~Verilog). Thus although we create
+correct-by-construction circuits, the model underlying the correctness
+verification may be too crude. We hope to resolve this soon (e.g.~by
+the time a final version of this paper is produced). If necessary, we
+can add extra initialisation logic to the circuit constructors and
+then reverify the synthesis laws using a 3-valued model of bits
+(as in Verilog).
+
+
+
+In the immediate future we plan to ruggedise and debug the existing
+code and continue and complete the case studies described in
+Section~\ref{secCaseStudy}. An important part of these case studies is
+examining the output of our compiler and developing improvements to
+ensure that it can produce reasonable quality designs.
+
+At present all data-refinement (e.g.~from numbers or enumerated types
 to words) must be done manually, by proof in higher order logic. The
 HOL4 system has some `boolification' facilities that automatically
 translate higher level data-types into bit-strings, and we hope to

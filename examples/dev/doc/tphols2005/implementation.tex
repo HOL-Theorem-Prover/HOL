@@ -16,6 +16,8 @@ $\DEF{Dev}~f_1$, $\ldots$, $\DEF{Dev}~f_p$, where functions $f_1$,
 $\ldots$, $f_p$ are not yet implemented. The compilation by deduction
 goes through a number of steps.
 
+\vspace*{-3mm}
+
 \subsection*{Step 1: conversion to combinators}
 
 The first step in translating $f(x_1,\ldots,x_n)=e$ is to encode $e$
@@ -65,6 +67,8 @@ from:
 \(         (\DEF{Par} (\DEF{Seq} (\DEF{Par} ({\lambda}(n,acc). n) ({\lambda}(n,acc). 1)) ({-}))   \)
 \(              (\DEF{Seq} (\DEF{Par} ({\lambda}(n,acc). n) ({\lambda}(n,acc). acc)) ({\times}))) \)
 \end{alltt}}
+
+\vspace*{-3mm}
 
 \subsection*{Step 2: implementation using circuit constructors}
 
@@ -182,6 +186,8 @@ of $d_1$ and $d_2$, but $\DEF{PRECEDE}~f~d$ and $\DEF{FOLLOW}~d~f$
 just `wire' f before or after $d$, respectively, without introducing a
 handshake. 
 
+\vspace*{-3mm}
+
 \subsection*{Step 3: unfolding to a cycle-level netlist}
 
 The result of Step~2 is a theorem
@@ -254,6 +260,8 @@ is an existentially quantified conjunction of predicates describing
 primitive components (combinational components plus \DEF{REG} and
 \DEF{REGF}).
 
+\vspace*{-3mm}
+
 \subsection*{Step 4: temporal refinement to a clocked synchronous circuit}
 
 At the end of Step~3 one has a circuit built out of standard gates,
@@ -313,6 +321,8 @@ The term ${\it{Imp}}$ represents the compiled implementation of $\DEF{Dev}~f$ in
 It differs from ${\it{Imp}}_C$ produced by Step~3 in having an explicit clock and using
 registers $\DEF{Dtype}$ and $\DEF{Dff}$ rather than \texttt{REG} and \texttt{REGF}.
 
+\vspace*{-3mm}
+
 \subsection*{Step 5: translation to Verilog}
 
 The implementation ${\it{Imp}}$ produced by Step~4 is a circuit
@@ -326,6 +336,8 @@ Verilog by proof. However, there is a direct and transparent
 correspondence between the structure of ${\it{Imp}}$ and the Verilog
 text that is printed.  Currently we have a translator to Verilog
 implemented, but we are still testing and validating it.
+
+
 
 %Steps 1 and 2 are performed automatically when
 %a function is defined using the \texttt{hwDefine} command.  Steps 3
