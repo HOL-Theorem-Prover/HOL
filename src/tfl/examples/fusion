@@ -2,7 +2,7 @@
     Transformation of programs involving "unfold" : the fusion law. 
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "Q", "pairTools"]; open bossLib pairTools; 
+app load ["bossLib", "Q", "pairTools"]; open bossLib TotalDefn pairTools; 
 
 infix 8 by; infix &&;
 show_assums := true;
