@@ -1383,7 +1383,7 @@ val lemma2 = TAC_PROOF (([],
 val LINV_DEF =
    let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma2
        val th2 = CONV_RULE SKOLEM_CONV th1
-   in 
+   in
       new_specification("LINV_DEF",["LINV"],th2)
    end;
 
@@ -1409,7 +1409,7 @@ val lemma3 = TAC_PROOF(([],
 val RINV_DEF =
     let val th1 = CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV) lemma3
         val th2 = CONV_RULE SKOLEM_CONV th1
-    in 
+    in
          new_specification("RINV_DEF",["RINV"],th2)
     end;
 
@@ -1771,7 +1771,7 @@ val CARD_EXISTS = TAC_PROOF(([],
 (* ---------------------------------------------------------------------*)
 
 val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
-                  
+
 
 (* ---------------------------------------------------------------------*)
 (* Various cardinality results.						*)
@@ -2982,7 +2982,7 @@ val _ = export_rewrites
      "IMAGE_INSERT", "IMAGE_SUBSET", "IMAGE_UNION", "IN_IMAGE",
      (* "INSERT" theorems *)
      "INSERT_DELETE", "INSERT_DIFF", "INSERT_INSERT", "INSERT_SUBSET",
-     "IN_INSERT", "NOT_IN_EMPTY",
+     "IN_INSERT", "NOT_IN_EMPTY", "NOT_INSERT_EMPTY", "NOT_EMPTY_INSERT",
      (* "INTER" theorems *)
      "IN_INTER", "INTER_EMPTY", "INTER_FINITE", "INTER_IDEMPOT",
      "INTER_SUBSET", "INTER_UNIV", "SUBSET_INTER",
