@@ -11,7 +11,7 @@ val vAR_PREFIX_LIST : string list ref
 val hOL_OP_LIST : string list ref
 val hOL_SYM_ALIST : (string * string) list ref
 val hOL_ID_ALIST : (string * string) list ref
-val hOL_CURRIED_ALIST : (string * (string * int)) list ref
+val hOL_CURRIED_ALIST : (string * (string * int * bool)) list ref
 
 val eCHO : bool ref
 

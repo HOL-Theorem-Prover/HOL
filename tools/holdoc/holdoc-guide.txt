@@ -62,12 +62,12 @@ IMNFILES=../../HOL-model/Timed/TNet.imn timedthreads.imn
 %.tex : %.mng $(IMNFILES)
 	cat $(IMNFILES) $*.mng \
 		| $(MNGTOLATEX) 2>&1 > $*.tex \
-		| sort -u | tee $*.errs
+		| sort | uniq -c | tee $*.errs
 
 %Script.tex : %Script.sml $(IMNFILES)
 	cat $(IMNFILES) $*Script.sml \
 		| $(LTSTOLATEX) 2>&1 > $*Script.tex \
-		| sort -u | tee $*Script.errs
+		| sort | uniq -c | tee $*Script.errs
 
 .PRECIOUS : %.tex  # we want to keep these around for debugging purposes
 
@@ -191,14 +191,15 @@ Note that in TeX, you should usually append a space, thus:
 
 in case the next character is not a backslash or other delimiter!
 
-(*[ HOL_CURRIED_ALIST id "\TeXery" 2 id "\moreTexery" 3 ]*) adds the
-named identifiers to the list of "curried HOL identifier", which have
-the specified number of arguments, which are passed to the specified
-TeX command.  Note that commas within an argument are converted to
-"}{", but the extra TeX args introduced this way do not count towards
-the number specified in this directive.  An argument is a (possibly
-qualified using dot notation) id, or a balanced-paren subsequence.
-The outer parentheses are stripped if present.
+(*[ HOL_CURRIED_ALIST id "\TeXery" 2 true id "\moreTexery" 3 false ]*)
+adds the named identifiers to the list of "curried HOL identifier",
+which have the specified number of arguments, which are passed to the
+specified TeX command.  If the flag is true, commas within an argument
+are converted to "}{", but the extra TeX args introduced this way do
+not count towards the number specified in this directive.  An argument
+is a (possibly qualified using dot notation) id, or a balanced-paren
+subsequence.  If the flag is true, the outer parentheses are stripped
+if present.
 
 
 The last two are a bit different.

@@ -371,7 +371,7 @@ and readbal ds ts cf = (* read a balanced arg; cf=true ==> level 1 commas to }{ 
   in
   bal 0 ds ts
 
-and readarg ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
+and readarg cf ts = (* read a single arg: spaces then (id.id.id or matched-paren string) *)
   let rec sp ts =
     match ts with
       (White(_)::ts) -> sp ts
@@ -381,27 +381,33 @@ and readarg ts = (* read a single arg: spaces then (id.id.id or matched-paren st
     match ts with
       (Sep(".")::Ident(s,true)::ts) -> dotted (Ident(s,true)::Sep(".")::ds) ts
     | (White(_)::_)                 -> (List.rev ds,ts)
+    | (Sep(_)::_)                   -> (List.rev ds,ts)
     | _                             -> raise BadArg
   in
   match sp ts with
     (Ident(s,true)::ts) -> dotted [Ident(s,true)] ts
-  | (Sep("(")::_)       -> readbal [] ts true  (* commas add extra args *)
+  | (Sep("(")::_)       -> readbal [] ts cf (* commas to add extra args? *)
   | _                   -> raise BadArg
 
 
-and mcurry x c n v xs = (* munge n arguments of curried function c; return string and remainder *)
+and mcurry x c n cf v xs = (* munge n arguments of curried function c;
+                             return string and remainder;
+                             strip outer parens and turn commas to }{ if b *)
   let wrap ys = "{"^munge v ys^"}"
   in
   let rec go n args ts =
     if n <= 0 then (c^String.concat "" (List.map wrap (List.rev args)),ts)
-    else match readarg ts with
+    else match readarg cf ts with
            (ds,ts) -> go (n-1) (ds::args) ts
   in
   try
     go n [] xs
   with
-    BadArg -> write_warning ("curry parse failed: "^mtok v x^" ==> "^c) ;
-              (mtok v x,xs)  (* abort curry parse; do it uncurried *)
+    BadArg -> (* abort curry parse; do it uncurried *)
+              let w = "curry parse failed: "^mtok v x^" ==> "^c
+              in
+              write_warning w;
+              ("\n% WARNING: "^w^"\n"^mtok v x^"%\n%\n",xs)
 
 and munges v ls = (* munge a list of lines *)
   match ls with
@@ -412,10 +418,10 @@ and munges v ls = (* munge a list of lines *)
 and munge v xs = (* munge a line of tokens *)
   match xs with
     (Ident(s,true)::xs) -> (match is_curried s with
-                              Some (c,n) -> let (s,xs') = mcurry (Ident(s,true)) c n v xs
-                                            in
-                                            s^munge v xs'
-                            | None       -> mtok v (Ident(s,true))^munge v xs)
+                              Some (c,n,cf) -> let (s,xs') = mcurry (Ident(s,true)) c n cf v xs
+                                               in
+                                               s^munge v xs'
+                            | None          -> mtok v (Ident(s,true))^munge v xs)
   | (x::xs)             -> mtok v x^munge v xs
   | []                  -> ""
 

@@ -41,13 +41,13 @@ let dir_proc n ts =
                           raise BadDirective
     | []               -> []
   in
-  let rec go2n ts =
+  let rec go2nb ts =
     match ts with
-      (White(_)::ts)   -> go2n ts
-    | (Indent(_)::ts)  -> go2n ts
-    | (Comment(_)::ts) -> go2n ts
-    | (Ident(s1,_)::White(_)::Str(s2)::White(_)::Ident(s3,true)::ts)
-                       -> (s1,(s2,int_of_string s3)) :: go2n ts
+      (White(_)::ts)   -> go2nb ts
+    | (Indent(_)::ts)  -> go2nb ts
+    | (Comment(_)::ts) -> go2nb ts
+    | (Ident(s1,_)::White(_)::Str(s2)::White(_)::Ident(s3,true)::White(_)::Ident(s4,true)::ts)
+                       -> (s1,(s2,int_of_string s3,bool_of_string s4)) :: go2nb ts
     | (t::ts)          -> prerr_endline ("Unexpected token in alist(c): "^render_token t);
                           raise BadDirective
     | []               -> []
@@ -64,7 +64,7 @@ let dir_proc n ts =
   | "HOL_OP_LIST"     -> hOL_OP_LIST     := (go ts)  @ !hOL_OP_LIST
   | "HOL_SYM_ALIST"   -> hOL_SYM_ALIST   := (go2 ts) @ !hOL_SYM_ALIST
   | "HOL_ID_ALIST"    -> hOL_ID_ALIST    := (go2 ts) @ !hOL_ID_ALIST
-  | "HOL_CURRIED_ALIST" -> hOL_CURRIED_ALIST := (go2n ts) @ !hOL_CURRIED_ALIST
+  | "HOL_CURRIED_ALIST" -> hOL_CURRIED_ALIST := (go2nb ts) @ !hOL_CURRIED_ALIST
   (* other *)
   | "ECHO"            -> eCHO := true
   | "NOECHO"          -> eCHO := false
