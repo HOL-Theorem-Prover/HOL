@@ -56,9 +56,10 @@ and parse_line0 = parser  (* parse a line; don't care if it starts with indent;
 
 and parse_line01 = parser
     [< 'DirBlk(n,ts) when (ignore (dir_proc n ts); true)
-                                ; e = parse_line01 >] -> e
-  | [< 't when not (isIndent t) ; e = parse_line01 >] -> t :: e
-  | [<>]                                              -> []
+                     ; e = parse_line01 >] -> e
+  | [< 't when not (isIndent t) && t <> Backtick
+          ; e = parse_line01 >]            -> t :: e
+  | [<>]                                   -> []
 
 and parse_lineT = parser  (* parse a chunk of TeX or HOL; process directives *)
     [< 'TeXNormal(s) >] -> [TeXNormal(s)]
@@ -90,6 +91,11 @@ and parse_longchunk1 n1 n2 = parser
        c = parse_longchunk >] -> [Indent(n1)] :: (Indent(n2) :: t :: e) :: c
   | [<>]                  -> []
 
+and parse_wholechunk = parser (* parse a chunk delimited by a closing backtick *)
+    [< 'Backtick >]                                 -> []
+  | [< 't; e = parse_line0; c = parse_wholechunk >] -> (t :: e) :: c
+  | [<>]                                            -> []
+
 and optcomm = parser
     [< 'Comment(c) >]                  -> Some [Comment(c)]
   | [< 'HolStartTeX; ts = parse_tex >] -> Some (HolStartTeX :: ts)
@@ -117,9 +123,9 @@ and wopt = parser
   | [<>]                         -> []
 
 and ids_nocomm = parser
-    [< 'Ident(s,_) ; ss = ids_nocomm >] -> s :: ss
-  | [< 'White(_)   ; ss = ids_nocomm >] -> ss
-  | [<>]                               -> []
+    [< 'Ident(s,true) ; ss = ids_nocomm >] -> s :: ss
+  | [< 'White(_)      ; ss = ids_nocomm >] -> ss
+  | [<>]                                   -> []
 
 and sp' = parser
     [< 'White(s)                  ; s1 = sp' >] -> White(s)     :: s1
@@ -475,6 +481,7 @@ and mungelab v s = (* munge the label *)
     match xs with
       (Ident("-->",_) :: xs) -> munge v (List.rev ys) []
     | (Ident("--->",_) :: xs)-> munge v (List.rev ys) []
+    | (Ident("--=>",_) :: xs)-> munge v (List.rev ys) []
     | (x :: xs)              -> go1 xs (x::ys)
     | _                      -> raise BadLabel
   in
@@ -517,6 +524,7 @@ type rule =
     Rule of string list * string * string list * token list option (* v, n, cat, desc, *)
         * token list list * token list * token list list (* lhs, lab, rhs, *)
         * token list list * token list option (* side, comm *)
+  | Definition of token list list
 
 (* debugging rule printer *)
 
@@ -527,31 +535,37 @@ let print_tokenline toks =
     ignore (List.map f toks);
     print_newline()
 
-let print_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
-  print_string ("Rule "^n^" (");
-  ignore (List.map (function s -> print_string (s^" ")) cat);
-  (match desc with
-     Some d -> print_string " ";
-               print_tokenline d
-   | None   -> ());
-  print_string ")\n";
-  print_string "Vars:\n";
-  ignore (List.map (function s -> print_string (s^" ")) v);
-  print_newline() ;
-  print_string "LHS:\n";
-  ignore (List.map print_tokenline lhs);
-  print_string "Label:\n";
-  print_tokenline lab;
-  print_string "RHS:\n";
-  ignore (List.map print_tokenline rhs);
-  print_string "Side:\n";
-  ignore (List.map print_tokenline side);
-  (match comm with
-     Some c -> print_string "Comments:\n";
-               print_tokenline c;
-               print_newline()
-  |  None   -> ());
-  print_newline()
+let print_rule ruleordefn =
+  match ruleordefn with
+    Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) ->
+      print_string ("Rule "^n^" (");
+      ignore (List.map (function s -> print_string (s^" ")) cat);
+      (match desc with
+         Some d -> print_string " ";
+                   print_tokenline d
+       | None   -> ());
+      print_string ")\n";
+      print_string "Vars:\n";
+      ignore (List.map (function s -> print_string (s^" ")) v);
+      print_newline() ;
+      print_string "LHS:\n";
+      ignore (List.map print_tokenline lhs);
+      print_string "Label:\n";
+      print_tokenline lab;
+      print_string "RHS:\n";
+      ignore (List.map print_tokenline rhs);
+      print_string "Side:\n";
+      ignore (List.map print_tokenline side);
+      (match comm with
+         Some c -> print_string "Comments:\n";
+                   print_tokenline c;
+                   print_newline()
+      |  None   -> ());
+      print_newline()
+  | Definition(e) ->
+      print_string "Definition:\n";
+      ignore (List.map print_tokenline e);
+      print_newline()
 
 (* parsing a rule *)
 
@@ -590,6 +604,10 @@ and parse_rule1 = parser
          Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)
   | [<>] -> raise (Stream.Error("!"));
 
+and parse_definition = parser
+    [< e = parse_wholechunk >] -> Definition(e)
+  | [<>] -> raise (Stream.Error("Couldn't parse definition!"));
+
 and rule_vars = parser
     [< 'White(_)                  ; r = rule_vars >] -> r
   | [< 'Indent(_)                 ; r = rule_vars >] -> r
@@ -603,15 +621,17 @@ and rule_vars = parser
 and rule_name = parser
     [< 'Ident(n,_); _ = sp; 'Ident("/*",_) ?? "/*"; _ = sp; cat = ids_nocomm ?? "category"; _ = wopt;
        desc = optcomm; _ = sp; 'Ident("*/",_) ?? "*/"; _ = sp >]
-      -> (* debug_print ("GOT "^n^"\n"); *) (n,cat,desc)
+      -> debug_print ("GOT "^n^"\n"); (n,cat,desc)
   | [<>] -> raise (Stream.Error("can't find rule name"));
 
 
 and parse_rules_and_process p = parser
-    [< 'Ident("Net_Hol_reln",_); _ = sp'; rs = parse_rules_ap0 p >] -> rs
+    [< 'Ident("Net_Hol_reln",_); _ = sp'; rs = parse_rules_ap0 p; rest = parse_rules_and_process p >] -> rs @ rest
+  | [< 'Ident("Define",_); _ = sp'; r = parse_definition_ap0 p; rs = parse_rules_and_process p >] -> r :: rs
   | [< 'DirBlk(n,ts) when (dir_proc n ts; true) (* cheat: make it happen right now *)
                                ; rs = parse_rules_and_process p  >] -> rs
   | [< '_                      ; rs = parse_rules_and_process p  >] -> rs
+  | [<>] -> []
 and parse_rules_ap0 p = parser
     [< 'Backtick; _ = sp'; rs = parse_rules_ap1 p >] -> rs
   | [< rs = parse_rules_and_process p             >] -> rs
@@ -624,6 +644,10 @@ and parse_rules_ap2 p = parser
        rs = parse_rules_ap1 p >] -> rs
   | [< 'Backtick >]              -> []
   | [<>]                         -> raise (Stream.Error("expected /\\ or `"))
+and parse_definition_ap0 p = parser
+    [< 'Backtick; _ = sp'; r = (function ts -> p (parse_definition ts)) >] -> r
+  | [<>] -> raise (Stream.Error("expected ` after Define"))
+
 
 (* get a list of the potential variables in a rule, ie, all idents
    that are bound somewhere *)
@@ -677,44 +701,87 @@ let potential_vars_line ts =
     in
     pot_l ts
 
-let potential_vars (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm)) =
-    let rec pot_s ls =       (* binders in lines *)
-      match ls with
-        (l::ls) -> pot_l l @ pot_s ls
-      | []      -> []
-    and pot_l ts = potential_vars_line ts
-    in
-    v              (* bound at top *)
-                   (* bound in each bit... *)
-    @ (match desc with Some c -> pot_l c | None -> [])
-    @ pot_s lhs
-    @ pot_l lab
-    @ pot_s rhs
-    @ pot_s side
-    @ (match comm with Some c -> pot_l c | None -> [])
+let rec pot_s ls =       (* binders in lines *)
+    match ls with
+      (l::ls) -> pot_l l @ pot_s ls
+    | []      -> []
+and pot_l ts = potential_vars_line ts;;
+
+let potential_vars ruleordefn =
+  match ruleordefn with
+    Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) ->
+      v              (* bound at top *)
+                     (* bound in each bit... *)
+      @ (match desc with Some c -> pot_l c | None -> [])
+      @ pot_s lhs
+      @ pot_l lab
+      @ pot_s rhs
+      @ pot_s side
+      @ (match comm with Some c -> pot_l c | None -> [])
+  | Definition(e) ->
+      pot_s e
+
+(* choose names for definitions *)
+
+let rec roman n =
+  let codes = [(1000,"m")
+              ;(900,"cm")
+              ;(500,"d")
+              ;(400,"cd")
+              ;(100,"c")
+              ;(90,"xc")
+              ;(50,"l")
+              ;(40,"xl")
+              ;(10,"x")
+              ;(9,"ix")
+              ;(5,"v")
+              ;(4,"iv")
+              ;(1,"i")
+              ]
+  in
+  let rec first n cs =
+    match cs with
+      ((m,s)::cs) -> if n >= m then Some(m,s) else first n cs
+    | []          -> None
+  in
+  match first n codes with
+    Some(m,s) -> s ^ roman (n-m)
+  | None      -> if n = 0 then "" else raise Not_found;;
+
+let defctr = ref (1:int);;
+let gendefname () = let n = !defctr in defctr := n+1; "\\defn" ^ roman n;;
 
 (* output (munge) a whole rule *)
 
-let latex_rule (Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r) =
-(* DEBUG:  let _ = print_rule r in *)
-  let pvs      = potential_vars r
-  in
-  let texname  = texify_command n
-  in
-  print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
-                         ^(match comm with Some _ -> "c" | None -> "n"));
-  print_string ("{"^texify n^"}{"^texifys " " cat^"}");
-  print_string ("{"^(match desc with Some d -> munge pvs d [] | None -> "")^"}\n");
-  print_string ("{"^munges pvs lhs^"}\n");
-  print_string ("{"^mungelab pvs lab^"}\n");
-  print_string ("{"^munges pvs rhs^"}\n");
-  print_string ("{"^munges pvs side^"}\n");
-  print_string "{";
-  (match comm with
-     Some c -> print_string (munge pvs c [])
-   | None   -> ());
-  print_string "}}\n\n";
-  texname
+let latex_rule ruleordefn =
+  match ruleordefn with
+    Rule(v,n,cat,desc,lhs,lab,rhs,side,comm) as r ->
+      (* DEBUG:  let _ = print_rule r in *)
+      let pvs      = potential_vars r
+      in
+      let texname  = texify_command n
+      in
+      print_string ("\\newcommand{"^texname^"}{\\rrule"^(if side = [] then "n" else "c")
+                             ^(match comm with Some _ -> "c" | None -> "n"));
+      print_string ("{"^texify n^"}{"^texifys " " cat^"}");
+      print_string ("{"^(match desc with Some d -> munge pvs d [] | None -> "")^"}\n");
+      print_string ("{"^munges pvs lhs^"}\n");
+      print_string ("{"^mungelab pvs lab^"}\n");
+      print_string ("{"^munges pvs rhs^"}\n");
+      print_string ("{"^munges pvs side^"}\n");
+      print_string "{";
+      (match comm with
+         Some c -> print_string (munge pvs c [])
+       | None   -> ());
+      print_string "}}\n\n";
+      texname
+  | Definition(e) ->
+      let pvs      = pot_s e
+      in
+      let texname = gendefname()
+      in
+      print_string ("\\newcommand{"^texname^"}{\\ddefn{"^munges pvs e^"}\n}\n\n");
+      texname
 
 (* ------------------------------------------------------------ *)
 (* renderer entry points                                        *)
