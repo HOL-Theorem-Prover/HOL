@@ -918,7 +918,11 @@ fun pp_term (G : grammar) TyG = let
       | CONST{Name = cname0, Ty} => let
           val cname =
             case Overload.overloading_of_term overload_info tm of
-              SOME s => if not (isPrefix recsel_special s) then s else cname0
+              SOME s =>
+                if
+                  isPrefix recsel_special s orelse isPrefix recupd_special s
+                  orelse isPrefix recfupd_special s
+                then cname0 else s
             | NONE => cname0
           val crules = lookup_term cname
           val is_string_literal =

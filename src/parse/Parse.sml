@@ -397,7 +397,44 @@ in
     (parse_Type ty_parser, tm_parser)
   end
 
+(*----------------------------------------------------------------------*
+ * parse_in_context                                                     *
+ *----------------------------------------------------------------------*)
 
+local
+  open Preterm TCPretype
+  fun name_eq s M = ((s = #Name(dest_var M)) handle HOL_ERR _ => false)
+  fun give_types_to_fvs ctxt boundvars tm = let
+    val gtf = give_types_to_fvs ctxt
+  in
+    case tm of
+      Var{Name, Ty = UVar (r as ref NONE)} => let
+      in
+        if Lib.mem tm boundvars then ()
+        else
+          case List.find (fn ctxttm => name_eq Name ctxttm) ctxt of
+            NONE => ()
+          | SOME ctxt_tm => r := SOME (TCPretype.fromType (type_of ctxt_tm))
+      end
+    | Comb{Rator, Rand} => (gtf boundvars Rator; gtf boundvars Rand)
+    | Abs{Bvar, Body} => gtf (Bvar::boundvars) Body
+    | Constrained(ptm, _) => gtf boundvars ptm
+    | _ => ()
+  end
+in
+  fun parse_in_context FVs q = let
+    val ptm = preTerm q
+    val _ = Preterm.typecheck_phase1 (SOME(term_to_string, type_to_string)) ptm
+    val _ = give_types_to_fvs FVs [] ptm
+    val final_ptm = overloading_resolution ptm
+  in
+    toTerm final_ptm
+  end
+end
+
+(* ---------------------------------------------------------------------- *)
+(* Grammar altering functions                                             *)
+(* ---------------------------------------------------------------------- *)
 
   fun temp_add_infix(s, prec, associativity) = let
   in

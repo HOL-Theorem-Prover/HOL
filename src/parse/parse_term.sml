@@ -1017,9 +1017,12 @@ fun remove_specials t =
                 "Record selection must have single id to right"
           else if s = reccons_special then
             remove_recupdate f t2 (VAR "ARB")
+          else if s = recwith_special then
+            remove_recupdate' t2 (remove_specials f)
           else
-            if s = recwith_special then
-              remove_recupdate' t2 (remove_specials f)
+            if s = recupd_special orelse s = recfupd_special then
+              raise ParseTermError
+                "May not use record update functions at top level"
             else
               COMB(remove_specials t1, remove_specials t2)
         end

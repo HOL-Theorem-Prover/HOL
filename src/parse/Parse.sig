@@ -95,6 +95,7 @@ in
     val preTerm : term frag list -> Preterm.preterm
     val Term : term frag list -> term
     val -- : term frag list -> 'a -> term
+    val parse_in_context : term list -> term frag list -> term
     val parse_from_grammars :
       (parse_type.grammar * term_grammar.grammar) ->
       ((hol_type frag list -> hol_type) * (term frag list -> term))
