@@ -98,7 +98,7 @@ val numeral_distrib = store_thm(
    (!n m. NUMERAL n > NUMERAL m  = m<n)  /\
    (!n. 0 <= n = T) /\ (!n. NUMERAL n <= 0 = n <= ALT_ZERO) /\
    (!n m. NUMERAL n <= NUMERAL m = n<=m) /\
-   (!n. n >= 0 = T) /\ (!n. NUMERAL n >= 0 = ALT_ZERO <= n) /\
+   (!n. n >= 0 = T) /\ (!n. 0 >= n = (n = 0)) /\
    (!n m. NUMERAL n >= NUMERAL m = m <= n) /\
    (!n. ODD (NUMERAL n) = ODD n) /\ (!n. EVEN (NUMERAL n) = EVEN n) /\
    ~ODD 0 /\ EVEN 0`,
