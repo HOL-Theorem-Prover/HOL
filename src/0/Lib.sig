@@ -99,6 +99,7 @@ sig
   val mlquote       : string -> string
   val words2        : string -> string -> string list
   val commafy       : string list -> string list
+  val is_substring  : string -> string -> bool
   val say           : string -> unit
   val prime         : string -> string
 
@@ -110,13 +111,13 @@ sig
   val hash          : int -> string -> int*int -> int
   val list_compare  : ('a * 'a -> order) -> 'a list * 'a list -> order
 
-  datatype 'a delta 
-       = SAME 
+  datatype 'a delta
+       = SAME
        | DIFF of 'a
 
   val delta_apply   : ('a -> 'a delta) -> 'a -> 'a
   val delta_map     : ('a -> 'a delta) -> 'a list -> 'a list delta
-  val delta_pair    : ('a -> 'a delta) -> ('b -> 'b delta) 
+  val delta_pair    : ('a -> 'a delta) -> ('b -> 'b delta)
                        -> 'a * 'b -> ('a * 'b) delta
 
   val deinitcommentss : substring -> substring

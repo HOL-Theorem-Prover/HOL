@@ -1,15 +1,15 @@
 (*===========================================================================
     Testing term construction and destruction for big terms
 
-    When the terms get bigger, various things barf, like the 
+    When the terms get bigger, various things barf, like the
     prettyprinter, and the naive way of doing list_mk_conj:
 
       itlist (curry mk_conj) vlist tm
 
     blows the stack, so things have to be made tail recursive.
  ===========================================================================*)
- 
-fun upto f b t = 
+
+fun upto f b t =
   let fun up i acc = if i < t then up (i+1) (f i::acc) else rev acc
   in up b []
   end;
@@ -73,9 +73,9 @@ val old_abs10 = (time old_list_mk_abs(vars10,body10); ());
 val old_abs100 = (time old_list_mk_abs(vars100,body100); ());
 val old_abs1K = (time old_list_mk_abs(vars1K,body1K); ());
 (* After this, it's too slow *)
-val abs10K = (time old_list_mk_abs(vars10K,body10K);()); 
-val abs100K = time old_list_mk_abs(vars100K,body100K); ());
-val abs500K = time old_list_mk_abs(vars500K,body500K);
+val abs10K = (time old_list_mk_abs(vars10K,body10K);());
+val abs100K = (time old_list_mk_abs(vars100K,body100K); ())
+val abs500K = (time old_list_mk_abs(vars500K,body500K); ())
 val abs1M = time old_list_mk_abs(vars1M,body1M);
 
 (* ---------------------------------------------------------------------------
@@ -101,20 +101,20 @@ strip_abs(beta_conv(Term `(\^y ^x. y /\ x' /\ x /\ x /\ x) x`));
 strip_abs(beta_conv(Term `(\^y ^x. y /\ !x. y /\ x) x`));
 strip_abs(beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`));
 
-(* Note: 
+(* Note:
 
    - strip_abs(beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`));
    > val it = ([`x''''`, `x'''`, `x'''''`, `x''`, `x'`], `x`)
 
-but 
+but
 
    - beta_conv(Term `(\^y ^x'''' ^x''' ^x ^x'' ^x'. y) x`);
    > val it = `\x'''' x''' x' x'' x'. x`
 
-The strip_abs only renames one bound variable to sort out the clash, 
-while the step-by-step version is different: it ends up with an 
+The strip_abs only renames one bound variable to sort out the clash,
+while the step-by-step version is different: it ends up with an
 apparent shadow in the resulting scope. This isn't a bug, because the shadow
-doesn't bind anything, but still, doesn't seem quite right. 
+doesn't bind anything, but still, doesn't seem quite right.
 
 In any case, the strip_abs result and the step-by-step result are different,
 which may cause some things to break, or some puzzlement.
@@ -137,7 +137,7 @@ strip_abs it;
 fun enumerate [] _ acc = acc
   | enumerate (h::t) i acc = enumerate t (i+1) ((h,i)::acc);
 
-fun mk_varmap vlist = 
+fun mk_varmap vlist =
  let open Polyhash
     val vmap :(term,int) hash_table = mkPolyTable(length vlist, Fail "varmap")
     val addin = insert vmap
