@@ -142,9 +142,7 @@ fun hyp_tyvars th =
                     (hypset th)
 
 fun hyp_frees th =
-  HOLset.foldl
-      (fn (h,tms) => HOLset.union(Term.FVL[h] empty_tmset,tms))
-      empty_hyp (hypset th);
+  HOLset.foldl (fn (h,tms) => Term.FVL[h] tms) empty_tmset (hypset th);
 
 fun is_bool tm = (type_of tm = bool);
 
@@ -941,7 +939,7 @@ fun CCONTR w fth =
 fun INST [] th = th
   | INST theta th =
       case subst_assoc (not o is_var) theta
-       of NONE => (make_thm Count.Inst 
+       of NONE => (make_thm Count.Inst
                        (tag th, hypset_map (subst theta) (hypset th),
                         subst theta (concl th))
                      handle HOL_ERR _ => ERR "INST" "")
