@@ -59,7 +59,8 @@ val def_suffix = QuotedDef.def_suffix;
  ---------------------------------------------------------------------------*)
 
 local open Context listTheory
-     val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,ITLIST_CONG,list_size_cong]
+     val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,
+                    FOLDL_CONG, FOLDR_CONG,list_size_cong]
 in 
   val _ = write_context (hocongs@read_context())
 end;

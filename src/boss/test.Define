@@ -373,9 +373,22 @@ recInduct variant_ind
 
 
 (*---------------------------------------------------------------------------
-    Evaluation
+         Evaluation of variant with computeLib
  ---------------------------------------------------------------------------*)
 load "computeLib";  open computeLib;
+
+val num_rws = 
+  let open numeralTheory Rsyntax
+      val REFL_EQ_0 = INST_TYPE [Type.alpha |-> Type`:num`] REFL_CLAUSE
+      val NORM_0 = prove(--`NUMERAL ALT_ZERO = 0`--,
+                         REWRITE_TAC [arithmeticTheory.NUMERAL_DEF, 
+                          arithmeticTheory.ALT_ZERO])
+ in 
+  [ numeral_distrib, REFL_EQ_0, numeral_eq, numeral_suc, numeral_pre, NORM_0,
+    numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
+    numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
+    numeral_exp, iSQR ]
+end;
 
 val rws = from_list (false,[COND_CLAUSES]);
 
@@ -385,12 +398,10 @@ val MEM_IF = prove
 
 val MEM_DEF' = CONJ (CONJUNCT1 listTheory.MEM) MEM_IF;
 
-val _ = add_thms (true,[variant_eqn,MEM_DEF']) rws;
+val _ = add_thms (true,([variant_eqn,MEM_DEF']@num_rws)) rws;
 fun norm q = time (CBV_CONV rws) (--q--);
 
-norm `variant 1 [1;2;3;4;5]`;
-norm `variant (SUC 0) [SUC 0; SUC(SUC 0); SUC(SUC(SUC 0))]`;
-
+norm `variant 1 [1;2;3;4;5;6;7;8;9;10;11;13;14;15;16;16;16;16;165]`;
 norm `variant (SUC 0) []`;
 norm `variant (SUC 0) [SUC(SUC 0)]`;
 
@@ -679,7 +690,7 @@ val ltree_occurs_def =
 val collect_def =
  Hol_fun "collect"
     `collect f (Node v tl) 
-       = ITLIST (\h a. APPEND (collect f h) a) tl [f v]`;
+       = FOLDR (\h a. APPEND (collect f h) a) [f v] tl`;
 
 val (collect_eqn, collect_ind) =
  Defn.tprove
