@@ -404,17 +404,31 @@ in
 local
   open Preterm TCPretype
   fun name_eq s M = ((s = #Name(dest_var M)) handle HOL_ERR _ => false)
+  fun has_any_uvars pty =
+    case pty of
+      (UVar (ref NONE)) => true
+    | (UVar (ref (SOME pty'))) => has_any_uvars pty'
+    | Tyop(s, args) => List.exists has_any_uvars args
+    | Vartype _ => false
   fun give_types_to_fvs ctxt boundvars tm = let
     val gtf = give_types_to_fvs ctxt
   in
     case tm of
-      Var{Name, Ty = UVar (r as ref NONE)} => let
+      Var{Name, Ty} => let
       in
-        if Lib.mem tm boundvars then ()
-        else
+        if has_any_uvars Ty andalso not(Lib.mem tm boundvars) then
           case List.find (fn ctxttm => name_eq Name ctxttm) ctxt of
             NONE => ()
-          | SOME ctxt_tm => r := SOME (TCPretype.fromType (type_of ctxt_tm))
+          | SOME ctxt_tm =>
+              unify Ty (TCPretype.fromType (type_of ctxt_tm))
+              handle HOL_ERR _ =>
+                (Lib.say ("\nUnconstrained variable "^Name^" in quotation "^
+                          "can't have type\n\n" ^
+                          type_to_string (type_of ctxt_tm) ^
+                          "\n\nas given by context.\n\n");
+                 raise ERROR "parse_in_context" "unify failed")
+        else
+          ()
       end
     | Comb{Rator, Rand} => (gtf boundvars Rator; gtf boundvars Rand)
     | Abs{Bvar, Body} => gtf (Bvar::boundvars) Body
