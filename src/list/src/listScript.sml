@@ -861,6 +861,7 @@ val REVERSE_REVERSE = store_thm(
   ``!l:'a list. REVERSE (REVERSE l) = l``,
   LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [REVERSE_DEF, REVERSE_APPEND, APPEND]);
+val _ = BasicProvers.export_rewrites ["REVERSE_REVERSE"]
 
 
 (* ----------------------------------------------------------------------
