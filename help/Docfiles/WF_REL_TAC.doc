@@ -15,12 +15,12 @@ to be applied to a goal arising from an application of {tgoal} or
 {
    ?R. WF R /\ ...
 }
-The tactic {tac} will instantiate {R} with the relation denoted by {q}
-and will attempt various simplifications of the goal. For example, it
-will try to automatically prove the well-foundedness of the relation
-denoted by {q}, and will also attempt to simplify the goal using some
-basic facts about well-founded relations. Often this can result in a
-much simpler goal.
+\noindent The tactic {tac} will instantiate {R} with the relation
+denoted by {q} and will attempt various simplifications of the
+goal. For example, it will try to automatically prove the
+well-foundedness of the relation denoted by {q}, and will also attempt
+to simplify the goal using some basic facts about well-founded
+relations. Often this can result in a much simpler goal.
 
 \FAILURE
 {WF_REL_TAC q} fails if {q} does not parse into a term whose type is
@@ -36,11 +36,9 @@ Suppose that a version of Quicksort had been defined as follows:
                 APPEND (qsort ord (FILTER ($~ o ord x) rst))
                   (x :: qsort ord (FILTER (ord x) rst)))`;
 }
-
-Then one can start a termination proof as follows: set up a goalstack
-with {tgoal} and then apply {WF_REL_TAC} with a quotation denoting a
-suitable wellfounded relation.
-
+\noindent Then one can start a termination proof as follows: set up a
+goalstack with {tgoal} and then apply {WF_REL_TAC} with a quotation
+denoting a suitable wellfounded relation.
 {
    - tgoal qsort_defn;
    > val it =
@@ -60,9 +58,13 @@ suitable wellfounded relation.
 
       !rst x ord. LENGTH (FILTER (\x'. ~ord x x') rst) < LENGTH (x::rst)
 }
-Execution of {WF_REL_TAC} has automatically proved the wellfoundedness
-of {measure (LENGTH o SND)} and the remainder of the goal has been
-simplified into a pair of easy goals.
+\noindent Execution of {WF_REL_TAC} has automatically proved the
+wellfoundedness of
+{
+   measure (LENGTH o SND)
+}
+\noindent and the remainder of the goal has been simplified into a
+pair of easy goals.
 
 \COMMENTS
 There are two problems to deal with when trying to prove termination.
@@ -93,7 +95,7 @@ numbers:
             Initial goal:
             ?R. WF R /\ !v2 n. R (n MOD SUC v2,SUC v2) (SUC v2,n)
 }
-The recursion happens in the first argument, and the recursive call in
+\noindent The recursion happens in the first argument, and the recursive call in
 that position is a smaller number.  The way to phrase the termination of
 {gcd} in HOL is to use a `measure` function to map from the domain of
 {gcd}---a pair of numbers---to a number.  The definition of {measure}
@@ -101,7 +103,7 @@ is equivalent to
 {
    measure f x y = (f x < f y).
 }
-(The actual definition of {measure} in {prim_recTheory} is more
+\noindent (The actual definition of {measure} in {prim_recTheory} is more
 primitive.)  Now we must pick out the argument position to measure and
 invoke {WF_REL_TAC}:
 {
@@ -112,14 +114,14 @@ invoke {WF_REL_TAC}:
    > val it =
     !v2 n. n MOD SUC v2 < SUC v2
 }
-This goal is easy to prove with a few simple arithmetic facts:
+\noindent This goal is easy to prove with a few simple arithmetic facts:
 {
    - e (PROVE_TAC [arithmeticTheory.DIVISION, prim_recTheory.LESS_0]);
    OK..
 
    Goal proved. ...
 }
-Sometimes one needs a measure function that is itself recursive.  For
+\noindent Sometimes one needs a measure function that is itself recursive.  For
 example, consider a type of binary trees and a function that
 `unbalances` trees. The algorithm works by rotating the tree until it
 gets a {Leaf} in the left branch, then it recurses into the right
@@ -145,7 +147,7 @@ branch. At the end of execution the tree has been linearized.
                (!bt. R bt (Brh Leaf bt)) /\
                !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
 }
-Since the size of the tree is unchanged in the last clause in the
+\noindent Since the size of the tree is unchanged in the last clause in the
 definition of {Unbal}, a simple size measure will not work. Instead, we
 can assign weights to nodes in the tree such that the recursive calls of
 {Unbal} decrease the total weight in every case. One such assignment is
@@ -153,7 +155,7 @@ can assign weights to nodes in the tree such that the recursive calls of
    Weight (Leaf) = 0
    Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1
 }
-It is easiest to use {Define} to define {Weight}, but if one is
+\noindent It is easiest to use {Define} to define {Weight}, but if one is
 worried about "polluting" the signature, one can also use
 {prove_rec_fn_exists} from the {Prim_rec} structure:
 {
@@ -179,7 +181,7 @@ worried about "polluting" the signature, one can also use
          0.  Weight Leaf = 0
          1.  !x y. Weight (Brh x y) = 2 * Weight x + Weight y + 1
 }
-Now we can invoke {WF_REL_TAC}:
+\noindent Now we can invoke {WF_REL_TAC}:
 {
    e (WF_REL_TAC `measure Weight`);
    OK..
@@ -197,7 +199,7 @@ Now we can invoke {WF_REL_TAC}:
       0.  Weight Leaf = 0
       1.  !x y. Weight (Brh x y) = 2 * Weight x + Weight y + 1
 }
-Both of these subgoals are quite easy to prove.
+\noindent Both of these subgoals are quite easy to prove.
 
 The technique of `weighting` nodes in a tree in order to prove
 termination also goes by the name of `polynomial interpretation`. It
@@ -241,7 +243,7 @@ used to restart the search.
 
    - val match = Define `match pat str = match0 pat str pat str`;
 }
-So much for the behaviour of the function. Why does it terminate? There
+\noindent So much for the behaviour of the function. Why does it terminate? There
 are two recursive calls. The first call reduces the size of the first
 and second arguments, and leaves the other arguments unchanged. The
 second call can increase the size of the first and second arguments, but
@@ -254,7 +256,7 @@ an infix operator, defined in {pairTheory} as follows:
 {
    LEX R1 R2 = \(x,y) (p,q). R1 x p \/ ((x=p) /\ R2 y q)
 }
-In the second recursive call, the length of {rs} is reduced, and in
+\noindent In the second recursive call, the length of {rs} is reduced, and in
 the first it stays the same. This motivates having the length of the
 fourth argument be the first component of the lexicographic
 combination, and the length of the second argument as the second
@@ -266,7 +268,7 @@ relations. This is enabled by {inv_image} from {relationTheory}:
 {
    inv_image R f = \x y. R (f x) (f y)
 }
-The actual relation maps from the four-tuple of arguments into a pair
+\noindent The actual relation maps from the four-tuple of arguments into a pair
 of numbers {(m,n)}, where {m} is the length of the fourth argument, and
 {n} is the length of the second argument. These lengths are then
 compared lexicographically with respect to less-than ({<}).
@@ -287,7 +289,7 @@ compared lexicographically with respect to less-than ({<}).
        !rs ss s p. (p = s) ==> LENGTH rs < LENGTH rs \/
                                LENGTH ss < LENGTH (s::ss)
 }
-The first subgoal is easy to prove by rewriting, and the second just
+\noindent The first subgoal is easy to prove by rewriting, and the second just
 needs a case-split on {rs} before it too gets polished off by rewriting.
 
 Occasionally, one needs to recurse over non-concrete data, such as
@@ -304,7 +306,7 @@ define a `fold` function for finite sets as follows:
            else FOLD_SET (REST s) (f (CHOICE s) b)
         else ARB`;
 }
-Typically, such functions terminate because the cardinality of the set
+\noindent Typically, such functions terminate because the cardinality of the set
 (or multiset) is reduced in the recursive call.
 {
    val (FOLD_SET_0, FOLD_SET_IND) =
@@ -313,13 +315,13 @@ Typically, such functions terminate because the cardinality of the set
        THEN PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
 
 }
-The desired recursion equation
+\noindent The desired recursion equation
 {
    |- FINITE s ==> (FOLD_SET f s b =
                       if s = {} then b
                       else FOLD_SET f (REST s) (f (CHOICE s) b))
 }
-is easy to obtain from {FOLD_SET_0}.
+\noindent is easy to obtain from {FOLD_SET_0}.
 
 \SEEALSO tgoal, tprove, Hol_defn, guessR.
 

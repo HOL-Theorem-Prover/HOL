@@ -22,14 +22,13 @@ a term that conforms to the following grammar:
    <hypothesis>   ::= any term
    <con>          ::= a new relation constant
 }
-
-The {sv1} terms that appear after a constant name are so-called
-"schematic variables".  The same variables must always follow the same
-constant name throughout the definition.  These variables and the
-names of the constants-to-be must not be quantified over in each
-{<clause>}.  Otherwise, a {<clause>} must not include any free
-variables.  (The universal quantifiers at the head of the clause can
-be used to bind free variables, but it is also permissible to use
+\noindent The {sv1} terms that appear after a constant name are
+so-called "schematic variables".  The same variables must always
+follow the same constant name throughout the definition.  These
+variables and the names of the constants-to-be must not be quantified
+over in each {<clause>}.  Otherwise, a {<clause>} must not include any
+free variables.  (The universal quantifiers at the head of the clause
+can be used to bind free variables, but it is also permissible to use
 existential quantification in the hypotheses.  If a clause has no free
 variables, it is permissible to have no universal quantification.)
 
@@ -89,7 +88,7 @@ Defining {ODD} and {EVEN}:
            !a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
       : thm * thm * thm
 }
-Defining reflexive and transitive closure, using a schematic
+\noindent Defining reflexive and transitive closure, using a schematic
 variable.  This is appropriate because it is {RTC R} that has the
 inductive characterisation, not {RTC} itself.
 {
