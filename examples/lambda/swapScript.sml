@@ -356,6 +356,24 @@ val swap_ALPHA = store_thm(
   ``~(v IN FV M) ==> (LAM v (swap v u M) = LAM u M)``,
   SRW_TAC [][GSYM fresh_var_swap, GSYM SIMPLE_ALPHA]);
 
+val LAM_INJ_swap = store_thm(
+  "LAM_INJ_swap",
+  ``(LAM v1 t1 = LAM v2 t2) = ~(v1 IN FV (LAM v2 t2)) /\
+                              (t1 = swap v1 v2 t2)``,
+  SRW_TAC [][EQ_IMP_THM] THENL [
+    Cases_on `v1 IN FV t2` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+    FIRST_X_ASSUM (MP_TAC o Q.AP_TERM `FV`) THEN
+    ASM_SIMP_TAC (srw_ss()) [EXTENSION] THEN
+    DISCH_THEN (Q.SPEC_THEN `v1` MP_TAC) THEN
+    ASM_REWRITE_TAC [],
+    Cases_on `v1 = v2` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    IMP_RES_TAC LAM_INJ_ALPHA_FV THEN
+    IMP_RES_TAC INJECTIVITY_LEMMA1 THEN
+    METIS_TAC [fresh_var_swap],
+    METIS_TAC [swap_ALPHA],
+    SRW_TAC [][]
+  ]);
+
 val swap_subst = store_thm(
   "swap_subst",
   ``!M N v x y.
