@@ -1,8 +1,7 @@
 structure numScript =
 struct
 
-open HolKernel Drule Conv Tactical Tactic Rewrite Resolve Thm_cont;
-open Type_def_support Parse;
+open HolKernel Parse boolLib;
 open boolTheory;
 infix THEN THENL;
 
@@ -12,7 +11,7 @@ val _ = new_theory "num";
  * Define successor `SUC_REP:ind->ind` on ind.
  *---------------------------------------------------------------------------*)
 
-val SUC_REP_DEF = new_specification {
+val SUC_REP_DEF = Rsyntax.new_specification {
   name = "SUC_REP_DEF",
   sat_thm = boolTheory.INFINITY_AX,
   consts = [{fixity = Prefix, const_name = "SUC_REP"}]
@@ -21,7 +20,7 @@ val SUC_REP_DEF = new_specification {
 val ZERO_REP_EXISTS = prove(
   Term`?z. !y. ~(z = SUC_REP y)`,
   Q.X_CHOOSE_THEN `zrep` ASSUME_TAC ((CONV_RULE NOT_FORALL_CONV o
-                                      REWRITE_RULE [ONTO_DEF] o
+                                      REWRITE_RULE [ONTO_THM] o
                                       CONJUNCT2) SUC_REP_DEF) THEN
   POP_ASSUM (ASSUME_TAC o CONV_RULE NOT_EXISTS_CONV) THEN
   Q.EXISTS_TAC `zrep` THEN POP_ASSUM ACCEPT_TAC);
@@ -29,7 +28,7 @@ val ZERO_REP_EXISTS = prove(
 (*---------------------------------------------------------------------------
  * `ZERO_REP:ind` represents `0:num`
  *---------------------------------------------------------------------------*)
-val ZERO_REP_DEF = new_specification{
+val ZERO_REP_DEF = Rsyntax.new_specification{
   name = "ZERO_REP_DEF",
   sat_thm = ZERO_REP_EXISTS,
   consts = [{fixity = Prefix, const_name = "ZERO_REP"}]
@@ -55,9 +54,8 @@ val EXISTS_NUM_REP = TAC_PROOF(([],--`?n. IS_NUM_REP n`--),
 (*---------------------------------------------------------------------------
  * Make the type definition.
  *---------------------------------------------------------------------------*)
-val num_TY_DEF = new_type_definition
+val num_TY_DEF = Rsyntax.new_type_definition
     {name = "num",
-     pred = --`IS_NUM_REP`--,
      inhab_thm = EXISTS_NUM_REP};
 
 val num_ISO_DEF = define_new_type_bijections
@@ -74,7 +72,8 @@ and A_ONTO = prove_abs_fn_onto    num_ISO_DEF;
 (*---------------------------------------------------------------------------
  * Define ZERO.
  *---------------------------------------------------------------------------*)
-val ZERO_DEF = new_definition("ZERO_DEF", --`0 = ABS_num ZERO_REP`--);
+val zero = mk_var("0", ``:num``)
+val ZERO_DEF = new_definition("ZERO_DEF", --`^zero = ABS_num ZERO_REP`--);
 
 
 (*---------------------------------------------------------------------------
@@ -110,7 +109,7 @@ val IS_NUM_REP_SUC_REP =
 (*---------------------------------------------------------------------------
  * |- !x1 x2. (SUC_REP x1 = SUC_REP x2) ==> (x1 = x2)
  *---------------------------------------------------------------------------*)
-val SUC_REP_11 = CONJUNCT1 (REWRITE_RULE [ONE_ONE_DEF] SUC_REP_DEF);
+val SUC_REP_11 = CONJUNCT1 (REWRITE_RULE [ONE_ONE_THM] SUC_REP_DEF);
 
 (*---------------------------------------------------------------------------
  *  |- !x. ~(SUC_REP x = ZERO_REP)

@@ -15,7 +15,7 @@
 structure arithmeticScript =
 struct
 
-open HolKernel basicHol90Lib Parse;
+open HolKernel boolLib Parse Prim_rec;
 infix THEN THENC THENL |-> ORELSE;
 
 (* interactive use:
@@ -56,7 +56,7 @@ val ADD = new_recursive_definition
     rec_axiom = num_Axiom,
     def = --`($+ 0 n = n) /\
              ($+ (SUC m) n = SUC($+ m n))`--};
-val _ = set_fixity "+" (Infixl 500);
+val _ = set_fixity ("+", Infixl 500);
 
 (*---------------------------------------------------------------------------*
  * Define NUMERAL, a tag put on numeric literals, and the basic constructors *
@@ -83,21 +83,21 @@ val SUB = new_recursive_definition
     rec_axiom = num_Axiom,
     def = --`($- 0 m = 0) /\
              ($- (SUC m) n = ((m < n) => 0 | SUC($- m n)))`--};
-val _ = set_fixity "-" (Infixl 500);
+val _ = set_fixity ("-", Infixl 500);
 
 val MULT = new_recursive_definition
    {name = "MULT",
     rec_axiom = num_Axiom,
     def = --`($* 0 n = 0) /\
              ($* (SUC m) n = ($* m n) + n)`--};
-val _ = set_fixity "*" (Infixl 600);
+val _ = set_fixity ("*", Infixl 600);
 
 val EXP = new_recursive_definition
    {name = "EXP",
     rec_axiom = num_Axiom,
     def = --`($EXP m 0 = 1) /\
              ($EXP m (SUC n) = m * ($EXP m n))`--};
-val _ = set_fixity "EXP" (Infixr 700);
+val _ = set_fixity ("EXP", Infixr 700);
 
 val GREATER_DEF = new_infixr_definition
   ("GREATER_DEF", --`$> m n = n < m`--,   450);
@@ -149,7 +149,7 @@ REWRITE_TAC
 
 fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
-val EQ_SYM_EQ' = INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
+val EQ_SYM_EQ' = Rsyntax.INST_TYPE [alpha |-> Type`:num`] EQ_SYM_EQ;
 
 
 (*---------------------------------------------------------------------------*)
@@ -1817,7 +1817,7 @@ val MOD_DIV_exist = prove
             Now define MOD and DIV by a constant specification.
  ---------------------------------------------------------------------------*)
 
-val DIVISION = new_specification
+val DIVISION = Rsyntax.new_specification
    {name = "DIVISION",
     consts = [{fixity = Infixl 650, const_name = "MOD"},
               {fixity = Infixl 600, const_name = "DIV"}],

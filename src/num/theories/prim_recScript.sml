@@ -58,7 +58,7 @@
 structure prim_recScript =
 struct
 
-open HolKernel basicHol90Lib Parse
+open HolKernel boolLib Prim_rec Parse
 infix THEN THENL;
 
 type thm = Thm.thm
@@ -339,11 +339,11 @@ val SIMP_REC_REL_UNIQUE_RESULT = store_thm(
   ASSUME_TAC (Q.SPEC `n` LESS_SUC_REFL) THEN
   IMP_RES_TAC SIMP_REC_REL_UNIQUE);
 
-val SIMP_REC = new_specification{
+val SIMP_REC = Rsyntax.new_specification{
   name = "SIMP_REC",
   sat_thm = ((CONJUNCT1 o
               SIMP_RULE bool_ss [EXISTS_UNIQUE_THM] o
-              SIMP_RULE bool_ss [Ho_boolTheory.UNIQUE_SKOLEM_THM])
+              SIMP_RULE bool_ss [UNIQUE_SKOLEM_THM])
              SIMP_REC_REL_UNIQUE_RESULT),
   consts = [{const_name = "SIMP_REC", fixity = Prefix}]
 };
@@ -525,7 +525,7 @@ val WF_IMP_WELLFOUNDED = Q.prove(
  GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
  THEN REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
  THEN STRIP_TAC
- THEN Ho_rewrite.REWRITE_TAC
+ THEN Ho_Rewrite.REWRITE_TAC
         [NOT_FORALL_THM,NOT_EXISTS_THM,boolTheory.NOT_IMP,DE_MORGAN_THM]
  THEN Q.EXISTS_TAC`\p:'a. ?n:num. p = f n`
  THEN BETA_TAC THEN CONJ_TAC THENL
@@ -543,7 +543,7 @@ val WELLFOUNDED_IMP_WF = Q.prove(
 `!R. wellfounded R ==> WF R`,
  REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
   THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
-  THEN Ho_rewrite.REWRITE_TAC
+  THEN Ho_Rewrite.REWRITE_TAC
         [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
   THEN REWRITE_TAC [GSYM IMP_DISJ_THM]
   THEN REPEAT STRIP_TAC
@@ -571,7 +571,7 @@ Q.store_thm
   `WF \x y. y = SUC x`,
  REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
   THEN CONV_TAC CONTRAPOS_CONV
-  THEN Ho_rewrite.REWRITE_TAC
+  THEN Ho_Rewrite.REWRITE_TAC
         [NOT_FORALL_THM,NOT_EXISTS_THM,NOT_IMP,DE_MORGAN_THM]
   THEN REWRITE_TAC [GSYM IMP_DISJ_THM]
   THEN DISCH_TAC

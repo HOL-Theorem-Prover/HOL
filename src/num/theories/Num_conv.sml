@@ -17,7 +17,7 @@
 structure Num_conv :> Num_conv =
 struct
 
-open HolKernel basicHol90Lib Parse Psyntax;
+open HolKernel Parse boolLib Psyntax;
 
 fun NUM_CONV_ERR function message =
          HOL_ERR{origin_structure ="Num_conv",
@@ -47,7 +47,7 @@ in
 fun num_CONV t =
  if t=one then arithmeticTheory.ONE else
  if t=two then arithmeticTheory.TWO else
- if is_numeral t andalso t <> ZERO
+ if Numeral.is_numeral t andalso t <> ZERO
  then let val pre_t    = mk_comb(PRE, t)
           val pre_thm  = SYM (RW_CONV1 pre_t)
           val result_t = lhs (concl pre_thm)
