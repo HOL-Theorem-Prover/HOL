@@ -8,7 +8,7 @@ basic computations.
 
 \LIBRARY boss
 
-\DESCRIPTION
+\DESCRIBE
 This function creates a new simplification set to use with the compute
 library performing computations about operations on primitive booleans
 and numerals (in binary representation) such as LET, conditional,
@@ -29,8 +29,8 @@ lemma:
 }
 \EXAMPLE
 {
-  - CBV_CONV (initial_rws()) (--`EVERY (\n. EVEN n) [4;6;8;10;12;14;16]`--);
-  > val it = |- EVERY (\n. EVEN n) [4; 6; 8; 10; 12; 14; 16] = T : Thm.thm
+- CBV_CONV (initial_rws()) (--`EVERY (\n. EVEN n) [4;6;8;10;12;14;16]`--);
+> val it = |- EVERY (\n. EVEN n) [4; 6; 8; 10; 12; 14; 16] = T : Thm.thm
 }
 
 \SEEALSO

@@ -7,24 +7,24 @@
 \KEYWORDS error, exception
 
 \DESCRIBE
-
 {mk_HOL_ERR} provides a curried interface to the standard {HOL_ERR}
 exception; experience has shown that this is often more convenient.
 
-\FAILURE Never fails.
+\FAILURE
+Never fails.
 
 
 \EXAMPLE
 {
-   - mk_HOL_ERR "Module" "function" "message"
+- mk_HOL_ERR "Module" "function" "message"
 
-   > val it = HOL_ERR : exn
+> val it = HOL_ERR : exn
 
-   - print(exn_to_string it);
+- print(exn_to_string it);
 
-   Exception raised at Module.function:
-   message
-   > val it = () : unit
+Exception raised at Module.function:
+message
+> val it = () : unit
 }
 
 \SEEALSO Feedback, HOL_ERR, error_record

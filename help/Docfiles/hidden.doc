@@ -3,13 +3,12 @@
 \TYPE {hidden : string -> bool}
 
 \SYNOPSIS
-
 Checks to see if a given name has been hidden.
 
 \DESCRIBE
 A call {hidden "c"} where {c} is the name of a constant, will
 check to see if the given name has been hidden, via a previous call
-to Parse.hide.
+to {Parse.hide}.
 
 \FAILURE
 Never fails.

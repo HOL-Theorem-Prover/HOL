@@ -9,11 +9,6 @@ Stops the quotation parser from recognizing a constant.
 A call {hide "c"} where {c} is the name of a constant, will prevent
 the quotation parser from parsing it as such; it will just be parsed
 as a variable.  The effect can be reversed by {Parse.reveal "c"}.
-However, this call does not affect the treatment of overloaded
-constants.  If {"+"} is overloaded (to addition over the naturals and
-integers, for example), then {hide "+"} will not affect its parsing.
-This must be achieved by first removing the overloading, using
-{clear_overloads_on}.
 
 \FAILURE
 Never fails.
