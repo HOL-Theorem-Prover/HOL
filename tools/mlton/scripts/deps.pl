@@ -7,7 +7,8 @@ sub avoid_dir {
     (scalar @_ == 1) or die;
     my ($dir) = @_;
 
-    return ($dir =~ /muddy$/ or
+    return ($dir =~ /muddy.?$/ or
+            $dir =~ /\/temporal\// or
             $dir =~ /HolBdd$/);
 }
 
@@ -78,7 +79,7 @@ sub rewrite {
     if ($f =~ s/\.sml$/-mlton/ and -f "$dir/$f") { $r = "$dir/$f"; }
     elsif (-f "src/$file") { $r = "src/$file"; }
 
-    if ($r ne "$dir/$file") { print STDERR "$dir/$file -> $r\n"; }
+    if ($r ne "$dir/$file") { print STDERR "  $dir/$file -> $r\n"; }
 
     return $r;
 }
@@ -162,7 +163,7 @@ sub process_files {
 
 sub process_dirs {
     print STDOUT "$name =";
-    foreach $dir (@dirs) { process_files $dir; }
+    foreach $dir (@dirs) { print STDERR "$dir\n"; process_files $dir; }
     print STDOUT "\n";
 }
 

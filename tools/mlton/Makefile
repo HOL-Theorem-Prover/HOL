@@ -8,7 +8,7 @@
 all: metis psl
 
 clean:
-	rm -f bin/metis* bin/psl*
+	rm -f bin/basic* bin/metis* bin/psl*
 
 reallyclean: clean
 	rm -f Makefile.*
@@ -47,22 +47,49 @@ include Makefile.src
 
 POST = src/std.prelude
 
+# Basic HOL tests
+
+basic: bin/basic1.out
+
+Makefile.basic:
+	scripts/deps.pl BASIC ../../src/portableML ../../src/experimental-kernel ../../src/parse ../../src/bool ../../src/goalstack >Makefile.basic
+
+include Makefile.basic
+
+BASIC1 = test/basic-test1.sml
+
+bin/basic1: bin/basic1.sml
+	$(MLC) $+
+
+bin/basic1.sml: $(PRE) $(BASIC) $(POST) $(BASIC1)
+	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
+	wc $@
+
+bin/basic1.out: bin/basic1
+	$+ | tee $@
+
 # Metis test problems
 
 metis: bin/metis1.out
 
-METIS1 = test/mlibProblem.sig test/mlibProblem.sml test/test.sml
+Makefile.metis:
+	scripts/deps.pl METIS ../../src/portableML ../../src/experimental-kernel ../../src/parse ../../src/bool ../../src/goalstack ../../src/taut ../../src/compute/src ../../src/q ../../src/combin ../../src/marker ../../src/labels ../../src/lite ../../src/refute ../../src/simp/src ../../src/metis ../../src/meson/src ../../src/basicProof ../../src/relation ../../src/pair/src ../../src/sum ../../src/one ../../src/option ../../src/num/theories ../../src/num/reduce/src ../../src/num/arith/src ../../src/num ../../src/IndDef ../../src/datatype/parse ../../src/datatype/equiv ../../src/datatype/record ../../src/datatype ../../src/list/src ../../src/tfl/src ../../src/unwind ../../src/boss ../../src/llist ../../src/pred_set/src >Makefile.metis
+
+include Makefile.metis
+
+METIS1 = test/mlibProblem.sig test/mlibProblem.sml test/metis-test.sml
 
 bin/metis1: bin/metis1.sml
 	$(MLC) $+
 
-bin/metis1.sml: $(PRE) $(SRC) $(POST) $(METIS1)
+bin/metis1.sml: $(PRE) $(METIS) $(POST) $(METIS1)
 	@$(MLPREP) $+ | $(UNQUOTE) | $(MOSML2MLTON) >$@
+	wc $@
 
 bin/metis1.out: bin/metis1
 	$+ | tee $@
 
-# Evaluation of PSL formulas in the logic
+# PSL formulas
 
 psl: bin/psl1.out
 
