@@ -1,0 +1,13 @@
+This directory contains a HOL proof of correctness for a microprocessor design closely based on the ARM6.  The files are as follows:
+
+armScript.sml: A HOL specification of the ARM instruction set.  This is loosely based on Dominic Pajak's ML specification done at Leeds.  For a detailed description of the HOL specification read www.cl.cam.ac.uk/users/acjf3/r.ps.gz
+
+coreScript.sml: A HOL specification of the ARM6 micro-architecture.  This is based on Daniel Schostak's specification done at Leeds.
+
+onestepScript.sml: Provides a framework for carrying out processor verifications.  This is described in www.cl.cam.ac.uk/users/acjf3/tr512.ps.gz
+
+lemmasScript.sml and lemmasLib.sml: Lots of lemmas to the main correctness results.
+
+correctScript.sml:  The main proof of correctness.
+
+Anthony Fox
