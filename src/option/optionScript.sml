@@ -163,14 +163,17 @@ val ex1_rw = prove(Term`!x. (?y. x = y) /\ (?y. y = x)`,
 
 fun OPTION_CASES_TAC t = STRUCT_CASES_TAC (ISPEC t option_nchotomy);
 
-val IS_NONE_EQ_NONE = prove(
-(--`!x. IS_NONE x = (x = NONE)`--),
+val IS_NONE_EQ_NONE = store_thm(
+  "IS_NONE_EQ_NONE",
+  ``!x. IS_NONE x = (x = NONE)``,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
 );
 
-val NOT_IS_SOME_EQ_NONE = prove((--`!x. ~(IS_SOME x) = (x = NONE)`--),
+val NOT_IS_SOME_EQ_NONE = store_thm(
+  "NOT_IS_SOME_EQ_NONE",
+  ``!x. ~(IS_SOME x) = (x = NONE)``,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
@@ -191,8 +194,9 @@ val IS_SOME_IMP_SOME_THE_CANCEL = prove(
     THEN ASM_REWRITE_TAC option_rws
 );
 
-val option_case_ID = prove(
-(--`!x:'a option. option_case NONE SOME x = x`--),
+val option_case_ID = store_thm(
+  "option_case_ID",
+  ``!x:'a option. option_case NONE SOME x = x``,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
@@ -205,8 +209,9 @@ val IS_SOME_option_case_SOME = prove(
     THEN ASM_REWRITE_TAC option_rws
 );
 
-val option_case_SOME_ID = prove(
-(--`!x:'a option. (option_case x SOME x = x)`--),
+val option_case_SOME_ID = store_thm(
+  "option_case_SOME_ID",
+  ``!x:'a option. (option_case x SOME x = x)``,
     GEN_TAC
     THEN OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws
@@ -320,7 +325,10 @@ val _ = adjoin_to_theory
     S "        end;"
   end)};
 
-val _ = BasicProvers.export_rewrites ["option_CLAUSES", "OPTION_MAP_EQ_SOME",
-                                      "OPTION_MAP_EQ_NONE"]
+val _ = BasicProvers.export_rewrites
+          ["OPTION_MAP_EQ_SOME", "OPTION_MAP_EQ_NONE", "THE_DEF",
+           "IS_SOME_DEF", "IS_NONE_EQ_NONE", "NOT_IS_SOME_EQ_NONE",
+           "option_case_ID", "option_case_SOME_ID", "option_case_def",
+           "OPTION_MAP_DEF", "OPTION_JOIN_DEF", "SOME_11", "NOT_SOME_NONE"]
 
 val _ = export_theory();
