@@ -1,5 +1,5 @@
 (* ===================================================================== *)
-(* FILE          : mk_one.sml                                            *)
+(* FILE          : oneScript.sml                                         *)
 (* DESCRIPTION   : Creates the theory `one.th` containing the logical    *)
 (*                 definition of the type :one, the type with only one   *)
 (*                 value.  The type :one is defined and the following    *)
@@ -48,8 +48,7 @@ val EXISTS_ONE_REP =
 (* The theorem returned is:   |- ?rep. TYPE_DEFINITION (\b.b) rep	*)
 
 val one_TY_DEF = REWRITE_RULE [boolTheory.TYPE_DEFINITION_THM]
-       (Rsyntax.new_type_definition{name = "one",
-                                    inhab_thm = EXISTS_ONE_REP});
+       (new_type_definition("one", EXISTS_ONE_REP));
 
 (* ---------------------------------------------------------------------*)
 (* The proof of the `axiom` for type :one follows.			*)
@@ -70,9 +69,7 @@ val one_axiom = store_thm("one_axiom",
     Define the constant `one` of type one....
  ---------------------------------------------------------------------------*)
 
-val one_DEF =
- new_definition
-   ("one_DEF", Term`one = @x:one.T`);
+val one_DEF = new_definition ("one_DEF", Term`one = @x:one.T`);
 
 (*---------------------------------------------------------------------------
   The following theorem shows that there is only one value of type :one
