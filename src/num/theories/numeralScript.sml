@@ -634,4 +634,20 @@ val numeral_funpow = store_thm(
   ] THEN  ASM_REWRITE_TAC[FUNPOW,PRE,ADD_CLAUSES, NUMERAL_DEF,
                           NUMERAL_BIT1, NUMERAL_BIT2]));
 
+val numeral_MIN = store_thm(
+  "numeral_MIN",
+  ``(MIN 0 x = 0) /\
+    (MIN x 0 = 0) /\
+    (MIN (NUMERAL x) (NUMERAL y) = NUMERAL (if x < y then x else y))``,
+  REWRITE_TAC [MIN_0] THEN
+  REWRITE_TAC [MIN_DEF, NUMERAL_DEF]);
+
+val numeral_MAX = store_thm(
+  "numeral_MAX",
+  ``(MAX 0 x = x) /\
+    (MAX x 0 = x) /\
+    (MAX (NUMERAL x) (NUMERAL y) = NUMERAL (if x < y then y else x))``,
+  REWRITE_TAC [MAX_0] THEN
+  REWRITE_TAC [MAX_DEF, NUMERAL_DEF]);
+
 val _ = export_theory();

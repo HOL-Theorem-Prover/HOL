@@ -16,12 +16,13 @@ fun failwith function = raise mk_HOL_ERR "reduceLib" function "";
 val RED_CONV =
   let fun FAIL_CONV (s:string) tm = failwith s
   in
-      Lib.itlist (Lib.curry (Conv.ORELSEC))
+      FIRST_CONV
          [ADD_CONV,  AND_CONV,  BEQ_CONV,  COND_CONV, EVEN_CONV,
           DIV_CONV,  EXP_CONV,   GE_CONV,    GT_CONV, ODD_CONV,
           IMP_CONV,   LE_CONV,   LT_CONV,   MOD_CONV,
           MUL_CONV,  NEQ_CONV,  NOT_CONV,    OR_CONV,
-          PRE_CONV,  SBC_CONV,  SUC_CONV] (FAIL_CONV "RED_CONV")
+          PRE_CONV,  SBC_CONV,  SUC_CONV] ORELSEC
+      FAIL_CONV "RED_CONV"
   end;
 
 (*-----------------------------------------------------------------------*)
@@ -35,7 +36,7 @@ val numeral_redns =
       numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
       numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
       numeral_exp, numeral_evenodd, iSQR, numeral_fact,numeral_funpow,
-      MAX_DEF,MIN_DEF];
+      numeral_MAX, numeral_MIN];
 
 val div_thm =
     prove
