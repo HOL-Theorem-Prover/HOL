@@ -261,7 +261,7 @@ are restrictions of the existential and universal quantifiers:
 The definition of \ml{RES\_ABSTRACT} is a characterising formula, rather
 than a direct equation.  There are two important properties
 \begin{itemize}
-\item if $y$ is an element of $P$ then $(${\small\verb+\+}$x :: P.\; M)
+\item if $y$ is an element of $P$ then $(\bs{}x :: P.\; M)
   y = M[y/x]$
 \item If two restricted abstractions agree on all values over their
   (common) restricting set, then they are equal.
@@ -328,7 +328,7 @@ same row.
 \index{choice operator, in HOL logic@choice operator, in \HOL\ logic!syntax of}
 \index{ negation, in HOL logic@{\small\verb+~+} (negation, in \HOL\ logic)}
 \index{ disjunction, in HOL logic@{\small\verb+\/+} (disjunction, in \HOL\ logic)}
-\index{ conjunction, in HOL logic@{\small\verb+/\+} (conjunction, in \HOL\ logic)}
+\index{ conjunction, in HOL logic@\texttt{\small/\bs} (conjunction, in \HOL\ logic)}
 \index{ implication, in HOL logic@{\small\verb+==>+} (implication, in \HOL\ logic)}
 \index{ equality, in HOL logic@\ml{=} (equality, in \HOL\ logic)}
 \index{ universal quantifier, in HOL logic@{\small\verb+"!+} (universal quantifier, in \HOL\ logic)}
@@ -368,21 +368,30 @@ same row.
  & {\small\verb+~+}$t$ & {\small\verb+$~ +}$t$ & {\small\verb+mk_neg(+}$t${\small\verb+)+} \\ \hline
 Disjunction & $t_1${\small\verb+\/+}$t_2$ & {\small\verb+$\/ +}$t_1\ t_2$ &
 {\small\verb+mk_disj(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+%
 Conjunction & $t_1${\small\verb+/\+}$t_2$ & {\small\verb+$/\ +}$t_1\ t_2$ &
-{\small\verb+mk_conj(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+{\small\verb+mk_conj(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\
+\hline
+%
 Implication & $t_1${\small\verb+==>+}$t_2$ & {\small\verb+$==> +}$t_1\ t_2$ &
 {\small\verb+mk_imp(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+%
 Equality & $t_1${\small\verb+=+}$t_2$ & {\small\verb+$= +}$t_1\ t_2$ &
 {\small\verb+mk_eq(+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
+%
 $\forall$-quantification & {\small\verb+!+}$x${\small\verb+.+}$t$ &
 {\small\verb+$!(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_forall(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+%
 $\exists$-quantification & {\small\verb+?+}$x${\small\verb+.+}$t$ &
 {\small\verb+$?(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_exists(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+%
 $\hilbert$-term & {\small\verb+@+}$x${\small\verb+.+}$t$ &
 {\small\verb+$@(\+}$x${\small\verb+.+}$t${\small\verb+)+} & {\small\verb+mk_select(+}$x${\small\verb+,+}$t${\small\verb+)+} \\ \hline
+%
 Conditional\index{COND@\ml{COND}} & {\small\verb+if +}$t\ ${\small\verb+then +}$t_1${\small\verb+ else +}$t_2$ &
 {\small\verb+COND +}$t\ t_1\ t_2$ & {\small\verb+mk_cond(+}$t${\small\verb+,+}$t_1${\small\verb+,+}$t_2${\small\verb+)+}
  \\ \hline
+%
 {\small\verb+let+}-expression & {\small\verb+let +}$x${\small\verb+=+}$t_1${\small\verb+ in +}$t_2$ &
 {\small\verb+LET(\+}$x${\small\verb+.+}$t_2${\small\verb+)+}$t_1$ &
 {\small\verb+mk_let(\+}$x${\small\verb+.+}$t_1${\small\verb+,+}$t_2${\small\verb+)+} \\ \hline
