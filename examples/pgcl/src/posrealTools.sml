@@ -62,6 +62,7 @@ val posreal_SS = simpLib.SIMPSET
             inv_zero, inv_one, inv_infty, inv_eq_zero, inv_antimono, inv_inj,
             inv_one_le, inv_le_one, inv_eq_infty, inv_eq_one, inv_inv,
             (* division *)
+            div_rone,
             (* cancellations *)
             (* halves *)
             half_between,
@@ -74,9 +75,13 @@ val posreal_SS = simpLib.SIMPSET
             (* injecting from the reals *)
             preal_not_infty,
             (* min *)
-            min_le1, min_le2, min_refl,
+            min_le1, min_le2, min_refl, min_linfty, min_rinfty,
+            min_lzero, min_rzero,
             (* max *)
-            le_max1, le_max2, max_refl]};
+            le_max1, le_max2, max_refl, max_linfty, max_rinfty,
+            max_lzero, max_rzero,
+            (* bound1 *)
+            bound1_basic, bound1_infty]};
 
 val posreal_ss = simpLib.++ (realSimps.real_ss, posreal_SS);
 
@@ -86,16 +91,49 @@ val posreal_ss = simpLib.++ (realSimps.real_ss, posreal_SS);
 
 val dest_preal_div = dest_binop ``preal_div`` (ERR "dest_preal_div" "");
 
-fun rat_cancel_conv tm =
+val posreal_of_num_tm = ``posreal_of_num``;
+
+fun numeral_factor_conv k tm =
+  let
+    val _ = k <> Arbnum.zero orelse raise ERR "numeral_factor_conv" "k = 0"
+    val n = numSyntax.dest_numeral tm
+    val (nq,nr) = Arbnum.divmod (n,k)
+    val _ = nr = Arbnum.zero orelse raise ERR "numeral_factor_conv" "k | n"
+    val k' = numSyntax.mk_numeral k
+    val nq' = numSyntax.mk_numeral nq
+    val mul_tm = numSyntax.mk_mult (k',nq')
+  in
+    GSYM (reduceLib.MUL_CONV mul_tm)
+  end;
+
+fun rat_cancel_conv k =
+  LAND_CONV (RAND_CONV (numeral_factor_conv k)) THENC
+  RAND_CONV (RAND_CONV (numeral_factor_conv k)) THENC
+  LAND_CONV (REWR_CONV (GSYM posreal_of_num_mul)) THENC
+  RAND_CONV (REWR_CONV (GSYM posreal_of_num_mul)) THENC
+  REWR_CONV rat_cancel;
+
+fun rat_reduce_conv tm =
   let
     val (a,b) = dest_preal_div tm
-    val m = dest_numeral a
-    val n = dest_numeral b
+    val m = numSyntax.dest_numeral (rand a)
+    val _ = m <> Arbnum.zero orelse raise ERR "rat_reduce_conv" "0 numerator"
+    val n = numSyntax.dest_numeral (rand b)
+    val _ = n <> Arbnum.zero orelse raise ERR "rat_reduce_conv" "0 denominator"
+    val g = Arbnum.gcd (m,n)
+  in
+    if g = Arbnum.one then raise ERR "rat_reduce_conv" "reduced"
+    else rat_cancel_conv g tm
+  end;
+
+val rat_reduce_pat =
+  Term `preal_div (posreal_of_num (NUMERAL x)) (posreal_of_num (NUMERAL y))`;
 
 val posreal_reduce_SS = simpLib.SIMPSET
   {ac = [],
    congs = [],
-   convs = [],
+   convs = [{name = "rat_reduce_conv (posreals)", conv = K (K rat_reduce_conv),
+             trace = 2, key = SOME ([],rat_reduce_pat)}],
    dprocs = [],
    filter = NONE,
    rewrs = [(* equality *)
@@ -121,10 +159,11 @@ val posreal_reduce_SS = simpLib.SIMPSET
             div_lzero, div_rinfty, div_linfty_num, div_linfty_rat,
             (* cancellations *)
             (* min *)
-            preal_min_def,
+            min_linfty, min_rinfty, min_num, min_ratl, min_ratr, min_rat,
             (* max *)
-            preal_max_def
-            ]};
+            max_linfty, max_rinfty, max_num, max_ratl, max_ratr, max_rat,
+            (* bound1 *)
+            bound1_infty, bound1_num, bound1_rat]};
 
 val posreal_reduce_ss =
   simpLib.++

@@ -156,11 +156,12 @@ val montyhall = Count.apply prove
    ++ RW_TAC list_ss [monty_choose_def, wp_def, Probchoice_def, Probs_def,
                       CHR_11, assign_def, lin_eta]
    ++ RW_TAC int_ss []
-   ++ RW_TAC posreal_ss [bound1_basic, Zero_def]
+   ++ RW_TAC posreal_reduce_ss []
+   ++ RW_TAC posreal_ss [Zero_def]
    ++ RW_TAC std_ss [wp_incognito_def]
    ++ RW_TAC int_ss [monty_hide_def, MAP, wp_def, Demonchoice_def,
                      Demons_def, Min_def, assign_def]
-   ++ RW_TAC posreal_reduce_ss [bound1_def]);
+   ++ RW_TAC posreal_reduce_ss []);
   
 (* ------------------------------------------------------------------------- *)
 (* The random walker                                                         *)

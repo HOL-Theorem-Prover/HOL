@@ -1306,6 +1306,32 @@ val min_le_lin = store_thm
        ++ Know `~(z = infty)` >> METIS_TAC [infty_le, posreal_of_num_not_infty]
        ++ RW_TAC std_ss [sub_add2, mul_lone, le_refl]]);
 
+val min_comm = store_thm
+  ("min_comm",
+   ``!x y. min x y = min y x``,
+   RW_TAC std_ss [preal_min_def]
+   ++ PROVE_TAC [le_antisym, le_total]);
+
+val min_rinfty = store_thm
+  ("min_rinfty",
+   ``!x : posreal. min x infty = x``,
+   RW_TAC std_ss [preal_min_def, le_infty]);
+
+val min_linfty = store_thm
+  ("min_linfty",
+   ``!x : posreal. min infty x = x``,
+   PROVE_TAC [min_rinfty, min_comm]);
+
+val min_lzero = store_thm
+  ("min_lzero",
+   ``!x : posreal. min 0 x = 0``,
+   RW_TAC std_ss [preal_min_def, zero_le]);
+
+val min_rzero = store_thm
+  ("min_rzero",
+   ``!x : posreal. min x 0 = 0``,
+   PROVE_TAC [min_lzero, min_comm]);
+
 val le_max = store_thm
   ("le_max",
    ``!z x y. z <= max x y = z <= x \/ z <= y``,
@@ -1358,6 +1384,32 @@ val lin_le_max = store_thm
        ++ Know `~(z = infty)` >> METIS_TAC [infty_le, posreal_of_num_not_infty]
        ++ RW_TAC std_ss [sub_add2, mul_lone, le_refl]]);
 
+val max_comm = store_thm
+  ("max_comm",
+   ``!x y. max x y = max y x``,
+   RW_TAC std_ss [preal_max_def]
+   ++ PROVE_TAC [le_antisym, le_total]);
+
+val max_rinfty = store_thm
+  ("max_rinfty",
+   ``!x : posreal. max x infty = infty``,
+   RW_TAC std_ss [preal_max_def, le_infty]);
+
+val max_linfty = store_thm
+  ("max_linfty",
+   ``!x : posreal. max infty x = infty``,
+   PROVE_TAC [max_rinfty, max_comm]);
+
+val max_lzero = store_thm
+  ("max_lzero",
+   ``!x : posreal. max 0 x = x``,
+   RW_TAC std_ss [preal_max_def, zero_le]);
+
+val max_rzero = store_thm
+  ("max_rzero",
+   ``!x : posreal. max x 0 = x``,
+   PROVE_TAC [max_lzero, max_comm]);
+
 (* ------------------------------------------------------------------------- *)
 (* 1-boundedness                                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -1392,6 +1444,11 @@ val bound1_min = store_thm
   ("bound1_min",
    ``!x. bound1 x = min x 1``,
    RW_TAC std_ss [bound1_def, preal_min_def]);
+
+val bound1_infty = store_thm
+  ("bound1_infty",
+   ``bound1 infty = 1``,
+   RW_TAC std_ss [bound1_min, min_linfty]);
 
 (* ------------------------------------------------------------------------- *)
 (* Supremums and infimums (these are always defined on posreals)             *)
@@ -2013,5 +2070,111 @@ val rat_eq_infty = store_thm
   ("rat_eq_infty",
    ``!a b. (& a / & b = infty) = ~(a = 0) /\ (b = 0)``,
    RW_TAC std_ss [div_eq_infty, posreal_of_num_inj, posreal_of_num_not_infty]);
+
+val rat_cancel = store_thm
+  ("rat_cancel",
+   ``!a b c. (& a * & b) / (& a * & c) = if a = 0 then 0 else & b / & c``,
+   (RW_TAC std_ss [preal_div_def, mul_lzero, inv_mul, entire,
+                  posreal_of_num_inj]
+    ++ FULL_SIMP_TAC std_ss [DE_MORGAN_THM, inv_zero])
+   >> (Cases_on `& b = 0`
+       ++ RW_TAC std_ss [mul_assoc, mul_rinfty, mul_rzero, posreal_of_num_inj])
+   ++ MP_TAC (METIS_PROVE [mul_assoc, mul_comm]
+              ``!a b c d : posreal. (a * b) * (c * d) = (a * c) * (b * d)``)
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   ++ RW_TAC std_ss
+      [mul_rinv, posreal_of_num_not_infty, posreal_of_num_inj, mul_lone]);
+
+val min_num = store_thm
+  ("min_num",
+   ``!m n. min (& m) (& n) = if m <= n then & m else & n``,
+   RW_TAC std_ss [preal_min_def, posreal_of_num_le]);
+
+val min_ratl = store_thm
+  ("min_ratl",
+   ``!m a b.
+       min (& a / & b) (& m) =
+       if (a = 0) \/ a <= b * m then & a / & b else & m``,
+   REPEAT STRIP_TAC
+   ++ Cases_on `a = 0` >> RW_TAC std_ss [div_lzero, min_lzero]
+   ++ RW_TAC std_ss [preal_min_def]
+   << [MATCH_MP_TAC le_antisym
+       ++ RW_TAC std_ss [le_ratr]
+       ++ PROVE_TAC [LESS_EQ_CASES, MULT_COMM, ZERO_LESS_EQ],
+       Suff `F` >> PROVE_TAC []
+       ++ Q.PAT_ASSUM `~(X <= Y)` MP_TAC
+       ++ RW_TAC std_ss [le_ratl]]);
+
+val min_ratr = store_thm
+  ("min_ratr",
+   ``!m a b.
+       min (& m) (& a / & b) =
+       if (a = 0) \/ a <= b * m then & a / & b else & m``,
+   PROVE_TAC [min_ratl, min_comm]);
+
+val min_rat = store_thm
+  ("min_rat",
+   ``!a b c d.
+       min (& a / & b) (& c / & d) =
+       if (a = 0) \/ (~(c = 0) /\ d * a <= c * b) then & a / & b
+       else & c / & d``,
+   REPEAT STRIP_TAC
+   ++ Cases_on `a = 0` >> RW_TAC std_ss [div_lzero, min_lzero]
+   ++ Cases_on `c = 0` >> RW_TAC std_ss [div_lzero, min_rzero]
+   ++ RW_TAC std_ss [preal_min_def, eq_rat, le_rat]
+   ++ FULL_SIMP_TAC arith_ss []
+   ++ PROVE_TAC [MULT_COMM, LESS_EQ_CASES, LESS_EQUAL_ANTISYM]);
+
+val max_num = store_thm
+  ("max_num",
+   ``!m n. max (& m) (& n) = if m <= n then & n else & m``,
+   RW_TAC std_ss [preal_max_def, posreal_of_num_le]);
+
+val max_ratl = store_thm
+  ("max_ratl",
+   ``!m a b.
+       max (& a / & b) (& m) =
+       if (a = 0) \/ a <= b * m then & m else & a / & b``,
+   REPEAT STRIP_TAC
+   ++ Cases_on `a = 0` >> RW_TAC std_ss [div_lzero, max_lzero]
+   ++ RW_TAC std_ss [preal_max_def]
+   << [MATCH_MP_TAC le_antisym
+       ++ RW_TAC std_ss [le_ratr]
+       ++ PROVE_TAC [LESS_EQ_CASES, MULT_COMM, ZERO_LESS_EQ],
+       Suff `F` >> PROVE_TAC []
+       ++ Q.PAT_ASSUM `~(X <= Y)` MP_TAC
+       ++ RW_TAC std_ss [le_ratl]]);
+
+val max_ratr = store_thm
+  ("max_ratr",
+   ``!m a b.
+       max (& m) (& a / & b) =
+       if (a = 0) \/ a <= b * m then & m else & a / & b``,
+   PROVE_TAC [max_ratl, max_comm]);
+
+val max_rat = store_thm
+  ("max_rat",
+   ``!a b c d.
+       max (& a / & b) (& c / & d) =
+       if (a = 0) \/ (~(c = 0) /\ d * a <= c * b) then & c / & d
+       else & a / & b``,
+   REPEAT STRIP_TAC
+   ++ Cases_on `a = 0` >> RW_TAC std_ss [div_lzero, max_lzero]
+   ++ Cases_on `c = 0` >> RW_TAC std_ss [div_lzero, max_rzero]
+   ++ RW_TAC std_ss [preal_max_def, eq_rat, le_rat]
+   ++ FULL_SIMP_TAC arith_ss []
+   ++ PROVE_TAC [MULT_COMM, LESS_EQ_CASES, LESS_EQUAL_ANTISYM]);
+
+val bound1_num = store_thm
+  ("bound1_num",
+   ``!m. bound1 (& m) = if m = 0 then 0 else 1``,
+   RW_TAC std_ss [bound1_min, min_num, posreal_of_num_inj]
+   ++ DECIDE_TAC);
+
+val bound1_rat = store_thm
+  ("bound1_rat",
+   ``!a b. bound1 (& a / & b) = if a <= b then & a / & b else 1``,
+   RW_TAC std_ss [bound1_min, min_ratl]
+   ++ FULL_SIMP_TAC arith_ss []);
 
 val _ = export_theory();
