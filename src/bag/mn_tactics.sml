@@ -8,10 +8,9 @@ in
 
 infix myTRANS THEN ORELSE ORELSEC THENL THENC |->;
 fun th1 myTRANS th2 = TRANS th1 th2;
-fun failwith s      =
-    raise HOL_ERR {message=s,
-                   origin_function="Somewhere in std-hol",
-                   origin_structure="std-hol"};
+fun failwith fname s =
+    raise HOL_ERR {message=s, origin_function= fname,
+                   origin_structure="mn_tactics"};
 fun foldr f zero []      = zero
   | foldr f zero (x::xs) = f x (foldr f zero xs);
 fun foldl f zero []      = zero
@@ -25,34 +24,29 @@ fun chop f [] = ([],[])
               (head::sub1, rest)
             end;
 fun chopn 0 l       = ([],l)
-  | chopn n (x::xs) = if n < 0 then failwith "chop_list" else
+  | chopn n (x::xs) = if n < 0 then failwith "chopn" "chop_list" else
                       let val (fhalf, shalf) = chopn (n-1) xs in
                         (x::fhalf, shalf)
                       end
-  | chopn _ _       = failwith "chop_list";
+  | chopn _ _       = failwith "chopn" "chop_list";
 fun insert n e l =
-    if n < 1 then failwith "Bad position to insert at" else
+    if n < 1 then failwith "insert" "Bad position to insert at" else
     if n = 1 then e::l else (hd l)::(insert (n-1) e (tl l));
 fun delete n l =
-    if n < 1 then failwith "Bad position to delete at" else
+    if n < 1 then failwith "delete" "Bad position to delete at" else
     if n = 1 then tl l
     else (hd l)::(delete (n-1) (tl l));
 fun update n e = (insert n e) o (delete n);
-fun findi e [] = failwith "Couldn't find element" |
+fun findi e [] = failwith "findi" "Couldn't find element" |
     findi e (x::xs) = if e = x then 1 else 1 + findi e xs
 val reverse = rev;
-fun forall P []        = true
-  | forall P (x::xs)   = P x andalso forall P xs;
-fun last []            = failwith "Last of an empty list"
-  | last [x]           = x
-  | last (x::y::xs)    = last (y::xs);
-fun butlast []         = failwith "Butlast of an empty list"
+fun butlast []         = failwith "butlast" "empty list"
   | butlast [x]        = []
   | butlast (x::y::xs) = x::(butlast (y::xs));
-fun remove x [] = raise Fail "remove: no such element"
+fun remove x [] = failwith "remove" "remove: no such element"
   | remove x (y::xs) = if (x = y) then xs else y::(remove x xs)
 val lookup  = assoc;
-fun rev_assoc k [] = raise Fail "rev_assoc: no such element"
+fun rev_assoc k [] = failwith "rev_assoc" "no such element"
   | rev_assoc k ((v, k')::xs) = if k = k' then v else rev_assoc k xs
 fun entry key value [] = [(key,value)]
   | entry key value ((k,v)::xs) =
@@ -80,7 +74,7 @@ fun is_connective t = (is_conj t) orelse (is_disj t) orelse
 fun get_conn_dest t = if (is_conj t) then dest_conj else
                       if (is_disj t) then dest_disj else
                       if (is_imp t)  then dest_imp
-                      else failwith "Bad connective";
+                      else failwith "get_conn_dest" "Bad connective";
 fun get_const_type str = type_of (#const (Term.const_decl str));
 fun myis_imp t = is_imp t andalso not (is_neg t)
 (* Copyright 1993, Laboratory for Applied Logic, Brigham Young
@@ -133,7 +127,7 @@ fun find_match {pattern, term} = let
                 handle HOL_ERR _ =>
                     find_match_aux (rand term)
                     handle HOL_ERR _ =>
-                       failwith "no match in find_match"
+                       failwith "find_match" "no match"
     in
         find_match_aux term
 end;
@@ -198,31 +192,6 @@ val mn_ss = simpLib.++(base_ss, arithSimps.ARITH_ss)
 end;
 
 
-local
-  val ADD1 = arithmeticTheory.ADD1
-  val SUC_ELIM = prove(
-    (--`!P. (!n. P (SUC n) n) = (!n. (n > 0 ==> P n (n-1)))`--),
-    GEN_TAC THEN EQ_TAC THENL [
-      REPEAT STRIP_TAC THEN
-      FIRST_ASSUM (MP_TAC o SPEC (--`n-1`--)) THEN
-      SIMP_TAC mn_ss [ASSUME (--`n > 0`--), arithmeticTheory.ADD1],
-      REPEAT STRIP_TAC THEN
-      FIRST_ASSUM (MP_TAC o SPEC (--`n+1`--)) THEN SIMP_TAC mn_ss [ADD1]
-    ])
-  fun mk_SUC t = (--`SUC ^t`--)
-  val num_ty = (==`:num`==)
-in
-  fun SUC_ELIM_CONV tm =
-    let val (v,bod) = dest_forall tm
-        val _ = assert (fn x => type_of x = num_ty) v
-        val (sn,n) = (genvar num_ty, genvar num_ty)
-        val suck_suc = Rsyntax.subst [mk_SUC v |-> sn] bod
-        val suck_n = Rsyntax.subst [v |-> n] suck_suc
-        val _ = assert (fn x => x <> tm) suck_n
-    in BETA_RULE (ISPEC (list_mk_abs ([sn,n],suck_n)) SUC_ELIM)
-    end
-  handle e => failwith "SUC_ELIM_CONV"
-end;
 fun strip_quant_CONV c term = let
    fun strip_quant_conval term =
       if (is_quant term) then
@@ -252,12 +221,12 @@ fun arg_CONV n c term = let
    val (fnc,args) = strip_comb term
    val num_args = length args in
    if (num_args < n orelse n < 1) then
-      failwith "Bad argnum spec."
+      failwith "arg_CONV" "Bad argnum spec."
    else
       (arg_conval num_args n) c term end;
 fun binop_CONV n test fstr c term = let
    val conv = if (n=1) then RATOR_CONV o RAND_CONV else RAND_CONV in
-   if (test term) then conv c term else failwith fstr end;
+   if (test term) then conv c term else failwith "binop_CONV" fstr end;
 val disj1_CONV = binop_CONV 1 is_disj "Term not a disjunction";
 val disj2_CONV = binop_CONV 2 is_disj "Term not a disjunction";
 val conj1_CONV = binop_CONV 1 is_conj "Term not a conjunction";
@@ -270,7 +239,7 @@ val fst_CONV   = binop_CONV 1 is_pair "Term not a pair";
 val snd_CONV   = binop_CONV 2 is_pair "Term not a pair";
 fun neg_CONV c term =
    if (is_neg term) then RAND_CONV c term
-                    else failwith "Term not a negation";
+                    else failwith "neg_CONV" "Term not a negation";
 fun conjl_CONV n c term = let
    val conjs = strip_conj term
    val newterm = list_mk_conj conjs
@@ -314,7 +283,7 @@ val PAIR_EQ = pairTheory.PAIR_EQ
 val pair_CASES = pairTheory.ABS_PAIR_THM
 fun split_pair t =
   if (not (is_pair_type t)) then
-    raise (failwith "Must have pair term given as argument")
+    raise (failwith "split_pair" "Must have pair term given as argument")
   else
     let val sthm = ISPEC t pair_CASES
     in
@@ -329,7 +298,7 @@ fun CONJ_CONV th term = let
     val ((lhs,rhs),substh) = th_convert th
     val thm_conjs = strip_conj lhs
     val trm_conjs = strip_conj term in
-    if (forall (C mem trm_conjs) thm_conjs) then let
+    if (List.all (C mem trm_conjs) thm_conjs) then let
        val newterm_conjs = filter (not o C mem thm_conjs) trm_conjs
        fun conjwithnew trm =
             if null newterm_conjs then
@@ -343,7 +312,7 @@ fun CONJ_CONV th term = let
        TRANS reorder_thm
              (prove((--`^reorder_term = ^newterm`--),
                     SUBST1_TAC substh THEN REFL_TAC)) end
-    else failwith "No subset" end;
+    else failwith "CONJ_CONV" "No subset" end;
 local
   fun inst' subst th acc =
     if (is_forall (concl th)) then
@@ -373,10 +342,7 @@ val IMP_CONJ_THM = prove(
 fun np t = prove(t,MESON_TAC [])
 fun ct t =
   prove(t, REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC [])
-val IMP2_THM = np (--`!P Q R. P ==> Q ==> R = P /\ Q ==> R`--)
-val EQ_IMP_THM = np (--`!P Q. (P = Q) = (P ==> Q) /\ (Q ==> P)`--)
-val DISJ_IMP_THM =
-  np (--`!P Q R. (P \/ Q ==> R) = (P ==> R) /\ (Q ==> R)`--)
+val IMP2_THM = AND_IMP_INTRO
 val IMP_CONJ_THM =
   np (--`!P Q R. (P ==> Q /\ R) = (P ==> Q) /\ (P ==> R)`--)
 val fCOND_OUT_THM = COND_RAND
@@ -407,9 +373,11 @@ fun myMATCH_MP impthm thm =
       else
         th::acc
     val ths = disj_mps impthm [impthm]
-      handle _ => raise Fail "myMATCH_MP: Theorem not an implication"
+      handle _ => failwith "myMATCH_MP" "Theorem not an implication"
   in
     hd (mapfilter (C MATCH_MP thm) ths)
+    handle List.Empty =>
+      failwith "myMATCH_MP" "No matches"
   end
 fun lastn n list =
   let val len = length list
@@ -467,7 +435,7 @@ fun rename_vars varlist term =
        if (is_forall term) then
           (strip_forall, list_mk_forall)
        else
-          failwith "Term not quantified with something I can handle"
+          failwith "rename_vars" "Term not quantified with something I can handle"
     val (ex_vars, body) = strip term
     val (tochange, unchanged) = chopn (length varlist) ex_vars
     val new_vars = varlist @ unchanged
@@ -492,16 +460,16 @@ in
 end;
 fun AP_TAC (asl, g) =
   let val _ = if (not (is_eq g)) then
-                failwith "Not an equality goal" else ()
+                failwith "AP_TAC" "Not an equality goal" else ()
       val (lhs, rhs) = dest_eq g
       val (lf, la) = dest_comb lhs handle _ =>
-                       failwith "lhs must be an application"
+                       failwith "AP_TAC" "lhs must be an application"
       val (rf, ra) = dest_comb rhs handle _ =>
-                       failwith "rhs must be an application"
+                       failwith "AP_TAC" "rhs must be an application"
   in
       if (lf = rf) then AP_TERM_TAC (asl, g) else
       if (la = ra) then AP_THM_TAC (asl, g) else
-      failwith "One of function or argument must be equal"
+      failwith "AP_TAC" "One of function or argument must be equal"
   end
 val APn_TAC = REPEAT AP_TAC;
 fun only_P_disjs P (asl, g) =
@@ -536,13 +504,6 @@ fun rotn n    = REPEATN n rotate;
 fun EVERY_OK_ASSUM ttac = EVERY_ASSUM (TRY o ttac)
 val myDISCH_TAC = DISCH_THEN STRIP_ASSUME_TAC
 (* the standard DISCH_TAC doesn't do any useful stripping *)
-fun UNDISCH_THEN tm ttac (asl, w) =
-  let val asl' = remove tm asl
-  in
-      ttac (ASSUME tm) (asl', w)
-  end handle Fail s => raise (Fail ("UNDISCH_THEN: "^s))
-val FIRST_X_ASSUM:thm_tactic -> tactic = fn ttac =>
-  FIRST_ASSUM (fn th => UNDISCH_THEN (concl th) ttac)
 val ELIM1_TAC =
   let fun apply thm =
         let fun chkeq thm =
@@ -666,8 +627,8 @@ fun swap_vars term = let
       if (is_forall term) then
          (dest_forall, C (foldr FORALL_EQ), FA_QVAR_SWAP_THM)
       else
-         failwith ("Formula must be universally or "^
-                   "existentially quantified")
+         failwith "swap_vars"
+         "Formula must be universally or existentially quantified"
   val (fst_var, fst_body) = dest term
   val (snd_var, snd_body) = dest fst_body
   val fnc = list_mk_abs ([fst_var,snd_var], snd_body)
@@ -696,9 +657,9 @@ local
         "/\\" => /\ |
         "\\/" => \/ |
         "==>" => ==> |
-        _     => failwith "Bad boolean operator"
+        _     => failwith "t2mlsym" "Bad boolean operator"
   fun split_found (Found(t,f)) = (t,f)
-    | split_found _            = failwith "Bad findresult"
+    | split_found _            = failwith "split_found" "Bad findresult"
   fun find_qterm term var (f,pf) pinfo (pos::postl) =
       if (is_var term orelse is_const term) then
          (NotFound 0, NoPInfo) else
@@ -759,8 +720,8 @@ local
          find_qterm body var (f o ABS_CONV, f) NoPInfo (pos::postl)
       end
       else
-         failwith "Can't handle funny term type"
-     | find_qterm _ _ _ _ _ = failwith "Need non-empty position list";
+         failwith "find_qterm" "Can't handle funny term type"
+     | find_qterm _ _ _ _ _ = failwith "find_qterm" "Need non-empty position list";
 in
   local
     val forall_tac =
@@ -780,10 +741,10 @@ in
               let val {Bvar, Body} = Rsyntax.dest_forall t in
                 (Bvar, Body, forall_tac) end
             else
-              failwith "Needs to be a quantified term"
+              failwith "rmqvar" "Needs to be a quantified term"
       in
           if (mem qvar (free_vars body)) then
-            failwith "Variable can't be free in body"
+            failwith "rmqvar" "Variable can't be free in body"
           else
             prove((--`^t = ^body`--), tac)
       end
@@ -811,7 +772,7 @@ in
       val (f,pi) =
         find_qterm term var (I,(fn _ => raise Fail "")) NoPInfo posl in
       case f of
-         NotFound _     => failwith "Couldn't find variable" |
+         NotFound _     => failwith "std_move_in" "Couldn't find variable" |
          Found(t,(f,_)) => let val (quant,abs) = dest_comb t
                                val (_,body) = dest_abs abs
                                val c = get_in_conv quant body in
@@ -848,22 +809,24 @@ in
 
        (Negated, !)         => NOT_FORALL_CONV |
        (Negated, ?)         => NOT_EXISTS_CONV |
-       (NoPInfo, _)         => failwith "This can't happen"
+       (NoPInfo, _)         => raise Fail "This can't happen"
     end
   in
     fun std_move_out var posl term = let
       val (f,pi) =
          find_qterm term var (I,(fn _ => raise Fail "")) NoPInfo posl in
       case f of
-        NotFound _   =>  failwith "Couldn't find variable" |
+        NotFound _   =>  failwith "std_move_out" "Couldn't find variable" |
         Found(t,(_,p)) =>  let val quant =
                            (if is_exists t then ? else !) in
                          case pi of
-                           NoPInfo  => failwith "No conv to move var" |
+                           NoPInfo  =>
+                             failwith "std_move_out" "No conv to move var" |
                            _        => let
-                                         val c = get_out_conv pi quant in
-                                         p c term
-                                       end
+                             val c = get_out_conv pi quant
+                           in
+                             p c term
+                           end
                          end
     end;
     fun move_out var = std_move_out var [1];
@@ -888,13 +851,13 @@ val FA_OUT_CONV = REDEPTH_CONV (
   NOT_FORALL_CONV)
 fun EXIN_CONJ_CONV t =
     let val (var,bdy) = dest_exists t
-                        handle _ => failwith "Not an exists"
+                        handle _ => failwith "EXIN_CONJ_CONV" "Not an exists"
         val conjs = strip_conj bdy
         val (notthere, there) = partition (not o free_in var) conjs
         val newbody = list_mk_conj (notthere @ there)
         val bdys_eq_thm = EQT_ELIM (
             AC_CONV (CONJ_ASSOC, CONJ_SYM) (mk_eq(bdy, newbody)))
-            handle _ => failwith "EXIN_CONJ_CONV: AC_CONV is a crock"
+            handle _ => failwith "EXIN_CONJ_CONV" "AC_CONV is a crock"
     in
         (dest_quant_CONV (K bdys_eq_thm) THENC
          rmove_in var) t
@@ -921,7 +884,7 @@ in
       val conjs = strip_conj lhs
       val (rest,newconjs) = partition (curry op= conj) conjs in
       if (null rest) then
-         failwith "Must specify an existing conjunct"
+         failwith "move_conj_right" "Must specify an existing conjunct"
       else let
         val newlhs = if null newconjs then (--`T`--)
                                       else list_mk_conj newconjs
@@ -939,7 +902,7 @@ in
       val disjs = strip_disj rhs
       val (rest,newdisjs) = partition (curry op= disj) disjs in
       if (null rest) then
-         failwith "Must specify an existing disjunct"
+         failwith "move_disj_left" "Must specify an existing disjunct"
       else let
         val neg_d = neg_version disj
         val newlhs = if lhs = (--`T`--) then neg_d
