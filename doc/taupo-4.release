@@ -33,6 +33,12 @@ New features:
     than evaluate tactics.  This can dramatically speed up the
     rebuilding of theories.  Of course, this is unsound, and marked as
     such with the "fast_proof" oracle tag.
+  * Holmake now runs by default in a mode where if a tactic fails to
+    prove a goal, an error message is printed and the goal is asserted
+    anyway (again with an oracle tag).  This means that the rest of a
+    development can be checked even though something may fail early
+    on.  Holmake's old behaviour is available if the --qof (the TLA
+    stands for "quit on failure") flag is give at the command-line.
 
 New theories:
 -------------
