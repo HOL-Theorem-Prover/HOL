@@ -78,10 +78,10 @@ let rewind_partial lexbuf len =
                                 with Lexing.pos_cnum = lexbuf.Lexing.lex_abs_pos + lexbuf.Lexing.lex_curr_pos }
 
 let register_newline lexbuf =
-  let pos = lexbuf.Lexing.lex_curr_p in
+  let pos = lexbuf.Lexing.lex_start_p in
   lexbuf.Lexing.lex_curr_p <- { pos with
                                 Lexing.pos_lnum = pos.Lexing.pos_lnum + 1;
-                                Lexing.pos_bol = pos.Lexing.pos_cnum }
+                                Lexing.pos_bol = pos.Lexing.pos_cnum + 1 }
 
 let register_newlines lexbuf s =
   let rec count_newlines i s n =
@@ -119,6 +119,8 @@ let directive_alist =
    ("HOL_OP_LIST"      ,HOL_OP_LIST      );
    ("HOL_SYM_ALIST"    ,HOL_SYM_ALIST    );
    ("HOL_SYM_BOL_ALIST",HOL_SYM_BOL_ALIST);
+   ("HOL_IOPEN_LIST"   ,HOL_IOPEN_LIST   );
+   ("HOL_ICLOSE_LIST"  ,HOL_ICLOSE_LIST  );
    ("HOL_ID_ALIST"     ,HOL_ID_ALIST     );
    ("HOL_CURRIED_ALIST",HOL_CURRIED_ALIST);
    ("SMART_PREFIX"     ,SMART_PREFIX     );
@@ -402,7 +404,8 @@ let print_token eds t =
                    | []         -> ((delim_info DelimEOF).sclose, []))
   | CLASS_LIST | CLASS | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
-  | HOL_SYM_ALIST | HOL_SYM_BOL_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
+  | HOL_SYM_ALIST | HOL_SYM_BOL_ALIST | HOL_IOPEN_LIST | HOL_ICLOSE_LIST
+  | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
   | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS
   | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | HOLDELIMUNBAL | NOHOLDELIMUNBAL | NEWMODE | MODE
   | SPECIAL | VARS
@@ -428,7 +431,8 @@ let render_token t =
   | From       -> ":D}"
   | CLASS_LIST | CLASS | TYPE_LIST | CON_LIST | FIELD_LIST | LIB_LIST | AUX_LIST
   | AUX_INFIX_LIST | VAR_PREFIX_LIST | VAR_PREFIX_ALIST | AUTO_BINDERS | NOAUTO_BINDERS | HOL_OP_LIST
-  | HOL_SYM_ALIST | HOL_SYM_BOL_ALIST | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
+  | HOL_SYM_ALIST | HOL_SYM_BOL_ALIST | HOL_IOPEN_LIST | HOL_ICLOSE_LIST
+  | HOL_ID_ALIST | HOL_CURRIED_ALIST | SMART_PREFIX
   | NO_SMART_PREFIX | INDENT | NOINDENT | RULES | NORULES | COMMENTS
   | NOCOMMENTS | ECHO | NOECHO | RCSID | HOLDELIM | HOLDELIMUNBAL | NOHOLDELIMUNBAL | NEWMODE | MODE
   | SPECIAL | VARS

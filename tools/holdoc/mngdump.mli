@@ -7,11 +7,6 @@ val texify_math : string -> string
 val texify_text : string -> string
 type pvars = string list
 val potential_vars : Holdocmodel.holdoc -> pvars
-type token_cxt = {
-    adjid : bool;
-    bol   : bool;
-  }
-val tcx0 : token_cxt
 val munge_ident : pvars -> string -> unit
 val munge_symbol : pvars -> bool -> string -> unit
 val munge_texify_text : string -> unit

@@ -167,6 +167,12 @@ quote.
 as the above, but applies only to the first non-space token on the
 line (Beginning Of Line), overriding HOL_SYM_ALIST in that case.
 
+(*[ HOL_IOPEN_LIST id id id ++ ++ ]*)
+(*[ HOL_ICLOSE_LIST id id id ++ ++ ]*) define the given
+identifiers/symbols as opening and closing an indent region; that is,
+they introduce an indent.  This needs fancy TeX support also.  TODO:
+complete this documentation.
+
 (*[ HOL_ID_ALIST id "\TeXery" id "\more\texery" ]*) adds the named
 identifiers to the list of "HOL identifiers", which are typeset with
 the specified TeX, literally.  Since HOL strings have no escapes, you

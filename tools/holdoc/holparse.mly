@@ -79,6 +79,8 @@ let loc_n : int -> 'a -> 'a located
 %token HOL_OP_LIST     
 %token HOL_SYM_ALIST   
 %token HOL_SYM_BOL_ALIST   
+%token HOL_IOPEN_LIST   
+%token HOL_ICLOSE_LIST   
 %token HOL_ID_ALIST    
 %token HOL_CURRIED_ALIST
 %token SMART_PREFIX    
@@ -211,7 +213,9 @@ directive0 :
 | VAR_PREFIX_LIST   ident_list      { loc (DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_LIST  ) $2)) }
 | VAR_PREFIX_ALIST  ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.vAR_PREFIX_ALIST ) $2)) }
 | HOL_SYM_ALIST     ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_SYM_ALIST    ) $2)) }
-| HOL_SYM_BOL_ALIST ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_SYM_BOL_ALIST    ) $2)) }
+| HOL_SYM_BOL_ALIST ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_SYM_BOL_ALIST) $2)) }
+| HOL_IOPEN_LIST    ident_list      { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_IOPEN_LIST   ) $2)) }
+| HOL_ICLOSE_LIST   ident_list      { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_ICLOSE_LIST  ) $2)) }
 | HOL_ID_ALIST      ident_alist     { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_ID_ALIST     ) $2)) }
 | HOL_CURRIED_ALIST curryspec_alist { loc (DirThunk (fun () -> add_to_list (!curmodals.hOL_CURRIED_ALIST) $2)) }
 /* other modals: */

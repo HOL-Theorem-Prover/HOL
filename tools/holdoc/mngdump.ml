@@ -378,11 +378,13 @@ let rec readarg cf ml ts0 = (* read a single arg: spaces then (id.id.id or match
 type token_cxt = {
     adjid : bool;  (* previous non-space token was alphanumeric identifier *)
     bol   : bool;  (* first token on line *)
+    indents : int list;  (* stack of current indentation levels *)
   }
 
 let tcx0 : token_cxt = {
   adjid = false;
-  bol = true
+  bol = true;
+  indents = [];
 }
 
 
@@ -463,6 +465,13 @@ let munge_indent : int -> unit
       else
         print_string "\n"
 
+(* output an indentation, correcting for the current indentation level *)
+let munge_indent_ext : int list -> int -> unit
+    = fun ms n ->
+      match ms with
+      | [] -> munge_indent n
+      | (m::_) -> munge_indent (if m > n then 0 else n - m)
+
 
 (* -------------------------------------------------------------------- *)
 (*  Munging the whole document                                          *)
@@ -478,7 +487,7 @@ let rec render_HolTex_hook : (pvars -> texdoc -> unit) ref
 (* output a single HOL token *)
 (* boolean flag: was previous token an alphanumeric ident? *)
 and munge_hol_content0 : pvars -> token_cxt -> hol_content -> token_cxt
-    = fun pvs tcx (t,_) ->
+    = fun pvs tcx (t,l) ->
       let render_it =
         match t with
           HolIdent(true ,s) -> (fun () ->
@@ -487,7 +496,7 @@ and munge_hol_content0 : pvars -> token_cxt -> hol_content -> token_cxt
         | HolIdent(false,s) -> (fun () -> munge_symbol pvs tcx.bol s)
         | HolStr s          -> (fun () -> wrap "\\text{``" "''}" munge_texify_text s)
         | HolWhite s        -> (fun () -> print_string s)
-        | HolIndent n       -> (fun () -> munge_indent n)
+        | HolIndent n       -> (fun () -> munge_indent_ext tcx.indents n)
         | HolSep s          -> (fun () -> munge_texify_math s)
         | HolText d         -> (fun () ->
                                let s = dumptextdoc d in
@@ -505,7 +514,19 @@ and munge_hol_content0 : pvars -> token_cxt -> hol_content -> token_cxt
         render_it ();
         let adjid' = match t with HolIdent(true,_) -> true | HolWhite _ -> tcx.adjid | _ -> false in
         let bol' = match t with HolIndent(_) -> true | HolWhite _ -> tcx.bol | _ -> false in
-        { tcx with adjid = adjid'; bol = bol' }
+        let indents' = match t with
+        | HolIdent(_,s) ->
+            if List.mem s !(!curmodals.hOL_IOPEN_LIST) then
+              (let m = snd (columns_of l) + 1 in
+              m :: tcx.indents)
+            else if List.mem s !(!curmodals.hOL_ICLOSE_LIST) then
+              (match tcx.indents with
+              | (_::tail) -> tail
+              | [] -> write_warning ("Close delimiter without matching open",l); tcx.indents)
+            else
+              tcx.indents
+        | _ -> tcx.indents in
+        { tcx with adjid = adjid'; bol = bol'; indents = indents' }
       end else
         tcx  (* don't display anything if echoing turned off *)
 

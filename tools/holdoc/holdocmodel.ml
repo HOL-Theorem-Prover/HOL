@@ -97,3 +97,16 @@ let rec format_location : (Lexing.position * Lexing.position) -> string
         l0.Lexing.pos_fname ^ ":" ^ string_of_int l0.Lexing.pos_lnum ^ ":" ^ string_of_int l0_col ^
         "-" ^ l1.Lexing.pos_fname ^ ":" ^ string_of_int l1.Lexing.pos_lnum ^ ":" ^ string_of_int l1_col ^ ":"
       end
+
+let columns_of : (Lexing.position * Lexing.position) -> (int * int)
+    = fun (l0,l1) ->
+      (if l0 = Lexing.dummy_pos then
+        0
+      else
+        l0.Lexing.pos_cnum - l0.Lexing.pos_bol),
+      (if l1 = Lexing.dummy_pos then
+        0
+      else
+        l1.Lexing.pos_cnum - l1.Lexing.pos_bol)
+        
+          
