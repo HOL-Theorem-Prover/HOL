@@ -215,26 +215,65 @@ in
         ListPair.map new_definition (fupd_names, fupd_def_terms)
       val fupdfn_thm =
         save_thm(typename^"_fn_updates", LIST_CONJ fupdfn_thms)
+      val fupdfn_terms = map (mk_const o dest_var) fupd_terms
 
 
       (* do cases and induction theorem *)
       val induction_thm = TypeBase.induction_of tyinfo
       val cases_thm = TypeBase.nchotomy_of tyinfo
 
+      fun gen_var_domty(name, tm, avoids) = let
+        val v0 = mk_var(name, #1 (dom_rng (type_of tm)))
+      in
+        variant avoids v0
+      end
+
       (* do access of updates theorems *)
       val var = Psyntax.mk_var(app_letter typ, typ)
       val tactic = STRUCT_CASES_TAC (SPEC var cases_thm) THEN
                 REWRITE_TAC [accessor_thm,updfn_thm]
       val combinations = crosslessdiag accfn_terms updfn_terms
-      fun create_goal (acc, upd) =
-        (--`^acc (^upd x ^var) = ^acc ^var`--)
+      fun create_goal (acc, upd) = let
+        val x = gen_var_domty("x", upd, [var])
+      in
+        (--`^acc (^upd ^x ^var) = ^acc ^var`--)
+      end
       val goals = map create_goal combinations
-      val diag_goals =
-        map2 (fn acc => fn upd => (--`^acc (^upd x ^var) = x`--))
-        accfn_terms updfn_terms
+      fun create_goal (acc, upd) = let
+        val x = gen_var_domty("x", upd, [var])
+      in
+        Term`^acc (^upd ^x ^var) = ^x`
+      end
+      val diag_goals = ListPair.map create_goal (accfn_terms, updfn_terms)
       val thms = map (C (curry prove) tactic) (goals@diag_goals)
       val accupd_thm =
         save_thm(typename^"_accupds", LIST_CONJ (map GEN_ALL thms))
+
+      (* do acc of fupdates theorems *)
+      (* i.e. thms of the form
+           (r with fld1 updated by val).fld2 = r.fld2
+         ( ==
+             fld1 (fld2_fupd val r) = fld1 r
+         )
+      *)
+      fun create_goal (acc, fupd) = let
+        val f = gen_var_domty("f", fupd, [var])
+      in
+        Term`^acc (^fupd ^f ^var) = ^acc ^var`
+      end
+      val combinations = crosslessdiag accfn_terms fupdfn_terms
+      val goals = map create_goal combinations
+      fun create_goal (acc, fupd) = let
+        val f = gen_var_domty("f", fupd, [var])
+      in
+        Term`^acc (^fupd ^f ^var) = ^f (^acc ^var)`
+      end
+      val diag_goals = ListPair.map create_goal (accfn_terms, fupdfn_terms)
+      val tactic = STRUCT_CASES_TAC (SPEC var cases_thm) THEN
+                   REWRITE_TAC [accessor_thm, fupdfn_thm, updfn_thm]
+      val thms = map (C (curry prove) tactic) (goals @ diag_goals)
+      val accfupd_thm =
+        save_thm(typename^"_accfupds", LIST_CONJ (map GEN_ALL thms))
 
       (* do updates of access theorems *)
       (* theorems of the form: fld_upd (fld r) r = r *)
@@ -305,7 +344,7 @@ in
       (* add to the TypeBase's simpls entry for the record type *)
       val existing_simpls = TypeBase.simpls_of tyinfo
       val new_simpls = [accupd_thm, accessor_thm, updfn_thm, updacc_thm,
-                        updupd_thm, updcanon_thm] @ fupdfn_thms
+                        updupd_thm, updcanon_thm, accfupd_thm]
       val new_tyinfo =
         TypeBase.put_simpls (existing_simpls @ new_simpls) tyinfo
       val _ = TypeBase.write new_tyinfo
@@ -321,6 +360,24 @@ in
       end
       val _ = ListPair.app do_accfn (fields, accfn_terms)
       val _ = ListPair.app add_record_field (fields, accfn_terms)
+
+      fun do_updfn (name0, tm) = let
+        val name = name0 ^ "_update"
+      in
+        Parse.allow_for_overloading_on (name, Type`:'a -> 'b -> 'b`);
+        Parse.overload_on(name, tm)
+      end
+      val _ = ListPair.app do_updfn (fields, updfn_terms)
+      val _ = ListPair.app add_record_update (fields, updfn_terms)
+
+      fun do_fupdfn (name0, tm) = let
+        val name = name0 ^ "_fupd"
+      in
+        Parse.allow_for_overloading_on (name, Type`:('a -> 'a) -> 'b -> 'b`);
+        Parse.overload_on(name, tm)
+      end
+      val _ = ListPair.app do_fupdfn (fields, fupdfn_terms)
+      val _ = ListPair.app add_record_fupdate (fields, fupdfn_terms)
 
     in
       {type_axiom = typthm,
