@@ -755,6 +755,15 @@ fun TAUT_CONV tm =
 val TAUT_TAC = CONV_TAC TAUT_CONV;
 
 (*---------------------------------------------------------------------------*)
+(* ASM_TAUT_TAC : tacti                                                      *)
+(*                                                                           *)
+(* Same as TAUT_TAC, except that it takes account of the assumptions of the  *)
+(* goal.                                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val ASM_TAUT_TAC = REPEAT (POP_ASSUM MP_TAC) THEN TAUT_TAC
+
+(*---------------------------------------------------------------------------*)
 (* TAUT_PROVE : conv                                                         *)
 (*                                                                           *)
 (* Given a valid propositional formula, or a valid instance of a             *)
