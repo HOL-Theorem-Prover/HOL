@@ -40,6 +40,9 @@
 
 let alpha = [ `A` - `Z` `a` - `z` `_` `'` ]
 let numeric = [ `0` - `9` ]
+let digitseq = (numeric | `_`)* numeric (numeric | `_`)*
+let hexdigit = [ `A` - `F` `a` - `f` ] | numeric
+let hexdigitseq = (hexdigit | `_`)* hexdigit (hexdigit | `_`)*
 
 (* symbol is as one would expect less '(' and '*' to prevent symbols that
    begin with '(''*' to match as symbols.  This sequence can't appear inside
@@ -63,14 +66,22 @@ rule base_token =
      in (BT_QIdent (hd l, hd (tl l)),getLoc st lexbuf) end }
  | locpragma { dolocpragma base_token lexbuf } (* must come before paren-star *)
  | "(*"  { fn st => comment lexbuf st 0 }
- | numeric+ alpha?  { fn st =>
+ | ("0b" digitseq | numeric (numeric | `_`)* | "0x" hexdigitseq ) alpha?  {
+     fn st =>
      let val s = getLexeme lexbuf
          val c = String.sub (s, size s - 1)
+         val clower = Char.toLower c
+         val chexp = #"a" <= clower andalso clower <= #"f"
+         val loc = getLoc st lexbuf
      in
-       if Char.isAlpha c then
-         (BT_Numeral(String.extract(s,0,SOME (size s - 1)), SOME c),getLoc st lexbuf)
+       if Char.isAlpha c andalso not (String.isPrefix "0x" s andalso chexp)
+       then let
+           val s = substring(s,0,size s - 1)
+         in
+           (BT_Numeral(parse_numeric_literal(s, loc), SOME c), loc)
+         end
        else
-         (BT_Numeral(s, NONE),getLoc st lexbuf)
+         (BT_Numeral(parse_numeric_literal(s, loc), NONE), loc)
      end }
  | `$` ? anysymb { fn st => (BT_Ident (getLexeme lexbuf),getLoc st lexbuf) }
  | "\""  { fn st as ref (nf,r,i,_) =>

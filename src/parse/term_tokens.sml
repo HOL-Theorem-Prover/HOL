@@ -8,7 +8,7 @@ struct
   datatype 'a term_token =
     Ident of string
   | Antiquote of 'a
-  | Numeral of (string * char option)
+  | Numeral of (Arbnum.num * char option)
   | QIdent of (string * string)
 
 

@@ -770,7 +770,7 @@ fun parse_term (G : grammar) typeparser = let
                         NUMERAL  = (QIDENT ("arithmetic", "NUMERAL"),locn),
                         BIT1     = (QIDENT ("arithmetic", "BIT1")  ,locn),
                         BIT2     = (QIDENT ("arithmetic", "BIT2")  ,locn)}
-                    (Arbnum.fromString dp)
+                       dp
                 fun inject_np NONE = numeral_part
                   | inject_np (SOME s) = (COMB((VAR s,locn), numeral_part),locn)
               in
@@ -787,7 +787,7 @@ fun parse_term (G : grammar) typeparser = let
                   end
                 | NONE =>
                   if null num_info then
-                    if dp = "0" then
+                    if dp = Arbnum.zero then
                       (WARN "term_parser"
                        ("\n   0 treated specially and allowed - "^
                         "no other numerals permitted");

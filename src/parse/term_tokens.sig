@@ -4,7 +4,7 @@ sig
   datatype 'a term_token =
     Ident of string
   | Antiquote of 'a
-  | Numeral of (string * char option)
+  | Numeral of (Arbnum.num * char option)
   | QIdent of (string * string)
 
   val lex : string list -> 'a qbuf.qbuf -> 'a term_token locn.located option
