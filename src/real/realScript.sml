@@ -3369,6 +3369,24 @@ val mult_ints = store_thm(
     (~&a * ~&b = &(a * b))``,
   SRW_TAC [][REAL_MUL_LNEG, REAL_MUL_RNEG]);
 
+val pow_rat = store_thm(
+  "pow_rat",
+  ``(x pow 0 = 1) /\
+    (0 pow (NUMERAL (NUMERAL_BIT1 n)) = 0) /\
+    (0 pow (NUMERAL (NUMERAL_BIT2 n)) = 0) /\
+    (&(NUMERAL a) pow (NUMERAL n) = &(NUMERAL a EXP NUMERAL n)) /\
+    (~&(NUMERAL a) pow (NUMERAL n) =
+      (if ODD (NUMERAL n) then (~) else (\x.x))
+      (&(NUMERAL a EXP NUMERAL n))) /\
+    ((x / y) pow n = (x pow n) / (y pow n))``,
+  SIMP_TAC bool_ss [pow, NUMERAL_DEF, NUMERAL_BIT1, NUMERAL_BIT2, POW_ADD,
+                    ALT_ZERO, ADD_CLAUSES, REAL_MUL, MULT_CLAUSES,
+                    REAL_MUL_RZERO, REAL_OF_NUM_POW, REAL_POW_DIV, EXP] THEN
+  Induct_on `n` THEN ASM_SIMP_TAC bool_ss [pow, ODD, EXP] THEN
+  Cases_on `ODD n` THEN
+  ASM_SIMP_TAC bool_ss [REAL_MUL, REAL_MUL_LNEG,
+                        REAL_MUL_RNEG, REAL_NEG_NEG]);
+
 val neg_rat = store_thm(
   "neg_rat",
   ``(~(x / y) = if y = 0 then ~ (unint(x/y)) else ~x / y) /\

@@ -223,7 +223,7 @@ val rel_rwts = [eq_ints, le_int, lt_int] @
                real_gts @ real_ges
 
 
-val rwts = op_rwts @ rel_rwts
+val rwts = pow_rat :: (op_rwts @ rel_rwts)
 
 val n_compset = reduceLib.num_compset()
 val _ = computeLib.add_thms (mult_ints:: mult_rats) n_compset
