@@ -13,7 +13,7 @@ Type.uo: Type.sml Raw-sig.uo Lexis.ui
 Term.uo: Term.sml Type.uo Globals.ui
 	HOLMOSMLC -c -toplevel Globals.ui Type.ui Raw-sig.ui Sig.ui Term.sml
 
-Tag.uo: Tag.sml Raw-sig.uo
+Tag.uo: Tag.sml Raw-sig.uo Globals.ui
 	HOLMOSMLC -c -toplevel Raw-sig.ui Tag.sml
 
 Thm.uo: Thm.sml Term.uo Tag.uo
