@@ -235,7 +235,7 @@ local
   val NOT_EXISTS_THM =
     GEN_ALL (SYM
              (PURE_REWRITE_RULE [NOT_CLAUSES]
-              (BETA_RULE (SPEC (Term`\x:'a. ~ P x`)
+              (BETA_RULE (SPEC (Term`\x:'a. ~ P x : bool`)
                                boolTheory.NOT_EXISTS_THM))))
 in
 
