@@ -1460,6 +1460,21 @@ val LINV_DEF =
       new_specification("LINV_DEF",["LINV"],th2)
    end;
 
+
+val BIJ_LINV_INV = Q.store_thm (
+"BIJ_LINV_INV",
+`!f s t. BIJ f s t ==> !x. x IN t ==> (f (LINV f s x) = x)`,
+RW_TAC bool_ss [BIJ_DEF] THEN
+IMP_RES_TAC LINV_DEF THEN FULL_SIMP_TAC bool_ss [INJ_DEF, SURJ_DEF] THEN
+METIS_TAC []);
+
+val BIJ_LINV_BIJ = Q.store_thm (
+"BIJ_LINV_BIJ",
+`!f s t. BIJ f s t ==> BIJ (LINV f s) t s`,
+RW_TAC bool_ss [BIJ_DEF] THEN
+IMP_RES_TAC LINV_DEF THEN FULL_SIMP_TAC bool_ss [INJ_DEF, SURJ_DEF] THEN
+METIS_TAC []);
+
 val lemma3 = TAC_PROOF(([],
 (--`!f:'a->'b. !s. ?g. !t. SURJ f s t ==> !x:'b. x IN t ==> (f(g x) = x)`--)),
      REPEAT GEN_TAC THEN PURE_REWRITE_TAC [SURJ_DEF] THEN
