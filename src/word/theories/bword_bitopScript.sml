@@ -9,7 +9,7 @@
 (* PC 18/11/93: SEG ->WSEG *)
 
 open HolKernel Parse basicHol90Lib Let_conv Num_conv Num_induct;
-open ConstrProofs Define_type Base;
+open Define_type Base;
 open arithLib numLib res_quanLib;
 open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 infix THEN THENL THENC ORELSE ORELSEC;
