@@ -17,7 +17,8 @@ struct
 
 open HolKernel boolLib pairSyntax Abbrev;
 
-infix THENC |-> -->;
+infix THENC |->
+infixr -->;
 
 val PAIR_ERR = mk_HOL_ERR "Pair_basic"
 
@@ -48,7 +49,7 @@ fun PABS p th =
 	    val p2ty = type_of p2
 	    val cty = type_of (rand (concl th))
 	in
-	  AP_TERM 
+	  AP_TERM
            (inst [alpha |-> p1ty, beta |-> p2ty,gamma |-> cty] uncurry_tm) t2
 	end
     handle HOL_ERR _ => failwith "PABS";
@@ -69,8 +70,8 @@ fun PABS_CONV conv tm =
 (* ----------------------------------------------------------------------- *)
 
 fun PSUB_CONV conv tm =
-    if is_pabs tm then PABS_CONV conv tm else 
-    if is_comb tm 
+    if is_pabs tm then PABS_CONV conv tm else
+    if is_comb tm
        then let val (Rator,Rand) = dest_comb tm
 	    in MK_COMB (conv Rator, conv Rand)
             end
@@ -86,7 +87,7 @@ val PAIR =  pairTheory.PAIR;
 
 val CURRY_CONV =
     let val gfty = alpha --> beta --> gamma
-	and gxty = alpha 
+	and gxty = alpha
 	and gyty = beta
 	and gpty = mk_prod(alpha,beta)
 	and grange = gamma
@@ -183,23 +184,23 @@ val PBETA_CONV =
     (* required changing along the correspoing subpair from p.		  *)
     let val pairlike =
       let fun int_pairlike p x =
-	if is_pair p 
+	if is_pair p
         then let val (p1,p2) = dest_pair p
 	    in
-	    if is_pair x 
+	    if is_pair x
             then let val (x1,x2) = dest_pair x
  		   val ((cl,lt),pl) = int_pairlike p1 x1
 	           val ((cr,rt),pr) = int_pairlike p2 x2
                    val (c,t) = if cl andalso cr then (true,MK_PAIR(lt,rt))
-                      else if cl 
+                      else if cl
                            then let val ty1 = type_of x1
 				    and ty2 = type_of x2
 				in (true,
-                                    AP_THM (AP_TERM 
+                                    AP_THM (AP_TERM
                                       (inst[alpha|->ty1, beta|->ty2] comma_tm)
                                           lt) x2)
 				end
-			   else if cr 
+			   else if cr
                                 then let val ty1 = type_of x1
 					 val ty2 = type_of x2
 				     in (true,
@@ -218,14 +219,14 @@ val PBETA_CONV =
  	          val ((cl,lt),pl) = (int_pairlike p1 x'1)
 		  val ((cr,rt),pr) = (int_pairlike p2 x'2)
                   val t = if cl andalso cr then TRANS (MK_PAIR(lt,rt)) th1
- 			  else if cl 
+ 			  else if cl
                                then let val ty1 = type_of x'1
 					and ty2 = type_of x'2
-				    in TRANS(AP_THM (AP_TERM 
+				    in TRANS(AP_THM (AP_TERM
                                          (inst[alpha|->ty1,beta|->ty2]comma_tm)
                                          lt) x'2) th1
 				    end
-			       else if cr 
+			       else if cr
                                     then let val ty1 = type_of x'1
 					     val ty2 = type_of x'2
 					 in
@@ -350,8 +351,8 @@ fun UNPBETA_CONV v tm =
 (* ------------------------------------------------------------------------- *)
 
 fun occs_in p t =  (* should use set operations for better speed *)
-  if is_vstruct p 
-  then let fun check V tm = 
+  if is_vstruct p
+  then let fun check V tm =
             if is_const tm then false else
             if is_var tm then mem tm V else
             if is_comb tm then check V (rand tm) orelse check V (rator tm) else
@@ -378,7 +379,7 @@ handle HOL_ERR _ => failwith "PETA_CONV";
 
 fun PALPHA_CONV np tm =
  let val (opr,_) = dest_pabs tm
- in if is_var np 
+ in if is_var np
     then if is_var opr then ALPHA_CONV np tm
          else (* is_pair opr *)
          let val np' = genvar (type_of np)
@@ -389,7 +390,7 @@ fun PALPHA_CONV np tm =
             CONV_RULE (RAND_CONV (ALPHA_CONV np)) t3
          end
     else (* is_pair np *)
-    if is_var opr 
+    if is_var opr
     then let val np' = genvarstruct (type_of np)
              val t1 = PBETA_CONV (mk_comb(tm, np'))
              val t2 = PABS np' t1
@@ -426,11 +427,11 @@ fun GEN_PALPHA_CONV p tm =
 (* ------------------------------------------------------------------------- *)
 
 fun PALPHA t1 t2 =
-   if t1 = t2 then REFL t1 else 
-   if (is_pabs t1) andalso (is_pabs t2) 
+   if t1 = t2 then REFL t1 else
+   if (is_pabs t1) andalso (is_pabs t2)
    then let val (p1,b1) = dest_pabs t1
             val (p2,b2) = dest_pabs t2
-        in if is_var p1 
+        in if is_var p1
            then let val th1 = PALPHA_CONV p1 t2
                     val b2' = pbody (rand (concl th1))
                 in
@@ -442,7 +443,7 @@ fun PALPHA t1 t2 =
                   TRANS th1 (PABS p2 (PALPHA b2 b1'))
                 end
         end
-   else if (is_comb t1) andalso(is_comb t2) 
+   else if (is_comb t1) andalso(is_comb t2)
         then let val (t1f,t1a) = dest_comb t1
                  val (t2f,t2a) = dest_comb t2
                  val thf = PALPHA t1f t2f
