@@ -220,12 +220,9 @@ local fun norm_name "-" = CTname()
 in
  val types         = thy_types o norm_name
  val constants     = thy_constants o norm_name
- fun axioms()      = map drop_pthmkind (thy_axioms (theCT()))
- fun definitions() = map drop_pthmkind (thy_defns (theCT()))
- fun theorems()    = map drop_pthmkind (thy_theorems (theCT()))
- fun axiom s       = grab_item "axiom" s (axioms())
- fun definition s  = grab_item "definition" s (definitions())
- fun theorem s     = grab_item "theorem" s (theorems())
+ fun curr_axioms() = map drop_pthmkind (thy_axioms (theCT()))
+ fun curr_defs()   = map drop_pthmkind (thy_defns (theCT()))
+ fun curr_thms()   = map drop_pthmkind (thy_theorems (theCT()))
  fun get_parents s = if norm_name s = CTname() 
                        then Graph.fringe() else thy_parents s
  val parents       = map thyid_name o get_parents

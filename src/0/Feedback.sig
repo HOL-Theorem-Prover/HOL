@@ -1,13 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : Feedback.sig                                          *)
-(* DESCRIPTION   : HOL exceptions, messages, warnings, and traces.       *)
-(*                                                                       *)
-(* AUTHOR        : (c) Konrad Slind, Michael Norrish                     *)
-(*                 University of Cambridge                               *)
-(* DATE          : October 1, 2000                                       *)
-(* ===================================================================== *)
-
-
 signature Feedback =
 sig
     type error_record = {origin_structure : string,
@@ -56,4 +46,4 @@ sig
     val reset_traces      : unit -> unit
     val trace             : string * int -> ('a -> 'b) -> 'a -> 'b
 
-end;
+end

@@ -34,12 +34,9 @@ sig
   val ancestry           : string -> string list
   val types              : string -> (string * int) list
   val constants          : string -> term list
-  val axioms             : unit -> (string * thm) list
-  val definitions        : unit -> (string * thm) list
-  val theorems           : unit -> (string * thm) list
-  val axiom              : string -> thm
-  val definition         : string -> thm
-  val theorem            : string -> thm
+  val curr_axioms        : unit -> (string * thm) list
+  val curr_defs          : unit -> (string * thm) list
+  val curr_thms          : unit -> (string * thm) list
 
 (* Support for persistent theories *)
 

@@ -1,14 +1,3 @@
-(* ===================================================================== *)
-(* FILE          : Globals.sig                                           *)
-(* DESCRIPTION   : Signature for global flags.                           *)
-(*                                                                       *)
-(* AUTHOR        : Ken Larsen, University of Cambridge                   *)
-(*                 Based on globals.sig by                               *)
-(*                 (c) Konrad Slind, University of Calgary               *)
-(* DATE          : September 22, 1997                                    *)
-(* ===================================================================== *)
-
-
 signature Globals =
 sig
 

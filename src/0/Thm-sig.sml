@@ -15,8 +15,8 @@ sig
   val concl         : thm -> term
   val dest_thm      : thm -> term list * term
   val thm_frees     : thm -> term list
-  val thm_hypfrees  : thm -> term set
-  val thm_hypfreetys: thm -> hol_type set
+  val hyp_frees     : thm -> term set
+  val hyp_tyvars    : thm -> hol_type set
 
 
   (* The primitive rules of inference *)

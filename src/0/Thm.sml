@@ -133,7 +133,7 @@ fun hypset_all P s = not (isSome (HOLset.find (not o P) s))
 fun hypset_exists P s = isSome (HOLset.find P s)
 fun hypset_map f s = HOLset.foldl(fn(i,s0) => HOLset.add(s0,f i)) empty_hyp s
 
-fun thm_hypfreetys th =
+fun hyp_tyvars th =
    HOLset.foldl (fn (h,tys) =>
                         List.foldl (fn (tyv,tys) => HOLset.add(tys,tyv))
                                    tys
@@ -141,7 +141,7 @@ fun thm_hypfreetys th =
                     (HOLset.empty Type.compare)
                     (hypset th)
 
-fun thm_hypfrees th =
+fun hyp_frees th =
   HOLset.foldl
       (fn (h,tms) => HOLset.union(Term.FVL[h] empty_tmset,tms))
       empty_hyp (hypset th);

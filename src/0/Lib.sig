@@ -78,7 +78,7 @@ sig
   val op_intersect  : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val op_set_diff   : ('a -> 'a -> bool) -> 'a list -> 'a list -> 'a list
   val for           : int -> int -> (int -> 'a) -> 'a list
-  val for_se        : int -> int -> (int -> 'a) -> unit
+  val for_se        : int -> int -> (int -> unit) -> unit
   val int_to_string : int -> string
   val string_to_int : string -> int
   val sort          : ('a -> 'a -> bool) -> 'a list -> 'a list

@@ -166,8 +166,8 @@ sig
   val concl         : thm -> term
   val dest_thm      : thm -> term list * term
   val thm_frees     : thm -> term list
-  val thm_hypfrees  : thm -> term set
-  val thm_hypfreetys: thm -> hol_type set
+  val hyp_frees     : thm -> term set
+  val hyp_tyvars    : thm -> hol_type set
   val ASSUME        : term -> thm
   val REFL          : term -> thm
   val BETA_CONV     : term -> thm
@@ -268,12 +268,9 @@ sig
   val ancestry       : string -> string list
   val types          : string -> (string * int) list
   val constants      : string -> term list
-  val axioms         : unit -> (string * thm) list
-  val definitions    : unit -> (string * thm) list
-  val theorems       : unit -> (string * thm) list
-  val axiom          : string -> thm
-  val definition     : string -> thm
-  val theorem        : string -> thm
+  val curr_axioms    : unit -> (string * thm) list
+  val curr_defs      : unit -> (string * thm) list
+  val curr_thms      : unit -> (string * thm) list
   val new_theory     : string -> unit
   val after_new_theory : (string -> unit) -> unit
   val adjoin_to_theory : thy_addon -> unit
