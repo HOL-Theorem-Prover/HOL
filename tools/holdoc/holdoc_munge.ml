@@ -283,6 +283,7 @@ let do_sub s =
 let rec do_var v s =
   (* return fully texified variable or number, or raise Not_found if it's not a var *)
 (*  let _ = print_string ("[dovar: >"^s^"<]") in *)
+  if s = "" then raise Not_found else
   let _ = (Str.search_forward
              (Str.regexp "\([0-9]*\)\([']*\)\($\|_\)")  (* always matches *)
              s
