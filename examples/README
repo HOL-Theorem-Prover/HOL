@@ -73,9 +73,9 @@ Currently on offer are the following:
        This file is a template for making a separately compilable HOL
        theory script.
 
-  * thery
+  * Thery
 
-       This file is a simple introductory example of proof in HOL,
+       This file is a very simple introductory example of proof in HOL,
        extracted from 
 
          "A quick overview of PVS and HOL"

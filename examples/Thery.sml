@@ -73,13 +73,17 @@ e (Induct THEN ARW_TAC[]);
 (*---------------------------------------------------------------------------
       This leaves two goals. The first is easy to show.
  ---------------------------------------------------------------------------*)
+
 (* Goal 1 *)
+
 e (MAP_EVERY Q.EXISTS_TAC [`1`, `1`] THEN DECIDE_TAC);
 
 (*---------------------------------------------------------------------------
       Now consider cases on the number of coins of value 5.
  ---------------------------------------------------------------------------*)
+
 (* Goal 2 *)
+
 e (Cases_on `k` THEN ARW_TAC []);
 
 (*---------------------------------------------------------------------------
@@ -87,7 +91,9 @@ e (Cases_on `k` THEN ARW_TAC []);
       of value 3. "j" has to be 3 or greater. Knowing this, the 
       existential witnesses are easy to supply.
  ---------------------------------------------------------------------------*)
+
 (* Goal 2.1 *)
+
 e (`2<j` by DECIDE_TAC);
 e (MAP_EVERY Q.EXISTS_TAC [`j-3`, `2`]);
 e DECIDE_TAC;
@@ -96,6 +102,7 @@ e DECIDE_TAC;
       Case: at least one coin of value 5.
  ---------------------------------------------------------------------------*)
 (* Goal 2.2*)
+
 e (MAP_EVERY Q.EXISTS_TAC [`j+2`, `n`] THEN DECIDE_TAC);
 
 

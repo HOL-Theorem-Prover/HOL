@@ -105,7 +105,7 @@ val DIVIDES_FACT = prove
 (``!m n. 0 < m /\ m <= n ==> m divides (FACT n)``,
 Induct_on `n - m`
  THEN ARW_TAC [] THENL
- [`m:num = n`     by DECIDE_TAC THEN
+ [`m = n`     by DECIDE_TAC THEN
   `?k. m = SUC k` by PROVE_TAC[arithmeticTheory.num_CASES,
                                prim_recTheory.LESS_REFL] THEN
    PROVE_TAC[FACT,DIVIDES_RMUL,DIVIDES_REFL],

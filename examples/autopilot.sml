@@ -355,6 +355,10 @@ Induct
              (tl(type_rws "off_eng") @ tl(type_rws "mode_status")));
 
 
+(*---------------------------------------------------------------------------*
+ * Induction for reachable states.                                           *
+ *---------------------------------------------------------------------------*)
+
 val reachable_induct = prove
 (Term`!P. (!st. is_initial st ==> P st) /\ 
           (!st st' e. is_reachable st ==> P (nextstate st e))

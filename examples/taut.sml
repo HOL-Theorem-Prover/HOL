@@ -10,16 +10,6 @@
 
  ---------------------------------------------------------------------------*)
 
-(* load "robddLib";
-fun bdd_oracle q =
-  let val tm = Parse.Term q
-      val V = free_vars tm
-  in 
-    Lib.say (String.concat [int_to_string (length V), " variables.\n"]);
-    time robddLib.mk_bdd_thm tm
-  end;
-*)
-
 load "muddyLib";
 fun bdd_oracle q =
   let val tm = Parse.Term q
@@ -29,10 +19,7 @@ fun bdd_oracle q =
     time muddyLib.mk_bdd_thm tm
   end;
 
-(* infix_at_front := true;       (* For readability of large formulas *) *)
-(* stack_infixes := false; *)
 show_tags := true;
-
 
 val mjcg_yes = bdd_oracle 
 `((adder1____carry__1__1 = ~a__0 /\ b__0) /\
