@@ -422,6 +422,11 @@ end handle NOT_FOUND => if redex = residue then (env, redex::idlist)
                         else (t::env, idlist)
 
 
+fun all_aconv [] [] = true
+  | all_aconv [] _ = false
+  | all_aconv _ [] = false
+  | all_aconv (h1::t1) (h2::t2) = aconv h1 h2 andalso all_aconv t1 t2
+
 fun term_homatch tyavoids lconsts tyins (insts, homs) = let
   (* local constants of both terms and types never change *)
   val term_homatch = term_homatch tyavoids lconsts
@@ -462,7 +467,7 @@ in
              val ni = let
                val (chop,cargs) = strip_comb ctm
              in
-               if cargs = pats then
+               if all_aconv cargs pats then
                  if chop = vhop then insts
                  else safe_inserta (vhop |-> chop) insts
                else let
