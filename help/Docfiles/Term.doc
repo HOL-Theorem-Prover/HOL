@@ -36,7 +36,7 @@ either {IDENTS}s or {AQ}s (anti-quotations).
 
 This first phase converts infixes, mixfixes and all the other
 categories of syntactic rule from the global grammar into simple
-structures built up using {COMB}.  For example, {`x op y`} (where {op}
+structures built up using {APP}.  For example, {`x op y`} (where {op}
 is an infix) will turn into
 {
    APP(APP(IDENT "op", IDENT "x"), IDENT "y")
