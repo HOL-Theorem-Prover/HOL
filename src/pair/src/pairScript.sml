@@ -547,6 +547,12 @@ Q.new_infixr_definition
      =
    \(s,t) (u,v). R1 s u \/ (s=u) /\ R2 t v`, 450);
 
+val LEX_DEF_THM = Q.store_thm
+("LEX_DEF_THM",
+ `(R1 LEX R2) (a,b) (c,d) = R1 a c \/ (a = c) /\ R2 b d`,
+  REWRITE_TAC [LEX_DEF,UNCURRY_DEF] THEN BETA_TAC THEN
+  REWRITE_TAC [UNCURRY_DEF] THEN BETA_TAC THEN REFL_TAC);
+
 val WF_LEX = Q.store_thm("WF_LEX",
  `!(R:'a->'a->bool) (Q:'b->'b->bool). WF R /\ WF Q ==> WF (R LEX Q)`,
 REWRITE_TAC [LEX_DEF, relationTheory.WF_DEF]
@@ -756,15 +762,32 @@ S "  in Parse.add_const cname"; NL();
 S "   ; itlist GEN vars (rev_itlist add_varstruct V th)"; NL();
 S "  end;"; NL();
 S "  "; NL();
-S "val _ = Definition.new_definition_hook := (dest, post)"; NL()
+S "val _ = Definition.new_definition_hook := (dest, post)"; NL();
+S "val _ = Drop.is_comma_hook := same_const comma_tm"; NL()
   end)};
-
 
 val _ = BasicProvers.export_rewrites
         ["PAIR", "FST", "SND", "CLOSED_PAIR_EQ", "CURRY_UNCURRY_THM",
          "UNCURRY_CURRY_THM", "CURRY_ONE_ONE_THM", "UNCURRY_ONE_ONE_THM",
          "UNCURRY_DEF", "CURRY_DEF", "PAIR_MAP_THM", "FST_PAIR_MAP",
          "SND_PAIR_MAP"]
+
+val comma_tm = Term.prim_mk_const{Name=",", Thy="pair"};
+fun is_pair tm = Term.same_const comma_tm (fst(strip_comb tm));
+fun dest_pair tm = let val (_,[a,b]) = strip_comb tm in (a,b) end;
+val _ = Drop.is_comma_hook := Term.same_const comma_tm;
+val _ = Drop.is_pair_hook := is_pair
+val _ = Drop.dest_pair_hook := dest_pair
+
+val _ = Drop.exportML ("pair", 
+          map Drop.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM]);
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm =>
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in S "val _ = ConstMapML.insert comma_tm;"; NL(); NL()
+  end)}
 
 val _ = export_theory();
 

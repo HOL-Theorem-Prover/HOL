@@ -275,4 +275,17 @@ fun lift_prod ty =
      fn f => fn g => fn (x,y) => list_mk_comb(comma, [f x, g y])
   end
 
+
+(*---------------------------------------------------------------------------*)
+(* Resolving forward references from bool/Drop                               *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Drop.dest_pair_hook := dest_pair
+val _ = Drop.dest_plet_hook := dest_plet
+val _ = Drop.dest_pabs_hook := dest_pabs
+val _ = Drop.is_pair_hook := is_pair
+val _ = Drop.is_plet_hook := is_plet
+val _ = Drop.is_pabs_hook := is_pabs
+
+
 end

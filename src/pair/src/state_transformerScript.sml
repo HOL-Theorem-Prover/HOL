@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib pairTheory combinTheory;
+open HolKernel Parse boolLib pairTheory pairSyntax combinTheory ;
 
 val _ = new_theory "state_transformer";
 
-infixr 0 ++ || ORELSEC;
+infixr 0 ||
 infix 1 >>;
 
 val op++ = op THEN;
@@ -173,5 +173,8 @@ val FST_o_MMAP = store_thm
    ++ REWRITE_TAC [MMAP_DEF, BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
    ++ BETA_TAC
    ++ REWRITE_TAC [FST]);
+
+val _ = Lib.try Drop.exportML("state_transformer", 
+                 map Drop.DEFN [UNIT_DEF, BIND_DEF, MMAP_DEF, JOIN_DEF]);
 
 val _ = export_theory ();
