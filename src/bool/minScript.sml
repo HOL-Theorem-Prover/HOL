@@ -21,7 +21,8 @@ val _ = new_type{Name="ind",  Arity=0};
 val _ = new_infix_type{Name="fun",  Arity=2, ParseName = SOME "->",
                        Assoc = HOLgrammars.RIGHT, Prec = 50};
 
-val _ = new_infix{Name = "=",   Ty=Type `: 'a -> 'a -> bool`,     Prec=100};
+val _ = new_constant{Name = "=",   Ty=Type `: 'a -> 'a -> bool`};
+val _ = set_fixity "=" (Infix(NONASSOC, 100));
 
 (* using the standard rules for infixes for ==> seems to result in bad
    pretty-printing of goals.  I think the following customised printing
