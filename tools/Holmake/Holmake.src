@@ -116,8 +116,7 @@ fun parse_command_line list = let
         (rem1, b0 orelse b1)
       end
 
-  val find_includes = find_pairs0 "-I" [] []
-  val (rem0, includes) = find_includes list
+  val (rem0, includes) = find_pairs "-I" list
   val (rem1, dontmakes) = find_pairs "-d" rem0
   val (rem2, debug) = find_toggle "--debug" rem1
   val (rem3, help) = find_alternative_tags  ["--help", "-h"] rem2
@@ -125,11 +124,14 @@ fun parse_command_line list = let
   val (rem5, rebuild_deps) = find_alternative_tags ["--rebuild_deps","-r"] rem4
   val (rem6, actual_HOLDIRs) = find_pairs "--holdir" rem5
   val (rem7, no_sigobj) = find_alternative_tags ["--no_sigobj", "-n"] rem6
+  val (rem8, allfast) = find_toggle "--fast" rem7
+  val (rem9, fastfiles) = find_pairs "-f" rem8
 in
-  {targets=rem7, debug=debug, show_usage=help, show_version=show_version,
+  {targets=rem9, debug=debug, show_usage=help, show_version=show_version,
    always_rebuild_deps=rebuild_deps,
    additional_includes=List.foldr(fn (s,L) => "-I"::s::L) [] includes,
    dontmakes=dontmakes, no_sigobj = no_sigobj,
+   allfast = allfast, fastfiles = fastfiles,
    actual_HOLDIR =
      case actual_HOLDIRs
       of []  => HOLDIR
@@ -143,7 +145,7 @@ end
 
 
 (* parameters which vary from run to run according to the command-line *)
-val {targets, debug, dontmakes, show_usage, show_version,
+val {targets, debug, dontmakes, show_usage, show_version, allfast, fastfiles,
      always_rebuild_deps, additional_includes, actual_HOLDIR, no_sigobj} =
   parse_command_line (CommandLine.arguments())
 
@@ -582,8 +584,14 @@ in
       val _ = b orelse raise CompileFailed
       val _ = print ("Linking "^scriptuo^
                      " to produce theory building executable\n")
+      val objectfiles =
+        if allfast andalso not (member s fastfiles) orelse
+           not allfast andalso member s fastfiles
+        then ["fastbuild.uo", scriptuo]
+        else [scriptuo]
+
     in
-      if compile debug (include_flags@["-o", script, scriptuo]) = success
+      if compile debug (include_flags @ ["-o", script] @ objectfiles) = success
       then let
         val script' = MK_XABLE script
         val thysmlfile = s^"Theory.sml"
@@ -791,7 +799,9 @@ val _ =
      "  additional command-line options are:\n",
      "    -I file             : include directory (can be repeated)\n",
      "    -d file             : ignore file (can be repeated)\n",
+     "    -f file             : toggles fast build (can be repeated)\n",
      "    --debug             : print debugging information\n",
+     "    --fast              : files default to fast build; -f toggles\n",
      "    --help | -h         : show this message\n",
      "    --holdir directory  : use specified directory as HOL root\n",
      "    --no_sigobj | -n    : don't use any HOL files from sigobj\n",
