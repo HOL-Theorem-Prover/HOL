@@ -31,7 +31,6 @@ datatype class = Thm | Axm | Def
  ---------------------------------------------------------------------------*)
 
 type data    = (string * string) * (thm * class)
-type keydata = (string * string) * data
 
 
 (*---------------------------------------------------------------------------
@@ -46,13 +45,44 @@ fun toLower s =
      is loaded.
  ---------------------------------------------------------------------------*)
 
-local val DBref = ref [] : keydata list ref
+structure Map = Redblackmap
+(* the keys are lower-cased, but the data also stores the keys, and there
+   the key infomration is kept in its original case *)
+type submap = (string, data list) Map.dict
+type dbmap = (string, submap) Map.dict
+
+local val DBref = ref (Map.mkDict String.compare) : dbmap ref
       fun lemmas() = !DBref
-      fun add ((p as (s1,s2)),x) = cons ((toLower s1, toLower s2),(p,x))
-      fun addb thy (name,th,cl) = add ((thy,name),(th,cl))
-      fun classify thy cl (s,th) = ((thy,s),(th,cl))
+      fun add_to_submap m (newdata as ((s1, s2), x)) =
+          let val s2key = toLower s2
+              val oldvalue = case Map.peek(m, s2key) of
+                               NONE => []
+                             | SOME items => items
+          in
+            Map.insert(m, s2key, newdata :: oldvalue)
+          end
+      fun functional_bindl db thy blist =
+          let val thykey = toLower thy
+              val submap = case Map.peek(db, thykey) of
+                             NONE => Map.mkDict String.compare
+                           | SOME m => m
+              fun foldthis ((n,th,cl), m) = add_to_submap m ((thy,n), (th,cl))
+              val submap' = List.foldl foldthis submap blist
+          in
+            Map.insert(db, thykey, submap')
+          end
+      fun bind_with_classfn thy cl thlist db =
+          let val thykey = toLower thy
+              val submap = case Map.peek(db, thykey) of
+                             NONE => Map.mkDict String.compare
+                           | SOME m => m
+              fun foldthis ((n, th), m) = add_to_submap m ((thy,n),(th, cl))
+              val submap' = List.foldl foldthis submap thlist
+          in
+            Map.insert(db, thykey, submap')
+          end
 in
-fun bindl thy blist = DBref := Lib.rev_itlist (addb thy) blist (lemmas())
+fun bindl thy blist = DBref := functional_bindl (lemmas()) thy blist
 
 (*---------------------------------------------------------------------------
     To the database representing all ancestor theories, add the
@@ -62,12 +92,12 @@ fun bindl thy blist = DBref := Lib.rev_itlist (addb thy) blist (lemmas())
 fun CT() =
   let val thyname = Theory.current_theory()
   in
-    itlist (add o classify thyname Def) (Theory.current_definitions ())
-     (itlist (add o classify thyname Axm) (Theory.current_axioms ())
-      (itlist (add o classify thyname Thm) (Theory.current_theorems ())
-              (lemmas())))
+    (bind_with_classfn thyname Def (Theory.current_definitions ()) o
+     bind_with_classfn thyname Axm (Theory.current_axioms ()) o
+     bind_with_classfn thyname Thm (Theory.current_theorems ()))
+    (lemmas())
   end
-end;
+end (* local *)
 
 
 (*---------------------------------------------------------------------------
@@ -87,9 +117,21 @@ fun norm_thyname "-" = current_theory()
  ---------------------------------------------------------------------------*)
 
 fun thy s =
-   map snd (filter (equal(toLower(norm_thyname s)) o fst o fst) (CT()));
+    case Map.peek(CT(), toLower (norm_thyname s)) of
+      NONE => []
+    | SOME m =>
+      let fun foldthis (k, v, acc) = v @ acc
+      in
+        Map.foldr foldthis [] m
+      end
 
-fun find s = map snd (filter (occurs(toLower s) o snd o fst) (CT()));
+fun find s =
+    let val s = toLower s
+        fun subfold (k, v, acc) = if occurs s k then v @ acc else acc
+        fun fold (thy, m, acc) = Map.foldr subfold acc m
+    in
+      Map.foldr fold [] (CT())
+    end
 
 
 (*---------------------------------------------------------------------------
@@ -97,13 +139,23 @@ fun find s = map snd (filter (occurs(toLower s) o snd o fst) (CT()));
  ---------------------------------------------------------------------------*)
 
 fun matchp P thylist =
- let val matchfn =
-       case List.map norm_thyname thylist
-        of []   => (fn (_,(th,_)) => P th)
-         | strl => (fn ((s,_),(th,_)) => Lib.mem s strl andalso P th)
- in
-   map snd (filter (matchfn o snd) (CT()))
- end
+    let fun data_P (_, (th, _)) = P th
+        fun subfold (k, v, acc) = List.filter data_P v @ acc
+    in
+      case thylist of
+        [] => let fun fold (k, m, acc) = Map.foldr subfold acc m
+              in
+                Map.foldr fold [] (CT())
+              end
+      | _ => let val db = CT()
+                 fun fold (thyn, acc) =
+                     case Map.peek(db, toLower (norm_thyname thyn)) of
+                       NONE => acc
+                     | SOME m => Map.foldr subfold acc m
+             in
+               List.foldr fold [] thylist
+             end
+    end
 
 
 fun matcher f thyl pat =
@@ -113,18 +165,31 @@ val match = matcher (ho_match_term [] empty_tmset);
 val apropos = match [];
 
 
-fun listDB () = map snd (CT());
+fun listDB () =
+    let fun subfold (k,v,acc) = v @ acc
+        fun fold (_, m, acc) = Map.foldr subfold acc m
+    in
+      Map.foldr fold [] (CT())
+    end
 
 (*---------------------------------------------------------------------------
       Some other lookup functions
  ---------------------------------------------------------------------------*)
 
 fun thm_class thy name =
-  case filter (equal (norm_thyname thy,name) o fst o snd) (CT())
-   of [(_,p)] => snd p
-    | [] => raise ERR "thm_class" "not found"
-    | other => raise ERR "thm_class" "multiple things with the same name";
-
+    let val db = CT()
+        val thymap = Map.find(db, toLower (norm_thyname thy))
+                     handle Map.NotFound =>
+                            raise ERR "thm_class" "no such theory"
+        val result = Map.find(thymap, toLower name)
+                     handle Map.NotFound =>
+                            raise ERR "thm_class" "not found"
+    in
+      case filter (equal (norm_thyname thy,name) o fst) result of
+        [(_,p)] => p
+      | [] => raise ERR "thm_class" "not found"
+      | other => raise ERR "thm_class" "multiple things with the same name"
+    end
 
 fun fetch s1 s2 = fst (thm_class s1 s2);
 
@@ -197,7 +262,7 @@ fun print_theory_to_file thy file =
 
 
 (*---------------------------------------------------------------------------
-     Print a theory as HTML 
+     Print a theory as HTML
  ---------------------------------------------------------------------------*)
 
 fun pp_theory_as_html ppstrm theory_name =
@@ -208,19 +273,19 @@ fun pp_theory_as_html ppstrm theory_name =
             add_newline,flush_ppstream,...} = with_ppstream ppstrm
        val pp_thm  = pp_thm ppstrm
        val pp_type = pp_type ppstrm
-       fun colour thing col = 
+       fun colour thing col =
           String.concat["<font color=\"",col,"\">",thing,"</font>"];
-       fun strong s = 
-        (add_string"<STRONG>"; add_string (colour s "black"); 
+       fun strong s =
+        (add_string"<STRONG>"; add_string (colour s "black");
          add_string"</STRONG>")
-       fun STRONG s = 
-        (add_string"<STRONG>"; 
-         add_string 
-            (String.concat["<font size=+3 color=\"black\">",s,"</font>"]); 
+       fun STRONG s =
+        (add_string"<STRONG>";
+         add_string
+            (String.concat["<font size=+3 color=\"black\">",s,"</font>"]);
          add_string"</STRONG>")
        fun title s = add_string(String.concat
                       ["<H1><font color=\"black\">",s,"</font></H1>"]);
-       fun link (l,s) = 
+       fun link (l,s) =
         (add_string("<A HREF = "^Lib.quote l^">");
                          strong s;
                          add_string"</A>")
@@ -231,7 +296,7 @@ fun pp_theory_as_html ppstrm theory_name =
                STRONG "Parents";
                add_string "&nbsp;&nbsp;&nbsp;&nbsp;";
                add_break (1,0);
-               pr_list ob_pr (fn () => add_string"&nbsp;&nbsp;") 
+               pr_list ob_pr (fn () => add_string"&nbsp;&nbsp;")
                              (fn () => add_break (1,0)) obs;
                end_block();
                add_newline();
@@ -243,8 +308,8 @@ fun pp_theory_as_html ppstrm theory_name =
              ( title "Signature"; add_newline();
                begin_block CONSISTENT 4;
                begin_block CONSISTENT 0;
-                add_string "<center>"; add_newline(); 
-                add_string "<table BORDER=4 CELLPADDING=10 CELLSPACING=1>"; 
+                add_string "<center>"; add_newline();
+                add_string "<table BORDER=4 CELLPADDING=10 CELLSPACING=1>";
                            add_newline();
                end_block();
                add_newline();
@@ -272,7 +337,7 @@ fun pp_theory_as_html ppstrm theory_name =
                            (fn () => ()) add_newline obs2;
                 add_newline())
                ;
-               end_block(); add_newline(); 
+               end_block(); add_newline();
                begin_block CONSISTENT 0;
                    add_string "</table>"; add_newline();
                    add_string "</center>"; add_newline();
@@ -284,8 +349,8 @@ fun pp_theory_as_html ppstrm theory_name =
                title header;
                add_newline();
                add_string"<DL>"; add_newline();
-               pr_list 
-                (fn (x,ob) => 
+               pr_list
+                (fn (x,ob) =>
                      (begin_block CONSISTENT 0;
                       add_string"<DT>"; strong x; add_newline();
                       add_string"<DD>"; add_newline();
@@ -298,7 +363,7 @@ fun pp_theory_as_html ppstrm theory_name =
                add_newline();
                add_newline())
 
-       fun pr_thm (heading, ths) = dl_block(heading, 
+       fun pr_thm (heading, ths) = dl_block(heading,
            (fn th => (begin_block CONSISTENT 0;
                       add_string"<PRE>";
                       add_newline();
@@ -320,28 +385,28 @@ fun pp_theory_as_html ppstrm theory_name =
          pblock ((fn n => link(n^"Theory.html",n)), parents)
          ;
          sig_block(
-             (fn (Name,Arity) => 
+             (fn (Name,Arity) =>
                    (begin_block CONSISTENT 0;
-                    add_string"<td>"; add_break(1,0); strong Name; 
+                    add_string"<td>"; add_break(1,0); strong Name;
                     add_break(1,0);
-                    add_string"<td>"; add_break(1,0); 
+                    add_string"<td>"; add_break(1,0);
                     add_string (Lib.int_to_string Arity); end_block())),
                    types,
              (fn (Name,Ty) =>
                  (begin_block CONSISTENT 0;
-                   add_string"<td>"; add_break(1,0); strong Name; 
+                   add_string"<td>"; add_break(1,0); strong Name;
                    add_break(1,0);
                    add_string"<td>"; add_break(1,0); pp_type Ty;
                    end_block())), consts)
-         ; 
+         ;
          if null axioms then () else pr_thm ("Axioms", axioms)
          ;
-         if null definitions then () 
-         else (if null axioms then () else (HR();HR()); 
+         if null definitions then ()
+         else (if null axioms then () else (HR();HR());
                pr_thm ("Definitions", definitions))
          ;
-         if null theorems then () 
-         else (if null axioms andalso null definitions then () 
+         if null theorems then ()
+         else (if null axioms andalso null definitions then ()
                else (HR();HR());
                pr_thm ("Theorems", theorems));
          add_newline();
@@ -351,7 +416,7 @@ fun pp_theory_as_html ppstrm theory_name =
        end_block()
    end;
 
-fun print_theory_as_html s path = 
+fun print_theory_as_html s path =
    let val name = (case s of "-" => current_theory() | other => s)
        val ostrm = Portable.open_out path
    in
