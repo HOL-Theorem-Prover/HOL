@@ -393,8 +393,7 @@ fun num_variant vlist v =
   mk_var{Name=pass Name,  Ty=Ty}
   end;
 
-fun generate_case_constant_eqns fvar clist = let
-  val ty = type_of fvar
+fun generate_case_constant_eqns ty clist = let
   val (dty,rty) = Type.dom_rng ty
   val {Tyop,Args} = dest_type dty
   fun mk_cfun ctm (nv,away) = let
@@ -417,23 +416,23 @@ end
 
 fun define_case_constant ax = let
   val oktypes = new_types ax
-  val (exvars,_) = strip_exists (#2 (strip_forall(concl ax)))
+  val conjs = strip_conj (#2 (strip_exists (#2 (strip_forall (concl ax)))))
+  val newfns = map (rator o lhs o #2 o strip_forall) conjs
+  val newtypes = map type_of newfns
+  val usethese =
+    mk_set (List.filter (fn ty => Lib.mem (#1 (dom_rng ty)) oktypes) newtypes)
 
-  fun dodefn exv = let
-    val (dty,rty) = dom_rng (type_of exv)
+  fun dodefn ty = let
+    val (dty,rty) = dom_rng ty
+    val name = #Tyop (Type.dest_type dty)
+    val cs = type_constructors_with_args ax name
+    val eqns = generate_case_constant_eqns ty cs
   in
-    if Lib.mem dty oktypes then let
-      val name = #Tyop (Type.dest_type dty)
-      val cs = type_constructors_with_args ax name
-      val eqns = generate_case_constant_eqns exv cs
-    in
-      SOME (new_recursive_definition {name = name^"_case_def", rec_axiom = ax,
-                                      def = eqns})
-    end
-    else NONE
+      new_recursive_definition {name = name^"_case_def", rec_axiom = ax,
+                                def = eqns}
   end
 in
-  List.mapPartial dodefn exvars
+  map dodefn usethese
 end
 
 (* ---------------------------------------------------------------------*)

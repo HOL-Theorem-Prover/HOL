@@ -27,6 +27,7 @@ sig
    (* given a type axiom and the type name, returns the constructors
       associated with that type in the axiom *)
    val type_constructors : thm -> string -> term list
+   val type_constructors_with_args : thm -> string -> term list
 
 
    val new_recursive_definition : {name:string, rec_axiom:thm, def:term} -> thm
