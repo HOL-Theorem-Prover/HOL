@@ -1,0 +1,29 @@
+Installation
+============
+
+In normal circumstances, all you have to do is 
+
+   1. Enter the "src" directory and type "Holmake"
+   2. Enter the smv.2.4.3 directory and type "make"
+
+The first command will build the HOL theories and conversions of the
+"temporal" library. The second will build the SMV executable.  You
+moreover have to set up the variables "temporalLib.smv_path" and
+"temporalLib.smv_call" before using the conversions. (These are found in
+src/temporalLib.sml.)  The first one contains the path where the
+executable file of the smv system is located, and the second contains a
+call with suitable parameters.  
+
+The library can be accessed simply by invoking 
+
+   load "temporalLib";
+
+in a Hol98 session. Some examples of usage of the library are in the
+file "examples.sml". 
+
+
+In case of problems, send email to 
+	
+	Klaus.Schneider@informatik.uni-karlsruhe.de
+
+

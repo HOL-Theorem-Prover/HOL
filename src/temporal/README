@@ -1,0 +1,85 @@
+
+General Information:
+====================
+
+These files contain the sml sources for installing three theories:
+
+	- Temporal_LogicTheory
+	- Past_Temporal_LogicTheory
+	- Omega_AutomataTheory
+
+The theory Temporal_Logic contains the definition of future temporal
+operators and proves some important theorems about these operators
+such as characterisations as fixpoints, invariant laws, and many
+more. The theory Past_Temporal_Logic extends this by the definition
+of past temporal logic operators and sums up with the theorems of 
+the theory Temporal_Logic. Finally, theory Omega_Automata contains
+important theorems about omega-Automata and theorems that are
+necessary to provide a translation of temporal logic to
+omega-Automata within HOL.
+
+Conversions that actually do the conversion from temporal logic to
+omega-Automata are given in "/src/temporalLib.sml". There are the
+following conversions:
+
+    val TEMP_NORMALIZE_CONV : term -> thm
+    val TEMP_DEFS_CONV : term -> thm
+    val LTL2OMEGA_CONV : term -> thm
+    val LTL_CONV : conv
+    val UNSAFE_TEMP_DEFS_CONV : term -> thm
+    val UNSAFE_LTL2OMEGA_CONV : term -> thm
+    val UNSAFE_LTL_CONV : conv
+    val SMV_AUTOMATON_CONV : term -> thm
+
+TEMP_NORMALIZE_CONV will bring the given temporal logic formula
+into some normal form that is necessary for the other
+conversions. So you will probably have to call this conversion
+before you use the other conversions. The result will be boolean
+combination of formulas that start with a temporal operator that
+is itself applied to the initial point of time, i.e. to "0".  In
+particular, the input term for the conversions TEMP_DEFS_CONV and
+LTL2OMEGA_CONV must not contain free occurences of numeric
+variables! For more details on that, see the comments in the file
+"/src/temporalLib.sml".  
+
+TEMP_DEFS_CONV is an intermediate conversion that you will
+probably never use. It singles out any subformula that starts
+with a temporal operator and abbreviates this by a new
+existentially quantified variable. See my paper of TPHOL99 for
+more details on that.
+
+LTL2OMEGA_CONV requires as input a temporal logic formula and
+translates this to an equivalent omega-Automaton. The
+translation is mainly based on the normal form given by
+TEMP_DEFS_CONV and the theorem "TEMP_OPS_DEFS_TO_OMEGA" given in
+the theory "Omega_Automata". See my paper of TPHOL99 for more
+details on that.
+
+SMV_AUTOMATON_CONV will translate a given automaton formula,
+into a file readable by McMillan's SMV system and will invoke
+the SMV system. The result is read in and if proved, the
+conversion will make a theorem with "mk_thm", otherwise it will
+fail and will print out some countermodel. You should use
+conversion TEMP_DEFS_CONV to gather the additional variables
+that appear in the countermodel.
+
+LTL_CONV is just the combination of TEMP_NORMALIZE_CONV, 
+LTL2OMEGA_CONV, and SMV_AUTOMATON_CONV. So, given a temporal
+logic formula, LTL_CONV will either prove the validity of that
+formula or it will fail and print out a countermodel that shows
+that the given formula is not valid.
+
+To use SMV_AUTOMATON_CONV and LTL_CONV, you need McMillan's SMV
+system. The source files are included in this distribution; the
+newest releases will be found at http://www.cs/cmu.edu/~modelcheck. A
+reworked implementation done by McMillan is also available from
+http://www-cad.eecs.berkeley.edu/~kenmcmil/. To install the system,
+just move to "./smv.2.4.3 and follow the installation instructions
+given there. Normally, you just have to move to "./smv.2.4.3"
+and type "make".
+
+You moreover have to set up the variables "temporalLib.smv_path"
+and "temporalLib.smv_call" before using the conversions. The
+first one contains the path where the executable file of the smv
+system is located, and the second contains a call with suitable
+parameters. 
