@@ -1,5 +1,5 @@
 # =====================================================================
-# Makefile for the arith library documentation 
+# Makefile for the arith library documentation
 # =====================================================================
 
 # ---------------------------------------------------------------------
@@ -8,15 +8,15 @@
 Help=../help
 
 # ---------------------------------------------------------------------
-# Pathname to the doc-to-tex script and doc-to-tex.sed file 
+# Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
-DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
-DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEX=../../../../Manual/Reference/bin/doc-to-tex
+DOCTOTEXSED=../../../../Manual/Reference/bin/doc-to-tex.sed
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -25,10 +25,7 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
-	@echo "\begin{theindex}" > index.tex
-	@echo "\mbox{}" >> index.tex
-	@echo "\end{theindex}" >> index.tex
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind
 
 tex: ids
 	@echo "TeX files made"
@@ -38,11 +35,11 @@ ids:
 	@echo "\input{entries-intro}" >> entries.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
 
-index: 
-	${MAKEINDEX} arith.idx index.tex
+index:
+	${MAKEINDEX} arith.idx
 
-arith: 
+arith:
 	latex arith.tex
 
-all: 
+all:
 	make clean; make tex; make arith; make index; make arith
