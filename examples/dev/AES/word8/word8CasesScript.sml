@@ -2,7 +2,9 @@
 (* Simple theory of bytes.                                                   *)
 (*===========================================================================*)
 
-load "word8Lib";
+(* Interactive mode:
+  load "word8Lib";
+*)
 open HolKernel Parse boolLib bossLib word8Lib word8Theory
 
 val _ = new_theory "word8Cases"
@@ -78,6 +80,9 @@ val word8PrimRec = BETA_RULE prim_rec
 end
 
 val induct = Prim_rec.prove_induction_thm word8PrimRec
+
+val _ = save_thm("word8PrimRec",word8PrimRec);
+val _ = save_thm("word8Induct",induct);
 
 (*
 local 
