@@ -19,9 +19,12 @@ val munge_curried :
   Holdoc_init.curried_info -> Holdocmodel.holdoc -> Holdocmodel.holdoc
 val munge_holdoc : pvars -> Holdocmodel.holdoc -> unit
 val rendertexdoc : Holdocmodel.texdoc -> unit
+val rendertexdoc_pvs : pvars -> Holdocmodel.texdoc -> unit
 val rendertexdoc_content : Holdocmodel.texdoc_content -> unit
+val rendertexdoc_content_pvs : pvars -> Holdocmodel.texdoc_content -> unit
 val texrenderdirective : Holdocmodel.directive -> unit
 val texrenderdirective_content : Holdocmodel.directive -> unit
 val renderholdoc : Holdocmodel.holdoc -> unit
+val renderholdoc_pvs : pvars -> Holdocmodel.holdoc -> unit
 val dump_unseen_strings : unit -> unit
 

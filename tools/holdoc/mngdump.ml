@@ -515,17 +515,23 @@ and munge_holdoc : pvars -> holdoc -> unit
 (* The main set of rendering functions. *)
 
 and rendertexdoc : texdoc -> unit
-    = fun d -> List.iter rendertexdoc_content d
+    = fun d -> rendertexdoc_pvs [] d
+
+and rendertexdoc_pvs : pvars -> texdoc -> unit
+    = fun pvs0 d -> List.iter (rendertexdoc_content_pvs pvs0) d
 
 and rendertexdoc_content : texdoc_content -> unit
-    = function
+    = fun d -> rendertexdoc_content_pvs [] d
+
+and rendertexdoc_content_pvs : pvars -> texdoc_content -> unit
+    = fun pvs0 -> function
     TexContent s -> print_string s
   | TexHol(TexHolLR,d) ->
       local_set !curmodals.iNDENT false
-        (wrap (!hOLDELIMOPEN) (!hOLDELIMCLOSE) renderholdoc) d
+        (wrap (!hOLDELIMOPEN) (!hOLDELIMCLOSE) (renderholdoc_pvs pvs0)) d
   | TexHol(TexHolMath,d) ->
       local_set !curmodals.iNDENT false
-        (wrap "" "" renderholdoc) d
+        (wrap "" "" (renderholdoc_pvs pvs0)) d
   | TexDir d -> texrenderdirective d
 
 and texrenderdirective : directive -> unit
@@ -538,7 +544,11 @@ and texrenderdirective_content : directive_content -> unit
 
 and renderholdoc : holdoc -> unit
     = fun d ->
-      let pvs = if !(!curmodals.aUTO_BINDERS) then potential_vars d else []
+      renderholdoc_pvs [] d
+
+and renderholdoc_pvs : pvars -> holdoc -> unit
+    = fun pvs0 d ->
+      let pvs = (if !(!curmodals.aUTO_BINDERS) then potential_vars d else []) @ pvs0
       in
       munge_holdoc pvs d
 
