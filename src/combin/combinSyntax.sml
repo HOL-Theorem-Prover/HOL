@@ -3,8 +3,6 @@ struct
 
 open HolKernel Parse boolLib;  local open combinTheory in end;
 
-infix |->;
-
 val K_tm = prim_mk_const{Name="K", Thy="combin"}
 val S_tm = prim_mk_const{Name="S", Thy="combin"}
 val I_tm = prim_mk_const{Name="I", Thy="combin"}
@@ -62,5 +60,26 @@ val is_I = can dest_I
 val is_C = can dest_C
 val is_W = can dest_W
 val is_o = can dest_o
+
+val fail_tm = prim_mk_const{Name="FAIL", Thy="combin"};
+
+fun mk_fail (f,s,args) = 
+   list_mk_comb(inst[alpha |-> type_of f,
+                     beta |-> bool]fail_tm, 
+                 f::mk_var(s,bool)::args);
+fun dest_fail M = 
+  case strip_comb M
+   of (c,f::s::args) =>
+        if same_const c fail_tm then 
+          if is_var s then (f,fst(dest_var s),args)
+          else raise ERR "dest_fail" "need a variable"
+        else raise ERR "dest_fail" "not a FAIL term"
+    | otherwise => raise ERR "dest_fail" "too few args";
+
+val is_fail = can dest_fail;
+
+val _ = Drop.is_fail_hook := is_fail
+val _ = Drop.dest_fail_hook := dest_fail;
+
 
 end

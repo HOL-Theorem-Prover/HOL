@@ -17,7 +17,9 @@ open HolKernel boolLib;
 
 val _ = new_theory "combin";
 
-(* Some basic combinators: function composition, S, K, I, W, and C.        *)
+(*---------------------------------------------------------------------------*)
+(*  Some basic combinators: function composition, S, K, I, W, and C.         *)
+(*---------------------------------------------------------------------------*)
 
 val K_DEF = Q.new_definition("K_DEF",        `K = \x y. x`);
 val S_DEF = Q.new_definition("S_DEF",        `S = \f g x. f x (g x)`);
@@ -110,7 +112,10 @@ val K_o_THM = store_thm("K_o_THM",
   --`(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))`--,
   REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]);
 
-(* theorems using combinators to specify let-movements *)
+(*---------------------------------------------------------------------------*)
+(* Theorems using combinators to specify let-movements                       *)
+(*---------------------------------------------------------------------------*)
+
 val GEN_LET_RAND = store_thm(
   "GEN_LET_RAND",
   ``P (LET f v) = LET (P o f) v``,
@@ -131,11 +136,17 @@ val LET_FORALL_ELIM = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
   ]);
 
-val _ = adjoin_to_theory
-{sig_ps = NONE,
- struct_ps = SOME (fn ppstrm =>
-   (PP.add_string ppstrm "val _ = Parse.hide \"C\";";
-    PP.add_newline ppstrm))};
+
+(*---------------------------------------------------------------------------*)
+(*  Tag combinator equal to K. Used in generating ML from HOL                *)
+(*---------------------------------------------------------------------------*)
+
+val FAIL_DEF = Q.new_definition("FAIL_DEF", `FAIL = \x y. x`);
+val FAIL_THM = Q.store_thm("FAIL_THM", `FAIL x y = x`,
+    REPEAT GEN_TAC
+    THEN PURE_REWRITE_TAC [ FAIL_DEF ]
+    THEN CONV_TAC (DEPTH_CONV BETA_CONV)
+    THEN REFL_TAC);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,
@@ -143,6 +154,7 @@ val _ = adjoin_to_theory
   let val S = PP.add_string ppstrm
       fun NL() = PP.add_newline ppstrm
   in
+    S "val _ = Parse.hide \"C\";"; NL();
     S "val _ ="; NL();
     S "   let open computeLib" ; NL();
     S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}"; NL();
@@ -152,8 +164,12 @@ val _ = adjoin_to_theory
     NL()
   end)};
 
-val _ = Drop.exportML ("combin",
-                       map Drop.DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM]);
+
+val _ = 
+ let open Drop
+ in exportML ("combin", 
+       map DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM, FAIL_THM])
+ end;
 
 val _ = export_theory();
 

@@ -8,6 +8,7 @@ sig
   val C_tm   : term
   val W_tm   : term
   val o_tm   : term
+  val fail_tm : term
 
   val mk_K   : term * term -> term
   val mk_K_1 : term * hol_type -> term
@@ -16,6 +17,7 @@ sig
   val mk_C   : term * term * term -> term
   val mk_W   : term * term -> term
   val mk_o   : term * term -> term
+  val mk_fail : term * string * term list -> term
 
   val dest_K : term -> term * term
   val dest_S : term -> term * term * term 
@@ -23,6 +25,7 @@ sig
   val dest_C : term -> term * term * term
   val dest_W : term -> term * term
   val dest_o : term -> term * term
+  val dest_fail : term -> term * string * term list
 
   val is_K   : term -> bool
   val is_S   : term -> bool
@@ -30,5 +33,5 @@ sig
   val is_C   : term -> bool
   val is_W   : term -> bool
   val is_o   : term -> bool
-
+  val is_fail : term -> bool
 end
