@@ -112,6 +112,31 @@ fun ZAP_TAC ss thl =
           ORELSE BasicProvers.GEN_PROVE_TAC 0 12 1 thl);
 
 
+
+(*---------------------------------------------------------------------------
+   The following is a function creating a new simplification set to be used
+   with computeLib.CBV_CONV. It contains basic definitions about arithmetic
+   operations (those of reduceLib), and several others:
+   LET, pairs, curryfication, options and lists.
+ ---------------------------------------------------------------------------*)
+
+local
+fun iter_add []      rws = ()
+  | iter_add (f::fs) rws = (f rws : unit ; iter_add fs rws);
+
+val added_theories =
+  [ computeLib.add_thms (true, [computeLib.strictify_thm LET_DEF]),
+    computeLib.add_thms (false, [arithmeticTheory.num_case_compute]),
+    pairSimps.PAIR_rws, sumSimps.SUM_rws, optionLib.OPTION_rws,
+    listSimps.list_rws ]
+
+in
+fun initial_rws () =
+  let val rws = reduceLib.reduce_rws ()
+      val () = iter_add added_theories rws
+  in rws end;
+end;
+
 (*---------------------------------------------------------------------------
             Single step interactive proof operations
  ---------------------------------------------------------------------------*)

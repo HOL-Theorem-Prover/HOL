@@ -60,6 +60,9 @@ in
   val &&       : simpset * thm list -> simpset  (* infix && *)
   val RW_TAC   : simpset -> thm list -> tactic
 
+  (* to be used with computeLib: simplifies pair, sum, option, arith, list. *)
+  val initial_rws  : unit -> computeLib.comp_rws
+
   (* A compound automated reasoner. *)
   val ZAP_TAC  : simpset -> thm list -> tactic
 
