@@ -10,9 +10,9 @@ much larger example due to John Harrison, in which he proved the $n =
 performed using the facilities of \ml{bossLib}, one of \HOL's many
 libraries and is intended to serve as an introduction to performing
 high-level interactive proofs in \holn.  Many of the details may be
-difficult to grasp the novice reader; nonetheless, it is recommended
-that the example be followed through in order to gain a true taste of
-using \HOL{} to prove non-trivial theorems.
+difficult to grasp for the novice reader; nonetheless, it is
+recommended that the example be followed through in order to gain a
+true taste of using \HOL{} to prove non-trivial theorems.
 
 Some tutorial descriptions of proof systems show the system performing
 amazing feats of automated theorem proving. In this example, we will
@@ -157,17 +157,16 @@ following, we will show how this is done in a few cases.
 \section{Divisibility}
 
 We start by proving a number of theorems about the \verb+divides+
-relation. Each theorem is proved with a single invocation of
-\ml{PROVE\_TAC}. Both
-\ml{ARW\_TAC} and \ml{PROVE\_TAC} are quite powerful reasoners, and
-the choice of a reasoner in a particular situation is a matter of
-experience. In the following, the major reason that \ml{PROVE\_TAC} has
-been selected is that \verb+divides+ is defined by means of an existential
-quantifier, and \ml{PROVE\_TAC} is quite good at automatically
-instantiating existentials in the course of proof. For a simple example,
-consider proving $\forall x.\ x\; \mbox{\tt divides}\; 0$. A new
-proposition to be proved is entered to the proof manager via ``{\tt
-g}'', which starts a fresh goalstack:
+relation.  We will see that each of these initial theorems can be
+proved with a single invocation of \ml{PROVE\_TAC}. Both \ml{ARW\_TAC}
+and \ml{PROVE\_TAC} are quite powerful reasoners, and the choice of a
+reasoner in a particular situation is a matter of experience.  The
+major reason that \ml{PROVE\_TAC} works so well is that \verb+divides+
+is defined by means of an existential quantifier, and \ml{PROVE\_TAC}
+is quite good at automatically instantiating existentials in the
+course of proof. For a simple example, consider proving $\forall x.\
+x\; \mbox{\tt divides}\; 0$. A new proposition to be proved is entered
+to the proof manager via ``{\tt g}'', which starts a fresh goalstack:
 
 \begin{session}\begin{verbatim}
 - g `!x. x divides 0`;
@@ -181,7 +180,7 @@ g}'', which starts a fresh goalstack:
 >    : GoalstackPure.proofs
 \end{verbatim}\end{session}
 The proof manager tells us that it has only one proof to manage, and
-echoes the given goal. Now we expand the definition of
+echoes the given goal.  Now we expand the definition of
 \verb+divides+. Notice that $\alpha$-conversion takes place in order to
 keep distinct the $x$ of the goal and the $x$ in the definition of
 \ml{divides}:
@@ -247,9 +246,12 @@ take just one step:
 >     Initial goal proved.
 >     |- !x. x divides 0
 \end{verbatim}\end{session}
-We have seen one way to prove the theorem. However, there is another:
-one can let \ml{PROVE\_TAC} expand the definition of \ml{divides} and
-find the required instantiation for \verb+x'+ from \ml{MULT\_CLAUSES}.
+We have seen one way to prove the theorem. However, as mentioned
+earlier, there is another: one can let \ml{PROVE\_TAC} expand the
+definition of \ml{divides} and find the required instantiation for
+\verb+x'+ from the theorem \ml{MULT\_CLAUSES}.\footnote{You might
+  like to try typing \ml{MULT\_CLAUSES} into the interactive loop
+  to see exactly what it states.}
 \begin{session}\begin{verbatim}
 - restart();
 >   ...
