@@ -21,7 +21,7 @@ open regexpTheory matcherTheory;
 (*---------------------------------------------------------------------------*)
 
 val trace_level = ref 1;
-val () = register_trace ("regexpTools", trace_level, 3);
+val () = register_trace ("regexpTools", trace_level, 4);
 fun chatting n = n <= !trace_level;
 fun chat n s = if chatting n then Lib.say s else ();
 
@@ -55,7 +55,7 @@ val () = computeLib.add_funs [LAST_DEF];
 (* Executing the automata matcher.                                           *)
 (*---------------------------------------------------------------------------*)
 
-fun cache_conv m conv =
+fun cache_conv m n conv =
   let
     val cconv = cache compare conv
   in
@@ -63,23 +63,39 @@ fun cache_conv m conv =
     let
       val (hit, th) = cconv tm
       val _ = chat m (if hit then "+" else "-")
-      val _ = if chatting (m + 1) then Lib.say (thm_to_string th ^ "\n") else ()
+      val _ = if chatting n then Lib.say ("\n" ^ thm_to_string th) else ()
     in
       th
     end
   end;
 
 val initial_regexp2na_conv =
-  cache_conv 2 (ONCE_REWRITE_CONV [initial_regexp2na] THENC EVAL);
+  cache_conv 3 4 (ONCE_REWRITE_CONV [initial_regexp2na] THENC EVAL);
 
 val accept_regexp2na_conv =
-  cache_conv 2 (ONCE_REWRITE_CONV [accept_regexp2na] THENC EVAL);
+  cache_conv 3 4 (ONCE_REWRITE_CONV [accept_regexp2na] THENC EVAL);
 
 val transition_regexp2na_conv =
-  cache_conv 2 (ONCE_REWRITE_CONV [transition_regexp2na] THENC EVAL);
+  cache_conv 3 4 (ONCE_REWRITE_CONV [transition_regexp2na] THENC EVAL);
 
 val eval_transitions_conv =
-  cache_conv 1 (ONCE_REWRITE_CONV [eval_transitions_def] THENC EVAL);
+  cache_conv 1 3 (ONCE_REWRITE_CONV [eval_transitions_def] THENC EVAL);
+
+local
+  fun hol_rev tm =
+    let val (l,ty) = listSyntax.dest_list tm
+    in listSyntax.mk_list (rev l, ty)
+    end;
+in
+  fun areport_conv tm =
+    let
+      val l = hol_rev (rand (rator tm))
+      val () = if not (chatting 2) then ()
+               else Lib.say ("\nmatch: " ^ term_to_string l)
+    in
+      REWR_CONV areport_def
+    end tm;
+end;
 
 val () = computeLib.add_funs
   [(* Prefer the cached conversions
@@ -92,7 +108,8 @@ val () = computeLib.add_convs
    (``transition_regexp2na : 'a regexp -> num -> 'a -> num -> bool``, 4,
     transition_regexp2na_conv),
    (``eval_transitions : 'a regexp -> num list -> 'a -> num list``, 3,
-    eval_transitions_conv)];
+    eval_transitions_conv),
+   (``areport : 'a -> 'b -> 'b``, 2, areport_conv)];
 
 (*---------------------------------------------------------------------------*)
 (* Speed up the evaluation of very long lists.                               *)

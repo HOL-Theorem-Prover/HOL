@@ -16,6 +16,16 @@ open regexpLib FinitePathTheory UnclockedSemanticsTheory ExecuteSemanticsTheory;
 quietdec := false;
 
 (******************************************************************************
+* Set the trace level of the regular expression library:      
+* 0: silent
+* 1: 1 character (either - or +) for each list element processed
+* 2: matches as they are discovered
+* 3: transitions as they are calculated
+* 4: internal state of the automata
+******************************************************************************)
+set_trace "regexpTools" 2;
+
+(******************************************************************************
 * Set default parsing to natural numbers rather than integers 
 ******************************************************************************)
 val _ = intLib.deprecate_int();
@@ -1021,19 +1031,6 @@ time
     (S_CAT(S_REPEAT S_TRUE,
            S_CAT(S_BOOL(B_PROP StoB_REQ), 
                  S_REPEAT S_TRUE)))``;
-
-(* A version using BIGLIST to keep terms small
-   (however, it doesn't seem to have much effect)
-val SimRun_def = pureDefine `SimRun = SimRun`;
-val () = computeLib.add_funs (time EVAL_BIGLIST SimRun_def);
-time
- EVAL
- ``US_SEM
-    (BIGLIST SimRun)
-    (S_CAT(S_REPEAT S_TRUE,
-           S_CAT(S_BOOL(B_PROP StoB_REQ), 
-                 S_REPEAT S_TRUE)))``;
-*)
 
 time
  EVAL 

@@ -7,7 +7,11 @@
 
 app load ["bossLib", "metisLib", "stringLib", "regexpLib"];
 
+quietdec := true;
 open HolKernel Parse boolLib bossLib;
+quietdec := false;
+
+set_trace "regexpTools" 2;
 
 (*---------------------------------------------------------------------------*)
 (* Examples of the matchers.                                                 *)
@@ -112,4 +116,5 @@ FCHECK NoRepeats "bb";
 TCHECK NoRepeats "ababababababababababababababababababababababababababab";
 FCHECK NoRepeats "abababababababababababbababababababababababababababab";
 
+val 
 (*---------------------------------------------------------------------------*)

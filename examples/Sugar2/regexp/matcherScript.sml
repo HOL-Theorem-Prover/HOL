@@ -963,6 +963,8 @@ val eval_transitions_def = pureDefine
   `eval_transitions r l c =
    calc_transitions r l c (SUC (initial_regexp2na r)) []`;
 
+val areport_def = pureDefine `areport h b = b`;
+
 val astep_def = Define
   `(astep r l [] = EXISTS (accept_regexp2na r) l) /\
    (astep r l (c :: cs) = astep r (eval_transitions r l c) cs)`;
@@ -970,14 +972,16 @@ val astep_def = Define
 val amatch_def = Define
   `amatch r l = let i = initial_regexp2na r in astep r [i] l`;
 
-val asignal_def = Define
-  `(asignal r f l [] = T) /\
-   (asignal r f l (c :: cs) =
-    let l' = eval_transitions r l c
-    in (EXISTS (accept_regexp2na r) l' ==> f (c :: cs)) /\ asignal r f l' cs)`;
+val acheckpt_def = Define
+  `(acheckpt r f h l [] = T) /\
+   (acheckpt r f h l (c :: cs) =
+    let l' = eval_transitions r l c in
+    let h = c :: h in
+    (EXISTS (accept_regexp2na r) l' ==> areport h (f (c :: cs))) /\
+    acheckpt r f h l' cs)`;
 
 val acheck_def = Define
-  `acheck r f l = let i = initial_regexp2na r in asignal r f [i] l`;
+  `acheck r f l = let i = initial_regexp2na r in acheckpt r f [] [i] l`;
 
 (*---------------------------------------------------------------------------*)
 (* Correctness of this version of the automata matcher.                      *)
@@ -1045,14 +1049,15 @@ val acheck = store_thm
    [GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da, acheck_def]
    ++ RW_TAC std_ss [initial_regexp2na_def]
    ++ Q.SPEC_TAC (`[initial (regexp2na r)]`, `k`)
-   ++ Induct_on `l` >> RW_TAC arith_ss [asignal_def, LENGTH]
-   ++ ONCE_REWRITE_TAC [asignal_def]
+   ++ Q.SPEC_TAC (`[]`, `h`)
+   ++ Induct_on `l` >> RW_TAC arith_ss [acheckpt_def, LENGTH]
+   ++ ONCE_REWRITE_TAC [acheckpt_def]
    ++ RW_TAC std_ss []
    ++ HO_MATCH_MP_TAC
       (METIS_PROVE [num_CASES]
        ``(P = Q 0 /\ !n. Q (SUC n)) ==> (P = !n. Q n)``)
    ++ RW_TAC arith_ss
-      [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na,
+      [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na, areport_def,
        accept_regexp2na_def, eval_transitions_def, initial_regexp2na_def]);
 
 val () = export_theory ();
