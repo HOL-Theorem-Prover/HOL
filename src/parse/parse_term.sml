@@ -81,6 +81,8 @@ fun all_tokens strlist =
 
 exception PrecConflict of stack_terminal * stack_terminal
 
+val complained_already = ref false;
+
 
 fun mk_prec_matrix G = let
   exception NotFound
@@ -93,7 +95,7 @@ fun mk_prec_matrix G = let
   val matrix:(stack_terminal * stack_terminal, order) Polyhash.hash_table =
     Polyhash.mkPolyTable (length specs * length specs, NotFound)
   val rule_elements = term_grammar.rule_elements o #elements
-  val complained_already = ref false
+  val complained_this_iteration = ref false
   fun insert k v = let
     val insert_result = Polyhash.peekInsert matrix (k, v)
   in
@@ -102,6 +104,7 @@ fun mk_prec_matrix G = let
     | (SOME _, EQUAL) => Polyhash.insert matrix (k,v)  (* EQUAL overrides *)
     | (SOME oldv, _) => if oldv <> v then
                           (Polyhash.insert matrix (k, LESS);
+                           complained_this_iteration := true;
                            if not (!complained_already) then
                              (Feedback.HOL_WARNING
                                 "Parse" "Term"
@@ -361,6 +364,8 @@ in
   insert_rhs_relns () ;
   insert_lhs_relns () ;
   apply_them_all process_rule Grules;
+  if (not (!complained_this_iteration)) then complained_already := false
+  else ();
   matrix
 end
 
