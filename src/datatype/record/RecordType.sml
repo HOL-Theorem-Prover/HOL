@@ -65,6 +65,17 @@ fun foldl f zero []      = zero
 
   (* end of PW's copyrighted stuff *)
 
+  fun variant tml tm = let
+    fun name_of tm = if is_var tm then SOME (#Name (Term.dest_var tm))
+                     else NONE
+    val avoidstrs = List.mapPartial name_of tml
+    val {Name, Ty} = Term.dest_var tm
+  in
+    Term.mk_var{Name = Lib.gen_variant Lib.tmvar_vary avoidstrs Name,
+                Ty = Ty}
+  end
+
+
   (* app_letter = "appropriate letter" *)
   fun app_letter ty =
     if is_vartype ty then
