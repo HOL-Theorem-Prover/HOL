@@ -421,12 +421,14 @@ val BITSw118_LEM = save_thm("BITSw118_LEM",REDUCE_RULE (SPECL [`11`,`7`,`1`] BIT
 
 val SLICEw_COMP_MSR1 = store_thm("SLICEw_COMP_MSR1",
   `!a. SLICEw 27 8 a + BITSw 7 0 a = BITSw 27 0 a`,
-  RW_TAC arith_ss [DECIDE ``8 = SUC 7``,GSYM SLICEw_ZERO_THM,SLICEw_COMP_THM]
+  SIMP_TAC bool_ss [DECIDE ``SUC 7 <= 27``,DECIDE ``8 = SUC 7``,
+                    ZERO_LESS_EQ,GSYM SLICEw_ZERO_THM,SLICEw_COMP_THM]
 );
 
 val SLICEw_COMP_MSR2 = store_thm("SLICEw_COMP_MSR2",
   `!a. SLICEw 31 28 a + SLICEw 27 8 a = SLICEw 31 8 a`,
-  RW_TAC arith_ss [DECIDE ``28 = SUC 27``,SLICEw_COMP_THM]
+  SIMP_TAC bool_ss [DECIDE ``SUC 27 <= 31``,DECIDE ``28 = SUC 27``,
+                    DECIDE ``8 <= 27``,SLICEw_COMP_THM]
 );
 
 val IF_NEG = store_thm("IF_NEG",
