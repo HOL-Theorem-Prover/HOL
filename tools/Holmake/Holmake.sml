@@ -677,9 +677,8 @@ in
   in
     case f of
       UO x =>
-        if
-          FileSys.access(fromFile (SIG x), []) andalso
-          List.all (fn f => f <> SIG x) phase1
+        if FileSys.access(fromFile (SIG x), []) andalso
+           List.all (fn f => f <> SIG x) phase1
         then
           UI x :: phase1
         else
@@ -699,25 +698,15 @@ fun get_implicit_dependencies (f: File) : File list = let
                       toFile (fullPath [SIGOBJ, s]) :: file_dependencies0
                   else
                     file_dependencies0
+  fun is_thy_file (SML (Theory _)) = true
+    | is_thy_file (SIG (Theory _)) = true
+    | is_thy_file _                = false
 in
-  case f of
-    SML (Theory x) => let
-      (* there may be theory files mentioned in the Theory.sml file that
-         aren't mentioned in the script file.  If so, we are really
-         dependent on these, and should add them.  They will be listed
-         in the dependencies for UO (Theory x). *)
-      val additional_theories =
-          if FileSys.access(fromFile f, [FileSys.A_READ]) then
-            List.mapPartial (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
-                            (get_implicit_dependencies (UO (Theory x)))
-          else
-            []
-
-      val firstcut = set_union file_dependencies additional_theories
-          (* because we have to build an executable in order to build a
-             theory, this build depends on all of the dependencies
-             (meaning the transitive closure of the direct dependency
-             relation) in their .UO form, not just .UI *)
+  if is_thy_file f then let
+      (* because we have to build an executable in order to build a
+         theory, this build depends on all of the dependencies
+         (meaning the transitive closure of the direct dependency
+         relation) in their .UO form, not just .UI *)
       fun collect_all_dependencies sofar tovisit =
           case tovisit of
             [] => sofar
@@ -734,13 +723,30 @@ in
               collect_all_dependencies (sofar @ newdeps)
                                        (set_union newdeps fs)
             end
-      val alldeps = collect_all_dependencies [] [f]
+      val tcdeps = collect_all_dependencies [] [f]
       val uo_deps =
-          List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) alldeps
+          List.mapPartial (fn (UI x) => SOME (UO x) | _ => NONE) tcdeps
+      val alldeps = set_union (set_union tcdeps uo_deps) file_dependencies
     in
-      set_union uo_deps (set_union alldeps firstcut)
+      case f of
+        SML x => let
+          (* there may be theory files mentioned in the Theory.sml file that
+             aren't mentioned in the script file.  If so, we are really
+             dependent on these, and should add them.  They will be listed
+             in the dependencies for UO (Theory x). *)
+          val additional_theories =
+              if FileSys.access(fromFile f, [FileSys.A_READ]) then
+                List.mapPartial
+                  (fn (x as (UO (Theory s))) => SOME x | _ => NONE)
+                  (get_implicit_dependencies (UO x))
+              else []
+        in
+          set_union alldeps additional_theories
+        end
+      | _ => alldeps
     end
-  | _ => file_dependencies
+  else
+    file_dependencies
 end
 
 fun get_explicit_dependencies (f : File) : File list =
