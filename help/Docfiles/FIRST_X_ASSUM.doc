@@ -45,7 +45,7 @@ matches the goal, reducing the goal to the antecedent of the corresponding
 instance of this implication and removing the implication from the
 assumption list.
 
-\COMMENT
+\COMMENTS
 The ``X'' in the name of this tactic is a mnemonic for the ``crossing
 out'' or removal of the assumption found.
 

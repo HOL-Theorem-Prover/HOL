@@ -1,6 +1,6 @@
 \DOC UNDISCH_THEN
 
-\TYPE {UNDISCH_THEN : term -> thm_tactic -> tactic}
+\TYPE {Thm_cont.UNDISCH_THEN : term -> thm_tactic -> tactic}
 
 \SYNOPSIS
 Discharges the assumption given and passes it to a theorem-tactic.
@@ -24,12 +24,12 @@ the theorem-tactic and then applies the consequent tactic.  Thus:
 }
 \noindent then
 {
-    A u {t1} ?- t
-   ==============  UNDISCH_THEN t1 f
+    A u {{t1}} ?- t
+   ===============  UNDISCH_THEN t1 f
        B ?- v
 }
 \FAILURE
-{UNDISCH_THEN} will fail for goals where the given term is not in the
+{UNDISCH_THEN} will fail on goals where the given term is not in the
 assumption list.
 
 \SEEALSO

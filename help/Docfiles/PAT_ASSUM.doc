@@ -3,7 +3,6 @@
 \TYPE {Tactical.PAT_ASSUM : term -> thm_tactic -> tactic}
 
 \SYNOPSIS
-
 Finds the first assumption that matches the term argument, applies
 the theorem tactic to it, and removes this assumption.
 
@@ -34,7 +33,7 @@ throughout the goal and assumptions.  It also removes the equality
 from the assumption list.  Using {FIRST_ASSUM} above would leave an
 equality on the assumption list of the form {x = x}.
 
-\COMMENT
+\COMMENTS
 It is possible that the implementation of this function will change to
 use higher-order matching rather than {match_term} in the future.
 
