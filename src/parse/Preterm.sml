@@ -162,6 +162,48 @@ in
   cl
 end;
 
+fun remove_overloading_phase1 ptm = let
+  (* this function will replace Overloaded _ nodes with Consts where it
+     can be shown that only one of the possible constants has a type
+     compatible with the type of the term as it has been inferred during
+     the previous phase of type inference.  This may in turn constrain
+     other overloaded terms elsewhere in the tree *)
+in
+  case ptm of
+    Comb{Rator, Rand} => Comb{Rator = remove_overloading_phase1 Rator,
+                              Rand = remove_overloading_phase1 Rand}
+  | Abs{Bvar, Body} => Abs{Bvar = remove_overloading_phase1 Bvar,
+                           Body = remove_overloading_phase1 Body}
+  | Constrained(tm,ty) => Constrained(remove_overloading_phase1 tm, ty)
+  | Overloaded{Name,Ty,Info} => let
+      fun testfn possty = let
+        val pty0 = TCPretype.fromType possty
+        val pty = TCPretype.rename_typevars pty0
+      in
+        TCPretype.can_unify Ty pty
+      end
+      val possible_ops =
+        List.filter (fn (ty,n) => testfn ty) (#actual_ops Info)
+    in
+      case possible_ops of
+        [] =>
+          (Lib.say ("\nNo possible type for overloaded constant "^Name^"\n");
+           raise PRETERM_ERR "typecheck" "failed")
+      | [(ty,n)] => let
+          val pty = TCPretype.rename_typevars (TCPretype.fromType ty)
+          val _ = TCPretype.unify pty Ty
+        in
+          Const{Name = n, Ty = pty}
+        end
+      | _ =>
+        Overloaded{Name = Name, Ty = Ty,
+                   Info = Overload.fupd_actual_ops (fn _ => possible_ops) Info}
+    end
+  | _ => ptm
+end
+
+
+
 fun remove_overloading ptm = let
   open seqmonad
   infix >- >> ++
@@ -170,30 +212,41 @@ fun remove_overloading ptm = let
       (env', NONE) => seq.empty
     | (env', SOME result) => seq.result (env', result)
   fun unify t1 t2 = opt2seq (TCPretype.safe_unify t1 t2)
-in
-  case ptm of
-    Var _ => return ptm
-  | Const _ => return ptm
-  | Comb{Rator,Rand} => remove_overloading Rator >- (fn Rator' =>
-                        remove_overloading Rand >-  (fn Rand' =>
-                        return (Comb{Rator = Rator', Rand = Rand'})))
-  | Abs{Bvar, Body} => remove_overloading Bvar >-   (fn Bvar' =>
-                       remove_overloading Body >-   (fn Body' =>
-                       return (Abs{Bvar = Bvar', Body = Body'})))
-  | Antiq _ => return ptm
-  | Constrained(tm,ty) => remove_overloading tm >- (fn tm' =>
-                          return (Constrained(tm', ty)))
-  | Overloaded{Name,Ty,Info} => let
-      val actual_ops = #actual_ops Info
-      fun tryit (ty, n) = let
-        val pty0 = TCPretype.fromType ty
-        val pty = TCPretype.rename_typevars pty0
+  (* Note that the order of the term traversal here is very important as
+     the sub-terms "pulled out" will be "put back in" later under the
+     assumption that the list is in the right order.  The traversal that
+     puts the constants into the place of the Overloaded nodes must also
+     traverse in the same order:
+       Rator before Rand, Bvar before Body
+     In accumulator style, that looks as below *)
+  fun overloaded_subterms acc ptm =
+    case ptm of
+      Overloaded x => x::acc
+    | Comb{Rator, Rand} =>
+        overloaded_subterms (overloaded_subterms acc Rand) Rator
+    | Abs{Bvar,Body} =>
+        overloaded_subterms (overloaded_subterms acc Body) Bvar
+    | Constrained(tm,_) => overloaded_subterms acc tm
+    | _ => acc
+  val overloads = overloaded_subterms [] ptm
+  fun workfunction list =
+    case list of
+      [] => return []
+    | {Name,Ty,Info}::xs => let
+        val actual_ops = #actual_ops Info
+        fun tryit (ty, n) = let
+          val pty0 = TCPretype.fromType ty
+          val pty = TCPretype.rename_typevars pty0
+        in
+          unify pty Ty >> return (Const{Name=n, Ty=Ty})
+        end
       in
-        unify pty Ty >> return (Const{Name=n, Ty=Ty})
+        tryall tryit actual_ops >-
+        (fn c => workfunction xs >-
+         (fn cs => return (c::cs)))
       end
-    in
-      tryall tryit actual_ops
-    end
+in
+  workfunction overloads
 end
 
 fun has_unconstrained_uvar ty = let
@@ -218,20 +271,51 @@ fun tyVars tm =
 
 fun do_overloading_removal ptm0 = let
   open seq
-  val result = remove_overloading ptm0 []
+  val ptm = remove_overloading_phase1 ptm0
+  val result = remove_overloading ptm []
   fun apply_subst subst =
     app (fn (r, value) => r := SOME value) subst
+  fun do_csubst clist ptm =
+    case clist of
+      [] => (ptm, [])
+    | (c::cs) => let
+      in
+        (* must take care to keep order of traversal same as traversal in
+           overloaded_subterms above *)
+        case ptm of
+          Comb{Rator, Rand} => let
+            (* Rator before Rand *)
+            val (Rator', clist') = do_csubst clist Rator
+            val (Rand', clist'') = do_csubst clist' Rand
+          in
+            (Comb{Rator = Rator', Rand = Rand'}, clist'')
+          end
+        | Abs{Bvar, Body} => let
+            (* Bvar before Body *)
+            val (Bvar', clist') = do_csubst clist Bvar
+            val (Body', clist'') = do_csubst clist' Body
+          in
+            (Abs{Bvar = Bvar', Body = Body'}, clist'')
+          end
+        | Constrained(tm,ty) => let
+            val (tm', clist') = do_csubst clist tm
+          in
+            (Constrained(tm', ty), clist')
+          end
+        | Overloaded _ => (c,cs)
+        | _ => (ptm, clist)
+      end
 in
   case cases result of
     NONE => raise PRETERM_ERR "do_overloading_removal"
       "Couldn't find a sensible resolution for overloaded constants"
-  | SOME ((env,ptm),xs) => let
+  | SOME ((env,clist),xs) => let
     in
       if not (!Globals.guessing_overloads) orelse
          !Globals.notify_on_tyvar_guess
       then
         case cases xs of
-          NONE => (apply_subst env; ptm)
+          NONE => (apply_subst env; #1 (do_csubst clist ptm))
         | SOME _ => (if (not (!Globals.guessing_overloads)) then
                        raise PRETERM_ERR "do_overloading_removal"
                          "More than one resolution of overloading possble"
@@ -239,9 +323,9 @@ in
                      Lib.mesg true
                        "more than one resolution of overloading was possible";
                      apply_subst env;
-                     ptm)
+                     #1 (do_csubst clist ptm))
       else
-        (apply_subst env; ptm)
+        (apply_subst env; #1 (do_csubst clist ptm))
     end
 end
 
@@ -313,7 +397,11 @@ fun cleanup tm =
  end
 
 
-fun typecheck pfns tm = (TC pfns tm; cleanup (cleanup0 tm));
+fun typecheck pfns tm = let
+  val _ = TC pfns tm
+in
+  cleanup (cleanup0 tm)
+end
 
 end; (* PRETERM *)
 

@@ -3,6 +3,10 @@ type overloaded_op_info = {overloaded_op: string,
                            actual_ops : (Type.hol_type * string) list}
 type overload_info = overloaded_op_info list
 
+val fupd_actual_ops :
+  ((Type.hol_type * string) list -> (Type.hol_type * string) list) ->
+  overloaded_op_info -> overloaded_op_info
+
 exception OVERLOAD_ERR of string
 
 val add_overloaded_form :
