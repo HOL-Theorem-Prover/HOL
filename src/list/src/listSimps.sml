@@ -29,13 +29,14 @@ val list_ss = rewrites
      For computeLib.
  ---------------------------------------------------------------------------*)
 local 
-  val MEM_IF = prove(Term `!x h t. MEM x (h::t) = if x=h then T else MEM x t`,
+  val MEM_IF = prove(Term 
+       `!(x:'a) h t. MEM x (h::t) = if x=h then T else MEM x t`,
        REPEAT GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC [MEM])
   val EXISTS_IF = prove(Term
-       `!P h t. EXISTS P (h::t) = if P h then T else EXISTS P t`,
+       `!P (h:'a) t. EXISTS P (h::t) = if P h then T else EXISTS P t`,
        REPEAT GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC [EXISTS_DEF])
   val EVERY_IF = prove(Term
-     `!P h t. EVERY P (h::t) = if P h then EVERY P t else F`,
+     `!P (h:'a) t. EVERY P (h::t) = if P h then EVERY P t else F`,
      REPEAT GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC [EVERY_DEF])
   val MEM_DEF'    = CONJ (CONJUNCT1 MEM) MEM_IF
   val EXISTS_DEF' = CONJ (CONJUNCT1 EXISTS_DEF) EXISTS_IF
