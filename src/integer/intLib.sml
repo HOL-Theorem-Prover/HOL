@@ -108,7 +108,7 @@ fun is_int_literal t =
   (rator t = int_injection andalso Term.is_numeral (rand t)) orelse
   (rator t = int_negation andalso is_int_literal (rand t))
   handle HOL_ERR _ => false
-fun is_int_negated tm = is_comb tm andalso rator tm = int_negation
+fun is_negated tm = is_comb tm andalso rator tm = int_negation
 
 
 fun int_of_term tm = let
@@ -140,17 +140,19 @@ in
     [] => raise Fail "strip_plus returned [] in collect_additive_consts"
   | [_] => NO_CONV tm
   | _ => let
-      val (numerals, non_numerals) = partition is_int_literal summands
     in
-      if length numerals < 2 then NO_CONV tm
-      else let
-        val reorder_t = mk_eq(tm, mk_plus(list_mk_plus non_numerals,
-                                          list_mk_plus numerals));
-        val reorder_thm =
-          EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
-      in
-        (K reorder_thm THENC REDUCE_CONV THENC REWRITE_CONV [INT_ADD_RID]) tm
-      end
+      case partition is_int_literal summands of
+        ([], _) => NO_CONV tm
+      | ([_], _) => NO_CONV tm
+      | (_, []) => REDUCE_CONV tm
+      | (numerals, non_numerals) => let
+          val reorder_t = mk_eq(tm, mk_plus(list_mk_plus non_numerals,
+                                            list_mk_plus numerals));
+          val reorder_thm =
+            EQT_ELIM(AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM) reorder_t)
+        in
+          (K reorder_thm THENC REDUCE_CONV THENC REWRITE_CONV [INT_ADD_RID]) tm
+        end
     end
 end
 

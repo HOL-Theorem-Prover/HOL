@@ -15,7 +15,7 @@ signature intLib = sig
 
   (* discriminators, constructors, etc *)
   val is_int_literal : Term.term -> bool
-  val is_int_negated : Term.term -> bool
+  val is_negated : Term.term -> bool  (* if a term is of form ~ e *)
   val int_of_term : Term.term -> Arbint.int
   val term_of_int : Arbint.int -> Term.term
 
