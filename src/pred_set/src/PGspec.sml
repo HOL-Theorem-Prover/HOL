@@ -179,8 +179,8 @@ fun list_variant l1 l2 =
 (*									*)
 (*   GSPEC (\(x1,...,xn). (t[x1,...,xn], p[x1,...,xn]))		        *)
 (* ---------------------------------------------------------------------*)
-fun check_const (s,thy) = 
-  assert (fn c => 
+fun check_const (s,thy) =
+  assert (fn c =>
            let val {Name, Thy, ...} = dest_thy_const c
            in s=Name andalso thy=Thy
            end handle HOL_ERR _ => false);
@@ -194,7 +194,7 @@ fun mktup tm =
    let val (Bvar,Body) = dest_abs(rand tm)
        val (xs,res) = mktup Body
    in (Bvar::xs,res)
-   end handle HOL_ERR _ => 
+   end handle HOL_ERR _ =>
         let val (Bvar,Body) = dest_abs tm
         in ([Bvar], fst(dest_pair Body))
         end
@@ -204,7 +204,7 @@ fun SET_SPEC_CONV th =
                  in GENL (rev vs) (SPECL vs th)
                 end
  in fn tm =>
-   let val (_,[v,set]) = (check_const ("IN","pred_set") ## I) (strip_comb tm)
+   let val (_,[v,set]) = (check_const ("IN","bool") ## I) (strip_comb tm)
        val (Rator,f) = dest_comb set
        val _ = check_const ("GSPEC","pred_set") Rator
        val vty = type_of v

@@ -37,10 +37,10 @@ val set = ty_antiq(Type`:'a->bool`);
 (* The axiom of specification: x IN {y | P y} iff P x			*)
 (* ---------------------------------------------------------------------*)
 
-val SPECIFICATION =
- new_infixr_definition( "SPECIFICATION",
+val SPECIFICATION = store_thm(
+  "SPECIFICATION",
   --`!P x. $IN (x:'a) (P:^set) = P x`--,
-  450);
+  REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
 (* --------------------------------------------------------------------- *)
 (* Axiom of extension: (s = t) iff !x. x IN s = x in t			*)
