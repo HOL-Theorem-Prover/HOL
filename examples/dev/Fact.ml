@@ -136,9 +136,38 @@ dump_all_flag := true;
 (* Change these variables to select simulator and viewer. Commenting out the *)
 (* three assignments below will revert to the defaults: cver/dinotrace.      *)
 (*****************************************************************************)
-vlogger_path      := "/homes/mjcg/bin/verilog/vlogger/vlogcm";
+vlogger_path      := "/homes/mjcg/bin/verilog/vlogger/vlogcmd";
 verilog_simulator := vlogger;
+
+(******************************************************************************
+(*****************************************************************************)
+(* Alternative: could replace "/homes/mjcg/bin/verilog/vlogger/vlogcmd" by   *)
+(* another verilog simulator.                                                *)
+(*****************************************************************************)
+verilog_simulator :=
+ let fun verilog name =
+      let val vlog_command = ("/homes/mjcg/bin/verilog/vlogger/vlogcmd"
+                              ^ " " ^ name ^ ".vl")
+          val code = Process.system vlog_command
+          val _ = if isSuccess code
+                   then print(vlog_command ^ "\n")
+                   else print("Warning:\n failure signal returned by\n "
+                              ^ vlog_command ^ "\n")
+      in
+       ()
+      end
+ in
+  verilog
+ end;
+******************************************************************************)
+
 waveform_viewer   := gtkwave;
+
+(*****************************************************************************)
+(* Stop zillions of warning messages that HOL variables of type ``:num``     *)
+(* are being converted to Verilog wires or registers of type [31:0].         *)
+(*****************************************************************************)
+numWarning := true;
 
 SIMULATE FACT_cir [("inp","4")];
 

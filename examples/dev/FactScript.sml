@@ -58,7 +58,7 @@ val (FactIter,FactIter_ind,FactIter_dev) =
    measuring FST`;
 
 (*****************************************************************************)
-(* To implement `$*`` we build a naive iterative multiplier function         *)
+(* To implement ``$*`` we build a naive iterative multiplier function        *)
 (* (works by repeated addition)                                              *)
 (*****************************************************************************)
 val (MultIter,MultIter_ind,MultIter_dev) =

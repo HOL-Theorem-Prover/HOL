@@ -1460,70 +1460,107 @@ fun IN_OUT_SPLIT th =
  end;
 
 (*****************************************************************************)
+(* User modifiable library of combinational components.                      *)
+(*****************************************************************************)
+val combinational_components = ref([] : thm list);
+
+fun add_combinational_components thl = 
+ (combinational_components :=
+   thl @ (!combinational_components));
+
+val _ =
+ add_combinational_components
+  [COMB_NOT,
+   COMB_AND,
+   COMB_OR,
+   COMB_ADD,
+   COMB_SUB,
+   COMB_LESS,
+   COMB_EQ];
+
+(*****************************************************************************)
 (* Compile a device implementation into a netlist represented in HOL         *)
 (*****************************************************************************)
-val MAKE_NETLIST =
- CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                          o
- Ho_Rewrite.REWRITE_RULE 
-  [COMB_NOT,COMB_AND,COMB_OR,COMB_ADD,COMB_SUB,COMB_LESS,COMB_EQ]          o
- CONV_RULE
-  (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                   o
- SIMP_RULE std_ss [UNCURRY]                                                o
- Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                 o
- Ho_Rewrite.REWRITE_RULE
-   [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
-    COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
-    BUS_CONCAT_PAIR,BUS_CONCAT_o,
-    FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
-    DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
-    POSEDGE_IMP_def,LATCH_def,
-    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                        o
- GEN_BETA_RULE                                                             o
- IN_OUT_SPLIT                                                              o
- REWRITE_RULE 
-  [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
-   ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-   Ite_def,Par_def,Seq_def,o_THM];
+fun MAKE_NETLIST devth =
+ (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                           o
+  Ho_Rewrite.REWRITE_RULE (!combinational_components)                        o
+  CONV_RULE
+   (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                    o
+  SIMP_RULE std_ss [UNCURRY]                                                 o
+  Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                  o
+  Ho_Rewrite.REWRITE_RULE
+    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
+     COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
+     BUS_CONCAT_PAIR,BUS_CONCAT_o,
+     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
+     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
+     POSEDGE_IMP_def,LATCH_def,
+     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                         o
+  GEN_BETA_RULE                                                              o
+  IN_OUT_SPLIT                                                               o
+  REWRITE_RULE 
+   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+    Ite_def,Par_def,Seq_def,o_THM]) devth;
+
+(*****************************************************************************)
+(* User modifiable list of Melham-style temporal abstraction theorem         *)
+(*****************************************************************************)
+val temporal_abstractions = ref([] : thm list);
+
+fun add_temporal_abstractions thl = 
+ (temporal_abstractions :=
+   thl @ (!temporal_abstractions));
+
+val _ =
+ add_temporal_abstractions
+  [UNDISCH DEL_IMP,
+   UNDISCH DELT_IMP,
+   UNDISCH DELF_IMP,
+   COMB_at,
+   CONSTANT_at,
+   TRUE_at,
+   FALSE_at,
+   NOT_at,
+   AND_at,
+   OR_at,
+   MUX_at,
+   EQ_at,
+   ADD_at,
+   SUB_at,
+   LESS_at];
 
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
-val at_thms =
- [UNDISCH DEL_IMP,UNDISCH DELT_IMP,UNDISCH DELF_IMP,
-  EQ_at,COMB_at,CONSTANT_at,TRUE_at,FALSE_at,
-  NOT_at,AND_at,OR_at,MUX_at,
-  EQ_at,ADD_at,SUB_at,LESS_at];
+fun MAKE_CIRCUIT devth =
+ (DISCH_ALL                                                                  o
+  LIST_ANTE_EXISTS_INTRO                                                     o 
+  (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))) o
+  (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                  o
+  at_SPEC_ALL ``clk:num->bool``                                              o
+  GEN_ALL                                                                    o
+  Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT]               o
+  CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                           o
+  Ho_Rewrite.REWRITE_RULE (!combinational_components)                        o
+  CONV_RULE 
+   (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                    o
+  SIMP_RULE std_ss [UNCURRY]                                                 o
+  Ho_Rewrite.REWRITE_RULE
+   [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]                   o
+  DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                          o
+  Ho_Rewrite.REWRITE_RULE
+    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
+     COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
+     BUS_CONCAT_PAIR,BUS_CONCAT_o,
+     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
+     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
+     DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
+     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                         o
+  GEN_BETA_RULE                                                              o
+  IN_OUT_SPLIT                                                               o
+  REWRITE_RULE 
+   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+    Ite_def,Par_def,Seq_def,o_THM]) devth;
 
-val MAKE_CIRCUIT =
- DISCH_ALL                                                                 o
- LIST_ANTE_EXISTS_INTRO                                                    o 
- (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL at_thms)))                o
- (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                 o
- at_SPEC_ALL ``clk:num->bool``                                             o
- GEN_ALL                                                                   o
- Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT]              o
- CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                          o
- Ho_Rewrite.REWRITE_RULE 
-  [COMB_NOT,COMB_AND,COMB_OR,COMB_ADD,COMB_SUB,COMB_LESS,COMB_EQ]          o
- CONV_RULE
-  (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                   o
- SIMP_RULE std_ss [UNCURRY]                                                o
- Ho_Rewrite.REWRITE_RULE
-  [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def
-   (*DEL_IMP_def,GSYM DEL_IMP_THM*)]                                       o
- DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                         o
- Ho_Rewrite.REWRITE_RULE
-   [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
-    COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
-    BUS_CONCAT_PAIR,BUS_CONCAT_o,
-    FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
-    DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
-    DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
-    COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                        o
- GEN_BETA_RULE                                                             o
- IN_OUT_SPLIT                                                              o
- REWRITE_RULE 
-  [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
-   ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-   (*GSYM DEL_IMP_THM,DEL_IMP_def,*)
-   Ite_def,Par_def,Seq_def,o_THM];

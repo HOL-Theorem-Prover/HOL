@@ -1,5 +1,5 @@
 (*****************************************************************************)
-(* Coversion of output of compiler to Verilog                                *)
+(* Conversion ("pretty printing") of output of compiler to Verilog           *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -659,16 +659,33 @@ fun CONSTANTvInst
   out ";\n\n")
  end;
 
+(*****************************************************************************)
+(* Code below is fairly gross because it needs to deal with numerals         *)
+(* of type `:num`` and ``word<n>``.                                          *)
+(*****************************************************************************)
 fun termToVerilog_CONSTANT (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
      andalso (fst(dest_const(fst(strip_comb tm))) = "CONSTANT")
-     andalso numSyntax.is_numeral(rand(rator tm))
+     andalso ((rand(rator tm) = ``0``)
+              orelse is_comb(rand(rator tm))
+                     andalso is_const(rator(rand(rator tm)))
+                     andalso mem 
+                              (fst(dest_const(rator(rand(rator tm))))) 
+                              ["NUMERAL","n2w"])
      andalso is_var (rand tm)
   then CONSTANTvInst 
         out 
         [("size", var2size(last(strip_pair(rand tm)))),
-         ("value",Arbnum.toString(numSyntax.dest_numeral(rand(rator tm))))] 
+         ("value",
+          let val num = rand(rator tm)
+              val n = 
+               if (num = ``0``) orelse (fst(dest_const(rator num)) = "NUMERAL")
+                then num
+                else rand num
+          in
+           Arbnum.toString(numSyntax.dest_numeral n)
+          end)]
         (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_CONSTANT" "bad component term";
 

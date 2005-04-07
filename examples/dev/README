@@ -11,6 +11,7 @@ compile.sml ............... convert to combinators and compile to circuits
 vsynth.sml ................ convert a circuit made with MAKE_CIRCUIT to Verilog
 FactScript.sml ............ synthesise naive factorial and dump Verilog
 Fact.ml ................... synthesise and simulate factorial and run gtkwave
+Fact32 .................... directory with word32 version of factorial example
 dff ....................... Melham's temporal abstraction theory
 Holmakefile ............... instructions for Holmake
 
@@ -651,5 +652,5 @@ ML reference "if_print_flag" to false.
 == [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT                     ==
 == [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION     ==
 == [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave        ==
-== [05.04.05: MJCG updated file                                              ==
+== [07.04.05: MJCG last updated file                                         ==
 ===============================================================================

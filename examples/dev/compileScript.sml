@@ -1084,7 +1084,6 @@ val LESS_at =
      LESS(in1 at clk,in2 at clk,out at clk)``,
    RW_TAC std_ss [LESS_def,at_def,when]);
 
-
 val UNWIND_THM = 
  store_thm
   ("UNWIND_THM",
