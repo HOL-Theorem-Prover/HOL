@@ -2533,6 +2533,34 @@ val HS_EVAL = store_thm("HS_EVAL",
   RW_TAC bool_ss [WORD_HS_THM,w2n_EVAL]
 );
 
+(*---------------------------------------------------------------------------*)
+(* Support for termination proofs                                            *)
+(*---------------------------------------------------------------------------*)
+
+val ZERO_LESS_TWO_EXP = Q.prove
+(`!n. 0 < 2**n`, 
+ METIS_TAC [ZERO_LESS_EXP,TWO]);
+
+val ZERO_MOD_WL = Q.store_thm
+("ZERO_MOD_WL",
+ `0 MOD 2**WL = 0`,
+ RW_TAC arith_ss [ZERO_MOD,ZERO_LESS_TWO_EXP]);
+
+val lem = SIMP_RULE arith_ss [ZERO_LESS_TWO_EXP]
+              (Q.SPEC `2**WL` bitsTheory.MOD_ADD_1);
+
+val WORD_PRED_THM = Q.store_thm
+("WORD_PRED_THM",
+ `!m. ~(m = 0w) ==> w2n (m - 1w) < w2n m`,
+ SIMP_TAC arith_ss [FORALL_WORD,w2n_EVAL] 
+  THEN Cases_on `n` THEN RW_TAC arith_ss []
+  THEN POP_ASSUM MP_TAC
+  THEN SIMP_TAC std_ss 
+         [ADD1,GSYM ADD_EVAL,WORD_ADD_SUB,w2n_EVAL,n2w_11]
+  THEN RW_TAC std_ss [MOD_WL_def,ZERO_MOD_WL]
+  THEN RW_TAC arith_ss [lem]);
+
+
 (* -------------------------------------------------------- *)
 
 val _ = overload_on ("<",  Term`word_lt`);
