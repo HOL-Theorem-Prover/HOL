@@ -551,12 +551,15 @@ fun mk_measure tm =
 (* For termination prover.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val default_simps =
+val default_termination_simps =
     [combinTheory.o_DEF,
      combinTheory.I_THM,
      prim_recTheory.measure_def,
      relationTheory.inv_image_def,
-     pairTheory.LEX_DEF]
+     pairTheory.LEX_DEF];
+
+val termination_simps = ref default_termination_simps;
+
 
 (*---------------------------------------------------------------------------*)
 (* Single entrypoint for definitions where proof of termination will succeed *)
@@ -596,7 +599,7 @@ fun hwDefine defq =
                              (Absyn.TYPED(loc,f,fty))
             val defn = Defn.mk_defn (hd names) deftm
             val tac = EXISTS_TAC (mk_measure typedf)
-                       THEN TotalDefn.TC_SIMP_TAC [] default_simps
+                       THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps)
             val (defth,ind) = Defn.tprove(defn, tac)
             val (lt,rt) = boolSyntax.dest_eq(concl defth)
             val (func,args) = dest_comb lt
@@ -608,7 +611,7 @@ fun hwDefine defq =
                     (Term`TOTAL(^fb,^f1,^f2)`,
                      RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
                       THEN EXISTS_TAC typedf
-                      THEN TotalDefn.TC_SIMP_TAC [] default_simps)
+                      THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps))
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                           (RecCompileConvert defth totalth)
         in
