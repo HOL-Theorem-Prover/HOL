@@ -7,11 +7,11 @@ quietdec := true;
 loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
 map load
  ["compileTheory","compile","metisLib","intLib","word32Theory", "word32Lib",
-  "dffTheory","vsynth" (* ,"compile32Theory"*)];
+  "dffTheory","vsynth" ,"compile32Theory"];
 open compile metisLib word32Theory;
 open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile vsynth dffTheory
-  (* compile32Theory *) ;
+     compile32Theory;
 quietdec := false;
 
 infixr 3 THENR;
