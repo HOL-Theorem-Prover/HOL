@@ -1,6 +1,7 @@
 signature  disassemblerLib =
 sig
   val opcode_string : Arbnum.num -> string
+  val psr_string : Arbnum.num -> string
   val pp_word_psr : unit -> unit
   val pp_word_pipe : unit -> unit
   val pp_word_arm_ex : unit -> unit

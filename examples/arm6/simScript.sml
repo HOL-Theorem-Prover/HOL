@@ -1,6 +1,6 @@
-(* app load ["onestepTheory","word32Theory","armTheory","coreTheory"]; *)
+(* app load ["onestepTheory","word32Theory","armTheory","coreTheory","lemmasTheory"]; *)
 open HolKernel boolLib bossLib Q arithmeticTheory whileTheory onestepTheory
-     bitsTheory word32Theory armTheory coreTheory;
+     bitsTheory word32Theory armTheory coreTheory lemmasTheory;
 
 (* -------------------------------------------------------- *)
 
@@ -8,6 +8,8 @@ val _ = new_theory "sim";
 
 val std_ss = std_ss ++ boolSimps.LET_ss;
 val arith_ss = arith_ss ++ boolSimps.LET_ss;
+
+val _ = intLib.deprecate_int();
 
 (* -------------------------------------------------------- *)
 
@@ -54,6 +56,7 @@ val DECODE_MRS_THM = store_thm("DECODE_MRS_THM",
                      EXP,DIV_1,ODD_MOD2_LEM,LET_THM,DIV_DIV_DIV_MULT]
 );
 
+(*
 val th1 = REDUCE_RULE (SPECL [`31`,`0`,`31`,`28`] BITS_COMP_THM);
 val th2 = REDUCE_RULE (SPECL [`31`,`0`,`27`,`8`] BITS_COMP_THM);
 val th3 = REDUCE_RULE (SPECL [`31`,`0`,`7`,`0`] BITS_COMP_THM);
@@ -66,6 +69,39 @@ val SPLIT_WORD_THM = store_thm("SPLIT_WORD_THM",
   STRIP_TAC
     THEN SIMP_TAC arith_ss [SPLIT_WORD_def,BITS_EVAL,MOD_WL_THM,HB_def,th1,th2,th3]
     THEN SIMP_TAC arith_ss [DIVMOD_2EXP_def,BITS_THM,DIV_1,EXP,DIV_DIV_DIV_MULT]
+);
+*)
+
+val lem = prove(
+  `!n. BITS 7 0 n = SLICE 7 7 n + SLICE 6 6 n + SLICE 5 5 n + BITS 4 0 n`,
+  SIMP_TAC std_ss [GSYM SLICE_ZERO_THM,SLICE_COMP_RWT]
+);
+
+val ADD_ss = simpLib.SIMPSET
+  {convs = [{name="ADD_CONV",trace = 3,conv=K (K reduceLib.ADD_CONV),key= SOME([],``(a:num) + b``)}],
+   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
+
+val lem2 = prove(
+  `!n. BITS 31 28 n = (SBIT (BIT 31 n) 3 + SBIT (BIT 30 n) 2 +
+                       SBIT (BIT 29 n) 1 + SBIT (BIT 28 n) 0)`,
+  STRIP_TAC
+    THEN ONCE_REWRITE_TAC [(GEN_ALL o SYM o ONCE_REWRITE_RULE [MULT_COMM] o
+           SIMP_RULE bool_ss [ZERO_LT_TWOEXP,DECIDE ``0 < a ==> (SUC (a - 1) = a)``] o
+           INST [`n` |-> `2 ** 28 - 1`] o SPEC_ALL) MULT_MONO_EQ]
+    THEN SIMP_TAC (bool_ss++ADD_ss) [BIT_SLICE_THM,GSYM SLICE_THM,RIGHT_ADD_DISTRIB,SBIT_MULT]
+    THEN SIMP_TAC std_ss [SLICE_COMP_RWT,GSYM RIGHT_ADD_DISTRIB]
+);
+
+val SPLIT_WORD_THM = store_thm("SPLIT_WORD_THM",
+  `(!a b c d n. BITS 7 0 (w2n (SET_NZCV (a,b,c,d) n)) = BITS 7 0 (w2n n)) /\
+   (!a b c d n. BITS 27 8 (w2n (SET_NZCV (a,b,c,d) n)) = BITS 27 8 (w2n n)) /\
+   (!a b c d n. BITS 31 28 (w2n (SET_NZCV (a,b,c,d) n)) = SBIT a 3 + SBIT b 2 + SBIT c 1 + SBIT d 0) /\
+   (!a b c n. BITS 7 0 (w2n (SET_IFMODE a b c n)) = SBIT a 7 + SBIT b 6 + SBIT (BIT 5 (w2n n)) 5 + mode_num c) /\
+   (!a b c n. BITS 27 8 (w2n (SET_IFMODE a b c n)) = BITS 27 8 (w2n n)) /\
+   (!a b c n. BITS 31 28 (w2n (SET_IFMODE a b c n)) = BITS 31 28 (w2n n))`,
+  RW_TAC bool_ss [DECODE_NZCV_SET_NZCV,DECODE_IFMODE_SET_IFMODE,
+                  DECODE_IFMODE_SET_NZCV,DECODE_NZCV_SET_IFMODE,
+                  SLICE_THM,GSYM BITV_def,SBIT_MULT,BITV_THM,ADD,lem,lem2]
 );
 
 val DECODE_MSR_THM = store_thm("DECODE_MSR_THM",

@@ -8,6 +8,8 @@ val _ = new_theory "test";
 
 val _ = numLib.prefer_num();
 
+val EXC_HANDLER = "exc_handler";
+
 (* -------------------------------------------------------- *)
 
 fun add_rws f rws =
@@ -39,19 +41,22 @@ val word2num = Arbnum.fromInt o Word.toInt;
 val block_width = 8;
 val block_size = Word.toInt (Word.<<(0w1,Word.fromInt block_width));
 
-val prog_block = Array.array(block_size,Arbnum.zero);
-
-val memory = ref (patriciaLib.add {data = prog_block, key = 0w0} patriciaLib.empty);
+val memory = ref (patriciaLib.empty : num array patriciaLib.ptree);
 
 local
   open Arbnum
 in
+  val n3 = fromInt 3
   val n4 = fromInt 4
   val n7 = fromInt 7
   val n8 = fromInt 8
   val n31 = fromInt 31
   val n32 = fromInt 32
+  val n256 = Arbnum.fromInt 256
+  val n65536 = Arbnum.fromInt 65536
+  val n16777216 = Arbnum.fromInt 16777216
   val block_size_num = fromInt block_size
+  val block_size_bytes = block_size_num * n4
 
   val plus4 = fn x => x + n4
 
@@ -74,20 +79,36 @@ in
         (slice n31 (a + n8) x) + b * pow(two,a) + (bits (less1 a) zero x)
       end
   end
+
+  fun swap_ends n =
+    let val x0 = bits n7 zero n
+        val x1 = bits (fromInt 15) n8 n
+        val x2 = bits (fromInt 23) (fromInt 16) n
+        val x3 = bits n31 (fromInt 24) n
+    in
+       x0 * n16777216 + x1 * n65536 + x2 * n256 + x3
+    end
 end;
 
 fun nzeros_string n = funpow n (fn x => x ^ "0") "";
 fun toHexString8 n = let val x = Arbnum.toHexString n in nzeros_string (8 - size x) ^ x end;
+fun block_start n = Arbnum.*(block_size_num,Arbnum.*(word2num n,n4));
 
-fun print_word n =
-  print (toHexString8 n ^ "; " ^ (disassemblerLib.opcode_string n) ^ "\n");
+fun block_range n =
+      let val x = block_start n
+          val y = Arbnum.-(Arbnum.+(x,block_size_bytes),Arbnum.one)
+      in
+        (toHexString8 x) ^ " - " ^ (toHexString8 y)
+      end
 
-fun print_line l n = (print (toHexString8 l ^ ": ");print_word n);
+fun line_string l n = (toHexString8 l) ^ ":  " ^ (toHexString8 n) ^ "    " ^ (disassemblerLib.opcode_string n);
+
+fun printn s = print (s ^ "\n");
 
 fun print_block (b:{data : num array, key : word},i,x) =
-  let val n = Arbnum.*(block_size_num,Arbnum.*(word2num (#key b),n4))
+  let val n = block_start (#key b)
       val _ =
-    ((Vector.foldl (fn (a,l) => (print_line l a; plus4 l)) n) o Array.extract) (#data b,i,x)
+    ((Vector.foldl (fn (a,l) => (printn (line_string l a); plus4 l)) n) o Array.extract) (#data b,i,x)
   in () end;
 
 fun mem_read byto n =
@@ -100,8 +121,9 @@ fun mem_read byto n =
         let val w = Array.sub(#data b,Arbnum.toInt i) in
         case byto of
           NONE => w
-        | SOME byt =>
-            let val a = Arbnum.*(align,n8) in
+        | SOME (le,byt) =>
+            let val w = if le then w else swap_ends w
+                val a = Arbnum.*(align,n8) in
               if byt then
                 bits (Arbnum.+(a,n7)) a w
               else
@@ -120,8 +142,8 @@ fun mem_write byt n w =
     case patriciaLib.member (num2word bl) (!memory) of
       NONE => memory := (patriciaLib.add
         {key = num2word bl,
-        data = let val d = Array.array(block_size,Arbnum.zero)
-                   val _ = Array.update(d,i,if byt then set_byte align w Arbnum.zero else w) in
+         data = let val d = Array.array(block_size,Arbnum.zero)
+                    val _ = Array.update(d,i,if byt then set_byte align w Arbnum.zero else w) in
                  d
                end} (!memory))
     | SOME b => Array.update(#data b,i,if byt then set_byte align w (Array.sub(#data b,i)) else w)
@@ -136,8 +158,15 @@ fun barmsim_rws () = add_rws arm_rws [ZM_def];
 
 val SIMARM_CONV = CBV_CONV (barmsim_rws());
 *)
+
 val SIMARM_CONV = armLib.ARM_CONV;
 val SIMARM6_CONV = coreLib.ARM6_CONV;
+
+fun weval_rws () = add_rws word32Lib.word_compset
+  [armTheory.SET_IFMODE_def,armTheory.SET_NZCV_def,
+   armTheory.mode_num_def,armTheory.mode_case_def];
+
+val WEVAL_CONV = computeLib.CBV_CONV (weval_rws());
 
 local open io_onestepTheory in
   val STATE_INP_ss =
@@ -161,7 +190,7 @@ val sdest_comb = snd o dest_comb;
 
 fun mk_word32 n = mk_comb(``n2w``,numSyntax.mk_numeral n);
 
-fun eval_word t = (numSyntax.dest_numeral o rhsc o word32Lib.WORD_CONV) (mk_comb (``w2n``,t));
+fun eval_word t = (numSyntax.dest_numeral o rhsc o WEVAL_CONV) (mk_comb (``w2n``,t));
 fun eval_pc t = (eval_word o rhsc o SIMARM_CONV) (mk_comb (t,``r15``));
 
 local
@@ -186,17 +215,6 @@ in
         (mk_read pc, mk_read (Arbnum.+(pc,n4)))
     end
 end;
-
-fun read_input t =
-  let fun recurse t a =
-        if is_cond t then
-          let val (c,t1,t2) = dest_cond t in
-            recurse t2 (t1::a)
-          end
-        else a
-  in
-    recurse (snd (dest_abs t)) []
-  end;
 
 datatype arm_component = Register of int | PSR of int | Ireg | Exc;
 
@@ -239,8 +257,19 @@ local
                 else (rhsc o SIMARM_CONV o mk_comb) (x,List.nth(psrs,i)) end))
     end
 
-  val read_registers = recurse2 patriciaLib.empty
-  val read_psrs = recurse3 (Array.array(length psrs,NONE: term option))
+  fun read_registers x = recurse2 patriciaLib.empty x
+  fun read_psrs x = recurse3 (Array.array(length psrs,NONE: term option)) x
+
+  fun read_input t =
+    let fun recurse t a =
+          if is_cond t then
+            let val (c,t1,t2) = dest_cond t in
+              recurse t2 (pairLib.strip_pair t1::a)
+            end
+          else a
+    in
+      recurse (snd (dest_abs t)) []
+    end;
 
   fun regVal (x,ptree) n =
     let val y = patriciaLib.member (Word.fromInt n) ptree in
@@ -249,7 +278,7 @@ local
       else
         (rhsc o SIMARM_CONV o mk_comb) (x,List.nth(register,n))
   end
-in
+
   fun read_state t =
     let val (l,r) = strip_comb t
         val ireg = List.nth(r, 1)
@@ -261,12 +290,21 @@ in
       {registers = read_registers reg, psrs = read_psrs psr, ireg = ireg, exc = exc}
     end
 
-  fun state_val (x: {exc : term, ireg : term, psrs : term array, registers : term * term patriciaLib.ptree}) c =
+in
+(*  fun state_val (x: {exc : term, ireg : term, psrs : term array, registers : term * term patriciaLib.ptree}) c =
     case c of
       Ireg => #ireg x
     | Exc => #exc x
     | PSR n => Array.sub(#psrs x,n)
-    | Register n => regVal (#registers x) n
+    | Register n => regVal (#registers x) n *)
+  fun read_trace t =
+     let val f1 = rev o (map (fn t => ((read_state o get_state) t, get_out t)))
+         val f2 = (read_input o get_input o hd)
+     in
+       zip (f1 t) ((f2 t) @ [[``ARB:interrupts option``,``ARB:word32``,``ARB:word32 list``]])
+     end;
+
+  fun word2reg_string n = term_to_string (List.nth(register,Word.toInt n))
 end;
 
 fun is_word_literal t =
@@ -280,7 +318,7 @@ fun is_word_literal t =
 
 datatype mem_op = MemRead of num | MemWrite of bool * num * num;
 
-fun dec_memop t = 
+fun dec_memop t =
   let val (t1,t2) = dest_comb t
   in
     if term_eq t1 ``MemRead`` then
@@ -336,19 +374,72 @@ fun transfer6 t =
 
 (* -------------------------------------------------------- *)
 
-val _ = Array.copy {si = 0, len = NONE, dst = prog_block, di = 0,
- src = Array.fromList
-   (map Arbnum.fromHexString [ 
-"E3B0F020",
-"E1B0F00E",
-"E1B0F00E",
-"E25EF004",
-"E25EF008",
-"E1B0F00E",
-"E25EF004",
-"E25EF004",
-"E3B0020F"
-])};
+local
+  val byte2num = Arbnum.fromInt o Char.ord o Byte.byteToChar
+  fun bytes2num (b0,b1,b2,b3) =
+        Arbnum.+(Arbnum.*(byte2num b0,n16777216),
+        Arbnum.+(Arbnum.*(byte2num b1,n65536),
+        Arbnum.+(Arbnum.*(byte2num b2,n256),byte2num b3)))
+        
+  fun read_word (v,i) =
+        let val l = Word8Vector.length v
+            fun f i = if i < l then Word8Vector.sub(v,i) else 0wx0
+        in
+          bytes2num (f i, f (i + 1), f (i + 2), f (i + 3))
+        end
+in
+  fun load_data fname skip top_addr =
+    let open BinIO
+        val istr = openIn fname
+        val data = inputAll istr
+        val _ = closeIn istr
+    in
+      for_se 0 ((Word8Vector.length data - skip) div 4)
+        (fn i => let val a = 4 * i
+                     val n = read_word (data,a + skip)
+                 in mem_write false (Arbnum.+(top_addr,Arbnum.fromInt a)) n end)
+    end
+end
+
+fun save_data fname start finish le =
+  let open BinIO
+      val ostr = openOut fname
+      val num2word8 = Word8.fromInt o Arbnum.toInt;
+      fun save_word i = output1(ostr,num2word8 (mem_read (SOME (le,true)) i))
+      fun recurse i =
+            if Arbnum.<=(i,finish) then recurse (save_word i; Arbnum.plus1 i)
+            else closeOut ostr
+  in
+    recurse start
+  end
+
+(* -----------
+ A suitable ARM code binary can be generated using GNU's binutils:
+
+   arm-coff-as -EB assembler.s
+   arm-coff-objcopy -S -j .text a.out code
+
+ Then a skip of 60 is needed to pass over the header of the COFF binary
+   ----------- *)
+
+val exc_handler = Word8Vector.fromList
+  [0wxE3,0wxB0,0wxF0,0wx20,
+   0wxE1,0wxB0,0wxF0,0wx0E,
+   0wxE1,0wxB0,0wxF0,0wx0E,
+   0wxE2,0wx5E,0wxF0,0wx04,
+   0wxE2,0wx5E,0wxF0,0wx08,
+   0wxE1,0wxB0,0wxF0,0wx0E,
+   0wxE2,0wx5E,0wxF0,0wx04,
+   0wxE2,0wx5E,0wxF0,0wx04];
+
+(* save exception handler *)
+val _ = let open BinIO
+            val ostr = openOut EXC_HANDLER
+        in output(ostr,exc_handler); closeOut ostr end;
+
+(** Load Exception Handler *************)
+val _ = load_data EXC_HANDLER 0 Arbnum.zero;
+(***************************************)
 
 (* -------------------------------------------------------- *)
 
@@ -361,7 +452,7 @@ val _ = npp_word_psr();
 *)
 
 val RESET_PSR_def = Define`
-  RESET_PSR = CPSR_WRITE (SPSR_WRITE ARB svc (SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w)))
+  RESET_PSR = CPSR_WRITE (SPSR_WRITE ARB svc (SET_NZCV (F,F,F,F) (SET_IFMODE F F irq 0w)))
                          (SET_NZCV (F,F,F,F) (SET_IFMODE F F svc 0w))`;
 
 val RESET_PSR = (SUBST_RULE o armLib.ARM_RULE) RESET_PSR_def;
@@ -385,6 +476,7 @@ fun init_state6 t =
     {newinst = newinst, done = done, state = ns}
   end;
 
+(*
 val r0 =
    (subst [``reg:register -> word32`` |-> ``ARB {. r15 <- 0x0w .}``,
            ``onfq:bool`` |-> ``T``,
@@ -401,6 +493,7 @@ val r0 =
            resetlatch onfq ooonfq oniq oooniq pipeaabt pipebabt iregabt2
            dataabt2 aregn2 mrq2 nbw nrw sctrlreg psrfb oareg mask orp
            oorp mul mul2 borrow2 mshift)``);
+*)
 
 (* --- *)
 
@@ -451,10 +544,12 @@ fun init_state t =
      {done = done, state = ns}
   end;
 
+(*
 val s0 =
    (subst [``reg:register -> word32`` |-> ``ARB {. r15 <- 0x0w .}``,
            ``psrs:psrs -> word32`` |-> rhsc RESET_PSR]
      ``ARM_EX (ARM reg psrs) ireg software``);
+*)
 
 (* --- *)
 
@@ -488,20 +583,17 @@ fun state t x =
      else recurse t [#state s0]
    end;
 
-val s1 = next_state (#state (init_state s0));
-val s = state 2 s0;
-val i = (read_input o get_input o hd) s;
-
-val states = map (read_state o get_state) s;
+(* val s1 = next_state (#state (init_state s0)); *)
+(* val s = state 2 s0; *)
 
 (* -------------------------------------------------------- *)
 
-val k = patriciaLib.keys (!memory);
-val SOME mb = patriciaLib.member 0wx0 (!memory);
+(* val k = patriciaLib.keys (!memory); *)
+(* val SOME mb = patriciaLib.member 0wx0 (!memory); *)
 (* val SOME db = patriciaLib.member 0wx2 (!memory); *)
 (* val _ = print_block(db,0,NONE); *)
 (* val _ = print_block(db,0,SOME 10); *)
-val _ = print_block(mb,0,SOME 14);
+(* val _ = print_block(mb,0,SOME 14); *)
 (* val _ = Array.copy {si = 0, len = NONE, dst = #data db, di = 0, src = Array.array(block_size,Arbnum.zero)}; *)
 (* val _ = Array.copy {si = 0, len = NONE, dst = #data mb, di = 0, src = Array.array(block_size,Arbnum.zero)}; *)
 
@@ -511,7 +603,8 @@ val concat = String.concat;
 val _ = use "root_mosml.sml";
 val _ = SmlTk.init();
 
-open SmlTk
+local
+  open SmlTk
   datatype mode = usr | fiq | irq | svc | abt | und
   datatype exc = reset | undefined | software | pabort | dabort | interrupt | fast
   type psr = {c : bool, f : bool, i : bool, mode : mode, n : bool, v : bool, z : bool}
@@ -530,6 +623,286 @@ open SmlTk
   val exc = ref software
   val psr = Array.array(6,{n = false, z = false, c = false, v = false, i = false, f = false, mode = usr})
 
+  val trace_winId = newWinId()
+
+  val load_winId = newWinId()
+  val load_fnameId = newWidgetId()
+  val load_offsetId = newWidgetId()
+  val load_startId = newWidgetId()
+
+  val save_winId = newWinId()
+  val save_fnameId = newWidgetId()
+  val save_startId = newWidgetId()
+  val save_finishId = newWidgetId()
+
+  val mem_winId = newWinId()
+  val mem_blockId = newWidgetId()
+  val mem_dumpId = newWidgetId()
+
+  val st_opcId = newWidgetId()
+  val st_excId = newWidgetId()
+  val st_regId = newWidgetId()
+  val st_psrId = newWidgetId()
+  val in_intId = newWidgetId()
+  val in_opcId = newWidgetId()
+  val in_dinId = newWidgetId()
+  val doutId = newWidgetId()
+  val timeId = newWidgetId()
+
+  val the_thm_trace = ref ([]:thm list)
+  val the_trace = ref ([]:(({exc : term, ireg : term, psrs : term array,
+     registers : term * term patriciaLib.ptree} * term) * term list) list)
+
+  fun reset_all() =
+        let val _ = Array.modify (fn _ => "") ex_regs
+            val _ = Array.modify (fn _ => {n = false, z = false, c = false, v = false,
+                                           i = false, f = false, mode = usr}) psr
+            val _ = mode := usr
+            val _ = exc  := software
+        in
+          ()
+        end
+
+  (* --- *)
+
+  fun simple_text id = TextWid {
+        widId = id, scrolltype = NoneScb, annotext = mtAT,
+        packings = [Side Right], configs = [Width 40, Height 1], bindings = []}
+
+  fun simple_list (x,y) scrl id = Listbox {
+        widId = id, scrolltype = if scrl then RightScb else NoneScb, packings = [], bindings = [],
+        configs = [Font (Typewriter []),Width x, Height y]}
+
+  fun simple_frame p w = Frame {
+        widId = newWidgetId(), bindings = [], configs = [], packings = p, widgets = w}
+        
+  fun simple_label t = Label {
+        widId = newWidgetId(), bindings = [], configs = [Text t], packings = [Side Left]}
+
+  fun simple_top_label t = Label {
+        widId = newWidgetId(), bindings = [], configs = [Text t], packings = [Side Top]}
+
+  fun simple_tt_label id t = Label {
+        widId = id, bindings = [], packings = [Side Left],
+        configs = [Text t,Font (Typewriter []),Foreground Black]}
+
+  fun simple_entry id = Entry {
+        widId = id, bindings = [], configs = [], packings = [Side Right]}
+
+  fun simple_button p t c = Button {
+        widId = newWidgetId(), configs = [Text t, Command c],
+        packings = p, bindings = []}
+
+  fun bind_list (Listbox {bindings, configs, packings, scrolltype, widId}) d = 
+        Listbox {bindings = d, configs = configs, packings = packings, scrolltype = scrolltype, widId = widId}
+    | bind_list x _ = x
+
+  fun bind_entry (Entry {bindings, configs, packings, widId}) d = 
+        Entry {bindings = d, configs = configs, packings = packings, widId = widId}
+    | bind_entry x _ = x
+
+  fun copenWindow wid win = if occursWin wid then () else openWindow win
+
+  (* --- *)
+
+  fun show_blocks() =
+        (clearText mem_blockId;
+         app (fn b => insertTextEnd mem_blockId (block_range b)) (patriciaLib.keys (!memory));
+         clearText mem_dumpId)
+
+  fun load_load() =
+        let val fname = readTextAll load_fnameId
+            val offset = case Int.fromString (readTextAll load_offsetId) of SOME n => n | _ => 0
+            val start = Arbnum.fromHexString (readTextAll load_startId) handle _ => Arbnum.zero
+        in
+           (load_data (if fname = "" then EXC_HANDLER else fname) offset start;
+            closeWindow load_winId; show_blocks())
+        end
+  (* add handle for failing to open file *)
+ 
+  local fun bind x = bind_entry x ([BindEv(KeyPress "Return", fn _ => load_load())]) in
+    val load_fname = simple_frame [Side Top] (Pack [simple_label ("file name [default \"" ^ EXC_HANDLER ^ "\"]:"),
+                      bind (simple_entry load_fnameId)])
+    val load_offset = simple_frame [Side Top] (Pack [simple_label "offset (bytes) [default 0]:",
+                      bind (simple_entry load_offsetId)])
+    val load_start = simple_frame [Side Top] (Pack [simple_label "start address [default 0]:",
+                      bind (simple_entry load_startId)])
+  end
+
+  val load_buttons = simple_frame [Side Bottom]
+                      (Pack [simple_button [Side Left]  "cancel" (fn _ => closeWindow load_winId),
+                             simple_button [Side Right] "load" load_load])
+
+  val load_win = mkWindow {
+    winId    = load_winId,
+    config   = [WinTitle "load block"],
+    widgets  = Pack [load_fname,load_offset,load_start,load_buttons],
+    bindings = [],
+    init     = noAction}
+
+  (* --- *)
+
+  fun save_save() =
+        let val fname = readTextAll save_fnameId
+            val start = Arbnum.fromHexString (readTextAll save_startId) handle _ => Arbnum.zero
+            val finish = Arbnum.fromHexString (readTextAll save_finishId) handle _ => Arbnum.zero
+        in
+           (save_data fname start finish ((readVarValue "LE") = "1"); closeWindow save_winId)
+        end
+  (* add handle for failing to open file *)
+
+  local fun bind x = bind_entry x ([BindEv(KeyPress "Return", fn _ => save_save())]) in
+    val save_fname =
+      simple_frame [Side Top] (Pack [simple_label "file name:", bind (simple_entry save_fnameId)])
+    val save_start =
+      simple_frame [Side Top] (Pack [simple_label "first address:", bind (simple_entry save_startId)])
+    val save_finish =
+      simple_frame [Side Top] (Pack [simple_label "last address:", bind (simple_entry save_finishId)])
+  end
+
+  fun save_le b _ = setVarValue "LE" (if b then "1" else "0")
+
+  val save_ends = simple_frame [Side Top] (Pack [
+        Radiobutton {widId = newWidgetId(), bindings = [], packings = [Side Top],
+                     configs = [Text "little endian",Variable "LE", Value "1",
+                                Command(save_le true)]},
+        Radiobutton {widId = newWidgetId(), bindings = [], packings = [Side Top],
+                     configs = [Text "big endian",Variable "LE", Value "0",
+                                Command(save_le false)]}])
+
+  val save_buttons = simple_frame [Side Bottom]
+                      (Pack [simple_button [Side Left]  "cancel" (fn _ => closeWindow save_winId),
+                             simple_button [Side Right] "save" save_save])
+
+  val save_win = mkWindow {
+    winId    = save_winId,
+    config   = [WinTitle "save block"],
+    widgets  = Pack [save_fname,save_start,save_finish,save_ends,save_buttons],
+    bindings = [],
+    init     = save_le false}
+
+  (* --- *)
+
+  local
+    fun projMark (Mark(x,_)) = x
+      | projMark (MarkToEnd x) = x
+      | projMark MarkEnd = 0
+    fun delete_block n = memory := patriciaLib.remove n (!memory)
+    fun nth_key n = List.nth(patriciaLib.keys (!memory),n)
+    fun nth_block n = valOf (patriciaLib.member (nth_key n) (!memory))
+  in
+    fun view_block() =
+        (clearText mem_dumpId;
+         if readSelWindow() = SOME (mem_winId,mem_blockId) then
+            let val a = nth_block (projMark (readCursor mem_blockId))
+                val n = block_start (#key a)
+                val d = #data a
+            in
+              (Array.foldl (fn (a,l) => (insertTextEnd mem_dumpId ((line_string l a)); plus4 l)) n d;())
+            end
+          else ())
+
+    fun wipe_block() =
+         ((if readSelWindow() = SOME (mem_winId,mem_blockId) then
+             let val n = projMark (readCursor mem_blockId) in
+               delete_block (nth_key n)
+             end
+           else ()); show_blocks())
+  end
+
+  val delete_button = simple_button [Side Top] "wipe block" wipe_block
+  val load_button = simple_button [Side Top] "load" (fn _ => copenWindow load_winId load_win)
+  val save_button = simple_button [Side Top] "save" (fn _ => copenWindow save_winId save_win)
+
+  val mem_blocks = simple_frame [Side Left] (
+         Pack [simple_frame [Side Top] (Pack [simple_top_label "blocks",
+                 bind_list (simple_list (19,10) true mem_blockId)
+                           [BindEv(Double(ButtonPress (SOME 1)), fn _ => view_block())]]),
+               delete_button,load_button,save_button])
+
+  val mem_content = simple_frame [Side Right]
+                     (Pack [simple_top_label "content", simple_list (50,24) true mem_dumpId])
+
+  val mem_win = mkWindow {
+    winId    = mem_winId,
+    config   = [WinTitle "memory"],
+    widgets  = Pack [mem_blocks,mem_content],
+    bindings = [],
+    init     = show_blocks}
+
+  (* --- *)
+
+  val st_reg = simple_frame [Side Top,Fill X] (Pack [simple_label "registers:", simple_list (50,8) true st_regId])
+  val st_psr = simple_frame [Side Top,Fill X] (Pack [simple_label "status:",    simple_list (50,6) false st_psrId])
+
+  val st_opcode    = simple_frame [Side Top,Fill X] (Pack [simple_label "opcode:",    simple_text st_opcId])
+  val st_exception = simple_frame [Side Top,Fill X] (Pack [simple_label "exception:", simple_text st_excId])
+  val in_opcode    = simple_frame [Side Top,Fill X] (Pack [simple_label "fetch:",     simple_text in_opcId])
+  val in_interrupt = simple_frame [Side Top,Fill X] (Pack [simple_label "interrupt:", simple_text in_intId])
+  val in_din       = simple_frame [Side Top,Fill X] (Pack [simple_label "data-in:",   simple_text in_dinId])
+  val dout         = simple_frame [Side Top,Fill X] (Pack [simple_label "data-out:",  simple_text doutId])
+
+  fun show_registers (l,r) =
+        let val ks = patriciaLib.keys r
+            val lks = length ks
+        in
+          (clearText st_regId;
+           app (fn i => insertTextEnd st_regId
+                  ((word2reg_string i) ^ ": " ^ (term_to_string (#data (valOf (patriciaLib.member i r)))))) ks;
+           if lks < 31 then
+             insertTextEnd st_regId ((if (lks = 0) then "all: " else "rest: ") ^
+                                     (term_to_string (if is_abs l then (snd o dest_abs) l else l)))
+           else ())
+        end
+
+  fun show_psrs psrs =
+        (clearText st_psrId;
+         let fun f n = (disassemblerLib.psr_string o eval_word) (Array.sub(psrs,n)) in
+           app (insertTextEnd st_psrId)
+             ["    CPSR: " ^ (f 0),
+              "SPSR_fiq: " ^ (f 1),
+              "SPSR_irq: " ^ (f 2),
+              "SPSR_svc: " ^ (f 3),
+              "SPSR_abt: " ^ (f 4),
+              "SPSR_und: " ^ (f 5)]
+         end)
+
+  fun show_time n =
+     let val ((s,out),i) = List.nth(!the_trace,n)
+         val irpt = List.nth(i,0)
+         val ftch = List.nth(i,1)
+         val din  = List.nth(i,2)
+         fun write_text wid s = (setTextWidReadOnly wid false; clearText wid;
+                                 insertTextEnd wid s; setTextWidReadOnly wid true)
+         fun write_opcode x = disassemblerLib.opcode_string (eval_word x) handle HOL_ERR _ => term_to_string x
+     in
+       (write_text st_opcId (write_opcode (#ireg s));
+        write_text st_excId (term_to_string (#exc s));
+        write_text in_intId (term_to_string irpt);
+        write_text in_opcId (write_opcode ftch);
+        write_text in_dinId (term_to_string din);
+        write_text doutId (term_to_string out);
+        show_registers (#registers s);
+        show_psrs (#psrs s))
+     end
+
+  val trace_scale = ScaleWid {widId = timeId, packings = [], bindings  = [],
+        configs = [Orient Horizontal,SLabel "cycle", From 0.0, To 0.0,
+                   Resolution 1.0,ShowValue true,SCommand (show_time o Real.trunc)]}
+
+  fun trace_to n = addConf timeId [To (Real.fromInt n)]
+
+  val trace_win = mkWindow {
+    winId    = trace_winId,
+    config   = [WinTitle "trace"],
+    widgets  = Pack [st_opcode,st_exception,st_reg,st_psr,in_opcode,in_interrupt,in_din,dout,trace_scale],
+    bindings = [],
+    init     = (fn () => (app (fn x => setTextWidReadOnly x true)
+                            [st_opcId,st_excId,in_opcId,in_intId,in_dinId,doutId]))}
+
+  (* --- *)
+
+  (* Constructs and SUBST term *)
   fun mk_subst m a b =
         let val ta = type_of a and tb = type_of b in
           subst [``a : ^(ty_antiq ta)`` |-> a,
@@ -538,15 +911,17 @@ open SmlTk
           ``SUBST m (a:^(ty_antiq ta)) (b:^(ty_antiq tb))``
         end
 
+  (* Constructs the exception term *)
   fun mk_exc e = case e of
       reset     => ``reset``
-    | undefined => ``reset``
+    | undefined => ``undefined``
     | software  => ``software``
     | pabort    => ``pabort``
     | dabort    => ``dabort``
     | interrupt => ``interrupt``
     | fast      => ``fast``
 
+  (* mk_psrs takes and array of PSR values and constructs a PSR term. *)
   local
     fun is_nzcv_clear (a:psr) = not (#n a orelse #z a orelse #c a orelse #v a)
     fun is_ifmode_clear (a:psr) = not (#i a orelse #f a) andalso #mode a = usr
@@ -569,7 +944,7 @@ open SmlTk
       | 2 => ``SPSR_svc``
       | 1 => ``SPSR_abt``
       | _ => ``SPSR_und``
-  
+
     fun mk_set_ifmode i f m n =
           foldl (fn (a,t) => mk_comb(t,a)) ``SET_IFMODE`` [mk_bool i,mk_bool f,mk_mode m,n]
 
@@ -631,30 +1006,110 @@ open SmlTk
     | abt => i + 18
     | und => i + 20
 
-  fun print_ex_reg() =
-        Array.appi (fn (i,t) => print ((Int.toString i) ^ ": " ^ t ^ "\n")) (ex_regs,0,NONE);
+  local
+    fun num2reg n = case n of
+       0 => ``r0``
+     | 1 => ``r1``
+     | 2 => ``r2``
+     | 3 => ``r3``
+     | 4 => ``r4``
+     | 5 => ``r5``
+     | 6 => ``r6``
+     | 7 => ``r7``
+     | 8 => ``r15``
+     | 9 => ``r8``
+     | 10 => ``r9``
+     | 11 => ``r10``
+     | 12 => ``r11``
+     | 13 => ``r12``
+     | 14 => ``r13``
+     | 15 => ``r14``
+     | 16 => ``r8_fiq``
+     | 17 => ``r9_fiq``
+     | 18 => ``r10_fiq``
+     | 19 => ``r11_fiq``
+     | 20 => ``r12_fiq``
+     | 21 => ``r13_fiq``
+     | 22 => ``r14_fiq``
+     | 23 => ``r13_irq``
+     | 24 => ``r14_irq``
+     | 25 => ``r13_svc``
+     | 26 => ``r14_svc``
+     | 27 => ``r13_abt``
+     | 28 => ``r14_abt``
+     | 29 => ``r13_und``
+     | 30 => ``r14_und``
+     | _ => ``ARB:register``
 
-  fun swp_reg b regid m1 m2 i =
-        let val i1 = if b orelse (m1 = usr) orelse (m1 = fiq) then i else i - 5
-            val j1 = ex_reg_index (if b andalso not (m1 = fiq) then usr else m1) i1
-            val i2 = if b orelse (m2 = usr) orelse (m2 = fiq) then i else i - 5
-            val j2 = ex_reg_index (if b andalso not (m2 = fiq) then usr else m2) i2
-            val t1 = readTextAll regid
-            val t2 = Array.sub(ex_regs,j2)
-            val _ = Array.update(ex_regs,j1,t1)
+    fun add_reg (i,s,t) =
+          if s = "" then t
+          else
+            mk_subst t (num2reg i) (((mk_word32 o Arbnum.fromString) s) handle e => ``ARB:word32``)
+    (* inst [alpha |-> ``:word32``] (Term ([QUOTE s]))) *)
+
+    fun read_regid (i,regid,t) = (i,readTextAll regid,t)
+    fun read_ex_reg (i,s,t) = (i + 9,s,t)
+  in
+    fun mk_reg r = add_reg (8,readTextAll (Array.sub(r,15)),
+           Array.foldli (add_reg o read_ex_reg)
+             (Array.foldli (add_reg o read_regid) ``(\x. 0w):register->word32`` (r,0,SOME 8)) (ex_regs,0,SOME 21))
+  end
+
+  fun mk_init_state() =
+        (subst [``reg:register -> word32`` |-> mk_reg regId,
+           ``psrs:psrs -> word32`` |-> mk_psrs psr,
+           ``exc:exception`` |-> mk_exc (!exc)]
+           ``ARM_EX (ARM reg psrs) ireg exc``)
+
+  fun write_top_regs() =
+        let fun upd_fiq_reg i =
+              let val t = readTextAll (Array.sub(regId,i))
+                  val i2 = ex_reg_index (if ((!mode) = fiq) then fiq else usr) (i - 8)
+              in
+                Array.update(ex_regs,i2,t)
+              end
+            fun upd_reg i =
+              let val t = readTextAll (Array.sub(regId,i))
+                  val i2 = ex_reg_index (!mode) (if ((!mode) = usr) orelse ((!mode) = fiq) then i - 8 else i - 13)
+              in
+                Array.update(ex_regs,i2,t)
+              end
         in
-           (clearText regid; insertTextEnd regid t2)
+          (for_se 8 12 upd_fiq_reg;
+           for_se 13 14 upd_reg)
         end
 
-  fun set_mode m _ = (
+  (* set_mode is called when the user chooses to enter/display a different
+     ARM operating mode - it changes the banked registers and PSR value. *)
+  local
+    (* used in debugging:
+    fun print_ex_reg() =
+        Array.appi (fn (i,t) => printn ((Int.toString i) ^ ": " ^ t)) (ex_regs,0,NONE); *)
+
+    fun read_top_regs() =
+        let fun read_fiq_reg i =
+              Array.sub(ex_regs,ex_reg_index (if ((!mode) = fiq) then fiq else usr) (i - 8))
+            fun read_reg i =
+              Array.sub(ex_regs,ex_reg_index (!mode)
+                (if ((!mode) = usr) orelse ((!mode) = fiq) then i - 8 else i - 13))
+            fun read_reg_ex f i = let val regid = Array.sub(regId,i) in
+                (clearText regid; insertTextEnd regid (f i))
+              end
+        in
+          (for_se 8 12 (read_reg_ex read_fiq_reg);
+           for_se 13 14 (read_reg_ex read_reg))
+        end
+
+  in
+    fun set_mode m _ = (
         let val c1 = if m = fiq then Red else Black
             val c2 = if m = usr then Black else Red in
           for_se 0 4 (fn i => addConf (Array.sub(reg_nameId,i)) [Foreground c1]);
           for_se 5 6 (fn i => addConf (Array.sub(reg_nameId,i)) [Foreground c2])
         end;
-        for_se 0 4 (fn i => swp_reg true (Array.sub(regId,i + 8)) (!mode) m i);
-        for_se 5 6 (fn i => swp_reg false (Array.sub(regId,i + 8)) (!mode) m i);
-   (*     print_ex_reg(); *)
+        write_top_regs();
+        mode := m;
+        read_top_regs(); (* print_ex_reg(); *)
         addConf modeId [Text (mode_name m)];
         addConf psr_nameId [Text (if m = usr then "cpsr:" else "spsr:")];
         let val x = Array.sub(psr,mode2num m) in
@@ -665,10 +1120,11 @@ open SmlTk
            setVarValue "I" (b2string (#i x));
            setVarValue "F" (b2string (#f x));
            addConf psrId [Text (mode_name (#mode x))])
-        end;
-        mode := m
+        end
         )
+  end
 
+  (* called when the NZCVIF flags are updated *)
   fun set_psr _ =
         let val x = Array.sub(psr,mode2num (!mode)) in
           Array.update(psr,mode2num (!mode),
@@ -683,8 +1139,7 @@ open SmlTk
             end)
         end
 
-  fun set_exc e _ = (exc := e; addConf excId [Text (exc_name e)])
-
+  (* called when the MODE of the PSR is updated *)
   fun set_psr_mode m _ =
         let val x = Array.sub(psr,mode2num (!mode))
             val _ = Array.update(psr,mode2num (!mode),
@@ -694,18 +1149,15 @@ open SmlTk
   val psr_label = Label {
         widId = psr_nameId, packings = [Row 1, Column 1], bindings = [], configs = [Text "cpsr:"]}
 
-  fun reg_label wid n = Label {
-        widId = wid, packings = [Side Left], bindings = [],
-        configs = [Text ("r" ^ Int.toString n ^ (if n < 10 then " " else "")),
-                   Font (Typewriter []),Foreground Black]}
+  fun register_string n =
+    case n of
+      13 => " sp"
+    | 14 => " lr"
+    | 15 => " pc"
+    | _  => (if n < 10 then " r" else "r") ^ int_to_string n;
 
-  fun reg n = Entry {
-        widId = Array.sub(regId,n), packings = [Side Right],
-        configs = [], bindings = []}
-
-  val mode_label = Label {
-        widId = newWidgetId(), packings = [Side Left],
-        configs = [Text "mode:"], bindings = []}
+  fun reg_label wid n = simple_tt_label wid (register_string n);
+  fun reg_entry n = simple_entry (Array.sub(regId,n))
 
   fun mode_popup wid act = Menubutton {
         widId = wid, configs = [Font (Typewriter []), Relief Raised, Tearoff false, Text (mode_name (!mode))],
@@ -713,95 +1165,74 @@ open SmlTk
         mitems = map (fn m => MCommand [Font (Typewriter []), Text (mode_name m),Command (act m)])
                   [usr, fiq, irq, svc, abt, und]}
 
-  val exc_popup = Frame {
-        widId = newWidgetId(), configs = [], bindings = [], packings = [Row 4,PadY 2],
-        widgets = Pack [
-          Label {
-            widId = newWidgetId(), packings = [Side Left], bindings = [],
-            configs = [Text "exception:"]},
+  (* called when the exception is updated *)
+  fun set_exc e _ = (exc := e; addConf excId [Text (exc_name e)])
+
+  val exc_popup = simple_frame [Row 4,PadY 2]
+        (Pack [simple_label "exception:",
           Menubutton {
             widId = excId, packings = [Side Right], bindings = [],
             configs = [Width 21, Font (Typewriter []), Relief Raised,
                        Tearoff false, Text (exc_name (!exc))],
             mitems = map (fn e => MCommand [Font (Typewriter []), Text (exc_name e),Command (set_exc e)])
-                      [reset, undefined, software, pabort, dabort, interrupt, fast]}]}
+                      [reset, undefined, software, pabort, dabort, interrupt, fast]}])
 
-  fun TF_picker l act c = 
+  fun TF_picker l act c =
         Checkbutton {
             widId = newWidgetId(), packings = [Row 1,Column c], bindings = [],
             configs = [Text l,Font (Typewriter []), Command act, Variable l]};
 
-  val psr_picker = Frame {
-        widId = newWidgetId(), packings = [Row 3], configs = [], bindings = [],
-        widgets = Grid ([psr_label] @
-                        (map (fn (s,n) => TF_picker s set_psr (n + 2))
-                          [("N",0), ("Z",1), ("C",2), ("V",3), ("I",4), ("F",5)]) @
-                        [mode_popup psrId set_psr_mode])}
+  val psr_picker = simple_frame [Row 3]
+        (Grid ([psr_label] @
+               (map (fn (s,n) => TF_picker s set_psr (n + 2))
+                     [("N",0), ("Z",1), ("C",2), ("V",3), ("I",4), ("F",5)]) @ [mode_popup psrId set_psr_mode]))
 
-  val bot_registers = Frame {
-         widId = newWidgetId(),
-         widgets = Pack (List.tabulate(8,fn i => Frame {
-                           widId = newWidgetId(), packings = [Side Top], configs = [], bindings = [],
-                           widgets = Pack [reg_label (newWidgetId()) i,reg i]})),
-         packings = [Side Left], configs = [],  bindings = []}
+  (* Registers r0-r7 are the same for all modes *)
+  val bot_registers = simple_frame [Side Left]
+         (Pack (List.tabulate(8,fn i => simple_frame [Side Top] (Pack [reg_label (newWidgetId()) i,reg_entry i]))))
 
-  val top_registers = Frame {
-         widId = newWidgetId(), 
-         widgets = Pack (List.tabulate(8,fn i => Frame {
-                           widId = newWidgetId(),
-                           packings = [Side Top], configs = [], bindings = [],
-                           widgets = Pack
-                            [reg_label (if i = 7 then newWidgetId() else Array.sub(reg_nameId,i)) (i + 8),
-                             reg (i + 8)]})),
-         packings = [Side Right], configs = [],  bindings = []}
+  (* Registers r8-r14 are mode dependent; r15 (i = 7) is the same for all modes.  *)
+  val top_registers = simple_frame [Side Right]
+         (Pack (List.tabulate(7,fn i => simple_frame [Side Top]
+                             (Pack [reg_label (Array.sub(reg_nameId,i)) (i + 8), reg_entry (i + 8)])) @
+                [simple_frame [Side Top] (Pack [reg_label (newWidgetId()) 15,reg_entry 15])]))
 
-  val reg_frame = Frame {
-        widId = newWidgetId(), widgets = Pack [bot_registers,top_registers],
-        packings = [Row 2], configs = [],  bindings = []}
+  val reg_frame = simple_frame [Row 2] (Pack [bot_registers,top_registers])
+  val mode_frame = simple_frame [Row 1, PadY 2] (Pack [simple_label "mode:",mode_popup modeId set_mode])
 
-  val mode_frame = Frame {
-        widId = newWidgetId(), widgets = Pack [mode_label,mode_popup modeId set_mode],
-        packings = [Row 1, PadY 2], configs = [],  bindings = []}
+ (* val int_frame = simple_frame [Row 5, PadY 2]
+        (Pack [simple_label "interrupt at time t:", simple_entry intId]) *)
 
-  val int_frame = Frame {
-        widId = newWidgetId(), packings = [Row 5, PadY 2], configs = [],  bindings = [],
-        widgets = Pack [Label {
-                          widId = newWidgetId(), packings = [Side Left],
-                          configs = [Text "interrupt at time t:"], bindings = []},
-                        Entry {
-                          widId = intId, packings = [Side Right],
-                          configs = [], bindings = []}]}
+  fun execute _ = (write_top_regs();
+                   let val n =
+                         case Int.fromString (readTextAll maxcId) of
+                           NONE => valOf Int.maxInt
+                         | SOME x => x
+                       val i = mk_init_state()
+                    (* val _ = (print_term i; print "\n"; printn (Int.toString n)) *)
+                       val _ = the_thm_trace := state n i
+                   in
+                     the_trace := read_trace (!the_thm_trace)
+                   end;
+                   show_blocks();
+                   copenWindow trace_winId trace_win;
+                   trace_to (length (!the_trace) - 1))
 
-  val maxc_frame = Frame {
-        widId = newWidgetId(), packings = [Row 6, PadY 2], configs = [Relief Groove],  bindings = [],
-        widgets = Pack [Label {
-                          widId = newWidgetId(), packings = [Side Left],
-                          configs = [Text "max cycles:"], bindings = []},
-                        Entry {
-                          widId = maxcId, packings = [Side Right],
-                          configs = [], bindings = []}]}
+  val maxc_frame = simple_frame [Row 6, PadY 2]
+        (Pack [simple_label "no. of cycles:",
+               bind_entry (simple_entry maxcId) [BindEv(KeyPress "Return", execute)]])
 
-  val go_button = Button {
-        widId = newWidgetId(), configs = [Text "execute"], packings = [Row 7, PadY 5], bindings = []}
+  val go_button = simple_button [Row 7, PadY 5] "execute" execute;
 
   val win = mkWindow {
     winId    = newWinId(),
     config   = [WinTitle "HOL simulator for the ARM ISA"],
-    widgets  = Grid [reg_frame,psr_picker,mode_frame,exc_popup,int_frame,maxc_frame,go_button],
+    widgets  = Grid [reg_frame,psr_picker,mode_frame,exc_popup,maxc_frame,go_button],
     bindings = [],
-    init     = noAction}
-
-  fun reset_all() =
-        let val _ = Array.modify (fn _ => "") ex_regs
-            val _ = Array.modify (fn _ => {n = false, z = false, c = false, v = false,
-                                           i = false, f = false, mode = usr}) psr
-            val _ = mode := usr
-            val _ = exc  := software
-        in
-          init()
-        end
-
-  val go = (reset_all(); startTcl [win]; mode)
+    init     = reset_all}
+in
+  fun go() = (init();startTcl [win,mem_win]; the_thm_trace)
+end
 
 (* -------------------------------------------------------- *)
 

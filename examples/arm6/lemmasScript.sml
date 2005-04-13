@@ -538,10 +538,16 @@ val DECODE_NZCV_SET_NZCV = store_thm("DECODE_NZCV_SET_NZCV",
 val FACTOR_NZCV = prove(
   `(!a b c d.
      SBIT a 31 + SBIT b 30 + SBIT c 29 + SBIT d 28 =
+     (SBIT a 3 + SBIT b 2 + SBIT c 1 + SBIT d 0) * 2 ** SUC 27) /\
+   (!a b c d.
+     SBIT a 31 + SBIT b 30 + SBIT c 29 + SBIT d 28 =
      (SBIT a 23 + SBIT b 22 + SBIT c 21 + SBIT d 20) * 2 ** SUC 7) /\
    (!a b c d.
      SBIT a 31 + SBIT b 30 + SBIT c 29 + SBIT d 28 =
      (SBIT a 24 + SBIT b 23 + SBIT c 22 + SBIT d 21) * 2 ** SUC 6) /\
+   (!a b c d.
+     SBIT a 31 + SBIT b 30 + SBIT c 29 + SBIT d 28 =
+     (SBIT a 25 + SBIT b 24 + SBIT c 23 + SBIT d 22) * 2 ** SUC 5) /\
    (!a b c d.
      SBIT a 31 + SBIT b 30 + SBIT c 29 + SBIT d 28 =
      (SBIT a 26 + SBIT b 25 + SBIT c 24 + SBIT d 23) * 2 ** SUC 4)`,
@@ -551,12 +557,14 @@ val FACTOR_NZCV = prove(
 val lems = (CONJUNCTS FACTOR_NZCV);
 
 val DECODE_IFMODE_SET_NZCV = store_thm("DECODE_IFMODE_SET_NZCV",
-   `(!a b c d n. BIT 7 (w2n (SET_NZCV (a,b,c,d) n)) = BIT 7 (w2n n)) /\
+   `(!a b c d n. BITS 27 8 (w2n (SET_NZCV (a,b,c,d) n)) = BITS 27 8 (w2n n)) /\
+    (!a b c d n. BIT 7 (w2n (SET_NZCV (a,b,c,d) n)) = BIT 7 (w2n n)) /\
     (!a b c d n. BIT 6 (w2n (SET_NZCV (a,b,c,d) n)) = BIT 6 (w2n n)) /\
+    (!a b c d n. BIT 5 (w2n (SET_NZCV (a,b,c,d) n)) = BIT 5 (w2n n)) /\
     (!a b c d n. BITS 4 0 (w2n (SET_NZCV (a,b,c,d) n)) = BITS 4 0 (w2n n))`,
    REPEAT STRIP_TAC 
      THEN SIMP_TAC arith_ss [SET_NZCV_def,w2n_EVAL,MOD_WL_THM,HB_def,BITS_COMP_THM2,BIT_def,WORD_BITS_def]
-     THENL List.tabulate(3,(fn i => SIMP_TAC bool_ss [ADD_ASSOC,List.nth(lems,i)]))
+     THENL List.tabulate(5,(fn i => SIMP_TAC bool_ss [ADD_ASSOC,List.nth(lems,i)]))
      THEN SIMP_TAC arith_ss [BITS_SUM2,BITS_COMP_THM2]
 );
 
@@ -607,6 +615,21 @@ val DECODE_IFMODE_SET_IFMODE = store_thm("DECODE_IFMODE_SET_IFMODE",
      THEN RW_TAC std_ss [SBIT_def,BITS_THM]
 );
 
+val FACTOR_NZCV = prove(
+  `!a b m n.
+       BITS 31 8 n * 2 ** 8 + (SBIT a 7 + SBIT b 6 +
+          BITS 5 5 n * 2 ** 5 + mode_num m) =
+       (BITS 31 8 n * 2 ** 3 + SBIT a 2 + SBIT b 1 + BITS 5 5 n) * 2 ** 5 + mode_num m`,
+  REWRITE_TAC [RIGHT_ADD_DISTRIB,SBIT_MULT] THEN SIMP_TAC arith_ss []
+);
+
+val FACTOR_NZCV2 = prove(
+  `!a b n.
+       (BITS 31 8 n * 2 ** 3 + SBIT a 2 + SBIT b 1 + BITS 5 5 n) * 2 ** 5 =
+       (BITS 31 8 n * 2 ** 2 + SBIT a 1 + SBIT b 0) * 2 ** SUC 5 + BITS 5 5 n * 2 ** 5`,
+  REWRITE_TAC [RIGHT_ADD_DISTRIB,SBIT_MULT] THEN SIMP_TAC arith_ss []
+);
+
 val lt_thms = prove(
   `(!i f m n. BITS 27 8 n * 2 ** 8 + SBIT i 7 + SBIT f 6 +
               BITS 5 5 n * 2 ** 5 + mode_num m < 2 ** 28) /\
@@ -615,7 +638,8 @@ val lt_thms = prove(
    (!i f m n. BITS 29 8 n * 2 ** 8 + SBIT i 7 + SBIT f 6 +
               BITS 5 5 n * 2 ** 5 + mode_num m < 2 ** 30) /\
    (!i f m n. BITS 30 8 n * 2 ** 8 + SBIT i 7 + SBIT f 6 +
-              BITS 5 5 n * 2 ** 5 + mode_num m < 2 ** 31)`,
+              BITS 5 5 n * 2 ** 5 + mode_num m < 2 ** 31) /\
+   (!i f m n. SBIT i 7 + SBIT f 6 + BITS 5 5 n * 2 ** 5 + mode_num m < 2 ** 8)`,
   RW_TAC bool_ss [SBIT_def]
     THEN ASSUME_TAC (SPEC `m` mode_num_lt)
     THEN MAP_EVERY (fn a => ASSUME_TAC (SPECL [a,`8`,`n`] BITSLT_THM)) [`30`,`29`,`28`,`27`]
@@ -624,22 +648,29 @@ val lt_thms = prove(
 );
 
 val DECODE_NZCV_SET_IFMODE = store_thm("DECODE_NZCV_SET_IFMODE",
-   `(!a b c d n. BIT 31 (w2n (SET_IFMODE i f m n)) = BIT 31 (w2n n)) /\
-    (!a b c d n. BIT 30 (w2n (SET_IFMODE i f m n)) = BIT 30 (w2n n)) /\
-    (!a b c d n. BIT 29 (w2n (SET_IFMODE i f m n)) = BIT 29 (w2n n)) /\
-    (!a b c d n. BIT 28 (w2n (SET_IFMODE i f m n)) = BIT 28 (w2n n))`,
+  `(!i f m n. BIT 31 (w2n (SET_IFMODE i f m n)) = BIT 31 (w2n n)) /\
+   (!i f m n. BIT 30 (w2n (SET_IFMODE i f m n)) = BIT 30 (w2n n)) /\
+   (!i f m n. BIT 29 (w2n (SET_IFMODE i f m n)) = BIT 29 (w2n n)) /\
+   (!i f m n. BIT 28 (w2n (SET_IFMODE i f m n)) = BIT 28 (w2n n)) /\
+   (!i f m n. BITS 27 8 (w2n (SET_IFMODE i f m n)) = BITS 27 8 (w2n n)) /\
+   (!i f m n. BIT 5 (w2n (SET_IFMODE i f m n)) = BIT 5 (w2n n))`,
   REPEAT STRIP_TAC
      THEN SIMP_TAC bool_ss [ADD_0,SET_IFMODE_def,w2n_EVAL,MOD_WL_THM,HB_def,
-            BITS_COMP_THM2,BIT_def,WORD_BITS_def,WORD_SLICE_def]
+            BITS_COMP_THM2,BIT_def,WORD_BITS_def,WORD_SLICE_def,MIN_31_5,MIN_31_27]
      THENL (
-       map (fn (a,b) => SIMP_TAC std_ss [(GSYM o SIMP_RULE arith_ss [] o SPECL [`31`,a,b,`8`]) SLICE_COMP_RWT])
-           [(`31`,`30`),(`30`,`29`),(`29`,`28`),(`28`,`27`)])
-     THEN SIMP_TAC bool_ss [DECIDE ``(a:num) + b + c + d + e + f = a + (b + c + d + e + f)``,
-            BITS_SUM,SLICE_THM,lt_thms]
+       (map (fn (a,b) => SIMP_TAC std_ss [(GSYM o SIMP_RULE arith_ss [] o SPECL [`31`,a,b,`8`]) SLICE_COMP_RWT])
+           [(`31`,`30`),(`30`,`29`),(`29`,`28`),(`28`,`27`)]) @ [ALL_TAC, ALL_TAC])
+     THEN SIMP_TAC bool_ss [BITS_SUM,SLICE_THM,lt_thms,
+            DECIDE ``(a:num) + b + c + d + e + f = a + (b + c + d + e + f)``]
+     THEN SIMP_TAC bool_ss [BITS_SUM,lt_thms,
+            DECIDE ``(a:num) + b + c + d + e = a + (b + c + d + e)``]
+     THEN SIMP_TAC bool_ss [BITS_SUM,FACTOR_NZCV,CONV_RULE (DEPTH_CONV reduceLib.SUC_CONV) mode_num_lt]
+     THEN SIMP_TAC bool_ss [BITS_SUM2,FACTOR_NZCV2]
      THEN SIMP_TAC bool_ss [BITS_THM,MULT_DIV,ZERO_LT_TWOEXP,MOD_MOD,MOD_MULT_MOD,
             simpLib.SIMP_PROVE arith_ss []  ``(2 ** (SUC 31 - 30) = 2 ** (SUC 30 - 30) * 2 ** 1) /\
                                               (2 ** (SUC 31 - 29) = 2 ** (SUC 29 - 29) * 2 ** 2) /\
-                                              (2 ** (SUC 31 - 28) = 2 ** (SUC 28 - 28) * 2 ** 3)``]
+                                              (2 ** (SUC 31 - 28) = 2 ** (SUC 28 - 28) * 2 ** 3) /\
+                                              (2 ** (SUC 31 - 8) = 2 ** (SUC 27 - 8) * 2 ** 4)``]
 );
 
 val FACTOR_NZCV = prove(
@@ -707,6 +738,40 @@ val SET_IFMODE_NZCV_SWP = store_thm("SET_IFMODE_NZCV_SWP",
            DECIDE ``(22 + SUC 5 = 28) /\ (SUC 27 = 28)``]
     THEN SIMP_TAC bool_ss [SPEC `31` BITS_THM,MULT_DIV,ZERO_LT_TWOEXP,LESS_MOD,lt_thm2]
 );
+
+(*
+val lem = prove(
+  `!n. BITS 7 0 n = SLICE 7 7 n + SLICE 6 6 n + SLICE 5 5 n + BITS 4 0 n`,
+  SIMP_TAC std_ss [GSYM SLICE_ZERO_THM,SLICE_COMP_RWT] 
+);
+
+val ADD_ss = simpLib.SIMPSET
+  {convs = [{name="ADD_CONV",trace = 3,conv=K (K reduceLib.ADD_CONV),key= SOME([],``(a:num) + b``)}],
+   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
+
+val lem2 = prove(
+  `!n. BITS 31 28 n = (SBIT (BIT 31 n) 3 + SBIT (BIT 30 n) 2 +
+                       SBIT (BIT 29 n) 1 + SBIT (BIT 28 n) 0)`,
+  STRIP_TAC
+    THEN ONCE_REWRITE_TAC [(GEN_ALL o SYM o ONCE_REWRITE_RULE [MULT_COMM] o
+           SIMP_RULE bool_ss [ZERO_LT_TWOEXP,DECIDE ``0 < a ==> (SUC (a - 1) = a)``] o
+           INST [`n` |-> `2 ** 28 - 1`] o SPEC_ALL) MULT_MONO_EQ]
+    THEN SIMP_TAC (bool_ss++ADD_ss) [BIT_SLICE_THM,GSYM SLICE_THM,RIGHT_ADD_DISTRIB,SBIT_MULT]
+    THEN SIMP_TAC std_ss [SLICE_COMP_RWT,GSYM RIGHT_ADD_DISTRIB]
+);
+
+val SPLIT_WORD_THM = prove(
+  `(!a b c d n. BITS 7 0 (w2n (SET_NZCV (a,b,c,d) n)) = BITS 7 0 (w2n n)) /\
+   (!a b c d n. BITS 27 8 (w2n (SET_NZCV (a,b,c,d) n)) = BITS 27 8 (w2n n)) /\
+   (!a b c d n. BITS 31 28 (w2n (SET_NZCV (a,b,c,d) n)) = SBIT a 3 + SBIT b 2 + SBIT c 1 + SBIT d 0) /\
+   (!a b c n. BITS 7 0 (w2n (SET_IFMODE a b c n)) = SBIT a 7 + SBIT b 6 + SBIT (BIT 5 (w2n n)) 5 + mode_num c) /\
+   (!a b c n. BITS 27 8 (w2n (SET_IFMODE a b c n)) = BITS 27 8 (w2n n)) /\
+   (!a b c n. BITS 31 28 (w2n (SET_IFMODE a b c n)) = BITS 31 28 (w2n n))`,
+  RW_TAC bool_ss [DECODE_NZCV_SET_NZCV,DECODE_IFMODE_SET_IFMODE,
+                  DECODE_IFMODE_SET_NZCV,DECODE_NZCV_SET_IFMODE,
+                  SLICE_THM,GSYM BITV_def,SBIT_MULT,BITV_THM,ADD,lem,lem2]
+);
+*)
 
 val DECODE_MODE_THM = store_thm("DECODE_MODE_THM",
   `!m psr x y. DECODE_MODE (WORD_BITS 4 0 (SET_IFMODE x y m psr)) = m`,

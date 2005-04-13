@@ -15,6 +15,14 @@ datatype iclass = swp | mrs | msr | Data_proc of shiftmode | mla_mul |
 
 (* ----------------------------------------------------------------- *)
 
+val toUpperString = I;
+(* val toUpperString = String.map Char.toUpper; *)
+val max_width = 8;
+fun nspaces_string n = funpow n (fn x => x ^ " ") "";
+fun mnemonic s = (toUpperString s) ^ (nspaces_string (max_width - size s))
+
+(* ----------------------------------------------------------------- *)
+
 fun num2list l n =
   if l = 0 then
     []
@@ -46,15 +54,15 @@ fun Rm l = bits 3 0 l;
 
 (* ----------------------------------------------------------------- *)
 
-fun decode_shift z l =
+fun decode_shift z l = toUpperString(
   case l of
-    [0,0] => "LSL"
-  | [0,1] => "LSR"
-  | [1,0] => "ASR"
-  | [1,1] => if z then "RRX" else "ROR"
+    [0,0] => "lsl"
+  | [0,1] => "lsr"
+  | [1,0] => "asr"
+  | [1,1] => if z then "rrx" else "ror"
   | _ => raise HOL_ERR { origin_structure = "disassemlerLib",
                          origin_function = "decode_shift",
-                         message = "Can't decode shift." };
+                         message = "Can't decode shift." });
 
 val msb32 = Arbnum.pow(Arbnum.two,Arbnum.fromInt 31);
 fun smsb b = if b then msb32 else Arbnum.zero;
@@ -107,50 +115,55 @@ fun decode_inst l =
 
 fun decode_condition l =
   case l of
-    [0,0,0,0] => "EQ"
-  | [0,0,0,1] => "NE"
-  | [0,0,1,0] => "CS"
-  | [0,0,1,1] => "CC"
-  | [0,1,0,0] => "MI"
-  | [0,1,0,1] => "PL"
-  | [0,1,1,0] => "VS"
-  | [0,1,1,1] => "VC"
-  | [1,0,0,0] => "HI"
-  | [1,0,0,1] => "LS"
-  | [1,0,1,0] => "GE"
-  | [1,0,1,1] => "LT"
-  | [1,1,0,0] => "GT"
-  | [1,1,0,1] => "LE"
-  | [1,1,1,0] => "" (* AL *)
-  | _ => "NV";
+    [0,0,0,0] => "eq"
+  | [0,0,0,1] => "ne"
+  | [0,0,1,0] => "cs"
+  | [0,0,1,1] => "cc"
+  | [0,1,0,0] => "mi"
+  | [0,1,0,1] => "pl"
+  | [0,1,1,0] => "vs"
+  | [0,1,1,1] => "vc"
+  | [1,0,0,0] => "hi"
+  | [1,0,0,1] => "ls"
+  | [1,0,1,0] => "ge"
+  | [1,0,1,1] => "lt"
+  | [1,1,0,0] => "gt"
+  | [1,1,0,1] => "le"
+  | [1,1,1,0] => "" (* al *)
+  | _ => "nv";
 
 fun decode_opcode l =
   case l of
-    [0,0,0,0] => "AND"
-  | [0,0,0,1] => "EOR"
-  | [0,0,1,0] => "SUB"
-  | [0,0,1,1] => "RSB"
-  | [0,1,0,0] => "ADD"
-  | [0,1,0,1] => "ADC"
-  | [0,1,1,0] => "SBC"
-  | [0,1,1,1] => "RSC"
-  | [1,0,0,0] => "TST"
-  | [1,0,0,1] => "TEQ"
-  | [1,0,1,0] => "CMP"
-  | [1,0,1,1] => "CMN"
-  | [1,1,0,0] => "ORR"
-  | [1,1,0,1] => "MOV"
-  | [1,1,1,0] => "BIC"
-  | _ => "MVN";
+    [0,0,0,0] => "and"
+  | [0,0,0,1] => "eor"
+  | [0,0,1,0] => "sub"
+  | [0,0,1,1] => "rsb"
+  | [0,1,0,0] => "add"
+  | [0,1,0,1] => "adc"
+  | [0,1,1,0] => "sbc"
+  | [0,1,1,1] => "rsc"
+  | [1,0,0,0] => "tst"
+  | [1,0,0,1] => "teq"
+  | [1,0,1,0] => "cmp"
+  | [1,0,1,1] => "cmn"
+  | [1,1,0,0] => "orr"
+  | [1,1,0,1] => "mov"
+  | [1,1,1,0] => "bic"
+  | _ => "mvn";
 
 fun decode_address_mode p u =
   case (p,u) of
-    (false,false) => "DA"
-  | (false,true)  => "IA"
-  | (true,false)  => "DB"
-  | (true,true)   => "IB";
+    (false,false) => "da"
+  | (false,true)  => "ia"
+  | (true,false)  => "db"
+  | (true,true)   => "ib";
 
-fun register_string n = "r" ^ int_to_string n;
+fun register_string n =
+  case n of
+    13 => "sp"
+  | 14 => "lr"
+  | 15 => "pc"
+  | _  => "r" ^ int_to_string n;
 
 local
   fun finish i ys = if ys = [] then [(i,i)] else ((fst (hd ys), i)::(tl ys));
@@ -241,21 +254,24 @@ fun shift_immediate_string (y:{Imm : int, Rm : int, Sh : string}) =
   register_string (#Rm y) ^
   (let val imm = #Imm y in
      if imm = 0 then
-        if #Sh y = "RRX" then ", RRX" else ""
+        toUpperString (if #Sh y = "rrx" then ", rrx" else "")
      else
        ", " ^ (#Sh y) ^ " #" ^ int_to_string imm
    end);
 
 fun branch_string l conds =
-  let val dl = decode_branch l in
-    "B" ^ (if #L dl then "L" else "") ^ conds ^ (if #sign dl then " #-" else " #") ^ (int_to_string (#offset dl))
+  let val dl = decode_branch l
+      val h = mnemonic ("b" ^ (if #L dl then "l" else "") ^ conds)
+  in
+    h ^ (if #sign dl then " #-" else " #") ^ (int_to_string (#offset dl))
   end;
 
 fun data_proc_string l conds x =
-  let val dl = decode_data_proc l in
-    (#opcode dl) ^ conds ^ (if #S dl andalso not (#binop dl) then "S" else "") ^ " " ^
-      (if #binop dl then "" else register_string (#Rd dl) ^ ", ") ^
-      (if #opcode dl = "MOV" orelse #opcode dl = "MVN" then "" else register_string (#Rn dl) ^ ", ") ^
+  let val dl = decode_data_proc l
+      val h = mnemonic ((#opcode dl) ^ conds ^ (if #S dl andalso not (#binop dl) then "s" else ""))
+  in
+    h ^ (if #binop dl then "" else register_string (#Rd dl) ^ ", ") ^
+      (if #opcode dl = "mov" orelse #opcode dl = "mvn" then "" else register_string (#Rn dl) ^ ", ") ^
       (case x of
          Immediate y => "#" ^ Arbnum.toString y
        | Immediate_shift y => shift_immediate_string y
@@ -263,51 +279,61 @@ fun data_proc_string l conds x =
   end;
 
 fun mrs_string l conds =
-  let val dl = decode_mrs l in
-    "MRS" ^ conds ^ " " ^ register_string (#Rd dl) ^ ", " ^ (if #R dl then "SPSR" else "CPSR")
+  let val dl = decode_mrs l
+      val h = mnemonic ("mrs" ^ conds)
+  in
+    h ^ register_string (#Rd dl) ^ ", " ^ (if #R dl then "SPSR" else "CPSR")
   end;
 
 fun msr_string l conds =
-  let val dl = decode_msr l in
-    "MSR" ^ conds ^ " " ^ (if #R dl then "SPSR" else "CPSR") ^
+  let val dl = decode_msr l
+      val h = mnemonic ("msr" ^ conds)
+  in
+    h ^ (if #R dl then "SPSR" else "CPSR") ^
       (if #I dl then "_f, #" ^ Arbnum.toString (decode_immediate l)
        else ", " ^ register_string (#Rm dl))
   end;
 
 fun mla_mul_string l conds =
-  let val dl = decode_mla_mul l in
-    (if #A dl then "MLA" else "MUL") ^ conds ^ (if #S dl then "S" else "") ^ " " ^
-       register_string (#Rd dl) ^ ", " ^ register_string (#Rm dl) ^ ", " ^ register_string (#Rs dl) ^
+  let val dl = decode_mla_mul l
+      val h = mnemonic ((if #A dl then "MLA" else "MUL") ^ conds ^ (if #S dl then "S" else ""))
+  in
+    h ^ register_string (#Rd dl) ^ ", " ^ register_string (#Rm dl) ^ ", " ^ register_string (#Rs dl) ^
        (if #A dl then ", " ^ register_string (#Rn dl) else "")
   end;
 
 fun ldr_str_string l conds =
   let val dl = decode_ldr_str l
       val offset = (if #I dl then
-                      (if not (#U dl) then "-" else "") ^ shift_immediate_string (decode_immediate_shift (#offset dl))
-                    else
-                      (if not (#U dl) then "#-" else "#") ^ Arbnum.toString (list2num (#offset dl)))
+                      (if not (#U dl) then "-" else "") ^
+                         shift_immediate_string (decode_immediate_shift (#offset dl))
+                    else let val n = list2num (#offset dl) in
+                      if n = Arbnum.zero then "" else
+                        ", " ^ (if not (#U dl) then "#-" else "#") ^ Arbnum.toString n end)
+      val h = mnemonic ((if #L dl then "ldr" else "str") ^ conds ^ (if #B dl then "b" else ""))
   in
-    (if #L dl then "LDR" else "STR") ^ conds ^ (if #B dl then "B " else " ") ^
-      register_string (#Rd dl) ^ ", [" ^ register_string (#Rn dl) ^
-      (if #P dl then ", " ^offset ^ "]" ^ (if #W dl then "!" else "")
+    h ^ register_string (#Rd dl) ^ ", [" ^ register_string (#Rn dl) ^
+      (if #P dl then
+          offset ^ "]" ^ (if #W dl then "!" else "")
        else "], " ^ offset)
   end;
 
 fun ldm_stm_string l conds =
-  let val dl = decode_ldm_stm l in
-    (if #L dl then "LDM" else "STM") ^ conds ^ decode_address_mode (#P dl) (#U dl) ^ " " ^
-       register_string (#Rn dl) ^ (if #W dl then "!, " else ", ") ^ #list dl ^
+  let val dl = decode_ldm_stm l
+      val h = mnemonic ((if #L dl then "ldm" else "stm") ^ conds ^ decode_address_mode (#P dl) (#U dl))
+  in
+    h ^ register_string (#Rn dl) ^ (if #W dl then "!, " else ", ") ^ #list dl ^
        (if #S dl then "^" else "")
   end;
 
 fun swp_string l conds =
-  let val dl = decode_swp l in
-    "SWP" ^ conds ^ (if #B dl then "B " else " ") ^
-       register_string (#Rd dl) ^ ", " ^ register_string (#Rm dl) ^ ", [" ^ register_string (#Rn dl) ^ "]"
+  let val dl = decode_swp l
+      val h = mnemonic ("swp" ^ conds ^ (if #B dl then "B" else ""))
+  in
+    h ^ register_string (#Rd dl) ^ ", " ^ register_string (#Rm dl) ^ ", [" ^ register_string (#Rn dl) ^ "]"
   end;
 
-fun swi_ex_string conds = "SWI" ^ conds;
+fun swi_ex_string conds = mnemonic ("swi" ^ conds);
 
 (* ----------------------------------------------------------------- *)
 
