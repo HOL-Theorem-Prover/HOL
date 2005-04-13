@@ -1,0 +1,15 @@
+OBJ = mllex.exe
+EXTRA_CLEANS = $(OBJ)
+OPTIONS = NO_SIGOBJ
+
+# also builds under mlton with
+#   mlton -basis 1997 mllex.sml
+# as the commandline, though this creates mllex rather than mllex.exe
+# as below.  (MLton on Windows is still something of a work in
+# progress I believe.)
+
+# (To get rid of the 1997 reference, replace Substring.all with
+# Substring.full in mllex.sml)
+
+$(OBJ): mllex.sml
+	$(MOSMLC) -toplevel -o $@ $<
