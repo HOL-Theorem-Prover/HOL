@@ -1,3 +1,11 @@
+(* ===================================================================== *)
+(* FILE          : testScript.sml                                        *)
+(* DESCRIPTION   : Provides GUI for executing the ARM ISA                *)
+(*                                                                       *)
+(* AUTHOR        : (c) Anthony Fox, University of Cambridge              *)
+(* DATE          : 2005                                                  *)
+(* ===================================================================== *)
+
 (* app load ["metisLib","listLib","compLib","io_onestepTheory",
              "armLib","coreLib","disassemblerLib","patriciaLib"]; *)
 open HolKernel boolLib bossLib Parse Q;
