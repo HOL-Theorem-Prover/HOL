@@ -3,13 +3,18 @@ sig
 
   exception LEX_ERR of string * locn.locn
 
+  datatype base_token0 =
+    BT0_Ident of string
+  | BT0_Numeral of (Arbnum.num * char option)
+  | BT0_QIdent of (string * string)
+  | BT0_EOI
+
   datatype 'a base_token =
     BT_Ident of string
   | BT_Numeral of (Arbnum.num * char option)
   | BT_QIdent of (string * string)
   | BT_AQ of 'a
   | BT_EOI
-  | BT_InComment of int
 
   val toString : 'a base_token -> string
 

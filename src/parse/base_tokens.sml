@@ -3,13 +3,18 @@ struct
 
 exception LEX_ERR of string * locn.locn
 
+  datatype base_token0 =
+    BT0_Ident of string
+  | BT0_Numeral of (Arbnum.num * char option)
+  | BT0_QIdent of (string * string)
+  | BT0_EOI
+
 datatype 'a base_token =
          BT_Ident of string
        | BT_Numeral of (Arbnum.num * char option)
        | BT_QIdent of (string * string)
        | BT_AQ of 'a
        | BT_EOI
-       | BT_InComment of int
 
 val allow_octal_input = ref false
 val preferred_output_base = ref StringCvt.DEC
@@ -22,7 +27,6 @@ fun toString (BT_Ident s) = s
   | toString (BT_QIdent(s1, s2)) = s1 ^ "$" ^ s2
   | toString (BT_AQ x) = "<AntiQuote>"
   | toString BT_EOI = "<End of Input>"
-  | toString (BT_InComment n) = "<In Comment, depth "^Int.toString(n + 1)^">"
 
 fun check_binary (s, loc) = let
   open Substring

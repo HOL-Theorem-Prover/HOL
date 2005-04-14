@@ -1,0 +1,167 @@
+ open base_tokens locn
+
+  type extrastate = {nf : int, r : int ref, i: int ref,
+                     rcopt : (int * int) option ref,
+                     stracc : (char list * locn_point) ref,
+                     incommentp : int ref}
+  (* mutable state argument to each rule is st=(nf,r,i,rcopt), where:
+       - nf  is the number of the fragment being parsed
+       - r   is the current row number
+       - i   is the index of the first char on the current row
+       - rcopt is the absolute line and character of the start of this fragment, if known
+  *)
+
+  fun mkLoc (st as {rcopt, ...} : extrastate) s e
+    = case !rcopt of
+          NONE => Loc(s,e)
+        | SOME(row,col) => Loc(rel_to_abs row col s, rel_to_abs row col e)
+
+  fun getLoc (st as {nf,r,i,rcopt,...} : extrastate) pos lexeme
+    = let val s = LocP(nf,!r,pos - !i)
+          val e = LocP(nf,!r,pos + size lexeme - !i - 1)
+      in
+          mkLoc st s e
+      end
+
+  fun newstate nf =
+      {nf = nf, r = ref 0, i = ref 0, rcopt = ref NONE,
+       stracc = ref ([], LocP(0,0,0) (* meaningless locn *)),
+       incommentp = ref 0}
+
+  (* processes location pragmas of the form (*#loc row col*), using
+     them to determine the absolute position of fragments in the input
+     stream. *)
+  fun dolocpragma (st as {r,i,rcopt,...} : extrastate) pos yytext
+    = let val s = Substring.all yytext
+          val sr = Substring.dropl (not o Char.isDigit) s
+          val sc = Substring.dropl (Char.isDigit) sr
+      in
+        r := 0;
+        i := pos + size yytext;
+        rcopt := SOME (valOf (Int.fromString(Substring.string sr)) - 1,
+                       valOf (Int.fromString(Substring.string sc)) - 1)
+      end
+   type lexresult = base_token0 * locn
+   fun eof (st:extrastate) = let
+     val lend = Loc(LocPEnd (#nf st), LocPEnd (#nf st))
+   in
+     if !(#incommentp st) <> 0 then
+       raise LEX_ERR ("eof/antiquote inside comment", lend)
+     else if not (null (#1 (! (#stracc st)))) then
+         raise LEX_ERR ("eof/antiquote inside quote-delimited string", lend)
+     else
+       (BT0_EOI, lend)
+   end
+
+%%
+%structure base_lexer
+%arg ({rcopt,nf,r,i,incommentp,stracc} : UserDeclarations.extrastate);
+%s string comment;
+
+alpha = [A-Za-z_'];
+numeric = [0-9];
+digitseq = ({numeric} | _)* {numeric} ({numeric} | _)*;
+hexdigit = [A-Fa-f] | {numeric};
+hexdigitseq = ({hexdigit} | _)* {hexdigit} ({hexdigit} | _)*;
+symbol = [-|!#%&)=+[{};:@~\\,.<>?/] | ];
+nonparen = {symbol} | \*;
+nonstar = {symbol} | \(;
+ident = {alpha} ({alpha} | {numeric})*;
+anysymb = {ident} | {nonparen} * \( | ({nonparen} | \( {nonstar}) +;
+space = [\ \t];
+linefeed = \n;
+creturn = \013;
+newline = {linefeed} | {creturn} | {creturn}{linefeed};
+locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
+
+%%
+<INITIAL>{ident} \$ ({anysymb}|{numeric}+) => (
+     let val l = String.tokens (fn c => c = #"$") yytext
+     in (BT0_QIdent (hd l, hd (tl l)),getLoc yyarg yypos yytext) end);
+<INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
+<INITIAL>"(*" => (YYBEGIN comment; incommentp := 1; continue());
+<INITIAL>("0b" {digitseq} | {numeric} ({numeric} | _)* | "0x" {hexdigitseq})
+         {alpha}? =>
+    (let val s = yytext
+         val c = String.sub (s, size s - 1)
+         val clower = Char.toLower c
+         val chexp = #"a" <= clower andalso clower <= #"f"
+         val loc = getLoc yyarg yypos s
+     in
+       if Char.isAlpha c andalso not (String.isPrefix "0x" s andalso chexp)
+       then let
+           val s = substring(s,0,size s - 1)
+         in
+           (BT0_Numeral(parse_numeric_literal(s, loc), SOME c), loc)
+         end
+       else
+         (BT0_Numeral(parse_numeric_literal(s, loc), NONE), loc)
+     end);
+<INITIAL>\" => (let
+                  val s = LocP(nf,!r,yypos - !(#i yyarg))
+                in
+                  stracc := ([#"\""], s);
+                  YYBEGIN string;
+                  continue()
+                end);
+<INITIAL>{space} => (continue());
+<INITIAL>{newline} => (let val i = #i yyarg
+                     in
+                       r := !r + 1;
+                       i := yypos + size yytext;
+                       continue()
+                     end);
+<INITIAL>\$ ? {anysymb} => ((BT0_Ident yytext, getLoc yyarg yypos yytext));
+<INITIAL>. => (raise LEX_ERR("Character \""^yytext^"\" is a lexical error",
+                             getLoc yyarg yypos yytext));
+
+
+<string>\" => (let val e = LocP(nf,!r,yypos - !(#i yyarg))
+                   val (clist, start) = !stracc
+                   val str = String.implode (#"\"" :: clist)
+               in
+                 stracc := ([], LocP(0,0,0));
+                 YYBEGIN INITIAL;
+                 (BT0_Ident str, Loc(start,e))
+               end);
+<string>"\\n" => (let val (clist, start) = !stracc
+                  in
+                    stracc := (#"\n" :: clist, start);
+                    continue()
+                  end);
+<string>"\\r" => (let val (clist, start) = !stracc
+                  in
+                    stracc := (#"\r" :: clist, start);
+                    continue()
+                  end);
+<string>"\\\"" => (let val (clist, start) = !stracc
+                   in
+                     stracc := (#"\"" :: clist, start);
+                     continue()
+                   end);
+<string>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
+<string>{newline} => (raise LEX_ERR ("newline inside quote-delimited string",
+                                   getLoc yyarg yypos yytext));
+<string>. =>  (let val (clist, start) = !stracc
+               in
+                 stracc := (String.sub(yytext,0) :: clist, start);
+                 continue()
+               end);
+
+
+<comment>"*)" => (incommentp := !incommentp - 1;
+                  if !incommentp = 0 then YYBEGIN INITIAL else ();
+                  continue());
+<comment>"(*" => (incommentp := !incommentp + 1;
+                  continue());
+<comment>{newline} => (let val i = #i yyarg
+                     in
+                       r := !r + 1;
+                       i := yypos + size yytext;
+                       continue()
+                     end);
+<comment>. => (continue());
+
+
+
+

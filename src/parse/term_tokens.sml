@@ -113,7 +113,6 @@ fn qb => let
        | BT_EOI         => NONE
        | BT_Ident s     => let val (s',locn') = split s locn qb in
                            SOME (Ident s',locn') end
-       | BT_InComment _ => raise Fail "qbuf returned BT_InComment"
    end
 end
 

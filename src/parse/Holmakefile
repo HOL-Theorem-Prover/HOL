@@ -1,4 +1,4 @@
 EXTRA_CLEANS = base_lexer.sml
 
-base_lexer.sml: base_lexer.lex
-	MOSMLLEX base_lexer.lex
+base_lexer.sml: base_lexer
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) base_lexer

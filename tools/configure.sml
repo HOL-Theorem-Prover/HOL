@@ -202,6 +202,28 @@ fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
 
 val _ = echo "Beginning configuration.";
 
+(* ----------------------------------------------------------------------
+    Compile our local copy of mllex
+   ---------------------------------------------------------------------- *)
+
+
+fun die s = (print s; print "\n"; Process.exit Process.failure)
+
+val _ = let
+  val _ = echo "Making tools/mllex/mllex.exe"
+  val cdir = FileSys.getDir()
+  val destdir = fullPath [holdir, "tools/mllex"]
+  val compiler = fullPath [mosmldir, "bin/mosmlc"]
+  val systeml = fn clist => if systeml clist <> Process.success then
+                              die "Failed to build mllex"
+                            else ()
+in
+  FileSys.chDir destdir;
+  systeml [compiler, "-toplevel", "-o", "mllex.exe", "mllex.sml"];
+  FileSys.chDir cdir
+end handle _ => die "Failed to build mllex."
+
+
 (*---------------------------------------------------------------------------
     Compile Holmake (bypassing the makefile in directory Holmake), then
     put the executable bin/Holmake.

@@ -54,7 +54,6 @@ in
   | BT_AQ x => ((fn () => advance fb), (AQ x,locn))
   | BT_EOI => ((fn () => ()), (Error bt,locn))
   | BT_Ident s => split_and_check fb s locn
-  | BT_InComment n => raise Fail "qbuf returned BT_InComment"
 end
 
 fun token_string (TypeIdent s) = s
