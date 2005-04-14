@@ -52,6 +52,11 @@ see the COPYRIGHT NOTICE for details and restrictions.
 	05/18/95 (jhr) changed Vector.vector to Vector.fromList
 *
  * $Log$
+ * Revision 1.2  2005/04/14 05:42:08  michaeln
+ * Slight change to allow the product of mllex foo to be compiled by mosml
+ * without having to use the -toplevel option.  Also a "fix" for an off-by-one
+ * issue that I think is a bug.
+ *
  * Revision 1.1  2005/04/13 05:31:30  michaeln
  * A MoscowML compilable version of the "standard" mllex tool, as used by
  * both SML/NJ and MLton.  The source code is also compilable by mlton,
@@ -1181,6 +1186,7 @@ end
 
 val skel_hd =
 "   struct\n\
+\    type int = Int.int\n\
 \    structure UserDeclarations =\n\
 \      struct\n\
 \"
@@ -1313,7 +1319,6 @@ fun lexGen infile =
 		       prErr "lookahead is unimplemented")
 		   else ()
 	in
-	   say "type int = Int.int\n";
 	  if (!HeaderDecl)
 	      then say (!HeaderCode)
 	      else say ("structure " ^ (!StrName));
@@ -1335,7 +1340,7 @@ fun lexGen infile =
 	  say "end\n\n";
 	  say "type int = Int.int\n";
 	  say (if (!PosArg) then "fun makeLexer (yyinput: int -> string,yygone0:int) =\nlet\n"
-		else "fun makeLexer (yyinput: int -> string) =\nlet\tval yygone0:int=1\n");
+		else "fun makeLexer (yyinput: int -> string) =\nlet\tval yygone0:int=0\n");
 	  if !CountNewLines then say "\tval yylineno: int ref = ref 0\n\n" else ();
 	  say "\tval yyb = ref \"\\n\" \t\t(* buffer *)\n\
 	  \\tval yybl: int ref = ref 1\t\t(*buffer length *)\n\
