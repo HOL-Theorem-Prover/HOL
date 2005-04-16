@@ -67,7 +67,7 @@ val ClockvDef =
 (* Combinational boolean inverter                                            *)
 (*****************************************************************************)
 val NOTvDef =
-"// Combinational inverter\n\
+"// Combinational boolean inverter\n\
 \module NOT (inp,out);\n\
 \ input inp;\n\
 \ output out;\n\
@@ -799,10 +799,9 @@ fun termToVerilog out tm =
          if_print_term tm;
          raise ERR "termToVerilog" "can't handle this case") else
   if (length results > 1)
-   then (if_print "termToVerilog found more than one module for:\n";
-         if_print_term tm; if_print "\n";
-         if_print "which shouldn't happen!";
-         raise ERR "termToVerilog" "more than one matching module") 
+   then (if_print "Warning: termToVerilog found more than one module for\n";
+         if_print_term tm; if_print "\n\n";
+         ()) 
    else ()
  end;
  

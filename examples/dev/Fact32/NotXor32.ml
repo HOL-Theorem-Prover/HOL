@@ -1,5 +1,5 @@
 (*****************************************************************************)
-(* Example to illiustrate adding a component: XOR32 (see ../README).         *)
+(* Another example to illiustrate adding a component (see ../README).        *)
 (*****************************************************************************)
 
 quietdec := true;
@@ -25,38 +25,39 @@ add_combinational ["word_add","word_sub"];
 add_combinational ["BITS","HB","w2n","n2w"];
 
 (*****************************************************************************)
-(* Start new theory "Xor32"                                                  *)
+(* Start new theory "NotXor32"                                               *)
 (*****************************************************************************)
-val _ = new_theory "Xor32";
+val _ = new_theory "NotXor32";
 
 (*****************************************************************************)
-(* Load definition of XOR32                                                  *)
+(* Load definitions of XOR32 and NOT32                                       *)
 (*****************************************************************************)
 use "XOR32.ml";
+use "NOT32.ml";
 
 (*****************************************************************************)
 (* Implement an atomic device computing XOR                                  *)
 (*****************************************************************************)
-val (Xor32,_,Xor32_dev) =
+val (NotXor32,_,NotXor32_dev) =
  hwDefine
-  `Xor32(in1,in2) = in1 # in2`;
+  `NotXor32(in1,in2) = ((in1 # in2), ~(in1 # in2))`;
 
 (*****************************************************************************)
 (* Derivation using refinement combining combinators                         *)
 (*****************************************************************************)
-val Xor32Imp_dev =
+val NotXor32Imp_dev =
  REFINE
   (DEPTHR ATM_REFINE)
-  Xor32_dev;
+  NotXor32_dev;
 
-val Xor32_cir =
+val NotXor32_cir =
  save_thm
-  ("Xor32_cir",
-   time MAKE_CIRCUIT Xor32Imp_dev);
+  ("NotXor32_cir",
+   time MAKE_CIRCUIT NotXor32Imp_dev);
 
 (*****************************************************************************)
 (* This dumps changes to all variables. Set to false to dump just the        *)
-(* changes to module Xor32.                                                  *)
+(* changes to module NotXor32.                                               *)
 (*****************************************************************************)
 dump_all_flag := true; 
 
@@ -69,6 +70,6 @@ waveform_viewer   := gtkwave;
 (*****************************************************************************)
 numWarning := false;
 
-SIMULATE Xor32_cir [("inp1","537"),("inp2","917")];
+SIMULATE NotXor32_cir [("inp1","537"),("inp2","917")];
 
 val _ = export_theory();
