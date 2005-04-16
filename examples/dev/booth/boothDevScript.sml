@@ -147,18 +147,6 @@ val (NEXTd_def,_,NEXTd_dev) = hwDefine
                     ALUd(borrow2,mul,rd,rm << mshift))`;
 
 
-(* ---------------------------------------------------------------
-   APPLY_NEXTd_TOTAL proves that APPLY_NEXTd is total
---------------------------------------------------------------- *)
-val APPLY_NEXTd_TOTAL = store_thm("APPLY_NEXTd_TOTAL",
-       ``TOTAL ((\x. FST x = 0),
-                (\((t:num),(inp:num#num#bool#num#word32#word32)).inp),
-                (\x. (FST x - 1,NEXTd (SND x))))``,
-       RW_TAC arith_ss [TOTAL_def]
-       THEN Q.EXISTS_TAC `FST`
-       THEN Cases_on `x`
-       THEN RW_TAC arith_ss []);
-
 
 (* ---------------------------------------------------------------
    APPLY_NEXTd applies the next state function t times
@@ -168,8 +156,6 @@ val (APPLY_NEXTd_def,_,APPLY_NEXTd_dev) = hwDefine
    `(APPLY_NEXTd(t,inp) = if t=0 then inp
                           else APPLY_NEXTd(t-1,NEXTd inp))
     measuring FST`;
-
-val APPLY_NEXTd_dev = MP APPLY_NEXTd_dev APPLY_NEXTd_TOTAL;
 
 
 (* ---------------------------------------------------------------
