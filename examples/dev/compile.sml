@@ -526,14 +526,24 @@ fun CompileConvert defth = Compile(Convert defth);
 (* Convert a recursive definition to an expression and then compile it.      *)
 (*****************************************************************************)
 fun RecCompileConvert defth totalth =
- let val (l,r) = dest_eq(concl(SPEC_ALL defth))
+ let val previousShowTypes = !show_types
+     val (l,r) = dest_eq(concl(SPEC_ALL defth))
      val (func,args) = dest_comb l 
      val impth = 
         (GEN_BETA_RULE o
          SIMP_RULE std_ss [Seq_def,Par_def,Ite_def])
         (DISCH_ALL(Compile (RecConvert defth totalth)))
+     val (_,args) = dest_comb (fst(dest_imp(concl impth)))
+     val (_,args') = dest_comb (concl totalth)
+     val (fb,(f1,f2)) = (fst(dest_pair args),dest_pair(snd (dest_pair args)))
+     val (fb',(f1',f2')) = (fst(dest_pair args'),dest_pair(snd (dest_pair args')))
      val h = fst(dest_imp(concl impth))
-     val hthm = prove (h,RW_TAC std_ss [LAMBDA_PROD,totalth])
+     val _ = (show_types := true)
+     val hthm = prove (h,
+           [QUOTE (term_to_string ``(^fb = ^fb') /\ (^f1 = ^f1') /\ (^f2 = ^f2')``)]
+               by RW_TAC std_ss [LAMBDA_PROD]
+           THEN RW_TAC std_ss [totalth])
+     val _ = (show_types := previousShowTypes)
  in
   SIMP_RULE std_ss [] (MP impth hthm)
  end;
