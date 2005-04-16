@@ -105,35 +105,6 @@ val MUXvDef =
 \\n\
 \endmodule\n\
 \\n";
-(******************************************************************************
-
-(*****************************************************************************)
-(* Combinational boolean and-gate                                            *)
-(* initially drives 0; filters out x                                         *)
-(*****************************************************************************)
-val ANDvDef =
-"// Combinational and-gate\n\
-\module AND (in1,in2,out);\n\
-\ input in1,in2;\n\
-\ output out;\n\
-\ reg out;\n\
-\ wire w;\n\
-\\n\
-\ assign w = in1 && in2;\n\
-\\n\
-\ initial out = 0;\n\
-\\n\
-\ always @(w)\n\
-\    casex (w)\n\
-\       0:       out <= 0;\n\
-\       1:       out <= 1;\n\
-\       default: out <= 0;\n\
-\    endcase\n\
-\\n\
-\endmodule\n\
-\\n";
-
-******************************************************************************)
 
 val ANDvDef =
 "// Combinational and-gate\n\
@@ -661,7 +632,7 @@ fun CONSTANTvInst
 
 (*****************************************************************************)
 (* Code below is fairly gross because it needs to deal with numerals         *)
-(* of type `:num`` and ``word<n>``.                                          *)
+(* of type `:num`` and of type ``:word<n>``.                                 *)
 (*****************************************************************************)
 fun termToVerilog_CONSTANT (out:string->unit) tm =
  if is_comb tm
@@ -801,69 +772,40 @@ fun termToVerilog_EQ (out:string->unit) tm =
         (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_EQ" "bad component term";
 
+val termToVerilogLib = 
+ ref
+  [termToVerilog_TRUE,
+   termToVerilog_NOT,
+   termToVerilog_AND,
+   termToVerilog_OR,
+   termToVerilog_MUX,
+   termToVerilog_DEL,
+   termToVerilog_DFF,
+   termToVerilog_Dtype,
+   termToVerilog_DtypeT,
+   termToVerilog_DtypeF,
+   termToVerilog_CONSTANT,
+   termToVerilog_ADD,
+   termToVerilog_SUB,
+   termToVerilog_LESS,
+   termToVerilog_EQ];
+
 fun termToVerilog out tm =
- termToVerilog_TRUE out tm       handle _ =>
- termToVerilog_NOT out tm        handle _ =>
- termToVerilog_AND out tm        handle _ =>
- termToVerilog_OR out tm         handle _ =>
- termToVerilog_MUX out tm        handle _ =>
- termToVerilog_DEL out tm        handle _ =>
- termToVerilog_DFF out tm        handle _ =>
- termToVerilog_Dtype out tm      handle _ =>
- termToVerilog_DtypeT out tm     handle _ =>
- termToVerilog_DtypeF out tm     handle _ =>
- termToVerilog_CONSTANT out tm   handle _ =>
- termToVerilog_ADD out tm        handle _ =>
- termToVerilog_SUB out tm        handle _ =>
- termToVerilog_LESS out tm       handle _ =>
- termToVerilog_EQ out tm         handle _ =>
- (if_print "termToVerilog failed on:\n";
-  if_print_term tm;
-  raise ERR "termToVerilog" "can't handle this case");
-
-(* Testing stuff
-val file_name = "foo";
-val outstr       = TextIO.openOut(file_name^".vl")
-fun out s        = TextIO.output(outstr,s);
-
-ClockvInst out [("period","10")] ["clk1"];
-ClockvInst out [("period","20")] ["clk2"];
-
-TRUEvInst out  [] ["out1"];
-TRUEvInst out  [] ["out2"];
-
-ANDvInst out [] ["inA1","inA2","outA"];
-ANDvInst out [] ["inB1","inB2","outB"];
-
-ORvInst out  [] ["inA1","inA2","outA"];
-ORvInst out  [] ["inB1","inB2","outB"];
-
-MUXvInst out [("size","31")] ["sw","inA1","inA2","outA"];
-MUXvInst out [("size","15")] ["sw","inB1","inB2","outB"];
-
-DtypevInst out [("size","31")] ["clk1","in1","out1"];
-DtypevInst out [("size","15")] ["clk2","in2","out2"];
-
-DtypeTvInst out [] ["clk1","in1","out1"];
-DtypeTvInst out [] ["clk2","in2","out2"];
-
-DtypeFvInst out [] ["clk1","in1","out1"];
-DtypeFvInst out [] ["clk2","in2","out2"];
-
-ADDvInst out [("size","31")] ["inA1","inA2","outA"];
-ADDvInst out [("size","15")] ["inB1","inB2","outB"];
-
-SUBvInst out [("size","31")] ["inA1","inA2","outA"];
-SUBvInst out [("size","15")] ["inB1","inB2","outB"];
-
-LESSvInst out [("size","31")] ["inA1","inA2","outA"];
-LESSvInst out [("size","15")] ["inB1","inB2","outB"];
-
-TextIO.flushOut outstr;
-TextIO.closeOut outstr;
-
-*)
-
+ let val results =
+          mapfilter (fn f => f out tm) (!termToVerilogLib);
+ in
+  if (length results = 0)
+   then (if_print "termToVerilog failed on:\n";
+         if_print_term tm;
+         raise ERR "termToVerilog" "can't handle this case") else
+  if (length results > 1)
+   then (if_print "termToVerilog found more than one module for:\n";
+         if_print_term tm; if_print "\n";
+         if_print "which shouldn't happen!";
+         raise ERR "termToVerilog" "more than one matching module") 
+   else ()
+ end;
+ 
 (*****************************************************************************)
 (* Library of modules with Verilog models                                    *)
 (*****************************************************************************)

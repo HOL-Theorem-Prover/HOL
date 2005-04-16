@@ -626,6 +626,102 @@ ML reference "if_print_flag" to false.
 
 =============================================================================== 
 
+(*****************************************************************************)
+(* The sources have lots of cut-and-paste-and-tweak style repetition for the *)
+(* various combinational components (NOT, AND, OR, MUX, ADD, SUB, LESS, EQ). *)
+(* I may eventually implement some generic tools to make adding new          *)
+(* combinational components a one-liner. However, this will be a tricky      *)
+(* and possibly -- at least for now -- not worth the effort, since adding    *)
+(* new components is likely to be relatively rare.                           *)
+(*                                                                           *)
+(* Here are the steps currently needed to add a new component,               *)
+(* illustrated with the addition of exclusive-or (XOR).                      *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Step 1                                                                    *)
+(* ------                                                                    *)
+(* Define the component in HOL                                               *)
+(* (assumes word32Theory loaded and open)                                    *)
+(*****************************************************************************)
+val XOR_def =
+ Define 
+  `XOR(in1,in2,out) = !t. out t = (in1 t) # (in2 t)`;
+
+(*****************************************************************************)
+(* Step 2                                                                    *)
+(* ------                                                                    *)
+(* Prove some boilerplate theorems and add to global lists:                  *)
+(*****************************************************************************)
+val COMB_XOR =
+ store_thm
+  ("COMB_XOR",
+   ``COMB (UNCURRY $#) (in1 <> in2, out) = XOR(in1,in2,out)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,XOR_def]);
+
+add_combinational_components[COMB_XOR];
+
+val XOR_at =
+ store_thm
+  ("XOR_at",
+   ``XOR(in1,in2,out)
+     ==>
+     XOR(in1 at clk,in2 at clk,out at clk)``,
+   RW_TAC std_ss [XOR_def,at_def,tempabsTheory.when]);
+
+add_temporal_abstractions[XOR_at];
+
+(*****************************************************************************)
+(* Step 3                                                                    *)
+(* ------                                                                    *)
+(* Define a Verilog module as an ML string (XORvDef), a function to          *)
+(* create an instance with a given size as a string (XORvInst), an           *)
+(* instance counter (XORvInst_count -- used to create unique names for       *)
+(* instances) and a function to print a HOL term ``XOR(in1,in2,out)`` as     *)
+(* an instance, using the the type of ``out`` to compute the word width      *)
+(* needed for setting of parameter "size" in XORvDef (termToVerilog_XOR).    *)
+(* These functions are added to a couple of global lists.                    *)
+(*****************************************************************************)
+val XORvDef =
+"// Combinational bitwise XOR\n\
+\module XOR (in1,in2,out);\n\
+\ parameter size = 31;\n\
+\ input  [size:0] in1,in2;\n\
+\ output [size:0] out;\n\
+\\n\
+\ assign out = in1 ^ in2;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+val XORvInst_count = ref 0;
+fun XORvInst (out:string->unit) [("size",size)] [in1_name,in2_name,out_name] =
+ let val count = !XORvInst_count
+     val _ = (XORvInst_count := count+1);
+     val inst_name = "XOR" ^ "_" ^ Int.toString count
+ in
+ (out " XOR        "; out inst_name;
+  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
+  out "   defparam ";out inst_name; out ".size = "; out size;
+  out ";\n\n")
+ end;
+
+add_module ("XOR", (XORvDef, XORvInst));
+
+fun termToVerilog_XOR (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "XOR")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then XORvInst
+        out
+        [("size", var2size(last(strip_pair(rand tm))))]
+        (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_XOR" "bad component term";
+
+termToVerilogLib := (!termToVerilogLib) @ [termToVerilog_XOR];
 
 ===============================================================================
 == This directory contains Juliano's HOL files modified by MJCG & KXS        ==
@@ -644,13 +740,13 @@ ML reference "if_print_flag" to false.
 == [29.01.05: MJCG added COMB_SYNTH_CONV removed SEL operators]              ==
 == [30.01.05: MJCG added dff: Melham's temporal abstraction theory]          ==
 == [01.02.05: MJCG minor tweaks to MAKE_NETLIST and COMB_SYNTH_CONV]         ==
-== [06.02.05: MJCG added refinement to clocked dtype registers               ==
-== [08.02.05: MJCG added ?-quantification of internal wires to MAKE_CIRCUIT  ==
-== [10.02.05: MJCG split input and output busses                             ==
-== [11.02.05: Holmakefile (thanks to MN) + code improvements (thanks to KXS) ==
-== [14.02.05: MJCG added vsynth (defines MAKE_VERILOG)                       ==
-== [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT                     ==
-== [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION     ==
-== [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave        ==
-== [07.04.05: MJCG last updated file                                         ==
+== [06.02.05: MJCG added refinement to clocked dtype registers]              ==
+== [08.02.05: MJCG added ?-quantification of internal wires to MAKE_CIRCUIT] ==
+== [10.02.05: MJCG split input and output busses]                            ==
+== [11.02.05: Holmakefile (thanks to MN) + code improvements (thanks to KXS)]==
+== [14.02.05: MJCG added vsynth (defines MAKE_VERILOG)]                      ==
+== [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT]                    ==
+== [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION]    ==
+== [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave]       ==
+== [07.04.05: MJCG added section on adding new compoents and Xor32]           ==
 ===============================================================================
