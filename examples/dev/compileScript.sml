@@ -89,6 +89,14 @@ val DEV_QUANT_NORM =
    SIMP_TAC std_ss [GSYM LAMBDA_PROD,FORALL_PROD]);
 
 (*****************************************************************************)
+(* Abstract on rising edge ("s at clk" analogous to PSL's "s@clk")           *)
+(*****************************************************************************)
+val _ = set_fixity "at" (Infixl 650);
+val at_def =
+ Define
+  `$at s clk = s when Rise clk`;
+
+(*****************************************************************************)
 (* First the operators:                                                      *)
 (*                                                                           *)
 (*  Seq f1 f2      f1 followed by f2 in series                               *)
@@ -502,52 +510,33 @@ val COMB_AND =
    ``COMB (UNCURRY $/\) (in1<>in2,out) = AND(in1,in2,out)``,
    RW_TAC std_ss [COMB_def,AND_def,BUS_CONCAT_def]);
 
+val AND_at =
+ store_thm
+  ("AND_at",
+   ``AND(in1,in2,out) 
+     ==> 
+     AND(in1 at clk,in2 at clk,out at clk)``,
+   RW_TAC std_ss [AND_def,at_def,when]);
+
+val NOT_at =
+ store_thm
+  ("NOT_at",
+   ``NOT(inp,out) ==> NOT(inp at clk,out at clk)``,
+   RW_TAC std_ss [NOT_def,at_def,when]);
+
 val COMB_OR =
  store_thm
   ("COMB_OR",
    ``COMB (UNCURRY $\/) (in1<>in2,out) = OR(in1,in2,out)``,
    RW_TAC std_ss [COMB_def,OR_def,BUS_CONCAT_def]);
 
-
-val ADD_def =
- Define
-  `ADD(in1,in2,out) = !t. out t = in1 t + in2 t`;
-
-val COMB_ADD =
+val OR_at =
  store_thm
-  ("COMB_ADD",
-   ``COMB (UNCURRY $+) (in1 <> in2, out) = ADD(in1,in2,out)``,
-   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,ADD_def]);
-
-val SUB_def =
- Define
-  `SUB(in1,in2,out) = !t. out t = in1 t - in2 t`;
-
-val COMB_SUB =
- store_thm
-  ("COMB_SUB",
-   ``COMB (UNCURRY $-) (in1 <> in2, out) = SUB(in1,in2,out)``,
-   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,SUB_def]);
-
-val EQ_def =
- Define
-  `EQ(in1,in2,out) = !t. out t = (in1 t = in2 t)`;
-
-val COMB_EQ =
- store_thm
-  ("COMB_EQ",
-   ``COMB (UNCURRY $=) (in1 <> in2, out) = EQ(in1,in2,out)``,
-   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,EQ_def]);
-
-val LESS_def =
- Define
-  `LESS(in1,in2,out) = !t. out t = in1 t < in2 t`;
-
-val COMB_LESS =
- store_thm
-  ("COMB_LESS",
-   ``COMB (UNCURRY $<) (in1 <> in2, out) = LESS(in1,in2,out)``,
-   RW_TAC std_ss [COMB_def,BUS_CONCAT_def,LESS_def]);
+  ("OR_at",
+   ``OR(in1,in2,out) 
+     ==> 
+     OR(in1 at clk,in2 at clk,out at clk)``,
+   RW_TAC std_ss [OR_def,at_def,when]);
 
 val FUN_EXISTS_PROD =
  store_thm
@@ -900,14 +889,6 @@ val DtypeT_def =
 val DtypeF_def =
  Define `DtypeF(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)`;
 
-(*****************************************************************************)
-(* Abstract on rising edge ("s at clk" analogous to PSL's "s@clk")           *)
-(*****************************************************************************)
-val _ = set_fixity "at" (Infixl 650);
-val at_def =
- Define
-  `$at s clk = s when Rise clk`;
-
 val at_CONCAT =
  store_thm
   ("at_CONCAT",
@@ -1009,40 +990,11 @@ val CONSTANT_at =
    ``CONSTANT c out ==> CONSTANT c (out at clk)``,
    RW_TAC std_ss [CONSTANT_def,at_def,when]);
 
-val EQ_at =
- store_thm
-  ("EQ_at",
-   ``(f = g) ==> (f at clk = g at clk)``,
-   RW_TAC std_ss [DEL_def,BUS_CONCAT_def]
-    THEN PROVE_TAC[]);
-
 val COMB_at =
  store_thm
   ("COMB_at",
    ``COMB f (inp,out) ==> COMB f (inp at clk,out at clk)``,
    RW_TAC std_ss [COMB_def,at_def,when]);
-
-val NOT_at =
- store_thm
-  ("NOT_at",
-   ``NOT(inp,out) ==> NOT(inp at clk,out at clk)``,
-   RW_TAC std_ss [NOT_def,at_def,when]);
-
-val AND_at =
- store_thm
-  ("AND_at",
-   ``AND(in1,in2,out) 
-     ==> 
-     AND(in1 at clk,in2 at clk,out at clk)``,
-   RW_TAC std_ss [AND_def,at_def,when]);
-
-val OR_at =
- store_thm
-  ("OR_at",
-   ``OR(in1,in2,out) 
-     ==> 
-     OR(in1 at clk,in2 at clk,out at clk)``,
-   RW_TAC std_ss [OR_def,at_def,when]);
 
 val MUX_at =
  store_thm
@@ -1051,38 +1003,6 @@ val MUX_at =
      ==> 
      MUX(sw at clk,in1 at clk,in2 at clk,out at clk)``,
    RW_TAC std_ss [MUX_def,at_def,when]);
-
-val EQ_at =
- store_thm
-  ("EQ_at",
-   ``EQ(in1,in2,out) 
-     ==> 
-     EQ(in1 at clk,in2 at clk,out at clk)``,
-   RW_TAC std_ss [EQ_def,at_def,when]);
-
-val ADD_at =
- store_thm
-  ("ADD_at",
-   ``ADD(in1,in2,out) 
-     ==> 
-     ADD(in1 at clk,in2 at clk,out at clk)``,
-   RW_TAC std_ss [ADD_def,at_def,when]);
-
-val SUB_at =
- store_thm
-  ("SUB_at",
-   ``SUB(in1,in2,out) 
-     ==> 
-     SUB(in1 at clk,in2 at clk,out at clk)``,
-   RW_TAC std_ss [SUB_def,at_def,when]);
-
-val LESS_at =
- store_thm
-  ("LESS_at",
-   ``LESS(in1,in2,out) 
-     ==> 
-     LESS(in1 at clk,in2 at clk,out at clk)``,
-   RW_TAC std_ss [LESS_def,at_def,when]);
 
 val UNWIND_THM = 
  store_thm

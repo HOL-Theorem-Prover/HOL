@@ -45,7 +45,7 @@ fun NOT32vInst (out:string->unit) [("size",size)] [inp_name,out_name] =
   out ";\n\n")
  end;
 
-add_module ("NOT32", (NOT32vDef, NOT32vInst));
+add_module ("NOT32", NOT32vDef);
 
 fun termToVerilog_NOT32 (out:string->unit) tm =
  if is_comb tm

@@ -5,6 +5,7 @@
 (*****************************************************************************)
 (* START BOILERPLATE                                                         *)
 (*****************************************************************************)
+
 (******************************************************************************
 * Load theories
 ******************************************************************************)
@@ -45,197 +46,436 @@ val ERR = mk_HOL_ERR "compile";
 fun date() = Date.fmt "%c" (Date.fromTimeLocal (Time.now ()));
 
 (*****************************************************************************)
+(* Test if a string is a constant                                            *)
+(*****************************************************************************)
+fun is_constant s = mem s (known_constants());
+
+(*****************************************************************************)
 (* Boilerplate definitions of primitive components                           *)
 (*****************************************************************************)
+fun string2int s =
+ let val (SOME n) = Int.fromString s in n end;
 
 (*****************************************************************************)
-(* Clock. Default has 10 units of simulation time between edges              *)
+(* Test if a ty is ``:word<n>`` for some n                                   *)
 (*****************************************************************************)
-val ClockvDef =
-"// Clock\n\
-\module Clock (clk);\n\
-\ parameter period = 10; // time between clock edges\n\
-\ output clk;\n\
-\ reg clk;\n\
-\\n\
-\ initial begin clk = 0; forever #period clk <= !clk; end\n\
-\\n\
-\endmodule\n\
-\\n";
+fun is_word_type wty =
+ let val (opr, tyargs) = dest_type wty
+     val oprl = explode opr
+ in
+  (tyargs = []      andalso
+   length oprl > 4  andalso
+   el 1 oprl = #"w" andalso
+   el 2 oprl = #"o" andalso
+   el 3 oprl = #"r" andalso
+   el 4 oprl = #"d" andalso
+   (case Int.fromString(implode(tl(tl(tl(tl oprl))))) of
+       SOME _ => true
+     | NONE   => false))
+ end;
 
 (*****************************************************************************)
-(* Combinational boolean inverter                                            *)
+(* Extraxt <n> from ``:word<n>``                                             *)
 (*****************************************************************************)
-val NOTvDef =
-"// Combinational boolean inverter\n\
-\module NOT (inp,out);\n\
-\ input inp;\n\
-\ output out;\n\
-\\n\
-\ assign out = !inp;\n\
-\\n\
-\endmodule\n\
-\\n";
+fun dest_word_type wty =
+ let val (opr, tyargs) = dest_type wty
+     val oprl = explode opr
+ in
+  string2int(implode(tl(tl(tl(tl oprl)))))
+ end;
 
 (*****************************************************************************)
-(* Constant output of T (1)                                                  *)
+(* Test if a type can be represented in Verilog.                             *)
+(* Currently this means the type is ``:word<n>``, ``:num`` or ``:bool``      *)
 (*****************************************************************************)
-val TRUEvDef =
-"// Constant T (1)\n\
-\module TRUE (out);\n\
-\ output out;\n\
-\\n\
-\ assign out = 1;\n\
-\\n\
-\endmodule\n\
-\\n";
+fun is_supported_type ty =
+ is_word_type ty orelse (ty = ``:num``) orelse (ty = ``:bool``);
 
 (*****************************************************************************)
-(* Combinational multiplexer. Default has 32-bits inputs and output          *)
+(* ``:wordn`` --> "n-1" (e.g. ``:word32`` --> "31")                          *)
+(* ``:num``   --> 31                                                         *)
+(* ``:bool``  --> "0"                                                        *)
 (*****************************************************************************)
-val MUXvDef =
-"// Combinational multiplexer\n\
-\module MUX (sw,in1,in2,out);\n\
-\ parameter size = 31;\n\
-\ input sw;\n\
-\ input  [size:0] in1,in2;\n\
-\ output [size:0] out;\n\
-\\n\
-\ assign out = sw?in1:in2;\n\
-\\n\
-\endmodule\n\
-\\n";
-
-val ANDvDef =
-"// Combinational and-gate\n\
-\module AND (in1,in2,out);\n\
-\ input in1,in2;\n\
-\ output out;\n\
-\\n\
-\ assign out = in1 && in2;\n\
-\\n\
-\endmodule\n\
-\\n";
-
+fun ty2size ty =
+ let val n = 
+      if (ty = ``:bool``) then 1
+       else if (ty = ``:num``)
+       then 32
+       else if  is_word_type ty
+       then dest_word_type ty
+       else raise ERR "ty2size" "unsupported type"
+ in
+  Int.toString(n-1)
+ end;
 
 (*****************************************************************************)
-(* Combinational boolean or-gate                                             *)
+(* ``v : num -> wordn`` --> "n-1" (e.g. ``v:word32`` --> "31")               *)
+(* ``v : num -> num``   --> 31    (warning issued if !numWarning is true)    *)
+(* ``v : num -> bool``  --> "0"                                              *)
 (*****************************************************************************)
-val ORvDef =
-"// Combinational or-gate\n\
-\module OR (in1,in2,out);\n\
-\ input in1,in2;\n\
-\ output out;\n\
-\\n\
-\ assign out = in1 || in2;\n\
-\\n\
-\endmodule\n\
-\\n";
+val numWarning = ref true;
+fun var2size tm =
+ let val ("fun", [_,ty]) = dest_type(type_of tm)
+     val _ = if (ty = ``:num``) andalso (!numWarning)
+              then 
+               (print "Warning: type of ";
+                print_term tm ;
+                print " is ``:num``, but is compiled to [31:0].\n")
+              else ()
+ in
+  ty2size ty
+ end;
 
 (*****************************************************************************)
-(* Abstract delay element                                                    *)
+(* ``:ty1 --> ty2`` --> (``:ty1``,``:ty2``)                                  *)
 (*****************************************************************************)
-val DELvDef =
-"// Abstract delay\n\
-\module DEL (inp,out);\n\
-\ parameter size = 31;\n\
-\ input  [size:0] inp;\n\
-\ output [size:0] out;\n\
-\ reg    [size:0] out;\n\
-\\n\
-\ always  out = #1 inp;\n\
-\\n\
-\endmodule\n\
-\\n";
+fun dest_unop_type uty =
+ let val (opr, utyl) = dest_type uty
+     val _ = if opr = "fun"
+              then ()
+              else(print_type uty;
+                   print "\nis not a function type\n";
+                   raise ERR "dest_unop_type" "not a function type")
+     val [argty,resty] = utyl
+ in
+  (argty,resty)
+ end
 
 (*****************************************************************************)
-(* Abstract edge-triggered clocked flipflop                                  *)
+(* ``:ty1 # ty2 --> ty3`` --> (``:ty1``,``:ty2``,``:ty3``)                   *)
 (*****************************************************************************)
-val DFFvDef =
-"// Abstract edge triggered flipflop\n\
-\module DFF (d,clk,q);\n\
-\ parameter size = 31;\n\
-\ input clk;\n\
-\ input  [size:0] d;\n\
-\ output [size:0] q;\n\
-\ reg    [size:0] q;\n\
-\\n\
-\ always @(posedge clk) q <= d;\n\
-\\n\
-\endmodule\n\
-\\n";
+fun dest_binop_type bty =
+ let val (opr, btyl) = dest_type bty
+     val _ = if opr = "fun"
+              then ()
+              else(print_type bty;
+                   print "\nis not a function type\n";
+                   raise ERR "dest_binop_type" "not a function type")
+     val [argsty,resty] = btyl
+     val (opr, argstyl) = dest_type argsty
+     val _ = if opr = "prod"
+              then ()
+              else(print_type argsty;
+                   print "\nis not a product type\n";
+                   raise ERR "dest_binop_type" "not a product type")
+     val [argty1,argty2] = argstyl
+ in
+  (argty1,argty2,resty)
+ end
 
 (*****************************************************************************)
-(* Positive edge triggered Dtype register. Default is 32-bits wide.          *)
+(* Library of modules with Verilog models                                    *)
 (*****************************************************************************)
-val DtypevDef =
-"// Positive edge triggered Dtype register\n\
-\module Dtype (clk,d,q);\n\
-\ parameter size = 31;\n\
-\ input clk;\n\
-\ input  [size:0] d;\n\
-\ output [size:0] q;\n\
-\ reg    [size:0] q;\n\
-\\n\
-\ initial q = 0;\n\
-\\n\
-\ always @(posedge clk) q <= d;\n\
-\\n\
-\endmodule\n\
-\\n";
+val module_lib = ref ([]:(string * string) list);
+
+fun add_modules name_vdef_list = 
+ module_lib := (!module_lib) @ name_vdef_list;
 
 (*****************************************************************************)
-(* Boolean positive edge triggered flip-flop starting in state 1             *)
+(* Library of functions for printing terms to Verilog                        *)
 (*****************************************************************************)
-val DtypeTvDef =
-"// Boolean positive edge triggered flip-flop starting in state 1\n\
-\module DtypeT (clk,d,q);\n\
-\ input clk,d;\n\
-\ output q;\n\
-\ reg q;\n\
-\\n\
-\ initial q = 1;\n\
-\\n\
-\ always @(posedge clk) q <= d;\n\
-\\n\
-\endmodule\n\
-\\n";
+val termToVerilog_lib = ref([]:((string -> unit) -> term -> unit) list);
+
+fun add_termToVerilog fl =
+ (termToVerilog_lib := (!termToVerilog_lib) @ fl);
 
 (*****************************************************************************)
-(* Boolean positive edge triggered flip-flop starting in state 0             *)
+(* Function for generating Verilog module definitions,                       *)
+(* e.g. UnopVlogDef "NOT32" "~" generates                                    *)
+(*                                                                           *)
+(* // Automatically generated definition of NOT32                            *)
+(* module NOT32 (inp,out);                                                   *)
+(*  parameter inpsize = 31;                                                  *)
+(*  parameter outsize = 31;                                                  *)
+(*  input   [inpsize:0] inp;                                                 *)
+(*  output  [outsize:0] out;                                                 *)
+(*                                                                           *)
+(*  assign out = ~ inp;                                                      *)
+(*                                                                           *)
+(* endmodule                                                                 *)
+(*                                                                           *)
 (*****************************************************************************)
-val DtypeFvDef =
-"// Boolean positive edge triggered flip-flop starting in state 0\n\
-\module DtypeF (clk,d,q);\n\
-\ input clk,d;\n\
-\ output q;\n\
-\ reg q;\n\
-\\n\
-\ initial q = 0;\n\
-\\n\
-\ always @(posedge clk) q <= d;\n\
-\\n\
-\endmodule\n\
-\\n";
+fun UnopVlogDef name vunop =
+ ("// Automatically generated definition of " ^ name ^ "\n\
+   \module " ^ name ^ " (inp,out);\n\
+   \ parameter inpsize = 31;\n\
+   \ parameter outsize = 31;\n\
+   \ input   [inpsize:0] inp;\n\
+   \ output  [outsize:0] out;\n\
+   \\n\
+   \ assign out = " ^ vunop ^ " inp;\n\
+   \\n\
+   \endmodule\n\
+   \\n");
 
 (*****************************************************************************)
-(* Non-primitive components                                                  *)
+(* Function for generating instances. The first evaluation of:               *)
+(*                                                                           *)
+(*  UnopVlogInstFun                                                          *)
+(*   "NOT32"                                                                 *)
+(*   print                                                                   *)
+(*   [("inp","32"),("out","32")]                                             *)
+(*                                                                           *)
+(* generates                                                                 *)
+(*                                                                           *)
+(*  NOT32        NOT32_0 (inp,out);                                          *)
+(*    defparam NOT32_0.inpsize = 32;                                         *)
+(*    defparam NOT32_0.outsize = 32;                                         *)
+(*                                                                           *)
+(* Subsequent evaluations inc the instance counter (NOT32_1, NOT32_2 etc)    *)
+(*                                                                           *)
 (*****************************************************************************)
+fun UnopVlogInstFun name =
+ let val instcount = ref 0
+     fun InstFn 
+          (out:string->unit)
+          [(argname,argsize),(outname,outsize)] =
+      let val count = !instcount
+          val _ = (instcount := count+1)
+          val inst_name = name ^ "_" ^ Int.toString count
+      in
+        (out(" " ^ name ^ "        "); out inst_name;
+         out " (";out argname;out",";out outname; out ");\n";
+         out "   defparam ";out inst_name; out ".inpsize = "; out argsize; out ";\n";
+         out "   defparam ";out inst_name; out ".outsize = "; out outsize; out ";\n";
+         out "\n")
+      end
+ in     
+  InstFn
+ end;
 
 (*****************************************************************************)
-(* Combinational adder. Default has 32-bit inputs and output                 *)
+(* Test if a term has the form ``name(v1,v2)`` where name is a constant      *)
+(* and v1, v2 are variables.                                                 *)
 (*****************************************************************************)
-val ADDvDef =
-"// Combinational adder\n\
-\module ADD (in1,in2,out);\n\
-\ parameter size = 31;\n\
-\ input  [size:0] in1,in2;\n\
-\ output [size:0] out;\n\
-\\n\
-\ assign out = in1 + in2;\n\
-\\n\
-\endmodule\n\
-\\n";
+fun is_unop name tm =
+ is_comb tm
+  andalso is_const(fst(strip_comb tm))
+  andalso (fst(dest_const(fst(strip_comb tm))) = name)
+  andalso is_pair(rand tm)
+  andalso (length(strip_pair(rand tm)) = 2)
+  andalso all is_var (strip_pair(rand tm));
+
+(*****************************************************************************)
+(* Invoke an instance of BinopVlogInstFun on a unop term                     *)
+(*****************************************************************************)
+fun UnopTermToVerilog nameVlogInstFun name (out:string->unit) tm =
+ if is_unop name tm
+  then nameVlogInstFun
+        out
+        (map (fn v => (fst(dest_var v), var2size v)) (strip_pair(rand tm)))
+  else raise ERR "UnopTermToVerilog" "bad component term";
+
+(*****************************************************************************)
+(* Evaluating                                                                *)
+(*                                                                           *)
+(*  AddUnop                                                                  *)
+(*   ("component name", (``function``, "corresponding Verilog operator"))    *)
+(*                                                                           *)
+(* defines a HOL component and a corresponding Verilog module and            *)
+(* adds these to the synthesis engine.                                       *)
+(*****************************************************************************)
+fun AddUnop(name, (hunop,vunop)) =
+ let val _ = if is_constant name
+               then (print "Warning: "; print name;
+                     print " is the name of an existing constant\n")
+               else ()
+     val uty = type_of hunop
+     val (argty,resty) = dest_unop_type uty
+     val _ = if not(is_supported_type argty)
+              then (print "type of argument: ";print_type argty; 
+                    print " doesn't correspond to a Verilog type\n";
+                    raise ERR "AddUnop" "arg1 not a Verilog type")
+              else ()
+     val _ = if not(is_supported_type resty)
+              then (print "type of result: ";print_type resty; 
+                    print " doesn't correspond to a Verilog type\n";
+                    raise ERR "AddUnop" "result not a Verilog type")
+              else ()
+     val namevar = mk_var(name,``:(num->^argty)#(num->^resty)->bool``)
+     val deftm = ``^namevar(inp,out) = !t:num. out t = ^hunop(inp t)``
+     val defth = Define `^deftm`
+     val deflhs = lhs(concl(SPEC_ALL defth))
+     val combtm = ``COMB ^hunop (inp, out) = ^deflhs``
+     val combth = prove
+                   (combtm,
+                    RW_TAC bool_ss [COMB_def,BUS_CONCAT_def,defth])
+     val namecon  = fst(strip_comb deflhs)
+     val attm = ``^deflhs ==> ^namecon(inp at clk, out at clk)``
+     val atth = prove
+                 (attm,
+                  RW_TAC bool_ss [defth,at_def,tempabsTheory.when,o_THM])
+     val argsize = ty2size argty
+     val ressize = ty2size resty
+     val nameVlogDef = UnopVlogDef name vunop 
+     val nameVlogInstFun = UnopVlogInstFun name
+     val nameTermToVerilog = UnopTermToVerilog nameVlogInstFun name
+ in
+  (add_combinational_components[combth];
+   add_temporal_abstractions[atth];
+   add_modules[(name, nameVlogDef)];
+   add_termToVerilog[nameTermToVerilog])
+ end;
+
+(*****************************************************************************)
+(* Function for generating Verilog module definitions,                       *)
+(* e.g. BinopVlogDef "XOR32A" "^" generates                                  *)
+(*                                                                           *)
+(*  // Automatically generated definition of XOR32A                          *)
+(*  module XOR32A (in1,in2,out);                                             *)
+(*   parameter in1size = 31;                                                 *)
+(*   parameter in2size = 31;                                                 *)
+(*   parameter outsize = 31;                                                 *)
+(*   input   [in1size:0] in1;                                                *)
+(*   input   [in2size:0] in2;                                                *)
+(*   output  [outsize:0] out;                                                *)
+(*                                                                           *)
+(*   assign out = in1 ^ in2;                                                 *)
+(*                                                                           *)
+(*  endmodule                                                                *)
+(*****************************************************************************)
+fun BinopVlogDef name vbinop =
+ ("// Automatically generated definition of " ^ name ^ "\n\
+   \module " ^ name ^ " (in1,in2,out);\n\
+   \ parameter in1size = 31;\n\
+   \ parameter in2size = 31;\n\
+   \ parameter outsize = 31;\n\
+   \ input   [in1size:0] in1;\n\
+   \ input   [in2size:0] in2;\n\
+   \ output  [outsize:0] out;\n\
+   \\n\
+   \ assign out = in1 " ^ vbinop ^ " in2;\n\
+   \\n\
+   \endmodule\n\
+   \\n");
+
+(*****************************************************************************)
+(* Function for generating instances. The first evaluation of:               *)
+(*                                                                           *)
+(*  BinopVlogInstFun                                                         *)
+(*   "XOR32A"                                                                *)
+(*   print                                                                   *)
+(*   [("in1","32"),("in2","32"),("out","32")]                                *)
+(*                                                                           *)
+(* generates                                                                 *)
+(*                                                                           *)
+(*  XOR32A        XOR32A_0 (in1,in2,out);                                    *)
+(*    defparam XOR32A_0.in1size = 32;                                        *)
+(*    defparam XOR32A_0.in2size = 32;                                        *)
+(*    defparam XOR32A_0.outsize = 31;                                        *)
+(*                                                                           *)
+(* Subsequent evaluations inc the instance counter (XOR32A_1, XOR32A_2 etc)  *)
+(*                                                                           *)
+(*****************************************************************************)
+fun BinopVlogInstFun name =
+ let val instcount = ref 0
+     fun InstFn 
+          (out:string->unit)
+          [(arg1name,arg1size),(arg2name,arg2size),(outname,outsize)] =
+      let val count = !instcount
+          val _ = (instcount := count+1)
+          val inst_name = name ^ "_" ^ Int.toString count
+      in
+        (out(" " ^ name ^ "        "); out inst_name;
+         out " (";out arg1name;out",";out arg2name;out",";out outname; out ");\n";
+         out "   defparam ";out inst_name; out ".in1size = "; out arg1size; out ";\n";
+         out "   defparam ";out inst_name; out ".in2size = "; out arg2size; out ";\n";
+         out "   defparam ";out inst_name; out ".outsize = "; out outsize; out ";\n";
+         out "\n")
+      end
+ in     
+  InstFn
+ end;
+
+(*****************************************************************************)
+(* Test if a term has the form ``name(v1,v2,v3)`` where name is a constant   *)
+(* and v1, v2  and v3are variables.                                          *)
+(*****************************************************************************)
+fun is_binop name tm =
+ is_comb tm
+  andalso is_const(fst(strip_comb tm))
+  andalso (fst(dest_const(fst(strip_comb tm))) = name)
+  andalso is_pair(rand tm)
+  andalso (length(strip_pair(rand tm)) = 3)
+  andalso all is_var (strip_pair(rand tm));
+
+(*****************************************************************************)
+(* Invoke an instance of BinopVlogInstFun on a binop term                    *)
+(*****************************************************************************)
+fun BinopTermToVerilog nameVlogInstFun name (out:string->unit) tm =
+ if is_binop name tm
+  then nameVlogInstFun
+        out
+        (map (fn v => (fst(dest_var v), var2size v)) (strip_pair(rand tm)))
+  else raise ERR "BinopTermToVerilog" "bad component term";
+
+(*****************************************************************************)
+(* Evaluating                                                                *)
+(*                                                                           *)
+(*  AddBinop                                                                 *)
+(*   ("component name",                                                      *)
+(*    (``uncurried binary function``, "corresponding Verilog operator"))     *)
+(*                                                                           *)
+(* defines a HOL component and a corresponding Verilog module and            *)
+(* adds these to the synthesis engine.                                       *)
+(*****************************************************************************)
+fun AddBinop(name, (hbinop,vbinop)) =
+ let val _ = if is_constant name
+               then (print "Warning: "; print name;
+                     print " is the name of an existing constant\n")
+               else ()
+     val bty = type_of hbinop
+     val (arg1ty,arg2ty,resty) = dest_binop_type bty
+     val _ = if not(is_supported_type arg1ty)
+              then (print "type of first argument: ";print_type arg1ty; 
+                    print " doesn't correspond to a Verilog type\n";
+                    raise ERR "AddBinop" "arg1 not a Verilog type")
+              else ()
+     val _ = if not(is_supported_type arg2ty)
+              then (print "type of second argument: ";print_type arg2ty; 
+                    print " doesn't correspond to a Verilog type\n";
+                    raise ERR "AddBinop" "arg2 not a Verilog type")
+              else ()
+     val _ = if not(is_supported_type resty)
+              then (print "type of result: ";print_type resty; 
+                    print " doesn't correspond to a Verilog type\n";
+                    raise ERR "AddBinop" "result not a Verilog type")
+              else ()
+     val namevar = mk_var
+                    (name,
+                     ``:(num->^arg1ty)#(num->^arg2ty)#(num->^resty)->bool``)
+     val deftm = ``^namevar(in1,in2,out) = 
+                   !t:num. out t = ^hbinop((in1 t), (in2 t))``
+     val defth = Define `^deftm`
+     val deflhs = lhs(concl(SPEC_ALL defth))
+     val combtm = ``COMB ^hbinop (in1 <> in2, out) = ^deflhs``
+     val combth = prove
+                   (combtm,
+                    RW_TAC bool_ss [COMB_def,BUS_CONCAT_def,defth])
+     val namecon  = fst(strip_comb deflhs)
+     val attm = ``^deflhs ==> ^namecon(in1 at clk, in2 at clk, out at clk)``
+     val atth = prove
+                 (attm,
+                  RW_TAC bool_ss [defth,at_def,tempabsTheory.when,o_THM])
+     val arg1size = ty2size arg1ty
+     val arg2size = ty2size arg1ty
+     val ressize  = ty2size resty
+     val nameVlogDef = BinopVlogDef name vbinop
+     val nameVlogInstFun = BinopVlogInstFun name
+     val nameTermToVerilog = BinopTermToVerilog nameVlogInstFun name
+ in
+  (add_combinational_components[combth];
+   add_temporal_abstractions[atth];
+   add_modules[(name, nameVlogDef)];
+   add_termToVerilog[nameTermToVerilog])
+ end;
+
+
+(*****************************************************************************)
+(* Each kind of module M generates an instance M_n, where n starts at 0 and  *)
+(* is increased each time a new instance is created.                         *)
+(* A reference variable MvInst_count holds the current value of n.           *)
+(*****************************************************************************)
 
 (*****************************************************************************)
 (* Read only register holding a number (default value 0)                     *)
@@ -252,365 +492,6 @@ val CONSTANTvDef =
 \\n\
 \endmodule\n\
 \\n";
-
-(*****************************************************************************)
-(* Combinational subtractor. Default has 32-bit inputs and output            *)
-(*****************************************************************************)
-val SUBvDef =
-"// Combinational subtractor\n\
-\module SUB (in1,in2,out);\n\
-\ parameter size = 31;\n\
-\ input  [size:0] in1,in2;\n\
-\ output [size:0] out;\n\
-\\n\
-\ assign out = in1 - in2;\n\
-\\n\
-\endmodule\n\
-\\n";
-
-(*****************************************************************************)
-(* Combinational less-than test. Default has 32-bit inputs                   *)
-(*****************************************************************************)
-val LESSvDef =
-"//Combinational less-than test\n\
-\module LESS (in1,in2,out);\n\
-\ parameter size = 31;\n\
-\ input  [size:0] in1,in2;\n\
-\ output out;\n\
-\\n\
-\ assign out = in1 < in2;\n\
-\\n\
-\endmodule\n\
-\\n";
-
-(*****************************************************************************)
-(* Combinational equality test. Default has 32-bit inputs and output         *)
-(*****************************************************************************)
-val EQvDef =
-"// Combinational equality test\n\
-\module EQ (in1,in2,out);\n\
-\ parameter size = 31;\n\
-\ input  [size:0] in1,in2;\n\
-\ output out;\n\
-\\n\
-\ assign out = in1 == in2;\n\
-\\n\
-\endmodule\n\
-\\n";
-
-fun string2int s =
- let val (SOME n) = Int.fromString s in n end;
-
-(*****************************************************************************)
-(* ``v : num -> wordn`` --> "n-1" (e.g. v:word32`` --> "31")                 *)
-(* ``v : num -> num``   --> 31                                               *)
-(* ``v : num -> bool``  --> "0"                                              *)
-(*****************************************************************************)
-val numWarning = ref true;
-fun var2size tm =
- let val ("fun", [_,ty]) = dest_type(type_of tm)
-     val n = if (ty = ``:bool``)
-              then 1
-              else if (ty = ``:num``)
-              then 
-               if (!numWarning)
-                then 
-                 let val _ = (print "Warning: type of ";
-                              print_term tm ;
-                              print " is ``:num``, but is compiled to [31:0].\n")
-                 in
-                  32
-                 end
-                else 32
-              else
-               let val chars = explode(fst(dest_type ty))
-                   val num = tl(tl(tl(tl chars)))
-               in
-                string2int(implode num)
-               end
-    
- in
-  Int.toString(n-1)
- end;
-
-(*****************************************************************************)
-(* Make instances of modules. Each kind of module M generates an instance    *)
-(* M_n, where n starts at 0 and is increased each time a new instance is     *)
-(* created. A reference variable MvInst_count holds the current value of n.  *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* ClockvInst out n "clk" prints, using function out, an instance of Clock   *)
-(* driving a line named "clk" and with n units of time between edges.        *)
-(*****************************************************************************)
-val ClockvInst_count = ref 0;
-fun ClockvInst (out:string->unit) [("period",period)] [clk_name] =
- let val count = !ClockvInst_count
-     val _ = (ClockvInst_count := count+1);
-     val inst_name = "Clock" ^ "_" ^ Int.toString count
- in
- (out " Clock      "; out inst_name;
-  out " (";out clk_name; out ");\n";
-  out "   defparam ";out inst_name; out ".period = "; out period; 
-  out ";\n\n")
- end;
-
-(*****************************************************************************)
-(* TRUEvInst out "output" prints, using out, and instance of TRUE driving    *)
-(* a line named "output"                                                     *)
-(*****************************************************************************)
-val TRUEvInst_count = ref 0;
-fun TRUEvInst (out:string->unit) [] [out_name] =
- let val count = !TRUEvInst_count
-     val _ = (TRUEvInst_count := count+1);
-     val inst_name = "TRUE" ^ "_" ^ Int.toString count
- in
- (out " TRUE       "; out inst_name;
-  out " (";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_TRUE (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "TRUE")
-     andalso is_var(rand tm)
-  then TRUEvInst out [] [fst(dest_var(rand tm))]
-  else raise ERR "termToVerilog_TRUE" "bad component term";
-
-
-(*****************************************************************************)
-(* Print an instance of a NOT                                                *)
-(*****************************************************************************)
-val NOTvInst_count = ref 0;
-fun NOTvInst (out:string->unit) [] [in_name,out_name] =
- let val count = !NOTvInst_count
-     val _ = (NOTvInst_count := count+1);
-     val inst_name = "NOT" ^ "_" ^ Int.toString count
- in
- (out " NOT        "; out inst_name;
-  out " (";out in_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_NOT (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "NOT")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 2)
-     andalso all is_var (strip_pair(rand tm))
-  then NOTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_NOT" "bad component term";
-
-(*****************************************************************************)
-(* Print an instance of an AND                                               *)
-(*****************************************************************************)
-val ANDvInst_count = ref 0;
-fun ANDvInst (out:string->unit) [] [in1_name,in2_name,out_name] =
- let val count = !ANDvInst_count
-     val _ = (ANDvInst_count := count+1);
-     val inst_name = "AND" ^ "_" ^ Int.toString count
- in
- (out " AND        "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_AND (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "AND")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then ANDvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_AND" "bad component term";
-
-(*****************************************************************************)
-(* Print an instance of an OR                                                *)
-(*****************************************************************************)
-val ORvInst_count = ref 0;
-fun ORvInst (out:string->unit) [] [in1_name,in2_name,out_name] =
- let val count = !ORvInst_count
-     val _ = (ORvInst_count := count+1);
-     val inst_name = "OR" ^ "_" ^ Int.toString count
- in
- (out " OR         "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_OR (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "OR")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then ORvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_OR" "bad component term";
-
-(*****************************************************************************)
-(* Print and instance of a MUX with a given size                             *)
-(*****************************************************************************)
-val MUXvInst_count = ref 0;
-fun MUXvInst (out:string->unit) [("size",size)] [sw_name,in1_name,in2_name,out_name] =
- let val count = !MUXvInst_count
-     val _ = (MUXvInst_count := count+1);
-     val inst_name = "MUX" ^ "_" ^ Int.toString count
- in
- (out " MUX        "; out inst_name;
-  out " (";out sw_name;out",";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
-  out "   defparam ";out inst_name; out ".size = "; out size; 
-  out ";\n\n")
- end;
-
-fun termToVerilog_MUX (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "MUX")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 4)
-     andalso all is_var (strip_pair(rand tm))
-  then MUXvInst 
-        out 
-        [("size", var2size(last(strip_pair(rand tm))))] 
-        (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_MUX" "bad component term";
-
-(*****************************************************************************)
-(* Print an instance of an DEL with a given size                             *)
-(*****************************************************************************)
-val DELvInst_count = ref 0;
-fun DELvInst (out:string->unit) [("size",size)] [inp_name,out_name] =
- let val count = !DELvInst_count
-     val _ = (DELvInst_count := count+1);
-     val inst_name = "DEL" ^ "_" ^ Int.toString count
- in
- (out " DEL        "; out inst_name;
-  out " (";out inp_name;out",";out out_name; out ");\n";
-  out "   defparam ";out inst_name; out ".size = "; out size; 
-  out ";\n\n")
- end;
-
-fun termToVerilog_DEL (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "DEL")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 2)
-     andalso all is_var (strip_pair(rand tm))
-  then DELvInst 
-        out 
-        [("size", var2size(last(strip_pair(rand tm))))] 
-        (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_DEL" "bad component term";
-
-(*****************************************************************************)
-(* Print an instance of a DFF with a given size                              *)
-(*****************************************************************************)
-val DFFvInst_count = ref 0;
-fun DFFvInst (out:string->unit) [("size",size)] [in_name,clk_name,out_name] =
- let val count = !DFFvInst_count
-     val _ = (DFFvInst_count := count+1);
-     val inst_name = "DFF" ^ "_" ^ Int.toString count
- in
- (out " DFF      "; out inst_name;
-  out " (";out in_name;out",";out clk_name;out",";out out_name; out ");\n";
-  out "   defparam ";out inst_name; out ".size = "; out size; 
-  out ";\n\n")
- end;
-
-fun termToVerilog_DFF (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "DFF")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then DFFvInst 
-        out 
-        [("size", var2size(last(strip_pair(rand tm))))] 
-        (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_DFF" "bad component term";
-
-(*****************************************************************************)
-(* Print an instance of a Dtype with a given size                            *)
-(*****************************************************************************)
-val DtypevInst_count = ref 0;
-fun DtypevInst (out:string->unit) [("size",size)] [clk_name,in_name,out_name] =
- let val count = !DtypevInst_count
-     val _ = (DtypevInst_count := count+1);
-     val inst_name = "Dtype" ^ "_" ^ Int.toString count
- in
- (out " Dtype      "; out inst_name;
-  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");\n";
-  out "   defparam ";out inst_name; out ".size = "; out size; 
-  out ";\n\n")
- end;
-
-fun termToVerilog_Dtype (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "Dtype")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then DtypevInst 
-        out 
-        [("size", var2size(last(strip_pair(rand tm))))] 
-        (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_Dtype" "bad component term";
-
-(*****************************************************************************)
-(* Print an instance of a DtypeT                                             *)
-(*****************************************************************************)
-val DtypeTvInst_count = ref 0;
-fun DtypeTvInst (out:string->unit) [] [clk_name,in_name,out_name] =
- let val count = !DtypeTvInst_count
-     val _ = (DtypeTvInst_count := count+1);
-     val inst_name = "DtypeT" ^ "_" ^ Int.toString count
- in
- (out " DtypeT        "; out inst_name;
-  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_DtypeT (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "DtypeT")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then DtypeTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_DtypeT" "bad component term";
-
-(*****************************************************************************)
-(* Print an instance of a DtypeF                                             *)
-(*****************************************************************************)
-val DtypeFvInst_count = ref 0;
-fun DtypeFvInst (out:string->unit) [] [clk_name,in_name,out_name] =
- let val count = !DtypeFvInst_count
-     val _ = (DtypeFvInst_count := count+1);
-     val inst_name = "DtypeF" ^ "_" ^ Int.toString count
- in
- (out " DtypeF        "; out inst_name;
-  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_DtypeF (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "DtypeF")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then DtypeFvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_DtypeF" "bad component term";
-
 
 (*****************************************************************************)
 (* Print an instance of an CONSTANT with a given size and value              *)
@@ -660,139 +541,492 @@ fun termToVerilog_CONSTANT (out:string->unit) tm =
         (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_CONSTANT" "bad component term";
 
+val _ = add_termToVerilog[termToVerilog_CONSTANT];
+val _ = add_modules[("CONSTANT",CONSTANTvDef)];
+
 (*****************************************************************************)
-(* Print an instance of an ADD with a given size                             *)
+(* Clock. Default has 10 units of simulation time between edges              *)
 (*****************************************************************************)
-val ADDvInst_count = ref 0;
-fun ADDvInst (out:string->unit) [("size",size)] [in1_name,in2_name,out_name] =
- let val count = !ADDvInst_count
-     val _ = (ADDvInst_count := count+1);
-     val inst_name = "ADD" ^ "_" ^ Int.toString count
+val ClockvDef =
+"// Clock\n\
+\module Clock (clk);\n\
+\ parameter period = 10; // time between clock edges\n\
+\ output clk;\n\
+\ reg clk;\n\
+\\n\
+\ initial begin clk = 0; forever #period clk <= !clk; end\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* ClockvInst out n "clk" prints, using function out, an instance of Clock   *)
+(* driving a line named "clk" and with n units of time between edges.        *)
+(*****************************************************************************)
+val ClockvInst_count = ref 0;
+fun ClockvInst (out:string->unit) [("period",period)] [clk_name] =
+ let val count = !ClockvInst_count
+     val _ = (ClockvInst_count := count+1);
+     val inst_name = "Clock" ^ "_" ^ Int.toString count
  in
- (out " ADD        "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
+ (out " Clock      "; out inst_name;
+  out " (";out clk_name; out ");\n";
+  out "   defparam ";out inst_name; out ".period = "; out period; 
+  out ";\n\n")
+ end;
+
+(*****************************************************************************)
+(* Combinational boolean inverter                                            *)
+(*****************************************************************************)
+val NOTvDef=
+"// Combinational boolean inverter\n\
+\module NOT (inp,out);\n\
+\ input inp;\n\
+\ output out;\n\
+\\n\
+\ assign out = !inp;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+
+(*****************************************************************************)
+(* Print an instance of a NOT                                                *)
+(*****************************************************************************)
+val NOTvInst_count = ref 0;
+fun NOTvInst (out:string->unit) [] [in_name,out_name] =
+ let val count = !NOTvInst_count
+     val _ = (NOTvInst_count := count+1);
+     val inst_name = "NOT" ^ "_" ^ Int.toString count
+ in
+ (out " NOT        "; out inst_name;
+  out " (";out in_name;out",";out out_name; out ");";
+  out "\n\n")
+ end;
+
+fun termToVerilog_NOT (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "NOT")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 2)
+     andalso all is_var (strip_pair(rand tm))
+  then NOTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_NOT" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_NOT];
+val _ = add_modules[("NOT",NOTvDef)];
+
+(*****************************************************************************)
+(* Constant output of T (1)                                                  *)
+(*****************************************************************************)
+val TRUEvDef =
+"// Constant T (1)\n\
+\module TRUE (out);\n\
+\ output out;\n\
+\\n\
+\ assign out = 1;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+
+(*****************************************************************************)
+(* TRUEvInst out "output" prints, using out, and instance of TRUE driving    *)
+(* a line named "output"                                                     *)
+(*****************************************************************************)
+val TRUEvInst_count = ref 0;
+fun TRUEvInst (out:string->unit) [] [out_name] =
+ let val count = !TRUEvInst_count
+     val _ = (TRUEvInst_count := count+1);
+     val inst_name = "TRUE" ^ "_" ^ Int.toString count
+ in
+ (out " TRUE       "; out inst_name;
+  out " (";out out_name; out ");";
+  out "\n\n")
+ end;
+
+fun termToVerilog_TRUE (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "TRUE")
+     andalso is_var(rand tm)
+  then TRUEvInst out [] [fst(dest_var(rand tm))]
+  else raise ERR "termToVerilog_TRUE" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_TRUE];
+val _ = add_modules[("TRUE",TRUEvDef)];
+
+(*****************************************************************************)
+(* Combinational multiplexer. Default has 32-bits inputs and output          *)
+(*****************************************************************************)
+val MUXvDef =
+"// Combinational multiplexer\n\
+\module MUX (sw,in1,in2,out);\n\
+\ parameter size = 31;\n\
+\ input sw;\n\
+\ input  [size:0] in1,in2;\n\
+\ output [size:0] out;\n\
+\\n\
+\ assign out = sw?in1:in2;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+
+(*****************************************************************************)
+(* Print and instance of a MUX with a given size                             *)
+(*****************************************************************************)
+val MUXvInst_count = ref 0;
+fun MUXvInst (out:string->unit) [("size",size)] [sw_name,in1_name,in2_name,out_name] =
+ let val count = !MUXvInst_count
+     val _ = (MUXvInst_count := count+1);
+     val inst_name = "MUX" ^ "_" ^ Int.toString count
+ in
+ (out " MUX        "; out inst_name;
+  out " (";out sw_name;out",";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
  end;
 
-fun termToVerilog_ADD (out:string->unit) tm =
+fun termToVerilog_MUX (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "ADD")
+     andalso (fst(dest_const(fst(strip_comb tm))) = "MUX")
      andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
+     andalso (length(strip_pair(rand tm)) = 4)
      andalso all is_var (strip_pair(rand tm))
-  then ADDvInst 
+  then MUXvInst 
         out 
         [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_ADD" "bad component term";
+  else raise ERR "termToVerilog_MUX" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_MUX];
+val _ = add_modules[("MUX",MUXvDef)];
+
+val ANDvDef =
+"// Combinational and-gate\n\
+\module AND (in1,in2,out);\n\
+\ input in1,in2;\n\
+\ output out;\n\
+\\n\
+\ assign out = in1 && in2;\n\
+\\n\
+\endmodule\n\
+\\n";
 
 (*****************************************************************************)
-(* Print an instance of a SUB with a given size                              *)
+(* Print an instance of an AND                                               *)
 (*****************************************************************************)
-val SUBvInst_count = ref 0;
-fun SUBvInst (out:string->unit) [("size",size)] [in1_name,in2_name,out_name] =
- let val count = !SUBvInst_count
-     val _ = (SUBvInst_count := count+1);
-     val inst_name = "SUB" ^ "_" ^ Int.toString count
+val ANDvInst_count = ref 0;
+fun ANDvInst (out:string->unit) [] [in1_name,in2_name,out_name] =
+ let val count = !ANDvInst_count
+     val _ = (ANDvInst_count := count+1);
+     val inst_name = "AND" ^ "_" ^ Int.toString count
  in
- (out " SUB        "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
+ (out " AND        "; out inst_name;
+  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");";
+  out "\n\n")
+ end;
+
+fun termToVerilog_AND (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "AND")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then ANDvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_AND" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_AND];
+val _ = add_modules[("AND",ANDvDef)];
+
+(*****************************************************************************)
+(* Combinational boolean or-gate                                             *)
+(*****************************************************************************)
+val ORvDef =
+"// Combinational or-gate\n\
+\module OR (in1,in2,out);\n\
+\ input in1,in2;\n\
+\ output out;\n\
+\\n\
+\ assign out = in1 || in2;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Print an instance of an OR                                                *)
+(*****************************************************************************)
+val ORvInst_count = ref 0;
+fun ORvInst (out:string->unit) [] [in1_name,in2_name,out_name] =
+ let val count = !ORvInst_count
+     val _ = (ORvInst_count := count+1);
+     val inst_name = "OR" ^ "_" ^ Int.toString count
+ in
+ (out " OR         "; out inst_name;
+  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");";
+  out "\n\n")
+ end;
+
+fun termToVerilog_OR (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "OR")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then ORvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_OR" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_OR];
+val _ = add_modules[("OR",ORvDef)];
+
+(*****************************************************************************)
+(* Abstract delay element                                                    *)
+(*****************************************************************************)
+val DELvDef =
+"// Abstract delay\n\
+\module DEL (inp,out);\n\
+\ parameter size = 31;\n\
+\ input  [size:0] inp;\n\
+\ output [size:0] out;\n\
+\ reg    [size:0] out;\n\
+\\n\
+\ always  out = #1 inp;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Print an instance of an DEL with a given size                             *)
+(*****************************************************************************)
+val DELvInst_count = ref 0;
+fun DELvInst (out:string->unit) [("size",size)] [inp_name,out_name] =
+ let val count = !DELvInst_count
+     val _ = (DELvInst_count := count+1);
+     val inst_name = "DEL" ^ "_" ^ Int.toString count
+ in
+ (out " DEL        "; out inst_name;
+  out " (";out inp_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
  end;
 
-fun termToVerilog_SUB (out:string->unit) tm =
+fun termToVerilog_DEL (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "SUB")
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DEL")
      andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
+     andalso (length(strip_pair(rand tm)) = 2)
      andalso all is_var (strip_pair(rand tm))
-  then SUBvInst 
+  then DELvInst 
         out 
         [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_SUB" "bad component term";
+  else raise ERR "termToVerilog_DEL" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_DEL];
+val _ = add_modules[("DEL",DELvDef)];
 
 (*****************************************************************************)
-(* Print an instance of a LESS with a given size                             *)
+(* Abstract edge-triggered clocked flipflop                                  *)
 (*****************************************************************************)
-val LESSvInst_count = ref 0;
-fun LESSvInst (out:string->unit) [("size",size)] [in1_name,in2_name,out_name] =
- let val count = !LESSvInst_count
-     val _ = (LESSvInst_count := count+1);
-     val inst_name = "LESS" ^ "_" ^ Int.toString count
+val DFFvDef =
+"// Abstract edge triggered flipflop\n\
+\module DFF (d,clk,q);\n\
+\ parameter size = 31;\n\
+\ input clk;\n\
+\ input  [size:0] d;\n\
+\ output [size:0] q;\n\
+\ reg    [size:0] q;\n\
+\\n\
+\ always @(posedge clk) q <= d;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Print an instance of a DFF with a given size                              *)
+(*****************************************************************************)
+val DFFvInst_count = ref 0;
+fun DFFvInst (out:string->unit) [("size",size)] [in_name,clk_name,out_name] =
+ let val count = !DFFvInst_count
+     val _ = (DFFvInst_count := count+1);
+     val inst_name = "DFF" ^ "_" ^ Int.toString count
  in
- (out " LESS       "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
+ (out " DFF      "; out inst_name;
+  out " (";out in_name;out",";out clk_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
  end;
 
-fun termToVerilog_LESS (out:string->unit) tm =
+fun termToVerilog_DFF (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "LESS")
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DFF")
      andalso is_pair(rand tm)
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
-  then LESSvInst 
+  then DFFvInst 
         out 
-        [("size", var2size(hd(strip_pair(rand tm))))] 
+        [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_LESS" "bad component term";
+  else raise ERR "termToVerilog_DFF" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_DFF];
+val _ = add_modules[("DFF",DFFvDef)];
 
 (*****************************************************************************)
-(* Print an instance of an EQ with a given size                              *)
+(* Positive edge triggered Dtype register. Default is 32-bits wide.          *)
 (*****************************************************************************)
-val EQvInst_count = ref 0;
-fun EQvInst (out:string->unit) [("size",size)] [in1_name,in2_name,out_name] =
- let val count = !EQvInst_count
-     val _ = (EQvInst_count := count+1);
-     val inst_name = "EQ" ^ "_" ^ Int.toString count
+val DtypevDef =
+"// Positive edge triggered Dtype register\n\
+\module Dtype (clk,d,q);\n\
+\ parameter size = 31;\n\
+\ input clk;\n\
+\ input  [size:0] d;\n\
+\ output [size:0] q;\n\
+\ reg    [size:0] q;\n\
+\\n\
+\ initial q = 0;\n\
+\\n\
+\ always @(posedge clk) q <= d;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Print an instance of a Dtype with a given size                            *)
+(*****************************************************************************)
+val DtypevInst_count = ref 0;
+fun DtypevInst (out:string->unit) [("size",size)] [clk_name,in_name,out_name] =
+ let val count = !DtypevInst_count
+     val _ = (DtypevInst_count := count+1);
+     val inst_name = "Dtype" ^ "_" ^ Int.toString count
  in
- (out " EQ         "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
+ (out " Dtype      "; out inst_name;
+  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
  end;
 
-fun termToVerilog_EQ (out:string->unit) tm =
+fun termToVerilog_Dtype (out:string->unit) tm =
  if is_comb tm
      andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "EQ")
+     andalso (fst(dest_const(fst(strip_comb tm))) = "Dtype")
      andalso is_pair(rand tm)
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
-  then EQvInst 
+  then DtypevInst 
         out 
-        [("size", var2size(hd(strip_pair(rand tm))))] 
+        [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_EQ" "bad component term";
+  else raise ERR "termToVerilog_Dtype" "bad component term";
 
-val termToVerilogLib = 
- ref
-  [termToVerilog_TRUE,
-   termToVerilog_NOT,
-   termToVerilog_AND,
-   termToVerilog_OR,
-   termToVerilog_MUX,
-   termToVerilog_DEL,
-   termToVerilog_DFF,
-   termToVerilog_Dtype,
-   termToVerilog_DtypeT,
-   termToVerilog_DtypeF,
-   termToVerilog_CONSTANT,
-   termToVerilog_ADD,
-   termToVerilog_SUB,
-   termToVerilog_LESS,
-   termToVerilog_EQ];
+val _ = add_termToVerilog[termToVerilog_Dtype];
+val _ = add_modules[("Dtype",DtypevDef)];
 
+(*****************************************************************************)
+(* Boolean positive edge triggered flip-flop starting in state 1             *)
+(*****************************************************************************)
+val DtypeTvDef =
+"// Boolean positive edge triggered flip-flop starting in state 1\n\
+\module DtypeT (clk,d,q);\n\
+\ input clk,d;\n\
+\ output q;\n\
+\ reg q;\n\
+\\n\
+\ initial q = 1;\n\
+\\n\
+\ always @(posedge clk) q <= d;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Print an instance of a DtypeT                                             *)
+(*****************************************************************************)
+val DtypeTvInst_count = ref 0;
+fun DtypeTvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+ let val count = !DtypeTvInst_count
+     val _ = (DtypeTvInst_count := count+1);
+     val inst_name = "DtypeT" ^ "_" ^ Int.toString count
+ in
+ (out " DtypeT        "; out inst_name;
+  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
+  out "\n\n")
+ end;
+
+fun termToVerilog_DtypeT (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DtypeT")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then DtypeTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_DtypeT" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_DtypeT];
+val _ = add_modules[("DtypeT",DtypeTvDef)];
+
+(*****************************************************************************)
+(* Boolean positive edge triggered flip-flop starting in state 0             *)
+(*****************************************************************************)
+val DtypeFvDef =
+"// Boolean positive edge triggered flip-flop starting in state 0\n\
+\module DtypeF (clk,d,q);\n\
+\ input clk,d;\n\
+\ output q;\n\
+\ reg q;\n\
+\\n\
+\ initial q = 0;\n\
+\\n\
+\ always @(posedge clk) q <= d;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Print an instance of a DtypeF                                             *)
+(*****************************************************************************)
+val DtypeFvInst_count = ref 0;
+fun DtypeFvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+ let val count = !DtypeFvInst_count
+     val _ = (DtypeFvInst_count := count+1);
+     val inst_name = "DtypeF" ^ "_" ^ Int.toString count
+ in
+ (out " DtypeF        "; out inst_name;
+  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
+  out "\n\n")
+ end;
+
+fun termToVerilog_DtypeF (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DtypeF")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then DtypeFvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_DtypeF" "bad component term";
+
+val _ = add_termToVerilog[termToVerilog_DtypeF];
+val _ = add_modules[("DtypeF",DtypeFvDef)];
+
+(*****************************************************************************)
+(* Non-primitive components                                                  *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* Lookup a term printer in termToVerilog_lib and apply it                   *)
+(*****************************************************************************)
 fun termToVerilog out tm =
  let val results =
-          mapfilter (fn f => f out tm) (!termToVerilogLib);
+          mapfilter (fn f => f out tm) (!termToVerilog_lib);
  in
   if (length results = 0)
    then (if_print "termToVerilog failed on:\n";
@@ -805,37 +1039,6 @@ fun termToVerilog out tm =
    else ()
  end;
  
-(*****************************************************************************)
-(* Library of modules with Verilog models                                    *)
-(*****************************************************************************)
-val module_lib = 
- ref
-  ([]:(string * 
-       (string *
-        ((string->unit)->(string*string)list->string list->unit)))list);
-
-fun add_module (name,(vdef,vinst)) = 
- (module_lib := (!module_lib) @ [(name,(vdef,vinst))]);
-
-val _ = 
- map
-  add_module
-  [("DEL",       (DELvDef,        DELvInst)),
-   ("DFF",       (DFFvDef,        DFFvInst)),
-   ("Dtype",     (DtypevDef,      DtypevInst)),
-   ("DtypeT",    (DtypeTvDef,     DtypeTvInst)),
-   ("DtypeF",    (DtypeFvDef,     DtypeFvInst)),
-   ("TRUE",      (TRUEvDef,       TRUEvInst)),
-   ("NOT",       (NOTvDef,        NOTvInst)),
-   ("AND",       (ANDvDef,        ANDvInst)),
-   ("OR",        (ORvDef,         ORvInst)),
-   ("MUX",       (MUXvDef,        MUXvInst)),
-   ("CONSTANT",  (CONSTANTvDef,   CONSTANTvInst)),
-   ("ADD",       (ADDvDef,        ADDvInst)),
-   ("SUB",       (SUBvDef,        SUBvInst)),
-   ("LESS",      (LESSvDef,       LESSvInst)),
-   ("EQ",        (EQvDef,         EQvInst))];
-
 (*****************************************************************************)
 (* ``v0 <> ... <> vn`` --> [``v0``, ... ,``vn``]                             *)
 (*****************************************************************************)
@@ -964,7 +1167,7 @@ fun MAKE_VERILOG name thm out =
  (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
   out("// Definitions of components used in " ^ name ^ "\n\n");
   map            (* Print definition of components *)
-   (fn(_,(def,_)) => out def)
+   (out o snd)
    (filter
      (fn(name,_) => mem name module_names)
      (!module_lib));
@@ -1182,7 +1385,7 @@ fun MAKE_NET_VERILOG name thm out =
  (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
   out("// Definitions of components used in " ^ name ^ "\n\n");
   map            (* Print definition of components *)
-   (fn(_,(def,_)) => out def)
+   (out o snd)
    (filter
      (fn(name,_) => mem name module_names)
      (!module_lib));

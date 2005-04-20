@@ -1,0 +1,24 @@
+
+===============================================================================
+== Examples in this directory ending ".ml" which should be run interactively ==
+== (e.g. loaded with "use")                                                  ==
+===============================================================================
+
+Xor32.ml .................. Simple example showing use of AddBinop
+NotXor32.ml ............... Simple example showing use of AddUnop and AddBinop
+Fact32.ml ................. Factorial example using word32 
+
+
+*******************************************************************************
+
+For running interactively (see examples listed above):
+
+ loadPath := "../" :: "word32" :: !loadPath;
+
+For compilation (currently no files to compile, but need to
+make word32Theory) do:
+ 
+ Holmake 
+
+(this uses Holmakefile).
+

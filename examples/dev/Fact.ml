@@ -1,6 +1,7 @@
 
 (*****************************************************************************)
 (* High level (TFL) specification and implementation of factorial.           *)
+(* Version for interactive use -- runs simulator and then waveform viewer.   *)
 (*****************************************************************************)
 
 quietdec := true;
@@ -19,6 +20,14 @@ quietdec := false;
 (* Start new theory "Fact"                                                   *)
 (*****************************************************************************)
 val _ = new_theory "Fact";
+
+(*****************************************************************************)
+(* Define arithmetic operators used and their Verilog implementations.       *)
+(*****************************************************************************)
+val _ = AddBinop ("ADD",  (``UNCURRY $+ : num#num->num``,  "+"));
+val _ = AddBinop ("SUB",  (``UNCURRY $- : num#num->num``,  "-"));
+val _ = AddBinop ("LESS", (``UNCURRY $< : num#num->bool``, "<"));
+val _ = AddBinop ("EQ",   (``UNCURRY $= : num#num->bool``, "=="));
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)

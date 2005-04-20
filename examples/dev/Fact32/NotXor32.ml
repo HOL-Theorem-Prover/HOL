@@ -6,11 +6,10 @@ quietdec := true;
 loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
 map load
  ["compileTheory","compile","metisLib","intLib","word32Theory", "word32Lib",
-  "dffTheory","vsynth" ,"compile32Theory"];
+  "dffTheory","vsynth"];
 open compile metisLib word32Theory;
 open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
-     devTheory composeTheory compileTheory compile vsynth dffTheory
-     compile32Theory;
+     devTheory composeTheory compileTheory compile vsynth dffTheory;
 quietdec := false;
 
 infixr 3 THENR;
@@ -30,10 +29,10 @@ add_combinational ["BITS","HB","w2n","n2w"];
 val _ = new_theory "NotXor32";
 
 (*****************************************************************************)
-(* Load definitions of XOR32 and NOT32                                       *)
+(* Add definitions of XOR32 and NOT32                                        *)
 (*****************************************************************************)
-use "XOR32.ml";
-use "NOT32.ml";
+AddBinop ("XOR32", (``UNCURRY $# : word32#word32->word32``, "^"));
+AddUnop  ("NOT32", (``$~:word32->word32`` ,                 "~"));
 
 (*****************************************************************************)
 (* Implement an atomic device computing XOR                                  *)

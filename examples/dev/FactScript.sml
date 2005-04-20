@@ -6,6 +6,7 @@
 (*****************************************************************************)
 (* START BOILERPLATE                                                         *)
 (*****************************************************************************)
+
 (******************************************************************************
 * Load theories
 ******************************************************************************)
@@ -47,6 +48,14 @@ val _ = intLib.deprecate_int();
 (* Start new theory "Fact"                                                   *)
 (*****************************************************************************)
 val _ = new_theory "Fact";
+
+(*****************************************************************************)
+(* Define arithmetic operators used and their Verilog implementations.       *)
+(*****************************************************************************)
+val _ = AddBinop ("ADD",  (``UNCURRY $+ : num#num->num``,  "+"));
+val _ = AddBinop ("SUB",  (``UNCURRY $- : num#num->num``,  "-"));
+val _ = AddBinop ("LESS", (``UNCURRY $< : num#num->bool``, "<"));
+val _ = AddBinop ("EQ",   (``UNCURRY $= : num#num->bool``, "=="));
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
@@ -201,7 +210,6 @@ val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 (* Print Verilog + a simulation environment to FACT.vl                       *)
 (* Run using: iverilog -o FACT.vvp FACT.vl; vvp FACT.vvp                     *)
 (*****************************************************************************)
-val _ = (dump_all_flag:=true);(* dump changes of all variables into VCD file *)
 
 (*
  iverilog -o FACT.vvp FACT.vl; 

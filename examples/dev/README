@@ -11,7 +11,7 @@ compile.sml ............... convert to combinators and compile to circuits
 vsynth.sml ................ convert a circuit made with MAKE_CIRCUIT to Verilog
 FactScript.sml ............ synthesise naive factorial and dump Verilog
 Fact.ml ................... synthesise and simulate factorial and run gtkwave
-Fact32 .................... directory with word32 version of factorial example
+Fact32 .................... directory with word32 examples (including factorial)
 dff ....................... Melham's temporal abstraction theory
 Holmakefile ............... instructions for Holmake
 
@@ -268,6 +268,57 @@ is_combinational : term -> bool
 
 Test whether a terms is a combinational function of its free variables
 (i.e. is built up using only combinational constants).
+
+AddUnop : string * (term * string) -> unit
+------------------------------------------
+
+Evaluating
+
+  AddUnop("<component name>", (``<HOL operator>``, "<Verilog operator>"))
+
+defines a HOL component and a corresponding Verilog module and adds
+these to the synthesis engine. Currently only types ``:bool``,
+``:num`` and ``:word<n>`` are supported; ``:num`` is converted to
+Verilog words of width [31:0] (and a warning is issued, since this is
+in general invalid). Example:
+
+ AddUnop  ("NOT32", (``$~:word32->word32`` , "~"));
+
+If one doesn't intend to generate Verilog, then just give an arbitrary
+string as the Verilog operator (invoking PRINT_VERILOG will then print
+a module that uses this string, but you will only get an error when
+the Verilog is used, e.g. a simulation is attempted).
+
+
+AddBinop : string * (term * string) -> unit
+-------------------------------------------
+
+Evaluating
+
+  AddBinop
+   ("<component name>",
+    (``<uncurried HOL binary operator>``, "<Verilog operator>"))
+
+defines a HOL component and a corresponding Verilog module and adds
+these to the synthesis engine. Currently only types ``:bool``,
+``:num`` and ``:word<n>`` are supported; ``:num`` is converted to
+Verilog words of width [31:0] (and a warning is issued, since this is
+in general invalid). Examples:
+
+ AddBinop ("ADD",     (``UNCURRY $+ : num#num->num``,           "+"))
+ AddBinop ("SUB",     (``UNCURRY $- : num#num->num``,           "-"))
+
+ AddBinop ("ADD32",   (``UNCURRY $+ : word32#word32->word32``,  "+"));
+ AddBinop ("SUB32",   (``UNCURRY $- : word32#word32->word32``,  "-"))
+
+ AddBinop ("LESS32",  (``UNCURRY $< : word32#word32->bool``,    "<"));
+ AddBinop ("EQ32",    (``UNCURRY $= : word32#word32->bool``,    "=="))
+
+
+If one doesn't intend to generate Verilog, then just give an arbitrary
+string as the Verilog operator (invoking PRINT_VERILOG will then print
+a module that uses this string, but you will only get an error when
+the Verilog is used, e.g. a simulation is attempted).
 
 
 MAKE_NETLIST : thm -> thm
@@ -631,13 +682,18 @@ ML reference "if_print_flag" to false.
 (*****************************************************************************)
 (* The sources have lots of cut-and-paste-and-tweak style repetition for the *)
 (* various combinational components (NOT, AND, OR, MUX, ADD, SUB, LESS, EQ). *)
-(* I may eventually implement some generic tools to make adding new          *)
-(* combinational components a one-liner. However, this will be a tricky      *)
-(* and possibly -- at least for now -- not worth the effort, since adding    *)
-(* new components is likely to be relatively rare.                           *)
+(*                                                                           *)
+(* The functions AddUnop and AddBinop cope with some of the repetition,      *)
+(* but what follows might also be useful documentation.                      *)
 (*                                                                           *)
 (* Here are the steps currently needed to add a new component,               *)
 (* illustrated with the addition of 32-bit bitwise exclusive-or (XOR32).     *)
+(*                                                                           *)
+(* These steps are a manual version of what is done when                     *)
+(*                                                                           *)
+(*  AddBinop ("XOR32", (``UNCURRY $# : word32#word32->word32``, "^"));       *)
+(*                                                                           *)
+(* is evaluated.                                                             *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -750,5 +806,5 @@ termToVerilogLib := (!termToVerilogLib) @ [termToVerilog_XOR32];
 == [15.02.05: MJCG revised MAKE_NETLIST and MAKE_CIRCUIT]                    ==
 == [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION]    ==
 == [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave]       ==
-== [07.04.05: MJCG added section on adding new compoents and Xor32]           ==
+== [20.04.05: MJCG updated section on adding new components]                 ==
 ===============================================================================

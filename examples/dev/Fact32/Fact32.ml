@@ -7,11 +7,10 @@ quietdec := true;
 loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
 map load
  ["compileTheory","compile","metisLib","intLib","word32Theory", "word32Lib",
-  "dffTheory","vsynth" ,"compile32Theory"];
+  "dffTheory","vsynth"];
 open compile metisLib word32Theory;
 open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
-     devTheory composeTheory compileTheory compile vsynth dffTheory
-     compile32Theory;
+     devTheory composeTheory compileTheory compile vsynth dffTheory;
 quietdec := false;
 
 infixr 3 THENR;
@@ -31,23 +30,16 @@ add_combinational ["MOD","WL","DIV"];
 add_combinational ["word_add","word_sub"];
 add_combinational ["BITS","HB","w2n","n2w"];
 
-add_combinational_components
- [COMB_ADD, 
-  COMB_SUB, 
-  COMB_LESS, 
-  COMB_EQ];
-
-add_temporal_abstractions
- [EQ_at, 
-  ADD_at, 
-  SUB_at, 
-  LESS_at];
-
-
 (*****************************************************************************)
 (* Start new theory "Fact32"                                                 *)
 (*****************************************************************************)
 val _ = new_theory "Fact32";
+
+AddBinop ("ADD32",   (``UNCURRY $+ : word32#word32->word32``,  "+"));
+AddBinop ("SUB32",   (``UNCURRY $- : word32#word32->word32``,  "-"));
+
+AddBinop ("LESS32",  (``UNCURRY $< : word32#word32->bool``,    "<"));
+AddBinop ("EQ32",    (``UNCURRY $= : word32#word32->bool``,    "=="));
 
 (*****************************************************************************)
 (* We implement multiplication with a naive iterative multiplier function    *)

@@ -548,8 +548,6 @@ fun RecCompileConvert defth totalth =
   SIMP_RULE std_ss [] (MP impth hthm)
  end;
 
-(* (SIMP_RULE std_ss [UNPAIR_TOTAL totalth] o  *)
-
 fun mk_measure tm = 
    let open numSyntax
        val measure_tm = prim_mk_const{Name="measure",Thy="prim_rec"}
@@ -569,7 +567,6 @@ val default_termination_simps =
      pairTheory.LEX_DEF];
 
 val termination_simps = ref default_termination_simps;
-
 
 (*---------------------------------------------------------------------------*)
 (* Single entrypoint for definitions where proof of termination will succeed *)
@@ -1457,7 +1454,6 @@ fun bus_split tm =
 (*     ==>                                                                   *)
 (*     DEV f (load,(inp1<>...<>inpm),done,(out1<>...<>outn))                 *)
 (*****************************************************************************)
-
 fun IN_OUT_SPLIT th =
  let val (tm1,tm2) = dest_dev_imp(concl th)
      val (ty1,ty2) = dom_rng (type_of tm2)
@@ -1485,11 +1481,7 @@ val _ =
  add_combinational_components
   [COMB_NOT,
    COMB_AND,
-   COMB_OR,
-   COMB_ADD,
-   COMB_SUB,
-   COMB_LESS,
-   COMB_EQ];
+   COMB_OR];
 
 (*****************************************************************************)
 (* Compile a device implementation into a netlist represented in HOL         *)
@@ -1537,11 +1529,7 @@ val _ =
    NOT_at,
    AND_at,
    OR_at,
-   MUX_at,
-   EQ_at,
-   ADD_at,
-   SUB_at,
-   LESS_at];
+   MUX_at];
 
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
