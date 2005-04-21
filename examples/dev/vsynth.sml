@@ -46,6 +46,19 @@ val ERR = mk_HOL_ERR "compile";
 fun date() = Date.fmt "%c" (Date.fromTimeLocal (Time.now ()));
 
 (*****************************************************************************)
+(* Convert a term to a string showing types of variables                     *)
+(* by setting show_types to true during printing                             *)
+(*****************************************************************************)
+fun term2string tm =
+ let val saved_val = !show_types
+     val _ = (show_types := true)
+     val s = Parse.term_to_string tm
+     val _ = (show_types := saved_val)
+ in
+  s
+ end;
+
+(*****************************************************************************)
 (* Test if a string is a constant                                            *)
 (*****************************************************************************)
 fun is_constant s = mem s (known_constants());
@@ -181,8 +194,11 @@ fun add_termToVerilog fl =
 
 (*****************************************************************************)
 (* Function for generating Verilog module definitions,                       *)
-(* e.g. UnopVlogDef "NOT32" "~" generates                                    *)
+(* e.g. UnopVlogDef "NOT32" (``$~``, "~") generates                          *)
 (*                                                                           *)
+(* // Verilog module implementing HOL unary operator                         *)
+(* // $~ :bool -> bool                                                       *)
+(* //                                                                        *)
 (* // Automatically generated definition of NOT32                            *)
 (* module NOT32 (inp,out);                                                   *)
 (*  parameter inpsize = 31;                                                  *)
@@ -193,31 +209,37 @@ fun add_termToVerilog fl =
 (*  assign out = ~ inp;                                                      *)
 (*                                                                           *)
 (* endmodule                                                                 *)
-(*                                                                           *)
 (*****************************************************************************)
-fun UnopVlogDef name vunop =
- ("// Automatically generated definition of " ^ name ^ "\n\
+fun UnopVlogDef name (hunop,vunop) =
+ let val (argty,resty) = dest_unop_type(type_of hunop)
+     val argsize = ty2size argty
+     val ressize = ty2size resty
+ in
+ ("// Verilog module implementing HOL unary operator\n// " ^
+  term2string hunop ^ " " ^
+  Parse.type_to_string(type_of hunop) ^ "\n//\n" ^ 
+  "// Automatically generated definition of " ^ name ^ "\n\
    \module " ^ name ^ " (inp,out);\n\
-   \ parameter inpsize = 31;\n\
-   \ parameter outsize = 31;\n\
+   \ parameter inpsize = " ^ argsize ^ ";\n\
+   \ parameter outsize = " ^ ressize ^ ";\n\
    \ input   [inpsize:0] inp;\n\
    \ output  [outsize:0] out;\n\
    \\n\
    \ assign out = " ^ vunop ^ " inp;\n\
    \\n\
    \endmodule\n\
-   \\n");
+   \\n")
+ end;
 
 (*****************************************************************************)
 (* Function for generating instances. The first evaluation of:               *)
 (*                                                                           *)
-(*  UnopVlogInstFun                                                          *)
-(*   "NOT32"                                                                 *)
-(*   print                                                                   *)
-(*   [("inp","32"),("out","32")]                                             *)
+(*  UnopVlogInstFun "NOT32"                                                  *)
+(*   ``NOT32(inp,out)`` print [("inp","32"),("out","32")]                    *)
 (*                                                                           *)
 (* generates                                                                 *)
 (*                                                                           *)
+(*  /* NOT32 (inp,out) */                                                    *)
 (*  NOT32        NOT32_0 (inp,out);                                          *)
 (*    defparam NOT32_0.inpsize = 32;                                         *)
 (*    defparam NOT32_0.outsize = 32;                                         *)
@@ -228,13 +250,16 @@ fun UnopVlogDef name vunop =
 fun UnopVlogInstFun name =
  let val instcount = ref 0
      fun InstFn 
+          tm
           (out:string->unit)
           [(argname,argsize),(outname,outsize)] =
       let val count = !instcount
           val _ = (instcount := count+1)
           val inst_name = name ^ "_" ^ Int.toString count
       in
-        (out(" " ^ name ^ "        "); out inst_name;
+        (out " /* ";
+         out(term2string tm); out " */\n";
+         out(" " ^ name ^ "        "); out inst_name;
          out " (";out argname;out",";out outname; out ");\n";
          out "   defparam ";out inst_name; out ".inpsize = "; out argsize; out ";\n";
          out "   defparam ";out inst_name; out ".outsize = "; out outsize; out ";\n";
@@ -262,6 +287,7 @@ fun is_unop name tm =
 fun UnopTermToVerilog nameVlogInstFun name (out:string->unit) tm =
  if is_unop name tm
   then nameVlogInstFun
+        tm
         out
         (map (fn v => (fst(dest_var v), var2size v)) (strip_pair(rand tm)))
   else raise ERR "UnopTermToVerilog" "bad component term";
@@ -307,7 +333,7 @@ fun AddUnop(name, (hunop,vunop)) =
                   RW_TAC bool_ss [defth,at_def,tempabsTheory.when,o_THM])
      val argsize = ty2size argty
      val ressize = ty2size resty
-     val nameVlogDef = UnopVlogDef name vunop 
+     val nameVlogDef = UnopVlogDef name (hunop,vunop)
      val nameVlogInstFun = UnopVlogInstFun name
      val nameTermToVerilog = UnopTermToVerilog nameVlogInstFun name
  in
@@ -319,27 +345,39 @@ fun AddUnop(name, (hunop,vunop)) =
 
 (*****************************************************************************)
 (* Function for generating Verilog module definitions,                       *)
-(* e.g. BinopVlogDef "XOR32A" "^" generates                                  *)
+(* e.g. BinopVlogDef "XOR32" (``UNCURRY $#``, "^") generates                 *)
 (*                                                                           *)
-(*  // Automatically generated definition of XOR32A                          *)
-(*  module XOR32A (in1,in2,out);                                             *)
-(*   parameter in1size = 31;                                                 *)
-(*   parameter in2size = 31;                                                 *)
-(*   parameter outsize = 31;                                                 *)
-(*   input   [in1size:0] in1;                                                *)
-(*   input   [in2size:0] in2;                                                *)
-(*   output  [outsize:0] out;                                                *)
+(* // Verilog module implementing HOL binary operator                        *)
+(* // UNCURRY $# :word32 # word32 -> word32                                  *)
+(* //                                                                        *)
+(* // Automatically generated definition of XOR32                            *)
+(* module XOR32 (in1,in2,out);                                               *)
+(*  parameter in1size = 31;                                                  *)
+(*  parameter in2size = 31;                                                  *)
+(*  parameter outsize = 31;                                                  *)
+(*  input   [in1size:0] in1;                                                 *)
+(*  input   [in2size:0] in2;                                                 *)
+(*  output  [outsize:0] out;                                                 *)
 (*                                                                           *)
-(*   assign out = in1 ^ in2;                                                 *)
+(*  assign out = in1 ^ in2;                                                  *)
 (*                                                                           *)
-(*  endmodule                                                                *)
+(* endmodule                                                                 *)
+(*                                                                           *)
 (*****************************************************************************)
-fun BinopVlogDef name vbinop =
- ("// Automatically generated definition of " ^ name ^ "\n\
+fun BinopVlogDef name (hbinop,vbinop) =
+ let val (arg1ty,arg2ty,resty) = dest_binop_type(type_of hbinop)
+     val arg1size = ty2size arg1ty
+     val arg2size = ty2size arg2ty
+     val ressize = ty2size resty
+ in
+ ("// Verilog module implementing HOL binary operator\n// " ^
+  term2string hbinop ^ " " ^
+  Parse.type_to_string(type_of hbinop) ^ "\n//\n" ^ 
+  "// Automatically generated definition of " ^ name ^ "\n\
    \module " ^ name ^ " (in1,in2,out);\n\
-   \ parameter in1size = 31;\n\
-   \ parameter in2size = 31;\n\
-   \ parameter outsize = 31;\n\
+   \ parameter in1size = " ^ arg1size ^ ";\n\
+   \ parameter in2size = " ^ arg2size ^ ";\n\
+   \ parameter outsize = " ^ ressize ^ ";\n\
    \ input   [in1size:0] in1;\n\
    \ input   [in2size:0] in2;\n\
    \ output  [outsize:0] out;\n\
@@ -347,36 +385,39 @@ fun BinopVlogDef name vbinop =
    \ assign out = in1 " ^ vbinop ^ " in2;\n\
    \\n\
    \endmodule\n\
-   \\n");
+   \\n")
+ end;
 
 (*****************************************************************************)
 (* Function for generating instances. The first evaluation of:               *)
 (*                                                                           *)
-(*  BinopVlogInstFun                                                         *)
-(*   "XOR32A"                                                                *)
-(*   print                                                                   *)
-(*   [("in1","32"),("in2","32"),("out","32")]                                *)
+(*   BinopVlogInstFun "XOR32"                                                *)
+(*    ``XOR32 (in1,in2,out)`` print [("in1","32"),("in2","32"),("out","32")] *)
 (*                                                                           *)
 (* generates                                                                 *)
 (*                                                                           *)
-(*  XOR32A        XOR32A_0 (in1,in2,out);                                    *)
-(*    defparam XOR32A_0.in1size = 32;                                        *)
-(*    defparam XOR32A_0.in2size = 32;                                        *)
-(*    defparam XOR32A_0.outsize = 31;                                        *)
+(*  /* XOR32 (in1,in2,out) */                                                *)
+(*  XOR32        XOR32_0 (in1,in2,out);                                      *)
+(*    defparam XOR32_0.in1size = 32;                                         *)
+(*    defparam XOR32_0.in2size = 32;                                         *)
+(*    defparam XOR32_0.outsize = 32;                                         *)
 (*                                                                           *)
-(* Subsequent evaluations inc the instance counter (XOR32A_1, XOR32A_2 etc)  *)
+(* Subsequent evaluations inc the instance counter (XOR32_1, XOR32_2 etc)    *)
 (*                                                                           *)
 (*****************************************************************************)
 fun BinopVlogInstFun name =
  let val instcount = ref 0
      fun InstFn 
+          tm
           (out:string->unit)
           [(arg1name,arg1size),(arg2name,arg2size),(outname,outsize)] =
       let val count = !instcount
           val _ = (instcount := count+1)
           val inst_name = name ^ "_" ^ Int.toString count
       in
-        (out(" " ^ name ^ "        "); out inst_name;
+        (out " /* ";
+         out(term2string tm); out " */\n";
+         out(" " ^ name ^ "        "); out inst_name;
          out " (";out arg1name;out",";out arg2name;out",";out outname; out ");\n";
          out "   defparam ";out inst_name; out ".in1size = "; out arg1size; out ";\n";
          out "   defparam ";out inst_name; out ".in2size = "; out arg2size; out ";\n";
@@ -405,6 +446,7 @@ fun is_binop name tm =
 fun BinopTermToVerilog nameVlogInstFun name (out:string->unit) tm =
  if is_binop name tm
   then nameVlogInstFun
+        tm
         out
         (map (fn v => (fst(dest_var v), var2size v)) (strip_pair(rand tm)))
   else raise ERR "BinopTermToVerilog" "bad component term";
@@ -460,7 +502,7 @@ fun AddBinop(name, (hbinop,vbinop)) =
      val arg1size = ty2size arg1ty
      val arg2size = ty2size arg1ty
      val ressize  = ty2size resty
-     val nameVlogDef = BinopVlogDef name vbinop
+     val nameVlogDef = BinopVlogDef name (hbinop,vbinop)
      val nameVlogInstFun = BinopVlogInstFun name
      val nameTermToVerilog = BinopTermToVerilog nameVlogInstFun name
  in
@@ -498,12 +540,15 @@ val CONSTANTvDef =
 (*****************************************************************************)
 val CONSTANTvInst_count = ref 0;
 fun CONSTANTvInst 
+ tm
  (out:string->unit) [("size",size),("value",value)] [out_name] =
  let val count = !CONSTANTvInst_count
      val _ = (CONSTANTvInst_count := count+1);
      val inst_name = "CONSTANT" ^ "_" ^ Int.toString count
  in
- (out " CONSTANT   "; out inst_name;
+ (out " /* ";
+  out(term2string tm); out " */\n";
+  out " CONSTANT   "; out inst_name;
   out " (";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size  = "; out size; out ";";
   out "\n";
@@ -527,6 +572,7 @@ fun termToVerilog_CONSTANT (out:string->unit) tm =
                               ["NUMERAL","n2w"])
      andalso is_var (rand tm)
   then CONSTANTvInst 
+        tm
         out 
         [("size", var2size(last(strip_pair(rand tm)))),
          ("value",
@@ -578,43 +624,8 @@ fun ClockvInst (out:string->unit) [("period",period)] [clk_name] =
 (*****************************************************************************)
 (* Combinational boolean inverter                                            *)
 (*****************************************************************************)
-val NOTvDef=
-"// Combinational boolean inverter\n\
-\module NOT (inp,out);\n\
-\ input inp;\n\
-\ output out;\n\
-\\n\
-\ assign out = !inp;\n\
-\\n\
-\endmodule\n\
-\\n";
-
-
-(*****************************************************************************)
-(* Print an instance of a NOT                                                *)
-(*****************************************************************************)
-val NOTvInst_count = ref 0;
-fun NOTvInst (out:string->unit) [] [in_name,out_name] =
- let val count = !NOTvInst_count
-     val _ = (NOTvInst_count := count+1);
-     val inst_name = "NOT" ^ "_" ^ Int.toString count
- in
- (out " NOT        "; out inst_name;
-  out " (";out in_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_NOT (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "NOT")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 2)
-     andalso all is_var (strip_pair(rand tm))
-  then NOTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_NOT" "bad component term";
-
-val _ = add_termToVerilog[termToVerilog_NOT];
+val NOTvDef= UnopVlogDef "NOT" (``$~:bool->bool``,"!");
+val _ = add_termToVerilog[UnopTermToVerilog (UnopVlogInstFun "NOT") "NOT"];
 val _ = add_modules[("NOT",NOTvDef)];
 
 (*****************************************************************************)
@@ -630,18 +641,19 @@ val TRUEvDef =
 \endmodule\n\
 \\n";
 
-
 (*****************************************************************************)
 (* TRUEvInst out "output" prints, using out, and instance of TRUE driving    *)
 (* a line named "output"                                                     *)
 (*****************************************************************************)
 val TRUEvInst_count = ref 0;
-fun TRUEvInst (out:string->unit) [] [out_name] =
+fun TRUEvInst tm (out:string->unit) [] [out_name] =
  let val count = !TRUEvInst_count
      val _ = (TRUEvInst_count := count+1);
      val inst_name = "TRUE" ^ "_" ^ Int.toString count
  in
- (out " TRUE       "; out inst_name;
+ (out " /* ";
+  out(term2string tm); out " */\n";
+  out " TRUE       "; out inst_name;
   out " (";out out_name; out ");";
   out "\n\n")
  end;
@@ -651,7 +663,7 @@ fun termToVerilog_TRUE (out:string->unit) tm =
      andalso is_const(fst(strip_comb tm))
      andalso (fst(dest_const(fst(strip_comb tm))) = "TRUE")
      andalso is_var(rand tm)
-  then TRUEvInst out [] [fst(dest_var(rand tm))]
+  then TRUEvInst tm out [] [fst(dest_var(rand tm))]
   else raise ERR "termToVerilog_TRUE" "bad component term";
 
 val _ = add_termToVerilog[termToVerilog_TRUE];
@@ -673,17 +685,19 @@ val MUXvDef =
 \endmodule\n\
 \\n";
 
-
 (*****************************************************************************)
 (* Print and instance of a MUX with a given size                             *)
 (*****************************************************************************)
 val MUXvInst_count = ref 0;
-fun MUXvInst (out:string->unit) [("size",size)] [sw_name,in1_name,in2_name,out_name] =
+fun MUXvInst tm (out:string->unit) [("size",size)] 
+     [sw_name,in1_name,in2_name,out_name] =
  let val count = !MUXvInst_count
      val _ = (MUXvInst_count := count+1);
      val inst_name = "MUX" ^ "_" ^ Int.toString count
  in
- (out " MUX        "; out inst_name;
+ (out " /*\n ";
+  out(term2string tm); out "\n */\n";
+  out " MUX        "; out inst_name;
   out " (";out sw_name;out",";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
@@ -697,6 +711,7 @@ fun termToVerilog_MUX (out:string->unit) tm =
      andalso (length(strip_pair(rand tm)) = 4)
      andalso all is_var (strip_pair(rand tm))
   then MUXvInst 
+        tm
         out 
         [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
@@ -705,83 +720,18 @@ fun termToVerilog_MUX (out:string->unit) tm =
 val _ = add_termToVerilog[termToVerilog_MUX];
 val _ = add_modules[("MUX",MUXvDef)];
 
-val ANDvDef =
-"// Combinational and-gate\n\
-\module AND (in1,in2,out);\n\
-\ input in1,in2;\n\
-\ output out;\n\
-\\n\
-\ assign out = in1 && in2;\n\
-\\n\
-\endmodule\n\
-\\n";
-
 (*****************************************************************************)
-(* Print an instance of an AND                                               *)
+(* Combinational Boolean and-gate                                            *)
 (*****************************************************************************)
-val ANDvInst_count = ref 0;
-fun ANDvInst (out:string->unit) [] [in1_name,in2_name,out_name] =
- let val count = !ANDvInst_count
-     val _ = (ANDvInst_count := count+1);
-     val inst_name = "AND" ^ "_" ^ Int.toString count
- in
- (out " AND        "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_AND (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "AND")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then ANDvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_AND" "bad component term";
-
-val _ = add_termToVerilog[termToVerilog_AND];
+val ANDvDef = BinopVlogDef "AND" (``UNCURRY $/\ :bool#bool->bool``,"&&");
+val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "AND") "AND"];
 val _ = add_modules[("AND",ANDvDef)];
 
 (*****************************************************************************)
-(* Combinational boolean or-gate                                             *)
+(* Combinational Boolean or-gate                                             *)
 (*****************************************************************************)
-val ORvDef =
-"// Combinational or-gate\n\
-\module OR (in1,in2,out);\n\
-\ input in1,in2;\n\
-\ output out;\n\
-\\n\
-\ assign out = in1 || in2;\n\
-\\n\
-\endmodule\n\
-\\n";
-
-(*****************************************************************************)
-(* Print an instance of an OR                                                *)
-(*****************************************************************************)
-val ORvInst_count = ref 0;
-fun ORvInst (out:string->unit) [] [in1_name,in2_name,out_name] =
- let val count = !ORvInst_count
-     val _ = (ORvInst_count := count+1);
-     val inst_name = "OR" ^ "_" ^ Int.toString count
- in
- (out " OR         "; out inst_name;
-  out " (";out in1_name;out",";out in2_name;out",";out out_name; out ");";
-  out "\n\n")
- end;
-
-fun termToVerilog_OR (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "OR")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then ORvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_OR" "bad component term";
-
-val _ = add_termToVerilog[termToVerilog_OR];
+val ORvDef = BinopVlogDef "OR" (``UNCURRY $\/ :bool#bool->bool``,"!!");
+val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "OR") "OR"];
 val _ = add_modules[("OR",ORvDef)];
 
 (*****************************************************************************)
@@ -804,12 +754,14 @@ val DELvDef =
 (* Print an instance of an DEL with a given size                             *)
 (*****************************************************************************)
 val DELvInst_count = ref 0;
-fun DELvInst (out:string->unit) [("size",size)] [inp_name,out_name] =
+fun DELvInst tm (out:string->unit) [("size",size)] [inp_name,out_name] =
  let val count = !DELvInst_count
      val _ = (DELvInst_count := count+1);
      val inst_name = "DEL" ^ "_" ^ Int.toString count
  in
- (out " DEL        "; out inst_name;
+ (out " /* ";
+  out(term2string tm); out " */\n";
+  out " DEL        "; out inst_name;
   out " (";out inp_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
@@ -823,6 +775,7 @@ fun termToVerilog_DEL (out:string->unit) tm =
      andalso (length(strip_pair(rand tm)) = 2)
      andalso all is_var (strip_pair(rand tm))
   then DELvInst 
+        tm
         out 
         [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
@@ -852,12 +805,14 @@ val DFFvDef =
 (* Print an instance of a DFF with a given size                              *)
 (*****************************************************************************)
 val DFFvInst_count = ref 0;
-fun DFFvInst (out:string->unit) [("size",size)] [in_name,clk_name,out_name] =
+fun DFFvInst tm (out:string->unit) [("size",size)] [in_name,clk_name,out_name] =
  let val count = !DFFvInst_count
      val _ = (DFFvInst_count := count+1);
      val inst_name = "DFF" ^ "_" ^ Int.toString count
  in
- (out " DFF      "; out inst_name;
+ (out " /* ";
+  out(term2string tm); out " */\n";
+  out " DFF      "; out inst_name;
   out " (";out in_name;out",";out clk_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
@@ -871,6 +826,7 @@ fun termToVerilog_DFF (out:string->unit) tm =
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
   then DFFvInst 
+        tm
         out 
         [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
@@ -902,12 +858,14 @@ val DtypevDef =
 (* Print an instance of a Dtype with a given size                            *)
 (*****************************************************************************)
 val DtypevInst_count = ref 0;
-fun DtypevInst (out:string->unit) [("size",size)] [clk_name,in_name,out_name] =
+fun DtypevInst tm (out:string->unit) [("size",size)] [clk_name,in_name,out_name] =
  let val count = !DtypevInst_count
      val _ = (DtypevInst_count := count+1);
      val inst_name = "Dtype" ^ "_" ^ Int.toString count
  in
- (out " Dtype      "; out inst_name;
+ (out " /* ";
+  out(term2string tm); out " */\n";
+  out " Dtype      "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
@@ -921,6 +879,7 @@ fun termToVerilog_Dtype (out:string->unit) tm =
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
   then DtypevInst 
+        tm
         out 
         [("size", var2size(last(strip_pair(rand tm))))] 
         (map (fst o dest_var) (strip_pair(rand tm)))
@@ -950,12 +909,14 @@ val DtypeTvDef =
 (* Print an instance of a DtypeT                                             *)
 (*****************************************************************************)
 val DtypeTvInst_count = ref 0;
-fun DtypeTvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+fun DtypeTvInst tm (out:string->unit) [] [clk_name,in_name,out_name] =
  let val count = !DtypeTvInst_count
      val _ = (DtypeTvInst_count := count+1);
      val inst_name = "DtypeT" ^ "_" ^ Int.toString count
  in
- (out " DtypeT        "; out inst_name;
+ (out " /* ";
+  out(term2string tm); out " */\n";
+  out " DtypeT        "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
   out "\n\n")
  end;
@@ -967,7 +928,7 @@ fun termToVerilog_DtypeT (out:string->unit) tm =
      andalso is_pair(rand tm)
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
-  then DtypeTvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  then DtypeTvInst tm out [] (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_DtypeT" "bad component term";
 
 val _ = add_termToVerilog[termToVerilog_DtypeT];
@@ -994,12 +955,14 @@ val DtypeFvDef =
 (* Print an instance of a DtypeF                                             *)
 (*****************************************************************************)
 val DtypeFvInst_count = ref 0;
-fun DtypeFvInst (out:string->unit) [] [clk_name,in_name,out_name] =
+fun DtypeFvInst tm (out:string->unit) [] [clk_name,in_name,out_name] =
  let val count = !DtypeFvInst_count
      val _ = (DtypeFvInst_count := count+1);
      val inst_name = "DtypeF" ^ "_" ^ Int.toString count
  in
- (out " DtypeF        "; out inst_name;
+ (out " /* ";
+  out(term2string tm); out " */\n";
+  out " DtypeF        "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
   out "\n\n")
  end;
@@ -1011,7 +974,7 @@ fun termToVerilog_DtypeF (out:string->unit) tm =
      andalso is_pair(rand tm)
      andalso (length(strip_pair(rand tm)) = 3)
      andalso all is_var (strip_pair(rand tm))
-  then DtypeFvInst out [] (map (fst o dest_var) (strip_pair(rand tm)))
+  then DtypeFvInst tm out [] (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_DtypeF" "bad component term";
 
 val _ = add_termToVerilog[termToVerilog_DtypeF];

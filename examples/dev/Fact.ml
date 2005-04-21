@@ -145,8 +145,8 @@ dump_all_flag := true;
 (* Change these variables to select simulator and viewer. Commenting out the *)
 (* three assignments below will revert to the defaults: cver/dinotrace.      *)
 (*****************************************************************************)
-vlogger_path      := "/homes/mjcg/bin/verilog/vlogger/vlogcmd";
-verilog_simulator := vlogger;
+iverilog_path      := "/usr/bin/iverilog";
+verilog_simulator := iverilog;
 
 (******************************************************************************
 (*****************************************************************************)
