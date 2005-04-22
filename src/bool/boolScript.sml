@@ -14,6 +14,7 @@ struct
 
 open HolKernel Parse;
 
+infixr -->
 
 val _ = new_theory "bool";
 
@@ -3983,37 +3984,6 @@ val DATATYPE_BOOL = save_thm("DATATYPE_BOOL",
  in
     SPEC (list_mk_comb(bvar,[T,F])) thm1
  end);
-
-
-(*---------------------------------------------------------------------------*)
-(* Hacking the grammar so that export_theory produces boolTheory.sig file    *)
-(* with HTML symbol versions of standard connectives and quantifiers.        *)
-(*---------------------------------------------------------------------------*)
-
-val _ = 
- let open Parse
- in temp_overload_on("&and;", conjunction);  
-    temp_overload_on("&or;", disjunction);
-    temp_overload_on("&rArr;", implication); 
-    temp_overload_on("&forall;", universal); 
-    temp_overload_on("&exist;", existential);
-    temp_overload_on("&exist;!",exists1);
-    temp_overload_on("&epsilon;", select);
-    temp_overload_on("&isin;", in_tm); 
-
-    temp_set_fixity "&and;" (Infixr 400);
-    temp_set_fixity "&or;" (Infixr 300);
-    temp_set_fixity "&rArr;" (Infixr 200);
-    temp_add_rule {term_name = "~",fixity=TruePrefix 900,
-       pp_elements = [TOK "&not;"],paren_style = OnlyIfNecessary,
-       block_style = (AroundEachPhrase, (CONSISTENT, 0))};
-    temp_set_fixity "&not;" (TruePrefix 900);
-    temp_set_fixity "&forall;" Binder;
-    temp_set_fixity "&exist;" Binder;
-    temp_set_fixity "&exist;!" Binder;
-    temp_set_fixity "&epsilon;" Binder;
-    temp_set_fixity "&isin;" (Infix(NONASSOC,425))
- end;
 
 val _ = export_theory();
 
