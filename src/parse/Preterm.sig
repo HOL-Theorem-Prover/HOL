@@ -3,12 +3,13 @@ sig
   type pretype = Pretype.pretype
   type hol_type = Type.hol_type
   type term = Term.term
+  type overinfo = {Name : string, Ty : pretype,
+                   Info : Overload.overloaded_op_info, Locn : locn.locn}
 
   datatype preterm =
     Var of   {Name : string, Ty : pretype, Locn : locn.locn}
   | Const of {Name : string, Thy : string, Ty : pretype, Locn : locn.locn}
-  | Overloaded of {Name : string, Ty : pretype,
-                   Info : Overload.overloaded_op_info, Locn : locn.locn}
+  | Overloaded of overinfo
   | Comb of  {Rator: preterm, Rand : preterm, Locn : locn.locn}
   | Abs of   {Bvar : preterm, Body : preterm, Locn : locn.locn}
   | Constrained of {Ptm:preterm, Ty:pretype, Locn:locn.locn}

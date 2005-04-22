@@ -1,7 +1,11 @@
 structure qbuf :> qbuf =
 struct
 
-  open base_tokens locn
+  open base_tokens locn Portable Lib
+
+(* For SML/NJ *)
+
+ infix ##;
 
   (* qbufs are references to quadruples:
        field #1   :  the optional lexing function for a current QUOTE part

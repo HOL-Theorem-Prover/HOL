@@ -41,8 +41,9 @@ type overload_info = ((string,overloaded_op_info) Binarymap.dict *
 fun nthy_rec_cmp ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
     pair_compare (String.compare, String.compare) ((thy1, n1), (thy2, n2))
 
-val null_oinfo = (Binarymap.mkDict String.compare,
-                  Binarymap.mkDict nthy_rec_cmp)
+val null_oinfo : overload_info = 
+  (Binarymap.mkDict String.compare,
+   Binarymap.mkDict nthy_rec_cmp)
 
 fun oinfo_ops (oi,_) = Binarymap.listItems oi
 fun print_map (_, pm) = Binarymap.listItems pm
@@ -220,7 +221,7 @@ fun add_actual_overloading {opname, realname, realthy} oinfo = let
       case info_for_name oinfo opname of
         SOME {base_type, actual_ops} => let
           (* this name is already overloaded *)
-          fun eq_nthy aop = #Name aop = realname andalso #Thy aop = realthy
+          fun eq_nthy {Name,Thy,Ty} = Name = realname andalso Thy = realthy
         in
           case Lib.total (Lib.pluck eq_nthy) actual_ops of
             SOME (_, rest) => let
@@ -307,6 +308,7 @@ fun merge_oinfos (O1:overload_info) (O2:overload_info) : overload_info = let
         ([], x) => rev_append acc x
       | (x, []) => rev_append acc x
       | (r1::r1s, r2::r2s) => let
+        val (x:nthy_rec,_) = r1   (* telling type inferencer the type *)
         in
           case nthy_rec_cmp(#1 r1, #1 r2) of
             LESS => merge_cops (r1::acc) r1s cop2s

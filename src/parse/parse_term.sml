@@ -135,7 +135,7 @@ fun mk_prec_matrix G = let
     | INFIX VSCONS => ()
     | CLOSEFIX rules => app (insert_oplist o rule_elements) rules
     | LISTRULE rlist => let
-        fun process r = let
+        fun process (r:listspec) = let
           val left = STD_HOL_TOK (first_tok (#leftdelim r))
           val right = STD_HOL_TOK (first_tok (#rightdelim r))
           val separator = STD_HOL_TOK (first_tok (#separator r))
@@ -179,7 +179,7 @@ fun mk_prec_matrix G = let
           | PREFIX (STD_prefix rules) => map (f o rule_elements) rules
           | CLOSEFIX rules => map (f o rule_elements) rules
           | LISTRULE rlist => let
-              fun process r =
+              fun process (r:listspec) =
                 [f (map (TOK o first_tok)
                         [#leftdelim r, #separator r, #rightdelim r])]
             in
@@ -390,7 +390,7 @@ fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
   val table:(rule_element list, rule_summary)Polyhash.hash_table =
        Polyhash.mkPolyTable (2 * length Grules, Fail "")
-  fun insert_rule f g rr =
+  fun insert_rule f g (rr:rule_record) =
     Polyhash.insert table (g (term_grammar.rule_elements (#elements rr)),
                            f (#term_name rr))
   fun infix_f elms = elms @ [TM]
@@ -414,7 +414,7 @@ fun mk_ruledb (G:grammar) = let
     | SUFFIX TYPE_annotation => ()
     | CLOSEFIX rules => app (insert_rule closefix_rule closefix_f) rules
     | LISTRULE rlist => let
-        fun process r = let
+        fun process (r:listspec) = let
           val ldelim = TOK (first_tok (#leftdelim r))
           val rdelim = TOK (first_tok (#rightdelim r))
           val sep = TOK (first_tok (#separator r))

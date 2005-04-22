@@ -15,7 +15,8 @@ datatype grammar = TYG of (int * grammar_rule) list *
 
 open HOLgrammars
 
-fun default_typrinter G pps ty = PP.add_string pps "<a type>"
+fun default_typrinter (G:grammar) (pps:Portable.ppstream) 
+                      (ty:Type.hol_type) = PP.add_string pps "<a type>"
 
 val type_printer = ref default_typrinter
 val initialised_printer = ref false

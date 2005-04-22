@@ -22,6 +22,7 @@ struct
 val ERR = Feedback.mk_HOL_ERR "ParseDatatype";
 val ERRloc = Feedback.mk_HOL_ERRloc "ParseDatatype";
 
+open Portable;
 
 datatype pretype
    = dVartype of string

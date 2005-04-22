@@ -9,6 +9,7 @@ type PhraseBlockStyle = term_grammar.PhraseBlockStyle
 type ParenStyle = term_grammar.ParenStyle
 type block_info = term_grammar.block_info
 type associativity = HOLgrammars.associativity
+type 'a frag = 'a Portable.frag
 
 val ERROR = mk_HOL_ERR "Parse";
 val ERRORloc = mk_HOL_ERRloc "Parse";
@@ -120,11 +121,11 @@ fun tyop_to_qtyop ((tyop,locn), args) =
 
 fun do_qtyop {Thy,Tyop,Locn,Args} = Pretype.Tyop {Thy=Thy,Tyop=Tyop,Args=Args}
 
-val typ1_rec = {vartype = Pretype.Vartype o fst, qtyop = do_qtyop,
+val typ1_rec = {vartype = fn x => Pretype.Vartype (fst x), qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
-                antiq = Pretype.fromType o remove_ty_aq}
+                antiq = fn x => Pretype.fromType (remove_ty_aq x)}
 
-val typ2_rec = {vartype = Pretype.Vartype o fst, qtyop = do_qtyop,
+val typ2_rec = {vartype = fn x => Pretype.Vartype (fst x), qtyop = do_qtyop,
                 tyop = tyop_to_qtyop,
                 antiq = Pretype.fromType}
 
@@ -1342,7 +1343,7 @@ fun export_theorems_as_docfiles dirname thms = let
   end
 in
   app write_thm thms
-end handle Io {function,name,...} =>
+end handle IO.Io {function,name,...} =>
            HOL_WARNING "Parse" "export_theorems_as_docfiles"
                        ("Giving up on IO error: "^function^" : "^name)
          | Fail s =>
@@ -1412,7 +1413,7 @@ val min_grammars = current_grammars();
   fun clear_thy_consts_from_oinfo thy oinfo = let
     val all_parse_consts = Overload.oinfo_ops oinfo
     fun bad_parse_guy (nm, {base_type, actual_ops}) = let
-      fun bad_guy {Name, Thy, ...} = if Thy = thy then
+      fun bad_guy {Name, Thy, Ty} = if Thy = thy then
                                        SOME (nm, {Name = Name, Thy = Thy})
                                      else NONE
     in

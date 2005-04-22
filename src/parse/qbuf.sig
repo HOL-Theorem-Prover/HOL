@@ -3,7 +3,7 @@ signature qbuf = sig
   (* a type of (stateful) lexing buffer designed to handle quotations *)
   type 'a qbuf
 
-  val new_buffer : 'a frag list -> 'a qbuf
+  val new_buffer : 'a Portable.frag list -> 'a qbuf
 
   val current : 'a qbuf -> 'a base_tokens.base_token locn.located
 
@@ -11,7 +11,7 @@ signature qbuf = sig
 
   val advance : 'a qbuf -> unit
 
-  val lex_to_toklist : 'a frag list -> 'a base_tokens.base_token locn.located list
+  val lex_to_toklist : 'a Portable.frag list -> 'a base_tokens.base_token locn.located list
 
   val toString : 'a qbuf -> string
 

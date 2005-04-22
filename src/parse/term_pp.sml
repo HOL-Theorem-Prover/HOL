@@ -6,6 +6,8 @@ open Portable HolKernel term_grammar
 
 val PP_ERR = mk_HOL_ERR "term_pp";
 
+infix -->
+
 (*---------------------------------------------------------------------------
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
@@ -522,7 +524,7 @@ fun pp_term (G : grammar) TyG = let
       with_ppstream pps
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
-        case #1 (#block_style rr) of
+        case #1 (#block_style (rr:rule_record)) of
           AroundSameName => grav_name pgrav <> fname
         | AroundSamePrec => grav_prec pgrav <> fprec
         | AroundEachPhrase => true
@@ -1436,7 +1438,7 @@ fun pp_term (G : grammar) TyG = let
           fun is_atom tm = is_const tm orelse is_var tm
           fun pr_atomf fname =
            let val candidate_rules = lookup_term fname
-               fun is_list (r as {nilstr, cons, ...}) tm =
+               fun is_list (r as {nilstr, cons, ...}:listspec) tm =
                     (has_name G nilstr tm)
                     orelse
                     is_comb tm andalso

@@ -1,7 +1,11 @@
 structure fragstr :> fragstr =
 struct
 
-open optmonad monadic_parse
+open optmonad monadic_parse;
+
+datatype frag = datatype Portable.frag;
+
+
 infix >- >> ++ >->
 
 fun member x [] = false

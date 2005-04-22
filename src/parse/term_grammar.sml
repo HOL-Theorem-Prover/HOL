@@ -5,6 +5,7 @@ open HOLgrammars GrammarSpecials
 
   type ppstream = Portable.ppstream
 
+type nthy_rec = {Name : string, Thy : string}
 
   type block_info = PP.break_style * int
   datatype rule_element = TOK of string | TM
@@ -364,7 +365,7 @@ local
     | CLOSEFIX rules =>
         mmap (specials_from_elm o rule_elements o #elements) rules
     | LISTRULE rlist => let
-        fun process r =
+        fun process (r:listspec) =
           add (first_tok (#separator r)) >>
           add (first_tok (#leftdelim r)) >>
           add (first_tok (#rightdelim r))
@@ -432,7 +433,7 @@ fun compatible_listrule (G:grammar) arg = let
         case rule of
           LISTRULE rlist => let
             fun check [] = NONE
-              | check (r::rs) = let
+              | check ((r:listspec)::rs) = let
                   val rule_sep = first_tok (#separator r)
                   val rule_left = first_tok (#leftdelim r)
                   val rule_right = first_tok (#rightdelim r)
@@ -597,7 +598,7 @@ end
 
 fun remove_tok {term_name, tok} r = let
   fun rels_safe rels = not (List.exists (fn e => e = TOK tok) rels)
-  fun rr_safe {term_name = s, elements,...} =
+  fun rr_safe ({term_name = s, elements,...}:rule_record) =
     s <> term_name orelse rels_safe (rule_elements elements)
 in
   case r of
@@ -609,7 +610,7 @@ in
       PREFIX (STD_prefix (List.filter rr_safe slist))
   | CLOSEFIX slist => CLOSEFIX (List.filter rr_safe slist)
   | LISTRULE rlist => let
-      fun lrule_ok r =
+      fun lrule_ok (r:listspec) =
         (#cons r <> term_name andalso #nilstr r <> term_name)  orelse
         (first_tok (#leftdelim r) <> tok andalso
          first_tok (#rightdelim r) <> tok andalso
@@ -716,7 +717,7 @@ fun get_precedence (G:grammar) s = let
   val rules = rules G
   fun check_rule (p, r) = let
     fun elmem s [] = false
-      | elmem s ({elements, ...}::xs) =
+      | elmem s (({elements, ...}:rule_record)::xs) =
       Lib.mem (TOK s) (rule_elements elements) orelse elmem s xs
   in
     case r of
@@ -826,7 +827,7 @@ fun prettyprint_grammar pstrm (G :grammar) = let
   val {add_string, add_break, begin_block, end_block,
        add_newline,...} = with_ppstream pstrm
 
-  fun pprint_rr m rr = let
+  fun pprint_rr m (rr:rule_record) = let
     val rels = rule_elements (#elements rr)
     val (pfx, sfx) =
       case m of
@@ -929,7 +930,7 @@ fun prettyprint_grammar pstrm (G :grammar) = let
       end
     | INFIX VSCONS => add_string "TM TM  (binder argument concatenation)"
     | LISTRULE lrs => let
-        fun pr_lrule {leftdelim, rightdelim, separator, ...} =
+        fun pr_lrule ({leftdelim, rightdelim, separator, ...}:listspec) =
           add_string ("\""^first_tok leftdelim^"\" ... \""^
                       first_tok rightdelim^
                       "\"  (separator = \""^ first_tok separator^"\")")
@@ -969,8 +970,10 @@ fun prettyprint_grammar pstrm (G :grammar) = let
                                          n))
         0
         oinfo
-      fun pr_ov (overloaded_op, r as {actual_ops,...}) = let
-        fun pr_name r =
+      fun pr_ov (overloaded_op, 
+                (r as {actual_ops,...}:Overload.overloaded_op_info)) = 
+       let
+        fun pr_name (r:Overload.const_rec) =
           case Term.decls (#Name r) of
             [] => raise Fail "term_grammar.prettyprint: should never happen"
           | [_] => #Name r

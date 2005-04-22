@@ -8,6 +8,8 @@ signature Parse = sig
   type PhraseBlockStyle = term_grammar.PhraseBlockStyle
   type ParenStyle = term_grammar.ParenStyle
   type block_info = term_grammar.block_info
+  type 'a frag = 'a Portable.frag
+  type ppstream = Portable.ppstream
 
   datatype fixity
      = RF of term_grammar.rule_fixity
@@ -147,22 +149,22 @@ signature Parse = sig
 
   (* Pretty printing *)
 
-  val pp_term : General.ppstream -> term -> unit
-  val pp_type : General.ppstream -> hol_type -> unit
-  val pp_thm : General.ppstream -> thm -> unit
+  val pp_term : ppstream -> term -> unit
+  val pp_type : ppstream -> hol_type -> unit
+  val pp_thm : ppstream -> thm -> unit
   val pp_with_bquotes :
-    (General.ppstream -> 'a -> unit) -> (General.ppstream -> 'a -> unit)
+    (ppstream -> 'a -> unit) -> (ppstream -> 'a -> unit)
   val term_pp_with_delimiters :
-    (General.ppstream -> term -> unit) -> General.ppstream -> term -> unit
+    (ppstream -> term -> unit) -> ppstream -> term -> unit
   val respect_width_ref :
-      int ref -> (General.ppstream -> 'a -> unit) ->
-      (General.ppstream -> 'a -> unit)
+      int ref -> (ppstream -> 'a -> unit) ->
+      (ppstream -> 'a -> unit)
   val type_pp_with_delimiters :
-    (General.ppstream -> hol_type -> unit) ->
-    General.ppstream -> hol_type -> unit
-  val get_term_printer : unit -> (General.ppstream -> term -> unit)
-  val set_term_printer : (General.ppstream -> term -> unit) ->
-                               General.ppstream -> term -> unit
+    (ppstream -> hol_type -> unit) ->
+    ppstream -> hol_type -> unit
+  val get_term_printer : unit -> (ppstream -> term -> unit)
+  val set_term_printer : (ppstream -> term -> unit) ->
+                               ppstream -> term -> unit
 
   val term_to_string : term -> string
   val type_to_string : hol_type -> string

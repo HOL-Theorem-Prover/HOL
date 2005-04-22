@@ -28,7 +28,7 @@ sig
   val merge_grammars   : grammar * grammar -> grammar
 
   val std_suffix_precedence : int
-  val prettyprint_grammar   : ppstream -> grammar -> unit
+  val prettyprint_grammar   : Portable.ppstream -> grammar -> unit
   val initialise_typrinter
     : (grammar -> Portable.ppstream -> Type.hol_type -> unit) -> unit
 
