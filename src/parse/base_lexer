@@ -118,7 +118,7 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 
 <string>\" => (let val e = LocP(nf,!r,yypos - !(#i yyarg))
                    val (clist, start) = !stracc
-                   val str = String.implode (#"\"" :: clist)
+                   val str = String.implode (List.rev(#"\"" :: clist))
                in
                  stracc := ([], LocP(0,0,0));
                  YYBEGIN INITIAL;
@@ -161,7 +161,3 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                        continue()
                      end);
 <comment>. => (continue());
-
-
-
-
