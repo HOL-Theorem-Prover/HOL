@@ -17,6 +17,7 @@ struct
 
 exception Div = General.Div
 exception Mod = General.Div
+exception Interrupt = General.Interrupt
 
 (*---------------------------------------------------------------------------
       Refs

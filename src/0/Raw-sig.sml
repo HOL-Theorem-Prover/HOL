@@ -216,7 +216,7 @@ sig
   val mk_axiom_thm  : string ref * term -> thm
   val mk_defn_thm   : tag * term -> thm
   val disk_thm      : term vector
-                       -> string * 'a frag list list * 'a frag list -> thm
+                       -> string * 'a Portable.frag list list * 'a Portable.frag list -> thm
 end;
 
 signature RawTheoryPP =

@@ -19,7 +19,7 @@ val ERR = mk_HOL_ERR "TheoryPP";
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
 val psort = Lib.sort (fn (s1:string,_:Thm.thm) => fn (s2,_:Thm.thm) => s1<=s2);
-val thid_sort = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2);
+fun thid_sort x = Lib.sort (fn (s1:string,_,_) => fn (s2,_,_) => s1<=s2) x;
 fun thm_terms th = Thm.concl th :: Thm.hyp th;
 
 (*---------------------------------------------------------------------------*)

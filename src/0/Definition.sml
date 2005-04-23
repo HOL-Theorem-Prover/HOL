@@ -102,12 +102,12 @@ fun mk_def (w as TERM _, tm)    = (w, Thm.mk_defn_thm (Tag.empty_tag, tm))
   | mk_def (w as THEOREM th,tm) = (w, Thm.mk_defn_thm (Thm.tag th, tm))
 
 val new_definition_hook = ref
-    ((fn tm => ([], tm)),
-     (fn (V,th) =>
+    ((fn tm => ([]:term list, tm:term)),
+     (fn (V:term list,th:thm) =>
        if null V then th
        else raise ERR "new_definition" "bare post-processing phase"));
 
-val new_specification_hook = ref
+val (new_specification_hook:(string list -> unit) ref) = ref
  (fn _ => raise ERR "new_specification"
             "introduced constants have not been added to the grammar")
 

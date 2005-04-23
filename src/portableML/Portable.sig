@@ -68,6 +68,7 @@ sig
 
   exception Mod
   exception Div
+  exception Interrupt
 
   type 'a quotation = 'a frag list
   type 'a frag = 'a frag

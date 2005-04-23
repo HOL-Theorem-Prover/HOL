@@ -119,7 +119,7 @@ fun thyname_assoc x [] = raise ERR "thyname_assoc" "not found"
 structure Graph = struct type graph = (thyid * thyid list) list
 local val theGraph = ref [(min_thyid,[])]
 in
-   fun add p = theGraph := (p :: !theGraph)
+   fun add (p:(thyid*thyid list)) = theGraph := (p :: !theGraph)
    fun add_parent (n,newp) =
      let fun same (node,_) = thyid_eq node n
          fun addp(node,parents) = (node, op_union thyid_eq [newp] parents)

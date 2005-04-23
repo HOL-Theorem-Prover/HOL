@@ -101,7 +101,7 @@ fun output_ERR s =
  ---------------------------------------------------------------------------*)
 
 fun exn_to_string (HOL_ERR sss)     = !ERR_to_string sss
-  | exn_to_string General.Interrupt = raise General.Interrupt
+  | exn_to_string Portable.Interrupt = raise Portable.Interrupt
   | exn_to_string e                 = General.exnMessage e;
 
 fun Raise e = (output_ERR (exn_to_string e); raise e)
@@ -119,12 +119,12 @@ end;
     exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
-fun wrap_exn s f General.Interrupt = raise General.Interrupt
+fun wrap_exn s f Portable.Interrupt = raise Portable.Interrupt
   | wrap_exn s f (HOL_ERR err_rec) =
         mk_HOL_ERR s f (format_err_rec err_rec)
   | wrap_exn s f exn = mk_HOL_ERR s f (General.exnMessage exn);
 
-fun wrap_exn_loc s f l General.Interrupt = raise General.Interrupt
+fun wrap_exn_loc s f l Portable.Interrupt = raise Portable.Interrupt
   | wrap_exn_loc s f l (HOL_ERR err_rec) =
         mk_HOL_ERRloc s f l (format_err_rec err_rec)
   | wrap_exn_loc s f l exn = mk_HOL_ERRloc s f l (General.exnMessage exn);

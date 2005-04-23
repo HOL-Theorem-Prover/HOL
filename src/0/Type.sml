@@ -81,7 +81,7 @@ fun mk_thy_type {Thy,Tyop,Args} =
                 ("the type operator "^quote Tyop^
                  " has not been declared in theory "^quote Thy^".")
 
-local fun dest e =
+local fun dest (e:TypeSig.entry) =
         let val (c,_) = #const e
         in {Tyop=KernelTypes.name_of c, Thy=KernelTypes.seg_of c}  end
 in
@@ -131,7 +131,7 @@ fun op_arity {Thy,Tyop} =
  ---------------------------------------------------------------------------*)
 
 fun thy_types s =
-  let fun xlate {const=(id,arity), ...} = (KernelTypes.name_of id, arity)
+  let fun xlate {const=(id,arity),witness,utd} = (KernelTypes.name_of id, arity)
   in map xlate (TypeSig.slice s)
   end;
 

@@ -109,5 +109,5 @@ sig
   (* Fetching theorems from disk *)
 
   val disk_thm      : term vector
-                       -> string * 'a frag list list * 'a frag list -> thm
+                       -> string * 'a Portable.frag list list * 'a Portable.frag list -> thm
 end;

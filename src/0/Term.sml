@@ -347,7 +347,7 @@ fun prim_mk_const {Name,Thy} =
    | NONE => raise ERR "prim_mk_const"
                (Lib.quote Name^" not found in theory "^Lib.quote Thy)
 
-val ground = Lib.all (fn {redex,residue} => not(Type.polymorphic residue));
+fun ground x = Lib.all (fn {redex,residue} => not(Type.polymorphic residue)) x;
 
 fun create_const errstr (const as Const(_,GRND pat)) Ty =
       if Ty=pat then const else raise ERR "create_const" "not a type match"
@@ -500,7 +500,7 @@ end;
  *    Replace arbitrary subterms in a term. Non-renaming.                    *
  *---------------------------------------------------------------------------*)
 
-val emptysubst = Binarymap.mkDict compare
+val emptysubst:(term,term)Binarymap.dict = Binarymap.mkDict compare
 local
   open Binarymap
   fun addb [] A = A

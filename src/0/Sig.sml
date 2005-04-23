@@ -130,7 +130,7 @@ fun add_witness (name, theory, wit) =
 fun delete (p as (name,_)) =
  let val i = hash name
      fun del [] = raise ERR "" ""
-       | del ((e as {const,...}) :: rst) =
+       | del ((e as {const,witness,utd}) :: rst) =
           if p = dest_id (key const) then (retire const; rst) else e::del rst
  in
    Array.update(theSig, i, del (Array.sub(theSig, i)))
