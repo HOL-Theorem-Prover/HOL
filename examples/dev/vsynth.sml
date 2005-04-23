@@ -730,7 +730,7 @@ val _ = add_modules[("AND",ANDvDef)];
 (*****************************************************************************)
 (* Combinational Boolean or-gate                                             *)
 (*****************************************************************************)
-val ORvDef = BinopVlogDef "OR" (``UNCURRY $\/ :bool#bool->bool``,"!!");
+val ORvDef = BinopVlogDef "OR" (``UNCURRY $\/ :bool#bool->bool``,"||");
 val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "OR") "OR"];
 val _ = add_modules[("OR",ORvDef)];
 
