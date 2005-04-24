@@ -36,7 +36,7 @@ val dest_pair = sdest_binop (",", "pair") (ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
 fun mk_pair (fst,snd) =
- let infix -->
+ let infixr -->
      val fsty = type_of fst
      val sndty = type_of snd
      val c = mk_thy_const{Name=",",Thy="pair",

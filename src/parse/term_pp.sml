@@ -6,7 +6,7 @@ open Portable HolKernel term_grammar
 
 val PP_ERR = mk_HOL_ERR "term_pp";
 
-infix -->
+infixr -->
 
 (*---------------------------------------------------------------------------
    Miscellaneous syntax stuff.
