@@ -1634,6 +1634,24 @@ end
 
 
 
+(* Modified HO_PART_MATCH by PVH on Apr. 25, 2005: code was broken;
+   repaired by tightening "foldthis" condition for entry to "bound_to_abs";
+   see longish note at bottom for more details. *)
+
+(* "bound_vars" returns set of bound variables within term t *)
+(* "t" argument is actual term, "acc" is accumulating set, orig. empty *)
+local
+ fun bound_vars1 t acc =
+  case dest_term t
+   of LAMB(v,b)
+       => bound_vars1 b (HOLset.add(acc, v))
+   | COMB(l,r) => bound_vars1 l (bound_vars1 r acc)
+   | otherwise => acc
+in
+fun bound_vars t = bound_vars1 t empty_tmset
+end
+
+
 fun HO_PART_MATCH partfn th =
  let val sth = SPEC_ALL th
      val bod = concl sth
@@ -1650,8 +1668,11 @@ fun HO_PART_MATCH partfn th =
      val ltyconsts = HOLset.listItems (hyp_tyvars th)
  in fn tm =>
     let val (tmin,tyin) = ho_match_term ltyconsts lconsts pbod tm
+        val tmbvs = bound_vars tm
         fun foldthis ({redex,residue}, acc) =
-            if is_abs residue then Map.insert(acc, redex, residue) else acc
+            if is_abs residue andalso
+               all (fn v => HOLset.member(tmbvs, v)) (fst (strip_abs residue))
+            then Map.insert(acc, redex, residue) else acc
         val bound_to_abs = List.foldl foldthis (Map.mkDict Term.compare) tmin
         val sth0 = INST_TYPE tyin sth
         val sth0c = concl sth0
@@ -2278,5 +2299,37 @@ won't get rewritten to
 
    !x::P'. Q' x
 
+                    ------------------------------
+
+Part 3. (By Peter V. Homeier)
+
+The above code was broken for higher order rewriting, such as
+
+val th = ASSUME ``!f:'a->'b. A (\x:'c. B (f (C x)) :'d) = (\x. f x)``;
+val tm = ``A (\rose:'c. B (g (C rose :'a) (C rose) :'b) :'d) : 'a->'b``;
+HO_PART_MATCH lhs th tm;
+
+produced
+
+   A (\rose. B (g (C rose) (C rose))) = (\gvar. g gvar gvar)
+
+where gvar was a freshly generated "genvar", instead of the correct
+
+   A (\rose. B (g (C rose) (C rose))) = (\rose. g rose rose)
+
+The reason the prior code did not work was that not only was the
+match of f with (\y. Q y) recognized for the Part 2 example above,
+but also the match of f with (\gvar. g gvar gvar) in the "rose" example.
+The code then "munged" the result by trying to change instances of the
+"rose" bound variable to "gvar".
+
+This was fixed by tightening the condition for entrance to the set of
+bound variables which are to be so "munged", by adding the condition
+that the bound variables ("y" in the Part 2 example, "gvar" in this one)
+must all be contained within the set of bound variables within the term
+"tm".  If they are not, then the "munge" operation is not needed, since
+that attempts to alter bound variable names to fit the given term,
+and if the suggested new variable names did not come from the term,
+there is no reason to change the old ones.
 
 *)
