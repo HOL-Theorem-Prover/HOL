@@ -80,7 +80,7 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
      in (BT0_QIdent (hd l, hd (tl l)),getLoc yyarg yypos yytext) end);
 <INITIAL>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
 <INITIAL>"(*" => (YYBEGIN comment; incommentp := 1; continue());
-<INITIAL>("0b" {digitseq} | {numeric} ({numeric} | _)* | "0x" {hexdigitseq})
+<INITIAL>("0b" {digitseq} | "0x" {hexdigitseq} | {numeric} ({numeric} | _)* )
          {alpha}? =>
     (let val s = yytext
          val c = String.sub (s, size s - 1)
