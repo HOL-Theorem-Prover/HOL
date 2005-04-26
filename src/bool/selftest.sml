@@ -93,6 +93,17 @@ val oldconstants_test = let
   val _ = test (not o uncurry aconv) (c2, c3)
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c1
   val _ = test (String.isPrefix "old" o #Name o dest_thy_const) c2
+  val _ = Feedback.emit_MESG := false
+  val _ = Feedback.emit_WARNING := false
+  val _ = new_theory "foo"
+  val defn1 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
+  val _ = new_theory "foo"
+  val defn2 = new_definition("c", mk_eq(mk_var("c", bool), boolSyntax.T))
+  val c1 = lhs (concl defn1)
+  val c2 = lhs (concl defn2)
+  val _ = test (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
+  val _ = test (not o uncurry aconv) (c1, c2)
+  val _ = app FileSys.remove ["scratchTheory.sml", "scratchTheory.sig"]
 in
   print "OK\n"
 end
