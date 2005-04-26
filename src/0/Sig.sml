@@ -175,7 +175,13 @@ fun app f =
 fun filter P = app (Lib.gather P)
 fun scope P  = app (op@ o Lib.partition P);
 
-fun del_segment seg = filter (fn e => not(seg = seg_of(id_of e)));
+fun del_segment seg = 
+    let fun doit e = if seg = seg_of (id_of e) then 
+                       (retire (#const e); false) 
+                     else true
+    in
+      filter doit 
+    end
 
 fun app_se f =   (* apply a s.e. function to each entry *)
   for_se 0 (table_size - 1)
