@@ -50,10 +50,10 @@ in
 end
 
 fun del_segment s = let
-  fun f (k, v, m) = if #Thy k = s then #1 (Map.remove(m, k)) else m
+  fun f (k, v) = if #Thy k = s then prim_delete_type k else () 
   val m = !operator_table
 in
-  operator_table := Map.foldl f m m
+  Map.app f m 
 end
 
 fun minseg s = {Thy = "min", Tyop = s}

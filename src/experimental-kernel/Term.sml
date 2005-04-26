@@ -102,10 +102,10 @@ in
 end
 
 fun del_segment s = let
-  fun f (k,v,m) = if #Thy k = s then #1 (Map.remove(m, k)) else m
+  fun f (k,v) = if #Thy k = s then prim_delete_const k else ()
   val m = !const_table
 in
-  const_table := Map.foldl f m m
+  Map.app f m
 end
 
 
