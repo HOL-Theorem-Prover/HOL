@@ -40,8 +40,6 @@ sig
   val mk_negated     : term -> term
   val dest_negated   : term -> term
 
-
-
   val is_plus        : term -> bool
   val mk_plus        : (term * term) -> term
   val dest_plus      : term -> (term * term)

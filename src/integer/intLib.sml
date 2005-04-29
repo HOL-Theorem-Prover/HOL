@@ -2,6 +2,7 @@ structure intLib :> intLib =
 struct
 
   open HolKernel Abbrev intSyntax intSimps Cooper
+
   val (Type,Term) = Parse.parse_from_grammars integerTheory.integer_grammars
 
   val operators = [("+", ``$+ : int -> int -> int``),

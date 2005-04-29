@@ -9,31 +9,32 @@ infixr -->
 infix THENC
 
 val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
-fun -- q x = Term q
-fun == q x = Type q
 
 val num_ty = numSyntax.num
 val int_ty = mk_thy_type{Tyop = "int", Thy="integer", Args = []}
 
-val plus_tm = Term`$+ : int -> int -> int`
-val minus_tm = Term`$- : int -> int -> int`
-val mult_tm = Term`$* : int -> int -> int`
-val div_tm = Term`$/ : int -> int -> int`
-val mod_tm = Term`$% : int -> int -> int`
-val quot_tm = Term`integer$int_quot`
-val rem_tm = Term`integer$int_rem`
-val exp_tm = Term`$** : int -> num -> int`
-val int_eq_tm = Term`$= : int -> int -> bool`
-val less_tm = Term`$< : int -> int -> bool`
-val leq_tm = Term`$<= : int -> int -> bool`
-val great_tm = Term`$> : int -> int -> bool`
-val geq_tm = Term`$>= : int -> int -> bool`
-val divides_tm = Term`$int_divides : int -> int -> bool`;
-val absval_tm = Term`ABS : int -> int`;
-val min_tm =
- Term.prim_mk_const {Name = "int_min", Thy="integer"}
-val max_tm =
- Term.prim_mk_const {Name = "int_max", Thy="integer"}
+fun Const s = prim_mk_const{Name=s, Thy="integer"};
+
+val negate_tm = Const "int_neg"
+val plus_tm =  Const "int_add"
+val minus_tm = Const "int_sub"
+val mult_tm =  Const "int_mul"
+val div_tm =   Const "int_div"
+val mod_tm =   Const "int_mod"
+val quot_tm =  Const "int_quot"
+val rem_tm =   Const "int_rem"
+val exp_tm =   Const "int_exp"
+val less_tm =  Const "int_lt"
+val leq_tm =   Const "int_le"
+val great_tm = Const "int_gt"
+val geq_tm =   Const "int_ge"
+val min_tm =   Const "int_min"
+val max_tm =   Const "int_max";
+val absval_tm =  Const "ABS"
+val divides_tm = Const "int_divides"
+val int_injection = Const "int_of_num"
+
+val int_eq_tm =  Term `min$= : int -> int -> bool`
 
 fun dest_binop t (srcf,msg) tm = let
   val (farg1, arg2) = dest_comb tm
@@ -68,7 +69,6 @@ end
 val dest_minus = dest_binop minus_tm ("dest_minus", "Term not a minus")
 val is_minus = can dest_minus
 fun mk_minus (tm1, tm2) = list_mk_comb(minus_tm, [tm1, tm2])
-
 
 val dest_mult = dest_binop mult_tm ("dest_mult", "Term not a multiplication")
 val is_mult = can dest_mult
@@ -124,8 +124,6 @@ val dest_divides = dest_binop divides_tm ("dest_divides", "Term not a divides")
 val is_divides = can dest_divides
 fun mk_divides (tm1, tm2) = list_mk_comb(divides_tm, [tm1, tm2])
 
-
-val int_injection = prim_mk_const{Name = "int_of_num", Thy = "integer"}
 fun dest_injected tm = let
   val (f,x) = dest_comb tm
     handle HOL_ERR _ => raise ERR "dest_injected" "term not an injection"
@@ -137,7 +135,6 @@ val is_injected = can dest_injected
 fun mk_injected tm = mk_comb(int_injection, tm)
 
 
-val negate_tm = prim_mk_const{Name = "int_neg", Thy = "integer"}
 fun dest_negated tm = let
   val (l,r) = dest_comb tm
     handle HOL_ERR _ => raise ERR "dest_negated" "term not a negation"
@@ -147,7 +144,6 @@ in
 end
 val is_negated = can dest_negated
 fun mk_negated tm = mk_comb(negate_tm, tm)
-
 
 fun is_int_literal t =
   (rator t = int_injection andalso numSyntax.is_numeral (rand t)) orelse
