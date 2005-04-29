@@ -14,22 +14,126 @@ open Arbint HolKernel Parse boolLib liteLib
      Arith reduceLib Arith_cons
      simpLib Traverse Cache Trace;
 
-val num_ty = Arith_cons.num_ty
-
 val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-fun -- q x = Term q
-fun == q x = Type q
 
-
+val num_ty = numSyntax.num
 val zero_tm  = numSyntax.zero_tm
 val dest_suc = numSyntax.dest_suc;
+val mk_numeral = term_of_int;
+val dest_numeral = int_of_term;
+
+val ARITH = EQT_ELIM o ARITH_CONV;
+
+(*---------------------------------------------------------------------------*)
+(* REDUCE_ss: simpset fragment that reduces ground arithmetic expressions    *)
+(*---------------------------------------------------------------------------*)
+
+local 
+ fun reducer t =
+  let open numSyntax
+      val (_, args) = strip_comb t
+      fun reducible t =
+        is_numeral t orelse (is_suc t andalso reducible (snd (dest_comb t)))
+  in
+   if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
+  end
+ fun mk_redconv0 pat =
+   {name = "REDUCE_CONV (arithmetic reduction)",
+    trace = 2,
+    key = SOME([], pat), conv = K (K reducer)}
+ val x = mk_var("x", num_ty)
+ val y = mk_var("y", num_ty)
+ fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
+ fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
+in
+val REDUCE_ss = 
+ let open numSyntax
+ in simpLib.SIMPSET
+     {convs = mk_unary_rconv even_tm ::
+           mk_unary_rconv odd_tm  ::
+           mk_unary_rconv pre_tm  ::
+           mk_unary_rconv suc_tm ::
+           map mk_redconv [mult_tm, plus_tm, minus_tm,
+                           div_tm, mod_tm, exp_tm,
+                           less_tm, leq_tm, greater_tm, geq_tm,
+                           min_tm, max_tm, Term`$= : num -> num -> bool`],
+      rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
+ end
+end;
+
+
+(*---------------------------------------------------------------------------*)
+(* Set of rewrites used in arith_ss.                                         *)
+(*---------------------------------------------------------------------------*)
+
+local open arithmeticTheory
+      val sym_lhs = CONV_RULE ((BINDER_CONV o BINDER_CONV
+                                o RATOR_CONV o RAND_CONV) SYM_CONV)
+      val one_suc = Rewrite.PURE_REWRITE_RULE [ONE]
+      val add_sym = Rewrite.ONCE_REWRITE_RULE [ADD_SYM]
+in
+val arithmetic_rewrites = [
+   (* suc *)
+   ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`),
+   ARITH(Term`!x. ((SUC x = 2) = (x=1)) /\ ((2 = SUC x) = (x=1))`),
+   (* addition *)
+   ADD_0, add_sym ADD_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
+   ADD_INV_0_EQ, add_sym ADD_INV_0_EQ,
+   (* multiplication *)
+   MULT_EQ_0, sym_lhs MULT_EQ_0,
+   MULT_EQ_1, sym_lhs MULT_EQ_1,
+   MULT_0, ONCE_REWRITE_RULE [MULT_COMM] MULT_0,
+   one_suc MULT_EQ_1, one_suc (sym_lhs MULT_EQ_1),
+   MULT_RIGHT_1, MULT_LEFT_1,
+   (* subtraction *)
+   SUB_EQUAL_0, SUC_SUB1, SUB_0, ADD_SUB, SUB_EQ_0, sym_lhs SUB_EQ_0,
+   SUB_LESS_EQ, SUB_MONO_EQ, SUB_RIGHT_GREATER, SUB_RIGHT_LESS,
+   SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ, prim_recTheory.PRE,
+
+   (* order relations and arith. ops *)
+   LESS_EQ_0, prim_recTheory.LESS_0, LESS_EQ_ADD,
+   ARITH ``0 <= x``, ARITH ``SUC x > 0``, ARITH ``x >= 0``,
+   LESS_EQ_REFL, ARITH ``x >= x``,
+   LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
+   ADD_MONO_LESS_EQ, add_sym ADD_MONO_LESS_EQ,
+   EQ_MONO_ADD_EQ, add_sym EQ_MONO_ADD_EQ,
+   ARITH (Term `!x y w. x + y < w + x = y < w`),
+   add_sym (ARITH (Term `!x y w. x + y < w + x = y < w`)),
+   prim_recTheory.INV_SUC_EQ, LESS_MONO_EQ, LESS_EQ_MONO,
+   LESS_MULT_MONO, MULT_SUC_EQ, MULT_MONO_EQ,
+   NOT_SUC_LESS_EQ,
+   MULT_EXP_MONO,  LE_MULT_LCANCEL, LE_MULT_RCANCEL,
+   LT_MULT_LCANCEL, LT_MULT_RCANCEL,
+  (* falsities *)
+   NOT_EXP_0, NOT_ODD_EQ_EVEN, NOT_SUC_ADD_LESS_EQ,
+   NOT_SUC_LESS_EQ_0, prim_recTheory.NOT_LESS_0, prim_recTheory.LESS_REFL,
+   ARITH ``~(x > x)``,
+
+   (* mins and maxs *)
+   MIN_0, MAX_0, MIN_IDEM, MAX_IDEM, MIN_LE, MAX_LE, MIN_LT, MAX_LT,
+   MIN_MAX_EQ, MIN_MAX_LT,
+
+   (* mods and divs *)
+   X_MOD_Y_EQ_X, DIVMOD_ID, DIV_1, MOD_1, LESS_MOD, ZERO_MOD, MOD_MOD
+   ]
+end;
+
+val ARITH_RWTS_ss =
+    simpLib.SIMPSET
+    { convs = [], rewrs = arithmetic_rewrites, congs = [],
+      filter = NONE, ac = [], dprocs = []};
+
+(*---------------------------------------------------------------------------*)
+(* Add the ground reducer and the arithmetic rewrites to srw_ss. If you want *)
+(* to use the dec. proc. with srw_ss, you have to add ARITH_DP_ss to the     *)
+(* first argument list of SRW_TAC                                            *)
+(*---------------------------------------------------------------------------*)
+
+val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
 (* ---------------------------------------------------------------------*
  * LIN: Linear arithmetic expressions                                   *
  * ---------------------------------------------------------------------*)
-
-val mk_numeral = term_of_int;
-val dest_numeral = int_of_term;
 
 datatype lin = LIN of (term * int) list * int;
 
@@ -168,7 +272,7 @@ val linear_reduction = term_of_lin o lin_of_term;
 
 fun cond_has_arith_components tm =
   if boolSyntax.is_cond tm then let
-    val {cond,rarm,larm} = Rsyntax.dest_cond tm
+    val (cond,rarm,larm) = dest_cond tm
   in
     List.all is_arith [cond, rarm, larm]
   end
@@ -177,7 +281,7 @@ and
   is_arith tm =
   is_presburger tm orelse
   List.all (fn t => type_of t = num_ty andalso cond_has_arith_components t)
-  (non_presburger_subterms tm)
+           (non_presburger_subterms tm)
 
 (*
    if (is_forall tm) then
@@ -228,8 +332,6 @@ val is_arith_asm = is_arith_thm o ASSUME
 
 type ctxt = thm list;
 
-
-val ARITH = EQT_ELIM o ARITH_CONV;
 
 fun CTXT_ARITH thms tm =
   if
@@ -350,60 +452,6 @@ in
      that we have accumulated a contradictory context. *)
 end;
 
-(* This needs to be done more systematically! *)
-local open arithmeticTheory
-      val sym_lhs = CONV_RULE ((BINDER_CONV o BINDER_CONV
-                                o RATOR_CONV o RAND_CONV) SYM_CONV)
-      val one_suc = Rewrite.PURE_REWRITE_RULE [arithmeticTheory.ONE]
-      val add_sym = Rewrite.ONCE_REWRITE_RULE [ADD_SYM]
-in
-val arithmetic_rewrites = [
-   (* suc *)
-   ARITH(Term `!x. ((SUC x = 1) = (x=0)) /\ ((1 = SUC x) = (x = 0))`),
-   ARITH(Term`!x. ((SUC x = 2) = (x=1)) /\ ((2 = SUC x) = (x=1))`),
-   (* addition *)
-   ADD_0, add_sym ADD_0, ADD_EQ_0, sym_lhs ADD_EQ_0,
-   ADD_INV_0_EQ, add_sym ADD_INV_0_EQ,
-   (* multiplication *)
-   MULT_EQ_0, sym_lhs MULT_EQ_0,
-   MULT_EQ_1, sym_lhs MULT_EQ_1,
-   MULT_0, ONCE_REWRITE_RULE [MULT_COMM] MULT_0,
-   one_suc MULT_EQ_1, one_suc (sym_lhs MULT_EQ_1),
-   MULT_RIGHT_1, MULT_LEFT_1,
-   (* subtraction *)
-   SUB_EQUAL_0, SUC_SUB1, SUB_0, ADD_SUB, SUB_EQ_0, sym_lhs SUB_EQ_0,
-   SUB_LESS_EQ, SUB_MONO_EQ, SUB_RIGHT_GREATER, SUB_RIGHT_LESS,
-   SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ, prim_recTheory.PRE,
-
-   (* order relations and arith. ops *)
-   LESS_EQ_0, prim_recTheory.LESS_0, LESS_EQ_ADD,
-   ARITH ``0 <= x``, ARITH ``SUC x > 0``, ARITH ``x >= 0``,
-   LESS_EQ_REFL, ARITH ``x >= x``,
-   LESS_MONO_ADD_EQ, add_sym LESS_MONO_ADD_EQ,
-   ADD_MONO_LESS_EQ, add_sym ADD_MONO_LESS_EQ,
-   EQ_MONO_ADD_EQ, add_sym EQ_MONO_ADD_EQ,
-   ARITH (Term `!x y w. x + y < w + x = y < w`),
-   add_sym (ARITH (Term `!x y w. x + y < w + x = y < w`)),
-   prim_recTheory.INV_SUC_EQ, LESS_MONO_EQ, LESS_EQ_MONO,
-   LESS_MULT_MONO, MULT_SUC_EQ, MULT_MONO_EQ,
-   NOT_SUC_LESS_EQ,
-   MULT_EXP_MONO,  LE_MULT_LCANCEL, LE_MULT_RCANCEL,
-   LT_MULT_LCANCEL, LT_MULT_RCANCEL,
-  (* falsities *)
-   NOT_EXP_0, NOT_ODD_EQ_EVEN, NOT_SUC_ADD_LESS_EQ,
-   NOT_SUC_LESS_EQ_0, prim_recTheory.NOT_LESS_0, prim_recTheory.LESS_REFL,
-   ARITH ``~(x > x)``,
-
-   (* mins and maxs *)
-   MIN_0, MAX_0, MIN_IDEM, MAX_IDEM, MIN_LE, MAX_LE, MIN_LT, MAX_LT,
-   MIN_MAX_EQ, MIN_MAX_LT,
-
-   (* mods and divs *)
-   X_MOD_Y_EQ_X, DIVMOD_ID, DIV_1, MOD_1, LESS_MOD, ZERO_MOD, MOD_MOD
-   ]
-end;
-
-
 val ARITH_REDUCER = let
   exception CTXT of thm list;
   fun get_ctxt e = (raise e) handle CTXT c => c
@@ -418,28 +466,38 @@ in
            initial = CTXT []}
 end;
 
-fun reducer t =
- let open numSyntax
-     val (_, args) = strip_comb t
-     fun reducible t =
-       is_numeral t orelse (is_suc t andalso reducible (snd (dest_comb t)))
- in
-   if List.all reducible args then reduceLib.REDUCE_CONV t else NO_CONV t
+(*---------------------------------------------------------------------------*)
+(* Finally, a simpset including the arithmetic decision procedure            *)
+(*---------------------------------------------------------------------------*)
+
+val ARITH_DP_ss =
+    simpLib.SIMPSET
+    { convs = [], rewrs = [], congs = [],
+      filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+
+(*---------------------------------------------------------------------------*)
+(* And one containing the dec. proc. and the set of arithmetic rewrites. But *)
+(* not REDUCE_ss (since that is a component of std_ss already).              *)
+(*---------------------------------------------------------------------------*)
+
+val ARITH_ss = merge_ss [ARITH_RWTS_ss, ARITH_DP_ss];
+
+fun clear_arith_caches() = clear_cache arith_cache;
+
+(*---------------------------------------------------------------------------*)
+(* Simpset for ordered AC rewriting on terms with + and *.                   *)
+(*---------------------------------------------------------------------------*)
+
+val ARITH_AC_ss = 
+ let open arithmeticTheory
+ in ac_ss [(ADD_SYM,ADD_ASSOC), (MULT_SYM,MULT_ASSOC)]
  end
 
-fun mk_redconv0 pat =
-   {name = "REDUCE_CONV (arithmetic reduction)",
-    trace = 2,
-    key = SOME([], pat), conv = K (K reducer)}
+(*---------------------------------------------------------------------------*)
+(* Development of a simpset that eliminates "SUC n" in favour of n           *)
+(*---------------------------------------------------------------------------*)
 
-local val x = Psyntax.mk_var("x", num_ty)
-      val y = Psyntax.mk_var("y", num_ty)
-in
-fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
-fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
-end;
-
-val SUC_PRE = UNDISCH (EQT_ELIM (ARITH_CONV ``0 < m ==> (SUC (PRE m) = m)``))
+val SUC_PRE = UNDISCH (ARITH ``0 < m ==> (SUC (PRE m) = m)``);
 
 fun mDISCH t th =
     if is_eq (concl th) then DISCH t th
@@ -503,48 +561,16 @@ end handle Option.Option =>
            raise mk_HOL_ERR "numSimps" "eliminate_SUCn"
                             "No applicable SUC term to eliminate"
 
-fun numfilter th = let
-  val newth = repeat eliminate_SUCn (repeat eliminate_single_SUC th)
-in
-  if aconv (concl newth) (concl th) then [th]
-  else [th, newth]
-end
-
-val ARITH_RWTS_ss =
-    simpLib.SIMPSET
-    { convs = [], rewrs = arithmetic_rewrites, congs = [],
-      filter = NONE, ac = [], dprocs = []};
-val ARITH_DP_ss =
-    simpLib.SIMPSET
+val SUC_FILTER_ss = 
+ let fun numfilter th = 
+      let val newth = repeat eliminate_SUCn 
+                        (repeat eliminate_single_SUC th)
+      in if aconv (concl newth) (concl th) then [th] else [th, newth]
+      end
+ in
+  simpLib.SIMPSET
     { convs = [], rewrs = [], congs = [],
-      filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+      filter = SOME numfilter, ac = [], dprocs = []}
+ end;
 
-val ARITH_ss = merge_ss [ARITH_RWTS_ss, ARITH_DP_ss];
-
-open numSyntax
-val REDUCE_ss = simpLib.SIMPSET
-  {convs = mk_unary_rconv (--`EVEN`--) ::
-           mk_unary_rconv (--`ODD`--)  ::
-           mk_unary_rconv (--`PRE`--)  ::
-           mk_unary_rconv (--`SUC`--) ::
-           map mk_redconv [mult_tm, plus_tm, minus_tm,
-                           div_tm, mod_tm, exp_tm,
-                           less_tm, leq_tm, greater_tm, geq_tm,
-                           ``MIN``, ``MAX``,
-                           ``$= : num -> num -> bool``],
-   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
-
-val SUC_FILTER_ss = simpLib.SIMPSET
-                    { convs = [], rewrs = [], congs = [],
-                      filter = SOME numfilter, ac = [], dprocs = []}
-
-val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
-
-fun clear_arith_caches() = clear_cache arith_cache;
-
-local open arithmeticTheory
-in
-val ARITH_AC_ss = ac_ss [(ADD_SYM,ADD_ASSOC), (MULT_SYM,MULT_ASSOC)]
-end
-
-end (* struct *)
+end (* numSimps *)

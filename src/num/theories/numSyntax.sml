@@ -32,6 +32,8 @@ struct
   val leq_tm       = prim_mk_const {Name="<=",      Thy="arithmetic"}
   val even_tm      = prim_mk_const {Name="EVEN",    Thy="arithmetic"}
   val odd_tm       = prim_mk_const {Name="ODD",     Thy="arithmetic"}
+  val min_tm       = prim_mk_const {Name="MIN",     Thy="arithmetic"}
+  val max_tm       = prim_mk_const {Name="MAX",     Thy="arithmetic"}
   val num_case_tm  = prim_mk_const {Name="num_case",Thy="arithmetic"}
   val fact_tm      = prim_mk_const {Name="FACT",    Thy="arithmetic"}
   val funpow_tm    = prim_mk_const {Name="FUNPOW",  Thy="arithmetic"}
@@ -47,21 +49,23 @@ struct
   fun mk_monop c tm = mk_comb(c,tm)
   fun mk_binop c (tm1,tm2) = mk_comb(mk_comb(c,tm1),tm2);
 
-  val mk_suc       = mk_monop suc_tm
-  val mk_pre       = mk_monop pre_tm
-  val mk_plus      = mk_binop plus_tm
-  val mk_minus     = mk_binop minus_tm
-  val mk_mult      = mk_binop mult_tm
-  val mk_exp       = mk_binop exp_tm
-  val mk_div       = mk_binop div_tm
-  val mk_mod       = mk_binop mod_tm
-  val mk_less      = mk_binop less_tm
-  val mk_greater   = mk_binop greater_tm
-  val mk_geq       = mk_binop geq_tm
-  val mk_leq       = mk_binop leq_tm
-  val mk_even      = mk_monop even_tm
-  val mk_odd       = mk_monop odd_tm
-  val mk_fact      = mk_monop fact_tm
+  val mk_suc     = mk_monop suc_tm
+  val mk_pre     = mk_monop pre_tm
+  val mk_plus    = mk_binop plus_tm
+  val mk_minus   = mk_binop minus_tm
+  val mk_mult    = mk_binop mult_tm
+  val mk_exp     = mk_binop exp_tm
+  val mk_div     = mk_binop div_tm
+  val mk_mod     = mk_binop mod_tm
+  val mk_less    = mk_binop less_tm
+  val mk_greater = mk_binop greater_tm
+  val mk_geq     = mk_binop geq_tm
+  val mk_leq     = mk_binop leq_tm
+  val mk_even    = mk_monop even_tm
+  val mk_odd     = mk_monop odd_tm
+  val mk_min     = mk_binop min_tm
+  val mk_max     = mk_binop max_tm
+  val mk_fact    = mk_monop fact_tm
 
   fun mk_num_case(b,f,n) =
       list_mk_comb(inst[alpha |-> type_of b] num_case_tm, [b,f,n]);
@@ -99,6 +103,8 @@ struct
   val dest_leq     = dest_binop leq_tm     (ERR "dest_leq" "")
   val dest_even    = dest_monop even_tm    (ERR "dest_even" "")
   val dest_odd     = dest_monop odd_tm     (ERR "dest_odd" "");
+  val dest_min     = dest_binop min_tm     (ERR "dest_min" "")
+  val dest_max     = dest_binop max_tm     (ERR "dest_max" "")
   val dest_fact    = dest_monop fact_tm    (ERR "dest_fact" "");
   val dest_least   = dest_monop least_tm   (ERR "dest_least" "");
 
@@ -162,6 +168,8 @@ struct
   val is_leq      = can dest_leq
   val is_even     = can dest_even
   val is_odd      = can dest_odd
+  val is_min      = can dest_min
+  val is_max      = can dest_max
   val is_num_case = can dest_num_case
   val is_fact     = can dest_fact
   val is_funpow   = can dest_funpow

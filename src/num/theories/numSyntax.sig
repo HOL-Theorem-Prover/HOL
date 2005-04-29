@@ -23,6 +23,8 @@ sig
   val leq_tm        : term
   val even_tm       : term
   val odd_tm        : term
+  val min_tm        : term
+  val max_tm        : term
   val num_case_tm   : term
   val fact_tm       : term
   val funpow_tm     : term
@@ -45,6 +47,8 @@ sig
   val mk_leq        : term * term -> term
   val mk_even       : term -> term
   val mk_odd        : term -> term
+  val mk_min        : term * term -> term
+  val mk_max        : term * term -> term
   val mk_num_case   : term * term * term -> term
   val mk_fact       : term -> term
   val mk_funpow     : term * term * term -> term
@@ -67,6 +71,8 @@ sig
   val dest_leq      : term -> term * term
   val dest_even     : term -> term
   val dest_odd      : term -> term
+  val dest_min      : term -> term * term
+  val dest_max      : term -> term * term
   val dest_num_case : term -> term * term * term
   val dest_fact     : term -> term
   val dest_funpow   : term -> term * term * term
@@ -89,6 +95,8 @@ sig
   val is_leq        : term -> bool
   val is_even       : term -> bool
   val is_odd        : term -> bool
+  val is_min        : term -> bool
+  val is_max        : term -> bool
   val is_num_case   : term -> bool
   val is_fact       : term -> bool
   val is_funpow     : term -> bool
