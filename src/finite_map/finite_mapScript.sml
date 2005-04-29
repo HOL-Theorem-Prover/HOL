@@ -1164,7 +1164,7 @@ val IN_DOMSUB_NOT_EQUAL = Q.prove
 (*---------------------------------------------------------------------------*)
 
 val SUBMAP_FUPDATE = Q.store_thm
-("SUBMAP_FUPDATE_",
+("SUBMAP_FUPDATE",
  `!(f:'a |->'b) g x y.
      (f |+ (x,y)) SUBMAP g =
         x IN FDOM(g) /\ (FAPPLY g x = y) /\ (f\\x) SUBMAP (g\\x)`,
