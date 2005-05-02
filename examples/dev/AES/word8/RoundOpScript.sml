@@ -236,37 +236,7 @@ val InvMultCol_def = Define
     (0xBw ** a) # (0xDw ** b) # (9w  ** c) # (0xEw ** d))`;
 
 (*---------------------------------------------------------------------------*)
-(* Table-lookup versions of MultCol and InvMultCol.Faster to use, but        *)
-(* require tables (consume space).                                           *)
-(*---------------------------------------------------------------------------*)
-(*
-val TabledMultCol = Q.store_thm
-("TabledMultCol",
- `MultCol(a,b,c,d) =
-    (GF256_by_2 a # GF256_by_3 b # c # d,
-     a # GF256_by_2 b # GF256_by_3 c # d,
-     a # b # GF256_by_2 c # GF256_by_3 d,
-     GF256_by_3 a # b # c # GF256_by_2 d)`,
- SIMP_TAC std_ss [MultCol_def] THEN
- SIMP_TAC std_ss (tcm_def::map SYM (CONJUNCTS (SPEC_ALL MultEquiv))));
-
-val TabledInvMultCol = 
- Q.store_thm
- ("TabledInvMultCol",
-  `InvMultCol (a,b,c,d) =
-    (GF256_by_14 a # GF256_by_11 b # GF256_by_13 c # GF256_by_9 d,
-     GF256_by_9 a # GF256_by_14 b # GF256_by_11 c # GF256_by_13 d,
-     GF256_by_13 a # GF256_by_9 b # GF256_by_14 c # GF256_by_11 d,
-     GF256_by_11 a # GF256_by_13 b # GF256_by_9 c # GF256_by_14 d)`,
- SIMP_TAC std_ss [InvMultCol_def] THEN
- SIMP_TAC std_ss (tcm_def::map SYM (CONJUNCTS (SPEC_ALL MultEquiv))));
-
-*)
-(*---------------------------------------------------------------------------*)
 (* Inversion lemmas for column multiplication. Proved with an ad-hoc tactic  *)
-(*                                                                           *)
-(* Note: could just use case analysis with Sbox_ind, then EVAL_TAC, but      *)
-(* that's far slower.                                                        *)
 (*---------------------------------------------------------------------------*)
 
 fun w8Cases (asl,g) =

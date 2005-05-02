@@ -6,7 +6,8 @@ open HolKernel boolLib bossLib Parse word8CasesLib;
 
 val _ = new_theory "tables";
 
-val Sbox = Count.apply word8Define
+val Sbox = Count.apply 
+ word8Define
   `(Sbox 0x0w = 0x63w) /\
    (Sbox 0x1w = 0x7Cw) /\
    (Sbox 0x2w = 0x77w) /\
@@ -265,7 +266,8 @@ val Sbox = Count.apply word8Define
    (Sbox 0xFFw = 0x16w)`;
 
 
-val InvSbox = Count.apply word8Define
+val InvSbox = Count.apply 
+ word8Define
   `(InvSbox 0x0w = 0x52w) /\
    (InvSbox 0x1w = 0x9w)  /\
    (InvSbox 0x2w = 0x6Aw) /\
@@ -522,7 +524,15 @@ val InvSbox = Count.apply word8Define
    (InvSbox 0xFDw = 0x21w) /\
    (InvSbox 0xFEw = 0xCw)  /\
    (InvSbox 0xFFw = 0x7Dw)`;
-(*
+
+val Sbox_Inversion = Q.store_thm
+("Sbox_Inversion",
+ `!w:word8. InvSbox (Sbox w) = w`,
+ STRIP_TAC THEN word8Cases_on `w` THEN RW_TAC bool_ss [Sbox, InvSbox]);
+
+(*  The following has been superseded by the construction
+    of tables in MultScript. We'll keep it for info purposes.
+
 val GF256_by_2 = Count.apply word8Define
   `(GF256_by_2 0x0w = 0x0w) /\
    (GF256_by_2 0x1w = 0x2w) /\
@@ -2072,9 +2082,5 @@ val GF256_by_14 = Count.apply word8Define
    (GF256_by_14 0xFFw = 0x8Dw)`;
 
 *)
-val Sbox_Inversion = Q.store_thm
-("Sbox_Inversion",
- `!w:word8. InvSbox (Sbox w) = w`,
- STRIP_TAC THEN word8Cases_on `w` THEN RW_TAC bool_ss [Sbox, InvSbox]);
 
 val _ = export_theory();

@@ -2,7 +2,10 @@ loadPath := "../../" :: "../../dff/" :: !loadPath;
 
 Globals.priming := SOME "";
 app load ["word8CasesLib", "compile", "aesTheory"];
+
+quietdec := true;
 open word8Theory compile MultTheory RoundOpTheory aesTheory;
+quietdec := false;
 
 val MAKE_NETLIST = Count.apply MAKE_NETLIST;
 
@@ -88,6 +91,8 @@ val InvShiftRows_dev =
            (CompileConvert (SPEC_ALL InvShiftRows_def));
 val InvShiftRowsNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvShiftRows_dev);
 
+val _ = add_combinational ["n2w"];
+
 val MultCol_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL MultCol_def));
@@ -106,6 +111,7 @@ val MixColumns_def' =
 val MixColumns_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL MixColumns_def'));
+(* Slow, but result seems pretty good *)
 val MixColumnsNetlist = 
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) MixColumns_dev);
 
@@ -117,6 +123,7 @@ val InvMixColumns_def' =
 val InvMixColumns_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL InvMixColumns_def'));
+
 val InvMixColumnsNetlist = 
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvMixColumns_dev);
 
@@ -125,14 +132,27 @@ val XOR_BLOCK_def =
    `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block,
                (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
        =
-      (a0 # b0,   a1 # b1,   a2 # b2,   a3 # b3,
-       a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
-       a8 # b8,   a9 # b9,   a10 # b10, a11 # b11,
+      (a0 # b0,    a1 # b1,   a2 # b2,   a3 # b3,
+       a4 # b4,    a5 # b5,   a6 # b6,   a7 # b7,
+       a8 # b8,    a9 # b9,  a10 # b10, a11 # b11,
        a12 # b12, a13 # b13, a14 # b14, a15 # b15)`;
+
+(*
+val XOR_BLOCK_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+           (CompileConvert (SPEC_ALL XOR_BLOCK_def));
+
+(* Takes way too long ... it's just a map2 for blocks *)
+val XOR_BLOCKNetlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) XOR_BLOCK_dev);
+*)
+
+val _ = add_combinational ["bitwise_eor"];
 
 val XOR_BLOCK_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (CompileConvert (SPEC_ALL XOR_BLOCK_def));
+
 val XOR_BLOCKNetlist = 
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) XOR_BLOCK_dev);
 
@@ -146,9 +166,27 @@ val XOR_BLOCKNetlist =
 
 val ROTKEYS_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
-           (CompileConvert (SPEC_ALL ROTKEYS_def));
-val ROTKEYSNetlist = 
-  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ROTKEYS_dev);
+           (CompileConvert (SPEC_ALL ROTKEYS_def))
+
+(* This is just re-wiring, so shouldn't be slow  (but is ...) *)
+
+val ROTKEYSNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ROTKEYS_dev);
+
+(* Simple example of slowness 
+val rot_def = Define `ROT (x,y,z) : num # num # num = (y,z,x)`;
+val rot_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] (CompileConvert (SPEC_ALL rot_def));
+val rotNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) rot_dev);
+
+type_abbrev("block",``:bool#bool#bool#bool#bool#bool#
+                       bool#bool#bool#bool#bool#bool``);
+val rot_def = Define `ROT (u,v,x,y,z) : block # block # block # block # block 
+                        = (v,x,y,z,u)`;
+val rot_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] (CompileConvert (SPEC_ALL rot_def));
+val rotNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) rot_dev);
+
+
 
 val REVKEYS_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
@@ -160,4 +198,5 @@ Round_def
 InvRound_def
 AES_FWD
 AES_BWD;
+
 

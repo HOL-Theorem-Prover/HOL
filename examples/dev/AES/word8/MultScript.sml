@@ -37,20 +37,12 @@ val xtime_def = Define
                  0x1Bw
                else
                  0w)`;
-(*
-val xtime_def = Define
-  `xtime (w : word8) =
-     if MSB w then
-       w << 1 # 0x1Bw
-     else
-       w << 1`;
-*)
+
 val MSB_lem = Q.prove (
 `!a b. MSB (a # b) = ~(MSB a = MSB b)`,
 REPEAT STRIP_TAC THEN n2w_TAC `a` THEN n2w_TAC `b` THEN 
 RW_TAC arith_ss [EOR_EVAL, EOR_def, MSB_EVAL, MSBn_def, HB_def, WL_def,
                  BITWISE_THM]);
-
 
 val xtime_distrib = Q.store_thm
 ("xtime_distrib",
@@ -136,20 +128,7 @@ val ConstMultEq = Q.store_thm
 
 
 (*---------------------------------------------------------------------------*)
-(* Specialized version, with partially evaluated multiplication. Uses tables *)
-(* from tablesTheory.                                                        *)
-(*---------------------------------------------------------------------------*)
-(*
-val TableConstMult_def = word8Define
- `(tcm 0x2w = GF256_by_2)  /\
-  (tcm 0x3w = GF256_by_3)  /\
-  (tcm 0x9w = GF256_by_9)  /\
-  (tcm 0xBw = GF256_by_11) /\
-  (tcm 0xDw = GF256_by_13) /\
-  (tcm 0xEw = GF256_by_14)`
-*)
-(*---------------------------------------------------------------------------*)
-(* Unrolled version                                                          *)
+(* Tabled versions                                                           *)
 (*---------------------------------------------------------------------------*)
 
 fun UNROLL_RULE 0 def = def
@@ -173,6 +152,10 @@ WORD_RULE o PURE_REWRITE_CONV [mult_thm, xtime_def]
 
 fun build_table arg1 = word8GenCases `$** ^arg1` eval_mult
 
+(*---------------------------------------------------------------------------*)
+(* Construct specialized multiplication tables.                              *)
+(*---------------------------------------------------------------------------*)
+
 val (mult_tables, mult_ifs) =
 let val (ifs, tables) =
         unzip (map (Count.apply build_table)
@@ -181,30 +164,31 @@ in
 (LIST_CONJ tables, LIST_CONJ ifs)
 end
 
+(*---------------------------------------------------------------------------*)
+(* mult_unroll                                                               *)
+(*    |- (2w ** x = xtime x) /\                                              *)
+(*       (3w ** x = x # xtime x) /\                                          *)
+(*       (9w ** x = x # xtime (xtime (xtime x)))      /\                     *)
+(*       (11w ** x = x # xtime (x # xtime (xtime x))) /\                     *)
+(*       (13w ** x = x # xtime (xtime (x # xtime x))) /\                     *)
+(*       (14w ** x = xtime (x # xtime (x # xtime x)))                        *)
+(*---------------------------------------------------------------------------*)
+
 val _ = save_thm ("mult_unroll", mult_thm)
+
+(*---------------------------------------------------------------------------*)
+(* Multiplication by constant implemented by one-step rewrites.              *)
+(*---------------------------------------------------------------------------*)
+
 val _ = save_thm ("mult_tables", mult_tables)
+
+(*---------------------------------------------------------------------------*)
+(* Multiplication by constant implemented by lookup into balanced binary     *)
+(* tree. Lookup is done bit-by-bit.                                          *)
+(*---------------------------------------------------------------------------*)
+
 val _ = save_thm ("mult_ifs", mult_ifs)
  
-(*---------------------------------------------------------------------------*)
-(* Directly looking up answers in specialized tables is equivalent to        *)
-(* the multiplication algorithm each time. And should be much faster!        *)
-(*---------------------------------------------------------------------------*)
-(*
-val MultEquiv = Count.apply Q.store_thm
- ("MultEquiv",
-  `!b. (tcm 0x2w b = 0x2w ** b) /\
-       (tcm 0x3w b = 0x3w ** b) /\
-       (tcm 0x9w b = 0x9w ** b) /\
-       (tcm 0xBw b = 0xBw ** b) /\
-       (tcm 0xDw b = 0xDw ** b) /\
-       (tcm 0xEw b = 0xEw ** b)`,
- STRIP_TAC THEN PURE_ONCE_REWRITE_TAC [TableConstMult_def] THEN
- word8Cases_on `b` THEN
- RW_TAC arith_ss [GF256_by_2_def, GF256_by_3_def,
-                  GF256_by_9_def, GF256_by_11_def, GF256_by_13_def,
-                  GF256_by_14_def, mult_thm] THEN
- PURE_REWRITE_TAC [xtime_def] THEN WORD_TAC)
-*)
 (*---------------------------------------------------------------------------*)
 (* Exponentiation                                                            *)
 (*---------------------------------------------------------------------------*)
