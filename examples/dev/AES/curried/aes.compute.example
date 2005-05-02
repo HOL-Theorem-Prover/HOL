@@ -63,7 +63,7 @@ val M2 = Term`AES ^key`;
 Count.apply EVAL M;
 (*
 runtime: 63.860s,    gctime: 3.300s,     systime: 0.530s.
-HOL primitive inference steps: 2526955.
+HOL primitive inference steps: 2,526,955.
 *)
 
 Count.apply EVAL M1;
