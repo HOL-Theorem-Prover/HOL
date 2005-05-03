@@ -6,8 +6,6 @@ open Portable HolKernel term_grammar
 
 val PP_ERR = mk_HOL_ERR "term_pp";
 
-infixr -->
-
 (*---------------------------------------------------------------------------
    Miscellaneous syntax stuff.
  ---------------------------------------------------------------------------*)
@@ -1179,7 +1177,7 @@ fun pp_term (G : grammar) TyG = let
         in
           pbegin addparens; begin_block INCONSISTENT 2;
           add_string fname;
-          spacep (not (symbolic fname)); 
+          spacep (not (symbolic fname));
           pr_vstructl bvs;
           add_string endbinding; spacep true;
           begin_block CONSISTENT 0;

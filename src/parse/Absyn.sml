@@ -2,7 +2,6 @@ structure Absyn :> Absyn =
 struct
 
 open Feedback HolKernel;
-infix ##;
 
 type term         = Term.term
 type pretype      = Pretype.pretype
@@ -36,8 +35,7 @@ val dest_pair = sdest_binop (",", "pair") (ERR "dest_pair" "");
 val is_pair = Lib.can dest_pair;
 
 fun mk_pair (fst,snd) =
- let infixr -->
-     val fsty = type_of fst
+ let val fsty = type_of fst
      val sndty = type_of snd
      val c = mk_thy_const{Name=",",Thy="pair",
               Ty=fsty --> sndty

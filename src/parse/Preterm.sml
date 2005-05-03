@@ -2,8 +2,6 @@ structure Preterm :> Preterm =
 struct
 
 open Feedback Lib GrammarSpecials;
-infix ##
-infixr -->
 
 val ERR = mk_HOL_ERR "Preterm"
 val ERRloc = mk_HOL_ERRloc "Preterm"

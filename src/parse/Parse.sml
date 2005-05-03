@@ -2,7 +2,6 @@ structure Parse :> Parse =
 struct
 
 open Feedback HolKernel HOLgrammars GrammarSpecials term_grammar type_grammar
-infixr -->
 
 type pp_element = term_grammar.pp_element
 type PhraseBlockStyle = term_grammar.PhraseBlockStyle
