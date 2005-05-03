@@ -1,5 +1,6 @@
 signature Lib =
 sig
+  datatype frag = datatype Portable.frag
   val curry         : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
   val uncurry       : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
   val append        : 'a list -> 'a list -> 'a list
