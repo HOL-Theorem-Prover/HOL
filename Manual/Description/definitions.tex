@@ -539,6 +539,8 @@ The pretty-printing of big records can be controlled with the
 
 
 \section{Quotient Type Definition}\label{quotients}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!quotients|(}
+\index{quotient types, definition of}
 
 \HOL{} provides a library for defining new types which are quotients
 of existing types, with respect to partial equivalence relations.
@@ -631,7 +633,7 @@ process of defining lifted constants
 is described in [HOQ] \S 9.
 
 {\it tyop\_equivs\/} is a list of conditional equivalence theorems
-for type operators (see [HOQ] \S 4.1). 
+for type operators (see [HOQ] \S 4.1).
 These are used for bringing into regular form
 theorems on new type operators, so that they can be lifted
 (see [HOQ] \S 11 and \S 12).
@@ -724,6 +726,7 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
       poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
       old_thms=old_thms};
 \end{verbatim}
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!quotients|)}
 
 
 \section{Function Definition}\label{TFL}

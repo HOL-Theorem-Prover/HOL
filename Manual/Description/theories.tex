@@ -2573,9 +2573,9 @@ The predicate \ml{NULL} and the selectors
 %
 \paragraph{Case expressions}
 
-Compound \HOL{} expressions that branch based on
-whether a term is an empty or non-empty list have the
-surface syntax (borrowed from ML)
+Compound \HOL{} expressions that branch based on whether a term is an
+empty or non-empty list have the surface syntax (roughly borrowed from
+ML)
 \[
 \begin{array}{l}
 \konst{case}\ e_1 \ \konst{of} \\
@@ -2836,8 +2836,8 @@ constants in this theory are:
 The \ml{LHD} and \ml{LTL} constants return \ml{NONE} when applied to
 the empty sequence, \ml{LNIL}.  This use of an option type is another
 way of modelling the essential partiality of these constants.  (In the
-theory of lists, the analogous \ml{HD} and \ml{TL} functions are
-simply have unspecified values when applied to empty lists.)
+theory of lists, the analogous \ml{HD} and \ml{TL} functions simply
+have unspecified values when applied to empty lists.)
 
 The type \ml{llist} is not inductive, and there is no primitive
 recursion theorem supporting the definition of functions that have
