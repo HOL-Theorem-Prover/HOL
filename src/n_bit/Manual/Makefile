@@ -59,5 +59,15 @@ index:
 word:
 	latex word.tex
 
+warn:
+	@if test -e word.ps; then \
+            echo "** WARNING ************************************"; \
+            echo "*** The file \"word.ps\" might be out od date ***"; \
+            echo "***********************************************"; fi
+	@if test -e word.pdf; then \
+            echo "** WARNING *************************************"; \
+            echo "*** The file \"word.pdf\" might be out od date ***"; \
+            echo "************************************************"; fi
+
 all:
-	make clean; make tex; make word; make index; make word;
+	make clean; make tex; make word; make index; make word; make warn
