@@ -62,11 +62,11 @@ word:
 warn:
 	@if test -e word.ps; then \
             echo "** WARNING ************************************"; \
-            echo "*** The file \"word.ps\" might be out od date ***"; \
+            echo "*** The file \"word.ps\" might be out of date ***"; \
             echo "***********************************************"; fi
 	@if test -e word.pdf; then \
             echo "** WARNING *************************************"; \
-            echo "*** The file \"word.pdf\" might be out od date ***"; \
+            echo "*** The file \"word.pdf\" might be out of date ***"; \
             echo "************************************************"; fi
 
 all:
