@@ -2,6 +2,9 @@
 (* Another example to illiustrate adding a component (see ../README).        *)
 (*****************************************************************************)
 
+(*****************************************************************************)
+(* Boilerplate theory loading stuff                                          *)
+(*****************************************************************************)
 quietdec := true;
 loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
 map load
@@ -17,7 +20,8 @@ infixr 3 ORELSER;
 intLib.deprecate_int();
 
 (*****************************************************************************)
-(* Boilerplate. Probably more than is needed.                                *)
+(* More boilerplate. Declaring combinational logic functions.                *)
+(* Probably more than is needed.                                             *)
 (*****************************************************************************)
 add_combinational ["MOD","WL","DIV"];
 add_combinational ["word_add","word_sub"];
@@ -62,12 +66,6 @@ dump_all_flag := true;
 
 verilog_simulator := iverilog;
 waveform_viewer   := gtkwave;
-
-(*****************************************************************************)
-(* Stop zillions of warning messages that HOL variables of type ``:num``     *)
-(* are being converted to Verilog wires or registers of type [31:0].         *)
-(*****************************************************************************)
-numWarning := false;
 
 SIMULATE NotXor32_cir [("inp1","537"),("inp2","917")];
 

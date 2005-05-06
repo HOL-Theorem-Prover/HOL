@@ -13,6 +13,9 @@ open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
 infixr 3 THENR;
 infixr 3 ORELSER;
 val _ = intLib.deprecate_int();
+(*
+use "linRec.ml";
+*)
 quietdec := false;
 
 
@@ -28,6 +31,19 @@ val _ = AddBinop ("ADD",  (``UNCURRY $+ : num#num->num``,  "+"));
 val _ = AddBinop ("SUB",  (``UNCURRY $- : num#num->num``,  "-"));
 val _ = AddBinop ("LESS", (``UNCURRY $< : num#num->bool``, "<"));
 val _ = AddBinop ("EQ",   (``UNCURRY $= : num#num->bool``, "=="));
+
+(*****************************************************************************)
+(* Definition of factorial function                                          *)
+(*****************************************************************************)
+val Fact_def = Define `Fact n = if n=0 then 1 else n * Fact (n-1)`;
+
+(* Start to use linRec tool (suspended pending tool release)
+
+val (simple_equiv,tail_def,equiv,linRec_thm,tailRec_thm) =
+ transformRec Fact_def;
+
+REWRITE_RULE [GSYM tail_def] tailRec_thm;
+*)
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
@@ -51,11 +67,11 @@ val (MultIter,MultIter_ind,MultIter_dev) =
 (*****************************************************************************)
 (* Verify that MultIter does compute multiplication                          *)
 (*****************************************************************************)
-val MultIterRecThm =              (* proof adapted from similar one from KXS *)
+val MultIterThm =                 (* proof adapted from similar one from KXS *)
  save_thm
-  ("MultIterRecThm",
+  ("MultIterThm",
    prove
-    (``!m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc``,
+    (``!m n acc. MultIter (m,n,acc) = (0, n, (m * n) + acc)``,
      recInduct MultIter_ind THEN RW_TAC std_ss []
       THEN RW_TAC arith_ss [Once MultIter]
       THEN Cases_on `m` 
@@ -75,16 +91,16 @@ val MultThm =
  store_thm
   ("MultThm",
    ``Mult = UNCURRY $*``,
-   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]);
+   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterThm]);
 
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
-val FactIterRecThm =                                       (* proof from KXS *)
+val FactIterThm =                                       (* proof from KXS *)
  save_thm
-  ("FactIterRecThm",
+  ("FactIterThm",
    prove
-    (``!n acc. SND(FactIter (n,acc)) = acc * FACT n``,
+    (``!n acc. FactIter (n,acc) = (0, acc * FACT n)``,
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter,FACT]
       THEN Cases_on `n` 
@@ -104,7 +120,7 @@ val FactThm =
  store_thm
   ("FactThm",
    ``Fact = FACT``,
-   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]);
+   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterThm]);
 
 (*****************************************************************************)
 (* Derivation using refinement combining combinators                         *)
@@ -139,38 +155,15 @@ val FACT_cir =
 (* This dumps changes to all variables. Set to false to dump just the        *)
 (* changes to module FACT.                                                   *)
 (*****************************************************************************)
-dump_all_flag := true; 
+dump_all_flag := false; 
 
 (*****************************************************************************)
 (* Change these variables to select simulator and viewer. Commenting out the *)
 (* three assignments below will revert to the defaults: cver/dinotrace.      *)
 (*****************************************************************************)
 iverilog_path      := "/usr/bin/iverilog";
-verilog_simulator := iverilog;
-
-(******************************************************************************
-(*****************************************************************************)
-(* Alternative: could replace "/homes/mjcg/bin/verilog/vlogger/vlogcmd" by   *)
-(* another verilog simulator.                                                *)
-(*****************************************************************************)
-verilog_simulator :=
- let fun verilog name =
-      let val vlog_command = ("/homes/mjcg/bin/verilog/vlogger/vlogcmd"
-                              ^ " " ^ name ^ ".vl")
-          val code = Process.system vlog_command
-          val _ = if isSuccess code
-                   then print(vlog_command ^ "\n")
-                   else print("Warning:\n failure signal returned by\n "
-                              ^ vlog_command ^ "\n")
-      in
-       ()
-      end
- in
-  verilog
- end;
-******************************************************************************)
-
-waveform_viewer   := gtkwave;
+verilog_simulator  := iverilog;
+waveform_viewer    := gtkwave;
 
 (*****************************************************************************)
 (* Stop zillions of warning messages that HOL variables of type ``:num``     *)

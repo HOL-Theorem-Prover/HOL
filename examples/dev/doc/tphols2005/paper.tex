@@ -6,7 +6,7 @@
 %\title{A Proof-Producing Hardware Compiler for a Subset of Higher Order Logic}
 %
 
-\title{{\tiny REVISED APRIL 05, 2005}\\
+\title{{\tiny LAST REVISED APRIL 22, 2005}\\
        A Proof-Producing Hardware Compiler\\
        for a Subset of Higher Order Logic}
 
@@ -40,7 +40,7 @@ Cambridge CB3 0FD, UK            &\hspace*{5mm}& Utah UT84112, USA
 \thispagestyle{empty}
 
 \begin{abstract}
-A special purpose theorem prover for creating hardware implementations
+A special-purpose theorem prover for creating hardware implementations
 is described.  Implementations are created as theorems $\vdash
 {\it{Imp}}\Rightarrow{\it{Spec}}$, where {\it{Imp}} describes a
 circuit that implements a four-phase handshake computing a function
@@ -98,7 +98,7 @@ underlies the work. Next we describe how function definitions in
 higher order logic are translated to hardware via a sequence of steps,
 ending with Verilog.  Some unfinished case studies that are in
 progress are then discussed. Finally, we survey related work by
-others, and outline our plans for the future. An appendix contains the
+others, and outline our plans for the future. An Appendix contains the
 definitions of the circuit constructors that we use to build
 implementations.
 
@@ -115,7 +115,7 @@ implementations.
 We illustrate the translation from higher order logic to hardware with a
 simple toy example: the factorial function. This example is chosen for
 clarity and is not typical of the kind of
-applications were are working on!  For a brief discussion of those
+applications w eare working on!  For a brief discussion of those
 applications see Section~\ref{secCaseStudy}.
 The factorial function \DEF{FACT} satisfies
 
@@ -182,7 +182,7 @@ implicit \texttt{Define}), but it also creates a theorem:
 \noindent The term to the left of $\Longrightarrow$ is a high-level
 representation of an implementation using `circuit constructors' which
 are described in Section~\ref{secImplementation} and formally defined in the
-appendix.  The term \DEF{Dev~FactIter} describes a behaviour that
+Appendix.  The term \DEF{Dev~FactIter} describes a behaviour that
 applies the function \DEF{FactIter} under the control of a four-phase
 handshake. The details of the handshake are specified in the
 definition of the higher order function \DEF{Dev} in
@@ -224,8 +224,10 @@ function \DEF{FACT}, so we create an implementation of it, called
 \vspace*{-2mm}
 
 \noindent The circuit here contains \DEF{Dev~FactIter} preceded and
-followed by some combinational logic. We can refine this
-implementation by replacing the specification
+followed by some combinational logic (the operators \DEF{PRECEDE} and
+\DEF{FOLLOW} add combinational logic before and after the body of a
+device, respectively -- see the Appendix for their definition). We can
+refine this implementation by replacing the specification
 \DEF{Dev~FactIter} by the previously constructed implementation.
 %(our circuit constructors are compositional).
 
@@ -261,13 +263,12 @@ then we would synthesise a theorem:
 \( \vdash \texttt{(...)} \Longrightarrow \DEF{Dev}({\times}) \)
 \end{alltt}}
 
-\vspace*{-2mm}
+\vspace*{-3mm}
 
 \noindent and then refine the occurrence of $\DEF{Dev}(\times)$
 to \texttt{(...)}. To manage such top-down developments we have
 implemented operators for combining refinements analogous to rewriting
 operators \cite{paulson83}.
-
 Alternatively, we could add
 ${\times}$ to the list of combinationally-implementable functions.
 
@@ -298,7 +299,7 @@ circuit to the left of $\Rightarrow$ is a netlist represented in the
 standard way in higher order logic \cite{Mel93} and built out of two
 kinds of abstract registers: a unit delay \DEF{DEL} and edge-triggered
 register \DEF{DFF}. The other components are combinational and
-comprise boolean functions \DEF{NOT},
+comprise Boolean functions \DEF{NOT},
 \DEF{AND}, \DEF{OR}, multiplexers \DEF{MUX}, constants $\DEF{CONSTANT}~n$ that output a value $n$,
 and functional blocks
 $\DEF{COMB}~f$ that compute the function $f$ (if $f$ takes two arguments,
@@ -314,7 +315,7 @@ incorporated his theory (and even some of his old HOL88 code) in
 our compiler. Applied to our factorial implementation.
 we get:
 
-%\vspace*{-1.5mm}
+\vspace*{-1.5mm}
 
 {\baselineskip10pt\begin{alltt}
 \( \vdash \DEF{InfRise} clk                                                                        \)
@@ -330,9 +331,9 @@ we get:
 \(   \Rightarrow \DEF{Dev} \DEF{FACT} (load \DEF{at} clk, inp \DEF{at} clk, done \DEF{at} clk, out \DEF{at} clk) \)
 \end{alltt}}
 
-%\vspace*{-2.5mm}
+\vspace*{-2.5mm}
 
-This theorem uses explicitly clocked registers \DEF{Dtype} and
+\noindent This theorem uses explicitly clocked registers \DEF{Dtype} and
 \DEF{DtypeT} (defined in Section~\ref{secImplementation}) and states
 that, assuming a live clock ($\DEF{InfRise}~clk$ means $clk$
 has infinitely many rising edges), then the behaviour of the
@@ -577,7 +578,7 @@ described here. As an example, the proof script deduces from:
 The next step is to replace the combinators \DEF{Seq},
 \DEF{Par}, \DEF{Ite} and \DEF{Rec} with corresponding circuit constructors
 \DEF{SEQ},
-\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build handshaking devices (see the appendix for their definitions).
+\DEF{PAR}, \DEF{ITE} and \DEF{REC} that build handshaking devices (see the Appendix for their definitions).
 The key property of these constructors are the following theorems that
 enable us to compositionally deduce theorems of the form $\vdash
 {\it{Imp_C}}
@@ -652,7 +653,7 @@ $$\begin{array}{l}
 \phantom{~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~}\\[-4mm]
 \end{array}$$
 
-\noindent The circuit constructor \DEF{ATM} is defined with the other constructors in the appendix.
+\noindent The circuit constructor \DEF{ATM} is defined with the other constructors in the Appendix.
 To avoid a proliferation  of internal handshakes, when the proof script that constructs $e_C$ from $e_c$ 
 is implementing $\DEF{Seq}~f_1~f_2$, it checks to see whether $f_1$ or $f_2$ 
 are compositions of combinational functions and if so introduces \DEF{PRECEDE} or \DEF{FOLLOW} instead of \DEF{SEQ},
@@ -697,7 +698,7 @@ $\vdash e_C \FIMP \DEF{Dev}~f$ where $e_C$ is an expression built out of the cir
 constructors \DEF{ATM}, 
 \DEF{SEQ}, \DEF{PAR}, \DEF{ITE}, \DEF{REC}, \DEF{PRECEDE} and \DEF{FOLLOW}. If the theorem
 is rewritten with the definitions of these constructors (see their
-definitions in the appendix) we get a circuit built out of standard
+definitions in the Appendix) we get a circuit built out of standard
 kinds of gates (\DEF{AND}, \DEF{OR}, \DEF{NOT} and \DEF{MUX}), a
 generic combinational component $\DEF{COMB}~g$ (where $g$ will be a
 function represented as a HOL $\lambda$-expression) and 
@@ -705,7 +706,7 @@ function represented as a HOL $\lambda$-expression) and
 
 The next phase of compilation converts terms of the form $\DEF{COMB}~g~(inp,out)$
 into circuits built only out of components that it is assumed can be directly realised in
-hardware. Such components  currently include boolean functions (e.g. $\wedge$,
+hardware. Such components  currently include Boolean functions (e.g. $\wedge$,
 $\vee$ and $\neg$), multiplexers and simple operations  on $n$-bit words (e.g.~versions
 of $+$, $-$ and $<$, various shifts etc.). 
 A special purpose proof rule uses a straightforward recursive algorithm to synthesise
@@ -724,7 +725,7 @@ combinational circuits. For example:
 \noindent where \texttt{<>} is bus concatenation,
 $\DEF{CONSTANT}~1~v0$ drives $v0$ high continuously, and
 $\DEF{COMB}~{<}$ and $\DEF{COMB}~{+}$ are assumed
-given components (if they were not given, then the could be
+given components (if they were not given, then they could be
 implemented explicitly, but one has to stop somewhere). 
  
 The abstract registers \DEF{DEL}, \DEF{DELT} and \DEF{DFF} used in the definitions of
@@ -767,7 +768,7 @@ $\DEF{Dtype}(ck,d,q) ~=~ \forall t.~q(t{+}1) = \texttt{if}~\DEF{Posedge}~ck~(t{+
 
 \vspace*{1mm}
 
-\noindent and a boolean version of this register that initialises to a state holding $\DEF{T}$ (i.e.~$1$):
+\noindent and a Boolean version of this register that initialises to a state holding $\DEF{T}$ (i.e.~$1$):
 
 \vspace*{1mm}
 
@@ -840,11 +841,11 @@ text that is printed.
 We are in the midst of two case-studies: a Booth multiplier, and an implementation
 of the AES encryption algorithm.
 
-As part of a project to verify an ARM processor \cite{Fox02}, a high
-level model of the multiplication algorithm used by some ARM
+As part of a project to verify an ARM processor \cite{Fox02}, a
+high-level model of the multiplication algorithm used by some ARM
 implementations was created in higher order logic. This is a Booth
 multiplier and we are using Fox's existing specification as an example
-for testing our compiler. 
+for testing our compiler.
 
 
 A more substantial example, being done at the University of Utah, is
@@ -875,7 +876,7 @@ a cyclical shift of each row;
 multiplication of each column by a fixed degree 3 polynomial, with coefficients
 in the 256 element finite field, GF($2^8$);
 \item
-adding a key to the matrix with exclusive or.
+adding a key to the matrix with exclusive OR.
 \end{enumerate}
 
 %\begin{figure}
@@ -905,7 +906,7 @@ the compiler.  As illustrated in
 Section~\ref{secHOL2Verilog}, we explored various options for
 generating components either as separate handshaking designs or expanding
 them into combinational logic. We have also explored converting our
-high level recursive specification of multiplication into a table
+high-level recursive specification of multiplication into a table
 lookup. The resulting verified tables can then be stored into a RAM or
 ROM device.  For synthesizing the tables directly into hardware, we
 have automated the definition of a function on bytes as a balanced
@@ -936,7 +937,7 @@ optimising designs.
 %--------------------------------------------------------------------------
 Previous approaches to combine theorem provers 
 and formal synthesis established an analogy between
-the goal directed proof technique and an interactive 
+the goal-directed proof technique and an interactive 
 design process. In LAMBDA, the user starts from the behavioural
 specification and builds the circuit incrementally
 by adding primitive hardware components
@@ -953,7 +954,7 @@ to their specifications. For instance,
 the Digital Design Derivation (DDD) transforms
 finite-state machines specified in terms of
 tail-recursive lambda abstractions into hierarchical
-boolean systems~\cite{Johnson90}. Lava and Hydra
+Boolean systems~\cite{Johnson90}. Lava and Hydra
 are both hardware description languages embedded
 in Haskell whose programs
 consist of definitions of gates and their 
@@ -965,7 +966,7 @@ via formal equational reasoning
 The functional languages $\mu$FP and Ruby
 adopt similar principles in hardware design~\cite{JS90,She84}.
 The circuits are defined in terms of primitive
-functions over booleans, numbers and lists, and
+functions over Booleans, numbers and lists, and
 higher-order functions, the {\em combining forms\/},
 which compose hardware blocks in different
 structures. Their mathematical properties provide
@@ -1019,7 +1020,7 @@ k-processes does not match the handshaking interface pattern.
 %------ SAFL: Sharp
 Our compilation method is partly inspired by SAFL 
 (Statically Allocated Functional Language) \cite{MS01b},
-especially the ideas in Richard Sharp's PhD \cite{Sha02}. 
+especially the ideas in Richard Sharp's PhD thesis \cite{Sha02}. 
 SAFL~is a first-order functional language whose
 programs consist of a sequence of tail-recursive function 
 definitions. Its high-level of abstraction allows
@@ -1051,19 +1052,19 @@ automatically.
 %--------------------------------------------------------------------------
 
 
-A first version of the compiler described here has only just been
-completed and is still being tested by simulating circuits and
-viewing the resulting waveforms. The source code for our compiler and
-the current state of various examples (including the Booth multiplier
-and AES) can be inspected at
+A first version of the compiler described here has been completed and
+has been tested by simulating circuits and viewing the resulting
+waveforms. The source code for our compiler and the current state of
+various examples (including the Booth multiplier and AES) can be
+inspected at
 SourceForge.\footnote{\url{http://cvs.sourceforge.net/viewcvs.py/hol/hol98/examples/dev/}}
 
 
-In the immediate future we plan to ruggedise and debug the existing
-code and continue and complete the case studies described in
-Section~\ref{secCaseStudy}. An important part of these case studies is
-examining the output of our compiler and developing improvements to
-ensure that it produces reasonable quality designs.
+In the immediate future we plan to continue and complete the case
+studies described in Section~\ref{secCaseStudy}. An important part of
+these case studies is examining the output of our compiler and
+developing improvements to ensure that it produces reasonable quality
+designs.
 
 At present all data-refinement (e.g.~from numbers or enumerated types
 to words) must be done manually, by proof in higher order logic. The
@@ -1079,7 +1080,7 @@ reference against which to test other implementations.
 The work described here is part of a bigger project to create
 hardware/software combinations by proof.  We hope to investigate the
 option of creating software for ARM processors and linking it to
-    hardware created by our compiler (possibly packaged as an ARM
+hardware created by our compiler (possibly packaged as an ARM
 co-processor). Our emphasis is likely to be on cryptographic hardware
 and software, because there is a clear need for high assurance of
 correct implementation in this domain.
@@ -1117,6 +1118,10 @@ $
 \TURNST\ \DEF{MUX} (\VAR{sw,in_1,in_2,out})~ =~
  \forall t.\ out~t =  \IF{sw~t}{in_1~t}{in_2~t}\\
 \TURNST\ \DEF{COMB}\ f\ \VAR{(inp,out)} ~ = \forall t.\ \VAR{out}\ t = f (\VAR{inp}\ t)\\
+\TURNST\ \DEF{PRECEDE}\ f\ d~ =~
+         \lambda(load,inp,done,out). \exists v. \DEF{COMB}~f~(inp,v) \wedge d(load,v,done,out)\\
+\TURNST\ \DEF{FOLLOW}\ d\ f~ =~
+         \lambda(load,inp,done,out). \exists v. d(load,inp,done,y) \wedge \DEF{COMB}~f~(v,out)\\
 \TURNST\ \DEF{DEL}\ (\VAR{inp},\VAR{out}) ~ = \forall t.\ \VAR{out} (t{+}1) = \VAR{inp}\ t\\
 \TURNST\ \DEF{DELT}\ (\VAR{inp},\VAR{out}) ~ = 
     (\VAR{out}\ 0 = \DEF{T})\ \AND\ 
