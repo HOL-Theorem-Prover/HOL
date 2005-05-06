@@ -30,6 +30,9 @@ clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
               entries.tex theorems.tex
 
+cleanAll:
+	make clean; rm -f *.ps *.pdf
+
 tex: ids theorems
 	@echo "TeX files made"
 
@@ -59,15 +62,31 @@ index:
 word:
 	latex word.tex
 
-warn:
+warnps:
 	@if test -e word.ps; then \
             echo "** WARNING ************************************"; \
             echo "*** The file \"word.ps\" might be out of date ***"; \
             echo "***********************************************"; fi
+
+warnpdf:
 	@if test -e word.pdf; then \
             echo "** WARNING *************************************"; \
             echo "*** The file \"word.pdf\" might be out of date ***"; \
             echo "************************************************"; fi
 
+psorpdf:
+	@if dvipdf word; then \
+	    make warnps; echo "* Made PDF *"; \
+	 elif dvips -Ppdf -G0 word; then \
+	    echo "* Made PS *"; \
+	    if ps2pdf word.ps; then \
+	       echo "* Made PDF *"; \
+	    else \
+	       make warnpdf; \
+	    fi; \
+	 else \
+	   make warnps; make warnpdf; \
+	 fi
+
 all:
-	make clean; make tex; make word; make index; make word; make warn
+	make clean; make tex; make word; make index; make word; make psorpdf
