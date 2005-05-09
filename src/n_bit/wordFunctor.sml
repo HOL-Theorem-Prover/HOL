@@ -689,6 +689,11 @@ val _ = overload_on (">>", Term`$word_asr`);
 val _ = overload_on (">>>", Term`$word_lsr`);
 val _ = overload_on ("#>>", Term`$word_ror`);
 
+val rotl = Define `rotl x n =  x #>> (WL - n)`;
+val _ = overload_on ("#<<",Term`$rotl`);
+val _ = set_fixity "#<<" (Infixl 680);
+
+
 val WORD_BIT_def   = Define `WORD_BIT b n = BIT b (w2n n)`;
 val WORD_BITS_def  = Define `WORD_BITS h l n = BITS h l (w2n n)`;
 val WORD_SLICE_def = Define `WORD_SLICE h l n = SLICE h l (w2n n)`;
@@ -2532,6 +2537,12 @@ val HS_EVAL = store_thm("HS_EVAL",
   `!m n. word_hs (n2w m) (n2w n) = MOD_WL m >= MOD_WL n`,
   RW_TAC bool_ss [WORD_HS_THM,w2n_EVAL]
 );
+
+val SHIFT_Inversion = Q.store_thm
+  ("SHIFT_Inversion",
+  `!s n. n < WL ==> ((s #>> n #<< n = s) /\ (s #<< n #>> n = s))`,
+  REWRITE_TAC [rotl,ROR_ADD] THEN RW_TAC arith_ss [SUB_LEFT_ADD] THEN
+  METIS_TAC [ROR_CYCLE, MULT_CLAUSES]);
 
 (*---------------------------------------------------------------------------*)
 (* Support for termination proofs                                            *)
