@@ -26,12 +26,8 @@ val (ctxt_rules, ctxt_indn, ctxt_cases) =  (* p. 10 *)
 val constant_contexts_exist = store_thm(
   "constant_contexts_exist",
   ``!t. ctxt (\x. t)``,
-  HO_MATCH_MP_TAC ncTheory.nc_INDUCTION THEN REPEAT STRIP_TAC THEN
-  SRW_TAC [][ctxt_rules] THEN
-  POP_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN
-  SRW_TAC [][ncTheory.lemma14a] THEN
-  `ctxt (\x'. LAM x ((\x'. t) x'))` by SRW_TAC [][ctxt_rules] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  HO_MATCH_MP_TAC ncTheory.simple_induction THEN REPEAT STRIP_TAC THEN
+  SRW_TAC [][ctxt_rules]);
 
 val (one_hole_context_rules, one_hole_context_ind, one_hole_context_cases) =
   Hol_reln`one_hole_context (\x.x) /\
@@ -109,68 +105,33 @@ val fixed_point_thm = store_thm(  (* p. 14 *)
 
 val SUB_TWICE_ONE_VAR = store_thm(
   "SUB_TWICE_ONE_VAR",
-  ``!body x y v. [x/v] ([y/v] body) = [[x/v]y / v] body``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][SUB_THM, SUB_VAR] THEN
-  Q_TAC (NEW_TAC "newx") `v INSERT FV body UNION FV y UNION FV x'` THEN
-  `LAM x body = LAM newx ([VAR newx/x]body)` by SRW_TAC [][ALPHA] THEN
+  ``!body. [x/v] ([y/v] body) = [[x/v]y / v] body``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN SRW_TAC [][SUB_THM, SUB_VAR] THEN
+  Q.EXISTS_TAC `v INSERT FV x UNION FV y` THEN
   SRW_TAC [][SUB_THM] THEN
   Cases_on `v IN FV y` THEN SRW_TAC [][SUB_THM, lemma14c, lemma14b]);
 
 val lemma2_11 = store_thm(
   "lemma2_11",
-  ``!t u v M N. ~(v = u)  /\ ~(v IN FV M) ==>
-                ([M/u] ([N/v] t) = [[M/u]N/v] ([M/u] t))``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][SUB_THM, SUB_VAR, lemma14b] THEN
-  Q_TAC (NEW_TAC "newx") `{u;v} UNION FV t UNION FV M UNION FV N` THEN
-  `LAM x t = LAM newx ([VAR newx/x] t)` by SRW_TAC [][ALPHA] THEN
-  SRW_TAC [][SUB_THM] THEN
-  Cases_on `u IN FV N` THENL [
-    SRW_TAC [][SUB_THM, lemma14c],
-    Q_TAC (fn t =>
-              SIMP_TAC (srw_ss()) [lemma14b, ASSUME t]) `~(u IN FV N)` THEN
-    FIRST_X_ASSUM (K ALL_TAC o assert (is_forall o concl)) THEN
-    SRW_TAC [][SUB_THM]
-  ]);
+  ``!t. ~(v = u)  /\ ~(v IN FV M) ==>
+        ([M/u] ([N/v] t) = [[M/u]N/v] ([M/u] t))``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  Q.EXISTS_TAC `{u;v} UNION FV M UNION FV N` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR, lemma14b] THEN
+  Cases_on `u IN FV N` THEN SRW_TAC [][SUB_THM, lemma14b, lemma14c]);
+
+val substitution_lemma = save_thm("substitution_lemma", lemma2_11);
 
 val GENERAL_SUB_COMMUTE = store_thm(
   "GENERAL_SUB_COMMUTE",
-  ``!t M N u v w.
+  ``!t.
        ~(w = u) /\ ~(w IN FV t) /\ ~(w IN FV M) ==>
        ([M/u] ([N/v] t) = [[M/u]N/w]([M/u] ([VAR w/v] t)))``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  Q.EXISTS_TAC `{u;v;w} UNION FV M UNION FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR] THENL [
-    COND_CASES_TAC THEN
-    FULL_SIMP_TAC (srw_ss())[SUB_THM, SUB_VAR, lemma14b],
-
-    Q_TAC (NEW_TAC "newx") `{w;u;v} UNION FV t UNION FV M UNION FV N` THEN
-    `LAM x t = LAM newx ([VAR newx/x] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    SRW_TAC [][SUB_THM] THEN
-    Cases_on `u IN FV N` THENL [
-      SRW_TAC [][SUB_THM, lemma14c, LAM_VAR_INJECTIVE] THEN
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      Cases_on `x IN FV t` THEN
-      SRW_TAC [][lemma14c, lemma14b],
-      `FV ([M/u] N) = FV N` by PROVE_TAC [lemma14b] THEN
-      SRW_TAC [][SUB_THM, LAM_VAR_INJECTIVE] THEN
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      Cases_on `x IN FV t` THEN
-      SRW_TAC [][lemma14c, lemma14b]
-    ],
-
-    Q_TAC (NEW_TAC "newx") `{w;u;v} UNION FV t UNION FV M UNION FV N` THEN
-    `LAM w t = LAM newx ([VAR newx/w] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    ASM_REWRITE_TAC [] THEN SRW_TAC [][SUB_THM] THEN
-    Cases_on `u IN FV N` THENL [
-      SRW_TAC [][SUB_THM, lemma14c] THEN
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      Cases_on `w IN FV t` THEN
-      SRW_TAC [][lemma14c, lemma14b],
-      `FV ([M/u] N) = FV N` by PROVE_TAC [lemma14b] THEN
-      SRW_TAC [][SUB_THM] THEN
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      Cases_on `w IN FV t` THEN
-      SRW_TAC [][lemma14c, lemma14b]
-    ]
+    SRW_TAC [][SUB_VAR, lemma14b],
+    Cases_on `u IN FV N` THEN SRW_TAC [][lemma14b, lemma14c, SUB_THM]
   ]);
 
 val NOT_IN_FV_SUB = store_thm(
@@ -200,8 +161,11 @@ val ISUB_SUB_COMMUTE = store_thm(
    Rf ([[P/y] N/u] ([P/y] ([VAR u/x]M)))` by
      SRW_TAC [][NOT_IN_FV_SUB] THEN
   `[VAR v/u] ([P/y] ([VAR u/x] M)) = [P/y] ([VAR v/x] M)` by
-      (Q.SPECL_THEN [`M`,`P`,`VAR v`,`y`,`x`,`u`]
-                    MP_TAC GENERAL_SUB_COMMUTE THEN
+      (MP_TAC
+         ((Q.SPEC `M` o
+           Q.INST [`M` |-> `P`, `u` |-> `y`, `w` |-> `u`,
+                   `N` |-> `VAR v`, `v` |-> `x`])
+            GENERAL_SUB_COMMUTE) THEN
        SRW_TAC [][lemma14b]) THEN
   POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][]);
 
@@ -219,15 +183,11 @@ val lemma2_12 = store_thm( (* p. 19 *)
       `LAM x M == LAM x M'` by PROVE_TAC [lam_eq_rules] THEN
       `LAM x M @@ N == LAM x M' @@ N` by PROVE_TAC [lam_eq_rules] THEN
       PROVE_TAC [lam_eq_rules],
-      Q_TAC SUFF_TAC `!M N N' x. N == N' ==> [N/x] M == [N'/x]M` THEN1
+      Q_TAC SUFF_TAC `!N N' x M. N == N' ==> [N/x] M == [N'/x]M` THEN1
         SRW_TAC [][] THEN
-      HO_MATCH_MP_TAC nc_INDUCTION THEN
-      REVERSE (SRW_TAC [][SUB_THM, SUB_VAR]) THEN1
-        (Q_TAC (NEW_TAC "y") `x' INSERT FV M UNION FV N UNION FV N'` THEN
-         `LAM x M = LAM y ([VAR y/x]M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-         SRW_TAC [][SUB_THM] THEN
-         PROVE_TAC [lam_eq_rules]) THEN
-      PROVE_TAC [lam_eq_rules]
+      NTAC 3 GEN_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+      Q.EXISTS_TAC `x INSERT FV N UNION FV N'` THEN
+      SRW_TAC [][SUB_THM, SUB_VAR] THEN PROVE_TAC [lam_eq_rules]
     ],
     PROVE_TAC [lam_eq_rules]
   ]);

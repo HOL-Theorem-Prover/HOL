@@ -761,6 +761,24 @@ val swap_RECURSION_simple = save_thm(
    Q.INST [`rswap` |-> `\x y z. z`, `rFV` |-> `K {}`])
     swap_RECURSION_nosideset);
 
+val lswapstr_def = Define`
+  (lswapstr [] s = s) /\
+  (lswapstr (h::t) s = swapstr (FST h) (SND h) (lswapstr t s))
+`;
+
+val lswap_def = Define`
+  (lswap [] t = t) /\
+  (lswap (h::hs) t = swap (FST h) (SND h) (lswap hs t))
+`;
+
+val lswap_thm = store_thm(
+  "lswap_thm",
+  ``(lswap p (VAR s) = VAR (lswapstr p s)) /\
+    (lswap p (CON k) = CON k) /\
+    (lswap p (M @@ N) = lswap p M @@ lswap p N) /\
+    (lswap p (LAM v M) = LAM (lswapstr p v) (lswap p M))``,
+  Induct_on `p` THEN SRW_TAC [][lswap_def, lswapstr_def, swap_thm]);
+val _ = export_rewrites ["lswap_thm"]
 
 (* examples
 
@@ -853,6 +871,8 @@ val l14a = prove(
 
 
 *)
+
+
 
 
 val _ = export_theory();

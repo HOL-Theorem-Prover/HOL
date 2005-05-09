@@ -90,6 +90,7 @@ val FV_THM = Q.store_thm("FV_THM",
   (!x n. FV (LAM x n:'a nc) = (FV n) DELETE x)`,
 RW_TAC OK_ss
   [FV, CON, VARR, APP, LAM, dFV_def, dFV_dLAMBDA]);
+val _ = export_rewrites ["FV_THM"]
 
 
 (* --------------------------------------------------------------------- *)
@@ -137,6 +138,13 @@ val SUB_THM =
 RW_TAC OK_ss
   [LAM, APP, VARR, CON, FV, SUB_DEF,lem, NEQ_dVAR_dSUB,
    EQ_dVAR_dSUB,dCON_dSUB, dAPP_dSUB,dLAMBDA_dSUB_EQ,dLAMBDA_dSUB]);
+
+(* ADG: following should be the axiomatisation *)
+
+val SUB_VAR = Q.store_thm("SUB_VAR",
+`!x y t. [t/y](VAR x) = if x=y then t else VAR x`,
+RW_TAC std_ss [SUB_THM]);
+
 
 
 (* --------------------------------------------------------------------- *)
@@ -707,7 +715,6 @@ nc_INDUCT_TAC
    THEN PROVE_TAC [lemma14a]);
 val _ = export_rewrites ["FINITE_FV"]
 
-
 (* ===================================================================== *)
 (* Injectivity theorems                                                  *)
 (* ===================================================================== *)
@@ -768,23 +775,25 @@ val LAM_INJ_ALPHA_FV = store_thm(
 (* Andy's second induction theorem -- follows easily.                    *)
 (* ===================================================================== *)
 
-val nc_INDUCTION2 = Q.store_thm ("nc_INDUCTION2",
-`!P. (!k. P(CON k)) /\
-     (!x. P(VAR x)) /\
-     (!t u. P t /\ P u ==> P(t @@ u)) /\
-     (?X. FINITE X /\ !y. ~(y IN X) ==> !u. P u ==> P(LAM y u))
+val nc_INDUCTION2 = Q.store_thm (
+  "nc_INDUCTION2",
+  `!P X. (!k. P(CON k)) /\
+         (!x. P(VAR x)) /\
+         (!t u. P t /\ P u ==> P(t @@ u)) /\
+         (!y u. ~(y IN X) /\ P u ==> P(LAM y u)) /\
+         FINITE X
      ==>
-     !u. P u`,
-GEN_TAC THEN STRIP_TAC THEN nc_INDUCT_TAC THEN RW_TAC std_ss []
+         !u. P u`,
+ REPEAT GEN_TAC THEN STRIP_TAC THEN nc_INDUCT_TAC THEN RW_TAC std_ss []
  THEN MP_TAC (Q.SPEC `FV ^u UNION X` FRESH_string)
- THEN RW_TAC std_ss [FINITE_UNION,IN_UNION,DE_MORGAN_THM,FINITE_FV]
+ THEN SRW_TAC [][]
  THEN PROVE_TAC [SIMPLE_ALPHA]);
 
 (* --------------------------------------------------------------------- *)
 (* Induction tactic for this kind of induction.                          *)
 (* --------------------------------------------------------------------- *)
 
-fun nc_INDUCT_TAC2 (A,g) =
+fun nc_INDUCT_TAC2 q (A,g) =
   let val (_,P) = dest_comb g
       val ith = ISPEC P nc_INDUCTION2
       fun bconv tm
@@ -794,9 +803,13 @@ fun nc_INDUCT_TAC2 (A,g) =
           else BETA_CONV tm
       val bth = CONV_RULE (ONCE_DEPTH_CONV bconv) ith
   in
-        (MATCH_MP_TAC bth THEN REPEAT CONJ_TAC
+        (MATCH_MP_TAC bth THEN Q.EXISTS_TAC q THEN REPEAT CONJ_TAC
           THENL [ALL_TAC, ALL_TAC,
                  GEN_TAC THEN GEN_TAC THEN STRIP_TAC,
+                 GEN_TAC THEN GEN_TAC THEN
+                 REWRITE_TAC [IN_UNION, IN_INSERT, IN_DELETE,
+                              DE_MORGAN_THM] THEN
+                 STRIP_TAC,
                  ALL_TAC]) (A,g)
   end;
 
@@ -811,61 +824,45 @@ fun nc_INDUCT_TAC2 (A,g) =
 (* Compare the original proof of Andy's -- witness FV(u) + FV(t) + {x}   *)
 (* --------------------------------------------------------------------- *)
 
-val lemma14b = Q.store_thm("lemma14b",
-`!t x u. ~(x IN FV u) ==> ([t/x]u = u)`,
-NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2
-   THEN RW_TAC std_ss [FV_THM,SUB_THM,DE_MORGAN_THM,IN_DELETE,IN_UNION,IN_SING]
-   THEN Q.EXISTS_TAC `FV t`
-   THEN RW_TAC std_ss
-          [FINITE_FV,FINITE_UNION,FINITE_SING,IN_UNION, DE_MORGAN_THM,IN_SING]
-   THEN Cases_on `x:string = y` THEN ZAP_TAC (std_ss && [SUB_THM]) []);
+val lemma14b = Q.store_thm(
+  "lemma14b",
+  `!t x u. ~(x IN FV u) ==> ([t/x]u = u)`,
+  NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2 `x INSERT FV t` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR]);
 
 
-(* --------------------------------------------------------------------- *)
-(* Andy's induction scheme. Fix only t. This also works.                 *)
-(* --------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    Andy's induction scheme. Fix only t. This also works, but it does
+    force an unnecessary case split.
+   ---------------------------------------------------------------------- *)
 
 val lemma14b = Q.store_thm("lemma14b",
-`!t u x. ~(x IN FV u) ==> ([t/x]u = u)`,
-GEN_TAC THEN nc_INDUCT_TAC2
-   THEN RW_TAC std_ss [FV_THM,SUB_THM,DE_MORGAN_THM,IN_DELETE,IN_UNION,IN_SING]
-   THEN Q.EXISTS_TAC `FV t`
-   THEN RW_TAC std_ss
-         [FINITE_FV,FINITE_UNION,FINITE_SING,IN_UNION,DE_MORGAN_THM,IN_SING]
-   THEN Cases_on `x:string = y` THEN ZAP_TAC (std_ss && [SUB_THM]) []);
-
+  `!t u x. ~(x IN FV u) ==> ([t/x]u = u)`,
+  GEN_TAC THEN nc_INDUCT_TAC2 `FV t` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR] THEN SRW_TAC [][SUB_THM] THEN
+  Cases_on `x = y` THEN SRW_TAC [][SUB_THM]);
 
 (* --------------------------------------------------------------------- *)
 (* The remaining Hindley and Seldin theorems.                            *)
 (* --------------------------------------------------------------------- *)
 
-val lemma14c = Q.store_thm("lemma14c",
-`!t u x.
-   x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))`,
-GEN_TAC THEN nc_INDUCT_TAC2
-  THEN RW_TAC std_ss [NOT_IN_EMPTY,FV_THM,SUB_THM,DE_MORGAN_THM,
-          IN_DELETE,IN_UNION,IN_SING,UNION_DELETE] THENL
- [RW_TAC std_ss  [SING_DELETE,UNION_EMPTY],
-  Cases_on `x IN (FV u)` THEN
-     ZAP_TAC (std_ss && [lemma14b,EXTENSION,IN_UNION]) [DELETE_NON_ELEMENT],
-  Cases_on `x IN (FV t')` THEN
-     ZAP_TAC (std_ss && [lemma14b,EXTENSION,IN_UNION]) [DELETE_NON_ELEMENT],
-  Q.EXISTS_TAC `FV t` THEN ZAP_TAC (std_ss &&
-      [FINITE_FV,SUB_THM,FV_THM,UNION_DELETE,EXTENSION,IN_UNION,IN_DELETE]) []]);
-
+val lemma14c = Q.store_thm(
+  "lemma14c",
+  `!t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))`,
+  NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2 `x INSERT FV t` THEN
+  ASM_SIMP_TAC (srw_ss()) [SUB_THM, SUB_VAR, EXTENSION] THENL [
+    STRIP_TAC THENL [
+      Cases_on `x IN FV u` THEN SRW_TAC [][lemma14b] THEN METIS_TAC [],
+      Cases_on `x IN FV t'` THEN SRW_TAC [][lemma14b] THEN METIS_TAC []
+    ],
+    METIS_TAC []
+  ]);
 
 val lemma15a = Q.store_thm("lemma15a",
-`!t y u.
-   ~(y IN FV u) ==> !x. [t/y]([VAR y/x]u) = [t/x]u`,
-NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2
-  THEN RW_TAC std_ss [FV_THM,SUB_THM,DE_MORGAN_THM,IN_UNION,IN_SING] THENL
-  [VAR_SUB_TAC THEN RW_TAC std_ss [SUB_THM],
-   Q.EXISTS_TAC `FV t UNION {y}`
-    THEN RW_TAC std_ss [FINITE_FV,IN_DELETE,DE_MORGAN_THM,FINITE_UNION,
-                        FINITE_SING,IN_UNION,IN_SING]
-    THEN Cases_on `x:string = y'` THENL
-    [RW_TAC std_ss [lemma14b,SUB_THM],
-     RW_TAC std_ss [FV_THM,EXTENSION,IN_SING,SUB_THM]]]);
+  `!t y u.
+     ~(y IN FV u) ==> ([t/y]([VAR y/x]u) = [t/x]u)`,
+  NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2 `{x;y} UNION FV t` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR] THEN SRW_TAC [][SUB_VAR]);
 
 
 val lemma15b = Q.store_thm("lemma15b",
@@ -1022,11 +1019,6 @@ val RENAMING_THM = store_thm(
 
 val R = Term `R : ('a nc # string) list`;
 
-(* ADG: following should be the axiomatisation *)
-
-val SUB_VAR = Q.store_thm("SUB_VAR",
-`!x y t. [t/y](VAR x) = if x=y then t else VAR x`,
-RW_TAC std_ss [SUB_THM]);
 
 val ISUB_VAR_RENAME = Q.store_thm("ISUB_VAR_RENAME",
 `!ss. RENAMING ss
@@ -1056,7 +1048,7 @@ Induct THENL
  THEN RW_TAC list_ss
  [ISUB_def,DOM_DEF,FVS_DEF,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
 
-val _ = BasicProvers.export_rewrites ["FV_THM", "nc_DISTINCT",
+val _ = BasicProvers.export_rewrites ["nc_DISTINCT",
                                       "nc_INJECTIVITY", "LAM_VAR_INJECTIVE"];
 
 
