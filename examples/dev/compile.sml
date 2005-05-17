@@ -588,7 +588,12 @@ val termination_simps = ref default_termination_simps;
 (* which will accept either non-recursive or recursive specifications. It    *)
 (* returns a triple (|- eqns, |- ind, |- dev) where the ind theorem should   *)
 (* be ignored for non(it will be boolTheory.TRUTH).                          *)
+(*                                                                           *)
+(* The results of hwDefine are stored in an reference hwDefineLib.           *)
+(*                                                                           *)
 (*---------------------------------------------------------------------------*)
+
+val hwDefineLib = ref([] : (thm * thm * thm)list);
 
 fun hwDefine defq =
  let val absyn0 = Parse.Absyn defq
@@ -622,6 +627,7 @@ fun hwDefine defq =
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                           (RecCompileConvert defth totalth)
         in
+         hwDefineLib := (defth,ind,devth) :: !hwDefineLib;
          (defth,ind,devth)
         end
      | otherwise => 
@@ -637,7 +643,9 @@ fun hwDefine defq =
               else ()
             val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
                           (CompileConvert defth)
-        in (defth,boolTheory.TRUTH,devth)
+        in 
+         hwDefineLib := (defth,boolTheory.TRUTH,devth) :: !hwDefineLib;
+         (defth,boolTheory.TRUTH,devth)
         end
  end;
 
@@ -782,7 +790,8 @@ fun ATM_REFINE tm =
 (*  ``DEV fi``                                                               *)
 (*                                                                           *)
 (* returns the first theorem <circuit> ===> DEV fi                           *)
-(* that it finds in the supplied list (i.e. library)                         *)
+(* that it finds in the supplied list (i.e. library).                        *)
+(* Fails if no refining theorem found.                                       *)
 (*****************************************************************************)
 fun LIB_REFINE lib tm =
  if is_DEV tm
@@ -792,7 +801,7 @@ fun LIB_REFINE lib tm =
       (aconv tm o snd o dest_dev_imp o concl o SPEC_ALL)
       lib
    of SOME th => th
-    | NONE    => ISPEC tm DEV_IMP_REFL
+    | NONE    => raise ERR "LIB_REFINE" "DEV not in library"
   else raise ERR "LIB_REFINE" "attempt to lookup a non-DEV";
 
 (*****************************************************************************)
@@ -823,7 +832,7 @@ fun DEPTHR refine tm =
   then (refine tm
         handle _ => ISPEC tm DEV_IMP_REFL)
  else if is_ATM tm
-  then ISPEC tm DEV_IMP_REFL
+ then ISPEC tm DEV_IMP_REFL
  else if is_PRECEDE tm
   then
    let val (f,d) = dest_PRECEDE tm
@@ -892,42 +901,61 @@ fun REFINE refine th =
  handle _ => raise ERR "REFINE" "bad argument";
 
 (*****************************************************************************)
-(* Some refinement combinators made by tweaking code from Conv.sml           *)
-(* N.B. Not yet working -- needs rethinking a bit                            *)
+(* Naively implemented refinement combinators                                *)
 (*****************************************************************************)
 
-(* ----------------------------------------------------------------------
-    Refinement that always succeeds, but does nothing.
-    Indicates this by raising the UNCHANGEDR exception.
-   ---------------------------------------------------------------------- *)
+(*****************************************************************************)
+(*    |- t2 ===> t1                                                          *)
+(*   --------------- refine t2 = |- t3 ===> t2                               *)
+(*    |- t3 ===> t1                                                          *)
+(*****************************************************************************)
+fun ANTE_REFINE th refine =
+  MATCH_MP DEV_IMP_TRANS (CONJ (refine (fst(dest_dev_imp(concl th)))) th);
 
-exception UNCHANGED_REFINE;
-
-fun ALL_REFINE t = raise UNCHANGED_REFINE;
-
-(* ----------------------------------------------------------------------
-    Apply two conversions in succession;  fail if either does.  Handle
-    UNCHANGED_REFINE appropriately.
-   ---------------------------------------------------------------------- *)
+(*****************************************************************************)
+(* Apply two refinements in succession;  fail if either does.                *)
+(*****************************************************************************)
 infixr 3 THENR;
 
-fun (refine1 THENR refine2) tm = 
- let val th1 = refine1 tm
- in
-  MATCH_MP DEV_IMP_TRANS (CONJ (refine2 (fst(dest_dev_imp(concl th1)))) th1)
-  handle UNCHANGED_REFINE => th1
- end 
- handle UNCHANGED_REFINE => refine2 tm;
+fun (refine1 THENR refine2) tm = ANTE_REFINE (refine1 tm) refine2;
 
-(* ----------------------------------------------------------------------
-    Apply refine1;  if it raises a HOL_ERR then apply refine2. Note that
-    interrupts and other exceptions (including UNCHANGED_REFINE) will sail 
-    on through.
-   ---------------------------------------------------------------------- *)
+(*****************************************************************************)
+(* Apply refine1;  if it raises a HOL_ERR then apply refine2. Note that      *)
+(* interrupts and other exceptions will sail on through.                     *)
+(*****************************************************************************)
 infixr 3 ORELSER;
 
 fun (refine1 ORELSER refine2) tm = 
  refine1 tm handle HOL_ERR _ => refine2 tm;
+
+(*****************************************************************************)
+(* Identity refinement    tm --> |- tm ===> tm                               *)
+(*****************************************************************************)
+fun ALL_REFINE tm = ISPEC tm DEV_IMP_REFL;
+
+(*****************************************************************************)
+(* Repeat refine until no change                                             *)
+(*****************************************************************************)
+fun REPEATR refine tm =
+ let val th = refine tm
+     val (tm1,tm2) = dest_dev_imp(concl th)
+ in
+  if aconv tm1 tm2 
+   then th 
+   else ANTE_REFINE th (REPEATR refine)
+ end;
+
+(*****************************************************************************)
+(* Refine using hwDefineLib and then convert all remaining DEVs to ATMs      *)
+(*****************************************************************************)
+fun REFINE_ALL th =
+ REFINE
+  (REPEATR
+    (DEPTHR
+      (LIB_REFINE(map #3 (!hwDefineLib))
+        ORELSER ATM_REFINE
+        ORELSER ALL_REFINE)))
+  th;
 
 (*****************************************************************************)
 (* Some ancient code for normalising circuits (will need to be updated!)     *)

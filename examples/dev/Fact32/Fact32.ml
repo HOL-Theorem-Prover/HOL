@@ -77,18 +77,7 @@ val (Fact32,_,Fact32_dev) =
 (*****************************************************************************)
 (* Derivation using refinement combining combinators                         *)
 (*****************************************************************************)
-val Fact32Imp_dev =
- REFINE
-  (DEPTHR(LIB_REFINE[Fact32Iter_dev])
-    THENR DEPTHR(LIB_REFINE[Mult32_dev])
-    THENR DEPTHR(LIB_REFINE[Mult32Iter_dev])
-    THENR DEPTHR ATM_REFINE)
-  Fact32_dev;
-
-val Fact32_net =
- save_thm
-  ("Fact32_net",
-   time MAKE_NETLIST Fact32Imp_dev);
+val Fact32Imp_dev = REFINE_ALL Fact32_dev;
 
 val Fact32_cir =
  save_thm

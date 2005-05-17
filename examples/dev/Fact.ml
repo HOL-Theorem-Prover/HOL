@@ -13,9 +13,6 @@ open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
 infixr 3 THENR;
 infixr 3 ORELSER;
 val _ = intLib.deprecate_int();
-(*
-use "linRec.ml";
-*)
 quietdec := false;
 
 
@@ -33,17 +30,21 @@ val _ = AddBinop ("LESS", (``UNCURRY $< : num#num->bool``, "<"));
 val _ = AddBinop ("EQ",   (``UNCURRY $= : num#num->bool``, "=="));
 
 (*****************************************************************************)
-(* Definition of factorial function                                          *)
+(* To implement multiplication we use a naive iterative multiplier function  *)
+(* (works by repeated addition)                                              *)
 (*****************************************************************************)
-val Fact_def = Define `Fact n = if n=0 then 1 else n * Fact (n-1)`;
+val (MultIter,MultIter_ind,MultIter_dev) =
+ hwDefine
+  `(MultIter (m,n,acc) =
+     if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc))
+   measuring FST`;
 
-(* Start to use linRec tool (suspended pending tool release)
-
-val (simple_equiv,tail_def,equiv,linRec_thm,tailRec_thm) =
- transformRec Fact_def;
-
-REWRITE_RULE [GSYM tail_def] tailRec_thm;
-*)
+(*****************************************************************************)
+(* Create an implementation of a multiplier from MultIter                    *)
+(*****************************************************************************)
+val (Mult,_,Mult_dev) =
+ hwDefine
+  `Mult(m,n) = SND(SND(MultIter(m,n,0)))`;
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
@@ -51,18 +52,47 @@ REWRITE_RULE [GSYM tail_def] tailRec_thm;
 val (FactIter,FactIter_ind,FactIter_dev) =
  hwDefine
   `(FactIter (n,acc) =
-      if n = 0 then (n,acc) else FactIter (n - 1,n * acc))
+      if n = 0 then (n,acc) else FactIter(n - 1, Mult(n,acc)))
    measuring FST`;
 
 (*****************************************************************************)
-(* To implement `$*`` we build a naive iterative multiplier function         *)
-(* (works by repeated addition)                                              *)
+(* Implement a function Fact to compute SND(FactIter (n,1))                  *)
 (*****************************************************************************)
-val (MultIter,MultIter_ind,MultIter_dev) =
+val (Fact,_,Fact_dev) =
  hwDefine
-  `(MultIter (m,n,acc) =
-      if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc))
-   measuring FST`;
+  `Fact n = SND(FactIter (n,1))`;
+
+(*****************************************************************************)
+(* Derivation using refinement combining combinators                         *)
+(*****************************************************************************)
+val FactImp_dev = REFINE_ALL Fact_dev;
+
+val Fact_cir =
+ save_thm
+  ("Fact_cir",
+   time MAKE_CIRCUIT FactImp_dev);
+
+(*****************************************************************************)
+(* This dumps changes to all variables. Set to false to dump just the        *)
+(* changes to module FACT.                                                   *)
+(*****************************************************************************)
+dump_all_flag := false; 
+
+(*****************************************************************************)
+(* Change these variables to select simulator and viewer. Commenting out the *)
+(* three assignments below will revert to the defaults: cver/dinotrace.      *)
+(*****************************************************************************)
+iverilog_path      := "/usr/bin/iverilog";
+verilog_simulator  := iverilog;
+waveform_viewer    := gtkwave;
+
+(*****************************************************************************)
+(* Stop zillions of warning messages that HOL variables of type ``:num``     *)
+(* are being converted to Verilog wires or registers of type [31:0].         *)
+(*****************************************************************************)
+numWarning := false;
+
+SIMULATE Fact_cir [("inp","4")];
 
 (*****************************************************************************)
 (* Verify that MultIter does compute multiplication                          *)
@@ -76,13 +106,6 @@ val MultIterThm =                 (* proof adapted from similar one from KXS *)
       THEN RW_TAC arith_ss [Once MultIter]
       THEN Cases_on `m` 
       THEN FULL_SIMP_TAC arith_ss [MULT]));
-
-(*****************************************************************************)
-(* Create an implementation of a multiplier from MultIter                    *)
-(*****************************************************************************)
-val (Mult,_,Mult_dev) =
- hwDefine
-  `Mult(m,n) = SND(SND(MultIter(m,n,0)))`;
 
 (*****************************************************************************)
 (* Verify Mult is actually multiplication                                    *)
@@ -104,14 +127,7 @@ val FactIterThm =                                       (* proof from KXS *)
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter,FACT]
       THEN Cases_on `n` 
-      THEN FULL_SIMP_TAC arith_ss [FACT, AC MULT_ASSOC MULT_SYM]));
-
-(*****************************************************************************)
-(* Implement a function Fact to compute SND(FactIter (n,1))                  *)
-(*****************************************************************************)
-val (Fact,_,Fact_dev) =
- hwDefine
-  `Fact n = SND(FactIter (n,1))`;
+      THEN FULL_SIMP_TAC arith_ss [FACT, MultThm, AC MULT_ASSOC MULT_SYM]));
 
 (*****************************************************************************)
 (* Verify Fact is indeed the factorial function                              *)
@@ -121,56 +137,5 @@ val FactThm =
   ("FactThm",
    ``Fact = FACT``,
    RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterThm]);
-
-(*****************************************************************************)
-(* Derivation using refinement combining combinators                         *)
-(*****************************************************************************)
-val Fact_dev =
- REFINE
-  (DEPTHR(LIB_REFINE[FactIter_dev])
-    THENR DEPTHR(LIB_REFINE[SUBS [MultThm] Mult_dev])
-    THENR DEPTHR(LIB_REFINE[MultIter_dev])
-    THENR DEPTHR ATM_REFINE)
-  Fact_dev;
-
-(*****************************************************************************)
-(* Create implementation of FACT (HOL's native factorial function)           *)
-(*****************************************************************************)
-val FACT_dev =
- save_thm
-  ("FACT_dev",
-   REWRITE_RULE [FactThm] Fact_dev);
-
-val FACT_net =
- save_thm
-  ("Fact_net",
-   time MAKE_NETLIST FACT_dev);
-
-val FACT_cir =
- save_thm
-  ("Fact_cir",
-   time MAKE_CIRCUIT FACT_dev);
-
-(*****************************************************************************)
-(* This dumps changes to all variables. Set to false to dump just the        *)
-(* changes to module FACT.                                                   *)
-(*****************************************************************************)
-dump_all_flag := false; 
-
-(*****************************************************************************)
-(* Change these variables to select simulator and viewer. Commenting out the *)
-(* three assignments below will revert to the defaults: cver/dinotrace.      *)
-(*****************************************************************************)
-iverilog_path      := "/usr/bin/iverilog";
-verilog_simulator  := iverilog;
-waveform_viewer    := gtkwave;
-
-(*****************************************************************************)
-(* Stop zillions of warning messages that HOL variables of type ``:num``     *)
-(* are being converted to Verilog wires or registers of type [31:0].         *)
-(*****************************************************************************)
-numWarning := true;
-
-SIMULATE FACT_cir [("inp","4")];
 
 val _ = export_theory();

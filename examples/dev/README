@@ -12,6 +12,7 @@ vsynth.sml ................ convert a circuit made with MAKE_CIRCUIT to Verilog
 FactScript.sml ............ synthesise naive factorial and dump Verilog
 Fact.ml ................... synthesise and simulate factorial and run gtkwave
 Fact32 .................... directory with word32 examples (including factorial)
+Fact32Script.sml .......... Theorems relating Fact and Fact32
 dff ....................... Melham's temporal abstraction theory
 Holmakefile ............... instructions for Holmake
 
@@ -25,9 +26,9 @@ There are six levels of abstraction:
  C: Circuit      (clocked synchronous device predicates: Dtype, Dff)
  V: Verilog      (netlist pretty-printed into Verilog)
 
-The main user-level functions are hwDefine, REFINE and MAKE_NETLIST
-for creating hardware, refining it and then creating a netlist
-representation, and MAKE_CIRCUIT and MAKE_VERILOG for creating
+The main user-level functions are hwDefine, REFINE_ALL and
+MAKE_NETLIST for creating hardware, refining it and then creating a
+netlist representation, and MAKE_CIRCUIT and MAKE_VERILOG for creating
 Verilog HDL output.
 *******************************************************************************
 
@@ -127,8 +128,10 @@ which will accept either non-recursive or recursive specifications. It
 returns a triple (|- eqns, |- ind, |- dev) where the ind theorem
 should be ignored (it will be numTheory.INDUCTION.
 
-See FactScript.sml for examples.
+The result of a call to hwRefine is added to the front of a global
+reference hwDefineLib, which is accessed by REFINE_ALL.
 
+See FactScript.sml for examples.
 
 REFINE: (term -> thm) -> thm -> thm
 -----------------------------------
@@ -157,9 +160,6 @@ and then uses transitivity of ===> (DEV_IMP_TRANS) to deduce:
 
    |- <circuit'> ===> Dev f
 
-See FactScript.sml for examples.
-
-
 Two useful refine functions are ATM_REFINE and LIB_REFINE.
 
 
@@ -181,11 +181,12 @@ Evaluating
      |- <circuit> ===> DEV fn]
     ``DEV fi``
 
-returns the first theorem |- <circuit> ===> DEV fi that it finds in the
-supplied list (i.e. the supplied library).
+returns the first theorem |- <circuit> ===> DEV fi that it finds in
+the supplied list (i.e. the supplied library). Fails if no refinement
+theorem found.
 
-Refinement functions (analogously to conversions and tactics) can be combined using
-combinators THENR, ORELSER, DEPTHR. See FactScript.sml for examples.
+Refinement functions (analogously to conversions and tactics) can be
+combined using combinators THENR, ORELSER, REPEATR, DEPTHR. 
 
 
 THENR : (term -> thm) * (term -> thm) -> (term -> thm)
@@ -199,6 +200,16 @@ ORELSER : (term -> thm) * (term -> thm) -> (term -> thm)
 
 Tries first refinement and if that fails tries the second one.
 
+REPEATR : (term -> thm) -> term -> thm
+--------------------------------------
+
+Repeates a refinement until no change. Will fail if the refinement
+being repeated fails.
+
+ALL_REFINE: term -> thm
+-----------------------
+
+ALL_REFINE tm evaluatges to the identity refinement |- tm ===> tm
 
 DEPTHR : (term -> thm) -> (term -> thm)
 ---------------------------------------------
@@ -244,6 +255,21 @@ A refined circuit is then build up using the "monotonicity" theorems:
   |- !f P Q. P ===> Q ==> PRECEDE f P ===> PRECEDE f Q 
 
 Note that "DEPTHR refine" should never fail.
+
+REFINE: thm -> thm
+------------------
+
+Refine using definitions in hwDefineLib and then convert all remaining
+DEVs to ATMs. The definition is:
+
+  fun REFINE_ALL th =
+   REFINE
+    (REPEATR
+      (DEPTHR
+        (LIB_REFINE(map #3 (!hwDefineLib))
+          ORELSER ATM_REFINE
+          ORELSER ALL_REFINE)))
+    th;
 
 
 add_combinational : string list -> unit
@@ -335,8 +361,6 @@ corresponding to a netlist, and returns
  |- <netlist> 
     ==> 
     DEV f (load,(inp1<>...<>inpm),done,(out1<>...<>outn))
-
-See FactScript.sml for examples (e.g. FACT_net).
 
 
 MAKE_CIRCUIT : thm -> thm
@@ -807,4 +831,5 @@ termToVerilogLib := (!termToVerilogLib) @ [termToVerilog_XOR32];
 == [18.02.05: MJCG revised MAKE_VERILOG in vsynth; added MAKE_SIMULATION]    ==
 == [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave]       ==
 == [20.04.05: MJCG updated section on adding new components]                 ==
+== [17.05.05: MJCG added hwDefineLib and REFINE_ALL]                         ==
 ===============================================================================
