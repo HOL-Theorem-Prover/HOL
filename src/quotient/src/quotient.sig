@@ -1,11 +1,11 @@
 (* ===================================================================== *)
 (*                                                                       *)
 (* FILE          : quotient.sig                                          *)
-(* VERSION       : 2.1                                                   *)
+(* VERSION       : 2.2                                                   *)
 (* DESCRIPTION   : Functions for creating a quotient type.               *)
 (*                                                                       *)
 (* AUTHOR        : Peter Vincent Homeier                                 *)
-(* DATE          : February 28, 2005                                     *)
+(* DATE          : April 15, 2005                                        *)
 (* COPYRIGHT     : Copyright (c) 2005 by Peter Vincent Homeier           *)
 (*                                                                       *)
 (* ===================================================================== *)
@@ -41,18 +41,18 @@ sig
 (* package.                                                            *)
 (* ------------------------------------------------------------------- *)
 
-val chatting : bool ref
+val chatting : bool ref (* default is false, no trace of quotient operation *)
+
+val caching  : bool ref (* default is true, do cache quotient thms for speed *)
+
+val reset_cache : unit -> unit
+val list_cache  : unit -> (Type.hol_type * Thm.thm) list
 
 val define_quotient_type :
         string ->      (* name of new quotient type *)
         string ->      (* name of abstraction function from old to new *)
         string ->      (* name of representation function from new to old *)
         Thm.thm ->     (* equivalence or partial equivalence theorem *)
-(*
-        Thm.thm ->     (* reflexivity theorem *)
-        Thm.thm ->     (* symmetry theorem *)
-        Thm.thm ->     (* transitivity theorem *)
-*)
         Thm.thm        (* returns one theorem:
 
               abs of rep is identity /\
@@ -389,6 +389,72 @@ val define_quotient_types_rule :
                                            by quotients *)
          poly_respects : Thm.thm list} ->
                                      (* polymorphic fns respect equivalence *)
+        (Thm.thm -> Thm.thm)          (* rule for lifting theorems *)
+
+(* MAIN ENTRY POINT INCLUDING STANDARD THEOREMS: *)
+
+val define_quotient_types_full :
+        {types: {name:string,          (* name of new quotient type *)
+                 equiv:Thm.thm} list,  (* relation is an equivalence *)
+         defs: {def_name:string,            (* name of stored definition *)
+                fname:string,               (* name of new lifted function *)
+                func:Term.term,             (* old function to be lifted *)
+                fixity: Parse.fixity} list, (* fixity of new function *)
+         tyop_equivs: Thm.thm list,  (* conditional equiv ths for type ops *)
+         tyop_quotients: Thm.thm list,(*conditional quotient ths for type ops*)
+         tyop_simps: Thm.thm list, (* rel/map simplification ths for type ops*)
+         respects : Thm.thm list,    (* old functions respect equivalence *)
+         poly_preserves : Thm.thm list, (* polymorphic fns are preserved
+                                           by quotients *)
+         poly_respects : Thm.thm list,(* polymorphic fns respect equivalence *)
+         old_thms : Thm.thm list} -> (* theorems of old fns to be lifted *)
+        Thm.thm list                 (* new lifted theorems *)
+
+(* ALTERNATE ENTRY POINT INCLUDING STANDARD THEOREMS: *)
+
+val define_quotient_types_full_rule :
+        {types: {name:string,          (* name of new quotient type *)
+                 equiv:Thm.thm} list,  (* relation is an equivalence *)
+         defs: {def_name:string,            (* name of stored definition *)
+                fname:string,               (* name of new lifted function *)
+                func:Term.term,             (* old function to be lifted *)
+                fixity: Parse.fixity} list, (* fixity of new function *)
+         tyop_equivs: Thm.thm list,  (* conditional equiv ths for type ops *)
+         tyop_quotients: Thm.thm list,(*conditional quotient ths for type ops*)
+         tyop_simps: Thm.thm list, (* rel/map simplification ths for type ops*)
+         respects : Thm.thm list,    (* old functions respect equivalence *)
+         poly_preserves : Thm.thm list, (* polymorphic fns are preserved
+                                           by quotients *)
+         poly_respects : Thm.thm list} ->
+                                     (* polymorphic fns respect equivalence *)
+        (Thm.thm -> Thm.thm)          (* rule for lifting theorems *)
+
+(* MAIN ENTRY POINT WITH JUST STANDARD THEOREMS: *)
+(* This is a quick, simple entry point if the only type operators involved are
+   the list, pair, sum, option, and function ones, and no new polymorphic
+   operators need to have their respectfulness or preservation proven.   *)
+
+val define_quotient_types_std :
+        {types: {name:string,          (* name of new quotient type *)
+                 equiv:Thm.thm} list,  (* relation is an equivalence *)
+         defs: {def_name:string,            (* name of stored definition *)
+                fname:string,               (* name of new lifted function *)
+                func:Term.term,             (* old function to be lifted *)
+                fixity: Parse.fixity} list, (* fixity of new function *)
+         respects : Thm.thm list,    (* old functions respect equivalence *)
+         old_thms : Thm.thm list} -> (* theorems of old fns to be lifted *)
+        Thm.thm list                 (* new lifted theorems *)
+
+(* ALTERNATE ENTRY POINT WITH JUST STANDARD THEOREMS: *)
+
+val define_quotient_types_std_rule :
+        {types: {name:string,          (* name of new quotient type *)
+                 equiv:Thm.thm} list,  (* relation is an equivalence *)
+         defs: {def_name:string,            (* name of stored definition *)
+                fname:string,               (* name of new lifted function *)
+                func:Term.term,             (* old function to be lifted *)
+                fixity: Parse.fixity} list, (* fixity of new function *)
+         respects : Thm.thm list} ->   (* old functions respect equivalence *)
         (Thm.thm -> Thm.thm)          (* rule for lifting theorems *)
 
 (* For backwards compatibility with John Harrison's package: *)

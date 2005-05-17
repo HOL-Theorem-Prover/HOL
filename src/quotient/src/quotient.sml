@@ -1,11 +1,11 @@
 (* ===================================================================== *)
 (*                                                                       *)
 (* FILE          : quotient.sml                                          *)
-(* VERSION       : 2.1                                                   *)
+(* VERSION       : 2.2                                                   *)
 (* DESCRIPTION   : Functions for creating a quotient type.               *)
 (*                                                                       *)
 (* AUTHOR        : Peter Vincent Homeier                                 *)
-(* DATE          : February 28, 2005                                     *)
+(* DATE          : April 15, 2005                                        *)
 (* COPYRIGHT     : Copyright (c) 2005 by Peter Vincent Homeier           *)
 (*                                                                       *)
 (* ===================================================================== *)
@@ -17,9 +17,9 @@
 
 (* --------------------------------------------------------------------- *)
 (* This file defines the function "define_quotient_types", which takes   *)
-(* one or more existing type and theorems about thm, along with theorems *)
-(* about equivalence relations on the types, and creates new types which *)
-(* are isomorphic to the equivalence classes of the old types.           *)
+(* one or more existing types with partial equivalence relations defined *)
+(* on them, and creates new types which are isomorphic to the            *)
+(* equivalence classes of the old types.                                 *)
 (* In addition to creating the new types, functions are defined in the   *)
 (* HOL logic to translate between the old and new types in both          *)
 (* directions.                                                           *)
@@ -66,26 +66,44 @@ val chatting = ref false;  (* When chatting is false,
 
 val _ = register_btrace("quotient", chatting);
 
+val caching = ref true; (* should be pure efficiency gain *)
+
+structure Map = Redblackmap
+
+(* Redblackmap has the same signature as Binarymap. *)
+
+val quotient_cache = ref ((Map.mkDict Type.compare) :(hol_type, thm) Map.dict);
+
+val hits = ref 0;
+val misses = ref 0;
+
+fun reset_cache () =
+      (quotient_cache := (Map.mkDict Type.compare : (hol_type, thm)Map.dict);
+       hits := 0; misses := 0)
+
+fun list_cache () = (if !chatting andalso !caching then (
+                     print (    "Hits = " ^ Int.toString (!hits) ^
+                            ", Misses = " ^ Int.toString (!misses) ^
+                            ", Cache size = " ^
+                             Int.toString (Map.numItems (!quotient_cache))
+                              ^ "\n"))
+                     else ();
+                     Map.listItems (!quotient_cache))
 
 
-val LIST_INDUCT_TAC =
- let val tm = Term `!P:'a list -> bool.
+
+local
+     val tm = Term `!P:'a list -> bool.
                        P [] /\ (!t. P t ==> !x. P (x::t)) ==> !l. P l`
      val eq = Thm.ALPHA (concl listTheory.list_induction) tm
      val list_induction' = EQ_MP eq listTheory.list_induction
- in INDUCT_THEN list_induction' ASSUME_TAC
- end;
-
-(*
-val MAP_I = TAC_PROOF(([],
-   (--`!lst:('a)list. MAP I lst = lst`--)),
-   LIST_INDUCT_TAC
-   THEN ASM_REWRITE_TAC[MAP,I_THM]
-  );
-*)
+in
+val LIST_INDUCT_TAC =INDUCT_THEN list_induction' ASSUME_TAC
+end;
 
 fun del_imps tm = if is_imp tm then (del_imps o #conseq o dest_imp) tm
-                                else tm;
+                               else tm;
+
 fun get_ants tm =
     let val {ant,conseq} = (dest_imp o snd o strip_forall) tm
     in
@@ -93,38 +111,51 @@ fun get_ants tm =
     end
     handle _ => []
 
+fun GEN_QUOT_TYVARS th =
+    (* need to move type vars in tyop ants to genvars,
+       to avoid clashes with type vars external to "th" *)
+    let val ants = get_ants (concl th)
+        val vs = mk_set (flatten (map type_vars_in_term ants))
+        val sub = map (fn v => (v |-> Type.gen_tyvar())) vs
+    in INST_TYPE sub th
+    end
+
 fun CAREFUL_INST_TYPE sub th =
 (* e.g., sub = [{redex = ``:'a``, residue = ``:'a term1``},
                 {redex = ``:'c``, residue = ``:'b``}] :
+                {redex : hol_type, residue : hol_type} list *)
+(* e.g., sub = [{redex = ``:'b`, residue = ``:'a term1``}] :
                 {redex : hol_type, residue : hol_type} list *)
    let val tyvars = type_varsl (map #residue sub)
        val redexs = map #redex sub
        val (asl,con) = dest_thm th
        val th_tyvars = U (map type_vars_in_term (con::asl))
        val old = subtract (intersect tyvars th_tyvars) redexs
-       val new = map (fn v => gen_tyvar()) old
+       val newsub = map (fn v => (v |-> gen_tyvar())) old
    in
-       INST_TYPE (sub @ map op |-> (zip old new)) th
+       INST_TYPE (sub @ newsub) th
    end;
 
 
 fun C_MATCH_MP imp th =
-    let val ant = (#ant o dest_imp o snd o strip_forall o concl) imp
+    let val imp1 = GEN_QUOT_TYVARS imp
+        val ant = (#ant o dest_imp o snd o strip_forall o concl) imp1
         val subj = (snd o strip_forall o concl) th
         val (_, ty_sub) = match_term ant subj
-        val imp' = CAREFUL_INST_TYPE ty_sub imp
+        val imp' = (*CAREFUL_*)INST_TYPE ty_sub imp1
     in
         MATCH_MP imp' th
     end;
 
 fun C_MATCH_MP2 imp th1 th2 =
-    let val {ant=ant1, conseq} = (dest_imp o snd o strip_forall o concl) imp
+    let val imp1 = GEN_QUOT_TYVARS imp
+        val {ant=ant1, conseq} = (dest_imp o snd o strip_forall o concl) imp1
         val {ant=ant2, conseq} = (dest_imp o snd o strip_forall) conseq
         val subj1 = (snd o strip_forall o concl) th1
         val subj2 = (snd o strip_forall o concl) th2
         val (_, ty_sub1) = match_term ant1 subj1
         val (_, ty_sub2) = match_term ant2 subj2
-        val imp' = CAREFUL_INST_TYPE (ty_sub1 @ ty_sub2) imp
+        val imp' = (*CAREFUL_*)INST_TYPE (ty_sub1 @ ty_sub2) imp1
     in
         MATCH_MP (MATCH_MP imp' th1) th2
     end;
@@ -152,12 +183,6 @@ fun wargs tylist =
   end;
 
 
-(*
-fun withcount1 f (x::xs) n = (f x n :: withcount1 f xs (n+1))
-  | withcount1 f []      n = [];
-fun withcount f xs = withcount1 f xs 1
-*)
-
 
 (* {tyname} is a string, denoting the name of the new quotient type.
    {abs} is a string, denoting the name of the new onto function from the
@@ -174,23 +199,32 @@ OR {equiv} is a "partial equivalence theorem", of the form
          where R :'a -> 'a -> bool is a partial equivalence relation on 'a
 *)
 
-(* Test case:
+(* Partial equivalence test case:
+
+val R = --`\x y:'a. Q x /\ Q y /\ (f x = f y :'b)`--;
 
 val FUN_PEQUIV = store_thm
   ("FUN_PEQUIV",
-   (--`!f:'a->'b.
-         (?x. (\r s. f r = f s) x x) /\
-         (!x y. (\r s. f r = f s) x y =
-                (\r s. f r = f s) x x /\
-                (\r s. f r = f s) y y /\
-                ((\r s. f r = f s) x = (\r s. f r = f s) y))`--),
+   (--`!(f:'a->'b) Q.
+         (?x. Q x) ==>
+         (?x. ^R x x) /\
+         (!x y. ^R x y =
+                ^R x x /\
+                ^R y y /\
+                (^R x = ^R y))`--),
    PROVE_TAC[]
+  );
+
+val NONZERO_EXISTS = store_thm
+  ("NONZERO_EXISTS",
+   (--`?n. (\n. ~(n = 0)) n`--),
+   RW_TAC arith_ss []
   );
 
 val tyname = "mod7";
 val abs    = "mod7_ABS";
 val rep    = "mod7_REP";
-val equiv  = ISPEC ``\n. n MOD 7`` FUN_PEQUIV;
+val equiv  = ISPEC ``\n. n MOD 7`` (MATCH_MP FUN_PEQUIV NONZERO_EXISTS);
 
 *)
 
@@ -215,8 +249,8 @@ fun define_partial_quotient_type tyname abs rep equiv =
         val sym = GENL rs
                     (IMP_ANTISYM_RULE (SPECL rs sym1) (SPECL (rev rs) sym1))
 
-(* We will now define the new type, and call it nty here.
-   We represent nty values as equivalence classes of ty objects.
+(* We will now define the new type, and call it nty here.  We represent
+   nty values as (isomorphic to) equivalence classes of ty objects.
    The classes are functions from ty to bool.  However, not all such
    functions are also suitable equivalence classes.  We must restrict
    the type ty->bool by a predicate.
@@ -228,9 +262,9 @@ fun define_partial_quotient_type tyname abs rep equiv =
 
    That is, consider the sets of ty-values which are REL-equivalent.
    Let each such set be represented by its characteristic function,
-   of type ty -> bool.  Then any set of ty-values is such an equivalence
-   set if and only if there is some ty, r, which is reflexive on REL
-   and whose characteristic function is the same as that of the given set.
+   of type ty -> bool.  Then any set of ty-values c is such an equivalence
+   set if and only if there is some ty-value, r, which is reflexive on REL
+   and the set of its equivalents is the same as that of the given set c.
 
    If P c, then c is a suitable function to represent an nty.
 *)
@@ -256,7 +290,7 @@ fun define_partial_quotient_type tyname abs rep equiv =
                            (CONJ (ASSUME Rxx) (REFL xcl)))))
             handle e => Raise e
 
-(* or,
+(* or, alternatively,
         val ty_exists = TAC_PROOF(([],
                         --`?^c. ^P ^c`--),
                         STRIP_ASSUME_TAC exist
@@ -271,6 +305,8 @@ fun define_partial_quotient_type tyname abs rep equiv =
 *)
 
 (* Then we can define the new type obj using 'new_type_definition'. *)
+(* This actually creates the new quotient type.                     *)
+
         val TY_DEF =  new_type_definition( tyname, ty_exists )
         val nty = (hd o #Args o dest_type o type_of o #Bvar o dest_exists
                       o concl) TY_DEF
@@ -414,7 +450,7 @@ but it could look like
                        (^cty_REP (^cty_ABS (^REL r)) = ^REL r)`--)),
             GEN_TAC
             THEN DISCH_TAC
-            THEN REWRITE_TAC[GSYM (CONJUNCT2 cty_ABS_REP)]
+            THEN PURE_REWRITE_TAC[GSYM REP_ABS]
             THEN EXISTS_TAC r
             THEN ASM_REWRITE_TAC[])
 
@@ -821,12 +857,7 @@ fun refl_sym_trans_equiv refl sym trans =
               (CONJ refl (CONJ sym trans))
 
 
-
-fun mkfun (ty1, ty2) = mk_type{Tyop="fun", Args=[ty1, ty2]};
-
-val bool_ty = mk_type{Tyop="bool", Args=[]};
-
-fun mkRELty ty = mkfun(ty, mkfun(ty, bool_ty));
+fun mkRELty ty = ty --> ty --> bool;
 
 
 fun identity_equiv ty =
@@ -866,15 +897,6 @@ fun make_equiv equivs ty =
                         CAREFUL_INST_TYPE (match_type ety ty) equiv)
                     etys_equivs
 
-     (* val ALL_op_EQUIVs = op_EQUIVs @ [PAIR_EQUIV, SUM_EQUIV,
-                                         LIST_EQUIV, OPTION_EQUIV] *)
-     (*   val ALL_op_EQUIVs = op_EQUIVs
-        val bodies = map (find_base o concl) ALL_op_EQUIVs
-        val opRELs = map (rator o rator o lhs o snd o strip_forall) bodies
-        val opnams = map (#Tyop o dest_type o hd o #Args o dest_type o type_of)
-                         opRELs
-        val op_nm_EQUIVs = zip opnams ALL_op_EQUIVs *)
-
         fun main_make_equiv ty =
                let val {Tyop, Args} = dest_type ty
                    val ths = map main_make_equiv Args
@@ -894,22 +916,6 @@ fun make_equiv equivs ty =
                          tyop' ths
                end
                handle _ => identity_equiv ty
-(*
-        fun make_equiv' ty = 
-           prim_make_equiv ty
-           handle _ =>
-           let val {Tyop, Args} = dest_type ty in
-             if Args = [] then identity_equiv ty
-             else
-               let val ths = map make_equiv' Args
-               in
-                   foldl (fn (arg,imp) => MATCH_MP imp arg handle _ => imp)
-                         (assoc Tyop op_nm_EQUIVs)
-                         ths
-                   handle _ => identity_equiv ty
-               end
-           end
-*)
     in
        main_make_equiv ty
        handle _ =>raise HOL_ERR {
@@ -920,7 +926,6 @@ fun make_equiv equivs ty =
                                              type_to_string ty
                                 }
     end;
-
 
 
 
@@ -982,11 +987,6 @@ fun make_quotient quots ty =
                let val {Tyop, Args} = dest_type ty
                    val ths = map main_make_quotient Args
                in
-(*
-                 if Tyop = "fun" then
-                     fun_quotient (hd ths) (hd (tl ths))
-                 else
-*)
                      let val tyop = prim_make_quotient ty
                          (* this may be one of the base quotient theorems,
                             or one of the tyop conditional quotient ths. *)
@@ -1011,8 +1011,6 @@ fun make_quotient quots ty =
 
 
 
-
-
 (*
 structure Parse:
 datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
@@ -1024,8 +1022,6 @@ datatype rule_fixity =
 structure HOLgrammars :
 datatype associativity = LEFT | RIGHT | NONASSOC
 *)
-
-
 
 
 
@@ -1060,24 +1056,10 @@ fun form_abs_rep_functions quot_ths tyops tyop_simps =
       val rtys = map hd ratys
       val atys = map (hd o tl) ratys
 
-(*    val (ABS_REP, ABS11) = split (map (Psyntax.dest_conj o concl) quot_ths)
-      val (abss, reps) = split (map ((I ## rator) o Psyntax.dest_comb
-                                     o lhs o #Body o dest_forall) ABS_REP)
-      val RELs = map (rator o rator o lhs o snd o strip_forall) ABS11
-      (* atys are the abstract versions of the types being lifted *)
-      val atys = map (#Ty o dest_var o #Bvar o dest_forall) ABS_REP
-      (* rtys are the representation versions of the types being lifted *)
-      val rtys = map (#Ty o dest_var o #Bvar o dest_forall) ABS11
-*)
       val rtys_atys = zip rtys atys
       val rtys_abss = zip rtys abss
       val atys_reps = zip atys reps
       val rtys_RELs = zip rtys RELs
-(*      val tyops = tyops @
-            [{Tyop="list",   Funop="MAP",        Relop="LIST_REL"},
-             {Tyop="prod",   Funop="##",         Relop="###"},
-             {Tyop="sum",    Funop="++",         Relop="+++"},
-             {Tyop="option", Funop="OPTION_MAP", Relop="OPTION_REL"}] *)
 
       (* we use Type.match_type, Type.type_subst to match types *)
 
@@ -1137,92 +1119,6 @@ fun form_abs_rep_functions quot_ths tyops tyop_simps =
           in (hd o snd o strip_comb o concl) qth
           end
 
-(*
-      fun prim_get_abs ty = tryfind (fn (rty,abs) =>
-                                      inst (match_type rty ty) abs)
-                                    rtys_abss
-
-      fun prim_get_rep ty = tryfind (fn (aty,rep) =>
-                                      inst (match_type aty ty) rep)
-                                    atys_reps
-
-      fun mk_term_type tm ty = inst (match_type (type_of tm) ty) tm
-
-      fun assoc_fun tyop [] = raise Match
-        | assoc_fun tyop ({Tyop, Funop, Relop}::l) =
-              if Tyop = tyop then Funop else assoc_fun tyop l
-
-      fun assoc_rel tyop [] = raise Match
-        | assoc_rel tyop ({Tyop, Funop, Relop}::l) =
-              if Tyop = tyop then Relop else assoc_rel tyop l
-
-      fun get_abs ty = if not (is_rep_ty ty) then
-                             mk_const{Name="I", Ty=(==`:^ty -> ^ty`==)}
-                       else
-                       prim_get_abs ty
-                       handle _ =>
-                       let val {Tyop, Args} = dest_type ty
-                       in
-                         if Tyop = "fun" then
-                           let val ty1 = hd Args and ty2 = hd (tl Args)
-                               val rep1 = get_rep (absty ty1)
-                               and abs2 = get_abs ty2
-                           in (--`^rep1 --> ^abs2`--)
-                           end
-                         else (
-                         let val Args' = map get_abs Args
-                             val tys = map (fn ty => mkfun(ty, absty ty)) Args
-                             val res_ty = mkfun(ty, absty ty)
-                             val fty = foldr mkfun res_ty tys
-                             val nm = assoc_fun Tyop tyops
-                             val opr = mk_const{Name=nm, Ty=fty}
-                         in list_mk_comb(opr, Args')
-                         end
-                         handle _ =>
-                             raise HOL_ERR {
-                                   origin_structure = "quotient",
-                                   origin_function  = "get_abs",
-                                   message = "Could not form the " ^
-                                             "abstraction function for " ^
-                                             type_to_string ty
-                             }
-                         )
-                       end
-
-      and get_rep ty = if not (is_abs_ty ty) then
-                             mk_const{Name="I", Ty=(==`:^ty -> ^ty`==)}
-                       else
-                       prim_get_rep ty
-                       handle _ =>
-                       let val {Tyop, Args} = dest_type ty
-                       in
-                         if Tyop = "fun" then
-                           let val ty1 = hd Args and ty2 = hd (tl Args)
-                               val abs1 = get_abs (repty ty1)
-                               and rep2 = get_rep ty2
-                           in (--`^abs1 --> ^rep2`--)
-                           end
-                         else (
-                         let val Args' = map get_rep Args
-                             val tys = map (fn ty => mkfun(ty, repty ty)) Args
-                             val res_ty = mkfun(ty, repty ty)
-                             val fty = foldr mkfun res_ty tys
-                             val nm = assoc_fun Tyop tyops
-                             val opr = mk_const{Name=nm, Ty=fty}
-                         in list_mk_comb(opr, Args')
-                         end
-                         handle _ =>
-                             raise HOL_ERR {
-                                   origin_structure = "quotient",
-                                   origin_function  = "get_rep",
-                                   message = "Could not form the " ^
-                                             "representation function for " ^
-                                             type_to_string ty
-                             }
-                         )
-                       end
-*)
-
 
       fun mkabs tm = let val ty = type_of tm in
                        if not (is_rep_ty ty) then tm
@@ -1234,65 +1130,17 @@ fun form_abs_rep_functions quot_ths tyops tyop_simps =
                        else mk_comb{Rator=get_rep ty, Rand=tm}
                      end
 
-(*
-      fun prim_tyREL ty = tryfind (fn (rty,REL) =>
-                                      inst (match_type rty ty) REL)
-                                  rtys_RELs
-
-      fun tyREL ty = if not (is_rep_ty ty) then
-                             mk_const{Name="=", Ty=mkRELty ty}
-                       else
-                       prim_tyREL ty
-                       handle _ =>
-                       let val {Tyop, Args} = dest_type ty
-                       in
-                         if Tyop = "fun" then
-                           let val ty1 = hd Args and ty2 = hd (tl Args)
-                               val rep1 = get_rep (absty ty1)
-                               and abs2 = get_abs ty2
-                           in (--`^rep1 =-> ^abs2`--)
-                           end
-                         else (
-                         let val Args' = map tyREL Args
-                             val tys = map mkRELty Args
-                             val res_ty = mkRELty ty
-                             val fty = foldr mkfun res_ty tys
-                             val nm = assoc_rel Tyop tyops
-                             val opr = mk_const{Name=nm, Ty=fty}
-                         in list_mk_comb(opr, Args')
-                         end
-                         handle _ =>
-                             raise HOL_ERR {
-                                   origin_structure = "quotient",
-                                   origin_function  = "tyREL",
-                                   message = "Could not form the " ^
-                                             "equivalence relation for " ^
-                                             type_to_string ty
-                             }
-                         )
-                       end
-*)
-
   in
     (is_abs_ty, is_rep_ty, absty, repty, get_abs, get_rep, mkabs, mkrep, tyREL)
   end;
 
 
 fun tyop_rec th =
-    let fun base tm = (base o #conseq o dest_imp o snd o strip_forall) tm
-                      handle _ => tm
-        val args = snd (strip_comb (base (concl th)))
+    let val args = snd (strip_comb (find_base (concl th)))
         val R = hd args
         val abs = (hd o tl) args
         val rep = (hd o tl o tl) args
         val rty = (hd o #Args o dest_type o type_of) abs
-(*
-        val {conj1=c1, conj2=c2} = snd (strip_comb (base (concl th)))
-        val rty = (#Ty o dest_var o #Bvar o dest_forall) c2
-        val R = (rator o rator o lhs o snd o strip_forall) c2
-        val decmb = Psyntax.dest_comb
-        val (abs,rep) = ((I ## rator) o decmb o lhs o body o rand) c1
-*)
         val Tyop = (#Tyop o dest_type) rty
         val Relop = (#Name o dest_const o fst o strip_comb) R
         val Funop = (#Name o dest_const o fst o strip_comb) abs
@@ -1302,10 +1150,9 @@ fun tyop_rec th =
 
 fun define_quotient_lifted_function quot_ths tyops tyop_simps =
     let
-(* no refls *)
+        (* no refls *)
         val syms  = map (MATCH_MP QUOTIENT_SYM)   quot_ths
         val trans = map (MATCH_MP QUOTIENT_TRANS) quot_ths
-      (*  val equiv_ths = map prove_quotient_equiv quot_ths *)
 
         val unp_quot_ths = map (REWRITE_RULE[QUOTIENT_def]) quot_ths
         val (ABS_REP, (REP_REFL, ABS11)) = ((I ## unzip) o unzip)
@@ -1483,108 +1330,82 @@ fun prove_quotient_equiv_rep_one_one QUOTIENT =
    can be lifted by this function, even if the lifted versions are true.  *)
 (* ====================================================================== *)
 
-(* example from ~/src/integer/integerScript.sml1 :
-
-val _ = print "Establish type of integers\n";
-
-local
-    fun mk_def (d,t,n,f) = {def_name=d, fixity=f, fname=n, func=t}
-in
-    val [INT_10, INT_ADD_SYM, INT_MUL_SYM,
-	 INT_ADD_ASSOC, INT_MUL_ASSOC, INT_LDISTRIB,
-	 INT_ADD_LID, INT_MUL_LID, INT_ADD_LINV,
-	 INT_LT_TOTAL, INT_LT_REFL, INT_LT_TRANS,
-	 INT_LT_LADD_IMP, INT_LT_MUL] =
-	define_equivalence_type
-	{name = "int", equiv = TINT_EQ_EQUIV,
-	 defs = [mk_def ("int_0", Term `tint_0`,     "int_0", Prefix),
-		 mk_def ("int_1", Term `tint_1`,     "int_1", Prefix),
-		 mk_def ("int_neg",Term `tint_neg`,  "int_neg",   Prefix),
-		 mk_def ("int_add",Term `$tint_add`, "int_add",   Infixl 500),
-		 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   Infixl 600),
-		 mk_def ("int_lt",Term `$tint_lt`,   "int_lt",    Infixr 450)],
-
-	 welldefs = [TINT_NEG_WELLDEF, TINT_LT_WELLDEF,
-		     TINT_ADD_WELLDEF, TINT_MUL_WELLDEF],
-	 old_thms = ([TINT_10] @
-		     (map (GEN_ALL o MATCH_MP TINT_EQ_AP o SPEC_ALL)
-		      [TINT_ADD_SYM, TINT_MUL_SYM, TINT_ADD_ASSOC,
-		       TINT_MUL_ASSOC, TINT_LDISTRIB]) @
-		     [TINT_ADD_LID, TINT_MUL_LID, TINT_ADD_LINV,
-		      TINT_LT_TOTAL, TINT_LT_REFL, TINT_LT_TRANS,
-		      TINT_LT_ADD, TINT_LT_MUL])}
-end;
-
-fun mk_def (d,t,n,f) = {def_name=d, fixity=f, fname=n, func=t}
-val tyname = "int";
-val equiv = TINT_EQ_EQUIV;
-val fnlist =    [mk_def ("int_0",  Term `tint_0`,    "int_0",     Prefix),
-		 mk_def ("int_1",  Term `tint_1`,    "int_1",     Prefix),
-		 mk_def ("int_neg",Term `tint_neg`,  "int_neg",   Prefix),
-		 mk_def ("int_add",Term `$tint_add`, "int_add",   Infixl 500),
-		 mk_def ("int_mul",Term `$tint_mul`, "int_mul",   Infixl 600),
-		 mk_def ("int_lt", Term `$tint_lt`,  "int_lt",    Infixr 450)];
-val welldefs = [TINT_NEG_WELLDEF, TINT_LT_WELLDEF,
-		     TINT_ADD_WELLDEF, TINT_MUL_WELLDEF];
-val old_thms = ([TINT_10] @
-		     (map (GEN_ALL o MATCH_MP TINT_EQ_AP o SPEC_ALL)
-		      [TINT_ADD_SYM, TINT_MUL_SYM, TINT_ADD_ASSOC,
-		       TINT_MUL_ASSOC, TINT_LDISTRIB]) @
-		     [TINT_ADD_LID, TINT_MUL_LID, TINT_ADD_LINV,
-		      TINT_LT_TOTAL, TINT_LT_REFL, TINT_LT_TRANS,
-		      TINT_LT_ADD, TINT_LT_MUL]);
-
-val quot_ths = 
-*)
-
 
 fun lift_theorem_by_quotients quot_ths equivs all_equivs
                               tyops tyop_simps newdefs
                               respects polydfs polywfs =
     let
-        val map_ths = []
-
         val refls = map equiv_refl equivs
         val syms  = map (MATCH_MP QUOTIENT_SYM)   quot_ths
         val trans = map (MATCH_MP QUOTIENT_TRANS) quot_ths
-        (* val equiv_ths = map prove_quotient_equiv quot_ths *)
-        (* val rep_one_one = map prove_quotient_rep_fn_one_one quot_ths *)
-        (* val abs_iso_equiv = map prove_quotient_abs_iso_equiv quot_ths *)
 
+        val _ = reset_cache()
+
+(* We unpack the quotient theorems into their parts, which consist of
+   three properties:
+     ABS_REP:    !a. abs (rep a) = a
+     REP_REFL:   !a. ?r. R r r /\ (rep a = r)
+     ABS11:      !r s. R r s = R r r /\ R s s /\ (abs r = abs s)
+*)
         val unp_quot_ths = map (REWRITE_RULE[QUOTIENT_def]) quot_ths
         val quot_parts = map ((I ## CONJ_PAIR) o CONJ_PAIR) unp_quot_ths
         val (ABS_REP, (REP_REFL, ABS11)) = ((I ## unzip) o unzip) quot_parts
+
+(* From these parts we extract the relations RELs, abstraction functions abss,
+   representation functions reps, lower types tys and quotient types ntys.
+*)
         val Rars = map (snd o strip_comb o concl) quot_ths
         val RELs = map hd Rars
         val abss = map (hd o tl) Rars
         val reps = map (hd o tl o tl) Rars
-(*
-        val (abss, rep_as) = unzip (map
-              (Psyntax.dest_comb o lhs o #Body o dest_forall o concl) ABS_REP)
-        val reps = map (#Rator o dest_comb) rep_as
-        val RELs = map (#Rator o dest_comb o #Rator o dest_comb
-                             o lhs o snd o strip_forall o concl) ABS11
-*)
         val tys  = map (hd o #Args o dest_type o type_of) RELs
         val ntys = map (hd o #Args o dest_type o type_of) reps
         val tys_quot_ths = zip tys quot_ths;
 
+(* The following functions are created in relation to the given quotient
+   theorems and  type operator quotient theorems:
 
+           is_abs_ty : hol_type -> bool
+                       true iff the given type contains a lifted, quotient type
+           is_rep_ty : hol_type -> bool
+                       true iff the given type contains a type being lifted
+           absty     : hol_type -> hol_type
+                       lifts the given type to the quotient level
+           repty     : hol_type -> hol_type
+                       lowers the given tupe from the quotient level
+           get_abs   : hol_type -> term
+                       returns the abstraction function for the lower type
+           get_rep   : hol_type -> term
+                       returns the representation function for the lifted type
+           mkabs     : term -> term
+                       wraps the given term with an application of the
+                       abstraction function for its type
+           mkrep     : term -> term
+                       wraps the given term with an application of the
+                       representation function for its type
+           tyREL     : hol_type -> term
+                       returns the partial equivalence relation for the type
+*)
         val (is_abs_ty, is_rep_ty, absty, repty, get_abs, get_rep,
               mkabs, mkrep, tyREL) =
                      form_abs_rep_functions quot_ths tyops tyop_simps;
 
+
+(* Determine the constants being lifted. *)
 
       fun get_deffunc newdef =
         let val (vs,b) = (strip_forall o concl) newdef
             val r = rhs  b
             val c = if is_abs_ty (type_of r) then rand r else r
         in funpow (length vs) rator c
-(* fst (strip_comb c) *)
         end
 
       val funcs = map get_deffunc newdefs
 
+(* For each constant being lifted, check that its respectfulness theorem
+   is present.  If not, then if the theorem is trivial, create it.
+   If it is missing and not trivial, fail with an error message.
+*)
       fun add_trivial_respects funcs all_equivs =
         let val get_func = fst o strip_comb o rand o rator
                             o find_base o snd o strip_forall o concl
@@ -1614,7 +1435,6 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
            map make_missing_respect missing @ respects
         end
 
-        (* val all_equivs = equivs @ tyop_equivs *)
         val all_respects = add_trivial_respects funcs all_equivs
 
 
@@ -1642,39 +1462,23 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                    else ty::tys'
               end
 
-
-        val funclist = 
-          let fun is_abss tm =
-                   (tryfind (fn abs => inst (snd (match_term abs tm)) abs)
-                            abss;
-                         true)
-                   handle _ => false
-              fun func def =
-                let val tm1 = (rhs o snd o strip_forall o concl) def
-                    val tm2 = (#Rator o dest_comb) tm1
-                              handle _ => tm1
-                    val tm3 = if is_abss tm2 then (#Rand o dest_comb) tm1
-                                             else tm1
-                in
-                    (fst o strip_comb) tm3
-                end
-          in (map func newdefs)
-          end
-
-(* only true now for equivalence relations, not quotient relations: *)
+(* EQ_APs holds theorems that equality implies reflexivity for those
+   partial equivalence relations which are reflexive.
+   This is only true now for equivalence relations,
+   not partial equivalence relations in general:
+*)
         val EQ_APs =
-          let fun prove_EQ_AP (REL,refl) =
-                    prove
-                      ((--`!p q. (p = q) ==> ^REL p q`--),
+          let fun prove_EQ_AP refl =
+                let val R = (rator o rator o #Body o dest_forall o concl) refl
+                in  prove
+                      ((--`!p q. (p = q) ==> ^R p q`--),
                        REPEAT GEN_TAC THEN DISCH_THEN SUBST1_TAC THEN
                        MATCH_ACCEPT_TAC refl)
-              val Rs = map (rator o rator o #Body o dest_forall o concl) refls
-          in map prove_EQ_AP (zip Rs refls)
+                end
+          in map prove_EQ_AP refls
           end
 
-
-        fun MAP_CONJ f = (LIST_CONJ o map f o CONJUNCTS)
-
+(*
         val EQ_WELLDEFs =
           let fun prove_EQ_WELLDEF (REL,(sym,trans)) =
           prove
@@ -1690,6 +1494,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
           in
            map prove_EQ_WELLDEF (zip RELs (zip syms trans))
           end
+*)
 
         fun UNDISCH_CONJ th =
             CONV_RULE (REWR_CONV (GSYM AND_IMP_INTRO)) th
@@ -1728,10 +1533,6 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
               val tm = concl th and asl = hyp th
               val free = mk_set (free_vars tm @ flatten (map free_vars asl))
               val ry = Term.variant free rx
-(*
-              val R = tyREL (type_of rx)
-              val asm = mk_comb{Rator=mk_comb{Rator=R, Rand=lx}, Rand=ry}
-*)
               val asm = mk_eq{lhs=lx, rhs=ry}
               val th1 = CONV_RULE (RAND_CONV (RAND_CONV
                                        (REWR_CONV (ASSUME asm)))) th
@@ -1741,13 +1542,11 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                  (CONV_RULE (REWR_CONV (GSYM FUN_REL)) th2)
           end
 
-(*
-        fun DISCH_ONE th = DISCH (last (hyp th)) th
-*)
 
-(* The GEN_DISCH_ONE rule discharges the top assumption from the
-   assumption list of the given theorem, and generalizes the 
-   three free variables of the assumption, if it was a quotient condition. *)
+(* The GEN_DISCH_ONE rule expects the top assumption of the hypothesis
+   to be a quotient condition.  It discharges the top assumption from the
+   hypotheses of the given theorem, and generalizes the three free variables
+   of the assumption. *)
 
         fun GEN_DISCH_ONE th =
            let val asm = last (hyp th)
@@ -1772,26 +1571,23 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
         val ho_respects = map prove_ho_respects all_respects
         val ho_polywfs  = map prove_ho_respects polywfs
 
-(*
-        val REL_REPs = map (MATCH_MP QUOTIENT_REL_REP) quot_ths
 
-        val REP_BETAs = 
-          let fun prove_REP_BETA rep =
-            prove
-            ((--`!f x:'a. (\f x. ^rep (f x)) f x = ^rep (f x)`--),
-             REPEAT GEN_TAC
-             THEN BETA_TAC
-             THEN REFL_TAC)
-          in
-            map prove_REP_BETA reps
-          end
-*)
+(* The prove_ALL_HIGHER_DEFs function takes a definition theorem def,
+   lowers it to the least possible order (higher possible arity), and
+   then generates all higher order versions.  All versions generated
+   are returned, from the least to the highest order. *)
 
         fun prove_ALL_HIGHER_DEFs def =
           let
+
+(* The function MAKE_LOWER_DEF converts a given definition theorem to
+   the version of one lower order, if possible, and otherwise throws
+   an exception. *)
+
               fun MAKE_LOWER_DEF def =
                 let val (vrs,df) = (strip_forall o concl) def
                     val {lhs=l,rhs=r} = dest_eq df
+                    val _ = assert is_rep_ty (type_of l)
                     val {Tyop,Args} = (dest_type o type_of) l
                     val _ = assert (curry op = "fun") Tyop
                     val ty1 = hd Args
@@ -1816,8 +1612,15 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                     THEN REWRITE_TAC[FUN_MAP_THM,I_THM])
                 end
 
+(* The function MAKE_LOWEST_DEF converts a given definition theorem to
+   the version of least possible order. *)
+
               fun MAKE_LOWEST_DEF def =
                 MAKE_LOWEST_DEF (MAKE_LOWER_DEF def) handle _ => def
+
+(* The function prove_HIGHER_DEF proves and returns a version of a definition
+   theorem of the next higher order, if possible, and otherwise throws
+   an exception. *)
 
               fun prove_HIGHER_DEF def =
                 let val (vrs,df) = (strip_forall o concl) def
@@ -1844,6 +1647,9 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                     THEN REWRITE_TAC([I_THM,FUN_MAP_I] @ tyop_simps))
                 end
 
+(* The function MAKE_HIGHER_DEFS proves and returns a list of all versions
+   of a given definition theorem of equal or higher order. *)
+
               fun MAKE_HIGHER_DEFS def =
                 def :: MAKE_HIGHER_DEFS (prove_HIGHER_DEF def)
                 handle _ => [def]
@@ -1856,6 +1662,11 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
         val higher_newdefs = ADD_HIGHER_DEFS newdefs
 
 
+(* The function strip_type takes a type and returns a pair, consisting of
+   a list of the types of the arguments of the function type (or [] if the
+   type is not a function type), and the result type of the function type
+   (or the type itself if it is not a function type).
+*)
         fun strip_type ty =
            if is_vartype ty then ([],ty)
            else
@@ -1883,9 +1694,11 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
               end
            else raise Match
 
-        fun del_imps tm =
+        fun del_imps tm = snd (strip_imp tm)
+(*
                     if is_imp tm then (del_imps o #conseq o dest_imp) tm
                                  else tm
+*)
 
         fun polydf_name th =
           let val tm = (snd o strip_forall
@@ -1909,8 +1722,9 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
           mem (#Name (dest_const opp)) poly_lifted_names
           handle _ => false
 
-        (* return a list of the polymorphic operators in the term
-           which have types being lifted. *)
+(* The function findops returns a list of the polymorphic operators in the term
+   which have types being lifted.
+*)
         fun findops tm =
            if is_abs tm then (findops o #Body o dest_abs) tm
            else if is_comb tm then
@@ -1933,6 +1747,10 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                    else []
                 end
 
+
+(* The function findaps returns a list of the types of function variables
+   in the term which contain types being lifted.
+*)
         fun findaps tm =
            if is_abs tm then (findaps o #Body o dest_abs) tm
            else if is_comb tm then
@@ -1947,6 +1765,9 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                    else []
                 end
 
+(* The function findabs returns a list of types of abstraction terms
+   in the given term which contain types being lifted.
+*)
         fun findabs tm =
            if is_abs tm then
               let val ty = type_of tm
@@ -1959,16 +1780,14 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
               end
            else []
 
-        val TOP_BETA_RULE = CONV_RULE (TOP_DEPTH_CONV BETA_CONV)
-
 
 
 (*
-So have a function to lift polymorphic already-defined functions
+So we need a function to lift polymorphic already-defined functions
 to operate on lifted types as well, and to deal with these functions
 appearing in definitions of theorems being lifted:
 
-It should take as arguments in a list of specifications of each
+It should take as arguments a list of specifications of each
 polymorphic function.  The specification for one polymorphic function
 would include
 
@@ -2004,12 +1823,12 @@ would include
       I, I, and $= for that abs, rep, and R.
 *)
 
+
+(* QUOTIENT THEOREM CREATION AND CACHING SECTION *)
+
         fun prim_get_quotient ty =
             tryfind (fn (rty,qth) => CAREFUL_INST_TYPE (match_type rty ty) qth)
                     tys_quot_ths
-
-        val tyops' = tyops @ [LIST_QUOTIENT, OPTION_QUOTIENT,
-                              PAIR_QUOTIENT,    SUM_QUOTIENT]
 
         val tyop_tys = map quotient_type tyops
 
@@ -2019,6 +1838,11 @@ would include
             tryfind (fn (rty,qth) => CAREFUL_INST_TYPE (match_type rty ty) qth)
                     tyop_ty_ths
 
+        fun insert_cache ty qth =
+            (quotient_cache := Map.insert(!quotient_cache, ty, qth); qth)
+
+(* The function get_quotient produces the quotient theorem for type ty. *)
+
         fun get_quotient ty =
             if not (is_rep_ty ty) then identity_quotient ty
             else
@@ -2027,28 +1851,37 @@ would include
             let val {Tyop,Args} = dest_type ty
                 val ths = map get_quotient Args
             in
-(*
-               if Tyop="fun" then fun_quotient (el 1 ths) (el 2 ths)
-               else
-*)
                   let val tyop = prim_get_tyop_quotient ty
                          (* this may be one of the base quotient theorems,
                             or one of the tyop conditional quotient ths. *)
                          (* may need to move type vars in tyop ants to genvars,
                             to avoid clashes with type vars in "ths" *)
-                      val vs = (map type_vars_in_term o get_ants o concl) tyop
-                      val vs = mk_set (flatten vs)
-                      val gs = map (fn v => Type.gen_tyvar()) vs
-                      val sub = map2 (fn v => fn g => {redex=v,residue=g})
-                                     vs gs
-                      val tyop' = INST_TYPE sub tyop
-                  in  foldl (fn (arg,qth) => MATCH_MP qth arg
-                                             handle _ => qth)
-                            tyop' ths
+                      val tyop' = GEN_QUOT_TYVARS tyop
+                      val qth = foldl (fn (arg,qth) => MATCH_MP qth arg
+                                             (* handle _ => qth *) )
+                                      tyop' ths
+                  in qth
                   end
                handle _ => identity_quotient ty
             end
 
+(* We wrap caching around the get_quotient function. *)
+
+        fun get_quotient1 ty =
+           if !caching then
+              case Map.peek(!quotient_cache, ty) of
+                 SOME th => (hits := !hits + 1; th)
+               | NONE    => (misses := !misses + 1;
+                             insert_cache ty (get_quotient ty))
+           else get_quotient ty
+
+        val get_quotient = get_quotient1
+
+(* The function resolve_quotient, given a theorem conditioned on a quotient
+   theorem, constructs the appropriate quotient theorem for the type present,
+   and discharges that condition from the given theorem, returning the
+   simplified theorem.  In general, this "resolution" may need to be repeated.
+*)
         fun resolve_quotient th =
             let val qtm = (#ant o dest_imp o snd o strip_forall o concl) th
                 val (Q,Rar) = strip_comb qtm
@@ -2056,7 +1889,7 @@ would include
                 val rty = (hd o #Args o dest_type o type_of o hd o tl) Rar
                 val qth = get_quotient rty
             in 
-               MATCH_MP th qth
+               (MATCH_MP th) qth
             end
 
         fun dest_QUOTIENT_imp tm =
@@ -2068,6 +1901,10 @@ would include
                 conseq
             end
 
+(* The function get_higher_wf_base strips off all quotient conditions from
+   the given theorem, and then regarding it as a respectfulness theorem,
+   strips off any remaining antecedent, returning the consequent as the "base".
+*)
         fun get_higher_wf_base th =
             let val tm1 = (concl) th
                 val tm2 = repeat (dest_QUOTIENT_imp o snd o strip_forall) tm1
@@ -2076,16 +1913,39 @@ would include
                 handle _ => tm3
             end
 
+(* The function match_higher_wf matches the base of a given conditional
+   respectfulness theorem to a goal, and then uses that match to instantiate
+   the types of the respectfulness theorem, which is then "resolved" by
+   "resolve_quotient" until all the conditions are gone.  This resolved
+   version of the respectfulness theorem is the result returned.
+   This function intentionally fails if the rand of the goal does not
+   contain a type being lifted.
+*)
         fun match_higher_wf th gl =
-            let val base = get_higher_wf_base th
-                val types = snd (match_term (rand base) (rand gl)
-                                 handle _ =>
-                                 match_term base gl)
-                val ith = CAREFUL_INST_TYPE types th
+            let val _ = assert is_rep_ty (type_of (rand gl))
+                val th' = (*GEN_QUOT_TYVARS*) th
+                val base = get_higher_wf_base th'
+                val types = snd (match_term base gl)
+                val ith = CAREFUL_INST_TYPE types th'
                 val wf = repeat resolve_quotient ith
             in  REWRITE_RULE[FUN_REL_EQ] wf
             end
 
+        fun match_higher_half_wf th gl =
+            let val th' = GEN_QUOT_TYVARS th
+                val base = get_higher_wf_base th'
+                val types = snd (match_term (rand base) (rand gl))
+                val ith = (*CAREFUL_*)INST_TYPE types th'
+                val wf = repeat resolve_quotient ith
+            in  REWRITE_RULE[FUN_REL_EQ] wf
+            end
+
+
+(* The function get_higher_eq_base strips off all quotient conditions from
+   the given theorem, and then regarding it as a preservation theorem,
+   strips off the right hand side if it is an equality, and returns the
+   remaining term as the "base".
+*)
         fun get_higher_eq_base tm =
             let val tm1 = repeat (dest_QUOTIENT_imp o snd o strip_forall) tm
                 val tm2 = (snd o strip_forall) tm1
@@ -2093,25 +1953,60 @@ would include
                 handle _ => tm2
             end
 
+(* The function match_higher_eq matches the base of a given conditional
+   preservation theorem to a goal, and then uses that match to instantiate
+   the types of the preservation theorem, which is then "resolved" by
+   "resolve_quotient" until all the conditions are gone.  This resolved
+   version of the preservation theorem is the result returned.
+*)
         fun match_higher_eq th gl =
-            let val base = get_higher_eq_base (concl th)
+            let val th' = (*GEN_QUOT_TYVARS*) th
+                val base = get_higher_eq_base (concl th')
                 val types = snd (match_term base gl)
-                val ith = CAREFUL_INST_TYPE types th
+                val ith = CAREFUL_INST_TYPE types th'
                 val eq = repeat resolve_quotient ith
             in  eq
             end
 
+(* When applied to a (conditional) respectfulness theorem of the form
+
+    |- !R1 abs1 rep1. QUOTIENT R1 abs1 rep1 ==> ...
+       !Rn absn repn. QUOTIENT Rn absn repn ==>
+         !x1 y1 ... xn yn. R_i_1 x1 y1 /\ ... /\ R_i_n xn yn ==>
+                           R (C x1 ... xn) (C y1 ... yn)
+
+HIGHER_RSP_TAC produces a tactic that reduces a goal whose conclusion
+is a substitution and/or type instance of R (C x1 ... xn) (C y1 ... yn)
+to a set of n subgoals which are the corresponding instances of 
+R_i_1 x1 y1 through R_i_n xn yn, IF for that substitution/type instance the 
+corresponding quotient theorem antecedents are resolvable.
+*)
+        fun cname tm = #Name (dest_const (fst (strip_comb (rand (rator tm)))))
+
         fun HIGHER_RSP_TAC th (asl,gl) =
-            let val {Rator=R,Rand=tms1} = (dest_comb o #Rator o dest_comb) gl
-                val (opp,args) = strip_comb tms1
-                val _ = assert is_rep_ty (type_of opp)
-                val wf = match_higher_wf th gl
-            in ((MATCH_MP_TAC wf handle _ => MATCH_ACCEPT_TAC wf)
-                 THEN REPEAT STRIP_TAC) (asl,gl)
+            let val base = get_higher_wf_base th
+                val _ = assert (curry op = (cname gl)) (cname base)
+                        (* for fast elimination of inapplicable th's *)
+                val wf = match_higher_half_wf th gl
+            in ((MATCH_ACCEPT_TAC wf handle _ => MATCH_MP_TAC wf)
+                 THEN REPEAT CONJ_TAC) (asl,gl)
             end
 
+(* The function get_higher_df_op takes a term which is a polymorphic operator,
+   and a conditional preservation theorem for that operator, and attempts to
+   instantiate the theorem according to the type of the term, and then
+   resolve the preservation theorem by proving and discharging the quotient
+   antecedents.  The resulting simplified preservation theorem is returned.
+
+   In the special case where some of the quotient theorem resolvents may 
+   have been identity quotients, the result may have to be simplified by
+   rewriting with theorems FUN_MAP_I and/or I_THM.  Of course, rewriting
+   with I_THM is not helpful if the operator being preserved is I itself.
+*)
+
         fun get_higher_df_op tm th =
-            let val tm1 = (concl) th
+            let val th' = (*GEN_QUOT_TYVARS*) th
+                val tm1 = (concl) th'
                 val tm2 = repeat (#conseq o dest_imp o snd o strip_forall) tm1
                 val {lhs=lhs2,rhs=rhs2} = (dest_eq o snd o strip_forall) tm2
                 val a1 = if is_comb lhs2 then (hd o snd o strip_comb) lhs2
@@ -2123,27 +2018,20 @@ would include
                           handle _ => (#Rand o dest_comb) rhs2
                 val opr = (fst o strip_comb) tm3
                 val types = snd (match_term opr tm)
-                val ith = CAREFUL_INST_TYPE types th
-                (* val df = repeat ((C tryfind quot_ths) o MATCH_MP) ith *)
+                val ith = CAREFUL_INST_TYPE types th'
                 val df = repeat resolve_quotient ith
                 val df' = REWRITE_RULE[FUN_MAP_I] df
             in  if #Name (dest_const opr) = "I" then df'
                 else REWRITE_RULE[I_THM] df'
             end
 
-        fun get_higher_wf_op tm th =
-            let val tm1 = (concl) th
-                val tm2 = repeat (dest_QUOTIENT_imp o snd o strip_forall) tm1
-                val base = (del_imps o snd o strip_forall) tm2
-                val opr = (fst o strip_comb o #Rand o dest_comb) base
-                val types = snd (match_term opr tm)
-                val ith = CAREFUL_INST_TYPE types th
-                (* val wf = repeat ((C tryfind quot_ths) o MATCH_MP) ith *)
-                val wf = repeat resolve_quotient ith
-            in  wf
-            end
-
-
+(* The function MK_DEF_OP takes a term which is a polymorphic operator,
+   and searches the list of polymorphic conditional preservation theorems
+   for one corresponding to that operator.  If found, the theorem is
+   instantiated for the particular type of that term and its quotient
+   antecedents are resolved and discharged, leaving a simplified preservation
+   theorem which is returned.  If not found, an exception is raised.
+*)
         fun MK_DEF_OP tm =
           let val {Name=nm, Ty=ty} = dest_const tm
           in
@@ -2156,20 +2044,24 @@ would include
                                 term_to_string tm ^ ".\n"
                 }
 
-(*
-        fun MK_RSP_OP tm =
-          let val {Name=nm, Ty=ty} = dest_const tm
-          in
-            tryfind (get_higher_wf_op tm) polywfs
-          end
-          handle e => raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "MK_RSP_OP",
-                  message = "Missing polymorphic respectfulness theorem for " ^
-                                term_to_string tm ^ ".\n"
-                }
-*)
+(* The tactic LAMBDA_RSP_TAC:
 
+        A |- (R1 ===> R2) (\x. f[x]) (\y. g[y])
+        =======================================
+         A U {R1 x' y'} |- R2 (f[x']) (g[y'])
+
+This tactic simplifies a goal which is a partial equivalence between
+two abstractions into a goal where a new hypothesis is added, being
+the R1 relation between two new variables x' and y', and the goal is
+now the R2 relation between the bodies of the two abstractions, with
+x' and y' substituted for their bound variables, respectively.
+
+The variables x' and y' are chosen to be new, but will often be the same
+as the abstraction variables x and y, if there are no other conflicts.
+
+The new hypothesis R1 x' y' may be used later to prove subgoals of
+R2 (f[x']) (g[y']).
+*)
         fun LAMBDA_RSP_TAC (asl,gl) =
             let val {Rator=Rf, Rand=g} = dest_comb gl
                 val {Rator=R, Rand=f} = dest_comb Rf
@@ -2179,7 +2071,7 @@ would include
                 val x = Term.variant     free  (#Bvar (dest_abs f))
                 val y = Term.variant (x::free) (#Bvar (dest_abs g))
                 val (Rop, Rargs) = strip_comb R
-                val _ = assert (curry op = "===>") (#Name (dest_const Rop))
+                (*val _ = assert (curry op = "===>") (#Name (dest_const Rop))*)
             in
                (CONV_TAC (REWR_CONV FUN_REL)
                 THEN X_GEN_TAC x THEN X_GEN_TAC y THEN DISCH_TAC
@@ -2188,54 +2080,13 @@ would include
             end;
 
 
-(*
-        val LAMBDA_ABS_REP_RSP_TAC =
-            MATCH_MP_TAC LAMBDA_REP_ABS_RSP
-            THEN CONJ_TAC
-            THENL
-              [ REWRITE_TAC[FUN_MAP_I,I_THM]
-                THEN REPEAT CONJ_TAC
-                THEN GEN_TAC THEN GEN_TAC
-                THEN DISCH_TAC,
-
-                ALL_TAC
-              ]
+(* The following set of tactics create a facility to use respectfulness
+   and preservation theorems which are conditioned by quotient antecedents
+   almost as easily as if they were simple implications or equations.
 *)
 
-        fun get_higher_wf_lambda tm th =
-            let val tm1 = (concl) th
-                val tm2 = repeat (dest_QUOTIENT_imp o snd o strip_forall) tm1
-                val base = (del_imps o snd o strip_forall) tm2
-                val types = snd (match_term base tm)
-                val ith = CAREFUL_INST_TYPE types th
-                (* val wf = repeat ((C tryfind quot_ths) o MATCH_MP) ith *)
-                val wf = repeat resolve_quotient ith
-            in  wf
-            end
-
-(* No longer!
-        val LAMBDA_ABS_REP_RSP_WEAK_TAC : tactic =
-            W(MATCH_MP_TAC o
-              (C get_higher_wf_lambda LAMBDA_REP_ABS_WEAK_RSP) o snd)
-*)
-
-        val FUN_REL_TAC : tactic =
-            CONV_TAC (REWR_CONV FUN_REL)
-            THEN GEN_TAC THEN GEN_TAC
-            THEN DISCH_TAC
-
-        fun CON_FUN_REL_TAC (asl,gl) =
-            let val r = rand gl
-                val l = rand (rator gl)
-                val (opr,args) = strip_comb l
-                val _ = assert is_const opr
-            in FUN_REL_TAC (asl,gl)
-            end
-
-        val EQUIV_RES_ABSTRACT_TAC =
-            FIRST (map MATCH_MP_TAC [EQUIV_RES_ABSTRACT_LEFT,
-                                     EQUIV_RES_ABSTRACT_RIGHT])
-            THEN CONJ_TAC
+        fun QUOT_MATCH_ACCEPT_TAC th =
+            W(MATCH_ACCEPT_TAC o (match_higher_wf th) o snd)
 
         fun QUOT_MATCH_MP_TAC th =
             W(MATCH_MP_TAC o (match_higher_wf th) o snd)
@@ -2250,13 +2101,15 @@ would include
 
         fun QUOT_REWRITE_TAC thl = CONV_TAC (QUOT_REWRITE_CONV thl)
 
+(* Here are some possible extensions to higher order rewriting,
+   which are currently not needed:
+
         fun SPEC_UNDISCH_ALL th =
               let val th' = UNDISCH_ALL (SPEC_ALL th)
               in if concl th = concl th' then th
                  else SPEC_UNDISCH_ALL th'
               end
 
-(*
         fun QUOT_HO_REWR_CONV th =
             W(Conv.HO_REWR_CONV o pthm o REWRITE_RULE[I_THM] o pthm
                   o repeat resolve_quotient o pthm o UNDISCH_ALL
@@ -2269,54 +2122,76 @@ would include
         fun QUOT_HO_REWRITE_RULE thl = CONV_RULE (QUOT_HO_REWRITE_CONV thl)
 *)
 
-        fun APPLY_RSP_TAC (asl,gl) =
-            let val {Rator=R,Rand=tms1} = (dest_comb o #Rator o dest_comb) gl
-                val {Rator=opp,Rand=args} = dest_comb tms1
-                val _ = assert is_rep_ty (type_of opp)
-                val wf = match_higher_wf APPLY_RSP gl
+(* The EQUALS_RSP_TAC tactic:
+
+                      ?-  R x1 x2  /\  R x2 y2
+                ====================================
+                       ?-  R x1 y1 = R x2 y2
+
+   R must be the partial equivalence relation of some quotient.
+*)
+
+        fun EQUALS_RSP_TAC (asl,gl) =
+            let val tms1 = rand (rator gl)
+                val _ = assert is_rep_ty (type_of (rand tms1))
+                val wf = match_higher_half_wf EQUALS_RSP gl
             in ((MATCH_MP_TAC wf handle _ => MATCH_ACCEPT_TAC wf)
                  THEN REPEAT STRIP_TAC) (asl,gl)
             end
 
+(* The APPLY_RSP_TAC tactic:
+
+               ?-  (R1 ===> R2) f g  /\  R1 x y
+             ====================================
+                      ?-  R2 (f x) (g y)
+
+   The type of f must contain a type being lifted.  Furthermore,
+   f must be of the form (v a1 ... an) with 0 <= n, where v is a variable.
+
+   This is intended to apply where the "head"s of f and g are variables,
+   not constants.  In this case the two variables should be related in the
+   assumption list.
+*)
+
+        fun APPLY_RSP_TAC (asl,gl) =
+            let val tms1 = rand (rator gl)
+                val opp = rator tms1
+                val _ = assert is_rep_ty (type_of opp)
+                val wf = match_higher_half_wf APPLY_RSP gl
+            in ((MATCH_MP_TAC wf handle _ => MATCH_ACCEPT_TAC wf)
+                 THEN REPEAT STRIP_TAC) (asl,gl)
+            end
+
+(* The ABSTRACT_RES_ABSTRACT_TAC tactic implements two complimentary rules
+   for dealing with RES_ABSTRACT:
+
+                          ?-  (R1 ===> R2) f g
+            =================================================
+            ?-  (R1 ===> R2) (RES_ABSTRACT (respects R1) f) g
+
+                          ?-  (R1 ===> R2) f g
+            =================================================
+            ?-  (R1 ===> R2) f (RES_ABSTRACT (respects R1) g)
+
+   This will get rid of the RES_ABSTRACT on either the left or right,
+   and when repeated on both, so that the other tactics can apply to
+   the (perhaps) abstractions f and g.
+*)
         val ABSTRACT_RES_ABSTRACT_TAC =
             QUOT_MATCH_MP_TAC ABSTRACT_RES_ABSTRACT ORELSE
             QUOT_MATCH_MP_TAC RES_ABSTRACT_ABSTRACT
 
-(*
-        val ABS_REP_RSP_TAC : tactic =
-            W(MATCH_MP_TAC o
-              (C get_higher_wf_lambda REP_ABS_RSP) o snd)
-*)
         val ABS_REP_RSP_TAC : tactic =
              QUOT_MATCH_MP_TAC REP_ABS_RSP
 
 
-        fun LAMBDA_PRS1 fty =
-            let val {Tyop=nm, Args=args} = dest_type fty
-                val _ = assert (curry op = "fun") nm
-                val aty = hd args
-                val xtm = mkabs (mk_var{Name="x", Ty=aty})
-                val f = mk_var{Name="f", Ty=absty fty}
-                val ftm = mkrep (mk_comb{Rator=f, Rand=xtm})
-                val rtm = mkabs (--`\x. ^ftm`--)
-            in
-              (* (\x. f x) = ^(\x. v(f ^x)) *)
-            prove
-            ((--`!f.
-                  (\x. f x) = ^rtm`--),
-            GEN_TAC
-            THEN CONV_TAC FUN_EQ_CONV
-            THEN GEN_TAC
-            THEN REWRITE_TAC[FUN_MAP,FUN_MAP_I,I_THM,PAIR_MAP]
-            THEN REPEAT (CHANGED_TAC
-                   (CONV_TAC (DEPTH_CONV BETA_CONV)
-                    THEN REWRITE_TAC map_ths))
-            THEN QUOT_REWRITE_TAC[QUOTIENT_ABS_REP]
-            THEN REWRITE_TAC [ETA_AX]
-            )
-            end;
+(* The LAMBDA_PRS function creates a preservation theorem for an abstraction.
+   It takes a function type fty = ty1 -> ty2 and returns a theorem of the form
 
+                !f. (\x. f x) = (rep1 --> abs2) (\x. rep2 (f (abs1 x)))
 
+   for the appropriate abs and rep functions for ty1 and ty2.
+*)
         fun LAMBDA_PRS fty =
             let val {Tyop=nm, Args=args} = dest_type fty
                 val _ = assert (curry op = "fun") nm
@@ -2331,6 +2206,13 @@ would include
             end;
 
 
+(* The APPLIC_PRS function creates a preservation theorem for an application.
+   It takes a function type fty = ty1 -> ty2 and returns a theorem of the form
+
+                !f. f x = abs2 ((abs1 --> rep2) f (rep1 x))
+
+   for the appropriate abs and rep functions for ty1 and ty2.
+*)
         fun APPLIC_PRS fty =
             let val tyl = dest_funtype fty
                 val tyl = eta_funtype tyl
@@ -2346,13 +2228,12 @@ would include
                 val gl = list_mk_forall(f::args, def)
             in
               (* (f x) = ^(v(f) v(x)) *)
-            prove
-            (gl,
+            prove (gl,
             REPEAT GEN_TAC
             THEN REWRITE_TAC[FUN_MAP,FUN_MAP_I,I_THM,PAIR_MAP]
             THEN REPEAT (CHANGED_TAC
                    (CONV_TAC (DEPTH_CONV BETA_CONV)
-                    THEN REWRITE_TAC map_ths))
+                    THEN REWRITE_TAC[]))
             THEN QUOT_REWRITE_TAC[QUOTIENT_ABS_REP]
             THEN REWRITE_TAC [ETA_AX]
             )
@@ -2362,26 +2243,215 @@ would include
                                 handle _ => MATCH_ACCEPT_TAC th)
 
 
-        (* This critical tactic performs the central task of proving
-           the expansion of the given, lower version of the theorem
-           into a version with "rep o abs" "oil" injected between
-           operator results and their uses.  This oil will be used
-           in the collapse of the lower operators into their higher
-           versions in subsequent rewriting.  *)
+(* ------------------------------------------------------------------------- *)
+(*                                                                           *)
+(* R_MK_COMB_TAC tactic:                                                     *)
+(*                                                                           *)
+(*    The R_MK_COMB_TAC tactic is key to the correct processing of theorems  *)
+(* being lifted up according to the equivalence relations.  It repeatedly    *)
+(* breaks down a goal to be proved into subgoals, and then analyzes each     *)
+(* subgoal, until all are resolved.  Each goal must be of the form           *)
+(*                                                                           *)
+(* RELATION term1 term2                                                      *)
+(*                                                                           *)
+(* where term1 and term2 are terms in the HOL OL of some type, say 'a,       *)
+(* and where RELATION is a partial equivalence relation relating values      *)
+(* of 'a.                                                                    *)
+(* If 'a is not a type being lifted, then RELATION will be normal equality.  *)
+(*                                                                           *)
+(* Currently R_MK_COMB_TAC consists of 12 tactics, tried in order until      *)
+(* one works.  The order of these tactics is very important.  For some       *)
+(* goals, several of the tactics may apply, but they should be tried in      *)
+(* order until the first one is found that works.                            *)
+(*                                                                           *)
+(* This tactic is called from two places: the most important of these is     *)
+(* the call from TRANSFORM_CONV, which proves the expansion of the given,    *)
+(* lower version of the theorem into a version with "rep o abs" "oil"        *)
+(* injected between operator results and their uses.  This oil will be used  *)
+(* in the collapse of the lower operators into their higher versions in      *)
+(* subsequent rewriting.  This is part of the actual lifting of the theorem. *)
+(*                                                                           *)
+(* The other place which calls this tactic is from REGULARIZE_TAC, where     *)
+(* this is used to solve subgoals of the form RELATION term1 term2.          *)
+(* To work in this context, the tactic ABSTRACT_RES_ABSTRACT_TAC is present, *)
+(* which would not be needed otherwise.  This is part of the attempt to      *)
+(* reshape the given theorem into a regular form which can be lifted, which  *)
+(* may or may not succeed.                                                   *)
+(*                                                                           *)
+(* We now list the 12 Individual tactics of R_MK_COMB_TAC:                   *)
+(*                                                                           *)
+(*                                                                           *)
+(* 1. W(C (curry op THEN) (GEN_TAC THEN CONV_TAC                             *)
+(*                 (RAND_CONV BETA_CONV THENC LAND_CONV BETA_CONV)) o        *)
+(*              CONV_TAC o X_FUN_EQ_CONV o #Bvar o dest_abs o lhs o snd)     *)
+(*                                                                           *)
+(* This takes a goal of the form (\x. F(x)) = (\y. G(y))                     *)
+(* and transforms it into the form F(x) = G(x).  I'll represent this as      *)
+(*                                                                           *)
+(*                         ?-  F(x) = G(x)                                   *)
+(*                   ===========================                             *)
+(*                   ?-  (\x. F(x)) = (\y. G(y))                             *)
+(*                                                                           *)
+(* The free variable "x" in the new goal is taken from the bound variable    *)
+(* in the left-hand-side of the original goal.  This obviously only works    *)
+(* if the type of the function (\x. F(x)) is not a type being lifted.        *)
+(*                                                                           *)
+(*                                                                           *)
+(* 2.  ABSTRACT_RES_ABSTRACT_TAC                                             *)
+(*                                                                           *)
+(* This implements two complimentary rules for dealing with RES_ABSTRACT:    *)
+(*                                                                           *)
+(*                           ?-  (R1 ===> R2) f g                            *)
+(*             =================================================             *)
+(*             ?-  (R1 ===> R2) (RES_ABSTRACT (respects R1) f) g             *)
+(*                                                                           *)
+(*                           ?-  (R1 ===> R2) f g                            *)
+(*             =================================================             *)
+(*             ?-  (R1 ===> R2) f (RES_ABSTRACT (respects R1) g)             *)
+(*                                                                           *)
+(* This will get rid of the RES_ABSTRACT on either the left or right,        *)
+(* and when repeated on both, so that the other tactics can apply to         *)
+(* the (perhaps) abstractions f and g.                                       *)
+(*                                                                           *)
+(*                                                                           *)
+(* 3.  LAMBDA_RES_TAC                                                        *)
+(*                                                                           *)
+(*                A U {R1 x y}  ?-  R2 (F(x)) (G(y))                         *)
+(*             =========================================                     *)
+(*             A  ?-  (R1 ===> R2) (\x. F(x)) (\y. G(y))                     *)
+(*                                                                           *)
+(* The free variable "x" is chosen to be not in the free variables of        *)
+(* (\x. F(x)), and "y" is chosen to be not "x" or free in (\y. G(y)).        *)
+(* If possible, they are chosed to be a close as possible to the bound       *)
+(* variables.                                                                *)
+(*                                                                           *)
+(* The new assumption R1 x y is propogated for possible use later in         *)
+(* solving subgoals of R2 (F(x)) (G(y)), where it may well be necessary      *)
+(* to know that R1 x y.  This use of the assumption is accomplished by       *)
+(* FIRST_ASSUM MATCH_ACCEPT_TAC mentioned below.                             *)
+(*                                                                           *)
+(*                                                                           *)
+(* 4.  EQUALS_RSP_TAC                                                        *)
+(*                                                                           *)
+(*                    ?-  R x1 x2  /\  R x2 y2                               *)
+(*              ====================================                         *)
+(*                     ?-  R x1 y1 = R x2 y2                                 *)
+(*                                                                           *)
+(* R must be the partial equivalence relation of some quotient.              *)
+(*                                                                           *)
+(*                                                                           *)
+(* 5.  FIRST (map HIGHER_RSP_TAC ho_polywfs)                                 *)
+(*                                                                           *)
+(* This tries the given generic constant respectfulness theorems until       *)
+(* one fits (if any).  Then the goal is replaced by the corresponding        *)
+(* antecedents, as by MATCH_MP_TAC.  The LET constant is a good example:     *)
+(*                                                                           *)
+(*                 ?-  (R1 ===> R2) f g  /\  R1 x y                          *)
+(*                ==================================                         *)
+(*                    ?-  R2 (LET f x) (LET g y)                             *)
+(*                                                                           *)
+(* The respectfulness theorems in ho_polywfs will have been converted to     *)
+(* the highest order possible, e.g., for the LET respectfulness theorem,     *)
+(*                                                                           *)
+(*                ==================================                         *)
+(*            ?-  ((R1 ===> R2) ===> R1 ===> R2) LET LET                     *)
+(*                                                                           *)
+(*                                                                           *)
+(* 6.  FIRST(map MATCH_ACCEPT_TAC ho_respects)                               *)
+(*                                                                           *)
+(* The "ho_respects" are the respectfulness theorems generated for           *)
+(* all newly defined functions, converted to the highest order, such as:     *)
+(*                                                                           *)
+(*      |- ($= ===> ALPHA) Con1 Con1                                         *)
+(*      |- ($= ===> ALPHA) Var1 Var1                                         *)
+(*      |- ($= ===> $= ===> LIST_REL ($= ### ALPHA)) $// $//                 *)
+(*      |- (ALPHA ===> ALPHA ===> ALPHA) App1 App1                           *)
+(*      |- ($= ===> ALPHA ===> ALPHA) Lam1 Lam1                              *)
+(*      |- (($= ===> ALPHA) ===> ALPHA) Abs1 Abs1                            *)
+(*      |- (ALPHA ===> $=) HEIGHT1 HEIGHT1                                   *)
+(*      |- (ALPHA ===> $=) FV1 FV1                                           *)
+(*      |- (LIST_REL ($= ### ALPHA) ===> $= ===> ALPHA) SUB1 SUB1            *)
+(*      |- (LIST_REL ($= ### ALPHA) ===> $=) FV_subst1 FV_subst1             *)
+(*      |- (ALPHA ===> LIST_REL ($= ### ALPHA) ===> ALPHA) $<[ $<[           *)
+(*      |- ($= ===> LIST_REL ($= ### ALPHA) ===> LIST_REL ($= ### ALPHA)     *)
+(*             ===> $=) ALPHA_subst ALPHA_subst                              *)
+(*                                                                           *)
+(*                                                                           *)
+(* 7.  ABS_REP_RSP_TAC                                                       *)
+(*                                                                           *)
+(*                            ?-  R f g                                      *)
+(*      =======================================================              *)
+(*                       ?-  R f (rep (abs g)                                *)
+(*                                                                           *)
+(*                                                                           *)
+(* 9.  APPLY_RSP_TAC                                                         *)
+(*                                                                           *)
+(*                ?-  (R1 ===> R2) f g  /\  R1 x y                           *)
+(*              ====================================                         *)
+(*                       ?-  R2 (f x) (g y)                                  *)
+(*                                                                           *)
+(* The type of f must contain a type being lifted.  Furthermore,             *)
+(* f must be of the form (v a1 ... an) with 0 <= n, where v is a variable.   *)
+(*                                                                           *)
+(* This is intended to apply where the "head"s of f and g are variables      *)
+(* or constants.  In the variables case, the two variables should be related *)
+(* in the assumption list.                                                   *)
+(*                                                                           *)
+(*                                                                           *)
+(* 9.  REFL_TAC                                                              *)
+(*                                                                           *)
+(*              ====================================                         *)
+(*                          ?-  x = x                                        *)
+(*                                                                           *)
+(* 10.  MK_COMB_TAC                                                          *)
+(*                                                                           *)
+(*                    ?-  (f = g)  /\  (x = y)                               *)
+(*              ====================================                         *)
+(*                         ?-  f x = g y                                     *)
+(*                                                                           *)
+(*                                                                           *)
+(* 11. FIRST_ASSUM MATCH_ACCEPT_TAC                                          *)
+(*                                                                           *)
+(* Finds the first assumption which matches the goal (if any).               *)
+(*                                                                           *)
+(*                                                                           *)
+(*                     ====================                                  *)
+(*                           A  ?-  A                                        *)
+(*                                                                           *)
+(* This makes use of the assumptions created by the tactic LAMBDA_RES_TAC    *)
+(* mentioned above.                                                          *)
+(*                                                                           *)
+(*                                                                           *)
+(* 12. FIRST (map MATCH_MP_TAC EQ_APs) (* for REGULARIZE later *)            *)
+(*                                                                           *)
+(* Reduces equivalence relations to equality relations.  An equality always  *)
+(* implies equivalence, but not the reverse; so these may not be the right   *)
+(* thing to do.  Nevertheless, sometimes it is easier to prove the equality. *)
+(* Note that this ONLY works for relations which are full equivalence        *)
+(* relations; partial equivalence relations are not in general reflexive.    *)
+(*                                                                           *)
+(*     [|- !p q. (p = q) ==> ALPHA p q,                                      *)
+(*      |- !p q. (p = q) ==> ($= ### ALPHA) p q,                             *)
+(*      |- !p q. (p = q) ==> LIST_REL ($= ### ALPHA) p q,                    *)
+(*      |- !p q. (p = q) ==> (ALPHA +++ LIST_REL ($= ### ALPHA)) p q]        *)
+(*                                                                           *)
+(*                                                                           *)
+(* ------------------------------------------------------------------------- *)
 
         val R_MK_COMB_TAC = FIRST
           [W(C (curry op THEN) (GEN_TAC THEN CONV_TAC
                 (RAND_CONV BETA_CONV THENC LAND_CONV BETA_CONV)) o
              CONV_TAC o X_FUN_EQ_CONV o #Bvar o dest_abs o lhs o snd)
            ,
-           ABSTRACT_RES_ABSTRACT_TAC,
+           ABSTRACT_RES_ABSTRACT_TAC, (* slow to die? *)
            LAMBDA_RSP_TAC,
-           FIRST (map HIGHER_RSP_TAC (EQUALS_RSP::ho_polywfs))
+           EQUALS_RSP_TAC,
+           FIRST (map HIGHER_RSP_TAC ho_polywfs)                 (* slow *)
            ,
            FIRST (map MATCH_ACCEPT_TAC ho_respects),
-           ABS_REP_RSP_TAC, (* before APPLY_RSP_TAC *)
+           ABS_REP_RSP_TAC, (* before MATCH_MP_RSP_TAC APPLY_RSP *)
            APPLY_RSP_TAC (* after MATCH_ACCEPT_TAC ho_respects,
-                           before MK_COMB_TAC *)
+                            before MK_COMB_TAC *)                (* slow *)
            ,
            REFL_TAC,
            MK_COMB_TAC
@@ -2391,14 +2461,27 @@ would include
            FIRST (map MATCH_MP_TAC EQ_APs) (* for REGULARIZE later *)
           ]
 
-(* REPEAT R_MK_COMB_TAC *)
+(* For testing purposes: *)
+(* REPEAT R_MK_COMB_TAC  *)
 
         fun prim_liftedf opp =
           exists (fn func => (match_term func opp; true) handle _ => false)
-              funclist
+              funcs
 
         fun liftedf opp =
           prim_liftedf opp orelse poly_liftedf opp
+
+(* ------------------------------------------------------------------------- *)
+(* The transconv function takes a term which is a statement to be lifted,    *)
+(* and "inflates" the term by injecting "rep (abs _)" oil around every       *)
+(* operator that yields a value being lifted.                                *)
+(*                                                                           *)
+(* The particular abs and rep functions used depend, of course, on the       *)
+(* particular type of the value returned by the operator.                    *)
+(*                                                                           *)
+(* The new term is not necessarily equal to the old one; this equality is    *)
+(* proven by the conversion TRANSCONV, using transconv and R_MK_COMB_TAC.    *)
+(* ------------------------------------------------------------------------- *)
 
         fun transconv tm =
           if is_abs tm then
@@ -2442,6 +2525,13 @@ would include
               else list_mk_comb(opp, tms)
             end
 
+(* ------------------------------------------------------------------------- *)
+(* The TRANSCONV conversion takes a term which is a statement to be lifted,  *)
+(* "inflates" the term by injecting "rep (abs _)" oil around every operator  *)
+(* that yields a value being lifted, and proves that the original term is    *)
+(* equal to the inflated term, using transconv and R_MK_COMB_TAC.            *)
+(* ------------------------------------------------------------------------- *)
+
         fun TRANSFORM_CONV tm =
           let 
               val teq = mk_eq{lhs=tm, rhs=transconv tm}
@@ -2459,6 +2549,22 @@ would include
                         ^ " for some constant in it."
                    }
 
+
+(* ------------------------------------------------------------------------- *)
+(* The regularize function takes a term which is a statement to be lifted,   *)
+(* and converts it to a similar term which is "regular", as defined in the   *)
+(* documentation for the quotient package.                                   *)
+(*                                                                           *)
+(* Instances of equality between two types being lifted are converted to     *)
+(* instances of the appropriate partial equivalence relation.                *)
+(* Instances of universal and existstential quantification for types being   *)
+(* lifted are converted to "RES_FORALL R" or "RES_EXISTS R" for the          *)
+(* appropriate partial equivalence relation R.                               *)
+(* Several other more specialized conversions are performed as well.         *)
+(*                                                                           *)
+(* That the original theorem implies the regularized version is proved       *)
+(* by the REGULARIZE function, using regularize and REGULARIZE_TAC.          *)
+(* ------------------------------------------------------------------------- *)
 
         fun regularize tm =
           let val ty = type_of tm
@@ -2566,30 +2672,8 @@ would include
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["RES_EXISTS_EQUIV"] then
-(*
-                      if is_comb (hd args) andalso
-                         is_const ((rator o hd) args) andalso
-                         ((#Name o dest_const o rator o hd) args) = "respects"
-                      then
-*)
                          list_mk_comb(opp, [hd args,
                                          regularize_abs (hd (tl args)) ])
-(*
-                      else
-                      let (*val restr = hd args
-                          val ropp = (#Name o dest_const o fst o strip_comb)
-                                     restr*)
-                          val equiv = hd args
-                          val tm1 = hd (tl args)
-                          val tm1r = regularize_abs tm1
-                          val ty1 = type_of tm1
-                          val dom = (fst o dom_rng) ty1
-                          (*val res = if ropp = "respects" then restr else
-                             (--`\z. respects(^(tyREL dom)) z /\ ^restr z`--)*)
-                      in
-                        (--`RES_EXISTS_EQUIV ^equiv ^tm1r`--)
-                      end
-*)
                       handle _ => list_mk_comb(opp, map regularize args)
                     else
                           list_mk_comb(opp, map regularize args)
@@ -2617,6 +2701,19 @@ would include
             THEN REPEAT R_MK_COMB_TAC
             THEN NO_TAC
 
+
+(* ------------------------------------------------------------------------- *)
+(* The REGULARIZE_TAC tactic attempts to prove the equality of a term with   *)
+(* its "regularized" version.  Similar to R_MK_COMB_TAC, it consists of a    *)
+(* list of 18 tactics which are tried successively and repeatedly to find    *)
+(* the first one that succeeds.  Unlike R_MK_COMB_TAC, success is not always *)
+(* expected.                                                                 *)
+(*                                                                           *)
+(* The first seven tactics deal with various versions of quantification.     *)
+(*                                                                           *)
+(* This tactic is used by the REGULARIZE function to prove the regularized   *)
+(* version of a given theorem.                                               *)
+(* ------------------------------------------------------------------------- *)
 
         val REGULARIZE_TAC = FIRST
           [
@@ -2700,16 +2797,14 @@ would include
            MK_COMB_TAC
           ]
 
-        fun REGULARIZE th =
-          let 
-              val tm = concl th
-              val rmp = mk_imp{ant=tm, conseq=regularize tm}
-              val rth = prove(rmp, REWRITE_TAC er_rws
-                                   THEN REPEAT REGULARIZE_TAC)
-          in
-            MP rth th
-          end
 
+(* ------------------------------------------------------------------------- *)
+(* The REGULARIZE_RULE function attempts to prove the regularized version of *)
+(* a given theorem.    It does this by calling "regularize" to generate the  *)
+(* regularized version of the theorem's conclusion, and then by using        *)
+(* REGULARIZE_TAC to prove that the regular version is implied by the        *)
+(* original version.                                                         *)
+(* ------------------------------------------------------------------------- *)
 
         fun REGULARIZE_RULE th =
                let val tm = concl th
@@ -2717,7 +2812,14 @@ would include
                in
                   if tm = tm' then th
                   else
-                    REGULARIZE th
+                    (* REGULARIZE th *)
+                    let 
+                        val rmp = mk_imp{ant=tm, conseq=tm'}
+                        val rth = prove(rmp, REWRITE_TAC er_rws
+                                             THEN REPEAT REGULARIZE_TAC)
+                    in
+                      MP rth th
+                    end
                     handle _ => raise HOL_ERR {
                          origin_structure = "quotient",
                          origin_function  = "REGULARIZE",
@@ -2727,6 +2829,15 @@ would include
                              term_to_string tm'
                    }
                end
+
+
+(* ------------------------------------------------------------------------- *)
+(* The check_high function verifies if the given term is completely formed   *)
+(* of quotient-level constants and types, without any remaining elements     *)
+(* from the lower, representational level.  Such elements might persist if   *)
+(* for some reason the preservation theorem for some constant in the theorem *)
+(* being lifted was not available to be used in the lifting process.         *)
+(* ------------------------------------------------------------------------- *)
 
         fun check_high tm =
             (if is_comb tm andalso is_const (rator tm)
@@ -2751,9 +2862,19 @@ would include
              else ()
             )
             
+        fun CHECK_HIGH th = (check_high (concl th); list_cache(); th)
 
-        fun CHECK_HIGH th = (check_high (concl th); th)
 
+(* ------------------------------------------------------------------------- *)
+(* In HOL4, version Kananaskis-3, it was discovered that higher order        *)
+(* rewriting was damaged from before.  Previously a rewrite of the form      *)
+(*  (\x. F x) = (\x. G x) would maintain the bound variable name.            *)
+(* But the current version does not, changing the \x. to a gensym variable.  *)
+(*                                                                           *)
+(* REPAIRED_HO_PURE_REWRITE_RULE repairs this, and keeps the original        *)
+(* variable name.                                                            *)
+(* ------------------------------------------------------------------------- *)
+(*
         fun RENAME_ABS_CONV name tm =
             let val ty = (#Ty o dest_var o #Bvar o dest_abs) tm
                 val x = mk_var{Name=name, Ty=ty}
@@ -2771,26 +2892,51 @@ would include
 
         val REPAIRED_HO_PURE_REWRITE_RULE =
                CONV_RULE o TOP_DEPTH_CONV o HO_PURE_REWRITE_CONV
-
+*)
 (*
-val tm4a =
-    ``(term_REP --> I)
-        (\u.
-           HEIGHT1
-             (term_REP
-                (term_ABS
-                   (App1 (term_REP (term_ABS t))
-                      (term_REP (term_ABS u))))) =
-           SUC
-             (HEIGHT1 (term_REP (term_ABS t)) MAX
-              HEIGHT1 (term_REP (term_ABS u))))``;
+        fun HO_REWR_CONV th tm =
+            (Ho_Rewrite.GEN_REWRITE_CONV TOP_DEPTH_CONV ths THENC
+             (if is_abs (rand tm) then
+                let val name = (#Name o dest_var o #Bvar o dest_abs o rand) tm
+                in
+                   RENAME_ABS_CONV name
+                end
+              else ALL_CONV)) tm
 
-Ho_Rewrite.GEN_REWRITE_CONV I LAM_APP_DEFS tm4a
-LAM_APP_DEFS_CONV tm4a handle e => Raise e;
-REPAIRED_HO_PURE_REWRITE_RULE(LAM_APP_DEFS) th4;
-PURE_REWRITE_RULE (map GSYM DEFs) it;
+        fun HO_PURE_REWRITE_CONV1 ths tm =
+            (Ho_Rewrite.GEN_REWRITE_CONV TOP_DEPTH_CONV ths THENC
+             (if is_abs (rand tm) then
+                let val name = (#Name o dest_var o #Bvar o dest_abs o rand) tm
+                in
+                   RENAME_ABS_CONV name
+                end
+              else ALL_CONV)) tm
+
+        val REPAIRED_HO_PURE_REWRITE_RULE1 =
+               CONV_RULE o HO_PURE_REWRITE_CONV1
 *)
 
+
+(* ------------------------------------------------------------------------- *)
+(* Here we define LIFT_RULE, which is the function that lifts theorems from  *)
+(* the original, lower level to the higher, quotient level.                  *)
+(*                                                                           *)
+(* LIFT_RULE has several phases:                                             *)
+(*    1. Preliminary cleaning by GEN_ALL and tyop_simps;                     *)
+(*    2. Conversion to regularized form by REGULARIZE_RULE;                  *)
+(*    3. Extraction of the operators, abstractions, and applications         *)
+(*          contained within the theorem to be lifted;                       *)
+(*    4. Creation of the preservation theorems for the operators,            *)
+(*          abstractions, and applications;                                  *)
+(*    5. Transformation of the regular theorem to its "inflated" form;       *)
+(*          ( This is the phase with the highest failure rate. )             *)
+(*    6. Conversion of R (rep x) (rep y) to (x = y);                         *)
+(*    7. Rewriting by all preservation theorems to collapse inflated forms;  *)
+(*    8. Checking that the result has no remaining lower-level terms.        *)
+(*                                                                           *)
+(* If anything fails, LIFT_RULE wraps the exception with an error message    *)
+(* containing the actual original theorem which was given to be lifted.      *)
+(* ------------------------------------------------------------------------- *)
 
         val LIFT_RULE =
               (fn th => let val thr = (REGULARIZE_RULE o
@@ -2808,8 +2954,7 @@ PURE_REWRITE_RULE (map GSYM DEFs) it;
                         in
                          (CHECK_HIGH o
                           PURE_REWRITE_RULE (map GSYM DEFs) o
-                          REPAIRED_HO_PURE_REWRITE_RULE(LAM_APP_DEFS) o
-                      (*  Ho_Rewrite.PURE_REWRITE_RULE(LAM_APP_DEFS) o *)
+                          Ho_Rewrite.PURE_REWRITE_RULE LAM_APP_DEFS o
                           QUOT_REWRITE_RULE [GSYM EQUALS_PRS] o
                           CONV_RULE TRANSFORM_CONV) thr
                          handle e => raise HOL_ERR {
@@ -2825,14 +2970,17 @@ PURE_REWRITE_RULE (map GSYM DEFs) it;
        
        LIFT_RULE
     end;
-(* end of lift_theorem_by_quotients1 *)
+(* end of lift_theorem_by_quotients *)
 
 
+(* --------------------------------------------------------------- *)
 (* Returns a list of types present in the "respects" theorems but  *)
-(* not directly mentioned in the "quot_ths" list, but which can be *)
-(* built from them.                                                *)
+(* not directly mentioned in the "quot_ths" list, but for which    *)
+(* quotient theorems can be built from the existing ones.          *)
+(* --------------------------------------------------------------- *)
 
 fun enrich_types quot_ths tyops respects =
+     (* qtys holds the base types of the new quotients formed. *)
     let val qtys = map (hd o #Args o dest_type o type_of o hd o tl
                             o snd o strip_comb o concl) quot_ths
         fun resp_ty rth =
@@ -2840,7 +2988,7 @@ fun enrich_types quot_ths tyops respects =
                 val base = (#conseq o dest_imp) body handle _ => body
             in (#Ty o dest_const o fst o strip_comb o #Rand o dest_comb) base
             end
-        (* Checks there is a substitution theta s.t. ty2 theta = ty1: *)
+        (* test checks there is a substitution theta s.t. ty2 theta = ty1: *)
         fun test ty1 ty2 = (match_type ty2 ty1; true) handle _ => false
         fun tintersect [] tys2 = []
           | tintersect (ty::tys) tys2 =
@@ -2850,15 +2998,30 @@ fun enrich_types quot_ths tyops respects =
           | tsubtract (ty::tys) tys2 =
                if exists (test ty) tys2 then     tsubtract tys tys2
                                         else ty::tsubtract tys tys2
-        val rbods = map (snd o strip_forall o concl) respects
+
+     (* being_lifted ty is true iff ty contains a subtype being lifted *)
+        fun being_lifted ty = not (null (tintersect (sub_tys ty) qtys))
+
+     (* atys holds the types of arguments and results of the operators
+           described in the "respects" theorems.
+           These are used as suggestions for types of new quotient theorems
+           that may be frequently needed in the later phase of lifting old
+           theorems to the quotient level. *)
         val atys = mk_set (flatten (map (fun_tys o resp_ty) respects))
-        val ltys = filter (fn ty =>
-                           not (null (tintersect (sub_tys ty) qtys))) atys
+
+     (* ltys holds those types from atys which contain a type being lifted *)
+        val ltys = filter being_lifted atys
+
+     (* natys holds those types from ltys which are new, not in qtys *)
         val natys = tsubtract ltys qtys
-        val nstys = filter (fn ty =>
-                           not (null (tintersect (sub_tys ty) qtys)))
-                        (flatten (map sub_tys natys))
+
+     (* nstys holds all subtypes of the types in natys which contain a type
+           being lifted *)
+        val nstys = filter being_lifted (flatten (map sub_tys natys))
+
+     (* ntys holds all types from nstys which are new, not in qtys *)
         val ntys = mk_set (tsubtract nstys qtys)
+
 (*    val quot_ths' = quot_ths @ map (make_quotient (quot_ths @ tyops)) ntys *)
     in
         ntys
@@ -2867,6 +3030,9 @@ fun enrich_types quot_ths tyops respects =
 
 
 
+(* ----------------------- *)
+(* ALTENATIVE ENTRY POINT. *)
+(* ----------------------- *)
 
 fun define_quotient_types_rule {types, defs,
                                 tyop_equivs, tyop_quotients, tyop_simps,
@@ -2890,7 +3056,12 @@ fun define_quotient_types_rule {types, defs,
       val _ = if !chatting then map print_thm' fn_defns else []
 
       val ntys = enrich_types quotients tyop_quotients respects
-      val equivs = equivs @ map (make_equiv all_equivs) ntys
+      val nequivs = map (make_equiv all_equivs) ntys
+      fun is_ident_equiv th =
+             (curry op = "=" o #Name o dest_const o rator o rator
+                               o lhs o snd o strip_forall o concl) th
+             handle _ => false
+      val equivs = equivs @ filter (not o is_ident_equiv) nequivs
       val quotients =
           quotients @ map (make_quotient (quotients @ tyop_quotients)) ntys
 
@@ -2904,6 +3075,10 @@ fun define_quotient_types_rule {types, defs,
   end;
 
 
+
+(* ----------------- *)
+(* MAIN ENTRY POINT. *)
+(* ----------------- *)
 
 fun define_quotient_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
                            respects, poly_preserves, poly_respects, old_thms} =
@@ -2926,6 +3101,97 @@ fun define_quotient_types {types, defs, tyop_equivs, tyop_quotients,tyop_simps,
   in
     new_thms
   end;
+
+
+fun define_quotient_types_full_rule {types, defs, tyop_equivs, tyop_quotients,
+               tyop_simps, respects, poly_preserves, poly_respects} =
+  let
+      val tyop_equivs = tyop_equivs @
+                        [LIST_EQUIV, PAIR_EQUIV, SUM_EQUIV, OPTION_EQUIV]
+      val tyop_quotients = tyop_quotients @
+                        [LIST_QUOTIENT, PAIR_QUOTIENT,
+                            SUM_QUOTIENT, OPTION_QUOTIENT, FUN_QUOTIENT]
+      val tyop_simps = tyop_simps @
+                       [LIST_MAP_I, LIST_REL_EQ, PAIR_MAP_I, PAIR_REL_EQ,
+                        SUM_MAP_I, SUM_REL_EQ, OPTION_MAP_I, OPTION_REL_EQ,
+                        FUN_MAP_I, FUN_REL_EQ]
+      val poly_preserves = poly_preserves @
+                           [CONS_PRS, NIL_PRS, MAP_PRS, LENGTH_PRS, APPEND_PRS,
+                            FLAT_PRS, REVERSE_PRS, FILTER_PRS, NULL_PRS,
+                            SOME_EL_PRS, ALL_EL_PRS, FOLDL_PRS, FOLDR_PRS,
+                            FST_PRS, SND_PRS, COMMA_PRS, CURRY_PRS,
+                            UNCURRY_PRS, PAIR_MAP_PRS,
+                            INL_PRS, INR_PRS, ISL_PRS, ISR_PRS, SUM_MAP_PRS,
+                            NONE_PRS, SOME_PRS, IS_SOME_PRS, IS_NONE_PRS,
+                            OPTION_MAP_PRS,
+                            FORALL_PRS, EXISTS_PRS,
+                            EXISTS_UNIQUE_PRS, ABSTRACT_PRS,
+                            COND_PRS, LET_PRS,
+                            I_PRS, K_PRS, o_PRS, C_PRS, W_PRS]
+      val poly_respects  = poly_respects @
+                           [CONS_RSP, NIL_RSP, MAP_RSP, LENGTH_RSP, APPEND_RSP,
+                            FLAT_RSP, REVERSE_RSP, FILTER_RSP, NULL_RSP,
+                            SOME_EL_RSP, ALL_EL_RSP, FOLDL_RSP, FOLDR_RSP,
+                            FST_RSP, SND_RSP, COMMA_RSP, CURRY_RSP,
+                            UNCURRY_RSP, PAIR_MAP_RSP,
+                            INL_RSP, INR_RSP, ISL_RSP, ISR_RSP, SUM_MAP_RSP,
+                            NONE_RSP, SOME_RSP, IS_SOME_RSP, IS_NONE_RSP,
+                            OPTION_MAP_RSP,
+                            RES_FORALL_RSP, RES_EXISTS_RSP,
+                            RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP,
+                            COND_RSP, LET_RSP,
+                            I_RSP, K_RSP, o_RSP, C_RSP, W_RSP]
+(* ?? EQUALS, LAMBDA, RES_FORALL, RES_EXISTS, APPLY ?? *)
+  in
+    define_quotient_types_rule
+          {types=types, defs=defs,
+           tyop_equivs=tyop_equivs, tyop_quotients=tyop_quotients,
+           tyop_simps=tyop_simps,
+           respects=respects,
+           poly_preserves=poly_preserves, poly_respects=poly_respects}
+  end;
+
+
+
+fun define_quotient_types_full {types, defs, tyop_equivs, tyop_quotients,
+               tyop_simps, respects, poly_preserves, poly_respects, old_thms} =
+  let fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)
+                                       else th
+
+      val LIFT_RULE =
+          define_quotient_types_full_rule
+              {types=types, defs=defs,
+               tyop_equivs=tyop_equivs, tyop_quotients=tyop_quotients,
+               tyop_simps=tyop_simps,
+               respects=respects,
+               poly_preserves=poly_preserves, poly_respects=poly_respects}
+
+      val _ = if !chatting then print "\nLifted theorems:\n" else ()
+      val new_thms = map (print_thm' o LIFT_RULE)
+                         old_thms   handle e => Raise e
+  in
+    new_thms
+  end;
+
+
+fun define_quotient_types_std_rule {types, defs, respects} =
+    define_quotient_types_full_rule
+          {types=types, defs=defs,
+           tyop_equivs=[], tyop_quotients=[],
+           tyop_simps=[],
+           respects=respects,
+           poly_preserves=[], poly_respects=[]};
+
+
+
+fun define_quotient_types_std {types, defs, respects, old_thms} =
+    define_quotient_types_full
+          {types=types, defs=defs,
+           tyop_equivs=[], tyop_quotients=[],
+           tyop_simps=[],
+           respects=respects,
+           poly_preserves=[], poly_respects=[],
+           old_thms=old_thms};
 
 
 

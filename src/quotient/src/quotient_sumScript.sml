@@ -49,7 +49,8 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 
 
-(* for SUM of ABS / REP functions, use infix ++, defined here: *)
+(* for SUM of ABS / REP functions, use infix ++, defined in
+   src/sum/sumScript.sml. *)
 
 
 (* for SUM of equivalence relations, use infix +++, defined here: *)
