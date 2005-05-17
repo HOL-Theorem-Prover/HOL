@@ -1010,7 +1010,7 @@ of theorems, which would compromise
 the consistency
 \index{consistency, of HOL logic@consistency, of \HOL{} logic} of the logic.
 (Functions which return theorems as values, \eg\ functions representing primitive inferences,
-are discussed in Section~\ref{rules}.
+are discussed in Section~\ref{rules}.)
 %% derived-rules reference is dead for the moment (until we
 %% resuscitate drules.tex)
 %, and further in Chapter\ref{derived-rules}.)
@@ -1295,8 +1295,9 @@ Failure if $x$ is not a variable, or $x$
 
 \begin{boxed}\index{INST_TYPE@\ml{INST\_TYPE}|pin}
 \begin{verbatim}
-   INST_TYPE : (hol_type*hol_type) list -> thm -> thm
-\end{verbatim}\end{boxed}
+   INST_TYPE : {redex : hol_type, residue : hol_type} list -> thm -> thm
+\end{verbatim}
+\end{boxed}
 
 \begin{center}
 \begin{tabular}{c}
@@ -1316,14 +1317,21 @@ $\alpha_n$ in $t$, with the restriction that none of $\alpha_1$, $\ldots$\
 \end{itemize}
 
 \noindent
-{\small\verb+INST_TYPE[(+}$\sigma_1${\small\verb+,+}$\alpha_1${\small\verb+);+}$\ldots${\small\verb+;(+}$\sigma_n${\small\verb+,+}$\alpha_n${\small\verb+)] +}$th$
+\ml{INST\_TYPE[$\alpha_1$~|->~$\sigma_1$%
+,$\ldots$,$\alpha_n$~|->~$\sigma_n$]~$th$}
 returns the result of instantiating each occurrence of $\alpha_i$ in the
-theorem $th$ to $\sigma_i$ (for $1 \leq i \leq n$). Failure if:
+theorem $th$ to $\sigma_i$ (for $1 \leq i \leq n$). Failure occurs if:
 \begin{myenumerate}
-\item arguments of the wrong form (\eg\ an $\alpha_i$ is not a type variable);
-\item $\alpha_i$
-(for $1\leq i\leq n$) occurs in any assumption in $\Gamma$.
+\item arguments are of the wrong form (\eg\ an $\alpha_i$ is not a
+  type variable);
+\item $\alpha_i$ (for $1\leq i\leq n$) occurs in any assumption in
+  $\Gamma$.
 \end{myenumerate}
+The polymorphic \ML{} infix function {\small\verb+|->+} is used to
+construct values of the \ml{redex-residue} record type.  It is defined
+\begin{verbatim}
+   fun ((x:'a) |-> (y:'b)) = {redex = x, residue = y}
+\end{verbatim}
 
 \bigskip
 
