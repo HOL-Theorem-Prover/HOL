@@ -263,7 +263,7 @@ fun branch_string l conds =
   let val dl = decode_branch l
       val h = mnemonic ("b" ^ (if #L dl then "l" else "") ^ conds)
   in
-    h ^ (if #sign dl then " #-" else " #") ^ (int_to_string (#offset dl))
+    h ^ (if #sign dl then "#-" else "#") ^ (int_to_string (#offset dl))
   end;
 
 fun data_proc_string l conds x =
@@ -309,7 +309,7 @@ fun ldr_str_string l conds =
                          shift_immediate_string (decode_immediate_shift (#offset dl))
                     else let val n = list2num (#offset dl) in
                       if n = Arbnum.zero then "" else
-                        ", " ^ (if not (#U dl) then "#-" else "#") ^ Arbnum.toString n end)
+                        (if not (#U dl) then "#-" else "#") ^ Arbnum.toString n end)
       val h = mnemonic ((if #L dl then "ldr" else "str") ^ conds ^ (if #B dl then "b" else ""))
   in
     h ^ register_string (#Rd dl) ^ ", [" ^ register_string (#Rn dl) ^

@@ -1,12 +1,4 @@
-(* ===================================================================== *)
-(* FILE          : testScript.sml                                        *)
-(* DESCRIPTION   : Provides GUI for executing the ARM ISA                *)
-(*                                                                       *)
-(* AUTHOR        : (c) Anthony Fox, University of Cambridge              *)
-(* DATE          : 2005                                                  *)
-(* ===================================================================== *)
-
-(* app load ["metisLib","listLib","compLib","io_onestepTheory",
+(* app load ["Unix","listLib","compLib","io_onestepTheory",
              "armLib","coreLib","disassemblerLib","patriciaLib"]; *)
 open HolKernel boolLib bossLib Parse Q;
 
@@ -17,6 +9,10 @@ val _ = new_theory "test";
 val _ = numLib.prefer_num();
 
 val EXC_HANDLER = "exc_handler";
+val UNDEF_INST  = Arbnum.fromHexString "E6000010";
+val BINUTILS    = "/local/scratch/acjf3/gas/bin/arm-coff-";
+val AS_BIN      = BINUTILS ^ "as";
+val OBJCOPY_BIN = BINUTILS ^ "objcopy";
 
 (* -------------------------------------------------------- *)
 
@@ -35,7 +31,7 @@ val SET_IREG_def = Define`
 val SET_IREG = prove(
   `!x s irpt data. (NEXT_ARM s (irpt,ARB,data) = x) ==>
                    (NEXT_ARM s (irpt,ireg,data) = SET_IREG x ireg)`,
-  Cases THEN RW_TAC std_ss [armTheory.NEXT_ARM_def,SET_IREG_def]
+  Cases THEN RW_TAC (std_ss++boolSimps.LET_ss) [armTheory.NEXT_ARM_def,SET_IREG_def]
 );
 
 val ARM_SPEC_NEXT = MATCH_MP io_onestepTheory.IMAP_NEXT armTheory.STATE_ARM_THM;
@@ -87,15 +83,6 @@ in
         (slice n31 (a + n8) x) + b * pow(two,a) + (bits (less1 a) zero x)
       end
   end
-
-  fun swap_ends n =
-    let val x0 = bits n7 zero n
-        val x1 = bits (fromInt 15) n8 n
-        val x2 = bits (fromInt 23) (fromInt 16) n
-        val x3 = bits n31 (fromInt 24) n
-    in
-       x0 * n16777216 + x1 * n65536 + x2 * n256 + x3
-    end
 end;
 
 fun nzeros_string n = funpow n (fn x => x ^ "0") "";
@@ -124,14 +111,13 @@ fun mem_read byto n =
       val (bl,i) = Arbnum.divmod(q,block_size_num)
   in
     case patriciaLib.member (num2word bl) (!memory) of
-      NONE => Arbnum.zero
+      NONE => UNDEF_INST
     | SOME b =>
         let val w = Array.sub(#data b,Arbnum.toInt i) in
         case byto of
           NONE => w
-        | SOME (le,byt) =>
-            let val w = if le then w else swap_ends w
-                val a = Arbnum.*(align,n8) in
+        | SOME byt =>
+            let val a = Arbnum.*(align,n8) in
               if byt then
                 bits (Arbnum.+(a,n7)) a w
               else
@@ -150,7 +136,7 @@ fun mem_write byt n w =
     case patriciaLib.member (num2word bl) (!memory) of
       NONE => memory := (patriciaLib.add
         {key = num2word bl,
-         data = let val d = Array.array(block_size,Arbnum.zero)
+         data = let val d = Array.array(block_size,UNDEF_INST)
                     val _ = Array.update(d,i,if byt then set_byte align w Arbnum.zero else w) in
                  d
                end} (!memory))
@@ -218,7 +204,9 @@ local
   val gpc = eval_pc o get_reg
   val mk_read = mk_word32 o mem_read_word
 in
-  val fetch_ireg = mk_read o gpc
+  fun fetch_ireg t = let val pc = gpc t in
+        (pc = n4,mk_read pc)
+    end
   fun fetch_ireg_pipeb t = let val pc = gpc t in
         (mk_read pc, mk_read (Arbnum.+(pc,n4)))
     end
@@ -393,7 +381,7 @@ local
         let val l = Word8Vector.length v
             fun f i = if i < l then Word8Vector.sub(v,i) else 0wx0
         in
-          bytes2num (f i, f (i + 1), f (i + 2), f (i + 3))
+          bytes2num (f i, f (i + 1), f (i + 2), f (i + 3)) (* could change order to do little-endian *)
         end
 in
   fun load_data fname skip top_addr =
@@ -402,24 +390,27 @@ in
         val data = inputAll istr
         val _ = closeIn istr
     in
-      for_se 0 ((Word8Vector.length data - skip) div 4)
+      for_se 0 ((Word8Vector.length data - skip) div 4 - 1)
         (fn i => let val a = 4 * i
                      val n = read_word (data,a + skip)
                  in mem_write false (Arbnum.+(top_addr,Arbnum.fromInt a)) n end)
     end
-end
+end;
 
 fun save_data fname start finish le =
-  let open BinIO
+  let open BinIO Arbnum
       val ostr = openOut fname
       val num2word8 = Word8.fromInt o Arbnum.toInt;
-      fun save_word i = output1(ostr,num2word8 (mem_read (SOME (le,true)) i))
+      val offset = bits one zero start
+      fun swap_end i = slice n31 two i + (n3 - bits one zero i)
+      fun addr i = if le then i else swap_end (i - offset) + offset
+      fun save_word i = output1(ostr,num2word8 (mem_read (SOME true) (addr i)))
       fun recurse i =
             if Arbnum.<=(i,finish) then recurse (save_word i; Arbnum.plus1 i)
             else closeOut ostr
   in
     recurse start
-  end
+  end;
 
 (* -----------
  A suitable ARM code binary can be generated using GNU's binutils:
@@ -430,24 +421,37 @@ fun save_data fname start finish le =
  Then a skip of 60 is needed to pass over the header of the COFF binary
    ----------- *)
 
-val exc_handler = Word8Vector.fromList
-  [0wxE3,0wxB0,0wxF0,0wx20,
-   0wxE1,0wxB0,0wxF0,0wx0E,
-   0wxE1,0wxB0,0wxF0,0wx0E,
-   0wxE2,0wx5E,0wxF0,0wx04,
-   0wxE2,0wx5E,0wxF0,0wx08,
-   0wxE1,0wxB0,0wxF0,0wx0E,
-   0wxE2,0wx5E,0wxF0,0wx04,
-   0wxE2,0wx5E,0wxF0,0wx04];
+fun assemble a s =
+  let val as_ex  = Unix.execute(AS_BIN,["-EB","-aln"])
+      val (inp,out) = Unix.streamsOf as_ex
+      val _ = TextIO.output(out,String.concat (map (fn t => t ^ "\n") s))
+      val _ = TextIO.closeOut out
+      val err = TextIO.inputAll inp
+      val _ = TextIO.closeIn inp
+      val objcopy_ex = Unix.execute(OBJCOPY_BIN,["-S","-j",".text","a.out","a.out"])
+      val _ = Unix.reap objcopy_ex
+  in
+    (load_data "a.out" 60 a) handle _ => print err
+  end;
+  
+fun assemble1 a s =
+   let val x = if s = "" then UNDEF_INST else Arbnum.fromHexString s in
+      mem_write false a x
+   end handle _ => assemble a [s];
 
-(* save exception handler *)
-val _ = let open BinIO
-            val ostr = openOut EXC_HANDLER
-        in output(ostr,exc_handler); closeOut ostr end;
+(* load and save rudimentary exception handler *)
 
-(** Load Exception Handler *************)
-val _ = load_data EXC_HANDLER 0 Arbnum.zero;
-(***************************************)
+val _ = assemble Arbnum.zero
+  ["movs pc, #32",
+   "label: b label",
+   "movs pc, r14",
+   "subs pc, r14, #4",
+   "subs pc, r14, #8",
+   "movs pc, r14",
+   "subs pc, r14, #4",
+   "subs pc, r14, #4"];
+
+val _ = save_data EXC_HANDLER Arbnum.zero n31 false;
 
 (* -------------------------------------------------------- *)
 
@@ -541,13 +545,13 @@ val r = state6 5 r0;
 (* -------------------------------------------------------- *)
 
 fun init_state t =
-  let val ireg = fetch_ireg t
+  let val (done,ireg) = fetch_ireg t
       val s = SIMP_CONV (std_ss++STATE_INP_ss++boolSimps.LET_ss)
                 [armTheory.STATE_ARM_def,armTheory.ARM_SPEC_def]
                (subst [``x:state_arm_ex`` |-> subst [``ireg:word32`` |-> ireg] t]
                  ``ARM_SPEC 0 <| state := x; inp := \c. ARB |>``)
       val ns = SUBST_RULE (CONV_RULE (RAND_CONV SIMARM_CONV) s)
-      val done = (not o is_word_literal o get_ireg o get_state) ns
+      val done = done orelse (not o is_word_literal o get_ireg o get_state) ns
   in
      {done = done, state = ns}
   end;
@@ -567,15 +571,16 @@ fun next_state p =
                   ``(NONE:interrupts option,ARB:word32,data:word32 list)``
       val ns = SIMARM_CONV (subst [``x:state_arm_ex`` |-> get_state p,
                  ``i:interrupts option # word32 # word32 list `` |-> inp] ``NEXT_ARM x i``)
-      val ireg = fetch_ireg (rhsc ns)
+      val (done,ireg) = fetch_ireg (rhsc ns)
       val ns2 = (CONV_RULE (RHS_CONV (PURE_REWRITE_CONV [SET_IREG_def])))
                   (MATCH_MP (Thm.INST [``ireg:word32`` |-> ireg] SET_IREG) ns)
       val out2 = SIMARM_CONV (mk_comb(``OUT_ARM``,rhsc ns2))
-      val done = (not o is_word_literal o get_ireg o rhsc) ns2
+      val done = done orelse (not o is_word_literal o get_ireg o rhsc) ns2
   in
      {done = done,
       state = (SUBST_RULE o SUC_BETA_RULE) (MATCH_MP ARM_SPEC_NEXT (CONJ  p (CONJ ns2 out2)))}
   end;
+(* make halt if go to undefined instruction exception handler *)
 
 fun state t x =
   let fun recurse t l =
@@ -628,7 +633,7 @@ local
 
   val ex_regs = Array.array(22,"")
   val mode = ref usr
-  val exc = ref software
+  val exc = ref reset
   val psr = Array.array(6,{n = false, z = false, c = false, v = false, i = false, f = false, mode = usr})
 
   val trace_winId = newWinId()
@@ -643,6 +648,10 @@ local
   val save_startId = newWidgetId()
   val save_finishId = newWidgetId()
 
+  val line_winId = newWinId()
+  val line_entryId = newWidgetId()
+
+  val bl_key = ref 0wx0
   val mem_winId = newWinId()
   val mem_blockId = newWidgetId()
   val mem_dumpId = newWidgetId()
@@ -666,7 +675,8 @@ local
             val _ = Array.modify (fn _ => {n = false, z = false, c = false, v = false,
                                            i = false, f = false, mode = usr}) psr
             val _ = mode := usr
-            val _ = exc  := software
+            val _ = exc  := reset
+            val _ = bl_key := (hd (patriciaLib.keys (!memory)) handle _ => 0wx0)
         in
           ()
         end
@@ -697,6 +707,9 @@ local
   fun simple_entry id = Entry {
         widId = id, bindings = [], configs = [], packings = [Side Right]}
 
+  fun simple_entryw id w = Entry {
+        widId = id, bindings = [], configs = [Width w], packings = [Side Right]}
+
   fun simple_button p t c = Button {
         widId = newWidgetId(), configs = [Text t, Command c],
         packings = p, bindings = []}
@@ -713,10 +726,42 @@ local
 
   (* --- *)
 
-  fun show_blocks() =
-        (clearText mem_blockId;
-         app (fn b => insertTextEnd mem_blockId (block_range b)) (patriciaLib.keys (!memory));
-         clearText mem_dumpId)
+  fun projMark (Mark(x,_)) = x
+    | projMark (MarkToEnd x) = x
+    | projMark MarkEnd = 0
+
+  local
+    fun delete_block n = memory := patriciaLib.remove n (!memory)
+    fun nth_key n = List.nth(patriciaLib.keys (!memory),n)
+    fun do_block n d = Array.foldl (fn (a,l) => (insertTextEnd mem_dumpId ((line_string l a)); plus4 l)) n d
+  in
+    fun fill_block k =
+          (clearText mem_dumpId;
+           case patriciaLib.member k (!memory) of
+             NONE => ()
+           | SOME d => ((do_block (block_start k) (#data d)); ()))
+
+    fun view_block() =
+         if readSelWindow() = SOME (mem_winId,mem_blockId) then
+            let val k = nth_key (projMark (readCursor mem_blockId))
+                val _ = bl_key := k
+            in
+              fill_block k
+            end
+         else ()
+
+    fun show_blocks() =
+         (clearText mem_blockId;
+          app (fn b => insertTextEnd mem_blockId (block_range b)) (patriciaLib.keys (!memory));
+          fill_block (!bl_key))
+
+    fun wipe_block() =
+         ((if readSelWindow() = SOME (mem_winId,mem_blockId) then
+             let val n = projMark (readCursor mem_blockId) in
+               delete_block (nth_key n)
+             end
+           else ()); show_blocks())
+  end
 
   fun load_load() =
         let val fname = readTextAll load_fnameId
@@ -791,32 +836,33 @@ local
 
   (* --- *)
 
-  local
-    fun projMark (Mark(x,_)) = x
-      | projMark (MarkToEnd x) = x
-      | projMark MarkEnd = 0
-    fun delete_block n = memory := patriciaLib.remove n (!memory)
-    fun nth_key n = List.nth(patriciaLib.keys (!memory),n)
-    fun nth_block n = valOf (patriciaLib.member (nth_key n) (!memory))
-  in
-    fun view_block() =
-        (clearText mem_dumpId;
-         if readSelWindow() = SOME (mem_winId,mem_blockId) then
-            let val a = nth_block (projMark (readCursor mem_blockId))
-                val n = block_start (#key a)
-                val d = #data a
-            in
-              (Array.foldl (fn (a,l) => (insertTextEnd mem_dumpId ((line_string l a)); plus4 l)) n d;())
-            end
-          else ())
+  val line_address = ref Arbnum.zero
 
-    fun wipe_block() =
-         ((if readSelWindow() = SOME (mem_winId,mem_blockId) then
-             let val n = projMark (readCursor mem_blockId) in
-               delete_block (nth_key n)
-             end
-           else ()); show_blocks())
-  end
+  fun read_line() =
+        if occursWin line_winId andalso (readSelWindow() = SOME (mem_winId,mem_dumpId)) then
+           let val k = (Arbnum.fromInt o projMark o readCursor) mem_dumpId
+               val n = Arbnum.+(block_start (!bl_key),Arbnum.*(k,n4))
+               val _ = line_address := n
+               val d = mem_read_word n
+               val s = disassemblerLib.opcode_string d
+               val s = if s = "cdp_und" then Arbnum.toHexString d else s
+           in
+             (clearText line_entryId; insertTextEnd line_entryId s;
+              changeTitle line_winId (mkTitle ("Edit address: 0x" ^ (Arbnum.toHexString n))))
+           end
+        else ()
+
+  fun line_update() =
+        (assemble1 (!line_address) (readTextAll line_entryId); show_blocks(); fill_block (!bl_key))
+
+  val line_win = mkWindow {
+    winId    = line_winId,
+    config   = [],
+    widgets  = Pack [bind_entry (simple_entryw line_entryId 30) [BindEv(KeyPress "Return", fn _ => line_update())]],
+    bindings = [],
+    init     = noAction}
+
+  fun edit_mem_line() = (copenWindow line_winId line_win; read_line())
 
   val delete_button = simple_button [Side Top] "wipe block" wipe_block
   val load_button = simple_button [Side Top] "load" (fn _ => copenWindow load_winId load_win)
@@ -829,7 +875,10 @@ local
                delete_button,load_button,save_button])
 
   val mem_content = simple_frame [Side Right]
-                     (Pack [simple_top_label "content", simple_list (50,24) true mem_dumpId])
+        (Pack [simple_top_label "content",
+                 bind_list (simple_list (50,24) true mem_dumpId)
+                           [BindEv(Double(ButtonPress (SOME 1)), fn _ => edit_mem_line()),
+                            BindEv(ButtonPress (SOME 1), fn _ => read_line())]])
 
   val mem_win = mkWindow {
     winId    = mem_winId,

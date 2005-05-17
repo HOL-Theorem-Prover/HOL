@@ -336,11 +336,12 @@ val DATA_PROCESSING_def = Define`
     let (C_s,op2) = ADDR_MODE1 reg mode C I opnd2
     and pc_reg = INC_PC reg in
     let rn = REG_READ (if ~I /\ (BIT 4 opnd2) then pc_reg else reg) mode Rn in
-    let ((N,Z,C_alu,V),res) = ALU opcode rn op2 C in
-      ARM (if TEST_OR_COMP opcode then pc_reg else REG_WRITE pc_reg mode Rd res)
+    let ((N,Z,C_alu,V),res) = ALU opcode rn op2 C
+    and tc = TEST_OR_COMP opcode in
+      ARM (if tc then pc_reg else REG_WRITE pc_reg mode Rd res)
         (if S then
            CPSR_WRITE psr
-             (if Rd = 15 then SPSR_READ psr mode
+             (if (Rd = 15) /\ ~tc then SPSR_READ psr mode
                          else (if ARITHMETIC opcode
                                  then SET_NZCV (N,Z,C_alu,V)
                                  else SET_NZC  (N,Z,C_s)) (CPSR_READ psr))
@@ -655,23 +656,27 @@ val PROJ_Dabort_def = Define `PROJ_Dabort (SOME (Dabort x)) = x`;
 val PROJ_Reset_def  = Define `PROJ_Reset  (SOME (Reset x))  = x`;
 
 val interrupt2exception_def = Define`
-  interrupt2exception (cpsr,exc,ireg) irpt =
-    let (nzcv,i,f,m) = DECODE_PSR cpsr in
+  interrupt2exception (ARM_EX (ARM reg psr) ireg exc) (i',f') irpt =
+    let (nzcv,i,f,m) = DECODE_PSR (CPSR_READ psr)
+    and n = w2n ireg in
+    let pass = (exc = software) /\ CONDITION_PASSED nzcv n
+    and ic = DECODE_INST n in
+    let old_flags = pass /\ (ic = mrs_msr)
+    and u_or_s = if pass /\ (ic = cdp_und) then
+                    undefined
+                 else
+                    software in
     (case irpt of
-        NONE -> if (exc = software) /\
-                   CONDITION_PASSED nzcv ireg /\
-                   (DECODE_INST ireg = cdp_und) then
-                  undefined
-                else
-                  software
+        NONE -> u_or_s
      || SOME (Reset x)  -> reset
      || SOME Prefetch   -> pabort
      || SOME (Dabort t) -> dabort
-     || SOME Fiq        -> fast
-     || SOME Irq        -> interrupt)`;
+     || SOME Fiq        -> if old_flags /\ f \/ ~old_flags /\ f' then u_or_s else fast
+     || SOME Irq        -> if old_flags /\ i \/ ~old_flags /\ i' then u_or_s else interrupt)`;
 
-val PROJ_TRIPLE_def = Define `
-  PROJ_TRIPLE (ARM_EX (ARM reg psr) ireg exc) = (CPSR_READ psr,exc,w2n ireg)`;
+val PROJ_IF_FLAGS_def = Define`
+  PROJ_IF_FLAGS (ARM reg psr) =
+    let (nzcv,i,f,m) = DECODE_PSR (CPSR_READ psr) in (i,f)`;
 
 (* --------------------------------------------------------
    The next state, output and state functions
@@ -681,9 +686,8 @@ val NEXT_ARM_def = Define`
   NEXT_ARM state (irpt,ireg,data) =
     if IS_Reset irpt then
       ARM_EX (PROJ_Reset irpt) ireg reset
-    else
-      ARM_EX (EXEC_INST state (if IS_Dabort irpt then SOME (PROJ_Dabort irpt) else NONE) data)
-             ireg (interrupt2exception (PROJ_TRIPLE state) irpt)`;
+    else let state' = EXEC_INST state (if IS_Dabort irpt then SOME (PROJ_Dabort irpt) else NONE) data in
+      ARM_EX state' ireg (interrupt2exception state (PROJ_IF_FLAGS state') irpt)`;
 
 val OUT_ARM_def = Define`
   OUT_ARM (ARM_EX (ARM reg psr) ireg exc) =

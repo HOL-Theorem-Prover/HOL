@@ -67,7 +67,7 @@ fun arm_rws () =
       NUMERAL_ONLY_RULE `n` CONDITION_PASSED_def,CONDITION_PASSED2_def,
       IS_Dabort_def,IS_Reset_def,PROJ_Dabort_def,PROJ_Reset_def,interrupt2exception_def,
       THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,option_case_ID,option_case_SOME_ID,
-      option_case_def,SOME_11,NOT_SOME_NONE,PROJ_TRIPLE_def,interrupt2exception_def,
+      option_case_def,SOME_11,NOT_SOME_NONE,PROJ_IF_FLAGS_def,interrupt2exception_def,
       NEXT_ARM_def,OUT_ARM_def
       ] rws
 in

@@ -1,4 +1,4 @@
-(* app load ["metisLib","armTheory","coreTheory","lemmasTheory","io_onestepTheory"]; *)
+(* app load ["armTheory","coreTheory","lemmasTheory","io_onestepTheory"]; *)
 open HolKernel boolLib bossLib Q arithmeticTheory io_onestepTheory
      armTheory coreTheory lemmasTheory;
 
@@ -286,8 +286,10 @@ val AREGN1_THM = store_thm("AREGN1_THM",
 );
 
 val interrupt_exists = store_thm("interrupt_exists",
-  `?aregn. ~(num2exception aregn IN {reset; undefined; software; address}) /\ aregn < 8`,
-  EXISTS_TAC `3`
+  `!i f. ?aregn. ~(num2exception aregn IN {reset; undefined; software; address}) /\ aregn < 8 /\
+      ((num2exception aregn = fast) ==> f) /\
+      ((num2exception aregn = interrupt) ==> i)`,
+  NTAC 2 STRIP_TAC THEN EXISTS_TAC `3`
     THEN RW_TAC std_ss [pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY,
                         num2exception_thm,exception_distinct]
 );
@@ -373,9 +375,11 @@ val SIMP_PROJ_Dabort = store_thm("SIMP_PROJ_Dabort",
 );
 
 val SIMP_interrupt2exception = store_thm("SIMP_interrupt2exception",
-  `!cpsr exc ireg x y nxtic pipeb resetstart dataabt1 nfq niq iregabt2.
-    ~(exc = software) \/ ~CONDITION_PASSED (NZCV (w2n cpsr)) ireg ==>
-    ((interrupt2exception (cpsr,exc,ireg)
+  `!reg psr ireg exc i f x y nxtic pipeb resetstart dataabt1 nfq niq iregabt2.
+    ~(exc = software) \/ ~CONDITION_PASSED (NZCV (w2n (CPSR_READ psr))) (w2n ireg) ==>
+    (fiqactl ==> ~f) /\
+    (irqactl ==> ~i) ==>
+    ((interrupt2exception (ARM_EX (ARM reg psr) ireg exc) (i,f)
      (case (num2exception
         (AREGN1 resetstart dataabt1 fiqactl irqactl F iregabt2)) of
         reset -> SOME (Reset (ARM x z))
@@ -387,16 +391,22 @@ val SIMP_interrupt2exception = store_thm("SIMP_interrupt2exception",
      || interrupt -> SOME Irq
      || fast -> SOME Fiq)) =
     num2exception (AREGN1 resetstart dataabt1 fiqactl irqactl F iregabt2))`,
-  RW_TAC std_ss [DECODE_PSR_def,AREGN1_def,num2exception_thm,NXTIC_def,interrupt2exception_def]
+  RW_TAC std_ss [DECODE_PSR_def,AREGN1_def,num2exception_thm,
+    NXTIC_def,interrupt2exception_def]
+    THEN REWRITE_TAC []
 );
 
-val SIMP_interrupt2exception2 = store_thm("SIMP_interrupt2exception2",
-  `!cpsr ireg x y nxtic pipeb resetstart dataabt1 nfq niq coproc1 iregabt2.
-    ((DECODE_INST ireg = cdp_und) = coproc1) /\
-     CONDITION_PASSED (NZCV (w2n cpsr)) ireg ==>
-    ((interrupt2exception (cpsr,software,ireg)
+val SIMP_interrupt2exception2 = prove(
+  `!reg psr ireg i' f' x y nxtic pipeb resetstart dataabt1 nfq niq coproc1 iregabt2.
+    ~(DECODE_INST (w2n ireg) = cdp_und) /\
+    CONDITION_PASSED (NZCV (w2n (CPSR_READ psr))) (w2n ireg) ==>
+    (let (nzcv,i,f,m) = DECODE_PSR (CPSR_READ psr)
+     and old_flags = (DECODE_INST (w2n ireg) = mrs_msr) in
+       (fiqactl ==> if old_flags then ~f else ~f') /\
+       (irqactl ==> if old_flags then ~i else ~i')) ==>
+    ((interrupt2exception (ARM_EX (ARM reg psr) ireg software) (i',f')
      (case (num2exception
-        (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2)) of
+        (AREGN1 resetstart dataabt1 fiqactl irqactl F iregabt2)) of
         reset -> SOME (Reset (ARM x z))
      || undefined -> NONE
      || software -> NONE
@@ -405,16 +415,25 @@ val SIMP_interrupt2exception2 = store_thm("SIMP_interrupt2exception2",
      || address -> NONE
      || interrupt -> SOME Irq
      || fast -> SOME Fiq)) =
-    num2exception (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2))`,
-  RW_TAC std_ss [DECODE_PSR_def,AREGN1_def,num2exception_thm,NXTIC_def,interrupt2exception_def]
+    num2exception (AREGN1 resetstart dataabt1 fiqactl irqactl F iregabt2))`,
+  RW_TAC std_ss [markerTheory.Abbrev_def,DECODE_PSR_def,AREGN1_def,num2exception_thm,
+    NXTIC_def,interrupt2exception_def]
+    THEN FULL_SIMP_TAC std_ss [iclass_distinct]
 );
+
+val SIMP_interrupt2exception2 = save_thm("SIMP_interrupt2exception2",
+  SIMP_RULE (std_ss++boolSimps.COND_elim_ss)
+   [GSYM word32Theory.WORD_BIT_def,DECODE_PSR_def] SIMP_interrupt2exception2);
 
 val SIMP_interrupt2exception3 = store_thm("SIMP_interrupt2exception3",
-  `!x y cpsr ireg aregn ointstart.
-    ~(DECODE_INST ireg = cdp_und) /\
-    ~(num2exception aregn IN {reset; undefined; software; address}) ==>
-    ((interrupt2exception (cpsr,software,ireg)
-     (case (num2exception (if ointstart then aregn else 2)) of
+  `!reg psr ireg i f x y nxtic pipeb resetstart dataabt1 nfq niq coproc1 iregabt2.
+    (DECODE_INST (w2n ireg) = cdp_und) /\
+    CONDITION_PASSED (NZCV (w2n (CPSR_READ psr))) (w2n ireg) ==>
+    (fiqactl ==> ~f) /\
+    (irqactl ==> ~i) ==>
+    ((interrupt2exception (ARM_EX (ARM reg psr) ireg software) (i,f)
+     (case (num2exception
+        (AREGN1 resetstart dataabt1 fiqactl irqactl T iregabt2)) of
         reset -> SOME (Reset (ARM x z))
      || undefined -> NONE
      || software -> NONE
@@ -423,11 +442,58 @@ val SIMP_interrupt2exception3 = store_thm("SIMP_interrupt2exception3",
      || address -> NONE
      || interrupt -> SOME Irq
      || fast -> SOME Fiq)) =
-    num2exception (if ointstart then aregn else 2))`,
+    num2exception (AREGN1 resetstart dataabt1 fiqactl irqactl T iregabt2))`,
+  RW_TAC std_ss [markerTheory.Abbrev_def,DECODE_PSR_def,AREGN1_def,num2exception_thm,
+    NXTIC_def,interrupt2exception_def]
+    THEN FULL_SIMP_TAC std_ss [iclass_distinct]
+);
+
+val SIMP_interrupt2exception4 = store_thm("SIMP_interrupt2exception4",
+  `!reg psr ireg i f x y z aregn.
+    ((DECODE_INST (w2n ireg) = ldm) \/
+     (DECODE_INST (w2n ireg) = stm) \/
+     (DECODE_INST (w2n ireg) = mla_mul)) /\
+    CONDITION_PASSED (NZCV (w2n (CPSR_READ psr))) (w2n ireg) /\
+    ~(num2exception aregn IN {reset; undefined; software; address}) ==>
+    ((interrupt2exception (ARM_EX (ARM reg psr) ireg software) (i,f)
+     (case (num2exception aregn) of
+        reset -> SOME (Reset (ARM x z))
+     || undefined -> NONE
+     || software -> NONE
+     || pabort -> SOME Prefetch
+     || dabort -> SOME (Dabort y)
+     || address -> NONE
+     || interrupt -> SOME Irq
+     || fast -> SOME Fiq)) =
+    num2exception (if ((num2exception aregn = fast) ==> ~f) /\
+                      ((num2exception aregn = interrupt) ==> ~i) then aregn else 2))`,
   RW_TAC std_ss [DECODE_PSR_def,num2exception_thm,interrupt2exception_def]
     THEN Cases_on `num2exception aregn`
     THEN RW_TAC std_ss [num2exception_thm]
-    THEN FULL_SIMP_TAC std_ss [exception_distinct,pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY]
+    THEN FULL_SIMP_TAC std_ss [iclass_distinct,exception_distinct,
+           pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY]
+);
+
+val SIMP_interrupt2exception5 = store_thm("SIMP_interrupt2exception5",
+  `!reg psr ireg i f x y z.
+    ~(DECODE_INST (w2n ireg) = cdp_und) /\
+    CONDITION_PASSED (NZCV (w2n (CPSR_READ psr))) (w2n ireg) ==>
+    ((interrupt2exception (ARM_EX (ARM reg psr) ireg software) (i,f)
+     (case (num2exception 2) of
+        reset -> SOME (Reset (ARM x z))
+     || undefined -> NONE
+     || software -> NONE
+     || pabort -> SOME Prefetch
+     || dabort -> SOME (Dabort y)
+     || address -> NONE
+     || interrupt -> SOME Irq
+     || fast -> SOME Fiq)) =
+    num2exception 2)`,
+  RW_TAC std_ss [DECODE_PSR_def,num2exception_thm,interrupt2exception_def]
+    THEN Cases_on `num2exception aregn`
+    THEN RW_TAC std_ss [num2exception_thm]
+    THEN FULL_SIMP_TAC std_ss [iclass_distinct,exception_distinct,
+           pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY]
 );
 
 (* -------------------------------------------------------- *)

@@ -41,14 +41,19 @@ fun barm_rws () = add_rws bool_compset
    MLA_MUL_def,DECODE_MLA_MUL_def, LDR_STR_def,DECODE_LDR_STR_def,
    LDM_STM_def,DECODE_LDM_STM_def, BRANCH_def,DECODE_BRANCH_def];
 
+val DECODE_IFMODE_SET_IFMODE = REWRITE_RULE [BIT_W32_NUM,BITS_W32_NUM] DECODE_IFMODE_SET_IFMODE;
+
 val BARM_CONV = CBV_CONV (barm_rws ());
 val BARM_ss = simpLib.SIMPSET
   {convs = [conv_rec "BARM_CONV" BARM_CONV ``EXEC_INST a b c``],
    rewrs = [iclass_distinct,iseq_distinct,
-            PROJ_TRIPLE_def,TRIPLE_ARM_EX_def,DECODE_PSR,
+            PROJ_IF_FLAGS_def,TRIPLE_ARM_EX_def,DECODE_PSR,
             ABS_ARM6_def,NEXT_ARM_def,
-            BIT_W32_NUM,BITS_W32_NUM,SIMP_interrupt2exception,
-            SIMP_interrupt2exception2,SIMP_interrupt2exception3,
+            BIT_W32_NUM,BITS_W32_NUM,
+            DECODE_IFMODE_SET_IFMODE,CPSR_WRITE_READ,
+            REWRITE_RULE [DECODE_IFMODE_SET_IFMODE] DECODE_MODE_THM,
+            (* SIMP_interrupt2exception,
+            SIMP_interrupt2exception2, SIMP_interrupt2exception3,*)
             SIMP_IS_Dabort,SIMP_PROJ_Dabort,
             GEQF_INTRO NOT_RESET,NOT_RESET2],
    congs = [], filter = NONE, ac = [], dprocs = []};

@@ -788,6 +788,12 @@ val SPSR_READ_THM = store_thm("SPSR_READ_THM",
     THEN REWRITE_TAC [mode_case_def]
 );
 
+val SPSR_READ_THM2 = store_thm("SPSR_READ_THM2",
+  `!psr mode cpsr.
+     USER mode ==> (SPSR_READ psr mode = CPSR_READ psr)`,
+  METIS_TAC [SPSR_READ_THM]
+);
+
 val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
   `(!psr m x. CPSR_READ (SPSR_WRITE psr m x) = CPSR_READ psr) /\
    (!psr x. CPSR_READ (CPSR_WRITE psr x) = x)`,

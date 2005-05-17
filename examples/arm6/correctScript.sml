@@ -1,4 +1,4 @@
-(* app load ["pred_setSimps","io_onestepTheory","word32Theory","armTheory","metisLib","word32Lib","memoryTheory",
+(* app load ["pred_setSimps","io_onestepTheory","word32Theory","armTheory","word32Lib","memoryTheory",
              "coreTheory","lemmasTheory","lemmasLib","compLib","blockTheory","multTheory","interruptsTheory"]; *)
 open HolKernel boolLib bossLib Q compLib lemmasLib arithmeticTheory word32Theory io_onestepTheory 
      armTheory coreTheory lemmasTheory blockTheory multTheory interruptsTheory memoryTheory;
@@ -304,6 +304,19 @@ val ARM6_COR_ZERO = GEN_ALL (SIMP_RULE (srw_ss()) [] ARM6_COR_LEM0);
 
 (* -------------------------------------------------------- *)
 
+val (BIT7,BIT6) =
+   let val x = CONJUNCTS DECODE_IFMODE_SET_NZCV
+       val y = List.nth(x,1)
+       val z = List.nth(x,2)
+       val f = (GEN_ALL o SIMP_RULE std_ss [BIT_W32_NUM] o
+                  SPECL [`FST (a : bool # bool # bool # bool)`,
+                         `FST (SND (a : bool # bool # bool # bool))`,
+                         `FST (SND (SND (a : bool # bool # bool # bool)))`,
+                         `SND (SND (SND (a : bool # bool # bool # bool)))`])
+   in
+     (f y,f z)
+   end;
+
 val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
   `!x. (x = <|state := ARM6 (DP reg psr areg din alua alub dout)
                (CTRL pipea pipeaval pipeb pipebval ireg iregval
@@ -357,9 +370,9 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
 	    THEN ABBREV_TAC `alu2' = SND alu2` THEN UNABBREV_TAC `alu2`
 	    THEN RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++ALU_ss) [])
 	    THEN MAP_EVERY UNABBREV_TAC [`alu2'`,`alu1'`,`psr2`,`psr1`]
-	    THEN ASM_SIMP_TAC std_ss [DECODE_MODE_THM,CPSR_WRITE_READ]
+	    THEN ASM_SIMP_TAC (std_ss++BARM_ss) [CPSR_WRITE_READ]
 	    THEN RW_TAC std_ss ([AC MULT_ASSOC MULT_COMM,PSR_WRITE_COMM,exception_EQ_exception,
-                                 num2exception_thm,exception2num_thm] @ finish_rws2),
+                   num2exception_thm,exception2num_thm] @ finish_rws2),
           PAT_ASSUM `Abbrev (cpsr = CPSR_READ psr)` (fn th => FULL_SIMP_TAC bool_ss [th] THEN ASSUME_TAC th)
             THEN REVERSE (Cases_on `CONDITION_PASSED (NZCV (w2n cpsr)) (w2n ireg)`)
             THENL [ (* unexecuted *)
@@ -389,8 +402,8 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                       FULL_SIMP_TAC stdi_ss [ABS_ARM6_def,COMP_VAL_BIT4,COND_PAIR,exception2num_thm]]
                     THEN STRIP_TAC THEN POP_ASSUM (SUBST1_TAC o SYM)
                     THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss++BARM_ss) [COMP_VAL_BIT4,BW_READ_def,
-                                          (numLib.REDUCE_RULE o SPEC `3`) PROJ_DATA_EL0,
-                                          (numLib.REDUCE_RULE o SPEC `5`) PROJ_DATA_EL0]
+                            (numLib.REDUCE_RULE o SPEC `3`) PROJ_DATA_EL0,
+                            (numLib.REDUCE_RULE o SPEC `5`) PROJ_DATA_EL0]
                     THEN FULL_SIMP_TAC (stdi_ss++ALU_ss) [PROJ_DATA,COND_RAND_RATOR_ROR,SLICE_ROR_THM,IF_NEG]
                     THEN MAP_EVERY UNABBREV_TAC [`alu3'`,`alu1'`,`pc`]
                     THEN RW_TAC stdi_ss (RBA_def :: finish_rws2)
@@ -403,15 +416,15 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                         THEN ASM_SIMP_TAC stdi_ss [ABS_ARM6_def,exception2num_thm]
                         THEN STRIP_TAC THEN POP_ASSUM (SUBST1_TAC o SYM)
                         THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss++BARM_ss) []
-                        THEN ASM_SIMP_TAC (stdi_ss++ALU_ss) [SPLIT_WORD_def,BIT_OPC,WORD_BITS118_LEM,FST_COND_RAND,
-                                                             SND_COND_RAND,GSYM IMMEDIATE_THM,IMMEDIATE_THM2]
+                        THEN ASM_SIMP_TAC (stdi_ss++ALU_ss) [SPLIT_WORD_def,BIT_OPC,WORD_BITS118_LEM,
+                               FST_COND_RAND,SND_COND_RAND,GSYM IMMEDIATE_THM,IMMEDIATE_THM2]
                         THEN UNABBREV_TAC `pc`
                         THEN ASM_SIMP_TAC stdi_ss finish_rws2
                         THEN Cases_on `USER nbs`
                         THEN Cases_on `WORD_BIT 22 ireg`
                         THEN Cases_on `WORD_BIT 19 ireg`
                         THEN Cases_on `WORD_BIT 16 ireg`
-                        THEN ASM_REWRITE_TAC [],
+                        THEN ASM_SIMP_TAC stdi_ss ([PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2),
                             (* mrs *)
                       Cases_on `WORD_BITS 15 12 ireg = 15`
                         THEN ASM_SIMP_TAC std_ss []
@@ -441,17 +454,17 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                         THEN ASM_SIMP_TAC stdi_ss [ABS_ARM6_def,exception2num_thm]
                         THEN STRIP_TAC THEN POP_ASSUM (SUBST1_TAC o SYM)
                         THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss++BARM_ss) []
-                        THEN ASM_SIMP_TAC (stdi_ss++ALU_ss) [WORD_BITS118_LEM,GSYM IMMEDIATE_THM,ARITHMETIC_THM,
-                                                SHIFT_IMMEDIATE_THM2,TEST_OR_COMP_THM,ADDR_MODE1_def,SPSR_READ_THM]
+                        THEN ASM_SIMP_TAC (stdi_ss++ALU_ss) [WORD_BITS118_LEM,GSYM IMMEDIATE_THM,
+                               ARITHMETIC_THM,SHIFT_IMMEDIATE_THM2,TEST_OR_COMP_THM,
+                               ADDR_MODE1_def,SPSR_READ_THM]
                         THEN PBETA_TAC
                         THEN UNABBREV_TAC `pc`
                         THEN REVERSE (Cases_on `WORD_BIT 20 ireg`)
-                        THEN ASM_REWRITE_TAC [] THEN1 ASM_SIMP_TAC bool_ss finish_rws2
-                        THEN Cases_on `WORD_BITS 15 12 ireg = 15`
-                        THEN ASM_REWRITE_TAC [] THEN1 ASM_SIMP_TAC bool_ss finish_rws2
+                        THEN ASM_REWRITE_TAC []
+                        THEN1 ASM_SIMP_TAC stdi_ss ([PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2)
                         THEN Cases_on `WORD_BIT 25 ireg`
-                        THEN ASM_SIMP_TAC std_ss [DATA_PROC_IMP_NOT_BIT4]
-                        THEN RW_TAC bool_ss finish_rws2,
+                        THEN ASM_SIMP_TAC (stdi_ss++BARM_ss) [SET_NZC_def,DATA_PROC_IMP_NOT_BIT4]
+                        THEN RW_TAC stdi_ss ([SET_NZC_def,BIT7,BIT6] @ finish_rws2),
                       Cases_on `WORD_BITS 15 12 ireg = 15`
                         THEN ASM_REWRITE_TAC []
                         THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]) THEN ASSUME_TAC th)
@@ -463,15 +476,17 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                             THEN STRIP_TAC THEN POP_ASSUM (SUBST1_TAC o SYM)
                             THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss++BARM_ss)
                                    [TEST_OR_COMP_THM,ADDR_MODE1_def,SHIFT_IMMEDIATE_THM2]
-                            THEN RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++ALU_ss) [GSYM IMMEDIATE_THM,WORD_BITS118_LEM])
                             THEN PBETA_TAC
+                            THEN ASM_SIMP_TAC std_ss [SPSR_READ_THM,PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM]
+                            THEN RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++ALU_ss) [GSYM IMMEDIATE_THM,WORD_BITS118_LEM])
                             THEN MAP_EVERY UNABBREV_TAC [`psr1`,`alu`]
+                            THEN PAT_ASSUM `~a \/ b` (fn th => ASSUME_TAC (REWRITE_RULE [NOT_A_OR_B] th))
                             THEN ASM_SIMP_TAC std_ss [SPSR_READ_THM]
                             THEN Cases_on `WORD_BIT 25 ireg`
                             THEN ASM_SIMP_TAC std_ss [DATA_PROC_IMP_NOT_BIT4]
-                            THEN POP_ASSUM_LIST (K ALL_TAC)
                             THEN Cases_on `WORD_BIT 20 ireg`
-                            THEN ASM_SIMP_TAC std_ss []
+                            THEN ASM_SIMP_TAC (std_ss++BARM_ss) [CPSR_WRITE_READ,SIMP_interrupt2exception2]
+                            THEN POP_ASSUM_LIST (K ALL_TAC)
                             THEN RW_TAC std_ss finish_rws2,
                                 (* NOT PCCHANGE *)
                           UNFOLD_NEXT THEN DATA_PROC_TAC
@@ -486,7 +501,8 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                             THEN ASM_SIMP_TAC std_ss [DATA_PROC_IMP_NOT_BIT4]
                             THEN Cases_on `WORD_BIT 20 ireg`
                             THEN ASM_SIMP_TAC std_ss [IF_NEG]
-                            THEN RW_TAC std_ss finish_rws2
+                            THEN RW_TAC std_ss ([PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM,
+                                   BIT7,BIT6,SET_NZC_def] @ finish_rws2)
                         ]
                     ], (* reg_shift *)
                   IMP_RES_TAC REG_SHIFT_IMP_BITS
@@ -505,10 +521,10 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                         THEN PBETA_TAC
                         THEN UNABBREV_TAC `pc`
                         THEN REVERSE (Cases_on `WORD_BIT 20 ireg`)
-                        THEN ASM_REWRITE_TAC [] THEN1 ASM_SIMP_TAC bool_ss finish_rws2
-                        THEN Cases_on `WORD_BITS 15 12 ireg = 15`
-                        THEN ASM_REWRITE_TAC [] THEN1 ASM_SIMP_TAC bool_ss finish_rws2
-                        THEN RW_TAC std_ss finish_rws2,
+                        THEN ASM_REWRITE_TAC []
+                        THEN1 ASM_SIMP_TAC stdi_ss ([PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2)
+                        THEN ASM_SIMP_TAC (stdi_ss++BARM_ss) [SET_NZC_def,DATA_PROC_IMP_NOT_BIT4]
+                        THEN RW_TAC stdi_ss ([SET_NZC_def,BIT7,BIT6] @ finish_rws2),
                       Cases_on `WORD_BITS 15 12 ireg = 15`
                         THEN ASM_REWRITE_TAC []
                         THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]) THEN ASSUME_TAC th)
@@ -524,7 +540,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                             THEN ASM_SIMP_TAC std_ss [SPSR_READ_THM]
                             THEN PBETA_TAC
                             THEN Cases_on `WORD_BIT 20 ireg`
-                            THEN RW_TAC std_ss finish_rws2,
+                            THEN RW_TAC std_ss ([PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2),
                           ASM_SIMP_TAC stdi_ss [ABS_ARM6_def,exception2num_thm]
                             THEN STRIP_TAC THEN POP_ASSUM (SUBST1_TAC o SYM)
                             THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss++BARM_ss) []
@@ -533,20 +549,23 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                             THEN PBETA_TAC
                             THEN UNABBREV_TAC `pc`
                             THEN Cases_on `WORD_BIT 20 ireg`
-                            THEN RW_TAC std_ss finish_rws2
+                            THEN RW_TAC std_ss ([PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM,
+                                   SET_NZC_def,BIT7,BIT6] @ finish_rws2)
                         ]
                     ], (* mla_mul *)
                   REWRITE_TAC [GSYM SUC_ONE_ADD,FUNPOW]
                     THEN UNFOLD_NEXT THEN MLA_MUL_TAC
-                    THEN ASM_SIMP_TAC arith_ss [iclass_distinct,ISPEC `FST` COND_RAND,ISPEC `SND` COND_RAND,IF_NEG,
-                           GSYM WORD_BITS_def,LSL_ZERO,bitsTheory.BITS_ZERO2,COMP_VAL_BIT2,MULT_ALU6_ZERO,TO_WRITE_READ6]
+                    THEN ASM_SIMP_TAC arith_ss [iclass_distinct,ISPEC `FST` COND_RAND,ISPEC `SND` COND_RAND,
+                           IF_NEG,GSYM WORD_BITS_def,LSL_ZERO,bitsTheory.BITS_ZERO2,COMP_VAL_BIT2,
+                           MULT_ALU6_ZERO,TO_WRITE_READ6]
                     THEN REWRITE_TAC [GSYM DE_MORGAN_THM,IF_NEG]
                     THEN PAT_ASSUM `Abbrev (nbs = DECODE_MODE (WORD_BITS 4 0 cpsr))`
                             (fn th => FULL_SIMP_TAC bool_ss [th,DECIDE ``1 + n = n + 1``] THEN ASSUME_TAC th)
                     THEN IMP_RES_TAC MLA_MUL_TN
                      THEN POP_ASSUM (SPECL_THEN 
-                            [`sctrlreg`,`psrfb`,`pipebabt`,`pipeb`,`FST (SND (i 0))`,`SND (SND (SND (SND (i 0))))`,
-                             `orp`,`oniq`,`onfq`,`FST (SND (SND (SND (i 0))))`, `FST (SND (SND (i 0)))`,
+                            [`sctrlreg`,`psrfb`,`pipebabt`,`pipeb`,`FST (SND (i 0))`,
+                             `SND (SND (SND (SND (i 0))))`,`orp`,`oniq`,`onfq`,`FST (SND (SND (SND (i 0))))`,
+                             `FST (SND (SND (i 0)))`,
                              `~BIT 6 (w2n cpsr) /\ ~ooonfq \/ pipebabt \/ ~BIT 7 (w2n cpsr) /\ ~oooniq`,
                              `BASELATCH mla_mul t3`,`REG_READ6 reg nbs (WORD_BITS 15 12 ireg)`,`F`,
                              `AREGN1 F F (~BIT 6 (w2n cpsr) /\ ~ooonfq) (~BIT 7 (w2n cpsr) /\ ~oooniq) F pipebabt`,`alua`]
@@ -554,10 +573,12 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                     THEN POP_ASSUM SUBST1_TAC
                     THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss) [ABS_ARM6_def,exception2num_thm]
                     THEN STRIP_TAC THEN POP_ASSUM (SUBST1_TAC o SYM)
-                    THEN ASM_SIMP_TAC (stdi_ss++BARM_ss) [ALU_multiply_def,MLA_MUL_CARRY_def,MSHIFT_def]
+                    THEN ASM_SIMP_TAC (stdi_ss++BARM_ss) [ALU_multiply_def,MLA_MUL_CARRY_def,MSHIFT_def,SET_NZC_def]
                     THEN UNABBREV_TAC `pc`
                     THEN RW_TAC std_ss ([WORD_ADD_0,CARRY_LEM] @ finish_rws2)
-                    THEN FULL_SIMP_TAC bool_ss [],
+                    THEN FULL_SIMP_TAC stdi_ss ([BIT7,BIT6,
+                            PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM,SIMP_interrupt2exception4,
+                            SIMP_interrupt2exception5] @ finish_rws2),
                     (* ldr *)
                   IMP_RES_TAC LDR_IMP_BITS
                     THEN REWRITE_TAC [onestepTheory.FUNPOW_COMP,SPEC_COND_RATOR3]
@@ -622,7 +643,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                         THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss++BARM_ss) []
                         THEN ASM_SIMP_TAC (stdi_ss++ALU_ss) [SND_COND_RAND,BIT_OPC,UP_DOWN_THM,SHIFT_IMMEDIATE_THM2,ADDR_MODE2_def]
                         THEN UNABBREV_TAC `pc`
-                        THEN RW_TAC bool_ss finish_rws2
+                        THEN RW_TAC std_ss ([PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2)
                     ],  (* ldm *)
                   ONCE_REWRITE_TAC [REV_ADD4] THEN ONCE_REWRITE_TAC [onestepTheory.FUNPOW_COMP]
                     THEN IMP_RES_TAC (simpLib.SIMP_PROVE arith_ss [] ``(!t. t < (2 + x) + y + z ==>
@@ -648,7 +669,8 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                         THEN RW_TAC std_ss ([SND_ADDR_MODE4,LEAST_ABORT_ZERO_ISA,WB_ADDRESS_ZERO,
                                              rich_listTheory.FIRSTN,CONJUNCT1 REG_WRITEN_def,
                                              LDM_LIST_EMPTY,REG_WRITE_WRITE,LENGTH_ADDR_MODE4,
-                                             REG_WRITE_READ_NEQ,REG_WRITE_READ_NEQ_15] @ finish_rws2)
+                                             REG_WRITE_READ_NEQ,REG_WRITE_READ_NEQ_15,
+                                             PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2)
                         THEN FULL_SIMP_TAC std_ss [],
                       `0 < LENGTH (REGISTER_LIST (w2n ireg))` by FULL_SIMP_TAC arith_ss [PENCZ_THM2]
                         THEN IMP_RES_TAC (simpLib.SIMP_PROVE arith_ss []
@@ -701,17 +723,17 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                             THEN Cases_on `USER nbs`
                             THEN Cases_on `WORD_BITS 19 16 ireg = 15`
                             THEN ASM_SIMP_TAC stdi_ss [USER_usr]
+                            THEN UNABBREV_TAC `cpsr`
                             THEN RW_TAC arith_ss ([(SIMP_RULE arith_ss [] o
-                                                    INST [`n` |-> `LENGTH (REGISTER_LIST ireg) + 3`] o
-                                                    SPEC_ALL) REGISTER_LIST_LDM_THM,
-                                                   (GEN_ALL o SIMP_RULE arith_ss [ADD1] o DISCH `0 < n` o
-                                                    INST [`n` |-> `n - 1`] o SPEC_ALL) REG_WRITEN_SUC,
-                                                   SUB_SUC1,SND_ADDR_MODE4,REG_WRITEN_WRITE_PC4,
-                                                   GSYM FIRST_ADDRESS,ALUOUT_ALU_logic,LENGTH_ADDR_MODE4,
-                                                   GSYM WB_ADDRESS,REG_READ_WRITEN_PC,ADVANCE_def,LSL_ZERO,
-                                                   REG_WRITE_WRITEN_PC,REG_WRITEN_WRITE_PC3] @ finish_rws2)
-                            THEN FULL_SIMP_TAC std_ss ([CPSR_READ_WRITE,markerTheory.Abbrev_def,PROJ_DATA] @
-                                                        finish_rws2),
+                                   INST [`n` |-> `LENGTH (REGISTER_LIST ireg) + 3`] o
+                                   SPEC_ALL) REGISTER_LIST_LDM_THM,
+                                   (GEN_ALL o SIMP_RULE arith_ss [ADD1] o DISCH `0 < n` o
+                                   INST [`n` |-> `n - 1`] o SPEC_ALL) REG_WRITEN_SUC,
+                                   SUB_SUC1,SND_ADDR_MODE4,REG_WRITEN_WRITE_PC4,GSYM FIRST_ADDRESS,
+                                   ALUOUT_ALU_logic,LENGTH_ADDR_MODE4,GSYM WB_ADDRESS,REG_READ_WRITEN_PC,
+                                   ADVANCE_def,LSL_ZERO,REG_WRITE_WRITEN_PC,REG_WRITEN_WRITE_PC3,
+                                   PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2)
+                            THEN FULL_SIMP_TAC stdi_ss ([SPSR_READ_THM2,CPSR_READ_WRITE,PROJ_DATA] @ finish_rws2),
                           RULE_ASSUM_TAC (PURE_REWRITE_RULE [
                                      metisLib.METIS_PROVE [] ``~(?s. s < l /\ FST (SND (i (s + 1)))) =
                                                             (!s. ~(s < l) \/ ~FST (SND (i (s + 1))))``])
@@ -740,15 +762,16 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                 THEN Cases_on `WORD_BITS 19 16 ireg = 15`
                                 THEN ASM_SIMP_TAC stdi_ss [USER_usr]
                                 THEN RW_TAC arith_ss ([(SIMP_RULE arith_ss [] o
-                                                     INST [`n` |-> `LENGTH (REGISTER_LIST ireg) + 1`] o
-                                                     SPEC_ALL) REGISTER_LIST_LDM_THM,
-                                                    (GEN_ALL o SIMP_RULE arith_ss [ADD1] o DISCH `0 < n` o
-                                                     INST [`n` |-> `n - 1`] o SPEC_ALL) REG_WRITEN_SUC,
-                                                    SUB_SUC1,REG_WRITEN_COMMUTE_PC,LENGTH_ADDR_MODE4,
-                                                    REG_WRITEN_COMMUTES,REG_READ_WRITEN_PC2,ADVANCE_def,
-                                                    REG_READ_WRITEN_PC,REG_WRITE_WRITEN_PC,REG_WRITEN_WRITE_PC4,
-                                                    REG_WRITEN_WRITE_PC3,SND_ADDR_MODE4] @ finish_rws2)
-                                THEN FULL_SIMP_TAC std_ss [PROJ_DATA,USER_usr,CPSR_READ_WRITE]
+                                       INST [`n` |-> `LENGTH (REGISTER_LIST ireg) + 1`] o
+                                       SPEC_ALL) REGISTER_LIST_LDM_THM,
+                                       (GEN_ALL o SIMP_RULE arith_ss [ADD1] o DISCH `0 < n` o
+                                       INST [`n` |-> `n - 1`] o SPEC_ALL) REG_WRITEN_SUC,
+                                       SUB_SUC1,REG_WRITEN_COMMUTE_PC,LENGTH_ADDR_MODE4,
+                                       REG_WRITEN_COMMUTES,REG_READ_WRITEN_PC2,ADVANCE_def,
+                                       REG_READ_WRITEN_PC,REG_WRITE_WRITEN_PC,REG_WRITEN_WRITE_PC4,
+                                       REG_WRITEN_WRITE_PC3,SND_ADDR_MODE4] @ finish_rws2)
+                                THEN FULL_SIMP_TAC stdi_ss ([PROJ_DATA,USER_usr,CPSR_READ_WRITE,
+                                       PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2)
                                 THEN IMP_RES_TAC (DECIDE ``!x. x < 1 ==> (x = 0)``)
                                 THEN PAT_ASSUM `Abbrev q` (fn th =>
                                        ASSUME_TAC (MATCH_MP (SPEC `1` LEAST_ABORT_ISA)
@@ -767,16 +790,17 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                                 THEN Cases_on `WORD_BITS 19 16 ireg = 15`
                                 THEN ASM_SIMP_TAC stdi_ss [USER_usr]
                                 THEN RW_TAC (stdi_ss++numSimps.ARITH_ss) ([(SIMP_RULE arith_ss [] o
-                                                      INST [`n` |-> `LENGTH (REGISTER_LIST ireg) + 1`] o
-                                                      SPEC_ALL) REGISTER_LIST_LDM_THM,
-                                                     (GEN_ALL o SIMP_RULE arith_ss [ADD1] o DISCH `1 < n` o
-                                                      INST [`n` |-> `n - 1`] o SPEC_ALL) REG_WRITEN_SUC,
-                                                     SUB_SUC1,REG_WRITEN_COMMUTE_PC,REG_WRITEN_COMMUTES,
-                                                     REG_READ_WRITEN_PC2,REG_READ_WRITEN_PC,REG_WRITE_WRITEN_PC,
-                                                     REG_WRITEN_WRITE_PC3,SND_ADDR_MODE4,ADVANCE_def,
-                                                     LENGTH_ADDR_MODE4,REG_WRITEN_WRITE_PC4] @ finish_rws2)
+                                       INST [`n` |-> `LENGTH (REGISTER_LIST ireg) + 1`] o
+                                       SPEC_ALL) REGISTER_LIST_LDM_THM,
+                                       (GEN_ALL o SIMP_RULE arith_ss [ADD1] o DISCH `1 < n` o
+                                       INST [`n` |-> `n - 1`] o SPEC_ALL) REG_WRITEN_SUC,
+                                       SUB_SUC1,REG_WRITEN_COMMUTE_PC,REG_WRITEN_COMMUTES,
+                                       REG_READ_WRITEN_PC2,REG_READ_WRITEN_PC,REG_WRITE_WRITEN_PC,
+                                       REG_WRITEN_WRITE_PC3,SND_ADDR_MODE4,ADVANCE_def,
+                                       LENGTH_ADDR_MODE4,REG_WRITEN_WRITE_PC4] @ finish_rws2)
                                 THEN UNABBREV_TAC `cpsr`
-                                THEN FULL_SIMP_TAC std_ss [LSL_ZERO,PROJ_DATA,USER_usr,CPSR_READ_WRITE]
+                                THEN FULL_SIMP_TAC stdi_ss ([LSL_ZERO,PROJ_DATA,USER_usr,CPSR_READ_WRITE,
+                                       PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2)
                                 THEN IMP_RES_TAC (DECIDE ``!x. x < 1 ==> (x = 0)``)
                                 THEN PAT_ASSUM `Abbrev q` (fn th =>
                                        ASSUME_TAC (MATCH_MP (SPEC `1` LEAST_ABORT_ISA)
@@ -791,7 +815,8 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                     THEN NTAC 2 (UNFOLD_NEXT THEN STM_TAC THEN ALU_ABBREV_TAC)
                     THEN IMP_RES_TAC DECODE_INST_STM
                     THEN Cases_on `WORD_BITS 15 0 ireg = 0`
-                    THEN ASM_SIMP_TAC stdi_ss [LSL_ZERO,MASKN_150,PENCZ_RP_150,MASKN16_1,PENCZ_THM3,FST_COND_RAND,COMP_VAL_BIT]
+                    THEN ASM_SIMP_TAC stdi_ss [LSL_ZERO,MASKN_150,PENCZ_RP_150,MASKN16_1,PENCZ_THM3,
+                           FST_COND_RAND,COMP_VAL_BIT]
                     THENL [
                       IMP_RES_TAC PENCZ_THM2
                         THEN ASM_REWRITE_TAC [SUB_0,FUNPOW]
@@ -802,7 +827,7 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                         THEN MAP_EVERY UNABBREV_TAC [`alu1`,`pc`]
                         THEN Cases_on `WORD_BITS 19 16 ireg = 15`
                         THEN RW_TAC std_ss ([LSL_ZERO,ALUOUT_ALU_logic,SND_ADDR_MODE4,GSYM WB_ADDRESS,
-                                             WB_ADDRESS_ZERO] @ finish_rws2),
+                               WB_ADDRESS_ZERO,PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2),
                       `~PENCZ stm (w2n ireg) (ONECOMP 16 0)` by FULL_SIMP_TAC arith_ss [SPEC_PENCZ_THM,PENCZ_THM2]
                         THEN Cases_on `LENGTH (REGISTER_LIST (w2n ireg)) = 1`
                         THENL [
@@ -816,8 +841,9 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                             THEN ASM_SIMP_TAC arith_ss [FST_HD_FST_ADDR_MODE4]
                             THEN Cases_on `WORD_BITS 19 16 ireg = 15`
                             THEN RW_TAC arith_ss ([SND_ADDR_MODE4,MASKN_ZERO,GSYM WB_ADDRESS,GSYM FIRST_ADDRESS,
-                                                   RP_LT_16_0,LSL_ZERO,ALUOUT_ALU_logic,
-                                                   REWRITE_RULE [word_0,word_1] WORD_MULT_CLAUSES] @ finish_rws2),
+                                   RP_LT_16_0,LSL_ZERO,ALUOUT_ALU_logic,
+                                   REWRITE_RULE [word_0,word_1] WORD_MULT_CLAUSES,
+                                   PROJ_IF_FLAGS_def,DECODE_PSR,BIT_W32_NUM] @ finish_rws2),
                           `1 < LENGTH (REGISTER_LIST (w2n ireg))` by FULL_SIMP_TAC arith_ss [PENCZ_THM2]
                             THEN `~(PENCZ stm (w2n ireg) (MASKN 16 1 (w2n ireg)))` by PROVE_TAC [PENCZ_THM]
                             THEN ASM_SIMP_TAC stdi_ss [LSL_ZERO,MASK_def,MASKN16_2b,GSYM ADVANCE_COMP]
@@ -852,7 +878,9 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                             THEN PBETA_TAC
                             THEN MAP_EVERY UNABBREV_TAC [`alu1`,`alu`,`pc`]
                             THEN RW_TAC arith_ss ([LSL_ZERO,ALUOUT_ALU_logic,SND_ADDR_MODE4,FST_HD_FST_ADDR_MODE4,
-                                                   GSYM WB_ADDRESS,GSYM FIRST_ADDRESS] @ finish_rws2)
+                                   GSYM WB_ADDRESS,GSYM FIRST_ADDRESS,SIMP_interrupt2exception4,
+                                   SIMP_interrupt2exception5,PROJ_IF_FLAGS_def,DECODE_PSR,
+                                   BIT_W32_NUM] @ finish_rws2)
                         ]
                     ], (* br *)
                   UNFOLD_NEXT THEN BR_TAC THEN ALU_ABBREV_TAC
@@ -879,7 +907,8 @@ val ARM6_COR_LEM1 = Count.apply store_thm("ARM6_COR_LEM1",
                     THEN UNABBREV_ALL_TAC
                     THEN SIMP_TAC std_ss [DECODE_MODE_THM,CPSR_WRITE_READ]
                     THEN RW_TAC std_ss ([AC MULT_ASSOC MULT_COMM,PSR_WRITE_COMM,exception_EQ_exception,
-                                         num2exception_thm,exception2num_thm] @ finish_rws2),
+                           num2exception_thm,exception2num_thm,
+                           REWRITE_RULE [BIT_W32_NUM] DECODE_IFMODE_SET_IFMODE] @ finish_rws2),
                   UNFOLD_NEXT THEN UNDEF_TAC
                     THEN ASM_SIMP_TAC (stdi_ss++STATE_INP_ss) [ABS_ARM6_def,exception2num_thm]
                     THEN STRIP_TAC THEN POP_ASSUM (SUBST1_TAC o SYM)

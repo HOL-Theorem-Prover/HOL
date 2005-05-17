@@ -1070,6 +1070,8 @@ val NEXT_CORE_LDM_TN_X = store_thm("NEXT_CORE_LDM_TN_X",
       (!t. t < SUC w ==> FST (i t)) ==>
       ?ointstart' onfq' ooonfq' oniq' oooniq' pipeaabt' pipebabt' aregn' oareg' mul' mul2' borrow2' mshift'.
         ~(num2exception aregn' IN {reset; undefined; software; address}) /\ (aregn' < 8) /\
+        ((num2exception aregn' = fast) ==> ~WORD_BIT 6 (CPSR_READ psr)) /\
+        ((num2exception aregn' = interrupt) ==> ~WORD_BIT 7 (CPSR_READ psr)) /\
        (FUNPOW (SNEXT NEXT_ARM6) x <|state := ARM6
                  (DP reg psr (if w = 1 then din else base + w32 1 * w32 4) (PROJ_DATA (i 1)) alua alub dout)
                  (CTRL pipea T pipeb T ireg T ointstart F F T F ldm (if w = 1 then tm else tn)
@@ -1110,9 +1112,10 @@ val NEXT_CORE_LDM_TN_X = store_thm("NEXT_CORE_LDM_TN_X",
     THEN PURE_REWRITE_TAC [SNEXT_NEXT_ARM6,pairTheory.FST,pairTheory.SND]
     THEN ASM_SIMP_TAC (arith_ss++STATE_INP_ss) [NEXT_CORE_LDM_TN1,PROJ_DATA,state_arm6_11,dp_11,ctrl_11,ADD1,
            IS_ABORT_LEM,NEW_ABORT_SUC,io_onestepTheory.ADVANCE_def,GSYM io_onestepTheory.ADVANCE_COMP,LDM_PENCZ_LEM,
-           DECIDE ``!a b. (~a \/ b) = (a ==> b)``,NEW_LEAST_ABORT_ZERO,CONJUNCT1 REG_WRITEN_def]
+           DECIDE ``!a b. (~a \/ b) = (a ==> b)``,NEW_LEAST_ABORT_ZERO,CONJUNCT1 REG_WRITEN_def,BIT_W32_NUM]
     THEN SIMP_TAC (bool_ss++boolSimps.CONJ_ss) [REG_WRITEN_SUC]
-    THEN ONCE_REWRITE_TAC [DECIDE ``a /\ b /\ c /\ d /\ f /\ g = (a /\ b /\ g) /\ (c /\ d /\ f)``]
+    THEN ONCE_REWRITE_TAC [DECIDE ``a /\ b /\ c /\ d /\ e /\ f /\ g /\ h =
+                                   (a /\ b /\ c /\ d /\ h) /\ (e /\ f /\ g)``]
     THEN CONV_TAC EXISTS_AND_CONV
     THEN CONJ_TAC
     THENL [
@@ -1168,6 +1171,8 @@ val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
       (!t. t < SUC w ==> FST (i t)) ==>
       ?ointstart' obaselatch' onfq' ooonfq' oniq' oooniq' pipeaabt' pipebabt' dataabt2' aregn' oareg' mul' mul2' borrow2' mshift'.
         ~(num2exception aregn' IN {reset; undefined; software; address}) /\ (aregn' < 8) /\
+        ((num2exception aregn' = fast) ==> ~WORD_BIT 6 (CPSR_READ psr)) /\
+        ((num2exception aregn' = interrupt) ==> ~WORD_BIT 7 (CPSR_READ psr)) /\
        (FUNPOW (SNEXT NEXT_ARM6) x <|state := ARM6 (DP reg psr (base + w32 1 * w32 4) din alua alub dout)
                 (CTRL pipea T pipeb T ireg T ointstart F F obaselatch F stm tn
                    T F F onfq ooonfq oniq oooniq pipeaabt pipebabt pipebabt dataabt2
@@ -1187,7 +1192,7 @@ val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
                  mul' mul2' borrow2' mshift'); inp := ADVANCE x (ADVANCE 2 i)|>))`,
   Induct
     THEN1 (RW_TAC arith_ss [FUNPOW,MASKN_ZERO,GSYM io_onestepTheory.ADVANCE_COMP]
-             THEN PROVE_TAC [interrupt_exists])
+             THEN METIS_TAC [interrupt_exists])
     THEN REPEAT STRIP_TAC
     THEN `x <= w - 2` by DECIDE_TAC
     THEN PAT_ASSUM `!w y reg ireg alub alua dout i. X` IMP_RES_TAC
@@ -1199,11 +1204,11 @@ val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
     THEN ABBREV_TAC `nbs = if WORD_BIT 22 ireg then usr else DECODE_MODE (WORD_BITS 4 0 (CPSR_READ psr))`
     THEN PURE_REWRITE_TAC [SNEXT_NEXT_ARM6,pairTheory.FST,pairTheory.SND]
     THEN ASM_SIMP_TAC (arith_ss++STATE_INP_ss) [PENCZ_THM,NEXT_CORE_STM_TN1,GSYM io_onestepTheory.ADVANCE_COMP,
-                                DECIDE ``!x. x + 3 = SUC x + 2``]
+                                DECIDE ``!x. x + 3 = SUC x + 2``,BIT_W32_NUM]
     THEN RW_TAC arith_ss [MASK_def,MASKN_SUC,io_onestepTheory.ADVANCE_def,
                           AREGN1_def,pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY]
     THEN FULL_SIMP_TAC arith_ss [num2exception_thm,exception_distinct]
-    THEN PROVE_TAC [SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) [] interrupt_exists]
+    THEN METIS_TAC [SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) [] interrupt_exists]
 );
 
 val NEXT_CORE_STM_TN_W2 =
@@ -1220,6 +1225,8 @@ val NEXT_CORE_STM_TN_W1 = store_thm("NEXT_CORE_STM_TN_W1",
       (!t. t < SUC w ==> FST (i t)) ==>
       ?ointstart' obaselatch' onfq' ooonfq' oniq' oooniq' pipeaabt' pipebabt' dataabt2' aregn' oareg' mul' mul2' borrow2' mshift'.
         ~(num2exception aregn' IN {reset; undefined; software; address}) /\ (aregn' < 8) /\
+        ((num2exception aregn' = fast) ==> ~WORD_BIT 6 (CPSR_READ psr)) /\
+        ((num2exception aregn' = interrupt) ==> ~WORD_BIT 7 (CPSR_READ psr)) /\
        (FUNPOW (SNEXT NEXT_ARM6) (w - 1) <|state := ARM6
                  (DP reg psr (base + w32 1 * w32 4) din alua alub dout)
                  (CTRL pipea T pipeb T ireg T ointstart F F obaselatch F stm tn
@@ -1252,8 +1259,8 @@ val NEXT_CORE_STM_TN_W1 = store_thm("NEXT_CORE_STM_TN_W1",
     THEN POP_ASSUM (K ALL_TAC)
     THEN RW_TAC arith_ss [MASK_def,PENCZ_THM,SUC_SUC_SUB2,io_onestepTheory.ADVANCE_def,
                           AREGN1_def,pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY]
-    THEN FULL_SIMP_TAC arith_ss [num2exception_thm,exception_distinct]
-    THEN PROVE_TAC [SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) [] interrupt_exists]
+    THEN FULL_SIMP_TAC arith_ss [num2exception_thm,exception_distinct,BIT_W32_NUM]
+    THEN METIS_TAC [SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) [] interrupt_exists]
 );
 
 val NEXT_CORE_STM_TN_W1 = save_thm("NEXT_CORE_STM_TN_W1",

@@ -542,13 +542,18 @@ val PSRDAT_def = Define`
     and bits1512 = WORD_BITS 15 12 ireg
     in
       if bit20 /\ (((is = t3) /\ (ic = data_proc)) \/ ((is = t4) /\ (ic = reg_shift))) then
-         if bits1512 = 15 then
+         let (n,z,c,v) = FST alu in
+         if bit24 /\ ~bit23 then
+            if ~bit22 then
+               SET_NZC (n,z,sctlc) cpsrl
+            else
+               SET_NZCV (n,z,c,v) cpsrl
+         else if bits1512 = 15 then
             if USER nbs then
                cpsrl
             else
                psrfb
-         else let (n,z,c,v) = FST alu in
-          if (~bit23 /\ ~bit22) \/ (bit24 /\ bit23) then
+         else if (~bit23 /\ ~bit22) \/ (bit24 /\ bit23) then
             SET_NZC (n,z,sctlc) cpsrl
          else
             SET_NZCV (n,z,c,v) cpsrl

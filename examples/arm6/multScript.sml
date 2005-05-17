@@ -558,6 +558,8 @@ val MLA_MUL_INVARIANT = Count.apply prove(
     n <= MLA_MUL_DUR (REG_READ6 reg nbs (WORD_BITS 11 8 ireg)) ==>
     ?ointstart' obaselatch' onfq' ooonfq' oniq' oooniq' pipeaabt' pipebabt' iregabt' dataabt' aregn'.
       ~(num2exception aregn' IN {reset; undefined; software; address}) /\ (aregn' < 8) /\
+      ((num2exception aregn' = fast) ==> ~WORD_BIT 6 (CPSR_READ psr)) /\
+      ((num2exception aregn' = interrupt) ==> ~WORD_BIT 7 (CPSR_READ psr)) /\
       let Rm = WORD_BITS 3 0 ireg
       and Rd = WORD_BITS 19 16 ireg
       and rs = REG_READ6 reg nbs (WORD_BITS 11 8 ireg)
@@ -631,7 +633,7 @@ val MLA_MUL_INVARIANT = Count.apply prove(
     THEN1 (SIMP_TAC (arith_ss++STATE_INP_ss) [state_arm6_11,ctrl_11,iclass_distinct,
              io_onestepTheory.state_out_literal_11,FUNPOW,BORROW2_def,MSHIFT,RD_INVARIANT_ZERO,MASK_def,
              BITS_ZERO2,DONE_NEQ_ZERO,WORD_BITS_HB_0,GSYM WORD_BITS_def,io_onestepTheory.ADVANCE_ZERO]
-            THEN PROVE_TAC [interrupt_exists])
+            THEN METIS_TAC [interrupt_exists])
     THEN REWRITE_TAC [FUNPOW_SUC]
     THEN Cases_on `n = 0`
     THENL [
@@ -657,7 +659,7 @@ val MLA_MUL_INVARIANT = Count.apply prove(
                            AREGN1 F dataabt2 (~BIT 6 (w2n cpsr) /\ ~ooonfq) (~BIT 7 (w2n cpsr) /\ ~oooniq) F pipebabt
                          else 3`
         THEN POP_ASSUM_LIST (K ALL_TAC) THEN RW_TAC std_ss [AREGN1_def]
-        THEN FULL_SIMP_TAC bool_ss [pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY,
+        THEN FULL_SIMP_TAC bool_ss [pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY,BIT_W32_NUM,
                                     num2exception_thm,exception_distinct],
       STRIP_TAC
         THEN `n <= MLA_MUL_DUR rs` by DECIDE_TAC
@@ -696,12 +698,14 @@ val MLA_MUL_INVARIANT = Count.apply prove(
             THEN REWRITE_TAC []
             THEN POP_ASSUM_LIST (K ALL_TAC)
             THEN RW_TAC stdi_ss [AREGN1_def]
-            THEN FULL_SIMP_TAC std_ss [pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY,
+            THEN FULL_SIMP_TAC std_ss [pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY,BIT_W32_NUM,
                                        num2exception_thm,exception_distinct],
           RW_TAC stdi_ss [AREGN1_def]
-            THEN FULL_SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [num2exception_thm,exception_distinct],
+            THEN FULL_SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss)
+                   [BIT_W32_NUM,num2exception_thm,exception_distinct],
           RW_TAC stdi_ss [AREGN1_def]
-            THEN FULL_SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [num2exception_thm,exception_distinct]
+            THEN FULL_SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss)
+                   [BIT_W32_NUM,num2exception_thm,exception_distinct]
         ]
     ]
 );
