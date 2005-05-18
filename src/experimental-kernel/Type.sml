@@ -3,7 +3,8 @@ struct
 
 open Feedback Lib
 
-infix --> |->
+infix |->
+infixr -->
 
 val WARN = HOL_WARNING "Type";
 fun ERR f msg = HOL_ERR {origin_structure = "Type",
