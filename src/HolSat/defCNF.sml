@@ -16,8 +16,6 @@ struct
 
 open HolKernel Parse boolLib simpLib numLib normalForms defCNFTheory;
 
-infix THEN THEN1 THENL THENC ORELSEC ++ --> |->;
-
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
 (* ------------------------------------------------------------------------- *)
