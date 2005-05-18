@@ -76,6 +76,13 @@ in
   else print "OK\n"
 end
 
+val _ = Process.atExit (fn () => let
+                             fun rm s = FileSys.remove s
+                                        handle _ => ()
+                           in
+                             app rm ["scratchTheory.sml", "scratchTheory.sig"]
+                           end)
+
 fun test f x = f x orelse (print "FAILED!\n"; Process.exit Process.failure)
 val oldconstants_test = let
   val _ = print "Identity of old constants test  ... "
@@ -103,7 +110,6 @@ val oldconstants_test = let
   val c2 = lhs (concl defn2)
   val _ = test (fn (c1, c2) => Term.compare(c1,c2) <> EQUAL) (c1, c2)
   val _ = test (not o uncurry aconv) (c1, c2)
-  val _ = app FileSys.remove ["scratchTheory.sml", "scratchTheory.sig"]
 in
   print "OK\n"
 end
