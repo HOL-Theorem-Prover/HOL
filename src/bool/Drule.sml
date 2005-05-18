@@ -15,8 +15,6 @@ struct
 
 open Feedback HolKernel Parse boolTheory boolSyntax Abbrev;
 
-infix 5 ## |-> -->;
-
 val ERR = mk_HOL_ERR "Drule";
 
 
