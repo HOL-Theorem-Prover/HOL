@@ -57,8 +57,8 @@ fun Rm l = bits 3 0 l;
 fun decode_shift z l = toUpperString(
   case l of
     [0,0] => "lsl"
-  | [0,1] => "lsr"
-  | [1,0] => "asr"
+  | [0,1] => "asr"
+  | [1,0] => "lsr"
   | [1,1] => if z then "rrx" else "ror"
   | _ => raise HOL_ERR { origin_structure = "disassemlerLib",
                          origin_function = "decode_shift",
@@ -305,17 +305,17 @@ fun mla_mul_string l conds =
 fun ldr_str_string l conds =
   let val dl = decode_ldr_str l
       val offset = (if #I dl then
-                      (if not (#U dl) then "-" else "") ^
+                      (if not (#U dl) then ", -" else ", ") ^
                          shift_immediate_string (decode_immediate_shift (#offset dl))
                     else let val n = list2num (#offset dl) in
                       if n = Arbnum.zero then "" else
-                        (if not (#U dl) then "#-" else "#") ^ Arbnum.toString n end)
+                        (if not (#U dl) then ", #-" else ", #") ^ Arbnum.toString n end)
       val h = mnemonic ((if #L dl then "ldr" else "str") ^ conds ^ (if #B dl then "b" else ""))
   in
     h ^ register_string (#Rd dl) ^ ", [" ^ register_string (#Rn dl) ^
       (if #P dl then
           offset ^ "]" ^ (if #W dl then "!" else "")
-       else "], " ^ offset)
+       else "]" ^ offset)
   end;
 
 fun ldm_stm_string l conds =
