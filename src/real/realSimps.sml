@@ -1,11 +1,10 @@
 (* ------------------------------------------------------------------------- *)
 (* A real simpset (includes Peano arithmetic and pairs).                     *)
 (* ------------------------------------------------------------------------- *)
-
 structure realSimps :> realSimps =
 struct
 
-open HolKernel boolLib realTheory simpLib
+open HolKernel boolLib realTheory simpLib realSyntax
 
 val (Type,Term) = parse_from_grammars realTheory.real_grammars
 
@@ -65,7 +64,6 @@ val real_ac_SS = simpLib.SIMPSET {
   rewrs = [],
   congs = []};
 
-
 (* ----------------------------------------------------------------------
     simple calculation over the reals
    ---------------------------------------------------------------------- *)
@@ -82,10 +80,10 @@ val real_ac_SS = simpLib.SIMPSET {
    but this seems over the top.
 *)
 
-open realSyntax
+
 
 val num_eq_0 = prove(
-  ``~(NUMERAL (BIT1 n) = 0) /\ ~(NUMERAL (BIT2 n) = 0)``,
+  Term`~(NUMERAL (BIT1 n) = 0n) /\ ~(NUMERAL (BIT2 n) = 0n)`,
   REWRITE_TAC [numeralTheory.numeral_distrib, numeralTheory.numeral_eq]);
 
 fun two_nats  rv nv th = let
@@ -290,10 +288,11 @@ in
     end
 end
 
-val ecf_patterns = [``&(NUMERAL n) / &(NUMERAL (BIT1 m))``,
-                    ``&(NUMERAL n) / &(NUMERAL (BIT2 m))``,
-                    ``~&(NUMERAL n) / &(NUMERAL (BIT1 m))``,
-                    ``~&(NUMERAL n) / &(NUMERAL (BIT2 m))``]
+
+val ecf_patterns = [Term`&(NUMERAL n) / &(NUMERAL (BIT1 m))`,
+                    Term`&(NUMERAL n) / &(NUMERAL (BIT2 m))`,
+                    Term`~&(NUMERAL n) / &(NUMERAL (BIT1 m))`,
+                    Term`~&(NUMERAL n) / &(NUMERAL (BIT2 m))`]
 
 val simpset_convs = map (fn p => {conv = K (K elim_common_factor),
                                   key = SOME ([], p),
@@ -542,7 +541,6 @@ val REAL_ARITH_ss =
     simpLib.SIMPSET
     { convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
-
 
 
 end;

@@ -30,10 +30,16 @@ open HolKernel Parse boolLib pairLib hol88Lib numLib reduceLib tautLib
      pairTheory numTheory prim_recTheory arithmeticTheory
      realTheory Ho_Rewrite jrhUtils Canon_Port AC numSyntax Arbint;
 
-val (Type,Term) = Parse.parse_from_grammars realTheory.real_grammars
-fun -- q x = Term q;
-fun == q x = Type q;
+local
+  val (Type,Term) = Parse.parse_from_grammars realTheory.real_grammars
+  val ambient_grammars = Parse.current_lgrms();
+in
 
+(*---------------------------------------------------------------------------*)
+(* Establish the required grammar(s) for executing this file                 *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Parse.temp_set_grammars realTheory.real_grammars;
 
 (*----------------------------------------------------------------------- *)
 (* The trace system.                                                      *)
@@ -1641,5 +1647,12 @@ REAL_ARITH (Term`&0 < x /\ &0 < y ==> x + y < &1
                ==> &144 * x + &100 * y < &144`);
 REAL_ARITH (Term`!x y. x <= ~y = x + y <= &0`);
 *)
+
+(*---------------------------------------------------------------------------*)
+(* Restore the ambient grammar in force when this file started executing.    *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Parse.temp_set_grammars ambient_grammars;
+end;
 
 end;
