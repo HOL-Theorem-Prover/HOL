@@ -3,9 +3,9 @@ load "ringLib";
 load "numeralTheory";
 load "bossLib";
 *)
-open HolKernel Parse boolLib bossLib  arithmeticTheory semi_ringTheory;
+open HolKernel Parse boolLib bossLib
+     arithmeticTheory semi_ringTheory;
 
-infix THEN THENL THENC o;
 
 val _ = new_theory "numRing";
 

@@ -4,17 +4,14 @@ load "RecordType";
 load "semi_ringTheory";
 *)
 
-open HolKernel Parse boolLib abs_tools;
+open HolKernel Parse boolLib;
 open BasicProvers SingleStep Datatype;
-
-infix ORELSE THEN THENL o;
-infix 8 by;
-
-val _ = new_theory "ring";
-
+open  abs_tools; (* Rebinds Term and Define *)
 
 fun EQ_TRANS_TAC t = MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC t THEN CONJ_TAC;
 
+
+val _ = new_theory "ring";
 
 val _ = Hol_datatype `ring = <| R0 : 'a;
                                 R1 : 'a;
@@ -28,15 +25,14 @@ val _ = app (C add_impl_param [r]) ["R0","R1","RP","RM","RN"];
 val _ = app (fn s => overload_on (s, Parse.Term [QUOTE ("ring_"^s)]))
             ["R0","R1","RP","RM","RN"];
 
-
-val p_plus_sym = --`!n m.  RP n m = RP m n`--;
-val p_plus_assoc = --`!n m p.  RP n (RP m p) = RP (RP n m) p`--;
-val p_mult_sym = --`!n m.  RM n m = RM m n`--;
-val p_mult_assoc = --`!n m p.  RM n (RM m p) = RM (RM n m) p`--;
-val p_plus_zero_left = --`!n.  RP R0 n = n`--;
-val p_mult_one_left = --`!n.  RM R1 n = n`--;
-val p_opp_def = --`!n.  RP n (RN n) = R0`--;
-val p_distr_left = --`!n m p.  RM (RP n m) p = RP (RM n p) (RM m p)`--;
+val p_plus_sym = Term`!n m.  RP n m = RP m n`;
+val p_plus_assoc = Term`!n m p.  RP n (RP m p) = RP (RP n m) p`;
+val p_mult_sym = Term`!n m.  RM n m = RM m n`;
+val p_mult_assoc = Term`!n m p.  RM n (RM m p) = RM (RM n m) p`;
+val p_plus_zero_left = Term`!n.  RP R0 n = n`;
+val p_mult_one_left = Term`!n.  RM R1 n = n`;
+val p_opp_def = Term`!n.  RP n (RN n) = R0`;
+val p_distr_left = Term`!n m p.  RM (RP n m) p = RP (RM n p) (RM m p)`;
 
 
 val is_ring_def = Define `
@@ -77,7 +73,7 @@ val distr_left =
 
 val plus_zero_right = asm_store_thm
     ("plus_zero_right",
-     --` !n. RP n R0 = n `--,
+     Term` !n. RP n R0 = n `,
 REPEAT GEN_TAC THEN
 ONCE_REWRITE_TAC [plus_sym] THEN
 REWRITE_TAC [plus_zero_left]);
@@ -85,15 +81,15 @@ REWRITE_TAC [plus_zero_left]);
 
 val mult_zero_left = asm_store_thm
     ("mult_zero_left",
-     --` !n. RM R0 n = R0 `--,
+     Term` !n. RM R0 n = R0 `,
 GEN_TAC THEN
-EQ_TRANS_TAC(--` RP (RM (RP R0 R0) n) (RN (RM R0 n)) `--) THENL
+EQ_TRANS_TAC(Term` RP (RM (RP R0 R0) n) (RN (RM R0 n)) `) THENL
   [ REWRITE_TAC[distr_left,GSYM plus_assoc], ALL_TAC ] THEN
 REWRITE_TAC[opp_def, plus_zero_right]);
 
 val mult_zero_right = asm_store_thm
     ("mult_zero_right",
-     --` !n. RM n R0 = R0 `--,
+     Term` !n. RM n R0 = R0 `,
 REPEAT GEN_TAC THEN
 ONCE_REWRITE_TAC [mult_sym] THEN
 REWRITE_TAC [mult_zero_left]);
@@ -104,7 +100,7 @@ val semi_ring_of_def = Define `semi_ring_of = (semi_ring R0 R1 RP RM) `;
 
 val ring_is_semi_ring = asm_store_thm
     ("ring_is_semi_ring",
-     --` is_semi_ring semi_ring_of`--,
+     Term` is_semi_ring semi_ring_of`,
 RW_TAC bool_ss [ semi_ring_of_def, semi_ringTheory.is_semi_ring_def,
 		 semi_ringTheory.semi_ring_accessors] THEN
 MAP_FIRST MATCH_ACCEPT_TAC
@@ -116,7 +112,7 @@ MAP_FIRST MATCH_ACCEPT_TAC
 val { plus_permute, plus_rotate, mult_permute, mult_rotate, distr_right,
       mult_one_right,...} =
   semi_ringTheory.IMPORT
-    { Vals=[--`semi_ring_of`--],
+    { Vals=[Term`semi_ring_of`],
       Inst=[ring_is_semi_ring],
       Rule=REWRITE_RULE[ semi_ring_of_def,
 			 semi_ringTheory.semi_ring_accessors],
@@ -127,9 +123,9 @@ val _ = asm_save_thm("mult_one_right",mult_one_right);
 
 val neg_mult = asm_store_thm
     ("neg_mult",
-     --`!a b. RM (RN a) b = RN (RM a b)`--,
+     Term`!a b. RM (RN a) b = RN (RM a b)`,
 REPEAT GEN_TAC THEN
-EQ_TRANS_TAC(--` RP (RM (RP a (RN a)) b) (RN (RM a b)) `--) THENL
+EQ_TRANS_TAC(Term` RP (RM (RP a (RN a)) b) (RN (RM a b)) `) THENL
   [ REWRITE_TAC[distr_left],
     REWRITE_TAC[opp_def,mult_zero_left,plus_zero_left] ] THEN
 ONCE_REWRITE_TAC[plus_permute] THEN

@@ -109,8 +109,8 @@ val interp_p_def = Define `
 
 val polynom_normalize_ok = asm_store_thm
     ("polynom_normalize_ok",
-     --` !vm p. r_interp_cs vm (polynom_normalize p)
-			      = interp_p vm p `--,
+     Term` !vm p. r_interp_cs vm (polynom_normalize p)
+			      = interp_p vm p `,
 Induct_on `p` THEN REPEAT GEN_TAC THEN
 ARW_TAC [ polynom_normalize_def, interp_cs_def, interp_p_def,
 	  ics_aux_def, canonical_sum_merge_ok, canonical_sum_prod_ok,
@@ -120,8 +120,8 @@ ARW_TAC [ polynom_normalize_def, interp_cs_def, interp_p_def,
 
 val polynom_simplify_ok = asm_store_thm
     ("polynom_simplify_ok",
-     --` !vm p. r_interp_cs vm (polynom_simplify p)
-			      = interp_p vm p `--,
+     Term` !vm p. r_interp_cs vm (polynom_simplify p)
+			      = interp_p vm p `,
 ARW_TAC [ polynom_simplify_def,
 	  canonical_sum_simplify_ok,
 	  polynom_normalize_ok ]);

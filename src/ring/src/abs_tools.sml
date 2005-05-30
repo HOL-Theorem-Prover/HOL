@@ -42,8 +42,6 @@ fun asm_store_thm(x,cl,tac) =
   end;
 
 
-
-
 fun Term q = let
     val pt = Parse.Absyn q
     val pt' = add_ip pt
