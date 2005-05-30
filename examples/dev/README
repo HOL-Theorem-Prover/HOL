@@ -26,7 +26,7 @@ There are six levels of abstraction:
  C: Circuit      (clocked synchronous device predicates: Dtype, Dff)
  V: Verilog      (netlist pretty-printed into Verilog)
 
-The main user-level functions are hwDefine, REFINE_ALL and
+The main user-level functions are hwDefine, cirDefine, REFINE_ALL and
 MAKE_NETLIST for creating hardware, refining it and then creating a
 netlist representation, and MAKE_CIRCUIT and MAKE_VERILOG for creating
 Verilog HDL output.
@@ -385,6 +385,18 @@ and DELF to clocked Dtype and Dff, and returns:
            (out1<>...<>outn) at clk)
 
 See FactScript.sml for examples (e.g. FACT_cir).
+
+
+cirDefine : term frag list -> thm * thm * thm
+--------------------------------------------
+
+Invoke hwDefine and then apply MAKE_CIRCUIT and REFINE_ALL to the device:
+
+fun cirDefine qdef =
+ let val (def,ind,dev) = hwDefine qdef
+ in
+  (def, ind, MAKE_CIRCUIT(REFINE_ALL dev))
+ end;
 
 
 PRINT_VERILOG : thm -> unit
@@ -832,4 +844,5 @@ termToVerilogLib := (!termToVerilogLib) @ [termToVerilog_XOR32];
 == [28.02.05: MJCG revised added SIMULATE to run iverilog and gtkwave]       ==
 == [20.04.05: MJCG updated section on adding new components]                 ==
 == [17.05.05: MJCG added hwDefineLib and REFINE_ALL]                         ==
+== [30.05.05: MJCG added cirDefine]                                          ==
 ===============================================================================

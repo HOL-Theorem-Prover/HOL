@@ -1593,3 +1593,12 @@ fun MAKE_CIRCUIT devth =
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,o_THM]) devth;
 
+(*****************************************************************************)
+(* Invoke hwDefine and then apply MAKE_CIRCUIT and REFINE_ALL to the         *)
+(* device                                                                    *)
+(*****************************************************************************)
+fun cirDefine qdef =
+ let val (def,ind,dev) = hwDefine qdef
+ in
+  (def, ind, MAKE_CIRCUIT(REFINE_ALL dev))
+ end;

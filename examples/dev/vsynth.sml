@@ -840,6 +840,7 @@ val _ = add_modules[("DFF",DFFvDef)];
 (*****************************************************************************)
 val DtypevDef =
 "// Positive edge triggered Dtype register\n\
+\// Dtype(clk,d,q) = !t. q(t+1) = if Rise clk t then d t else q t\n\
 \module Dtype (clk,d,q);\n\
 \ parameter size = 31;\n\
 \ input clk;\n\
@@ -893,6 +894,7 @@ val _ = add_modules[("Dtype",DtypevDef)];
 (*****************************************************************************)
 val DtypeTvDef =
 "// Boolean positive edge triggered flip-flop starting in state 1\n\
+\// DtypeT(clk,d,q) = (q 0 = T) /\\ Dtype(clk,d,q)\n\
 \module DtypeT (clk,d,q);\n\
 \ input clk,d;\n\
 \ output q;\n\

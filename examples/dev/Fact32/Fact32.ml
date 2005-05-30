@@ -45,8 +45,8 @@ AddBinop ("EQ32",    (``UNCURRY $= : word32#word32->bool``,    "=="));
 (* We implement multiplication with a naive iterative multiplier function    *)
 (* (works by repeated addition)                                              *)
 (*****************************************************************************)
-val (Mult32Iter,Mult32Iter_ind,Mult32Iter_dev) =
- hwDefine
+val (Mult32Iter,Mult32Iter_ind,Mult32Iter_cir) =
+ cirDefine
   `(Mult32Iter (m,n,acc) =
      if m = 0w then (0w,n,acc) else Mult32Iter(m-1w,n,n + acc))
    measuring (w2n o FST)`;
@@ -54,15 +54,15 @@ val (Mult32Iter,Mult32Iter_ind,Mult32Iter_dev) =
 (*****************************************************************************)
 (* Create an implementation of a multiplier from Mult32Iter                  *)
 (*****************************************************************************)
-val (Mult32,_,Mult32_dev) =
- hwDefine
+val (Mult32,_,Mult32_cir) =
+ cirDefine
   `Mult32(m,n) = SND(SND(Mult32Iter(m,n,0w)))`;
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
 (*****************************************************************************)
-val (Fact32Iter,Fact32Iter_ind,Fact32Iter_dev) =
- hwDefine
+val (Fact32Iter,Fact32Iter_ind,Fact32Iter_cir) =
+ cirDefine
   `(Fact32Iter (n,acc) =
      if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc)))
    measuring (w2n o FST)`;
@@ -70,19 +70,9 @@ val (Fact32Iter,Fact32Iter_ind,Fact32Iter_dev) =
 (*****************************************************************************)
 (* Implement a function Fact32 to compute SND(Fact32Iter (n,1))              *)
 (*****************************************************************************)
-val (Fact32,_,Fact32_dev) =
- hwDefine
+val (Fact32,_,Fact32_cir) =
+ cirDefine
   `Fact32 n = SND(Fact32Iter (n,1w))`;
-
-(*****************************************************************************)
-(* Derivation using refinement combining combinators                         *)
-(*****************************************************************************)
-val Fact32Imp_dev = REFINE_ALL Fact32_dev;
-
-val Fact32_cir =
- save_thm
-  ("Fact32_cir",
-   time MAKE_CIRCUIT Fact32Imp_dev);
 
 (*****************************************************************************)
 (* This dumps changes to all variables. Set to false to dump just the        *)
