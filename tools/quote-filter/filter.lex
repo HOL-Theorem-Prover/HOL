@@ -55,16 +55,16 @@ parse `"` { ECHO lexbuf; STRING lexbuf  }
   | "("  { ECHO lexbuf; inc pardepth; INITIAL lexbuf }
   | ")"  { ECHO lexbuf; dec pardepth;
            if !antiquote andalso !pardepth < 1 then () else INITIAL lexbuf }
-  | "==" ws * "`" { print ("(Type [QUOTE \""^locpragma lexbuf 0); OLDTYQUOTE lexbuf }
-  | "--" ws * "`" { print ("(Term [QUOTE \""^locpragma lexbuf 0); OLDTMQUOTE lexbuf }
+  | "==" ws * "`" { print ("(Parse.Type [QUOTE \""^locpragma lexbuf 0); OLDTYQUOTE lexbuf }
+  | "--" ws * "`" { print ("(Parse.Term [QUOTE \""^locpragma lexbuf 0); OLDTMQUOTE lexbuf }
   | "``" ws * `:` (letter | ws | [`(` `'` ]) {
-      print ("(Type [QUOTE \""^locpragma lexbuf 2);
+      print ("(Parse.Type [QUOTE \""^locpragma lexbuf 2);
       print (drop_upto #":" (Lexing.getLexeme lexbuf));
       TYQUOTE lexbuf
     }
-  | "``" ws * ":^" { print ("(Type [QUOTE \""^locpragma lexbuf 2^":\", ANTIQUOTE (");
+  | "``" ws * ":^" { print ("(Parse.Type [QUOTE \""^locpragma lexbuf 2^":\", ANTIQUOTE (");
                      ANTIQUOTE lexbuf; TYQUOTE lexbuf }
-  | "``" { print ("(Term [QUOTE \""^locpragma lexbuf 0); TMQUOTE lexbuf }
+  | "``" { print ("(Parse.Term [QUOTE \""^locpragma lexbuf 0); TMQUOTE lexbuf }
   | "`"  { print ("[QUOTE \""^locpragma lexbuf 0); QUOTE lexbuf }
   | newline { print "\n"; TextIO.flushOut (!output_stream); nextline lexbuf; INITIAL lexbuf }
   | _ { ECHO lexbuf; INITIAL lexbuf }
