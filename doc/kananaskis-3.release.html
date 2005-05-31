@@ -86,6 +86,19 @@ html1/DTD/xhtml1-strict.dtd">
     assumptions rather than equal terms.  Thanks to Lockwood Morris
     for the bug report. </p> </li>
 
+<li> <p> The order in which type arguments appeared as arguments to
+    polymorphic type operators defined by <code>Hol_datatype</code>
+    was previously undefined.  For example, if one wrote:<p>
+<pre>
+         Hol_datatype `sum = left of 'a | right of 'b`;
+</pre>
+    <p> it was not specified that <code>('a,'b)sum</code> was the type
+    which associated the variable <code>'a</code> with the
+    <code>left</code> constructor.  Now, the type picks up the type
+    variable arguments in <code>Hol_datatype</code> in alphabetical
+    order.  <em>This may break code that relied on what was an
+    unspecified behaviour.</em></p></li>
+
 
 </ul>
 
