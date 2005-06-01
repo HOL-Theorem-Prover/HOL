@@ -1,13 +1,9 @@
 structure CooperMath :> CooperMath = struct
 
-  local open gcdTheory
-  in
-  end
+  local open gcdTheory in end
 
-  open HolKernel boolLib intSyntax integerTheory int_arithTheory intSimps
-  open CooperThms CooperSyntax
-
-  infix THENC ORELSEC THEN ## |->
+  open HolKernel Parse boolLib intSyntax integerTheory 
+       int_arithTheory intSimps CooperThms CooperSyntax
 
   type num = Arbnum.num
 
@@ -15,16 +11,13 @@ structure CooperMath :> CooperMath = struct
   val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
   val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
 
-fun ERR f s = HOL_ERR { origin_function = f,
-                        origin_structure = "CooperMath",
-                        message = s};
+val ERR = mk_HOL_ERR "CooperMath";
 
 fun lhand t = rand (rator t)
 
-val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
-fun -- q x = Term q
-fun == q x = Type q
-
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
 
 (*---------------------------------------------------------------------------*)
 (* Function to compute the Greatest Common Divisor of two integers.          *)
@@ -1066,5 +1059,6 @@ in
 end tm
 
 
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* struct *)

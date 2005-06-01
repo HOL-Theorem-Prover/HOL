@@ -1,5 +1,5 @@
 (* app load ["wordUtil","bitsTheory"]; *)
-open HolKernel boolLib bossLib Q wordUtil
+open HolKernel Parse boolLib bossLib Q wordUtil
      arithmeticTheory numeralTheory bitsTheory;
 
 (* -------------------------------------------------------- *)

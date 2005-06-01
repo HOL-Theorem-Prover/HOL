@@ -3,8 +3,6 @@ struct
 
 open HolKernel boolLib liteLib Trace;
 
-infix |-> ##
-
 fun WRAP_ERR x = STRUCT_WRAP "Cond_rewr" x;
 fun ERR x      = STRUCT_ERR "Cond_rewr" x;
 

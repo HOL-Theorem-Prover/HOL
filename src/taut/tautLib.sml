@@ -39,8 +39,6 @@ struct
 
 open HolKernel Parse boolLib Abbrev Rsyntax;
 
-infix THEN THENL THENC ## |->;
-
 val ERR = mk_HOL_ERR "tautLib"
 
 
@@ -48,9 +46,9 @@ val ERR = mk_HOL_ERR "tautLib"
      Set the parsers to a fixed grammar for the duration of this file.
  ---------------------------------------------------------------------------*)
 
-val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q handle e => Raise e;
-fun == q x = Type q handle e => Raise e;
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 val BOOL_CASES_AX = boolTheory.BOOL_CASES_AX;
 
@@ -606,4 +604,6 @@ fun TAUT_PROVE tm =
 
 fun TAUT q = TAUT_PROVE (Term q);
 
-end; (* tautLib *)
+val _ = Parse.temp_set_grammars ambient_grammars;
+
+end (* tautLib *)

@@ -15,18 +15,15 @@ struct
    ---------------------------------------------------------------------- *)
 
 open HolKernel boolLib intSyntax
-
 open integerTheory
-
-infix THENC ORELSEC |->
 
 val lhand = rand o rator
 
-fun ERR f msg = HOL_ERR { origin_structure = "OmegaSimple",
-                          origin_function = f,
-                          message = msg}
+val ERR = mk_HOL_ERR "OmegaSimple";
 
-val (Type,Term) = parse_from_grammars integer_grammars
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars integer_grammars;
 
 
 (* ----------------------------------------------------------------------
@@ -331,4 +328,6 @@ end
 
 *)
 
-end; (* struct *)
+val _ = Parse.temp_set_grammars ambient_grammars
+
+end (* struct *)

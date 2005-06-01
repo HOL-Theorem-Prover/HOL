@@ -38,12 +38,12 @@ fun all_fns eqns =
 
 fun dest_hd_eqn eqs =
   let val hd_eqn = if is_conj eqs then fst(dest_conj eqs) else eqs
-      val (lhs,rhs) = dest_eq hd_eqn
+      val (lhs,rhs) = dest_eq (snd(strip_forall hd_eqn))
   in (strip_comb lhs, rhs)
   end;
 
 fun dest_hd_eqnl (hd_eqn::_) =
-  let val (lhs,rhs) = dest_eq (concl hd_eqn)
+  let val (lhs,rhs) = dest_eq (snd (strip_forall (concl hd_eqn)))
   in (strip_comb lhs, rhs)
   end;
 
@@ -272,13 +272,15 @@ fun elim_tcs (STDREC {eqs, ind, R, SV,stem}) thms =
   | elim_tcs x _ = x;
 
 
-local val lem = let val M  = mk_var("M",bool)
-                    val P  = mk_var("P",bool)
-                    val M1 = mk_var("M1",bool)
-                    val tm1 = mk_eq(M,M1)
-                    val tm2 = mk_imp(M,P)
-                in DISCH tm1 (DISCH tm2 (SUBS [ASSUME tm1] (ASSUME tm2)))
-                end
+local 
+ val lem = 
+   let val M  = mk_var("M",bool)
+       val P  = mk_var("P",bool)
+       val M1 = mk_var("M1",bool)
+       val tm1 = mk_eq(M,M1)
+       val tm2 = mk_imp(M,P)
+   in DISCH tm1 (DISCH tm2 (SUBS [ASSUME tm1] (ASSUME tm2)))
+   end
 in
 fun simp_assum conv tm th =
   let val th' = DISCH tm th

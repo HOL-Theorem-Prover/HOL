@@ -8,7 +8,7 @@
 structure containerScript =
 struct
 
-open HolKernel boolLib pred_setTheory listTheory bagTheory
+open HolKernel Parse boolLib pred_setTheory listTheory bagTheory
      Defn TotalDefn SingleStep BasicProvers;
 
 (* ---------------------------------------------------------------------*)
@@ -48,7 +48,7 @@ val (SET_TO_LIST_EQN, SET_TO_LIST_IND) =
  ---------------------------------------------------------------------------*)
 
 val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM",
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] SET_TO_LIST_EQN));
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE s``] SET_TO_LIST_EQN));
 
 val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND",SET_TO_LIST_IND);
 
@@ -150,7 +150,7 @@ Defn.tprove
    THEN PROVE_TAC [PSUB_BAG_CARD, PSUB_BAG_REST]);
 
 val BAG_TO_LIST_THM = save_thm("BAG_TO_LIST_THM",
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME (Term`FINITE_BAG bag`)] BAG_TO_LIST_EQN));
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE_BAG bag``] BAG_TO_LIST_EQN));
 
 val BAG_TO_LIST_IND = save_thm("BAG_TO_LIST_IND",BAG_TO_LIST_IND);
 

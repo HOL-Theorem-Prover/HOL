@@ -16,16 +16,15 @@ structure GenFuns :> GenFuns =
     struct
 
 open NestedRecMask HolKernel Parse basicHol90Lib;
-infix THEN THENL THENC;
-
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars;
-fun -- q x = Term q
-fun == q x = Type q;
 
  type hol_type = Type.hol_type
  type term = Term.term
  type thm = Thm.thm
  type conv = Abbrev.conv
+
+
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
         fun dom_cod_ty (ty:hol_type) =
             let
@@ -234,5 +233,7 @@ fun == q x = Type q;
                 then (LEFT_IMP_FORALL_CONV THENC
                       RAND_CONV (ABS_CONV LEFT_IMP_LIST_FORALL_CONV)) tm
             else REFL tm
+
+  val _ = Parse.temp_set_grammars ambient_grammars
 
     end (* structure GenFuns *)

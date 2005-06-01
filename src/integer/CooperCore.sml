@@ -1,22 +1,21 @@
 structure CooperCore :> CooperCore =
 struct
-open HolKernel boolLib
+open HolKernel Parse boolLib
      integerTheory int_arithTheory intSimps
      intSyntax CooperSyntax CooperMath CooperThms
      Profile
 
-infix ## ORELSEC THENC |->
-infixr -->
-
 val ERR = mk_HOL_ERR "CooperCore";
-
 
 val lhand = rand o rator
 
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars listTheory.list_grammars;
+
 local
-  val (Type,Term) = Parse.parse_from_grammars listTheory.list_grammars
   val prove = INST_TYPE [alpha |-> int_ty] o prove
   infix THEN
 in
@@ -38,8 +37,6 @@ val mem_consP = prove(
   simpLib.SIMP_TAC boolSimps.bool_ss [listTheory.MEM, RIGHT_AND_OVER_OR,
                                       EXISTS_OR_THM]);
 end
-
-val _ = Term
 
 fun prove_membership t1 t2 = let
   val (tmlist, elty) = listSyntax.dest_list t2
@@ -1221,5 +1218,7 @@ in
 end
 
 val phase5_CONV = profile "phase5" phase5_CONV
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end

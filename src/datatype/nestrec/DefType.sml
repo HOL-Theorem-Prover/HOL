@@ -16,12 +16,12 @@ structure DefType :> DefType =
   struct
 
     open HolKernel Parse basicHol90Lib;
-    val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-    fun -- q x = Term q
-    fun == q x = Type q
-        infix THEN |->
-        open Recftn;
-        open TypeInfo
+    open Recftn;
+    open TypeInfo
+
+    val ambient_grammars = Parse.current_grammars();
+    val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+
 
         fun DEF_TYPE_ERR {function, message} =
             HOL_ERR {message = message,
@@ -1364,5 +1364,7 @@ fun define_type def_type_spec recursor_thms =
        Constructors_One_One_Thm = Constructors_One_One_Thm,
        Cases_Thm = Cases_Thm}
    end
+
+  val _ = Parse.temp_set_grammars ambient_grammars
 
 end;

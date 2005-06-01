@@ -353,11 +353,11 @@ val RM_ALL_ABBREVS_TAC = REPEAT (FIRST_X_ASSUM (K ALL_TAC o DeAbbrev))
     ABBRS_THEN
    ---------------------------------------------------------------------- *)
 
-open markerLib
-fun ABBRS_THEN ttac thl = let
-  val (abbrs, rest) = List.partition is_Abbr thl
-in
+fun ABBRS_THEN ttac thl = 
+ let open markerLib
+     val (abbrs, rest) = List.partition is_Abbr thl
+ in
   MAP_EVERY (UNABBREV_TAC o dest_Abbr) abbrs THEN ttac rest
-end
+ end
 
 end; (* Q *)

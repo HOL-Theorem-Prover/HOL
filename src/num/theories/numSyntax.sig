@@ -55,6 +55,7 @@ sig
   val mk_while      : term * term * term -> term
   val mk_least      : term -> term
   val mk_divmod     : term * term * term -> term
+  val mk_cmeasure   : term -> term
   val mk_measure    : term * term * term -> term
 
   val dest_suc      : term -> term
@@ -80,6 +81,7 @@ sig
   val dest_least    : term -> term
   val dest_divmod   : term -> term * term * term
   val dest_measure  : term -> term * term * term
+  val dest_cmeasure : term -> term
 
   val is_suc        : term -> bool
   val is_pre        : term -> bool

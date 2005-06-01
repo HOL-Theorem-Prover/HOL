@@ -20,21 +20,16 @@
 structure Boolconv :> Boolconv =
 struct
 
-open HolKernel boolLib;
-
-infix |->;
-
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-
-
-val zv    = mk_var("z",bool)
-and beqop = inst [alpha |->bool] equality;
+open HolKernel Parse boolLib;
 
 val ERR = mk_HOL_ERR "Boolconv";
 fun failwith function = raise (ERR function "");
+
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+
+val zv    = mk_var("z",bool)
+and beqop = inst [alpha |->bool] equality;
 
 (*-----------------------------------------------------------------------*)
 (* NOT_CONV "~F"  = |-  ~F = T                                           *)
@@ -189,5 +184,7 @@ fun COND_CONV tm =
       else failwith "BEQ_CONV"
  end
 end;
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end

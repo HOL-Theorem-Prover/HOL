@@ -13,7 +13,9 @@ type tyinfo = TypeBasePure.tyinfo;
 val ERR = mk_HOL_ERR "EnumType";
 val NUM = num;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
 
 fun enum_pred k =
  let val n = mk_var("n",num)
@@ -373,6 +375,8 @@ in
              eq_elim_name^" "^rep_name^" ")
   | SOME thm => (tyinfo0, "")
 end
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* struct *)
 

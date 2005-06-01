@@ -84,6 +84,10 @@ struct
   fun mk_measure (f,x,y) = 
       list_mk_comb(inst [alpha |-> type_of x] measure_tm, [f,x,y]);
 
+  (* Partial application of measure is often more useful *)
+  fun mk_cmeasure f = 
+     mk_comb(inst [alpha |-> fst(dom_rng (type_of f))] measure_tm, f);
+
 
 (*---------------------------------------------------------------------------
           Destructors
@@ -149,6 +153,12 @@ struct
          else raise ERR "dest_measure" "not an application of \"measure\""
       | _ => raise ERR "dest_measure" "not an application of \"measure\"";
 
+  fun dest_cmeasure tm =
+    case total dest_comb tm
+     of NONE => raise ERR "dest_cmeasure" "not an application of \"measure\""
+      | SOME (m,f) => if same_const measure_tm m then f
+                      else raise ERR "dest_cmeasure" 
+                                     "not an application of \"measure\""
 
 (*---------------------------------------------------------------------------
           Query operations

@@ -1,7 +1,7 @@
 structure pureSimps :> pureSimps =
 struct
 
-open Drule Lib simpLib
+open simpLib;
 
 val PURE_ss = SIMPSET
     {convs  = [],

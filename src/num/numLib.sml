@@ -23,14 +23,11 @@ local open numeralTheory in end;
 
 open HolKernel boolLib Num_conv Parse numSyntax;
 
-infix THEN THENC THENL |-> ##;
-infixr -->;
-
 val ERR = mk_HOL_ERR "numLib";
 
-
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-fun -- q x = Term q
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
 
 val N = numSyntax.num;
 
@@ -256,4 +253,6 @@ end
 
 fun prefer_num () = app temp_overload_on operators
 
-end; (* numLib *)
+val _ = Parse.temp_set_grammars ambient_grammars;
+
+end (* numLib *)

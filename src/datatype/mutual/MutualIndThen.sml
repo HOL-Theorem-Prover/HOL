@@ -23,9 +23,8 @@ fun MUTUAL_INDUCT_THEN_ERR{function,message} =
 		      origin_function = function,
 		      message = message}
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 val AND = --`$/\`--;
 
@@ -430,5 +429,7 @@ fun MUTUAL_INDUCT_THEN th ttac =
     THEN TRY (UNDISCH_TAC (concl TRUTH) THEN DISCH_THEN (fn th => ALL_TAC))
 
 end;
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end; (* MutualIndThen *)

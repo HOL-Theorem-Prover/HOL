@@ -20,18 +20,13 @@ struct
 
 open HolKernel Parse boolLib pairLib Rsyntax;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-infix ##;
-infix |->;
-infix THEN;
-
-
 val RW_ERR = mk_HOL_ERR "RW";
-
 val monitoring = ref false;
+
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+
 
 (*----------------------------------------------------------------------------
  * |- !x y z. w   --->  |- w[x|->g1][y|->g2][z|->g3]
@@ -949,5 +944,6 @@ fun Simpl tac std_thms thl =
   end;
 *)
 
+val _ = Parse.temp_set_grammars ambient_grammars;
 
-end; (* structure RW *)
+end (* structure RW *)

@@ -1,31 +1,16 @@
 structure boolSimps :> boolSimps =
 struct
 
-open HolKernel boolLib liteLib simpLib pureSimps Ho_Rewrite tautLib;
+open HolKernel boolLib liteLib simpLib pureSimps 
+     Ho_Rewrite tautLib Parse;
 
 infix THENQC
 
-val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars
-fun -- q x = Term q handle e => Raise e;
-fun == q x = Type q handle e => Raise e;
-
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars combinTheory.combin_grammars
 
 fun BETA_CONVS tm = (RATOR_CONV BETA_CONVS THENQC BETA_CONV) tm
-
-val COND_BOOL_CLAUSES =
-  prove(Term`(!b e. (if b then T else e) = (b \/ e)) /\
-             (!b t. (if b then t else T) = (b ==> t)) /\
-             (!b e. (if b then F else e) = (~b /\ e)) /\
-             (!b t. (if b then t else F) = (b /\ t))`,
-REPEAT (STRIP_TAC ORELSE COND_CASES_TAC ORELSE EQ_TAC)
- THEN TRY (ACCEPT_TAC TRUTH ORELSE FIRST_ASSUM ACCEPT_TAC)
- THENL [DISJ1_TAC THEN ACCEPT_TAC TRUTH,
-        DISJ2_TAC THEN FIRST_ASSUM ACCEPT_TAC,
-        FIRST_ASSUM MATCH_MP_TAC THEN ACCEPT_TAC TRUTH,
-        POP_ASSUM (K ALL_TAC) THEN
-        POP_ASSUM (MP_TAC o EQ_MP (el 2 (CONJUNCTS (SPEC_ALL NOT_CLAUSES))))
-        THEN ACCEPT_TAC
-             (EQT_ELIM (el 4 (CONJUNCTS (SPEC(Term`F`) IMP_CLAUSES))))]);
 
 (* ----------------------------------------------------------------------
     ETA_ss
@@ -41,12 +26,11 @@ fun comb_ETA_CONV t =
 val ETA_ss = SIMPSET {
   convs = [{name = "ETA_CONV (eta reduction)",
             trace = 2,
-            key = SOME ([],
-                       --`(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)`--),
+            key = SOME ([],``(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)``),
             conv = K (K comb_ETA_CONV)},
            {name = "ETA_CONV (eta reduction)",
             trace = 2,
-            key = SOME ([], --`\x:'a. \y:'b. (f:'a->'b->'c) x y`--),
+            key = SOME ([], ``\x:'a. \y:'b. (f:'a->'b->'c) x y``),
             conv = K (K (ABS_CONV ETA_CONV))}],
   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
 
@@ -61,7 +45,7 @@ val ETA_ss = SIMPSET {
 val BOOL_ss = SIMPSET
   {convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
-           key=SOME ([],(--`(\x:'a. y:'b) z`--)),
+           key=SOME ([],``(\x:'a. y:'b) z``),
 	   conv=K (K BETA_CONV)}],
    rewrs=[REFL_CLAUSE,  EQ_CLAUSES,
           NOT_CLAUSES,  AND_CLAUSES,
@@ -120,11 +104,11 @@ val NOT_ss = rewrites [NOT_IMP,
 val UNWIND_ss = SIMPSET
   {convs=[{name="UNWIND_EXISTS_CONV",
            trace=1,
-           key=SOME ([],(--`?x:'a. P`--)),
+           key=SOME ([],``?x:'a. P``),
            conv=K (K Unwind.UNWIND_EXISTS_CONV)},
           {name="UNWIND_FORALL_CONV",
            trace=1,
-           key=SOME ([],(--`!x:'a. P`--)),
+           key=SOME ([],``!x:'a. P``),
            conv=K (K Unwind.UNWIND_FORALL_CONV)}],
    rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
 
@@ -162,8 +146,7 @@ val LET_ss =
       from BOOL_ss.
    ---------------------------------------------------------------------- *)
 
-val bool_ss =
-    pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss
+val bool_ss = pure_ss ++ BOOL_ss ++ NOT_ss ++ CONG_ss ++ UNWIND_ss
 
 
 
@@ -185,11 +168,11 @@ val bool_ss =
 
 
 val NESTED_COND = prove(
-  Term`!p (q:'a) (r:'a) s.
+  ``!p (q:'a) (r:'a) s.
           (COND p (COND p q r) s = COND p q s) /\
           (COND p q (COND p r s) = COND p q s) /\
           (COND p (COND (~p) q r) s = COND p r s) /\
-          (COND p q (COND (~p) r s) = COND p q r)`,
+          (COND p q (COND (~p) r s) = COND p q r)``,
   REPEAT GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []);
 
 fun celim_rand_CONV tm = let
@@ -215,7 +198,7 @@ in
   (if proceed then REWR_CONV boolTheory.COND_RAND else NO_CONV) tm
 end
 
-fun COND_ABS_CONV tm =let
+fun COND_ABS_CONV tm = let
   open Type Rsyntax
   infix |-> THENC
   val {Bvar=v,Body=bdy} = dest_abs tm
@@ -289,6 +272,7 @@ val DNF_ss = rewrites [FORALL_AND_THM, EXISTS_OR_THM,
                        GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
                        GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM]
 
+val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* struct *)
 

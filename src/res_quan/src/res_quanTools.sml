@@ -11,14 +11,16 @@
 structure res_quanTools :> res_quanTools =
 struct
 
-open HolKernel Drule Conv Tactic Tactical Thm_cont Rewrite boolSyntax
-  res_quanTheory boolTheory simpLib Cond_rewrite;
+open HolKernel Parse Drule Conv Tactic Tactical Thm_cont 
+     Rewrite boolSyntax res_quanTheory boolTheory simpLib Cond_rewrite;
 
 infix THENR ORELSER ++ ||;
 
-val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars;
-fun -- q x = Term q
-fun == q x = Type q
+
+local  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+in
 
 val bool_ss = boolSimps.bool_ss;
 val op++ = op THEN;
@@ -26,9 +28,7 @@ val op|| = op ORELSE;
 fun f THENR g = g o f;
 fun f ORELSER g = fn x => f x handle HOL_ERR _ => g x;
 
-fun ERR function message =
-  HOL_ERR {origin_structure = "res_quanTools", origin_function = function,
-           message = message};
+val ERR = mk_HOL_ERR "res_quanTools";
 
 (* ===================================================================== *)
 (* Syntactic operations on restricted quantifications.                   *)
@@ -592,5 +592,8 @@ fun Q_RESQ_HALF_ISPEC tm = CONV_RULE RES_FORALL_CONV THENR Q.ISPEC tm;
 val Q_RESQ_HALF_ISPECL = GEN_RESQ_HALF_SPECL Q.ISPEC Q_RESQ_HALF_ISPEC;
 fun Q_RESQ_ISPEC tm = (Q_RESQ_HALF_ISPEC tm THENR UNDISCH) ORELSER Q.ISPEC tm;
 val Q_RESQ_ISPECL = C (foldl (uncurry Q_RESQ_ISPEC));
+
+val _ = Parse.temp_set_grammars ambient_grammars
+end ;
 
 end; (* res_quanTools *)

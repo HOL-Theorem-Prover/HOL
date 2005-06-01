@@ -7,14 +7,12 @@ structure CooperSyntax :> CooperSyntax = struct
 open HolKernel boolLib intSyntax intSimps CooperThms
 open int_arithTheory integerTheory Parse
 
-infix THEN THENC ORELSEC |-> ##
-infixr -->
 
-val (Type,Term) = parse_from_grammars integerTheory.integer_grammars
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
 
-fun ERR f msg = HOL_ERR {origin_structure = "CooperSyntax",
-                         origin_function = f,
-                         message = msg}
+val ERR = mk_HOL_ERR "CooperSyntax";
 
 val not_tm = boolSyntax.negation;
 val num_ty = numSyntax.num
@@ -544,5 +542,6 @@ fun ADDITIVE_TERMS_CONV c tm =
   else ALL_CONV tm
 
 
-end
+val _ = Parse.temp_set_grammars ambient_grammars
 
+end

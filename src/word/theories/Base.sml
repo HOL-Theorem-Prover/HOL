@@ -8,8 +8,9 @@ local
 open HolKernel Parse boolLib Prim_rec numLib 
      rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars;
-
+  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
 in
 
 val LESS_EQ_SPLIT =
@@ -229,14 +230,15 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
-fun export_doc_theorems() = let
-  infix ^^
-  val op^^ = Path.concat
-in
+fun export_doc_theorems() = 
+ let infix ^^
+     val op^^ = Path.concat
+ in
   export_theory_as_docfiles (Path.parentArc ^^ "help" ^^ "thms" ^^
                              current_theory())
-end
+ end
 
+val _ = Parse.temp_set_grammars ambient_grammars
 end (* local *)
 
 end

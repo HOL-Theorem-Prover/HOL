@@ -24,14 +24,11 @@ val rem = Int.rem;
 infix 7 quot rem;
 
 open HolKernel Parse basicHol90Lib TypeInfo;
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-infix THEN ORELSE;
 
 type thm = Thm.thm
 
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars;
 
 fun MUT_REC_ERR {function,message} = HOL_ERR{origin_structure = "MutRecDef",
 					     origin_function = function,
@@ -1476,6 +1473,8 @@ in
    New_Ty_Induct_Thm = New_Ty_Induct_Thm,
    New_Ty_Uniqueness_Thm = New_Ty_Uniqueness_Thm}
 end
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* MutRecDef *)
 

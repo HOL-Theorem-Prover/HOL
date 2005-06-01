@@ -7,9 +7,9 @@ struct
 
 open HolKernel Parse boolLib pairLib NonRecSize DefnBase;
 
-val ERR = mk_HOL_ERR "TotalDefn";
+val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
-val WARN = HOL_WARNING "TotalDefn";
+val WARN   = HOL_WARNING "TotalDefn";
 
 fun proper_subterm tm1 tm2 =
   not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
@@ -119,12 +119,7 @@ fun list_mk_prod_tyl L =
  * The second measure is just the total size of the arguments.               *
  *---------------------------------------------------------------------------*)
 
-local open Defn
-      val meas = prim_mk_const{Name="measure",Thy="prim_rec"}
-      fun mk_meas tm =
-        let val (d,_) = dom_rng(type_of tm)
-        in mk_comb(inst [Type.alpha |-> d] meas,tm)
-        end
+local open Defn numSyntax
 in
 fun guessR defn =
  if null (tcs_of defn) then []
@@ -140,9 +135,9 @@ fun guessR defn =
            val domtyl  = strip_prod_ty chf domty
            val domty0  = list_mk_prod_tyl domtyl
        in
-          [mk_meas domty0,
-           mk_meas (TypeBasePure.type_size
-                    (TypeBase.theTypeBase()) domty)]
+          [mk_cmeasure domty0,
+           mk_cmeasure (TypeBasePure.type_size
+                         (TypeBase.theTypeBase()) domty)]
        end
 end;
 
@@ -187,8 +182,6 @@ fun TC_SIMP_CONV simps tm =
  * Trivial wellfoundedness prover for combinations of wellfounded relations.
  *--------------------------------------------------------------------------*)
 
-val ARITH_TAC = CONV_TAC Arith.ARITH_CONV;
-
 local fun BC_TAC th =
         if (is_imp (#2 (strip_forall (concl th))))
         then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
@@ -199,6 +192,8 @@ local fun BC_TAC th =
 in
 fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
 end;
+
+val ARITH_TAC = CONV_TAC Arith.ARITH_CONV;
 
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
@@ -238,8 +233,7 @@ fun WF_REL_TAC Rquote = PRIM_WF_REL_TAC Rquote [] default_simps;
       trivial and can be blown away with rewriting.
  ---------------------------------------------------------------------------*)
 
-local open prim_recTheory relationTheory
-      fun mesg tac (g as (_,tm)) =
+local fun mesg tac (g as (_,tm)) =
         (if !Defn.monitoring
            then print(String.concat
                    ["\nCalling ARITH on\n",term_to_string tm,"\n"])
@@ -247,12 +241,14 @@ local open prim_recTheory relationTheory
          tac g)
 in
 fun default_prover g =
- (CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_EMPTY_REL::default_simps))
-   THEN mesg ASM_ARITH_TAC) g
+ let open prim_recTheory relationTheory
+ in (CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_EMPTY_REL::default_simps))
+     THEN mesg ASM_ARITH_TAC) g
+ end
 end;
 
-local val term_prover = proveTotal default_prover
-      open Defn
+local open Defn
+      val term_prover = proveTotal default_prover
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
       fun should_try_to_prove_termination defn rhs_frees =
          let val tcs = tcs_of defn

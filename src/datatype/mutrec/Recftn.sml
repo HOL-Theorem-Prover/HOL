@@ -76,16 +76,14 @@ structure Recftn :> Recftn =
 struct
 
 open HolKernel Parse basicHol90Lib;
-infix THEN ORELSE;
-
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
 
 type term = Term.term
 type fixity = Parse.fixity
 type thm = Thm.thm;
+
+
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 
 (* define_mutual_functions takes the term def (one such as the one above)
@@ -743,7 +741,7 @@ open Rsyntax   (* use records *)
 	final
     end
 
-
+val _ = Parse.temp_set_grammars ambient_grammars
 end;
 
 (* Tests:

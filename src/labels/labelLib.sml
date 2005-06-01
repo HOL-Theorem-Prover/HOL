@@ -3,9 +3,7 @@ struct
 
 open HolKernel boolLib labelTheory
 
-fun ERR f msg = HOL_ERR {origin_structure = "labelLib",
-                         origin_function = f,
-                         message = msg}
+val ERR = mk_HOL_ERR "labelLib";
 
 (* following makes label_tm independent of name chosen in labelTheory;
    requires defining theorem of form !v1..vn. lab x1 .. xn = ..
@@ -104,8 +102,5 @@ in
 end
 
 fun LABEL_RESOLVE th (asl, w) = hd (LLABEL_RESOLVE [th] asl)
-
-
-
 
 end; (* struct *)

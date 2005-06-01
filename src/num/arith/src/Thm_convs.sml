@@ -17,17 +17,17 @@
 
 structure Thm_convs :> Thm_convs =
 struct
-open Arbint HolKernel Parse boolTheory Drule Theorems;
 
-infix |->;
+open Arbint HolKernel Parse boolTheory Drule Theorems;
 
 val GSYM      = Conv.GSYM;
 val REWR_CONV = Conv.REWR_CONV;
 val GEN_REWRITE_CONV = Rewrite.GEN_REWRITE_CONV;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-fun -- q x = Term q
-fun == q x = Type q
+local  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
+in
 
 (*===========================================================================*)
 (* Conversions for rewriting Boolean terms                                   *)
@@ -194,5 +194,8 @@ val SUB_NORM_CONV =
 val COND_RATOR_CONV  = REWR_CONV COND_RATOR
 val COND_RAND_CONV   = REWR_CONV COND_RAND
 val COND_EXPAND_CONV = REWR_CONV COND_EXPAND;
+
+val _ = Parse.temp_set_grammars ambient_grammars
+end; 
 
 end

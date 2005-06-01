@@ -4,9 +4,12 @@
 structure realSimps :> realSimps =
 struct
 
-open HolKernel boolLib realTheory simpLib realSyntax
+open HolKernel Parse boolLib realTheory simpLib realSyntax
 
-val (Type,Term) = parse_from_grammars realTheory.real_grammars
+local  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars realTheory.real_grammars
+in
 
 val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss ++
                numSimps.REDUCE_ss
@@ -542,5 +545,7 @@ val REAL_ARITH_ss =
     { convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
+val _ = Parse.temp_set_grammars ambient_grammars
+end; 
 
-end;
+end

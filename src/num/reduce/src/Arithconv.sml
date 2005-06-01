@@ -27,11 +27,8 @@ struct
 open HolKernel boolTheory boolLib Parse Rsyntax
      Num_conv numSyntax arithmeticTheory numeralTheory;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-infix THEN |-> THENC;
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
 
 val ERR = mk_HOL_ERR "Arithconv"
 fun failwith function = raise (ERR function "")
@@ -281,5 +278,7 @@ fun MOD_CONV tm =
    end handle HOL_ERR _ => failwith "MOD_CONV"
             | Div => raise ERR "MOD_CONV" "attempt to take mod 0"
 end;
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end

@@ -1,7 +1,7 @@
 structure SatisfySimps :> SatisfySimps =
 struct
 
-open Lib Parse simpLib Satisfy Traverse;
+open Lib simpLib Satisfy Traverse;
 
 val SATISFY_REDUCER =
   let exception FACTDB of factdb;

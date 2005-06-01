@@ -15,7 +15,10 @@ struct
 
 open HolKernel Parse boolLib simpLib;
 
-val (Type,Term) = Parse.parse_from_grammars combinTheory.combin_grammars;
+local  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars combinTheory.combin_grammars
+in
 
 (* ------------------------------------------------------------------------- *)
 (* Tracing.                                                                  *)
@@ -1561,5 +1564,8 @@ val large_problem = time Term large_problem_frag;
 time CNF_CONV (mk_neg large_problem);
 *)
 *)
+
+val _ = Parse.temp_set_grammars ambient_grammars
+end; 
 
 end

@@ -1,5 +1,5 @@
 (* load "wordUtil"; *)
-open HolKernel boolLib bossLib Q simpLib numLib
+open HolKernel Parse boolLib bossLib Q simpLib numLib
      arithmeticTheory prim_recTheory wordUtil;
 
 (* -------------------------------------------------------- *)

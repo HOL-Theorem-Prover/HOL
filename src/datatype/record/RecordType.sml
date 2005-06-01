@@ -15,9 +15,8 @@ struct
 
 open HolKernel Parse boolLib
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars;
 
 val K_tm = combinSyntax.K_tm
 
@@ -523,5 +522,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
      "RecordType.update_tyinfo NONE ["^String.concat (Lib.commafy thm_str_list)^
      "] ")
   end
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* struct *)

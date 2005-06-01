@@ -5,17 +5,13 @@ open HolKernel boolLib integerTheory Parse
      arithmeticTheory intSyntax int_arithTheory intSimps
      CooperSyntax CooperThms CooperMath;
 
+val ERR = mk_HOL_ERR "CooperShell";
 val lhand = rand o rator
 
-infix THEN THENC THENL |-> ## ORELSEC
-infixr -->
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
 
-val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
-fun -- q x = Term q
-fun == q x = Type q
-
-
-val ERR = mk_HOL_ERR "CooperShell";
 
 fun EXIN_CONJ_CONV t = let
   val (var,bdy) = dest_exists t
@@ -791,5 +787,7 @@ end tm
      end tm
 
 *)
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end

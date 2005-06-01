@@ -14,7 +14,10 @@ open Arbint HolKernel Parse boolLib liteLib
      Arith reduceLib Arith_cons
      simpLib Traverse Cache Trace;
 
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+local  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
+in
 
 val num_ty = numSyntax.num
 val zero_tm  = numSyntax.zero_tm
@@ -572,5 +575,8 @@ val SUC_FILTER_ss =
     { convs = [], rewrs = [], congs = [],
       filter = SOME numfilter, ac = [], dprocs = []}
  end;
+
+val _ = Parse.temp_set_grammars ambient_grammars
+end; 
 
 end (* numSimps *)

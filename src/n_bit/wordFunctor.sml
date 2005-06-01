@@ -7,7 +7,7 @@ struct
 val bits = 8;
 *)
 
-open HolKernel boolLib wordUtil Q Parse quotient
+open HolKernel Parse boolLib wordUtil Q Parse quotient
      computeLib bossLib simpLib numLib pairTheory numeralTheory
      arithmeticTheory prim_recTheory bitsTheory metisLib;
 

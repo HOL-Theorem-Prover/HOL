@@ -3,7 +3,6 @@ struct
 
 open HolKernel boolLib markerTheory
 
-infix THENC ORELSEC
 
 val stmarker_t = prim_mk_const{Thy = "marker", Name = "stmarker"};
 val stmark_term = REWR_CONV (GSYM stmarker_def)
@@ -97,8 +96,5 @@ in
 end
 
 val Abbrev_tm = prim_mk_const {Name = "Abbrev", Thy = "marker"}
-
-
-
 
 end

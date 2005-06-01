@@ -9,10 +9,9 @@ open HolKernel boolLib liteLib Ho_Rewrite Canon_Port tautLib;
 
 infix THEN THENC ORELSE ORELSE_TCL;
 
-val (Type,Term) = Parse.parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 (*---------------------------------------------------------------------------*
  * Miscellaneous bits.                                                       *
@@ -819,9 +818,9 @@ val create_equality_axioms =
   let
     (* open Resolve *)
     val eq_thms = (CONJUNCTS o prove)
-      (--`(x:'a = x) /\
-          (~(x:'a = y) \/ ~(x = z) \/ (y = z))`--,
-      REWRITE_TAC[] THEN ASM_CASES_TAC (--`x:'a = y`--) THEN
+      (``(x:'a = x) /\
+         (~(x:'a = y) \/ ~(x = z) \/ (y = z))``,
+      REWRITE_TAC[] THEN ASM_CASES_TAC ``x:'a = y`` THEN
       ASM_REWRITE_TAC[ONCE_REWRITE_RULE[boolTheory.DISJ_SYM]
                        (REWRITE_RULE[] boolTheory.BOOL_CASES_AX)])
     val imp_elim_CONV = REWR_CONV (TAUT `(a ==> b) = ~a \/ b`)
@@ -1016,5 +1015,7 @@ val max_depth = ref 30;
 val ASM_MESON_TAC = GEN_MESON_TAC 0 (!max_depth) 1;
 
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;
+
+val _ = Parse.temp_set_grammars ambient_grammars;
 
 end;

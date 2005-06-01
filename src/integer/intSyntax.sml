@@ -5,11 +5,6 @@ open HolKernel boolLib Parse integerTheory;
 
 val ERR = mk_HOL_ERR "intSyntax";
 
-infixr -->
-infix THENC
-
-val (Type,Term) = parse_from_grammars integerTheory.integer_grammars;
-
 val num_ty = numSyntax.num
 val int_ty = mk_thy_type{Tyop = "int", Thy="integer", Args = []}
 
@@ -34,7 +29,7 @@ val absval_tm =  Const "ABS"
 val divides_tm = Const "int_divides"
 val int_injection = Const "int_of_num"
 
-val int_eq_tm =  Term `min$= : int -> int -> bool`
+val int_eq_tm = inst [alpha |-> int_ty] boolSyntax.equality
 
 fun dest_binop t (srcf,msg) tm = let
   val (farg1, arg2) = dest_comb tm

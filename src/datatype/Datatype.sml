@@ -38,10 +38,7 @@ structure Datatype :> Datatype =
 struct
 
 open HolKernel Parse boolLib Prim_rec ParseDatatype DataSize
-
 local open ind_typeTheory in end;
-
-val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
 
 type hol_type     = Type.hol_type
 type thm          = Thm.thm
@@ -55,6 +52,10 @@ type field_names  = string list
 type constructor  = string * hol_type list
 type tyspec       = hol_type * constructor list
 type record_rw_names = string list
+
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars;
 
 (*---------------------------------------------------------------------------
    A tyspec is a type specification.  The first component is a type
@@ -1242,5 +1243,7 @@ fun Hol_datatype q =
   persistent_tyinfo tyinfos_etc;
   HOL_MESG message
  end handle ? as HOL_ERR _ => Raise (wrap_exn "Datatype" "Hol_datatype" ?);
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end

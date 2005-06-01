@@ -19,18 +19,11 @@ struct
 
 open HolKernel Parse Drule Conv Type_def_support oneTheory;
 
-infix THENC ## |->;
-val --> = Type.-->; infixr -->
+fun ERR function message = mk_HOL_ERR "Define_type";
 
-val (Type,Term) = parse_from_grammars rec_typeTheory.rec_type_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-
-fun ERR function message =
-      HOL_ERR{origin_structure = "Define_type",
-	      origin_function = function,
-	      message = message}
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars rec_typeTheory.rec_type_grammars;
 
 
 (* =====================================================================*)
@@ -1400,5 +1393,7 @@ define_type{name="seven'",
             fixities = [Prefix]};
 
 ===================================================================== *)
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end; (* Define_type *)

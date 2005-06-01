@@ -44,8 +44,13 @@ val equivalence_def = new_definition(
   "equivalence_def",
   ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\ transitive R``);
 
-val total_def = new_definition
-("total_def", Term`total (R:'a->'a->bool) = !x y. R x y \/ R y x`);
+val total_def = new_definition(
+  "total_def", 
+  ``total (R:'a->'a->bool) = !x y. R x y \/ R y x``);
+
+val trichotomous = new_definition(
+  "trichotomous",
+  ``trichotomous (R:'a->'a->bool) = !a b. R a b \/ R b a \/ (a = b)``);
 
 (*---------------------------------------------------------------------------*)
 (* Closures                                                                  *)
@@ -1677,10 +1682,6 @@ val IDEM_RTC = store_thm(
     We may define notions of linear (i.e., total) order, but in the
     absence of numbers I don't see much to prove about them.
    ---------------------------------------------------------------------- *)
-
-val trichotomous = new_definition(
-  "trichotomous",
-  ``trichotomous (R:'a->'a->bool) = !a b. R a b \/ R b a \/ (a = b)``);
 
 val LinearOrder = new_definition(
   "LinearOrder",

@@ -6,25 +6,20 @@ open HolKernel boolLib integerTheory Parse
 
 open CooperSyntax CooperThms CooperMath
 open Profile
+open DeepSyntaxTheory;
 
 val lhand = rand o rator
 val collect_additive_consts = profile "additive_consts" collect_additive_consts
 
-infix THEN THENC THENL |-> ## ORELSEC
-infixr -->
-
-val (Type,Term) = parse_from_grammars DeepSyntaxTheory.DeepSyntax_grammars;
-fun -- q x = Term q
-fun == q x = Type q
-
-
 val ERR = mk_HOL_ERR "Cooper";
+
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars DeepSyntaxTheory.DeepSyntax_grammars;
 
 val REWRITE_CONV = GEN_REWRITE_CONV Conv.TOP_DEPTH_CONV bool_rewrites
 
 
-
-open DeepSyntaxTheory
 val tac = REWRITE_TAC [eval_form_def, Aset_def, Bset_def]
 val conjn_rwt = prove(``!f1 f2 x. eval_form f1 x /\ eval_form f2 x =
                                   eval_form (Conjn f1 f2) x``, tac)
@@ -262,5 +257,6 @@ end
 
 val phase5_CONV = profile "phase5" phase5_CONV
 
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end;

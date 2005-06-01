@@ -14,14 +14,11 @@ structure ConsThms :> ConsThms =
 struct
 
 open HolKernel Parse basicHol90Lib;
-infix THEN THENL;
-
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
 
 type thm = Thm.thm;
+
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 fun decompose (tm, args_so_far) =
     if is_comb tm then
@@ -661,6 +658,8 @@ in
     mutual_cases                = mutual_cases,
     argument_extraction_definitions = argument_extraction_definitions}
 end;
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* ConsThms *)
 

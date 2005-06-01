@@ -7,13 +7,9 @@
 structure BasicProvers :> BasicProvers =
 struct
 
-open HolKernel boolLib labelLib;
-
-local open labelTheory in end;
-
 type simpset = simpLib.simpset;
 
-infix THEN THENL ORELSE ++ &&;
+open HolKernel boolLib labelLib;
 
 val op++ = simpLib.++;
 val op&& = simpLib.&&;

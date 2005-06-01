@@ -1,20 +1,18 @@
 structure intLib :> intLib =
 struct
 
-  open HolKernel Abbrev intSyntax intSimps Cooper
+  open HolKernel Abbrev intSimps Cooper
 
-  val (Type,Term) = Parse.parse_from_grammars integerTheory.integer_grammars
-
-  val operators = [("+", ``$+ : int -> int -> int``),
-                   ("-", ``$- : int -> int -> int``),
-                   ("*", ``$* : int -> int -> int``),
-                   ("/", ``$/ : int -> int -> int``),
-                   ("<", ``$< : int -> int -> bool``),
-                   ("<=", ``$<= : int -> int -> bool``),
-                   (">", ``$> : int -> int -> bool``),
-                   (">=", ``$>= : int -> int -> bool``),
-                   (GrammarSpecials.fromNum_str, ``int_of_num``),
-                   (GrammarSpecials.num_injection, ``int_of_num``)];
+  val operators = [("+", intSyntax.plus_tm),
+                   ("-", intSyntax.minus_tm),
+                   ("*", intSyntax.mult_tm),
+                   ("/", intSyntax.div_tm),
+                   ("<", intSyntax.less_tm),
+                   ("<=", intSyntax.leq_tm),
+                   (">", intSyntax.great_tm),
+                   (">=", intSyntax.geq_tm),
+                   (GrammarSpecials.fromNum_str, intSyntax.int_injection),
+                   (GrammarSpecials.num_injection, intSyntax.int_injection)];
 
 fun deprecate_int () = let
   fun losety {Name,Thy,Ty} = {Name = Name, Thy = Thy}

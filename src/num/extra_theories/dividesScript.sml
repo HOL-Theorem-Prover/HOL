@@ -1,7 +1,7 @@
 structure dividesScript =
 struct
 
-open HolKernel boolLib BasicProvers arithmeticTheory simpLib SingleStep;
+open HolKernel Parse boolLib BasicProvers arithmeticTheory simpLib SingleStep;
 
 val arith_ss = simpLib.++(bool_ss, numSimps.ARITH_ss)
 

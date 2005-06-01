@@ -1,9 +1,7 @@
 structure Satisfy :> Satisfy =
 struct
 
-open HolKernel Parse boolLib Sequence liteLib Unify Trace;
-
-infix THEN;
+open HolKernel boolLib Sequence liteLib Unify Trace;
 
 (*-----------------------------------------------------------------
  * satisfy_in_envs

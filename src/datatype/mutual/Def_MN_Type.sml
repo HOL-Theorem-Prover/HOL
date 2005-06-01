@@ -90,21 +90,15 @@ struct
 (* ---------------------------------------------------------------------*)
 
 open HolKernel Parse basicHol90Lib;
-infix THENC THEN;
 
 type 'a quotation = 'a frag list
 type hol_type = Type.hol_type
 type thm = Thm.thm
 
-fun ERR func mesg =
- Exception.HOL_ERR
-    {origin_structure = "DefNestType",
-     origin_function = func,
-     message = mesg};
+val ERR = mk_HOL_ERR "DefNestType";
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 val OR  = --`$\/`--;
 val AND = --`$/\`--;
@@ -546,5 +540,7 @@ define_type [listTheory.list_Axiom]
         ty2 = C4 of ty1 list
             | C5 of 'a => ty2 `;
 *)
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end;

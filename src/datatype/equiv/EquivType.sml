@@ -45,10 +45,9 @@ struct
 (* The Standard Header *)
 open HolKernel Parse boolLib liteLib;
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-
-fun -- q x = Term q
-fun == q x = Type q
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 val LAND_CONV = RATOR_CONV o RAND_CONV;
 val PROVE = Tactical.default_prover
@@ -248,5 +247,6 @@ fun define_equivalence_type{name=tyname, equiv, defs = fnlist,
   newthms
 end;
 
+val _ = Parse.temp_set_grammars ambient_grammars
 
-end (* EquivType *);
+end (* EquivType *)

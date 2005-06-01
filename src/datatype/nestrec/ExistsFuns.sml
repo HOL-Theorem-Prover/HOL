@@ -27,9 +27,8 @@ fun ExistsFun_ERR {function, message} =
              origin_function = function,
              origin_structure = "ExistsFuns"}
 
-val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
-fun -- q x = Term q
-fun == q x = Type q;
+    val ambient_grammars = Parse.current_grammars();
+    val _ = Parse.temp_set_grammars boolTheory.bool_grammars
 
 val lemma1 = TAC_PROOF
     (([],
@@ -172,4 +171,7 @@ fun GEN_EXISTS_FROM_EXISTS_RULE {exists_thm,
                    | _ =>
         raise ExistsFun_ERR {function = "GEN_EXISTS_FROM_EXISTS_RULE",
                              message = str^"."^funt^": "^message}
+
+  val _ = Parse.temp_set_grammars ambient_grammars
+
 end;

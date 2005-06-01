@@ -164,8 +164,8 @@ val alt_string_Axiom = Q.prove
 REPEAT GEN_TAC
   THEN STRIP_ASSUME_TAC
      (prove_rec_fn_exists listTheory.list_Axiom
-       (Term `(list_rec (b:'a) f ([]:char list) = b) /\
-              (list_rec b f (h::t) = f h t (list_rec b f t))`))
+        ``(list_rec (b:'a) f ([]:char list) = b) /\
+          (list_rec b f (h::t) = f h t (list_rec b f t))``)
    THEN Q.EXISTS_TAC`list_rec b g o EXPLODE`
    THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]);
 
@@ -229,8 +229,8 @@ val STRING_CASES = Q.store_thm
 
 val STRING_CASE_DEF = new_recursive_definition
  {name="STRING_CASE_DEF",
-  def = Term `(string_case b f ""  = b) /\
-              (string_case b f (STRING c s) = f c s)`,
+  def = ``(string_case b f ""  = b) /\
+          (string_case b f (STRING c s) = f c s)``,
   rec_axiom = string_Axiom};
 
 
@@ -244,8 +244,8 @@ val STRING_CASE_CONG = save_thm
  ---------------------------------------------------------------------------*)
 
 val STRLEN_DEF = new_recursive_definition
-   {def = Term`(STRLEN "" = 0) /\
-               (STRLEN (STRING c s) = 1 + STRLEN s)`,
+   {def = ``(STRLEN "" = 0) /\
+            (STRLEN (STRING c s) = 1 + STRLEN s)``,
     name = "STRLEN_DEF",
     rec_axiom = string_Axiom};
 
@@ -257,7 +257,7 @@ val _ = TypeBase.write
         case_cong=STRING_CASE_CONG,
         induction=TypeBasePure.ORIG STRING_INDUCT_THM,
         nchotomy=STRING_CASES,
-        size=SOME(Parse.Term`STRLEN`,TypeBasePure.ORIG STRLEN_DEF),
+        size=SOME(``STRLEN``,TypeBasePure.ORIG STRLEN_DEF),
         encode=NONE, lift=NONE,
         one_one=SOME STRING_11,
         fields = [],
@@ -270,8 +270,8 @@ val _ = TypeBase.write
 
 val DEST_STRING = new_recursive_definition
 {name = "DEST_STRING",
- def = Term`(DEST_STRING "" = NONE) /\
-            (DEST_STRING (STRING c rst) = SOME(c,rst))`,
+ def = ``(DEST_STRING "" = NONE) /\
+         (DEST_STRING (STRING c rst) = SOME(c,rst))``,
  rec_axiom = string_Axiom};
 
 
@@ -383,7 +383,7 @@ val STRLEN_THM = Q.store_thm
 val STRCAT =
   new_definition
    ("STRCAT",
-    Term `STRCAT s1 s2 = IMPLODE(APPEND (EXPLODE s1) (EXPLODE s2))`);
+    ``STRCAT s1 s2 = IMPLODE(APPEND (EXPLODE s1) (EXPLODE s2))``);
 
 val STRCAT_EQNS = Q.store_thm
 ("STRCAT_EQNS",
@@ -520,7 +520,7 @@ val _ = adjoin_to_theory
 val _ = ConstMapML.insert(prim_mk_const{Name="DEST_STRING",Thy="string"});
 val _ = ConstMapML.insert(prim_mk_const{Name="STRING",Thy="string"});
 val _ = ConstMapML.prim_insert(prim_mk_const{Name="EMPTYSTRING",Thy="string"},
-                               ("","\"\"",Type`:string`));
+                               ("","\"\"",Parse.Type`:string`));
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

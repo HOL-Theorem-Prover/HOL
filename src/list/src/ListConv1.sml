@@ -45,9 +45,10 @@ fun mk_list {els,ty} = listSyntax.mk_list(els,ty)
 
 val ERR = mk_HOL_ERR "List_conv";
 
-val (Type,Term) = parse_from_grammars rich_listTheory.rich_list_grammars
-fun -- q x = Term q
-fun == q x = Type q
+local  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars rich_listTheory.rich_list_grammars
+in
 
 val % = Term;
 val alpha_ty = Type.alpha
@@ -1264,5 +1265,8 @@ val AND_EL_CONV =
 
 val OR_EL_CONV =
     list_FOLD_CONV rich_listTheory.OR_EL_FOLDR (REWRITE_CONV[OR_CLAUSES]);
+
+val _ = Parse.temp_set_grammars ambient_grammars
+end; 
 
 end; (* List_conv1 *)

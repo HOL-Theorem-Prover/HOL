@@ -22,12 +22,12 @@ open HolKernel Parse boolLib Rsyntax;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 
-val (Type,Term) =
-  parse_from_grammars Omega_AutomataTheory.Omega_Automata_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
 local open Omega_AutomataTheory in end;
+
+local  (* Fix the grammar used by this file *)
+  val ambient_grammars = Parse.current_grammars();
+  val _ = Parse.temp_set_grammars Omega_AutomataTheory.Omega_Automata_grammars
+in
 
 type smv_output =
 	{Proved:bool,
@@ -1438,5 +1438,7 @@ fun UNSAFE_LTL_CONV t =
 	EQT_INTRO(REWRITE_RULE[](TRANS (TRANS thm0 thm1) thm2))
     end
 
+val _ = Parse.temp_set_grammars ambient_grammars
+end; 
 
 end;

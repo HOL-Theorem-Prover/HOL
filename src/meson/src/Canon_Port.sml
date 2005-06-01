@@ -1,14 +1,11 @@
 structure Canon_Port :> Canon_Port =
 struct
 
-open HolKernel boolLib liteLib Ho_Rewrite tautLib;
+open HolKernel Parse boolLib liteLib Ho_Rewrite tautLib;
 
-val (Type,Term) = parse_from_grammars combinTheory.combin_grammars
-fun -- q x = Term q
-fun == q x = Type q
-
-
-infix THEN THENC;
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars combinTheory.combin_grammars;
 
 val RIGHT_AND_EXISTS_THM = GSYM RIGHT_EXISTS_AND_THM;
 val LEFT_AND_EXISTS_THM  = GSYM LEFT_EXISTS_AND_THM;
@@ -56,7 +53,7 @@ end;
 
 local
   val APP_CONV =
-    let val eq = Term`!f:'a->'b. !x. f x = I f x`
+    let val eq = ``!f:'a->'b. !x. f x = I f x``
     in REWR_CONV (prove (eq, REWRITE_TAC[combinTheory.I_THM]))
     end
 
@@ -110,7 +107,7 @@ end
 
 local
   val NOT_EXISTS_UNIQUE_THM = Tactical.prove(
-    --`~(?!x:'a. P x) = (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')`--,
+    ``~(?!x:'a. P x) = (!x. ~P x) \/ ?x x'. P x /\ P x' /\ ~(x = x')``,
     REWRITE_TAC [EXISTS_UNIQUE_THM, DE_MORGAN_THM,NOT_EXISTS_THM]
      THEN CONV_TAC (REDEPTH_CONV NOT_FORALL_CONV)
      THEN REWRITE_TAC [NOT_IMP, CONJ_ASSOC])
@@ -156,8 +153,8 @@ fun has_abs tm =
 
 val DELAMB_CONV =
   let val pth = prove(
-        --`(((\x. s x) = t) = (!x:'a. s x:'b = t x)) /\
-           ((s = \x. t x) = (!x. s x = t x))`--,
+        ``(((\x. s x) = t) = (!x:'a. s x:'b = t x)) /\
+           ((s = \x. t x) = (!x. s x = t x))``,
         CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN BETA_TAC THEN
         REWRITE_TAC [])
       val qconv =
@@ -290,4 +287,6 @@ val PRENEX_CONV =
    fn tm => TRY_CONV PRENEX_QCONV tm
  end;
 
-end;
+val _ = Parse.temp_set_grammars ambient_grammars;
+
+end
