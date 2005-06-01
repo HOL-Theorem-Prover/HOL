@@ -7,7 +7,7 @@ struct
 val bits = 8;
 *)
 
-open HolKernel Parse boolLib wordUtil Q Parse quotient
+open HolKernel Parse boolLib wordUtil Q quotient
      computeLib bossLib simpLib numLib pairTheory numeralTheory
      arithmeticTheory prim_recTheory bitsTheory metisLib;
 
@@ -689,7 +689,7 @@ val _ = overload_on (">>", Term`$word_asr`);
 val _ = overload_on (">>>", Term`$word_lsr`);
 val _ = overload_on ("#>>", Term`$word_ror`);
 
-val rotl = Define `rotl x n =  x #>> (WL - n)`;
+val rotl_def = Define `rotl x n =  x #>> (WL - n MOD WL)`;
 val _ = overload_on ("#<<",Term`$rotl`);
 val _ = set_fixity "#<<" (Infixl 680);
 
@@ -2540,9 +2540,14 @@ val HS_EVAL = store_thm("HS_EVAL",
 
 val SHIFT_Inversion = Q.store_thm
   ("SHIFT_Inversion",
-  `!s n. n < WL ==> ((s #>> n #<< n = s) /\ (s #<< n #>> n = s))`,
-  REWRITE_TAC [rotl,ROR_ADD] THEN RW_TAC arith_ss [SUB_LEFT_ADD] THEN
-  METIS_TAC [ROR_CYCLE, MULT_CLAUSES]);
+  `!s n. (s #>> n #<< n = s) /\ (s #<< n #>> n = s)`,
+  REPEAT STRIP_TAC THEN REWRITE_TAC [rotl_def,ROR_ADD] THEN
+  Cases_on `n < WL` THEN
+  ASM_SIMP_TAC arith_ss [(REWRITE_RULE [MULT_CLAUSES] o SPEC `1`) ROR_CYCLE] THEN
+  `0 < WL` by SIMP_TAC arith_ss [WL_def] THEN IMP_RES_TAC DA THEN
+  POP_ASSUM (STRIP_ASSUME_TAC o SPEC `n`) THEN
+  ASM_SIMP_TAC arith_ss [ONCE_REWRITE_RULE [ADD_COMM] MOD_MULT,ROR_CYCLE,
+                         (ONCE_REWRITE_RULE [MULT_COMM] o GSYM) MULT_CLAUSES]);
 
 (*---------------------------------------------------------------------------*)
 (* Support for termination proofs                                            *)
