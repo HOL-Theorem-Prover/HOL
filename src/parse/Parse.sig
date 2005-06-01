@@ -226,5 +226,6 @@ signature Parse = sig
 
   val min_grammars : type_grammar.grammar * term_grammar.grammar
   val current_lgrms : unit -> type_grammar.grammar * term_grammar.grammar
+  val current_grammars : unit -> type_grammar.grammar * term_grammar.grammar
 
 end
