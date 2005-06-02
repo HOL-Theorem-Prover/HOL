@@ -396,7 +396,7 @@ val SPEC_SLICE_COMP = prove(
           SLICE (2 * t + 1) (2 * t) a + a MOD 2 ** (2 * t))`,
   REPEAT STRIP_TAC
     THEN IMP_RES_TAC NOT_ZERO_ADD1
-    THEN ASM_SIMP_TAC arith_ss [DECIDE (Term `!p. 2 * SUC p = SUC (2 * p + 1)`),
+    THEN ASM_SIMP_TAC arith_ss [DECIDE ``!p. 2 * SUC p = SUC (2 * p + 1)``,
                                GSYM BITS_ZERO3,GSYM SLICE_ZERO_THM,SLICE_COMP_RWT]
     THEN SIMP_TAC arith_ss [SLICE_ZERO_THM,BITS_ZERO3,ADD1,LEFT_ADD_DISTRIB]
 );

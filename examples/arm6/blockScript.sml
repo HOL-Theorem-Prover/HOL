@@ -314,7 +314,7 @@ val lem3b = prove(
    ((SUM (SUC y) (BITV n) = SUC (SUM p (BITV n))) /\
     (!q. q < y ==> ~(SUM (SUC q) (BITV n) = SUC (SUM p (BITV n)))))`,
   RW_TAC arith_ss [SUM_def,BITV_THM,SBIT_def,GSYM ADD1]
-    THEN RULE_ASSUM_TAC (REWRITE_RULE [DECIDE (Term `!a b c. (a ==> ~b \/ c) = (b /\ a ==> c)`)])
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [DECIDE ``!a b c. (a ==> ~b \/ c) = (b /\ a ==> c)``])
     THENL [
       Cases_on `p = y` THEN1 PROVE_TAC []
         THEN `p < y` by DECIDE_TAC
@@ -366,7 +366,7 @@ val ADDRESS_LIST_LEM = prove(
   RW_TAC bool_ss [ADDRESS_LIST_def,EL_GENLIST,MUL_EVAL] THEN PROVE_TAC [MULT_COMM]
 );
 
-val MUST_BE_EQUAL = DECIDE (Term `!x y. x < SUC y /\ ~(x < y) ==> (x = y)`);
+val MUST_BE_EQUAL = DECIDE ``!x y. x < SUC y /\ ~(x < y) ==> (x = y)``;
 
 val EL_GEN_REG_LIST_LT_WL = prove(
   `!wl x n. x < LENGTH (GEN_REG_LIST wl n) ==> (EL x (GEN_REG_LIST wl n) < wl)`,
@@ -521,11 +521,11 @@ val RP_NOT_15 = store_thm("RP_NOT_15",
             y < LENGTH (REGISTER_LIST n) - 1 ==>
             ~(RP ic n (MASKN 16 y n) = 15)`,
   RW_TAC bool_ss [] THEN REWRITE_TAC [RP_GEN_RP]
-    THEN ASM_SIMP_TAC bool_ss [(SIMP_RULE std_ss [DECIDE (Term `x < y - 1 ==> x < y`),
+    THEN ASM_SIMP_TAC bool_ss [(SIMP_RULE std_ss [DECIDE ``x < y - 1 ==> x < y``,
      REGISTER_LIST_GEN_REG_LIST,REGISTER_LIST_LEM2] o SPEC `15`) GEN_REG_LIST_NOT_LAST]
 );
 
-val lem = DECIDE (Term `!x. 0 < x ==> (x - 1 < x) /\ (x = SUC (x - 1))`);
+val lem = DECIDE ``!x. 0 < x ==> (x - 1 < x) /\ (x = SUC (x - 1))``;
 
 val GEN_RP_LAST = prove(
   `!x n. 0 < LENGTH (GEN_REG_LIST (SUC x) n) ==>
@@ -744,7 +744,7 @@ val WB_CALC = prove(
     THEN Induct_on `x` THEN RW_TAC arith_ss [MULT_CLAUSES]
 );
 
-val WB_CALC2 = DECIDE (Term `!x. 1 <= x ==> (4 * (x - 1) = 4 * x - 4)`);
+val WB_CALC2 = DECIDE ``!x. 1 <= x ==> (4 * (x - 1) = 4 * x - 4)``;
 
 val REGISTER_LIST_LENGTH = 
   (GSYM o REWRITE_RULE [RP_GEN_RP,REGISTER_LIST_GEN_REG_LIST] o SPEC `16`) REGISTER_LIST_LEM;
@@ -1216,7 +1216,7 @@ val NEXT_CORE_STM_TN_W2 =
    INST [`w` |-> `LENGTH (REGISTER_LIST (w2n ireg))`] o
    SPEC_ALL o SPECL [`w - 2`,`w`]) NEXT_CORE_STM_TN_X;
 
-val SUC_SUC_SUB2 = DECIDE (Term `!x. 1 < x ==> (SUC (SUC (x - 2)) = x)`);
+val SUC_SUC_SUB2 = DECIDE ``!x. 1 < x ==> (SUC (SUC (x - 2)) = x)``;
 
 val NEXT_CORE_STM_TN_W1 = store_thm("NEXT_CORE_STM_TN_W1",
    `!w y reg ireg alub alua.

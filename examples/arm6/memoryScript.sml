@@ -253,8 +253,8 @@ val finish_rws = [INIT_ARM6_def,DECODE_PSR_def,NXTIC_def,MASK_MASK,SWI_LEM,
                   TO_WRITE_READ6,REG_READ_WRITE,REG_WRITE_COMMUTE_PC,REG_WRITE_READ_PC,
                   REGISTER_RANGES,RP_LT_16,RP_LT_16_0,AREGN1_THM,AREGN1_BIJ];
 
-val REMOVE_STUFF = REPEAT (WEAKEN_TAC (fn th => not (can (match_term (Term `~(x = 15)`)) th) andalso
-                                                not (can (match_term (Term `a \/ ~(x = 15)`)) th)));
+val REMOVE_STUFF = REPEAT (WEAKEN_TAC (fn th => not (can (match_term ``~(x = 15)``) th) andalso
+                                                not (can (match_term ``a \/ ~(x = 15)``) th)));
 val FINISH_OFF =
   REMOVE_STUFF THEN RW_TAC std_ss finish_rws
     THEN FULL_SIMP_TAC std_ss [MASK_MASK,REGISTER_RANGES,REG_READ_WRITE,REG_WRITE_READ_PC];
@@ -510,7 +510,7 @@ val LDM_GENLIST_MEMOP_EQ = prove(
    (LENGTH (REGISTER_LIST (w2n ireg)) = SUC n) ==>
    ~FST (DUR_X x) ==>
     (?f. GENLIST (\t. OUT_ARM6 ((FUNPOW (SNEXT NEXT_ARM6) t (FUNPOW (SNEXT NEXT_ARM6) 2 x)).state)) n =
-         GENLIST (^(Term LDM_f)) n)`,
+         GENLIST (^(Parse.Term LDM_f)) n)`,
   REPEAT STRIP_TAC
     THEN EXISTS_TAC `\t reg psr i. if t = 0 then
            REG_READ6 (REG_WRITE reg usr 15 (REG_READ6 reg usr 15 + 4w))
@@ -757,7 +757,7 @@ val STM_GENLIST_MEMOP_EQ = prove(
    (LENGTH (REGISTER_LIST (w2n ireg)) = SUC n) ==>
    ~FST (DUR_X x) ==>
     (GENLIST (\t. OUT_ARM6 ((FUNPOW (SNEXT NEXT_ARM6) t (FUNPOW (SNEXT NEXT_ARM6) 2 x)).state)) n =
-     GENLIST (^(Term STM_f)) n)`,
+     GENLIST (^(Parse.Term STM_f)) n)`,
   REPEAT STRIP_TAC
     THEN MATCH_MP_TAC GENLIST_FUN_EQ
     THEN MAP_EVERY IMP_RES_TAC [STM_INIT2,STM_INIT]
@@ -1013,7 +1013,7 @@ val pat5 = `z = (fx : word32 -> (register -> word32) -> word32 -> bool -> word32
   bool -> bool -> word32 -> num -> word32 -> word32 -> num)
   z0 z1 z2 z3 z4 z5 z6 z7 z8 z9 z10 z11 z12 z13 z14 z15 z16 z17 z18 z19 z20 z21 z22 z23 z24`;
 
-val REV_ADD4 = DECIDE (Term `a + b + c + d = d + c + b + a`);
+val REV_ADD4 = DECIDE ``a + b + c + d = d + c + b + a``;
 
 val LDM_LEM = prove(
   `!base abort. 0 < LENGTH (REGISTER_LIST (w2n ireg)) ==>

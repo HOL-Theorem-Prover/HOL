@@ -185,7 +185,7 @@ val SPEC_COND_RATOR = prove(
 val [SPEC_COND_RATOR1,SPEC_COND_RATOR2,SPEC_COND_RATOR3,SPEC_COND_RATOR4] =
    map (fn x => (SIMP_RULE arith_ss [] o SPEC x) SPEC_COND_RATOR) [`1`,`2`,`3`,`4`];
 
-val REV_ADD4 = DECIDE (Term `a + b + c + d = d + c + b + a`);
+val REV_ADD4 = DECIDE ``a + b + c + d = d + c + b + a``;
 
 val COMP_VAL_BIT = prove(
   `!a b c x. (~(\(w,a). w /\ (a = 15)) if c /\ ~(a = 15) then (T,a) else (F,x))`,
@@ -234,7 +234,7 @@ val PSR_ABBREV_TAC = with_flag (priming,SOME "") (PAT_ABBREV_TAC `psr = xpsr:psr
 
 val FST_COND_RAND = ISPEC `FST` COND_RAND;
 val SND_COND_RAND = ISPEC `SND` COND_RAND;
-val SUB_SUC1 = DECIDE (Term `!x. 1 < x ==> (SUC (x - 1) = x)`);
+val SUB_SUC1 = DECIDE ``!x. 1 < x ==> (SUC (x - 1) = x)``;
 
 val COND_RAND_RATOR = PROVE [] ``!f b z x y. (if b then f x z else f y z) = f (if b then x else y) z``;
 val COND_RATOR_TWO = PROVE [] ``!f g b x y. (if b then f x y else g x y) = (if b then f else g) x y``;

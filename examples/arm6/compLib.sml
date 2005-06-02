@@ -136,7 +136,7 @@ fun inst_simpset ((cnst,pat),cnv) = simpLib.SIMPSET
    congs = [], filter = NONE, ac = [], dprocs = []};
 
 val inst_simpsets
-  = map inst_simpset (zip (zip (map Term (classes @ [`ldm`,`stm`,`mla_mul`])) patterns) inst_convs);
+  = map inst_simpset (zip (zip (map Parse.Term (classes @ [`ldm`,`stm`,`mla_mul`])) patterns) inst_convs);
 val [UNEXEC_ss,SWP_ss,MRS_MSR_ss,DATA_PROC_ss,REG_SHIFT_ss,
      LDR_ss,STR_ss,BR_ss,SWI_EX_ss,UNDEF_ss,LDM_ss,STM_ss,MLA_MUL_ss] = inst_simpsets;
 
