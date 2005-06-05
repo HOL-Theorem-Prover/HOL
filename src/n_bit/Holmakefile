@@ -2,10 +2,10 @@ EXTRA_CLEANS = mkword.exe selftest.exe
 
 all: mkword.exe selftest.exe
 
-wordFunctor.uo: wordFunctor.sml wordUtil.uo bitsTheory.uo numeral_bitsTheory.uo
+wordFunctor.uo: wordFunctor.sml wordUtil.uo bitsTheory.uo numeral_bitsTheory.uo bitsLib.uo
 	$(HOLMOSMLC) -c -toplevel Overlay.ui wordFunctor.sml
 
-wordFunctorLib.uo: wordFunctorLib.sml bitsTheory.uo numeral_bitsTheory.uo
+wordFunctorLib.uo: wordFunctorLib.sml bitsTheory.uo numeral_bitsTheory.uo bitsLib.uo
 	$(HOLMOSMLC) -c -toplevel Overlay.ui wordFunctorLib.sml
 
 mkword.uo: wordFunctor.uo mkword.sml

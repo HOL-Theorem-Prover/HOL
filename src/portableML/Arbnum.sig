@@ -10,6 +10,7 @@ sig
   val times2     : num -> num
   val div2       : num -> num
   val mod2       : num -> num
+  val log2       : num -> num
 
   val plus1      : num -> num
   val plus2      : num -> num

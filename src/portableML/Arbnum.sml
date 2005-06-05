@@ -369,6 +369,11 @@ fun divmod (xn, yn) =
 fun (xn div yn) = #1 (divmod (xn, yn))
 fun (xn mod yn) = #2 (divmod (xn, yn))
 
+local
+  fun recurse x n = if x = zero then n else recurse (div2 x) (plus1 n)
+ in
+  fun log2 x = if x = zero then raise Domain else recurse (div2 x) zero
+end
 
 local
   fun gcd' i j = let

@@ -73,7 +73,7 @@ end =
 struct
 
 open HolKernel boolLib bossLib computeLib
-     arithmeticTheory bitsTheory numeral_bitsTheory wordTheory;
+     arithmeticTheory bitsTheory wordTheory;
 
 (* -------------------------------------------------------- *)
 
@@ -102,24 +102,15 @@ val HS_EVAL = REWRITE_RULE [MOD_WL_EVAL] HS_EVAL;
 
 (* -------------------------------------------------------- *)
 
-fun NUMERAL_ONLY_RULE l n x =
-  let val y = SPEC_ALL x
-  in CONJ ((GEN_ALL o simpLib.SIMP_RULE bossLib.arith_ss l o Q.INST [n |-> `0`]) y)
-          ((GEN_ALL o Q.INST [n |-> `NUMERAL n`]) y)
-  end;
-
-(* -------------------------------------------------------- *)
-
 val wl = (numSyntax.dest_numeral o rhs o concl) THE_WL;
 val sn = Arbnum.toString wl;
 
 (* -------------------------------------------------------- *)
 
 fun word_compset () =
-  let val rws = reduceLib.num_compset()
+  let val rws = bitsLib.bits_compset()
       val _ = add_thms
-     [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF, LET_THM,
-      LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
+     [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
       LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
       THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
       MOD_WL_EVAL, w2n_EVAL, n2w_11,
@@ -128,13 +119,7 @@ fun word_compset () =
       AND_EVAL2, OR_EVAL2, EOR_EVAL2,
       LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
       WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
-      MSB_EVAL2, LSB_EVAL2,
-      iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, SIGN_EXTEND_def,
-      DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
-      MSBn_def, LSBn_def, BITV_def, SBIT_def,
-      NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` BITS_def,
-      NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
-      NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def
+      MSB_EVAL2, LSB_EVAL2,MSBn_def
       ] rws
 in
    rws
