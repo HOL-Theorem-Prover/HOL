@@ -12,41 +12,24 @@ val FRESH_STRING_eq = prove(
   ``!X x. FINITE (X:string set) /\ x IN X ==> ~(NEW X = x)``,
   PROVE_TAC [pred_setTheory.SUBSET_DEF, dBTheory.NEW_FRESH_string]);
 
-fun NEW_TAC vname t = let
-  val var = mk_var(vname, ``:string``)
-  val new_t = mk_comb(``NEW:string set -> string``, t)
-  val asm = mk_eq(var, new_t)
-  fun union_inds (sets, inds) t = let
-    val (f, args) = strip_comb t
-  in
-    if same_const f pred_setSyntax.union_tm then
-      union_inds (union_inds (sets, inds) (hd args)) (hd (tl args))
-    else if same_const f pred_setSyntax.insert_tm then
-      union_inds (sets, hd args::inds) (hd (tl args))
-    else if same_const f pred_setSyntax.empty_tm then (sets, inds)
-    else (t::sets, inds)
-  end
-  val (sets, inds) = union_inds ([], []) t
-  val munge = UNDISCH o CONV_RULE (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ]))
-  fun mk_IN (v,s) = let
-    val ty = type_of v
-  in
-    list_mk_comb(inst [alpha |-> ty] pred_setSyntax.in_tm, [v,s])
-  end
-  fun prove_ind i =
-      munge (SIMP_PROVE (srw_ss()) [FRESH_STRING_eq]
-                        (mk_imp(asm, mk_neg(mk_eq(var, i)))))
-  fun prove_set s =
-      munge (prove(mk_imp(asm, mk_neg(mk_IN(var, s))),
-                   DISCH_THEN SUBST_ALL_TAC THEN
-                   MATCH_MP_TAC FRESH_STRING THEN
-                   SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF]))
+val string_ty = stringSyntax.string_ty
+val strset_finite_t = inst [alpha |-> string_ty] pred_setSyntax.finite_tm
+fun NEW_TAC vname t (asl, g) = let
+  val var = mk_var(vname, string_ty)
+  open pred_setTheory
+  val fresh_thm =
+      (CONV_RULE (RAND_CONV (REWRITE_CONV [IN_INSERT, IN_UNION, DE_MORGAN_THM,
+                                           NOT_IN_EMPTY])) o
+       SPEC t) dBTheory.FRESH_string
+  fun is_finitestrset t = free_in strset_finite_t t
+  val finite_asms = filter is_finitestrset asl
+  val finiteness_discharged0 =
+      CONV_RULE (LAND_CONV (SIMP_CONV (srw_ss()) (map ASSUME finite_asms)))
+                fresh_thm
+  val finiteness_discharged = MP finiteness_discharged0 TRUTH
 in
-  Q.ABBREV_TAC `^asm` THEN
-  MAP_EVERY (ASSUME_TAC o prove_ind) inds THEN
-  MAP_EVERY (ASSUME_TAC o prove_set) sets THEN
-  Q.RM_ABBREV_TAC `^var`
-end
+  X_CHOOSE_THEN var STRIP_ASSUME_TAC finiteness_discharged
+end (asl, g)
 
 (* ----------------------------------------------------------------------
     NEW_ELIM_TAC

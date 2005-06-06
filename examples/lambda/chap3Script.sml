@@ -243,6 +243,24 @@ val lswap_subst = store_thm(
   ``lswap p ([M/v]N) = [lswap p M/lswapstr p v](lswap p N)``,
   Induct_on `p` THEN SRW_TAC [][swap_subst, lswap_def, lswapstr_def]);
 
+val strong_bvc_term_ind = store_thm(
+  "strong_bvc_term_ind",
+  ``!P fv. (!s x. P (VAR s) x) /\
+           (!k x. P (CON k) x) /\
+           (!M N x. (!x. P M x) /\ (!x. P N x) ==> P (M @@ N) x) /\
+           (!v x M. ~(v IN fv x) /\ (!x. P M x) ==> P (LAM v M) x) /\
+           (!x. FINITE (fv x)) ==>
+           !t x. P t x``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!t p x. P (lswap p t) x` THEN1 METIS_TAC [lswap_def] THEN
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN
+  Q.ABBREV_TAC `u = lswapstr p v` THEN
+  Q.ABBREV_TAC `M = lswap p t` THEN
+  Q_TAC (NEW_TAC "z") `u INSERT FV M UNION fv x` THEN
+  `LAM u M = LAM z (swap z u M)` by SRW_TAC [][swap_ALPHA] THEN
+  `swap z u M = lswap ((z,u)::p) t` by SRW_TAC [][lswap_def, Abbr`M`] THEN
+  SRW_TAC [][])
+
 val ccbeta_gen_ind = store_thm(
   "ccbeta_gen_ind",
   ``(!v M N X. ~(v IN FV N) /\ ~(v IN fv X) ==>
@@ -262,10 +280,7 @@ val ccbeta_gen_ind = store_thm(
     Q.ABBREV_TAC `v = lswapstr p x` THEN
     Q.ABBREV_TAC `N' = lswap p arg` THEN
     Q.ABBREV_TAC `M' = lswap p body` THEN
-    `?z. ~(z IN FV M') /\ ~(z IN FV N') /\ ~(z IN fv X) /\ ~(z = v)`
-       by (Q.SPEC_THEN `v INSERT FV M' UNION FV N' UNION fv X` MP_TAC
-                       dBTheory.NEW_FRESH_string THEN
-           SRW_TAC [][] THEN METIS_TAC []) THEN
+    Q_TAC (NEW_TAC "z") `v INSERT FV M' UNION FV N' UNION fv X` THEN
     `LAM v M' = LAM z ([VAR z/v] M')` by SRW_TAC [][SIMPLE_ALPHA] THEN
     Q_TAC SUFF_TAC `[N'/v]M' = [N'/z]([VAR z/v]M')` THEN1 SRW_TAC [][] THEN
     SRW_TAC [][lemma15a],
@@ -275,10 +290,7 @@ val ccbeta_gen_ind = store_thm(
     Q.ABBREV_TAC `x = lswapstr p v` THEN
     Q.ABBREV_TAC `M' = lswap p M` THEN
     Q.ABBREV_TAC `N' = lswap p N` THEN
-    `?z. ~(z IN FV M') /\ ~(z IN FV N') /\ ~(z IN fv X) /\ ~(z = x)`
-       by (Q.SPEC_THEN `x INSERT FV M' UNION FV N' UNION fv X` MP_TAC
-                       dBTheory.NEW_FRESH_string THEN
-           SRW_TAC [][] THEN METIS_TAC []) THEN
+    Q_TAC (NEW_TAC "z") `x INSERT FV M' UNION FV N' UNION fv X` THEN
     `(LAM x M' = LAM z (swap z x M')) /\ (LAM x N' = LAM z (swap z x N'))`
        by SRW_TAC [][swap_ALPHA] THEN
     SRW_TAC [][] THEN
@@ -485,8 +497,6 @@ val (grandbeta_rules, grandbeta_ind, grandbeta_cases) =
              (!M N M' N' x. grandbeta M M' /\ grandbeta N N' ==>
                             grandbeta ((LAM x M) @@ N) ([N'/x] M'))`;
 
-
-
 val grandbeta_bvc_gen_ind = store_thm(
   "grandbeta_bvc_gen_ind",
   ``!P fv.
@@ -508,10 +518,7 @@ val grandbeta_bvc_gen_ind = store_thm(
     Q.ABBREV_TAC `M' = lswap p M` THEN
     Q.ABBREV_TAC `N' = lswap p N` THEN
     Q.ABBREV_TAC `v = lswapstr p x` THEN
-    `?z. ~(z IN fv x') /\ ~(z = v) /\ ~(z IN FV M') /\ ~(z IN FV N')`
-       by (Q.SPEC_THEN `v INSERT fv x' UNION FV M' UNION FV N'` MP_TAC
-                       dBTheory.NEW_FRESH_string THEN
-           SRW_TAC [][] THEN METIS_TAC []) THEN
+    Q_TAC (NEW_TAC "z") `v INSERT fv x' UNION FV M' UNION FV N'` THEN
     `(LAM v M' = LAM z (lswap ((z,v)::p) M)) /\
      (LAM v N' = LAM z (lswap ((z,v)::p) N))`
        by SRW_TAC [][Abbr`M'`, Abbr`N'`, lswap_def, swap_ALPHA] THEN
@@ -522,12 +529,8 @@ val grandbeta_bvc_gen_ind = store_thm(
     Q.ABBREV_TAC `N1 = lswap p M'` THEN
     Q.ABBREV_TAC `M2 = lswap p N'` THEN
     Q.ABBREV_TAC `N2 = lswap p N''` THEN
-    `?z. ~(z IN fv x') /\ ~(z = v) /\ ~(z IN FV N1) /\ ~(z IN FV N2) /\
-         ~(z IN FV M1) /\ ~(z IN FV M2)`
-       by (Q.SPEC_THEN
-             `v INSERT fv x' UNION FV N1 UNION FV N2 UNION FV M1 UNION FV M2`
-             MP_TAC dBTheory.NEW_FRESH_string THEN
-           SRW_TAC [][] THEN METIS_TAC []) THEN
+    Q_TAC (NEW_TAC "z")
+          `v INSERT fv x' UNION FV N1 UNION FV N2 UNION FV M1 UNION FV M2` THEN
     `LAM v M1 = LAM z (swap z v M1)` by SRW_TAC [][swap_ALPHA] THEN
     `[N2/v]M2 = [N2/z](swap z v M2)`
        by SRW_TAC [][GSYM fresh_var_swap, lemma15a] THEN

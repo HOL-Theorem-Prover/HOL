@@ -243,357 +243,22 @@ val lemma2_14 = store_thm(
     PROVE_TAC [lameta_rules]
   ]);
 
-val _ = type_abbrev("termset", ``:'a nc # 'a nc -> bool``)
-
-val beta_f_def =
-    Define`beta_f (X:'a termset) =
-                    { (LAM x M @@ N, [N/x] M) | T } : 'a termset`;
-val beta_f_monotone = store_thm(
-  "beta_f_monotone",
-  ``monotone beta_f``,
-  SIMP_TAC (srw_ss()) [fixedPointTheory.monotone_def, beta_f_def]);
-
-val refl_f_def = Define`refl_f X = { (x,x) | T }`;
-
-val refl_f_monotone = store_thm(
-  "refl_f_monotone",
-  ``monotone refl_f``,
-  SRW_TAC [][monotone_def, refl_f_def]);
-
-val sym_f_def = Define`sym_f X = { (x,y) | (y,x) IN X }`;
-
-val sym_f_monotone = store_thm(
-  "sym_f_monotone",
-  ``monotone sym_f``,
-  SRW_TAC[][monotone_def, sym_f_def, SUBSET_DEF]);
-
-val trans_f_def = Define`trans_f X = { (x,z) | ?y. (x,y) IN X /\ (y,z) IN X }`;
-val trans_f_monotone = store_thm(
-  "trans_f_monotone",
-  ``monotone trans_f``,
-  SRW_TAC [][monotone_def, trans_f_def, SUBSET_DEF] THEN PROVE_TAC []);
-
-val congl_f_def =
-  Define`congl_f X = { (L,R) | ?M N Z. (L = M @@ Z) /\ (R = N @@ Z) /\
-                                       (M,N) IN X }`;
-val congl_f_monotone = store_thm(
-  "congl_f_monotone",
-  ``monotone congl_f``,
-  SRW_TAC [][monotone_def, congl_f_def, SUBSET_DEF] THEN PROVE_TAC []);
-
-val congr_f_def =
-  Define`congr_f X = { (L,R) | ?M N Z. (L = Z @@ M) /\ (R = Z @@ N) /\
-                                       (M,N) IN X }`;
-val congr_f_monotone = store_thm(
-  "congr_f_monotone",
-  ``monotone congr_f``,
-  SRW_TAC [][monotone_def, congr_f_def, SUBSET_DEF] THEN PROVE_TAC []);
-
-val congabs_f_def =
-  Define`congabs_f X = { (L,R) | ?M N x. (L = LAM x M) /\ (R = LAM x N) /\
-                                         (M,N) IN X }`;
-val congabs_f_monotone = store_thm(
-  "congabs_f_monotone",
-  ``monotone congabs_f``,
-  SRW_TAC [][monotone_def, congabs_f_def, SUBSET_DEF] THEN PROVE_TAC []);
-
-val stdlam_def =
-  Define`stdlam = beta_f ++ congl_f ++ congr_f ++ congabs_f ++
-                         refl_f ++ sym_f ++ trans_f`;
-
-val stdlam_monotone = store_thm(
-  "stdlam_monotone",
-  ``monotone stdlam``,
-  SRW_TAC [][stdlam_def] THEN
-  PROVE_TAC [fnsum_monotone, beta_f_monotone, congl_f_monotone,
-             congr_f_monotone, congabs_f_monotone, refl_f_monotone,
-             sym_f_monotone, trans_f_monotone]);
-
-
-val stdlam_refl = store_thm(
-  "stdlam_refl",
-  ``!thy. monotone thy ==> !x. (x,x) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC lfp_empty THEN
-  ASM_SIMP_TAC (srw_ss()) [fnsum_monotone, stdlam_monotone,
-                           fnsum_def, stdlam_def, refl_f_def]);
-
-val stdlam_sym = store_thm(
-  "stdlam_sym",
-  ``!thy. monotone thy ==>
-          !x y. (x,y) IN lfp (stdlam ++ thy) ==>
-                (y,x) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC lfp_rule_applied THEN
-  Q.EXISTS_TAC `{(x,y)}` THEN
-  ASM_SIMP_TAC std_ss [IN_SING, SUBSET_DEF] THEN CONJ_TAC THENL [
-    PROVE_TAC [stdlam_monotone, fnsum_monotone],
-    ASM_SIMP_TAC (srw_ss()) [fnsum_def, stdlam_def, sym_f_def]
-  ]);
-
-val stdlam_trans = store_thm(
-  "stdlam_trans",
-  ``!thy. monotone thy ==>
-          !x y z. (x,y) IN lfp (stdlam ++ thy) /\
-                  (y,z) IN lfp (stdlam ++ thy) ==>
-                  (x,z) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC lfp_rule_applied THEN
-  Q.EXISTS_TAC `{(x,y); (y,z)}` THEN
-  ASM_SIMP_TAC (srw_ss()) [SUBSET_DEF, pairTheory.FORALL_PROD,
-                           DISJ_IMP_THM, FORALL_AND_THM, fnsum_def,
-                           stdlam_monotone, fnsum_monotone] THEN
-  ASM_SIMP_TAC (srw_ss()) [stdlam_def, fnsum_def, trans_f_def] THEN
-  PROVE_TAC []);
-
-val stdlam_congl = store_thm(
-  "stdlam_congl",
-  ``!thy. monotone thy ==>
-          !x y. (x, y) IN lfp (stdlam ++ thy) ==>
-                !z. (x @@ z, y @@ z) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC lfp_rule_applied THEN
-  Q.EXISTS_TAC `{(x,y)}` THEN
-  ASM_SIMP_TAC (srw_ss()) [SUBSET_DEF, fnsum_monotone, stdlam_monotone] THEN
-  SIMP_TAC (srw_ss()) [congl_f_def, stdlam_def, fnsum_def,
-                       nc_INJECTIVITY]);
-
-val stdlam_congr = store_thm(
-  "stdlam_congr",
-  ``!thy. monotone thy ==>
-          !x y. (x, y) IN lfp (stdlam ++ thy) ==>
-                !z. (z @@ x, z @@ y) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC lfp_rule_applied THEN
-  Q.EXISTS_TAC `{(x,y)}` THEN
-  ASM_SIMP_TAC (srw_ss()) [SUBSET_DEF, fnsum_monotone, stdlam_monotone] THEN
-  SIMP_TAC (srw_ss()) [congr_f_def, stdlam_def, fnsum_def,
-                       nc_INJECTIVITY]);
-
-val stdlam_congabs = store_thm(
-  "stdlam_congabs",
-  ``!thy. monotone thy ==>
-          !x y. (x, y) IN lfp (stdlam ++ thy) ==>
-                !v. (LAM v x, LAM v y) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC lfp_rule_applied THEN
-  Q.EXISTS_TAC `{(x,y)}` THEN
-  ASM_SIMP_TAC (srw_ss()) [SUBSET_DEF, fnsum_monotone, stdlam_monotone] THEN
-  SIMP_TAC (srw_ss()) [congabs_f_def, stdlam_def, fnsum_def] THEN
-  PROVE_TAC []);
-
-val stdlam_beta = store_thm(
-  "stdlam_beta",
-  ``!thy. monotone thy ==>
-          !x M N. ((LAM x M) @@ N, [N/x]M) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC lfp_empty THEN
-  ASM_SIMP_TAC (srw_ss()) [fnsum_monotone, stdlam_monotone, fnsum_def] THEN
-  SIMP_TAC (srw_ss()) [beta_f_def, stdlam_def, fnsum_def] THEN PROVE_TAC []);
-
-val lampair_ty = ``:'a nc # 'a nc``
-val rel_ty = lampair_ty --> bool
-val transform_ty = rel_ty --> rel_ty
-val munge = INST_TYPE [beta |-> lampair_ty, alpha |-> rel_ty]
-val ass = munge fnsum_ASSOC
-val comm = munge fnsum_COMM
-val fnsum_t = mk_const("fnsum", transform_ty --> transform_ty --> transform_ty)
-fun prove_constituent_case th monoths = let
-  (* th = equation of form const = f ++ g ++ h ++ i ++ ... *)
-  fun leaves acc t =
-      if length (#2 (strip_comb t)) > 0 then
-        leaves (leaves acc (rand t)) (rand (rator t))
-      else t::acc
-  val rhs_leaves = leaves [] (rhs (concl th))
-  fun mk(t1, t2) = list_mk_comb(fnsum_t, [t1, t2])
-  fun listmk ac [] = ac
-    | listmk ac (h::t) = listmk (mk(ac,h)) t
-  fun mknew t others = let
-    val r = listmk (hd others) (tl others)
-  in
-    mk(t,r)
-  end
-  fun one_instance t others = let
-    val new_eq = TRANS th (EQT_ELIM
-                             (AC_CONV(ass, comm)
-                                     (mk_eq(rhs (concl th), mknew t others))))
-  in
-    prove(``lfp ^t SUBSET lfp ^(lhs (concl th))``,
-          SUBST_ALL_TAC new_eq THEN
-          PROVE_TAC (lfp_fnsum::fnsum_monotone::monoths))
-  end
-
-  fun recurse ts otherl =
-      case ts of
-        [] => []
-      | (h::t) => one_instance h (tl otherl) ::
-                  recurse t (tl otherl @ [h])
-in
-  recurse rhs_leaves rhs_leaves
-end
-
-val monoths = [beta_f_monotone, congl_f_monotone,
-               congr_f_monotone, congabs_f_monotone, refl_f_monotone,
-               sym_f_monotone, trans_f_monotone]
-val constituents = prove_constituent_case stdlam_def monoths
-
-val stdlam_lameq = store_thm(
-  "stdlam_lameq",
-  ``!M N. M == N = (M, N) IN lfp stdlam``,
-  REPEAT GEN_TAC THEN EQ_TAC THENL [
-    MAP_EVERY Q.ID_SPEC_TAC [`N`,`M`] THEN
-    HO_MATCH_MP_TAC lam_eq_indn THEN REPEAT STRIP_TAC THENL [
-      PROVE_TAC [stdlam_beta, empty_monotone, fnsum_empty],
-      PROVE_TAC [stdlam_refl, empty_monotone, fnsum_empty],
-      PROVE_TAC [stdlam_sym, empty_monotone, fnsum_empty],
-      PROVE_TAC [stdlam_trans, empty_monotone, fnsum_empty],
-      PROVE_TAC [stdlam_congl, empty_monotone, fnsum_empty],
-      PROVE_TAC [stdlam_congr, empty_monotone, fnsum_empty],
-      PROVE_TAC [stdlam_congabs, empty_monotone, fnsum_empty]
-    ],
-
-    Q_TAC SUFF_TAC `lfp stdlam SUBSET UNCURRY $==` THEN1
-      SIMP_TAC std_ss [SUBSET_DEF, pairTheory.FORALL_PROD, SPECIFICATION] THEN
-    Q_TAC SUFF_TAC `stdlam (UNCURRY $==) SUBSET UNCURRY $==` THEN1
-      PROVE_TAC [lfp_induction, stdlam_monotone] THEN
-    SIMP_TAC (srw_ss()) [SUBSET_DEF, pairTheory.FORALL_PROD,
-                         stdlam_def, fnsum_def, beta_f_def,
-                         congl_f_def, congr_f_def, congabs_f_def, refl_f_def,
-                         sym_f_def, trans_f_def] THEN
-    SRW_TAC [][SPECIFICATION] THEN PROVE_TAC [lam_eq_rules]
-  ]);
-
-val ext_f_def =
-  Define`ext_f X = { (M,N) | ?x. (M @@ VAR x, N @@ VAR x) IN X /\
-                                 ~(x IN FV (M @@ N)) }`;
-val ext_f_monotone = store_thm(
-  "ext_f_monotone",
-  ``monotone ext_f``,
-  SIMP_TAC (srw_ss()) [monotone_def, ext_f_def, SUBSET_DEF] THEN
-  PROVE_TAC []);
-
-val eta_f_def =
-  Define`eta_f X = { (LAM x (M @@ VAR x), M) | ~(x IN FV M) }`;
-
-val eta_f_monotone = store_thm(
-  "eta_f_monotone",
-  ``monotone eta_f``,
-  SIMP_TAC std_ss [monotone_def, eta_f_def, SUBSET_DEF]);
-
-
-val ext_eq_eta = store_thm(
-  "ext_eq_eta",
-  ``lfp (stdlam ++ ext_f) = lfp (stdlam ++ eta_f)``,
-  `monotone (stdlam ++ ext_f)`
-     by PROVE_TAC [stdlam_monotone, ext_f_monotone, fnsum_monotone] THEN
-  `monotone (stdlam ++ eta_f)`
-     by PROVE_TAC [stdlam_monotone, eta_f_monotone, fnsum_monotone] THEN
-  MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL [
-    FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP lfp_induction) THEN
-    SIMP_TAC (srw_ss()) [SUBSET_DEF, fnsum_def, pairTheory.FORALL_PROD,
-                         DISJ_IMP_THM, FORALL_AND_THM] THEN
-    CONJ_TAC THENL [
-      REPEAT STRIP_TAC THEN
-      Q_TAC SUFF_TAC
-        `(p_1,p_2) IN (stdlam ++ eta_f) (lfp (stdlam ++ eta_f))` THEN1
-        PROVE_TAC [lfp_fixedpoint, stdlam_monotone, eta_f_monotone,
-                   fnsum_monotone] THEN
-      ASM_SIMP_TAC (srw_ss()) [fnsum_def],
-      SIMP_TAC (srw_ss())[ext_f_def] THEN
-      Q.X_GEN_TAC `M` THEN Q.X_GEN_TAC `N` THEN
-      DISCH_THEN (Q.X_CHOOSE_THEN `x` STRIP_ASSUME_TAC) THEN
-      `(LAM x (M @@ VAR x), LAM x (N @@ VAR x)) IN lfp (stdlam ++ eta_f)`
-         by PROVE_TAC  [stdlam_congabs, eta_f_monotone] THEN
-      `(LAM x (M @@ VAR x), M) IN lfp (stdlam ++ eta_f)` by
-         (MATCH_MP_TAC lfp_empty THEN
-          ASM_SIMP_TAC (srw_ss()) [fnsum_def, eta_f_def] THEN
-          PROVE_TAC []) THEN
-      POP_ASSUM (fn th =>
-        `(M, LAM x (M @@ VAR x)) IN lfp (stdlam ++ eta_f)` by
-         PROVE_TAC [eta_f_monotone, stdlam_sym, th]) THEN
-      POP_ASSUM (fn th =>
-        `(M, LAM x (N @@ VAR x)) IN lfp (stdlam ++ eta_f)` by
-        PROVE_TAC [eta_f_monotone, stdlam_trans, th]) THEN
-      `(LAM x (N @@ VAR x), N) IN lfp (stdlam ++ eta_f)` by
-         (MATCH_MP_TAC lfp_empty THEN
-          ASM_SIMP_TAC (srw_ss()) [fnsum_def, eta_f_def] THEN
-          PROVE_TAC []) THEN
-      PROVE_TAC [stdlam_trans, eta_f_monotone]
-    ],
-
-    FIRST_ASSUM (MATCH_MP_TAC o MATCH_MP lfp_induction) THEN
-    SIMP_TAC (srw_ss()) [SUBSET_DEF, fnsum_def, pairTheory.FORALL_PROD,
-                         DISJ_IMP_THM, FORALL_AND_THM] THEN
-    CONJ_TAC THENL [
-      REPEAT STRIP_TAC THEN
-      Q_TAC SUFF_TAC
-        `(p_1,p_2) IN (stdlam ++ ext_f) (lfp (stdlam ++ ext_f))` THEN1
-        PROVE_TAC [lfp_fixedpoint, stdlam_monotone, fnsum_monotone,
-                   ext_f_monotone] THEN
-      ASM_SIMP_TAC std_ss [fnsum_def, IN_UNION],
-      ASM_SIMP_TAC (srw_ss()) [eta_f_def, GSYM LEFT_FORALL_IMP_THM] THEN
-      CONV_TAC (RENAME_VARS_CONV ["x", "y"]) THEN REPEAT STRIP_TAC THEN
-      MATCH_MP_TAC lfp_rule_applied THEN
-      Q.EXISTS_TAC `{((LAM y (x @@ VAR y)) @@ VAR y, x @@ VAR y)}` THEN
-      ASM_SIMP_TAC (srw_ss()) [SUBSET_DEF, fnsum_def] THEN
-      CONJ_TAC THENL [
-        Q_TAC SUFF_TAC `[VAR y/y](x @@ VAR y) = (x @@ VAR y)` THEN1
-          PROVE_TAC [stdlam_beta, ext_f_monotone] THEN
-        ASM_SIMP_TAC std_ss [lemma14b, SUB_THM],
-        ASM_SIMP_TAC (srw_ss()) [ext_f_def] THEN
-        PROVE_TAC []
-      ]
-    ]
-  ]);
-
-val lameta_eta_f = store_thm(
-  "lameta_eta_f",
-  ``!M N. (M,N) IN lfp (stdlam ++ eta_f) = lameta M N``,
-  SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
-    Q_TAC SUFF_TAC `lfp (stdlam ++ eta_f) SUBSET {(M,N) | lameta M N}` THEN1
-          (SRW_TAC [][pred_setTheory.SUBSET_DEF] THEN RES_TAC THEN
-           FULL_SIMP_TAC (srw_ss()) []) THEN
-    Q_TAC SUFF_TAC `(stdlam ++ eta_f) { (M,N) | lameta M N } SUBSET
-                    { (M,N) | lameta M N}` THEN1
-       PROVE_TAC [lfp_induction, stdlam_monotone, fnsum_monotone,
-                  eta_f_monotone] THEN
-    SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF, fnsum_def,
-                         pairTheory.FORALL_PROD, stdlam_def,
-                         beta_f_def, congl_f_def, congr_f_def, congabs_f_def,
-                         refl_f_def, sym_f_def, trans_f_def,
-                         DISJ_IMP_THM, FORALL_AND_THM,
-                         GSYM LEFT_FORALL_IMP_THM, eta_f_def] THEN
-    PROVE_TAC [lameta_rules],
-    HO_MATCH_MP_TAC lameta_ind THEN REPEAT STRIP_TAC THENL [
-      PROVE_TAC [stdlam_beta, fnsum_monotone, eta_f_monotone],
-      PROVE_TAC [stdlam_refl, fnsum_monotone, eta_f_monotone],
-      PROVE_TAC [stdlam_sym, fnsum_monotone, eta_f_monotone],
-      PROVE_TAC [stdlam_trans, fnsum_monotone, eta_f_monotone],
-      PROVE_TAC [stdlam_congl, fnsum_monotone, eta_f_monotone],
-      PROVE_TAC [stdlam_congr, fnsum_monotone, eta_f_monotone],
-      PROVE_TAC [stdlam_congabs, fnsum_monotone, eta_f_monotone],
-      MATCH_MP_TAC lfp_empty THEN
-      SRW_TAC [][fnsum_monotone, stdlam_monotone, eta_f_monotone, fnsum_def,
-                 eta_f_def] THEN PROVE_TAC []
-    ]
-  ]);
-
 val consistent_def =
     Define`consistent (thy:'a nc -> 'a nc -> bool) = ?M N. ~thy M N`;
 
-val eqn_thy_def =
-    Define`eqn_thy p = \X:'a termset. {p}:'a termset`;
-
-val eqn_thy_monotone = store_thm(
-  "eqn_thy_monotone",
-  ``!p. monotone (eqn_thy p)``,
-  REWRITE_TAC [eqn_thy_def, monotone_def, SUBSET_REFL]);
-
-val stdlam_eqn_thy = store_thm(
-  "stdlam_eqn_thy",
-  ``!p. p IN lfp (stdlam ++ eqn_thy p)``,
-  GEN_TAC THEN MATCH_MP_TAC lfp_empty THEN
-  CONJ_TAC THENL [
-    PROVE_TAC [stdlam_monotone, eqn_thy_monotone, fnsum_monotone],
-    SIMP_TAC std_ss [fnsum_def, eqn_thy_def, IN_UNION, IN_SING]
-  ]);
+val (asmlam_rules, asmlam_ind, asmlam_cases) = Hol_reln`
+  (!M N. (M,N) IN eqns ==> asmlam eqns M N) /\
+  (!x M N. asmlam eqns (LAM x M @@ N) ([N/x]M)) /\
+  (!M. asmlam eqns M M) /\
+  (!M N. asmlam eqns M N ==> asmlam eqns N M) /\
+  (!M N P. asmlam eqns M N /\ asmlam eqns N P ==> asmlam eqns M P) /\
+  (!M M' N. asmlam eqns M M' ==> asmlam eqns (M @@ N) (M' @@ N)) /\
+  (!M N N'. asmlam eqns N N' ==> asmlam eqns (M @@ N) (M @@ N')) /\
+  (!x M M'. asmlam eqns M M' ==> asmlam eqns (LAM x M) (LAM x M'))
+`;
 
 val incompatible_def =
-    Define`incompatible x y =
-                ~consistent (CURRY (lfp (stdlam ++ eqn_thy (x,y))))`;
+    Define`incompatible x y = ~consistent (asmlam {(x,y)})`
 
 val S_def =
     Define`S = LAM "x" (LAM "y" (LAM "z"
@@ -613,17 +278,11 @@ val SUB_LAM_RWT = store_thm(
                  in
                    LAM n ([x/y]([VAR n/v] body))``,
   SIMP_TAC std_ss [] THEN REPEAT GEN_TAC THEN
-  Q_TAC (NEW_TAC "n") `y INSERT FV x UNION FV body` THEN
-  Cases_on `y = v` THENL [
-    POP_ASSUM SUBST_ALL_TAC THEN Cases_on `v IN FV body` THENL [
-      SRW_TAC [][SUB_THM, lemma14b, SUB_TWICE_ONE_VAR, ALPHA],
-      ASM_SIMP_TAC std_ss [SUB_THM, lemma14b] THEN
-      MATCH_MP_TAC INJECTIVITY_LEMMA3 THEN Q.EXISTS_TAC `n` THEN
-      ASM_SIMP_TAC std_ss [lemma14b, lemma14a]
-    ],
-    `LAM v body = LAM n ([VAR n/v] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-    ASM_SIMP_TAC std_ss [SUB_THM]
-  ]);
+  NEW_ELIM_TAC THEN Q.X_GEN_TAC `z` THEN
+  Q_TAC (NEW_TAC "n") `{z;y} UNION FV x UNION FV body` THEN
+  REPEAT STRIP_TAC THEN
+  `LAM v body = LAM z ([VAR z/v] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
+  SRW_TAC [][SUB_THM]);
 
 val alpha_lemma = prove(
   ``!x y u body.
@@ -631,78 +290,75 @@ val alpha_lemma = prove(
        (LAM x u = LAM y body)``,
   PROVE_TAC [ALPHA]);
 
-val stdlam_S = store_thm(
-  "stdlam_S",
-  ``!thy. monotone thy ==>
-          !A B C. (S @@ A @@ B @@ C, (A @@ C) @@ (B @@ C)) IN
-                     lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN
+val lameq_asmlam = store_thm(
+  "lameq_asmlam",
+  ``!M N. M == N ==> asmlam eqns M N``,
+  HO_MATCH_MP_TAC lam_eq_indn THEN METIS_TAC [asmlam_rules]);
+
+val lameq_S = store_thm(
+  "lameq_S",
+  ``S @@ A @@ B @@ C == (A @@ C) @@ (B @@ C)``,
   Q_TAC (NEW_TAC "y") `{"x"; "y"; "z"} UNION FV A UNION FV B UNION FV C` THEN
   Q_TAC (NEW_TAC "z")
         `{y; "x"; "y"; "z"} UNION FV A UNION FV B UNION FV C` THEN
   Q.ABBREV_TAC `S1 = LAM y (LAM z ((A @@ VAR z) @@ (VAR y @@ VAR z)))` THEN
-  `(S @@ A, S1) IN lfp (stdlam ++ thy)` by
-     (Q_TAC SUFF_TAC `?x M. (S = LAM x M) /\ (S1 = [A/x]M)` THEN1
-        PROVE_TAC [stdlam_beta] THEN
-      Q.EXISTS_TAC `"x"` THEN SIMP_TAC std_ss [S_def] THEN
-      `LAM "y" (LAM "z" ((VAR "x" @@ VAR "z") @@ (VAR "y" @@ VAR "z"))) =
-       LAM y (LAM z ((VAR "x" @@ VAR z) @@ (VAR y @@ VAR z)))` by
-         ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.CHR_11,
-                                  stringTheory.STRING_11, alpha_lemma] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN
-      ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.STRING_11,
-                               stringTheory.CHR_11]) THEN
-  `(S @@ A @@ B @@ C, S1 @@ B @@ C) IN lfp (stdlam ++ thy)` by
-     PROVE_TAC [stdlam_congl] THEN
-  Q_TAC SUFF_TAC `(S1 @@ B @@ C, A @@ C @@ (B @@ C)) IN lfp(stdlam++thy)` THEN1
-    PROVE_TAC [stdlam_trans] THEN
+  `S @@ A == S1`
+     by (Q_TAC SUFF_TAC `?x M. (S = LAM x M) /\ (S1 = [A/x]M)` THEN1
+           PROVE_TAC [lam_eq_rules] THEN
+         Q.EXISTS_TAC `"x"` THEN SRW_TAC [][S_def] THEN
+        `LAM "y" (LAM "z" ((VAR "x" @@ VAR "z") @@ (VAR "y" @@ VAR "z"))) =
+         LAM y (LAM z ((VAR "x" @@ VAR z) @@ (VAR y @@ VAR z)))` by
+           ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.CHR_11,
+                                    stringTheory.STRING_11, alpha_lemma] THEN
+        POP_ASSUM SUBST_ALL_TAC THEN
+        ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.STRING_11,
+                                 stringTheory.CHR_11]) THEN
+  `S @@ A @@ B @@ C == S1 @@ B @@ C` by PROVE_TAC [lam_eq_rules] THEN
+  Q_TAC SUFF_TAC `S1 @@ B @@ C == A @@ C @@ (B @@ C)` THEN1
+    PROVE_TAC [lam_eq_rules] THEN
   Q.ABBREV_TAC `S2 = LAM z (A @@ VAR z @@ (B @@ VAR z))` THEN
-  `(S1 @@ B, S2) IN lfp (stdlam ++ thy)` by
+  `S1 @@ B == S2` by
      (Q_TAC SUFF_TAC `?M. (S1 = LAM y M) /\ (S2 = [B/y]M)` THEN1
-        PROVE_TAC [stdlam_beta] THEN
+        PROVE_TAC [lam_eq_rules] THEN
       NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
       ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.CHR_11,
                                stringTheory.STRING_11, alpha_lemma,
                                lemma14b]) THEN
-  Q_TAC SUFF_TAC `(S2 @@ C, A @@ C @@ (B @@ C)) IN lfp (stdlam ++ thy)` THEN1
-      PROVE_TAC [stdlam_trans, stdlam_congl] THEN
+  Q_TAC SUFF_TAC `S2 @@ C == A @@ C @@ (B @@ C)` THEN1
+      PROVE_TAC [lam_eq_rules] THEN
   Q_TAC SUFF_TAC `?M. (S2 = LAM z M) /\ (A @@ C @@ (B @@ C) = [C/z]M)` THEN1
-      PROVE_TAC [stdlam_beta] THEN
+      PROVE_TAC [lam_eq_rules] THEN
   NTAC 2 (FIRST_X_ASSUM (SUBST_ALL_TAC o SYM)) THEN
   ASM_SIMP_TAC (srw_ss()) [SUB_THM, stringTheory.CHR_11,
                            stringTheory.STRING_11, alpha_lemma,
                            lemma14b]);
 
-val stdlam_K = store_thm(
-  "stdlam_K",
-  ``!thy. monotone thy ==>
-          !A B. (K @@ A @@ B, A) IN lfp (stdlam ++ thy)``,
-  REPEAT STRIP_TAC THEN
+val lameq_K = store_thm(
+  "lameq_K",
+  ``K @@ A @@ B == A``,
   Q_TAC (NEW_TAC "x") `{"x"; "y"} UNION FV A UNION FV B` THEN
   Q_TAC (NEW_TAC "y") `{x; "x"; "y"} UNION FV A UNION FV B` THEN
-  `K = LAM x (LAM y (VAR x))` by
-      (ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
-       ASM_SIMP_TAC std_ss [alpha_lemma, K_def, SUB_THM, FV_THM,
-                            IN_SING, IN_DELETE, stringTheory.STRING_11,
-                            stringTheory.CHR_11]) THEN
+  `K = LAM x (LAM y (VAR x))`
+     by SRW_TAC [][K_def, LAM_INJ_swap, swap_thm, swapstr_def,
+                   stringTheory.CHR_11] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   Q_TAC SUFF_TAC
-    `(LAM x (LAM y (VAR x)) @@ A @@ B, (LAM y A) @@ B) IN lfp (stdlam ++ thy)
+    `LAM x (LAM y (VAR x)) @@ A @@ B == (LAM y A) @@ B
         /\
-     (LAM y A @@ B, A) IN lfp (stdlam ++ thy)`
-    THEN1 PROVE_TAC [stdlam_trans] THEN
+     LAM y A @@ B == A`
+    THEN1 PROVE_TAC [lam_eq_rules] THEN
   CONJ_TAC THENL [
     Q_TAC SUFF_TAC `[A/x](LAM y (VAR x)) = LAM y A` THEN1
-      PROVE_TAC [stdlam_beta, stdlam_congl] THEN
+      PROVE_TAC [lam_eq_rules] THEN
     ASM_SIMP_TAC std_ss [FV_THM, SUB_THM],
-    Q_TAC SUFF_TAC `[B/y]A = A` THEN1 PROVE_TAC [stdlam_beta] THEN
+    Q_TAC SUFF_TAC `[B/y]A = A` THEN1 PROVE_TAC [lam_eq_rules] THEN
     ASM_SIMP_TAC std_ss [lemma14b]
   ]);
 
-val stdlam_I = store_thm(
-  "stdlam_I",
-  ``!thy. monotone thy ==> !A. (I @@ A, A) IN lfp (stdlam ++ thy)``,
-  PROVE_TAC [stdlam_beta, I_def, SUB_THM]);
+val lameq_I = store_thm(
+  "lameq_I",
+  ``I @@ A == A``,
+  PROVE_TAC [lam_eq_rules, I_def, SUB_THM]);
 
 val FV_I = store_thm(
   "FV_I",
@@ -713,22 +369,23 @@ val FV_I = store_thm(
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",
   ``incompatible S K``,
-  Q_TAC SUFF_TAC `!M N. (M,N) IN lfp (stdlam ++ eqn_thy (S,K))` THEN1
-        SRW_TAC [][SPECIFICATION, incompatible_def, consistent_def] THEN
+  Q_TAC SUFF_TAC `!M N. asmlam {(S,K)} M N`
+        THEN1 SRW_TAC [][incompatible_def, consistent_def] THEN
   REPEAT GEN_TAC THEN
-  `(S,K) IN lfp (stdlam ++ eqn_thy (S,K))` by PROVE_TAC [stdlam_eqn_thy] THEN
-  `!D. (S @@ I @@ (K @@ D) @@ I, K @@ I @@ (K @@ D) @@ I) IN
-          lfp (stdlam ++ eqn_thy (S,K))` by
-      PROVE_TAC [stdlam_congl, eqn_thy_monotone] THEN
-  `!D. (S @@ I @@ (K @@ D) @@ I, I) IN lfp (stdlam ++ eqn_thy(S,K))` by
-      PROVE_TAC [stdlam_K, stdlam_congl, eqn_thy_monotone, stdlam_trans,
-                 stdlam_I] THEN
-  `!D. ((I @@ I) @@ (K @@ D @@ I), I) IN lfp (stdlam ++ eqn_thy(S,K))` by
-      PROVE_TAC [stdlam_S, eqn_thy_monotone, stdlam_trans, stdlam_sym] THEN
-  `!D. (D, I) IN lfp (stdlam ++ eqn_thy(S,K))` by
-      PROVE_TAC [stdlam_I, stdlam_K, eqn_thy_monotone, stdlam_trans,
-                 stdlam_sym, stdlam_congl] THEN
-  PROVE_TAC [stdlam_trans, stdlam_sym, eqn_thy_monotone]);
+  `asmlam {(S,K)} S K` by PROVE_TAC [asmlam_rules, IN_INSERT] THEN
+  `!D. asmlam {(S,K)} (S @@ I @@ (K @@ D) @@ I) (K @@ I @@ (K @@ D) @@ I)`
+      by PROVE_TAC [asmlam_rules] THEN
+  `!D. asmlam {(S,K)} (S @@ I @@ (K @@ D) @@ I) I`
+      by PROVE_TAC [lameq_K, asmlam_rules, lameq_asmlam, lameq_I] THEN
+  `!D. asmlam {(S,K)} ((I @@ I) @@ (K @@ D @@ I)) I`
+      by PROVE_TAC [lameq_S, asmlam_rules, lameq_asmlam] THEN
+  `!D. asmlam {(S,K)} D I`
+      by PROVE_TAC [lameq_I, lameq_K, asmlam_rules, lameq_asmlam] THEN
+  PROVE_TAC [asmlam_rules]);
+
+val [asmlam_eqn, asmlam_beta, asmlam_refl, asmlam_sym, asmlam_trans,
+     asmlam_lcong, asmlam_rcong, asmlam_abscong] =
+    CONJUNCTS (SPEC_ALL asmlam_rules)
 
 val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
   "xx_xy_incompatible",
@@ -736,44 +393,43 @@ val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
   STRIP_TAC THEN
   Q_TAC SUFF_TAC
         `!M N.
-            (M,N) IN lfp (stdlam ++ eqn_thy (VAR x @@ VAR x, VAR x @@ VAR y))`
-        THEN1 SIMP_TAC std_ss [incompatible_def, consistent_def,
-                               SPECIFICATION] THEN
+            asmlam {(VAR x @@ VAR x, VAR x @@ VAR y)} M N`
+        THEN1 SIMP_TAC std_ss [incompatible_def, consistent_def] THEN
   REPEAT GEN_TAC THEN
-  Q.ABBREV_TAC `xx_xy = eqn_thy (VAR x @@ VAR x, VAR x @@ VAR y)` THEN
-  `monotone xx_xy` by PROVE_TAC [eqn_thy_monotone] THEN
-  `(VAR x @@ VAR x, VAR x @@ VAR y) IN lfp (stdlam ++ xx_xy)` by
-     PROVE_TAC [stdlam_eqn_thy] THEN
-  `(LAM x (LAM y (VAR x @@ VAR x)), LAM x (LAM y (VAR x @@ VAR y))) IN
-     lfp (stdlam ++ xx_xy)` by PROVE_TAC [stdlam_congabs] THEN
-  `((LAM x (LAM y (VAR x @@ VAR x))) @@ I,
-    (LAM x (LAM y (VAR x @@ VAR y))) @@ I) IN lfp (stdlam ++ xx_xy)` by
-     PROVE_TAC [stdlam_congl] THEN
-  `(LAM y (I @@ I), (LAM x (LAM y (VAR x @@ VAR x))) @@ I) IN
-     lfp (stdlam ++ xx_xy)` by
-     (Q_TAC SUFF_TAC `[I/x] (LAM y (VAR x @@ VAR x)) = LAM y (I @@ I)` THEN1
-        PROVE_TAC [stdlam_sym, stdlam_beta] THEN
-      ASM_SIMP_TAC std_ss [SUB_THM, FV_I, NOT_IN_EMPTY]) THEN
-  `(LAM y I, (LAM x (LAM y (VAR x @@ VAR y))) @@ I) IN lfp (stdlam ++ xx_xy)`
-     by PROVE_TAC [stdlam_trans, stdlam_I, stdlam_congabs, stdlam_sym] THEN
+  Q.ABBREV_TAC `xx_xy = asmlam {(VAR x @@ VAR x, VAR x @@ VAR y)}` THEN
+  `xx_xy (VAR x @@ VAR x) (VAR x @@ VAR y)`
+     by PROVE_TAC [asmlam_rules, IN_INSERT] THEN
+  `xx_xy (LAM x (LAM y (VAR x @@ VAR x))) (LAM x (LAM y (VAR x @@ VAR y)))`
+     by PROVE_TAC [asmlam_rules] THEN
+  `xx_xy ((LAM x (LAM y (VAR x @@ VAR x))) @@ I)
+         ((LAM x (LAM y (VAR x @@ VAR y))) @@ I)`
+     by PROVE_TAC [asmlam_rules] THEN
+  `xx_xy (LAM y (I @@ I)) ((LAM x (LAM y (VAR x @@ VAR x))) @@ I)`
+     by (Q_TAC SUFF_TAC `[I/x] (LAM y (VAR x @@ VAR x)) = LAM y (I @@ I)` THEN1
+               PROVE_TAC [asmlam_rules] THEN
+         ASM_SIMP_TAC std_ss [SUB_THM, FV_I, NOT_IN_EMPTY]) THEN
+  `xx_xy (LAM y (I @@ I)) (LAM y I)`
+     by PROVE_TAC [asmlam_rules, lameq_I, lameq_asmlam] THEN
+  `xx_xy (LAM y I) ((LAM x (LAM y (VAR x @@ VAR y))) @@ I)`
+     by METIS_TAC [asmlam_trans, asmlam_sym] THEN
   `[I/x](LAM y (VAR x @@ VAR y)) = LAM y (I @@ VAR y)` by
       ASM_SIMP_TAC (srw_ss()) [SUB_THM, FV_I] THEN
-  `(LAM x (LAM y (VAR x @@ VAR y)) @@ I, LAM y (I @@ VAR y))
-      IN lfp (stdlam ++ xx_xy)` by PROVE_TAC [stdlam_beta] THEN
-  `(LAM y (I @@ VAR y), LAM y I) IN lfp (stdlam ++ xx_xy)` by
-      PROVE_TAC [stdlam_trans, stdlam_sym] THEN
-  `(LAM y (VAR y), LAM y I) IN lfp (stdlam ++ xx_xy)` by
-      PROVE_TAC [stdlam_congabs, stdlam_I, stdlam_trans, stdlam_sym] THEN
-  `!D. ((LAM y (VAR y)) @@ D, (LAM y I) @@ D) IN lfp (stdlam ++ xx_xy)` by
-      PROVE_TAC [stdlam_congl] THEN
+  `xx_xy (LAM x (LAM y (VAR x @@ VAR y)) @@ I) (LAM y (I @@ VAR y))`
+      by PROVE_TAC [asmlam_beta] THEN
+  `xx_xy (LAM y (I @@ VAR y))  (LAM y I)`
+      by METIS_TAC [asmlam_trans, asmlam_sym] THEN
+  `xx_xy (LAM y (VAR y)) (LAM y I)`
+      by METIS_TAC [asmlam_abscong, lameq_I, asmlam_trans, asmlam_sym,
+                    lameq_asmlam] THEN
+  `!D. xx_xy ((LAM y (VAR y)) @@ D) ((LAM y I) @@ D)`
+      by PROVE_TAC [asmlam_lcong] THEN
   `!D. [D/y](VAR y) = D` by SRW_TAC [][SUB_THM] THEN
-  `!D. (D, (LAM y I) @@ D) IN lfp (stdlam ++ xx_xy)` by
-      PROVE_TAC [stdlam_beta, stdlam_trans, stdlam_sym] THEN
+  `!D. xx_xy D ((LAM y I) @@ D)`
+      by METIS_TAC [asmlam_beta, asmlam_trans, asmlam_sym] THEN
   `!D. [D/y]I = I` by SRW_TAC [][lemma14b, FV_I] THEN
-  `!D. (D, I) IN lfp (stdlam ++ xx_xy)` by
-      PROVE_TAC [stdlam_beta, stdlam_trans, stdlam_sym] THEN
-  PROVE_TAC [stdlam_trans, stdlam_sym]);
-
+  `!D. xx_xy D I`
+      by PROVE_TAC [asmlam_beta, asmlam_trans, asmlam_sym] THEN
+  METIS_TAC [asmlam_trans, asmlam_sym]);
 
 val (is_abs_thm, _) = define_recursive_term_function
   `(is_abs (VAR s) = F) /\
@@ -894,20 +550,12 @@ val subst_eq_var = store_thm(
 
 val enf_vsubst_invariant = store_thm(
   "enf_vsubst_invariant",
-  ``!t v u. enf ([VAR v/u] t) = enf t``,
-  HO_MATCH_MP_TAC simple_induction THEN
-  SIMP_TAC (srw_ss()) [SUB_THM, enf_thm] THEN CONJ_TAC THENL [
-    SRW_TAC [][enf_thm, SUB_VAR],
-    MAP_EVERY Q.X_GEN_TAC [`x`, `t`] THEN STRIP_TAC THEN
-    MAP_EVERY Q.X_GEN_TAC [`v`, `u`] THEN
-    Q_TAC (NEW_TAC "z") `{u;v;x} UNION FV t` THEN
-    `LAM x t = LAM z (swap z x t)` by SRW_TAC [][swap_ALPHA] THEN
-    SRW_TAC [][SUB_THM, enf_thm, swap_subst_out, swap_thm, swap_eq_var] THEN
-    `~(swapstr z x v = x)` by SRW_TAC [][swapstr_def] THEN
-    `~(swapstr z x u = x)` by SRW_TAC [][swapstr_def] THEN
-    SRW_TAC [boolSimps.CONJ_ss][GSYM rand_subst_commutes, subst_eq_var] THEN
-    SRW_TAC [][GSYM rator_subst_commutes, FV_SUB]
-  ]);
+  ``!t. enf ([VAR v/u] t) = enf t``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR, enf_thm] THEN
+  SRW_TAC [boolSimps.CONJ_ss][GSYM rand_subst_commutes, subst_eq_var] THEN
+  SRW_TAC [][GSYM rator_subst_commutes, FV_SUB]);
 val _ = export_rewrites ["enf_vsubst_invariant"]
 
 val FV_RENAMING = store_thm(

@@ -12,11 +12,6 @@ fun ERR f msg = raise (HOL_ERR {origin_function = f,
                                 message = msg})
 
 
-fun vsubst_tac defthm =
-  HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][SUB_LAM_SWAP_RWT, SUB_THM, SUB_VAR, defthm,
-             swap_subst_out, swap_thm, LET_THM]
-
 exception ProofFailed of (term list * term) list
 local
   val string_ty = stringSyntax.string_ty
@@ -29,12 +24,17 @@ local
   val VAR_t = mk_thy_const{Name = "VAR", Thy = "nc",
                            Ty = string_ty --> anc_ty}
 in
+fun vsubst_tac defthm =
+    HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+    Q.EXISTS_TAC `{u;v}` THEN
+    SRW_TAC [][SUB_THM, SUB_VAR, defthm]
+
 fun prove_vsubst_result defthm extra_tac = let
   val cs = strip_conj (concl defthm)
   val f = #1 (strip_comb (lhs (#2 (strip_forall (hd cs)))))
   val goal0 = mk_eq(mk_comb(f, list_mk_comb(sub, [mk_comb(VAR_t, v), u, t])),
                     mk_comb(f, t))
-  val goal = list_mk_forall ([t,u,v], goal0)
+  val goal = mk_forall (t, goal0)
   val extra_tac = case extra_tac of NONE => ALL_TAC | SOME t => t
   val whole_tac = vsubst_tac defthm THEN extra_tac
   val prove_goal = prove(goal, whole_tac)
