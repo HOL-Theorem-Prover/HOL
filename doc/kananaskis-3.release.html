@@ -12,12 +12,12 @@ html1/DTD/xhtml1-strict.dtd">
 
 <h2 id="contents">Contents</h2>
 <ul>
-  <li> <a href="#bugs-fixed">Bugs fixed</a>
-  <li> <a href="#new-features">New features</a>
-  <li> <a href="#new-theories">New theories</a>
-  <li> <a href="#new-tools">New tools</a>
-  <li> <a href="#new-examples">New examples</a>
-  <li> <a href="#incompatibilities">Incompatibilities</a>
+  <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
+  <li> <a href="#new-features">New features</a> </li>
+  <li> <a href="#new-theories">New theories</a> </li>
+  <li> <a href="#new-tools">New tools</a> </li>
+  <li> <a href="#new-examples">New examples</a> </li>
+  <li> <a href="#incompatibilities">Incompatibilities</a> </li>
 </ul>
 
 
@@ -88,7 +88,7 @@ html1/DTD/xhtml1-strict.dtd">
 
 <li> <p> The order in which type arguments appeared as arguments to
     polymorphic type operators defined by <code>Hol_datatype</code>
-    was previously undefined.  For example, if one wrote:<p>
+    was previously undefined.  For example, if one wrote:</p>
 <pre>
          Hol_datatype `sum = left of 'a | right of 'b`;
 </pre>
@@ -124,24 +124,24 @@ html1/DTD/xhtml1-strict.dtd">
 
 <li> <p> Holmake now supports the use of user-specified variables, in a
     manner analogous to that done by traditional make implementations.
-    For example, one can define a variable <code>OBJS</code>,
+    For example, one can define a variable <code>OBJS</code>,</p>
 
 <pre>
          OBJS = foo bar baz
 </pre>
 
-    and then refer to this variable elsewhere by writing
+    <p>and then refer to this variable elsewhere by writing
     <code>$(OBJS)</code> Holmake also provides some functions like
     those in GNU make for manipulating text (performing pattern-based
     substitutions, for example).  See the DESCRIPTION for more
-    details. </li>
+    details. </p></li>
 
 <li> <p> Performance when defining large record types (where the number of
     fields is greater than a user-adjustable reference variable), is
     now much improved.  Part of this change was to remove update
     functions as separate constants (they are now encoded using
     functional update functions), though the concrete syntax remains.
-    See the DESCRIPTION for more details.</p>
+    See the DESCRIPTION for more details.</p></li>
 
 <li> <p>In addition to the traditional $-prefix for making identifiers
     ignore their status as special forms in the grammar, HOL now
@@ -173,9 +173,9 @@ html1/DTD/xhtml1-strict.dtd">
     changed, for more detail on this.  (Thanks to Lockwood Morris for
     this feature suggestion.)</p></li>
 
-<li> There are two new simpset fragments in realSimps.
+<li> <p>There are two new simpset fragments in realSimps.
     <code>REAL_REDUCE_ss</code>
-    performs calculations over ground rational values.  Thus,
+    performs calculations over ground rational values.  Thus,</p>
 <pre>
          SIMP_CONV (std_ss ++ REAL_REDUCE_ss) [] ``1/3 - 3/7``
 </pre>
@@ -184,28 +184,28 @@ html1/DTD/xhtml1-strict.dtd">
          &gt; val it = |- 1 / 3 - 3 / 7 = ~2 / 21 : thm
 </pre>
 
-    When <code>realSimps</code> is loaded, <code>REAL_REDUCE_ss</code>
+    <p>When <code>realSimps</code> is loaded, <code>REAL_REDUCE_ss</code>
     is automatically added to the stateful-rewriting simpset, and
     <code>bossLib</code>&rsquo;s <code>EVAL</code> is also augmented
     with this functionality.  This code also removes common factors
     from fractions even when there are no other arithmetic operations
-    being performed.
+    being performed.</p>
 
     <p> The second simpset fragment in <code>realSimps</code> is
     <code>REAL_ARITH_ss</code>, which embodies the
     <code>RealArith</code> decision procedure for universal Presburger
-    arithmetic over the real numbers.</li>
+    arithmetic over the real numbers.</p></li>
 
-<li> The simplifier now provides simpler interfaces for the addition of
+<li> <p>The simplifier now provides simpler interfaces for the addition of
     AC-rewriting and congruence rules.  They can be added as if normal
     rewrites with the functions <code>simpLib.AC</code> and
-    <code>simpLib.Cong</code>.  Thus,
+    <code>simpLib.Cong</code>.  Thus,</p>
 <pre>
          - SIMP_CONV bool_ss [AC ADD_COMM ADD_ASSOC] ``3 + x + y + 1``;
          &gt; val it = |- 3 + x + y + 1 = x + (y + (1 + 3)) : thm
 </pre>
-    <code>Cong</code> is used similarly.  Both functions are further
-    described in the REFERENCE.</li>
+    <p><code>Cong</code> is used similarly.  Both functions are further
+    described in the REFERENCE.</p></li>
 
 <li> <p> Holmake now supports a new command-line option
     <code>--logging</code>, which tells it to record running times for
@@ -249,24 +249,24 @@ html1/DTD/xhtml1-strict.dtd">
   <li> <p> A new first-order proof tactic (called
       <code>METIS_TAC</code>) that uses ordered resolution and
       paramodulation, specifically tailored for subgoals that require
-      equality reasoning.</p>
+      equality reasoning.</p></li>
 
 <li> <p> A &lsquo;boolification&rsquo; tool that automatically defines
     functions that map datatypes to boolean vectors. These kind of
     functions are needed for sending HOL subgoals to a model-checker
-    or SAT solver.</p>
+    or SAT solver.</p></li>
 </ul>
 
 <h2 id="new-examples">New examples:</h2>
 <ul>
 <li> <p> An extension of the existing lambda calculus example
-    (examples/lambda) to include mechanisations of chapters 2 & 3 of
+    (examples/lambda) to include mechanisations of chapters&nbsp;2 &amp; 3 of
     Hankin&rsquo;s lambda calculus text, and the standardisation theorem
-    from Barendregt&rsquo;s chapter 11.</p>
+    from Barendregt&rsquo;s chapter&nbsp;11.</p></li>
 
 <li> <p> A formalization of the probabilistic guarded command language
     (pGCL) in higher-order logic, including a tool for deriving
-    sufficient verification conditions for partial correctness.</p>
+    sufficient verification conditions for partial correctness.</p></li>
 </ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
@@ -279,7 +279,7 @@ used to be called <code>hol.unquote</code>.)  To avoid using the
 quotation filter, use <code>hol.noquote</code>.  Analogous changes
 have been made to <code>hol.bare</code>; <em>i.e.,</em>
 <code>hol.bare</code> now includes the filter, and
-<code>hol.bare.noquote</code> does not. </p>
+<code>hol.bare.noquote</code> does not. </p></li>
 
 <li> <p> The rewrite theorem for <code>LET</code>, </p>
 <pre>
@@ -294,19 +294,19 @@ have been made to <code>hol.bare</code>; <em>i.e.,</em>
 </pre>
 </li>
 
-  <li> <p>Rewrite rules for <code>arithmeticTheory</code>&rsquo;s
-      <code>MIN</code> and <code>MAX</code> constants have been made
-      more general; they will now match more often.  For example,
-      <code>MIN_LE</code> has changed from</p>
+<li> <p>Rewrite rules for <code>arithmeticTheory</code>&rsquo;s
+    <code>MIN</code> and <code>MAX</code> constants have been made
+    more general; they will now match more often.  For example,
+    <code>MIN_LE</code> has changed from</p>
 <pre>
          m &lt;= MIN m n = m &lt;= n
 </pre>
     to
 <pre>
          p &lt;= MIN m n = p &lt;= m /\ p &lt;= n
-</pre>
+</pre></li>
 
-<li> For reasons of efficiency, all conversions in the system may now
+<li> <p>For reasons of efficiency, all conversions in the system may now
     potentially raise the special exception
     <code>Conv.UNCHANGED</code> to indicate that they haven&rsquo;t changed
     the input term, and that they should be treated as if they had
@@ -317,14 +317,14 @@ have been made to <code>hol.bare</code>; <em>i.e.,</em>
     presence of this exception.  Previously, sub-systems such as the
     simplifier, rewriter and arithmetic decision procedures have used
     this idea to make them work faster, but couldn&rsquo;t share information
-    about unchangedness.
+    about unchangedness.</p>
 
 <p> For interactive use, <code>CONV_RULE</code> and
     <code>CONV_TAC</code> handle the exception appropriately, and the
-    new function <code>QCONV</cdoe> (of type
+    new function <code>QCONV</code> (of type
     <code>:&nbsp;conv&nbsp;-&gt;&nbsp;conv</code>) can make any
     conversion handle <code>UNCHANGED</code>.  <code>QCONV</code>&rsquo;s
-    implementation is
+    implementation is</p>
 <pre>
          fun QCONV c t = c t handle UNCHANGED => REFL t
 </pre>
@@ -347,13 +347,13 @@ have been made to <code>hol.bare</code>; <em>i.e.,</em>
          myconv THENC &lt;something else&gt;
 </pre>
 
-    to treat <code>myconv</code> as if it hadn&rsquo;t done anything
+    <p> to treat <code>myconv</code> as if it hadn&rsquo;t done anything
     (because the <code>&lt;fiddle&nbsp;with&nbsp;th&gt;</code> code
-    never got called).
+    never got called).</p>
 
-    This can be relatively difficult to track down, but the fix is
+    <p>This can be relatively difficult to track down, but the fix is
     simple enough: change <code>someconv&nbsp;t</code> to
-    <code>QCONV&nbsp;someconv&nbsp;t</code>.</li>
+    <code>QCONV&nbsp;someconv&nbsp;t</code>.</p></li>
 
 <li> <p> The constant <code>LIST_TO_SET</code> is now defined in
     <code>listTheory</code>.</p></li>
@@ -372,7 +372,7 @@ have been made to <code>hol.bare</code>; <em>i.e.,</em>
     automatically update these theories.  If this is a concern, the
     <code>Holmakefile</code> in
     <code>hol/src/n_bit/help/Holmakefile.example-32</code> demonstrates how to
-    ensure word theories are rebuilt.</p>
+    ensure word theories are rebuilt.</p></li>
 
 </ul>
 
