@@ -131,6 +131,56 @@ val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 
 (* -------------------------------------------------------- *)
 
+val iLOG2_def = Define `iLOG2 n = LOG2 (n + 1)`;
+
+val LOG2_1 = (SIMP_RULE arith_ss [] o SPECL [`1`,`0`]) LOG2_UNIQUE;
+val LOG2_BIT2 = (GEN_ALL o SIMP_RULE arith_ss [LEFT_ADD_DISTRIB] o
+                 ONCE_REWRITE_RULE [DECIDE ``!a b. (a = b) = (2 * a = 2 * b)``] o
+                 SIMP_RULE arith_ss [] o SPEC `n + 1`) LOG2;
+val LOG2_BIT1 = (REWRITE_RULE [DECIDE ``!a. a + 2 + 1 = a + 3``] o
+                 ONCE_REWRITE_RULE [DECIDE ``!a b. (a = b) = (a + 1 = b + 1)``]) LOG2_BIT2;
+
+val LESS_MULT_MONO_2 = 
+   (GEN_ALL o numLib.REDUCE_RULE o INST [`n` |-> `1`] o SPEC_ALL) LESS_MULT_MONO;
+
+val lem = prove(
+  `!a b. 2 * (a MOD 2 ** b) < 2 ** (b + 1)`,
+  METIS_TAC [MOD_2EXP_LT,ADD1,EXP,LESS_MULT_MONO_2]
+);
+
+val lem2 = prove(
+  `!a b. 2 * (a MOD 2 ** b) + 1 < 2 ** (b + 1)`,
+  METIS_TAC [MOD_2EXP_LT,ADD1,EXP,LESS_MULT_MONO_2,
+    DECIDE ``a < b ==> 2 * a + 1 < 2 * b``]
+);
+
+val numeral_ilog2 = store_thm("numeral_ilog2",
+  `(iLOG2 ZERO = 0) /\
+   (!n. iLOG2 (BIT1 n) = 1 + iLOG2 n) /\
+   (!n. iLOG2 (BIT2 n) = 1 + iLOG2 n)`,
+  RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def]
+    THEN SIMP_TAC arith_ss [LOG2_1]
+    THENL [
+      MATCH_MP_TAC ((SIMP_RULE arith_ss [] o
+        SPECL [`2 * n + 2`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
+        THEN EXISTS_TAC `2 * ((n + 1) MOD 2 ** LOG2 (n + 1))`
+        THEN SIMP_TAC arith_ss [LOG2_BIT2,EXP_ADD,lem],
+      MATCH_MP_TAC ((SIMP_RULE arith_ss [] o
+        SPECL [`2 * n + 3`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
+        THEN EXISTS_TAC `2 * ((n + 1) MOD 2 ** LOG2 (n + 1)) + 1`
+        THEN SIMP_TAC arith_ss [LOG2_BIT1,EXP_ADD,lem2]
+    ]
+);
+
+val numeral_log2 = store_thm("numeral_log2",
+  `(!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (iDUB n)) /\
+   (!n. LOG2 (NUMERAL (BIT2 n)) = iLOG2 (BIT1 n))`,
+  RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def,numeralTheory.iDUB]
+    THEN SIMP_TAC arith_ss []
+);
+
+(* -------------------------------------------------------- *)
+
 val _ = 
  let open EmitML
  in exportML("numeral_bits", 

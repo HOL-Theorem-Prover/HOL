@@ -14,6 +14,7 @@ fun NUMERAL_ONLY_RULE l n x =
           ((GEN_ALL o Q.INST [n |-> `NUMERAL n`]) y)
   end;
 
+(*
 local
   val _ = set_trace "metis" 0
 in
@@ -37,6 +38,7 @@ fun cbv_LOG2_CONV tm =
  end
  handle HOL_ERR _ => raise (mk_HOL_ERR "bitsLib" "cbv_LOG2" "")
       | Domain => raise (mk_HOL_ERR "bitsLib" "cbv_LOG2" "")
+*)
 
 fun bits_compset () =
   let val compset = reduceLib.num_compset()
@@ -47,9 +49,10 @@ fun bits_compset () =
                  LSBn_def, BITV_def, SBIT_def,
                  NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` BITS_def,
                  NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
-                 NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def
+                 NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def,
+                 numeral_log2,numeral_ilog2
                  ] compset
-      val _ = add_conv (``$LOG2``, 1, cbv_LOG2_CONV) compset
+   (*   val _ = add_conv (``$LOG2``, 1, cbv_LOG2_CONV) compset *)
 in
   compset
 end;
