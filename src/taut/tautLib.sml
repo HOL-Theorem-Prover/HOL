@@ -47,8 +47,11 @@ val ERR = mk_HOL_ERR "tautLib"
  ---------------------------------------------------------------------------*)
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars boolTheory.bool_grammars
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+end
+open Parse
 
 val BOOL_CASES_AX = boolTheory.BOOL_CASES_AX;
 
@@ -603,7 +606,5 @@ fun TAUT_PROVE tm =
  EQT_ELIM (TAUT_CONV tm) handle HOL_ERR _ => raise ERR "TAUT_PROVE" "";
 
 fun TAUT q = TAUT_PROVE (Term q);
-
-val _ = Parse.temp_set_grammars ambient_grammars;
 
 end (* tautLib *)
