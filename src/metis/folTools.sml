@@ -17,6 +17,12 @@ struct
 open HolKernel Parse boolLib combinTheory simpLib
      normalFormsTheory normalForms folMapping;
 
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars normalFormsTheory.normalForms_grammars
+end
+open Parse
+
 infix THEN ORELSE THENC ##;
 
 type 'a pp       = 'a mlibUseful.pp;
