@@ -16,7 +16,7 @@ local fun has_dq file =
        in
           TextIO.closeIn istrm;
           status
-       end
+       end handle Io _ => false
        fun unquote_to file1 file2 =
          Process.system (String.concat
              [Path.concat(HOLDIR, "bin/unquote"), " ",file1, " ",file2])

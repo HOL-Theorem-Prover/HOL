@@ -26,15 +26,15 @@
    get the correct values itself.  Then run
 
       mosml < configure.sml
-
-val mosmldir:string =
-val holdir :string  =
-
-val OS :string      =
-                           (* Operating system; choices are:
-                                "linux", "solaris", "unix", "winNT"   *)
 *)
 
+
+val mosmldir:string = "/local/scratch/acjf3/mosml";
+val holdir :string  = "/local/scratch/acjf3/hol98";
+
+val OS :string      = "linux";
+                           (* Operating system; choices are:
+                                "linux", "solaris", "unix", "winNT"   *)
 
 val CC:string       = "gcc";      (* C compiler                       *)
 val GNUMAKE:string  = "make";     (* for bdd library and SMV          *)

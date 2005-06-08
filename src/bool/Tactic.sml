@@ -395,6 +395,9 @@ val STRUCT_CASES_TAC =
   REPEAT_TCL STRIP_THM_THEN
      (fn th => (SUBST1_TAC th) ORELSE (ASSUME_TAC th));
 
+val FULL_STRUCT_CASES_TAC =
+  REPEAT_TCL STRIP_THM_THEN
+     (fn th => (SUBST_ALL_TAC th) ORELSE (ASSUME_TAC th));
 
 (*---------------------------------------------------------------------------*
  * COND_CASES_TAC: tactic for doing a case split on the condition p	     *
