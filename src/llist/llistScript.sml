@@ -1615,6 +1615,48 @@ val LFLATTEN_APPEND = store_thm(
     ]
   ]);
 
+(*---------------------------------------------------------------------------*)
+(* ZIP two streams together, returning LNIL as soon as possible.             *)
+(*                                                                           *)
+(* LZIP_THM                                                                  *)
+(*    |- (!l2. LZIP LNIL l2 = LNIL) /\                                       *)
+(*       (!l1. LZIP l1 LNIL = LNIL) /\                                       *)
+(*       (!h1 h2 t1 t2.                                                      *)
+(*          LZIP (LCONS h1 t1) (LCONS h2 t2) = LCONS (h1,h2) (LZIP t1 t2))   *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val LZIP_THM = new_specification
+ ("LZIP_THM", ["LZIP"],
+  Q.prove
+   (`?LZIP.
+       (!l2. LZIP LNIL l2 = LNIL:('a#'b)llist) /\
+       (!l1. LZIP l1 LNIL = LNIL:('a#'b)llist) /\
+       (!h1 h2 t1 t2. LZIP (LCONS (h1:'a) t1) (LCONS (h2:'b) t2) = 
+                        LCONS (h1,h2) (LZIP t1 t2))`,
+    let val ax = 
+       ISPEC 
+        ``\(l1,l2).
+             if (l1:'a llist = LNIL) \/ (l2:'b llist = LNIL) 
+              then NONE 
+              else SOME ((THE(LTL l1),THE(LTL l2)),
+                         (THE(LHD l1),THE(LHD l2)))``
+         llist_Axiom_1
+    in
+     STRIP_ASSUME_TAC (SIMP_RULE std_ss [FORALL_PROD] ax)
+      THEN Q.EXISTS_TAC `CURRY g`
+      THEN REWRITE_TAC [CURRY_DEF]
+      THEN REPEAT CONJ_TAC THENL
+      [ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
+         THEN RW_TAC std_ss [],
+       ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
+         THEN RW_TAC std_ss [],
+       REPEAT GEN_TAC THEN 
+       POP_ASSUM (fn th => GEN_REWRITE_TAC LHS_CONV bool_rewrites [th])
+         THEN RW_TAC std_ss [LCONS_NOT_NIL,LTL_THM,LHD_THM]]
+    end));
+
+
 val _ = BasicProvers.export_rewrites
           ["LCONS_NOT_NIL", "LCONS_11", "LMAP", "LAPPEND", "LFILTER_THM"]
 
