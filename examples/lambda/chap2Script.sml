@@ -339,7 +339,7 @@ val lameq_K = store_thm(
   Q_TAC (NEW_TAC "x") `{"x"; "y"} UNION FV A UNION FV B` THEN
   Q_TAC (NEW_TAC "y") `{x; "x"; "y"} UNION FV A UNION FV B` THEN
   `K = LAM x (LAM y (VAR x))`
-     by SRW_TAC [][K_def, LAM_INJ_swap, swap_thm, swapstr_def,
+     by SRW_TAC [][K_def, LAM_INJ_swap, swap_thm, basic_swapTheory.swapstr_def,
                    stringTheory.CHR_11] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   Q_TAC SUFF_TAC

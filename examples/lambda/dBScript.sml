@@ -17,6 +17,7 @@ struct
 open HolKernel Parse boolLib
      bossLib numLib IndDefLib
      pred_setTheory arithmeticTheory
+     basic_swapTheory
 
 val _ = new_theory"dB";
 
@@ -54,43 +55,6 @@ val GSPEC_DEF = Q.prove
   THEN CONV_TAC (ONCE_DEPTH_CONV ETA_CONV)
   THEN PROVE_TAC [GSPECIFICATION]);
 
-
-(* --------------------------------------------------------------------- *)
-(* Given a finite set of strings, we can always find another string      *)
-(* not in the set.                                                       *)
-(* --------------------------------------------------------------------- *)
-
-val stringset = ty_antiq (Type `:string -> bool`);
-
-val INFINITE_UNIV_string = Q.prove(
- `INFINITE (UNIV:^stringset)`,
-RW_TAC std_ss [INFINITE_UNIV]
-  THEN EXISTS_TAC (Term`STRING (ASCII F F F F F F F F)`)
-  THEN ZAP_TAC std_ss [stringTheory.STRING_DISTINCT]);
-
-val FRESH_string = Q.store_thm("FRESH_string",
- `!X. FINITE X ==> ?x:string. ~(x IN X)`,
-PROVE_TAC
-   [INFINITE_UNIV_string,IN_INFINITE_NOT_FINITE]);
-
-val NEW = Define `NEW X = @x. ~(x IN X)`;
-
-val NEW_FRESH_string = Q.store_thm("NEW_FRESH_string",
-  `!X:^stringset. FINITE X ==> ~(NEW X IN X)`,
-RW_TAC std_ss [NEW]
-  THEN CONV_TAC SELECT_CONV
-  THEN PROVE_TAC [FRESH_string]);
-
-val NEW_UNION1 = Q.prove(
-`!X Y:^stringset. FINITE (X UNION Y) ==> ~(NEW (X UNION Y) IN X)`,
-PROVE_TAC
-  [NEW_FRESH_string,IN_UNION]);
-
-val NOT_EQ_NEW = Q.prove(
-`!X:^stringset. FINITE X /\ x IN X ==> ~(x = NEW X)`,
-PROVE_TAC [NEW_FRESH_string]);
-
-
 (* ===================================================================== *)
 (* PART I: A type of de Bruijn terms.                                    *)
 (* ===================================================================== *)
@@ -120,7 +84,7 @@ val FINITE_dFV = Q.store_thm("FINITE_dFV", `!t. FINITE (dFV t)`,
 Induct THEN RW_TAC std_ss [dFV, FINITE_UNION, FINITE_EMPTY, FINITE_SING]);
 
 val FRESH_VAR = Q.store_thm("FRESH_VAR", `!t. ?x. ~(x IN dFV t)`,
-                            PROVE_TAC [FRESH_string, SPEC_ALL FINITE_dFV]);
+                            PROVE_TAC [new_exists, SPEC_ALL FINITE_dFV]);
 
 (* --------------------------------------------------------------------- *)
 (* Functions defined by recursion on de Bruijn terms.                    *)
@@ -629,6 +593,16 @@ REPEAT STRIP_TAC
         (BETA_RULE (Q.ISPEC `\y:string. dFV ([x |-> dVAR y] u)` lemma1))
   THEN REWRITE_TAC [FINITE_dFV]);
 
+val NEW_UNION1 = prove(
+  ``FINITE (s UNION t) ==> ~(NEW (s UNION t) IN s)``,
+  STRIP_TAC THEN NEWLib.NEW_ELIM_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) []);
+
+val NOT_EQ_NEW = prove(
+  ``!X. FINITE X /\ x IN X ==> ~(x = NEW X)``,
+  PROVE_TAC [NEW_def]);
+
+
 val lemma3 =
  Q.prove(
   `!t x y z.
@@ -692,7 +666,8 @@ Q.EXISTS_TAC
  THEN Q.EXISTS_TAC `{z | !y. z IN dFV([x |-> dVAR y] u)}`
  THEN RW_TAC std_ss [lemma4]
  THEN CONV_TAC SELECT_CONV
- THEN MATCH_MP_TAC FRESH_string THEN MATCH_MP_TAC lemma2 THEN PROVE_TAC[]);
+ THEN MATCH_MP_TAC new_exists THEN MATCH_MP_TAC lemma2 THEN
+ ASM_REWRITE_TAC []);
 
 val _ = export_theory();
 

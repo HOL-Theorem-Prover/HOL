@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib metisLib
+open HolKernel Parse boolLib bossLib metisLib basic_swapTheory
 
 val _ = new_theory "chap3";
 
@@ -31,8 +31,49 @@ val substitutive_def = Define`
 `;
 
 val permutative_def = Define`
-  permutative R = !M M'. R M M' ==> !x y. R (swap x y M) (swap x y M')
+  permutative R = !M M'. R M M' ==> !p. R (lswap p M) (lswap p M')
 `;
+
+val cc_gen_ind = store_thm(
+  "cc_gen_ind",
+  ``!R fv. (!M N p. R M N ==> R (lswap p M) (lswap p N)) /\
+           (!M N x. R M N ==> P M N x) /\
+           (!M M' N x. (!y. P M M' y) ==> P (M @@ N) (M' @@ N) x) /\
+           (!M N N' x. (!y. P N N' y) ==> P (M @@ N) (M @@ N') x) /\
+           (!v M M' x. ~(v IN fv x) /\ (!y. P M M' y) ==>
+                       P (LAM v M) (LAM v M') x) /\
+           (!x. FINITE (fv x)) ==>
+           !M N. compat_closure R M N ==> !x. P M N x``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!M N. compat_closure R M N ==>
+                        !x p. P (lswap p M) (lswap p N) x`
+        THEN1 METIS_TAC [lswap_def] THEN
+  HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][] THEN
+  Q_TAC (NEW_TAC "z") `fv x UNION {lswapstr p v} UNION FV (lswap p M) UNION
+                       FV (lswap p N)` THEN
+  `LAM (lswapstr p v) (lswap p M) = LAM z (lswap ((z,lswapstr p v)::p) M)`
+     by SRW_TAC [][lswap_def, swap_ALPHA] THEN
+  `LAM (lswapstr p v) (lswap p N) = LAM z (lswap ((z,lswapstr p v)::p) N)`
+     by SRW_TAC [][lswap_def, swap_ALPHA] THEN
+  SRW_TAC [][]);
+
+val all_fnone = prove(
+  ``(!(f:one -> 'a). P f) = !x:'a. P (K x)``,
+  SRW_TAC [][EQ_IMP_THM] THEN
+  Q_TAC SUFF_TAC `f = K (f())`
+        THEN1 (DISCH_THEN SUBST1_TAC THEN SRW_TAC [][]) THEN
+  SRW_TAC [][FUN_EQ_THM, oneTheory.one]);
+
+val cc_ind = save_thm(
+  "cc_ind",
+  (Q.GEN `P` o Q.GEN `X` o Q.GEN `R` o
+   SIMP_RULE bool_ss [] o
+   SPECL [``(\M:'a nc N:'a nc x:one. P M N:bool)``,
+          ``R: 'a nc -> 'a nc -> bool``,
+          ``X:string -> bool``] o
+   SIMP_RULE (srw_ss()) [all_fnone, oneTheory.one] o
+   INST_TYPE [beta |-> ``:one``] o
+   GEN_ALL) cc_gen_ind);
 
 val compat_closure_permutative = store_thm(
   "compat_closure_permutative",
@@ -44,13 +85,14 @@ val compat_closure_permutative = store_thm(
 val permutative_compat_closure_eqn = store_thm(
   "permutative_compat_closure_eqn",
   ``permutative R ==>
-    (compat_closure R (swap x y M) (swap x y N) = compat_closure R M N)``,
+    (compat_closure R (lswap p M) (lswap p N) = compat_closure R M N)``,
   STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     `permutative (compat_closure R)`
        by METIS_TAC [compat_closure_permutative] THEN
-    `compat_closure R (swap x y (swap x y M)) (swap x y (swap x y N))`
+    `compat_closure R (lswap (REVERSE p) (lswap p M))
+                      (lswap (REVERSE p) (lswap p N))`
        by METIS_TAC [permutative_def] THEN
-    FULL_SIMP_TAC (srw_ss()) [swap_inverse],
+    FULL_SIMP_TAC (srw_ss()) [],
     METIS_TAC [permutative_def, compat_closure_permutative]
   ]);
 val _ = BasicProvers.export_rewrites ["permutative_compat_closure_eqn"]
@@ -71,9 +113,12 @@ val substitutive_implies_permutative = store_thm(
   "substitutive_implies_permutative",
   ``substitutive R ==> permutative R``,
   SRW_TAC [][substitutive_def, permutative_def] THEN
-  Q_TAC (NEW_TAC "z") `{x; y} UNION FV M UNION FV M'` THEN
-  `(swap x y M = [VAR y/z] ([VAR x/y] ([VAR z/x] M))) /\
-   (swap x y M'= [VAR y/z] ([VAR x/y] ([VAR z/x] M')))`
+  Induct_on `p` THEN SRW_TAC [][lswap_def] THEN
+  `?x y. h = (x,y)` by METIS_TAC [TypeBase.nchotomy_of "prod"] THEN
+  SRW_TAC [][] THEN
+  Q_TAC (NEW_TAC "z") `{x; y} UNION FV (lswap p M) UNION FV (lswap p M')` THEN
+  `(swap x y (lswap p M) = [VAR y/z] ([VAR x/y] ([VAR z/x] (lswap p M)))) /\
+   (swap x y (lswap p M')= [VAR y/z] ([VAR x/y] ([VAR z/x] (lswap p M'))))`
       by SRW_TAC [][swap_eq_3substs] THEN
   ASM_SIMP_TAC (srw_ss()) []);
 
@@ -82,17 +127,16 @@ val compat_closure_substitutive = store_thm(
   "compat_closure_substitutive",
   ``substitutive R ==> substitutive (compat_closure R)``,
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [substitutive_def] THEN
-  HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][SUB_THM] THENL [
+  REPEAT STRIP_TAC THEN
+  Q.UNDISCH_THEN `compat_closure R M M'` MP_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`M'`, `M`] THEN
+  HO_MATCH_MP_TAC cc_ind THEN Q.EXISTS_TAC `v INSERT FV N` THEN
+  SRW_TAC [][SUB_THM] THENL [
+    PROVE_TAC [substitutive_implies_permutative, permutative_def],
     PROVE_TAC [compat_closure_rules, substitutive_def],
-    PROVE_TAC [compat_closure_rules],
-    PROVE_TAC [compat_closure_rules],
-    Q_TAC (NEW_TAC "z") `{v;v'} UNION FV M UNION FV M' UNION FV N` THEN
-    `(LAM v M = LAM z (swap z v M)) /\ (LAM v M' = LAM z (swap z v M'))`
-       by SRW_TAC [][swap_ALPHA] THEN
-    ASM_SIMP_TAC (srw_ss()) [SUB_THM, swap_subst_out] THEN
-    MATCH_MP_TAC (last (CONJUNCTS (SPEC_ALL compat_closure_rules))) THEN
-    `permutative R` by METIS_TAC [substitutive_implies_permutative] THEN
-    ASM_SIMP_TAC (srw_ss()) []
+    SRW_TAC [][compat_closure_rules],
+    SRW_TAC [][compat_closure_rules],
+    SRW_TAC [][compat_closure_rules]
   ]);
 
 
@@ -238,6 +282,23 @@ val normal_form_def = Define`normal_form R t = ~can_reduce R t`;
 val beta_def = Define`beta M N = ?x body arg. (M = LAM x body @@ arg) /\
                                               (N = [arg/x]body)`;
 
+val beta_alt = store_thm(
+  "beta_alt",
+  ``!X M N. FINITE X ==>
+            (beta M N = ?x body arg. (M = LAM x body @@ arg) /\
+                                     (N = [arg/x] body) /\
+                                     ~(x IN X))``,
+  SRW_TAC [][beta_def, EQ_IMP_THM] THENL [
+    SRW_TAC [][LAM_INJ_swap] THEN
+    Q_TAC (NEW_TAC "z") `x INSERT FV body UNION X` THEN
+    MAP_EVERY Q.EXISTS_TAC [`z`, `swap x z body`] THEN
+    SRW_TAC [][] THEN
+    Q_TAC SUFF_TAC `swap x z body = [VAR z/x]body`
+          THEN1 SRW_TAC [][lemma15a] THEN
+    SRW_TAC [][fresh_var_swap],
+    METIS_TAC []
+  ]);
+
 val lswap_subst = store_thm(
   "lswap_subst",
   ``lswap p ([M/v]N) = [lswap p M/lswapstr p v](lswap p N)``,
@@ -301,13 +362,6 @@ val ccbeta_gen_ind = store_thm(
     SRW_TAC [][]
   ]);
 
-val all_fnone = prove(
-  ``(!(f:one -> 'a). P f) = !x:'a. P (K x)``,
-  SRW_TAC [][EQ_IMP_THM] THEN
-  Q_TAC SUFF_TAC `f = K (f())`
-        THEN1 (DISCH_THEN SUBST1_TAC THEN SRW_TAC [][]) THEN
-  SRW_TAC [][FUN_EQ_THM, oneTheory.one]);
-
 val ccbeta_ind = save_thm(
   "ccbeta_ind",
   (Q.GEN `P` o Q.GEN `X` o
@@ -321,10 +375,10 @@ val ccbeta_ind = save_thm(
 val beta_substitutive = store_thm(
   "beta_substitutive",
   ``substitutive beta``,
-  SRW_TAC [][substitutive_def, beta_def] THEN
-  Q_TAC (NEW_TAC "z") `{v; x} UNION FV body UNION FV arg UNION FV N` THEN
-  `LAM x body = LAM z ([VAR z/x] body)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  Q.EXISTS_TAC `z` THEN SRW_TAC [][SUB_THM, GENERAL_SUB_COMMUTE]);
+  SRW_TAC [][substitutive_def] THEN
+  Q.SPEC_THEN `v INSERT FV N` ASSUME_TAC beta_alt THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  Q.EXISTS_TAC `x` THEN SRW_TAC [][SUB_THM, GSYM substitution_lemma]);
 
 val cc_beta_subst = store_thm(
   "cc_beta_subst",

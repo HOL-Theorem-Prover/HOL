@@ -265,8 +265,8 @@ fun with_info_prove_recn_exists f nc_ty lookup info = let
                    recursion_exists0
   val precondition_discharged =
       CONV_RULE
-        (LAND_CONV (SIMP_CONV (srw_ss()) [fv_thm, GSYM rswap_thm, swapping,
-                                          swap_null, GSYM swap_thm]))
+        (LAND_CONV (SIMP_CONV (srw_ss()) [fv_thm, rswap_thm, swapping,
+                                          swap_null, swap_eql]))
         recursion_exists
 in
   MP precondition_discharged TRUTH

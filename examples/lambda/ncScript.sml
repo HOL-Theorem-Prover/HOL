@@ -16,7 +16,7 @@ struct
 
 open HolKernel Parse boolLib
      bossLib arithmeticTheory pred_setTheory dBTheory
-     BasicProvers
+     BasicProvers basic_swapTheory
 
 val _ = new_theory "nc";
 
@@ -736,7 +736,7 @@ val lemma =
  REWRITE_RULE [IN_UNION,IN_SING,DE_MORGAN_THM,IN_INSERT]
   (Q.prove(`?gv:string.
               ~(gv IN FV ^u UNION FV (u1:'a nc) UNION {x;x1})`,
-      MATCH_MP_TAC FRESH_string
+      MATCH_MP_TAC new_exists
         THEN REWRITE_TAC [FINITE_UNION,FINITE_FV,FINITE_SING,
                           IN_INSERT,FINITE_INSERT,FINITE_EMPTY]));
 
@@ -785,7 +785,7 @@ val nc_INDUCTION2 = Q.store_thm (
      ==>
          !u. P u`,
  REPEAT GEN_TAC THEN STRIP_TAC THEN nc_INDUCT_TAC THEN RW_TAC std_ss []
- THEN MP_TAC (Q.SPEC `FV ^u UNION X` FRESH_string)
+ THEN MP_TAC (Q.SPEC `FV ^u UNION X` new_exists)
  THEN SRW_TAC [][]
  THEN PROVE_TAC [SIMPLE_ALPHA]);
 
@@ -1052,18 +1052,6 @@ val _ = BasicProvers.export_rewrites ["nc_DISTINCT",
                                       "nc_INJECTIVITY", "LAM_VAR_INJECTIVE"];
 
 
-val NEW_ELIM_RULE = store_thm(
-  "NEW_ELIM_RULE",
-  ``!P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
-          P (NEW X)``,
-  PROVE_TAC [dBTheory.NEW_FRESH_string]);
-
-val NEW_ELIM_RULE_SUBSET = store_thm(
-  "NEW_ELIM_RULE_SUBSET",
-  ``!P X Y. FINITE X /\ Y SUBSET X /\ (!v:string. ~(v IN Y) ==> P v) ==>
-            P (NEW X)``,
-  PROVE_TAC [dBTheory.NEW_FRESH_string, pred_setTheory.SUBSET_DEF]);
-
 val FV_SUB = store_thm(
   "FV_SUB",
   ``!t u v. FV ([t/v] u) = if v IN FV u then FV t UNION (FV u DELETE v)
@@ -1103,7 +1091,7 @@ val size_isub = store_thm(
            SRW_TAC [][FINITE_FVS, FINITE_DOM, FINITE_FV]) THEN
     Q.ABBREV_TAC `z = NEW avds` THEN
     `~(z IN avds)`
-        by (Q.UNABBREV_TAC `z` THEN SRW_TAC [][NEW_FRESH_string]) THEN
+        by (Q.UNABBREV_TAC `z` THEN SRW_TAC [][NEW_def]) THEN
     `~(z IN FVS R) /\ ~(z IN DOM R) /\ ~(z IN FV t)`
         by (Q.UNABBREV_TAC `z` THEN Q.UNABBREV_TAC `avds` THEN
             SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN

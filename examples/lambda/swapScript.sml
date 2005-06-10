@@ -6,86 +6,7 @@ val _ = new_theory "swap"
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 
-open ncTheory NEWLib pred_setTheory
-
-(* ----------------------------------------------------------------------
-    Basic swapping on strings
-   ---------------------------------------------------------------------- *)
-
-val swapstr_def = Define`
-  swapstr x y (s:string) = if s = x then y else if s = y then x else s
-`;
-
-val swapstr_inverse = store_thm(
-  "swapstr_inverse",
-  ``(swapstr x y (swapstr x y s) = s) /\
-    (swapstr x y (swapstr y x s) = s)``,
-  SRW_TAC [][swapstr_def] THEN REPEAT (POP_ASSUM MP_TAC) THEN
-  SRW_TAC [][] THEN PROVE_TAC []);
-val _ = export_rewrites ["swapstr_inverse"]
-
-val swapstr_comm = store_thm(
-  "swapstr_comm",
-  ``swapstr x y s = swapstr y x s``,
-  SRW_TAC [][swapstr_def]);
-
-val swapstr_11 = store_thm(
-  "swapstr_11",
-  ``((swapstr x y s1 = swapstr x y s2) = (s1 = s2)) /\
-    ((swapstr x y s1 = swapstr y x s2) = (s1 = s2))``,
-  SRW_TAC [][swapstr_def] THEN PROVE_TAC []);
-val _ = export_rewrites ["swapstr_11"]
-
-val swapstr_id = store_thm(
-  "swapstr_id",
-  ``swapstr x x s = s``,
-  SRW_TAC [][swapstr_def]);
-val _ = export_rewrites ["swapstr_id"]
-
-fun simp_cond_tac (asl, g) = let
-  val eqn = find_term (fn t => is_eq t andalso is_var (lhs t) andalso
-                               is_var (rhs t)) g
-in
-  ASM_CASES_TAC eqn THEN TRY (POP_ASSUM SUBST_ALL_TAC) THEN
-  ASM_SIMP_TAC bool_ss []
-end (asl, g)
-val swapstr_swapstr = store_thm(
-  "swapstr_swapstr",
-  ``swapstr (swapstr x y u) (swapstr x y v) (swapstr x y s) =
-    swapstr x y (swapstr u v s)``,
-  REWRITE_TAC [swapstr_def] THEN
-  REPEAT simp_cond_tac);
-val _ = export_rewrites ["swapstr_swapstr"]
-
-val swapstr_swapstr2 = store_thm(
-  "swapstr_swapstr2",
-  ``swapstr x y (swapstr (swapstr x y a) (swapstr x y b) s) =
-    swapstr a b (swapstr x y s)``,
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [GSYM swapstr_swapstr])) THEN
-  REWRITE_TAC [swapstr_inverse]);
-val _ = export_rewrites ["swapstr_swapstr2"]
-
-val swapstr_eq_normalise = store_thm(
-  "swapstr_eq_normalise",
-  ``(s = swapstr x y t) = (swapstr x y s = t)``,
-  SRW_TAC [][swapstr_def] THEN PROVE_TAC []);
-val _ = export_rewrites ["swapstr_eq_normalise"]
-
-val swapstr_identity = store_thm(
-  "swapstr_identity",
-  ``~(x = s) /\ ~(y = s) ==>
-    (swapstr x y s = s) /\ ((swapstr x y t = s) = (t = s))``,
-  SRW_TAC [][swapstr_def]);
-val _ = export_rewrites ["swapstr_identity"]
-
-val swapstr_rewrites = store_thm(
-  "swapstr_rewrites",
-  ``(swapstr x y y = x) /\ (swapstr x y x = y)``,
-  SRW_TAC [][swapstr_def]);
-val _ = export_rewrites ["swapstr_rewrites"]
-
-
-
+open basic_swapTheory ncTheory NEWLib pred_setTheory
 
 (* ----------------------------------------------------------------------
     Swapping over sets of strings
@@ -130,6 +51,12 @@ val swapset_INSERT = store_thm(
   SRW_TAC [][swapset_def]);
 val _ = export_rewrites ["swapset_INSERT"]
 
+val swapset_DELETE = store_thm(
+  "swapset_DELETE",
+  ``swapset u v (s DELETE x) = swapset u v s DELETE swapstr u v x``,
+  SRW_TAC [][swapset_def, EXTENSION, GSYM swapstr_eq_left]);
+val _ = export_rewrites ["swapset_DELETE"]
+
 val swapset_FINITE = store_thm(
   "swapset_FINITE",
   ``FINITE (swapset x y s) = FINITE s``,
@@ -144,8 +71,9 @@ val IN_swapset_lemma = prove(
 
 val swapstr_IN_swapset0 = prove(
   ``swapstr x y s IN swapset x y set = s IN set``,
-  SIMP_TAC (srw_ss()) [IN_swapset_lemma, swapstr_def] THEN
-  MAP_EVERY Cases_on [`s = x`, `s = y`] THEN SRW_TAC [][]);
+  SIMP_TAC (srw_ss()) [IN_swapset_lemma] THEN
+  MAP_EVERY Cases_on [`s = x`, `s = y`] THEN SRW_TAC [][] THEN
+  SRW_TAC [][swapstr_def]);
 
 val IN_swapset = store_thm(
   "IN_swapset",
@@ -200,10 +128,10 @@ val swap_comm = store_thm(
 
 val fresh_var_swap = store_thm(
   "fresh_var_swap",
-  ``!t v u. ~(v IN FV t) ==> ([VAR v/u] t = swap v u t)``,
+  ``!t. ~(v IN FV t) ==> ([VAR v/u] t = swap v u t)``,
   HO_MATCH_MP_TAC nc_INDUCTION THEN REPEAT CONJ_TAC THENL [
     SRW_TAC [][SUB_THM, swap_def],
-    SRW_TAC [][SUB_VAR, swap_def, swapstr_def],
+    SRW_TAC [][SUB_VAR, swap_def] THEN SRW_TAC [][swapstr_def],
     SRW_TAC [][SUB_THM, swap_def],
     REPEAT STRIP_TAC THEN SRW_TAC [][swap_def] THEN
     NEW_ELIM_TAC THEN Q.X_GEN_TAC `w` THEN STRIP_TAC THENL [
@@ -219,6 +147,9 @@ val fresh_var_swap = store_thm(
     ]
   ]);
 
+val delete_non_element = prove(
+  ``~(x IN s) ==> (s DELETE x = s)``,
+  PROVE_TAC [DELETE_NON_ELEMENT]);
 
 val FV_swap = store_thm(
   "FV_swap",
@@ -226,17 +157,9 @@ val FV_swap = store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION THEN REPEAT CONJ_TAC THEN
   SRW_TAC [][swap_def, swapset_UNION] THEN
   NEW_ELIM_TAC THEN Q.X_GEN_TAC `w` THEN SRW_TAC [][] THENL [
-    SRW_TAC [][FV_SUB] THENL [
-      `~(w = x)` by PROVE_TAC [] THEN
-      SRW_TAC [][swapset_UNION] THEN
-      `swapstr u v w = w` by SRW_TAC [][] THEN
-      SRW_TAC [][dBTheory.UNION_DELETE] THEN
-      SRW_TAC [][GSYM DELETE_NON_ELEMENT],
-      `FV t DELETE x = FV t`
-         by SRW_TAC [][GSYM DELETE_NON_ELEMENT] THEN
-      SRW_TAC [][GSYM DELETE_NON_ELEMENT]
-    ],
-    SRW_TAC [][lemma14a, EXTENSION, EQ_IMP_THM]
+    SRW_TAC [][FV_SUB, swapset_UNION, dBTheory.UNION_DELETE,
+               delete_non_element],
+    SRW_TAC [][lemma14a]
   ]);
 val _ = export_rewrites ["FV_swap"]
 
@@ -278,14 +201,13 @@ val swap_vsubst = store_thm(
           NEW_ELIM_TAC THEN Q.X_GEN_TAC `a` THEN
           STRIP_TAC THENL [
             ASM_SIMP_TAC (srw_ss()) [] THEN
-            Q.ABBREV_TAC `uv'x = swapstr u v' x` THEN
-            Q.ABBREV_TAC `uv'y = swapstr u v' y` THEN
-            `~(a IN FV ([VAR uv'x/uv'y] (swap u v' M)))`
-               by (`[VAR uv'x/uv'y] (swap u v' M) = swap u v' ([VAR x/y] M)`
-                       by SRW_TAC [][] THEN
-                   POP_ASSUM SUBST_ALL_TAC THEN
-                   ASM_SIMP_TAC (srw_ss()) []) THEN
-            ASM_SIMP_TAC (srw_ss()) [GSYM SIMPLE_ALPHA],
+            MATCH_MP_TAC (GSYM SIMPLE_ALPHA) THEN
+            `[VAR (swapstr u v' x)/swapstr u v' y] (swap u v' M) =
+             swap u v' ([VAR x/y] M)`
+               by SRW_TAC [][] THEN
+            POP_ASSUM SUBST_ALL_TAC THEN
+            SIMP_TAC (srw_ss()) [] THEN
+            SRW_TAC [][],
             ASM_SIMP_TAC (srw_ss()) [lemma14a]
           ]) THEN
     POP_ASSUM SUBST_ALL_TAC THEN
@@ -294,10 +216,10 @@ val swap_vsubst = store_thm(
       `~(a IN FV (swap u v' M))` by ASM_SIMP_TAC (srw_ss()) [] THEN
       ASM_SIMP_TAC (srw_ss())[GSYM SIMPLE_ALPHA] THEN
       MATCH_MP_TAC (GSYM (last (CONJUNCTS SUB_THM))) THEN
-      SRW_TAC [][],
+      SRW_TAC [][GSYM swapstr_eq_left],
       ASM_SIMP_TAC (srw_ss()) [lemma14a] THEN
       MATCH_MP_TAC (GSYM (last (CONJUNCTS SUB_THM))) THEN
-      SRW_TAC [][]
+      SRW_TAC [][GSYM swapstr_eq_left]
     ]
   ]);
 
@@ -318,17 +240,18 @@ val swap_thm = store_thm(
     (swap x y (t @@ u) = swap x y t @@ swap x y u) /\
     (swap x y (LAM v t) = LAM (swapstr x y v) (swap x y t))``,
   SRW_TAC [][swap_LAM] THEN SRW_TAC [][swap_def]);
+val _ = export_rewrites ["swap_thm"]
 
 val swap_swap = store_thm(
   "swap_swap",
   ``!t u v x y. swap (swapstr x y u) (swapstr x y v) (swap x y t) =
                 swap x y (swap u v t)``,
   HO_MATCH_MP_TAC nc_INDUCTION THEN REPEAT CONJ_TAC THENL [
-    SRW_TAC [][swap_thm],
-    SRW_TAC [][swap_thm],
-    REPEAT STRIP_TAC THEN SIMP_TAC (srw_ss()) [swap_thm] THEN
+    SRW_TAC [][],
+    SRW_TAC [][],
+    REPEAT STRIP_TAC THEN SIMP_TAC (srw_ss()) [] THEN
     CONJ_TAC THEN FIRST_ASSUM MATCH_ACCEPT_TAC,
-    SRW_TAC [][swap_thm] THEN
+    SRW_TAC [][] THEN
     METIS_TAC [lemma14a]
   ]);
 val _ = export_rewrites ["swap_swap"]
@@ -378,20 +301,11 @@ val swap_subst = store_thm(
   "swap_subst",
   ``!M N v x y.
       swap x y ([N/v] M) = [swap x y N / swapstr x y v] (swap x y M)``,
-  HO_MATCH_MP_TAC pvh_induction THEN REPEAT STRIP_TAC THENL [
-    SRW_TAC [][SUB_VAR, swap_thm],
-    SRW_TAC [][SUB_THM, swap_thm],
-    SRW_TAC [][SUB_THM, swap_thm],
-    Q_TAC (NEW_TAC "z") `{v; v'; x; y} UNION FV M UNION FV N` THEN
-    `LAM v M = LAM z ([VAR z/v] M)` by SRW_TAC [][ALPHA] THEN
-    Q.ABBREV_TAC `M' = [VAR z/v] M` THEN
-    `size M' = size M` by SRW_TAC [][Abbr`M'`] THEN
-    ASM_SIMP_TAC (srw_ss()) [SUB_THM] THEN
-    ASM_SIMP_TAC (srw_ss()) [swap_thm] THEN
-    `~(z IN FV (swap x y N))` by SRW_TAC [][] THEN
-    `~(swapstr x y v = z)` by SRW_TAC [][] THEN
-    ASM_SIMP_TAC (srw_ss()) [SUB_THM]
-  ]);
+  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `M` THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;y;v} UNION FV N` THEN
+  SRW_TAC [][SUB_VAR, SUB_THM] THEN
+  `~(y' = swapstr x y v)` by SRW_TAC [][swapstr_def] THEN
+  SRW_TAC [][SUB_THM]);
 
 val swap_subst_out = store_thm(
   "swap_subst_out",
@@ -402,42 +316,36 @@ val swap_11 = store_thm(
   "swap_11",
   ``((swap x y t1 = swap x y t2) = (t1 = t2)) /\
     ((swap x y t1 = swap y x t2) = (t1 = t2))``,
-  Q_TAC SUFF_TAC `!t1 t2. (swap x y t1 = swap x y t2) = (t1 = t2)` THEN1
-        METIS_TAC [swap_comm] THEN
-  HO_MATCH_MP_TAC pvh_induction THEN REPEAT STRIP_TAC THEN
-  Q.SPEC_THEN `t2` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][swap_thm] THEN EQ_TAC THENL [
-    Cases_on `v = x'` THENL [
-      SRW_TAC [][],
-      `~(swapstr x y v = swapstr x y x')` by SRW_TAC [][] THEN STRIP_TAC THEN
-      `~(v IN FV u) /\ ~(x' IN FV t1)`
-          by (IMP_RES_TAC LAM_INJ_ALPHA_FV THEN
-              FULL_SIMP_TAC (srw_ss()) []) THEN
-      FIRST_X_ASSUM (MP_TAC o MATCH_MP INJECTIVITY_LEMMA1) THEN
-      SRW_TAC [][swap_subst_out, swap_thm, FV_swap, SIMPLE_ALPHA]
-    ],
-    Cases_on `v = x'` THENL [
-      SRW_TAC [][],
-      STRIP_TAC THEN
-      `~(v IN FV u) /\ ~(x' IN FV t1)` by METIS_TAC [LAM_INJ_ALPHA_FV] THEN
-      `t1 = [VAR v/x'] u` by PROVE_TAC [INJECTIVITY_LEMMA1] THEN
-      ` _ = swap v x' u` by PROVE_TAC [fresh_var_swap] THEN
-      `swap x y t1 = swap (swapstr x y v) (swapstr x y x') (swap x y u)`
-           by SRW_TAC [][] THEN
-      POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][swap_ALPHA]
-    ]
-  ]);
+  METIS_TAC [swap_comm, swap_inverse]);
 val _ = export_rewrites ["swap_11"]
 
-val swap_induction = store_thm(
-  "swap_induction",
-  ``!P. (!s. P (VAR s)) /\ (!k. P (CON k)) /\
-        (!t u. P t /\ P u ==> P(t @@ u)) /\
-        (!v t. (!u. ~(u IN FV t) ==> P(swap u v t)) ==> P (LAM v t)) ==>
-        !t. P t``,
-  GEN_TAC THEN STRIP_TAC THEN
-  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [][] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][GSYM fresh_var_swap]);
+val swap_eql = store_thm(
+  "swap_eql",
+  ``(swap x y t = u) = (t = swap x y u)``,
+  METIS_TAC [swap_inverse]);
+
+val swap_eq_var = store_thm(
+  "swap_eq_var",
+  ``((swap x y t = VAR s) = (t = VAR (swapstr x y s))) /\
+    ((VAR s = swap x y t) = (VAR (swapstr x y s) = t))``,
+  SRW_TAC [][swap_eql] THEN SRW_TAC [][GSYM swap_eql]);
+val swap_eq_app = store_thm(
+  "swap_eq_app",
+  ``((swap x y t = M @@ N) = (t = swap x y M @@ swap x y N)) /\
+    ((M @@ N = swap x y t) = (swap x y M @@ swap x y N = t))``,
+  SRW_TAC [][swap_eql] THEN SRW_TAC [][GSYM swap_eql]);
+val swap_eq_con = store_thm(
+  "swap_eq_con",
+  ``((swap x y t = CON k) = (t = CON k)) /\
+    ((CON k = swap x y t) = (CON k = t))``,
+  SRW_TAC [][swap_eql] THEN SRW_TAC [][GSYM swap_eql]);
+val swap_eq_lam = store_thm(
+  "swap_eq_lam",
+  ``((swap x y t = LAM v M) = (t = LAM (swapstr x y v) (swap x y M))) /\
+    ((LAM v M = swap x y t) = (LAM (swapstr x y v) (swap x y M) = t))``,
+  SRW_TAC [][swap_eql] THEN SRW_TAC [][GSYM swap_eql]);
+val _ = export_rewrites ["swap_eq_var", "swap_eq_con", "swap_eq_app",
+                         "swap_eq_lam"]
 
 (* ----------------------------------------------------------------------
     supporting recursion over lambda calculus terms using swap
@@ -446,10 +354,7 @@ val swap_induction = store_thm(
 val swapping_def = Define`
   swapping f fv =
     (!x z. f x x z = z) /\
-    (* (!x y u v z. f x y (f u v z) =
-                   f (swapstr x y u) (swapstr x y v) (f x y z)) /\ *)
     (!x y z. f x y (f x y z) = z) /\
-    (* (!x y z z'. (f x y z = f x y z') = (z = z')) /\ *)
     (!x y z. ~(x IN fv z) /\ ~(y IN fv z) ==> (f x y z = z)) /\
     (!x y z s. s IN fv (f x y z) = swapstr x y s IN fv z)
 `
@@ -490,7 +395,7 @@ val nc_swapping = store_thm(
 val str_swapping = store_thm(
   "str_swapping",
   ``swapping swapstr (\s. {s})``,
-  REWRITE_TAC [swapping_def] THEN SRW_TAC [][]);
+  REWRITE_TAC [swapping_def] THEN SRW_TAC [][swapstr_eq_left]);
 
 val swapping_implies_empty_swap = store_thm(
   "swapping_implies_empty_swap",
@@ -615,15 +520,7 @@ val swap_RECURSION_pgeneric = store_thm(
             SRW_TAC [][],
             REPEAT STRIP_TAC THEN
             Cases_on `x = y` THEN1 SRW_TAC [][] THEN
-            Q.SPEC_THEN `{x;y;v} UNION FV t UNION X UNION pFV p`
-                        MP_TAC dBTheory.FRESH_string THEN
-            CONV_TAC
-              (LAND_CONV
-                 (SIMP_CONV
-                    (srw_ss())
-                    [Q.ASSUME `FINITE (X:string set)`,
-                     Q.ASSUME `!p:'b. FINITE (pFV p:string set)`])) THEN
-            DISCH_THEN (Q.X_CHOOSE_THEN `z` STRIP_ASSUME_TAC) THEN
+            Q_TAC (NEW_TAC "z") `{x;y;v} UNION FV t UNION X UNION pFV p` THEN
             `LAM v t = LAM z ([VAR z/v] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN
             Q.ABBREV_TAC `M = [VAR z/v] t` THEN
             `size t = size M` by SRW_TAC [][Abbr`M`] THEN
@@ -705,8 +602,6 @@ val swap_RECURSION_pgeneric = store_thm(
     SRW_TAC [][]
   ]);
 
-
-
 val one_eta = prove(
   ``(\u. f ()) = f``,
   SRW_TAC [][FUN_EQ_THM] THEN Cases_on `u` THEN SRW_TAC [][]);
@@ -751,10 +646,9 @@ val swap_RECURSION_simple = save_thm(
    Q.INST [`rswap` |-> `\x y z. z`, `rFV` |-> `K {}`])
     swap_RECURSION_nosideset);
 
-val lswapstr_def = Define`
-  (lswapstr [] s = s) /\
-  (lswapstr (h::t) s = swapstr (FST h) (SND h) (lswapstr t s))
-`;
+(* ----------------------------------------------------------------------
+    list swap
+   ---------------------------------------------------------------------- *)
 
 val lswap_def = Define`
   (lswap [] t = t) /\
@@ -770,99 +664,17 @@ val lswap_thm = store_thm(
   Induct_on `p` THEN SRW_TAC [][lswap_def, lswapstr_def, swap_thm]);
 val _ = export_rewrites ["lswap_thm"]
 
-(* examples
+val lswap_inverse = store_thm(
+  "lswap_inverse",
+  ``!t. (lswap (REVERSE p) (lswap p t) = t) /\
+        (lswap p (lswap (REVERSE p) t) = t)``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][])
+val _ = export_rewrites ["lswap_inverse"]
 
-* ENF *
-
-val enf_lam = ``\t' v t. t' /\ is_comb t ==> (rand t = VAR v) ==>
-                         v IN FV (rator t)``
-
-val g = ``!t' t x y v. ^enf_lam t' (swapstr x y v) (swap x y t) = ^enf_lam t' v t``
-
-val _ = SIMP_CONV (srw_ss()) [GSYM swap_thm] g
-
-val simple_recursor_lam = ``\t' v t : 'a nc. LAM v t'``
-val g = ``!t' t x y v. ^simple_recursor_lam (swap x y t') (swapstr x y v) (swap x y t) = swap x y (^simple_recursor_lam t' v t)``
-
-val _ = SIMP_CONV (srw_ss()) [GSYM swap_thm] g
-
-* SUBSTITUTION *
-
-open BasicProvers simpLib pred_setTheory boolSimps SingleStep NEWLib
-     ncTheory
-val pswap = ``\x y. (swapstr x y ## swap x y)``
-val pFV = ``\p : string # 'a nc. FST p INSERT FV (SND p)``
-
-val swap_if = prove(``swap x y (if p then q else r) =
-                      if p then swap x y q else swap x y r``,
-                    SRW_TAC [][])
-
-val pair_swapping = prove(
-  ``swapping (\x y. swapstr x y ## swap x y) (\p. FST p INSERT FV (SND p))``,
-  REWRITE_TAC [swapping_def] THEN
-  SIMP_TAC (srw_ss())[pairTheory.FORALL_PROD, swap_identity]);
-
-
-val forall_prod =
-    CONV_RULE (RHS_CONV (RENAME_VARS_CONV ["z", "M"])) pairTheory.FORALL_PROD
-
-val reorder = prove(
-  ``(?f: 'a -> 'b # 'c -> 'd.  P f) =
-    (?f: 'c -> 'b -> 'a -> 'd. P (\a bc. f (SND bc) (FST bc) a))``,
-  SRW_TAC [][EQ_IMP_THM] THEN TRY (metisLib.METIS_TAC []) THEN
-  Q.EXISTS_TAC `\c b a. f a (b, c)` THEN SRW_TAC [ETA_ss][]);
-
-val result0 =
-    (REWRITE_RULE [] o
-     CONV_RULE (LAND_CONV (EQT_INTRO o PROVE [])) o
-     CONV_RULE
-       (LAND_CONV (SIMP_CONV (srw_ss() ++ COND_elim_ss)
-                             [SUBSET_DEF, swap_thm, RIGHT_AND_OVER_OR,
-                              LEFT_AND_OVER_OR, DISJ_IMP_THM,
-                              swap_identity])) o
-     SIMP_RULE (srw_ss()) [forall_prod] o
-     SIMP_RULE (srw_ss()) [SUBSET_UNION, nc_swapping,
-                           swapfn_def, swap_thm, swap_if,
-                           pair_swapping, reorder] o
-     Q.INST [`X` |-> `{}`,
-             `app` |-> `\rt ru t u p. rt p @@ ru p`,
-             `con` |-> `\k p. CON k`,
-             `var` |-> `\s p . if s = FST p then SND p else VAR s`,
-             `lam` |-> `\rt u t p. LAM u (rt p)`,
-             `rswap` |-> `swap`, `rFV` |-> `FV`,
-             `pswap` |-> `^pswap`, `pFV` |-> `^pFV`] o
-     INST_TYPE [beta |-> ``:string # 'a nc``, gamma |-> ``:'a nc``])
-    swap_RECURSION_pgeneric
-
-val hom_def = new_specification ("hom_def", ["hom"], result0)
-
-val l14b = prove(
-  ``!t v M. ~(v IN FV t) ==> (hom M v t = t)``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][hom_def] THENL [
-    Q_TAC (NEW_TAC "z") `FV M UNION FV t UNION {v';v}` THEN
-    `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
-    SRW_TAC [][hom_def] THEN Cases_on `v' = v` THEN SRW_TAC [][],
-    Q_TAC (NEW_TAC "z") `FV M UNION FV t UNION {v}` THEN
-    `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
-    SRW_TAC [][hom_def]
-  ]);
-
-val hom_lam_eq_var = prove(
-  ``hom M v (LAM v t) = LAM v t``,
-  SRW_TAC [][l14b]);
-
-val l14a = prove(
-  ``!t v. hom (VAR v) v t = t``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][hom_def] THEN
-  Cases_on `v = v'` THEN1 SRW_TAC [][l14b] THEN
-  Q_TAC (NEW_TAC "z") `FV t UNION {v;v'}` THEN
-  `LAM v t = LAM z (swap z v t)` by SRW_TAC [][swap_ALPHA] THEN
-  SRW_TAC [][hom_def]);
-
-
-*)
-
-
-
+val lswap_NIL = store_thm(
+  "lswap_NIL",
+  ``lswap [] t = t``,
+  SRW_TAC [][lswap_def]);
+val _ = export_rewrites ["lswap_NIL"]
 
 val _ = export_theory();

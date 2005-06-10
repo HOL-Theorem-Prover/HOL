@@ -385,7 +385,7 @@ in
 end
 
 val strip_lab_commutes = prove(
-  ``!t v u. [VAR v/u] (strip_lab t) = strip_lab ([VAR v/u] t)``,
+  ``!t. [VAR v/u] (strip_lab t) = strip_lab ([VAR v/u] t)``,
   vsubst_tac strip_lab_thm THENL [
     `?k. t = CON k` by METIS_TAC [nc_CASES, is_const_thm] THEN
     FULL_SIMP_TAC (srw_ss()) [SUB_THM],
