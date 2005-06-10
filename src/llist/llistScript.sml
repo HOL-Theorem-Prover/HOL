@@ -11,13 +11,13 @@ app load ["boolSimps","pairSimps","combinSimps",
       optionTheory;
 *)
 open HolKernel boolLib Parse
-      SingleStep mesonLib Rsyntax Prim_rec simpLib
+      SingleStep mesonLib Prim_rec simpLib
       boolSimps pairSimps combinSimps optionSimps numSimps listSimps
-      metisLib optionTheory;
+      metisLib optionTheory pairTheory;
 
 open BasicProvers
 
-local open listTheory optionTheory pairTheory in end;
+local open listTheory in end;
 
 val is_pair = pairSyntax.is_pair
 
@@ -78,9 +78,11 @@ val ELIM_TAC = REPEAT (CHANGED_TAC ELIM1_TAC);
 
 val _ = new_theory "llist";
 
-(* representing type is :'a list -> 'a option *)
+(*---------------------------------------------------------------------------*)
+(* The representing type is :'a list -> 'a option                            *)
+(*---------------------------------------------------------------------------*)
 
-val lrep_take = Prim_rec.new_recursive_definition {
+val lrep_take = new_recursive_definition {
   rec_axiom = prim_recTheory.num_Axiom,
   def = ``(lrep_take f 0 = SOME []) /\
           (lrep_take f (SUC n) =
@@ -147,7 +149,7 @@ val LCONS = new_definition(
   "LCONS",
   ``LCONS h t = llist_abs (lcons_rep h (llist_rep t))``);
 
-val lbuildn_rep = Prim_rec.new_recursive_definition {
+val lbuildn_rep = new_recursive_definition {
   name = "lbuildn_rep",
   rec_axiom = prim_recTheory.num_Axiom,
   def = ``(lbuildn_rep (f:'a -> ('a # 'b) option) x 0 = SOME ([], x)) /\
@@ -527,10 +529,13 @@ val llist_Axiom_1 = Q.store_thm
   METIS_TAC [LHDTL_EQ_SOME]]);
 
 
-(* now we can define MAP  *)
-val LMAP = new_specification {
-  consts = [{const_name = "LMAP", fixity = Prefix}], name = "LMAP",
-  sat_thm = prove(
+(*---------------------------------------------------------------------------*)
+(*  Now we can define MAP                                                    *)
+(*---------------------------------------------------------------------------*)
+
+val LMAP = new_specification 
+("LMAP", ["LMAP"], 
+  prove(
     ``?LMAP. (!f. LMAP f LNIL = LNIL) /\
              (!f h t. LMAP f (LCONS h t) = LCONS (f h) (LMAP f t))``,
     ASSUME_TAC (GEN_ALL
@@ -547,10 +552,10 @@ val LMAP = new_specification {
                                  Q.SPEC `LCONS h t`) o
                  Q.SPEC `f`) THEN
       ASM_SIMP_TAC hol_ss [LHDTL_EQ_SOME]
-    ])};
+    ]));
 
 
-val LTAKE = Prim_rec.new_recursive_definition {
+val LTAKE = new_recursive_definition {
   def = ``(LTAKE 0 ll = SOME []) /\
           (LTAKE (SUC n) ll =
              option_case
@@ -667,10 +672,9 @@ val LLIST_BISIMULATION = store_thm(
     ]
   ]);
 
-val LAPPEND = new_specification{
-  consts = [{const_name = "LAPPEND", fixity = Prefix}],
-  name = "LAPPEND",
-  sat_thm = prove(
+val LAPPEND = new_specification
+ ("LAPPEND", ["LAPPEND"],
+  prove(
     ``?LAPPEND. (!x. LAPPEND LNIL x = x) /\
                (!h t x. LAPPEND (LCONS h t) x = LCONS h (LAPPEND t x))``,
     STRIP_ASSUME_TAC
@@ -693,7 +697,7 @@ val LAPPEND = new_specification{
         ASM_SIMP_TAC hol_ss [LHD_THM, LCONS_NOT_NIL]
       ],
       ASM_SIMP_TAC hol_ss [LHDTL_EQ_SOME, LCONS_NOT_NIL, LTL_THM, LHD_THM]
-    ])};
+    ]));
 
 val LMAP_APPEND = store_thm(
   "LMAP_APPEND",
@@ -1265,10 +1269,9 @@ val firstPelemAt_SUC = store_thm(
   FIRST_X_ASSUM (ASSUME_TAC o GEN_ALL o SIMP_RULE hol_ss [LNTH_THM] o
                  Q.SPEC `SUC q`) THEN ASM_MESON_TAC []);
 
-val LFILTER = new_specification {
-  name = "LFILTER",
-  consts = [{const_name = "LFILTER", fixity = Prefix}], 
-  sat_thm = prove(
+val LFILTER = new_specification 
+ ("LFILTER", ["LFILTER"], 
+  prove(
     ``?LFILTER.
         !P ll. LFILTER P ll = if never P ll then LNIL
                               else
@@ -1389,7 +1392,7 @@ val LFILTER = new_specification {
         ] THEN
         ASM_MESON_TAC [LHDTL_EQ_SOME]
       ]
-    ])};
+    ]));
 
 val LFILTER_THM = store_thm(
   "LFILTER_THM",
@@ -1450,10 +1453,9 @@ val firstPelemAt_CONS = store_thm(
     ]
   ]);
 
-val LFLATTEN = new_specification {
-  consts = [{const_name = "LFLATTEN", fixity = Prefix}],
-  name = "LFLATTEN",
-  sat_thm = prove(
+val LFLATTEN = new_specification 
+ ("LFLATTEN", ["LFLATTEN"],
+  prove(
     ``?LFLATTEN.
       !ll. LFLATTEN (ll:'a llist llist) =
              if LL_ALL ($= LNIL) ll then LNIL
@@ -1531,7 +1533,7 @@ val LFLATTEN = new_specification {
          GEN_TAC THEN EQ_TAC THEN ASM_SIMP_TAC hol_ss [firstPelemAt_CONS],
          ALL_TAC
        ] THEN ASM_SIMP_TAC hol_ss [LL_ALL_THM, LNTH_THM, LDROP_THM]
-     ])};
+     ]));
 
 
 val LFLATTEN_THM = store_thm(
@@ -1643,17 +1645,17 @@ val LZIP_THM = new_specification
                          (THE(LHD l1),THE(LHD l2)))``
          llist_Axiom_1
     in
-     STRIP_ASSUME_TAC (SIMP_RULE std_ss [FORALL_PROD] ax)
+     STRIP_ASSUME_TAC (SIMP_RULE hol_ss [FORALL_PROD] ax)
       THEN Q.EXISTS_TAC `CURRY g`
       THEN REWRITE_TAC [CURRY_DEF]
       THEN REPEAT CONJ_TAC THENL
       [ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
-         THEN RW_TAC std_ss [],
+         THEN RW_TAC hol_ss [],
        ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
-         THEN RW_TAC std_ss [],
+         THEN RW_TAC hol_ss [],
        REPEAT GEN_TAC THEN 
        POP_ASSUM (fn th => GEN_REWRITE_TAC LHS_CONV bool_rewrites [th])
-         THEN RW_TAC std_ss [LCONS_NOT_NIL,LTL_THM,LHD_THM]]
+         THEN RW_TAC hol_ss [LCONS_NOT_NIL,LTL_THM,LHD_THM]]
     end));
 
 
