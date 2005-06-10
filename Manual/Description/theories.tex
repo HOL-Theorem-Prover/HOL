@@ -662,15 +662,10 @@ and \ml{C},
 \begin{hol}
 \begin{verbatim}
    o_DEF |- f o g = (\x. f(g x))
-
    K_DEF |- K = (\x y. x)
-
    S_DEF |- S = (\f g x. f x(g x))
-
    I_DEF |- I = S K K
-
    W_DEF |- W = (\f x. f x x)
-
    C_DEF |- C = (\f x y. f y x)
 \end{verbatim}
 \end{hol}
@@ -688,10 +683,6 @@ and \ml{C},
    I_THM   |- !x. I x = x
    W_THM   |- !f x. W f x = f x x
    C_THM   |- !f x y. C f x y = f y x
-
-   I_o_ID  |- !f. (I o f = f) /\ (f o I = f)
-
-   K_o_THM |- (!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))
 \end{verbatim}
 \end{hol}
 
@@ -1681,11 +1672,11 @@ The factorial of a number is a primitive recursive definition.
 \paragraph{Function iteration}
 \index{FUNPOW, the HOL constant@\ml{FUNPOW}, the \HOL{} constant}
 
-The iterated application $f^n x$ of a function $f : \konst{num} \to
-\konst{num}$ is defined by primitive recursion. The definition
-(\ml{FUNPOW}) is tail-recursive. An alternative presentation of the
-recursion (\ml{FUNPOW\_SUC}) may be simpler to reason about in some
-cases.
+The iterated application $f^n x$ of a function $f : \alpha \to
+\alpha$ is defined by primitive recursion. The definition
+(\ml{FUNPOW}) is tail-recursive, which can be awkward to reason
+about. An alternative characterization (\ml{FUNPOW\_SUC}) may be easier 
+to apply when doing proofs.
 %
 \begin{hol}
 \begin{verbatim}
@@ -2816,11 +2807,12 @@ theory can be found in \theoryimp{rich\_list}.
 \subsection{Possibly infinite sequences (\theoryimp{llist})}
 
 \index{lazy lists, the HOL theory of@``lazy'' lists, the \HOL{} theory of|(}
+
 The theory \theoryimp{llist} contains the definition of a type of
 possibly infinite sequences.  This type is similar to the ``lazy
 lists'' of programming languages like Haskell, hence the name of the
 theory.  The \theoryimp{llist} theory has a number of constants that
-are analogous to constants in the theory of (necessarily finite)
+are analogous to constants in the theory of finite
 lists.  The \theoryimp{llist} versions of these constants have the
 same names, but with a capital `L\/' prepended.  Thus, some of the core
 constants in this theory are:
@@ -2843,72 +2835,104 @@ The type \ml{llist} is not inductive, and there is no primitive
 recursion theorem supporting the definition of functions that have
 domains of type \ml{llist}.  Rather, \ml{llist} is a coinductive type,
 and has an axiom that justifies the definition of (co-)recursive
-functions that map into the \ml{llist} type.  This axiom has the name
-\ml{llist\_Axiom}, and states
+functions that map \emph{into} the \ml{llist} type:
 \begin{hol}
 \begin{verbatim}
-   !f : 'a -> ('a # 'b) option.
-      ?g : 'a -> 'b llist.
-         (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
-         (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
+   llist_Axiom
+      |- !f : 'a -> ('a # 'b) option.
+           ?g : 'a -> 'b llist.
+             (!x. LHD (g x) = OPTION_MAP SND (f x)) /\
+             (!x. LTL (g x) = OPTION_MAP (g o FST) (f x))
 \end{verbatim}
 \end{hol}
 \noindent An equivalent form of the above is
 \begin{hol}
 \begin{verbatim}
-   !f. ?g.
-      !x. g x = case f x of
-                   NONE -> LNIL
+   llist_Axiom_1
+      |- !f. ?g.
+           !x. g x = 
+               case f x 
+                of NONE -> LNIL
                 || SOME (x',y) -> LCONS y (g x')
 \end{verbatim}
 \end{hol}
 
-Other constants in the theory \theoryimp{llist} include \texttt{LTAKE},
-\texttt{LDROP}, \texttt{LMAP}, \texttt{LFINITE} and
-\texttt{LFILTER}. Their types are
+Other constants in the theory \theoryimp{llist} include \ml{LMAP}, \ml{LFINITE},
+\ml{LNTH}, \ml{LTAKE}, \ml{LDROP}, and \ml{LFILTER}. Their types are
 %
 \index{mapping functions, in the HOL logic@mapping functions, in the \HOL{} logic!for possibly infinite sequences}
 \begin{hol}
 \begin{verbatim}
-   LTAKE   : num -> 'a llist -> 'a list
-   LDROP   : num -> 'a llist -> 'a llist
    LMAP    : ('a -> 'b) -> 'a llist -> 'b llist
    LFINITE : 'a llist -> bool
+   LNTH    : num -> 'a llist -> 'a option
+   LTAKE   : num -> 'a llist -> 'a list option
+   LDROP   : num -> 'a llist -> 'a llist option
    LFILTER : ('a -> bool) -> 'a llist -> 'a llist
 \end{verbatim}
 \end{hol}
 They are characterised by the following theorems
 \begin{hol}
 \begin{verbatim}
+   LMAP
+      |- (LMAP f LNIL = LNIL) /\
+         (LMAP f (LCONS h t) = LCONS (f h) (LMAP f t))
+   LFINITE_THM
+      |- (LFINITE LNIL = T) /\
+         (LFINITE (LCONS h t) = LFINITE t)
+   LNTH_THM
+      |- (!n. LNTH n LNIL = NONE) /\ 
+         (!h t. LNTH 0 (LCONS h t) = SOME h) /\
+         (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)
    LTAKE_THM
       |- (LTAKE 0 l = SOME []) /\
          (LTAKE (SUC n) LNIL = NONE) /\
          (LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t)
-
    LDROP_THM
       |- (LDROP 0 ll = SOME ll) /\
          (LDROP (SUC n) ll = NONE) /\
          (LDROP (SUC n) (LCONS h t) = LDROP n t)
-
-   LMAP
-      |- (LMAP f LNIL = LNIL) /\
-         (LMAP f (LCONS h t) = LCONS (f h) (LMAP f t))
-
-   LFINITE_THM
-      |- (LFINITE LNIL = T) /\
-         (LFINITE (LCONS h t) = LFINITE t)
-
    LFILTER_THM
       |- (LFILTER P LNIL = LNIL) /\
          (LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
-                                  else LFILTER P t)
+                                         else LFILTER P t)
 \end{verbatim}
 \end{hol}
+
+\paragraph{Concatenation}
+
+Two lazy lists may be concatenated by \ml{LAPPEND}. If the first lazy
+list is infinite, elements of the second are inaccessible in the
+result.  A lazy list of lazy lists can be flattened to a lazy list by
+\ml{LFLATTEN}. 
+\begin{hol}\begin{verbatim}
+   LAPPEND   
+      |- (!x. LAPPEND LNIL x = x) /\
+         (!h t x. LAPPEND (LCONS h t) x = LCONS h (LAPPEND t x))
+   LFLATTEN_THM
+      |- (LFLATTEN LNIL = LNIL) /\
+         (!tl. LFLATTEN (LCONS LNIL t) = LFLATTEN t) /\
+         (!h t tl. LFLATTEN (LCONS (LCONS h t) tl) =
+                      LCONS h (LFLATTEN (LCONS t tl)))
+\end{verbatim}\end{hol}
+
+\paragraph{Lists and lazy lists}
+
+Mapping back and forth from lists to lazy lists is accomplished
+by \ml{fromList} and \ml{toList}:
+\begin{hol}\begin{verbatim}
+   fromList
+      |- (fromList [] = LNIL) /\ 
+         (!h t. fromList (h::t) = LCONS h (fromList t))
+   toList_THM
+      |- (toList LNIL = SOME []) /\
+         (!h t. toList (LCONS h t) = OPTION_MAP (CONS h) (toList t))
+\end{verbatim}\end{hol}
 
 \paragraph{Proof principles}
 
 Finally, there are two very important proof principles for proving
-that two \texttt{llist} values are equal.  The first states that two
+that two \ml{llist} values are equal.  The first states that two
 sequences are equal if they return the same prefixes of length $n$ for
 all possible values of $n$:
 \begin{hol}
@@ -2951,7 +2975,7 @@ used.
 The theory \theoryimp{path}
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|(}
 \index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|(}
-defines a binary type operator $(\alpha,\beta)\texttt{path}$, which
+defines a binary type operator $(\alpha,\beta)\ml{path}$, which
 stands for possibly infinite paths of the following form
 \[
   \alpha_1 \stackrel{\beta_1}{\longrightarrow}
@@ -2960,12 +2984,12 @@ stands for possibly infinite paths of the following form
   \alpha_n \stackrel{\beta_n}{\longrightarrow}
   \alpha_{n+1} \stackrel{\beta_{n+1}}{\longrightarrow}  \cdots
   \]
-The \texttt{path} type is thus an appropriate model for reduction
+The \ml{path} type is thus an appropriate model for reduction
 sequences, where the $\alpha$ parameter corresponds to ``states'', and
 the $\beta$ parameter corresponds to the labels on the arrows.
 
-The model of $(\alpha,\beta)\texttt{path}$ is $\alpha \times
-((\alpha\times\beta)\texttt{llist})$.  The type of paths has two
+The model of $(\alpha,\beta)\ml{path}$ is $\alpha \times
+((\alpha\times\beta)\ml{llist})$.  The type of paths has two
 constructors:
 \begin{hol}
 \begin{verbatim}
@@ -2978,7 +3002,7 @@ state, and no transitions.  (Thus, the reduction sequence has
 ``stopped at'' this state.)  The \ml{pcons} constructor takes a state,
 a label, and a path, and returns a path which is now headed by the
 state argument, and which moves from that state via the label argument
-to the path.  Graphically, $\texttt{pcons}\;x\;l\;p$ is equal to
+to the path.  Graphically, $\ml{pcons}\;x\;l\;p$ is equal to
 \[
 x \stackrel{l}{\longrightarrow}
 \underbrace{p_1 \stackrel{l_1}{\longrightarrow} p_2
@@ -3001,7 +3025,7 @@ Other constants defined in theory \theoryimp{path} include
 \end{verbatim}
 \end{hol}
 
-The \texttt{first} function returns the first element of a path.
+The \ml{first} function returns the first element of a path.
 There always is such an element, and the defining equations are
 \begin{hol}
 \begin{verbatim}
@@ -3010,7 +3034,7 @@ There always is such an element, and the defining equations are
 \end{verbatim}
 \end{hol}
 
-On the other hand, the \texttt{last} function does not always have a
+On the other hand, the \ml{last} function does not always have a
 well-specified value, though it still has nice characterising
 equations:
 \begin{hol}
@@ -3020,9 +3044,9 @@ equations:
 \end{verbatim}
 \end{hol}
 
-The theorem for \texttt{finite} has a similar feel, but has a definite
-value (\texttt{F}, or \emph{false}) on infinite paths), whereas the
-value of \texttt{last} on such paths is unspecified:
+The theorem for \ml{finite} has a similar feel, but has a definite
+value (\ml{F}, or \emph{false}) on infinite paths), whereas the
+value of \ml{last} on such paths is unspecified:
 \begin{hol}
 \begin{verbatim}
    finite_thm |- (finite (stopped_at x) = T) /\
@@ -3030,7 +3054,7 @@ value of \texttt{last} on such paths is unspecified:
 \end{verbatim}
 \end{hol}
 
-The function \texttt{pconcat} concatenates two paths, linking them
+The function \ml{pconcat} concatenates two paths, linking them
 with a provided label.  If the first path is infinite, then the result
 is equal to that first path.  The defining equation is
 \begin{hol}
@@ -3042,9 +3066,9 @@ is equal to that first path.  The defining equation is
 \end{hol}
 %
 These equations are true even when the first argument to
-\texttt{pconcat} is an infinite path.
+\ml{pconcat} is an infinite path.
 
-The \texttt{okpath} predicate tests whether or not a path is a valid
+The \ml{okpath} predicate tests whether or not a path is a valid
 transition given a ternary transition relation.  Its characterising
 theorem is
 \begin{hol}
@@ -3546,7 +3570,7 @@ The normal interpretation of
 {\small\verb%{%}$t${\small\verb% | %}$p${\small\verb%}%} is
 the set of all $t$s such that $p$. In \HOL, such syntax parses to:
 %
-\texttt{GSPEC(\bs($x_1$,$\ldots$,$x_n$).($t$,$p$))}
+\ml{GSPEC(\bs($x_1$,$\ldots$,$x_n$).($t$,$p$))}
 %
 \noindent where $x_1, \ldots, x_n$ are those free variables that
 occur in both $t$ and $p$.  If there are no such free variables
