@@ -1295,10 +1295,9 @@ val FRESH_lists = store_thm(
   Induct THEN SRW_TAC [][] THENL [
     Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
     RES_TAC THEN
-    Q.SPEC_THEN `LIST_TO_SET l' UNION s` MP_TAC dBTheory.FRESH_string THEN
-    SRW_TAC [][] THEN
-    Q.EXISTS_TAC `x::l'` THEN
-    SRW_TAC [][]
+    Q_TAC (NEW_TAC "z") `LIST_TO_SET l' UNION s` THEN
+    Q.EXISTS_TAC `z::l'` THEN
+    FULL_SIMP_TAC (srw_ss()) []
   ]);
 
 val RENAMING_APPEND = store_thm(
