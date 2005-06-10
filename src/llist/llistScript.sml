@@ -7,11 +7,13 @@ app load ["boolSimps","pairSimps","combinSimps",
           "mesonLib","SingleStep", "Q", "numLib"];
 
  open SingleStep mesonLib Rsyntax Prim_rec simpLib
-      boolSimps pairSimps combinSimps optionSimps numSimps listSimps;
+      boolSimps pairSimps combinSimps optionSimps numSimps listSimps
+      optionTheory;
 *)
 open HolKernel boolLib Parse
       SingleStep mesonLib Rsyntax Prim_rec simpLib
-      boolSimps pairSimps combinSimps optionSimps numSimps listSimps;
+      boolSimps pairSimps combinSimps optionSimps numSimps listSimps
+      metisLib optionTheory;
 
 open BasicProvers
 
@@ -457,6 +459,10 @@ val lbuild_recurses = prove(
     Cases_on `lbuildn_rep f q (LENGTH pfx)` THEN SIMP_TAC hol_ss []
   ]);
 
+(*---------------------------------------------------------------------------*)
+(* Co-recursion theorem for lazy lists                                       *)
+(*---------------------------------------------------------------------------*)
+
 val llist_Axiom = store_thm(
   "llist_Axiom",
   ``!f : 'a -> ('a # 'b) option.
@@ -486,6 +492,7 @@ val LHD_EQ_NONE = store_thm(
   ``!ll. (LHD ll = NONE) = (ll = LNIL)``,
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
   SIMP_TAC hol_ss [LHD_THM, LCONS_NOT_NIL]);
+
 val LTL_EQ_NONE = store_thm(
   "LTL_EQ_NONE",
   ``!ll. (LTL ll = NONE) = (ll = LNIL)``,
@@ -497,6 +504,27 @@ val LHDTL_EQ_SOME = store_thm(
   ``!h t ll. (ll = LCONS h t) = (LHD ll = SOME h) /\ (LTL ll = SOME t)``,
   REPEAT GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
   SIMP_TAC hol_ss [LCONS_11, LCONS_NOT_NIL, LHD_THM, LTL_THM]);
+
+(*---------------------------------------------------------------------------*)
+(* Alternative version of llist_Axiom (more understandable)                  *)
+(*---------------------------------------------------------------------------*)
+
+val llist_Axiom_1 = Q.store_thm
+("llist_Axiom_1",
+ `!f :'a -> ('a#'b)option.
+     ?g:'a -> 'b llist. 
+       !x. g x = 
+            case f x
+             of NONE -> LNIL
+             || SOME (a,b) -> LCONS b (g a)`,
+ GEN_TAC THEN
+ STRIP_ASSUME_TAC (SPEC_ALL llist_Axiom) THEN 
+ Q.EXISTS_TAC `g` THEN 
+ GEN_TAC THEN (REPEAT CASE_TAC) THENL
+ [METIS_TAC [LHD_EQ_NONE,OPTION_MAP_DEF],
+  RULE_ASSUM_TAC SPEC_ALL THEN 
+  FULL_SIMP_TAC hol_ss [] THEN 
+  METIS_TAC [LHDTL_EQ_SOME]]);
 
 
 (* now we can define MAP  *)
@@ -1238,7 +1266,8 @@ val firstPelemAt_SUC = store_thm(
                  Q.SPEC `SUC q`) THEN ASM_MESON_TAC []);
 
 val LFILTER = new_specification {
-  consts = [{const_name = "LFILTER", fixity = Prefix}], name = "LFILTER",
+  name = "LFILTER",
+  consts = [{const_name = "LFILTER", fixity = Prefix}], 
   sat_thm = prove(
     ``?LFILTER.
         !P ll. LFILTER P ll = if never P ll then LNIL
