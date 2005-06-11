@@ -1,3 +1,4 @@
+(* this is an -*- sml -*- file *)
 open HolKernel Parse boolLib
 
 open bossLib metisLib
