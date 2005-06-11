@@ -5,7 +5,7 @@ open basic_swapTheory pred_setTheory nomsetTheory ncTheory
 
 local open swapTheory in end
 
-val _ = new_theory "labelledTerm";
+val _ = new_theory "labelledTerms";
 
 val _ = Hol_datatype `l0term = var of string
                               | app of l0term => l0term
