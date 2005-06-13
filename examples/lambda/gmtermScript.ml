@@ -325,6 +325,215 @@ val lemma15b = store_thm(
   ``~(v IN FV M) ==> ([VAR u/v]([VAR v/u] M) = M)``,
   SRW_TAC [][lemma15a]);
 
+(* ----------------------------------------------------------------------
+    size of a term 
+   ---------------------------------------------------------------------- *)
+
+val _ = hide "size"
+val size_def = Define`size t = nc$size (from_term t)`;
+
+val size_thm = store_thm(
+  "size_thm",
+  ``(size (VAR s) = 1) /\
+    (size (t @@ u) = size t + size u + 1) /\
+    (size (LAM v t) = size t + 1)``,
+  SRW_TAC [][size_def, ncTheory.size_thm, fromto_inverse, VAR_def, APP_def,
+             LAM_def]);
+val _ = export_rewrites ["size_thm"]
+
+val size_tpm = store_thm(
+  "size_tpm",
+  ``!t. size (tpm pi t) = size t``,
+  HO_MATCH_MP_TAC simple_induction THEN 
+  SRW_TAC [][]);
+val _ = export_rewrites ["size_tpm"]
+
+val size_vsubst = store_thm(
+  "size_vsubst",
+  ``!t. size ([VAR v/u] t) = size t``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  SRW_TAC [][SUB_THM, SUB_VAR]);
+val _ = export_rewrites ["size_vsubst"]
+
+(* ----------------------------------------------------------------------
+    proving a recursion theorem 
+   ---------------------------------------------------------------------- *)
+val gm_recursion = prove(
+  ``!var app lam. 
+      ?hom : term -> 'b.
+        (!s. hom (VAR s) = var s) /\
+        (!t u. hom (t @@ u) = app (hom t) (hom u) t u) /\
+        !v t. hom (LAM v t) = lam (\y. hom ([VAR y/v] t)) 
+                                  (\y. [VAR y/v] t)``,
+  REPEAT GEN_TAC THEN 
+  Q.SPECL_THEN [`\k. ARB`, `var`, 
+                `\rt ru t u. app rt ru (to_term t) (to_term u)`,
+                `\rf tf. lam rf (to_term o tf)`] MP_TAC
+               (INST_TYPE [alpha |-> ``:one``] nc_RECURSION) THEN 
+  DISCH_THEN (STRIP_ASSUME_TAC o CONJUNCT1 o CONV_RULE EXISTS_UNIQUE_CONV) THEN
+  Q.EXISTS_TAC `hom o from_term` THEN 
+  SRW_TAC [][VAR_def, APP_def, LAM_def, fromto_inverse, 
+             combinTheory.o_ABS_R, SUB_def]);
+
+val ABS_def = Define`ABS f = to_term (nc$ABS (from_term o f))`
+val _ = hide "ABS"
+
+val ABS_axiom = prove(
+  ``term$ABS (\y. [VAR y/v] t) = LAM v t``,
+  SRW_TAC [][LAM_def, ABS_def, SUB_def, combinTheory.o_ABS_R, 
+             fromto_inverse, VAR_def, ncTheory.ABS_DEF]);
+  
+
+val fresh_new_subst0 = prove(
+  ``FINITE X ==> 
+    ((let v = NEW (FV (LAM x u) UNION X) in f v ([VAR v/x] u)) = 
+     (let v = NEW (FV (LAM x u) UNION X) in f v (tpm [(v,x)] u)))``,
+  STRIP_TAC THEN NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN 
+  SRW_TAC [][] THEN SRW_TAC [][fresh_tpm_subst]);
+
+val lemma = (SIMP_RULE bool_ss [ABS_axiom, fresh_new_subst0,
+                                ASSUME ``FINITE (X:string set)``]o 
+             Q.INST [`lam` |-> 
+                        `\r t. let v = NEW (FV (term$ABS t) UNION X)
+                               in 
+                                 lam (r v) v (t v)`] o 
+             INST_TYPE [beta |-> alpha] o 
+             SPEC_ALL) gm_recursion
+
+val term_CASES = store_thm(
+  "term_CASES",
+  ``!t. (?s. t = VAR s) \/ (?t1 t2. t = t1 @@ t2) \/
+        (?v t0. t = LAM v t0)``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN METIS_TAC []);
+
+val pvh_induction = prove(
+  ``!P. (!s. P (VAR s)) /\ (!t u. P t /\ P u ==> P (t @@ u)) /\
+        (!v t. (!t'. (size t' = size t) ==> P t') ==> P (LAM v t)) ==> 
+        !t. P t``,
+  REPEAT STRIP_TAC THEN measureInduct_on `size t` THEN 
+  Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN 
+  FULL_SIMP_TAC (srw_ss()) [] THEN 
+  POP_ASSUM (fn th => FIRST_X_ASSUM MATCH_MP_TAC THEN ASSUME_TAC th) THEN 
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN 
+  SRW_TAC [numSimps.ARITH_ss][]);
+
+open pred_setTheory
+
+val swap_RECURSION = store_thm(
+  "swap_RECURSION",
+  ``swapping rswap rFV /\ FINITE X /\ 
+    (!s. rFV (var s) SUBSET s INSERT X) /\
+    (!t' u' t u.
+       rFV t' SUBSET FV t UNION X /\ rFV u' SUBSET FV u UNION X ==>
+       rFV (app t' u' t u) SUBSET FV t UNION FV u UNION X) /\
+    (!t' v t.
+       rFV t' SUBSET FV t UNION X ==>
+       rFV (lam t' v t) SUBSET FV t DELETE v UNION X) /\
+    (!k x y. ~(x IN X) /\ ~(y IN X) ==> (rswap x y (con k) = con k)) /\
+    (!s x y.
+       ~(x IN X) /\ ~(y IN X) ==>
+       (rswap x y (var s) = var (swapstr x y s))) /\
+    (!t t' u u' x y.
+       ~(x IN X) /\ ~(y IN X) ==>
+       (rswap x y (app t' u' t u) =
+        app (rswap x y t') (rswap x y u') (tpm [(x,y)] t) (tpm [(x,y)] u))) /\
+    (!t' t x y v.
+       ~(x IN X) /\ ~(y IN X) ==>
+       (rswap x y (lam t' v t) =
+        lam (rswap x y t') (swapstr x y v) (tpm[(x,y)] t))) ==>
+    ?hom.
+      ((!s. hom (VAR s) = var s) /\
+       (!t u. hom (t @@ u) = app (hom t) (hom u) t u) /\
+       !v t. ~(v IN X) ==> (hom (LAM v t) = lam (hom t) v t)) /\
+      (!t x y.
+         ~(x IN X) /\ ~(y IN X) ==>
+         (hom (tpm [(x,y)] t) = rswap x y (hom t))) /\
+      !t. rFV (hom t) SUBSET FV t UNION X``,
+  REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC lemma THEN 
+  Q.EXISTS_TAC `hom` THEN ASM_SIMP_TAC bool_ss [] THEN 
+  `!t. rFV (hom t) SUBSET FV t UNION X`
+     by (HO_MATCH_MP_TAC pvh_induction THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+         REPEAT CONJ_TAC THENL [
+           ASM_SIMP_TAC (srw_ss()) [INSERT_UNION_EQ],
+           REPEAT STRIP_TAC THEN NEW_ELIM_TAC THEN 
+           ASM_SIMP_TAC (srw_ss()) [] THEN Q.X_GEN_TAC `u` THEN 
+           REPEAT STRIP_TAC THENL [
+             SRW_TAC [][LET_THM] THEN 
+             `FV t DELETE v = FV (LAM v t)`  by SRW_TAC [][] THEN 
+             POP_ASSUM SUBST_ALL_TAC THEN 
+             `LAM v t = LAM u (tpm [(u,v)] t)` by SRW_TAC [][tpm_ALPHA] THEN 
+             POP_ASSUM SUBST1_TAC THEN SRW_TAC [][],
+             SRW_TAC [][LET_THM]
+           ]
+         ]) THEN 
+  ASM_REWRITE_TAC [] THEN 
+  `!x r. rswap x x r = r` by FULL_SIMP_TAC (srw_ss()) [swapping_def] THEN 
+  `!t x y. ~(x IN X) /\ ~(y IN X) ==> 
+           (hom (tpm [(x,y)] t) = rswap x y (hom t))` 
+     by (HO_MATCH_MP_TAC pvh_induction THEN REPEAT CONJ_TAC THEN
+         TRY (SRW_TAC [][] THEN NO_TAC) THEN 
+         REPEAT STRIP_TAC THEN 
+         Cases_on `x = y` THEN1 SRW_TAC [][] THEN 
+         Q_TAC (NEW_TAC "z") `{x;y;v} UNION FV t UNION X` THEN 
+         `LAM v t = LAM z ([VAR z/v] t)` by SRW_TAC [][SIMPLE_ALPHA] THEN 
+         Q.ABBREV_TAC `M = [VAR z/v] t` THEN 
+         `size t = size M` by SRW_TAC [][Abbr`M`] THEN 
+         Q.RM_ABBREV_TAC `M` THEN 
+         NTAC 2 (POP_ASSUM SUBST_ALL_TAC) THEN 
+         `hom (tpm [(x,y)] (LAM z M)) = rswap x y (lam (hom M) z M)`
+            by (SRW_TAC [][LET_THM] THEN 
+                NEW_ELIM_TAC THEN ASM_SIMP_TAC bool_ss [] THEN 
+                Q.X_GEN_TAC `a` THEN 
+                REVERSE (SRW_TAC [][]) THEN1 SRW_TAC [][] THEN 
+                Q.MATCH_ABBREV_TAC 
+                  `lam (rswap a z Y) a (tpm [(a,z)] M') = R` THEN 
+                `lam (rswap a z Y) a (tpm [(a,z)] M') = 
+                   lam (rswap a z Y) (swapstr a z z) (tpm [(a,z)] M')`
+                  by SRW_TAC [][] THEN 
+                ` _ = rswap a z (lam Y z M')`  
+                  by POP_ASSUM (fn th => SRW_TAC [][] THEN ASSUME_TAC th) THEN
+                POP_ASSUM SUBST1_TAC THEN 
+                MATCH_MP_TAC swapping_implies_identity_swap THEN 
+                Q.EXISTS_TAC `rFV` THEN ASM_REWRITE_TAC [] THEN 
+                `rFV (lam Y z M') SUBSET FV M' DELETE z UNION X`
+                   by (FIRST_ASSUM MATCH_MP_TAC THEN 
+                       FULL_SIMP_TAC (srw_ss()) 
+                                     [SUBSET_DEF, Abbr`Y`, Abbr`M'`, 
+                                      swapping_def]) THEN 
+                Q_TAC SUFF_TAC `~(a IN FV M' DELETE z UNION X) /\
+                                ~(z IN FV M' DELETE z UNION X)`
+                      THEN1 METIS_TAC [SUBSET_DEF] THEN 
+                SRW_TAC [][Abbr`M'`]) THEN 
+         POP_ASSUM SUBST_ALL_TAC THEN REPEAT AP_TERM_TAC THEN 
+         ASM_SIMP_TAC bool_ss [] THEN NEW_ELIM_TAC THEN 
+         ASM_REWRITE_TAC [] THEN Q.X_GEN_TAC `a` THEN 
+         REVERSE (SRW_TAC [][]) THEN1 SRW_TAC [][] THEN 
+         MATCH_MP_TAC EQ_TRANS THEN 
+         Q.EXISTS_TAC `rswap a z (lam (hom M) z M)` THEN CONJ_TAC THENL [
+           ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN 
+           MATCH_MP_TAC swapping_implies_identity_swap THEN 
+           Q.EXISTS_TAC `rFV` THEN ASM_REWRITE_TAC [] THEN 
+           `rFV (lam (hom M) z M) SUBSET FV (LAM z M) UNION X`
+             by SRW_TAC [][] THEN 
+           POP_ASSUM MP_TAC THEN SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN 
+           METIS_TAC [],
+           SRW_TAC [][]
+         ]) THEN 
+  ASM_SIMP_TAC bool_ss [] THEN SRW_TAC [][LET_THM] THEN 
+  NEW_ELIM_TAC THEN ASM_SIMP_TAC bool_ss [] THEN 
+  Q.X_GEN_TAC `u` THEN STRIP_TAC THENL [
+    `lam (rswap u v (hom t)) u (tpm [(u,v)] t) = rswap u v (lam (hom t) v t)`
+       by SRW_TAC [][] THEN 
+    POP_ASSUM SUBST_ALL_TAC THEN 
+    MATCH_MP_TAC swapping_implies_identity_swap THEN 
+    Q.EXISTS_TAC `rFV` THEN ASM_REWRITE_TAC [] THEN 
+    `rFV (lam (hom t) v t) SUBSET FV (LAM v t) UNION X`
+       by SRW_TAC [][] THEN 
+    POP_ASSUM MP_TAC THEN REWRITE_TAC [SUBSET_DEF] THEN SRW_TAC [][] THEN 
+    METIS_TAC [],
+    SRW_TAC [][]
+  ]);
+
 
 val _ = export_theory();
 
