@@ -59,13 +59,14 @@ sig
   (* Easy building of common kinds of ssdata objects                        *)
   (*------------------------------------------------------------------------*)
 
-  val Cong     : thm -> thm
-  val AC       : thm -> thm -> thm
+  val Cong        : thm -> thm
+  val AC          : thm -> thm -> thm
 
-  val rewrites : thm list -> ssdata
-  val dproc_ss : Traverse.reducer -> ssdata
-  val ac_ss    : (thm * thm) list -> ssdata
-  val merge_ss : ssdata list -> ssdata
+  val rewrites    : thm list -> ssdata
+  val dproc_ss    : Traverse.reducer -> ssdata
+  val ac_ss       : (thm * thm) list -> ssdata
+  val merge_ss    : ssdata list -> ssdata
+  val type_ssdata : string -> ssdata
 
    (* ---------------------------------------------------------------------
     * mk_simpset: Joins several ssdata fragments to make a simpset.

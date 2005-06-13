@@ -307,6 +307,17 @@ fun FULL_SIMP_TAC ss l =
          Q.ABBRS_THEN (fn l => ASSUM_LIST f THEN ASM_SIMP_TAC ss l) l
        end
 
+(* ----------------------------------------------------------------------
+    creating per-type ssdata values 
+   ---------------------------------------------------------------------- *)
+
+fun type_ssdata s = let 
+  val {rewrs, convs} = TypeBase.simpls_of s
+in
+  SIMPSET {convs = convs, rewrs = rewrs, filter = NONE,
+           dprocs = [], ac = [], congs = []}
+end 
+
 
 (* ---------------------------------------------------------------------
  * Pretty printer for Simpsets
