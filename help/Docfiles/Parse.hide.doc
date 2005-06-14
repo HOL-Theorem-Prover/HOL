@@ -31,8 +31,11 @@ Never fails.
 \COMMENTS
 The hiding of a constant only affects the quotation parser; the
 constant is still there in a theory.  Further, (re-)defining a string
-hidden with {hide} will reveal it once more.
+hidden with {hide} will reveal it once more.  The {hide} function's
+effect is temporary; it is not exported with a theory.  A more
+permanent hiding effect is possible with use of the
+{remove_ovl_mapping} function.
 
 \SEEALSO
-Parse.hidden, Parse.known_constants, Parse.reveal, Parse.set_known_constants, Parse.update_overload_maps.
+Parse.hidden, Parse.known_constants, Parse.remove_ovl_mapping,Parse.reveal, Parse.set_known_constants, Parse.update_overload_maps.
 \ENDDOC
