@@ -3,39 +3,28 @@
    GM base.  Does this by defining the predicate "const-free" *)
 
 open HolKernel Parse boolLib bossLib BasicProvers boolSimps NEWLib
-open ncTheory swapTheory
+open ncTheory swapTheory binderLib
 
 val _ = new_theory "term";
 
-val (constfree_rules, constfree_ind, constfree_cases) = Hol_reln`
-  (!s. constfree (nc$VAR s)) /\
-  (!M N. constfree M /\ constfree N ==> constfree (nc$@@ M N)) /\
-  (!v M. constfree M ==> constfree (nc$LAM v M))
+val (constfree_def, _) = define_recursive_term_function`
+  (constfree (nc$VAR s) = T) /\
+  (constfree (nc$CON k) = F) /\
+  (constfree (nc$@@ M N) = constfree M /\ constfree N) /\
+  (constfree (LAM v t) = constfree t)
 `;
+val _ = export_rewrites ["constfree_def"]
 
 val lswap_constfree = prove(
-  ``constfree (lswap pi t) = constfree t``,
-  Q_TAC SUFF_TAC `!t. constfree t ==> !pi. constfree (lswap pi t)`
-        THEN1 METIS_TAC [lswap_inverse] THEN
-  HO_MATCH_MP_TAC constfree_ind THEN SRW_TAC [][constfree_rules]);
+  ``!t. constfree (lswap pi t) = constfree t``,
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
 val _ = augment_srw_ss [rewrites [lswap_constfree]]
 
 val swap_constfree = prove(
   ``constfree (swap x y t) = constfree t``,
-  MP_TAC (Q.INST [`pi` |-> `[(x,y)]`] lswap_constfree) THEN
+  MP_TAC (Q.INST [`pi` |-> `[(x,y)]`] (SPEC_ALL lswap_constfree)) THEN
   REWRITE_TAC [lswap_def]);
 val _ = augment_srw_ss [rewrites [swap_constfree]]
-
-val constfree_thm = prove(
-  ``(constfree (nc$VAR s) = T) /\
-    (constfree (nc$CON k) = F) /\
-    (constfree (nc$@@ M N) = constfree M /\ constfree N) /\
-    (constfree (nc$LAM v M) = constfree M)``,
-  REPEAT CONJ_TAC THEN
-  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [constfree_cases])) THEN
-  SRW_TAC [][LAM_INJ_swap, EQ_IMP_THM] THEN SRW_TAC [][] THEN
-  METIS_TAC [swap_id]);
-val _ = augment_srw_ss [rewrites [constfree_thm]]
 
 val term_ax = new_type_definition(
   "term",
@@ -74,8 +63,9 @@ val from_term_11 = prove(
 val term_11 = store_thm(
   "term_11",
   ``((VAR s = VAR t) = (s = t)) /\
-    ((M1 @@ N1 = M2 @@ N2) = (M1 = M2) /\ (N1 = N2))``,
-  SRW_TAC [][VAR_def, APP_def, EQ_IMP_THM] THEN
+    ((M1 @@ N1 = M2 @@ N2) = (M1 = M2) /\ (N1 = N2)) /\
+    ((LAM v M1 = LAM v M2) = (M1 = M2))``,
+  SRW_TAC [][VAR_def, APP_def, LAM_def, EQ_IMP_THM] THEN
   POP_ASSUM (MP_TAC o AP_TERM ``from_term``) THEN
   SRW_TAC [][fromto_inverse] THEN
   FULL_SIMP_TAC (srw_ss()) [from_term_11]);
@@ -88,10 +78,6 @@ val term_disjoint = store_thm(
   POP_ASSUM (MP_TAC o AP_TERM ``from_term``) THEN
   SRW_TAC [][fromto_inverse]);
 val _ = export_rewrites ["term_disjoint"]
-
-val strong_constfree_ind =
-    IndDefRules.derive_strong_induction (CONJUNCTS constfree_rules,
-                                         constfree_ind)
 
 val simple_induction = store_thm(
   "simple_induction",
@@ -106,7 +92,7 @@ val simple_induction = store_thm(
                `M = to_term (from_term M)` by METIS_TAC [term_bij] THEN
                POP_ASSUM SUBST1_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
                SRW_TAC [][term_bij]) THEN
-  HO_MATCH_MP_TAC strong_constfree_ind THEN SRW_TAC [][] THENL [
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THENL [
     `(M = from_term (to_term M)) /\ (M' = from_term (to_term M'))`
       by METIS_TAC [term_bij] THEN
     NTAC 2 (POP_ASSUM SUBST1_TAC) THEN
@@ -188,6 +174,7 @@ val LAM_eq_thm = store_thm(
     AP_TERM_TAC THEN SRW_TAC [][fromto_inverse, LAM_INJ_swap,
                                 lswap_def]
   ]);
+val LAM_INJ_swap = save_thm("LAM_INJ_swap", LAM_eq_thm)
 
 val FV_tpm = store_thm(
   "FV_tpm",
@@ -314,6 +301,19 @@ val lemma14b = store_thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
+open pred_setTheory
+
+val lemma14c = store_thm(
+  "lemma14c",
+  ``!t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))``,
+  NTAC 2 GEN_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION2 THEN
+  Q.EXISTS_TAC `x INSERT FV t` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR, EXTENSION] THENL [
+    Cases_on `x IN FV u'` THEN SRW_TAC [][lemma14b] THEN METIS_TAC [],
+    Cases_on `x IN FV u` THEN SRW_TAC [][lemma14b] THEN METIS_TAC [],
+    METIS_TAC []
+  ]);
+
 val lemma15a = store_thm(
   "lemma15a",
   ``!M. ~(v IN FV M) ==> ([N/v]([VAR v/x]M) = [N/x]M)``,
@@ -324,6 +324,55 @@ val lemma15b = store_thm(
   "lemma15b",
   ``~(v IN FV M) ==> ([VAR u/v]([VAR v/u] M) = M)``,
   SRW_TAC [][lemma15a]);
+
+val FV_SUB = store_thm(
+  "FV_SUB",
+  ``!t u v. FV ([t/v] u) = if v IN FV u then FV t UNION (FV u DELETE v)
+                           else FV u``,
+  PROVE_TAC [lemma14b, lemma14c]);
+
+(* ----------------------------------------------------------------------
+    iterated substitutions (ugh)
+   ---------------------------------------------------------------------- *)
+
+val ISUB_def =
+ Define
+     `($ISUB t [] = t)
+  /\  ($ISUB t ((s,x)::rst) = $ISUB ([s/x]t) rst)`;
+
+val _ = set_fixity "ISUB" (Infixr 501);
+
+val DOM_DEF =
+ Define
+     `(DOM [] = {})
+  /\  (DOM ((x,y)::rst) = {y} UNION DOM rst)`;
+
+val FVS_DEF =
+ Define
+    `(FVS [] = {})
+ /\  (FVS ((t,x)::rst) = FV t UNION FVS rst)`;
+
+
+val FINITE_DOM = Q.store_thm("FINITE_DOM",
+ `!ss. FINITE (DOM ss)`,
+Induct THENL [ALL_TAC, Cases]
+   THEN RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]);
+val _ = export_rewrites ["FINITE_DOM"]
+
+
+val FINITE_FVS = Q.store_thm("FINITE_FVS",
+`!ss. FINITE (FVS ss)`,
+Induct THENL [ALL_TAC, Cases]
+   THEN RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]);
+val _ = export_rewrites ["FINITE_FVS"]
+
+val ISUB_LAM = store_thm(
+  "ISUB_LAM",
+  ``!R x. ~(x IN (DOM R UNION FVS R)) ==>
+          !t. (LAM x t) ISUB R = LAM x (t ISUB R)``,
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
+                           DOM_DEF, FVS_DEF, SUB_THM]);
 
 (* ----------------------------------------------------------------------
     size of a term
@@ -416,8 +465,6 @@ val pvh_induction = prove(
   POP_ASSUM (fn th => FIRST_X_ASSUM MATCH_MP_TAC THEN ASSUME_TAC th) THEN
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
   SRW_TAC [numSimps.ARITH_ss][]);
-
-open pred_setTheory
 
 val swap_RECURSION = store_thm(
   "swap_RECURSION",
@@ -532,6 +579,42 @@ val swap_RECURSION = store_thm(
     METIS_TAC [],
     SRW_TAC [][]
   ]);
+
+val swap_RECURSION_nosideset = save_thm(
+  "swap_RECURSION_nosideset",
+  SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION))
+
+val term_swapping = store_thm(
+  "term_swapping",
+  ``swapping (\x y t. tpm [(x,y)] t) FV``,
+  SRW_TAC [][swapping_def, tpm_fresh]);
+val _ = export_rewrites ["term_swapping"]
+
+val term_info_string =
+    "local\n\
+    \fun k |-> v = {redex = k, residue = v}\n\
+    \val term_info = \n\
+    \   {nullfv = ``LAM \"\" (VAR \"\")``,\n\
+    \    rewrites = [],\n\
+    \    inst = [\"rFV\" |-> (fn () => ``term$FV : term -> string set``),\n\
+    \            \"rswap\" |-> (fn () =>\n\
+    \                            ``\\(x:string) (y:string) (t:term).\n\
+    \                                   tpm [(x,y)] t``),\n\
+    \            \"apm\" |-> (fn () =>\n\
+    \                           ``term$tpm : (string # string) list -> \n\
+    \                                          term$term -> term$term``)]}\n\
+    \val _ = binderLib.range_database :=\n\
+    \          Binarymap.insert(!binderLib.range_database, \"term\", \n\
+    \                           term_info)\n\
+    \val _ = binderLib.type_db :=\n\
+    \          Binarymap.insert(!binderLib.type_db, \"term\",\n\
+    \                           swap_RECURSION_nosideset)\n\
+    \in end;\n"
+
+val _ = adjoin_to_theory
+        { sig_ps = NONE,
+          struct_ps =
+          SOME (fn pps => PP.add_string pps term_info_string)}
 
 
 val _ = export_theory();

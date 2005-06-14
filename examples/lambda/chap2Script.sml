@@ -5,8 +5,8 @@ open HolKernel Parse boolLib
 
 open bossLib binderLib
 
-open ncTheory fixedPointTheory pred_setTheory pred_setLib
-open swapTheory BasicProvers
+open fixedPointTheory pred_setTheory pred_setLib
+open termTheory BasicProvers
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
@@ -20,7 +20,6 @@ val _ = new_theory "chap2";
 
 val (ctxt_rules, ctxt_indn, ctxt_cases) =  (* p. 10 *)
   Hol_reln`(!s. ctxt (\x. VAR s))                       /\
-           (!c. ctxt (\x. CON c))                       /\
            ctxt (\x. x)                                 /\
            (!c1 c2. ctxt c1 /\ ctxt c2 ==>
                     ctxt (\x. c1 x @@ c2 x))            /\
@@ -29,7 +28,7 @@ val (ctxt_rules, ctxt_indn, ctxt_cases) =  (* p. 10 *)
 val constant_contexts_exist = store_thm(
   "constant_contexts_exist",
   ``!t. ctxt (\x. t)``,
-  HO_MATCH_MP_TAC ncTheory.simple_induction THEN REPEAT STRIP_TAC THEN
+  HO_MATCH_MP_TAC simple_induction THEN REPEAT STRIP_TAC THEN
   SRW_TAC [][ctxt_rules]);
 
 val (one_hole_context_rules, one_hole_context_ind, one_hole_context_cases) =
@@ -102,7 +101,7 @@ val fixed_point_thm = store_thm(  (* p. 14 *)
   Q.EXISTS_TAC `w @@ w` THEN
   `w @@ w == [w/x] (f @@ (VAR x @@ VAR x))` by PROVE_TAC [lam_eq_rules] THEN
   POP_ASSUM MP_TAC THEN
-  ASM_SIMP_TAC (srw_ss())[ncTheory.ALT_SUB_THM, lemma14b, lam_eq_rules]);
+  ASM_SIMP_TAC (srw_ss())[SUB_THM, lemma14b, lam_eq_rules]);
 
 (* properties of substitution - p19 *)
 
@@ -177,8 +176,8 @@ val lemma2_12 = store_thm( (* p. 19 *)
   ``(M == M' ==> [N/x]M == [N/x]M') /\
     (N == N' ==> [N/x]M == [N'/x]M) /\
     (M == M' /\ N == N' ==> [N/x]M == [N'/x]M')``,
-  Q.SUBGOAL_THEN `(!M M':'a nc. M == M' ==> !N x. [N/x]M == [N/x]M') /\
-                  (!N N':'a nc. N == N' ==> !M x. [N/x]M == [N'/x]M)`
+  Q.SUBGOAL_THEN `(!M M'. M == M' ==> !N x. [N/x]M == [N/x]M') /\
+                  (!N N'. N == N' ==> !M x. [N/x]M == [N'/x]M)`
      (fn th => STRIP_ASSUME_TAC th THEN SRW_TAC[][])
   THENL [
     CONJ_TAC THENL [
@@ -247,7 +246,7 @@ val lemma2_14 = store_thm(
   ]);
 
 val consistent_def =
-    Define`consistent (thy:'a nc -> 'a nc -> bool) = ?M N. ~thy M N`;
+    Define`consistent (thy:term -> term -> bool) = ?M N. ~thy M N`;
 
 val (asmlam_rules, asmlam_ind, asmlam_cases) = Hol_reln`
   (!M N. (M,N) IN eqns ==> asmlam eqns M N) /\
@@ -291,7 +290,7 @@ val alpha_lemma = prove(
   ``!x y u body.
        ~(y IN FV (LAM x u)) /\ (body = [VAR y/x]u) ==>
        (LAM x u = LAM y body)``,
-  PROVE_TAC [ALPHA]);
+  SRW_TAC [][] THEN SRW_TAC [][SIMPLE_ALPHA]);
 
 val lameq_asmlam = store_thm(
   "lameq_asmlam",
@@ -342,7 +341,7 @@ val lameq_K = store_thm(
   Q_TAC (NEW_TAC "x") `{"x"; "y"} UNION FV A UNION FV B` THEN
   Q_TAC (NEW_TAC "y") `{x; "x"; "y"} UNION FV A UNION FV B` THEN
   `K = LAM x (LAM y (VAR x))`
-     by SRW_TAC [][K_def, LAM_INJ_swap, swap_thm, basic_swapTheory.swapstr_def,
+     by SRW_TAC [][K_def, LAM_INJ_swap, basic_swapTheory.swapstr_def,
                    stringTheory.CHR_11] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   Q_TAC SUFF_TAC
@@ -353,7 +352,7 @@ val lameq_K = store_thm(
   CONJ_TAC THENL [
     Q_TAC SUFF_TAC `[A/x](LAM y (VAR x)) = LAM y A` THEN1
       PROVE_TAC [lam_eq_rules] THEN
-    ASM_SIMP_TAC std_ss [FV_THM, SUB_THM],
+    ASM_SIMP_TAC std_ss [SUB_THM],
     Q_TAC SUFF_TAC `[B/y]A = A` THEN1 PROVE_TAC [lam_eq_rules] THEN
     ASM_SIMP_TAC std_ss [lemma14b]
   ]);
@@ -363,11 +362,7 @@ val lameq_I = store_thm(
   ``I @@ A == A``,
   PROVE_TAC [lam_eq_rules, I_def, SUB_THM]);
 
-val FV_I = store_thm(
-  "FV_I",
-  ``FV I = {}``,
-  SIMP_TAC std_ss [FV_THM, IN_DELETE, I_def, EXTENSION, NOT_IN_EMPTY,
-                   IN_SING]);
+val FV_I = store_thm("FV_I", ``FV I = {}``, SRW_TAC [][I_def]);
 
 val SK_incompatible = store_thm( (* example 2.18, p23 *)
   "SK_incompatible",
@@ -437,7 +432,6 @@ val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
 
 val (is_abs_thm, _) = define_recursive_term_function
   `(is_abs (VAR s) = F) /\
-   (is_abs (CON k) = F) /\
    (is_abs (t1 @@ t2) = F) /\
    (is_abs (LAM v t) = T)`;
 val _ = export_rewrites ["is_abs_thm"]
@@ -450,7 +444,6 @@ val is_abs_vsubst_invariant = Store_Thm(
 
 val (is_comb_thm, _) = define_recursive_term_function
   `(is_comb (VAR s) = F) /\
-   (is_comb (CON k) = F) /\
    (is_comb (t1 @@ t2) = T) /\
    (is_comb (LAM v t) = F)`;
 val _ = export_rewrites ["is_comb_thm"]
@@ -463,7 +456,6 @@ val is_comb_vsubst_invariant = Store_Thm(
 
 val (is_var_thm, _) = define_recursive_term_function
   `(is_var (VAR s) = T) /\
-   (is_var (CON k) = F) /\
    (is_var (t1 @@ t2) = F) /\
    (is_var (LAM v t) = F)`;
 val _ = export_rewrites ["is_var_thm"]
@@ -474,26 +466,8 @@ val is_var_vsubst_invariant = Store_Thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
-val (is_const_thm,_) = define_recursive_term_function
-  `(is_const (VAR s) = F) /\
-   (is_const (CON k) = T) /\
-   (is_const (t @@ u) = F) /\
-   (is_const (LAM v t) = F)`;
-val _ = export_rewrites ["is_const_thm"]
-
-val is_const_vsubst_invariant = Store_Thm(
-  "is_const_vsubst_invariant",
-  ``!t. is_const ([VAR v/u] t) = is_const t``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR]);
-
-val (dest_const_thm, _) =
-    define_recursive_term_function `dest_const (CON k:'a nc) = k`;
-val _ = export_rewrites ["dest_const_thm"]
-
 val (bnf_thm, _) = define_recursive_term_function
   `(bnf (VAR s) = T) /\
-   (bnf (CON k) = T) /\
    (bnf (t1 @@ t2) = bnf t1 /\ bnf t2 /\ ~is_abs t1) /\
    (bnf (LAM v t) = bnf t)`;
 val _ = export_rewrites ["bnf_thm"]
@@ -504,22 +478,17 @@ val bnf_vsubst_invariant = Store_Thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
+val _ = augment_srw_ss [rewrites [LAM_INJ_swap]]
 val (rand_thm, _) = define_recursive_term_function `rand (t1 @@ t2) = t2`;
 val _ = export_rewrites ["rand_thm"]
 
 val (rator_thm, _) = define_recursive_term_function `rator (t1 @@ t2) = t1`;
 val _ = export_rewrites ["rator_thm"]
 
-val swap_is_const2 = store_thm(
-  "swap_is_const2",
-  ``is_const t ==> (swap x y t = t)``,
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][swap_thm, is_const_thm]);
-
 val is_comb_APP_EXISTS = store_thm(
   "is_comb_APP_EXISTS",
   ``!t. is_comb t = (?u v. t = u @@ v)``,
-  PROVE_TAC [nc_CASES, is_comb_thm]);
+  PROVE_TAC [term_CASES, is_comb_thm]);
 
 val is_comb_rator_rand = store_thm(
   "is_comb_rator_rand",
@@ -556,25 +525,25 @@ val extra_LAM_DISJOINT = store_thm(
   SRW_TAC [][SUB_THM, ISUB_LAM]);
 val _ = export_rewrites ["extra_LAM_DISJOINT"]
 
+val swap_eq_var = store_thm(
+  "swap_eq_var",
+  ``(tpm [(x,y)] t = VAR s) = (t = VAR (swapstr x y s))``,
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
+  SRW_TAC [][basic_swapTheory.swapstr_eq_left]);
+val _ = augment_srw_ss [rewrites [swap_eq_var]]
+
 val (enf_thm, _) = define_recursive_term_function
   `(enf (VAR s) = T) /\
-   (enf (CON k) = T) /\
    (enf (t @@ u) = enf t /\ enf u) /\
    (enf (LAM v t) = enf t /\ (is_comb t /\ (rand t = VAR v) ==>
                               v IN FV (rator t)))`
 val _ = export_rewrites ["enf_thm"]
 
-val swap_eq_var = store_thm(
-  "swap_eq_var",
-  ``(swap x y t = VAR s) = (t = VAR (swapstr x y s))``,
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
-  SRW_TAC [][swap_thm]);
-
 val subst_eq_var = store_thm(
   "subst_eq_var",
   ``([v/u] t = VAR s) = (t = VAR u) /\ (v = VAR s) \/
                         (t = VAR s) /\ ~(u = s)``,
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC nc_CASES THEN
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][SUB_VAR, SUB_THM] THEN PROVE_TAC []);
 
 val enf_vsubst_invariant = store_thm(
@@ -587,13 +556,14 @@ val enf_vsubst_invariant = store_thm(
   SRW_TAC [][GSYM rator_subst_commutes, FV_SUB]);
 val _ = export_rewrites ["enf_vsubst_invariant"]
 
-val FV_RENAMING = store_thm(
+(*val FV_RENAMING = store_thm(
   "FV_RENAMING",
   ``!R. RENAMING R ==>
         !t. FV (t ISUB R) = IMAGE (RENAME R) (FV t)``,
   HO_MATCH_MP_TAC RENAMING_ind THEN
   SRW_TAC [][RENAME_def, VNAME_DEF, EXTENSION, ISUB_def] THEN EQ_TAC THEN
   SRW_TAC [][FV_SUB] THEN PROVE_TAC []);
+*)
 
 val benf_def = Define`benf t = bnf t /\ enf t`;
 
