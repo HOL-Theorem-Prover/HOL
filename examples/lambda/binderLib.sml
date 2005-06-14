@@ -1,58 +1,26 @@
-structure ncLib :> ncLib =
+structure binderLib :> binderLib =
 struct
 
 open HolKernel Parse boolLib
 open BasicProvers SingleStep simpLib
 
-open ncTheory swapTheory NEWLib
-val (Type,Term) = parse_from_grammars swapTheory.swap_grammars
+local open pred_setTheory in end
+
+open NEWLib
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+end
+open Parse
 
 fun ERR f msg = raise (HOL_ERR {origin_function = f,
-                                origin_structure = "ncLib",
+                                origin_structure = "binderLib",
                                 message = msg})
-
-
-exception ProofFailed of (term list * term) list
-local
-  val string_ty = stringSyntax.string_ty
-  val v = mk_var("v", string_ty)
-  val u = mk_var("u", string_ty)
-  val anc_ty = mk_thy_type{Tyop = "nc", Thy = "nc", Args = [alpha]}
-  val t = mk_var("t", anc_ty)
-  val sub = mk_thy_const{Name = "SUB", Thy = "nc",
-                         Ty = anc_ty --> string_ty --> anc_ty --> anc_ty}
-  val VAR_t = mk_thy_const{Name = "VAR", Thy = "nc",
-                           Ty = string_ty --> anc_ty}
-in
-fun vsubst_tac defthm =
-    HO_MATCH_MP_TAC nc_INDUCTION2 THEN
-    Q.EXISTS_TAC `{u;v}` THEN
-    SRW_TAC [][SUB_THM, SUB_VAR, defthm]
-
-fun prove_vsubst_result defthm extra_tac = let
-  val cs = strip_conj (concl defthm)
-  val f = #1 (strip_comb (lhs (#2 (strip_forall (hd cs)))))
-  val goal0 = mk_eq(mk_comb(f, list_mk_comb(sub, [mk_comb(VAR_t, v), u, t])),
-                    mk_comb(f, t))
-  val goal = mk_forall (t, goal0)
-  val extra_tac = case extra_tac of NONE => ALL_TAC | SOME t => t
-  val whole_tac = vsubst_tac defthm THEN extra_tac
-  val prove_goal = prove(goal, whole_tac)
-      handle HOL_ERR _ => raise ProofFailed (#1 (whole_tac ([], goal)))
-  val thm_name = #Name (dest_thy_const f) ^ "_vsubst_invariant"
-in
-  save_thm(thm_name, prove_goal);
-  BasicProvers.export_rewrites [thm_name];
-  prove_goal
-end
-
-end (* local *)
-
 
 (* ----------------------------------------------------------------------
     prove_recursive_term_function_exists tm
 
-    tm is of the form
+    for the 'a nc type tm would be roughly of the form
 
        (!s. f (VAR s) = var_rhs s) /\
        (!k. f (CON k) = con_rhs k) /\
@@ -66,26 +34,55 @@ end (* local *)
     LAMBDA clause comes in for particular attention because this might
     attempt a recursion that is not be justified.  This function
     attempts to use the simplifier and the stateful simpset (srw_ss()) to
-    prove that the side-conditions on either
-       swapTheory.swap_RECURSION_generic
-    or
-       swapTheory.swap_RECURSION_simple
+    prove that the side-conditions on the recursion theorem for the given
+    type actually hold.
 
    ---------------------------------------------------------------------- *)
 
+(* recursion theorems are stored in SPEC_ALL form, with preconditions as one
+   big set of conjuncts (rather than iterated implications) *)
+val type_db =
+    ref (Binarymap.mkDict String.compare : (string,thm) Binarymap.dict)
 
-val var_con = ``VAR : string -> 'a nc``;
-val con_con = ``CON : 'a -> 'a nc``;
-val lam_con = ``LAM : string -> 'a nc -> 'a nc``
-val app_con = ``$@@ : 'a nc -> 'a nc -> 'a nc``;
-val nc_constructors = [var_con, con_con, lam_con, app_con];
+(*  testing code
 
-val abs_con = ``ABS: (string -> 'a nc) -> 'a nc``
-val fv_con = ``FV : 'a nc -> string set``
-val new_con = ``NEW : string set -> string``
+type_db :=
+     Binarymap.insert(!type_db, "nc",
+                      SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`]
+                                               swap_RECURSION_generic))
+
+type_db :=
+   Binarymap.insert(!type_db, "term",
+                    SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`]
+                                             termTheory.swap_RECURSION))
+*)
+
+fun recthm_for_type ty = let
+  val {Tyop,...} = dest_thy_type ty
+in
+  SOME (Binarymap.find(!type_db, Tyop))
+end handle Binarymap.NotFound => NONE
+         | HOL_ERR _ => NONE
 
 fun myfind f [] = NONE
   | myfind f (h::t) = case f h of NONE => myfind f t | x => x
+
+fun find_constructors recthm = let
+  val (_, c) = dest_imp (concl recthm)
+  val (homvar, body) = dest_exists c
+  val eqns = let val (c1, c2) = dest_conj body
+             in
+               if is_conj c1 then c1
+               else body
+             end
+  fun dest_eqn t = let
+    val eqn_proper = #2 (strip_imp (#2 (strip_forall t)))
+  in
+    (#1 (strip_comb (rand (lhs eqn_proper))), #1 (strip_comb (rhs eqn_proper)))
+  end
+in
+  map dest_eqn (strip_conj eqns)
+end
 
 fun check_for_errors tm = let
   val conjs = map (#2 o strip_forall) (strip_conj tm)
@@ -99,17 +96,19 @@ fun check_for_errors tm = let
   val _ = List.all (fn t => length (#2 (strip_comb (lhs t))) = 1) conjs orelse
           ERR "prove_recursive_term_function_exists"
               "Function being defined must be applied to one argument"
-  val _ = (#1 (dest_type (type_of (rand (lhs (hd conjs))))) = "nc"
-           handle HOL_ERR _ => false) orelse
-          ERR "prove_recursive_term_function_exists"
-              "Function to be defined must be applied to nc terms"
+  val dom_ty = #1 (dom_rng (type_of f))
+  val recthm = valOf (recthm_for_type dom_ty)
+               handle Option => ERR "prove_recursive_term_function_exists"
+                                    ("No recursion theorem for type "^
+                                     type_to_string dom_ty)
+  val constructors = map #1 (find_constructors recthm)
   val () =
       case List.find
            (fn t => List.all
                       (fn c => not
                                  (same_const c
                                              (#1 (strip_comb (rand (lhs t))))))
-                      nc_constructors) conjs of
+                      constructors) conjs of
         NONE => ()
       | SOME t => ERR "prove_recursive_term_function_exists"
                       ("Unknown constructor "^
@@ -131,142 +130,88 @@ in
   (f, conjs)
 end
 
-val renaming_goal_form =
-  ``!t R. RENAMING R ==> ((hom:'a nc -> 'b) (t ISUB R) = hom t)``
-
-val SIMPLE_LET = prove(``!(t:'a) (v:'b). (let x = v in t) = t``,
-                       REWRITE_TAC [LET_THM]);
-
-val string_ty = stringSyntax.string_ty
-fun gennc_ty ty = mk_type("nc", [ty])
-
-val var_functor = mk_var("var", string_ty --> beta)
-val con_functor = mk_var("con", alpha --> beta)
-val app_functor = mk_var("app", beta --> beta -->
-                                     gennc_ty alpha --> gennc_ty alpha -->
-                                     beta)
-val lam_functor = mk_var("lam", beta --> string_ty --> gennc_ty alpha --> beta)
-
-val FV_t = ``nc$FV``
-val swap_t = mk_const("swap", ``:string -> string -> 'a nc -> 'a nc``)
-val nc_info =
-    {nullfv = (``LAM "" (VAR "")``,
-                   prove(``FV (LAM "" (VAR "")) = {}``,
-                         SRW_TAC [][])),
-     fv = (FV_t, FV_THM),
-     swap = (swap_t, swap_thm),
-     recursion = SIMP_RULE (srw_ss()) []
-                           (Q.INST [`X` |-> `{}`]
-                                   swapTheory.swap_RECURSION_generic),
-     swapping = nc_swapping}
-
-val null_fv = ``K {} : 'a -> string set``
+val null_fv = ``combin$K pred_set$EMPTY : 'a -> string -> bool``
 val null_swap = ``\x:string y:string z:'a. z``
-val null_info = {nullfv = (mk_arb alpha,
-                            prove(``^null_fv ^(mk_arb alpha) = {}``,
-                                  SRW_TAC [][])),
-                 fv = (null_fv, TRUTH),
-                 swap = (null_swap, TRUTH),
-                 recursion = swapTheory.swap_RECURSION_simple,
-                 swapping = null_swapping}
+val null_info = {nullfv = mk_arb alpha,
+                 inst = ["rFV" |-> (fn () => null_fv),
+                         "rswap" |-> (fn () => null_swap),
+                         "apm" |-> (fn () => ``K I : 'a pm``)],
+                 rewrites = []}
 
-(*
-val string_fv = ``\s:string. {s}``
-val string_swap = ``swapstr``
-val string_info = {nullfv = (
-*)
+type range_type_info = {nullfv : term,
+                        inst : {redex : string, residue : unit -> term} list,
+                        rewrites : thm list}
 
-val database = let
-  val empty = Binarymap.mkDict String.compare
+val range_database = ref (Binarymap.mkDict String.compare)
+
+fun force_inst {src, to_munge} = let
+  val inst = match_type (type_of to_munge) (type_of src)
 in
-  Binarymap.insert(empty, "nc", nc_info)
-end
-
-
-
-fun inst_info dest_ty {nullfv, fv, swap, recursion, swapping} = let
-  val inst_val = Type.match_type (type_of (fst nullfv)) dest_ty
-  val local_inst = inst inst_val
-in
-  {nullfv = let val (t, th) = nullfv in (local_inst t, th) end,
-   fv = let val (t, th) = fv in (local_inst t, th) end,
-   swap = let val(t, th) = swap in (local_inst t, th) end,
-   recursion = recursion,
-   swapping = swapping}
+  Term.inst inst to_munge
 end
 
 exception InfoProofFailed of term
-fun with_info_prove_recn_exists f nc_ty lookup info = let
-  val nc_arg_ty = hd (#Args (dest_thy_type nc_ty))
-  val {nullfv, fv, swap, recursion, swapping} = info
-  val (nullfv_t, nullfv_thm) = nullfv
-  val rhs_ty = type_of nullfv_t
-  val (fv_t, fv_thm) = fv
-  val (rswap_t, rswap_thm) = swap
-  val swap_null = SIMP_RULE bool_ss [GSYM rswap_thm]
-                            (MATCH_MP swapping_implies_empty_swap
-                                      (CONJ swapping nullfv_thm))
+fun with_info_prove_recn_exists f dom_ty rng_ty lookup info = let
+  val {nullfv, inst, rewrites} = info
   fun mk_simple_abstraction (c, (cargs, r)) = list_mk_abs(cargs, r)
-  val varcase =
-      case lookup var_con of
-        NONE => mk_abs(genvar string_ty, nullfv_t)
-      | SOME x => mk_simple_abstraction x
-  val concase =
-      case lookup con_con of
-        NONE => mk_abs(genvar nc_arg_ty, nullfv_t)
-      | SOME x => mk_simple_abstraction x
-  val appcase =
-      case lookup app_con of
-        NONE => list_mk_abs([genvar rhs_ty, genvar rhs_ty,
-                             genvar nc_ty, genvar nc_ty], nullfv_t)
-      | SOME (c, (cargs, r)) => let
-          val t1 = hd cargs
-          val t2 = hd (tl cargs)
-          val t1v = variant [t1,t2,f] (mk_var("t1f", rhs_ty))
-          val t2v = variant [t1v,t1,t2,f] (mk_var("t2f", rhs_ty))
-          val ft1 = mk_comb(f, t1)
-          val ft2 = mk_comb(f, t2)
+  val recthm = valOf (recthm_for_type dom_ty)
+  val hom_t = #1 (dest_exists (#2 (dest_imp (concl recthm))))
+  val base_inst = match_type (type_of hom_t) (type_of f)
+  val nullfv = let
+    val i = match_type (type_of nullfv) rng_ty
+  in
+    Term.inst i nullfv
+  end
+  val constructors = find_constructors recthm
+  fun do_a_constructor (c, fnterm) =
+      case lookup c of
+        SOME (user_c, (args, r_term)) => let
+          fun hasdom_ty t = Type.compare(type_of t, dom_ty) = EQUAL
+          val rec_args = filter hasdom_ty args
+          val f_applied =
+              map (fn t => mk_comb(f, t) |-> genvar rng_ty) rec_args
+          val new_body = Term.subst f_applied r_term
+          val base_abs = list_mk_abs (args, new_body)
+          val with_reccalls = list_mk_abs (map #residue f_applied, base_abs)
         in
-          list_mk_abs([t1v,t2v,t1,t2],
-                      Term.subst [ft1 |-> t1v, ft2 |-> t2v] r)
+          force_inst {src = with_reccalls, to_munge = fnterm} |-> with_reccalls
         end
-  val lamcase =
-      case lookup lam_con of
-        NONE => list_mk_abs([genvar rhs_ty,
-                             genvar string_ty,
-                             genvar nc_ty],
-                            nullfv_t)
-      | SOME (c, (cargs, r)) => let
-          val uvar = hd cargs
-          val bodyvar = hd (tl cargs)
-          val body_result_var =
-              variant [uvar, bodyvar, f] (mk_var("brv", rhs_ty))
-          val fbody = mk_comb(f, bodyvar)
+      | NONE => let
+          val fnterm' = Term.inst base_inst fnterm
+          fun build_abs ty = let
+            val (d,r) = dom_rng ty
+          in
+            mk_abs(genvar d, build_abs r)
+          end handle HOL_ERR _ => nullfv
         in
-          list_mk_abs([body_result_var, uvar, bodyvar],
-                      Term.subst [fbody |-> body_result_var] r)
+          fnterm' |-> build_abs (type_of fnterm')
         end
-  val instantiation = [alpha |-> nc_arg_ty, beta |-> rhs_ty]
-  fun i t = inst instantiation t
   val recursion_exists0 =
-      INST [i con_functor |-> concase,
-            i var_functor |-> varcase,
-            i app_functor |-> appcase,
-            i lam_functor |-> lamcase,
-            i ``rFV : 'b -> string set`` |-> fv_t,
-            i ``rswap : string -> string -> 'b -> 'b`` |-> rswap_t]
-           (INST_TYPE instantiation recursion)
+      INST (map do_a_constructor constructors) (INST_TYPE base_inst recthm)
+  val other_var_inst = let
+    val recvars = free_vars (concl recursion_exists0)
+    fun findvar {redex,residue} =
+        case List.find (fn t => #1 (dest_var t) = redex) recvars of
+          SOME v => let val residue' = residue()
+                    in
+                      SOME (v |-> force_inst {src = v, to_munge = residue'})
+                    end
+        | NONE => NONE
+  in
+    List.mapPartial findvar inst
+  end
+  val recursion_exists1 = INST other_var_inst recursion_exists0
   val recursion_exists =
       CONV_RULE (RAND_CONV
                    (BINDER_CONV
                       (EVERY_CONJ_CONV
                          (STRIP_QUANT_CONV (RAND_CONV LIST_BETA_CONV))) THENC
                       RAND_CONV (ALPHA_CONV f)))
-                   recursion_exists0
+                   recursion_exists1
   val precondition_discharged =
       CONV_RULE
-        (LAND_CONV (SIMP_CONV (srw_ss()) [fv_thm, rswap_thm, swapping,
-                                          swap_null, swap_eql]))
+        (LAND_CONV (SIMP_CONV (srw_ss()) rewrites THENC
+                    SIMP_CONV (srw_ss()) [pred_setTheory.SUBSET_DEF]))
         recursion_exists
 in
   MP precondition_discharged TRUTH
@@ -280,8 +225,7 @@ end;
 fun prove_recursive_term_function_exists0 tm = let
   val (f, conjs) = check_for_errors tm
 
-  val (nc_ty, rhs_ty) = dom_rng (type_of f)
-  val nc_arg_ty = hd (#2 (dest_type nc_ty))
+  val (dom_ty, rng_ty) = dom_rng (type_of f)
 
   fun insert (x as (c, rhs)) alist =
       case alist of
@@ -303,15 +247,14 @@ fun prove_recursive_term_function_exists0 tm = let
   (* order of keys is order of clauses in original definition request *)
   val alist = List.foldl insert_eqn [] conjs
   fun find_eqn c = lookup c alist
-  val null_info = inst_info rhs_ty null_info
-  val callthis = with_info_prove_recn_exists f nc_ty find_eqn
+  val callthis = with_info_prove_recn_exists f dom_ty rng_ty find_eqn
 in
-  case Lib.total dest_type rhs_ty of
+  case Lib.total dest_type rng_ty of
     SOME (tyop, args) => let
     in
-      case Binarymap.peek(database, tyop) of
+      case Binarymap.peek(!range_database, tyop) of
         NONE => callthis null_info
-      | SOME i => callthis (inst_info rhs_ty i)
+      | SOME i => callthis i
         handle InfoProofFailed tm =>
                (HOL_WARNING
                   "ncLib"

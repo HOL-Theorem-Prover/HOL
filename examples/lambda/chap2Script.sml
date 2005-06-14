@@ -3,13 +3,16 @@ struct
 
 open HolKernel Parse boolLib
 
-open bossLib ncLib
+open bossLib binderLib
 
 open ncTheory fixedPointTheory pred_setTheory pred_setLib
 open swapTheory BasicProvers
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
 val std_ss = std_ss ++ rewrites [LET_THM]
+
+fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before
+                            export_rewrites [s])
 
 structure Q = struct open Q open OldAbbrevTactics end;
 
@@ -419,8 +422,9 @@ val xx_xy_incompatible = store_thm( (* example 2.20, p24 *)
   `xx_xy (LAM y (I @@ VAR y))  (LAM y I)`
       by METIS_TAC [asmlam_trans, asmlam_sym] THEN
   `xx_xy (LAM y (VAR y)) (LAM y I)`
-      by METIS_TAC [asmlam_abscong, lameq_I, asmlam_trans, asmlam_sym,
-                    lameq_asmlam] THEN
+      by (Q.UNABBREV_TAC `xx_xy` THEN MATCH_MP_TAC asmlam_trans THEN
+          Q.EXISTS_TAC `LAM y (I @@ VAR y)` THEN
+          METIS_TAC [asmlam_abscong, lameq_I, asmlam_sym, lameq_asmlam]) THEN
   `!D. xx_xy ((LAM y (VAR y)) @@ D) ((LAM y I) @@ D)`
       by PROVE_TAC [asmlam_lcong] THEN
   `!D. [D/y](VAR y) = D` by SRW_TAC [][SUB_THM] THEN
@@ -437,7 +441,12 @@ val (is_abs_thm, _) = define_recursive_term_function
    (is_abs (t1 @@ t2) = F) /\
    (is_abs (LAM v t) = T)`;
 val _ = export_rewrites ["is_abs_thm"]
-val _ = prove_vsubst_result is_abs_thm NONE
+
+val is_abs_vsubst_invariant = Store_Thm(
+  "is_abs_vsubst_invariant",
+  ``!t. is_abs ([VAR v/u] t) = is_abs t``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val (is_comb_thm, _) = define_recursive_term_function
   `(is_comb (VAR s) = F) /\
@@ -445,7 +454,12 @@ val (is_comb_thm, _) = define_recursive_term_function
    (is_comb (t1 @@ t2) = T) /\
    (is_comb (LAM v t) = F)`;
 val _ = export_rewrites ["is_comb_thm"]
-val _ = prove_vsubst_result is_comb_thm NONE
+
+val is_comb_vsubst_invariant = Store_Thm(
+  "is_comb_vsubst_invariant",
+  ``!t. is_comb ([VAR v/u] t) = is_comb t``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val (is_var_thm, _) = define_recursive_term_function
   `(is_var (VAR s) = T) /\
@@ -453,7 +467,12 @@ val (is_var_thm, _) = define_recursive_term_function
    (is_var (t1 @@ t2) = F) /\
    (is_var (LAM v t) = F)`;
 val _ = export_rewrites ["is_var_thm"]
-val _ = prove_vsubst_result is_var_thm NONE
+
+val is_var_vsubst_invariant = Store_Thm(
+  "is_var_vsubst_invariant",
+  ``!t. is_var ([VAR v/u] t) = is_var t``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val (is_const_thm,_) = define_recursive_term_function
   `(is_const (VAR s) = F) /\
@@ -461,7 +480,12 @@ val (is_const_thm,_) = define_recursive_term_function
    (is_const (t @@ u) = F) /\
    (is_const (LAM v t) = F)`;
 val _ = export_rewrites ["is_const_thm"]
-val _ = prove_vsubst_result is_const_thm NONE
+
+val is_const_vsubst_invariant = Store_Thm(
+  "is_const_vsubst_invariant",
+  ``!t. is_const ([VAR v/u] t) = is_const t``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val (dest_const_thm, _) =
     define_recursive_term_function `dest_const (CON k:'a nc) = k`;
@@ -473,7 +497,12 @@ val (bnf_thm, _) = define_recursive_term_function
    (bnf (t1 @@ t2) = bnf t1 /\ bnf t2 /\ ~is_abs t1) /\
    (bnf (LAM v t) = bnf t)`;
 val _ = export_rewrites ["bnf_thm"]
-val _ = prove_vsubst_result bnf_thm NONE
+
+val bnf_vsubst_invariant = Store_Thm(
+  "bnf_vsubst_invariant",
+  ``!t. bnf ([VAR v/u] t) = bnf t``,
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
+  SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val (rand_thm, _) = define_recursive_term_function `rand (t1 @@ t2) = t2`;
 val _ = export_rewrites ["rand_thm"]

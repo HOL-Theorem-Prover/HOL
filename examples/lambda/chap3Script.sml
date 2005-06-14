@@ -4,7 +4,7 @@ val _ = new_theory "chap3";
 
 local open pred_setLib in end;
 
-open ncLib BasicProvers
+open binderLib BasicProvers
 open chap2Theory ncTheory swapTheory
 
 val compatible_def =

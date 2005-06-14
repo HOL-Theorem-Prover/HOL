@@ -1119,6 +1119,10 @@ val size_nonzero = store_thm(
   ``!t. 0 < size t``,
   HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
 
+
+
+
+
 val _ = export_theory();
 
 end; (* structure ncScript *)
