@@ -98,6 +98,11 @@ val lswapstr_eqr = store_thm(
   ``(s = lswapstr p t) = (lswapstr (REVERSE p) s =  t)``,
   METIS_TAC [lswapstr_inverse]);
 
+val lswapstr_sing_to_back = store_thm(
+  "lswapstr_sing_to_back",
+  ``!p u v s. swapstr (lswapstr p u) (lswapstr p v) (lswapstr p s) =
+              lswapstr p (swapstr u v s)``,
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
 
 (* ----------------------------------------------------------------------
     NEW constant
