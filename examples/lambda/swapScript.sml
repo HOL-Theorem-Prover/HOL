@@ -682,7 +682,7 @@ val nc_info_string =
     "local\n\
     \fun k |-> v = {redex = k, residue = v}\n\
     \val nc_info = \n\
-    \   {nullfv = ``CON ARB``,\n\
+    \   {nullfv = ``CON ARB : 'a nc``,\n\
     \    rewrites = [ncTheory.FV_THM, swap_thm, nc_swapping],\n\
     \    inst = [\"rFV\" |-> (fn () => ``nc$FV : 'a nc -> string set``),\n\
     \            \"rswap\" |-> (fn () =>\n\
