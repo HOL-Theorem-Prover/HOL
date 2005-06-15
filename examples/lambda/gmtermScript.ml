@@ -35,7 +35,8 @@ val term_bij = define_new_type_bijections
                  {ABS = "to_term", REP = "from_term",
                   name = "term_bij", tyax = term_ax}
 
-val _ = map hide ["LAM", "VAR", "CON", "@@", "FV", "SUB"]
+val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "nc"})
+            ["LAM", "VAR", "CON", "@@", "FV", "SUB", "ABS", "size"]
 
 val VAR_def = Define`VAR s = to_term (nc$VAR s)`
 val APP_def = xDefine "APP"
@@ -159,7 +160,6 @@ val tpm_NIL = store_thm(
   SRW_TAC [][]);
 val _ = export_rewrites ["tpm_NIL"]
 
-
 val LAM_eq_thm = store_thm(
   "LAM_eq_thm",
   ``(LAM u M = LAM v N) = ((u = v) /\ (M = N)) \/
@@ -195,6 +195,11 @@ val tpm_eqr = store_thm(
   ``(t = tpm pi u) = (tpm (REVERSE pi) t = u)``,
   METIS_TAC [tpm_inverse]);
 
+val tpm_eql = store_thm(
+  "tpm_eql",
+  ``(tpm pi t = u) = (t = tpm (REVERSE pi) u)``,
+  METIS_TAC [tpm_inverse]);
+
 val tpm_flip_args = store_thm(
   "tpm_flip_args",
   ``!t. tpm ((y,x)::rest) t = tpm ((x,y)::rest) t``,
@@ -205,6 +210,11 @@ val tpm_APPEND = store_thm(
   ``!t. tpm (p1 ++ p2) t = tpm p1 (tpm p2 t)``,
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][basic_swapTheory.lswapstr_APPEND]);
+
+val tpm_CONS = store_thm(
+  "tpm_CONS",
+  ``tpm ((x,y)::pi) t = tpm [(x,y)] (tpm pi t)``,
+  SRW_TAC [][GSYM tpm_APPEND]);
 
 val tpm_sing_inv = store_thm(
   "tpm_sing_inv",
@@ -231,6 +241,12 @@ val nc_INDUCTION2 = store_thm(
     FULL_SIMP_TAC (srw_ss()) [],
     SRW_TAC [][tpm_eqr, tpm_flip_args, tpm_APPEND]
   ]);
+
+val tpm_sing_to_back = store_thm(
+  "tpm_sing_to_back",
+  ``!t. tpm [(lswapstr p u, lswapstr p v)] (tpm p t) = tpm p (tpm [(u,v)] t)``,
+  HO_MATCH_MP_TAC simple_induction THEN
+  SRW_TAC [][basic_swapTheory.lswapstr_sing_to_back]);
 
 val tpm_subst = store_thm(
   "tpm_subst",
@@ -378,7 +394,6 @@ val ISUB_LAM = store_thm(
     size of a term
    ---------------------------------------------------------------------- *)
 
-val _ = hide "size"
 val size_def = Define`size t = nc$size (from_term t)`;
 
 val size_thm = store_thm(
@@ -425,7 +440,6 @@ val gm_recursion = prove(
              combinTheory.o_ABS_R, SUB_def]);
 
 val ABS_def = Define`ABS f = to_term (nc$ABS (from_term o f))`
-val _ = hide "ABS"
 
 val ABS_axiom = prove(
   ``term$ABS (\y. [VAR y/v] t) = LAM v t``,
