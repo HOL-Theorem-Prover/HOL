@@ -594,15 +594,44 @@ val swap_RECURSION = store_thm(
     SRW_TAC [][]
   ]);
 
-val swap_RECURSION_nosideset = save_thm(
-  "swap_RECURSION_nosideset",
-  SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION))
-
 val term_swapping = store_thm(
   "term_swapping",
   ``swapping (\x y t. tpm [(x,y)] t) FV``,
   SRW_TAC [][swapping_def, tpm_fresh]);
 val _ = export_rewrites ["term_swapping"]
+
+val lam_rFV = prove(
+  ``(!t' v t. rFV (lam t' v t) SUBSET ((rFV t' UNION FV t) DELETE v) UNION X)
+       ==>
+    !t' v t. rFV t' SUBSET FV t UNION X ==>
+             rFV (lam t' v t) SUBSET (FV t DELETE v) UNION X``,
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`t'`, `v`, `t`] ASSUME_TAC) THEN
+  REPEAT (POP_ASSUM MP_TAC) THEN
+  SRW_TAC [][SUBSET_DEF] THEN METIS_TAC [])
+val app_rFV = prove(
+  ``(!t' u' t u. rFV (app t' u' t u) SUBSET
+                 rFV t' UNION rFV u' UNION FV t UNION FV u UNION X) ==>
+    !t' u' t u.
+        rFV t' SUBSET FV t UNION X /\ rFV u' SUBSET FV u UNION X ==>
+        rFV (app t' u' t u) SUBSET FV t UNION FV u UNION X``,
+  SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPECL_THEN [`t'`, `u'`, `t`, `u`] MP_TAC) THEN
+  REPEAT (POP_ASSUM MP_TAC) THEN
+  SRW_TAC [][SUBSET_DEF] THEN METIS_TAC []);
+
+val swap_RECURSION_improved = save_thm(
+  "swap_RECURSION_improved",
+  REWRITE_RULE [AND_IMP_INTRO]
+               (DISCH_ALL (REWRITE_RULE [UNDISCH lam_rFV, UNDISCH app_rFV]
+                                        swap_RECURSION)))
+
+val swap_RECURSION_nosideset = save_thm(
+  "swap_RECURSION_nosideset",
+  SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION_improved))
+
+
+
 
 val term_info_string =
     "local\n\
