@@ -1077,6 +1077,16 @@ val WORD_BIT_BOOLOPS = store_thm("WORD_BIT_BOOLOPS",
            BITWISE_THM]
 );
 
+val WORD_EQ = store_thm("WORD_EQ",
+  `!w1 w2. (!x. x < WL ==> (WORD_BIT x w1 = WORD_BIT x w2)) = (w1 = w2)`,
+  NTAC 2 STRIP_TAC 
+    THEN STRUCT_CASES_TAC (SPEC `w1` word_nchotomy)
+    THEN STRUCT_CASES_TAC (SPEC `w2` word_nchotomy)
+    THEN SIMP_TAC arith_ss [ADD1,BIT_OF_BITS_THM,WL_def,WORD_BIT_def,
+           w2n_EVAL,n2w_11,MOD_WL_THM,DECIDE (Term `a < b + 1 = a <= b`),
+           (GSYM o SIMP_RULE arith_ss [] o SPECL [`HB`,`0`]) BIT_BITS_THM]
+);
+
 (* -------------------------------------------------------- *)
 
 val WORD_MULT_SUC = prove(
