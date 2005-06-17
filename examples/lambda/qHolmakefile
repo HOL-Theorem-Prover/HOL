@@ -1,4 +1,4 @@
 EXTRA_CLEANS = termScript.sml
 
-termScript.sml: gmtermScript.ml
+termScript.sml: qtermScript.ml
 	$(CP) $< $@

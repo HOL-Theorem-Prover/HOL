@@ -9,7 +9,7 @@ local open pred_setTheory in end
 open NEWLib
 structure Parse = struct
   open Parse
-  val (Type,Term) = parse_from_grammars boolTheory.bool_grammars
+  val (Type,Term) = parse_from_grammars stringTheory.string_grammars
 end
 open Parse
 
@@ -132,10 +132,11 @@ end
 
 val null_fv = ``combin$K pred_set$EMPTY : 'a -> string -> bool``
 val null_swap = ``\x:string y:string z:'a. z``
+val null_apm = ``combin$K combin$I : (string # string)list -> 'a -> 'a``
 val null_info = {nullfv = mk_arb alpha,
                  inst = ["rFV" |-> (fn () => null_fv),
                          "rswap" |-> (fn () => null_swap),
-                         "apm" |-> (fn () => ``K I : 'a pm``)],
+                         "apm" |-> (fn () => null_apm)],
                  rewrites = []}
 
 type range_type_info = {nullfv : term,
@@ -309,46 +310,40 @@ fun define_recursive_term_function q = let
   val _ = restore()
   val f_thm0 = prove_recursive_term_function_exists0 tm
   val (f_t, th_body) = dest_exists (concl f_thm0)
-  val have_renamings = not (is_const (last (strip_conj th_body)))
   fun defining_conj c = let
     val fvs = List.filter (fn v => #1 (dest_var v) <> fstr) (free_vars c)
   in
     list_mk_forall(fvs, c)
   end
   val defining_term0 = list_mk_conj(map defining_conj (strip_conj tm))
-  val defining_term =
-      if have_renamings then mk_conj(defining_term0, rand th_body)
-      else defining_term0
-  val (base_definition, definition_ok) = let
+  val defining_term = mk_conj(defining_term0, rand th_body)
+  val base_definition = let
+    (* this checks that the user-provided term is a consequence of the
+       existential theorem that prove_recursive_term_function_exists0
+       returns.  It might go wrong if extra implications appear as
+       side-conditions to equations on binder-constructors.  This can't
+       happen in this version of the code yet (because we don't handle
+       parameters or side sets *)
     val definition_ok0 = default_prover(mk_imp(th_body, defining_term),
                                         SIMP_TAC bool_ss [])
   in
-    (CHOOSE (f_t, f_thm0)
-            (EXISTS(mk_exists(f_t, defining_term), f_t)
-                   (UNDISCH definition_ok0)), true)
-  end handle HOL_ERR _ =>
-             if have_renamings then (f_thm0, false)
-             else (CONJUNCT1 (CONV_RULE (HO_REWR_CONV LEFT_EXISTS_AND_THM)
-                                        f_thm0), false)
+    CHOOSE (f_t, f_thm0)
+           (EXISTS(mk_exists(f_t, defining_term), f_t)
+                  (UNDISCH definition_ok0))
+  end
   val f_def =
       new_specification (fstr^"_def", [fstr], base_definition)
   val _ = add_const fstr
   val f_const = prim_mk_const {Name = fstr, Thy = current_theory()}
-  val f_thm = if definition_ok then
-                save_thm(fstr^"_thm",
-                         default_prover(subst [f_t |-> f_const] tm,
-                                        SIMP_TAC bool_ss [f_def]))
-              else f_def
-  val f_invariants =
-      if have_renamings then let
-          val interesting_bit = CONJUNCT2 f_def
-          val th = CONJUNCT1 interesting_bit
-              handle HOL_ERR _ => interesting_bit
-        in
-          SOME (save_thm(fstr^"_swap_invariant", th)) before
-          BasicProvers.export_rewrites [fstr^"_swap_invariant"]
-        end
-      else NONE
+  val f_thm = save_thm(fstr^"_thm",
+                       default_prover(subst [f_t |-> f_const] tm,
+                                      SIMP_TAC bool_ss [f_def]))
+  val f_invariants = let
+    val interesting_bit = CONJUNCT2 f_def
+  in
+    save_thm(fstr^"_swap_invariant", interesting_bit) before
+    BasicProvers.export_rewrites [fstr^"_swap_invariant"]
+  end
 in
   (f_thm, f_invariants)
 end

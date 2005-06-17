@@ -637,9 +637,18 @@ val swap_RECURSION_generic = save_thm(
    INST_TYPE [beta |-> ``:one``, gamma |-> beta])
   swap_RECURSION_pgeneric);
 
-val swap_RECURSION_nosideset = save_thm(
-  "swap_RECURSION_nosideset",
-  SIMP_RULE (srw_ss()) [] (Q.INST [`X` |-> `{}`] swap_RECURSION_generic));
+val ex = (UNDISCH o
+          SIMP_RULE (srw_ss()) [] o
+          Q.INST [`X` |-> `{}`]) swap_RECURSION_generic
+val bod = #2 (dest_exists (concl ex))
+val (eqns, swfv) = CONJ_PAIR (ASSUME bod)
+val bodth' = CONJ eqns (CONJUNCT1 swfv)
+val hom_t = ``hom:'a nc -> 'b``
+
+val better = (DISCH_ALL o
+              CHOOSE (hom_t, ex) o
+              EXISTS (mk_exists(hom_t, concl bodth'), hom_t)) bodth'
+val swap_RECURSION_nosideset = save_thm("swap_RECURSION_nosideset", better)
 
 val swap_RECURSION_simple = save_thm(
   "swap_RECURSION_simple",

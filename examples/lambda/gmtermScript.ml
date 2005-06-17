@@ -72,13 +72,13 @@ val term_11 = store_thm(
   FULL_SIMP_TAC (srw_ss()) [from_term_11]);
 val _ = export_rewrites ["term_11"]
 
-val term_disjoint = store_thm(
-  "term_disjoint",
+val term_distinct = store_thm(
+  "term_distinct",
   ``~(VAR s = M @@ N) /\ ~(VAR s = LAM v t) /\ ~(M @@ N = LAM v t)``,
   SRW_TAC [][VAR_def, APP_def, LAM_def] THEN STRIP_TAC THEN
   POP_ASSUM (MP_TAC o AP_TERM ``from_term``) THEN
   SRW_TAC [][fromto_inverse]);
-val _ = export_rewrites ["term_disjoint"]
+val _ = export_rewrites ["term_distinct"]
 
 val simple_induction = store_thm(
   "simple_induction",
@@ -174,7 +174,6 @@ val LAM_eq_thm = store_thm(
     AP_TERM_TAC THEN SRW_TAC [][fromto_inverse, LAM_INJ_swap,
                                 lswap_def]
   ]);
-val LAM_INJ_swap = save_thm("LAM_INJ_swap", LAM_eq_thm)
 
 val FV_tpm = store_thm(
   "FV_tpm",
@@ -507,8 +506,7 @@ val swap_RECURSION = store_thm(
        !v t. ~(v IN X) ==> (hom (LAM v t) = lam (hom t) v t)) /\
       (!t x y.
          ~(x IN X) /\ ~(y IN X) ==>
-         (hom (tpm [(x,y)] t) = rswap x y (hom t))) /\
-      !t. rFV (hom t) SUBSET FV t UNION X``,
+         (hom (tpm [(x,y)] t) = rswap x y (hom t)))``,
   REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC lemma THEN
   Q.EXISTS_TAC `hom` THEN ASM_SIMP_TAC bool_ss [] THEN
   `!t. rFV (hom t) SUBSET FV t UNION X`

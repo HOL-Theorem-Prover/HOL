@@ -5,7 +5,7 @@ open HolKernel Parse boolLib
 
 open bossLib binderLib
 
-open fixedPointTheory pred_setTheory pred_setLib
+open pred_setTheory pred_setLib
 open termTheory BasicProvers
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
@@ -341,7 +341,7 @@ val lameq_K = store_thm(
   Q_TAC (NEW_TAC "x") `{"x"; "y"} UNION FV A UNION FV B` THEN
   Q_TAC (NEW_TAC "y") `{x; "x"; "y"} UNION FV A UNION FV B` THEN
   `K = LAM x (LAM y (VAR x))`
-     by SRW_TAC [][K_def, LAM_INJ_swap, basic_swapTheory.swapstr_def,
+     by SRW_TAC [][K_def, LAM_eq_thm, basic_swapTheory.swapstr_def,
                    stringTheory.CHR_11] THEN
   POP_ASSUM SUBST_ALL_TAC THEN
   Q_TAC SUFF_TAC
@@ -478,7 +478,7 @@ val bnf_vsubst_invariant = Store_Thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
-val _ = augment_srw_ss [rewrites [LAM_INJ_swap]]
+val _ = augment_srw_ss [rewrites [LAM_eq_thm]]
 val (rand_thm, _) = define_recursive_term_function `rand (t1 @@ t2) = t2`;
 val _ = export_rewrites ["rand_thm"]
 

@@ -171,6 +171,11 @@ val is_perm_inverse = store_thm(
                   (f (REVERSE p) (f p a) = a)``,
   METIS_TAC [is_perm_def, permof_inverse])
 
+val is_perm_sing_inv = store_thm(
+  "is_perm_sing_inv",
+  ``is_perm pm ==> (pm [h] (pm [h] x) = x)``,
+  METIS_TAC [listTheory.REVERSE_DEF, listTheory.APPEND, is_perm_inverse]);
+
 val is_perm_eql = store_thm(
   "is_perm_eql",
   ``is_perm pm ==> ((pm p x = y) = (x = pm (REVERSE p) y))``,
@@ -181,7 +186,23 @@ val is_perm_injective = store_thm(
   ``is_perm pm ==> ((pm p x = pm p y) = (x = y))``,
   METIS_TAC [is_perm_inverse]);
 
-(* two simple permutation actions *)
+val permeq_flip_args = store_thm(
+  "permeq_flip_args",
+  ``(x,y)::t == (y,x)::t``,
+  SRW_TAC [][permeq_def, FUN_EQ_THM]);
+
+val is_perm_flip_args = store_thm(
+  "is_perm_flip_args",
+  ``is_perm pm ==> (pm ((x,y)::t) a = pm ((y,x)::t) a)``,
+  METIS_TAC [is_perm_def, permeq_flip_args]);
+
+
+(* ----------------------------------------------------------------------
+   define (possibly parameterised) permutation actions on standard
+   builtin types: functions, sets, lists, pairs, etc
+  ----------------------------------------------------------------------  *)
+
+(* two simple permutation actions: strings, and "everything else" *)
 val perm_of_is_perm = Store_Thm(
   "perm_of_is_perm",
   ``is_perm perm_of``,
@@ -192,8 +213,7 @@ val discrete_is_perm = Store_Thm(
   ``is_perm (K I)``,
   SRW_TAC [][is_perm_def]);
 
-(* define (parameterised) permutation actions on functions and sets *)
-
+(* functions *)
 val fnpm_def = Define`
   fnpm (dpm:'a pm) (rpm: 'b pm) p f x = rpm p (f (dpm (REVERSE p) x))
 `;
@@ -204,6 +224,7 @@ val fnpm_is_perm = Store_Thm(
   SRW_TAC [][is_perm_def, fnpm_def, FUN_EQ_THM, listTheory.REVERSE_APPEND] THEN
   METIS_TAC [permof_REVERSE_monotone]);
 
+(* sets *)
 val setpm_def = Define`
   setpm pm = fnpm pm (K I) : ('a -> bool) pm
 `;
@@ -259,14 +280,85 @@ val perm_FINITE = Store_Thm(
     SRW_TAC [][is_perm_eql, setpm_is_perm, perm_INSERT]
   ]);
 
-val perm_subset_toright = store_thm(
-  "perm_subset_toright",
-  ``is_perm pm ==>
-    (setpm pm p s SUBSET s' = s SUBSET setpm pm (REVERSE p) s')``,
-  SRW_TAC [][EQ_IMP_THM, SUBSET_DEF, perm_IN] THENL [
-    FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][is_perm_inverse],
-    METIS_TAC [is_perm_inverse]
+(* pairs *)
+val pairpm_def = Define`
+  pairpm (apm:'a pm) (bpm:'b pm) pi (a,b) = (apm pi a, bpm pi b)
+`;
+val _ = export_rewrites ["pairpm_def"]
+
+val pairpm_is_perm = Store_Thm(
+  "pairpm_is_perm",
+  ``is_perm pm1 /\ is_perm pm2 ==> is_perm (pairpm pm1 pm2)``,
+  SIMP_TAC (srw_ss()) [is_perm_def, pairpm_def, pairTheory.FORALL_PROD,
+                       FUN_EQ_THM]);
+
+val FST_pairpm = Store_Thm(
+  "FST_pairpm",
+  ``FST (pairpm pm1 pm2 pi v) = pm1 pi (FST v)``,
+  Cases_on `v` THEN SRW_TAC [][]);
+
+val SND_pairpm = Store_Thm(
+  "SND_pairpm",
+  ``SND (pairpm pm1 pm2 pi v) = pm2 pi (SND v)``,
+  Cases_on `v` THEN SRW_TAC [][]);
+
+(* lists *)
+val listpm_def = Define`
+  (listpm (apm: 'a pm) pi [] = []) /\
+  (listpm apm pi (h::t) = apm pi h :: listpm apm pi t)
+`;
+val _ = export_rewrites ["listpm_def"]
+
+val listpm_MAP = store_thm(
+  "listpm_MAP",
+  ``!l. listpm pm pi l = MAP (pm pi) l``,
+  Induct THEN SRW_TAC [][listpm_def]);
+
+val listpm_is_perm = Store_Thm(
+  "listpm_is_perm",
+  ``is_perm pm ==> is_perm (listpm pm)``,
+  SIMP_TAC (srw_ss()) [is_perm_def, FUN_EQ_THM, permeq_def] THEN
+  STRIP_TAC THEN REPEAT CONJ_TAC THENL [
+    Induct THEN SRW_TAC [][],
+    Induct_on `x` THEN SRW_TAC [][],
+    REPEAT GEN_TAC THEN STRIP_TAC THEN Induct THEN SRW_TAC [][]
   ]);
+
+val listpm_APPENDlist = store_thm(
+  "listpm_APPENDlist",
+  ``listpm pm pi (l1 ++ l2) = listpm pm pi l1 ++ listpm pm pi l2``,
+  Induct_on `l1` THEN SRW_TAC [][]);
+
+val listpm_APPEND = store_thm(
+  "listpm_APPEND",
+  ``is_perm pm ==> (listpm pm (p1 ++ p2) x = listpm pm p1 (listpm pm p2 x))``,
+  METIS_TAC [listpm_is_perm, is_perm_decompose]);
+
+(* lists of pairs of strings, (concrete rep for permutations) *)
+val cpmpm_def = Define`
+  cpmpm = listpm (pairpm lswapstr lswapstr)
+`;
+
+val cpmpm_thm = Store_Thm(
+  "cpmpm_thm",
+  ``(cpmpm pi [] = []) /\
+    (cpmpm pi ((x,y)::t) = (lswapstr pi x, lswapstr pi y) :: cpmpm pi t)``,
+  SRW_TAC [][cpmpm_def]);
+
+val cpmpm_is_perm = Store_Thm(
+  "cpmpm_is_perm",
+  ``is_perm cpmpm``,
+  SRW_TAC [][cpmpm_def]);
+
+val cpmpm_APPENDlist = store_thm(
+  "cpmpm_APPENDlist",
+  ``cpmpm pi (l1 ++ l2) = cpmpm pi l1 ++ cpmpm pi l2``,
+  SRW_TAC [][cpmpm_def, listpm_APPENDlist]);
+
+val cpmpm_APPEND = store_thm(
+  "cpmpm_APPEND",
+  ``cpmpm (p1 ++ p2) p = cpmpm p1 (cpmpm p2 p)``,
+  SRW_TAC [][cpmpm_def, listpm_APPEND]);
 
 (* ----------------------------------------------------------------------
     Notion of support, and calculating the smallest set of support
@@ -319,7 +411,7 @@ val support_dwards_directed = store_thm(
   SIMP_TAC bool_ss [support_def] THEN
   REPEAT STRIP_TAC THEN
   Cases_on `x = y` THEN1 METIS_TAC [is_perm_id, is_perm_def] THEN
-  Q_TAC (NEW_TAC "z") `{x;y} UNION s1 UNION s2` THEN 
+  Q_TAC (NEW_TAC "z") `{x;y} UNION s1 UNION s2` THEN
   `[(x,y)] == [(x,z); (y,z); (x,z)]`
      by (SRW_TAC [][FUN_EQ_THM, permeq_def] THEN
          CONV_TAC (RAND_CONV
@@ -422,26 +514,88 @@ val lemma = prove(
   HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][lemma0] THEN
   SRW_TAC [][INFINITE_STR_UNIV, GSYM INFINITE_DEF]);
 
-(* some examples of supp *)
+val supp_unique = store_thm(
+  "supp_unique",
+  ``is_perm pm /\ support pm x set /\ FINITE set /\
+    (!s'. support pm x s' /\ FINITE s' ==> set SUBSET s') ==>
+    (supp pm x = set)``,
+  SRW_TAC [][] THEN
+  `FINITE (supp pm x)` by METIS_TAC [supp_smallest, SUBSET_FINITE] THEN
+  `support pm x (supp pm x)` by METIS_TAC [supp_supports] THEN
+  `!s'. support pm x s' /\ FINITE s' ==> supp pm x SUBSET s'`
+     by METIS_TAC [supp_smallest] THEN
+  METIS_TAC [SUBSET_ANTISYM]);
 
-val supp_string = store_thm(
+val supp_unique_apart = store_thm(
+  "supp_unique_apart",
+  ``is_perm pm /\ support pm x s /\ FINITE s /\
+    (!a b. a IN s /\ ~(b IN s) ==> ~(pm [(a,b)] x = x)) ==>
+    (supp pm x = s)``,
+  STRIP_TAC THEN MATCH_MP_TAC supp_unique THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][SUBSET_DEF] THEN
+  SPOSE_NOT_THEN ASSUME_TAC THEN
+  `?z. ~(z IN s') /\ ~(z IN s)`
+      by (Q.SPEC_THEN `s UNION s'` MP_TAC NEW_def THEN
+          SRW_TAC [][] THEN METIS_TAC []) THEN
+  METIS_TAC [support_def]);
+
+(* some examples of supp *)
+val supp_string = Store_Thm(
   "supp_string",
   ``supp perm_of s = {s}``,
-  SRW_TAC [][supp_def, EXTENSION, INFINITE_DEF, EQ_IMP_THM] THENL [
-    SPOSE_NOT_THEN ASSUME_TAC THEN
-    FULL_SIMP_TAC (srw_ss() ++ COND_elim_ss) [swapstr_def],
-    `{b | ~(b = s)} = COMPL {s}`
-       by (SRW_TAC [][EXTENSION] THEN METIS_TAC []) THEN
-    SRW_TAC [][lemma]
-  ]);
-val _ = export_rewrites ["supp_string"]
+  MATCH_MP_TAC supp_unique_apart THEN SRW_TAC [][support_def]);
 
-val supp_discrete = store_thm(
+val supp_discrete = Store_Thm(
   "supp_discrete",
   ``supp (K I) x = {}``,
   SRW_TAC [][supp_def, INFINITE_DEF]);
-val _ = export_rewrites ["supp_discrete"]
 
+(* pairs *)
+val supp_pairpm = Store_Thm(
+  "supp_pairpm",
+  ``(supp (pairpm pm1 pm2) (x,y) = supp pm1 x UNION supp pm2 y)``,
+  SRW_TAC [][supp_def, GSPEC_OR, INFINITE_DEF]);
+
+(* lists *)
+val supp_listpm = Store_Thm(
+  "supp_listpm",
+  ``(supp (listpm apm) [] = {}) /\
+    (supp (listpm apm) (h::t) = supp apm h UNION supp (listpm apm) t)``,
+  SRW_TAC [][supp_def, INFINITE_DEF, GSPEC_OR]);
+
+(* concrete permutations, which get their own constant for calculating their
+   support *)
+val patoms_def = Define`
+  (patoms [] = {}) /\
+  (patoms (h::t) = {FST h:string; SND h} UNION patoms t)
+`;
+val _ = export_rewrites ["patoms_def"]
+
+val FINITE_patoms = Store_Thm(
+  "FINITE_patoms",
+  ``!l. FINITE (patoms l)``,
+  Induct THEN SRW_TAC [][patoms_def]);
+
+val supp_cpmpm = Store_Thm(
+  "supp_cpmpm",
+  ``!p. supp cpmpm p = patoms p``,
+  SIMP_TAC (srw_ss()) [cpmpm_def] THEN
+  Induct THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, INSERT_UNION_EQ]);
+
+val patoms_fresh = Store_Thm(
+  "patoms_fresh",
+  ``!p. ~(x IN patoms p) /\ ~(y IN patoms p) ==> (cpmpm [(x,y)] p = p)``,
+  METIS_TAC [supp_cpmpm, supp_supports, support_def, cpmpm_is_perm]);
+
+val perm_of_unchanged = store_thm(
+  "perm_of_unchanged",
+  ``!p. ~(s IN patoms p) ==> (perm_of p s = s)``,
+  Induct THEN SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
+  SRW_TAC [][swapstr_def]);
+
+(* support for honest to goodness permutations, not just their
+   representations *)
 val perm_supp_SUBSET_plistvars = prove(
   ``!p. {s | ~(perm_of p s = s)} SUBSET
         FOLDR (\p a. {FST p; SND p} UNION a) {} p``,
@@ -477,18 +631,6 @@ val lemma = prove(
          METIS_TAC [permeq_swap_ends, listTheory.APPEND]) THEN
   SRW_TAC [][]);
 
-val supp_unique = store_thm(
-  "supp_unique",
-  ``is_perm pm /\ support pm x set /\ FINITE set /\
-    (!s'. support pm x s' /\ FINITE s' ==> set SUBSET s') ==>
-    (supp pm x = set)``,
-  SRW_TAC [][] THEN
-  `FINITE (supp pm x)` by METIS_TAC [supp_smallest, SUBSET_FINITE] THEN
-  `support pm x (supp pm x)` by METIS_TAC [supp_supports] THEN
-  `!s'. support pm x s' /\ FINITE s' ==> supp pm x SUBSET s'`
-     by METIS_TAC [supp_smallest] THEN
-  METIS_TAC [SUBSET_ANTISYM]);
-
 val supp_perm_of = store_thm(
   "supp_perm_of",
   ``supp (fnpm perm_of perm_of) (perm_of p) = { s | ~(perm_of p s = s) }``,
@@ -498,12 +640,12 @@ val supp_perm_of = store_thm(
 
     SRW_TAC [][pred_setTheory.SUBSET_DEF] THEN
     SPOSE_NOT_THEN ASSUME_TAC THEN
-    Q_TAC (NEW_TAC "y") `{x; perm_of (REVERSE p) x} UNION s'` THEN 
+    Q_TAC (NEW_TAC "y") `{x; perm_of (REVERSE p) x} UNION s'` THEN
     `!a. fnpm perm_of perm_of [(x,y)] (perm_of p) a = perm_of p a`
        by METIS_TAC [support_def] THEN
     `p ++ [(x,y)] == [(x,y)] ++ p`
        by (POP_ASSUM (ASSUME_TAC o SIMP_RULE (srw_ss()) [fnpm_def]) THEN
-           SRW_TAC [][permeq_def, FUN_EQ_THM, perm_of_decompose, 
+           SRW_TAC [][permeq_def, FUN_EQ_THM, perm_of_decompose,
                       GSYM swapstr_eq_left]) THEN
     `(x,y) :: p == (perm_of p x, perm_of p y) :: p`
        by METIS_TAC [permeq_swap_ends, permeq_trans, permeq_sym,
@@ -522,17 +664,6 @@ val supp_perm_of = store_thm(
     `~(x = perm_of p y)` by METIS_TAC [permof_inverse_applied] THEN
     SRW_TAC [][swapstr_def]
   ]);
-
-
-val permeq_flip_args = store_thm(
-  "permeq_flip_args",
-  ``(x,y)::t == (y,x)::t``,
-  SRW_TAC [][permeq_def, FUN_EQ_THM]);
-
-val is_perm_flip_args = store_thm(
-  "is_perm_flip_args",
-  ``is_perm pm ==> (pm ((x,y)::t) a = pm ((y,x)::t) a)``,
-  METIS_TAC [is_perm_def, permeq_flip_args]);
 
 val supp_fnapp = store_thm(
   "supp_fnapp",

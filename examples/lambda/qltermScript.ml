@@ -1,7 +1,7 @@
 (* This is an -*- sml -*- file *)
 open HolKernel boolLib Parse bossLib BasicProvers metisLib NEWLib
 
-open basic_swapTheory pred_setTheory nomsetTheory ncTheory 
+open basic_swapTheory pred_setTheory nomsetTheory termTheory
 
 local open swapTheory in end
 
@@ -13,6 +13,7 @@ val _ = Hol_datatype `l0term = var of string
                               | lami of num => string => l0term => l0term`
 
 fun Store_Thm(s, t, tac) = (store_thm(s,t,tac) before export_rewrites [s])
+fun Save_Thm(s, th) = (save_thm(s, th) before export_rewrites [s])
 
 val fv_def = Define`
   (fv (var s) = {s}) /\
@@ -99,19 +100,6 @@ val allatoms_apart = store_thm(
   ``a IN allatoms t /\ ~(b IN allatoms t) ==> ~(ptpm [(a,b)] t = t)``,
   Induct_on `t` THEN SRW_TAC [][swapstr_def] THEN
   METIS_TAC []);
-
-val supp_unique_apart = store_thm(
-  "supp_unique_apart",
-  ``is_perm pm /\ support pm x s /\ FINITE s /\
-    (!a b. a IN s /\ ~(b IN s) ==> ~(pm [(a,b)] x = x)) ==>
-    (supp pm x = s)``,
-  STRIP_TAC THEN MATCH_MP_TAC supp_unique THEN
-  ASM_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][SUBSET_DEF] THEN
-  SPOSE_NOT_THEN ASSUME_TAC THEN
-  `?z. ~(z IN s') /\ ~(z IN s)`
-      by (Q.SPEC_THEN `s UNION s'` MP_TAC NEW_def THEN
-          SRW_TAC [][] THEN METIS_TAC []) THEN
-  METIS_TAC [support_def]);
 
 val allatoms_supp = store_thm(
   "allatoms_supp",
@@ -645,68 +633,21 @@ val limf_support_fresh = UNDISCH (UNDISCH (prove(
 val h_supp_t = ``supp (fnpm perm_of apm) ^h``
 val i_supp_t = ``supp (fnpm perm_of (fnpm apm apm)) ^i``
 
-val pairpm_def = Define`
-  pairpm (apm: 'a pm) (bpm:'b pm) pi (a,b) =
-     (apm pi a, bpm pi b)
-`;
-
-val pairpm_is_perm = Store_Thm(
-  "pairpm_is_perm",
-  ``is_perm pm1 /\ is_perm pm2 ==> is_perm (pairpm pm1 pm2)``,
-  SIMP_TAC (srw_ss()) [is_perm_def, pairpm_def, pairTheory.FORALL_PROD,
-                       FUN_EQ_THM]);
-
-val listpm_def = Define`
-  (listpm (pm: 'a pm) pi [] = []) /\
-  (listpm pm pi (h :: t) = pm pi h :: listpm pm pi t)
-`;
-
-val MAP_MAP = store_thm(
-  "MAP_MAP",
-  ``!l. MAP f (MAP g l) = MAP (f o g) l``,
-  Induct THEN SRW_TAC [][]);
-
-val MAP_I = store_thm(
-  "MAP_I",
-  ``!x. MAP I x = x``,
-  Induct THEN SRW_TAC [][]);
-
-val listpm_MAP = store_thm(
-  "listpm_MAP",
-  ``!l. listpm pm pi l = MAP (pm pi) l``,
-  Induct THEN SRW_TAC [][listpm_def]);
-
-val listpm_is_perm = Store_Thm(
-  "listpm_is_perm",
-  ``is_perm pm ==> is_perm (listpm pm)``,
-  STRIP_TAC THEN SIMP_TAC (srw_ss()) [is_perm_def, listpm_MAP, MAP_MAP] THEN
-  `pm [] = I` by FULL_SIMP_TAC (srw_ss()) [is_perm_def, FUN_EQ_THM] THEN
-  SRW_TAC [][MAP_I] THEN FULL_SIMP_TAC (srw_ss()) [is_perm_def] THENL [
-    REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
-    SRW_TAC [][FUN_EQ_THM],
-    SRW_TAC [][FUN_EQ_THM, listpm_MAP] THEN METIS_TAC []
-  ]);
-
-val listpm_APPEND = store_thm(
-  "listpm_APPEND",
-  ``listpm pm pi (l1 ++ l2) = listpm pm pi l1 ++ listpm pm pi l2``,
-  SRW_TAC [][listpm_MAP]);
-
 val ctxt00 = ``^lamf_support_t /\ ^limf_support_t /\ FINITE A /\ is_perm apm``
 val ctxt_s_supp =
-    ``support (fnpm (listpm (pairpm perm_of perm_of)) apm) s sS /\ FINITE sS``
+    ``support (fnpm (cpmpm) apm) s sS /\ FINITE sS``
 val ctxt_s12_supp =
-    ``support (fnpm (listpm (pairpm perm_of perm_of)) apm) s1 sS1 /\
+    ``support (fnpm (cpmpm) apm) s1 sS1 /\
       FINITE sS1 /\
-      support (fnpm (listpm (pairpm perm_of perm_of)) apm) s2 sS2 /\
+      support (fnpm (cpmpm) apm) s2 sS2 /\
       FINITE sS2``
 
 val ssupport_fresh = UNDISCH (UNDISCH (prove(
-  ``support (fnpm (listpm (pairpm perm_of perm_of)) apm) s sS ==>
+  ``support (fnpm (cpmpm) apm) s sS ==>
     is_perm apm ==>
     !x y p.
       ~(x IN sS) /\ ~(y IN sS) ==>
-      (apm [(x,y)] (s p) = s (listpm (pairpm perm_of perm_of) [(x,y)] p))``,
+      (apm [(x,y)] (s p) = s (cpmpm [(x,y)] p))``,
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC (Q.GEN `A` support_freshf) THEN Q.EXISTS_TAC `sS` THEN
   SRW_TAC [][])));
@@ -714,39 +655,13 @@ val ssupport_fresh = UNDISCH (UNDISCH (prove(
 val s1support_fresh = Q.INST [`s` |-> `s1`, `sS` |-> `sS1`] ssupport_fresh
 val s2support_fresh = Q.INST [`s` |-> `s2`, `sS` |-> `sS2`] ssupport_fresh
 
-val patoms_def = Define`
-  (patoms [] = {}) /\
-  (patoms (h::t) = {FST h:string; SND h} UNION patoms t)
-`;
-
-val FINITE_patoms = Store_Thm(
-  "FINITE_patoms",
-  ``!l. FINITE (patoms l)``,
-  Induct THEN SRW_TAC [][patoms_def]);
-
-val patoms_support = store_thm(
-  "patoms_support",
-  ``!l. support (listpm (pairpm perm_of perm_of)) l (patoms l)``,
-  SIMP_TAC (srw_ss()) [support_def] THEN Induct THEN
-  SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, support_def, patoms_def,
-                       listpm_def, pairpm_def] THEN
-  SRW_TAC [][swapstr_def]);
-
-val patoms_fresh = Store_Thm(
-  "patoms_fresh",
-  ``!p. ~(x IN patoms p) /\ ~(y IN patoms p) ==>
-        (listpm (pairpm perm_of perm_of) [(x,y)] p = p)``,
-  METIS_TAC [patoms_support, support_def]);
-
 val h_supported_by = prove(
   ``!a s sS pi.
        ^ctxt00 /\ ^ctxt_s_supp ==>
        support (fnpm perm_of apm) ^h (a INSERT (A UNION patoms pi UNION sS))``,
   REPEAT STRIP_TAC THEN
   MAP_EVERY ASSUME_TAC [lamf_support_fresh, ssupport_fresh] THEN
-  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, listpm_APPEND,
-             listpm_def, pairpm_def] THEN
-  SRW_TAC [][swapstr_def]);
+  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, cpmpm_APPENDlist]);
 val i_supported_by = prove(
   ``!a s1 s2 sS1 sS2 pi.
        ^ctxt00 /\ ^ctxt_s_supp ==>
@@ -754,9 +669,8 @@ val i_supported_by = prove(
                (a INSERT A UNION patoms pi UNION sS)``,
   REPEAT STRIP_TAC THEN
   MAP_EVERY ASSUME_TAC [limf_support_fresh, ssupport_fresh] THEN
-  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, listpm_APPEND,
-             listpm_def, pairpm_def, is_perm_sing_inv] THEN
-  SRW_TAC [][swapstr_def]);
+  SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, cpmpm_APPENDlist,
+             is_perm_sing_inv]);
 
 val cond16 = ``?a'. ~(a' IN A) /\ !x. ~(a' IN supp apm (^lamf a' x))``
 val cond16i = ``?a'. ~(a' IN A) /\
@@ -771,11 +685,11 @@ val cond16_implies_freshness_ok = prove(
   `!a'' x. ~(a'' IN A) /\ ~(a' = a'') ==>
            ~(a'' IN supp apm (lamf a'' (apm [(a',a'')] x)))`
       by (REPEAT GEN_TAC THEN STRIP_TAC THEN
-          `lamf a'' = fnpm apm apm [(a',a'')] (lamf a')` 
+          `lamf a'' = fnpm apm apm [(a',a'')] (lamf a')`
               by SRW_TAC [][fnpm_def, FUN_EQ_THM, is_perm_sing_inv,
                             lamf_support_fresh] THEN
           SRW_TAC [][fnpm_def, is_perm_sing_inv, perm_supp]) THEN
-  Q_TAC (NEW_TAC "a''") `{a;a'} UNION A UNION sS UNION patoms pi` THEN 
+  Q_TAC (NEW_TAC "a''") `{a;a'} UNION A UNION sS UNION patoms pi` THEN
   `support (fnpm perm_of apm) h (a INSERT A UNION patoms pi UNION sS)`
      by (Q.UNABBREV_ALL_TAC THEN MATCH_MP_TAC h_supported_by THEN
          SRW_TAC [][]) THEN
@@ -803,7 +717,7 @@ val cond16i_implies_freshness_ok = prove(
               by SRW_TAC [][fnpm_def, FUN_EQ_THM, is_perm_sing_inv,
                             limf_support_fresh] THEN
           SRW_TAC [][fnpm_def, is_perm_sing_inv, perm_supp]) THEN
-  Q_TAC (NEW_TAC "a''") `{a;a'} UNION A UNION sS UNION patoms pi` THEN 
+  Q_TAC (NEW_TAC "a''") `{a;a'} UNION A UNION sS UNION patoms pi` THEN
   `support (fnpm perm_of (fnpm apm apm)) i
            (a INSERT A UNION patoms pi UNION sS)`
      by (Q.UNABBREV_ALL_TAC THEN MATCH_MP_TAC i_supported_by THEN
@@ -834,46 +748,28 @@ val full = SIMP_RULE (srw_ss()) [FUN_EQ_THM] full0
 
 val fndefn = #2 (dest_exists (concl full))
 
-val perm_of_swapstr2 = store_thm(
-  "perm_of_swapstr2",
-  ``perm_of [(swapstr x y a, swapstr x y b)] =
-    fnpm perm_of perm_of [(x,y)] (perm_of [(a,b)])``,
-  SRW_TAC [][FUN_EQ_THM, fnpm_def] THEN 
-  CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM swapstr_swapstr])) THEN 
-  SRW_TAC [][]);
-
 val swapstr_perm_of = store_thm(
   "swapstr_perm_of",
   ``swapstr x y (perm_of pi s) =
-    perm_of (listpm (pairpm perm_of perm_of) [(x,y)] pi) (swapstr x y s)``,
+    perm_of (cpmpm [(x,y)] pi) (swapstr x y s)``,
   Induct_on `pi` THEN
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, listpm_def, pairpm_def] THEN
   POP_ASSUM (SUBST1_TAC o SYM) THEN SRW_TAC [][]);
 
-val perm_o = Store_Thm(
-  "perm_o",
-  ``is_perm pm1 /\ is_perm pm2 /\ is_perm pm3 ==>
-    (fnpm pm1 pm2 pi f o fnpm pm3 pm1 pi g =
-     fnpm pm3 pm2 pi (f o g))``,
-  SRW_TAC [][FUN_EQ_THM, fnpm_def, is_perm_inverse]);
-
-
 val rawfinite_support = prove(
   ``^fndefn /\ ^ctxt00 /\ ^cond16 /\ ^cond16i /\ ^var_support_t /\
     ^app_support_t ==>
-    support (fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm)) fn A``,
+    support (fnpm ptpm (fnpm (cpmpm) apm)) fn A``,
   STRIP_TAC THEN SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] THEN
   Q_TAC SUFF_TAC
         `!t pi x y.  ~(x IN A) /\ ~(y IN A) ==>
-                     (apm [(x,y)] (fn (ptpm [(x,y)] t)
-                                     (listpm (pairpm perm_of perm_of)
-                                             [(x,y)] pi)) =
+                     (apm [(x,y)] (fn (ptpm [(x,y)] t) (cpmpm [(x,y)] pi)) =
                       fn t pi)`
         THEN1 PROVE_TAC [] THEN
   Induct THEN SRW_TAC [][fnpm_def] THENL [
     `(!s. apm [(x,y)] (vr s) = vr (perm_of [(x,y)] s))`
         by (MATCH_MP_TAC support_freshf THEN SRW_TAC [][]) THEN
-    SRW_TAC [][swapstr_perm_of, is_perm_sing_inv, listpm_def],
+    SRW_TAC [][swapstr_perm_of, is_perm_sing_inv],
 
     `!a b pi. apm pi (ap a b) =
               fnpm apm apm pi (ap a) (apm pi b)`
@@ -888,28 +784,24 @@ val rawfinite_support = prove(
        by (MAP_EVERY Q.UNABBREV_TAC [`g`, `h`] THEN
            SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `a` THEN
            SRW_TAC [][fnpm_def, lamf_support_fresh] THEN
-           `listpm (pairpm perm_of perm_of) [(x,y)] pi ++
-              [(swapstr x y a, swapstr x y s)]
-            =
-              listpm (pairpm perm_of perm_of) [(x,y)] (pi ++ [(a,s)])`
-               by SRW_TAC [][listpm_APPEND, listpm_def, pairpm_def] THEN
+           `cpmpm [(x,y)] pi ++ [(swapstr x y a, swapstr x y s)] =
+                cpmpm [(x,y)] (pi ++ [(a,s)])`
+              by SRW_TAC [][cpmpm_APPENDlist] THEN
            SRW_TAC [][]) THEN
     POP_ASSUM (fn th =>
                   Q_TAC SUFF_TAC `fcond apm h` THEN1
                         SRW_TAC [][fresh_equivariant, is_perm_eql,
                                    is_perm_sing_inv, th]) THEN
     Q.UNABBREV_ALL_TAC THEN
-    `support (fnpm (listpm (pairpm perm_of perm_of)) apm) (fn t)
-             (A UNION allatoms t)`
+    `support (fnpm (cpmpm) apm) (fn t) (A UNION allatoms t)`
        by (SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] THEN
            MAP_EVERY Q.X_GEN_TAC [`c`, `d`] THEN REPEAT STRIP_TAC THEN
            `!x. apm [(c,d)] (fn t x) =
-                fnpm (listpm (pairpm perm_of perm_of)) apm [(c,d)] (fn t)
-                     (listpm (pairpm perm_of perm_of) [(c,d)] x)`
+                fnpm (cpmpm) apm [(c,d)] (fn t) (cpmpm [(c,d)] x)`
              by SRW_TAC [][fnpm_def, is_perm_sing_inv] THEN
            SRW_TAC [][is_perm_sing_inv] THEN
-           `fnpm (listpm (pairpm perm_of perm_of)) apm [(c,d)] (fn t) =
-            fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm) [(c,d)] fn
+           `fnpm (cpmpm) apm [(c,d)] (fn t) =
+            fnpm ptpm (fnpm (cpmpm) apm) [(c,d)] fn
                  (ptpm [(c,d)] t)`
              by SRW_TAC [][fnpm_def] THEN
            `ptpm [(c,d)] t = t`
@@ -918,8 +810,8 @@ val rawfinite_support = prove(
            NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN SRW_TAC [][fnpm_def]) THEN
     Q.ABBREV_TAC `bigA = A UNION allatoms t UNION patoms pi` THEN
     `support (fnpm perm_of (fnpm apm apm)) lamf bigA /\
-     support (fnpm (listpm (pairpm perm_of perm_of)) apm) (fn t) bigA /\
-     support (listpm (pairpm perm_of perm_of)) pi bigA`
+     support (fnpm (cpmpm) apm) (fn t) bigA /\
+     support (cpmpm) pi bigA`
        by FULL_SIMP_TAC (srw_ss()) [support_def, Abbr`bigA`] THEN
     SRW_TAC [][fcond_def] THENL [
       Q.MATCH_ABBREV_TAC `FINITE (supp pm h)` THEN
@@ -943,11 +835,9 @@ val rawfinite_support = prove(
        by (MAP_EVERY Q.UNABBREV_TAC [`g`, `h`] THEN
            SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Q.X_GEN_TAC `a` THEN
            SRW_TAC [][fnpm_def, limf_support_fresh, is_perm_sing_inv] THEN
-           `listpm (pairpm perm_of perm_of) [(x,y)] pi ++
-              [(swapstr x y a, swapstr x y s)]
-            =
-              listpm (pairpm perm_of perm_of) [(x,y)] (pi ++ [(a,s)])`
-               by SRW_TAC [][listpm_APPEND, listpm_def, pairpm_def] THEN
+           `cpmpm [(x,y)] pi ++ [(swapstr x y a, swapstr x y s)] =
+                cpmpm [(x,y)] (pi ++ [(a,s)])`
+              by SRW_TAC [][cpmpm_APPENDlist, listpm_def, pairpm_def] THEN
            SRW_TAC [][]) THEN
     `arg2 = apm [(x,y)] arg1` by SRW_TAC [][Abbr`arg1`, Abbr`arg2`,
                                             is_perm_sing_inv] THEN
@@ -960,17 +850,17 @@ val rawfinite_support = prove(
 
                          SRW_TAC [][fresh_equivariant, th])) THEN
     Q.UNABBREV_ALL_TAC THEN
-    `support (fnpm (listpm (pairpm perm_of perm_of)) apm) (fn t)
+    `support (fnpm (cpmpm) apm) (fn t)
              (A UNION allatoms t)`
        by (SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] THEN
            MAP_EVERY Q.X_GEN_TAC [`c`, `d`] THEN REPEAT STRIP_TAC THEN
            `!x. apm [(c,d)] (fn t x) =
-                fnpm (listpm (pairpm perm_of perm_of)) apm [(c,d)] (fn t)
-                     (listpm (pairpm perm_of perm_of) [(c,d)] x)`
+                fnpm (cpmpm) apm [(c,d)] (fn t)
+                     (cpmpm [(c,d)] x)`
              by SRW_TAC [][fnpm_def, is_perm_sing_inv] THEN
            SRW_TAC [][is_perm_sing_inv] THEN
-           `fnpm (listpm (pairpm perm_of perm_of)) apm [(c,d)] (fn t) =
-            fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm) [(c,d)] fn
+           `fnpm (cpmpm) apm [(c,d)] (fn t) =
+            fnpm ptpm (fnpm (cpmpm) apm) [(c,d)] fn
                  (ptpm [(c,d)] t)`
              by SRW_TAC [][fnpm_def] THEN
            `ptpm [(c,d)] t = t`
@@ -979,8 +869,8 @@ val rawfinite_support = prove(
            NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN SRW_TAC [][fnpm_def]) THEN
     Q.ABBREV_TAC `bigA = A UNION allatoms t UNION patoms pi` THEN
     `support (fnpm perm_of (fnpm apm apm)) lamf bigA /\
-     support (fnpm (listpm (pairpm perm_of perm_of)) apm) (fn t) bigA /\
-     support (listpm (pairpm perm_of perm_of)) pi bigA`
+     support (fnpm (cpmpm) apm) (fn t) bigA /\
+     support (cpmpm) pi bigA`
        by FULL_SIMP_TAC (srw_ss()) [support_def, Abbr`bigA`] THEN
     SRW_TAC [][fcond_def] THENL [
       Q.MATCH_ABBREV_TAC `FINITE (supp pm h)` THEN
@@ -1023,16 +913,16 @@ val perm_of_unchanged = store_thm(
   SRW_TAC [][swapstr_def]);
 
 val fn_support_fresh = UNDISCH (UNDISCH (prove(
-  ``support (fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm)) fn A ==>
+  ``support (fnpm ptpm (fnpm (cpmpm) apm)) fn A ==>
     is_perm apm ==>
     !x y M p.
        ~(x IN A) /\ ~(y IN A) ==>
        (apm [(x,y)] (fn M p) =
-          fn (ptpm [(x,y)] M) (listpm (pairpm perm_of perm_of) [(x,y)] p))``,
+          fn (ptpm [(x,y)] M) (cpmpm [(x,y)] p))``,
   REPEAT STRIP_TAC THEN
   `apm [(x,y)] (fn M p) =
-       fnpm (listpm (pairpm perm_of perm_of)) apm [(x,y)] (fn M)
-            (listpm (pairpm perm_of perm_of) [(x,y)] p)`
+       fnpm (cpmpm) apm [(x,y)] (fn M)
+            (cpmpm [(x,y)] p)`
      by SRW_TAC [][fnpm_def, is_perm_sing_inv] THEN
   SRW_TAC [][] THEN AP_THM_TAC THEN
   MATCH_MP_TAC support_freshf THEN SRW_TAC [][])))
@@ -1045,7 +935,7 @@ val perms_move = prove(
   SRW_TAC [][lswapstr_APPEND] THEN
   SRW_TAC [][GSYM lswapstr_APPEND] THENL [
     Q.MATCH_ABBREV_TAC `fresh apm f = fresh apm g` THEN
-    `support (fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm)) fn A`
+    `support (fnpm ptpm (fnpm (cpmpm) apm)) fn A`
        by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
            METIS_TAC []) THEN
     ASSUME_TAC fn_support_fresh THEN
@@ -1056,7 +946,7 @@ val perms_move = prove(
     Q.PAT_ASSUM `!p1 p2. fn (ptpm p2 t) p1 = fn t (p1 ++ p2)` (K ALL_TAC) THEN
     `support (fnpm perm_of apm) f bigS /\ support (fnpm perm_of apm) g bigS`
        by (SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, Abbr`f`, Abbr`g`,
-                      Abbr`bigS`, listpm_APPEND, listpm_def, pairpm_def] THEN
+                      Abbr`bigS`, cpmpm_APPENDlist, listpm_def, pairpm_def] THEN
            SRW_TAC [][swapstr_perm_of, swapstr_def]) THEN
     `FINITE bigS` by SRW_TAC [][Abbr`bigS`] THEN
     `?b. ~(b IN bigS)` by METIS_TAC [NEW_def] THEN
@@ -1074,15 +964,15 @@ val perms_move = prove(
               MATCH_MP_TAC cond16_implies_freshness_ok THEN
               MAP_EVERY Q.EXISTS_TAC
                         [`A`, `A UNION allatoms t UNION patoms p2`] THEN
-              SRW_TAC [][patoms_support] THENL [
-                SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, listpm_APPEND,
+              SRW_TAC [][] THENL [
+                SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, cpmpm_APPENDlist,
                            is_perm_sing_inv],
                 METIS_TAC []
               ],
               Q.UNABBREV_TAC `g` THEN
               MATCH_MP_TAC cond16_implies_freshness_ok THEN
               MAP_EVERY Q.EXISTS_TAC [`A`, `A UNION allatoms t`] THEN
-              SRW_TAC [][patoms_support] THENL [
+              SRW_TAC [][] THENL [
                 SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def,
                            is_perm_sing_inv],
                 METIS_TAC []
@@ -1107,7 +997,7 @@ val perms_move = prove(
 
     AP_THM_TAC THEN
     Q.MATCH_ABBREV_TAC `fresh (fnpm apm apm) f = fresh (fnpm apm apm) g` THEN
-    `support (fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm)) fn A`
+    `support (fnpm ptpm (fnpm (cpmpm) apm)) fn A`
        by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
            METIS_TAC []) THEN
     ASSUME_TAC fn_support_fresh THEN
@@ -1120,7 +1010,7 @@ val perms_move = prove(
     `support (fnpm perm_of (fnpm apm apm)) f bigS /\
      support (fnpm perm_of (fnpm apm apm)) g bigS`
        by (SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def, Abbr`f`, Abbr`g`,
-                      Abbr`bigS`, listpm_APPEND, listpm_def, pairpm_def,
+                      Abbr`bigS`, cpmpm_APPENDlist, listpm_def, pairpm_def,
                       allatoms_fresh] THEN
            SRW_TAC [][swapstr_perm_of, swapstr_def, is_perm_sing_inv]) THEN
     `FINITE bigS` by SRW_TAC [][Abbr`bigS`] THEN
@@ -1142,15 +1032,15 @@ val perms_move = prove(
               MATCH_MP_TAC cond16i_implies_freshness_ok THEN
               MAP_EVERY Q.EXISTS_TAC
                         [`A UNION allatoms t UNION patoms p2`, `A`] THEN
-              SRW_TAC [][patoms_support] THENL [
-                SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, listpm_APPEND,
+              SRW_TAC [][] THENL [
+                SRW_TAC [][support_def, fnpm_def, FUN_EQ_THM, cpmpm_APPENDlist,
                            is_perm_sing_inv, allatoms_fresh],
                 METIS_TAC []
               ],
               Q.UNABBREV_TAC `g` THEN
               MATCH_MP_TAC cond16i_implies_freshness_ok THEN
               MAP_EVERY Q.EXISTS_TAC [`A UNION allatoms t`, `A`] THEN
-              SRW_TAC [][patoms_support] THENL [
+              SRW_TAC [][] THENL [
                 SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def,
                            is_perm_sing_inv, allatoms_fresh],
                 METIS_TAC []
@@ -1239,7 +1129,7 @@ val fn_respectful = prove(
     AP_THM_TAC
   ] THEN
   Q.MATCH_ABBREV_TAC `fresh somepm f = fresh somepm g` THEN
-  `support (fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm)) fn A`
+  `support (fnpm ptpm (fnpm (cpmpm) apm)) fn A`
      by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
          METIS_TAC [])
   THENL [
@@ -1335,7 +1225,7 @@ val better_lam_clause0 = prove(
      by (MATCH_MP_TAC perms_move THEN SRW_TAC [][] THEN METIS_TAC []) THEN
   POP_ASSUM (fn th => SIMP_TAC (srw_ss()) [th]) THEN
   Q.MATCH_ABBREV_TAC `fresh apm f = lamf z (fn t [(z,v)])` THEN
-  `support (fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm)) fn A`
+  `support (fnpm ptpm (fnpm (cpmpm) apm)) fn A`
      by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
          METIS_TAC []) THEN
   Q.ABBREV_TAC `bigS = v INSERT A UNION allatoms t` THEN
@@ -1397,7 +1287,7 @@ val better_lami_clause0 = prove(
   POP_ASSUM (fn th => SIMP_TAC (srw_ss()) [th]) THEN
   AP_THM_TAC THEN
   Q.MATCH_ABBREV_TAC `fresh spm f = limf n z (fn t [(z,v)])` THEN
-  `support (fnpm ptpm (fnpm (listpm (pairpm perm_of perm_of)) apm)) fn A`
+  `support (fnpm ptpm (fnpm (cpmpm) apm)) fn A`
      by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
          METIS_TAC []) THEN
   Q.ABBREV_TAC `bigS = v INSERT A UNION allatoms t` THEN
@@ -1440,11 +1330,13 @@ val better_lami_clause =
 val recursion0 = prove(
   ``^cond16 /\ ^cond16i /\ ^ctxt00 /\ ^var_support_t /\ ^app_support_t ==>
     ?f :: respects (aeq ===> (=)).
-        (!s. f (var s) = vr s) /\
-        (!t1 t2. f (app t1 t2) = ap (f t1) (f t2)) /\
-        (!v t. ~(v IN A) ==> (f (lam v t) = lamf v (f t))) /\
-        (!n v t1 t2. ~(v IN A) ==>
-                     (f (lami n v t1 t2) = limf n v (f t1) (f t2)))``,
+        ((!s. f (var s) = vr s) /\
+         (!t1 t2. f (app t1 t2) = ap (f t1) (f t2)) /\
+         (!v t. ~(v IN A) ==> (f (lam v t) = lamf v (f t))) /\
+         (!n v t1 t2. ~(v IN A) ==>
+                      (f (lami n v t1 t2) = limf n v (f t1) (f t2)))) /\
+        (!x y t. ~(x IN A) /\ ~(y IN A) ==>
+                 (f (ptpm [(x,y)] t) = apm [(x,y)] (f t)))``,
   REPEAT STRIP_TAC THEN
   STRIP_ASSUME_TAC full THEN
   SRW_TAC [][RES_EXISTS_THM, quotientTheory.IN_RESPECTS,
@@ -1457,7 +1349,12 @@ val recursion0 = prove(
     REPEAT STRIP_TAC THEN BETA_TAC THEN
     MATCH_MP_TAC better_lam_clause THEN SRW_TAC [][] THEN METIS_TAC [],
     REPEAT STRIP_TAC THEN BETA_TAC THEN
-    MATCH_MP_TAC better_lami_clause THEN SRW_TAC [][] THEN METIS_TAC []
+    MATCH_MP_TAC better_lami_clause THEN SRW_TAC [][] THEN METIS_TAC [],
+    `support (fnpm ptpm (fnpm cpmpm apm)) fn A`
+       by (MATCH_MP_TAC rawfinite_support THEN SRW_TAC [][] THEN
+           METIS_TAC []) THEN
+    ASSUME_TAC fn_support_fresh THEN
+    SRW_TAC [][]
   ]);
 
 fun mk_def(s,t) =
@@ -1486,32 +1383,20 @@ val [FV_thm, simple_lterm_induction, ltpm_thm, LAM_distinct, LAM_11,
                  ptpm_sing_inv, ptpm_NIL, ptpm_flip_args, ptpm_id_front,
                  ptpm_fv, ptpm_INVERSE]}
 
-val _ = save_thm("ltpm_NIL", ltpm_NIL)
-val _ = export_rewrites ["ltpm_NIL"]
+val _ = Save_Thm("ltpm_NIL", ltpm_NIL)
 
-val FRESH_swap = save_thm("FRESH_swap", GSYM FRESH_swap0)
+val ltpm_fresh = save_thm("ltpm_fresh", GSYM FRESH_swap0)
 val _ = save_thm("simple_lterm_induction", simple_lterm_induction)
 
-val _ = save_thm("LAM_distinct", LAM_distinct);
-val _ = export_rewrites ["LAM_distinct"]
-
-val _ = save_thm("LAM_11", LAM_11);
-val _ = export_rewrites ["LAM_11"]
-
-val _ = save_thm("ltpm_thm", ltpm_thm);
-val _ = export_rewrites ["ltpm_thm"]
-
-val _ = save_thm("FV_thm", FV_thm);
-val _ = export_rewrites ["FV_thm"]
+val _ = Save_Thm("lterm_distinct", LAM_distinct);
+val _ = Save_Thm("lterm_11", LAM_11);
+val _ = Save_Thm("ltpm_thm", ltpm_thm);
+val _ = Save_Thm("FV_thm", FV_thm);
+val _ = Save_Thm("FINITE_FV", FINITE_FV);
+val _ = Save_Thm("ltpm_sing_inv", ltpm_sing_inv);
 
 val _ = save_thm("LAM_eq_thm", LAM_eq_thm);
 val _ = save_thm("ltm_recursion", ltm_recursion)
-
-val _ = save_thm("FINITE_FV", FINITE_FV);
-val _ = export_rewrites ["FINITE_FV"]
-
-val _ = save_thm("ltpm_sing_inv", ltpm_sing_inv);
-val _ = export_rewrites ["ltpm_sing_inv"]
 
 val _ = save_thm("ltpm_flip_args", ltpm_flip_args)
 val _ = save_thm("ltpm_id_front", ltpm_id_front)
@@ -1666,19 +1551,19 @@ val lswap_is_perm = Store_Thm(
   "lswap_is_perm",
   ``is_perm lswap``,
   SRW_TAC [][is_perm_def, permeq_def, FUN_EQ_THM] THEN
-  Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC ncTheory.simple_induction THEN 
+  Q.ID_SPEC_TAC `x` THEN HO_MATCH_MP_TAC ncTheory.simple_induction THEN
   SRW_TAC [][lswapstr_APPEND]);
 
 val FV_lswap = Store_Thm(
   "FV_lswap",
   ``!t. x IN FV (lswap pi t) = lswapstr (REVERSE pi) x IN FV t``,
-  HO_MATCH_MP_TAC simple_induction THEN 
+  HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][lswapstr_eql]);
 
 val lswap_subst = store_thm(
-  "lswap_subst", 
+  "lswap_subst",
   ``!t. lswap pi ([N/v] t) = [lswap pi N/lswapstr pi v] (lswap pi t)``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `v INSERT FV N` THEN SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val lswap_fresh = store_thm(
@@ -1692,7 +1577,7 @@ val lswap_apart = store_thm(
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THENL [
     METIS_TAC [],
     METIS_TAC [],
-    SRW_TAC [][LAM_INJ_swap] THEN 
+    SRW_TAC [][LAM_INJ_swap] THEN
     Cases_on `y = v` THEN SRW_TAC [][],
     SRW_TAC [][LAM_INJ_swap]
   ]);
@@ -1700,7 +1585,7 @@ val lswap_apart = store_thm(
 val supp_lswap = Store_Thm(
   "supp_lswap",
   ``supp lswap t = FV t``,
-  MATCH_MP_TAC supp_unique_apart THEN 
+  MATCH_MP_TAC supp_unique_apart THEN
   SRW_TAC [][lswap_fresh, lswap_apart, support_def]);
 
 
@@ -1708,18 +1593,18 @@ val supp_lswap = Store_Thm(
 val supp_subst_partial = store_thm(
   "supp_subst_partial",
   ``supp (fnpm lswap lswap) (\t2. [t2/v] t) = FV t DELETE v``,
-  MATCH_MP_TAC supp_unique_apart THEN 
-  SRW_TAC [][support_def, FUN_EQ_THM] THEN 
-  REWRITE_TAC [fnpm_def] THEN 
+  MATCH_MP_TAC supp_unique_apart THEN
+  SRW_TAC [][support_def, FUN_EQ_THM] THEN
+  REWRITE_TAC [fnpm_def] THEN
   SRW_TAC [][lswap_subst, is_perm_sing_inv, lswap_fresh] THENL [
-    Cases_on `x = v` THEN SRW_TAC [][lemma14b] THEN 
+    Cases_on `x = v` THEN SRW_TAC [][lemma14b] THEN
     Cases_on `y = v` THEN SRW_TAC [][lemma14b],
-    `lswap [(x,v)] t = [VAR x/v] t` 
-       by SRW_TAC [][lswap_def, fresh_var_swap] THEN 
+    `lswap [(x,v)] t = [VAR x/v] t`
+       by SRW_TAC [][lswap_def, fresh_var_swap] THEN
     SRW_TAC [][lemma15a],
     `lswap [(v,y)] t = [VAR y/v] t`
-       by (SRW_TAC [][lswap_def] THEN 
-           METIS_TAC [swap_comm, fresh_var_swap]) THEN 
+       by (SRW_TAC [][lswap_def] THEN
+           METIS_TAC [swap_comm, fresh_var_swap]) THEN
     SRW_TAC [][lemma15a],
     SRW_TAC [][lswap_def],
     Cases_on `b = v` THEN SRW_TAC [][] THENL [
@@ -1727,27 +1612,27 @@ val supp_subst_partial = store_thm(
       Q.EXISTS_TAC `VAR v` THEN SRW_TAC [][lemma14a, lswap_apart]
     ],
     Cases_on `b IN FV t` THENL [
-      Q.EXISTS_TAC `VAR a` THEN SRW_TAC [][lemma14a] THEN 
-      STRIP_TAC THEN 
+      Q.EXISTS_TAC `VAR a` THEN SRW_TAC [][lemma14a] THEN
+      STRIP_TAC THEN
       `b IN FV (lswap [(a,b)] t) = b IN FV ([VAR a/b] t)`
-         by METIS_TAC [] THEN 
+         by METIS_TAC [] THEN
       POP_ASSUM MP_TAC THEN SRW_TAC [][FV_SUB],
       SRW_TAC [][lemma14b, lswap_apart]
     ]
   ]);
-      
-val phi_exists = 
-    (SIMP_RULE (srw_ss()) [is_perm_sing_inv, lswap_subst, 
-                           supp_subst_partial] o 
-     REWRITE_RULE [fnpm_def] o 
+
+val phi_exists =
+    (SIMP_RULE (srw_ss()) [is_perm_sing_inv, lswap_subst,
+                           supp_subst_partial] o
+     REWRITE_RULE [fnpm_def] o
      SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] o
      Q.INST [`apm` |-> `lswap`,
              `A` |-> `{}`,
-             `vr` |-> `VAR`, 
-             `ap` |-> `(@@)`, 
-             `lm` |-> `LAM`, 
-             `li` |-> `\n v t1 t2. [t2/v]t1`] o SPEC_ALL o 
-     INST_TYPE [alpha |-> ``:'a nc``]) 
+             `vr` |-> `VAR`,
+             `ap` |-> `(@@)`,
+             `lm` |-> `LAM`,
+             `li` |-> `\n v t1 t2. [t2/v]t1`] o SPEC_ALL o
+     INST_TYPE [alpha |-> ``:'a nc``])
     ltm_recursion
 
 val phi_thm = new_specification("phi_thm", ["phi"], phi_exists)
@@ -1755,28 +1640,28 @@ val phi_thm = new_specification("phi_thm", ["phi"], phi_exists)
 
 val supp_lamax_app = prove(
   ``supp (fnpm lswap lswap) (\t2. (LAM v t1) @@ t2) = FV t1 DELETE v``,
-  MATCH_MP_TAC supp_unique_apart THEN 
-  SRW_TAC [][support_def, FUN_EQ_THM] THEN 
-  REWRITE_TAC [fnpm_def] THEN 
-  SRW_TAC [][is_perm_sing_inv, lswap_fresh] THEN 
-  SRW_TAC [][LAM_INJ_swap] THEN 
-  Cases_on `b = v` THEN SRW_TAC [][] THEN 
+  MATCH_MP_TAC supp_unique_apart THEN
+  SRW_TAC [][support_def, FUN_EQ_THM] THEN
+  REWRITE_TAC [fnpm_def] THEN
+  SRW_TAC [][is_perm_sing_inv, lswap_fresh] THEN
+  SRW_TAC [][LAM_INJ_swap] THEN
+  Cases_on `b = v` THEN SRW_TAC [][] THEN
   SRW_TAC [][lswap_apart]);
 
-val strip_label_exists = 
-    (SIMP_RULE (srw_ss()) [is_perm_sing_inv, supp_lamax_app] o 
-     REWRITE_RULE [fnpm_def] o 
+val strip_label_exists =
+    (SIMP_RULE (srw_ss()) [is_perm_sing_inv, supp_lamax_app] o
+     REWRITE_RULE [fnpm_def] o
      SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] o
-     Q.INST [`apm` |-> `lswap`, 
+     Q.INST [`apm` |-> `lswap`,
              `A` |-> `{}`,
              `vr` |-> `VAR`,
              `ap` |-> `(@@)`,
              `lm` |-> `LAM`,
              `li` |-> `\n v t1 t2. (LAM v t1) @@ t2`] o SPEC_ALL o
-     INST_TYPE [alpha |-> ``:'a nc``]) 
+     INST_TYPE [alpha |-> ``:'a nc``])
     ltm_recursion
 
-val strip_label_thm = new_specification("strip_label_thm", ["strip_label"], 
+val strip_label_thm = new_specification("strip_label_thm", ["strip_label"],
                                         strip_label_exists)
 
 val _ = export_theory()

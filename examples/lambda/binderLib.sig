@@ -9,7 +9,7 @@ sig
   val recursive_term_function_existence : term -> thm
   val prove_recursive_term_function_exists : term -> thm
   val define_recursive_term_function :
-      term quotation -> thm * thm option
+      term quotation -> thm * thm
 
   (* stores recursion theorems for types *)
   val type_db : (string,thm) Binarymap.dict ref
