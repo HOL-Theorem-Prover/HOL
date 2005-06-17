@@ -1654,8 +1654,23 @@ fun HO_PART_MATCH partfn th =
  let val sth = SPEC_ALL th
      val bod = concl sth
      val pbod = partfn bod
+     fun find_fvars bvs t =let
+       val (f, args) = strip_comb t
+       val fset = if is_var f andalso not (null args) andalso
+                     not (HOLset.member(bvs, f))
+                  then HOLset.add(empty_tmset, f)
+                  else if is_abs f then let
+                      val (v, bod) = dest_abs f
+                    in
+                      find_fvars (HOLset.add(bvs, v)) bod
+                    end
+                  else empty_tmset
+       val arg_sets = map (find_fvars bvs) args
+     in
+       List.foldl HOLset.union fset arg_sets
+     end
      val possbetas = mapfilter (fn v => (v,BETA_VAR v bod))
-                               (filter (can dom_rng o type_of) (free_vars bod))
+                               (HOLset.listItems (find_fvars empty_tmset pbod))
      fun finish_fn tyin ivs =
        let val npossbetas =
             if null tyin then possbetas else map (inst tyin ## I) possbetas
