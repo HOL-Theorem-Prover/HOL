@@ -232,6 +232,11 @@ val BITS_ZERO3 = save_thm("BITS_ZERO3",
   (GEN_ALL o SIMP_RULE bool_ss [CONJUNCT1 EXP,DIV_1] o SPECL [`h`,`0`]) BITS_THM2
 );
 
+val BITS_ZERO4 = store_thm("BITS_ZERO4",
+  `!h l n. l <= h ==> (BITS h l (a * 2 ** l) = BITS (h - l) 0 a)`,
+  RW_TAC arith_ss [BITS_THM,MULT_DIV,ZERO_LT_TWOEXP,SUB]
+);
+
 val BITS_ZEROL = store_thm("BITS_ZEROL",
   `!h a. a < 2 EXP SUC h ==> (BITS h 0 a = a)`,
   RW_TAC bool_ss [BITS_ZERO3,LESS_MOD]
@@ -329,6 +334,11 @@ RW_TAC arith_ss [DIV_P, ZERO_LT_TWOEXP] THEN
 Q.EXISTS_TAC `a * 2 ** (s - n)` THEN Q.EXISTS_TAC `0` THEN
 RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT,
                  EVEN_EXP])
+
+val BIT_OF_BITS_THM2 = store_thm("BIT_OF_BITS_THM2",
+  `!h l x n.  h < l + x ==> ~BIT x (BITS h l n)`,
+  RW_TAC arith_ss [MIN_DEF,BIT_def,BITS_COMP_THM2,BITS_ZERO]
+);
 
 (* -------------------------------------------------------- *)
 
