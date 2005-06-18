@@ -872,7 +872,8 @@ val _ = Save_Thm("ltpm_id_front", ltpm_id_front);
 val _ = Save_Thm("ltpm_FV", ltpm_FV)
 val _ = Save_Thm("ltpm_inverse", ltpm_inverse)
 
-val _ = save_thm("LAM_eq_thm", LAM_eq_thm);
+val _ = save_thm("lLAM_eq_thm", LAM_eq_thm);
+val _ = save_thm("lLAMi_eq_thm", LAMi_eq_thm);
 val _ = save_thm("ltm_recursion", ltm_recursion)
 
 val _ = save_thm("ltpm_flip_args", ltpm_flip_args)
@@ -972,16 +973,16 @@ val SUB_DEF = new_specification("lSUB_DEF", ["SUB"], subst_exists)
 
 val _ = overload_on ("@@", ``APP``)
 
-val SUB_THM = Store_Thm(
-  "SUB_THM",
+val lSUB_THM = Store_Thm(
+  "lSUB_THM",
   ``([N/x] (VAR x) = N) /\ (~(x = y) ==> ([N/x] (VAR y) = VAR y)) /\
     ([N/x] (M @@ P) = [N/x] M @@ [N/x] P) /\
     (~(v IN FV N) /\ ~(v = x) ==> ([N/x] (LAM v M) = LAM v ([N/x] M))) /\
     (~(v IN FV N) /\ ~(v = x) ==> 
         ([N/x] (LAMi n v M P) = LAMi n v ([N/x]M) ([N/x]P)))``,
   SRW_TAC [][SUB_DEF]);
-val SUB_VAR = store_thm(
-  "SUB_VAR", 
+val lSUB_VAR = store_thm(
+  "lSUB_VAR", 
   ``[N/x] (VAR s : lterm) = if s = x then N else VAR s``,
   SRW_TAC [][SUB_DEF]);
 
@@ -1017,13 +1018,13 @@ val fresh_ltpm_subst = store_thm(
   "fresh_ltpm_subst",
   ``!t. ~(u IN FV t) ==> (ltpm [(u,v)] t = [VAR u/v] t)``,
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `{u;v}` THEN
-  SRW_TAC [][] THEN SRW_TAC [][SUB_VAR]);
+  SRW_TAC [][] THEN SRW_TAC [][lSUB_VAR]);
 
 val l14a = Store_Thm(
   "l14a",
   ``!t : lterm. [VAR v/v] t = t``,
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `{v}` THEN
-  SRW_TAC [][SUB_VAR]);
+  SRW_TAC [][lSUB_VAR]);
 
 val l14b = store_thm(
   "l14b",
