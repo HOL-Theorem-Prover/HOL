@@ -185,7 +185,7 @@ fun with_info_prove_recn_exists f dom_ty rng_ty lookup info = let
             mk_abs(genvar d, build_abs r)
           end handle HOL_ERR _ => nullfv
         in
-          fnterm' |-> build_abs (type_of fnterm')
+          fnterm' |-> build_abs (type_of fnterm)
         end
   val recursion_exists0 =
       INST (map do_a_constructor constructors) (INST_TYPE base_inst recthm)
