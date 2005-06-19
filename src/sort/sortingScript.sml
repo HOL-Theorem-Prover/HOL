@@ -11,7 +11,7 @@ app load ["permTheory","bossLib"];
 
 open HolKernel Parse boolLib bossLib labelLib
 
-open combinTheory pairTheory relationTheory listTheory metisLib
+open combinTheory pairTheory relationTheory listTheory 
      BasicProvers
 
 
@@ -317,8 +317,11 @@ val PERM_MEM_EQ = Q.store_thm(
  * all adjacent elements of the list.                                        *
  *---------------------------------------------------------------------------*)
 
-val SORTED_DEF = Define `(SORTED R [] = T) /\ (SORTED R [x] = T) /\
- (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
+val SORTED_DEF = 
+ Define 
+   `(SORTED R [] = T) /\ 
+    (SORTED R [x] = T) /\
+    (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
 
 
 val SORTS_DEF =
@@ -332,7 +335,8 @@ val SORTS_DEF =
 
 val SORTED_EQ = Q.store_thm
 ("SORTED_EQ",
- `!R L x. transitive R ==> (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
+ `!R L x. transitive R ==> 
+          (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
 Induct_on `L`
  THEN RW_TAC list_ss [SORTED_DEF,MEM]
  THEN PROVE_TAC [relationTheory.transitive_def]);
@@ -349,7 +353,7 @@ val SORTED_APPEND = Q.store_thm("SORTED_APPEND",
  /\  SORTED R L2
  /\ (!x y. MEM x L1 /\ MEM y L2 ==> R x y)
   ==>
-    SORTED R (APPEND L1 L2)`,
+    SORTED R (L1 ++ L2)`,
 Induct_on `L1`
   THEN SRW_TAC [boolSimps.CONJ_ss][SORTED_EQ]
   THEN PROVE_TAC []);
@@ -425,7 +429,7 @@ val PART_PERM = Q.prove
 (`!P L a1 a2 l1 l2.
    ((a1,a2) = PART P L l1 l2)
       ==>
-   PERM (APPEND L (APPEND l1 l2)) (APPEND a1 a2)`,
+   PERM (L ++ (l1 ++ l2)) (a1 ++ a2)`,
 Induct_on `L`
   THEN RW_TAC list_ss [PART_DEF, PERM_REFL]
   THEN RES_TAC THEN MATCH_MP_TAC PERM_TRANS THENL
@@ -443,7 +447,7 @@ val PART_MEM = Q.store_thm
  `!P L a1 a2 l1 l2.
      ((a1,a2) = PART P L l1 l2)
        ==>
-      !x. MEM x (APPEND L (APPEND l1 l2)) = MEM x (APPEND a1 a2)`,
+      !x. MEM x (L ++ (l1 ++ l2)) = MEM x (a1 ++ a2)`,
   METIS_TAC [PART_PERM, PERM_MEM_EQ]);
 
 (*---------------------------------------------------------------------------
@@ -464,8 +468,7 @@ val QSORT_defn =
      (QSORT ord (h::t) =
            let (l1,l2) = PARTITION (\y. ord y h) t
            in
-           APPEND (QSORT ord l1)
-               (h::QSORT ord l2))`;
+             QSORT ord l1 ++ [h] ++ QSORT ord l2)`;
 
 
 (*---------------------------------------------------------------------------
@@ -504,14 +507,14 @@ val QSORT_PERM = Q.store_thm
 ("QSORT_PERM",
  `!R L. PERM L (QSORT R L)`,
  recInduct QSORT_IND
-  THEN RW_TAC bool_ss [QSORT_DEF,PERM_REFL,PARTITION_DEF]
+  THEN RW_TAC list_ss [QSORT_DEF,PERM_REFL,PARTITION_DEF]
+  THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
   THEN MATCH_MP_TAC CONS_PERM
   THEN MATCH_MP_TAC PERM_TRANS
-  THEN Q.EXISTS_TAC`APPEND l1 l2`
+  THEN Q.EXISTS_TAC `l1 ++ l2`
   THEN RW_TAC std_ss [] THENL
-  [PROVE_TAC [APPEND,APPEND_NIL,PART_PERM],
-   `PERM l1 (QSORT ord l1)` by RES_TAC THEN
-   `PERM l2 (QSORT ord l2)` by RES_TAC THEN PROVE_TAC [PERM_CONG]]);
+  [METIS_TAC [APPEND,APPEND_NIL,PART_PERM],
+   METIS_TAC [PERM_CONG]]);
 
 
 (*---------------------------------------------------------------------------
@@ -524,6 +527,7 @@ Q.store_thm
 `!R L. transitive R /\ total R ==> SORTED R (QSORT R L)`,
  recInduct QSORT_IND
   THEN RW_TAC bool_ss [QSORT_DEF, SORTED_DEF, PARTITION_DEF]
+  THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
   THEN MATCH_MP_TAC SORTED_APPEND
   THEN POP_ASSUM (ASSUME_TAC o SYM)
   THEN IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SORTED_EQ
