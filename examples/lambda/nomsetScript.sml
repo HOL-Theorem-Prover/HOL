@@ -302,6 +302,19 @@ val SND_pairpm = Store_Thm(
   ``SND (pairpm pm1 pm2 pi v) = pm2 pi (SND v)``,
   Cases_on `v` THEN SRW_TAC [][]);
 
+(* sums *)
+val sumpm_def = Define`
+  (sumpm (pm1:'a pm) (pm2:'b pm) pi (INL x) = INL (pm1 pi x)) /\
+  (sumpm pm1 pm2 pi (INR y) = INR (pm2 pi y))
+`;
+val _ = export_rewrites ["sumpm_def"]
+
+val sumpm_is_perm = Store_Thm(
+  "sumpm_is_perm",
+  ``is_perm pm1 /\ is_perm pm2 ==> is_perm (sumpm pm1 pm2)``,
+  SRW_TAC [][is_perm_def, FUN_EQ_THM, permeq_def] THEN Cases_on `x` THEN 
+  SRW_TAC [][sumpm_def]);
+
 (* lists *)
 val listpm_def = Define`
   (listpm (apm: 'a pm) pi [] = []) /\
