@@ -182,7 +182,7 @@ fun with_info_prove_recn_exists f dom_ty rng_ty lookup info = let
           fun build_abs ty = let
             val (d,r) = dom_rng ty
           in
-            mk_abs(genvar d, build_abs r)
+            mk_abs(genvar (Type.type_subst base_inst d), build_abs r)
           end handle HOL_ERR _ => nullfv
         in
           fnterm' |-> build_abs (type_of fnterm)
