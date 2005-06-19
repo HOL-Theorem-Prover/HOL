@@ -3804,9 +3804,6 @@ val beta0_n_posns = store_thm(
   ]);
 
 
-
-
-
 (* definitions 11_2_26 *)
 val SN_beta0 = save_thm(
   "SN_beta0",
@@ -3953,7 +3950,6 @@ val beta0_reduce_at_single_label = store_thm(
   HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THEN
   SIMP_TAC (srw_ss()) [nlabel_thm] THENL [
     ONCE_REWRITE_TAC [lrcc_cases] THEN SRW_TAC [][beta0_def],
-    ONCE_REWRITE_TAC [lrcc_cases] THEN SRW_TAC [][beta0_def],
     MAP_EVERY Q.X_GEN_TAC [`f`,`x`] THEN Cases_on `is_abs f` THENL [
       `?v body. f = LAM v body` by PROVE_TAC [is_abs_thm, term_CASES] THEN
       ASM_SIMP_TAC (srw_ss()) [nlabel_thm] THEN STRIP_TAC THEN
@@ -3978,7 +3974,7 @@ val beta0_reduce_at_single_label = store_thm(
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SRW_TAC [][lrcc_beta0_LAM] THEN
     SRW_TAC [][n_posns_def, IMAGE_EQ_EMPTY] THEN
-    PROVE_TAC [lemma14a]
+    PROVE_TAC []
   ]);
 
 val lemma11_2_28i = store_thm(
