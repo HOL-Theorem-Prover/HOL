@@ -124,52 +124,11 @@ val lemma2_11 = store_thm(
 
 val substitution_lemma = save_thm("substitution_lemma", lemma2_11);
 
-val GENERAL_SUB_COMMUTE = store_thm(
-  "GENERAL_SUB_COMMUTE",
-  ``!t.
-       ~(w = u) /\ ~(w IN FV t) /\ ~(w IN FV M) ==>
-       ([M/u] ([N/v] t) = [[M/u]N/w]([M/u] ([VAR w/v] t)))``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN
-  Q.EXISTS_TAC `{u;v;w} UNION FV M UNION FV N` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR] THENL [
-    SRW_TAC [][SUB_VAR, lemma14b],
-    Cases_on `u IN FV N` THEN SRW_TAC [][lemma14b, lemma14c, SUB_THM]
-  ]);
-
 val NOT_IN_FV_SUB = store_thm(
   "NOT_IN_FV_SUB",
   ``!x t u v. ~(x IN FV u) /\ ~(x IN FV t) ==> ~(x IN FV ([t/v]u))``,
   SRW_TAC [][FV_SUB]);
 
-
-val ISUB_SUB_COMMUTE = store_thm(
-  "ISUB_SUB_COMMUTE",
-  ``!R M N x v.
-        ~(v IN FV M) /\ ~(v IN FV N) /\ ~(v IN DOM R) /\ ~(v IN FVS R) ==>
-        ([N ISUB R/v] ([VAR v/x] M ISUB R) = [N/x] M ISUB R)``,
-  Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [ISUB_def, FVS_def, lemma15a, DOM_def,
-                           pairTheory.FORALL_PROD] THEN
-  CONV_TAC (RENAME_VARS_CONV ["P", "y"]) THEN
-  Q.ABBREV_TAC `Rf = \x. x ISUB R` THEN
-  `!t. t ISUB R = Rf t` by SRW_TAC [][] THEN
-  FIRST_X_ASSUM (K ALL_TAC o assert (is_eq o concl)) THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN REPEAT STRIP_TAC THEN
-  Q_TAC (NEW_TAC "u") `{v;y;x} UNION FV M UNION FV N UNION FV P UNION
-                       DOM R` THEN
-  `[P/y] ([N/x] M) = [[P/y]N/u] ([P/y] ([VAR u/x] M))` by
-     SRW_TAC [][GENERAL_SUB_COMMUTE] THEN
-  `[Rf ([P/y]N)/v] (Rf ([VAR v/u] ([P/y] ([VAR u/x]M)))) =
-   Rf ([[P/y] N/u] ([P/y] ([VAR u/x]M)))` by
-     SRW_TAC [][NOT_IN_FV_SUB] THEN
-  `[VAR v/u] ([P/y] ([VAR u/x] M)) = [P/y] ([VAR v/x] M)` by
-      (MP_TAC
-         ((Q.SPEC `M` o
-           Q.INST [`M` |-> `P`, `u` |-> `y`, `w` |-> `u`,
-                   `N` |-> `VAR v`, `v` |-> `x`])
-            GENERAL_SUB_COMMUTE) THEN
-       SRW_TAC [][lemma14b]) THEN
-  POP_ASSUM SUBST_ALL_TAC THEN SRW_TAC [][]);
 
 val lemma2_12 = store_thm( (* p. 19 *)
   "lemma2_12",
