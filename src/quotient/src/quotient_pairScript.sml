@@ -104,10 +104,9 @@ val PAIR_REL_REFL = store_thm
 
 val PAIR_EQUIV = store_thm
    ("PAIR_EQUIV",
-    (--`!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) ==>
-                (!x y:'b. R2 x y = (R2 x = R2 y)) ==>
-                (!x y. (R1 ### R2) x y = ((R1 ### R2) x = (R1 ### R2) y))`--),
+    (--`!R1 R2. EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 ### R2)`--),
     REPEAT GEN_TAC
+    THEN REWRITE_TAC[EQUIV_def]
     THEN REPEAT DISCH_TAC
     THEN Cases
     THEN Cases

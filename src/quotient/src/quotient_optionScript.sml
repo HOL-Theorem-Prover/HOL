@@ -82,9 +82,9 @@ val OPTION_REL_EQ = store_thm
 
 val OPTION_EQUIV = store_thm
    ("OPTION_EQUIV",
-    (--`!R. (!x y:'a. R x y = (R x = R y)) ==>
-            (!x y. OPTION_REL R x y = (OPTION_REL R x = OPTION_REL R y))`--),
+    (--`!R. EQUIV R ==> EQUIV (OPTION_REL R)`--),
     GEN_TAC
+    THEN REWRITE_TAC[EQUIV_def]
     THEN DISCH_TAC
     THEN Cases
     THEN Cases (* 4 subgoals *)

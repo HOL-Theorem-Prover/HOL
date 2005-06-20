@@ -837,6 +837,8 @@ fun define_quotient_type tyname abs rep equiv =
 
 
 (* Equivalence theorems have the form:
+     EQUIV R
+   which can be translated into the equivalent
      !x y. R x y = (R x = R y)
 
    Here are routines to create equivalence theorems,
@@ -844,16 +846,20 @@ fun define_quotient_type tyname abs rep equiv =
    reflexivity, symmetry, and transitivity.              *)
 
 fun equiv_refl equiv =
-    CONJUNCT1 (CONV_RULE (REWR_CONV EQUIV_REFL_SYM_TRANS) equiv)
+    CONJUNCT1 (CONV_RULE (REWRITE_CONV[EQUIV_def]
+                          THENC REWR_CONV EQUIV_REFL_SYM_TRANS) equiv)
 
 fun equiv_sym equiv =
-    CONJUNCT1 (CONJUNCT2 (CONV_RULE (REWR_CONV EQUIV_REFL_SYM_TRANS) equiv))
+    CONJUNCT1 (CONJUNCT2 (CONV_RULE (REWRITE_CONV[EQUIV_def]
+                          THENC REWR_CONV EQUIV_REFL_SYM_TRANS) equiv))
 
 fun equiv_trans equiv =
-    CONJUNCT2 (CONJUNCT2 (CONV_RULE (REWR_CONV EQUIV_REFL_SYM_TRANS) equiv))
+    CONJUNCT2 (CONJUNCT2 (CONV_RULE (REWRITE_CONV[EQUIV_def]
+                          THENC REWR_CONV EQUIV_REFL_SYM_TRANS) equiv))
 
 fun refl_sym_trans_equiv refl sym trans =
-    CONV_RULE (REWR_CONV (GSYM EQUIV_REFL_SYM_TRANS))
+    CONV_RULE (REWR_CONV (GSYM EQUIV_REFL_SYM_TRANS)
+               (* THENC ONCE_REWRITE_CONV[GSYM EQUIV_def] *) )
               (CONJ refl (CONJ sym trans))
 
 
@@ -880,7 +886,8 @@ fun find_base tm = (find_base o #conseq o dest_imp o snd o strip_forall) tm
                    handle _ => tm
 
 fun equiv_type th =
-    (#Ty o dest_var o #Bvar o dest_forall o find_base o concl) th
+    (fst o dom_rng o type_of o rand o find_base o concl) th
+ (*   (#Ty o dest_var o #Bvar o dest_forall o find_base o concl) th *)
                   handle e => raise HOL_ERR {
                      origin_structure = "quotient",
                      origin_function  = "equiv_type",
@@ -2862,7 +2869,7 @@ R2 (f[x']) (g[y']).
              else ()
             )
             
-        fun CHECK_HIGH th = (check_high (concl th); list_cache(); th)
+        fun CHECK_HIGH th = (check_high (concl th); th)
 
 
 (* ------------------------------------------------------------------------- *)
@@ -3039,6 +3046,7 @@ fun define_quotient_types_rule {types, defs,
                                 respects, poly_preserves, poly_respects} =
   let
       val equivs = map #equiv (filter (not o is_partial_equiv o #equiv) types)
+      val equivs = map (REWRITE_RULE[GSYM EQUIV_def]) equivs
       val all_equivs = equivs @ tyop_equivs
 
       fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)

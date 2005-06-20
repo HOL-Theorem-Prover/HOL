@@ -52,7 +52,6 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 (* for SUM of ABS / REP functions, use infix ++, defined in
    src/sum/sumScript.sml. *)
 
-
 (* for SUM of equivalence relations, use infix +++, defined here: *)
 
 val _ = Lib.try add_infix("+++", 450, HOLgrammars.RIGHT)
@@ -75,10 +74,9 @@ val SUM_REL_EQ = store_thm
 
 val SUM_EQUIV = store_thm
    ("SUM_EQUIV",
-    (--`!R1 R2. (!x y:'a. R1 x y = (R1 x = R1 y)) ==>
-                (!x y:'b. R2 x y = (R2 x = R2 y)) ==>
-                (!x y. (R1 +++ R2) x y = ((R1 +++ R2) x = (R1 +++ R2) y))`--),
+    (--`!R1 R2. EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)`--),
     REPEAT GEN_TAC
+    THEN REWRITE_TAC[EQUIV_def]
     THEN REPEAT DISCH_TAC
     THEN Cases
     THEN Cases (* 4 subgoals *)
@@ -290,6 +288,6 @@ val SUM_MAP_RSP = store_thm
 val _ = export_theory();
 
 val _ = print_theory_to_file "-" "quotient_sum.lst";
-
+                                                                                
 val _ = html_theory "quotient_sum";
 

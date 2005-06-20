@@ -102,9 +102,9 @@ val LIST_REL_REFL = store_thm
 
 val LIST_EQUIV = store_thm
    ("LIST_EQUIV",
-    (--`!R. (!x y:'a. R x y = (R x = R y)) ==>
-            (!x y. LIST_REL R x y = (LIST_REL R x = LIST_REL R y))`--),
+    (--`!R. EQUIV R ==> EQUIV (LIST_REL R)`--),
     GEN_TAC
+    THEN REWRITE_TAC[EQUIV_def]
     THEN DISCH_TAC
     THEN Induct THENL [ALL_TAC, GEN_TAC]
     THEN Induct
