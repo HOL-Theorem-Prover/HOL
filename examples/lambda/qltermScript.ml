@@ -242,7 +242,7 @@ val swapstr_perm_of = store_thm(
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, listpm_def, pairpm_def] THEN
   POP_ASSUM (SUBST1_TAC o SYM) THEN SRW_TAC [][]);
 
-val _ = print "Proving function is supported by set A..."
+val _ = print "Proving function is supported by set A... "
 val rawfinite_support = prove(
   ``^fndefn /\ ^ctxt00 /\ ^cond16 /\ ^cond16i /\ ^var_support_t /\
     ^app_support_t ==>
@@ -415,6 +415,7 @@ val fn_support_fresh = UNDISCH (UNDISCH (prove(
   SRW_TAC [][] THEN AP_THM_TAC THEN
   MATCH_MP_TAC support_freshf THEN SRW_TAC [][])))
 
+val _ = print "Proving that permutations can be re-arranged... "
 val perms_move = prove(
   ``^fndefn /\ ^var_support_t /\ ^app_support_t /\ ^cond16 /\ ^cond16i /\
     ^ctxt00 ==>
@@ -552,8 +553,9 @@ val perms_move = prove(
     `~(b IN patoms p2)` by FULL_SIMP_TAC (srw_ss()) [Abbr`bigS`] THEN
     SRW_TAC [][perm_of_unchanged]
   ]);
+val _ = print "done\n"
 
-
+val _ = print "Proving that the function respects alpha-equivalence... "
 val fn_respectful = prove(
   ``^fndefn /\ ^var_support_t /\ ^app_support_t /\ ^cond16 /\ ^cond16i /\
     ^ctxt00 /\
@@ -649,6 +651,7 @@ val fn_respectful = prove(
     SRW_TAC [][Abbr`f`, Abbr`g`, is_perm_flip_args, Abbr`bigS`] THEN
     FULL_SIMP_TAC (srw_ss()) []
   ]);
+val _ = print "done\n"
 
 val better_lam_clause0 = prove(
   ``^fndefn /\ ^ctxt00 /\ ^var_support_t /\ ^app_support_t /\ ^cond16 /\
@@ -837,11 +840,11 @@ val [FV_thm, simple_lterm_induction, ltpm_thm, LAM_distinct, lterm_11,
     quotient.define_equivalence_type
     {
      name = "lterm", equiv = aeq_equiv,
-     defs = map mk_def [("LAM", ``prelterm$lam``), 
+     defs = map mk_def [("LAM", ``prelterm$lam``),
                         ("APP", ``prelterm$app``),
                         ("VAR", ``prelterm$var``),
                         ("LAMi", ``prelterm$lami``),
-                        ("FV",  ``prelterm$fv``), 
+                        ("FV",  ``prelterm$fv``),
                         ("ltpm", ``prelterm$ptpm``)],
      welldefs = [lam_respects_aeq, app_respects_aeq, var_respects_aeq,
                  lami_respects_aeq, aeq_fv,
@@ -890,11 +893,11 @@ val ltpm_is_perm = Store_Thm(
 val ltpm_eql = store_thm(
   "ltpm_eql",
   ``(ltpm pi t = u) = (t = ltpm (REVERSE pi) u)``,
-  METIS_TAC [ltpm_inverse]) 
+  METIS_TAC [ltpm_inverse])
 val ltpm_eqr = store_thm(
   "ltpm_eqr",
   ``(t = ltpm pi u) = (ltpm (REVERSE pi) t =  u)``,
-  METIS_TAC [ltpm_inverse]) 
+  METIS_TAC [ltpm_inverse])
 val ltpm_APPEND = store_thm(
   "ltpm_APPEND",
   ``ltpm (p1 ++ p2) t = ltpm p1 (ltpm p2 t)``,
@@ -903,7 +906,7 @@ val ltpm_APPEND = store_thm(
 
 (* alpha-convertibility *)
 val ltpm_ALPHA = store_thm(
-  "ltpm_ALPHA",  
+  "ltpm_ALPHA",
   ``~(v IN FV t) ==> (LAM u t = LAM v (ltpm [(v,u)] t))``,
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, ltpm_flip_args]);
 val ltpm_ALPHAi = store_thm(
@@ -978,11 +981,11 @@ val lSUB_THM = Store_Thm(
   ``([N/x] (VAR x) = N) /\ (~(x = y) ==> ([N/x] (VAR y) = VAR y)) /\
     ([N/x] (M @@ P) = [N/x] M @@ [N/x] P) /\
     (~(v IN FV N) /\ ~(v = x) ==> ([N/x] (LAM v M) = LAM v ([N/x] M))) /\
-    (~(v IN FV N) /\ ~(v = x) ==> 
+    (~(v IN FV N) /\ ~(v = x) ==>
         ([N/x] (LAMi n v M P) = LAMi n v ([N/x]M) ([N/x]P)))``,
   SRW_TAC [][SUB_DEF]);
 val lSUB_VAR = store_thm(
-  "lSUB_VAR", 
+  "lSUB_VAR",
   ``[N/x] (VAR s : lterm) = if s = x then N else VAR s``,
   SRW_TAC [][SUB_DEF]);
 
@@ -999,18 +1002,18 @@ val lterm_bvc_induction = store_thm(
   Q_TAC SUFF_TAC `!t pi. P (ltpm pi t)` THEN1 METIS_TAC [ltpm_NIL] THEN
   HO_MATCH_MP_TAC simple_lterm_induction THEN
   SRW_TAC [][] THENL [
-    Q_TAC (NEW_TAC "z") `perm_of pi s INSERT FV (ltpm pi t) UNION X` THEN 
+    Q_TAC (NEW_TAC "z") `perm_of pi s INSERT FV (ltpm pi t) UNION X` THEN
     Q_TAC SUFF_TAC `LAM (perm_of pi s) (ltpm pi t) =
                     LAM z (ltpm [(z,perm_of pi s)] (ltpm pi t))`
           THEN1 SRW_TAC [][GSYM ltpm_APPEND] THEN
     SRW_TAC [][ltpm_ALPHA],
-    Q_TAC (NEW_TAC "z") 
-          `perm_of pi s INSERT FV (ltpm pi t') UNION X 
-           UNION FV (ltpm pi t)` THEN 
-    Q_TAC SUFF_TAC 
+    Q_TAC (NEW_TAC "z")
+          `perm_of pi s INSERT FV (ltpm pi t') UNION X
+           UNION FV (ltpm pi t)` THEN
+    Q_TAC SUFF_TAC
           `LAMi n (perm_of pi s) (ltpm pi t) (ltpm pi t') =
            LAMi n z (ltpm [(z,perm_of pi s)] (ltpm pi t)) (ltpm pi t')`
-          THEN1 SRW_TAC [][GSYM ltpm_APPEND] THEN 
+          THEN1 SRW_TAC [][GSYM ltpm_APPEND] THEN
     SRW_TAC [][ltpm_ALPHAi]
   ]);
 
