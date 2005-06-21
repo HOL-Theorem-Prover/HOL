@@ -369,10 +369,11 @@ fun add_persistent_funs l =
     end
 end;
 
+val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
+
 local
   val chattiness = ref true
   val _ = Feedback.register_btrace("Define.storage_message", chattiness)
-  val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 in
 fun been_stored s thm =
   (add_persistent_funs [(s,thm)];
@@ -390,7 +391,7 @@ fun store(stem,eqs,ind) =
       val _ = add_persistent_funs [(eqs_bind,eqs)]
          handle e => HOL_MESG ("Unable to add "^eqs_bind^" to global compset")
   in
-    Lib.say (String.concat
+    mesg (String.concat
        [   "Equations stored under ", Lib.quote eqs_bind,
         ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
   end;
