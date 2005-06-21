@@ -99,6 +99,17 @@ html1/DTD/xhtml1-strict.dtd">
     order.  <em>This may break code that relied on what was an
     unspecified behaviour.</em></p></li>
 
+<li><p> The quotation filter didn&rsquo;t recognise text of the form</p>
+<pre>
+         ``:
+             foo
+         ``
+</pre>
+    <p> with a newline immediately following the colon as a type
+    quotation.   (Thanks to Steve Brackin for the report of this bug.)
+    </p>
+</li>
+
 
 </ul>
 

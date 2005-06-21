@@ -57,7 +57,7 @@ parse `"` { ECHO lexbuf; STRING lexbuf  }
            if !antiquote andalso !pardepth < 1 then () else INITIAL lexbuf }
   | "==" ws * "`" { print ("(Parse.Type [QUOTE \""^locpragma lexbuf 0); OLDTYQUOTE lexbuf }
   | "--" ws * "`" { print ("(Parse.Term [QUOTE \""^locpragma lexbuf 0); OLDTMQUOTE lexbuf }
-  | "``" ws * `:` (letter | ws | [`(` `'` ]) {
+  | "``" ws * `:` (letter | ws | newline | [`(` `'` ]) {
       print ("(Parse.Type [QUOTE \""^locpragma lexbuf 2);
       print (drop_upto #":" (Lexing.getLexeme lexbuf));
       TYQUOTE lexbuf
