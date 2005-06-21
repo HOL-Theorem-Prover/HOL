@@ -431,13 +431,20 @@ fun scrubCT() = (scrub(); theCT());
 
 local fun check_name (fname,s) = ()
       fun DATED_ERR f bindname = ERR f (Lib.quote bindname^" is out-of-date!")
+      val save_thm_reporting = ref 1
+      val _ = Feedback.register_trace ("Theory.save_thm_reporting",
+                                       save_thm_reporting, 2)
+      val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 in
 fun save_thm (name,th) =
       (check_name ("save_thm",name)
        ; if uptodate_thm th then add_thmCT(name,th)
          else raise DATED_ERR "save_thm" name
-       ; if !Globals.interactive then ()
-         else Lib.say ("Saving theorem " ^ name ^ "\n")
+       ; if !save_thm_reporting = 0 then ()
+         else if not (!Globals.interactive) orelse !save_thm_reporting > 1
+         then
+           mesg ("Saving theorem " ^ name ^ "\n")
+         else ()
        ; th)
 
 fun new_axiom (name,tm) =

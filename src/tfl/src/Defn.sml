@@ -1,7 +1,7 @@
 structure Defn :> Defn =
 struct
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      pairLib Rules wfrecUtils Functional Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
@@ -272,8 +272,8 @@ fun elim_tcs (STDREC {eqs, ind, R, SV,stem}) thms =
   | elim_tcs x _ = x;
 
 
-local 
- val lem = 
+local
+ val lem =
    let val M  = mk_var("M",bool)
        val P  = mk_var("P",bool)
        val M1 = mk_var("M1",bool)
@@ -346,17 +346,17 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
    what is assumed at present.
  ---------------------------------------------------------------------------*)
 
-local fun is_suc tm = 
+local fun is_suc tm =
        case total dest_thy_const tm
         of NONE => false
          | SOME{Name,Thy,...} => Name="SUC" andalso Thy="num"
 in
-val SUC_TO_NUMERAL_DEFN_CONV_hook = 
+val SUC_TO_NUMERAL_DEFN_CONV_hook =
       ref (fn _ => raise ERR "SUC_TO_NUMERAL_DEFN_CONV_hook" "not initialized")
 fun add_persistent_funs l =
   if not (!computeLib.auto_import_definitions) then () else
-    let val has_lhs_SUC = List.exists 
-              (can (find_term is_suc) o lhs o #2 o strip_forall) 
+    let val has_lhs_SUC = List.exists
+              (can (find_term is_suc) o lhs o #2 o strip_forall)
                                       o strip_conj o concl
       fun f (s, th) =
         [(s, th)] @
@@ -369,10 +369,18 @@ fun add_persistent_funs l =
     end
 end;
 
+local
+  val chattiness = ref true
+  val _ = Feedback.register_btrace("Define.storage_message", chattiness)
+  val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
+in
 fun been_stored s thm =
   (add_persistent_funs [(s,thm)];
-   Lib.say ("Definition has been stored under "^Lib.quote s^".\n")
+   if !chattiness then
+     mesg ("Definition has been stored under "^Lib.quote s^".\n")
+   else ()
    );
+end
 
 fun store(stem,eqs,ind) =
   let val eqs_bind = defSuffix stem
@@ -551,7 +559,7 @@ fun wfrec_eqns thy eqns =
      val eqns_consts = find_terms is_const functional (* could be a set *)
      val (case_rewrites,context_congs) = extraction_thms eqns_consts thy
      val RW = REWRITES_CONV (add_rewrites empty_rewrites case_rewrites)
-     val rule = unprotect_thm o 
+     val rule = unprotect_thm o
                 RIGHT_CONV_RULE
                    (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
      val corollaries' = map rule corollaries
@@ -692,7 +700,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
          end
      val ng_thms = map nested_guard nested_guards
      val nested_ihs' = map (Rules.simpl_conv ng_thms) nested_ihs
-     val nested_ihs''' = nested_ihs' 
+     val nested_ihs''' = nested_ihs'
 (*     fun disch_context thm =
           if length(hyp thm) = 2
           then DISCH (fst(dest_imp(lhs (concl thm)))) thm
@@ -1336,7 +1344,7 @@ fun tprove p   =
     val () = if not (!computeLib.auto_import_definitions) then ()
              else computeLib.add_funs
                     [eqns, CONV_RULE (!SUC_TO_NUMERAL_DEFN_CONV_hook) eqns]
-  in 
+  in
     (eqns, ind)
   end
 
