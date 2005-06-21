@@ -2,7 +2,7 @@ open HolKernel Parse boolLib bossLib BasicProvers metisLib
 
 local open stringTheory in end
 
-open pred_setTheory ncLib boolSimps relationTheory
+open pred_setTheory binderLib boolSimps relationTheory
 open chap3Theory
 
 (* ----------------------------------------------------------------------
@@ -50,13 +50,11 @@ open chap3Theory
 val _ = new_theory "raw_syntax"
 
 val _ = Hol_datatype `raw_term = var of string
-                               | con of 'a
                                | app of raw_term => raw_term
                                | lam of string => raw_term`;
 
 val fv_def = Define`
   (fv (var s) = {s}) /\
-  (fv (con k) = {}) /\
   (fv (app t u) = fv t UNION fv u) /\
   (fv (lam v t) = fv t DELETE v)`;
 
@@ -68,7 +66,6 @@ val _ = export_rewrites ["FINITE_fv"]
 
 val capt_def = Define`
   (capt x (var y) = {}) /\
-  (capt x (con k) = {}) /\
   (capt x (app t u) = capt x t UNION capt x u) /\
   (capt x (lam y t) = if ~(x = y) /\ x IN fv t then {y} UNION capt x t
                       else {})
@@ -88,7 +85,6 @@ val _ = export_rewrites ["capt_fv"]
 
 val subst_def = Define`
   (subst x y (var s) = if y = s then x else var s) /\
-  (subst x y (con k) = con k) /\
   (subst x y (app t u) = app (subst x y t) (subst x y u)) /\
   (subst x y (lam v t) = if ~(y = v) /\ ~(v IN fv x) then lam v (subst x y t)
                          else lam v t)
@@ -150,11 +146,10 @@ val renaming_sanity4 = store_thm(
 
 val collapse_def = Define`
   (collapse (var s) = VAR s) /\
-  (collapse (con k) = CON k) /\
   (collapse (app t u) = collapse t @@ collapse u) /\
   (collapse (lam v t) = LAM v (collapse t))`;
 
-open ncTheory
+open termTheory
 
 val FV_collapse = store_thm(
   "FV_collapse",
@@ -183,7 +178,8 @@ val collapse_vsubst = store_thm(
     REPEAT GEN_TAC THEN COND_CASES_TAC THEN SRW_TAC [][collapse_def],
     REPEAT GEN_TAC THEN
     Cases_on `x = s` THEN ASM_SIMP_TAC (srw_ss()) [collapse_def, SUB_THM] THEN
-    Cases_on `s = y` THEN ASM_SIMP_TAC (srw_ss()) [collapse_def, SUB_THM] THENL [
+    Cases_on `s = y` THEN
+    ASM_SIMP_TAC (srw_ss()) [collapse_def, SUB_THM, lemma14b] THENL [
       Cases_on `x IN fv e` THEN
       ASM_SIMP_TAC (srw_ss()) [] THEN
       `~(x IN FV (collapse e))` by SRW_TAC [][] THEN
@@ -237,9 +233,9 @@ val ialpha_lam_lemma = prove(
   ``!y t u. ialpha y t u ==>
             !v t0 s k t1 t2.
                ((t = lam v t0) ==>
-                ~(u = var s) /\ ~(u = con k) /\ ~(u = app t1 t2)) /\
+                ~(u = var s) /\ ~(u = app t1 t2)) /\
                ((u = lam v t0) ==>
-                ~(t = var s) /\ ~(t = con k) /\ ~(t = app t1 t2))``,
+                ~(t = var s) /\ ~(t = app t1 t2))``,
   HO_MATCH_MP_TAC ialpha_ind THEN SRW_TAC [][]);
 
 val ialpha_lam_thm = save_thm(
@@ -249,7 +245,6 @@ val ialpha_lam_thm = save_thm(
 val alpha_lam_thm = store_thm(
   "alpha_lam_thm",
   ``(!v t0 s. ~alpha (lam v t0) (var s) /\ ~alpha (var s) (lam v t0)) /\
-    (!v t0 k. ~alpha (lam v t0) (con k) /\ ~alpha (con k) (lam v t0)) /\
     (!v t0 t1 t2.
         ~alpha (lam v t0) (app t1 t2) /\ ~alpha (app t1 t2) (lam v t0))``,
   METIS_TAC [alpha_def, ialpha_lam_thm]);
@@ -259,9 +254,9 @@ val EQC_alpha_lam_lemma = prove(
   ``!t u. EQC alpha t u ==>
           !v t0 s k t1 t2.
                ((t = lam v t0) ==>
-                ~(u = var s) /\ ~(u = con k) /\ ~(u = app t1 t2)) /\
+                ~(u = var s) /\ ~(u = app t1 t2)) /\
                ((u = lam v t0) ==>
-                ~(t = var s) /\ ~(t = con k) /\ ~(t = app t1 t2))``,
+                ~(t = var s) /\ ~(t = app t1 t2))``,
   HO_MATCH_MP_TAC EQC_INDUCTION THEN REPEAT STRIP_TAC THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN Cases_on `t'` THEN
   FULL_SIMP_TAC (srw_ss()) []);
@@ -304,14 +299,13 @@ val alpha_eq_safe_subst = store_thm(
   ``!t. ?t'. EQC alpha t t' /\ (capt x t' INTER fv u = {})``,
   Induct THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
     REPEAT GEN_TAC THEN Q.EXISTS_TAC `var s` THEN SRW_TAC [][capt_def],
-    REPEAT GEN_TAC THEN Q.EXISTS_TAC `con a` THEN SRW_TAC [][capt_def],
     Q.EXISTS_TAC `app t'' t'''` THEN
     SRW_TAC [][capt_def, RIGHT_INTER_OVER_UNION] THEN
     METIS_TAC [EQC_alpha_CONG2],
     Q.X_GEN_TAC `s` THEN
     Cases_on `x IN fv t` THENL [
       Cases_on `s IN fv u` THENL [
-        Q_TAC (ncLib.NEW_TAC "z")
+        Q_TAC (NEW_TAC "z")
               `fv t UNION fv u UNION {s;x} UNION capt s t'` THEN
         Q.EXISTS_TAC `lam z (subst (var z) s t')` THEN
         CONJ_TAC THENL [
@@ -336,6 +330,14 @@ val alpha_eq_safe_subst = store_thm(
       ]
     ]
   ]);
+
+val LAM_INJ_ALPHA_FV = prove(
+  ``~(v1 = v2) /\ (LAM v1 t1 = LAM v2 t2) ==>
+    ~(v1 IN FV t2) /\ ~(v2 IN FV t1)``,
+  SRW_TAC [][LAM_eq_thm] THEN SRW_TAC [][]);
+val INJECTIVITY_LEMMA1 = prove(
+  ``(LAM v1 t1 = LAM v2 t2) ==> (t1 = [VAR v1/v2]t2)``,
+  SRW_TAC [][LAM_eq_thm] THEN SRW_TAC [][fresh_tpm_subst]);
 
 val collapse_alpha = store_thm(
   "collapse_alpha",
