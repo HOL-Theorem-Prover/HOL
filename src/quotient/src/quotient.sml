@@ -564,6 +564,8 @@ val partial_equiv_tm =
 fun is_partial_equiv th = is_match_term partial_equiv_tm (concl th);
 
 fun define_quotient_type tyname abs rep equiv =
+    let val equiv = REWRITE_RULE[EQUIV_def] equiv
+    in
     if is_match_term partial_equiv_tm (concl equiv) then
          define_partial_quotient_type tyname abs rep equiv
     else
@@ -832,6 +834,7 @@ fun define_quotient_type tyname abs rep equiv =
 
     in
        save_thm(tyname^"_QUOTIENT", QUOTIENT_thm)
+    end
     end;
 
 
@@ -859,7 +862,7 @@ fun equiv_trans equiv =
 
 fun refl_sym_trans_equiv refl sym trans =
     CONV_RULE (REWR_CONV (GSYM EQUIV_REFL_SYM_TRANS)
-               (* THENC ONCE_REWRITE_CONV[GSYM EQUIV_def] *) )
+               THENC ONCE_REWRITE_CONV[GSYM EQUIV_def] )
               (CONJ refl (CONJ sym trans))
 
 
