@@ -11,12 +11,10 @@ infixr -->;
 val _ = new_theory "alpha";
 
 
-open prim_recTheory pairTheory pairLib listTheory rich_listTheory;
+open prim_recTheory pairTheory pairLib listTheory;
 open combinTheory;
-open listLib;
-open pred_setTheory pred_setLib;
+open pred_setTheory;
 open numTheory;
-open numLib;
 open arithmeticTheory;
 open bossLib;
 open MutualIndThen;
@@ -26,7 +24,6 @@ open more_listTheory;
 open more_setTheory;
 open variableTheory;
 open objectTheory;
-
 
 open tactics;
 
@@ -928,10 +925,6 @@ val ALPHA1_height_induct = store_thm
 (* Unfortunately, this induction principle is not that useful yet, because *)
 (* we do not yet have the ability to shift the bound variable of a SIGMA1. *)
 
-*)
-
-
-(* Unused at present.
 
 fun INSTANTIATE_TAC th (asm,gl) =
     let val {Bvar=x, Body=glb} = Rsyntax.dest_forall gl
@@ -1244,8 +1237,6 @@ val variant_not_in_sub = store_thm
 
 
 
-(* This next IS TRUE!!!  *)
-
 val ALPHA1_SUB = store_thm
    ("ALPHA1_SUB",
     (--`(!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
@@ -1344,48 +1335,6 @@ val ALPHA1_SUB = store_thm
       ]
    );
 (* Soli Deo Gloria!!! *)
-
-(* THe point of stuck:
-
-> val it =
-    ALPHA1_obj
-      (o1 <[ CONS (x,OVAR1 (variant x (FV_subst1 s1 (FV_obj1 o1 DIFF {x})))) s1)
-      (o2 <[ CONS (y,OVAR1 (variant y (FV_subst1 s2 (FV_obj1 o2 DIFF {y})))) s2)
-      (CONS (variant x (FV_subst1 s1 (FV_obj1 o1 DIFF {x}))) xs)
-      (CONS (variant y (FV_subst1 s2 (FV_obj1 o2 DIFF {y}))) ys)
-    ------------------------------------
-      0.  !s1 s2.
-            ALPHA1_subst (CONS x xs) (CONS y ys) s1 s2 ==>
-            ALPHA1_obj (o1 <[ s1) (o2 <[ s2) (CONS x xs) (CONS y ys)
-      1.  ALPHA1_obj o1 o2 (CONS x xs) (CONS y ys)
-      2.  ALPHA1_subst xs ys s1 s2
-      3.  !y x.
-            alpha_match xs ys x y ==> ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs ys
-    
-
-    THEN POP_ASSUM (fn th => ALL_TAC) (* is the last assm here useless? *)
-    THEN DEFINE_NEW_VAR
-         (--`x' = variant x (FV_subst1 s1 (FV_obj1 o1 DIFF {x}))`--)
-    THEN FIRST_ASSUM (REWRITE_THM o SYM)
-    THEN DEFINE_NEW_VAR
-         (--`y' = variant y (FV_subst1 s2 (FV_obj1 o2 DIFF {y}))`--)
-    THEN FIRST_ASSUM (REWRITE_THM o SYM)
-
-> val it =
-    ALPHA1_obj (o1 <[ CONS (x,OVAR1 x') s1) (o2 <[ CONS (y,OVAR1 y') s2)
-      (CONS x' xs)
-      (CONS y' ys)
-    ------------------------------------
-      0.  !s1 s2.
-            ALPHA1_subst (CONS x xs) (CONS y ys) s1 s2 ==>
-            ALPHA1_obj (o1 <[ s1) (o2 <[ s2) (CONS x xs) (CONS y ys)
-      1.  ALPHA1_obj o1 o2 (CONS x xs) (CONS y ys)
-      2.  ALPHA1_subst xs ys s1 s2
-      3.  !y x.
-            alpha_match xs ys x y ==> ALPHA1_obj (SUB1 s1 x) (SUB1 s2 y) xs ys
-      4.  x' = variant x (FV_subst1 s1 (FV_obj1 o1 DIFF {x}))
-      5.  y' = variant y (FV_subst1 s2 (FV_obj1 o2 DIFF {y}))
-*)
 
 
 
@@ -1587,6 +1536,7 @@ val PARTIALLY_BLOCKED_SUBST = store_thm
       ]
    );
 
+
 (* THe following two theorems are unnecessary.
 
 val ALPHA1_DUPLICATE_CONTEXT = store_thm
@@ -1784,7 +1734,6 @@ val ALPHA1_SWITCH_OVAR1 = TAC_PROOF(([],
           ]
       ]
    );
-
 
 
 
@@ -2031,7 +1980,6 @@ val ALPHA1_method_one_one = store_thm
 (* Now we define the alpha-equivalence predicates themselves. *)
 (* ========================================================== *)
 
-
 val ALPHA_obj =
     new_definition ("ALPHA_obj",
     (--`ALPHA_obj o1 o2 = ALPHA1_obj o1 o2 [] []`--));
@@ -2090,7 +2038,6 @@ val ALPHA_object_similar = store_thm
                    (?x2 o2. m = SIGMA1 x2 o2))`--),
     REWRITE_TAC[ALPHA_object,ALPHA1_object_similar]
    );
-
 
 
 val ALPHA_REFL = store_thm
@@ -2203,7 +2150,6 @@ val ALPHA_object_neg = store_thm
 (* --------------------------------------------------------------------- *)
 
 
-
 val ALPHA_FV = store_thm
    ("ALPHA_FV",
     (--`(!o1 o2. ALPHA_obj o1 o2 ==> (FV_obj1 o1 = FV_obj1 o2)) /\
@@ -2296,7 +2242,6 @@ val ALPHA_SUB = store_thm
    );
 
 
-
 val ALPHA_CHANGE_VAR = store_thm
    ("ALPHA_CHANGE_VAR",
     (--`!y x s v a.
@@ -2309,6 +2254,7 @@ val ALPHA_CHANGE_VAR = store_thm
     THEN MATCH_MP_TAC ALPHA1_CHANGE_VAR
     THEN ASM_REWRITE_TAC[]
    );
+
 
 val ALPHA_CHANGE_ONE_VAR = store_thm
    ("ALPHA_CHANGE_ONE_VAR",
@@ -2386,14 +2332,12 @@ val ALPHA_SIGMA_subst = store_thm
    );
 
 
-
 (* --------------------------------------------------------------------- *)
 (* Primitive semantics of the sigma-calculus:                            *)
 (*   Abadi/Cardelli, Section 6.1.2, page 58-59                           *)
 (* Here we define the primitive reduction operator of the calculus.      *)
 (* It has two forms, one for method invocation and one for update.       *)
 (* --------------------------------------------------------------------- *)
-
 
 val obj1_0_RSP = store_thm
    ("obj1_0_RSP",
@@ -2406,6 +2350,7 @@ val method1_0_RSP = store_thm
     (--`ALPHA_method method1_0 method1_0`--),
     REWRITE_TAC[ALPHA_REFL]
    );
+
 
 (* --------------------------------------------------------------------- *)
 (* Definition of method invocation.                                      *)

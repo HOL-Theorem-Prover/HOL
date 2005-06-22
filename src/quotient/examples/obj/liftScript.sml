@@ -17,9 +17,7 @@ open combinTheory pred_setTheory;
 open numTheory numLib arithmeticTheory;
 open bossLib;
 open MutualIndThen;
-open ind_rel;
 open dep_rewrite;
-open quotient;
 open more_listTheory more_setTheory;
 open variableTheory;
 open objectTheory;
@@ -203,30 +201,6 @@ val SUB1_RSP = store_thm
     THEN ASM_REWRITE_TAC[]
    );
 
-(*
-val FV_obj1_o_SUB1_RSP = TAC_PROOF(([],
-    (--`!s1:^subs s2.
-         LIST_REL ($= ### ALPHA_obj) s1 s2 ==>
-         ((FV_obj1 o SUB1 s1) = (FV_obj1 o SUB1 s2))`--)),
-    REPEAT STRIP_TAC
-    THEN CONV_TAC FUN_EQ_CONV
-    THEN GEN_TAC
-    THEN REWRITE_TAC[o_THM]
-    THEN FIRST (map MATCH_MP_TAC (CONJUNCTS ALPHA_FV))
-    THEN MATCH_MP_TAC ALPHA_SUB1
-    THEN ASM_REWRITE_TAC[]
-   );
-
-val FV_subst_RSP = store_thm
-   ("FV_subst_RSP",
-    (--`!s1:^subs s2 xs ys.
-         LIST_REL ($= ### ALPHA_obj) s1 s2 /\ (xs = ys) ==>
-         (FV_subst1 s1 xs = FV_subst1 s2 ys)`--),
-    REPEAT STRIP_TAC
-    THEN IMP_RES_TAC FV_obj1_o_SUB1_RSP
-    THEN ASM_REWRITE_TAC[FV_subst1]
-   );
-*)
 
 val FV_subst_RSP = store_thm
    ("FV_subst_RSP",
@@ -246,7 +220,6 @@ val FV_subst_RSP = store_thm
     THEN MATCH_MP_TAC ALPHA_SUB1
     THEN ASM_REWRITE_TAC[]
    );
-
 
 
 val ALPHA_subst_obj_RSP = store_thm
@@ -418,6 +391,7 @@ val BV_subst_PRS = store_thm
     THEN FIRST_ASSUM ACCEPT_TAC
    );
 
+
 val FV_subst_EQ1' = store_thm
    ("FV_subst_EQ1'",
     (--`!s1:^subs s2 t.
@@ -509,6 +483,7 @@ val subst_EQ1' = store_thm
         THEN FIRST_ASSUM ACCEPT_TAC
       ]
    );
+
 
 val BV_subst_IDENT1 = store_thm
    ("BV_subst_IDENT1",
@@ -642,19 +617,6 @@ val object1_one_one' = store_thm
     REWRITE_TAC[ALPHA_object_pos,ALPHA_method_one_one,subst_SAME_ONE1]
    );
 
-(*
-val CHANGE_VAR1 = store_thm
-   ("CHANGE_VAR1",
-    (--`!x v t.
-         ~(x IN FV_method1 (SIGMA1 v t)) ==>
-         ALPHA_method (SIGMA1 v t) (SIGMA1 x (t <[ [(v, OVAR1 x)]))`--),
-    REWRITE_TAC[FV_object1_def]
-    THEN REPEAT STRIP_TAC
-    THEN IMP_RES_TAC ALPHA_CHANGE_ONE_VAR
-    THEN ONCE_REWRITE_TAC[ALPHA_SYM]
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
 
 (* AXIOM 3 *)
 
@@ -1165,48 +1127,6 @@ val object1_respects_Axiom_11 = store_thm(
     THEN ASM_REWRITE_TAC[]
    );
 
-(*
-val object1_respects_Axiom_11 = store_thm(
-    "object1_respects_Axiom_11",
-    (--`!(var :var -> 'a) obj nvk upd cns (nil:'b)
-         (par:'d -> string -> method1 -> 'c) sgm.
-        !hom_o1 hom_o2 :: respects(ALPHA_obj ===> $=).
-        !hom_d1 hom_d2 :: respects(ALPHA_dict ===> $=).
-        !hom_e1 hom_e2 :: respects(ALPHA_entry ===> $=).
-        !hom_m1 hom_m2 :: respects(ALPHA_method ===> $=).
-           ((!x.     hom_o1 (OVAR1 x) = var x) /\
-            (!d.     hom_o1 (OBJ1 d) = obj (hom_d1 d) d) /\
-            (!a l.   hom_o1 (INVOKE1 a l) = nvk (hom_o1 a) a l) /\
-            (!a l m. hom_o1 (UPDATE1 a l m) = upd (hom_o1 a)(hom_m1 m)a l m) /\
-            (!e d.   hom_d1 (e::d) = cns (hom_e1 e) (hom_d1 d) e d) /\
-            (        hom_d1 ([]) = nil) /\
-            (!l m.   hom_e1 (l,m) = (par (hom_m1 m) l m):'c) /\
-            (!x a.   hom_m1 (SIGMA1 x a) =
-                     ((sgm (\y. hom_o1 (a <[ [x, OVAR1 y]))
-                           (\y. a <[ [x, OVAR1 y]))):'d)) /\
-           ((!x.     hom_o2 (OVAR1 x) = var x) /\
-            (!d.     hom_o2 (OBJ1 d) = obj (hom_d2 d) d) /\
-            (!a l.   hom_o2 (INVOKE1 a l) = nvk (hom_o2 a) a l) /\
-            (!a l m. hom_o2 (UPDATE1 a l m) = upd (hom_o2 a)(hom_m2 m)a l m) /\
-            (!e d.   hom_d2 (e::d) = cns (hom_e2 e) (hom_d2 d) e d) /\
-            (        hom_d2 ([]) = nil) /\
-            (!l m.   hom_e2 (l,m) = (par (hom_m2 m) l m):'c) /\
-            (!x a.   hom_m2 (SIGMA1 x a) =
-                     ((sgm (\y. hom_o2 (a <[ [x, OVAR1 y]))
-                           (\y. a <[ [x, OVAR1 y]))):'d))
-           ==>
-           (hom_o1 = hom_o2) /\
-           (hom_d1 = hom_d2) /\
-           (hom_e1 = hom_e2) /\
-           (hom_m1 = hom_m2)`--),
-    REPEAT GEN_TAC
-    THEN REPEAT res_quanLib.RESQ_GEN_TAC
-    THEN STRIP_TAC
-    THEN MATCH_MP_TAC (SPEC_ALL object1_respects_Axiom_11_LEMMA2)
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
-
 
 
 fun PAIR_LAMBDA_CONV abs =
@@ -1295,9 +1215,11 @@ val object1_respects_Axiom = store_thm(
    );
 
 
+(* ---------------------------------------------------------------- *)
 (* Now we develop the last of the Gordon-Melham axioms, that states *)
 (* the existence of a function `Abs' such that                      *)
 (*         SIGMA x a = ABS (\y. a <[ [x, OVAR y])                   *)
+(* ---------------------------------------------------------------- *)
 
 val ABS1_def =
     Define
@@ -1370,11 +1292,13 @@ val SIGMA1_ABS1 = store_thm
    );
 
 
-
-
+(* ---------------------------------------------------------------- *)
+(* Now we prepare for the creation of the quotient of the object    *)
+(* calculus syntax by alpha-equivalence.  Accordingly, we establish *)
+(* the arguments to be passed to the quotient tool.                 *)
+(* ---------------------------------------------------------------- *)
 
 val equivs = [ALPHA_obj_EQUIV, ALPHA_method_EQUIV];
-
 
 val fnlist = [{def_name="OVAR_def", fname="OVAR",
                func= (--`OVAR1 :var->^obj`--), fixity=Prefix
@@ -1552,19 +1476,6 @@ val old_thms =
       REWRITE_RULE[ALPHA_dict_EQ,ALPHA_entry_EQ(*,FUN_REL_EQ*)]
             object1_respects_Axiom
       ];
-(* from lambda theory:
-      SUB_APPEND_FREE_vsubst1,
-      ALPHA_subst,
-      ALPHA_SUB_CONTEXT,
-      ALPHA_CHANGE_VAR,
-      ALPHA_CHANGE_ONE_VAR,
-      CHANGE_ONE_VAR1,
-      ALPHA_Lam_subst,
-      Lam1_Abs1,
-      term1_induction,
-      term1_respects_Axiom
-      ]
-*)
 
 
 (* ==================================================== *)
@@ -1720,104 +1631,10 @@ val method = ty_antiq( ==`:method`== );
 
 
 
-(* Test:
-
-val LIFT_RULE =
-    define_quotient_types_rule
-    {types = [{name = "obj",    equiv = ALPHA_obj_EQUIV},
-              {name = "method", equiv = ALPHA_method_EQUIV}],
-     tyop_equivs = [LIST_EQUIV, PAIR_EQUIV],
-     tyop_quotients = [LIST_QUOTIENT, PAIR_QUOTIENT, FUN_QUOTIENT],
-     tyop_simps = [LIST_REL_EQ, LIST_MAP_I, PAIR_REL_EQ, PAIR_MAP_I,
-                   FUN_REL_EQ, FUN_MAP_I],
-     defs = fnlist,
-     respects = respects,
-     poly_preserves = polydfs,
-     poly_respects = polywfs};
-
-LIFT_RULE FV_subst1;
-LIFT_RULE swap1_def handle e => Raise e;
-map LIFT_RULE old_thms;
-fun l n = LIFT_RULE (el n old_thms);
-fun ls m n = if m <= n then (l m :: ls (m+1) n) else [];
-l 38;
 
 
 
-Work on    INST_TYPE[alpha |-> beta, beta |-> alpha] HEIGHT1_var_subst 
-... seems to fail, not in the TRANFORM_CONV, but in the rewriting;
-it does not reduce properly to the small higher version. 
-
-
-fun is_match_term tm1 tm2 =
-    (match_term tm1 tm2; true) handle _ => false;
-
-val partial_equiv_tm =
-    --`(?(x:'a). R x x) /\
-       (!(x:'a) (y:'a). R x y = R x x /\ R y y /\ (R x = R y))`--;
-
-fun is_partial_equiv th = is_match_term partial_equiv_tm (concl th);
-
-
-val types = [{name = "obj",    equiv = ALPHA_obj_EQUIV},
-             {name = "method", equiv = ALPHA_method_EQUIV}]
-val defs = fnlist
-val tyop_equivs = [LIST_EQUIV, PAIR_EQUIV]
-val tyop_quotients = [LIST_QUOTIENT, PAIR_QUOTIENT, FUN_QUOTIENT]
-val tyop_simps = [LIST_REL_EQ, LIST_MAP_I, PAIR_REL_EQ, PAIR_MAP_I,
-                   FUN_REL_EQ, FUN_MAP_I]
-val respects = respects
-val poly_preserves = polydfs
-val poly_respects = polywfs
-(* val equivs = map #equiv types *)
-val equivs = map #equiv (filter (not o is_partial_equiv o #equiv) types)
-val equivs = map (REWRITE_RULE[GSYM EQUIV_def]) equivs
-val all_equivs = equivs @ tyop_equivs
-
-val quotients = map (fn {name, equiv} =>
-            define_quotient_type name (name^"_ABS") (name^"_REP") equiv)
-                          types
-val fn_defns = map (define_quotient_lifted_function
-                          quotients tyop_quotients tyop_simps) defs
-
-... read in quotient.sml here
-
-val ntys = enrich_types quotients tyop_quotients respects
-val equivs = equivs @ map (make_equiv (equivs @ tyop_equivs)) ntys
-val quotients =
-    quotients @ map (make_quotient (quotients @ tyop_quotients)) ntys
-
-val LIFT_RULE =
-    lift_theorem_by_quotients quotients equivs tyop_quotients fn_defns
-                              respects poly_preserves poly_respects
-
--or-
-
-val quot_ths = quotients
-val tyops = tyop_quotients
-val newdefs = fn_defns
-
-.. read in lift_theorem_by_quotients quot_ths equivs tyops newdefs respects polydfs polywfs
-
-LIFT_RULE swap1_OBJ1 handle e => Raise e;
-
-
-val object1_respects_Axiom1' =
-    REWRITE_RULE[ALPHA_dict_EQ,ALPHA_entry_EQ,FUN_REL_EQ] object1_respects_Axiom;
-
-REGULARIZE_RULE object1_respects_Axiom1' handle e => Raise e;
-
-LIFT_RULE object1_respects_Axiom1 handle e => Raise e;
-
-val new_thms = map LIFT_RULE old_thms handle e => Raise e
-length new_thms; (* 42 at present *)
-*)
-
-
-
-
-
-(* Now test this induction principle: *)
+(* Now test the lifted induction principle: *)
 
 val HEIGHT_LESS_EQ_ZERO = store_thm
    ("HEIGHT_LESS_EQ_ZERO",
@@ -1836,6 +1653,7 @@ val HEIGHT_LESS_EQ_ZERO = store_thm
    );
 
 
+(* We will sometimes wish to induct on the height of an object. *)
 
 val object_height_induct_LEMMA = store_thm
    ("object_height_induct_LEMMA",
@@ -1940,79 +1758,6 @@ val object_height_induct = store_thm
     THEN REWRITE_TAC[LESS_EQ_REFL]
    );
 
-(* Already lifted:
-
-val FINITE_FV_object = store_thm
-   ("FINITE_FV_object",
-    (--`(!a. FINITE (FV_obj a)) /\
-        (!d. FINITE (FV_dict d)) /\
-        (!e. FINITE (FV_entry e)) /\
-        (!m. FINITE (FV_method m))`--),
-    MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
-    THEN REWRITE_TAC[FV_object]
-    THEN ASM_REWRITE_TAC[FINITE_INSERT,FINITE_EMPTY,FINITE_UNION]
-    THEN GEN_TAC
-    THEN MATCH_MP_TAC FINITE_DIFF
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
-
-(* Already lifted:
-
-val vsubst = store_thm
-   ("vsubst",
-    (--`(!ys. [] / ys = []) /\
-        (!xs. xs / [] = []) /\
-        (!xs ys x y. (CONS x xs) / (CONS y ys) =
-                      CONS (x,OVAR y) (xs / ys))`--),
-    REWRITE_TAC[vsubst_def]
-    THEN CONJ_TAC
-    THENL
-      [ LIST_INDUCT_TAC
-        THEN REWRITE_TAC[vsubst_def],
-
-        REWRITE_TAC[NOT_CONS_NIL,HD,TL]
-      ]
-   );
-*)
-
-
-(* Already lifted:
-
-val SUB_vsubst_OVAR = store_thm
-   ("SUB_vsubst_OVAR",
-    (--`!xs ys x. ?y. SUB (xs / ys) x = OVAR y`--),
-    LIST_INDUCT_TAC
-    THEN REWRITE_TAC[vsubst,SUB]
-    THENL
-      [ GEN_TAC
-        THEN EXISTS_TAC (--`x:var`--)
-        THEN REFL_TAC,
-
-        GEN_TAC
-        THEN LIST_INDUCT_TAC
-        THEN REWRITE_TAC[vsubst,SUB]
-        THEN REPEAT GEN_TAC
-        THENL
-          [ EXISTS_TAC (--`x':var`--)
-            THEN REFL_TAC,
-
-            POP_ASSUM (fn th => ALL_TAC)
-            THEN COND_CASES_TAC
-            THENL
-              [ EXISTS_TAC (--`x':var`--)
-                THEN REFL_TAC,
-
-                FIRST_ASSUM (STRIP_ASSUME_TAC o
-                             SPECL[--`ys:var list`--,--`x'':var`--])
-                THEN EXISTS_TAC (--`y:var`--)
-                THEN FIRST_ASSUM ACCEPT_TAC
-              ]
-          ]
-      ]
-   );
-*)
-
 
 val HEIGHT_SUB_vsubst = store_thm
    ("HEIGHT_SUB_vsubst",
@@ -2023,280 +1768,6 @@ val HEIGHT_SUB_vsubst = store_thm
     THEN ASM_REWRITE_TAC[HEIGHT]
    );
 
-
-(* Already lifted:
-
-val IN_FV_SUB_vsubst = store_thm
-   ("IN_FV_SUB_vsubst",
-    (--`!xs ys x y.
-         (y IN FV_obj (SUB (xs / ys) x)) = (SUB (xs / ys) x = OVAR y)`--),
-    REPEAT GEN_TAC
-    THEN STRIP_ASSUME_TAC (SPEC_ALL SUB_vsubst_OVAR)
-    THEN ASM_REWRITE_TAC[FV_object,object_one_one,IN]
-    THEN EQ_TAC
-    THEN DISCH_THEN REWRITE_THM
-   );
-*)
-
-
-(* Already lifted:
-
-val SUB_APPEND_vsubst = store_thm
-   ("SUB_APPEND_vsubst",
-    (--`!xs ys xs' ys' x.
-         (LENGTH xs = LENGTH ys) ==>
-         (SUB (APPEND xs xs' / APPEND ys ys') x =
-          ((x IN SL xs) => SUB (xs / ys) x | SUB (xs' / ys') x))`--),
-    LIST_INDUCT_TAC
-    THEN REWRITE_TAC[SL,IN]
-    THENL
-      [ LIST_INDUCT_TAC
-        THEN REWRITE_TAC[LENGTH,SUC_NOT]
-        THEN REWRITE_TAC[APPEND],
-
-        GEN_TAC
-        THEN LIST_INDUCT_TAC
-        THEN REWRITE_TAC[LENGTH,NOT_SUC]
-        THEN POP_TAC
-        THEN REWRITE_TAC[INV_SUC_EQ]
-        THEN REPEAT STRIP_TAC
-        THEN REWRITE_TAC[APPEND,vsubst,SUB]
-        THEN COND_CASES_TAC
-        THENL
-          [ POP_ASSUM REWRITE_THM,
-
-            FIRST_ASSUM (REWRITE_THM o GSYM)
-            THEN FIRST_ASSUM MATCH_MP_TAC
-            THEN ASM_REWRITE_TAC[]
-          ]
-      ]
-   );
-*)
-
-
-(* Already lifted:
-
-val SUB_FREE_vsubst = store_thm
-   ("SUB_FREE_vsubst",
-    (--`!xs ys x.
-         ~(x IN SL xs) ==>
-         (SUB (xs / ys) x = OVAR x)`--),
-    LIST_INDUCT_TAC
-    THEN REWRITE_TAC[SL,IN]
-    THENL
-      [ REWRITE_TAC[vsubst,SUB],
-
-        GEN_TAC
-        THEN LIST_INDUCT_TAC
-        THEN REWRITE_TAC[vsubst,SUB]
-        THEN POP_TAC
-        THEN REWRITE_TAC[DE_MORGAN_THM]
-        THEN REPEAT STRIP_TAC
-        THEN UNDISCH_LAST_TAC
-        THEN FIRST_ASSUM (REWRITE_THM o GSYM)
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-*)
-
-(* Already lifted:
-
-val SUB_APPEND_FREE_vsubst = store_thm
-   ("SUB_APPEND_FREE_vsubst",
-    (--`!xs ys xs' ys' x.
-         (LENGTH xs = LENGTH ys) /\ ~(x IN SL xs) ==>
-         (SUB (APPEND xs xs' / APPEND ys ys') x = SUB (xs' / ys') x)`--),
-    LIST_INDUCT_TAC
-    THEN REWRITE_TAC[SL,IN]
-    THENL
-      [ LIST_INDUCT_TAC
-        THEN REWRITE_TAC[LENGTH,SUC_NOT]
-        THEN REWRITE_TAC[APPEND],
-
-        GEN_TAC
-        THEN LIST_INDUCT_TAC
-        THEN REWRITE_TAC[LENGTH,NOT_SUC]
-        THEN POP_TAC
-        THEN REWRITE_TAC[INV_SUC_EQ,DE_MORGAN_THM]
-        THEN REPEAT STRIP_TAC
-        THEN REWRITE_TAC[APPEND,vsubst,SUB]
-        THEN ASM_REWRITE_TAC[]
-        THEN FIRST_ASSUM MATCH_MP_TAC
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-*)
-
-
-(* Already lifted:
-
-val FINITE_FV_subst = store_thm
-   ("FINITE_FV_subst",
-    (--`!x s. FINITE s ==> FINITE (FV_subst x s)`--),
-    REPEAT STRIP_TAC
-    THEN REWRITE_TAC[FV_subst]
-    THEN COND_REWRITE_TAC[FINITE_UNION_SET]
-    THEN COND_REWRITE_TAC[IMAGE_FINITE]
-    THEN ASM_REWRITE_TAC[IN_IMAGE]
-    THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC[o_THM,FINITE_FV_object]
-    THEN MATCH_MP_TAC FINITE_DIFF
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
-
-
-(* Already lifted:
-
-val FV_subst_EQ = store_thm
-   ("FV_subst_EQ",
-    (--`!s1 s2 t.
-          (!x. (x IN t) ==> (SUB s1 x = SUB s2 x)) ==>
-          (FV_subst s1 t = FV_subst s2 t)`--),
-    REPEAT STRIP_TAC
-    THEN REWRITE_TAC[FV_subst]
-    THEN REWRITE_TAC[EXTENSION]
-    THEN GEN_TAC
-    THEN REWRITE_TAC[IN_UNION_SET,IN_IMAGE,o_THM]
-    THEN EQ_TAC
-    THEN STRIP_TAC
-    THENL
-      [ EXISTS_TAC (--`si:var set`--)
-        THEN FIRST_ASSUM REWRITE_THM
-        THEN EXISTS_TAC (--`x':var`--)
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[],
-
-        EXISTS_TAC (--`si:var set`--)
-        THEN FIRST_ASSUM REWRITE_THM
-        THEN EXISTS_TAC (--`x':var`--)
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-*)
-
-(* Already lifted:
-
-val FV_subst_IDENT = store_thm
-   ("FV_subst_IDENT",
-    (--`!s t. (!x. (x IN t) ==> (SUB s x = OVAR x)) ==>
-              (FV_subst s t = t)`--),
-    REPEAT STRIP_TAC
-    THEN REWRITE_TAC[FV_subst]
-    THEN REWRITE_TAC[EXTENSION]
-    THEN GEN_TAC
-    THEN REWRITE_TAC[IN_UNION_SET,IN_IMAGE,o_THM]
-    THEN EQ_TAC
-    THEN STRIP_TAC
-    THENL
-      [ UNDISCH_LAST_TAC
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[FV_object,IN]
-        THEN DISCH_TAC
-        THEN ASM_REWRITE_TAC[],
-
-        EXISTS_TAC (--`{x:var}`--)
-        THEN REWRITE_TAC[IN]
-        THEN EXISTS_TAC (--`x:var`--)
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[FV_object]
-      ]
-   );
-*)
-
-(* Already lifted:
-
-val FV_subst_NIL = store_thm
-   ("FV_subst_NIL",
-    (--`!s. FV_subst [] s = s`--),
-    GEN_TAC
-    THEN MATCH_MP_TAC FV_subst_IDENT
-    THEN REWRITE_TAC[SUB]
-   );
-*)
-
-
-(* Already lifted:
-
-val ARITH_PROVE = EQT_ELIM o arithLib.ARITH_CONV;
-val TAUT_PROVE = EQT_ELIM o tautLib.TAUT_CONV;
-val OR_IMP = TAUT_PROVE (--`(a \/ b ==> c) = ((a ==> c) /\ (b ==> c))`--);
-
-
-val subst_IDENT = store_thm
-   ("subst_IDENT",
-    (--`(!a s. (!x. (x IN FV_obj a) ==> (SUB s x = OVAR x)) ==>
-               ((a <[ s) = a)) /\
-        (!d s. (!x. (x IN FV_dict d) ==> (SUB s x = OVAR x)) ==>
-               ((d <[ s) = d)) /\
-        (!e s. (!x. (x IN FV_entry e) ==> (SUB s x = OVAR x)) ==>
-               ((e <[ s) = e)) /\
-        (!m s. (!x. (x IN FV_method m) ==> (SUB s x = OVAR x)) ==>
-               ((m <[ s) = m))`--),
-    MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
-    THEN REWRITE_TAC[FV_object,IN_UNION,IN]
-    THEN REWRITE_TAC[OR_IMP]
-    THEN CONV_TAC (DEPTH_CONV FORALL_AND_CONV)
-    THEN REPEAT STRIP_TAC
-    THEN REWRITE_TAC[SUB_object]
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]
-    (* 2 subgoals left *)
-    THENL
-      [ IMP_RES_THEN REWRITE_THM FV_subst_IDENT
-        THEN COND_REWRITE_TAC[variant_ident]
-        THEN COND_REWRITE_TAC[FINITE_DIFF]
-        THEN REWRITE_TAC[FINITE_FV_object,IN_DIFF,IN]
-        THEN CONV_TAC (DEPTH_CONV let_CONV)
-        THEN COND_ASM_REWRITE_TAC[]
-        THEN REWRITE_TAC[SUB]
-        THEN GEN_TAC
-        THEN DISCH_TAC
-        THEN COND_CASES_TAC
-        THEN ASM_REWRITE_TAC[]
-        THEN FIRST_ASSUM MATCH_MP_TAC
-        THEN ASM_REWRITE_TAC[IN_DIFF,IN]
-        THEN FIRST_ASSUM (REWRITE_THM o GSYM),
-
-        FIRST_ASSUM MATCH_MP_TAC
-        THEN REFL_TAC
-      ]
-   );
-*)
-
-(* Already lifted:
-
-val subst_NIL = store_thm
-   ("subst_NIL",
-    (--`(!a: obj. (a <[ []) = a) /\
-        (!d:^dict. (d <[ []) = d) /\
-        (!e:^entry. (e <[ []) = e) /\
-        (!m: method. (m <[ []) = m)`--),
-    REPEAT CONJ_TAC
-    THEN GEN_TAC
-    THENL (map MATCH_MP_TAC (CONJUNCTS subst_IDENT))
-    THEN REWRITE_TAC[SUB]
-   );
-*)
-
-(* Already lifted:
-
-val subst_SAME_ONE = store_thm
-   ("subst_SAME_ONE",
-    (--`(!(a: obj) x. (a <[ [x,OVAR x]) = a) /\
-        (!(d:^dict) x. (d <[ [x,OVAR x]) = d) /\
-        (!(e:^entry) x. (e <[ [x,OVAR x]) = e) /\
-        (!(m: method) x. (m <[ [x,OVAR x]) = m)`--),
-    REPEAT CONJ_TAC
-    THEN REPEAT GEN_TAC
-    THENL (map MATCH_MP_TAC (CONJUNCTS subst_IDENT))
-    THEN REWRITE_TAC[SUB]
-    THEN GEN_TAC
-    THEN COND_CASES_TAC
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
 
 val subst_EMPTY = store_thm
    ("subst_EMPTY",
@@ -2311,49 +1782,6 @@ val subst_EMPTY = store_thm
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
    );
-
-
-(* Already lifted:
-
-val subst_EQ = store_thm
-   ("subst_EQ",
-    (--`(!a s1 s2. (!x. (x IN FV_obj a) ==> (SUB s1 x = SUB s2 x)) ==>
-                   ((a <[ s1) = (a <[ s2))) /\
-        (!d s1 s2. (!x. (x IN FV_dict d) ==> (SUB s1 x = SUB s2 x)) ==>
-                   ((d <[ s1) = (d <[ s2))) /\
-        (!e s1 s2. (!x. (x IN FV_entry e) ==> (SUB s1 x = SUB s2 x)) ==>
-                   ((e <[ s1) = (e <[ s2))) /\
-        (!m s1 s2. (!x. (x IN FV_method m) ==> (SUB s1 x = SUB s2 x)) ==>
-                   ((m <[ s1) = (m <[ s2)))`--),
-    MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
-    THEN REWRITE_TAC[FV_object,IN_UNION,IN]
-    THEN REWRITE_TAC[OR_IMP]
-    THEN CONV_TAC (DEPTH_CONV FORALL_AND_CONV)
-    THEN REPEAT STRIP_TAC
-    THEN REWRITE_TAC[SUB_object]
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]
-    (* 2 subgoals left *)
-    THENL
-      [ IMP_RES_THEN REWRITE_THM FV_subst_EQ
-        THEN CONV_TAC (DEPTH_CONV let_CONV)
-        THEN REWRITE_TAC[object_one_one]
-        THEN FIRST_ASSUM MATCH_MP_TAC
-        THEN REWRITE_TAC[SUB]
-        THEN GEN_TAC
-        THEN DISCH_TAC
-        THEN COND_CASES_TAC
-        THEN ASM_REWRITE_TAC[]
-        THEN FIRST_ASSUM MATCH_MP_TAC
-        THEN ASM_REWRITE_TAC[IN_DIFF,IN]
-        THEN FIRST_ASSUM (REWRITE_THM o GSYM),
-
-        FIRST_ASSUM MATCH_MP_TAC
-        THEN REFL_TAC
-      ]
-   );
-
-*)
 
 
 val FV_object_subst = store_thm
@@ -2434,57 +1862,6 @@ val FV_object_subst = store_thm
    );
 
 
-(* Already lifted:
-
-val FV_subst_IDENT = store_thm
-   ("FV_subst_IDENT",
-    (--`!s t. (!x. SUB s x = OVAR x) ==> (FV_subst s t = t)`--),
-    REPEAT STRIP_TAC
-    THEN REWRITE_TAC[FV_subst]
-    THEN REWRITE_TAC[EXTENSION]
-    THEN GEN_TAC
-    THEN REWRITE_TAC[IN_UNION_SET,IN_IMAGE,o_THM,SUB]
-    THEN ASM_REWRITE_TAC[FV_object]
-    THEN EQ_TAC
-    THEN STRIP_TAC
-    THENL
-      [ UNDISCH_LAST_TAC
-        THEN ASM_REWRITE_TAC[IN]
-        THEN DISCH_TAC
-        THEN ASM_REWRITE_TAC[],
-
-        EXISTS_TAC (--`{x:var}`--)
-        THEN REWRITE_TAC[IN]
-        THEN EXISTS_TAC (--`x:var`--)
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-
-val subst_IDENT = store_thm
-   ("subst_IDENT",
-    (--`(!(a: obj) s. (!x. SUB s x = OVAR x) ==> ((a <[ s) = a)) /\
-        (!(d:^dict) s. (!x. SUB s x = OVAR x) ==> ((d <[ s) = d)) /\
-        (!(e:^entry) s. (!x. SUB s x = OVAR x) ==> ((e <[ s) = e)) /\
-        (!(m: method) s. (!x. SUB s x = OVAR x) ==> ((m <[ s) = m))`--),
-    MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
-    THEN REPEAT STRIP_TAC
-    THEN REWRITE_TAC[SUB_object]
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[SUB]
-    THEN IMP_RES_THEN REWRITE_THM FV_subst_IDENT
-    THEN COND_REWRITE_TAC[variant_ident]
-    THEN COND_REWRITE_TAC[FINITE_DIFF]
-    THEN REWRITE_TAC[FINITE_FV_object,IN_DIFF,IN]
-    THEN CONV_TAC (DEPTH_CONV let_CONV)
-    THEN COND_ASM_REWRITE_TAC[]
-    THEN REWRITE_TAC[SUB]
-    THEN GEN_TAC
-    THEN COND_CASES_TAC
-    THEN ASM_REWRITE_TAC[]
-   );
-
-*)
-
 val NOT_IN_FV_subst = store_thm
    ("NOT_IN_FV_subst",
     (--`!y x a s.
@@ -2534,32 +1911,6 @@ val NOT_IN_FV_subst2 = store_thm
    );
 
 
-(* Already lifted:
-
-val SIGMA_CHANGE_VAR = store_thm
-   ("SIGMA_CHANGE_VAR",
-    (--`!y x s v a.
-         ~(x IN FV_subst s (FV_obj a DIFF {v})) /\
-         ~(y IN FV_subst s (FV_obj a DIFF {v})) ==>
-         (SIGMA x (a <[ CONS (v, OVAR x) s) =
-          SIGMA y (a <[ CONS (v, OVAR y) s))`--),
-    REWRITE_TAC[FV_subst_EQUIV,FV_obj_def]
-    THEN REPEAT STRIP_TAC
-    THEN REWRITE_TAC[method_REP_equal_equiv]
-    THEN ALPHA_REWRITE_TAC[REP_object]
-    THEN ASSUME_TAC (SPECL[--`a:obj`--,--`CONS ((v:var),OVAR x) s`--]
-                          (CONJUNCT1 REP_SUB_object))
-    THEN ASSUME_TAC (SPECL[--`a:obj`--,--`CONS ((v:var),OVAR y) s`--]
-                          (CONJUNCT1 REP_SUB_object))
-    THEN IMP_RES_TAC ALPHA_method_SIGMA
-    THEN POP_ASSUM (REWRITE_THM o ALPHA_EQ_RULES o SPEC(--`x:var`--))
-    THEN POP_ASSUM (REWRITE_THM o ALPHA_EQ_RULES o SPEC(--`y:var`--))
-    THEN REWRITE_TAC[subst_ABS_REP_def,sub_ABS_REP_def,REP_OVAR_EQ]
-    THEN MATCH_MP_TAC ALPHA_CHANGE_VAR
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
-
 val SIGMA_CHANGE_BOUND_VAR = store_thm
    ("SIGMA_CHANGE_BOUND_VAR",
     (--`!y x a.
@@ -2579,6 +1930,7 @@ val SIGMA_CHANGE_BOUND_VAR = store_thm
     THEN COND_CASES_TAC
     THEN ASM_REWRITE_TAC[]
    );
+
 
 val SIGMA_CLEAN_VAR = store_thm
    ("SIGMA_CLEAN_VAR",
@@ -2732,21 +2084,6 @@ val SIGMA_LIST_CLEAN_VAR = store_thm
     end
    );
 
-(* Already lifted:
-
-val BV_subst_IDENT = store_thm
-   ("BV_subst_IDENT",
-    (--`!s x. ~(x IN (BV_subst s)) ==> (SUB s x = OVAR x)`--),
-    LIST_INDUCT_TAC
-    THEN ONCE_REWRITE_TAC[GSYM PAIR]
-    THEN REWRITE_TAC[BV_subst_def,SUB]
-    THEN REWRITE_TAC[FST,SND,IN,DE_MORGAN_THM]
-    THEN REPEAT STRIP_TAC
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
-
 (*
 val EQ_subst =
     new_definition
@@ -2860,13 +2197,11 @@ val ALL_SIGMA_OBJ_EQ = store_thm
 
 
 
-
 (* ===================================================================== *)
 (* End of the lifting of object calculus types and basic definitions     *)
 (* to the higher, more abstract level where alpha-equivalent expressions *)
 (* are actually equal in HOL.                                            *)
 (* ===================================================================== *)
-
 
 
 

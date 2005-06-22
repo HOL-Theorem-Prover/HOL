@@ -14,26 +14,23 @@ val _ = new_theory "object";
 
 (* In interactive sessions, do:
 
-app load ["Let_conv", "listTheory", "setTheory", "pairTheory",
+app load ["combinTheory", "listTheory",
           "arithmeticTheory", "numTheory", "prim_recTheory",
+          "pairTheory", "pairLib", "pred_setTheory",
           "dep_rewrite", "more_listTheory", "more_setTheory",
           "variableTheory",
-          "numLib", "listLib",
-          "tautLib", "arithLib", "bossLib"];
+          "bossLib", "MutualIndThen"];
 
 *)
 
-open Psyntax combinTheory;
-open listTheory listLib;
+open combinTheory;
+open listTheory;
 open arithmeticTheory numTheory prim_recTheory;
-open pairTheory;
-open pred_setTheory;
+open pairTheory pairLib pred_setTheory;
 open dep_rewrite;
 open more_listTheory;
 open more_setTheory;
 open variableTheory;
-open pairLib;
-open numLib;
 open bossLib;
 open MutualIndThen;
 
@@ -553,6 +550,7 @@ val FREE_FV_SUB1 = store_thm
     THEN ASM_REWRITE_TAC[FV_object1_def]
    );
 
+
 val FREE_IDENT_SUBST1 = store_thm
    ("FREE_IDENT_SUBST1",
     (--`!s t.
@@ -591,8 +589,7 @@ val FREE_IDENT_SUBST1 = store_thm
 
  
 (* --------------------------------------------------------------------- *)
-(* Naive substitution; not proper; will fix later.                       *)
-(* This DOES typecheck and create! Compare to PVS.                       *)
+(* Naive substitution; not proper; only here for pedagogical reasons.    *)
 (* --------------------------------------------------------------------- *)
 
 val NSUB_object1_def = xDefine  "NSUB_object1"
@@ -628,7 +625,6 @@ val _ = map (fn s => add_infix(s,250,LEFT))
 
 (* --------------------------------------------------------------------- *)
 (* Proper substitution, including renaming of bound variables.           *)
-(* This DOES typecheck and create! Compare to PVS.                       *)
 (* --------------------------------------------------------------------- *)
 
 val SUB_object1_def = xDefine "SUB_object1"
@@ -687,10 +683,6 @@ handle e => Raise e;
 val TAUT_PROVE = EQT_ELIM o tautLib.TAUT_CONV;
 val OR_IMP = TAUT_PROVE (--`(a \/ b ==> c) = ((a ==> c) /\ (b ==> c))`--);
 
-(*
-tautLib.TAUT_CONV (--`(a \/ b ==> c) = ((a ==> c) /\ (b ==> c))`--)
-handle e => (print_HOL_ERR e; raise e);
-*)
 
 val subst_EQ1 = store_thm
    ("subst_EQ1",
@@ -982,6 +974,5 @@ val _ = export_theory();
 val _ = print_theory_to_file "object.lst";
 
 val _ = html_theory "object";
-
 
 val _ = print_theory_size();

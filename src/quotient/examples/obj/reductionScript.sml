@@ -12,25 +12,19 @@ infixr -->;
 val _ = new_theory "reduction";
 
 
-open prim_recTheory pairTheory pairLib listTheory rich_listTheory;
-open combinTheory;
-open listLib;
-open pred_setTheory pred_setLib;
-open numTheory;
+open listTheory;
+open pred_setTheory;
 open numLib;
 open arithmeticTheory;
 open bossLib;
 open MutualIndThen;
 open ind_rel;
 open dep_rewrite;
-open more_listTheory;
 open more_setTheory;
-open variableTheory;
 open objectTheory;
 open alphaTheory;
 open liftTheory;
 open barendregt;
-
 
 open tactics;
 
@@ -53,7 +47,6 @@ val [ALPHA_obj_SYM, ALPHA_dict_SYM, ALPHA_entry_SYM,
 val [ALPHA_obj_TRANS, ALPHA_dict_TRANS, ALPHA_entry_TRANS,
      ALPHA_method_TRANS]
     = CONJUNCTS ALPHA_TRANS;
-
 
 
 
@@ -92,8 +85,9 @@ val HEIGHT_SUB_VAR = store_thm
         REWRITE_TAC[SUB_object]
         THEN ASM_REWRITE_TAC[HEIGHT],
 (*
-SHIFT_SIGMAS_TAC
-THEN MAKE_SIMPLE_SUBST_TAC*)
+        SHIFT_SIGMAS_TAC
+        THEN MAKE_SIMPLE_SUBST_TAC
+*)
         SIMPLE_SUBST_TAC
         THEN ASM_REWRITE_TAC[HEIGHT]
       ]
@@ -250,9 +244,9 @@ val COLLAPSE_SUBST = store_thm
 
 (* Define the reflexive closure of a relation.                           *)
 
-(* NO!  Now, this is done in relationTheory!
+(* Wait!  Now, this is done in relationTheory!
 
-The following definition is now not the same. *)
+But the following definition is not the same as that in relationTheory. *)
 
 val RC_DEF =
    new_definition("RC_DEF",
@@ -596,11 +590,6 @@ val RED1_height_ind_thm_LEMMA = store_thm
             THEN REPEAT STRIP_TAC
             THEN ASSUM_LIST
                     (MATCH_MP_TAC o REWRITE_RULE[AND_IMP_INTRO] o hd o rev)
-(*            THEN UNDISCH_THEN
-                 (--`!(R:obj->obj->bool) o1 o2. R o1 o2 ==> P_0 R o1 o2`--)
-                 (fn th => ALL_TAC)
-            THEN FIRST_ASSUM (MATCH_MP_TAC o REWRITE_RULE[AND_IMP_INTRO])
-*)
             THEN POP_ASSUM (REWRITE_THM o SYM)
             THEN POP_ASSUM (REWRITE_THM o SYM)
             THEN ASM_REWRITE_TAC[]
@@ -642,6 +631,7 @@ val RED1_height_ind_thm = store_thm
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_MAX]
    );
+
 
 val RED1_height_strong_ind_LEMMA = store_thm
    ("RED1_height_strong_ind_LEMMA",
@@ -789,6 +779,7 @@ val RED1_height_strong_ind_LEMMA = store_thm
       ]
    );
 
+
 val RED1_height_strong_ind = store_thm
    ("RED1_height_strong_ind",
     (--`!P_0 P_1 P_2 P_3.
@@ -839,7 +830,6 @@ val RED1_height_strong_ind = store_thm
 
 
 
-
 (* --------------------------------------------------------------------- *)
 (* We claim that RED1 is a binary relation on the object/method          *)
 (* language which is                                                     *)
@@ -863,7 +853,6 @@ val RED1_compatible = store_thm
                               THEN NO_TAC)
                     (CONJUNCTS RED1_rules_sat))
    );
-
 
 
 
@@ -965,6 +954,7 @@ val _ = save_thm ("RED_inv_thms", LIST_CONJ RED_inv_thms);
 val _ = save_thm ("RED_strong_ind", RED_strong_ind);
 
 
+
 (* --------------------------------------------------------------------- *)
 (* We claim that RED is a binary relation on the object/method           *)
 (* language which is                                                     *)
@@ -1042,7 +1032,6 @@ val [RED_obj_COMPAT, RED_dict_COMPAT, RED_entry_COMPAT, RED_method_COMPAT]
 
 
 
-
 val RED_reduction = store_thm
    ("RED_reduction",
     (--`!R. reduction
@@ -1050,6 +1039,7 @@ val RED_reduction = store_thm
     REWRITE_TAC[reduction]
     THEN REWRITE_TAC[RED_compatible,RED_reflexive,RED_transitive]
    );
+
 
 
 (* Barendregt's Substitution Remark, 3.1.7, page 52: *)
@@ -1128,7 +1118,6 @@ val BARENDREGT_SUBSTITUTION_REMARK = store_thm
         THEN ASM_REWRITE_TAC[]
       ]
    );
-
 
 
 
@@ -1226,8 +1215,9 @@ val _ = save_thm ("REQUAL_inv_thms", LIST_CONJ REQUAL_inv_thms);
 val _ = save_thm ("REQUAL_strong_ind", REQUAL_strong_ind);
 
 
+
 (* --------------------------------------------------------------------- *)
-(* We claim that REQUAL is a binary relation on the object/method           *)
+(* We claim that REQUAL is a binary relation on the object/method        *)
 (* language which is                                                     *)
 (*  1) compatible (in the sense of Barendregt, Definition 3.1.1, pg 50   *)
 (*  2) the symmetric, transitive closure of the RED relation, in the     *)
@@ -1356,7 +1346,6 @@ val REQUAL_equality = store_thm
                          (* ============ *)
 
 
-
 val NORMAL_FORM_obj =
     new_definition
     ("NORMAL_FORM_obj",
@@ -1381,7 +1370,6 @@ val NORMAL_FORM = save_thm
   ("NORMAL_FORM",
         LIST_CONJ [NORMAL_FORM_obj, NORMAL_FORM_dict,
                    NORMAL_FORM_entry, NORMAL_FORM_method]);
-
 
 
 val NORMAL_FORM_OF_obj =
@@ -1441,8 +1429,8 @@ val NORMAL_FORM_IDENT = store_thm
    );
 
 
-(* THE DIAMOND PROPERTY *)
 
+(* THE DIAMOND PROPERTY *)
 
 val DIAMOND =
     new_definition
@@ -1450,8 +1438,8 @@ val DIAMOND =
      (--`DIAMOND R = (!a b c:'a. R a b /\ R a c ==> (?d. R b d /\ R c d))`--));
 
 
-(* THE CHURCH-ROSSER PROPERTY *)
 
+(* THE CHURCH-ROSSER PROPERTY *)
 
 val CHURCH_ROSSER =
     new_definition
@@ -1640,6 +1628,7 @@ val NORMAL_FORM_UNIQUE = store_thm
    );
 
 
+
 (* SUBSTITUTIVE RELATIONS *)
 
 
@@ -1768,7 +1757,6 @@ val RED1_SUBSTITUTIVE = store_thm
     THEN IMP_RES_TAC RED1_SUBSTITUTIVE_LEMMA
     THEN ASM_REWRITE_TAC[]
    );
-
 
 
 val RED1_SUBSTITUTIVE_ind_thm_LEMMA = store_thm
@@ -1913,6 +1901,7 @@ val RED1_SUBSTITUTIVE_ind_thm_LEMMA = store_thm
       ]
    );
 
+
 val RED1_SUBSTITUTIVE_ind_thm_LEMMA1 = store_thm
    ("RED1_SUBSTITUTIVE_ind_thm_LEMMA1",
     (--`!P_0 P_1 P_2 P_3.
@@ -2001,14 +1990,6 @@ val RED1_SUBSTITUTIVE_ind_thm = store_thm
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[]
    );
-
-(*
-g `(!R o1 o2. RED1_obj R o1 o2 ==> (o1 = o2)) /\
-   (!R d1 d2. RED1_dict R d1 d2 ==> (d1 = d2)) /\
-   (!R e1 e2. RED1_entry R e1 e2 ==> (e1 = e2)) /\
-   (!R m1 m2. RED1_method R m1 m2 ==> (m1 = m2))`;
-e(rule_induct RED1_SUBSTITUTIVE_ind_thm);
-*)
 
 
 
@@ -2119,7 +2100,6 @@ val REQUAL_SUBSTITUTIVE = store_thm
     THEN IMP_RES_TAC REQUAL_SUBSTITUTIVE_LEMMA
     THEN ASM_REWRITE_TAC[]
    );
-
 
 
 

@@ -12,28 +12,22 @@ infixr -->;
 val _ = new_theory "semantics";
 
 
-open prim_recTheory pairTheory pairLib listTheory rich_listTheory;
+open pairTheory listTheory;
 open combinTheory;
-open listLib;
-open pred_setTheory pred_setLib;
-open numTheory;
+open pred_setTheory;
 open numLib;
 open arithmeticTheory;
 open bossLib;
 open MutualIndThen;
 open ind_rel;
 open dep_rewrite;
-open quotient;
-open more_listTheory;
 open more_setTheory;
-open variableTheory;
 open objectTheory;
 open alphaTheory;
 open liftTheory;
 open barendregt;
 open relationTheory;
 open reductionTheory;
-
 
 open tactics;
 
@@ -159,7 +153,6 @@ val TC_DIAMOND = store_thm
 
 
 
-
 (* --------------------------------------------------------------------- *)
 (* Primitive semantics of the sigma-calculus:                            *)
 (*   Abadi/Cardelli, Section 6.1.2, page 58-59                           *)
@@ -281,13 +274,11 @@ val SUB_invoke_dict = store_thm
    );
 
 
-val invoke_full = invoke_def;
-
 val FV_invoke = store_thm
    ("FV_invoke",
     (--`!a lb. FV_obj (invoke a lb) SUBSET FV_obj a`--),
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
-    THEN REWRITE_TAC[invoke_full]
+    THEN REWRITE_TAC[invoke_def]
     THEN REWRITE_TAC[obj_0, FV_object, EMPTY_SUBSET]
     (* only one subgoal *)
     THEN GEN_TAC
@@ -365,14 +356,12 @@ val SUB_update_dict = store_thm
    );
 
 
-val update_full = update_def;
-
 val FV_update = store_thm
    ("FV_update",
     (--`!a lb mth. FV_obj (update a lb mth) SUBSET
                    (FV_obj a UNION FV_method mth)`--),
     MUTUAL_INDUCT_THEN object_induct ASSUME_TAC
-    THEN REWRITE_TAC[update_full]
+    THEN REWRITE_TAC[update_def]
     THEN REWRITE_TAC[obj_0, FV_object, EMPTY_SUBSET]
     (* only one subgoal *)
     THEN REPEAT GEN_TAC
@@ -539,8 +528,6 @@ val SIGMA_R_SUBSTITUTIVE = store_thm
 
 
 
-
-
 (* --------------------------------------------------------------------- *)
 (* (REDL o1 o2) will now be defined on the sigma calculus such that      *)
 (*   1) REDL satisfies the diamond property, and                         *)
@@ -646,7 +633,6 @@ val [REDL_obj_REFL, REDL_OBJ, REDL_INVOKE, REDL_UPDATE,
      REDL_invoke, REDL_update, REDL_dict_REFL, REDL_CONS,
      REDL_entry_REFL, REDL_PAIR, REDL_method_REFL, REDL_SIGMA]
    = CONJUNCTS REDL_rules_sat;
-
 
 
 
@@ -774,6 +760,7 @@ val REDL_height_ind_thm_LEMMA = store_thm
       ]
    );
 
+
 val REDL_height_ind_thm = store_thm
    ("REDL_height_ind_thm",
     (--`!P_0 P_1 P_2 P_3.
@@ -815,6 +802,7 @@ val REDL_height_ind_thm = store_thm
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASM_REWRITE_TAC[LESS_EQ_REFL]
    );
+
 
 val REDL_height_strong_ind_LEMMA = store_thm
    ("REDL_height_strong_ind_LEMMA",
@@ -946,6 +934,7 @@ val REDL_height_strong_ind_LEMMA = store_thm
       ]
    );
 
+
 val REDL_height_strong_ind = store_thm
    ("REDL_height_strong_ind",
     (--`!P_0 P_1 P_2 P_3.
@@ -1037,7 +1026,6 @@ val REDL_FV = TAC_PROOF(([],
         THEN ASM_REWRITE_TAC[]
       ]
    );
-
 
 
 val SHIFT_IN_DIFF = TAC_PROOF(([],
@@ -1156,7 +1144,6 @@ val SUBST_REVERSE = store_thm
    );
 
 
-
 val REDL_SUBSTITUTIVE_SAME = TAC_PROOF(([],
     (--`(!M.
           (!N N' x. REDL_obj N N' ==>
@@ -1201,8 +1188,6 @@ val REDL_SUBSTITUTIVE_SAME = TAC_PROOF(([],
    );
 
 
-
-
 val REDL_SUBSTITUTIVE_LEMMA = store_thm
    ("REDL_SUBSTITUTIVE_LEMMA",
     (--`(!M M'.
@@ -1235,8 +1220,6 @@ val REDL_SUBSTITUTIVE_LEMMA = store_thm
    );
 
 
-
-
 val REDL_invoke_SAME = store_thm
    ("REDL_invoke_SAME",
     (--`(!M.
@@ -1267,7 +1250,6 @@ val REDL_invoke_SAME = store_thm
         THEN FIRST_ASSUM ACCEPT_TAC
       ]
    );
-
 
 
 val REDL_invoke_LEMMA1 = TAC_PROOF(([],
@@ -1343,8 +1325,6 @@ val REDL_invoke_LEMMA = store_thm
     THEN FIRST_ASSUM (ASSUME_TAC o REWRITE_RULE[] o SPEC (--`D:^dict`--))
     THEN ASM_REWRITE_TAC[]
    );
-
-
 
 
 val REDL_update_SAME1 = TAC_PROOF(([],
@@ -1480,7 +1460,6 @@ val REDL_OBJ_IMP_dict = store_thm
    );
 
 
-
 val NOT_IN_SUBSET_DIFF = store_thm
    ("NOT_IN_SUBSET_DIFF",
     (--`!s1 s2 t (x:'a).
@@ -1495,8 +1474,6 @@ val NOT_IN_SUBSET_DIFF = store_thm
         ASM_REWRITE_TAC[]
       ]
    );
-
-
 
 
 
@@ -1643,7 +1620,6 @@ val REDL_method_cases = store_thm
         THEN ASM_REWRITE_TAC[IN_DIFF,IN]
       ]
    );
-
 
 
 
@@ -1852,16 +1828,6 @@ RC   R   =   R-arrow with "=" underneath          =   reflexive closure
 TC   R   =   R-arrow with "*" superscript after   =   transitive closure
 *)
 
-(*
-val RC_SIGMA_IMP_REDL = store_thm
-   ("RC_SIGMA_IMP_REDL",
-    (--`!o1 o2. RC SIGMA_R o1 o2 ==> REDL_obj o1 o2`--),
-    RC_INDUCT_TAC
-    THEN ONCE_REWRITE_TAC SIGMA_R_inv_thms
-    THEN REPEAT STRIP_TAC
-    THEN DEP_ASM_REWRITE_TAC[REDL_rules_sat]
-   );
-*)
 
 val RED1_SIGMA_IMP_REDL_LEMMA = store_thm
    ("RED1_SIGMA_IMP_REDL_LEMMA",
@@ -1897,6 +1863,7 @@ val RED1_SIGMA_IMP_REDL_LEMMA = store_thm
         DEP_ASM_REWRITE_TAC[REDL_rules_sat]
       ]
    );
+
 
 val RED1_SIGMA_IMP_REDL = store_thm
    ("RED1_SIGMA_IMP_REDL",
@@ -2030,19 +1997,6 @@ val REDL_IMP_RED_SIGMA = store_thm
      ]
    );
 
-(*
-val RC_RED1_SIGMA_IMP_REDL = store_thm
-   ("RC_RED1_SIGMA_IMP_REDL",
-    (--`(!o1 o2. RC (RED1_obj SIGMA_R) o1 o2 ==> REDL_obj o1 o2) /\
-        (!d1 d2. RC (RED1_dict SIGMA_R) d1 d2 ==> REDL_dict d1 d2) /\
-        (!e1 e2. RC (RED1_entry SIGMA_R) e1 e2 ==> REDL_entry e1 e2) /\
-        (!m1 m2. RC (RED1_method SIGMA_R) m1 m2 ==> REDL_method m1 m2)`--),
-    REPEAT CONJ_TAC
-    THEN RC_INDUCT_TAC
-    THEN REWRITE_TAC[REDL_rules_sat]
-    THEN REWRITE_TAC[RED1_SIGMA_IMP_REDL]
-   );
-*)
 
 val TC_RC_SIGMA_IMP_RED_SIGMA = store_thm
    ("TC_RC_SIGMA_IMP_RED_SIGMA",
