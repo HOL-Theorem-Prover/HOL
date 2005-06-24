@@ -208,30 +208,35 @@ fun Convert defth =
          handle HOL_ERR _ 
          => (print "not an equation\n"; 
              raise ERR "Convert" "not an equation")
-     val (func,args) = 
-         dest_comb lt
-         handle HOL_ERR _ => 
-         (print "lhs not a comb\n"; 
-          raise ERR "Convert" "lhs not a comb")
-     val _ = if not(is_const func)
-              then (print_term func; print " is not a constant\n";
-                    raise ERR "Convert" "rator of lhs not a constant")
-              else ()
-     val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
-              then (print "definition rhs has unbound variables: "; 
-                    map (fn t => (print_term t; print " "))
-                        (rev(subtract (free_vars rt) (free_vars lt))); 
-                    print "\n";
-                    raise ERR "Convert" "definition rhs has unbound variables")
-              else ()
  in
-  let val f = mk_pabs(args,rt)
-      val th1 = Convert_CONV f
-      val th2 = PABS args (SPEC_ALL defth)
-      val th3 = TRANS th2 th1
-  in
-   CONV_RULE (LHS_CONV PETA_CONV) th3
-  end
+  if is_const lt
+   then defth
+   else
+   let  val (func,args) = 
+            dest_comb lt
+            handle HOL_ERR _ => 
+            (print "lhs not a comb\n"; 
+             raise ERR "Convert" "lhs not a comb")
+        val _ = if not(is_const func)
+                 then (print_term func; print " is not a constant\n";
+                       raise ERR "Convert" "rator of lhs not a constant")
+                 else ()
+        val _ = if not(subtract (free_vars rt) (free_vars lt) = [])
+                 then (print "definition rhs has unbound variables: "; 
+                       map (fn t => (print_term t; print " "))
+                           (rev(subtract (free_vars rt) (free_vars lt))); 
+                       print "\n";
+                       raise ERR "Convert" "definition rhs has unbound variables")
+                 else ()
+    in
+     let val f = mk_pabs(args,rt)
+         val th1 = Convert_CONV f
+         val th2 = PABS args (SPEC_ALL defth)
+         val th3 = TRANS th2 th1
+     in
+      CONV_RULE (LHS_CONV PETA_CONV) th3
+     end
+    end
  end;
 
 (*****************************************************************************)
@@ -350,7 +355,7 @@ fun RecConvert defth totalth =
 fun dest_exp tm =
  if not(fst(dest_type(type_of tm)) = "fun")
   then (print_term tm;print "\n";
-        print "is not a function";
+        print "is not a function\n";
         raise ERR "dest_exp" "dest_exp failure")
   else if is_comb tm 
           andalso is_const(fst(strip_comb tm))
@@ -416,7 +421,12 @@ fun is_combinational_const tm =
 (* [REC assumption] |- <circuit> ===> DEV exp                                *)
 (*****************************************************************************)
 fun CompileExp tm =
- let val (opr,args) = dest_exp tm
+ let val _ = if not(fst(dest_type(type_of tm)) = "fun")
+              then (print_term tm; print "\n";
+                    print "Devices can only compute functions.\n";
+                    raise ERR "CompileExp" "attempt to compile non-function")
+              else ()
+     val (opr,args) = dest_exp tm
                       handle HOL_ERR _ 
                       => raise ERR "CompileExp" "bad expression"
  in
