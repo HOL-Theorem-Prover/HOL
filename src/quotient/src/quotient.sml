@@ -233,6 +233,7 @@ fun define_partial_quotient_type tyname abs rep equiv =
     let
 
    (* Extract the existing type, ty, and the equivalence relation, REL. *)
+        val equiv = REWRITE_RULE[PARTIAL_EQUIV_def] equiv
         val (exist,pequiv) = CONJ_PAIR equiv
         val (v, exist_tm) = boolSyntax.dest_exists (concl exist)
         val ty = type_of v
@@ -557,18 +558,154 @@ but it could look like
 fun is_match_term tm1 tm2 =
     (match_term tm1 tm2; true) handle _ => false;
 
+(*
+val equiv_tm =
+    --`!(x:'a) (y:'a). R x y = (R x = R y)`--;
+
 val partial_equiv_tm =
     --`(?(x:'a). R x x) /\
        (!(x:'a) (y:'a). R x y = R x x /\ R y y /\ (R x = R y))`--;
+*)
+
+val equiv_tm =
+    --`EQUIV (R :'a -> 'a -> bool)`--;
+
+val partial_equiv_tm =
+    --`PARTIAL_EQUIV (R :'a -> 'a -> bool)`--;
+
+fun is_equiv th = is_match_term equiv_tm (concl th);
 
 fun is_partial_equiv th = is_match_term partial_equiv_tm (concl th);
 
+fun check_equiv th =
+    is_equiv th orelse is_partial_equiv th orelse
+         raise HOL_ERR {
+                  origin_structure = "quotient",
+                  origin_function  = "check_equiv",
+                  message = "The following is neither an equivalence nor a partial equivalence theorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                       }
+
+fun distinct [] = true
+  | distinct (x::xs) = not (mem x xs) andalso distinct xs
+
+fun dest_EQUIV_cond tm =
+            let val (vrs, body) = strip_forall tm
+                val {ant, conseq} = Rsyntax.dest_imp body
+                val (E, R) = strip_comb ant
+                val Ename = #Name (Rsyntax.dest_const E)
+                val _ = assert (curry op = "EQUIV") Ename
+                val _ = assert (curry op = 1) (length R)
+                val R = el 1 R
+                val tau = fst (dom_rng (type_of R))
+            in
+                (tau,R,conseq)
+            end
+
+fun strip_EQUIV_cond tm =
+            let val (tau,R,conseq) = dest_EQUIV_cond tm
+                val (taus,Rs,conseq) = strip_EQUIV_cond conseq
+            in
+                (tau::taus, R::Rs, conseq)
+            end
+            handle _ => ([],[],tm)
+
+fun check_tyop_equiv th =
+   let val (taus, Rs, uncond_tm) = strip_EQUIV_cond (concl th)
+       val _ = assert (all is_vartype) taus
+       val _ = assert distinct taus
+       val _ = assert distinct Rs
+   in
+       Term.free_vars (concl th) = [] andalso
+       is_match_term equiv_tm uncond_tm  orelse raise Match
+   end
+   handle e => raise HOL_ERR {
+                  origin_structure = "quotient",
+                  origin_function  = "check_tyop_equiv",
+                  message = "The following does not have the form of a type quotient extension theorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                       }
+
+
+fun dest_QUOTIENT_cond tm =
+            let val (vrs, body) = strip_forall tm
+                val {ant, conseq} = Rsyntax.dest_imp body
+                val (Q, R_abs_rep) = strip_comb ant
+                val Qname = #Name (Rsyntax.dest_const Q)
+                val _ = assert (curry op = "QUOTIENT") Qname
+                val _ = assert (curry op = vrs) R_abs_rep
+                val _ = assert (curry op = 3) (length R_abs_rep)
+                val R = el 1 R_abs_rep
+                val abs = el 2 R_abs_rep
+                val rep = el 3 R_abs_rep
+                val (tau,ksi) = dom_rng (type_of abs)
+            in
+                (tau,ksi,R,abs,rep,conseq)
+            end
+
+fun strip_QUOTIENT_cond tm =
+            let val (tau,ksi,R,abs,rep,conseq) = dest_QUOTIENT_cond tm
+                val (taus,ksis,Rs,abss,reps,conseq) = strip_QUOTIENT_cond conseq
+            in
+                (tau::taus, ksi::ksis, R::Rs, abs::abss, rep::reps, conseq)
+            end
+            handle _ => ([],[],[],[],[],tm)
+
+val quotient_tm = --`QUOTIENT R (abs:'a -> 'b) rep`--;
+
+fun check_tyop_quotient th =
+   let val (taus, ksis, Rs, abss, reps, uncond_tm) =
+                                           strip_QUOTIENT_cond (concl th)
+       val _ = assert (all is_vartype) (append taus ksis)
+       val _ = assert distinct (append taus ksis)
+       val _ = assert distinct (append (append Rs abss) reps)
+   in
+       Term.free_vars (concl th) = [] andalso
+       is_match_term quotient_tm uncond_tm  orelse raise Match
+   end
+   handle e => raise HOL_ERR {
+                  origin_structure = "quotient",
+                  origin_function  = "check_tyop_quotient",
+                  message = "The following does not have the form of a type quotient extension theorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                       }
+
+fun check_tyop_simp th =
+   let val tm = concl th
+       val (l,r) = Psyntax.dest_eq tm
+       val (name,rty) = Psyntax.dest_const r
+       val (cn,args) = strip_comb l
+       val _ = assert (all (curry op = name o fst o Psyntax.dest_const)) args
+       val atys = map (fst o dom_rng o type_of) args
+       val tys = (snd o Psyntax.dest_type o fst o dom_rng) rty
+       val _ = assert (curry op = tys) atys
+   in
+      true
+   end
+   handle e => raise HOL_ERR {
+                  origin_structure = "quotient",
+                  origin_function  = "check_tyop_simp",
+                  message = "The following does not have the form of a simplification theorem for either\nrelation extension simplification or map function extension simplification:\n" ^
+                                       thm_to_string th ^ "\n"
+                       }
+
+
 fun define_quotient_type tyname abs rep equiv =
-    let val equiv = REWRITE_RULE[EQUIV_def] equiv
+    let val equiv = REWRITE_RULE (map GSYM [EQUIV_def,PARTIAL_EQUIV_def]) equiv
     in
-    if is_match_term partial_equiv_tm (concl equiv) then
-         define_partial_quotient_type tyname abs rep equiv
+        define_partial_quotient_type tyname abs rep
+           (if is_partial_equiv equiv
+              then equiv
+              else MATCH_MP EQUIV_IMP_PARTIAL_EQUIV equiv)
+    end
+
+
+(* This section is code to construct a quotient from a normal equivalence;
+   It is now superceeded by the more general code for a partial equivalance.
+
+
     else
+         
     let
 
    (* Extract the existing type, ty, and the equivalence relation, REL. *)
@@ -836,6 +973,8 @@ fun define_quotient_type tyname abs rep equiv =
        save_thm(tyname^"_QUOTIENT", QUOTIENT_thm)
     end
     end;
+
+End of code for a quotient from a normal equivalence. *)
 
 
 
@@ -2983,6 +3122,126 @@ R2 (f[x']) (g[y']).
 (* end of lift_theorem_by_quotients *)
 
 
+
+(* --------------------------------------------------------------- *)
+(* Check to see if a purported respectfulness theorem is actually  *)
+(* of the right form.                                              *)
+(* --------------------------------------------------------------- *)
+
+fun check_respects_tm tm =
+   let val (vrs,body) = strip_forall tm
+       val (ants, base) = if is_imp body then
+               let val {ant, conseq} = Rsyntax.dest_imp body
+                in (strip_conj ant, conseq) end
+          else ([],body)
+       val ant_args = map (fn ant => (rand (rator ant), rand ant)) ants
+       val _ = assert distinct (uncurry append (unzip ant_args))
+       val ((Rc,t1),t2) = ((Psyntax.dest_comb ## I) o Psyntax.dest_comb) base
+       val (c1,args1) = strip_comb t1
+       val (c2,args2) = strip_comb t2
+       val _ = assert (curry op = c1) c2
+       val _ = assert distinct args1
+       val _ = assert distinct args2
+       val argpairs = zip args1 args2
+       fun check_arg (a12 as (a1,a2)) =
+               ((mem a12 ant_args andalso mem a1 vrs andalso mem a2 vrs
+                 orelse (a1 = a2))
+                 andalso type_of a1 = type_of a2)
+       fun check_ant (ant12 as (ant1,ant2)) =
+                (mem ant12 argpairs
+                 andalso mem ant1 vrs andalso mem ant2 vrs
+                 andalso type_of ant1 = type_of ant2)
+       fun check_var vr = mem vr args1 orelse mem vr args2
+   in
+       all check_arg argpairs  andalso  all check_ant ant_args
+       andalso  all check_var vrs
+       orelse raise Match
+   end;
+
+fun check_respects th =
+   Term.free_vars (concl th) = [] andalso
+   check_respects_tm (concl th)
+   handle e => raise HOL_ERR {
+                        origin_structure = "quotient",
+                        origin_function  = "check_respects",
+                        message = "The following theorem is not of the right form for a respectfulness theorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                                  };
+
+
+(* --------------------------------------------------------------- *)
+(* Check to see if a purported polymorphic respectfulness theorem  *)
+(* is actually of the right form.                                  *)
+(* --------------------------------------------------------------- *)
+
+fun check_poly_respects th =
+   let val (taus, ksis, Rs, abss, reps, uncond_tm) =
+                                           strip_QUOTIENT_cond (concl th)
+       val _ = assert (all is_vartype) (append taus ksis)
+       val _ = assert distinct (append taus ksis)
+       val _ = assert distinct (append (append Rs abss) reps)
+   in
+       Term.free_vars (concl th) = [] andalso
+       check_respects_tm uncond_tm
+   end
+   handle e => raise HOL_ERR {
+                        origin_structure = "quotient",
+                        origin_function  = "check_poly_respects",
+                        message = "The following theorem is not of the right form for a polymorphic respectfulness\ntheorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                                  };
+
+local
+       fun any_type_var_in tyl ty = exists (C type_var_in ty) tyl
+       fun un_abs_rep tyl tm = if any_type_var_in tyl (type_of tm)
+                               then rand tm else tm
+       fun check_strip_comb [] tm = (tm,[])
+         | check_strip_comb (x::xs) tm =
+             let val (tm', y) = Psyntax.dest_comb tm
+                 val (c,ys) = check_strip_comb xs tm'
+             in (c, y::ys) end
+       fun dest_psv_rhs args tm =
+             let val (c, ys) = check_strip_comb (rev args) tm
+             in (c, rev ys) end
+
+in
+fun check_poly_preserves th =
+   let val (taus, ksis, Rs, abss, reps, uncond_tm) =
+                                           strip_QUOTIENT_cond (concl th)
+       val _ = assert (all is_vartype) (append taus ksis)
+       val _ = assert distinct (append taus ksis)
+       val _ = assert distinct (append (append Rs abss) reps)
+       val (vrs,body) = strip_forall uncond_tm
+       val (tm1,tm2) = Psyntax.dest_eq body
+       val (c1,args1) = strip_comb tm1
+        (* Next line is for ABSTRACT_PRS, but not for APPLY_PRS: *)
+       val args1' = if is_var c1 then c1::args1 else args1
+       val _ = assert (all (C mem args1')) vrs
+       val _ = assert (all (C mem vrs)) args1'
+       val tm2' = un_abs_rep ksis tm2
+       val (c2,args2) = dest_psv_rhs args1' tm2'
+       val tysubst = map (op |->) (zip taus ksis)
+       val _ = assert (curry op = (type_of tm1))
+                      (type_subst tysubst (type_of tm2'))
+       val args2' = map (un_abs_rep taus) args2
+       val _ = assert (all (op =)) (zip args1' args2')
+       val _ = assert (all (op =))
+                      (zip (map type_of args1')
+                           (map (type_subst tysubst o type_of) args2))
+   in
+           true
+   end
+   handle e => raise HOL_ERR {
+                        origin_structure = "quotient",
+                        origin_function  = "check_poly_preserves",
+                        message = "The following theorem is not of the right form for a polymorphic preservation\ntheorem:\n" ^
+                                       thm_to_string th ^ "\n"
+                                  }
+end;
+
+
+
+
 (* --------------------------------------------------------------- *)
 (* Returns a list of types present in the "respects" theorems but  *)
 (* not directly mentioned in the "quot_ths" list, but for which    *)
@@ -3048,8 +3307,14 @@ fun define_quotient_types_rule {types, defs,
                                 tyop_equivs, tyop_quotients, tyop_simps,
                                 respects, poly_preserves, poly_respects} =
   let
-      val equivs = map #equiv (filter (not o is_partial_equiv o #equiv) types)
-      val equivs = map (REWRITE_RULE[GSYM EQUIV_def]) equivs
+      val equivs = map (REWRITE_RULE (map GSYM [EQUIV_def,PARTIAL_EQUIV_def])
+                        o #equiv) types
+      val _ = map check_equiv equivs
+      val _ = map check_tyop_equiv tyop_equivs
+      val _ = map check_tyop_quotient tyop_quotients
+      val _ = map check_tyop_simp tyop_simps
+
+      val equivs = filter is_equiv equivs
       val all_equivs = equivs @ tyop_equivs
 
       fun print_thm' th = if !chatting then (print_thm th; print "\n"; th)
@@ -3065,6 +3330,10 @@ fun define_quotient_types_rule {types, defs,
                      quotients tyop_quotients tyop_simps) defs
       val _ = if !chatting then print "\nDefinitions:\n" else ()
       val _ = if !chatting then map print_thm' fn_defns else []
+
+      val _ = map check_respects respects
+      val _ = map check_poly_preserves poly_preserves
+      val _ = map check_poly_respects poly_respects
 
       val ntys = enrich_types quotients tyop_quotients respects
       val nequivs = map (make_equiv all_equivs) ntys

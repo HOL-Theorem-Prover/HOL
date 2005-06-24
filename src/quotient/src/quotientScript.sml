@@ -54,6 +54,21 @@ val EQUIV_def =
     Define
       `EQUIV E = !x y:'a. E x y = (E x = E y)`;
 
+(* Partial Equivalence relations: *)
+
+val PARTIAL_EQUIV_def =
+    Define
+      `PARTIAL_EQUIV R = (?x:'a. R x x) /\
+                         (!x y.  R x y = R x x /\ R y y /\ (R x = R y))`;
+
+val EQUIV_IMP_PARTIAL_EQUIV = store_thm
+  ("EQUIV_IMP_PARTIAL_EQUIV",
+    (--`!R :'a -> 'a -> bool. EQUIV R ==> PARTIAL_EQUIV R`--),
+    REWRITE_TAC[EQUIV_def,PARTIAL_EQUIV_def]
+    THEN REPEAT STRIP_TAC
+    THEN PROVE_TAC[]
+   );
+
 (* Quotients, with partial equivalence relation, abstraction function, and
    representation function: *)
 
