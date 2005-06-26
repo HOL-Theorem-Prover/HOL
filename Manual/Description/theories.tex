@@ -2567,13 +2567,13 @@ The predicate \ml{NULL} and the selectors
 Compound \HOL{} expressions that branch based on whether a term is an
 empty or non-empty list have the surface syntax (roughly borrowed from
 ML)
-\[
-\begin{array}{l}
-\konst{case}\ e_1 \ \konst{of} \\
-{~~~~~~~}  \nil \longrightarrow e_2 \\
-{~~~}  \mid\mid \cons{h}{t} \longrightarrow e_3
-\end{array}
-\]
+\begin{hol}
+\begin{verbatim}
+   case e1 
+    of [] -> e2 
+    || (h::t) -> e3
+\end{verbatim}
+\end{hol}
 %
 Such an expression is translated to
 $\konst{list\_case}\ e_2\ (\lambda h\; t.\ e_3)\ e_1$ where the constant
@@ -2800,6 +2800,73 @@ are unspecified on empty lists.
 \noindent For a complete list of available theorems in
 \theoryimp{list}, see \REFERENCE.  Further development of list
 theory can be found in \theoryimp{rich\_list}.
+
+\subsubsection{List permutations and sorting}
+
+The \theoryimp{sorting} theory defines a notion of two lists being 
+permutations of each other, then defines a general notion of sorting, 
+then shows that Quicksort is a sorting function.
+
+\paragraph{List permutation}
+
+Two lists are in permutation if they have exactly the same members,
+and each member has the same number of occurrences in both lists. One
+definition (\holtxt{PERM}) that captures this relationship is the
+following:
+%
+\begin{hol}
+\begin{verbatim}
+   PERM_DEF
+     |- !L1 L2. PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2
+   PERM_IND =
+     |- !P.
+          P [] [] /\ 
+          (!x l1 l2. P l1 l2 ==> P (x::l1) (x::l2)) /\
+          (!x y l1 l2. P l1 l2 ==> P (x::y::l1) (y::x::l2)) /\
+          (!l1 l2 l3. P l1 l2 /\ P l2 l3 ==> P l1 l3) 
+         ==>
+         !l1 l2. PERM l1 l2 ==> P l1 l2
+\end{verbatim}
+\end{hol}
+%
+A derived induction theorem (\holtxt{PERM\_IND}) is very 
+useful in proofs about permutations.
+
+\paragraph{Sorting}
+
+A list is $R$-sorted if $R$ holds pairwise through the list. This
+notion (\holtxt{SORTED}) can be defined recursively. Then a function
+$f:\alpha \to\beta$ is a sorting function with respect to $R$
+(\holtxt{SORTS}) if it delivers a permutation of its input, and the
+result is $R$-sorted.
+%
+\begin{hol}
+\begin{verbatim}
+   SORTED_DEF
+     |- (SORTED R [] = T) /\ 
+        (SORTED R [x] = T) /\
+        (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))
+   SORTS_DEF 
+     |- !f R. SORTS f R = !l. PERM l (f R l) /\ SORTED R (f R l) 
+\end{verbatim}
+\end{hol}
+%
+Quicksort is defined in the usual functional programming style, and 
+it is indeed a sorting function, provided $R$ is a transitive and 
+total relation.
+%
+\begin{hol}
+\begin{verbatim}
+   QSORT_DEF =
+     |- (QSORT ord [] = []) /\
+        (QSORT ord (h::t) =
+           let (l1,l2) = PARTITION (\y. ord y h) t 
+           in
+             QSORT ord l1 ++ [h] ++ QSORT ord l2)
+   QSORT_SORTS 
+     |- !R. transitive R /\ total R ==> SORTS QSORT R
+\end{verbatim}
+\end{hol}
 
 \index{lists, the HOL theory of@lists, the \HOL{} theory of|)}
 \index{ lists, the HOL theory of@\ml{[} $\cdots$ \ml{;} $\cdots$ \ml{]} (lists, the \HOL{} theory of)|)}
@@ -4033,11 +4100,12 @@ From these definitions, one can recover the initial rules.
 \end{hol}
 %
 Notice that {\small\verb+RTC_RULES+}, in keeping with the definition
-of {\small\verb+RTC+}, extends a sequence of \verb+R+-steps leading
-from \verb+y+ to \verb+z+ on the left with a single \verb+R+-step from
-\verb+x+ to \verb+y+ to construct \verb+RTC x z+. The theorem
-{\small\verb+RTC_RULES_RIGHT1+} makes the extension on the right.
-Similar alternative theorems are proved for case analysis and induction.
+of {\small\verb+RTC+}, extends an \verb+R+-step from \verb+x+ to
+\verb+y+ with a a sequence of \verb+R+-steps from \verb+y+ to \verb+z+
+to construct \verb+RTC x z+. The theorem
+{\small\verb+RTC_RULES_RIGHT1+} first makes a sequence of \verb+R+
+steps and then a single \verb+R+ step to form \verb+RTC x z+. Similar
+alternative theorems are proved for case analysis and induction.
 
 For example, {\small\verb+TC_CASES1+} and {\small\verb+TC_CASES2+} in the
 following decompose {\small\verb+RTC R x z+} to either
@@ -4416,6 +4484,105 @@ it into a finite map.
 \end{verbatim}
 \end{hol}
 
+\section{While loops}
+
+It is a curious fact that higher order logic, although a logic of
+total functions, allows the definition of functions that don't 
+seem total, at least from a computational perspective. An example
+is \holtxt{WHILE}-loops. The following equation is derived in theory
+\theoryimp{while}:
+%
+\begin{hol}
+\begin{verbatim}
+   WHILE  |- !P g x. WHILE P g x = if P x then WHILE P g (g x) else x
+\end{verbatim}
+\end{hol}
+%
+Clearly, if \holtxt{P} in this theorem was instantiated to $\lambda
+x.\;\konst{T}$, the resulting instance of \holtxt{WHILE} would `run
+forever' if executed. Why is such an ``obviously'' partial function
+definable in HOL?
+%
+The answer lies in a subtle definition of \holtxt{WHILE},
+\footnote{The original idea is due to Wolfgang Goerigk, 
+          who suggested it for use in ACL2.}
+which uses the expressive power of HOL to surprising effect. Consider
+the following total and non-recursive function:
+%
+\begin{hol}
+\begin{verbatim}
+  \x. if (?n. P (FUNPOW g n x)) 
+       then FUNPOW g (@n. P (FUNPOW g n x) /\
+                          !m.  m < n ==> ~P (FUNPOW g m x)) x
+       else ARB
+\end{verbatim}
+\end{hol}
+%
+This function does a case analysis on the iterations of function
+\holtxt{g}: the finite ones return the first value in the iteration at
+which \holtxt{P} holds (\ie, when the iteration stops); the infinite
+ones are mapped to \holtxt{ARB}. This function is used as the witness
+for \verb+f+ in the proof of the following theorem:
+%
+\begin{hol}
+\begin{verbatim}
+   ITERATION 
+     |- !P g. ?f. !x. f x = if P x then x else f (g x)
+\end{verbatim}
+\end{hol}
+%
+From this, it is a simple application of Skolemization and 
+\holtxt{new\_specification} to obtain the equation for \holtxt{WHILE}.
+
+\paragraph{Reasoning about \holtxt{WHILE} loops}
+
+The induction theorem for \holtxt{WHILE} loops is proved by
+wellfounded induction, and carries wellfoundedness constraints
+limiting its application. In order to apply \verb+WHILE_INDUCTION+,
+the instantiations for \verb+B+ and \verb+C+ must be known before
+a wellfounded relation for \verb+R+ is found and used to eliminate the
+constraints. 
+%
+\begin{hol}
+\begin{verbatim}
+   WHILE_INDUCTION
+     |- !B C R.
+          WF R /\ (!s. B s ==> R (C s) s) ==>
+          !P. (!s. (B s ==> P (C s)) ==> P s) ==> !v. P v
+\end{verbatim}
+\end{hol}
+%
+A more refined level of support is provided by the standard Hoare
+Logic \holtxt{WHILE} rule, phrased in terms of Hoare triples
+(\holtxt{HOARE\_SPEC}). 
+%
+\begin{hol}
+\begin{verbatim}
+   HOARE_SPEC_DEF
+     |- !P C Q. HOARE_SPEC P C Q = !s. P s ==> Q (C s)
+   WHILE_RULE
+     |- !R B C.
+           WF R /\ (!s. B s ==> R (C s) s) ==>
+           HOARE_SPEC (\s. P s /\ B s) C P ==>
+           HOARE_SPEC P (WHILE B C) (\s. P s /\ ~B s)
+\end{verbatim}
+\end{hol}
+%
+As a follow-on, an operator for finding the least number with property 
+\verb+P+ is defined.
+%
+\begin{hol}
+\begin{verbatim}
+   LEAST_DEF  |- !P. $LEAST P = WHILE ($~ o P) SUC 0
+\end{verbatim}
+\end{hol}
+%
+A few theorems for reasoning about \holtxt{LEAST} may be found in 
+theory \theoryimp{while}. 
+
+
+\section{Partial orders}
+
 \section{Further theories}
 Other theories of interest in \HOL{} are listed and briefly described
 in Figure~\ref{fig:further-hol-theories}.
@@ -4425,15 +4592,6 @@ in Figure~\ref{fig:further-hol-theories}.
 \begin{tabular}{p{0.2\textwidth}p{0.7\textwidth}}
 \theoryimp{divides}, \theoryimp{gcd} &
 Divisibility and the greatest common divisor.
-\\
-\theoryimp{while} &
-Unrestricted while loops and associated Hoare rules.
-\\
-\theoryimp{sorting} &
-List permutations and sorting, including the correctness of quicksort.
-\\
-\theoryimp{poset} &
-Partial orders, leading to the Knaster-Tarski theorem.
 \\
 \theoryimp{poly} &
 A theory of polynomials over $\mathbb{R}$, providing
