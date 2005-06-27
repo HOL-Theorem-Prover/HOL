@@ -1675,7 +1675,7 @@ The factorial of a number is a primitive recursive definition.
 The iterated application $f^n x$ of a function $f : \alpha \to
 \alpha$ is defined by primitive recursion. The definition
 (\ml{FUNPOW}) is tail-recursive, which can be awkward to reason
-about. An alternative characterization (\ml{FUNPOW\_SUC}) may be easier 
+about. An alternative characterization (\ml{FUNPOW\_SUC}) may be easier
 to apply when doing proofs.
 %
 \begin{hol}
@@ -1693,7 +1693,9 @@ to apply when doing proofs.
 On this basis, an \adhoc\ but useful collection of over two hundred
 and fifty elementary theorems of arithmetic are proved when \HOL{} is
 built and stored in the theory \theoryimp{arithmetic}.  For a complete
-list of the available theorems, see \REFERENCE.
+list of the available theorems, see \REFERENCE.  See also
+Section~\ref{sec-while-loops} for discussion of the \holtxt{LEAST}
+operator, which returns the least number satisfying a predicate.
 
 \subsubsection{Grammar information}
 
@@ -2569,8 +2571,8 @@ empty or non-empty list have the surface syntax (roughly borrowed from
 ML)
 \begin{hol}
 \begin{verbatim}
-   case e1 
-    of [] -> e2 
+   case e1
+    of [] -> e2
     || (h::t) -> e3
 \end{verbatim}
 \end{hol}
@@ -2802,9 +2804,11 @@ are unspecified on empty lists.
 theory can be found in \theoryimp{rich\_list}.
 
 \subsubsection{List permutations and sorting}
+\index{permutations (of lists), the HOL theory of@permutations (of lists), the \HOL{} theory of}
+\index{sorting, the HOL theory of@sorting, the \HOL{} theory of}
 
-The \theoryimp{sorting} theory defines a notion of two lists being 
-permutations of each other, then defines a general notion of sorting, 
+The \theoryimp{sorting} theory defines a notion of two lists being
+permutations of each other, then defines a general notion of sorting,
 then shows that Quicksort is a sorting function.
 
 \paragraph{List permutation}
@@ -2820,16 +2824,16 @@ following:
      |- !L1 L2. PERM L1 L2 = !x. FILTER ($= x) L1 = FILTER ($= x) L2
    PERM_IND =
      |- !P.
-          P [] [] /\ 
+          P [] [] /\
           (!x l1 l2. P l1 l2 ==> P (x::l1) (x::l2)) /\
           (!x y l1 l2. P l1 l2 ==> P (x::y::l1) (y::x::l2)) /\
-          (!l1 l2 l3. P l1 l2 /\ P l2 l3 ==> P l1 l3) 
+          (!l1 l2 l3. P l1 l2 /\ P l2 l3 ==> P l1 l3)
          ==>
          !l1 l2. PERM l1 l2 ==> P l1 l2
 \end{verbatim}
 \end{hol}
 %
-A derived induction theorem (\holtxt{PERM\_IND}) is very 
+A derived induction theorem (\holtxt{PERM\_IND}) is very
 useful in proofs about permutations.
 
 \paragraph{Sorting}
@@ -2843,16 +2847,16 @@ result is $R$-sorted.
 \begin{hol}
 \begin{verbatim}
    SORTED_DEF
-     |- (SORTED R [] = T) /\ 
+     |- (SORTED R [] = T) /\
         (SORTED R [x] = T) /\
         (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))
-   SORTS_DEF 
-     |- !f R. SORTS f R = !l. PERM l (f R l) /\ SORTED R (f R l) 
+   SORTS_DEF
+     |- !f R. SORTS f R = !l. PERM l (f R l) /\ SORTED R (f R l)
 \end{verbatim}
 \end{hol}
 %
-Quicksort is defined in the usual functional programming style, and 
-it is indeed a sorting function, provided $R$ is a transitive and 
+Quicksort is defined in the usual functional programming style, and
+it is indeed a sorting function, provided $R$ is a transitive and
 total relation.
 %
 \begin{hol}
@@ -2860,10 +2864,10 @@ total relation.
    QSORT_DEF =
      |- (QSORT ord [] = []) /\
         (QSORT ord (h::t) =
-           let (l1,l2) = PARTITION (\y. ord y h) t 
+           let (l1,l2) = PARTITION (\y. ord y h) t
            in
              QSORT ord l1 ++ [h] ++ QSORT ord l2)
-   QSORT_SORTS 
+   QSORT_SORTS
      |- !R. transitive R /\ total R ==> SORTS QSORT R
 \end{verbatim}
 \end{hol}
@@ -2917,8 +2921,8 @@ functions that map \emph{into} the \ml{llist} type:
 \begin{verbatim}
    llist_Axiom_1
       |- !f. ?g.
-           !x. g x = 
-               case f x 
+           !x. g x =
+               case f x
                 of NONE -> LNIL
                 || SOME (x',y) -> LCONS y (g x')
 \end{verbatim}
@@ -2948,7 +2952,7 @@ They are characterised by the following theorems
       |- (LFINITE LNIL = T) /\
          (LFINITE (LCONS h t) = LFINITE t)
    LNTH_THM
-      |- (!n. LNTH n LNIL = NONE) /\ 
+      |- (!n. LNTH n LNIL = NONE) /\
          (!h t. LNTH 0 (LCONS h t) = SOME h) /\
          (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)
    LTAKE_THM
@@ -2971,9 +2975,9 @@ They are characterised by the following theorems
 Two lazy lists may be concatenated by \ml{LAPPEND}. If the first lazy
 list is infinite, elements of the second are inaccessible in the
 result.  A lazy list of lazy lists can be flattened to a lazy list by
-\ml{LFLATTEN}. 
+\ml{LFLATTEN}.
 \begin{hol}\begin{verbatim}
-   LAPPEND   
+   LAPPEND
       |- (!x. LAPPEND LNIL x = x) /\
          (!h t x. LAPPEND (LCONS h t) x = LCONS h (LAPPEND t x))
    LFLATTEN_THM
@@ -2989,7 +2993,7 @@ Mapping back and forth from lists to lazy lists is accomplished
 by \ml{fromList} and \ml{toList}:
 \begin{hol}\begin{verbatim}
    fromList
-      |- (fromList [] = LNIL) /\ 
+      |- (fromList [] = LNIL) /\
          (!h t. fromList (h::t) = LCONS h (fromList t))
    toList_THM
       |- (toList LNIL = SOME []) /\
@@ -4485,9 +4489,10 @@ it into a finite map.
 \end{hol}
 
 \section{While loops}
+\label{sec:while-loops}
 
 It is a curious fact that higher order logic, although a logic of
-total functions, allows the definition of functions that don't 
+total functions, allows the definition of functions that don't
 seem total, at least from a computational perspective. An example
 is \holtxt{WHILE}-loops. The following equation is derived in theory
 \theoryimp{while}:
@@ -4504,14 +4509,14 @@ forever' if executed. Why is such an ``obviously'' partial function
 definable in HOL?
 %
 The answer lies in a subtle definition of \holtxt{WHILE},
-\footnote{The original idea is due to Wolfgang Goerigk, 
+\footnote{The original idea is due to Wolfgang Goerigk,
           who suggested it for use in ACL2.}
 which uses the expressive power of HOL to surprising effect. Consider
 the following total and non-recursive function:
 %
 \begin{hol}
 \begin{verbatim}
-  \x. if (?n. P (FUNPOW g n x)) 
+  \x. if (?n. P (FUNPOW g n x))
        then FUNPOW g (@n. P (FUNPOW g n x) /\
                           !m.  m < n ==> ~P (FUNPOW g m x)) x
        else ARB
@@ -4526,12 +4531,12 @@ for \verb+f+ in the proof of the following theorem:
 %
 \begin{hol}
 \begin{verbatim}
-   ITERATION 
+   ITERATION
      |- !P g. ?f. !x. f x = if P x then x else f (g x)
 \end{verbatim}
 \end{hol}
 %
-From this, it is a simple application of Skolemization and 
+From this, it is a simple application of Skolemization and
 \holtxt{new\_specification} to obtain the equation for \holtxt{WHILE}.
 
 \paragraph{Reasoning about \holtxt{WHILE} loops}
@@ -4541,7 +4546,7 @@ wellfounded induction, and carries wellfoundedness constraints
 limiting its application. In order to apply \verb+WHILE_INDUCTION+,
 the instantiations for \verb+B+ and \verb+C+ must be known before
 a wellfounded relation for \verb+R+ is found and used to eliminate the
-constraints. 
+constraints.
 %
 \begin{hol}
 \begin{verbatim}
@@ -4554,7 +4559,7 @@ constraints.
 %
 A more refined level of support is provided by the standard Hoare
 Logic \holtxt{WHILE} rule, phrased in terms of Hoare triples
-(\holtxt{HOARE\_SPEC}). 
+(\holtxt{HOARE\_SPEC}).
 %
 \begin{hol}
 \begin{verbatim}
@@ -4568,7 +4573,7 @@ Logic \holtxt{WHILE} rule, phrased in terms of Hoare triples
 \end{verbatim}
 \end{hol}
 %
-As a follow-on, an operator for finding the least number with property 
+As a follow-on, an operator for finding the least number with property
 \verb+P+ is defined.
 %
 \begin{hol}
@@ -4577,8 +4582,8 @@ As a follow-on, an operator for finding the least number with property
 \end{verbatim}
 \end{hol}
 %
-A few theorems for reasoning about \holtxt{LEAST} may be found in 
-theory \theoryimp{while}. 
+A few theorems for reasoning about \holtxt{LEAST} may be found in
+theory \theoryimp{while}.
 
 
 \section{Partial orders}
