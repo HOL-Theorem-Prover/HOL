@@ -2,25 +2,25 @@
 
 \newcommand\ptt{\tt}
 
-This document describes the facilities provided by the \ml{n-bit} library and
+This document describes the facilities provided by the \ml{n-bit} word library and
 explains its logical basis.
-The library provides support for reasoning about natural numbers as bit strings, and provides an executable \ml{mkword.exe} which makes $n$-bit numbers available within \HOL; for example, \ml{mkword.exe 16} introduces the type \ml{word16}.
+The library provides support for reasoning about natural numbers as finite length bit strings.  An executable \ml{mkword.exe} makes $n$-bit number theories available within \HOL; for example, \ml{mkword.exe 16} introduces the type \ml{word16}.
 Such types are prevalent in computer architectures where, for example, one might find: bytes/octets (\ml{word8}), half-words (\ml{word16}), words (\ml{word32}) and long-words (\ml{word64}).
 
 There is another theory of words in \HOL\ --  Wai Wong's word theory is more generic -- it supports words with differing number bases and word lengths~\cite{wong}.
 The underlying data type for that theory is the list -- the theory was developed with Paul Curzon's \ml{rich\_list} theory.
-However, \HOL's type system does not directly support predicate sub-types and so, when using the theory, word lengths must be explicitly declared with the insertion of predicates.
+However, \HOL's type system does not directly support predicate sub-types and so, when using Wong's theory, word lengths must be explicitly declared with the insertion of predicates.
 
-Here $n$-bit words are represented as equivalence classes of natural numbers \ie{} sets of numbers equivalent modulo $2^n$.
-This has been implemented in \HOL\ via an \ML\ functor which makes use of John Harrison's equivalence type package.
-Each theory instance is for a \emph{fixed} word size -- this works well provided that only a small group of word sizes are required.
+Here $n$-bit words are represented as equivalence classes of natural numbers \ie{} as sets of numbers that are equivalent modulo $2^n$.
+This has been implemented in \HOL\ via an \ML\ functor.  The original implementation made use of John Harrison's equivalence type package, but this has been superseded by Peter Homeier's quotient theory.
+Each word theory instance is for a \emph{fixed} word size -- this works well provided that only a small selection of word sizes are required.
 Word operations and theorems are lifted from the representing type \ie{} from natural number operations.
 Consequently, the word operations are naturally and concisely defined.
 Natural number theorems and reductions are used in proving word theorems and for ground-term (variable free) evaluation.
 
 \section{Bits} \label{bits}
 
-The most basic theory in the library is the theory \ml{bits} -- this theory defines some bit operations over the natural numbers and is used in defining some $n$-bit word operations.  (No new data types are provided by this theory.)
+The \ml{bits} theory introduces some operations, over the natural numbers, that are useful in defining $n$-bit word operations.  (No new data types are provided by this theory.)
 The main functions are: \ml{BITS}, \ml{SLICE}, \ml{BIT} and \ml{BITWISE}.  These are defined using operations from the theory \ml{arithmetic}; in particular, \ml{DIV}, \ml{MOD} and \ml{EXP}.
 The predicate \ml{BIT n b} is true if, and only if, the bit $n$ of number $b$ has value one.
 The other operations are illustrated in Figures~\ref{bits-slice} and~\ref{bitwise}.
@@ -47,23 +47,23 @@ The other operations are illustrated in Figures~\ref{bits-slice} and~\ref{bitwis
 \end{figure}
 
 The \ml{numeral\_bits} theory provides a group of theorems which allow the \ml{bits} theory functions to be evaluated more efficiently.
-This is done be working with \HOL's internal representation of numerals \ie{} in terms of \ml{ALT\_ZERO}, \ml{NUMERAL\_BIT1} and \ml{NUMERAL\_BIT2}.
+This is done be working with \HOL's internal representation of numerals \ie{} in terms of \ml{ZERO}, \ml{BIT1} and \ml{BIT2}.
 
-Some of the most significant (useful) theorems in \ml{bits} theory are presented (in Cartesian form) below:
+Some of the most significant (useful) theorems in \ml{bits} theory are presented below:
 \begin{eqnarray*}
-\mathtt{SLICE\_THM} & \vdash & \forall n\,h\,l.\ \;\slice(h,l,n) = \bits(h,l,n) * 2^n \\[4pt]
+\mathtt{SLICE\_THM} & \vdash & \forall n\,h\,l.\ \;\slice\ h\ l\ n = (\bits\ h\ l\ n) * 2^l \\[4pt]
 \mathtt{BITS\_COMP\_THM2} & \vdash & \forall h_1\,l_1\,h_2\,l_2\,n.\\*
-&& \ \bits(h_2,l_2,\bits(h_1,l_1,n)) = \bits(\minn(h_1,h_2 + l_1),l_2 + l_1,n) \\[4pt]
+&& \ \bits\ h_2\ l_2\ (\bits\ h_1\ l_1\ n) = \bits\ (\minn\ h_1\ (h_2 + l_1))\ (l_2 + l_1)\ n \\[4pt]
 \mathtt{SLICE\_COMP\_THM} & \vdash &
    \forall h\,m\,l\,n.\ \;\suc(m) \leq h \mbox{ and } l \leq m \Rightarrow \\*
-&& \quad \slice(h,\suc(m),n) + \slice(m,l,n) = \slice(h,l,n) \\[4pt]
+&& \quad (\slice\ h\ (\suc\ m)\ n + \slice\ m\ l\ n = \slice\ h\ l\ n) \\[4pt]
 \mathtt{SLICE\_COMP\_THM2} & \vdash &
    \forall h_2\,l_2\,h_1\,l_1\,n.\ \; h_2 \leq h_1 \mbox{ and } l_1 \leq l_2 \Rightarrow \\*
-&& \quad \slice(h_2,l_2,\slice(h_1,l_1,n)) = \slice(h_2,l_2,n) \\[4pt]
+&& \quad (\slice\ h_2\ l_2\ (\slice\ h_1\ l_1\ n) = \slice\ h_2\ l_2\ n) \\[4pt]
 \mathtt{BITWISE\_THM} & \vdash &
    \forall x\,n\,f\,a\,b.\ \;
         x < n \Rightarrow \\*
-&& \quad \bit(x,\bitwise(n,f,a,b)) = f(\bit(x,a),\bit(x,b))
+&& \quad (\bit\ x\ (\bitwise\ n\ f\ a\ b) = f\ (\bit\ x\ a)\ (\bit\ x\ b))
 \end{eqnarray*}
 
 \noindent The theorem \ml{SLICE\_THM} shows that \ml{SLICE} is a shifted version of \ml{BITS}.  The theorems \ml{BITS\_COMP\_THM2} and \ml{SLICE\_COMP\_THM2} are used in simplifying repeated applications of \ml{BITS} and \ml{SLICE}.  The theorem \ml{SLICE\_COMP\_THM} shows that adjoining slices of the same number can be combined into a single slice.  Finally, theorem \ml{BITWISE\_THM} shows that every bit in the result of a \ml{BITWISE} operations is the expected single-bit function of the corresponding bits in the arguments.
@@ -75,13 +75,13 @@ Ground term evaluation and pretty printing are discussed in Section~\ref{eval}, 
 
 \subsection{Generating a Word Theory} \label{mkword}
 
-The executable \ml{mkword.exe} in the \ml{n-bit} library constructs a word theory for a given word length.\footnote{The words length cannot be zero.}  This command creates files \ml{word<n>Theory.sml} and \ml{word<n>Lib.sml} in the working directory and these sources are then compiled. When the \ml{-sys} option is selected the object files are copied to the \ml{SIGOBJ} directory.\footnote{
+The executable \ml{mkword.exe} constructs a word theory for a given word length.\footnote{The executable can be found in HOL's \ml{bin} directory.  The word length must be non-zero.}  This command creates files \ml{word<n>Theory.sml} and \ml{word<n>Lib.sml} in the working directory and these sources are then compiled. When the \ml{-sys} option is selected the object files are copied to the \ml{SIGOBJ} directory.\footnote{
 However, there will not be an on-line help entry for the new theory.}
-The word theory does not have a script file and so \ml{Holmake} does not automatically update these theories \eg{} when \HOL\ is re-built.  The easiest way to manage this is to use a \ml{Holmakefile} which includes the necessary calls to \ml{mkword.exe}, as in \ml{help/Holmakefile.example-32}.
+The word theory does not have a script file and so \ml{Holmake} does not automatically update these theories \eg{} when \HOL\ is re-built.  The easiest way to manage this is to use a \ml{Holmakefile} that includes the necessary calls to \ml{mkword.exe}, as in \ml{help/Holmakefile.example-32}.
 
 \subsection{The Word Type} \label{type}
 
-The word type is declared in \HOL\ using the function \ml{define\_equivalence\_type}, which is in the library \ml{datatype/equiv}.  The following equivalence relation is used to construct the word type:
+The word type is declared in \HOL\ using the function \ml{define\_equivalence\_type}, which is in the library \ml{quotient}.  The following equivalence relation is used to construct the word type:
 \[ a \equiv b = (a \bmod 2^\ell = b \bmod 2^\ell) \]
 where $\ell$ is the word length.
 One can observe that this relation is reflexive, symmetric and transitive.
@@ -95,7 +95,7 @@ The \HOL\ constant \ml{WL} is equal to the word length $\ell$ and \ml{HB} is the
 
 The function \ml{w2n} maps a word to a natural number; when given a word represented by the predicate ${\equiv_i}$ the value returned is $i \bmod 2^\ell$ -- this is the \emph{standard class representative} for the equivalence class.  The function \ml{n2w} maps a natural numbers to a word: for number $i$ the returned word has representative ${\equiv_i}$.
 
-The map \ml{n2w} is the primary means of constructing new words -- a group of theorems are provided which enable word operations to be evaluated via natural number reductions; see Section~\ref{eval}.
+The map \ml{n2w} is the primary means of constructing new words and word operations are evaluated via natural number reductions; see Section~\ref{eval}.
 
 \subsubsection{Bits and Slices}
 
@@ -111,10 +111,10 @@ Eight orderings are provided: these are signed and unsigned versions of $<$, $\l
 
 \subsubsection{Shifts}
 
-Five types of shifting are supported: logical shift left (which is synonymous with arithmetic shift left) and four types of shift right.
+Six types of shifting are supported: logical shift left (which is synonymous with arithmetic shift left), rotate left and four types of shift right.
 Shifting left $i$ places is defined to be multiplication by the word with value $2^i$.
-Rotating left $i$ places can be achieved by rotating right $\ell - i$ places.
-Figure~\ref{right-one} shows the natural number (one place) shift operations upon which the word shift rights are based: these are lifted to words, giving the operations \ml{word\_ror1}, \ml{word\_lsr1}, \ml{word\_asr1} and \ml{RRX}.
+Rotating left $i$ places is achieved by rotating right $\ell - i$ places.
+Figure~\ref{right-one} shows the natural number (one place) shift operations for the four shift rights: these are lifted to words, giving the operations \ml{word\_ror1}, \ml{word\_lsr1}, \ml{word\_asr1} and \ml{RRX}.
 The first three operations can be iterated and this gives the operations: rotate right (\ml{\#>>}), logical shift right (\ml{>>>}) and arithmetic shift right (\ml{>>}).  The theorems \ml{ROR\_THM}, \ml{LSR\_THM} and \ml{ASR\_THM} provide a more helpful semantics for these operations; they are especially useful for ground-term evaluation, see Section~\ref{eval}.
 
 \begin{figure}
@@ -134,7 +134,7 @@ The first three operations can be iterated and this gives the operations: rotate
 
 \subsubsection{Boolean Operations}
 
-The one's complement (bitwise bit inversion) is given by the function \ml{NOT} and this maps ${\equiv_i}$ to ${\equiv_{2^\ell -1 - (i \bmod 2^\ell)}}$.  Bitwise conjunction (\ml{\&}), disjunction (\ml{|}) and exclusive-or (\ml{\#}) are also defined.  These operations are lifted versions of the function \ml{BITWISE} specialised to the word length $\ell$ together with the appropriate Boolean operation.
+The one's complement (bitwise bit inversion) is given by the function \ml{NOT} and this maps ${\equiv_i}$ to ${\equiv_{2^\ell -1 - (i \bmod 2^\ell)}}$.  Bitwise conjunction (\ml{\&}), disjunction (\ml{|}) and exclusive-or (\ml{\#}) are also defined.  These operations are lifted versions of the function \ml{BITWISE}, specialised to the word length $\ell$ and with the appropriate Boolean operation.
 
 \subsubsection{Word Constants}
 
@@ -190,36 +190,30 @@ Constant & (Overloaded) Symbol & Strength & Associativity \\
 
 \subsection{Evaluation and Pretty Printing} \label{eval}
 
-The conversion \ml{WORD\_CONV} can be used to evaluate word expressions.  This is achieved by providing re-write theorems for word terms containing the map \ml{n2w}.  For example, word addition and unsigned less-than can be evaluated using the theorems:
+The conversion \ml{WORD\_CONV} can be used to evaluate word expressions -- it uses re-write theorems for terms containing the map \ml{n2w}.  For example, word addition and unsigned less-than are evaluated using the theorems:
 
 \begin{hol}\begin{verbatim}
 ADD_EVAL |- !a b. n2w a + n2w b = n2w (a + b)
  LO_EVAL |- !m n. n2w m <. n2w n = MOD_2EXP WL m < MOD_2EXP WL n
 \end{verbatim}\end{hol}
 
-\noindent Natural number reductions can be used to evaluate the right-hand side.  In practice it is helpful to ensure that word computations return the standard class representative, therefore the follow theorem is used for addition:
-
-\begin{hol}\begin{verbatim}
-ADD_EVAL2 |- !a b. n2w a + n2w b = n2w (MOD_2EXP WL (a + b))
-\end{verbatim}\end{hol}
-
-\noindent This is illustrated for eight bit words in the session below.
+\noindent Natural number reductions can then evaluate the right-hand side.  When entering numeral values, the suffix \ml{w} denotes a word and the prefixes \ml{0x}, \ml{0} and \ml{0b} denote hexadecimal, octal and binary values.
 
 \setcounter{sessioncount}{0}
 \begin{session}\begin{verbatim}
 - load "word8Lib";
 - open word8Lib;
 > ..
-- WORD_CONV ``n2w 250 + n2w 8``;
+- WORD_CONV ``250w + 0b1000w``;
 > val it = |- 250w + 8w = 2w : thm
-- WORD_CONV ``n2w 21 <. n2w 56``;
+- WORD_CONV ``21w <. 56w``;
 > val it = |- 21w <. 56w = T : thm
 \end{verbatim}\end{session}
 
 The shift right operations are evaluated efficiently by using theorems that express the result in term of \ml{BITS}.  This ensures that the run-time is still quick when shifting by a large value.
 
 \begin{session}\begin{verbatim}
-- time WORD_CONV ``n2w 14 #>> 100001``;
+- time WORD_CONV ``14w #>> 100001``;
 runtime: 0.020s,    gctime: 0.010s,     systime: 0.000s.
 > val it = |- 14w #>> 100001 = 7w : thm
 \end{verbatim}\end{session}
@@ -228,11 +222,11 @@ It is possible to display word values as signed (two's complement) decimals or a
 \begin{session}\begin{verbatim}
 - pp_word_unsigned_bin();
 > val it = () : unit
-- WORD_CONV ``n2w 219 #>> 5``;
+- WORD_CONV ``219w #>> 5``;
 > val it = |- 0b11011011w #>> 5 = 0b11011110w : thm
 - pp_word_signed_dec();
 > val it = () : unit
-- WORD_CONV ``n2w 20 - n2w 24``;
+- WORD_CONV ``20w - 24w``;
 > val it = |- 20w - 24w = ~4w : thm
 \end{verbatim}\end{session}
 
