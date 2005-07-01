@@ -16,9 +16,6 @@ structure milScript =
 struct
 
 open HolKernel Parse boolLib;
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
 open IndDefLib Datatype clTheory;
 
 
@@ -37,9 +34,9 @@ val _ = new_theory"mil";
    ---------------------------------------------------------------------- *)
 
 val _ = Hol_datatype `ty = G  of 'a
-                         | ==> of ty => ty`;
+                         | Arrow of ty => ty`;
 
-val _ = set_MLname "==>" "Arrow_def";
+val _ = overload_on("==>",``Arrow``);
 
 (* --------------------------------------------------------------------- *)
 (* Structural induction theorem for types.				 *)

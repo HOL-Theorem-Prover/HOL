@@ -23,10 +23,6 @@ struct
 
 open HolKernel Parse boolLib bossLib stringLib IndDefLib IndDefRules;
 
-infixr 3 -->;
-infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
-
 
 (* ---------------------------------------------------------------------*)
 (* Open a new theory and load the required libraries.			*)
@@ -43,7 +39,7 @@ val _ = new_theory "opsem";
 (* modelled by functions from program variables to natural numbers.	 *)
 (* --------------------------------------------------------------------- *)
 
-val state = Type`:string->num`;
+val state = ``:string->num``;
 
 (* --------------------------------------------------------------------- *)
 (* Natural number expressions and boolean expressions will just be 	 *)
@@ -52,8 +48,8 @@ val state = Type`:string->num`;
 (* example on defining the semantics of commands.			 *)
 (* --------------------------------------------------------------------- *)
 
-val nexp = Type`:^state -> num`;
-val bexp = Type`:^state -> bool`;
+val nexp = ``:^state -> num``
+val bexp = ``:^state -> bool``;
 
 (* ---------------------------------------------------------------------*)
 (* We can now use the recursive types package to define the syntax of   *)
@@ -82,16 +78,15 @@ val bexp = Type`:^state -> bool`;
 val _ = Hol_datatype
           `comm
              = Skip
-             | :==    of string => ^nexp
-             | ;;    of  comm => comm
+             | Assign   of string => ^nexp
+             | Seq    of  comm => comm
              | If    of ^bexp => comm => comm
              | While of ^bexp => comm`;
 
+val _ = overload_on("<-", ``Assign``);
+val _ = overload_on(";;", ``Seq``);
 
-val _ = set_MLname ":==" "assign_def";
-val _ = set_MLname ";;" "seq_def";
-
-val _ = set_fixity ":==" (Infixr 400);
+val _ = set_fixity "<-" (Infixr 400);
 val _ = set_fixity ";;" (Infixr 350);
 
 (* ===================================================================== *)
@@ -118,7 +113,7 @@ val Bexp = ty_antiq bexp;
 val (rules,induction,ecases) =
  Hol_reln
   `(!s. EVAL Skip s s) /\
-   (!s V E. EVAL (V :== E) s (\v. if v=V then E s else s v)) /\
+   (!s V E. EVAL (V <- E) s (\v. if v=V then E s else s v)) /\
    (!s1 s2 s3 C1 C2.EVAL C1 s1 s2 /\ EVAL C2 s2 s3 ==> EVAL (C1;;C2) s1 s3) /\
    (!s1 s2 B C1 C2. EVAL C1 s1 s2 /\ B s1 ==> EVAL (If B C1 C2) s1 s2) /\
    (!s1 s2 B C1 C2. EVAL C2 s1 s2 /\ ~B s1 ==> EVAL (If B C1 C2) s1 s2) /\
@@ -185,13 +180,13 @@ val SKIP_THM = store_thm("SKIP_THM",
         PROVE_TAC [rules]]);
 
 (* --------------------------------------------------------------------- *)
-(* ASSIGN_THM : EVAL (V :== E) s1 s2 is provable only by the assignment	 *)
+(* ASSIGN_THM : EVAL (V <- E) s1 s2 is provable only by the assignment	 *)
 (* rule, which requires that s2 be the state s1 with V updated to E.	 *)
 (* --------------------------------------------------------------------- *)
 
 val ASSIGN_THM = store_thm 
 ("ASSIGN_THM",
- --`!s1 s2 V E. EVAL (V :== E) s1 s2 
+ --`!s1 s2 V E. EVAL (V <- E) s1 s2 
                   =
                ((\v. if v=V then  E s1 else s1 v) = s2)`--,
  REPEAT (GEN_TAC ORELSE EQ_TAC) 
