@@ -43,7 +43,12 @@ struct
     andb(cword, sub(cs, d)) <> word0
   end
 
-  fun isEmpty cs = length cs = 0;
+  fun isEmpty cs = let
+    fun recurse i = if i = 32 then true
+                    else Word8.toInt (sub(cs, i)) = 0 andalso recurse (i + 1)
+  in
+    recurse 0
+  end
 
   fun union(cs1, cs2) = let
     fun update(i, w) = orb(w, sub(cs2, i))
