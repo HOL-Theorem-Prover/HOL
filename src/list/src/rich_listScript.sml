@@ -338,6 +338,7 @@ val MAP2 = store_thm("MAP2",
 (* alias "ALL_EL" to EVERY in list theory *)
 val ALL_EL = save_thm("ALL_EL", listTheory.EVERY_DEF);
 val _ = overload_on("ALL_EL", ``EVERY``);
+val _ = overload_on("EVERY", ``EVERY``);
 
 (*--------------------------------------------------------------*)
 (* Spec:                                                        *)
@@ -348,6 +349,7 @@ val _ = overload_on("ALL_EL", ``EVERY``);
 (* alias "SOME_EL" to EXISTS in list theory *)
 val SOME_EL = save_thm("SOME_EL", listTheory.EXISTS_DEF);
 val _ = overload_on("SOME_EL", ``EXISTS``);
+val _ = overload_on("EXISTS", ``EXISTS``);
 
 (*--------------------------------------------------------------*)
 (* Spec:                                                        *)
@@ -358,6 +360,7 @@ val _ = overload_on("SOME_EL", ``EXISTS``);
 (* overload "IS_EL" to listTheory$MEM, and prove this next theorem
    as consequence *)
 val _ = overload_on("IS_EL", ``list$MEM``);
+val _ = overload_on("MEM", ``list$MEM``);
 val IS_EL_DEF = store_thm(
   "IS_EL_DEF",
   ``!(x:'a) l. IS_EL x l = SOME_EL ($= x) l``,
@@ -439,6 +442,7 @@ open BasicProvers
 
 (* establish BUTLAST as an alias for FRONT *)
 val _ = overload_on("BUTLAST", ``FRONT``);
+val _ = overload_on("FRONT", ``FRONT``);
 
 val LENGTH_SNOC = prove(
     (--`!(x:'a) l. LENGTH (SNOC x l) = SUC (LENGTH l)`--),

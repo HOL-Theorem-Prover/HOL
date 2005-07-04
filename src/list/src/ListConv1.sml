@@ -778,7 +778,7 @@ val ALL_EL_CONV =
             [(SPEC (--`T`--) AND_CLAUSES),(SPEC (--`F`--) AND_CLAUSES)]))
     in
   fn conv => fn tm =>
-    (let val (_,[P,l]) = ((check_const"ALL_EL") ## I)(strip_comb tm)
+    (let val (_,[P,l]) = ((check_const"EVERY") ## I)(strip_comb tm)
 	 val bth' = ISPEC P bth and ith' = ISPEC P ith
 	 val lis = #1(dest_list l)
 	 fun ffn x th =
@@ -809,7 +809,7 @@ val SOME_EL_CONV =
 	    [(SPEC (--`T`--) OR_CLAUSES),(SPEC (--`F`--) OR_CLAUSES)]))
     in
   fn conv => fn tm =>
-    (let val (_,[P,l]) = ((check_const"SOME_EL") ## I)(strip_comb tm)
+    (let val (_,[P,l]) = ((check_const"EXISTS") ## I)(strip_comb tm)
 	 val bth' = ISPEC P bth and ith' = ISPEC P ith
 	 val lis = #1(dest_list l)
 	 fun ffn x th =
@@ -836,7 +836,7 @@ val SOME_EL_CONV =
 val IS_EL_CONV =
     let val bth = rich_listTheory.IS_EL_DEF in
   fn conv => fn tm =>
-    let val (_,[x,l]) = ((check_const"IS_EL") ## I)(strip_comb tm)
+    let val (_,[x,l]) = ((check_const"MEM") ## I)(strip_comb tm)
 	 val bth' = ISPECL[x,l] bth
 	 val right = rhs (concl bth')
     in
@@ -891,7 +891,7 @@ val BUTLAST_CONV =
         handle e => raise wrap_exn "List_conv" "BUTLAST_CONV" e
     end;
 
-fun SUC_CONV tm = 
+fun SUC_CONV tm =
   let val {Rator=SUC,Rand} = dest_comb tm
       val n = term_of_int (int_of_term Rand + 1)
   in
@@ -1101,7 +1101,7 @@ val FIRSTN_CONV =
    (let val (_,[K,L]) = ((check_const"FIRSTN")## I)(strip_comb tm)
 	val k = int_of_term K and (lis,lty) = dest_list L
     in
-	if k > length lis 
+	if k > length lis
           then raise ERR "FIRSTN_CONV" ("index too large: "^(int_to_string k))
     else if (k = 0) then ISPEC L bthm
     else
@@ -1267,6 +1267,6 @@ val OR_EL_CONV =
     list_FOLD_CONV rich_listTheory.OR_EL_FOLDR (REWRITE_CONV[OR_CLAUSES]);
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end; 
+end;
 
 end; (* List_conv1 *)
