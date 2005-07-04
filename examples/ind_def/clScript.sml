@@ -4,10 +4,10 @@ open bossLib simpLib
 
 val _ = new_theory "cl";
 
-val _ = Hol_datatype `cl = S | K | APP of cl => cl`;
+val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
-val _ = overload_on("#",``APP``);
 val _ = set_fixity "#"  (Infixl 1100);
+val _ = set_MLname "#"  "HASH";
 
 val _ = set_fixity "-->" (Infix(NONASSOC, 510));
 
