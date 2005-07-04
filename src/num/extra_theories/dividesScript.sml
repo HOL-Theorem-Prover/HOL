@@ -7,10 +7,14 @@ val arith_ss = simpLib.++(bool_ss, numSimps.ARITH_ss)
 
 val ARW = RW_TAC arith_ss
 
+local open numeralTheory in end;
+  (* concession to Holmake's flawed dependency analysis, which doesn't
+     spot this problem *)
+
 val _ = new_theory "divides";
 
-val divides_def = Q.new_definition 
-  ("divides_def", 
+val divides_def = Q.new_definition
+  ("divides_def",
    `divides a b = ?q. b = q*a`);
 
 val ALL_DIVIDES_0 = store_thm("ALL_DIVIDES_0",
