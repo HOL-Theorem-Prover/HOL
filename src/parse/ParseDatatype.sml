@@ -195,66 +195,6 @@ in
 end
 
 
-(*---------------------------------------------------------------------------
-          tests
-
-quotation := true;
-
-parse `foo = NIL | CONS of 'a => 'a foo`;
-parse `list = NIL | :: of 'a => list`;
-parse `void = Void`;
-parse `pair = CONST of 'a#'b`;
-parse `onetest = OOOO of one`;
-parse `tri = Hi | Lo | Fl`;
-parse `iso = ISO of 'a`;
-parse `ty = C1 of 'a
-          | C2
-          | C3 of 'a => 'b => ty
-          | C4 of ty => 'c => ty => 'a => 'b
-          | C5 of ty => ty`;
-parse `bintree = LEAF of 'a | TREE of bintree => bintree`;
-parse `typ = C of one => (one#one)
-                      => (one -> one -> 'a list)
-                      => ('a,one#one,'a list) ty`;
-parse `Typ = D of one # (one#one)
-                      # (one -> one -> 'a list)
-                      # ('a, one#one, 'a list) ty`;
-
-parse `atexp = var_exp of var
-           | let_exp of dec => exp ;
-
-       exp = aexp    of atexp
-           | app_exp of exp => atexp
-           | fn_exp  of match ;
-
-     match = match  of rule
-           | matchl of rule => match ;
-
-      rule = rule of pat => exp ;
-
-       dec = val_dec   of valbind
-           | local_dec of dec => dec
-           | seq_dec   of dec => dec ;
-
-   valbind = bind  of pat => exp
-           | bindl of pat => exp => valbind
-           | rec_bind of valbind ;
-
-       pat = wild_pat
-           | var_pat of var`;
-
-val state = Type`:ind->bool`;
-val nexp  = Type`:^state -> ind`;
-val bexp  = Type`:^state -> bool`;
-
-parse `comm = skip
-            | :=    of bool list => ^nexp
-            | ;;    of comm => comm
-            | if    of ^bexp => comm => comm
-            | while of ^bexp => comm`;
-
-parse `ascii = ASCII of bool=>bool=>bool=>bool=>bool=>bool=>bool=>bool`;
-*)
 
 
 end
