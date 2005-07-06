@@ -3160,7 +3160,7 @@ val _ = BasicProvers.export_rewrites
          "INT_LE_MUL", "INT_LE_NEG", "INT_LE_NEGL", "INT_LE_NEGR",
          "INT_LE_RADD", "INT_LE_REFL", "INT_LE_SQUARE", "INT_LT_ADD",
          "INT_LT_ADDL", "INT_LT_ADDR", "INT_LT_CALCULATE",
-         "INT_LT_IMP_LE", "INT_LT_IMP_NE", "INT_LT_LADD",
+         "INT_LT_IMP_LE", "INT_LT_LADD",
          "INT_LT_RADD", "INT_LT_REFL", "INT_MAX_NUM", "INT_MIN_NUM",
          "INT_MOD", "INT_REM", "INT_MOD0", "INT_REM0",
          "INT_MOD_COMMON_FACTOR", "INT_REM_COMMON_FACTOR",
