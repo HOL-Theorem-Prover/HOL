@@ -27,8 +27,9 @@ val _ = new_theory "aes";
 val _ = 
   type_abbrev ("keysched", Type`:key#key#key#key#key#key#key#key#key#key#key`);
 
-val FORALL_KEYSCHED = Q.prove
-(`(!x:keysched. P x) = !k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11. 
+val FORALL_KEYSCHED = Q.store_thm
+("FORALL_KEYSCHED",
+ `(!x:keysched. P x) = !k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11. 
                         P(k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11)`,
  EQ_TAC THEN RW_TAC std_ss [] THEN
  `?a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11. 
@@ -56,41 +57,49 @@ val LIST_TO_KEYS_def =
 val DUMMY_KEYS_def = 
  Define
   `DUMMY_KEYS = (ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,
-                 ZERO_BLOCK, ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,
+                 ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK,
                  ZERO_BLOCK,ZERO_BLOCK,ZERO_BLOCK)`;
 
 (*---------------------------------------------------------------------------*)
 (* Orchestrate the round computations.                                       *)
 (*---------------------------------------------------------------------------*)
 
-
-val (Round_def, Round_ind) = Defn.tprove
+val (Round_def,_) = Defn.tprove
  (Hol_defn 
    "Round"
-   `Round n (keys:keysched) (state:state) = 
+   `Round (n:num,keys:keysched,state:state) = 
      if n=0 
-      then AddRoundKey (FST keys) (ShiftRows (SubBytes state))
-      else Round (n-1) (ROTKEYS keys)
-            (AddRoundKey (FST keys) 
-              (MixColumns (ShiftRows (SubBytes state))))`,
+      then (ROTKEYS keys,
+            AddRoundKey (FST keys) 
+               (ShiftRows (SubBytes state)))
+      else Round (n-1,ROTKEYS keys,
+                  AddRoundKey (FST keys) 
+                    (MixColumns 
+                      (ShiftRows 
+                         (SubBytes state))))`,
   WF_REL_TAC `measure FST`);
 
 
-val (InvRound_def,InvRound_ind) = Defn.tprove
+val (InvRound_def,_) = Defn.tprove
  (Hol_defn 
    "InvRound"
-   `InvRound n keys state =
+   `InvRound (n:num,keys:keysched,state:state) =
       if n=0 
-       then AddRoundKey (FST keys) (InvSubBytes (InvShiftRows state))
-       else InvRound (n-1) (ROTKEYS keys)
-             (InvMixColumns 
-               (AddRoundKey (FST keys) (InvSubBytes (InvShiftRows state))))`,
+       then (ROTKEYS keys,
+             AddRoundKey (FST keys) 
+                 (InvSubBytes (InvShiftRows state)))
+       else InvRound (n-1,ROTKEYS keys,
+                     InvMixColumns 
+                       (AddRoundKey (FST keys) 
+                         (InvSubBytes 
+                           (InvShiftRows state))))`,
   WF_REL_TAC `measure FST`);
 
 val _ = save_thm ("Round_def", Round_def);
-val _ = save_thm ("Round_ind", Round_ind);
 val _ = save_thm ("InvRound_def", InvRound_def);
-val _ = save_thm ("InvRound_ind", InvRound_ind);
+
+val Rnd_def = Define `Rnd n k s = SND(Round(n,k,s))`;
+val InvRnd_def = Define `InvRnd n k s = SND(InvRound(n,k,s))`;
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
@@ -99,13 +108,13 @@ val _ = save_thm ("InvRound_ind", InvRound_ind);
 val AES_FWD_def = 
  Define 
   `AES_FWD keys = 
-    from_state o Round 9 (ROTKEYS keys) o AddRoundKey (FST keys) o to_state`;
+    from_state o Rnd 9 (ROTKEYS keys) o AddRoundKey (FST keys) o to_state`;
      
 
 val AES_BWD_def = 
  Define 
   `AES_BWD keys = 
-    from_state o InvRound 9 (ROTKEYS keys) o AddRoundKey (FST keys) o to_state`;
+    from_state o InvRnd 9 (ROTKEYS keys) o AddRoundKey (FST keys) o to_state`;
      
 (*---------------------------------------------------------------------------*)
 (* Main lemma                                                                *)

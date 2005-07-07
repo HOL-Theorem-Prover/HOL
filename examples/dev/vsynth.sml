@@ -1388,8 +1388,12 @@ val iverilog_path   = ref "/usr/bin/iverilog";
 val vvp_path        = ref "/usr/bin/vvp";
 val gtkwave_path    = ref "/usr/bin/gtkwave -a";
 
+(*
 val cver_path       = ref "./gplcver-2.10c.linux.bin/bin/cver";
 val dinotrace_path  = ref "./gplcver-2.10c.linux.bin/bin/dinotrace";
+*)
+val cver_path       = ref "/Users/konradslind/Desktop/gplcver-2.10c.osx.bin/bin/cver";
+val dinotrace_path  = ref "/Users/konradslind/Desktop/gplcver-2.10c.osx.bin/bin/dinotrace";
 
 val vlogger_path    = ref "/usr/bin/vlogcmd";
 

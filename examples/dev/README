@@ -65,9 +65,9 @@ where:
 
 The sequential components are then implemented in terms of clocked reqisters:
 
-  |- Dtype     (ck,d,q) = !t. q (t+1) = (if Rise ck t then d t else q t)
-  |- DtypeT (ck,d,q)    = (q 0 = T) /\ Dtype(ck,d,q)
-  |- DtypeF (ck,d,q)    = (q 0 = F) /\ Dtype(ck,d,q)
+  |- Dtype  (ck,d,q) = !t. q (t+1) = (if Rise ck t then d t else q t)
+  |- DtypeT (ck,d,q) = (q 0 = T) /\ Dtype(ck,d,q)
+  |- DtypeF (ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)
 
 where:
 
@@ -371,7 +371,7 @@ Evaluating
  MAKE_CIRCUIT (|- <device> ===> DEV f)
 
 unfolds <device> into a netlist, then replaces DFF by an
-implementation in terms of DEL and DELT, and then, uing Melham's
+implementation in terms of DEL and DELT, and then, using Melham's
 temporal abstraction theory in dff, refines any unclocked DEL, DELT
 and DELF to clocked Dtype and Dff, and returns:
 
@@ -633,7 +633,7 @@ RecCompileConvert : thm -> thm -> thm
 -------------------------------------
 
 Converts a recursive equation to combinators and then compiles to a
-device implementation Needs a totality theorem (user-supplied as third
+device implementation. Needs a totality theorem (user-supplied as third
 argument).
 
 Example:

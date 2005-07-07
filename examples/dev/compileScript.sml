@@ -1010,5 +1010,33 @@ val UNWIND_THM =
    ``!P x y. (x = y) /\ P x = (x = y) /\ P y``,
    PROVE_TAC[]);
 
-val _ = export_theory();
+(*---------------------------------------------------------------------------*)
 
+val K_INTRO_THM = Q.store_thm
+  ("K_INTRO_THM",
+   `!u. (\v.u) = K u`,RW_TAC std_ss [FUN_EQ_THM]);
+
+val I_INTRO_THM = Q.store_thm
+  ("I_INTRO_THM",
+   `(\v.v) = I`,RW_TAC std_ss [FUN_EQ_THM]);
+
+val _ = Parse.reveal "C";
+
+val thlist = 
+ map (C (curry Q.prove) 
+        (RW_TAC std_ss [FUN_EQ_THM,BUS_CONCAT_def,combinTheory.C_THM]))
+   [`!x y. K x <> K y = K (x,y)`,
+    `!x y. (\v.x) <> (\v.y) = K (x,y)`,
+    `!u. I <> K u = C ($,) u`,
+    `I<>I = S $, I`];
+
+val BUS_CONCAT_LIFTERS = save_thm
+  ("BUS_CONCAT_LIFTERS",LIST_CONJ thlist);
+
+val BUS_CONCAT_LIFTERS1 = Q.store_thm
+   ("BUS_CONCAT_LIFTERS1",
+    `(!f a. f <> K a = C ($, o f) a) /\
+     (!f a. K a <> f = ($, a) o f)`,
+   RW_TAC std_ss [FUN_EQ_THM,BUS_CONCAT_def]);
+
+val _ = export_theory();

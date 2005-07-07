@@ -73,8 +73,8 @@ val FORALL_BLOCK = Q.store_thm
 (*---------------------------------------------------------------------------*)
 
 val XOR_BLOCK_def = Define
- `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block)
-            ((b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
+ `XOR_BLOCK ((a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15):block,
+             (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15):block)
        =
       (a0 # b0,   a1 # b1,   a2 # b2,   a3 # b3,
        a4 # b4,   a5 # b5,   a6 # b6,   a7 # b7,
@@ -83,24 +83,24 @@ val XOR_BLOCK_def = Define
 
 val XOR_BLOCK_ZERO = Q.store_thm
 ("XOR_BLOCK_ZERO",
- `!x:block. XOR_BLOCK x ZERO_BLOCK = x`,
+ `!x:block. XOR_BLOCK (x,ZERO_BLOCK) = x`,
  SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, XOR8_ZERO]);
 
 val XOR_BLOCK_INV = Q.store_thm
 ("XOR_BLOCK_INV",
- `!x:block. XOR_BLOCK x x = ZERO_BLOCK`,
+ `!x:block. XOR_BLOCK (x,x) = ZERO_BLOCK`,
  SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, XOR8_INV]);
 
 val XOR_BLOCK_AC = Q.store_thm
 ("XOR_BLOCK_AC",
- `(!x y z:block. XOR_BLOCK (XOR_BLOCK x y) z = XOR_BLOCK x (XOR_BLOCK y z)) /\
-  (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)`, 
+ `(!x y z. XOR_BLOCK(XOR_BLOCK(x,y),z) = XOR_BLOCK(x,XOR_BLOCK(y,z))) /\
+  (!x y. XOR_BLOCK (x,y) = XOR_BLOCK (y,x))`, 
  SIMP_TAC std_ss [FORALL_BLOCK,XOR_BLOCK_def, XOR8_AC]);
 
 val XOR_BLOCK_IDEM = Q.store_thm
 ("XOR_BLOCK_IDEM",
- `(!v u. XOR_BLOCK (XOR_BLOCK v u) u = v) /\
-  (!v u. XOR_BLOCK v (XOR_BLOCK v u) = u)`,
+ `(!v u. XOR_BLOCK (XOR_BLOCK(v,u),u) = v) /\
+  (!v u. XOR_BLOCK (v,XOR_BLOCK (v,u)) = u)`,
  METIS_TAC [XOR_BLOCK_INV,XOR_BLOCK_AC,XOR_BLOCK_ZERO]);
 
 
@@ -420,7 +420,7 @@ val MixColumns_Inversion = Q.store_thm
     Pairwise XOR the state with the round key
  ---------------------------------------------------------------------------*)
 
-val AddRoundKey_def = Define `AddRoundKey = XOR_BLOCK`;
+val AddRoundKey_def = Define `AddRoundKey a b = XOR_BLOCK(a,b)`;
 
 (*---------------------------------------------------------------------------*)
 (* For alternative decryption scheme                                         *)

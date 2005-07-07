@@ -558,12 +558,6 @@ fun RecCompileConvert defth totalth =
   SIMP_RULE std_ss [] (MP impth hthm)
  end;
 
-fun mk_measure tm = 
-   let open numSyntax
-       val measure_tm = prim_mk_const{Name="measure",Thy="prim_rec"}
-       val theta = match_type (alpha --> num) (type_of tm)
-   in mk_comb(inst theta measure_tm, tm)
-   end;
 
 (*---------------------------------------------------------------------------*)
 (* For termination prover.                                                   *)
@@ -620,7 +614,7 @@ fun hwDefine defq =
                              (Parse.term_grammar())
                              (Absyn.TYPED(loc,f,fty))
             val defn = Defn.mk_defn (hd names) deftm
-            val tac = EXISTS_TAC (mk_measure typedf)
+            val tac = EXISTS_TAC (numSyntax.mk_cmeasure typedf)
                        THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps)
             val (defth,ind) = Defn.tprove(defn, tac)
             val (lt,rt) = boolSyntax.dest_eq(concl defth)
@@ -1226,7 +1220,9 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
              THEN GEN_BETA_TAC 
              THEN Ho_Rewrite.REWRITE_TAC[PAIR_EQ,FORALL_AND_THM]
              THEN Ho_Rewrite.REWRITE_TAC[GSYM FUN_EQ_THM]
-             THEN PROVE_TAC[])
+             THEN (* PROVE_TAC[] *)
+             (EQ_TAC THEN REPEAT STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC)
+              ORELSE PROVE_TAC [])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
@@ -1521,30 +1517,252 @@ val _ =
    COMB_AND,
    COMB_OR];
 
-(*****************************************************************************)
-(* Compile a device implementation into a netlist represented in HOL         *)
-(*****************************************************************************)
+(*---------------------------------------------------------------------------*)
+(* Building netlists                                                         *)
+(*---------------------------------------------------------------------------*)
+
+val monitor_netlist_construction = ref false;
+
+fun ptime a f x = 
+  if !monitor_netlist_construction
+   then (print (a^":  "); time f x)
+   else f x;
+
+fun PRINT_CONV tm = (print_term tm; ALL_CONV tm);
+
+val comb_tm = ``COMB``
+val bus_concat_tm = ``BUS_CONCAT``;
+
+fun CIRC_CONV c = RATOR_CONV (RAND_CONV c);
+val CIRC_RULE = CONV_RULE o CIRC_CONV;
+
+fun COMB_FN_CONV cnv tm =
+  case strip_comb tm
+   of (c,[_,_]) =>
+        if same_const c comb_tm 
+         then RATOR_CONV(RAND_CONV cnv) tm
+         else raise Conv.UNCHANGED
+    | other => raise Conv.UNCHANGED
+
+fun variants V [] = []
+  | variants V (h::t) = 
+     let val h' = variant V h
+     in h'::variants (h'::V) t
+     end;
+
+val is_prod = Lib.can pairSyntax.dest_prod;
+
+val bus_concat_tm = prim_mk_const{Name="BUS_CONCAT",Thy="compile"};
+
+fun mk_bus_concat(tm1,tm2) = 
+ let val (ty1,ty2) = dom_rng(type_of tm1)
+     val (ty1',ty3) = dom_rng(type_of tm2)
+ in 
+  list_mk_comb(inst[alpha |-> ty1, beta |-> ty2, gamma |-> ty3] bus_concat_tm,
+               [tm1,tm2])
+ end;
+
+val dest_bus_concat = dest_binop bus_concat_tm (ERR"dest_bus_concat" "");
+
+fun bus_concat_of ty V =
+ let open pairSyntax
+ in 
+   if is_prod ty
+    then let val (ty1,ty2) = dest_prod ty
+             val (l,V') = bus_concat_of ty1 V
+             val (r,V'') = bus_concat_of ty2 V'
+         in (mk_bus_concat(l,r),V'')
+         end
+    else (hd V, tl V)
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* STEP 4                                                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun FUN_EXISTS_PROD_CONV tm =
+ if is_exists tm andalso 
+    Lib.can (match_type ``:'a -> 'b#'c``) 
+            (type_of (bvar (rand tm)))
+ then
+   let val (forig,body) = dest_exists tm
+       val fty = type_of forig
+       val f = mk_var("f",fty)
+       val P = mk_var("P",fty --> bool)
+       val (ty1,ty2) = dom_rng fty
+       val ty2list = strip_prod ty2
+       val vartys = map (curry op--> ty1) ty2list
+       val init_vars = map mk_var 
+                        (zip (map (concat "f_" o Int.toString) 
+                                  (upto 1 (length vartys)))
+                             vartys)
+       val vars = variants (free_vars tm) init_vars
+       val bus_concatenation = fst(bus_concat_of ty2 vars)
+       val absgoal = mk_eq(mk_exists(f,mk_comb(P,f)),
+             list_mk_exists(vars,mk_comb(P,bus_concatenation)))
+       val tac = CONV_TAC (LHS_CONV (TOP_SWEEP_CONV 
+                                      (HO_REWR_CONV FUN_EXISTS_PROD)))
+                    THEN REFL_TAC
+       val th = prove(absgoal,tac)
+   in 
+     HO_REWR_CONV th tm
+   end
+ else raise ERR "FUN_EXISTS_PROD_CONV" "";
+
+val OLD_STEP4a =  (* split buses up *)
+ let open Ho_Rewrite
+ in 
+  ptime "\n4a" 
+   (CONV_RULE (CIRC_CONV
+     (GEN_REWRITE_CONV TOP_SWEEP_CONV [FUN_EXISTS_PROD])))
+ end;
+
+
+val STEP4a =  (* split buses up *)
+ let open Ho_Rewrite
+ in 
+  ptime "\n4a" 
+   (CONV_RULE (CIRC_CONV
+     (TOP_SWEEP_CONV FUN_EXISTS_PROD_CONV)))
+ end;
+
+val STEP4b =  (* build names in COMBs *)
+ let open Ho_Rewrite
+ in 
+  ptime "4b" 
+   (CONV_RULE (CIRC_CONV 
+     (TOP_SWEEP_CONV (COMB_FN_CONV
+       (GEN_REWRITE_CONV TOP_SWEEP_CONV [LAMBDA_PROD] THENC
+        GEN_REWRITE_CONV DEPTH_CONV [FST,SND])))))
+ end;
+
+
+val STEP4c =  (* expose f<>g *)
+ let open Ho_Rewrite
+ in 
+  ptime "4c" 
+   (CONV_RULE (CIRC_CONV
+     (GEN_REWRITE_CONV TOP_SWEEP_CONV [GSYM BUS_CONCAT_def])))
+ end;
+
+val STEP4d = 
+ let open Ho_Rewrite
+ in 
+  ptime "4d" 
+   (CONV_RULE (CIRC_CONV
+     (GEN_REWRITE_CONV TOP_DEPTH_CONV 
+           [COMB_CONCAT_FST,COMB_CONCAT_SND,
+            COMB_FST,COMB_SND,COMB_CONSTANT_1,COMB_CONSTANT_2,
+            COMB_CONSTANT_3,COMB_ID])))
+ end;
+
+val STEP4e = 
+ let open Ho_Rewrite
+ in 
+  ptime "4e" 
+   (CONV_RULE (CIRC_CONV 
+     (GEN_REWRITE_CONV TOP_DEPTH_CONV [LATCH_def,POSEDGE_IMP_def])))
+ end;
+
+val STEP4f = 
+ let open Ho_Rewrite
+ in 
+  ptime "4f" 
+   (CONV_RULE (CIRC_CONV
+     (GEN_REWRITE_CONV TOP_DEPTH_CONV 
+        [ID_CONST,ID_o,o_ID,
+         DEL_CONCAT,MUX_CONCAT,DFF_CONCAT,
+         BUS_CONCAT_PAIR,BUS_CONCAT_ETA])))
+ end;
+
+val STEP4 = STEP4f o STEP4e o STEP4d o STEP4c o STEP4b o STEP4a;
+
+(*---------------------------------------------------------------------------*)
+(* STEP 5                                                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun CONCAT_CONV c M =
+  if is_abs M then ABS_CONV (CONCAT_CONV c) M else
+  case strip_comb M
+   of (f,[_,_]) => if same_const f bus_concat_tm
+         then c M
+         else COMB_CONV (CONCAT_CONV c) M
+    | otherwise => if is_comb M then COMB_CONV (CONCAT_CONV c) M 
+                   else ALL_CONV M;
+  
+local (* partial evaluation instantiates term-nets once *)
+ val SIMPLIFY = RATOR_CONV(RAND_CONV(CONCAT_CONV
+      (PURE_REWRITE_CONV [K_INTRO_THM,I_INTRO_THM,BUS_CONCAT_LIFTERS] THENC 
+       PURE_REWRITE_CONV [BUS_CONCAT_LIFTERS1] THENC
+       PURE_REWRITE_CONV [o_DEF,C_THM] THENC 
+       PURE_ONCE_REWRITE_CONV [GSYM ETA_THM] THENC
+       PURE_REWRITE_CONV [K_THM,C_THM,I_THM] THENC DEPTH_CONV BETA_CONV)))
+in
+fun STEP5_CONV tm =
+  case strip_comb tm
+   of (c,[f,x]) =>
+        if same_const c comb_tm andalso 
+           Lib.can (find_term (same_const bus_concat_tm)) f
+         then SIMPLIFY tm
+         else raise ERR "STEP5_CONV" ""
+    | other => raise ERR "STEP5_CONV" ""
+end;
+
+         
+(*---------------------------------------------------------------------------*)
+(* Translate a DEV into a netlist                                            *)
+(*---------------------------------------------------------------------------*)
+
 fun MAKE_NETLIST devth =
- (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                           o
-  Ho_Rewrite.REWRITE_RULE (!combinational_components)                        o
-  CONV_RULE
-   (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                    o
-  SIMP_RULE std_ss [UNCURRY]                                                 o
-  Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM]                                  o
-  Ho_Rewrite.REWRITE_RULE
+ ((ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+  (ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
+  (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
+  (ptime "6" (REWRITE_RULE [UNCURRY,FST,SND]))           o
+  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV)))) o
+  (ptime "4" STEP4) o 
+  (ptime "3" GEN_BETA_RULE)  o
+  (ptime "2" IN_OUT_SPLIT)   o
+  (ptime "1" (REWRITE_RULE 
+   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+    Ite_def,Par_def,Seq_def,o_THM]))) devth;
+
+(*----------------ORIGINAL (mostly)----------------------------------
+val OLD_STEP4 = 
+ ptime "4" 
+   (CONV_RULE (CIRC_CONV(Ho_Rewrite.REWRITE_CONV
+     [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
+     COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
+     BUS_CONCAT_PAIR,BUS_CONCAT_o,
+     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
+     DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
+     POSEDGE_IMP_def,LATCH_def,
+     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT])));
+
+fun MAKE_NETLIST devth =
+ ((ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+(*  (ptime "8"  (Ho_Rewrite.REWRITE_RULE (!combinational_components))) o *)
+  (ptime "8"  (PURE_REWRITE_RULE (!combinational_components))) o
+  (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
+(*  (ptime "7" (SIMP_RULE std_ss [UNCURRY]))           o *)
+  (ptime "6" (REWRITE_RULE [UNCURRY,FST,SND]))           o
+(*  (ptime "5" (Ho_Rewrite.REWRITE_RULE [BUS_CONCAT_ELIM])) o *)
+  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV)))) o
+  (ptime "4" (Ho_Rewrite.REWRITE_RULE
     [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,COMB_CONSTANT_1,COMB_CONSTANT_2,
      COMB_CONSTANT_3,COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
      BUS_CONCAT_PAIR,BUS_CONCAT_o,
      FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,
      DEL_CONCAT,DFF_CONCAT,MUX_CONCAT,
      POSEDGE_IMP_def,LATCH_def,
-     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                         o
-  GEN_BETA_RULE                                                              o
-  IN_OUT_SPLIT                                                               o
-  REWRITE_RULE 
+     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]))  o
+  (ptime "3" GEN_BETA_RULE)  o
+  (ptime "2" IN_OUT_SPLIT)   o
+  (ptime "1" (REWRITE_RULE 
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-    Ite_def,Par_def,Seq_def,o_THM]) devth;
+    Ite_def,Par_def,Seq_def,o_THM]))) devth;
+ ---------------------------------------------------------------------------*)
 
 (*****************************************************************************)
 (* User modifiable list of Melham-style temporal abstraction theorem         *)
