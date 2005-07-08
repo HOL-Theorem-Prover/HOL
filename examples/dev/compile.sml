@@ -1178,8 +1178,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
    in
     if is_combinational_const bdy
      then let val goal = ``^tm = CONSTANT ^bdy ^out_bus``
-              val _ = (ifprint "\n COMB_SYNTH_CONV case 1:\n "; 
-                       ifprint_term goal; ifprint "\n")
+              val _ = (if_print "\n COMB_SYNTH_CONV case 1:\n "; 
+                       if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
@@ -1194,8 +1194,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
           end
      else if is_var bdy andalso can (assoc bdy) args_match
      then let val goal = ``^tm = (^out_bus = ^(assoc bdy (rev args_match)))``
-              val _ = (ifprint "\n COMB_SYNTH_CONV case 2:\n "; 
-                       ifprint_term goal; ifprint "\n")
+              val _ = (if_print "\n COMB_SYNTH_CONV case 2:\n "; 
+                       if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
@@ -1220,8 +1220,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                       then ``CONSTANT ^t1 ^(assoc t1 bdy_match)``
                       else mk_eq(t2,assoc t1 (rev args_match)))
                    bdy_match))
-              val _ = (ifprint "\n COMB_SYNTH_CONV case 3:\n "; 
-                       ifprint_term goal; ifprint "\n")
+              val _ = (if_print "\n COMB_SYNTH_CONV case 3:\n "; 
+                       if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
@@ -1244,8 +1244,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                    ``^tm = 
                      COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\
                      COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``
-              val _ = (ifprint "\n COMB_SYNTH_CONV case 4:\n "; 
-                       ifprint_term goal; ifprint "\n")
+              val _ = (if_print "\n COMB_SYNTH_CONV case 4:\n "; 
+                       if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
           prove
@@ -1268,8 +1268,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                    ``^tm = ?^v. COMB ^(mk_pabs(args, arg)) (^in_bus,^v) 
                                 /\
                                 COMB ^(rator bdy) (^v, ^out_bus)``
-              val _ = (ifprint "\n COMB_SYNTH_CONV case 5:\n "; 
-                       ifprint_term goal; ifprint "\n")
+              val _ = (if_print "\n COMB_SYNTH_CONV case 5:\n "; 
+                       if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
@@ -1296,8 +1296,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                       COMB ^(mk_pabs(args, then_tm)) (^in_bus,^mux_in1) /\
                       COMB ^(mk_pabs(args, else_tm)) (^in_bus,^mux_in2) /\
                       MUX(^sw,^mux_in1,^mux_in2,^out_bus)``
-              val _ = (ifprint "\n COMB_SYNTH_CONV case 6:\n "; 
-                       ifprint_term goal; ifprint "\n")
+              val _ = (if_print "\n COMB_SYNTH_CONV case 6:\n "; 
+                       if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
           prove
@@ -1326,8 +1326,8 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                        COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\ 
                        COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\ 
                        COMB (UNCURRY ^opr) (^v1 <> ^v2, ^out_bus)``
-              val _ = (ifprint "\n COMB_SYNTH_CONV case 7:\n "; 
-                       ifprint_term goal; ifprint "\n")
+              val _ = (if_print "\n COMB_SYNTH_CONV case 7:\n "; 
+                       if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
