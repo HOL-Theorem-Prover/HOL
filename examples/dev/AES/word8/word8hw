@@ -305,6 +305,47 @@ val XOR_BLOCKNetlist =
 
 val ROTKEYSNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ROTKEYS_dev);
 
+fun MAKE_NETLIST_8 devth =
+ ((ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
+  (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
+  (ptime "6" (REWRITE_RULE [UNCURRY,FST,SND]))           o
+  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV)))) o
+  (ptime "4" STEP4) o 
+  (ptime "3" GEN_BETA_RULE)  o
+  (ptime "2" IN_OUT_SPLIT)   o
+  (ptime "1" (REWRITE_RULE 
+   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+    Ite_def,Par_def,Seq_def,o_THM]))) devth;
+
+fun EXISTS_OUT_CONV t =
+ let val th        = ptime "EXISTS_OUT_CONV 1 " 
+                        (STANDARDIZE_EXISTS_CONV "v") t
+     val (vl,tml)  = ptime "EXISTS_OUT_CONV 2 " EXISTS_OUT (rhs(concl th))
+     val tml1      = ptime "EXISTS_OUT_CONV 3 " (foldl PRUNE1_FUN tml) vl 
+     val t1        = ptime "EXISTS_OUT_CONV 4 " list_mk_conj tml1
+     val vl1       = ptime "EXISTS_OUT_CONV 5 " 
+                        rev (intersect vl (free_vars t1))
+     val count_ref = ref 0
+     fun mkv ty    = let val newv = mk_var(("v"^Int.toString(!count_ref)),ty)
+                      in
+                       (count_ref := (!count_ref)+1; newv)
+                      end
+     val subsl     = map (fn v => (mkv(snd(dest_var v)),v)) vl1
+     val vl2       = map fst subsl
+     val t2        = ptime "EXISTS_OUT_CONV 6 " 
+                       (hol88Lib.subst subsl) t1 
+     val t3        = ptime "EXISTS_OUT_CONV 7 " list_mk_exists (vl2, t2)
+     val th        = ptime "EXISTS_OUT_CONV 8 " 
+                      mk_oracle_thm (* YIKES! -- what's this!!! *)
+                      (Tag.read "EXISTS_OUT_CONV")([],mk_eq(t,t3))
+ in
+  th
+ end;
+
+val th8 = MAKE_NETLIST_8 (REFINE (DEPTHR ATM_REFINE) Round_dev);
+val tm = fst(dest_imp(concl th8));
+
 val REVKEYSNetlist = 
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) REVKEYS_dev);
 
