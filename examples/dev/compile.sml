@@ -983,7 +983,7 @@ fun LIST_EXISTS_ALPHA_CONV s n t =
 (* Standardise apart all quantified variables to ``v0``, ``v1``, ...         *)
 (* where "v" is given as an argument                                         *)
 (*****************************************************************************)
-fun STANDARDIZE_EXISTS_CONV s =
+fun OLD_STANDARDIZE_EXISTS_CONV s =
  let val count_ref = ref 0
      fun mkv ty = let val newv = mk_var((s^Int.toString(!count_ref)),ty)
                   in
@@ -1001,6 +1001,46 @@ fun STANDARDIZE_EXISTS_CONV s =
  in
   LOCAL_RENAME_CONV
  end;
+
+(*---------------------------------------------------------------------------*)
+(* A faster version of STANDARDIZE_EXISTS_CONV.                              *)
+(*---------------------------------------------------------------------------*)
+
+fun STANDARDIZE_EXISTS_CONV s =
+ let val count_ref = ref 0
+     fun mkv ty = let val newv = mk_var((s^Int.toString(!count_ref)),ty)
+                  in
+                   (count_ref := (!count_ref)+1; newv)
+                  end
+     fun rename t =
+      if is_exists t orelse is_forall t
+       then 
+        let val (vlist,body) = if is_exists t then strip_exists t 
+                                              else strip_forall t
+            val vlist' = map (mkv o type_of) vlist
+            val theta  = map (op|->) (zip vlist vlist')
+            val body' = rename (subst theta body) (* slow *)
+        in
+         (if is_exists t then list_mk_exists else list_mk_forall)
+         (vlist', body')
+        end
+       else if is_abs t then
+              let val (v,M) = dest_abs t
+              in mk_abs(v,rename t)
+              end
+       else if is_comb t then
+              let val (M,N) = dest_comb t
+              in mk_comb(rename M, rename N)
+              end
+       else t
+ in
+  fn t => (ALPHA t (rename t)
+           handle HOL_ERR _ => 
+             (print"STANDARDIZE_EXISTS_CONV: new version broken,\
+                  \ so calling the old version";
+            OLD_STANDARDIZE_EXISTS_CONV s t))
+ end;
+
 
 (*****************************************************************************)
 (* Hoist all existential quantifiers to the outside                          *)
