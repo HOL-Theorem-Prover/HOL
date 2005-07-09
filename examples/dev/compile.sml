@@ -1159,9 +1159,10 @@ fun is_pure_abs tm =
 (*****************************************************************************)
 val comb_synth_goalref = ref T;
 
-val if_print_flag = ref true;
+val if_print_flag = ref false;
 fun if_print s = if !if_print_flag then print s else ();
 fun if_print_term tm = if !if_print_flag then print_term tm else ();
+
 fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
  if is_comb tm
      andalso is_comb(rator tm)
