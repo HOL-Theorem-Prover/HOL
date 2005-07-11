@@ -107,14 +107,16 @@ val InvRnd_def = Define `InvRnd n k s = SND(InvRound(n,k,s))`;
 
 val AES_FWD_def = 
  Define 
-  `AES_FWD keys = 
-    from_state o Rnd 9 (ROTKEYS keys) o AddRoundKey (FST keys) o to_state`;
+  `AES_FWD (keys,inp) = 
+    from_state (SND(Round(9,ROTKEYS keys, 
+                          XOR_BLOCK (FST keys, to_state inp))))`;
      
 
 val AES_BWD_def = 
  Define 
-  `AES_BWD keys = 
-    from_state o InvRnd 9 (ROTKEYS keys) o AddRoundKey (FST keys) o to_state`;
+  `AES_BWD (keys,inp) = 
+    from_state (SND(InvRound(9,ROTKEYS keys,
+                             XOR_BLOCK(FST keys,to_state inp))))`;
      
 (*---------------------------------------------------------------------------*)
 (* Main lemma                                                                *)
@@ -127,7 +129,7 @@ val [genMixColumns] = decls "genMixColumns";
 val AES_LEMMA = Q.store_thm
 ("AES_LEMMA",
  `!(plaintext:state) (keys:keysched). 
-     AES_BWD (REVKEYS keys) (AES_FWD keys plaintext) = plaintext`,
+     AES_BWD (REVKEYS keys, AES_FWD (keys,plaintext)) = plaintext`,
  SIMP_TAC std_ss [FORALL_BLOCK] THEN 
  SIMP_TAC std_ss [FORALL_KEYSCHED]
    THEN RESTR_EVAL_TAC [MultCol,InvMultCol,genMixColumns]
@@ -224,7 +226,8 @@ RW_TAC list_ss [unpack_def]
 val AES_def = Define
  `AES key = 
    let keys = LIST_TO_KEYS (mk_keysched key) DUMMY_KEYS 
-   in (AES_FWD keys, AES_BWD (REVKEYS keys))`;
+   in ((\inp. AES_FWD (keys,inp)), 
+       (\inp. AES_BWD (REVKEYS keys,inp)))`;
 
 
 (*---------------------------------------------------------------------------*)

@@ -241,14 +241,19 @@ val InvRound_dev =
   PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
            (RecCompileConvert (SPEC_ALL InvRound_def') totalInvRound);
 
+val AES_FWD_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+    (CompileConvert 
+      (SPEC_ALL AES_FWD_def));
+
+compile.monitor_netlist_construction := true;
 
 STOP;
+
 
 (*---------------------------------------------------------------------------*)
 (* Make netlists                                                             *)
 (*---------------------------------------------------------------------------*)
-
-compile.monitor_netlist_construction := true;
 
 val xtimeNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) xtime_dev);
 val iter_mult_Netlist = MAKE_NETLIST iter_mult_atm;
@@ -298,12 +303,15 @@ val InvMixColumns_Rewire_Netlist =
 val Refined_MixColumns_Netlist = 
    MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) Refined_MixColumns_dev);
 val Refined_InvMixColumns_Netlist = 
-   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvRefined_MixColumns_dev);
+   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) Refined_InvMixColumns_dev);
 
 val XOR_BLOCKNetlist = 
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) XOR_BLOCK_dev);
 
 val ROTKEYSNetlist = MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ROTKEYS_dev);
+
+val REVKEYSNetlist = 
+  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) REVKEYS_dev);
 
 fun MAKE_NETLIST_8 devth =
  ((ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
@@ -346,9 +354,6 @@ fun EXISTS_OUT_CONV t =
 val th8 = MAKE_NETLIST_8 (REFINE (DEPTHR ATM_REFINE) Round_dev);
 val tm = fst(dest_imp(concl th8));
 
-val REVKEYSNetlist = 
-  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) REVKEYS_dev);
-
 (*---------------------------------------------------------------------------*)
 (* Incredibly slow at the moment.                                            *)
 (*---------------------------------------------------------------------------*)
@@ -357,6 +362,8 @@ val RoundNetlist =
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) Round_dev);
 val InvRoundNetlist = 
   MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) InvRound_dev);
+
+val AES_FWDNetlist =  MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) AES_FWD_dev);
 
 
 (*---------------------------------------------------------------------------*)
