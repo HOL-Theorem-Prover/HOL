@@ -1005,7 +1005,7 @@ fun OLD_STANDARDIZE_EXISTS_CONV s =
 (*---------------------------------------------------------------------------*)
 (* A faster version of STANDARDIZE_EXISTS_CONV.                              *)
 (*---------------------------------------------------------------------------*)
-
+(*
 fun STANDARDIZE_EXISTS_CONV s =
  let val count_ref = ref 0
      fun mkv ty = let val newv = mk_var((s^Int.toString(!count_ref)),ty)
@@ -1018,8 +1018,8 @@ fun STANDARDIZE_EXISTS_CONV s =
         let val (vlist,body) = if is_exists t then strip_exists t 
                                               else strip_forall t
             val vlist' = map (mkv o type_of) vlist
-            val theta  = map (op|->) (zip vlist vlist')
-            val body' = rename (subst theta body) (* slow *)
+            val theta  = map2 (curry op|->) vlist vlist'
+            val body' = rename (time (Term.subst theta) body) (* slow *)
         in
          (if is_exists t then list_mk_exists else list_mk_forall)
          (vlist', body')
@@ -1040,6 +1040,61 @@ fun STANDARDIZE_EXISTS_CONV s =
                   \ so calling the old version";
             OLD_STANDARDIZE_EXISTS_CONV s t))
  end;
+*)
+
+local
+val init_theta:(term,term)Binarymap.dict 
+          = Binarymap.mkDict Term.var_compare;
+fun mksubst L1 L2 theta_0 = 
+ rev_itlist2 
+    (fn redex:term => fn residue:term => fn theta => 
+          Binarymap.insert(theta,redex,residue)) L1 L2 theta_0;
+
+fun subst_fn theta M = Binarymap.find(theta,M);
+fun applysubst f x = f x handle Binarymap.NotFound => x;
+
+infix oo;
+fun (th2 oo th1) M = th1 M handle Binarymap.NotFound => th2 M;
+in
+fun STANDARDIZE_EXISTS_CONV s =
+ let val count_ref = ref 0
+     fun mkv ty = let val newv = mk_var((s^Int.toString(!count_ref)),ty)
+                  in
+                   (count_ref := (!count_ref)+1; newv)
+                  end
+     fun rename theta t =
+      if is_var t then applysubst theta t else
+      if is_const t then t else
+      if is_exists t orelse is_forall t
+       then 
+        let val (vlist,body) = if is_exists t then strip_exists t 
+                                              else strip_forall t
+            val vlist' = map (mkv o type_of) vlist
+            val block_theta = subst_fn (mksubst vlist vlist' init_theta)
+            val body' = rename (theta oo block_theta) body
+        in
+         (if is_exists t then list_mk_exists else list_mk_forall)
+         (vlist', body')
+        end
+       else if is_abs t then
+             let val (vlist,body) = strip_abs t
+                 val block_theta = subst_fn (mksubst vlist vlist init_theta)
+                 val body' = rename (theta oo block_theta) body 
+              in list_mk_abs(vlist,body')
+              end
+       else if is_comb t then
+              let val (M,N) = dest_comb t
+              in mk_comb(rename theta M, rename theta N)
+              end
+       else t
+ in
+  fn t => (ALPHA t (rename (subst_fn init_theta) t)
+           handle HOL_ERR _ => 
+             (print"STANDARDIZE_EXISTS_CONV: new version broken,\
+                  \ so calling the old version";
+            OLD_STANDARDIZE_EXISTS_CONV s t))
+ end
+end;
 
 
 (*****************************************************************************)
@@ -1733,7 +1788,7 @@ val STEP4f =
   ptime "4f" 
    (CONV_RULE (CIRC_CONV
      (GEN_REWRITE_CONV TOP_DEPTH_CONV 
-        [ID_CONST,ID_o,o_ID,
+        [ID_CONST, ID_o, o_ID,
          DEL_CONCAT,MUX_CONCAT,DFF_CONCAT,
          BUS_CONCAT_PAIR,BUS_CONCAT_ETA])))
  end;
