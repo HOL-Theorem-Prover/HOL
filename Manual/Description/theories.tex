@@ -1694,7 +1694,7 @@ On this basis, an \adhoc\ but useful collection of over two hundred
 and fifty elementary theorems of arithmetic are proved when \HOL{} is
 built and stored in the theory \theoryimp{arithmetic}.  For a complete
 list of the available theorems, see \REFERENCE.  See also
-Section~\ref{sec-while-loops} for discussion of the \holtxt{LEAST}
+Section~\ref{sec:while-loops} for discussion of the \holtxt{LEAST}
 operator, which returns the least number satisfying a predicate.
 
 \subsubsection{Grammar information}
@@ -2487,17 +2487,17 @@ are proved and stored in the theory \ml{list}.
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
 \begin{verbatim}
-   list_Axiom   
+   list_Axiom
      |- !x f. ?fn. (fn [] = x) /\ (!h t. fn (h::t) = f(fn t)h t)
-   list_INDUCT  
+   list_INDUCT
      |- !P. P [] /\ (!t. P t ==> (!h. P(h::t))) ==> (!l. P l)
-   list_CASES   
+   list_CASES
      |- !l. (l = []) \/ (?t h. l = h::t)
    CONS_11
      |- !h t h' t'. (h::t = h'::t') = (h = h') /\ (t = t')
-   NOT_NIL_CONS 
+   NOT_NIL_CONS
      |- !h t. ~([] = h::t)
-   NOT_CONS_NIL 
+   NOT_CONS_NIL
      |- !h t. ~(h::t = [])
 \end{verbatim}
 \end{hol}
@@ -2825,7 +2825,7 @@ useful in proofs about permutations.
 \paragraph{Sorting}
 
 A list is $R$-sorted if $R$ holds pairwise through the list. This
-notion (\holtxt{SORTED}) is captured by a recursive definition. Then 
+notion (\holtxt{SORTED}) is captured by a recursive definition. Then
 a function of type
 %
 \begin{hol}
@@ -2834,7 +2834,7 @@ a function of type
 \end{verbatim}
 \end{hol}
 %
-is a sorting function (\holtxt{SORTS}) with respect to $R$ if 
+is a sorting function (\holtxt{SORTS}) with respect to $R$ if
 it delivers a permutation of its input, and the result is $R$-sorted.
 %
 \begin{hol}
