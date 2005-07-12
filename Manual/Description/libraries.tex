@@ -1245,6 +1245,7 @@ accessible from within \ml{bossLib}, though some originate in other
 structures.
 
 \subsubsection{\ml{pure\_ss} and \ml{bool\_ss}}
+\label{sec:purebool-ss}
 %
 \index{pure_ss@\ml{pure\_ss}}
 %
@@ -1518,7 +1519,7 @@ traversal strategy (slightly simplified) is
   While there are any matches for stored rewrite rules at this level,
   continue to apply them.  The order in which rewrite rules are
   applied can \emph{not} be relied on, except that when a \simpset{}
-  includes two rewrite with exactly the same left-hand sides, the
+  includes two rewrites with exactly the same left-hand sides, the
   rewrite added later will get matched in preference.  (This allows a
   certain amount of rewrite-overloading in the construction of
   \simpset{}s.)
@@ -1533,9 +1534,138 @@ traversal strategy (slightly simplified) is
   finish.
 \end{enumerate}
 
+\subsubsection{Conditional rewriting}
+
+The above description is a slight simplification of the true state of
+affairs.  One particularly powerful feature of the simplifier is that
+it really uses \emph{conditional} rewrite rules.  These are theorems
+of the form
+\[
+\vdash P \Rightarrow (\ell = r)
+\]
+When the simplifier finds a match for term $\ell$ during its traversal
+of the term, it attempts to discharge the condition $P$.  If the
+simplifier can simplify the term $P$ to truth, then the instance of
+$\ell$ in the term being traversed can be replaced by the appropriate
+instantiation of $r$.
+
+When simplifying $P$ (a term that does not necessarily even occur in
+the original), the simplifier may find itself applying another
+conditional rewrite rule.  In order to stop excessive recursive
+applications, the simplifier keeps track of a stack of all the
+side-conditions it is working on.  The simplifier will give up on
+side-condition proving if it notices a repetition in this stack.
+There is also a user-accessible variable, \ml{Cond\_rewr.stack\_limit}
+which specifies the maximum size of stack the simplifier is allowed to
+use.
+
+Conditional rewrites can be extremely useful.  For example, theorems
+about division and modulus are frequently accompanied by conditions
+requiring the divisor to be non-zero.  The simplifier can often
+discharge these, particularly if it includes an arithmetic decision
+procedure.  For example, the theorem \ml{MOD\_MOD} from the theory
+\ml{arithmetic} states
+\[
+\vdash 0 < n \;\Rightarrow \; (k\,\textsf{MOD}\,n)\,\textsf{MOD}\,n = k
+\,\textsf{MOD}\,n
+\]
+The simplifier (specifically, \ml{SIMP\_CONV~arith\_ss~[MOD\_MOD]})
+can use this theorem to simplify the term
+\holtxt{(k~MOD~(x~+~1))~MOD~(x~+~1)}: the arithmetic decision
+procedure can prove that \holtxt{0 < x + 1}, justifying the rewrite.
+
+Though conditional rewrites are powerful, not every theorem of the
+form described above is an appropriate choice.  A badly chosen rewrite
+may cause the simplifier's performance to degrade considerably, as it
+wastes time attempting to prove impossible side-conditions.  For
+example, the simplifier is not very good at finding existential
+witnesses.  This means that the conditional rewrite \[
+\vdash x < y \land y < z \Rightarrow (x < z = \top)
+\]
+will not work as one might hope.  In general, the simplifier is not a
+good tool for performing transitivity reasoning.  (Try first-order
+tools such as \ml{PROVE\_TAC} instead.)
+
 \subsubsection{Generating rewrite rules from theorems}
 
-\subsubsection{Conditional rewriting}
+There are two routes by which a theorem for rewriting can be passed to
+the simplifier: either as an explicit argument to one of the \ML{}
+functions (\ml{SIMP\_CONV}, \ml{ASM\_SIMP\_TAC} etc) that take theorem
+lists as arguments, or by being included in a \simpset{} fragment
+which is merged into a \simpset.  In both cases, these theorems are
+transformed before being used.  The transformations applied are
+designed to make interactive use as convenient as possible.
+
+In particular, it is not necessary to pass the simplifier theorems
+that are exactly of the form
+\[
+\vdash P \Rightarrow (\ell = r)
+\]
+Instead, the simplifier will transform its input theorems to extract
+rewrites of this form itself.  The exact transformation performed is
+dependent on the \simpset{} being used: each \simpset{} contains its
+own ``filter'' function which is applied to theorems that are added to
+it.  Most \simpset{}s use the filter function from the \ml{pure\_ss}
+\simpset{} (see Section~\ref{sec:purebool-ss}).  However, when a
+\simpset{} fragment is added to a full simpset, the fragment can
+specify an additional filter component.  If specified, this function
+is of type \ml{thm~->~thm~list}, and is applied to each of the
+theorems produced by the existing \simpset's filter.
+
+The rewrite-producing filter in \ml{pure\_ss} strips away
+conjunctions, implications and universal quantifications until it has
+either an equality theorem, or some other boolean form.  For example,
+the theorem \ml{ADD\_MODULUS} states
+\[
+\vdash
+\begin{array}[t]{l}
+(\forall n\;x.\;\;0 < n \Rightarrow ((x + n)\,\textsf{MOD}\,n =
+ x\,\textsf{MOD}\,n)) \;\;\land\\
+(\forall n\;x.\;\;0 < n \Rightarrow ((n + x)\,\textsf{MOD}\,n =
+ x\,\textsf{MOD}\,n))
+\end{array}
+\]
+This theorem becomes two rewrite rules \[
+\begin{array}{l}
+\vdash 0 < n \Rightarrow ((x + n)\,\textsf{MOD}\,n)\\
+\vdash 0 < n \Rightarrow ((n + x)\,\textsf{MOD}\,n)
+\end{array}
+\]
+
+If looking at an equality where there are variables on the
+right-hand side that do not occur on the left-hand side, the
+simplifier transforms this to the rule \[
+\vdash (\ell = r) = \top
+\]
+Similarly, if a boolean negation $\neg P$, becomes the rule \[
+\vdash P = \bot
+\]
+and other boolean formulas $P$ become \[
+\vdash P = \top
+\]
+
+Finally, if looking at an equality whose left-hand side is itself an
+equality, and where the right-hand side is not an equality as well,
+the simplifier transforms $(x = y) = P$ into the two rules
+\[
+\begin{array}{l}
+\vdash (x = y) = P\\
+\vdash (y = x) = P
+\end{array}
+\]
+This is generally useful.  For example, a theorem such as
+\[
+\vdash \neg(\textsf{SUC}\,n = 0)
+\]
+will cause the simplifier to rewrite both $(\textsf{SUC}\,n = 0)$ and
+$(0 = \textsf{SUC}\,n)$ to false.
+
+The restriction that the right-hand side of such a rule not itself be
+an equality is a simple heuristic that prevents some forms of looping.
+
+
+
+
 
 
 \subsubsection{Matching rewrite rules}
