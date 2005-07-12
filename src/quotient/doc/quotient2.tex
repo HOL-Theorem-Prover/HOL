@@ -158,6 +158,8 @@
 \newcommand{\rb}{\mbox{$]\!]$}}
 \newcommand{\quotient}{partial equivalence}
 \newcommand{\Quotient}{Partial Equivalence}
+%\newcommand{\repofabs}{\mbox{\tt //}}
+\newcommand{\repofabs}{\Downarrow}
 
 % -------------------------
 % Theorem environments
@@ -239,25 +241,33 @@ This simplifies the system by removing unneeded structure.
 %before the quotient operation thus gives rise to a system that identifies
 %such equivalent elements so that they can no longer be distinguished.
 
-Quotients have found many applications.  Classic examples are the construction
-of the integers from pairs of non-negative natural numbers, or the construction
-of the rationals from pairs of integers.  In the lambda calculus and
-similar calculi, it is
+Traditionally, quotients have found many applications. 
+Classic examples are the construction
+of the integers from pairs of non-negative natural numbers,
+or
+%the construction of
+the rationals from pairs of integers. 
+In the lambda calculus \cite{Bar81} and similar calculi, it is
 common to identify terms which are alpha-equivalent, that differ only by
 the choice of local names used by binding operators.
-Other examples include the construction of bags from lists
-by ignoring order,
+Other examples include the construction of bags from lists by ignoring order,
 %where the order does not matter,
-and the construction of sets from bags
-by ignoring duplicates.
+and the construction of sets from bags by ignoring duplicates.
 %where if positive, the number of equal elements does not matter.
 
 The ubiquity of quotients has recommended their investigation
 %Since quotients are ubiquitous,
 %they have been previously investigated 
 within the field of mechanical theorem proving.
-Isabelle/HOL has mechanical support for the creation of
-higher order quotients by Oscar Slotosch \cite{Slo97}. 
+The first to appear was Ton Kalker's 1989 package for HOL88 \cite{Kal89}.
+Isabelle/HOL
+\cite{NiPaWe02}
+has mechanical support for the creation of
+higher order quotients by Oscar Slotosch \cite{Slo97},
+using partial equivalence relations represented as a type class,
+with equivalence relations as a subclass.
+That system provides a definitional framework for establishing
+quotient types, including higher order.
 Independently, Larry Paulson has shown a construction of first-order quotients
 in Isabelle without any use of the Hilbert choice operator
 \cite{LP04}.
@@ -268,13 +278,14 @@ Coq, based on the Calculus of Constructions \cite{Hof95},
 supports quotients \cite{GPWZ02} but
 has some difficulties with higher order
 \cite{CPS02}.
+These systems provide little automatic support.
+In particular, there is no automatic lifting of constants or theorems.
 
 John Harrison has developed a package for the 
 %Higher Order Logic
 HOL
-theorem prover which
-supports first order quotients, including automation to
-define new quotient types
+theorem prover which supports first order quotients,
+including automation to define new quotient types
 %based on an existing type and an equivalence relation on that type,
 and to lift to the quotient level both constants 
 and theorems previously established
@@ -284,8 +295,9 @@ This automatic lifting is key to practical support for quotients.
 A quotient of a group
 would be incomplete without also mapping the original group
 operation to a corresponding one for the quotient group.
-Similarly, theorems about the group
-which are independent of the equivalence relation
+%Similarly, theorems about the group
+%which are independent of the equivalence relation
+Similarly, a theorem stating that the original group was abelian
 should also be true of the quotient group.
 %If one wished to take a quotient of a group, it would be inadequate to 
 %only create the quotient set of the original set by the equivalence relation,
@@ -296,7 +308,7 @@ should also be true of the quotient group.
 %should also be true (in a translated form) of the new quotient group.
 Mechanizing this lifting is vital for avoiding the repetition of proofs
 at the higher level which were already proved at the lower level.
-Such automation is not only practical, but intellectually cogent.
+Such automation is not only practical, but mathematically incisive.
 %Such automation makes the quotient operation more practical and intellectually cogent.
 
 Despite the quality of Harrison's excellent package, it does have
@@ -356,45 +368,26 @@ universal, existential, and unique existential quantification.
 In addition, many existing polymorphic operators from the theories of
 lists, pairs, sums, and options have theorems pre-proven
 showing the operators' respectfulness of equivalence relations and
-their
-%stability
-preservation
-across
-quotients,
-%the quotient operation,
-yielding results at the
-high level which correspond properly with their results at the lower level.
-These respectfulness and
-%stability
-preservation
-theorems enable the automatic
-lifting of theorems that mention these operators.  Other operators
-can also be lifted by proving and including
-the corresponding respectfulness and
-%stability
-preservation
-theorems which
-justify the operator's use across quotient operations.
+their preservation across quotients, yielding results at the
+quotient level which correspond properly with their results at the lower level.
+These respectfulness and preservation theorems enable the automatic
+lifting of theorems that mention these operators.  Additional operators
+can also be lifted by proving
+and including
+the corresponding respectfulness and preservation
+theorems, which justify the operator's use across quotients.
+%operations.
 
 The system is thus extensible, both in terms of new operators, and even
-in terms of new polymorphic type operators,
-by proving and including
-theorems providing
+in terms of new polymorphic type operators, by proving and including
+theorems entailing
 %the existence of
 a quotient
-of the operator,
+of the type operator,
 given quotients
-of the argument types.
-
-Higher order quotients are also implemented in the Isabelle/HOL system
-\cite{NiPaWe02},
-using \quotient{} relations represented as a type class,
-with equivalence relations as a subclass
-\cite{Slo97}.
-That system provides a definitional framework for establishing quotient
-types, including higher order, but provides little automatic support.
-In particular, there is
-no automatic lifting of constants or theorems.
+of the
+argument types.
+%types which are arguments of the operator.
 
 The structure of this paper is as follows.  In section \ref{quotientsets}
 we briefly review quotient sets.  In section \ref{quotienttypes} we
@@ -404,10 +397,10 @@ aggregates.
 Section \ref{quotientrelation} describes \quotient{} relations,
 their extension for aggregate and function types,
 the properties of a quotient relationship,
-and conditional quotient theorems
+and quotient extension theorems
 for lifting aggregate and function types.
 %%In particular,
-%The conditional quotient theorem for function types
+%The quotient extension theorem for function types
 %is the heart of higher order quotients, and
 %%its proof is presented
 %is proved
@@ -442,6 +435,7 @@ Finally, our conclusions are presented in section \ref{conclusions}.
 
 We are grateful for the helpful comments and
 suggestions made by
+Rob Arthan,
 Randolph Johnson,
 Sylvan Pinsky,
 Yvonne V. Shashoua,
@@ -504,21 +498,31 @@ This is the set of all equivalence classes modulo $\sim$ of elements in $S$.
 
 
 %
-\section{Quotient Types}
+\section{Equivalence Relations and Equivalence Theorems}
 %
-\label{quotienttypes}
+\label{equivalence}
 
-Now let us reinterpret this for the Higher Order Logic theorem prover,
-whose logic is a type
-theory, rather than a set theory.
-The following definitions and proofs are accomplished within 
-HOL \cite{GoMe93}.
-%and then expressed here in normal notation.
-Let $\tau$ be any type; then a binary relation on $\tau$ can be
-represented in HOL
-as a curried function
+%Quotient sets \cite{End77} are a standard construction of set theory. 
+%%They have found wide application in many areas of mathematics,
+%%including algebra and logic.
+%
+%We reinterpret quotient sets
+%\cite{End77}
+%for the Higher Order Logic theorem prover
+%\cite{GoMe93},
+%whose logic is a type theory, rather than a set theory.
+%
+Before considering quotients, we examine equivalence relations,
+on which such traditional quotients as those mentioned in the introduction
+have been based.
+
+Let $\tau$ be any type.  A binary relation $R$ on $\tau$ can be
+represented in HOL as a curried function
 of type $\tau \rightarrow (\tau \rightarrow \mbox{\tt bool})$.
-Let $E$ be an equivalence relation, which is a binary relation satisfying
+We will take advantage of the curried nature of $R$, where 
+$R\ x\ y = (R\ x)\ y$.
+
+An equivalence relation is a binary relation $E$ satisfying
 $$
 \begin{array}{l@{\hspace{0.6cm}}l@{\hspace{0.3cm}}l}
 \mbox{\it reflexivity:} &
@@ -530,411 +534,23 @@ $$
 \end{array}
 $$
 
-We will take advantage of the curried nature of $E$, where 
-$E\ x\ y = (E\ x)\ y$.
-%
-%
-\begin{definition}
-\label{equiv_class}
-%We define
-The {\it equivalence class\/} of $x:\tau$ ({\it modulo} $E$) is
-$[ x ]_E \defeq  E \ x.$ 
-\end{definition}
-%This is the characteristic function
-%of the corresponding equivalence class of $x$ from set theory.
-%As before, it follows that 
-This is the characteristic function 
-of the $[ x ]_E$ from set theory.
-As before,
-%$$
-%[ x ]_E = [ y ]_E \ \ \Leftrightarrow \ \ E\ x\ y .
-%$$
-
-\begin{lemma}
-\label{ty_REL_equiv}
-$
-%\forall x\ y.\ 
-[ x ]_E = [ y ]_E \ \Leftrightarrow \ E\ x\ y$
-\end{lemma}
-Proof:
-We prove this as a biconditional.
-
-%{\it Case 1.}
-$\Rightarrow$:
-Assume $[ x ]_E = [ y ]_E$, which is $E\ x = E\ y$ by 
-definition \ref{equiv_class}.
-Then $E\ x\ y =
-%(E\ x)\ y = (E\ y)\ y =
-E\ y\ y$,
-which is true by reflexivity.
-
-%{\it Case 2.}
-$\Leftarrow$:
-Conversely,
-assume $E\ x\ y$.
-By symmetry, $E\ y\ x$.
-We must show
-%that
-$[ x ]_E = [ y ]_E$,
-which by definition \ref{equiv_class}
-is $E\ x = E\ y$.
-This is equality between functions, which by extension follows from
-$\forall z.\ E\ x\ z \Leftrightarrow E\ y\ z$.
-%We prove this as
-We split as a biconditional.
-
-{\addtolength{\parindent}{\parindent}
-%{\it Case 1.}
-$\Rightarrow$:
-Assume $E\ x\ z$.
-Since $E\ y\ x$,
-$E\ y\ z$ follows by transitivity.
-
-%{\it Case 2.}
-$\Leftarrow$:
-Assume $E\ y\ z$.
-Since $E\ x\ y$, $E\ x\ z$ follows
-by transitivity.
-$\Box$
-}
-
-\vspace{\topsep}
-\noindent
-Also, any relation $E$ satisfying Lemma 2 is reflexive,
-symmetric, and transitive.
-
-New types may be defined in HOL
-using the function {\tt new\_type\_definition}
-%and {\tt define\_new\_type\_bijections}
-\cite[sections 18.2.2.3-5]{GoMe93}.
-This function requires us to
-%To define a new type in higher order logic, we must
-choose a representing
-type, and a predicate on that type denoting a subset that is nonempty.
-
-We define as a new type the
-{\it quotient type\/} $\tau / E$
-%\mathbin{\sim}$
-by the representing type $\tau \rightarrow \mbox{\tt bool}$, and the
-predicate $P : (\tau \rightarrow \mbox{\tt bool}) \rightarrow \mbox{\tt bool}$
-where
-\begin{definition}
-\label{p_def}
-$
-P \ f  \ \defeq \  \exists x.\ f = [ x ]_E \ .
-$
-\end{definition}
-%\begin{eqnarray*}
-%P \ f & \ \defeq \ & \exists x.\ f = [ x ]_E \ .
-%\end{eqnarray*}
-
-\noindent
-$P$ is nonempty because $P \ [ x ]_E$ for all $x : \tau$.
-Let $\tau' = \tau / E$.
-We then use the HOL tool
-{\tt define\_new\_type\_bijections}
-\cite{GoMe93}, which automatically defines
-%in the HOL logic
-%an abstraction
-%function $\lceil \_ \rceil_c
-%: (\tau \rightarrow \mbox{\tt bool}) \rightarrow  \tau'$
-%and a representation function $\lfloor \_ \rfloor_c
-%: \tau' \rightarrow (\tau \rightarrow \mbox{\tt bool}) $, such that
-%abstraction and representation functions
-a function
-$\lceil \_ \rceil_c
-: (\tau \rightarrow \mbox{\tt bool}) \rightarrow  \tau'$
-and its inverse
-$\lfloor \_ \rfloor_c
-: \tau' \rightarrow (\tau \rightarrow \mbox{\tt bool}) $, such that
-
-\begin{theorem}
-\label{abs_rep_classes}
-$
-(\forall a:\tau'.\ \lceil \, \lfloor a \rfloor_c \rceil_c = a)
-\ \wedge \ 
-(\forall f:\tau \rightarrow \mbox{\tt bool}.\ 
-P\ f \, \Leftrightarrow (\lfloor \, \lceil f \rceil_c \rfloor_c = f)) 
-$
-\end{theorem}
-
-\noindent
-and returns theorem \ref{abs_rep_classes} as its result.
-%These functions are used to create identifiable values of the new type.
-%and to establish their interrelationships.
-%(The `${}_c$' is notation.)
-For this $P$, we can prove:
-\begin{theorem}
-\label{abs_rep_classes_simple}
-$
-(\forall a:\tau'
-.\ \lceil \, \lfloor a \rfloor_c \rceil_c = a)
-\ \wedge \ 
-(\forall r:\tau
-.\ 
-\lfloor \, \lceil \, [ r ]_E \rceil_c \rfloor_c = [ r ]_E ) .
-$
-\end{theorem}
-Proof: 
-The left conjunct comes directly from theorem \ref{abs_rep_classes}.
-Also by that theorem, the right conjunct is equivalent to
-$\forall r.\ P\ [ r ]_E$.
-% !r. (\c. ?r. c = ALPHA r) (ALPHA r)
-Then
-$
-P\ [ r ]_E =
-%P\ (E\ r) =
-(\exists x.\ [ r ]_E = [ x ]_E)
-$
-which is proven true by choosing the witness $x = r$.
-$\Box$
-
-\begin{lemma}[$\lfloor \_ {\rfloor}_c$ maps to equivalence classes]
-\label{ty_REP_REL}
-$\forall a.\ \exists r.\ \lfloor a {\rfloor}_c = [ r ]_E$
-\end{lemma}
-Proof:
-By the left clause of theorem \ref{abs_rep_classes},
-$ \lceil \, \lfloor a {\rfloor}_c {\rceil}_c = a$, so taking
-the $\lfloor \_ {\rfloor}_c$ of both sides,
-$\lfloor \, \lceil \, \lfloor a {\rfloor}_c {\rceil}_c {\rfloor}_c
-= \lfloor a {\rfloor}_c$.
-By the right clause of theorem \ref{abs_rep_classes}, this implies
-$P\ \lfloor a {\rfloor}_c$.
-By the definition of $P$, this is the goal.
-$\Box$
-
-\begin{lemma}[$\lceil \_ {\rceil}_c$ is one-to-one]
-\label{ty_ABS_11}
-$\forall x\ y.\ 
-\lceil \, [ x ]_E {\rceil}_c = \lceil \, [ y ]_E {\rceil}_c
-\ \Leftrightarrow \ [ x ]_E = [ y ]_E$
-\end{lemma}
-Proof: We will prove this as a biconditional.
-
-%{\it Case 1.}
-$\Rightarrow$:
-Assume $\lceil \, [ x ]_E {\rceil}_c = \lceil \, [ y ]_E {\rceil}_c$.
-Applying the function $\lfloor \_ {\rfloor}_c$ to
-%Taking the representative ($\lfloor \_ {\rfloor}_c$) of
-both sides gives us
-$\lfloor \, \lceil \, [ x ]_E {\rceil}_c {\rfloor}_c =
-\lfloor \, \lceil \, [ y ]_E {\rceil}_c {\rfloor}_c$.
-By the right clause of theorem \ref{abs_rep_classes_simple},
-$[ x ]_E = [ y ]_E $.
-% which is the goal.
-
-%{\it Case 2.}
-$\Leftarrow$:
-Assume $[ x ]_E = [ y ]_E $. 
-%Then the goal is immediate.
-Then
-applying
-$\lceil \_ {\rceil}_c$
-to both sides yields the goal,
-$\lceil \, [ x ]_E {\rceil}_c = \lceil \, [ y ]_E {\rceil}_c$.
-$\Box$
-
-\vspace{\topsep}
-The functions
-$\lceil \_ \rceil_c$ and $\lfloor \_ \rfloor_c$
-map between equivalence classes of type
-$\tau \rightarrow \mbox{\tt bool}$ and the quotient type $\tau'$.
-Using these functions, we can define new functions
-$\lceil \_ \rceil$ and $\lfloor \_ \rfloor$
-between the original
-type $\tau$ and the quotient type $\tau'$ as follows.
-\begin{definition}[Quotient maps]
-\label{abs_rep_def}
-$$
-\begin{array}[t]{c@{\hspace{0.1cm}}c@{\hspace{0.1cm}}l@{\hspace{1.0cm}}rcl}
-\lceil \_ \rceil & : & \tau \rightarrow \tau' &
-\lceil x \rceil  & \ \defeq \ & 
-\lceil \, [ x ]_E \rceil_c  \ \ \ ( \ = \ \ 
-\lceil E \ x \rceil_c \ )  \\
-\lfloor \_ \rfloor & : & \tau' \rightarrow \tau  &
-\lfloor  a \rfloor   & \ \defeq \ & 
-\mbox{\tt \$@} \ \lfloor a \rfloor_c \ \ \ ( \ = \ \ 
-\mbox{\tt @}x.\ \lfloor a \rfloor_c \ x \ \ = \ \ 
-\mbox{\tt @}x.\ ( [ x ]_E = \lfloor a \rfloor_c ) \ )
-\end{array}
-$$
-\end{definition}
-
-The {\tt @} operator, which is here used as a prefix unary operator {\tt \$@},
-is a higher order version of Hilbert's choice operator $\varepsilon$
-\cite{GoMe93}.
-It has type $(\alpha \rightarrow \mbox{\tt bool}) \rightarrow \alpha$,
-%{\tt ('a -> bool) -> 'a},
-and is usually used as a binder,
-where
-%the two syntaxes are related by
-$\mbox{\tt \$@}\ t = \mbox{\tt @}x.\ t\ x$.
-Given a predicate $Q$ on a type,
-if any element of the type satisfies the predicate, 
-then $\mbox{\tt \$@}\ Q$ returns an arbitrary element of
-that type which satisfies $Q$.
-If no element of the type satisfies $Q$,
-then $\mbox{\tt \$@}\ Q$ will return simply some unknown,
-arbitrary element of the type.
-The axiom in HOL about the behavior of {\tt @} is
-$\forall t\ x.\ t\ x \Rightarrow t\ (\mbox{\tt \$@}\ t)$.
-In the definition above, it selects some arbitrary representative $x$ such
-that the equivalence class of $x$ is the class representating $a$.
-
-%\begin{lemma}
-%\label{type_exists}
-%$\exists c.\ P\ c$
-%\end{lemma}
-%Proof: Let $x$ be a value of type {\tt ty}. 
-%Then choose $c = \mbox{\it E\/}\ x$,
-%and then $P\ c = P\ ( \mbox{\it E\/}\ x ) = 
-%     (\exists r : {\tt ty}.\ {\it E\/}\ x = \mbox{\it E\/}\ r)$.
-%Then choose $r = x$.
-
-\begin{lemma}
-\label{ty_REL_SELECT_REL}
-$\forall r.\ [ \, \mbox{\tt \$@} \ [ r ]_E \, ]_E = [ r ]_E$
-\end{lemma}
-Proof:
-The axiom for the {\tt @} operator is
-$\forall t\ x.\ t\ x \Rightarrow t\ (\mbox{\tt \$@}\ t)$.
-Taking $t = E\ r$ and $x = r$, we have
-$E\ r\ r \Rightarrow E\ r\ (\mbox{\tt \$@}\ E\ r)$.
-But $E\ r\ r$ by reflexivity, so by modus ponens,
-$E\ r\ (\mbox{\tt \$@} \ (E\ r))$.
-%By lemma
-%\ref{ty_REL_SELECT} and symmetry, $E\ (\mbox{\tt \$@} \ (E\ r))\ r$.
-Then
-by lemma \ref{ty_REL_equiv},
-$[ r ]_E = [ \mbox{\tt \$@} \ (E\ r) ]_E$, from which the goal follows
-by definition \ref{equiv_class}.
-$\Box$
-
-\begin{theorem}
-\label{ty_ABS_REP}
-$\forall a.\ \lceil \, \lfloor a \rfloor \, \rceil = a$
-\end{theorem}
-Proof:
-By lemma \ref{ty_REP_REL}, there exists an $r$ such that
-$\lfloor a {\rfloor}_c = [ r ]_E$.  Then
-$$
-\begin{array}{rcl@{\hspace{2.0cm}}r}
-\lceil \, \lfloor a \rfloor \, \rceil
-& \ = \ &
-\lceil \, [ \, \mbox{\tt \$@} \ \lfloor a {\rfloor}_c \, ]_E {\rceil}_c  
-& \mbox{definition \ref{abs_rep_def}}  \\
-& \ = \ &
-\lceil \, [ \, \mbox{\tt \$@} \ [ r ]_E \, ]_E {\rceil}_c  
-& \mbox{selection of $r$}  \\
-%& \ = \ &
-%\lceil \, [ \, \mbox{\tt \$@} \ (E\ r) \, ]_E {\rceil}_c  
-%& \mbox{definition \ref{equiv_class}}  \\
-& \ = \ &
-\lceil \, [ r ]_E {\rceil}_c  
-& \mbox{lemma \ref{ty_REL_SELECT_REL}}  \\
-& \ = \ &
-\lceil \, \lfloor a {\rfloor}_c {\rceil}_c  
-& \mbox{selection of $r$}  \\
-& \ = \ &
-a 
-& \mbox{theorem \ref{abs_rep_classes}}  \\
-\Box \hfill & & &
-\end{array}
-$$
-
-
-\begin{theorem}
-\label{equiv_ty_ABS}
-$\forall r\ r'.\ \ E\ r\ r' \ \Leftrightarrow \ 
-(\lceil r \rceil = \lceil r' \rceil)$
-\end{theorem}
-Proof:
-$
-\begin{array}[t]{rcl@{\hspace{2.0cm}}r}
-E\ r\ r'
-& \ \Leftrightarrow \ &
-[ r ]_E = [ r' ]_E
-& \mbox{lemma \ref{ty_REL_equiv}}  \\
-& \ \Leftrightarrow \ &
-\lceil \, [ r ]_E {\rceil}_c = \lceil \, [ r' ]_E {\rceil}_c 
-& \mbox{lemma \ref{ty_ABS_11}}  \\
-%& \ \Leftrightarrow \ &
-% \lceil E\ r {\rceil}_c = \lceil E\ r' {\rceil}_c 
-%& \mbox{definition \ref{equiv_class}}  \\
-& \ \Leftrightarrow \ &
-\lceil r \rceil = \lceil r' \rceil 
-& \mbox{definition \ref{abs_rep_def}}  \\
-\Box \hfill & & &
-\end{array}
-$
-
-%Because $\lfloor \_ {\rfloor}_c$ is one-to-one,
-%$\forall a\ a'.\ (\lfloor a {\rfloor}_c = \lfloor a' {\rfloor}_c) = (a = a')$,
-%so the goal is equivalent to
-%$$
-%E\ r\ r' =
-%  (\lfloor \, \lceil r \rceil \, {\rfloor}_c =
-%   \lfloor \, \lceil r' \rceil \, {\rfloor}_c)
-%$$
-%By definition \ref{abs_rep_def}, the goal is
-%$$
-%E\ r\ r' =
-%  (\lfloor \, \lceil E\ r {\rceil}_c \, {\rfloor}_c =
-%   \lfloor \, \lceil E\ r' {\rceil}_c \, {\rfloor}_c)
-%$$
-%By theorem \ref{abs_rep_classes_simple}, this simplifies to
-%$$
-%E\ r\ r' =
-%  (E\ r =
-%   E\ r')
-%$$
-%which is proved by lemma
-%\ref{ty_REL_equiv}.
-
-\vspace{\topsep}
-It is significant to note that the combination of theorems
-\ref{ty_ABS_REP}
-and
-\ref{equiv_ty_ABS}
-succinctly express all that is necessary to use the quotient type.
-% and to relate it properly to the original type. 
-These theorems completely characterize
-%the two types and
-the mapping functions between the original and quotient types.
-
-
-%
-\section{Equivalence Relations and Equivalence Theorems}
-%
-\label{equivalence}
-
-The statement that a given binary relation {\it E\/}
-is an equivalence relation
-means that the relation is reflexive, symmetric, and transitive:
-\begin{center}
-\begin{tabular}[t]{l@{\hspace{0.5cm}}l}
-{\it reflexivity} & {\tt |- $\forall$a. {\it E\/} a a} \\
-{\it symmetry} & {\tt |- $\forall$a b. {\it E\/} a b $\Rightarrow$ {\it E\/} b a} \\
-{\it transitivity} & {\tt |- $\forall$a b c. {\it E\/} a b $\wedge$
-			 {\it E\/} b c $\Rightarrow$ {\it E\/} a c}
-\end{tabular}
-\end{center}
-
-These three properties can be encompassed in
+These three properties are encompassed in
 %one, which we call
 the {\it equivalence property:}
-\begin{center}
-\begin{tabular}[t]{l@{\hspace{0.5cm}}l@{\hspace{1.5cm}}}
-{\it equivalence} &
-{\tt |- $\forall$x y. {\it E} x y $\Leftrightarrow$ ({\it E} x = {\it E} y)}
-\end{tabular}
-\end{center}
+$$
+%\begin{array}[t]{l@{\hspace{0.5cm}}l@{\hspace{1.5cm}}}
+\begin{array}[t]{l@{\hspace{0.6cm}}l@{\hspace{0.3cm}}}
+\mbox{\it equivalence:} &
+\mbox{\tt EQUIV}\ E \ \defeq \ 
+\forall x\ y :\tau.\ E\ x\ y \ \Leftrightarrow \ (E\ x = E\ y)
+\end{array}
+$$
 
 \noindent
-{\it E\/} is a curried function of type {\tt ty -> ty -> bool}. 
-{\it E\/} may be either a constant or an expression.
-Such a theorem is called an {\it equivalence theorem\/} on type {\tt ty}.
+A theorem of the form
+$\vdash$ {\tt EQUIV} $E$
+%($E : \tau$ {\tt ->} $\tau$ {\tt -> bool})
+is called an {\it equivalence theorem\/} on type $\tau$.
 
 Given an equivalence theorem, we can obtain the reflexive, symmetric,
 and transitive properties, or given those three, construct the corresponding
@@ -950,14 +566,24 @@ equivalence theorem, using the following Standard ML functions of our package.
 }
 \end{center}
 
-Given an equivalence relation {\it E\/} on values of type {\tt ty},
-there is a natural extension of {\it E\/} to lists of values of {\tt ty}.
-This is expressed as {\tt LIST\_REL {\it E\/}}, which forms an 
-equivalence relation of type {\tt ty list -> ty list -> bool}.
+%
+\subsection{Equivalence Extension Theorems}
+%
+\label{condequivs}
+
+Given an equivalence relation
+%{\it E\/}{\tt :ty} $\rightarrow$ {\tt ty} $\rightarrow$ {\tt bool}
+$E:\tau \rightarrow \tau \rightarrow \mbox{\tt bool}$
+on values of type $\tau$,
+there is a natural extension of {\it E\/} to values of lists of $\tau$.
+This is expressed as {\tt LIST\_REL\;{\it E\/}},
+which forms an equivalence relation of type
+%{\tt (ty)list} $\rightarrow$ {\tt (ty)list} $\rightarrow$ {\tt bool}.
+$\tau\ \mbox{\tt list} \rightarrow \tau\ \mbox{\tt list} \rightarrow \mbox{\tt bool}$.
 Similarly, equivalence relations on pairs, sums, and options
 may be formed
 %in the HOL logic
-from their constituent equivalence relations by the following operators.
+from their constituent types' equivalence relations by the following operators.
 
 \begin{center}
 \framebox{
@@ -980,13 +606,7 @@ option\ \ & {\tt OPTION\_REL : } & {\tt ('a -> 'a -> bool) ->} \\
 \end{center}
 
 These operators are defined
-as indicated below
-%in the obvious way
-%either in standard HOL or
-in
-{\tt quotientTheory},
-%an HOL theory provided.
-a theory in this package.
+as indicated below.
 
 \begin{definition}
 \label{listrel}
@@ -1042,28 +662,13 @@ take
 arguments which are the
 equivalence relations for component subtypes, and return
 an equivalence relation for the aggregate type.
-% (see sections \ref{newquotienttype} and \ref{aggregates}).
-% The exception is 
-% the function operator, {\tt ===>},
-% which takes two \quotient{} relations (\S\ref{newquotienttype}).
-% The function operator
-% % requires its arguments to be
-% tests if the two functions are
-% also
-% respectful (see \S\ref{respectfulness});
-% hence, unlike the others,
-% the relation that {\tt ===>} forms is {\it not\/} an equivalence relation.
-% It is listed here for comparison with the other operators, but is
-% only used to form \quotient{} relations, not equivalence relations
-% (see sections \ref{newquotienttype} and \ref{aggregates}).
 
 Since the pair and sum relation operators have two arguments,
 they are infix, whereas the list and option relation operators
 are unary, prefix operators.
 The operator definitions
-%in {\tt quotientTheory}
 may be needed to prove respectfulness
-(see sections \ref{respectfulness}, \ref{polyrespects}).
+(see \S \ref{respectfulness}, \ref{polyrespects}).
 
 Given equivalence theorems for the constituent subtypes, the
 equivalence theorems for the natural extensions to aggregate types (e.g.,
@@ -1091,25 +696,19 @@ the given type {\it ty,} using equality ({\tt =}) as the equivalence relation.
 theorem for the given type {\it ty,}
 which may be a complex type expression with lists, pairs, etc.
 Here {\it equivs} is a list of both equivalence theorems
-for the base types and conditional equivalence theorems for type operators
+for the base types and equivalence extension theorems for type operators
 (see section \ref{condequivs}).
 
-%
-\subsection{Conditional equivalence theorems}
-%
-\label{condequivs}
-
-Conditional equivalence theorems for type operators
+{\it Equivalence extension theorems\/} for type operators
 %as:
 have the form:
 \begin{center}
 \begin{tabular}{rl}
-{\tt |-}& {\tt $\forall$E1 ... En. }  \\
-& {\tt ($\forall$(x:$\alpha_1$) (y:$\alpha_1$). E1 x y $\Leftrightarrow$ (E1 x = E1 y)) $\Rightarrow$}  \\
-%$\wedge$ \ 
-%|- ($\forall$a. {\it abs}({\it rep} a) = a) $\wedge$
-%} \\
-& {\tt ...} \\
+$\vdash$ & {\tt $\forall$E1 ... En. }  \\
+& {\tt ($\forall$(x:$\alpha_1$) (y:$\alpha_1$). E1 x y $\Leftrightarrow$ (E1 x = E1 y)) $\Rightarrow$}
+% \\
+%& {\tt ...} \\
+ {\tt ...} \\
 & {\tt ($\forall$(x:$\alpha_n$) (y:$\alpha_n$). En x y $\Leftrightarrow$ (En x = En y)) $\Rightarrow$}  \\
 & {\tt ($\forall$(x:$(\alpha_1,...,\alpha_n)op$) (y:$(\alpha_1,...,\alpha_n)op$).}  \\
 & \hspace{4mm}
@@ -1121,14 +720,15 @@ have the form:
 \end{center}
 
 Given the type operator $(\alpha_1,...,\alpha_n)op$,
-{\tt OP\_REL}
-%should be
-is
-an operator which takes $n$ arguments,
+{\tt OP\_REL} should be an operator which takes $n$ arguments,
 which are the equivalence relations {\tt E1} through {\tt En}
 on the types $\alpha_1$ through $\alpha_n$,
-and yields an equivalence relation for the type $(\alpha_1,...,\alpha_n)op$.
-The type operators {\tt list},
+%and yields
+yielding
+an equivalence relation for the type $(\alpha_1,...,\alpha_n)op$.
+
+Using the above relation extension operators,
+the aggregate type operators {\tt list},
 {\tt prod},
 {\tt sum}, and
 {\tt option}
@@ -1136,48 +736,46 @@ The type operators {\tt list},
 %{\tt ($\alpha$)option},
 %{\tt ($\alpha,\beta$)prod}, and
 %{\tt ($\alpha,\beta$)sum}
-have the following conditional equivalence theorems in {\tt quotientTheory}.
+have the following equivalence extension theorems:
 
+\vspace{3mm}
+
+\noindent
 {\tt
-\begin{tabbing}
-LIST\_EQUIV: \\
- |- $\forall$R. \=($\forall$x y. R x y $\Leftrightarrow$ (R x = R y)) $\Rightarrow$ \\
-        \>($\forall$x y. LIST\_REL R x y $\Leftrightarrow$ (LIST\_REL R x = LIST\_REL R y)) \\
-\\
-PAIR\_EQUIV: \\
- |- $\forall$R1 R2. \\
-\>
-        ($\forall$x y. R1 x y $\Leftrightarrow$ (R1 x = R1 y)) $\Rightarrow$ \\
-\>
-        ($\forall$x y. R2 x y $\Leftrightarrow$ (R2 x = R2 y)) $\Rightarrow$ \\
-\>
-        ($\forall$x y. (R1 \#\#\# R2) x y $\Leftrightarrow$ ((R1 \#\#\# R2) x = (R1 \#\#\# R2) y)) \\
-\\
-SUM\_EQUIV: \\
- |- $\forall$R1 R2. \\
-\>
-        ($\forall$x y. R1 x y $\Leftrightarrow$ (R1 x = R1 y)) $\Rightarrow$ \\
-\>
-        ($\forall$x y. R2 x y $\Leftrightarrow$ (R2 x = R2 y)) $\Rightarrow$ \\
-\>
-        ($\forall$x y. (R1 +++ R2) x y $\Leftrightarrow$ ((R1 +++ R2) x = (R1 +++ R2) y)) \\
-\\
-OPTION\_EQUIV: \\
- |- $\forall$R. ($\forall$x y. R x y $\Leftrightarrow$ (R x = R y)) $\Rightarrow$ \\
-\>
-        ($\forall$x y. OPTION\_REL R x y $\Leftrightarrow$ (OPTION\_REL R x = OPTION\_REL R y))
-\end{tabbing}
+\begin{tabular}{ll}
+LIST\_EQUIV: &
+ $\vdash \forall E.\ \mbox{\tt EQUIV}\ E  \;\Rightarrow \;\mbox{\tt EQUIV}\;(\mbox{\tt LIST\_REL}\ E)$ \\
+%\\
+PAIR\_EQUIV: &
+ $\vdash \forall E_1\ E_2.\ \mbox{\tt EQUIV}\ E_1  \;\Rightarrow \;
+                            \mbox{\tt EQUIV}\ E_2  \;\Rightarrow \;
+         \mbox{\tt EQUIV}\;(E_1\ \mbox{\tt \#\#\#}\ E_2)$ \\
+% $\vdash \forall E_1\ E_2.$  EQUIV $E_1$  $\Rightarrow$ EQUIV $E_2$ $\Rightarrow$
+%                        EQUIV\;($E_1$ \#\#\# $E_2$) \\
+%\\
+SUM\_EQUIV: \  &
+ $\vdash \forall E_1\ E_2.\ \mbox{\tt EQUIV}\ E_1  \;\Rightarrow \;
+                            \mbox{\tt EQUIV}\ E_2  \;\Rightarrow \;
+         \mbox{\tt EQUIV}\;(E_1\ \mbox{\tt +++}\ E_2)$ \\
+% $\vdash \forall E_1\ E_2.$  EQUIV $E_1$  $\Rightarrow$ EQUIV $E_2$ $\Rightarrow$
+%                        EQUIV\;($E_1$ +++ $E_2$) \\
+%\\
+OPTION\_EQUIV: &
+ $\vdash \forall E.\ \mbox{\tt EQUIV}\ E  \;\Rightarrow \;\mbox{\tt EQUIV}\;(\mbox{\tt OPTION\_REL}\ E)$ \\
+% $\vdash \forall E$.  EQUIV $E$  $\Rightarrow$ EQUIV\;(OPTION\_REL $E$) \\
+\end{tabular}
 }
 
 
 %
-\section{\Quotient{} Relations and Quotient Theorems}
+\section{Partial Equivalence Relations and Quotient Theorems}
 %
 \label{quotientrelation}
 
 In this section we introduce a new definition of the quotient
-relationship, based on {\it \quotient{} relations},
-a related but different concept than equivalence relations.
+relationship, based on {\it \quotient{} relations}
+(PERs), related to but different from equivalence relations.
+%a related but different concept than equivalence relations.
 Every equivalence relation is a \quotient{} relation, but
 not every \quotient{} relation is an equivalence relation.
 An equivalence relation is reflexive, symmetric and transitive,
@@ -1193,18 +791,55 @@ from the domain to the range.
 
 The reason is that not all functions which are elements of the function
 type are {\it respectful\/} of the associated equivalence relations,
-as described in section {\ref{respectfulness}}. 
-For example, given an equivalence relation $E${\tt :ty -> ty -> bool},
-the set of functions from {\tt ty} to {\tt ty} may contain a function
+as described in
+section {\ref{respectfulness}}. 
+For example, given an equivalence relation
+$E:\tau \rightarrow \tau \rightarrow \mbox{\tt bool}$,
+the set of functions from $\tau$ to $\tau$ may contain a function
 $f^?$ where for some $x$ and $y$
-%of type {\tt ty}
+%of type $\tau$
 which are equivalent
-($E\ x\ y$), the results of $f^?$ are not equivalent ($\neg E (f^? x) (f^? y)$).
+($E\ x\ y$), the results of $f^?$ are not equivalent
+($\neg (E\ (f^?\ x)\ (f^?\ y))$).
 Such disrespectful functions cannot be worked with; they do not 
 correspond to any function at the abstract quotient level.
+%
+Suppose instead that $f^?$ did lift. 
+Let $\lceil \phi \rceil$ be the lifted version of $\phi$. 
+As $\lceil f^? \rceil$ is the lifted version of $f^?$,
+it should act just like $f^?$ on its argument, 
+except that it should not consider the lower level details
+that $E$
+%and thus $\lceil \_ \rceil$
+disregards.
+%collapses.
+%obscures. 
+Thus
+%Because we assume that $f^?$ lifts,
+$
+\forall u.\ 
+\lceil f^? \rceil \lceil u \rceil =
+\lceil f^?\ u \rceil $.
+%This means that the lifted version of $f^?$ must act on lifted versions
+%of its argument just as if the original $f^?$ had been applied to the
+%original argument, and the result lifted.
+Then
+certainly
+$\forall u\ v.\ E\ u\ v \Leftrightarrow (\lceil u \rceil = \lceil v \rceil)$,
+and
+because $E\ x\ y$, we must have $\lceil x \rceil = \lceil y \rceil$.
+Applying $\lceil f^? \rceil$ to both sides, 
+$\lceil f^? \rceil \lceil x \rceil = \lceil f^? \rceil \lceil y \rceil$.
+But this implies $\lceil f^?\ x \rceil = \lceil f^?\ y \rceil$,
+which means that $E\ (f^?\ x)\ (f^?\ y)$, which we have said is false,
+a contradiction.
+%
+\begin{comment}
 %Every theorem at the quotient level should correspond to a theorem at
 %the lower level.
-Any equivalence relation $E^2$ for the function type {\tt ty -> ty} would
+Any equivalence relation $E^2$ for the function type
+$\tau \rightarrow \tau$
+would
 have to be reflexive, so we would have $E^2\ f^?\ f^?$.
 %which with $E\ x\ y$ would {\it not\/} imply $E (f^? x) (f^? y)$.
 But this would invalidate
@@ -1214,8 +849,9 @@ But this would invalidate
 %$\forall f_1 f_2\ x.\ E^2 f_1 f_2 \Rightarrow E (f_1\ x) (f_2\ x)$
 %$\forall f_1 f_2\ x\ y.\ E^2 f_1 f_2 \wedge E\ x\ y \Rightarrow
 %$\forall f_1\, f_2\, x\,y.\ E^2 f_1 f_2 \wedge E\ x\ y \Rightarrow E (f_1\ x) (f_2\ y)$,
-$\forall f_1, f_2, x, y.\ E^2 f_1 f_2 \wedge E\ x\ y \Rightarrow E (f_1\ x) (f_2\ y)$,
 %$\forall f, g, x, y.\ E^2 f g \wedge E\ x\ y \Rightarrow E (f\ x) (g\ y)$,
+%$\forall f_1, f_2, x, y.\ E^2 f_1 f_2 \wedge E\ x\ y \Rightarrow E (f_1\ x) (f_2\ y)$,
+$\forall f_1\;f_2\;x\;y.\; E^2 f_1\:f_2 \wedge E\ x\ y \Rightarrow E (f_1\;x) (f_2\;y)$,
 %the lower unlifted version of
 %to be lifted to
 the higher version of which is
@@ -1226,18 +862,27 @@ the higher version of which is
 %$\forall f_1 f_2\ x\ y.\ (f_1 = f_2) \wedge (x = y) \Rightarrow (f_1\ x = f_2\ y)$,
 %$\forall f_1, f_2, x, y.\ (f_1 = f_2) \wedge (x = y) \Rightarrow (f_1\ x = f_2\ y)$,
 %$\forall f_1\,f_2\, x\,y.\ f_1 = f_2 \wedge x = y \Rightarrow f_1\ x = f_2\ y$,
-$\forall f_1, f_2, x, y.\ f_1 = f_2 \wedge x = y \Rightarrow f_1\ x = f_2\ y$,
 %$\forall f, g, x, y.\ f = g \wedge x = y \Rightarrow f\ x = g\ y$,
+%$\forall f_1, f_2, x, y.\ f_1 = f_2 \wedge x = y \Rightarrow f_1\ x = f_2\ y$,
+$\forall f_1\;f_2\;x\;y.\;f_1 = f_2 \wedge x = y \Rightarrow f_1\;x = f_2\;y$,
 which is obviously true.
-Every theorem at the higher level should correspond to a theorem at
-the lower level.
+%Every theorem at the higher level should correspond to a theorem at the lower level.
+%Every provable statement at the higher level should translate to a provable one at the lower level.
+Just as every element of the higher type should translate to at least one
+element at the lower level,
+every true statement at the higher level should translate to a true statement at the lower level.
+But this principle is violated in this case.
+\end{comment}
+Therefore such disrespectful functions cannot be lifted, and
+we must exclude them.  Using \quotient{} relations
+accomplishes this exclusion.
+%Therefore we exclude such disrespectful functions
 %Ordinary function application would be intractable.
-Therefore we exclude such disrespectful functions
 %Therefore such disrespectful functions should be excluded
 %from relations between functions.
-from \quotient{} relations.
 %Hence a \quotient{} relation
 %cannot be fully reflexive if its domain is a function type.
+\begin{comment}
 The resulting
 %\quotient{}
 relation cannot be
@@ -1245,10 +890,11 @@ a true equivalence,
 %an equivalence,
 %an equivalence relation,
 but it could be described as an equivalence relation on the field of
-the relation, where the field is the set of elements which
+the relation, the field being the set of elements which
 are related to any element.
+\end{comment}
 
-First, we say an element $r$ {\it respects\/} {\it R\/} if and only if
+First, we say an element $r$ {\it respects R\/} if and only if
 {\it R\/} {\it r\/} {\it r}.
 
 \begin{definition}[Quotient]
@@ -1259,7 +905,8 @@ with
 %is a {\it \quotient{} relation\/} with respect to
 abstraction function {\it abs\/}
 and representation function {\it rep\/}
-(between the representation type {\tt ty} and the abstraction type {\tt qty})
+(between the representation, lower type $\tau$
+and the abstract, quotient type $\xi$)
 is a {\it quotient}
 (notated as $\langle R$,${\it abs}$,${\it rep} \rangle$)
 if and only if
@@ -1268,15 +915,15 @@ if and only if
 
 \begin{center}
 \begin{tabular}[t]{l@{\hspace{0.5cm}}l}
-%{\it abs is left inverse of rep}
+%{\it rep is right inverse of abs}
 (1)
-& $\forall a:{\tt qty}.$ {\it abs} ({\it rep} $a$) = $a$) \\
+& $\forall a:\xi.$ {\it abs} ({\it rep} $a$) = $a$ \\
 %{\it reflexivity of rep}
 (2)
-& $\forall a:{\tt qty}.$ {\it R\/} ({\it rep} $a$) ({\it rep} $a$) \\
+& $\forall a:\xi.$ {\it R\/} ({\it rep} $a$) ({\it rep} $a$) \\
 %{\it proper equivalence}
 (3)
-& $\forall r,s:{\tt ty}.$
+& $\forall r,s:\tau.$
 {\it R\/} $r$ $s$ $\Leftrightarrow$ 
 {\it R\/} $r$ $r$ $\wedge$
 {\it R\/} $s$ $s$ $\wedge$
@@ -1284,17 +931,19 @@ if and only if
 \end{tabular}
 \end{center}
 
-Property (1) states that {\it abs\/} is the left inverse of {\it rep}.
+Property 1 states that {\it rep\/} is a right inverse of {\it abs}.
 
-Property (2) states that {\it R\/} is reflexive on the range of {\it rep}.
+Property 2 states that
+%{\it R\/} is reflexive on the range of {\it rep}.
+the range of {\it rep} respects {\it R}.
 
-Property (3) states that two elements of {\tt ty} are related by {\it R\/}
+Property 3 states that two elements of $\tau$ are related by {\it R\/}
 if and only if
 each element respects {\it R} and their abstractions are equal.
 
 %Of course, if {\it R\/} is an equivalence relation, then for example
 %it is reflexive on all elements, not only the range of {\it rep}
-%(property (2)). 
+%(property 2). 
 %But the properties here describe a 
 %{\it \quotient{} relation}, which is not the same as an equivalence relation.
 
@@ -1304,11 +953,8 @@ These three properties (1-3) describe the way
 the \quotient{} relation {\it R\/} works together with 
 {\it abs\/} and {\it rep}
 to establish the correct
-quotient relationship between the lower type {\tt ty}
-and the quotient type {\tt qty}.
-% In this case
-%We also say that
-%{\tt qty} is also called a quotient (type).
+quotient relationship between the lower type $\tau$
+and the quotient type $\xi$.
 The precise definition of this quotient relationship
 is a central contribution of this work.
 %This relationship is so important that we give it a special definition:
@@ -1316,77 +962,590 @@ This relationship is defined in the HOL logic as a new predicate:
 {\tt
 \begin{tabbing}
 \hspace{3.5mm}
-  QUOTI\=ENT  (R:'a -> 'a -> bool) (abs:'a -> 'b) (rep:'b -> 'a) = \\
+  QUOTI\=ENT  (R:'a -> 'a -> bool) (abs:'a -> 'b) (rep:'b -> 'a) $\Leftrightarrow$ \\
 \>       ($\forall$a. abs (rep a) = a) $\wedge$ \\
 \>       ($\forall$a. R (rep a) (rep a)) $\wedge$ \\
 \>       ($\forall$r s. R r s $\Leftrightarrow$ R r r $\wedge$ R s s $\wedge$ (abs r = abs s))
 \end{tabbing}}
 
 \noindent
-The relationship that {\it R\/}
-with
-{\it abs\/} and {\it rep}
-%is a \quotient{} relation with respect to
+The relationship that {\it R\/} with {\it abs\/} and {\it rep\/}
 is a quotient is
 %concisely notated as $\langle R$,${\it abs}$,${\it rep} \rangle$, or
 expressed in HOL as
 \begin{center}
 \tt
-|- QUOTIENT {\it R\/} {\it abs\/} {\it rep}
+$\vdash$ QUOTIENT {\it R\/} {\it abs\/} {\it rep} .
 \end{center}
 
 \noindent
 A theorem of this form is called a {\it quotient theorem}.
+The identity is
+$\vdash \langle \mbox{\tt \$=}, \mbox{\tt I}, \mbox{\tt I} \rangle$.
 %They play a central role within this quotient package.
 
+\begin{comment}
+The traditional construction requires the elements of the
+%new
+quotient
+type to be subsets of the original type.
+This definition of quotients only requires them to be isomorphic.
+\end{comment}
+%
 %The above definition is a fundamental revision of the notion of quotients.
-As will be shown in section
-\ref{condquotients},
-these three properties support the inference of a quotient theorem for a 
-function type, given the quotient theorems for the domain and the range.
-This inference is necessary to enable higher order quotients.
+%As will be shown in section \ref{condquotients},
+These three properties support the inference of a quotient theorem for a 
+function type, given quotient theorems for the domain and the range.
+This key inference is central and necessary to enable higher order quotients.
 
 
 %
-\subsection{Aggregate Quotient Theorems}
+\section{Quotient Types}
+%
+\label{quotienttypes}
+
+The user may specify a quotient of a type $\tau$ by a relation $R$
+(written $\tau / R$) by giving
+either a theorem that the relation is an equivalence relation, of the form
+\begin{equation}
+\vdash
+\forall x\ y.\ R\ x\ y \ \Leftrightarrow \ (R\ x = R\ y) \ ,
+\end{equation}
+or one
+%by giving a theorem
+that the relation is a nonempty partial equivalence relation, of the form
+\begin{equation}
+\label{PERinput}
+\vdash
+(\exists x.\ R\ x\ x) \ \wedge \
+(\forall x\ y.\ R\ x\ y \ \Leftrightarrow \
+                R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y)) \ .
+\end{equation}
+
+%
+Alternatively, these theorems may be equivalently expressed as
+$\vdash \mbox{\tt EQUIV}\ R$ or
+$\vdash \mbox{\tt PARTIAL\_EQUIV}\ R$, respectively,
+%These abbreviations are
+defined in
+%the theorems
+{\tt EQUIV\_def}
+and {\tt PARTIAL\_EQUIV\_def}.
+In this section we will develop the second, more difficult case (2).
+The first follows immediately.
+%, where the theorem describes a nonempty partial equivalence relation.
+In the following, $x$, $y$, $r$, $s : \tau$, $c : \tau\rightarrow{\tt bool}$,
+and $a : \tau / R$.
+
+New types may be defined in HOL
+using the function {\tt new\_type\_definition}
+%and {\tt define\_new\_type\_bijections}
+\cite[sections 18.2.2.3-5]{GoMe93}.
+This function requires us to
+%To define a new type in higher order logic, we must
+choose a representing
+type, and a predicate on that type denoting a subset that is nonempty.
+
+\begin{definition}
+\label{quotient_type_def}
+We define the new
+{\it quotient type\/} $\tau / R$
+%\mathbin{\sim}$
+as isomorphic to the subset of
+%by
+the representing type $\tau \rightarrow \mbox{\tt bool}$
+%and
+%selected
+by the
+predicate $P : (\tau \rightarrow \mbox{\tt bool}) \rightarrow \mbox{\tt bool}$,
+where
+$
+P \ c \ \defeq \ \exists x.\ R\ x\ x \wedge (c = R\ x).
+$
+\end{definition}
+
+\noindent
+{\it P\/} is nonempty because $P\ (R\ x)$ for the $x$\,:\,$\tau$
+such that $R\ x\ x$ by (\ref{PERinput}).
+Let $\xi = \tau / R$.
+The HOL tool
+{\tt define\_new\_type\_bijections}
+\cite{GoMe93} automatically defines
+%in the HOL logic
+%an abstraction
+%function $\lceil \_ \rceil_c
+%: (\tau \rightarrow \mbox{\tt bool}) \rightarrow  \xi$
+%and a representation function $\lfloor \_ \rfloor_c
+%: \xi \rightarrow (\tau \rightarrow \mbox{\tt bool}) $, such that
+%abstraction and representation functions
+a function
+%$\lceil \_ \rceil_c
+$\mbox{\it abs}_c :(\tau \rightarrow \mbox{\tt bool}) \rightarrow  \xi$
+and its right inverse
+%$\lfloor \_ \rfloor_c
+$\mbox{\it rep}_c :\xi \rightarrow (\tau \rightarrow \mbox{\tt bool}) $ satisfying
+
+\begin{definition}
+\label{abs_rep_classes}
+$
+%(\forall a:\xi.\ \lceil \, \lfloor a \rfloor_c \rceil_c = a)
+%\ \wedge \ 
+%(\forall f:\tau \rightarrow \mbox{\tt bool}.\ 
+%P\ f \, \Leftrightarrow (\lfloor \, \lceil f \rceil_c \rfloor_c = f)) .
+\begin{array}[t]{ll}
+(\mbox{\rm a})\ & \forall a:\xi.\ {\it abs}_c \ ({\it rep}_c \ a) = a
+%\ \wedge 
+\\
+(\mbox{\rm b}) & \forall c:\tau \rightarrow \mbox{\tt bool}.\ 
+P\ c
+%(\exists x.\ R\ x\ x \wedge (c = R\ x))
+\ \Leftrightarrow \ {\it rep}_c \ ({\it abs}_c \ c) = c
+\end{array}
+$
+\end{definition}
+
+\noindent
+%{\it``PER classes''}
+{\it PER classes\/}
+are subsets of $\tau$ (of type $\tau \rightarrow \mbox{\tt bool}$)
+which satisfy $P$.
+Then ${\it abs}_c$ and ${\it rep}_c$
+map between
+the quotient type $\xi$
+and
+PER classes (hence the ``$c$'').
+
+%\noindent
+%and returns Definition \ref{abs_rep_classes} as its result.
+%These functions are used to create identifiable values of the new type.
+%and to establish their interrelationships.
+%(The `${}_c$' is notation.)
+%
+%For the $P$ of Definition \ref{quotient_type_def}, we can prove:
+%\begin{theorem}
+%\label{abs_rep_classes_simple}
+%$
+%(\forall a
+%%:\xi
+%.\ \lceil \, \lfloor a \rfloor_c \rceil_c = a)
+%\ \wedge \ 
+%(\forall f.\ (\exists x.\ R\ x\ x \wedge f = R\ x) \Leftrightarrow
+%\lfloor \, \lceil \, f  \rceil_c \rfloor_c = f ) .
+%$
+%\end{theorem}
+%Proof: 
+%The left conjunct comes directly from Definition \ref{abs_rep_classes}.
+%Also by that theorem, the right conjunct is equivalent to
+%$\forall r.\ P\ [ r ]_E$.
+%% !r. (\c. ?r. c = ALPHA r) (ALPHA r)
+%Then
+%$
+%P\ [ r ]_E =
+%%P\ (E\ r) =
+%(\exists x.\ [ r ]_E = [ x ]_E)
+%$
+%which is proven true by choosing the witness $x = r$.
+%$\Box$
+
+\begin{lemma}[${\it rep}_c$ maps to PER classes]
+\label{ty_REP_REL}
+$\forall a.\ 
+P\ ({\it rep}_c\ a)$.
+%\exists r.\ R\ r\ r\ \wedge \ {\it rep}_c\ a = R\ r$.
+\end{lemma}
+Proof:
+By
+%the first clause of
+Definition \ref{abs_rep_classes}(a),
+$ {\it abs}_c\ ({\it rep}_c\ a) = a$, so taking
+the ${\it rep}_c$ of both sides,
+$ {\it rep}_c\ ({\it abs}_c\ ({\it rep}_c\ a)) = {\it rep}_c\ a$.
+By
+%the second clause of
+Definition \ref{abs_rep_classes}(b),
+%this implies
+$P\ ({\it rep}_c\ a)$.
+%By the definition of $P$, this is
+%the goal.
+$\Box$
+
+%\begin{corollary}
+%\label{ty_REP_REL_cor}
+%$\forall a.\ 
+%\exists r.\ 
+%R\ r\ r\ \wedge\ {\it rep}_c\ a = R\ r$.
+%%{\it rep}_c\ ({\it abs}_c\ ({\it rep}_c\ a)) = {\it rep}_c\ a$.
+%\end{corollary}
+
+\begin{lemma}
+\label{ty_REP_ABS}
+$\forall r.\ 
+R\ r\ r \Rightarrow
+({\it rep}_c\ ({\it abs}_c\ (R\ r)) = R\ r)$.
+\end{lemma}
+Proof: Assume $R\ r\ r$; then $P\ (R\ r)$. 
+By Definition \ref{abs_rep_classes}(b), the goal follows.
+
+\begin{lemma}[${\it abs}_c$ is one-to-one on PER classes]
+\label{ty_ABS_11}
+\\
+$\forall r\ s.\ 
+R\ r\ r \Rightarrow
+R\ s\ s \Rightarrow
+({\it abs}_c\ (R\ r) = {\it abs}_c\ (R\ s)
+\ \Leftrightarrow \ R\ r = R\ s)$.
+\end{lemma}
+Proof:  Assume $R\ r\ r$ and $R\ s\ s$. 
+%Then $P\ (R\ r)$ and $P\ (R\ s)$
+%by the definition of $P$.
+The right-to-left implication of the biconditional is trivial.
+Assume ${\it abs}_c\ (R\ x) = {\it abs}_c\ (R\ y)$.
+Applying ${\it rep}_c$ to
+both sides gives us
+${\it rep}_c\ ({\it abs}_c\ (R\ x)) = {\it rep}_c\ ({\it abs}_c\ (R\ y))$.
+%By Lemma \ref{ty_REP_REL}, $P$ is true of both sides.
+%$P\ ({\it rep}_c\ ({\it abs}_c (R\ x))$.
+Then by
+%Definition \ref{abs_rep_classes}(b),
+Lemma \ref{ty_REP_ABS} twice, 
+$R\ x = R\ y$.
+$\Box$
+
+\vspace{\topsep}
+The functions
+${\it abs}_c$ and ${\it rep}_c$
+map between PER classes of type
+$\tau \rightarrow \mbox{\tt bool}$ and the quotient type $\xi$.
+Using these functions, we can define new functions
+${\it abs}$ and ${\it rep}$
+between the original
+type $\tau$ and the quotient type $\xi$ as follows.
+\begin{definition}[Quotient abstraction and representation functions]
+\label{abs_rep_def}
+$$
+\begin{array}[t]{c@{\hspace{0.1cm}}c@{\hspace{0.1cm}}l@{\hspace{1.0cm}}rcl}
+{\it abs} & : & \tau \rightarrow \xi &
+{\it abs}\ r & \ \defeq \ & 
+{\it abs}_c\ (R\ r)  \\
+{\it rep} & : & \xi \rightarrow \tau  &
+{\it rep}\ a  & \ \defeq \ & 
+\mbox{\tt \$@} \ ({\it rep}_c\ a)\ \ ( \ = \ 
+\mbox{\tt @}r.\ {\it rep}_c\ a \ r
+%\ = \ \mbox{\tt @}x.\ ( R\ x = {\it rep}_c\ a )
+\ )
+\end{array}
+$$
+\end{definition}
+
+The {\tt @} operator
+%which is here used as a prefix unary operator {\tt \$@},
+is a higher order version of Hilbert's choice operator $\varepsilon$
+\cite{GoMe93,Lei69}.
+It has type $(\alpha \rightarrow \mbox{\tt bool}) \rightarrow \alpha$,
+%{\tt ('a -> bool) -> 'a},
+and is usually used as a binder,
+where
+%the two syntaxes are related by
+$\mbox{\tt \$@}\ P = \mbox{\tt @}x.\ P\ x$.
+(The {\tt \$} converts an operator to prefix syntax.)
+%The axiom in HOL about the behavior of {\tt @} is
+{\tt @} satisfies the HOL axiom
+$\forall P\ x.\ P\ x \Rightarrow P\ (\mbox{\tt \$@}\ P)$.
+Given any predicate $P$ on a type,
+%(not confused with Definition \ref{quotient_type_def}),
+if any element of the type satisfies the predicate, 
+then $\mbox{\tt \$@}\ P$ returns an arbitrary element of
+that type which satisfies $P$.
+If no element of the type satisfies $P$,
+then $\mbox{\tt \$@}\ P$ will return simply some
+arbitrary,
+unknown
+element of the type.
+%
+%In the definition above, {\tt @}
+%selects some arbitrary representative $x$ such
+%that the equivalence class of $x$ is the class representating $a$.
+%
+Such definitions
+have been questioned by constructivist critics of the Axiom of Choice.
+%are controversial.
+An alternative design for quotients avoiding
+%the Hilbert choice operator and
+the Axiom of Choice
+is described in section \ref{axiomofchoice}.
+
+%\begin{lemma}
+%\label{type_exists}
+%$\exists c.\ P\ c$
+%\end{lemma}
+%Proof: Let $x$ be a value of type {\tt ty}. 
+%Then choose $c = \mbox{\it E\/}\ x$,
+%and then $P\ c = P\ ( \mbox{\it E\/}\ x ) = 
+%     (\exists r : {\tt ty}.\ {\it E\/}\ x = \mbox{\it E\/}\ r)$.
+%Then choose $r = x$.
+
+\begin{lemma}
+\label{ty_REL_SELECT_REL}
+$\forall r.\ 
+R\ r\ r \Rightarrow
+(R\ (\mbox{\tt \$@} \ (R\ r)) = R\ r)$.
+\end{lemma}
+Proof:
+The axiom for the {\tt @} operator is
+$\forall P\ x.\ P\ x \Rightarrow P\ (\mbox{\tt \$@}\ P)$.
+Taking $P = R\ r$ and $x = r$, we have
+$R\ r\ r \Rightarrow R\ r\ (\mbox{\tt \$@}\ R\ r)$.
+Assuming $R\ r\ r$,
+$R\ r\ (\mbox{\tt \$@} \ (R\ r))$ follows.
+%By lemma
+%\ref{ty_REL_SELECT} and symmetry, $R\ (\mbox{\tt \$@} \ (R\ r))\ r$.
+Then
+by (\ref{PERinput}),
+%since $R\ x\ y \Leftrightarrow R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y)$
+%(the partial equivalence property for $R$),
+$R\ r\ (\mbox{\tt \$@} \ (R\ r))$ implies the equality
+$R\ r = R\ (\mbox{\tt \$@} \ (R\ r))$.
+$\Box$
+
+\begin{theorem}
+\label{ty_ABS_REP}
+$\forall a.\ {\it abs}\ ({\it rep}\ a) = a$
+\end{theorem}
+Proof:
+By Lemma \ref{ty_REP_REL}
+ and the definition of $P$,
+%By Corollary \ref{ty_REP_REL_cor},
+for each $a$
+there exists an $r$ such that
+$R\ r\ r$ and ${\it rep}_c\ a = R\ r$. 
+Then
+by Lemma \ref{ty_REL_SELECT_REL}, $R\ (\mbox{\tt \$@} \ (R\ r)) = R\ r$.
+%which is equivalent to $R\ (\mbox{\tt \$@}\ ({\it rep}_c\ a) = {\it rep}_c\ a$.
+Now by Definition \ref{abs_rep_def}, ${\it abs}\ ({\it rep}\ a) =
+{\it abs}_c\ (R\ (\mbox{\tt \$@}\ ({\it rep}_c\ a)))$,
+which simplifies by the above and Definition \ref{abs_rep_classes}(a)
+to $a$. $\Box$
+%equivalent to ${\it abs}_c\ ({\it rep}_c\ a)$,
+%which by Definition \ref{abs_rep_classes} is simply $a$.
+\begin{comment}
+$$
+\begin{array}{rcl@{\hspace{2.0cm}}r}
+{\it abs}\ ({\it rep}\ a)
+%\lceil \, \lfloor a \rfloor \, \rceil
+& \ = \ &
+{\it abs}_c\ (R\ (\mbox{\tt \$@}\ ({\it rep}_c\ a)))
+%\lceil \, [ \, \mbox{\tt \$@} \ \lfloor a {\rfloor}_c \, ]_E {\rceil}_c  
+& \mbox{Definition \ref{abs_rep_def}}  \\
+& \ = \ &
+{\it abs}_c\ (R\ (\mbox{\tt \$@}\ (R\ r)))
+%\lceil \, [ \, \mbox{\tt \$@} \ [ r ]_E \, ]_E {\rceil}_c  
+& \mbox{selection of $r$}  \\
+& \ = \ &
+{\it abs}_c\ (R\ r)
+& \mbox{Lemma \ref{ty_REL_SELECT_REL} and $R\ r\ r$}  \\
+& \ = \ &
+{\it abs}_c\ ({\it rep}_c\ a)
+\ = \ a
+%& \mbox{selection of $r$}  \\
+%& \ = \ &
+%a 
+& \mbox{selection of $r$,} \ 
+  \mbox{Definition \ref{abs_rep_classes}(a)}  \\
+\Box \hfill & & &
+\end{array}
+$$
+\end{comment}
+
+\begin{theorem}
+\label{rep_respects}
+$\forall a.\ R\ ({\it rep}\ a)\ ({\it rep}\ a)$.
+\end{theorem}
+Proof:
+As before,
+%in Theorem \ref{ty_ABS_REP},
+%By Lemma \ref{ty_REP_REL} and the definition of $P$,
+%By Corollary \ref{ty_REP_REL_cor},
+for each $a$
+there exists an $r$ such that
+$R\ r\ r$ and ${\it rep}_c\ a = R\ r$. 
+%Then
+%by Definition \ref{abs_rep_def},
+%$R\ ({\it rep}\ a)\ ({\it rep}\ a)$
+%is $R\ (\mbox{\tt \$@}\ ({\it rep}_c\ a))\ (\mbox{\tt \$@}\ ({\it rep}_c\ a))$,
+%which is $R\ (\mbox{\tt \$@}\ (R\ r))\ (\mbox{\tt \$@}\ (R\ r))$,
+%which by Lemma \ref{ty_REL_SELECT_REL} twice,
+%using the symmetry of $R$, is $R\ r\ r$, true.
+%
+$$
+\begin{array}[t]{rcl@{\hspace{0.5cm}}r}
+R\ (\mbox{\it rep}\ a)\ (\mbox{\it rep}\ a)
+& \ \Leftrightarrow \ &
+R\ (\mbox{\tt \$@}\ (\mbox{\it rep}_c\ a))\ (\mbox{\tt \$@}\ (\mbox{\it rep}_c\ a))
+& \mbox{Definition \ref{abs_rep_def}}  \\
+& \ \Leftrightarrow \ &
+R\ (\mbox{\tt \$@}\ (R\ r))\ (\mbox{\tt \$@}\ (R\ r))
+& \mbox{selection of $r$}  \\
+& \ \Leftrightarrow \ &
+R\ r\ (\mbox{\tt \$@}\ (R\ r))
+& \mbox{Lemma \ref{ty_REL_SELECT_REL}}  \\
+& \ \Leftrightarrow \ &
+R\ (\mbox{\tt \$@}\ (R\ r))\ r
+& \mbox{symmetry of $R$}  \\
+& \ \Leftrightarrow \ &
+R\ r\ r \ \Leftrightarrow \ T
+& \mbox{Lemma \ref{ty_REL_SELECT_REL}, selection of $r$}  \\
+\Box \hfill & & &
+\end{array}
+$$
+%$\Box$
+
+\begin{theorem}
+\label{equiv_ty_ABS}
+$\forall r\ s.\ \ R\ r\ s \ \Leftrightarrow \ 
+R\ r\ r\ \wedge \ R\ s\ s\ \wedge \ 
+({\it abs}\ r = {\it abs}\ s)$
+\end{theorem}
+Proof:
+$
+\begin{array}[t]{rcl@{\hspace{0.6cm}}r}
+R\ r\ s
+& \ \Leftrightarrow \ &
+R\ r\ r \ \wedge\ R\ s\ s \ \wedge\ (R\ r = R\ s)
+& \mbox{(\ref{PERinput})}  \\
+& \ \Leftrightarrow \ &
+R\ r\ r \ \wedge\ R\ s\ s \ \wedge\ 
+({\it abs}_c\ (R\ r) = {\it abs}_c\ (R\ s))
+& \mbox{Lemma \ref{ty_ABS_11}}  \\
+%& \ \Leftrightarrow \ &
+% \lceil E\ r {\rceil}_c = \lceil E\ s {\rceil}_c 
+%& \mbox{Definition \ref{equiv_class}}  \\
+& \ \Leftrightarrow \ &
+R\ r\ r \ \wedge\ R\ s\ s \ \wedge\ 
+({\it abs}\ r = {\it abs}\ s)
+& \mbox{Definition \ref{abs_rep_def}}  \\
+\Box \hfill & & &
+\end{array}
+$
+
+%Because $\lfloor \_ {\rfloor}_c$ is one-to-one,
+%$\forall a\ a'.\ (\lfloor a {\rfloor}_c = \lfloor a' {\rfloor}_c) = (a = a')$,
+%so the goal is equivalent to
+%$$
+%E\ r\ r' =
+%  (\lfloor \, \lceil r \rceil \, {\rfloor}_c =
+%   \lfloor \, \lceil r' \rceil \, {\rfloor}_c)
+%$$
+%By Definition \ref{abs_rep_def}, the goal is
+%$$
+%E\ r\ r' =
+%  (\lfloor \, \lceil E\ r {\rceil}_c \, {\rfloor}_c =
+%   \lfloor \, \lceil E\ r' {\rceil}_c \, {\rfloor}_c)
+%$$
+%By Theorem \ref{abs_rep_classes_simple}, this simplifies to
+%$$
+%E\ r\ r' =
+%  (E\ r =
+%   E\ r')
+%$$
+%which is proved by Lemma \ref{ty_REL_equiv}.
+
+\begin{theorem}
+\label{quotientthm}
+$\langle R,\ {\it abs},\ {\it rep} \rangle$.
+\end{theorem}
+Proof:
+By Theorems \ref{ty_ABS_REP},
+\ref{rep_respects},
+and
+\ref{equiv_ty_ABS}, with Definition
+\ref{quotientdef}.
+$\Box$
+
+
+%
+\section{Aggregate and Higher Order Quotient Theorems}
+%
+\label{extensions}
+
+Traditional quotients that lift $\tau$ to a set of $\tau$ also
+lift lists of $\tau$ to sets of lists of $\tau$. 
+These sets are isomorphic to lists, but {\it they are not lists}.
+In this design, when $\tau$ is lifted to $\xi$, then 
+we lift lists of $\tau$ to lists of $\xi$.
+We preserve the type operator structure built on top of the
+types being lifted.  Similarly, we want to preserve polymorphic constants.
+Thus we need not create a new type for each lifted version of lists,
+but simply reuse the existing list type operator, now applied to $\xi$. 
+This preserves the type structure and enables direct use
+of the polymorphic constants of that type operator, such as 
+{\tt HD} for lists.
+In a theorem being lifted, we want an occurrence of
+$\mbox{\tt HD} : \tau\ \mbox{\tt list} \rightarrow \tau$
+to lift to an occurrence of
+$\mbox{\tt HD} : \xi\ \mbox{\tt list} \rightarrow \xi$.
+%This motivated the design choice in
+%This is vital.
+If such a constant is not lifted to itself, the lifted version
+of the theorem will not look like the original.
+Hence Definition \ref{quotientdef} was
+intentionally
+designed
+to preserve the vital type operator structure.
+%so that $\tau$ could lift to any $\xi'$ isomorphic to $\xi$.
+
+\begin{comment}
+\end{comment}
+At times one wishes to not only lift a number of types across a
+quotient operation, but also lift by extension a number of other
+types which are dependent on the first set.  For example, if we
+lift the type of terms of the lambda calculus across alpha-equivalence,
+then we would also expect that the types of lists or pairs involving
+the lifted terms would follow naturally.
+
+In fact these do follow; one merely has to apply the type
+operator, say {\tt list}, to the lifted type {\tt term} to produce
+the type of lists of lifted terms {\tt (term)list}.  All of the
+theorems about lists in general now apply to lists of lifted terms,
+and all of the theorems about lifted terms apply to the elements of
+these lifted lists.
+\begin{comment}
+\end{comment}
+
+%However, we will see that within the {\tt define\_quotient\_types} function,
+In the process of lifting constants and theorems,
+quotient theorems are needed for each
+argument and result type
+%subtype of the type
+of each constant being lifted.
+%where each type involved is a subtype of the type of the constant.
+%either the type of a parameter or the type of the result.
+For aggregate and higher order types,
+the tool automatically proves any needed quotient theorems
+%for the types
+from the available quotient theorems for the 
+constituent subtypes. 
+To accomplish this, the tool uses {\it quotient extension theorems\/}
+(section \ref{condquotients}). 
+These are provided preproven for some standard type operators.
+For others,
+%new types that the user may declare,
+new quotient extension theorems may be manually proven and then
+included to extend the tool's power.
+%to handle the new types.
+\begin{comment}
+\end{comment}
+
+%This section discusses the creation
+%%and manipulation
+%of these quotient
+%theorems for aggregate types. 
+
+%
+\subsection{Aggregate and Higher Order PERs and Map Operators}
 %
 \label{aggregates}
 
-%At times one wishes to not only lift a number of types across a
-%quotient operation, but also lift by extension a number of other
-%types which are dependent on the first set.  For example, if we
-%lift the type of terms of the lambda calculus across alpha-equivalence,
-%then we would also expect that the types of lists or pairs involving
-%the lifted terms would follow naturally.
-
-%In fact these do follow; one merely has to apply the type
-%operator, say {\tt list}, to the lifted type {\tt term} to produce
-%the type of lists of lifted terms {\tt (term)list}.  All of the
-%theorems about lists in general now apply to lists of lifted terms,
-%and all of the theorems about lifted terms apply to the elements of
-%these lifted lists.
-
-%However, we will see that within the {\tt define\_quotient\_types} function,
-Quotient theorems are used to control 
-the process of defining lifted constants and lifting theorems.
-A quotient theorem is needed for each type involved in a constant
-being lifted, where each type involved is either the type of a parameter
-or the type of the result.
-For aggregate types,
-the tool automatically proves any needed quotient theorems for the
-aggregate types from the available quotient theorems for the 
-constituent subtypes of the aggregate types. 
-To accomplish this, the tool uses conditional quotient theorems
-(section \ref{condquotients}). 
-These are provided preproven for some standard aggregate type operators.
-For new aggregate types that the user may declare,
-new conditional quotient theorems can be added to extend the tool
-to handle the new aggregate types.
-
-This section discusses the creation
-%and manipulation
-of these quotient
-theorems for aggregate types.  Some aggregate equivalence relation
+Some aggregate equivalence relation
 operators have been already described in section \ref{equivalence}, and
 these can equally be used to build aggregate \quotient{} relations. 
 In addition, for function types, the following is added:
@@ -1402,8 +1561,9 @@ fun & {\tt ===> : } & {\tt ('a -> 'a -> bool) -> ('b -> 'b -> bool) ->} \\
 }
 \end{center}
 
-\noindent
-The definition of the function relation operator is:
+%\noindent
+%The definition of the function relation operator is:
+%
 % related to respectfulness:
 \begin{definition}
 \label{funrel}
@@ -1411,7 +1571,7 @@ $(R_1\ \mbox {\tt ===>} \ R_2)\ f \ g \ \Leftrightarrow \
 \forall x \ y. \ R_1\ x\ y \Rightarrow R_2\ (f\ x)\ (g\ y)$.
 \end{definition}
 %\begin{center}
-%{\tt (R1 ===> R2) f g =
+%{\tt (R1 ===> R2) f g \Leftrightarrow
 %   $\forall$x y. R1 x y $\Rightarrow$ R2 (f x) (g y)}.
 %\end{center}
 
@@ -1429,6 +1589,9 @@ if and only if $f$ is respectful.
 % involved, using the abstraction and representation functions of the
 % constituent subtypes of the aggregate type.
 
+%\begin{verbatim}
+\begin{comment}
+\end{comment}
 To ease the creation of quotient theorems,
 we provide several Standard ML functions that automatically prove the 
 necessary quotient theorems for lists, pairs, sums, options, and function types,
@@ -1453,8 +1616,7 @@ these type operators.
 These functions prove and return quotient theorems,
 of the form
 \begin{center}
-\tt
-|- QUOTIENT {\it R\/} {\it abs\/} {\it rep}
+$\vdash$ {\tt QUOTIENT} {\it R\/} {\it abs\/} {\it rep}
 \end{center}
 %created by
 %as that returned by the function {\tt define\_quotient\_type}
@@ -1487,7 +1649,7 @@ using equality and the identity function,
 %between items of that type.
 
 \begin{center}
-{\tt |- QUOTIENT (\$= : ty -> ty -> bool) (I: ty -> ty) (I: ty -> ty)}
+{\tt $\vdash$ QUOTIENT (\$= : ty -> ty -> bool) (I: ty -> ty) (I: ty -> ty)}
 \end{center}
 
 In case one would need to create a quotient theorem for a complex type,
@@ -1498,6 +1660,9 @@ that type, automatically constructing it recursively
 according to the structure of the type
 and the supplied quotient theorems.
 % for the bases.
+\begin{comment}
+\end{comment}
+%\end{verbatim}
 
 %(*      Type Operator     Constructor   Abstraction      Equivalence   *)
 %(*                                                                     *)
@@ -1509,8 +1674,10 @@ and the supplied quotient theorems.
 %(*  Function (ty1 -> ty2)  (\x. f x)  (rep1 --> abs2)  (rep1 =-> abs2) *)
 %(*  (Strong respect)                                     (R1 ===> R2)  *)
 
-The quotient theorems returned by the aggregate quotient functions
-involve not only the aggregate \quotient{} relation, but also
+The quotient theorems
+created for aggregate types
+%returned by the aggregate quotient functions
+involve not only aggregate \quotient{} relations, but also
 aggregate abstraction and representation functions.  These are constructed
 from the component abstraction and representation functions using the
 following ``map'' operators.
@@ -1550,7 +1717,7 @@ fun & {\tt --> : } & {\tt ('a -> 'b) -> ('c -> 'd) ->} \\
 
 \noindent
 The definitions of the above operators are indicated below. 
-They are created in theory {\tt quotientTheory} or in standard HOL. 
+They are created either in the quotient package or in standard HOL. 
 
 \begin{definition}
 \label{listmap}
@@ -1595,7 +1762,7 @@ function map operator definition is of special interest:
 
 \begin{definition}
 \label{funmap}
-$(f\ \mbox{\tt -->}\ g)\ h\ x \ = \ 
+$(f\ \mbox{\tt -->}\ g)\ h\ x \ \defeq \ 
 g\ (h\ (f\ x))$.
 \end{definition}
 %\begin{center}
@@ -1606,132 +1773,151 @@ g\ (h\ (f\ x))$.
 \noindent
 {\tt MAP} and {\tt OPTION\_MAP} are prefix operators,
 and the others are infix.
+The identity quotient map operator is the identity operator
+$\mbox{\tt I}:\alpha \rightarrow \alpha$.
+%$\mbox{\tt I:'a} \rightarrow \mbox{\tt 'a}$.
 
-The identity quotient map operator is the identity operator {\tt I:'a -> 'a}.
 These map operators are inserted automatically
-in the quotient theorems created by the aggregate quotient functions. 
-Each resulting quotient theorem establishes that the aggregate type's
+in the quotient theorems created
+for extended types.
+%by the extended quotient functions. 
+Each resulting quotient theorem establishes that the extended type's
 \quotient{} relation,
 abstraction function, and representation function properly relate together
-to form a quotient of the appropriate aggregate type.
-The map operator definitions
-%in {\tt quotientTheory}
-may be needed to prove 
-the preservation
-%``definitions''
-of new polymorphic operators (see section \ref{polypreserves}).
+to form a quotient of the
+%appropriate
+extended type.
 
-The key feature of these map operators is that they map a value of the
-given polymorphic type to a value of the same polymorphic type operator,
-but whose component types are of the other level (quotient vs. original).
-Thus {\tt MAP} $f$ takes a list and returns a list, $f_1$ {\tt \#\#} $f_2$
-takes a pair and returns a pair, etc. 
-
-In other designs for quotients, the values at the quotient level
-were considered to be exactly the sets of equivalent values from
-the original level.  So a quotient value corresponding to a list, say, 
-would not be a list but a set of lists.  That approach meant that
-in order to manipulate the quotient versions of lists one would have to
-define new constants to mimic each of the normal list operations like
-{\tt HD}, {\tt TL}, {\tt NIL}, {\tt CONS}, {\tt MAP}, {\tt FOLDR}, and {\tt APPEND},
-but operating on the quotient values.
-We would also need to define functions to translate between these
-``sets that are behaving like lists'' and the true list type. 
-All of this
-would be a tremendous burden and only obfuscate the essential
-structure of the system. 
-
-Rather than this, we take the approach
-that polymorphic type operators are used to form both the original and
-the quotient types from the underlying original and quotient types,
-and that the map functions map between these two applications of the
-same polymorphic type operator, applied to different type arguments from the
-two different levels.
+%The map operator definitions
+%may be needed to prove 
+%the preservation
+%%``definitions''
+%of new polymorphic operators (see
+%section \ref{polypreserves}).
 
 %
-\subsection{Conditional quotient theorems}
+\subsection{Quotient Extension Theorems}
 %
 \label{condquotients}
 
-The
-%{\tt define\_quotient\_types} and
-{\tt make\_quotient}
-function supports the extension of quotients
-over any type operator for which a conditional quotient theorem is 
-included in the first argument of {\tt make\_quotient}.
-%the list of theorems. 
-A conditional quotient theorem
-has antecedents
-which are statements
-that the constituent subtypes
-of the type operator are quotients, and a consequent that states that the 
-extension over the type operator is a quotient.
-Each antecedent has the form of a quotient theorem, but the types involved
-are simple type variables in the HOL logic.
-\begin{center}
-\begin{tabular}{rl}
-{\tt |-}
-& {\tt $\forall$R1 (abs1:$\alpha_1$->$\beta_1$) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ ...} \\
-%& {\tt ...} \\
-& {\tt $\forall$Rn (absn:$\alpha_n$->$\beta_n$) repn. QUOTIENT Rn absn repn $\Rightarrow$} \\
-& {\tt QUOTIENT\;(OP\_REL R1 ... Rn)\;(OP\_MAP abs1 ... absn rep1 ... repn)} \\
-& \hfill {\tt (OP\_MAP rep1 ... repn abs1 ... absn)} \\
-\end{tabular}
-\end{center}
+%%The
+%%%{\tt define\_quotient\_types} and
+%%{\tt make\_quotient}
+%%function supports the extension of quotients
+%%over any type operator for which a quotient extension theorem is 
+%%included in the first argument of {\tt make\_quotient}.
+%%the list of theorems. 
+%A quotient extension theorem
+%has antecedents
+%%which are statements
+%that the constituent subtypes
+%of the type operator are quotients, and a consequent that states that the 
+%extension over the type operator is a quotient.
+%Each antecedent has the form of a quotient theorem, but the types involved
+%are simple type variables in the HOL logic.
+%\begin{center}
+%\begin{tabular}{rl}
+%{\tt |-}
+%& {\tt $\forall$R1 (abs1:$\alpha_1$->$\beta_1$) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ ...} \\
+%%& {\tt ...} \\
+%& {\tt $\forall$Rn (absn:$\alpha_n$->$\beta_n$) repn. QUOTIENT Rn absn repn $\Rightarrow$} \\
+%& {\tt QUOTIENT (OP\_REL R1 ... Rn) (OP\_MAP abs1 ... absn rep1 ... repn)} \\
+%&
+%%\hspace{50mm}
+%\hfill
+%{\tt (OP\_MAP rep1 ... repn abs1 ... absn)} 
+%\end{tabular}
+%\end{center}
+%
+%\noindent
+%%where
+%{\tt OP\_REL} creates a \quotient{} relation for the type operator
+%$(\alpha_1,...,\alpha_n)op$.
+%%as described in section \ref{equivalence}
+%%or earlier in this section for the operator {\tt ===>} for function types,
+%%and
+%%where
+%{\tt OP\_MAP} is a map operator which takes up to $2n$ arguments,
+%%which are
+%taken from
+%%all
+%%either
+%the
+%abstraction and representation functions
+%between the types $\alpha_1$ through $\alpha_n$
+%and $\beta_1$ through $\beta_n$.
+%%respectively,
+%%and,
+%Depending on the order of the arguments, it
+%yields either an abstraction or representation function
+%between
+%%the types
+%$(\alpha_1,...,\alpha_n)op$
+%and $(\beta_1,...,\beta_n)op$.
 
-\noindent
-%where
-{\tt OP\_REL} creates a \quotient{} relation for the type operator
-$(\alpha_1,...,\alpha_n)op$.
-%as described in section \ref{equivalence}
-%or earlier in this section for the operator {\tt ===>} for function types,
-%and where
-{\tt OP\_MAP} is a map operator which takes up to $2n$ arguments,
-%which are all either
-taken from
-the
-abstraction or representation functions
-between the types $\alpha_1$ through $\alpha_n$
-and $\beta_1$ through $\beta_n$.
-Depending on the order of the arguments, it
-yields either an abstraction or representation function
-between
-%the types
-$(\alpha_1,...,\alpha_n)op$
-and $(\beta_1,...,\beta_n)op$.
-
-Here are the conditional quotient theorems for the {\tt list}, {\tt prod},
-{\tt sum}, {\tt option}, and, most significantly, {\tt fun} type operators,
-as found in {\tt quotientTheory}:
+Here are the quotient extension theorems for the {\tt list}, {\tt prod},
+{\tt sum}, {\tt option}, and, most significantly, {\tt fun} type operators:
 
 {\tt \begin{tabbing}
-LIST\=\_QUOTIENT: \\
-\>  |- \=$\forall$R\= \ abs rep. QUOTIENT R abs rep $\Rightarrow$ \\
-\>\>\>   QUOTIENT (LIST\_REL R) (MAP abs) (MAP rep) \\
+LIS\=T\_QUOTIENT: \\
+\>  $\vdash$ \=$\forall R\;$\=${\it abs}\;{\it rep}.\ 
+          \langle R,{\it abs},{\it rep} \rangle \Rightarrow 
+          \langle \mbox{\tt LIST\_REL}\;R,\ 
+            \mbox{\tt MAP}\;{\it abs},\ \mbox{\tt MAP}\;{\it rep} \rangle$ \\
+%\>  $\vdash$ \=$\forall$R\= \ abs rep. QUOTIENT R abs rep $\Rightarrow$ \\
+%\>\>\>   QUOTIENT (LIST\_REL R) (MAP abs) (MAP rep) \\
 \\
 PAIR\_QUOTIENT: \\
-\>  |- $\forall$R1 abs1 rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
-\>\>   $\forall$R2 abs2 rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
-\>\>\>   QUOTIENT (R1 \#\#\# R2) (abs1 \#\# abs2) (rep1 \#\# rep2) \\
+\>  $\vdash$   $\forall R_1\;{\it abs}_1\;{\it rep}_1.\ 
+          \langle R_1,{\it abs}_1,{\it rep}_1 \rangle \Rightarrow \ 
+          \forall R_2\;{\it abs}_2\;{\it rep}_2.\ 
+          \langle R_2,{\it abs}_2,{\it rep}_2 \rangle \Rightarrow $ \\
+\>\>\>   $\langle R_1\;\mbox{\tt \#\#\#}\;R_2,\ 
+            {\it abs}_1\;\mbox{\tt \#\#}\;{\it abs}_2,\ 
+            {\it rep}_1\;\mbox{\tt \#\#}\;{\it rep}_2
+          \rangle$ \\
+%\>  $\vdash$ $\forall$R1 abs1 rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+%\>\>   $\forall$R2 abs2 rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
+%\>\>\>   QUOTIENT (R1 \#\#\# R2) (abs1 \#\# abs2) (rep1 \#\# rep2) \\
 \\
 SUM\_QUOTIENT: \\
-\>  |- $\forall$R1 abs1 rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
-\>\>   $\forall$R2 abs2 rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
-\>\>\>   QUOTIENT (R1 +++ R2) (abs1 ++ abs2) (rep1 ++ rep2) \\
+\>  $\vdash$   $\forall R_1\;{\it abs}_1\;{\it rep}_1.\ 
+          \langle R_1,{\it abs}_1,{\it rep}_1 \rangle \Rightarrow \ 
+          \forall R_2\;{\it abs}_2\;{\it rep}_2.\ 
+          \langle R_2,{\it abs}_2,{\it rep}_2 \rangle \Rightarrow $ \\
+\>\>\>   $\langle R_1\;\mbox{\tt +++}\;R_2,\ 
+            {\it abs}_1\;\mbox{\tt ++}\;{\it abs}_2,\ 
+            {\it rep}_1\;\mbox{\tt ++}\;{\it rep}_2
+          \rangle$ \\
+%\>  $\vdash$ $\forall$R1 abs1 rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+%\>\>   $\forall$R2 abs2 rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
+%\>\>\>   QUOTIENT (R1 +++ R2) (abs1 ++ abs2) (rep1 ++ rep2) \\
 \\
 OPTION\_QUOTIENT: \\
-\>  |- $\forall$R abs rep. QUOTIENT R abs rep $\Rightarrow$ \\
-\>\>\>   QUOTIENT (OPTION\_REL R) (OPTION\_MAP abs) (OPTION\_MAP rep) \\
+\>  $\vdash$   $\forall R\;{\it abs}\;{\it rep}.\ 
+          \langle R,{\it abs},{\it rep} \rangle \Rightarrow $ \\
+\>\>\>   $\langle \mbox{\tt OPTION\_REL}\;R,\ 
+            \mbox{\tt OPTION\_MAP}\;{\it abs},\ \mbox{\tt OPTION\_MAP}\;{\it rep} \rangle$ \\
+%\>  $\vdash$ $\forall$R abs rep. QUOTIENT R abs rep $\Rightarrow$ \\
+%\>\>\>   QUOTIENT (OPTION\_REL R) (OPTION\_MAP abs) (OPTION\_MAP rep) \\
 \\
 FUN\_QUOTIENT: \\
-\>  |- $\forall$R1 abs1 rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
-\>\>   $\forall$R2 abs2 rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
-\>\>\>   QUOTIENT (R1 ===> R2) (rep1 --> abs2) (abs1 --> rep2)
+\>  $\vdash$   $\forall R_1\;{\it abs}_1\;{\it rep}_1.\ 
+          \langle R_1,{\it abs}_1,{\it rep}_1 \rangle \Rightarrow \ 
+          \forall R_2\;{\it abs}_2\;{\it rep}_2.\ 
+          \langle R_2,{\it abs}_2,{\it rep}_2 \rangle \Rightarrow $ \\
+\>\>\>   $\langle R_1\;\mbox{\tt ===>}\;R_2,\ 
+            {\it rep}_1\;\mbox{\tt -->}\;{\it abs}_2,\ 
+            {\it abs}_1\;\mbox{\tt -->}\;{\it rep}_2
+          \rangle$ 
+%\>  $\vdash$ $\forall$R1 abs1 rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+%\>\>   $\forall$R2 abs2 rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
+%\>\>\>   QUOTIENT (R1 ===> R2) (rep1 --> abs2) (abs1 --> rep2)
 \end{tabbing}}
 
-This last theorem is of critical importance to forming higher-order
+This last theorem is of central and critical importance to forming higher order
 quotients. 
-%Here is its proof.
+We present here its proof in detail.
 
 \begin{theorem}[Function quotients]
 \label{funquotient}
@@ -1763,7 +1949,7 @@ is a quotient.
 \end{theorem}
 {\bf Proof:}
 We need to prove the three properties of
-definition \ref{quotientdef}:
+Definition \ref{quotientdef}:
 %in section \ref{quotientrelation}:
 % for $R_1$ {\tt ===>} $R_2$ to be a \quotient{} relation with
 %respect to
@@ -1805,12 +1991,12 @@ Assume $R_1 \ x \ y$, and show $R_2$
 By the definition of {\tt -->}, this is $R_2$
 (${\it rep}_2$ ($a$ (${\it abs}_1$ $x$)))
 (${\it rep}_2$ ($a$ (${\it abs}_1$ $y$))).
-Now since $R_1 \ x \ y$, by property 3 of $\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$,
+Now since $R_1 \ x \ y$, by Property 3 of $\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$,
 ${\it abs}_1$ $x$ = ${\it abs}_1$ $y$.
 Substituting this into our goal, we must prove $R_2$
 (${\it rep}_2$ ($a$ (${\it abs}_1$ $y$)))
 (${\it rep}_2$ ($a$ (${\it abs}_1$ $y$))).
-But this is an instance of property 2 of
+But this is an instance of Property 2 of
 $\langle R_2$,${\it abs}_2$,${\it rep}_2 \rangle$, and
 so the goal is proven.
 
@@ -1836,13 +2022,13 @@ $(1) \Leftrightarrow (2) \wedge (3) \wedge (4)$, where
 \begin{center}
 \begin{tabular}{r@{\hspace{10mm}}l}
 (1) &
-($\forall x,y.\ R_1 \ x \ y \ \Rightarrow$ $R_2$ ($r$ $x$) ($s$ $y$))
+($\forall x\ y.\ R_1 \ x \ y \ \Rightarrow$ $R_2$ ($r$ $x$) ($s$ $y$))
  \\
 (2) &
-($\forall x,y.\ R_1 \ x \ y \ \Rightarrow$ $R_2$ ($r$ $x$) ($r$ $y$))
+($\forall x\ y.\ R_1 \ x \ y \ \Rightarrow$ $R_2$ ($r$ $x$) ($r$ $y$))
 \\
 (3) &
-($\forall x,y.\ R_1 \ x \ y \ \Rightarrow$ $R_2$ ($s$ $x$) ($s$ $y$))
+($\forall x\ y.\ R_1 \ x \ y \ \Rightarrow$ $R_2$ ($s$ $x$) ($s$ $y$))
 \\
 (4) &
 ($\forall x.$ (${\it abs}_2$ ($r$ (${\it rep}_1$ $x$)) =
@@ -1851,7 +2037,6 @@ $(1) \Leftrightarrow (2) \wedge (3) \wedge (4)$, where
 \end{center}
 We prove
 $(1) \Leftrightarrow (2) \wedge (3) \wedge (4)$
-%this
 as a biconditional with two goals.
 %
 %\begin{center}
@@ -1886,7 +2071,7 @@ Assume (1).  Then we must prove (2), (3), and (4).
 
 {\it Subgoal 1.1.} (Proof of (2))
 Assume $R_1$ $x$ $y$.  We must prove $R_2$ ($r$ $x$) ($r$ $y$).
-From $R_1$ $x$ $y$ and property 3 of
+From $R_1$ $x$ $y$ and Property 3 of
 $\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$,
 we also have 
 $R_1$ $x$ $x$ and
@@ -1902,24 +2087,24 @@ Then by symmetry and transitivity of $R_2$, the goal is proven.
 %   ${\it abs}_2$ ($r$ (${\it rep}_1$ $x$)) =
 %   ${\it abs}_2$ ($s$ (${\it rep}_1$ $x$)).
 $R_1$ (${\it rep}_1$ $x$) (${\it rep}_1$ $x$) follows from
-property 2 of 
+Property 2 of 
 $\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$.
 From (1),
 we have
 $R_2$ ($r$ (${\it rep}_1$ $x$)) ($s$ (${\it rep}_1$ $x$)).
-Then the goal follows from this and the third conjunct of property 3 of 
+Then the goal follows from this and the third conjunct of Property 3 of 
 $\langle R_2$,${\it abs}_2$,${\it rep}_2 \rangle$.
 
 {\it Goal 2.} ($\Leftarrow$)
 Assume (2), (3), and (4).  We must prove (1).
-Assume $R_1$ $x$ $y$.  Then we must prove $R_2$ ($r$ $x$) ($s$ $y$).
-From $R_1$ $x$ $y$ and property 3 of 
+Assume $R_1\ x\ y$.  Then we must prove $R_2$ ($r$ $x$) ($s$ $y$).
+From $R_1\,x\ y$ and Property 3 of 
 $\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$,
 we also have 
-$R_1$ $x$ $x$,
-$R_1$ $y$ $y$, and
+$R_1\,x\ x$,
+$R_1\,y\ y$, and
 ${\it abs}_1$ $x$ = ${\it abs}_1$ $y$.
-By property 3 of 
+By Property 3 of 
 $\langle R_2$,${\it abs}_2$,${\it rep}_2 \rangle$,
 the goal is
 $R_2$ ($r$ $x$) ($r$ $x$) $\wedge$
@@ -1949,16 +2134,16 @@ $R$ $z$ $z$, then {\rm $R$ (${\it rep}$ (${\it abs}$ $z$)) $z$}.
 %\end{lemma}
 } \\
 $R$ (${\it rep}$ (${\it abs}$ $z$)) (${\it rep}$ (${\it abs}$ $z$)),
-by property 2 of 
+by Property 2 of 
 $\langle R$,${\it abs}$,${\it rep} \rangle$.
 %We already have
 From the hypothesis,
 $R$ $z$ $z$.
-From property 1 of
+From Property 1 of
 $\langle R$,${\it abs}$,${\it rep} \rangle$,
 \linebreak[3]
 ${\it abs}$~(${\it rep}$ (${\it abs}$ $z$)) = ${\it abs}$ $z$.
-From these three statements and property 3 of
+From these three statements and Property 3 of
 $\langle R$,${\it abs}$,${\it rep} \rangle$,
 we have
 $R$~(${\it rep}$ (${\it abs}$ $z$)) $z$.
@@ -1969,16 +2154,16 @@ $R$~(${\it rep}$ (${\it abs}$ $z$)) $z$.
 %%\end{lemma}
 %} \\
 %$R_1$ (${\it rep}_1$ (${\it abs}_1$ $z$)) (${\it rep}_1$ (${\it abs}_1$ $z$)),
-%by property 2 of 
+%by Property 2 of 
 %$\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$.
 %%We already have
 %From the hypothesis,
 %$R_1$ $z$ $z$.
-%From property 1 of
+%From Property 1 of
 %$\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$,
 %\linebreak[3]
 %${\it abs}_1$~(${\it rep}_1$ (${\it abs}_1$ $z$)) = ${\it abs}_1$ $z$.
-%From these three statements and property 3 of
+%From these three statements and Property 3 of
 %$\langle R_1$,${\it abs}_1$,${\it rep}_1 \rangle$,
 %we have
 %$R_1$~(${\it rep}_1$ (${\it abs}_1$ $z$)) $z$.
@@ -1998,7 +2183,7 @@ Then by (2), we have
 $R_2$~($r$ (${\it rep}_1$ (${\it abs}_1$ $x$))) ($r$ $x$), and
 by (3),
 $R_2$~($s$~(${\it rep}_1$ (${\it abs}_1$ $y$))) ($s$ $y$).
-From these and property 3 of
+From these and Property 3 of
 $\langle R_2$,${\it abs}_2$,${\it rep}_2 \rangle$,
 \begin{center}
 \begin{tabular}{rcl}
@@ -2024,8 +2209,8 @@ $\Box$
 Gregory Moore wrote that ``Rarely have the practitioners of mathematics,
 a discipline known for the certainty of its conclusions, differed so vehemently
 over one of its central premises as they have done over the Axiom of Choice.
-Yet without the Axiom, mathematics today would be quite different.''
-\cite{Moore82}
+Yet without the Axiom, mathematics today would be quite different''
+\cite{Moore82}.
 Today,
 %a hundred years after Zermelo formulated the Axiom of Choice in 1904,
 this discussion continues.
@@ -2036,19 +2221,18 @@ and others on
 %the restrictions of
 a constructivist logic.
 In higher order logic, the Axiom of Choice is represented
-by Hilbert's $\varepsilon$-operator \cite{Lei69},
+by Hilbert's $\varepsilon$-operator \cite[\S4.4]{Lei69},
 also called the indefinite description 
 operator.
-%(\cite{NiPaWe02},\S 5.10).
+%\cite[\S 5.10]{NiPaWe02}.
   Paulson's lucid recent work \cite{LP04} exhibits an approach to quotients
 which avoids the use of Hilbert's $\varepsilon$-operator,
 by
 instead
-using the definite description operator $\iota$
-(\cite{NiPaWe02}, \S 5.10).
-%(\cite{Lei69} ch.IV \S 4.1)
-These two operators may be axiomatized as
-follows:
+using the definite description operator~$\iota$
+\cite[\S 5.10]{NiPaWe02}.
+%\cite[ch.IV \S 4.1]{Lei69}
+These two operators may be axiomatized as follows:
 %\begin{eqnarray*}
 %& \forall P\ x.\ P\ x \Rightarrow P (\varepsilon \ P) &
 %\\
@@ -2075,13 +2259,13 @@ The $\iota$-operator yields the single element of a singleton set,
 $\iota \{z\} = z$, but its result on non-singleton sets is indeterminate.
 By contrast, the $\varepsilon$-operator chooses some
 indeterminate
-element of any non-empty set, even nondenumerable.
+element of any non-empty set, even if nondenumerable.
 %where the particular element chosen is indeterminate.
 %
 %The $\varepsilon$-operator is weaker than the Axiom of Choice, as
 %Leisenring states that ``it does not necessarily follow that the axiom
 %of choice is derivable in a formulization of set theory
-%which is based on the $\varepsilon$-calculus.'' \cite{Lei69}
+%which is based on the $\varepsilon$-calculus'' \cite{Lei69}.
 %Nevertheless,
 The $\iota$-operator is
 %strictly
@@ -2100,22 +2284,25 @@ Inspired by
 %Following
 Paulson,
 we
-investigate this.
+investigate this
+by forming an alternative design,
+eliminating the representation functions.
 %redefine quotients.
 %Inspired by Paulson's work,
 %we can redefine 
 % the definition of
 %quotients as follows.
 
-\begin{definition}[Quotient]
+\begin{definition}[Constructive quotient, replacing Definition \ref{quotientdef}]
 \label{quotientdef_ac}
 %We define that
+\\
 A relation {\it R\/}
 with
 %is a {\it \quotient{} relation\/} with respect to
 abstraction function {\it abs\/}
 % and representation function {\it rep\/}
-(between the representation type {\tt ty} and the abstraction type {\tt qty})
+(between the representation type $\tau$ and the abstraction type $\xi$)
 is a {\it quotient}
 % (notated as $\langle R$,${\it abs}$,${\it rep} \rangle$)
 (notated as $\langle R, {\it abs} \rangle$)
@@ -2127,11 +2314,11 @@ if and only if
 \begin{tabular}[t]{l@{\hspace{0.5cm}}l}
 %{\it existence of rep}
 (1)
-& $\forall a:{\tt qty}.\ \exists r:{\tt ty}.$
+& $\forall a:\xi.\ \exists r:\tau.$
 {\it R\/} $r$ $r$ $\wedge$ ({\it abs\/} $r$ = $a$) \\
 %{\it partial equivalence}
 (2)
-& $\forall r,s:{\tt ty}.$
+& $\forall r\ s:\tau.$
 {\it R\/} $r$ $s$ $\Leftrightarrow$ 
 {\it R\/} $r$ $r$ $\wedge$
 {\it R\/} $s$ $s$ $\wedge$
@@ -2139,64 +2326,75 @@ if and only if
 \end{tabular}
 \end{center}
 
-Property (1) states that for every abstract element $a$ of {\tt qty}
-there is a representative in {\tt ty} which respects {\it R\/} and whose abstraction is $a$.
+Property 1 states that for every abstract element $a$ of $\xi$
+there exists a representative in $\tau$ which respects {\it R\/} and whose abstraction is $a$.
 %and lifts to $a$.
 
-Property (2) states that two elements of {\tt ty} are related by {\it R\/}
+Property 2 states that two elements of $\tau$ are related by {\it R\/}
 if and only if
-each element respects {\it R} and their abstractions are equal.
+each element respects {\it R\/} and their abstractions are equal.
 
-The
-%fundamental
-quotients for new quotient types
-based on equivalence relations may now be
-proven without any use of the Hilbert $\varepsilon$-operator,
-in contrast to definition \ref{abs_rep_def} in \S \ref{quotienttypes}.
-So may the identity quotient for type $\alpha$,
-$\langle \mbox{\tt \$=:}\alpha \rightarrow \alpha \rightarrow {\tt bool},\ 
-\mbox{\tt I:}\alpha \rightarrow \alpha \rangle$.
-From
-%this
-definition \ref{quotientdef_ac}
-also follow analogs of the conditional quotient theorems,
-e.g.,
-%such as
-$$\langle R,\ {\it abs} \rangle \Rightarrow
-\langle {\tt LIST\_REL}\ R,\ {\tt MAP}\ {\it abs} \rangle$$
+The quotients for new quotient types
+based on (partial) equivalence relations may now be
+constructed by a modified version of \S \ref{quotienttypes},
+where the representation function {\it rep\/} is omitted
+from Definition \ref{abs_rep_def}, so there is no
+use of the Hilbert $\varepsilon$-operator.
+Property 1 follows from Lemma \ref{ty_REP_REL}.
+%and Property 2
+%follows from Theorem 
+%\ref{equiv_ty_ABS}, as before.
+%
+The identity quotient is
+$\langle \mbox{\tt \$=},\mbox{\tt I} \rangle$.
+From Definition \ref{quotientdef_ac}
+also follow analogs of the quotient extension theorems, e.g.,
+$$
+\forall R\ \mbox{\it abs}.\ \,
+\langle R,\ \mbox{\it abs} \rangle \Rightarrow
+\langle \mbox{\tt LIST\_REL}\ R,\ \mbox{\tt MAP}\ \mbox{\it abs} \rangle$$
 \noindent
 for lists
 and similarly for pairs, sums and option types. 
 Functions are lifted by
 the abstraction operation for functions, which requires two new definitions:
 \begin{eqnarray*}
-(abs \Downarrow R)\ a\ r \ & \defeq & \ 
-%\lambda a{\mbox{\tt :qty}}.\ 
-%\lambda r{\mbox{\tt :ty}}.\ 
+(abs \repofabs R) \ a \ r \ & \defeq & \ 
 R\ r\ r\ \wedge \ {\it abs}\ r = a
 \\
-(rep \ \mbox{\tt -->} \ abs)\ f\ x \ & \defeq & \ 
-%\lambda f
+(reps \ \mbox{\tt +->} \ abs) \ f \ x \ & \defeq & \ 
+\iota \ ({\tt IMAGE}\ {\it abs}\ ({\tt IMAGE}\ f\ ({\it reps}\ x)))
+\end{eqnarray*}
+%
+\begin{comment}
+\begin{eqnarray*}
+abs \repofabs R \ & \defeq & \ 
+\lambda a{\mbox{\tt :}\xi}.\ 
+\lambda r{\mbox{\tt :}\tau}.\ 
+R\ r\ r\ \wedge \ {\it abs}\ r = a
+\\
+rep \ \mbox{\tt +->} \ abs \ & \defeq & \ 
+\lambda f
 %:\alpha \rightarrow \beta
-%.\ \lambda x.\ 
+.\ \lambda x.\ 
 \iota \ ({\tt IMAGE}\ {\it abs}\ ({\tt IMAGE}\ f\ ({\it rep}\ x)))
 \end{eqnarray*}
+\end{comment}
 
 \noindent
-%Constants are lifted using this abstraction operator {\tt -->}.
-Note that for the identity quotient,
-$(\mbox{\tt I $\Downarrow$ \$=}) = \mbox{\tt \$=}$.
+%Constants are lifted using this abstraction operator {\tt +->}.
+Note that for the identity quotient, $(\mbox{\tt I $\repofabs$ \$=}) = \mbox{\tt \$=}$.
 
-The critical conditional quotient
+The critical quotient extension
 theorem for functions has also been proven:
-\begin{theorem}[Function Conditional Quotient]
+\begin{theorem}[Function quotient extension]
 \label{functionquotient}
 $$
 %\forall R_1\ {\it abs}_1\ R_2\ {\it abs}_2.\ 
   \langle R_1,\ {\it abs}_1 \rangle \Rightarrow
   \langle R_2,\ {\it abs}_2 \rangle \Rightarrow
 \langle R_1 \ \mbox{\tt ===>} \ R_2,\ 
-  ({\it abs}_1 \Downarrow R_1) \ \mbox{\tt -->} \ {\it abs}_2 \rangle$$
+  ({\it abs}_1 \repofabs R_1) \ \mbox{\tt +->} \ {\it abs}_2 \rangle$$
 \end{theorem}
 \noindent
 Unfortunately, the proof requires using the Axiom of Choice. 
@@ -2211,14 +2409,14 @@ If $f$ is any function from type $\alpha$ to $\beta$,
 and
 %$Q{\tt :} \alpha \rightarrow {\tt bool}$ is any predicate,
 $Q$ is any predicate on $\alpha$,
-such that $\forall y{\tt :}\beta.\ \exists x{\tt :}\alpha.\ Q\ x \wedge (f\ x = y)$,
-then the partial equivalence relation $R = \lambda r\ s.\ Q\ r \wedge Q\ s \wedge (f\ r = f\ s)$
-with abstraction function $f$ is a quotient.
+such that $\forall y{\tt :}\beta.\ \exists x{\tt :}\alpha.\ Q\ x \wedge (f\;x = y)$,
+then the partial equivalence relation $R = \lambda r\;s.\ Q\ r \wedge Q\ s \wedge (f\;r = f\;s)$
+with abstraction function $f$ is a quotient ($\langle R,f \rangle$).
 \end{theorem}
 {\bf Proof:}
-%The two properties of definition \ref{quotientdef_ac}
+%The two properties of Definition \ref{quotientdef_ac}
 Follows easily from substituting $R$
-in definition \ref{quotientdef_ac}
+in Definition \ref{quotientdef_ac}
 %as defined above
 and simplifying.
 $\Box$
@@ -2240,34 +2438,38 @@ $\forall y.\ Q\ (g\ y)$.
 [William Schneeburger]}
 \end{theorem}
 {\bf Proof:}
-Assuming the function conditional quotient theorem \ref{functionquotient},
+Assuming the function quotient extension theorem
+%(Th.
+\ref{functionquotient},
 we apply it to two quotient theorems;
-first, the identity quotient for type $\beta$, and second,
+first, the identity quotient
+$\langle \mbox{\tt \$=}, \mbox{\tt I} \rangle$
+for type $\beta$, and second,
 the partial abstraction quotient $\langle R,f \rangle$
-from theorem \ref{partabsquotient}.
+from Theorem \ref{partabsquotient}.
 This yields the quotient
 $\langle \mbox{\tt \$=}\ \mbox{\tt ===>}\ R,\ 
-% (\mbox{\tt I // \$=})
- \mbox{\tt \$=}\ \mbox{\tt -->}\ f \rangle$,
-since $(\mbox{\tt I $\Downarrow$ \$=}) = \mbox{\tt \$=}$.
-By property 1 of definition \ref{quotientdef_ac},
+% (\mbox{\tt I $\repofabs$ \$=})
+ \mbox{\tt \$=}\ \mbox{\tt +->}\ f \rangle$,
+since $(\mbox{\tt I $\repofabs$ \$=}) = \mbox{\tt \$=}$.
+By Property 1 of Definition \ref{quotientdef_ac},
 $\forall a.\ \exists r.\ (\mbox{\tt \$=}\ \mbox{\tt ===>}\ R)\ r\ r \wedge
 ((
 \mbox{\tt \$=}
-\ \mbox{\tt -->}\ f) r = a)$.
-Specializing $a = {\tt I:}\beta \rightarrow \beta$,
+\ \mbox{\tt +->}\ f) r = a)$.
+Specializing $a = {\tt I}:\beta \rightarrow \beta$,
 and renaming $r$ as $g$, we obtain
-$\exists g.\ (\mbox{\tt \$=}\ \mbox{\tt ===>}\ R)\ g\ g \wedge
-(\mbox{\tt \$=}\ \mbox{\tt -->}\ f) g = {\tt I})$.
-By the definitions of $\mbox{\tt ===>}$,
-$(\mbox{\tt \$=}\ \mbox{\tt ===>}\ R) g\ g$ is 
+$\exists g.\ (\mbox{\tt \$=}\ \mbox{\tt ===>}\ R)\:g\ g \wedge
+(\mbox{\tt \$=}\ \mbox{\tt +->}\ f) g = {\tt I})$.
+By the definition of $\mbox{\tt ===>}$,
+$(\mbox{\tt \$=}\ \mbox{\tt ===>}\ R)\:g\ g$ is 
 $\forall x\ y.\ x = y \Rightarrow R\ (g\ x)\ (g\ y)$,
-which simplifies by the definition of $R$ to $\forall y.\ Q\ (g\ y)$.
+which simplifies by the definition of {\it R\/} to $\forall y.\ Q\ (g\ y)$.
 The right conjunct is
 $
 %\exists g.\ 
-(\mbox{\tt \$=}\ \mbox{\tt -->}\ f) g = {\tt I}$,
-which by the definition of {\tt -->} is 
+(\mbox{\tt \$=}\ \mbox{\tt +->}\ f) g = {\tt I}$,
+which by the definition of {\tt +->} is 
 %which is 
 $
 %\exists g. 
@@ -2297,16 +2499,43 @@ $\forall P\ x.\ P\ x \Rightarrow P\ (c\ P)$.
 \end{theorem}
 
 {\bf Proof:}
-In theorem \ref{partinverses}, 
-take $Q = (\lambda(P{\tt :}\alpha \rightarrow {\tt bool},\ a{\tt :}\alpha).\ 
+In Theorem \ref{partinverses}, 
+let $Q = (\lambda(P{\tt :}\alpha \rightarrow {\tt bool},\ a{\tt :}\alpha).\ 
                   (\exists x.\ P\ x) \Rightarrow P\ a)$
 and $f = {\tt FST}$.  Then its antecedent is
 $\forall P'.\, \exists (P,a).\, ((\exists x. P\, x) \Rightarrow P\, a) \wedge ({\tt FST} (P,a) = P')$.
-%
-%and $f = {\tt FST}$.  Then its antecedent is
-%$\forall P'.\, \exists (P,a).\, ((\exists x. P\, x) \Rightarrow P\, a) \wedge ({\tt FST} (P,a) = P')$.
-%
-For any $P'$, take $P = P'$, and if $\exists x.\ P\ x$,
+For any $P'$,
+take $P = P'$, and
+if $\exists x.\ P\ x$,
+then take $a$ to be such an $x$.
+Otherwise take $a$ to be any value of $\alpha$.
+In either case the antecedent is true.
+%So
+Therefore
+by Theorem \ref{partinverses} 
+there exists a function $g$ such that
+${\tt FST} \circ g = {\tt I}$
+and
+$\forall P.\ Q\ (g\ P)$,
+which is
+%$\forall P.\ {\bf let}\ (P,a) = g\ P\ {\bf in}\ 
+$\forall P.\ 
+(\exists x.\ ({\tt FST}\ (g\ P))\ x) \Rightarrow ({\tt FST}\ (g\ P))\ ({\tt SND}\ (g\ P))$.
+The operator $c$ is
+taken as ${\tt SND} \circ g$,
+and
+since ${\tt FST}\ (g\ P) = P$,
+the Hilbert choice axiom follows.
+$\Box$
+
+\begin{comment}
+{\bf Proof:}
+In Theorem \ref{partinverses}, 
+take $Q = (\lambda(P{\tt :}\alpha \rightarrow {\tt bool},\ a{\tt :}\alpha).\ 
+                  (\exists x.\ P\ x) \Rightarrow P\ a)$
+and $f = {\tt FST}$.  Then its antecedent is
+$\forall P.\ \exists (P,a).\ ((\exists x.\ P\ x) \Rightarrow P\ a) \wedge ({\tt FST} (P,a) = P)$.
+For any $P$, if $\exists x.\ P\ x$,
 then take $a$ to be such an $x$.
 Otherwise take $a$ to be any value of $\alpha$.
 In either case the antecedent is true.
@@ -2314,27 +2543,18 @@ In either case the antecedent is true.
 Therefore there exists a function $g$ such that
 ${\tt FST} \circ g = {\tt I}$
 and
-$\forall P.\ Q\ (g\ P)$,
-which is
-%$\forall P.\ {\bf let}\ (P,a) = g\ P\ {\bf in}\
-$\forall P.\
-(\exists x.\ ({\tt FST}\ (g\ P))\ x) \Rightarrow ({\tt FST}\ (g\ P))\ ({\tt SND}\ (g\ P))$.
+$\forall P.\ {\bf let}\ (P,a) = g\ P\ {\bf in}\ ((\exists x.\ P\ x) \Rightarrow P\ a)$.
 The operator $c$ is then taken as ${\tt SND} \circ g$,
-and
-since ${\tt FST}\ (g\ P) = P$,
-the Hilbert choice axiom follows.
+and the Hilbert choice axiom follows.
 $\Box$
+\end{comment}
 
-The significance of theorem 
-\ref{hilbertchoice}
+\vspace{2.0mm}
+The significance of Theorem \ref{hilbertchoice}
 is that even if we are able to avoid all use of the Axiom of Choice up to
-this point, it is not possible to prove the function conditional quotient
-theorem 
-\ref{functionquotient}
-without it.  
-%It is possible to use
-This section's design
-may be used
+this point, it is not possible to prove the function quotient extension
+theorem \ref{functionquotient} without it.  
+This section's design may be used
 to build a theory of quotients which is constructive and which extends
 naturally to quotients of lists, pairs, sums, and options.
 However, it is not possible
@@ -2347,7 +2567,7 @@ provers like HOL which admit the Hilbert choice operator,
 %there is no point
 %in avoiding its use if we wish to enjoy higher order quotients
 %although an automatic system for lifting theorems could be constructed,
-%analogeous to that for the main design,
+%analogous to that for the main design,
 if higher order quotients are desired,
 there is no advantage in avoiding using the Axiom of Choice 
 through using the design of this section.
@@ -2355,6 +2575,8 @@ through using the design of this section.
 The main design presented earlier is much simpler to automate.
 
 
+\vfill
+\pagebreak[4]
 %
 \section{Lifting Types, Constants, and Theorems}
 %
@@ -2424,21 +2646,25 @@ either 1)
 a theorem that a binary relation {\it R\/}
 is an equivalence relation
 (see section \ref{equivalence}),
-or 2)
-a theorem that {\it R\/} is a nonempty partial equivalence relation,
+or 2)\ a theorem that {\it R\/} is a nonempty partial equivalence relation,
 of the form
 $$
-\mbox{\tt |-}\ 
+\vdash\ 
 (\exists x.\ R\ x\ x) \ \wedge \ 
 (\forall x\ y.\ R\ x\ y \ \Leftrightarrow \ 
-                R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y)).
+                R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y))
 $$
 %,
 %of the form:
 %
 %\begin{center}
-%{\tt |- $\forall$x y. {\it R} x y = ({\it R} x = {\it R} y)}
+%{\tt $\vdash\ \forall$x y. {\it R} x y = ({\it R} x = {\it R} y)}
 %\end{center}
+\noindent
+or using the abbreviated forms
+$\vdash \mbox{\tt EQUIV}\ R$
+or
+$\vdash \mbox{\tt PARTIAL\_EQUIV}\ R$, respectively.
 
 {\it defs\/} is a list of records specifying the constants to be lifted.
 Each record contains the following four fields:
@@ -2457,7 +2683,7 @@ is described in
 \S\ref{liftingdefs}.
 %section \ref{liftingdefs}.
 
-{\it tyop\_equivs\/} is a list of conditional equivalence theorems
+{\it tyop\_equivs\/} is a list of equivalence extension theorems
 for type operators
 (see
 %section
@@ -2467,7 +2693,7 @@ theorems on new type operators, so that they can be lifted
 (see sections \ref{restrictions} and
 \ref{nonstandard}).
 
-{\it tyop\_quotients\/} is a list of conditional quotient theorems
+{\it tyop\_quotients\/} is a list of quotient extension theorems
 for type operators
 (see
 %section
@@ -2475,10 +2701,13 @@ for type operators
 and theorems.
 
 {\it tyop\_simps\/} is a list of theorems used to simplify type operator
-relations and map functions, e.g.,
+relations and map functions for identity quotients, e.g.,
 for pairs,
-{\tt |- (\$= \#\#\# \$=) = \$=} and
-{\tt |- (I \#\# I) = I}.
+$\vdash (\mbox{\tt \$= \#\#\# \$=}) = \mbox{\tt \$=}$ and
+$\vdash (\mbox{\tt I \#\# I}) = \mbox{\tt I}$,
+or for lists,
+$\vdash \mbox{\tt LIST\_REL \$=} = \mbox{\tt \$=}$ and
+$\vdash \mbox{\tt MAP I} = \mbox{\tt I}$.
 
 The rest of the arguments refer to the general process of lifting theorems
 over the quotients being defined,
@@ -2520,6 +2749,110 @@ record with the same fields as above except for {\it old\_thms},
 and returns an SML function of type {\tt thm -> thm}. 
 This result, typically called {\tt LIFT\_RULE},
 is then used to lift the old theorems individually, one at a time.
+
+In addition to these, two related functions,
+{\tt define\_quotient\_full\_types} and
+{\tt define\_quotient\_full\_types\_rule},
+are provided
+that automatically include the standard pre-proven quotient,
+equivalence, and simplification theorems relating
+to the list, pair, sum, option, and function type operators, along with
+all the pre-proven polymorphic respectfulness and preservation theorems
+for many standard polymorphic operators of those theories in HOL.
+Other type operators and/or polymorphic operators may be supported
+by including their theorems in the appropriate input fields, which
+are named the same as before.
+
+%This function is limited to a single quotient type, but may be
+%more convenient when the generality of {\tt define\_quotient\_types}
+%is not needed. 
+The function {\tt define\_quotient\_types\_full\_rule}
+can be defined in terms of {\tt define\_quotient\_types\_rule} as
+
+\begin{verbatim}
+fun define_quotient_types_full_rule
+          {types, defs, tyop_equivs, tyop_quotients, tyop_simps,
+           respects, poly_preserves, poly_respects} =
+  let
+      val tyop_equivs = tyop_equivs @
+              [LIST_EQUIV, PAIR_EQUIV, SUM_EQUIV, OPTION_EQUIV]
+      val tyop_quotients = tyop_quotients @
+              [LIST_QUOTIENT, PAIR_QUOTIENT,
+               SUM_QUOTIENT, OPTION_QUOTIENT, FUN_QUOTIENT]
+      val tyop_simps = tyop_simps @
+              [LIST_MAP_I, LIST_REL_EQ, PAIR_MAP_I, PAIR_REL_EQ,
+               SUM_MAP_I, SUM_REL_EQ, OPTION_MAP_I, OPTION_REL_EQ,
+               FUN_MAP_I, FUN_REL_EQ]
+      val poly_preserves = poly_preserves @
+              [CONS_PRS, NIL_PRS, MAP_PRS, LENGTH_PRS, APPEND_PRS,
+               FLAT_PRS, REVERSE_PRS, FILTER_PRS, NULL_PRS,
+               SOME_EL_PRS, ALL_EL_PRS, FOLDL_PRS, FOLDR_PRS,
+               FST_PRS, SND_PRS, COMMA_PRS, CURRY_PRS,
+               UNCURRY_PRS, PAIR_MAP_PRS,
+               INL_PRS, INR_PRS, ISL_PRS, ISR_PRS, SUM_MAP_PRS,
+               NONE_PRS, SOME_PRS, IS_SOME_PRS, IS_NONE_PRS,
+               OPTION_MAP_PRS,
+               FORALL_PRS, EXISTS_PRS,
+               EXISTS_UNIQUE_PRS, ABSTRACT_PRS,
+               COND_PRS, LET_PRS,
+               I_PRS, K_PRS, o_PRS, C_PRS, W_PRS]
+      val poly_respects  = poly_respects @
+              [CONS_RSP, NIL_RSP, MAP_RSP, LENGTH_RSP, APPEND_RSP,
+               FLAT_RSP, REVERSE_RSP, FILTER_RSP, NULL_RSP,
+               SOME_EL_RSP, ALL_EL_RSP, FOLDL_RSP, FOLDR_RSP,
+               FST_RSP, SND_RSP, COMMA_RSP, CURRY_RSP,
+               UNCURRY_RSP, PAIR_MAP_RSP,
+               INL_RSP, INR_RSP, ISL_RSP, ISR_RSP, SUM_MAP_RSP,
+               NONE_RSP, SOME_RSP, IS_SOME_RSP, IS_NONE_RSP,
+               OPTION_MAP_RSP,
+               RES_FORALL_RSP, RES_EXISTS_RSP,
+               RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP,
+               COND_RSP, LET_RSP,
+               I_RSP, K_RSP, o_RSP, C_RSP, W_RSP]
+  in
+    define_quotient_types_rule
+          {types=types,
+           defs=defs,
+           tyop_equivs=tyop_equivs,
+           tyop_quotients=tyop_quotients,
+           tyop_simps=tyop_simps,
+           respects=respects,
+           poly_preserves=poly_preserves,
+           poly_respects=poly_respects}
+  end;
+\end{verbatim}
+
+Furthermore, two more related functions,
+{\tt define\_quotient\_types\_std} and
+{\tt define\_quotient\_types\_std\_rule},
+are provided.
+These are the same as the ``{\tt full}'' functions above, but
+%do not provide
+without the input record fields for 
+{\tt tyop\_equivs},
+{\tt tyop\_quotients},
+{\tt tyop\_simps},
+{\tt poly\_preserves}, or
+{\tt poly\_respects}.
+The ``{\tt std}'' functions may be the easiest to use, providing much of the
+power of higher order quotients without the need for the user
+to worry about choosing theorems to include. 
+For many applications the ``{\tt std}'' functions will be all that is needed.
+
+Similar to the above,
+the {\tt define\_quotient\_types\_std} function
+is defined in terms of {\tt define\_quotient\_types\_full} as
+
+\begin{verbatim}
+fun define_quotient_types_std {types, defs, respects, old_thms} =
+    define_quotient_types_full
+          {types=types, defs=defs,
+           tyop_equivs=[], tyop_quotients=[],
+           tyop_simps=[],
+           respects=respects,
+           poly_preserves=[], poly_respects=[],
+           old_thms=old_thms};
+\end{verbatim}
 
 For backwards compatibility with John Harrison's excellent quotients package \cite{Har98}
 %to whom much credit is due, and
@@ -2577,13 +2910,22 @@ It automates the reasoning described
 in section \ref{quotienttypes},
 creating the quotient type as a new type in
 the HOL logic.  It also defines the mapping functions between the
-types, relating them as described in theorems
-\ref{ty_ABS_REP}
+types,
+forming
+a quotient
+%relationship
+%with the equivalence relation
+as described in theorem
+\ref{quotientthm}.
+\begin{comment}
+\ref{ty_ABS_REP},
+\ref{rep_respects},
 and
 \ref{equiv_ty_ABS}.
+\end{comment}
 
-The new type is created by the quotient type package by internally 
-making use of the HOL primitive, {\tt new\_type\_definition}. 
+%The new type is created by the quotient type package by internally 
+%making use of the HOL primitive, {\tt new\_type\_definition}. 
 All definitions are accomplished as definitional extensions of HOL,
 and thus
 preserve HOL's consistency.
@@ -2591,9 +2933,9 @@ preserve HOL's consistency.
 %are completely secure.
 
 Before invoking {\tt define\_quotient\_types}, the user should define
-a relation on the original type {\tt ty}, and prove that it is
+a relation on the original type $\tau$, and prove that it is
 either 1)
-an equivalence relation on the original type {\tt ty}, as described
+an equivalence relation on the original type $\tau$, as described
 in section \ref{equivalence},
 %The equivalence relation should be
 %expressed as a constant {\it R},
@@ -2611,7 +2953,7 @@ of the form:
 \begin{tabular}[t]{l@{\hspace{0.3cm}}l}
 {\tt R\_EQUIV} &
 %{\tt |- $\forall$a b. {\it R\/} a b $\Leftrightarrow$ ({\it R\/} a = {\it R\/} b)} \\
-$\mbox{\tt |-}\ 
+$\vdash
 (\forall x\ y.\ R\ x\ y \ \Leftrightarrow \ (R\ x = R\ y))$
 \end{tabular}
 \end{center}
@@ -2624,7 +2966,7 @@ of the form
 \begin{center}
 \begin{tabular}[t]{l@{\hspace{0.3cm}}l}
 {\tt R\_EQUIV} &
-$\mbox{\tt |-}\ 
+$\vdash
 (\exists x.\ R\ x\ x) \ \wedge \ 
 (\forall x\ y.\ R\ x\ y \ \Leftrightarrow \ 
                 R\ x\ x \wedge R\ y\ y \wedge (R\ x = R\ y))$.
@@ -2632,34 +2974,52 @@ $\mbox{\tt |-}\
 \end{center}
 
 \noindent
+Equivalently,
+%the theorem
+{\tt R\_EQUIV}
+may be of the form
+$\vdash \mbox{\tt EQUIV}\ R$
+or
+$\vdash \mbox{\tt PARTIAL\_EQUIV}\ R$, respectively.
+These abbreviations are defined in the theorems
+{\tt EQUIV\_def} and {\tt PARTIAL\_EQUIV\_def}.
 Evaluating
-{\tt define\_quotient\_types} with the argument field {\tt types}
+{\tt define\_quotient\_types} with the
+argument
+\linebreak[4]
+%field
+{\tt types}
 containing the record
-{\tt \{name="{\it tyname}",} {\tt equiv=R\_EQUIV\}}
+\texttt{\{name="{\it tyname}",} {\tt equiv=R\_EQUIV\}}
 automatically declares a new type {\it tyname}
-%{\tt \{name="qty", equiv=R\_EQUIV\}}
-%automatically declares a new type {\tt qty}
-in the HOL logic as the quotient type ${\tt ty} / {\it R}$,
-which we will refer to from here on as {\tt qty},
+in the HOL logic as the quotient type $\tau / {\it R}$,
+which we will refer to from here on as $\xi$,
 %with the user-specified name ``{\it tyname}'',
 and
-declares two new constants {\it abs} {\tt :ty->qty}
-and {\it rep} {\tt :qty->ty}, such that
-the relation {\it R\/}
+declares two new constants {\it abs} {\tt :} $\tau \rightarrow \xi$
+with name ``{\it tyname}{\tt \_ABS}''
+and {\it rep} {\tt :} $\xi \rightarrow \tau$
+with name ``{\it tyname}{\tt \_REP}'',
+such that the relation {\it R\/}
 with
 %respect to
 {\it abs\/} and
 {\it rep\/}
-is a quotient
-as described in section \ref{quotientrelation}.
+is a quotient,
+as described in
+Definition~\ref{quotientdef} of
+section~\ref{quotientrelation}.
 %
 The {\tt define\_quotient\_types} tool proves
 the quotient theorem
 %for {\it R}, {\it abs}, and {\it rep},
 \begin{center}
 \tt
-|- QUOTIENT {\it R\/} {\it abs\/} {\it rep}
+$\vdash$
+QUOTIENT {\it R\/} {\it abs\/} {\it rep}
 \end{center}
+according to the development of
+Section~\ref{quotienttypes},
 and stores it in the current theory under
 the automatically-generated name \mbox{\it tyname}{\tt \_QUOTIENT}.
 
@@ -2715,7 +3075,7 @@ but without antecedents.
 %It is used only internally as an input to the later step of lifting theorems
 %concerning this constant.  Afterwards,
 After the quotient operation,
-the definition theorem will not be of further value, as
+the definition theorem will not usually be of further value, as
 the lifted theorems will be the basis for all further proof efforts.
 
 Here are the values related to fixity from the structure {\tt Parse}:
@@ -2781,11 +3141,11 @@ and greatly eases the entire task of forming quotients.
 In order for the tool to work effectively and
 exert its full power, several ingredients need to be provided
 by the user in the form of lists of theorems that describe
-key properties of the functions used
+key properties of the type operators and constants used
 in the theorem to be lifted.  These kinds of theorems will be
 described in detail in the subsections that follow.
 First we
-review the arguments used by
+review the arguments of
 {\tt define\_quotient\_types}
 for lifting theorems.
 
@@ -2854,7 +3214,7 @@ demonstrated through a theorem of the general form
 
 \begin{center}
 \begin{tabular}{rl}
-{\tt |-}&
+$\vdash$&
 {\tt $\forall$(x1:$\gamma_1$) (y1:$\gamma_1$) ... (xn:$\gamma_n$) (yn:$\gamma_n$).}
 \\
 & \hspace{12mm}
@@ -2862,14 +3222,14 @@ demonstrated through a theorem of the general form
 $\wedge$ \ 
 ... \
 $\wedge$ \ 
-$R_n$ xn yn $\Rightarrow$
+$R_n$ xn yn \;$\Rightarrow$
 }  \\
 & \hspace{12mm}
 {\tt $R_c$ (C x1 ... xn) (C y1 ... yn)}  \\
 \end{tabular}
 \end{center}
 where the constant {\tt C} has type
-{\tt $\gamma_1$ -> ... -> $\gamma_n$ -> $\gamma_c$},
+{\tt $\gamma_1$ -> ... -> $\gamma_n$ -> $\gamma_c$} ($n \ge 0$),
 and each relation {\tt $R_i$} has type {\tt $\gamma_i$ -> $\gamma_i$ -> bool}
 for all $i$.
 Depending on the types involved, 
@@ -2893,6 +3253,12 @@ operand of {\tt $R_c$} and {\tt yi} in the second operand.  This simpler
 version is not completely standard, but may be more convenient for
 the user to provide.  The package will compensate by automatically
 creating the standard version from this simplified one.
+Also, if all the antecedents thus simplify,
+or if $n = 0$ with no antecedents,
+then the implication
+simplifies
+%collapses
+to just the consequent, {\tt $R_c$ (C z1 ... zn) (C z1 ... zn)}.
 
 To illustrate this, the following functions are taken from an example
 of syntactic terms of the untyped lambda calculus,
@@ -2906,12 +3272,14 @@ lambda calculus terms which are single variables.
 The respectfulness theorem for {\tt Var1} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$x1 x2. (x1 = x2) $\Rightarrow$ ALPHA (Var1 x1) (Var1 x2)
+    $\vdash \forall$x1 x2. (x1 = x2) $\Rightarrow$ ALPHA (Var1 x1) (Var1 x2)
 \end{tabbing}}
+\pagebreak[2]
+\noindent
 or possibly the simplified (but nonstandard) form
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$x. ALPHA (Var1 x) (Var1 x)
+    $\vdash \forall$x. ALPHA (Var1 x) (Var1 x)
 \end{tabbing}}
 {\tt Var1} has one argument of type {\tt var}, which type is not lifted,
 so the \quotient{} relation of this argument is simple equality.
@@ -2923,7 +3291,7 @@ is used to construct terms which are applications of a function to an argument.
 The respectfulness theorem for {\tt App1} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$t\=1 t2 u1 u2. \\
+    $\vdash \forall$t\=1 t2 u1 u2. \\
 \>       ALPHA t1 t2 $\wedge$ ALPHA u1 u2 $\Rightarrow$\\
 \>       ALPHA (App1 t1 u1) (App1 t2 u2)
 \end{tabbing}}
@@ -2940,7 +3308,7 @@ is used to calculate the height of a term as a tree.
 The respectfulness theorem for {\tt HEIGHT1} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$t1 t2. ALPHA t1 t2 $\Rightarrow$ (HEIGHT1 t1 = HEIGHT1 t2)
+    $\vdash \forall$t1 t2. ALPHA t1 t2 $\Rightarrow$ (HEIGHT1 t1 = HEIGHT1 t2)
 \end{tabbing}}
 {\tt HEIGHT1} has one argument, which
 has type {\tt term1},
@@ -2953,7 +3321,7 @@ is used to calculate the set of free variables of a term.
 The respectfulness theorem for {\tt FV1} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$t1 t2. ALPHA t1 t2 $\Rightarrow$ (FV1 t1 = FV1 t2)
+    $\vdash \forall$t1 t2. ALPHA t1 t2 $\Rightarrow$ (FV1 t1 = FV1 t2)
 \end{tabbing}}
 {\tt FV1} has one argument, which
 has type {\tt term1},
@@ -2970,7 +3338,7 @@ where they occur free across a target term.
 The respectfulness theorem for {\tt <[} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$t\=1 t2 s1 s2. \\
+    $\vdash \forall$t\=1 t2 s1 s2. \\
 \>       ALPHA t1 t2 $\wedge$ LIST\_REL (\$= \#\#\# ALPHA) s1 s2 $\Rightarrow$ \\
 \>       ALPHA (t1 <[ s1) (t2 <[ s2)
 \end{tabbing}}
@@ -3072,7 +3440,7 @@ consequent of each of the theorems above is either a \quotient{} or an
 equality, depending on whether the type of the value returned by the
 function is of a type being lifted or not.  There is a direct one-to-one
 relationship between the type of the argument/result and the 
-\quotient{} relation used to compare it.
+\quotient{} relation used to compare its values.
 
 Therefore the antecedent of the theorem on the respectfulness of {\tt Var1}
 is an equality, since the type of the argument is {\tt var} which is not
@@ -3116,10 +3484,10 @@ For example, the respectfulness theorem for {\tt FV1:term1 -> var -> bool} may b
 equally well as any of the following completely equivalent versions:
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    \=|- $\forall$t\=1 t2 x1 x2. \\
+    \=$\vdash \forall$t\=1 t2 x1 x2. \\
 \>\>     ALPHA t1 t2 $\wedge$ (x1 = x2) $\Rightarrow$ (FV1 t1 x1 = FV1 t2 x2) \\
-\>  |- $\forall$t1 t2. ALPHA t1 t2 $\Rightarrow$ (FV1 t1 = FV1 t2) \\
-\>  |- (ALPHA ===> \$=) FV1 FV1
+\>  $\vdash \forall$t1 t2. ALPHA t1 t2 $\Rightarrow$ (FV1 t1 = FV1 t2) \\
+\>  $\vdash$ (ALPHA ===> \$=) FV1 FV1
 \end{tabbing}}
 The last version has higher order and lesser arity than the
 earlier versions.  In fact, the three theorems above have arities
@@ -3150,23 +3518,24 @@ lifted types, and the lifted version of the value of the same function
 applied to arguments of the lower types. 
 The equalities are conditioned on the component types being quotients.
 
-These theorems have the following general form.
+These preservation theorems have the following general form.
 \begin{center}
 \begin{tabular}{rl}
-{\tt |-}
+$\vdash$
 & {\tt $\forall$R1 (abs1:$\alpha_1$->$\beta_1$) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$} \\
 & {\tt ...} \\
 & {\tt $\forall$Rn (absn:$\alpha_n$->$\beta_n$) repn. QUOTIENT Rn absn repn $\Rightarrow$} \\
 & {\tt $\forall$(x1:$\delta_1$) ... (xk:$\delta_k$).}  \\
 & \hspace{17mm}
-{\tt C x1 ... xk = $abs_c$ (C' ($rep_1$ x1) ... ($rep_k$ xk)) }  \\
+{\tt C' x1 ... xk = $abs_c$ (C ($rep_1$ x1) ... ($rep_k$ xk)) }  \\
 \end{tabular}
 \end{center}
 where
 \begin{enumerate}
 \item
-the constant {\tt C} has a polymorphic type with $n$ type variables,
+the constant {\tt C} has a polymorphic type with $n>0$ type variables,
 $\alpha_1, ..., \alpha_n$,
+%where $n > 0$,
 % and where
 \item
 {\tt C'} is usually {\tt C}, but may be a different constant
@@ -3174,12 +3543,18 @@ in case {\tt C} is not preserved,
 % and where
 \item
 the type of {\tt C} is of the form
-{\tt $\gamma_1$ -> ... -> $\gamma_k$ -> $\gamma_c$} \\
+{\tt $\gamma_1$ -> ... -> $\gamma_k$ -> $\gamma_c$} ($k \ge 0$) \\
 ({\tt C} is a curried function of $k$ arguments, with a return value of
 type $\gamma_c$), \\
 with
 all type variables in the $\gamma_1$, ..., $\gamma_k$, $\gamma_c$ types
 contained within $\alpha_1$,~...,~$\alpha_n$,
+% and where
+\item
+the type of {\tt C'} is of the form
+{\tt $\delta_1$ -> ... -> $\delta_k$ -> $\delta_c$} ($k \ge 0$) \\
+({\tt C'} is a curried function of $k$ arguments, with a return value of
+type $\delta_c$),
 % and where
 \item
 $\delta_i$ is the lifted version of $\gamma_i$ for all $i=1,...,k,c$ \\
@@ -3215,7 +3590,7 @@ each argument, and the type returned by the operator.
 The preservation theorem for {\tt NIL} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$R (a\=bs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+    $\vdash \forall$R (a\=bs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
 \>          ([] = MAP abs [])
 \end{tabbing}}
 The operator {\tt NIL} has polymorphic type {\tt ('a)list}. 
@@ -3235,7 +3610,7 @@ is {\tt MAP abs}.
 The preservation theorem for {\tt LENGTH} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+    $\vdash \forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
 \>       $\forall$l. LENGTH l = LENGTH (MAP rep l)
 \end{tabbing}}
 The operator {\tt LENGTH} has polymorphic type {\tt ('a)list -> num}. 
@@ -3259,10 +3634,11 @@ the abstraction function
 %for $\gamma_c$
 is {\tt I}, which disappears.
 
+\pagebreak[2]
 The preservation theorem for {\tt CONS} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+    $\vdash \forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
 \>       $\forall$t h. h::t = MAP abs (rep h::MAP rep t)
 \end{tabbing}}
 The operator {\tt CONS} has polymorphic type {\tt 'a -> ('a)list -> ('a)list}. 
@@ -3297,7 +3673,7 @@ is {\tt MAP abs}.
 The preservation theorem for {\tt FST} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- \=$\forall$R\=1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+    $\vdash$ \=$\forall$R\=1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
 \>     $\forall$R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
 \>\>     $\forall$p:'c \# 'd. FST p = abs1 (FST ((rep1 \#\# rep2) p))
 \end{tabbing}}
@@ -3323,10 +3699,10 @@ is {\tt abs1}.
 %$\delta_c$ = {\tt 'c}.
 
 \pagebreak[3]
-The preservation theorem for the operator {\tt o} is
+The preservation theorem for the composition operator {\tt o} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- \=$\forall$R\=1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+    $\vdash$ \=$\forall$R\=1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
 \>     $\forall$R2 (abs2:'b -> 'e) rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
 \>     $\forall$R3 (abs3:'c -> 'f) rep3. QUOTIENT R3 abs3 rep3 $\Rightarrow$ \\
 \>\>     $\forall$f\=\ g. f o g = \\
@@ -3432,13 +3808,13 @@ preservation
 %``definition''
 theorems for various
 standard polymorphic functions of the HOL logic have been proven already and
-are available in {\tt quotientTheory} (see Table 1). 
+is available in the theories of the quotient library (see Table 1). 
 If there is a need to use a
 polymorphic function not covered by these, the corresponding
 preservation
 %``definition''
 theorem can be proven by the user, using the same approach as for the example
-theorems above, as shown in {\tt quotientScript.sml}.
+theorems above, as shown in the theory scripts of the quotient library.
 
 Whenever there are arguments to the constant, there are
 multiple equivalent ways to state the
@@ -3477,6 +3853,8 @@ arity possible, and then all higher order versions are produced
 % The entire collection of versions is
 and used for lifting theorems
 which involve the operator.
+
+\vfill
 
 \begin{table}
 \begin{center}
@@ -3559,16 +3937,24 @@ Theorems & Respectfulness Theorems \\
 \end{tabular}
 \\
 \end{center}
-An arrow indicates that in the
-preservation theorem,
+An arrow
+({\it lower} $\rightarrow$ {\it higher})
+indicates that in 
+preservation theorems,
 %definition,
-the lower operator is different
+the lower operator
+is different
+%differs
+from the higher,
+%otherwise
+else
+it
+%the operator
+is the same.
 %\\
-from the higher
-({\it lower} $\rightarrow$ {\it higher}), otherwise the operator is unchanged.
-%\\
-The respectfulness theorems concern the lower operator.
-These theorems are found in {\tt quotientTheory}.
+Respectfulness theorems concern
+{\it lower}.
+%the lower operator.
 \end{table}
 
 %
@@ -3597,7 +3983,7 @@ for {\tt poly\_preserves} (\S\ref{polypreserves}).
 These theorems have the following general form.
 \begin{center}
 \begin{tabular}{rl}
-{\tt |-}
+$\vdash$
 & {\tt $\forall$R1 (abs1:$\alpha_1$->$\beta_1$) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$} \\
 & {\tt ...} \\
 & {\tt $\forall$Rn (absn:$\alpha_n$->$\beta_n$) repn. QUOTIENT Rn absn repn $\Rightarrow$} \\
@@ -3650,7 +4036,7 @@ returned by the operator.
 The respectfulness theorem for {\tt NIL} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+    $\vdash \forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
 \>       LIST\_REL R [] []
 \end{tabbing}}
 The operator {\tt NIL} has polymorphic type {\tt ('a)list}. 
@@ -3670,7 +4056,7 @@ is {\tt LIST\_REL R}.
 The respectfulness theorem for {\tt LENGTH} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+    $\vdash \forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
 \>       $\forall$l1 l2. \=LIST\_REL R l1 l2 $\Rightarrow$ \\
 \>\>             (LENGTH l1 = LENGTH l2)
 \end{tabbing}}
@@ -3698,7 +4084,7 @@ is {\tt =}.
 The respectfulness theorem for {\tt CONS} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+    $\vdash \forall$R\=\ (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
 \>       $\forall$t\=1 t2 h1 h2. \\
 \>\>       R h1 h2 $\wedge$ LIST\_REL R t1 t2 $\Rightarrow$ \\
 \>\>       LIST\_REL R (h1::t1) (h2::t2)
@@ -3735,7 +4121,7 @@ is {\tt LIST\_REL R}.
 The respectfulness theorem for {\tt FST} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- \=$\forall$R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+    $\vdash$ \=$\forall$R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
 \>     $\forall$R\=2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
 \>\>     $\forall$p1 p2. \=(R1 \#\#\# R2) p1 p2 $\Rightarrow$ \\
 \>\>\>           R1 (FST p1) (FST p2)
@@ -3761,10 +4147,10 @@ is {\tt R1}.
 %$\delta_1$ = {\tt ('c \# 'd)},
 %$\delta_c$ = {\tt 'c}.
 
-The respectfulness theorem for the operator {\tt o} is
+The respectfulness theorem for the composition operator {\tt o} is
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- \=$\forall$R1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+    $\vdash$ \=$\forall$R1 (abs1:'a -> 'd) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
 \>     $\forall$R2 (abs2:'b -> 'e) rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
 \>     $\forall$R\=3 (abs3:'c -> 'f) rep3. QUOTIENT R3 abs3 rep3 $\Rightarrow$ \\
 \>\>     $\forall$f\=1 f2 g1 g2. \\
@@ -3830,11 +4216,11 @@ arity possible, usually with arity zero.
 
 A substantial collection of these respectfulness theorems for various
 standard polymorphic functions of the HOL logic have been proven already and
-are available in {\tt quotientTheory} (see Table 1).
+is available in the quotient library theories (see Table 1).
 If there is a need to use a
 polymorphic function not covered by these, the corresponding respectfulness
 theorem can be proven by the user, using the same approach as for the example
-theorems above, as shown in {\tt quotientScript.sml}.
+theorems above, as shown in the theory scripts of the quotient library.
 
 
 %
@@ -3901,7 +4287,7 @@ For example, in the lambda calculus example, one theorem to be
 lifted is the induction theorem:
 {\tt \begin{tabbing}
 \hspace{5.5mm}
-    |- $\forall$P\=. \\
+    $\vdash \forall$P\=. \\
 \>       ($\forall$v. P (Var1 v)) $\wedge$ \\
 \>       ($\forall$t t0. P t $\wedge$ P t0 $\Rightarrow$ P (App1 t t0)) $\wedge$ \\
 \>       ($\forall$t. P t $\Rightarrow$ $\forall$v. P (Lam1 v t)) $\Rightarrow$ \\
@@ -3948,7 +4334,7 @@ rephrased
 %and reproven
 as
 {\tt \begin{tabbing}
-|- $\forall$P\=\ :: respects (ALPHA ===> \$=). \\
+$\vdash \forall$P\=\ :: respects (ALPHA ===> \$=). \\
 \>     ($\forall$v. P (Var1 v)) $\wedge$ \\
 \>     ($\forall$t t0 :: respects ALPHA. P t $\wedge$ P t0 $\Rightarrow$ P (App1 t t0)) $\wedge$ \\
 \>     ($\forall$t :: respects ALPHA. P t $\Rightarrow$ $\forall$v. P (Lam1 v t)) $\Rightarrow$ \\
@@ -4012,7 +4398,6 @@ Therefore one cannot simply lift from
 a lower version of $\exists$! to a higher version of $\exists$!.  Instead, we
 must introduce a new operator, {\tt RES\_EXISTS\_EQUIV} of type
 {\tt ('a -> 'a -> bool) -> ('a -> bool) -> bool}.
-%|- !R P. RES_EXISTS_EQUIV R P =
 {\tt \begin{tabbing}
 \hspace{20mm}
          RES\=\_EXISTS\_EQUIV R P = \\
@@ -4049,7 +4434,7 @@ along with the appropriate \quotient{} relation.
 Instances of quantifying by $\exists$! over types not being lifted need
 not be modified at all.
 Note that where the restricted quantifier versions of $\forall$ and $\exists$
-use restrictions of the form {\tt respects R}, the restricted quantifier
+use restrictions of the form {\tt respects~R}, the restricted quantifier
 version of $\exists$!! uses just {\tt R} as the restriction.
 
 For example, this arises naturally in
@@ -4059,7 +4444,7 @@ Melham for the lambda calculus
 \pagebreak[2]
 {\tt \begin{tabbing}
 \hspace{2.5mm}
-   |- $\forall$v\=ar app abs. \\
+   $\vdash \forall$v\=ar app abs. \\
 \>      $\exists !$\=hom. \\
 \>\>      ($\forall$x. hom (Var x) = var x) $\wedge$ \\
 \>\>      ($\forall$t u. hom (App t u) = app (hom t) (hom u)) $\wedge$ \\
@@ -4072,7 +4457,7 @@ the proper lower version
 %at the lower level
 {\tt \begin{tabbing}
 \hspace{2.5mm}
-  |- $\forall$v\=ar app abs. \\
+  $\vdash \forall$v\=ar app abs. \\
 \>     $\exists !!$\=hom :: (ALPHA ===> \$=). \\
 \>\>     ($\forall$x. hom (Var1 x) = var x) $\wedge$ \\
 \>\>     ($\forall$t\=\ u :: respects ALPHA. \\
@@ -4105,25 +4490,25 @@ lifted type with two values for which we can define the constants,
 {\tt EVEN} as the lifted version of {\tt 0} and {\tt ODD}
 as the lifted version of {\tt 1}.
 
-At the lower level, we can prove the theorem {\tt |- \verb+~+(3 = 5)}. 
+At the lower level, we can prove the theorem {\tt $\vdash$ \verb+~+(3 = 5)}. 
 But this theorem does not lift to the abstract level, where it would be
-{\tt |- \verb+~+(ODD = ODD)}, which is obviously false.
+{\tt $\vdash$ \verb+~+(ODD = ODD)}, which is obviously false.
 So not every theorem should or will lift!
 
-At the lower level, we can prove the theorem {\tt |- \verb+~+(0 = 1)}.
+At the lower level, we can prove the theorem {\tt $\vdash$ \verb+~+(0 = 1)}.
 For this theorem, there {\it is\/}
 a corresponding theorem at the abstract level,
-{\tt |- \verb+~+(EVEN = ODD)}, which should be true.  However, there is just not
-enough information in the lower theorem {\tt |- \verb+~+(0 = 1)}
+{\tt $\vdash$ \verb+~+(EVEN = ODD)}, which should be true.  However, there is just not
+enough information in the lower theorem {\tt $\vdash$ \verb+~+(0 = 1)}
 to prove the lifted version, because the lower theorem
 only states an inequality.  What is actually needed is
-{\tt |- \verb+~+(0 $\sim$ 1)}, which states that the two values are
+{\tt $\vdash$ \verb+~+(0 $\sim$ 1)}, which states that the two values are
 not equivalent, which is stronger. 
-{\tt |- \verb+~+(0 $\sim$ 1)} implies that
-{\tt |- \verb+~+(0 = 1)},
+{\tt $\vdash$ \verb+~+(0 $\sim$ 1)} implies that
+{\tt $\vdash$ \verb+~+(0 = 1)},
 but not the reverse.
-{\tt |- \verb+~+(0 $\sim$ 1)} is provable at the lower level,
-and it will successfully lift to {\tt |- \verb+~+(EVEN = ODD)}.
+{\tt $\vdash$ \verb+~+(0 $\sim$ 1)} is provable at the lower level,
+and it will successfully lift to {\tt $\vdash$ \verb+~+(EVEN = ODD)}.
 
 In general, a property which will lift may be composed only of 
 functions which respect the equivalence relations involved.
@@ -4166,22 +4551,22 @@ and then lifted.
 Despite the objections to the use of equality
 in theorems to be lifted mentioned above, in practice equality is commonly used.
 Many theorems to be lifted have the form 
-{\tt |- a = b}, for some expressions {\tt a} and {\tt b} whose type is
+{\tt $\vdash$ a = b}, for some expressions {\tt a} and {\tt b} whose type is
 being lifted. 
 In fact,
 if $\sim$ is an equivalence relation,
-this equality implies {\tt |- a $\sim$ b}.
+this equality implies {\tt $\vdash$ a $\sim$ b}.
 The tool recognizes this common case and automatically proves
 the needed revised
 theorem that only mentions equivalence instead of equality. 
 This can then be lifted. 
 
-Similarly, theorems of the form {\tt |- P $\Rightarrow$ (a = b)}, or even more
+Similarly, theorems of the form {\tt $\vdash$ P $\Rightarrow$ (a = b)}, or even more
 general examples, can also be
 automatically revised and then lifted. 
 
 Universal or existential restricted quantification, where the 
-restriction is of the form {\tt respects R} for {\tt R} an equivalence
+restriction is of the form {\tt respects R}, for {\tt R} an equivalence
 relation, do not actually restrict any elements from the quantification.
 Thus these are really equal to the original ordinary quantification,
 and the tool is able to create and prove the version with such
@@ -4209,7 +4594,7 @@ calculus example, we have proven
 %it is possible to prove
 at the lower level
 {\tt \begin{tabbing}
- |- $\forall$v\=ar app abs. \\
+ $\vdash \forall$v\=ar app abs. \\
 \>    $\exists !$\=hom :: respects (ALPHA ===> \$=). \\
 \>\>    ($\forall$x. hom (Var1 x) = var x) $\wedge$ \\
 \>\>    ($\forall$t u. hom (App1 t u) = app (hom t) (hom u)) $\wedge$ \\
@@ -4219,7 +4604,7 @@ at the lower level
 \noindent
 The tool will first automatically prove the proper version:
 {\tt \begin{tabbing}
- |- $\forall$v\=ar app abs. \\
+ $\vdash \forall$v\=ar app abs. \\
 \>    $\exists !!$\=hom :: ALPHA ===> \$=. \\
 \>\>    ($\forall$x. hom (Var1 x) = var x) $\wedge$ \\
 \>\>    ($\forall$t\=\ u :: respects ALPHA. \\
@@ -4231,7 +4616,7 @@ The tool will first automatically prove the proper version:
 \noindent
 and then lift the proper version to the desired higher version of this theorem:
 {\tt \begin{tabbing}
- |- $\forall$v\=ar app abs. \\
+ $\vdash \forall$v\=ar app abs. \\
 \>    $\exists !$\=hom. \\
 \>\>    ($\forall$x. hom (Var x) = var x) $\wedge$ \\
 \>\>    ($\forall$t u. hom (App t u) = app (hom t) (hom u)) $\wedge$ \\
@@ -4253,7 +4638,7 @@ every constant mentioned in the theorem that takes or returns values
 of types being lifted must be described in a respectfulness theorem,
 whether in the {\tt respects} or {\tt poly\_respects} arguments.
 Also, every such constant in the theorem
-must be either being lifted to a new constant in the {\tt defs} argument,
+must be either one being lifted to a new constant in the {\tt defs} argument,
 or described in a preservation theorem in the {\tt poly\_preserves} argument.
 Every partial equivalence relation mentioned in any of these theorems
 should be either one of those mentioned in the {\tt types} argument,
@@ -4263,10 +4648,10 @@ using the relation operators mentioned in sections
 \ref{quotientrelation}.
 If the type of any constant in any theorem
 involves type operators, like lists or functions, then the associated
-conditional quotient theorems must be provided in the
+quotient extension theorems must be provided in the
 {\tt tyop\_quotients} argument.
 %except for {\tt FUN\_QUOTIENT}, which is builtin by default.
-Likewise, the conditional equivalence theorems (if available),
+Likewise, the equivalence extension theorems (if available),
 and the associated relation and map function simplification theorems
 should be provided
 in the {\tt tyop\_equivs} and {\tt tyop\_simps} arguments.
@@ -4277,7 +4662,8 @@ by setting the variable {\tt quotient.chatting := true}.
 Lastly, during development it may be more convenient to use the
 {\tt define\_quotient\_types\_rule} tool, so that the {\tt LIFT\_RULE}
 function it returns may be applied to candidate lower theorems individually
-and repeatedly.
+and repeatedly.  This helps to retry lifting a troublesome theorem
+in isolation until it successfully lifts.
 
 
 %
@@ -4587,10 +4973,10 @@ equivalence theorems for these,
 \begin{tabular}{l}
 {\tt ALPHA\_obj\_EQUIV:} \\
 \hspace{0.9cm}
-{\tt |- $\forall$x y. ALPHA\_obj x y = (ALPHA\_obj x = ALPHA\_obj y)} \\
+{\tt $\vdash \forall$x y. ALPHA\_obj x y = (ALPHA\_obj x = ALPHA\_obj y)} \\
 {\tt ALPHA\_method\_EQUIV:} \\
 \hspace{0.9cm}
-{\tt |- $\forall$x y. ALPHA\_method x y =\;(ALPHA\_method x = ALPHA\_method y)}
+{\tt $\vdash \forall$x y. ALPHA\_method x y =\;(ALPHA\_method x = ALPHA\_method y)}
 \end{tabular}
 \end{center}
 
@@ -4656,7 +5042,7 @@ val polyprs = [BV_subst_PRS, COND_PRS, CONS_PRS, NIL_PRS,
                EXISTS_UNIQUE_PRS, ABSTRACT_PRS];
 \end{verbatim}
 
-We specify the polymorphic conditional respectfulness theorems
+We specify the polymorphic respectfulness theorems
 to assist the lifting:
 \begin{verbatim}
 val polyrsp = [BV_subst_RSP, COND_RSP, CONS_RSP, NIL_RSP,
@@ -4696,12 +5082,12 @@ and lift all constants and theorems:
 The tool is able to lift many theorems to the abstract, quotient level.
 Here is the original definition of substitution on a variable:
 {\tt \begin{tabbing}
-|- \=($\forall$y. SUB1 [] y = OVAR1 y) $\wedge$ \\
+$\vdash$ \=($\forall$y. SUB1 [] y = OVAR1 y) $\wedge$ \\
 \> ($\forall$y x c s. SUB1 ((x,c)::s) y = (if y = x then c else SUB1 s y))
 \end{tabbing}}
 This theorem lifts to its abstract version:
 {\tt \begin{tabbing}
-|- \=($\forall$y. SUB [] y = OVAR y) $\wedge$ \\
+$\vdash$ \=($\forall$y. SUB [] y = OVAR y) $\wedge$ \\
 \> ($\forall$y x c s. SUB ((x,c)::s) y = (if y = x then c else SUB s y))
 \end{tabbing}}
 Note how the different constants lift, e.g., {\tt SUB1} to {\tt SUB},
@@ -4719,7 +5105,7 @@ the simplicity of the result.
 In addition, the original theorem was not regular; before lifting,
 it actually was first quietly converted to:
 {\tt \begin{tabbing}
-|- \=($\forall$y. ALPHA\_obj (SUB1 [] y) (OVAR1 y)) $\wedge$ \\
+$\vdash$ \=($\forall$y. ALPHA\_obj (SUB1 [] y) (OVAR1 y)) $\wedge$ \\
 \>   (\=$\forall$y x \=(c :: respects ALPHA\_obj) \\
 \>\>\> (s :: respects (LIST\_REL (\$= \#\#\# ALPHA\_obj))). \\
 \>\>  ALPHA\_obj (SUB1 ((x,c)::s) y) (if y = x then c else SUB1 s y))
@@ -4728,14 +5114,14 @@ it actually was first quietly converted to:
 Similarly, here is a version of this definition which uses the {\tt let...in}
 form:
 {\tt \begin{tabbing}
-|- \=($\forall$p\=\ s y. \\
+$\vdash$ \=($\forall$p\=\ s y. \\
 \>\>  SUB1 (p::s) y = \\
 \>\>  (let (x,c) = p in (if y = x then c else SUB1 s y))) $\wedge$ \\
 \> ($\forall$y. SUB1 [] y = OVAR1 y)
 \end{tabbing}}
 This lifts to the following abstract version:
 {\tt \begin{tabbing}
-|- \=($\forall$p\=\ s y. \\
+$\vdash$ \=($\forall$p\=\ s y. \\
 \>\>  SUB (p::s) y = \\
 \>\>  (let (x,c) = p in (if y = x then c else SUB s y))) $\wedge$ \\
 \> ($\forall$y. SUB [] y = OVAR y)
@@ -4746,7 +5132,7 @@ Furthermore, because the {\tt let} involves a pair, the
 pair is implemented by the {\tt UNCURRY} operator, which is also higher-order.
 The following regular version was quietly proven and then lifted:
 {\tt \begin{tabbing}
-|- \=($\forall$(\=p\=\ :: respects (\$= \#\#\# ALPHA\_obj)) \\
+$\vdash$ \=($\forall$(\=p\=\ :: respects (\$= \#\#\# ALPHA\_obj)) \\
 \>\>\> (s :: respects (LIST\_REL (\$= \#\#\# ALPHA\_obj))) y. \\
 \>\>  AL\=PHA\_obj (SUB1 (p::s) y) \\
 \>\>\>  (LE\=T \\
@@ -4757,9 +5143,9 @@ The following regular version was quietly proven and then lifted:
 \end{tabbing}}
 
 One of the most difficult theorems to lift is the induction theorem,
-because it is second-order, as it involves quantification over predicates.
+because it is higher-order, as it involves quantification over predicates.
 {\tt \begin{tabbing}
-|- $\forall$P\=0 P1 P2 P3. \\
+$\vdash \forall$P\=0 P1 P2 P3. \\
 \>   ($\forall$v. P0 (OVAR1 v)) $\wedge$ ($\forall$l. P2 l $\Rightarrow$ P0 (OBJ1 l)) $\wedge$ \\
 \>   ($\forall$o'. P0 o' $\Rightarrow$ $\forall$s. P0 (INVOKE1 o' s)) $\wedge$ \\
 \>   ($\forall$o' m. P0 o' $\wedge$ P1 m $\Rightarrow$ $\forall$s. P0 (UPDATE1 o' s m)) $\wedge$ \\
@@ -4770,7 +5156,7 @@ because it is second-order, as it involves quantification over predicates.
 \end{tabbing}}
 This lifts to the abstract version:
 {\tt \begin{tabbing}
-|- $\forall$P\=0 P1 P2 P3. \\
+$\vdash \forall$P\=0 P1 P2 P3. \\
 \>   ($\forall$v. P0 (OVAR v)) $\wedge$ ($\forall$l. P2 l $\Rightarrow$ P0 (OBJ l)) $\wedge$ \\
 \>   ($\forall$o'. P0 o' $\Rightarrow$ $\forall$s. P0 (INVOKE o' s)) $\wedge$ \\
 \>   ($\forall$o' m. P0 o' $\wedge$ P1 m $\Rightarrow$ $\forall$s. P0 (UPDATE o' s m)) $\wedge$ \\
@@ -4783,7 +5169,7 @@ Note how the quantifications over {\tt P0:obj1 -> bool}, etc. lift to
 quantification over {\tt P0:obj -> bool}, etc.
 The following regular version was quietly proven and then lifted:
 {\tt \begin{tabbing}
-|- $\forall$(\=P0\=::respects (ALPHA\_obj ===> \$=)) \\
+$\vdash \forall$(\=P0\=::respects (ALPHA\_obj ===> \$=)) \\
 \>\>  (P1::respects (ALPHA\_method ===> \$=)) \\
 \>\>  (P2::respects (LIST\_REL (\$= \#\#\# ALPHA\_method) ===> \$=)) \\
 \>\>  (P3::respects ((\$= \#\#\# ALPHA\_method) ===> \$=)). \\
@@ -4814,7 +5200,7 @@ but a tuple of four functions, involving a higher-order
 \quotient{} relation of tuples of functions.  This relation is {\it not\/}
 an equivalence relation.
 {\tt \begin{tabbing}
-|- \=$\forall$var \\
+$\vdash$ \=$\forall$var \\
 \> (obj::respects(\$= ===> LIST\_REL (\$= \#\#\# ALPHA\_method) ===> \$=)) \\
 \> (inv::respects(\$= ===> ALPHA\_obj ===> \$= ===> \$=)) \\
 \> (\=upd::respects \\
@@ -4861,7 +5247,7 @@ an equivalence relation.
 %\end{verbatim}
 This lifts to the abstract version:
 {\tt \begin{tabbing}
-|- $\forall$v\=ar obj inv upd cns nil par sgm. \\
+$\vdash \forall$v\=ar obj inv upd cns nil par sgm. \\
 \>   $\exists !$\=(hom\_o,hom\_d,hom\_e,hom\_m). \\
 \>\>   ($\forall$x. hom\_o (OVAR x) = var x) $\wedge$ \\
 \>\>   ($\forall$d. hom\_o (OBJ d) = obj (hom\_d d) d) $\wedge$ \\
@@ -4903,7 +5289,7 @@ lifts to unique existance quantification over {\tt (hom\_o :obj->'a,
 To accomplish this,
 the following regular version was quietly proven and then lifted:
 {\tt \begin{tabbing}
-|- \=$\forall$var \\
+$\vdash$ \=$\forall$var \\
 \> (obj::respects(\$= ===> LIST\_REL (\$= \#\#\# ALPHA\_method) ===> \$=)) \\
 \> (inv::respects(\$= ===> ALPHA\_obj ===> \$=)) \\
 \> (\=upd::respects \\
@@ -4985,68 +5371,76 @@ The package automatically lifts not only types,
 but also constants and theorems from
 the original level to the quotient level.
 
-This involves the use of \quotient{} relations,
-as symmetric and transitive but not necessarily reflexive
-on all elements of their domains.  This is necessary to treat
-higher-order quotients, where elements
-should not be compared by reflexive relations.
+\begin{comment}
+\end{comment}
+Higher order quotients require
+%involves
+%is accomplished through
+the use of \quotient{} relations,
+as symmetric and transitive but not necessarily reflexive on all
+%elements of
+their domains.
+%This is necessary to treat
+%higher order quotients,
+%where elements should not be compared by reflexive relations.
+\begin{comment}
+\end{comment}
 
 The relationship between the lower type and the
 %lifted,
 quotient type
 is characterized by the \quotient{} relation, the abstraction function,
 and the representation function. 
-Three necessary properties have been identified
+As a key contribution,
+three necessary properties have been identified
 for these to properly describe a quotient,
-which are preserved in the creation of aggregate and higher order quotients.
+which are preserved in the creation of both
+aggregate and higher order quotients.
 Most normal polymorphic operators both respect and are preserved
 across such quotients, including higher order quotients.
 
-Quotients are useful in a variety of contexts, as shown in the literature.
-%This package is widely applicabile, consistent with
-%the use of quotients in the literature.
-%
-%For example, bags may be modeled as lists where the order is irrelevant,
-%and sets may be modeled as bags where the number of
-%equal elements is unimportant.
-%
-For example, the syntax of programming languages may be modelled
-as recursive types.
-Terms which are alpha-equivalent 
-may be identified by taking quotients.
-This eases the problem of capture of bound variables.
+The Axiom of Choice was used in this design.  We showed that an alternative
+design may be constructed without dependence on the Axiom of Choice, but that
+it may not be extended to higher order quotients while remaining constructive.
 
-%This is useful for the study of systems which
-Some systems
-are convenient to model initially at one level of granularity, but
-%which may
-have properties which are only true at a
-level with less detail.
-%larger level of granularity.
-For example, the pure sigma calculus is Church-Rosser,
-while
-%but not
-the pre-sigma calculus
-is not.
+%Most implementations of quotients in theorem provers
+%provided support for
+%%the modeling of
+%modeling
+%the quotient types,
+%given an equivalence relation.
+Prior to this work, only Harrison
+\cite{Har98} went beyond
+%this
+support for modeling the quotient types
+to provide automation for the lifting of constant definitions
+and theorems from their original statements concerning
+the original types to the corresponding analogous statements
+concerning the new quotient types.  This is important
+for the practical application of quotients to sizable problems like
+quotients on
+the syntax of
+%large,
+complex,
+realistic programming or specification
+%or annotation
+%\linebreak
+languages.
+%The size of these grammars means that the number
+%of theorems and their bulk are large, and there can be a
+%significant amount of labor involved in lifting these definitions and
+%theorems by hand.
+These may be modelled
+as recursive types, where
+terms which are
+partially equivalent by being
+well-typed and alpha-equivalent
+are identified by taking quotients.
+This eases the traditional problem of the capture of bound variables
+\cite{GoMe96}.
 
 Such quotients may now be more easily modeled within a theorem prover,
 using the package described here.
-
-%For an extended example of the use of
-%a prior version of
-%this package in a significant proof,
-%and for more information on these and other new HOL tools, please see 
-%\cite{HoW01}.
-%\begin{center}
-%{\tt http://www.cis.upenn.edu/\verb+~+hol/lamcr}.
-%\end{center}
-%{\centering {\tt http://www.cis.upenn.edu/\verb+~+hol/lamcr}.
-%
-%}
-
-%{\sc DEDICATION:}  This paper is dedicated to David F. Martin, Professor of
-%Computer Science at UCLA, who passed away December 22, 1996.  Without his
-%encouragement, none of these results would have happened.
 
 {\it Soli Deo Gloria.}
 
@@ -5299,6 +5693,10 @@ Lecture Notes in Computer Science, vol. 902
 %\bibitem {HoW01}
 %Homeier, P.~V.:
 %{\tt http://www.cis.upenn.edu/\verb+~+hol/lamcr}.
+%
+\bibitem {Kal89}
+Kalker, T.: at
+{\tt www.ftp.cl.cam.ac.uk/ftp/hvg/info-hol-archive/00xx/0082}.
 %
 \bibitem {Lei69}
 Leisenring, A. C.:
