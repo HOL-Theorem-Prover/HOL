@@ -23,8 +23,9 @@ transformations that might be applicable to given terms.  These
 ``transformational components'' are rewrites, conversions, AC-rules,
 congruences, decision procedures and a filter, which is used to modify
 the way in which rewrite rules are added to the simpset.  The exact
-types for these components, and the way they can be combined to create
-simpsets is given in the reference entry for {SIMPSET}.
+types for these components, known as simpset fragments, and the way
+they can be combined to create simpsets is given in the reference
+entry for {SSFRAG}.
 
 Rewrite rules are used similarly to the way in they are used in the
 rewriting system ({REWRITE_TAC} et al.).  These are equational
@@ -120,7 +121,7 @@ generally.
 \SEEALSO
 bossLib.++, bossLib.ASM_SIMP_TAC,
 bossLib.FULL_SIMP_TAC, simpLib.mk_simpset, bossLib.rewrites,
-bossLib.SIMP_RULE, bossLib.SIMP_TAC, simpLib.SIMPSET,
+bossLib.SIMP_RULE, bossLib.SIMP_TAC, simpLib.SSFRAG,
 bossLib.EVAL.
 
 \ENDDOC

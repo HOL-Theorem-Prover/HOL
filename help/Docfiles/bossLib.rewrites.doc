@@ -27,6 +27,6 @@ how the basic system's various {ssfrag} values are constructed where
 those values consist only of rewrite theorems.
 
 \SEEALSO
-bossLib.++, simpLib.mk_simpset, simpLib.SIMPSET, bossLib.SIMP_CONV.
+bossLib.++, simpLib.mk_simpset, simpLib.SSFRAG, bossLib.SIMP_CONV.
 
 \ENDDOC

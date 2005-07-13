@@ -1,4 +1,4 @@
-\DOC SIMPSET
+\DOC SSFRAG
 
 \BLTYPE
 SSFRAG : { ac     : (thm * thm) list,

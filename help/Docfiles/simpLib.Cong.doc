@@ -12,7 +12,7 @@ Simplification.
 The {Cong} function marks (or "tags") a theorem so that when passed to
 the simplifier, it is not used as a rewrite, but rather as a
 congruence rule.  This is a simpler way of adding a congruence rule to
-the simplifier than using the underlying {SIMPSET} function.
+the simplifier than using the underlying {SSFRAG} function.
 
 \FAILURE
 Never fails.  On the other hand, {Cong} does not check that the
@@ -39,6 +39,6 @@ behaviour of the simplifier.
 simpsets built on it.)
 
 \SEEALSO
-simpLib.SIMPSET.
+simpLib.SSFRAG.
 
 \ENDDOC
