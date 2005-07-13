@@ -745,7 +745,7 @@ val lem = prove(
   SIMP_TAC std_ss [GSYM SLICE_ZERO_THM,SLICE_COMP_RWT] 
 );
 
-val ADD_ss = simpLib.SIMPSET
+val ADD_ss = simpLib.SSFRAG
   {convs = [{name="ADD_CONV",trace = 3,conv=K (K reduceLib.ADD_CONV),key= SOME([],``(a:num) + b``)}],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 

@@ -20,7 +20,7 @@ val PBETA_CONV = PairRules.PBETA_CONV;
 
 (* -------------------------------------------------------- *)
 
-val PBETA_CONV_ss = simpLib.SIMPSET
+val PBETA_CONV_ss = simpLib.SSFRAG
   {convs = [{name="PBETA_CONV",trace = 3,conv=K (K PBETA_CONV),key= SOME([],``(\(x,y). s1) s2``)}],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 

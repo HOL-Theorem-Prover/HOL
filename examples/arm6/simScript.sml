@@ -77,7 +77,7 @@ val lem = prove(
   SIMP_TAC std_ss [GSYM SLICE_ZERO_THM,SLICE_COMP_RWT]
 );
 
-val ADD_ss = simpLib.SIMPSET
+val ADD_ss = simpLib.SSFRAG
   {convs = [{name="ADD_CONV",trace = 3,conv=K (K reduceLib.ADD_CONV),key= SOME([],``(a:num) + b``)}],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
@@ -305,7 +305,7 @@ val lem1c = prove(
   RW_TAC (std_ss++boolSimps.LET_ss) [DECODE_SWP_def]
 );
 
-val PBETA_CONV_ss = simpLib.SIMPSET
+val PBETA_CONV_ss = simpLib.SSFRAG
   {convs = [{name="PBETA_CONV",trace = 3,conv=K (K PairRules.PBETA_CONV),key= SOME([],``(\(x,y). s1) s2``)}],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 

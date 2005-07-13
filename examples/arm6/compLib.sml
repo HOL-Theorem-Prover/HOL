@@ -44,7 +44,7 @@ fun barm_rws () = add_rws bool_compset
 val DECODE_IFMODE_SET_IFMODE = REWRITE_RULE [BIT_W32_NUM,BITS_W32_NUM] DECODE_IFMODE_SET_IFMODE;
 
 val BARM_CONV = CBV_CONV (barm_rws ());
-val BARM_ss = simpLib.SIMPSET
+val BARM_ss = simpLib.SSFRAG
   {convs = [conv_rec "BARM_CONV" BARM_CONV ``EXEC_INST a b c``],
    rewrs = [iclass_distinct,iseq_distinct,
             PROJ_IF_FLAGS_def,TRIPLE_ARM_EX_def,DECODE_PSR,
@@ -129,7 +129,7 @@ val CORE_CONV = CBV_CONV (core_rws());
 fun conv_rec2 nm cnv cnst trm
   = {name = nm, trace = 3, key = SOME([cnst]@[``tn``,``tm``], trm), conv = K (K cnv)};
 
-fun inst_simpset ((cnst,pat),cnv) = simpLib.SIMPSET
+fun inst_simpset ((cnst,pat),cnv) = simpLib.SSFRAG
   {convs = [conv_rec "CORE_CONV" CORE_CONV ``NEXT_ARM6 (ARM6 d c) (nr,ab,nfiq,nirq,da)``] @
            (map (conv_rec2 "INST_CONV" cnv cnst) pat),
    rewrs = [REG_WRITE_WRITE,TEST_OR_COMP_THM2],
