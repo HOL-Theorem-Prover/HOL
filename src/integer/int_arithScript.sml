@@ -358,7 +358,7 @@ val INT_LT_ADD_NUMERAL = store_thm(
   Term`!x:int y. x < x + &(NUMERAL (BIT1 y)) /\
                  x < x + &(NUMERAL (BIT2 y)) /\
                  ~(x < x + ~(&(NUMERAL y)))`,
-  SIMP_TAC bool_ss [INT_LT_ADDR, INT_LT, NUMERAL_DEF, BIT1,BIT2, 
+  SIMP_TAC bool_ss [INT_LT_ADDR, INT_LT, NUMERAL_DEF, BIT1,BIT2,
                     ADD_CLAUSES, prim_recTheory.LESS_0,
                     INT_NEG_GT0, prim_recTheory.NOT_LESS_0]);
 
@@ -835,7 +835,7 @@ val elim_eq_coeffs = store_thm(
   ]);
 
 
-val int_acnorm_ss = SIMPSET{
+val int_acnorm_ss = SSFRAG{
   ac = [(SPEC_ALL INT_ADD_ASSOC, SPEC_ALL INT_ADD_COMM),
         (SPEC_ALL INT_MUL_ASSOC, SPEC_ALL INT_MUL_COMM)],
   convs = [], congs = [], dprocs = [], filter = NONE,

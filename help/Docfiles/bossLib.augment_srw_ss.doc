@@ -1,6 +1,6 @@
 \DOC augment_srw_ss
 
-\TYPE {bossLib.augment_srw_ss : simpLib.ssdata list -> unit}
+\TYPE {bossLib.augment_srw_ss : simpLib.ssfrag list -> unit}
 
 \SYNOPSIS
 Augments the ``stateful rewriter'' with a list of {simpset} fragments.

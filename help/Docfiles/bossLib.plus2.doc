@@ -1,9 +1,9 @@
 \DOC ++
 
-\TYPE {op ++ : simpset * ssdata -> simpset}
+\TYPE {op ++ : simpset * ssfrag -> simpset}
 
 \SYNOPSIS
-Infix operator for augmenting simpsets with {ssdata} values.
+Infix operator for augmenting simpsets with {ssfrag} values.
 
 \KEYWORDS
 simplification
@@ -20,7 +20,7 @@ particular simplification task at hand.
 Never fails.
 
 \EXAMPLE
-Here we add the {UNWIND_ss} ssdata value to the {pure_ss} simpset to
+Here we add the {UNWIND_ss} {ssfrag} value to the {pure_ss} simpset to
 exploit the former's point-wise elimination conversions.
 {
 - SIMP_CONV (pureSimps.pure_ss ++ boolSimps.UNWIND_ss) []
@@ -31,7 +31,7 @@ exploit the former's point-wise elimination conversions.
 
 
 \SEEALSO
-simpLib.mk_simpset, simpLib.rewrites, 
+simpLib.mk_simpset, simpLib.rewrites,
 simpLib.SIMP_CONV, pureSimps.pure_ss, boolSimps.UNWIND_ss.
 
 \ENDDOC

@@ -3,7 +3,7 @@ struct
 
 open simpLib;
 
-val PURE_ss = SIMPSET
+val PURE_ss = SSFRAG
     {convs  = [],
      rewrs  = [],
      congs  = [],

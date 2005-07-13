@@ -7,14 +7,14 @@ sig
   val REDUCE_CONV   : term -> thm
   val RED_CONV      : term -> thm
 
-  val INT_REDUCE_ss : simpLib.ssdata
-  val INT_RWTS_ss   : simpLib.ssdata
+  val INT_REDUCE_ss : simpLib.ssfrag
+  val INT_RWTS_ss   : simpLib.ssfrag
 
   val int_ss        : simpLib.simpset
 
-  val INT_MUL_AC_ss : simpLib.ssdata
-  val INT_ADD_AC_ss : simpLib.ssdata
-  val INT_AC_ss     : simpLib.ssdata
+  val INT_MUL_AC_ss : simpLib.ssfrag
+  val INT_ADD_AC_ss : simpLib.ssfrag
+  val INT_AC_ss     : simpLib.ssfrag
 
 
   val collect_additive_consts : term -> thm

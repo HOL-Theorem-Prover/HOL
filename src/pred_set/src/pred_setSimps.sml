@@ -5,7 +5,7 @@ struct
 
   val PRED_SET_ss = simpLib.merge_ss [pred_set_rwts, SET_SPEC_ss]
 
-  val PRED_SET_AC_ss = simpLib.SIMPSET
+  val PRED_SET_AC_ss = simpLib.SSFRAG
     {
      convs = [], rewrs = [], filter = NONE, dprocs = [], congs = [],
      ac = [(UNION_ASSOC, UNION_COMM), (INTER_ASSOC, INTER_COMM)]

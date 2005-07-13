@@ -10,7 +10,7 @@ infix |-> THENC
 
 val ERR = mk_HOL_ERR "bagSimps";
 
-val BAG_AC_ss = simpLib.SIMPSET {
+val BAG_AC_ss = simpLib.SSFRAG {
     convs = [], rewrs = [], dprocs = [], congs = [],
     ac = [(SPEC_ALL ASSOC_BAG_UNION, SPEC_ALL COMM_BAG_UNION)],
     filter = NONE
@@ -88,7 +88,7 @@ fun mk_cancelconv (t, s) =
 
 val BAG_EQ_tm = mk_const("=", bag_ty --> bag_ty --> bool);
 
-val BAG_ss = SIMPSET
+val BAG_ss = SSFRAG
   {ac = [], congs = [],
    convs = map mk_cancelconv [(BAG_DIFF_tm, "DIFF"),
                               (SUB_BAG_tm, "SUB_BAG"),
@@ -144,7 +144,7 @@ in
    initial = CTXT []}
 end;
 
-val SBAG_SOLVE_ss = SIMPSET
+val SBAG_SOLVE_ss = SSFRAG
   {ac = [], convs = [], filter = NONE, rewrs = [],
    dprocs = [SBAG_SOLVER], congs = []}
 

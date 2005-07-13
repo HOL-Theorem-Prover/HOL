@@ -114,7 +114,7 @@ val GSPECIFICATION = new_specification
 
 val SET_SPEC_CONV = PGspec.SET_SPEC_CONV GSPECIFICATION;
 
-val SET_SPEC_ss = SIMPSET
+val SET_SPEC_ss = SSFRAG
                     {ac=[], congs=[], dprocs=[], filter=NONE, rewrs=[],
                      convs = [{conv = K (K SET_SPEC_CONV),
                                key = SOME([], ``x IN GSPEC f``),
@@ -3599,24 +3599,24 @@ val SUBSET_MIN_SET = Q.store_thm
 
 val SUBSET_MAX_SET = Q.store_thm
 ("SUBSET_MAX_SET",
- `!I J n. FINITE I /\ FINITE J /\ 
+ `!I J n. FINITE I /\ FINITE J /\
           ~(I={}) /\ ~(J={}) /\ I SUBSET J ==> MAX_SET I <= MAX_SET J`,
  METIS_TAC [SUBSET_DEF,MAX_SET_DEF]);
 
 val MIN_SET_LEQ_MAX_SET = Q.store_thm
 ("MIN_SET_LEQ_MAX_SET",
  `!s. ~(s={}) /\ FINITE s ==> MIN_SET s <= MAX_SET s`,
- RW_TAC arith_ss [MIN_SET_DEF] THEN 
+ RW_TAC arith_ss [MIN_SET_DEF] THEN
 METIS_TAC [FULL_LEAST_INTRO,MAX_SET_DEF,IN_DEF]);
 
 val MIN_SET_UNION = Q.store_thm
 ("MIN_SET_UNION",
- `!A B. FINITE A /\ FINITE B /\ ~(A={}) /\ ~(B={}) 
-         ==> 
+ `!A B. FINITE A /\ FINITE B /\ ~(A={}) /\ ~(B={})
+         ==>
       (MIN_SET (A UNION B) = MIN (MIN_SET A) (MIN_SET B))`,
  let val lem = Q.prove
- (`!A. FINITE A ==> 
-   !B. FINITE B /\ ~(A={}) /\ ~(B={}) 
+ (`!A. FINITE A ==>
+   !B. FINITE B /\ ~(A={}) /\ ~(B={})
        ==> (MIN_SET (A UNION B) = MIN (MIN_SET A) (MIN_SET B))`,
   SET_INDUCT_TAC THEN RW_TAC (srw_ss()) []
    THEN `?b t. (B = b INSERT t) /\ ~(b IN t)` by METIS_TAC [SET_CASES]
@@ -3632,7 +3632,7 @@ val MIN_SET_UNION = Q.store_thm
    THEN POP_ASSUM SUBST_ALL_TAC
    THEN `MIN_SET (s UNION (b INSERT t)) = MIN (MIN_SET s) (MIN_SET (b INSERT t))`
         by METIS_TAC [] THEN POP_ASSUM SUBST_ALL_TAC
-   THEN `MIN_SET (e INSERT s) = MIN (MIN_SET s) (MIN_SET {e})` 
+   THEN `MIN_SET (e INSERT s) = MIN (MIN_SET s) (MIN_SET {e})`
         by METIS_TAC [FINITE_SING,NOT_EMPTY_INSERT,
                       UNION_COMM,INSERT_UNION_EQ,UNION_EMPTY]
    THEN RW_TAC (srw_ss()) [MIN_SET_THM, AC MIN_COMM MIN_ASSOC])
@@ -3641,12 +3641,12 @@ val MIN_SET_UNION = Q.store_thm
 
 val MAX_SET_UNION = Q.store_thm
 ("MAX_SET_UNION",
- `!A B. FINITE A /\ FINITE B /\ ~(A={}) /\ ~(B={}) 
-         ==> 
+ `!A B. FINITE A /\ FINITE B /\ ~(A={}) /\ ~(B={})
+         ==>
       (MAX_SET (A UNION B) = MAX (MAX_SET A) (MAX_SET B))`,
  let val lem = Q.prove
- (`!A. FINITE A ==> 
-   !B. FINITE B /\ ~(A={}) /\ ~(B={}) 
+ (`!A. FINITE A ==>
+   !B. FINITE B /\ ~(A={}) /\ ~(B={})
        ==> (MAX_SET (A UNION B) = MAX (MAX_SET A) (MAX_SET B))`,
   SET_INDUCT_TAC THEN RW_TAC (srw_ss()) []
    THEN `?b t. (B = b INSERT t) /\ ~(b IN t)` by METIS_TAC [SET_CASES]
@@ -3662,7 +3662,7 @@ val MAX_SET_UNION = Q.store_thm
    THEN POP_ASSUM SUBST_ALL_TAC
    THEN `MAX_SET (s UNION (b INSERT t)) = MAX (MAX_SET s) (MAX_SET (b INSERT t))`
         by METIS_TAC [] THEN POP_ASSUM SUBST_ALL_TAC
-   THEN `MAX_SET (e INSERT s) = MAX (MAX_SET s) (MAX_SET {e})` 
+   THEN `MAX_SET (e INSERT s) = MAX (MAX_SET s) (MAX_SET {e})`
         by METIS_TAC [FINITE_SING,NOT_EMPTY_INSERT,
                       UNION_COMM,INSERT_UNION_EQ,UNION_EMPTY]
    THEN RW_TAC (srw_ss()) [MAX_SET_THM, AC MAX_COMM MAX_ASSOC])
@@ -3973,12 +3973,12 @@ val sspec_conv_str =
 \     name = \"SET_SPEC_CONV\",\n\
 \     trace = 2}\n\
 \  in\n\
-\  val SET_SPEC_ss = simpLib.SIMPSET { ac = [], congs = [],\n\
-\                                      convs = [SET_SPEC_CONV], dprocs = [],\n\
-\                                      filter = NONE, rewrs = []}\n\
+\  val SET_SPEC_ss = simpLib.SSFRAG { ac = [], congs = [],\n\
+\                                     convs = [SET_SPEC_CONV], dprocs = [],\n\
+\                                     filter = NONE, rewrs = []}\n\
 \  val _ = BasicProvers.augment_srw_ss [SET_SPEC_ss]\n  end\n"
 
-fun sigps pps = (PP.add_string pps "val SET_SPEC_ss : simpLib.ssdata";
+fun sigps pps = (PP.add_string pps "val SET_SPEC_ss : simpLib.ssfrag";
                  PP.add_newline pps)
 
 val _ = adjoin_to_theory {sig_ps = SOME sigps,

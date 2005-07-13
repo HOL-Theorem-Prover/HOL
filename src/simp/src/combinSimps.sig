@@ -1,4 +1,4 @@
 signature combinSimps =
 sig
-     val COMBIN_ss : simpLib.ssdata
+     val COMBIN_ss : simpLib.ssfrag
 end

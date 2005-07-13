@@ -43,7 +43,7 @@ could:
 }
 This example illustrates the way in which the simplifier can do
 conditional rewriting.  However, the lack of the congruence for
-implications, means that using {pure_ss} will not be able to discharge
+implications means that using {pure_ss} will not be able to discharge
 the side condition in the goal below:
 {
    - SIMP_TAC pure_ss [ADD_EQ_SUB] ([], --`x <= y ==> (z + x = y)`--);
@@ -64,11 +64,11 @@ distribution itself, as a basis for the construction of other
 simpsets.
 
 \COMMENTS
-There is also a {pureSimps.PURE_ss} {ssdata} value. Its usefulness is
+There is also a {pureSimps.PURE_ss} {ssfrag} value. Its usefulness is
 questionable.
 
 \SEEALSO
-boolSimps.bool_ss, Rewrite.PURE_REWRITE_TAC, 
+boolSimps.bool_ss, Rewrite.PURE_REWRITE_TAC,
 simpLib.SIMP_CONV, simpLib.SIMP_TAC.
 
 \ENDDOC

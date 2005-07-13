@@ -3,12 +3,12 @@ sig
  include Abbrev
  type ctxt
 
-     val ARITH_ss           : simpLib.ssdata
-     val REDUCE_ss          : simpLib.ssdata
-     val SUC_FILTER_ss      : simpLib.ssdata
-     val ARITH_DP_ss        : simpLib.ssdata
-     val ARITH_RWTS_ss      : simpLib.ssdata
-     val ARITH_AC_ss        : simpLib.ssdata
+     val ARITH_ss           : simpLib.ssfrag
+     val REDUCE_ss          : simpLib.ssfrag
+     val SUC_FILTER_ss      : simpLib.ssfrag
+     val ARITH_DP_ss        : simpLib.ssfrag
+     val ARITH_RWTS_ss      : simpLib.ssfrag
+     val ARITH_AC_ss        : simpLib.ssfrag
      val CTXT_ARITH         : ctxt -> conv
      val CACHED_ARITH       : ctxt -> conv
      val clear_arith_caches : unit -> unit

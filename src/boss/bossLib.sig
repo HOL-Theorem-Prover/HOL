@@ -1,7 +1,7 @@
 signature bossLib =
 sig
   include Abbrev
-  type ssdata = simpLib.ssdata
+  type ssfrag = simpLib.ssfrag
   type simpset = simpLib.simpset
 
   (* Make definitions *)
@@ -35,7 +35,7 @@ sig
 
   (* Simplification *)
 
-  val ++             : simpset * ssdata -> simpset    (* infix *)
+  val ++             : simpset * ssfrag -> simpset    (* infix *)
   val &&             : simpset * thm list -> simpset  (* infix *)
   val pure_ss        : simpset
   val bool_ss        : simpset
@@ -43,10 +43,10 @@ sig
   val arith_ss       : simpset
   val list_ss        : simpset
   val srw_ss         : unit -> simpset
-  val ARITH_ss       : ssdata            (* arithmetic d.p. + some rewrites *)
+  val ARITH_ss       : ssfrag            (* arithmetic d.p. + some rewrites *)
   val type_rws       : string -> thm list
-  val rewrites       : thm list -> ssdata
-  val augment_srw_ss : ssdata list -> unit
+  val rewrites       : thm list -> ssfrag
+  val augment_srw_ss : ssfrag list -> unit
 
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
@@ -57,7 +57,7 @@ sig
   val ASM_SIMP_TAC   : simpset -> thm list -> tactic
   val FULL_SIMP_TAC  : simpset -> thm list -> tactic
   val RW_TAC         : simpset -> thm list -> tactic
-  val SRW_TAC        : ssdata list -> thm list -> tactic
+  val SRW_TAC        : ssfrag list -> thm list -> tactic
 
   val EVAL           : term -> thm   (* Call-by-value evaluation *)
   val EVAL_RULE      : thm -> thm

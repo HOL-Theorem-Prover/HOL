@@ -1,6 +1,6 @@
 \DOC SRW_TAC
 
-\TYPE {SRW_TAC : ssdata list -> thm list -> tactic}
+\TYPE {SRW_TAC : ssfrag list -> thm list -> tactic}
 
 \SYNOPSIS
 A version of {RW_TAC} with an implicit {simpset}.
@@ -46,7 +46,7 @@ such a fragment is {numSimps.ARITH_ss}, which embodies an arithmetic
 decision procedure for the natural numbers.
 
 \SEEALSO
-bossLib.srw_ss, bossLib.augment_srw_ss, 
-BasicProvers.export_rewrites, simpLib.SIMPSET, simpLib.ssdata.
+bossLib.srw_ss, bossLib.augment_srw_ss,
+BasicProvers.export_rewrites, simpLib.SSFRAG.
 
 \ENDDOC

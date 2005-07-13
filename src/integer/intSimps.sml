@@ -66,7 +66,7 @@ local
       conv = K (K reducer)}
   val rederr = ERR "RED_CONV" "Term not reducible"
 in
-val INT_REDUCE_ss = SIMPSET
+val INT_REDUCE_ss = SSFRAG
   {convs = map mk_conv (exp_pattern::(abs_patterns @ basic_op_patterns)),
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 

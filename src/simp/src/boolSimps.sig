@@ -1,31 +1,31 @@
 signature boolSimps =
 sig
      val bool_ss : simpLib.simpset
-     val BOOL_ss : simpLib.ssdata       (* boolean rewrites and
+     val BOOL_ss : simpLib.ssfrag       (* boolean rewrites and
                                            beta conversion *)
-     val CONG_ss : simpLib.ssdata       (* congruence rules for ==> and
+     val CONG_ss : simpLib.ssfrag       (* congruence rules for ==> and
                                            if-then-else *)
-     val CONJ_ss : simpLib.ssdata       (* congruence rules for /\; not
+     val CONJ_ss : simpLib.ssfrag       (* congruence rules for /\; not
                                            included in bool_ss, but
                                            occasionally useful *)
-     val NOT_ss : simpLib.ssdata        (* rewrites that move negations
+     val NOT_ss : simpLib.ssfrag        (* rewrites that move negations
                                            inwards, included in bool_ss *)
-     val COND_elim_ss : simpLib.ssdata  (* eliminates if-then-else's;
+     val COND_elim_ss : simpLib.ssfrag  (* eliminates if-then-else's;
                                            not in bool_ss *)
-     val LIFT_COND_ss : simpLib.ssdata  (* lifts conds high in a term, but
+     val LIFT_COND_ss : simpLib.ssfrag  (* lifts conds high in a term, but
                                            doesn't eliminate them; can merge
                                            those of the same guard or
                                            opposing guards *)
-     val UNWIND_ss : simpLib.ssdata     (* "pointwise" elimination for
+     val UNWIND_ss : simpLib.ssfrag     (* "pointwise" elimination for
                                             ? and !, included in bool_ss *)
-     val ETA_ss : simpLib.ssdata        (* eta conversion;
+     val ETA_ss : simpLib.ssfrag        (* eta conversion;
                                            not included in bool_ss *)
 
-     val LET_ss : simpLib.ssdata        (* writes out let terms, using a
+     val LET_ss : simpLib.ssfrag        (* writes out let terms, using a
                                            congruence to evaluate the
                                            second argument first *)
 
-     val DNF_ss : simpLib.ssdata
+     val DNF_ss : simpLib.ssfrag
         (* converts a term to DNF at the level of propositional logic, and
            also moves quantifiers around to give them maximum useful scope
            over their bodies:

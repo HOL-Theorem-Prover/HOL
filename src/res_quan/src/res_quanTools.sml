@@ -11,7 +11,7 @@
 structure res_quanTools :> res_quanTools =
 struct
 
-open HolKernel Parse Drule Conv Tactic Tactical Thm_cont 
+open HolKernel Parse Drule Conv Tactic Tactical Thm_cont
      Rewrite boolSyntax res_quanTheory boolTheory simpLib Cond_rewrite;
 
 infix THENR ORELSER ++ ||;
@@ -410,7 +410,7 @@ fun RESQ_REWRITE1_TAC th' =
 (* --------------------------------------------------------------------- *)
 
 val resq_SS =
-  simpLib.SIMPSET
+  simpLib.SSFRAG
   {ac = [], congs = [],
    convs =
    [{conv = K (K RES_FORALL_CONV),

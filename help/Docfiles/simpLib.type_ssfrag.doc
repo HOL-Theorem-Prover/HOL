@@ -1,6 +1,6 @@
-\DOC 
+\DOC
 
-\TYPE {simpLib.type_ssdata : string -> ssdata}
+\TYPE {simpLib.type_ssfrag : string -> ssdata}
 
 \SYNOPSIS Returns a simpset fragment for simplifying types' constructors.
 
@@ -8,7 +8,7 @@
 
 \DESCRIBE
 
-A call to {type_ssdata(s)} function returns a simpset fragment that
+A call to {type_ssfrag(s)} function returns a simpset fragment that
 embodies simplification routines for the type named by the string {s}.
 The fragment includes rewrites that express injectivity and
 disjointness of constructors, and which simplify {case} expressions
@@ -20,18 +20,18 @@ the {TypeBase}.
 
 \EXAMPLE
 {
-- val ss = simpLib.type_ssdata "list";
+- val ss = simpLib.type_ssfrag "list";
 > val ss =
     simpLib.SIMPSET{ac = [], congs = [], convs = [], dprocs = [],
                     filter = NONE,
                     rewrs =
-                      [|- (!v f. case v f [] = v) /\ 
+                      [|- (!v f. case v f [] = v) /\
                           !v f a0 a1. case v f (a0::a1) = f a0 a1,
-                       |- !a1 a0. ~([] = a0::a1), 
+                       |- !a1 a0. ~([] = a0::a1),
                        |- !a1 a0. ~(a0::a1 = []),
-                       |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') = 
+                       |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') =
                                           (a0 = a0') /\ (a1 = a1')]}
-     : ssdata
+     : ssfrag
 
 - SIMP_CONV (bool_ss ++ ss) [] ``h::t = []``;
 <<HOL message: inventing new type variable names: 'a>>
@@ -39,7 +39,7 @@ the {TypeBase}.
 }
 
 \COMMENTS
-{RW_TAC} and {SRW_TAC} automatically include these simpset fragments. 
+{RW_TAC} and {SRW_TAC} automatically include these simpset fragments.
 
 
 \SEEALSO

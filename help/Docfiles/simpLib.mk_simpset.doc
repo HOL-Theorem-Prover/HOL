@@ -1,15 +1,19 @@
 \DOC mk_simpset
 
-\TYPE {simpLib.mk_simpset : ssdata list -> simpset}
+\TYPE {simpLib.mk_simpset : ssfrag list -> simpset}
 
 \SYNOPSIS
-Creates a simpset by combining a list of {ssdata} values.
+Creates a simpset by combining a list of {ssfrag} values.
 
 \KEYWORDS
 simplification.
 
 \LIBRARY
 simpLib
+
+\DESCRIBE
+This function creates a {simpset} value by repeatedly adding (as per
+the {++} operator) {simpset} fragment values to the base {empty_ss}.
 
 \FAILURE
 Never fails.

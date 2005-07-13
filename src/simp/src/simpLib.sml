@@ -72,7 +72,7 @@ fun mk_rewr_convdata thm =
 (* Composable simpset fragments                                              *)
 (*---------------------------------------------------------------------------*)
 
-datatype ssdata = SIMPSET of
+datatype ssfrag = SSFRAG of
    {convs  : convdata list,
     rewrs  : thm list,
     ac     : (thm * thm) list,
@@ -85,18 +85,18 @@ datatype ssdata = SIMPSET of
 (*---------------------------------------------------------------------------*)
 
 fun rewrites rewrs =
-   SIMPSET {convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
+   SSFRAG {convs=[],rewrs=rewrs,filter=NONE,ac=[],dprocs=[],congs=[]};
 
 fun dproc_ss dproc =
-   SIMPSET {convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
+   SSFRAG {convs=[],rewrs=[],filter=NONE,ac=[],dprocs=[dproc],congs=[]};
 
 fun ac_ss aclist =
-   SIMPSET {convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
+   SSFRAG {convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
 
-fun D (SIMPSET s) = s;
+fun D (SSFRAG s) = s;
 
-fun merge_ss (s:ssdata list) =
-    SIMPSET {convs=flatten (map (#convs o D) s),
+fun merge_ss (s:ssfrag list) =
+    SSFRAG {convs=flatten (map (#convs o D) s),
              rewrs=flatten (map (#rewrs o D) s),
             filter=SOME (end_foldr (op oo) (mapfilter (the o #filter o D) s))
                     handle HOL_ERR _ => NONE,
@@ -175,7 +175,7 @@ with
 
 
  fun add_to_ss
-    (SIMPSET {convs,rewrs,filter,ac,dprocs,congs},
+    (SSFRAG {convs,rewrs,filter,ac,dprocs,congs},
      SS {mk_rewrs=mk_rewrs',travrules,initial_net,dprocs=dprocs'})
   = let val mk_rewrs = case filter of SOME f => f oo mk_rewrs' | _ => mk_rewrs'
         val rewrs' = flatten (map mk_rewrs (ac_rewrites ac@rewrs))
@@ -233,7 +233,7 @@ local open markerLib
         val (ACs,rst') = Lib.partition is_AC rst
     in
      if null Congs andalso null ACs then (ss,thl)
-     else ((ss ++ SIMPSET{ac=map unAC ACs, congs=map unCong Congs,
+     else ((ss ++ SSFRAG{ac=map unAC ACs, congs=map unCong Congs,
                         convs=[],rewrs=[],filter=NONE,dprocs=[]}), rst')
     end
 in
@@ -308,15 +308,15 @@ fun FULL_SIMP_TAC ss l =
        end
 
 (* ----------------------------------------------------------------------
-    creating per-type ssdata values 
+    creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun type_ssdata s = let 
+fun type_ssfrag s = let
   val {rewrs, convs} = TypeBase.simpls_of s
 in
-  SIMPSET {convs = convs, rewrs = rewrs, filter = NONE,
+  SSFRAG {convs = convs, rewrs = rewrs, filter = NONE,
            dprocs = [], ac = [], congs = []}
-end 
+end
 
 
 (* ---------------------------------------------------------------------

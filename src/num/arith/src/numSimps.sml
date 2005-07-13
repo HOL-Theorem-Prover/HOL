@@ -31,7 +31,7 @@ val ARITH = EQT_ELIM o ARITH_CONV;
 (* REDUCE_ss: simpset fragment that reduces ground arithmetic expressions    *)
 (*---------------------------------------------------------------------------*)
 
-local 
+local
  fun reducer t =
   let open numSyntax
       val (_, args) = strip_comb t
@@ -49,9 +49,9 @@ local
  fun mk_unary_rconv op_t = mk_redconv0 (mk_comb(op_t, x))
  fun mk_redconv op_t = mk_redconv0 (list_mk_comb(op_t, [x, y]))
 in
-val REDUCE_ss = 
+val REDUCE_ss =
  let open numSyntax
- in simpLib.SIMPSET
+ in simpLib.SSFRAG
      {convs = mk_unary_rconv even_tm ::
            mk_unary_rconv odd_tm  ::
            mk_unary_rconv pre_tm  ::
@@ -122,7 +122,7 @@ val arithmetic_rewrites = [
 end;
 
 val ARITH_RWTS_ss =
-    simpLib.SIMPSET
+    simpLib.SSFRAG
     { convs = [], rewrs = arithmetic_rewrites, congs = [],
       filter = NONE, ac = [], dprocs = []};
 
@@ -474,7 +474,7 @@ end;
 (*---------------------------------------------------------------------------*)
 
 val ARITH_DP_ss =
-    simpLib.SIMPSET
+    simpLib.SSFRAG
     { convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
@@ -491,7 +491,7 @@ fun clear_arith_caches() = clear_cache arith_cache;
 (* Simpset for ordered AC rewriting on terms with + and *.                   *)
 (*---------------------------------------------------------------------------*)
 
-val ARITH_AC_ss = 
+val ARITH_AC_ss =
  let open arithmeticTheory
  in ac_ss [(ADD_SYM,ADD_ASSOC), (MULT_SYM,MULT_ASSOC)]
  end
@@ -564,19 +564,19 @@ end handle Option.Option =>
            raise mk_HOL_ERR "numSimps" "eliminate_SUCn"
                             "No applicable SUC term to eliminate"
 
-val SUC_FILTER_ss = 
- let fun numfilter th = 
-      let val newth = repeat eliminate_SUCn 
+val SUC_FILTER_ss =
+ let fun numfilter th =
+      let val newth = repeat eliminate_SUCn
                         (repeat eliminate_single_SUC th)
       in if aconv (concl newth) (concl th) then [th] else [th, newth]
       end
  in
-  simpLib.SIMPSET
+  simpLib.SSFRAG
     { convs = [], rewrs = [], congs = [],
       filter = SOME numfilter, ac = [], dprocs = []}
  end;
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end; 
+end;
 
 end (* numSimps *)

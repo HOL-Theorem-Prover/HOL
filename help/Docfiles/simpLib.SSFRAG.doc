@@ -1,19 +1,19 @@
 \DOC SIMPSET
 
 \BLTYPE
-SIMPSET : { ac     : (thm * thm) list,
-            congs  : thm list,
-            convs  : {conv  : (term list -> conv) -> term list -> conv,
-                      key   : (term list * term) option,
-                      name  : string,
-                      trace : int} list,
-            dprocs : Traverse.reducer list,
-            filter : (thm -> thm list) option,
-            rewrs  : thm list } -> ssdata
+SSFRAG : { ac     : (thm * thm) list,
+           congs  : thm list,
+           convs  : {conv  : (term list -> conv) -> term list -> conv,
+                     key   : (term list * term) option,
+                     name  : string,
+                     trace : int} list,
+           dprocs : Traverse.reducer list,
+           filter : (thm -> thm list) option,
+           rewrs  : thm list } -> ssfrag
 \ELTYPE
 
 \SYNOPSIS
-Constructs {ssdata} values.
+Constructs {ssfrag} values.
 
 \KEYWORDS
 simplification.
@@ -22,12 +22,12 @@ simplification.
 simpLib
 
 \DESCRIBE
-The {ssdata} type is the way in which simplification components are
-packaged up and made available to the simplifier (though {ssdata}
+The {ssfrag} type is the way in which simplification components are
+packaged up and made available to the simplifier (though {ssfrag}
 values must first be turned into simpsets, either by addition to an
 existing simpset, or with the {mk_simpset} function).
 
-The big record type passed to {SIMPSET} as an argument has six fields.
+The big record type passed to {SSFRAG} as an argument has six fields.
 Here we describe each in turn.
 
 The {ac} field is a list of ``AC theorem'' pairs.  Each such pair is
@@ -78,7 +78,7 @@ written as
 }
 
 The {convs} field is a list of conversions that the simplifier will
-apply.  Each conversion added to an {ssdata} value is done so in a
+apply.  Each conversion added to an {ssfrag} value is done so in a
 record consisting of four fields.
 
 The {conv} field of this subsidiary record type includes the value of
@@ -103,7 +103,7 @@ term, then the conversion will need to reject the input itself.  The
 {name} and {trace} fields are only relevant to the debugging
 facilities of the simplifier.
 
-The {dprocs} field of the record passed to {SIMPSET} is where decision
+The {dprocs} field of the record passed to {SSFRAG} is where decision
 procedures can be specified.  The construction of values of type
 {reducer} will be described in other reference entries (some of which
 may not have been written yet).
@@ -127,18 +127,18 @@ documentation to the contrary notwithstanding.
 Given a conversion {MUL_CONV} to calculate multiplications, the
 following illustrates how this can be added to a simpset:
 {
-   - val ssd = SIMPSET {ac = [], congs = [],
+   - val ssd = SSFRAG {ac = [], congs = [],
                         convs = [{conv = K (K MUL_CONV),
                                   key= SOME ([], Term`x * y`),
                                   name = "MUL_CONV",
                                   trace = 2}],
                         dprocs = [], filter = NONE, rewrs = []};
    > val ssd =
-       SIMPSET{ac = [], congs = [],
+       SSFRAG{ac = [], congs = [],
                convs =
                  [{conv = fn, key = SOME([], `x * y`), name = "MUL_CONV",
                    trace = 2}], dprocs = [], filter = NONE, rewrs = []}
-       : ssdata
+       : ssfrag
    - SIMP_CONV bool_ss [] (Term`3 * 4`);
    > val it = |- 3 * 4 = 3 * 4 : thm
    - SIMP_CONV (bool_ss ++ ssd) [] (Term`3 * 4`);
@@ -147,24 +147,19 @@ following illustrates how this can be added to a simpset:
 Given the theorems {ADD_SYM} and {ADD_ASSOC} from {arithmeticTheory},
 we can construct a normaliser for additive terms.
 {
-   - val ssd2 = SIMPSET {ac = [(SPEC_ALL ADD_ASSOC, SPEC_ALL ADD_SYM)],
+   - val ssd2 = SSFRAG {ac = [(SPEC_ALL ADD_ASSOC, SPEC_ALL ADD_SYM)],
                          congs = [], convs = [], dprocs = [],
                          filter = NONE, rewrs = []};
    > val ssd2 =
-       SIMPSET{ac = [(|- m + n + p = (m + n) + p, |- m + n = n + m)],
+       SSFRAG{ac = [(|- m + n + p = (m + n) + p, |- m + n = n + m)],
                congs = [], convs = [], dprocs = [], filter = NONE,
                rewrs = []}
-       : ssdata
+       : ssfrag
    - SIMP_CONV (bool_ss ++ ssd2) [] (Term`(y + 3) + x + 4`);
      (* note that the printing of + in this example is that of a
         right associative operator.*)
    > val it = |- (y + 3) + x + 4 = 3 + 4 + x + y : thm
 }
-
-
-\COMMENTS
-{SIMPSET} is not the right name for something that creates an {ssdata}
-value.
 
 \SEEALSO
 simpLib.++, boolSimps.bool_ss, simpLib.Cong, simpLib.mk_simpset,

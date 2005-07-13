@@ -117,7 +117,7 @@ fun tyi_to_ssdata tyinfo =
  let open simpLib
   val {rewrs, convs} = TypeBasePure.simpls_of tyinfo;
 in
-  SIMPSET {convs = convs, rewrs = rewrs, filter = NONE,
+  SSFRAG {convs = convs, rewrs = rewrs, filter = NONE,
            dprocs = [], ac = [], congs = []}
 end
 
@@ -165,7 +165,7 @@ in
 end tm
 
 val ABBREV_ss =
-    simpLib.SIMPSET { ac = [], congs = [],
+    simpLib.SSFRAG { ac = [], congs = [],
                       convs = [{conv = K (K ABBREV_CONV),
                                 key = SOME ([], ``marker$Abbrev x``),
                                 trace = 2, name = "ABBREV_CONV"}],
@@ -370,7 +370,7 @@ val (srw_ss : simpset ref) = ref (bool_ss ++ combinSimps.COMBIN_ss);
 
 val srw_ss_initialised = ref false;
 
-val pending_updates = ref ([]: simpLib.ssdata list);
+val pending_updates = ref ([]: simpLib.ssfrag list);
 
 fun initialise_srw_ss() =
   if !srw_ss_initialised then !srw_ss
@@ -415,7 +415,7 @@ fun setup_exports (oldname, thyname) = let
   val rwts_name = thyname ^ "_rwts"
   fun print_sig pps =
       if not (null (!exports)) then
-        Portable.add_string pps ("val "^rwts_name^" : simpLib.ssdata")
+        Portable.add_string pps ("val "^rwts_name^" : simpLib.ssfrag")
       else ()
   fun print_export pps =
       if not (null (!exports)) then let

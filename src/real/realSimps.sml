@@ -14,7 +14,7 @@ in
 val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss ++
                numSimps.REDUCE_ss
 
-val real_SS = simpLib.SIMPSET
+val real_SS = simpLib.SSFRAG
   {ac = [],
    congs = [],
    convs = [],
@@ -58,7 +58,7 @@ val real_SS = simpLib.SIMPSET
             REAL_MAX_REFL, REAL_LE_MAX1, REAL_LE_MAX2, REAL_MAX_ADD,
             REAL_MAX_SUB]};
 
-val real_ac_SS = simpLib.SIMPSET {
+val real_ac_SS = simpLib.SSFRAG {
   ac = [(SPEC_ALL REAL_ADD_ASSOC, SPEC_ALL REAL_ADD_SYM),
         (SPEC_ALL REAL_MUL_ASSOC, SPEC_ALL REAL_MUL_SYM)],
   convs = [],
@@ -302,7 +302,7 @@ val simpset_convs = map (fn p => {conv = K (K elim_common_factor),
                                   name = "realSimps.elim_common_factor",
                                   trace = 2}) ecf_patterns
 
-val REAL_REDUCE_ss = SIMPSET {ac = [], congs =[],
+val REAL_REDUCE_ss = SSFRAG {ac = [], congs =[],
                               convs = simpset_convs,
                               dprocs = [], filter = NONE,
                               rewrs = rwts}
@@ -541,11 +541,11 @@ in
 end;
 
 val REAL_ARITH_ss =
-    simpLib.SIMPSET
+    simpLib.SSFRAG
     { convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end; 
+end;
 
 end

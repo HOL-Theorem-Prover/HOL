@@ -13,9 +13,9 @@ simpLib
 
 \DESCRIBE
 {SIMP_CONV} is the fundamental engine of the HOL simplification
-library.  It repeatedly applies the transformations included in 
+library.  It repeatedly applies the transformations included in
 the provided simpset (which is augmented with the given rewrite rules)
-to a term, ultimately yielding a theorem equating the original 
+to a term, ultimately yielding a theorem equating the original
 term to another.
 
 Values of the {simpset} type embody a suite of different
@@ -51,7 +51,7 @@ an infinite loop.
 Rewrite rules can always be added ``on the fly'' as all of the
 simplification functions take a {thm list} argument where these rules
 can be specified.  If a set of rewrite rules is frequently used, then
-these should probably be made into a {ssdata} value with the
+these should probably be made into a {ssfrag} value with the
 {rewrites} function and then added to an existing simpset with {++}.
 
 The conversions which are part of simpsets are useful for situations
@@ -86,7 +86,7 @@ valid is ({IMP_CONG}):
 }
 Other congruence theorems can be part of simpsets.  The
 system provides {IMP_CONG} above and {COND_CONG} as part of the
-{CONG_ss} {ssdata} value.  (These {ssdata} values can be incorporated
+{CONG_ss} {ssfrag} value.  (These {ssdata} values can be incorporated
 into simpsets with the {++} function.)  Other congruence theorems are
 already proved for operators such as conjunction and disjunction, but
 use of these in standard simpsets is not recommended as the
@@ -118,8 +118,8 @@ functionality, and is useful in its own right, just as conversions are
 generally.
 
 \SEEALSO
-bossLib.++, bossLib.ASM_SIMP_TAC, 
-bossLib.FULL_SIMP_TAC, simpLib.mk_simpset, bossLib.rewrites, 
+bossLib.++, bossLib.ASM_SIMP_TAC,
+bossLib.FULL_SIMP_TAC, simpLib.mk_simpset, bossLib.rewrites,
 bossLib.SIMP_RULE, bossLib.SIMP_TAC, simpLib.SIMPSET,
 bossLib.EVAL.
 

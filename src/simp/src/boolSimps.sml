@@ -1,7 +1,7 @@
 structure boolSimps :> boolSimps =
 struct
 
-open HolKernel boolLib liteLib simpLib pureSimps 
+open HolKernel boolLib liteLib simpLib pureSimps
      Ho_Rewrite tautLib Parse;
 
 infix THENQC
@@ -23,7 +23,7 @@ fun comb_ETA_CONV t =
        then RAND_CONV ETA_CONV
        else NO_CONV) t
 
-val ETA_ss = SIMPSET {
+val ETA_ss = SSFRAG {
   convs = [{name = "ETA_CONV (eta reduction)",
             trace = 2,
             key = SOME ([],``(f:('a->'b)->'c) (\x:'a. (g:'a->'b) x)``),
@@ -42,7 +42,7 @@ val ETA_ss = SIMPSET {
    ---------------------------------------------------------------------- *)
 
 
-val BOOL_ss = SIMPSET
+val BOOL_ss = SSFRAG
   {convs=[{name="BETA_CONV (beta reduction)",
            trace=2,
            key=SOME ([],``(\x:'a. y:'b) z``),
@@ -70,7 +70,7 @@ val BOOL_ss = SIMPSET
 local val IMP_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] IMP_CONG
       val COND_CONG = REWRITE_RULE [GSYM AND_IMP_INTRO] COND_CONG
 in
-val CONG_ss = SIMPSET
+val CONG_ss = SSFRAG
   {congs = [IMP_CONG, COND_CONG, RES_FORALL_CONG, RES_EXISTS_CONG],
    convs = [], rewrs = [], filter=NONE, ac=[], dprocs=[]}
 end;
@@ -101,7 +101,7 @@ val NOT_ss = rewrites [NOT_IMP,
  * UNWIND_ss
  *------------------------------------------------------------------------*)
 
-val UNWIND_ss = SIMPSET
+val UNWIND_ss = SSFRAG
   {convs=[{name="UNWIND_EXISTS_CONV",
            trace=1,
            key=SOME ([],``?x:'a. P``),
@@ -125,7 +125,7 @@ val let_I_thm = prove(
   REWRITE_TAC [combinTheory.I_THM, LET_THM]);
 
 val LET_ss =
-    simpLib.SIMPSET {ac = [], congs = [let_cong], convs = [], filter = NONE,
+    simpLib.SSFRAG {ac = [], congs = [let_cong], convs = [], filter = NONE,
                      dprocs = [], rewrs = [let_I_thm]}
 
 (* ----------------------------------------------------------------------
@@ -217,7 +217,7 @@ end handle HOL_ERR _ => failwith "COND_ABS_CONV";
 
 
 val COND_elim_ss =
-  simpLib.SIMPSET {ac = [], congs = [],
+  simpLib.SSFRAG {ac = [], congs = [],
                    convs = [{conv = K (K celim_rand_CONV),
                              name = "conditional lifting at rand",
                              key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
@@ -232,7 +232,7 @@ val COND_elim_ss =
                             NESTED_COND]}
 
 val LIFT_COND_ss =
-    simpLib.SIMPSET {ac = [], congs = [],
+    simpLib.SSFRAG {ac = [], congs = [],
                      convs = [{conv = K (K celim_rand_CONV),
                                name = "conditional lifting at rand",
                                key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
@@ -256,7 +256,7 @@ val LIFT_COND_ss =
  * Not efficient on terms with many conjunctions chained together
  * ------------------------------------------------------------------------*)
 
-val CONJ_ss = SIMPSET {
+val CONJ_ss = SSFRAG {
   ac = [],
   congs = [REWRITE_RULE [GSYM AND_IMP_INTRO] (SPEC_ALL boolTheory.AND_CONG)],
   convs = [], dprocs = [], filter = NONE, rewrs = []}

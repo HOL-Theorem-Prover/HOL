@@ -1,8 +1,8 @@
 signature pred_setSimps =
 sig
-  val SET_SPEC_ss : simpLib.ssdata
-  val PRED_SET_ss : simpLib.ssdata
-  val PRED_SET_AC_ss : simpLib.ssdata
+  val SET_SPEC_ss : simpLib.ssfrag
+  val PRED_SET_ss : simpLib.ssfrag
+  val PRED_SET_AC_ss : simpLib.ssfrag
 end
 
 (*

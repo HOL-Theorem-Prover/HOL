@@ -1,6 +1,6 @@
 \DOC SRW_TAC
 
-\TYPE {SRW_TAC : simpset -> thm list -> tactic}
+\TYPE {SRW_TAC : ssfrag list -> thm list -> tactic}
 
 \SYNOPSIS
 A version of {RW_TAC} with an implicit {simpset}.

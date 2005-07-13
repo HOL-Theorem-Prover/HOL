@@ -1,9 +1,9 @@
 \DOC rewrites
 
-\TYPE {rewrites : thm list -> ssdata}
+\TYPE {rewrites : thm list -> ssfrag}
 
 \SYNOPSIS
-Create an {ssdata} value consisting of the given theorems as
+Create an {ssfrag} value consisting of the given theorems as
 rewrites.
 
 \DESCRIBE

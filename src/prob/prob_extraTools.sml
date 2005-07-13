@@ -3,7 +3,7 @@
 (* development.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-structure prob_extraTools :> prob_extraTools = 
+structure prob_extraTools :> prob_extraTools =
 struct
 
 open HolKernel Parse boolLib;
@@ -35,7 +35,7 @@ val pred_set_rewrs
      IN_INTER, SET_EQ_EXT, SUBSET_DEF, IN_IMAGE, INTER_EMPTY,
      INTER_UNIV, UNION_EMPTY, UNION_UNIV, GSPECIFICATION];
 
-val pred_set_ss = simpLib.++(boolSimps.bool_ss, simpLib.SIMPSET {
+val pred_set_ss = simpLib.++(boolSimps.bool_ss, simpLib.SSFRAG {
   ac = [],
   convs = [],
   dprocs = [],
@@ -62,14 +62,14 @@ fun IN_LAMBDA_CONV ty tm
        else assert_false "IN_LAMBDA_CONV" "not the right form"
     end;
 
-fun pset_ss_ty ty = simpLib.++(boolSimps.bool_ss, simpLib.SIMPSET {
+fun pset_ss_ty ty = simpLib.++(boolSimps.bool_ss, simpLib.SSFRAG {
   ac = [],
   convs = [{conv = (K o K) (IN_LAMBDA_CONV ty),
 	    key = SOME ([], ``(x:'a) IN y``),
 	    name = "IN_LAMBDA_CONV", trace = 2}],
   dprocs = [],
   filter = NONE,
-  rewrs = map (INST_TYPE [alpha |-> ty]) 
+  rewrs = map (INST_TYPE [alpha |-> ty])
               (GSYM SPECIFICATION::pred_set_rewrs),
   congs = []});
 

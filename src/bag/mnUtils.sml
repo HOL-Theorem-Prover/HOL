@@ -112,7 +112,7 @@ fun app_letter ty =
   in
       hd (explode operator)
   end;
-val CONJ_ss = simpLib.SIMPSET {
+val CONJ_ss = simpLib.SSFRAG {
   ac = [], convs = [], dprocs = [],
   filter = NONE, rewrs = [], congs = [GEN_ALL (
     tautLib.TAUT_PROVE (Term`(P ==> (Q = Q')) ==> (Q' ==> (P = P')) ==>

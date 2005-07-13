@@ -1,9 +1,9 @@
 \DOC ++
 
-\TYPE {op ++ : simpset * ssdata -> simpset}
+\TYPE {op ++ : simpset * ssfrag -> simpset}
 
 \SYNOPSIS
-Infix operator for adding an {ssdata} item into a simpset.
+Infix operator for adding an {ssfrag} item into a simpset.
 
 \DESCRIBE
 {bossLib.++} is identical to {simpLib.++}.

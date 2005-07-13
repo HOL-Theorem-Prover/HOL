@@ -9,7 +9,7 @@ open Lib Parse simpLib pairTheory PairedLambda;
  *------------------------------------------------------------------------*)
 
 val PAIR0_ss =
-    SIMPSET
+    SSFRAG
       {convs=[{name="GEN_BETA_CONV (beta reduction)",
                trace=2,
                key=SOME ([],(--`(\(x,y):('a # 'b). y:'b) (z,w)`--)),

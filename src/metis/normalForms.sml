@@ -220,7 +220,7 @@ val MK_I = prove
    [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.I_THM]);
 
 val SKI_SS =
-  simpLib.SIMPSET
+  simpLib.SSFRAG
   {convs = [], rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 
 val SKI_ss = simpLib.++ (pureSimps.pure_ss, SKI_SS);
@@ -253,7 +253,7 @@ val MK_o = prove
    [combinTheory.S_DEF, combinTheory.K_DEF, combinTheory.o_DEF]);
 
 val SKICo_SS =
-  simpLib.SIMPSET
+  simpLib.SSFRAG
   {convs = [], rewrs = [combinTheory.I_o_ID], congs = [],
    filter = NONE, ac = [], dprocs = []};
 
@@ -278,7 +278,7 @@ val FUN_EQ = prove
    REWRITE_TAC []);
 
 val SIMPLIFY_SS =
-  simpLib.SIMPSET
+  simpLib.SSFRAG
   {convs = [{name = "extensionality simplification", trace = 2,
              key = SOME([], Term`!x. (f:'a -> 'b) x = g x`),
              conv = K (K (REWR_CONV FUN_EQ))}],
@@ -1027,7 +1027,7 @@ fun cond_lift_rand_CONV tm =
   end;
 
 val cond_lift_SS =
-  simpLib.SIMPSET
+  simpLib.SSFRAG
   {convs =
    [{name = "conditional lifting at rand", trace = 2,
      key = SOME([], Term`(f:'a -> 'b) (COND P Q R)`),
@@ -1087,7 +1087,7 @@ val COND_ETA = prove
 val COND_SIMP_CONV = CHANGED_CONV (HO_REWR_CONV COND_SIMP);
 
 val condify_SS =
-  SIMPSET
+  SSFRAG
   {convs =
    [{name = "COND_SIMP_CONV", trace = 2,
      key = SOME ([], (``if a then (b:'a) else c``)),
@@ -1566,6 +1566,6 @@ time CNF_CONV (mk_neg large_problem);
 *)
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end; 
+end;
 
 end

@@ -1,5 +1,5 @@
 signature optionSimps =
 sig
-  val OPTION_ss : simpLib.ssdata
+  val OPTION_ss : simpLib.ssfrag
 end
 
