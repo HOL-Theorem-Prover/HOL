@@ -84,10 +84,10 @@ valid is ({IMP_CONG}):
 {
    |- (P = P') ==> (P' ==> (Q = Q')) ==> ((P ==> Q) = (P' ==> Q'))
 }
-Other congruence theorems can be part of simpsets.  The
-system provides {IMP_CONG} above and {COND_CONG} as part of the
-{CONG_ss} {ssfrag} value.  (These {ssdata} values can be incorporated
-into simpsets with the {++} function.)  Other congruence theorems are
+Other congruence theorems can be part of simpsets.  The system
+provides {IMP_CONG} above and {COND_CONG} as part of the {CONG_ss}
+{ssfrag} value.  (These {simpset} fragments can be incorporated into
+simpsets with the {++} function.)  Other congruence theorems are
 already proved for operators such as conjunction and disjunction, but
 use of these in standard simpsets is not recommended as the
 computation of all the additional contexts for a simple chain of

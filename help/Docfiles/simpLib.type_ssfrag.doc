@@ -1,6 +1,6 @@
 \DOC
 
-\TYPE {simpLib.type_ssfrag : string -> ssdata}
+\TYPE {simpLib.type_ssfrag : string -> ssfrag}
 
 \SYNOPSIS Returns a simpset fragment for simplifying types' constructors.
 
@@ -22,15 +22,15 @@ the {TypeBase}.
 {
 - val ss = simpLib.type_ssfrag "list";
 > val ss =
-    simpLib.SIMPSET{ac = [], congs = [], convs = [], dprocs = [],
-                    filter = NONE,
-                    rewrs =
-                      [|- (!v f. case v f [] = v) /\
-                          !v f a0 a1. case v f (a0::a1) = f a0 a1,
-                       |- !a1 a0. ~([] = a0::a1),
-                       |- !a1 a0. ~(a0::a1 = []),
-                       |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') =
-                                          (a0 = a0') /\ (a1 = a1')]}
+    simpLib.SSFRAG{ac = [], congs = [], convs = [], dprocs = [],
+                   filter = NONE,
+                   rewrs =
+                     [|- (!v f. case v f [] = v) /\
+                         !v f a0 a1. case v f (a0::a1) = f a0 a1,
+                      |- !a1 a0. ~([] = a0::a1),
+                      |- !a1 a0. ~(a0::a1 = []),
+                      |- !a0 a1 a0' a1'. (a0::a1 = a0'::a1') =
+                                         (a0 = a0') /\ (a1 = a1')]}
      : ssfrag
 
 - SIMP_CONV (bool_ss ++ ss) [] ``h::t = []``;
