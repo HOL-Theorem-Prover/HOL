@@ -53,12 +53,12 @@
 \subsection*{Some Basic Tactics}
 \begin{tabular}{ll}
 \hol{bossLib}{Cases} & case analysis on outermost variable \\
-\hol{bossLib}{Cases_on} \var{term} & case analysis on named variable \\
+\hol{bossLib}{Cases_on} \var{term} & case analysis on given term \\
 \hol{bossLib}{Induct} & induct on outermost variable \\
-\hol{bossLib}{Induct_on} \var{term} & induct on named variable \\
+\hol{bossLib}{Induct_on} \var{term} & induct on given term \\
 \hol{Tactic}{STRIP_TAC} & splits on outermost connective \\
 \hol{Tactic}{EXISTS_TAC} \var{term} & gives witness for existential \\
-\holnoref{Tactic}{SELECT_ELIM_TAC} & eliminates Hilbert choice operator \\
+\hol{Tactic}{SELECT_ELIM_TAC} & eliminates Hilbert choice operator \\
 \hol{Tactic}{EQ_TAC} & reduces boolean equality to implication \\
 \hol{Tactic}{ASSUME_TAC} \var{thm} & adds an assumption \\
 \hol{Tactic}{DISJ1_TAC} & selects left disjunct \\
@@ -128,12 +128,14 @@
 \hol{simpLib}{ASM_SIMP_TAC} \var{simpset} [\var{thms}] & as above but also uses the assumptions \\
 \hol{simpLib}{FULL_SIMP_TAC} \var{simpset} [\var{thms}] & simplifies the goal and all the assumptions \\[4pt]
 \hol{BasicProvers}{RW_TAC} \var{simpset} [\var{thms}] & more aggressive simplifier; uses type info.\ \& case splits \\
-\hol{BasicProvers}{SRW_TAC} [\var{ssdata}] \var{simpset} [\var{thms}] & as above but uses a list of \emph{simpset} fragments \\[4pt]
+\hol{BasicProvers}{SRW_TAC} [\var{ssfrags}][\var{thms}] & as above but
+uses a list of \emph{simpset} fragments  \\[4pt]
 \hol{simpLib}{rewrites} [\var{thms}] & constructs a rewrite fragment \\
-\hol{simpLib}{mk_simpset} [\var{ssdata}] & constructs a \emph{simpset} from fragments \\
-\holnoref{simpLib}{++}(\var{simpset},\var{ssdata}) & adds a fragment to a \emph{simpset} \\ % infix
+\hol{simpLib}{mk_simpset} [\var{ssfrag}] & constructs a \emph{simpset} from fragments \\
+\holnoref{simpLib}{++}(\var{simpset},\var{ssfrag}) & adds a fragment to a \emph{simpset} \\ % infix
 \holnoref{simpLib}{\&\&}(\var{simpset},[\var{thms}]) & adds rewrites to a \emph{simpset} \\ % infix
-\holnoref{simpLib}{AC} \var{thm} \var{thm} & constructs tagged theorem to enable AC simplification \\
+\holnoref{simpLib}{AC} \var{thm} \var{thm} & constructs tagged theorem
+to enable AC simplification \\
 \end{tabular}
 \subsection*{Simplification Sets and Fragments}
 \begin{tabular}{ll}
@@ -142,8 +144,16 @@
 \hol{bossLib}{std_ss} & as above + pairs, options, sums, numeral evaluation \& eta reduction \\
 \hol{bossLib}{arith_ss} & as above + arithmetic rewrites and decision procedure for linear arithmetic \\
 \hol{bossLib}{list_ss} & a version of the above for the theory of lists \\
-\holnoref{bossLib}{real_ss} & adds some real number evaluation and rewrites to the arithmetic \emph{simpset} \\
+\holnoref{realLib}{real_ss} & adds some real number evaluation and rewrites to the arithmetic \emph{simpset} \\
+\hol{bossLib}{srw_ss}() & returns `stateful' \emph{simpset}; has type thms. from loaded theories
 \end{tabular}
+
+\medskip
+\noindent\begin{tabular}{ll}
+\hol{bossLib}{augment_srw_ss} [\var{ssfrag}] & adds fragments to the `stateful' \emph{simpset} \\
+\hol{BasicProvers}{export_rewrites} [\var{names}] & exports named theorems to the `stateful' \emph{simpset} \\
+\end{tabular}
+
 
 \noindent\begin{tabular}{ll}
 \holnoref{boolSimps}{CONJ_ss} & congruence rule for conjunction \\
@@ -161,11 +171,6 @@
 \holnoref{pred_setSimps}{PRED_SET_ss} & rewrites for sets \\
 \end{tabular}
 
-\noindent\begin{tabular}{ll}
-\hol{bossLib}{srw_ss}() & returns `stateful' \emph{simpset}; has type thms. from loaded theories \\
-\hol{bossLib}{augment_srw_ss} [\var{ssdata}] & adds fragments to the `stateful' \emph{simpset} \\
-\hol{BasicProvers}{export_rewrites} [\var{names}] & exports named theorems to the `stateful' \emph{simpset} \\
-\end{tabular}
 \end{multicols}
 \begin{multicols}{2}
 \subsection*{Specialize and Generalize Rules}
@@ -245,8 +250,10 @@
 \end{tabular}
 \subsection*{Parsing}
 \begin{tabular}{ll}
-\holnoref{numLib}{prefer_num}() & parse numerals as natural numbers \\
-\holnoref{intLib}{prefer_int}() & parse numerals as integers \\
+\holnoref{numLib}{prefer_num}() & give numerals and operators natural
+number types by default \\
+\holnoref{intLib}{prefer_int}() & give numerals and operators integer
+types by default\\
 \hol{Parse}{overload_on}(\var{name},\var{term}) & establishes constant as one of the overloading possibilities for a string \\
 \hol{Parse}{add_infix}(\var{name},\var{int},\var{assoc}) & adds string as infix with given precedence \& associativity to grammar \\
 \hol{Parse}{set_fixity} \var{name} \var{fixity} & allows the fixity of tokens to be updated \\
@@ -272,10 +279,14 @@
 \quad \textsf{``Rewrite''} & tracing variable for term rewriting (0--1) \\
 \quad \textsf{``Subgoal number''} & number of printed sub-goals (10--10000) \\
 \quad \textsf{``meson''} & for the first-order prover (1--2) \\
+\quad \textsf{``numeral types''} & show types of numerals (0--1)\\
 \quad \textsf{``simplifier''} & for the simplifier (0--7) \\
 \quad \textsf{``types''} & printing of types (0--2) \\[4pt]
-\hol{Globals}{show_types}:= \var{bool} & flag controlling printing of HOL types \\
-\hol{Globals}{show_tags}:= \var{bool} & flag for controlling display of tags in theorem pretty-printer \\[4pt]
+\hol{Globals}{show_types} := \var{bool} & flag controlling printing of
+HOL types \\
+\hol{Globals}{show_assums} := \var{bool} & flag for controlling
+display of theorem assumptions\\
+\hol{Globals}{show_tags} := \var{bool} & flag for controlling display of tags in theorem pretty-printer \\[4pt]
 \hol{Lib}{start_time}() & set a timer running \\
 \hol{Lib}{end_time} \var{name} & check a running timer, and print out how long it has been running \\
 \hol{Lib}{time} \var{function} & measure how long a function application takes \\
