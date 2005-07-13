@@ -763,10 +763,12 @@ and the \simpset{} \ml{(srw\_ss())} automatically include these
 theorems.  Other tactics used with other \simpset{}s will need these
 theorems to be manually added.
 
-The \ml{Induct} tactic makes it convenient to invoke
-induction. When it is applied to a goal, the leading universal
-quantifier is examined; if its type is that of a known datatype, the
-appropriate structural induction tactic is extracted and applied.
+\index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for algebraic data types}
+%
+The \ml{Induct} tactic makes it convenient to invoke induction. When
+it is applied to a goal, the leading universal quantifier is examined;
+if its type is that of a known datatype, the appropriate structural
+induction tactic is extracted and applied.
 
 The \ml{Cases} tactic makes it convenient to invoke case
 analysis. The leading universal quantifier in the goal is examined; if
@@ -854,7 +856,7 @@ handles statements of linear arithmetic.
 
 \begin{verbatim}
    RW_TAC   : simpset -> thm list -> tactic
-   SRW_TAC  : ssdata list -> thm list -> tactic
+   SRW_TAC  : ssfrag list -> thm list -> tactic
    &&       : simpset * thm list -> simpset  (* infix *)
    std_ss   : simpset
    arith_ss : simpset
@@ -878,7 +880,7 @@ assumptions.
 \ml{RW\_TAC}, but works with respect to an underlying \simpset{}
 (accessible through the function \ml{srw\_ss}) that is updated as new
 context is loaded.  This \simpset{} can be augmented through the
-addition of ``\simpset{} fragments'' (\ml{ssdata} values) and
+addition of ``\simpset{} fragments'' (\ml{ssfrag} values) and
 theorems.  In situations where there are many large types stored in
 the system, \ml{RW\_TAC}'s performance can suffer because it
 repeatedly adds all of the rewrite theorems for the known types into a
@@ -1204,26 +1206,25 @@ in two ways:
   phases of simplification in a way that is difficult to describe.
 \end{itemize}
 
-\subsubsection{\ml{SRW\_TAC : ssdata list -> thm list -> tactic}}
+\subsubsection{\ml{SRW\_TAC : ssfrag list -> thm list -> tactic}}
 \index{SRW_TAC@\ml{SRW\_TAC}}
 
 The tactic \ml{SRW\_TAC} has a different type from the other
-simplification tactics.  It does not take a \simpset{} as an
-argument.  Instead its operation always builds on the built-in
-\simpset{} \ml{srw\_ss()} (further described in
-Section~\ref{sec:srw_ss}).  The theorems provided as \ml{SRW\_TAC}'s
-second argument are treated in the same way as the by the other
-simplification tactics.  Finally, the list of \simpset{} fragments
-(the \ml{ssdata} values), are merged into the underlying \simpset{},
-allowing the user to merge in additional simplification capabilities
-if desired.
+simplification tactics.  It does not take a \simpset{} as an argument.
+Instead its operation always builds on the built-in \simpset{}
+\ml{srw\_ss()} (further described in Section~\ref{sec:srw_ss}).  The
+theorems provided as \ml{SRW\_TAC}'s second argument are treated in
+the same way as the by the other simplification tactics.  Finally, the
+list of \simpset{} fragments are merged into the underlying
+\simpset{}, allowing the user to merge in additional simplification
+capabilities if desired.
 
 For example, to include the Presburger decision procedure, one could
 write
 \begin{verbatim}
    SRW_TAC [ARITH_ss][]
 \end{verbatim}
-\HOL's standard \simpset{} fragments are described below in
+\Simpset{} fragments are described below in
 Section~\ref{sec:simpset-fragments}.
 
 \ml{SRW\_TAC} performs the same mixture of simplification and
@@ -1481,10 +1482,83 @@ As a general rule, \ml{(srw\_ss())} includes all of its context's
 (such as the arithmetic performed in the above example).  It does not
 include decision procedures that may exhibit occasional poor
 performance, so the \simpset{} fragments containing these procedures
-should be added manually to those simplification invocations that need them.
+should be added manually to those simplification invocations that need
+them.
 
 \subsection{\Simpset{} fragments}
 \label{sec:simpset-fragments}
+\index{simplification!simpset fragments}
+
+The \simpset{} fragment is the basic building block that is used to
+construct \simpset{} values.  There is one basic function that
+performs this construction:
+\begin{hol}
+\begin{verbatim}
+   op ++      : simpset * ssfrag -> simpset
+\end{verbatim}
+\end{hol}
+where \ml{++} is an infix.  In general, it is best to build on top of
+the \ml{pure\_ss} \simpset{} or one of its descendents in order to
+pick up the default ``filter'' function for converting theorems to
+rewrite rules.  (This filtering process is described below in
+Section~\ref{sec:generating-rewrite-rules}.)
+
+For major theories (or groups thereof), a collection of relevant
+\simpset{} fragments is usually found in the module \ml{<thy>Simps},
+with \ml{<thy>} the name of the theory.  For example, \simpset{}
+fragments for the theory of natural numbers are found in
+\ml{numSimps}, and fragments for lists are found in \ml{listSimps}.
+
+Some of the distribution's standard \simpset{} fragments are described
+in Table~\ref{table:ssfrags}.  These and other \simpset{} fragments
+are described in more detail in the \REFERENCE.
+
+\begin{table}[htbp]
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lp{0.65\textwidth}}
+\ml{BOOL\_ss} &
+Standard rewrites for the boolean operators
+(conjunction, negation \&c), as well as a conversion for performing
+$\beta$-reduction.  (In \ml{boolSimps}.)
+\\
+\ml{CONG\_ss} & Congruence rules for implication and conditional
+expressions. (In \ml{boolSimps}.)
+\\
+\ml{ARITH\_ss} &
+The natural number decision
+procedure for universal Presburger arithmetic. (In \ml{numSimps}.)
+\\
+\ml{PRED\_SET\_AC\_ss} & AC-normalisation for unions and intersections
+over sets. (In \ml{pred\_setSimps}.)
+\end{tabular}
+\end{center}
+\caption{Some of \HOL's standard \simpset{} fragments}
+\label{table:ssfrags}
+\end{table}
+
+\Simpset{} fragments are ultimately constructed with the \ml{SSFRAG}
+constructor:
+\begin{hol}
+\begin{verbatim}
+   SSFRAG : { convs  : convdata list,
+              rewrs  : thm list,
+              ac     : (thm * thm) list,
+              filter : (thm -> thm list) option,
+              dprocs : Traverse.reducer list,
+              congs  : thm list }
+           -> ssfrag
+\end{verbatim}
+\end{hol}
+A complete description of the various fields of the record passed to
+\ml{SSFRAG}, and their meaning is given in \REFERENCE.  The
+\ml{rewrites} function provides an easy route to constructing a
+fragment that just includes a list of rewrites:
+\begin{hol}
+\begin{verbatim}
+   rewrites : thm list -> ssfrag
+\end{verbatim}
+\end{hol}
 
 \subsection{Rewriting with the simplifier}
 \label{sec:simplifier-rewriting}
@@ -1535,6 +1609,7 @@ traversal strategy (slightly simplified) is
 \end{enumerate}
 
 \subsubsection{Conditional rewriting}
+\index{simplification!conditional rewriting}
 
 The above description is a slight simplification of the true state of
 affairs.  One particularly powerful feature of the simplifier is that
@@ -1587,6 +1662,7 @@ good tool for performing transitivity reasoning.  (Try first-order
 tools such as \ml{PROVE\_TAC} instead.)
 
 \subsubsection{Generating rewrite rules from theorems}
+\label{sec:generating-rewrite-rules}
 
 There are two routes by which a theorem for rewriting can be passed to
 the simplifier: either as an explicit argument to one of the \ML{}
