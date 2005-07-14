@@ -1747,10 +1747,73 @@ an equality is a simple heuristic that prevents some forms of looping.
 \subsubsection{Matching rewrite rules}
 \label{sec:simp-homatch}
 
+Given a rewrite theorem $\vdash \ell = r$, the first stage of
+performing a rewrite is determining whether or not $\ell$ can be
+instantiated so as to make it equal to the term that is being
+rewritten.  This process is known as matching.  For example, if $\ell$
+is the term $\textsf{SUC}(n)$, then matching it against the term
+$\textsf{SUC}(3)$ will succeed, and find the instantiation $n\mapsto
+3$. In contrast with unification, matching is not symmetrical: a
+pattern $\textsf{SUC}(3)$ will not match the term $\textsf{SUC}(n)$.
 
+The simplifier uses a special form of higher-order matching.  If a
+pattern includes a variable of some function type ($f$ say), and that
+variable is applied to an argument $a$ that includes no variables
+except those that are bound by an abstraction at a higher scope, then
+the combined term $f(a)$ will match any term of the appropriate type
+as long as the only occurrences of the bound variables in $a$ are in
+sub-terms matching $a$.
+
+For example, if $f(x)$ is to match $x + 4$ (where $x$ is assumed to be
+the bound variable in the term to be matched as well), then $f$ will
+be instantiated to $(\lambda x.\; x + 4)$.  If $f(x)$ is to match $3 +
+z$, then $f$ will be instantiated to $(\lambda x.\;3 + z)$.  Further $f(x +
+1)$ matches $x + 1 < 7$, but does not match $x + 2 < 7$.
+
+Higher-order matching of this sort makes it easy to express quantifier
+movement results as rewrite rules, and have these rules applied by the
+simplifier.  For example, the theorem
+\[
+\vdash (\exists x. \;P(x)\lor Q(x)) = (\exists x.\;P(x)) \lor (\exists
+x.\;Q(x))
+\]
+has two variables of a function-type ($P$ and $Q$), and both are
+applied to the bound variable $x$.  This means that when applied to
+the input \[
+\exists z. \;z < 4 \lor z + x = 5 * z
+\]
+the matcher will find the instantiation \[
+\begin{array}{l}
+P \mapsto (\lambda z.\;z < 4)\\
+Q \mapsto (\lambda z.\;z + x = 5 * z)
+\end{array}
+\]
+
+Performing this instantiation, and then doing some $\beta$-reduction
+on the rewrite rule, produces the theorem\[
+\vdash (\exists z. \;z < 4 \lor z + x = 5 * z) =
+(\exists z. \;z < 4) \lor (\exists z.\;z + x = 5 * z)
+\]
+as required.
+
+Another example of a rule that the simplifier will use successfully is
+\[
+\vdash f \circ (\lambda x.\; g(x)) = (\lambda x.\;f(g(x)))
+\]
+The presence of the abstraction on the left-hand side of the rule
+requires an abstraction to appear in the term to be matched, so this
+rule can be seen as an implementation of a method to move abstractions
+up over function compositions.
+
+An example of a possible left-hand side that will \emph{not} match as
+generally as might be liked is $(\exists x.\;P(x + y))$.  This is
+because the predicate $P$ is applied to an argument that includes the
+free variable $y$.
 
 \subsection{Advanced features}
 \label{sec:advanced-simplifier}
+
+This section describes some of the simplifier's advanced features.
 
 \subsubsection{Congruence rules}
 \label{sec:simp-congruences}
