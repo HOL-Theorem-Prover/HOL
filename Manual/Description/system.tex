@@ -402,8 +402,8 @@ other common term operations.  See \REFERENCE{} for more details.
 \label{quotation}\label{gen-abs}\label{let}
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!of quotation syntax|(}
 \index{quotation, in HOL logic@quotation, in \HOL{} logic|(}
-\index{ type quotes, in ML@\ml{"":$\cdots$""} (type quotes, in \ML)|(}
-\index{ term quotes, in ML@\ml{""$\cdots$""} (term quotes, in \ML)|(}
+\index{ type quotes, in ML@\ml{``:$\cdots$``} (type quotes, in \ML)|(}
+\index{ term quotes, in ML@\ml{``$\cdots$``} (term quotes, in \ML)|(}
 
 It would be tedious to always have to input types and terms
 using the constructor functions. The \HOL{} system, adapting the
@@ -460,19 +460,19 @@ Types are printed
 %
 \index{printing, in HOL logic@printing, in \HOL{} logic!of types}
 %
-in the form $\holquote{:\mathit{type}}$. For example, the \ML\ value
+in the form \holquote{\ml{:}\textit{type}}. For example, the \ML\ value
 of type \ml{hol\_type} representing
 $\alpha\fun(\ty{ind}\fun\ty{bool})$ would be printed out
-as $\holquote{: \ml{\ensuremath{{}^\prime\!} a -> ind -> bool}}$.
-Similarly, terms are printed in the form $\holquote{\,\mathit{term}\,}$.
-Thus, the term representing $\holquote{\uquant{x\ y}x<y \imp\equant{z}x+z = y}$
+as \ml{\holquote{:'a -> ind -> bool}}.
+Similarly, terms are printed in the form \holquote{\textit{term}}.
+Thus, the term representing $\uquant{x\ y}x<y \imp\equant{z}x+z = y$
 would be printed as:
 %
 \[ \holquote{\ml{!x y. x < y ==> ?z. x + z = y}} \]
 %
 A leading colon is used to distinguish a type quotation from a term quotation:
-the former have the form \ml{`:}$\ \cdots\ $\ml{`} and the latter have
-the form \ml{`}$\ \cdots\ $\ml{`}.
+the former have the form \holquote{\ml{:}~$\cdots$~} and the latter have
+the form \holquote{~$\cdots$~}.
 
 
 \paragraph {Type inference}
@@ -544,7 +544,8 @@ This treatment of types within quotations is inherited from
 %
 \index{LCF@\LCF}
 \index{type constraint!in HOL logic@in \HOL{} logic|)}
-\index{ term quotes, in ML@\ml{`$\cdots$`} (term quotes, in \ML)|)}
+\index{ type quotes, in ML@\ml{``:$\cdots$``} (type quotes, in \ML)|)}
+\index{ term quotes, in ML@\ml{``$\cdots$``} (term quotes, in \ML)|)}
 
 \subsection{Antiquotation}
 
