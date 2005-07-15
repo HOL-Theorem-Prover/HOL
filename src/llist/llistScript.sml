@@ -10,14 +10,12 @@ app load ["boolSimps","pairSimps","combinSimps",
       boolSimps pairSimps combinSimps optionSimps numSimps listSimps
       optionTheory;
 *)
-open HolKernel boolLib Parse
+open HolKernel boolLib Parse bossLib
       SingleStep mesonLib Prim_rec simpLib
       boolSimps pairSimps combinSimps optionSimps numSimps listSimps
       metisLib optionTheory pairTheory;
 
 open BasicProvers
-
-local open listTheory in end;
 
 val is_pair = pairSyntax.is_pair
 
@@ -77,6 +75,7 @@ val ELIM_TAC = REPEAT (CHANGED_TAC ELIM1_TAC);
 
 
 val _ = new_theory "llist";
+
 
 (*---------------------------------------------------------------------------*)
 (* The representing type is :'a list -> 'a option                            *)
@@ -318,6 +317,20 @@ val lcons_repabs = prove(
   SIMP_TAC hol_ss [GSYM llist_repabs] THEN
   REPEAT GEN_TAC THEN MATCH_MP_TAC LCONS_ok THEN
   SIMP_TAC hol_ss [llist_repabs, llist_absrep]);
+
+(*---------------------------------------------------------------------------*)
+(* Syntax for lazy lists, similar to lists                                   *)
+(*---------------------------------------------------------------------------*)
+
+val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
+                      leftdelim = [TOK "[|"], rightdelim = [TOK "|]"],
+                      cons = "LCONS", nilstr = "LNIL"};
+
+val _ = add_rule {term_name = "LCONS", fixity = Infixr 450,
+                  pp_elements = [TOK ":::", BreakSpace(0,2)],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
+
 
 val LHDTL_CONS_THM = store_thm(
   "LHDTL_CONS_THM",
@@ -1631,11 +1644,10 @@ val LFLATTEN_APPEND = store_thm(
 val LZIP_THM = new_specification
  ("LZIP_THM", ["LZIP"],
   Q.prove
-   (`?LZIP.
-       (!l2. LZIP LNIL l2 = LNIL:('a#'b)llist) /\
-       (!l1. LZIP l1 LNIL = LNIL:('a#'b)llist) /\
-       (!h1 h2 t1 t2. LZIP (LCONS (h1:'a) t1) (LCONS (h2:'b) t2) = 
-                        LCONS (h1,h2) (LZIP t1 t2))`,
+   (`?LZIP:'a llist # 'b llist -> ('a#'b) llist.
+    (!l1. LZIP (l1,[||]) = [||]) /\
+    (!l2. LZIP ([||],l2) = [||]) /\
+    (!h1 h2 t1 t2. LZIP (h1:::t1, h2:::t2) = (h1,h2) ::: LZIP (t1,t2))`,
     let val ax = 
        ISPEC 
         ``\(l1,l2).
@@ -1646,9 +1658,8 @@ val LZIP_THM = new_specification
          llist_Axiom_1
     in
      STRIP_ASSUME_TAC (SIMP_RULE hol_ss [FORALL_PROD] ax)
-      THEN Q.EXISTS_TAC `CURRY g`
-      THEN REWRITE_TAC [CURRY_DEF]
-      THEN REPEAT CONJ_TAC THENL
+       THEN Q.EXISTS_TAC `g`
+       THEN REPEAT CONJ_TAC THENL
       [ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
          THEN RW_TAC hol_ss [],
        ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC)
@@ -1657,6 +1668,136 @@ val LZIP_THM = new_specification
        POP_ASSUM (fn th => GEN_REWRITE_TAC LHS_CONV bool_rewrites [th])
          THEN RW_TAC hol_ss [LCONS_NOT_NIL,LTL_THM,LHD_THM]]
     end));
+
+
+(*---------------------------------------------------------------------------*)
+(* LUNZIP_THM                                                                *)
+(*  |- (LUNZIP [||] = ([||],[||])) /\                                        *)
+(*     !x y t. LUNZIP ((x,y):::t) =                                          *)
+(*                let (ll1,ll2) = LUNZIP t in (x:::ll1,y:::ll2)              *)
+(*---------------------------------------------------------------------------*)
+
+val LUNZIP_THM = new_specification (
+  "LUNZIP_THM",
+  ["LUNZIP"],
+  Q.prove(
+      `?LUNZIP. (LUNZIP [||] = ([||]:'a llist, [||]:'b llist)) /\
+    	(!x y t. LUNZIP ((x:'a, y:'b):::t) = 
+                  let (ll1, ll2) = LUNZIP t in (x:::ll1, y:::ll2))`,
+      STRIP_ASSUME_TAC
+       (Q.ISPEC `\ll. if (LHD ll = NONE) then NONE
+        		else SOME (THE (LTL ll), SND (THE (LHD ll)))` llist_Axiom_1) THEN
+      STRIP_ASSUME_TAC
+       (Q.ISPEC `\ll. if (LHD ll = NONE) then NONE
+                        else SOME (THE (LTL ll), FST (THE (LHD ll)))` llist_Axiom_1) THEN
+      Q.EXISTS_TAC `\ll. (g' ll, g ll)` THEN SIMP_TAC list_ss [] THEN
+      REPEAT STRIP_TAC THENL [
+	POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
+	FULL_SIMP_TAC list_ss [LHD_THM],
+	POP_ASSUM (K ALL_TAC) THEN POP_ASSUM (ASSUME_TAC o Q.SPEC `[||]`) THEN
+        FULL_SIMP_TAC list_ss [LHD_THM], 	
+        NTAC 2 (POP_ASSUM (MP_TAC o Q.SPEC `(x,y):::t`)) THEN
+	RW_TAC list_ss [LHD_THM, LTL_THM, LET_THM]])
+  );
+
+val LZIP_LUNZIP = Q.store_thm
+("LZIP_LUNZIP",
+ `!ll: ('a # 'b) llist. LZIP(LUNZIP ll) = ll`,
+ REWRITE_TAC [Once LTAKE_EQ]
+  THEN SIMP_TAC std_ss [Once SWAP_FORALL_THM]
+  THEN Induct THENL
+  [RW_TAC hol_ss [LTAKE_THM],
+   GEN_TAC THEN STRUCT_CASES_TAC 
+     (Q.SPEC `ll` (INST_TYPE [alpha |-> ``:'a#'b``] llist_CASES)) THENL
+    [METIS_TAC [LUNZIP_THM,LZIP_THM],
+     Cases_on `h` 
+        THEN ONCE_REWRITE_TAC [LUNZIP_THM]
+        THEN RW_TAC hol_ss [LZIP_THM,LCONS_11,LTAKE_THM]]]);
+
+val LFINITE_LLENGTH = Q.prove
+(`!ll. (?n. LLENGTH ll = SOME n) = LFINITE ll`,
+ REPEAT GEN_TAC THEN EQ_TAC THENL
+ [RW_TAC hol_ss [LLENGTH],METIS_TAC[LFINITE_HAS_LENGTH]]);
+
+val LLENGTH_EQ_SOME = Q.prove
+(`!n ll. (LLENGTH ll = SOME n) ==> 
+          ?l. (LTAKE n ll = SOME l) /\ (LENGTH l = n)`,
+ Induct THEN GEN_TAC 
+   THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES)
+   THEN RW_TAC hol_ss [LTAKE_THM,LLENGTH_THM]
+   THEN RES_TAC
+   THEN RW_TAC hol_ss []);
+
+val LLENGTH_EQ_SOME_LFINITE = Q.prove
+(`!ll n. (LLENGTH ll = SOME n) ==> LFINITE ll`,
+ RW_TAC hol_ss [LLENGTH]);
+
+val LLENGTH_toList = Q.prove
+(`!ll n. (LLENGTH ll = SOME n) ==> (LENGTH (THE(toList ll)) = n)`,
+ RW_TAC hol_ss [] THEN 
+ IMP_RES_TAC LLENGTH_EQ_SOME THEN 
+ RW_TAC hol_ss [toList] THEN
+ `~?n. LLENGTH ll = SOME n` by METIS_TAC [LLENGTH_EQ_SOME_LFINITE] THEN
+ METIS_TAC[]);
+
+
+val VPAIR_EQ = Q.prove
+(`!p1 p2. (p1 = p2) = (FST p1 = FST p2) /\ (SND p1 = SND p2)`,
+ SIMP_TAC std_ss [FORALL_PROD])
+
+
+(*
+val LUNZIP_LZIP = Q.store_thm
+("LZIP_LUNZIP",
+g`!l1 l2. (LLENGTH l1 = LLENGTH l2) ==> (LUNZIP(LZIP (l1,l2)) = (l1,l2))`,
+e (REPEAT GEN_TAC THEN
+   Cases_on `LLENGTH (l1:'a llist)` THEN 
+   Cases_on `LLENGTH (l2:'b llist)` THEN RW_TAC hol_ss []);
+(*1*)
+e (RW_TAC hol_ss [VPAIR_EQ] THENL 
+   [RW_TAC hol_ss [Once LTAKE_EQ],RW_TAC hol_ss [Once LTAKE_EQ]]);
+(*1.1*)
+e (Induct_on `n` THEN
+   FULL_STRUCT_CASES_TAC (Q.ISPEC `l1:'a llist` llist_CASES) THEN
+   FULL_STRUCT_CASES_TAC (Q.ISPEC `l2:'b llist` llist_CASES) THEN
+   RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
+(*1.1.1*)
+e (FULL_SIMP_TAC hol_ss [LLENGTH_THM,LZIP_THM,LUNZIP_THM]);
+(*1.1.2*)
+
+(*1.2*)
+e (Induct_on `n` THEN	
+e (STRUCT_CASES_TAC (Q.ISPEC `l1:'a llist` llist_CASES) THEN
+   STRUCT_CASES_TAC (Q.ISPEC `l2:'b llist` llist_CASES) THEN
+   RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
+(*1.1*)
+e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM]);
+(*1.1.1*)
+e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM]);
+(*1.1.2*)
+e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM]);
+(*1.2*)
+e (STRUCT_CASES_TAC (Q.SPEC `l1` llist_CASES));
+(*1.2.1*)
+e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
+(*1.2.2*)
+e (STRUCT_CASES_TAC (Q.ISPEC `l2:'b llist` llist_CASES));
+(*1.2.2.1*)
+e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
+(*1.2.2.2*)
+(*2*)
+
+ REWRITE_TAC [Once LTAKE_EQ]
+  THEN SIMP_TAC std_ss [Once SWAP_FORALL_THM]
+  THEN Induct THENL
+  [RW_TAC hol_ss [LTAKE_THM],
+   GEN_TAC THEN STRUCT_CASES_TAC 
+     (Q.SPEC `ll` (INST_TYPE [alpha |-> ``:'a#'b``] llist_CASES)) THENL
+    [METIS_TAC [LUNZIP_THM,LZIP_THM],
+     Cases_on `h` 
+        THEN ONCE_REWRITE_TAC [LUNZIP_THM]
+        THEN RW_TAC hol_ss [LZIP_THM,LCONS_11,LTAKE_THM]]]);
+*)
 
 
 val _ = BasicProvers.export_rewrites
