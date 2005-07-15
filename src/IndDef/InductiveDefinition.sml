@@ -10,7 +10,10 @@ struct
 open HolKernel Parse boolLib
      liteLib refuteLib AC Ho_Rewrite;
 
-infix ## |-> THEN THENC; infixr -->;
+
+(* Fix the grammar used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars combinTheory.combin_grammars;
 
 (*---------------------------------------------------------------------------
     Variants. We re-define the kernel "variant" function here because
@@ -790,5 +793,7 @@ fun new_inductive_definition monoset tm =
  in (GENL avs r, GENL avs i, GENL avs c)
  end
  handle e => raise wrap_exn "InductiveDefinition" "new_inductive_definition" e;
+
+val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* InductiveDefinition *)

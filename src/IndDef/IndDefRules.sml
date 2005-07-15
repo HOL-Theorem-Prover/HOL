@@ -11,9 +11,6 @@ open HolKernel Parse boolLib;
 
 val ERR = mk_HOL_ERR "IndDefRules";
 
-infix ## |-> THEN THENC THENL;
-infixr -->
-
 (* ===================================================================== *)
 (* STRONGER FORM OF INDUCTION. From Tom Melham's library.                *)
 (* ===================================================================== *)
