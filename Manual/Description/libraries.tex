@@ -1764,11 +1764,12 @@ the combined term $f(a)$ will match any term of the appropriate type
 as long as the only occurrences of the bound variables in $a$ are in
 sub-terms matching $a$.
 
-For example, if $f(x)$ is to match $x + 4$ (where $x$ is assumed to be
-the bound variable in the term to be matched as well), then $f$ will
-be instantiated to $(\lambda x.\; x + 4)$.  If $f(x)$ is to match $3 +
-z$, then $f$ will be instantiated to $(\lambda x.\;3 + z)$.  Further $f(x +
-1)$ matches $x + 1 < 7$, but does not match $x + 2 < 7$.
+Assume for the following examples that the variable $x$ is bound at a
+higher scope.  Then, if $f(x)$ is to match $x + 4$, the variable $f$
+will be instantiated to $(\lambda x.\; x + 4)$.  If $f(x)$ is to match
+$3 + z$, then $f$ will be instantiated to $(\lambda x.\;3 + z)$.
+Further $f(x + 1)$ matches $x + 1 < 7$, but does not match $x + 2 <
+7$.
 
 Higher-order matching of this sort makes it easy to express quantifier
 movement results as rewrite rules, and have these rules applied by the
@@ -1817,6 +1818,114 @@ This section describes some of the simplifier's advanced features.
 
 \subsubsection{Congruence rules}
 \label{sec:simp-congruences}
+\index{simplification!congruence rules}
+
+Congruence rules control the way the simplifier traverses a term.
+They also provide a mechanism by which additional assumptions can be
+added to the simplifier's context, representing information about the
+containing context.  The simplest congruence rules are built into the
+\ml{pure\_ss} simpset.  They specify how to traverse application and
+abstraction terms.  At this fundamental level, these congruence rules
+are little more than the rules of inference \ml{ABS}
+\[
+\Gamma \turn t_1 = t_2
+\over
+\Gamma \turn (\lquant{x}t_1) = (\lquant{x}t_2)
+\]
+(where $x\not\in\Gamma$) and \ml{MK\_COMB}
+\[
+\Gamma \turn f = g \qquad \qquad \Delta \turn x = y
+\over
+\Gamma \cup \Delta \turn f(x) = g(y)
+\]
+When specifying the action of the simplifier, these rules should be
+read upwards.  With \ml{ABS}, for example, the rule says ``when
+simplifying an abstraction, simplify the body $t_1$ to some new $t_2$,
+and then the result is formed by re-abstracting with the bound
+variable~$x$.''
+
+Further congruence rules should be added to the simplifier in the form
+of theorems, via the \ml{congs} field of the records passed to the
+\ml{SSFRAG} constructor.  Such congruence rules should be of the form
+\[
+\mathit{cond_1} \Rightarrow \mathit{cond_2} \Rightarrow \dots (E_1 =
+E_2)
+\]
+where $E_1$ is the form to be rewritten.  Each $\mathit{cond}_i$ can
+either be an arbitrary boolean formula (in which case it is treated as
+a side-condition to be discharged) or an equation of the general form
+\[
+\forall \vec{v}. \;\mathit{ctxt}_1 \Rightarrow \mathit{ctxt}_2
+\Rightarrow \dots (V_0(\vec{v}) = V_1(\vec{v}))
+\]
+where the variable $V_1$ must occur free in $E_2$.
+
+For example, the theorem form of \ml{MK\_COMB} would be
+\[
+\vdash (f = g) \Rightarrow (x = y) \Rightarrow (f(x) = g(y))
+\]
+and the theorem form of \ml{ABS} would be
+\[
+\vdash (\forall x. \;f (x) = g (x)) \Rightarrow (\lambda x. \;f(x)) = (\lambda
+x.\;g(x))
+\]
+The form for \ml{ABS} demonstrates how it is possible for congruence
+rules to handle bound variables.  Because the congruence rules are
+matched with the higher-order match of Section~\ref{sec:simp-homatch},
+this rule will match all possible abstraction terms.
+
+These simple examples have not yet demonstrated the use of
+$\mathit{ctxt}$ conditions on sub-equations.  An example of this is
+the congruence rule (found in \ml{CONG\_ss}) for implications.  This
+states
+\[
+\vdash (P = P') \Rightarrow (P' \Rightarrow (Q = Q')) \Rightarrow
+(P \Rightarrow Q = P' \Rightarrow Q')
+\]
+This rule should be read: ``When simplifying $P\Rightarrow Q$, first
+simplify $P$ to $P'$.  Then assume $P'$, and simplify $Q$ to $Q'$.
+Then the result is $P' \Rightarrow Q'$.
+
+The rule for conditional expressions is
+\[
+\vdash \begin{array}[t]{l}
+  (P = P') \Rightarrow (P' \Rightarrow (x = x')) \Rightarrow
+  (\neg P' \Rightarrow (y = y')) \;\Rightarrow\\
+       (\textsf{if}\;P\;\textsf{then}\;x\;\textsf{else}\;y =
+       \textsf{if}\;P'\;\textsf{then}\;x'\;\textsf{else}\;y')
+\end{array}
+\]
+This rule allows the guard to be assumed when simplifying the
+true-branch of the conditional, and its negation to be assumed when
+simplifying the false-branch.
+
+The contextual assumptions from congruence rules are turned into
+rewrites using the mechanisms described in
+Section~\ref{sec:generating-rewrite-rules}.
+
+Congruence rules can be used to achieve a number of interesting
+effects.  For example, congruence can specify that sub-terms
+\emph{not} be simplified if desired.  This might be used to prevent
+simplification of the branches of conditional expressions:
+\[
+\vdash (P = P') \Rightarrow
+       (\textsf{if}\;P\;\textsf{then}\;x\;\textsf{else}\;y =
+       \textsf{if}\;P'\;\textsf{then}\;x\;\textsf{else}\;y)
+\]
+If added to the simplifier, this rule will take precedence over any
+other rules for conditional expressions (masking the one above from
+\ml{CONG\_ss}, say), and will cause the simplifier to only descend
+into the guard.  With the standard rewrites (from \ml{BOOL\_ss}):
+\[
+\begin{array}{l}
+\vdash \;\textsf{if}\;\top\;\textsf{then}\;x\;\textsf{else}\;y \,\;=\,\; x\\
+\vdash \;\textsf{if}\;\bot\;\textsf{then}\;x\;\textsf{else}\;y \,\;=\,\; y
+\end{array}
+\]
+users can choose to have the simplifier completely ignore
+a conditional's branches until that conditional's guard is simplified
+to either true or false.
+
 
 \subsubsection{AC-normalisation}
 
