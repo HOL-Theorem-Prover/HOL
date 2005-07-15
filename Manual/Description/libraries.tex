@@ -1261,7 +1261,7 @@ in Section~\ref{sec:advanced-simplifier}; the generation of rewrite
 rules from theorems is described in
 Section~\ref{sec:simplifier-rewriting}.
 
-\index{bool_ss@\ml{bool\_ss}}
+\index{bool_ss (simplification set)@\ml{bool\_ss} (simplification set)}
 %
 The \ml{bool\_ss} \simpset{} (defined in structure \ml{boolSimps}) is
 often used when other \simpset{}s might do too much.  It contains
@@ -1305,7 +1305,7 @@ under a universal quantifier):
 
 \subsubsection{\ml{std\_ss}}
 %
-\index{std_ss@\ml{std\_ss}}
+\index{std_ss (simplification set)@\ml{std\_ss} (simplification set)}
 %
 The \ml{std\_ss} \simpset{} is defined in \ml{bossLib}, and adds
 rewrite rules pertinent to the types of sums, pairs and options to
@@ -1326,7 +1326,7 @@ rewrite rules pertinent to the types of sums, pairs and options to
 
 \subsubsection{\ml{arith\_ss}}
 %
-\index{arith_ss@\ml{arith\_ss}}
+\index{arith_ss (simplification set)@\ml{arith\_ss} (simplification set)}
 %
 The \ml{arith\_ss} \simpset{} (defined in \ml{bossLib}) extends
 \ml{std\_ss} by adding an extensive treatment of natural number
@@ -1364,7 +1364,7 @@ equal when $2x + y < z$.
 
 \subsubsection{\ml{list\_ss}}
 %
-\index{list_ss@\ml{list\_ss}}
+\index{list_ss (simplification set)@\ml{list\_ss} (simplification set)}
 %
 The last pure \simpset{} value in \ml{bossLib}, \ml{list\_ss} adds
 rewrite theorems about the type of lists to \ml{arith\_ss}.  These
@@ -1406,7 +1406,7 @@ efficient, but less general than the simplifier.  For example:
 
 \subsubsection{The ``stateful'' \simpset---\ml{srw\_ss()}}
 \label{sec:srw_ss}
-\index{srw_ss@\ml{srw\_ss}}
+\index{srw_ss (simplification set)@\ml{srw\_ss} (simplification set)}
 
 The last \simpset{} exported by \ml{bossLib} is hidden behind a
 function.  The \ml{srw\_ss} value has type \ml{unit -> simpset}, so

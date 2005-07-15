@@ -799,8 +799,6 @@ following characterizing theorem, by use of the function
 \ml{define\_new\_type\_bijections}.
 %
 \begin{hol}
-\index{REP_prod@\ml{REP\_prod}}
-\index{ABS_prod@\ml{ABS\_prod}}
 \begin{verbatim}
    |- (!a. ABS_prod (REP_prod a) = a) /\
       (!r. (\p. ?x y. p = (\a b. (a=x) /\ (b=y)) r = (REP_prod(ABS_prod r) = r)
@@ -815,7 +813,6 @@ crucial theorems are proved: {\small\verb+PAIR_EQ+} asserts that equal
 pairs have equal components and {\small\verb+ABS_PAIR_THM+} shows that
 every term having a product type can be decomposed into a pair of terms.
 \begin{hol}
-\index{COMMA_DEF@\ml{COMMA\_DEF}}
 \index{pairing constructor, in HOL logic@pairing constructor, in \HOL{} logic!definition of}
 \index{PAIR_EQ@\ml{PAIR\_EQ}}
 \index{ABS_PAIR_THM@\ml{ABS\_PAIR\_THM}}
@@ -1143,10 +1140,10 @@ left and right summands, respectively. The constants \ml{OUTL} and \ml{OUTR}
 project from a sum to the left and right summands, respectively.
 
 The following theorem is proved in the theory \ml{sum}. It provides a
-complete and abstract characterization of the disjoint sum type.
+complete and abstract characterization of the disjoint sum type, and
+is used to justify the definition of functions over sums.
 
 \begin{hol}
-\index{sum_Axiom@\ml{sum\_Axiom}}
 \begin{verbatim}
   sum_Axiom  |- !f g. ?! h. (!x. h(INL x) = f x) /\ (!x. h(INR x) = g x)
 \end{verbatim}
@@ -1514,7 +1511,7 @@ justifying recursive definitions. For example, the theory
 \theoryimp{prim\_rec} proves the Axiom of Dependent Choice ({\small\verb+DC+}).
 
 \begin{hol}
-\index{Axiom of Dependent Choice@\ml{DC}}
+\index{axiom of dependent choice (DC)@axiom of dependent choice (\ml{DC})}
 \begin{verbatim}
    DC  |- !P R a.
             P a /\ (!x. P x ==> ?y. P y /\ R x y)
