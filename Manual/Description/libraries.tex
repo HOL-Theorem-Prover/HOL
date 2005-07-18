@@ -8,6 +8,10 @@
 %                 names of HOL API functions, such as mk_const
 % \theoryimp{..}  for names of HOL theories.
 
+% text inside \begin{verbatim} should be indented three spaces, unless
+% the verbatim is in turn inside a \begin{session}, in which case it
+% should be flush with the left margin.
+
 
 \newcommand{\simpset}{simpset}
 \newcommand{\Simpset}{Simpset}
@@ -1959,9 +1963,9 @@ above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
 demonstrated in the following example:
 \begin{session}
 \begin{verbatim}
-   - SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
-   <<HOL message: inventing new type variable names: 'a>>
-   > val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
+- SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
 \end{verbatim}
 \end{session}
 
@@ -1974,10 +1978,23 @@ their own bespoke normalisation procedures for addition over the
 natural numbers.  Mixing AC-normalisation, as described here, with
 \ml{arith\_ss} can cause the simplifier to go into an infinite loop.
 
+AC theorems can also be added to \simpset{}s via the theorem-list part
+of the tactic and conversion interface, using the special rewrite form
+\ml{AC}:
+\begin{session}
+\begin{verbatim}
+- SIMP_CONV bool_ss [AC DISJ_ASSOC DISJ_COMM] ``p /\ q \/ r \/ P z``;
+<<HOL message: inventing new type variable names: 'a>>
+> val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
+\end{verbatim}
+\end{session}
+See Section~\ref{sec:simp-special-rewrite-forms} for more on special
+rewrite forms.
 
 \subsubsection{Embedding code}
 
 \subsubsection{Special rewrite forms}
+\label{sec:simp-special-rewrite-forms}
 
 \index{simplification|)}
 
