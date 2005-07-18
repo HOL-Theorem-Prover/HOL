@@ -8,39 +8,54 @@ val _ = new_theory "bits";
 
 (* -------------------------------------------------------- *)
 
-val DIV2_def        = Define `DIV2 n = n DIV 2`;
+fun Def s = curry Definition.new_definition s o Parse.Term;
 
-val TIMES_2EXP_def  = Define `TIMES_2EXP x n = n * 2 EXP x`;
+val DIV2_def        = Def "DIV2_def" 
+                          `DIV2 n = n DIV 2`;
 
-val DIV_2EXP_def    = Define `DIV_2EXP x n = n DIV 2 EXP x`;
+val TIMES_2EXP_def  = Def "TIMES_2EXP_def" 
+                          `TIMES_2EXP x n = n * 2 EXP x`;
 
-val MOD_2EXP_def    = Define `MOD_2EXP x n = n MOD 2 EXP x`;
+val DIV_2EXP_def    = Def "DIV_2EXP_def"
+                          `DIV_2EXP x n = n DIV 2 EXP x`;
 
-val DIVMOD_2EXP_def = Define `DIVMOD_2EXP x n = (n DIV 2 EXP x,n MOD 2 EXP x)`;
+val MOD_2EXP_def    = Def "MOD_2EXP_def"
+                          `MOD_2EXP x n = n MOD 2 EXP x`;
 
-val SBIT_def        = Define `SBIT b n = if b then 2 EXP n else 0`;
+val DIVMOD_2EXP_def = Def "DIVMOD_2EXP_def"
+                         `DIVMOD_2EXP x n = (n DIV 2 EXP x,n MOD 2 EXP x)`;
 
-val BITS_def        = Define `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
+val SBIT_def        = Def "SBIT_def"
+                          `SBIT b n = if b then 2 EXP n else 0`;
 
-val BITV_def        = Define `BITV n b = BITS b b n`;
+val BITS_def        = Def "BITS_def"
+                          `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
 
-val BIT_def         = Define `BIT b n = (BITS b b n = 1)`;
+val BITV_def        = Def "BITV_def" 
+                          `BITV n b = BITS b b n`;
 
-val SLICE_def       = Define `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`;
+val BIT_def         = Def "BIT_def" 
+                          `BIT b n = (BITS b b n = 1)`;
 
-val LSBn_def        = Define `LSBn = BIT 0`;
+val SLICE_def       = Def "SLICE_def"
+                          `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`;
+
+val LSBn_def        = Def "LSBn_def"
+                          `LSBn = BIT 0`;
 
 val BITWISE_def =
-  Define`
-     (BITWISE 0 op x y = 0)
-  /\ (BITWISE (SUC n) op x y =
-         BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)`;
+ Prim_rec.new_recursive_definition
+  {name = "BITWISE_def",
+   def = ``(BITWISE 0 op x y = 0)
+        /\ (BITWISE (SUC n) op x y =
+              BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)``,
+   rec_axiom = prim_recTheory.num_Axiom}
 
 val SIGN_EXTEND_def =
-  Define`
-     SIGN_EXTEND l h n =
-       let m = n MOD 2 EXP l in
-       if BIT (l - 1) n then 2 EXP h - 2 EXP l + m else m`;
+  Def "SIGN_EXTEND_def"
+      `SIGN_EXTEND l h n =
+         let m = n MOD 2 EXP l in
+         if BIT (l - 1) n then 2 EXP h - 2 EXP l + m else m`;
 
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
@@ -310,25 +325,25 @@ val ODD_MOD2_LEM = store_thm("ODD_MOD2_LEM",
 val BIT_OF_BITS_THM = Q.store_thm (
 "BIT_OF_BITS_THM",
 `!n h l a. l + n <= h ==> (BIT n (BITS h l a) = BIT (l + n) a)`,
-RW_TAC arith_ss [BIT_def, BITS_COMP_THM])
+RW_TAC arith_ss [BIT_def, BITS_COMP_THM]);
 
 val BIT_SHIFT_THM = Q.store_thm (
 "BIT_SHIFT_THM",
 `!n a s. BIT (n + s) (a * 2 ** s) = BIT n a`,
-EVAL_TAC THEN
+RW_TAC std_ss [BIT_def, BITS_def,MOD_2EXP_def, DIV_2EXP_def] THEN
 RW_TAC arith_ss [SUC_SUB, EXP_ADD] THEN
 metisLib.METIS_TAC [GSYM DIV_DIV_DIV_MULT, ZERO_LT_TWOEXP,
-                    MULT_DIV, MULT_SYM])
+                    MULT_DIV, MULT_SYM]);
 
 val BIT_SHIFT_THM2 = Q.store_thm (
 "BIT_SHIFT_THM2",
 `!n a s. s <= n ==> (BIT n (a * 2 ** s) = BIT (n - s) a)`,
-RW_TAC arith_ss [GSYM (Q.SPECL [`n-s`, `a`, `s`] BIT_SHIFT_THM)])
+RW_TAC arith_ss [GSYM (Q.SPECL [`n-s`, `a`, `s`] BIT_SHIFT_THM)]);
 
 val BIT_SHIFT_THM3 = Q.store_thm (
 "BIT_SHIFT_THM3",
 `!n a s. (n < s) ==> ~BIT n (a * 2 ** s)`,
-EVAL_TAC THEN
+RW_TAC std_ss [BIT_def, BITS_def,MOD_2EXP_def, DIV_2EXP_def] THEN
 RW_TAC arith_ss [SUC_SUB, NOT_MOD2_LEM2, GSYM EVEN_MOD2] THEN
 RW_TAC arith_ss [DIV_P, ZERO_LT_TWOEXP] THEN
 Q.EXISTS_TAC `a * 2 ** (s - n)` THEN Q.EXISTS_TAC `0` THEN

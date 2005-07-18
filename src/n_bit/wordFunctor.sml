@@ -31,15 +31,17 @@ val _ = set_fixity "==" (Infixr 450);
 
 val topbit = numSyntax.mk_numeral (Arbnum.fromInt (bits - 1));
 
-val HB_def     = Define `HB = ^topbit`;
+fun Def s = curry Definition.new_definition s o Parse.Term;
 
-val WL_def     = Define `WL = SUC HB`;
+val HB_def     = Def "HB_def" `HB = ^topbit`;
 
-val MOD_WL_def = Define `MOD_WL n = n MOD 2 EXP WL`;
+val WL_def     = Def "WL_def" `WL = SUC HB`;
 
-val LT_WL_def  = Define `LT_WL n = n < 2 EXP WL`;
+val MOD_WL_def = Def "MOD_WL_def" `MOD_WL n = n MOD 2 EXP WL`;
 
-val EQUIV_def  = xDefine "EQUIV" `x == y = (MOD_WL x = MOD_WL y)`;
+val LT_WL_def  = Def "LT_WL_def" `LT_WL n = n < 2 EXP WL`;
+
+val EQUIV_def  = Def "EQUIV_def" `x == y = (MOD_WL x = MOD_WL y)`;
 
 val EQUIV_QT = prove(
   `!x y. x == y = ($== x = $== y)`,
@@ -102,7 +104,7 @@ val MOD_WL_MULT = prove(
   B_RW_TAC [MOD_WL_def,MOD_TIMES2,ZERO_LT_TWOEXP]
 );
 
-val AONE_def = Define `AONE = 1`;
+val AONE_def = Def "AONE_def" `AONE = 1`;
 
 val ADD_QT = prove(
   `(!n. 0 + n == n) /\ !m n. SUC m + n == SUC (m + n)`,
@@ -218,9 +220,12 @@ val MULT_CLAUSES_QT = prove(
 
 (* -------------------------------------------------------- *)
 
-val MSBn_def = Define`MSBn = BIT HB`;
-val ONE_COMP_def = Define`ONE_COMP x = 2 EXP WL - 1 - MOD_WL x`;
-val TWO_COMP_def = Define`TWO_COMP x = 2 EXP WL - MOD_WL x`;
+val MSBn_def     = Def "MSBn_def" 
+                       `MSBn = BIT HB`;
+val ONE_COMP_def = Def "ONE_COMP_def"
+                       `ONE_COMP x = 2 EXP WL - 1 - MOD_WL x`;
+val TWO_COMP_def = Def "TWO_COMP_def"
+                       `TWO_COMP x = 2 EXP WL - MOD_WL x`;
 
 val MOD_WL_LESS = REWRITE_RULE [MOD_WL_def,LT_WL_def] LT_WL_MOD_WL;
 
@@ -284,10 +289,10 @@ val ONE_COMP_TRUE = REWRITE_RULE [ZERO_IS_FALSE] (SPEC `0` ONE_COMP_THM);
 
 (* -------------------------------------------------------- *)
 
-val OR_def    = Define `OR = BITWISE WL $\/`;
-val AND_def   = Define `AND = BITWISE WL $/\`;
-val EOR_def   = Define `EOR = BITWISE WL (\x y. ~(x = y))`;
-val COMP0_def = Define `COMP0 = ONE_COMP 0`;
+val OR_def    = Def "OR_def"    `OR = BITWISE WL $\/`;
+val AND_def   = Def "AND_def"   `AND = BITWISE WL $/\`;
+val EOR_def   = Def "EOR_def"   `EOR = BITWISE WL (\x y. ~(x = y))`;
+val COMP0_def = Def "COMP0_def" `COMP0 = ONE_COMP 0`;
 
 (* -------------------------------------------------------- *)
 
@@ -469,10 +474,10 @@ val MOD_WL_WELLDEF = prove(
 
 (* -------------------------------------------------------- *)
 
-val LSR_ONE_def = Define `LSR_ONE a = MOD_WL a DIV 2`;
-val ASR_ONE_def = Define `ASR_ONE a = LSR_ONE a + SBIT (MSBn a) HB`;
-val ROR_ONE_def = Define `ROR_ONE a = LSR_ONE a + SBIT (LSBn a) HB`;
-val RRXn_def    = Define `RRXn c a  = LSR_ONE a + SBIT c HB`;
+val LSR_ONE_def = Def "LSR_ONE_def" `LSR_ONE a = MOD_WL a DIV 2`;
+val ASR_ONE_def = Def "ASR_ONE_def" `ASR_ONE a = LSR_ONE a + SBIT (MSBn a) HB`;
+val ROR_ONE_def = Def "ROR_ONE_def" `ROR_ONE a = LSR_ONE a + SBIT (LSBn a) HB`;
+val RRXn_def    = Def "RRXn_def"    `RRXn c a  = LSR_ONE a + SBIT c HB`;
 
 val LSR_ONE_WELLDEF = prove(
   `!a b. a == b ==> LSR_ONE a == LSR_ONE b`,
@@ -582,8 +587,8 @@ val mk_word    = prim_mk_const {Name = "word"^sbits^"_ABS",Thy = "word"^sbits};
 val dest_word  = prim_mk_const {Name = "word"^sbits^"_REP",Thy = "word"^sbits};
 (*val word_ty_aq = ty_antiq (mk_type ("word"^sbits, []));*)
 
-val n2w_def = Define `n2w n = ^mk_word n`;
-val w2n_def = Define `w2n w = MOD_WL (^dest_word w)`;
+val n2w_def = Def "n2w_def" `n2w n = ^mk_word n`;
+val w2n_def = Def "w2n_def" `w2n w = MOD_WL (^dest_word w)`;
 
 val _ = add_bare_numeral_form (#"w", SOME "n2w");
 
@@ -689,14 +694,17 @@ val _ = overload_on (">>", Term`$word_asr`);
 val _ = overload_on (">>>", Term`$word_lsr`);
 val _ = overload_on ("#>>", Term`$word_ror`);
 
-val rotl_def = Define `rotl x n =  x #>> (WL - n MOD WL)`;
+val rotl_def = Def "rotl_def" `rotl x n =  x #>> (WL - n MOD WL)`;
 val _ = overload_on ("#<<",Term`$rotl`);
 val _ = set_fixity "#<<" (Infixl 680);
 
 
-val WORD_BIT_def   = Define `WORD_BIT b n = BIT b (w2n n)`;
-val WORD_BITS_def  = Define `WORD_BITS h l n = BITS h l (w2n n)`;
-val WORD_SLICE_def = Define `WORD_SLICE h l n = SLICE h l (w2n n)`;
+val WORD_BIT_def   = Def "WORD_BIT_def"
+                         `WORD_BIT b n = BIT b (w2n n)`;
+val WORD_BITS_def  = Def "WORD_BITS_def"
+                         `WORD_BITS h l n = BITS h l (w2n n)`;
+val WORD_SLICE_def = Def "WORD_SLICE_def"
+                         `WORD_SLICE h l n = SLICE h l (w2n n)`;
 
 (* -------------------------------------------------------- *)
 
@@ -1733,34 +1741,37 @@ val WORD_SLICE_ZERO = store_thm("WORD_SLICE_ZERO",
 (* -------------------------------------------------------- *)
 (* -------------------------------------------------------- *)
 
-val CMP_NZCV_def = Define `
-  CMP_NZCV a b =
-    let q = w2n a + w2n (word_2comp b) in
-    let r = n2w q in
-      (MSB r,r = 0w,BIT WL q \/ (b = 0w),~(MSB a = MSB b) /\ ~(MSB r = MSB a))`;
+val CMP_NZCV_def = Def "CMP_NZCV_def"
+   `CMP_NZCV a b =
+      let q = w2n a + w2n (word_2comp b) in
+      let r = n2w q in
+      (MSB r,
+       r = 0w,
+       BIT WL q \/ (b = 0w),
+       ~(MSB a = MSB b) /\ ~(MSB r = MSB a))`;
 
-val WORD_LT_def = Define `
+val WORD_LT_def = Def "WORD_LT_def" `
   word_lt a b = let (n,z,c,v) = CMP_NZCV a b in ~(n = v)`;
 
-val WORD_GT_def = Define `
+val WORD_GT_def = Def "WORD_GT_def" `
   word_gt a b = let (n,z,c,v) = CMP_NZCV a b in ~z /\ (n = v)`;
 
-val WORD_LE_def = Define `
+val WORD_LE_def = Def "WORD_LE_def" `
   word_le a b = let (n,z,c,v) = CMP_NZCV a b in z \/ ~(n = v)`;
 
-val WORD_GE_def = Define `
+val WORD_GE_def = Def "WORD_GE_def"  `
   word_ge a b = let (n,z,c,v) = CMP_NZCV a b in n = v`;
 
-val WORD_LS_def = Define `
+val WORD_LS_def = Def "WORD_LS_def" `
   word_ls a b = let (n,z,c,v) = CMP_NZCV a b in ~c \/ z`;
 
-val WORD_HI_def = Define `
+val WORD_HI_def = Def "WORD_HI_def" `
   word_hi a b = let (n,z,c,v) = CMP_NZCV a b in c /\ ~z`;
 
-val WORD_LO_def = Define `
+val WORD_LO_def = Def "WORD_LO_def" `
   word_lo a b = let (n,z,c,v) = CMP_NZCV a b in ~c`;
 
-val WORD_HS_def = Define `
+val WORD_HS_def = Def "WORD_HS_def"  `
   word_hs a b = let (n,z,c,v) = CMP_NZCV a b in c`;
 
 val EQUAL_THEN_SUB_ZERO = (GEN_ALL o REWRITE_RULE [WORD_SUB_REFL] o SPECL [`b`,`a`,`b`]) WORD_LCANCEL_SUB;

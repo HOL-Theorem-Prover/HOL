@@ -12,12 +12,16 @@ val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 (* -------------------------------------------------------- *)
 
-val iMOD_2EXP_def = Define`
-  (iMOD_2EXP 0 n = 0) /\
-  (iMOD_2EXP (SUC x) n =
-      2 * (iMOD_2EXP x (n DIV 2)) + SBIT (ODD n) 0)`;
+val iMOD_2EXP_def = 
+ Prim_rec.new_recursive_definition
+  {name = "iMOD_2EXP_def",
+   def = ``(iMOD_2EXP 0 n = 0) /\
+           (iMOD_2EXP (SUC x) n =
+              2 * (iMOD_2EXP x (n DIV 2)) + SBIT (ODD n) 0)``,
+   rec_axiom = prim_recTheory.num_Axiom};
 
-val iBITWISE_def = Define `iBITWISE = BITWISE`;
+val iBITWISE_def = 
+  Definition.new_definition("iBITWISE_def", ``iBITWISE = BITWISE``);
 
 (* -------------------------------------------------------- *)
 
@@ -131,7 +135,8 @@ val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 
 (* -------------------------------------------------------- *)
 
-val iLOG2_def = Define `iLOG2 n = LOG2 (n + 1)`;
+val iLOG2_def = 
+ Definition.new_definition("iLOG2_def", ``iLOG2 n = LOG2 (n + 1)``);
 
 val LOG2_1 = (SIMP_RULE arith_ss [] o SPECL [`1`,`0`]) LOG2_UNIQUE;
 val LOG2_BIT2 = (GEN_ALL o SIMP_RULE arith_ss [LEFT_ADD_DISTRIB] o

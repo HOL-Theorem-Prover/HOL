@@ -107,10 +107,7 @@ val sn = Arbnum.toString wl;
 
 (* -------------------------------------------------------- *)
 
-fun word_compset () =
-  let val rws = bitsLib.bits_compset()
-      val _ = add_thms
-     [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
+val thms = [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
       LO_EVAL, LS_EVAL, HI_EVAL, HS_EVAL,
       THE_WL, HB_def, word_0, word_1, word_L_def, word_H_def, word_T,
       MOD_WL_EVAL, w2n_EVAL, n2w_11,
@@ -120,7 +117,12 @@ fun word_compset () =
       LSL_EVAL, LSR_THM, ASR_THM, ROR_THM, RRX_EVAL2,
       WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
       MSB_EVAL2, LSB_EVAL2,MSBn_def
-      ] rws
+      ];
+
+fun word_compset () =
+  let val rws = bitsLib.bits_compset()
+      val _ = add_thms thms rws
+      val _ = add_thms thms computeLib.the_compset
 in
    rws
 end;
