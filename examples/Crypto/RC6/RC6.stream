@@ -1,0 +1,474 @@
+(*                                   RC6 Block Cipher
+                                        -- implemented in Standard ML
+
+ This is an Standard ML implementation of the encryption algorithm:
+         RC6 by Ron Rivest and RSA Labs
+ which is a candidate algorithm in the Advanced Encryption Standard
+ For detailed information about RC6, please refer to
+        http://www.rsasecurity.com/rsalabs/node.asp?id=2512
+ in which algorithm specification, Security and performance evaluation, etc. could be found.
+*)
+
+(* For interactive work*)
+  quietdec := true;
+  app load ["arithmeticTheory","metisLib","word32Theory","llistTheory","optionTheory","listTheory"];
+  open arithmeticTheory word32Theory pairTheory metisLib llistTheory optionTheory listTheory;
+  quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* Create the theory.                                                        *)
+(*---------------------------------------------------------------------------*)
+
+val _ = new_theory "RC6";
+
+(*---------------------------------------------------------------------------*)
+(* Additional support for llist						     *)
+(*---------------------------------------------------------------------------*)
+
+val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
+                      leftdelim = [TOK "[|"], rightdelim = [TOK "|]"],
+                      cons = "LCONS", nilstr = "LNIL"};
+
+val _ = add_rule {term_name = "LCONS", fixity = Infixr 450,
+                  pp_elements = [TOK ":::", BreakSpace(0,2)],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundSameName, (PP.INCONSISTENT, 2))};
+
+val llist_Axiom_1 = Q.store_thm
+("llist_Axiom_1",
+    `!f : 'a -> ('a # 'b) option. ?g. !x. g x =
+        case f x  of
+            NONE -> LNIL
+        || SOME (a,b) -> LCONS b (g a)`,
+    GEN_TAC THEN
+    STRIP_ASSUME_TAC (SPEC_ALL llist_Axiom) THEN
+    Q.EXISTS_TAC `g` THEN
+    GEN_TAC THEN (REPEAT CASE_TAC) THENL [
+        METIS_TAC [LHD_EQ_NONE,OPTION_MAP_DEF],
+        RULE_ASSUM_TAC SPEC_ALL THEN
+        FULL_SIMP_TAC list_ss [] THEN
+        METIS_TAC [LHDTL_EQ_SOME]]);
+
+(*---------------------------------------------------------------------------*)
+(* Make bindings to pre-existing stuff                                       *)
+(*---------------------------------------------------------------------------*)
+
+val ARW_TAC = RW_TAC arith_ss;
+val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
+
+(*---------------------------------------------------------------------------*)
+(* Type Definition							     *)
+(*---------------------------------------------------------------------------*)
+
+val _ = type_abbrev("block", Type`:word32 # word32 # word32 # word32`);
+val _ = type_abbrev("key", Type`:word32 # word32`);
+val _ = type_abbrev("keysched", Type`:  word32 # word32 # 
+	word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+	word32 # word32 # word32 # word32 # word32 # word32 # word32 #
+	word32 # word32 # word32 # word32 # word32 # word32 # word32`);
+val _ = type_abbrev("state", Type`:keysched # block`);
+
+(*---------------------------------------------------------------------------*)
+(* Case analysis on a block, a key schedule and a state.                     *)
+(*---------------------------------------------------------------------------*)
+
+val FORALL_BLOCK = Q.store_thm
+  ("FORALL_BLOCK", 
+    `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
+    SIMP_TAC std_ss [FORALL_PROD]);
+
+val FORALL_KEYSCHEDULE = Q.store_thm
+  ("FORALL_KEYSCHEDULE",
+    `(!b:keysched. P b) = !v0 v1 v2 v3 v4 v5 v6 v7 v8 v9 v10 v11 v12 v13 v14 v15 v16 v17 v18 v19 
+	v20 v21 v22 v23 v24 v25 v26 v27 v28 v29 v30 v31 v32 v33 v34 v35 v36 v37 v38 v39 v40 v41 v42 v43. 
+	P (v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15,v16,v17,v18,v19,v20,v21,v22,v23,
+	   v24,v25,v26,v27,v28,v29,v30,v31,v32,v33,v34,v35,v36,v37,v38,v39,v40,v41,v42,v43)`,
+    SIMP_TAC std_ss [FORALL_PROD]);
+
+val FORALL_STATE = Q.store_thm
+  ("FORALL_STATE",
+    `(!s:state. P s) = !k b. P (k,b)`,
+    SIMP_TAC std_ss [FORALL_PROD]);
+
+(* --------------------------------------------------------------------------*)
+(*      Rotation operators                                                   *)
+(* --------------------------------------------------------------------------*)
+
+val rotl = Define `rotl x n =  x #>> (WL - n)`;
+val _ = overload_on ("#<<",Term`$rotl`);
+val _ = set_fixity "#<<" (Infixl 650);
+val _ = set_fixity "#>>" (Infixl 650);
+
+val SHIFT_Inversion = Q.store_thm
+  ("SHIFT_Inversion",
+  `!s n. n < WL ==> ((s #>> n #<< n = s) /\ (s #<< n #>> n = s))`,
+  REWRITE_TAC [rotl,ROR_ADD] THEN ARW_TAC [SUB_LEFT_ADD] THEN
+  METIS_TAC [ROR_CYCLE, MULT_CLAUSES]);
+
+val LeftShift_def = Define
+   `LeftShift x n = x #<< ((w2n n) MOD WL)`;
+
+val RightShift_def = Define
+   `RightShift x n = x #>> ((w2n n) MOD WL)`;
+
+val _ = overload_on ("<<<",Term`$LeftShift`);
+val _ = set_fixity "<<<" (Infixl 625);
+val _ = overload_on (">>>",Term`$RightShift`);
+val _ = set_fixity ">>>" (Infixl 625);
+
+val EX_Shift_Lemma = Q.store_thm
+   ("EX_Shift_Lemma",
+   `!n. w2n n MOD WL < WL`,
+    ARW_TAC [WL_def, HB_def] THEN ARW_TAC [DIVISION]);
+
+val EX_Shift_Inversion = Q.store_thm
+  ("EX_Shift_Inversion",
+  `!s n. (s >>> n <<< n = s) /\ (s <<< n >>> n = s)`,
+  ASSUME_TAC EX_Shift_Lemma THEN
+  REWRITE_TAC [LeftShift_def, RightShift_def] THEN ARW_TAC [SHIFT_Inversion]);
+
+(* --------------------------------------------------------------------------*)
+(*	One round forward computation and one round backward computation     *)
+(* --------------------------------------------------------------------------*)
+
+(*--------r is the number of rounds excluding whitening rounds---------------*)
+val r_def = Define `r = 20`;
+
+val CompUT_def = Define
+   `CompUT x = (x * (x + x + word_1)) #<< 5`;
+
+val FwdRound_def = Define
+  `FwdRound ((a,b,c,d):block) ((k0,k1):key)  = 
+	(b, 
+	 ((c # CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
+	 d,
+	 ((a # CompUT b) <<< CompUT d) + k0)`;
+
+val BwdRound_def = Define
+  `BwdRound ((a,b,c,d):block) ((k0,k1):key)  =   (* Note that let val (a,b,c,d) = (d,a,b,c) *)
+	(((d - k0) >>> CompUT c) # CompUT a,	(*a = ((a - k0) >>> u) xor t*)
+	 a,
+	 ((b - k1) >>> CompUT a) # CompUT c,	(*c = ((c - k1) >>> t) xor u*)
+	 c)`;
+
+val FORALL_KEYS = Q.prove
+(`(!x:key. P x) = !k0 k1. P(k0,k1)`,
+  SIMP_TAC std_ss [FORALL_PROD]);
+
+val OneRound_Inversion = Q.store_thm
+  ("OneRound_Inversion",
+  `!b:block k:key. BwdRound (FwdRound b k) k = b`,
+   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] THEN 
+   SIMP_TAC std_ss [FwdRound_def, BwdRound_def] THEN 
+   REWRITE_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] THEN
+   REWRITE_TAC [ EX_Shift_Inversion] THEN
+   METIS_TAC [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]  
+  );
+
+
+(*-------------------------------------------------------------------------------*)
+(* Rotate keys and get a pair of keys from the head of the key schedule		 *)  
+(* INVROTK rotates the key schedule in reverse version				 *)
+(*-------------------------------------------------------------------------------*)
+
+val ROTKEYS_def =
+ Define
+   `ROTKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
+	     k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) =
+	    (k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,k21,k22,
+	     k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43,k0,k1)
+             : keysched`;
+
+val INVROTK_def =
+ Define
+   `INVROTK (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
+             k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) =
+            (k42,k43,k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
+             k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41)
+             : keysched`;
+                                                                                           
+val GETKEYS_def =
+ Define
+   `GETKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
+             k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) =
+	(k0,k1):key`;
+
+
+val ROTKEYS_Inversion = Q.store_thm
+  ("ROTKEYS_Inversion",
+  `!k. (INVROTK (ROTKEYS k) = k) /\
+       (ROTKEYS (INVROTK k) = k)`,
+  SIMP_TAC std_ss [FORALL_KEYSCHEDULE] THEN
+  SIMP_TAC std_ss [INVROTK_def, ROTKEYS_def] THEN
+  METIS_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0]
+  );
+
+(*-------------------------------------------------------------------------------*)
+(* Pre-Whitening and post-whitening in the encryption and the decryption	 *)  
+(*-------------------------------------------------------------------------------*)
+
+val PreWhitening_def = Define
+ `PreWhitening (s:state) =
+    let k = FST s in
+    let (a,b,c,d):block = SND s in 
+      (ROTKEYS k,
+      (a, b + FST(GETKEYS(k)), c, d + SND(GETKEYS(k)))) : state`;
+
+val PostWhitening_def = Define
+ `PostWhitening (s:state)  =
+    let k = FST s in
+    let (a,b,c,d):block = SND s in
+     (ROTKEYS k,
+     (a + SND(GETKEYS(k)), b, c + SND(GETKEYS(k)), d)) : state`;
+
+val InvPreWhitening_def = Define
+ `InvPreWhitening (s:state) =
+    let k = FST s in
+    let (a,b,c,d):block = SND s in
+      (INVROTK k,
+      (a - SND(GETKEYS(INVROTK(k))), b, c - SND(GETKEYS(INVROTK(k))), d)) : state`;
+
+val InvPostWhitening_def = Define
+ `InvPostWhitening (s:state)  =
+    let k = FST s in
+    let (a,b,c,d):block = SND s in
+      (INVROTK k,
+      (a, b - FST(GETKEYS(INVROTK(k))), c, d - SND(GETKEYS(INVROTK(k))))) : state`;
+
+val Whitening_Inversion = Q.store_thm
+  ("Whitening_Inversion",
+  `!s. (InvPostWhitening(PreWhitening(s)) = s) /\ 
+       (InvPreWhitening(PostWhitening(s)) = s)`,
+  SIMP_TAC std_ss [FORALL_STATE, FORALL_BLOCK] THEN
+  SIMP_TAC std_ss [InvPostWhitening_def, PreWhitening_def, InvPreWhitening_def, PostWhitening_def] THEN
+  SIMP_TAC std_ss [LET_THM, ROTKEYS_Inversion] THEN 
+  METIS_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] 
+  );
+
+val Whitening_Keys = Q.store_thm
+  ("Whitening_Keys",
+  `!s. (FST (PreWhitening(s)) = ROTKEYS (FST s)) /\
+       (FST (PostWhitening(s)) = ROTKEYS (FST s))`,
+  SIMP_TAC std_ss [FORALL_STATE, FORALL_BLOCK] THEN
+  SIMP_TAC std_ss [PreWhitening_def, PostWhitening_def] THEN
+  SIMP_TAC std_ss [LET_THM]
+  );
+
+(*-------------------------------------------------------------------------------*)
+(* Round operations in the encryption and the decryption			 *)  
+(*-------------------------------------------------------------------------------*)
+(* RoundFun defines the function to build the lazy list		*)
+val RoundFun_def = Define `
+    RoundFun (s:state) = 
+      let newS:state = (ROTKEYS (FST s), FwdRound (SND s) (GETKEYS (FST s))) 
+      in SOME (newS, newS)`; 
+
+val StreamG_def = new_specification (
+    "StreamG",
+    ["StreamG"],
+    ISPEC ``RoundFun`` llist_Axiom);
+
+val Rounds_def = Define
+   `(Rounds 0 (s:state) = s) /\
+    (Rounds (SUC n) s = 
+	 (Rounds n (ROTKEYS (FST s), FwdRound (SND s) (GETKEYS (FST s)))))`;
+
+(* Now define the stream of blocks in encryption *)
+val FwdStream_def = Define
+   ` FwdStream (s:state) = THE (LNTH (r-1) (StreamG(s)))`;
+	
+(* The following theorem says functions Rounds represents the lazy list (stream)  *)
+val Stream_Of_Rounds = Q.store_thm
+  ("Stream_Of_Rounds",
+  `!s. THE (LNTH n (StreamG(s))) = Rounds (SUC n) s`,
+   Induct_on `n` THEN RW_TAC std_ss [LNTH] THEN 
+   RW_TAC list_ss [LET_THM,StreamG_def, RoundFun_def, option_CLAUSES, THE_DEF] THENL [ 
+     ONCE_REWRITE_TAC [ONE] THEN ONCE_REWRITE_TAC [Rounds_def] THEN ARW_TAC [Rounds_def],
+     Q.ABBREV_TAC `i=SUC n` THEN ARW_TAC [Rounds_def]]     
+  );
+
+(*---------------------------------------------------------------------------------*)
+(* The following stuffs are for decryption and similar to those for encryption     *) 
+(*---------------------------------------------------------------------------------*)
+
+val InvRoundFun_def = Define `
+    InvRoundFun (s:state) =
+      let newS:state = (INVROTK (FST s), BwdRound (SND s) (GETKEYS (INVROTK(FST s))))
+      in SOME (newS, newS)`;
+
+val InvStreamG_def = new_specification (
+    "InvStreamG",
+    ["InvStreamG"],
+    ISPEC ``InvRoundFun`` llist_Axiom);
+
+val InvRounds_def = Define
+   `(InvRounds 0 (s:state) = s) /\
+    (InvRounds (SUC n) s =
+         (InvRounds n (INVROTK (FST s), BwdRound (SND s) (GETKEYS (INVROTK(FST s))))))`;
+
+val BwdStream_def = Define
+   ` BwdStream (s:state) = THE (LNTH (r-1) (InvStreamG(s)))`;
+
+val InvStream_Of_Rounds = Q.store_thm
+  ("InvStream_Of_Rounds",
+  `!s. THE (LNTH n (InvStreamG(s))) = InvRounds (SUC n) s`,
+   Induct_on `n` THEN RW_TAC std_ss [LNTH] THEN
+   RW_TAC list_ss [LET_THM,InvStreamG_def, InvRoundFun_def, option_CLAUSES, THE_DEF] THENL [
+     ONCE_REWRITE_TAC [ONE] THEN ONCE_REWRITE_TAC [InvRounds_def] THEN ARW_TAC [InvRounds_def],
+     Q.ABBREV_TAC `i=SUC n` THEN ARW_TAC [InvRounds_def]]
+  );
+
+
+(*---------------------------------------------------------------------------*)
+(* Encrypt and Decrypt                                                       *)
+(*---------------------------------------------------------------------------*)
+
+(* The number of rounds is 20. It is easy to change it into any value, but in*)
+(* in this case you should redefine the type keysched 			     *) 
+
+val RC6Encrypt_def =
+ Define
+  `RC6Encrypt keys txt = 
+    SND(PostWhitening(FwdStream(PreWhitening (keys,txt))))`;
+
+val RC6Decrypt_def =
+ Define
+  `RC6Decrypt keys txt = 
+    SND(InvPostWhitening(BwdStream(InvPreWhitening (keys,txt))))`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Main lemmas                                                                *)
+(*---------------------------------------------------------------------------*)
+val [FwdRound] = decls "FwdRound";
+val [BwdRound] = decls "BwdRound";
+
+(* The following theorem verifies that rotating the original key schedule by 22 times would give
+  the same key schedule as the original one. This theorem guarantees correspoding rounds in encryption
+  and decryption would use the same pair of keys 						*)
+val Rounds_Keys = Q.store_thm
+  ("Rounds_Keys",
+  `!k b. k = FST(PostWhitening(FwdStream(PreWhitening(k,b))))`,
+   SIMP_TAC std_ss [FwdStream_def, Stream_Of_Rounds] THEN 
+   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYSCHEDULE] THEN 
+   RW_TAC std_ss [Whitening_Keys] THEN 
+   RESTR_EVAL_TAC [FwdRound]
+  );
+
+
+val Rounds_Inversion = Q.store_thm
+  ("Rounds_Inversion",
+  `!s. InvRounds r (Rounds r s) = s`,
+   RESTR_EVAL_TAC [FwdRound, BwdRound] THEN SIMP_TAC std_ss [FORALL_STATE] THEN 
+   RW_TAC std_ss [OneRound_Inversion, ROTKEYS_Inversion]
+  );
+
+val RC6_LEMMA = Q.store_thm
+("RC6_LEMMA",
+ `!(plaintext:block) (keys:keysched).
+     RC6Decrypt keys (RC6Encrypt keys plaintext) = plaintext`,
+   RW_TAC std_ss [RC6Encrypt_def, RC6Decrypt_def] THEN 
+   `keys = FST (PostWhitening(FwdStream (PreWhitening (keys,plaintext))))` by METIS_TAC [Rounds_Keys] 
+   THEN Q.ABBREV_TAC `x = PostWhitening(FwdStream (PreWhitening (keys,plaintext)))` THEN
+   ASM_REWRITE_TAC [] THEN Q.UNABBREV_TAC `x` THEN   
+   PAT_ASSUM ``keys = FST (PostWhitening (FwdStream (PreWhitening (keys,plaintext))))`` (K ALL_TAC) 
+   THEN SIMP_TAC std_ss [Whitening_Inversion] THEN 
+   SIMP_TAC std_ss [FwdStream_def, Stream_Of_Rounds, BwdStream_def, InvStream_Of_Rounds]
+   THEN `SUC (r-1) = r` by ARW_TAC [r_def] THEN ASM_REWRITE_TAC [] THEN
+   ARW_TAC [Rounds_Inversion, Whitening_Inversion]
+   );
+
+
+(*---------------------------------------------------------------------------*)
+(* Build the keyschedule from a key. This definition is too specific, but    *)
+(* works fine for 128 bit blocks.                                            *)
+(*---------------------------------------------------------------------------*)
+val LIST_TO_KEYS_def =
+ Define
+  `(LIST_TO_KEYS [] acc = acc) /\
+   (LIST_TO_KEYS (h::t) (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
+             k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) =
+         LIST_TO_KEYS t (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,k20,
+             k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43))`;
+
+val DUMMY_KEYS_def =
+ Define
+  `DUMMY_KEYS = (0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+        0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w)`;
+
+val Pw_def = Define `
+    Pw = 0xB7E15163w`;
+
+val Qw_def = Define `
+    Qw = 0x9E3779B9w`;
+
+val InitSFun_def = Define `
+    InitSFun (oldEL:word32, rndNo) =
+      if rndNo > 2*r+3 then NONE
+      else SOME ((oldEL + Qw, rndNo + 1),oldEL)`;
+
+(* :num -> num llist                                                                       *)
+val InitSG_def = new_specification (
+    "InitSG",
+    ["InitSG"],
+    ISPEC ``InitSFun`` llist_Axiom_1);
+
+val KeySchedFun_def = Define `
+    KeySchedFun (s : word32 llist # word32 llist # word32 # word32) =
+      let (S, L, a, b) = s in
+	let a = (THE (LHD S) + a + b) #<< 3 in
+	let b = (THE (LHD L) + a + b) <<< (a+b) in
+	SOME ((LAPPEND (THE (LTL S)) [|a|], LAPPEND (THE (LTL L)) [|b|], a, b),
+		a)`;  
+
+val KeySchedG_def = new_specification (
+    "KeySchedG",
+    ["KeySchedG"],
+    ISPEC ``KeySchedFun`` llist_Axiom_1);
+
+val mk_keysched_def = Define
+   `mk_keysched L =
+      let K = KeySchedG(InitSG(Pw,0), L, 0w, 0w) in
+      let f = \n ll. THE(LNTH n ll) in
+      [|f 0 K;f 1 K;f 2 K;f 3 K;f 4 K;f 5 K;f 6 K;f 7 K;f 8 K;f 9 K;f 10 K;f 11 K;
+	f 12 K;f 13 K;f 14 K;f 15 K;f 16 K;f 17 K;f 18 K;f 19 K;f 20 K;f 21 K;f 22 K;f 23 K;
+	f 24 K;f 25 K;f 26 K;f 27 K;f 28 K;f 29 K;f 30 K;f 31 K;f 32 K;f 33 K;f 34 K;f 35 K;
+	f 36 K;f 37 K;f 38 K;f 39 K;f 40 K;f 41 K;f 42 K;f 43 K|]`;
+
+(* Could be defined in a more succint way as follows, but the sanity check would be much more 
+   cumbersome because so many expressions are expended out. But it holds for any r. 
+  val mk_keysched_def = Define
+   `mk_keysched L =
+        fromList(THE(LTAKE (2*r+4) (KeySchedG(InitSG(Pw,0), L, 0w, 0w))))`;
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Sanity check                                                              *)
+(*---------------------------------------------------------------------------*)
+
+val keysched_length = Q.prove (
+  `!L. LLENGTH (mk_keysched L) = SOME (r*2+4)`,
+  RW_TAC list_ss [mk_keysched_def,LET_THM,r_def,LLENGTH_THM]
+  );
+
+
+(*---------------------------------------------------------------------------*)
+(* Basic theorem about encryption/decryption                                 *)
+(*---------------------------------------------------------------------------*)
+val RC6_def = Define
+ `RC6 key =
+   let keys = LIST_TO_KEYS (THE(toList(mk_keysched key))) DUMMY_KEYS
+   in (RC6Encrypt keys, RC6Decrypt keys)`;                                                          
+                                                                                           
+val RC6_CORRECT = Q.store_thm
+  ("RC6_CORRECT",
+   `!key plaintext.
+       ((encrypt,decrypt) = RC6 key)
+       ==>
+       (decrypt (encrypt plaintext) = plaintext)`,
+         RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]);
+                                                                                                                                             
+val _ = export_theory();

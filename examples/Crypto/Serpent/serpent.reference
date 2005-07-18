@@ -1,0 +1,3833 @@
+(*verification of Serpent reference algorithm from
+the original submission package.
+Jianjun Duan, 
+School of Computing, University of Utah
+*)
+
+app load ["listTheory","rich_listTheory", "word4Theory",  
+          "word8Theory", "word32Theory", "word128Theory", 
+          "word256Theory"]; 
+quietdec := true;
+open listTheory rich_listTheory word4Theory word8Theory 
+     word32Theory word128Theory  word256Theory 
+     bitsTheory markerTheory pairTheory arithmeticTheory;
+quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* UTILITIES                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val row_conv = REPEATC (numLib.BOUNDED_FORALL_CONV EVAL)
+                   THENC REWRITE_CONV [];      
+
+val WORD_EQ = prove(
+``!(w1:word128) (w2:word128). 
+    (!x. x < word128$WL ==> (word128$WORD_BIT x w1 = word128$WORD_BIT x w2)) 
+   = 
+    (w1 = w2)``,
+	
+NTAC 2 STRIP_TAC THEN
+STRUCT_CASES_TAC (Q.SPEC `w1` word128Theory.word_nchotomy) THEN
+STRUCT_CASES_TAC (Q.SPEC `w2` word128Theory.word_nchotomy) THEN
+SIMP_TAC arith_ss 
+  [word128Theory.WORD_ADD1,BIT_OF_BITS_THM,
+   word128Theory.WL_def,word128Theory.WORD_BIT_def, 
+   word128Theory.w2n_EVAL,word128Theory.n2w_11,
+   word128Theory.MOD_WL_THM,DECIDE ``a < b + 1 = a <= b``, 
+   (GSYM o SIMP_RULE arith_ss [] o Q.SPECL [`word128$HB`,`0`])  BIT_BITS_THM]
+THEN METIS_TAC [DECIDE ``x < SUC y = x <= y``]
+); 
+
+
+val OR_DISTRIB_ROR128 = prove(
+``!(w1:word128) (w2:word128) n. 
+	(w1 | w2) #>> n = (w1 #>> n) | (w2 #>> n)``,
+
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC ((fst o EQ_IMP_RULE o SPEC_ALL) word128Theory.WORD_EQ) THEN
+SIMP_TAC arith_ss 
+  [simpLib.SIMP_PROVE arith_ss  [word128Theory.WL_def,DIVISION] 
+       ``!a. a MOD word128$WL < word128$WL``, 
+   word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_ROR]
+); 
+	
+val AND_DISTRIB_ROR128 = prove(
+``!(w1:word128) (w2:word128) n. (w1 & w2) #>> n = (w1 #>> n) & (w2 #>> n)``,
+	
+REPEAT STRIP_TAC THEN
+MATCH_MP_TAC ((fst o EQ_IMP_RULE o SPEC_ALL) word128Theory.WORD_EQ) THEN
+SIMP_TAC arith_ss [simpLib.SIMP_PROVE arith_ss [word128Theory.WL_def,DIVISION] ``!a. a MOD word128$WL < word128$WL``,
+		word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_ROR]
+); 
+		      
+val bit_num_val_bound=prove(
+``!w n.
+	BIT n w ==> w >= 2 ** n``,
+		
+RW_TAC arith_ss [BIT_def, BITS_THM] THEN
+CCONTR_TAC THEN
+FULL_SIMP_TAC arith_ss [DECIDE ``SUC n - n = 1n``, DECIDE``~(x >= y) = x<y:num``, LESS_DIV_EQ_ZERO]
+); 
+
+
+val word_1_bit_0=prove(``(WORD_BIT:num->word128->bool) 0 (1w:word128)``,
+
+CCONTR_TAC THEN
+FULL_SIMP_TAC bool_ss [word128Theory.WORD_BIT_def] THEN
+`(w2n:word128->num) 1w= 1` by FULL_SIMP_TAC arith_ss [word128Theory.w2n_EVAL,word128Theory.MOD_WL_def] THENL [
+	EVAL_TAC,
+	`BIT 0 (2 ** 0)` by METIS_TAC [BIT_B] THEN
+	 METIS_TAC [EXP_EQ_1]]);
+
+	    
+val word_1_bit128=prove(
+``!n.
+	n>0  /\
+	n< word128$WL
+	==>
+	 ~((WORD_BIT:num->word128->bool) n (1w:word128))``,
+		
+CCONTR_TAC THEN
+FULL_SIMP_TAC bool_ss [word128Theory.WORD_BIT_def] THEN
+`(w2n:word128->num) 1w= 1` by
+FULL_SIMP_TAC arith_ss [word128Theory.w2n_EVAL,word128Theory.MOD_WL_def] THENL [
+	EVAL_TAC,
+	`1 >=2**n` by METIS_TAC [bit_num_val_bound] THEN
+	` ~(2 ** n=0)` by FULL_SIMP_TAC arith_ss [TWOEXP_NOT_ZERO] THEN
+	`2**n=1` by RW_TAC arith_ss [] THEN
+	`(2=1) \/ (n=0)` by METIS_TAC [EXP_EQ_1] THENL [
+		FULL_SIMP_TAC arith_ss [],
+		FULL_SIMP_TAC arith_ss []]]
+);     
+
+val w2n_zero128 = prove (
+``(w2n:word128->num) 0w= 0``,
+			
+FULL_SIMP_TAC arith_ss [word128Theory.w2n_EVAL,word128Theory.MOD_WL_def] THEN
+EVAL_TAC
+);
+			
+val w2n_one128 = prove (  
+``(w2n:word128->num) 1w= 1``,
+			
+FULL_SIMP_TAC arith_ss [word128Theory.w2n_EVAL,word128Theory.MOD_WL_def] THEN
+EVAL_TAC
+); 			
+
+val word_1_shift_and_w128=prove(``!n. 0<n /\ n<word128$WL==> ((1w:word128)&(1w:word128)#>>n=(0w:word128))``,
+		
+		RW_TAC std_ss [Q.SPECL [`(1w:word128)&(1w:word128)#>>n`,`(0w:word128)`] (GSYM word128Theory.WORD_EQ),word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_ROR,word128Theory.WORD_BIT_def,BIT_ZERO,w2n_zero128,w2n_one128] THEN
+		
+		Cases_on `x=(word128$WL-n)` THEN Cases_on `x=0` THENL [
+			FULL_SIMP_TAC arith_ss [],
+			`x>0` by RW_TAC arith_ss [] THEN
+			METIS_TAC [word_1_bit128,word128Theory.WORD_BIT_def,w2n_one128],
+			
+			FULL_SIMP_TAC arith_ss [] THEN 
+			METIS_TAC [word_1_bit128,word128Theory.WORD_BIT_def,w2n_one128,DECIDE ``x:num<y=y>x``,DECIDE ``~(x:num<=y)=y<x`` ],
+			
+			METIS_TAC [word_1_bit128,word128Theory.WORD_BIT_def,w2n_one128,DECIDE ``~(x=0)=x>0`` ]]
+);
+						
+val word_1_shift_and1_w128=prove(
+``!n m. 
+	m < word128$WL /\
+	n < word128$WL /\
+	m < n
+	==>
+	((1w:word128) #>>m & (1w:word128) #>>n = 0w)``,
+		
+RW_TAC std_ss [] THEN
+`~(n<m)` by RW_TAC arith_ss [] THEN 
+`?p. n=p+m` by METIS_TAC [LESS_OR_EQ_ADD] THEN
+`p<word128$WL /\ 0<p` by RW_TAC arith_ss [] THEN
+METIS_TAC [GSYM word128Theory.ROR_ADD,GSYM AND_DISTRIB_ROR128,word_1_shift_and_w128,word128Theory.ZERO_SHIFT]
+);
+
+
+val boolXor_def= Define
+`boolXor (x:bool) y = ~(x=y)`;
+
+val boolXorComm=prove(`` !x y. boolXor x y = boolXor y x``,
+
+METIS_TAC [boolXor_def]);
+
+val boolXorAssoc=prove(`` !x y z. boolXor z (boolXor x y) = boolXor (boolXor z x) y``,
+
+METIS_TAC [boolXor_def]);
+
+val boolXorFacts=prove(``  (!x.(boolXor x x) = F)           /\
+                              (!x.(boolXor x T) = ~x)          /\
+			      (!x.(boolXor x F) = x) ``,
+
+METIS_TAC [boolXor_def]);
+
+val boolXorComm3=prove(
+``! x y z. 
+	boolXor x (boolXor y z) = boolXor y (boolXor x z)``,
+
+Cases_on `x` THEN Cases_on `y` THEN Cases_on `z` THENL [
+	RW_TAC std_ss [boolXor_def],
+	RW_TAC std_ss [boolXor_def],
+	RW_TAC std_ss [boolXor_def],
+	RW_TAC std_ss [boolXor_def],
+	RW_TAC std_ss [boolXor_def],
+	RW_TAC std_ss [boolXor_def],
+	RW_TAC std_ss [boolXor_def],
+	RW_TAC std_ss [boolXor_def]]);
+	
+	
+val ALL_EL_FILTER=prove(
+``!p q l. ALL_EL p l==> ALL_EL p (FILTER q l)``,
+
+Induct_on `l` THENL [
+	RW_TAC list_ss [],
+	RW_TAC list_ss []]);	
+	
+val LENGTH_NIL_LEQ =prove(
+``!n. LENGTH [] <= n``,
+
+RW_TAC list_ss []);
+	  
+val LENGTH_FILTER=prove(
+``!l p. 
+	LENGTH (FILTER p l) <= LENGTH l``,
+
+Induct_on `l` THENL [
+	RW_TAC list_ss [],
+	RW_TAC list_ss [] THEN
+	`LENGTH l <=  SUC (LENGTH l)` by RW_TAC arith_ss [] THEN
+	METIS_TAC [LESS_EQ_TRANS]]);
+	
+	
+(*make a list of "T" of length n*)
+val makeTL_def =Define
+`(makeTL 0 =  []) /\
+
+(makeTL (SUC n) = T::(makeTL n))`;
+
+val LENGTH_makeTL = prove(
+``!n.
+	LENGTH (makeTL n) = n``,
+	
+Induct_on `n` THENL [
+	RW_TAC list_ss [makeTL_def],
+	RW_TAC list_ss [makeTL_def]]);
+	
+
+val makeTL_fact=prove(
+``!i n. 
+	i<n
+	==>
+	EL i (makeTL n)``,
+
+Induct_on `n` THENL [
+	RW_TAC arith_ss [],
+	Cases_on `i` THENL [
+		RW_TAC list_ss [makeTL_def],
+		FULL_SIMP_TAC list_ss [makeTL_def]]]);			
+		
+val zipXor_def =Define 
+`(zipXor [] l =l) /\
+
+(zipXor (xh::xt) (ah::at) = (boolXor xh ah)::zipXor xt at)   /\
+(zipXor (xh::xt) [] = [])`;
+
+val zipXor_fact=prove(
+`` !l. zipXor l [] = [] ``,
+
+Cases_on `l` THENL [
+	RW_TAC list_ss [zipXor_def],
+	RW_TAC list_ss [zipXor_def]]);
+	
+val LENGTH_zipXor=prove(
+``!l1 l2.
+	LENGTH (zipXor l1 l2) = LENGTH l2``,
+
+Induct_on `l2` THENL [
+	Cases_on `l1` THENL [
+		RW_TAC list_ss [zipXor_def],
+		RW_TAC list_ss [zipXor_def]],
+	Cases_on `l1` THENL [
+		RW_TAC list_ss [zipXor_def],
+		RW_TAC list_ss [zipXor_def]]]);
+
+
+	  
+val makeL_def=Define
+`(makeL 0 = [T]) /\
+(makeL (SUC n) = F::makeL n)`;
+
+
+val zipXor_makeL_COMM=prove(
+``! i n1 n2 l.
+	 zipXor (makeL n2) (zipXor (makeL n1) al)=zipXor (makeL n1) (zipXor (makeL n2) al)``,
+	 
+Induct_on `al` THENL [
+	RW_TAC list_ss [zipXor_fact],
+	Cases_on `n1` THEN Cases_on `n2` THENL [
+		RW_TAC list_ss [makeL_def,zipXor_def,boolXor_def],
+		RW_TAC list_ss [makeL_def,zipXor_def,boolXor_def],
+		RW_TAC list_ss [makeL_def,zipXor_def,boolXor_def],
+		RW_TAC list_ss [makeL_def,zipXor_def,boolXor_def]]]);		
+		
+		
+val zipXor_makeL=prove(
+ ``!i al h tl. 
+	i < LENGTH al  /\
+	h < LENGTH al  
+	==>
+	(EL i (zipXor (makeL h) al) = boolXor (i=h) (EL i al))``,
+	
+Induct_on `h` THENL [
+	RW_TAC list_ss [zipXor_def,makeL_def] THEN
+	Cases_on `al` THENL [
+		FULL_SIMP_TAC list_ss [],
+		RW_TAC list_ss [zipXor_def,boolXor_def] THEN
+		Cases_on `i` THENL [
+			RW_TAC list_ss [],
+			RW_TAC list_ss []]],
+	RW_TAC list_ss [makeL_def] THEN
+	Cases_on `al` THENL [
+		FULL_SIMP_TAC list_ss [],
+		RW_TAC list_ss [zipXor_def,boolXor_def] THEN
+		Cases_on `i` THENL [
+			RW_TAC list_ss [],
+			FULL_SIMP_TAC list_ss [boolXor_def]]]]);			
+		
+		
+		
+val MAP_ID=prove(
+``!l f. 
+	ALL_EL (\x. f x =x) l
+	==>
+	(MAP f l=l)``, 
+	
+Induct_on `l` THENL [
+	RW_TAC list_ss [],
+	RW_TAC list_ss []]);
+	  		
+		
+		
+
+
+(*EL 0 is the MS in all split
+the bit ordering is perserved
+*)
+
+(*use word_bits*) 
+val word128to32l_def =Define 
+`word128to32l (w128:word128) = 
+ [(n2w:num->word32) (w2n (w128 >>> 96)); (n2w:num->word32) (w2n ((w128 <<32) >>> 96));
+ (n2w:num->word32) (w2n ((w128<<64) >>> 96)); (n2w:num->word32) (w2n ((w128<<96) >>> 96))]`;
+
+val word32to8l_def =Define 
+`word32to8l (w32:word32) = 
+ [(n2w:num->word8) (w2n (w32 >>> 24)); (n2w:num->word8) (w2n ((w32 <<8) >>> 24));
+ (n2w:num->word8) (w2n ((w32<<16) >>> 24)); (n2w:num->word8) (w2n ((w32<<24) >>> 24))]`;
+
+
+val word8to4l_def =Define 
+`word8to4l(w8:word8) = 
+ [(n2w:num->word4) (w2n (w8 >>> 4)); (n2w:num->word4) (w2n ((w8 <<4) >>> 4))]`;
+
+val word32to4l_def=Define
+`word32to4l w32= FLAT (MAP  word8to4l (word32to8l w32))`;
+
+val word4to32_def = Define
+`word4to32 (w4:word4)= (n2w:num->word32) (w2n w4)`;
+
+val word4to128_def = Define
+`word4to128 (w4:word4)= (n2w:num->word128) (w2n w4)`;
+
+val word32to128_def = Define
+ `word32to128 (w32:word32)= (n2w:num->word128) (w2n w32)`;
+
+val word256to128l = Define
+`word256to128l (w256:word256) = [(n2w:num->word128) (w2n (w256 >>> 128)); (n2w:num->word128) (w2n ((w256 <<128) >>> 128))]`;
+
+val word256to32l_def = Define
+`word256to32l (w256:word256) = FLAT ( MAP word128to32l (word256to128l w256))`;
+ (*input is in MSNibble....LSNibble
+in each Nibble, MSBit..LSBit
+input is of 32 nibbles
+*)
+
+(*convert a word4 list to a num
+LSW,,,,,MSW*)
+val revWord4ltoNum_def=Define
+`(revWord4ltoNum [] = 0) /\
+(revWord4ltoNum (h::t) = (word4$w2n h+ (revWord4ltoNum t)*16))`;
+
+
+(*convert a num to a word4 list,
+the length of list is controled by a parameter,
+the length provides a MOD 
+LSW,,,,,MSW*)
+val numtoRevWord4l_def =Define
+`(numtoRevWord4l 0 n = []) /\
+ (numtoRevWord4l (SUC m) n = 
+    word4$n2w (n MOD 16)::(numtoRevWord4l m (n DIV 16)))`;
+
+val numtoRevWord4lEval=prove(
+``!n m. 
+	numtoRevWord4l m n =
+	if m=0 then []
+	else  word4$n2w (  n MOD 16)::(numtoRevWord4l (m-1) (n DIV 16))``,
+
+
+RW_TAC arith_ss [numtoRevWord4l_def] THEN
+Cases_on `m` THENL [
+	METIS_TAC [],
+	FULL_SIMP_TAC arith_ss [numtoRevWord4l_def]]);
+	
+
+(*the length provides a MOD *)
+val revWord4ltoNumRange=prove(
+``!n l. 
+	LENGTH l <= n ==> revWord4ltoNum l < 2 ** (4*n)``,
+	
+Induct_on `l` THENL [
+	METIS_TAC [ revWord4ltoNum_def,ZERO_LESS_EXP,DECIDE ``2 = SUC 1``],
+	RW_TAC list_ss [ revWord4ltoNum_def] THEN
+	Cases_on `n` THENL [
+		FULL_SIMP_TAC arith_ss [],
+		`4* SUC n'=4+ 4*n'` by RW_TAC arith_ss [] THEN
+		`word4$w2n h < 2**word4$WL` by METIS_TAC  [word4Theory.w2n_LT] THEN
+		FULL_SIMP_TAC std_ss [EXP_ADD,word4Theory.WL_def,word4Theory.HB_def] THEN
+		FULL_SIMP_TAC list_ss [] THEN
+		`revWord4ltoNum  l < 2 ** (4 * n') ` by METIS_TAC [] THEN
+		`SUC ( revWord4ltoNum l) <= 2 ** (4 * n')` by METIS_TAC [LESS_EQ] THEN
+		`16+16* (revWord4ltoNum l)<= 16*2 ** (4 * n')` by RW_TAC arith_ss [] THEN
+		FULL_SIMP_TAC arith_ss []]]);
+		
+val LENGTH_numtoRevWord4l=prove(
+``!wl n. 
+	LENGTH (numtoRevWord4l n wl) =n``,
+
+Induct_on `n` THENL [
+	RW_TAC list_ss [numtoRevWord4l_def],
+	RW_TAC list_ss [numtoRevWord4l_def]]);
+	
+	
+
+	  
+(*the conversions between a num and word4 list are reversible*)        
+val numtoRevWord4l_conversion=prove(
+``!n wl. 
+	(n=LENGTH wl)
+	==>
+	( numtoRevWord4l n (revWord4ltoNum wl) =wl)``,
+
+Induct_on `wl` THENL [
+	RW_TAC list_ss [revWord4ltoNum_def,numtoRevWord4l_def],
+	RW_TAC list_ss [revWord4ltoNum_def,numtoRevWord4l_def] THENL [
+		`word4$w2n h < 2**word4$WL` by METIS_TAC  [word4Theory.w2n_LT] THEN
+		FULL_SIMP_TAC arith_ss [MOD_MULT,word4Theory.WL_def,word4Theory.HB_def]  THEN
+		`(revWord4ltoNum wl * 16+word4$w2n h) MOD 16 =word4$w2n h` by METIS_TAC [MOD_MULT] THEN
+		 FULL_SIMP_TAC arith_ss [word4Theory.w2n_ELIM], 
+		 `(revWord4ltoNum wl * 16) MOD 16=0 ` by METIS_TAC [MOD_EQ_0,DECIDE ``0<16``] THEN
+		 `word4$w2n h < 2**word4$WL` by METIS_TAC  [word4Theory.w2n_LT] THEN 
+		 FULL_SIMP_TAC arith_ss [ADD_DIV_RWT,LESS_DIV_EQ_ZERO,MULT_DIV,word4Theory.WL_def,word4Theory.HB_def]]]); 
+		 
+val revWord4ltoNum_conversion=prove(
+``!n len.
+	n < 2**(4*len)
+	==>
+	(revWord4ltoNum  (numtoRevWord4l len n) =n)``,	
+
+Induct_on `len` THENL [
+	RW_TAC list_ss [revWord4ltoNum_def,numtoRevWord4l_def],
+	RW_TAC list_ss [revWord4ltoNum_def,numtoRevWord4l_def] THEN
+	`n DIV 16 <=2 ** (4 * SUC len) DIV 16` by RW_TAC arith_ss [DIV_LE_MONOTONE] THEN
+	`n = n DIV 16 * 16 + n MOD 16` by METIS_TAC [DIVISION,DECIDE ``0<16``] THEN
+	`2 ** (4 * SUC len) = 2**(4*len)*16` by FULL_SIMP_TAC std_ss [DECIDE ``4*SUC len=4*len +4``,EXP_ADD] THEN
+	FULL_SIMP_TAC std_ss [MULT_DIV] THEN
+	`n DIV 16 *16<= 2 ** (4 * len)*16` by RW_TAC arith_ss [] THEN
+	Cases_on ` n DIV 16 = 2 ** (4 * len) ` THEN Cases_on `n MOD 16=0` THENL [
+		FULL_SIMP_TAC arith_ss [],
+		FULL_SIMP_TAC arith_ss [],
+	        FULL_SIMP_TAC arith_ss [word4Theory.w2n_EVAL,word4Theory.MOD_WL_def,word4Theory.WL_def,word4Theory.HB_def],
+	        FULL_SIMP_TAC arith_ss [word4Theory.w2n_EVAL,word4Theory.MOD_WL_def,word4Theory.WL_def,word4Theory.HB_def]]]);
+		        
+
+(*the conversions between a word128 and word4 list*)				 	
+val word4ltow128_def = Define
+`word4ltow128 w4l=word128$n2w (revWord4ltoNum (REVERSE w4l))`;
+
+val word128tow4l_def= Define
+`word128tow4l w128 = REVERSE (numtoRevWord4l 32 (word128$w2n w128))`;
+
+
+
+val LENGTH_word128tow4l=prove(
+``!w.
+	LENGTH (word128tow4l w) =32``,
+
+RW_TAC std_ss [word128tow4l_def,LENGTH_REVERSE,LENGTH_numtoRevWord4l]);
+
+(*the conversions between a word128 and word4 list are reversible*)
+val word128tow4l_conversion=prove(
+``!l. (LENGTH l =32) ==> (word128tow4l (word4ltow128 l) =l)``,
+
+RW_TAC arith_ss [word128tow4l_def,word4ltow128_def,word128Theory.w2n_EVAL,word128Theory.MOD_WL_def,word128Theory.WL_def,word128Theory.HB_def] THEN
+`LENGTH (REVERSE l) <=32` by RW_TAC list_ss [LENGTH_REVERSE] THEN
+`revWord4ltoNum (REVERSE l) < 2 ** (4*32)` by METIS_TAC [revWord4ltoNumRange] THEN
+FULL_SIMP_TAC arith_ss [LESS_MOD] THEN
+`LENGTH (REVERSE l) =32` by RW_TAC list_ss [LENGTH_REVERSE] THEN
+`numtoRevWord4l 32 (revWord4ltoNum (REVERSE l)) = REVERSE l` by METIS_TAC [numtoRevWord4l_conversion] THEN
+METIS_TAC [REVERSE_REVERSE]);
+
+val word4ltow128_conversion=prove(
+``!w128.
+	word4ltow128 (word128tow4l w128) = w128``,
+
+RW_TAC arith_ss [word4ltow128_def,word128tow4l_def,REVERSE_REVERSE] THEN
+`word128$w2n w128 < 2 **word128$WL` by METIS_TAC [word128Theory.w2n_LT] THEN
+FULL_SIMP_TAC arith_ss [word128Theory.WL_def,word128Theory.HB_def,revWord4ltoNum_conversion,word128Theory.w2n_ELIM]);
+
+
+	 
+
+val word256to32lLength = prove (
+``!w. 
+	LENGTH (word256to32l w) =8``,
+
+EVAL_TAC THEN METIS_TAC []);
+
+
+
+
+val LENGTH_GREATER_EQ_CONS=prove(
+``!l n. 
+	(LENGTH l >=SUC n) 
+	==>
+	?x l'. (LENGTH l' >= n) /\ (l = x::l')``,
+
+Induct_on `l` THENL [
+	SIMP_TAC arith_ss [LENGTH],
+	RW_TAC std_ss [] THEN
+	FULL_SIMP_TAC arith_ss [LENGTH]]);
+	  
+val listInstGreaterEq2=prove(
+``!l. 
+	(LENGTH l>=2) 
+	==> 
+	?v_1 v_2 t. l = (v_1::v_2::t)``,
+	     
+REWRITE_TAC [DECIDE ``2 = SUC (SUC 0)``] THEN
+METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);	  
+
+val listInstEq2=prove(
+``!l. 
+	(LENGTH l=2) 
+	==> 
+	?w_1 w_2. l = (w_1::w_2::[])``,
+	
+REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, DECIDE ``2 = SUC (SUC 0)``] THEN
+METIS_TAC []);
+
+
+val listInstGreaterEq4=prove(
+``!l. 
+	(LENGTH l>=4) 
+	==> 
+	?v_1 v_2 v_3 v_4 t. l = (v_1::v_2::v_3::v_4::t)``,
+	
+REWRITE_TAC [DECIDE ``4 = SUC  (SUC  (SUC (SUC 0)))``] THEN
+METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);	  
+
+val listInstEq4=prove(
+``!l. 
+	(LENGTH l=4) 
+	==> 
+	?w_1 w_2 w_3 w_4. l = (w_1::w_2::w_3::w_4::[])``,
+
+REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, DECIDE ``4 = SUC (SUC (SUC (SUC 0)))``] THEN
+METIS_TAC []);
+     	  
+val listInstGreaterEq8=prove(
+``!l. 
+	(LENGTH l>=8) 
+	==> 
+	?v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 t. l = (v_1::v_2::v_3::v_4::v_5::v_6::v_7::v_8::t)``,
+	     
+REWRITE_TAC [DECIDE ``8 = SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC 0)))))))``] THEN
+METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);	
+	        
+val listInstEq8=prove(
+``!l. 
+	(LENGTH l=8) 
+	==> 
+	?w_1 w_2 w_3 w_4 w_5 w_6 w_7 w_8. l = (w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::[])``,
+
+REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, DECIDE ``8 = SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC 0)))))))``] THEN
+METIS_TAC []);
+
+
+val listInstEq32 =prove(
+`` !l.
+	(LENGTH l = 32) ==>
+        ?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14
+         v_15 v_16 v_17 v_18 v_19 v_20 v_21 v_22 v_23 v_24 v_25 v_26 v_27
+         v_28 v_29 v_30 v_31.
+        l =[v_0; v_1; v_2; v_3; v_4; v_5; v_6; v_7; v_8; v_9; v_10; v_11;
+           v_12; v_13; v_14; v_15; v_16; v_17; v_18; v_19; v_20; v_21; v_22;
+           v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31]``,
+
+REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, DECIDE `` 32 = SUC (SUC (SUC (SUC (SUC
+	(SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC
+	(SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC 
+	(SUC 0))))))))))))))))))))))))))))))) ``] THEN
+METIS_TAC []); 
+
+val listInstEq33 =prove(
+`` !l.
+	(LENGTH l = 33) ==>
+        ?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14
+           v_15 v_16 v_17 v_18 v_19 v_20 v_21 v_22 v_23 v_24 v_25 v_26 v_27
+           v_28 v_29 v_30 v_31 v_32.
+        l =[v_0; v_1; v_2; v_3; v_4; v_5; v_6; v_7; v_8; v_9; v_10; v_11;
+           v_12; v_13; v_14; v_15; v_16; v_17; v_18; v_19; v_20; v_21; v_22;
+           v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31; v_32]``,
+
+REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, DECIDE `` 33 =
+       SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC
+       (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC (SUC
+        0)))))))))))))))))))))))))))))))) ``] THEN
+METIS_TAC []); 
+
+
+	
+				
+(********************************************PERMUTATION********************************************************)
+(*initial/inverse final permutation table*)			
+val IPTable_def=Define
+`IPTable=
+ [0;32;64;96;1;33;65;97;2;34;66;98;3;35;67;99;
+  4;36;68;100;5;37;69;101;6;38;70;102;7;39;71;103;
+  8;40;72;104;9;41;73;105;10;42;74;106;11;43;75;107;
+  12;44;76;108;13;45;77;109;14;46;78;110;15;47;79;111;
+  16;48;80;112;17;49;81;113;18;50;82;114;19;51;83;115;
+  20;52;84;116;21;53;85;117;22;54;86;118;23;55;87;119;
+  24;56;88;120;25;57;89;121;26;58;90;122;27;59;91;123;
+  28;60;92;124;29;61;93;125;30;62;94;126;31;63;95;127]`;
+
+(*final/inverse initial permutation table*)
+val FPTable_def=Define
+`FPTable= 
+ [0;4;8;12;16;20;24;28;32;36;40;44;48;52;56;60;
+  64;68;72;76;80;84;88;92;96;100;104;108;112;116;120;124;
+  1;5;9;13;17;21;25;29;33;37;41;45;49;53;57;61;
+  65;69;73;77;81;85;89;93;97;101;105;109;113;117;121;125;
+  2;6;10;14;18;22;26;30;34;38;42;46;50;54;58;62;
+  66;70;74;78;82;86;90;94;98;102;106;110;114;118;122;126;
+  3;7;11;15;19;23;27;31;35;39;43;47;51;55;59;63;
+  67;71;75;79;83;87;91;95;99;103;107;111;115;119;123;127]`;
+
+val IPFun_def=Define
+`IPFun x = EL x IPTable`; 
+
+val FPFun_def=Define
+`FPFun x = EL x FPTable`;
+
+
+val IPFunVal=prove(
+``
+	( IPFun 0=0 ) /\
+  	( IPFun 1=32 ) /\
+  	( IPFun 2=64 ) /\
+	( IPFun 3=96 ) /\
+	( IPFun 4=1 ) /\
+	( IPFun 5=33 ) /\
+	( IPFun 6=65 ) /\
+	( IPFun 7=97 ) /\
+	( IPFun 8=2 ) /\
+	( IPFun 9=34 ) /\
+	( IPFun 10=66 ) /\
+	( IPFun 11=98 ) /\
+	( IPFun 12=3 ) /\
+	( IPFun 13=35 ) /\
+	( IPFun 14=67 ) /\
+	( IPFun 15=99 ) /\
+	( IPFun 16=4 ) /\
+	( IPFun 17=36 ) /\
+	( IPFun 18=68 ) /\
+	( IPFun 19=100 ) /\
+	( IPFun 20=5 ) /\
+	( IPFun 21=37 ) /\
+	( IPFun 22=69 ) /\
+	( IPFun 23=101 ) /\
+	( IPFun 24=6 ) /\
+	( IPFun 25=38 ) /\
+	( IPFun 26=70 ) /\
+	( IPFun 27=102 ) /\
+	( IPFun 28=7 ) /\
+	( IPFun 29=39 ) /\
+	( IPFun 30=71 ) /\
+	( IPFun 31=103 ) /\
+	( IPFun 32=8 ) /\
+	( IPFun 33=40 ) /\
+	( IPFun 34=72 ) /\
+	( IPFun 35=104 ) /\
+	( IPFun 36=9 ) /\
+	( IPFun 37=41 ) /\
+	( IPFun 38=73 ) /\
+	( IPFun 39=105 ) /\
+	( IPFun 40=10 ) /\
+	( IPFun 41=42 ) /\
+	( IPFun 42=74 ) /\
+	( IPFun 43=106 ) /\
+	( IPFun 44=11 ) /\
+	( IPFun 45=43 ) /\
+	( IPFun 46=75 ) /\
+	( IPFun 47=107 ) /\
+	( IPFun 48=12 ) /\
+	( IPFun 49=44 ) /\
+	( IPFun 50=76 ) /\
+	( IPFun 51=108 ) /\
+	( IPFun 52=13 ) /\
+	( IPFun 53=45 ) /\
+	( IPFun 54=77 ) /\
+	( IPFun 55=109 ) /\
+	( IPFun 56=14 ) /\
+	( IPFun 57=46 ) /\
+	( IPFun 58=78 ) /\
+	( IPFun 59=110 ) /\
+	( IPFun 60=15 ) /\
+	( IPFun 61=47 ) /\
+	( IPFun 62=79 ) /\
+	( IPFun 63=111 ) /\
+	( IPFun 64=16 ) /\
+	( IPFun 65=48 ) /\
+	( IPFun 66=80 ) /\
+	( IPFun 67=112 ) /\
+	( IPFun 68=17 ) /\
+	( IPFun 69=49 ) /\
+	( IPFun 70=81 ) /\
+	( IPFun 71=113 ) /\
+	( IPFun 72=18 ) /\
+	( IPFun 73=50 ) /\
+	( IPFun 74=82 ) /\
+	( IPFun 75=114 ) /\
+	( IPFun 76=19 ) /\
+	( IPFun 77=51 ) /\
+	( IPFun 78=83 ) /\
+	( IPFun 79=115 ) /\
+	( IPFun 80=20 ) /\
+	( IPFun 81=52 ) /\
+	( IPFun 82=84 ) /\
+	( IPFun 83=116 ) /\
+	( IPFun 84=21 ) /\
+	( IPFun 85=53 ) /\
+	( IPFun 86=85 ) /\
+	( IPFun 87=117 ) /\
+	( IPFun 88=22 ) /\
+	( IPFun 89=54 ) /\
+	( IPFun 90=86 ) /\
+	( IPFun 91=118 ) /\
+	( IPFun 92=23 ) /\
+	( IPFun 93=55 ) /\
+	( IPFun 94=87 ) /\
+	( IPFun 95=119 ) /\
+	( IPFun 96=24 ) /\
+	( IPFun 97=56 ) /\
+	( IPFun 98=88 ) /\
+	( IPFun 99=120 ) /\
+	( IPFun 100=25 ) /\
+	( IPFun 101=57 ) /\
+	( IPFun 102=89 ) /\
+	( IPFun 103=121 ) /\
+	( IPFun 104=26 ) /\
+	( IPFun 105=58 ) /\
+	( IPFun 106=90 ) /\
+	( IPFun 107=122 ) /\
+	( IPFun 108=27 ) /\
+	( IPFun 109=59 ) /\
+	( IPFun 110=91 ) /\
+	( IPFun 111=123 ) /\
+	( IPFun 112=28 ) /\
+	( IPFun 113=60 ) /\
+	( IPFun 114=92 ) /\
+	( IPFun 115=124 ) /\
+	( IPFun 116=29 ) /\
+	( IPFun 117=61 ) /\
+	( IPFun 118=93 ) /\
+	( IPFun 119=125 ) /\
+	( IPFun 120=30 ) /\
+	( IPFun 121=62 ) /\
+	( IPFun 122=94 ) /\
+	( IPFun 123=126 ) /\
+	( IPFun 124=31 ) /\
+	( IPFun 125=63 ) /\
+	( IPFun 126=95 ) /\
+	( IPFun 127=127)``,
+	
+EVAL_TAC);
+
+(*final permuation table
+*)
+val FPFunVal=prove(
+``
+	( FPFun 0= 0) /\
+	( FPFun 1=4) /\
+	( FPFun 2=8) /\
+	( FPFun 3=12) /\
+	( FPFun 4=16) /\
+	( FPFun 5=20) /\
+	( FPFun 6=24) /\
+	( FPFun 7=28) /\
+	( FPFun 8=32) /\
+	( FPFun 9=36) /\
+	( FPFun 10=40) /\
+	( FPFun 11=44) /\
+	( FPFun 12=48) /\
+	( FPFun 13=52) /\
+	( FPFun 14=56) /\
+	( FPFun 15=60) /\
+	( FPFun 16=64) /\
+	( FPFun 17=68) /\
+	( FPFun 18=72) /\
+	( FPFun 19=76) /\
+	( FPFun 20=80) /\
+	( FPFun 21=84) /\
+	( FPFun 22=88) /\
+	( FPFun 23=92) /\
+	( FPFun 24=96) /\
+	( FPFun 25=100) /\
+	( FPFun 26=104) /\
+	( FPFun 27=108) /\
+	( FPFun 28=112) /\
+	( FPFun 29=116) /\
+	( FPFun 30=120) /\
+	( FPFun 31=124) /\
+	( FPFun 32=1) /\
+	( FPFun 33=5) /\
+	( FPFun 34=9) /\
+	( FPFun 35=13) /\
+	( FPFun 36=17) /\
+	( FPFun 37=21) /\
+	( FPFun 38=25) /\
+	( FPFun 39=29) /\
+	( FPFun 40=33) /\
+	( FPFun 41=37) /\
+	( FPFun 42=41) /\
+	( FPFun 43=45) /\
+	( FPFun 44=49) /\
+	( FPFun 45=53) /\
+	( FPFun 46=57) /\
+	( FPFun 47=61) /\
+	( FPFun 48=65) /\
+	( FPFun 49=69) /\
+	( FPFun 50=73) /\
+	( FPFun 51=77) /\
+	( FPFun 52=81) /\
+	( FPFun 53=85) /\
+	( FPFun 54=89) /\
+	( FPFun 55=93) /\
+	( FPFun 56=97) /\
+	( FPFun 57=101) /\
+	( FPFun 58=105) /\
+	( FPFun 59=109) /\
+	( FPFun 60=113) /\
+	( FPFun 61=117) /\
+	( FPFun 62=121) /\
+	( FPFun 63=125) /\
+	( FPFun 64=2) /\
+	( FPFun 65=6) /\
+	( FPFun 66=10) /\
+	( FPFun 67=14) /\
+	( FPFun 68=18) /\
+	( FPFun 69=22) /\
+	( FPFun 70=26) /\
+	( FPFun 71=30) /\
+	( FPFun 72=34) /\
+	( FPFun 73=38) /\
+	( FPFun 74=42) /\
+	( FPFun 75=46) /\
+	( FPFun 76=50) /\
+	( FPFun 77=54) /\
+	( FPFun 78=58) /\
+	( FPFun 79=62) /\
+	( FPFun 80=66) /\
+	( FPFun 81=70) /\
+	( FPFun 82=74) /\
+	( FPFun 83=78) /\
+	( FPFun 84=82) /\
+	( FPFun 85=86) /\
+	( FPFun 86=90) /\
+	( FPFun 87=94) /\
+	( FPFun 88=98) /\
+	( FPFun 89=102) /\
+	( FPFun 90=106) /\
+	( FPFun 91=110) /\
+	( FPFun 92=114) /\
+	( FPFun 93=118) /\
+	( FPFun 94=122) /\
+	( FPFun 95=126) /\
+	( FPFun 96=3) /\
+	( FPFun 97=7) /\
+	( FPFun 98=11) /\
+	( FPFun 99=15) /\
+	( FPFun 100=19) /\
+	( FPFun 101=23) /\
+	( FPFun 102=27) /\
+	( FPFun 103=31) /\
+	( FPFun 104=35) /\
+	( FPFun 105=39) /\
+	( FPFun 106=43) /\
+	( FPFun 107=47) /\
+	( FPFun 108=51) /\
+	( FPFun 109=55) /\
+	( FPFun 110=59) /\
+	( FPFun 111=63) /\
+	( FPFun 112=67) /\
+	( FPFun 113=71) /\
+	( FPFun 114=75) /\
+	( FPFun 115=79) /\
+	( FPFun 116=83) /\
+	( FPFun 117=87) /\
+	( FPFun 118=91) /\
+	( FPFun 119=95) /\
+	( FPFun 120=99) /\
+	( FPFun 121=103) /\
+	( FPFun 122=107) /\
+	( FPFun 123=111) /\
+	( FPFun 124=115) /\
+	( FPFun 125=119) /\
+	( FPFun 126=123) /\
+	( FPFun 127=127) ``,
+	
+EVAL_TAC);
+
+
+(*permutation *)
+val permu_def = Define
+`(permu 0 permFun (block:word128) =let sourceBit=word128$WORD_BIT (permFun 0) block in
+				   if  sourceBit then (1w:word128)
+				   else (0w:word128)
+ )  /\
+ (permu (SUC i) permFun  block =let sourceBit=word128$WORD_BIT (permFun (SUC i)) block in
+				let maskedWord=if  sourceBit then (1w:word128)<<(SUC i)
+		       		else (0w:word128)
+ 				in
+			 	maskedWord | (permu i permFun  block)
+ )`;  
+
+val permuEval = prove(
+``!m  (block:word128).
+	permu m permFun (block:word128) =if m=0 then 
+				let sourceBit=word128$WORD_BIT (permFun 0) block in
+				   if  sourceBit then (1w:word128)
+				   else (0w:word128)
+                                 else
+ 				let sourceBit=word128$WORD_BIT (permFun m) block in
+				let maskedWord=if  sourceBit then (1w:word128)<<m
+		       		else (0w:word128)
+ 				in
+			 	maskedWord | (permu (m-1) permFun  block) ``,    
+
+RW_TAC  list_ss [permu_def,LET_THM] THENL [
+	Cases_on `m` THENL [
+		RW_TAC std_ss [],
+		RW_TAC  list_ss [permu_def,LET_THM]],
+	Cases_on `m` THENL [
+		RW_TAC std_ss [],
+		RW_TAC  list_ss [permu_def,LET_THM]]]);
+		
+
+ (*desired properties of permu *)	
+val perm_recur_inv1_w128=prove(
+``!permFun block from to d.
+	(!x. x<word128$WL ==> permFun x <word128$WL) /\
+	(d < word128$WL)   /\
+	(to < word128$WL)   /\
+	( permFun to = from) /\  
+	to >d
+	==>
+	~(WORD_BIT to (permu d permFun block))``,
+		
+Induct_on `d` THENL [
+	RW_TAC arith_ss [permu_def,LET_THM] THENL [
+		METIS_TAC [word_1_bit128],
+		FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_def, w2n_zero128, BIT_ZERO]],
+		RW_TAC std_ss [permu_def,LET_THM] THENL [
+			RW_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL,word128Theory.WORD_BIT_def,word_1_bit128],
+			FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_def, w2n_zero128, BIT_ZERO]]]
+);	
+		
+		
+val perm_recur_inv2_w128=prove(
+``!permFun block from to d.
+	(!x. x<word128$WL ==> permFun x <word128$WL) /\
+	(d < word128$WL)   /\
+	(to < word128$WL)   /\
+	( permFun to = from) /\  
+	to <=d 
+	==>
+	(WORD_BIT to (permu d permFun block) =WORD_BIT from block)``, 
+		
+Induct_on `d` THENL [
+	RW_TAC arith_ss [permu_def,LET_THM] THENL [
+		FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_def, w2n_one128,BIT_def, BITS_THM ],
+		FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_def, w2n_zero128,BIT_def, BITS_THM ]],
+	RW_TAC std_ss [permu_def,LET_THM] THENL[
+		Cases_on `to <=d`  THEN Cases_on `to=d` THENL [
+			RW_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL],
+			RW_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL],
+			FULL_SIMP_TAC arith_ss [],
+			`to = SUC d` by RW_TAC arith_ss [] THEN
+			FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL,word128Theory.WORD_BIT_def, w2n_one128,BIT_def, BITS_THM]],
+		FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_def, w2n_zero128, BIT_ZERO,DECIDE ``SUC x<y==>x<y``] THEN
+		Cases_on `to<=d` THENL [
+			FULL_SIMP_TAC arith_ss [],
+			`to>d /\ (to = SUC d)` by METIS_TAC [DECIDE ``~(x<=y) /\ x <= SUC y=(x=SUC y) /\ (x>y)``] THEN
+			FULL_SIMP_TAC arith_ss [GSYM word128Theory.WORD_BIT_def,perm_recur_inv1_w128]]]]
+);
+		
+		
+(*composite of 2 permutations*)		
+val permu_compose_w128=prove(
+``!permFun1 permFun2 block i.
+	i<word128$WL  /\
+	(!x. x < word128$WL ==> permFun1 x < word128$WL) /\	 
+	(!x. x < word128$WL ==> permFun2 x < word128$WL)
+	 ==>
+	(word128$WORD_BIT i (permu word128$HB permFun2   (permu word128$HB permFun1 block)) = word128$WORD_BIT i (permu word128$HB (permFun1 o permFun2)  block))``,
+		
+RW_TAC std_ss [] THEN
+`word128$WORD_BIT i (permu word128$HB permFun2 (permu word128$HB permFun1 block))= word128$WORD_BIT (permFun2 i) (permu word128$HB permFun1 block)` by FULL_SIMP_TAC arith_ss [ perm_recur_inv2_w128,word128Theory.HB_def, word128Theory.WL_def] THEN
+`word128$WORD_BIT i (permu word128$HB (permFun1 o permFun2) block)=word128$WORD_BIT ((permFun1 o permFun2) i) block` by FULL_SIMP_TAC arith_ss [perm_recur_inv2_w128,word128Theory.HB_def, word128Theory.WL_def] THEN
+`permFun2 i < word128$WL` by METIS_TAC [] THEN
+`word128$WORD_BIT (permFun2 i) (permu word128$HB permFun1 block)=  word128$WORD_BIT (permFun1 ( permFun2 i)) block` by FULL_SIMP_TAC arith_ss [ perm_recur_inv2_w128,word128Theory.HB_def, word128Theory.WL_def] THEN
+RW_TAC std_ss []
+);
+
+(*two permutations cancel each other*)			
+val permu_comp_reverse_w128=prove(
+``!permFun1 permFun2 block.
+	(!x. x < word128$WL ==> permFun1 x < word128$WL) /\	 
+	(!x. x < word128$WL ==> permFun2 x < word128$WL) /\
+	(!x. x < word128$WL ==> ((permFun1 o permFun2) x =x))==>
+	(permu word128$HB permFun2 (permu word128$HB permFun1 block)=block)``,    
+		
+RW_TAC arith_ss [GSYM WORD_EQ, permu_compose_w128,perm_recur_inv2_w128,word128Theory.HB_def,word128Theory.WL_def]
+);    
+			
+val IP_def = Define
+`IP w128=permu word128$HB IPFun w128`;
+
+val FP_def = Define
+`FP w128=permu word128$HB FPFun w128`;
+
+val invIP_def = Define
+`invIP w128=FP w128`;
+
+val invFP_def = Define
+`invFP w128=IP w128`;
+
+val IP_FP_fact =  prove(
+``!x . x < word128$WL ==> ((IPFun x < word128$WL) /\
+	 (FPFun x < word128$WL) /\
+	((FPFun o IPFun) x=x) /\ 
+	((IPFun o FPFun) x=x) )``,
+
+FULL_SIMP_TAC arith_ss [BOUNDED_FORALL_THM,IPFunVal,FPFunVal,word128Theory.WL_def,word128Theory.HB_def]
+);
+(*permutations using given IP and FP tables cancel*) 
+val invFP_FP_cancel=prove(
+``! (block:word128). invFP (FP block)=block``,
+
+SIMP_TAC std_ss [invFP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]
+);
+
+val invIP_IP_cancel=prove(
+``! (block:word128). invIP (IP block)=block``,
+
+SIMP_TAC std_ss [invIP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]
+);
+
+
+
+(***************************************************LINEAR TRANSFORMATION****************************************)   
+
+
+(*linear transformation table 
+used in encryption
+*)
+
+val LTTable_def=Define
+`LTTable= 
+[[16;52;56;70;83;94;105]
+;[72;114;125]
+;[2;9;15;30;76;84;126]
+;[36;90;103]
+;[20;56;60;74;87;98;109]
+;[1;76;118]
+;[2;6;13;19;34;80;88]
+;[40;94;107]
+;[24;60;64;78;91;102;113]
+;[5;80;122]
+;[6;10;17;23;38;84;92]
+;[44;98;111]
+;[28;64;68;82;95;106;117]
+;[9;84;126]
+;[10;14;21;27;42;88;96]
+;[48;102;115]
+;[32;68;72;86;99;110;121]
+;[2;13;88]
+;[14;18;25;31;46;92;100]
+;[52;106;119]
+;[36;72;76;90;103;114;125]
+;[6;17;92]
+;[18;22;29;35;50;96;104]
+;[56;110;123]
+;[1;40;76;80;94;107;118]
+;[10;21;96]
+;[22;26;33;39;54;100;108]
+;[60;114;127]
+;[5;44;80;84;98;111;122]
+;[14;25;100]
+;[26;30;37;43;58;104;112]
+;[3;118]
+;[9;48;84;88;102;115;126]
+;[18;29;104]
+;[30;34;41;47;62;108;116]
+;[7;122]
+;[2;13;52;88;92;106;119]
+;[22;33;108]
+;[34;38;45;51;66;112;120]
+;[11;126]
+;[6;17;56;92;96;110;123]
+;[26;37;112]
+;[38;42;49;55;70;116;124]
+;[2;15;76]
+;[10;21;60;96;100;114;127]
+;[30;41;116]
+;[0;42;46;53;59;74;120]
+;[6;19;80]
+;[3;14;25;100;104;118]
+;[34;45;120]
+;[4;46;50;57;63;78;124]
+;[10;23;84]
+;[7;18;29;104;108;122]
+;[38;49;124]
+;[0;8;50;54;61;67;82]
+;[14;27;88]
+;[11;22;33;108;112;126]
+;[0;42;53]
+;[4;12;54;58;65;71;86]
+;[18;31;92]
+;[2;15;26;37;76;112;116]
+;[4;46;57]
+;[8;16;58;62;69;75;90]
+;[22;35;96]
+;[6;19;30;41;80;116;120]
+;[8;50;61]
+;[12;20;62;66;73;79;94]
+;[26;39;100]
+;[10;23;34;45;84;120;124]
+;[12;54;65]
+;[16;24;66;70;77;83;98]
+;[30;43;104]
+;[0;14;27;38;49;88;124]
+;[16;58;69]
+;[20;28;70;74;81;87;102]
+;[34;47;108]
+;[0;4;18;31;42;53;92]
+;[20;62;73]
+;[24;32;74;78;85;91;106]
+;[38;51;112]
+;[4;8;22;35;46;57;96]
+;[24;66;77]
+;[28;36;78;82;89;95;110]
+;[42;55;116]
+;[8;12;26;39;50;61;100]
+;[28;70;81]
+;[32;40;82;86;93;99;114]
+;[46;59;120]
+;[12;16;30;43;54;65;104]
+;[32;74;85]
+;[36;90;103;118]
+;[50;63;124]
+;[16;20;34;47;58;69;108]
+;[36;78;89]
+;[40;94;107;122]
+;[0;54;67]
+;[20;24;38;51;62;73;112]
+;[40;82;93]
+;[44;98;111;126]
+;[4;58;71]
+;[24;28;42;55;66;77;116]
+;[44;86;97]
+;[2;48;102;115]
+;[8;62;75]
+;[28;32;46;59;70;81;120]
+;[48;90;101]
+;[6;52;106;119]
+;[12;66;79]
+;[32;36;50;63;74;85;124]
+;[52;94;105]
+;[10;56;110;123]
+;[16;70;83]
+;[0;36;40;54;67;78;89]
+;[56;98;109]
+;[14;60;114;127]
+;[20;74;87]
+;[4;40;44;58;71;82;93]
+;[60;102;113]
+;[3;18;72;114;118;125]
+;[24;78;91]
+;[8;44;48;62;75;86;97]
+;[64;106;117]
+;[1;7;22;76;118;122]
+;[28;82;95]
+;[12;48;52;66;79;90;101]
+;[68;110;121]
+;[5;11;26;80;122;126]
+;[32;86;99]
+]`;      
+
+(*linear transformation table 
+used in decryption
+*)
+val InvLTTable_def=Define
+`InvLTTable= 
+[[53;55;72]
+;[1;5;20;90]
+;[15;102]
+;[3;31;90]
+;[57;59;76]
+;[5;9;24;94]
+;[19;106]
+;[7;35;94]
+;[61;63;80]
+;[9;13;28;98]
+;[23;110]
+;[11;39;98]
+;[65;67;84]
+;[13;17;32;102]
+;[27;114]
+;[1;3;15;20;43;102]
+;[69;71;88]
+;[17;21;36;106]
+;[1;31;118]
+;[5;7;19;24;47;106]
+;[73;75;92]
+;[21;25;40;110]
+;[5;35;122]
+;[9;11;23;28;51;110]
+;[77;79;96]
+;[25;29;44;114]
+;[9;39;126]
+;[13;15;27;32;55;114]
+;[81;83;100]
+;[1;29;33;48;118]
+;[2;13;43]
+;[1;17;19;31;36;59;118]
+;[85;87;104]
+;[5;33;37;52;122]
+;[6;17;47]
+;[5;21;23;35;40;63;122]
+;[89;91;108]
+;[9;37;41;56;126]
+;[10;21;51]
+;[9;25;27;39;44;67;126]
+;[93;95;112]
+;[2;13;41;45;60]
+;[14;25;55]
+;[2;13;29;31;43;48;71]
+;[97;99;116]
+;[6;17;45;49;64]
+;[18;29;59]
+;[6;17;33;35;47;52;75]
+;[101;103;120]
+;[10;21;49;53;68]
+;[22;33;63]
+;[10;21;37;39;51;56;79]
+;[105;107;124]
+;[14;25;53;57;72]
+;[26;37;67]
+;[14;25;41;43;55;60;83]
+;[0;109;111]
+;[18;29;57;61;76]
+;[30;41;71]
+;[18;29;45;47;59;64;87]
+;[4;113;115]
+;[22;33;61;65;80]
+;[34;45;75]
+;[22;33;49;51;63;68;91]
+;[8;117;119]
+;[26;37;65;69;84]
+;[38;49;79]
+;[26;37;53;55;67;72;95]
+;[12;121;123]
+;[30;41;69;73;88]
+;[42;53;83]
+;[30;41;57;59;71;76;99]
+;[16;125;127]
+;[34;45;73;77;92]
+;[46;57;87]
+;[34;45;61;63;75;80;103]
+;[1;3;20]
+;[38;49;77;81;96]
+;[50;61;91]
+;[38;49;65;67;79;84;107]
+;[5;7;24]
+;[42;53;81;85;100]
+;[54;65;95]
+;[42;53;69;71;83;88;111]
+;[9;11;28]
+;[46;57;85;89;104]
+;[58;69;99]
+;[46;57;73;75;87;92;115]
+;[13;15;32]
+;[50;61;89;93;108]
+;[62;73;103]
+;[50;61;77;79;91;96;119]
+;[17;19;36]
+;[54;65;93;97;112]
+;[66;77;107]
+;[54;65;81;83;95;100;123]
+;[21;23;40]
+;[58;69;97;101;116]
+;[70;81;111]
+;[58;69;85;87;99;104;127]
+;[25;27;44]
+;[62;73;101;105;120]
+;[74;85;115]
+;[3;62;73;89;91;103;108]
+;[29;31;48]
+;[66;77;105;109;124]
+;[78;89;119]
+;[7;66;77;93;95;107;112]
+;[33;35;52]
+;[0;70;81;109;113]
+;[82;93;123]
+;[11;70;81;97;99;111;116]
+;[37;39;56]
+;[4;74;85;113;117]
+;[86;97;127]
+;[15;74;85;101;103;115;120]
+;[41;43;60]
+;[8;78;89;117;121]
+;[3;90]
+;[19;78;89;105;107;119;124]
+;[45;47;64]
+;[12;82;93;121;125]
+;[7;94]
+;[0;23;82;93;109;111;123]
+;[49;51;68]
+;[1;16;86;97;125]
+;[11;98]
+;[4;27;86;97;113;115;127]
+]`;
+
+val LTFun_def = Define
+`LTFun x = EL x LTTable`;
+
+val invLTFun_def = Define
+`invLTFun x = EL x InvLTTable`;
+
+val LTFunVal=prove(
+``
+(LTFun 0= [ 16;52;56;70;83;94;105])  /\
+(LTFun 1= [ 72;114;125])  /\
+(LTFun 2= [ 2;9;15;30;76;84;126])  /\
+(LTFun 3= [ 36;90;103])  /\
+(LTFun 4= [ 20;56;60;74;87;98;109])  /\
+(LTFun 5= [ 1;76;118])  /\
+(LTFun 6= [ 2;6;13;19;34;80;88])  /\
+(LTFun 7= [ 40;94;107])  /\
+(LTFun 8= [ 24;60;64;78;91;102;113])  /\
+(LTFun 9= [ 5;80;122])  /\
+(LTFun 10= [ 6;10;17;23;38;84;92])  /\
+(LTFun 11= [ 44;98;111])  /\
+(LTFun 12= [ 28;64;68;82;95;106;117])  /\
+(LTFun 13= [ 9;84;126])  /\
+(LTFun 14= [ 10;14;21;27;42;88;96])  /\
+(LTFun 15= [ 48;102;115])  /\
+(LTFun 16= [ 32;68;72;86;99;110;121])  /\
+(LTFun 17= [ 2;13;88])  /\
+(LTFun 18= [ 14;18;25;31;46;92;100])  /\
+(LTFun 19= [ 52;106;119])  /\
+(LTFun 20= [ 36;72;76;90;103;114;125])  /\
+(LTFun 21= [ 6;17;92])  /\
+(LTFun 22= [ 18;22;29;35;50;96;104])  /\
+(LTFun 23= [ 56;110;123])  /\
+(LTFun 24= [ 1;40;76;80;94;107;118])  /\
+(LTFun 25= [ 10;21;96])  /\
+(LTFun 26= [ 22;26;33;39;54;100;108])  /\
+(LTFun 27= [ 60;114;127])  /\
+(LTFun 28= [ 5;44;80;84;98;111;122])  /\
+(LTFun 29= [ 14;25;100])  /\
+(LTFun 30= [ 26;30;37;43;58;104;112])  /\
+(LTFun 31= [ 3;118])  /\
+(LTFun 32= [ 9;48;84;88;102;115;126])  /\
+(LTFun 33= [ 18;29;104])  /\
+(LTFun 34= [ 30;34;41;47;62;108;116])  /\
+(LTFun 35= [ 7;122])  /\
+(LTFun 36= [ 2;13;52;88;92;106;119])  /\
+(LTFun 37= [ 22;33;108])  /\
+(LTFun 38= [ 34;38;45;51;66;112;120])  /\
+(LTFun 39= [ 11;126])  /\
+(LTFun 40= [ 6;17;56;92;96;110;123])  /\
+(LTFun 41= [ 26;37;112])  /\
+(LTFun 42= [ 38;42;49;55;70;116;124])  /\
+(LTFun 43= [ 2;15;76])  /\
+(LTFun 44= [ 10;21;60;96;100;114;127])  /\
+(LTFun 45= [ 30;41;116])  /\
+(LTFun 46= [ 0;42;46;53;59;74;120])  /\
+(LTFun 47= [ 6;19;80])  /\
+(LTFun 48= [ 3;14;25;100;104;118])  /\
+(LTFun 49= [ 34;45;120])  /\
+(LTFun 50= [ 4;46;50;57;63;78;124])  /\
+(LTFun 51= [ 10;23;84])  /\
+(LTFun 52= [ 7;18;29;104;108;122])  /\
+(LTFun 53= [ 38;49;124])  /\
+(LTFun 54= [ 0;8;50;54;61;67;82])  /\
+(LTFun 55= [ 14;27;88])  /\
+(LTFun 56= [ 11;22;33;108;112;126])  /\
+(LTFun 57= [ 0;42;53])  /\
+(LTFun 58= [ 4;12;54;58;65;71;86])  /\
+(LTFun 59= [ 18;31;92])  /\
+(LTFun 60= [ 2;15;26;37;76;112;116])  /\
+(LTFun 61= [ 4;46;57])  /\
+(LTFun 62= [ 8;16;58;62;69;75;90])  /\
+(LTFun 63= [ 22;35;96])  /\
+(LTFun 64= [ 6;19;30;41;80;116;120])  /\
+(LTFun 65= [ 8;50;61])  /\
+(LTFun 66= [ 12;20;62;66;73;79;94])  /\
+(LTFun 67= [ 26;39;100])  /\
+(LTFun 68= [ 10;23;34;45;84;120;124])  /\
+(LTFun 69= [ 12;54;65])  /\
+(LTFun 70= [ 16;24;66;70;77;83;98])  /\
+(LTFun 71= [ 30;43;104])  /\
+(LTFun 72= [ 0;14;27;38;49;88;124])  /\
+(LTFun 73= [ 16;58;69])  /\
+(LTFun 74= [ 20;28;70;74;81;87;102])  /\
+(LTFun 75= [ 34;47;108])  /\
+(LTFun 76= [ 0;4;18;31;42;53;92])  /\
+(LTFun 77= [ 20;62;73])  /\
+(LTFun 78= [ 24;32;74;78;85;91;106])  /\
+(LTFun 79= [ 38;51;112])  /\
+(LTFun 80= [ 4;8;22;35;46;57;96])  /\
+(LTFun 81= [ 24;66;77])  /\
+(LTFun 82= [ 28;36;78;82;89;95;110])  /\
+(LTFun 83= [ 42;55;116])  /\
+(LTFun 84= [ 8;12;26;39;50;61;100])  /\
+(LTFun 85= [ 28;70;81])  /\
+(LTFun 86= [ 32;40;82;86;93;99;114])  /\
+(LTFun 87= [ 46;59;120])  /\
+(LTFun 88= [ 12;16;30;43;54;65;104])  /\
+(LTFun 89= [ 32;74;85])  /\
+(LTFun 90= [ 36;90;103;118])  /\
+(LTFun 91= [ 50;63;124])  /\
+(LTFun 92= [ 16;20;34;47;58;69;108])  /\
+(LTFun 93= [ 36;78;89])  /\
+(LTFun 94= [ 40;94;107;122])  /\
+(LTFun 95= [ 0;54;67])  /\
+(LTFun 96= [ 20;24;38;51;62;73;112])  /\
+(LTFun 97= [ 40;82;93])  /\
+(LTFun 98= [ 44;98;111;126])  /\
+(LTFun 99= [ 4;58;71])  /\
+(LTFun 100= [ 24;28;42;55;66;77;116])  /\
+(LTFun 101= [ 44;86;97])  /\
+(LTFun 102= [ 2;48;102;115])  /\
+(LTFun 103= [ 8;62;75])  /\
+(LTFun 104= [ 28;32;46;59;70;81;120])  /\
+(LTFun 105= [ 48;90;101])  /\
+(LTFun 106= [ 6;52;106;119])  /\
+(LTFun 107= [ 12;66;79])  /\
+(LTFun 108= [ 32;36;50;63;74;85;124])  /\
+(LTFun 109= [ 52;94;105])  /\
+(LTFun 110= [ 10;56;110;123])  /\
+(LTFun 111= [ 16;70;83])  /\
+(LTFun 112= [ 0;36;40;54;67;78;89])  /\
+(LTFun 113= [ 56;98;109])  /\
+(LTFun 114= [ 14;60;114;127])  /\
+(LTFun 115= [ 20;74;87])  /\
+(LTFun 116= [ 4;40;44;58;71;82;93])  /\
+(LTFun 117= [ 60;102;113])  /\
+(LTFun 118= [ 3;18;72;114;118;125])  /\
+(LTFun 119= [ 24;78;91])  /\
+(LTFun 120= [ 8;44;48;62;75;86;97])  /\
+(LTFun 121= [ 64;106;117])  /\
+(LTFun 122= [ 1;7;22;76;118;122])  /\
+(LTFun 123= [ 28;82;95])  /\
+(LTFun 124= [ 12;48;52;66;79;90;101])  /\
+(LTFun 125= [ 68;110;121])  /\
+(LTFun 126= [ 5;11;26;80;122;126])  /\
+(LTFun 127= [ 32;86;99])``,
+
+EVAL_TAC);      
+
+(*linear transformation table 
+used in decryption
+*)
+val invLTFunVal=prove(
+``
+(invLTFun 0= [53;55;72])  /\
+(invLTFun 1= [1;5;20;90])  /\
+(invLTFun 2= [15;102])  /\
+(invLTFun 3= [3;31;90])  /\
+(invLTFun 4= [57;59;76])  /\
+(invLTFun 5= [5;9;24;94])  /\
+(invLTFun 6= [19;106])  /\
+(invLTFun 7= [7;35;94])  /\
+(invLTFun 8= [61;63;80])  /\
+(invLTFun 9= [9;13;28;98])  /\
+(invLTFun 10= [23;110])  /\
+(invLTFun 11= [11;39;98])  /\
+(invLTFun 12= [65;67;84])  /\
+(invLTFun 13= [13;17;32;102])  /\
+(invLTFun 14= [27;114])  /\
+(invLTFun 15= [1;3;15;20;43;102])  /\
+(invLTFun 16= [69;71;88])  /\
+(invLTFun 17= [17;21;36;106])  /\
+(invLTFun 18= [1;31;118])  /\
+(invLTFun 19= [5;7;19;24;47;106])  /\
+(invLTFun 20= [73;75;92])  /\
+(invLTFun 21= [21;25;40;110])  /\
+(invLTFun 22= [5;35;122])  /\
+(invLTFun 23= [9;11;23;28;51;110])  /\
+(invLTFun 24= [77;79;96])  /\
+(invLTFun 25= [25;29;44;114])  /\
+(invLTFun 26= [9;39;126])  /\
+(invLTFun 27= [13;15;27;32;55;114])  /\
+(invLTFun 28= [81;83;100])  /\
+(invLTFun 29= [1;29;33;48;118])  /\
+(invLTFun 30= [2;13;43])  /\
+(invLTFun 31= [1;17;19;31;36;59;118])  /\
+(invLTFun 32= [85;87;104])  /\
+(invLTFun 33= [5;33;37;52;122])  /\
+(invLTFun 34= [6;17;47])  /\
+(invLTFun 35= [5;21;23;35;40;63;122])  /\
+(invLTFun 36= [89;91;108])  /\
+(invLTFun 37= [9;37;41;56;126])  /\
+(invLTFun 38= [10;21;51])  /\
+(invLTFun 39= [9;25;27;39;44;67;126])  /\
+(invLTFun 40= [93;95;112])  /\
+(invLTFun 41= [2;13;41;45;60])  /\
+(invLTFun 42= [14;25;55])  /\
+(invLTFun 43= [2;13;29;31;43;48;71])  /\
+(invLTFun 44= [97;99;116])  /\
+(invLTFun 45= [6;17;45;49;64])  /\
+(invLTFun 46= [18;29;59])  /\
+(invLTFun 47= [6;17;33;35;47;52;75])  /\
+(invLTFun 48= [101;103;120])  /\
+(invLTFun 49= [10;21;49;53;68])  /\
+(invLTFun 50= [22;33;63])  /\
+(invLTFun 51= [10;21;37;39;51;56;79])  /\
+(invLTFun 52= [105;107;124])  /\
+(invLTFun 53= [14;25;53;57;72])  /\
+(invLTFun 54= [26;37;67])  /\
+(invLTFun 55= [14;25;41;43;55;60;83])  /\
+(invLTFun 56= [0;109;111])  /\
+(invLTFun 57= [18;29;57;61;76])  /\
+(invLTFun 58= [30;41;71])  /\
+(invLTFun 59= [18;29;45;47;59;64;87])  /\
+(invLTFun 60= [4;113;115])  /\
+(invLTFun 61= [22;33;61;65;80])  /\
+(invLTFun 62= [34;45;75])  /\
+(invLTFun 63= [22;33;49;51;63;68;91])  /\
+(invLTFun 64= [8;117;119])  /\
+(invLTFun 65= [26;37;65;69;84])  /\
+(invLTFun 66= [38;49;79])  /\
+(invLTFun 67= [26;37;53;55;67;72;95])  /\
+(invLTFun 68= [12;121;123])  /\
+(invLTFun 69= [30;41;69;73;88])  /\
+(invLTFun 70= [42;53;83])  /\
+(invLTFun 71= [30;41;57;59;71;76;99])  /\
+(invLTFun 72= [16;125;127])  /\
+(invLTFun 73= [34;45;73;77;92])  /\
+(invLTFun 74= [46;57;87])  /\
+(invLTFun 75= [34;45;61;63;75;80;103])  /\
+(invLTFun 76= [1;3;20])  /\
+(invLTFun 77= [38;49;77;81;96])  /\
+(invLTFun 78= [50;61;91])  /\
+(invLTFun 79= [38;49;65;67;79;84;107])  /\
+(invLTFun 80= [5;7;24])  /\
+(invLTFun 81= [42;53;81;85;100])  /\
+(invLTFun 82= [54;65;95])  /\
+(invLTFun 83= [42;53;69;71;83;88;111])  /\
+(invLTFun 84= [9;11;28])  /\
+(invLTFun 85= [46;57;85;89;104])  /\
+(invLTFun 86= [58;69;99])  /\
+(invLTFun 87= [46;57;73;75;87;92;115])  /\
+(invLTFun 88= [13;15;32])  /\
+(invLTFun 89= [50;61;89;93;108])  /\
+(invLTFun 90= [62;73;103])  /\
+(invLTFun 91= [50;61;77;79;91;96;119])  /\
+(invLTFun 92= [17;19;36])  /\
+(invLTFun 93= [54;65;93;97;112])  /\
+(invLTFun 94= [66;77;107])  /\
+(invLTFun 95= [54;65;81;83;95;100;123])  /\
+(invLTFun 96= [21;23;40])  /\
+(invLTFun 97= [58;69;97;101;116])  /\
+(invLTFun 98= [70;81;111])  /\
+(invLTFun 99= [58;69;85;87;99;104;127])  /\
+(invLTFun 100= [25;27;44])  /\
+(invLTFun 101= [62;73;101;105;120])  /\
+(invLTFun 102= [74;85;115])  /\
+(invLTFun 103= [3;62;73;89;91;103;108])  /\
+(invLTFun 104= [29;31;48])  /\
+(invLTFun 105= [66;77;105;109;124])  /\
+(invLTFun 106= [78;89;119])  /\
+(invLTFun 107= [7;66;77;93;95;107;112])  /\
+(invLTFun 108= [33;35;52])  /\
+(invLTFun 109= [0;70;81;109;113])  /\
+(invLTFun 110= [82;93;123])  /\
+(invLTFun 111= [11;70;81;97;99;111;116])  /\
+(invLTFun 112= [37;39;56])  /\
+(invLTFun 113= [4;74;85;113;117])  /\
+(invLTFun 114= [86;97;127])  /\
+(invLTFun 115= [15;74;85;101;103;115;120])  /\
+(invLTFun 116= [41;43;60])  /\
+(invLTFun 117= [8;78;89;117;121])  /\
+(invLTFun 118= [3;90])  /\
+(invLTFun 119= [19;78;89;105;107;119;124])  /\
+(invLTFun 120= [45;47;64])  /\
+(invLTFun 121= [12;82;93;121;125])  /\
+(invLTFun 122= [7;94])  /\
+(invLTFun 123= [0;23;82;93;109;111;123])  /\
+(invLTFun 124= [49;51;68])  /\
+(invLTFun 125= [1;16;86;97;125])  /\
+(invLTFun 126= [11;98])  /\
+(invLTFun 127= [4;27;86;97;113;115;127])``,
+
+EVAL_TAC);
+
+
+(*compute the parity on select bits*)
+
+val selParity_def = Define
+`(selParity (w:word128) []=F) /\
+( selParity w (pos::t)  = boolXor (word128$WORD_BIT pos w) (selParity w t))`;
+
+val selParityAppend=prove(``!w l1 l2.
+selParity w (l1++l2) =boolXor (selParity w l1) (selParity w l2)``,
+
+Induct_on `l1` THENL [
+	RW_TAC list_ss [selParity_def] THEN
+	METIS_TAC [boolXorFacts,boolXorComm],
+	RW_TAC list_ss [selParity_def] THEN
+	METIS_TAC [boolXorAssoc,selParity_def]]);
+
+
+(*lineat transform*)
+val transform_def = Define
+`(transform transFun 0 (w:word128) =  let newBit=selParity w (transFun 0) in
+			if newBit then (1w:word128) 
+			else (0w:word128))/\
+ (transform transFun (SUC i) w = let newBit=selParity w (transFun (SUC i)) in
+ 		 let newWord=if newBit then ((1w:word128)<<(SUC i))
+		 	     else (0w:word128)
+	  	 in
+		 newWord | transform transFun i w)`;
+		 
+
+
+val transformEval = prove(
+``!n transFun (w:word128). 
+	transform transFun n w = 
+		if n=0 then
+			let newBit=selParity w (transFun 0) in
+			if newBit then (1w:word128) 
+			else (0w:word128)
+		else
+		 	let newBit=selParity w (transFun n) in
+ 		 	let newWord=if newBit then ((1w:word128)<<n)
+		 	     else (0w:word128)
+	  	 	in
+		 	newWord | transform transFun (n-1) w``,
+
+RW_TAC std_ss [transform_def,LET_THM] THENL [
+	Cases_on `n` THENL [
+		METIS_TAC [],
+		FULL_SIMP_TAC arith_ss [transform_def,LET_THM]],
+	Cases_on `n` THENL [
+		METIS_TAC [],
+		FULL_SIMP_TAC arith_ss [transform_def,LET_THM]]]);
+		 
+
+
+		 
+
+val LT_def = Define
+`LT (w:word128) =  transform LTFun word128$HB w`;
+
+
+val invLT_def = Define
+`invLT (w:word128) =  transform invLTFun word128$HB w`;
+
+(*desired properties of transform*)
+val transform_inv1_w128=prove(
+``!to d w transFun.
+	 to < word128$WL /\ 
+         d < word128$WL /\
+	 to >d 
+	 ==>
+	 ~(word128$WORD_BIT to (transform transFun d w))``, 
+
+Induct_on `d` THENL [
+ 	 RW_TAC arith_ss [transform_def,LET_THM] THENL [
+	 	 METIS_TAC [word_1_bit128],
+		 FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_def, w2n_zero128, BIT_ZERO]],
+	 RW_TAC arith_ss [transform_def,LET_THM] THENL [
+	 	 RW_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL,word128Theory.WORD_BIT_def,word_1_bit128],
+		 FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_def, w2n_zero128, BIT_ZERO]]]);
+
+
+
+val transform_inv2_w128=prove(
+``!to d w transFun.
+	 to < word128$WL /\ 
+         d < word128$WL /\
+	 to <=d 
+	 ==>
+	 (word128$WORD_BIT to (transform transFun d w) = selParity w (transFun to))``,
+
+
+Induct_on `d` THENL [
+	RW_TAC arith_ss [transform_def,LET_THM] THENL [
+		FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_def, w2n_one128,BIT_def, BITS_THM ],
+		FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_def, w2n_zero128,BIT_def, BITS_THM ]],
+	RW_TAC std_ss [transform_def,LET_THM] THENL[
+		Cases_on `to <=d`  THEN Cases_on `to=d` THENL [
+			RW_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL],
+			RW_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL],
+			FULL_SIMP_TAC arith_ss [],
+			`to = SUC d` by RW_TAC arith_ss [] THEN
+			FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_LSL,word128Theory.WORD_BIT_def, w2n_one128,BIT_def, BITS_THM]],
+		FULL_SIMP_TAC arith_ss [word128Theory.WORD_BIT_BOOLOPS,word128Theory.WORD_BIT_def, w2n_zero128, BIT_ZERO,DECIDE ``SUC x<y==>x<y``] THEN
+		Cases_on `to<=d` THENL [
+			FULL_SIMP_TAC arith_ss [],
+			`to>d /\ (to = SUC d)` by METIS_TAC [DECIDE ``~(x<=y) /\ x <= SUC y=(x=SUC y) /\ (x>y)``] THEN
+			FULL_SIMP_TAC arith_ss [GSYM word128Theory.WORD_BIT_def,transform_inv1_w128]]]]
+);
+
+(*the composite of two linear transformations*)		
+val transCompose_def=Define
+`transCompose f1 f2 = \x. FLAT (MAP f1 (f2 x))`;
+
+(*a transform function is legal*)
+val transInRange_def=Define
+ `transInRange transFun = 
+!i. i < word128$WL==> ALL_EL (\x. x < word128$WL) (transFun i)`;
+
+val LTFunInRange=prove(
+``transInRange LTFun``,
+
+SIMP_TAC std_ss [transInRange_def,word128Theory.WL_def,word128Theory.HB_def] THEN
+CONV_TAC (time row_conv));
+
+val invLTFunInRange=prove(
+``transInRange invLTFun``,
+
+SIMP_TAC std_ss [transInRange_def,word128Theory.WL_def,word128Theory.HB_def] THEN
+CONV_TAC (time row_conv));
+
+(*desired properties of composite of linear transformations*) 
+val transformComposeLemma=prove(``!transFun1 transL2 w.
+	transInRange transFun1  /\
+	ALL_EL (\x. x < word128$WL) transL2
+	==>
+	(selParity (transform transFun1 word128$HB w) transL2= selParity w (FLAT (MAP transFun1 transL2)))``,
+
+Induct_on `transL2` THENL [
+	 METIS_TAC [MAP,FLAT,selParity_def],
+	 RW_TAC list_ss [selParity_def,transform_def,selParityAppend,word128Theory.WL_def,word128Theory.HB_def] THEN
+	 `127=128-1` by RW_TAC arith_ss [] THEN
+	 `h <=127` by METIS_TAC [SUB_LESS_OR] THEN
+	 `127<128` by RW_TAC arith_ss [] THEN
+	  FULL_SIMP_TAC arith_ss [transform_inv2_w128,word128Theory.WL_def,word128Theory.HB_def]]); 
+
+val transformComposeBit=prove(``!i transFun1 transFun2 w.
+	i < word128$WL          /\   
+	transInRange transFun1  /\
+	transInRange transFun2  
+	==>
+	(word128$WORD_BIT i (transform transFun2 word128$HB (transform transFun1 word128$HB w)) = word128$WORD_BIT i (transform (transCompose transFun1 transFun2) word128$HB w))``,
+
+RW_TAC arith_ss [transCompose_def,transInRange_def,transform_inv2_w128,word128Theory.WL_def,word128Theory.HB_def,transformComposeLemma]);	
+
+val transformComposeWord=prove(``!transFun1 transFun2 w.
+	transInRange transFun1  /\
+	transInRange transFun2  
+	==>
+	(transform transFun2 word128$HB (transform transFun1 word128$HB w) = transform (transCompose transFun1 transFun2) word128$HB w)``,
+	
+RW_TAC std_ss[GSYM WORD_EQ,transformComposeBit]);
+
+
+	
+
+val TL128_eq_makeTL128=prove(
+``T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::[]=makeTL 128``,
+
+EVAL_TAC);	  
+	      
+(*the intermediate values of the composite of the two given linear transformation functions,
+used to speed up the verification*)
+val Res_def = Define `Res i = FLAT (MAP LTFun (invLTFun i))`;
+load "numSyntax";
+quietdec := true;
+open numSyntax;
+quietdec := false;
+val ResTable = 
+  LIST_CONJ
+    (map EVAL (map (fn i => ``Res ^(term_of_int i)``) (upto 0 127)));
+
+computeLib.add_thms[ResTable] computeLib.the_compset;
+
+
+		
+(*parity check is the same as counting EVEN or ODD.
+countEvenL and countEven is the two equivalent description,
+while countEvenL reduce a layer of loop*)
+val countL_def=Define
+`(countL l []=l) /\
+(countL l (h::t)=let x=makeL h in
+let tmp=zipXor x l in 
+countL tmp t)`;
+
+
+val countEvenL_def=Define
+`countEvenL tl = countL (T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::
+	      T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::
+	      T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::
+	      T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::T::[]) tl`;
+	      
+	
+val countEvenL_LT_facts=prove(
+``!i. i<word128$WL ==>
+         (countEvenL  (Res i)= countEvenL  [i]) ``,
+
+SIMP_TAC std_ss [word128Theory.WL_def,word128Theory.HB_def] THEN
+CONV_TAC (time row_conv) THEN
+REWRITE_TAC []);	
+
+
+
+val countEven_def=Define
+`(countEven x [] =T) /\
+ (countEven x (h::t)= boolXor (x=h) (countEven x t))`;
+
+
+
+
+val countL_fact=prove(
+``!i al h tl. 
+	i < LENGTH al  /\
+	h < LENGTH al  /\
+	ALL_EL (\x. x < LENGTH al) tl
+	==>(					
+	EL i (countL (zipXor (makeL h) al) tl) = boolXor (i=h) (EL i (countL al tl)))``,
+
+Induct_on `tl` THENL [
+	RW_TAC list_ss [countL_def,zipXor_makeL],
+	RW_TAC list_ss [countL_def,LET_THM, zipXor_makeL_COMM,LENGTH_zipXor,boolXorComm3]]
+	);
+	
+
+val Res_fact=prove(
+``!i.
+	i < word128$WL
+	==>
+	ALL_EL (\x. x < word128$WL) (Res i)``,
+
+SIMP_TAC std_ss [word128Theory.WL_def,word128Theory.HB_def] THEN
+CONV_TAC (time row_conv));
+
+(*equivalence between countEven and countEvenL*)	     
+val countEvenL_countEven_eq=prove(
+``!i tl. 
+	i < word128$WL /\
+	ALL_EL (\x. x < word128$WL) tl      
+	==>
+	(EL i (countEvenL tl)=countEven i tl)``,
+	
+SIMP_TAC std_ss [word128Theory.WL_def,word128Theory.HB_def] THEN
+Induct_on `tl` THENL [
+	FULL_SIMP_TAC arith_ss [countEvenL_def,countEven_def,countL_def,TL128_eq_makeTL128,makeTL_fact],
+	
+	FULL_SIMP_TAC std_ss [ALL_EL, countEvenL_def,countEven_def,countL_def,LET_THM,TL128_eq_makeTL128,makeTL_fact, zipXor_makeL_COMM,LENGTH_zipXor,boolXorComm3] THEN
+	FULL_SIMP_TAC std_ss [countEven_def,countL_fact,countEvenL_def,TL128_eq_makeTL128,LENGTH_makeTL]]);	
+
+val LTFun_invLTFun_fact=prove(
+``!i. 
+	i<word128$WL 
+	==>
+	!j.
+		 j<word128$WL
+		 ==>
+		 (countEven j ((transCompose LTFun invLTFun) i) = countEven j [i])``,
+
+RW_TAC std_ss [GSYM Res_def, transCompose_def,GSYM countEvenL_countEven_eq,countEvenL_LT_facts,Res_fact,ALL_EL]);
+
+(*desired properties of countEven*)       
+val countEven_filter1=prove(
+``!i L d transL.
+	LENGTH transL <= L /\
+	i < d+1  /\
+	ALL_EL (\x. x < d+1) transL
+	
+	==>
+	countEven i (FILTER (\x. ~(x = i)) transL)``,	
+	
+Induct_on `L` THENL [
+	RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER],
+	RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THEN
+	Cases_on `transL` THENL [
+		RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER],
+		RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THENL [
+			FULL_SIMP_TAC list_ss [boolXor_def] THEN
+			METIS_TAC [],
+			FULL_SIMP_TAC list_ss [] THEN
+			METIS_TAC []]]]);	
+			    
+
+
+			    			    
+			    
+val countEven_filter2=prove(
+``!i k L d transL.
+	LENGTH transL <= L /\
+	i < d+1  /\
+	k < d+1  /\
+	ALL_EL (\x. x < d+1) transL
+	
+	==>
+	(countEven k (FILTER (\x. ~(x = i)) transL)= if k=i then T
+							else countEven k transL)``,
+
+		
+Induct_on `L` THENL [
+	RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER],
+	RW_TAC arith_ss [countEven_def,ALL_EL,FILTER] THEN
+	Cases_on `transL` THENL [
+		RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER],
+		FULL_SIMP_TAC list_ss [countEven_def] THEN
+		Cases_on `k=i` THEN Cases_on `h=i` THENL [
+			METIS_TAC [boolXor_def,countEven_def],
+			RW_TAC std_ss [boolXor_def,countEven_def] THEN 
+			METIS_TAC [],
+			RW_TAC std_ss [boolXor_def,countEven_def] THEN 
+			METIS_TAC [],
+			METIS_TAC [boolXor_def,countEven_def]]]]);
+		 
+
+val countEven_filter3=prove(
+``!i k L d transL1 transL2.
+	LENGTH transL1 <= L /\
+	LENGTH transL2 <= L /\
+	(!j. j < d+1 ==> (countEven j transL1 = countEven j transL2)) /\
+	i < d+1  /\
+	k < d+1  /\
+	ALL_EL (\x. x < d+1) transL1 /\
+	ALL_EL (\x. x < d+1) transL2
+	==>
+	(countEven k (FILTER (\x. ~(x = i)) transL1) = countEven k (FILTER (\x. ~(x = i)) transL2))``,			    
+			    
+
+RW_TAC std_ss [] THEN		    			    
+`countEven k (FILTER (\x. ~(x = i)) transL1)= if k=i then T
+						else countEven k transL1` by METIS_TAC [countEven_filter2] THEN	    
+`countEven k (FILTER (\x. ~(x = i)) transL2)= if k=i then T
+						else countEven k transL2` by METIS_TAC [countEven_filter2] THEN	    
+METIS_TAC []);	
+
+
+(*desired properties of selParity*)	 
+val selParity_filter=prove(``!i transL w.
+	i< word128$WL /\
+	ALL_EL (\x. x < word128$WL) transL 
+	==>
+	(selParity w transL = if countEven i transL then  selParity w (FILTER (\x. ~(x=i)) transL)
+			     else  boolXor (word128$WORD_BIT i w) (selParity w (FILTER (\x. ~(x =i)) transL)))``,
+
+Induct_on `transL` THENL [
+	METIS_TAC [FILTER,countEven_def],
+	RW_TAC std_ss [selParity_def,FILTER,countEven_def,ALL_EL] THENL [
+		`(selParity w transL = (if countEven i transL then selParity w (FILTER (\x. ~(x = i)) transL) 
+					else boolXor (WORD_BIT i w) (selParity w (FILTER (\x. ~(x = i)) transL))))` by METIS_TAC [] THEN
+		FULL_SIMP_TAC std_ss [boolXor_def],
+		`(selParity w transL = (if countEven h transL then selParity w (FILTER (\x. ~(x = h)) transL)
+					else boolXor (WORD_BIT h w) (selParity w (FILTER (\x. ~(x = h)) transL))))` by METIS_TAC [] THEN
+		FULL_SIMP_TAC std_ss [boolXorAssoc,boolXorFacts,boolXorComm] THEN
+		METIS_TAC [boolXorAssoc,boolXorFacts,boolXorComm,boolXor_def],
+		`(selParity w transL = (if countEven i transL then selParity w (FILTER (\x. ~(x = i)) transL) 
+					else boolXor (WORD_BIT i w) (selParity w (FILTER (\x. ~(x = i)) transL))))` by METIS_TAC [] THEN
+		FULL_SIMP_TAC std_ss [boolXorAssoc,boolXorComm,boolXor_def] THEN
+		METIS_TAC [boolXorAssoc,boolXorFacts,boolXorComm,boolXor_def],	
+		`(selParity w transL = (if countEven h transL then selParity w (FILTER (\x. ~(x = h)) transL)
+		else boolXor (WORD_BIT h w) (selParity w (FILTER (\x. ~(x = h)) transL))))` by METIS_TAC [] THEN
+		FULL_SIMP_TAC std_ss [boolXorAssoc,boolXorFacts,boolXorComm,boolXor_def]]]);	
+		
+
+(*equivalence between two position list used in selParity*) 
+val selParity_eq1=prove(
+``!L transL1 transL2 w.
+	ALL_EL (\x. x < word128$WL) transL1 /\ 
+	ALL_EL (\x. x < word128$WL) transL2 /\
+	LENGTH transL1 <= L /\ 
+	LENGTH transL2 <= L /\
+	(!j. j <  word128$WL  ==>(countEven j transL1= countEven j transL2 )) 
+	==> 
+	( selParity w transL1  =selParity w transL2)``,
+
+Induct_on `L` THENL [
+	RW_TAC arith_ss [boolXor_def,countEven_def,selParity_def,LENGTH_NIL],
+	RW_TAC arith_ss [boolXor_def,countEven_def,selParity_def] THEN
+	Cases_on `transL1` THEN Cases_on `transL2` THENL [
+		RW_TAC arith_ss [selParity_def],
+		`!j. j < word128$WL ==> (countEven j (FILTER (\x. ~(x = h)) (h::t)) = countEven j (h::t))` by RW_TAC std_ss [] THENL [
+			Cases_on `j=h` THENL [
+				METIS_TAC [countEven_def, countEven_filter2,word128Theory.WL_def,DECIDE ``SUC x = x +1``],
+				`h < word128$WL` by FULL_SIMP_TAC list_ss [ALL_EL] THEN
+				METIS_TAC [countEven_def, countEven_filter2,word128Theory.WL_def,DECIDE ``SUC x = x +1``]],
+			`!j:num. countEven j []` by METIS_TAC [countEven_def] THEN
+			`!j:num. j < word128$WL ==> countEven j (FILTER (\x. ~(x = h)) (h::t))` by METIS_TAC [] THEN
+			FULL_SIMP_TAC bool_ss [FILTER] THEN
+			`LENGTH (FILTER (\x. ~(x = h)) t)<=L` by FULL_SIMP_TAC list_ss [] THENL [
+				`LENGTH  (FILTER (\x. ~(x = h)) t)<=LENGTH t` by FULL_SIMP_TAC list_ss [LENGTH_FILTER] THEN
+				FULL_SIMP_TAC arith_ss [],
+				`LENGTH ([]:num list)<=L` by RW_TAC arith_ss [LENGTH] THEN
+				`ALL_EL (\x. x < word128$WL) t` by FULL_SIMP_TAC list_ss [ALL_EL] THEN
+				`!j:num. j < word128$WL ==> (countEven j [] = countEven j  (FILTER (\x. ~(x = h)) t)  )`by METIS_TAC [] THEN
+				`ALL_EL (\x. x < word128$WL) (FILTER (\x. ~(x = h)) t)` by METIS_TAC [ALL_EL_FILTER] THEN
+				`selParity w [] = selParity w  (FILTER (\x. ~(x = h)) t)` by METIS_TAC [] THEN
+				`h < word128$WL` by FULL_SIMP_TAC std_ss [ALL_EL] THEN
+				`countEven h (h::t)` by METIS_TAC [] THEN
+				`~countEven h t` by FULL_SIMP_TAC std_ss [countEven_def,boolXor_def] THEN
+				`selParity w t = if countEven h t then selParity w (FILTER (\x. ~(x=h)) t) 
+						else boolXor (word128$WORD_BIT h w) (selParity w (FILTER (\x. ~(x =h)) t))` by METIS_TAC [selParity_filter] THEN
+				FULL_SIMP_TAC std_ss [boolXor_def,selParity_def]]],
+		
+		`!j. j < word128$WL ==> (countEven j (FILTER (\x. ~(x = h)) (h::t)) = countEven j (h::t))` by RW_TAC std_ss [] THENL [
+			Cases_on `j=h` THENL [
+				METIS_TAC [countEven_def, countEven_filter2,word128Theory.WL_def,DECIDE ``SUC x = x +1``],
+				`h < word128$WL` by FULL_SIMP_TAC list_ss [ALL_EL] THEN
+				METIS_TAC [countEven_def, countEven_filter2,word128Theory.WL_def,DECIDE ``SUC x = x +1``]],
+			`!j:num. countEven j []` by METIS_TAC [countEven_def] THEN
+			`!j:num. j < word128$WL ==> countEven j (FILTER (\x. ~(x = h)) (h::t))` by METIS_TAC [] THEN
+			FULL_SIMP_TAC bool_ss [FILTER] THEN
+			`LENGTH (FILTER (\x. ~(x = h)) t)<=L` by FULL_SIMP_TAC list_ss [] THENL [
+				`LENGTH  (FILTER (\x. ~(x = h)) t)<=LENGTH t` by FULL_SIMP_TAC list_ss [LENGTH_FILTER] THEN
+				FULL_SIMP_TAC arith_ss [],
+				`LENGTH ([]:num list)<=L` by RW_TAC arith_ss [LENGTH] THEN
+				`ALL_EL (\x. x < word128$WL) t` by FULL_SIMP_TAC list_ss [ALL_EL] THEN
+				`!j:num. j < word128$WL ==> (countEven j [] = countEven j  (FILTER (\x. ~(x = h)) t)  )`by METIS_TAC [] THEN
+				`ALL_EL (\x. x < word128$WL) (FILTER (\x. ~(x = h)) t)` by METIS_TAC [ALL_EL_FILTER] THEN
+				`selParity w [] = selParity w  (FILTER (\x. ~(x = h)) t)` by METIS_TAC [] THEN
+				`h < word128$WL` by FULL_SIMP_TAC std_ss [ALL_EL] THEN
+				`countEven h (h::t)` by METIS_TAC [] THEN
+				`~countEven h t` by FULL_SIMP_TAC std_ss [countEven_def,boolXor_def] THEN
+				`selParity w t = if countEven h t then selParity w (FILTER (\x. ~(x=h)) t) 
+						else  boolXor (word128$WORD_BIT h w) (selParity w (FILTER (\x. ~(x =h)) t))` by METIS_TAC [selParity_filter] THEN
+				FULL_SIMP_TAC std_ss [boolXor_def,selParity_def]]],
+		
+		`(h < word128$WL) /\  (h' < word128$WL)` by FULL_SIMP_TAC std_ss [ALL_EL] THEN
+		`!j. j < word128$WL ==> (countEven j (FILTER (\x. ~(x = h')) (h::t)) = countEven j (FILTER (\x. ~(x = h')) (h'::t')))` by METIS_TAC  [countEven_filter3,word128Theory.WL_def,DECIDE ``SUC x = x +1``] THEN
+		`ALL_EL (\x. x < word128$WL) (FILTER (\x. ~(x = h')) (h::t))` by METIS_TAC [ALL_EL_FILTER] THEN
+		`ALL_EL (\x. x < word128$WL) (FILTER (\x. ~(x = h')) (h'::t'))` by METIS_TAC [ALL_EL_FILTER] THEN 
+		`LENGTH  (FILTER (\x. ~(x = h')) (h::t))<=LENGTH (h::t)` by FULL_SIMP_TAC arith_ss [LENGTH_FILTER] THEN
+		`LENGTH (FILTER (\x. ~(x = h')) (h::t)) <=SUC L ` by FULL_SIMP_TAC arith_ss [] THEN
+		`LENGTH  (FILTER (\x. ~(x = h')) (h'::t'))<=LENGTH (h'::t')` by FULL_SIMP_TAC arith_ss [LENGTH_FILTER] THEN
+		`LENGTH (FILTER (\x. ~(x = h')) (h'::t')) <=SUC L ` by FULL_SIMP_TAC arith_ss [] THEN
+		`!j. j < word128$WL ==> (countEven j (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h::t))) = countEven j (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h'::t'))))` by METIS_TAC  [countEven_filter3,word128Theory.WL_def,DECIDE ``SUC x = x +1``] THEN
+		`FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h::t))= FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) t)` by  RW_TAC list_ss [FILTER_COMM,FILTER] THEN
+		`FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h'::t'))= FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) t')` by  RW_TAC list_ss [FILTER] THEN
+		`ALL_EL (\x. x < word128$WL) (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h'::t')))` by METIS_TAC [ALL_EL_FILTER] THEN
+		`ALL_EL (\x. x < word128$WL) (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h::t)))` by METIS_TAC [ALL_EL_FILTER] THEN
+		`LENGTH ( FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) t)) <= L` by FULL_SIMP_TAC list_ss [] THENL [
+			`LENGTH (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) t)) <= LENGTH (FILTER (\x. ~(x = h')) t)` by METIS_TAC [LENGTH_FILTER] THEN
+			`LENGTH (FILTER (\x. ~(x = h')) t) <= LENGTH t` by METIS_TAC [LENGTH_FILTER] THEN
+			METIS_TAC [LESS_EQ_TRANS],
+			`LENGTH ( FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) t')) <= L` by FULL_SIMP_TAC list_ss [] THENL [
+				`LENGTH (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) t')) <= LENGTH (FILTER (\x. ~(x = h')) t')` by METIS_TAC [LENGTH_FILTER] THEN
+				`LENGTH (FILTER (\x. ~(x = h')) t') <= LENGTH t'` by METIS_TAC [LENGTH_FILTER] THEN
+				METIS_TAC [LESS_EQ_TRANS],
+				`selParity w  (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h::t))) = selParity w  (FILTER (\x. ~(x = h)) (FILTER (\x. ~(x = h')) (h'::t')))` by METIS_TAC [] THEN
+				`selParity w (h::t) = if countEven h' (h::t) then selParity w (FILTER (\x. ~(x=h')) (h::t)) 
+							else  boolXor (word128$WORD_BIT h' w) (selParity w (FILTER (\x. ~(x =h')) (h::t)))` by METIS_TAC [selParity_filter] THEN
+				`selParity w (h'::t') = if countEven h' (h'::t') then selParity w (FILTER (\x. ~(x=h')) (h'::t')) 
+							else  boolXor (word128$WORD_BIT h' w) (selParity w (FILTER (\x. ~(x =h')) (h'::t')))` by METIS_TAC [selParity_filter] THEN
+				`selParity w (FILTER (\x. ~(x=h')) (h::t)) = if countEven h (FILTER (\x. ~(x=h')) (h::t)) then selParity w (FILTER (\x. ~(x=h)) (FILTER (\x. ~(x=h')) (h::t))) 
+										else  boolXor (word128$WORD_BIT h w) (selParity w (FILTER (\x. ~(x =h)) (FILTER (\x. ~(x=h')) (h::t))))` by METIS_TAC [selParity_filter] THEN
+				`selParity w (FILTER (\x. ~(x=h')) (h'::t')) = if countEven h (FILTER (\x. ~(x=h')) (h'::t')) then selParity w (FILTER (\x. ~(x=h)) (FILTER (\x. ~(x=h')) (h'::t'))) 
+										else  boolXor (word128$WORD_BIT h w) (selParity w (FILTER (\x. ~(x =h)) (FILTER (\x. ~(x=h')) (h'::t'))))` by METIS_TAC [selParity_filter] THEN
+				Cases_on `countEven h' (h::t)` THEN Cases_on `countEven h (h::t)` THEN Cases_on `countEven h' (h'::t')` THEN Cases_on `countEven h (h'::t')` THENL [
+				 	FULL_SIMP_TAC std_ss [],
+				 	FULL_SIMP_TAC std_ss [],
+				 	METIS_TAC [],
+				 	METIS_TAC [],
+				 	METIS_TAC [],
+					FULL_SIMP_TAC std_ss [],
+					METIS_TAC [],
+					METIS_TAC [],
+					METIS_TAC [],
+					METIS_TAC [],
+					FULL_SIMP_TAC std_ss [],
+					METIS_TAC [],
+					METIS_TAC [],
+					METIS_TAC [],
+					METIS_TAC [],
+					FULL_SIMP_TAC std_ss []]]]]]);
+		       
+		       
+		       
+		  
+	
+val selParity_eq2=prove(
+``!transL1 transL2 w.
+	ALL_EL (\x. x < word128$WL) transL1 /\ 
+	ALL_EL (\x. x < word128$WL) transL2 /\
+	(!j. j <  word128$WL  ==>(countEven j transL1= countEven j transL2 )) 
+	==> 
+	( selParity w transL1  =selParity w transL2)``,
+	
+RW_TAC std_ss [] THEN
+Cases_on `LENGTH transL1 < LENGTH transL2` THENL [
+	`LENGTH transL1 <=  LENGTH transL2` by RW_TAC arith_ss [] THEN
+	`LENGTH transL2 <=  LENGTH transL2` by RW_TAC arith_ss [] THEN
+	METIS_TAC [selParity_eq1],
+	`LENGTH transL1 <=  LENGTH transL1` by RW_TAC arith_ss [] THEN
+	`LENGTH transL2 <=  LENGTH transL1` by RW_TAC arith_ss [] THEN
+	METIS_TAC [selParity_eq1]]);
+	
+
+(*given linear transformations cancel each other*)	
+val invLT_LT_cancel=prove(
+``!w.
+	invLT (LT w) = w ``,
+
+
+RW_TAC std_ss [GSYM WORD_EQ,invLT_def,LT_def,transformComposeWord,LTFunInRange,invLTFunInRange] THEN
+`WORD_BIT x w= selParity w [x]` by RW_TAC std_ss [selParity_def,boolXor_def] THEN
+FULL_SIMP_TAC arith_ss [transform_inv2_w128,word128Theory.HB_def,word128Theory.WL_def] THEN
+`ALL_EL (\x. x < word128$WL)  (transCompose LTFun invLTFun x)` by FULL_SIMP_TAC arith_ss [GSYM Res_def,transCompose_def,word128Theory.WL_def,word128Theory.HB_def] THENL [
+	`!i.
+		i < word128$WL
+		==>
+		ALL_EL (\x. x < word128$WL) (Res i)` by METIS_TAC [Res_fact] THEN
+	FULL_SIMP_TAC arith_ss [word128Theory.WL_def,word128Theory.HB_def],
+	 `ALL_EL (\x. x < word128$WL) [x]` by RW_TAC list_ss [ALL_EL,word128Theory.WL_def,word128Theory.HB_def] THEN
+	  RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2,word128Theory.WL_def,word128Theory.HB_def]]);	
+
+
+
+
+
+
+(****************************************SBOX ***************************************************) 
+
+(*sbox table used in encrytion
+*)
+val SBox_def=Define 
+`SBox=MAP (MAP (n2w:num->word4))[
+[3;8;15;1;10;6;5;11;14;13;4;2;7;0;9;12]
+;[15;12;2;7;9;0;5;10;1;11;14;8;6;13;3;4]
+;[8;6;7;9;3;12;10;15;13;1;14;4;0;11;5;2]
+;[0;15;11;8;12;9;6;3;13;1;2;4;10;7;5;14]
+;[1;15;8;3;12;0;11;6;2;5;4;10;9;14;7;13]
+;[15;5;2;11;4;10;9;12;0;3;14;8;13;6;7;1]
+;[7;2;12;5;8;4;6;11;14;9;1;15;13;3;10;0]
+;[1;13;15;0;14;8;2;11;7;4;12;10;9;3;5;6]]`;
+
+
+(*inverse sbox table used in decrytion
+*)
+val invSBox_def=Define
+`invSBox= MAP (MAP (n2w:num->word4))[
+[13;3;11;0;10;6;5;12;1;14;4;7;15;9;8;2]
+;[5;8;2;14;15;6;12;3;11;4;7;9;1;13;10;0]
+;[12;9;15;4;11;14;1;2;0;3;6;13;5;8;10;7]
+;[0;9;10;7;11;14;6;13;3;5;12;2;4;8;15;1]
+;[5;0;8;3;10;9;7;14;2;12;11;6;4;15;13;1]
+;[8;15;2;9;4;1;13;14;11;6;5;3;7;12;10;0]
+;[15;10;1;13;5;3;6;0;4;9;14;7;2;12;8;11]
+;[3;0;6;13;9;14;15;8;5;12;11;7;10;1;4;2]]`;
+
+val S_def = Define
+`(S:num->num->word4) x y= EL y (EL x SBox)`;
+
+val invS_def = Define
+`(invS:num->num->word4) x y= EL y (EL x invSBox)`;
+
+val SBoxVal=prove( 
+``
+	( S 0 0=3w) /\ 
+	( S 0 1=8w) /\ 
+	( S 0 2=15w) /\ 
+	( S 0 3=1w) /\ 
+	( S 0 4=10w) /\ 
+	( S 0 5=6w) /\ 
+	( S 0 6=5w) /\ 
+	( S 0 7=11w) /\ 
+	( S 0 8=14w) /\ 
+	( S 0 9=13w) /\ 
+	( S 0 10=4w) /\ 
+	( S 0 11=2w) /\ 
+	( S 0 12=7w) /\ 
+	( S 0 13=0w) /\ 
+	( S 0 14=9w) /\ 
+	( S 0 15=12w)
+	/\
+	( S 1 0=15w) /\ 
+	( S 1 1=12w) /\ 
+	( S 1 2=2w) /\ 
+	( S 1 3=7w) /\ 
+	( S 1 4=9w) /\ 
+	( S 1 5=0w) /\ 
+	( S 1 6=5w) /\ 
+	( S 1 7=10w) /\ 
+	( S 1 8=1w) /\ 
+	( S 1 9=11w) /\ 
+	( S 1 10=14w) /\ 
+	( S 1 11=8w) /\ 
+	( S 1 12=6w) /\ 
+	( S 1 13=13w) /\ 
+	( S 1 14=3w) /\ 
+	( S 1 15=4w)
+	/\
+	( S 2 0=8w) /\ 
+	( S 2 1=6w) /\ 
+	( S 2 2=7w) /\ 
+	( S 2 3=9w) /\ 
+	( S 2 4=3w) /\ 
+	( S 2 5=12w) /\ 
+	( S 2 6=10w) /\ 
+	( S 2 7=15w) /\ 
+	( S 2 8=13w) /\ 
+	( S 2 9=1w) /\ 
+	( S 2 10=14w) /\ 
+	( S 2 11=4w) /\ 
+	( S 2 12=0w) /\ 
+	( S 2 13=11w) /\ 
+	( S 2 14=5w) /\ 
+	( S 2 15=2w)
+	/\ 
+	( S 3 0=0w) /\
+	( S 3 1=15w) /\
+	( S 3 2=11w) /\ 
+	( S 3 3=8w) /\ 
+	( S 3 4=12w) /\ 
+	( S 3 5=9w) /\ 
+	( S 3 6=6w) /\ 
+	( S 3 7=3w) /\
+	( S 3 8=13w) /\
+	( S 3 9=1w) /\ 
+	( S 3 10=2w) /\ 
+	( S 3 11=4w) /\ 
+	( S 3 12=10w) /\
+	( S 3 13=7w) /\ 
+	( S 3 14=5w) /\ 
+	( S 3 15=14w)
+	/\ 
+	( S 4 0=1w) /\ 
+	( S 4 1=15w) /\ 
+	( S 4 2=8w) /\ 
+	( S 4 3=3w) /\ 
+	( S 4 4=12w) /\
+	( S 4 5=0w) /\
+	( S 4 6=11w) /\
+	( S 4 7=6w) /\ 
+	( S 4 8=2w) /\
+	( S 4 9=5w) /\ 
+	( S 4 10=4w) /\ 
+	( S 4 11=10w) /\ 
+	( S 4 12=9w) /\ 
+	( S 4 13=14w) /\
+	( S 4 14=7w) /\ 
+	( S 4 15=13w)
+	/\ 
+	( S 5 0=15w) /\
+	( S 5 1=5w) /\ 
+	( S 5 2=2w) /\ 
+	( S 5 3=11w) /\ 
+	( S 5 4=4w) /\ 
+	( S 5 5=10w) /\
+	( S 5 6=9w) /\
+	( S 5 7=12w) /\ 
+	( S 5 8=0w) /\ 
+	( S 5 9=3w) /\ 
+	( S 5 10=14w) /\ 
+	( S 5 11=8w) /\ 
+	( S 5 12=13w) /\
+	( S 5 13=6w) /\
+	( S 5 14=7w) /\
+	( S 5 15=1w)
+	/\ 
+	( S 6 0=7w) /\ 
+	( S 6 1=2w) /\ 
+	( S 6 2=12w) /\ 
+	( S 6 3=5w) /\ 
+	( S 6 4=8w) /\ 
+	( S 6 5=4w) /\ 
+	( S 6 6=6w) /\ 
+	( S 6 7=11w) /\
+	( S 6 8=14w) /\
+	( S 6 9=9w) /\
+	( S 6 10=1w) /\ 
+	( S 6 11=15w) /\ 
+	( S 6 12=13w) /\ 
+	( S 6 13=3w) /\ 
+	( S 6 14=10w) /\ 
+	( S 6 15=0w)
+	/\ 
+	( S 7 0=1w) /\ 
+	( S 7 1=13w) /\ 
+	( S 7 2=15w) /\ 
+	( S 7 3=0w) /\ 
+	( S 7 4=14w) /\ 
+	( S 7 5=8w) /\ 
+	( S 7 6=2w) /\ 
+	( S 7 7=11w) /\ 
+	( S 7 8=7w) /\ 
+	( S 7 9=4w) /\ 
+	( S 7 10=12w) /\ 
+	( S 7 11=10w) /\
+	( S 7 12=9w) /\ 
+	( S 7 13=3w) /\ 
+	( S 7 14=5w) /\ 
+	( S 7 15=6w)``,
+
+EVAL_TAC);
+
+
+(*inverse sbox table used in decrytion
+*)
+val invSBoxVal=prove(
+``	(invS 0 0=13w) /\
+	(invS 0 1=3w) /\ 
+	(invS 0 2=11w) /\
+	(invS 0 3=0w) /\ 
+	(invS 0 4=10w) /\
+	(invS 0 5=6w) /\ 
+	(invS 0 6=5w) /\ 
+	(invS 0 7=12w) /\
+	(invS 0 8=1w) /\ 
+	(invS 0 9=14w) /\
+	(invS 0 10=4w) /\ 
+	(invS 0 11=7w) /\
+	(invS 0 12=15w) /\ 
+	(invS 0 13=9w) /\ 
+	(invS 0 14=8w) /\ 
+	(invS 0 15=2w)
+	 /\
+	(invS 1 0=5w)/\
+	(invS 1 1=8w) /\ 
+	(invS 1 2=2w) /\ 
+	(invS 1 3=14w) /\ 
+	(invS 1 4=15w) /\ 
+	(invS 1 5=6w) /\ 
+	(invS 1 6=12w) /\
+	(invS 1 7=3w) /\ 
+	(invS 1 8=11w) /\ 
+	(invS 1 9=4w) /\ 
+	(invS 1 10=7w) /\ 
+	(invS 1 11=9w) /\ 
+	(invS 1 12=1w) /\ 
+	(invS 1 13=13w) /\ 
+	(invS 1 14=10w) /\ 
+	(invS 1 15=0w)
+	 /\
+	(invS 2 0=12w) /\
+	(invS 2 1=9w) /\ 
+	(invS 2 2=15w) /\
+	(invS 2 3=4w) /\ 
+	(invS 2 4=11w) /\ 
+	(invS 2 5=14w) /\ 
+	(invS 2 6=1w) /\ 
+	(invS 2 7=2w) /\ 
+	(invS 2 8=0w) /\ 
+	(invS 2 9=3w) /\ 
+	(invS 2 10=6w) /\ 
+	(invS 2 11=13w) /\ 
+	(invS 2 12=5w) /\ 
+	(invS 2 13=8w) /\ 
+	(invS 2 14=10w) /\ 
+	(invS 2 15=7w)
+	 /\ 
+	(invS 3 0=0w) /\ 
+	(invS 3 1=9w) /\ 
+	(invS 3 2=10w) /\ 
+	(invS 3 3=7w) /\ 
+	(invS 3 4=11w) /\ 
+	(invS 3 5=14w) /\ 
+	(invS 3 6=6w) /\ 
+	(invS 3 7=13w) /\ 
+	(invS 3 8=3w) /\ 
+	(invS 3 9=5w) /\ 
+	(invS 3 10=12w) /\ 
+	(invS 3 11=2w) /\ 
+	(invS 3 12=4w) /\ 
+	(invS 3 13=8w) /\ 
+	(invS 3 14=15w) /\ 
+	(invS 3 15=1w)
+	 /\ 
+	(invS 4 0=5w) /\
+	(invS 4 1=0w) /\
+	(invS 4 2=8w) /\
+	(invS 4 3=3w) /\
+	(invS 4 4=10w) /\ 
+	(invS 4 5=9w) /\ 
+	(invS 4 6=7w) /\
+	(invS 4 7=14w) /\ 
+	(invS 4 8=2w) /\ 
+	(invS 4 9=12w) /\ 
+	(invS 4 10=11w) /\
+	(invS 4 11=6w) /\ 
+	(invS 4 12=4w) /\ 
+	(invS 4 13=15w) /\ 
+	(invS 4 14=13w) /\ 
+	(invS 4 15=1w)
+	 /\ 
+	(invS 5 0=8w) /\ 
+	(invS 5 1=15w) /\ 
+	(invS 5 2=2w) /\ 
+	(invS 5 3=9w) /\ 
+	(invS 5 4=4w) /\ 
+	(invS 5 5=1w) /\ 
+	(invS 5 6=13w) /\ 
+	(invS 5 7=14w) /\ 
+	(invS 5 8=11w) /\ 
+	(invS 5 9=6w) /\ 
+	(invS 5 10=5w) /\ 
+	(invS 5 11=3w) /\ 
+	(invS 5 12=7w) /\
+	(invS 5 13=12w)  /\
+	(invS 5 14=10w) /\
+	(invS 5 15=0w)
+	 /\ 
+	(invS 6 0=15w) /\ 
+	(invS 6 1=10w) /\ 
+	(invS 6 2=1w) /\ 
+	(invS 6 3=13w) /\ 
+	(invS 6 4=5w) /\ 
+	(invS 6 5=3w) /\ 
+	(invS 6 6=6w) /\ 
+	(invS 6 7=0w) /\ 
+	(invS 6 8=4w) /\ 
+	(invS 6 9=9w) /\ 
+	(invS 6 10=14w) /\
+	(invS 6 11=7w) /\
+	(invS 6 12=2w) /\
+	(invS 6 13=12w) /\ 
+	(invS 6 14=8w) /\ 
+	(invS 6 15=11w)
+	 /\ 
+	(invS 7 0=3w) /\ 
+	(invS 7 1=0w) /\ 
+	(invS 7 2=6w) /\ 
+	(invS 7 3=13w) /\ 
+	(invS 7 4=9w) /\ 
+	(invS 7 5=14w) /\
+	(invS 7 6=15w) /\
+	(invS 7 7=8w) /\
+	(invS 7 8=5w) /\
+	(invS 7 9=12w) /\ 
+	(invS 7 10=11w) /\
+	(invS 7 11=7w) /\ 
+	(invS 7 12=10w) /\
+	(invS 7 13=1w) /\
+	(invS 7 14=4w) /\
+	(invS 7 15=2w)``,
+	
+EVAL_TAC);
+
+(*apply SBox on a nibble (word4)*)
+val sNibble_def = Define
+`sNibble round (w4:word4) = S (round MOD 8) (word4$w2n w4)`;
+
+(*apply invSBox on a nibble (word4)*)
+val invSNibble_def = Define
+`invSNibble round (w4:word4) = invS (round MOD 8) (word4$w2n w4)`;
+
+(*SBox and invSBox cancels *)
+val invS_S_cancel=prove(
+``!round. 
+	round<8 
+	==>
+	(!n. n<16==> (invS  round (word4$w2n (S round n))=word4$n2w n))``, 
+
+SIMP_TAC arith_ss [BOUNDED_FORALL_THM] THEN
+	RW_TAC arith_ss [SBoxVal,word4Theory.w2n_EVAL,word4Theory.MOD_WL_def,word4Theory.WL_def,word4Theory.HB_def,invSBoxVal]);
+	
+val invSNibble_sNibble_cancel=prove(
+``!round w.
+	round<32
+	==>
+	(invSNibble round (sNibble round w)=w)``,
+
+RW_TAC std_ss [invSNibble_def,sNibble_def] THEN
+`round MOD 8<8` by METIS_TAC [X_MOD_Y_EQ_X,LESS_MOD,MOD_MOD,DECIDE ``0<8``] THEN
+`word4$w2n w < 2**word4$WL` by METIS_TAC  [word4Theory.w2n_LT] THEN
+FULL_SIMP_TAC arith_ss [invS_S_cancel,word4Theory.WL_def,word4Theory.HB_def,word4Theory.w2n_ELIM]);
+
+val w4l_fact=prove(``!wl round. round<32==> ALL_EL (\x. (invSNibble round o sNibble round) x =x) wl``,
+Induct_on `wl` THENL [
+	 RW_TAC list_ss [],
+	 RW_TAC list_ss [invSNibble_sNibble_cancel]]);   	
+	 
+
+
+
+(*apply SBox and invSBox on a word128*)  
+val sBlock_def=Define
+`sBlock round w128=word4ltow128 (MAP (sNibble round) (word128tow4l w128))`;
+
+val invSBlock_def=Define
+`invSBlock round w128=word4ltow128 (MAP (invSNibble round) (word128tow4l w128))`;	
+
+(*invSBlock and sBlock cancel*)
+val invSBlock_sBlock_cancel=prove(``
+!w128 round. 
+	round <32
+	==>
+	(invSBlock round (sBlock round w128)=w128)``,	
+
+RW_TAC std_ss [invSBlock_def,sBlock_def] THEN
+`LENGTH  (MAP (sNibble round) (word128tow4l w128))=32` by METIS_TAC [LENGTH_MAP,LENGTH_word128tow4l] THEN
+RW_TAC std_ss [word128tow4l_conversion,MAP_MAP_o,w4l_fact,MAP_ID,word4ltow128_conversion]);
+
+
+
+(**************************************KEY SCHEDULE*****************************************)
+
+(*val (countSigBits_def,countSigBits_termi)=Defn.tprove(Hol_defn "countSigBits" 
+`countSigBits n = if word256$MOD_WL n=0 then 0
+else 1+countSigBits ((w2n:word256->num) (((n2w:num->word256) n)>>>1))`,
+
+
+WF_REL_TAC `$<` THEN
+RW_TAC arith_ss [LSR_EVAL] THEN
+RW_TAC std_ss [w2n_EVAL] THEN
+`MOD_WL n DIV 2 < MOD_WL n` by FULL_SIMP_TAC arith_ss [DIV_LESS] THEN
+`MOD_WL n < 2**WL` by METIS_TAC [LT_WL_MOD_WL,LT_WL_def] THEN
+ FULL_SIMP_TAC arith_ss [LT_WL_def,MOD_WL_IDEM] THEN
+`!n. MOD_WL n <= n` by RW_TAC std_ss [] THENL [
+  	Cases_on `n' < 2**WL` THENL [
+		 FULL_SIMP_TAC arith_ss [MOD_WL_IDEM,LT_WL_def],
+		  `LT_WL (MOD_WL n')` by FULL_SIMP_TAC arith_ss [LT_WL_MOD_WL] THEN
+		   FULL_SIMP_TAC arith_ss [LT_WL_def]],
+	METIS_TAC [LESS_LESS_EQ_TRANS]]);*)
+
+val short2longKey_def = Define 
+`short2longKey k kl = let nw256 = (n2w:num->word256) (k MOD  (2**kl)) in
+nw256 | (1w<<kl)`;
+
+
+
+val R_def=Define 
+`R=32`;
+
+val PHI_def=Define 
+`PHI=(n2w:num->word32) 0x9e3779b9`;
+
+(*initialize i with 32
+first word32 in the input list is the least significant
+
+it is assumed n2w will be consistent
+
+in HOL, MSbit.....LSbit in a word as implied by LSR_EVAL
+
+word128to32 perserves the order, gives 
+[MSW32,...LSW32]
+*)
+val (makeSubKeyBitSlice_def,makeSubKeyBitSlice_termi)=Defn.tprove(
+Hol_defn "makeSubKeyBitSlice"
+`makeSubKeyBitSlice (w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::t) i = let nl =((w_1 # w_3 #  w_5 # w_8 #PHI# (n2w:num->word32) (131-i)) #>> (32-11)) ::(w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::t) in
+if i=0 then nl
+else makeSubKeyBitSlice nl (i-1)`,
+
+ WF_REL_TAC `measure SND`);
+
+val (myFIRSTN_def,myFIRSTN_termi) =Defn.tprove(
+ Defn.Hol_defn "myBUTLASTN"
+`myFIRSTN n l = if n=0 then []
+else if l=[] then []
+else (HD l)::(myFIRSTN (n-1) (TL l))`,
+
+WF_REL_TAC `measure (LENGTH o SND)` THEN
+RW_TAC list_ss [] THEN
+Cases_on `l` THENL [
+	FULL_SIMP_TAC list_ss [],
+	RW_TAC list_ss []]);
+
+val myBUTLASTN_def = Define
+`myBUTLASTN n l = let len=LENGTH l in
+if len>=n then myFIRSTN (LENGTH l-n) l
+else []
+`;
+
+val LENGTH_myFIRSTN=prove(
+``!n l. 
+	n <= LENGTH l 
+	==> 
+	(LENGTH (myFIRSTN n l) = n)``,
+
+Induct_on `n` THENL [
+	RW_TAC list_ss [] THEN
+	`myFIRSTN 0 l=[]` by METIS_TAC  [myFIRSTN_def] THEN
+	RW_TAC list_ss [],
+	RW_TAC list_ss [] THEN
+	Cases_on `l` THENL [
+		FULL_SIMP_TAC list_ss [],
+		`~(SUC n=0)` by RW_TAC arith_ss [] THEN
+		`~((h::t) =[])` by RW_TAC list_ss [] THEN
+		`myFIRSTN (SUC n) (h::t)= (HD (h::t))::(myFIRSTN (SUC n-1) (TL (h::t)))` by  METIS_TAC  [myFIRSTN_def] THEN
+		FULL_SIMP_TAC list_ss []]]);
+	
+
+
+
+val LENGTH_myBUTLASTN=prove(
+``!n l. 
+	n <= LENGTH l 
+	==> 
+	(LENGTH (myBUTLASTN n l) = LENGTH l - n)``,
+
+RW_TAC arith_ss [myBUTLASTN_def,LENGTH_myFIRSTN,LET_THM]);	
+	   
+
+
+
+
+val makeRevPreKey_def= Define
+`makeRevPreKey longKey=let keySlices = word256to32l longKey in
+myBUTLASTN 8 (makeSubKeyBitSlice keySlices 131)`;
+
+
+(*in reverse order
+
+round  from 31 to 0
+
+bitPos from 31 to 0
+
+(k3,k2,k1,k0) =(0w,0w,0w,0w) when bitPos=31
+*)
+
+
+(*in reverse order
+
+round  from 31 to 0
+
+bitPos from 31 to 0
+
+(k3,k2,k1,k0) =(0w,0w,0w,0w) when bitPos=31
+*)
+(*slow,bug-prone*)
+(*
+val makeRoundKey_def = Define
+`makeRoundKey (w3:word32,w2:word32,w1:word32,w0:word32) (k3:word32,k2:word32,k1:word32,k0:word32) bitPos round= 
+let mask=(1w:word32)<<bitPos in
+let subed=S (((R+3-round) MOD R) MOD 8) (w2n (((w0 & mask) >>> bitPos) | 
+		   (((w1 & mask) >>>bitPos) << 1)|
+		   (((w2 & mask) >>>bitPos) << 2)|
+		   (((w3 & mask) >>>bitPos) << 3)))
+	       in
+let word32ofSubed=(word4to32) subed in
+let bitofk0=((word32ofSubed & 1w) <<bitPos) | k0 in
+let bitofk1=(((word32ofSubed & (1w<<1))>>>1) <<bitPos)  | k1 in
+let bitofk2=(((word32ofSubed & (1w<<2)) >>>2) <<bitPos)  | k2 in
+let bitofk3=(((word32ofSubed & (1w<<3)) >>>3) <<bitPos)  | k3 in
+
+if bitPos =0 then  ((word32to128 bitofk3) <<96) |((word32to128 bitofk2) <<64) |
+((word32to128 bitofk1) <<32) |(word32to128 bitofk0)
+else makeRoundKey (w3,w2,w1,w0) 
+( bitofk3, bitofk2, bitofk1, bitofk0) (bitPos-1) round`;
+
+*)
+
+
+
+
+
+
+(*efficient*)
+val makeRoundKey_def = Define
+`makeRoundKey (w3:word32,w2:word32,w1:word32,w0:word32) (k3:word32,k2:word32,k1:word32,k0:word32) bitPos round= 
+let bitofw0 = if word32$WORD_BIT bitPos w0 then 1
+		else 0
+in
+let bitofw1 = if word32$WORD_BIT bitPos w1 then 2
+		else 0
+in
+let bitofw2 = if word32$WORD_BIT bitPos w2 then 4 
+		else 0
+in
+let bitofw3 = if word32$WORD_BIT bitPos w3 then 8
+		else 0
+in
+let subed=S (((R+3-round) MOD R) MOD 8) ( bitofw3+ bitofw2+ bitofw1+ bitofw0)
+in
+
+let subedbitofw0 = if word4$WORD_BIT 0 subed then 2**bitPos
+		else 0
+in
+let subedbitofw1 = if word4$WORD_BIT 1 subed then 2**bitPos 
+		else 0
+in
+let subedbitofw2 = if word4$WORD_BIT 2 subed then  2**bitPos 
+		else 0
+in
+let subedbitofw3 = if word4$WORD_BIT 3 subed then  2**bitPos
+		else 0
+in
+let bitofk0= subedbitofw0 + w2n k0 in
+let bitofk1= subedbitofw1 + w2n k1 in
+let bitofk2= subedbitofw2 + w2n k2 in
+let bitofk3= subedbitofw3 + w2n k3 in
+
+if bitPos =0 then  word128$n2w (bitofk3 *2**96+ bitofk2*2**64 + bitofk1*2**32+bitofk0)
+else makeRoundKey (w3,w2,w1,w0) 
+( word32$n2w bitofk3, word32$n2w bitofk2,word32$n2w bitofk1, word32$n2w bitofk0) (bitPos-1) round`;
+
+
+
+
+(*EL 0 is the 128bit key for first round
+MSBit(127)...LSBit(0) for each key
+initialize round with 32 
+still in reversed order here
+*)
+val makeRevSubKey_def =Define
+`(makeRevSubKey [] round = [])          /\
+(makeRevSubKey (w3::w2::w1::w0::t) round = let roundKey = makeRoundKey (w3,w2,w1,w0) (0w,0w,0w,0w) 31 round in
+roundKey::(makeRevSubKey t (round-1))) `;
+
+
+
+val makeSubKey_def =Define
+` makeSubKey revPreKey = REVERSE ( makeRevSubKey revPreKey 32)`;
+
+val makeSubKeyHat_def=Define
+`makeSubKeyHat subKey=MAP IP subKey`;
+
+
+val makeKeyHat_def = Define
+`makeKeyHat userKey kl=let longKey =short2longKey userKey kl in
+let revPreKey=makeRevPreKey longKey in
+let subKey= makeSubKey revPreKey in
+makeSubKeyHat subKey`;
+
+val makeSubKeyBitSliceLength=prove(
+``!longKey n. 
+	(LENGTH longKey>=8)
+	==> 
+	(LENGTH (makeSubKeyBitSlice longKey n )= n+LENGTH longKey+1)``,
+
+Induct_on `n` THENL [
+	FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def,LENGTH,Abbrev_def] THEN
+	RW_TAC std_ss [] THEN
+	`?v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 t. longKey = (v_1::v_2::v_3::v_4::v_5::v_6::v_7::v_8::t)` by METIS_TAC [listInstGreaterEq8] THEN
+	FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def] THEN
+	METIS_TAC [LENGTH,SUC_ONE_ADD,ADD_COMM],
+	RW_TAC std_ss [] THEN
+	`?v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 t. longKey = (v_1::v_2::v_3::v_4::v_5::v_6::v_7::v_8::t)` by METIS_TAC [listInstGreaterEq8] THEN
+	FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def] THEN
+	RW_TAC list_ss [] THEN
+	FULL_SIMP_TAC list_ss [Abbrev_def]]);
+
+val makeRevPreKeyLength=prove(
+``!userKey. 
+	LENGTH (makeRevPreKey userKey)=132``,
+
+RW_TAC std_ss [makeRevPreKey_def,LET_THM] THEN
+`LENGTH (word256to32l userKey)=8` by METIS_TAC [word256to32lLength] THEN
+`LENGTH (word256to32l userKey)>=8` by RW_TAC arith_ss [] THEN
+`LENGTH  (makeSubKeyBitSlice (word256to32l userKey) 131)=131+LENGTH (word256to32l userKey) +1` by METIS_TAC [makeSubKeyBitSliceLength,LENGTH_REVERSE] THEN
+`8 <=  LENGTH (makeSubKeyBitSlice (word256to32l userKey) 131)` by FULL_SIMP_TAC arith_ss [] THEN
+FULL_SIMP_TAC list_ss [LENGTH_myBUTLASTN,LENGTH_REVERSE]);
+
+
+
+ val makeRevSubKeyLength=prove(
+``!n revPreKey. 
+	(LENGTH revPreKey= 4 * (n+1)) ==>(LENGTH (makeRevSubKey revPreKey n) =n+1)``,
+
+	
+	
+Induct_on `n` THENL [
+	RW_TAC arith_ss [] THEN
+	`?w_1 w_2 w_3 w_4. revPreKey = (w_1::w_2::w_3::w_4::[])` by METIS_TAC [listInstEq4] THEN
+	FULL_SIMP_TAC list_ss [makeRevSubKey_def] THEN
+	RW_TAC std_ss [] THEN
+	FULL_SIMP_TAC list_ss [LENGTH,Abbrev_def],
+	`4 * (SUC n + 1) = 4 +  4 * (n + 1)` by RW_TAC arith_ss [] THEN
+	`4 * (SUC n + 1) >=4` by  RW_TAC arith_ss [] THEN
+	RW_TAC std_ss [] THEN
+	`?v_1 v_2 v_3 v_4 t. revPreKey = (v_1::v_2::v_3::v_4::t)` by METIS_TAC [listInstGreaterEq4] THEN
+	`LENGTH t = 4 * (n + 1)` by FULL_SIMP_TAC list_ss [LENGTH] THEN
+	FULL_SIMP_TAC list_ss [makeRevSubKey_def,LET_THM]]);
+
+val makeSubKeyLength=prove(
+``!revPreKey.
+	(LENGTH revPreKey= 132) ==>(LENGTH (makeSubKey revPreKey) =33)``,
+
+RW_TAC list_ss [makeSubKey_def,makeRevSubKeyLength,LENGTH_REVERSE]);
+
+
+(*the only significant property of key scheduling is its length*)	    
+val makeKeyHatLength=prove(
+``!userKey kl. 
+	LENGTH (makeKeyHat userKey kl) =33``,
+
+RW_TAC std_ss [makeKeyHat_def,makeSubKeyHat_def] THEN
+RW_TAC std_ss [LENGTH_MAP] THEN
+FULL_SIMP_TAC std_ss [Abbrev_def] THEN
+`LENGTH  (makeRevPreKey (short2longKey userKey kl))=132` by METIS_TAC [makeRevPreKeyLength] THEN
+`132=4*(32+1)` by EVAL_TAC THEN
+FULL_SIMP_TAC arith_ss [makeSubKeyLength]);
+
+(************************************ENCRYPTION**************************************)
+(*each normal encryption round*)
+val enRound_def = Define
+`enRound pt round (revSubKeyHat::kt)=if round=0 then 
+
+let afterKeying= pt # revSubKeyHat in
+let afterS = sBlock 0 afterKeying in
+LT afterS 
+else 
+
+let BHat=enRound pt (round-1) kt in
+let afterKeying= BHat # revSubKeyHat in
+let afterS = sBlock round afterKeying in
+LT afterS`;
+
+
+(*specila encryption round 31*)
+val enRound31_def=Define
+`enRound31 pt (revSubKeyHat32::revSubKeyHat31::kt)=let afterEnRound30= enRound pt 30 kt in
+let afterKeying= afterEnRound30 # revSubKeyHat31 in
+let afterS = sBlock 31 afterKeying in
+afterS # revSubKeyHat32`;
+
+(*encryption*)
+val doAllEnRound_def = Define
+`doAllEnRound pt subKeyHat=let revSubKeyHat = REVERSE subKeyHat in
+enRound31 pt revSubKeyHat`;
+
+
+val encryptwithKeyHat_def= Define
+`encryptwithKeyHat pt subKeyHat = FP (doAllEnRound (IP pt) subKeyHat)`;
+
+
+val serpentBlockEncrypt_def = Define
+`serpentBlockEncrypt pt userKey kl= 
+let subKeyHat =makeKeyHat userKey kl in
+encryptwithKeyHat pt subKeyHat`;
+
+(****************************************DECRYPTION***********************)
+
+
+(*each normal decryption round*)
+val deRound_def = Define
+`deRound (BHat:word128) round (revSubKeyHat::kt)= 
+let afterInvLT =invLT BHat in
+let afterInvS= invSBlock (31-round) afterInvLT in
+let nextBHat = afterInvS # revSubKeyHat in
+if round <(R-1) then deRound nextBHat (SUC round) kt
+else nextBHat `;
+
+(*specila decryption round 0*)
+val deRound0_def=Define
+`deRound0 BHat0 revSubKeyHat_1 revSubKeyHat0= let afterRevKeying_1=BHat0 # revSubKeyHat_1 in 
+let afterInvS= invSBlock 31 afterRevKeying_1 in
+  afterInvS # revSubKeyHat0 `;
+
+
+(*decryption,
+reverse order as encryption*)
+val doAllDeRound_def=Define
+`doAllDeRound et (revSubKeyHat_1::revSubKeyHat0::kt) = let afterDeRound0=deRound0 et revSubKeyHat_1 revSubKeyHat0 in
+ deRound afterDeRound0 1 kt`;
+
+
+val decryptwithKeyHat_def= Define
+`decryptwithKeyHat et subKeyHat = let revSubKeyHat=REVERSE subKeyHat in
+let afterInvFP=invFP et in
+ let afterDeRound = doAllDeRound afterInvFP revSubKeyHat in
+ invIP afterDeRound`;
+
+
+val serpentBlockDecrypt_def = Define
+`serpentBlockDecrypt et userKey kl= 
+let subKeyHat =makeKeyHat userKey kl in
+decryptwithKeyHat et subKeyHat`;
+
+
+
+
+(*************************decyption and encryption cancel*********************************)
+
+(*use induction*)      
+val deRound_enRound_cancel=prove(
+``!r t revKeyHat. 
+	r >0 /\ 
+	r<31 /\ 
+	(LENGTH revKeyHat=r+1)
+	==> 
+	(deRound (enRound t r revKeyHat) (31-r) revKeyHat=t)``,
+	    
+Induct_on `r` THENL [
+	FULL_SIMP_TAC arith_ss [], 
+	RW_TAC std_ss [] THEN
+	Cases_on `r` THEN Cases_on `revKeyHat` THENL [
+		FULL_SIMP_TAC list_ss [],
+		RW_TAC list_ss [enRound_def,deRound_def,invSBlock_sBlock_cancel,invLT_LT_cancel,GSYM word128Theory.WORD_EOR_ASSOC,word128Theory.WORD_EOR_INV,word128Theory.WORD_EOR_ID,LET_THM,R_def] THEN
+		Cases_on `t'` THENL [
+			FULL_SIMP_TAC list_ss [],
+			RW_TAC list_ss [enRound_def,deRound_def,invSBlock_sBlock_cancel,invLT_LT_cancel,GSYM word128Theory.WORD_EOR_ASSOC,word128Theory.WORD_EOR_INV,word128Theory.WORD_EOR_ID,LET_THM,R_def]],
+		FULL_SIMP_TAC list_ss [], 
+		`SUC (31 - SUC (SUC n))=31-SUC n` by RW_TAC arith_ss [] THEN
+		FULL_SIMP_TAC list_ss [enRound_def,deRound_def,invSBlock_sBlock_cancel,invLT_LT_cancel,GSYM word128Theory.WORD_EOR_ASSOC,word128Theory.WORD_EOR_INV,word128Theory.WORD_EOR_ID,LET_THM,R_def]]]);	     
+
+val decryptwithKeyHat_encryptwithKeyHat_cancel=prove(
+``!keyHat pt. 
+	(LENGTH keyHat=33)
+	==>
+	(decryptwithKeyHat (encryptwithKeyHat pt keyHat) keyHat= pt)``,
+
+RW_TAC std_ss [encryptwithKeyHat_def, decryptwithKeyHat_def,LET_THM,invFP_FP_cancel] THEN
+`?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14 v_15 v_16 v_17 v_18 v_19 v_20 v_21 v_22 v_23 v_24 v_25 v_26 v_27 v_28 v_29 v_30 v_31 v_32.
+keyHat=[v_0; v_1; v_2; v_3; v_4; v_5; v_6; v_7; v_8; v_9; v_10; v_11; v_12; v_13; v_14; v_15; v_16; v_17; v_18; v_19; v_20; v_21; v_22;v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31; v_32]` by METIS_TAC [ listInstEq33] THEN
+RW_TAC list_ss [doAllDeRound_def,doAllEnRound_def,deRound0_def,enRound31_def,LET_THM,GSYM word128Theory.WORD_EOR_ASSOC,word128Theory.WORD_EOR_INV,word128Theory.WORD_EOR_ID,invSBlock_sBlock_cancel] THEN
+`LENGTH  [v_30; v_29; v_28; v_27; v_26; v_25; v_24; v_23; v_22; v_21; v_20; v_19; v_18; v_17; v_16; v_15; v_14; v_13; v_12; v_11; v_10; v_9; v_8; v_7; v_6; v_5; v_4; v_3; v_2; v_1; v_0]=30+1` by RW_TAC list_ss [] THEN
+METIS_TAC [deRound_enRound_cancel,invIP_IP_cancel,DECIDE ``30>0 /\ 30<31 /\(31=30+1)/\ (1=31-30)``]);
+
+
+
+val serpentBlockDecrypt_serpentBlockEncrypt_cancel_rec=prove(
+``!userKey pt kl. 
+	serpentBlockDecrypt (serpentBlockEncrypt pt userKey kl) userKey kl=pt``,
+	
+RW_TAC std_ss [serpentBlockDecrypt_def,serpentBlockEncrypt_def,LET_THM] THEN
+METIS_TAC [makeKeyHatLength,decryptwithKeyHat_encryptwithKeyHat_cancel]);
+
+
+
+(*without induction*)
+val serpentBlockDecrypt_serpentBlockEncrypt_cancel_whole=prove(
+``!userKey pt kl. 
+	serpentBlockDecrypt (serpentBlockEncrypt pt userKey kl) userKey kl=pt``,
+	
+RW_TAC std_ss [serpentBlockDecrypt_def,serpentBlockEncrypt_def,LET_THM,encryptwithKeyHat_def, decryptwithKeyHat_def] THEN
+ `?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14 v_15 v_16 v_17 v_18 v_19 v_20 v_21 v_22 v_23 v_24 v_25 v_26 v_27 v_28 v_29 v_30 v_31 v_32.
+makeKeyHat userKey kl=[v_0; v_1; v_2; v_3; v_4; v_5; v_6; v_7; v_8; v_9; v_10; v_11; v_12; v_13; v_14; v_15; v_16; v_17; v_18; v_19; v_20; v_21; v_22;v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31; v_32]` by METIS_TAC [makeKeyHatLength, listInstEq33] THEN	
+RW_TAC list_ss [doAllDeRound_def,deRound_def,doAllEnRound_def, enRound_def,enRound31_def,deRound0_def,invFP_FP_cancel,invIP_IP_cancel,invSBlock_sBlock_cancel,invLT_LT_cancel,GSYM word128Theory.WORD_EOR_ASSOC,word128Theory.WORD_EOR_INV,word128Theory.WORD_EOR_ID,LET_THM,R_def]);
+
+
+userkey 0
+userkey length 256
+plain text 0x00000000000000000000000000000000
+SERPENT_CONV ``makeRevPreKey (short2longKey 0 256)``;
+
+ |- makeRevPreKey (short2longKey 0 256) =
+       [0x90BEF37Dw; 0x4F5662D5w; 0xAF41512Ew; 0xDB4A958Fw; 0xD62DFB3w;
+        0x888556E8w; 0x7CDCC107w; 0xB4A063FBw; 0xED1CCF56w; 0x1A61DC6Dw;
+        0x5C8D318Ew; 0xB36EC189w; 0x4E123CE3w; 0x8E6B56B2w; 0xA3779C43w;
+        0x1EC22FF2w; 0x538E910Dw; 0xA27CA4D6w; 0x8C3B50AFw; 0x11EA25B4w;
+        0x308B661Fw; 0x34A4E944w; 0xBB17B9AFw; 0x8F4A0635w; 0x38AF603Ew;
+        0x344B940w; 0x21C23467w; 0x9B86FB03w; 0xE57B3E8Bw; 0x14CB00BCw;
+        0xBC485F55w; 0xA490FA47w; 0x15F92EC1w; 0xCEC644FDw; 0x390E406Ew;
+        0xB28E4611w; 0x31D668BFw; 0x190AD145w; 0xAC58087Cw; 0xCBE2EDD2w;
+        0x23571556w; 0xA50E81BEw; 0xF3962296w; 0xE2D85D84w; 0xFE37FE02w;
+        0xCA0D6701w; 0x1D96C30Dw; 0xA98CC7Aw; 0xB928A83Bw; 0xB9D4C7AAw;
+        0xEEA4FDDBw; 0x7422B7DEw; 0x2729D3C0w; 0x3414AEAEw; 0x38FA773Aw;
+        0x61D3ACD4w; 0x60A28225w; 0x9A171A52w; 0x4AF18D3w; 0x1A88DB60w;
+        0x29E384E4w; 0x170616AEw; 0x983C0B5Cw; 0x49555D92w; 0x4D02BA3Ew;
+        0x6114AC7Bw; 0xC08C7C4Fw; 0xEE91D6Cw; 0x3DF5A2C9w; 0x5E475410w;
+        0xD30C92F8w; 0x9C0537EEw; 0xE8443CAAw; 0x3F2E1710w; 0xDB6416E5w;
+        0x350BA841w; 0x3A7CB3DCw; 0xFC1009DAw; 0x570D90A9w; 0x6AB860B0w;
+        0xFD5FC78Ew; 0xCA25A9D1w; 0xE12FD429w; 0x63F3C0Fw; 0xB93DF6A3w;
+        0xEE157880w; 0x2DBF6D50w; 0x2D77CB85w; 0x4DE73F2Cw; 0xD1A372E4w;
+        0xDE56D378w; 0xC6B21AB1w; 0x58819FC9w; 0x30243A3Cw; 0xE546DA9w;
+        0x25A2A4F1w; 0x5C8B971Cw; 0x4A2E6CE5w; 0x22183736w; 0xC251CAAEw;
+        0x38B49B85w; 0xA976B09Bw; 0x86CBB1ABw; 0x4634F666w; 0x5CB5FE38w;
+        0x9EF9214Ew; 0x55E0B6CDw; 0x2925E7B6w; 0x9F2B0886w; 0x2DCAE2Fw;
+        0x5AAF904Cw; 0xC481FF48w; 0xEC3C87CAw; 0x27808880w; 0xA8E57367w;
+        0x414A421Dw; 0x6F394528w; 0x45A146DBw; 0x35F7198Bw; 0x5CCF5817w;
+        0x4401727Cw; 0x7C18A67Ew; 0xAAE639D7w; 0xC3507E3Ew; 0x5E4C262Cw;
+        0x9E4F9FBFw; 0x4CD64700w; 0x2C778DD9w; 0xF0B8BE63w; 0xE984A25Cw;
+        0xD5AA492Fw; 0xBBCDCCF1w] : thm
+
+
+
+SERPENT_CONV `` makeSubKey  
+       [0x90BEF37Dw; 0x4F5662D5w; 0xAF41512Ew; 0xDB4A958Fw; 0xD62DFB3w;
+        0x888556E8w; 0x7CDCC107w; 0xB4A063FBw; 0xED1CCF56w; 0x1A61DC6Dw;
+        0x5C8D318Ew; 0xB36EC189w; 0x4E123CE3w; 0x8E6B56B2w; 0xA3779C43w;
+        0x1EC22FF2w; 0x538E910Dw; 0xA27CA4D6w; 0x8C3B50AFw; 0x11EA25B4w;
+        0x308B661Fw; 0x34A4E944w; 0xBB17B9AFw; 0x8F4A0635w; 0x38AF603Ew;
+        0x344B940w; 0x21C23467w; 0x9B86FB03w; 0xE57B3E8Bw; 0x14CB00BCw;
+        0xBC485F55w; 0xA490FA47w; 0x15F92EC1w; 0xCEC644FDw; 0x390E406Ew;
+        0xB28E4611w; 0x31D668BFw; 0x190AD145w; 0xAC58087Cw; 0xCBE2EDD2w;
+        0x23571556w; 0xA50E81BEw; 0xF3962296w; 0xE2D85D84w; 0xFE37FE02w;
+        0xCA0D6701w; 0x1D96C30Dw; 0xA98CC7Aw; 0xB928A83Bw; 0xB9D4C7AAw;
+        0xEEA4FDDBw; 0x7422B7DEw; 0x2729D3C0w; 0x3414AEAEw; 0x38FA773Aw;
+        0x61D3ACD4w; 0x60A28225w; 0x9A171A52w; 0x4AF18D3w; 0x1A88DB60w;
+        0x29E384E4w; 0x170616AEw; 0x983C0B5Cw; 0x49555D92w; 0x4D02BA3Ew;
+        0x6114AC7Bw; 0xC08C7C4Fw; 0xEE91D6Cw; 0x3DF5A2C9w; 0x5E475410w;
+        0xD30C92F8w; 0x9C0537EEw; 0xE8443CAAw; 0x3F2E1710w; 0xDB6416E5w;
+        0x350BA841w; 0x3A7CB3DCw; 0xFC1009DAw; 0x570D90A9w; 0x6AB860B0w;
+        0xFD5FC78Ew; 0xCA25A9D1w; 0xE12FD429w; 0x63F3C0Fw; 0xB93DF6A3w;
+        0xEE157880w; 0x2DBF6D50w; 0x2D77CB85w; 0x4DE73F2Cw; 0xD1A372E4w;
+        0xDE56D378w; 0xC6B21AB1w; 0x58819FC9w; 0x30243A3Cw; 0xE546DA9w;
+        0x25A2A4F1w; 0x5C8B971Cw; 0x4A2E6CE5w; 0x22183736w; 0xC251CAAEw;
+        0x38B49B85w; 0xA976B09Bw; 0x86CBB1ABw; 0x4634F666w; 0x5CB5FE38w;
+        0x9EF9214Ew; 0x55E0B6CDw; 0x2925E7B6w; 0x9F2B0886w; 0x2DCAE2Fw;
+        0x5AAF904Cw; 0xC481FF48w; 0xEC3C87CAw; 0x27808880w; 0xA8E57367w;
+        0x414A421Dw; 0x6F394528w; 0x45A146DBw; 0x35F7198Bw; 0x5CCF5817w;
+        0x4401727Cw; 0x7C18A67Ew; 0xAAE639D7w; 0xC3507E3Ew; 0x5E4C262Cw;
+        0x9E4F9FBFw; 0x4CD64700w; 0x2C778DD9w; 0xF0B8BE63w; 0xE984A25Cw;
+        0xD5AA492Fw; 0xBBCDCCF1w]
+        ``;
+
+|- makeSubKey
+         [0x90BEF37Dw; 0x4F5662D5w; 0xAF41512Ew; 0xDB4A958Fw; 0xD62DFB3w;
+          0x888556E8w; 0x7CDCC107w; 0xB4A063FBw; 0xED1CCF56w; 0x1A61DC6Dw;
+          0x5C8D318Ew; 0xB36EC189w; 0x4E123CE3w; 0x8E6B56B2w; 0xA3779C43w;
+          0x1EC22FF2w; 0x538E910Dw; 0xA27CA4D6w; 0x8C3B50AFw; 0x11EA25B4w;
+          0x308B661Fw; 0x34A4E944w; 0xBB17B9AFw; 0x8F4A0635w; 0x38AF603Ew;
+          0x344B940w; 0x21C23467w; 0x9B86FB03w; 0xE57B3E8Bw; 0x14CB00BCw;
+          0xBC485F55w; 0xA490FA47w; 0x15F92EC1w; 0xCEC644FDw; 0x390E406Ew;
+          0xB28E4611w; 0x31D668BFw; 0x190AD145w; 0xAC58087Cw; 0xCBE2EDD2w;
+          0x23571556w; 0xA50E81BEw; 0xF3962296w; 0xE2D85D84w; 0xFE37FE02w;
+          0xCA0D6701w; 0x1D96C30Dw; 0xA98CC7Aw; 0xB928A83Bw; 0xB9D4C7AAw;
+          0xEEA4FDDBw; 0x7422B7DEw; 0x2729D3C0w; 0x3414AEAEw; 0x38FA773Aw;
+          0x61D3ACD4w; 0x60A28225w; 0x9A171A52w; 0x4AF18D3w; 0x1A88DB60w;
+          0x29E384E4w; 0x170616AEw; 0x983C0B5Cw; 0x49555D92w; 0x4D02BA3Ew;
+          0x6114AC7Bw; 0xC08C7C4Fw; 0xEE91D6Cw; 0x3DF5A2C9w; 0x5E475410w;
+          0xD30C92F8w; 0x9C0537EEw; 0xE8443CAAw; 0x3F2E1710w; 0xDB6416E5w;
+          0x350BA841w; 0x3A7CB3DCw; 0xFC1009DAw; 0x570D90A9w; 0x6AB860B0w;
+          0xFD5FC78Ew; 0xCA25A9D1w; 0xE12FD429w; 0x63F3C0Fw; 0xB93DF6A3w;
+          0xEE157880w; 0x2DBF6D50w; 0x2D77CB85w; 0x4DE73F2Cw; 0xD1A372E4w;
+          0xDE56D378w; 0xC6B21AB1w; 0x58819FC9w; 0x30243A3Cw; 0xE546DA9w;
+          0x25A2A4F1w; 0x5C8B971Cw; 0x4A2E6CE5w; 0x22183736w; 0xC251CAAEw;
+          0x38B49B85w; 0xA976B09Bw; 0x86CBB1ABw; 0x4634F666w; 0x5CB5FE38w;
+          0x9EF9214Ew; 0x55E0B6CDw; 0x2925E7B6w; 0x9F2B0886w; 0x2DCAE2Fw;
+          0x5AAF904Cw; 0xC481FF48w; 0xEC3C87CAw; 0x27808880w; 0xA8E57367w;
+          0x414A421Dw; 0x6F394528w; 0x45A146DBw; 0x35F7198Bw; 0x5CCF5817w;
+          0x4401727Cw; 0x7C18A67Ew; 0xAAE639D7w; 0xC3507E3Ew; 0x5E4C262Cw;
+          0x9E4F9FBFw; 0x4CD64700w; 0x2C778DD9w; 0xF0B8BE63w; 0xE984A25Cw;
+          0xD5AA492Fw; 0xBBCDCCF1w] =
+       [0x8ED77390F2D998EDA7E3A3CE6F5795D0w;
+        0x4113A99960A3EBD1ECE6554A8092730Aw;
+        0x5108D22AEF402A3C86E649C3FA49CA68w;
+        0xFA9026F2E1905B08280A67399EEBC8Bw;
+        0x8F27BBF2EA3F3D7A02913E203413B4B0w;
+        0x87D980AF610536D2238DC99CFCA3985Aw;
+        0x415297C6FE9B100C5D8751BB35F660F8w;
+        0xE97FD45841B4F7D7D6766CEBEE42D6EDw;
+        0xBCF648C7D4EC2645EA423134F6C9CCA8w;
+        0xEC2D21326B736DB90B56612446D1E86Cw;
+        0xACEC090B7BFF737FAB5DA91E32B84C52w;
+        0x7ED5EA77B89DD673D7A0187A8482BB59w;
+        0x2B2A6DF9F555C276106F0679D8E083A1w;
+        0xD3692B4F074B07657EDA461C6A3EB570w;
+        0xD7FA42E1F9D5D5B0ECDE7CE50AB5FE41w;
+        0x5E4F43DE1D07F106EEB113FFD2442936w;
+        0xA3FBCB1862773B2F8365CD79CE636762w;
+        0x31B4BFDBE8ACD046D72C46C8A7DD8D94w;
+        0x81F0FF69016D671B056ABCE9E15FA63Ew;
+        0x6B1526403F29596E8E142C059DD3267Bw;
+        0x3722FB5AA5A880F32FCE59A9B0B05A4w;
+        0xE135BA06E1F9B18D227497F1D6D3AC8Aw;
+        0xCAB800818D26C9BB59EE371369E65C17w;
+        0x576A5C116BB274EECB6E4C54D2A92687w;
+        0xE671289258B92C6D0DC644AF82B76E53w;
+        0x53A44454E9E89F051C00853449786166w;
+        0xFD9652A6E45422E57D1054A55C7D40D9w;
+        0x307836D4049DDF9E44B250C1FB9CFFB0w;
+        0x2E67F4D97D89514DEC3B40C64E25CA80w;
+        0x614CF840E1258A5CDCE119EC0C5028EDw;
+        0x566D1DCB5C02CC6EEFE0E087A9031CC4w;
+        0x441D77A708E1E2B03D862BA33A247410w;
+        0x60B526D684A2550D2F5726757BEBC481w] : thm
+
+
+SERPENT_CONV ``makeSubKeyHat 
+       [0x8ED77390F2D998EDA7E3A3CE6F5795D0w;
+        0x4113A99960A3EBD1ECE6554A8092730Aw;
+        0x5108D22AEF402A3C86E649C3FA49CA68w;
+        0xFA9026F2E1905B08280A67399EEBC8Bw;
+        0x8F27BBF2EA3F3D7A02913E203413B4B0w;
+        0x87D980AF610536D2238DC99CFCA3985Aw;
+        0x415297C6FE9B100C5D8751BB35F660F8w;
+        0xE97FD45841B4F7D7D6766CEBEE42D6EDw;
+        0xBCF648C7D4EC2645EA423134F6C9CCA8w;
+        0xEC2D21326B736DB90B56612446D1E86Cw;
+        0xACEC090B7BFF737FAB5DA91E32B84C52w;
+        0x7ED5EA77B89DD673D7A0187A8482BB59w;
+        0x2B2A6DF9F555C276106F0679D8E083A1w;
+        0xD3692B4F074B07657EDA461C6A3EB570w;
+        0xD7FA42E1F9D5D5B0ECDE7CE50AB5FE41w;
+        0x5E4F43DE1D07F106EEB113FFD2442936w;
+        0xA3FBCB1862773B2F8365CD79CE636762w;
+        0x31B4BFDBE8ACD046D72C46C8A7DD8D94w;
+        0x81F0FF69016D671B056ABCE9E15FA63Ew;
+        0x6B1526403F29596E8E142C059DD3267Bw;
+        0x3722FB5AA5A880F32FCE59A9B0B05A4w;
+        0xE135BA06E1F9B18D227497F1D6D3AC8Aw;
+        0xCAB800818D26C9BB59EE371369E65C17w;
+        0x576A5C116BB274EECB6E4C54D2A92687w;
+        0xE671289258B92C6D0DC644AF82B76E53w;
+        0x53A44454E9E89F051C00853449786166w;
+        0xFD9652A6E45422E57D1054A55C7D40D9w;
+        0x307836D4049DDF9E44B250C1FB9CFFB0w;
+        0x2E67F4D97D89514DEC3B40C64E25CA80w;
+        0x614CF840E1258A5CDCE119EC0C5028EDw;
+        0x566D1DCB5C02CC6EEFE0E087A9031CC4w;
+        0x441D77A708E1E2B03D862BA33A247410w;
+        0x60B526D684A2550D2F5726757BEBC481w]``;
+
+|- makeSubKeyHat
+         [0x8ED77390F2D998EDA7E3A3CE6F5795D0w;
+          0x4113A99960A3EBD1ECE6554A8092730Aw;
+          0x5108D22AEF402A3C86E649C3FA49CA68w;
+          0xFA9026F2E1905B08280A67399EEBC8Bw;
+          0x8F27BBF2EA3F3D7A02913E203413B4B0w;
+          0x87D980AF610536D2238DC99CFCA3985Aw;
+          0x415297C6FE9B100C5D8751BB35F660F8w;
+          0xE97FD45841B4F7D7D6766CEBEE42D6EDw;
+          0xBCF648C7D4EC2645EA423134F6C9CCA8w;
+          0xEC2D21326B736DB90B56612446D1E86Cw;
+          0xACEC090B7BFF737FAB5DA91E32B84C52w;
+          0x7ED5EA77B89DD673D7A0187A8482BB59w;
+          0x2B2A6DF9F555C276106F0679D8E083A1w;
+          0xD3692B4F074B07657EDA461C6A3EB570w;
+          0xD7FA42E1F9D5D5B0ECDE7CE50AB5FE41w;
+          0x5E4F43DE1D07F106EEB113FFD2442936w;
+          0xA3FBCB1862773B2F8365CD79CE636762w;
+          0x31B4BFDBE8ACD046D72C46C8A7DD8D94w;
+          0x81F0FF69016D671B056ABCE9E15FA63Ew;
+          0x6B1526403F29596E8E142C059DD3267Bw;
+          0x3722FB5AA5A880F32FCE59A9B0B05A4w;
+          0xE135BA06E1F9B18D227497F1D6D3AC8Aw;
+          0xCAB800818D26C9BB59EE371369E65C17w;
+          0x576A5C116BB274EECB6E4C54D2A92687w;
+          0xE671289258B92C6D0DC644AF82B76E53w;
+          0x53A44454E9E89F051C00853449786166w;
+          0xFD9652A6E45422E57D1054A55C7D40D9w;
+          0x307836D4049DDF9E44B250C1FB9CFFB0w;
+          0x2E67F4D97D89514DEC3B40C64E25CA80w;
+          0x614CF840E1258A5CDCE119EC0C5028EDw;
+          0x566D1DCB5C02CC6EEFE0E087A9031CC4w;
+          0x441D77A708E1E2B03D862BA33A247410w;
+          0x60B526D684A2550D2F5726757BEBC481w] =
+       [0xE5749BF3EF2D49BF78AD41ABF7496624w;
+        0x3E602208726902FCC7D3C25FC60CB03Cw;
+        0x7D59567C272092219B4870D223D4D4A2w;
+        0x3041DCE9B194D11C303117A45AE698BBw;
+        0xC451C9E820C74CDF90FFE7AC9CFD40C0w;
+        0x957119AEB818A61FB2453442E587BAD8w;
+        0x4E57674B791D43F6831E088AB9337CA2w;
+        0xBF92933C4BEE8EB8DF6D2F547F3CB567w;
+        0xF7BDAD30DFC85CA1196295429C321E8Cw;
+        0x8DC0E97617C78A6D17F0540E41FC5384w;
+        0xA4F5E876DED7FE462564B14E0547E6FCw;
+        0x7ACECBA2F82C4C1CDC97B4D10FEF38EDw;
+        0x55C7948C17B4A6A65C808A799EFEA44Bw;
+        0x8B3A36FC2E93F17C129187ED0D53AE8Cw;
+        0xEE6C7A9CFE9FA7A55F373794EBE4020Bw;
+        0x3B2DEEB429228DCE4C5610AFAA3BAFF2w;
+        0xB5C011FA8FFC86DFAB54E3DF037AE456w;
+        0x76DA433BD1E97F01D68C9BA9BE09A5C8w;
+        0x9110020F8FE97535BCFAAFDC2AB5F15Ew;
+        0x38C5F7ED114B4A1D04B46B940D515653w;
+        0x506350F92EAE72D162A0CB8BB09A6D6Cw;
+        0xDDE1013C57EF4A1DF0DE93A672225C96w;
+        0xCB12F487B3F8A77045235326C047417Fw;
+        0x3F4968FE5AF4B2E10E5CAF10564A4759w;
+        0x9C846A927ADD433D03D0D710A56966B7w;
+        0x4D4A728DC5D1580069144E47093A0F14w;
+        0xCFEBBF0A851F1D810B4A02C0F5E11E87w;
+        0x1399161178AFD524579F5DD5FA1D4C42w;
+        0x27E4FF9448B269AF9F8C1814BE08C62Cw;
+        0x6EC2330C2B618C06C89AF0423F347701w;
+        0x3E3C7EA32AA088596629DD08BD40C7EAw;
+        0x8337A1264588B2C4DF929EAE0E508AAw;
+        0x49B13633D3DA1A7B15A40FA49A2A4E87w] : thm
+
+
+
+SERPENT_CONV ``encryptwithKeyHat 0w  
+       [0xE5749BF3EF2D49BF78AD41ABF7496624w;
+        0x3E602208726902FCC7D3C25FC60CB03Cw;
+        0x7D59567C272092219B4870D223D4D4A2w;
+        0x3041DCE9B194D11C303117A45AE698BBw;
+        0xC451C9E820C74CDF90FFE7AC9CFD40C0w;
+        0x957119AEB818A61FB2453442E587BAD8w;
+        0x4E57674B791D43F6831E088AB9337CA2w;
+        0xBF92933C4BEE8EB8DF6D2F547F3CB567w;
+        0xF7BDAD30DFC85CA1196295429C321E8Cw;
+        0x8DC0E97617C78A6D17F0540E41FC5384w;
+        0xA4F5E876DED7FE462564B14E0547E6FCw;
+        0x7ACECBA2F82C4C1CDC97B4D10FEF38EDw;
+        0x55C7948C17B4A6A65C808A799EFEA44Bw;
+        0x8B3A36FC2E93F17C129187ED0D53AE8Cw;
+        0xEE6C7A9CFE9FA7A55F373794EBE4020Bw;
+        0x3B2DEEB429228DCE4C5610AFAA3BAFF2w;
+        0xB5C011FA8FFC86DFAB54E3DF037AE456w;
+        0x76DA433BD1E97F01D68C9BA9BE09A5C8w;
+        0x9110020F8FE97535BCFAAFDC2AB5F15Ew;
+        0x38C5F7ED114B4A1D04B46B940D515653w;
+        0x506350F92EAE72D162A0CB8BB09A6D6Cw;
+        0xDDE1013C57EF4A1DF0DE93A672225C96w;
+        0xCB12F487B3F8A77045235326C047417Fw;
+        0x3F4968FE5AF4B2E10E5CAF10564A4759w;
+        0x9C846A927ADD433D03D0D710A56966B7w;
+        0x4D4A728DC5D1580069144E47093A0F14w;
+        0xCFEBBF0A851F1D810B4A02C0F5E11E87w;
+        0x1399161178AFD524579F5DD5FA1D4C42w;
+        0x27E4FF9448B269AF9F8C1814BE08C62Cw;
+        0x6EC2330C2B618C06C89AF0423F347701w;
+        0x3E3C7EA32AA088596629DD08BD40C7EAw;
+        0x8337A1264588B2C4DF929EAE0E508AAw;
+        0x49B13633D3DA1A7B15A40FA49A2A4E87w]``;
+
+  |- encryptwithKeyHat 0x0w
+         [0xE5749BF3EF2D49BF78AD41ABF7496624w;
+          0x3E602208726902FCC7D3C25FC60CB03Cw;
+          0x7D59567C272092219B4870D223D4D4A2w;
+          0x3041DCE9B194D11C303117A45AE698BBw;
+          0xC451C9E820C74CDF90FFE7AC9CFD40C0w;
+          0x957119AEB818A61FB2453442E587BAD8w;
+          0x4E57674B791D43F6831E088AB9337CA2w;
+          0xBF92933C4BEE8EB8DF6D2F547F3CB567w;
+          0xF7BDAD30DFC85CA1196295429C321E8Cw;
+          0x8DC0E97617C78A6D17F0540E41FC5384w;
+          0xA4F5E876DED7FE462564B14E0547E6FCw;
+          0x7ACECBA2F82C4C1CDC97B4D10FEF38EDw;
+          0x55C7948C17B4A6A65C808A799EFEA44Bw;
+          0x8B3A36FC2E93F17C129187ED0D53AE8Cw;
+          0xEE6C7A9CFE9FA7A55F373794EBE4020Bw;
+          0x3B2DEEB429228DCE4C5610AFAA3BAFF2w;
+          0xB5C011FA8FFC86DFAB54E3DF037AE456w;
+          0x76DA433BD1E97F01D68C9BA9BE09A5C8w;
+          0x9110020F8FE97535BCFAAFDC2AB5F15Ew;
+          0x38C5F7ED114B4A1D04B46B940D515653w;
+          0x506350F92EAE72D162A0CB8BB09A6D6Cw;
+          0xDDE1013C57EF4A1DF0DE93A672225C96w;
+          0xCB12F487B3F8A77045235326C047417Fw;
+          0x3F4968FE5AF4B2E10E5CAF10564A4759w;
+          0x9C846A927ADD433D03D0D710A56966B7w;
+          0x4D4A728DC5D1580069144E47093A0F14w;
+          0xCFEBBF0A851F1D810B4A02C0F5E11E87w;
+          0x1399161178AFD524579F5DD5FA1D4C42w;
+          0x27E4FF9448B269AF9F8C1814BE08C62Cw;
+          0x6EC2330C2B618C06C89AF0423F347701w;
+          0x3E3C7EA32AA088596629DD08BD40C7EAw;
+          0x8337A1264588B2C4DF929EAE0E508AAw;
+          0x49B13633D3DA1A7B15A40FA49A2A4E87w] =
+       0x8910494504181950F98DD998A82B6749w : thm
+
+
+
+
+
+
+
+
+
+**************************************************************
+userkey  0x0123456789abcdef0000111122223333
+userkey length 128
+plain text 0x112233445566778899AABBCCDDEEFFw
+
+SERPENT_CONV ``makeRevPreKey (short2longKey 0x0123456789abcdef0000111122223333 128)``;
+
+
+ |- makeRevPreKey
+         (short2longKey 1512366075204170928967615590474855219 128) =
+       [0x7DDA4F5Dw; 0x58CF7319w; 0x914D4293w; 0x98428B7Bw; 0xF7B6AABBw;
+        0xC814253Dw; 0xC2644161w; 0x70C7A6D4w; 0x7D011F2Cw; 0x5983C99Cw;
+        0xECD45802w; 0xB997859Ew; 0x2819C566w; 0x6A3F7D0Cw; 0x22DCDF9Aw;
+        0xFD75E379w; 0xF193E8EFw; 0x4BAD0B44w; 0xB0B7F8A0w; 0xD6B6B922w;
+        0xEE15EFC7w; 0x5C42F1F5w; 0xD1D7348w; 0x5E3928F9w; 0x42900824w;
+        0xA5016845w; 0x5EEC0F19w; 0x1BF53BB5w; 0xC1B00A22w; 0xB1FD85FCw;
+        0x17FBA173w; 0x5CD0B3EFw; 0x95B6FDDFw; 0x1E247DB6w; 0x8BC4A9F7w;
+        0xAB6951F8w; 0x2966047Aw; 0x2828B334w; 0x59C81909w; 0xD4C8B399w;
+        0xB8A0507Fw; 0xD39E09D0w; 0xF74F5018w; 0x692C59FFw; 0x3E0C5C5Bw;
+        0xEE95659Fw; 0xD166A351w; 0x9CEEBCCFw; 0xC5E75858w; 0xBC08A530w;
+        0x867E10A5w; 0x8B57FB38w; 0xDB23C405w; 0xBF3540EFw; 0x5FBCB7FFw;
+        0x9F7E68C2w; 0x1D45DBE6w; 0x3AC19BA0w; 0x219B653Fw; 0x60FCBB0Aw;
+        0x406AE03w; 0xE0A29679w; 0xA49FC60Aw; 0xBEBC86E2w; 0x586B679Aw;
+        0x6B322CF6w; 0x731E10Dw; 0x78969F5w; 0x6B7BC546w; 0xAACE2D30w;
+        0x8D6429E5w; 0x7641EDBCw; 0xAB091CA5w; 0xE1D41210w; 0x649136BDw;
+        0xED8178D2w; 0xBA1C462w; 0x7ADE23BFw; 0xD892527Fw; 0xED805FC2w;
+        0x7C0951DCw; 0x6B89E3A1w; 0x3344EF09w; 0x2B500E6Fw; 0xEEA1926Aw;
+        0x7E07CEE1w; 0x7C95D9CAw; 0xC786E539w; 0x9B66DB8Fw; 0x4B6AAC1Ew;
+        0xEDC034A2w; 0x5A8083A7w; 0x21812A62w; 0x482B8F89w; 0x711421AFw;
+        0x6E284C06w; 0xB605B579w; 0xA0AB2BA9w; 0x76E981BEw; 0xC4C9735w;
+        0x54DBA19Dw; 0xDEE66986w; 0x6916AB82w; 0x8ACD29CEw; 0x43006C36w;
+        0xA027E75Fw; 0xF19E73D5w; 0x65B9622w; 0x599145C5w; 0x7564110Bw;
+        0xC2CB03C2w; 0x4CE97A26w; 0xCBE779D9w; 0x1F07488Dw; 0xDB5FB761w;
+        0xACA8D0Dw; 0x166826w; 0x6D2A1857w; 0xBF4B9F6Aw; 0xCA50421Cw;
+        0xDDE9D892w; 0xEB96D96Fw; 0xDFBCC518w; 0x5D220F26w; 0xD61BF85Fw;
+        0x29C45E14w; 0xF840492w; 0x9E0D668w; 0x131C4CD4w; 0xB5E932BDw;
+        0x402A0972w; 0xB07F6DE9w] : thm
+
+SERPENT_CONV `` makeSubKey  
+       [0x7DDA4F5Dw; 0x58CF7319w; 0x914D4293w; 0x98428B7Bw; 0xF7B6AABBw;
+        0xC814253Dw; 0xC2644161w; 0x70C7A6D4w; 0x7D011F2Cw; 0x5983C99Cw;
+        0xECD45802w; 0xB997859Ew; 0x2819C566w; 0x6A3F7D0Cw; 0x22DCDF9Aw;
+        0xFD75E379w; 0xF193E8EFw; 0x4BAD0B44w; 0xB0B7F8A0w; 0xD6B6B922w;
+        0xEE15EFC7w; 0x5C42F1F5w; 0xD1D7348w; 0x5E3928F9w; 0x42900824w;
+        0xA5016845w; 0x5EEC0F19w; 0x1BF53BB5w; 0xC1B00A22w; 0xB1FD85FCw;
+        0x17FBA173w; 0x5CD0B3EFw; 0x95B6FDDFw; 0x1E247DB6w; 0x8BC4A9F7w;
+        0xAB6951F8w; 0x2966047Aw; 0x2828B334w; 0x59C81909w; 0xD4C8B399w;
+        0xB8A0507Fw; 0xD39E09D0w; 0xF74F5018w; 0x692C59FFw; 0x3E0C5C5Bw;
+        0xEE95659Fw; 0xD166A351w; 0x9CEEBCCFw; 0xC5E75858w; 0xBC08A530w;
+        0x867E10A5w; 0x8B57FB38w; 0xDB23C405w; 0xBF3540EFw; 0x5FBCB7FFw;
+        0x9F7E68C2w; 0x1D45DBE6w; 0x3AC19BA0w; 0x219B653Fw; 0x60FCBB0Aw;
+        0x406AE03w; 0xE0A29679w; 0xA49FC60Aw; 0xBEBC86E2w; 0x586B679Aw;
+        0x6B322CF6w; 0x731E10Dw; 0x78969F5w; 0x6B7BC546w; 0xAACE2D30w;
+        0x8D6429E5w; 0x7641EDBCw; 0xAB091CA5w; 0xE1D41210w; 0x649136BDw;
+        0xED8178D2w; 0xBA1C462w; 0x7ADE23BFw; 0xD892527Fw; 0xED805FC2w;
+        0x7C0951DCw; 0x6B89E3A1w; 0x3344EF09w; 0x2B500E6Fw; 0xEEA1926Aw;
+        0x7E07CEE1w; 0x7C95D9CAw; 0xC786E539w; 0x9B66DB8Fw; 0x4B6AAC1Ew;
+        0xEDC034A2w; 0x5A8083A7w; 0x21812A62w; 0x482B8F89w; 0x711421AFw;
+        0x6E284C06w; 0xB605B579w; 0xA0AB2BA9w; 0x76E981BEw; 0xC4C9735w;
+        0x54DBA19Dw; 0xDEE66986w; 0x6916AB82w; 0x8ACD29CEw; 0x43006C36w;
+        0xA027E75Fw; 0xF19E73D5w; 0x65B9622w; 0x599145C5w; 0x7564110Bw;
+        0xC2CB03C2w; 0x4CE97A26w; 0xCBE779D9w; 0x1F07488Dw; 0xDB5FB761w;
+        0xACA8D0Dw; 0x166826w; 0x6D2A1857w; 0xBF4B9F6Aw; 0xCA50421Cw;
+        0xDDE9D892w; 0xEB96D96Fw; 0xDFBCC518w; 0x5D220F26w; 0xD61BF85Fw;
+        0x29C45E14w; 0xF840492w; 0x9E0D668w; 0x131C4CD4w; 0xB5E932BDw;
+        0x402A0972w; 0xB07F6DE9w]``;
+
+|- makeSubKey
+         [0x7DDA4F5Dw; 0x58CF7319w; 0x914D4293w; 0x98428B7Bw; 0xF7B6AABBw;
+          0xC814253Dw; 0xC2644161w; 0x70C7A6D4w; 0x7D011F2Cw; 0x5983C99Cw;
+          0xECD45802w; 0xB997859Ew; 0x2819C566w; 0x6A3F7D0Cw; 0x22DCDF9Aw;
+          0xFD75E379w; 0xF193E8EFw; 0x4BAD0B44w; 0xB0B7F8A0w; 0xD6B6B922w;
+          0xEE15EFC7w; 0x5C42F1F5w; 0xD1D7348w; 0x5E3928F9w; 0x42900824w;
+          0xA5016845w; 0x5EEC0F19w; 0x1BF53BB5w; 0xC1B00A22w; 0xB1FD85FCw;
+          0x17FBA173w; 0x5CD0B3EFw; 0x95B6FDDFw; 0x1E247DB6w; 0x8BC4A9F7w;
+          0xAB6951F8w; 0x2966047Aw; 0x2828B334w; 0x59C81909w; 0xD4C8B399w;
+          0xB8A0507Fw; 0xD39E09D0w; 0xF74F5018w; 0x692C59FFw; 0x3E0C5C5Bw;
+          0xEE95659Fw; 0xD166A351w; 0x9CEEBCCFw; 0xC5E75858w; 0xBC08A530w;
+          0x867E10A5w; 0x8B57FB38w; 0xDB23C405w; 0xBF3540EFw; 0x5FBCB7FFw;
+          0x9F7E68C2w; 0x1D45DBE6w; 0x3AC19BA0w; 0x219B653Fw; 0x60FCBB0Aw;
+          0x406AE03w; 0xE0A29679w; 0xA49FC60Aw; 0xBEBC86E2w; 0x586B679Aw;
+          0x6B322CF6w; 0x731E10Dw; 0x78969F5w; 0x6B7BC546w; 0xAACE2D30w;
+          0x8D6429E5w; 0x7641EDBCw; 0xAB091CA5w; 0xE1D41210w; 0x649136BDw;
+          0xED8178D2w; 0xBA1C462w; 0x7ADE23BFw; 0xD892527Fw; 0xED805FC2w;
+          0x7C0951DCw; 0x6B89E3A1w; 0x3344EF09w; 0x2B500E6Fw; 0xEEA1926Aw;
+          0x7E07CEE1w; 0x7C95D9CAw; 0xC786E539w; 0x9B66DB8Fw; 0x4B6AAC1Ew;
+          0xEDC034A2w; 0x5A8083A7w; 0x21812A62w; 0x482B8F89w; 0x711421AFw;
+          0x6E284C06w; 0xB605B579w; 0xA0AB2BA9w; 0x76E981BEw; 0xC4C9735w;
+          0x54DBA19Dw; 0xDEE66986w; 0x6916AB82w; 0x8ACD29CEw; 0x43006C36w;
+          0xA027E75Fw; 0xF19E73D5w; 0x65B9622w; 0x599145C5w; 0x7564110Bw;
+          0xC2CB03C2w; 0x4CE97A26w; 0xCBE779D9w; 0x1F07488Dw; 0xDB5FB761w;
+          0xACA8D0Dw; 0x166826w; 0x6D2A1857w; 0xBF4B9F6Aw; 0xCA50421Cw;
+          0xDDE9D892w; 0xEB96D96Fw; 0xDFBCC518w; 0x5D220F26w; 0xD61BF85Fw;
+          0x29C45E14w; 0xF840492w; 0x9E0D668w; 0x131C4CD4w; 0xB5E932BDw;
+          0x402A0972w; 0xB07F6DE9w] =
+       [0xE7CB330F16881AD0512800A6F27564BBw;
+        0xDFDF7703DFFB26B32FA454A2F99BF4D9w;
+        0x34282B534B1C3E1A8088F510A2D5ECCBw;
+        0x1837ED03751DF57058A5A591BFDBDFCAw;
+        0xC45073E4CFB732711E720B3921354ABAw;
+        0xBBD7450F97BB961100D1AD3219C9C2D7w;
+        0xE91F93414D62661E5B99F4B6AE5C7175w;
+        0x35E063C448FFE9CE48C60857540B35E8w;
+        0xC8422B662CA389F9DAA821A3680D164Bw;
+        0xC9E83DFD7FBC64625716E9A950968844w;
+        0xD21993D58AB3BC6EF5F31B6913DDE775w;
+        0xED35E050D4329E8300FE460DB85D4BC4w;
+        0x539D02AB349451562F84B219CF3F5393w;
+        0x436DE660B233D1DD5433CA7DC3005640w;
+        0x54B3A7B5D1E6C5779D22AD2D3C32FB42w;
+        0xB2CE050D7BE1ED68BE142CAEDC4FD388w;
+        0x7CC2AE6330F163904B92A49E13E88AF4w;
+        0xA1F8296CBEA768E2FA81D698E09B7810w;
+        0xE3E4DA06D978FB8CB99F64BD865DBA68w;
+        0x3FF61BD75BA39738249513D2049F33FFw;
+        0x3866B7A5F5A14ECDF0CE14F5448002F7w;
+        0xB3197A5073E2C3E4DC00257ABE6AFC6Aw;
+        0x638EFF88D19CA6409C61AFE79AA2A637w;
+        0xA46008BC8D081194DCCE15DBFEB140A1w;
+        0x345B0590A13F79D63EA9D5B12A3F782Ew;
+        0x1449E9DD1B6299CE3ADF95707766AF41w;
+        0xE292D0E75C669B96587E873BBC76C376w;
+        0xAF626D42BF04BE76B1D384360388D90Cw;
+        0xBF3EE3E42C894A8BD8BEAA294565045Dw;
+        0x8E84EC42E0BA949F0D9C090845827Ew;
+        0xA6BEF0D357A9394DD77FBDDFCA3C6C43w;
+        0x48156118FAA7A2B185412973F0DF93E9w;
+        0xF4D0B6B73C5FF73D59C783B92C1ACDECw] : thm
+
+
+
+SERPENT_CONV ``makeSubKeyHat 
+
+       [0xE7CB330F16881AD0512800A6F27564BBw;
+        0xDFDF7703DFFB26B32FA454A2F99BF4D9w;
+        0x34282B534B1C3E1A8088F510A2D5ECCBw;
+        0x1837ED03751DF57058A5A591BFDBDFCAw;
+        0xC45073E4CFB732711E720B3921354ABAw;
+        0xBBD7450F97BB961100D1AD3219C9C2D7w;
+        0xE91F93414D62661E5B99F4B6AE5C7175w;
+        0x35E063C448FFE9CE48C60857540B35E8w;
+        0xC8422B662CA389F9DAA821A3680D164Bw;
+        0xC9E83DFD7FBC64625716E9A950968844w;
+        0xD21993D58AB3BC6EF5F31B6913DDE775w;
+        0xED35E050D4329E8300FE460DB85D4BC4w;
+        0x539D02AB349451562F84B219CF3F5393w;
+        0x436DE660B233D1DD5433CA7DC3005640w;
+        0x54B3A7B5D1E6C5779D22AD2D3C32FB42w;
+        0xB2CE050D7BE1ED68BE142CAEDC4FD388w;
+        0x7CC2AE6330F163904B92A49E13E88AF4w;
+        0xA1F8296CBEA768E2FA81D698E09B7810w;
+        0xE3E4DA06D978FB8CB99F64BD865DBA68w;
+        0x3FF61BD75BA39738249513D2049F33FFw;
+        0x3866B7A5F5A14ECDF0CE14F5448002F7w;
+        0xB3197A5073E2C3E4DC00257ABE6AFC6Aw;
+        0x638EFF88D19CA6409C61AFE79AA2A637w;
+        0xA46008BC8D081194DCCE15DBFEB140A1w;
+        0x345B0590A13F79D63EA9D5B12A3F782Ew;
+        0x1449E9DD1B6299CE3ADF95707766AF41w;
+        0xE292D0E75C669B96587E873BBC76C376w;
+        0xAF626D42BF04BE76B1D384360388D90Cw;
+        0xBF3EE3E42C894A8BD8BEAA294565045Dw;
+        0x8E84EC42E0BA949F0D9C090845827Ew;
+        0xA6BEF0D357A9394DD77FBDDFCA3C6C43w;
+        0x48156118FAA7A2B185412973F0DF93E9w;
+        0xF4D0B6B73C5FF73D59C783B92C1ACDECw]``;
+
+
+
+|- makeSubKeyHat
+         [0xE7CB330F16881AD0512800A6F27564BBw;
+          0xDFDF7703DFFB26B32FA454A2F99BF4D9w;
+          0x34282B534B1C3E1A8088F510A2D5ECCBw;
+          0x1837ED03751DF57058A5A591BFDBDFCAw;
+          0xC45073E4CFB732711E720B3921354ABAw;
+          0xBBD7450F97BB961100D1AD3219C9C2D7w;
+          0xE91F93414D62661E5B99F4B6AE5C7175w;
+          0x35E063C448FFE9CE48C60857540B35E8w;
+          0xC8422B662CA389F9DAA821A3680D164Bw;
+          0xC9E83DFD7FBC64625716E9A950968844w;
+          0xD21993D58AB3BC6EF5F31B6913DDE775w;
+          0xED35E050D4329E8300FE460DB85D4BC4w;
+          0x539D02AB349451562F84B219CF3F5393w;
+          0x436DE660B233D1DD5433CA7DC3005640w;
+          0x54B3A7B5D1E6C5779D22AD2D3C32FB42w;
+          0xB2CE050D7BE1ED68BE142CAEDC4FD388w;
+          0x7CC2AE6330F163904B92A49E13E88AF4w;
+          0xA1F8296CBEA768E2FA81D698E09B7810w;
+          0xE3E4DA06D978FB8CB99F64BD865DBA68w;
+          0x3FF61BD75BA39738249513D2049F33FFw;
+          0x3866B7A5F5A14ECDF0CE14F5448002F7w;
+          0xB3197A5073E2C3E4DC00257ABE6AFC6Aw;
+          0x638EFF88D19CA6409C61AFE79AA2A637w;
+          0xA46008BC8D081194DCCE15DBFEB140A1w;
+          0x345B0590A13F79D63EA9D5B12A3F782Ew;
+          0x1449E9DD1B6299CE3ADF95707766AF41w;
+          0xE292D0E75C669B96587E873BBC76C376w;
+          0xAF626D42BF04BE76B1D384360388D90Cw;
+          0xBF3EE3E42C894A8BD8BEAA294565045Dw;
+          0x8E84EC42E0BA949F0D9C090845827Ew;
+          0xA6BEF0D357A9394DD77FBDDFCA3C6C43w;
+          0x48156118FAA7A2B185412973F0DF93E9w;
+          0xF4D0B6B73C5FF73D59C783B92C1ACDECw] =
+       [0x9B970CDAC931E189019C41C874359AB9w;
+        0xDD3DFEEFFC6DDADD1BDB0FC8716510EDw;
+        0x349848543185E50133F6D7CA190E50D9w;
+        0x165FB51531AD5E9FFDE59F1F3546109Aw;
+        0xCC126E654A7F056509CC30FA9CF73816w;
+        0xC08D94CDFB4E58CF79242E5A112789BDw;
+        0x9E92F53E254BB9CAA77B06C929374769w;
+        0x7896908EEC456754CD1618DDF125E62w;
+        0xAB52F420686031C540A1C19E6DE458B7w;
+        0x8F47C66ED8C7C73036E8BC0AADE8A94Aw;
+        0xEA2B42D3736F916FD15E65BB8F796D4Bw;
+        0xDC959C0823EF3B69CB84567159082346w;
+        0x196C37BBE01D9F19252700B59487A4DBw;
+        0x5B4602D908E6886EEF8529B44FA66606w;
+        0x6C1F3B06C4F904F8F5B13E9F85EC2E5Ew;
+        0xB5EF73E4CD429B9555616E1D3460FA28w;
+        0xACDA833FD5610A4B4E09AD4799723A8w;
+        0xF3F66468F8C9945727D3D2286CC3A840w;
+        0xFCA6619EADC77B23DE7DD2D461327E82w;
+        0x4ACCBCCF8CB1BD7401F84FFBB5F59B9w;
+        0x67EE85047AC02AA4848A4ED8F7B34F1Fw;
+        0xB6DF33DC455890585DB993C64F7A3430w;
+        0x7C87329CD234CC92F8F8AFFAA6318333w;
+        0xF3937F143A91622101068206F29EAC23w;
+        0x40FA3A34287DF5DF27575A0EE43E1552w;
+        0x13F69752F52A37AF896D31FCF2ACC49w;
+        0x9E977580877B27F0F90C4277C9B72DFAw;
+        0xE0E6CCDF3A8214A279C5DE490C6617E0w;
+        0xA3CAED8961BAEBA5ACA061E8C9A17947w;
+        0x24023262C540AB83F0466A50C995BD12w;
+        0xB7861EF6C2FBFBA6A9FE7306AF0A66BFw;
+        0x7D55C24253491D5F58E1205B537E9027w; 
+        0x8ADE7D02AE0D5676F5CC1DE7B1FE7D8Ew] : thm
+
+
+SERPENT_CONV ``encryptwithKeyHat 0x00112233445566778899aabbccddeeffw
+       [0x9B970CDAC931E189019C41C874359AB9w;
+        0xDD3DFEEFFC6DDADD1BDB0FC8716510EDw;
+        0x349848543185E50133F6D7CA190E50D9w;
+        0x165FB51531AD5E9FFDE59F1F3546109Aw;
+        0xCC126E654A7F056509CC30FA9CF73816w;
+        0xC08D94CDFB4E58CF79242E5A112789BDw;
+        0x9E92F53E254BB9CAA77B06C929374769w;
+        0x7896908EEC456754CD1618DDF125E62w;
+        0xAB52F420686031C540A1C19E6DE458B7w;
+        0x8F47C66ED8C7C73036E8BC0AADE8A94Aw;
+        0xEA2B42D3736F916FD15E65BB8F796D4Bw;
+        0xDC959C0823EF3B69CB84567159082346w;
+        0x196C37BBE01D9F19252700B59487A4DBw;
+        0x5B4602D908E6886EEF8529B44FA66606w;
+        0x6C1F3B06C4F904F8F5B13E9F85EC2E5Ew;
+        0xB5EF73E4CD429B9555616E1D3460FA28w;
+        0xACDA833FD5610A4B4E09AD4799723A8w;
+        0xF3F66468F8C9945727D3D2286CC3A840w;
+        0xFCA6619EADC77B23DE7DD2D461327E82w;
+        0x4ACCBCCF8CB1BD7401F84FFBB5F59B9w;
+        0x67EE85047AC02AA4848A4ED8F7B34F1Fw;
+        0xB6DF33DC455890585DB993C64F7A3430w;
+        0x7C87329CD234CC92F8F8AFFAA6318333w;
+        0xF3937F143A91622101068206F29EAC23w;
+        0x40FA3A34287DF5DF27575A0EE43E1552w;
+        0x13F69752F52A37AF896D31FCF2ACC49w;
+        0x9E977580877B27F0F90C4277C9B72DFAw;
+        0xE0E6CCDF3A8214A279C5DE490C6617E0w;
+        0xA3CAED8961BAEBA5ACA061E8C9A17947w;
+        0x24023262C540AB83F0466A50C995BD12w;
+        0xB7861EF6C2FBFBA6A9FE7306AF0A66BFw;
+        0x7D55C24253491D5F58E1205B537E9027w; 
+        0x8ADE7D02AE0D5676F5CC1DE7B1FE7D8Ew]``;
+
+ |- encryptwithKeyHat 0x112233445566778899AABBCCDDEEFFw
+         [0x9B970CDAC931E189019C41C874359AB9w;
+          0xDD3DFEEFFC6DDADD1BDB0FC8716510EDw;
+          0x349848543185E50133F6D7CA190E50D9w;
+          0x165FB51531AD5E9FFDE59F1F3546109Aw;
+          0xCC126E654A7F056509CC30FA9CF73816w;
+          0xC08D94CDFB4E58CF79242E5A112789BDw;
+          0x9E92F53E254BB9CAA77B06C929374769w;
+          0x7896908EEC456754CD1618DDF125E62w;
+          0xAB52F420686031C540A1C19E6DE458B7w;
+          0x8F47C66ED8C7C73036E8BC0AADE8A94Aw;
+          0xEA2B42D3736F916FD15E65BB8F796D4Bw;
+          0xDC959C0823EF3B69CB84567159082346w;
+          0x196C37BBE01D9F19252700B59487A4DBw;
+          0x5B4602D908E6886EEF8529B44FA66606w;
+          0x6C1F3B06C4F904F8F5B13E9F85EC2E5Ew;
+          0xB5EF73E4CD429B9555616E1D3460FA28w;
+          0xACDA833FD5610A4B4E09AD4799723A8w;
+          0xF3F66468F8C9945727D3D2286CC3A840w;
+          0xFCA6619EADC77B23DE7DD2D461327E82w;
+          0x4ACCBCCF8CB1BD7401F84FFBB5F59B9w;
+          0x67EE85047AC02AA4848A4ED8F7B34F1Fw;
+          0xB6DF33DC455890585DB993C64F7A3430w;
+          0x7C87329CD234CC92F8F8AFFAA6318333w;
+          0xF3937F143A91622101068206F29EAC23w;
+          0x40FA3A34287DF5DF27575A0EE43E1552w;
+          0x13F69752F52A37AF896D31FCF2ACC49w;
+          0x9E977580877B27F0F90C4277C9B72DFAw;
+          0xE0E6CCDF3A8214A279C5DE490C6617E0w;
+          0xA3CAED8961BAEBA5ACA061E8C9A17947w;
+          0x24023262C540AB83F0466A50C995BD12w;
+          0xB7861EF6C2FBFBA6A9FE7306AF0A66BFw;
+          0x7D55C24253491D5F58E1205B537E9027w;
+          0x8ADE7D02AE0D5676F5CC1DE7B1FE7D8Ew] =
+       0xB0C75A6E4D5AC0ABF964D6EBA59CF3A7w : thm
+-k 0000000000000000000000000000000000000000000000000000000000000000 \
+-p 00000000000000000000000000000000
+plainText=00000000000000000000000000000000
+LONG_KEY=0000000000000000000000000000000000000000000000000000000000000000
+w[0]=bbcdccf1l
+w[1]=d5aa492fl
+w[2]=e984a25cl
+w[3]=f0b8be63l
+w[4]=2c778dd9l
+w[5]=4cd64700l
+w[6]=9e4f9fbfl
+w[7]=5e4c262cl
+w[8]=c3507e3el
+w[9]=aae639d7l
+w[10]=7c18a67el
+w[11]=4401727cl
+w[12]=5ccf5817l
+w[13]=35f7198bl
+w[14]=45a146dbl
+w[15]=6f394528l
+w[16]=414a421dl
+w[17]=a8e57367l
+w[18]=27808880l
+w[19]=ec3c87cal
+w[20]=c481ff48l
+w[21]=5aaf904cl
+w[22]=2dcae2fl
+w[23]=9f2b0886l
+w[24]=2925e7b6l
+w[25]=55e0b6cdl
+w[26]=9ef9214el
+w[27]=5cb5fe38l
+w[28]=4634f666l
+w[29]=86cbb1abl
+w[30]=a976b09bl
+w[31]=38b49b85l
+w[32]=c251caael
+SK[0]=8ed77390f2d998eda7e3a3ce6f5795d0
+SK[1]=4113a99960a3ebd1ece6554a8092730a
+SK[2]=5108d22aef402a3c86e649c3fa49ca68
+SK[3]=0fa9026f2e1905b08280a67399eebc8b
+SK[4]=8f27bbf2ea3f3d7a02913e203413b4b0
+SK[5]=87d980af610536d2238dc99cfca3985a
+SK[6]=415297c6fe9b100c5d8751bb35f660f8
+SK[7]=e97fd45841b4f7d7d6766cebee42d6ed
+SK[8]=bcf648c7d4ec2645ea423134f6c9cca8
+SK[9]=ec2d21326b736db90b56612446d1e86c
+SK[10]=acec090b7bff737fab5da91e32b84c52
+SK[11]=7ed5ea77b89dd673d7a0187a8482bb59
+SK[12]=2b2a6df9f555c276106f0679d8e083a1
+SK[13]=d3692b4f074b07657eda461c6a3eb570
+SK[14]=d7fa42e1f9d5d5b0ecde7ce50ab5fe41
+SK[15]=5e4f43de1d07f106eeb113ffd2442936
+SK[16]=a3fbcb1862773b2f8365cd79ce636762
+SK[17]=31b4bfdbe8acd046d72c46c8a7dd8d94
+SK[18]=81f0ff69016d671b056abce9e15fa63e
+SK[19]=6b1526403f29596e8e142c059dd3267b
+SK[20]=03722fb5aa5a880f32fce59a9b0b05a4
+SK[21]=e135ba06e1f9b18d227497f1d6d3ac8a
+SK[22]=cab800818d26c9bb59ee371369e65c17
+SK[23]=576a5c116bb274eecb6e4c54d2a92687
+SK[24]=e671289258b92c6d0dc644af82b76e53
+SK[25]=53a44454e9e89f051c00853449786166
+SK[26]=fd9652a6e45422e57d1054a55c7d40d9
+SK[27]=307836d4049ddf9e44b250c1fb9cffb0
+SK[28]=2e67f4d97d89514dec3b40c64e25ca80
+SK[29]=614cf840e1258a5cdce119ec0c5028ed
+SK[30]=566d1dcb5c02cc6eefe0e087a9031cc4
+SK[31]=441d77a708e1e2b03d862ba33a247410
+SK[32]=60b526d684a2550d2f5726757bebc481
+SK^[0]=e5749bf3ef2d49bf78ad41abf7496624
+SK^[1]=3e602208726902fcc7d3c25fc60cb03c
+SK^[2]=7d59567c272092219b4870d223d4d4a2
+SK^[3]=3041dce9b194d11c303117a45ae698bb
+SK^[4]=c451c9e820c74cdf90ffe7ac9cfd40c0
+SK^[5]=957119aeb818a61fb2453442e587bad8
+SK^[6]=4e57674b791d43f6831e088ab9337ca2
+SK^[7]=bf92933c4bee8eb8df6d2f547f3cb567
+SK^[8]=f7bdad30dfc85ca1196295429c321e8c
+SK^[9]=8dc0e97617c78a6d17f0540e41fc5384
+SK^[10]=a4f5e876ded7fe462564b14e0547e6fc
+SK^[11]=7acecba2f82c4c1cdc97b4d10fef38ed
+SK^[12]=55c7948c17b4a6a65c808a799efea44b
+SK^[13]=8b3a36fc2e93f17c129187ed0d53ae8c
+SK^[14]=ee6c7a9cfe9fa7a55f373794ebe4020b
+SK^[15]=3b2deeb429228dce4c5610afaa3baff2
+SK^[16]=b5c011fa8ffc86dfab54e3df037ae456
+SK^[17]=76da433bd1e97f01d68c9ba9be09a5c8
+SK^[18]=9110020f8fe97535bcfaafdc2ab5f15e
+SK^[19]=38c5f7ed114b4a1d04b46b940d515653
+SK^[20]=506350f92eae72d162a0cb8bb09a6d6c
+SK^[21]=dde1013c57ef4a1df0de93a672225c96
+SK^[22]=cb12f487b3f8a77045235326c047417f
+SK^[23]=3f4968fe5af4b2e10e5caf10564a4759
+SK^[24]=9c846a927add433d03d0d710a56966b7
+SK^[25]=4d4a728dc5d1580069144e47093a0f14
+SK^[26]=cfebbf0a851f1d810b4a02c0f5e11e87
+SK^[27]=1399161178afd524579f5dd5fa1d4c42
+SK^[28]=27e4ff9448b269af9f8c1814be08c62c
+SK^[29]=6ec2330c2b618c06c89af0423f347701
+SK^[30]=3e3c7ea32aa088596629dd08bd40c7ea
+SK^[31]=08337a1264588b2c4df929eae0e508aa
+SK^[32]=49b13633d3da1a7b15a40fa49a2a4e87
+userKey=0000000000000000000000000000000000000000000000000000000000000000
+BHat=00000000000000000000000000000000
+Xored=e5749bf3ef2d49bf78ad41abf7496624
+SHati=96bad2c19cf0ad2cbe40a842cbad55fa
+BHati+1=8f64ab2451da86149c0b1443c79c6932
+R[0]=8f64ab2451da86149c0b1443c79c6932
+R[1]=7552ce0b614d390354ab81d6bed2737b
+R[2]=39e635be07becb829d443893648b6bdb
+R[3]=d16e814c41ef211b65d9f5e4501bbea4
+R[4]=974ab9a3b7d2fafad4babfdcadc1ca7c
+R[5]=6106f804b18a5dea8863064f060cf241
+R[6]=06c6dc2c5009e05fc4d8840ef5b8f4a8
+R[7]=81b2017dbf2bc07eb60212b54bc479ea
+R[8]=e514fc52ddddc95b13b141995095442a
+R[9]=1eab95f1ce822c81af324309aa05dbb6
+R[10]=9ad80c073cd5616e13355c4f407ac4a0
+R[11]=a9eaab1d77038faf9e428a1fdf3987a0
+R[12]=75bc609f262ced5f7d3ef9d19fbe5329
+R[13]=67ed3eb40030e3a4b4387d77caa43bc2
+R[14]=339024663b6512e95484b60f5941c12e
+R[15]=cf1c07485e45b5e1f4a6532cffb9930d
+R[16]=787b086811cfd5060d2240ae702aa2c2
+R[17]=0ffb305024e8d16c5e667709590a1c55
+R[18]=084fe21348b44fef3f370ad0f5b3f73d
+R[19]=e384a7208adf26d7f5787f85dde7f62e
+R[20]=77ebc86b62896bbd2466b2fc5d99e3bd
+R[21]=88633f44a23e64a99f412bc9456cd6ff
+R[22]=8fb1a4858ef1d18a474069d7631699db
+R[23]=53a17a03db9b32e0afca2e426718b689
+R[24]=17060dc0c1e99290a09f5cbd1f0cd859
+R[25]=1df38462340a30c2af7ba2839828059e
+R[26]=9f1505722848c1c45e59cd7fc5b2918f
+R[27]=38989654f70719391955758b9d9d21b4
+R[28]=bad0d82e41252c79d81fa6dbf8795608
+R[29]=3f1ddc9df48e970fdaefc5a7ca262100
+R[30]=2f6e2cce49f77ed9998f6d9d988f87fe
+R[31]=b232b40a201c72132b16e11f2d063809
+cipherText=8910494504181950f98dd998a82b6749
+
+
+************************************************************
+
+
+
+-k 0123456789abcdef0000111122223333 
+-p 00112233445566778899aabbccddeeff
+
+plainText=00112233445566778899aabbccddeeff
+LONG_KEY=000000000000000000000000000000010123456789abcdef0000111122223333
+w[0]=b07f6de9l
+w[1]=402a0972l
+w[2]=b5e932bdl
+w[3]=131c4cd4l
+w[4]=9e0d668l
+w[5]=f840492l
+w[6]=29c45e14l
+w[7]=d61bf85fl
+w[8]=5d220f26l
+w[9]=dfbcc518l
+w[10]=eb96d96fl
+w[11]=dde9d892l
+w[12]=ca50421cl
+w[13]=bf4b9f6al
+w[14]=6d2a1857l
+w[15]=166826l
+w[16]=aca8d0dl
+w[17]=db5fb761l
+w[18]=1f07488dl
+w[19]=cbe779d9l
+w[20]=4ce97a26l
+w[21]=c2cb03c2l
+w[22]=7564110bl
+w[23]=599145c5l
+w[24]=65b9622l
+w[25]=f19e73d5l
+w[26]=a027e75fl
+w[27]=43006c36l
+w[28]=8acd29cel
+w[29]=6916ab82l
+w[30]=dee66986l
+w[31]=54dba19dl
+w[32]=c4c9735l
+SK[0]=e7cb330f16881ad0512800a6f27564bb
+SK[1]=dfdf7703dffb26b32fa454a2f99bf4d9
+SK[2]=34282b534b1c3e1a8088f510a2d5eccb
+SK[3]=1837ed03751df57058a5a591bfdbdfca
+SK[4]=c45073e4cfb732711e720b3921354aba
+SK[5]=bbd7450f97bb961100d1ad3219c9c2d7
+SK[6]=e91f93414d62661e5b99f4b6ae5c7175
+SK[7]=35e063c448ffe9ce48c60857540b35e8
+SK[8]=c8422b662ca389f9daa821a3680d164b
+SK[9]=c9e83dfd7fbc64625716e9a950968844
+SK[10]=d21993d58ab3bc6ef5f31b6913dde775
+SK[11]=ed35e050d4329e8300fe460db85d4bc4
+SK[12]=539d02ab349451562f84b219cf3f5393
+SK[13]=436de660b233d1dd5433ca7dc3005640
+SK[14]=54b3a7b5d1e6c5779d22ad2d3c32fb42
+SK[15]=b2ce050d7be1ed68be142caedc4fd388
+SK[16]=7cc2ae6330f163904b92a49e13e88af4
+SK[17]=a1f8296cbea768e2fa81d698e09b7810
+SK[18]=e3e4da06d978fb8cb99f64bd865dba68
+SK[19]=3ff61bd75ba39738249513d2049f33ff
+SK[20]=3866b7a5f5a14ecdf0ce14f5448002f7
+SK[21]=b3197a5073e2c3e4dc00257abe6afc6a
+SK[22]=638eff88d19ca6409c61afe79aa2a637
+SK[23]=a46008bc8d081194dcce15dbfeb140a1
+SK[24]=345b0590a13f79d63ea9d5b12a3f782e
+SK[25]=1449e9dd1b6299ce3adf95707766af41
+SK[26]=e292d0e75c669b96587e873bbc76c376
+SK[27]=af626d42bf04be76b1d384360388d90c
+SK[28]=bf3ee3e42c894a8bd8beaa294565045d
+SK[29]=008e84ec42e0ba949f0d9c090845827e
+SK[30]=a6bef0d357a9394dd77fbddfca3c6c43
+SK[31]=48156118faa7a2b185412973f0df93e9
+SK[32]=f4d0b6b73c5ff73d59c783b92c1acdec
+SK^[0]=9b970cdac931e189019c41c874359ab9
+SK^[1]=dd3dfeeffc6ddadd1bdb0fc8716510ed
+SK^[2]=349848543185e50133f6d7ca190e50d9
+SK^[3]=165fb51531ad5e9ffde59f1f3546109a
+SK^[4]=cc126e654a7f056509cc30fa9cf73816
+SK^[5]=c08d94cdfb4e58cf79242e5a112789bd
+SK^[6]=9e92f53e254bb9caa77b06c929374769
+SK^[7]=07896908eec456754cd1618ddf125e62
+SK^[8]=ab52f420686031c540a1c19e6de458b7
+SK^[9]=8f47c66ed8c7c73036e8bc0aade8a94a
+SK^[10]=ea2b42d3736f916fd15e65bb8f796d4b
+SK^[11]=dc959c0823ef3b69cb84567159082346
+SK^[12]=196c37bbe01d9f19252700b59487a4db
+SK^[13]=5b4602d908e6886eef8529b44fa66606
+SK^[14]=6c1f3b06c4f904f8f5b13e9f85ec2e5e
+SK^[15]=b5ef73e4cd429b9555616e1d3460fa28
+SK^[16]=0acda833fd5610a4b4e09ad4799723a8
+SK^[17]=f3f66468f8c9945727d3d2286cc3a840
+SK^[18]=fca6619eadc77b23de7dd2d461327e82
+SK^[19]=04accbccf8cb1bd7401f84ffbb5f59b9
+SK^[20]=67ee85047ac02aa4848a4ed8f7b34f1f
+SK^[21]=b6df33dc455890585db993c64f7a3430
+SK^[22]=7c87329cd234cc92f8f8affaa6318333
+SK^[23]=f3937f143a91622101068206f29eac23
+SK^[24]=40fa3a34287df5df27575a0ee43e1552
+SK^[25]=013f69752f52a37af896d31fcf2acc49
+SK^[26]=9e977580877b27f0f90c4277c9b72dfa
+SK^[27]=e0e6ccdf3a8214a279c5de490c6617e0
+SK^[28]=a3caed8961baeba5aca061e8c9a17947
+SK^[29]=24023262c540ab83f0466a50c995bd12
+SK^[30]=b7861ef6c2fbfba6a9fe7306af0a66bf
+SK^[31]=7d55c24253491d5f58e1205b537e9027
+SK^[32]=8ade7d02ae0d5676f5cc1de7b1fe7d8e
+userKey=000000000000000000000000000000010123456789abcdef0000111122223333
+BHat=35003500350f350f35f035f035ff35ff
+Xored=ae9739dafc3ed486346c743841caaf46
+SHati=49db1d04c7190ae51a57ba1ea8744ca5
+BHati+1=0d0a0ded1d3fdb3272f3df7ff88c5134
+R[0]=0d0a0ded1d3fdb3272f3df7ff88c5134
+R[1]=6da3ab49ae965d35fbff542204b9aaa5
+R[2]=837a40ba37c3d8f0d4bc845e313a4c4d
+R[3]=bab6fe2e472b16c79197e1a75e846c8d
+R[4]=8050cebdc50f8e0577abed37046420b3
+R[5]=1df628fb681034682fc5d4d5c73b0e4c
+R[6]=32bc004e5a70a57c346697568a78243c
+R[7]=765cd639bfad876290eaf2ff0c1dc448
+R[8]=3bce788681430f16af8d061ce078cc06
+R[9]=8a9f060c9b77204f87b15c591078aa73
+R[10]=312e347c8a814ebf06c3dfc80a893f2b
+R[11]=c61b418e5559fffe97bacd6c9cdec225
+R[12]=5f6a9bc8064845676c04bb54c46d5ba7
+R[13]=21aa840ca3d4039ebb40fca671d397e4
+R[14]=5276f24beb91d6def18765dcc6edd198
+R[15]=9f6810c6a57567e12e484e0ccf06e734
+R[16]=e2610a1b6e57acae76d2f356e83dfd34
+R[17]=b12e116af9a8894a5e0aaba29e078e26
+R[18]=1e7b049a49a3b36a38e834c9b365069a
+R[19]=ea1a15d6ad32ca2e4257ac6866abc575
+R[20]=d413bc4f9676eaa6b6ab4457e5e86883
+R[21]=4e6552f06b63fdc1f85dda881e60929a
+R[22]=37037f96942f52109475bce9e79d11aa
+R[23]=eb37582cfee3400bfd53730beebbaa32
+R[24]=0d02862623f7bf7d9ba86563c1901659
+R[25]=d06294c0d802c8ecbbd6150008f71f0c
+R[26]=bce2faea64740dfac46530098504d649
+R[27]=181ae7516acbb48e4688b5a1121de3e1
+R[28]=689d1f4333f16d0a3404a33711d4d70c
+R[29]=1b3da2740d0de5bc96f87a694cdd44ca
+R[30]=a7acc77c802c2c2b03f9e2b4f44a59ab
+R[31]=b6ba65079e255bc87f1b82b17af0e9f7
+cipherText=b0c75a6e4d5ac0abf964d6eba59cf3a7

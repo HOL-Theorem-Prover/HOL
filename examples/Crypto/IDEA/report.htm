@@ -1,0 +1,463 @@
+<html>
+	<head>
+		<title>CS6110 Term Project: Formal Verification of IDEA with HOL</title></head>
+	<body>
+		<H1>CS6110 Term Project: Formal Verification of IDEA with HOL</H1>
+		<hr width="100%">
+		<font size="+0">Junxing Zhang<br>
+			<A href="mailto:junxing@cs.utah.edu">junxing@cs.utah.edu</A><br>
+			<br>
+			<br>
+			<table width="100%">
+				<tr>
+					<td width="100%" colSpan="2"><font size="+1"><b> 1. Project Proposal</b> </font>
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colspan="2">
+						<A href="JZ-IdeaProposal.pdf">Click here for the project proposal in PDF format.</A>
+						<br><br>						
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colSpan="2"><font size="+1"><b> 2. Introduction</b> </font>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2">
+						<p>IDEA (International Data Encryption Algorithm) is one kind of secret key 
+							cryptographic algorithm. It was published in 1991 by Xuejia Lai and James L. 
+							Massey of ETH Zuria. It's original name is IPES (Improved Proposed Encryption 
+							Standard). This algorithm encrypts a 64-bit block of plain text into a 64-bit 
+							block of cypher text using a 128-bit key. It has been studied by cryphtanalysts 
+							since its publication. So far, no weekness has been identified in publications.
+						<br><br></p>						
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colSpan="2"><font size="+1"><b> 3. Protocol Specification</b> </font>
+						<p>We will specify IDEA in HOL-4 [Kananaskis 3] in this section, and provide the 
+							proof of its correctness in the next one. We could specify it in more general 
+							functional programming language such as SML (HOL is considered less general 
+							because it is built on top of SML). But if we use SML here, we will have to 
+							translate it into HOL later because the proof has to be done in HOL. Since the 
+							translation from HOL to SML is pretty straight-forward, to save us from writing 
+							duplicate definitions and save you from reading duplicate things, we will just 
+							use HOL here.
+							<br><br>
+						</p>				
+					</td>					
+				</tr>
+				<tr>
+					<td colspan="2">
+						<b>3.1 State And Keys</b>
+						<p>
+							The state of a cryptographic algorithm is initialized with the input data (the 
+							plain text for the encryption or the cypher text for the decryption). It is 
+							then transformed by primitive operations in several rounds of the algorithm. 
+							The final result is the desired cypher text for encryption or plain text for 
+							decryption. Although the IDEA algorithm operates on 64-bit blocks, its 
+							primitive operations work with 16-bit quantities. Thus, the state is 
+							represented with four 16-bit words. The HOL library has a data type word16 that 
+							suits our need, so we define the state as a 4-tuple of word16 quatities.
+						</p>
+						 &nbsp &nbsp <EM>val _ = type_abbrev("Block", Type`:word16 # word16 # word16 # word16`);</EM>
+						<p>
+						The algorithm uses a 128-bit quatity as the input key, so we define it as a 8-tuple of word16. 
+						The input key is then expanded into 52 16-bit quatities. Each of these quatities are defined as  
+						word16 values. We use a list to hold these values, and thus needn't provide the container type.
+						One special character of IDEA is that it distinguish between even rounds and odd rounds, and that
+						different rounds use different types of keys. The even rounds use the key type that has four 16-bit values, 
+						while the odd rounds uses the type that has only two 16-bit values. As a result, we has the following
+						different EvenKey and OddKey types. We also need two container types to hold all even-round keys 
+						and all odd-round keys. These types provide convenience to the round definitions such that each round
+						can rotate keys within them and always use the first key inside. EvenKeySched holds 8 EvenKey, and 
+						OddKeySched holds 9 OddKey. These definitions are given below. </p>
+											
+						<p> &nbsp &nbsp <EM>val _ = type_abbrev("InputKey", Type`:word16 # word16 # word16 # word16
+                                    # word16 # word16 # word16 # word16`); </EM><br>						
+						&nbsp &nbsp <EM> val _ = type_abbrev("EvenKey", Type`:word16 # word16`); </EM><br>
+						&nbsp &nbsp <EM> val _ = type_abbrev("OddKey", Type`:word16 # word16 # word16 # word16`);</EM><br>
+						&nbsp &nbsp <EM> val _ = type_abbrev
+						("EvenKeySched", Type`:EvenKey#EvenKey#EvenKey#EvenKey#EvenKey#EvenKey#EvenKey#EvenKey`);</EM><br>
+						&nbsp &nbsp <EM> val _ = type_abbrev 
+						("OddKeySched", Type`:OddKey#OddKey#OddKey#OddKey#OddKey#OddKey#OddKey#OddKey#OddKey`); </EM></p>
+						
+						
+                        <p>We also need some instances of the above types. These instances are initialized with zeros and will be used in
+                        the round definitions. </p>
+						<p> &nbsp &nbsp <EM> val ZeroEvenKey_def =  Define `ZeroEvenKey = (0w,0w) : EvenKey`;</EM><br>
+						    &nbsp &nbsp <EM> val ZeroOddKey_def =  Define `ZeroOddKey = (0w,0w,0w,0w) : OddKey`;</EM><br>
+						    &nbsp &nbsp <EM> val ZeroEvenKeys_def =  Define
+                            `ZeroEvenKeys = (ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey) 
+                            : EvenKeySched`;</EM><br>
+						   &nbsp &nbsp <EM> val ZeroOddKeys_def =  Define
+                                `ZeroOddKeys = (ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey,ZeroOddKey) 
+                                : OddKeySched`;</EM></p><br> 																					
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2">
+						<b>3.2 Primitive Operations</b>
+						<p>In DES, each Sbox maps a 6-bit value into a 4-bit value. In IDEA, however, each primitive operations maps two 
+						16-bit values into one 16-bit value. IDEA has three primitive operations. They are bitwise exclusive or (xor), modulo
+						addition, and modulo multiplication. The modulo addition is the addition under the mode of 2^16. It is the same as 
+						the addition provided in HOL word16Theory. The exclusive or is also the same as the one in this theory. Thus, we can    
+						use the two existent operations directly. On the other hand, the modulo multiplication used in IDEA is different from 
+						the one provided in word16Theory. The multiplication used in IDEA is under the mode of 2^16+1, but the one in word16Theory
+						is under the mode of 2^16. Therefore, we cannot use the existent multiplication in HOL. The definition of the required 
+						modulo multiplication is very complicated, because although it works with 16-bit values its mode (2^16+1) cannot be represented
+						as a 16-bit value. More importantly, this modulo multiplication ensures that every 16-bit value (0-65535) has the multiplicative 
+						inverse. To prove it, we need prove the Euclids' Algorithm, some clever encoding and decoding algorithm and some attributes
+						related to the prime number 65537 (2^16+1, the mode). All of these details will be given in the section 5. For the sake of
+						understanding the correctness of IDEA itself, we just need to know that there exists a multiplicative inverse operation, winv,
+						that takes a 16-bit value and returns another 16-bit value that is its mulplicative inverse. And there exists a multiplication
+						operation that produces 1 when multiplying a 16-bit value with its inverse, preserves the original value when multiplying a
+						16-bit value with 1, and has the associative property. These high level definitions are shown below.    
+						</p>
+						<p> &nbsp &nbsp <EM>winv: word16 -> word16</EM></p>
+						<p> &nbsp &nbsp <EM>wmul_Theorem: !w:word16. w wmul (winv w) = 1</EM></p>
+						<p> &nbsp &nbsp <EM>wmul_Mul1: !w:word16. w wmul 1 = w </EM></p>
+                        <p> &nbsp &nbsp <EM>wmul_Assoc: !x:word16 y:word16 z:word16. x wmul y wmul z = x wmul (y wmul z)</EM></p>                        
+						<br>
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colSpan="2">
+						<b>3.3 Key Expansion</b>
+						<p>The protocol expands one 128-bit input key into fifty-two 16-bit encryption keys. The expansion is done by chopping off
+						eight 16-bit keys from the input key seven times, and each time starts with a different offset that is a multiple of
+						25. For the first time, you just start from the beginning (bit 0) and chop the input key until the end. For the second time,
+						you offset the starting position by 25 bit, i.e. start the chopping from the bit 25, and wrapping around to the beginning 
+						when the end is reached. Next time, you offset another 25 bit from the previous starting position, and so on. Because you 
+						only need fifty-two encryption keys, you chop off four 16-bit keys for the last time. In other words, for the seventh time, 
+						you start from the bit 22 and finish at the bit 85. Because there is no "chopping" operation in HOL, we use the shifting and
+						bitwise xor operations to simulate it. For example, the new KEY1 is the combination of the last 7 bits of the old KEY2 and
+						the first 9 bits of the old KEY3, due to the effect of rotating the input key to the right for 25 bits from its previous state.
+						To get this result, we left shift the old KEY2 for 9 bits, right shift the old KEY3 for 7 bits, and xor them together. Please
+						note that we use the logical right shift (>>>) instead of the arithmetic right shift (>>) in order to make sure that the vacated
+						high bits are filled with zeroes.   
+						</p>
+						<p> &nbsp &nbsp <EM> val (MakeEnKeys_def,MakeEnKeys_ind) = </EM><br>
+						&nbsp &nbsp &nbsp <EM>Defn.tprove</EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM>(Hol_defn</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp <EM>"MakeEnKeys"</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp <EM>`MakeEnKeys n (K8::K7::K6::K5::K4::K3::K2::K1::rst) =</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp <EM>let (NK1, NK2, NK3, NK4, NK5, NK6, NK7, NK8) = </EM><br>
+					    &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>((K2<<9) # (K3>>>7), (K3<<9) # (K4>>>7),</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>((K4<<9) # (K5>>>7), (K5<<9) # (K6>>>7),</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(K6<<9) # (K7>>>7), (K7<<9) # (K8>>>7), </EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(K8<<9) # (K1>>>7), (K1<<9) # (K2>>>7)) </EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp <EM>in </EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM> if n = 0 then</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(NK4::NK3::NK2::NK1::K8::K7::K6::K5::K4::K3::K2::K1::rst)</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>else </EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM> MakeEnKeys (n-1) (NK8::NK7::NK6::NK5::NK4::NK3::NK2::NK1</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM> ::K8::K7::K6::K5::K4::K3::K2::K1::rst)`,</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>WF_REL_TAC `measure (FST)`);</EM></p>
+
+						<p> &nbsp &nbsp <EM> val MakeKeys_def = Define </EM><br>
+						&nbsp &nbsp &nbsp <EM>`MakeKeys ((K1, K2, K3, K4, K5, K6, K7, K8):InputKey)  =</EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM>MakeEnKeys 6 [K8;K7;K6;K5;K4;K3;K2;K1]`;</EM></p>    
+						
+						<p>After the key expansion, the expanded keys are grouped into the key schedule for the odd rounds and the key schedule for
+						the even rounds. This is done with the following two operations. The first operation uses the first four keys in
+						every six keys in the list to make odd-round keys. Because there are totally fifty-two keys in the list, four keys will be
+						left after extracting keys in the group of six, these four keys are used to make the last odd-round key. The second operation
+						uses the last two keys in every six keys in the list to make even-round keys.
+						</p>
+						<p> &nbsp &nbsp <EM> val ListToOddKeys_def = </EM><br>
+						&nbsp &nbsp &nbsp <EM>  Define</EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM> `(ListToOddKeys [] oddkeys = oddkeys) /\</EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM> (ListToOddKeys ((k1::k2::k3::k4::k5::k6::t): word16 list)</EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp <EM> ((ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9): OddKeySched)  =</EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM> ListToOddKeys t ((k1,k2,k3,k4),ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8))   /\</EM><br>
+						&nbsp &nbsp <EM> (ListToOddKeys ((k1::k2::k3::k4::t): word16 list) </EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM> ((ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9): OddKeySched) =</EM><br>
+						&nbsp &nbsp <EM> ListToOddKeys t ((k1,k2,k3,k4),ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8))`;</EM></p>
+						
+						<p> &nbsp &nbsp <EM> val ListToEvenKeys_def = </EM><br>
+						&nbsp &nbsp &nbsp <EM> </EM>Define<br>
+						&nbsp &nbsp &nbsp &nbsp <EM> `(ListToEvenKeys [] evenkeys = evenkeys) /\</EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM>(ListToEvenKeys ((k1::k2::k3::k4::k5::k6::t): word16 list) </EM><br>
+						&nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM> ((ek1,ek2,ek3,ek4,ek5,ek6,ek7,ek8): EvenKeySched) =</EM><br>
+						&nbsp &nbsp &nbsp &nbsp <EM> ListToEvenKeys t ((k5,k6),ek1,ek2,ek3,ek4,ek5,ek6,ek7))`;</EM></p>
+						
+						<p> The decryption keys are made by inverse the encryption keys and (or) reverse the order these key are used. For the
+						odd rounds, the encryption keys are inversed and then used in the reverse order. The first and forth keys of every
+						odd-round key are the multiplicative inverses, and the second and third keys are the additive inverse. These definitions
+						are shown in the InverseKey_def and InverseKeys_def below. For the even rounds, the decryption keys are made by simply
+						reverse the order of the encryption keys as shown in ReverseKeys_def. 
+						</p>
+
+						<p> &nbsp &nbsp <EM>val InverseKey_def = Define `InverseKey (k1,k2,k3,k4) = ((winv k1), ~k3, ~k2, (winv k4)) : OddKey`;</EM><p>
+						    &nbsp &nbsp <EM>val InverseKeys_def = </EM><br>
+						    &nbsp &nbsp &nbsp <EM>Define</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>`InverseKeys (ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9) =</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(InverseKey ok9,InverseKey ok8,InverseKey ok7,InverseKey ok6,</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>InverseKey ok5,InverseKey ok4,InverseKey ok3,InverseKey ok2,</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>InverseKey ok1) : OddKeySched`;</EM></p>
+
+						<p> &nbsp &nbsp <EM>val ReverseKeys_def =</EM><br>
+						    &nbsp &nbsp &nbsp <EM>Define</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>`ReverseKeys (ek1,ek2,ek3,ek4,ek5,ek6,ek7,ek8) =</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(ek8,ek7,ek6,ek5,ek4,ek3,ek2,ek1) : EvenKeySched`;</EM></p>
+					<br>
+					</td>
+				</tr>				
+				<tr>
+					<td width="100%" colSpan="2">
+						<b>3.4 Rounds </b>
+						<p>IDEA has seventeen rounds. Among them, nine rounds are odd rounds and eight are even rounds (The round number starts
+						from one). Even rounds and odd rounds are different because they are designed differently and they use different types
+						of keys. The odd round is relatively simple. There are four 16-bit values in the odd-round key, and there are also four
+						 16-bit values in the input block, so every pair of these 16-bit values are added or multiplied together to produce one
+						 16-bit value in the output block. This is defined by OddRound_def. The even round is more complicated. It uses two mangler
+						 functions to generate two intermediate values, Yout and Zout, from the input key and block values. Then, these two intermediate
+						 values are xor'ed with the input block values to produce the output block values. In the original protocol specification [1]
+						 there is only one mangler function, which generates Yout and Zout in two steps. We define two steps in the original mangler
+						 function as two separate functions to simplify the verification. First, the transformation of the first two 16-bit
+						 values in the input block is only affected by the first mangler step, so separating two steps is good for verify this 
+						 transformation. Second, the second mangler step takes the output of the first step as one of its input, so separating two
+						 steps modualized operations, i.e. we can prove certain properties of the first step and use these properties in the 
+						 verification of the second step. The two managler functions and how they are used in the even round is given in the 
+						 specifications below:   
+						</p>
+						
+						<p> &nbsp &nbsp <EM>val OddRound_def    = Define</EM><br>
+						    &nbsp &nbsp &nbsp <EM>`OddRound ((Ka, Kb, Kc, Kd):OddKey) ((Xa, Xb, Xc, Xd):Block) =</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>(Xa wmul Ka, Xc + Kc, Xb + Kb,Xd wmul Kd ):Block`;</EM></p>
+						
+						<p> &nbsp &nbsp <EM>val Mangler1_def = Define `Mangler1 ((Yin:word16), (Zin:word16), (Ke:word16), (Kf:word16))
+						    = ((Ke * Yin) + Zin) * Kf`; </EM></p>
+						<p> &nbsp &nbsp <EM>val Mangler2_def = Define `Mangler2 ((Yin:word16), (Ke:word16), (Yout:word16)) 
+						    = (Ke * Yin) + Yout`;</EM></p>
+						    
+						<p> &nbsp &nbsp <EM>val EvenRound_def = Define</EM></p>
+						    &nbsp &nbsp &nbsp <EM> `EvenRound ((Ke, Kf):EvenKey) ((Xa, Xb, Xc, Xd):Block) = </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>let Yout =  Mangler1 ((Xa # Xb), (Xc # Xd), Ke, Kf) in</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>let Zout = Mangler2 ((Xa # Xb), Ke, Yout) in </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(Xa # Yout, Xb # Yout, Xc # Zout, Xd # Zout):Block`;</EM></p>
+						
+						<p> The seventeen rounds are executed by calling the Round definition below with 17 as the round number value 
+						    (the input parameter n). The Round function then recursively calls itself with decreased round number n,  
+						    new key from the rotated key schedule, and transformed state. It calls EvenRound or OddRound function
+						    based on the round number. The rotation of the key schedule is done by RotateOddKeys and RotateEvenKeys
+					    </p>
+ 
+  						<p> &nbsp &nbsp <EM>val RotateOddKeys_def = </EM><br>
+						    &nbsp &nbsp &nbsp <EM>  Define </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>`RotateOddKeys (k1,k2,k3,k4,k5,k6,k7,k8,k9) =</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(k2,k3,k4,k5,k6,k7,k8,k9,k1) : OddKeySched`; </EM></p>
+            
+						<p> &nbsp &nbsp <EM>val RotateEvenKeys_def = </EM><br>
+						    &nbsp &nbsp &nbsp <EM> Define</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>`RotateEvenKeys (k1,k2,k3,k4,k5,k6,k7,k8) =</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>(k2,k3,k4,k5,k6,k7,k8,k1) : EvenKeySched`; </EM></p>
+
+
+						<p> &nbsp &nbsp <EM>val (Round_def,Round_ind) =  </EM><br>
+						    &nbsp &nbsp &nbsp <EM> Defn.tprove</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>(Hol_defn </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>"Round" </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>`Round n (oddkeys: OddKeySched) (evenkeys: EvenKeySched) (state:Block) = </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>if (n = 0) then</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>state </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>else </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>if (EVEN n) then </EM><br>
+  						    &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>Round (n-1) oddkeys (RotateEvenKeys evenkeys) (EvenRound (FST evenkeys) state) </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>else </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp &nbsp <EM>Round (n-1) (RotateOddKeys oddkeys) evenkeys (OddRound (FST oddkeys) state)`, </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>WF_REL_TAC `measure (FST)`);</EM></p>
+						<br>
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colSpan="2">
+						<b>3.5 Encryption and Decryption </b>
+						<p>One amazing feature of IDEA is that it can perform either encryption or decryption without requiring any change to the 
+						primitive operations, rounds or the orders in which they are carried out. In othere words, for the software implementation 
+						of IDEA, we can use the same code to perform either operation. Which operation is performed depends on which key is used.
+						If we use the encryption key, the code will encrypt the input block; if we use the decryption key, it will decrypt the 
+						input block. In the following specifications, IdeaFwd is defined to run seventeen rounds without distinguishing encryption
+						from decryption. Then, the encryption is defined by passing the expanded encryption key to IdeaFwd, and the decryption is
+						defined by passing the decryption key to it.
+						</p>
+						<p> &nbsp &nbsp <EM>val IdeaFwd_def = Define `IdeaFwd oddkeys evenkeys= Round 17 oddkeys evenkeys`;</EM></p>
+						<p> &nbsp &nbsp <EM>val IDEA_def = Define `IDEA key =   </EM><br>
+						    &nbsp &nbsp &nbsp <EM> let oddkeys = ListToOddKeys (MakeKeys key) ZeroOddKeys in</EM><br>
+						    &nbsp &nbsp &nbsp <EM>let evenkeys = ListToEvenKeys (MakeKeys key) ZeroEvenKeys in </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>(IdeaFwd oddkeys evenkeys, IdeaFwd (InverseKeys oddkeys) (ReverseKeys evenkeys))`;</EM></p>						
+						<br>
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colSpan="2"><font size="+1"><b> 4. Protocol Verification</b> </font>
+					</td>
+				</tr>				
+				<tr>
+					<td width="100%" colSpan="2">
+						<b> 4.1 Handle Aggregation Types</b>
+						<p>We defined many types that are aggregations of 16-bit values, so we need theorems to dissolve them into word16 (the type
+						we use for 16-bit values). The theorem FORALL_ODDKEYSCHED is proved to dissolve the odd key schedule into odd keys, and the
+						theorem FORALL_ODDKEY is proved to further dissove an odd key into four word16 values. We also defined the similar theorems
+						for the even key schedule, even key and block.
+						</p>
+
+						<p> &nbsp &nbsp <EM>val FORALL_ODDKEYSCHED = Q.prove</EM><br>
+						    &nbsp &nbsp &nbsp <EM> (`(!x:OddKeySched. Q x) = !k1 k2 k3 k4 k5 k6 k7 k8 k9.</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>Q(k1,k2,k3,k4,k5,k6,k7,k8,k9)`, </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>EQ_TAC THEN RW_TAC std_ss [] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>`?a1 a2 a3 a4 a5 a6 a7 a8 a9.</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>x = (a1,a2,a3,a4,a5,a6,a7,a8,a9)`</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>by METIS_TAC [ABS_PAIR_THM]</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>THEN ASM_REWRITE_TAC[]); </EM></p>
+ 						    
+ 						<p> &nbsp &nbsp <EM>val FORALL_ODDKEY = Q.prove</EM><br>
+						    &nbsp &nbsp &nbsp <EM> (`(!x:OddKey. Q x) = !kw1 kw2 kw3 kw4. </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>Q(kw1,kw2,kw3,kw4)`, </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>EQ_TAC THEN RW_TAC std_ss [] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>`?a1 a2 a3 a4.</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp &nbsp <EM>x = (a1,a2,a3,a4)`</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>by METIS_TAC [ABS_PAIR_THM]</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>THEN ASM_REWRITE_TAC[]); </EM></p>                     
+  						<br>
+					</td>
+				</tr>
+
+ 				<tr>
+					<td width="100%" colSpan="2">
+						<b> 4.2 Odd Round</b>
+						<p>For odd rounds, the most important proof is to show that the addition or multiplication with inverses cancells the effect
+						of the previous addition or multiplication with original values. For the addition, this proof is given by OddRound_Lemma1
+						below. For the multiplication, it is given by wmul_Theorem, wmul_ASSOC and wmul_Mul1 in the section 5. As defined in the 
+						section 3.2, wmul_Theorem proves that the mulitiplication of one 16-bit value with its inverse equals to one; wmul_ASSOC proves
+						that the modulo muliplication (wmul) has the associative attribute, and thus the 16-bit value can be multiplied with its inverse
+						before it is multiplied with the input value; wmul_Mul1 proves that the input value doesn't change when multiplied with one. 
+						</p>
+						
+ 						<p> &nbsp &nbsp <EM>val OddRound_Lemma1 = Q.store_thm</EM><br>
+						    &nbsp &nbsp &nbsp <EM> ("OddRound_Lemma1", </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM> `!w1:word16 w2:word16. w1 + w2 + ~w2 = w1`, </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>SIMP_TAC std_ss [WORD_ADD_COMM] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>SIMP_TAC std_ss [WORD_ADD_ASSOC] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>ONCE_REWRITE_TAC [WORD_ADD_COMM] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>SIMP_TAC std_ss [WORD_ADD_ASSOC, WORD_ADD_RINV, WORD_ADD]);</EM></p>                     
+						
+ 						<p> &nbsp &nbsp <EM>val OddRound_Inversion = Q.store_thm</EM><br>
+						    &nbsp &nbsp &nbsp <EM> ("OddRound_Inversion", </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>  `!s:Block k:OddKey. OddRound (InverseKey k) (OddRound k s) = s`, </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>SIMP_TAC std_ss [FORALL_BLOCK, FORALL_ODDKEY] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>ARW [InverseKey_def, OddRound_def] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>ARW [wmul_ASSOC, wmul_Theorem, wmul_Mul1, OddRound_Lemma1]);</EM></p>                     
+   						<br>
+					</td>
+				</tr>
+ 				<tr>
+					<td width="100%" colSpan="2">
+						<b> 4.3 Even Round</b>
+						<p> For even rounds, we need work with the mangler functions first. Mangler1_Lemma1 and Mangler2_Lemma1 prove that
+						if two 16-bit values are multiplied with the same mangler function individually and then multiplied together the result equals
+						to multiplying them directly. Mangler1_Lemma2 and Mangler2_Lemma2 show that the effect of multiplying a mangler
+						function can be cancelled by multiplying the same function again. With the assistance of these lemmas, we can prove that the
+						effect of a even round operation can be inversed by simply run the same operation with the same key again. What a magic!
+						</p>
+
+ 						<p> &nbsp &nbsp <EM>val Mangler1_Lemma1 = Q.store_thm</EM><br>
+						    &nbsp &nbsp &nbsp <EM> ("Mangler1_Lemma1", </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>`!w1 w2 w3 w4 w5 w6. w5 # Mangler1 (w1, w2, w3, w4) # (w6 # Mangler1 (w1, w2, w3, w4)) = w5 # w6`,</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_COMM] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> ONCE_REWRITE_TAC [WORD_EOR_COMM] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]); </EM></p>                     
+
+ 
+ 						<p> &nbsp &nbsp <EM>val Mangler2_Lemma1 = Q.store_thm</EM><br>
+						    &nbsp &nbsp &nbsp <EM> ("Mangler2_Lemma1",</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM> `!w1 w2 w3 w4 w5. w4 # Mangler2 (w1, w2, w3) # (w5 # Mangler2 (w1, w2, w3)) = w4 # w5`,</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_COMM] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> ONCE_REWRITE_TAC [WORD_EOR_COMM] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]); </EM></p>                     
+
+
+ 						<p> &nbsp &nbsp <EM>val Mangler1_Lemma2 = Q.store_thm</EM><br>
+						    &nbsp &nbsp &nbsp <EM> ("Mangler1_Lemma2",</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>  `!w1 w2 w3 w4 w5. w5 # Mangler1 (w1, w2, w3, w4) # Mangler1 (w1, w2, w3, w4) = w5`,</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_COMM] THEN  </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> ONCE_REWRITE_TAC [WORD_EOR_COMM] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]); </EM></p>                     
+
+ 						<p> &nbsp &nbsp <EM>val Mangler2_Lemma2 = Q.store_thm</EM><br>
+						    &nbsp &nbsp &nbsp <EM> ("Mangler2_Lemma2",</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>   `!w1 w2 w3 w4. w4 # Mangler2 (w1, w2, w3) # Mangler2 (w1, w2, w3) = w4`,</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_COMM] THEN  </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> ONCE_REWRITE_TAC [WORD_EOR_COMM] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM> SIMP_TAC std_ss [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]); </EM></p>                     
+ 
+ 
+  						<p> &nbsp &nbsp <EM>val EvenRound_Inversion = Q.store_thm</EM><br>
+						    &nbsp &nbsp &nbsp <EM> ("EvenRound_Inversion",</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM> `!s:Block k:EvenKey. EvenRound k (EvenRound k s) = s`,</EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>  SIMP_TAC std_ss [FORALL_BLOCK, FORALL_EVENKEY] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>  RESTR_EVAL_TAC [Mangler1, Mangler2] THEN </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>  SIMP_TAC std_ss [Mangler1_Lemma1, Mangler1_Lemma2, Mangler2_Lemma1, Mangler2_Lemma2]);</EM></p>                      
+   						<br>
+					</td>
+				</tr>
+ 				<tr>
+					<td width="100%" colSpan="2">
+						<b> 4.4 Correctness</b>
+						<p> Since we have shown that both even rounds and odd rounds are inversable, it is easy to prove the whole seventeen rounds are
+						inversable as shown in IDEA_LEMMA below. To prove the correctness of the encryption and decryption, we simply apply the definition
+						of the ecryption and decryption to the goal, and then apply the lemma we just proved.
+						</p>
+
+  						<p> &nbsp &nbsp <EM>val IDEA_LEMMA = Q.store_thm</EM><br>
+						    &nbsp &nbsp <EM> ("IDEA_LEMMA",</EM><br>
+						    &nbsp &nbsp &nbsp <EM> `!plaintext:Block oddkeys:OddKeySched evenkeys:EvenKeySched. </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>  IdeaFwd (InverseKeys oddkeys) (ReverseKeys evenkeys) (IdeaFwd oddkeys evenkeys plaintext) = plaintext`,</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>  SIMP_TAC std_ss [FORALL_ODDKEYSCHED, FORALL_EVENKEYSCHED] THEN  </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>  RESTR_EVAL_TAC [OddRound, EvenRound] THEN</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>  SIMP_TAC std_ss [OddRound_Inversion, EvenRound_Inversion]);</EM></p>                      
+
+  						<p> &nbsp &nbsp <EM>val IDEA_CORRECT = Q.store_thm</EM><br>
+						    &nbsp &nbsp <EM> ("IDEA_CORRECT",</EM><br>
+						    &nbsp &nbsp &nbsp <EM> `!key plaintext. </EM><br>
+						    &nbsp &nbsp &nbsp &nbsp <EM>  ((encrypt,decrypt) = IDEA key)</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>  ==>   </EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>  (decrypt (encrypt plaintext) = plaintext)`,</EM><br>
+ 						    &nbsp &nbsp &nbsp &nbsp <EM>   RW_TAC std_ss [IDEA_def,LET_THM,IDEA_LEMMA]);</EM></p>                      
+   						<br>
+					</td>
+				</tr>				
+				<tr>
+					<td width="100%" colSpan="2"><font size="+1"><b> 5. Euclid's Algorithm and Inversable Modulo Multiplication</b> </font>
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colspan="2">
+						<A href="JZ-EuclidVerification.pdf">Click here for the specification and proof in PDF format.</A>
+						<br><br>						
+					</td>
+				</tr>
+				<tr>
+					<td width="100%" colSpan="2"><font size="+1"><b> 6. Conclusions</b> </font>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="2">
+						<p>I have completed all the tasks planned in the project proposal. In fact, I accomplished more than I planned. In the project
+						planning phase, I didn't realize that I need specify and prove the inversable modulo multiplication, which further leads to
+						the verification of Euclid's algorithm. This project turned out to be fun and fruitful! 
+						<br><br></p>						
+					</td>
+				</tr>								     
+			</table>
+		</font>
+	</body>
+</html>

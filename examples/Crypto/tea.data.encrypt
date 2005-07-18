@@ -1,0 +1,633 @@
+(*---------------------------------------------------------------------------*)
+(* Encrypt data using CBC-TEA                                                *)
+(*---------------------------------------------------------------------------*)
+
+loadPath := "TEA" :: !loadPath;
+
+app load ["modesTheory", "TEATheory", "word32Lib","CoderTheory","Encode"];
+
+quietdec := true;
+open combinTheory pairTheory listTheory arithmeticTheory
+     modesTheory TEATheory EncodeTheory DecodeTheory CoderTheory;
+quietdec := false;
+
+val _ = numLib.prefer_num();
+
+(*---------------------------------------------------------------------------*)
+(* Useful law for FOLDL                                                      *)
+(*---------------------------------------------------------------------------*)
+
+val FOLDL_APPEND = Q.prove
+(`!f e l1 l2. FOLDL f e (l1 ++ l2) = FOLDL f (FOLDL f e l1) l2`,
+ NTAC 3 GEN_TAC THEN 
+ MAP_EVERY Q.ID_SPEC_TAC [`e`,`f`,`l1`] THEN
+ Induct THEN RW_TAC list_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* NUM_TO_BITS k n l: add bottom k bits of number n to list l                *)
+(*---------------------------------------------------------------------------*)
+
+val (NUM_TO_BITS_DEF,_) = 
+  Defn.tprove (Hol_defn "NUM_TO_BITS" 
+   `NUM_TO_BITS k n l =
+     if k=0n then l else NUM_TO_BITS (k-1) (n DIV 2) (ODD n::l)`,
+   WF_REL_TAC `measure FST`);
+
+(*---------------------------------------------------------------------------*)
+(* BV b: map bool to num                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val BV_DEF = Define `(BV T = 1) /\ (BV F = 0)`;
+
+(*---------------------------------------------------------------------------*)
+(* BLV blist: map list of bool to corresponding num. Leftmost bit in list    *)
+(* is most significant.                                                      *)
+(*---------------------------------------------------------------------------*)
+
+val BLV_DEF = 
+ Define 
+  `BLV bitlist = FOLDL (\a b. 2*a + BV(b)) 0 bitlist`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Let's get started                                                         *)
+(*---------------------------------------------------------------------------*)
+
+val TEA_LEMMA' = Q.prove
+(`!k. TEADecrypt k o TEAEncrypt k = I`,
+ RW_TAC std_ss [TEA_LEMMA,o_DEF,FUN_EQ_THM]);
+
+val XORB_DEF = 
+  Define `XORB (x1,x2) (y1,y2) = (x1#y1, x2#y2)`;
+
+val XORB_IDEM = Q.prove
+(`!x y. XORB (XORB x y) y = x`,
+ SIMP_TAC std_ss [pairTheory.FORALL_PROD,XORB_DEF] THEN
+ METIS_TAC[word32Theory.WORD_EOR_ASSOC,
+           word32Theory.WORD_EOR_INV,
+           word32Theory.WORD_EOR_ID]);
+
+(*---------------------------------------------------------------------------*)
+(* TEA_CBC_CORRECT =                                                         *)
+(*     |- !l v k.                                                            *)
+(*       CBC_DEC XORB (TEADecrypt k) v                                       *)
+(*          (CBC_ENC XORB (TEAEncrypt k) v l) = l                            *)
+(*---------------------------------------------------------------------------*)
+
+val TEA_CBC_CORRECT = MATCH_MP CBC_CORRECT (CONJ TEA_LEMMA' XORB_IDEM);
+
+(*---------------------------------------------------------------------------*)
+(* Now to address data encoding, via padding and blocking                    *)
+(*---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Utility stuff, should already be in system.                               *)
+(* Put n copies of x into a list                                             *)
+(*---------------------------------------------------------------------------*)
+
+val REPLICATE_DEF = 
+ Define
+   `REPLICATE n x = if n=0 then [] else x::REPLICATE (n-1) x`;
+
+val LENGTH_REPLICATE = Q.store_thm
+("LENGTH_REPLICATE",
+ `!n x. LENGTH(REPLICATE n x) = n`,
+  Induct THENL
+  [EVAL_TAC THEN PROVE_TAC [],
+   ONCE_REWRITE_TAC [REPLICATE_DEF] THEN RW_TAC list_ss []]);
+
+
+(*---------------------------------------------------------------------------*)
+(* The first n elements of a list                                            *)
+(*---------------------------------------------------------------------------*)
+
+val (FRONTN_DEF,_) = Defn.tprove (Hol_defn "FRONT"
+    `FRONTN n l = if n = 0 then [] else HD(l)::FRONTN (n-1) (TL l)`,
+    WF_REL_TAC `measure FST`);
+
+val _ = save_thm ("FRONTN_DEF",FRONTN_DEF);
+
+val FRONTN_LENGTH = Q.store_thm
+("FRONTN_LENGTH",
+ `!l. FRONTN (LENGTH l) l = l`,
+ Induct THENL 
+ [EVAL_TAC,
+  ONCE_REWRITE_TAC [FRONTN_DEF] THEN RW_TAC list_ss []]);
+
+val FRONTN_LENGTH_APPEND = Q.store_thm
+("FRONT_LENGTH_APPEND",
+ `!l l1. FRONTN (LENGTH l) (l ++ l1) = l`,
+ Induct THENL
+ [GEN_TAC THEN EVAL_TAC,
+  ONCE_REWRITE_TAC [FRONTN_DEF] THEN RW_TAC list_ss []]);
+
+val FRONTN_LENGTH_APPEND_LEM = Q.prove
+(`!n l l1 l2. (n = LENGTH l1) /\ (l = l1 ++ l2) ==> (FRONTN n l = l1)`,
+ PROVE_TAC [FRONTN_LENGTH_APPEND]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Padding : bool list -> bool list, where the result is a multiple of the   *)
+(* block size, and where the original input list can be recovered by         *)
+(* an "unpadding" operation.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val NUM_TO_BITS7_DEF = 
+ Define 
+   `NUM_TO_BITS7 n = 
+      [BIT 6 n; BIT 5 n; BIT 4 n; BIT 3 n; BIT 2 n; BIT 1 n; BIT 0 n]`;
+
+val BITS7_TO_NUM_DEF = 
+ Define 
+   `BITS7_TO_NUM [b6;b5;b4;b3;b2;b1;b0] = 
+      BV b0 + 2*BV(b1) + 4*BV(b2) + 8*BV(b3) + 
+      16*BV(b4) + 32*BV(b5) + 64*BV(b6)`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Define a padding function and its inverse. Note that  0 <= slop <= 63     *)
+(* and if 0 <= slop <= 57 then slop + padding + droplen can fit in 64 bits,  *)
+(* we can fit the padding in at most 1 extra block. But if 58 <= slop <= 63  *)
+(* then we need another block, and droplen needs 7 bits to be represented.   *)
+(*---------------------------------------------------------------------------*)
+
+val PADDING_DEF = 
+ Define
+   `PADDING l = 
+      let slop = (LENGTH l) MOD 64 in
+      let droplen = (if slop <= 57 then 64 else 128) - slop
+      in
+        REPLICATE (droplen - 7) F ++ NUM_TO_BITS7 droplen`;
+
+val PAD_DEF = Define `PAD l = l ++ PADDING l`;
+
+(*---------------------------------------------------------------------------*)
+(* Extract the length of the over-run from the last 7 bits of a padded list  *)
+(*---------------------------------------------------------------------------*)
+
+val DROPLEN_DEF = 
+ Define
+  `(DROPLEN [b6;b5;b4;b3;b2;b1;b0] = BITS7_TO_NUM [b6;b5;b4;b3;b2;b1;b0])
+/\ (DROPLEN (b7::b6::b5::b4::b3::b2::b1::b0::t) 
+      = DROPLEN (b6::b5::b4::b3::b2::b1::b0::t))`;
+
+val lem = Q.prove
+(`!l. ?l1 b0 b1 b2 b3 b4 b5 b6 t. 
+       l ++ [h6; h5; h4; h3; h2; h1; h0] = 
+       b0::b1::b2::b3::b4::b5::b6::t`,
+ Induct THEN EVAL_TAC THEN PROVE_TAC []);
+
+val DROPLEN_EQUALS_BITS7_TO_NUM = Q.prove
+(`!l. DROPLEN (l ++ [h6;h5;h4;h3;h2;h1;h0]) = 
+      BITS7_TO_NUM [h6;h5;h4;h3;h2;h1;h0]`,
+ Induct THENL
+ [EVAL_TAC, RW_TAC list_ss [] THEN METIS_TAC [lem,DROPLEN_DEF]]);
+
+(*---------------------------------------------------------------------------*)
+(* Inverse of padding function.                                              *)
+(*---------------------------------------------------------------------------*)
+
+val UNPAD_DEF = Define `UNPAD l = FRONTN (LENGTH l - DROPLEN l) l`;
+
+(*---------------------------------------------------------------------------*)
+(* Facts about padding                                                       *)
+(*---------------------------------------------------------------------------*)
+
+val LENGTH_PADDING_EQUALS_DROPLEN = Q.store_thm
+("LENGTH_PADDING_EQUALS_DROPLEN",
+ `!l. LENGTH (PADDING l) = DROPLEN (PADDING l)`,
+ REWRITE_TAC [PADDING_DEF] 
+   THEN RW_TAC std_ss [LENGTH_APPEND,LENGTH_REPLICATE,LET_THM] THENL
+   [POP_ASSUM MP_TAC THEN Q.SPEC_TAC (`LENGTH l MOD 64`, `x`) 
+      THEN GEN_TAC THEN STRIP_TAC
+      THEN `x < 58` by DECIDE_TAC
+      THEN Q.PAT_ASSUM `x <= y` (K ALL_TAC)
+      THEN POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `x`
+      THEN NTAC 58 (CONV_TAC (numLib.BOUNDED_FORALL_CONV EVAL))
+      THEN PROVE_TAC [],
+    `57 < LENGTH l MOD 64 /\ LENGTH l MOD 64 < 64` 
+        by RW_TAC arith_ss [arithmeticTheory.DIVISION]
+      THEN REPEAT (POP_ASSUM MP_TAC) 
+      THEN Q.SPEC_TAC (`LENGTH l MOD 64`, `x`) 
+      THEN REPEAT STRIP_TAC 
+      THEN `(x = 58) \/ (x = 59) \/ (x = 60) \/ 
+            (x = 61) \/ (x = 62) \/ (x = 63)` 
+        by RW_TAC arith_ss []
+      THEN RW_TAC std_ss []
+      THEN EVAL_TAC]);
+
+val PADDING_APPEND_LEMMA = Q.prove
+(`!l. ?l1 h0 h1 h2 h3 h4 h5 h6. 
+      PADDING l = l1 ++ [h6;h5;h4;h3;h2;h1;h0]`,
+ RW_TAC std_ss [PADDING_DEF, LET_THM] THENL 
+ [Q.EXISTS_TAC `(REPLICATE (64 - LENGTH l MOD 64 - 7) F)`,
+  Q.EXISTS_TAC `(REPLICATE (128 - LENGTH l MOD 64 - 7) F)`] THEN 
+ RW_TAC std_ss [listTheory.APPEND_11] THEN 
+ PROVE_TAC [NUM_TO_BITS7_DEF]);
+
+val DROPLEN_APPEND = Q.store_thm
+("DROPLEN_APPEND",
+ `!l. DROPLEN (l ++ PADDING l) = DROPLEN (PADDING l)`,
+ METIS_TAC [APPEND_ASSOC,DROPLEN_EQUALS_BITS7_TO_NUM, PADDING_APPEND_LEMMA]);
+
+(*---------------------------------------------------------------------------*)
+(* Correctness of padding then unpadding                                     *)
+(*---------------------------------------------------------------------------*)
+
+val UNPAD_PAD_THM = Q.store_thm
+("UNPAD_PAD_THM",
+ `!l. UNPAD (PAD l) = l`,
+ RW_TAC std_ss [UNPAD_DEF,PAD_DEF] 
+   THEN MATCH_MP_TAC FRONTN_LENGTH_APPEND_LEM
+   THEN Q.EXISTS_TAC `PADDING l` THEN RW_TAC list_ss []
+   THEN MATCH_MP_TAC (DECIDE (Term `(x = y) ==> (p + x - y = p)`))
+   THEN REWRITE_TAC [LENGTH_PADDING_EQUALS_DROPLEN,GSYM PAD_DEF]
+   THEN PROVE_TAC [DROPLEN_APPEND,LENGTH_PADDING_EQUALS_DROPLEN,PAD_DEF]);
+
+(*---------------------------------------------------------------------------*)
+(* Padding always yields a multiple of 64                                    *)
+(*---------------------------------------------------------------------------*)
+
+val LENGTH_PAD_THM = Q.store_thm
+("LENGTH_PAD_THM",
+ `!l. LENGTH (PAD l) MOD 64 = 0`,
+ RW_TAC std_ss [PAD_DEF,PADDING_DEF, LENGTH_APPEND,
+                LENGTH_REPLICATE, NUM_TO_BITS7_DEF,LET_THM,LENGTH]
+  THEN ONCE_REWRITE_TAC [EVAL_RULE (Q.SPEC `64` (GSYM MOD_PLUS))] THENL
+  [POP_ASSUM MP_TAC 
+     THEN Q.SPEC_TAC (`LENGTH l MOD 64`, `x`) 
+     THEN RW_TAC std_ss [] 
+     THEN `(x = 0) \/ 0 < x` by DECIDE_TAC THEN RW_TAC arith_ss [LESS_MOD],
+   `57 < LENGTH l MOD 64 /\ LENGTH l MOD 64 < 64` 
+         by RW_TAC arith_ss [arithmeticTheory.DIVISION]
+      THEN REPEAT (POP_ASSUM MP_TAC)
+      THEN Q.SPEC_TAC (`LENGTH l MOD 64`, `x`) 
+      THEN GEN_TAC THEN REPEAT STRIP_TAC 
+      THEN `(x = 58) \/ (x = 59) \/ (x = 60) \/ 
+            (x = 61) \/ (x = 62) \/ (x = 63)` 
+          by RW_TAC arith_ss []
+      THEN RW_TAC arith_ss []]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Trivial but irritating maps between lists of bits and a pair of words     *)
+(*---------------------------------------------------------------------------*)
+
+val WORD32_DEF = 
+ Define 
+  `(WORD32 [] = []:word32 list) /\
+   (WORD32 (b1::b2::b3::b4::b5::b6::b7::b8::b9::b10::
+            b11::b12::b13::b14::b15::b16::b17::b18::
+            b19::b20::b21::b22::b23::b24::b25::b26::
+            b27::b28::b29::b30::b31::b32::t)
+     = word32$n2w
+         (BLV[b1;b2;b3;b4;b5;b6;b7;b8;b9;b10;b11;b12;b13;b14;
+              b15;b16;b17;b18;b19;b20;b21;b22;b23;b24;b25;b26;
+              b27;b28;b29;b30;b31;b32]) :: WORD32 t)`;
+
+(*---------------------------------------------------------------------------*)
+(* Take a number and get the bottom 32 bits out of it                        *)
+(*---------------------------------------------------------------------------*)
+
+val NUM_TO_BITS32_DEF = 
+ Define 
+   `NUM_TO_BITS32 n = NUM_TO_BITS 32 n []`;
+
+val UNWORD32_DEF = Define 
+   `(UNWORD32 [] = [] :bool list) /\
+    (UNWORD32 (w::t) = NUM_TO_BITS32 (word32$w2n w) ++ UNWORD32 t)`;
+
+val WORD32_INVERSION = 
+ mk_thm([], 
+  ``!l:bool list. (LENGTH l MOD 32 = 0) ==> (UNWORD32 (WORD32 l) = l)``);
+(*
+val WORD32_INVERSION = Q.store_thm
+("WORD32_INVERSION",
+ `!l:bool list. (LENGTH l MOD 32 = 0) ==> (UNWORD32 (WORD32 l) = l)`,
+ recInduct(fetch "-" "WORD32_ind")
+ THEN REPEAT STRIP_TAC 
+ THEN RULE_ASSUM_TAC (SIMP_RULE list_ss [])
+ THEN RW_TAC std_ss [] THENL
+ [RW_TAC std_ss [UNWORD32_DEF, WORD32_DEF],
+  `LENGTH
+    (b1::b2::b3::b4::b5::b6::b7::b8::b9::b10::b11::b12::
+     b13::b14::b15::b16::b17::b18::b19::b20::b21::b22::
+     b23::b24::b25::b26::b27::b28::b29::b30::b31::b32::t) = 
+    LENGTH t + 32` 
+    by RW_TAC list_ss [] THEN POP_ASSUM SUBST_ALL_TAC
+   THEN FULL_SIMP_TAC list_ss [ADD_MODULUS]));
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Conversions between a list of elements and a list of pairs of elements    *)
+(*---------------------------------------------------------------------------*)
+
+val BLOCK_DEF = 
+ Define
+  `(BLOCK [] = []) /\
+   (BLOCK (a::b::t) = (a,b)::BLOCK t)`;
+
+val UNBLOCK_DEF = 
+ Define
+  `(UNBLOCK [] = []) /\
+   (UNBLOCK ((a,b)::t) = a::b::UNBLOCK t)`;
+
+val BLOCK_INVERSION = Q.store_thm
+("BLOCK_INVERSION",
+ `!l k. (LENGTH (l) MOD 2 = 0) ==> (UNBLOCK (BLOCK l) = l)`,
+ recInduct(fetch "-" "BLOCK_ind") THEN EVAL_TAC
+   THEN FULL_SIMP_TAC list_ss [ADD1,ADD_MODULUS]);
+
+(*---------------------------------------------------------------------------*)
+(* Next proof is convenient by a 64-way case analysis in the induction, so   *)
+(* we get such an ind. thm by making an otherwise unused recursive           *)
+(* definition with the right shape. Takes some time to process.              *)
+(*---------------------------------------------------------------------------*)
+
+val _ = Define
+ `(foo(v1::v2::v3::v4::v5::v6::v7::v8::v9::v10::v11::v12::v13::v14::v15::v16::
+       v17::v18::v19::v20::v21::v22::v23::v24::v25::v26::v27::v28::v29::v30::
+       v31::v32::v33::v34::v35::v36::v37::v38::v39::v40::v41::v42::v43::v44::
+       v45::v46::v47::v48::v49::v50::v51::v52::v53::v54::v55::v56::v57::v58::
+       v59::v60::v61::v62::v63::v64::t) = foo t) /\
+  (foo otherwise = T)`;
+
+val listind64 = fetch "-" "foo_ind";
+
+val LENGTH_WORD32_THM = Q.store_thm
+("LENGTH_BYTE_THM",
+ `!l. (LENGTH l MOD 64 = 0) ==> (LENGTH (WORD32 l) MOD 2 = 0)`,
+ HO_MATCH_MP_TAC listind64 
+   THEN REPEAT (CONJ_TAC ORELSE GEN_TAC)
+   THEN EVAL_TAC   (* Gets all cases except induction step *)
+   THEN SIMP_TAC std_ss [ADD1] THEN RW_TAC arith_ss [ADD_MODULUS]);
+
+val MOD_FACTOR = Q.prove
+(`!n. (n MOD 64 = 0) ==> (n MOD 32 = 0)`,
+  RW_TAC arith_ss [BETA_RULE (Q.ISPECL [`\x.x=0`] MOD_P)]
+   THEN Q.EXISTS_TAC `2 * k` THEN DECIDE_TAC);
+
+(*---------------------------------------------------------------------------*)
+(* Padding then blocking is invertible                                       *)
+(*---------------------------------------------------------------------------*)
+
+val PAD_TO_UNPAD_THM = Q.store_thm
+("PAD_TO_UNPAD_THM",
+ `(UNPAD o UNWORD32 o UNBLOCK) o (BLOCK o WORD32 o PAD) = I`,
+ RW_TAC std_ss [FUN_EQ_THM,I_THM] THEN
+ `LENGTH (PAD x) MOD 64 = 0` by METIS_TAC [LENGTH_PAD_THM] THEN
+ IMP_RES_TAC LENGTH_WORD32_THM THEN 
+ RW_TAC list_ss [BLOCK_INVERSION] THEN 
+ RW_TAC list_ss [MOD_FACTOR,WORD32_INVERSION,UNPAD_PAD_THM]);
+
+
+(*===========================================================================*)
+(* Now we turn to encryption of high-level datatypes. This is accomplished   *)
+(* by using pre-existing polytypism infrastructure in HOL, which works       *)
+(* by traversing types and building up corresponding terms that perform      *)
+(* encoding and decoding.                                                    *)
+(*===========================================================================*)
+
+fun encode tm = 
+ let val db = TypeBase.theTypeBase()
+     val f = TypeBasePure.type_encode db (type_of tm)
+ in
+    EVAL (mk_comb (f, tm))
+ end;
+
+try encode ``[(1,2,3,4) ; (5,6,7,8)]``;
+
+(*---------------------------------------------------------------------------*)
+(* Example. Encode then pad. Unpad then decode.                              *)
+(*---------------------------------------------------------------------------*)
+
+Count.apply EVAL 
+  ``let encoded = encode_num 255 in
+    let padded = PAD encoded in
+    let unpadded = UNPAD padded
+    in
+     decode_num (K T) unpadded``;
+
+
+(*---------------------------------------------------------------------------*)
+(* Currently, the decoders installed for basic types are not efficient,      *)
+(* mainly because they use case statements on the rhs, and that is not       *)
+(* efficiently supported. The following two versions of decode_num and       *)
+(* decode_list are far better.                                               *)
+(*---------------------------------------------------------------------------*)
+
+val decode_num_thm = 
+ mk_thm ([], Term 
+ `(decode_num P [] = NONE) /\
+  (decode_num P [x] = NONE) /\
+  (decode_num P (T::T::t) = SOME (0,t)) /\
+  (decode_num P (T::F::t) = 
+     let x = decode_num P t 
+     in if IS_SOME x then (let (m,t') = THE(x) in SOME (2*m + 1, t'))
+        else NONE) /\
+  (decode_num P (F::t) = 
+     let x = decode_num P t 
+     in if IS_SOME x then (let (m,t') = THE(x) in SOME (2*m + 2, t'))
+        else NONE)`);
+
+val decode_list_thm = 
+ mk_thm ([],Term
+  `(decode_list (EVERY (K T)) (decode_num (K T)) [] = NONE) /\
+   (decode_list (EVERY (K T)) (decode_num (K T)) (F::t) = SOME([],t)) /\
+   (decode_list (EVERY (K T)) (decode_num (K T)) (T::t) =
+       let x = decode_num (K T) t
+       in if IS_SOME x 
+            then let (y,t') = THE(x) 
+                 in let z = decode_list (ALL_EL (K T)) (decode_num (K T)) t'
+                    in if IS_SOME z
+                        then (let (u,w) = THE(z) in SOME (y::u,w))
+                        else NONE
+            else NONE)`);
+
+avl _ = computeLib.add_funs [decode_num_thm,decode_list_thm];
+
+(*---------------------------------------------------------------------------*)
+(* For example, the following is more than twice as fast as the previous     *)
+(*---------------------------------------------------------------------------*)
+
+Count.apply EVAL 
+  (Term `let encoded = encode_num 255 in
+         let padded = PAD encoded in
+         let unpadded = UNPAD padded
+          in
+           decode_num (K T) unpadded`);
+
+(*---------------------------------------------------------------------------*)
+(* Example: encryption and decryption of elements of the type                *)
+(*                                                                           *)
+(*    (num # bool option) list                                               *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val ty = ``:(num # bool option) list``;
+
+(*---------------------------------------------------------------------------*)
+(* Current version of encoding technology depends on domain predicates. The  *)
+(* following is the dom. pred. for ty                                        *)
+(*---------------------------------------------------------------------------*)
+
+val Dom_ty = ``EVERY (lift_prod (K T) (lift_option (K T))) 
+               : ^(ty_antiq ty) -> bool``;
+(*---------------------------------------------------------------------------*)
+(* Automatically generate encoder                                            *)
+(*---------------------------------------------------------------------------*)
+
+val Enc_ty = TypeBasePure.type_encode 
+                 (TypeBase.theTypeBase()) ty;
+(*---------------------------------------------------------------------------*)
+(* Decoder for the type. Not currently generated automatically               *)
+(*---------------------------------------------------------------------------*)
+
+val Dec_ty = 
+  ``decode_list (ALL_EL (lift_prod (K T) (lift_option (K T))))
+      (decode_prod (lift_prod (K T) (lift_option (K T)))
+         (decode_num (K T))
+         (decode_option (lift_option (K T)) (decode_bool (K T))))``;
+
+(*---------------------------------------------------------------------------*)
+(* Rephrase some preproved theorems for easier use while backwards chaining  *)
+(*---------------------------------------------------------------------------*)
+
+val wf_coder_option' = Q.prove
+(`!P e d lc. wf_coder (P,e,d) /\ (option_coder (P,e,d) = oc) ==> wf_coder oc`,
+ METIS_TAC [ABS_PAIR_THM,wf_coder_option]);
+
+val wf_coder_prod' = Q.prove
+(`!P1 P2 e1 e2 d1 d2 pc. 
+   wf_coder (P1,e1,d1) /\ 
+   wf_coder (P2,e2,d2) /\ 
+(prod_coder (P1,e1,d1) (P2,e2,d2) = pc) ==> wf_coder pc`,
+ METIS_TAC [ABS_PAIR_THM,wf_coder_prod]);
+
+val wf_coder_list' = Q.prove
+(`!P e d lc. wf_coder (P,e,d) /\ (list_coder (P,e,d) = lc) ==> wf_coder lc`,
+ METIS_TAC [ABS_PAIR_THM,wf_coder_list]);
+
+(*---------------------------------------------------------------------------*)
+(* More useful (for me) versions of wf_coder theorems from CoderTheory.      *)
+(*---------------------------------------------------------------------------*)
+
+val [wf_list_coder,wf_prod_coder,wf_option_coder,
+     wf_num_coder, wf_bool_coder] = 
+  [SIMP_RULE std_ss [FORALL_PROD,list_coder_def] wf_coder_list,
+   SIMP_RULE std_ss [FORALL_PROD,prod_coder_def] wf_coder_prod,
+   SIMP_RULE std_ss [FORALL_PROD,option_coder_def] wf_coder_option,
+   SIMP_RULE std_ss [FORALL_PROD,num_coder_def] wf_coder_num,
+   SIMP_RULE std_ss [FORALL_PROD,bool_coder_def] wf_coder_bool];
+
+val wf_pred_KT = REWRITE_RULE [K_THM] (Q.SPEC `K T` wf_pred_def);
+
+val wf_bool = MATCH_MP wf_bool_coder (INST_TYPE [alpha |-> bool] wf_pred_KT);
+
+(*---------------------------------------------------------------------------*)
+(* (Dom_ty, Enc_ty, Dec_ty) is a wf_coder                                    *)
+(*---------------------------------------------------------------------------*)
+
+val thm = Q.prove
+(`wf_coder (^Dom_ty,^Enc_ty,^Dec_ty)`,
+ METIS_TAC [wf_pred_KT, wf_list_coder, wf_num_coder, 
+            wf_bool_coder, wf_prod_coder, wf_option_coder]);
+
+(* OR *)
+val thm = Q.prove
+(`wf_coder (^Dom_ty,^Enc_ty,^Dec_ty)`,
+ REPEAT (CONJ_TAC 
+       ORELSE MATCH_ACCEPT_TAC wf_pred_KT 
+       ORELSE MAP_FIRST MATCH_MP_TAC 
+               [wf_list_coder, wf_num_coder,
+                wf_bool_coder, wf_prod_coder, wf_option_coder]));
+
+
+(*---------------------------------------------------------------------------*)
+(* Hence Dec_ty o Enc_ty = I                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val thm1 = SIMP_RULE std_ss [domain_def,decoder_def, encoder_def] 
+                            (MATCH_MP wf_coder thm);
+val thm2 = prove (fst(dest_imp(snd(dest_forall(concl thm1)))),
+                  Induct_on `x` THEN EVAL_TAC THEN ASM_REWRITE_TAC []);
+val thm3 = GEN_ALL (MATCH_MP thm1 thm2);
+
+val CODING_INVERSION = Q.prove
+(`decode ^Dom_ty ^Dec_ty o ^Enc_ty = I`,
+ RW_TAC std_ss [thm3, FUN_EQ_THM,I_THM]);
+
+(*---------------------------------------------------------------------------*)
+(* Apply example to CBC-TEA                                                  *)
+(*                                                                           *)
+(*  |- !v key.                                                               *)
+(*      (decode (EVERY (lift_prod (K T) (lift_option (K T))))                *)
+(*         (decode_list (EVERY (lift_prod (K T) (lift_option (K T))))        *)
+(*            (decode_prod (lift_prod (K T) (lift_option (K T)))             *)
+(*               (decode_num (K T))                                          *)
+(*               (decode_option (lift_option (K T)) (decode_bool (K T))))) o *)
+(*        UNPAD o UNWORD32 o UNBLOCK o CBC_DEC XORB (TEADecrypt key) v)      *)
+(*       o                                                                   *)
+(*        (CBC_ENC XORB (TEAEncrypt key) v o BLOCK o WORD32 o PAD o          *)
+(*         encode_list (encode_prod encode_num (encode_option encode_bool))) *)
+(*      =                                                                    *)
+(*       I                                                                   *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val ENCODE_THEN_ENCRYPT_CORRECT = 
+  (SIMP_RULE std_ss [XORB_IDEM]
+  (ISPEC ``XORB``
+  (SIMP_RULE std_ss [TEA_LEMMA']
+  (ISPEC ``TEADecrypt``
+  (ISPEC ``TEAEncrypt``
+  (SIMP_RULE std_ss [PAD_TO_UNPAD_THM]
+  (ISPEC ``UNPAD o UNWORD32 o UNBLOCK``
+  (ISPEC ``BLOCK o WORD32 o PAD``
+  (SIMP_RULE std_ss [CODING_INVERSION]
+  (ISPEC ``decode ^Dom_ty ^Dec_ty`` 
+  (ISPEC Enc_ty DATA_CBC_CORRECT)))))))))));
+
+computeLib.add_funs [Rounds_def,InvRounds_def];
+
+(*---------------------------------------------------------------------------*)
+(* Let's see it in action ...                                                *)
+(*---------------------------------------------------------------------------*)
+
+val M = ``[(1,NONE);(13,SOME T)]``;
+val key = ``(1w,2w,3w,4w)``;
+val v =   ``(5w,10w)``
+
+val ev1 = EVAL 
+  ``(CBC_ENC XORB (TEAEncrypt ^key) ^v o BLOCK o WORD32 o PAD o
+     encode_list (encode_prod encode_num (encode_option encode_bool)))
+        ^M``;
+
+val ev2 = EVAL
+  ``(UNPAD o UNWORD32 o UNBLOCK o CBC_DEC XORB (TEADecrypt ^key) ^v)
+    ^(rhs (concl ev1))``;
+
+STOP;
+val ev3 = EVAL
+  ``decode (EVERY (lift_prod (K T) (lift_option (K T))))
+      (decode_list (EVERY (lift_prod (K T) (lift_option (K T))))
+        (decode_prod (lift_prod (K T) (lift_option (K T)))
+           (decode_num (K T))
+           (decode_option (lift_option (K T)) (decode_bool (K T)))))
+     ^(rhs(concl ev2))``
+
+
+(* Generate ML
+val _ = 
+  let open aesTheory EmitML
+  in exportML("modes",
+      MLSIG "type num = numML.num" ::
+      MLSTRUCT "type num = numML.num" ::
+      OPEN ["combin", "list", "aes"] ::
+      map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+      [ ECB_DEF, CBC_ENC_DEF, CBC_DEC_DEF, BYTE_TO_LIST_DEF,
+        REPLICATE_DEF, PADDING_DEF, PAD_DEF, DROPLEN_DEF, 
+        FRONT_DEF, UNPAD_DEF, BYTE_DEF, BLOCK_DEF, UNBYTE_DEF, UNBLOCK_DEF,
+        ENBLOCK_DEF, DEBLOCK_DEF, AES_CBC_DEF])
+  end
+*)
