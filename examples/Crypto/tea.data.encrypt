@@ -444,7 +444,7 @@ val decode_list_thm =
                         else NONE
             else NONE)`);
 
-avl _ = computeLib.add_funs [decode_num_thm,decode_list_thm];
+val _ = computeLib.add_funs [decode_num_thm,decode_list_thm];
 
 (*---------------------------------------------------------------------------*)
 (* For example, the following is more than twice as fast as the previous     *)
@@ -588,13 +588,12 @@ val ENCODE_THEN_ENCRYPT_CORRECT =
   (ISPEC ``decode ^Dom_ty ^Dec_ty`` 
   (ISPEC Enc_ty DATA_CBC_CORRECT)))))))))));
 
-computeLib.add_funs [Rounds_def,InvRounds_def];
 
 (*---------------------------------------------------------------------------*)
 (* Let's see it in action ...                                                *)
 (*---------------------------------------------------------------------------*)
 
-val M = ``[(1,NONE);(13,SOME T)]``;
+val M = ``[(1,NONE);(13,SOME T), (257,SOME F)]``;
 val key = ``(1w,2w,3w,4w)``;
 val v =   ``(5w,10w)``
 
@@ -607,14 +606,38 @@ val ev2 = EVAL
   ``(UNPAD o UNWORD32 o UNBLOCK o CBC_DEC XORB (TEADecrypt ^key) ^v)
     ^(rhs (concl ev1))``;
 
-STOP;
+
+(*---------------------------------------------------------------------------*)
+(* Now an ugly bit ... need to prove all the domain conditions.              *)
+(*---------------------------------------------------------------------------*)
+
+val decode_option_thm = 
+ MATCH_MP decode_option (SPEC ``K T:bool->bool`` wf_decode_bool);
+
+val decode_prod_thm = 
+ MATCH_MP decode_prod 
+   (CONJ (SPEC ``K T:num->bool`` wf_decode_num)
+         (MATCH_MP wf_decode_option 
+              (SPEC ``K T:bool->bool`` wf_decode_bool)));
+
+val decode_list_thm = 
+ MATCH_MP decode_list
+  (MATCH_MP wf_decode_prod 
+    (CONJ (SPEC ``K T:num->bool`` wf_decode_num)
+         (MATCH_MP wf_decode_option 
+              (SPEC ``K T:bool->bool`` wf_decode_bool))));
+
+computeLib.add_funs [decode_bool, decode_option_thm,
+                     decode_prod_thm, decode_list_thm, decode_def];
+
 val ev3 = EVAL
   ``decode (EVERY (lift_prod (K T) (lift_option (K T))))
       (decode_list (EVERY (lift_prod (K T) (lift_option (K T))))
         (decode_prod (lift_prod (K T) (lift_option (K T)))
            (decode_num (K T))
            (decode_option (lift_option (K T)) (decode_bool (K T)))))
-     ^(rhs(concl ev2))``
+     ^(rhs(concl ev2))``;
+
 
 
 (* Generate ML
