@@ -1886,17 +1886,18 @@ the current theory.
 \index{new_definition@\ml{new\_definition}|pin}
 \begin{verbatim}
    new_definition : (string * term) -> thm
-\end{verbatim}\end{boxed}
+\end{verbatim}
+\end{boxed}
 
 
 \noindent Evaluating
- \ml{new\_definition("}$name$\ml{",\ }$c\ v_1\ \cdots\ v_n\ =\ t$\ml{)},
+ \ml{new\_definition("$name$", \holquote{$c\ v_1\ \cdots\ v_n\ =\ t$})},
 declares the sequent
-\ml{(\{\},$\lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
+\ml{(\{\},$c = \lambda v_1\ \cdots\ v_n.\  t$)} to be a constant definition
 \index{definitions, adding to HOL logic@definitions, adding to \HOL{} logic}
 of the current theory. The name associated with the definition in
 this theory is $name$.
-Failure if:
+Failure occurs if:
 \begin{myenumerate}
 \item $t$ contains free variables that are not in any of
 the variable structures $v_1$, $\dots$, $v_n$ (this is equivalent
