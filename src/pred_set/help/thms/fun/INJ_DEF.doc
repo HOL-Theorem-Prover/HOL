@@ -1,0 +1,6 @@
+\THEOREM INJ_DEF pred_sets
+|- !f s t.
+    INJ f s t =
+    (!x. x IN s ==> (f x) IN t) /\
+    (!x y. x IN s /\ y IN s ==> (f x = f y) ==> (x = y))
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM INFINITE_DIFF_FINITE pred_sets
+|- !s t. INFINITE s /\ FINITE t ==> ~(s DIFF t = {{}})
+\ENDTHEOREM

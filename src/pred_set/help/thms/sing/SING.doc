@@ -1,0 +1,3 @@
+\THEOREM SING pred_sets
+|- !x. SING{{x}}
+\ENDTHEOREM

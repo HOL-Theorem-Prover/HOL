@@ -1,0 +1,3 @@
+\THEOREM DELETE_SUBSET pred_sets
+|- !x s. (s DELETE x) SUBSET s
+\ENDTHEOREM

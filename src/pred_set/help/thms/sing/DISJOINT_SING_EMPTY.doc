@@ -1,0 +1,3 @@
+\THEOREM DISJOINT_SING_EMPTY pred_sets
+|- !x. DISJOINT{{x}}{{}}
+\ENDTHEOREM

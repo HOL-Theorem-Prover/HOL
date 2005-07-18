@@ -1,0 +1,3 @@
+\THEOREM IMAGE_DELETE pred_sets
+|- !f x s. ~x IN s ==> (IMAGE f(s DELETE x) = IMAGE f s)
+\ENDTHEOREM

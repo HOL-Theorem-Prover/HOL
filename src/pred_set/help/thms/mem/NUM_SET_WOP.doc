@@ -1,0 +1,3 @@
+\THEOREM NUM_SET_WOP pred_sets
+|- !s. (?n. n IN s) = (?n. n IN s /\ (!m. m IN s ==> n <= m))
+\ENDTHEOREM

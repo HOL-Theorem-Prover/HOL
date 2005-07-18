@@ -1,0 +1,3 @@
+\THEOREM IMAGE_COMPOSE pred_sets
+|- !f g s. IMAGE(f o g)s = IMAGE f(IMAGE g s)
+\ENDTHEOREM

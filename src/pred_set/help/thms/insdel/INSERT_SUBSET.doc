@@ -1,0 +1,3 @@
+\THEOREM INSERT_SUBSET pred_sets
+|- !x s t. (x INSERT s) SUBSET t = x IN t /\ s SUBSET t
+\ENDTHEOREM

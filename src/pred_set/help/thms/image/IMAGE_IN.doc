@@ -1,0 +1,3 @@
+\THEOREM IMAGE_IN pred_sets
+|- !x s. x IN s ==> (!f. (f x) IN (IMAGE f s))
+\ENDTHEOREM

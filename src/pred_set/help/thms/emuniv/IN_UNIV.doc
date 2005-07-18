@@ -1,0 +1,3 @@
+\THEOREM IN_UNIV pred_sets
+|- !x. x IN UNIV
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM BIJ_DEF pred_sets
+|- !f s t. BIJ f s t = INJ f s t /\ SURJ f s t
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM IMAGE_FINITE pred_sets
+|- !s. FINITE s ==> (!f. FINITE(IMAGE f s))
+\ENDTHEOREM

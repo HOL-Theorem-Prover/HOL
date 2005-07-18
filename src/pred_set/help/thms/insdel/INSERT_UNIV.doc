@@ -1,0 +1,3 @@
+\THEOREM INSERT_UNIV pred_sets
+|- !x. x INSERT UNIV = UNIV
+\ENDTHEOREM

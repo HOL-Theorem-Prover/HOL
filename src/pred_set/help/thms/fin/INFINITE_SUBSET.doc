@@ -1,0 +1,3 @@
+\THEOREM INFINITE_SUBSET pred_sets
+|- !s. INFINITE s ==> (!t. s SUBSET t ==> INFINITE t)
+\ENDTHEOREM

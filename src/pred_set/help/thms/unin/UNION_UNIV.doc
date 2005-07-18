@@ -1,0 +1,3 @@
+\THEOREM UNION_UNIV pred_sets
+|- (!s. UNIV UNION s = UNIV) /\ (!s. s UNION UNIV = UNIV)
+\ENDTHEOREM

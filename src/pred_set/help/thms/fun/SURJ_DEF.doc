@@ -1,0 +1,6 @@
+\THEOREM SURJ_DEF pred_sets
+|- !f s t.
+    SURJ f s t =
+    (!x. x IN s ==> (f x) IN t) /\
+    (!x. x IN t ==> (?y. y IN s /\ (f y = x)))
+\ENDTHEOREM

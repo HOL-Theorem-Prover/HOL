@@ -1,0 +1,3 @@
+\THEOREM SURJ_ID pred_sets
+|- !s. SURJ(\x. x)s s
+\ENDTHEOREM

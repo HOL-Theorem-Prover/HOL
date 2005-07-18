@@ -1,0 +1,3 @@
+\THEOREM SING_DELETE pred_sets
+|- !x. {{x}} DELETE x = {{}}
+\ENDTHEOREM

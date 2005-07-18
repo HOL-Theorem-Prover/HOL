@@ -1,0 +1,3 @@
+\THEOREM MEMBER_NOT_EMPTY pred_sets
+|- !s. (?x. x IN s) = ~(s = {{}})
+\ENDTHEOREM

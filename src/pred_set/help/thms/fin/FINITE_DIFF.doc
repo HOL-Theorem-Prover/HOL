@@ -1,0 +1,3 @@
+\THEOREM FINITE_DIFF pred_sets
+|- !s. FINITE s ==> (!t. FINITE(s DIFF t))
+\ENDTHEOREM

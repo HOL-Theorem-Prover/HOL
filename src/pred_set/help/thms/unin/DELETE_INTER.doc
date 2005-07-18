@@ -1,0 +1,3 @@
+\THEOREM DELETE_INTER pred_sets
+|- !s t x. (s DELETE x) INTER t = (s INTER t) DELETE x
+\ENDTHEOREM

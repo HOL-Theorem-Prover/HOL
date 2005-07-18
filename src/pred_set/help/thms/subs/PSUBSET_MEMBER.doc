@@ -1,0 +1,3 @@
+\THEOREM PSUBSET_MEMBER pred_sets
+|- !s t. s PSUBSET t = s SUBSET t /\ (?y. y IN t /\ ~y IN s)
+\ENDTHEOREM

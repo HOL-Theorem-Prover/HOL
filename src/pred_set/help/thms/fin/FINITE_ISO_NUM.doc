@@ -1,0 +1,7 @@
+\THEOREM FINITE_ISO_NUM pred_sets
+|- !s.
+    FINITE s ==>
+    (?f.
+      (!n m. n < (CARD s) /\ m < (CARD s) ==> (f n = f m) ==> (n = m)) /\
+      (s = {{f n | n < (CARD s)}}))
+\ENDTHEOREM

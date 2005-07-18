@@ -1,0 +1,3 @@
+\THEOREM SURJ_EMPTY pred_sets
+|- !f. (!s. SURJ f{{}}s = (s = {{}})) /\ (!s. SURJ f s{{}} = (s = {{}}))
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM DELETE_COMM pred_sets
+|- !x y s. (s DELETE x) DELETE y = (s DELETE y) DELETE x
+\ENDTHEOREM

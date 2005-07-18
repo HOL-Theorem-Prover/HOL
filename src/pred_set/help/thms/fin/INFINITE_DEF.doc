@@ -1,0 +1,3 @@
+\THEOREM INFINITE_DEF pred_sets
+|- !s. INFINITE s = ~FINITE s
+\ENDTHEOREM

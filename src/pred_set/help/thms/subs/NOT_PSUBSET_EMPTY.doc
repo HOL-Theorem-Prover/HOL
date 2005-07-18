@@ -1,0 +1,3 @@
+\THEOREM NOT_PSUBSET_EMPTY pred_sets
+|- !s. ~s PSUBSET {{}}
+\ENDTHEOREM

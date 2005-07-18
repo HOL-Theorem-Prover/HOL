@@ -1,0 +1,3 @@
+\THEOREM DELETE_EQ_SING pred_sets
+|- !s x. x IN s ==> ((s DELETE x = {{}}) = (s = {{x}}))
+\ENDTHEOREM

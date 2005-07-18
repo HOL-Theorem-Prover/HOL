@@ -1,0 +1,5 @@
+\THEOREM CARD_DELETE pred_sets
+|- !s.
+    FINITE s ==>
+    (!x. CARD(s DELETE x) = (x IN s => (CARD s) - 1 | CARD s))
+\ENDTHEOREM

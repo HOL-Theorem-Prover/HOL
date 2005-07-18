@@ -1,0 +1,3 @@
+\THEOREM CARD_SING pred_sets
+|- !x. CARD{{x}} = 1
+\ENDTHEOREM

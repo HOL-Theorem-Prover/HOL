@@ -1,0 +1,3 @@
+\THEOREM BIJ_COMPOSE pred_sets
+|- !f g s t u. BIJ f s t /\ BIJ g t u ==> BIJ(g o f)s u
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM SUBSET_UNION pred_sets
+|- (!s t. s SUBSET (s UNION t)) /\ (!s t. s SUBSET (t UNION s))
+\ENDTHEOREM

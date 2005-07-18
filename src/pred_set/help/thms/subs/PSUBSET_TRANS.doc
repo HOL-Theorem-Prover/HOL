@@ -1,0 +1,3 @@
+\THEOREM PSUBSET_TRANS pred_sets
+|- !s t u. s PSUBSET t /\ t PSUBSET u ==> s PSUBSET u
+\ENDTHEOREM

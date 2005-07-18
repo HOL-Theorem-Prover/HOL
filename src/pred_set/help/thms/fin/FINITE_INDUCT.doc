@@ -1,0 +1,5 @@
+\THEOREM FINITE_INDUCT pred_sets
+|- !P.
+    P{{}} /\ (!s. FINITE s /\ P s ==> (!e. ~e IN s ==> P(e INSERT s))) ==>
+    (!s. FINITE s ==> P s)
+\ENDTHEOREM

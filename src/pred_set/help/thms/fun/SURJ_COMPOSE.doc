@@ -1,0 +1,3 @@
+\THEOREM SURJ_COMPOSE pred_sets
+|- !f g s t u. SURJ f s t /\ SURJ g t u ==> SURJ(g o f)s u
+\ENDTHEOREM

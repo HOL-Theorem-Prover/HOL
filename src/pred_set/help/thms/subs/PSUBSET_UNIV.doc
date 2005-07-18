@@ -1,0 +1,3 @@
+\THEOREM PSUBSET_UNIV pred_sets
+|- !s. s PSUBSET UNIV = (?x. ~x IN s)
+\ENDTHEOREM

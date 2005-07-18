@@ -1,0 +1,3 @@
+\THEOREM EQ_UNIV pred_sets
+|- (!x. x IN s) = (s = UNIV)
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM DIFF_DIFF pred_sets
+|- !s t. (s DIFF t) DIFF t = s DIFF t
+\ENDTHEOREM

@@ -1,0 +1,7 @@
+\THEOREM CARD_UNION pred_sets
+|- !s.
+    FINITE s ==>
+    (!t.
+      FINITE t ==>
+      ((CARD(s UNION t)) + (CARD(s INTER t)) = (CARD s) + (CARD t)))
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM INSERT_UNION_EQ pred_sets
+|- !x s t. (x INSERT s) UNION t = x INSERT (s UNION t)
+\ENDTHEOREM

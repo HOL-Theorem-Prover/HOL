@@ -1,0 +1,3 @@
+\THEOREM COMPONENT pred_sets
+|- !x s. x IN (x INSERT s)
+\ENDTHEOREM

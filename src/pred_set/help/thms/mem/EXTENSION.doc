@@ -1,0 +1,3 @@
+\THEOREM EXTENSION pred_sets
+|- !s t. (s = t) = (!x. x IN s = x IN t)
+\ENDTHEOREM

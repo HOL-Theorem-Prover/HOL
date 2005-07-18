@@ -1,0 +1,3 @@
+\THEOREM PSUBSET_IRREFL pred_sets
+|- !s. ~s PSUBSET s
+\ENDTHEOREM

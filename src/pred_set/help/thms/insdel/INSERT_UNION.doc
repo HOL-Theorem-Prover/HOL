@@ -1,0 +1,4 @@
+\THEOREM INSERT_UNION pred_sets
+|- !x s t.
+    (x INSERT s) UNION t = (x IN t => s UNION t | x INSERT (s UNION t))
+\ENDTHEOREM

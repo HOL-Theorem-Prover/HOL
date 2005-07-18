@@ -1,0 +1,3 @@
+\THEOREM REST_SING pred_sets
+|- !x. REST{{x}} = {{}}
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM PSUBSET_INSERT_SUBSET pred_sets
+|- !s t. s PSUBSET t = (?x. ~x IN s /\ (x INSERT s) SUBSET t)
+\ENDTHEOREM

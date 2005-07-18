@@ -1,0 +1,3 @@
+\THEOREM IMAGE_INTER pred_sets
+|- !f s t. (IMAGE f(s INTER t)) SUBSET ((IMAGE f s) INTER (IMAGE f t))
+\ENDTHEOREM

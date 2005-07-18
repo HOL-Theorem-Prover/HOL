@@ -1,0 +1,3 @@
+\THEOREM IN_SING pred_sets
+|- !x y. x IN {{y}} = (x = y)
+\ENDTHEOREM

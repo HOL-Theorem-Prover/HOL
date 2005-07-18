@@ -1,0 +1,3 @@
+\THEOREM DIFF_INSERT pred_sets
+|- !s t x. s DIFF (x INSERT t) = (s DELETE x) DIFF t
+\ENDTHEOREM

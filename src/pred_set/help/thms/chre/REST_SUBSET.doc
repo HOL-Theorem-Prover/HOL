@@ -1,0 +1,3 @@
+\THEOREM REST_SUBSET pred_sets
+|- !s. (REST s) SUBSET s
+\ENDTHEOREM

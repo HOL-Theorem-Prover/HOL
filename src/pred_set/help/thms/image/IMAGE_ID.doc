@@ -1,0 +1,3 @@
+\THEOREM IMAGE_ID pred_sets
+|- !s. IMAGE(\x. x)s = s
+\ENDTHEOREM

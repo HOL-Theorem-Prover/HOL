@@ -1,0 +1,4 @@
+\THEOREM INFINITE_UNIV pred_sets
+|- INFINITE (UNIV:*->bool) =
+   (?f:*->*. (!x y. (f x = f y) ==> (x = y)) /\ (?y. !x. ~(f x = y)))
+\ENDTHEOREM

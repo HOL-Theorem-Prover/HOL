@@ -1,0 +1,3 @@
+\THEOREM IMAGE_UNION pred_sets
+|- !f s t. IMAGE f(s UNION t) = (IMAGE f s) UNION (IMAGE f t)
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM SUBSET_INSERT pred_sets
+|- !x s. ~x IN s ==> (!t. s SUBSET (x INSERT t) = s SUBSET t)
+\ENDTHEOREM

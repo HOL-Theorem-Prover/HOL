@@ -1,0 +1,4 @@
+\THEOREM INSERT_INTER pred_sets
+|- !x s t.
+    (x INSERT s) INTER t = (x IN t => x INSERT (s INTER t) | s INTER t)
+\ENDTHEOREM

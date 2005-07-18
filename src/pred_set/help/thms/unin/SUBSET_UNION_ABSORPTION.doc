@@ -1,0 +1,3 @@
+\THEOREM SUBSET_UNION_ABSORPTION pred_sets
+|- !s t. s SUBSET t = (s UNION t = t)
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM DISJOINT_SYM pred_sets
+|- !s t. DISJOINT s t = DISJOINT t s
+\ENDTHEOREM

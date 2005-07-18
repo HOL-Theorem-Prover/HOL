@@ -1,0 +1,3 @@
+\THEOREM DISJOINT_EMPTY pred_sets
+|- !s. DISJOINT {{}} s /\ DISJOINT s {{}}
+\ENDTHEOREM

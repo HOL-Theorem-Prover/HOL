@@ -1,0 +1,3 @@
+\THEOREM INTER_ASSOC pred_sets
+|- !s t u. (s INTER t) INTER u = s INTER (t INTER u)
+\ENDTHEOREM

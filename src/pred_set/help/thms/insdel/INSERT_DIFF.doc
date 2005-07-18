@@ -1,0 +1,4 @@
+\THEOREM INSERT_DIFF pred_sets
+|- !s t x.
+    (x INSERT s) DIFF t = (x IN t => s DIFF t | x INSERT (s DIFF t))
+\ENDTHEOREM

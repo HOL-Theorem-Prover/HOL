@@ -1,0 +1,3 @@
+\THEOREM NOT_SING_EMPTY pred_sets
+|- !x. ~({{x}} = {{}})
+\ENDTHEOREM

@@ -1,0 +1,4 @@
+\THEOREM IN_DELETE_EQ pred_sets
+|- !s x x'.
+    (x IN s = x' IN s) = (x IN (s DELETE x') = x' IN (s DELETE x))
+\ENDTHEOREM

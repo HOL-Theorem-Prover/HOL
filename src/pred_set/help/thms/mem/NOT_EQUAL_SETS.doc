@@ -1,0 +1,3 @@
+\THEOREM NOT_EQUAL_SETS pred_sets
+|- !s t. ~(s = t) = (?x. x IN t = ~x IN s)
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM DISJOINT_EMPTY_REFL pred_sets
+|- !s. (s = {{}}) = DISJOINT s s
+\ENDTHEOREM

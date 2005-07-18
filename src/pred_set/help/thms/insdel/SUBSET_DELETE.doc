@@ -1,0 +1,3 @@
+\THEOREM SUBSET_DELETE pred_sets
+|- !x s t. s SUBSET (t DELETE x) = ~x IN s /\ s SUBSET t
+\ENDTHEOREM

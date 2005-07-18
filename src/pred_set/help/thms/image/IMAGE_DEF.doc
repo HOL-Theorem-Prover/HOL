@@ -1,0 +1,3 @@
+\THEOREM IMAGE_DEF pred_sets
+|- !f s. IMAGE f s = {{f x | x IN s}}
+\ENDTHEOREM

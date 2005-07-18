@@ -1,0 +1,3 @@
+\THEOREM CHOICE_NOT_IN_REST pred_sets
+|- !s. ~(CHOICE s) IN (REST s)
+\ENDTHEOREM

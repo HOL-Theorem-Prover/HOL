@@ -1,0 +1,3 @@
+\THEOREM DELETE_NON_ELEMENT pred_sets
+|- !x s. ~x IN s = (s DELETE x = s)
+\ENDTHEOREM

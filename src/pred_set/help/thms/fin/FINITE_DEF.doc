@@ -1,0 +1,4 @@
+\THEOREM FINITE_DEF pred_sets
+|- !s.
+    FINITE s = (!P. P{{}} /\ (!s'. P s' ==> (!e. P(e INSERT s'))) ==> P s)
+\ENDTHEOREM

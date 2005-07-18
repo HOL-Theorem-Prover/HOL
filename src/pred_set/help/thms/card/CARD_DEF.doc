@@ -1,0 +1,6 @@
+\THEOREM CARD_DEF pred_sets
+|- (CARD{{}} = 0) /\
+   (!s.
+     FINITE s ==>
+     (!x. CARD(x INSERT s) = (x IN s => CARD s | SUC(CARD s))))
+\ENDTHEOREM

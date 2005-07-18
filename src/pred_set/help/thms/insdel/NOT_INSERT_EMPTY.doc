@@ -1,0 +1,3 @@
+\THEOREM NOT_INSERT_EMPTY pred_sets
+|- !x s. ~(x INSERT s = {{}})
+\ENDTHEOREM

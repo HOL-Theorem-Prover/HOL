@@ -1,0 +1,3 @@
+\THEOREM IN_IMAGE pred_sets
+|- !y s f. y IN (IMAGE f s) = (?x. (y = f x) /\ x IN s)
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM INJ_COMPOSE pred_sets
+|- !f g s t u. INJ f s t /\ INJ g t u ==> INJ(g o f)s u
+\ENDTHEOREM

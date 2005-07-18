@@ -1,0 +1,3 @@
+\THEOREM UNIV_DEF pred_sets
+|- UNIV = (\x. T)
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM LINV_DEF pred_sets
+|- !f s t. INJ f s t ==> (!x. x IN s ==> (LINV f s(f x) = x))
+\ENDTHEOREM
