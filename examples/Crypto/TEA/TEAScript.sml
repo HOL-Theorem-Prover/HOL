@@ -114,7 +114,9 @@ val _ = save_thm ("Rounds_ind", Rounds_ind);
 val _ = save_thm ("InvRounds_def", InvRounds_def);
 val _ = save_thm ("InvRounds_ind", InvRounds_ind);
 
-val _ = computeLib.add_funs [Rounds_def, InvRounds_def];
+val _ = computeLib.add_persistent_funs 
+           [("Rounds_def",Rounds_def), 
+            ("InvRounds_def",InvRounds_def)];
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)

@@ -588,27 +588,35 @@ val ENCODE_THEN_ENCRYPT_CORRECT =
   (ISPEC ``decode ^Dom_ty ^Dec_ty`` 
   (ISPEC Enc_ty DATA_CBC_CORRECT)))))))))));
 
+STOP;
 
 (*---------------------------------------------------------------------------*)
 (* Let's see it in action ...                                                *)
 (*---------------------------------------------------------------------------*)
 
-val M = ``[(1,NONE);(13,SOME T), (257,SOME F)]``;
+val M = ``[(1,NONE); (13,SOME T); (257,SOME F)]``;
 val key = ``(1w,2w,3w,4w)``;
-val v =   ``(5w,10w)``
+val v =   ``(5w,10w)``;
 
-val ev1 = EVAL 
+(*---------------------------------------------------------------------------*)
+(* Encode and encrypt to a list (length 1) of pairs of 32-bit words          *)
+(*---------------------------------------------------------------------------*)
+
+val ev1 = Count.apply EVAL 
   ``(CBC_ENC XORB (TEAEncrypt ^key) ^v o BLOCK o WORD32 o PAD o
      encode_list (encode_prod encode_num (encode_option encode_bool)))
         ^M``;
+(*---------------------------------------------------------------------------*)
+(* Decrypt and generate a bit list, padding removed                          *)
+(*---------------------------------------------------------------------------*)
 
-val ev2 = EVAL
+val ev2 = Count.apply EVAL
   ``(UNPAD o UNWORD32 o UNBLOCK o CBC_DEC XORB (TEADecrypt ^key) ^v)
     ^(rhs (concl ev1))``;
 
 
 (*---------------------------------------------------------------------------*)
-(* Now an ugly bit ... need to prove all the domain conditions.              *)
+(* Decoding: first an ugly bit ... need to prove all the domain conditions.  *)
 (*---------------------------------------------------------------------------*)
 
 val decode_option_thm = 
@@ -630,7 +638,11 @@ val decode_list_thm =
 computeLib.add_funs [decode_bool, decode_option_thm,
                      decode_prod_thm, decode_list_thm, decode_def];
 
-val ev3 = EVAL
+(*-------------------------------------------------------------------------- *)
+(* Run the decoder.                                                          *)
+(*---------------------------------------------------------------------------*)
+
+val ev3 = Count.apply EVAL
   ``decode (EVERY (lift_prod (K T) (lift_option (K T))))
       (decode_list (EVERY (lift_prod (K T) (lift_option (K T))))
         (decode_prod (lift_prod (K T) (lift_option (K T)))
@@ -638,11 +650,31 @@ val ev3 = EVAL
            (decode_option (lift_option (K T)) (decode_bool (K T)))))
      ^(rhs(concl ev2))``;
 
+(*-------------------------------------------------------------------------- *)
+(* The whole round-trip at once, on a longer list.                           *)
+(*---------------------------------------------------------------------------*)
+
+val N = 
+  ``decode (EVERY (lift_prod (K T) (lift_option (K T))))
+           (decode_list (EVERY (lift_prod (K T) (lift_option (K T))))
+              (decode_prod (lift_prod (K T) (lift_option (K T)))
+                 (decode_num (K T))
+                 (decode_option (lift_option (K T)) (decode_bool (K T))))) o
+         UNPAD o UNWORD32 o UNBLOCK o CBC_DEC XORB (TEADecrypt ^key) ^v o
+         CBC_ENC XORB (TEAEncrypt ^key) ^v o BLOCK o WORD32 o PAD o
+         encode_list (encode_prod encode_num (encode_option encode_bool))``;
+
+(*---------------------------------------------------------------------------*)
+(* Can take a long time                                                      *)
+(*---------------------------------------------------------------------------*)
+
+Count.apply EVAL ``^N [(1,NONE); (13,SOME T); (257,SOME F);
+                       (1,NONE); (13,SOME T); (257,SOME F)]``;
 
 
 (* Generate ML
 val _ = 
-  let open aesTheory EmitML
+  let open TEATheory EmitML
   in exportML("modes",
       MLSIG "type num = numML.num" ::
       MLSTRUCT "type num = numML.num" ::
