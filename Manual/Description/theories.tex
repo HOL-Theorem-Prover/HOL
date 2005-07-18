@@ -16,6 +16,9 @@
 % terrible things to line-spacing in the vicinity, use the hol
 % environment, thus \begin{hol}\begin{verbatim}...\end{verbatim}\end{hol}
 
+\setcounter{sessioncount}{0}
+
+
 \newcommand{\konst}[1]{\ensuremath{\mbox{\small{\textbf{\sf{#1}}}}}}
 \newcommand{\nil}{\mathbf{[} \;\mathbf{]}}
 \newcommand{\cons}[2]{{#1}\mathbf{:}\mathbf{:}{#2}}
@@ -1065,7 +1068,6 @@ $\leadsto$~~\texttt{LET($\ldots$(LET(LET(\bs$v_1\ldots v_n$.$t$)$t_1$)$t_2$)$\ld
 \noindent The underlying structure of the term can be seen by applying
 destructor operations.  For example:
 
-\setcounter{sessioncount}{1}
 \begin{session}
 \begin{verbatim}
 - Term `let x = 1 and y = 2 in x+y`;
