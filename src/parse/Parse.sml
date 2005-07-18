@@ -407,8 +407,12 @@ fun reform_def (t1, t2) =
 
 fun munge_let binding_term body = let
   open Absyn
-  fun strip_and(APP(_,APP(_,IDENT(_,"and"),t1),t2)) A = strip_and t1 (strip_and t2 A)
-    | strip_and tm acc = tm::acc
+  fun strip_and pt A =
+      case pt of
+        APP(_,APP(_,IDENT(_,andstr),t1),t2) => if andstr = and_special then
+                                                 strip_and t1 (strip_and t2 A)
+                                               else pt::A
+      | _ => pt::A
   val binding_clauses = strip_and binding_term []
   fun is_eq tm = case tm of APP(_,APP(_,IDENT (_,"="), _), _) => true | _ => false
   fun dest_eq (APP(_,APP(_,IDENT (_,"="), t1), t2)) = (t1, t2)
@@ -439,13 +443,15 @@ end
 
 fun remove_lets t0 = let
   open Absyn
-  fun let_remove f (APP(_,APP(_,IDENT (_,"let"), t1), t2)) = munge_let (f t1) (f t2)
+  fun let_remove f (APP(_,APP(_,IDENT _, t1), t2)) = munge_let (f t1) (f t2)
     | let_remove _ _ = raise Fail "Can't happen"
-  val t1 = traverse (fn APP(_,APP(_,IDENT (_,"let"), _), _) => true
-                      | otherwise => false) let_remove t0
+  val t1 =
+      traverse (fn APP(_,APP(_,IDENT (_,letstr), _), _) => letstr = let_special
+                 | otherwise => false) let_remove t0
   val _ =
-    traverse (fn IDENT(_,"and") => true | _ => false)
-    (fn _ => fn t => raise ERRORloc "Term" (locn_of_absyn t) "Invalid use of reserved word and") t1
+    traverse (fn IDENT(_,andstr) => andstr = and_special | _ => false)
+    (fn _ => fn t => raise ERRORloc "Term" (locn_of_absyn t)
+                                    "Invalid use of reserved word and") t1
 in
   t1
 end

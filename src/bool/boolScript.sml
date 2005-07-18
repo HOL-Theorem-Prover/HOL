@@ -119,14 +119,22 @@ val _ = add_rule {term_name   = "~",
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 
-val _ = add_rule {term_name   = "let", fixity = TruePrefix 2,
+(* prettyprinting information here for "let" and "and" is completely ignored;
+   the pretty-printer handles these specially.  These declarations are only
+   for the parser's benefit. *)
+val _ = add_rule {term_name   = GrammarSpecials.let_special,
+                  fixity = TruePrefix 2,
                   pp_elements = [TOK "let", BreakSpace(1,0), TM,
                                  BreakSpace(1, 0), TOK "in",
                                  BreakSpace(1, 0)],
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (INCONSISTENT, 0))};
 
-val _ = add_infix ("and", 9, HOLgrammars.LEFT)
+val _ = add_rule {term_name = GrammarSpecials.and_special,
+                  fixity = Infixl 9,
+                  pp_elements = [TOK "and"],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (INCONSISTENT, 0))}
 
 val _ = add_rule{term_name   = "COND",
                  fixity      = Infix (HOLgrammars.RIGHT, 3),
@@ -3521,7 +3529,7 @@ val bool_INDUCT = save_thm("bool_INDUCT",
      GEN P (DISCH tm1 th9)
  end);
 
-val FORALL_BOOL = save_thm 
+val FORALL_BOOL = save_thm
 ("FORALL_BOOL",
  let val tm1 = Term `!b:bool. P b`
      val tm2 = Term `P T /\ P F`
@@ -3531,7 +3539,7 @@ val FORALL_BOOL = save_thm
      val th4 = ASSUME tm2
      val th5 = MP (SPEC (Term `P:bool->bool`) bool_INDUCT) th4
      val th6 = DISCH tm2 th5
- in 
+ in
    IMP_ANTISYM_RULE th3 th6
  end);
 

@@ -5,6 +5,8 @@ sig
   val bracket_special : string
   val vs_cons_special : string
   val resquan_special : string
+  val let_special : string
+  val and_special : string
 
   (* special strings for records *)
   val recsel_special : string

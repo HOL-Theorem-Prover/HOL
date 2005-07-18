@@ -3,6 +3,8 @@ struct
 
   val fnapp_special = "_ fnapp"
   val bracket_special = "_ bracket"
+  val let_special = " _ let"
+  val and_special = " _ and"
 
   val recsel_special = " _ record select"
   val recupd_special = " _ record update"
