@@ -1856,9 +1856,9 @@ either be an arbitrary boolean formula (in which case it is treated as
 a side-condition to be discharged) or an equation of the general form
 \[
 \forall \vec{v}. \;\mathit{ctxt}_1 \Rightarrow \mathit{ctxt}_2
-\Rightarrow \dots (V_0(\vec{v}) = V_1(\vec{v}))
+\Rightarrow \dots (V_1(\vec{v}) = V_2(\vec{v}))
 \]
-where the variable $V_1$ must occur free in $E_2$.
+where the variable $V_2$ must occur free in $E_2$.
 
 For example, the theorem form of \ml{MK\_COMB} would be
 \[
@@ -1928,8 +1928,56 @@ to either true or false.
 
 
 \subsubsection{AC-normalisation}
+\index{simplification!AC-normalisation}
+
+The simplifier can be used to normalise terms involving associative
+and commutative constants.  This process is known as
+\emph{AC-normalisation}.  The simplifier will perform AC-normalisation
+for those constants which have their associativity and commutativity
+theorems provided in a constituent \simpset{} fragment's \ml{ac}
+field.
+
+For example, the following \simpset{} fragment will cause
+AC-normalisation of disjunctions
+\begin{hol}
+\begin{verbatim}
+   SSFRAG {ac = [(DISJ_ASSOC, DISJ_COMM)],
+           rewrs = [], filter = NONE, convs = [],
+           dprocs = [], congs = []}
+\end{verbatim}
+\end{hol}
+The pair of provided theorems must state
+\begin{eqnarray*}
+x \oplus y &=& y \oplus x\\
+x \oplus (y \oplus z) &=& (x \oplus y) \oplus z
+\end{eqnarray*}
+for a constant $\oplus$.  The theorems may be universally quantified,
+and the associativity theorem may be oriented either way.  Further,
+either the associativity theorem or the commutativity theorem may be
+the first component of the pair.  Assuming the \simpset{} fragment
+above is bound to the \ML{} identifier \ml{DISJ\_ss}, its behaviour is
+demonstrated in the following example:
+\begin{session}
+\begin{verbatim}
+   - SIMP_CONV (bool_ss ++ DISJ_ss) [] ``p /\ q \/ r \/ P z``;
+   <<HOL message: inventing new type variable names: 'a>>
+   > val it = |- p /\ q \/ r \/ P z = r \/ P z \/ p /\ q : thm
+\end{verbatim}
+\end{session}
+
+\index{arith_ss (simplification set)@\ml{arith\_ss} (simplification set)}
+The order of operands in the AC-normal form that the simplifer's
+AC-normalisation works toward is unspecified.  However, the normal
+form is always right-associated.  Note also that the \ml{arith\_ss}
+\simpset, and the \ml{ARITH\_ss} fragment which is its basis, have
+their own bespoke normalisation procedures for addition over the
+natural numbers.  Mixing AC-normalisation, as described here, with
+\ml{arith\_ss} can cause the simplifier to go into an infinite loop.
+
 
 \subsubsection{Embedding code}
+
+\subsubsection{Special rewrite forms}
 
 \index{simplification|)}
 
