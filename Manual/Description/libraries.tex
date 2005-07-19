@@ -1993,6 +1993,65 @@ rewrite forms.
 
 \subsubsection{Embedding code}
 
+The simplifier features two different ways in which user-code can be
+embedded into its traversal and simplification of input terms.  By
+embedding their own code, users can customise the behaviour of the
+simplifier to a significant extent.
+
+\paragraph{User conversions}
+The simpler of the two methods allows the simplifier to include
+user-supplied conversions.  These are added to \simpset{}s in the
+{convs} field of \simpset{} fragments.  This field takes lists of
+values of type
+\begin{hol}
+\begin{verbatim}
+   { name: string,
+    trace: int,
+      key: (term list * term) option,
+     conv: (term list -> term -> thm) -> term list -> term -> thm}
+\end{verbatim}
+\end{hol}
+
+The \ml{name} and \ml{trace} fields are used when simplifier tracing
+is turned on.  If the conversion is applied, and if the simplifier
+trace level is greater than or equal to the \ml{trace} field, then a
+message about the conversion's application (including its \ml{name})
+will be emitted.
+
+The \ml{key} field of the above record is used to specify the
+sub-terms to which the conversion should be applied.  If the value is
+\ml{NONE}, then the conversion will be tried at every position.
+Otherwise, the conversion is applied at term positions matching the
+provided pattern.  The first component of the pattern is a list of
+variables that should be treated as constants when finding pattern
+matches.  The second component is the term pattern itself.  Matching
+against this component is \emph{not} done by the higher-order match of
+Section~\ref{sec:simp-homatch}, but by a higher-order ``term-net''.
+This form of matching does not aim to be precise; it is used to
+efficiently eliminate clearly impossible matches.  It does not check
+types, and does not check multiple bindings.  This means that the
+conversion will not only be applied to terms that are exact matches
+for the supplied pattern.
+
+Finally, the conversion itself.  Most uses of this facility are to add
+normal \HOL{} conversions (of type \ml{term->thm}), and this can be
+done by ignoring the \ml{conv} field's first two parameters.  For a
+conversion \ml{myconv}, the standard idiom is to write
+\ml{K~(K~myconv)}.  If the user desires, however, their code
+\emph{can} refer to the first two parameters.  The second parameter is
+the stack of side-conditions that have been attempted so far.  The
+first enables the user's code to call back to the simplifier, passing
+the stack of side-conditions, and a new side-condition to solve.  The
+\ml{term} argument must be of type \holtxt{:bool}, and the recursive
+call will simplify it to true (and call \ml{EQT\_ELIM} to turn a term
+$t$ into the theorem $\vdash t$).  This restriction may be lifted in a
+future version of \HOL{} but as it stands, the recursive call can
+\emph{only} be used for side-condition discharge.  Note also that it
+is the user's responsibility to pass an appropriately updated stack of
+side-conditions to the recursive invocation of the simplifier.
+
+\paragraph{Context-aware decision procedures}
+
 \subsubsection{Special rewrite forms}
 \label{sec:simp-special-rewrite-forms}
 
