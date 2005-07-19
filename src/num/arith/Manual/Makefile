@@ -10,8 +10,6 @@ Help=../help
 # ---------------------------------------------------------------------
 # Pathname to the doc-to-tex script and doc-to-tex.sed file
 # ---------------------------------------------------------------------
-DOCTOTEX=../../../../Manual/Reference/bin/doc-to-tex
-DOCTOTEXSED=../../../../Manual/Reference/bin/doc-to-tex.sed
 DOCTOTEXEXE=../../../../help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
@@ -19,14 +17,13 @@ DOCTOTEXEXE=../../../../help/src/Doc2Tex.exe
 # ---------------------------------------------------------------------
 MAKEINDEX=makeindex
 
-default:
-	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
+default: all
 
 # ---------------------------------------------------------------------
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind entries.tex
 
 tex: ids
 	@echo "TeX files made"
@@ -45,7 +42,7 @@ arith:
 ps:
 	dvips arith.dvi -o
 
-pdf:	arith.ps
+pdf:
 	pdflatex arith.tex
 
 all:

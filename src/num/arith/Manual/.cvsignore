@@ -1,0 +1,10 @@
+arith.pdf
+arith.ps
+*.dvi
+*.aux
+*.toc
+*.log
+*.idx
+*.ilg
+*.ind
+entries.tex
