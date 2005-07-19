@@ -2,7 +2,7 @@
 % HOL Manual LaTeX Source: unwind library (standard latex style)
 % =====================================================================
 
-\documentstyle[12pt,fleqn,
+\documentstyle[12pt,fleqn,makeidx,
                ../../../Manual/LaTeX/alltt,
                ../../../Manual/LaTeX/layout]{book}
 
@@ -11,6 +11,7 @@
 % ---------------------------------------------------------------------
 \input{../../../Manual/LaTeX/commands}
 \input{../../../Manual/LaTeX/ref-macros}
+\def\ptt{\tt}
 
 % ---------------------------------------------------------------------
 % The document has an index
@@ -59,7 +60,8 @@
  
    {\def\_{{\char'137}}		         % \tt style `_' character
 
-    \include{index}}
+    \printindex}
+%    \include{index}}
 
 \end{document}
 

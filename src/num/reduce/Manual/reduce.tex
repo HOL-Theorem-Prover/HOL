@@ -2,15 +2,15 @@
 % HOL Manual LaTeX Source: reduce library (standard latex style)
 % =====================================================================
 
-\documentstyle[12pt,fleqn,
-               ../../../Manual/LaTeX/alltt,
-               ../../../Manual/LaTeX/layout]{book}
+\documentstyle[12pt,fleqn,makeidx,
+               ../../../../Manual/LaTeX/alltt,
+               ../../../../Manual/LaTeX/layout]{book}
 
 % ---------------------------------------------------------------------
 % Input defined macros and commands
 % ---------------------------------------------------------------------
-\input{../../../Manual/LaTeX/commands}
-\input{../../../Manual/LaTeX/ref-macros}
+\input{../../../../Manual/LaTeX/commands}
+\input{../../../../Manual/LaTeX/ref-macros}
 
 % ---------------------------------------------------------------------
 % The document has an index
@@ -53,6 +53,7 @@
 
    {\def\_{{\char'137}}                  % \tt style `_' character
 
-    \include{index}}
+    \printindex }
+%    \include{index}}
 
 \end{document}

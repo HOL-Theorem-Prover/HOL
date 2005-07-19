@@ -16,6 +16,7 @@ LATEX=latex
 # ---------------------------------------------------------------------
 DOCTOTEX=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=$(HOLMANDIR)/Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEXEXE=$(HOLMANDIR)/help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
@@ -29,7 +30,7 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ps *.ind \
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ps *.pdf *.ind \
          theorems.tex entries.tex
 	@echo "\begin{theindex}" > index.tex
 	@echo "\mbox{}" >> index.tex
@@ -42,7 +43,7 @@ functions:
 	@echo "\chapter{ML Functions in the {\tt word} Library}">entries.tex
 	@echo "\label{entries}">>entries.tex
 	@echo "\input{entries-intro}" >> entries.tex
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
@@ -66,7 +67,12 @@ index:
 word:
 	$(LATEX) word.tex
 
+ps:
+	dvips word.dvi -o
+
+pdf:	word.ps
+	pdflatex word.tex
+
 all:
-	make clean; make tex; make word; make index; make word
-	dvips word.dvi
+	make clean; make tex; make word; make index; make word ps pdf
 

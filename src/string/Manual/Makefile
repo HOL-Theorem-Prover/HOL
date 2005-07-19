@@ -12,6 +12,7 @@ Help=../help
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEXEXE=../../../help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
@@ -26,7 +27,7 @@ default:
 # ---------------------------------------------------------------------
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
-              entries.tex theorems.tex
+              entries.tex theorems.tex string.{ps,pdf}
 
 tex: ids theorems
 	@echo "TeX files made"
@@ -34,7 +35,7 @@ tex: ids theorems
 ids:
 	@echo "\chapter{ML Functions in the string Library}">entries.tex
 	@echo "\input{entries-intro}" >> entries.tex
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
@@ -50,5 +51,11 @@ index:
 string:
 	latex string.tex
 
+ps:
+	dvips string.dvi -o
+
+pdf:	string.ps
+	pdflatex string.tex
+
 all:
-	make clean; make tex; make string; make index; make string
+	make clean; make tex; make string; make index; make string ps pdf

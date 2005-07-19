@@ -1,0 +1,6 @@
+\THEOREM ascii_Axiom ascii
+|- !f.
+    ?! fn.
+     !b0 b1 b2 b3 b4 b5 b6 b7.
+      fn(ASCII b0 b1 b2 b3 b4 b5 b6 b7) = f b0 b1 b2 b3 b4 b5 b6 b7
+\ENDTHEOREM

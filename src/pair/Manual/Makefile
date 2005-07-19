@@ -12,6 +12,7 @@ Help=../help
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEXEXE=../../../help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex program
@@ -26,7 +27,7 @@ default:
 # ---------------------------------------------------------------------
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
-              entries.tex theorems.tex *.ind
+              entries.tex theorems.tex *.ind pair.{ps,pdf}
 
 tex: ids theorems
 	@echo "TeX files made"
@@ -34,7 +35,7 @@ tex: ids theorems
 ids:
 	echo "\chapter{ML Functions in the pair Library}" >entries.tex;   	\
 	echo "\input{entries-intro}" >>entries.tex;                         \
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
@@ -49,7 +50,7 @@ pair:
 	latex pair.tex
 
 ps:
-	dvips pair.dvi
+	dvips pair.dvi -o
 
 pdf:
 	pdflatex pair.tex

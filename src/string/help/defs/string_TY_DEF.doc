@@ -1,0 +1,9 @@
+\THEOREM string_TY_DEF string
+|- ?rep.
+    TYPE_DEFINITION
+    (TRP
+     (\v tl.
+       (v = INL one) /\ (LENGTH tl = 0) \/
+       (?a. v = INR a) /\ (LENGTH tl = SUC 0)))
+    rep
+\ENDTHEOREM

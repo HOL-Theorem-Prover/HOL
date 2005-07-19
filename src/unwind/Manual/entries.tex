@@ -1,8 +1,8 @@
 \chapter{ML Functions in the unwind Library}
 \input{entries-intro}
-\DOC{CONJ\_FORALL\_CONV}
+\DOC{CONJ\_FORALL\_CONV}{CONJ\_FORALL\_CONV}
 
-\TYPE {\small\verb%CONJ_FORALL_CONV : conv%}\egroup
+\noindent{\small\verb%CONJ_FORALL_CONV : conv%}\egroup
 
 \SYNOPSIS
 Moves universal quantifiers up through a tree of conjunctions.
@@ -14,9 +14,8 @@ following theorem:
 \begin{verbatim}
    |- (!x1 ... xm. t1) /\ ... /\ (!x1 ... xm. tn) =
       !x1 ... xm. t1 /\ ... /\ tn
-\end{verbatim}
-}
-\noindent where the original term can be an arbitrary tree of conjunctions. The
+\end{verbatim}}\noindent 
+where the original term can be an arbitrary tree of conjunctions. The
 structure of the tree is retained in both sides of the equation.
 
 \FAILURE
@@ -36,16 +35,16 @@ Never fails.
 #                  (!(x:*) (y:*) (z:*). c)";;
 |- ((!x y z. a) /\ (!x w z. b)) /\ (!x y z. c) =
    (!x. ((!y z. a) /\ (!w z. b)) /\ (!y z. c))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-FORALL_CONJ_CONV, CONJ_FORALL_ONCE_CONV, FORALL_CONJ_ONCE_CONV,
-CONJ_FORALL_RIGHT_RULE, FORALL_CONJ_RIGHT_RULE.
+FORALL\_CONJ\_CONV, CONJ\_FORALL\_ONCE\_CONV, FORALL\_CONJ\_ONCE\_CONV, CONJ\_FORALL\_RIGHT\_RULE, FORALL\_CONJ\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{CONJ\_FORALL\_ONCE\_CONV}
 
-\TYPE {\small\verb%CONJ_FORALL_ONCE_CONV : conv%}\egroup
+\DOC{CONJ\_FORALL\_ONCE\_CONV}{CONJ\_FORALL\_ONCE\_CONV}
+
+\noindent{\small\verb%CONJ_FORALL_ONCE_CONV : conv%}\egroup
 
 \SYNOPSIS
 Moves a single universal quantifier up through a tree of conjunctions.
@@ -55,9 +54,8 @@ Moves a single universal quantifier up through a tree of conjunctions.
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (!x. t1) /\ ... /\ (!x. tn) = !x. t1 /\ ... /\ tn
-\end{verbatim}
-}
-\noindent where the original term can be an arbitrary tree of conjunctions. The
+\end{verbatim}}\noindent 
+where the original term can be an arbitrary tree of conjunctions. The
 structure of the tree is retained in both sides of the equation.
 
 \FAILURE
@@ -77,16 +75,16 @@ the same variable.
 
 #CONJ_FORALL_ONCE_CONV "((!x. x \/ a) /\ (!y. y \/ b)) /\ (!x. x \/ c)";;
 evaluation failed     CONJ_FORALL_ONCE_CONV
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-FORALL_CONJ_ONCE_CONV, CONJ_FORALL_CONV, FORALL_CONJ_CONV,
-CONJ_FORALL_RIGHT_RULE, FORALL_CONJ_RIGHT_RULE.
+FORALL\_CONJ\_ONCE\_CONV, CONJ\_FORALL\_CONV, FORALL\_CONJ\_CONV, CONJ\_FORALL\_RIGHT\_RULE, FORALL\_CONJ\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{CONJ\_FORALL\_RIGHT\_RULE}
 
-\TYPE {\small\verb%CONJ_FORALL_RIGHT_RULE : (thm -> thm)%}\egroup
+\DOC{CONJ\_FORALL\_RIGHT\_RULE}{CONJ\_FORALL\_RIGHT\_RULE}
+
+\noindent{\small\verb%CONJ_FORALL_RIGHT_RULE : (thm -> thm)%}\egroup
 
 \SYNOPSIS
 Moves universal quantifiers up through a tree of conjunctions.
@@ -98,21 +96,20 @@ Moves universal quantifiers up through a tree of conjunctions.
           t = ?y1 ... yp. (!x1 ... xm. t1) /\ ... /\ (!x1 ... xm. tn)
    -------------------------------------------------------------------
       A |- !z1 ... zr. t = ?y1 ... yp. !x1 ... xm. t1 /\ ... /\ tn
-\end{verbatim}
-}
+\end{verbatim}}
 
 \FAILURE
 Fails if the argument theorem is not of the required form, though either or
 both of {\small\verb%r%} and {\small\verb%p%} may be zero.
 
 \SEEALSO
-FORALL_CONJ_RIGHT_RULE, CONJ_FORALL_CONV, FORALL_CONJ_CONV,
-CONJ_FORALL_ONCE_CONV, FORALL_CONJ_ONCE_CONV.
+FORALL\_CONJ\_RIGHT\_RULE, CONJ\_FORALL\_CONV, FORALL\_CONJ\_CONV, CONJ\_FORALL\_ONCE\_CONV, FORALL\_CONJ\_ONCE\_CONV.
 
 \ENDDOC
-\DOC{DEPTH\_EXISTS\_CONV}
 
-\TYPE {\small\verb%DEPTH_EXISTS_CONV : (conv -> conv)%}\egroup
+\DOC{DEPTH\_EXISTS\_CONV}{DEPTH\_EXISTS\_CONV}
+
+\noindent{\small\verb%DEPTH_EXISTS_CONV : (conv -> conv)%}\egroup
 
 \SYNOPSIS
 Applies a conversion to the body of nested existential quantifications.
@@ -123,8 +120,7 @@ returns a theorem of the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (?x1 ... xn. body) = (?x1 ... xn. body')
-\end{verbatim}
-}
+\end{verbatim}}
 
 \FAILURE
 Fails if the application of {\small\verb%conv%} fails.
@@ -134,15 +130,16 @@ Fails if the application of {\small\verb%conv%} fails.
 \begin{verbatim}
 #DEPTH_EXISTS_CONV BETA_CONV "?x y z. (\w. x /\ y /\ z /\ w) T";;
 |- (?x y z. (\w. x /\ y /\ z /\ w)T) = (?x y z. x /\ y /\ z /\ T)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-DEPTH_FORALL_CONV.
+DEPTH\_FORALL\_CONV.
 
 \ENDDOC
-\DOC{DEPTH\_FORALL\_CONV}
 
-\TYPE {\small\verb%DEPTH_FORALL_CONV : (conv -> conv)%}\egroup
+\DOC{DEPTH\_FORALL\_CONV}{DEPTH\_FORALL\_CONV}
+
+\noindent{\small\verb%DEPTH_FORALL_CONV : (conv -> conv)%}\egroup
 
 \SYNOPSIS
 Applies a conversion to the body of nested universal quantifications.
@@ -153,8 +150,7 @@ returns a theorem of the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (!x1 ... xn. body) = (!x1 ... xn. body')
-\end{verbatim}
-}
+\end{verbatim}}
 
 \FAILURE
 Fails if the application of {\small\verb%conv%} fails.
@@ -164,15 +160,16 @@ Fails if the application of {\small\verb%conv%} fails.
 \begin{verbatim}
 #DEPTH_FORALL_CONV BETA_CONV "!x y z. (\w. x /\ y /\ z /\ w) T";;
 |- (!x y z. (\w. x /\ y /\ z /\ w)T) = (!x y z. x /\ y /\ z /\ T)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-DEPTH_EXISTS_CONV.
+DEPTH\_EXISTS\_CONV.
 
 \ENDDOC
-\DOC{EXISTS\_DEL1\_CONV}
 
-\TYPE {\small\verb%EXISTS_DEL1_CONV : conv%}\egroup
+\DOC{EXISTS\_DEL1\_CONV}{EXISTS\_DEL1\_CONV}
+
+\noindent{\small\verb%EXISTS_DEL1_CONV : conv%}\egroup
 
 \SYNOPSIS
 Deletes one existential quantifier.
@@ -182,21 +179,21 @@ Deletes one existential quantifier.
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (?x. t) = t
-\end{verbatim}
-}
-\noindent provided {\small\verb%x%} is not free in {\small\verb%t%}.
+\end{verbatim}}\noindent 
+provided {\small\verb%x%} is not free in {\small\verb%t%}.
 
 \FAILURE
 Fails if the argument term is not an existential quantification or if {\small\verb%x%} is
 free in {\small\verb%t%}.
 
 \SEEALSO
-EXISTS_DEL_CONV, PRUNE_ONCE_CONV.
+EXISTS\_DEL\_CONV, PRUNE\_ONCE\_CONV.
 
 \ENDDOC
-\DOC{EXISTS\_DEL\_CONV}
 
-\TYPE {\small\verb%EXISTS_DEL_CONV : conv%}\egroup
+\DOC{EXISTS\_DEL\_CONV}{EXISTS\_DEL\_CONV}
+
+\noindent{\small\verb%EXISTS_DEL_CONV : conv%}\egroup
 
 \SYNOPSIS
 Deletes existential quantifiers.
@@ -206,9 +203,8 @@ Deletes existential quantifiers.
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (?x1 ... xn. t) = t
-\end{verbatim}
-}
-\noindent provided {\small\verb%x1,...,xn%} are not free in {\small\verb%t%}.
+\end{verbatim}}\noindent 
+provided {\small\verb%x1,...,xn%} are not free in {\small\verb%t%}.
 
 \FAILURE
 Fails if any of the {\small\verb%x%}'s appear free in {\small\verb%t%}. The function does not perform a
@@ -217,15 +213,16 @@ partial deletion; for example, if {\small\verb%x1%} and {\small\verb%x2%} do not
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- ?x1 ... xn. t = ?x3 ... xn. t
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-EXISTS_DEL1_CONV, PRUNE_CONV.
+EXISTS\_DEL1\_CONV, PRUNE\_CONV.
 
 \ENDDOC
-\DOC{EXISTS\_EQN\_CONV}
 
-\TYPE {\small\verb%EXISTS_EQN_CONV : conv%}\egroup
+\DOC{EXISTS\_EQN\_CONV}{EXISTS\_EQN\_CONV}
+
+\noindent{\small\verb%EXISTS_EQN_CONV : conv%}\egroup
 
 \SYNOPSIS
 Proves the existence of a line that has a non-recursive equation.
@@ -235,21 +232,21 @@ Proves the existence of a line that has a non-recursive equation.
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (?l. !y1 ... ym. l x1 ... xn = t) = T
-\end{verbatim}
-}
-\noindent provided {\small\verb%l%} is not free in {\small\verb%t%}. Both {\small\verb%m%} and {\small\verb%n%} may be zero.
+\end{verbatim}}\noindent 
+provided {\small\verb%l%} is not free in {\small\verb%t%}. Both {\small\verb%m%} and {\small\verb%n%} may be zero.
 
 \FAILURE
 Fails if the argument term is not of the specified form or if {\small\verb%l%} appears free
 in {\small\verb%t%}.
 
 \SEEALSO
-PRUNE_ONCE_CONV.
+PRUNE\_ONCE\_CONV.
 
 \ENDDOC
-\DOC{EXPAND\_ALL\_BUT\_CONV}
 
-\TYPE {\small\verb%EXPAND_ALL_BUT_CONV : (string list -> thm list -> conv)%}\egroup
+\DOC{EXPAND\_ALL\_BUT\_CONV}{EXPAND\_ALL\_BUT\_CONV}
+
+\noindent{\small\verb%EXPAND_ALL_BUT_CONV : (string list -> thm list -> conv)%}\egroup
 
 \SYNOPSIS
 Unfolds, then unwinds all lines (except those specified) as much as possible,
@@ -261,16 +258,14 @@ term:
 {\par\samepage\setseps\small
 \begin{verbatim}
    "?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn"
-\end{verbatim}
-}
-\noindent returns a theorem of the form:
+\end{verbatim}}\noindent 
+returns a theorem of the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    B |- (?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn) =
         (?li(k+1) ... lim. t1' /\ ... /\ tn')
-\end{verbatim}
-}
-\noindent where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
+\end{verbatim}}\noindent 
+where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
 {\small\verb%thl%}. The set of assumptions {\small\verb%B%} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to a
 conjunct, it is unchanged. Those conjuncts that after rewriting are equations
@@ -280,9 +275,8 @@ unwind and the lines {\small\verb%li1,...,lik%} are then pruned.
 The {\small\verb%li%}'s are related by the equation:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   {li1,...,lik} u {li(k+1),...,lim} = {l1,...,lm}
-\end{verbatim}
-}
+   {{li1,...,lik}} u {{li(k+1),...,lim}} = {{l1,...,lm}}
+\end{verbatim}}
 
 \FAILURE
 The function may fail if the argument term is not of the specified form. It
@@ -300,16 +294,16 @@ function to attempt unwinding indefinitely (to loop).
        INV(l1,l2) /\ INV(l2,out) /\ (!t. l1 t = l2(t - 1) \/ out(t - 1))) =
      (?l1.
        (!t. out t = ~~l1 t) /\ (!t. l1 t = ~l1(t - 1) \/ ~~l1(t - 1)))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-EXPAND_AUTO_CONV, EXPAND_ALL_BUT_RIGHT_RULE, EXPAND_AUTO_RIGHT_RULE,
-UNFOLD_CONV, UNWIND_ALL_BUT_CONV, PRUNE_SOME_CONV.
+EXPAND\_AUTO\_CONV, EXPAND\_ALL\_BUT\_RIGHT\_RULE, EXPAND\_AUTO\_RIGHT\_RULE, UNFOLD\_CONV, UNWIND\_ALL\_BUT\_CONV, PRUNE\_SOME\_CONV.
 
 \ENDDOC
-\DOC{EXPAND\_ALL\_BUT\_RIGHT\_RULE}
 
-\TYPE {\small\verb%EXPAND_ALL_BUT_RIGHT_RULE : (string list -> thm list -> thm -> thm)%}\egroup
+\DOC{EXPAND\_ALL\_BUT\_RIGHT\_RULE}{EXPAND\_ALL\_BUT\_RIGHT\_RULE}
+
+\noindent{\small\verb%EXPAND_ALL_BUT_RIGHT_RULE : (string list -> thm list -> thm -> thm)%}\egroup
 
 \SYNOPSIS
 Unfolds, then unwinds all lines (except those specified) as much as possible,
@@ -323,9 +317,8 @@ then prunes the unwound lines.
           t = ?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn
    -------------------------------------------------------------------
        B u A |- !z1 ... zr. t = ?li(k+1) ... lim. t1' /\ ... /\ tn'
-\end{verbatim}
-}
-\noindent where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
+\end{verbatim}}\noindent 
+where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
 {\small\verb%thl%}. The set of assumptions {\small\verb%B%} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to a
 conjunct, it is unchanged. Those conjuncts that after rewriting are equations
@@ -335,9 +328,8 @@ unwind and the lines {\small\verb%li1,...,lik%} are then pruned.
 The {\small\verb%li%}'s are related by the equation:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   {li1,...,lik} u {li(k+1),...,lim} = {l1,...,lm}
-\end{verbatim}
-}
+   {{li1,...,lik}} u {{li(k+1),...,lim}} = {{l1,...,lm}}
+\end{verbatim}}
 
 \FAILURE
 The function may fail if the argument theorem is not of the specified form. It
@@ -357,16 +349,16 @@ function to attempt unwinding indefinitely (to loop).
 .. |- !in out.
        DEV(in,out) =
        (?l1. (!t. out t = ~~l1 t) /\ (!t. l1 t = in t \/ ~~l1(t - 1)))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-EXPAND_AUTO_RIGHT_RULE, EXPAND_ALL_BUT_CONV, EXPAND_AUTO_CONV,
-UNFOLD_RIGHT_RULE, UNWIND_ALL_BUT_RIGHT_RULE, PRUNE_SOME_RIGHT_RULE.
+EXPAND\_AUTO\_RIGHT\_RULE, EXPAND\_ALL\_BUT\_CONV, EXPAND\_AUTO\_CONV, UNFOLD\_RIGHT\_RULE, UNWIND\_ALL\_BUT\_RIGHT\_RULE, PRUNE\_SOME\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{EXPAND\_AUTO\_CONV}
 
-\TYPE {\small\verb%EXPAND_AUTO_CONV : (thm list -> conv)%}\egroup
+\DOC{EXPAND\_AUTO\_CONV}{EXPAND\_AUTO\_CONV}
+
+\noindent{\small\verb%EXPAND_AUTO_CONV : (thm list -> conv)%}\egroup
 
 \SYNOPSIS
 Unfolds, then unwinds as much as possible, then prunes the unwound lines.
@@ -376,16 +368,14 @@ Unfolds, then unwinds as much as possible, then prunes the unwound lines.
 {\par\samepage\setseps\small
 \begin{verbatim}
    "?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn"
-\end{verbatim}
-}
-\noindent returns a theorem of the form:
+\end{verbatim}}\noindent 
+returns a theorem of the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    B |- (?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn) =
         (?li(k+1) ... lim. t1' /\ ... /\ tn')
-\end{verbatim}
-}
-\noindent where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
+\end{verbatim}}\noindent 
+where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
 {\small\verb%thl%}. The set of assumptions {\small\verb%B%} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to a
 conjunct, it is unchanged. After rewriting, the function decides which of the
@@ -401,10 +391,9 @@ resulting in the elimination of {\small\verb%ui1',...,uik'%}.
 The {\small\verb%li%}'s are related by the equation:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   {li1,...,lik} u {li(k+1),...,lim} = {l1,...,lm}
-\end{verbatim}
-}
-\noindent The loop analysis allows the term to be unwound as much as possible
+   {{li1,...,lik}} u {{li(k+1),...,lim}} = {{l1,...,lm}}
+\end{verbatim}}\noindent 
+The loop analysis allows the term to be unwound as much as possible
 without the risk of looping. The user is left to deal with the recursive
 equations.
 
@@ -423,16 +412,16 @@ also fails if there is more than one equation for any line variable.
        INV(l1,l2) /\ INV(l2,out) /\ (!t. l1 t = l2(t - 1) \/ out(t - 1))) =
      (?l2.
        (!t. l2 t = ~(l2(t - 1) \/ ~l2(t - 1))) /\ (!t. out t = ~l2 t))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-EXPAND_ALL_BUT_CONV, EXPAND_AUTO_RIGHT_RULE, EXPAND_ALL_BUT_RIGHT_RULE,
-UNFOLD_CONV, UNWIND_AUTO_CONV, PRUNE_SOME_CONV.
+EXPAND\_ALL\_BUT\_CONV, EXPAND\_AUTO\_RIGHT\_RULE, EXPAND\_ALL\_BUT\_RIGHT\_RULE, UNFOLD\_CONV, UNWIND\_AUTO\_CONV, PRUNE\_SOME\_CONV.
 
 \ENDDOC
-\DOC{EXPAND\_AUTO\_RIGHT\_RULE}
 
-\TYPE {\small\verb%EXPAND_AUTO_RIGHT_RULE : (thm list -> thm -> thm)%}\egroup
+\DOC{EXPAND\_AUTO\_RIGHT\_RULE}{EXPAND\_AUTO\_RIGHT\_RULE}
+
+\noindent{\small\verb%EXPAND_AUTO_RIGHT_RULE : (thm list -> thm -> thm)%}\egroup
 
 \SYNOPSIS
 Unfolds, then unwinds as much as possible, then prunes the unwound lines.
@@ -445,9 +434,8 @@ Unfolds, then unwinds as much as possible, then prunes the unwound lines.
           t = ?l1 ... lm. t1 /\ ... /\ ui1 /\ ... /\ uik /\ ... /\ tn
    -------------------------------------------------------------------
       B u A |- !z1 ... zr. t = ?li(k+1) ... lim. t1' /\ ... /\ tn'
-\end{verbatim}
-}
-\noindent where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
+\end{verbatim}}\noindent 
+where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
 {\small\verb%thl%}. The set of assumptions {\small\verb%B%} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to a
 conjunct, it is unchanged. After rewriting, the function decides which of the
@@ -463,10 +451,9 @@ resulting in the elimination of {\small\verb%ui1',...,uik'%}.
 The {\small\verb%li%}'s are related by the equation:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   {li1,...,lik} u {li(k+1),...,lim} = {l1,...,lm}
-\end{verbatim}
-}
-\noindent The loop analysis allows the term to be unwound as much as possible
+   {{li1,...,lik}} u {{li(k+1),...,lim}} = {{l1,...,lm}}
+\end{verbatim}}\noindent 
+The loop analysis allows the term to be unwound as much as possible
 without the risk of looping. The user is left to deal with the recursive
 equations.
 
@@ -485,16 +472,16 @@ also fails if there is more than one equation for any line variable.
 #      ?l1 l2.
 #       INV (l1,l2) /\ INV (l2,out) /\ (!(t:num). l1 t = in t \/ out (t-1))");;
 .. |- !in out. DEV(in,out) = (!t. out t = ~~(in t \/ out(t - 1)))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-EXPAND_ALL_BUT_RIGHT_RULE, EXPAND_AUTO_CONV, EXPAND_ALL_BUT_CONV,
-UNFOLD_RIGHT_RULE, UNWIND_AUTO_RIGHT_RULE, PRUNE_SOME_RIGHT_RULE.
+EXPAND\_ALL\_BUT\_RIGHT\_RULE, EXPAND\_AUTO\_CONV, EXPAND\_ALL\_BUT\_CONV, UNFOLD\_RIGHT\_RULE, UNWIND\_AUTO\_RIGHT\_RULE, PRUNE\_SOME\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{FLATTEN\_CONJ\_CONV}
 
-\TYPE {\small\verb%FLATTEN_CONJ_CONV : conv%}\egroup
+\DOC{FLATTEN\_CONJ\_CONV}{FLATTEN\_CONJ\_CONV}
+
+\noindent{\small\verb%FLATTEN_CONJ_CONV : conv%}\egroup
 
 \SYNOPSIS
 Flattens a `tree' of conjunctions.
@@ -504,9 +491,8 @@ Flattens a `tree' of conjunctions.
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- t1 /\ ... /\ tn = u1 /\ ... /\ un
-\end{verbatim}
-}
-\noindent where the right-hand side of the equation is a flattened version of
+\end{verbatim}}\noindent 
+where the right-hand side of the equation is a flattened version of
 the left-hand side.
 
 \FAILURE
@@ -517,15 +503,16 @@ Never fails.
 \begin{verbatim}
 #FLATTEN_CONJ_CONV "(a /\ (b /\ c)) /\ ((d /\ e) /\ f)";;
 |- (a /\ b /\ c) /\ (d /\ e) /\ f = a /\ b /\ c /\ d /\ e /\ f
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-CONJUNCTS_CONV.
+CONJUNCTS\_CONV.
 
 \ENDDOC
-\DOC{FORALL\_CONJ\_CONV}
 
-\TYPE {\small\verb%FORALL_CONJ_CONV : conv%}\egroup
+\DOC{FORALL\_CONJ\_CONV}{FORALL\_CONJ\_CONV}
+
+\noindent{\small\verb%FORALL_CONJ_CONV : conv%}\egroup
 
 \SYNOPSIS
 Moves universal quantifiers down through a tree of conjunctions.
@@ -536,9 +523,8 @@ Moves universal quantifiers down through a tree of conjunctions.
 \begin{verbatim}
    |- !x1 ... xm. t1 /\ ... /\ tn =
       (!x1 ... xm. t1) /\ ... /\ (!x1 ... xm. tn)
-\end{verbatim}
-}
-\noindent where the original term can be an arbitrary tree of conjunctions. The
+\end{verbatim}}\noindent 
+where the original term can be an arbitrary tree of conjunctions. The
 structure of the tree is retained in both sides of the equation.
 
 \FAILURE
@@ -555,16 +541,16 @@ Never fails.
 
 #FORALL_CONJ_CONV "!(x:*) (y:*) (z:*). T";;
 |- (!x y z. T) = (!x y z. T)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-CONJ_FORALL_CONV, FORALL_CONJ_ONCE_CONV, CONJ_FORALL_ONCE_CONV,
-FORALL_CONJ_RIGHT_RULE, CONJ_FORALL_RIGHT_RULE.
+CONJ\_FORALL\_CONV, FORALL\_CONJ\_ONCE\_CONV, CONJ\_FORALL\_ONCE\_CONV, FORALL\_CONJ\_RIGHT\_RULE, CONJ\_FORALL\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{FORALL\_CONJ\_ONCE\_CONV}
 
-\TYPE {\small\verb%FORALL_CONJ_ONCE_CONV : conv%}\egroup
+\DOC{FORALL\_CONJ\_ONCE\_CONV}{FORALL\_CONJ\_ONCE\_CONV}
+
+\noindent{\small\verb%FORALL_CONJ_ONCE_CONV : conv%}\egroup
 
 \SYNOPSIS
 Moves a single universal quantifier down through a tree of conjunctions.
@@ -574,9 +560,8 @@ Moves a single universal quantifier down through a tree of conjunctions.
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- !x. t1 /\ ... /\ tn = (!x. t1) /\ ... /\ (!x. tn)
-\end{verbatim}
-}
-\noindent where the original term can be an arbitrary tree of conjunctions. The
+\end{verbatim}}\noindent 
+where the original term can be an arbitrary tree of conjunctions. The
 structure of the tree is retained in both sides of the equation.
 
 \FAILURE
@@ -596,16 +581,16 @@ need not be a conjunction.
 #FORALL_CONJ_ONCE_CONV "!x. ((x \/ a) /\ (y \/ b)) /\ (x \/ c)";;
 |- (!x. ((x \/ a) /\ (y \/ b)) /\ (x \/ c)) =
    ((!x. x \/ a) /\ (!x. y \/ b)) /\ (!x. x \/ c)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-CONJ_FORALL_ONCE_CONV, FORALL_CONJ_CONV, CONJ_FORALL_CONV,
-FORALL_CONJ_RIGHT_RULE, CONJ_FORALL_RIGHT_RULE.
+CONJ\_FORALL\_ONCE\_CONV, FORALL\_CONJ\_CONV, CONJ\_FORALL\_CONV, FORALL\_CONJ\_RIGHT\_RULE, CONJ\_FORALL\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{FORALL\_CONJ\_RIGHT\_RULE}
 
-\TYPE {\small\verb%FORALL_CONJ_RIGHT_RULE : (thm -> thm)%}\egroup
+\DOC{FORALL\_CONJ\_RIGHT\_RULE}{FORALL\_CONJ\_RIGHT\_RULE}
+
+\noindent{\small\verb%FORALL_CONJ_RIGHT_RULE : (thm -> thm)%}\egroup
 
 \SYNOPSIS
 Moves universal quantifiers down through a tree of conjunctions.
@@ -617,21 +602,20 @@ Moves universal quantifiers down through a tree of conjunctions.
    -------------------------------------------------------------------
     A |- !z1 ... zr.
           t = ?y1 ... yp. (!x1 ... xm. t1) /\ ... /\ (!x1 ... xm. tn)
-\end{verbatim}
-}
+\end{verbatim}}
 
 \FAILURE
 Fails if the argument theorem is not of the required form, though either or
 both of {\small\verb%r%} and {\small\verb%p%} may be zero.
 
 \SEEALSO
-CONJ_FORALL_RIGHT_RULE, FORALL_CONJ_CONV, CONJ_FORALL_CONV,
-FORALL_CONJ_ONCE_CONV, CONJ_FORALL_ONCE_CONV.
+CONJ\_FORALL\_RIGHT\_RULE, FORALL\_CONJ\_CONV, CONJ\_FORALL\_CONV, FORALL\_CONJ\_ONCE\_CONV, CONJ\_FORALL\_ONCE\_CONV.
 
 \ENDDOC
-\DOC{line\_name}
 
-\TYPE {\small\verb%line_name : (term -> string)%}\egroup
+\DOC{line\_name}{line\_name}
+
+\noindent{\small\verb%line_name : (term -> string)%}\egroup
 
 \SYNOPSIS
 Computes the line name of an equation.
@@ -643,12 +627,13 @@ Computes the line name of an equation.
 Fails if the argument term is not of the specified form.
 
 \SEEALSO
-line_var.
+line\_var.
 
 \ENDDOC
-\DOC{line\_var}
 
-\TYPE {\small\verb%line_var : (term -> term)%}\egroup
+\DOC{line\_var}{line\_var}
+
+\noindent{\small\verb%line_var : (term -> term)%}\egroup
 
 \SYNOPSIS
 Computes the line variable of an equation.
@@ -660,12 +645,13 @@ Computes the line variable of an equation.
 Fails if the argument term is not of the specified form.
 
 \SEEALSO
-line_name.
+line\_name.
 
 \ENDDOC
-\DOC{PRUNE\_CONV}
 
-\TYPE {\small\verb%PRUNE_CONV : conv%}\egroup
+\DOC{PRUNE\_CONV}{PRUNE\_CONV}
+
+\noindent{\small\verb%PRUNE_CONV : conv%}\egroup
 
 \SYNOPSIS
 Prunes all hidden variables.
@@ -677,9 +663,8 @@ returns a theorem of the form:
 \begin{verbatim}
    |- (?l1 ... lr. t1 /\ ... /\ eqn1 /\ ... /\ eqnr /\ ... /\ tp) =
       (t1 /\ ... /\ tp)
-\end{verbatim}
-}
-\noindent where each {\small\verb%eqni%} has the form {\small\verb%"!y1 ... ym. li x1 ... xn = b"%} and
+\end{verbatim}}\noindent 
+where each {\small\verb%eqni%} has the form {\small\verb%"!y1 ... ym. li x1 ... xn = b"%} and
 {\small\verb%li%} does not appear free in any of the other conjuncts or in {\small\verb%b%}. The
 conversion works if one or more of the {\small\verb%eqni%}'s are not present, that is if
 {\small\verb%li%} is not free in any of the conjuncts, but does not work if {\small\verb%li%} appears
@@ -700,16 +685,16 @@ Fails if the argument term is not of the specified form or if any of the
 #   (!(x:num). l1 x = F) /\ (!x. l2 x = ~(out x)) /\ (!(x:num). out x = T)";;
 |- (?l2 l1. (!x. l1 x = F) /\ (!x. l2 x = ~out x) /\ (!x. out x = T)) =
    (!x. out x = T)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-PRUNE_ONCE_CONV, PRUNE_ONE_CONV, PRUNE_SOME_CONV, PRUNE_SOME_RIGHT_RULE,
-PRUNE_RIGHT_RULE.
+PRUNE\_ONCE\_CONV, PRUNE\_ONE\_CONV, PRUNE\_SOME\_CONV, PRUNE\_SOME\_RIGHT\_RULE, PRUNE\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{PRUNE\_ONCE\_CONV}
 
-\TYPE {\small\verb%PRUNE_ONCE_CONV : conv%}\egroup
+\DOC{PRUNE\_ONCE\_CONV}{PRUNE\_ONCE\_CONV}
+
+\noindent{\small\verb%PRUNE_ONCE_CONV : conv%}\egroup
 
 \SYNOPSIS
 Prunes one hidden variable.
@@ -721,9 +706,8 @@ theorem of the form:
 \begin{verbatim}
    |- (?l. t1 /\ ... /\ ti /\ eq /\ t(i+1) /\ ... /\ tp) =
       (t1 /\ ... /\ ti /\ t(i+1) /\ ... /\ tp)
-\end{verbatim}
-}
-\noindent where {\small\verb%eq%} has the form {\small\verb%"!y1 ... ym. l x1 ... xn = b"%} and {\small\verb%l%} does
+\end{verbatim}}\noindent 
+where {\small\verb%eq%} has the form {\small\verb%"!y1 ... ym. l x1 ... xn = b"%} and {\small\verb%l%} does
 not appear free in the {\small\verb%ti%}'s or in {\small\verb%b%}. The conversion works if {\small\verb%eq%} is not
 present, that is if {\small\verb%l%} is not free in any of the conjuncts, but does not work
 if {\small\verb%l%} appears free in more than one of the conjuncts. Each of {\small\verb%m%}, {\small\verb%n%} and {\small\verb%p%}
@@ -738,16 +722,16 @@ more than one of the conjuncts or if the equation for {\small\verb%l%} is recurs
 \begin{verbatim}
 #PRUNE_ONCE_CONV "?l2. (!(x:num). l1 x = F) /\ (!x. l2 x = ~(l1 x))";; 
 |- (?l2. (!x. l1 x = F) /\ (!x. l2 x = ~l1 x)) = (!x. l1 x = F)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-PRUNE_ONE_CONV, PRUNE_SOME_CONV, PRUNE_CONV, PRUNE_SOME_RIGHT_RULE,
-PRUNE_RIGHT_RULE.
+PRUNE\_ONE\_CONV, PRUNE\_SOME\_CONV, PRUNE\_CONV, PRUNE\_SOME\_RIGHT\_RULE, PRUNE\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{PRUNE\_ONE\_CONV}
 
-\TYPE {\small\verb%PRUNE_ONE_CONV : (string -> conv)%}\egroup
+\DOC{PRUNE\_ONE\_CONV}{PRUNE\_ONE\_CONV}
+
+\noindent{\small\verb%PRUNE_ONE_CONV : (string -> conv)%}\egroup
 
 \SYNOPSIS
 Prunes a specified hidden variable.
@@ -757,16 +741,14 @@ Prunes a specified hidden variable.
 {\par\samepage\setseps\small
 \begin{verbatim}
    "?l1 ... lj ... lr. t1 /\ ... /\ ti /\ eq /\ t(i+1) /\ ... /\ tp"
-\end{verbatim}
-}
-\noindent returns a theorem of the form:
+\end{verbatim}}\noindent 
+returns a theorem of the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (?l1 ... lj ... lr. t1 /\ ... /\ ti /\ eq /\ t(i+1) /\ ... /\ tp) =
       (?l1 ... l(j-1) l(j+1) ... lr. t1 /\ ... /\ ti /\ t(i+1) /\ ... /\ tp)
-\end{verbatim}
-}
-\noindent where {\small\verb%eq%} has the form {\small\verb%"!y1 ... ym. lj x1 ... xn = b"%} and {\small\verb%lj%}
+\end{verbatim}}\noindent 
+where {\small\verb%eq%} has the form {\small\verb%"!y1 ... ym. lj x1 ... xn = b"%} and {\small\verb%lj%}
 does not appear free in the {\small\verb%ti%}'s or in {\small\verb%b%}. The conversion works if {\small\verb%eq%} is
 not present, that is if {\small\verb%lj%} is not free in any of the conjuncts, but does not
 work if {\small\verb%lj%} appears free in more than one of the conjuncts. Each of {\small\verb%m%}, {\small\verb%n%}
@@ -790,16 +772,16 @@ quantified lines.
 
 #PRUNE_ONE_CONV `l1` "?l2 l1. (!(x:num). l1 x = F) /\ (!x. l2 x = ~(l1 x))";; 
 evaluation failed     PRUNE_ONE_CONV
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-PRUNE_ONCE_CONV, PRUNE_SOME_CONV, PRUNE_CONV, PRUNE_SOME_RIGHT_RULE,
-PRUNE_RIGHT_RULE.
+PRUNE\_ONCE\_CONV, PRUNE\_SOME\_CONV, PRUNE\_CONV, PRUNE\_SOME\_RIGHT\_RULE, PRUNE\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{PRUNE\_RIGHT\_RULE}
 
-\TYPE {\small\verb%PRUNE_RIGHT_RULE : (thm -> thm)%}\egroup
+\DOC{PRUNE\_RIGHT\_RULE}{PRUNE\_RIGHT\_RULE}
+
+\noindent{\small\verb%PRUNE_RIGHT_RULE : (thm -> thm)%}\egroup
 
 \SYNOPSIS
 Prunes all hidden variables.
@@ -812,9 +794,8 @@ Prunes all hidden variables.
           t = ?l1 ... lr. t1 /\ ... /\ eqn1 /\ ... /\ eqnr /\ ... /\ tp
    ---------------------------------------------------------------------
                    A |- !z1 ... zr. t = t1 /\ ... /\ tp
-\end{verbatim}
-}
-\noindent where each {\small\verb%eqni%} has the form {\small\verb%"!y1 ... ym. li x1 ... xn = b"%} and
+\end{verbatim}}\noindent 
+where each {\small\verb%eqni%} has the form {\small\verb%"!y1 ... ym. li x1 ... xn = b"%} and
 {\small\verb%li%} does not appear free in any of the other conjuncts or in {\small\verb%b%}. The rule
 works if one or more of the {\small\verb%eqni%}'s are not present, that is if {\small\verb%li%} is not
 free in any of the conjuncts, but does not work if {\small\verb%li%} appears free in more
@@ -837,16 +818,16 @@ Fails if the argument theorem is not of the specified form or if any of the
 #      ?(l1:num->bool) l2.
 #       (!x. l1 x = F) /\ (!x. l2 x = ~(in x)) /\ (!x. out x = ~(in x))");;
 . |- !in out. DEV(in,out) = (!x. out x = ~in x)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-PRUNE_SOME_RIGHT_RULE, PRUNE_ONCE_CONV, PRUNE_ONE_CONV, PRUNE_SOME_CONV,
-PRUNE_CONV.
+PRUNE\_SOME\_RIGHT\_RULE, PRUNE\_ONCE\_CONV, PRUNE\_ONE\_CONV, PRUNE\_SOME\_CONV, PRUNE\_CONV.
 
 \ENDDOC
-\DOC{PRUNE\_SOME\_CONV}
 
-\TYPE {\small\verb%PRUNE_SOME_CONV : (string list -> conv)%}\egroup
+\DOC{PRUNE\_SOME\_CONV}{PRUNE\_SOME\_CONV}
+
+\noindent{\small\verb%PRUNE_SOME_CONV : (string list -> conv)%}\egroup
 
 \SYNOPSIS
 Prunes several hidden variables.
@@ -856,29 +837,25 @@ Prunes several hidden variables.
 {\par\samepage\setseps\small
 \begin{verbatim}
    "?l1 ... lr. t1 /\ ... /\ eqni1 /\ ... /\ eqnik /\ ... /\ tp"
-\end{verbatim}
-}
-\noindent returns a theorem of the form:
+\end{verbatim}}\noindent 
+returns a theorem of the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (?l1 ... lr. t1 /\ ... /\ eqni1 /\ ... /\ eqnik /\ ... /\ tp) =
       (?li(k+1) ... lir. t1 /\ ... /\ tp)
-\end{verbatim}
-}
-\noindent where for {\small\verb%1 <= j <= k%}, each {\small\verb%eqnij%} has the form:
+\end{verbatim}}\noindent 
+where for {\small\verb%1 <= j <= k%}, each {\small\verb%eqnij%} has the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    "!y1 ... ym. lij x1 ... xn = b"
-\end{verbatim}
-}
-\noindent and {\small\verb%lij%} does not appear free in any of the other conjuncts or in
+\end{verbatim}}\noindent 
+and {\small\verb%lij%} does not appear free in any of the other conjuncts or in
 {\small\verb%b%}. The {\small\verb%li%}'s are related by the equation:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   {li1,...,lik} u {li(k+1),...,lir} = {l1,...,lr}
-\end{verbatim}
-}
-\noindent The conversion works if one or more of the {\small\verb%eqnij%}'s are not present,
+   {{li1,...,lik}} u {{li(k+1),...,lir}} = {{l1,...,lr}}
+\end{verbatim}}\noindent 
+The conversion works if one or more of the {\small\verb%eqnij%}'s are not present,
 that is if {\small\verb%lij%} is not free in any of the conjuncts, but does not work if
 {\small\verb%lij%} appears free in more than one of the conjuncts. {\small\verb%p%} may be zero, that is,
 all the conjuncts may be {\small\verb%eqnij%}'s. In this case the body of the result will be
@@ -903,16 +880,16 @@ not one of the existentially quantified lines.
 #   (!(x:num). l1 x = F) /\ (!x. l2 x = ~(l3 x)) /\ (!(x:num). l3 x = T)";;
 |- (?l3 l2 l1. (!x. l1 x = F) /\ (!x. l2 x = ~l3 x) /\ (!x. l3 x = T)) =
    (?l3. !x. l3 x = T)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-PRUNE_ONCE_CONV, PRUNE_ONE_CONV, PRUNE_CONV, PRUNE_SOME_RIGHT_RULE,
-PRUNE_RIGHT_RULE.
+PRUNE\_ONCE\_CONV, PRUNE\_ONE\_CONV, PRUNE\_CONV, PRUNE\_SOME\_RIGHT\_RULE, PRUNE\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{PRUNE\_SOME\_RIGHT\_RULE}
 
-\TYPE {\small\verb%PRUNE_SOME_RIGHT_RULE : (string list -> thm -> thm)%}\egroup
+\DOC{PRUNE\_SOME\_RIGHT\_RULE}{PRUNE\_SOME\_RIGHT\_RULE}
+
+\noindent{\small\verb%PRUNE_SOME_RIGHT_RULE : (string list -> thm -> thm)%}\egroup
 
 \SYNOPSIS
 Prunes several hidden variables.
@@ -925,22 +902,19 @@ Prunes several hidden variables.
           t = ?l1 ... lr. t1 /\ ... /\ eqni1 /\ ... /\ eqnik /\ ... /\ tp
    -----------------------------------------------------------------------
            A |- !z1 ... zr. t = ?li(k+1) ... lir. t1 /\ ... /\ tp
-\end{verbatim}
-}
-\noindent where for {\small\verb%1 <= j <= k%}, each {\small\verb%eqnij%} has the form:
+\end{verbatim}}\noindent 
+where for {\small\verb%1 <= j <= k%}, each {\small\verb%eqnij%} has the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    "!y1 ... ym. lij x1 ... xn = b"
-\end{verbatim}
-}
-\noindent and {\small\verb%lij%} does not appear free in any of the other conjuncts or in
+\end{verbatim}}\noindent 
+and {\small\verb%lij%} does not appear free in any of the other conjuncts or in
 {\small\verb%b%}. The {\small\verb%li%}'s are related by the equation:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   {li1,...,lik} u {li(k+1),...,lir} = {l1,...,lr}
-\end{verbatim}
-}
-\noindent The rule works if one or more of the {\small\verb%eqnij%}'s are not present, that
+   {{li1,...,lik}} u {{li(k+1),...,lir}} = {{l1,...,lr}}
+\end{verbatim}}\noindent 
+The rule works if one or more of the {\small\verb%eqnij%}'s are not present, that
 is if {\small\verb%lij%} is not free in any of the conjuncts, but does not work if {\small\verb%lij%}
 appears free in more than one of the conjuncts. {\small\verb%p%} may be zero, that is, all
 the conjuncts may be {\small\verb%eqnij%}'s. In this case the conjunction will be
@@ -967,15 +941,16 @@ not one of the existentially quantified lines.
 #      ?(l1:num->bool) l2.
 #       (!x. l1 x = F) /\ (!x. l2 x = ~(in x)) /\ (!x. out x = ~(in x))");;
 . |- !in out. DEV(in,out) = (!x. out x = ~in x)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-PRUNE_RIGHT_RULE, PRUNE_ONCE_CONV, PRUNE_ONE_CONV, PRUNE_SOME_CONV, PRUNE_CONV.
+PRUNE\_RIGHT\_RULE, PRUNE\_ONCE\_CONV, PRUNE\_ONE\_CONV, PRUNE\_SOME\_CONV, PRUNE\_CONV.
 
 \ENDDOC
-\DOC{UNFOLD\_CONV}
 
-\TYPE {\small\verb%UNFOLD_CONV : (thm list -> conv)%}\egroup
+\DOC{UNFOLD\_CONV}{UNFOLD\_CONV}
+
+\noindent{\small\verb%UNFOLD_CONV : (thm list -> conv)%}\egroup
 
 \SYNOPSIS
 Expands sub-components of a hardware description using their definitions.
@@ -985,9 +960,8 @@ Expands sub-components of a hardware description using their definitions.
 {\par\samepage\setseps\small
 \begin{verbatim}
    B |- t1 /\ ... /\ tn = t1' /\ ... /\ tn'
-\end{verbatim}
-}
-\noindent where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
+\end{verbatim}}\noindent 
+where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
 {\small\verb%thl%}. The set of assumptions {\small\verb%B%} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to
 a {\small\verb%ti%}, it is unchanged.
@@ -1004,15 +978,16 @@ Never fails.
      (!t. l2 t = ~l1 t) /\
      (!t. l3 t = ~l2 t) /\
      (!t. l1 t = l2(t - 1) \/ l3(t - 1))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNFOLD_RIGHT_RULE.
+UNFOLD\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{UNFOLD\_RIGHT\_RULE}
 
-\TYPE {\small\verb%UNFOLD_RIGHT_RULE : (thm list -> thm -> thm)%}\egroup
+\DOC{UNFOLD\_RIGHT\_RULE}{UNFOLD\_RIGHT\_RULE}
+
+\noindent{\small\verb%UNFOLD_RIGHT_RULE : (thm list -> thm -> thm)%}\egroup
 
 \SYNOPSIS
 Expands sub-components of a hardware description using their definitions.
@@ -1024,9 +999,8 @@ Expands sub-components of a hardware description using their definitions.
        A |- !z1 ... zr. t = ?y1 ... yp. t1 /\ ... /\ tn
    --------------------------------------------------------
     B u A |- !z1 ... zr. t = ?y1 ... yp. t1' /\ ... /\ tn'
-\end{verbatim}
-}
-\noindent where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
+\end{verbatim}}\noindent 
+where each {\small\verb%ti'%} is the result of rewriting {\small\verb%ti%} with the theorems in
 {\small\verb%thl%}. The set of assumptions {\small\verb%B%} is the union of the instantiated assumptions
 of the theorems used for rewriting. If none of the rewrites are applicable to
 a {\small\verb%ti%}, it is unchanged.
@@ -1042,15 +1016,16 @@ both of {\small\verb%r%} and {\small\verb%p%} may be zero.
 # (ASSUME "!(in:num->bool) out. BUF(in,out) = ?l. INV(in,l) /\ INV(l,out)");;
 .. |- !in out.
        BUF(in,out) = (?l. (!t. l t = ~in t) /\ (!t. out t = ~l t))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNFOLD_CONV.
+UNFOLD\_CONV.
 
 \ENDDOC
-\DOC{UNWIND\_ALL\_BUT\_CONV}
 
-\TYPE {\small\verb%UNWIND_ALL_BUT_CONV : (string list -> conv)%}\egroup
+\DOC{UNWIND\_ALL\_BUT\_CONV}{UNWIND\_ALL\_BUT\_CONV}
+
+\noindent{\small\verb%UNWIND_ALL_BUT_CONV : (string list -> conv)%}\egroup
 
 \SYNOPSIS
 Unwinds all lines of a device (except those in the argument list) as much as
@@ -1061,16 +1036,14 @@ possible.
 {\par\samepage\setseps\small
 \begin{verbatim}
    "t1 /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn"
-\end{verbatim}
-}
-\noindent returns a theorem of the form:
+\end{verbatim}}\noindent 
+returns a theorem of the form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- t1  /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn =
       t1' /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn'
-\end{verbatim}
-}
-\noindent where {\small\verb%ti'%} (for {\small\verb%1 <= i <= n%}) is {\small\verb%ti%} rewritten with the equations
+\end{verbatim}}\noindent 
+where {\small\verb%ti'%} (for {\small\verb%1 <= i <= n%}) is {\small\verb%ti%} rewritten with the equations
 {\small\verb%eqni%} ({\small\verb%1 <= i <= m%}). These equations are those conjuncts with line name not
 in {\small\verb%l%} (and which are equations).
 
@@ -1090,16 +1063,16 @@ Never fails but may loop indefinitely.
    (!x. l1 x = (l2 x) - 1) /\
    (!x. f x = (l2(x + 1)) + ((l2(x + 2)) - 1)) /\
    (!x. l2 x = 7)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNWIND_ONCE_CONV, UNWIND_CONV, UNWIND_AUTO_CONV, UNWIND_ALL_BUT_RIGHT_RULE,
-UNWIND_AUTO_RIGHT_RULE.
+UNWIND\_ONCE\_CONV, UNWIND\_CONV, UNWIND\_AUTO\_CONV, UNWIND\_ALL\_BUT\_RIGHT\_RULE, UNWIND\_AUTO\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{UNWIND\_ALL\_BUT\_RIGHT\_RULE}
 
-\TYPE {\small\verb%UNWIND_ALL_BUT_RIGHT_RULE : (string list -> thm -> thm)%}\egroup
+\DOC{UNWIND\_ALL\_BUT\_RIGHT\_RULE}{UNWIND\_ALL\_BUT\_RIGHT\_RULE}
+
+\noindent{\small\verb%UNWIND_ALL_BUT_RIGHT_RULE : (string list -> thm -> thm)%}\egroup
 
 \SYNOPSIS
 Unwinds all lines of a device (except those in the argument list) as much as
@@ -1116,9 +1089,8 @@ possible.
     A |- !z1 ... zr.
           t =
           (?l1 ... lp. t1' /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn')
-\end{verbatim}
-}
-\noindent where {\small\verb%ti'%} (for {\small\verb%1 <= i <= n%}) is {\small\verb%ti%} rewritten with the equations
+\end{verbatim}}\noindent 
+where {\small\verb%ti'%} (for {\small\verb%1 <= i <= n%}) is {\small\verb%ti%} rewritten with the equations
 {\small\verb%eqni%} ({\small\verb%1 <= i <= m%}). These equations are those conjuncts with line name not
 in {\small\verb%l%} (and which are equations).
 
@@ -1142,16 +1114,16 @@ both of {\small\verb%p%} and {\small\verb%r%} may be zero. May loop indefinitely
         (!x. l1 x = (l2 x) - 1) /\
         (!x. f x = (l2(x + 1)) + ((l2(x + 2)) - 1)) /\
         (!x. l2 x = 7))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNWIND_AUTO_RIGHT_RULE, UNWIND_ALL_BUT_CONV, UNWIND_AUTO_CONV,
-UNWIND_ONCE_CONV, UNWIND_CONV.
+UNWIND\_AUTO\_RIGHT\_RULE, UNWIND\_ALL\_BUT\_CONV, UNWIND\_AUTO\_CONV, UNWIND\_ONCE\_CONV, UNWIND\_CONV.
 
 \ENDDOC
-\DOC{UNWIND\_AUTO\_CONV}
 
-\TYPE {\small\verb%UNWIND_AUTO_CONV : conv%}\egroup
+\DOC{UNWIND\_AUTO\_CONV}{UNWIND\_AUTO\_CONV}
+
+\noindent{\small\verb%UNWIND_AUTO_CONV : conv%}\egroup
 
 \SYNOPSIS
 Automatic unwinding of equations defining wire values in a standard device
@@ -1162,9 +1134,8 @@ specification.
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- (?l1 ... lm. t1 /\ ... /\ tn) = (?l1 ... lm. t1' /\ ... /\ tn')
-\end{verbatim}
-}
-\noindent where {\small\verb%tj'%} is {\small\verb%tj%} rewritten with equations selected from the
+\end{verbatim}}\noindent 
+where {\small\verb%tj'%} is {\small\verb%tj%} rewritten with equations selected from the
 {\small\verb%ti%}'s.
 
 The function decides which equations to use for rewriting by performing a loop
@@ -1186,16 +1157,16 @@ Fails if there is more than one equation for any line variable.
    (!x. f x = (l2(x + 1)) + (l1(x + 2))) /\
    (!x. l2 x = 7) =
    (!x. l1 x = 7 - 1) /\ (!x. f x = 7 + (7 - 1)) /\ (!x. l2 x = 7)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNWIND_ONCE_CONV, UNWIND_CONV, UNWIND_ALL_BUT_CONV, UNWIND_ALL_BUT_RIGHT_RULE,
-UNWIND_AUTO_RIGHT_RULE.
+UNWIND\_ONCE\_CONV, UNWIND\_CONV, UNWIND\_ALL\_BUT\_CONV, UNWIND\_ALL\_BUT\_RIGHT\_RULE, UNWIND\_AUTO\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{UNWIND\_AUTO\_RIGHT\_RULE}
 
-\TYPE {\small\verb%UNWIND_AUTO_RIGHT_RULE : (thm -> thm)%}\egroup
+\DOC{UNWIND\_AUTO\_RIGHT\_RULE}{UNWIND\_AUTO\_RIGHT\_RULE}
+
+\noindent{\small\verb%UNWIND_AUTO_RIGHT_RULE : (thm -> thm)%}\egroup
 
 \SYNOPSIS
 Automatic unwinding of equations defining wire values in a standard device
@@ -1208,9 +1179,8 @@ specification.
     A |- !z1 ... zr. t = ?l1 ... lm. t1  /\ ... /\ tn
    ----------------------------------------------------
     A |- !z1 ... zr. t = ?l1 ... lm. t1' /\ ... /\ tn'
-\end{verbatim}
-}
-\noindent where {\small\verb%tj'%} is {\small\verb%tj%} rewritten with equations selected from the
+\end{verbatim}}\noindent 
+where {\small\verb%tj'%} is {\small\verb%tj%} rewritten with equations selected from the
 {\small\verb%ti%}'s.
 
 The function decides which equations to use for rewriting by performing a loop
@@ -1237,16 +1207,16 @@ argument theorem is not of the required form, though either or both of {\small\v
       IMP f =
       (?l2 l1.
         (!x. l1 x = 7 - 1) /\ (!x. f x = 7 + (7 - 1)) /\ (!x. l2 x = 7))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNWIND_ALL_BUT_RIGHT_RULE, UNWIND_AUTO_CONV, UNWIND_ALL_BUT_CONV,
-UNWIND_ONCE_CONV, UNWIND_CONV.
+UNWIND\_ALL\_BUT\_RIGHT\_RULE, UNWIND\_AUTO\_CONV, UNWIND\_ALL\_BUT\_CONV, UNWIND\_ONCE\_CONV, UNWIND\_CONV.
 
 \ENDDOC
-\DOC{UNWIND\_CONV}
 
-\TYPE {\small\verb%UNWIND_CONV : ((term -> bool) -> conv)%}\egroup
+\DOC{UNWIND\_CONV}{UNWIND\_CONV}
+
+\noindent{\small\verb%UNWIND_CONV : ((term -> bool) -> conv)%}\egroup
 
 \SYNOPSIS
 Unwinds device behaviour using selected line equations until no change.
@@ -1258,9 +1228,8 @@ theorem of the form:
 \begin{verbatim}
    |- t1  /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn =
       t1' /\ ... /\ eqn1 /\ ... /\ eqnm /\ ... /\ tn'
-\end{verbatim}
-}
-\noindent where {\small\verb%ti'%} (for {\small\verb%1 <= i <= n%}) is {\small\verb%ti%} rewritten with the equations
+\end{verbatim}}\noindent 
+where {\small\verb%ti'%} (for {\small\verb%1 <= i <= n%}) is {\small\verb%ti%} rewritten with the equations
 {\small\verb%eqni%} ({\small\verb%1 <= i <= m%}). These equations are the conjuncts for which the
 predicate {\small\verb%p%} is true. The {\small\verb%ti%} terms are the conjuncts for which {\small\verb%p%} is false.
 The rewriting is repeated until no changes take place.
@@ -1279,16 +1248,16 @@ Never fails but may loop indefinitely.
    (!x. f x = (l2(x + 1)) + (l1(x + 2))) /\
    (!x. l2 x = 7) =
    (!x. l1 x = (l2 x) - 1) /\ (!x. f x = 7 + (7 - 1)) /\ (!x. l2 x = 7)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNWIND_ONCE_CONV, UNWIND_ALL_BUT_CONV, UNWIND_AUTO_CONV,
-UNWIND_ALL_BUT_RIGHT_RULE, UNWIND_AUTO_RIGHT_RULE.
+UNWIND\_ONCE\_CONV, UNWIND\_ALL\_BUT\_CONV, UNWIND\_AUTO\_CONV, UNWIND\_ALL\_BUT\_RIGHT\_RULE, UNWIND\_AUTO\_RIGHT\_RULE.
 
 \ENDDOC
-\DOC{UNWIND\_ONCE\_CONV}
 
-\TYPE {\small\verb%UNWIND_ONCE_CONV : ((term -> bool) -> conv)%}\egroup
+\DOC{UNWIND\_ONCE\_CONV}{UNWIND\_ONCE\_CONV}
+
+\noindent{\small\verb%UNWIND_ONCE_CONV : ((term -> bool) -> conv)%}\egroup
 
 \SYNOPSIS
 Basic conversion for parallel unwinding of equations defining wire values in a
@@ -1301,32 +1270,27 @@ associative-commutative reordering to:
 {\par\samepage\setseps\small
 \begin{verbatim}
    t1 /\ t2 /\ ... /\ tn
-\end{verbatim}
-}
-\noindent {\small\verb%p%} is used to partition the terms {\small\verb%ti%} for {\small\verb%1 <= i <= n%} into two
+\end{verbatim}}{\small\verb%p%} is used to partition the terms {\small\verb%ti%} for {\small\verb%1 <= i <= n%} into two
 disjoint sets:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   REW = {ti | p ti}
-   OBJ = {ti | ~p ti}
-\end{verbatim}
-}
-\noindent The terms {\small\verb%ti%} for which {\small\verb%p%} is true are then used as a set of
+   REW = {{ti | p ti}}
+   OBJ = {{ti | ~p ti}}
+\end{verbatim}}\noindent 
+The terms {\small\verb%ti%} for which {\small\verb%p%} is true are then used as a set of
 rewrite rules (thus they should be equations) to do a single top-down parallel
 rewrite of the remaining terms. The rewritten terms take the place of the
 original terms in the input conjunction. For example, if {\small\verb%tm%} is:
 {\par\samepage\setseps\small
 \begin{verbatim}
    t1 /\ t2 /\ t3 /\ t4
-\end{verbatim}
-}
-\noindent and {\small\verb%REW = {t1,t3}%} then the result is:
+\end{verbatim}}\noindent 
+and {\small\verb%REW = {{t1,t3}}%} then the result is:
 {\par\samepage\setseps\small
 \begin{verbatim}
    |- t1 /\ t2 /\ t3 /\ t4 = t1 /\ t2' /\ t3 /\ t4'
-\end{verbatim}
-}
-\noindent where {\small\verb%ti'%} is {\small\verb%ti%} rewritten with the equations {\small\verb%REW%}.
+\end{verbatim}}\noindent 
+where {\small\verb%ti'%} is {\small\verb%ti%} rewritten with the equations {\small\verb%REW%}.
 
 \FAILURE
 Never fails.
@@ -1344,10 +1308,10 @@ Never fails.
    (!x. l1 x = (l2 x) - 1) /\
    (!x. f x = 7 + ((l2(x + 2)) - 1)) /\
    (!x. l2 x = 7)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-UNWIND_CONV, UNWIND_ALL_BUT_CONV, UNWIND_AUTO_CONV, UNWIND_ALL_BUT_RIGHT_RULE,
-UNWIND_AUTO_RIGHT_RULE.
+UNWIND\_CONV, UNWIND\_ALL\_BUT\_CONV, UNWIND\_AUTO\_CONV, UNWIND\_ALL\_BUT\_RIGHT\_RULE, UNWIND\_AUTO\_RIGHT\_RULE.
 
 \ENDDOC
+

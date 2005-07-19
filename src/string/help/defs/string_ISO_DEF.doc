@@ -1,0 +1,10 @@
+\THEOREM string_ISO_DEF string
+|- (!a. ABS_string(REP_string a) = a) /\
+   (!r.
+     TRP
+     (\v tl.
+       (v = INL one) /\ (LENGTH tl = 0) \/
+       (?a. v = INR a) /\ (LENGTH tl = SUC 0))
+     r =
+     (REP_string(ABS_string r) = r))
+\ENDTHEOREM

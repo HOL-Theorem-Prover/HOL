@@ -104,7 +104,7 @@ do
     mv HolSatLib$i /tmp/$name-HolSatLib$i
 done
 
-for lib_name in pred_set
+for lib_name in pred_set pair res_quan string taut unwind word
 do
     echo Building $lib_name documentation
     cd /tmp/hol98/src/$lib_name/Manual
@@ -113,6 +113,22 @@ do
        :
     else
        echo "Build failed, see /tmp/$lib_name-latex.log" ; exit 1
+    fi
+    for i in .dvi .ps .pdf
+    do
+        mv $lib_name$i /tmp/$name-$lib_name$i
+    done
+done
+
+for lib_name in arith reduce
+do
+    echo Building num/$lib_name documentation
+    cd /tmp/hol98/src/num/$lib_name/Manual
+    if (make all) > /tmp/num-$lib_name-latex.log 2>&1
+    then
+       :
+    else
+       echo "Build failed, see /tmp/num-$lib_name-latex.log" ; exit 1
     fi
     for i in .dvi .ps .pdf
     do

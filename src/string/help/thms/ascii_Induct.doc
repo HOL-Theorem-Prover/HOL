@@ -1,0 +1,5 @@
+\THEOREM ascii_Induct ascii
+|- !P.
+    (!b0 b1 b2 b3 b4 b5 b6 b7. P(ASCII b0 b1 b2 b3 b4 b5 b6 b7)) ==>
+    (!a. P a)
+\ENDTHEOREM

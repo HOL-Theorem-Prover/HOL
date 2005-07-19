@@ -12,11 +12,12 @@ Help=../help
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEXEXE=../../../help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
 # ---------------------------------------------------------------------
-MAKEINDEX=../../../Manual/LaTeX/makeindex ../../../
+MAKEINDEX=makeindex
 
 default:
 	@echo "INSTRUCTIONS: Type \"make all\" to make the documentation"
@@ -25,7 +26,7 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg unwind.{ps,pdf}
 	@echo "\begin{theindex}" > index.tex
 	@echo "\mbox{}" >> index.tex
 	@echo "\end{theindex}" >> index.tex
@@ -36,7 +37,7 @@ tex: ids
 ids:
 	@echo "\chapter{ML Functions in the unwind Library}">entries.tex
 	@echo "\input{entries-intro}" >> entries.tex
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 index: 
 	${MAKEINDEX} unwind.idx index.tex
@@ -44,5 +45,11 @@ index:
 unwind: 
 	latex unwind.tex
 
+ps:
+	dvips unwind.dvi -o
+
+pdf:	unwind.ps
+	pdflatex unwind.tex
+
 all: 
-	make clean; make tex; make unwind; make index; make unwind
+	make clean; make tex; make unwind; make index; make unwind ps pdf

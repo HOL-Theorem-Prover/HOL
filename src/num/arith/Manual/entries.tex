@@ -1,8 +1,8 @@
 \chapter{ML Functions in the arith Library}
 \input{entries-intro}
-\DOC{ARITH\_CONV}
+\DOC{ARITH\_CONV}{ARITH\_CONV}
 
-\TYPE {\small\verb%ARITH_CONV : conv%}\egroup
+\noindent{\small\verb%ARITH_CONV : conv%}\egroup
 
 \SYNOPSIS
 Partial decision procedure for a subset of linear natural number arithmetic.
@@ -53,20 +53,18 @@ is in the subset but is not valid.
 A simple example containing a free variable:
 {\par\samepage\setseps\small
 \begin{verbatim}
-   #ARITH_CONV "m < SUC m";;
-   |- m < (SUC m) = T
-\end{verbatim}
-}
-\noindent A more complex example with subtraction and universal quantifiers,
-and which is not initially in prenex normal form:
+   - ARITH_CONV ``m < SUC m``;
+   > val it = |- m < (SUC m) = T : thm
+\end{verbatim}}\noindent 
+A more complex example with subtraction and universal quantifiers, and
+which is not initially in prenex normal form:
 {\par\samepage\setseps\small
 \begin{verbatim}
    #ARITH_CONV
    # "!m p. p < m ==> !q r. (m < (p + q) + r) ==> ((m - p) < q + r)";;
    |- (!m p. p < m ==> (!q r. m < ((p + q) + r) ==> (m - p) < (q + r))) = T
-\end{verbatim}
-}
-\noindent Two examples with existential quantifiers:
+\end{verbatim}}\noindent 
+Two examples with existential quantifiers:
 {\par\samepage\setseps\small
 \begin{verbatim}
    #ARITH_CONV "?m n. m < n";;
@@ -74,40 +72,37 @@ and which is not initially in prenex normal form:
 
    #ARITH_CONV "?m n. (2 * m) + (3 * n) = 10";;
    |- (?m n. (2 * m) + (3 * n) = 10) = T
-\end{verbatim}
-}
-\noindent An instance of a universally quantified formula involving a conditional
+\end{verbatim}}\noindent 
+An instance of a universally quantified formula involving a conditional
 statement and subtraction:
 {\par\samepage\setseps\small
 \begin{verbatim}
    #ARITH_CONV
    # "((p + 3) <= n) ==> (!m. ((m EXP 2 = 0) => (n - 1) | (n - 2)) > p)";;
    |- (p + 3) <= n ==> (!m. ((m EXP 2 = 0) => n - 1 | n - 2) > p) = T
-\end{verbatim}
-}
-\noindent Failure due to mixing quantifiers:
+\end{verbatim}}\noindent 
+Failure due to mixing quantifiers:
 {\par\samepage\setseps\small
 \begin{verbatim}
    #ARITH_CONV "!m. ?n. m < n";;
    evaluation failed     ARITH_CONV -- formula not in the allowed subset
-\end{verbatim}
-}
-\noindent Failure because the truth of the formula relies on the fact that the
+\end{verbatim}}\noindent 
+Failure because the truth of the formula relies on the fact that the
 variables cannot have fractional values:
 {\par\samepage\setseps\small
 \begin{verbatim}
    #ARITH_CONV "!m n. ~(SUC (2 * m) = 2 * n)";;
    evaluation failed     ARITH_CONV -- cannot prove formula
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-NEGATE_CONV, EXISTS_ARITH_CONV, FORALL_ARITH_CONV, INSTANCE_T_CONV,
-PRENEX_CONV, SUB_AND_COND_ELIM_CONV.
+NEGATE\_CONV, EXISTS\_ARITH\_CONV, FORALL\_ARITH\_CONV, INSTANCE\_T\_CONV, PRENEX\_CONV, SUB\_AND\_COND\_ELIM\_CONV.
 
 \ENDDOC
-\DOC{ARITH\_FORM\_NORM\_CONV}
 
-\TYPE {\small\verb%ARITH_FORM_NORM_CONV : conv%}\egroup
+\DOC{ARITH\_FORM\_NORM\_CONV}{ARITH\_FORM\_NORM\_CONV}
+
+\noindent{\small\verb%ARITH_FORM_NORM_CONV : conv%}\egroup
 
 \SYNOPSIS
 Normalises an unquantified formula of linear natural number arithmetic.
@@ -147,15 +142,16 @@ subset.
    (1 * n) <= 1 /\ 1 <= (1 * n) \/
    (1 * n) <= 2 /\ 2 <= (1 * n) \/
    (1 * n) <= 3 /\ 3 <= (1 * n)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \USES
 Useful in constructing decision procedures for linear arithmetic.
 
 \ENDDOC
-\DOC{COND\_ELIM\_CONV}
 
-\TYPE {\small\verb%COND_ELIM_CONV : conv%}\egroup
+\DOC{COND\_ELIM\_CONV}{COND\_ELIM\_CONV}
+
+\noindent{\small\verb%COND_ELIM_CONV : conv%}\egroup
 
 \SYNOPSIS
 Eliminates conditional statements from a formula.
@@ -181,19 +177,20 @@ Never fails.
 #COND_ELIM_CONV "!f n. (\m. f ((m = 0) => 0 | (m - 1))) (SUC n) < (f n) + 1";;
 |- (!f n. ((\m. f((m = 0) => 0 | m - 1))(SUC n)) < ((f n) + 1)) =
    (!f n. ((\m. ((m = 0) => f 0 | f(m - 1)))(SUC n)) < ((f n) + 1))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \USES
 Useful as a preprocessor to decision procedures which do not allow conditional
 statements in their argument formula.
 
 \SEEALSO
-SUB_AND_COND_ELIM_CONV.
+SUB\_AND\_COND\_ELIM\_CONV.
 
 \ENDDOC
-\DOC{DISJ\_INEQS\_FALSE\_CONV}
 
-\TYPE {\small\verb%DISJ_INEQS_FALSE_CONV : conv%}\egroup
+\DOC{DISJ\_INEQS\_FALSE\_CONV}{DISJ\_INEQS\_FALSE\_CONV}
+
+\noindent{\small\verb%DISJ_INEQS_FALSE_CONV : conv%}\egroup
 
 \SYNOPSIS
 Proves a disjunction of conjunctions of normalised inequalities is false,
@@ -227,15 +224,16 @@ incompleteness of the procedure used.
    (5 + (4 * n)) <= ((3 * m) + (1 * p)) \/
    2 <= 0 =
    F
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-ARITH_FORM_NORM_CONV.
+ARITH\_FORM\_NORM\_CONV.
 
 \ENDDOC
-\DOC{EXISTS\_ARITH\_CONV}
 
-\TYPE {\small\verb%EXISTS_ARITH_CONV : conv%}\egroup
+\DOC{EXISTS\_ARITH\_CONV}{EXISTS\_ARITH\_CONV}
+
+\noindent{\small\verb%EXISTS_ARITH_CONV : conv%}\egroup
 
 \SYNOPSIS
 Partial decision procedure for non-universal Presburger natural arithmetic.
@@ -269,15 +267,16 @@ the formula. The failure strings are different in each case.
 
 #EXISTS_ARITH_CONV "?m n. (2 * m) + (3 * n) = 10";;
 |- (?m n. (2 * m) + (3 * n) = 10) = T
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-NEGATE_CONV, FORALL_ARITH_CONV, ARITH_CONV.
+NEGATE\_CONV, FORALL\_ARITH\_CONV, ARITH\_CONV.
 
 \ENDDOC
-\DOC{FORALL\_ARITH\_CONV}
 
-\TYPE {\small\verb%FORALL_ARITH_CONV : conv%}\egroup
+\DOC{FORALL\_ARITH\_CONV}{FORALL\_ARITH\_CONV}
+
+\noindent{\small\verb%FORALL_ARITH_CONV : conv%}\egroup
 
 \SYNOPSIS
 Partial decision procedure for non-existential Presburger natural arithmetic.
@@ -315,16 +314,16 @@ the formula. The failure strings are different in each case.
 
 #FORALL_ARITH_CONV "!m n. ~(SUC (2 * m) = 2 * n)";;
 evaluation failed     FORALL_ARITH_CONV -- cannot prove formula
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-NEGATE_CONV, EXISTS_ARITH_CONV, ARITH_CONV, ARITH_FORM_NORM_CONV,
-DISJ_INEQS_FALSE_CONV.
+NEGATE\_CONV, EXISTS\_ARITH\_CONV, ARITH\_CONV, ARITH\_FORM\_NORM\_CONV, DISJ\_INEQS\_FALSE\_CONV.
 
 \ENDDOC
-\DOC{INSTANCE\_T\_CONV}
 
-\TYPE {\small\verb%INSTANCE_T_CONV : ((term -> term list) -> conv -> conv)%}\egroup
+\DOC{INSTANCE\_T\_CONV}{INSTANCE\_T\_CONV}
+
+\noindent{\small\verb%INSTANCE_T_CONV : ((term -> term list) -> conv -> conv)%}\egroup
 
 \SYNOPSIS
 Function which allows a proof procedure to work on substitution instances of
@@ -356,12 +355,13 @@ evaluation failed     FORALL_ARITH_CONV -- formula not in the allowed subset
 #INSTANCE_T_CONV non_presburger_subterms FORALL_ARITH_CONV
 # "!f m (n:num). (m < (f n)) ==> (m <= (f n))";;
 |- (!f m n. m < (f n) ==> m <= (f n)) = T
-\end{verbatim}
-}
-\ENDDOC
-\DOC{is\_prenex}
+\end{verbatim}}
 
-\TYPE {\small\verb%is_prenex : (term -> bool)%}\egroup
+\ENDDOC
+
+\DOC{is\_prenex}{is\_prenex}
+
+\noindent{\small\verb%is_prenex : (term -> bool)%}\egroup
 
 \SYNOPSIS
 Determines whether a formula is in prenex normal form.
@@ -382,20 +382,21 @@ true : bool
 
 #is_prenex "!x. x ==> (?y. x /\ y)";;
 false : bool
-\end{verbatim}
-}
+\end{verbatim}}
+
 \USES
 Useful for determining whether it is necessary to apply a prenex normaliser to
 a formula before passing it to a function which requires the formula to be in
 prenex normal form.
 
 \SEEALSO
-PRENEX_CONV.
+PRENEX\_CONV.
 
 \ENDDOC
-\DOC{is\_presburger}
 
-\TYPE {\small\verb%is_presburger : (term -> bool)%}\egroup
+\DOC{is\_presburger}{is\_presburger}
+
+\noindent{\small\verb%is_presburger : (term -> bool)%}\egroup
 
 \SYNOPSIS
 Determines whether a formula is in the Presburger subset of arithmetic.
@@ -431,19 +432,20 @@ true : bool
 
 #is_presburger "(m + n) - m = n";;
 true : bool
-\end{verbatim}
-}
+\end{verbatim}}
+
 \USES
 Useful for determining whether a decision procedure for Presburger arithmetic
 is applicable to a term.
 
 \SEEALSO
-non_presburger_subterms, FORALL_ARITH_CONV, EXISTS_ARITH_CONV, is_prenex.
+non\_presburger\_subterms, FORALL\_ARITH\_CONV, EXISTS\_ARITH\_CONV, is\_prenex.
 
 \ENDDOC
-\DOC{NEGATE\_CONV}
 
-\TYPE {\small\verb%NEGATE_CONV : (conv -> conv)%}\egroup
+\DOC{NEGATE\_CONV}{NEGATE\_CONV}
+
+\noindent{\small\verb%NEGATE_CONV : (conv -> conv)%}\egroup
 
 \SYNOPSIS
 Function for negating the operation of a conversion that proves a formula to
@@ -469,12 +471,13 @@ not yield either {\small\verb%"T"%} or {\small\verb%"F"%}.
 
 #NEGATE_CONV ARITH_CONV "?n. ~(0 <= n)";;
 |- (?n. ~0 <= n) = F
-\end{verbatim}
-}
-\ENDDOC
-\DOC{non\_presburger\_subterms}
+\end{verbatim}}
 
-\TYPE {\small\verb%non_presburger_subterms : (term -> term list)%}\egroup
+\ENDDOC
+
+\DOC{non\_presburger\_subterms}{non\_presburger\_subterms}
+
+\noindent{\small\verb%non_presburger_subterms : (term -> term list)%}\egroup
 
 \SYNOPSIS
 Computes the subterms of a term that are not in the Presburger subset of
@@ -509,15 +512,16 @@ Never fails.
 
 #non_presburger_subterms "(m + n) - m = f n";;
 ["m"; "n"; "f n"] : term list
-\end{verbatim}
-}
+\end{verbatim}}
+
 \SEEALSO
-INSTANCE_T_CONV, is_presburger.
+INSTANCE\_T\_CONV, is\_presburger.
 
 \ENDDOC
-\DOC{PRENEX\_CONV}
 
-\TYPE {\small\verb%PRENEX_CONV : conv%}\egroup
+\DOC{PRENEX\_CONV}{PRENEX\_CONV}
+
+\noindent{\small\verb%PRENEX_CONV : conv%}\egroup
 
 \SYNOPSIS
 Puts a formula into prenex normal form.
@@ -546,19 +550,20 @@ Never fails.
 #PRENEX_CONV "!m. (((m = 0) ==> (!n. m <= n)) => 0 | m) + m = m";;
 |- (!m. (((m = 0) ==> (!n. m <= n)) => 0 | m) + m = m) =
    (!m. ((!n. (m = 0) ==> m <= n) => 0 | m) + m = m)
-\end{verbatim}
-}
+\end{verbatim}}
+
 \USES
 Useful as a preprocessor to decision procedures which require their argument
 formula to be in prenex normal form.
 
 \SEEALSO
-is_prenex.
+is\_prenex.
 
 \ENDDOC
-\DOC{SUB\_AND\_COND\_ELIM\_CONV}
 
-\TYPE {\small\verb%SUB_AND_COND_ELIM_CONV : conv%}\egroup
+\DOC{SUB\_AND\_COND\_ELIM\_CONV}{SUB\_AND\_COND\_ELIM\_CONV}
+
+\noindent{\small\verb%SUB_AND_COND_ELIM_CONV : conv%}\egroup
 
 \SYNOPSIS
 Eliminates natural number subtraction, PRE, and conditional statements from a
@@ -605,13 +610,14 @@ Never fails.
 # "!f n. (\m. f ((m = 0) => 0 | (m - 1))) (SUC n) < (f n) + 1";;
 |- (!f n. ((\m. f((m = 0) => 0 | m - 1))(SUC n)) < ((f n) + 1)) =
    (!f n. ((\m. ((m = 0) => f 0 | f(m - 1)))(SUC n)) < ((f n) + 1))
-\end{verbatim}
-}
+\end{verbatim}}
+
 \USES
 Useful as a preprocessor to decision procedures which do not allow natural
 number subtraction in their argument formula.
 
 \SEEALSO
-COND_ELIM_CONV.
+COND\_ELIM\_CONV.
 
 \ENDDOC
+

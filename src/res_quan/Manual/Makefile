@@ -12,6 +12,7 @@ LATEX=latex
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEXEXE=../../../help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
@@ -26,7 +27,7 @@ default:
 # ---------------------------------------------------------------------
 clean:
 	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind \
-          entries.tex theorems.tex
+          entries.tex theorems.tex res_quan.{ps,pdf}
 
 tex: theorems functions
 	@echo "TeX files made"
@@ -35,7 +36,7 @@ functions:
 	@echo "\chapter{ML Functions in the {\tt res\_quan} Library}">entries.tex
 	@echo "\label{entries}">>entries.tex
 	@echo "\input{entries-intro}" >> entries.tex
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
@@ -50,6 +51,12 @@ res_quan:
 	$(LATEX) res_quan.tex
 	$(LATEX) summary.tex
 
+ps:
+	dvips res_quan.dvi -o
+
+pdf:	res_quan.ps
+	pdflatex res_quan.tex
+
 all:
-	make clean; make tex; make res_quan; make index; make res_quan
+	make clean; make tex; make res_quan; make index; make res_quan ps pdf
 

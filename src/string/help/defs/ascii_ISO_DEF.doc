@@ -1,0 +1,10 @@
+\THEOREM ascii_ISO_DEF ascii
+|- (!a. ABS_ascii(REP_ascii a) = a) /\
+   (!r.
+     TRP
+     (\v tl.
+       (?b0 b1 b2 b3 b4 b5 b6 b7. v = b0,b1,b2,b3,b4,b5,b6,b7) /\
+       (LENGTH tl = 0))
+     r =
+     (REP_ascii(ABS_ascii r) = r))
+\ENDTHEOREM

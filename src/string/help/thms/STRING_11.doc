@@ -1,0 +1,3 @@
+\THEOREM STRING_11 string
+|- !a s a' s'. (STRING a s = STRING a' s') = (a = a') /\ (s = s')
+\ENDTHEOREM

@@ -12,6 +12,7 @@ Help=../help
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEXEXE=../../../../help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
@@ -33,7 +34,7 @@ tex: ids
 ids:
 	@echo "\chapter{ML Functions in the arith Library}">entries.tex
 	@echo "\input{entries-intro}" >> entries.tex
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 index:
 	${MAKEINDEX} arith.idx
@@ -41,5 +42,11 @@ index:
 arith:
 	latex arith.tex
 
+ps:
+	dvips arith.dvi -o
+
+pdf:	arith.ps
+	pdflatex arith.tex
+
 all:
-	make clean; make tex; make arith; make index; make arith
+	make clean; make tex; make arith; make index; make arith ps pdf

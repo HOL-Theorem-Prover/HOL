@@ -1,0 +1,3 @@
+\THEOREM string_Axiom string
+|- !e f. ?! fn. (fn `` = e) /\ (!a s. fn(STRING a s) = f(fn s)a s)
+\ENDTHEOREM

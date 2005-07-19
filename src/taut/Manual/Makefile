@@ -12,6 +12,7 @@ Help=../help
 # ---------------------------------------------------------------------
 DOCTOTEX=../../../Manual/Reference/bin/doc-to-tex
 DOCTOTEXSED=../../../Manual/Reference/bin/doc-to-tex.sed
+DOCTOTEXEXE=../../../help/src/Doc2Tex.exe
 
 # ---------------------------------------------------------------------
 # Pathname to the makeindex script
@@ -25,7 +26,8 @@ default:
 # Remove all trace of previous LaTeX jobs
 # ---------------------------------------------------------------------
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind entries.tex
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind entries.tex \
+		taut.{ps,pdf}
 
 tex: ids
 	@echo "TeX files made"
@@ -33,7 +35,7 @@ tex: ids
 ids:
 	@echo "\chapter{ML Functions in the taut Library}">entries.tex
 	@echo "\input{entries-intro}" >> entries.tex
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/entries entries.tex
+	${DOCTOTEXEXE} ${Help}/entries entries.tex
 
 index:
 	${MAKEINDEX} taut.idx
@@ -41,5 +43,11 @@ index:
 taut:
 	latex taut.tex
 
+ps:
+	dvips taut.dvi -o
+
+pdf:	taut.ps
+	pdflatex taut.tex
+
 all:
-	make clean; make tex; make taut; make index; make taut
+	make clean; make tex; make taut; make index; make taut ps pdf
