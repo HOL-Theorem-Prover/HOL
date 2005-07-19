@@ -1,9 +1,9 @@
 # =====================================================================
-# Makefile for the pred_sets library documentation 
+# Makefile for the pred_set library documentation 
 # =====================================================================
 
 # ---------------------------------------------------------------------
-# Pathname to the pred_sets help files
+# Pathname to the pred_set help files
 # ---------------------------------------------------------------------
 Help=../help
 
@@ -72,17 +72,17 @@ theorems:
 	${DOCTOTEX} ${Help}/thms/card theorems.tex
 
 index: 
-	${MAKEINDEX} pred_sets.idx index.tex
+	${MAKEINDEX} pred_set.idx index.tex
 
-pred_sets: 
-	latex pred_sets.tex 
+pred_set: 
+	latex pred_set.tex 
 
 ps:
-	dvips pred_sets.dvi -o
+	dvips pred_set.dvi -o
 
-pdf:	pred_sets.ps
-	pdflatex pred_sets.tex
+pdf:	pred_set.ps
+	pdflatex pred_set.tex
 
 all: 
-	make clean; make tex; make pred_sets; make index; make pred_sets ps pdf
+	make clean; make tex; make pred_set; make index; make pred_set ps pdf
 

@@ -52,7 +52,8 @@ fi
 
 echo Now building Doc2Tex
 cd help/src
-../../bin/Holmake Doc2Tex
+# ../../bin/Holmake Doc2Tex
+../../bin/Holmake Doc2Tex.exe
 
 echo Now building documentation
 for man_name in Reference Description Tutorial
@@ -101,6 +102,22 @@ fi
 for i in .dvi .ps .pdf
 do
     mv HolSatLib$i /tmp/$name-HolSatLib$i
+done
+
+for lib_name in pred_set
+do
+    echo Building $lib_name documentation
+    cd /tmp/hol98/src/$lib_name/Manual
+    if (make all) > /tmp/$lib_name-latex.log 2>&1
+    then
+       :
+    else
+       echo "Build failed, see /tmp/$lib_name-latex.log" ; exit 1
+    fi
+    for i in .dvi .ps .pdf
+    do
+        mv $lib_name$i /tmp/$name-$lib_name$i
+    done
 done
 
 echo Now starting to clean up and make tar ball
