@@ -104,9 +104,9 @@ term, then the conversion will need to reject the input itself.  The
 facilities of the simplifier.
 
 The {dprocs} field of the record passed to {SSFRAG} is where decision
-procedures can be specified.  The construction of values of type
-{reducer} will be described in other reference entries (some of which
-may not have been written yet).
+procedures can be specified.  Documentation describing the
+construction and use of values of type {reducer} is available in the
+DESCRIPTION.
 
 The {filter} field of the record is an optional function, which, if
 present, is composed with the standard simplifier's function for
