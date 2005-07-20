@@ -842,21 +842,26 @@ HOL'.} (These underlying libraries, and others providing similarly
 powerful tools are described in detail in sections below.)
 
 \begin{verbatim}
-   PROVE      : thm list -> term quotation -> thm
+   PROVE      : thm list -> term -> thm
    PROVE_TAC  : thm list -> tactic
+
+   METIS_TAC  : thm list -> tactic
+   METIS_PROVE: thm list -> term -> thm
 
    DECIDE     : term quotation -> thm
    DECIDE_TAC : tactic
 \end{verbatim}
 
 The inference rule \texttt{PROVE} (and the corresponding tactic
-\texttt{PROVE\_TAC}) takes a list of theorems and a quotation, and
-attempts to prove the term using a first order reasoner.  The
-\texttt{PROVE} entry-points refer to the \texttt{meson} library, which
-is further described in Section~\ref{sec:mesonLib} below. The
-inference rule \texttt{DECIDE} (and the corresponding tactic
-\texttt{DECIDE\_TAC}) applies a decision procedure that (at least)
-handles statements of linear arithmetic.
+\texttt{PROVE\_TAC}) takes a list of theorems and a term, and attempts
+to prove the term using a first order reasoner.  The two \ml{METIS}
+functions perform the same functionality but use a different
+underlying proof method.  The \texttt{PROVE} entry-points refer to the
+\texttt{meson} library, which is further described in
+Section~\ref{sec:mesonLib} below. The \ml{METIS} system is described
+in Section~\ref{sec:metisLib}.  The inference rule \texttt{DECIDE}
+(and the corresponding tactic \texttt{DECIDE\_TAC}) applies a decision
+procedure that (at least) handles statements of linear arithmetic.
 
 \begin{verbatim}
    RW_TAC   : simpset -> thm list -> tactic
@@ -946,11 +951,16 @@ supplied function, which will use the theorem to build and apply a
 tactic.
 
 \section{First Order Proof---\texttt{mesonLib} and \texttt{metisLib}}
-\label{sec:mesonLib}
-
+\label{sec:first-order-proof}
 \index{decision procedures!first-order logic}
 
+First order proof is a powerful theorem-proving technique that can
+finish off complicated goals.  Unlike tools such as the simplifier, it
+either proves a goal outright, or fails.  It can not transform a goal
+into a different (and more helpful) form.
+
 \subsection{Model elimination---\texttt{mesonLib}}
+\label{sec:mesonLib}
 
 \index{meson (model elimination) procedure@\ml{meson} (model elimination) procedure}
 \index{model elimination method for first-order logic}
@@ -987,7 +997,14 @@ $d$ exceeds the value stored in the reference value
 \ml{GEN\_MESON\_TAC~min~max~step} starts $d$ at \ml{min}, increments
 it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 
+The \ml{PROVE\_TAC} function from \ml{bossLib} performs some
+normalisation, before passing a goal and its assumptions to
+\ml{ASM\_MESON\_TAC}.  Because of this normalisation, in most
+circumstances, \ml{PROVE\_TAC} should be preferred to
+\ml{ASM\_MESON\_TAC}.
+
 \subsection{Resolution---\texttt{metisLib}}
+\label{sec:metisLib}
 
 \index{metis (resolution) procedure@\ml{metis} (resolution) procedure}
 \index{resolution method for first-order logic}
