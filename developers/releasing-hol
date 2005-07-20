@@ -104,7 +104,7 @@ do
     mv HolSatLib$i /tmp/$name-HolSatLib$i
 done
 
-for lib_name in pred_set pair res_quan string taut unwind word
+for lib_name in n_bit pair pred_set quotient res_quan string taut unwind word
 do
     echo Building $lib_name documentation
     cd /tmp/hol98/src/$lib_name/Manual
