@@ -1621,7 +1621,7 @@ $t_0$ it can create the new equation \[
 \]
 The traversal of the term to be simplified is repeated until no
 further matches for the simplifier's rewrite rules are found.  The
-traversal strategy (slightly simplified) is
+traversal strategy is
 \begin{enumerate}
 \item \label{enum:simp-traverse-toplevel}%
   While there are any matches for stored rewrite rules at this level,
@@ -1638,8 +1638,12 @@ traversal strategy (slightly simplified) is
     rules}~(an advanced feature, see Section~\ref{sec:simp-congruences}
   below)
 \item If step~\ref{enum:simp-traverse-recurse} changed the term at
-  all, return to step~\ref{enum:simp-traverse-toplevel}.  Otherwise,
-  finish.
+  all, try another phase of rewriting at this level.  If this fails,
+  or if there was no change from the traversal of the sub-terms, try
+  any embedded decision procedures (see
+  Section~\ref{sec:simp-embedding-code}).  If the rewriting phase or
+  any of the decision procedures altered the term, return to
+  step~\ref{enum:simp-traverse-toplevel}.  Otherwise, finish.
 \end{enumerate}
 
 \subsubsection{Conditional rewriting}
@@ -2022,6 +2026,7 @@ See Section~\ref{sec:simp-special-rewrite-forms} for more on special
 rewrite forms.
 
 \subsubsection{Embedding code}
+\label{sec:simp-embedding-code}
 
 The simplifier features two different ways in which user-code can be
 embedded into its traversal and simplification of input terms.  By
@@ -2080,7 +2085,82 @@ future version of \HOL{} but as it stands, the recursive call can
 is the user's responsibility to pass an appropriately updated stack of
 side-conditions to the recursive invocation of the simplifier.
 
+A user-supplied conversion should never return the reflexive identity
+(an instance of $\vdash t = t$).  This will cause the simplifier to
+loop.  Rather than return such a result, raise a \ml{HOL\_ERR} or
+\ml{Conv.UNCHANGED} exception.  (Both are treated the same by the simplifier.)
+
 \paragraph{Context-aware decision procedures}
+Another, more involved, method for embedding user code into the
+simplifier is \emph{via} the \ml{dprocs} field of the \simpset{}
+fragment structure.  This method is more general than adding
+conversions, and also allows user code to construct and maintain its
+own bespoke logical contexts.
+
+The \ml{dprocs} field requires lists of values of the type
+\ml{Traverse.REDUCER}.  These values are constructed with the
+constructor \ml{REDUCER}:
+\begin{hol}
+\begin{verbatim}
+   REDUCER : {initial : context,
+              addcontext : context * thm list -> context,
+              apply : {solver : term list -> term -> thm,
+                       context : context,
+                       stack : term list} -> term -> thm}
+          -> reducer
+\end{verbatim}
+\end{hol}
+The \ml{context} type is an alias for the built-in \ML{} type
+\ml{exn}, that of exceptions.  The exceptions here are used as a
+``universal type'', capable of storing data of any type.  For example,
+if the desired data is a pair of an integer and a boolean, then the
+following declaration could be made:
+\begin{hol}
+\begin{verbatim}
+   exception my_data of int * bool
+\end{verbatim}
+\end{hol}
+It is not necessary to make this declaration visible with a wide
+scope.  Indeed, only functions accessing and creating contexts of this
+form need to see it. For example:
+\begin{hol}
+\begin{verbatim}
+   fun get_data c = (raise c) handle my_data (i,b) => (i,b)
+   fun mk_ctxt (i,b) = my_data(i,b)
+\end{verbatim}
+\end{hol}
+
+When creating a value of \ml{reducer} type, the user must provide an
+initial context, and two functions.  The first, \ml{addcontext}, is
+called by the simplifier's traversal mechanism to give every embedded
+decision procedure access to theorems representing new context
+information.  For example, this function is called with theorems from
+the current assumptions in \ml{ASM\_SIMP\_TAC}, and with the theorems
+from the theorem-list arguments to all of the various simplification
+functions.  As a term is traversed, the congruence rules governing
+this traversal may also provide additional theorems; these will also
+be passed to the \ml{addcontext} function.  (Of course, it is entirely
+up to the \ml{addcontext} function as to how these theorems will be
+handled; they may even be ignored entirely.)
+
+When an embedded reducer is applied to a term, the provided \ml{apply}
+function is called.  As well as the term to be transformed, the
+\ml{apply} function is also passed a record containing a
+side-condition solver, the decision procedure's current context, and
+the stack of side-conditions attempted so far.  The stack and solver
+are the same as the additional arguments provided to user-supplied
+conversions.  The power of the reducer abstraction is having access to
+a context that can be built appropriately for each decision procedure.
+
+Decision procedures are applied last when a term is encountered by the
+simplifier.  More, they are applied \emph{after} the simplifier has
+already recursed into any sub-terms and tried to do as much rewriting
+as possible.  This means that although simplifier rewriting occurs in
+a top-down fashion, decision procedures will be applied bottom-up and
+only as a last resort.
+
+As with user-conversions, decision procedures must raise an exception
+rather than return instances of reflexivity.
 
 \subsubsection{Special rewrite forms}
 \label{sec:simp-special-rewrite-forms}
