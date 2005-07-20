@@ -1,0 +1,3 @@
+\THEOREM LAMBDA_PROD pair
+|- !P. (\p. P p) = (\(p1,p2). P (p1,p2))
+\ENDTHEOREM

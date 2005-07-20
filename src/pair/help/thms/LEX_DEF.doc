@@ -1,0 +1,3 @@
+\THEOREM LEX_DEF pair
+|- !R1 R2. R1 LEX R2 = (\(s,t) (u,v). R1 s u \/ (s = u) /\ R2 t v)
+\ENDTHEOREM

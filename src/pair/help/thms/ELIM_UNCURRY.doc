@@ -1,0 +1,3 @@
+\THEOREM ELIM_UNCURRY pair
+|- !f. UNCURRY f = (\x. f (FST x) (SND x))
+\ENDTHEOREM

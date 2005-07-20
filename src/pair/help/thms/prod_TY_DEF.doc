@@ -1,0 +1,3 @@
+\THEOREM prod_TY_DEF pair
+|- ?rep. TYPE_DEFINITION (\p. ?x y. p = (\a b. (a = x) /\ (b = y))) rep
+\ENDTHEOREM

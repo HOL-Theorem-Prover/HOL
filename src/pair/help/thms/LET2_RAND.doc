@@ -1,0 +1,3 @@
+\THEOREM LET2_RAND pair
+|- !P M N. P (let (x,y) = M in N x y) = (let (x,y) = M in P (N x y))
+\ENDTHEOREM

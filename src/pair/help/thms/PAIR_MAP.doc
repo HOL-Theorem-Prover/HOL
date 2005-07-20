@@ -1,0 +1,3 @@
+\THEOREM PAIR_MAP pair
+|- !f g p. (f ## g) p = (f (FST p),g (SND p))
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM UNCURRY_ONE_ONE_THM pair
+|- (UNCURRY f = UNCURRY g) = (f = g)
+\ENDTHEOREM

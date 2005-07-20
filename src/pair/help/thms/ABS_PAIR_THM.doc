@@ -1,0 +1,3 @@
+\THEOREM ABS_PAIR_THM pair
+|- !x. ?q r. x = (q,r)
+\ENDTHEOREM

@@ -1,0 +1,5 @@
+\THEOREM pair_case_cong pair
+|- !M M' f.
+     (M = M') /\ (!x y. (M' = (x,y)) ==> (f x y = f' x y)) ==>
+     (pair_case f M = pair_case f' M')
+\ENDTHEOREM

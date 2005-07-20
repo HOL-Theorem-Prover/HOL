@@ -1,0 +1,3 @@
+\THEOREM PEXISTS_THM pair
+|- !P. (?x y. P x y) = ?(x,y). P x y
+\ENDTHEOREM

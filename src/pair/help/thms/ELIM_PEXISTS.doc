@@ -1,0 +1,3 @@
+\THEOREM ELIM_PEXISTS pair
+|- (?p. P (FST p) (SND p)) = ?p1 p2. P p1 p2
+\ENDTHEOREM

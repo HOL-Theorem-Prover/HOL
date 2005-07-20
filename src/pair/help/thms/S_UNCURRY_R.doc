@@ -1,0 +1,3 @@
+\THEOREM S_UNCURRY_R pair
+|- S f (UNCURRY g) = UNCURRY (S (S o $o f o $,) g)
+\ENDTHEOREM

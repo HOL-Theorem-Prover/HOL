@@ -1,0 +1,3 @@
+\THEOREM CLOSED_PAIR_EQ pair
+|- !x y a b. ((x,y) = (a,b)) = (x = a) /\ (y = b)
+\ENDTHEOREM

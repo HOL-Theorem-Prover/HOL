@@ -1,0 +1,3 @@
+\THEOREM COMMA_DEF pair
+|- !x y. (x,y) = ABS_prod (\a b. (a = x) /\ (b = y))
+\ENDTHEOREM

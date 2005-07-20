@@ -1,0 +1,5 @@
+\THEOREM UNCURRY_CONG pair
+|- !M M' f.
+     (M = M') /\ (!x y. (M' = (x,y)) ==> (f x y = f' x y)) ==>
+     (UNCURRY f M = UNCURRY f' M')
+\ENDTHEOREM

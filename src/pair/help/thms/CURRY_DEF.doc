@@ -1,0 +1,3 @@
+\THEOREM CURRY_DEF pair
+|- !f x y. CURRY f x y = f (x,y)
+\ENDTHEOREM

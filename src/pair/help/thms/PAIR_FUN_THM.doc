@@ -1,0 +1,3 @@
+\THEOREM PAIR_FUN_THM pair
+|- !P. (?!f. P f) = ?!p. P (\a. (FST p a,SND p a))
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM pair_induction pair
+|- (!p_1 p_2. P (p_1,p_2)) ==> !p. P p
+\ENDTHEOREM

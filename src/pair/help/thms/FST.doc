@@ -1,0 +1,3 @@
+\THEOREM FST pair
+|- !x y. FST (x,y) = x
+\ENDTHEOREM

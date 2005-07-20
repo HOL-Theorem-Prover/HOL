@@ -1,0 +1,3 @@
+\THEOREM pair_Axiom pair
+|- !f. ?fn. !x y. fn (x,y) = f x y
+\ENDTHEOREM
