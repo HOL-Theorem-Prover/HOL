@@ -2007,6 +2007,26 @@ theorem.
 \end{description}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|)}
 
+\subsection{Probability theory}\label{prob}
+
+A foundational construction of probability theory developed by Joe
+Hurd~\cite{hurd-thesis}. First a type of boolean sequences is defined
+to model an infinite sequence of coin flips. Next a probability
+function is formalized which takes as input a set of boolean
+sequences, and returns a real number between 0 and 1. Unfortunately
+not all sets can be assigned a probability (the Banach-Tarski
+paradox), rather the sets that can be assigned a probability are
+called \emph{measurable sets}, and this is also formalized in the
+HOL theory.
+
+Building on this foundation, the probability theory is used to define
+a sampling function that takes an infinite sequence of coin flips and
+a positive integer $N$, and returns an integer $n$ in the range $0\le
+n < N$, picked uniformly at random from the available choices. This
+sampling function for the uniform distribution is later used to verify
+the Miller-Rabin primality test.
+
+
 \subsection{Theories of $n$-bit words}
 \index{n-bit words, the HOL theory of@$n$-bit words, the \HOL{} theory of|(}
 
@@ -4588,10 +4608,6 @@ Divisibility and the greatest common divisor.
 \theoryimp{poly} &
 A theory of polynomials over $\mathbb{R}$, providing
 a collection of operations on polynomials, and theorems about them.
-\\
-\theoryimp{prob} &
-A foundational construction of probability theory due to Joe Hurd. See
-his thesis.
 \\
 \theoryimp{Temporal\_Logic}, \theoryimp{Omega\_Automata}
 &
