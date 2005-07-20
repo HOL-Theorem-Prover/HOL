@@ -945,12 +945,16 @@ quantifiers. It provides the resulting theorem as an argument to the
 supplied function, which will use the theorem to build and apply a
 tactic.
 
-\section{First Order Proof---\texttt{mesonLib}}
+\section{First Order Proof---\texttt{mesonLib} and \texttt{metisLib}}
 \label{sec:mesonLib}
 
-\index{decision procedures!first-order logic, meson@first-order logic, \ml{meson}}
+\index{decision procedures!first-order logic}
+
+\subsection{Model elimination---\texttt{mesonLib}}
+
 \index{meson (model elimination) procedure@\ml{meson} (model elimination) procedure}
 \index{model elimination method for first-order logic}
+
 The \ml{meson} library is an implementation of the
 model-elimination method for finding proofs of goals in first-order
 logic.  There are three main entry-points:
@@ -983,6 +987,32 @@ $d$ exceeds the value stored in the reference value
 \ml{GEN\_MESON\_TAC~min~max~step} starts $d$ at \ml{min}, increments
 it by \ml{step}, and gives up when $d$ exceeds \ml{max}.
 
+\subsection{Resolution---\texttt{metisLib}}
+
+\index{metis (resolution) procedure@\ml{metis} (resolution) procedure}
+\index{resolution method for first-order logic}
+
+The \ml{metis} library is an implementation of the resolution method
+for finding proofs of goals in first-order logic. There are two main
+entry-points:
+
+\begin{verbatim}
+   METIS_TAC   : thm list -> tactic
+   METIS_PROVE : thm list -> term -> thm
+\end{verbatim}
+
+Both functions take a list of theorems, and these are used as lemmas
+in the proof. \texttt{METIS\_TAC} is a tactic, and will either succeed
+in proving the goal, or if unsuccessful will either fail or loop
+forever. \texttt{METIS\_PROVE} takes a term $t$ and tries to prove a
+theorem with conclusion $t$: if successful, the theorem $\vdash t$ is
+returned. As for \texttt{METIS\_TAC}, it might fail or loop forever if
+the proof search is unsuccessful.
+
+The \texttt{metisLib} family of proof tools implement the ordered
+resolution and ordered paramodulation calculus for first order logic,
+which usually makes them better suited to goals requiring non-trivial
+equality reasoning than the tactics in \texttt{mesonLib}.
 
 
 \section{Simplification---\texttt{simpLib}}
