@@ -12,8 +12,7 @@ quotient2.dvi: quotient2.tex
 	latex quotient2.tex
 
 quotient2.ps: quotient2.dvi
-#	dvips -Ppdf -f quotient2.dvi > quotient2.ps.tmp
-	dvips quotient2.dvi -o
+	dvips -t letter quotient2.dvi -o
 
 quotient2.pdf: quotient2.tex
 #	ps2pdf quotient2.ps
