@@ -75,7 +75,9 @@ warnpdf:
             echo "************************************************"; fi
 
 psorpdf:
-	@if dvipdf word; then \
+	@if pdflatex word.tex; then \
+	    make warnps; echo "* Made PDF *"; \
+	 elif dvipdf word; then \
 	    make warnps; echo "* Made PDF *"; \
 	 elif dvips -Ppdf -G0 word; then \
 	    echo "* Made PS *"; \
