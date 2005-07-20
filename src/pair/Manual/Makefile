@@ -52,7 +52,7 @@ pair:
 ps:
 	dvips pair.dvi -o
 
-pdf:
+pdf:	pair.ps
 	pdflatex pair.tex
 
 all:
