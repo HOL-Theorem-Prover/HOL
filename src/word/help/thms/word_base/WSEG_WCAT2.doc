@@ -1,0 +1,4 @@
+\THEOREM WSEG_WCAT2 word_base
+|- !n1 n2 (w1::PWORDLEN n1) (w2::PWORDLEN n2).
+     WSEG n2 0 (WCAT (w1,w2)) = w2
+\ENDTHEOREM

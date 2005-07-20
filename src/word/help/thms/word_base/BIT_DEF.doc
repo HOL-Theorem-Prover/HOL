@@ -1,0 +1,3 @@
+\THEOREM BIT_DEF word_base
+|- !k l. BIT k (WORD l) = ELL k l
+\ENDTHEOREM

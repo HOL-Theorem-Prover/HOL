@@ -1,0 +1,3 @@
+\THEOREM WORD word_base
+|- WORD = word_base0
+\ENDTHEOREM

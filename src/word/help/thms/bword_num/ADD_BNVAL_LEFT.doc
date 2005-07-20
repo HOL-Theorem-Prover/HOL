@@ -1,0 +1,6 @@
+\THEOREM ADD_BNVAL_LEFT bword_num
+|- !n (w1::PWORDLEN (SUC n)) (w2::PWORDLEN (SUC n)).
+     BNVAL w1 + BNVAL w2 =
+     (BV (BIT n w1) + BV (BIT n w2)) * 2 ** n +
+     (BNVAL (WSEG n 0 w1) + BNVAL (WSEG n 0 w2))
+\ENDTHEOREM

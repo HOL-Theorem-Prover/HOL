@@ -1,0 +1,3 @@
+\THEOREM RES_SELECT res_quan
+|- !P f. RES_SELECT P f = @x. x IN P /\ f x
+\ENDTHEOREM

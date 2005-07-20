@@ -1,0 +1,3 @@
+\THEOREM RES_FORALL_REORDER res_quan
+|- !P Q R. (!(i::P) (j::Q). R i j) = !(j::Q) (i::P). R i j
+\ENDTHEOREM

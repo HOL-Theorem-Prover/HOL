@@ -1,0 +1,3 @@
+\THEOREM BNVAL_WCAT1 bword_num
+|- !n (w::PWORDLEN n) x. BNVAL (WCAT (w,WORD [x])) = BNVAL w * 2 + BV x
+\ENDTHEOREM

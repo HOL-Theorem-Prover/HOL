@@ -1,0 +1,3 @@
+\THEOREM RES_EXISTS_UNIQUE_NULL res_quan
+|- !p m. (?!x::p. m) = (?x. p = {x}) /\ m
+\ENDTHEOREM

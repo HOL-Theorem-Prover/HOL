@@ -1,0 +1,3 @@
+\THEOREM WSEG_BIT word_base
+|- !n (w::PWORDLEN n) k. k < n ==> (WSEG 1 k w = WORD [BIT k w])
+\ENDTHEOREM

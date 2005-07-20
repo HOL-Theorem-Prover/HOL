@@ -1,0 +1,3 @@
+\THEOREM BIT0 word_base
+|- !b. BIT 0 (WORD [b]) = b
+\ENDTHEOREM

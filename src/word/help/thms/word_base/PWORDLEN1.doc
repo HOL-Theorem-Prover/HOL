@@ -1,0 +1,3 @@
+\THEOREM PWORDLEN1 word_base
+|- !x. WORD [x] IN PWORDLEN 1
+\ENDTHEOREM

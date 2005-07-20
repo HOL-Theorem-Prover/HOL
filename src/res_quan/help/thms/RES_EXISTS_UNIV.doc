@@ -1,0 +1,3 @@
+\THEOREM RES_EXISTS_UNIV res_quan
+|- !p. RES_EXISTS UNIV p = $? p
+\ENDTHEOREM

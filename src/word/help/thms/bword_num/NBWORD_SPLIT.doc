@@ -1,0 +1,4 @@
+\THEOREM NBWORD_SPLIT bword_num
+|- !n1 n2 m.
+     NBWORD (n1 + n2) m = WCAT (NBWORD n1 (m DIV 2 ** n2),NBWORD n2 m)
+\ENDTHEOREM

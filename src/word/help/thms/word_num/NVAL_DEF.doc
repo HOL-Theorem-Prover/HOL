@@ -1,0 +1,3 @@
+\THEOREM NVAL_DEF word_num
+|- !f b l. NVAL f b (WORD l) = LVAL f b l
+\ENDTHEOREM

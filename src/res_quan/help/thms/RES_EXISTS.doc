@@ -1,0 +1,3 @@
+\THEOREM RES_EXISTS res_quan
+|- !P f. RES_EXISTS P f = ?x. x IN P /\ f x
+\ENDTHEOREM

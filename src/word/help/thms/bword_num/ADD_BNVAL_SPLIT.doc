@@ -1,0 +1,6 @@
+\THEOREM ADD_BNVAL_SPLIT bword_num
+|- !n1 n2 (w1::PWORDLEN (n1 + n2)) (w2::PWORDLEN (n1 + n2)).
+     BNVAL w1 + BNVAL w2 =
+     (BNVAL (WSEG n1 n2 w1) + BNVAL (WSEG n1 n2 w2)) * 2 ** n2 +
+     (BNVAL (WSEG n2 0 w1) + BNVAL (WSEG n2 0 w2))
+\ENDTHEOREM

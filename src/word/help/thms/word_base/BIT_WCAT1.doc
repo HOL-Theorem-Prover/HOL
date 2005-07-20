@@ -1,0 +1,3 @@
+\THEOREM BIT_WCAT1 word_base
+|- !n (w::PWORDLEN n) b. BIT n (WCAT (WORD [b],w)) = b
+\ENDTHEOREM

@@ -1,0 +1,4 @@
+\THEOREM BIT_EQ_IMP_WORD_EQ word_base
+|- !n (w1::PWORDLEN n) (w2::PWORDLEN n).
+     (!k. k < n ==> (BIT k w1 = BIT k w2)) ==> (w1 = w2)
+\ENDTHEOREM

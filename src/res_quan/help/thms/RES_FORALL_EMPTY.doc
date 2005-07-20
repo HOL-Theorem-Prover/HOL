@@ -1,0 +1,3 @@
+\THEOREM RES_FORALL_EMPTY res_quan
+|- !p. RES_FORALL {} p
+\ENDTHEOREM

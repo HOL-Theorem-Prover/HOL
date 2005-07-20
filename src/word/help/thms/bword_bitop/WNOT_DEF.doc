@@ -1,0 +1,3 @@
+\THEOREM WNOT_DEF bword_bitop
+|- !l. WNOT (WORD l) = WORD (MAP $~ l)
+\ENDTHEOREM

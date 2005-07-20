@@ -1,0 +1,3 @@
+\THEOREM WSEG_NBWORD_SUC bword_num
+|- !n m. WSEG n 0 (NBWORD (SUC n) m) = NBWORD n m
+\ENDTHEOREM

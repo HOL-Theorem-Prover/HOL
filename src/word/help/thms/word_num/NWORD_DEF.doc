@@ -1,0 +1,3 @@
+\THEOREM NWORD_DEF word_num
+|- !n frep b m. NWORD n frep b m = WORD (NLIST n frep b m)
+\ENDTHEOREM

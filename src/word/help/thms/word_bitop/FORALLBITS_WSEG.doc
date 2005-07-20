@@ -1,0 +1,4 @@
+\THEOREM FORALLBITS_WSEG word_bitop
+|- !n (w::PWORDLEN n) P.
+     FORALLBITS P w ==> !m k. m + k <= n ==> FORALLBITS P (WSEG m k w)
+\ENDTHEOREM

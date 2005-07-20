@@ -1,0 +1,6 @@
+\THEOREM ACARRY_EQ_ADD_DIV bword_arith
+|- !n (w1::PWORDLEN n) (w2::PWORDLEN n) k.
+     k < n ==>
+     (BV (ACARRY k w1 w2 cin) =
+      (BNVAL (WSEG k 0 w1) + BNVAL (WSEG k 0 w2) + BV cin) DIV 2 ** k)
+\ENDTHEOREM

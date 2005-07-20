@@ -1,0 +1,8 @@
+\THEOREM WSEG_NBWORD_ADD bword_arith
+|- !n (w1::PWORDLEN n) (w2::PWORDLEN n) m k cin.
+     m + k <= n ==>
+     (WSEG m k (NBWORD n (BNVAL w1 + BNVAL w2 + BV cin)) =
+      NBWORD m
+        (BNVAL (WSEG m k w1) + BNVAL (WSEG m k w2) +
+         BV (ACARRY k w1 w2 cin)))
+\ENDTHEOREM

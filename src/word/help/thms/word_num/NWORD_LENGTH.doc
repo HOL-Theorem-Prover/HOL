@@ -1,0 +1,3 @@
+\THEOREM NWORD_LENGTH word_num
+|- !n f b m. WORDLEN (NWORD n f b m) = n
+\ENDTHEOREM

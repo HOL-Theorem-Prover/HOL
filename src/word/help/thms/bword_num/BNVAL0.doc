@@ -1,0 +1,3 @@
+\THEOREM BNVAL0 bword_num
+|- BNVAL (WORD []) = 0
+\ENDTHEOREM

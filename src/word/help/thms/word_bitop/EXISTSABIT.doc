@@ -1,0 +1,3 @@
+\THEOREM EXISTSABIT word_bitop
+|- !n (w::PWORDLEN n) P. EXISTSABIT P w = ?k. k < n /\ P (BIT k w)
+\ENDTHEOREM

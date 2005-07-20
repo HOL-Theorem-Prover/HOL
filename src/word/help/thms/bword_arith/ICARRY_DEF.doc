@@ -1,0 +1,7 @@
+\THEOREM ICARRY_DEF bword_arith
+|- (!w1 w2 cin. ICARRY 0 w1 w2 cin = cin) /\
+   !n w1 w2 cin.
+     ICARRY (SUC n) w1 w2 cin =
+     BIT n w1 /\ BIT n w2 \/
+     (BIT n w1 \/ BIT n w2) /\ ICARRY n w1 w2 cin
+\ENDTHEOREM

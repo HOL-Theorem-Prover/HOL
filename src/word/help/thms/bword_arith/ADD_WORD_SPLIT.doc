@@ -1,0 +1,10 @@
+\THEOREM ADD_WORD_SPLIT bword_arith
+|- !n1 n2 (w1::PWORDLEN (n1 + n2)) (w2::PWORDLEN (n1 + n2)) cin.
+     NBWORD (n1 + n2) (BNVAL w1 + BNVAL w2 + BV cin) =
+     WCAT
+       (NBWORD n1
+          (BNVAL (WSEG n1 n2 w1) + BNVAL (WSEG n1 n2 w2) +
+           BV (ACARRY n2 w1 w2 cin)),
+        NBWORD n2
+          (BNVAL (WSEG n2 0 w1) + BNVAL (WSEG n2 0 w2) + BV cin))
+\ENDTHEOREM

@@ -1,0 +1,7 @@
+\THEOREM SHL_WSEG_1F word_bitop
+|- !n (w::PWORDLEN n) b m k.
+     m + k <= n ==>
+     0 < m ==>
+     (SHL F (WSEG m k w) b =
+      (BIT (k + (m - 1)) w,WCAT (WSEG (m - 1) k w,WORD [b])))
+\ENDTHEOREM

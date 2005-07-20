@@ -1,0 +1,5 @@
+\THEOREM WSEG_WSEG word_base
+|- !n (w::PWORDLEN n) m1 k1 m2 k2.
+     m1 + k1 <= n /\ m2 + k2 <= m1 ==>
+     (WSEG m2 k2 (WSEG m1 k1 w) = WSEG m2 (k1 + k2) w)
+\ENDTHEOREM

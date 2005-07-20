@@ -1,0 +1,4 @@
+\THEOREM PBITBOP_PWORDLEN word_bitop
+|- !(op::PBITBOP) n (w1::PWORDLEN n) (w2::PWORDLEN n).
+     op w1 w2 IN PWORDLEN n
+\ENDTHEOREM

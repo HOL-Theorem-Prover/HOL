@@ -1,0 +1,3 @@
+\THEOREM word_nchotomy word_base
+|- !w. ?l. w = WORD l
+\ENDTHEOREM

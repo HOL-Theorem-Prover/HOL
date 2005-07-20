@@ -1,0 +1,7 @@
+\THEOREM ACARRY_DEF bword_arith
+|- (!w1 w2 cin. ACARRY 0 w1 w2 cin = cin) /\
+   !n w1 w2 cin.
+     ACARRY (SUC n) w1 w2 cin =
+     VB
+       ((BV (BIT n w1) + BV (BIT n w2) + BV (ACARRY n w1 w2 cin)) DIV 2)
+\ENDTHEOREM

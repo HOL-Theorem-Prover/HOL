@@ -1,0 +1,4 @@
+\THEOREM BIT_WCAT_SND word_base
+|- !n1 n2 (w1::PWORDLEN n1) (w2::PWORDLEN n2) k.
+     k < n2 ==> (BIT k (WCAT (w1,w2)) = BIT k w2)
+\ENDTHEOREM

@@ -1,0 +1,5 @@
+\THEOREM WSEG_SHL word_bitop
+|- !n (w::PWORDLEN (SUC n)) m k.
+     0 < k /\ m + k <= SUC n ==>
+     !b. WSEG m k (SND (SHL f w b)) = WSEG m (k - 1) w
+\ENDTHEOREM

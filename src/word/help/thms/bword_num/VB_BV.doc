@@ -1,0 +1,3 @@
+\THEOREM VB_BV bword_num
+|- !x. VB (BV x) = x
+\ENDTHEOREM

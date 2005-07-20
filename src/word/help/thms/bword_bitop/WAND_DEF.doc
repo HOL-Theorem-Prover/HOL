@@ -1,0 +1,3 @@
+\THEOREM WAND_DEF bword_bitop
+|- !l1 l2. WORD l1 WAND WORD l2 = WORD (MAP2 $/\ l1 l2)
+\ENDTHEOREM

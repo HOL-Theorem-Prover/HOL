@@ -1,0 +1,5 @@
+\THEOREM PBITBOP_WSEG word_bitop
+|- !(op::PBITBOP) n (w1::PWORDLEN n) (w2::PWORDLEN n) m k.
+     m + k <= n ==>
+     (op (WSEG m k w1) (WSEG m k w2) = WSEG m k (op w1 w2))
+\ENDTHEOREM

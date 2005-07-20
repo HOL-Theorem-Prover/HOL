@@ -1,0 +1,3 @@
+\THEOREM word_case_def word_base
+|- !f a. case f (WORD a) = f a
+\ENDTHEOREM

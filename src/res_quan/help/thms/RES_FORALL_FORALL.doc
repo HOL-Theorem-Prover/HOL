@@ -1,0 +1,3 @@
+\THEOREM RES_FORALL_FORALL res_quan
+|- !P R x. (!x (i::P). R i x) = !(i::P) x. R i x
+\ENDTHEOREM

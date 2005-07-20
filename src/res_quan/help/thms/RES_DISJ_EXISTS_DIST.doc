@@ -1,0 +1,3 @@
+\THEOREM RES_DISJ_EXISTS_DIST res_quan
+|- !P Q R. (?i::(\i. P i \/ Q i). R i) = (?i::P. R i) \/ ?i::Q. R i
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM RES_ABSTRACT res_quan
+|- !p m x. x IN p ==> (RES_ABSTRACT p m x = m x)
+\ENDTHEOREM
