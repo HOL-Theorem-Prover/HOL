@@ -1,4 +1,0 @@
-\THEOREM LVAL word_num
-|- (!f b. LVAL f b [] = 0) /\
-   !l f b x. LVAL f b (x::l) = f x * b ** LENGTH l + LVAL f b l
-\ENDTHEOREM

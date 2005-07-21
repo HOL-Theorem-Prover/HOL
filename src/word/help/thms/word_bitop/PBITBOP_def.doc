@@ -1,9 +1,0 @@
-\THEOREM PBITBOP_def word_bitop
-|- PBITBOP =
-   {op |
-    !n (w1::PWORDLEN n) (w2::PWORDLEN n).
-      op w1 w2 IN PWORDLEN n /\
-      !m k.
-        m + k <= n ==>
-        (op (WSEG m k w1) (WSEG m k w2) = WSEG m k (op w1 w2))}
-\ENDTHEOREM

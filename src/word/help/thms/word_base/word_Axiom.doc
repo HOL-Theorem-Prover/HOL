@@ -1,3 +1,0 @@
-\THEOREM word_Axiom word_base
-|- !f. ?fn. !a. fn (WORD a) = f a
-\ENDTHEOREM

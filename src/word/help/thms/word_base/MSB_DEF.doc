@@ -1,3 +1,0 @@
-\THEOREM MSB_DEF word_base
-|- !l. MSB (WORD l) = HD l
-\ENDTHEOREM

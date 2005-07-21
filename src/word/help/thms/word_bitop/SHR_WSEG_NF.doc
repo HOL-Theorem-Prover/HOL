@@ -1,6 +1,0 @@
-\THEOREM SHR_WSEG_NF word_bitop
-|- !n (w::PWORDLEN n) m k.
-     m + k < n ==>
-     0 < m ==>
-     (SHR F (BIT (m + k) w) (WSEG m k w) = (WSEG m (k + 1) w,BIT k w))
-\ENDTHEOREM

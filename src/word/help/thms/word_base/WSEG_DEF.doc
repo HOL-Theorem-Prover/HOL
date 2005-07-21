@@ -1,3 +1,0 @@
-\THEOREM WSEG_DEF word_base
-|- !m k l. WSEG m k (WORD l) = WORD (LASTN m (BUTLASTN k l))
-\ENDTHEOREM

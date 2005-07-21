@@ -1,4 +1,0 @@
-\THEOREM WSPLIT_NBWORD_0 bword_num
-|- !n m.
-     m <= n ==> (WSPLIT m (NBWORD n 0) = (NBWORD (n - m) 0,NBWORD m 0))
-\ENDTHEOREM

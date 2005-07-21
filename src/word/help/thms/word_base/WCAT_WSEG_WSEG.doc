@@ -1,5 +1,0 @@
-\THEOREM WCAT_WSEG_WSEG word_base
-|- !n (w::PWORDLEN n) m1 m2 k.
-     m1 + (m2 + k) <= n ==>
-     (WCAT (WSEG m2 (m1 + k) w,WSEG m1 k w) = WSEG (m1 + m2) k w)
-\ENDTHEOREM

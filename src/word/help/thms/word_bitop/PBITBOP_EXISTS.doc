@@ -1,3 +1,0 @@
-\THEOREM PBITBOP_EXISTS word_bitop
-|- !f. ?fn. !l1 l2. fn (WORD l1) (WORD l2) = WORD (MAP2 f l1 l2)
-\ENDTHEOREM

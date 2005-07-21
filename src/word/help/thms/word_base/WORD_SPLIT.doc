@@ -1,3 +1,0 @@
-\THEOREM WORD_SPLIT word_base
-|- !n1 n2 (w::PWORDLEN (n1 + n2)). w = WCAT (WSEG n1 n2 w,WSEG n2 0 w)
-\ENDTHEOREM

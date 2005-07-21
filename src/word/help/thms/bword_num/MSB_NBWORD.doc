@@ -1,3 +1,0 @@
-\THEOREM MSB_NBWORD bword_num
-|- !n m. BIT n (NBWORD (SUC n) m) = VB ((m DIV 2 ** n) MOD 2)
-\ENDTHEOREM

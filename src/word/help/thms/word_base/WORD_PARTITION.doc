@@ -1,5 +1,0 @@
-\THEOREM WORD_PARTITION word_base
-|- (!n (w::PWORDLEN n) m. m <= n ==> (WCAT (WSPLIT m w) = w)) /\
-   !n m (w1::PWORDLEN n) (w2::PWORDLEN m).
-     WSPLIT m (WCAT (w1,w2)) = (w1,w2)
-\ENDTHEOREM

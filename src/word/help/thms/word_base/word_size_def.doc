@@ -1,3 +1,0 @@
-\THEOREM word_size_def word_base
-|- !f a. word_size f (WORD a) = 1 + list_size f a
-\ENDTHEOREM

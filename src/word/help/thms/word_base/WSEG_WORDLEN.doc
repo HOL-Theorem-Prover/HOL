@@ -1,3 +1,0 @@
-\THEOREM WSEG_WORDLEN word_base
-|- !n (w::PWORDLEN n) m k. m + k <= n ==> (WORDLEN (WSEG m k w) = m)
-\ENDTHEOREM

@@ -1,4 +1,0 @@
-\THEOREM PBITOP_BIT word_bitop
-|- !(op::PBITOP) n (w::PWORDLEN n) k.
-     k < n ==> (op (WORD [BIT k w]) = WORD [BIT k (op w)])
-\ENDTHEOREM

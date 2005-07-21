@@ -1,4 +1,0 @@
-\THEOREM EXISTSABIT_WSEG word_bitop
-|- !n (w::PWORDLEN n) m k.
-     m + k <= n ==> !P. EXISTSABIT P (WSEG m k w) ==> EXISTSABIT P w
-\ENDTHEOREM

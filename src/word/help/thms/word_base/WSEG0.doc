@@ -1,3 +1,0 @@
-\THEOREM WSEG0 word_base
-|- !k w. WSEG 0 k w = WORD []
-\ENDTHEOREM

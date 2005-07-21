@@ -1,4 +1,0 @@
-\THEOREM BNVAL_11 bword_num
-|- !w1 w2.
-     (WORDLEN w1 = WORDLEN w2) ==> (BNVAL w1 = BNVAL w2) ==> (w1 = w2)
-\ENDTHEOREM

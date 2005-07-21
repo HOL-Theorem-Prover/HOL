@@ -1,7 +1,0 @@
-\THEOREM SHR_WSEG_1F word_bitop
-|- !n (w::PWORDLEN n) b m k.
-     m + k <= n ==>
-     0 < m ==>
-     (SHR F b (WSEG m k w) =
-      (WCAT (WORD [b],WSEG (m - 1) (k + 1) w),BIT k w))
-\ENDTHEOREM

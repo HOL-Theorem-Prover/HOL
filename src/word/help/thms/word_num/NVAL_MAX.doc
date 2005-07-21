@@ -1,3 +1,0 @@
-\THEOREM NVAL_MAX word_num
-|- !f b. (!x. f x < b) ==> !n (w::PWORDLEN n). NVAL f b w < b ** n
-\ENDTHEOREM

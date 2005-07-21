@@ -1,3 +1,0 @@
-\THEOREM PWORDLEN0 word_base
-|- !w. w IN PWORDLEN 0 ==> (w = WORD [])
-\ENDTHEOREM

@@ -1,5 +1,0 @@
-\THEOREM WSEG_SUC word_base
-|- !n (w::PWORDLEN n) k m1.
-     k + SUC m1 < n ==>
-     (WSEG (SUC m1) k w = WCAT (WSEG 1 (k + m1) w,WSEG m1 k w))
-\ENDTHEOREM

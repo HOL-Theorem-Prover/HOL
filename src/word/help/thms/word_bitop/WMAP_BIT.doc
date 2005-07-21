@@ -1,3 +1,0 @@
-\THEOREM WMAP_BIT word_bitop
-|- !n (w::PWORDLEN n) k. k < n ==> !f. BIT k (WMAP f w) = f (BIT k w)
-\ENDTHEOREM

@@ -1,5 +1,0 @@
-\THEOREM word_case_cong word_base
-|- !M M' f.
-     (M = M') /\ (!a. (M' = WORD a) ==> (f a = f' a)) ==>
-     (case f M = case f' M')
-\ENDTHEOREM

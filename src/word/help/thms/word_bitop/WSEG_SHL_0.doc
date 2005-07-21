@@ -1,6 +1,0 @@
-\THEOREM WSEG_SHL_0 word_bitop
-|- !n (w::PWORDLEN (SUC n)) m b.
-     0 < m /\ m <= SUC n ==>
-     (WSEG m 0 (SND (SHL f w b)) =
-      WCAT (WSEG (m - 1) 0 w,(if f then WSEG 1 0 w else WORD [b])))
-\ENDTHEOREM
