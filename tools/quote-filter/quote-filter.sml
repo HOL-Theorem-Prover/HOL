@@ -5,19 +5,18 @@ open OS.Process
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
-fun createLexerStream (is : BasicIO.instream) =
-  Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
+fun read_from_stream is n = TextIO.input is
 
 val (instream, outstream) =
     case CommandLine.arguments() of
-      [] => (BasicIO.std_in, TextIO.stdOut)
+      [] => (TextIO.stdIn, TextIO.stdOut)
     | [ifile, ofile] => let
         open TextIO
-        val is = BasicIO.open_in ifile
+        val is = TextIO.openIn ifile
                  handle OS.SysErr _ =>
                         (output(stdErr, "Error opening "^ifile^"\n");
                          exit failure)
-        val os = openOut ofile
+        val os = TextIO.openOut ofile
                  handle Io {cause = OS.SysErr (_, eo), ...} =>
                         (case eo of
                            SOME e => output(stdErr, OS.errorMsg e)
@@ -31,15 +30,23 @@ val (instream, outstream) =
                           " [<inputfile> <outputfile>]\n");
             exit failure)
 
-val _ = filter.output_stream := outstream
-val instr = createLexerStream instream
+val _ = filter.UserDeclarations.output_stream := outstream
 
 (* with many thanks to Ken Friis Larsen, Peter Sestoft, Claudio Russo and
    Kenn Heinrich who helped me see the light with respect to this code *)
 
-fun loop() = filter.INITIAL instr
-    handle Interrupt => (filter.comdepth := 0; filter.pardepth := 0;
-                         filter.antiquote := false; loop())
+fun loop() = let
+  val lexer = filter.makeLexer (read_from_stream instream)
+in
+  lexer()
+  handle Interrupt => (let open filter.UserDeclarations
+                       in
+                         comdepth := 0;
+                         pardepth := 0;
+                         antiquote := false;
+                         loop()
+                       end)
+end
 
 val _ = loop()
 val _ = exit success
