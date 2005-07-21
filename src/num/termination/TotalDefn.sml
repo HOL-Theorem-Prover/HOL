@@ -143,9 +143,11 @@ end;
 
 
 fun proveTotal tac defn =
-  Defn.elim_tcs defn
-    (CONJUNCTS (Tactical.default_prover
-                  (list_mk_conj (Defn.tcs_of defn), tac)));
+  let val thm = Tactical.default_prover
+                  (list_mk_conj (Defn.tcs_of defn), tac)
+  in
+    (Defn.elim_tcs defn (CONJUNCTS thm), thm)
+  end;
 
 (*---------------------------------------------------------------------------
       Default TC simplifier and prover. Terribly terribly naive, but
@@ -275,19 +277,20 @@ in
 fun primDefine defn =
  let val V = params_of defn
      val _ = if not(null V) then fvs_on_rhs V else ()  (* can fail *)
-     val defn' =
+     val (defn',th) =
        if should_try_to_prove_termination defn V
          then Lib.tryfind (try_proof defn) (guessR defn)
                handle HOL_ERR _ => termination_proof_failed()
-         else defn
+         else (defn,TRUTH)
  in
     save_defn defn'
-  ; (LIST_CONJ (eqns_of defn'), ind_of defn')
+  ; (LIST_CONJ (eqns_of defn'), ind_of defn', 
+     if (concl th) = T then NONE else SOME th)
  end
 end;
 
 
-fun xDefine stem = Lib.try (fst o primDefine o Defn.Hol_defn stem);
+fun xDefine stem = Lib.try (#1 o primDefine o Defn.Hol_defn stem);
 
 
 (*---------------------------------------------------------------------------
@@ -310,7 +313,7 @@ fun define q =
        val bindstem = mk_bindstem (ERRloc "Define" locn "")
             "xDefine <alphanumeric-stem> <eqns-quotation>" names
    in
-       fst (primDefine (Defn.mk_defn bindstem tm))
+       #1 (primDefine (Defn.mk_defn bindstem tm))
        handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
    end
 val Define = Lib.try define

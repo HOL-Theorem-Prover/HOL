@@ -6,7 +6,7 @@ sig
    (* Support for automated termination proofs *)
 
    val guessR        : defn -> term list
-   val proveTotal    : tactic -> defn -> defn 
+   val proveTotal    : tactic -> defn -> defn * thm 
 
 
    (* Support for interactive termination proofs *)
@@ -18,7 +18,7 @@ sig
 
    (* Definitions with automated termination proof support *)
 
-   val primDefine    : defn -> thm * thm option
+   val primDefine    : defn -> thm * thm option * thm option
    val xDefine       : string -> term quotation -> thm
    val Define        : term quotation -> thm
    val xDefineSchema : string -> term quotation -> thm
