@@ -52,6 +52,10 @@ see the COPYRIGHT NOTICE for details and restrictions.
 	05/18/95 (jhr) changed Vector.vector to Vector.fromList
 *
  * $Log$
+ * Revision 1.3  2005/07/21 07:01:27  michaeln
+ * Get mllex to cope with actions that include strings with unbalanced
+ * parentheses.  (Code taken from SML/NJ's mllex.)
+ *
  * Revision 1.2  2005/04/14 05:42:08  michaeln
  * Slight change to allow the product of mllex foo to be compiled by mosml
  * without having to use the -toplevel option.  Also a "fix" for an off-by-one
@@ -635,18 +639,37 @@ fun AdvanceTok () : unit = let
 	in NextTok := makeTok()
 	end
 	| 2 => NextTok :=
-	     (case skipws()
-		 of #"(" => let
-			fun GetAct (lpct,x) = (case getch(!LexBuf)
-			       of #"(" => GetAct (lpct+1, #"("::x)
-				| #")" => if lpct = 0 then (implode (rev x))
-					 	      else GetAct(lpct-1, #")"::x)
-				| y => GetAct(lpct,y::x)
-			      (* end case *))
-			in ACTION (GetAct (0,nil))
-			end
-		 | #";" => SEMI
-		 | c => (prSynErr ("invalid character " ^ String.str c)))
+               (case skipws() of
+                  #"(" =>
+                  let
+                    fun loop_to_end (backslash, x) =
+                      let
+                        val c    = getch (! LexBuf)
+                        val notb = not backslash
+                        val nstr = c :: x
+                      in
+                        case c of
+                          #"\"" => if notb then nstr
+                                   else loop_to_end (false, nstr)
+                        | _ => loop_to_end (c = #"\\" andalso notb, nstr)
+                      end
+                    fun GetAct (lpct, x) =
+                      let
+                        val c    = getch (! LexBuf)
+                        val nstr = c :: x
+                      in
+                        case c of
+                          #"\"" => GetAct (lpct, loop_to_end (false, nstr))
+                        | #"(" => GetAct (lpct + 1, nstr)
+                        | #")" => if lpct = 0 then implode (rev x)
+                                  else GetAct(lpct - 1, nstr)
+                        | _ => GetAct(lpct, nstr)
+                      end
+                  in
+                    ACTION (GetAct (0,nil))
+                  end
+                | #";" => SEMI
+                | c => (prSynErr ("invalid character " ^ String.str c)))
 	| _ => raise LexError
 end
 handle eof => NextTok := EOF ;
