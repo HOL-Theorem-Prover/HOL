@@ -2182,6 +2182,53 @@ rather than return instances of reflexivity.
 \subsubsection{Special rewrite forms}
 \label{sec:simp-special-rewrite-forms}
 
+Some of the simplifier's features can be accessed in a relatively
+simple way by using \ML{} functions to construct special theorem
+forms.  These special theorems can then be passed in the
+simplification tactics' theorem-list arguments.
+
+Two of the simplifier's advanced features, AC-normalisation and
+congruence rules can be accessed in this way.  Rather than construct a
+custom \simpset{} fragment including the required AC or congruence
+rules, the user can instead use the functions \ml{AC} or \ml{Cong}:
+\begin{hol}
+\begin{verbatim}
+   AC : thm -> thm -> thm
+   Cong : thm -> thm
+\end{verbatim}
+\end{hol}
+For example, if the theorem value
+\begin{hol}
+\begin{verbatim}
+   AC DISJ_ASSOC DISJ_COMM
+\end{verbatim}
+\end{hol}
+appears amongst the theorems passed to a simplification tactic, then
+the simplifier will perform AC-normalisation of disjunctions.  The
+\ml{Cong} function provides a similar interface for the addition of
+new congruence rules.
+
+Two other functions provide a crude mechanism for controlling the
+number of times an individual rewrite will be applied.
+\begin{hol}
+\begin{verbatim}
+   Once : thm -> thm
+   Ntimes : thm -> int -> thm
+\end{verbatim}
+\end{hol}
+A theorem ``wrapped'' in the \ml{Once} function will onl be applied
+once when the simplifier runs.  A theorem wrapped in \ml{Ntimes} will
+be applied as many times as given in the integer parameter.
+These restrictions apply across multiple applications of the
+simplifier to different goals.  This means that if \ml{tac} in
+\begin{hol}
+\begin{verbatim}
+   tac THEN SIMP_TAC bool_ss [Once th]
+\end{verbatim}
+\end{hol}
+results in two sub-goals, then \ml{th} will only be used as a rewrite
+in one of those goals.
+
 \index{simplification|)}
 
 \section{Efficient Applicative Order Reduction---\texttt{computeLib}}
