@@ -49,4 +49,5 @@ in
 end
 
 val _ = loop()
+val _ = TextIO.closeOut outstream
 val _ = exit success

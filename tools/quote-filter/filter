@@ -49,7 +49,7 @@ fun eof () = ("", 0)
 letter = [A-Za-z];
 digit = [0-9];
 symbol = [-!%&$+/:<=>?@~|#*\\^];
-MLid = {letter} ({letter} | {digit} | _ | "'")* | {symbol}+;
+MLid = ({letter} ({letter} | {digit} | _ | "'")*) | {symbol}+;
 ws = [\ \t];
 newline = "\n" | "\015\n";
 locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
@@ -81,14 +81,17 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>"`" => (print ("[QUOTE \""^locpragma (yytext,yypos) 0); YYBEGIN quote;
                  continue());
 <INITIAL>"\"" => (ECHO yytext; YYBEGIN string; continue());
-<INITIAL>{newline} =>  (print "\n"; TextIO.flushOut (!output_stream);
-                        nextline (yypos + size yytext);
-                        continue());
+<INITIAL>{newline} => (print "\n"; TextIO.flushOut (!output_stream);
+                       nextline (yypos + size yytext);
+                       continue());
 <INITIAL>. => (ECHO yytext;continue());
 
 <string>"\\\"" => (ECHO yytext; continue());
 <string>"\\\\" => (ECHO yytext; continue());
 <string>"\"" => (ECHO yytext; YYBEGIN INITIAL; continue());
+<string>{newline} => (print "\n"; TextIO.flushOut (!output_stream);
+                      nextline (yypos + size yytext);
+                      continue());
 <string>. => (ECHO yytext; continue());
 
 <comment>"(*" => (ECHO yytext; inc comdepth; continue());
