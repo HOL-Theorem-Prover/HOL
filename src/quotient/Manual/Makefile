@@ -5,17 +5,17 @@
 default: all
 
 clean:
-	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind quotient2.{ps,pdf}
+	rm -f *.dvi *.aux *.toc *.log *.idx *.ilg *.ind quotient.{ps,pdf}
 
-quotient2.dvi: quotient2.tex
-	latex quotient2.tex
-	latex quotient2.tex
+quotient.dvi: quotient.tex
+	latex quotient.tex
+	latex quotient.tex
 
-quotient2.ps: quotient2.dvi
-	dvips -t letter quotient2.dvi -o
+quotient.ps: quotient.dvi
+	dvips -t letter quotient.dvi -o
 
-quotient2.pdf: quotient2.tex
-#	ps2pdf quotient2.ps
-	pdflatex quotient2.tex
+quotient.pdf: quotient.tex
+#	ps2pdf quotient.ps
+	pdflatex quotient.tex
 
-all: quotient2.ps quotient2.pdf
+all: quotient.ps quotient.pdf
