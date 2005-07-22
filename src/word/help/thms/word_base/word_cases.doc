@@ -1,0 +1,3 @@
+\THEOREM word_cases word_base
+|- !w. ?l. w = WORD l
+\ENDTHEOREM

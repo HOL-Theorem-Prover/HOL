@@ -1,0 +1,3 @@
+\THEOREM NBWORD_SUC_WSEG bword_num
+|- !n (w::PWORDLEN (SUC n)). NBWORD n (BNVAL w) = WSEG n 0 w
+\ENDTHEOREM

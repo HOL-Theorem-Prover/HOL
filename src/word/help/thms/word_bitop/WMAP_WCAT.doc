@@ -1,0 +1,3 @@
+\THEOREM WMAP_WCAT word_bitop
+|- !w1 w2 f. WMAP f (WCAT (w1,w2)) = WCAT (WMAP f w1,WMAP f w2)
+\ENDTHEOREM

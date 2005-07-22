@@ -1,0 +1,4 @@
+\THEOREM NVAL_WCAT word_num
+|- !n m (w1::PWORDLEN n) (w2::PWORDLEN m) f b.
+     NVAL f b (WCAT (w1,w2)) = NVAL f b w1 * b ** m + NVAL f b w2
+\ENDTHEOREM

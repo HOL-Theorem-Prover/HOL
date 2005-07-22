@@ -1,0 +1,4 @@
+\THEOREM WSPLIT_WSEG1 word_base
+|- !n (w::PWORDLEN n) k.
+     k <= n ==> (FST (WSPLIT k w) = WSEG (n - k) k w)
+\ENDTHEOREM

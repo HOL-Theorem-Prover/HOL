@@ -1,0 +1,6 @@
+\THEOREM ACARRY_ACARRY_WSEG bword_arith
+|- !n (w1::PWORDLEN n) (w2::PWORDLEN n) cin m k1 k2.
+     k1 < m /\ k2 < n /\ m + k2 <= n ==>
+     (ACARRY k1 (WSEG m k2 w1) (WSEG m k2 w2) (ACARRY k2 w1 w2 cin) =
+      ACARRY (k1 + k2) w1 w2 cin)
+\ENDTHEOREM

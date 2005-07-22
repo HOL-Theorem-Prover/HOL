@@ -1,0 +1,4 @@
+\THEOREM PBITOP_WSEG word_bitop
+|- !(op::PBITOP) n (w::PWORDLEN n) m k.
+     m + k <= n ==> (op (WSEG m k w) = WSEG m k (op w))
+\ENDTHEOREM

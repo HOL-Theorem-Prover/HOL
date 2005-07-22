@@ -1,0 +1,3 @@
+\THEOREM WCAT_DEF word_base
+|- !l1 l2. WCAT (WORD l1,WORD l2) = WORD (l1 ++ l2)
+\ENDTHEOREM

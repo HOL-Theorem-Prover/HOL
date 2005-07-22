@@ -1,0 +1,3 @@
+\THEOREM WORD_CONS_WCAT word_base
+|- !x l. WORD (x::l) = WCAT (WORD [x],WORD l)
+\ENDTHEOREM

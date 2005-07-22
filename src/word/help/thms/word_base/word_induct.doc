@@ -1,0 +1,3 @@
+\THEOREM word_induct word_base
+|- !P. (!l. P (WORD l)) ==> !w. P w
+\ENDTHEOREM

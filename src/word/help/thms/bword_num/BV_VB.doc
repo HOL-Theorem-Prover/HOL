@@ -1,0 +1,3 @@
+\THEOREM BV_VB bword_num
+|- !x. x < 2 ==> (BV (VB x) = x)
+\ENDTHEOREM

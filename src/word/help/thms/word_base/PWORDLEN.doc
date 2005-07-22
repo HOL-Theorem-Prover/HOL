@@ -1,0 +1,3 @@
+\THEOREM PWORDLEN word_base
+|- !n w. w IN PWORDLEN n = (WORDLEN w = n)
+\ENDTHEOREM

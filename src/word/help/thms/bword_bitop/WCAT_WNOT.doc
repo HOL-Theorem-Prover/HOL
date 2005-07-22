@@ -1,0 +1,4 @@
+\THEOREM WCAT_WNOT bword_bitop
+|- !n1 n2 (w1::PWORDLEN n1) (w2::PWORDLEN n2).
+     WCAT (WNOT w1,WNOT w2) = WNOT (WCAT (w1,w2))
+\ENDTHEOREM

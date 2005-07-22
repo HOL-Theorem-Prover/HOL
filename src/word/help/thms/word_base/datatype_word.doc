@@ -1,0 +1,3 @@
+\THEOREM datatype_word word_base
+|- DATATYPE (word WORD)
+\ENDTHEOREM

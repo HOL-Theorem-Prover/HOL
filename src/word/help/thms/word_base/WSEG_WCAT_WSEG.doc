@@ -1,0 +1,6 @@
+\THEOREM WSEG_WCAT_WSEG word_base
+|- !n1 n2 (w1::PWORDLEN n1) (w2::PWORDLEN n2) m k.
+     m + k <= n1 + n2 /\ k < n2 /\ n2 <= m + k ==>
+     (WSEG m k (WCAT (w1,w2)) =
+      WCAT (WSEG (m + k - n2) 0 w1,WSEG (n2 - k) k w2))
+\ENDTHEOREM

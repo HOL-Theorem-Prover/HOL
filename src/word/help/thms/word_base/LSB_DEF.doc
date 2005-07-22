@@ -1,0 +1,3 @@
+\THEOREM LSB_DEF word_base
+|- !l. LSB (WORD l) = LAST l
+\ENDTHEOREM

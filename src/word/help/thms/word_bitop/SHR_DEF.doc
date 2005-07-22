@@ -1,0 +1,7 @@
+\THEOREM SHR_DEF word_bitop
+|- !f b w.
+     SHR f b w =
+     (WCAT
+        ((if f then WSEG 1 (PRE (WORDLEN w)) w else WORD [b]),
+         WSEG (PRE (WORDLEN w)) 1 w),BIT 0 w)
+\ENDTHEOREM

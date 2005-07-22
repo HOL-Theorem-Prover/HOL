@@ -1,0 +1,4 @@
+\THEOREM NBWORD_SUC bword_num
+|- !n m.
+     NBWORD (SUC n) m = WCAT (NBWORD n (m DIV 2),WORD [VB (m MOD 2)])
+\ENDTHEOREM

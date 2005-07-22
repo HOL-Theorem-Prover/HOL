@@ -1,0 +1,3 @@
+\THEOREM NBWORD_MOD bword_num
+|- !n m. NBWORD n (m MOD 2 ** n) = NBWORD n m
+\ENDTHEOREM

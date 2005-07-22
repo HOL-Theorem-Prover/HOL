@@ -1,0 +1,3 @@
+\THEOREM ZERO_WORD_VAL bword_num
+|- !w::PWORDLEN n. (w = NBWORD n 0) = (BNVAL w = 0)
+\ENDTHEOREM

@@ -1,0 +1,3 @@
+\THEOREM WCAT_NBWORD_0 bword_num
+|- !n1 n2. WCAT (NBWORD n1 0,NBWORD n2 0) = NBWORD (n1 + n2) 0
+\ENDTHEOREM

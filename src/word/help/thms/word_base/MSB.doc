@@ -1,0 +1,3 @@
+\THEOREM MSB word_base
+|- !n (w::PWORDLEN n). 0 < n ==> (MSB w = BIT (PRE n) w)
+\ENDTHEOREM

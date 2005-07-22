@@ -1,0 +1,6 @@
+\THEOREM DOUBL_EQ_SHL bword_num
+|- !n.
+     0 < n ==>
+     !(w::PWORDLEN n) b.
+       NBWORD n (BNVAL w + BNVAL w + BV b) = SND (SHL F w b)
+\ENDTHEOREM

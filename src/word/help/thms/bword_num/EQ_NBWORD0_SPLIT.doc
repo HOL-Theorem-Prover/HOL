@@ -1,0 +1,7 @@
+\THEOREM EQ_NBWORD0_SPLIT bword_num
+|- !n (w::PWORDLEN n) m.
+     m <= n ==>
+     ((w = NBWORD n 0) =
+      (WSEG (n - m) m w = NBWORD (n - m) 0) /\
+      (WSEG m 0 w = NBWORD m 0))
+\ENDTHEOREM

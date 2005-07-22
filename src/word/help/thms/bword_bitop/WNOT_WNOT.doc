@@ -1,0 +1,3 @@
+\THEOREM WNOT_WNOT bword_bitop
+|- !w. WNOT (WNOT w) = w
+\ENDTHEOREM
