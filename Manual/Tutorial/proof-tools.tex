@@ -1,4 +1,101 @@
-\chapter{Proof Tools}
+\chapter{Proof Tools: Propositional Logic}
+\label{chap:proof-tools}
+
+Users of \HOL{} can create their own theorem proving tools by
+combining predefined rules and tactics. The \ML{} type-discipline
+ensures that only logically sound methods can be used to create values
+of type \ml{thm}.  In this chapter, a real example is described.
+
+Two implementations of the tool are given to illustrate various styles
+of proof programming. The first implementation is the obvious one, but
+is inefficient because of the `brute force' method used. The second
+implementation attempts to be a great deal more intelligent.
+Extensions to the tools to allow more general applicability are also
+discussed.
+
+The problem to be solved is that of deciding the truth of a closed
+formula of propositional logic.  Such a formula has the general form
+\[
+\begin{array}{ccl}
+\varphi & ::= & v \;|\;\top\;|\;\bot \;|\; \neg\varphi\;|\;\varphi \land \varphi \;|\; \varphi \lor \varphi\\[1ex]
+\mathit{formula} &::= & \forall \vec{v}. \;\varphi
+\end{array}
+\]
+where the variables $v$ are all of boolean type, and where the
+universal quantification at the outermost level captures all of the
+free variables.
+
+\section{Method 1: Truth Tables}
+
+\setcounter{sessioncount}{0}
+
+The first method to be implemented is the brute force method of trying
+all possible boolean combinations.  This approach's only real virtue
+is that it is exceptionally easy to implement.  First we will prove
+the motivating theorem:
+\begin{hol}
+\begin{verbatim}
+   val FORALL_BOOL = prove(
+     ``(!v. P v) = P T /\ P F``,
+     SRW_TAC [][EQ_IMP_THM] THEN Cases_on `v` THEN SRW_TAC [][]);
+\end{verbatim}
+\end{hol}
+The proof proceeds by splitting the goal into two halves, showing
+\[
+(\forall v. \;P(v))\Rightarrow P(\top) \land P(\bot)
+\]
+(which goal is automatically shown by the simplifier), and
+\[
+P(\top) \land P(\bot) \Rightarrow P(v)
+\]
+for an arbitrary boolean variable $v$.  After case-splitting on $v$,
+the assumptions are then enough to show the goal.  (This theorem is
+actually already proved in the theory \theoryimp{bool}.)
+
+The next, and final, step is to rewrite with this theorem:
+\begin{hol}
+\begin{verbatim}
+   val tautDP = SIMP_CONV bool_ss [FORALL_BOOL]
+\end{verbatim}
+\end{hol}
+
+This enables the following
+
+\begin{session}
+\begin{verbatim}
+- tautDP ``!p q. p /\ q /\ ~p``;
+> val it = |- (!p q. p /\ q /\ ~p) = F : thm
+
+- tautDP ``!p. p \/ ~p``
+> val it = |- (!p. p \/ ~p) = T : thm
+\end{verbatim}
+\end{session}
+and even the marginally more intimidating
+\begin{session}
+\begin{verbatim}
+- time tautDP
+     ``!p q c a. ~(((~a \/ p /\ ~q \/ ~p /\ q) /\
+                    (~(p /\ ~q \/ ~p /\ q) \/ a)) /\
+                   (~c \/ p /\ q) /\ (~(p /\ q) \/ c)) \/
+                 ~(p /\ q) \/ c /\ ~a``;
+runtime: 0.147s,    gctime: 0.012s,     systime: 0.000s.
+> val it =
+    |- (!p q c a.
+          ~(((~a \/ p /\ ~q \/ ~p /\ q) /\ (~(p /\ ~q \/ ~p /\ q) \/ a)) /\
+            (~c \/ p /\ q) /\ (~(p /\ q) \/ c)) \/ ~(p /\ q) \/ c /\ ~a) =
+       T : thm
+\end{verbatim}
+\end{session}
+
+This is a dreadful algorithm for solving this problem.  The system's
+built-in function, \ml{tautLib.TAUT\_CONV} solves the same problem ten
+times faster, even though it is also using a truth-table technique.
+The only real merit in this solution is that it took one line to
+write.
+
+
+\section{Method 2: the DPLL Algorithm}
+
 
 
 %%% Local Variables:
