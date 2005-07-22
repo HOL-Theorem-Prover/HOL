@@ -17,10 +17,11 @@ sig
   val ok_sml_identifier     : string -> bool
   val is_num_literal        : string -> bool
   val is_string_literal     : string -> bool
+  val is_char_literal       : string -> bool
 
   val nameStrm              : string -> unit -> string
   val tyvar_vary            : string -> string
   val tmvar_vary            : string -> string
-  val gen_variant           : (string -> string) 
+  val gen_variant           : (string -> string)
                                 -> string list -> string -> string
 end;

@@ -251,6 +251,14 @@ fun make_string_literal l s =
          fromMLchar = fn ch =>
                          mk_chr l(mk_numeral l(Arbnum.fromInt (Char.ord ch)))}
         (String.substring(s,1,String.size s - 2))
+fun make_char_literal l s =
+    if not (mem "string" (ancestry "-")) andalso
+       current_theory() <> "string"
+    then
+      raise (ERRORloc "make_char_literal" l
+                      "Char literals not allowed - \
+                      \load \"stringTheory\" first.")
+    else mk_chr l (mk_numeral l (Arbnum.fromInt (Char.ord (String.sub(s,2)))))
 end;
 
 (*---------------------------------------------------------------------------
@@ -270,6 +278,7 @@ fun make_atom oinfo l s E =
   case List.find (fn rfn => String.isPrefix rfn s)
                  [recsel_special, recupd_special, recfupd_special]
    of NONE => if Lexis.is_string_literal s then (make_string_literal l s, E)
+              else if Lexis.is_char_literal s then (make_char_literal l s, E)
               else make_free_var l (s, E)
     | SOME rfn =>
         Raise (ERRORloc "make_atom" l

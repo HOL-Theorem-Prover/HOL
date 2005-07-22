@@ -199,7 +199,7 @@ fun allowed_term_constant "let"        = false
  *---------------------------------------------------------------------------*)
 
 fun is_num_literal str =
-   let fun loop i = 
+   let fun loop i =
          (Word8Array.sub(numbers,ordof(str,i)) = bone) andalso loop(i+1)
    in
    ((Word8Array.sub(numbers,ordof(str,0)) = bone) handle _ => false)
@@ -212,7 +212,13 @@ in
 fun is_string_literal s = String.size s > 1
     andalso (String.sub(s,0) = dquote)
     andalso (String.sub(s,String.size s - 1) = dquote)
+fun is_char_literal s = String.size s = 4 andalso
+                        String.sub(s,0) = #"#" andalso
+                        String.sub(s,1) = dquote andalso
+                        String.sub(s,size s - 1) = dquote
 end;
+
+
 
 
 (*---------------------------------------------------------------------------*
@@ -241,7 +247,7 @@ end;
 (*---------------------------------------------------------------------------
    String variants, on type variables and term variables. Each,
    given a string produce another one that is different, but which is in
-   some sense the "next" string in a sequence.  
+   some sense the "next" string in a sequence.
 
     `tyvar_vary' can be used to generate  'a, 'b, 'c ... 'z, 'a0 ...
 
@@ -255,14 +261,14 @@ end;
      of s that doesn't appear in the list avoids.
  ---------------------------------------------------------------------------*)
 
-fun tyvar_vary s = 
+fun tyvar_vary s =
  let open Substring
      val ss = all s
      val (nonletters, letters) = splitr Char.isAlpha ss
      val szletters = size letters
  in
-  if szletters > 0 
-  then case sub(letters, szletters - 1) 
+  if szletters > 0
+  then case sub(letters, szletters - 1)
         of #"z" => concat [nonletters,
                            slice(letters, 0, SOME (szletters - 1)),
                            all "a0"]
@@ -275,7 +281,7 @@ fun tyvar_vary s =
   else let val (nondigits, digits) = splitr Char.isDigit ss
            val szdigits = size digits
        in
-        if szdigits > 0 
+        if szdigits > 0
         then let val n = valOf (Int.fromString (string digits))
              in concat [nondigits, all (Int.toString (n + 1))]
              end
@@ -283,12 +289,12 @@ fun tyvar_vary s =
        end
  end
 
-fun tmvar_vary s = 
+fun tmvar_vary s =
  let open Substring
      val ss = all s
      val (nondigits, digits) = splitr Char.isDigit ss
  in
-   if size digits > 0 
+   if size digits > 0
    then let val n = valOf (Int.fromString (string digits))
         in concat [nondigits, all (Int.toString (n + 1))]
         end

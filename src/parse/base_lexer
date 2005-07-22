@@ -53,6 +53,12 @@
        (BT0_EOI, lend)
    end
 
+   fun check_char (tl as (tok, loc)) =
+       case tok of
+         BT0_Ident s => if size s = 4 then tl
+                        else raise LEX_ERR ("bad character constant", loc)
+       | _ => raise LEX_ERR ("Very bad character constant", loc)
+
 %%
 %structure base_lexer
 %arg ({rcopt,nf,r,i,incommentp,stracc} : UserDeclarations.extrastate);
@@ -104,6 +110,12 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                   YYBEGIN string;
                   continue()
                 end);
+<INITIAL>#\" => (let val s = LocP(nf,!r,yypos - !(#i yyarg))
+                 in
+                     stracc := ([#"\"", #"#"], s);
+                     YYBEGIN string;
+                     check_char (continue())
+                 end);
 <INITIAL>{space} => (continue());
 <INITIAL>{newline} => (let val i = #i yyarg
                      in
@@ -139,7 +151,6 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                      stracc := (#"\"" :: clist, start);
                      continue()
                    end);
-<string>{locpragma} => (dolocpragma yyarg yypos yytext; continue());
 <string>{newline} => (raise LEX_ERR ("newline inside quote-delimited string",
                                    getLoc yyarg yypos yytext));
 <string>. =>  (let val (clist, start) = !stracc

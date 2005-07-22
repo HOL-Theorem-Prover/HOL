@@ -14,7 +14,7 @@
  *
  *     STRING (CHAR c_0) (STRING ... (STRING (CHAR c_n) EMPTYSTRING) ...)
  *
- * The code in this structure has been generalized to work with 
+ * The code in this structure has been generalized to work with
  * terms and also preterms, since it is also used to build preterms
  * by the parser.
  *---------------------------------------------------------------------------*)
@@ -38,35 +38,35 @@ fun is_numtype ty =
          of {Thy="num",Tyop="num", Args=[]} => true
           | _ => false
 
-fun is_num2num_type ty = 
+fun is_num2num_type ty =
    let val (ty1,ty2) = Type.dom_rng ty
    in is_numtype ty1 andalso is_numtype ty2
    end handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------
-    Checks if t is a sequence of applications of BIT1 and BIT2 to ZERO 
+    Checks if t is a sequence of applications of BIT1 and BIT2 to ZERO
  ---------------------------------------------------------------------------*)
 
 fun is_nb t =
-   if is_const t 
+   if is_const t
    then let val {Name, Thy, Ty} = dest_thy_const t
         in Name = "ZERO" andalso Thy="arithmetic" andalso is_numtype Ty
         end
    else let val (Rator, Rand) = dest_comb t
             val {Name, Thy, Ty} = dest_thy_const Rator
-        in (Name="BIT1" orelse Name="BIT2") 
+        in (Name="BIT1" orelse Name="BIT2")
             andalso Thy = "arithmetic"
             andalso is_num2num_type Ty andalso is_nb Rand
         end
 
-fun is_numeral t = 
-  if is_const t 
+fun is_numeral t =
+  if is_const t
   then let val {Name,Thy,Ty} = dest_thy_const t
        in is_numtype Ty andalso Name = "0" andalso Thy="num"
        end
   else let val (Rator,Rand) = dest_comb t
            val {Name,Thy,Ty} = dest_thy_const Rator
-       in Name="NUMERAL" andalso Thy="arithmetic" 
+       in Name="NUMERAL" andalso Thy="arithmetic"
           andalso is_num2num_type Ty andalso is_nb Rand
        end handle HOL_ERR _ => false;
 
@@ -75,15 +75,15 @@ fun dest_numeral t =
   if not(is_numeral t) then raise ERR "dest_numeral" "term is not a numeral"
   else
   if is_const t then Arbnum.zero
-  else 
+  else
   let open Arbnum
       fun dest t =
-         if is_comb t 
+         if is_comb t
          then let val (Rator, Rand) = dest_comb t
-              in case fst(dest_const Rator) 
+              in case fst(dest_const Rator)
                   of "BIT1" => two * dest Rand + one
                    | "BIT2" => two * dest Rand + two
-                   | otherwise => raise ERR "dest_numeral" 
+                   | otherwise => raise ERR "dest_numeral"
                                     "This should never ever happen"
               end
          else zero
@@ -94,8 +94,8 @@ fun dest_numeral t =
 fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
  let open Arbnum
      fun positive x =
-       if x = zero then ALT_ZERO else 
-       if x mod two = one 
+       if x = zero then ALT_ZERO else
+       if x mod two = one
          then mk_comb(BIT1, positive ((x-one) div two))
          else mk_comb(BIT2, positive ((x-two) div two))
  in
@@ -111,12 +111,15 @@ val dest_chr    = sdest_monop ("CHR","string")    (ERR "dest_chr" "")
 val dest_string = sdest_binop ("STRING","string") (ERR "dest_string" "")
 val fromHOLchar = Char.chr o Arbnum.toInt o dest_numeral o dest_chr
 
+val dest_char_lit = fromHOLchar
+val is_char_lit = can dest_char_lit
+
 fun is_emptystring tm =
   case total dest_thy_const tm
    of SOME {Name="EMPTYSTRING",Thy="string",...} => true
     | otherwise => false
 
-fun dest_string_lit tm = 
+fun dest_string_lit tm =
  if is_emptystring tm then ""
  else let val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
       in if is_emptystring e
@@ -127,7 +130,7 @@ fun dest_string_lit tm =
 val is_string_lit = can dest_string_lit
 
 fun mk_string_lit {mk_string,fromMLchar,emptystring} s =
-  itlist (curry mk_string) 
+  itlist (curry mk_string)
          (List.map fromMLchar (String.explode s)) emptystring
 
 

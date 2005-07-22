@@ -20,14 +20,14 @@ val mk_ord = C (with_exn (curry mk_comb ord_tm)) (ERR "mk_ord" "")
 val dest_chr = dest_monop chr_tm (ERR "dest_chr" "")
 val dest_ord = dest_monop ord_tm (ERR "dest_ord" "")
 
-val is_chr = Lib.can dest_chr 
+val is_chr = Lib.can dest_chr
 val is_ord = Lib.can dest_ord
 
-val fromMLchar = 
+val fromMLchar =
  C (with_exn (mk_chr o mk_numeral o Arbnum.fromInt o Char.ord))
    (ERR "fromMLchar" "")
 
-val fromHOLchar = 
+val fromHOLchar =
  C (with_exn (Char.chr o Arbnum.toInt o dest_numeral o dest_chr))
    (ERR "fromHOLchar" "");
 
@@ -48,15 +48,15 @@ val isprefix_tm    = prim_mk_const{Name="isPREFIX",    Thy="string"};
 
 val mk_implode = C (with_exn (curry mk_comb implode_tm)) (ERR "mk_implode" "")
 val mk_explode = C (with_exn (curry mk_comb explode_tm)) (ERR "mk_explode" "")
-fun mk_string (c,s) = 
+fun mk_string (c,s) =
   with_exn list_mk_comb (string_tm,[c,s]) (ERR "mk_string" "")
-fun mk_string_case (e,f,s) = 
+fun mk_string_case (e,f,s) =
   with_exn list_mk_comb (inst [alpha |-> type_of e]string_case_tm, [e,f,s])
            (ERR "mk_string_case" "")
 val mk_strlen = C (with_exn (curry mk_comb strlen_tm)) (ERR "mk_strlen" "")
-fun mk_strcat (s1,s2) = 
+fun mk_strcat (s1,s2) =
   with_exn list_mk_comb (strcat_tm,[s1,s2]) (ERR "mk_strcat" "")
-fun mk_isprefix (s1,s2) = 
+fun mk_isprefix (s1,s2) =
   with_exn list_mk_comb (isprefix_tm,[s1,s2]) (ERR "mk_isprefix" "")
 
 val dest_implode     = dest_monop implode_tm     (ERR "dest_implode"  "")
@@ -76,7 +76,7 @@ val is_strlen      = can dest_strlen
 val is_strcat      = can dest_strcat
 val is_isprefix    = can dest_isprefix
 
-val fromMLstring = 
+val fromMLstring =
    Literal.mk_string_lit
         {mk_string=mk_string,
          fromMLchar=fromMLchar,
@@ -98,24 +98,5 @@ fun lift_string ty s = fromMLstring s;
 
 val _ = EmitML.is_string_literal_hook := is_string_literal
 val _ = EmitML.dest_string_literal_hook := fromHOLstring
-
-(*---------------------------------------------------------------------------*)
-(* Prettyprinter for characters (one for strings is already hardwired in the *)
-(* HOL prettyprinter).                                                       *)
-(*---------------------------------------------------------------------------*)
-
-fun char_printer sys gravs d pps tm = 
- let open Portable term_pp_types
-     fun charqs s = "'"^s^"'"
- in (case total fromHOLchar tm
-      of SOME ch => add_string pps (charqs(Char.toString ch))
-       | NONE => raise UserPP_Failed
-     )
-     handle HOL_ERR _ => raise UserPP_Failed
- end
-
-val _ = Parse.temp_add_user_printer 
-        ({Thy="string", Tyop="char"}, char_printer);
-
 
 end

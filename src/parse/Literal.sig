@@ -9,7 +9,7 @@ sig
                        ZERO    : 'a,
                        ALT_ZERO: 'a,
                        NUMERAL : 'a,
-                       BIT1    : 'a, 
+                       BIT1    : 'a,
                        BIT2    : 'a} -> Arbnum.num -> 'a
 
  val is_string_lit   : term -> bool
@@ -17,4 +17,8 @@ sig
  val mk_string_lit   : {mk_string   : 'a * 'a -> 'a,
                         emptystring : 'a,
                         fromMLchar  : char -> 'a} -> String.string -> 'a
+
+ val is_char_lit     : term -> bool
+ val dest_char_lit   : term -> Char.char
+
 end

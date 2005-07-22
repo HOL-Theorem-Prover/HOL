@@ -758,6 +758,12 @@ fun pp_term (G : grammar) TyG = let
       val _ = case total Literal.dest_string_lit tm
                of NONE => ()
                 | SOME s => (add_string (Lib.mlquote s); raise SimpleExit)
+      val _ = case total Literal.dest_char_lit tm of
+                NONE => ()
+              | SOME c => (add_string "#";
+                           add_string (Lib.mlquote (str c));
+                           raise SimpleExit)
+
       val _ =
         if Literal.is_numeral tm andalso can_pr_numeral NONE then
           (pr_numeral NONE tm; raise SimpleExit)
