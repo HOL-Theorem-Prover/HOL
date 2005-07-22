@@ -28,15 +28,11 @@ RW_TAC arith_ss [BIT_EVAL, n2w_11, w2n_EVAL, MOD_WL_THM, GSYM BIT_BITS_THM,
 
 (*---------------------------------------------------------------------------
     Multiply a byte (representing a polynomial) by x. 
-
  ---------------------------------------------------------------------------*)
 
 val xtime_def = Define
   `xtime (w : word8) =
-     w << 1 # (if MSB w then
-                 0x1Bw
-               else
-                 0w)`;
+     w << 1 # (if MSB w then 0x1Bw else 0w)`;
 
 val MSB_lem = Q.prove (
 `!a b. MSB (a # b) = ~(MSB a = MSB b)`,

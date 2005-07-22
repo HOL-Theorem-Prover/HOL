@@ -97,7 +97,10 @@ val ZeroEvenKeys_def =
                        ZeroEvenKey,ZeroEvenKey,ZeroEvenKey,ZeroEvenKey) : EvenKeySched`;
 
 (*---Use Both Additive and Multiplicative Inverses Now---*)
-val InverseKey_def = Define `InverseKey (k1,k2,k3,k4) = ((winv k1), ~k3, ~k2, (winv k4)) : OddKey`;
+val InverseKey_def = 
+ Define 
+   `InverseKey (k1,k2,k3,k4) = (winv k1, ~k3, ~k2, winv k4) : OddKey`;
+
 val InverseKeys_def = 
  Define
    `InverseKeys (ok1,ok2,ok3,ok4,ok5,ok6,ok7,ok8,ok9) =
@@ -121,9 +124,10 @@ val RotateEvenKeys_def =
             (k2,k3,k4,k5,k6,k7,k8,k1) : EvenKeySched`;
 
 (*-1st and 4th are multiplications now-*)
-val OddRound_def    = Define 
-  `OddRound ((Ka, Kb, Kc, Kd):OddKey) ((Xa, Xb, Xc, Xd):Block) =
-      (Xa wmul Ka, Xc + Kc, Xb + Kb,Xd wmul Kd ):Block`;
+val OddRound_def = 
+ Define 
+   `OddRound ((Ka, Kb, Kc, Kd):OddKey) ((Xa, Xb, Xc, Xd):Block) =
+          (Xa wmul Ka, Xc + Kc, Xb + Kb,Xd wmul Kd) :Block`;
 
 val OddRound_Lemma1 = Q.store_thm
 ("OddRound_Lemma1",

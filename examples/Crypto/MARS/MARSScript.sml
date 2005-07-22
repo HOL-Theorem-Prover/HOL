@@ -1,7 +1,7 @@
 (*                                   MARS Block Cipher
-                                        -- implemented in Standard ML
+                                        -- implemented in HOL
 
- This is an Standard ML implementation of the encryption algorithm:
+ This is a HOL implementation of the encryption algorithm:
                         MARS by IBM
  which is a candidate algorithm in the Advanced Encryption Standard
  For detailed information about MARS, please refer to

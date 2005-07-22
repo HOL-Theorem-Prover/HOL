@@ -6,7 +6,8 @@
  which is a candidate algorithm in the Advanced Encryption Standard
  For detailed information about RC6, please refer to
         http://www.rsasecurity.com/rsalabs/node.asp?id=2512
- in which algorithm specification, Security and performance evaluation, etc. could be found.
+ in which algorithm specification, Security and performance evaluation, 
+ etc. can be found.
 *)
 
 (* For interactive work
@@ -37,7 +38,9 @@ val _ = new_theory "RC6";
 (*---------------------------------------------------------------------------*)
 
 val _ = type_abbrev("block", ``:word32 # word32 # word32 # word32``);
+
 val _ = type_abbrev("key",   ``:word32 # word32``);
+
 val _ = type_abbrev("keysched", 
         ``:word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
            word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
@@ -47,8 +50,7 @@ val _ = type_abbrev("keysched",
            word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
            word32 # word32``);
 
-val _ = type_abbrev("state", ``:word32 # word32 # word32 # 
-                                word32 # word32 # word32``);
+val _ = type_abbrev("state", ``:word32#word32#word32#word32#word32#word32``);
 
 (*---------------------------------------------------------------------------*)
 (* Case analysis on blocks and keys.                                         *)
@@ -105,9 +107,9 @@ val CompUT_def = Define
 val FwdRound_def = Define
   `FwdRound ((a,b,c,d):block) ((k0,k1):key)  = 
 	(b, 
-	 ((c # CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
+	 ((c#CompUT d) <<< CompUT b) + k1,  (*c = (c xor u <<< t) + k1*)
 	 d,
-	 ((a # CompUT b) <<< CompUT d) + k0)`;
+	 ((a#CompUT b) <<< CompUT d) + k0)`;
 
 val BwdRound_def = Define
   `BwdRound ((a,b,c,d):block) ((k0,k1):key)  =  (* NB: (a,b,c,d) = (d,a,b,c) *)
@@ -126,9 +128,9 @@ val OneRound_Inversion = Q.store_thm
   METIS_TAC [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]  
   );
 
-(*-------------------------------------------------------------------------------*)
-(* Rotate keys and get a pair of keys from the head of the key schedule          *)
-(*-------------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Rotate keys and get a pair of keys from the head of the key schedule      *)
+(*---------------------------------------------------------------------------*)
 
 val ROTKEYS_def =
  Define
@@ -139,7 +141,7 @@ val ROTKEYS_def =
      (k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,
       k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,
       k34,k35,k36,k37,k38,k39,k40,k41,k42,k43,k0,k1) : keysched`;
-                                                                                           
+
 val GETKEYS_def =
  Define
    `GETKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,
@@ -165,7 +167,7 @@ val PostWhitening_def = Define
 val InvPreWhitening_def = Define
  `InvPreWhitening (k:keysched) ((a,b,c,d):block)  =
             (a - SND(GETKEYS(k)), b, c - SND(GETKEYS(k)), d) : block`;
-                                                                                                                                               
+
 val InvPostWhitening_def = Define
  `InvPostWhitening (k:keysched) ((a,b,c,d):block)  =
             (a, b - FST(GETKEYS(k)), c, d - SND(GETKEYS(k))) : block`;
@@ -181,9 +183,9 @@ val Whitening_Inversion = Q.store_thm
   );
 
 
-(*-------------------------------------------------------------------------------*)
-(* Round operations in the encryption and the decryption                         *)
-(*-------------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Round operations in the encryption and the decryption                     *)
+(*---------------------------------------------------------------------------*)
 
 val (Round_def, Round_ind) = Defn.tprove
  (Hol_defn
@@ -209,9 +211,7 @@ val (InvRound_def,InvRound_ind) = Defn.tprove
   WF_REL_TAC `measure FST`);
 
 val _ = save_thm ("Round_def", Round_def);
-val _ = save_thm ("Round_ind", Round_ind);
 val _ = save_thm ("InvRound_def", InvRound_def);
-val _ = save_thm ("InvRound_ind", InvRound_ind);
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
@@ -221,13 +221,11 @@ val _ = save_thm ("InvRound_ind", InvRound_ind);
 
 val RC6_FWD_def =
  Define
-  `RC6_FWD keys = 
-    Round r keys o PreWhitening keys`;
-                                                                                                                                               
+   `RC6_FWD keys = Round r keys o PreWhitening keys`;
+
 val RC6_BWD_def =
  Define
-  `RC6_BWD keys = 
-    InvPostWhitening keys o InvRound r keys`;
+   `RC6_BWD keys = InvPostWhitening keys o InvRound r keys`;
 
 (*---------------------------------------------------------------------------*)
 (* Main lemma                                                                *)
@@ -329,8 +327,7 @@ val RC6_def = Define
  `RC6 key =
    let keys = LIST_TO_KEYS (mk_keysched key) DUMMY_KEYS
    in (RC6_FWD keys, RC6_BWD keys)`;
-                                                                                                                                               
-                                                                                                                                               
+
 val RC6_CORRECT = Q.store_thm
   ("RC6_CORRECT",
    `!key plaintext.
@@ -338,5 +335,5 @@ val RC6_CORRECT = Q.store_thm
        ==>
        (decrypt (encrypt plaintext) = plaintext)`,
          RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]);
-                                                                                                                                               
+
 val _ = export_theory();

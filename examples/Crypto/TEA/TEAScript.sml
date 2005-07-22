@@ -64,18 +64,18 @@ val FORALL_STATE = Q.prove
 
 val DELTA_def = Define `DELTA = 0x9e3779b9w`;
 
-val ShiftXor_def = Define
-   `ShiftXor (x, s, k0, k1) = 
-	((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
+val ShiftXor_def = 
+ Define 
+   `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
 
 val Round_def = Define
-  `Round ((y,z),(k0,k1,k2,k3),sum):state  = 
-	((y + ShiftXor(z, sum+DELTA, k0, k1),
-	  z + ShiftXor(y + ShiftXor(z, sum+DELTA, k0, k1), sum+DELTA, k2, k3)),
-	 (k0,k1,k2,k3), sum+DELTA)`;
+   `Round ((y,z),(k0,k1,k2,k3),sum):state  = 
+      ((y + ShiftXor(z, sum+DELTA, k0, k1),
+       z + ShiftXor(y + ShiftXor(z, sum+DELTA, k0, k1), sum+DELTA, k2, k3)),
+      (k0,k1,k2,k3), sum+DELTA)`;
 
 val InvRound_def = Define
-  `InvRound((y,z),(k0,k1,k2,k3),sum)  =
+   `InvRound((y,z),(k0,k1,k2,k3),sum)  =
         ((y - ShiftXor(z - ShiftXor(y, sum, k2, k3), sum, k0, k1),
           z - ShiftXor(y, sum, k2, k3)), 
 	 (k0,k1,k2,k3), sum-DELTA)`;
@@ -94,25 +94,17 @@ val OneRound_Inversion = Q.store_thm
 val (Rounds_def, Rounds_ind) = Defn.tprove
  (Hol_defn
    "Rounds"
-   `Rounds n (s:state) =
-     if n=0
-      then s
-      else Rounds (n-1) (Round s)`,
+   `Rounds n (s:state) = if n=0 then s else Rounds (n-1) (Round s)`,
   WF_REL_TAC `measure FST`);
 
 val (InvRounds_def,InvRounds_ind) = Defn.tprove
  (Hol_defn
    "InvRounds"
-   `InvRounds n (s:state) =
-      if n=0
-       then s
-       else InvRounds (n-1) (InvRound s)`,
+   `InvRounds n (s:state) = if n=0 then s else InvRounds (n-1) (InvRound s)`,
   WF_REL_TAC `measure FST`);
 
 val _ = save_thm ("Rounds_def", Rounds_def);
-val _ = save_thm ("Rounds_ind", Rounds_ind);
 val _ = save_thm ("InvRounds_def", InvRounds_def);
-val _ = save_thm ("InvRounds_ind", InvRounds_ind);
 
 val _ = computeLib.add_persistent_funs 
            [("Rounds_def",Rounds_def), 
@@ -123,12 +115,12 @@ val _ = computeLib.add_persistent_funs
 (*---------------------------------------------------------------------------*)
 
 val TEAEncrypt_def = Define `
-  TEAEncrypt keys txt =
-    FST (Rounds 32 (txt,keys,0w))`;
+    TEAEncrypt keys txt =
+         FST (Rounds 32 (txt,keys,0w))`;
 
 val TEADecrypt_def = Define `
-  TEADecrypt keys txt = 
-    FST (InvRounds 32 (txt,keys,DELTA << 5))`;
+    TEADecrypt keys txt = 
+       FST (InvRounds 32 (txt,keys,DELTA << 5))`;
 
 (*---------------------------------------------------------------------------*)
 (* Main lemmas                                                               *)

@@ -13,7 +13,7 @@ The dependencies are:
       word8Theory     (definition of bytes and operations)
          |
          |
-      tablesTheory    (definition of Sboxes)
+     tablesTheory    (definition of Sboxes)
          |
          |
       MultTheory      (definition of GF_256 multiplication: 

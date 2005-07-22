@@ -14,13 +14,17 @@ val _ = new_theory "MARS_Data";
 (* Type Definitions                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val _ = type_abbrev("block", Type`:word32 # word32 # word32 # word32`);
-val _ = type_abbrev("key",   Type`:word32 # word32 # word32 # word32`);
-val _ = type_abbrev("keysched", Type`:
-	word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-        word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-        word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
-        word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32 # word32`);
+val _ = type_abbrev("block", ``:word32 # word32 # word32 # word32``);
+
+val _ = type_abbrev("key",   ``:word32 # word32 # word32 # word32``);
+
+val _ = type_abbrev("keysched", ``:
+	word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+        word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+        word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+        word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+        word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+        word32 # word32 # word32 # word32 # word32`);
 
 (*---------------------------------------------------------------------------*)
 (* Case analysis on a block, a key schedule                                  *)

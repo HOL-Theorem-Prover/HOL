@@ -231,9 +231,9 @@ val MultCol_def = Define
 val InvMultCol_def = Define
  `InvMultCol (a,b,c,d) = 
    ((0xEw ** a) # (0xBw ** b) # (0xDw ** c) # (9w  ** d),
-    (9w  ** a) # (0xEw ** b) # (0xBw ** c) # (0xDw ** d),
-    (0xDw ** a) # (9w  ** b) # (0xEw ** c) # (0xBw ** d),
-    (0xBw ** a) # (0xDw ** b) # (9w  ** c) # (0xEw ** d))`;
+    (9w  ** a)  # (0xEw ** b) # (0xBw ** c) # (0xDw ** d),
+    (0xDw ** a) # (9w  ** b)  # (0xEw ** c) # (0xBw ** d),
+    (0xBw ** a) # (0xDw ** b) # (9w  ** c)  # (0xEw ** d))`;
 
 (*---------------------------------------------------------------------------*)
 (* Inversion lemmas for column multiplication. Proved with an ad-hoc tactic  *)
