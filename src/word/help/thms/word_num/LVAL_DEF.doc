@@ -1,3 +1,0 @@
-\THEOREM LVAL_DEF word_num
-|- !f b l. LVAL f b l = FOLDL (\e x. b * e + f x) 0 l
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM LVAL_SNOC word_num
-|- !l h f b. LVAL f b (SNOC h l) = LVAL f b l * b + f h
-\ENDTHEOREM

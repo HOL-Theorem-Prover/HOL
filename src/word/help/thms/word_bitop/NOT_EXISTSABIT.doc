@@ -1,3 +1,0 @@
-\THEOREM NOT_EXISTSABIT word_bitop
-|- !P w. ~EXISTSABIT P w = FORALLBITS ($~ o P) w
-\ENDTHEOREM

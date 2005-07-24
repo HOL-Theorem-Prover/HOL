@@ -1,4 +1,0 @@
-\THEOREM WCAT_PWORDLEN word_base
-|- !n1 (w1::PWORDLEN n1) n2 (w2::PWORDLEN n2).
-     WCAT (w1,w2) IN PWORDLEN (n1 + n2)
-\ENDTHEOREM

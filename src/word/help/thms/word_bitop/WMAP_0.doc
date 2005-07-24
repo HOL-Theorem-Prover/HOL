@@ -1,3 +1,0 @@
-\THEOREM WMAP_0 word_bitop
-|- !f. WMAP f (WORD []) = WORD []
-\ENDTHEOREM

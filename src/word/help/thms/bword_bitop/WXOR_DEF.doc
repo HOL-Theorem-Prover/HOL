@@ -1,3 +1,0 @@
-\THEOREM WXOR_DEF bword_bitop
-|- !l1 l2. WORD l1 WXOR WORD l2 = WORD (MAP2 (\x y. ~(x = y)) l1 l2)
-\ENDTHEOREM

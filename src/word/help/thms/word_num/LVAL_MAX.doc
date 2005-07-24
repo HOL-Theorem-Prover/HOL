@@ -1,3 +1,0 @@
-\THEOREM LVAL_MAX word_num
-|- !l f b. (!x. f x < b) ==> LVAL f b l < b ** LENGTH l
-\ENDTHEOREM

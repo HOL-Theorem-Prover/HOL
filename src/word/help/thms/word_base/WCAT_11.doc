@@ -1,5 +1,0 @@
-\THEOREM WCAT_11 word_base
-|- !m n (wm1::PWORDLEN m) (wm2::PWORDLEN m) (wn1::PWORDLEN n)
-      (wn2::PWORDLEN n).
-     (WCAT (wm1,wn1) = WCAT (wm2,wn2)) = (wm1 = wm2) /\ (wn1 = wn2)
-\ENDTHEOREM

@@ -1,4 +1,0 @@
-\THEOREM WMAP_WSEG word_bitop
-|- !n (w::PWORDLEN n) m k.
-     m + k <= n ==> !f. WMAP f (WSEG m k w) = WSEG m k (WMAP f w)
-\ENDTHEOREM

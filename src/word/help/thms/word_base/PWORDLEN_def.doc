@@ -1,3 +1,0 @@
-\THEOREM PWORDLEN_def word_base
-|- !n. PWORDLEN n = {w | WORDLEN w = n}
-\ENDTHEOREM

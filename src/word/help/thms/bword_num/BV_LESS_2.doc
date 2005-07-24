@@ -1,3 +1,0 @@
-\THEOREM BV_LESS_2 bword_num
-|- !x. BV x < 2
-\ENDTHEOREM

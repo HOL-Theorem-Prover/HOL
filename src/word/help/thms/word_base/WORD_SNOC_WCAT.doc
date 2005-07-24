@@ -1,3 +1,0 @@
-\THEOREM WORD_SNOC_WCAT word_base
-|- !l x. WORD (SNOC x l) = WCAT (WORD l,WORD [x])
-\ENDTHEOREM

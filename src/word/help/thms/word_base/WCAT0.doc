@@ -1,3 +1,0 @@
-\THEOREM WCAT0 word_base
-|- !w. (WCAT (WORD [],w) = w) /\ (WCAT (w,WORD []) = w)
-\ENDTHEOREM

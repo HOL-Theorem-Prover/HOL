@@ -1,6 +1,0 @@
-\THEOREM NLIST_DEF word_num
-|- (!frep b m. NLIST 0 frep b m = []) /\
-   !n frep b m.
-     NLIST (SUC n) frep b m =
-     SNOC (frep (m MOD b)) (NLIST n frep b (m DIV b))
-\ENDTHEOREM

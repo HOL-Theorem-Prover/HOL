@@ -1,3 +1,0 @@
-\THEOREM word_base0_def word_base
-|- word_base0 = (\a. mk_word ((\a. CONSTR 0 a (\n. BOTTOM)) a))
-\ENDTHEOREM

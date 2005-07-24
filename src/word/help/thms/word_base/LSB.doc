@@ -1,3 +1,0 @@
-\THEOREM LSB word_base
-|- !n (w::PWORDLEN n). 0 < n ==> (LSB w = BIT 0 w)
-\ENDTHEOREM

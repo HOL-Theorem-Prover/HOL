@@ -1,3 +1,0 @@
-\THEOREM WSEG_WORD_LENGTH word_base
-|- !n (w::PWORDLEN n). WSEG n 0 w = w
-\ENDTHEOREM

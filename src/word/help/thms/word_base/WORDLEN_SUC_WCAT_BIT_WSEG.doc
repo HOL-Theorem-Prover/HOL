@@ -1,3 +1,0 @@
-\THEOREM WORDLEN_SUC_WCAT_BIT_WSEG word_base
-|- !n (w::PWORDLEN (SUC n)). w = WCAT (WORD [BIT n w],WSEG n 0 w)
-\ENDTHEOREM

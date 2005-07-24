@@ -1,3 +1,0 @@
-\THEOREM WORD_11 word_base
-|- !l l'. (WORD l = WORD l') = (l = l')
-\ENDTHEOREM

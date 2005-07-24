@@ -1,4 +1,0 @@
-\THEOREM WSEG_NBWORD bword_num
-|- !m k n.
-     m + k <= n ==> !l. WSEG m k (NBWORD n l) = NBWORD m (l DIV 2 ** k)
-\ENDTHEOREM

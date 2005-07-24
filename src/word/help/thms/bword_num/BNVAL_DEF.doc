@@ -1,3 +1,0 @@
-\THEOREM BNVAL_DEF bword_num
-|- !l. BNVAL (WORD l) = LVAL BV 2 l
-\ENDTHEOREM

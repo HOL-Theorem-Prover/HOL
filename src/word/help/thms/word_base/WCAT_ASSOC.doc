@@ -1,3 +1,0 @@
-\THEOREM WCAT_ASSOC word_base
-|- !w1 w2 w3. WCAT (w1,WCAT (w2,w3)) = WCAT (WCAT (w1,w2),w3)
-\ENDTHEOREM

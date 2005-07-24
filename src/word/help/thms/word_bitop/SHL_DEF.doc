@@ -1,8 +1,0 @@
-\THEOREM SHL_DEF word_bitop
-|- !f w b.
-     SHL f w b =
-     (BIT (PRE (WORDLEN w)) w,
-      WCAT
-        (WSEG (PRE (WORDLEN w)) 0 w,
-         (if f then WSEG 1 0 w else WORD [b])))
-\ENDTHEOREM

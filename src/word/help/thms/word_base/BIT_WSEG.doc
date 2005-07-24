@@ -1,4 +1,0 @@
-\THEOREM BIT_WSEG word_base
-|- !n (w::PWORDLEN n) m k j.
-     m + k <= n ==> j < m ==> (BIT j (WSEG m k w) = BIT (j + k) w)
-\ENDTHEOREM

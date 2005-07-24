@@ -1,3 +1,0 @@
-\THEOREM BNVAL_NBWORD bword_num
-|- !n m. m < 2 ** n ==> (BNVAL (NBWORD n m) = m)
-\ENDTHEOREM

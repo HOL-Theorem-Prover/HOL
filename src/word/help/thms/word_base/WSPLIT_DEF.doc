@@ -1,3 +1,0 @@
-\THEOREM WSPLIT_DEF word_base
-|- !m l. WSPLIT m (WORD l) = (WORD (BUTLASTN m l),WORD (LASTN m l))
-\ENDTHEOREM

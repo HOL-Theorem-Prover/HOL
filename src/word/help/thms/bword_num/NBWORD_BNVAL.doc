@@ -1,3 +1,0 @@
-\THEOREM NBWORD_BNVAL bword_num
-|- !n (w::PWORDLEN n). NBWORD n (BNVAL w) = w
-\ENDTHEOREM

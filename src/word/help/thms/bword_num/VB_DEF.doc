@@ -1,3 +1,0 @@
-\THEOREM VB_DEF bword_num
-|- !n. VB n = ~(n MOD 2 = 0)
-\ENDTHEOREM

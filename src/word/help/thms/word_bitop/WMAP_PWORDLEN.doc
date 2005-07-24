@@ -1,3 +1,0 @@
-\THEOREM WMAP_PWORDLEN word_bitop
-|- !(w::PWORDLEN n) f. WMAP f w IN PWORDLEN n
-\ENDTHEOREM

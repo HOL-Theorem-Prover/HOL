@@ -1,3 +1,0 @@
-\THEOREM PBITOP_PWORDLEN word_bitop
-|- !(op::PBITOP) n (w::PWORDLEN n). op w IN PWORDLEN n
-\ENDTHEOREM

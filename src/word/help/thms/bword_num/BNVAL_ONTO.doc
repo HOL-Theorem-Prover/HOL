@@ -1,3 +1,0 @@
-\THEOREM BNVAL_ONTO bword_num
-|- !w. ?n. BNVAL w = n
-\ENDTHEOREM

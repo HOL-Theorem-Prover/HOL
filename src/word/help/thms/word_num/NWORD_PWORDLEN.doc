@@ -1,3 +1,0 @@
-\THEOREM NWORD_PWORDLEN word_num
-|- !n f b m. NWORD n f b m IN PWORDLEN n
-\ENDTHEOREM

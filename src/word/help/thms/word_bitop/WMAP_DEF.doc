@@ -1,3 +1,0 @@
-\THEOREM WMAP_DEF word_bitop
-|- !f l. WMAP f (WORD l) = WORD (MAP f l)
-\ENDTHEOREM

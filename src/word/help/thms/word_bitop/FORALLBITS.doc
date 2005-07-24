@@ -1,3 +1,0 @@
-\THEOREM FORALLBITS word_bitop
-|- !n (w::PWORDLEN n) P. FORALLBITS P w = !k. k < n ==> P (BIT k w)
-\ENDTHEOREM

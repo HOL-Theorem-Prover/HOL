@@ -1,3 +1,0 @@
-\THEOREM NVAL1 word_num
-|- !f b x. NVAL f b (WORD [x]) = f x
-\ENDTHEOREM

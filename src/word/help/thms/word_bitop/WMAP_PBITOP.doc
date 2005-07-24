@@ -1,3 +1,0 @@
-\THEOREM WMAP_PBITOP word_bitop
-|- !f. WMAP f IN PBITOP
-\ENDTHEOREM

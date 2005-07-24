@@ -1,3 +1,0 @@
-\THEOREM NBWORD0 bword_num
-|- !m. NBWORD 0 m = WORD []
-\ENDTHEOREM

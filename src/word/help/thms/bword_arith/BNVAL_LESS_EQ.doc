@@ -1,3 +1,0 @@
-\THEOREM BNVAL_LESS_EQ bword_arith
-|- !n (w::PWORDLEN n). BNVAL w <= 2 ** n - 1
-\ENDTHEOREM

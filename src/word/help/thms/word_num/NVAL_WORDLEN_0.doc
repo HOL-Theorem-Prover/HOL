@@ -1,3 +1,0 @@
-\THEOREM NVAL_WORDLEN_0 word_num
-|- !(w::PWORDLEN 0) fv r. NVAL fv r w = 0
-\ENDTHEOREM

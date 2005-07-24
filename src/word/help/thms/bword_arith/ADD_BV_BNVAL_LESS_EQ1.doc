@@ -1,5 +1,0 @@
-\THEOREM ADD_BV_BNVAL_LESS_EQ1 bword_arith
-|- !n x1 x2 cin (w1::PWORDLEN n) (w2::PWORDLEN n).
-     (BV x1 + BV x2 + (BNVAL w1 + (BNVAL w2 + BV cin))) DIV
-     2 ** SUC n <= 1
-\ENDTHEOREM

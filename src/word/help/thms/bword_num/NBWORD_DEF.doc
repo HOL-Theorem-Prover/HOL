@@ -1,3 +1,0 @@
-\THEOREM NBWORD_DEF bword_num
-|- !n m. NBWORD n m = WORD (NLIST n VB 2 m)
-\ENDTHEOREM
