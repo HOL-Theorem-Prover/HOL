@@ -1,6 +1,6 @@
 (* app load ["pred_setSimps","bitsTheory","armTheory","coreTheory","lemmasTheory",
              "interruptsTheory","compLib","word32Lib"]; *)
-open HolKernel boolLib bossLib Q arithmeticTheory whileTheory
+open HolKernel boolLib bossLib Q bitsLib arithmeticTheory whileTheory
      bitsTheory word32Theory armTheory coreTheory
      lemmasTheory compLib interruptsTheory;
 
