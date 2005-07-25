@@ -188,7 +188,8 @@ val numeral_log2 = store_thm("numeral_log2",
 
 val _ = 
  let open EmitML
- in exportML("numeral_bits", 
+ in exportML (!Globals.exportMLPath)
+   ("numeral_bits", 
      MLSIG  "type num = numML.num" :: OPEN ["num"] 
      ::
      map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])

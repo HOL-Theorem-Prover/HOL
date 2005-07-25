@@ -30,6 +30,7 @@ sig
   val make_let              : locn.locn -> (binder_in_env list * preterm_in_env) list
                                 -> preterm_in_env -> preterm_in_env
   val make_set_abs          : locn.locn -> preterm_in_env * preterm_in_env -> preterm_in_env
+(*  val make_seq_abs          : locn.locn -> preterm_in_env * preterm_in_env -> preterm_in_env *)
 
   val binder_restrictions   : unit -> (string * string) list
   val associate_restriction : locn.locn -> string * string -> unit

@@ -176,8 +176,9 @@ val FST_o_MMAP = store_thm
 
 val _ = 
  let open EmitML
- in Lib.try exportML("state_transformer", 
-        map DEFN [UNIT_DEF, BIND_DEF, MMAP_DEF, JOIN_DEF])
+ in Lib.try exportML (!Globals.exportMLPath)
+           ("state_transformer", 
+            map DEFN [UNIT_DEF, BIND_DEF, MMAP_DEF, JOIN_DEF])
  end;
 
 val _ = export_theory ();

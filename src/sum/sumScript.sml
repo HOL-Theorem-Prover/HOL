@@ -472,9 +472,10 @@ val ISR_THM = Q.prove
 
 val _ =
  let open EmitML combinSyntax
- in exportML ("sum",
-    DATATYPE (ParseDatatype.parse `sum = INL of 'a | INR of 'b`)
-    :: map DEFN [CONJ OUTL OUTL_INR, OUTR, ISL_THM, ISR_THM])
+ in exportML (!Globals.exportMLPath)
+    ("sum",
+      DATATYPE (ParseDatatype.parse `sum = INL of 'a | INR of 'b`)
+      :: map DEFN [CONJ OUTL OUTL_INR, OUTR, ISL_THM, ISR_THM])
  end;
 
 val _ = export_theory();

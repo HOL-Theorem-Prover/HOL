@@ -23,7 +23,6 @@ open HolKernel Parse boolLib InductiveDefinition
 type constructor  = string * hol_type list
 type tyspec       = hol_type * constructor list
 
-infix THEN THENC THENL |-> ORELSEC; infixr --> ##;
 
 val ERR = mk_HOL_ERR "ind_types";
 

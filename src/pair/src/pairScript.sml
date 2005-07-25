@@ -770,8 +770,10 @@ val _ = EmitML.is_comma_hook := Term.same_const comma_tm;
 val _ = EmitML.is_pair_hook := is_pair
 val _ = EmitML.dest_pair_hook := dest_pair
 
-val _ = EmitML.exportML ("pair",
-          map EmitML.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM]);
+val _ = 
+  EmitML.exportML (!Globals.exportMLPath)
+   ("pair",
+     map EmitML.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM]);
 
 val _ = adjoin_to_theory
 {sig_ps = NONE,

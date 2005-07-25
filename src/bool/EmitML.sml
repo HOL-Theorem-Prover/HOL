@@ -897,18 +897,20 @@ fun emit_adjoin_call thy consts =
 (* is properly updated when the theory is loaded.                            *)
 (*---------------------------------------------------------------------------*)
 
-fun exportML (s,elems) =
-  let val path = Path.concat(Globals.HOLDIR,"src/theoryML/")
-      val (sigStrm,sigPPstrm) = mk_file_ppstream (path^s^"ML.sig")
-      val (structStrm,structPPstrm) = mk_file_ppstream (path^s^"ML.sml")
+val sigSuffix = ref "ML.sig";
+val structSuffix = ref "ML.sml";
+
+fun exportML path (s,elems) =
+  let val (sigStrm,sigPPstrm) = mk_file_ppstream (path^s^ !sigSuffix)
+      val (structStrm,structPPstrm) = mk_file_ppstream (path^s^ !structSuffix)
       val consts = install_consts s elems
   in
    (pp_sig sigPPstrm (s,elems);
     pp_struct structPPstrm (s,elems,map (fst o dest_const) consts);
     TextIO.closeOut sigStrm;
     TextIO.closeOut structStrm;
-    HOL_MESG ("exportML: wrote files "^s^"ML.sig and \n\
-     \                                     "^s^"ML.sml \n\
+    HOL_MESG ("exportML: wrote files "^s^ !sigSuffix ^" and \n\
+     \                                     "^s^ !structSuffix^" \n\
               \ in directory "^path);
     emit_adjoin_call s consts
    )
@@ -916,8 +918,7 @@ fun exportML (s,elems) =
                 raise wrap_exn "EmitML" "exportML" e)
   end handle Io _ =>
              HOL_WARNING "EmitML" "exportML"
-                         "I/O error prevented ML export to distribution's \
-                         \theoryML directory"
+              ("I/O error prevented exporting files to "^Lib.quote path)
            | e => Raise e;
 
 end (* struct *)

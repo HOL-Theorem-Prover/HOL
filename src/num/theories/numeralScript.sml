@@ -746,7 +746,8 @@ val _ = adjoin_to_theory
 val _ = 
   let open EmitML whileTheory pairSyntax combinSyntax
   in 
-    exportML("num",
+    exportML (!Globals.exportMLPath)
+    ("num",
      DATATYPE (ParseDatatype.parse `num = ZERO
                                         | BIT1 of num
                                         | BIT2 of num`)

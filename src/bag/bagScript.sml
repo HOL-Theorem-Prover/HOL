@@ -1818,7 +1818,8 @@ val _ =
  let open EmitML combinSyntax
      val bagdecl = scoped_parse `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`
      val _ = new_type("bag",1)
-  in try exportML ("bag",
+  in try exportML (!Globals.exportMLPath)
+   ("bag",
     ABSDATATYPE (["'a"], bagdecl)
     :: OPEN ["num", "set"]
     :: MLSIG "type num = numML.num"

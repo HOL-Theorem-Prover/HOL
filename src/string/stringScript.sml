@@ -542,7 +542,8 @@ val _ = adjoin_to_theory
 
 val _ = 
  let open EmitML
- in exportML("string",
+ in exportML (!Globals.exportMLPath)
+   ("string",
     OPEN ["num", "list", "option"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "type char = Char.char"

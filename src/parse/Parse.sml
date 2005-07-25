@@ -479,6 +479,9 @@ in
     case t of
       APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
         make_set_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
+(*    |  APP(l,APP(_,IDENT (_,"seq_spec special"), t1), t2) =>
+        make_seq_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
+*)
     | APP(l, t1, t2)     => list_make_comb l (map to_ptmInEnv [t1, t2])
     | IDENT (l, s)       => make_atom ginfo l s
     | QIDENT (l, s1, s2) => make_qconst ginfo l (s1,s2)

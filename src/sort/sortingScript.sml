@@ -554,12 +554,13 @@ val _ = export_theory();
 
 val _ =
  let open EmitML
- in exportML("sorting",
-  [OPEN ["list"],
-   DEFN PART_DEF,
-   DEFN PARTITION_DEF,
-   DEFN QSORT_DEF,
-   DEFN SORTED_DEF])
+ in exportML (!Globals.exportMLPath)
+    ("sorting",
+       [OPEN ["list"],
+        DEFN PART_DEF,
+        DEFN PARTITION_DEF,
+        DEFN QSORT_DEF,
+        DEFN SORTED_DEF])
  end;
 
 end;

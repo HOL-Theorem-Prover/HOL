@@ -1,4 +1,5 @@
-functor wordFunctor (val bits : int) =
+functor wordFunctor (val bits : int
+                     val MLpath : string) =
 struct
 
 (*
@@ -2790,7 +2791,8 @@ val _ =
      val TOPstr = term_to_string (rhs(concl TOPNUM_THMa))
      val MAXstr = term_to_string (rhs(concl MAXNUM_THMa))
      val deNUMERAL = PURE_REWRITE_RULE[NUMERAL_DEF]
- in exportML(wordn,
+ in exportML MLpath 
+   (wordn,
     OPEN ["num", "bits", "numeral_bits"]
     :: EQDATATYPE ([],ParseDatatype.parse [QUOTE (wordn^" = n2w of num")])
     :: MLSIG "type num = numML.num"

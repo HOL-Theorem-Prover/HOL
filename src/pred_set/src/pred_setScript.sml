@@ -4047,7 +4047,8 @@ val _ =
  let open EmitML combinSyntax
      val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set`
      val _ = new_type("set",1)
-  in try exportML ("set",
+  in try exportML (!Globals.exportMLPath)
+   ("set",
     ABSDATATYPE (["'a"], setdecl)
     :: OPEN ["num"]
     :: MLSIG "type num = numML.num"

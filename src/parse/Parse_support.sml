@@ -483,4 +483,45 @@ fun make_set_abs l (tm1,tm2) (E as {scope=scope0,...}:env) =
          end
    end;
 
+(*---------------------------------------------------------------------------
+ * Sequence abstractions [| tm1 | tm2 |]. 
+ *
+ * You can't make a llist unless llistTheory is an ancestor.
+ * The call to make_seq_comp_const ensure this.
+ *---------------------------------------------------------------------------*)
+(*
+fun make_seqComp_const l fname s E =
+ (gen_const l s, E)
+  handle HOL_ERR _
+    => raise ERRORloc fname l ("The theory "^Lib.quote "llist"^" is not loaded");
+
+fun make_seq_abs l (tm1,tm2) (E as {scope=scope0,...}:env) =
+   let val (_,(e1:env)) = tm1 empty_env
+       val (_,(e2:env)) = tm2 empty_env
+       val (_,(e3:env)) = tm2 e1
+       val tm1_fv_names = map fst (#free e1)
+       val tm2_fv_names = map fst (#free e2)
+       val fv_names = if null tm1_fv_names then tm2_fv_names else
+                      if null tm2_fv_names then tm1_fv_names else
+                      intersect tm1_fv_names tm2_fv_names
+       val init_fv = #free e3
+   in
+   case gather (fn (name,_) => mem name fv_names) init_fv
+     of [] => raise ERRORloc "make_seq_abs" l "no free variables in set abstraction"
+      | quants =>
+         let val quants' = map
+                (fn (bnd as (Name,Ty)) =>
+                     (fn (s:string) => fn E =>
+                       ((fn b => Preterm.Abs{Bvar=Preterm.Var{Name=Name,Ty=Ty,Locn=l(*ugh*)},
+                                             Body=b, Locn=l}),
+                                add_scope(bnd,E))))
+               (rev quants) (* make_vstruct expects reverse occ. order *)
+         in list_make_comb l
+               [(make_seqComp_const l "make_seq_abs" "SeqComp"),
+                (bind_term l "\\" [make_vstruct l quants' NONE]
+                          (list_make_comb l [make_const l ",",tm1,tm2]))] E
+         end
+   end;
+*)
+
 end; (* Parse_support *)
