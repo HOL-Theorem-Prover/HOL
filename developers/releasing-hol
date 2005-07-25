@@ -45,13 +45,6 @@ else
     echo "Local HOL directory looks bogus" >&2
     exit 1
 fi
-if [ -r $localholdir/src/word/help/thms/bword_arith ]
-then
-    :
-else
-    echo "Can't find word theories' theorems"
-    exit 1
-fi
 
 if [ ! -x $mosmldir/bin/mosml ]
 then
@@ -92,8 +85,20 @@ else
   echo
 fi
 
-echo Copying word theorems from local installation
-/bin/cp -R $localholdir/src/word/help/thms /tmp/hol98/src/word/help
+echo -n "Copying various theorems from local installation: "
+for i in word pair res_quan
+do
+  echo -n "$i "
+  if /bin/cp -R $localholdir/src/$i/help/thms /tmp/hol98/src/$i/help 2> /dev/null
+  then
+      :
+  else
+      echo
+      echo "Couldn't find theorems for $i"
+      exit 1
+  fi
+done
+echo
 
 echo Removing all .cvsignore files
 find hol98 -name .cvsignore -exec /bin/rm \{} \;
