@@ -11,7 +11,7 @@
             "BasicProvers", "Q", "SingleStep", "metisLib"];
 *)
 
-open HolKernel boolLib 
+open HolKernel boolLib
      numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib;
 
 (* ---------------------------------------------------------------------*)
@@ -279,7 +279,7 @@ val DEST_STRING_LEMS = Q.store_thm
 ("DEST_STRING_LEMS",
  `!s. ((DEST_STRING s = NONE) = (s = "")) /\
       ((DEST_STRING s = SOME(c,t)) = (s = STRING c t))`,
- GEN_TAC 
+ GEN_TAC
    THEN STRIP_ASSUME_TAC (SPEC_ALL STRING_CASES)
    THEN RW_TAC list_ss [DEST_STRING]);
 
@@ -354,7 +354,7 @@ val EXPLODE_DEST_STRING = Q.store_thm
  `!s. EXPLODE s = case DEST_STRING s
                    of NONE -> []
                    || SOME(c,t) -> c::EXPLODE t`,
- GEN_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `s` STRING_CASES) 
+ GEN_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `s` STRING_CASES)
  THEN RW_TAC std_ss [EXPLODE_EQNS,DEST_STRING]);
 
 
@@ -432,7 +432,7 @@ val STRLEN_CAT = Q.store_thm
  ---------------------------------------------------------------------------*)
 
 val isPREFIX_defn = Hol_defn "isPREFIX"
-   `isPREFIX s1 s2 = 
+   `isPREFIX s1 s2 =
        case (DEST_STRING s1, DEST_STRING s2)
         of (NONE, _) -> T
         || (SOME __, NONE) -> F
@@ -441,7 +441,7 @@ val isPREFIX_defn = Hol_defn "isPREFIX"
 val (isPREFIX_DEF,isPREFIX_IND_0) =
  Defn.tprove
    (isPREFIX_defn,
-    WF_REL_TAC `measure (STRLEN o FST)` 
+    WF_REL_TAC `measure (STRLEN o FST)`
       THEN RW_TAC std_ss []
       THEN FULL_SIMP_TAC std_ss [DEST_STRING_LEMS]
       THEN RW_TAC arith_ss [STRLEN_DEF]);
@@ -453,7 +453,7 @@ val isPREFIX_IND = Q.store_thm
  `!P. (!s1 s2.
          (!c1 c2 t1 t2.
            (DEST_STRING s1 = SOME (c1,t1)) /\
-           (DEST_STRING s2 = SOME (c2,t2)) ==> P t1 t2) ==> P s1 s2) 
+           (DEST_STRING s2 = SOME (c2,t2)) ==> P t1 t2) ==> P s1 s2)
        ==> !v v1. P v v1`,
  METIS_TAC [pairTheory.ABS_PAIR_THM,isPREFIX_IND_0]);
 
@@ -462,7 +462,7 @@ val isPREFIX_STRCAT = Q.store_thm
 ("isPREFIX_STRCAT",
  `!s1 s2. isPREFIX s1 s2 = ?s3. s2 = STRCAT s1 s3`,
  recInduct isPREFIX_IND
-   THEN REPEAT STRIP_TAC 
+   THEN REPEAT STRIP_TAC
    THEN RW_TAC list_ss [Once isPREFIX_DEF]
    THEN REPEAT CASE_TAC
    THEN FULL_SIMP_TAC list_ss [DEST_STRING_LEMS,STRCAT_EQNS]
@@ -534,13 +534,13 @@ val _ = adjoin_to_theory
      S "val _ = ConstMapML.insert (prim_mk_const{Name=\"DEST_STRING\",Thy=\"string\"});";
      NL();
      S "val _ = ConstMapML.insert (prim_mk_const{Name=\"STRING\",Thy=\"string\"});";
-     NL(); 
+     NL();
      S "val _ = ConstMapML.prim_insert(prim_mk_const{Name=\"EMPTYSTRING\",Thy=\"string\"},"; NL();
      S "                   (\"\",\"\\\"\\\"\",mk_type(\"string\",[])));";
      NL()
   end)}
 
-val _ = 
+val _ =
  let open EmitML
  in exportML (!Globals.exportMLPath)
    ("string",
@@ -562,3 +562,9 @@ val _ =
  end;
 
 val _ = export_theory();
+val _ = let
+  val ^^ = Path.concat
+  infix ^^
+in
+  export_theory_as_docfiles ("help" ^^ "thms")
+end;
