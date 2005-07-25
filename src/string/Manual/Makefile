@@ -40,8 +40,6 @@ ids:
 theorems:
 	@echo "\chapter{Pre-proved Theorems}" > theorems.tex
 	@echo "\input{theorems-intro}" >> theorems.tex
-	@echo "\section{Definitions}">>theorems.tex
-	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/defs theorems.tex
 	@echo "\section{Theorems}">>theorems.tex
 	/bin/sh ${DOCTOTEX} ${DOCTOTEXSED} ${Help}/thms theorems.tex
 
