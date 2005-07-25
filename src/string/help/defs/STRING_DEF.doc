@@ -1,3 +1,0 @@
-\THEOREM STRING_DEF string
-|- !a s. STRING a s = ABS_string(Node(INR a)[REP_string s])
-\ENDTHEOREM
