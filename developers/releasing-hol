@@ -86,7 +86,7 @@ else
 fi
 
 echo -n "Copying various theorems from local installation: "
-for i in word pair res_quan
+for i in word pair res_quan string
 do
   echo -n "$i "
   if /bin/cp -R $localholdir/src/$i/help/thms /tmp/hol98/src/$i/help 2> /dev/null
