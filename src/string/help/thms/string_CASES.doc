@@ -1,3 +1,0 @@
-\THEOREM string_CASES string
-|- !s. (s = ``) \/ (?s' a. s = STRING a s')
-\ENDTHEOREM

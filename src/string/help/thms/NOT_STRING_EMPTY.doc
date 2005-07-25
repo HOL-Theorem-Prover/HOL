@@ -1,3 +1,0 @@
-\THEOREM NOT_STRING_EMPTY string
-|- !a s. ~(`` = STRING a s)
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM string_Induct string
-|- !P. P `` /\ (!s. P s ==> (!a. P(STRING a s))) ==> (!s. P s)
-\ENDTHEOREM
