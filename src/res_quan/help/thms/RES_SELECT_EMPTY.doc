@@ -1,3 +1,0 @@
-\THEOREM RES_SELECT_EMPTY res_quan
-|- !p. RES_SELECT {} p = @x. F
-\ENDTHEOREM

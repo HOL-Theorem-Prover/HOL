@@ -1,3 +1,0 @@
-\THEOREM RES_FORALL_UNIQUE res_quan
-|- !P j. (!i::$= j. P i) = P j
-\ENDTHEOREM

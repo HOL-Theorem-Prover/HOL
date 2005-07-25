@@ -1,3 +1,0 @@
-\THEOREM RES_FORALL res_quan
-|- !P f. RES_FORALL P f = !x. x IN P ==> f x
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM RES_EXISTS_EMPTY res_quan
-|- !p. ~RES_EXISTS {} p
-\ENDTHEOREM

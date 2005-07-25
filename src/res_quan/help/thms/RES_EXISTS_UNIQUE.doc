@@ -1,5 +1,0 @@
-\THEOREM RES_EXISTS_UNIQUE res_quan
-|- !P f.
-     RES_EXISTS_UNIQUE P f =
-     (?x::P. f x) /\ !x y::P. f x /\ f y ==> (x = y)
-\ENDTHEOREM

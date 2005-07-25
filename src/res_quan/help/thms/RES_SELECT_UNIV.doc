@@ -1,3 +1,0 @@
-\THEOREM RES_SELECT_UNIV res_quan
-|- !p. RES_SELECT UNIV p = $@ p
-\ENDTHEOREM
