@@ -1,3 +1,0 @@
-\THEOREM FORALL_PROD pair
-|- (!p. P p) = !p_1 p_2. P (p_1,p_2)
-\ENDTHEOREM

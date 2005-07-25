@@ -1,3 +1,0 @@
-\THEOREM RPROD_DEF pair
-|- !R1 R2. RPROD R1 R2 = (\(s,t) (u,v). R1 s u /\ R2 t v)
-\ENDTHEOREM

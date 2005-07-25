@@ -1,3 +1,0 @@
-\THEOREM C_UNCURRY_L pair
-|- combin$C (UNCURRY f) x = UNCURRY (combin$C (combin$C o f) x)
-\ENDTHEOREM

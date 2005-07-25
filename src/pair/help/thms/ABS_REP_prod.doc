@@ -1,6 +1,0 @@
-\THEOREM ABS_REP_prod pair
-|- (!a. ABS_prod (REP_prod a) = a) /\
-   !r.
-     (\p. ?x y. p = (\a b. (a = x) /\ (b = y))) r =
-     (REP_prod (ABS_prod r) = r)
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM pair_case_def pair
-|- pair_case = UNCURRY
-\ENDTHEOREM

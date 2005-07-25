@@ -1,3 +1,0 @@
-\THEOREM LEX_DEF_THM pair
-|- (R1 LEX R2) (a,b) (c,d) = R1 a c \/ (a = c) /\ R2 b d
-\ENDTHEOREM

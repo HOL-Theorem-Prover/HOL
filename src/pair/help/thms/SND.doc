@@ -1,3 +1,0 @@
-\THEOREM SND pair
-|- !x y. SND (x,y) = y
-\ENDTHEOREM

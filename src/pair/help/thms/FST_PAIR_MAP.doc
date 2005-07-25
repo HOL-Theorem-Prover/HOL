@@ -1,3 +1,0 @@
-\THEOREM FST_PAIR_MAP pair
-|- !p f g. FST ((f ## g) p) = f (FST p)
-\ENDTHEOREM

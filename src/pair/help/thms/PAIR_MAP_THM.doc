@@ -1,3 +1,0 @@
-\THEOREM PAIR_MAP_THM pair
-|- !f g x y. (f ## g) (x,y) = (f x,g y)
-\ENDTHEOREM

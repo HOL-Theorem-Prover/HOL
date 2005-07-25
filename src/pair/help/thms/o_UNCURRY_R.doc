@@ -1,3 +1,0 @@
-\THEOREM o_UNCURRY_R pair
-|- f o UNCURRY g = UNCURRY ($o f o g)
-\ENDTHEOREM

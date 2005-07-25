@@ -1,3 +1,0 @@
-\THEOREM CURRY_ONE_ONE_THM pair
-|- (CURRY f = CURRY g) = (f = g)
-\ENDTHEOREM

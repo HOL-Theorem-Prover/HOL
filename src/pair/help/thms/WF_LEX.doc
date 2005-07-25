@@ -1,3 +1,0 @@
-\THEOREM WF_LEX pair
-|- !R Q. WF R /\ WF Q ==> WF (R LEX Q)
-\ENDTHEOREM

@@ -1,3 +1,0 @@
-\THEOREM pair_case_thm pair
-|- pair_case f (x,y) = f x y
-\ENDTHEOREM

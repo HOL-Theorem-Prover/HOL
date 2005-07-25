@@ -1,3 +1,0 @@
-\THEOREM UNCURRY pair
-|- !f v. UNCURRY f v = f (FST v) (SND v)
-\ENDTHEOREM

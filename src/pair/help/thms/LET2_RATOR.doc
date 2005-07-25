@@ -1,3 +1,0 @@
-\THEOREM LET2_RATOR pair
-|- !M N b. (let (x,y) = M in N x y) b = (let (x,y) = M in N x y b)
-\ENDTHEOREM

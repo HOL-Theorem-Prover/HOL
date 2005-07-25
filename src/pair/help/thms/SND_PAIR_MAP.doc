@@ -1,3 +1,0 @@
-\THEOREM SND_PAIR_MAP pair
-|- !p f g. SND ((f ## g) p) = g (SND p)
-\ENDTHEOREM

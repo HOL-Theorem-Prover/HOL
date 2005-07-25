@@ -1,3 +1,0 @@
-\THEOREM PAIR_FST_SND_EQ pair
-|- !p q. (p = q) = (FST p = FST q) /\ (SND p = SND q)
-\ENDTHEOREM

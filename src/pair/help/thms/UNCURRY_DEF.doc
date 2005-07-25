@@ -1,3 +1,0 @@
-\THEOREM UNCURRY_DEF pair
-|- !f x y. UNCURRY f (x,y) = f x y
-\ENDTHEOREM
