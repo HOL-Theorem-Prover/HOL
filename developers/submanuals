@@ -1,0 +1,11 @@
+arith src/num/arith/Manual
+n_bit src/n_bit/Manual
+pair src/pair/Manual
+pred_set src/pred_set/Manual
+quotient src/quotient/Manual
+reduce src/num/reduce/Manual
+res_quan src/res_quan/Manual
+string src/string/Manual
+taut src/taut/Manual
+unwind src/unwind/Manual
+word src/word/Manual

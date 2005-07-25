@@ -3,20 +3,64 @@
 if [ $# -ne 3 ]
 then
         echo "Usage: releasing-hol <releasename> <S/F user-id> <mosmldir>"
-        echo "  <releasename> can be \"today\" for testing purposes..."
+        echo "  <releasename> can be \"today\" for testing purposes"
         exit 1
 fi
 name=$1
 userid=$2
 mosmldir=$3
+mosmldir=$(cd $mosmldir; pwd)
+
+localholdir="`dirname $0`/.."
+localholdir=$(cd $localholdir ; pwd)
+
+submandir=/tmp/$name-submanuals
+texlogs=/tmp/$name-latex-logs
+
+createdir () {
+  if mkdir $1 2> /dev/null
+  then
+      :
+  else
+    if /bin/rm -rf $1 2> /dev/null
+    then
+        mkdir $1
+    else
+        echo "Couldn't create directory $1"
+        exit 1
+    fi
+  fi
+}
+
+# initial setup
+createdir $submandir
+createdir $texlogs
+createdir "/tmp/hol98"        # where cvs co will go
+/bin/rm -r "/tmp/hol"         # final directory to be tarred
+
+if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
+then
+    :
+else
+    echo "Local HOL directory looks bogus" >&2
+    exit 1
+fi
+if [ -r $localholdir/src/word/help/thms/bword_arith ]
+then
+    :
+else
+    echo "Can't find word theories' theorems"
+    exit 1
+fi
 
 if [ ! -x $mosmldir/bin/mosml ]
 then
-    echo "No mosml in $mosmldir/bin"
+    echo "No mosml in $mosmldir/bin" >&2
     exit 1
 fi
 
 cd /tmp
+
 
 # use -r release-name for known release
 echo "Getting copy of CVS repository from SourceForge"
@@ -24,7 +68,16 @@ echo -n "Progress: "
 linecount=0
 (if [ "$name" = "today" ]
 then
-  cvs -d:ext:${userid}@cvs.sf.net:/cvsroot/hol export -D tomorrow hol98
+  if [ -d $name-cvs-cache ]
+  then
+      cat /tmp/$name-cvs-export
+      /bin/rm -r hol98
+      cp -R $name-cvs-cache hol98
+  else
+      cvs -d:ext:${userid}@cvs.sf.net:/cvsroot/hol export -D tomorrow hol98 |
+        tee /tmp/$name-cvs-export
+      cp -R hol98 $name-cvs-cache
+  fi
 else
   cvs -d:ext:${userid}@cvs.sf.net:/cvsroot/hol export -r $name hol98
 fi) 2>&1 | tee /tmp/cvs-export.log |
@@ -39,14 +92,17 @@ else
   echo
 fi
 
+echo Copying word theorems from local installation
+/bin/cp -R $localholdir/src/word/help/thms /tmp/hol98/src/word/help
+
 echo Removing all .cvsignore files
 find hol98 -name .cvsignore -exec /bin/rm \{} \;
 
 echo "Running configure script"
 cd /tmp/hol98
-$mosmldir/bin/mosml < tools/smart-configure.sml > /tmp/config-log 2>&1
+$mosmldir/bin/mosml < tools/smart-configure.sml > /tmp/$name-config-log 2>&1
 if [ $? -ne 0 ] ; then
-  echo "HOL configuration failed, consult /tmp/config.log" ; exit 1
+  echo "HOL configuration failed, consult /tmp/$name-config.log" ; exit 1
 fi
 
 
@@ -56,19 +112,16 @@ cd help/src
 ../../bin/Holmake Doc2Tex.exe
 
 echo Now building documentation
-for man_name in Reference Description Tutorial
+for man_name in Reference Description Tutorial Quick
 do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo Making $man_name
     cd /tmp/hol98/Manual/$man_name
-    if make all > /tmp/$man_name-latex.log 2>&1
+    if make all > $texlogs/$man_name.log 2>&1
     then :
     else echo Build failed ; exit 1
     fi
-    for i in .dvi .ps .pdf
-    do
-        mv $lcname$i /tmp/$name-$lcname$i
-    done
+    mv $lcname.pdf /tmp/$name-$lcname.pdf
 done
 
 echo Also removing Buddy documentation from distribution
@@ -78,79 +131,50 @@ mv hol98/src/muddy/muddyC/buddy/doc/*.ps .
 echo Building HolBddLib documentation
 cd /tmp/hol98/src/HolBdd/Manual
 if (latex HolBdd ; bibtex HolBdd ; latex HolBdd ; latex HolBdd ;
-    dvips -G0 -Ppdf HolBdd ; ps2pdf HolBdd.ps) > /tmp/holbdd-latex.log 2>&1
+    dvips -G0 -Ppdf HolBdd ;
+    ps2pdf HolBdd.ps) > $texlogs/holbdd.log 2>&1
 then
    :
 else
-   echo Build failed
+   echo "Build failed, see /tmp/$texlogs/holsat.log"
    exit 1
 fi
-for i in .dvi .ps .pdf
-do
-    mv HolBdd$i /tmp/$name-HolBdd$i
-done
+mv HolBdd.pdf /tmp/$name-HolBdd.pdf
 
 echo Building HolSatLib documentation
 cd /tmp/hol98/src/HolSat/doc
 if (latex HolSatLib ; latex HolSatLib ; dvips -G0 -Ppdf HolSatLib ;
-    ps2pdf HolSatLib.ps) > /tmp/holsat-latex.log 2>&1
+    ps2pdf HolSatLib.ps) > $texlogs/holsat.log 2>&1
 then
    :
 else
-   echo "Build failed, see /tmp/holsat-latex.log" ; exit 1
+   echo "Build failed, see $texlogs/holsat.log" ; exit 1
 fi
-for i in .dvi .ps .pdf
-do
-    mv HolSatLib$i /tmp/$name-HolSatLib$i
-done
+mv HolSatLib.pdf /tmp/$name-HolSatLib.pdf
 
-for lib_name in n_bit
-do
-    echo Building $lib_name documentation
-    cd /tmp/hol98/src/$lib_name/Manual
-    if (make all) > /tmp/$lib_name-latex.log 2>&1
-    then
-       :
-    else
-       echo "Build failed, see /tmp/$lib_name-latex.log" ; exit 1
-    fi
-    for i in .dvi .pdf
-    do
-        mv word$i /tmp/$name-$lib_name$i
-    done
-done
 
-for lib_name in pair pred_set quotient res_quan string taut unwind word
-do
-    echo Building $lib_name documentation
-    cd /tmp/hol98/src/$lib_name/Manual
-    if (make all) > /tmp/$lib_name-latex.log 2>&1
-    then
-       :
-    else
-       echo "Build failed, see /tmp/$lib_name-latex.log" ; exit 1
-    fi
-    for i in .dvi .ps .pdf
-    do
-        mv $lib_name$i /tmp/$name-$lib_name$i
-    done
-done
 
-for lib_name in arith reduce
+while read helpname dir
 do
-    echo Building num/$lib_name documentation
-    cd /tmp/hol98/src/num/$lib_name/Manual
-    if (make all) > /tmp/num-$lib_name-latex.log 2>&1
-    then
-       :
-    else
-       echo "Build failed, see /tmp/num-$lib_name-latex.log" ; exit 1
-    fi
-    for i in .dvi .ps .pdf
-    do
-        mv $lib_name$i /tmp/$name-$lib_name$i
-    done
-done
+  echo "Building $helpname sub-manual in $dir"
+  cd /tmp/hol98/$dir
+  if make all > $texlogs/$helpname.log 2>&1
+  then
+      :
+  else
+      echo "Build failed, see $texlogs/$helpname.log" ; exit 1
+  fi
+  if [ $(ls -1 *.pdf | wc -l) -ne 1 ]
+  then
+      echo "Too many or too few documentation files in directory $dir"
+      exit 1
+  else
+      mv *.pdf $submandir/$helpname.pdf
+  fi
+  cd /tmp
+  /bin/rm -r /tmp/hol98/$dir
+done < $localholdir/developers/submanuals
+
 
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
@@ -163,8 +187,9 @@ cd /tmp/hol98
 mv bin/README ../bin-README
 /bin/rm tools/Holmake/*.{uo,ui} tools/hol98-mode.el
 /bin/rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
-/bin/rm tools/Holmake/Holmake_{parse.{sig,sml},tokens.sml}
+/bin/rm tools/Holmake/Holmake_tokens.sml
 (cd tools/quote-filter ; ../../bin/Holmake cleanAll)
+(cd tools/mllex ; ../../bin/Holmake cleanAll)
 (cd help/src ; ../../bin/Holmake cleanAll)
 /bin/rm bin/*
 
