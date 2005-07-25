@@ -1,11 +1,15 @@
-(*                              TEA, a Tiny Encryption Algorithm                                  *)
-(* TEA routine is a Feistel type routine although addition and subtraction are used as the        *)
-(* reversible operators rather than XOR. The routine relies on the alternate use of XOR and       *)
-(* ADD to provide nonlinearity. A dual shift causes all bits of the key and data to be mixed      *)
-(* repeatedly.The number of rounds before a single bit change of the data or key has spread       *)
-(* very close to 32 is at most six, so that sixteen cycles may suffice and the authors suggest 32.*)
-(* The key is set at 128 bits.                                                                    *)
-(* See http://www.ftp.cl.cam.ac.uk/ftp/papers/djw-rmn/djw-rmn-tea.html for more information       *)
+(*---------------------------------------------------------------------------*)
+(* TEA, a Tiny Encryption Algorithm                                          *)
+(* TEA routine is a Feistel type routine although addition and subtraction   *)
+(* are used as the reversible operators rather than XOR. The routine relies  *)
+(* on the alternate use of XOR and ADD to provide nonlinearity. A dual shift *)
+(* causes all bits of the key and data to be mixed repeatedly.The number of  *)
+(* rounds before a single bit change of the data or key has spread very      *)
+(* close to 32 is at most six, so that sixteen cycles may suffice and the    *)
+(* authors suggest 32. The key is set at 128 bits.                           *)
+(* See http://www.ftp.cl.cam.ac.uk/ftp/papers/djw-rmn/djw-rmn-tea.html       *)
+(* for more information.                                                     *)
+(*---------------------------------------------------------------------------*)
 
 (* For interactive work
   quietdec := true;
@@ -17,7 +21,6 @@
 
 open HolKernel Parse boolLib bossLib 
      pairTools numLib metisLib pairTheory word32Theory arithmeticTheory;
-
 
 (*---------------------------------------------------------------------------*)
 (* Make bindings to pre-existing stuff                                       *)
@@ -32,7 +35,7 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 val _ = new_theory "TEA";
 
 (*---------------------------------------------------------------------------*)
-(* Type Definition                                                           *)
+(* Cipher types                                                              *)
 (*---------------------------------------------------------------------------*)
 
 val _ = type_abbrev("block", ``:word32 # word32``);
@@ -88,7 +91,7 @@ val OneRound_Inversion = Q.store_thm
   );
 
 (*-------------------------------------------------------------------------------*)
-(* 32 rounds of computation							 *)
+(* Rounds of computation							 *)
 (*-------------------------------------------------------------------------------*)
 
 val (Rounds_def, Rounds_ind) = Defn.tprove
@@ -111,14 +114,16 @@ val _ = computeLib.add_persistent_funs
             ("InvRounds_def",InvRounds_def)];
 
 (*---------------------------------------------------------------------------*)
-(* Encrypt and Decrypt                                                       *)
+(* Encrypt and Decrypt (32 rounds)                                           *)
 (*---------------------------------------------------------------------------*)
 
-val TEAEncrypt_def = Define `
+val TEAEncrypt_def = 
+ Define `
     TEAEncrypt keys txt =
          FST (Rounds 32 (txt,keys,0w))`;
 
-val TEADecrypt_def = Define `
+val TEADecrypt_def = 
+ Define `
     TEADecrypt keys txt = 
        FST (InvRounds 32 (txt,keys,DELTA << 5))`;
 
@@ -170,9 +175,10 @@ val TEA_LEMMA = Q.store_thm
 (*---------------------------------------------------------------------------*)
 (* Basic theorem about encryption/decryption                                 *)
 (*---------------------------------------------------------------------------*)
-val TEA_def = Define
- `TEA keys =
-    (TEAEncrypt keys, TEADecrypt keys)`;
+
+val TEA_def = 
+  Define
+   `TEA keys = (TEAEncrypt keys, TEADecrypt keys)`;
 
 val TEA_CORRECT = Q.store_thm
   ("TEA_CORRECT",
@@ -181,6 +187,43 @@ val TEA_CORRECT = Q.store_thm
        ==>
        (decrypt (encrypt plaintext) = plaintext)`,
  RW_TAC std_ss [TEA_def, TEA_LEMMA]);
+
+(*---------------------------------------------------------------------------*)
+(* Generate ML                                                               *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ let open EmitML word32Theory
+     fun fromNum_INTRO th = REWRITE_RULE [GSYM MOD_WL_ELIM,GSYM fromNum] th
+     val [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
+                  Rounds_def, InvRounds_def, TEAEncrypt_def, TEADecrypt_def]
+         = map fromNum_INTRO 
+                 [DELTA_def, ShiftXor_def, Round_def, InvRound_def, 
+                  Rounds_def, InvRounds_def, TEAEncrypt_def, TEADecrypt_def]
+     val elems = 
+     MLSIG "type num = numML.num"::
+     MLSIG "type word32 = word32ML.word32" ::
+     MLSIG "type block = word32 * word32" ::
+     MLSIG "type key   = word32 * (word32 * (word32 * word32))" ::
+     MLSIG "type state = block * (key * word32)" ::
+     MLSIG "val Round : state -> state" ::
+     MLSIG "val InvRound : state -> state" ::
+     MLSIG "val Rounds : num -> state -> state" ::
+     MLSIG "val InvRounds : num -> state -> state" ::
+     MLSIG "val TEAEncrypt : key -> block -> block" ::
+     MLSIG "val TEADecrypt : key -> block -> block" ::
+     OPEN ["num","word32"] :: 
+     MLSTRUCT "type word32 = word32ML.word32" ::
+     MLSTRUCT "type block = word32 * word32" ::
+     MLSTRUCT "type key   = word32 * (word32 * (word32 * word32))" ::
+     MLSTRUCT "type state = block * (key * word32)" ::
+      [DEFN DELTA_def, DEFN ShiftXor_def, 
+       DEFN_NOSIG Round_def, DEFN_NOSIG InvRound_def, 
+       DEFN_NOSIG Rounds_def, DEFN_NOSIG InvRounds_def, 
+       DEFN_NOSIG TEAEncrypt_def, DEFN_NOSIG TEADecrypt_def]
+ in 
+   exportML "./ML/" ("tea",elems)
+ end;
 
 val _ = export_theory();
 
