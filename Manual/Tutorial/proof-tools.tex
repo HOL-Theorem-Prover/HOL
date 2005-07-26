@@ -91,12 +91,81 @@ This is a dreadful algorithm for solving this problem.  The system's
 built-in function, \ml{tautLib.TAUT\_CONV} solves the same problem ten
 times faster, even though it is also using a truth-table technique.
 The only real merit in this solution is that it took one line to
-write.
-
+write.  This is a general illustration of the truth that \HOL{}'s
+high-level tools, particularly the simplifier, can provide fast
+prototypes for a variety of proof tasks.
 
 \section{Method 2: the DPLL Algorithm}
 
+The Davis-Putnam-Loveland-Logemann method~\cite{DPLL-paper} for
+deciding the satisfiability of propositional formulas in CNF
+(Conjunctive Normal Form) is a powerful technique, still used in
+state-of-the-art solvers today.  If we strip the universal quantifiers
+from our input formulas, our task can be seen as determining the
+validity of a propositional formula.  Testing the negation of such a
+formula for satisfiability is a test for validity: if the formula's
+negation is satisfiable, then it is not valid (the satisfying
+assignment will make the original false); if the formula's negation is
+unsatisfiable, then the formula is valid (no assignment can make it
+false).
 
+\subsection*{Preliminaries}
+
+To begin, assume that we have code already to convert arbitrary
+formulas into CNF, and to then decide the satisfiability of these
+formulas.  Assume further that if the input to the latter procedure is
+unsatisfiable, then it will return with a theorem of the form
+\[ \vdash \varphi = \holtxt{F}
+\]
+or if it is satisfiable, then it will return a satisfying assignment,
+a map from variables to booleans.   This map will be a function from
+\HOL{} variables to one of the \HOL{} terms \holtxt{T} or \holtxt{F}.
+Thus, we will assume
+\begin{hol}
+\begin{verbatim}
+   datatype result = Unsat of thm | Sat of term -> term
+   toCNF : term -> thm
+   DPLL : term -> result
+\end{verbatim}
+\end{hol}
+(The theorem returned by \ml{toCNF} will equate the input term to
+another in CNF.)
+
+\smallskip
+\noindent
+Before looking into implementing these functions, we will need to
+consider
+\begin{itemize}
+\item how to transform our inputs to suit the function; and
+\item how to use the outputs from the functions to produce our desired
+  results
+\end{itemize}
+
+We are assuming our input is a universally quantified formula.  Both
+the CNF and DPLL procedures expect formulas without quantifiers.  We
+also want to pass these procedures the negation of the original
+formula.  Both of the required term manipulations required can be done
+by functions found in the structure \ml{boolSyntax}.  (In general,
+important theories (such as \theoryimp{bool}) are accompanied by
+\ml{Syntax} modules containing functions for manipulating the
+term-forms associated with that theory.)
+
+In this case we need the functions
+\begin{hol}
+\begin{verbatim}
+   strip_forall : term -> term list * term
+   mk_neg       : term -> term
+\end{verbatim}
+\end{hol}
+The function \ml{strip\_forall} strips a term of all its outermost
+universal quantifications, returning the list of variables stripped
+and the body of the quantification.  The function \ml{mk\_neg} takes a
+term of type \holtxt{bool} and returns the term corresponding to its
+negation.
+
+Using these functions, it is easy to see how we will be able to take
+$\forall\vec{v}.\;\varphi$ as input, and pass the term $\neg\varphi$
+to the function \ml{toCNF}.
 
 %%% Local Variables:
 %%% mode: latex
