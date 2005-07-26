@@ -543,6 +543,26 @@ val llist_Axiom_1 = Q.store_thm
 
 
 (*---------------------------------------------------------------------------*)
+(* From which we get LUNFOLD by Skolemization :                              *)
+(*                                                                           *)
+(* LUNFOLD                                                                   *)
+(*    |- !f x. LUNFOLD f x =                                                 *)
+(*              case f x                                                     *)
+(*               of NONE -> [||]                                             *)
+(*               || SOME (v1,v2) -> v2:::LUNFOLD f v1                        *)
+(*---------------------------------------------------------------------------*)
+
+val LUNFOLD = new_specification 
+("LUNFOLD", ["LUNFOLD"], 
+  Q.prove(
+    `?LUNFOLD. 
+      !f x. LUNFOLD f x =
+             case f x 
+              of NONE -> [||]
+              || SOME (v1,v2) -> v2:::LUNFOLD f v1`,
+   METIS_TAC [llist_Axiom_1]));
+
+(*---------------------------------------------------------------------------*)
 (*  Now we can define MAP                                                    *)
 (*---------------------------------------------------------------------------*)
 
@@ -1713,92 +1733,6 @@ val LZIP_LUNZIP = Q.store_thm
      Cases_on `h` 
         THEN ONCE_REWRITE_TAC [LUNZIP_THM]
         THEN RW_TAC hol_ss [LZIP_THM,LCONS_11,LTAKE_THM]]]);
-
-val LFINITE_LLENGTH = Q.prove
-(`!ll. (?n. LLENGTH ll = SOME n) = LFINITE ll`,
- REPEAT GEN_TAC THEN EQ_TAC THENL
- [RW_TAC hol_ss [LLENGTH],METIS_TAC[LFINITE_HAS_LENGTH]]);
-
-val LLENGTH_EQ_SOME = Q.prove
-(`!n ll. (LLENGTH ll = SOME n) ==> 
-          ?l. (LTAKE n ll = SOME l) /\ (LENGTH l = n)`,
- Induct THEN GEN_TAC 
-   THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES)
-   THEN RW_TAC hol_ss [LTAKE_THM,LLENGTH_THM]
-   THEN RES_TAC
-   THEN RW_TAC hol_ss []);
-
-val LLENGTH_EQ_SOME_LFINITE = Q.prove
-(`!ll n. (LLENGTH ll = SOME n) ==> LFINITE ll`,
- RW_TAC hol_ss [LLENGTH]);
-
-val LLENGTH_toList = Q.prove
-(`!ll n. (LLENGTH ll = SOME n) ==> (LENGTH (THE(toList ll)) = n)`,
- RW_TAC hol_ss [] THEN 
- IMP_RES_TAC LLENGTH_EQ_SOME THEN 
- RW_TAC hol_ss [toList] THEN
- `~?n. LLENGTH ll = SOME n` by METIS_TAC [LLENGTH_EQ_SOME_LFINITE] THEN
- METIS_TAC[]);
-
-
-val VPAIR_EQ = Q.prove
-(`!p1 p2. (p1 = p2) = (FST p1 = FST p2) /\ (SND p1 = SND p2)`,
- SIMP_TAC std_ss [FORALL_PROD])
-
-
-(*
-val LUNZIP_LZIP = Q.store_thm
-("LZIP_LUNZIP",
-g`!l1 l2. (LLENGTH l1 = LLENGTH l2) ==> (LUNZIP(LZIP (l1,l2)) = (l1,l2))`,
-e (REPEAT GEN_TAC THEN
-   Cases_on `LLENGTH (l1:'a llist)` THEN 
-   Cases_on `LLENGTH (l2:'b llist)` THEN RW_TAC hol_ss []);
-(*1*)
-e (RW_TAC hol_ss [VPAIR_EQ] THENL 
-   [RW_TAC hol_ss [Once LTAKE_EQ],RW_TAC hol_ss [Once LTAKE_EQ]]);
-(*1.1*)
-e (Induct_on `n` THEN
-   FULL_STRUCT_CASES_TAC (Q.ISPEC `l1:'a llist` llist_CASES) THEN
-   FULL_STRUCT_CASES_TAC (Q.ISPEC `l2:'b llist` llist_CASES) THEN
-   RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
-(*1.1.1*)
-e (FULL_SIMP_TAC hol_ss [LLENGTH_THM,LZIP_THM,LUNZIP_THM]);
-(*1.1.2*)
-
-(*1.2*)
-e (Induct_on `n` THEN	
-e (STRUCT_CASES_TAC (Q.ISPEC `l1:'a llist` llist_CASES) THEN
-   STRUCT_CASES_TAC (Q.ISPEC `l2:'b llist` llist_CASES) THEN
-   RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
-(*1.1*)
-e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM]);
-(*1.1.1*)
-e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM]);
-(*1.1.2*)
-e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM]);
-(*1.2*)
-e (STRUCT_CASES_TAC (Q.SPEC `l1` llist_CASES));
-(*1.2.1*)
-e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
-(*1.2.2*)
-e (STRUCT_CASES_TAC (Q.ISPEC `l2:'b llist` llist_CASES));
-(*1.2.2.1*)
-e (RW_TAC hol_ss [LTAKE_THM,LZIP_THM,LUNZIP_THM]);
-(*1.2.2.2*)
-(*2*)
-
- REWRITE_TAC [Once LTAKE_EQ]
-  THEN SIMP_TAC std_ss [Once SWAP_FORALL_THM]
-  THEN Induct THENL
-  [RW_TAC hol_ss [LTAKE_THM],
-   GEN_TAC THEN STRUCT_CASES_TAC 
-     (Q.SPEC `ll` (INST_TYPE [alpha |-> ``:'a#'b``] llist_CASES)) THENL
-    [METIS_TAC [LUNZIP_THM,LZIP_THM],
-     Cases_on `h` 
-        THEN ONCE_REWRITE_TAC [LUNZIP_THM]
-        THEN RW_TAC hol_ss [LZIP_THM,LCONS_11,LTAKE_THM]]]);
-*)
-
 
 val _ = BasicProvers.export_rewrites
           ["LCONS_NOT_NIL", "LCONS_11", "LMAP", "LAPPEND", "LFILTER_THM"]
