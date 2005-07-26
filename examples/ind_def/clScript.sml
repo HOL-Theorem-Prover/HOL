@@ -65,7 +65,7 @@ val R_RTC_diamond = store_thm(
          !x p. RTC R x p ==>
                !z. R x z ==>
                    ?u. RTC R p u /\ RTC R z u``,
-  GEN_TAC THEN STRIP_TAC THEN 
+  GEN_TAC THEN STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_ind THEN
   PROVE_TAC [diamond_def,RTC_rules]);
 
@@ -73,7 +73,7 @@ val RTC_RTC = store_thm(
   "RTC_RTC",
   ``!R x y z. RTC R x y /\ RTC R y z ==> RTC R x z``,
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO, RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN 
+  GEN_TAC THEN HO_MATCH_MP_TAC RTC_ind THEN
   PROVE_TAC [RTC_rules]);
 
 val diamond_RTC_lemma = prove(
@@ -177,12 +177,7 @@ val RTCpredn_EQ_RTCredn = store_thm(
   CONV_TAC FUN_EQ_CONV THEN GEN_TAC THEN
   PROVE_TAC [RTCpredn_RTCredn, RTCredn_RTCpredn]);
 
-val cl_11 = TypeBase.one_one_of "cl";
-val cl_distinct0 = TypeBase.distinct_of "cl";
-val cl_distinct =
- CONJ cl_distinct0 (ONCE_REWRITE_RULE [EQ_SYM_EQ] cl_distinct0);
-
-fun characterise t = SIMP_RULE std_ss [cl_11,cl_distinct] (SPEC t predn_cases);
+fun characterise t = SIMP_RULE (srw_ss()) [] (SPEC t predn_cases);
 
 val K_predn = characterise ``K``;
 val S_predn = characterise ``S``;
