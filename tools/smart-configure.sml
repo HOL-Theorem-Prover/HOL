@@ -65,7 +65,10 @@ in
                      "linux"
                    else if String.isPrefix "SunOS" s then
                      "solaris"
-                   else "unix"
+                   else if String.isPrefix "Darwin" s then
+                     "macosx"
+                   else
+                     "unix"
     | Failure s => (print "\nRunning uname failed with message: ";
                     print s;
                     Process.exit Process.failure)
