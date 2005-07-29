@@ -149,7 +149,7 @@ fun dest_pair_map tm =
 
 fun dest_lex tm = 
   let val (M,r2) = with_exn dest_comb tm (ERR "dest_lex" "")
-      val (_,r1) = dest_binop lex_tm (ERR "dest_lex" "") M
+      val r1 = dest_monop lex_tm (ERR "dest_lex" "") M
   in (r1,r2)
   end;
 
