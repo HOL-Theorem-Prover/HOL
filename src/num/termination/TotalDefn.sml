@@ -11,6 +11,10 @@ val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
 
+(*---------------------------------------------------------------------------*)
+(* proper_subterm t1 t2 iff t1 is a proper subterm of t2                     *)
+(*---------------------------------------------------------------------------*)
+
 fun proper_subterm tm1 tm2 =
   not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
 
@@ -104,7 +108,55 @@ fun list_mk_prod_tyl L =
  end
 
 
+(*---------------------------------------------------------------------------*)
+(* perms delivers all permutations of a list. By Peter Sestoft.              *)
+(* Pinched from MoscowML distribution (examples/small/perms.sml).            *)
+(*---------------------------------------------------------------------------*)
 
+local 
+    fun accuperms []      tail res = tail :: res
+      | accuperms (x::xr) tail res = cycle [] x xr tail res
+    and cycle left mid [] tail res = accuperms left (mid::tail) res
+      | cycle left mid (right as r::rr) tail res = 
+        cycle (mid::left) r rr tail (accuperms (left @ right) (mid::tail) res)
+in
+    fun perms xs = accuperms xs [] []
+    fun permsn n = perms (List.tabulate(n, fn x => x+1))
+end
+
+val inv_image_tm = prim_mk_const{Thy="relation",Name="inv_image"};
+
+fun mk_inv_image(R,f) = 
+  let val ty1 = fst(dom_rng(type_of R))
+      val ty2 = fst(dom_rng(type_of f))
+  in
+    list_mk_comb(inst[beta |-> ty1, alpha |-> ty2] inv_image_tm,[R,f])
+  end;
+
+val list_mk_lex = end_itlist (curry pairSyntax.mk_lex);
+val nless_lex = list_mk_lex o copies numSyntax.less_tm;
+
+val strip_lex = strip_binop (total dest_lex);
+
+(*---------------------------------------------------------------------------*)
+(* Takes [v1,...,vn] [i_j,...,i_m], where  1 <= i_j <= i_m <= n and returns  *)
+(*                                                                           *)
+(*    inv_image ($< LEX ... LEX $<)                                          *)
+(*              (\(v1:ty1,...,vn:tyn).                                       *)
+(*                  (size_of(tyi)(vi), ..., size_of(tym)(vm)))               *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_sized_subsets argvars sizedlist =
+  let val lex_comb = nless_lex (length sizedlist)
+      val pargvars = list_mk_pair argvars
+      fun mk_reln arrangement = 
+          mk_inv_image (lex_comb, mk_pabs(pargvars,list_mk_pair arrangement))
+  in 
+     map mk_reln (perms sizedlist)
+  end;
+
+fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
+               
 (*---------------------------------------------------------------------------*
  * The general idea behind this is to try 2 termination measures. The first  *
  * measure takes the size of all subterms meeting the following criteria:    *
@@ -128,16 +180,29 @@ fun guessR defn =
    of NONE => []
     | SOME R =>
        let val domty   = fst(dom_rng(type_of R))
+           val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
+           fun size_app v = mk_comb(tysize (type_of v),v)
            val (_,tcs) = Lib.pluck isWFR (tcs_of defn)
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
-           val chf     = projects check1
-           val domtyl  = strip_prod_ty chf domty
-           val domty0  = list_mk_prod_tyl domtyl
+           val chf1     = projects check1
+           val domtyl_1  = strip_prod_ty chf1 domty
+           val domty0  = list_mk_prod_tyl domtyl_1
+           val check2  = map (map (not o uncurry aconv)) matrix
+           val chf2    = projects check2
+           val domtyl_2  = strip_prod_ty chf2 domty
+           val indices = Lib.upto 1 (length domtyl_2)
+           val (argvars,subset) = 
+             itlist2 (fn i => fn (b,ty) => fn (alist,slist) =>
+                        let val v = imk_var(i,ty)
+                        in (v::alist, if b then size_app v::slist else slist)
+                        end) indices domtyl_2 ([],[])
+           val lex_combs = mk_sized_subsets argvars subset
        in
           [mk_cmeasure domty0,
            mk_cmeasure (TypeBasePure.type_size
                          (TypeBase.theTypeBase()) domty)]
+          @ lex_combs
        end
 end;
 
