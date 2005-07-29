@@ -68,6 +68,8 @@ val _ = register_btrace("quotient", chatting);
 
 val caching = ref true; (* should be pure efficiency gain *)
 
+
+
 structure Map = Redblackmap
 
 (* Redblackmap has the same signature as Binarymap. *)
@@ -678,7 +680,7 @@ fun check_tyop_simp th =
        val _ = assert (all (curry op = name o fst o Psyntax.dest_const)) args
        val atys = map (fst o dom_rng o type_of) args
        val tys = (snd o Psyntax.dest_type o fst o dom_rng) rty
-       val _ = assert (curry op = tys) atys
+       val _ = assert (curry op = []) (set_diff atys tys)
    in
       true
    end
@@ -2007,7 +2009,7 @@ would include
                             to avoid clashes with type vars in "ths" *)
                       val tyop' = GEN_QUOT_TYVARS tyop
                       val qth = foldl (fn (arg,qth) => MATCH_MP qth arg
-                                             (* handle _ => qth *) )
+                                             (**) handle _ => qth (**) )
                                       tyop' ths
                   in qth
                   end
@@ -2077,7 +2079,7 @@ would include
                 val types = snd (match_term base gl)
                 val ith = CAREFUL_INST_TYPE types th'
                 val wf = repeat resolve_quotient ith
-            in  REWRITE_RULE[FUN_REL_EQ] wf
+            in  REWRITE_RULE tyop_simps wf
             end
 
         fun match_higher_half_wf th gl =
@@ -2086,7 +2088,7 @@ would include
                 val types = snd (match_term (rand base) (rand gl))
                 val ith = (*CAREFUL_*)INST_TYPE types th'
                 val wf = repeat resolve_quotient ith
-            in  REWRITE_RULE[FUN_REL_EQ] wf
+            in  REWRITE_RULE tyop_simps wf
             end
 
 
@@ -2171,7 +2173,7 @@ corresponding quotient theorem antecedents are resolvable.
                 val df = repeat resolve_quotient ith
                 val df' = REWRITE_RULE[FUN_MAP_I] df
             in  if #Name (dest_const opr) = "I" then df'
-                else REWRITE_RULE[I_THM] df'
+                else REWRITE_RULE (I_THM::tyop_simps) df'
             end
 
 (* The function MK_DEF_OP takes a term which is a polymorphic operator,
@@ -2379,7 +2381,7 @@ R2 (f[x']) (g[y']).
               (* (f x) = ^(v(f) v(x)) *)
             prove (gl,
             REPEAT GEN_TAC
-            THEN REWRITE_TAC[FUN_MAP,FUN_MAP_I,I_THM,PAIR_MAP]
+            THEN REWRITE_TAC[FUN_MAP,FUN_MAP_I,(*SET_MAP_def,*)I_THM,PAIR_MAP]
             THEN REPEAT (CHANGED_TAC
                    (CONV_TAC (DEPTH_CONV BETA_CONV)
                     THEN REWRITE_TAC[]))
@@ -2763,16 +2765,55 @@ R2 (f[x']) (g[y']).
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["SUBSET","PSUBSET"] then
                       let val tm1 = hd args
-                          val ty1 = type_of tm1
+                          val ty1 = (fst o dom_rng o type_of) tm1
                           val elemREL = tyREL ty1
-                          val res = (--`respects(^elemREL)`--)
                       in
                         if name = "SUBSET" then
-                             list_mk_comb(--`SUBSETR ^res`--, map regularize args)
+                             list_mk_comb(--`SUBSETR ^elemREL`--, map regularize args)
                         else if name = "PSUBSET" then
                              list_mk_comb(--`PSUBSETR ^elemREL`--, map regularize args)
                         else 
                              list_mk_comb(opp, map regularize args)
+                      end
+                      handle _ => list_mk_comb(opp, map regularize args)
+                    else if mem name ["INSERT"] then
+                      let val tm1 = hd args
+                          val ty1 = (type_of) tm1
+                          val elemREL = tyREL ty1
+                      in
+                        list_mk_comb(--`INSERTR ^elemREL`--, map regularize args)
+                      end
+                      handle _ => list_mk_comb(opp, map regularize args)
+                    else if mem name ["DELETE","DISJOINT"] then
+                      let val tm1 = hd args
+                          val ty1 = (fst o dom_rng o type_of) tm1
+                          val elemREL = tyREL ty1
+                      in
+                        if name = "DELETE" then
+                             list_mk_comb(--`DELETER ^elemREL`--, map regularize args)
+                        else if name = "DISJOINT" then
+                             list_mk_comb(--`DISJOINTR ^elemREL`--, map regularize args)
+                        else 
+                             list_mk_comb(opp, map regularize args)
+                      end
+                      handle _ => list_mk_comb(opp, map regularize args)
+                    else if mem name ["FINITE"] then
+                      let val tm1 = hd args
+                          val ty1 = (fst o dom_rng o type_of) tm1
+                          val elemREL = tyREL ty1
+                      in
+                        list_mk_comb(--`FINITER ^elemREL`--, map regularize args)
+                      end
+                      handle _ => list_mk_comb(opp, map regularize args)
+                    else if mem name ["GSPEC"] then
+                      let val tm1 = hd args
+                          val ty1 = type_of tm1
+                          val (dom,rng) = dom_rng ty1
+                          val tya = hd (#Args (dest_type rng))
+                          val bREL = tyREL dom
+                          val aREL = tyREL tya
+                      in
+                        list_mk_comb(--`GSPECR ^aREL ^bREL`--, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["IMAGE"] then

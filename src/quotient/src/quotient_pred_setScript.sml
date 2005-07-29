@@ -6,7 +6,8 @@ infixr -->;
 (* --------------------------------------------------------------------- *)
 (* Fundamental definitions and theorems for the quotients package.       *)
 (* Version 2.2.                                                          *)
-(* Date: April 11, 2005                                                  *)
+(* Date: July 29, 2005                                                   *)
+(* WARNING: EXPERIMENTAL (not guarranteed to be fully operable.)         *)
 (* --------------------------------------------------------------------- *)
 
 
@@ -14,16 +15,19 @@ val _ = new_theory "quotient_pred_set";
 
 open prim_recTheory;
 open combinTheory;
+open pairTheory;
 open pred_setTheory;
 open bossLib;
 open res_quanTheory;
 open res_quanLib;
 open dep_rewrite;
 open quotientTheory;
+open quotient_pairTheory;
 
 
 val REWRITE_THM = fn th => REWRITE_TAC[th];
 val ONCE_REWRITE_THM = fn th => ONCE_REWRITE_TAC[th];
+fun ASM_REWRITE_THM th = ASM_REWRITE_TAC[th];
 val REWRITE_ALL_THM = fn th => RULE_ASSUM_TAC (REWRITE_RULE[th])
                                THEN REWRITE_TAC[th];
 
@@ -50,151 +54,46 @@ val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
 
 
-(* ============================ *)
-(* Main development of SET_REL: *)
-(* ============================ *)
+(* ========================================== *)
+(* Main development of predicate set support: *)
+(* ========================================== *)
 
 (* for set rep or abs, DON'T use (abs --> I) or (rep --> I).  *)
 (* No, for set rep or abs, use SET_MAP abs or SET_MAP rep.  *)
 
-val SET_REL_def =
-    Define
-      `SET_REL (R:'a->'a->bool) = (R ===> ($= :bool->bool->bool))`;
 
-(*
-val SET_REL_def =
-    Define
-      `SET_REL (R:'a->'a->bool) s t = (R ===> ($= :bool->bool->bool)) s t /\
-                                      (!x. x IN s \/ x IN t ==> respects R x)`;
-*)
-
-val SET_REL = store_thm
-   ("SET_REL",
-    (--`!(R:'a->'a->bool).
-         SET_REL R s t =
-           (!x y. R x y ==> ((x IN s) = (y IN t)))`--),
-    REPEAT GEN_TAC
-    THEN REWRITE_TAC[SET_REL_def,FUN_REL,SPECIFICATION]
-   );
-
-val SET_MAP_def =
-    Define
-      `SET_MAP (f:'a->'b) = (f --> (I:bool->bool))`;
-
-val SET_MAP_COMPOSE = store_thm
-   ("SET_MAP_COMPOSE",
-    (--`!(f:'a->'b) s.
-         SET_MAP f s = s o f`--),
-    REPEAT GEN_TAC
-    THEN REWRITE_TAC[SET_MAP_def,FUN_MAP_THM,I_THM,o_THM,
-                     EXTENSION,SPECIFICATION]
-   );
 
 val IN_SET_MAP = store_thm
    ("IN_SET_MAP",
     (--`!(f:'a->'b) s x.
-         x IN SET_MAP f s = f x IN s`--),
+         x IN (f --> I) s = f x IN s`--),
     REPEAT GEN_TAC
-    THEN REWRITE_TAC[SET_MAP_COMPOSE,SPECIFICATION,o_THM]
+    THEN REWRITE_TAC[FUN_MAP_THM,SPECIFICATION,I_THM]
    );
 
-val SET_MAP_SET_MAP = store_thm
-   ("SET_MAP_SET_MAP",
-    (--`!(f:'a->'b) (g:'b->'c) s.
-         SET_MAP f (SET_MAP g s) = SET_MAP (g o f) s`--),
+val SET_REL = store_thm
+   ("SET_REL",
+    (--`!R s t.
+         (R ===> $=) s t = !x y:'a. R x y ==> (x IN s = y IN t)`--),
     REPEAT GEN_TAC
-    THEN REWRITE_TAC[SET_MAP_COMPOSE,o_ASSOC]
+    THEN REWRITE_TAC[FUN_REL,SPECIFICATION]
    );
 
-val SET_QUOTIENT = store_thm
-   ("SET_QUOTIENT",
-    (--`!R (abs:'a->'c) rep. QUOTIENT R abs rep ==>
-         QUOTIENT (SET_REL R) (SET_MAP rep) (SET_MAP abs)`--),
-    REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN REWRITE_TAC[SET_REL_def,SET_MAP_def]
-    THEN IMP_RES_THEN MATCH_MP_TAC FUN_QUOTIENT
-    THEN REWRITE_TAC[IDENTITY_QUOTIENT]
-   );
-
+val BOOL_QUOTIENT = INST_TYPE [alpha |-> bool] IDENTITY_QUOTIENT;
 
 val SET_REL_MP = store_thm
    ("SET_REL_MP",
-    (--`!(R:'a -> 'a -> bool) s t x y.
-         (SET_REL R) s t ==> R x y ==> (x IN s = y IN t)`--),
-    REPEAT STRIP_TAC
-    THEN IMP_RES_TAC SET_REL
-   );
-
-
-(* One possible development of SET_REL, based on set rep/abs by IMAGE:
-Unfortunately this definition makes it impossible to prove the respectfulness
-theorems for such operators as IN.
-
-val SET_REL_def =
-    Define
-      `SET_REL (R:'a->'a->bool) s t =
-                     (!x. x IN s ==> ?y. y IN t /\ R x y) /\
-                     (!y. y IN t ==> ?x. x IN s /\ R x y)`;
-
-
-val SET_EQUIV = store_thm
-   ("SET_EQUIV",
-    (--`!R :'a->'a->bool.
-         (!x y. R x y = (R x = R y)) ==>
-         (!x y. SET_REL R x y = (SET_REL R x = SET_REL R y))`--),
-    GEN_TAC
-    THEN REWRITE_TAC[EQUIV_REFL_SYM_TRANS]
-    THEN STRIP_TAC
-    THEN REWRITE_TAC[SET_REL_def,EXTENSION,IN_IMAGE]
-    THEN REPEAT STRIP_TAC (* 6 subgoals *)
-    THENL
-      [ EXISTS_TAC ``x':'a``
-        THEN ASM_REWRITE_TAC[],
-
-        EXISTS_TAC ``y:'a``
-        THEN ASM_REWRITE_TAC[],
-
-        RES_TAC
-        THEN EXISTS_TAC ``x'':'a``
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[],
-
-        RES_TAC
-        THEN EXISTS_TAC ``y'':'a``
-        THEN RES_TAC
-        THEN ASM_REWRITE_TAC[],
-
-        RES_TAC
-        THEN RES_TAC
-        THEN EXISTS_TAC ``y'':'a``
-        THEN ASM_REWRITE_TAC[],
-
-        RES_TAC
-        THEN RES_TAC
-        THEN EXISTS_TAC ``x''':'a``
-        THEN ASM_REWRITE_TAC[]
-      ]
-    THEN PROVE_TAC[] (* could replace the THENL 6 cases above *)
-   );
-
-
-val SET_QUOTIENT = store_thm
-   ("SET_QUOTIENT",
-    (--`!R (abs:'a->'b) rep.
-         (!a. abs (rep a) = a) /\
-         (!r r'. R r r' = (abs r = abs r')) ==>
-         (!a. IMAGE abs (IMAGE rep a) = a) /\
-         (!r r'. SET_REL R r r' = (IMAGE abs r = IMAGE abs r'))`--),
+    (--`!R (abs:'a -> 'b) rep.
+         QUOTIENT R abs rep ==>
+           !s t x y. (R ===> $=) s t /\ R x y ==> (x IN s = y IN t)`--),
     REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN CONJ_TAC
-    THEN REWRITE_TAC[SET_REL_def,EXTENSION,IN_IMAGE]
-    THEN PROVE_TAC[]
+    THEN DISCH_THEN (ASSUME_TAC o C MATCH_MP BOOL_QUOTIENT o MATCH_MP
+              (INST_TYPE[beta |-> bool, delta |-> bool] FUN_REL_MP))
+    THEN REPEAT STRIP_TAC
+    THEN REWRITE_TAC[SPECIFICATION]
+    THEN FIRST_ASSUM MATCH_MP_TAC
+    THEN ASM_REWRITE_TAC[]
    );
-
-*)
-
 
 
 (* Here are some definitional and well-formedness theorems
@@ -203,13 +102,14 @@ val SET_QUOTIENT = store_thm
 
 
 
-(* pred_set theory: IN, EMPTY, UNIV, INTER, UNION, SUBSET, PSUBSET, IMAGE *)
+(* pred_set theory: IN, GSPEC, EMPTY, UNIV, INTER, UNION, SUBSET, PSUBSET,
+                    INSERT, DELETE, DIFF, IMAGE *)
 
 val IN_PRS = store_thm
    ("IN_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !x s. x IN s =
-               rep x IN SET_MAP abs s`--),
+               rep x IN (abs --> I) s`--),
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC QUOTIENT_ABS_REP
     THEN ASM_REWRITE_TAC[IN_SET_MAP]
@@ -219,7 +119,7 @@ val IN_RSP = store_thm
    ("IN_RSP",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !x1 x2 s1 s2.
-          R x1 x2 /\ (SET_REL R) s1 s2 ==>
+          R x1 x2 /\ (R ===> $=) s1 s2 ==>
           (x1 IN s1 = x2 IN s2)`--),
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC SET_REL_MP
@@ -230,154 +130,85 @@ val IN_RSP = store_thm
 
 GSPECIFICATION   |- !f v. v IN GSPEC f = ?x. (v,T) = f x : thm
 
-involves = between v:'b and FST(f x):'b, rather than R2 v (FST(f x)),
-it does not respect the equivalence relation on 'b.
-But a similar operator exists which we can try to lift to GSPEC.
+involves = between v:'b and FST(f x):'b, rather than R1 v (FST(f x)),
+which does not respect the equivalence relation on 'b.
+The definition also does not guarantee that the chosen x respectes R2.
+But a similar operator exists which we can try to lift to GSPEC.  *)
+
+
+val GSPECR_def = Define
+   `GSPECR (R1:'a->'a->bool) R2 f (v:'a) =
+             ?x:'b :: respects R2. (R1 ### $=) (v,T) (f x) `;
+
+val IN_GSPECR = store_thm
+   ("IN_GSPECR",
+    (--`!R1 R2 f (v:'a).
+         v IN GSPECR R1 R2 f =
+         ?x:'b :: respects R2. (R1 ### $=) (v,T) (f x : 'a # bool)`--),
+    REWRITE_TAC[GSPECR_def,SPECIFICATION]
+   );
 
 val GSPEC_PRS = store_thm
    ("GSPEC_PRS",
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !f. GSPEC f =
-               SET_MAP rep2 (GSPEC ((abs1 --> (rep2 ## I)) f))`--),
+               (rep1 --> I) (GSPECR R1 R2 ((abs2 --> (rep1 ## I)) f))`--),
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC QUOTIENT_ABS_REP
     THEN REWRITE_TAC[EXTENSION]
     THEN GEN_TAC
-    THEN REWRITE_TAC[GSPECIFICATION,IN_SET_MAP]
+    THEN REWRITE_TAC[GSPECIFICATION,IN_SET_MAP,IN_GSPECR]
     THEN REWRITE_TAC[FUN_MAP_THM,PAIR_MAP]
-    THEN REWRITE_TAC[PAIR_EQ,I_THM]
+    THEN REWRITE_TAC[PAIR_REL_THM,I_THM]
+    THEN IMP_RES_THEN REWRITE_THM QUOTIENT_REL_REP
+    THEN CONV_TAC (DEPTH_CONV RES_EXISTS_CONV)
+    THEN REWRITE_TAC[IN_RESPECTS]
     THEN EQ_TAC
     THEN STRIP_TAC
     THENL
-      [ EXISTS_TAC ``rep1 (x':'c) :'a``
+      [ EXISTS_TAC ``rep2 (x':'d) :'b``
+        THEN IMP_RES_THEN REWRITE_THM QUOTIENT_REP_REFL
         THEN ASM_REWRITE_TAC[]
         THEN POP_ASSUM (REWRITE_THM o SYM),
 
-        EXISTS_TAC ``abs1 (x':'a) :'c``
+        EXISTS_TAC ``abs2 (x':'b) :'d``
         THEN CONV_TAC (RAND_CONV (REWR_CONV (GSYM PAIR)))
-        THEN REWRITE_TAC[PAIR_EQ]
-        THEN POP_ASSUM REWRITE_THM
-        THEN POP_ASSUM (MP_TAC o AP_TERM ``abs2:'b->'d``)
-        THEN ASM_REWRITE_TAC[]
+        THEN ASM_REWRITE_TAC[PAIR_EQ]
       ]
    );
 
-val GSPECR_def =
-    Define
-      `GSPECR R (f:'a -> ('b # bool)) (v:'b) =
-                     ?x. (R ### $=) (v,T) (f x)`;
-
-
-val GSPECIFICATION_R = store_thm
-   ("GSPECIFICATION_R",
-    (--`!R f v:'b. v IN GSPECR R f = ?x:'a. (R ### $=) (v,T) (f x)`--),
-    REWRITE_TAC[GSPECR_def,SPECIFICATION]
-   );
-
-val GSPECR_PRS = store_thm
-   ("GSPECR_PRS",
-    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
-        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
-         !f. GSPEC f =
-               SET_MAP rep2 (GSPECR R2 ((abs1 --> (rep2 ## I)) f))`--),
-    REPEAT STRIP_TAC
-    THEN IMP_RES_TAC QUOTIENT_ABS_REP
-    THEN IMP_RES_TAC QUOTIENT_REP_REFL
-    THEN REWRITE_TAC[EXTENSION]
-    THEN GEN_TAC
-    THEN REWRITE_TAC[GSPECIFICATION,GSPECIFICATION_R,IN_SET_MAP]
-    THEN REWRITE_TAC[FUN_MAP_THM,I_THM,PAIR_MAP]
-    THEN REWRITE_TAC[PAIR_REL_THM,PAIR_EQ]
-    THEN EQ_TAC
-    THEN STRIP_TAC
-    THENL
-      [ EXISTS_TAC ``rep1 (x':'c) :'a``
-        THEN ASM_REWRITE_TAC[]
-        THEN POP_ASSUM (REWRITE_THM o SYM)
-        THEN ASM_REWRITE_TAC[],
-
-        EXISTS_TAC ``abs1 (x':'a) :'c``
-        THEN CONV_TAC (RAND_CONV (REWR_CONV (GSYM PAIR)))
-        THEN REWRITE_TAC[PAIR_EQ]
-        THEN POP_ASSUM REWRITE_THM
-        THEN POP_ASSUM MP_TAC
-        THEN IMP_RES_THEN ONCE_REWRITE_THM QUOTIENT_REL
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-
-This proof fails for the new quotient relations; not reflexive!
 val GSPECR_RSP = store_thm
    ("GSPECR_RSP",
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !f1 f2.
-          (R1 ===> (R2 ### $=)) f1 f2 ==>
-          SET_REL R2 (GSPECR R2 f1) (GSPECR R2 f2)`--),
+          (R2 ===> (R1 ### $=)) f1 f2 ==>
+          (R1 ===> $=) (GSPECR R1 R2 f1) (GSPECR R1 R2 f2)`--),
     REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC
-    THEN REWRITE_TAC[FUN_REL]
-    THEN ONCE_REWRITE_TAC[GSYM PAIR]
-    THEN REWRITE_TAC[PAIR_REL_THM]
-    THEN DISCH_TAC
     THEN REWRITE_TAC[SET_REL]
-    THEN X_GEN_TAC ``z:'b``
-    THEN GEN_TAC
-    THEN DISCH_TAC
-    THEN REWRITE_TAC[GSPECIFICATION_R]
-    THEN ONCE_REWRITE_TAC[GSYM PAIR]
-    THEN REWRITE_TAC[PAIR_REL_THM,PAIR_EQ]
-    THEN EQ_TAC
-    THEN STRIP_TAC
-    THEN EXISTS_TAC ``(rep1:'c->'a) ((abs1:'a->'c) x)``
-    THEN IMP_RES_TAC QUOTIENT_REP_REFL
-    THEN FIRST_ASSUM (ASSUME_TAC o SPEC ``(abs1:'a->'c) x``)
-    THEN RES_TAC
-    THEN POP_TAC
-    THEN POP_TAC
-    THEN POP_ASSUM (REWRITE_THM o SYM)
-    THEN IMP_RES_TAC QUOTIENT_SYM
-    THEN IMP_RES_TAC QUOTIENT_TRANS
-   );
-
-Can't prove this, so can't lift GSPEC.
-
-val GSPEC_RSP = store_thm
-   ("GSPEC_RSP",
-    (--`!R1 (abs1:'a -> 'c) rep1 R2 (abs2:'b -> 'd) rep2.
-         (!a. abs1 (rep1 a) = a) /\ (!r r'. R1 r r' = (abs1 r = abs1 r'))
-         ==>
-         (!a. abs2 (rep2 a) = a) /\ (!r r'. R2 r r' = (abs2 r = abs2 r'))
-         ==>
-         !f1 f2.
-          (R1 ===> (R2 ### $=)) f1 f2 ==>
-          SET_REL R2 (GSPEC f1) (GSPEC f2)`--),
-    REPEAT GEN_TAC
-    THEN STRIP_TAC
-    THEN STRIP_TAC
-    THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[FUN_REL]
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
     THEN REWRITE_TAC[PAIR_REL_THM]
     THEN DISCH_TAC
-    THEN REWRITE_TAC[SET_REL_EQ]
-    THEN REPEAT STRIP_TAC
-    THEN REWRITE_TAC[GSPECIFICATION]
+    THEN X_GEN_TAC ``u:'a``
+    THEN X_GEN_TAC ``v:'a``
+    THEN DISCH_TAC
+    THEN REWRITE_TAC[IN_GSPECR]
+    THEN CONV_TAC (DEPTH_CONV RES_EXISTS_CONV)
+    THEN REWRITE_TAC[IN_RESPECTS]
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
-    THEN REWRITE_TAC[PAIR_EQ]
-    THEN ???
+    THEN REWRITE_TAC[PAIR_REL_THM]
+    THEN PROVE_TAC[QUOTIENT_SYM,QUOTIENT_TRANS]
    );
-
-No, the GSPEC / GSPECR experiment has not succeeded.
-*)
 
 
 val EMPTY_PRS = store_thm
    ("EMPTY_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         (EMPTY = SET_MAP abs EMPTY)`--),
+         (EMPTY = (rep --> I) EMPTY)`--),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[EXTENSION]
     THEN REWRITE_TAC[NOT_IN_EMPTY,IN_SET_MAP]
@@ -386,7 +217,7 @@ val EMPTY_PRS = store_thm
 val EMPTY_RSP = store_thm
    ("EMPTY_RSP",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         SET_REL R EMPTY EMPTY`--),
+         (R ===> $=) EMPTY EMPTY`--),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[SET_REL]
     THEN REWRITE_TAC[NOT_IN_EMPTY]
@@ -395,7 +226,7 @@ val EMPTY_RSP = store_thm
 val UNIV_PRS = store_thm
    ("UNIV_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         (UNIV = SET_MAP abs UNIV)`--),
+         (UNIV = (rep --> I) UNIV)`--),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[EXTENSION]
     THEN REWRITE_TAC[IN_SET_MAP,IN_UNIV]
@@ -404,7 +235,7 @@ val UNIV_PRS = store_thm
 val UNIV_RSP = store_thm
    ("UNIV_RSP",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         SET_REL R UNIV UNIV`--),
+         (R ===> $=) UNIV UNIV`--),
     REPEAT STRIP_TAC
     THEN REWRITE_TAC[SET_REL]
     THEN REWRITE_TAC[IN_UNIV]
@@ -415,7 +246,7 @@ val UNION_PRS = store_thm
    ("UNION_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s t. s UNION t =
-               SET_MAP rep (SET_MAP abs s UNION SET_MAP abs t)`--),
+               (rep --> I) ((abs --> I) s UNION (abs --> I) t)`--),
     REPEAT STRIP_TAC
     THEN PURE_ONCE_REWRITE_TAC[EXTENSION]
     THEN GEN_TAC
@@ -428,8 +259,8 @@ val UNION_RSP = store_thm
    ("UNION_RSP",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s1 s2 t1 t2.
-          SET_REL R s1 s2 /\ SET_REL R t1 t2 ==>
-          SET_REL R (s1 UNION t1) (s2 UNION t2)`--),
+          (R ===> $=) s1 s2 /\ (R ===> $=) t1 t2 ==>
+          (R ===> $=) (s1 UNION t1) (s2 UNION t2)`--),
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[SET_REL]
     THEN REPEAT STRIP_TAC
@@ -443,7 +274,7 @@ val INTER_PRS = store_thm
    ("INTER_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s t. s INTER t =
-               SET_MAP rep (SET_MAP abs s INTER SET_MAP abs t)`--),
+               (rep --> I) ((abs --> I) s INTER (abs --> I) t)`--),
     REPEAT STRIP_TAC
     THEN PURE_ONCE_REWRITE_TAC[EXTENSION]
     THEN GEN_TAC
@@ -456,8 +287,8 @@ val INTER_RSP = store_thm
    ("INTER_RSP",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s1 s2 t1 t2.
-          SET_REL R s1 s2 /\ SET_REL R t1 t2 ==>
-          SET_REL R (s1 INTER t1) (s2 INTER t2)`--),
+          (R ===> $=) s1 s2 /\ (R ===> $=) t1 t2 ==>
+          (R ===> $=) (s1 INTER t1) (s2 INTER t2)`--),
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[SET_REL]
     THEN REPEAT STRIP_TAC
@@ -466,146 +297,17 @@ val INTER_RSP = store_thm
     THEN ASM_REWRITE_TAC[]
    );
 
-(*
-val EQ_EMPTY_PRS = store_thm
-   ("EQ_EMPTY_PRS",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s.
-             (s = {}) = (SET_MAP abs s = {})`--),
-    REPEAT STRIP_TAC
-    THEN REWRITE_TAC[EXTENSION,NOT_IN_EMPTY]
-    THEN REWRITE_TAC[IN_SET_MAP]
-    THEN EQ_TAC
-    THENL
-      [ DISCH_TAC
-        THEN GEN_TAC
-        THEN POP_ASSUM MATCH_ACCEPT_TAC,
-
-        DISCH_TAC
-        THEN GEN_TAC
-        THEN POP_ASSUM (MP_TAC o SPEC ``rep (x:'b) :'a``)
-        THEN IMP_RES_TAC QUOTIENT_ABS_REP
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-
-val EQ_EMPTY_RSP = store_thm
-   ("EQ_EMPTY_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s1 s2. SET_REL R s1 s2 ==>
-             ((s1 = {}) = (s2 = {}))`--),
-    REWRITE_TAC[SET_REL]
-    THEN REPEAT STRIP_TAC
-    THEN REWRITE_TAC[EXTENSION,NOT_IN_EMPTY]
-    THEN EQ_TAC
-    THENL
-      [ DISCH_TAC
-        THEN GEN_TAC
-        THEN POP_ASSUM MATCH_ACCEPT_TAC,
-
-        DISCH_TAC
-        THEN GEN_TAC
-        THEN POP_ASSUM (MP_TAC o SPEC ``rep (x:'b) :'a``)
-        THEN IMP_RES_TAC QUOTIENT_ABS_REP
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-*)
-
-(* DISJOINT does not lift.
-
-val DISJOINTR_def =
-    Define
-      `DISJOINTR R (s:'a -> bool) t = SET_REL R (s INTER t) {}`;
-
-NO.
-val SET_REL_EXTENSION = store_thm
-   ("SET_REL_EXTENSION",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s t. SET_REL R s t = (!x :: respects R. x IN s = x IN t)`--),
-    REPEAT STRIP_TAC
-    THEN REWRITE_TAC[SET_REL]
-    THEN CONV_TAC (DEPTH_CONV RES_FORALL_CONV)
-    THEN REWRITE_TAC[IN_RESPECTS]
-    THEN EQ_TAC
-    THENL
-      [ DISCH_TAC
-        THEN GEN_TAC
-        THEN POP_ASSUM MATCH_ACCEPT_TAC,
-
-        DISCH_TAC
-        THEN REPEAT GEN_TAC
-        THEN POP_ASSUM (MP_TAC o SPEC ``rep (x:'b) :'a``)
-        THEN IMP_RES_TAC QUOTIENT_REP_REFL
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-
-val DISJOINT_PRS = store_thm
-   ("DISJOINT_PRS",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s t.
-             DISJOINT s t = DISJOINTR R (SET_MAP abs s) (SET_MAP abs t)`--),
-    REPEAT STRIP_TAC
-    THEN PURE_REWRITE_TAC[DISJOINT_DEF,DISJOINTR_def]
-    THEN REWRITE_TAC[EXTENSION,NOT_IN_EMPTY,IN_INTER]
-    THEN REWRITE_TAC[SET_REL_EXTENSION,NOT_IN_EMPTY,IN_INTER]
-    THEN REWRITE_TAC[IN_SET_MAP]
-    THEN EQ_TAC
-    THENL
-      [ DISCH_TAC
-        THEN GEN_TAC
-        THEN POP_ASSUM MATCH_ACCEPT_TAC,
-
-        DISCH_TAC
-        THEN GEN_TAC
-        THEN POP_ASSUM (MP_TAC o SPEC ``rep (x:'b) :'a``)
-        THEN IMP_RES_TAC QUOTIENT_ABS_REP
-        THEN ASM_REWRITE_TAC[]
-      ]
-   );
-
-val DISJOINT_RSP = store_thm
-   ("DISJOINT_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s1 s2 t1 t2.
-          SET_REL R s1 s2 /\ SET_REL R t1 t2 ==>
-          (DISJOINT s1 t1 = DISJOINT s2 t2)`--),
-    REPEAT STRIP_TAC
-    THEN PURE_REWRITE_TAC[DISJOINT_DEF]
-    THEN AP_THM_TAC
-    THEN AP_TERM_TAC
-    THEN MP_TAC (SPEC_ALL INTER_RSP)
-    THEN ASM_REWRITE_TAC[]
-    THEN 
-    THEN 
-    THEN 
-    THEN IMP_RES_THEN MATCH_MP_TAC INTER_RSP
-    THEN 
-    THEN REWRITE_TAC[EXTENSION,NOT_IN_EMPTY,IN_INTER]
-    THEN REWRITE_TAC[DE_MORGAN_THM]
-    THEN EQ_TAC
-    THEN DISCH_TAC
-    THEN GEN_TAC
-    THEN POP_ASSUM (MP_TAC o SPEC ``x:'a``)
-    THEN IMP_RES_TAC QUOTIENT_REFL
-    THEN POP_ASSUM (ASSUME_TAC o SPEC ``x:'a``)
-    THEN IMP_RES_TAC SET_REL_MP
-    THEN ASM_REWRITE_TAC[]
-   );
-*)
-
 
 
 val SUBSETR_def =
     Define
-      `SUBSETR P s t = !x:'a::P. x IN s ==> x IN t`;
+      `SUBSETR R s t = !x:'a::respects R. x IN s ==> x IN t`;
 
 val SUBSET_PRS = store_thm
    ("SUBSET_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s t. s SUBSET t =
-               SUBSETR (respects R) (SET_MAP abs s) (SET_MAP abs t)`--),
+               SUBSETR R ((abs --> I) s) ((abs --> I) t)`--),
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[SUBSET_DEF,SUBSETR_def]
     THEN PURE_REWRITE_TAC[IN_SET_MAP]
@@ -629,8 +331,8 @@ val SUBSETR_RSP = store_thm
    ("SUBSETR_RSP",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s1 s2 t1 t2.
-          SET_REL R s1 s2 /\ SET_REL R t1 t2 ==>
-          (SUBSETR (respects R) s1 t1 = SUBSETR (respects R) s2 t2)`--),
+          (R ===> $=) s1 s2 /\ (R ===> $=) t1 t2 ==>
+          (SUBSETR R s1 t1 = SUBSETR R s2 t2)`--),
     REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC
     THEN REWRITE_TAC[SET_REL]
@@ -651,12 +353,12 @@ val SUBSETR_RSP = store_thm
 val PSUBSETR_def =
     Define
       `PSUBSETR R (s:'a->bool) t =
-       SUBSETR (respects R) s t /\ ~(SET_REL R s t)`;
+       SUBSETR R s t /\ ~((R ===> $=) s t)`;
 
 val PSUBSET_PRS = store_thm
    ("PSUBSET_PRS",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
-         !s t. s PSUBSET t = PSUBSETR R (SET_MAP abs s) (SET_MAP abs t)`--),
+         !s t. s PSUBSET t = PSUBSETR R ((abs --> I) s) ((abs --> I) t)`--),
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[PSUBSET_DEF,PSUBSETR_def]
     THEN PURE_ONCE_REWRITE_TAC[EXTENSION]
@@ -681,7 +383,7 @@ val PSUBSETR_RSP = store_thm
    ("PSUBSETR_RSP",
     (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
          !s1 s2 t1 t2.
-          SET_REL R s1 s2 /\ SET_REL R t1 t2 ==>
+          (R ===> $=) s1 s2 /\ (R ===> $=) t1 t2 ==>
           (PSUBSETR R s1 t1 = PSUBSETR R s2 t2)`--),
     REPEAT STRIP_TAC
     THEN PURE_REWRITE_TAC[PSUBSETR_def]
@@ -692,10 +394,323 @@ val PSUBSETR_RSP = store_thm
     THEN DISCH_THEN REWRITE_THM
     THEN AP_TERM_TAC
     THEN AP_TERM_TAC
-    THEN IMP_RES_TAC SET_QUOTIENT
-    THEN POP_ASSUM (MATCH_MP_TAC o (MATCH_MP EQUALS_RSP))
+    THEN IMP_RES_THEN (MATCH_MP_TAC o MATCH_MP EQUALS_RSP
+                                    o C MATCH_MP BOOL_QUOTIENT)
+            (INST_TYPE[beta |-> bool, delta |-> bool] FUN_QUOTIENT)
     THEN ASM_REWRITE_TAC[]
    );
+
+
+
+val INSERTR_def =
+    Define
+      `INSERTR R (x:'a) s = {y:'a | R y x \/ y IN s}`;
+
+val IN_INSERTR = store_thm
+   ("IN_INSERTR",
+    (--`!R (x:'a) s y.
+          y IN INSERTR R x s = R y x \/ y IN s`--),
+    REPEAT GEN_TAC
+    THEN PURE_ONCE_REWRITE_TAC[INSERTR_def]
+    THEN CONV_TAC (DEPTH_CONV pred_setLib.SET_SPEC_CONV)
+    THEN REWRITE_TAC[]
+   );
+
+val INSERT_PRS = store_thm
+   ("INSERT_PRS",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s x. x INSERT s =
+               (rep --> I) (INSERTR R (rep x) ((abs --> I) s))
+       `--),
+    REPEAT STRIP_TAC
+    THEN IMP_RES_TAC QUOTIENT_ABS_REP
+    THEN IMP_RES_TAC QUOTIENT_REL_REP
+    THEN PURE_ONCE_REWRITE_TAC[EXTENSION]
+    THEN GEN_TAC
+    THEN ASM_REWRITE_TAC[IN_SET_MAP,IN_INSERT,IN_INSERTR]
+   );
+
+val INSERTR_RSP = store_thm
+   ("INSERTR_RSP",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !x1 x2 s1 s2.
+          R x1 x2 /\ (R ===> $=) s1 s2 ==>
+          (R ===> $=) (INSERTR R x1 s1) (INSERTR R x2 s2)`--),
+    REPEAT GEN_TAC
+    THEN STRIP_TAC
+    THEN REPEAT GEN_TAC
+    THEN REWRITE_TAC[SET_REL]
+    THEN REPEAT STRIP_TAC
+    THEN REWRITE_TAC[IN_INSERTR]
+    THEN PROVE_TAC[QUOTIENT_SYM,QUOTIENT_TRANS]
+   );
+
+
+
+val DELETER_def =
+    Define
+      `DELETER R s (x:'a) = {y:'a | y IN s /\ ~R x y}`;
+
+val IN_DELETER = store_thm
+   ("IN_DELETER",
+    (--`!R s (x:'a) y.
+          y IN DELETER R s x = y IN s /\ ~R x y`--),
+    REPEAT GEN_TAC
+    THEN PURE_ONCE_REWRITE_TAC[DELETER_def]
+    THEN CONV_TAC (DEPTH_CONV pred_setLib.SET_SPEC_CONV)
+    THEN REWRITE_TAC[]
+   );
+
+val DELETE_PRS = store_thm
+   ("DELETE_PRS",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s x. s DELETE x =
+               (rep --> I) (DELETER R ((abs --> I) s) (rep x))
+       `--),
+    REPEAT STRIP_TAC
+    THEN IMP_RES_TAC QUOTIENT_ABS_REP
+    THEN IMP_RES_TAC QUOTIENT_REL_REP
+    THEN PURE_ONCE_REWRITE_TAC[EXTENSION]
+    THEN GEN_TAC
+    THEN ASM_REWRITE_TAC[IN_SET_MAP,IN_DELETE,IN_DELETER]
+    THEN PROVE_TAC[]
+   );
+
+val DELETER_RSP = store_thm
+   ("DELETER_RSP",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s1 s2 x1 x2.
+          (R ===> $=) s1 s2 /\ R x1 x2 ==>
+          (R ===> $=) (DELETER R s1 x1) (DELETER R s2 x2)`--),
+    REPEAT GEN_TAC
+    THEN STRIP_TAC
+    THEN REPEAT GEN_TAC
+    THEN REWRITE_TAC[SET_REL]
+    THEN REPEAT STRIP_TAC
+    THEN REWRITE_TAC[IN_DELETER]
+    THEN PROVE_TAC[QUOTIENT_SYM,QUOTIENT_TRANS]
+   );
+
+
+
+val DIFF_PRS = store_thm
+   ("DIFF_PRS",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s t. s DIFF t =
+               (rep --> I) (((abs --> I) s) DIFF ((abs --> I) t))
+       `--),
+    REPEAT STRIP_TAC
+    THEN IMP_RES_TAC QUOTIENT_ABS_REP
+    THEN PURE_ONCE_REWRITE_TAC[EXTENSION]
+    THEN GEN_TAC
+    THEN ASM_REWRITE_TAC[IN_SET_MAP,IN_DIFF]
+   );
+
+val DIFF_RSP = store_thm
+   ("DIFF_RSP",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s1 s2 t1 t2.
+          (R ===> $=) s1 s2 /\ (R ===> $=) t1 t2 ==>
+          (R ===> $=) (s1 DIFF t1) (s2 DIFF t2)`--),
+    REPEAT GEN_TAC
+    THEN STRIP_TAC
+    THEN REPEAT GEN_TAC
+    THEN REWRITE_TAC[SET_REL]
+    THEN REPEAT STRIP_TAC
+    THEN REWRITE_TAC[IN_DIFF]
+    THEN PROVE_TAC[]
+   );
+
+
+
+val DISJOINTR_def =
+    Define
+      `DISJOINTR R s t = ~?x:'a::respects R. x IN s /\ x IN t`;
+
+
+val DISJOINT_PRS = store_thm
+   ("DISJOINT_PRS",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s t. DISJOINT s t =
+               DISJOINTR R ((abs --> I) s) ((abs --> I) t)`--),
+    REPEAT STRIP_TAC
+    THEN PURE_REWRITE_TAC[DISJOINT_DEF,DISJOINTR_def]
+    THEN PURE_REWRITE_TAC[EXTENSION]
+    THEN CONV_TAC (DEPTH_CONV RES_EXISTS_CONV THENC
+                   DEPTH_CONV NOT_EXISTS_CONV)
+    THEN PURE_REWRITE_TAC[IN_RESPECTS]
+    THEN REWRITE_TAC[NOT_IN_EMPTY,IN_INTER,IN_SET_MAP,DE_MORGAN_THM]
+    THEN EQ_TAC
+    THEN DISCH_TAC
+    THEN GEN_TAC
+    THENL
+      [ ASM_REWRITE_TAC[],
+
+        POP_ASSUM (MP_TAC o SPEC ``rep (x:'b) :'a``)
+        THEN IMP_RES_TAC QUOTIENT_ABS_REP
+        THEN IMP_RES_TAC QUOTIENT_REP_REFL
+        THEN ASM_REWRITE_TAC[]
+      ]
+   );
+
+val DISJOINTR_RSP = store_thm
+   ("DISJOINTR_RSP",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s1 s2 t1 t2.
+          (R ===> $=) s1 s2 /\ (R ===> $=) t1 t2 ==>
+          (DISJOINTR R s1 t1 = DISJOINTR R s2 t2)`--),
+    REPEAT GEN_TAC THEN DISCH_TAC
+    THEN REPEAT GEN_TAC
+    THEN REWRITE_TAC[SET_REL]
+    THEN STRIP_TAC
+    THEN PURE_REWRITE_TAC[DISJOINTR_def]
+    THEN CONV_TAC (DEPTH_CONV RES_EXISTS_CONV THENC
+                   DEPTH_CONV NOT_EXISTS_CONV)
+    THEN REWRITE_TAC[DE_MORGAN_THM,IN_RESPECTS]
+    THEN PROVE_TAC[]
+   );
+
+
+val FINITER_def =
+    Define
+      `FINITER R s = !P :: respects ((R ===> $=) ===> $=).
+                         P {} /\
+                         (!s::respects(R ===> $=).
+                                P s ==> !e:'a::respects R. P (INSERTR R e s))
+                         ==> P s`;
+
+
+val FINITE_PRS = store_thm
+   ("FINITE_PRS",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s. FINITE s = FINITER R ((abs --> I) s)`--),
+    REPEAT STRIP_TAC
+    THEN PURE_REWRITE_TAC[FINITE_DEF,FINITER_def]
+    THEN CONV_TAC (DEPTH_CONV RES_FORALL_CONV)
+    THEN PURE_REWRITE_TAC[IN_RESPECTS]
+    THEN CONV_TAC (RAND_CONV (RAND_CONV (ABS_CONV (RATOR_CONV
+                     (REWRITE_CONV[FUN_REL])))))
+    THEN PURE_REWRITE_TAC[SET_REL]
+    THEN EQ_TAC
+    THEN DISCH_TAC
+    THEN GEN_TAC
+    THENL
+      [ DISCH_TAC
+        THEN STRIP_TAC
+        THEN FIRST_ASSUM HO_MATCH_MP_TAC
+        THEN CONJ_TAC
+        THENL
+          [ SUBGOAL_THEN ``P (((abs:'a -> 'b) --> (I:bool -> bool)) {})
+                           = (P {} : bool)``
+                    ASM_REWRITE_THM
+            THEN FIRST_ASSUM MATCH_MP_TAC
+            THEN REWRITE_TAC[FUN_MAP_THM,I_THM]
+            THEN REWRITE_TAC[REWRITE_RULE[SPECIFICATION] NOT_IN_EMPTY],
+
+            REPEAT STRIP_TAC
+            THEN SUBGOAL_THEN ``!e. P (((abs:'a -> 'b) --> (I:bool -> bool))
+                                      (e INSERT s'))
+                            = (P (INSERTR R (rep e) ((abs --> I) s')) : bool)``
+                    REWRITE_THM
+            THENL
+              [ GEN_TAC
+                THEN FIRST_ASSUM MATCH_MP_TAC
+                THEN REPEAT STRIP_TAC
+                THEN REWRITE_TAC[REWRITE_RULE[SPECIFICATION] IN_INSERTR]
+                THEN REWRITE_TAC[FUN_MAP_THM,I_THM]
+                THEN REWRITE_TAC[REWRITE_RULE[SPECIFICATION] IN_INSERT]
+                THEN IMP_RES_TAC QUOTIENT_REL_ABS
+                THEN FIRST_ASSUM REWRITE_THM
+                THEN AP_THM_TAC
+                THEN AP_TERM_TAC
+                THEN IMP_RES_THEN ONCE_REWRITE_THM QUOTIENT_REL
+                THEN IMP_RES_TAC QUOTIENT_REL
+                THEN POP_TAC THEN POP_TAC THEN POP_TAC
+                THEN POP_ASSUM REWRITE_THM
+                THEN IMP_RES_THEN REWRITE_THM QUOTIENT_REP_REFL
+                THEN IMP_RES_THEN REWRITE_THM QUOTIENT_ABS_REP,
+
+                DEP_ONCE_ASM_REWRITE_TAC[]
+                THEN REWRITE_TAC[IN_SET_MAP]
+                THEN FIRST_ASSUM REWRITE_THM
+                THEN IMP_RES_THEN REWRITE_THM QUOTIENT_REP_REFL
+                THEN REPEAT STRIP_TAC
+                THEN IMP_RES_TAC QUOTIENT_REL_ABS
+                THEN FIRST_ASSUM REWRITE_THM
+              ]
+          ],
+
+        STRIP_TAC
+        THEN FIRST_ASSUM (ASSUME_TAC o C MATCH_MP BOOL_QUOTIENT o MATCH_MP
+                 (INST_TYPE [alpha |-> etyvar, beta |-> ftyvar] FUN_QUOTIENT))
+        THEN SUBGOAL_THEN ``(P s : bool) =
+                             P (((rep:'b -> 'a) --> (I:bool -> bool))
+                                   (((abs:'a -> 'b) --> I) s))``
+                    ONCE_REWRITE_THM
+        THENL
+          [ IMP_RES_THEN REWRITE_THM QUOTIENT_ABS_REP,
+
+            FIRST_ASSUM (HO_MATCH_MP_TAC o
+                         REWRITE_RULE [AND_IMP_INTRO] o
+                         CONV_RULE (DEPTH_CONV RIGHT_IMP_FORALL_CONV))
+            THEN REPEAT STRIP_TAC
+            THENL (* 3 subgoals *)
+              [ POP_ASSUM (ASSUME_TAC o REWRITE_RULE[GSYM FUN_REL])
+                THEN IMP_RES_TAC QUOTIENT_REL_ABS
+                THEN ASM_REWRITE_TAC[],
+
+                IMP_RES_THEN (ASM_REWRITE_THM o SYM) EMPTY_PRS
+                THEN SUBGOAL_THEN ``((rep:'b -> 'a) --> (I:bool -> bool)) {} = {}``
+                        ASM_REWRITE_THM
+                THEN IMP_RES_THEN (REWRITE_THM o SYM) EMPTY_PRS,
+
+                SUBGOAL_THEN ``((rep:'b -> 'a) --> I) (INSERTR R e s') =
+                               ((abs:'a -> 'b) e INSERT ((rep --> I) s'))``
+                    REWRITE_THM
+                THENL
+                  [ REWRITE_TAC[EXTENSION]
+                    THEN GEN_TAC
+                    THEN REWRITE_TAC[IN_SET_MAP,IN_INSERTR,IN_INSERT]
+                    THEN AP_THM_TAC
+                    THEN AP_TERM_TAC
+                    THEN IMP_RES_THEN ONCE_REWRITE_THM QUOTIENT_REL
+                    THEN IMP_RES_THEN REWRITE_THM QUOTIENT_REP_REFL
+                    THEN POP_ASSUM REWRITE_THM
+                    THEN IMP_RES_THEN REWRITE_THM QUOTIENT_ABS_REP,
+
+                    DEP_ONCE_ASM_REWRITE_TAC[]
+                    THEN FIRST_ASSUM ACCEPT_TAC
+                  ]
+              ]
+          ]
+      ]
+   );
+
+val FINITER_RSP = store_thm
+   ("FINITER_RSP",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s1 s2.
+          (R ===> $=) s1 s2 ==>
+          (FINITER R s1 = FINITER R s2)`--),
+    REPEAT GEN_TAC THEN DISCH_TAC
+    THEN REPEAT GEN_TAC
+    THEN STRIP_TAC
+    THEN PURE_REWRITE_TAC[FINITER_def]
+    THEN CONV_TAC (DEPTH_CONV RES_FORALL_CONV)
+    THEN REWRITE_TAC[IN_RESPECTS]
+    THEN EQ_TAC
+    THEN DISCH_TAC
+    THEN GEN_TAC
+    THEN DISCH_TAC
+    THEN STRIP_TAC
+    THEN RES_TAC
+    THEN POP_ASSUM MP_TAC
+    THEN SUBGOAL_THEN ``(P s1 : bool) = P (s2 : 'a -> bool)``
+                    REWRITE_THM
+    THEN POP_TAC THEN POP_TAC
+    THEN POP_ASSUM (IMP_RES_TAC o ONCE_REWRITE_RULE[FUN_REL])
+   );
+
 
 
 (* IMAGER (rep1,abs2) f s =
@@ -749,7 +764,7 @@ val IMAGE_PRS = store_thm
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !f s. IMAGE f s =
-               SET_MAP rep2 (IMAGER R1 R2 ((abs1-->rep2) f) (SET_MAP abs1 s))
+               (rep2 --> I) (IMAGER R1 R2 ((abs1-->rep2) f) ((abs1 --> I) s))
        `--),
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC QUOTIENT_ABS_REP
@@ -780,8 +795,8 @@ val IMAGER_RSP = store_thm
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !f1 f2 s1 s2.
-          (R1 ===> R2) f1 f2 /\ SET_REL R1 s1 s2 ==>
-          SET_REL R2 (IMAGER R1 R2 f1 s1) (IMAGER R1 R2 f2 s2)`--),
+          (R1 ===> R2) f1 f2 /\ (R1 ===> $=) s1 s2 ==>
+          (R2 ===> $=) (IMAGER R1 R2 f1 s1) (IMAGER R1 R2 f2 s2)`--),
     REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN REPEAT GEN_TAC
@@ -808,8 +823,8 @@ val IMAGE_RSP = store_thm
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !f1 f2 s1 s2.
-          (R1 ===> R2) f1 f2 /\ SET_REL R1 s1 s2 ==>
-          SET_REL R2 (IMAGE f1 s1) (IMAGE f2 s2)`--),
+          (R1 ===> R2) f1 f2 /\ (R1 ===> $=) s1 s2 ==>
+          (R2 ===> $=) (IMAGE f1 s1) (IMAGE f2 s2)`--),
     REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC

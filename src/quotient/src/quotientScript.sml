@@ -271,6 +271,11 @@ val IN_FUN = store_thm
     THEN REWRITE_TAC[FUN_MAP_THM]
    );
 
+(*
+val SET_MAP_def =
+    Define
+      `SET_MAP (f:'a->'b) = (f --> (I:bool->bool))`;
+*)
 
 
 
