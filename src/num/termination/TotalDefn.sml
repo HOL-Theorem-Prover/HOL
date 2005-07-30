@@ -136,7 +136,7 @@ fun mk_inv_image(R,f) =
 val list_mk_lex = end_itlist (curry pairSyntax.mk_lex);
 val nless_lex = list_mk_lex o copies numSyntax.less_tm;
 
-val strip_lex = strip_binop (total dest_lex);
+val strip_lex = strip_binop (total pairSyntax.dest_lex);
 
 (*---------------------------------------------------------------------------*)
 (* Takes [v1,...,vn] [i_j,...,i_m], where  1 <= i_j <= i_m <= n and returns  *)
