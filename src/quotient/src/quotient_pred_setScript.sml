@@ -30,6 +30,8 @@ val ONCE_REWRITE_THM = fn th => ONCE_REWRITE_TAC[th];
 fun ASM_REWRITE_THM th = ASM_REWRITE_TAC[th];
 val REWRITE_ALL_THM = fn th => RULE_ASSUM_TAC (REWRITE_RULE[th])
                                THEN REWRITE_TAC[th];
+val REWRITE_ALL_TAC = fn ths => RULE_ASSUM_TAC (REWRITE_RULE ths)
+                                THEN REWRITE_TAC ths;
 
 val POP_TAC = POP_ASSUM (fn th => ALL_TAC);
 
@@ -686,14 +688,13 @@ val FINITE_PRS = store_thm
       ]
    );
 
-val FINITER_RSP = store_thm
-   ("FINITER_RSP",
-    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+val FINITER_EQ = store_thm
+   ("FINITER_EQ",
+    (--`!R:'a -> 'a -> bool.
          !s1 s2.
           (R ===> $=) s1 s2 ==>
           (FINITER R s1 = FINITER R s2)`--),
-    REPEAT GEN_TAC THEN DISCH_TAC
-    THEN REPEAT GEN_TAC
+    REPEAT GEN_TAC
     THEN STRIP_TAC
     THEN PURE_REWRITE_TAC[FINITER_def]
     THEN CONV_TAC (DEPTH_CONV RES_FORALL_CONV)
@@ -710,6 +711,130 @@ val FINITER_RSP = store_thm
     THEN POP_TAC THEN POP_TAC
     THEN POP_ASSUM (IMP_RES_TAC o ONCE_REWRITE_RULE[FUN_REL])
    );
+
+val FINITER_RSP = store_thm
+   ("FINITER_RSP",
+    (--`!R (abs:'a -> 'b) rep. QUOTIENT R abs rep ==>
+         !s1 s2.
+          (R ===> $=) s1 s2 ==>
+          (FINITER R s1 = FINITER R s2)`--),
+    REWRITE_TAC[FINITER_EQ]
+   );
+
+
+val FINITER_EMPTY = store_thm
+   ("FINITER_EMPTY",
+    (--`!R:'a -> 'a -> bool. FINITER R EMPTY`--),
+     GEN_TAC THEN
+     PURE_ONCE_REWRITE_TAC [FINITER_def] THEN
+     RESQ_GEN_TAC THEN
+     DISCH_THEN REWRITE_THM
+   );
+
+val FINITER_INSERTR = store_thm
+   ("FINITER_INSERTR",
+    (--`!R (s::respects (R ===> $=)).
+            FINITER R s ==>
+            !x:'a::respects R. FINITER R (INSERTR R x s)`--),
+     GEN_TAC THEN
+     PURE_ONCE_REWRITE_TAC [FINITER_def] THEN
+     CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
+     REWRITE_TAC[IN_RESPECTS] THEN
+     REPEAT STRIP_TAC THEN
+     UNDISCH_TAC (--`R (x:'a) x :bool`--) THEN
+     SPEC_TAC ((--`x:'a`--),(--`x:'a`--)) THEN
+     FIRST_ASSUM (MATCH_MP_TAC o REWRITE_RULE[AND_IMP_INTRO]) THEN
+     ASM_REWRITE_TAC[] THEN
+     FIRST_ASSUM (MATCH_MP_TAC o REWRITE_RULE[AND_IMP_INTRO]) THEN
+     ASM_REWRITE_TAC[GSYM AND_IMP_INTRO]);
+
+val SIMPLE_FINITER_INDUCT =
+    TAC_PROOF
+    (([], (--`!R (P::respects ((R ===> $=) ===> $=)).
+               P EMPTY /\
+               (!s::respects (R ===> $=).
+                 P s ==> (!e:'a::respects R. P(INSERTR R e s)))
+                ==>
+               !s::respects (R ===> $=). FINITER R s ==> P s`--)),
+     GEN_TAC THEN
+     RESQ_GEN_TAC THEN
+     CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
+     REWRITE_ALL_TAC[IN_RESPECTS] THEN
+     STRIP_TAC THEN
+     GEN_TAC THEN DISCH_TAC THEN
+     PURE_ONCE_REWRITE_TAC [FINITER_def] THEN
+     CONV_TAC (DEPTH_CONV RES_FORALL_CONV) THEN
+     REWRITE_ALL_TAC[IN_RESPECTS] THEN
+     ONCE_REWRITE_TAC [AND_IMP_INTRO] THEN
+     DISCH_THEN MATCH_MP_TAC THEN
+     ASM_REWRITE_TAC []);
+
+val lemma =
+  let val tac = ASM_CASES_TAC (--`P:bool`--) THEN ASM_REWRITE_TAC[]
+      val lem = TAC_PROOF(([],(--`(P ==> P /\ Q) = (P ==> Q)`--)), tac)
+      val th1 = DISCH_ALL
+                  (RESQ_SPEC (--`\s:'a set. FINITER R s /\ P s`--)
+                     (SPEC_ALL SIMPLE_FINITER_INDUCT))
+      val th2 = TAC_PROOF(([],(--`P IN respects ((R ===> $=) ===> $=) ==>
+                                  (\s:'a set. FINITER R s /\ P s) IN
+                                   respects ((R ===> $=) ===> $=)`--)),
+                      REWRITE_TAC[IN_RESPECTS]
+                      THEN ONCE_REWRITE_TAC[FUN_REL]
+                      THEN DISCH_TAC
+                      THEN BETA_TAC
+                      THEN REPEAT STRIP_TAC
+                      THEN IMP_RES_THEN REWRITE_THM FINITER_EQ
+                      THEN AP_TERM_TAC
+                      THEN FIRST_ASSUM MATCH_MP_TAC
+                      THEN FIRST_ASSUM ACCEPT_TAC)
+  in DISCH_ALL (REWRITE_RULE [lem,FINITER_EMPTY]
+                      (BETA_RULE (MP th1 (UNDISCH_ALL th2))))
+  end;
+
+val ABSORPTIONR =
+    store_thm
+    ("ABSORPTIONR",
+     (--`!R (x:'a::respects R). !s::respects(R ===> $=).
+            (x IN s) = (R ===> $=) (INSERTR R x s) s`--),
+     GEN_TAC THEN
+     REWRITE_TAC [SET_REL,IN_INSERTR] THEN
+     REPEAT (RESQ_GEN_TAC ORELSE STRIP_TAC ORELSE EQ_TAC) THEN
+     REWRITE_ALL_TAC[IN_RESPECTS,SET_REL] THEN
+     RES_TAC THEN
+     ASM_REWRITE_TAC[]);
+
+val FINITER_INDUCT = store_thm("FINITER_INDUCT",
+--`!R (P::respects ((R ===> $=) ===> $=)).
+       P {} /\ (!s::respects (R ===> $=). FINITER R s /\ P s ==>
+                    (!e:'a::respects R. ~(e IN s) ==> P(INSERTR R e s)))
+       ==> !s::respects (R ===> $=). FINITER R s
+                          ==> P s`--,
+     GEN_TAC THEN
+     RESQ_GEN_TAC THEN
+     FIRST_ASSUM (MP_TAC o ONCE_REWRITE_RULE[FUN_REL]
+                         o REWRITE_RULE[IN_RESPECTS]) THEN 
+     FIRST_ASSUM (ASSUME_TAC o MP lemma) THEN
+     DISCH_TAC THEN
+     STRIP_TAC THEN
+     FIRST_ASSUM MATCH_MP_TAC THEN
+     ASM_REWRITE_TAC [] THEN
+     FIRST_ASSUM (ASSUME_TAC o REWRITE_RULE[IN_RESPECTS]
+                             o CONV_RULE RES_FORALL_CONV) THEN
+     RESQ_GEN_TAC THEN
+     FIRST_ASSUM (ASSUME_TAC o REWRITE_RULE[IN_RESPECTS]) THEN
+     STRIP_TAC THEN
+     RESQ_GEN_TAC THEN
+     FIRST_ASSUM (ASSUME_TAC o REWRITE_RULE[IN_RESPECTS]) THEN
+     CONJ_TAC THENL
+     [MP_TAC (ASSUME ``(e:'a) IN respects R``) THEN
+      IMP_RES_THEN (MATCH_ACCEPT_TAC o CONV_RULE RES_FORALL_CONV)
+               (RESQ_SPEC ``s:'a -> bool`` (SPEC_ALL FINITER_INSERTR)),
+      ASM_CASES_TAC (--`(e:'a) IN s`--) THENL
+      [IMP_RES_TAC (RESQ_SPEC ``s:'a -> bool``
+                    (RESQ_SPEC ``e:'a`` (SPEC_ALL ABSORPTIONR)))
+       THEN RES_TAC,
+       RES_TAC
+       THEN FIRST_ASSUM (IMP_RES_TAC o RESQ_SPEC ``e:'a``)]]);
 
 
 
