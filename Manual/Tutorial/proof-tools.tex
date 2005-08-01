@@ -89,11 +89,16 @@ runtime: 0.147s,    gctime: 0.012s,     systime: 0.000s.
 
 This is a dreadful algorithm for solving this problem.  The system's
 built-in function, \ml{tautLib.TAUT\_CONV} solves the same problem ten
-times faster, even though it is also using a truth-table technique.
-The only real merit in this solution is that it took one line to
-write.  This is a general illustration of the truth that \HOL{}'s
-high-level tools, particularly the simplifier, can provide fast
-prototypes for a variety of proof tasks.
+times faster, even though it is also using a truth-table
+technique.\footnote{The main difference is that \ml{TAUT\_CONV}
+  simplifies the body of the universally quantified formula after each
+  case-split.  Our function does all of the case-splits and then
+  simplifies.  The simplifier, which works over a term top-down, can't
+  implement \ml{TAUT\_CONV}'s algorithm directly.}  The only real
+merit in this solution is that it took one line to write.  This is a
+general illustration of the truth that \HOL{}'s high-level tools,
+particularly the simplifier, can provide fast prototypes for a variety
+of proof tasks.
 
 \section{Method 2: the DPLL Algorithm}
 
@@ -124,8 +129,8 @@ Thus, we will assume
 \begin{hol}
 \begin{verbatim}
    datatype result = Unsat of thm | Sat of term -> term
-   toCNF : term -> thm
-   DPLL : term -> result
+   val toCNF : term -> thm
+   val DPLL : term -> result
 \end{verbatim}
 \end{hol}
 (The theorem returned by \ml{toCNF} will equate the input term to
@@ -165,7 +170,109 @@ negation.
 
 Using these functions, it is easy to see how we will be able to take
 $\forall\vec{v}.\;\varphi$ as input, and pass the term $\neg\varphi$
-to the function \ml{toCNF}.
+to the function \ml{toCNF}.  A more significant question is how to
+use the results of these calls.   The call to \ml{toCNF} will return a
+theorem
+\begin{equation}
+\vdash \neg\varphi = \varphi'
+\label{eqn:tocnf-result}
+\end{equation}
+The formula $\varphi'$ is what will then be passed to \ml{DPLL}.  (We
+can extract it by using the \ml{concl} and \ml{rhs} functions.) If
+\ml{DPLL} returns the theorem $\vdash \varphi' = \holtxt{F}$, an
+application of \ml{TRANS} to this and~(\ref{eqn:tocnf-result}) will
+derive the formula $\vdash \neg\varphi = F$.  In order to derive the
+final result, we will need to turn this into $\vdash\varphi$.  This is
+best done by proving a bespoke theorem embodying the equality (there
+isn't one such already in the system):
+\begin{hol}
+\begin{verbatim}
+   val NEG_EQ_F = prove(
+     ``(~p = F) = p``,
+     REWRITE_TAC []);
+\end{verbatim}
+\end{hol}
+To turn $\vdash \varphi$ into $\vdash (\forall
+\vec{v}.\;\varphi) = \holtxt{T}$, we will perform the following proof:
+\[
+\infer[\texttt{\scriptsize EQT\_INTRO}]{
+  \vdash (\forall \vec{v}.\;\varphi) = \holtxt{T}}{
+  \infer[\texttt{\scriptsize GENL}(\vec{v})]{\vdash \forall \vec{v}.\;\varphi}{
+    \vdash \varphi
+  }
+}
+\]
+The other possibility is that \ml{DPLL} will return a satisfying
+assignment demonstrating that $\varphi'$ is satisfiable.  If this is
+the case, we want to show that $\forall\vec{v}.\;\varphi$ is false.
+We can do this by assuming this formula, and then specialising the
+universally quantified variables in line with the provided map.  In
+this way, it will be possible to produce the theorem
+\[
+\forall \vec{v}.\;\varphi \vdash \varphi[\vec{v} := \mbox{\emph{satisfying
+  assignment}}]
+\]
+Because there are no free variables in $\forall\vec{v}.\;\varphi$, the
+substitution will produce a completely ground boolean formula.  This
+will straightforwardly rewrite to \holtxt{F} (if the assignment
+makes $\neg\varphi$ true, it must make $\varphi$ false).  Turning
+$\phi\vdash \holtxt{F}$ into $\vdash \phi = \holtxt{F}$ is a matter of
+calling \ml{DISCH} and then rewriting with the built-in theorem
+\ml{IMP\_F\_EQ\_F}:
+\[
+\vdash \forall t.\;t \Rightarrow \holtxt{F} = (t = \holtxt{F})
+\]
+Putting all of the above together, we can write our wrapper function:
+\begin{hol}
+\begin{verbatim}
+   fun wrapper t = let
+     val (vs, phi) = strip_forall t
+     val cnf_eqn = toCNF (mk_neg phi)
+     val (_, phi') = rhs (concl cnf_eq)
+   in
+     case DPLL phi' of
+       Unsat phi'_eq_F => let
+         val negphi_eq_F = TRANS cnf_eqn phi'_eq_F
+         val phi_thm = CONV_RULE (REWR_CONV NEG_EQ_F) negphi_eq_F
+       in
+         EQT_INTRO (GENL vs phi_thm)
+       end
+     | Sat f => let
+         val t_assumed = ASSUME t
+         fun spec th =
+             spec (SPEC (f (#1 (dest_forall (concl th)))) th)
+             handle HOL_ERR _ => REWRITE_RULE [] th
+       in
+         CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH t (spec t_assumed))
+       end
+   end
+\end{verbatim}
+\end{hol}
+
+The auxiliary function \ml{spec} that is used in the second case
+relies on the fact that \ml{dest\_forall} will raise a \ml{HOL\_ERR}
+exception if the term it is applied to is not universally quantified.
+When \ml{spec}'s argument is not universally quantified, this means
+that the recursion has bottomed out, and all of the original formula's
+universal variables have been specialised.  Then the resulting formula
+can be rewritten to false (\ml{REWRITE\_RULE}'s built-in rewrites will
+handle all of the necessary cases).
+
+The \ml{wrapper} function also uses \ml{REWR\_CONV} in two places.
+The \ml{REWR\_CONV} function applies a single (first-order) rewrite at
+the top of a term.
+
+
+\subsection{Conversion to Conjunctive Normal Form}
+\label{sec:conv-conj-norm}
+
+
+\subsection{The Core DPLL Procedure}
+\label{sec:dpll-procedure}
+
+
+
+
 
 %%% Local Variables:
 %%% mode: latex
