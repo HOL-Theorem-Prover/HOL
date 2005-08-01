@@ -1,0 +1,536 @@
+\newcommand{\tsu}[1]{\textsf{\textup{#1}}}
+\newcommand{\semb}[1]{\ensuremath{[\![#1]\!]}}
+\newcommand{\rvset}{\ensuremath{V\!\!AR}}
+\newcommand{\wff}{\ensuremath{w\!f\!\!f}}
+\newcommand{\nnf}{\ensuremath{N\!N\!F\,}}
+\newcommand{\ctl}{\textsf{CTL}\,}
+\newcommand{\hc}{HolCheck\,}
+\newcommand{\HOLb}{\HOL\,}
+\newcommand{\hand}{\ensuremath{/\backslash}}
+\newcommand{\hor}{\ensuremath{\backslash/}}
+\newcommand{\hnot}{\ensuremath{\sim}}
+\setcounter{sessioncount}{0}
+
+This is a brief description of the \hc model checker, version 1.0. It assumes the reader is familiar with symbolic model checking, with \HOLb, and, ideally, with \texttt{HolBddLib}, the \HOLb interface to BDDs. It should be read with a working \HOLb installation at hand.
+
+\subsection{Introduction}\label{sec:intro}
+
+\hc is a BDD-based model checker embedded in the \HOLb theorem prover, interfaced to an external BDD engine for efficiency. It currently has the following features:
+
+\begin{itemize}
+\item All steps of the algorithm are proved in \HOLb, with BDD operations considered atomic.
+\item Results are returned as \HOLb theorems.
+\item Model checking for the propositional \(\mu\)-calculus and \ctl is supported.
+\item Counterexamples and witnesses are generated when appropriate.
+\item A fully-automatic counterexample-guided abstraction refinement framework is included.  
+\end{itemize}
+
+The user inputs a model and a list of properties to be checked, and the model checker returns theorems, counterexamples and/or witnesses for each property with respect to the model. Models are formally treated as Kripke structures described by the quintuple \( (S, S_0, T, P, L) \) where 
+
+\begin{itemize}
+\item \( S \) is the set of states of the model. Each state is modelled as a tuple of state variables. Currently only boolean state variables are supported.
+\item \( S_0\) is the set of initial states.
+\item \( T \) is the set of actions or program letters, such that for each \( a \in T \), we have \( R_a \subseteq S \times S\). This says that the model has a transition labelled \( a \) from a state \( s \) to a state \( s' \) if and only if \( R_a(s,s') \). Next state variables are distinguished from current state variables by priming. 
+\item \( P \) is the set of atomic propositions. 
+\item \( L:S\rightarrow 2^P \) labels each state with those propositions that are true in it.   
+\end{itemize}
+
+See \S\ref{sec:models} for details. The user is required to supply only \( S_0 \) and \( T \) as the remaining components can be calculated from these. Properties are input as \HOLb terms of type \(\mathtt{mu}\) or \(\mathtt{ctl}\), \HOLb datatypes for which have been defined (see \S\ref{sec:prop} for details). A property is satisfied by a model if the set of initial states of the model is a subset of the set of states satisfying the property. 
+
+\subsection{Quick Usage Overview}
+
+This section provides a quick look at a typical use of \hc. We choose a simple mod-8 counter as our example, which starts at 0 and counts up to 7, and then loops from 0 again. We wish to show that the most significant bit eventually goes high. 
+
+First we load the holCheck library:
+\begin{session}\begin{verbatim}
+- load "holCheckLib"; open holCheckLib; 
+  (* we don't show the output from the "open" here *)
+> val it = () : unit
+\end{verbatim}\end{session}
+Now we specify the labelled transition system as a list of (string, term) pairs, where each string is a transition label and each term represents a transition relation (three booleans required to encode numbers 0-7; next-state variable values indicated by priming; note we expand the xor, since holCheck currently requires purely propositional terms) :
+\begin{session}\begin{verbatim}
+- val xor_def = Define `xor x y = (x \/ y) /\ ~(x=y)`;
+  val TS = List.map (I ## (rhs o concl o 
+           (fn tm => REWRITE_CONV [xor_def] tm handle ex => REFL tm))) 
+                [("v0",``(v0'=~v0)``),("v1",``v1' = xor v0 v1``),
+                 ("v2",``v2' = xor (v0 /\ v1) v2``)]
+Definition has been stored under "xor_def".
+> val xor_def = |- !x y. xor x y = (x \/ y) /\ ~(x = y) : thm
+> val TS =
+    [("v0", ``v0' = ~v0``), ("v1", ``v1' = (v0 \/ v1) /\ ~(v0 = v1)``),
+     ("v2", ``v2' = (v0 /\ v1 \/ v2) /\ ~(v0 /\ v1 = v2)``)] :
+  (string * term) list
+\end{verbatim}\end{session}
+Next we specify the initial states (counter starts at 0):
+\begin{session}\begin{verbatim}
+- val S0 = ``~v0 /\ ~v1 /\ ~v2``; 
+> val S0 = ``~v0 /\ ~v1 /\ ~v2`` : term
+\end{verbatim}\end{session}
+Now we say whether the transitions happen synchronously (they do):
+\begin{session}\begin{verbatim}
+- val ric = true;
+> val ric = true : bool
+\end{verbatim}\end{session}
+Then we set up the state tuple:
+\begin{session}\begin{verbatim}
+- val state = mk_state S0 TS;
+> val state = ``(v0,v1,v2)`` : term
+\end{verbatim}\end{session}
+Next we specify a property (there exists a future in which the most significant bit, v2, will go high). Note how atomic propositions are represented as functions on the state :
+\begin{session}\begin{verbatim}
+- val ctlf = ("ef_msb_high",``C_EF (C_BOOL 
+(B_PROP ^(pairSyntax.mk_pabs(state,``v2:bool``))))``);
+> val ctlf = ("ef_msb_high",``C_EF (C_BOOL(B_PROP(\(v0,v1,v2). v2))``) 
+  : string * term
+\end{verbatim}\end{session}
+Now we can create the model. This is done by starting with the supplied \texttt{empty\_model} value and filling it using the \texttt{set\_*} functions: 
+\begin{session}\begin{verbatim}
+- val m = ((set_init S0) o (set_trans TS) o (set_flag_ric ric) o 
+           (set_state state) o  (set_props [ctlf])) empty_model;
+> val m = <model> : model
+\end{verbatim}\end{session}
+At last we can call the model checker...
+\begin{session}\begin{verbatim}
+- val m2 = holCheck m;
+> val m2 = model : <model>
+\end{verbatim}\end{session}
+...and examine the results:
+\begin{session}\begin{verbatim}
+- get_results m2; 
+> val it =
+  SOME [(<term_bdd>,
+   SOME [............................]
+    |- CTL_MODEL_SAT ctlKS (C_EF (C_BOOL (B_PROP (\(v0,v1,v2). v2)))),
+   SOME [``(~v0,~v1,~v2)``, ``(v0,~v1,~v2)``, ``(~v0,v1,~v2)``,
+                 ``(v0,v1,~v2)``, ``(~v0,~v1,v2)``])] :
+  (term_bdd * thm option * term list option) list option
+\end{verbatim}\end{session}
+The result is a list of triples, one triple per property checked. The first component contains the BDD representation of the set of states satisfying the property. The second component contains a theorem certifying that the property holds in the model i.e. it holds in the initial states. The third contains a witness trace that counts up to 4, at which point v2 goes high.
+
+Note that since we did not supply a name for the model, the system has chosen the default name \texttt{ctlKS}, which stands for "CTL Kripke structure". Names can be given via \texttt{set\_name}. See \S\ref{sec:formal_models} for more on how \hc represents formal models.
+
+Note also that the theorem created has several assumptions. This is because \hc\, creates proofs lazily. We can verify the proof...
+\begin{session}\begin{verbatim}
+- val m3 = prove_model m2; 
+  (* we don't show the prove_model "chatting" messages here *)
+> val m3 = <model> : model\end{verbatim}\end{session}
+...and examine the verified results: 
+\begin{session}\begin{verbatim}
+- get_results m3;
+> val it =
+   SOME [(<term_bdd>,
+    SOME|- CTL_MODEL_SAT ctlKS (C_EF(C_BOOL(B_PROP(\(v0,v1,v2). v2)))),
+    SOME [``(~v0,~v1,~v2)``, ``(v0,~v1,~v2)``, ``(~v0,v1,~v2)``,
+                 ``(v0,v1,~v2)``, ``(~v0,~v1,v2)``])] :
+  (term_bdd * thm option * term list option) list option
+\end{verbatim}\end{session}
+The theorem component now has no assumptions. Any assumptions to the term\_bdd would also have been discharged. 
+
+\subsection{Detailed Usage}
+
+This section describes the usage of \hc in more detail. As a running example we will take the children's game of tic-tac-toe or noughts-and-crosses, usually played on a 3-by-3 grid. For simplicity and to keep the formulas under consideration manageable, we consider the trivial 1-by-1 variant. Thus, the grid starts off empty, the player to go first makes a move and immediately wins, ending the game.
+
+For this model, we need one state variable to track whose move it is, and we shall call this \(m\), which is true if the first player (call her A) is to move and false if the second player (call him B) is to move. We also need two state variables to keep track of the moves already played. The state variable \(u_{0,0}\) is true if A has claimed grid cell \((0,0)\) and false otherwise, and similarly the state variable \(v_{0,0}\) tracks B's moves. It is easy to see how this scheme can be generalised to arbitrary grids.
+
+The state is described by the tuple \( (m,u_{0,0},v_{0,0}) \). \(S_0\) is \( \{ (T,F,F) \} \) and \( T \) is 
+
+\begin{eqnarray*}
+ [&(&''{u_{0,0}}'',(\lnot u_{0,0} \land \lnot v_{0,0} \land m) \land \lnot((\lnot m \land u_{0,0}) \lor (m \land v_{0,0}))\\
+       &&\land (u_{0,0}' \land \lnot m' \land (v_{0,0}' = v_{0,0}))),\\
+     &(&''{v_{0,0}}'',(\lnot v_{0,0} \land \lnot u_{0,0} \land \lnot m) \land \lnot((\lnot m \land u_{0,0}) \lor (m \land v_{0,0}))\\
+        &&\land (v_{0,0}' \land m' \land (u_{0,0}' = u_{0,0})))]
+\end{eqnarray*}
+
+This says for instance that the move \(''{u_{0,0}}''\) may be played if and only if the board is empty and it is A's turn AND the game is not already over AND in the next state A will have claimed \((0,0)\) and it will be B's turn, whose status will remained unchanged. And similarly for the move \(''{v_{0,0}}''\). 
+
+Note that although there are eight possible states, only two (\((T,F,F)\) and \((F,T,F) \)) are actually reachable.
+
+For our running example, we use \texttt{ttt.sml} from \texttt{src/HolCheck/examples}. Build this (and others\footnote{The AMBA examples are large and take a while to build. To skip them, see the README file in the same folder.}) by typing \texttt{Holmake} in \texttt{src/HolCheck/examples}. Now start \HOLb from this directory (or use the -I command-line parameter).
+
+The first step after loading \HOLb is to load \hc. \HOLb messages have been elided.
+
+\setcounter{sessioncount}{0}
+
+\begin{session}\begin{verbatim}
+- app load ["holCheckLib","ttt"];
+> val it = () : unit
+\end{verbatim}\end{session}
+
+The user interacts with \hc through a single ML function \texttt{holCheck}, found in the library \texttt{holCheckLib}. 
+
+\begin{session}\begin{verbatim}
+- holCheckLib.holCheck;
+> val holCheck = fn : model -> model
+\end{verbatim}\end{session}
+
+The function takes a \hc model as an argument, and returns a model which is the same as the argument, but additionally contains the results of the model checking. We now describe how a \hc model is constructed.
+
+\subsubsection{The Input Model}
+
+A \hc model is a data structure that contains all the information required for model checking. We use the model construction function provided in the \texttt{ttt} example to create the model. 
+
+\begin{session}\begin{verbatim}
+- val ttt1 = ttt.makeTTT 1;
+> val ttt1 = <model> : model
+\end{verbatim}\end{session}
+ 
+The numeric argument to \(\mathtt{ttt.makeTTT}\) gives the size of grid required.  Now we consider each component of the model \texttt{ttt1}, using the \texttt{holCheckLib.get\_*} family of functions. The corresponding \texttt{holCheckLib.set\_*} functions were used to actually construct the model. The argument to each \texttt{set} function is precisely the return value of the corresponding \texttt{get} function as seen below. The only difference is that the values of optional model components are returned as option types. See the source code of \texttt{mod8.sml} in the HolCheck \texttt{examples} directory for a simple example of how this is done. See \S\ref{sec:models} for general details on model construction.
+
+\begin{session}\begin{verbatim}
+- val S0 = holCheckLib.get_init ttt1;
+> val S0 = ``~u0_0 /\ ~v0_0 /\ m`` : term
+\end{verbatim}\end{session}
+
+\(\mathtt{S0}\) is a term over the state variables of the model, such that only those assignments to the variables that satisfy the initial states of the model also satisfy \(\mathtt{S0}\). Thus \(\mathtt{S0}\) denotes the initial states. Note that since only boolean variables are supported, \(\mathtt{S0}\) must be a purely propositional term.
+
+\begin{session}\begin{verbatim}
+- val TS = holCheckLib.get_trans ttt1;
+> val TS =
+    [("u0_0",
+      ``~u0_0 /\ ~v0_0 /\ m /\
+        ~(~m /\ (u0_0 \/ u0_0 \/ u0_0 \/ u0_0) \/
+          m /\ (v0_0 \/ v0_0 \/ v0_0 \/ v0_0)) /\ u0_0' /\ ~m' /\
+        (v0_0' = v0_0)``),
+     ("v0_0",
+      ``~v0_0 /\ ~u0_0 /\ ~m /\
+        ~(~m /\ (u0_0 \/ u0_0 \/ u0_0 \/ u0_0) \/
+          m /\ (v0_0 \/ v0_0 \/ v0_0 \/ v0_0)) /\ v0_0' /\ m' /\
+        (u0_0' = u0_0)``)] : (string * term) list
+\end{verbatim}\end{session}
+
+\(\mathtt{TS}\) is a list of pairs of the form \( (a,R_a)\), where the string \(a\) is an action name (or transition label) and the \HOLb term \(R_a\) is a relation over current and next states such that the model has a transition labelled \(a\) from a state \( s \) to a state \(s'\) if and only if the corresponding valuations of current and next state variables satisfy \( R_a \). In this example, there are two actions, corresponding to the two possible moves ``u0\_0'' and ``v0\_0'', as explained earlier. Of course, in this particular case, the second move is never actually played. We have here edited out the redundancy in \(\mathtt{TS}\), which is an artifact of how \(\mathtt{ttt.makeTTT}\) generates the grid.
+
+Thus \(\mathtt{S0}\) and \(\mathtt{TS}\) are just \HOLb equivalents of \(S_0\) and \(T\) as described in section \ref{sec:intro}. \( \mathtt{TS} \) is named as such to avoid clashing with the global \HOLb term constant \( \mathtt{T} \). 
+
+\begin{session}\begin{verbatim}
+- val ric = holCheckLib.get_flag_ric ttt1;
+> val ric = false : bool
+\end{verbatim}\end{session}
+
+\(\mathtt{ric}\) is a boolean which is true if the transition system described by \(\mathtt{TS}\) is synchronous, and false otherwise. In a synchronous transition system, all actions must occur simultaneously. Otherwise \(\mathtt{TS}\) is asynchronous i.e., the actions are interleaved. In the case of our example for instance, \( \mathtt{TS} \) should be asynchronous since the players do not move together but interleave moves. The definition of \( \mathtt{TS} \) ensures that they do not play out of turn, or make illegal moves. 
+
+For an asynchronous system, the formal transition relation is internally represented as the disjunction of all the actions. For a synchronous system (e.g., a circuit with a single global clock), it is a conjunction. Indeed, the standard way to specify a synchronous transition relation is using the wildcard ``.'' action, with the corresponding relation being a conjunction over all possible actions. Step through the usage example given at the top of \texttt{alu.sml} in the \hc \texttt{examples} directory, and then examine the generated model to see how synchronous transition systems are modelled. 
+
+\begin{session}\begin{verbatim}
+- val nm = holCheckLib.get_name ttt1;
+> val nm = SOME "ttt" : string option
+\end{verbatim}\end{session}
+
+\(\mathtt{nm}\) is an optional argument when constructing the model (hence it is stored internally as an option type). It is a string that names the formal model that is generated internally by \hc. Since the resulting theorems are stated in terms of this model, it is useful to have an abbreviation for the term representing the model to keep the theorem statement readable. \hc has a default name for models, but if the user expects to be using more than one model in the same session, then setting a name is required to avoid name clashes.
+
+\begin{session}\begin{verbatim}
+- val vord = holCheckLib.get_vord ttt1;
+> val vord = SOME ["m", "m'", "u0_0", "u0_0'", "v0_0", "v0_0'"] : 
+  string list option
+\end{verbatim}\end{session}
+
+\(\mathtt{vord}\) is an optional argument to the model. It is a list of current- and next-state variables names, given as strings without any type information. \(\mathtt{vord}\) is used to manually supply a variable ordering to the BDD engine. \hc has a default ordering heuristic but it is rather primitive at present (it just interleaves current- and next-state variables).
+
+\begin{session}\begin{verbatim}
+- val st =  holCheckLib.get_state ttt1;
+> val st = SOME``(m,u0_0,v0_0)`` : term option
+\end{verbatim}\end{session}
+
+\(\mathtt{st}\) is an optional argument. It is a \HOLb tuple that explicitly describes the order in which state variables appear in the state tuple. \hc can automatically calculate the state from \(\mathtt{S0}\) and \(\mathtt{TS}\), but in some cases the user may wish to use the resulting theorems in other work where the state tuple has already been defined in a certain manner. \(\mathtt{st}\) is used in such cases. Note we do not use the identifier \texttt{state} as this already exists in the default HOL interactive session namespace.
+
+At present the user must take care that \(\mathtt{vord}\) and \(\mathtt{st}\) are consistent with the rest of the arguments e.g. there are no missing variables. 
+
+\texttt{holCheckLib.get\_props} returns the properties to be model checked. This is simply a list of \ctl or \(\mu\)-calculus formulas. Since the formulas contain atomic propositions, which are modelled as functions on the state, the user inputting the formulas needs to know what the state is going to be. \hc provides a function \(\mathtt{mk\_state}\) for this purpose.
+
+\begin{session}
+\begin{verbatim} 
+- holCheckLib.mk_state;
+> val it = fn : term -> (string * term) list -> term
+- holCheckLib.mk_state S0 TS;
+> val it = ``(m,u0_0,v0_0)`` : term
+\end{verbatim}
+\end{session}
+
+Thus even though the state is an optional argument when constructing the model, in practice we nearly always use \texttt{mk\_state} and then \texttt{set\_state} to set it. 
+
+\(\mathtt{ttt1}\) contains five \ctl properties. We consider these in turn.
+
+\begin{session}
+\begin{verbatim} 
+- List.nth(holCheckLib.get_props ttt1,0);
+> val it =
+    ("isInit",
+     ``~C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) /\
+       ~C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) /\
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). m))``) : string * term
+\end{verbatim}
+\end{session}
+
+The first property describes the initial state of the system. Note how atomic propositions are formally modelled as boolean functions on the state. As noted earlier, all atomic propositions are currently just boolean variables. \texttt{C\_BOOL} and \texttt{B\_PROP} are type constructors from the \HOLb datatype for \ctl formulas. Property specification is considered in more detail in \S\ref{sec:prop}.
+
+\begin{session}
+\begin{verbatim} 
+- List.nth(holCheckLib.get_props ttt1,1);
+> val it =
+    ("A_win",
+     ``~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+       (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))``) : string * term
+\end{verbatim}
+\end{session}
+
+This property describes a winning position for A. As with \(\mathtt{TS}\) there is some redundancy here which has been edited out. We shall edit this redundancy from the following properties to save space.
+
+\begin{session} 
+\begin{verbatim} 
+- List.nth(holCheckLib.get_props ttt1,2);
+> val it =
+    ("B_win",
+     ``C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+       C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)``) : string * term
+\end{verbatim}
+\end{session}
+
+The property above similarly describes a winning position for B.
+
+\begin{session}\begin{verbatim} 
+- List.nth(holCheckLib.get_props ttt1,3);
+> val it =
+    ("A_canwin",
+     ``C_EG (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+             (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0))) \/
+             C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+          C_EF (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))) \/
+            ~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+            C_AF (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                  (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))))``) : 
+  string * term
+\end{verbatim}\end{session}
+
+This property says that A has a winning strategy from the current state. Since we define success if the set of states satisfying the property contains the set of initial states, this suffices to check that A has a winning strategy. Cleaned up, this is the \ctl property \[ \mathbf{EG} (\textup{(A wins)} \lor (\textup{A to move} \land \mathbf{EF} (\textup{A wins})) \lor (\textup{B to move} \land \mathbf{AF} (\textup{A wins})))\] Intuitively, the property says that there exists a path from the current state such that at each step on that path either A has won the game, or it is A's turn and there exists at least one path in which A eventually wins the game, or it is not A's turn and on all paths A eventually wins the game. 
+
+The last property similarly says the B has a winning strategy. 
+
+\subsubsection{The Output Model}
+
+The model returned by \(\mathtt{ttt.makeTTT}\) can be supplied as the first argument to \(\mathtt{holCheck}\).
+
+\begin{session}\begin{verbatim} 
+- val ttt2 = holCheckLib.holCheck ttt1;
+> val ttt2 = <model> : model
+\end{verbatim}\end{session}
+ 
+\(\mathtt{holCheck}\) returns another model. This model is exactly the same as \texttt{ttt1}, except that it now contains the results of the model checking. These are recovered via the function \texttt{holCheckLib.get\_results}, and return a list in which the n\({}^{th}\) element gives the results of model checking the n\({}^{th}\) property in the list returned by \texttt{holCheckLib.get\_props}. \texttt{holCheckLib.get\_results} returns an option type, since no results are known before model checking takes place.
+
+Each element is a triple of the form \( (term\_bdd,thm,trace) \).\footnote{A \(\textup{term\_bdd}\) is an ML value that contains a \HOLb term together with its boolean semantics represented as a BDD (see the \texttt{HolBddLib} documentation for details).} These are the BDD semantics of the property, a theorem certifying the property holds (if it does) and a counterexample or witness trace, if one could be recovered. 
+
+We consider each result in turn.
+
+\begin{session}\begin{verbatim} 
+- List.nth(valOf (holCheckLib.get_results ttt2),0);
+> val it =
+    (<term_bdd>,
+     SOME [.................]
+         |- CTL_MODEL_SAT ctlKS_ttt
+              (~C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) /\
+               ~C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) /\
+               C_BOOL (B_PROP (\(m,u0_0,v0_0). m))), NONE) :
+  term_bdd * thm option * term list option
+\end{verbatim}\end{session}
+
+This is the result corresponding to the first property (which described the set of initial states).  The first component is the \(\textup{term\_bdd}\) that corresponds to the set of states of the model satsified by this property. As expected, the set of initial states is contained in the set of initial states and thus the second component is a success theorem attesting to this. The predicate \( \mathtt{CTL\_MODEL\_SAT} \) says that the property holds in the formal model \( \mathtt{ctlKS\_ttt}\). If the property had not held, the theorem derivation would have failed and the component would have been \( \mathtt{NONE}\). The third component is used to return the counterexample or witness associated with the property. Since we succeeded there is no counterexample, and witnesses are only returned for properties talking about paths, so this component is \( \mathtt{NONE}\). Note that the theorem has some assumptions associated with it. We shall return to these later. 
+
+\begin{session}\begin{verbatim}
+- List.nth(valOf (holCheckLib.get_results ttt2),1); 
+> val it = (<term_bdd>, NONE, SOME []) :
+  term_bdd * thm option * term list option
+\end{verbatim}\end{session}
+
+The second result corresponds to a win position for A. Since the initial state is not a win position for A, there is no success theorem and as before counterexamples are only provided for properties talking about paths. The third result is exactly the same, since the initial state is not a win position for B either.
+ 
+\begin{session}\begin{verbatim}
+- List.nth(valOf (holCheckLib.get_results ttt2),3); 
+> val it =
+    (<term_bdd>,
+     SOME [....................................]
+         |- CTL_MODEL_SAT ctlKS_ttt
+              (C_EG
+                 (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                  (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0))) \/
+                  C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                  C_EF
+                    (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                     (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))) \/
+                  ~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                  C_AF
+                    (~C_BOOL (B_PROP (\(m,u0_0,v0_0). m)) /\
+                     (C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)))))),
+     SOME [``(m,~u0_0,~v0_0)``]) : 
+   term_bdd * thm option * term list option
+\end{verbatim}\end{session}
+
+This result corresponds to the fourth property, that stated that A has a winning strategy. This is true, and we get the success theorem, as well as a witness, which shows that there is such a path from the initial state. 
+
+The last result is the same as the second and third, since B does not have a winning strategy, and counterexamples cannot be calculated for properties that assert the existence of specific paths (since the ``counterexample'' would effectively be the entire set of reachable states).
+
+Finally, note that both success theorems have some assumptions. If the term\_bdd's were examined, they would also have the corresponding assumptions. This is because \hc uses postponed proof verification to speed up the model checking work-flow (i.e. no time is wasted proving intermediate lemmas for properties that fail eventually). Any success theorems and term\_bdd's thus end up with several undischarged assumptions. The idea is that the time-consuming proof verification can be postponed to a later time, when the user is otherwise occupied (e.g., asleep).
+
+The assumptions are discharged as follows (HOL chatting messages have been elided).
+
+\begin{session}\begin{verbatim}
+- val ttt3 = holCheckLib.prove_model ttt2;
+> val ttt3 = <model> : model
+\end{verbatim}\end{session}
+
+This returns a model that is exactly the same as \texttt{ttt2}, except that any assumptions introduced due to the postponed proof have been discharged. We can confirm this by looking at say, the first property, again. 
+
+\begin{session}\begin{verbatim}
+- List.nth(valOf (holCheckLib.get_results ttt3),0);
+> val it =
+    (<term_bdd>,
+     SOME|- CTL_MODEL_SAT ctlKS_ttt
+              (~C_BOOL (B_PROP (\(m,u0_0,v0_0). u0_0)) /\
+               ~C_BOOL (B_PROP (\(m,u0_0,v0_0). v0_0)) /\
+               C_BOOL (B_PROP (\(m,u0_0,v0_0). m))), NONE) :
+  term_bdd * thm option * term list option
+\end{verbatim}\end{session}
+
+This completes one cycle of the \hc work-flow (typically calls to \texttt{prove\_model} are saved for the end of the checking, since  \texttt{prove\_model} just verifies the results fully-expansively; it cannot invalidate them unless there is a bug in \hc).
+
+At this point the user would fix either \(\mathtt{S0}\) or \(\mathtt{TS}\) or the properties, and start over, until all expected properties are verified.
+
+\subsection{General Usage Guidelines}
+
+\texttt{holCheckLib} is different from other libraries in that it does not provide tools that fit in with the usual interactive theorem proving workflow. There are no tactics, and it is unlikely (though possible) that \hc would be called as a decision procedure during interactive proof. The reason for this is that the models checked by model checkers are represented explicitly as state machines, whereas in \HOLb interactive proof the underlying ``model'' is simply that of higher-order logic.  Therefore, we need to specify both models and properties explicitly.
+
+\subsubsection{Model construction}\label{sec:models} 
+
+We have already seen how to create the ML type \texttt{model} that acts as an input into \hc. The three mandatory components of a model are a predicate representing the set of initial states, predicate(s) for the transition system, and the synchronous flag. The following observations should be kept in mind. 
+
+\paragraph{Initial states} 
+
+Since \hc supports only boolean variables, only those are allowed in the state. Only the variables in the state space are allowed here, and the term must be purely propositional. Primed variables are not allowed. 
+
+\paragraph{Transition system} 
+
+Only the variables in the state space are allowed. They may be primed to indicate the value of that variable in the next state. It is strongly recommended that primed variables not be used for anything other than this function. \hc may wander into uncharted territory otherwise. 
+
+\hc can handle from about about 50 to 100 variables currently, depending on the transition system in question. This number should rise as standard model checking optmisations such as partitioning, cone-of-influnce, and symmetry reductions are implemented.
+
+The wildcard ``.'' action represents any action, and is always present. It may only be explicitly defined by the user if it is the only action, to prevent internal inconsistency. If it is not defined, then it is internally generated as a conjunction or disjunction over the defined actions, depending on whether or not the synchronous flag \texttt{ric} is true. It may be used in \(\mu\)-calculus properties, and represents the entire transition system for \ctl properties. Usually, for synchronous transition systems, the user defines just the ``.'' action, since all actions happen simultaneously so there is usually not much call for giving them separate identities.
+
+See the AMBA AHB bus protocol example in the file \texttt{amba\_ahbScript.sml} in the \hc \texttt{examples} directory for an example of how to specify a complex transition system in a modular manner, hiding internal details using existential quantifiers. 
+
+\paragraph{The ``relation-is-conjunctive'' flag} The \texttt{ric} flag is an ML boolean type that is set to true for synchronous transition systems, and false for asynchronous or interleaved transition systems. 
+ 
+\subsubsection{Formal models}\label{sec:formal_models}
+
+A theorem returned by \hc is usually of the form \texttt{CTL\_MODEL\_SAT M f}. We have already explained what the predicate \texttt{CTL\_MODEL\_SAT} is. \texttt{f} is the property that was checked (see \S\ref{sec:prop} below), and \texttt{M} is the formal model. 
+ 
+The model we provide to \hc as the ML type \texttt{model} consists of several \HOLb terms representing various pieces of information used by \hc. However, \hc does everything by proof, and this requires a formal \HOLb theory of the \( \mu\)-calculus as well as of Kripke structures. Hence, the terms contained in the ML \texttt{model} type are packaged into a formal \HOLb datatype that represents a Kripke structure and is assigned a constant name for brevity. It is this name that we see in the theorem statement in place of \texttt{M}. Indeed, a full \HOLb definition corresponding to that name would exist in the current session's namespace, and the \HOLb terms we supplied to the ML model would appear (perhaps abbreviated) in the right hand side of that definition.
+
+As long as we are restricted to model checking, this internal formal model is not important. However, \hc has some experimental support for model decomposition using \HOLb (see \S\ref{sec:decomp} for details). This requires manipulation of the formal model and then it becomes important to know what the models contain. For the moment this support is automatic, so in-depth knowledge of formal models is not required. This subsection is here, for the moment, mainly as an explanation for what we see in the \hc output theorems.
+
+\subsubsection{Writing properties}\label{sec:prop}
+
+\hc supports model checking for \ctl and \(\mu\)-calculus properties. It is beyond the scope of this description to describe these languages in detail here (e.g., see \emph{Model Checking} by Clarke et al, MIT Press, 1999). Properties are specified as \HOLb terms of type \texttt{ctl} or \texttt{mu}. 
+
+\begin{table}
+\caption{\HOLb \(\mu\)-calculus formula syntax}
+\label{tab_mu}
+\begin{tabular}{|l|l|l|}
+\hline
+\(\mu\)-calculus operator & \HOLb type constructor & Overloaded syntax \\
+\hline
+true & \texttt{TR} & \texttt{T} \\
+false & \texttt{FL} & \texttt{F} \\
+$\lnot f$ & \texttt{Not} & $\hnot f$  \\
+$f \land g$ & \texttt{And} & $f\, \hand\, g$ \\
+$f \lor g$ & \texttt{Or} & $f\, \hor\, g$ \\
+proposition $p$ & \texttt{AP} & \texttt{AP p} \\
+$\langle a \rangle$ f& \texttt{DIAMOND} & \verb+<<"a">> f+ \\
+$[a] f$  & \texttt{BOX} & \verb+[["a"]] f+ \\
+variable $Q$ & \texttt{RV} & \texttt{RV Q} \\
+$\mu Q . f$ & \texttt{mu} & \texttt{mu Q .. f} \\
+$\nu Q . f$ & \texttt{nu} & \texttt{nu Q .. f} \\
+\hline
+\end{tabular}
+\end{table}
+
+The type constructors for \texttt{mu} are shown in Table \ref{tab_mu}, together with overloaded syntax for ease of entry. For example, the property saying that there exists a path to a state where \( v_0 \land v_1 \) holds is represented by the \(\mu\)-calculus formula \( \mu Q. (v_0 \land v_1) \lor \langle.\rangle Q \) and would be written in \HOLb as
+
+\verb+mu "Q" .. AP (\(v_0,v_1). v_0 /\ v_1) \/ (<<".">> RV "Q")+ 
+
+Note that atomic propositions are written as functions on the state, and that \(\mu\)-calculus variables and action names are modelled as \HOLb strings. For internal reasons, these strings must be alphanumeric with underscores, and begin with a letter, the only exception being the special ``.'' action.
+
+Clearly, \(\mu\)-calculus ``variables'' as modelled above are not treated as variables by \HOLb. We use strings because \HOLb does not have native support for variable binding in higher-order abtract syntax (this is an active research area). The treatment of free and bound variables within \hc is however consistent with standard definitions. 
+
+\begin{table}
+\caption{\HOLb \ctl formula syntax}
+\label{tab_ctl}
+\begin{tabular}{|l|l|l|}
+\hline
+\ctl operator & \HOLb type constructor & Overloaded to \\
+\hline
+true & \texttt{B\_TRUE} & \texttt{T} \\
+$\lnot f$ & \texttt{B\_NOT} & $\hnot f $  \\
+$f \land g$ & \texttt{B\_AND} & $f\,\hand\,g$ \\
+proposition $p$ & \texttt{B\_PROP} & \texttt{B\_PROP p} \\
+$\mathbf{EX} f$ & \texttt{C\_EX} & \texttt{C\_EX} f \\
+$\mathbf{EG} f$ & \texttt{C\_EG} & \texttt{C\_EG} f \\
+$\mathbf{E}(f\,\mathbf{U}\,g)$ & \texttt{C\_EU} & \texttt{C\_EU}(f,g) \\
+\hline
+\end{tabular}
+\end{table} 
+
+Table \ref{tab_ctl} describes the syntax for \ctl. Note that some of the operators are missing e.g. \( \mathtt{F} \) and \( \mathbf{AX} \). These are defined indirectly in terms of the rest, with the expected overloaded syntax. The syntax is structured slightly differently in that any subformula from the propositional fragment (i.e., the first four rows of Table \ref{tab_ctl}) is always wrapped within the type constructor \texttt{C\_BOOL}.
+
+The example property above is the \ctl formula \( \mathbf{EF} (v_0 \land v_1) \) and would be written in \HOLb as 
+
+\verb+C_EF (C_BOOL (B_PROP (\(v_0,v_1). v_0 /\ v_1)))+
+
+where \(\mathbf{EF} f\) has the standard definition \( \mathbf{EU}(T,f) \).
+
+\subsubsection{Environments}
+
+\(\mu\)-calculus model checking, in addition to having a model, also requires an environment: a mapping from variables to sets of states. The \hc core accepts environments as maps from strings to \texttt{term\_bdd}'s. However, the user interface for the moment has no provision for supplying an environment. This will be added in due course. In the meantime, environments can be ``faked'' by purely propositional subformulas, though this may not be particularly efficient.
+
+\ctl model checking does not require environments.
+
+\subsection{Experimental Support for Decomposition}\label{sec:decomp}
+
+One of the motivations behind \hc is to see if tight integration with \HOLb helps the model checking work flow. In this spirit, \hc  includes some experimental support for model decomposition. The basic idea is that if the model consists of several components joined by parallel synchronous composition, then a property holding in one component should hold in the entire model. This seeks to exploit locality in the structure of models and properties.
+
+For those familiar with model checking, this is \emph{not} assume-guarantee reasoning, nor does it use simulation pre-orders. It is considerably more simple: take a product Kripke structure, break up the components, model check each component, re-compose. Unlike assume-guarantee reasoning, this does not apply to properties that address truly global aspects of the system. Also, it is limited to synchronous systems. Nevertheless, there are some applications in hardware verification.
+
+Support is via two functions, \texttt{mk\_gen\_par\_sync\_comp\_thm} and \texttt{mk\_par\_sync\_comp\_thm}. These functions are not part of the \texttt{holCheckLib} signature, as the user interface for decomposition support is considered unstable at the moment. They are instead found in the \texttt{decompTools} structure. 
+
+The first function takes initial state and transition system predicates for two models with non-overlapping state spaces, and returns a theorem that says that if any well-formed property holds in the first model, then it holds in the parallel synchronous composition of the two models. 
+
+The second function takes the theorem generated by the first function, and a property, and discharges the well-formedness assumptions to return a theorem saying that if the supplied property holds in the first model, then it holds in the composed model. 
+
+In time we expect to integrate this fully into \hc as a sort of localisation reduction. In the meantime, the interested reader can take a look at the synchronous composition section of \texttt{ambaScript.sml} in the \texttt{examples} directory. Even without any knowledge of AMBA, the ten or so lines give a flavour of how decomposition can be used.
+
+\subsection{\hc Internals and Caveats}
+
+This section contains information on some internal details and quirks that may help with creating models and properties for \hc. 
+
+\subsubsection{Variable ordering}
+
+\hc users are strongly recommended to supply a BDD variable ordering for the model using the \texttt{set\_vord} function, even though it is optional. \hc does have its own variable ordering heuristic. This just interleaves current- and next-state variables however, and is not very good. Remember that the ordering supplied must include next-state (i.e., primed) variables, and must include all state variables.
+
+\subsubsection{Counterexamples}
+
+The generation of witness traces for properties of the form \(\mathbf{EG} f \) (or dually, counterexamples for \(\mathbf{AF} f \) style properties) leaves much to be desired: it tries to give the shortest qualifying path which usually turns out to be just the initial state, whereas typically the user is interested in the longest one. 
+ 
+\subsubsection{Abstraction}
+
+\hc implements a fully automatic abstraction refinement framework that is invisible to the user. A simple heuristic analysis is used to decide whether or not to apply abstraction for a given property. Sometimes the abstraction may make things worse. If \hc appears to be taking overly long on a property, the user may try redoing the check, after turning off abstraction. This can be done by calling \texttt{set\_flag\_abs} on the model. Turning abstraction on and off on a per-property basis is not supported yet. 
+
+\subsubsection{Lazy proof}
+
+All steps of the model checking (except BDD operations) are backed up by fully expansive proof. To get around the speed penalty imposed by this proof, \hc performs proof lazily. This means that any theorem produced by \hc may have several undischarged assumptions (it is then known as a lazy theorem). Typically, once all properties have been checked, the user calls \texttt{prove\_model} on the model to discharge the assumptions. This step may take a while for big models and properties, in which case it is advisable to let it run when computing resources are expected to be free, e.g., overnight.
+
+A failure to discharge all assumptions means a completeness bug in the \hc proof verification machinery. However, it does not invalidate the soundness of the theorem, modulo the soundness of \HOLb. 
+
+\texttt{prove\_model} must be used in the same session in which the model checking was done, if the produced theorems are going to be written to permanent storage. This is because the lazy proof machinery is unable to persist lazy theorems, owing to Moscow ML's inability to persist closures.
+
+\subsubsection{Permanent Storage}
+
+For the moment, \hc does not support persistence for models. The theorems produced can however be saved to permanent storage as \HOLb theorems. 
+
