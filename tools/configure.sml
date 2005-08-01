@@ -62,8 +62,9 @@ fun check_is_dir role dir =
 val _ = check_is_dir "mosmldir" mosmldir
 val _ = check_is_dir "holdir" holdir
 val _ =
-    if List.exists (fn s => s = OS) ["linux", "solaris", "unix", "winNT"] then
-      ()
+    if List.exists (fn s => s = OS)
+                   ["linux", "solaris", "unix", "winNT", "macosx"]
+    then ()
     else (print ("\n*** Bad OS specified: "^OS^" ***\n");
           Process.exit Process.failure)
 
