@@ -2658,15 +2658,6 @@ R2 (f[x']) (g[y']).
             in
               if (((#Name o dest_const) opp = "respects") handle _ => false)
                    then list_mk_comb(opp, (hd tms0)::(tl tms))
-              else if (mem ((#Name o dest_const) opp)
-                           ["RES_EXISTS_EQUIV","PSUBSETR"]
-                          handle _ => false)
-                   then list_mk_comb(opp, (hd tms0)::(tl tms))
-              else if (mem ((#Name o dest_const) opp)
-                           ["IMAGER"]
-                          handle _ => false)
-                   then list_mk_comb(opp,
-                          (hd tms0)::(hd (tl tms0))::(tl (tl tms)))
               else if (liftedf opp andalso is_rep_ty ty) then
                    mkrep(mkabs(list_mk_comb(opp,tms)))
               else if (is_var opp andalso length tms > 0
@@ -2717,6 +2708,8 @@ R2 (f[x']) (g[y']).
 (* by the REGULARIZE function, using regularize and REGULARIZE_TAC.          *)
 (* ------------------------------------------------------------------------- *)
 
+        val domain = fst o dom_rng
+
         fun regularize tm =
           let val ty = type_of tm
               val regularize_abs = (pairLib.mk_pabs o (I ## regularize)
@@ -2725,7 +2718,7 @@ R2 (f[x']) (g[y']).
             (* abstraction *)
             if is_abs tm then
               let val tm1 = regularize_abs tm
-                  val (dom,rng) = (dom_rng) ty
+                  val dom = domain ty
               in
                 if is_rep_ty dom then
                   (--`RES_ABSTRACT (respects (^(tyREL dom))) ^tm1`--)
@@ -2737,18 +2730,17 @@ R2 (f[x']) (g[y']).
                      handle _ => false
                  then tm
             (* combination *)
-            else if is_comb tm then
+            else if is_comb tm orelse is_const tm then
               let val (opp,args) = strip_comb tm
-                (*  val argsr = map regularize args *)
               in
                 if is_const opp andalso is_rep_ty (type_of opp) then
                   let val name = #Name (dest_const opp) in
                     if name = "=" then
                       list_mk_comb(tyREL (type_of (hd args)), map regularize args)
                     else if mem name ["!","?","?!"] then
-                      let val tm1 = hd args
+                      let val ty1 = (domain o type_of) opp
+                          val tm1 = hd args
                           val tm1r = regularize_abs tm1
-                          val ty1 = type_of tm1
                           val dom = (fst o dom_rng) ty1
                           val domREL = tyREL dom
                           val res = (--`respects(^domREL)`--)
@@ -2764,8 +2756,7 @@ R2 (f[x']) (g[y']).
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["SUBSET","PSUBSET"] then
-                      let val tm1 = hd args
-                          val ty1 = (fst o dom_rng o type_of) tm1
+                      let val ty1 = (domain o domain o type_of) opp
                           val elemREL = tyREL ty1
                       in
                         if name = "SUBSET" then
@@ -2777,16 +2768,14 @@ R2 (f[x']) (g[y']).
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["INSERT"] then
-                      let val tm1 = hd args
-                          val ty1 = (type_of) tm1
+                      let val ty1 = (domain o type_of) opp
                           val elemREL = tyREL ty1
                       in
                         list_mk_comb(--`INSERTR ^elemREL`--, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["DELETE","DISJOINT"] then
-                      let val tm1 = hd args
-                          val ty1 = (fst o dom_rng o type_of) tm1
+                      let val ty1 = (domain o domain o type_of) opp
                           val elemREL = tyREL ty1
                       in
                         if name = "DELETE" then
@@ -2798,16 +2787,14 @@ R2 (f[x']) (g[y']).
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["FINITE"] then
-                      let val tm1 = hd args
-                          val ty1 = (fst o dom_rng o type_of) tm1
+                      let val ty1 = (domain o domain o type_of) opp
                           val elemREL = tyREL ty1
                       in
                         list_mk_comb(--`FINITER ^elemREL`--, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["GSPEC"] then
-                      let val tm1 = hd args
-                          val ty1 = type_of tm1
+                      let val ty1 = (domain o type_of) opp
                           val (dom,rng) = dom_rng ty1
                           val tya = hd (#Args (dest_type rng))
                           val bREL = tyREL dom
@@ -2817,8 +2804,7 @@ R2 (f[x']) (g[y']).
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
                     else if mem name ["IMAGE"] then
-                      let val tm1 = hd args
-                          val ty1 = type_of tm1
+                      let val ty1 = (domain o type_of) opp
                           val (dom,rng) = dom_rng ty1
                           val domREL = tyREL dom
                           val rngREL = tyREL rng
@@ -2871,8 +2857,9 @@ R2 (f[x']) (g[y']).
                 else
                      list_mk_comb(opp, map regularize args)
               end
+            (* var *)
             else
-                 tm
+                  tm
           end
 
 
