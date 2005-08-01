@@ -49,6 +49,18 @@ infixr 5 C_AND
 
 fun (l C_AND r) = ``C_AND2 (^l) (^r)``
 
+val _ = new_constant("BC_AF",bool-->bool) 
+val BCAF = mk_const("BC_AF",bool-->bool)
+val _ = new_constant("BC_AX",bool-->bool) 
+val BCAX = mk_const("BC_AX",bool-->bool)
+val _ = new_constant("BC_AG",bool-->bool) 
+val BCAG = mk_const("BC_AG",bool-->bool)
+val _ = new_constant("BC_EF",bool-->bool) 
+val BCEF = mk_const("BC_EF",bool-->bool)
+val _ = new_constant("BC_EX",bool-->bool) 
+val BCEX = mk_const("BC_EX",bool-->bool)
+val _ = new_constant("BC_EG",bool-->bool) 
+val BCEG = mk_const("BC_EG",bool-->bool)
 
 fun list_C_AND l = 
 if (List.null l) then ``C_BOOL B_TRUE`` 
@@ -77,6 +89,8 @@ fun C_AX tm = ``C_AX ^tm``;
 fun C_AG tm = ``C_AG ^tm``
 fun C_EG tm = ``C_EG ^tm``
 fun C_EF tm = ``C_EF ^tm``
+fun C_EX tm = ``C_EX ^tm``
+fun C_EG tm = ``C_EG ^tm``
 fun C_AF tm = ``C_AF ^tm``
 fun C_AU(l,r) = ``C_AU(^l,^r)`` 
 infixr 1 C_AU;
@@ -111,6 +125,27 @@ let val ksSu = inst [alpha |-> s_ty,beta |-> p_ty] ksSu_tm
 in List.foldr (fn ((u,v),ks) => mk_comb(mk_comb (u,mk_comb(inst [alpha |-> type_of v, beta |->type_of v] combinSyntax.K_tm,v)),ks)) 
 	      arb_cks  [(ksSu,S),(ksS0u,S0),(ksRu,R),(ksPu,P),(ksLu,L)] end
 
+fun bool2ctl state p_ty f = 
+if is_bool_var f  then C_AP state f
+else if is_T f    then inst [alpha|->p_ty] C_T
+else if is_F f    then inst [alpha|->p_ty] C_F
+else if is_neg f  then C_NOT (bool2ctl state p_ty (rand f))
+else if is_conj f then (bool2ctl state p_ty (land f)) C_AND (bool2ctl state p_ty (rand f))
+else if is_disj f then (bool2ctl state p_ty (land f)) C_OR  (bool2ctl state p_ty (rand f))
+else if is_imp f  then (bool2ctl state p_ty (land f)) C_IMP (bool2ctl state p_ty (rand f))
+else if is_eq f   then (bool2ctl state p_ty (land f)) C_IFF (bool2ctl state p_ty (rand f))
+else if is_cond f then let val (c,a,b) = dest_cond f
+		       in ((bool2ctl state p_ty c) C_OR (bool2ctl state p_ty b)) C_AND 
+			  ((bool2ctl state p_ty (mk_neg c)) C_OR (bool2ctl state p_ty a)) end
+else case (fst(dest_const(fst(strip_comb f)))) of
+	 "BC_AF" => C_AF (bool2ctl state p_ty (rand f))
+       | "BC_AX" => C_AX (bool2ctl state p_ty (rand f))
+       | "BC_AG" => C_AG (bool2ctl state p_ty (rand f))
+       | "BC_EF" => C_EF (bool2ctl state p_ty (rand f))
+       | "BC_EX" => C_EX (bool2ctl state p_ty (rand f))
+       | "BC_EG" => C_EG (bool2ctl state p_ty (rand f))
+       | _       => failwith ("Unrecognized term passed to ctlSyntax.b2ctl: "^(term_to_string f))
+     
 
 end 
 end

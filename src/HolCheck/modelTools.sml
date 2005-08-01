@@ -37,7 +37,7 @@ val empty_model = {init=NONE,trans=NONE,ric=NONE,name=NONE,vord=NONE,state=NONE,
 fun get_name (m:model) = #name(m)
 fun get_init (m:model) = valOf (#init(m))
 fun get_trans (m:model) = valOf (#trans(m))
-fun get_ric (m:model) = valOf (#ric(m))
+fun get_flag_ric (m:model) = valOf (#ric(m))
 fun get_vord (m:model) = #vord(m)
 fun get_state (m:model) = #state(m)
 fun get_props (m:model) = valOf (#props(m))
@@ -57,7 +57,7 @@ fun set_init i (m:model) =
     {init= SOME i,trans= #trans(m),ric= #ric(m),name= #name(m),vord= #vord(m),
      state= #state(m),props= #props(m),results= #results(m),ic= #ic(m),flags = #flags(m)})
 
-fun set_ric r (m:model)  =     
+fun set_flag_ric r (m:model)  =     
     {init= #init(m),trans= #trans(m),ric= SOME r,name= #name(m),vord= #vord(m),
      state= #state(m),props= #props(m),results= #results(m),ic= #ic(m),flags = #flags(m)}
 
@@ -143,7 +143,8 @@ fun add_prop p (m:model)  =
 
 (* destruction (does not return flags) *)
 
-fun dest_model m = (get_init m,get_trans m,get_ric m,get_name m,get_vord m,get_state m,get_props m,get_results m,get_ic m)
+fun dest_model m = (get_init m,get_trans m,get_flag_ric m,get_name m,get_vord m,
+		    get_state m,get_props m,get_results m,get_ic m)
 
 (* unlazify *)
 

@@ -12,7 +12,7 @@ local
 	   
     fun init model = 
 	let val _ = dbgTools.DEN dpfx "i"(*DBG*)
-	    val _ = if bdd.isRunning() then () else bdd.init 1000000 10000
+	    val _ = if bdd.isRunning() then () else bdd.init 1000000 10000 (* FIXME: allow user to supply the nums here *)
 	    val (I1,T1,Ric,ksname,bvm,state,fl,_,ic) = dest_model model
 	    val state = if isSome state then valOf state else mk_state I1 T1
 	    val (apl,apsubs) = if get_flag_abs model then holCheckTools.mk_abs_APs fl state else (NONE,[])
@@ -33,11 +33,11 @@ fun holCheck model =
 			       val is_mu = ((String.compare(fst(dest_type(type_of f)),"mu"))=EQUAL)
 			       val (res,ic) = 
 				   if is_mu 
-				   then let val (r,(i,c)) = absCheck I1 T1 state Ric vm ksname (get_abs ic,get_common ic) (nf,f)
-				                                     (apl,apsubs)
+				   then let val (r,(i,c)) = absCheck I1 T1 state Ric vm ksname (get_abs ic,get_common ic) 
+								     (nf,f) (apl,apsubs)
 					in (r,((set_common c) o (set_abs i)) ic) end
-				   else let val (r,(i,c)) = ctlCheck I1 T1 state Ric vm ksname (get_ctl ic,get_common ic) (nf,f)
-				                                     (apl,apsubs)
+				   else let val (r,(i,c)) = ctlCheck I1 T1 state Ric vm ksname (get_ctl ic,get_common ic) 
+								     (nf,f) (apl,apsubs)
 					in (r,((set_common c) o (set_ctl i)) ic) end
 			   in (results@[res],ic) end)  
 		       ([],if isSome ic then valOf ic else set_vm vm empty_ic) fl

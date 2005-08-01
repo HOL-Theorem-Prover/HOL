@@ -1147,7 +1147,7 @@ val fol4 = save_thm("fol4",prove(``!p x y z. ((x \/ y) ==> z) ==>((p ==> (x\/y))
 
 val fol5 = save_thm("fol5",prove(``!p x y. (x ==> y) ==> ((p==>x)==>(p==>y))``,PROVE_TAC []))
 
-(* AP substitution used by abstraction engine*)
+(* ---------------AP substitution used by abstraction engine--------------------*)
 
 fun ap_subst_fp_TAC gfp (asl:term list,w) = 
 let val (w1l,w1r) = (rand o hd o snd o strip_comb ## rand o hd o snd o strip_comb)(dest_eq w)
@@ -1214,6 +1214,8 @@ ASSUME_TAC lm2
 THEN metisLib.METIS_TAC [lm1] 
 ])
 
+(* subst of ap's by propositional formulas with the same semantics preserves overall semantics *)
+(* i.e. the principle of subst of equals for equals, for mu ap's *)
 val AP_SUBST = save_thm("AP_SUBST",prove(``!(f:'prop mu) g ap (ks:('prop,'state) KS) e (s:'state). 
 			    wfKS ks ==> (IS_PROP g) ==> (!s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) 
 			    ==> (MU_SAT f ks e s = MU_SAT (AP_SUBST g ap f) ks e s)``,
@@ -1228,6 +1230,156 @@ val AP_SUBST_MODEL = save_thm("AP_SUBST_MODEL",prove(``!(f:'prop mu) g ap (ks:('
 			    wfKS ks ==> (IS_PROP g) ==> (!s. MU_SAT (AP ap) ks e s = MU_SAT g ks e s) 
 			    ==> (MU_MODEL_SAT f ks e = MU_MODEL_SAT (AP_SUBST g ap f) ks e)``,
 metisLib.METIS_TAC [lm4,MU_MODEL_SAT_def]))
+
+(*----------- bisimilarity preserves mu properties (used to eliminate data independent vars of any type) ---------------*)
+
+val MU_BISIM_STATES = save_thm("MU_BISIM_STATES",prove(``!f M1 M2 e1 e2 s1 s2 BS. 
+		    wfKS M1 ==> 
+		    wfKS M2 ==> 
+		    (!p s1 s2. AP p SUBF f ==> (M1.L s1 p = M2.L s2 p)) ==> 
+		    BISIM M1 M2 BS ==> 
+		    (!(Q:string) s1 s2. BS(s1,s2) ==> (s1 IN e1 Q = s2 IN e2 Q)) ==> 		    
+		    BS(s1,s2) ==> 
+		    (MU_SAT f M1 e1 s1 = MU_SAT f M2 e2 s2)``,
+Induct_on `f` THENL [
+SIMP_TAC std_ss [MU_SAT_T],(* T *)
+SIMP_TAC std_ss [MU_SAT_F],(* F *)
+REPEAT STRIP_TAC 
+THEN FULL_SIMP_TAC std_ss [MU_SAT_NEG,SUB_AP_NEG] THEN RES_TAC,(* ~ *)
+REPEAT STRIP_TAC 
+THEN FULL_SIMP_TAC std_ss [MU_SAT_CONJ,SUB_AP_CONJ,DISJ_IMP_THM,FORALL_AND_THM] 
+THEN RES_TAC
+THEN metisLib.METIS_TAC [],(* /\ *)
+REPEAT STRIP_TAC 
+THEN FULL_SIMP_TAC std_ss [MU_SAT_DISJ,SUB_AP_DISJ,DISJ_IMP_THM,FORALL_AND_THM] 
+THEN RES_TAC
+THEN metisLib.METIS_TAC [],(* \/ *)
+RW_TAC std_ss [MU_SAT_RV,IN_DEF], (* RV *)
+REPEAT STRIP_TAC
+THEN FULL_SIMP_TAC std_ss [MU_SAT_AP,SUBF_REFL], (* AP *)
+REPEAT STRIP_TAC
+THEN Q.PAT_ASSUM `!t s1 s2. P SUBF P' ==>Q` (fn t => ASSUME_TAC (REWRITE_RULE [SUB_AP_DMD] t))
+THEN FULL_SIMP_TAC std_ss [MU_SAT_DMD]
+THEN Q.PAT_ASSUM `BS t` (fn t => RES_TAC THEN NTAC 2 (POP_ASSUM (K ALL_TAC)) 
+					 THEN POP_ASSUM (fn t' => NTAC 2 (POP_ASSUM (K ALL_TAC)) 
+								  THEN POP_ASSUM (fn t'' => NTAC 3 (POP_ASSUM (K ALL_TAC))
+                                                                       THEN ASSUME_TAC t'' THEN ASSUME_TAC t'))                        
+					 THEN ASSUME_TAC t) 
+THEN FULL_SIMP_TAC std_ss [BISIM_def]
+THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC THENL [
+  Q.PAT_ASSUM `!a b. P ==> (Q=Q')` (fn t => ASSUME_TAC (Q.SPECL [`s2'`,`q`] t))
+  THEN Q.EXISTS_TAC `s2'`
+  THEN metisLib.METIS_TAC [],
+  Q.PAT_ASSUM `!a b. P ==> (Q=Q')` (fn t => ASSUME_TAC (Q.SPECL [`q`,`s1'`] t))
+  THEN Q.EXISTS_TAC `s1'`
+  THEN metisLib.METIS_TAC []
+ ], (* <<>>*)
+REPEAT STRIP_TAC
+THEN Q.PAT_ASSUM `!t s1 s2. P SUBF P' ==>Q` (fn t => ASSUME_TAC (REWRITE_RULE [SUB_AP_BOX] t))
+THEN FULL_SIMP_TAC std_ss [MU_SAT_BOX]
+THEN Q.PAT_ASSUM `BS t` (fn t => RES_TAC THEN NTAC 2 (POP_ASSUM (K ALL_TAC)) 
+					 THEN POP_ASSUM (fn t' => NTAC 2 (POP_ASSUM (K ALL_TAC)) 
+								  THEN POP_ASSUM (fn t'' => NTAC 3 (POP_ASSUM (K ALL_TAC))
+                                                                       THEN ASSUME_TAC t'' THEN ASSUME_TAC t'))                        
+					 THEN ASSUME_TAC t) 
+THEN FULL_SIMP_TAC std_ss [BISIM_def]
+THEN EQ_TAC THEN REPEAT STRIP_TAC THEN RES_TAC THEN  metisLib.METIS_TAC [], (* [[]] *)
+REPEAT STRIP_TAC
+THEN POP_ASSUM MP_TAC
+THEN MAP_EVERY Q.SPEC_TAC [(`s2`,`s2`),(`s1`,`s1`)]
+THEN FULL_SIMP_TAC std_ss [MU_SAT_LFP]
+THEN Q.SUBGOAL_THEN `!n s1 s2. BS (s1,s2) ==> (s1 IN FP f s M1 e1[[[s<--{}]]] n = s2 IN FP f s M2 e2[[[s<--{}]]] n)`  ASSUME_TAC 
+ THENL [
+  Induct_on `n` THENL [
+     SIMP_TAC std_ss [STATES_def,ENV_EVAL,NOT_IN_EMPTY], (* 0 *)
+     REPEAT STRIP_TAC THEN SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
+     THEN Q.PAT_ASSUM `!t s1 s2. P SUBF P' ==>Q` (fn t => ASSUME_TAC (REWRITE_RULE [SUB_AP_MU] t))
+     THEN Q.PAT_ASSUM `!M1 M2 e1 e2. P` (fn t => ASSUME_TAC (Q.SPECL [`M1`,`M2`,
+								       `e1[[[s<--FP f s M1 e1[[[s<--{}]]] n]]]`,
+								       `e2[[[s<--FP f s M2 e2[[[s<--{}]]] n]]]`] t))
+     THEN RES_TAC
+     THEN NTAC 8 (POP_ASSUM (K ALL_TAC))
+     THEN POP_ASSUM (fn t => NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN ASSUME_TAC t)
+     THEN POP_ASSUM_LIST (fn l => MAP_EVERY ASSUME_TAC (List.take(l,4)))
+     THEN Q.SUBGOAL_THEN `(!Q s1 s2.
+		BS (s1,s2) ==>(s1 IN e1[[[s<--FP f s M1 e1[[[s<--{}]]] n]]] Q = s2 IN e2[[[s<--FP f s M2 e2[[[s<--{}]]] n]]] Q))` 
+              ASSUME_TAC
+     THENL [ 
+      POP_ASSUM_LIST (fn l => MAP_EVERY ASSUME_TAC (List.take(l,2)))
+      THEN REPEAT STRIP_TAC
+      THEN Cases_on `Q=s` THENL [
+       FULL_SIMP_TAC std_ss [ENV_EVAL],
+       FULL_SIMP_TAC std_ss [ENV_UPDATE_INV]
+      ],
+      RES_TAC THEN metisLib.METIS_TAC [MU_SAT_def,IN_DEF]
+     ]
+   ],
+  metisLib.METIS_TAC []
+ ], (* mu *)
+REPEAT STRIP_TAC
+THEN POP_ASSUM MP_TAC
+THEN MAP_EVERY Q.SPEC_TAC [(`s2`,`s2`),(`s1`,`s1`)]
+THEN FULL_SIMP_TAC std_ss [MU_SAT_GFP]
+THEN Q.SUBGOAL_THEN `!n s1 s2. BS (s1,s2) ==> (s1 IN FP f s M1 e1[[[s<--M1.S]]] n = s2 IN FP f s M2 e2[[[s<--M2.S]]] n)`  ASSUME_TAC 
+ THENL [
+  Induct_on `n` THENL [
+     FULL_SIMP_TAC std_ss [STATES_def,ENV_EVAL,IN_UNIV,wfKS_def], (* 0 *)
+     REPEAT STRIP_TAC THEN SIMP_TAC std_ss [STATES_def,ENV_UPDATE]
+     THEN Q.PAT_ASSUM `!t s1 s2. P SUBF P' ==>Q` (fn t => ASSUME_TAC (REWRITE_RULE [SUB_AP_NU] t))
+     THEN Q.PAT_ASSUM `!M1 M2 e1 e2. P` (fn t => ASSUME_TAC (Q.SPECL [`M1`,`M2`,
+								       `e1[[[s<--FP f s M1 e1[[[s<--M1.S]]] n]]]`,
+								       `e2[[[s<--FP f s M2 e2[[[s<--M2.S]]] n]]]`] t))
+     THEN RES_TAC
+     THEN NTAC 8 (POP_ASSUM (K ALL_TAC))
+     THEN POP_ASSUM (fn t => NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN ASSUME_TAC t)
+     THEN POP_ASSUM_LIST (fn l => MAP_EVERY ASSUME_TAC (List.take(l,4)))
+     THEN Q.SUBGOAL_THEN `(!Q s1 s2.
+		BS (s1,s2) ==>(s1 IN e1[[[s<--FP f s M1 e1[[[s<--M1.S]]] n]]] Q = s2 IN e2[[[s<--FP f s M2 e2[[[s<--M2.S]]] n]]] Q))` 
+              ASSUME_TAC
+     THENL [ 
+      POP_ASSUM_LIST (fn l => MAP_EVERY ASSUME_TAC (List.take(l,2)))
+      THEN REPEAT STRIP_TAC
+      THEN Cases_on `Q=s` THENL [
+       FULL_SIMP_TAC std_ss [ENV_EVAL],
+       FULL_SIMP_TAC std_ss [ENV_UPDATE_INV]
+
+      ],
+      RES_TAC THEN metisLib.METIS_TAC [MU_SAT_def,IN_DEF]
+     ]
+   ],
+  metisLib.METIS_TAC []
+ ] (* nu *)
+]))
+
+val MU_BISIM = save_thm("MU_BISIM",prove(``!f M1 M2 e1 e2 BS. 
+			wfKS M1 ==> 
+			wfKS M2 ==> 
+			(!p s1 s2. AP p SUBF f ==> (M1.L s1 p = M2.L s2 p)) ==>
+			(!s1 s2. BS(s1,s2) ==> (s1 IN M1.S0 = s2 IN M2.S0)) ==>  
+			BISIM M1 M2 BS ==> 
+			(!(Q:string) s1 s2. BS(s1,s2) ==> (s1 IN e1 Q = s2 IN e2 Q)) ==> 		    
+			(!s1. ?s2. BS(s1,s2)) ==> 
+			(!s2. ?s1. BS(s1,s2)) ==> 
+			(MU_MODEL_SAT f M1 e1 = MU_MODEL_SAT f M2 e2)``,
+REPEAT STRIP_TAC
+THEN FULL_SIMP_TAC std_ss [MU_MODEL_SAT_def]
+THEN REPEAT STRIP_TAC
+THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+ Q.PAT_ASSUM `!s2. ?s1. BS(s1,s2)` (fn t => ASSUME_TAC t THEN ASSUME_TAC(Q.SPEC `s` t))
+ THEN FULL_SIMP_TAC std_ss []
+ THEN  Q.PAT_ASSUM `!s1 s2. BS (s1,s2) ==> (s1 IN M1.S0 = s2 IN M2.S0)` (fn t => IMP_RES_TAC (Q.SPECL [`s1`,`s`] t)) 
+ THEN  Q.PAT_ASSUM `!s. s IN M1.S0 ==> MU_SAT f M1 e1 s` (fn t => ASSUME_TAC (Q.SPEC `s1` t)) 
+ THEN IMP_RES_TAC MU_BISIM_STATES
+ THEN NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN POP_ASSUM (fn t => NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN ASSUME_TAC t)
+ THEN FULL_SIMP_TAC std_ss [],
+ Q.PAT_ASSUM `!s1. ?s2. BS(s1,s2)` (fn t => Q.PAT_ASSUM `!s1. ?s2. BS(s1,s2)` (fn t => ASSUME_TAC t THEN ASSUME_TAC(Q.SPEC `s` t)))
+ THEN FULL_SIMP_TAC std_ss []
+ THEN  Q.PAT_ASSUM `!s1 s2. BS (s1,s2) ==> (s1 IN M1.S0 = s2 IN M2.S0)` (fn t => IMP_RES_TAC (Q.SPECL [`s`,`s2`] t)) 
+ THEN  Q.PAT_ASSUM `!s. s IN M2.S0 ==> MU_SAT f M2 e1 s` (fn t => ASSUME_TAC (Q.SPEC `s2` t)) 
+ THEN IMP_RES_TAC MU_BISIM_STATES
+ THEN NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN POP_ASSUM (fn t => NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN ASSUME_TAC t)
+ THEN FULL_SIMP_TAC std_ss []
+]))
 
 val _ = export_theory()
 

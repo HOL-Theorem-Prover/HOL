@@ -1,1 +1,1 @@
-INCLUDES = ..
+INCLUDES = .. ../lazy ../tools

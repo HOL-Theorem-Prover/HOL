@@ -9,41 +9,9 @@ local
 open Globals HolKernel Parse goalstackLib;
 infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-open Psyntax;
+open Psyntax bossLib pairTheory pred_setTheory pred_setLib stringLib listTheory simpLib pairSyntax pairLib PrimitiveBddRules DerivedBddRules Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory listSyntax stringTheory boolSimps pureSimps listSimps numLib HolSatLib defCNF metisLib
 
-open bossLib;
-open pairTheory;
-open pred_setTheory;
-open pred_setLib;
-open stringLib;
-open listTheory;
-open simpLib;
-open pairSyntax;
-open pairLib;
-open PrimitiveBddRules;
-open DerivedBddRules;
-open Binarymap;
-open PairRules;
-open pairTools;
-(*open setLemmasTheory;*)
-open boolSyntax;
-open Drule;
-open Tactical;
-open Conv;
-open Rewrite;
-open Tactic;
-open boolTheory;
-open listSyntax;
-open stringTheory;
-open stringBinTree;
-open boolSimps;
-open pureSimps;
-open listSimps;
-open numLib;
-open reachTheory;
-open HolSatLib;
-open defCNF;
-open commonTools
+open stringBinTree reachTheory commonTools
 
 val dpfx = "bto_"
 
@@ -166,7 +134,8 @@ fun mk_next state bR vm b1 =
 	val svi =  List.map getIntForVar sv
 	val spi = List.map getIntForVar (List.map (fn v => v^"'") sv)
 	val s = bdd.makeset svi
-	val sp2s =  bdd.makepairSet (ListPair.zip(List.foldl (fn (h,t) => h::t) [] (spi),List.foldl (fn (h,t) => h::t) [] (svi)))
+	val sp2s =  bdd.makepairSet (ListPair.zip(List.foldl (fn (h,t) => h::t) [] (spi),
+						  List.foldl (fn (h,t) => h::t) [] (svi)))
 	val res = bdd.replace (bdd.appex bR b1 bdd.And s) sp2s  
 	val _ = dbgTools.DEX dpfx "mn" (*DBG*)
     in res end
@@ -180,7 +149,8 @@ fun mk_prev state bR vm b1 =
 	val svi =  List.map getIntForVar sv
 	val spi = List.map getIntForVar (List.map (fn v => v^"'") sv)
 	val sp = bdd.makeset spi
-	val s2sp =  bdd.makepairSet (ListPair.zip(List.foldl (fn (h,t) => h::t) [] (svi),List.foldl (fn (h,t) => h::t) [] (spi)))
+	val s2sp =  bdd.makepairSet (ListPair.zip(List.foldl (fn (h,t) => h::t) [] (svi),
+						  List.foldl (fn (h,t) => h::t) [] (spi)))
 	val res = bdd.appex bR (bdd.replace b1 s2sp) bdd.And sp 
 	val _ = dbgTools.DEX dpfx "mpv" (*DBG*)
     in res end
@@ -217,39 +187,97 @@ fun mk_sb sb t =
 
 (* return a satisfying assignment for t, as a HOL subst *)
 fun findAss t = 
-    let val th = satProve zchaff (snd(strip_exists(rhs(concl(DEF_CNF_CONV t)))))
+    let val th = satProve zchaff (snd(strip_exists(rhs(concl(normalForms.ORACLE_DEF_CNF_CONV t)))))
 	val t = strip_conj (fst(dest_imp (concl th)))
         val t1 = List.filter (fn v =>  (if is_neg v then not (is_genvar(dest_neg v)) else not (is_genvar v))) t
 	fun ncompx v = not (String.compare(term_to_string v, "x")=EQUAL)
 	val t2 = List.filter (fn v => if is_neg v then ncompx (dest_neg v) else ncompx v) t1
     in  List.map (fn v => if is_neg v then (dest_neg v) |-> F else v |-> T) t2 end
 
-(* given a list of vars and a HOL assignment to perhaps not all the vars in the list, return an order preserving list of bool assgns *)
+(* given a list of vars and a HOL assignment to perhaps not all the vars in the list, 
+   return an order preserving list of bool assgns *)
 (* this is for use with MAP_EVERY EXISTS_TAC *)
 fun exv l ass = 
 let val t1 = List.map (fn v => subst ass v) l
     in List.map (fn v => if is_var v then T else v) t1 end;
 
-(* take a point bdd (i.e. just one state) and return it as concrete instance of state *)
+fun smt' t n = 
+let val pt = undup Term.compare (find_terms (fn t => numSyntax.is_leq t orelse is_eq t)  t)
+    val gv = List.foldr (fn (_,l) => (genvar bool)::l) [] (List.tabulate(length pt,I))
+    val gvs = list2set Term.var_compare gv
+    val gvm = listmap Term.var_compare (ListPair.zip(gv,pt))
+    val bs = mk_subst gv pt
+    val t2 = subst (mk_subst pt gv) t
+    val cnfth = normalForms.CNF_CONV t2
+    val ecnf = rhs(concl cnfth)
+    val (cv,cnf) = (strip_exists ecnf) (* remnants from def_cnf usage *)
+    val _ = if Term.compare(cnf,F)=EQUAL then failwith "NO SAT" else ()
+    val th = satProve zchaff cnf handle ex => failwith "NO SAT"
+    val th1 = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [SYM cnfth])) th
+    val (t3,t3') = List.partition (fn t => (is_neg t andalso is_genvar (rand t) andalso Binaryset.member(gvs,rand t))
+					   orelse (is_genvar t andalso Binaryset.member(gvs,t))) 
+				  (strip_conj(land (concl th1)))
+    val t4 = subst bs (list_mk_conj t3)
+    val t5 = list_mk_exists(free_vars t4,t4)
+    val th2 = SOME (DECIDE t5) handle ex => NONE
+    val (th3,th3') = if isSome th2 then let val th4 = valOf th2
+					    val t3b = List.map (fn t => if is_neg t then rand t else t) t3
+					    val th5 = List.foldl (fn (v,t) => SPEC (Binarymap.find(gvm,v)) t)
+								 (GENL t3b th1) t3b
+				 in (th5,th4) end
+	      else let val t6 = subst bs (mk_conj(t,mk_neg(list_mk_conj t3)))
+		       val (th6,th8,bv)  = smt' t6 (n+1)
+		       val (th7,th8) = if n=0 then 
+					   let val ct = concl th6 
+					       val ctr = rand ct
+					       val (c1,c2) = dest_conj ctr
+					   in (CONJUNCT1(PURE_ONCE_REWRITE_RULE [SPECL [land ct,c1,c2] IMP_CONJ_THM] th6),
+					       th8) end
+				 else (th6,th8) 
+		   in (th7,th8) end
+in (th3,th3',t3') end
+
+(* barebones SMT procedure. Will some day be migrated to HolSatLib *)
+fun smt t = 
+    let val (sth,dth,bv) = smt' t 0
+	val (tv,tt) = strip_exists(concl dth)
+    in (METIS_PROVE [dth] (list_mk_exists(tv,mk_imp(list_mk_conj bv,rand(concl sth)))),dth) end
+
+              
+(* given an existential goal, 
+ replaces all quantified variables with satisfying values (assumes entire goal is propositional)*)
+fun SAT_EXISTS_TAC (asl,w) =
+    let val (vl,t) = strip_exists w
+	val ass = findAss t
+	val exl = exv vl ass
+in (MAP_EVERY EXISTS_TAC exl) (asl,w) end
+
+(* take a point bdd (i.e. just one state) and return it as concrete instance of state 
+   annotated with var names *)
 fun pt_bdd2state state vm pb = 
     let val _ = dbgTools.DEN dpfx "pb2s"(*DBG*)
 	val _ = dbgTools.DBD (dpfx^"pb2s_pb") pb(*DBG*)
 	val _ = Vector.app (dbgTools.DNM (dpfx^"pb2s_pb_support")) (bdd.scanset (bdd.support pb)) (*DBG*)
 	val i2val = list2imap((bdd.getAssignment o bdd.toAssignment_) pb)
-	val res = list_mk_pair (List.map (fn v => if Binarymap.find(i2val,Binarymap.find(vm,v)) then T else F) 
+	val res = list_mk_pair (List.map (fn v => if Binarymap.find(i2val,Binarymap.find(vm,v)) 
+						  then mk_bool_var v else mk_neg (mk_bool_var v)
+					 handle ex => mk_bool_var v) 
 					 (List.map term_to_string2 (strip_pair state))) 
 	val _ = dbgTools.DEX dpfx "pb2s"(*DBG*)
     in res end
    
 
-(* make varmap. if ordering is not given, just shuffle the current and next state vars. FIXME: do a better default ordering *)
+(* make varmap. if ordering is not given, just shuffle the current and next state vars. 
+   FIXME: do a better default ordering *)
 fun mk_varmap state bvm = 
     let val bvm = if (Option.isSome bvm) then Option.valOf bvm 
 		  else let val st = strip_pair state
 			   val st' = List.map prime st
-			   val bvm = List.map (term_to_string2) (List.concat (List.map (fn (v,v') => [v',v]) (ListPair.zip(st,st'))))
+			   val bvm = List.map (term_to_string2) (List.concat (List.map (fn (v,v') => [v',v]) 
+										       (ListPair.zip(st,st'))))
 		       in bvm end
-	val vm = List.foldr (fn(v,vm') => Varmap.insert v vm') (Varmap.empty) (ListPair.zip(bvm,(List.tabulate(List.length bvm,I))))
+	val vm = List.foldr (fn(v,vm') => Varmap.insert v vm') (Varmap.empty) 
+			    (ListPair.zip(bvm,(List.tabulate(List.length bvm,I))))
 	val _ = if (bdd.getVarnum()<(List.length bvm)) 
 		then bdd.setVarnum (List.length bvm) else () (* this tells BuDDy where and what the vars are *)	  
     in vm end

@@ -9,6 +9,19 @@
 (* simplest example (other than the mod8 counter toy example).                                          *)
 (*                                                                                                      *)
 (********************************************************************************************************)
+
+(* usage example (start hol including the HolCheck/examples directory, using the -I command line option)
+
+val _ = app load ["holCheckLib","ttt"];
+(*val _ = set_trace "HolCheckDBGLZ" 0; val _ = set_trace "HolCheckDBG" 0;
+val _ = set_trace "HolCheckPRF" 0; val _ = set_trace "HolCheckLZ" 1; *)
+val ttt1 = ttt.makeTTT 1; (* n=1 gives more interesting results. Most props fail for n=3 and can't get traces *)
+val ttt2 = holCheckLib.holCheck ttt1 handle ex => Raise ex;
+val ttt3 = holCheckLib.prove_model ttt2;
+val res = holCheckLib.get_results ttt3;
+
+*)
+
 structure ttt =
 
 struct
@@ -51,8 +64,9 @@ fun makeTTT n =
     let
       val r = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.row(pm,x))) (List.tabulate (n, (fn x => x)))
       val c = List.map (fn x => Vector.foldr (fn (h,t) => h::t) [] (Array2.column(pm,x))) (List.tabulate (n, (fn x => x)))
-      val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) [] (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
-											  (List.foldr (fn (h,t) => h @ t) [] c)))
+      val d1 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) [] 
+			  (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),				  
+					(List.foldr (fn (h,t) => h @ t) [] c)))
       val d2 = List.foldr (fn ((h1,h2),t) => if h1=h2 then h1::t else t) [] 
 	  (ListPair.zip((List.foldr (fn (h,t) => h @ t) [] r),
 			(List.rev(List.foldr (fn (h,t) => h @ t) [] c))))
@@ -139,24 +153,13 @@ fun makeTTT n =
      val fl' = [("muisInit",ctl2muTools.ctl2mu ((snd o hd) fl))]@fl@
 	      [("muAcw",ctl2muTools.ctl2mu ((snd o last o butlast) fl))]*)
   in
-    ((set_init I1) o (set_trans T1) o (set_ric false) o (set_name "ttt") o (set_vord bvm)o (set_state state) o 
+    ((set_init I1) o (set_trans T1) o (set_flag_ric false) o (set_name "ttt") o (set_vord bvm)o (set_state state) o 
     (set_props fl)) empty_model
   end
 
 end
 end
 
-(* usage example (start hol including the HolCheck/examples directory, using the -I command line option)
-
-val _ = app load ["holCheckLib","ttt"];
-(*val _ = set_trace "HolCheckDBGLZ" 0; val _ = set_trace "HolCheckDBG" 0;
-val _ = set_trace "HolCheckPRF" 0; val _ = set_trace "HolCheckLZ" 1; *)
-val ttt1 = ttt.makeTTT 3; (* n=1 gives more interesting results. Pretty much all props fail for n=3 and you can't even get traces *)
-val ttt2 = holCheckLib.holCheck ttt1 handle ex => Raise ex;
-val ttt3 = holCheckLib.prove_model ttt2;
-val res = holCheckLib.get_results ttt3;
-
-*)
 
 
 

@@ -9,46 +9,8 @@ infixr 3 -->;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
 open Psyntax;
 
-open bossLib;
-open pairTheory;
-open pred_setTheory;
-open pred_setLib;
-open stringLib;
-open listTheory;
-open simpLib;
-open pairSyntax;
-open pairLib;
-open PrimitiveBddRules;
-open DerivedBddRules;
-open Binarymap;
-open PairRules;
-open pairTools;
-open setLemmasTheory;
-open muSyntax
-open muSyntaxTheory;
-open muTheory;
-open boolSyntax;
-open Drule;
-open Tactical;
-open Conv;
-open Rewrite;
-open Tactic;
-open boolTheory;
-open listSyntax;
-open stringTheory;
-open stringBinTree;
-open boolSimps;
-open pureSimps;
-open listSimps;
-open numLib;
-open reachTheory;
-open bddTools
-open envTheory
-open envTools
-open muTools
-open cacheTheory
-open commonTools
-open lazyTools
+open bossLib pairTheory pred_setTheory pred_setLib stringLib listTheory simpLib pairSyntax pairLib PrimitiveBddRules DerivedBddRules Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory listSyntax stringTheory boolSimps pureSimps listSimps numLib
+open setLemmasTheory muSyntax muSyntaxTheory muTheory reachTheory stringBinTree bddTools envTheory envTools muTools cacheTheory commonTools lazyTools
 
 val dpfx = "ct_"
 
@@ -773,13 +735,7 @@ fun mk_cache ee env (nf,mf) mfo qd githms state (seth,sel) msp =
 				    (Vector.tabulate(qd+(List.length rvnm2ix),fn ix => 0))
 				    (List.length rvnm2ix)
 				    []  githms state seth msp (ref 0)
-				    (fn _ => ((List.hd(CONJUNCTS(List.last(tsimps "mu"))))
-				     ::((List.filter (fn th => can (match_term 
-									(``~(((RV a):'prop mu) = (b:'prop mu))``)) 
-								   (concl (SPEC_ALL th))) (tsimps "mu"))@
-					(List.filter (fn th => can (match_term 
-									(``~(((Not a):'prop mu) = (b:'prop mu))``)) 
-								   (concl (SPEC_ALL th))) (tsimps "mu"))),sel))
+				    (mk_tysimps sel p_ty)
 				    p_ty 
 				    (get_mu_ty_conj_tm p_ty,get_mu_ty_disj_tm p_ty,get_mu_ty_neg_tm p_ty,
 				     get_mu_ty_dmd_tm p_ty,get_mu_ty_box_tm p_ty,get_mu_ty_rv_tm p_ty,

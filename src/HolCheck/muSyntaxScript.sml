@@ -195,6 +195,19 @@ val FV_def = save_thm("FV_def",Define `
 (FV (mu Q.. f) =  (FV f) DELETE Q)  /\ 
 (FV (nu Q.. f) =  (FV f) DELETE Q)`)
 
+val ALLV_def = save_thm("ALLV_def",Define `
+(ALLV (T:'prop mu) = {}) /\
+(ALLV F = {}) /\
+(ALLV (~f) = ALLV f) /\ 
+(ALLV (f1 /\ f2) = (ALLV f1) UNION (ALLV f2)) /\
+(ALLV (f1 \/ f2) = (ALLV f1) UNION (ALLV f2)) /\
+(ALLV (RV Q) = {Q}) /\
+(ALLV (AP p) = {}) /\
+(ALLV (<<a>> f) = ALLV f) /\
+(ALLV ([[a]] f) = ALLV f) /\
+(ALLV (mu Q.. f) =  (ALLV f))  /\ 
+(ALLV (nu Q.. f) =  (ALLV f))`)
+
 val CLOSED_def = save_thm("CLOSED_def",Define `CLOSED (f:'prop mu) = (FV f = {})`)
 
 val IS_PROP_def = Define `
@@ -351,6 +364,28 @@ REPEAT STRIP_TAC THEN Cases_on `Q'=Q` THENL [
 
 val IMF_MU_IFF_IMF_NU=save_thm("IMF_MU_IFF_IMF_NU",prove(``!(f:'prop mu) Q. IMF (mu Q..f) = IMF (nu Q..f)``,SIMP_TAC std_ss [IMF_def]))
 
+val ALLV_RVNEG = prove(``!f Q. ALLV f = ALLV (RVNEG Q f)``,
+Induct_on `f` THEN FULL_SIMP_TAC std_ss ([UNION_DEF,SET_SPEC,RVNEG_def,ALLV_def]@(tsimps "mu")) THENL [
+ ONCE_REWRITE_TAC [EXTENSION]
+ THEN FULL_SIMP_TAC std_ss [SET_SPEC]
+ THEN METIS_TAC [],
+ ONCE_REWRITE_TAC [EXTENSION]
+ THEN FULL_SIMP_TAC std_ss [SET_SPEC]
+ THEN METIS_TAC [],
+ REPEAT GEN_TAC THEN Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [ALLV_def],
+ REPEAT GEN_TAC THEN Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [ALLV_def],
+ REPEAT GEN_TAC THEN Cases_on `Q=s` THEN FULL_SIMP_TAC std_ss [ALLV_def]
+])
+
+val ALLV_NNF = prove(``!f. ALLV f = ALLV (NNF f)``,
+recInduct NNF_IND_def THEN REPEAT CONJ_TAC THEN BETA_TAC
+THEN FULL_SIMP_TAC std_ss ([GSYM ALLV_RVNEG,NNF_def,RVNEG_def,NOT_IN_EMPTY,MU_SUB_def,ALLV_def]@(tsimps "mu")))
+
+val ALLV_SUBF = prove(``!f Q. (RV Q) SUBF f = Q IN ALLV f``,
+Induct_on `f` THEN FULL_SIMP_TAC std_ss ([IN_SING,UNION_DEF,SET_SPEC,NOT_IN_EMPTY,MU_SUB_def,ALLV_def]@(tsimps "mu")))
+
+val ALLV_FINITE = prove(``!f. FINITE (ALLV f)``,
+Induct_on `f` THEN FULL_SIMP_TAC std_ss [FINITE_EMPTY,FINITE_UNION,ALLV_def,FINITE_SING])
 
 val CLOSED_NEG = save_thm("CLOSED_NEG",prove(``!f. CLOSED (~f) = CLOSED f``,Induct_on `f` THEN FULL_SIMP_TAC std_ss ([CLOSED_def,FV_def]@tsimps "mu")))
 
@@ -367,6 +402,12 @@ val CLOSED_DMD = save_thm("CLOSED_DMD",prove(``!f a. CLOSED (<<a>> f) = CLOSED f
 (* thms about subformulas *)
 
 val SUBF_REFL = save_thm("SUBF_REFL",prove(``!f. f SUBF f``,Induct_on `f` THEN SIMP_TAC std_ss (MU_SUB_def::(tsimps "mu"))))
+
+val SUBF_NEG = prove(``!f g. ~(g SUBF f) ==> ~(~g SUBF f)``,
+Induct_on `f` THEN Induct_on `g` THEN FULL_SIMP_TAC std_ss ([MU_SUB_def]@(tsimps "mu"))
+THEN TRY (METIS_TAC (MU_SUB_def::(tsimps "mu"))))
+
+val SUBF_NEG2 = prove(``!f g. (~g SUBF f) ==> (g SUBF f)``, PROVE_TAC [SUBF_NEG])
 
 val SUBF_CONJ =  save_thm("SUBF_CONJ",prove(``!f g h. (f /\ g) SUBF h ==> f SUBF h /\ g SUBF h``,
 Induct_on `h` THEN REPEAT CONJ_TAC THEN FULL_SIMP_TAC std_ss ([MU_SUB_def,NNF_def]@(tsimps "mu"))
@@ -567,5 +608,19 @@ val IMF_MU_NEG_NU = save_thm("IMF_MU_NEG_NU",prove(``!f Q Q'. IMF (mu Q.. ~nu Q'
 val IMF_MU_NEG_NEG = save_thm("IMF_MU_NEG_NEG",prove(``!f a Q. IMF (mu Q.. ~~f) = IMF (mu Q .. f)``,SIMP_TAC std_ss [IMF_def] THEN Induct_on `f` THEN SIMP_TAC std_ss (IMF_def::MU_SUB_def::NNF_def::(tsimps "mu")) THEN ASSUM_LIST PROVE_TAC))
 
 val IMF_MU_INV_RVNEG = save_thm("IMF_MU_INV_RVNEG",prove(``!f Q. IMF (mu Q.. f) = IMF mu Q.. RVNEG Q ~f``, REWRITE_TAC [IMF_def] THEN PROVE_TAC[STATES_MONO_LEM3,IMF_INV_NEG_RVNEG]))
+
+val IMF_MU_EXT = save_thm("IMF_MU_EXT",prove(``!f. IMF f ==> ?Q. IMF (mu Q..f)``,
+REPEAT STRIP_TAC
+THEN FULL_SIMP_TAC std_ss [IMF_def]
+THEN Q.EXISTS_TAC `@Q. ~(Q IN ALLV (NNF f))`
+THEN SELECT_ELIM_TAC
+THEN CONJ_TAC THENL [
+ POP_ASSUM (K ALL_TAC)
+ THEN REWRITE_TAC [GSYM ALLV_NNF]
+ THEN METIS_TAC [NOT_IN_FIN_STRING_SET,ALLV_FINITE],
+ REPEAT STRIP_TAC
+ THEN IMP_RES_TAC SUBF_NEG2
+ THEN METIS_TAC [ALLV_SUBF,ALLV_NNF]
+]))
 
 val _ = export_theory()

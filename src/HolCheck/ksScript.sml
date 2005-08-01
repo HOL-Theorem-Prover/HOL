@@ -21,17 +21,6 @@ val wfKS_def = Define `
   wfKS ks = (ks.S0 SUBSET ks.S) /\  (ks.S = UNIV)
 `;
 
-(* toy example of ks
-val dks_def4 = Define `dks4 = <|
-                     S := (UNIV:((bool # bool # bool # bool) -> bool));
-                     S0:= {}; (* should be \(p1,p2,p3,p4). p1 \/ p2 \/ p3 \/ p4 but empty for the moment for convenience *)
-                     T := \t. if t="t" then (\((p1,p2:bool,p3:bool,p4:bool),(p1',p2',p3',p4')).
-                                                p1 \/ p1' /\ (p2=p2') /\ (p3=p3') /\ (p4=p4'))
-                                       else (\((p1:bool,p2:bool,p3:bool,p4:bool),(p1':bool,p2':bool,p3':bool,p4':bool)).F);
-                     ap := {"p1";"p2";"p3";"p4"};
-                     L :=  \(p1,p2,p3,p4). {p|((p="p1")/\p1) \/ ((p="p2")/\p2) \/ ((p="p3") /\ p3) \/ ((p="p4") /\ p4)}  |>`;
-*)
-
 val KS_TRANSITION_def = Define`
   KS_TRANSITION (p:'state) ks a (q:'state) = (ks.T a)(p,q)
 `;
@@ -60,5 +49,11 @@ THEN Cases_on `(?s'. R (s,s'))` THENL [
 DISJ1_TAC THEN ASM_REWRITE_TAC [],
 DISJ2_TAC THEN ASM_REWRITE_TAC []
 THEN Q.EXISTS_TAC `s` THEN REFL_TAC]))
+
+(* KS analogue of bisimulation (used in muScript) *)
+val BISIM_def = Define `BISIM M1 M2 BS = 
+		(!a s1 s2. 
+		     (!s1'. BS(s1,s2) /\ (M1.T a)(s1,s1') ==> (?s2'. (M2.T a)(s2,s2') /\ BS(s1',s2')))  /\
+		     (!s2'. BS(s1,s2) /\ (M2.T a)(s2,s2') ==> (?s1'. (M1.T a)(s1,s1') /\ BS(s1',s2')))) `
 
 val _ = export_theory();

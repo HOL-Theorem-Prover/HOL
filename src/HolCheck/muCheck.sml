@@ -6,54 +6,9 @@ struct
 local 
 
 open Globals HolKernel Parse goalstackLib
-open bossLib
-open pairTheory
-open pred_setTheory
-open pred_setLib
-open stringLib
-open listTheory
-open simpLib
-open pairSyntax 
-open pairLib
-open PrimitiveBddRules
-open DerivedBddRules
-open Binarymap
-open PairRules
-open pairTools
-open setLemmasTheory
-open muSyntax
-open muSyntaxTheory
-open muTheory
-open boolSyntax
-open Drule
-open Tactical
-open Conv
-open Rewrite
-open Tactic
-open boolTheory
-open listSyntax 
-open stringTheory
-open stringBinTree
-open boolSimps 
-open pureSimps
-open listSimps
-open numLib
-open muTools
-open commonTools
-open ksTheory
-open HolSatLib
-open defCNF
-open cearTheory
-open bddTools
-open envTheory
-open envTools
-open cacheTools
-open cacheTheory
-open ksTools
-open lazyTools
-open lzPairRules
-open lzConv
 
+open bossLib pairTheory pred_setTheory pred_setLib stringLib listTheory simpLib pairSyntax pairLib PrimitiveBddRules DerivedBddRules Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory listSyntax stringTheory boolSimps pureSimps listSimps numLib HolSatLib defCNF
+open setLemmasTheory muSyntax muSyntaxTheory muTheory stringBinTree muTools commonTools ksTheory cearTheory bddTools envTheory envTools cacheTools cacheTheory ksTools lazyTools lzPairRules lzConv
 
 val dpfx = "mc_"
 
@@ -95,8 +50,10 @@ fun mk_seths mf =
 	val nutm = ``(nu Q .. f):^(ty_antiq(type_of mf))``
 	val rvs = Binaryset.addList(Binaryset.empty Term.compare,
 				    ((List.map (fn tm => rand tm) (find_terms (can (match_term rvtm)) mf)) @
-				     (List.map (fn tm => List.hd(snd(strip_comb tm))) (find_terms (can (match_term mutm)) mf)) @
-				     (List.map (fn tm => List.hd(snd(strip_comb tm))) (find_terms (can (match_term nutm)) mf))))
+				     (List.map (fn tm => List.hd(snd(strip_comb tm))) 
+					       (find_terms (can (match_term mutm)) mf)) @
+				     (List.map (fn tm => List.hd(snd(strip_comb tm))) 
+					       (find_terms (can (match_term nutm)) mf))))
         val seglpairs = List.map (fn l => (hd l,last l)) (cartprod [Binaryset.listItems rvs,Binaryset.listItems rvs])
         val segl2 = List.map (fn v => (v,list2map(List.map (fn (x,y) => (fromHOLstring y,mk_eq(x,y))) 
 				(List.filter (fn (x,y) => Term.compare(x,v)=EQUAL) 
@@ -104,15 +61,24 @@ fun mk_seths mf =
 	val seths = list2map(List.map (fn (v,gll) => 
 				       (fromHOLstring v,
 					Binarymap.map (fn (y,gl) => (* FIXME: this lz has not been verified *)
-						       let val jf = (fn _ =>  (PURE_REWRITE_RULE 
-										 [GEN_ALL(List.last(CONJUNCTS (SPEC_ALL EQ_CLAUSES)))]
+						       let val jf = (fn _ =>  
+									(PURE_REWRITE_RULE 
+								[GEN_ALL(List.last(CONJUNCTS (SPEC_ALL EQ_CLAUSES)))]
 										 (stringLib.string_EQ_CONV gl)))
 						       in mk_lthm (fn _ =>  (if Term.compare(lhs gl,rhs gl)=EQUAL
 									    then mk_eq(gl,T) else mk_neg(gl),jf)) jf end)
 						      gll)) segl2) 	
-	val sel = (List.map snd (List.concat (List.map snd (Binarymap.listItems (Binarymap.map (Binarymap.listItems o snd) seths)))))
+	val sel = (List.map snd (List.concat (List.map snd (Binarymap.listItems 
+								(Binarymap.map (Binarymap.listItems o snd) seths)))))
 	val _ = dbgTools.DEX dpfx "mse" (*DBG*)
         in (seths,sel) end
+
+(* for when we have not got sel precomputed  *)
+fun prove_imf f = 
+    let val p_ty = muSyntax.get_prop_type f
+	val sel = snd (mk_seths f)
+	val imfth = mk_imf_thm (inst [alpha |-> p_ty] muSyntax.mu_imf_tm) f (mk_tysimps sel p_ty) p_ty
+    in imfth end
 
 fun mk_gen_rv_thms mf ksname state rvl ie wfKS_ks =
    let  
@@ -151,7 +117,8 @@ fun mk_gen_thms T (apl,ks_def,wfKS_ks) state state' st vm =
        val pvar = mk_var("p",prop_type)
        val jf = (fn _ =>  (PURE_REWRITE_RULE [Lth] (List.nth(msthl,0))))
        val msa = lzPBETA_RULE 
-		     (mk_lthm (fn _ => (``!e p. MU_SAT (AP p) ^ksname e ^state = ^(list_mk_comb(rhs(concl Lth),[state,pvar]))``,jf)) jf)
+		     (mk_lthm (fn _ => (``!e p. MU_SAT (AP p) ^ksname e ^state = 
+					^(list_mk_comb(rhs(concl Lth),[state,pvar]))``,jf)) jf)
        (*val _ =  dbgTools.DTH (dpfx^ msa)   val _ =  dbgTools.DST (dpfx^ "msa\n") *)
        val msp = List.map GSYM (List.drop(msthl,3))	
        val (Tth,dmdth) = mk_Tth ks_def ksname (List.nth(msthl,1)) (List.nth(msthl,2)) state' state_type prop_type  
@@ -179,7 +146,7 @@ fun mk_ap_tb vm absf mf sth =
 	val _ = dbgTools.DEX dpfx "mat" (*DBG*)
     in res  end 
 
-fun mk_con_tb_tm vm tm = if (Term.compare(tm,``T:bool``)=EQUAL) then BddCon true vm else BddCon false vm
+fun mk_con_tb_tm vm tm = if (Term.compare(tm,T)=EQUAL) then BddCon true vm else BddCon false vm
 
 fun mk_con_tb b vm mf sth = 
     let 
@@ -214,24 +181,28 @@ fun mk_rv_spec_thm msr seth sel msreq ie ee state (tb,gth,sth,env,ix,rsc,ithm,ab
 	(*val _ = dbgTools.DTM (dpfx^  bv)  val _ = dbgTools.DST (dpfx^  " bv \n") (*DBG*)*)
 	val v = fromHOLstring(bv) 
 	(*val _ = dbgTools.DTH (dpfx^  msr)  val _ = dbgTools.DST (dpfx^  "msr\n") (*DBG*)
-	val _ = if (Option.isSome sth) then dbgTools.DTH (dpfx^  (Option.valOf sth))  else dbgTools.DST (dpfx^  " NONE")   
+	val _ = if (Option.isSome sth) then dbgTools.DTH (dpfx^  (Option.valOf sth))  else dbgTools.DST (dpfx^  " NONE") 
 	val _ = dbgTools.DST (dpfx^  "\nsth\n") (*DBG*)
 	val _ = dbgTools.DTM (dpfx^  ie)  val _ = dbgTools.DST (dpfx^  " ie\n") (*DBG*)
-        val _ = List.app (fn th => let val _ = dbgTools.DTH (dpfx^  th)  val _ = dbgTools.DST (dpfx^  "seth\n")  in () end)(*DBG*)
+        val _ = List.app (fn th => let val _ = dbgTools.DTH (dpfx^  th)  
+				       val _ = dbgTools.DST (dpfx^  "seth\n")  in () end)(*DBG*)
 			 ((List.map snd (Binarymap.listItems(Binarymap.find(seth,v))))@[ENV_UPDATE_def,BETA_THM])(*DBG*)*)
-	val th =  if (Int.compare(ix,dp)=EQUAL andalso (Vector.sub(rsc,ix)>0)) (*i.e.current bound var top level fv filt by >0 test*)
+	val th =  if (Int.compare(ix,dp)=EQUAL 
+		      andalso (Vector.sub(rsc,ix)>0)) (*i.e.current bnd var top level fv filt by >0 test*)
 		  then (* this has already been proved in FixExp *) 
 		      Option.valOf sth
 		  else (* otherwise not innermost bound var so must account for change in environment *)
 		      let 
-			  (*val _ = dbgTools.DST (dpfx^  "else\n")  val _ = dbgTools.DTH (dpfx^  (ISPECL [ie,fromMLstring v] msr))  
+			  (*val _ = dbgTools.DST (dpfx^  "else\n")  
+			   val _ = dbgTools.DTH (dpfx^  (ISPECL [ie,fromMLstring v] msr))  
                             val _ = dbgTools.DST (dpfx^  " msr1\n") (*DBG*)
 			    val _ = List.app (fn th => let val _ = dbgTools.DTH (dpfx^  th)  
                             val _ = dbgTools.DST (dpfx^  " seths\n")  in () end)(*DBG*)
 			      (List.map snd (Binarymap.listItems(Binarymap.find(seth,v))))(*DBG*)
 			    val _ = dbgTools.DTH (dpfx^  (eval_env ie ie bv seth [])) (*DBG*)
 			    val _ = dbgTools.DST (dpfx^  " env_eval thm\n") (*DBG*)*)
-		      in SYM (CONV_RULE(RHS_CONV(PURE_ONCE_REWRITE_CONV [eval_env ie ie bv state seth sel []])) (ISPECL [ie,bv] msr)) end
+		      in SYM (CONV_RULE(RHS_CONV(PURE_ONCE_REWRITE_CONV [eval_env ie ie bv state seth sel []])) 
+				       (ISPECL [ie,bv] msr)) end
 	(*val _ = dbgTools.DTH (dpfx^  th)  val _ = dbgTools.DST (dpfx^  "rv spec thm\n") (*DBG*)*)
 	val _ = dbgTools.DEX dpfx "mrst" (*DBG*)
     in th end
@@ -251,7 +222,7 @@ fun get_spec_thm ie spec_func gth mf =
 	val _ = dbgTools.DEX dpfx "gst" (*DBG*)
     in res end
 
-(* dummy theorem not used by FixExp *) 
+(* dummy theorem, not used by FixExp *) 
 (* we don't just put TRUTH here because a gen thm needs to be SPEC'able *)
 fun mk_fp_gen_thm state mf = INST_TYPE [``:'a`` |-> type_of state] ENV_UPDATE_INV 
 
@@ -389,9 +360,11 @@ fun cache_get cch ie tb_func gth_func dp nodes mf seth sel state =
 	       else let val _ = dbgTools.DST (dpfx^"cg_ recompute NONE gth\n") (*DBG*)
 			val gth = gth_func mf 
 			val sth = if (is_RV mf) then gth else ISPEC ie gth 
-			(*val _ = with_flag(show_types,true) dbgTools.DTH (dpfx^  gth)  val _ = dbgTools.DST (dpfx^  " gth\n") (*DBG*) *)
+			(*val _ = with_flag(show_types,true) dbgTools.DTH (dpfx^  gth)  
+			 val _ = dbgTools.DST (dpfx^  " gth\n") (*DBG*) *)
 			val tb = tb_func mf sth
-			val _ = upd_cch_tb cch tb val _ = upd_cch_sth cch sth val _ = upd_cch_gth cch gth val _ = upd_cch_env cch ie 
+			val _ = upd_cch_tb cch tb val _ = upd_cch_sth cch sth 
+			val _ = upd_cch_gth cch gth val _ = upd_cch_env cch ie 
 		    in tb end			  
      val _ = dbgTools.DEX dpfx "cg" (*DBG*)
     in res end
@@ -418,7 +391,8 @@ fun muCheck_aux ((_,(msa,absf,ksname),_,_,_),(seth,sel,state,ie)) mf vm dp (muAP
     in tb end 
   | muCheck_aux ((_,_,(msr,_,msreq,ee),_,_),(seth,sel,state,ie)) mf vm dp (muRV cch) =  
     let val _ = profTools.bgt (dpfx^"mc_rv")(*PRF*)
-	val tb = cache_get cch ie (mk_rv_tb ee (!cch)) (mk_rv_spec_thm msr seth sel msreq ie ee state (!cch) dp) dp [] mf seth sel state
+	val tb = cache_get cch ie (mk_rv_tb ee (!cch)) (mk_rv_spec_thm msr seth sel msreq ie ee state (!cch) dp) dp [] 
+			   mf seth sel state
 	val _ = profTools.ent (dpfx^"mc_rv")(*PRF*)
     in tb end
   | muCheck_aux (args as (msp,_,_,_,_),(seth,sel,state,ie)) mf vm dp (muAnd(cch,(f1,f2))) = 
@@ -450,13 +424,15 @@ fun muCheck_aux ((_,(msa,absf,ksname),_,_,_),(seth,sel,state,ie)) mf vm dp (muAP
   | muCheck_aux (args as (_,_,_,(_,Tth,(dmdth,_),_,_),_),(seth,sel,state,ie)) mf vm dp (muDIAMOND(cch,(act,f1))) = 
      let 
 	 val (abthm,abthnm,_,_,cabthm,cabthmnm,_,_) = get_abthms mf f1 f1 cch
-	 val tb = cache_get cch ie (ModalExp (args,(seth,sel,state,ie)) act false (List.last(snd(strip_comb mf))) vm f1 dp abthm) 
+	 val tb = cache_get cch ie (ModalExp (args,(seth,sel,state,ie)) act false (List.last(snd(strip_comb mf))) 
+					     vm f1 dp abthm) 
 	     (mk_gen_modal_thm Tth dmdth) dp [f1] mf seth sel state
      in  tb end 
   | muCheck_aux (args as (_,_,_,(_,Tth,(_,boxth),_,_),_),(seth,sel,state,ie)) mf vm dp (muBOX(cch,(act,f1))) = 
      let 
 	 val (abthm,abthnm,_,_,cabthm,cabthmnm,_,_) = get_abthms mf f1 f1 cch
-	 val tb = cache_get cch ie (ModalExp (args,(seth,sel,state,ie)) act true (List.last(snd(strip_comb mf))) vm f1 dp abthm) 
+	 val tb = cache_get cch ie (ModalExp (args,(seth,sel,state,ie)) act true (List.last(snd(strip_comb mf))) 
+					     vm f1 dp abthm) 
 	     (mk_gen_modal_thm Tth boxth) dp [f1] mf seth sel state
      in tb end  
   | muCheck_aux (args,(seth,sel,state,ie)) mf vm dp (fpmu(bvch,cch,f1)) = 
@@ -464,14 +440,16 @@ fun muCheck_aux ((_,(msa,absf,ksname),_,_,_),(seth,sel,state,ie)) mf vm dp (muAP
 	val rvnm = List.hd(snd(strip_comb mf))
 	val (abthm,abthnm,mf1,_,cabthm,cabthmnm,_,_) = get_abthms mf f1 f1 cch
 	val tb = cache_get cch ie (FixExp (args,(seth,sel,state,ie)) [rvnm,cabthmnm] (BddCon false vm) vm 
-					  (bvch,cch,f1) (dp+1) abthm cabthm) (mk_fp_gen_thm state) dp [f1] mf seth sel state
+					  (bvch,cch,f1) (dp+1) abthm cabthm) (mk_fp_gen_thm state) dp [f1] 
+			   mf seth sel state
     in tb end
   | muCheck_aux (args,(seth,sel,state,ie)) mf vm dp (fpnu(bvch,cch,f1)) = 
     let 
 	val rvnm = List.hd(snd(strip_comb mf))
 	val (abthm,abthnm,mf1,_,cabthm,cabthmnm,_,_) = get_abthms mf f1 f1 cch
 	val tb = cache_get cch ie (FixExp (args,(seth,sel,state,ie)) [rvnm,cabthmnm] (BddCon true vm) vm 
-					  (bvch,cch,f1) (dp+1) abthm cabthm) (mk_fp_gen_thm state) dp [f1] mf seth sel state
+					  (bvch,cch,f1) (dp+1) abthm cabthm) (mk_fp_gen_thm state) dp [f1] 
+			   mf seth sel state
     in tb end
 
 and NotExp (args,(seth,sel,state,ie)) mf1 vm dp f1 abthm mf sth = 
@@ -515,7 +493,7 @@ and ModalExp (args as (_,_,_,(RTm,_,_,sp,s2sp),_),(seth,sel,state,ie))  actnm is
 	val _ = profTools.bgt (dpfx^"mc_mod")(*PRF*)
         val tb2 = if isbox then BddAppall sp (bdd.Imp, find(RTm,actnm),(BddReplace  s2sp tb1))
 		  else BddAppex sp (bdd.And, find(RTm,actnm),(BddReplace  s2sp tb1))
-	val sth = SPEC (hd(snd(strip_comb(getTerm(tb1))))) sth (* TODO: move this to muCheck_aux to be consistent with ~,/\,\/ etc*)
+	val sth = SPEC (hd(snd(strip_comb(getTerm(tb1))))) sth (* TODO: move this to muCheck_aux as with ~,/\,\/ etc*)
 	(*val _ = dbgTools.DTH (dpfx^  sth) 	val _ = dbgTools.DST (dpfx^  " ModalExp sth\n") (*DBG*)*)
 	val sth = PURE_REWRITE_RULE [SYM abthm] sth
 	(*val _ = dbgTools.DTH (dpfx^  sth) 	val _ = dbgTools.DST (dpfx^  " ModalExp sth abbrev\n")  
@@ -526,8 +504,8 @@ and ModalExp (args as (_,_,_,(RTm,_,_,sp,s2sp),_),(seth,sel,state,ie))  actnm is
     in ttb end
 
 and FixExp ((p_,ap_,rv_,d_,
-	     (wfKS_ks,finS,frv_thms,imf_thms,pextth,rvtt,mssth,fps,eus,Ss,ess,statel,ksname,prop_type,ee,qd,sqd,ce,qt,eeq)),
-	    (seth,sel,state,ie)) [t1,t2] initbdd vm (bvch,_,f1) dp abthm cabthm mf _ =
+	   (wfKS_ks,finS,frv_thms,imf_thms,pextth,rvtt,mssth,fps,eus,Ss,ess,statel,ksname,prop_type,ee,qd,sqd,ce,qt,eeq)),
+	   (seth,sel,state,ie)) [t1,t2] initbdd vm (bvch,_,f1) dp abthm cabthm mf _ =
     let (*FIXME: clean up this monster *)
 	val _ = dbgTools.DEN dpfx "fe" (*DBG*)
 	val _ = profTools.bgt (dpfx^"fe")(*PRF*)
@@ -538,8 +516,8 @@ and FixExp ((p_,ap_,rv_,d_,
 	val p_ty = get_prop_type t2
         val (ttm,initset,imf_t2g,init_thm,abbrev_thm,fp2thm,adogeneqthm,bigthm,chainth,initsubth) = 
 	    if (bdd.equal (getBdd(initbdd)) (bdd.TRUE)) 
-		then (true,Ss,list_mk_comb(get_mu_ty_nu_tm p_ty,[t1,List.last (snd(strip_comb mf))]),GFP_INIT,NU_FP_STATES,
-		      STATES_FP_BIGINTER_2,STATES_DEF_SYM_NU,NU_BIGINTER,GEN_GFP_CHAIN,
+		then (true,Ss,list_mk_comb(get_mu_ty_nu_tm p_ty,[t1,List.last (snd(strip_comb mf))]),
+		      GFP_INIT,NU_FP_STATES,STATES_FP_BIGINTER_2,STATES_DEF_SYM_NU,NU_BIGINTER,GEN_GFP_CHAIN,
 		      let val jf = (fn _ => (REWRITE_RULE [SYM (List.last (CONJUNCTS (REWRITE_RULE [wfKS_def] wfKS_ks)))] 
 							 (INST_TYPE [alpha|->type_of state] SUBSET_UNIV)))
 		      in mk_lthm (fn _ => (``!s. s SUBSET ^Ss``,jf)) jf end)  
@@ -563,7 +541,8 @@ and FixExp ((p_,ap_,rv_,d_,
 			 (*val _ = dbgTools.DTM (dpfx^  X)  val _ = dbgTools.DST (dpfx^  " X\n") (*DBG*)*)
 			 val th = MP (ISPECL [ksname,fst(dest_env e),t1,state,X] GEN_MS_FP_INIT) wfKS_ks
 		         (*val _ = dbgTools.DTH (dpfx^  th)  val _ = dbgTools.DST (dpfx^  " initset MS_FP\n") (*DBG*)*)
-		     in ((X,BddEqMp th (Option.valOf bvtb)),GEN_FP_INIT,if (ttm) then GEN_NU_FP_STATES else GEN_MU_FP_STATES) end
+		     in ((X,BddEqMp th (Option.valOf bvtb)),GEN_FP_INIT,
+			 if (ttm) then GEN_NU_FP_STATES else GEN_MU_FP_STATES) end
 	    else ((initset,initbdd),init_thm,abbrev_thm)
 	(*val _ = dbgTools.DTM (dpfx^  initset)  val _ = dbgTools.DST (dpfx^  " initset\n")  (*DBG*)
         val _ = dbgTools.DTM (dpfx^  (getTerm(initbdd)))  val _ = dbgTools.DST (dpfx^  " initbdd\n")  (*DBG*)
@@ -584,23 +563,26 @@ and FixExp ((p_,ap_,rv_,d_,
         val ix = (Array.length ee) - qd  (* index of current bv in ee and rv_thms arrays *)
 	val _ = 
 	    if (ado) 
-		then Array.update(ee,ix,(bv,BddEqMp (SYM(MP (ISPECL [t2,ksname,ie,t1,initset,state] init_thm) wfKS_ks)) initbdd))
+		then Array.update(ee,ix,(bv,BddEqMp (SYM(MP (ISPECL [t2,ksname,ie,t1,initset,state] init_thm) wfKS_ks)) 
+						    initbdd))
 	    else Array.update(ee,ix,(bv,BddEqMp (SYM(MP (ISPECL [t2,ksname,ie,t1,state] init_thm) wfKS_ks)) initbdd))
 	val ado_subthm' = if sqd then SOME (lift_ado_sub_thm ado ado_subthm t2 ksname ie1 eeq imf_thms abthm
 	    wfKS_ks ie t1 initset seth imf_t2 ess Ss eus adogeneqthm initsubth numSyntax.zero_tm) else NONE
 	val _ = profTools.ent (dpfx^"fe")(*PRF*)
         fun iter ie2 n = (* ee also changes with each iter, but statefully, so no need to pass it in *) 
           let val _ = dbgTools.DST (dpfx^  ("(iter)\n")) (*DBG*)
-	      (*val _ = dbgTools.DTM (dpfx^  t1)  val _ = dbgTools.DST (dpfx^  "::")  val _ = dbgTools.DTM (dpfx^  n) (*DBG*)
-	      val _ = dbgTools.DTM (dpfx^  ie2)  val _ = dbgTools.DST (dpfx^  " ie2\n") (*DBG*)*)
+	      (*val _ = dbgTools.DTM (dpfx^  t1)  val _ = dbgTools.DST (dpfx^  "::")  
+	       val _ = dbgTools.DTM (dpfx^  n) (*DBG*)
+	       val _ = dbgTools.DTM (dpfx^  ie2)  val _ = dbgTools.DST (dpfx^  " ie2\n") (*DBG*)*)
 	      val _ = profTools.bgt (dpfx^"fe")(*PRF*)
 	      val eeqthm  = if sqd then mk_ado_pre_sub_thm ado ado_subthm t2 ksname ie1 eeq imf_thms abthm wfKS_ks ie t1 
 		  initset seth imf_t2 ess eus chainth adogeneqthm initsubth
 		  (if  (Term.compare(n,numSyntax.zero_tm)=EQUAL) then n else rand n)  else TRUTH
 	      val _ = profTools.ent (dpfx^"fe")(*PRF*)
 	      (*val _ = dbgTools.DTH (dpfx^  eeqthm)  val _ = dbgTools.DST (dpfx^  " eeqthm\n") (*DBG*)*)
-	      val itr = (muCheck_aux ((p_,ap_,rv_,d_,(wfKS_ks,finS,frv_thms,imf_thms,pextth,rvtt,mssth,fps,eus,Ss,ess,statel,
-							   ksname,prop_type,ee,qd-1,sqd,ce,ttm::qt,(eeqthm,abthm)::eeq)),
+	      val itr = (muCheck_aux ((p_,ap_,rv_,d_,(wfKS_ks,finS,frv_thms,imf_thms,pextth,rvtt,mssth,fps,
+						      eus,Ss,ess,statel,ksname,prop_type,ee,qd-1,sqd,ce,
+						      ttm::qt,(eeqthm,abthm)::eeq)),
 					   (seth,sel,state,ie2)) (List.last (snd(strip_comb mf)))  vm dp f1)
 	      val _ = profTools.bgt (dpfx^"fe")(*PRF*)
 	      val itrtm = getTerm itr
@@ -612,7 +594,8 @@ and FixExp ((p_,ap_,rv_,d_,
 	      (* if counterexamples/witnesses are turned on, and we are in the outermost fixed point iteration *)
 	      val _ = if (Option.isSome (!ce)) andalso ix=0 then ce := SOME (itr::(Option.valOf (!ce))) else ()
 	      (*val _ = if (Option.isSome (!ce)) andalso ix=0 then (*DBG*)
-	      let val _=dbgTools.DST (dpfx^ "CE len") val _=DMSG(ST((int_to_string(List.length(Option.valOf (!ce))))^"\n"))(*DBG*)
+	      let val _=dbgTools.DST (dpfx^ "CE len") 
+		  val _=DMSG(ST((int_to_string(List.length(Option.valOf (!ce))))^"\n"))(*DBG*)
 		  val _ = DMSG (BD (getBdd itr))
 			  in () end else ()(*DBG*)*)
 	      (*val _ = dbgTools.DTM (dpfx^  (getTerm itr))  val _ = dbgTools.DST (dpfx^  " (itr 2)\n") (*DBG*)*)
@@ -632,27 +615,34 @@ and FixExp ((p_,ap_,rv_,d_,
 			   val endth =  
 			       if ado 
 				   then let (*FIXME: ADO stuff not lazified yet *)
-				            (*val _ = dbgTools.DTH (dpfx^ cabthm)  val _ = dbgTools.DST (dpfx^  " ADO cabthm\n") (*DBG*)
-					    val _ = dbgTools.DTH (dpfx^ abthm)  val _ = dbgTools.DST (dpfx^  " ADO abthm\n") (*DBG*)*)
+				            (*val _ = dbgTools.DTH (dpfx^ cabthm)  
+					     val _ = dbgTools.DST (dpfx^  " ADO cabthm\n") (*DBG*)
+					    val _ = dbgTools.DTH (dpfx^ abthm)  
+					    val _ = dbgTools.DST (dpfx^  " ADO abthm\n") (*DBG*)*)
 					    val imf_t2 = PURE_ONCE_REWRITE_RULE [abthm] imf_t2
-					    (*val _ = dbgTools.DTH (dpfx^ imf_t2)  val _ = dbgTools.DST (dpfx^  " ADO imf_t2\n") (*DBG*)
-					    val _ =DMSG(TH (valOf ado_subthm')) val _ =dbgTools.DST (dpfx^ " ADO subthm'") (*DBG*)
+					    (*val _ = dbgTools.DTH (dpfx^ imf_t2)  
+					     val _ = dbgTools.DST (dpfx^  " ADO imf_t2\n") (*DBG*)
+					    val _ =DMSG(TH (valOf ado_subthm')) 
+					    val _ =dbgTools.DST (dpfx^" ADO subthm'") (*DBG*)
 					    val _=DMSG(TH(valOf ado_eqthm)) val _=DMSG(ST "ADO eqthm\n")(*DBG*)*)
 					    val ado_imfth = Binarymap.find(imf_thms,t2)
 					    (*val _ = dbgTools.DTH (dpfx^" ADO ado_imfth\n") ado_imfth)   (*DBG*)
-					    val _ = dbgTools.DTM (dpfx^ ie)  val _ = dbgTools.DST (dpfx^  " ADO ie\n") (*DBG*)
+					    val _ = dbgTools.DTM (dpfx^ ie) val _ = dbgTools.DST (dpfx^" ADO ie\n")(*DBG*)
 					    val _ = dbgTools.DTH (dpfx^" ADO fst hd eeq\n" (fst(hd eeq)))   (*DBG*)*)
 					    val adoeqthm2 = MATCH_MP SUBSET_TRANS 
-						(LIST_CONJ [MATCH_MP EQ_IMP_SUBSET (Option.valOf ado_eqthm),
-							    (SPEC (fst (dest_env ie)) 
-							     (MATCH_MP fp2thm 
-							      (LIST_CONJ [imf_t2,ado_imfth,
-									  wfKS_ks,PURE_ONCE_REWRITE_RULE[adogeneqthm](fst(hd eeq))])))])
+						(LIST_CONJ[MATCH_MP EQ_IMP_SUBSET (Option.valOf ado_eqthm),
+							   (SPEC (fst (dest_env ie)) 
+							    (MATCH_MP fp2thm 
+							     (LIST_CONJ [imf_t2,ado_imfth,
+									 wfKS_ks,
+									 PURE_ONCE_REWRITE_RULE[adogeneqthm](fst(hd eeq))]
+						)))])
 					    (*val _ = dbgTools.DTH (dpfx^" ADO adoeqthm2\n"  adoeqthm2)  (*DBG*)*)
 					    val sabbrev_thm = ISPECL [t2,ksname,ie,n,t1,initset] abbrev_thm 
 					    (*val _ =dbgTools.DTH (dpfx^" ADO sabbrev_thm\n" sabbrev_thm) (*DBG*)*)
 					in PURE_ONCE_REWRITE_RULE [SYM abthm]  
-					    (MP (MP sabbrev_thm (LIST_CONJ [wfKS_ks,imf_t2,finS,Option.valOf ado_subthm'])) adoeqthm2)
+					    (MP (MP sabbrev_thm (LIST_CONJ [wfKS_ks,imf_t2,finS,
+									    Option.valOf ado_subthm'])) adoeqthm2)
 					end
 			       else MP (PURE_REWRITE_RULE [SYM abthm] (ISPECL [t2,ksname,ie,n,t1] abbrev_thm))
 						    (LIST_CONJ [wfKS_ks,imf_t2])
@@ -664,13 +654,16 @@ and FixExp ((p_,ap_,rv_,d_,
 			   val _ = if sqd then 
 			       let val t2b' = (CONV_RULE (RHS_CONV (RATOR_CONV (PURE_ONCE_REWRITE_CONV [abthm]))) 
 				       (PEXT (PairRules.PGEN state (BETA_RULE (REWRITE_RULE [IN_DEF,MU_SAT_def] t2b)))))
-				   (*val _ = dbgTools.DTH (dpfx^  t2b')   val _ = dbgTools.DST (dpfx^  " t2b'\n") (*DBG*)*)
-				   val ado_eqthm' =  CONV_RULE(RHS_CONV(REWRITE_CONV[MP(ISPECL[t2,ksname,ie,t1] bigthm) wfKS_ks])) t2b'
-				   (*val _ = dbgTools.DTH (dpfx^  ado_eqthm')   val _ = dbgTools.DST (dpfx^  " ado_eqthm'\n") (*DBG*)*)
+				   (*val _ = dbgTools.DTH (dpfx^t2b')   val _ = dbgTools.DST (dpfx^  " t2b'\n") (*DBG*)*)
+				   val ado_eqthm' = CONV_RULE(RHS_CONV(REWRITE_CONV[MP(ISPECL[t2,ksname,ie,t1] bigthm) 
+										      wfKS_ks])) t2b'
+				   (*val _ = dbgTools.DTH (dpfx^ado_eqthm') 
+				     val _ = dbgTools.DST (dpfx^" ado_eqthm'\n") (*DBG*)*)
 				   val _ = upd_cch_eqth bvch ado_eqthm' 
 				   (* make ado subthm *)
 				   val ado_subthm = mk_ado_sub_thm ado (Option.valOf ado_subthm') t2 ksname ie1 eeq 
-				       imf_thms abthm wfKS_ks ie t1 initset (rator (getTerm prevbdd)) seth imf_t2 ess eus chainth n  
+				       imf_thms abthm wfKS_ks ie t1 initset (rator (getTerm prevbdd)) seth 
+				       imf_t2 ess eus chainth n  
 				   val _ = upd_cch_subth bvch ado_subthm 
 			       in () end else ()
 			   (*val _ = dbgTools.DST (dpfx^  bv) (*DBG*)*)
@@ -721,25 +714,29 @@ fun init_thms (apl,ks_def,wfKS_ks) T1 state vm Ric absf = (*FIXME: this becomes 
 	val (msp,msa,Tth,(dmdth,boxth),githms) = mk_gen_thms T1 (apl,ks_def,wfKS_ks) state state' st vm
         val mssth = GSYM (SIMP_RULE std_ss [IN_DEF] MU_SAT_def)
 	val jf = (fn _ => (GENL [``f:^(ty_antiq(f_ty))``,``e:^(ty_antiq(env_ty))``,
-			 ``X:^(ty_antiq(st_set_ty))``,``Q:string``,``n:num``] (ISPEC state (GENL [``s:^(ty_antiq(st_ty))``] 
+			 ``X:^(ty_antiq(st_set_ty))``,``Q:string``,``n:num``] 
+				(ISPEC state (GENL [``s:^(ty_antiq(st_ty))``] 
 			  (SPEC_ALL (MATCH_MP  (SIMP_RULE std_ss [MS_FP] (GEN_ALL (SIMP_RULE std_ss [ENV_UPDATE]  
-				         (ISPECL [``f:(^(ty_antiq(f_ty)))``,``Q:string``,``ks:^(ty_antiq(type_of ksname))``,
-						  ``e[[[Q<--X]]]:(^(ty_antiq(env_ty)))``] SAT_RV_ENV_SUBST)))) wfKS_ks))))))
+				(ISPECL [``f:(^(ty_antiq(f_ty)))``,``Q:string``,``ks:^(ty_antiq(type_of ksname))``,
+					 ``e[[[Q<--X]]]:(^(ty_antiq(env_ty)))``] SAT_RV_ENV_SUBST)))) wfKS_ks))))))
 	val rvtt = mk_lthm (fn _ =>  
-	    (list_mk_forall([``f:^(ty_antiq(f_ty))``,``e:^(ty_antiq(env_ty))``,``X:^(ty_antiq(st_set_ty))``,``Q:string``,``n:num``],
+	    (list_mk_forall([``f:^(ty_antiq(f_ty))``,``e:^(ty_antiq(env_ty))``,``X:^(ty_antiq(st_set_ty))``,
+			       ``Q:string``,``n:num``],
 				  mk_eq(``MU_SAT (RV Q) ^ksname e[[[Q<--FP f Q ^ksname e[[[Q<--X]]] (SUC n)]]] ^state``,
 					``FP f Q ^ksname  e[[[Q<--X]]] (SUC n) ^state``)),jf)) jf
 	val _ = dbgTools.DTH (dpfx^"it_rvtt") rvtt  (*DBG*)
         val pextth = GSYM (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV commonTools.lzELIM_TUPLED_QUANT_CONV)) 
 				     (ONCE_REWRITE_RULE [(lzGEN_PALPHA_CONV state  (rhs(concl(SPEC_ALL(INST_TYPE 
-										 [alpha|->st_ty,beta |->bool] FUN_EQ_THM)))))] 
+									[alpha|->st_ty,beta |->bool] FUN_EQ_THM)))))] 
 				       (INST_TYPE [alpha |-> st_ty, beta |-> bool] FUN_EQ_THM)))
 	val _ = dbgTools.DTH (dpfx^"it_pextth") pextth (*DBG*)
 	val fS = mk_comb (inst [alpha |-> type_of state] pred_setSyntax.finite_tm,mk_ks_dot_S ksname)
-	val jf = fn _ => (prove(fS(*``FINITE (^ksname).S``*),PROVE_TAC [wfKS_def,wfKS_ks,BOOLVEC_UNIV_FINITE_CONV (List.length st)]))
+	val jf = fn _ => (prove(fS(*``FINITE (^ksname).S``*),PROVE_TAC [wfKS_def,wfKS_ks,
+									BOOLVEC_UNIV_FINITE_CONV (List.length st)]))
         val finS = mk_lthm (fn _ => (fS(*``FINITE (^ksname).S``*),jf)) jf
 	val _ = dbgTools.DEX dpfx "it" (*DBG*)
-    in ((msp,(msa,absf,ksname), (Tth,(dmdth,boxth),st',s2s'),(finS,pextth,rvtt,mssth,fps,eus,Ss,ess,st,prop_ty)),state,githms)
+    in ((msp,(msa,absf,ksname), (Tth,(dmdth,boxth),st',s2s'),(finS,pextth,rvtt,mssth,fps,eus,Ss,ess,st,prop_ty)),
+	state,githms)
     end
 
 (* init data structures and theorems that depend on the property and environment *)
@@ -764,14 +761,18 @@ fun init_prop (nf,mf) ee ksname state wfKS_ks vm githms msp prop_ty =
 	val _ = Array.copy {si=0,len=NONE,src=ee,dst=ee2,di=0}
 	(*val tmr2 = Timer.startRealTimer()(*PRF*)*)
 	val (mfml,imf_thms,frv_thms) = mk_cache ee ie (nf,mf) mf qd githms state (seth,sel) msp
-	(*val _ = Binarymap.app (fn (k,v) => let val _ = dbgTools.DTM (dpfx^  k)  val _ = dbgTools.DST (dpfx^  " key\n")  (*DBG*)
-					       val _ = dbgTools.DTH (dpfx^  v)  val _ = dbgTools.DST (dpfx^  " v\n")  (*DBG*)
+	(*val _ = Binarymap.app (fn (k,v) => let val _ = dbgTools.DTM (dpfx^  k)  (*DBG*)
+						 val _ = dbgTools.DST (dpfx^  " key\n")  (*DBG*)
+						 val _ = dbgTools.DTH (dpfx^  v) (*DBG*) 
+						 val _ = dbgTools.DST (dpfx^  " v\n")  (*DBG*)
                                              in () end) frv_thms val _ = dbgTools.DST (dpfx^  " frv_thms\n") (*DBG*)*)
 	val _ = profTools.bgt (dpfx^"init_prop_adoimf")(*PRF*)
 	val imf_thms = mk_ado_imf_thms mf seth (tsimps "mu") frv_thms imf_thms
 	val _ = profTools.ent (dpfx^"init_prop_adoimf")(*PRF*)
-	(*val _ = Binarymap.app (fn (k,v) => let val _ = dbgTools.DTM (dpfx^  k)  val _ = dbgTools.DST (dpfx^  " key\n")  (*DBG*)
-					       val _ = dbgTools.DTH (dpfx^  v)  val _ = dbgTools.DST (dpfx^  " v\n")  (*DBG*)
+	(*val _ = Binarymap.app (fn (k,v) => let val _ = dbgTools.DTM (dpfx^k) (*DBG*) 
+						 val _ = dbgTools.DST (dpfx^  " key\n")  (*DBG*)
+						 val _ = dbgTools.DTH (dpfx^  v)  (*DBG*)
+						 val _ = dbgTools.DST (dpfx^  " v\n")  (*DBG*)
                                              in () end) imf_thms val _ = dbgTools.DST (dpfx^  " imf_thms\n") (*DBG*)*)
         (*val _ = dbgTools.DST (dpfx^ (Time.toString(Timer.checkRealTimer tmr2)))  (*PRF*)	*)
 	val _ = dbgTools.DEX dpfx "ip" (*DBG*)
@@ -785,7 +786,8 @@ fun init I1 T1 state vm Ric ce (nf,mf) ee absf {ks=model_data,th=init_data} =
 	val (apl,ks_def,wfKS_ks,RTm,ITdf) = if Option.isSome model_data then Option.valOf model_data 
 				       else init_model I1 T1 state vm Ric 
 	val _ = profTools.ent (dpfx^"init_mod")(*PRF*)
-	val _ = if Option.isSome init_data then dbgTools.DST (dpfx^"init_ isSome") else dbgTools.DST (dpfx^"init_ no init data")(*DBG*) 
+	val _ = if Option.isSome init_data then dbgTools.DST (dpfx^"init_ isSome") (*DBG*)
+		else dbgTools.DST (dpfx^"init_ no init data")(*DBG*) 
 	val _ = profTools.bgt (dpfx^"init_thm")(*PRF*)
 	val ((msp,(msa,absf,ksname),(Tth,(dmdth,boxth),st',s2s'),
 	      (finS,pextth,rvtt,mssth,fps,eus,Ss,ess,st,prop_ty)),state,githms) =
@@ -819,12 +821,15 @@ fun finish tb frv_thms =
     in unfrv end
 
 (* given the list of top-level approximations, find a path through them and return it as a trace *)
+(* see 31 July 2005 notes on how this works *)
 (* FIXME: a more readable trace would only print  out those AP's that are talked about in the corresponding property *) 
-(* FIXME: need to extend this to work with properties other than EF f (i.e. EG f)*)
+(* FIXME: need to extend this to work with properties other than EF f (i.e. EG f)
+   problem with EG is that right now it will giv the shortest path it can find, whereas I feel that
+   for EG the longest path is what is needed *)
 (* FIXME: in amba_ahb, the ctl_grant2 property will fail if the outer EF is replaced by AG
           that is fine. however, the ce computation fails because the last outermost approximation does not contain
           any initial state. This is not possible in theory, so points to some problem with the ce machinery*)
-fun makeTrace state vm mu_init_data ce Itb =  
+fun makeTrace mf state vm mu_init_data ce Itb =  
     let val _ = dbgTools.DEN dpfx "mt" (*DBG*)
 	val _ = dbgTools.DTM (dpfx^"mt_state") state (*DBG*)
 	val vmc = List.foldl (fn (v,bm) => Binarymap.insert(bm,v,Binarymap.find(vm,v))) (Binarymap.mkDict String.compare) 
@@ -833,40 +838,64 @@ fun makeTrace state vm mu_init_data ce Itb =
 	val cel = Option.valOf (!ce)
 	val Ib = getBdd Itb
 	val _ = dbgTools.DBD (dpfx^"mt_Ib") Ib(*DBG*)	 
+	val _ = List.app (dbgTools.DBD (dpfx^"mt_cel") o getBdd) cel(*DBG*)
 	val _ = dbgTools.DNM (dpfx^"mt_cel_sz") (List.length cel)(*DBG*)
+	val gfp = is_nu (NNF mf)
 	val res =  	    
 	    if (List.length cel <= 1) 
-	    then (*no outermost fp or the outermost fp comp terminated immediately, so tr is empty: any initial state is the ce *)
+	    then (*no outermost fp (|cel|=0) or the outermost fp comp terminated immediately (|cel|=1), 
+		  so tr is empty: any initial state is the ce *)
 		[pt_bdd2state state vmc (bddTools.mk_pt Ib vmc)] 	    
 	    else let 	        
 		    val trbl = List.map getBdd (List.tl cel) (* list of outermost fp computation's approximations *) 
 		    val _ = dbgTools.DNM (dpfx^"mt_trbl_sz") (List.length trbl)(*DBG*)
 		    val _ = List.app (dbgTools.DBD (dpfx^"mt_trbl")) trbl(*DBG*)
-		    val RTm = #4(Option.valOf (#ks(mu_init_data)))
-		    val Rb = getBdd(Binarymap.find(RTm,".")) 		    
+		    val Rb = getBdd(Binarymap.find(#4(Option.valOf (#ks(mu_init_data))),".")) (*#4 is RTm*)    
 		    fun has_to b1 b2 = (* those states in b1 that have a transition to b2 *)
-			let val im = bddTools.mk_next state Rb vm b1 (* image of b1 under R *)
-			    val pi = bddTools.mk_prev state Rb vm (bdd.AND(im,b2)) (*preimg of img cut to b2 is all source states *)
+			let val im = bddTools.mk_next state Rb vm b1 (* image of b1 under R. *)
+			    (*preimg of img cut to b2 is all source states *)
+			    val pi = bddTools.mk_prev state Rb vm (bdd.AND(im,b2)) (*  FIXME: is im superfluous here? *)
 			in bdd.AND(pi,b1) end (* cut down source states to the ones in b1 *)
 		    fun mk_tr (apx::trl) prev = (* trace out a path of transitions over trbl *)
-			if bdd.equal bdd.FALSE (has_to prev apx)  (* no outgoing trans from current ce so return this *)
-			then []
-			else let val s1 = bddTools.mk_pt (bdd.AND(apx,bddTools.mk_next state Rb vm prev)) vmc(*next state on the trace*)
-			     in if List.null trl then [s1] 
-				else s1::(mk_tr trl s1) 
-			     end 
+			if not (isSome prev)
+			then let val prev = if gfp 
+					    then SOME (bddTools.mk_pt Ib vmc)
+					    else if not (bdd.equal bdd.FALSE (bdd.AND(apx,Ib)))
+					         then SOME (bddTools.mk_pt (bdd.AND(apx,Ib)) vmc)
+					         else NONE
+			     in if isSome prev 
+				then (valOf prev)::mk_tr (apx::trl) prev
+				else mk_tr trl prev
+			     end
+			else if (List.length trl)=1 
+		             then if gfp then [] 
+				         else (bddTools.mk_pt (hd trl) vmc)::[]
+			     else let val napx = 
+					  if gfp then bdd.DIFF(hd trl,apx)
+					  else bdd.DIFF(hd trl,List.nth(trl,1))
+				  in (*next state on the trace*)
+				      let val s1 = mk_pt (bdd.AND(napx,bddTools.mk_next state Rb vm (valOf prev))) vmc
+				      in s1::(mk_tr trl (SOME s1)) end
+				  end
 		      | mk_tr [] prev = Raise Match (* this should not happen. Put here to avoid compiler warning *)
 		    val tr = if (List.length trbl)=1 
-			     then let val s1 = bddTools.mk_pt Ib vmc in s1::(mk_tr trbl s1) end
+			     then let val s1 = bddTools.mk_pt Ib vmc in [s1](*::(mk_tr trbl s1)*) end
 			     (*bddTools.mk_pt (List.hd trbl) vmc] *)
-			     else let val s1 = bddTools.mk_pt (bdd.AND(List.hd trbl,Ib)) vmc 
-				  in s1::(mk_tr (List.tl trbl) s1) end 
+			     else mk_tr trbl NONE 
+				 (*let val s1 = bddTools.mk_pt (bdd.AND(List.hd trbl,Ib)) vmc 
+				   in s1::(mk_tr (List.tl trbl) s1) end *)
 		    val _ = List.app (dbgTools.DBD (dpfx^"mt_tr")) tr(*DBG*)
 		    val trace = List.map (pt_bdd2state state vmc) tr
 		    val _ = List.app (dbgTools.DTM (dpfx^"mt_trace")) trace(*DBG*)
 		in trace end
 	val _ = dbgTools.DEX dpfx "mt" (*DBG*)
     in res end 
+
+
+					(*  (* no outgoing trans from current ce so return this *)
+					  if bdd.equal bdd.FALSE (has_to prev napx)  
+					  then []
+					  else*) 
 
 (* try and prove that M |= f i.e. initial states are contained in the term-bdd returned by muCheck *)
 fun checkResult tb mf ks_def (I1,Itb,ITdf) state ie vm =
@@ -876,16 +905,18 @@ fun checkResult tb mf ks_def (I1,Itb,ITdf) state ie vm =
 	val _ = dbgTools.DTB (dpfx^"cr_tb")  tb (*DBG*)
 	val _ = dbgTools.DBD (dpfx^"cr_tb_bdd")  (getBdd tb) (*DBG*)
 	(*val _ = dbgTools.DTM (dpfx^  (getTerm tb))  val _ = dbgTools.DST (dpfx^  " tb\n") (*DBG*)
-	val _ = List.app (fn t => let val _ = dbgTools.DTM (dpfx^ t)  val _ =  dbgTools.DST (dpfx^  " tb assum\n")  in () end) 
+	val _ = List.app (fn t => let val _ = dbgTools.DTM (dpfx^ t) val _ =  dbgTools.DST (dpfx^" tb assum\n") in () end)
 	    (HOLset.listItems (getAssums tb))(*DBG*)*)
 	val Itb = if Option.isSome Itb then Option.valOf Itb else BddEqMp (SYM (fst (valOf ITdf))) (t2tb vm I1) 
 	val _ = dbgTools.DTB (dpfx^"cr_Itb")  Itb (*DBG*)
 	val _ = dbgTools.DBD (dpfx^"cr_Itb_bdd")  (getBdd Itb)
 	val sIth = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [GSYM SPECIFICATION])) 
-	    (lzPBETA_RULE (AP_THM (SYM (lzPBETA_RULE 
-					    (let val jf = (fn _ =>  (SIMP_CONV std_ss [KS_accfupds,combinTheory.K_DEF,ks_def] 
-									     (mk_ks_dot_S0 ksname)))
-					     in mk_lthm (fn _ =>  (mk_eq((mk_ks_dot_S0 ksname),getS0 (rhs(concl ks_def))),jf)) jf end)))
+			     (lzPBETA_RULE (AP_THM (SYM (lzPBETA_RULE 
+					 (let val jf = (fn _ => (SIMP_CONV std_ss [KS_accfupds,combinTheory.K_DEF,ks_def] 
+									   (mk_ks_dot_S0 ksname)))
+					  in mk_lthm (fn _ =>  (mk_eq((mk_ks_dot_S0 ksname),
+								      getS0 (rhs(concl ks_def))),jf)) jf 
+					  end)))
 				  state))
 	val _ = dbgTools.DTH (dpfx^"cr_sIth")  sIth (*DBG*)
 	val Itb2 = BddEqMp sIth Itb
@@ -894,7 +925,7 @@ fun checkResult tb mf ks_def (I1,Itb,ITdf) state ie vm =
 	val _ = dbgTools.DTB (dpfx^"cr_Itb3")  Itb3 (*DBG*)
 	val _ = dbgTools.DBD (dpfx^"cr_Itb3_bdd")  (getBdd Itb3)
 	(*val _ = dbgTools.DTM (dpfx^  (getTerm Itb3))  val _ = dbgTools.DST (dpfx^  " Itb3\n") (*DBG*)
-	val _ = List.app (fn t => let val _ = dbgTools.DTM (dpfx^ t)  val _ =  dbgTools.DST (dpfx^  " Itb3 assum\n")  in () end) 
+	  val _ = List.app (fn t=> let val _= dbgTools.DTM (dpfx^t) val _ = dbgTools.DST (dpfx^" Itb3 assum\n") in () end)
 	    (HOLset.listItems (getAssums Itb3))(*DBG*)*)
 	val tb1 = BddForall (strip_pair state) Itb3 
 	(*val _ = dbgTools.DTM (dpfx^  (getTerm tb1))  val _ = dbgTools.DST (dpfx^  " tb1\n") (*DBG*)*)
@@ -913,7 +944,7 @@ fun checkResult tb mf ks_def (I1,Itb,ITdf) state ie vm =
    I is thm def of init state needed to compute the varsets for BddRules.BddExistsAnd, and termbdd replacement op
    mf is the mu formula to be checked
    absf is an optional abstraction function 
-   OUT: termbdd of set of states satisfying mf, success theorem, ce/witness trace, cache of stuff usable for another property  *)
+   OUT: termbdd of set of states satisfying mf, success theorem, ce/witness trace, cache of reusable stuff *)
 fun muCheck ee I1 T1 state vm Ric ce (absf,Itb) ic (nf,mf) = 
     let val _ = dbgTools.DEN dpfx "mc" (*DBG*)
 	val _ = profTools.bgt (dpfx^"mc")(*PRF*)
@@ -921,46 +952,49 @@ fun muCheck ee I1 T1 state vm Ric ce (absf,Itb) ic (nf,mf) =
 	val tb = muCheck_aux (init_stuff,(seth,sel,state,ie)) mf vm ((Array.length ee)-1) mfml
         val res_tb = finish tb frv_thms
 	val (res_thm,Itb) = if Option.isSome (!ce) 
-			    then (NONE,Itb) 
+			    then (NONE,Itb) (* in ce gen mode, so result is unimportant *)
 			    else checkResult res_tb mf ks_def (I1,Itb,#5(valOf(#ks(ic)))) state ie vm 
 	val _ = profTools.ent (dpfx^"mc")(*PRF*)
-	val trace = if Option.isSome (!ce) 
-		    then NONE 
-		    else 
-			if is_universal mf 
-			then 
-			    if Option.isSome res_thm 
-			    then NONE 
-			    else SOME (get_ce ee I1 T1 state vm Ric (absf,Itb) ic (nf,mf)) (* compute counterexample *)
-			else 
-			    if Option.isSome res_thm andalso is_traceable (NNF mf) 
-			    then SOME(makeTrace state vm ic ce' (valOf Itb))(*return witness*)
-			    else NONE
+	val trace = get_trace ce ce' res_thm ic ee I1 T1 state vm Ric (absf,Itb) ic (nf,mf)
 	val _ = dbgTools.DEX dpfx "mc" (*DBG*)
    in ((res_tb,res_thm,trace),ic) end (* ic can then be passed in as ic next time *)
 
-(* find counterexample... FIXME: only tested for AG/EF properties so far, probably needs fixing to work for other properties *)
+(* find counterexample/create witness... *)
+(* FIXME: only tested for AG/EF properties so far, probably needs fixing to work for other properties *)
 (* FIXME thmfy the returned list ... right now a buggy HolCheck can announce false counterexamples *)
 (* FIXME will this work if ce is a loop i.e. if some initial state is reachable from a non-initial one? *)
-and get_ce Ree I1 T1 state vm Ric (absf,Itb) mu_init_data (nf,mf) = 
+and get_trace ce ce' res_thm ic Ree I1 T1 state vm Ric (absf,Itb) mu_init_data (nf,mf) = 
     let 
 	val _ = dbgTools.DEN dpfx "gc" (*DBG*)
-	val res =  if is_traceable mf then (* FIXME: move this check into muCheck, or move related stuff from muCheck here *)
-	       let val ce = ref (SOME [])
-		   (* model check the negation of f and save all top-level approximations in the ref ce*)
-		   val _ = muCheck Ree I1 T1 state vm Ric ce (absf,Itb) mu_init_data (nf^"trace",(NNF(mu_neg mf)))
-		   val trace =  makeTrace state vm mu_init_data ce (valOf Itb)
-	       in trace end
-	   else []
+	val trace = if Option.isSome (!ce) 
+		    then NONE (* already in ce mode, called from previous get_trace, which will now use the ref ce *)
+		    else 
+			if is_universal mf 
+			then 
+			    if Option.isSome res_thm then NONE 
+			    else if is_traceable (NNF mf)  
+			    then let val ce = ref (SOME []) (* compute counterexample *)
+				     (* model check the neg of f and save all top-level approximations in the ref ce*)
+				     val _ = muCheck Ree I1 T1 state vm Ric ce (absf,Itb) mu_init_data 
+						     (nf^"trace",(NNF(mu_neg mf)))
+				     val trace =  makeTrace mf state vm mu_init_data ce (valOf Itb)
+				 in SOME trace end 
+			    else NONE (* universal but ce not computable*)
+			else 
+			    if Option.isSome res_thm andalso is_traceable (NNF mf) 
+			    then SOME(makeTrace mf state vm ic ce' (valOf Itb))(*return witness*)
+			    else NONE (* existential but false or untraceable, so no witness *)	
 	val _ = dbgTools.DEX dpfx "gc" (*DBG*)
-    in res end
+    in trace end
 
+
+(* FIXME: uncomment once trace gen is fixed.
 (* get trace and convert to trace of action names*)
 fun findTraceNames RTm Ree I1 T1 state vm Ric mf (absf,Itb) mu_init_data =
     let val tr = get_ce Ree I1 T1 state vm Ric (absf,Itb) mu_init_data mf
 	val RTm = #4(Option.valOf (#ks(mu_init_data)))
         val (actns,dotactn) = List.partition (fn (nm,_) => not (String.compare(nm,".")=EQUAL)) (Binarymap.listItems RTm)
-        val (acts,acttbl) = ListPair.unzip (actns@dotactn) (* thus giving "." action last priority when pattern matching *) 
+        val (acts,acttbl) = ListPair.unzip (actns@dotactn) (* thus giving "." action last priority when pattern matching*)
 	val (s,sp) = (strip_pair ## strip_pair) (state,mk_primed_state state)
         val (stb,sptb) = ListPair.unzip(ListPair.map (fn (s,sp) => (BddVar true vm s,BddVar true vm sp)) (s,sp)) 
         fun findact (v,vp) = 
@@ -973,6 +1007,7 @@ fun findTraceNames RTm Ree I1 T1 state vm Ric mf (absf,Itb) mu_init_data =
 	    in List.hd nm end  
         val tr2 = List.map findact (threadlist tr)
     in tr2 end
+*)
 
 end
 end

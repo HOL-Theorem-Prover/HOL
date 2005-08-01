@@ -13,7 +13,7 @@ val empty_model : model
 
 val set_init : Term.term -> model -> model
 val set_trans : (string * Term.term) list -> model -> model
-val set_ric : bool -> model -> model
+val set_flag_ric : bool -> model -> model
 val set_name : string -> model -> model
 val set_vord : string list -> model -> model
 val set_state : Term.term -> model -> model
@@ -22,7 +22,7 @@ val set_flag_abs : bool -> model -> model
 
 val get_init : model -> Term.term
 val get_trans : model -> (string * Term.term) list 
-val get_ric : model -> bool
+val get_flag_ric : model -> bool
 val get_name : model -> string option
 val get_vord : model -> string list option
 val get_state : model -> Term.term option

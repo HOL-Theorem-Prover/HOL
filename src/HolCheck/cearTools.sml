@@ -599,9 +599,9 @@ fun check_ace' atr I1 RTm(*T1*) state Ric astate h n =
 								 else Binarymap.insert(bm,v,T)) (Binarymap.mkDict Term.compare) 
 				   (snd(List.partition 
 				    (fn v => 						 
-				     let val vs = term_to_string (if is_neg v then dest_neg v else v)
-				     in (String.size vs >= 10) andalso 
-					 (String.compare(String.substring(vs,0,10),"%%genvar%%")=EQUAL) end) l))
+				     let val vs = (*term_to_string*) (if is_neg v then dest_neg v else v)
+				     in is_genvar vs (*(String.size vs >= 10) andalso 
+					 (String.compare(String.substring(vs,0,10),"%%genvar%%")=EQUAL)*) end) l))
 			       val _ = List.app (fn (k,v) => (dbgTools.DTM (dpfx^"ca'_bm_k:") k; (*DBG*)
 							      dbgTools.DTM (dpfx^"ca'_bm_v:") v)) (*DBG*)
 						(Binarymap.listItems bm) (*DBG*)
@@ -665,7 +665,8 @@ fun ref_abs atr ctr state RTm astate h =
         val s = List.map term_to_string2 st
 	val st' =  List.map mk_primed_bool_var s
         val s2s' = List.map (fn(v,v') => (BddVar true vm v,BddVar true vm v')) (ListPair.zip(st,st'))
-	val bad = BddOp(bdd.And,cS1,BddAppex st' (bdd.And, BddExtendVarmap vm (Binarymap.find(RTm,".")),(BddReplace  s2s' cS2)))
+	val bad = BddOp(bdd.And,cS1,BddAppex st' (bdd.And, BddExtendVarmap vm (Binarymap.find(RTm,".")),
+						  (BddReplace  s2s' cS2)))
 	val dead = (BddOp(bdd.And,cS1,BddNot bad))
 	val n = List.foldl (fn (v,n) => if Term.compare(v,T)=EQUAL then 2*n else 2*n+1) 0 as1
 	val _ = dbgTools.DEX dpfx "ra"(*DBG*)
@@ -678,8 +679,9 @@ fun absCheck_aux I1 ITdf T1 RTm Ric state (apl,ks_def,wfKS_ks) astate hd_def af 
 	val _ = profTools.bgt (dpfx^"aca") (*PRF*)
 	val _ = profTools.bgt (dpfx^"aca_mak") (*PRF*)
 	val aksname = if isSome aksname then SOME (valOf(aksname)^"'") 
-		      else SOME ((despace (term_to_string (lhs(concl ks_def))))^"_aks") (* avoid overwriting previous defs *)
-	val (aI1,aT1,aItb,(abpl,aks_def,wfKS_aks,aRTm)) = (* first aks is passed in by absCheck;refined ones are created here *)
+		      else SOME ((despace (term_to_string (lhs(concl ks_def))))^"_aks") (*avoid overwriting prev defs*)
+	val (aI1,aT1,aItb,(abpl,aks_def,wfKS_aks,aRTm)) = (* first aks is passed in by absCheck;
+							     refined ones are created here *)
 	    if isSome aksinfo then valOf aksinfo 
 	    else mk_abs_ks I1 ITdf RTm state astate Ric af (valOf aksname) (apl,ks_def,wfKS_ks) hd_def
 	val aenv = inst [alpha |-> type_of astate] envTools.empty_env_tm
@@ -694,7 +696,8 @@ fun absCheck_aux I1 ITdf T1 RTm Ric state (apl,ks_def,wfKS_ks) astate hd_def af 
 	val _ = profTools.ent (dpfx^"aca_mak") (*PRF*)		
 	val (state',astate',st) = (mk_primed_state state,mk_primed_state astate,strip_pair state)
 	val _ = profTools.bgt (dpfx^"aca_maat") (*PRF*)
-	val abs_aks = if isSome abs_aks then valOf abs_aks else mk_abs_aks_thm state astate af state' astate' st hd_def ks_def aks_def
+	val abs_aks = if isSome abs_aks then valOf abs_aks 
+		      else mk_abs_aks_thm state astate af state' astate' st hd_def ks_def aks_def
 	val _ = profTools.ent (dpfx^"aca_maat") (*PRF*)
 	val vm'' = PrimitiveBddRules.getVarmap (Binarymap.find(aRTm,"."))
 	val _ = profTools.ent (dpfx^"aca") (*PRF*)

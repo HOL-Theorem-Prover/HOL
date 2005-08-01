@@ -7,34 +7,8 @@ local
 
 open Globals HolKernel Parse goalstackLib Feedback
 
-open bossLib;
-open pairTheory;
-open pred_setTheory;
-open pred_setLib;
-open stringLib;
-open simpLib;
-open pairSyntax;
-open pairLib;
-open PrimitiveBddRules;
-open DerivedBddRules;
-open Binarymap;
-open PairRules;
-open pairTools;
-open boolSyntax;
-open Drule;
-open Tactical;
-open Conv;
-open Rewrite;
-open Tactic;
-open boolTheory;
-open stringTheory;
-open stringBinTree;
-open boolSimps;
-open pureSimps;
-open numLib
-open lazyTools
-open sumSyntax
-open sumTheory
+open bossLib pairTheory pred_setTheory pred_setLib stringLib simpLib pairSyntax pairLib PrimitiveBddRules DerivedBddRules Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory stringTheory boolSimps pureSimps numLib sumSyntax sumTheory listTheory
+open stringBinTree lazyTools setLemmasTheory
 
 val dpfx = "comt_"
 
@@ -51,9 +25,14 @@ fun log2 n = Math.ln n / Math.ln 2.0
 (* taken from Mike's HOL history paper. Attributed to C. Strachey. *)
 fun cartprod L = List.foldr (fn (k,z) => List.foldr (fn (x,y) => List.foldr (fn (p,q) => (x::p)::q) y z) [] k) [[]] L
 
+fun fromMLnum n = numSyntax.mk_numeral(Arbnum.fromInt n);
+
 (************ HOL **************)
 
 fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
+
+fun get_ss_rewrs ss = 
+let val simpLib.SSFRAG{rewrs,ac,congs,convs,dprocs,filter} = ss in rewrs end
 
 (* make abbrev def: make definition where the lhs is just a constant name and rhs is closed term with no free_vars *)
 fun mk_adf nm rhs = 
@@ -64,10 +43,41 @@ fun LIST_ACCEPT_TAC l (asl,w) =
     let val th = hd(List.filter (aconv w o concl) l)
     in ACCEPT_TAC th (asl,w) end
 
+(* simpset that is just beta reduction *)
+val BETA_ss = SSFRAG
+  {convs=[{name="BETA_CONV (beta reduction)",
+           trace=2,
+           key=SOME ([],(--`(\x:'a. y:'b) z`--)),
+	   conv=K (K BETA_CONV)}],
+   rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
+
+val REDUCE_ss = SSFRAG
+  {convs=[{name="REDUCE_CONV (num reduction)",
+           trace=2,
+           key=SOME ([],(--`(x:num)-1`--)),
+	   conv=K (K REDUCE_CONV)}],
+   rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
+
+val EL_ss = SSFRAG
+  {convs=[{name="num_CONV (num to suc conversion)",
+           trace=2,
+           key=SOME ([],(--`EL (x:num)`--)),
+	   conv=K (K (RAND_CONV numLib.num_CONV))}],
+   rewrs=[EL,HD,TL], congs = [], filter = NONE, ac = [], dprocs = []};
+
+fun UNCHANGED_CONV conv tm = conv tm handle UNCHANGED => REFL tm
+
+fun NCONV n conv = if n=0 then ALL_CONV else conv THENC NCONV (n-1) conv
+
+(* given p IN {s_1,...,s_n}, proves = to \/_i p = s_i *)
+fun IN_FIN_CONV t = PURE_REWRITE_CONV [NOT_IN_EMPTY,IN_INSERT,GEN_ALL (List.nth(CONJUNCTS (SPEC_ALL OR_CLAUSES),3))] t
+
 (************ strings ************)
 
 (* replace all spaces in s with underscores *)
 fun despace s = implode (List.map (fn c => if Char.compare(c,#" ")=EQUAL then #"_" else c) (explode s))
+
+fun prm s = s^"'"
 
 (*********** lists **************)
 
@@ -76,6 +86,12 @@ fun threadlist (h1::h2::t) = (h1,h2)::(threadlist (h2::t))
 | threadlist [h] = []
 | threadlist [] = []
 
+(* given a list [a,b,c...] and a list [1,2,3...], return [a,1,b,2,...] *)
+(* both lists should be same length, otherwise exception *)
+fun interleave (h1::t1) (h2::t2) = h1::h2::(interleave t1 t2)
+|   interleave []       []       = []
+|   interleave l1       l2       = failwith ("Match exception in commonTools.interleave")
+
 (* just discovered this is already present as Lib.split_after (though not sure if that behaves exactly like this) *)
 fun split_list [] n =  ([],[])
   | split_list (h::t) n = let val (M,N)=split_list (t) (n-1)
@@ -83,11 +99,15 @@ fun split_list [] n =  ([],[])
 
 fun listmax l = List.foldl (fn (i,m) => if m<i then i else m) (Option.valOf Int.minInt) l
 
-fun list2map (h::t) = Binarymap.insert(list2map t, (fst h), (snd h))
-|   list2map [] = Binarymap.mkDict String.compare;
+fun listmap cf (h::t) = Binarymap.insert(listmap cf t, (fst h), (snd h))
+|   listmap cf [] = Binarymap.mkDict cf;
 
-fun list2imap (h::t) = insert(list2imap t, (fst h), (snd h))
-|   list2imap [] = mkDict Int.compare;
+fun list2set cf (h::t) = Binaryset.add(list2set cf t,h)
+|   list2set cf [] = Binaryset.empty cf;
+
+fun list2imap l = listmap Int.compare l
+
+fun list2map l = listmap String.compare l
 
 fun listkeyfind (h::t) k cf = if (cf(k,fst h)=EQUAL) then snd h else listkeyfind t k cf
 | listkeyfind [] _ _ = Raise NotFound 
@@ -96,6 +116,16 @@ fun listkeyfind (h::t) k cf = if (cf(k,fst h)=EQUAL) then snd h else listkeyfind
 fun multi_part n l = if (List.length l) <= n then [l] 
 		     else let val (bf,af) = split_list l n
 			  in bf::(multi_part n af) end
+
+(* remove duplicates from list l, under comparison function f *)
+fun undup f l = Binaryset.listItems(Binaryset.addList(Binaryset.empty f,l))
+
+(* this is better than listSyntax.mk_list because it figures out the type by itself*)
+fun fMl ty (h::t) = listSyntax.mk_cons(h,fMl ty t)
+|   fMl ty [] = listSyntax.mk_nil ty
+
+fun fromMLlist (h::t) = fMl (type_of h) (h::t)
+| fromMLlist [] = listSyntax.mk_nil alpha
 
 (*********** terms **************)
 
@@ -107,7 +137,9 @@ val mk_var = Term.mk_var;
 
 val land = rand o rator
 
-fun mk_bool_var v = mk_var(v,``:bool``);
+fun setify cf l = HOLset.listItems(HOLset.addList(HOLset.empty cf,l))
+
+fun mk_bool_var v = mk_var(v,bool);
 
 fun mk_primed_bool_var v = mk_bool_var (v^"'");
 
@@ -137,7 +169,7 @@ fun term_to_string2 t = with_flag (show_types,false) term_to_string t;
 
 fun prime v = mk_var((term_to_string2 v)^"'",type_of v)
 
-fun is_prime v = (Char.compare(List.last(explode(term_to_string v)),#"'")=EQUAL) 
+fun is_prime v =  (Char.compare(List.last(explode(term_to_string2 v)),#"'")=EQUAL)
 
 fun unprime v = if is_prime v then mk_var(implode(butlast(explode(term_to_string2 v))),type_of v) else v
 
@@ -175,6 +207,15 @@ fun gen_dest_cond_aux (c,f1,f2) =
 (* destroy general conditional, returning (list of tests,value) pairs *)
 fun gen_dest_cond t = if is_cond t then gen_dest_cond_aux (dest_cond t) else []
 
+(* conversion for pushing in implications in an implication chain *)
+
+(* push outermost implication in one step *)
+(* assume tm is of the form t0 ==> .... ==> tn, where n is at least 2 *)
+
+fun PUSH_IMP_CONV tm = PURE_ONCE_REWRITE_CONV [PUSH_IMP_THM] tm
+
+fun PUSHN_IMP_CONV  n = if n=0 then REFL else PUSH_IMP_CONV THENC RAND_CONV (PUSHN_IMP_CONV (n-1))
+
 (* my own version of ELIM_TULPED_QUANT_CONV *)
 
 (* vacuous quantification. Will fail if v is free in tm *)
@@ -203,11 +244,11 @@ local
       | SOME(f,x) =>
         if is_comb x andalso is_uncurry_tm (rator x)
         then if is_existential f then SOME (strip_exists, list_mk_exists, pairSyntax.dest_pexists,
-					    fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_exists v) 
-										     THENC (PUSH_QUANT_CONV SWAP_EXISTS_CONV n)))) else
+					 fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_exists v) 
+								THENC (PUSH_QUANT_CONV SWAP_EXISTS_CONV n)))) else
              if is_universal f   then SOME (strip_forall, list_mk_forall, pairSyntax.dest_pforall,
-					    fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_forall v) 
-										     THENC (PUSH_QUANT_CONV SWAP_VARS_CONV n)))) 
+					 fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_forall v) 
+								THENC (PUSH_QUANT_CONV SWAP_VARS_CONV n)))) 
              else NONE
         else NONE
 in

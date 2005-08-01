@@ -18,6 +18,19 @@
 (*     ctrl = op selection                                                                              *)
 (********************************************************************************************************)
 
+(* Usage example (start hol including the HolCheck/examples directory, using the -I command line option)
+   Warning: this gives huge unreadable properties for aw>2 and d>4 or so
+
+app load ["holCheckLib","alu"];
+val aw = 1; (* address space width in bits *)
+val d = 1; (* datapath width in bits *)
+val alu1 = alu.makeALU d aw;
+val alu2 = holCheckLib.holCheck alu1 handle ex => Raise ex;
+val alu3 = holCheckLib.prove_model alu2;
+val res = holCheckLib.get_results alu3;
+
+*)
+
 structure alu = 
 
 struct
@@ -185,20 +198,10 @@ fun makeALU d aw =
      in (interleave src0v src1v) @ (stdest stallv  destv) @ ctrlv @
         (List.concat(geninter ([(rev op0v)]@[(rev op1v)]@(regv)@[(rev resv)]))) end
     val bvm = makeBddMap d aw;
-  in ((set_init I1) o (set_trans T1) o (set_ric true) o (set_name "alu") o (set_vord bvm)o (set_state state) o 
+  in ((set_init I1) o (set_trans T1) o (set_flag_ric true) o (set_name "alu") o (set_vord bvm)o (set_state state) o 
     (set_props(bw_prop1@bw_prop2))) empty_model end;
 
-(* usage example (start hol including the HolCheck/examples directory, using the -I command line option)
-   warning: this gives huge unreadable properties for aw>2 and d>4 or so
-app load ["holCheckLib","alu"];
-val aw = 1; (* address space width in bits *)
-val d = 1; (* datapath width in bits *)
-val alu1 = alu.makeALU d aw;
-val alu2 = holCheckLib.holCheck alu1 handle ex => Raise ex;
-val alu3 = holCheckLib.prove_model alu2;
-val res = holCheckLib.get_results alu3;
 
-*)
 
 
 end

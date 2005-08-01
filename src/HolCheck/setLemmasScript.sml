@@ -2,12 +2,7 @@ open HolKernel Parse boolLib bossLib
 
 val _ = new_theory("setLemmas"); 
 
-open pred_setLib
-open pred_setTheory
-open numLib
-open metisLib
-open pairTheory
-open metisLib
+open pred_setLib pred_setTheory numLib metisLib pairTheory stringTheory stringLib
 
 infix &&; infix 8 by;
 
@@ -174,5 +169,35 @@ val UNIV_CROSS_UNIV = save_thm("UNIV_CROSS_UNIV",prove(``(UNIV:bool -> bool) CRO
 SIMP_TAC std_ss [UNIV_DEF,CROSS_DEF,FST,SND,IN_DEF,SET_GSPEC])); 
 
 val IN_APPLY = save_thm("IN_APPLY",prove(``!P x. x IN P = P x``,SIMP_TAC std_ss [IN_DEF] THEN BETA_TAC));
+
+val IMPLODE_EXPLODE_BIJ = prove(``BIJ (IMPLODE o EXPLODE) UNIV UNIV``,
+SIMP_TAC std_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_UNIV,IMPLODE_ONTO,EXPLODE_ONTO,IMPLODE_11,EXPLODE_11,INJ_COMPOSE,SURJ_COMPOSE]THEN METIS_TAC [IMPLODE_EXPLODE])
+
+val PRIME_def = Define `PRIME s = STRCAT s "'"`;
+
+val PRIME_11 = prove(``!x y. (PRIME x = PRIME y) ==> (x=y)``,
+Induct_on `x` THEN Induct_on `y` THEN REWRITE_TAC [PRIME_def] THEN METIS_TAC [STRCAT_11])
+
+val PRIME_NOT_ONTO = prove(``?y. !x. ~(PRIME x = y)``,
+Q.EXISTS_TAC `""`
+THEN Induct_on `x` THENL [
+ REWRITE_TAC [PRIME_def] THEN EVAL_TAC,
+ GEN_TAC THEN REWRITE_TAC [PRIME_def] THEN EVAL_TAC
+])
+
+val INF_STRING_UNIV = save_thm("INF_STRING_UNIV",prove(``INFINITE (UNIV:string->bool)``,
+REWRITE_TAC [INFINITE_UNIV]
+THEN Q.EXISTS_TAC `PRIME`
+THEN METIS_TAC [PRIME_11,PRIME_NOT_ONTO]))
+
+val NOT_IN_FIN_STRING_SET = save_thm("NOT_IN_FIN_STRING_SET",prove(``!s. FINITE s ==> ?(x:string). ~(x IN s)``,
+ REPEAT STRIP_TAC
+ THEN ASSUME_TAC INF_STRING_UNIV
+ THEN IMP_RES_TAC INFINITE_DIFF_FINITE
+ THEN FULL_SIMP_TAC std_ss [DIFF_DEF,IN_UNIV,SET_GSPEC,EMPTY_DEF]
+ THEN METIS_TAC []))
+
+(* used by commonTools.PUSH_IMP_CONV *)
+val PUSH_IMP_THM = save_thm("PUSH_IMP_THM",prove(``!a b c. a ==> b ==> c = b ==> a ==> c``,PROVE_TAC []))
 
 val _ = export_theory();

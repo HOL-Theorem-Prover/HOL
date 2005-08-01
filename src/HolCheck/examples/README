@@ -1,1 +1,3 @@
 Type Holmake in this directory to build the examples.
+
+NOTE: The AMBA examples need a lot of memory (min 512M) and take a while to build. To skip building them, use Holmake's -d parameter (see Holmake --help for details on that).

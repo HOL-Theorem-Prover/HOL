@@ -42,10 +42,10 @@ fun mk_bool_var s = mk_var(s,bool)
 
 fun mk_AP state ap = mk_pabs(state,ap)
 
-(* take a state and return it with all vars primed *)
-fun mk_primed_state s = 
-    let val l = strip_pair s
-    in list_mk_pair (List.map (fn v => mk_var((term_to_string2 v)^"'",type_of v)) l) end
+(* take a state and return it with all vars primed, preserving nested tuple structure if any *)
+fun mk_primed_state s =
+if is_pair s then list_mk_pair(List.map mk_primed_state (spine_pair s))
+else mk_var((term_to_string2 s)^"'",type_of s)
 
 fun has_primed_vars t = List.exists (fn v => Char.compare(#"'", 
 							  List.last(String.explode ((with_flag(show_types,false) 
@@ -80,7 +80,8 @@ val getap = (rand o rand o rator o rand o rand o rand)
 fun getL tm = (rand o rand o rator o rand o rand o rand o rand) tm
     handle ex => (rand o rand o rator o rand o rand o rand) tm (* in case there is no ap *)
 
-fun mk_ks s_ty p_ty ks_ty S S0 T ap L = (* FIXME: this assumes alpha stands for st_ty etc. This could change if HOL records change *)
+(* FIXME: this assumes alpha stands for st_ty etc. This could change if HOL records change *)
+fun mk_ks s_ty p_ty ks_ty S S0 T ap L = 
 let val _ =  dbgTools.DEN dpfx "mk" (*DBG*)
     val ksSu = inst [alpha |-> s_ty,beta |-> p_ty] ksSu_tm
     val ksS0u = inst [alpha |-> s_ty,beta |-> p_ty] ksS0u_tm
@@ -119,8 +120,8 @@ else [];
 fun get_APs tm = Binaryset.listItems(Binaryset.addList(Binaryset.empty Term.compare,get_APs_aux tm))
 
 (* R is a term_bdd representing a transition relation. return totalised version *)
-fun totalise tbR I1 vm =
-   let val sv = strip_pair(rand (lhs (concl(SPEC_ALL(I1)))))	
+fun totalise tbR S0 vm =
+   let val sv = strip_pair(rand (lhs (concl(SPEC_ALL(S0)))))	
        val s = List.map (with_flag(show_types,false) term_to_string) sv	
        val sp =  List.map (fn v => mk_bool_var (v^"'")) s
        val s2sp = List.map (fn(v,v') => (BddVar true vm v,BddVar true vm v')) (ListPair.zip(sv,sp))
@@ -136,24 +137,24 @@ fun totalise tbR I1 vm =
    vm is term_bdd varmap
    OUT: a map : name of action -> termbdd of corresponding transition relation also add the dot action      
    TODO: fix NOTE issue above *)
-fun RmakeTmap KS_trans_def T1 vm Ric state state' avar =
+fun RmakeTmap KS_trans_def TS vm Ric state state' avar =
     let val _ =  dbgTools.DEN dpfx "rt" (*DBG*)
 	val _ = profTools.bgt (dpfx^"rt")(*PRF*)
 	fun makeR (h::t) mp = makeR t (insert(mp,(fst h), t2tb vm (snd h)))
 		|   makeR [] mp = mp
         val mp = mkDict String.compare
 	(*val U_T = if Ric then list_mk_conj(snd(unzip T)) else list_mk_disj(snd(unzip T))*)
-	val Tmap = makeR T1 mp (*,".",DerivedBddRules.GenTermToTermBdd (!DerivedBddRules.termToTermBddFun) vm (U_T))*)
+	val Tmap = makeR TS mp (*,".",DerivedBddRules.GenTermToTermBdd (!DerivedBddRules.termToTermBddFun) vm (U_T))*)
 	val _ = profTools.bgt (dpfx^"rt_fc")(*PRF*)
 	val kstdnm = fst(strip_comb(lhs(concl (SPEC_ALL KS_trans_def))))
 	val Tmap' = Binarymap.map (fn (nm,tb) => 
-				      let val holnm = fromMLstring nm
-					  val jf = (fn _ => SYM (CONV_RULE (RHS_CONV find_CONV) (SPEC_ALL (SPEC holnm KS_trans_def))))	
-					  val th = mk_lthm 
-						       (fn _ => (mk_eq(getTerm tb,list_mk_comb(kstdnm,[holnm,mk_pair(state,state')])),
-								 jf)) jf 							   
-					  val _ = dbgTools.DTH (dpfx^"rt_"^nm) th (*DBG*)
-				      in BddEqMp th tb end) Tmap
+		let val holnm = fromMLstring nm
+		    val jf = (fn _ => SYM (CONV_RULE (RHS_CONV find_CONV) (SPEC_ALL (SPEC holnm KS_trans_def))))	
+		    val th = mk_lthm 
+				 (fn _ => (mk_eq(getTerm tb,list_mk_comb(kstdnm,[holnm,mk_pair(state,state')])),
+					   jf)) jf 							   
+		    val _ = dbgTools.DTH (dpfx^"rt_"^nm) th (*DBG*)
+		in BddEqMp th tb end) Tmap
 	val _ = profTools.ent (dpfx^"rt_fc")(*PRF*)
 	val _ = Binarymap.app (fn (nm,tb) => dbgTools.DTB (dpfx^"rt_"^nm) tb) Tmap'(*DBG*)
 	val _ = profTools.ent (dpfx^"rt")(*PRF*)
@@ -176,20 +177,21 @@ fun mk_model_names ksname state_type prop_type =
 	val Tn = "T_"^kn
 	val _ = new_constant(Tn,stringLib.string_ty --> (mk_prod(state_type,state_type)) --> bool)
 	val Tnm = mk_const(Tn,stringLib.string_ty --> (mk_prod(state_type,state_type)) --> bool)
-	val In = "I_"^kn
-	val _ = new_constant(In,state_type --> bool)
-	val Inm = mk_const(In, state_type --> bool)
+	val S0n = "S0_"^kn
+	val _ = new_constant(S0n,state_type --> bool)
+	val S0nm = mk_const(S0n, state_type --> bool)
 	val _ = dbgTools.DEX dpfx "mmn" (*DBG*)
-in (kn,Tnm,Tn,Inm,In) end
+in (kn,Tnm,Tn,S0nm,S0n) end
 
-(* T1 is the (nm,term) list derived from the output of RmakeTmap, I is the initial state set *)
-fun mk_wfKS I1 T1 RTm state vm Ric apl abs_fun ksname = 
+
+(* TS is the (nm,term) list derived from the output of RmakeTmap, S0 is the initial state set *)
+fun mk_formal_KS S0 TS state Ric apl abs_fun ksname = 
     let val _ = dbgTools.DEN dpfx "mw" (*DBG*)
 	val _ = profTools.bgt (dpfx^"mw")(*PRF*)
 	val _ = profTools.bgt (dpfx^"mw_init")(*PRF*)
 	val state' = mk_primed_state state
 	val _ = dbgTools.DTM (dpfx^"mw_state'") state'(*DBG*)
-	val (cstate,cstate',cstate_type,cpvar,ht,htc,cT) = (* concrete stuff in case this is building abstract ks *)
+	val (cstate,cstate',cstate_type,cpvar,ht,htc,cT) = (*compute concrete stuff in case this is building abstract ks*)
 	    if isSome abs_fun 
 	    then let val (aftb,cT,cstate,cstate') = valOf abs_fun
 		     val _ = dbgTools.DTM (dpfx^"mw_cstate") cstate(*DBG*)		
@@ -203,11 +205,12 @@ fun mk_wfKS I1 T1 RTm state vm Ric apl abs_fun ksname =
 	val apl =  if (Option.isSome apl) then Option.valOf apl
 		   else if (Option.isSome abs_fun) 
 		   then List.map (fn ap => mk_pabs(valOf cstate,ap)) (strip_pair (valOf cstate)) 
-		   else List.map (fn ap => mk_pabs(state,ap)) (strip_pair state)(*(get_APs(mk_conj(list_mk_conj(List.map snd T1),I1)))*)
+		   else List.map (fn ap => mk_pabs(state,ap)) (strip_pair state)
+	              (*(get_APs(mk_conj(list_mk_conj(List.map snd TS),S0)))*)
 	val _ = List.app (dbgTools.DTM (dpfx^"mw_apl")) apl(*DBG*)
 	val state_type = type_of state
 	val prop_type = if isSome abs_fun then (valOf cstate_type) --> bool else state_type --> bool 
-	val (kn,Tnm,Tn,Inm,In) = mk_model_names ksname state_type prop_type
+	val (kn,Tnm,Tn,S0nm,S0n) = mk_model_names ksname state_type prop_type
 	val ks_ty = mk_thy_type {Tyop="KS", Thy="ks", Args=[prop_type,state_type]}
 	val avar= mk_var("t",stringLib.string_ty)
 	val _ = dbgTools.DTM (dpfx^"mw_pvar") avar(*DBG*)
@@ -217,7 +220,7 @@ fun mk_wfKS I1 T1 RTm state vm Ric apl abs_fun ksname =
 			       (inst [alpha|->prop_type] pred_setSyntax.empty_tm) apl 
 	val _ = profTools.ent (dpfx^"mw_ap")(*PRF*)
 	val KS_states = inst [alpha|->state_type] pred_setSyntax.univ_tm
-	val KS_initstates = I1 
+	val KS_initstates = S0 
 	val _ = profTools.bgt (dpfx^"mw_L")(*PRF*)
 	val pvar = mk_var("p",prop_type)
 	val _ = dbgTools.DTM (dpfx^"mw_pvar") pvar(*DBG*)
@@ -228,12 +231,13 @@ fun mk_wfKS I1 T1 RTm state vm Ric apl abs_fun ksname =
 	val _ = profTools.ent (dpfx^"mw_L")(*PRF*)
 	val _ = dbgTools.DTM (dpfx^"mw_KS_valids") KS_valids(*DBG*)
 	val _ = profTools.bgt (dpfx^"mw_df_i")(*PRF*)
-	val KS_init_def = hd(Defn.eqns_of(Hol_defn (In) `^(mk_eq(mk_comb(Inm,state),KS_initstates))`))
+	val KS_init_def = hd(Defn.eqns_of(Hol_defn (S0n) `^(mk_eq(mk_comb(S0nm,state),KS_initstates))`))
 	val _ = profTools.ent (dpfx^"mw_df_i")(*PRF*)
 	val _ = dbgTools.DTH (dpfx^"mw_KS_init_def") KS_init_def (*DBG*)
 	val _ = profTools.bgt (dpfx^"mw_T")(*PRF*)
 	val Rvar = mk_var("R",(mk_prod(state_type,state_type)) --> bool)	
-	val T1 = (".",if Ric then list_mk_conj (snd(unzip T1)) else  list_mk_disj (snd(unzip T1)))::T1 (* add the wildcard action *)
+	val TS = (".",if Ric then list_mk_conj (snd(unzip TS)) 
+		      else  list_mk_disj (snd(unzip TS)))::TS (*add wildcard action *)
 	val KS_trans = if isSome abs_fun 
 		       then let val (cs,cs') = (valOf cstate,valOf cstate')  
 			    in list_mk_pabs([avar,mk_pair(state,state')],
@@ -241,30 +245,56 @@ fun mk_wfKS I1 T1 RTm state vm Ric apl abs_fun ksname =
 							    list_mk_conj [list_mk_comb(valOf cT,[avar,mk_pair(cs,cs')]),
 									  mk_comb(valOf htc,mk_pair(cs,state)),
 									  mk_comb(valOf htc,mk_pair(cs',state'))])) end 
-		       else mk_tree (SOME (mk_pair(state,state'))) T1
+		       else mk_tree (SOME (mk_pair(state,state'))) TS
 	val _ = profTools.ent (dpfx^"mw_T")(*PRF*)
 	val _ = dbgTools.DTM (dpfx^"mw_KS_trans") KS_trans(*DBG*)
 	val _ = profTools.bgt (dpfx^"mw_df_t")(*PRF*)
-	val KS_trans_def =hd(Defn.eqns_of(Hol_defn(Tn) `^(mk_eq(list_mk_comb(Tnm,[avar,mk_pair(state,state')]),pbody(body KS_trans)))`))
+	val KS_trans_def =hd(Defn.eqns_of(Hol_defn(Tn) 
+				`^(mk_eq(list_mk_comb(Tnm,[avar,mk_pair(state,state')]),pbody(body KS_trans)))`))
 	val _ = profTools.ent (dpfx^"mw_df_t")(*PRF*)
-	val _ = dbgTools.DTH (dpfx^"mw_KS_trans_def") KS_trans_def (*DBG*)
-	val RTm = if Option.isSome RTm then Option.valOf RTm else RmakeTmap KS_trans_def T1 vm Ric state state' avar
+	val _ = dbgTools.DTH (dpfx^"mw_KS_trans_def") KS_trans_def (*DBG*)	
 	(* skip M.ap for abstracted M since cearTheory.ABS_KS_def does not define M.ap *)
 	(* FIXME: since aks.ap is simply the set of abstract state variables, we could pass it in to ABS_KS_def *)
 	val _ = profTools.bgt (dpfx^"mw_df_k")(*PRF*)
 	val ks_def = if (isSome abs_fun)  
-		     then mk_adf kn (mk_ks state_type prop_type ks_ty KS_states (mk_pabs(state,KS_initstates)) KS_trans NONE KS_valids) 
-		     else mk_adf kn (mk_ks state_type prop_type ks_ty KS_states (rator (lhs (snd(strip_forall(concl KS_init_def)))))
-					   (rator (rator (lhs (snd (strip_forall(concl KS_trans_def)))))) (SOME KS_ap) KS_valids) 
+		     then mk_adf kn (mk_ks state_type prop_type ks_ty KS_states (mk_pabs(state,KS_initstates)) 
+					   KS_trans NONE KS_valids) 
+		     else mk_adf kn (mk_ks state_type prop_type ks_ty KS_states 
+					   (rator (lhs (snd(strip_forall(concl KS_init_def)))))
+					   (rator (rator (lhs (snd (strip_forall(concl KS_trans_def))))))
+					   (SOME KS_ap) KS_valids) 
 	val _ = profTools.ent (dpfx^"mw_df_k")(*PRF*)
 	val ksnm = lhs(concl ks_def)
 	val _ = profTools.bgt (dpfx^"mw_pw")(*PRF*)
 	val wfKS_ks = prove_wfKS ks_def
 	val _ = profTools.ent (dpfx^"mw_pw")(*PRF*)
+	val ITdf = if isSome abs_fun then NONE else SOME (SPEC_ALL KS_init_def,SPEC_ALL KS_trans_def)
 	val _ = profTools.ent (dpfx^"mw")(*PRF*)
         val _ = dbgTools.DEX dpfx "mw" (*DBG*)
-    in (apl,ks_def,wfKS_ks,RTm,if isSome abs_fun then NONE else SOME (SPEC_ALL KS_init_def,SPEC_ALL KS_trans_def)) end
+    in (apl,ks_def,wfKS_ks,ITdf,KS_trans_def,state',avar) end
 
+fun mk_wfKS S0 TS RTm state vm Ric apl abs_fun ksname =
+    let 
+	val (apl,ks_def,wfKS_ks,ITdf,KS_trans_def,state',avar) = mk_formal_KS S0 TS state Ric apl abs_fun ksname
+	val RTm = if Option.isSome RTm then Option.valOf RTm else RmakeTmap KS_trans_def TS vm Ric state state' avar
+    in  (apl,ks_def,wfKS_ks,RTm,ITdf) end 
+
+(* construct state var tuple from I and T*)
+fun mk_state S0 (TS:(string * term) list) = 
+    let val R1 = list_mk_conj (List.map snd TS) (* whether conj or disj doesn't matter for our purposes here *)
+	val vars = (free_vars S0) @ (free_vars R1)
+	val (st1',st1) = List.partition (fn v => is_prime v) 
+					(Binaryset.listItems(Binaryset.addList(Binaryset.empty Term.compare,vars)))
+	val sts = Binaryset.addList(Binaryset.empty Term.compare,st1)
+	val st2 = List.foldl (fn (v,l) => if (Binaryset.member(sts,unprime v)) then l else (unprime v)::l) [] st1'
+	val st = st1@st2
+	val state = list_mk_pair st
+    in state end
+
+(* this does not require or create BDD's. Mainly for experimenting with ideas on combining mc and tp *)
+fun auto_mk_formal_ks S0 TS Ric apl ksname =
+    let val state = mk_state S0 TS
+    in mk_formal_KS S0 TS state Ric apl NONE ksname end
 
 val getT = rand o rand o rator o rand o rand
 
@@ -361,8 +391,7 @@ val ksTupx_tm = ``KS_T_fupd x``
 (* return Tth and dmdth of mk_gen_dmd_thms *)
 fun mk_Tth ks_def ksname msd2 msb2 state' state_type prop_type = 
     let 
-	val _ = dbgTools.DEN dpfx "mt" (*DBG*)
-        (*val ksT=mk_comb(``KS_T:^(ty_antiq(list_mk_fun([type_of ksname,``:string``,mk_prod(state_type,state_type)],bool)))``,ksname) *)
+	val _ = dbgTools.DEN dpfx "mt" (*DBG*)        
 	val ksT = mk_ks_dot_T ksname
 	val jf = (fn _ => PURE_ONCE_REWRITE_RULE 
 		       [GEN_ALL (hd(tl(CONJUNCTS(SPEC_ALL EQ_CLAUSES))))] 
@@ -385,17 +414,6 @@ fun mk_Tth ks_def ksname msd2 msb2 state' state_type prop_type =
     val _ = dbgTools.DTH (dpfx^"mt_boxth") boxth(*DBG*)
     val _ = dbgTools.DEX dpfx "mt" (*DBG*)
     in (Tth,(dmdth,boxth)) end
-
-(* construct state var tuple from I and T*)
-fun mk_state I1 (T1:(string * term) list) = 
-    let val R1 = list_mk_conj (List.map snd T1) (* whether conj or disj doesn't matter for our purposes here *)
-	val vars = (free_vars I1) @ (free_vars R1)
-	val (st1',st1) = List.partition (fn v => is_prime v) (Binaryset.listItems(Binaryset.addList(Binaryset.empty Term.compare,vars)))
-	val sts = Binaryset.addList(Binaryset.empty Term.compare,st1)
-	val st2 = List.foldl (fn (v,l) => if (Binaryset.member(sts,unprime v)) then l else (unprime v)::l) [] st1'
-	val st = st1@st2
-	val state = list_mk_pair st
-    in state end
 
 (*given t of the form \s. P s = \s. Q s, prove t=T or die, where P s and Q s must be completely propositional *)
 fun AP_EQ vm t = 
