@@ -1,6 +1,6 @@
-\DOC set_ric
+\DOC set_flag_ric
 
-\TYPE {set_ric :  bool -> model -> model}
+\TYPE {set_flag_ric :  bool -> model -> model}
 
 \SYNOPSIS
 
@@ -15,6 +15,6 @@ This information must be set for a HolCheck model.
 \SEEALSO 
 holCheckLib.holCheck,
 holCheckLib.empty_model,
-holCheckLib.get_ric.
+holCheckLib.get_flag_ric.
 
 \ENDDOC

@@ -8,6 +8,6 @@ Returns a description of the transition system of the HolCheck model. Throws an 
 \SEEALSO 
 holCheckLib.holCheck,
 holCheckLib.set_trans
-holCheckLib.get_ric.
+holCheckLib.get_flag_ric.
 
 \ENDDOC

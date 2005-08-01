@@ -29,6 +29,6 @@ This information must be set for a HolCheck model.
 holCheckLib.holCheck,
 holCheckLib.empty_model,
 holCheckLib.get_trans,
-holCheckLib.set_ric.
+holCheckLib.set_flag_ric.
 
 \ENDDOC

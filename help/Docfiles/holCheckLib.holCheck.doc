@@ -62,7 +62,7 @@ Note how atomic propositions are represented as functions on the state.
 
 7. Create the model: 
 {
-- val m = ((set_init S0) o (set_trans TS) o (set_ric ric) o (set_state state) o  (set_props [ctlf])) empty_model;
+- val m = ((set_init S0) o (set_trans TS) o (set_flag_ric ric) o (set_state state) o  (set_props [ctlf])) empty_model;
 > val m = <model> : model
 }
 
@@ -79,8 +79,8 @@ Note how atomic propositions are represented as functions on the state.
     SOME [(<term_bdd>,
            SOME [............................]
                |- CTL_MODEL_SAT ctlKS (C_EF (C_BOOL (B_PROP (\(v0,v1,v2). v2)))),
-           SOME [``(F,F,F)``, ``(T,F,F)``, ``(F,T,F)``, ``(T,T,F)``,
-                 ``(F,F,T)``])] :
+           SOME [``(~v0,~v1,~v2)``, ``(v0,~v1,~v2)``, ``(~v0,v1,~v2)``,
+                 ``(v0,v1,~v2)``, ``(~v0,~v1,v2)``])] :
   (term_bdd * thm option * term list option) list option
 }
 
@@ -100,21 +100,21 @@ Note that since we did not supply a name for the model (via holCheckLib.set_name
 > val it =
     SOME [(<term_bdd>,
            SOME|- CTL_MODEL_SAT ctlKS (C_EF (C_BOOL (B_PROP (\(v0,v1,v2). v2)))),
-           SOME [``(F,F,F)``, ``(T,F,F)``, ``(F,T,F)``, ``(T,T,F)``,
-                 ``(F,F,T)``])] :
+           SOME [``(~v0,~v1,~v2)``, ``(v0,~v1,~v2)``, ``(~v0,v1,~v2)``,
+                 ``(v0,v1,~v2)``, ``(~v0,~v1,v2)``])] :
   (term_bdd * thm option * term list option) list option
 }
 
 Note that the theorem component now has no assumptions. Any assumptions to the term_bdd would also have been discharged. 
 
 \COMMENTS
-For more detail, read the HolCheck manual at hol98/src/holCheck/Manual/holCheck.ps.
+For more detail, read the section on the HolCheck library in the HOL System Description. From time to time, stable versions of HolCheck will be backported to the latest public release of HOL. Visit www.cl.cam.ac.uk/users/ha227/holcheck.html to check for these. 
 
 \SEEALSO 
 holCheckLib.empty_model,
 holCheckLib.get_init,
 holCheckLib.get_trans,
-holCheckLib.get_ric,
+holCheckLib.get_flag_ric,
 holCheckLib.get_name,
 holCheckLib.get_vord,
 holCheckLib.get_state,
@@ -123,7 +123,7 @@ holCheckLib.get_results,
 holCheckLib.get_flag_abs,
 holCheckLib.set_init,
 holCheckLib.set_trans,
-holCheckLib.set_ric,
+holCheckLib.set_flag_ric,
 holCheckLib.set_name,
 holCheckLib.set_vord,
 holCheckLib.set_state,

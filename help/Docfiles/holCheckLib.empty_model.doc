@@ -12,7 +12,7 @@ This is used as a starting point for building a HolCheck model, using the set_X 
 holCheckLib.holCheck,
 holCheckLib.set_init,
 holCheckLib.set_trans,
-holCheckLib.set_ric,
+holCheckLib.set_flag_ric,
 holCheckLib.set_name,
 holCheckLib.set_vord,
 holCheckLib.set_state,

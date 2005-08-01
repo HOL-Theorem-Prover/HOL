@@ -1,12 +1,12 @@
-\DOC get_ric
+\DOC get_flag_ric
 
-\TYPE {get_ric : model -> bool}
+\TYPE {get_flag_ric : model -> bool}
 
 \SYNOPSIS
 Returns whether or not the transition system for this HolCheck model is synchronous (conjunctive). Throws an exception if this information has not been set.
 
 \SEEALSO 
 holCheckLib.holCheck,
-holCheckLib.set_ric.
+holCheckLib.set_flag_ric.
 
 \ENDDOC
