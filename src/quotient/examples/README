@@ -1,0 +1,67 @@
+File: README
+Author: Peter Vincent Homeier
+Date: August 1, 2005
+
+This directory contains examples which show uses of the 
+higher order quotients library in HOL4.  Except as noted,
+all were composed by Peter Homeier.  It is hoped that studying
+these examples may ease the task of learning how to use the
+higher order quotients package.
+
+The following examples are presented, in order from simplest
+to the most complex:
+
+1. msgScript.sml
+
+This is a recreation using higher order quotients of an example
+of message encryption and decryption studied by Larry Paulson
+in his paper, "Defining Functions on Equivalence Classes," to
+be published in ACM Transactions on Computational Logic, in press
+as of August 2005, but available at Larry Paulson's website, at
+http://www.cl.cam.ac.uk/users/lcp/papers/Reports/equivclasses.pdf.
+This paper is exceptionally well written, and a pleasure to read.
+
+2. finite_setScript.sml
+
+This contains the creation of finite sets as a new type in HOL4
+as a quotient of lists, as described in the TPHOLs 2005 paper,
+"A Design Structure for Higher Order Quotients," available in
+the TPHOLs 2005 conference proceedings published by Springer-
+Verlag, LNCS 3603.
+
+3. ext_finite_setScript.sml
+
+This contains another approach to using higher order quotients
+to form finite sets as a new type as a quotient of lists,
+composed by Michael Norrish.  The reader is invited to compare
+this with the other approach above.
+
+4. sigma/*
+
+This directory contains a development of the sigma calculus,
+invented by Abadi and Cardelli in their book, "A Theory of Objects,"
+published by Springer-Verlag in 1996.
+
+This is the example described in the currently unpublished
+paper, "Higher Order Quotients in Higher Order Logic,"
+available at http://www.trustworthytools.com/id14.html.
+
+The sigma calculus is created first as a free algebra,
+which is then lifted to a pure version of the sigma calculus
+as a quotient by alpha equivalence on the free algebra.
+
+The innovative portions of this exercise are the fact that
+the sigma calculus, unlike the lambda calculus, is nested
+mutually recursive in its syntax, and this makes the exercise
+much more interesting.  Also a particularly difficult theorem
+to lift, the function existence theorem, is successfully
+regularized and lifted by the higher order quotients package.
+The elegance of this approach is demonstrated through a proof
+of the Church-Rosser property for the sigma calculus, which
+has not previously been mechanized.
+
+All of these examples may be created by typing
+
+Holmake
+
+in the appropriate directories.
