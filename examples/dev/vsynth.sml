@@ -624,9 +624,9 @@ fun ClockvInst (out:string->unit) [("period",period)] [clk_name] =
 (*****************************************************************************)
 (* Combinational boolean inverter                                            *)
 (*****************************************************************************)
-val NOTvDef= UnopVlogDef "NOT" (``$~:bool->bool``,"!");
-val _ = add_termToVerilog[UnopTermToVerilog (UnopVlogInstFun "NOT") "NOT"];
-val _ = add_modules[("NOT",NOTvDef)];
+val NOTvDef= UnopVlogDef "devNOT" (``$~:bool->bool``,"!");
+val _ = add_termToVerilog[UnopTermToVerilog (UnopVlogInstFun "devNOT") "NOT"];
+val _ = add_modules[("devNOT",NOTvDef)];
 
 (*****************************************************************************)
 (* Constant output of T (1)                                                  *)
@@ -674,7 +674,7 @@ val _ = add_modules[("TRUE",TRUEvDef)];
 (*****************************************************************************)
 val MUXvDef =
 "// Combinational multiplexer\n\
-\module MUX (sw,in1,in2,out);\n\
+\module devMUX (sw,in1,in2,out);\n\
 \ parameter size = 31;\n\
 \ input sw;\n\
 \ input  [size:0] in1,in2;\n\
@@ -693,11 +693,11 @@ fun MUXvInst tm (out:string->unit) [("size",size)]
      [sw_name,in1_name,in2_name,out_name] =
  let val count = !MUXvInst_count
      val _ = (MUXvInst_count := count+1);
-     val inst_name = "MUX" ^ "_" ^ Int.toString count
+     val inst_name = "devMUX" ^ "_" ^ Int.toString count
  in
  (out " /*\n ";
   out(term2string tm); out "\n */\n";
-  out " MUX        "; out inst_name;
+  out " devMUX        "; out inst_name;
   out " (";out sw_name;out",";out in1_name;out",";out in2_name;out",";out out_name; out ");\n";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
@@ -718,21 +718,21 @@ fun termToVerilog_MUX (out:string->unit) tm =
   else raise ERR "termToVerilog_MUX" "bad component term";
 
 val _ = add_termToVerilog[termToVerilog_MUX];
-val _ = add_modules[("MUX",MUXvDef)];
+val _ = add_modules[("devMUX",MUXvDef)];
 
 (*****************************************************************************)
 (* Combinational Boolean and-gate                                            *)
 (*****************************************************************************)
-val ANDvDef = BinopVlogDef "AND" (``UNCURRY $/\ :bool#bool->bool``,"&&");
-val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "AND") "AND"];
-val _ = add_modules[("AND",ANDvDef)];
+val ANDvDef = BinopVlogDef "devAND" (``UNCURRY $/\ :bool#bool->bool``,"&&");
+val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "devAND") "AND"];
+val _ = add_modules[("devAND",ANDvDef)];
 
 (*****************************************************************************)
 (* Combinational Boolean or-gate                                             *)
 (*****************************************************************************)
-val ORvDef = BinopVlogDef "OR" (``UNCURRY $\/ :bool#bool->bool``,"||");
-val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "OR") "OR"];
-val _ = add_modules[("OR",ORvDef)];
+val ORvDef = BinopVlogDef "devOR" (``UNCURRY $\/ :bool#bool->bool``,"||");
+val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "devOR") "OR"];
+val _ = add_modules[("devOR",ORvDef)];
 
 (*****************************************************************************)
 (* Abstract delay element                                                    *)
@@ -1120,11 +1120,19 @@ fun MAKE_VERILOG name thm out =
      val done_name = var_name done_tm
      val out_names = map var_name outl
      val module_args = 
-          [clk_name,load_name] @ inp_names @ [done_name] @ out_names;
+          [clk_name,load_name] @ inp_names @ [done_name] @ out_names
      val module_names  = map (fst o dest_const o fst o strip_comb) modules
-     val _ = if not(null(subtract module_names (map fst (!module_lib))))
+     fun removeTag tag s = let val l = explode s
+                       in if (size s > size tag) andalso 
+                             (implode (List.take(l,size tag)) = tag) then
+                             implode (List.drop(l,size tag))
+                          else s
+                       end
+     val _ = if not(null(subtract module_names 
+                        (map ((removeTag "dev") o fst) (!module_lib))))
               then (print "unknown module in circuit: ";
-                    print(hd(subtract module_names (map fst (!module_lib))));
+                    print(hd(subtract module_names (map ((removeTag "dev") o fst)
+                                                              (!module_lib))));
                     print "\n";
                     raise ERR "MAKE_VERILOG" "unknown modules in circuit")
               else ()
@@ -1134,7 +1142,7 @@ fun MAKE_VERILOG name thm out =
   map            (* Print definition of components *)
    (out o snd)
    (filter
-     (fn(name,_) => mem name module_names)
+     (fn(name,_) => mem (removeTag "dev" name) module_names)
      (!module_lib));
   out("\n// Definition of module " ^ name ^ "\n");
   out "module ";
