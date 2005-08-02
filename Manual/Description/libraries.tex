@@ -2216,11 +2216,11 @@ number of times an individual rewrite will be applied.
    Ntimes : thm -> int -> thm
 \end{verbatim}
 \end{hol}
-A theorem ``wrapped'' in the \ml{Once} function will onl be applied
+A theorem ``wrapped'' in the \ml{Once} function will only be applied
 once when the simplifier runs.  A theorem wrapped in \ml{Ntimes} will
-be applied as many times as given in the integer parameter.
-These restrictions apply across multiple applications of the
-simplifier to different goals.  This means that if \ml{tac} in
+be applied as many times as given in the integer parameter.  These
+restrictions apply across multiple applications of the simplifier to
+different goals.  This means that if \ml{tac} in
 \begin{hol}
 \begin{verbatim}
    tac THEN SIMP_TAC bool_ss [Once th]
