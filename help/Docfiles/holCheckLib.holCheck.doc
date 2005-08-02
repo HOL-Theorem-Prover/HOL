@@ -15,7 +15,7 @@ holCheck should not fail, except on malformed input e.g. mu-calculus properties 
 
 We choose a mod-8 counter as our example, which starts at 0 and counts up to 7, and then loops from 0 again. We wish to show that the most significant bit eventually goes high. 
 
-1. Load the holCheck library:
+1. Load the HolCheck library:
 {
 - load "holCheckLib"; open holCheckLib; (* we don't show the output from the "open" here *)
 > val it = () : unit
