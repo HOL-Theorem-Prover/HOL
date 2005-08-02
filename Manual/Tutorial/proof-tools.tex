@@ -1,6 +1,8 @@
 \chapter{Proof Tools: Propositional Logic}
 \label{chap:proof-tools}
 
+\newcommand{\naive}{na\"\i{}ve}
+
 Users of \HOL{} can create their own theorem proving tools by
 combining predefined rules and tactics. The \ML{} type-discipline
 ensures that only logically sound methods can be used to create values
@@ -17,7 +19,10 @@ The problem to be solved is that of deciding the truth of a closed
 formula of propositional logic.  Such a formula has the general form
 \[
 \begin{array}{ccl}
-\varphi & ::= & v \;|\;\top\;|\;\bot \;|\; \neg\varphi\;|\;\varphi \land \varphi \;|\; \varphi \lor \varphi\\[1ex]
+\varphi & ::= & v \;|\;\neg\varphi\;|\;\varphi
+\land \varphi \;|\; \varphi \lor \varphi \;|\; \varphi \Rightarrow
+\varphi\;|\;\varphi = \varphi
+\\[1ex]
 \mathit{formula} &::= & \forall \vec{v}. \;\varphi
 \end{array}
 \]
@@ -88,8 +93,8 @@ runtime: 0.147s,    gctime: 0.012s,     systime: 0.000s.
 \end{session}
 
 This is a dreadful algorithm for solving this problem.  The system's
-built-in function, \ml{tautLib.TAUT\_CONV} solves the same problem ten
-times faster, even though it is also using a truth-table
+built-in function, \ml{tautLib.TAUT\_CONV} solves the problem above
+ten times faster, even though it is also using a truth-table
 technique.\footnote{The main difference is that \ml{TAUT\_CONV}
   simplifies the body of the universally quantified formula after each
   case-split.  Our function does all of the case-splits and then
@@ -260,16 +265,142 @@ handle all of the necessary cases).
 
 The \ml{wrapper} function also uses \ml{REWR\_CONV} in two places.
 The \ml{REWR\_CONV} function applies a single (first-order) rewrite at
-the top of a term.
+the top of a term.  These uses of \ml{REWR\_CONV} are done within
+calls to the \ml{CONV\_RULE} function.  This lifts a conversion $c$ (a
+function taking a term $t$ and producing a theorem $\vdash t = t'$),
+so that $\ml{CONV\_RULE}\;c$ takes the theorem $\vdash t$, to $\vdash
+t = t'$.
 
 
 \subsection{Conversion to Conjunctive Normal Form}
 \label{sec:conv-conj-norm}
 
+A formula in Conjunctive Normal Form is a conjunction of disjunctions
+of literals (either variables, or negated variables).  It is possible
+to convert formulas of the form we are expecting into CNF by simply
+rewriting with the following theorems
+\begin{eqnarray*}
+\neg (\phi \land \psi) &=& \neg\phi \lor \neg\psi\\
+\neg (\phi \lor \psi) &=& \neg\phi \land \neg\psi\\
+\phi \lor (\psi \land \xi) &=& (\phi \lor \psi) \land (\phi \lor \xi)\\
+(\psi \land \xi)\lor\phi \ &=& (\phi \lor \psi) \land (\phi \lor
+\xi)\\[1ex]
+\phi \Rightarrow\psi &=& \neg\phi \lor \psi\\
+(\phi = \psi) &=& (\phi \Rightarrow \psi) \land (\psi \Rightarrow
+\phi)
+\end{eqnarray*}
+Unfortunately, using these theorems as rewrites can result in an
+exponential increase in the size of a formula.  (Consider using them
+to convert an input in Disjunctive Normal Form, a disjunction
+of conjunctions of literals, into CNF{}.)
+
+A better approach is to convert to what is known as ``definitional
+CNF''. \HOL{} includes functions to do this in the structure
+\ml{defCNF}.  Unfortunately, this approach adds extra, existential,
+quantifiers to the formula.  For example
+\begin{session}
+\begin{verbatim}
+- defCNF.DEF_CNF_CONV ``p \/ (q /\ r)``;
+> val it =
+    |- p \/ q /\ r =
+       ?x. (x \/ ~q \/ ~r) /\ (r \/ ~x) /\ (q \/ ~x) /\ (p \/ x) : thm
+\end{verbatim}
+\end{session}
+Under the existentially-bound \holtxt{x}, the code has produced a
+formula in CNF{}.  With an example this small, the formula is actually
+bigger than that produced by the \naive{} translation, but with more
+realistic examples, the difference quickly becomes significant.  The
+last example used with \ml{tautDP} is 20 times bigger when translated
+\naive{}ly than when using \ml{defCNF}, and the translation takes 150
+times longer to perform.
+
+But what of these extra existentially quantified variables?  In fact,
+we can ignore the quantification when calling the core DPLL procedure.
+If we pass the unquantified body to DPLL, we will either get back an
+unsatisfiable verdict of the form $\vdash \varphi' = \holtxt{F}$, or a
+satisfying assignment for all of the free variables.  If the latter
+occurs, the same satisfying assignment will also satisfy the
+original.  If the former, we will perform the following proof
+\[
+\infer{\vdash (\exists \vec{x}.\;\varphi') = \holtxt{F}}{
+  \infer{\vdash (\exists \vec{x}.\;\varphi') \Rightarrow \holtxt{F}}{
+    \infer{\vdash\forall \vec{x}.\;\varphi' \Rightarrow \holtxt{F}}{
+      \infer{\vdash\varphi' \Rightarrow \holtxt{F}}{
+        \vdash \varphi' = \holtxt{F}
+      }
+    }
+  }
+}
+\]
+producing a theorem of the form expected by our \ml{wrapper}
+function.
+
+In fact, there is an alternative function in the \ml{defCNF} API that
+we will use in preference to \ml{DEF\_CNF\_CONV}.   The problem with
+\ml{DEF\_CNF\_CONV} is that it can produce a big quantification,
+involving lots of variables.  We will rather use
+\ml{DEF\_CNF\_VECTOR\_CONV}.  Instead of output of the form
+\[
+\vdash \varphi = (\exists \vec{x}.\; \varphi')
+\]
+this second function produces
+\[
+\vdash \varphi = (\exists (v : \textsf{num} \rightarrow
+\textsf{bool}).\; \varphi')
+\]
+where the individual variables $x_i$ of the first formula are replaced
+by calls to the $v$ function $v(i)$, and there is just one quantified
+variable, $v$.  This variation will not affect the operation of the
+proof sketched above.  And as long as we don't require literals to be
+variables or their negations, but also allow them to be terms of
+the form $v(i)$ and $\neg v(i)$ as well, then the action of the DPLL
+procedure on the formula $\varphi'$ won't be affected either.
+
+All this means that the \ml{toCNF} function referred to in the
+\ml{wrapper} function should be \ml{defCNF.DEF\_CNF\_VECTOR\_CONV},
+and that we should implement \ml{DPLL} as
+\begin{hol}
+\begin{verbatim}
+   fun DPLL t = let
+     val (vector, body) = dest_exists t
+   in
+     case CoreDPLL body of
+       Unsat body_eq_F => let
+         val body_imp_F = CONV_RULE (REWR_CONV (GSYM IMP_F_EQ_F)) body_eq_F
+         val fa_body_imp_F = GEN vector body_imp_F
+         val ex_body_imp_F = CONV_RULE FORALL_IMP_CONV fa_body_imp_F
+       in
+         CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F
+       end
+     | x => x
+   end
+\end{verbatim}
+\end{hol}
+where we have still to implement the core DPLL procedure (called
+\ml{CoreDPLL} above).  The above code uses \ml{REWR\_CONV} with the
+\ml{IMP\_F\_EQ\_F} theorem to affect two of the proof's
+transformations.  The \ml{GSYM} function is used to flip the
+orientation a theorem's top-level equalities.  Finally, the
+\ml{FORALL\_IMP\_CONV} conversion takes a term of the form
+\[
+\forall x.\;P(x) \Rightarrow Q
+\]
+and returns the theorem
+\[
+\vdash (\forall x.\;P(x) \Rightarrow Q) = ((\exists
+x.\;P(x))\Rightarrow Q)
+\]
+
+
+
 
 \subsection{The Core DPLL Procedure}
 \label{sec:dpll-procedure}
 
+
+
+\section{Extending our Procedure's Applicability}
+\label{sec:dpll-applicability-extension}
 
 
 
