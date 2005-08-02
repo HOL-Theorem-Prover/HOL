@@ -160,10 +160,11 @@ variables that need overriding.
 With this file in place, the \texttt{smart-configure} program will use
 the values specified there rather than those it attempts to calculate
 itself.  The value given for the \texttt{OS} variable must be one of
-\texttt{"unix"}, \texttt{"linux"}, \texttt{"solaris"} or
-\texttt{"winNT"}.\footnote{It has been reported that \texttt{"unix"}
-  works as a value for the \texttt{OS} variable when building on
-  MacOS~X.}
+\texttt{"unix"}, \texttt{"linux"}, \texttt{"solaris"},
+\texttt{"macosx"} or \texttt{"winNT"}.\footnote{The string
+  \texttt{"winNT"} is used for Microsoft Windows operating systems
+  that are at least as recent as Windows~NT.  This includes Windows~XP
+  and Windows~2000.}
 
 In extreme circumstances it is possible to edit the file
 \texttt{configure.sml} yourself to set configuration variables
