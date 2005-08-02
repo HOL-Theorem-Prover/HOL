@@ -3912,14 +3912,16 @@ Theorems & Respectfulness Theorems \\
 {\tt IS\_NONE} & & & {\tt IS\_NONE\_PRS} & {\tt IS\_NONE\_RSP} \\
 {\tt OPTION\_MAP} & & & {\tt OPTION\_MAP\_PRS} & {\tt OPTION\_MAP\_RSP} \\
 % function application & & & {\tt APPLY\_PRS} & {\tt APPLY\_RSP} \\
-\multicolumn{3}{|l|}
-{{\tt I}, {\tt K}, {\tt o}, {\tt C}, {\tt W}}
-& {\tt I\_PRS}, {\tt K\_PRS}, {\tt o\_PRS}, etc. \ 
-& {\tt I\_RSP}, {\tt K\_RSP}, {\tt o\_RSP}, etc. \\
-%{\tt K} & & & {\tt K\_PRS} & {\tt K\_RSP} \\
-%{\tt o} & & & {\tt o\_PRS} & {\tt o\_RSP} \\
-%{\tt C} & & & {\tt C\_PRS} & {\tt C\_RSP} \\
-%{\tt W} & & & {\tt W\_PRS} & {\tt W\_RSP} \\
+%\multicolumn{3}{|l|}
+%{{\tt I}, {\tt K}, {\tt o}, {\tt C}, {\tt W}}
+%& {\tt I\_PRS}, {\tt K\_PRS}, {\tt o\_PRS}, etc. \ 
+%& {\tt I\_RSP}, {\tt K\_RSP}, {\tt o\_RSP}, etc. \\
+{\tt I} & & & {\tt I\_PRS} & {\tt I\_RSP} \\
+{\tt K} & & & {\tt K\_PRS} & {\tt K\_RSP} \\
+{\tt o} & & & {\tt o\_PRS} & {\tt o\_RSP} \\
+{\tt C} & & & {\tt C\_PRS} & {\tt C\_RSP} \\
+{\tt W} & & & {\tt W\_PRS} & {\tt W\_RSP}
+\begin{comment}
 {\tt IN} & & & {\tt IN\_PRS} & {\tt IN\_RSP} \\
 {\tt EMPTY} & & & {\tt EMPTY\_PRS} & {\tt EMPTY\_RSP} \\
 {\tt UNIV} & & & {\tt UNIV\_PRS} & {\tt UNIV\_RSP} \\
@@ -3933,6 +3935,8 @@ Theorems & Respectfulness Theorems \\
 & {\tt PSUBSET\_PRS} & {\tt PSUBSETR\_RSP} \\
 {\tt IMAGER} & $\rightarrow$ & {\tt IMAGE}
 & {\tt IMAGE\_PRS} & {\tt IMAGER\_RSP} \\
+\end{comment}
+\\
 \hline
 \end{tabular}
 \\
@@ -4667,6 +4671,304 @@ in isolation until it successfully lifts.
 
 
 %
+\section{Lifting Sets}
+%
+\label{liftingsets}
+
+The facilities provided so far for higher order quotients are flexible
+and extensible for the addition of support for new type operators, with
+their own associated quotient extension theorems, simplification theorems,
+perhaps equivalence extension theorems, and respectfulness and 
+preservation theorems for the
+constants associated with the type operator.
+
+One commonly used type is sets, which are implemented in the Higher
+Order Logic theorem prover through the library {\tt pred\_set}.  No actual
+new type is used here, but sets are represented by the function type
+{\tt 'a -> bool}, where {\tt 'a} is the underlying type of the elements
+of the set.
+In fact, there is a close identity between a set and its characteristic
+function.  Nevertheless, it is helpful and intuitive at times to think
+of sets as sets, not functions, and many normal set operators, such
+as {\tt INSERT}, {\tt SUBSET}, and {\tt UNION}, are provided.
+
+For this type of sets,
+if the partial equivalence relation
+on the underlying type is $R$, then
+the extension of $R$
+to the set type is
+$R \ \mbox{\tt ===>} \ (\mbox{\tt \$=:bool->bool->bool})$.
+Essentially, sets behave as a specialization of the
+function quotient extention theorem, where the domain is the base type of $R$
+and the range is {\tt bool}, as in
+{\tt \begin{tabbing}
+SET\=\_QUOTIENT: \\
+\>  $\vdash$  \=$\forall R\;$\=${\it abs}\;{\it rep}.\ 
+          \langle R,{\it abs},{\it rep} \rangle \Rightarrow 
+          \langle R\;\mbox{\tt ===>}\;\mbox{\tt \$=},\ 
+            {\it rep}\;\mbox{\tt -->}\;{\tt I},\ 
+            {\it abs}\;\mbox{\tt -->}\;{\tt I}
+          \rangle$ 
+\end{tabbing}}
+The associated abstraction function
+is ${\it rep}\;\mbox{\tt -->}\;{\tt I}$,
+and the associated representation function
+is ${\it abs}\;\mbox{\tt -->}\;{\tt I}$.
+Note that the use of $abs$ vs. $rep$ is counterintuitive.
+
+When lifting theorems that contain instances of polymorphic set operators
+applied to values of types being lifted, some of the normal set
+operators are preserved across the quotient operation, but several are
+not.  For these operators, we have provided new, similar operators
+which take into account the partial equivalence relation(s) involved,
+and thus do successfully lift to their normal set operator counterpart.
+
+For example, for the set operator {\tt DIFF}, no problems arise, and
+we can prove its respectfulness and preservation theorems of the normal
+form.
+
+{\tt \begin{tabbing}
+DIFF\_PRS: \\
+\hspace{5.5mm}
+    $\vdash$ \=$\forall$R \=(abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+\>\>     $\forall$s t. \=s DIFF t = \\
+\>\>\>     (rep --> I) (((abs --> I) s) DIFF ((abs --> I) t)) \\
+\\
+DIFF\_RSP: \\
+\hspace{5.5mm}
+    $\vdash$ $\forall$R (abs:'a -> 'b) rep. QUOTIENT R abs rep $\Rightarrow$ \\
+\>\>     $\forall$s1 s2 t1 t2. \\
+\>\>\>     (R ===> \$=) s1 s2 $\wedge$ (R ===> \$=) t1 t2 $\Rightarrow$ \\
+\>\>\>     (R ===> \$=) (s1 DIFF t1) (s2 DIFF t2)
+\end{tabbing}}
+
+But  the following operators are {\it not\/} preserved, and have the indicated
+associated ``regular'' versions:
+
+\begin{center}
+{\tt \begin{tabular}{|c|c|}
+\hline
+{\rm Normal} & {\rm Regular} \\
+\hline
+INSERT   & INSERTR \\
+DELETE   & DELETER  \\
+SUBSET   & SUBSETR \\
+PSUBSET  & PSUBSETR \\
+\ DISJOINT \ & \ DISJOINTR \  \\
+FINITE   & FINITER  \\
+GSPEC    & GSPECR  \\
+IMAGE    & IMAGER  \\
+\hline
+\end{tabular}}
+\end{center}
+
+Even if the original operator is infix, all of the new operators
+are prefix operators, to ease the addition of the new arguments.
+
+Most of these regular operators take one new argument, which is the
+partial equivalence relation of the underlying type of the set.
+For {\tt GSPECR} and {\tt IMAGER}, there are two new arguments,
+which are the partial equivalence relations of 
+the types used for the polymorphic type variables of the original
+{\tt GSPEC} or {\tt IMAGE}.  To make this clearer, here are the
+preservation theorems for these two operators.
+
+{\tt \begin{tabbing}
+GSPEC\_PRS: \\
+\hspace{1.5mm}
+    $\vdash$ \=$\forall$R\=1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+\>           $\forall$R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
+\>\>     $\forall$f. \=GSPEC f = \\
+\>\>\>     (rep2 --> I) (GSPECR R1 R2 ((abs1 --> (rep2 \#\# I)) f)) \\
+\\
+IMAGE\_PRS: \\
+\hspace{1.5mm}
+    $\vdash$ $\forall$R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 $\Rightarrow$ \\
+\>           $\forall$R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 $\Rightarrow$ \\
+\>\>     $\forall$f s. IMAGE f s = \\
+\>\>\>     (rep2 --> I) (IMAGER R1 R2 \=((abs1 --> rep2) f) \\
+\>\>\>\>                                ((abs1 --> I) s))
+\end{tabbing}}
+
+The polymorphic preservation and respectfulness theorems for all these
+operators are found in {\tt quotient\_pred\_setTheory}, where e.g. the
+names of these theorems for the {\tt INSERT} operator are
+{\tt INSERT\_PRS} and {\tt INSERTR\_RSP}, respectively.
+
+To ease the process of formulating the appropriate regular version of a 
+theorem that a user wishes to lift, the tools will examine a given
+theorem to see if it is regular, and if not, will construct a regular
+version which if proved by the user will (hopefully) lift.
+Here are some examples.
+
+{\tt \begin{tabbing}
+val \=LIFT\_RULE =  \\
+\>  define\_quotient\_types\_full\_rule  \\
+\>  \{types = [\{name = "term", equiv = ALPHA\_EQUIV\}],  \\
+\>  \ defs = fnlist,  \\
+\>  \ tyop\_equivs = [],  \\
+\>  \ tyop\_quotients = [],  \\
+\>  \ tyop\_simps = [],  \\
+\>  \ respects = respects,  \\
+\>  \ poly\_preserves = [\=IN\_PRS,EMPTY\_PRS,UNIV\_PRS,UNION\_PRS,  \\
+\>\>                   INTER\_PRS,SUBSET\_PRS,PSUBSET\_PRS,  \\
+\>\>                   DELETE\_PRS,INSERT\_PRS,DIFF\_PRS,GSPEC\_PRS,  \\
+\>\>                   DISJOINT\_PRS,FINITE\_PRS,IMAGE\_PRS],  \\
+\>  \ poly\_respects \ = [IN\_RSP,EMPTY\_RSP,UNIV\_RSP,UNION\_RSP,  \\
+\>\>                   INTER\_RSP,SUBSETR\_RSP,PSUBSETR\_RSP,  \\
+\>\>                   DELETER\_RSP,INSERTR\_RSP,DIFF\_RSP,GSPECR\_RSP,  \\
+\>\>                   DISJOINTR\_RSP,FINITER\_RSP,IMAGER\_RSP],  \\
+  \\
+- LIFT\_RULE (INST\_TYPE [alpha |-> ``:'a term1``] EXTENSION)  \\
+\ \ handle e => Raise e;  \\
+  \\
+Exception raised at quotient.REGULARIZE:  \\
+Could not lift the irregular theorem  \\
+$\vdash$ $\forall$s t. (s = t) $\Leftrightarrow$ $\forall$x. x IN s $\Leftrightarrow$ x IN t  \\
+May try proving and then lifting  \\
+$\forall$s t::respects (ALPHA ===> \$=).  \\
+\ \ (ALPHA ===> \$=) s t $\Leftrightarrow$ $\forall$x::respects ALPHA. x IN s $\Leftrightarrow$ x IN t  \\
+! Uncaught exception:   \\
+! HOL\_ERR  \\
+  \\
+- LIFT\_RULE (INST\_TYPE [alpha |-> ``:'a term1``] SUBSET\_TRANS)  \\
+\ \ handle e => Raise e;  \\
+  \\
+Exception raised at quotient.REGULARIZE:  \\
+Could not lift the irregular theorem  \\
+$\vdash$ $\forall$s t u. s SUBSET t $\wedge$ t SUBSET u $\Rightarrow$ s SUBSET u  \\
+May try proving and then lifting  \\
+$\forall$s t u::respects (ALPHA ===> \$=).  \\
+\ \ SUBSETR ALPHA s t $\wedge$ SUBSETR ALPHA t u $\Rightarrow$ SUBSETR ALPHA s u  \\
+! Uncaught exception:   \\
+! HOL\_ERR  \\
+  \\
+- LIFT\_RULE  \\
+\ \ \ \ (INST\_TYPE [alpha |-> ``:'a term1``, beta |-> ``:'b term1``]  \\
+\ \ \ \ \ \        INJECTIVE\_IMAGE\_FINITE);  \\
+  \\
+Exception raised at quotient.REGULARIZE:  \\
+Could not lift the irregular theorem  \\
+$\vdash$ $\forall$f.  
+        ($\forall$x y. (f x = f y) $\Leftrightarrow$ (x = y)) $\Rightarrow$  \\
+\ \ \ \ \ \ $\forall$s. FINITE (IMAGE f s) $\Leftrightarrow$ FINITE s  \\
+May try proving and then lifting  \\
+$\forall$f::respects (ALPHA ===> ALPHA).  \\
+\ \ ($\forall$x y::respects ALPHA. ALPHA (f x) (f y) $\Leftrightarrow$ ALPHA x y) $\Rightarrow$  \\
+\ \ \ $\forall$s::respects (ALPHA ===> \$=).  \\
+\ \ \ \ \ FINITER ALPHA (IMAGER ALPHA ALPHA f s) $\Leftrightarrow$ FINITER ALPHA s  \\
+! Uncaught exception:   \\
+! HOL\_ERR  
+\end{tabbing}}
+
+In each case the suggested regular version of the theorem can be 
+copied from the error message,
+proven by hand, and then submitted to the tool for lifting.
+
+Here are the names of the preservation and respectfulness theorems
+for polymorphic set operators provided in the quotient library.
+
+\begin{table}
+\begin{center}
+{\bfseries TABLE 2.\\
+Preservation
+%Definition
+and Respectfulness Theorems for Polymorphic Set Operators}\\[1ex]
+\begin{tabular}{|lll|l|l|}
+\hline
+\multicolumn{3}{|l|}
+{Lifted Operators} &
+%Lifted
+Preservation
+%Definition
+Theorems & Respectfulness Theorems \\
+\hline
+{\tt IN} & & & {\tt IN\_PRS} & {\tt IN\_RSP} \\
+{\tt EMPTY} & & & {\tt EMPTY\_PRS} & {\tt EMPTY\_RSP} \\
+{\tt UNIV} & & & {\tt UNIV\_PRS} & {\tt UNIV\_RSP} \\
+{\tt INTER} & & & {\tt INTER\_PRS} & {\tt INTER\_RSP} \\
+{\tt UNION} & & & {\tt UNION\_PRS} & {\tt UNION\_RSP} \\
+{\tt DIFF} & & & {\tt DIFF\_PRS} & {\tt DIFF\_RSP} \\
+{\tt INSERTR} & $\rightarrow$ & {\tt INSERT}
+& {\tt INSERT\_PRS} & {\tt INSERTR\_RSP} \\
+{\tt DELETER} & $\rightarrow$ & {\tt DELETE}
+& {\tt DELETE\_PRS} & {\tt DELETER\_RSP} \\
+{\tt DISJOINTR} & $\rightarrow$ & {\tt DISJOINT}
+& {\tt DISJOINT\_PRS} & {\tt DISJOINTR\_RSP} \\
+{\tt GSPECR} & $\rightarrow$ & {\tt GSPEC}
+& {\tt GSPEC\_PRS} & {\tt GSPECR\_RSP} \\
+{\tt SUBSETR} & $\rightarrow$ & {\tt SUBSET}
+& {\tt SUBSET\_PRS} & {\tt SUBSETR\_RSP} \\
+{\tt PSUBSETR} & $\rightarrow$ & {\tt PSUBSET}
+& {\tt PSUBSET\_PRS} & {\tt PSUBSETR\_RSP} \\
+{\tt FINITER} & $\rightarrow$ & {\tt FINITE}
+& {\tt FINITE\_PRS} & {\tt FINITER\_RSP} \\
+{\tt IMAGER} & $\rightarrow$ & {\tt IMAGE}
+& {\tt IMAGE\_PRS} & {\tt IMAGER\_RSP} \\
+\hline
+\end{tabular}
+\\
+\end{center}
+An arrow
+({\it lower} $\rightarrow$ {\it higher})
+indicates that in 
+preservation theorems,
+%definition,
+the lower operator
+is different
+%differs
+from the higher,
+%otherwise
+else
+it
+%the operator
+is the same.
+%\\
+Respectfulness theorems concern
+{\it lower}.
+%the lower operator.
+\end{table}
+
+In addition, several related theorems are provided, including the
+definitions of the new operators and some of their interactions with other
+set operators.
+
+\pagebreak[4]
+{\tt \begin{tabbing}
+IN\_INSERTR: \\
+\hspace{5.5mm}
+\=$\vdash$ $\forall$R\= x s y. y IN INSERTR R x s $\Leftrightarrow$ R y x $\vee$ y IN s  \\
+IN\_DELETER: \\
+\>$\vdash$ $\forall$R s x y. y IN DELETER R s x $\Leftrightarrow$ y IN s $\wedge$ \verb+~+R x y  \\
+IN\_GSPECR: \\
+\>$\vdash$ $\forall$R1 R2 f v.  \\
+\>\> v IN GSPECR R1 R2 f $\Leftrightarrow$  \\
+\>\> $\exists$x::respects R1. (R2 \#\#\# \$=) (v,T) (f x)  \\
+IN\_IMAGER:  \\
+\>$\vdash$ $\forall$R1 R2 y f s.  \\
+\>\>     y IN IMAGER R1 R2 f s $\Leftrightarrow$  \\
+\>\>     $\exists$x::respects R1. R2 y (f x) $\wedge$ x IN s
+%FINITER\_def: \\
+%\>    $\vdash$ $\forall$R s. 
+%         FINITER R s $\Leftrightarrow$  \\
+%\>\>     !P\=::respects ((R ===> \$=) ===> \$=).  \\
+%\>\>\>     P \{\} $\wedge$  
+%           ($\forall$s\=::respects (R ===> \$=).  \\
+%\>\>\>\>      P s ==> $\forall$e::respects R. P (INSERTR R e s)) $\Rightarrow$  \\
+%\>\>\>     P s
+\end{tabbing}}
+
+These facilities for set operators are presented to be helpful,
+but they are in
+%a state of
+development, and should be considered
+experimental and subject to change.
+%They will probably change somewhat in future versions.
+
+%\vspace{0.7in}
+
+
+%
 \section{The Sigma Calculus}
 %
 \label{sigmacalculus}
@@ -4760,7 +5062,7 @@ respective alpha-equivalence relations.
 %
 \label{presigmacalculus}
 
-Hol98 supports the definition of new nested mutually recursive types
+HOL supports the definition of new nested mutually recursive types
 by the {\tt Hol\_datatype} function in the
 {\tt bossLib} library.
 %(HOL System Description Manual, section 5.2.1).

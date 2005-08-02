@@ -2797,8 +2797,8 @@ R2 (f[x']) (g[y']).
                       let val ty1 = (domain o type_of) opp
                           val (dom,rng) = dom_rng ty1
                           val tya = hd (#Args (dest_type rng))
-                          val bREL = tyREL dom
-                          val aREL = tyREL tya
+                          val bREL = tyREL tya
+                          val aREL = tyREL dom
                       in
                         list_mk_comb(--`GSPECR ^aREL ^bREL`--, map regularize args)
                       end

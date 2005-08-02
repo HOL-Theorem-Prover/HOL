@@ -139,14 +139,14 @@ But a similar operator exists which we can try to lift to GSPEC.  *)
 
 
 val GSPECR_def = Define
-   `GSPECR (R1:'a->'a->bool) R2 f (v:'a) =
-             ?x:'b :: respects R2. (R1 ### $=) (v,T) (f x) `;
+   `GSPECR R1 (R2:'b -> 'b -> bool) f v =
+             ?x:'a :: respects R1. (R2 ### $=) (v,T) (f x) `;
 
 val IN_GSPECR = store_thm
    ("IN_GSPECR",
     (--`!R1 R2 f (v:'a).
          v IN GSPECR R1 R2 f =
-         ?x:'b :: respects R2. (R1 ### $=) (v,T) (f x : 'a # bool)`--),
+         ?x:'b :: respects R1. (R2 ### $=) (v,T) (f x : 'a # bool)`--),
     REWRITE_TAC[GSPECR_def,SPECIFICATION]
    );
 
@@ -155,7 +155,7 @@ val GSPEC_PRS = store_thm
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !f. GSPEC f =
-               (rep1 --> I) (GSPECR R1 R2 ((abs2 --> (rep1 ## I)) f))`--),
+               (rep2 --> I) (GSPECR R1 R2 ((abs1 --> (rep2 ## I)) f))`--),
     REPEAT STRIP_TAC
     THEN IMP_RES_TAC QUOTIENT_ABS_REP
     THEN REWRITE_TAC[EXTENSION]
@@ -169,12 +169,12 @@ val GSPEC_PRS = store_thm
     THEN EQ_TAC
     THEN STRIP_TAC
     THENL
-      [ EXISTS_TAC ``rep2 (x':'d) :'b``
+      [ EXISTS_TAC ``rep1 (x':'c) :'a``
         THEN IMP_RES_THEN REWRITE_THM QUOTIENT_REP_REFL
         THEN ASM_REWRITE_TAC[]
         THEN POP_ASSUM (REWRITE_THM o SYM),
 
-        EXISTS_TAC ``abs2 (x':'b) :'d``
+        EXISTS_TAC ``abs1 (x':'a) :'c``
         THEN CONV_TAC (RAND_CONV (REWR_CONV (GSYM PAIR)))
         THEN ASM_REWRITE_TAC[PAIR_EQ]
       ]
@@ -185,8 +185,8 @@ val GSPECR_RSP = store_thm
     (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
         !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
          !f1 f2.
-          (R2 ===> (R1 ### $=)) f1 f2 ==>
-          (R1 ===> $=) (GSPECR R1 R2 f1) (GSPECR R1 R2 f2)`--),
+          (R1 ===> (R2 ### $=)) f1 f2 ==>
+          (R2 ===> $=) (GSPECR R1 R2 f1) (GSPECR R1 R2 f2)`--),
     REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC THEN DISCH_TAC
     THEN REPEAT GEN_TAC
@@ -195,8 +195,8 @@ val GSPECR_RSP = store_thm
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
     THEN REWRITE_TAC[PAIR_REL_THM]
     THEN DISCH_TAC
-    THEN X_GEN_TAC ``u:'a``
-    THEN X_GEN_TAC ``v:'a``
+    THEN X_GEN_TAC ``u:'b``
+    THEN X_GEN_TAC ``v:'b``
     THEN DISCH_TAC
     THEN REWRITE_TAC[IN_GSPECR]
     THEN CONV_TAC (DEPTH_CONV RES_EXISTS_CONV)
