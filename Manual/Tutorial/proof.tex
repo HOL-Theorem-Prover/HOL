@@ -150,13 +150,11 @@ Three of the primitive inference rules of the \HOL{} logic are
 assumption elimination) and \ml{MP} (Modus Ponens).  These rules will
 be used to illustrate forward proof and the writing of derived rules.
 
-The inference rule {\small\verb|ASSUME|} generates theorems of the form
-$t${\small\verb% |- %}$t$. Note, however, that the \ML{} printer prints each
-  assumption as a dot (but this default can be changed; see below).
-  The function {\small\verb|dest_thm|} decomposes a theorem into a
-  pair consisting of list of assumptions and the conclusion. The \ML\
-  type \ml{goal} abbreviates {\small\verb|(term)list * term|}, this is
-  motivated in Section~\ref{tactics}.
+The inference rule \ml{ASSUME} generates theorems of the form \ml{$t$
+  |- $t$}. Note, however, that the \ML{} printer prints each
+assumption as a dot (but this default can be changed; see below).  The
+function \ml{dest\_thm} decomposes a theorem into a pair consisting of
+list of assumptions and the conclusion.
 
 \begin{session}
 \begin{verbatim}
