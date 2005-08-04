@@ -122,7 +122,7 @@ false).
 \subsection*{Preliminaries}
 
 To begin, assume that we have code already to convert arbitrary
-formulas into CNF, and to then decide the satisfiability of these
+formulas into CNF{}, and to then decide the satisfiability of these
 formulas.  Assume further that if the input to the latter procedure is
 unsatisfiable, then it will return with a theorem of the form
 \[ \vdash \varphi = \holtxt{F}
@@ -139,7 +139,7 @@ Thus, we will assume
 \end{verbatim}
 \end{hol}
 (The theorem returned by \ml{toCNF} will equate the input term to
-another in CNF.)
+another in CNF{}.)
 
 \smallskip
 \noindent
@@ -192,9 +192,7 @@ best done by proving a bespoke theorem embodying the equality (there
 isn't one such already in the system):
 \begin{hol}
 \begin{verbatim}
-   val NEG_EQ_F = prove(
-     ``(~p = F) = p``,
-     REWRITE_TAC []);
+   val NEG_EQ_F = prove(``(~p = F) = p``, REWRITE_TAC []);
 \end{verbatim}
 \end{hol}
 To turn $\vdash \varphi$ into $\vdash (\forall
@@ -268,7 +266,7 @@ The \ml{REWR\_CONV} function applies a single (first-order) rewrite at
 the top of a term.  These uses of \ml{REWR\_CONV} are done within
 calls to the \ml{CONV\_RULE} function.  This lifts a conversion $c$ (a
 function taking a term $t$ and producing a theorem $\vdash t = t'$),
-so that $\ml{CONV\_RULE}\;c$ takes the theorem $\vdash t$, to $\vdash
+so that $\ml{CONV\_RULE}\;c$ takes the theorem $\vdash t$ to $\vdash
 t = t'$.
 
 
@@ -370,7 +368,7 @@ and that we should implement \ml{DPLL} as
          val fa_body_imp_F = GEN vector body_imp_F
          val ex_body_imp_F = CONV_RULE FORALL_IMP_CONV fa_body_imp_F
        in
-         CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F
+         Unsat (CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F)
        end
      | x => x
    end
@@ -396,6 +394,93 @@ x.\;P(x))\Rightarrow Q)
 
 \subsection{The Core DPLL Procedure}
 \label{sec:dpll-procedure}
+
+The DPLL procedure can be seen as a slight variation on the basic
+``truth table'' technique we have already seen.  As with that
+procedure, the core operation is a case-split on a boolean variable.
+There are two significant differences though: DPLL can be seen as a
+search for a satisfying assignment, so that if picking a variable to
+have a particular value results in a satisfying assignment, we do not
+need to also check what happens if the same variable is given the
+opposite truth-value.  Secondly, DPLL takes some care to pick good
+variables to split on.  In particular, \emph{unit propagation} is used
+to eliminate variables that will not cause branching in the
+search-space.
+
+Our implementation of the core DPLL procedure is a function that takes
+a term and returns a value of type \ml{result}: either a theorem
+equating the original term to false, or a satisfying assignment (in
+the form of a function from terms to terms).  As the DPLL search for a
+satisfying assignment proceeds, an assignment is incrementally
+constructed.  This suggests that the recursive core of our function
+will need to take a term (the current formula) and a context (the
+current assignment) as parameters.  The assignment can be naturally
+represented as a set of equations, where each equation is either $v =
+\holtxt{T}$ or $v = \holtxt{F}$.
+
+This suggests that a natural representation for our program state is a
+theorem: the hypotheses will represent the assignment, and the
+conclusion can be the current formula.  Of course, \HOL{} theorems
+can't just be wished into existence.  In this case, we can make
+everything sound by also assuming the initial formula.  Thus, when we
+begin our initial state will be $\phi\vdash\phi$.  After splitting on
+variable $v$, we will generate two new states
+$\phi,(v\!=\!\holtxt{T})\vdash \phi_1$, and
+$\phi,(v\!=\!\holtxt{F})\vdash \phi_2$, where the $\phi_i$ are the
+result of simplifying $\phi$ under the additional assumption
+constraining $v$.
+
+The easiest way to add an assumption to a theorem is to use the
+derived rule \ml{ADD\_ASSUM}.  But in this situation, we also want to
+simplify the conclusion of the theorem with the same assumption.  This
+means that it will be enough to rewrite with the theorem
+$\psi\vdash\psi$, where $\psi$ is the new assumption.  The action of
+rewriting with such a theorem will cause the new assumption to appear
+among the assumptions of the result.
+
+The \ml{casesplit} function is thus:
+\begin{hol}
+\begin{verbatim}
+   fun casesplit v th = let
+     val eqT = ASSUME (mk_eq(v, boolSyntax.T))
+     val eqF = ASSUME (mk_eq(v, boolSyntax.F))
+   in
+     (REWRITE_RULE [eqT] th, REWRITE_RULE [eqF] th)
+   end
+\end{verbatim}
+\end{hol}
+
+The next question to address is what to do with the results of
+recursive calls.  If a case-split returns a satisfying assignment this
+can be returned unchanged.  But if a recursive call returns a theorem
+equating the input to false, more needs to be done.  If this is the
+first call, then the other branch needs to be checked.  If this also
+returns that the theorem is unsatisfiable, we will have two theorems:
+\[
+\phi_0,\Delta,(v\!=\!\holtxt{T})\vdash \holtxt{F} \qquad
+\phi_0,\Delta,(v\!=\!\holtxt{F})\vdash \holtxt{F}
+\] where $\phi_0$ is the original formula, $\Delta$ is the rest of the
+current assignment, and $v$ is the variable on which a split has just
+been performed.  To turn these two theorems into the desired
+\[
+\phi_0,\Delta\vdash \holtxt{F}
+\]
+we will use the rule of inference \ml{DISJ\_CASES}:
+\[
+\infer{\Gamma \cup \Delta_1 \cup \Delta_2 \vdash \phi}{
+  \Gamma \vdash \psi \lor \xi &
+  \Delta_1 \cup \{\psi\}\vdash \phi &
+  \Delta_2 \cup \{\xi\} \vdash \phi
+}
+\]
+and the theorem \ml{BOOL\_CASES\_AX}:
+\[
+\vdash \forall t.\;(t = \holtxt{T}) \lor (t = \holtxt{F})
+\]
+If the original formula is unsatisfiable, then all of the case-splits
+will result in falsity, and the ultimate result will be $\phi_0\vdash
+\holtxt{F}$.  Turning this into $\vdash \phi_0 = \holtxt{F}$ will then
+give the core procedure's callers what they expect.
 
 
 
