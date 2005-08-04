@@ -362,7 +362,9 @@ fun invokeSat sat_solver t =
      val code       = Process.system run_cmd
      val _          = if isSuccess code
                        then ()
-                       else print("Warning:\n Process.system reports failure signal returned by\n " ^ run_cmd ^ "\n")
+		      else if (name="minisat") 
+		      then ()
+                      else print("Warning:\n Process.system reports failure signal returned by\n " ^ run_cmd ^ "\n")
      val ins        = TextIO.openIn outfile
      val sat_res    = TextIO.inputAll ins
      val _          = TextIO.closeIn ins

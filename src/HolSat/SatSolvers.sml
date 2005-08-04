@@ -72,4 +72,18 @@ val sato =
    start_string   = "Model #1: (indices of true atoms)",
    end_string     = "The number of found models"};
 
+val minisat =
+ SatSolver
+  {name           = "minisat", 
+   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat/cgi/MiniSat_v1.13_linux.cgi",
+   executable     = "sat_solvers/minisat/minisat",
+   notime_run     = (fn ex => fn (infile,outfile) => 
+                      (ex ^ " " ^ infile ^ " > " ^ outfile)),
+   time_run       = (fn ex => fn ((infile,outfile),time) => 
+                      (ex ^ " " ^ infile ^ " " ^ (Int.toString time) ^ " > " ^ outfile)),
+   only_true      = false,
+   failure_string = "UNSAT",
+   start_string   = "v",
+   end_string     = "0"};
+
 end

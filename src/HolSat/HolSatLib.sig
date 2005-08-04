@@ -16,6 +16,7 @@ signature HolSatLib = sig
   val sato : sat_solver
   val grasp  : sat_solver
   val zchaff  : sat_solver
+  val minisat : sat_solver
   val showSatVarMap : unit -> int * (string * int) list
   val readDimacs : string -> Term.term
   val satProve : sat_solver -> Term.term -> Thm.thm
