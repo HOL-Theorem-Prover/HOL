@@ -1,3 +1,31 @@
 
-HolBddLib has been revised. The old version can be found in the directory OldHolBdd.
+ACKNOWLEDGEMENTS 
 
+HolBddLib would not have been possible without BuDDy from
+Jorn Lind-Nielsen and MuDDy from Ken Friis Larsen and Jakob Lichtenberg.
+
+This research was initially supported by EPSRC grant
+GR/K57343 "Checking Equivalence Between Synthesised Logic and
+Non-Synthesisable Behavioural Prototypes", EPSRC grant GR/L35973
+entitled "A Hardware Compilation Workbench", EPSRC grant
+GR/L74262 entitled "A uniform semantics for Verilog and VHDL
+suitable for both simulation and formal verification" and ESPRIT
+Framework IV LTR 26241 project Prosper "Proof and Specification
+Assisted Design Environments". Currently the research is supported by
+EPSRC grant GR/R27105/01 entitled "Fully Expansive Proof and
+Algorithmic Verification" (http://www.cl.cam.ac.uk/~mjcg/HolCheck/).
+
+At the beginning of the research, data from Atanas Parashkevov
+and Bill Roscoe on the BDD and state space sizes arising from Peg Solitaire
+was useful for evaluating and testing the first version of HolBddLib.
+
+Michael Norrish and Konrad Slind have provided invaluable help with
+HOL, which they are currently developing. 
+
+Mark Aagaard provided some
+of the information on Voss and its successors described in
+the preface.
+
+Paul Jackson, Jesper Moller and Konrad Slind provided detailed
+comments and suggestions on a first draft of the University of
+Cambridge Computer Laboratory Technical Report No.481.
