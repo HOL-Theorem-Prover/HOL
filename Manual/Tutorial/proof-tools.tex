@@ -119,6 +119,10 @@ assignment will make the original false); if the formula's negation is
 unsatisfiable, then the formula is valid (no assignment can make it
 false).
 
+\smallskip
+\noindent
+(The source code for this example is available in the file \texttt{examples/dpll.sml}.)
+
 \subsection*{Preliminaries}
 
 To begin, assume that we have code already to convert arbitrary
@@ -178,14 +182,13 @@ $\forall\vec{v}.\;\varphi$ as input, and pass the term $\neg\varphi$
 to the function \ml{toCNF}.  A more significant question is how to
 use the results of these calls.   The call to \ml{toCNF} will return a
 theorem
-\begin{equation}
+\[
 \vdash \neg\varphi = \varphi'
-\label{eqn:tocnf-result}
-\end{equation}
+\]
 The formula $\varphi'$ is what will then be passed to \ml{DPLL}.  (We
 can extract it by using the \ml{concl} and \ml{rhs} functions.) If
 \ml{DPLL} returns the theorem $\vdash \varphi' = \holtxt{F}$, an
-application of \ml{TRANS} to this and~(\ref{eqn:tocnf-result}) will
+application of \ml{TRANS} to this and the theorem displayed above will
 derive the formula $\vdash \neg\varphi = F$.  In order to derive the
 final result, we will need to turn this into $\vdash\varphi$.  This is
 best done by proving a bespoke theorem embodying the equality (there
@@ -231,7 +234,7 @@ Putting all of the above together, we can write our wrapper function:
    fun wrapper t = let
      val (vs, phi) = strip_forall t
      val cnf_eqn = toCNF (mk_neg phi)
-     val (_, phi') = rhs (concl cnf_eq)
+     val phi' = rhs (concl cnf_eqn)
    in
      case DPLL phi' of
        Unsat phi'_eq_F => let
@@ -354,22 +357,34 @@ variables or their negations, but also allow them to be terms of
 the form $v(i)$ and $\neg v(i)$ as well, then the action of the DPLL
 procedure on the formula $\varphi'$ won't be affected either.
 
-All this means that the \ml{toCNF} function referred to in the
-\ml{wrapper} function should be \ml{defCNF.DEF\_CNF\_VECTOR\_CONV},
-and that we should implement \ml{DPLL} as
+Unfortunately for uniformity, in simple cases, the definitional CNF
+conversion functions may not result in any existential
+quantifications at all.  This makes our implementation of \ml{DPLL}
+somewhat more complicated.  We calculate a \ml{body} variable that
+will be passed onto the \ml{CoreDPLL} function, as well as a
+\ml{transform} function that will transform an unsatisfiability result
+into something of the desired form.  If the result of conversion to
+CNF produces an existential quantification, we use the proof sketched
+above.  Otherwise, the transformation can be the identity function,
+\ml{I}:
 \begin{hol}
 \begin{verbatim}
    fun DPLL t = let
-     val (vector, body) = dest_exists t
-   in
-     case CoreDPLL body of
-       Unsat body_eq_F => let
+     val (transform, body) = let
+       val (vector, body) = dest_exists t
+       fun transform body_eq_F = let
          val body_imp_F = CONV_RULE (REWR_CONV (GSYM IMP_F_EQ_F)) body_eq_F
          val fa_body_imp_F = GEN vector body_imp_F
          val ex_body_imp_F = CONV_RULE FORALL_IMP_CONV fa_body_imp_F
        in
-         Unsat (CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F)
+         CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F
        end
+     in
+       (transform, body)
+     end handle HOL_ERR _ => (I, t)
+   in
+     case CoreDPLL body of
+       Unsat body_eq_F => Unsat (transform body_eq_F)
      | x => x
    end
 \end{verbatim}
@@ -450,6 +465,44 @@ The \ml{casesplit} function is thus:
 \end{verbatim}
 \end{hol}
 
+A case-split can result in a formula that has been rewritten all the
+way to true or false.  These are the recursion's base cases. If the
+formula has been rewritten to true, then we have found a satisfying
+assignment, one that is now stored for us in the hypotheses of the
+theorem itself.  The following function, \ml{mk\_satmap}, extracts
+those hypotheses into a finite-map, and then returns the lookup
+function for that finite-map:
+\begin{hol}
+\begin{verbatim}
+   fun mk_satmap th = let
+     val hyps = hypset th
+     fun foldthis (t,acc) = let
+       val (l,r) = dest_eq t
+     in
+       Binarymap.insert(acc,l,r)
+     end handle HOL_ERR _ => acc
+     val fmap = HOLset.foldl foldthis (Binarymap.mkDict Term.compare) hyps
+   in
+     Sat (fn v => Binarymap.find(fmap,v)
+                  handle Binarymap.NotFound => boolSyntax.T)
+   end
+\end{verbatim}
+\end{hol}
+The \ml{foldthis} function above adds the equations that are stored as
+hypotheses into the finite-map.  The exception handler in
+\ml{foldthis} is necessary because one of the hypotheses will be the
+original formula.  The exception handler in the function that looks up
+variable bindings is necessary because a formula may be reduced to
+true without every variable being assigned a value at all.  In this
+case, it is irrelevant what value we give to the variable, so we
+arbitrarily map such variables to \holtxt{T}.
+
+If the formula has been rewritten to false, then we can just return
+this theorem directly.  Such a theorem is not quite in the right form
+for the external caller, which is expecting an equation, so if the
+final result is of the form $\phi\vdash \holtxt{F}$, we will have to
+transform this to $\vdash \phi = \holtxt{F}$.
+
 The next question to address is what to do with the results of
 recursive calls.  If a case-split returns a satisfying assignment this
 can be returned unchanged.  But if a recursive call returns a theorem
@@ -477,12 +530,161 @@ and the theorem \ml{BOOL\_CASES\_AX}:
 \[
 \vdash \forall t.\;(t = \holtxt{T}) \lor (t = \holtxt{F})
 \]
-If the original formula is unsatisfiable, then all of the case-splits
-will result in falsity, and the ultimate result will be $\phi_0\vdash
-\holtxt{F}$.  Turning this into $\vdash \phi_0 = \holtxt{F}$ will then
-give the core procedure's callers what they expect.
+
+We can put these fragments together and write the top-level
+\ml{CoreDPLL} function, in Figure~\ref{fig:coredpll}.
+\begin{figure}[htbp]
+\begin{boxed}
+\begin{hol}
+\begin{verbatim}
+fun CoreDPLL form = let
+  val initial_th = ASSUME form
+  fun recurse th = let
+    val c = concl th
+  in
+    if c = boolSyntax.T then
+      mk_satmap th
+    else if c = boolSyntax.F then
+      Unsat th
+    else let
+        val v = find_splitting_var c
+        val (l,r) = casesplit v th
+      in
+        case recurse l of
+          Unsat l_false => let
+          in
+            case recurse r of
+              Unsat r_false =>
+                Unsat (DISJ_CASES (SPEC v BOOL_CASES_AX) l_false r_false)
+            | x => x
+          end
+        | x => x
+      end
+  end
+in
+  case (recurse initial_th) of
+    Unsat th => Unsat (CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH form th))
+  | x => x
+end
+\end{verbatim}
+\end{hol}
+\end{boxed}
+\caption{The core of the DPLL function}
+\label{fig:coredpll}
+\end{figure}
 
 
+All that remains to be done is to figure out which variable to
+case-split on.  The most important variables to split on are those
+that appear in what are called ``unit clauses'', a clause containing
+just one literal.  If there is a unit clause in a formula then it is
+of the form
+\[
+\phi \land v \land \phi'
+\]
+or
+\[
+\phi \land \neg v \land \phi'
+\]
+In either situation, splitting on $v$ will always result in a branch
+that evaluates directly to false.  We thus eliminate a variable
+without increasing the size of the problem.  The process of
+eliminating unit clauses is usually called ``unit propagation''.
+Unit propagation is not usually thought of as a case-splitting
+operation, but doing it this way makes our code simpler.
+
+If a formula does not include a unit clause, then choice of the next
+variable to split on is much more of a black art.  Here we will
+implement a very simple choice: to split on the variable that occurs
+most often.  Our function \ml{find\_splitting\_var} takes a formula
+and returns the variable to split on.
+\begin{hol}
+\begin{verbatim}
+   fun find_splitting_var phi = let
+     fun recurse acc [] = getBiggest acc
+       | recurse acc (c::cs) = let
+           val ds = strip_disj c
+         in
+           case ds of
+             [lit] => (dest_neg lit handle HOL_ERR _ => lit)
+           | _ => recurse (count_vars ds acc) cs
+         end
+   in
+     recurse (Binarymap.mkDict Term.compare) (strip_conj phi)
+   end
+\end{verbatim}
+\end{hol}
+This function works by handing a list of clauses to the inner
+\ml{recurse} function.  This strips each clause apart in turn.  If a
+clause has only one disjunct it is a unit-clause and the variable can
+be returned directly.  Otherwise, the variables in the clause are
+counted and added to the accumulating map by \ml{count\_vars}, and the
+recursion can continue.
+
+The \ml{count\_vars} function has the following implementation:
+\begin{hol}
+\begin{verbatim}
+   fun count_vars ds acc =
+     case ds of
+       [] => acc
+     | lit::lits => let
+         val v = dest_neg lit handle HOL_ERR _ => lit
+       in
+         case Binarymap.peek (acc, v) of
+           NONE => count_vars lits (Binarymap.insert(acc,v,1))
+         | SOME n => count_vars lits (Binarymap.insert(acc,v,n + 1))
+       end
+\end{verbatim}
+\end{hol}
+
+The use of a binary tree to store variable data makes it efficient to
+update the data as it is being collected.  Extracting the variable
+with the largest count is then a linear scan of the tree, which we can
+do with the \ml{foldl} function:
+\begin{hol}
+\begin{verbatim}
+   fun getBiggest acc =
+     #1 (Binarymap.foldl(fn (v,cnt,a as (bestv,bestcnt)) =>
+                            if cnt > bestcnt then (v,cnt) else a)
+                        (boolSyntax.T, 0)
+                        acc
+\end{verbatim}
+\end{hol}
+
+\subsection{Performance}
+\label{sec:dpll-performance}
+
+Once inputs get even a little beyond the clearly trivial, the function
+we have written (at the top-level, \ml{wrapper}) performs considerably
+better than the truth table implementation.  For example, the
+generalisation of the following term, with 29 variables, takes
+\ml{wrapper} two and a half minutes to demonstrate as a tautology:
+\begin{hol}
+\begin{verbatim}
+   (s0_0 = (x_0 = ~y_0)) /\ (c0_1 = x_0 /\ y_0) /\
+   (s0_1 = ((x_1 = ~y_1) = ~c0_1)) /\
+   (c0_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c0_1) /\
+   (s0_2 = ((x_2 = ~y_2) = ~c0_2)) /\
+   (c0_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c0_2) /\
+   (s1_0 = ~(x_0 = ~y_0)) /\ (c1_1 = x_0 /\ y_0 \/ x_0 \/ y_0) /\
+   (s1_1 = ((x_1 = ~y_1) = ~c1_1)) /\
+   (c1_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c1_1) /\
+   (s1_2 = ((x_2 = ~y_2) = ~c1_2)) /\
+   (c1_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c1_2) /\
+   (c_3 = ~c_0 /\ c0_3 \/ c_0 /\ c1_3) /\
+   (s_0 = ~c_0 /\ s0_0 \/ c_0 /\ s1_0) /\
+   (s_1 = ~c_0 /\ s0_1 \/ c_0 /\ s1_1) /\
+   (s_2 = ~c_0 /\ s0_2 \/ c_0 /\ s1_2) /\ ~c_0 /\
+   (s2_0 = (x_0 = ~y_0)) /\ (c2_1 = x_0 /\ y_0) /\
+   (s2_1 = ((x_1 = ~y_1) = ~c2_1)) /\
+   (c2_2 = x_1 /\ y_1 \/ (x_1 \/ y_1) /\ c2_1) /\
+   (s2_2 = ((x_2 = ~y_2) = ~c2_2)) /\
+   (c2_3 = x_2 /\ y_2 \/ (x_2 \/ y_2) /\ c2_2) ==>
+   (c_3 = c2_3) /\ (s_0 = s2_0) /\ (s_1 = s2_1) /\ (s_2 = s2_2)
+\end{verbatim}
+\end{hol}
+The truth table implementation in \ml{tautLib} takes 10 times as long
+to prove the tautology.
 
 \section{Extending our Procedure's Applicability}
 \label{sec:dpll-applicability-extension}
