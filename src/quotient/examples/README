@@ -36,7 +36,16 @@ to form finite sets as a new type as a quotient of lists,
 composed by Michael Norrish.  The reader is invited to compare
 this with the other approach above.
 
-4. sigma/*
+4. lambda/*
+
+This directory contains a development of the syntax of the
+lambda calculus.
+
+The lambda calculus is created first as a free algebra,
+which is then lifted to a pure version of the lambda calculus
+as a quotient by alpha equivalence on the free algebra.
+
+5. sigma/*
 
 This directory contains a development of the sigma calculus,
 invented by Abadi and Cardelli in their book, "A Theory of Objects,"
