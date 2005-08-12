@@ -1744,7 +1744,7 @@ val RES_EXISTS_UNIQUE_RESPECTS_REGULAR = store_thm
 
 val RES_EXISTS_UNIQUE_REGULAR = store_thm
    ("RES_EXISTS_UNIQUE_REGULAR",
-    (--`!P R E Q.
+    (--`!P R Q.
           (!x:'a. P x ==> Q x) /\
           (!x y. respects R x /\ Q x /\ respects R y /\ Q y ==> R x y) ==>
           (RES_EXISTS_UNIQUE (respects R) P ==> RES_EXISTS_EQUIV R Q)`--),

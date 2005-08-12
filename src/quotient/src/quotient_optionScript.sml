@@ -82,7 +82,7 @@ val OPTION_REL_EQ = store_thm
 
 val OPTION_EQUIV = store_thm
    ("OPTION_EQUIV",
-    (--`!R. EQUIV R ==> EQUIV (OPTION_REL R)`--),
+    (--`!R:'a -> 'a -> bool. EQUIV R ==> EQUIV (OPTION_REL R)`--),
     GEN_TAC
     THEN REWRITE_TAC[EQUIV_def]
     THEN DISCH_TAC

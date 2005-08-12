@@ -104,7 +104,8 @@ val PAIR_REL_REFL = store_thm
 
 val PAIR_EQUIV = store_thm
    ("PAIR_EQUIV",
-    (--`!R1 R2. EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 ### R2)`--),
+    (--`!(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
+            EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 ### R2)`--),
     REPEAT GEN_TAC
     THEN REWRITE_TAC[EQUIV_def]
     THEN REPEAT DISCH_TAC

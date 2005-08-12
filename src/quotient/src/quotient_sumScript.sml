@@ -74,7 +74,8 @@ val SUM_REL_EQ = store_thm
 
 val SUM_EQUIV = store_thm
    ("SUM_EQUIV",
-    (--`!R1 R2. EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)`--),
+    (--`!(R1:'a -> 'a -> bool) (R2:'b -> 'b -> bool).
+            EQUIV R1 ==> EQUIV R2 ==> EQUIV (R1 +++ R2)`--),
     REPEAT GEN_TAC
     THEN REWRITE_TAC[EQUIV_def]
     THEN REPEAT DISCH_TAC
