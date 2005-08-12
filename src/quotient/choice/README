@@ -1,0 +1,25 @@
+File: README
+Author: Peter Vincent Homeier
+Date: August 12, 2005
+
+This directory contains an alternative development of
+the foundations of the higher order quotients library,
+which attempts to avoid using the Axiom of Choice.
+
+At the beginning of the development, the Hilbert epsilon
+"indefinite choice" operator is used to define the iota
+"definite choice" operator.  The only use of the epsilon
+operator thereafter is in proving the function quotient
+extension theorem.  That theorem is then used to prove the
+existance of an operator satisfying the same behavioral axiom
+as the Hilbert epsilon operator.
+
+This is the development described in section 6 of the paper,
+"A Design Structure for Higher Order Quotients,"
+available at http://www.trustworthytools.com/id14.html.
+
+This development may be created by typing
+
+Holmake
+
+in this directory.
