@@ -119,11 +119,11 @@ fun mk_uncurry (f,x) =
    of ([a,b],c) => mk_comb(mk_comb(mk_uncurry_tm(a,b,c),f),x)
     | other => raise ERR "mk_uncurry" "";
 
-fun mk_pair_map(f,g,p) =
+fun mk_pair_map(f,g) =
  let val (df,rf) = dom_rng (type_of f)
      val (dg,rg) = dom_rng (type_of g)
  in list_mk_comb(inst[alpha |-> df, beta  |-> dg, 
-                      gamma |-> rf, delta |-> rg] pair_map_tm, [f,g,p])
+                      gamma |-> rf, delta |-> rg] pair_map_tm, [f,g])
  end;
 
 fun mk_lex (r1,r2) =
@@ -141,17 +141,9 @@ fun dest_curry tm =
   in (f,x,y)
   end;
 
-fun dest_pair_map tm = 
-  let val (M,p) = with_exn dest_comb tm (ERR "dest_pair_map" "")
-      val (f,g) = dest_binop pair_map_tm (ERR "dest_pair_map" "") M
-  in (f,g,p)
-  end;
+val dest_pair_map = dest_binop pair_map_tm (ERR "dest_pair_map" "");
 
-fun dest_lex tm = 
-  let val (M,r2) = with_exn dest_comb tm (ERR "dest_lex" "")
-      val r1 = dest_monop lex_tm (ERR "dest_lex" "") M
-  in (r1,r2)
-  end;
+val dest_lex = dest_binop lex_tm (ERR "dest_lex" "");
 
 val is_fst = can dest_fst
 val is_snd = can dest_snd

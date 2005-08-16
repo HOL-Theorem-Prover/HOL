@@ -21,7 +21,7 @@ sig
  val mk_snd           : term -> term
  val mk_curry         : term * term * term -> term
  val mk_uncurry       : term * term -> term
- val mk_pair_map      : term * term * term -> term
+ val mk_pair_map      : term * term -> term
  val mk_pabs          : term * term -> term
  val mk_pforall       : term * term -> term
  val mk_pexists       : term * term -> term
@@ -33,7 +33,7 @@ sig
  val dest_snd         : term -> term
  val dest_curry       : term -> term * term * term
  val dest_uncurry     : term -> term * term
- val dest_pair_map    : term -> term * term * term
+ val dest_pair_map    : term -> term * term 
  val dest_pabs        : term -> term * term
  val pbvar            : term -> term
  val pbody            : term -> term
