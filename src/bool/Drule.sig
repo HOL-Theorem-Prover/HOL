@@ -19,7 +19,6 @@ sig
   val UNDISCH          : thm -> thm
   val EQT_ELIM         : thm -> thm
   val SPECL            : term list -> thm -> thm
-  val GENL             : term list -> thm -> thm
   val SELECT_INTRO     : thm -> thm
   val SELECT_ELIM      : thm -> term * thm -> thm
   val SELECT_RULE      : thm -> thm

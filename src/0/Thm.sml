@@ -646,6 +646,20 @@ fun GEN x th =
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
+fun GENL vs th = let 
+  val (asl,c) = sdest_thm th
+in
+  if exists (fn v => var_occursl v asl) vs then 
+    ERR "GENL" "variable occurs free in hypotheses"
+  else
+    make_thm 
+      Count.Gen(tag th, asl, 
+                list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"})) 
+                               (vs,c))
+    handle HOL_ERR _ => ERR "GENL" ""
+end
+
+
 
 (*---------------------------------------------------------------------------
  * Existential introduction

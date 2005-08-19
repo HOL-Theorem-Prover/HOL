@@ -355,9 +355,6 @@ fun EQT_ELIM th =
 fun SPECL tml th =
   rev_itlist SPEC tml th handle HOL_ERR _ => raise ERR"SPECL" "";
 
-val GENL = itlist GEN;
-
-
 (*---------------------------------------------------------------------------
  * SELECT introduction
  *

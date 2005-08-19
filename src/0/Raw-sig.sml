@@ -194,6 +194,7 @@ sig
   val INST          : (term,term)Lib.subst -> thm -> thm
   val SPEC          : term -> thm -> thm
   val GEN           : term -> thm -> thm
+  val GENL          : term list -> thm -> thm
   val EXISTS        : term * term -> thm -> thm
   val CHOOSE        : term * thm -> thm -> thm
   val CONJ          : thm -> thm -> thm

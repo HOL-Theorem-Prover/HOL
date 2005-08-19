@@ -648,6 +648,8 @@ fun GEN x th =
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
+val GENL = itlist GEN
+
 
 (*---------------------------------------------------------------------------
  * Existential introduction

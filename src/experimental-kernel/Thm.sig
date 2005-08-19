@@ -60,6 +60,7 @@ sig
 
   val SPEC          : term -> thm -> thm
   val GEN           : term -> thm -> thm
+  val GENL          : term list -> thm -> thm
 
 
   (* Existential quantification *)
