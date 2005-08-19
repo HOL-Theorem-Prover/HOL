@@ -81,14 +81,16 @@ C. Enter the "tools" directory and type
 
      val holdir = "a full pathname to my holdir"
 
-   for example. All three parameters must be given as ML strings.
+   for example. The OS, holdir and mosmldir parameters must be given
+   as ML strings, while dynlib_available must be an ML boolean (either
+   true or false).
 
-   The valid values for OS are "linux", "unix", "solaris" and "winNT".
-   If you are on a unix operating system that is not Linux or Solaris,
-   it is OK to just put "unix"; however, this will imply that the
-   robdd library will not be usable (it currently only builds on linux
-   and solaris).  "winNT" stands in for all versions of "Windows NT",
-   "Windows 2000", and (we believe) "Windows XP".
+   The valid values for OS are "linux", "unix", "solaris", "macosx"
+   and "winNT".  If you are on a unix operating system that is not
+   Linux or Solaris, it is OK to just put "unix"; however, this will
+   imply that the robdd library will not be usable (it currently only
+   builds on linux and solaris).  "winNT" stands in for all versions
+   of "Windows NT", "Windows 2000", and (we believe) "Windows XP".
 
    It's possible that in order to get the muddy library to build, you
    will need to change the binding for GNUMAKE, which is made in the

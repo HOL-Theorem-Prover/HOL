@@ -165,7 +165,8 @@ in
    "val MOSMLDIR =" --> ("val MOSMLDIR = "^quote mosmldir^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
-   "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n")];
+   "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"), 
+   "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available)];
   use destfile
 end;
 

@@ -1,5 +1,6 @@
 quietdec := true;
-app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int"] ;
+app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int", 
+          "Bool"] ;
 open Mosml;
 
 (* utility functions *)
@@ -113,6 +114,11 @@ in
         print "please run me from the root HOL directory\n";
         Process.exit Process.failure)
 end;
+
+determining "dynlib_available";
+
+val dynlib_available = (load "Dynlib"; true) handle _ => false;
+
 print "\n";
 
 val _ = let
@@ -126,13 +132,14 @@ end;
 
 
 fun verdict (prompt, value) =
-    (print (StringCvt.padRight #" " 10 (prompt^":"));
-     print value;
+    (print (StringCvt.padRight #" " 20 (prompt^":"));
+     print value; 
      print "\n");
 
 verdict ("OS", OS);
 verdict ("mosmldir", mosmldir);
 verdict ("holdir", holdir);
+verdict ("dynlib_available", Bool.toString dynlib_available);
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";

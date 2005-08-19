@@ -101,9 +101,10 @@ Enter `quit();' to quit.
 HOL smart configuration.
 
 Determining configuration parameters: OS mosmldir holdir
-OS:       linux
-mosmldir: /home/mn200/mosml
-holdir:   /home/mn200/hol
+OS:                 linux
+mosmldir:           /home/mn200/mosml
+holdir:             /home/mn200/hol
+dynlib_available:   true
 
 Configuration will begin with above values.  If they are wrong
 press Control-C.
@@ -140,17 +141,20 @@ $
 \label{sec:editting-configure}
 
 If \texttt{smart-configure} is unable to guess correct values for the
-three parameters, \texttt{mosmldir}, \texttt{holdir} and \texttt{OS},
-then you will need to create a file called \texttt{config-override} in
-the root directory of the HOL distribution.  In this file, specify the
-correct value for the appropriate parameter by providing an ML binding
-for it.  Each of the three variables must be given a string as a
-possible value.  So, one might write
+four parameters, \texttt{mosmldir}, \texttt{holdir}. \texttt{OS} and
+\texttt{dynlib\_available} then you will need to create a file called
+\texttt{config-override} in the root directory of the HOL
+distribution.  In this file, specify the correct value for the
+appropriate parameter by providing an ML binding for it.  Each of the
+first three variables must be given a string as a possible value,
+while \texttt{dynlib\_available} must be either \texttt{true} or
+\texttt{false}.  So, one might write
 
 \begin{session}
 \begin{verbatim}
 val OS = "unix";
 val holdir = "/local/scratch/myholdir";
+val dynlib_available = false;
 \end{verbatim}
 \end{session}
 

@@ -42,6 +42,7 @@ val HOLDIR = Systeml.HOLDIR
 val EXECUTABLE = Systeml.xable_string (fullPath [HOLDIR, "bin", "build"])
 val DEPDIR = Systeml.DEPDIR
 val GNUMAKE = Systeml.GNUMAKE
+val DYNLIB = Systeml.DYNLIB
 
 (* ----------------------------------------------------------------------
     Analysing the command-line
@@ -291,6 +292,10 @@ in
                               " temporal Lib has NOT been built!! ",
                               "(continuing anyway).\n\n"])
                    else ()
+  | "HolCheck" => if not DYNLIB then 
+                    warn "*** Not building HolCheck as Dynlib, and hence \
+                         \HolBddLib, not available\n"
+                  else Holmake dir
   | _ => Holmake dir
 end
 handle OS.SysErr(s, erropt) =>

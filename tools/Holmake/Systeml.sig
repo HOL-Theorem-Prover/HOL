@@ -18,6 +18,7 @@ sig
   val OS : string
   val DEPDIR : string
   val GNUMAKE : string
+  val DYNLIB : bool
 
   val isUnix : bool
 
