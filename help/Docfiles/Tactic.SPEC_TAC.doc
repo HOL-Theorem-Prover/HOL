@@ -27,5 +27,5 @@ Removing unnecessary speciality in a goal, particularly as a prelude to
 an inductive proof.
 
 \SEEALSO
-Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.STRIP_TAC.
+Thm.GEN, Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.STRIP_TAC.
 \ENDDOC

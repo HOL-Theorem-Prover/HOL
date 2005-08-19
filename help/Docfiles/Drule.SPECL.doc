@@ -39,5 +39,5 @@ The following is a specialization of a theorem from theory {arithmetic}.
 
 
 \SEEALSO
-Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPEC_ALL, Tactic.SPEC_TAC.
+Thm.GEN, Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPEC_ALL, Tactic.SPEC_TAC.
 \ENDDOC

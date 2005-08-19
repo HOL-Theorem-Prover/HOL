@@ -32,5 +32,5 @@ Never fails.
 
 
 \SEEALSO
-Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Tactic.SPEC_TAC.
+Thm.GEN, Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Tactic.SPEC_TAC.
 \ENDDOC

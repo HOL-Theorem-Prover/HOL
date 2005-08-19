@@ -28,5 +28,5 @@ Never fails.
 theorems while avoiding using any variables that may be present elsewhere.
 
 \SEEALSO
-Thm.GEN, Drule.GENL, Term.genvar, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
+Thm.GEN, Thm.GENL, Term.genvar, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
 \ENDDOC

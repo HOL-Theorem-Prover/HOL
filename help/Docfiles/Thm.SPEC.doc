@@ -42,5 +42,5 @@ clearly invalid theorem {|- ~y ==> (!y. y ==> ~y)}.
 
 
 \SEEALSO
-Drule.ISPEC, Drule.SPECL, Drule.SPEC_ALL, Drule.SPEC_VAR, Thm.GEN, Drule.GENL, Drule.GEN_ALL.
+Drule.ISPEC, Drule.SPECL, Drule.SPEC_ALL, Drule.SPEC_VAR, Thm.GEN, Thm.GENL, Drule.GEN_ALL.
 \ENDDOC

@@ -28,5 +28,5 @@ or if {x} and {u} have different types.
 {Specialize} behaves identically to {SPEC}, but is faster.
 
 \SEEALSO
-Thm.SPEC, Drule.ISPEC, Drule.SPECL, Drule.SPEC_ALL, Drule.SPEC_VAR, Thm.GEN, Drule.GENL, Drule.GEN_ALL.
+Thm.SPEC, Drule.ISPEC, Drule.SPECL, Drule.SPEC_ALL, Drule.SPEC_VAR, Thm.GEN, Thm.GENL, Drule.GEN_ALL.
 \ENDDOC

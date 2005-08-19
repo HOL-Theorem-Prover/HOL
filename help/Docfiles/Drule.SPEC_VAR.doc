@@ -27,5 +27,5 @@ This rule is very similar to plain {SPEC}, except that it returns the
 variant chosen, which may be useful information under some circumstances.
 
 \SEEALSO
-Thm.GEN, Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL.
+Thm.GEN, Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL.
 \ENDDOC

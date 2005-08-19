@@ -24,5 +24,5 @@ variable of the appropriate type. It also fails if the variable given is free
 in either the assumptions or (initial) conclusion of the goal.
 
 \SEEALSO
-Tactic.FILTER_GEN_TAC, Thm.GEN, Drule.GENL, Drule.GEN_ALL, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC, Tactic.STRIP_TAC.
+Tactic.FILTER_GEN_TAC, Thm.GEN, Thm.GENL, Drule.GEN_ALL, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC, Tactic.STRIP_TAC.
 \ENDDOC

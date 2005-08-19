@@ -42,5 +42,5 @@ the derivation of the theorem {x=T |- !x. x=T}, which is clearly invalid.
 
 
 \SEEALSO
-Drule.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
+Thm.GENL, Drule.GEN_ALL, Tactic.GEN_TAC, Thm.SPEC, Drule.SPECL, Drule.SPEC_ALL, Tactic.SPEC_TAC.
 \ENDDOC
