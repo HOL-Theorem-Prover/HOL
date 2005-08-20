@@ -528,11 +528,11 @@ fun time f x =
 fun with_flag (flag,b) f x =
   let val fval = !flag
       val () = flag := b
-      val res = f x handle e => (flag := fval;
-                                 case e of Interrupt => raise e
-                                         | _ => Feedback.Raise e)
-   in flag := fval; res
-   end;
+      val res = f x handle e => (flag := fval; raise e)
+  in 
+    flag := fval; 
+    res
+  end;
 
 
 (*---------------------------------------------------------------------------*
