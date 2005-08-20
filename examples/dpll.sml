@@ -1,4 +1,5 @@
 (* Code to accompany Proof Tools chapter of the Manual *)
+(* Ultimate entry-point is DPLL_TAUT *)
 open HolKernel Parse boolLib
 
 datatype result = Unsat of thm | Sat of term -> term
@@ -103,7 +104,7 @@ end
    end
 val NEG_EQ_F = prove(``(~p = F) = p``, REWRITE_TAC []);
 val toCNF = defCNF.DEF_CNF_VECTOR_CONV
-fun wrapper t = let
+fun DPLL_UNIV t = let
   val (vs, phi) = strip_forall t
   val cnf_eqn = toCNF (mk_neg phi)
   val phi' = rhs (concl cnf_eqn)
@@ -124,6 +125,40 @@ in
       CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH t (spec t_assumed))
     end
 end
+
+fun dest_bool_eq t = let 
+  val (l,r) = dest_eq t
+  val _ = type_of l = bool orelse 
+          raise mk_HOL_ERR "dpll" "dest_bool_eq" "Eq not on bools"
+in
+  (l,r)
+end
+fun var_leaves acc t = let 
+  val (l,r) = dest_conj t handle HOL_ERR _ => 
+              dest_disj t handle HOL_ERR _ => 
+              dest_imp t handle HOL_ERR _ => 
+              dest_bool_eq t 
+in
+  var_leaves (var_leaves acc l) r 
+end handle HOL_ERR _ => 
+           if type_of t <> bool then 
+             raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
+           else if t = boolSyntax.T then acc
+           else if t = boolSyntax.F then acc
+           else HOLset.add(acc, t)
+
+fun DPLL_TAUT tm =
+    let val (univs,tm') = strip_forall tm
+        val insts = HOLset.listItems (var_leaves empty_tmset tm')
+        val vars = map (fn t => genvar bool) insts
+        val theta = map2 (curry (op |->)) insts vars
+        val tm'' = list_mk_forall (vars,subst theta tm')
+    in 
+      EQT_INTRO (GENL univs 
+                      (SPECL insts (EQT_ELIM (DPLL_UNIV tm''))))
+    end
+      
+
 
 (* implementation of DPLL ends *)
 
@@ -200,6 +235,6 @@ end
 val example = gen_all (mk_adder_test 4 3)
 
 (* test them here:
-time wrapper example;
+time DPLL_UNIV example;
 time tautLib.TAUT_PROVE example;
 *)
