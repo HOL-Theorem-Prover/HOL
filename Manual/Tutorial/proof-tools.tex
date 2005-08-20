@@ -228,10 +228,12 @@ calling \ml{DISCH} and then rewriting with the built-in theorem
 \[
 \vdash \forall t.\;t \Rightarrow \holtxt{F} = (t = \holtxt{F})
 \]
-Putting all of the above together, we can write our wrapper function:
+Putting all of the above together, we can write our wrapper function,
+which we will call \ml{DPLL\_UNIV}, with the \ml{UNIV} suffix
+reminding us that the input must be universally quantified.
 \begin{hol}
 \begin{verbatim}
-   fun wrapper t = let
+   fun DPLL_UNIV t = let
      val (vs, phi) = strip_forall t
      val cnf_eqn = toCNF (mk_neg phi)
      val phi' = rhs (concl cnf_eqn)
@@ -264,7 +266,7 @@ universal variables have been specialised.  Then the resulting formula
 can be rewritten to false (\ml{REWRITE\_RULE}'s built-in rewrites will
 handle all of the necessary cases).
 
-The \ml{wrapper} function also uses \ml{REWR\_CONV} in two places.
+The \ml{DPLL\_UNIV} function also uses \ml{REWR\_CONV} in two places.
 The \ml{REWR\_CONV} function applies a single (first-order) rewrite at
 the top of a term.  These uses of \ml{REWR\_CONV} are done within
 calls to the \ml{CONV\_RULE} function.  This lifts a conversion $c$ (a
@@ -655,7 +657,7 @@ do with the \ml{foldl} function:
 \label{sec:dpll-performance}
 
 Once inputs get even a little beyond the clearly trivial, the function
-we have written (at the top-level, \ml{wrapper}) performs considerably
+we have written (at the top-level, \ml{DPLL\_UNIV}) performs considerably
 better than the truth table implementation.  For example, the
 generalisation of the following term, with 29 variables, takes
 \ml{wrapper} two and a half minutes to demonstrate as a tautology:
@@ -689,7 +691,113 @@ to prove the tautology.
 \section{Extending our Procedure's Applicability}
 \label{sec:dpll-applicability-extension}
 
+The function \ml{DPLL\_UNIV} requires its input to be universally
+quantified, with all free variables bound, and for each literal to be
+a variable or the negation of a variable.  This makes \ml{DPLL\_UNIV}
+a little unfriendly when it comes to using it as part of the proof of
+a goal.  In this section, we will write one further ``wrapper''
+layer to wrap around \ml{DPLL\_UNIV}, producing a tool that can be
+applied to many more goal.  
 
+\paragraph{Relaxing the Quantification Requirement}  The first step is
+to allow formulas that are not closed.  In order to hand on a formula
+that \emph{is} closed to \ml{DPLL\_UNIV}, we can simply generalise
+over the formula's free variables.   If \ml{DPLL\_UNIV} then says that
+the new, ground formula is true, then so too will be the original.  On
+the other hand, if \ml{DPLL\_UNIV} says that the ground formula is
+false, then we can't conclude anything further and will have to raise
+an exception.
+
+Code implementing this is shown below:
+\begin{hol}
+\begin{verbatim}
+   fun nonuniv_wrap t = let 
+     val fvs = free_vars t
+     val gen_t = list_mk_forall(fvs, t)
+     val gen_t_eq = DPLL_UNIV gen_t
+   in
+     if rhs (concl gen_t_eq) = boolSyntax.T then let 
+         val gen_th = EQT_ELIM gen_t_eq
+       in
+         EQT_INTRO (SPECL fvs gen_th)
+       end
+     else
+       raise mk_HOL_ERR "dpll" "nonuniv_wrap" "No conclusion"
+   end
+\end{verbatim}
+\end{hol}
+
+\paragraph{Allowing Non-Literal Leaves}
+We can do better than \ml{nonuniv\_wrap}: rather than quantifying over
+just the free variables (which we have conveniently assumed will only
+be boolean), we can turn any leaf part of the term that is not a
+variable or a negated variable into a fresh variable.  We first
+extract those boolean-valued leaves that are not the constants true or
+false. 
+\begin{hol}
+\begin{verbatim}
+   fun var_leaves acc t = let 
+     val (l,r) = dest_conj t handle HOL_ERR _ => 
+                 dest_disj t handle HOL_ERR _ => 
+                 dest_imp t handle HOL_ERR _ => 
+                 dest_bool_eq t 
+   in
+     var_leaves (var_leaves acc l) r 
+   end handle HOL_ERR _ => 
+     if type_of t <> bool then 
+       raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
+     else if t = boolSyntax.T then acc
+     else if t = boolSyntax.F then acc
+     else HOLset.add(acc, t)
+\end{verbatim}
+\end{hol}
+Note that we haven't explicitly attempted to pull apart boolean
+negations (which one might do with \ml{dest\_neg}).  This is because
+\ml{dest\_imp} also destructs terms \holtxt{\~{}p}, returning
+\holtxt{p} and \holtxt{F} as the antecedent and conclusion.  We have
+also used a function \ml{dest\_bool\_eq} designed to pull apart only
+those equalities which are over boolean values.  Its definition is
+\begin{hol}
+\begin{verbatim}
+   fun dest_bool_eq t = let 
+     val (l,r) = dest_eq t
+     val _ = type_of l = bool orelse 
+             raise mk_HOL_ERR "dpll" "dest_bool_eq" "Eq not on bools"
+   in
+     (l,r)
+   end
+\end{verbatim}
+\end{hol}
+
+Now we can finally write our final \ml{DPLL\_TAUT} function:
+\begin{hol}
+\begin{verbatim}
+   fun DPLL_TAUT tm =
+     let val (univs,tm') = strip_forall tm
+         val insts = HOLset.listItems (var_leaves empty_tmset tm')
+         val vars = map (fn t => genvar bool) insts
+         val theta = map2 (curry (op |->)) insts vars
+         val tm'' = list_mk_forall (vars,subst theta tm')
+     in 
+         EQT_INTRO (GENL univs 
+                      (SPECL insts (EQT_ELIM (DPLL_UNIV tm''))))
+     end
+\end{verbatim}
+\end{hol}
+Note how this code first pulls off all external universal
+quantifications (with \ml{strip\_forall}), and then re-generalises
+(with \ml{list\_mk\_forall}).  The calls to \ml{GENL} and \ml{SPECL}
+undo these manipulations, but at the level of theorems.  This produces
+a theorem equating the original input to true.  (If the input term is
+not an instance of a valid propositional formula, the call to
+\ml{EQT\_ELIM} will raise an exception.)
+
+\section*{Exercises}
+
+\begin{enumerate}
+\item Extend the procedure so that it handles conditional expressions
+  (both arms of the terms must be of boolean type).
+\end{enumerate}
 
 
 %%% Local Variables:
