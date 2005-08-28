@@ -184,19 +184,15 @@ val rawfinite_support = prove(
                                    is_perm_sing_inv, th]) THEN
     Q.UNABBREV_ALL_TAC THEN
     `support (fnpm cpmpm apm) (fn t) (A UNION allatoms t)`
-       by (SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def] THEN
+       by (SIMP_TAC (srw_ss()) [support_def, FUN_EQ_THM] THEN
            MAP_EVERY Q.X_GEN_TAC [`c`, `d`] THEN REPEAT STRIP_TAC THEN
-           `!x. apm [(c,d)] (fn t x) =
-                fnpm cpmpm apm [(c,d)] (fn t) (cpmpm [(c,d)] x)`
-             by SRW_TAC [][fnpm_def, is_perm_sing_inv] THEN
-           SRW_TAC [][is_perm_sing_inv] THEN
            `fnpm cpmpm apm [(c,d)] (fn t) =
             fnpm ptpm (fnpm cpmpm apm) [(c,d)] fn (ptpm [(c,d)] t)`
              by SRW_TAC [][fnpm_def] THEN
            `ptpm [(c,d)] t = t`
              by PROVE_TAC [allatoms_supports, support_def] THEN
            SRW_TAC [][] THEN
-           NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN SRW_TAC [][fnpm_def]) THEN
+           NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN SRW_TAC [][fnpm_def]) THEN
     Q.ABBREV_TAC `bigA = A UNION allatoms t UNION patoms pi` THEN
     `support (fnpm perm_of (fnpm apm apm)) lamf bigA /\
      support (fnpm cpmpm apm) (fn t) bigA /\
