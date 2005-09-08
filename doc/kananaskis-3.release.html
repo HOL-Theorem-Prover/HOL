@@ -12,14 +12,150 @@ html1/DTD/xhtml1-strict.dtd">
 
 <h2 id="contents">Contents</h2>
 <ul>
-  <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
   <li> <a href="#new-features">New features</a> </li>
+  <li> <a href="#bugs-fixed">Bugs fixed</a> </li>
   <li> <a href="#new-theories">New theories</a> </li>
   <li> <a href="#new-tools">New tools</a> </li>
   <li> <a href="#new-examples">New examples</a> </li>
   <li> <a href="#incompatibilities">Incompatibilities</a> </li>
 </ul>
 
+
+
+<h2 id="new-features">New features:</h2>
+
+<ul>
+<li> <p> Configuration and installation of the system is easier.
+    Instead of having to edit <code>configure.sml</code> yourself,
+    just pipe <code>tools/smart-configure</code> into
+    <code>mosml</code> as the first step of installation (before
+    build):</p>
+<pre>
+         mosml &lt; tools/smart-configure.sml
+</pre></li>
+
+<li> <p> The term and type parsers now report errors with an indication as
+    to where in the parse they have occurred.  If the error is found
+    during a run of Holmake, the location includes the line number in
+    the file where the error is.  Pragma comments of the form
+    <code>(*#loc&nbsp;100&nbsp;5*)</code> allow the line and column
+    numbers to be overridden, &agrave; la C&rsquo;s <code>#line</code>
+    directive.  (Many thanks to Keith Wansbrough for the
+    implementation of this feature.)  The lexer is also much faster
+    than it used to be.</p></li>
+
+<li> <p> The system better distinguishes interactive and non-interactive
+    use (the latter occurs with building things with Holmake).
+    Diagnostic output is now rather different in non-interactive mode.
+    Holmake comes with a new <code>-i</code> or
+    <code>--interactive</code> flag to flip the underlying flag back
+    to interactive, if you want to see "interactive mode" output.</p></li>
+
+<li> <p> Holmake now supports the use of user-specified variables, in a
+    manner analogous to that done by traditional make implementations.
+    For example, one can define a variable <code>OBJS</code>,</p>
+
+<pre>
+         OBJS = foo bar baz
+</pre>
+
+    <p>and then refer to this variable elsewhere by writing
+    <code>$(OBJS)</code> Holmake also provides some functions like
+    those in GNU make for manipulating text (performing pattern-based
+    substitutions, for example).  See the DESCRIPTION for more
+    details. </p></li>
+
+<li> <p> Performance when defining large record types (where the number of
+    fields is greater than a user-adjustable reference variable), is
+    now much improved.  Part of this change was to remove update
+    functions as separate constants (they are now encoded using
+    functional update functions), though the concrete syntax remains.
+    See the DESCRIPTION for more details.</p></li>
+
+<li> <p>In addition to the traditional $-prefix for making identifiers
+    ignore their status as special forms in the grammar, HOL now
+    supports the Caml method of enclosing identifiers in parentheses.
+    Thus, instead of</p>
+<pre>
+         $/\ p
+</pre>
+    one can also write
+<pre>
+         (/\) p
+</pre>
+
+<p>    By default, the pretty-printer continues to print using the old
+    $-syntax.  This can be changed by setting the trace variable
+    <code>"pp_dollar_escapes"</code>.</p></li>
+
+
+
+<li> <p> Pretty-printing of &ldquo;list forms&rdquo; (e.g., lists,
+    sets and bags) is now under more user-control.  See the REFERENCE
+    (or online help) for <code>add_listform</code>, whose type has
+    changed, for more detail on this.  (Thanks to Lockwood Morris for
+    this feature suggestion.)</p></li>
+
+<li> <p>There are two new simpset fragments in realSimps.
+    <code>REAL_REDUCE_ss</code>
+    performs calculations over ground rational values.  Thus,</p>
+<pre>
+         SIMP_CONV (std_ss ++ REAL_REDUCE_ss) [] ``1/3 - 3/7``
+</pre>
+    returns
+<pre>
+         &gt; val it = |- 1 / 3 - 3 / 7 = ~2 / 21 : thm
+</pre>
+
+    <p>When <code>realSimps</code> is loaded, <code>REAL_REDUCE_ss</code>
+    is automatically added to the stateful-rewriting simpset, and
+    <code>bossLib</code>&rsquo;s <code>EVAL</code> is also augmented
+    with this functionality.  This code also removes common factors
+    from fractions even when there are no other arithmetic operations
+    being performed.</p>
+
+    <p> The second simpset fragment in <code>realSimps</code> is
+    <code>REAL_ARITH_ss</code>, which embodies the
+    <code>RealArith</code> decision procedure for universal Presburger
+    arithmetic over the real numbers.</p></li>
+
+<li> <p>The simplifier now provides simpler interfaces for the addition of
+    AC-rewriting and congruence rules.  They can be added as if normal
+    rewrites with the functions <code>simpLib.AC</code> and
+    <code>simpLib.Cong</code>.  Thus,</p>
+<pre>
+         - SIMP_CONV bool_ss [AC ADD_COMM ADD_ASSOC] ``3 + x + y + 1``;
+         &gt; val it = |- 3 + x + y + 1 = x + (y + (1 + 3)) : thm
+</pre>
+    <p><code>Cong</code> is used similarly.  Both functions are further
+    described in the REFERENCE.</p></li>
+
+<li> <p> Holmake now supports a new command-line option
+    <code>--logging</code>, which tells it to record running times for
+    the building of theories.  These times are stored in a file in the
+    current directory.  See the DESCRIPTION for more
+    details. </p></li>
+
+<li> <p> Support for abbreviations in goals, via tactics such as
+    <code>Q.ABBREV_TAC</code>, is now a deal richer.  Abbbreviations
+    are now specially marked as such in a goal&rsquo;s assumptions,
+    protecting them against being removed by tactics such as
+    <code>RW_TAC</code> or <code>SRW_TAC</code>.  There are also new
+    tactics for establishing abbreviations, such as
+    <code>MATCH_ABBREV_TAC</code> and <code>PAT_ABBREV_TAC</code>.
+    For more on these and other new tactics, see the REFERENCE (or the
+    online help). </p>
+
+    <p> To support old code, the old implementations of these tactics
+    are available in a structure <code>OldAbbrevTactics</code>.  Thus,
+    it is possible to restore a file to its old behaviour by
+    including: </p>
+<pre>
+         structure Q = struct open Q open OldAbbrevTactics end;
+</pre>
+    <p> at the top of an affected file. </p> </li>
+
+</ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
 
@@ -113,137 +249,6 @@ html1/DTD/xhtml1-strict.dtd">
 
 </ul>
 
-<h2 id="new-features">New features:</h2>
-
-<ul>
-<li> <p> The term and type parsers now report errors with an indication as
-    to where in the parse they have occurred.  If the error is found
-    during a run of Holmake, the location includes the line number in
-    the file where the error is.  Pragma comments of the form
-    <code>(*#loc&nbsp;100&nbsp;5*)</code> allow the line and column
-    numbers to be overridden, &agrave; la C&rsquo;s <code>#line</code>
-    directive.  (Many thanks to Keith Wansbrough for the
-    implementation of this feature.)  The lexer is also much faster
-    than it used to be.</p></li>
-
-<li> <p> The system better distinguishes interactive and non-interactive
-    use (the latter occurs with building things with Holmake).
-    Diagnostic output is now rather different in non-interactive mode.
-    Holmake comes with a new <code>-i</code> or
-    <code>--interactive</code> flag to flip the underlying flag back
-    to interactive, if you want to see "interactive mode" output.</p></li>
-
-<li> <p> Holmake now supports the use of user-specified variables, in a
-    manner analogous to that done by traditional make implementations.
-    For example, one can define a variable <code>OBJS</code>,</p>
-
-<pre>
-         OBJS = foo bar baz
-</pre>
-
-    <p>and then refer to this variable elsewhere by writing
-    <code>$(OBJS)</code> Holmake also provides some functions like
-    those in GNU make for manipulating text (performing pattern-based
-    substitutions, for example).  See the DESCRIPTION for more
-    details. </p></li>
-
-<li> <p> Performance when defining large record types (where the number of
-    fields is greater than a user-adjustable reference variable), is
-    now much improved.  Part of this change was to remove update
-    functions as separate constants (they are now encoded using
-    functional update functions), though the concrete syntax remains.
-    See the DESCRIPTION for more details.</p></li>
-
-<li> <p>In addition to the traditional $-prefix for making identifiers
-    ignore their status as special forms in the grammar, HOL now
-    supports the Caml method of enclosing identifiers in parentheses.
-    Thus, instead of</p>
-<pre>
-         $/\ p
-</pre>
-    one can also write
-<pre>
-         (/\) p
-</pre>
-
-<p>    By default, the pretty-printer continues to print using the old
-    $-syntax.  This can be changed by setting the trace variable
-    <code>"pp_dollar_escapes"</code>.</p></li>
-
-<li> <p> Configuration of the system is easier.  Instead of having to edit
-    configure.sml yourself, just pipe
-    <code>tools/smart-configure</code> into <code>mosml</code> as the
-    first step of installation (before build):</p>
-<pre>
-         mosml &lt; tools/smart-configure.sml
-</pre></li>
-
-<li> <p> Pretty-printing of &ldquo;list forms&rdquo; (e.g., lists,
-    sets and bags) is now under more user-control.  See the REFERENCE
-    (or online help) for <code>add_listform</code>, whose type has
-    changed, for more detail on this.  (Thanks to Lockwood Morris for
-    this feature suggestion.)</p></li>
-
-<li> <p>There are two new simpset fragments in realSimps.
-    <code>REAL_REDUCE_ss</code>
-    performs calculations over ground rational values.  Thus,</p>
-<pre>
-         SIMP_CONV (std_ss ++ REAL_REDUCE_ss) [] ``1/3 - 3/7``
-</pre>
-    returns
-<pre>
-         &gt; val it = |- 1 / 3 - 3 / 7 = ~2 / 21 : thm
-</pre>
-
-    <p>When <code>realSimps</code> is loaded, <code>REAL_REDUCE_ss</code>
-    is automatically added to the stateful-rewriting simpset, and
-    <code>bossLib</code>&rsquo;s <code>EVAL</code> is also augmented
-    with this functionality.  This code also removes common factors
-    from fractions even when there are no other arithmetic operations
-    being performed.</p>
-
-    <p> The second simpset fragment in <code>realSimps</code> is
-    <code>REAL_ARITH_ss</code>, which embodies the
-    <code>RealArith</code> decision procedure for universal Presburger
-    arithmetic over the real numbers.</p></li>
-
-<li> <p>The simplifier now provides simpler interfaces for the addition of
-    AC-rewriting and congruence rules.  They can be added as if normal
-    rewrites with the functions <code>simpLib.AC</code> and
-    <code>simpLib.Cong</code>.  Thus,</p>
-<pre>
-         - SIMP_CONV bool_ss [AC ADD_COMM ADD_ASSOC] ``3 + x + y + 1``;
-         &gt; val it = |- 3 + x + y + 1 = x + (y + (1 + 3)) : thm
-</pre>
-    <p><code>Cong</code> is used similarly.  Both functions are further
-    described in the REFERENCE.</p></li>
-
-<li> <p> Holmake now supports a new command-line option
-    <code>--logging</code>, which tells it to record running times for
-    the building of theories.  These times are stored in a file in the
-    current directory.  See the DESCRIPTION for more
-    details. </p></li>
-
-<li> <p> Support for abbreviations in goals, via tactics such as
-    <code>Q.ABBREV_TAC</code>, is now a deal richer.  Abbbreviations
-    are now specially marked as such in a goal&rsquo;s assumptions,
-    protecting them against being removed by tactics such as
-    <code>RW_TAC</code> or <code>SRW_TAC</code>.  There are also new
-    tactics for establishing abbreviations, such as
-    <code>MATCH_ABBREV_TAC</code> and <code>PAT_ABBREV_TAC</code>.
-    For more on these and other new tactics, see the REFERENCE (or the
-    online help). </p>
-
-    <p> To support old code, the old implementations of these tactics
-    are available in a structure <code>OldAbbrevTactics</code>.  Thus,
-    it is possible to restore a file to its old behaviour by
-    including: </p>
-<pre>
-         structure Q = struct open Q open OldAbbrevTactics end;
-</pre>
-    <p> at the top of an affected file. </p> </li>
-
-</ul>
 
 <h2 id="new-theories">New theories:</h2>
 <ul>
