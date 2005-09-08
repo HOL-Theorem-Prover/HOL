@@ -16,6 +16,7 @@ a term that conforms to the following grammar:
 {
    <input-format> ::= <clause> /\ <input-format> | <clause>
    <clause>       ::= (!x1 .. xn. <hypothesis> ==> <conclusion>)
+                   |  (!x1 .. xn. <conclusion>)
    <conclusion>   ::= <con> sv1 sv2 ....
    <hypothesis>   ::= any term
    <con>          ::= a new relation constant
@@ -114,7 +115,7 @@ inductive characterisation, not {RTC} itself.
 
 \COMMENTS
 Being a definition principle, the {Hol_reln} function takes a
-quotation rather than a term. The structure {IndDefRules} provides functions 
+quotation rather than a term. The structure {IndDefRules} provides functions
 for applying the results of an invocation of {Hol_reln}.
 
 \SEEALSO

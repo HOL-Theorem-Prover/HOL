@@ -14,6 +14,7 @@ recursive, nested recursive, and involve records.  The syntax
 of declarations that \verb+Hol_datatype+ accepts is found in Table
 \ref{datatype}.
 
+\newcommand{\bk}{\char'134}
 \newcommand{\ident}      {\mbox{\it ident}}
 \newcommand{\clause}      {\mbox{\it clause}}
 \newcommand{\type}       {\mbox{\it hol\_type}}
@@ -955,6 +956,66 @@ equations and the induction theorem.
 \end{session}
 
 \section{Defining Inductive Relations}
+
+Inductive definitions are made with the function \ml{Hol\_reln}, found
+in the \ml{bossLib} structure.  The \ml{Hol\_reln} function takes a
+term quotation as input and attempts to define the relations there
+specified.  The input term quotation must parse to a term that
+conforms to the following grammar:
+\newcommand{\nonterm}[1]{\ensuremath{\langle\mathit{#1}\rangle}}
+\begin{eqnarray*}
+   \nonterm{inputFormat} &::=& \nonterm{clause} \;\holtxt{/\bk}\; \nonterm{inputFormat} \;\;|\;\; \nonterm{clause}\\
+   \nonterm{clause}       &::=& (\holtxt{!}x_1 \dots
+   x_n. \;\;\nonterm{hypothesis} \;\holtxt{==>}
+   \;\nonterm{conclusion})\\
+   &|& (\holtxt{!}x_1\dots x_n.\;\;\nonterm{conclusion})\\
+   \nonterm{conclusion}   &::=& \nonterm{con} \;\mathit{sv_1}\; \mathit{sv_2} \dots\\
+   \nonterm{hypothesis}   &::=& \mbox{any term}\\
+   \nonterm{con}          &::=& \mbox{a new relation constant}
+\end{eqnarray*}
+The (optional) $\mathit{sv}_i$ terms that appear after a constant name are
+so-called ``schematic variables''.  The same variables must always
+follow the same constant name throughout the definition.  These
+variables and the names of the constants-to-be must not be quantified
+over in each {\nonterm{clause}}.  Otherwise, a {\nonterm{clause}} must
+not include any free variables.  (The universal quantifiers at the
+head of the clause can be used to bind free variables, but it is also
+permissible to use existential quantification in the hypotheses.  If a
+clause has no free variables, it is permissible to have no universal
+quantification.)
+
+The \ml{Hol\_reln} function may be used to define multiple relations.
+These may or may not be mutually recursive.  The clauses for each
+relation need not be contiguous.
+
+The function returns three theorems.  Each is also saved in the
+current theory segment.  The first is a conjunction of implications
+that will be the same as the input term quotation.  This theorem is
+saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
+first relation defined by the function.  The second is the induction
+principle for the relations, saved under the name \ml{<stem>\_ind}.  The
+third is the cases theorem for the relations, saved under the name
+\ml{<stem>\_cases}.  The cases theorem is of the form
+\begin{verbatim}
+   (!a0 .. an.  R1 a0 .. an = <R1's first rule possibility> \/
+                              <R1's second rule possibility> \/ ...)
+                   /\
+   (!a0 .. am.  R2 a0 .. am = <R2's first rule possibility> \/
+                              <R2's second rule possibility> \/ ...)
+                   /\
+   ...
+\end{verbatim}
+
+So called ``strong'' versions of induction principles (where instances
+of relation being defined appear as extra hypotheses), can be
+automatically proved with a call to the function \[
+\ml{IndDefRules.derive\_strong\_induction : thm list * thm -> thm}
+\]
+The first argument is the list of rules (use the \ml{CONJUNCTS}
+function to turn the \ml{<stem>\_rules} theorem into such a list), and
+the second is the induction theorem.
+
+
 
 %%% Local Variables:
 %%% mode: latex
