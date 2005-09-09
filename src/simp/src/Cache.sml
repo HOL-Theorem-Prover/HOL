@@ -166,9 +166,19 @@ in
   | _ => mk_links fvs G
 end
 
-fun build_graph fvs_of tmlist =
-    List.foldl (make_links fvs_of) (Binarymap.mkDict Term.compare) tmlist
+(* Creates a graph. Each node is a term where two terms are linked
+   if each appears in a term from tmlist.  The function parameter fvs_of
+   calculates which sub-terms should be inserted into the graph.
 
+   The "idea" is that only free variables are linked, but the
+   specified fvs_of function may additionally cause other sorts of
+   sub-terms to be treated as variables. *)
+fun build_graph fvs_of
+   tmlist = List.foldl (make_links fvs_of) (Binarymap.mkDict
+   Term.compare) tmlist
+
+(* given a list of list of variables; build a map where all the variables
+   in the same list point to the same updatable reference cell *)
 val build_var_to_group_map = let
   fun foldthis (tlist, acc) = let
     val r = ref (empty_tmset, [] : thm list)
@@ -195,26 +205,28 @@ fun mk_goal t = let
 in
   mk_eq(t, if ty = bool then T else mk_arb ty)
 end
-fun consider_false_context_cache (cache:table) original_goal (ctxtlist:context list) = let
-  val cache_F = Polyhash.find cache boolSyntax.F handle NOT_FOUND => []
-  fun recurse acc ctxts =
-      case ctxts of
-        [] => possible_ctxts acc
-      | (c as (hyps, thlist))::cs => let
-          fun ok (cached, SOME _) = cached << hyps
-            | ok (cached, NONE) = hyps << cached
-        in
-          case List.find ok cache_F of
-            NONE => recurse (c::acc) cs
-          | SOME (_, NONE) => recurse acc cs
-          | SOME (_, SOME th) =>
-            (trace(1,PRODUCE(original_goal,
-                             "cache hit for contradiction", th));
-             proved_it (CCONTR (mk_goal original_goal) (EQT_ELIM th)))
-        end
-in
-  recurse [] ctxtlist
-end
+
+fun consider_false_context_cache cache original_goal (ctxtlist:context list) =
+    let
+      val cache_F = Polyhash.find cache boolSyntax.F handle NOT_FOUND => []
+      fun recurse acc ctxts =
+          case ctxts of
+            [] => possible_ctxts acc
+          | (c as (hyps, thlist))::cs => let
+              fun ok (cached, SOME _) = cached << hyps
+                | ok (cached, NONE) = hyps << cached
+            in
+              case List.find ok cache_F of
+                NONE => recurse (c::acc) cs
+              | SOME (_, NONE) => recurse acc cs
+              | SOME (_, SOME th) =>
+                (trace(1,PRODUCE(original_goal,
+                                 "cache hit for contradiction", th));
+                 proved_it (CCONTR (mk_goal original_goal) (EQT_ELIM th)))
+            end
+    in
+      recurse [] ctxtlist
+    end
 
 fun prove_false_context (conv:thm list -> conv) (cache:table) (ctxtlist:context list) original_goal = let
   fun recurse clist =
@@ -270,21 +282,39 @@ fun RCACHE (dpfvs, check, conv) = let
     | SOME (_, NONE) => raise Fail "RCACHE: Invariant failure"
     | NONE => let
         (* do connected component analysis to test for false *)
-        val ctxt_ts = map concl ctxt
+        val ctxt_ts0 = map concl ctxt
+        val (ctxt_ts,ground_ctxts) =
+            List.partition (not o null o dpfvs) ctxt_ts0
         val G = build_graph dpfvs (t::ctxt_ts)
+                (* G a map from v to v's neighbours *)
         val vs = Binarymap.foldl (fn (k,v,acc) => k::acc) [] G
         val (comps, _) = ccs G vs
+                (* a list of lists of variables *)
         val group_map = build_var_to_group_map comps
         val _ = app (build_up_ctxt group_map) ctxt
+                  (* group map is a map from variables to all the
+                     ctxts (theorems) that are in that variable's component *)
+
+        (* now extract the ctxt relevant for the goal statement *)
         val (group_map', glstmtref) =
           case dpfvs t of
             [] => (group_map, ref (empty_tmset, []))
           | (glvar::_) => Binarymap.remove(group_map, glvar)
+
+        (* and the remaining contexts, ensuring there are no
+           duplicate copies *)
         fun foldthis (k, v, acc as (setlist, seenreflist)) =
             if mem v seenreflist then acc
             else (!v::setlist, v::seenreflist)
-        val (divided_clist, _) =
+        val (divided_clist0, _) =
             Binarymap.foldl foldthis ([], [glstmtref]) group_map'
+
+        (* fold in every ground hypothesis as a separate context, entire
+           unto itself *)
+        val divided_clist =
+            divided_clist0 @
+            map (fn t => (HOLset.add(empty_tmset, t), [ASSUME t])) ground_ctxts
+
         val (glhyps, thmlist) = !glstmtref
         fun oknone (prev, NONE) = glhyps << prev
           | oknone _ = false

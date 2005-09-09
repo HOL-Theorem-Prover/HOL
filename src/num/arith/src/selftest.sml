@@ -17,4 +17,12 @@ val _ = if not (aconv (rhs (concl (SIMP_CONV arith_ss [] ``x + x + x``)))
         then die "FAILED!\n"
         else print "OK\n"
 
+val _ = print "Testing arith on ground ctxt ...              "
+val _ = let
+  val (res, vfn) = ASM_SIMP_TAC arith_ss [] ([``2 <= 0``], ``F``)
+in
+  if null res andalso concl (vfn []) = F then print "OK\n"
+  else die "FAILED!\n"
+end
+
 val _ = Process.exit Process.success

@@ -15,15 +15,15 @@
     contents
 
     The RCACHE variant of this function should be used for those
-    functions where is inappropriate to have hypotheses that don't
+    functions where it is inappropriate to have hypotheses that don't
     include the variables mentioned in the "goal term", the one that
-    is to be shown equal to some other value.  The extra, first, parameter
-    to RCACHE is a function that when applied to a term that might be
-    passed to the underlying decision procedure, returns a list of those
-    terms within it that will be treated as variables.
+    is to be shown equal to some other value.  The extra, first,
+    parameter to RCACHE is a function that when applied to a term that
+    might be passed to the underlying decision procedure, returns a
+    list of those terms within it that will be treated as variables.
 
     The relevance analysis behind RCACHE c will return a c' that
-    strips out irrelevant hypotheses when checking to see if their is
+    strips out irrelevant hypotheses when checking to see if there is
     a cached failure.  Just in case the stripped out hypotheses are
     contradictory these will be tested for this (again, in independent
     groups).
