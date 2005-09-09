@@ -34,7 +34,6 @@ MLsyntax () { simple_example MLsyntax; }
 RSA ()      { simple_example RSA; }
 ind_def ()  { simple_example ind_def; }
 lambda ()   { simple_example lambda; }
-sunrise ()  { simple_example sunrise/src; }
 arm6 ()     { simple_example arm6; }
 PSL ()      { simple_example PSL; }
 
@@ -57,10 +56,15 @@ miller () {
   cd ..
 }
 
-Rijndael () {
-  cd Rijndael
-  $holmake cleanAll
-  $holmake && ../../bin/hol.unquote < rijn
+Crypto () {
+  cd Crypto
+  for i in AES IDEA MARS RC6 TEA TWOFISH
+  do
+      cd $i
+      $holmake cleanAll
+      $holmake
+      cd ..
+  done
   cd ..
 }
 
@@ -100,7 +104,7 @@ if [ $# -eq 0 ]
 then
     echo Building all examples
     for i in toplevel MLsyntax RSA ind_def lambda bmark parity \
-             miller arm6 Rijndael PSL
+             miller arm6 Crypto PSL
     do
         buildit $i
     done
