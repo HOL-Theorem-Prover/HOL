@@ -1,4 +1,4 @@
-(* app load ["metisLib"] *)
+(* load "rich_listTheory"; *)
 open HolKernel boolLib bossLib Q listTheory rich_listTheory;
 
 (* -------------------------------------------------------- *)
@@ -92,12 +92,16 @@ val ZIP_APPEND = store_thm("ZIP_APPEND",
   `!a b c d. (LENGTH a = LENGTH b) /\
              (LENGTH c = LENGTH d) ==>
              (ZIP (a,b) ++ ZIP (c,d) = ZIP (a ++ c,b ++ d))`,
-  Induct_on `b` THEN1 SIMP_TAC list_ss [LENGTH_NIL]    THEN Induct_on `d` THEN1 SIMP_TAC list_ss [LENGTH_NIL]
+  Induct_on `b` THEN1 SIMP_TAC list_ss [LENGTH_NIL]
+    THEN Induct_on `d` THEN1 SIMP_TAC list_ss [LENGTH_NIL]
     THEN Induct_on `a` THEN1 SIMP_TAC list_ss [LENGTH_NIL]
     THEN Induct_on `c` THEN1 SIMP_TAC list_ss [LENGTH_NIL]
-    THEN RW_TAC list_ss []    THEN NTAC 3 (PAT_ASSUM `!a c d. P` (K ALL_TAC))
-    THEN `LENGTH (h::c) = LENGTH (h''::d)` by ASM_SIMP_TAC list_ss []
-    THEN PAT_ASSUM `!a c d. P` (SPECL_THEN [`a`,`h::c`,`h''::d`] IMP_RES_TAC)
+    THEN MAP_EVERY X_GEN_TAC [`h1`,`h2`,`h3`,`h4`]
+    THEN RW_TAC list_ss []
+    THEN `LENGTH (h1::c) = LENGTH (h3::d)`
+      by ASM_SIMP_TAC list_ss []
+    THEN `ZIP (a,b) ++ ZIP (h1::c,h3::d) = ZIP (a ++ h1::c,b ++ h3::d)`
+      by ASM_SIMP_TAC list_ss []
     THEN FULL_SIMP_TAC list_ss []
 );
 
