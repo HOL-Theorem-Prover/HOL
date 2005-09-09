@@ -1,11 +1,11 @@
-fun UseErr() = 
+fun UseErr() =
 (print("Usage: " ^ CommandLine.name() ^ " [-sys] [-MLpath p] n\n");
                 Process.exit Process.failure);
 
 (* --------------------------------------------------------------------- *)
 
-val (sys_inst,sn,MLpath) = 
-  case CommandLine.arguments() 
+val (sys_inst,sn,MLpath) =
+  case CommandLine.arguments()
    of ["-MLpath",p,"-sys",sn] => (true,sn,p)
     | [sn,"-MLpath",p,"-sys"] => (true,sn,p)
     | [sn,"-sys","-MLpath",p] => (true,sn,p)
@@ -18,7 +18,7 @@ val n = valOf (Int.fromString sn) handle _ => UseErr()
 
 (* --------------------------------------------------------------------- *)
 
-structure word = wordFunctor (val bits = n 
+structure word = wordFunctor (val bits = n
                               val MLpath = MLpath)
 
 (* --------------------------------------------------------------------- *)
@@ -46,16 +46,16 @@ end
 (* --------------------------------------------------------------------- *)
 
 val SIGOBJ_DIR = fullPath [Systeml.HOLDIR,"sigobj"];
-val MOSMLC = fullPath [Systeml.MOSMLDIR,"bin","mosmlc"];
+val MOSMLC = fullPath [Systeml.MOSMLDIR,"mosmlc"];
 
 val thy_file = "word" ^ sn ^ "Theory";
 val lib_file = "word" ^ sn ^ "Lib";
 
-val _ = 
+val _ =
  Systeml.systeml
    [MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui", thy_file^ ".sig"];
 
-val _ = 
+val _ =
  Systeml.systeml
    [MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui", thy_file ^ ".sml"];
 

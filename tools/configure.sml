@@ -79,7 +79,7 @@ fun fullPath slist = normPath
 fun quote s = String.concat ["\"",String.toString s,"\""]
 
 val holmakedir = fullPath [holdir, "tools", "Holmake"];
-val compiler = fullPath [mosmldir, "bin", "mosmlc"];
+val compiler = fullPath [mosmldir, "mosmlc"];
 
 (*---------------------------------------------------------------------------
       File handling. The following implements a very simple line
@@ -165,7 +165,7 @@ in
    "val MOSMLDIR =" --> ("val MOSMLDIR = "^quote mosmldir^"\n"),
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
-   "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"), 
+   "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
    "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available)];
   use destfile
 end;
@@ -221,7 +221,6 @@ val _ = let
   val _ = echo "Making tools/mllex/mllex.exe"
   val cdir = FileSys.getDir()
   val destdir = fullPath [holdir, "tools/mllex"]
-  val compiler = fullPath [mosmldir, "bin/mosmlc"]
   val systeml = fn clist => if systeml clist <> Process.success then
                               die "Failed to build mllex"
                             else ()
@@ -243,8 +242,8 @@ val _ =
      val hmakedir  = normPath(Path.concat(holdir, "tools/Holmake"))
      val _         = FileSys.chDir hmakedir
      val bin       = fullPath [holdir,   "bin/Holmake"]
-     val lexer     = fullPath [mosmldir, "bin/mosmllex"]
-     val yaccer    = fullPath [mosmldir, "bin/mosmlyac"]
+     val lexer     = fullPath [mosmldir, "mosmllex"]
+     val yaccer    = fullPath [mosmldir, "mosmlyac"]
      val systeml   = fn clist => if systeml clist <> Process.success then
                                    raise Fail ""
                                  else ()
@@ -288,7 +287,7 @@ val _ =
       in String.concat o plist
       end
   in
-   if systeml [fullPath [mosmldir, "bin/mosmlc"], "-o", bin,
+   if systeml [compiler, "-o", bin,
                "-I", holmakedir, target] = Process.success then ()
    else (print "*** Failed to build build executable.\n";
          Process.exit Process.failure) ;

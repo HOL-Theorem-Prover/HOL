@@ -49,7 +49,7 @@ val MOSMLDIR =
 val OS =
 val DEPDIR =
 val GNUMAKE =
-val DYNLIB = 
+val DYNLIB =
 
 val isUnix = false
 
@@ -67,7 +67,7 @@ fun emit_hol_script target qend =
      fun output s = TextIO.output(ostrm, s)
      val sigobj = q (fullPath [HOLDIR, "sigobj"])
      val std_prelude = q (fullPath [HOLDIR, "std.prelude"])
-     val mosml = q (fullPath [MOSMLDIR, "bin", "mosml"])
+     val mosml = q (fullPath [MOSMLDIR, "mosml"])
  in
     output "@echo off\n";
     output "rem The bare HOL script\n";
@@ -85,7 +85,7 @@ fun emit_hol_unquote_script target qend =
      val qfilter = q (fullPath [HOLDIR, "bin", "unquote"])
      val sigobj = q (fullPath [HOLDIR, "sigobj"])
      val std_prelude = q (fullPath [HOLDIR, "std.prelude"])
-     val mosml = q (fullPath [MOSMLDIR, "bin", "mosml"])
+     val mosml = q (fullPath [MOSMLDIR, "mosml"])
      val qinit = q (fullPath [HOLDIR, "tools", "unquote-init.sml"])
  in
     output "@echo off\n";

@@ -175,12 +175,13 @@ In extreme circumstances it is possible to edit the file
 directly.  At the top of this file three SML declarations are present,
 but commented out.  You will need to uncomment this section (remove
 the \texttt{(*} and \texttt{*)} markers), and provide sensible values.
-The \texttt{mosmldir} value must be the name of the directory where
-the Moscow~ML implementation is on your machine.  The \texttt{holdir}
-value must be the name of the top-level directory listed in the first
-session above.  The \texttt{OS} value should be one of the strings
-specified in the accompanying comment.  All three strings must be
-enclosed in double quotes.
+The \texttt{mosmldir} value must be the name of the directory
+containing the Moscow~ML binaries (\texttt{mosmlc}, \texttt{mosml},
+\texttt{mosmllex} etc).  The \texttt{holdir} value must be the name of
+the top-level directory listed in the first session above.  The
+\texttt{OS} value should be one of the strings specified in the
+accompanying comment.  All three strings must be enclosed in double
+quotes.
 
 The next two values (\texttt{CC} and \texttt{GNUMAKE}) are needed for
 ``optional'' components of the system.  The first gives a string

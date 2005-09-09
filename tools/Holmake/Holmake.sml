@@ -290,7 +290,7 @@ val _ = Process.atExit (fn () => finish_logging false)
 *)
 val HOLDIR    = case cmdl_HOLDIR of NONE => HOLDIR0 | SOME s => s
 val MOSMLDIR =  case cmdl_MOSMLDIR of NONE => MOSMLDIR0 | SOME s => s
-val MOSMLCOMP = fullPath [MOSMLDIR, "bin/mosmlc"]
+val MOSMLCOMP = fullPath [MOSMLDIR, "mosmlc"]
 val SIGOBJ    = normPath(Path.concat(HOLDIR, "sigobj"));
 
 val UNQUOTER  = xable_string(fullPath [HOLDIR, "bin/unquote"])
@@ -328,9 +328,9 @@ in
     "HOLDIR" => [LIT HOLDIR]
   | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
   | "MOSMLDIR" => [LIT MOSMLDIR]
-  | "MOSMLCOMP" => [VREF "protect $(MOSMLDIR)/bin/mosmlc"]
-  | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/bin/mosmllex"]
-  | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/bin/mosmlyac"]
+  | "MOSMLCOMP" => [VREF "protect $(MOSMLDIR)/mosmlc"]
+  | "MOSMLLEX" => [VREF "protect $(MOSMLDIR)/mosmllex"]
+  | "MOSMLYAC" => [VREF "protect $(MOSMLDIR)/mosmlyac"]
   | "UNQUOTE" => [VREF ("protect $(HOLDIR)/" ^ xable_string "/bin/unquote")]
   | "MV" => if Systeml.OS = "winNT" then [LIT "rename"] else [LIT "/bin/mv"]
   | "CP" => if Systeml.OS = "winNT" then [LIT "copy /b"] else [LIT "/bin/cp"]

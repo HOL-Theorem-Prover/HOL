@@ -61,7 +61,7 @@ val OS =
 
 val DEPDIR =
 val GNUMAKE =
-val DYNLIB = 
+val DYNLIB =
 
 val isUnix = true
 
@@ -75,7 +75,7 @@ val make_log_file = "current-make-log"
           fun output s = TextIO.output(ostrm, s)
           val sigobj = unix_quote (fullPath [HOLDIR, "sigobj"])
           val std_prelude = unix_quote (fullPath [HOLDIR, "std.prelude"])
-          val mosml = unix_quote (fullPath [MOSMLDIR, "bin", "mosml"])
+          val mosml = unix_quote (fullPath [MOSMLDIR, "mosml"])
       in
         output "#!/bin/sh\n";
         output "# The bare HOL script\n";
@@ -93,7 +93,7 @@ val make_log_file = "current-make-log"
           val qfilter = unix_quote (fullPath [HOLDIR, "bin", "unquote"])
           val sigobj = unix_quote (fullPath [HOLDIR, "sigobj"])
           val std_prelude = unix_quote (fullPath [HOLDIR, "std.prelude"])
-          val mosml = unix_quote (fullPath [MOSMLDIR, "bin", "mosml"])
+          val mosml = unix_quote (fullPath [MOSMLDIR, "mosml"])
           val qinit =
               unix_quote (fullPath [HOLDIR, "tools", "unquote-init.sml"])
       in

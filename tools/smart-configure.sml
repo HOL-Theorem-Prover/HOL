@@ -1,5 +1,5 @@
 quietdec := true;
-app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int", 
+app load ["Mosml", "Process", "Path", "FileSys", "Timer", "Real", "Int",
           "Bool"] ;
 open Mosml;
 
@@ -90,8 +90,17 @@ val mosmldir = let
       if lib <> "lib" then
         print "\nMosml library directory (from loadPath) not .../lib -- weird!\n"
       else ()
+  val candidate =
+      Path.toString {arcs = arcs' @ ["bin"], isAbs = true, vol = vol}
+  val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"
+  val _ =
+      if FileSys.access (Path.concat(candidate, mosml'), [FileSys.A_EXEC]) then
+        ()
+      else (print ("\nCouldn't find executable mosmlc in "^candidate^"\n");
+            print ("Giving up - please use config-override file to fix\n");
+            Process.exit Process.failure)
 in
-  Path.toString {arcs = arcs', isAbs = true, vol = vol}
+  candidate
 end;
 
 
@@ -133,7 +142,7 @@ end;
 
 fun verdict (prompt, value) =
     (print (StringCvt.padRight #" " 20 (prompt^":"));
-     print value; 
+     print value;
      print "\n");
 
 verdict ("OS", OS);
