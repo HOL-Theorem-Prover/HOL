@@ -10,9 +10,9 @@ holmake=`pwd`/../bin/Holmake
 
 toplevel () {
   ../bin/hol < autopilot.sml
-  ../bin/hol.unquote < euclid.sml
+  ../bin/hol < euclid.sml
   ../bin/hol < fol.sml
-  ../bin/hol.unquote < root2.sml
+  ../bin/hol < root2.sml
   ../bin/hol < Thery.sml
 }
 
@@ -45,7 +45,13 @@ bmark () {
 
 parity () {
   cd parity
-  ../../bin/hol.unquote < PARITY.sml
+  ../../bin/hol < PARITY.sml
+  cd ..
+}
+
+elliptic () {
+  cd elliptic
+  ../../bin/hol < elliptic.sml
   cd ..
 }
 
@@ -69,7 +75,7 @@ Crypto () {
 }
 
 fast () {
-    for i in toplevel MLsyntax RSA ind_def lambda bmark parity
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity elliptic
     do
         buildit $i
     done
@@ -103,7 +109,7 @@ fi
 if [ $# -eq 0 ]
 then
     echo Building all examples
-    for i in toplevel MLsyntax RSA ind_def lambda bmark parity \
+    for i in toplevel MLsyntax RSA ind_def lambda bmark parity elliptic \
              miller arm6 Crypto PSL
     do
         buildit $i
