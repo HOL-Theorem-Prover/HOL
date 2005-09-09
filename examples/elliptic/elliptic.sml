@@ -295,7 +295,7 @@ local
         val convs = map mk_conv conversions
         val dproc = algebra_dproc judgements reductions dproc_cache
         val data =
-            simpLib.SIMPSET
+            simpLib.SSFRAG
               {ac = [], congs = [], convs = convs, rewrs = rewrites,
                dprocs = [dproc], filter = NONE}
       in
