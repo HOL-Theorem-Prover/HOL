@@ -96,8 +96,8 @@ val ZIP_APPEND = store_thm("ZIP_APPEND",
     THEN Induct_on `a` THEN1 SIMP_TAC list_ss [LENGTH_NIL]
     THEN Induct_on `c` THEN1 SIMP_TAC list_ss [LENGTH_NIL]
     THEN RW_TAC list_ss []    THEN NTAC 3 (PAT_ASSUM `!a c d. P` (K ALL_TAC))
-    THEN `LENGTH (h::c) = LENGTH (h'::d)` by ASM_SIMP_TAC list_ss []
-    THEN PAT_ASSUM `!a c d. P` (SPECL_THEN [`a`,`h::c`,`h'::d`] IMP_RES_TAC)
+    THEN `LENGTH (h::c) = LENGTH (h''::d)` by ASM_SIMP_TAC list_ss []
+    THEN PAT_ASSUM `!a c d. P` (SPECL_THEN [`a`,`h::c`,`h''::d`] IMP_RES_TAC)
     THEN FULL_SIMP_TAC list_ss []
 );
 
