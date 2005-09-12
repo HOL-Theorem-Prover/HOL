@@ -79,7 +79,7 @@ val define_type = ind_types.define_type;
 (* Copied from TheoryPP.sml. Parameterized by strings representing *)
 (*---------------------------------------------------------------------------*)
 
-fun extern_type mk_vartype_str mk_thy_type_str ppstrm ty = 
+fun extern_type mk_vartype_str mk_thy_type_str ppstrm ty =
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
@@ -140,7 +140,7 @@ fun pp_fields ppstrm fields =
          extern_type "U" "T" ppstrm ty;
          add_string ")";
          end_block())
- in 
+ in
   begin_block CONSISTENT 0;
   add_string "let fun T t s A = mk_thy_type{Thy=t,Tyop=s,Args=A}"; add_newline();
   add_string "    val U = mk_vartype"; add_newline();
@@ -558,17 +558,17 @@ in
 end
 
 fun handle_big_record ast =
-    (* ast is a type declaration of the form 
+    (* ast is a type declaration of the form
            tyname = <foo>
-       where <foo> might be a record or a standard algebraic type with  
-       constructors 
+       where <foo> might be a record or a standard algebraic type with
+       constructors
        This code looks at ast, and does nothing unless the <foo> is a big record.
-       If so, it translates 
+       If so, it translates
          rcdty = <| fld1 : ty1 ; fld2 : ty2 ; ... fldmax : tymax |>
        into
-         rcdty = <| subrec_fld1 : subrec1_ty ; subrec_fld2 : subrec2_ty ... |> ; 
-         subrec1_ty = <| fld1 : ty1 ; fld2 : ty2 ; ... |> ; 
-         subrec2_ty = <| fld11 : ty11 ; fld12 : ty12 ; ... |> ; 
+         rcdty = <| subrec_fld1 : subrec1_ty ; subrec_fld2 : subrec2_ty ... |> ;
+         subrec1_ty = <| fld1 : ty1 ; fld2 : ty2 ; ... |> ;
+         subrec2_ty = <| fld11 : ty11 ; fld12 : ty12 ; ... |> ;
          ...
        Return a pair.  The first is the new list of type declarations.
                        The second is the list of old type declarations for just
@@ -832,7 +832,7 @@ fun augment_tyinfos persistp tyis thminfo_list = let
      tyinfo -> tyinfo; these functions will be applied to the basic tyinfo
      created for the record type).
 
-     [thminfo_list] is of type 
+     [thminfo_list] is of type
         (string * (string * thm) list * (string * hol_type) list) list,
 
      basically an association list from type names to extra stuff.
@@ -921,19 +921,19 @@ local
   fun insert_tyarguments prevtypes astl =
       map (fn (s, dt) => (s, astpty_map (reform_tyops prevtypes) dt)) astl
 
-  fun getfldinfo bigrecinfo = let 
+  fun getfldinfo bigrecinfo = let
       fun mapthis (s, l) = (s, map (I ## ParseDatatype.pretypeToType) l)
   in
       map mapthis bigrecinfo
   end
-  fun merge_alists alist1 alist2 = let 
-      fun recurse acc alist1 alist2 = 
-          case (alist1, alist2) of 
+  fun merge_alists alist1 alist2 = let
+      fun recurse acc alist1 alist2 =
+          case (alist1, alist2) of
               ([], []) => List.rev acc
             | (_, []) => List.rev acc @ map (fn (s,d) => (s, d, [])) alist1
             | ([], _) => List.rev acc @ map (fn (s,d) => (s, [], d)) alist2
-            | ((a1k, a1d)::a1s, (a2k, a2d)::a2s) => 
-              case String.compare (a1k, a2k) of 
+            | ((a1k, a1d)::a1s, (a2k, a2d)::a2s) =>
+              case String.compare (a1k, a2k) of
                   LESS => recurse ((a1k,a1d,[]) :: acc) a1s alist2
                 | EQUAL => recurse ((a1k,a1d,a2d) :: acc) a1s a2s
                 | GREATER => recurse ((a2k,[],a2d) :: acc) alist1 a2s
@@ -941,7 +941,7 @@ local
   in
       recurse [] (Listsort.sort alistcomp alist1) (Listsort.sort alistcomp alist2)
   end
-      
+
 in
 fun prim_define_type_from_astl prevtypes f db astl0 = let
   (* precondition: astl has been sorted, so that, for example,  those
@@ -953,8 +953,8 @@ in
       val (newastls, bigrecords) = reformulate_record_types astl
       val (db, tyinfos) = f prevtypes db newastls
       val function_defns = map define_bigrec_functions bigrecords
-      val fldinfo = getfldinfo bigrecords (* list of (string * (string*type) list) 
-                                             recording user's desired fields for 
+      val fldinfo = getfldinfo bigrecords (* list of (string * (string*type) list)
+                                             recording user's desired fields for
                                              each big record type *)
       val merged_alists = merge_alists function_defns fldinfo
       val tyinfos = augment_tyinfos true tyinfos merged_alists
@@ -968,7 +968,7 @@ in
       val newtheorems = map (prove_bigrec_theorems tyinfos ss) bigrecords
      (* don't need to make this stuff persist because what's adjoined already
         will mention the theorems that should be in the typebase.  What we've
-        done here is made the theorems look right. 
+        done here is made the theorems look right.
       *)
       val tyinfos = augment_tyinfos false tyinfos merged_alists
     in
@@ -1061,6 +1061,12 @@ fun primHol_datatype db q =
    theorems are loaded automatically into theTypeBase.
 
  ---------------------------------------------------------------------------*)
+
+val (type_to_string, term_to_string) = let
+  val (pty, ptm) = print_from_grammars boolTheory.bool_grammars
+in
+  ((fn ty => ":" ^ PP.pp_to_string 70 pty ty), PP.pp_to_string 70 ptm)
+end
 
 fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
   | adjoin (string_etc0 :: strings_etc) =
@@ -1213,19 +1219,19 @@ fun mk_datatype_presentation thy tyspecl =
           in
             list_mk_comb(tyn_var,constrs)
           end
-        | type_dec (tyname,Record fields) = 
+        | type_dec (tyname,Record fields) =
           let val fvars = map (mk_var o (I##pretypeToType)) fields
               val tyn_var = mk_var(tyname,ind)
-              val record_var = mk_var("record", 
+              val record_var = mk_var("record",
                                       list_mk_fun(ind::map type_of fvars,bool))
           in
             list_mk_comb(record_var,tyn_var::fvars)
           end
-  in 
+  in
    (fst(hd tyspecl),list_mk_conj (map type_dec tyspecl))
   end
 
-fun datatype_thm (n,M) = save_thm 
+fun datatype_thm (n,M) = save_thm
   ("datatype_"^n,
    EQT_ELIM (ISPEC M DATATYPE_TAG_THM));
 
