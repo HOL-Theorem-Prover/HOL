@@ -5,34 +5,40 @@
 
      Some of these can take a great deal of time and memory to complete.
 
-     Note: the robdd package can be very slow to respond to interrupts: 
+     Note: the robdd package can be very slow to respond to interrupts:
            the longer it runs, the longer it seems to take to respond.
 
  ---------------------------------------------------------------------------*)
 
-load "muddyLib";
+load "HolBddLib";
 
 fun bdd_oracle q =
   let val tm = Parse.Term q
       val V = free_vars tm
-  in 
+      open DerivedBddRules
+      fun oracle t = let
+        val tbdd = termToTermBdd t
+      in
+        TermBddToEqThm tbdd
+      end
+  in
     Lib.say (String.concat [int_to_string (length V), " variables.\n"]);
-    time muddyLib.mk_bdd_thm tm
+    time oracle tm
   end;
 
 show_tags := true;
 
 
-val syn323_1 = bdd_oracle 
+val syn323_1 = bdd_oracle
 `~((v0 \/ v1) /\ (~v0 \/ v1) /\ (~v1 \/ v0) /\ (~v0 \/ ~v1))`;
 
-val syn029_1 = bdd_oracle 
+val syn029_1 = bdd_oracle
 `~((~v2 \/ ~v1) /\ v0 /\ (~v0 \/ ~v1 \/ v2) /\ (~v2 \/ v1) /\ (v1 \/ v2))`;
 
-val syn052_1 = bdd_oracle 
+val syn052_1 = bdd_oracle
 `~((~v1 \/ v0) /\ (~v0 \/ v1) /\ (v1 \/ v0) /\ (~v1 \/ v1) /\ (~v0 \/ ~v1))`;
 
-val syn051_1 = bdd_oracle 
+val syn051_1 = bdd_oracle
 `~((v1 \/ v0) /\
   (v1 \/ v2) /\
   (~v0 \/ ~v1) /\
@@ -40,7 +46,7 @@ val syn051_1 = bdd_oracle
   (~v0 \/ v1) /\
   (~v1 \/ v2))`;
 
-val syn044_1 = bdd_oracle 
+val syn044_1 = bdd_oracle
 `~((v0 \/ v1) /\
   (~v0 \/ ~v1) /\
   (~v0 \/ v1 \/ v2) /\
@@ -68,7 +74,7 @@ val syn032_1 = bdd_oracle
   (~v3 \/ v4 \/ v5))`;
 
 val ex2_be  = bdd_oracle
- `~((a /\ b /\ ~c) \/ (~a /\ b /\ c /\ ~d)) 
+ `~((a /\ b /\ ~c) \/ (~a /\ b /\ c /\ ~d))
     ==>
     (s1 = ~a \/ d) /\ (oh = b /\ s1) /\ (s2 = ~c \/ d) ==> (oh = b /\ s2)`;
 
@@ -170,7 +176,7 @@ val puz014_1 = bdd_oracle
   (~v7 \/ ~v8 \/ v9) /\
   (~v10 \/ ~v11 \/ v12))` ;
 
-val mjcg_yes = bdd_oracle 
+val mjcg_yes = bdd_oracle
 `((adder1____carry__1__1 = ~a__0 /\ b__0) /\
   (adder1____carry__1__2 =
    b__1 /\ adder1____carry__1__1 \/
