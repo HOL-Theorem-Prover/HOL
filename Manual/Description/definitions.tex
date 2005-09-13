@@ -3,15 +3,16 @@
 \section{Datatype Definition}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
 
-There are several useful consequences of an object logic datatype
-definition: structural induction, rewrite rules for constructors,
-\etc\ However, these have not traditionally been automatically derived
-at the invocation of the definition package: the user would have to
-build the required theorems by explicitly invoking various proof
-procedures.  The \verb+Hol_datatype+ function supports the definition of
-concrete data types; the specifications of the types may be recursive, mutually
-recursive, nested recursive, and involve records.  The syntax
-of declarations that \verb+Hol_datatype+ accepts is found in Table
+Although the \HOL{} logic provides primitive definition principles 
+allowing new types to be introduced, the level of detail is 
+very fine-grained. The style of datatype definitions in functional 
+programming languages provides motivation for a high level 
+interface for defining algebraic datatypes.
+
+The \verb+Hol_datatype+ function supports the definition of such 
+data types; the specifications of the types may be recursive, mutually
+recursive, nested recursive, and involve records.  The syntax of
+declarations that \verb+Hol_datatype+ accepts is found in Table
 \ref{datatype}.
 
 \newcommand{\bk}{\char'134}
@@ -314,10 +315,7 @@ of declarations that \verb+Hol_datatype+ accepts is found in Table
 \HOL{} maintains an underlying database of datatype facts called the
 \ml{TypeBase}.  This database is used to support various high-level
 proof tools (see Section~\ref{sec:bossLib}), and is augmented whenever
-a \verb+Hol_datatype+ declaration is made.  When the \HOL{} system
-starts up, the \ml{TypeBase} already contains the relevant entries for
-the types \holtxt{bool}, \holtxt{prod}, \holtxt{num}, \holtxt{option},
-and \holtxt{list}.  When a datatype is defined by \verb+Hol_datatype+,
+a \verb+Hol_datatype+ declaration is made.  When a datatype is defined by \verb+Hol_datatype+,
 the following information is derived and stored in the database.
 
 \begin{itemize}
@@ -331,27 +329,39 @@ the following information is derived and stored in the database.
 \item definition of the `size' of the type
 \end{itemize}
 
-The \texttt{Hol\_datatype} function can be used to define types that
-are parametrically polymorphic.  For example, the type of lists is
-defined as
+When the \HOL{} system
+starts up, the \ml{TypeBase} already contains the relevant entries for
+the types \holtxt{bool}, \holtxt{prod}, \holtxt{num}, \holtxt{option},
+and \holtxt{list}.  
+
+\paragraph{Example: Binary trees}
+The following ML declaration of a data type of binary trees
 \begin{hol}
 \begin{verbatim}
-   Hol_datatype `list = NIL | CONS of 'a => list`;
+  datatype ('a,'b) btree = Leaf of 'a
+                         | Node of ('a,'b) btree * 'b * ('a,'b) btree
 \end{verbatim}
 \end{hol}
-\noindent Although the new \texttt{list} type is polymorphic, the
-specification passed to \texttt{Hol\_datatype} does not explicitly
-provide arguments for the new operator.  Contrast with SML, where one
-would write
+\noindent would be declared in \HOL{} as
 \begin{hol}
 \begin{verbatim}
-   datatype 'a list = nil | cons of 'a * 'a list
+   Hol_datatype `btree = Leaf of 'a
+                       | Node of btree => 'b => btree`
 \end{verbatim}
 \end{hol}
-\noindent In \HOL{} neither occurrence of the new operator has its
-arguments provided.  When defining a type that is polymorphic in more
-than one argument, this raises the question of what the order of the
-new operator's arguments will be.  For example, if one defines
+\noindent The \holtxt{=>} notation in a HOL datatype description 
+is intended to replace \holtxt{*} in an ML datatype description, 
+and highlights the fact that, in HOL, constructors are by default 
+curried.  Note also that any type parameters for the new type are not 
+mentioned: the type variables are always ordered alphabetically.
+
+This subtle point bears repeating: the format of datatype definitions
+does not have enough information to always determine the order of
+arguments to the introduced type operators. Thus, when defining a type
+that is polymorphic in more than one argument, there is a question of
+what the order of the new operator's arguments will be.  For another
+example, if one defines
+%
 \begin{hol}
 \begin{verbatim}
    Hol_datatype `sum = Left of 'left | Right of 'right`;
@@ -365,6 +375,286 @@ dictionary ordering of the variables' names.  Thus, in the example
 given, the \ml{'a} of \ml{('a,'b)sum} will be the \ml{Left} argument
 because \ml{left} comes before \ml{right} in the standard (ASCII)
 dictionary ordering.
+
+\subsection{Further Examples}
+
+ In the following, we shall give an overview of the kinds of types that
+ may be defined by \ml{Hol\_datatype}.
+
+ To start, enumerated types can be defined as in the following example:
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `enum = A1  | A2  | A3  | A4  | A5
+          | A6  | A7  | A8  | A9  | A10
+          | A11 | A12 | A13 | A14 | A15
+          | A16 | A17 | A18 | A19 | A20
+          | A21 | A22 | A23 | A24 | A25
+          | A26 | A27 | A28 | A29 | A30`
+\end{verbatim}
+\end{hol}
+%
+Other non-recursive types may be defined as well:
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `foo = N of num
+         | B of bool
+         | Fn of 'a -> 'b
+         | Pr of 'a # 'b`
+\end{verbatim}
+\end{hol}
+% 
+Turning to recursive types, we have already seen a type of binary 
+trees having polymorphic values at internal nodes. This time, we will 
+declare it in "paired" format.
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `tree = Leaf of 'a
+          | Node of tree # 'b # tree`
+\end{verbatim}
+\end{hol}
+% 
+This specification seems closer to the declaration that one might make
+in ML, but can be more difficult to deal with in proof than the curried format
+used above.
+
+The basic syntax of the named lambda calculus is easy to describe:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `lambda = Var of string
+            | Const of 'a
+            | Comb of lambda => lambda
+            | Abs of lambda => lambda`
+\end{verbatim}
+\end{hol}
+% 
+The syntax for `de Bruijn' terms is roughly similar:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `dB = Var of string
+        | Const of 'a
+        | Bound of num
+        | Comb  of dB => dB
+        | Abs   of dB`
+\end{verbatim}
+\end{hol}
+%
+Arbitrarily branching trees may be defined by allowing a node to hold
+the list of its subtrees. In such a case, leaf nodes do not need to be
+explicitly declared.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `ntree = Node of 'a => ntree list`
+\end{verbatim}
+\end{hol}
+%
+A type of `first order terms' can be declared as follows:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `term = Var of string
+          | Fnapp of string # term list`
+\end{verbatim}
+\end{hol}
+%
+Mutally recursive types may also be defined. The following, extracted by
+Elsa Gunter from the Definition of Standard ML, captures a subset of
+Core ML.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `atexp = var_exp of string
+           | let_exp of dec => exp ;
+
+       exp = aexp    of atexp
+           | app_exp of exp => atexp
+           | fn_exp  of match ;
+
+     match = match  of rule
+           | matchl of rule => match ;
+
+      rule = rule of pat => exp ;
+
+       dec = val_dec   of valbind
+           | local_dec of dec => dec
+           | seq_dec   of dec => dec ;
+
+   valbind = bind  of pat => exp
+           | bindl of pat => exp => valbind
+           | rec_bind of valbind ;
+
+       pat = wild_pat
+           | var_pat of string`
+\end{verbatim}
+\end{hol}
+%
+Simple record types may be introduced using the \holtxt{<| ... |>} notation.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
+\end{verbatim}
+\end{hol}
+%
+The use of record types may be recursive. For example, the following
+declaration could be used to formalize a simple file system.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `file = Text of string | Dir of directory
+       ;
+     directory = <| owner : string ;
+                    files : (string # file) list |>`
+\end{verbatim}
+\end{hol}
+
+\subsection{Type Definitions that Fail}
+
+ Now we address some types that cannot be declared with \ml{Hol\_datatype}.
+In some cases they cannot exist in HOL at all; in others, the type
+can be built in the HOL logic, but \ml{Hol\_datatype} is not able to make
+the definition.
+
+First, an empty type is not allowed in HOL, so the following attempt
+is doomed to fail.
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `foo = A of foo`
+\end{verbatim}
+\end{hol}
+% 
+So called `nested types', which are occasionally quite useful, cannot
+at present be built with \ml{Hol\_datatype}:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `btree = Leaf of 'a
+           | Node of  ('a # 'a) btree`
+\end{verbatim}
+\end{hol}
+% 
+Co-inductive types may not currently be built with {Hol\_datatype}:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `lazylist = Nil
+              | Cons of 'a # (one -> lazylist)`
+\end{verbatim}
+\end{hol}
+% 
+A similar type can however be constructed in HOL: see \theoryimp{llistTheory}.
+%
+Finally, for cardinality reasons, HOL does not allow the following attempt
+to model the untyped lambda calculus as a set (note 
+the \holtxt{->} in the clause for the \holtxt{Abs} constructor):
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `lambda = Var of string
+            | Const of 'a
+            | Comb of lambda => lambda
+            | Abs of lambda -> lambda`
+\end{verbatim}
+\end{hol}
+% 
+Instead, one would have to build a theory of complete partial orders
+(or something similar) with which to model the untyped lambda calculus.
+
+\subsection{Theorems arising from a datatype definition}
+
+ The consequences of an invocation of \ml{Hol\_datatype} are stored in the
+current theory segment and in \ml{TypeBase}. The principal consequences
+ of a datatype definition are the primitive recursion and induction theorems.
+ These provide the ability to define simple functions over the type, and
+ an induction principle for the type. Thus, for a type named \holtxt{ty},
+ the primitive recursion theorem is stored under \ml{ty\_Axiom} and
+ the induction theorem is put under \ml{ty\_induction}. Other
+ consequences include the distinctness of constructors (\ml{ty\_distinct}),
+ and the injectivity of constructors (\verb+ty_11+). A `degenerate' version of
+ \ml{ty\_induction} is also stored under \ml{ty\_nchotomy}: it provides 
+ for reasoning by cases on the construction of elements of \ml{ty}. 
+ Finally, some special-purpose theorems are stored: for example,
+ \ml{ty\_case\_cong} holds a congruence theorem for "case" statements 
+ on elements of \ml{ty}. These 
+ case statements are defined by \ml{ty\_case\_def}. Also, a definition of 
+ the "size" of the type is added to the current theory, under the name 
+ \ml{ty\_size\_def}.
+
+For example, invoking
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype 
+    `tree = Leaf of num
+          | Node of tree => tree`
+\end{verbatim}
+\end{hol}
+%
+results in the definitions
+%
+\begin{hol}
+\begin{verbatim}
+  tree_case_def =
+    |- (!f f1 a. case f f1 (Leaf a) = f a) /\
+       !f f1 a0 a1. case f f1 (Node a0 a1) = f1 a0 a1
+
+  tree_size_def
+    |- (!a. tree_size (Leaf a) = 1 + a) /\
+       !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
+\end{verbatim}
+\end{hol}
+%
+being added to the current theory. The following theorems about the datatype
+are also proved and stored in the current theory.
+%
+\begin{hol}
+\begin{verbatim}
+  tree_Axiom
+    |- !f0 f1.
+       ?fn. (!a. fn (Leaf a) = f0 a) /\
+            !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
+  tree_induction
+    |- !P. (!n. P (Leaf n)) /\
+           (!t t0. P t /\ P t0 ==> P (Node t t0)) ==> !t. P t
+  tree_nchotomy  
+    |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
+  tree_11
+    |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
+       !a0 a1 a0' a1'. (Node a0 a1 = Node a0' a1') = (a0=a0') /\ (a1=a1')
+  tree_distinct  
+    |- !a1 a0 a. ~(Leaf a = Node a0 a1)
+  tree_case_cong
+    |- !M M' f f1.
+        (M = M') /\
+        (!a. (M' = Leaf a) ==> (f a = f' a)) /\
+        (!a0 a1. (M' = Node a0 a1) ==> (f1 a0 a1 = f1' a0 a1))
+          ==>
+        (case f f1 M = case f' f1' M')
+\end{verbatim}
+\end{hol}
+%
+When a type involving records is defined, many more definitions are
+made and added to the current theory.
+
+A definition of mutually recursives types results in the above theorems and
+definitions being added for each of the defined types.
 
 \section{Record Types}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!record types}
@@ -384,9 +674,11 @@ result in the addition or deletion of other fields will not invalidate
 this reference.  One failing in SML's record types is that they do not
 allow the same maintainability as far as (functional) updates of
 records are concerned.  The HOL implementation allows one to write
+\begin{hol}
 \begin{verbatim}
   rec with fieldn := new_value
 \end{verbatim}
+\end{hol}
 which replaces the old value of {\tt fieldn} in the record {\tt rec}
 with {\tt new\_value}.  This expression will not need to be changed if
 another field is added, modified or deleted from the record's original
@@ -397,11 +689,14 @@ Record types are defined with the function \texttt{Hol\_datatype}, as
 previously discussed.  For example, to create a record type called
 {\tt person} with boolean, string and number fields called {\tt
   employed}, {\tt name} and {\tt age}, one would enter:
+\begin{hol}
 \begin{verbatim}
-val _ = Hol_datatype `person = <| employed : bool ; age : num ;
-                                  name : string
-                               |>`;
+  Hol_datatype 
+    `person = <| employed : bool ; 
+                 age : num ;
+                 name : string |>`
 \end{verbatim}
+\end{hol}
 The order in which the fields are entered is not significant. As well
 as defining the type (called {\tt person}), the datatype definition
 function also defines two other sets of constants.  These are the
