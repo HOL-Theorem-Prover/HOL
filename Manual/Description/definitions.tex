@@ -985,8 +985,6 @@ theorem.
      /\   (flatten ([]::rst)     = flatten rst)
      /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
 
-   <<HOL message: inventing new type variable names: 'a>>
-
    Equations stored under "flatten_def".
    Induction stored under "flatten_ind".
 
@@ -1023,7 +1021,6 @@ induction theorem is generated in this case.
   Define `(filter P [] = [])
     /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
 
-  <<HOL message: inventing new type variable names: 'a>>
   Definition has been stored under "filter_def".
 
   > val it =
@@ -1111,7 +1108,7 @@ yields a definition with thirty-one clauses.
 
 \subsection{When Termination is not Automatically Proved}
 
-Recall that, if the termination proof for a prospective definition
+If the termination proof for a prospective definition
 fails, the invocation of \ml{Define} (or \ml{xDefine}) fails. In such
 situations, the \ML{} function \ml{Hol\_defn} should be used.
 %
@@ -1148,11 +1145,11 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 \begin{verbatim}
 val qsort_def =
   Hol_defn "qsort"
-    `(qsort r [] = []) /\
-     (qsort r (h::t) =
-         qsort r (FILTER (\x. r x h) t) 
+    `(qsort ord [] = []) /\
+     (qsort ord (h::t) =
+         qsort ord (FILTER (\x. ord x h) t) 
          ++ [h] ++ 
-         qsort r (FILTER (\x. ~(r x h)) t))`
+         qsort ord (FILTER (\x. ~(ord x h)) t))`
 \end{verbatim}
 \end{hol}
 \end{session}
@@ -1162,35 +1159,37 @@ to prove termination.
 \begin{hol}
 \begin{verbatim}
   HOL function definition (recursive)
-
+    
   Equation(s) :
-     [...]
-    |- (qsort v0 [] = []) /\
-       (qsort ord (x::rst) =
-         qsort ord (FILTER ($~ o ord x) rst ++ [x] ++
-         qsort ord (FILTER (ord x) rst))
-
+   [...] |- qsort ord [] = []
+   [...]
+  |- qsort ord (h::t) =
+     qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+     qsort ord (FILTER (\x. ~ord x h) t)
+    
   Induction :
-     [...]
-    |- !P.
-        (!v0. P v0 []) /\
-        (!ord x rst.
-           P ord (FILTER ($~ o ord x) rst) /\
-           P ord (FILTER (ord x) rst) ==> P ord (x::rst))
-        ==> !v v1. P v v1
-
+   [...]
+  |- !P.
+       (!ord. P ord []) /\
+       (!ord h t.
+          P ord (FILTER (\x. ~ord x h) t) /\
+          P ord (FILTER (\x. ord x h) t) ==>
+          P ord (h::t)) ==>
+       !v v1. P v v1
+    
   Termination conditions :
-    0. WF R
-    1. !rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)
-    2. !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
+    0. !t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)
+    1. !t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)
+    2. WF R
 \end{verbatim}
 \end{hol}
 \end{session}
 
-Although it is possible to directly work with elements of
+The type \ml{defn} has a prettyprinter installed for it: the above
+output is typical, showing the components of a \ml{defn} in an understandable
+format. Although it is possible to directly work with elements of
 type \ml{defn}, it is more convenient to invoke 
-\ml{Defn.tgoal qsort\_def}, which sets up a termination proof 
-in a goalstack. 
+\ml{Defn.tgoal}, which sets up a termination proof in a goalstack. 
 %
 \begin{session}
 \begin{hol}
@@ -1198,12 +1197,12 @@ in a goalstack.
   Defn.tgoal qsort_def;
 
   > val it =
-      Proof manager status: 1 proof.
-      1. Incomplete:
-           Initial goal:
-           ?R.
-             (!t h r. R (r,FILTER (\x. ~r x h) t) (r,h::t)) /\
-             (!t h r. R (r,FILTER (\x. r x h) t) (r,h::t)) /\ WF R
+    Proof manager status: 1 proof.
+    1. Incomplete:
+         Initial goal:
+         ?R.
+           (!t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)) /\
+           (!t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)) /\ WF R
 \end{verbatim}
 \end{hol}
 \end{session}
@@ -1224,16 +1223,26 @@ prove.
   OK..
   2 subgoals:
   > val it =
-      !t h r. LENGTH (FILTER (\x. r x h) t) < LENGTH (h::t)
- 
-      !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
+     !t h ord. LENGTH (FILTER (\x. ord x h) t) < LENGTH (h::t)
+     
+     !t h ord. LENGTH (FILTER (\x. ~ord x h) t) < LENGTH (h::t)
 \end{verbatim}
 \end{hol}
 \end{session}
-
-Once both goals are proved, we can encapsulate the termination
-proof with \ml{Defn.tprove}, which takes a \ml{defn}, builds
-a termination goal from it, applies the given tactic, and, if the
+%
+Execution of \ml{WF\_REL\_TAC} has automatically proved the
+wellfoundedness of
+%
+\begin{hol}
+\begin{verbatim}
+   measure (LENGTH o SND)
+\end{verbatim}
+\end{hol}
+%
+and the remainder of the goal has been simplified into a
+pair of easy goals. Once both goals are proved, we can encapsulate 
+the termination proof with \ml{Defn.tprove}, which takes a \ml{defn}, 
+builds a termination goal from it, applies the given tactic, and, if the
 initial goal is proved, returns a pair comprising the requested
 equations and the induction theorem.
 
@@ -1247,22 +1256,276 @@ equations and the induction theorem.
           THEN ...);
 
   > val qsort_eqns =
-      |- (qsort r [] = []) /\
-         (qsort r (h::t) =
-            qsort r (FILTER (\x. r x h) t) ++
-            [h] ++ qsort r (FILTER (\x. ~r x h) t))  : thm
+      |- (qsort ord [] = []) /\
+         (qsort ord (h::t) =
+            qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
+            qsort ord (FILTER (\x. ~ord x h) t)) : thm
 
     val qsort_ind =
-       |- !P.
-          (!r. P r []) /\
-          (!r h t. P r (FILTER (\x. r x h) t) /\
-                   P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
-          ==> !v v1. P v v1  : thm
+      |- !P.
+           (!ord. P ord []) /\
+           (!ord h t.
+              P ord (FILTER (\x. ~ord x h) t) /\
+              P ord (FILTER (\x. ord x h) t) ==> P ord (h::t)) 
+            ==>
+           !v v1. P v v1  : thm
 \end{verbatim}
 \end{hol}
 \end{session}
 The custom induction theorem for a function can be applied by \ml{recInduct}.
 See Section \ref{sec:bossLib} for details.
+
+\subsubsection{Techniques for Proving Termination}
+
+There are two problems to deal with when trying to prove termination.
+First, one has to understand, intuitively and then mathematically,
+why the function under consideration terminates. Second, one must
+be able to phrase this in \HOL. In the following, we shall give a few
+examples of how this is done.
+
+There are a number of basic and advanced means of specifying wellfounded
+relations. The most common starting point for dealing with termination
+problems for recursive functions is to find some function, known as a a
+\emph{measure} under which the arguments of a function call are larger 
+than the arguments to any recursive calls that result.
+
+For a very simple starter example, consider the following definition
+of a function that computes the greatest common divisor of two
+numbers:
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  - val gcd_defn = 
+      Hol_defn "gcd"
+         `(gcd (0,n) = n) /\
+          (gcd (m,n) = gcd (n MOD m, m))`;
+ 
+  - Defn.tgoal gcd_defn;
+ 
+  > val it =
+      Proof manager status: 1 proof.
+      1. Incomplete:
+           Initial goal:
+           ?R. WF R /\ !v2 n. R (n MOD SUC v2,SUC v2) (SUC v2,n)
+\end{verbatim}
+\end{hol}
+\end{session}
+% 
+The invocation \holtxt{gcd(m,n)} recurses in its first argument, and 
+since we know that \holtxt{m} is not 0, it is the case that
+\holtxt{n MOD m} is smaller than \holtxt{m}. The way to phrase the 
+termination of \holtxt{gcd} in HOL is to use a `measure` function 
+to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.  
+The definition of {measure} in \HOL{} is equivalent to
+%
+\begin{hol}
+\begin{verbatim}
+  measure f x y = (f x < f y).
+\end{verbatim}
+\end{hol}
+%
+Now we must pick out the argument position to measure and
+invoke \ml{WF\_REL\_TAC}:
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  - e (WF_REL_TAC `measure FST`);
+  OK..
+ 
+  1 subgoal:
+  > val it =
+     !v2 n. n MOD SUC v2 < SUC v2
+\end{verbatim}
+\end{hol}
+\end{session}
+% 
+This goal is easy to prove with a few simple arithmetic facts.
+
+\paragraph{Weighting Functions}
+
+Sometimes one needs a measure function that is itself recursive.  For
+example, consider a type of binary trees and a function that
+linearizes trees. The algorithm works by rotating the tree until it
+gets a \holtxt{Leaf} in the left branch, then it recurses into the right
+branch. At the end of execution the tree has been linearized.
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  - Hol_datatype
+      `btree = Leaf
+             | Brh of btree => btree`;
+
+  - val Unbal_defn =
+      Hol_defn "Unbal"
+        `(Unbal Leaf = Leaf)
+     /\  (Unbal (Brh Leaf bt) = Brh Leaf (Unbal bt))
+     /\  (Unbal (Brh (Brh bt1 bt2) bt) = Unbal (Brh bt1 (Brh bt2 bt)))`;
+
+  - Defn.tgoal Unbal_defn;
+
+  > val it =
+      Proof manager status: 1 proof.
+      1. Incomplete:
+         Initial goal:
+          ?R. WF R /\
+              (!bt. R bt (Brh Leaf bt)) /\
+              !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
+\end{verbatim}
+\end{hol}
+\end{session}
+% 
+Since the size of the tree is unchanged in the last clause in the
+definition of \holtxt{Unbal}, a simple size measure will not work. Instead, we
+can assign weights to nodes in the tree such that the recursive calls of
+\holtxt{Unbal} decrease the total weight in every case. One such assignment is
+%
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  Define 
+   `(Weight (Leaf) = 0) /\
+    (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`
+\end{verbatim}
+\end{hol}
+\end{session}
+% 
+Now we can invoke \ml{WF\_REL\_TAC}:
+%
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  e (WF_REL_TAC `measure Weight`);
+  OK..
+
+  2 subgoals:
+  > val it =
+   !bt. Weight bt < Weight (Brh Leaf bt)
+    
+   !bt bt2 bt1.
+      Weight (Brh bt1 (Brh bt2 bt)) < Weight (Brh (Brh bt1 bt2) bt)
+\end{verbatim}
+\end{hol}
+\end{session}
+% 
+Both of these goals are quite easy to prove.
+%
+The technique of `weighting` nodes in a datatype in order to prove
+termination also goes by the name of \emph{polynomial interpretation}. It
+must be admitted that finding the correct weighting for a termination
+proof is more an art than a science. Typically, one makes a guess and
+then tries the termination proof to see if it works.
+
+\paragraph{Lexicographic Combinations}
+
+Occasionally, there's a combination of factors that complicate the
+termination argument. For example, the following specification
+describes a naive pattern matching algorithm on strings (represented
+as lists here). The function takes four arguments: the first is the
+remainder of the pattern being matched. The second is the remainder of
+the string being searched.  The third argument holds the original
+pattern to be matched. The fourth argument is the string being
+searched. If the pattern (first argument) becomes exhausted, then a
+match has been found and the function returns \holtxt{T}. Otherwise, if the
+string being searched becomes exhausted, the function returns \holtxt{F}.
+%
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  val match_defn =
+    Hol_defn "match"
+      `(match [] __ __ __ = T)  /\
+       (match __ [] __ __ = F)  /\
+       (match (p::pp) (s::ss) p0 rs =
+         if p=s then match pp ss p0 rs 
+           else
+         if NULL rs then F
+           else 
+         match p0 (TL rs) p0 (TL rs))`;
+
+  - val Match = Define `Match pat str = match pat str pat str`;
+\end{verbatim}
+\end{hol}
+\end{session}
+%
+The remaining case is when there's more searching to do; the function
+checks if the head of the pattern is the same as the head of the
+string being searched. If yes, then we recursively search, using the
+tail of the pattern and the tail of the string being searched. If no,
+that means that we have failed to match the pattern, so we should move
+one character ahead in the string being searched and try again. If the
+string being searched is empty, however, then we return \holtxt{F}. The
+second and third arguments both represent the string being
+searched. The second argument is a kind of `local` version of the
+string being searched; we recurse into it as long as there are matches
+with the pattern. However, if the search eventually fails, then the
+fourth argument, which `remembers` where the search started from, is
+used to restart the search.
+
+So much for the behaviour of the function. Why does it terminate? There
+are two recursive calls. The first call reduces the size of the first
+and second arguments, and leaves the other arguments unchanged. The
+second call can increase the size of the first and second arguments, but
+reduces the size of the fourth.
+
+This is a classic situation in which to use a lexicographic ordering:
+some arguments to the function are reduced in some recursive calls, and
+some others are reduced in other recursive calls.  Recall that \holtxt{LEX} is
+an infix operator, defined in \ml{pairTheory} as follows:
+%
+\begin{hol}
+\begin{verbatim}
+  LEX R1 R2 = \(x,y) (p,q). R1 x p \/ ((x=p) /\ R2 y q)
+\end{verbatim}
+\end{hol}
+%
+In the second recursive call, the length of \holtxt{rs} is reduced, and in
+the first it stays the same. This motivates having the length of the
+fourth argument be the first component of the lexicographic
+combination, and the length of the second argument as the second
+component.
+
+What we need now is to formalize this. We want to map from the
+four-tuple of arguments into a lexicographic combination of
+relations. This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
+%
+\begin{hol}
+\begin{verbatim}
+   inv_image R f = \x y. R (f x) (f y)
+\end{verbatim}
+\end{hol}
+%
+The actual relation maps from the four-tuple of arguments into a pair
+of numbers $(m,n)$, where $m$ is the length of the fourth argument, and
+$n$ is the length of the second argument. These lengths are then
+compared lexicographically with respect to less-than ($<$).
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  Defn.tgoal match_defn;
+
+  - e (WF_REL_TAC `inv_image ($< LEX $<)
+                    (\(w,x,y,z). (LENGTH z, LENGTH x))`);
+
+  OK..
+  2 subgoals:
+  > val it =
+   !rs ss s p. 
+     (p=s) ==> LENGTH rs < LENGTH rs \/ LENGTH ss < LENGTH (s::ss)
+    
+   !ss rs s p.
+     ~(p = s) /\ ~NULL rs ==>
+     LENGTH (TL rs) < LENGTH rs \/
+     (LENGTH (TL rs) = LENGTH rs) /\ LENGTH (TL rs) < LENGTH (s::ss)
+\end{verbatim}
+\end{hol}
+\end{session}
+%
+The first subgoal needs a case-split on \holtxt{rs} before it is proved by
+rewriting, and the second is also easy to prove by rewriting.
 
 \subsubsection{How Termination Conditions are Synthesized}
 
@@ -1312,20 +1575,17 @@ encountered while the extractor traverses the function definition,
 do the following:
 \begin{enumerate}
 
-\item Traverse \holtxt{B} and extract termination conditions 
+\item Traverse $B$ and extract termination conditions 
      $\mathit{TCs}(B)$ from any recursive calls in it. 
      This returns a theorem $\mathit{TCs}(B) \vdash B = B'$.
 
 \item Assume $B'$ and extract termination conditions from any
   recursive calls in $X$. This returns a theorem
   $\mathit{TCs}(X) \vdash X = X'$. 
-  Each element of $\mathit{TCs}(X)$ will have
-  the form $B' \imp M$.
  
 \item Assume $\neg B'$ and extract termination conditions from any
    recursive calls in $Y$. This returns a theorem
-   $\mathit{TCs}(Y) \vdash Y = Y'$. Each element of 
-   $\mathit{TCs}(Y)$ will have the form $\neg B' \imp M$.
+   $\mathit{TCs}(Y) \vdash Y = Y'$. 
  
 \item  By equality reasoning with (1), (2), and (3), derive the theorem
 \[\mathit{TCs}(B) \cup \mathit{TCs}(X) \cup \mathit{TCs}(Y)
@@ -1339,11 +1599,9 @@ do the following:
 \end{enumerate}
  
  
-The accumulated termination conditions are propagated until the
+The termination conditions are accumulated until the
 extraction process finishes, and appear as hypotheses in the final
-result. In our example, context is properly accounted for in recursive
-calls under either branch of an `if-then-else`. Thus the extracted
-termination conditions for {fact} are
+result. Thus the extracted termination conditions for {fact} are
 %
 \begin{hol}
 \begin{verbatim}
@@ -1365,48 +1623,71 @@ termination condition extraction mechanism. Congruence rules for
 common higher-order functions, \eg, \holtxt{MAP}, \holtxt{EVERY}, and
 \holtxt{EXISTS} for lists, are already known to the
 mechanism. However, at times, one must manually prove and install a
-congruence theorem for a higher-order function.
+congruence theorem for a new user-defined higher-order function.
  
-For example, suppose we define a higher-order function {SIGMA} for
-summing the results of a function in a list. We then use {SIGMA} in 
-the definition of a function for summing the results of a function 
-in a arbitrarily (finitely) branching tree.
+For example, suppose we define a higher-order function \holtxt{SIGMA} for
+summing the results of a function in a list. 
 %
+\setcounter{sessioncount}{0}
+\begin{session}
 \begin{hol}
 \begin{verbatim}
   Define `(SIGMA f [] = 0) /\
           (SIGMA f (h::t) = f h + SIGMA f t)`;
- 
+\end{verbatim}
+\end{hol}
+\end{session}
+% 
+We then use \holtxt{SIGMA} in the definition of a function for 
+summing the results of a function in a arbitrarily 
+(finitely) branching tree.
+%
+\begin{session}
+\begin{hol}
+\begin{verbatim}
   Hol_datatype `ltree = Node of 'a => ltree list`;
  
   Defn.Hol_defn  
-    "ltree_sigma"     (* higher order recursion *)
+    "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
- 
-  > val it =
-    HOL function definition (recursive)
- 
-    Equation(s) :
-      [..] |- ltree_sigma f (Node v tl)
-                = f v + SIGMA (\a. ltree_sigma f a) tl
- 
-    Induction :
-      [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
- 
-    Termination conditions :
-      0. WF R
-      1. !tl v f a. R (f,a) (f,Node v tl) : defn
 \end{verbatim}
 \end{hol}
+\end{session}
 %
- The termination conditions for \holtxt{ltree\_sigma} seem to 
+In this definition, \holtxt{SIGMA} is applied to a partial application 
+\holtxt{(ltree\_sigma f)} of the function being defined. Such a situation
+is called a higher-order recursion. Since the recursive call of 
+\holtxt{ltree\_sigma} is not fully applied, special efforts have
+to be made to extract the correct termination conditions. Otherwise,
+we have the following unhappy situation:
+%
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  HOL function definition (recursive)
+ 
+  Equation(s) :
+    [..] |- ltree_sigma f (Node v tl)
+              = f v + SIGMA (\a. ltree_sigma f a) tl
+ 
+  Induction :
+    [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
+
+  Termination conditions :
+    0. WF R
+    1. !tl v f a. R (f,a) (f,Node v tl) : defn
+\end{verbatim}
+\end{hol}
+\end{session}
+%
+The termination conditions for \holtxt{ltree\_sigma} seem to 
 require finding a wellfounded relation \holtxt{R} such that the pair 
 \holtxt{(f,a)} is \holtxt{R}-less than
 \holtxt{(f, Node v tl)}. However, this is a hopeless task, since there is no
 relation between \holtxt{a} and \holtxt{Node v tl}, besides the fact 
 that they are both \holtxt{ltree}s. The termination condition extractor 
 has not performed properly, because it didn't know a congruence rule 
-for {SIGMA}. Such a congruence theorem is the following:
+for \holtxt{SIGMA}. Such a congruence theorem is the following:
 %
 \begin{hol}
 \begin{verbatim}
@@ -1418,16 +1699,16 @@ for {SIGMA}. Such a congruence theorem is the following:
 \end{hol}
 %
 Once \ml{Hol\_defn} has been told about this theorem, via 
-\ml{write\_congs}, the termination conditions extracted for 
+\ml{DefnBase.write\_congs}, the termination conditions extracted for 
 the definition are now provable, since \holtxt{a} is a 
 proper subterm of \holtxt{Node v tl}.
 %
+\begin{session}
 \begin{hol}
 \begin{verbatim}
-  local open DefnBase
-  in
-  val _ = write_congs (SIGMA_CONG::read_congs())
-  end;
+  val _ = let open DefnBase
+          in write_congs (SIGMA_CONG::read_congs())
+          end;
  
   Defn.Hol_defn
     "ltree_sigma"
@@ -1444,6 +1725,7 @@ proper subterm of \holtxt{Node v tl}.
         1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
 \end{verbatim}
 \end{hol}
+\end{session}
 
 \section{Defining Inductive Relations}
 
