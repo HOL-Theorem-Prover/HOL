@@ -31,11 +31,11 @@ simple_example () {
 }
 
 MLsyntax () { simple_example MLsyntax; }
-RSA ()      { simple_example RSA; }
 ind_def ()  { simple_example ind_def; }
 lambda ()   { simple_example lambda; }
 arm6 ()     { simple_example arm6; }
-PSL ()      { simple_example PSL; }
+PSL ()      { simple_example PSL/1.1; }
+ring ()     { ../bin/hol < ring.sml; }
 
 bmark () {
   cd bmark
@@ -75,7 +75,7 @@ Crypto () {
 }
 
 fast () {
-    for i in toplevel MLsyntax RSA ind_def lambda bmark parity elliptic
+    for i in toplevel MLsyntax ind_def lambda bmark parity elliptic
     do
         buildit $i
     done
@@ -119,8 +119,10 @@ then
     echo "Must have 0 or 1 argument" >&2
     exit 1
 else
-    buildit `basename $1`   # use of basename strips trailing slashes from
-                            # inputs of the form   dirname/
+    arg=`basename $1 .sml`   # use of basename strips trailing slashes from
+                             # inputs of the form   dirname/ and .sml
+                             # from ring.sml and others we may wish to use
+    buildit $arg
 fi
 
 
