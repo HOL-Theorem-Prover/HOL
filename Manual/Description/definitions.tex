@@ -49,265 +49,6 @@ declarations that \verb+Hol_datatype+ accepts is found in Table
 \end{table}
 }
 
-% Many formalizations require the definition of new types.  For
-% example, ML-style datatypes are commonly used to model the abstract
-% syntax of programming languages and the state-space of elaborate
-% transition systems.  In HOL, such datatypes (at least, those that are
-% inductive, or, alternatively, have a model in an initial algebra) may be
-% specified using the invocation {Hol_datatype `<spec>`}, where
-% {<spec>} should conform to the following grammar:
-% {
-%    spec    ::= [ <binding> ; ]* <binding>
-%
-%    binding ::= <ident> = [ <clause> | ]* <clause>
-%             |  <ident> = <| [ <ident> : <type> ; ]* <ident> : <type> |>
-%
-%    clause  ::= <ident>
-%             |  <ident> of [<type> => ]* <type>
-% }
-% When a datatype is successfully defined, a number of standard theorems
-% are automatically proved about the new type: the constructors of the type
-% are proved to be injective and disjoint, induction and case analysis
-% theorems are proved, and each type also has a `size' function defined
-% for it. All these theorems are stored in the current theory and added to
-% a database accessed via the functions in {TypeBase}.
-%
-% The notation used to declare datatypes is, unfortunately, not the same
-% as that of ML. For example, an ML declaration
-% {
-%    datatype ('a,'b) btree = Leaf of 'a
-%                           | Node of ('a,'b) btree * 'b * ('a,'b) btree
-% }
-% would most likely be declared in HOL as
-% {
-%    Hol_datatype `btree = Leaf of 'a
-%                        | Node of btree => 'b => btree`
-% }
-% The {=>} notation in a HOL datatype description is intended to replace
-% {*} in an ML datatype description, and highlights the fact that, in
-% HOL, constructors are by default curried.  Note also that any type
-% parameters for the new type are not allowed; they are inferred (in an
-% arbitrary order) from the right hand side of the binding.
-%
-% When a record type is defined, the parser is adjusted to allow new
-% syntax (appropriate for records), and a number of useful
-% simplification theorems are also proved.  The most useful of the
-% latter are automatically stored in the {TypeBase} and can be inspected
-% using the {simpls_of} function.  For further details on record types,
-% see the DESCRIPTION.
-%
-% \EXAMPLE
-% In the following, we shall give an overview of the kinds of types that
-% may be defined by {Hol_datatype}.
-%
-% To start, enumerated types can be defined as in the following example:
-% {
-%    Hol_datatype `enum = A1  | A2  | A3  | A4  | A5
-%                       | A6  | A7  | A8  | A9  | A10
-%                       | A11 | A12 | A13 | A14 | A15
-%                       | A16 | A17 | A18 | A19 | A20
-%                       | A21 | A22 | A23 | A24 | A25
-%                       | A26 | A27 | A28 | A29 | A30`
-%
-% }
-% Other non-recursive types may be defined as well:
-% {
-%    Hol_datatype `foo = N of num
-%                      | B of bool
-%                      | Fn of 'a -> 'b
-%                      | Pr of 'a # 'b`
-% }
-% Turning to recursive types, we can define a type of binary trees
-% where the leaves are numbers.
-% {
-%     - Hol_datatype `tree = Leaf of num
-%                          | Node of tree => tree`
-% }
-% We have already seen a type of binary trees having polymorphic
-% values at internal nodes. This time, we will declare it in "paired" format.
-% {
-%     Hol_datatype `tree = Leaf of 'a
-%                        | Node of tree # 'b # tree`
-% }
-% This specification seems closer to the declaration that one might make
-% in ML, but is more difficult to deal with in proof than the curried format
-% used above.
-%
-% The basic syntax of the named lambda calculus is easy to describe:
-% {
-%     - load "stringTheory";
-%     > val it = () : unit
-%
-%     - Hol_datatype `lambda = Var of string
-%                            | Const of 'a
-%                            | Comb of lambda => lambda
-%                            | Abs of lambda => lambda`
-% }
-% The syntax for `de Bruijn' terms is roughly similar:
-% {
-%    Hol_datatype `dB = Var of string
-%                     | Const of 'a
-%                     | Bound of num
-%                     | Comb  of dB => dB
-%                     | Abs   of dB`
-% }
-% Arbitrarily branching trees may be defined by allowing a node to hold
-% the list of its subtrees. In such a case, leaf nodes do not need to be
-% explicitly declared.
-% {
-%    Hol_datatype `ntree = Node of 'a => ntree list`
-% }
-% A type of `first order terms' can be declared as follows:
-% {
-%    Hol_datatype `term = Var of string
-%                       | Fnapp of string # term list`
-% }
-% Mutally recursive types may also be defined. The following, extracted by
-% Elsa Gunter from the Definition of Standard ML, captures a subset of
-% Core ML.
-% {
-%    Hol_datatype
-%         `atexp = var_exp of string
-%                | let_exp of dec => exp ;
-%
-%            exp = aexp    of atexp
-%                | app_exp of exp => atexp
-%                | fn_exp  of match ;
-%
-%          match = match  of rule
-%                | matchl of rule => match ;
-%
-%           rule = rule of pat => exp ;
-%
-%            dec = val_dec   of valbind
-%                | local_dec of dec => dec
-%                | seq_dec   of dec => dec ;
-%
-%        valbind = bind  of pat => exp
-%                | bindl of pat => exp => valbind
-%                | rec_bind of valbind ;
-%
-%            pat = wild_pat
-%                | var_pat of string`
-% }
-% Simple record types may be introduced using the {<| ... |>} notation.
-% {
-%     Hol_datatype `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
-% }
-% The use of record types may be recursive. For example, the following
-% declaration could be used to formalize a simple file system.
-% {
-%    Hol_datatype
-%         `file = Text of string
-%               | Dir of directory
-%           ;
-%     directory = <| owner : string ;
-%                    files : (string # file) list |>`
-% }
-%
-% \FAILURE
-% Now we address some types that cannot be declared with {Hol_datatype}.
-% In some cases they cannot exist in HOL at all; in others, the type
-% can be built in the HOL logic, but {Hol_datatype} is not able to make
-% the definition.
-%
-% First, an empty type is not allowed in HOL, so the following attempt
-% is doomed to fail.
-% {
-%    Hol_datatype `foo = A of foo`
-% }
-% So called `nested types', which are occasionally quite useful, cannot
-% at present be built with {Hol_datatype}:
-% {
-%    Hol_datatype `btree = Leaf of 'a
-%                        | Node of  ('a # 'a) btree`
-% }
-% Co-inductive types may not currently be built with {Hol_datatype}:
-% {
-%    Hol_datatype `lazylist = Nil
-%                           | Cons of 'a # (one -> lazylist)`
-% }
-% This type can however be built in HOL: see {llistTheory}.
-%
-% Finally, for cardinality reasons, HOL does not allow the following attempt
-% to model the untyped lambda calculus as a set (note the {->} in the clause
-% for the {Abs} constructor):
-% {
-%     Hol_datatype `lambda = Var of string
-%                          | Const of 'a
-%                          | Comb of lambda => lambda
-%                          | Abs of lambda -> lambda`
-% }
-% Instead, one would have to build a theory of complete partial orders
-% (or something similar) with which to model the untyped lambda calculus.
-%
-% \COMMENTS
-% The consequences of an invocation of {Hol_datatype} are stored in the
-% current theory segment and in {TypeBase}. The principal consequences
-% of a datatype definition are the primitive recursion and induction theorems.
-% These provide the ability to define simple functions over the type, and
-% an induction principle for the type. For a type named {ty},
-% the primitive recursion theorem is stored under {ty_Axiom} and
-% the induction theorem is put under {ty_induction}. Other
-% consequences include the distinctness of constructors ({ty_distinct}),
-% and the injectivity of constructors ({ty_11}). A `degenerate' version of
-% {ty_induction} is also stored under {ty_nchotomy}: it provides for reasoning
-% by cases on the construction of elements of {ty}. Finally, some
-% special-purpose theorems are stored : {ty_case_cong} gives a congruence
-% theorem for "case" statements on elements of {ty}. These case statements
-% are introduced by {ty_case_def}. Also, a definition of the "size" of the type
-% is added to the current theory, under the name {ty_size_def}.
-%
-% For example, invoking
-% {
-%    Hol_datatype `tree = Leaf of num
-%                       | Node of tree => tree`;
-% }
-% results in the definitions
-% {
-%    tree_case_def =
-%      |- (!f f1 a. case f f1 (Leaf a) = f a) /\
-%          !f f1 a0 a1. case f f1 (Node a0 a1) = f1 a0 a1
-%
-%    tree_size_def
-%      |- (!a. tree_size (Leaf a) = 1 + a) /\
-%          !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
-% }
-% being added to the current theory. The following theorems about the datatype
-% are also stored in the current theory.
-% {
-%    tree_Axiom
-%      |- !f0 f1.
-%           ?fn. (!a. fn (Leaf a) = f0 a) /\
-%                !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
-%
-%    tree_induction
-%      |- !P. (!n. P (Leaf n)) /\
-%             (!t t0. P t /\ P t0 ==> P (Node t t0))
-%             ==>
-%             !t. P t
-%
-%    tree_nchotomy  |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
-%
-%    tree_11
-%      |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
-%          !a0 a1 a0' a1'. (Node a0 a1 = Node a0' a1') = (a0=a0') /\ (a1=a1')
-%
-%    tree_distinct  |- !a1 a0 a. ~(Leaf a = Node a0 a1)
-%
-%    tree_case_cong
-%      |- !M M' f f1.
-%           (M = M') /\
-%           (!a. (M' = Leaf a) ==> (f a = f' a)) /\
-%           (!a0 a1. (M' = Node a0 a1) ==> (f1 a0 a1 = f1' a0 a1))
-%           ==>
-%           (case f f1 M = case f' f1' M')
-% }
-% When a type involving records is defined, many more definitions are
-% made and added to the current theory.
-%
-% A definition of mutually recursives types results in the above theorems and
-% definitions being added for each of the defined types.
 
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!maintenance of TypeBase@maintenance of \ml{TypeBase}}
 \index{TypeBase@\ml{TypeBase}}
@@ -315,8 +56,9 @@ declarations that \verb+Hol_datatype+ accepts is found in Table
 \HOL{} maintains an underlying database of datatype facts called the
 \ml{TypeBase}.  This database is used to support various high-level
 proof tools (see Section~\ref{sec:bossLib}), and is augmented whenever
-a \verb+Hol_datatype+ declaration is made.  When a datatype is defined by \verb+Hol_datatype+,
-the following information is derived and stored in the database.
+a \verb+Hol_datatype+ declaration is made.  When a datatype is 
+defined by \verb+Hol_datatype+, the following information is derived 
+and stored in the database.
 
 \begin{itemize}
 \item initiality theorem for the type
@@ -653,8 +395,8 @@ are also proved and stored in the current theory.
 When a type involving records is defined, many more definitions are
 made and added to the current theory.
 
-A definition of mutually recursives types results in the above theorems and
-definitions being added for each of the defined types.
+A mutually recursive type definition results in the above 
+theorems and definitions being added for each of the defined types.
 
 \section{Record Types}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!record types}
@@ -702,66 +444,88 @@ as defining the type (called {\tt person}), the datatype definition
 function also defines two other sets of constants.  These are the
 field access functions and functional update functions.  The field
 access functions have names of the form
-``$\langle$\textsl{record-type\/}$\rangle$\verb|_|$\langle$\textsl{field\/}$\rangle$''.
+   $\langle$\textsl{record-type\/}$\rangle$\verb|_|$\langle$\textsl{field\/}$\rangle$.
 These functions can be used directly, or one can use standard field
 selection notation to access the values of a record's field.  Thus,
-one would write the expression: \mbox{\tt ``bob.employed``} in order
+one would write the expression: \holtxt{bob.employed} in order
 to return the value of {\tt bob}'s {\tt employed} field.  The
-alternative, \texttt{``person\_employed bob``}, works, but would be
+alternative, \holtxt{person\_employed bob}, works, but would be
 printed using the first syntax, with the full-stop.
 
 The functional update functions are given the names
-\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}%
-  $\langle$\textsl{field}$\rangle$\texttt{\_fupd}''} for each field in
+\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''} 
+for each field in
 the type.  They take two arguments, a function and a record to be
 updated.  The function parameter is an endomorphism on the field type,
 so that the resulting record is the same as the original, except that
 the specified field has had the given function applied to it to
 generate the new value for that field.  They can be written with the
 keyword \texttt{with} and the \texttt{updated\_by} operator.  Thus
-\begin{alltt}
-  ``bob with employed updated_by \$~``
-\end{alltt} \noindent
+%
+\begin{hol}
+\begin{verbatim}
+  bob with employed updated_by $~
+\end{verbatim} 
+\end{hol}\noindent
+%
 is a record value identical to the \texttt{bob} except that the
 boolean value in the \texttt{employed} field has been inverted.
 
 Additionally, there is syntactic sugar available to let one write a
 record with one of its fields replaced by a specific value.  This is
-done by using the \texttt{:=} operator instead of
-\texttt{updated\_by}:
+done by using the \holtxt{:=} operator instead of
+\holtxt{updated\_by}:
+%
+\begin{hol}
 \begin{verbatim}
-  ``bob with employed := T``
+  bob with employed := T
 \end{verbatim}
+\end{hol}
+%
 This form is translated at parse-time to be a use of the corresponding
 functional update, along with a use of the \textsf{K}-combinator from
 the \texttt{combin} theory.  Thus, the above example  is really
+%
+\begin{hol}
 \begin{verbatim}
-  ``bob with employed updated_by (K T)``
+  bob with employed updated_by (K T)
 \end{verbatim}
+\end{hol}
+%
 which is in turn a pretty form of
+%
+\begin{hol}
 \begin{verbatim}
-  ``person_employed_fupd (K T) bob``
+  person_employed_fupd (K T) bob
 \end{verbatim}
+\end{hol}
+%
 If a chain of updates is desired, then multiple updates can be
-specified inside \texttt{<|}-\texttt{|>} pairs, separated by
+specified inside \holtxt{<|}-\holtxt{|>} pairs, separated by
 semi-colons, thus:
-
+%
+\begin{hol}
 \begin{verbatim}
-  ``bob with <| age := 10; name := "Child labourer" |>``
+  bob with <| age := 10; name := "Child labourer" |>
 \end{verbatim}
+\end{hol}
+%
 Both update forms (using \texttt{updated\_by} and \texttt{:=}) can be
 used in a chain of updates.
 
 \paragraph{Specifying record literals}
 
 The parser accepts lists of field specifications between
-\texttt{<|}-\texttt{|>} pairs without the \texttt{with} keyword.
+\holtxt{<|}-\holtxt{|>} pairs without the \holtxt{with} keyword.
 These translate to sequences of updates of an arbitrary value
-(literally, the HOL value \texttt{ARB}), and are treated as literals.
+(literally, the HOL value \holtxt{ARB}), and are treated as literals.
 Thus,
+%
+\begin{hol}
 \begin{verbatim}
-  ``<| age := 21; employed := F; name := "Layabout" |>``
+  <| age := 21; employed := F; name := "Layabout" |>
 \end{verbatim}
+\end{hol}
 
 \paragraph{Using the theorems produced by record definition}
 
@@ -809,7 +573,7 @@ order to generate the final name of the theorem.
  \rewruse
 \end{description}
 
-\paragraph{``Big'' records} The size of certain theorems proved in the
+\paragraph{Big records} The size of certain theorems proved in the
 record type package increases as the square of the number of fields in
 the record.  (In particular, the update canonicalisation and
 \texttt{acc\_fupd} theorems have this property.) To avoid inefficiency
@@ -1027,79 +791,323 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
 
 \section{Function Definition}\label{TFL}
 
-\HOL{} provides a function definition mechanism based on the
-wellfounded recursion theorem which is proved in \theoryimp{relation},
-discussed in Section \ref{relation}.
+HOL{} provides a function definition mechanism based on the
+wellfounded recursion theorem proved in \theoryimp{relationTheory},
+discussed in Section \ref{relation}.  \ml{Define} takes a high-level,
+possibly recursive, specification of a function, and attempts to
+define the function in the logic. If this attempt is successful, the
+specification is derived from the definition. The derived
+specification is returned to the user, and also stored in the current
+theory. \ml{Define} may be used to define abbreviations, recursive
+functions, and mutually recursive functions. A custom induction
+theorem may be stored in the current theory as a by-product of
+\ml{Define}'s activity. This induction theorem follows the recursion
+structure of the function, and may be useful when proving properties
+of the function.
+
 
 \index{Define@\ml{Define}}
+
+ \ml{Define} takes as input a quotation representing a conjunction of
+equations. The specified function(s) may be phrased using ML-style
+pattern-matching. A call \ml{Define `}\textit{spec}\ml{`} should conform 
+with the grammar in Table \ref{define:syntax}.
+\begin{table}[htbp]
+\begin{center}
+\[
+\begin{array}{|rll|}
+\hline
+\mathit{spec} & ::= &  \mathit{eqn} \\
+              & \mid  & (\mathit{eqn}) \land \mathit{spec} \\
+  & & \\ 
+\mathit{eqn} & ::= & \mathit{alphanumeric}\ \mathit{pat} \ldots \mathit{pat} = \mathit{term} \\
+  & & \\ 
+  & & \\ 
+\mathit{pat} & ::= & \mathit{variable} \\
+    & \mid   & \mathit{wildcard} \\
+    & \mid   & \mathit{cname} \\
+    & \mid   & (\mathit{cname}_n\ \mathit{pat}_1 \ldots \mathit{pat}_n) \\
+  & & \\ 
+\mathit{cname} & ::= & \mathit{alphanumeric} \mid \mathit{symbolic} \\
+  & & \\ 
+\mathit{wildcard} & ::=  & \_\!\_ \\
+                  & \mid & \_\!\_ \mathit{wildcard} \\
+  & & \\ 
+\hline
+\end{array}
+\]
+\caption{Function Declaration}\label{define:syntax}
+\end{center}
+\end{table}
+
+\paragraph{Termination} When processing the specification of a recursive function,
+\ml{Define} must perform a termination proof. It automatically
+constructs termination conditions for the function, and invokes a
+termination prover in an attempt to prove the termination conditions.
+If the function is primitive recursive, in the sense that it exactly
+follows the recursion pattern of a previously declared HOL datatype,
+then this proof always succeeds, and \ml{Define} stores the derived
+equations in the current theory segment.  Otherwise, the function is
+not an instance of primitive recursion, and the termination prover may
+succeed or fail.
+ 
+ If it succeeds, then \ml{Define} stores the specified equations in the
+ current theory segment. An induction theorem customized for the defined
+ function is also stored in the current segment. Note, however, that an
+ induction theorem is not stored for primitive recursive functions, since
+ that theorem would be identical to the induction theorem resulting from
+ the declaration of the datatype.
+ 
+ If the termination proof fails, then \ml{Define} fails.
+ 
+\paragraph{Pattern Expansion}
+In general, \ml{Define} attempts to derive exactly the specified
+conjunction of equations. However, the rich syntax of patterns allows
+some ambiguity. For example, the input
+%
+\begin{hol}
+\begin{verbatim} 
+  Define `(f 0 _ = 1)
+    /\    (f _ 0 = 2)`
+\end{verbatim} 
+\end{hol}
+%
+is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
+\holtxt{2}?  This ambiguity is dealt with in the usual way for compilers and
+interpreters for functional languages: namely, the conjunction of
+equations is treated as being applied left-conjunct first, followed
+by processing the right conjunct. Therefore, in the example above, the
+right-hand side of the first clause is taken as the value of 
+\holtxt{f 0 0}. In the implementation, ambiguities arising 
+from such overlapping patterns are systematically translated 
+away in a pre-processing step.
+ 
+ Another case of ambiguity in patterns is shown above: the specification
+is incomplete since it does not tell how \holtxt{f} should behave when
+applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
+implementation, such missing clauses are filled in, and have the value
+\holtxt{ARB}. This `pattern-completion` step is a way of turning descriptions
+of partial functions into total functions suitable for HOL. However,
+since the user has not completely specified the function, the system
+takes that as a hint that the user is not interested in using the
+function at the missing-but-filled-in clauses, and so such clauses are
+dropped from the final theorem.
+ 
+In summary, \ml{Define} will derive the unambiguous and complete
+equations
+%
+\begin{hol}
+\begin{verbatim} 
+  |- (f 0 (SUC v4) = 1) /\
+     (f 0 0 = 1) /\
+     (f (SUC v2) 0 = 2)
+     (f (SUC v2) (SUC v4) = ARB)
+\end{verbatim} 
+\end{hol}
+%
+from the above ambiguous and incomplete equations. The odd-looking
+variable names are due to the pre-processing steps described above. The
+above result is only an intermediate value: in the final result returned
+by \ml{Define}, the last equation is droppped since it was not 
+specified by the original input.
+\begin{hol}
+\begin{verbatim} 
+  |- (f 0 (SUC v4) = 1) /\
+     (f 0 0 = 1) /\
+     (f (SUC v2) 0 = 2)
+\end{verbatim} 
+\end{hol}
+  
+\paragraph{Storing definitions in the theory segment}
+
+ \ml{Define} automatically generates names with which to store the
+definition and, (if it exists) the associated induction theorem, in
+the current theory. The name for storing the definition is built by
+concatenating the name of the function with the value of the reference
+variable \ml{Defn.def\_suffix}. The name for storing the induction theorem
+is built by concatenating the name of the function with the value of
+the reference variable \ml{Defn.ind\_suffix}. For mutually recursive
+functions, where there is a choice of names, the name of the function
+in the first clause is taken.
+ 
+ Since the names used to store elements in the current theory segment
+are transformed into ML bindings after the theory is exported, it is
+required that every invocation of \ml{Define} generate names that are
+valid ML identifiers. For this reason, \ml{Define} requires
+alphanumeric function names. If one wishes to define symbolic
+identifiers, the ML function \ml{xDefine} should be used.
+
 \index{xDefine@\ml{xDefine}}
+\begin{hol}
 \begin{verbatim}
-   Define   : term quotation -> thm
-   xDefine  : string -> term quotation -> thm
-   Hol_defn : string -> term quotation -> Defn.defn
+  xDefine : string -> term quotation -> thm
 \end{verbatim}
+\end{hol}
+The \ml{xDefine} function is identical to
+\ml{Define} except that it takes an explicit name to use when
+storing the definition in the current theory. 
 
-The \texttt{Define} function is a general-purpose function definition
-mechanism. The \texttt{xDefine} function is identical to
-{\small\verb+Define+} except that it takes an explicit name to use when
-storing the definition in the current theory. {\small\tt Define}
-accepts the following syntax:
-
-\begin{enumerate}
-
-\item Non-recursive definition, varstructs allowed on left-hand side.
+\subsection{Examples}
+ We will give a number of examples that display the range of functions
+that may be defined with \ml{Define}. First, we have a recursive function
+that uses "destructors" in the recursive call. 
+ 
+\begin{hol}
 \begin{verbatim}
-   Define `f w (x, y, z) = x + y / w + z`;
+  Define 
+    `fact x = if x = 0 then 1 else x * fact(x-1)`;
+
+   Equations stored under "fact_def".
+   Induction stored under "fact_ind".
+   > val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
 \end{verbatim}
-
-\item Primitive recursive (or non-recursive) over known datatype.
-\label{enum:prim-recursive}
-
+\end{hol}
+%
+Since \holtxt{fact} is not
+primitive recursive, an induction theorem for \holtxt{fact} is generated and 
+stored in the current theory.
+%
+\begin{hol}
 \begin{verbatim}
-   Define
-       `(fold b f [] = b) /\
-        (fold b f (h::t) = f h (fold b f t))`;
+  - DB.fetch "-" "fact_ind";
+ 
+  > val it =
+     |- !P. (!x. (~(x = 0) ==> P (x - 1)) ==> P x) ==> !v. P v : thm
 \end{verbatim}
-
-\item Non-recursive definition, over complex patterns:
-
+\end{hol}
+ 
+Next we have a recursive function with relatively complex
+pattern-matching. We omit to examine the generated induction
+theorem.
+%
+\begin{hol}
 \begin{verbatim}
-   Define
-       `(g (0,x,y,z) = 1)
-     /\ (g (w,0,y,z) = 2)
-     /\ (g (w,x,0,z) = 3)
-     /\ (g (w,x,y,0) = 4)`;
+  Define `(flatten  []           = [])
+     /\   (flatten ([]::rst)     = flatten rst)
+     /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
+
+   <<HOL message: inventing new type variable names: 'a>>
+
+   Equations stored under "flatten_def".
+   Induction stored under "flatten_ind".
+
+   > val it =
+       |- (flatten [] = []) /\
+          (flatten ([]::rst) = flatten rst) /\
+          (flatten ((h::t)::rst) = h::flatten (t::rst)) : thm
 \end{verbatim}
-
-\item Recursions (not mutual or nested) that aren't handled
-  by~\ref{enum:prim-recursive}.
-
+\end{hol}
+ 
+Next we define a curried recursive function, which uses
+wildcard expansion and pattern-matching pre-processing.
+%
+\begin{hol}
 \begin{verbatim}
-   Define `(flatten  []           = [])
-      /\   (flatten ([]::rst)     = flatten rst)
-      /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
-\end{verbatim}
+  Define `(min (SUC x) (SUC y) = min x y + 1)
+     /\   (min  ____    ____   = 0)`;
 
-\item Nested recursions.
-\begin{verbatim}
-   Define `N x = if x>100 then x-10 else N(N(x+11))`;
-\end{verbatim}
+  Equations stored under "min_def".
+  Induction stored under "min_ind".
 
-\item Mutual recursion.
-\begin{verbatim}
-   xDefine "even_odd"
-      `(even 0 = T)
-   /\  (even (SUC n) = odd n)
-   /\  (odd 0 = F)
-   /\  (odd (SUC n) = even n)`;
+  > val it =
+      |- (min (SUC x) (SUC y) = min x y + 1) /\
+         (min (SUC v2) 0 = 0) /\
+         (min 0 v1 = 0) : thm
 \end{verbatim}
+\end{hol}
+ 
+ Next we make a primitive recursive definition. Note that no
+induction theorem is generated in this case.
+%
+\begin{hol}
+\begin{verbatim}
+  Define `(filter P [] = [])
+    /\    (filter P (h::t) = if P h then h::filter P t else filter P t)`;
 
-\item Schematic definitions (mutual and nested recursive schemata are
-         accepted).
-\begin{verbatim}
-   Define `While s = if B s then While (C s) else s`;
+  <<HOL message: inventing new type variable names: 'a>>
+  Definition has been stored under "filter_def".
+
+  > val it =
+     |- (!P. filter P [] = []) /\
+        !P h t. filter P (h::t) =
+                 (if P h then h::filter P t else filter P t) : thm
 \end{verbatim}
-\end{enumerate}
+\end{hol}
+ 
+\ml{Define} may also be used to define mutually recursive functions. 
+For example, we can define a datatype of propositions and a function for
+putting a proposition into negation normal form as follows.  
+First we define a datatype, named \ml{prop}, of boolean formulas:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_datatype
+    `prop = VAR of 'a
+          | NOT of prop
+          | AND of prop => prop
+          | OR  of prop => prop`;
+\end{verbatim}
+\end{hol}
+%
+Then two mutually recursive functions \holtxt{nnfpos} and \holtxt{nnfneg}
+are defined:
+%
+\begin{hol}
+\begin{verbatim}
+  Define
+     `(nnfpos (VAR x)   = VAR x)
+ /\   (nnfpos (NOT p)   = nnfneg p)
+ /\   (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
+ /\   (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
+
+ /\   (nnfneg (VAR x)   = NOT (VAR x))
+ /\   (nnfneg (NOT p)   = nnfpos p)
+ /\   (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
+ /\   (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`
+\end{verbatim}
+\end{hol}
+%
+The system makes the definition and returns the theorem
+%
+\begin{hol}
+\begin{verbatim}
+  |- (nnfpos (VAR x) = VAR x) /\
+     (nnfpos (NOT p) = nnfneg p) /\
+     (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q)) /\
+     (nnfpos (OR p q) = OR (nnfpos p) (nnfpos q)) /\
+     (nnfneg (VAR x) = NOT (VAR x)) /\
+     (nnfneg (NOT p) = nnfpos p) /\
+     (nnfneg (AND p q) = OR (nnfneg p) (nnfneg q)) /\
+     (nnfneg (OR p q) = AND (nnfneg p) (nnfneg q)) : thm
+\end{verbatim}
+\end{hol}
+ 
+\ml{Define} may also be used to define non-recursive functions.
+%
+\begin{hol}
+\begin{verbatim}
+  Define 
+    `f x (y,z) = (x + 1 = y DIV z)`;
+\end{verbatim}
+\end{hol}
+
+\ml{Define} may also be used to define non-recursive functions
+with complex pattern-matching. The pattern-matching pre-processing of
+{Define} can be convenient for this purpose, but can also generate a
+large number of equations. For example:
+%
+\begin{hol}
+\begin{verbatim}
+  Define 
+    `(g (0,_,_,_,_) = 1) /\
+     (g (_,0,_,_,_) = 2) /\
+     (g (_,_,0,_,_) = 3) /\
+     (g (_,_,_,0,_) = 4) /\
+     (g (_,_,_,_,0) = 5)`
+\end{verbatim}
+\end{hol}
+%
+yields a definition with thirty-one clauses.
 
 For complex recursions, \ml{Define} attempts to find a measure under
 which recursive calls become smaller (and to prove that they do indeed
@@ -1112,15 +1120,18 @@ an induction theorem for the function is also automatically derived
 and stored in the current theory.
 
 \paragraph{Example.} Invoking
+\begin{hol}
 \begin{verbatim}
-     Define
-       `(gcd 0 y = y)
-   /\   (gcd (SUC x) 0 = SUC x)
-   /\   (gcd (SUC x) (SUC y) =
+  Define
+      `(gcd 0 y = y)
+  /\   (gcd (SUC x) 0 = SUC x)
+  /\   (gcd (SUC x) (SUC y) =
             if y <= x then gcd (x-y)   (SUC y)
                       else gcd (SUC x) (y-x))`;
 \end{verbatim}
+\end{hol}
 proves all termination conditions and stores the theorem
+\begin{hol}
 \begin{verbatim}
    |- (gcd 0 y = y)           /\
       (gcd (SUC x) 0 = SUC x) /\
@@ -1128,8 +1139,10 @@ proves all termination conditions and stores the theorem
            if y <= x then gcd (x - y) (SUC y)
                      else gcd (SUC x) (y - x))
 \end{verbatim}
+\end{hol}
 in the current theory under the name \ml{"gcd\_def"} and also stores
 the theorem
+\begin{hol}
 \begin{verbatim}
    !P. (!y. P 0 y)       /\
        (!x. P (SUC x) 0) /\
@@ -1139,7 +1152,8 @@ the theorem
           ==>
             !v v1. P v v1.
 \end{verbatim}
-in the current theory under the name \ml{"gcd\_ind"} before
+\end{hol}
+in the current theory under the name \ml{gcd\_ind} before
 returning the requested recursion equations.
 
 Recall that, if the termination proof fails, an invocation of
@@ -1148,19 +1162,22 @@ function \ml{Hol\_defn} should be used.
 %
 \index{Hol_defn@\ml{Hol\_defn}}
 
+\begin{hol}
 \begin{verbatim}
-   Hol_defn     : string -> term quotation -> Defn.defn
-   WF_REL_TAC   : term quotation -> tactic
+  Hol_defn   : string -> term quotation -> Defn.defn
+  WF_REL_TAC : term quotation -> tactic
 \end{verbatim}
+\end{hol}
 
 \ml{Hol\_defn} makes the requested definition, but defers the proof of
 termination to the user. For setting up termination proofs, there are
 several useful entrypoints, namely
-
+\begin{hol}
 \begin{verbatim}
    Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
    Defn.tprove : Defn.defn * tactic -> thm * thm
 \end{verbatim}
+\end{hol}
 \ml{Defn.tgoal} is analogous to \ml{set\_goal} and \ml{Defn.tprove} is
 analogous to \ml{prove}.
 
@@ -1171,6 +1188,7 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 
 \setcounter{sessioncount}{0}
 \begin{session}
+\begin{hol}
 \begin{verbatim}
 val qsort_def =
   Hol_defn "qsort"
@@ -1179,6 +1197,7 @@ val qsort_def =
          APPEND (qsort r (FILTER (\x. r x h) t))
            (h :: qsort r (FILTER (\x. ~(r x h)) t)))`;
 \end{verbatim}
+\end{hol}
 \end{session}
 which returns a value of type \ml{defn}, but does not try to prove
 termination. Although it is possible to directly work with elements of
@@ -1188,6 +1207,7 @@ goal is just to get the unrestricted recursion equations and induction
 theorem.
 
 \begin{session}
+\begin{hol}
 \begin{verbatim}
 Defn.tgoal qsort_def;
 
@@ -1199,6 +1219,7 @@ Defn.tgoal qsort_def;
            (!t h r. R (r,FILTER (\x. ~r x h) t) (r,h::t)) /\
            (!t h r. R (r,FILTER (\x. r x h) t) (r,h::t)) /\ WF R
 \end{verbatim}
+\end{hol}
 \end{session}
 
 How to proceed? The function \ml{WF\_REL\_TAC} now shows its utility.
@@ -1208,6 +1229,7 @@ For our example, we obtain two subgoals both of which are easy to
 prove.
 
 \begin{session}
+\begin{hol}
 \begin{verbatim}
 - e (WF_REL_TAC `measure (LENGTH o SND)`);
 OK..
@@ -1218,6 +1240,7 @@ OK..
 
     !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
 \end{verbatim}
+\end{hol}
 \end{session}
 
 
@@ -1228,6 +1251,7 @@ initial goal is proved, returns a pair comprising the requested
 equations and the induction theorem.
 
 \begin{session}
+\begin{hol}
 \begin{verbatim}
 - val (qsort_eqns,qsort_ind) =
      Defn.tprove
@@ -1248,7 +1272,10 @@ equations and the induction theorem.
                  P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
         ==> !v v1. P v v1  : thm
 \end{verbatim}
+\end{hol}
 \end{session}
+The custom induction theorem for a function can be applied by \ml{recInduct}.
+See Section \ref{sec:bossLib} for details.
 
 \section{Defining Inductive Relations}
 
@@ -1291,6 +1318,7 @@ first relation defined by the function.  The second is the induction
 principle for the relations, saved under the name \ml{<stem>\_ind}.  The
 third is the cases theorem for the relations, saved under the name
 \ml{<stem>\_cases}.  The cases theorem is of the form
+\begin{hol}
 \begin{verbatim}
    (!a0 .. an.  R1 a0 .. an = <R1's first rule possibility> \/
                               <R1's second rule possibility> \/ ...)
@@ -1300,10 +1328,11 @@ third is the cases theorem for the relations, saved under the name
                    /\
    ...
 \end{verbatim}
-
+\end{hol}
 So called ``strong'' versions of induction principles (where instances
-of relation being defined appear as extra hypotheses), can be
-automatically proved with a call to the function \[
+of the relation being defined appear as extra hypotheses), can be
+automatically proved with a call to the function 
+\[
 \ml{IndDefRules.derive\_strong\_induction : thm list * thm -> thm}
 \]
 The first argument is the list of rules (use the \ml{CONJUNCTS}
