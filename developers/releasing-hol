@@ -185,7 +185,7 @@ echo Now starting to clean up and make tar ball
 cd /tmp/hol98
 /bin/rm -rf developers
 /bin/rm -rf Manual
-/bin/rm -rf examples/sunrise
+/bin/rm -rf examples/miller
 /bin/rm -rf src/HolBdd/Manual
 /bin/rm -rf src/HolSat/doc
 
