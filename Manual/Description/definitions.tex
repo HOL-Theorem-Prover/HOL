@@ -795,12 +795,9 @@ HOL{} provides a function definition mechanism based on the
 wellfounded recursion theorem proved in \theoryimp{relationTheory},
 discussed in Section \ref{relation}.  \ml{Define} takes a high-level,
 possibly recursive, specification of a function, and attempts to
-define the function in the logic. If this attempt is successful, the
-specification is derived from the definition. The derived
-specification is returned to the user, and also stored in the current
-theory. \ml{Define} may be used to define abbreviations, recursive
-functions, and mutually recursive functions. A custom induction
-theorem may be stored in the current theory as a by-product of
+define the function in the logic. \ml{Define} may be used to define
+abbreviations, recursive functions, and mutually recursive
+functions. An induction theorem may be generated as a by-product of
 \ml{Define}'s activity. This induction theorem follows the recursion
 structure of the function, and may be useful when proving properties
 of the function.
@@ -808,10 +805,11 @@ of the function.
 
 \index{Define@\ml{Define}}
 
- \ml{Define} takes as input a quotation representing a conjunction of
-equations. The specified function(s) may be phrased using ML-style
-pattern-matching. A call \ml{Define `}\textit{spec}\ml{`} should conform 
-with the grammar in Table \ref{define:syntax}.
+ In particular, \ml{Define} takes as input a quotation representing a
+conjunction of equations. The specified function(s) may be phrased
+using ML-style pattern-matching. A call \ml{Define
+`}\textit{spec}\ml{`} should conform with the grammar in Table
+\ref{define:syntax}.
 \begin{table}[htbp]
 \begin{center}
 \[
@@ -836,30 +834,10 @@ with the grammar in Table \ref{define:syntax}.
 \hline
 \end{array}
 \]
-\caption{Function Declaration}\label{define:syntax}
+\caption{Syntax of Function Declaration}\label{define:syntax}
 \end{center}
 \end{table}
 
-\paragraph{Termination} When processing the specification of a recursive function,
-\ml{Define} must perform a termination proof. It automatically
-constructs termination conditions for the function, and invokes a
-termination prover in an attempt to prove the termination conditions.
-If the function is primitive recursive, in the sense that it exactly
-follows the recursion pattern of a previously declared HOL datatype,
-then this proof always succeeds, and \ml{Define} stores the derived
-equations in the current theory segment.  Otherwise, the function is
-not an instance of primitive recursion, and the termination prover may
-succeed or fail.
- 
- If it succeeds, then \ml{Define} stores the specified equations in the
- current theory segment. An induction theorem customized for the defined
- function is also stored in the current segment. Note, however, that an
- induction theorem is not stored for primitive recursive functions, since
- that theorem would be identical to the induction theorem resulting from
- the declaration of the datatype.
- 
- If the termination proof fails, then \ml{Define} fails.
- 
 \paragraph{Pattern Expansion}
 In general, \ml{Define} attempts to derive exactly the specified
 conjunction of equations. However, the rich syntax of patterns allows
@@ -918,6 +896,27 @@ specified by the original input.
 \end{verbatim} 
 \end{hol}
   
+\paragraph{Termination} 
+
+When processing the specification of a recursive function, \ml{Define}
+must perform a termination proof. It automatically constructs
+termination conditions for the function, and invokes a termination
+prover in an attempt to prove the termination conditions.  If the
+function is primitive recursive, in the sense that it exactly follows
+the recursion pattern of a previously declared HOL datatype, then this
+proof always succeeds, and \ml{Define} stores the derived equations in
+the current theory segment.  
+Otherwise, the function is not an
+instance of primitive recursion, and the termination prover may
+succeed or fail. If the termination proof fails, then \ml{Define} fails.
+If it succeeds, then \ml{Define} stores the specified equations in the
+current theory segment. An induction theorem customized for the defined
+function is also stored in the current segment. Note, however, that an
+induction theorem is not stored for primitive recursive functions, since
+that theorem would be identical to the induction theorem resulting from
+the declaration of the datatype.
+ 
+ 
 \paragraph{Storing definitions in the theory segment}
 
  \ml{Define} automatically generates names with which to store the
@@ -947,7 +946,7 @@ The \ml{xDefine} function is identical to
 \ml{Define} except that it takes an explicit name to use when
 storing the definition in the current theory. 
 
-\subsection{Examples}
+\subsection{Function Definition Examples}
  We will give a number of examples that display the range of functions
 that may be defined with \ml{Define}. First, we have a recursive function
 that uses "destructors" in the recursive call. 
@@ -1109,63 +1108,18 @@ large number of equations. For example:
 %
 yields a definition with thirty-one clauses.
 
-For complex recursions, \ml{Define} attempts to find a measure under
-which recursive calls become smaller (and to prove that they do indeed
-become smaller). Currently, it examines the domain type of the
-function being defined and synthesizes a ``size'' measure.  Then it
-does some basic simplifications and then attempts to automatically
-prove the termination constraints.  If this termination proof fails,
-then the definition attempt fails. If the termination proof succeeds,
-an induction theorem for the function is also automatically derived
-and stored in the current theory.
 
-\paragraph{Example.} Invoking
-\begin{hol}
-\begin{verbatim}
-  Define
-      `(gcd 0 y = y)
-  /\   (gcd (SUC x) 0 = SUC x)
-  /\   (gcd (SUC x) (SUC y) =
-            if y <= x then gcd (x-y)   (SUC y)
-                      else gcd (SUC x) (y-x))`;
-\end{verbatim}
-\end{hol}
-proves all termination conditions and stores the theorem
-\begin{hol}
-\begin{verbatim}
-   |- (gcd 0 y = y)           /\
-      (gcd (SUC x) 0 = SUC x) /\
-      (gcd (SUC x) (SUC y) =
-           if y <= x then gcd (x - y) (SUC y)
-                     else gcd (SUC x) (y - x))
-\end{verbatim}
-\end{hol}
-in the current theory under the name \ml{"gcd\_def"} and also stores
-the theorem
-\begin{hol}
-\begin{verbatim}
-   !P. (!y. P 0 y)       /\
-       (!x. P (SUC x) 0) /\
-       (!x y. (~(y <= x) ==> P (SUC x) (y - x)) /\
-                (y <= x  ==> P (x - y) (SUC y))
-                 ==> P (SUC x) (SUC y))
-          ==>
-            !v v1. P v v1.
-\end{verbatim}
-\end{hol}
-in the current theory under the name \ml{gcd\_ind} before
-returning the requested recursion equations.
+\subsection{When Termination is not Automatically Proved}
 
-Recall that, if the termination proof fails, an invocation of
-\ml{Define}  (or \ml{xDefine}) fails. In such situations, the \ML{}
-function \ml{Hol\_defn} should be used.
+Recall that, if the termination proof for a prospective definition
+fails, the invocation of \ml{Define} (or \ml{xDefine}) fails. In such
+situations, the \ML{} function \ml{Hol\_defn} should be used.
 %
 \index{Hol_defn@\ml{Hol\_defn}}
 
 \begin{hol}
 \begin{verbatim}
-  Hol_defn   : string -> term quotation -> Defn.defn
-  WF_REL_TAC : term quotation -> tactic
+  Hol_defn : string -> term quotation -> Defn.defn
 \end{verbatim}
 \end{hol}
 
@@ -1174,16 +1128,18 @@ termination to the user. For setting up termination proofs, there are
 several useful entrypoints, namely
 \begin{hol}
 \begin{verbatim}
-   Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
-   Defn.tprove : Defn.defn * tactic -> thm * thm
+  Defn.tgoal  : Defn.defn -> GoalstackPure.proofs
+  Defn.tprove : Defn.defn * tactic -> thm * thm
 \end{verbatim}
 \end{hol}
 \ml{Defn.tgoal} is analogous to \ml{set\_goal} and \ml{Defn.tprove} is
-analogous to \ml{prove}.
+analogous to \ml{prove}. Thus, \ml{Defn.tgoal} is used to take the 
+result of \ml{Hol\_defn} and set up a goal for proving termination
+of the definition.
 
 \paragraph{Example.} An invocation of {\small\verb+Define+} on
 the following equations for Quicksort will currently fail, since the
-termination proof is beyond the capabilities of our naive termination
+termination proof is currently beyond the capabilities of the naive termination
 prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 
 \setcounter{sessioncount}{0}
@@ -1194,58 +1150,89 @@ val qsort_def =
   Hol_defn "qsort"
     `(qsort r [] = []) /\
      (qsort r (h::t) =
-         APPEND (qsort r (FILTER (\x. r x h) t))
-           (h :: qsort r (FILTER (\x. ~(r x h)) t)))`;
+         qsort r (FILTER (\x. r x h) t) 
+         ++ [h] ++ 
+         qsort r (FILTER (\x. ~(r x h)) t))`
 \end{verbatim}
 \end{hol}
 \end{session}
-which returns a value of type \ml{defn}, but does not try to prove
-termination. Although it is possible to directly work with elements of
-type \ml{defn}, it is more convenient to invoke \ml{Defn.tgoal
-  qsort\_def}, which sets up a termination proof in a goalstack. The
-goal is just to get the unrestricted recursion equations and induction
-theorem.
-
+which returns the following value of type \ml{defn}, but does not try 
+to prove termination. 
 \begin{session}
 \begin{hol}
 \begin{verbatim}
-Defn.tgoal qsort_def;
+  HOL function definition (recursive)
 
-> val it =
-    Proof manager status: 1 proof.
-    1. Incomplete:
-         Initial goal:
-         ?R.
-           (!t h r. R (r,FILTER (\x. ~r x h) t) (r,h::t)) /\
-           (!t h r. R (r,FILTER (\x. r x h) t) (r,h::t)) /\ WF R
+  Equation(s) :
+     [...]
+    |- (qsort v0 [] = []) /\
+       (qsort ord (x::rst) =
+         qsort ord (FILTER ($~ o ord x) rst ++ [x] ++
+         qsort ord (FILTER (ord x) rst))
+
+  Induction :
+     [...]
+    |- !P.
+        (!v0. P v0 []) /\
+        (!ord x rst.
+           P ord (FILTER ($~ o ord x) rst) /\
+           P ord (FILTER (ord x) rst) ==> P ord (x::rst))
+        ==> !v v1. P v v1
+
+  Termination conditions :
+    0. WF R
+    1. !rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)
+    2. !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
 \end{verbatim}
 \end{hol}
 \end{session}
 
-How to proceed? The function \ml{WF\_REL\_TAC} now shows its utility.
+Although it is possible to directly work with elements of
+type \ml{defn}, it is more convenient to invoke 
+\ml{Defn.tgoal qsort\_def}, which sets up a termination proof 
+in a goalstack. 
+%
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+  Defn.tgoal qsort_def;
+
+  > val it =
+      Proof manager status: 1 proof.
+      1. Incomplete:
+           Initial goal:
+           ?R.
+             (!t h r. R (r,FILTER (\x. ~r x h) t) (r,h::t)) /\
+             (!t h r. R (r,FILTER (\x. r x h) t) (r,h::t)) /\ WF R
+\end{verbatim}
+\end{hol}
+\end{session}
+%
+The goal is to find a wellfounded relation on the arguments to \holtxt{qsort}.
+The function \ml{WF\_REL\_TAC} is almost invariably used at this point.
 When given a \ml{defn} and a quotation denoting a termination relation
 for the function, \ml{WF\_REL\_TAC} initiates the termination proof.
-For our example, we obtain two subgoals both of which are easy to
+The \ml{qsort} function terminates because the list argument gets
+shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate measure 
+function results in two subgoals, both of which are easy to
 prove.
 
 \begin{session}
 \begin{hol}
 \begin{verbatim}
-- e (WF_REL_TAC `measure (LENGTH o SND)`);
-OK..
-2 subgoals:
-> val it =
-    !t h r. LENGTH (FILTER (\x. r x h) t) < LENGTH (h::t)
-
-
-    !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
+  - e (WF_REL_TAC `measure (LENGTH o SND)`);
+  OK..
+  2 subgoals:
+  > val it =
+      !t h r. LENGTH (FILTER (\x. r x h) t) < LENGTH (h::t)
+ 
+      !t h r. LENGTH (FILTER (\x. ~r x h) t) < LENGTH (h::t)
 \end{verbatim}
 \end{hol}
 \end{session}
 
-
-Both goals are provable; once the proof is completed, we can
-encapsulate it with \ml{Defn.tprove}, which takes a \ml{defn}, builds
+Once both goals are proved, we can encapsulate the termination
+proof with \ml{Defn.tprove}, which takes a \ml{defn}, builds
 a termination goal from it, applies the given tactic, and, if the
 initial goal is proved, returns a pair comprising the requested
 equations and the induction theorem.
@@ -1253,29 +1240,210 @@ equations and the induction theorem.
 \begin{session}
 \begin{hol}
 \begin{verbatim}
-- val (qsort_eqns,qsort_ind) =
-     Defn.tprove
-       (qsort_def,
-        WF_REL_TAC `measure (LENGTH o SND)`
-        THEN ...);
+  - val (qsort_eqns,qsort_ind) =
+       Defn.tprove
+         (qsort_def,
+          WF_REL_TAC `measure (LENGTH o SND)`
+          THEN ...);
 
-> val qsort_eqns =
-    |- (qsort r [] = []) /\
-       (qsort r (h::t) =
-          APPEND (qsort r (FILTER (\x. r x h) t))
-             (h::qsort r (FILTER (\x. ~r x h) t)))  : thm
+  > val qsort_eqns =
+      |- (qsort r [] = []) /\
+         (qsort r (h::t) =
+            qsort r (FILTER (\x. r x h) t) ++
+            [h] ++ qsort r (FILTER (\x. ~r x h) t))  : thm
 
-  val qsort_ind =
-     |- !P.
-        (!r. P r []) /\
-        (!r h t. P r (FILTER (\x. r x h) t) /\
-                 P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
-        ==> !v v1. P v v1  : thm
+    val qsort_ind =
+       |- !P.
+          (!r. P r []) /\
+          (!r h t. P r (FILTER (\x. r x h) t) /\
+                   P r (FILTER (\x. ~r x h) t) ==> P r (h::t))
+          ==> !v v1. P v v1  : thm
 \end{verbatim}
 \end{hol}
 \end{session}
 The custom induction theorem for a function can be applied by \ml{recInduct}.
 See Section \ref{sec:bossLib} for details.
+
+\subsubsection{How Termination Conditions are Synthesized}
+
+It is occasionally important to understand, at least in part, how
+\ml{Hol\_defn} constructs termination constraints. In some cases, it is
+even necessary for users to influence this process in order to have correct
+termination constraints extracted. The process is driven by so-called
+\emph{congruence theorems} for particular \HOL{} constants. 
+For example, consider the following recursive definition of factorial:
+%
+\begin{hol}
+\begin{verbatim}
+  fact n = if n=0 then 1 else n * fact (n-1)
+\end{verbatim}
+\end{hol}
+%
+In the absence of knowledge of how the `if-then-else` construct
+affects the \emph{context} of recursive calls, \ml{Hol\_defn} would 
+extract the termination constraints:
+%
+\begin{hol}
+\begin{verbatim}
+  0. WF R
+  1. !n. R (n - 1) n
+\end{verbatim}
+\end{hol}
+%
+which are unprovable, because the \emph{context} of the recursive call has not
+been taken account of. This example is in fact not a problem for HOL,
+since the following congruence theorem is known to \ml{Hol\_defn}:
+%
+\begin{hol}
+\begin{verbatim}
+ |- !b b' x x' y y'.
+      (b = b') /\
+      (b' ==> (x = x')) /\
+      (~b' ==> (y = y')) ==>
+       ((if b then x else y) = (if b' then x' else y'))
+\end{verbatim}
+\end{hol}
+%
+This theorem is understood by \ml{Hol\_defn} as an ordered sequence
+of instructions to follow when the termination condition extractor
+hits an `if-then-else`. The theorem is read as follows: when an
+instance `\texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$` is 
+encountered while the extractor traverses the function definition, 
+do the following:
+\begin{enumerate}
+
+\item Traverse \holtxt{B} and extract termination conditions 
+     $\mathit{TCs}(B)$ from any recursive calls in it. 
+     This returns a theorem $\mathit{TCs}(B) \vdash B = B'$.
+
+\item Assume $B'$ and extract termination conditions from any
+  recursive calls in $X$. This returns a theorem
+  $\mathit{TCs}(X) \vdash X = X'$. 
+  Each element of $\mathit{TCs}(X)$ will have
+  the form $B' \imp M$.
+ 
+\item Assume $\neg B'$ and extract termination conditions from any
+   recursive calls in $Y$. This returns a theorem
+   $\mathit{TCs}(Y) \vdash Y = Y'$. Each element of 
+   $\mathit{TCs}(Y)$ will have the form $\neg B' \imp M$.
+ 
+\item  By equality reasoning with (1), (2), and (3), derive the theorem
+\[\mathit{TCs}(B) \cup \mathit{TCs}(X) \cup \mathit{TCs}(Y)
+  \vdash
+  (\mathtt{if}\ B\ \mathtt{then}\ X\ \mathtt{else}\ Y) = 
+  (\mathtt{if}\ B'\ \mathtt{then}\ X'\ \mathtt{else}\ Y')
+\] 
+\item Replace \texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$ by 
+\texttt{if} $B'$ \texttt{then} $X'$ \texttt{else} $Y'$.
+
+\end{enumerate}
+ 
+ 
+The accumulated termination conditions are propagated until the
+extraction process finishes, and appear as hypotheses in the final
+result. In our example, context is properly accounted for in recursive
+calls under either branch of an `if-then-else`. Thus the extracted
+termination conditions for {fact} are
+%
+\begin{hol}
+\begin{verbatim}
+   0. WF R
+   1. !n. ~(n = 0) ==> R (n - 1) n
+\end{verbatim}
+\end{hol}
+%
+and are easy to prove. 
+ 
+\paragraph{Higher Order Congruence Rules}
+
+Now we discuss congruence theorems for higher-order functions. A
+`higher-order` recursion is one in which a higher-order function is
+used to apply the recursive function to arguments. In order for the
+correct termination conditions to be proved for such a recursion,
+congruence rules for the higher order function must be known to the
+termination condition extraction mechanism. Congruence rules for
+common higher-order functions, \eg, \holtxt{MAP}, \holtxt{EVERY}, and
+\holtxt{EXISTS} for lists, are already known to the
+mechanism. However, at times, one must manually prove and install a
+congruence theorem for a higher-order function.
+ 
+For example, suppose we define a higher-order function {SIGMA} for
+summing the results of a function in a list. We then use {SIGMA} in 
+the definition of a function for summing the results of a function 
+in a arbitrarily (finitely) branching tree.
+%
+\begin{hol}
+\begin{verbatim}
+  Define `(SIGMA f [] = 0) /\
+          (SIGMA f (h::t) = f h + SIGMA f t)`;
+ 
+  Hol_datatype `ltree = Node of 'a => ltree list`;
+ 
+  Defn.Hol_defn  
+    "ltree_sigma"     (* higher order recursion *)
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+ 
+  > val it =
+    HOL function definition (recursive)
+ 
+    Equation(s) :
+      [..] |- ltree_sigma f (Node v tl)
+                = f v + SIGMA (\a. ltree_sigma f a) tl
+ 
+    Induction :
+      [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
+ 
+    Termination conditions :
+      0. WF R
+      1. !tl v f a. R (f,a) (f,Node v tl) : defn
+\end{verbatim}
+\end{hol}
+%
+ The termination conditions for \holtxt{ltree\_sigma} seem to 
+require finding a wellfounded relation \holtxt{R} such that the pair 
+\holtxt{(f,a)} is \holtxt{R}-less than
+\holtxt{(f, Node v tl)}. However, this is a hopeless task, since there is no
+relation between \holtxt{a} and \holtxt{Node v tl}, besides the fact 
+that they are both \holtxt{ltree}s. The termination condition extractor 
+has not performed properly, because it didn't know a congruence rule 
+for {SIGMA}. Such a congruence theorem is the following:
+%
+\begin{hol}
+\begin{verbatim}
+  SIGMA_CONG =
+   |- !l1 l2 f g.
+       (l1=l2) /\ (!x. MEM x l2 ==> (f x = g x)) ==>
+       (SIGMA f l1 = SIGMA g l2)
+\end{verbatim}
+\end{hol}
+%
+Once \ml{Hol\_defn} has been told about this theorem, via 
+\ml{write\_congs}, the termination conditions extracted for 
+the definition are now provable, since \holtxt{a} is a 
+proper subterm of \holtxt{Node v tl}.
+%
+\begin{hol}
+\begin{verbatim}
+  local open DefnBase
+  in
+  val _ = write_congs (SIGMA_CONG::read_congs())
+  end;
+ 
+  Defn.Hol_defn
+    "ltree_sigma"
+    `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
+ 
+  > val it =
+      HOL function definition (recursive)
+ 
+      Equation(s) :  ...  (* as before *)
+      Induction :    ...  (* as before *)
+ 
+      Termination conditions :
+        0. WF R
+        1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
+\end{verbatim}
+\end{hol}
 
 \section{Defining Inductive Relations}
 
