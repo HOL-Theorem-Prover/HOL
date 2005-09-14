@@ -15,6 +15,8 @@ recursive, nested recursive, and involve records.  The syntax of
 declarations that \verb+Hol_datatype+ accepts is found in Table
 \ref{datatype}.
 
+\newcommand{\itelse}[3]{\mbox{$\mathtt{if}\ {#1}\ \mathtt{then}\ {#2}\ \mathtt{else}\ {#3}$}}
+
 \newcommand{\bk}{\char'134}
 \newcommand{\ident}      {\mbox{\it ident}}
 \newcommand{\clause}      {\mbox{\it clause}}
@@ -812,7 +814,7 @@ using ML-style pattern-matching. A call \ml{Define
 \ref{define:syntax}.
 \begin{table}[htbp]
 \begin{center}
-\[
+$
 \begin{array}{|rll|}
 \hline
 \mathit{spec} & ::= &  \mathit{eqn} \\
@@ -833,7 +835,7 @@ using ML-style pattern-matching. A call \ml{Define
   & & \\ 
 \hline
 \end{array}
-\]
+$
 \caption{Syntax of Function Declaration}\label{define:syntax}
 \end{center}
 \end{table}
@@ -855,10 +857,9 @@ is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
 interpreters for functional languages: namely, the conjunction of
 equations is treated as being applied left-conjunct first, followed
 by processing the right conjunct. Therefore, in the example above, the
-right-hand side of the first clause is taken as the value of 
-\holtxt{f 0 0}. In the implementation, ambiguities arising 
-from such overlapping patterns are systematically translated 
-away in a pre-processing step.
+value of \holtxt{f 0 0} is \holtxt{1}. In the implementation, 
+ambiguities arising from such overlapping patterns are systematically 
+translated away in a pre-processing step.
  
  Another case of ambiguity in patterns is shown above: the specification
 is incomplete since it does not tell how \holtxt{f} should behave when
@@ -956,9 +957,9 @@ that uses "destructors" in the recursive call.
   Define 
     `fact x = if x = 0 then 1 else x * fact(x-1)`;
 
-   Equations stored under "fact_def".
-   Induction stored under "fact_ind".
-   > val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
+  Equations stored under "fact_def".
+  Induction stored under "fact_ind".
+  > val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
 \end{verbatim}
 \end{hol}
 %
@@ -985,13 +986,13 @@ theorem.
      /\   (flatten ([]::rst)     = flatten rst)
      /\   (flatten ((h::t)::rst) = h::flatten(t::rst))`;
 
-   Equations stored under "flatten_def".
-   Induction stored under "flatten_ind".
+  Equations stored under "flatten_def".
+  Induction stored under "flatten_ind".
 
-   > val it =
-       |- (flatten [] = []) /\
-          (flatten ([]::rst) = flatten rst) /\
-          (flatten ((h::t)::rst) = h::flatten (t::rst)) : thm
+  > val it =
+      |- (flatten [] = []) /\
+         (flatten ([]::rst) = flatten rst) /\
+         (flatten ((h::t)::rst) = h::flatten (t::rst)) : thm
 \end{verbatim}
 \end{hol}
  
@@ -1052,14 +1053,14 @@ are defined:
 \begin{verbatim}
   Define
      `(nnfpos (VAR x)   = VAR x)
- /\   (nnfpos (NOT p)   = nnfneg p)
- /\   (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
- /\   (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
+   /\ (nnfpos (NOT p)   = nnfneg p)
+   /\ (nnfpos (AND p q) = AND (nnfpos p) (nnfpos q))
+   /\ (nnfpos (OR p q)  = OR  (nnfpos p) (nnfpos q))
 
- /\   (nnfneg (VAR x)   = NOT (VAR x))
- /\   (nnfneg (NOT p)   = nnfpos p)
- /\   (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
- /\   (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`
+   /\ (nnfneg (VAR x)   = NOT (VAR x))
+   /\ (nnfneg (NOT p)   = nnfpos p)
+   /\ (nnfneg (AND p q) = OR  (nnfneg p) (nnfneg q))
+   /\ (nnfneg (OR p q)  = AND (nnfneg p) (nnfneg q))`
 \end{verbatim}
 \end{hol}
 %
@@ -1143,7 +1144,7 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
 \begin{session}
 \begin{hol}
 \begin{verbatim}
-val qsort_def =
+ val qsort_def =
   Hol_defn "qsort"
     `(qsort ord [] = []) /\
      (qsort ord (h::t) =
@@ -1726,6 +1727,72 @@ proper subterm of \holtxt{Node v tl}.
 \end{verbatim}
 \end{hol}
 \end{session}
+
+\subsection{Recursion Schemas}
+
+In higher order logic, very general patterns of recursion, known as 
+\emph{recursion schemas} or sometimes \emph{program schemas}, can be
+defined. One example is the following:
+%
+\[ 
+  \konst{linRec} (x) = 
+    \itelse{d(x)}{e(x)}{f(\konst{linRec}(g\; x))}
+\]
+%
+In this specification, the variables $d$, $e$, $f$, and $g$ are 
+functions, that, when instantiated in different ways, allow 
+\konst{linRec} to implement different functions. In this, 
+\konst{linRec} is like many other higher order functions. However, 
+notice that if $d(x) = \konst{F}$, $f(x) = x+1$, and
+$g(x) = x$, then the resulting instantiation of 
+\konst{linRec} could be used to obtain a contradiction:
+%
+\[ 
+  \konst{linRec} (x) = \konst{linRec}(x) + 1
+\]
+%
+This is not, however, derivable in \HOL{}, because recursion schemas
+are defined by instantiating the wellfounded recursion theorem, and
+therefore certain abstract termination constraints arise that
+must be satisfied before recursion equations can be used in an 
+unfettered manner. The entrypoint for defining a schema is 
+\ml{TotalDefn.DefineSchema}. On the \konst{linRec} example it
+behaves as follows (note that the schematic variables should
+only occur on the right-hand side of the definition when making
+the definition of a schema):
+%
+\begin{hol}
+\begin{verbatim}
+  - TotalDefn.DefineSchema
+      `linRec (x:'a) = if d(x) then e(x) else f(linRec(g x))`;
+
+  <<HOL message: Definition is schematic in the following variables:
+      "d", "e", "f", "g">>
+
+  Equations stored under "linRec_def".
+  Induction stored under "linRec_ind".
+  > val it =
+     [..]
+    |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
+\end{verbatim}
+\end{hol}
+%
+The hypotheses of the returned theorem hold the abstract termination
+constraints. A similarly constrained induction theorem is also 
+stored in the current theory segment.
+%
+\begin{hol}
+\begin{verbatim}
+  hyp it;
+  > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
+\end{verbatim}
+\end{hol}
+%
+These constraints are abstract, since they place termination requirements
+on variables that have not yet been instantiated. Once instantiations
+for the variables are found, then the constraints may be eliminated
+by finding a suitable wellfounded relation for \holtxt{R} and then
+proving the other constraints.
 
 \section{Defining Inductive Relations}
 
