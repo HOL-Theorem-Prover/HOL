@@ -425,7 +425,7 @@ value (of \ML\ type \ml{hol\_type}) as
 \end{verbatim}
 \end{hol}
 
-\noindent and the expression {\small\verb|\x. x + 1|}
+\noindent and the expression \texttt{``}{\verb|\x. x + 1|}\texttt{``}
 %
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic}
 %
@@ -546,78 +546,6 @@ This treatment of types within quotations is inherited from
 \index{type constraint!in HOL logic@in \HOL{} logic|)}
 \index{ type quotes, in ML@\ml{``:$\cdots$``} (type quotes, in \ML)|)}
 \index{ term quotes, in ML@\ml{``$\cdots$``} (term quotes, in \ML)|)}
-
-\subsection{Antiquotation}
-
-Within a quotation, expressions of the form {\small\verb+^(+}$t${\small\verb+)+}
-%
-\index{ antiquotation, in HOL logic@{\small\verb+^+} (antiquotation, in \HOL{} logic)}
-%
-(where $t$ is an \ML\ expression of type
-%
-\index{type checking, in HOL logic@type checking, in \HOL{} logic!antiquotation in}
-%
-{\small\verb+term+} or {\small\verb+type+}) are called {\it antiquotations\/}
-%
-\index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}.
-%
-An antiquotation \holtxt{\^{}($t$)} evaluates to the
-\ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
-evaluates to the same term as {\small\verb+``x \/ (y /\ z)``+}. The
-most common use of antiquotation is when the term $t$ is bound to an \ML\
-variable $x$. In this case {\small\verb+^(+}$x${\small\verb+)+} can be
-abbreviated by {\small\verb+^+}$x$.
-
-The following session illustrates antiquotation.
-
-\setcounter{sessioncount}{1}
-\begin{session}
-\begin{verbatim}
-- val y = ``x+1``;
-> val y = ``x + 1`` : term
-
-val z = ``y = ^y``;
-> val z = ``y = x + 1`` : term
-
-- ``!x:num.?y:num.^z``;
-> val it = ``!x. ?y. y = x + 1`` : term
-\end{verbatim}
-\end{session}
-
-\noindent Types may be antiquoted as well:
-
-\setcounter{sessioncount}{1}
-\begin{session}
-\begin{verbatim}
-- val pred = ``:'a -> bool``;
-> val pred = ``:'a -> bool`` : hol_type
-
-- ``:^pred -> bool``;
-> val it = ``:('a -> bool) -> bool`` : hol_type
-\end{verbatim}
-\end{session}
-
-\noindent Antiquoting a type into a term quotation requires the use of
-{\verb+ty_antiq+}. For example,%
-%
-\index{ty_antiq@\ml{ty\_antiq}}
-
-\begin{session}
-\begin{verbatim}
-- ``!P:^pred. P x ==> Q x``;
-
-! Toplevel input:
-! Term `!P:^pred. P x ==> Q x`;
-!           ^^^^
-! Type clash: expression of type
-!   hol_type
-! cannot have type
-!   term
-
-- ``!P:^(ty_antiq pred). P x ==> Q x``;
-> val it = `!P. P x ==> Q x` : term
-\end{verbatim}
-\end{session}
 
 \subsection{Viewing the grammar}
 

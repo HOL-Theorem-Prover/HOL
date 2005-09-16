@@ -1323,7 +1323,7 @@ The definition of {measure} in \HOL{} is equivalent to
 %
 \begin{hol}
 \begin{verbatim}
-  measure f x y = (f x < f y).
+  |- measure f x y = (f x < f y).
 \end{verbatim}
 \end{hol}
 %
@@ -1479,7 +1479,7 @@ an infix operator, defined in \ml{pairTheory} as follows:
 %
 \begin{hol}
 \begin{verbatim}
-  LEX R1 R2 = \(x,y) (p,q). R1 x p \/ ((x=p) /\ R2 y q)
+  |- LEX R1 R2 = \(x,y) (p,q). R1 x p \/ ((x=p) /\ R2 y q)
 \end{verbatim}
 \end{hol}
 %
@@ -1495,11 +1495,11 @@ relations. This is enabled by \holtxt{inv\_image} from \ml{relationTheory}:
 %
 \begin{hol}
 \begin{verbatim}
-   inv_image R f = \x y. R (f x) (f y)
+   |- inv_image R f = \x y. R (f x) (f y)
 \end{verbatim}
 \end{hol}
 %
-The actual relation maps from the four-tuple of arguments into a pair
+The desired relation maps from the four-tuple of arguments into a pair
 of numbers $(m,n)$, where $m$ is the length of the fourth argument, and
 $n$ is the length of the second argument. These lengths are then
 compared lexicographically with respect to less-than ($<$).
@@ -1741,7 +1741,7 @@ defined. One example is the following:
 %
 In this specification, the variables $d$, $e$, $f$, and $g$ are 
 functions, that, when instantiated in different ways, allow 
-\konst{linRec} to implement different functions. In this, 
+\konst{linRec} to implement different recursive functions. In this, 
 \konst{linRec} is like many other higher order functions. However, 
 notice that if $d(x) = \konst{F}$, $f(x) = x+1$, and
 $g(x) = x$, then the resulting instantiation of 
@@ -1823,18 +1823,19 @@ permissible to use existential quantification in the hypotheses.  If a
 clause has no free variables, it is permissible to have no universal
 quantification.)
 
-The \ml{Hol\_reln} function may be used to define multiple relations.
-These may or may not be mutually recursive.  The clauses for each
-relation need not be contiguous.
-
-The function returns three theorems.  Each is also saved in the
-current theory segment.  The first is a conjunction of implications
-that will be the same as the input term quotation.  This theorem is
+A successful invocation of \ml{Hol\_reln} returns three theorems
+$(\mathit{rules},\mathit{ind},\mathit{cases})$. Each is also stored in
+the current theory segment.
+\begin{itemize}
+\item $\mathit{rules}$ is a conjunction of implications
+that will be the same as the input term quotation; the theorem is
 saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
-first relation defined by the function.  The second is the induction
-principle for the relations, saved under the name \ml{<stem>\_ind}.  The
-third is the cases theorem for the relations, saved under the name
-\ml{<stem>\_cases}.  The cases theorem is of the form
+first relation defined by the function.  
+\item $\mathit{ind}$ is the induction principle for the relations, 
+saved under the name \ml{<stem>\_ind}.  
+\item $\mathit{cases}$ is the so-called `cases theorem' for the relations, 
+saved under the name \ml{<stem>\_cases}. A cases theorem is of the form
+%
 \begin{hol}
 \begin{verbatim}
    (!a0 .. an.  R1 a0 .. an = <R1's first rule possibility> \/
@@ -1846,6 +1847,80 @@ third is the cases theorem for the relations, saved under the name
    ...
 \end{verbatim}
 \end{hol}
+%
+and is used to decompose an element in the relation into the 
+possible ways of obtaining it by the rules.
+\end{itemize}
+
+\paragraph{Examples}
+
+A simple example of defining two mutually recursive relations is
+the following:
+%
+\begin{hol}
+\begin{verbatim}
+  Hol_reln
+    `EVEN 0 /\
+     (!n. ODD n ==> EVEN (n + 1)) /\
+     (!n. EVEN n ==> ODD (n + 1))`;
+\end{verbatim}
+\end{hol}
+%
+The result is three theorems
+%
+\begin{hol}
+\begin{verbatim}
+  > val it =
+    (|- EVEN 0 /\ 
+        (!n. ODD n ==> EVEN (n + 1)) /\
+        (!n. EVEN n ==> ODD (n + 1)),
+ 
+     |- !EVEN' ODD'.
+           EVEN' 0 /\ 
+           (!n. ODD' n ==> EVEN' (n + 1)) /\
+           (!n. EVEN' n ==> ODD' (n + 1)) 
+           ==>
+           (!a0. EVEN a0 ==> EVEN' a0) /\ 
+           (!a1. ODD a1 ==> ODD' a1),
+ 
+     |- (!a0. EVEN a0 = (a0 = 0) \/
+                        ?n. (a0 = n + 1) /\ ODD n) /\
+        (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
+    ) : thm * thm * thm
+\end{verbatim}
+\end{hol}
+%
+The next example shows how to inductively define the reflexive and
+transitive closure of relation $R$. Note that \holtxt{R}, as a
+schematic variable, is not quantified in the rules. This is
+appropriate because it is \holtxt{RTC R} that has the inductive
+characterisation, not \holtxt{RTC} itself.
+%
+\begin{hol}
+\begin{verbatim}
+  - Hol_reln `(!x. RTC R x x) /\
+             (!x z. (?y. R x y /\ RTC R y z) ==> RTC R x z)`;
+
+  > val it =
+     (|- !R. (!x. RTC R x x) /\
+             !x z. (?y. R x y /\ RTC R y z) ==> RTC R x z,
+ 
+      |- !R RTC'.
+           (!x. RTC' x x) /\
+           (!x z. (?y. R x y /\ RTC' y z) ==> RTC' x z) 
+           ==>
+           (!a0 a1. RTC R a0 a1 ==> RTC' a0 a1),
+ 
+      |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
+     ) : thm * thm * thm
+\end{verbatim}
+\end{hol}
+%
+The \ml{Hol\_reln} function may be used to define multiple relations,
+as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
+may or may not be mutually recursive.  The clauses for each relation
+need not be contiguous.
+
 So called ``strong'' versions of induction principles (where instances
 of the relation being defined appear as extra hypotheses), can be
 automatically proved with a call to the function 
@@ -1857,8 +1932,3 @@ function to turn the \ml{<stem>\_rules} theorem into such a list), and
 the second is the induction theorem.
 
 
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "description"
-%%% End:
