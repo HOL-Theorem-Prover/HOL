@@ -213,6 +213,10 @@ fun write_datatype_info tyinfo =
     add_funs (mapfilter Option.valOf compset_addns @ simpls)
  end
 
+(*---------------------------------------------------------------------------*)
+(* Usage note: call this before export_theory().                             *)
+(*---------------------------------------------------------------------------*)
+
 fun add_persistent_funs [] = ()
   | add_persistent_funs alist =
      let open Portable
