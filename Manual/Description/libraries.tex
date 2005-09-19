@@ -2392,7 +2392,8 @@ interpreter. This functionality is available in \HOL{} via use of
 Third, \ml{computeLib} can be used. This library supports call-by-value
 evaluation of \HOL{} functions by deductive steps. In other words, it
 is quite similar to having an \ML{} interpreter inside the \HOL{} logic,
-working by forward inference.
+working by forward inference. When used in this way, functional 
+programs can be executed more quickly than by using the simplifier.
 
 The most accessible entrypoints for using the \ml{computeLib} library
 are the conversion \ml{EVAL} and its tactic counterpart
@@ -2416,7 +2417,7 @@ augments this database with relevant definitions, that of Quicksort
 Often, the argument to a function has no variables: in that case 
 application of \ml{EVAL} ought to return a ground result,
 as in the above example. However, \ml{EVAL} can also evaluate functions on 
-with arguments with variables---so-called \emph{symbolic} evaluation---and 
+arguments with variables---so-called \emph{symbolic} evaluation---and 
 in that case, the behaviour of \ml{EVAL} depends on the structure of the 
 recursion equations. For example, in the following session, if there is
 sufficient information in the input, symbolic execution can deliver
@@ -2535,13 +2536,18 @@ terms with numbers and booleans.  Given a \ml{compset}, the function
 \ml{CBV\_CONV} generates an evaluator: it is used to implement \ml{EVAL}.
 See \REFERENCE{} for more details.
 
-\paragraph{Functions over numbers}
+\paragraph{Dealing with Functions over Peano Numbers}
 
-\ml{SUC\_TO\_NUMERAL\_DEFN\_CONV} is used to convert a function
-defined by pattern-matching over Peano-style numbers to a function
-over numerals, which is the format that \ml{EVAL} prefers. \ml{Define}
-will automatically call \ml{SUC\_TO\_NUMERAL\_DEFN\_CONV} on its
-result. 
+A function defined by pattern-matching over Peano-style numbers is not
+in the right format for \ml{EVAL}, since the calculations will be
+asymptotically inefficient. Instead, the same definition should be
+used over numerals, which is a positional notation described in
+Section \ref{numeral}. However, it is preferable for proofs to work
+over Peano numbers. In order to bridge this gap, the function
+\ml{numLib.SUC\_TO\_NUMERAL\_DEFN\_CONV} is used to convert a function
+over Peano numbers to one over numerals, which is the format that
+\ml{EVAL} prefers. \ml{Define} will automatically call
+\ml{SUC\_TO\_NUMERAL\_DEFN\_CONV} on its result.
 
 \paragraph{Storing definitions}
 
