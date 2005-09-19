@@ -58,8 +58,8 @@ declarations that \verb+Hol_datatype+ accepts is found in Table
 \HOL{} maintains an underlying database of datatype facts called the
 \ml{TypeBase}.  This database is used to support various high-level
 proof tools (see Section~\ref{sec:bossLib}), and is augmented whenever
-a \verb+Hol_datatype+ declaration is made.  When a datatype is 
-defined by \verb+Hol_datatype+, the following information is derived 
+a \verb+Hol_datatype+ declaration is made.  When a datatype is
+defined by \verb+Hol_datatype+, the following information is derived
 and stored in the database.
 
 \begin{itemize}
@@ -397,7 +397,7 @@ are also proved and stored in the current theory.
 When a type involving records is defined, many more definitions are
 made and added to the current theory.
 
-A mutually recursive type definition results in the above 
+A mutually recursive type definition results in the above
 theorems and definitions being added for each of the defined types.
 
 \section{Record Types}\label{sec:records}
@@ -455,7 +455,7 @@ alternative, \holtxt{person\_employed bob}, works, but would be
 printed using the first syntax, with the full-stop.
 
 The functional update functions are given the names
-\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''} 
+\mbox{``$\langle$\textsl{record-type}$\rangle$\texttt{\_}$\langle$\textsl{field}$\rangle$\texttt{\_fupd}''}
 for each field in
 the type.  They take two arguments, a function and a record to be
 updated.  The function parameter is an endomorphism on the field type,
@@ -467,7 +467,7 @@ keyword \texttt{with} and the \texttt{updated\_by} operator.  Thus
 \begin{hol}
 \begin{verbatim}
   bob with employed updated_by $~
-\end{verbatim} 
+\end{verbatim}
 \end{hol}\noindent
 %
 is a record value identical to the \texttt{bob} except that the
@@ -818,7 +818,7 @@ in detail in \cite{slind-thesis}.
 
  In particular, \ml{Define} takes as input a quotation representing a
 conjunction of equations. The specified function(s) may be phrased
-using ML-style pattern-matching. A call 
+using ML-style pattern-matching. A call
 \ml{Define `}\textit{spec}\ml{`} should conform with the grammar in Table
 \ref{define:syntax}.
 \begin{table}[htbp]
@@ -828,20 +828,20 @@ $
 \hline
 \mathit{spec} & ::= &  \mathit{eqn} \\
               & \mid  & (\mathit{eqn}) \land \mathit{spec} \\
-  & & \\ 
+  & & \\
 \mathit{eqn} & ::= & \mathit{alphanumeric}\ \mathit{pat} \ldots \mathit{pat} = \mathit{term} \\
-  & & \\ 
-  & & \\ 
+  & & \\
+  & & \\
 \mathit{pat} & ::= & \mathit{variable} \\
     & \mid   & \mathit{wildcard} \\
     & \mid   & \mathit{cname} \\
     & \mid   & (\mathit{cname}_n\ \mathit{pat}_1 \ldots \mathit{pat}_n) \\
-  & & \\ 
+  & & \\
 \mathit{cname} & ::= & \mathit{alphanumeric} \mid \mathit{symbolic} \\
-  & & \\ 
+  & & \\
 \mathit{wildcard} & ::=  & \_\!\_ \\
                   & \mid & \_\!\_ \mathit{wildcard} \\
-  & & \\ 
+  & & \\
 \hline
 \end{array}
 $
@@ -855,10 +855,10 @@ conjunction of equations. However, the rich syntax of patterns allows
 some ambiguity. For example, the input
 %
 \begin{hol}
-\begin{verbatim} 
+\begin{verbatim}
   Define `(f 0 _ = 1)
     /\    (f _ 0 = 2)`
-\end{verbatim} 
+\end{verbatim}
 \end{hol}
 %
 is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
@@ -866,10 +866,10 @@ is ambiguous at \holtxt{f 0 0}: should the result be \holtxt{1} or
 interpreters for functional languages: namely, the conjunction of
 equations is treated as being applied left-conjunct first, followed
 by processing the right conjunct. Therefore, in the example above, the
-value of \holtxt{f 0 0} is \holtxt{1}. In the implementation, 
-ambiguities arising from such overlapping patterns are systematically 
+value of \holtxt{f 0 0} is \holtxt{1}. In the implementation,
+ambiguities arising from such overlapping patterns are systematically
 translated away in a pre-processing step.
- 
+
  Another case of ambiguity in patterns is shown above: the specification
 is incomplete since it does not tell how \holtxt{f} should behave when
 applied to two non-zero arguments: e.g., \holtxt{f (SUC m) (SUC n)}. In the
@@ -880,33 +880,33 @@ since the user has not completely specified the function, the system
 takes that as a hint that the user is not interested in using the
 function at the missing-but-filled-in clauses, and so such clauses are
 dropped from the final theorem.
- 
+
 In summary, \ml{Define} will derive the unambiguous and complete
 equations
 %
 \begin{hol}
-\begin{verbatim} 
+\begin{verbatim}
   |- (f 0 (SUC v4) = 1) /\
      (f 0 0 = 1) /\
      (f (SUC v2) 0 = 2)
      (f (SUC v2) (SUC v4) = ARB)
-\end{verbatim} 
+\end{verbatim}
 \end{hol}
 %
 from the above ambiguous and incomplete equations. The odd-looking
 variable names are due to the pre-processing steps described above. The
 above result is only an intermediate value: in the final result returned
-by \ml{Define}, the last equation is droppped since it was not 
+by \ml{Define}, the last equation is droppped since it was not
 specified by the original input.
 \begin{hol}
-\begin{verbatim} 
+\begin{verbatim}
   |- (f 0 (SUC v4) = 1) /\
      (f 0 0 = 1) /\
      (f (SUC v2) 0 = 2)
-\end{verbatim} 
+\end{verbatim}
 \end{hol}
-  
-\paragraph{Termination} 
+
+\paragraph{Termination}
 
 When processing the specification of a recursive function, \ml{Define}
 must perform a termination proof. It automatically constructs
@@ -915,7 +915,7 @@ prover in an attempt to prove the termination conditions.  If the
 function is primitive recursive, in the sense that it exactly follows
 the recursion pattern of a previously declared HOL datatype, then this
 proof always succeeds, and \ml{Define} stores the derived equations in
-the current theory segment.  
+the current theory segment.
 Otherwise, the function is not an
 instance of primitive recursion, and the termination prover may
 succeed or fail. If the termination proof fails, then \ml{Define} fails.
@@ -925,8 +925,8 @@ function is also stored in the current segment. Note, however, that an
 induction theorem is not stored for primitive recursive functions, since
 that theorem would be identical to the induction theorem resulting from
 the declaration of the datatype.
- 
- 
+
+
 \paragraph{Storing definitions in the theory segment}
 
  \ml{Define} automatically generates names with which to store the
@@ -938,7 +938,7 @@ is built by concatenating the name of the function with the value of
 the reference variable \ml{Defn.ind\_suffix}. For mutually recursive
 functions, where there is a choice of names, the name of the function
 in the first clause is taken.
- 
+
  Since the names used to store elements in the current theory segment
 are transformed into ML bindings after the theory is exported, it is
 required that every invocation of \ml{Define} generate names that are
@@ -954,16 +954,16 @@ identifiers, the ML function \ml{xDefine} should be used.
 \end{hol}
 The \ml{xDefine} function is identical to
 \ml{Define} except that it takes an explicit name to use when
-storing the definition in the current theory. 
+storing the definition in the current theory.
 
 \subsection{Function Definition Examples}
  We will give a number of examples that display the range of functions
 that may be defined with \ml{Define}. First, we have a recursive function
-that uses "destructors" in the recursive call. 
- 
+that uses ``destructors'' in the recursive call.
+
 \begin{hol}
 \begin{verbatim}
-  Define 
+  Define
     `fact x = if x = 0 then 1 else x * fact(x-1)`;
 
   Equations stored under "fact_def".
@@ -973,18 +973,18 @@ that uses "destructors" in the recursive call.
 \end{hol}
 %
 Since \holtxt{fact} is not
-primitive recursive, an induction theorem for \holtxt{fact} is generated and 
+primitive recursive, an induction theorem for \holtxt{fact} is generated and
 stored in the current theory.
 %
 \begin{hol}
 \begin{verbatim}
   - DB.fetch "-" "fact_ind";
- 
+
   > val it =
      |- !P. (!x. (~(x = 0) ==> P (x - 1)) ==> P x) ==> !v. P v : thm
 \end{verbatim}
 \end{hol}
- 
+
 Next we have a recursive function with relatively complex
 pattern-matching. We omit to examine the generated induction
 theorem.
@@ -1004,7 +1004,7 @@ theorem.
          (flatten ((h::t)::rst) = h::flatten (t::rst)) : thm
 \end{verbatim}
 \end{hol}
- 
+
 Next we define a curried recursive function, which uses
 wildcard expansion and pattern-matching pre-processing.
 %
@@ -1022,7 +1022,7 @@ wildcard expansion and pattern-matching pre-processing.
          (min 0 v1 = 0) : thm
 \end{verbatim}
 \end{hol}
- 
+
  Next we make a primitive recursive definition. Note that no
 induction theorem is generated in this case.
 %
@@ -1039,10 +1039,10 @@ induction theorem is generated in this case.
                  (if P h then h::filter P t else filter P t) : thm
 \end{verbatim}
 \end{hol}
- 
-\ml{Define} may also be used to define mutually recursive functions. 
+
+\ml{Define} may also be used to define mutually recursive functions.
 For example, we can define a datatype of propositions and a function for
-putting a proposition into negation normal form as follows.  
+putting a proposition into negation normal form as follows.
 First we define a datatype, named \ml{prop}, of boolean formulas:
 %
 \begin{hol}
@@ -1087,12 +1087,12 @@ The system makes the definition and returns the theorem
      (nnfneg (OR p q) = AND (nnfneg p) (nnfneg q)) : thm
 \end{verbatim}
 \end{hol}
- 
+
 \ml{Define} may also be used to define non-recursive functions.
 %
 \begin{hol}
 \begin{verbatim}
-  Define 
+  Define
     `f x (y,z) = (x + 1 = y DIV z)`;
 \end{verbatim}
 \end{hol}
@@ -1104,7 +1104,7 @@ large number of equations. For example:
 %
 \begin{hol}
 \begin{verbatim}
-  Define 
+  Define
     `(g (0,_,_,_,_) = 1) /\
      (g (_,0,_,_,_) = 2) /\
      (g (_,_,0,_,_) = 3) /\
@@ -1140,7 +1140,7 @@ several useful entrypoints, namely
 \end{verbatim}
 \end{hol}
 \ml{Defn.tgoal} is analogous to \ml{set\_goal} and \ml{Defn.tprove} is
-analogous to \ml{prove}. Thus, \ml{Defn.tgoal} is used to take the 
+analogous to \ml{prove}. Thus, \ml{Defn.tgoal} is used to take the
 result of \ml{Hol\_defn} and set up a goal for proving termination
 of the definition.
 
@@ -1157,26 +1157,26 @@ prover. Instead, we make an application of {\small\verb+Hol_defn+}:
   Hol_defn "qsort"
     `(qsort ord [] = []) /\
      (qsort ord (h::t) =
-         qsort ord (FILTER (\x. ord x h) t) 
-         ++ [h] ++ 
+         qsort ord (FILTER (\x. ord x h) t)
+         ++ [h] ++
          qsort ord (FILTER (\x. ~(ord x h)) t))`
 \end{verbatim}
 \end{hol}
 \end{session}
-which returns the following value of type \ml{defn}, but does not try 
-to prove termination. 
+which returns the following value of type \ml{defn}, but does not try
+to prove termination.
 \begin{session}
 \begin{hol}
 \begin{verbatim}
   HOL function definition (recursive)
-    
+
   Equation(s) :
    [...] |- qsort ord [] = []
    [...]
   |- qsort ord (h::t) =
      qsort ord (FILTER (\x. ord x h) t) ++ [h] ++
      qsort ord (FILTER (\x. ~ord x h) t)
-    
+
   Induction :
    [...]
   |- !P.
@@ -1186,7 +1186,7 @@ to prove termination.
           P ord (FILTER (\x. ord x h) t) ==>
           P ord (h::t)) ==>
        !v v1. P v v1
-    
+
   Termination conditions :
     0. !t h ord. R (ord,FILTER (\x. ~ord x h) t) (ord,h::t)
     1. !t h ord. R (ord,FILTER (\x. ord x h) t) (ord,h::t)
@@ -1198,8 +1198,8 @@ to prove termination.
 The type \ml{defn} has a prettyprinter installed for it: the above
 output is typical, showing the components of a \ml{defn} in an understandable
 format. Although it is possible to directly work with elements of
-type \ml{defn}, it is more convenient to invoke 
-\ml{Defn.tgoal}, which sets up a termination proof in a goalstack. 
+type \ml{defn}, it is more convenient to invoke
+\ml{Defn.tgoal}, which sets up a termination proof in a goalstack.
 %
 \begin{session}
 \begin{hol}
@@ -1222,7 +1222,7 @@ The function \ml{WF\_REL\_TAC} is almost invariably used at this point.
 When given a \ml{defn} and a quotation denoting a termination relation
 for the function, \ml{WF\_REL\_TAC} initiates the termination proof.
 The \ml{qsort} function terminates because the list argument gets
-shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate measure 
+shorter. Invoking \ml{WF\_REL\_TAC} with the appropriate measure
 function results in two subgoals, both of which are easy to
 prove.
 
@@ -1234,7 +1234,7 @@ prove.
   2 subgoals:
   > val it =
      !t h ord. LENGTH (FILTER (\x. ord x h) t) < LENGTH (h::t)
-     
+
      !t h ord. LENGTH (FILTER (\x. ~ord x h) t) < LENGTH (h::t)
 \end{verbatim}
 \end{hol}
@@ -1250,8 +1250,8 @@ wellfoundedness of
 \end{hol}
 %
 and the remainder of the goal has been simplified into a
-pair of easy goals. Once both goals are proved, we can encapsulate 
-the termination proof with \ml{Defn.tprove}, which takes a \ml{defn}, 
+pair of easy goals. Once both goals are proved, we can encapsulate
+the termination proof with \ml{Defn.tprove}, which takes a \ml{defn},
 builds a termination goal from it, applies the given tactic, and, if the
 initial goal is proved, returns a pair comprising the requested
 equations and the induction theorem.
@@ -1276,7 +1276,7 @@ equations and the induction theorem.
            (!ord. P ord []) /\
            (!ord h t.
               P ord (FILTER (\x. ~ord x h) t) /\
-              P ord (FILTER (\x. ord x h) t) ==> P ord (h::t)) 
+              P ord (FILTER (\x. ord x h) t) ==> P ord (h::t))
             ==>
            !v v1. P v v1  : thm
 \end{verbatim}
@@ -1296,7 +1296,7 @@ examples of how this is done.
 There are a number of basic and advanced means of specifying wellfounded
 relations. The most common starting point for dealing with termination
 problems for recursive functions is to find some function, known as a a
-\emph{measure} under which the arguments of a function call are larger 
+\emph{measure} under which the arguments of a function call are larger
 than the arguments to any recursive calls that result.
 
 For a very simple starter example, consider the following definition
@@ -1307,13 +1307,13 @@ numbers:
 \begin{session}
 \begin{hol}
 \begin{verbatim}
-  - val gcd_defn = 
+  - val gcd_defn =
       Hol_defn "gcd"
          `(gcd (0,n) = n) /\
           (gcd (m,n) = gcd (n MOD m, m))`;
- 
+
   - Defn.tgoal gcd_defn;
- 
+
   > val it =
       Proof manager status: 1 proof.
       1. Incomplete:
@@ -1322,12 +1322,12 @@ numbers:
 \end{verbatim}
 \end{hol}
 \end{session}
-% 
-The invocation \holtxt{gcd(m,n)} recurses in its first argument, and 
+%
+The invocation \holtxt{gcd(m,n)} recurses in its first argument, and
 since we know that \holtxt{m} is not 0, it is the case that
-\holtxt{n MOD m} is smaller than \holtxt{m}. The way to phrase the 
-termination of \holtxt{gcd} in HOL is to use a `measure` function 
-to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.  
+\holtxt{n MOD m} is smaller than \holtxt{m}. The way to phrase the
+termination of \holtxt{gcd} in HOL is to use a `measure` function
+to map from the domain of \holtxt{gcd}---a pair of numbers---to a number.
 The definition of {measure} in \HOL{} is equivalent to
 %
 \begin{hol}
@@ -1343,14 +1343,14 @@ invoke \ml{WF\_REL\_TAC}:
 \begin{verbatim}
   - e (WF_REL_TAC `measure FST`);
   OK..
- 
+
   1 subgoal:
   > val it =
      !v2 n. n MOD SUC v2 < SUC v2
 \end{verbatim}
 \end{hol}
 \end{session}
-% 
+%
 This goal is easy to prove with a few simple arithmetic facts.
 
 \paragraph{Weighting Functions}
@@ -1386,7 +1386,7 @@ branch. At the end of execution the tree has been linearized.
 \end{verbatim}
 \end{hol}
 \end{session}
-% 
+%
 Since the size of the tree is unchanged in the last clause in the
 definition of \holtxt{Unbal}, a simple size measure will not work. Instead, we
 can assign weights to nodes in the tree such that the recursive calls of
@@ -1395,13 +1395,13 @@ can assign weights to nodes in the tree such that the recursive calls of
 \begin{session}
 \begin{hol}
 \begin{verbatim}
-  Define 
+  Define
    `(Weight (Leaf) = 0) /\
     (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`
 \end{verbatim}
 \end{hol}
 \end{session}
-% 
+%
 Now we can invoke \ml{WF\_REL\_TAC}:
 %
 \begin{session}
@@ -1413,13 +1413,13 @@ Now we can invoke \ml{WF\_REL\_TAC}:
   2 subgoals:
   > val it =
    !bt. Weight bt < Weight (Brh Leaf bt)
-    
+
    !bt bt2 bt1.
       Weight (Brh bt1 (Brh bt2 bt)) < Weight (Brh (Brh bt1 bt2) bt)
 \end{verbatim}
 \end{hol}
 \end{session}
-% 
+%
 Both of these goals are quite easy to prove.
 %
 The technique of `weighting` nodes in a datatype in order to prove
@@ -1450,10 +1450,10 @@ string being searched becomes exhausted, the function returns \holtxt{F}.
       `(match [] __ __ __ = T)  /\
        (match __ [] __ __ = F)  /\
        (match (p::pp) (s::ss) p0 rs =
-         if p=s then match pp ss p0 rs 
+         if p=s then match pp ss p0 rs
            else
          if NULL rs then F
-           else 
+           else
          match p0 (TL rs) p0 (TL rs))`;
 
   - val Match = Define `Match pat str = match pat str pat str`;
@@ -1523,9 +1523,9 @@ compared lexicographically with respect to less-than ($<$).
   OK..
   2 subgoals:
   > val it =
-   !rs ss s p. 
+   !rs ss s p.
      (p=s) ==> LENGTH rs < LENGTH rs \/ LENGTH ss < LENGTH (s::ss)
-    
+
    !ss rs s p.
      ~(p = s) /\ ~NULL rs ==>
      LENGTH (TL rs) < LENGTH rs \/
@@ -1543,7 +1543,7 @@ It is occasionally important to understand, at least in part, how
 \ml{Hol\_defn} constructs termination constraints. In some cases, it is
 even necessary for users to influence this process in order to have correct
 termination constraints extracted. The process is driven by so-called
-\emph{congruence theorems} for particular \HOL{} constants. 
+\emph{congruence theorems} for particular \HOL{} constants.
 For example, consider the following recursive definition of factorial:
 %
 \begin{hol}
@@ -1553,7 +1553,7 @@ For example, consider the following recursive definition of factorial:
 \end{hol}
 %
 In the absence of knowledge of how the `if-then-else` construct
-affects the \emph{context} of recursive calls, \ml{Hol\_defn} would 
+affects the \emph{context} of recursive calls, \ml{Hol\_defn} would
 extract the termination constraints:
 %
 \begin{hol}
@@ -1580,35 +1580,35 @@ since the following congruence theorem is known to \ml{Hol\_defn}:
 This theorem is understood by \ml{Hol\_defn} as an ordered sequence
 of instructions to follow when the termination condition extractor
 hits an `if-then-else`. The theorem is read as follows: when an
-instance `\texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$` is 
-encountered while the extractor traverses the function definition, 
+instance `\texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$` is
+encountered while the extractor traverses the function definition,
 do the following:
 \begin{enumerate}
 
-\item Traverse $B$ and extract termination conditions 
-     $\mathit{TCs}(B)$ from any recursive calls in it. 
+\item Traverse $B$ and extract termination conditions
+     $\mathit{TCs}(B)$ from any recursive calls in it.
      This returns a theorem $\mathit{TCs}(B) \vdash B = B'$.
 
 \item Assume $B'$ and extract termination conditions from any
   recursive calls in $X$. This returns a theorem
-  $\mathit{TCs}(X) \vdash X = X'$. 
- 
+  $\mathit{TCs}(X) \vdash X = X'$.
+
 \item Assume $\neg B'$ and extract termination conditions from any
    recursive calls in $Y$. This returns a theorem
-   $\mathit{TCs}(Y) \vdash Y = Y'$. 
- 
+   $\mathit{TCs}(Y) \vdash Y = Y'$.
+
 \item  By equality reasoning with (1), (2), and (3), derive the theorem
 \[\mathit{TCs}(B) \cup \mathit{TCs}(X) \cup \mathit{TCs}(Y)
   \vdash
-  (\mathtt{if}\ B\ \mathtt{then}\ X\ \mathtt{else}\ Y) = 
+  (\mathtt{if}\ B\ \mathtt{then}\ X\ \mathtt{else}\ Y) =
   (\mathtt{if}\ B'\ \mathtt{then}\ X'\ \mathtt{else}\ Y')
-\] 
-\item Replace \texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$ by 
+\]
+\item Replace \texttt{if} $B$ \texttt{then} $X$ \texttt{else} $Y$ by
 \texttt{if} $B'$ \texttt{then} $X'$ \texttt{else} $Y'$.
 
 \end{enumerate}
- 
- 
+
+
 The termination conditions are accumulated until the
 extraction process finishes, and appear as hypotheses in the final
 result. Thus the extracted termination conditions for {fact} are
@@ -1620,8 +1620,8 @@ result. Thus the extracted termination conditions for {fact} are
 \end{verbatim}
 \end{hol}
 %
-and are easy to prove. 
- 
+and are easy to prove.
+
 \paragraph{Higher Order Congruence Rules}
 
 Now we discuss congruence theorems for higher-order functions. A
@@ -1634,9 +1634,9 @@ common higher-order functions, \eg, \holtxt{MAP}, \holtxt{EVERY}, and
 \holtxt{EXISTS} for lists, are already known to the
 mechanism. However, at times, one must manually prove and install a
 congruence theorem for a new user-defined higher-order function.
- 
+
 For example, suppose we define a higher-order function \holtxt{SIGMA} for
-summing the results of a function in a list. 
+summing the results of a function in a list.
 %
 \setcounter{sessioncount}{0}
 \begin{session}
@@ -1647,26 +1647,26 @@ summing the results of a function in a list.
 \end{verbatim}
 \end{hol}
 \end{session}
-% 
-We then use \holtxt{SIGMA} in the definition of a function for 
-summing the results of a function in a arbitrarily 
+%
+We then use \holtxt{SIGMA} in the definition of a function for
+summing the results of a function in a arbitrarily
 (finitely) branching tree.
 %
 \begin{session}
 \begin{hol}
 \begin{verbatim}
   Hol_datatype `ltree = Node of 'a => ltree list`;
- 
-  Defn.Hol_defn  
+
+  Defn.Hol_defn
     "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
 \end{verbatim}
 \end{hol}
 \end{session}
 %
-In this definition, \holtxt{SIGMA} is applied to a partial application 
+In this definition, \holtxt{SIGMA} is applied to a partial application
 \holtxt{(ltree\_sigma f)} of the function being defined. Such a situation
-is called a higher-order recursion. Since the recursive call of 
+is called a higher-order recursion. Since the recursive call of
 \holtxt{ltree\_sigma} is not fully applied, special efforts have
 to be made to extract the correct termination conditions. Otherwise,
 we have the following unhappy situation:
@@ -1675,11 +1675,11 @@ we have the following unhappy situation:
 \begin{hol}
 \begin{verbatim}
   HOL function definition (recursive)
- 
+
   Equation(s) :
     [..] |- ltree_sigma f (Node v tl)
               = f v + SIGMA (\a. ltree_sigma f a) tl
- 
+
   Induction :
     [..] |- !P. (!f v tl. (!a. P f a) ==> P f (Node v tl)) ==> !v v1. P v v1
 
@@ -1690,13 +1690,13 @@ we have the following unhappy situation:
 \end{hol}
 \end{session}
 %
-The termination conditions for \holtxt{ltree\_sigma} seem to 
-require finding a wellfounded relation \holtxt{R} such that the pair 
+The termination conditions for \holtxt{ltree\_sigma} seem to
+require finding a wellfounded relation \holtxt{R} such that the pair
 \holtxt{(f,a)} is \holtxt{R}-less than
 \holtxt{(f, Node v tl)}. However, this is a hopeless task, since there is no
-relation between \holtxt{a} and \holtxt{Node v tl}, besides the fact 
-that they are both \holtxt{ltree}s. The termination condition extractor 
-has not performed properly, because it didn't know a congruence rule 
+relation between \holtxt{a} and \holtxt{Node v tl}, besides the fact
+that they are both \holtxt{ltree}s. The termination condition extractor
+has not performed properly, because it didn't know a congruence rule
 for \holtxt{SIGMA}. Such a congruence theorem is the following:
 %
 \begin{hol}
@@ -1708,9 +1708,9 @@ for \holtxt{SIGMA}. Such a congruence theorem is the following:
 \end{verbatim}
 \end{hol}
 %
-Once \ml{Hol\_defn} has been told about this theorem, via 
-\ml{DefnBase.write\_congs}, the termination conditions extracted for 
-the definition are now provable, since \holtxt{a} is a 
+Once \ml{Hol\_defn} has been told about this theorem, via
+\ml{DefnBase.write\_congs}, the termination conditions extracted for
+the definition are now provable, since \holtxt{a} is a
 proper subterm of \holtxt{Node v tl}.
 %
 \begin{session}
@@ -1719,17 +1719,17 @@ proper subterm of \holtxt{Node v tl}.
   val _ = let open DefnBase
           in write_congs (SIGMA_CONG::read_congs())
           end;
- 
+
   Defn.Hol_defn
     "ltree_sigma"
     `ltree_sigma f (Node v tl) = f v + SIGMA (ltree_sigma f) tl`;
- 
+
   > val it =
       HOL function definition (recursive)
- 
+
       Equation(s) :  ...  (* as before *)
       Induction :    ...  (* as before *)
- 
+
       Termination conditions :
         0. WF R
         1. !v f tl a. MEM a tl ==> R (f,a) (f,Node v tl)
@@ -1739,32 +1739,32 @@ proper subterm of \holtxt{Node v tl}.
 
 \subsection{Recursion Schemas}
 
-In higher order logic, very general patterns of recursion, known as 
+In higher order logic, very general patterns of recursion, known as
 \emph{recursion schemas} or sometimes \emph{program schemas}, can be
 defined. One example is the following:
 %
-\[ 
-  \konst{linRec} (x) = 
+\[
+  \konst{linRec} (x) =
     \itelse{d(x)}{e(x)}{f(\konst{linRec}(g\; x))}
 \]
 %
-In this specification, the variables $d$, $e$, $f$, and $g$ are 
-functions, that, when instantiated in different ways, allow 
-\konst{linRec} to implement different recursive functions. In this, 
-\konst{linRec} is like many other higher order functions. However, 
+In this specification, the variables $d$, $e$, $f$, and $g$ are
+functions, that, when instantiated in different ways, allow
+\konst{linRec} to implement different recursive functions. In this,
+\konst{linRec} is like many other higher order functions. However,
 notice that if $d(x) = \konst{F}$, $f(x) = x+1$, and
-$g(x) = x$, then the resulting instantiation of 
+$g(x) = x$, then the resulting instantiation of
 \konst{linRec} could be used to obtain a contradiction:
 %
-\[ 
+\[
   \konst{linRec} (x) = \konst{linRec}(x) + 1
 \]
 %
 This is not, however, derivable in \HOL{}, because recursion schemas
 are defined by instantiating the wellfounded recursion theorem, and
 therefore certain abstract termination constraints arise that
-must be satisfied before recursion equations can be used in an 
-unfettered manner. The entrypoint for defining a schema is 
+must be satisfied before recursion equations can be used in an
+unfettered manner. The entrypoint for defining a schema is
 \ml{TotalDefn.DefineSchema}. On the \konst{linRec} example it
 behaves as follows (note that the schematic variables should
 only occur on the right-hand side of the definition when making
@@ -1790,7 +1790,7 @@ the definition of a schema):
 \end{session}
 %
 The hypotheses of the returned theorem hold the abstract termination
-constraints. A similarly constrained induction theorem is also 
+constraints. A similarly constrained induction theorem is also
 stored in the current theory segment.
 %
 \begin{session}
@@ -1844,10 +1844,10 @@ the current theory segment.
 \item $\mathit{rules}$ is a conjunction of implications
 that will be the same as the input term quotation; the theorem is
 saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
-first relation defined by the function.  
-\item $\mathit{ind}$ is the induction principle for the relations, 
-saved under the name \ml{<stem>\_ind}.  
-\item $\mathit{cases}$ is the so-called `cases theorem' for the relations, 
+first relation defined by the function.
+\item $\mathit{ind}$ is the induction principle for the relations,
+saved under the name \ml{<stem>\_ind}.
+\item $\mathit{cases}$ is the so-called `cases theorem' for the relations,
 saved under the name \ml{<stem>\_cases}. A cases theorem is of the form
 %
 \begin{hol}
@@ -1862,7 +1862,7 @@ saved under the name \ml{<stem>\_cases}. A cases theorem is of the form
 \end{verbatim}
 \end{hol}
 %
-and is used to decompose an element in the relation into the 
+and is used to decompose an element in the relation into the
 possible ways of obtaining it by the rules.
 \end{itemize}
 
@@ -1889,18 +1889,18 @@ The result is three theorems
 \begin{hol}
 \begin{verbatim}
   > val it =
-    (|- EVEN 0 /\ 
+    (|- EVEN 0 /\
         (!n. ODD n ==> EVEN (n + 1)) /\
         (!n. EVEN n ==> ODD (n + 1)),
- 
+
      |- !EVEN' ODD'.
-           EVEN' 0 /\ 
+           EVEN' 0 /\
            (!n. ODD' n ==> EVEN' (n + 1)) /\
-           (!n. EVEN' n ==> ODD' (n + 1)) 
+           (!n. EVEN' n ==> ODD' (n + 1))
            ==>
-           (!a0. EVEN a0 ==> EVEN' a0) /\ 
+           (!a0. EVEN a0 ==> EVEN' a0) /\
            (!a1. ODD a1 ==> ODD' a1),
- 
+
      |- (!a0. EVEN a0 = (a0 = 0) \/
                         ?n. (a0 = n + 1) /\ ODD n) /\
         (!a1. ODD a1 = ?n. (a1 = n + 1) /\ EVEN n)
@@ -1924,13 +1924,13 @@ characterisation, not \holtxt{RTC} itself.
   > val it =
      (|- !R. (!x. RTC R x x) /\
              !x z. (?y. R x y /\ RTC R y z) ==> RTC R x z,
- 
+
       |- !R RTC'.
            (!x. RTC' x x) /\
-           (!x z. (?y. R x y /\ RTC' y z) ==> RTC' x z) 
+           (!x z. (?y. R x y /\ RTC' y z) ==> RTC' x z)
            ==>
            (!a0 a1. RTC R a0 a1 ==> RTC' a0 a1),
- 
+
       |- !R a0 a1. RTC R a0 a1 = (a1 = a0) \/ ?y. R a0 y /\ RTC R y a1
      ) : thm * thm * thm
 \end{verbatim}
@@ -1944,7 +1944,7 @@ need not be contiguous.
 
 So called ``strong'' versions of induction principles (where instances
 of the relation being defined appear as extra hypotheses), can be
-automatically proved with a call to the function 
+automatically proved with a call to the function
 \[
 \ml{IndDefRules.derive\_strong\_induction : thm list * thm -> thm}
 \]
@@ -1953,3 +1953,8 @@ function to turn the \ml{<stem>\_rules} theorem into such a list), and
 the second is the induction theorem.
 
 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
