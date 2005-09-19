@@ -1072,146 +1072,46 @@ val word_lsr_n2w = store_thm("word_lsr_n2w",
   SIMP_TAC arith_ss [word_lsr_def,word_bits_def,MIN_IDEM,DIMINDEX_GT_0,
     DECIDE ``0 < m ==> (a <= m - 1 = a < m)``]);
 
-val BITS1_LT =
-  (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`h`,`1`]) BITSLT_THM;
+val lem = (GEN_ALL o REWRITE_RULE [MATCH_MP (DECIDE ``0 < n ==> 1 <= n``)
+  (SPEC_ALL ZERO_LT_TWOEXP),MULT_LEFT_1] o SPECL [`1`,`2 ** n`]) LESS_MONO_MULT;
+
+val TRUE_LSL = store_thm("TRUE_LSL",
+  `!n. Tw << n = n2w (^TOP - 2 ** n):bool ** 'a`,
+  RW_TAC arith_ss [n2w_11,word_T_def,word_lsl_n2w]
+    THENL [
+      `^WL <= n` by DECIDE_TAC THEN IMP_RES_TAC TWOEXP_MONO2
+        THEN ASM_SIMP_TAC std_ss [LESS_MOD,ZERO_MOD,ZERO_LT_TWOEXP,
+               DECIDE ``a <= b ==> (a - b = 0)``],
+      FULL_SIMP_TAC arith_ss [NOT_LESS,RIGHT_SUB_DISTRIB]
+        THEN `n < ^WL` by DECIDE_TAC THEN IMP_RES_TAC TWOEXP_MONO
+        THEN `^TOP * 2 ** n - 2 ** n =
+              (2 ** n - 1) * ^TOP + (^TOP - 2 ** n)`
+          by (`^TOP <= 2 ** n * ^TOP` by ASM_SIMP_TAC arith_ss [lem]
+                THEN ASM_SIMP_TAC std_ss [MULT_LEFT_1,RIGHT_SUB_DISTRIB,
+                       GSYM LESS_EQ_ADD_SUB,LESS_IMP_LESS_OR_EQ,SUB_ADD]
+                THEN PROVE_TAC [MULT_COMM])
+        THEN ASM_SIMP_TAC std_ss [MOD_TIMES,ZERO_LT_TWOEXP]]);
+
+val word_asr_n2w = prove(
+  `!n w. w:bool ** 'a >> n =
+     if word_msb w then
+       Tw << (^WL - MIN n ^WL) !! w >>> n
+     else
+       w >>> n`,
+  NTAC 2 STRIP_TAC THEN Cases_on `^WL < n`
+    THEN1 RW_TAC arith_ss [MIN_DEF,SHIFT_ZERO,LSR_LIMIT,ASR_LIMIT,WORD_OR_CLAUSES]
+    THEN SHIFT_WORD_TAC THEN Cases_on `^WL <= i + n`
+    THEN FULL_SIMP_TAC arith_ss [MIN_DEF]);
+
+val word_asr_n2w = save_thm("word_asr_n2w", REWRITE_RULE [TRUE_LSL] word_asr_n2w);
 
 val BITS_SUM1 =
   (GEN_ALL o REWRITE_RULE [MULT_LEFT_1] o
    INST [`a` |-> `1`] o SPEC_ALL) BITS_SUM;
 
-val word_asr1_n2w = prove(
-  `!n a. (n2w a):bool ** 'a >> 1 =
-     n2w (BITS ^HB 1 a + SBIT (BIT ^HB a) ^HB)`,
-  SHIFT_WORD_TAC
-    THEN RW_TAC arith_ss [SBIT_def,BIT_OF_BITS_THM,
-           DECIDE ``i < n ==> (n <= i + 1 = (n = i + 1))``]
-    THEN STRIP_ASSUME_TAC EXISTS_HB
-    THEN FULL_SIMP_TAC arith_ss [ADD1,BIT_OF_BITS_THM2]
-    THEN TRY (PAT_ASSUM `m = i` SUBST_ALL_TAC)
-    THENL [
-      ASM_SIMP_TAC std_ss [BITS1_LT,BIT_def,BITS_SUM1]
-        THEN REWRITE_TAC [GSYM BIT_def,BIT_B],
-      PROVE_TAC [],
-      `BIT i (BITS m 1 a) = BIT (i + 1) a`
-        by ASM_SIMP_TAC arith_ss [BIT_OF_BITS_THM]
-        THEN `i < m` by DECIDE_TAC
-        THEN POP_ASSUM (fn th => (STRIP_ASSUME_TAC o
-                REWRITE_RULE [DECIDE ``a + (b + 1) = b + SUC a``])
-                                 (MATCH_MP LESS_ADD_1 th))
-        THEN ASM_SIMP_TAC std_ss [BIT_def,EXP_ADD,BITS_SUM2,BITS_SUM2]
-        THEN PROVE_TAC [BIT_def]]);
-
-val ONE_LT_TWOEXP =
-   (GEN_ALL o SIMP_RULE arith_ss [ZERO_LT_TWOEXP] o SPEC `0`) TWOEXP_MONO;
-
-val MIN_lem = prove(`!m n. n <= m ==> (MIN n m = n)`,
-  RW_TAC arith_ss [MIN_DEF]);
-
-val MIN_lem2 = prove(
+val MIN_lem = prove(
  `(!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m`,
   RW_TAC arith_ss [MIN_DEF]);
-
-val BITS_EQ_1 = (GEN_ALL o fst o EQ_IMP_RULE o SPEC_ALL) BIT_def;
-val SUB2_PLUS1 = DECIDE ``1 < n ==> (n - 2 + 1 = n - 1)``;
-
-val lem = DECIDE ``!a b c. c < a /\ c < b ==> a - b + c < a:num``;
-
-val lem2 = REWRITE_RULE [ADD1] (prove(
-  `!h x n. 2 ** SUC h - 2 ** (SUC h - x) + BITS h x n < 2 ** SUC h`,
-  REPEAT STRIP_TAC
-    THEN ASSUME_TAC (SPECL [`h`,`x`,`n`] BITSLT_THM)
-    THEN ASSUME_TAC (SPECL [`SUC h`,`x`] EXP_SUB_LESS_EQ)
-    THEN IMP_RES_TAC LESS_LESS_EQ_TRANS
-    THEN ASM_SIMP_TAC bool_ss [lem]));
-
-val lem3 = REWRITE_RULE [ADD1] (prove(
-  `!h x n. 2 ** h - 2 ** (h - x) + BITS h (SUC x) n < 2 ** h`,
-  REPEAT STRIP_TAC
-    THEN ASSUME_TAC (SIMP_RULE arith_ss [] (SPECL [`h`,`SUC x`,`n`] BITSLT_THM))
-    THEN ASSUME_TAC (SPECL [`h`,`x`] EXP_SUB_LESS_EQ)
-    THEN IMP_RES_TAC LESS_LESS_EQ_TRANS
-    THEN ASM_SIMP_TAC bool_ss [lem]));
-
-val word_asr_n2w_lem1 = prove(
-  `!n a m. n <= m /\ BIT m a ==>
-     BIT m (2 ** (m + 1) - 2 ** ((m + 1) - n) + BITS m n a)`,
-  RW_TAC bool_ss [BIT_def,REWRITE_RULE [ADD1] (SPEC `m` BITS_LT_HIGH),lem2]
-    THEN Cases_on `n = 0` THENL [
-      ASM_SIMP_TAC arith_ss [BITS_THM,CONJUNCT1 EXP,DIV_1]
-        THEN ASM_REWRITE_TAC [GSYM BITS_THM2],
-      IMP_RES_TAC (REWRITE_RULE [ADD1] NOT_ZERO_ADD1)
-        THEN ASM_SIMP_TAC arith_ss [EXP_ADD]
-        THEN SIMP_TAC bool_ss [LESS_EQ_ADD_SUB,EXP_SUB_LESS_EQ,
-               ONCE_REWRITE_RULE [MULT_COMM] TIMES2,
-               GSYM ADD_ASSOC,DIV_MULT_1,lem3]]);
-
-val BITS_DIV_THM2 =
-  (GEN `l` o REWRITE_RULE [EXP_1] o GEN `h` o GEN `x` o
-   INST [`n` |-> `1`] o SPEC_ALL) BITS_DIV_THM;
-
-val lem = prove(
-  `!m n. n <= m ==> (2 ** (m + 1) - 2 ** (m + 1 - n) = (2 ** m - 2 ** (m - n)) * 2)`,
-  RW_TAC bool_ss [ONCE_REWRITE_RULE [ADD_COMM] LESS_EQ_ADD_SUB]
-    THEN SIMP_TAC arith_ss [GSYM ADD1,EXP,RIGHT_SUB_DISTRIB]);
-
-val word_asr_n2w_lem2 = prove(
-  `!n a. n <= m ==> ((2 ** (m + 1) - 2 ** ((m + 1) - n) + BITS m n a) DIV 2 =
-                       2 ** m - 2 ** (m - n) + BITS m (n + 1) a)`,
-  RW_TAC arith_ss [lem,ADD_DIV_ADD_DIV,ZERO_LT_TWOEXP,BITS_DIV_THM2]);
-
-val lem = prove(
-  `!m. 2 ** (m + 1) - 2 ** m = 2 ** m`,
-  RW_TAC arith_ss [EXP_ADD,EXP_1]);
-
-val lem2 = prove(
-  `!m n. 2 ** m <= 2 ** (m - n) ==> (m = 0) \/ (n = 0)`,
-  REPEAT STRIP_TAC
-    THEN SPECL_THEN [`m`,`n`] ASSUME_TAC EXP_SUB_LESS_EQ
-    THEN `2 ** (m - n) = 2 ** m` by IMP_RES_TAC LESS_EQUAL_ANTISYM
-    THEN FULL_SIMP_TAC arith_ss [SUB_EQ_EQ_0,
-           numLib.REDUCE_RULE (SPEC `2` EXP_INJECTIVE)]);
-
-val word_asr_n2w = store_thm("word_asr_n2w",
-  `!n a. (n2w a):bool ** 'a >> n =
-     let x = MIN n ^HB in let s = BITS ^HB x a in
-       n2w (if BIT ^HB a then ^TOP - 2 ** (^WL - x) + s else s)`,
-  Induct THEN1 SIMP_TAC (arith_ss++boolSimps.LET_ss)
-      [SHIFT_ZERO,BITS_ZERO3,DIMINDEX_GT_0,SUB1_SUC,n2w_mod]
-    THEN Cases_on `^WL < SUC n`
-    THEN1 RW_TAC (arith_ss++boolSimps.LET_ss)
-           [NOT_BITS2,BIT_def,MIN_DEF,ASR_LIMIT,ONE_LT_TWOEXP,word_msb_n2w,
-            SUB2_PLUS1,word_T_def,DECIDE ``0 < a ==> (a - (a - 1) = 1)``,
-            DIMINDEX_GT_0]
-    THEN STRIP_ASSUME_TAC EXISTS_HB
-    THEN FULL_SIMP_TAC (arith_ss++boolSimps.LET_ss)
-           [NOT_LESS,ADD1,GSYM ASR_ADD,MIN_lem,word_asr1_n2w]
-    THEN PAT_ASSUM `!a. P` (K ALL_TAC)
-    THEN RW_TAC std_ss [BITS_COMP_THM2,MIN_lem2]
-    THENL [
-      ASM_SIMP_TAC std_ss [word_asr_n2w_lem1,word_asr_n2w_lem2,SBIT_def,
-         (SIMP_RULE arith_ss [] o SPECL [`m`,`1`]) BITS_THM,LESS_MOD,lem3]
-        THEN Cases_on `n = 0`
-        THEN1 (RW_TAC std_ss [MIN_DEF] THEN ASM_SIMP_TAC arith_ss [lem]
-                 THEN `(m = 0) \/ (m = 1)` by DECIDE_TAC
-                 THEN FULL_SIMP_TAC arith_ss [BITS_ZERO,BITS_EQ_1])
-        THEN `(m = n) \/ (n + 1 <= m)` by DECIDE_TAC
-        THEN1 FULL_SIMP_TAC arith_ss [BITS_ZERO,BITS_EQ_1,SUB2_PLUS1,
-                ONE_LT_TWOEXP,GSYM EXP,ADD1,MIN_lem2]
-        THEN `~(m = 0)` by DECIDE_TAC
-        THEN `~(2 ** m <= 2 ** (m - n))` by PROVE_TAC [lem2]
-        THEN `2 ** m - 2 ** (m - n) + BITS m (n + 1) a + 2 ** m =
-              2 * 2 ** m - 2 ** (m - n) + BITS m (n + 1) a`
-          by ASM_SIMP_TAC arith_ss [SUB_RIGHT_ADD]
-        THEN ASM_SIMP_TAC std_ss [MIN_lem]
-        THEN SIMP_TAC arith_ss [GSYM EXP,ADD1],
-      Cases_on `n = 0`
-        THEN FULL_SIMP_TAC arith_ss [SBIT_def,BITS_ZERO,BIT_def,
-               BITS_COMP_THM2,MIN_lem2]
-        THEN1 (Cases_on `m = 1` THEN RW_TAC arith_ss [MIN_DEF,BITS_ZERO]
-                 THEN PROVE_TAC [NOT_BITS2])
-        THEN RW_TAC arith_ss [MIN_DEF]
-        THEN `(m = n) \/ (m = n + 1)` by DECIDE_TAC
-        THEN FULL_SIMP_TAC arith_ss [BITS_ZERO,NOT_BITS2]]);
 
 val lem = (GSYM o SIMP_RULE arith_ss [] o
   SPECL [`p`,`SUC m - n MOD SUC m + p`,
@@ -1255,12 +1155,12 @@ val word_rrx_n2w = store_thm("word_rrx_n2w",
     THEN STRIP_ASSUME_TAC EXISTS_HB THEN FULL_SIMP_TAC arith_ss []
     THENL [
       METIS_TAC [BITSLT_THM,SUC_SUB1,BITS_SUM1,BIT_def,BIT_B],
-      SIMP_TAC arith_ss [BIT_def,BITS_COMP_THM2,MIN_lem2,BITS_ZERO],
+      SIMP_TAC arith_ss [BIT_def,BITS_COMP_THM2,MIN_lem,BITS_ZERO],
       `i < m` by DECIDE_TAC
         THEN POP_ASSUM (fn th => (STRIP_ASSUME_TAC o REWRITE_RULE
               [DECIDE ``a + (b + 1) = b + SUC a``]) (MATCH_MP LESS_ADD_1 th))
         THEN ASM_SIMP_TAC std_ss [EXP_ADD,BIT_def,BITS_SUM2,BITS_COMP_THM2]
-        THEN SIMP_TAC std_ss [ADD1,ONCE_REWRITE_RULE [ADD_COMM] MIN_lem2]]);
+        THEN SIMP_TAC std_ss [ADD1,ONCE_REWRITE_RULE [ADD_COMM] MIN_lem]]);
 
 (* ------------------------------------------------------------------------- *)
 (*  Orderings : theorems                                                     *)
