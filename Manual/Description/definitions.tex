@@ -1,6 +1,6 @@
 \chapter{Advanced Definition Principles}\label{HOLdefinitions}
 
-\section{Datatype Definition}
+\section{Datatype Definition}\label{sec:datatype}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
 
 Although the \HOL{} logic provides primitive definition principles
@@ -400,7 +400,7 @@ made and added to the current theory.
 A mutually recursive type definition results in the above 
 theorems and definitions being added for each of the defined types.
 
-\section{Record Types}
+\section{Record Types}\label{sec:records}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!record types}
 
 Record types are convenient ways of bundling together a number of
@@ -634,6 +634,7 @@ may be safely and forever forgotten.
 This can be done in a single call of the
 main tool of this package.
 
+\begin{hol}
 \begin{verbatim}
 define_quotient_types :
         {types: {name: string,
@@ -651,7 +652,7 @@ define_quotient_types :
          old_thms : thm list} ->
         thm list
 \end{verbatim}
-
+\end{hol}
 {\tt define\_quotient\_types} takes a single argument which is a
 record with the following fields.
 
@@ -759,6 +760,7 @@ John Harrison
 (which provided much inspiration),
 the following function is also provided:
 
+\begin{hol}
 \begin{verbatim}
 define_equivalence_type :
         {name: string,
@@ -771,13 +773,14 @@ define_equivalence_type :
          old_thms : thm list} ->
         thm list
 \end{verbatim}
-
+\end{hol}
 \noindent
 This function is limited to a single quotient type, but may be
 more convenient when the generality of {\tt define\_quotient\_types}
 is not needed.
 This function is defined in terms of {\tt define\_quotient\_types} as
 
+\begin{hol}
 \begin{verbatim}
 fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
     define_quotient_types
@@ -788,6 +791,7 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
       poly_respects=[RES_FORALL_RSP,RES_EXISTS_RSP],
       old_thms=old_thms};
 \end{verbatim}
+\end{hol}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!quotients|)}
 
 
@@ -802,15 +806,20 @@ abbreviations, recursive functions, and mutually recursive
 functions. An induction theorem may be generated as a by-product of
 \ml{Define}'s activity. This induction theorem follows the recursion
 structure of the function, and may be useful when proving properties
-of the function.
+of the function. \ml{Define} is not always successful in attempting
+to make the specified definition, usually because an automatic
+termination proof fails; in that case, another entrypoint, \ml{Hol\_defn},
+which defers the termination proof to the user, can be used.
+The technology underlying \ml{Define} and \ml{Hol\_defn} is explained
+in detail in \cite{slind-thesis}.
 
 
 \index{Define@\ml{Define}}
 
  In particular, \ml{Define} takes as input a quotation representing a
 conjunction of equations. The specified function(s) may be phrased
-using ML-style pattern-matching. A call \ml{Define
-`}\textit{spec}\ml{`} should conform with the grammar in Table
+using ML-style pattern-matching. A call 
+\ml{Define `}\textit{spec}\ml{`} should conform with the grammar in Table
 \ref{define:syntax}.
 \begin{table}[htbp]
 \begin{center}
@@ -1761,6 +1770,8 @@ behaves as follows (note that the schematic variables should
 only occur on the right-hand side of the definition when making
 the definition of a schema):
 %
+\setcounter{sessioncount}{0}
+\begin{session}
 \begin{hol}
 \begin{verbatim}
   - TotalDefn.DefineSchema
@@ -1776,17 +1787,20 @@ the definition of a schema):
     |- linRec d e f g x = if d x then e x else f (linRec d e f g (g x))
 \end{verbatim}
 \end{hol}
+\end{session}
 %
 The hypotheses of the returned theorem hold the abstract termination
 constraints. A similarly constrained induction theorem is also 
 stored in the current theory segment.
 %
+\begin{session}
 \begin{hol}
 \begin{verbatim}
   hyp it;
   > val it = [``!x. ~d x ==> R (g x) x``, ``WF R``] : term list
 \end{verbatim}
 \end{hol}
+\end{session}
 %
 These constraints are abstract, since they place termination requirements
 on variables that have not yet been instantiated. Once instantiations
@@ -1857,6 +1871,8 @@ possible ways of obtaining it by the rules.
 A simple example of defining two mutually recursive relations is
 the following:
 %
+\setcounter{sessioncount}{0}
+\begin{session}
 \begin{hol}
 \begin{verbatim}
   Hol_reln
@@ -1865,9 +1881,11 @@ the following:
      (!n. EVEN n ==> ODD (n + 1))`;
 \end{verbatim}
 \end{hol}
+\end{session}
 %
 The result is three theorems
 %
+\begin{session}
 \begin{hol}
 \begin{verbatim}
   > val it =
@@ -1889,6 +1907,7 @@ The result is three theorems
     ) : thm * thm * thm
 \end{verbatim}
 \end{hol}
+\end{session}
 %
 The next example shows how to inductively define the reflexive and
 transitive closure of relation $R$. Note that \holtxt{R}, as a
@@ -1896,6 +1915,7 @@ schematic variable, is not quantified in the rules. This is
 appropriate because it is \holtxt{RTC R} that has the inductive
 characterisation, not \holtxt{RTC} itself.
 %
+\begin{session}
 \begin{hol}
 \begin{verbatim}
   - Hol_reln `(!x. RTC R x x) /\
@@ -1915,6 +1935,7 @@ characterisation, not \holtxt{RTC} itself.
      ) : thm * thm * thm
 \end{verbatim}
 \end{hol}
+\end{session}
 %
 The \ml{Hol\_reln} function may be used to define multiple relations,
 as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
