@@ -156,6 +156,243 @@ val dest_in = dest_binop pred_setSyntax.in_tm (ERR "dest_in" "");
 
 val is_in = can dest_in;
 
+(* ------------------------------------------------------------------------- *)
+(* Helper theorems.                                                          *)
+(* ------------------------------------------------------------------------- *)
+
+val THREE = DECIDE ``3 = SUC 2``;
+
+val DIV_THEN_MULT = store_thm
+  ("DIV_THEN_MULT",
+   ``!p q. SUC q * (p DIV SUC q) <= p``,
+   NTAC 2 STRIP_TAC
+   ++ Know `?r. p = (p DIV SUC q) * SUC q + r`
+   >> (Know `0 < SUC q` >> DECIDE_TAC
+       ++ PROVE_TAC [DIVISION])
+   ++ STRIP_TAC
+   ++ Suff `p = SUC q * (p DIV SUC q) + r`
+   >> (POP_ASSUM_LIST (K ALL_TAC) ++ DECIDE_TAC)
+   ++ PROVE_TAC [MULT_COMM]);
+
+val MOD_EXP = store_thm
+  ("MOD_EXP",
+   ``!a n m. 0 < m ==> (((a MOD m) ** n) MOD m = (a ** n) MOD m)``,
+   RW_TAC std_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC std_ss [EXP]
+   ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
+   ++ ASM_REWRITE_TAC []
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+   ++ ASM_SIMP_TAC std_ss [MOD_MOD]);
+
+val MULT_EXP = store_thm
+  ("MULT_EXP",
+   ``!a b n. (a * b) ** n = (a ** n) * (b ** n)``,
+   RW_TAC std_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC std_ss [EXP, EQ_MULT_LCANCEL, GSYM MULT_ASSOC]
+   ++ RW_TAC std_ss
+        [EXP, ONCE_REWRITE_RULE [MULT_COMM] EQ_MULT_LCANCEL, MULT_ASSOC]
+   ++ METIS_TAC [MULT_COMM]);
+
+val EXP_EXP = store_thm
+  ("EXP_EXP",
+   ``!a b c. (a ** b) ** c = a ** (b * c)``,
+   RW_TAC std_ss []
+   ++ Induct_on `b`
+   ++ RW_TAC std_ss [EXP, MULT, EXP_1]
+   ++ RW_TAC std_ss [MULT_EXP, EXP_ADD]
+   ++ METIS_TAC [MULT_COMM]);
+
+val FUNPOW_ADD = store_thm
+  ("FUNPOW_ADD",
+   ``!f p q x. FUNPOW f (p + q) x = FUNPOW f p (FUNPOW f q x)``,
+   Induct_on `q`
+   ++ RW_TAC arith_ss [FUNPOW, ADD_CLAUSES]);
+
+val FUNPOW_MULT = store_thm
+  ("FUNPOW_MULT",
+   ``!f p q x. FUNPOW f (p * q) x = FUNPOW (\x. FUNPOW f p x) q x``,
+   Induct_on `q`
+   ++ RW_TAC arith_ss [FUNPOW, MULT_CLAUSES]
+   ++ ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_ADD]
+   ++ RW_TAC std_ss []);
+
+val EL_ETA = store_thm
+  ("EL_ETA",
+   ``!l1 l2.
+       (LENGTH l1 = LENGTH l2) /\ (!n. n < LENGTH l1 ==> (EL n l1 = EL n l2)) =
+       (l1 = l2)``,
+   Induct
+   >> (Cases ++ RW_TAC arith_ss [LENGTH])
+   ++ STRIP_TAC
+   ++ Cases
+   ++ RW_TAC arith_ss [LENGTH]
+   ++ REVERSE (Cases_on `h = h'`)
+   >> (RW_TAC std_ss []
+       ++ DISJ2_TAC
+       ++ Q.EXISTS_TAC `0`
+       ++ RW_TAC arith_ss [EL, HD])
+   ++ RW_TAC arith_ss []
+   ++ Q.PAT_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th])
+   ++ EQ_TAC
+   >> (RW_TAC std_ss []
+       ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `SUC n`)
+       ++ RW_TAC arith_ss [EL, TL])
+   ++ RW_TAC std_ss []
+   ++ Q.PAT_ASSUM `n < SUC X` MP_TAC
+   ++ Cases_on `n`
+   ++ RW_TAC arith_ss [EL, HD, TL]);
+
+val el_append = store_thm
+  ("el_append",
+   ``!n p q.
+       n < LENGTH p + LENGTH q ==>
+       (EL n (APPEND p q) =
+        if n < LENGTH p then EL n p else EL (n - LENGTH p) q)``,
+   Induct
+   ++ Cases
+   ++ RW_TAC arith_ss [EL, HD, TL, APPEND, LENGTH]);
+
+val DELETE_INSERT = store_thm
+  ("DELETE_INSERT",
+   ``!e s. ~(e IN s) ==> ((e INSERT s) DELETE e = s)``,
+   RW_TAC std_ss [EXTENSION, IN_DELETE, IN_INSERT]
+   ++ METIS_TAC []);
+
+val finite_image_card = store_thm
+  ("finite_image_card",
+   ``!f s. FINITE s ==> CARD (IMAGE f s) <= CARD s``,
+   RW_TAC std_ss []
+   ++ POP_ASSUM MP_TAC
+   ++ Q.SPEC_TAC (`s`,`s`)
+   ++ HO_MATCH_MP_TAC FINITE_INDUCT
+   ++ RW_TAC std_ss
+        [INJ_DEF, CARD_INSERT, NOT_IN_EMPTY, SUBSET_DEF, IN_IMAGE,
+         IMAGE_EMPTY, CARD_EMPTY, IN_INSERT, IMAGE_INSERT, IMAGE_FINITE]
+   ++ RW_TAC arith_ss []);
+
+val finite_inj_card = store_thm
+  ("finite_inj_card",
+   ``!f s t.
+       FINITE s ==>
+       (INJ f s t = IMAGE f s SUBSET t /\ (CARD s = CARD (IMAGE f s)))``,
+   RW_TAC std_ss []
+   ++ POP_ASSUM MP_TAC
+   ++ Q.SPEC_TAC (`s`,`s`)
+   ++ HO_MATCH_MP_TAC FINITE_INDUCT
+   ++ RW_TAC std_ss
+        [INJ_DEF, CARD_INSERT, NOT_IN_EMPTY, SUBSET_DEF, IN_IMAGE,
+         IMAGE_EMPTY, CARD_EMPTY, IN_INSERT, IMAGE_INSERT, IMAGE_FINITE]
+   ++ REVERSE CASE_TAC >> PROVE_TAC []
+   ++ MATCH_MP_TAC (PROVE [] ``~a /\ ~b ==> (a = b)``)
+   ++ CONJ_TAC >> METIS_TAC []
+   ++ RW_TAC std_ss []
+   ++ DISJ2_TAC
+   ++ MATCH_MP_TAC (DECIDE ``b <= a ==> ~(SUC a = b)``)
+   ++ RW_TAC arith_ss [finite_image_card]);
+
+val finite_inj_surj_imp = store_thm
+  ("finite_inj_surj_imp",
+   ``!f s. FINITE s /\ SURJ f s s ==> INJ f s s``,
+   RW_TAC std_ss [IMAGE_SURJ, finite_inj_card, SUBSET_REFL]);
+
+val finite_inj_surj_imp' = store_thm
+  ("finite_inj_surj_imp'",
+   ``!f s. FINITE s /\ INJ f s s ==> SURJ f s s``,
+   RW_TAC std_ss [IMAGE_SURJ]
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC std_ss [finite_inj_card, IMAGE_FINITE, SUBSET_EQ_CARD]);
+
+val finite_inj_surj = store_thm
+  ("finite_inj_surj",
+   ``!f s. FINITE s ==> (INJ f s s = SURJ f s s)``,
+   METIS_TAC [finite_inj_surj_imp, finite_inj_surj_imp']);
+
+val delete_absent = store_thm
+  ("delete_absent",
+   ``!s e. ~(e IN s) ==> (s DELETE e = s)``,
+   RW_TAC std_ss [EXTENSION, IN_DELETE]
+   ++ METIS_TAC []);
+
+val commuting_itset = store_thm
+  ("commuting_itset",
+   ``!f.
+       (!x y z. f x (f y z) = f y (f x z)) ==>
+       !e s b.
+         FINITE s /\ ~(e IN s) ==>
+         (ITSET f (e INSERT s) b = f e (ITSET f s b))``,
+   RW_TAC std_ss []
+   ++ Know `s DELETE e = s` >> METIS_TAC [delete_absent]
+   ++ MP_TAC (Q.SPECL [`f`,`e`,`s`,`b`] COMMUTING_ITSET_RECURSES)
+   ++ RW_TAC std_ss []);
+
+val finite_num = store_thm
+  ("finite_num",
+   ``!s. FINITE s = ?n. !m. m IN s ==> m < n``,
+   RW_TAC std_ss []
+   ++ EQ_TAC
+   >> (Q.SPEC_TAC (`s`,`s`)
+       ++ HO_MATCH_MP_TAC FINITE_INDUCT
+       ++ RW_TAC arith_ss [NOT_IN_EMPTY, IN_INSERT]
+       ++ Q.EXISTS_TAC `MAX n (SUC e)`
+       ++ RW_TAC arith_ss []
+       ++ RES_TAC
+       ++ DECIDE_TAC)
+   ++ STRIP_TAC
+   ++ POP_ASSUM MP_TAC
+   ++ Q.SPEC_TAC (`s`,`s`)
+   ++ Induct_on `n`
+   >> (RW_TAC arith_ss []
+       ++ Suff `s = {}` >> RW_TAC std_ss [FINITE_EMPTY]
+       ++ ONCE_REWRITE_TAC [EXTENSION]
+       ++ RW_TAC std_ss [NOT_IN_EMPTY])
+   ++ RW_TAC std_ss []
+   ++ MATCH_MP_TAC
+        (SIMP_RULE std_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
+         SUBSET_FINITE)
+   ++ Q.EXISTS_TAC `n INSERT (s DELETE n)`
+   ++ REVERSE CONJ_TAC
+   >> (ONCE_REWRITE_TAC [EXTENSION]
+       ++ RW_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_DELETE])
+   ++ RW_TAC std_ss [FINITE_INSERT]
+   ++ FIRST_ASSUM MATCH_MP_TAC
+   ++ RW_TAC arith_ss [IN_DELETE]
+   ++ RES_TAC
+   ++ DECIDE_TAC);
+
+val DIVIDES_ONE = store_thm
+  ("DIVIDES_ONE",
+   ``!n. divides n 1 = (n = 1)``,
+   RW_TAC std_ss [divides_def, MULT_EQ_1]);
+
+val divides_mod_zero = store_thm
+  ("divides_mod_zero",
+   ``!m n. 0 < n ==> (divides n m = (m MOD n = 0))``,
+   RW_TAC std_ss [divides_def]
+   ++ (EQ_TAC ++ STRIP_TAC)
+   ++ RW_TAC std_ss [MOD_EQ_0]
+   ++ MP_TAC (Q.SPEC `n` DIVISION)
+   ++ ASM_SIMP_TAC std_ss []
+   ++ DISCH_THEN (MP_TAC o Q.SPEC `m`)
+   ++ ASM_SIMP_TAC arith_ss []
+   ++ METIS_TAC []);
+
+val prime_one_lt = store_thm
+  ("prime_one_lt",
+   ``!p. prime p ==> 1 < p``,
+   RW_TAC std_ss []
+   ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
+   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]);
+
+(* ========================================================================= *)
+(* Proof tools.                                                              *)
+(* ========================================================================= *)
+
+(* ------------------------------------------------------------------------- *)
+(* Predicate subtype prover.                                                 *)
+(* ------------------------------------------------------------------------- *)
+
 local
   type cache = (term,thm) M.dict ref;
 
@@ -398,136 +635,373 @@ fun alg_binop_ac_conv {dest_neg,is_binop,comm_th,comm_th'} =
     end;
 
 (* ------------------------------------------------------------------------- *)
-(* Helper theorems.                                                          *)
+(* Primality prover.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val THREE = DECIDE ``3 = SUC 2``;
-
-val DIV_THEN_MULT = store_thm
-  ("DIV_THEN_MULT",
-   ``!p q. SUC q * (p DIV SUC q) <= p``,
-   NTAC 2 STRIP_TAC
-   ++ Know `?r. p = (p DIV SUC q) * SUC q + r`
-   >> (Know `0 < SUC q` >> DECIDE_TAC
-       ++ PROVE_TAC [DIVISION])
-   ++ STRIP_TAC
-   ++ Suff `p = SUC q * (p DIV SUC q) + r`
-   >> (POP_ASSUM_LIST (K ALL_TAC) ++ DECIDE_TAC)
-   ++ PROVE_TAC [MULT_COMM]);
-
-val MOD_EXP = store_thm
-  ("MOD_EXP",
-   ``!a n m. 0 < m ==> (((a MOD m) ** n) MOD m = (a ** n) MOD m)``,
-   RW_TAC std_ss []
-   ++ Induct_on `n`
-   ++ RW_TAC std_ss [EXP]
-   ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
-   ++ ASM_REWRITE_TAC []
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ ASM_SIMP_TAC std_ss [MOD_MOD]);
-
-val MULT_EXP = store_thm
-  ("MULT_EXP",
-   ``!a b n. (a * b) ** n = (a ** n) * (b ** n)``,
-   RW_TAC std_ss []
-   ++ Induct_on `n`
-   ++ RW_TAC std_ss [EXP, EQ_MULT_LCANCEL, GSYM MULT_ASSOC]
-   ++ RW_TAC std_ss
-        [EXP, ONCE_REWRITE_RULE [MULT_COMM] EQ_MULT_LCANCEL, MULT_ASSOC]
-   ++ METIS_TAC [MULT_COMM]);
-
-val EXP_EXP = store_thm
-  ("EXP_EXP",
-   ``!a b c. (a ** b) ** c = a ** (b * c)``,
-   RW_TAC std_ss []
-   ++ Induct_on `b`
-   ++ RW_TAC std_ss [EXP, MULT, EXP_1]
-   ++ RW_TAC std_ss [MULT_EXP, EXP_ADD]
-   ++ METIS_TAC [MULT_COMM]);
-
-val FUNPOW_ADD = store_thm
-  ("FUNPOW_ADD",
-   ``!f p q x. FUNPOW f (p + q) x = FUNPOW f p (FUNPOW f q x)``,
-   Induct_on `q`
-   ++ RW_TAC arith_ss [FUNPOW, ADD_CLAUSES]);
-
-val FUNPOW_MULT = store_thm
-  ("FUNPOW_MULT",
-   ``!f p q x. FUNPOW f (p * q) x = FUNPOW (\x. FUNPOW f p x) q x``,
-   Induct_on `q`
-   ++ RW_TAC arith_ss [FUNPOW, MULT_CLAUSES]
-   ++ ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_ADD]
-   ++ RW_TAC std_ss []);
-
-val finite_num = store_thm
-  ("finite_num",
-   ``!s. FINITE s = ?n. !m. m IN s ==> m < n``,
-   RW_TAC std_ss []
-   ++ EQ_TAC
-   >> (Q.SPEC_TAC (`s`,`s`)
-       ++ HO_MATCH_MP_TAC FINITE_INDUCT
-       ++ RW_TAC arith_ss [NOT_IN_EMPTY, IN_INSERT]
-       ++ Q.EXISTS_TAC `MAX n (SUC e)`
-       ++ RW_TAC arith_ss []
-       ++ RES_TAC
-       ++ DECIDE_TAC)
-   ++ STRIP_TAC
-   ++ POP_ASSUM MP_TAC
-   ++ Q.SPEC_TAC (`s`,`s`)
-   ++ Induct_on `n`
-   >> (RW_TAC arith_ss []
-       ++ Suff `s = {}` >> RW_TAC std_ss [FINITE_EMPTY]
-       ++ ONCE_REWRITE_TAC [EXTENSION]
-       ++ RW_TAC std_ss [NOT_IN_EMPTY])
-   ++ RW_TAC std_ss []
-   ++ MATCH_MP_TAC
-        (SIMP_RULE std_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
-         SUBSET_FINITE)
-   ++ Q.EXISTS_TAC `n INSERT (s DELETE n)`
-   ++ REVERSE CONJ_TAC
-   >> (ONCE_REWRITE_TAC [EXTENSION]
-       ++ RW_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_DELETE])
-   ++ RW_TAC std_ss [FINITE_INSERT]
-   ++ FIRST_ASSUM MATCH_MP_TAC
-   ++ RW_TAC arith_ss [IN_DELETE]
-   ++ RES_TAC
+val (nat_sqrt_def,nat_sqrt_ind) = Defn.tprove
+  (Defn.Hol_defn "nat_sqrt"
+   `nat_sqrt n k = if n < k * k then k - 1 else nat_sqrt n (k + 1)`,
+   WF_REL_TAC `measure (\(n,k). (n + 1) - k)`
+   ++ RW_TAC arith_ss [NOT_LESS]
+   ++ Suff `k <= n` >> DECIDE_TAC
+   ++ Cases_on `k = 0` >> RW_TAC arith_ss []
+   ++ Suff `k * k <= k * n` >> RW_TAC arith_ss [LE_MULT_LCANCEL]
+   ++ MATCH_MP_TAC LESS_EQ_TRANS
+   ++ Q.EXISTS_TAC `1 * n`
+   ++ CONJ_TAC >> RW_TAC arith_ss []
+   ++ RW_TAC bool_ss [LE_MULT_RCANCEL]
    ++ DECIDE_TAC);
 
-val EL_ETA = store_thm
-  ("EL_ETA",
-   ``!l1 l2.
-       (LENGTH l1 = LENGTH l2) /\ (!n. n < LENGTH l1 ==> (EL n l1 = EL n l2)) =
-       (l1 = l2)``,
-   Induct
-   >> (Cases ++ RW_TAC arith_ss [LENGTH])
-   ++ STRIP_TAC
-   ++ Cases
-   ++ RW_TAC arith_ss [LENGTH]
-   ++ REVERSE (Cases_on `h = h'`)
+val prime_checker_def = Define
+  `prime_checker n i =
+   if i <= 1 then T
+   else if n MOD i = 0 then F
+   else prime_checker n (i - 1)`;
+
+val prime_checker_ind = fetch "-" "prime_checker_ind";
+
+val nat_sqrt = prove
+  (``!n k. k * k <= n = k <= nat_sqrt n 0``,
+   RW_TAC std_ss []
+   ++ Suff `!n i k. k * k <= n \/ k < i = k <= nat_sqrt n i`
+   >> METIS_TAC [ZERO_LESS_EQ, prim_recTheory.NOT_LESS_0]
+   ++ recInduct nat_sqrt_ind
+   ++ RW_TAC std_ss []
+   ++ ONCE_REWRITE_TAC [nat_sqrt_def]
+   ++ Cases_on `n < k * k`
    >> (RW_TAC std_ss []
-       ++ DISJ2_TAC
-       ++ Q.EXISTS_TAC `0`
-       ++ RW_TAC arith_ss [EL, HD])
-   ++ RW_TAC arith_ss []
-   ++ Q.PAT_ASSUM `!x. P x` (fn th => REWRITE_TAC [GSYM th])
+       ++ Q.PAT_ASSUM `X ==> Y` (K ALL_TAC)
+       ++ Cases_on `k = 0`
+       >> (RW_TAC std_ss []
+           ++ FULL_SIMP_TAC arith_ss [])
+       ++ MATCH_MP_TAC (PROVE [] ``(~b ==> ~a) /\ (b = c) ==> (a \/ b = c)``)
+       ++ REVERSE CONJ_TAC >> DECIDE_TAC
+       ++ Suff `k <= k' ==> n < k' * k'` >> DECIDE_TAC
+       ++ RW_TAC std_ss []
+       ++ MATCH_MP_TAC LESS_LESS_EQ_TRANS
+       ++ Q.EXISTS_TAC `k * k`
+       ++ RW_TAC std_ss []
+       ++ MATCH_MP_TAC LESS_EQ_TRANS
+       ++ Q.EXISTS_TAC `k * k'`
+       ++ RW_TAC arith_ss [LE_MULT_LCANCEL, LE_MULT_RCANCEL])
+   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ RW_TAC std_ss []
+   ++ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
+   ++ MATCH_MP_TAC
+        (PROVE [] ``(b ==> c) /\ (~a /\ c ==> b) ==> (a \/ b = a \/ c)``)
+   ++ CONJ_TAC >> DECIDE_TAC
+   ++ RW_TAC std_ss []
+   ++ Suff `~(k = k')` >> DECIDE_TAC
+   ++ STRIP_TAC
+   ++ RW_TAC arith_ss []);
+
+val prime_condition = store_thm
+  ("prime_condition",
+   ``!p. prime p = 1 < p /\ !n. 1 < n /\ n * n <= p ==> ~(p MOD n = 0)``,
+   STRIP_TAC
+   ++ Know `(p = 0) \/ 0 < p` >> DECIDE_TAC
+   ++ STRIP_TAC >> RW_TAC std_ss [NOT_PRIME_0]
+   ++ RW_TAC std_ss [prime_def]
+   ++ MATCH_MP_TAC
+        (PROVE [] ``(a = d) /\ (a /\ d ==> (b = c)) ==> (a /\ b = d /\ c)``)
+   ++ CONJ_TAC >> DECIDE_TAC
+   ++ STRIP_TAC
+   ++ Know `!n. 1 < n ==> 0 < n` >> DECIDE_TAC
+   ++ DISCH_THEN (fn th => RW_TAC std_ss [GSYM divides_mod_zero, th])
    ++ EQ_TAC
    >> (RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `SUC n`)
-       ++ RW_TAC arith_ss [EL, TL])
+       ++ STRIP_TAC
+       ++ Q.PAT_ASSUM `!b. P b` (MP_TAC o Q.SPEC `n`)
+       ++ REVERSE (RW_TAC std_ss []) >> DECIDE_TAC
+       ++ STRIP_TAC
+       ++ RW_TAC std_ss []
+       ++ Know `(n = 0) \/ n <= 1` >> METIS_TAC [LE_MULT_LCANCEL, MULT_CLAUSES]
+       ++ RW_TAC arith_ss [])
    ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `n < SUC X` MP_TAC
-   ++ Cases_on `n`
-   ++ RW_TAC arith_ss [EL, HD, TL]);
+   ++ Cases_on `b = 1` >> RW_TAC std_ss []
+   ++ Cases_on `b = p` >> RW_TAC std_ss []
+   ++ RW_TAC std_ss []
+   ++ Q.PAT_ASSUM `divides b p` MP_TAC
+   ++ RW_TAC std_ss [divides_def]
+   ++ STRIP_TAC
+   ++ RW_TAC std_ss []
+   ++ Cases_on `q = 1` >> FULL_SIMP_TAC arith_ss []
+   ++ Cases_on `q = 0` >> FULL_SIMP_TAC arith_ss []
+   ++ Cases_on `b = 0` >> FULL_SIMP_TAC arith_ss []
+   ++ Q.PAT_ASSUM `!n. P n`
+        (fn th => MP_TAC (Q.SPEC `q` th) ++ MP_TAC (Q.SPEC `b` th))
+   ++ REVERSE (RW_TAC arith_ss [divides_def, LE_MULT_LCANCEL])
+   >> METIS_TAC [MULT_COMM]
+   ++ REVERSE (Cases_on `b <= q`) >> DECIDE_TAC
+   ++ METIS_TAC [MULT_COMM]);
 
-val el_append = store_thm
-  ("el_append",
-   ``!n p q.
-       n < LENGTH p + LENGTH q ==>
-       (EL n (APPEND p q) =
-        if n < LENGTH p then EL n p else EL (n - LENGTH p) q)``,
-   Induct
-   ++ Cases
-   ++ RW_TAC arith_ss [EL, HD, TL, APPEND, LENGTH]);
+val prime_checker = prove
+  (``!p. prime p = 1 < p /\ prime_checker p (nat_sqrt p 0)``,
+   RW_TAC std_ss [prime_condition]
+   ++ Cases_on `p = 0` >> RW_TAC arith_ss []
+   ++ Cases_on `p = 1` >> RW_TAC arith_ss []
+   ++ RW_TAC arith_ss []
+   ++ Suff `!p k. prime_checker p k = !i. 1 < i /\ i <= k ==> ~(p MOD i = 0)`
+   >> (DISCH_THEN (fn th => RW_TAC arith_ss [th])
+       ++ RW_TAC arith_ss [GSYM nat_sqrt])
+   ++ recInduct prime_checker_ind
+   ++ RW_TAC arith_ss []
+   ++ ONCE_REWRITE_TAC [prime_checker_def]
+   ++ RW_TAC arith_ss []
+   ++ POP_ASSUM MP_TAC
+   ++ Cases_on `i = 0` >> RW_TAC arith_ss []
+   ++ Cases_on `i = 1` >> RW_TAC arith_ss []
+   ++ ASM_SIMP_TAC arith_ss []
+   ++ Cases_on `n MOD i = 0`
+   >> (RW_TAC arith_ss []
+       ++ Q.EXISTS_TAC `i`
+       ++ RW_TAC arith_ss [])
+   ++ RW_TAC arith_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ REVERSE EQ_TAC
+   >> RW_TAC arith_ss []
+   ++ RW_TAC arith_ss []
+   ++ Suff `i' <= i - 1 \/ (i' = i)` >> METIS_TAC []
+   ++ DECIDE_TAC);
+
+val prime_checker_conv = REWR_CONV prime_checker THENC EVAL;
+
+(* ========================================================================= *)
+(* Number Theory                                                             *)
+(* ========================================================================= *)
+
+(* ------------------------------------------------------------------------- *)
+(* Basic definitions                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+val totient_def = Define
+  `totient n = CARD { i | 0 < i /\ i < n /\ (gcd n i = 1) }`;
+
+(* ------------------------------------------------------------------------- *)
+(* Fermat's Little Theorem                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+val mult_lcancel_gcd_imp = store_thm
+  ("mult_lcancel_gcd_imp",
+   ``!n a b c.
+       0 < n /\ (gcd n a = 1) /\ ((a * b) MOD n = (a * c) MOD n) ==>
+       (b MOD n = c MOD n)``,
+   RW_TAC std_ss []
+   ++ Cases_on `n = 1` >> METIS_TAC [MOD_1]
+   ++ Cases_on `a = 0` >> METIS_TAC [GCD_0R]
+   ++ MP_TAC (Q.SPECL [`a`,`n`] LINEAR_GCD)
+   ++ RW_TAC std_ss []
+   ++ Know
+      `(p MOD n * (a MOD n * b MOD n)) MOD n =
+       (p MOD n * (a MOD n * c MOD n)) MOD n`
+   >> METIS_TAC [MOD_TIMES2, MOD_MOD]
+   ++ REWRITE_TAC [MULT_ASSOC]
+   ++ Suff `((p MOD n * a MOD n) MOD n) MOD n = 1`
+   >> METIS_TAC [MOD_TIMES2, MOD_MOD, MULT_CLAUSES]
+   ++ RW_TAC arith_ss [MOD_TIMES2]
+   ++ MP_TAC (Q.SPEC `n` MOD_PLUS)
+   ++ ASM_REWRITE_TAC []
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+   ++ RW_TAC std_ss [MOD_EQ_0]
+   ++ RW_TAC arith_ss [MOD_MOD]);
+
+val mult_lcancel_gcd = store_thm
+  ("mult_lcancel_gcd",
+   ``!n a b c.
+       0 < n /\ (gcd n a = 1) ==>
+       (((a * b) MOD n = (a * c) MOD n) = (b MOD n = c MOD n))``,
+   METIS_TAC [MOD_TIMES2, mult_lcancel_gcd_imp]);
+
+val is_gcd_1 = store_thm
+  ("is_gcd_1",
+   ``!n. is_gcd n 1 1``,
+   RW_TAC std_ss [is_gcd_def, ONE_DIVIDES_ALL]);
+
+val gcd_1 = store_thm
+  ("gcd_1",
+   ``!n. gcd n 1 = 1``,
+   METIS_TAC [is_gcd_1, GCD_IS_GCD, IS_GCD_UNIQUE]);
+
+val divides_gcd = store_thm
+  ("divides_gcd",
+   ``!a b. divides (gcd a b) a /\ divides (gcd a b) b``,
+   Suff `!a b. divides (gcd a b) a` >> METIS_TAC [GCD_SYM]
+   ++ RW_TAC std_ss []
+   ++ Know `is_gcd a b (gcd a b)` >> METIS_TAC [GCD_IS_GCD]
+   ++ RW_TAC std_ss [is_gcd_def]);
+
+val is_gcd_1_mult_imp = store_thm
+  ("is_gcd_1_mult_imp",
+   ``!n a b. is_gcd n a 1 /\ is_gcd n b 1 ==> is_gcd n (a * b) 1``,
+   RW_TAC std_ss [is_gcd_def, ONE_DIVIDES_ALL]
+   ++ Cases_on `gcd a d = 1`
+   >> (MP_TAC (Q.SPECL [`a`,`d`,`b`] L_EUCLIDES)
+       ++ RW_TAC std_ss [])
+   ++ FULL_SIMP_TAC std_ss [DIVIDES_ONE]
+   ++ Suff `F` >> METIS_TAC []
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC std_ss []
+   ++ Q.PAT_ASSUM `!i. P i` (K ALL_TAC)
+   ++ Q.PAT_ASSUM `!i. P i` MATCH_MP_TAC
+   ++ METIS_TAC [DIVIDES_TRANS,  divides_gcd]);
+
+val gcd_1_mult_imp = store_thm
+  ("gcd_1_mult_imp",
+   ``!n a b. (gcd n a = 1) /\ (gcd n b = 1) ==> (gcd n (a * b) = 1)``,
+   METIS_TAC [is_gcd_1_mult_imp, GCD_IS_GCD, IS_GCD_UNIQUE]);
+
+val gcd_modr = store_thm
+  ("gcd_modr",
+   ``!n a. 0 < n ==> (gcd n (a MOD n) = gcd n a)``,
+   METIS_TAC [GCD_SYM, DECIDE ``0 < n ==> ~(n = 0)``, GCD_EFFICIENTLY]);
+
+val euler_totient = store_thm
+  ("euler_totient",
+   ``!n a. (gcd n a = 1) ==> (a ** totient n MOD n = 1 MOD n)``,
+   RW_TAC std_ss []
+   ++ Cases_on `n = 0`
+   >> RW_TAC bool_ss
+        [totient_def, prim_recTheory.NOT_LESS_0, GSPEC_F,
+         CARD_EMPTY, EXP]
+   ++ Cases_on `n = 1` >> RW_TAC bool_ss [MOD_1]
+   ++ Know `0 < n` >> DECIDE_TAC
+   ++ STRIP_TAC
+   ++ MATCH_MP_TAC mult_lcancel_gcd_imp
+   ++ Q.EXISTS_TAC
+      `ITSET (\y z. y * z) { i | 0 < i /\ i < n /\ (gcd n i = 1) } 1`
+   ++ Know `FINITE { i | 0 < i /\ i < n /\ (gcd n i = 1) }`
+   >> (RW_TAC std_ss [finite_num, GSPECIFICATION]
+       ++ METIS_TAC [])
+   ++ RW_TAC arith_ss []
+   >> (Suff
+       `!s b.
+          FINITE s /\ (!i. i IN s ==> (gcd n i = 1)) /\ (gcd n b = 1) ==>
+          (gcd n (ITSET (\y z. y * z) s b) = 1)`
+       >> (DISCH_THEN MATCH_MP_TAC
+           ++ RW_TAC std_ss [GSPECIFICATION, gcd_1])
+       ++ HO_MATCH_MP_TAC (GEN_ALL ITSET_IND)
+       ++ Q.EXISTS_TAC `\y z. y * z`
+       ++ RW_TAC std_ss []
+       ++ RW_TAC std_ss [ITSET_THM]
+       ++ FIRST_ASSUM (MATCH_MP_TAC o CONV_RULE (REWR_CONV AND_IMP_INTRO))
+       ++ RW_TAC std_ss [REST_DEF, FINITE_DELETE, IN_DELETE]
+       ++ MATCH_MP_TAC gcd_1_mult_imp
+       ++ METIS_TAC [CHOICE_DEF])
+   ++ Know `INJ (\i. (i * a) MOD n) {i | 0 < i /\ i < n /\ (gcd n i = 1)} UNIV`
+   >> (RW_TAC std_ss [INJ_DEF, IN_UNIV]
+       ++ Know `i MOD n = i' MOD n`
+       >> METIS_TAC [mult_lcancel_gcd_imp, MULT_COMM]
+       ++ FULL_SIMP_TAC std_ss [GSPECIFICATION]
+       ++ METIS_TAC [LESS_MOD])
+   ++ STRIP_TAC
+   ++ Know
+      `IMAGE (\i. (i * a) MOD n) {i | 0 < i /\ i < n /\ (gcd n i = 1)} =
+       {i | 0 < i /\ i < n /\ (gcd n i = 1)}`
+   >> (RW_TAC std_ss [GSYM IMAGE_SURJ, GSYM finite_inj_surj]
+       ++ POP_ASSUM MP_TAC
+       ++ RW_TAC bool_ss [INJ_DEF, IN_UNIV]
+       ++ Q.PAT_ASSUM `!i i'. P i i'` (K ALL_TAC)
+       ++ FULL_SIMP_TAC std_ss [GSPECIFICATION, DIVISION]
+       ++ MATCH_MP_TAC (PROVE [] ``(~a ==> ~b) /\ b ==> a /\ b``)
+       ++ CONJ_TAC
+       >> (Cases_on `(i * a) MOD n`
+           ++ RW_TAC arith_ss [GCD_0R])
+       ++ RW_TAC std_ss [gcd_modr]
+       ++ METIS_TAC [gcd_1_mult_imp])
+   ++ DISCH_THEN (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
+   ++ RW_TAC std_ss [totient_def]
+   ++ POP_ASSUM MP_TAC
+   ++ POP_ASSUM MP_TAC
+   ++ Suff
+      `!s.
+         FINITE s ==>
+         INJ (\i. (i * a) MOD n) s UNIV ==>
+         ((ITSET (\y z. y * z) s 1 * a ** CARD s) MOD n =
+          ITSET (\y z. y * z) (IMAGE (\i. (i * a) MOD n) s) 1 MOD n)`
+   >> METIS_TAC []
+   ++ HO_MATCH_MP_TAC FINITE_INDUCT
+   ++ RW_TAC std_ss
+        [CARD_EMPTY, ITSET_EMPTY, IMAGE_EMPTY, EXP, MULT_CLAUSES,
+         CARD_INSERT, IMAGE_INSERT]
+   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+   ++ POP_ASSUM MP_TAC
+   ++ SIMP_TAC bool_ss [INJ_DEF, IN_UNIV]
+   ++ STRIP_TAC
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   ++ CONJ_TAC >> METIS_TAC [IN_INSERT]
+   ++ STRIP_TAC
+   ++ MP_TAC (Q.ISPEC `\y z. y * z` commuting_itset)
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   ++ SIMP_TAC std_ss []
+   ++ CONJ_TAC >> METIS_TAC [MULT_ASSOC, MULT_COMM]
+   ++ DISCH_THEN
+      (fn th =>
+       MP_TAC (Q.SPECL [`(e * a) MOD n`,`IMAGE (\i. (i * a) MOD n) s`,`1`] th)
+       ++ MP_TAC (Q.SPECL [`e`,`s`,`1`] th))
+   ++ RW_TAC std_ss [IMAGE_FINITE]
+   ++ POP_ASSUM MP_TAC
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   ++ CONJ_TAC
+   >> (Q.PAT_ASSUM `!i i'. P i i'` (MP_TAC o Q.SPEC `e`)
+       ++ RW_TAC std_ss [IN_IMAGE, IN_INSERT]
+       ++ METIS_TAC [])
+   ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.PAT_ASSUM `!i i'. P i i'` (K ALL_TAC)
+   ++ MATCH_MP_TAC
+      (METIS_PROVE [MULT_ASSOC, MULT_COMM]
+       ``(((a * c) * (b * d)) MOD n = X) ==> ((a * b * (c * d)) MOD n = X)``)
+   ++ MP_TAC (Q.SPEC `n` MOD_TIMES2)
+   ++ ASM_SIMP_TAC std_ss []
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+   ++ RW_TAC std_ss [MOD_MOD]);
+
+val prime_is_gcd_1 = store_thm
+  ("prime_is_gcd_1",
+   ``!p a. prime p ==> (is_gcd p a 1 = ~divides p a)``,
+   RW_TAC std_ss [is_gcd_def, DIVIDES_ONE, ONE_DIVIDES_ALL]
+   ++ EQ_TAC
+   >> (DISCH_THEN (MP_TAC o Q.SPEC `p`)
+       ++ METIS_TAC [DIVIDES_REFL, NOT_PRIME_1])
+   ++ RW_TAC std_ss []
+   ++ MP_TAC (Q.SPEC `p` prime_def)
+   ++ RW_TAC std_ss []
+   ++ POP_ASSUM (MP_TAC o Q.SPEC `d`)
+   ++ ASM_REWRITE_TAC []
+   ++ STRIP_TAC
+   ++ RW_TAC std_ss []
+   ++ METIS_TAC []);
+
+val prime_gcd_1 = store_thm
+  ("prime_gcd_1",
+   ``!p a. prime p ==> ((gcd p a = 1) = ~divides p a)``,
+   METIS_TAC [prime_is_gcd_1, GCD_IS_GCD, IS_GCD_UNIQUE]);
+
+val prime_totient = store_thm
+  ("prime_totient",
+   ``!p. prime p ==> (totient p = p - 1)``,
+   RW_TAC std_ss [totient_def, prime_gcd_1]
+   ++ Suff `{i | 0 < i /\ i < p /\ ~divides p i} = count p DELETE 0`
+   >> (RW_TAC std_ss [CARD_DELETE, FINITE_COUNT, CARD_COUNT]
+       ++ Suff `F` >> METIS_TAC []
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM MP_TAC
+       ++ RW_TAC std_ss [count_def, GSPECIFICATION]
+       ++ METIS_TAC [NOT_PRIME_0, DECIDE ``0 < p = ~(p = 0)``])
+   ++ RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_DELETE, count_def]
+   ++ Suff `0 < x /\ x < p ==> ~divides p x`
+   >> METIS_TAC [DECIDE ``0 < p = ~(p = 0)``]
+   ++ METIS_TAC [DIVIDES_LE, DECIDE ``~(a < b) = b <= a``]);
+
+val fermat_little = store_thm
+  ("fermat_little",
+   ``!p a. prime p /\ ~divides p a ==> (a ** (p - 1) MOD p = 1)``,
+   RW_TAC std_ss []
+   ++ MP_TAC (Q.SPECL [`p`,`a`] euler_totient)
+   ++ RW_TAC std_ss [prime_gcd_1, prime_totient]
+   ++ Suff `0 < p /\ 1 < p` >> METIS_TAC [X_MOD_Y_EQ_X]
+   ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
+   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]);
 
 (* ========================================================================= *)
 (* Groups                                                                    *)
@@ -1462,30 +1936,55 @@ val Prime_Nonzero = store_thm
 val alg_context = alg_add_judgement Prime_Nonzero alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
-(***
-val divides_mod_zero = store_thm
-  ("divides_mod_zero",
-   ``!m n. 0 < n ==> (divides n m = (m MOD n = 0))``,
-
 val group_mult_mod = store_thm
   ("group_mult_mod",
    ``!p :: Prime. mult_mod p IN Group``,
    RW_TAC resq_ss
      [Group_def,GSPECIFICATION,mult_mod_def,combinTheory.K_THM,Prime_def]
-   ++ RW_TAC arith_ss []
-   ++ Know `0 < n /\ !m. m < n = (m MOD n = m)` >> RW_TAC arith_ss []
-   ++ RW_TAC std_ss [ZERO_MOD, MOD_MOD, MULT_CLAUSES]
-   << [METIS_TAC [],
-       Suff `((n - x) MOD n + x MOD n) MOD n = 0`
-       >> METIS_TAC []
-       ++ RW_TAC std_ss [MOD_PLUS]
-       ++ POP_ASSUM (K ALL_TAC)
-       ++ RW_TAC arith_ss [],
-       Suff `((x + y) MOD n + z MOD n) MOD n = (x MOD n + (y + z) MOD n) MOD n`
-       >> METIS_TAC []
-       ++ RW_TAC std_ss [MOD_PLUS]
-       ++ POP_ASSUM (K ALL_TAC)
-       ++ RW_TAC arith_ss []]);
+   ++ RW_TAC arith_ss [prime_one_lt]
+   ++ Cases_on `p = 0` >> METIS_TAC [NOT_PRIME_0]
+   ++ Know `0 < p` >> DECIDE_TAC ++ STRIP_TAC
+   ++ RW_TAC std_ss [DIVISION, GSYM divides_mod_zero]
+   << [STRIP_TAC
+       ++ MP_TAC (Q.SPECL [`p`,`x`,`y`] P_EUCLIDES)
+       ++ RW_TAC std_ss []
+       ++ Know `0 < x` >> DECIDE_TAC ++ STRIP_TAC
+       ++ Know `0 < y` >> DECIDE_TAC ++ STRIP_TAC
+       ++ METIS_TAC [DIVIDES_LE, NOT_LESS],
+       Know `0 < x` >> DECIDE_TAC ++ STRIP_TAC
+       ++ Q.SPEC_TAC (`p - 2`, `k`)
+       ++ Induct
+       >> (RW_TAC std_ss [EXP]
+           ++ STRIP_TAC
+           ++ Know `p <= 1` >> METIS_TAC [DIVIDES_LE, DECIDE ``0 < 1``]
+           ++ METIS_TAC [NOT_LESS, prime_one_lt])
+       ++ RW_TAC std_ss [EXP]
+       ++ STRIP_TAC
+       ++ MP_TAC (Q.SPECL [`p`,`x`,` x ** k`] P_EUCLIDES)
+       ++ RW_TAC std_ss []
+       ++ STRIP_TAC
+       ++ Know `p <= x` >> METIS_TAC [DIVIDES_LE]
+       ++ METIS_TAC [NOT_LESS],
+       MP_TAC (Q.SPEC `p` MOD_TIMES2)
+       ++ ASM_REWRITE_TAC []
+       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
+       ++ RW_TAC std_ss [MOD_MOD]
+       ++ RW_TAC std_ss [MOD_TIMES2]
+       ++ ONCE_REWRITE_TAC [MULT_COMM]
+       ++ REWRITE_TAC [GSYM EXP]
+       ++ Know `SUC (p - 2) = p - 1`
+       >> (Suff `1 <= p` >> DECIDE_TAC
+           ++ DECIDE_TAC)
+       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
+       ++ RW_TAC std_ss [EXP]
+       ++ Suff `~divides p x` >> METIS_TAC [fermat_little]
+       ++ METIS_TAC
+            [DIVIDES_LE, DECIDE ``~(x = 0) = 0 < x``,
+             DECIDE ``~(a < b) = b <= a``],
+       MP_TAC (Q.SPEC `p` MOD_TIMES2)
+       ++ MP_TAC (Q.SPEC `p` MOD_MOD)
+       ++ ASM_REWRITE_TAC []
+       ++ METIS_TAC [MULT_ASSOC]]);
 
 val mult_mod = store_thm
   ("mult_mod",
@@ -1495,11 +1994,10 @@ val mult_mod = store_thm
       GSPECIFICATION,combinTheory.K_THM,FiniteGroup_def,Nonzero_def]
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ RW_TAC arith_ss [mult_mod_def, finite_num, GSPECIFICATION]
-   ++ METIS_TAC []);
+   ++ METIS_TAC [MULT_COMM]);
 
 val alg_context = alg_add_reduction mult_mod alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
-***)
 
 (* ========================================================================= *)
 (* Cryptography based on groups                                              *)
@@ -1652,6 +2150,14 @@ fun dest_field_mult tm =
 val is_field_mult = can dest_field_mult;
 
 (* Theorems *)
+
+val FiniteField_Field = store_thm
+  ("FiniteField_Field",
+   ``!f. f IN FiniteField ==> f IN Field``,
+   RW_TAC std_ss [FiniteField_def, GSPECIFICATION]);
+
+val alg_context = alg_add_judgement FiniteField_Field alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_nonzero_carrier = store_thm
   ("field_nonzero_carrier",
@@ -2722,12 +3228,33 @@ val GF_alt = store_thm
      [GF_zero, GF_one, GF_neg, GF_add, GF_sub, GF_inv, GF_mult, GF_div,
       GF_exp, GF_num]);
 
-(***
 val GF = store_thm
   ("GF",
    ``!p :: Prime. GF p IN FiniteField``,
-   RW_TAC resq_ss
-***)
+   RW_TAC resq_ss [FiniteField_def, GSPECIFICATION, Field_def]
+   << [RW_TAC alg_ss [GF_def, combinTheory.K_THM],
+       RW_TAC alg_ss [GF_def, combinTheory.K_THM],
+       RW_TAC alg_ss [GF_def, combinTheory.K_THM, add_mod_def],
+       RW_TAC alg_ss [GF_alt]
+       ++ RW_TAC alg_ss [GF_def, combinTheory.K_THM, mult_mod_def,
+                         EXTENSION, IN_DIFF, GSPECIFICATION, IN_SING]
+       ++ METIS_TAC [],
+       RW_TAC std_ss [GF_alt, MULT]
+       ++ MATCH_MP_TAC ZERO_MOD
+       ++ Suff `p IN Nonzero` >> RW_TAC arith_ss [Nonzero_def, GSPECIFICATION]
+       ++ RW_TAC alg_ss [],
+       RW_TAC std_ss [GF_alt]
+       ++ Know `0 < p`
+       >> (Suff `p IN Nonzero` >> RW_TAC arith_ss [Nonzero_def, GSPECIFICATION]
+           ++ RW_TAC alg_ss [])
+       ++ STRIP_TAC
+       ++ RW_TAC std_ss [Once (GSYM MOD_TIMES2), MOD_MOD]
+       ++ RW_TAC std_ss [MOD_TIMES2, LEFT_ADD_DISTRIB, MOD_PLUS],
+       RW_TAC std_ss [GF_def, finite_num, GSPECIFICATION]
+       ++ METIS_TAC []]);
+
+val alg_context = alg_add_reduction GF alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 (* ------------------------------------------------------------------------- *)
 (* GF(2^n).                                                                  *)
@@ -3843,26 +4370,22 @@ val curve_hom_field = store_thm
 
 val ec_def = Define `ec = curve (GF 751) 0 0 1 750 0`;
 
-(***
-val prime_751 = lemma
-  (``751 IN Prime``,
-   RW_TAC std_ss [Prime_def, GSPECIFICATION, prime_def]
-   ++ Know `b <= 751` >> RW_TAC arith_ss [DIVIDES_LE]
-   ++ Suff `b <= 751 ==> (~divides b 751 \/ (b = 1) \/ (b = 751))`
-   >> METIS_TAC []
-   ++ POP_ASSUM (K ALL_TAC)
-   ++ divides_mod_zero
+(*** Testing the primality checker
+val prime_65537 = Count.apply prove
+  (``65537 IN Prime``,
+   RW_TAC std_ss [Prime_def, GSPECIFICATION]
+   ++ CONV_TAC prime_checker_conv);
 ***)
 
-val prime_751 = mk_thm ([], ``751 IN Prime``);
+val prime_751 = prove
+  (``751 IN Prime``,
+   RW_TAC std_ss [Prime_def, GSPECIFICATION]
+   ++ CONV_TAC prime_checker_conv);
 
 val alg_context = alg_add_reduction prime_751 alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
-val field_gf_751 = mk_thm ([], ``GF 751 IN Field``);
-
-val alg_context = alg_add_reduction field_gf_751 alg_context;
-val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+val field_gf_751 = lemma (``GF 751 IN Field``, RW_TAC alg_ss []);
 
 val curve_ec = lemma
   (``ec IN Curve``,
