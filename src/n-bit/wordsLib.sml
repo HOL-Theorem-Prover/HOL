@@ -14,7 +14,7 @@ open bitLib wordsTheory;
 val thms =
   [n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def,
    word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,
-   word_concat_def, word_reverse_n2w, word_log2_n2w,
+   word_concat_def, word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
    word_2comp_n2w, word_add_n2w, word_sub_def, word_mul_n2w,
    word_asr_n2w, word_lsr_n2w, word_lsl_n2w,
@@ -25,7 +25,7 @@ val thms =
 
 val TIMES_2EXP1 =
  (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
-  Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def
+  Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
 
 val thms =
   let fun mrw th = map (REWRITE_RULE [th])

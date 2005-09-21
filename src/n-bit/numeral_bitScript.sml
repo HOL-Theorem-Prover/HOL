@@ -18,6 +18,78 @@ val _ = new_theory "numeral_bit";
 
 (* ------------------------------------------------------------------------- *)
 
+val BIT_REV_def =
+  Prim_rec.new_recursive_definition
+  {name = "BIT_REV_def",
+   def = ``(BIT_REV 0 x y = y)
+        /\ (BIT_REV (SUC n) x y =
+              BIT_REV n (x DIV 2) (2 * y + SBIT (ODD x) 0))``,
+   rec_axiom = prim_recTheory.num_Axiom};
+
+val BIT_R = ``\(x,y). (x DIV 2, 2 * y + SBIT (BIT 0 x) 0)``;
+
+val BIT_R_FUNPOW = prove(
+  `!n x y. FUNPOW ^BIT_R (SUC n) (x,y) =
+       (x DIV 2 ** (SUC n), 2 * (SND (FUNPOW ^BIT_R n (x, y))) + SBIT (BIT n x) 0)`,
+  Induct THEN1 SIMP_TAC arith_ss [FUNPOW]
+    THEN `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
+      by SIMP_TAC std_ss [BIT_def,BITS_THM,BITS_COMP_THM2,DIV_1,SUC_SUB]
+    THEN ASM_SIMP_TAC std_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
+           (GSYM o ONCE_REWRITE_RULE [MULT_COMM]) EXP]);
+
+val BIT_R_BIT_REV = prove(
+  `!n a y. SND (FUNPOW ^BIT_R n (a, y)) = BIT_REV n a y`,
+  Induct THEN1 SIMP_TAC std_ss [FUNPOW,BIT_REV_def]
+    THEN ASM_SIMP_TAC std_ss [FUNPOW,BIT_REV_def,LSB_def,GSYM LSB_ODD]);
+
+val BIT_REVERSE_REV = prove(
+  `!m n. BIT_REVERSE m n = SND (FUNPOW ^BIT_R m (n, 0))`,
+  Induct THEN1 SIMP_TAC std_ss [BIT_REVERSE_def,FUNPOW]
+    THEN ASM_SIMP_TAC arith_ss [BIT_REVERSE_def,BIT_R_FUNPOW]);
+
+val BIT_REVERSE_EVAL = save_thm("BIT_REVERSE_EVAL",
+  REWRITE_RULE [BIT_R_BIT_REV] BIT_REVERSE_REV);
+
+(* ------------------------------------------------------------------------- *)
+
+val BIT_MODF_def =
+  Prim_rec.new_recursive_definition
+  {name = "BIT_MODF_def",
+   def = ``(BIT_MODF 0 f x b e y = y)
+        /\ (BIT_MODF (SUC n) f x b e y =
+              BIT_MODF n f (x DIV 2) (b + 1) (2 * e) (if f b (ODD x) then e + y else y))``,
+   rec_axiom = prim_recTheory.num_Axiom};
+
+val BIT_M = ``\(y,f,x,b,e). (if f b (BIT 0 x) then e + y else y, f, x DIV 2, b + 1, 2 * e)``;
+
+val BIT_M_FUNPOW = prove(
+  `!n f x b e y. FUNPOW ^BIT_M (SUC n) (y,f,x,b,e) =
+       (if f (b + n) (BIT n x)
+        then 2 ** n * e + FST (FUNPOW ^BIT_M n (y,f,x,b,e))
+        else FST (FUNPOW ^BIT_M n (y,f,x,b,e)),
+        f, x DIV 2 ** (SUC n), b + SUC n, 2 ** SUC n * e)`,
+  Induct THEN1 SIMP_TAC arith_ss [FUNPOW]
+    THEN `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
+      by SIMP_TAC std_ss [BIT_def,BITS_THM,BITS_COMP_THM2,DIV_1,SUC_SUB]
+    THEN ASM_SIMP_TAC arith_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
+           (GSYM o ONCE_REWRITE_RULE [MULT_COMM]) EXP]
+    THEN SIMP_TAC (std_ss++numSimps.ARITH_AC_ss) [EXP]);
+
+val BIT_M_BIT_MODF = prove(
+  `!n f x b e y. FST (FUNPOW ^BIT_M n (y,f,x,b,e)) = BIT_MODF n f x b e y`,
+  Induct THEN1 SIMP_TAC std_ss [FUNPOW,BIT_MODF_def]
+    THEN ASM_SIMP_TAC std_ss [FUNPOW,BIT_MODF_def,LSB_def,GSYM LSB_ODD]);
+
+val BIT_MODIFY_MODF = prove(
+  `!m f n. BIT_MODIFY m f n = FST (FUNPOW ^BIT_M m (0,f,n,0,1))`,
+  Induct THEN1 SIMP_TAC std_ss [BIT_MODIFY_def,FUNPOW]
+    THEN RW_TAC arith_ss [SBIT_def,BIT_MODIFY_def,BIT_M_FUNPOW]);
+
+val BIT_MODIFY_EVAL = save_thm("BIT_MODIFY_EVAL",
+  REWRITE_RULE [BIT_M_BIT_MODF] BIT_MODIFY_MODF);
+
+(* ------------------------------------------------------------------------- *)
+
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 val iMOD_2EXP_def = 
@@ -89,6 +161,26 @@ val NUMERAL_BIT_REVERSE = store_thm("NUMERAL_BIT_REVERSE",
     !n m. BIT_REVERSE (NUMERAL m) (NUMERAL n) =
        NUMERAL (BIT_REV (NUMERAL m) (NUMERAL n) ZERO)`,
   SIMP_TAC bool_ss [NUMERAL_DEF,ALT_ZERO,BIT_REVERSE_EVAL]);
+
+val NUMERAL_BIT_MODF = prove(
+  `(!f x b e y. BIT_MODF 0 f x b e y = y) /\
+   (!n f b e y. BIT_MODF (SUC n) f 0 b (NUMERAL e) y =
+      BIT_MODF n f 0 (b + 1) (NUMERAL (iDUB e))
+              (if f b F then (NUMERAL e) + y else y)) /\
+   (!n f x b e y. BIT_MODF (SUC n) f (NUMERAL x) b (NUMERAL e) y =
+      BIT_MODF n f (DIV2 (NUMERAL x)) (b + 1) (NUMERAL (iDUB e))
+              (if f b (ODD x) then (NUMERAL e) + y else y))`,
+  RW_TAC bool_ss [BIT_MODF_def,SBIT_def,NUMERAL_DEF,DIV2_def,
+           ADD,ADD_0,BIT2,BIT1,iDUB,ALT_ZERO]
+    THEN FULL_SIMP_TAC arith_ss []);
+
+val NUMERAL_BIT_MODF = save_thm("NUMERAL_BIT_MODF", SUC_RULE NUMERAL_BIT_MODF);
+
+val NUMERAL_BIT_MODIFY = store_thm("NUMERAL_BIT_MODIFY",
+  `(!m f. BIT_MODIFY (NUMERAL m) f 0 = BIT_MODF (NUMERAL m) f 0 0 1 0) /\
+    !m f n. BIT_MODIFY (NUMERAL m) f (NUMERAL n) =
+       BIT_MODF (NUMERAL m) f (NUMERAL n) 0 1 0`,
+  SIMP_TAC bool_ss [NUMERAL_DEF,ALT_ZERO,BIT_MODIFY_EVAL]);
 
 (* ------------------------------------------------------------------------- *)
 

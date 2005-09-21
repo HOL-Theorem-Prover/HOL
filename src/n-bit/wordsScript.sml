@@ -107,6 +107,9 @@ val word_bit_def = Def "word_bit_def"
 val word_reverse_def = Def "word_reverse_def"
   `word_reverse (w:bool ** 'a) = (FCP i. w %% (^HB - i)):bool ** 'a`;
 
+val word_modify_def = Def "word_modify_def"
+  `word_modify f (w:bool ** 'a) = (FCP i. f i (w %% i)):bool ** 'a`;
+
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: definitions                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -488,7 +491,7 @@ val WORD_XOR = store_thm("WORD_XOR",
 
 val WORD_ss = rewrites [word_slice_def,word_bits_def,word_bit_def,
   word_lsl_def,word_lsr_def,word_and_def,word_or_def,word_xor_def,
-  word_reverse_def,n2w_def,SUC_SUB1,BIT_SLICE_THM4];
+  word_reverse_def,word_modify_def,n2w_def,SUC_SUB1,BIT_SLICE_THM4];
 
 val FIELD_WORD_TAC = RW_TAC (fcp_ss++WORD_ss++ARITH_ss) [];
 
@@ -514,6 +517,11 @@ val word_reverse_n2w = store_thm("word_reverse_n2w",
   `!n. word_reverse ((n2w n):bool ** 'a) =
          (n2w (BIT_REVERSE ^WL n)):bool ** 'a`,
   FIELD_WORD_TAC THEN ASM_SIMP_TAC arith_ss [BIT_REVERSE_THM]);
+
+val word_modify_n2w = store_thm("word_modify_n2w",
+  `!f n. word_modify f ((n2w n):bool ** 'a) =
+         (n2w (BIT_MODIFY ^WL f n)):bool ** 'a`,
+  FIELD_WORD_TAC THEN ASM_SIMP_TAC arith_ss [BIT_MODIFY_THM]);
 
 val WORD_EQ = store_thm("WORD_EQ",
   `!v:bool ** 'a w. (!x. x < ^WL ==> (word_bit x v = word_bit x w)) = (v = w)`,

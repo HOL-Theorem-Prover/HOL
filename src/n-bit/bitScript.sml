@@ -53,7 +53,7 @@ val BIT_REVERSE_def =
    def = ``(BIT_REVERSE 0 x = 0)
         /\ (BIT_REVERSE (SUC n) x =
               (BIT_REVERSE n x) * 2 + SBIT (BIT n x) 0)``,
-   rec_axiom = prim_recTheory.num_Axiom}
+   rec_axiom = prim_recTheory.num_Axiom};
 
 val BITWISE_def =
  Prim_rec.new_recursive_definition
@@ -61,7 +61,15 @@ val BITWISE_def =
    def = ``(BITWISE 0 op x y = 0)
         /\ (BITWISE (SUC n) op x y =
               BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)``,
-   rec_axiom = prim_recTheory.num_Axiom}
+   rec_axiom = prim_recTheory.num_Axiom};
+
+val BIT_MODIFY_def =
+ Prim_rec.new_recursive_definition
+  {name = "BIT_MODIFY_def",
+   def = ``(BIT_MODIFY 0 f x = 0)
+        /\ (BIT_MODIFY (SUC n) f x =
+              BIT_MODIFY n f x + SBIT (f n (BIT n x)) n)``,
+   rec_axiom = prim_recTheory.num_Axiom};
 
 val SIGN_EXTEND_def =
   Def "SIGN_EXTEND_def"
@@ -1061,38 +1069,35 @@ val BIT_REVERSE_THM = store_thm("BIT_REVERSE_THM",
         THEN `1 <= n /\ 1 <= x` by DECIDE_TAC
         THEN ASM_SIMP_TAC std_ss [ADD1,SUB_SUB,ADD_SUB,SUB_ADD]]);
 
-val BIT_REV_def =
-  Prim_rec.new_recursive_definition
-  {name = "BIT_REV_def",
-   def = ``(BIT_REV 0 x y = y)
-        /\ (BIT_REV (SUC n) x y =
-              BIT_REV n (x DIV 2) (2 * y + SBIT (ODD x) 0))``,
-   rec_axiom = prim_recTheory.num_Axiom};
+(* ------------------------------------------------------------------------- *)
 
-val BIT_R = Def "BIT_R"
- `BIT_R (x, y) = (x DIV 2, 2 * y + SBIT (BIT 0 x) 0)`;
+val BIT_MODIFY_LT_2EXP = prove(
+  `!n f a. BIT_MODIFY n f a < 2 ** n`,
+  Induct_on `n`
+    THEN RW_TAC bool_ss [ADD_0,TIMES2,LESS_IMP_LESS_ADD,LESS_MONO_ADD,
+           BIT_MODIFY_def,SBIT_def,EXP] THEN REDUCE_TAC);
 
-val BIT_R_FUNPOW = prove(
-  `!n x y. FUNPOW BIT_R (SUC n) (x,y) =
-       (x DIV 2 ** (SUC n), 2 * (SND (FUNPOW BIT_R n (x, y))) + SBIT (BIT n x) 0)`,
-  Induct THEN1 SIMP_TAC arith_ss [FUNPOW,BIT_R]
-    THEN `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
-      by SIMP_TAC std_ss [BIT_def,BITS_THM,BITS_COMP_THM2,DIV_1,SUC_SUB]
-    THEN ASM_SIMP_TAC std_ss [FUNPOW_SUC,BIT_R,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
-           (GSYM o ONCE_REWRITE_RULE [MULT_COMM]) EXP]);
+val BIT_MODIFY_LEM = prove(
+  `!n f a. BIT n (BIT_MODIFY (SUC n) f a) = f n (BIT n a)`,
+  RW_TAC arith_ss [SBIT_def,BIT_MODIFY_def,NOT_BIT]
+    THEN1 SIMP_TAC arith_ss [BIT_def,BITS_THM,SUC_SUB,
+            REWRITE_RULE [BIT_MODIFY_LT_2EXP]
+              (SPECL [`BIT_MODIFY n f a`,`2 ** n`] DIV_MULT_1)]
+    THEN SIMP_TAC arith_ss [BITS_THM,LESS_DIV_EQ_ZERO,BIT_MODIFY_LT_2EXP,SUC_SUB]);
 
-val BIT_R_BIT_REV = prove(
-  `!n a y. SND (FUNPOW BIT_R n (a, y)) = BIT_REV n a y`,
-  Induct THEN1 SIMP_TAC std_ss [FUNPOW,BIT_REV_def]
-    THEN ASM_SIMP_TAC std_ss [FUNPOW,BIT_REV_def,BIT_R,LSB_def,GSYM LSB_ODD]);
-
-val BIT_REVERSE_REV = prove(
-  `!m n. BIT_REVERSE m n = SND (FUNPOW BIT_R m (n, 0))`,
-  Induct THEN1 SIMP_TAC std_ss [BIT_REVERSE_def,FUNPOW]
-    THEN ASM_SIMP_TAC arith_ss [BIT_REVERSE_def,BIT_R_FUNPOW]);
-
-val BIT_REVERSE_EVAL = save_thm("BIT_REVERSE_EVAL",
-  REWRITE_RULE [BIT_R_BIT_REV] BIT_REVERSE_REV);
+val BIT_MODIFY_THM = store_thm("BIT_MODIFY_THM",
+  `!x n f a. x < n ==> (BIT x (BIT_MODIFY n f a) = f x (BIT x a))`,
+  Induct_on `n` THEN REPEAT STRIP_TAC THEN1 FULL_SIMP_TAC arith_ss []
+    THEN Cases_on `x = n` THEN1 ASM_REWRITE_TAC [BIT_MODIFY_LEM]
+    THEN `x < n` by ASM_SIMP_TAC arith_ss []
+    THEN RW_TAC arith_ss [BIT_MODIFY_def,SBIT_def]
+    THEN LEFT_REWRITE_TAC [BIT_def] THEN ASM_REWRITE_TAC [BITS_THM]
+    THEN IMP_RES_TAC LESS_EXP_MULT2 THEN POP_LAST_TAC
+    THEN ASM_SIMP_TAC bool_ss [ZERO_LT_TWOEXP,ADD_DIV_ADD_DIV,
+           TWO_SUC_SUB,GSYM ADD1,EXP,ONCE_REWRITE_RULE [MULT_COMM]
+           (REWRITE_RULE [DECIDE (Term `0 < 2`)] (SPEC `2` MOD_TIMES))]
+    THEN SUBST_OCCS_TAC [([2],SYM (SPEC `x` TWO_SUC_SUB))]
+    THEN ASM_SIMP_TAC bool_ss [GSYM BITS_THM,GSYM BIT_def]);
 
 (* ------------------------------------------------------------------------- *)
 
