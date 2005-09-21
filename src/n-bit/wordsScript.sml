@@ -101,6 +101,10 @@ val word_bits_def = xDef "word_bits_def" 350
   `$-- h l = \w:bool ** 'a.
     (FCP i. i + l <= MIN h ^HB /\ w %% (i + l)):bool ** 'a`;
 
+val _ = set_fixity "><" (Infixr 350);
+
+val word_extract_def = xDefine "word_extract" `h >< l = w2w o (h -- l)`;
+
 val word_bit_def = Def "word_bit_def"
   `word_bit b (w:bool ** 'a) = b <= ^HB /\ w %% b`;
 
@@ -368,7 +372,7 @@ val word_2comp_n2w = store_thm("word_2comp_n2w",
   `!n. $- (n2w n):bool ** 'a  = (n2w (^TOP - n MOD ^TOP)):bool ** 'a`,
   SIMP_TAC std_ss [word_2comp_def,n2w_11,w2n_n2w]);
 
-val word_lsb_n2w = store_thm("word_msb_n2w",
+val word_lsb_n2w = store_thm("word_lsb_n2w",
   `!n. word_lsb ((n2w n):bool ** 'a)  = BIT 0 n`,
   SIMP_TAC fcp_ss [word_lsb_def,n2w_def,DIMINDEX_GT_0]);
 
