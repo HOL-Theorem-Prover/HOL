@@ -12,8 +12,8 @@
 open HolKernel Parse boolLib bossLib;
 open Q pred_setTheory;
 
-(* ------------------------------------------------------------------------- *)
 val _ = new_theory "fcp";
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = add_infix("HAS_SIZE",8,HOLgrammars.RIGHT);

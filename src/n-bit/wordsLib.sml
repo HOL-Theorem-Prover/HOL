@@ -1,7 +1,7 @@
 structure wordsLib :> wordsLib =
 struct
 
-(* iinteractive use:
+(* interactive use:
   app load ["fcpLib", "bitLib", "wordsTheory"];
 *)
 
