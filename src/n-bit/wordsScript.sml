@@ -1743,10 +1743,6 @@ val WORD_NOT_LOWER = store_thm("WORD_NOT_LOWER",
   `!a b. ~(a <+ b) = b <=+ a`,
   RW_TAC arith_ss [WORD_LO,WORD_LS]);
 
-val WORD_NOT_LOWER_EQ = store_thm("WORD_NOT_LESS_EQ",
-  `!a b:bool ** 'a. a <+ b ==> ~(a = b)`,
-  REPEAT Cases_word THEN SIMP_TAC arith_ss [WORD_LO,n2w_11,w2n_n2w]);
-
 val WORD_NOT_LOWER_EQUAL = store_thm("WORD_NOT_LOWER_EQUAL",
   `!a b. ~(a <=+ b) = b <+ a`,
   PROVE_TAC [WORD_NOT_LOWER]);
