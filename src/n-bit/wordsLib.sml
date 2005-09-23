@@ -46,4 +46,11 @@ val _ = add_thms thms computeLib.the_compset
 
 val mk_index_type = fcpLib.mk_index_type;
 
+fun Cases_on_word tm = FULL_STRUCT_CASES_TAC (SPEC tm word_nchotomy);
+
+fun Cases_word (g as (_,w)) =
+  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
+  in (STRIP_TAC THEN STRUCT_CASES_TAC (Thm.SPEC Bvar word_nchotomy)) g
+  end
+
 end

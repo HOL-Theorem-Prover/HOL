@@ -335,6 +335,9 @@ val w2n_lt = store_thm("w2n_lt",
   `!w:bool ** 'a. w2n w < ^TOP`,
   SIMP_TAC std_ss [w2n_def,SUM_SBIT_LT]);
 
+val word_0_n2w = store_thm("word_0_n2w",
+  `w2n 0w = 0`, SIMP_TAC arith_ss [w2n_n2w,ZERO_LT_TWOEXP]);
+
 val word_add_n2w = store_thm("word_add_n2w",
   `!m n. n2w m + n2w n = n2w (m + n)`,
   SIMP_TAC fcp_ss [word_add_def,w2n_n2w] THEN ONCE_REWRITE_TAC [GSYM n2w_mod]
@@ -516,6 +519,42 @@ val word_bit_n2w = store_thm("word_bit_n2w",
   FIELD_WORD_TAC THEN Cases_on `b <= ^HB`
     THEN ASM_SIMP_TAC fcp_ss [DIMINDEX_GT_0,
            DECIDE ``0 < b /\ a <= b - 1 ==> a < b:num``]);
+
+val MIN_lem = prove(
+ `(!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m`,
+  RW_TAC arith_ss [MIN_DEF]);
+
+val MIN_lem2 = prove(
+  `MIN a (MIN b (MIN (c + a) (c + b))) = MIN a b`,
+  RW_TAC arith_ss [MIN_DEF]);
+
+val MIN_lem3 = prove(
+  `MIN a (MIN a b) = MIN a b`, RW_TAC arith_ss [MIN_DEF]);
+
+val word_bits_w2w = store_thm("word_bits_w2w",
+  `!w. (h -- l) (w2w (w:bool ** 'a)):bool ** 'b =
+       w2w ((MIN h (dimindex (UNIV:'b->bool) - 1) -- l) w)`,
+  Cases_word THEN SIMP_TAC arith_ss [word_bits_n2w,w2w_def,w2n_n2w]
+    THEN STRIP_ASSUME_TAC EXISTS_HB
+    THEN STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> beta] EXISTS_HB)
+    THEN ASM_SIMP_TAC arith_ss [n2w_11,GSYM BITS_ZERO3,BITS_COMP_THM2,
+           AC MIN_ASSOC MIN_COMM,ONCE_REWRITE_RULE [ADD_COMM] MIN_lem,
+           MIN_lem2]);
+
+val w2w_id = store_thm("w2w_id",
+  `!w:bool ** 'a. w2w w:bool ** 'a = w`,
+  Cases_word THEN REWRITE_TAC [w2w_def,w2n_n2w,n2w_mod]);
+
+val w2w_w2w = store_thm("w2w_w2w",
+  `!w:bool ** 'a. (w2w ((w2w w):bool ** 'b)):bool ** 'c =
+        w2w ((dimindex (UNIV:'b->bool) - 1 -- 0) w)`,
+  Cases_word
+    THEN STRIP_ASSUME_TAC EXISTS_HB
+    THEN STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> beta] EXISTS_HB)
+    THEN STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:'c``] EXISTS_HB)
+    THEN RW_TAC arith_ss [n2w_11,AC MIN_ASSOC MIN_COMM,
+           GSYM bitTheory.BITS_ZERO3,MIN_lem3,
+           w2w_def,w2n_n2w,word_bits_n2w,BITS_COMP_THM2]);
 
 val word_reverse_n2w = store_thm("word_reverse_n2w",
   `!n. word_reverse ((n2w n):bool ** 'a) =
@@ -1121,10 +1160,6 @@ val BITS_SUM1 =
   (GEN_ALL o REWRITE_RULE [MULT_LEFT_1] o
    INST [`a` |-> `1`] o SPEC_ALL) BITS_SUM;
 
-val MIN_lem = prove(
- `(!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m`,
-  RW_TAC arith_ss [MIN_DEF]);
-
 val lem = (GSYM o SIMP_RULE arith_ss [] o
   SPECL [`p`,`SUC m - n MOD SUC m + p`,
          `SUC m - n MOD SUC m`]) BIT_OF_BITS_THM;
@@ -1707,6 +1742,10 @@ val WORD_HIGHER_EQ = store_thm("WORD_HIGHER_EQ",
 val WORD_NOT_LOWER = store_thm("WORD_NOT_LOWER",
   `!a b. ~(a <+ b) = b <=+ a`,
   RW_TAC arith_ss [WORD_LO,WORD_LS]);
+
+val WORD_NOT_LOWER_EQ = store_thm("WORD_NOT_LESS_EQ",
+  `!a b:bool ** 'a. a <+ b ==> ~(a = b)`,
+  REPEAT Cases_word THEN SIMP_TAC arith_ss [WORD_LO,n2w_11,w2n_n2w]);
 
 val WORD_NOT_LOWER_EQUAL = store_thm("WORD_NOT_LOWER_EQUAL",
   `!a b. ~(a <=+ b) = b <+ a`,
