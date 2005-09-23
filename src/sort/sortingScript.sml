@@ -550,7 +550,18 @@ val QSORT_SORTS = Q.store_thm
   PROVE_TAC [SORTS_DEF, QSORT_PERM, QSORT_SORTED]);
 
 
+(*---------------------------------------------------------------------------*)
+(* Add the computable definitions to the database used by EVAL               *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ computeLib.add_persistent_funs [("QSORT_DEF",QSORT_DEF)];
+
 val _ = export_theory();
+
+(*---------------------------------------------------------------------------*)
+(* Generate ML corresponding to the computable definitions.                  *)
+(*---------------------------------------------------------------------------*)
 
 val _ =
  let open EmitML
