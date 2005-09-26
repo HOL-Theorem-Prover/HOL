@@ -180,7 +180,12 @@ val SRCFILES =
      val istrm = openIn (Path.concat(HOLpath,"sigobj/SRCFILES"))
         handle _ => (print "Couldn't open HOLDIR/sigobj/SRCFILES";
                      raise Fail "File not found")
-     val wholefile = inputAll istrm before closeIn istrm
+     fun readlines acc =
+         case inputLine istrm of
+           "" => List.rev acc
+         | s => readlines (String.substring(s, 0, size s - 1) :: acc)
+                (* drop final newline *)
+     val wholefile = readlines [] before closeIn istrm
      fun munge path =
        let val {dir,file} = Path.splitDirFile path
        in case destProperSuffix "Theory" file
@@ -188,7 +193,7 @@ val SRCFILES =
             | NONE     => (file,path^".sml")
        end
  in
-   map (munge o normPath o single) (String.tokens Char.isSpace wholefile)
+   map (munge o normPath o single) wholefile
  end
 
 fun dirToBase (sigdir, docdirs, filename) =
