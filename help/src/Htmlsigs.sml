@@ -5,7 +5,7 @@
 fun indexbar out srcpath = out (String.concat
    ["<HR><TABLE WIDTH=100%>",
     "<TR ALIGN = CENTER>\n",
-    "<TH><A HREF=\"", srcpath, "\">Source File</A>\n",
+    "<TH><A HREF=\"file://", srcpath, "\">Source File</A>\n",
     "<TH><A HREF=\"idIndex.html\">Identifier index</A>\n",
     "<TH><A HREF=\"TheoryIndex.html\">Theory binding index</A>\n",
     "</TABLE><HR>\n"]);
@@ -166,7 +166,7 @@ fun processSig db version bgcolor HOLpath SRCFILES sigfile htmlfile =
 	fun idhref link id =
 	    (out "<A HREF=\"#"; out link; out "\">"; out id; out"</A>")
 	fun idhref_full link id =
-	    (out "<A HREF=\""; out link; out "\">"; out id; out"</A>")
+	    (out "<A HREF=\"file://"; out link; out "\">"; out id; out"</A>")
 
         fun locate_docfile id =
            let open FileSys Path Database
@@ -315,7 +315,7 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	val os = TextIO.openOut outfile
 	fun out s = TextIO.output(os, s)
 	fun href anchor target =
-	    app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
+	    app out ["<A HREF=\"file://", target, "\">", anchor, "</A>"]
 	fun idhref file line anchor =
 	    href anchor (concat [file, ".html#line", Int.toString line])
 	fun strhref file anchor =
