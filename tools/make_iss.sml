@@ -91,7 +91,8 @@ val header = "\
 \AppPublisher       = HOL Developers\n\
 \DefaultDirName     = {pf}\\Hol\n\
 \DefaultGroupName   = HOL\n\
-\Compression        = bzip\n\
+\Compression        = lzma/ultra\n\
+\SolidCompression   = true\n\
 \OutputBaseFilename = HOL-install\n";
 
 fun mem s [] = false | mem s (h::t) = s = h orelse mem s t

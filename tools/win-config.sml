@@ -37,63 +37,19 @@ fun itstrings f [] = raise Fail "itstrings: empty list"
 fun fullPath slist = normPath
    (itstrings (fn chunk => fn path => Path.concat (chunk,path)) slist);
 
-val compiler  = fullPath [mosmldir, "bin/mosmlc.exe"]
-val sigobj = fullPath [holdir, "sigobj"]
+val ostrm = TextIO.openOut (fullPath [holdir, "config-override"])
 
-fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
-              TextIO.flushOut TextIO.stdOut);
-
-(*---------------------------------------------------------------------------
-      File handling. The following implements a very simple line
-      replacement function: it searchs the source file for a line that
-      contains "redex" and then replaces the whole line by "residue". As it
-      searches, it copies lines to the target. Each replacement happens
-      once; the replacements occur in order. After the last replacement
-      is done, the rest of the source is copied to the target.
- ---------------------------------------------------------------------------*)
-
-fun processLinesUntil (istrm,ostrm) (redex,residue) =
- let open TextIO
-     fun loop () =
-       case inputLine istrm
-        of ""   => ()
-         | line =>
-            let val ssline = Substring.all line
-                val (pref, suff) = Substring.position redex ssline
-            in
-              if Substring.size suff > 0
-              then output(ostrm, residue)
-              else (output(ostrm, line); loop())
-            end
- in
-   loop()
- end;
-
-fun fill_holes (src,target) repls =
- let open TextIO
-     val istrm = openIn src
-     val ostrm = openOut target
-  in
-     List.app (processLinesUntil (istrm, ostrm)) repls;
-     output(ostrm, inputAll istrm);
-     closeIn istrm; closeOut ostrm
-  end;
-
-infix -->
-fun (x --> y) = (x,y);
-
-val config_src = fullPath [holdir, "tools", "configure.sml"]
-val config_dest = fullPath [holdir, "tools", "newconfig.sml"]
-
-val _ = fill_holes(config_src, config_dest)
-        ["val mosmldir" --> ("val mosmldir = \""^
-                             String.toString mosmldir^"\"\n"),
-         "val holdir" --> ("val holdir = \""^String.toString holdir^"\"\n")]
-
+fun pr s = TextIO.output(ostrm, s)
+val _ = (pr ("val holdir = \""^holdir^"\"\n");
+         pr ("val mosmldir = \""^mosmldir^"\"\n");
+         pr ("val OS = \"winNT\"\n");
+         pr ("val dynlib_available = true\n");
+         TextIO.closeOut ostrm)
 
 val _ = print "Configuring the system\n";
 val _ = FileSys.mkDir (fullPath [holdir, "src", "0"]) handle _ => ()
-val _ = Process.system ("mosml < \"" ^ config_dest ^ "\"")
+val _ = FileSys.chDir holdir
+val _ = Process.system ("mosml < tools\\smart-configure.sml")
 
 val _ = print "Building the help system \n";
 val _ = Systeml.systeml [fullPath [holdir, "bin", "build"], "help"];

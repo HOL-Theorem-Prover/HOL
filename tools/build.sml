@@ -85,38 +85,43 @@ end
      Source directories.
  ---------------------------------------------------------------------------*)
 
-val SRCDIRS0 = let
-  fun read_file acc fstr =
-      case TextIO.inputLine fstr of
-        "" => List.rev acc
-      | s => let
-          val s = String.substring(s, 0, size s - 1) (* drop final \n char *)
-          val ss = Substring.all s
-          val ss = Substring.dropl Char.isSpace ss  (* drop leading w-space *)
-          val (ss, _) = Substring.position "#" ss   (* drop trailing comment *)
-          val s = Substring.string ss
-        in
-          if s = "" then read_file acc fstr
-          else let
-              val dirname = fullPath [HOLDIR, s]
-              open FileSys
-            in if access (dirname, [A_READ, A_EXEC]) then
-                 if isDir dirname then read_file (s::acc) fstr
-                 else (warn ("** File "^s^" from build sequence is not "^
-                             "a directory -- skipping it\n");
-                       read_file acc fstr)
-               else (warn ("** File "^s^" from build sequence does not "^
-                           "exist or is inacessible -- skipping it\n");
-                     read_file acc fstr)
-            end
-        end
-  val bseq_file =
-      TextIO.openIn bseq_fname
-      handle Io {cause, function, name} =>
-             die ("Couldn't open build sequence file: "^bseq_fname)
-in
-  read_file [] bseq_file before TextIO.closeIn bseq_file
-end
+val SRCDIRS0 =
+    if cmdline = ["help"] then []
+    else let
+        fun read_file acc fstr =
+            case TextIO.inputLine fstr of
+              "" => List.rev acc
+            | s => let
+                val s = String.substring(s, 0, size s - 1)
+                        (* drop final \n char *)
+                val ss = Substring.all s
+                val ss = Substring.dropl Char.isSpace ss
+                        (* drop leading w-space *)
+                val (ss, _) = Substring.position "#" ss
+                              (* drop trailing comment *)
+                val s = Substring.string ss
+              in
+                if s = "" then read_file acc fstr
+                else let
+                    val dirname = fullPath [HOLDIR, s]
+                    open FileSys
+                  in if access (dirname, [A_READ, A_EXEC]) then
+                       if isDir dirname then read_file (s::acc) fstr
+                       else (warn ("** File "^s^" from build sequence is not "^
+                                   "a directory -- skipping it\n");
+                             read_file acc fstr)
+                     else (warn ("** File "^s^" from build sequence does not "^
+                                 "exist or is inacessible -- skipping it\n");
+                           read_file acc fstr)
+                  end
+              end
+        val bseq_file =
+            TextIO.openIn bseq_fname
+            handle Io {cause, function, name} =>
+                   die ("Couldn't open build sequence file: "^bseq_fname)
+      in
+        read_file [] bseq_file before TextIO.closeIn bseq_file
+      end
 
 val SRCDIRS =
     map (fn s => fullPath [HOLDIR, s])
