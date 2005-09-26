@@ -36,7 +36,7 @@ createdir () {
 createdir $submandir
 createdir $texlogs
 createdir "/tmp/hol98"        # where cvs co will go
-/bin/rm -r "/tmp/hol"         # final directory to be tarred
+/bin/rm -rf "/tmp/hol"         # final directory to be tarred
 
 if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
 then
@@ -99,6 +99,9 @@ do
   fi
 done
 echo
+
+echo "Copying theory graph from local installation"
+/bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/hol98/help/theorygraph
 
 echo Removing all .cvsignore files
 find hol98 -name .cvsignore -exec /bin/rm \{} \;
@@ -180,7 +183,6 @@ do
   /bin/rm -r /tmp/hol98/$dir
 done < $localholdir/developers/submanuals
 
-
 echo Now starting to clean up and make tar ball
 cd /tmp/hol98
 /bin/rm -rf developers
@@ -209,6 +211,6 @@ tar czf $name.tar.gz hol
 
 if [ "$name" != "today" ]
 then
-  mv hol/doc/$name.release .
+  mv hol/doc/$name.release.html .
 fi
 

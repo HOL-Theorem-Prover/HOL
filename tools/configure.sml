@@ -399,13 +399,14 @@ val _ =
      val _ = echo "Setting up the muddy library Makefile."
      val src    = fullPath [holdir, "tools/makefile.muddy.src"]
      val target = fullPath [holdir, "src/muddy/muddyC/Makefile"]
+     val mosmlhome = Path.getParent mosmldir
  in
    case (CFLAGS, DLLIBCOMP, ALL) of
      (SOME s1, SOME s2, SOME s3) => let
        val (cflags, dllibcomp, all) = (s1, s2, s3)
      in
        fill_holes (src,target)
-       ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmldir,"\n"],
+       ["MOSMLHOME=\n"  -->  String.concat["MOSMLHOME=", mosmlhome,"\n"],
         "CC=\n"         -->  String.concat["CC=", CC, "\n"],
         "CFLAGS="       -->  String.concat["CFLAGS=",cflags,"\n"],
         "all:\n"        -->  String.concat["all: ",all,"\n"],
