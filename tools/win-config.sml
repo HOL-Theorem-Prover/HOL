@@ -20,7 +20,7 @@ val mosmldir =
              Process.exit Process.failure)
   | SOME s => let
       val {arcs,isAbs,vol} = Path.fromString s
-      val newarcs = butlast arcs
+      val newarcs = butlast arcs @ ["bin"]
     in
       Path.toString {arcs = newarcs, isAbs = isAbs, vol = vol}
     end
