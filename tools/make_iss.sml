@@ -23,50 +23,8 @@ fun fullPath slist = normPath
 
 fun die s = (print s; Process.exit Process.failure)
 
-local
-  open FileSys
-  fun traverse P dir = let
-    val dir0 = getDir ()
-    val _ = chDir dir
-    val ds = openDir "."
-    fun dodir found_a_keeper acc =
-      case readDir ds of
-        NONE => (found_a_keeper, acc)
-      | SOME s =>
-          if isDir s then dodir found_a_keeper (s::acc)
-          else
-            if P s then
-              (remove s; dodir found_a_keeper acc)
-            else
-              dodir true acc
-    val (found_a_keeper, subdirectories) = dodir false []
-    val _ = closeDir ds
-    val found_anything_to_keep =
-        foldl (fn (d,b) => traverse P d orelse b) found_a_keeper subdirectories
-    val _ = chDir dir0
-  in
-    if not found_anything_to_keep then (rmDir dir; false) else true
-  end
-  fun is_not_docfile s =
-      String.size s < 6 orelse
-      String.extract(s, String.size s - 4, NONE) <> ".doc"
-  fun is_html_or_adoc s =
-      String.size s >= 6 andalso let
-        val suff = String.extract(s, String.size s - 5, NONE)
-      in
-        suff = ".html" orelse suff = ".adoc"
-      end
-in
-  val _ = print "Purging source directory\n"
-  val _ = traverse is_not_docfile "src"
-      handle OS.SysErr(s,_) => die ("OS error: "^s)
-  val _ = print "Purging help directory of HTML and .adoc files\n"
-  val _ = traverse is_html_or_adoc "help"
-      handle OS.SysErr(s,_) => die ("OS error: "^s)
-end
-
 val _ = FileSys.chDir holdir
-val _ = print "Removing other unnecessary files: ";
+val _ = print "Removing unnecessary files: ";
 val _ = FileSys.remove (fullPath ["help", "HOL.Help"])
     handle Interrupt => raise Interrupt | _ => ()
 val _ = print "help/HOL.Help, "
