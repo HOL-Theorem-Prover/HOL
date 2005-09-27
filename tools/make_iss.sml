@@ -145,4 +145,23 @@ in
   TextIO.closeOut outstream
 end handle OS.SysErr(s,_) => die ("OS error: "^s)
 
+(* adjusting sigobj/SRCFILES *)
+val _ = let
+  val _ = print "Adjusting sigobj/SRCFILES ... "
+  val file = fullPath [holdir, "sigobj", "SRCFILES"]
+  val instrm = TextIO.openIn file
+  fun readlines acc =
+      case TextIO.inputLine instrm of
+        "" => List.rev acc
+      | s => readlines (s::acc)
+  val lines = readlines []
+  val _ = TextIO.closeIn instrm
+  fun adjustline s = String.extract(s,size holdir,NONE)
+  val outstrm = TextIO.openOut file
+  val _ = app (fn s => TextIO.output(outstrm, adjustline s)) lines
+  val _ = TextIO.closeOut outstrm
+in
+  print "done\n"
+end
+
 end (* structure *)

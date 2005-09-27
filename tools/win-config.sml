@@ -39,6 +39,9 @@ fun fullPath slist = normPath
 
 val ostrm = TextIO.openOut (fullPath [holdir, "config-override"])
 
+val _ = FileSys.chDir holdir
+val holdir = FileSys.getDir ()
+
 fun pr s = TextIO.output(ostrm, s)
 val _ = (pr ("val holdir = \""^holdir^"\"\n");
          pr ("val mosmldir = \""^mosmldir^"\"\n");
@@ -48,8 +51,26 @@ val _ = (pr ("val holdir = \""^holdir^"\"\n");
 
 val _ = print "Configuring the system\n";
 val _ = FileSys.mkDir (fullPath [holdir, "src", "0"]) handle _ => ()
-val _ = FileSys.chDir holdir
 val _ = Process.system ("mosml < tools\\smart-configure.sml")
+
+val _ = let
+  val _ = print "Adjusting sigobj/SRCFILES ... "
+  val file = fullPath [holdir, "sigobj", "SRCFILES"]
+  val instrm = TextIO.openIn file
+  fun readlines acc =
+      case TextIO.inputLine instrm of
+        "" => List.rev acc
+      | s => readlines (s::acc)
+  val lines = readlines []
+  val _ = TextIO.closeIn instrm
+  fun adjustline s = fullPath [holdir, s]
+  val outstrm = TextIO.openOut file
+  val _ = app (fn s => TextIO.output(outstrm, adjustline s)) lines
+  val _ = TextIO.closeOut outstrm
+in
+  print "done\n"
+end
+
 
 val _ = print "Building the help system \n";
 val _ = Systeml.systeml [fullPath [holdir, "bin", "build"], "help"];
