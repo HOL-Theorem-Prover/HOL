@@ -911,7 +911,7 @@ val COMPLETE_INDUCTION = store_thm("COMPLETE_INDUCTION",
   end);
 
 
-val FORALL_NUM_THM = Q.store_thm 
+val FORALL_NUM_THM = Q.store_thm
  ("FORALL_NUM_THM",
   `(!n. P n) = P 0 /\ !n. P n ==> P (SUC n)`,
   METIS_TAC [INDUCTION]);
@@ -1338,6 +1338,22 @@ val LESS_MULT2 = store_thm("LESS_MULT2",
   --`!m n. 0 < m /\ 0 < n ==> 0 < (m * n)`--,
   REPEAT GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
   REWRITE_TAC[NOT_LESS, LESS_EQ_0, DE_MORGAN_THM, MULT_EQ_0]);
+
+val ZERO_LESS_MULT = store_thm(
+  "ZERO_LESS_MULT",
+  ``!m n. 0 < m * n = 0 < m /\ 0 < n``,
+  REPEAT GEN_TAC THEN
+  Q.SPEC_THEN `m` STRUCT_CASES_TAC num_CASES THEN
+  REWRITE_TAC [MULT_CLAUSES, LESS_REFL, LESS_0] THEN
+  Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES THEN
+  REWRITE_TAC [MULT_CLAUSES, LESS_REFL, LESS_0, ADD_CLAUSES]);
+
+val ZERO_LESS_ADD = store_thm(
+  "ZERO_LESS_ADD",
+  ``!m n. 0 < m + n = 0 < m \/ 0 < n``,
+  REPEAT GEN_TAC THEN
+  Q.SPEC_THEN `m` STRUCT_CASES_TAC num_CASES THEN
+  REWRITE_TAC [ADD_CLAUSES, LESS_REFL, LESS_0]);
 
 val LESS_EQ_LESS_TRANS = store_thm("LESS_EQ_LESS_TRANS",
   --`!m n p. m <= n /\ n < p ==> m < p`--,
