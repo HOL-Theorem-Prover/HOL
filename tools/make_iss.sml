@@ -156,7 +156,7 @@ val _ = let
       | s => readlines (s::acc)
   val lines = readlines []
   val _ = TextIO.closeIn instrm
-  fun adjustline s = String.extract(s,size holdir,NONE)
+  fun adjustline s = String.extract(s,size holdir + 1,NONE)
   val outstrm = TextIO.openOut file
   val _ = app (fn s => TextIO.output(outstrm, adjustline s)) lines
   val _ = TextIO.closeOut outstrm
