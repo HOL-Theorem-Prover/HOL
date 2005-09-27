@@ -5,14 +5,14 @@
 (*		  and so on.						*)
 (*								        *)
 (* REWRITTEN    : T Melham						*)
-(* DATE		: 90.10.16 (adapted for pred_set: January 1992)	*)
+(* DATE		: 90.10.16 (adapted for pred_set: January 1992)	        *)
 (* TRANSLATED to hol90 February 1993 by kls                             *)
 (* =====================================================================*)
 
 structure PFset_conv :> PFset_conv =
 struct
 
-open HolKernel Parse boolLib pred_setSyntax;
+open HolKernel Parse boolLib pred_setSyntax pred_setTheory;
 
 val ERR = mk_HOL_ERR "PFset_conv"
 
@@ -35,8 +35,7 @@ fun check_const cnst = assert (same_const cnst);
 (* The conversion fails on sets of the wrong form.			*)
 (* ---------------------------------------------------------------------*)
 
-local exception FAIL
-      val finI =
+local val finI =
         let val th =
              snd(EQ_IMP_RULE
                   (SPECL[(--`x:'a`--),(--`s:'a->bool`--)]
@@ -48,7 +47,7 @@ in
 fun FINITE_CONV tm =
    let val (Rator,Rand) = dest_comb tm
        val _ = check_const finite_tm Rator
-       val els = strip_set FAIL Rand
+       val els = strip_set Rand
        val (ty,_) = dom_rng(type_of Rand)
        val theta = [alpha |-> ty]
        val eth = INST_TYPE theta pred_setTheory.FINITE_EMPTY
@@ -212,7 +211,7 @@ local val Eu = CONJUNCT1 pred_setTheory.UNION_EMPTY
 in
 fun UNION_CONV conv tm =
  let val (_,[S1,S2]) = (check_const union_tm ## I) (strip_comb tm)
-     val els = strip_set (ERR "UNION_CONV" "") S1
+     val els = strip_set S1
      val (ty,_) = dom_rng(type_of S1)
      val ith = INST_TYPE [alpha |-> ty] pred_setTheory.INSERT_UNION
      val iith = INST_TYPE [alpha |-> ty] pred_setTheory.INSERT_UNION_EQ
@@ -304,5 +303,108 @@ fun IMAGE_CONV conv1 conv2 tm =
   handle e => raise wrap_exn "PFset_conv" "IMAGE_CONV" e
 end;
 
+
+(*---------------------------------------------------------------------------*)
+(* Evaluates terms of the form                                               *)
+(*                                                                           *)
+(*     CARD {e1; ...; en}                                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun CARD_CONV tm = 
+ let val s = dest_card tm
+     val ty = eltype s
+     val items = strip_set s
+     val CARD_EMPTY' = INST_TYPE [alpha |-> ty] CARD_EMPTY
+     val CARD_INSERT' = INST_TYPE [alpha |-> ty] CARD_INSERT
+     val FINITE_EMPTY' = INST_TYPE [alpha |-> ty] FINITE_EMPTY
+     val FINITE_INSERT' = INST_TYPE [alpha |-> ty] FINITE_INSERT
+     fun step x (finthm,cardthm) =
+      let val s = dest_finite (concl finthm)
+          val finthm' = EQ_MP (SYM (SPEC s (SPEC x FINITE_INSERT'))) finthm
+          val cardthm1 = SPEC x (MP (SPEC s CARD_INSERT') finthm)
+          val inthm = IN_CONV computeLib.EVAL_CONV (mk_in(x,s))
+          val cardthm2 = CONV_RULE (RHS_CONV 
+             (REWRITE_CONV [inthm,cardthm] THENC reduceLib.SUC_CONV)) cardthm1
+      in (finthm', cardthm2)
+      end
+     val (fin,card) = itlist step items (FINITE_EMPTY',CARD_EMPTY')
+ in
+  card
+ end;
+
+
+(*---------------------------------------------------------------------------*)
+(* Evaluates terms of the form                                               *)
+(*                                                                           *)
+(*     MAX_SET {n1; ...; nk}                                                 *)
+(*---------------------------------------------------------------------------*)
+
+local open numSyntax
+      val MAX_SET_SING = CONJUNCT1 MAX_SET_THM
+      val MAX_SET_THM' = CONJUNCT2 MAX_SET_THM
+      val FINITE_EMPTY' = INST_TYPE [alpha |-> num] FINITE_EMPTY
+      val FINITE_INSERT' = INST_TYPE [alpha |-> num] FINITE_INSERT
+in
+fun MAX_SET_CONV tm  =
+ let open numSyntax
+     val s = dest_max_set tm
+     val items = strip_set s
+     val (front,b) = front_last items
+     val FINITE_SING = EQ_MP(SYM(SPEC (mk_empty num) (SPEC b FINITE_INSERT')))
+                            (INST_TYPE [alpha |-> num] FINITE_EMPTY)
+     fun step x (finthm,maxthm) =
+      let val ys = dest_max_set (lhs (concl maxthm))
+          val (y,s) = dest_insert ys
+          val finthm' = EQ_MP (SYM (SPEC s (SPEC y FINITE_INSERT'))) finthm
+          val maxthm1 = SPEC y (SPEC x (MP (SPEC s MAX_SET_THM') finthm))
+          val maxthm2 = CONV_RULE (RHS_CONV 
+                (RAND_CONV (REWR_CONV maxthm) THENC computeLib.EVAL_CONV)) maxthm1
+      in (finthm', maxthm2)
+      end
+     val (fin,maxthm) = itlist step front (FINITE_EMPTY',SPEC b MAX_SET_SING)
+ in
+  maxthm
+ end
+ handle e => raise wrap_exn "MAX_SET_CONV" "" e
+end;
+
+
+(*---------------------------------------------------------------------------*)
+(* Evaluates terms of the form                                               *)
+(*                                                                           *)
+(*     SUM_IMAGE f {e1; ...; ek}                                             *)
+(*---------------------------------------------------------------------------*)
+
+local val SIGMA_EMPTY = CONJUNCT1 (SPEC_ALL SUM_IMAGE_THM)
+      val SIGMA_INSERT = Q.prove
+          (`!f s e. FINITE s ==> 
+                  (SIGMA f (e INSERT s) = 
+                     f e + (if e IN s then SIGMA f s - f e else SIGMA f s))`,
+           metisLib.METIS_TAC [SUM_IMAGE_THM,SUM_IMAGE_DELETE])
+in
+fun SUM_IMAGE_CONV tm = 
+ let open numSyntax
+     val (f,s) = dest_sum_image tm
+     val ty = eltype s
+     val items = strip_set s
+     val FINITE_EMPTY' = INST_TYPE [alpha |-> ty] FINITE_EMPTY
+     val FINITE_INSERT' = INST_TYPE [alpha |-> ty] FINITE_INSERT
+     val SIGMA_EMPTY' = INST_TYPE [alpha |-> ty] SIGMA_EMPTY
+     val SIGMA_INSERT' = ISPEC f SIGMA_INSERT
+     fun step x (finthm,sumthm) =
+      let val s = dest_finite (concl finthm)
+          val finthm' = EQ_MP (SYM (SPEC s (SPEC x FINITE_INSERT'))) finthm
+          val sumthm1 = MP (SPEC x (SPEC s SIGMA_INSERT')) finthm
+          val inthm = IN_CONV computeLib.EVAL_CONV (mk_in(x,s))
+          val sumthm2 = CONV_RULE (RHS_CONV
+              (RAND_CONV (REWRITE_CONV [inthm,sumthm]) 
+                          THENC computeLib.EVAL_CONV)) sumthm1
+      in (finthm', sumthm2)
+      end
+     val (fin,sum) = itlist step items (FINITE_EMPTY',SIGMA_EMPTY')
+ in
+  sum
+ end
+end;
 
 end (* PFset_conv *)
