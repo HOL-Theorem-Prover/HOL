@@ -18,7 +18,7 @@
 
 /* Reduced Ordered Binary Decision Diagrams: interface to
    Jørn Lind-Nielsen's <buddy@it.edu> BuDDy library.
-   Made by Ken Friis Larsen <kfl@it.edu>
+   Made by Ken Friis Larsen <ken@friislarsen.net>
 
    The type bdd.bdd of a Binary Decision Diagram is an abstract type;
    really a BDD structure.  This will contain an integer which is a
@@ -528,8 +528,7 @@ EXTERNML value mlbdd_bdd_appex(value left, value right,
 /* Some helper for making BddPairs, which on the ML side is called
    pairSet. pairSet is implemented very similar to bdd, i.e. as
    finalized objects. */
-
-#define PairSet_val(x) ((bddPair *) Field(x, 1))
+#define PairSet_val(x) (((bddPair **) (x)) [1]) // Also an l-value
 
 
 void mlbdd_pair_finalize(value pairset)
@@ -565,7 +564,7 @@ EXTERNML value mlbdd_makepairset(value oldvar, value newvar) /* ML */
   stat_free((char *) n);
 
   result = mlbdd_alloc_final(2, &mlbdd_pair_finalize);
-  PairSet_val(result) = (value) pairs;
+  PairSet_val(result) = pairs;
 
   return result;
 }
@@ -599,7 +598,7 @@ EXTERNML value mlbdd_makebddpairset(value oldvar, value newvar) /* ML */
   stat_free((char *) n);
 
   result = mlbdd_alloc_final(2, &mlbdd_pair_finalize);
-  PairSet_val(result) = (value) pairs;
+  PairSet_val(result) = pairs;
 
   return result;
 }
@@ -836,15 +835,15 @@ EXTERNML value mlfdd_setpairs(value oldvar, value newvar) /* ML */
   stat_free((char *) n);
 
   result = mlbdd_alloc_final(2, &mlbdd_pair_finalize);
-  PairSet_val(result) = (value) pairs;
+  PairSet_val(result) = pairs;
 
   return result;
 }
 
 /* BVEC FUNCTIONS */
 
-#define bvecbitnum_val(x) ((int)  (Field(x, 1)))
-#define bvecbitvec_val(x) ((BDD*) (Field(x, 2)))
+#define bvecbitnum_val(x) (((int*)  (x)) [1])
+#define bvecbitvec_val(x) (((BDD**) (x)) [2])
 
 BVEC BVEC_val(value obj) {
   BVEC t;
