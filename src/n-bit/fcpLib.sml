@@ -69,4 +69,6 @@ fun mk_index_type n =
   end
 end
 
+val FCP_ss = rewrites [FCP_BETA,FCP_ETA,CART_EQ];
+
 end

@@ -4,8 +4,15 @@ sig
 
     val words_compset : unit -> computeLib.compset
 
-    val mk_index_type : int -> unit
+    val SIZES_ss      : simpLib.ssfrag
 
-    val Cases_on_word : term -> tactic
+    val mk_index_type : int -> unit
+    val mk_word_type  : int -> unit
+
+    val WORDS_CONV    : conv
+    val WORDS_RULE    : rule
+    val WORDS_TAC     : tactic
+
+    val Cases_on_word : term frag list -> tactic
     val Cases_word    : tactic
 end
