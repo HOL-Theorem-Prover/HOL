@@ -2,17 +2,19 @@ structure wordsLib :> wordsLib =
 struct
 
 (* interactive use:
-  app load ["fcpLib", "numeral_bitTheory",
-            "wordsTheory", "machine_wordsTheory"];
+  app load ["fcpLib", "numeral_bitTheory", "wordsTheory"];
 *)
 
 open HolKernel Parse boolLib bossLib;
 open computeLib;
-open bitTheory numeral_bitTheory wordsTheory machine_wordsTheory;
+open bitTheory numeral_bitTheory wordsTheory;
 
 (* ------------------------------------------------------------------------- *)
 
-val machine_sizes = map snd (theorems "machine_words");
+fun is_fcp_thm s =
+  String.isPrefix "finite_" s orelse String.isPrefix "dimindex_" s;
+
+val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
 val SIZES_ss = rewrites machine_sizes;
 

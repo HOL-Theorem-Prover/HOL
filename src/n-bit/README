@@ -37,9 +37,9 @@ slice       :   WORD_SLICE h l w    (h <> l) w
 The function w2w converts between words of different sizes (unsigned) and
 sw2sw is a signed (2's complement) word-word conversion.
 
-The library machine_wordsLib provides the some standard words sizes.  Ground
-term evaluation with EVAL should work here.  Some operations (+, *) can be
-evaluated with alpha types e.g.
+The library provides the some standard words sizes.  Ground term evaluation
+with EVAL will work for these sizes.  Some operations (+, *) can be evaluated
+with alpha types e.g.
 
 EVAL ``6w + 4w``;
 <<HOL message: inventing new type variable names: 'a>>

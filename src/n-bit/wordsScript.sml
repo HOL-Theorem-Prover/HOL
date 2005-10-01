@@ -1937,5 +1937,21 @@ val WORD_PRED_THM = store_thm("WORD_PRED_THM",
          (SIMP_RULE arith_ss [ZERO_LT_TWOEXP] o SPEC `^TOP`) MOD_ADD_1]);
 
 (* ------------------------------------------------------------------------- *)
+(* Create a few word sizes                                                   *)
+(* ------------------------------------------------------------------------- *)
+
+val sizes = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 32, 64];
+
+fun mk_word_type n =
+  let val _ = fcpLib.mk_index_type n
+      val sn = Int.toString n
+      val TYPE = mk_type("cart", [bool, mk_type("i"^sn, [])])
+  in
+    type_abbrev("word"^sn, TYPE)
+  end;
+
+val _ = List.app mk_word_type sizes;
+
+(* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();
