@@ -113,13 +113,13 @@ val HAS_SIZE_INDEX = prove(
 val finite_image_tybij = BETA_RULE (define_new_type_bijections
   {name="finite_image_tybij", ABS="mk_finite_image", REP="dest_finite_image",
    tyax=new_type_definition("finite_image",
-          prove(`?x:'a. (\x. (x = @z. T) \/ FINITE(UNIV:'a->bool)) x`,PROVE_TAC[]))});
+          prove(`?x:'a. (\x. (x = ARB) \/ FINITE(UNIV:'a->bool)) x`,PROVE_TAC[]))});
 
 val FINITE_IMAGE_IMAGE = prove(
   `UNIV:'a finite_image->bool =
     IMAGE mk_finite_image
-      (if FINITE(UNIV:'a->bool) then UNIV:'a->bool else {(@z. T)})`,
-  MP_TAC finite_image_tybij THEN ABBREV_TAC `arb = @z:'a. T` THEN
+      (if FINITE(UNIV:'a->bool) then UNIV:'a->bool else {ARB})`,
+  MP_TAC finite_image_tybij THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[EXTENSION, IN_IMAGE, IN_SING, IN_UNIV] THEN PROVE_TAC[]);
 
@@ -134,7 +134,7 @@ val dimindex = Definition.new_definition("dimindex",
 val HAS_SIZE_FINITE_IMAGE = prove(
   `!s. (UNIV:'a finite_image->bool) HAS_SIZE dimindex(s:'a->bool)`,
   GEN_TAC THEN REWRITE_TAC[dimindex, FINITE_IMAGE_IMAGE] THEN
-  MP_TAC finite_image_tybij THEN ABBREV_TAC `arb = @z:'a. T` THEN
+  MP_TAC finite_image_tybij THEN 
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
   MATCH_MP_TAC HAS_SIZE_IMAGE_INJ THEN
   ASM_REWRITE_TAC [HAS_SIZE, IN_UNIV, IN_SING] THEN
@@ -251,7 +251,7 @@ val FCP_ETA = store_thm("FCP_ETA",
   SIMP_TAC std_ss [CART_EQ, FCP_BETA]);
 
 (* ------------------------------------------------------------------------- *)
-(* Support for intorducing finite index types                                *)
+(* Support for introducing finite index types                                *)
 (* ------------------------------------------------------------------------- *)
 
 (* Given an abstraction map f ... *)
