@@ -72,15 +72,21 @@ val rinv_tm     = prim_mk_const{Name = "RINV",     Thy = "pred_set"};
 (* Set membership                                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_in (x,s) = list_mk_comb (inst [alpha |-> type_of x] in_tm, [x,s])
+fun mk_in (x,s) = 
+  list_mk_comb (inst [alpha |-> type_of x] in_tm, [x,s])
+  handle HOL_ERR _ => raise ERR "mk_in" "";
+
 val dest_in = dest_binop in_tm (ERR "dest_in" "not an IN term");
+
 val is_in = Lib.can dest_in;
 
 (*---------------------------------------------------------------------------*)
 (* Empty set                                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_empty ty = inst [alpha |-> ty] empty_tm;
+fun mk_empty ty = inst [alpha |-> ty] empty_tm
+  handle HOL_ERR _ => raise ERR "mk_empty" "";
+
 fun dest_empty tm =
   if same_const tm empty_tm then type_of tm
   else raise ERR "dest_empty" "not the empty set";
@@ -91,7 +97,9 @@ val is_empty = Lib.can dest_empty;
 (* Unversal set                                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_univ ty = inst [alpha |-> ty] empty_tm;
+fun mk_univ ty = inst [alpha |-> ty] univ_tm
+  handle HOL_ERR _ => raise ERR "mk_univ" "";
+
 fun dest_univ tm =
   if same_const tm univ_tm then type_of tm
   else raise ERR "dest_univ" "not the universal set";
@@ -115,11 +123,14 @@ val is_insert = Lib.can dest_insert;
 (* Finitely iterated insertion                                               *)
 (*---------------------------------------------------------------------------*)
 
-fun prim_mk_set (l,ty) = itlist (curry mk_insert) l (mk_empty ty);
+fun prim_mk_set (l,ty) = 
+  itlist (curry mk_insert) l (mk_empty ty)
+  handle HOL_ERR _ => raise ERR "prim_mk_set" "";
 
 fun mk_set [] = raise ERR "mk_set" "empty set"
   | mk_set (els as (h::_)) = 
-      itlist (curry mk_insert) els (mk_empty (type_of h));
+      itlist (curry mk_insert) els (mk_empty (type_of h))
+      handle HOL_ERR _ => raise ERR "mk_set" "";
 
 val strip_set =
  let fun strip tm = 
@@ -193,12 +204,14 @@ fun prim_mk_set_spec(tm1,tm2,sharedvars) =
  let val tuple = pairSyntax.list_mk_pair sharedvars
  in mk_comb(inst [alpha |-> type_of tm1,beta |-> type_of tuple]gspec_tm,
             pairSyntax.mk_pabs(tuple,pairSyntax.mk_pair(tm1,tm2)))
- end;
+ end
+ handle HOL_ERR _ => raise ERR "prim_mk_set_spec" "";
 
 fun mk_set_spec (tm1,tm2) = 
  let val shared = intersect (free_vars_lr tm1) (free_vars_lr tm2)
  in prim_mk_set_spec(tm1,tm2,shared)
- end;
+ end
+ handle e as HOL_ERR _ => raise wrap_exn "mk_set_spec" "" e;
 
 fun dest_set_spec tm =
  case total dest_comb tm
@@ -242,7 +255,7 @@ val is_card = Lib.can dest_card;
 (*---------------------------------------------------------------------------*)
 
 fun mk_image (tm1,tm2) =
- let val (dty,rty) = dom_rng(type_of tm1)
+ let val (dty,rty) = with_exn dom_rng (type_of tm1) (ERR "mk_image" "")
  in 
   list_mk_comb(inst[alpha |-> dty, beta |-> rty] image_tm, [tm1,tm2])
   handle HOL_ERR _ => raise ERR "mk_image" "type disagreement"
@@ -361,7 +374,7 @@ val dest_biginter =
 val is_biginter = Lib.can dest_biginter;
 
 fun list_mk_biginter sets = mk_biginter (mk_set sets)
-fun strip_biginter tm = strip_set (dest_biginter tm);
+fun strip_biginter tm = strip_set (dest_biginter tm)
 
 (*---------------------------------------------------------------------------*)
 (* Cross product                                                             *)
@@ -421,7 +434,7 @@ val is_min_set = Lib.can dest_min_set;
 (*---------------------------------------------------------------------------*)
 
 fun mk_sum_image (f,tm) =
- let val (dty,_) = dom_rng(type_of f)
+ let val (dty,_) = with_exn dom_rng(type_of f) (ERR "mk_sum_image" "")
  in 
    list_mk_comb(inst [alpha |-> dty] sum_image_tm,[f,tm])
   handle HOL_ERR _ => raise ERR "mk_sum_image" ""
@@ -432,7 +445,6 @@ val dest_sum_image =
                                "not an application of SUM_IMAGE");
 
 val is_sum_image = Lib.can dest_sum_image;
-
 
 (*---------------------------------------------------------------------------*)
 (* Sum of a set                                                              *)
@@ -479,7 +491,7 @@ val is_rest = Lib.can dest_rest;
 (*---------------------------------------------------------------------------*)
 
 fun mk_inj (f,s1,s2) =
- let val (dty,rty) = dom_rng(type_of f)
+ let val (dty,rty) = with_exn dom_rng(type_of f) (ERR "mk_inj" "")
  in 
    list_mk_comb(inst[alpha |-> dty, beta |-> rty]inj_tm, [f,s1,s2])
     handle HOL_ERR _ => raise ERR "mk_inj" ""
@@ -495,7 +507,7 @@ val is_inj = Lib.can dest_inj;
 (*---------------------------------------------------------------------------*)
 
 fun mk_surj (f,s1,s2) =
- let val (dty,rty) = dom_rng(type_of f)
+ let val (dty,rty) = with_exn dom_rng(type_of f) (ERR "mk_surj" "")
  in 
    list_mk_comb(inst[alpha |-> dty, beta |-> rty]surj_tm, [f,s1,s2])
     handle HOL_ERR _ => raise ERR "mk_surj" ""
@@ -511,7 +523,7 @@ val is_surj = Lib.can dest_surj;
 (*---------------------------------------------------------------------------*)
 
 fun mk_bij (f,s1,s2) =
- let val (dty,rty) = dom_rng(type_of f)
+ let val (dty,rty) = with_exn dom_rng(type_of f) (ERR "mk_bij" "")
  in 
    list_mk_comb(inst[alpha |-> dty, beta |-> rty]bij_tm, [f,s1,s2])
     handle HOL_ERR _ => raise ERR "mk_bij" ""
@@ -527,7 +539,7 @@ val is_bij = Lib.can dest_bij;
 (*---------------------------------------------------------------------------*)
 
 fun mk_linv (f,s,y) =
- let val (dty,rty) = dom_rng(type_of f)
+ let val (dty,rty) = with_exn dom_rng(type_of f) (ERR "mk_linv" "")
  in 
    list_mk_comb(inst[alpha |-> dty, beta |-> rty]linv_tm, [f,s,y])
     handle HOL_ERR _ => raise ERR "mk_linv" ""
@@ -543,7 +555,7 @@ val is_linv = Lib.can dest_linv;
 (*---------------------------------------------------------------------------*)
 
 fun mk_rinv (f,s,y) =
- let val (dty,rty) = dom_rng(type_of f)
+ let val (dty,rty) = with_exn dom_rng(type_of f) (ERR "mk_rinv" "")
  in 
    list_mk_comb(inst[alpha |-> dty, beta |-> rty]rinv_tm, [f,s,y])
     handle HOL_ERR _ => raise ERR "mk_rinv" ""

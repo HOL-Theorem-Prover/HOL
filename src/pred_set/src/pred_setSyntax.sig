@@ -2,7 +2,6 @@ signature pred_setSyntax =
 sig
   include Abbrev
 
-
   val mk_set_type : hol_type -> hol_type
   val dest_set_type : hol_type -> hol_type
   val is_set_type : hol_type -> bool
