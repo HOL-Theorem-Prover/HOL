@@ -124,13 +124,17 @@ E. If bin/build completes, successfully, you are done. From <hol-dir>
    you can now access
 
       bin/hol              * The standard HOL interactive system;
-      bin/hol.unquote      * The interactive system with quote preprocessing;
-      bin/hol.bare         * A "stripped down" version of hol
-      bin/hol.bare.unquote * A "stripped down" version of hol.unquote
+      bin/hol.noquote      * The interactive system with quote
+                             preprocessing turned off;
+      bin/hol.bare         * A "stripped down" version of hol;
+      bin/hol.bare.noquote * A "stripped down" version of hol.unquote,
+                             with quote preprocessing turned off;
       bin/Holmake          * A batch compiler for HOL directories;
       src/                 * System sources;
-      Manual/              * User manuals for the system;
       examples/            * Examples of the use of the system.
+
+   On Windows the hol scripts additionally include a .bat extension,
+   and Holmake has a .exe extension.
 
 
 External tools.
