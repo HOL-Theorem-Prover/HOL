@@ -126,7 +126,14 @@ fun ID_SPEC_TAC q (g as (asl,w)) =
    Tactic.SPEC_TAC (tm, tm) g
  end
 
-val EXISTS = Thm.EXISTS o (btm##btm);
+fun EXISTS(q1,q2) thm = 
+ let val tm1 = btm q1
+     val exvartype = type_of (fst (dest_exists tm1))
+       handle HOL_ERR _ => raise Q_ERR "EXISTS" "first quotation not an exists"
+     val tm2 = ptm_with_ty q2 exvartype
+ in
+   Thm.EXISTS (tm1,tm2) thm
+ end;
 
 fun EXISTS_TAC q (g as (asl, w)) =
  let val ctxt = free_varsl (w::asl)
