@@ -757,7 +757,7 @@ like the following:
     e (ARW_TAC []);
     e (Cases_on `m`);
     (*1.1*)
-    e (PROVE_TAC [DECIDE `!x. ~(x < x)`]);
+    e (PROVE_TAC [DECIDE ``!x. ~(x < x)``]);
     (*1.2*)
     e (ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]);
     (*2*)
@@ -774,7 +774,7 @@ tactic:
     ARW_TAC [LESS_EQ_EXISTS]
      THEN Induct_on `p`
      THENL [ARW_TAC [] THEN Cases_on `m`
-            THENL [PROVE_TAC [DECIDE `!x. ~(x < x)`],
+            THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
                    ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
             ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]
 \end{verbatim}}
@@ -789,7 +789,7 @@ tactic:
 - e (ARW_TAC [LESS_EQ_EXISTS]
        THEN Induct_on `p`
        THENL [ARW_TAC [] THEN Cases_on `m`
-              THENL [PROVE_TAC [DECIDE `!x. ~(x < x)`],
+              THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
                      ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
               ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]);
 OK..
@@ -817,7 +817,7 @@ is
       THEN Induct_on `p`
       THEN ARW_TAC [FACT, ADD_CLAUSES]
       THENL [Cases_on `m`
-              THENL [PROVE_TAC [DECIDE `!x. ~(x < x)`],
+              THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
                      ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
              PROVE_TAC [DIVIDES_LMUL]]
 \end{verbatim}}
@@ -832,7 +832,7 @@ single invocation of \ml{PROVE\_TAC}:
       THEN Induct_on `p`
       THEN ARW_TAC [FACT, ADD_CLAUSES]
       THENL [Cases_on `m`
-              THEN PROVE_TAC [DECIDE `!x. ~(x < x)`,
+              THEN PROVE_TAC [DECIDE ``!x. ~(x < x)``,
                               FACT, DIVIDES_RMUL, DIVIDES_REFL],
              PROVE_TAC [DIVIDES_LMUL]]
 \end{verbatim}}
@@ -851,7 +851,7 @@ function on the goal.
       THEN Induct_on `p`
       THEN ARW_TAC [FACT, ADD_CLAUSES]
       THENL [Cases_on `m`, ALL_TAC]
-      THEN PROVE_TAC [DECIDE `!x. ~(x < x)`, FACT,
+      THEN PROVE_TAC [DECIDE ``!x. ~(x < x)``, FACT,
                       DIVIDES_RMUL, DIVIDES_REFL, DIVIDES_LMUL]
 \end{verbatim}}
 
@@ -1093,8 +1093,8 @@ primes are positive. These are all quite simple to prove.
 \verb+prime 2+ \\ \hline
 \verb+ARW_TAC [prime]+ \\
 \verb+ THEN PROVE_TAC [DIVIDES_LE, DIVIDES_ZERO,+ \\
-\verb+                 DECIDE `~(2=1)`, DECIDE `~(2=0)`,+ \\
-\verb+                 DECIDE `x <= 2 = (x=0) \/ (x=1) \/ (x=2)`]+ \\
+\verb+                 DECIDE ``~(2=1)``, DECIDE ``~(2=0)``,+ \\
+\verb+                 DECIDE ``x <= 2 = (x=0) \/ (x=1) \/ (x=2)``]+ \\
 \end{tabular}
 
 \item [\small{({\it PRIME\_POS\/})}]
@@ -1308,7 +1308,7 @@ A HOL rendition of the proof may be given as follows:
 \verb+!n. ?p. n < p /\ prime p+ \\ \hline
 \verb+SPOSE_NOT_THEN STRIP_ASSUME_TAC+ \\
 \verb!  THEN MP_TAC (SPEC ``FACT n + 1`` PRIME_FACTOR)! \\
-\verb+  THEN ARW_TAC [FACT_LESS, DECIDE `~(x=0) = 0<x`]+ \\
+\verb+  THEN ARW_TAC [FACT_LESS, DECIDE ``~(x=0) = 0<x``]+ \\
 \verb+  THEN PROVE_TAC [NOT_PRIME_1, NOT_LESS, PRIME_POS, + \\
 \verb+                  DIVIDES_FACT, DIVIDES_ADDL, DIVIDES_ONE]+ \\
 \end{tabular}
@@ -1394,7 +1394,7 @@ OK..
     \ml{arithmeticTheory} under the name \ml{FACT\_LESS}. Thus we can
     solve the top goal by simplification:
 \begin{session}\begin{verbatim}
-- e (ARW_TAC [FACT_LESS, DECIDE `!x. ~(x=0) = 0 < x`]);
+- e (ARW_TAC [FACT_LESS, DECIDE ``!x. ~(x=0) = 0 < x``]);
 
 OK..
 Goal proved.  ...
