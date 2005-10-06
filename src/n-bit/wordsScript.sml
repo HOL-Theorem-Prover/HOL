@@ -189,7 +189,7 @@ val word_concat_def = xDef "word_concat_def" 700
   `($@@ (v:bool ** 'a) (w:bool ** 'b)):bool ** ('a + 'b) =
     let cv = (w2w v):bool ** ('a + 'b)
     and cw = (w2w w):bool ** ('a + 'b)
-    in word_add (cv << (dimindex (UNIV:'b->bool))) cw`;
+    in word_or (cv << (dimindex (UNIV:'b->bool))) cw`;
 
 (* ------------------------------------------------------------------------- *)
 (*  Orderings : definitions                                                  *)
