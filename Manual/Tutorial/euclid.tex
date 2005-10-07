@@ -1445,7 +1445,7 @@ Goal proved.
 \verb|CCONTR_TAC THEN | \\
 \verb|`?n. !p. n < p ==> ~prime p`  by PROVE_TAC []             THEN| \\
 \verb|`~(FACT n + 1 = 1)`           by ARW_TAC [FACT_LESS,| \\
-\verb|                                      DECIDE`~(x=0)=0<x`] THEN| \\
+\verb|                                    DECIDE``~(x=0)=0<x``] THEN| \\
 \verb|`?p. prime p /\  | \\
 \verb|     p divides (FACT n + 1)`  by PROVE_TAC [PRIME_FACTOR] THEN| \\
 \verb|`0 < p`                       by PROVE_TAC [PRIME_POS]    THEN| \\
