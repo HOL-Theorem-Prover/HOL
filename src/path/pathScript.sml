@@ -400,7 +400,7 @@ val path_Axiom = store_thm(
     SRW_TAC [][stopped_at_def] THEN
     Q_TAC SUFF_TAC `LHD (g (v, NONE)) = NONE` THEN1
       PROVE_TAC [LHD_EQ_NONE] THEN
-    ASM_SIMP_TAC (srw_ss()) [],
+    ASM_SIMP_TAC std_ss [],
     ASM_SIMP_TAC (srw_ss()) [first_def]
   ]);
 
@@ -903,9 +903,12 @@ val labels_def =
             STRIP_ASSUME_TAC
               (Q.ISPEC `\p. if ?x. p = stopped_at x then NONE
                             else SOME (tail p, first_label p)`
-                       llist_Axiom) THEN
+                       llist_Axiom_1) THEN
             Q.EXISTS_TAC `g` THEN
-            SRW_TAC [][LHDTL_EQ_SOME, GSYM LHD_EQ_NONE]));
+            REPEAT STRIP_TAC THEN
+            POP_ASSUM
+              (fn th => CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))) THEN
+            SRW_TAC [][]));
 
 val _ = BasicProvers.export_rewrites ["labels_def"]
 
