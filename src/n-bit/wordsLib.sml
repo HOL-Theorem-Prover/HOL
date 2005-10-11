@@ -5,9 +5,9 @@ struct
   app load ["fcpLib", "numeral_bitTheory", "wordsTheory"];
 *)
 
-open HolKernel Parse boolLib bossLib;
-open computeLib;
-open bitTheory numeral_bitTheory wordsTheory;
+open HolKernel Parse boolLib bossLib computeLib;
+open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
+
 
 (* ------------------------------------------------------------------------- *)
 

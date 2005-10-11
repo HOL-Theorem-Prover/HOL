@@ -12,7 +12,7 @@
 
 open HolKernel Parse boolLib bossLib;
 open Q arithmeticTheory pred_setTheory;
-open bitTheory sum_numTheory fcpTheory;
+open bitTheory sum_numTheory fcpTheory numeral_bitTheory;
 
 val _ = new_theory "words";
 
@@ -32,9 +32,13 @@ val HB = ``^WL - 1``;
 val TOP = ``2 ** ^WL``;
 val MSB = ``2 ** ^HB``;
 
-fun Def s = curry Definition.new_definition s o Parse.Term;
-fun xDef s n t = boolSyntax.new_infixr_definition(s, Parse.Term t, n);
-fun xlDef s n t = boolSyntax.new_infixl_definition(s, Parse.Term t, n);
+fun Def s q = Definition.new_definition(s,Parse.Term q) 
+              handle e => Raise e;
+fun xDef s n t = boolSyntax.new_infixr_definition(s, Parse.Term t, n)
+                 handle e => Raise e;
+fun xlDef s n t = boolSyntax.new_infixl_definition(s, Parse.Term t, n)
+                  handle e => Raise e;
+
 
 (* ------------------------------------------------------------------------- *)
 (*  Domain transforming maps : definitions                                   *)
@@ -147,6 +151,8 @@ val _ = overload_on ("-",   Term`$word_sub`);
 val _ = overload_on ("-",   Term`$word_2comp`);
 val _ = overload_on ("*",   Term`$word_mul`);
 
+val _ = print "gooble";
+
 (* ------------------------------------------------------------------------- *)
 (*  Shifts : definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
@@ -155,9 +161,13 @@ val word_lsl_def = xlDef "word_lsl_def" 680
   `$<< (w:bool ** 'a) n =
     (FCP i. i < ^WL /\ n <= i /\ w %% (i - n)):bool ** 'a`;
 
+val _ = print "foo";
+
 val word_lsr_def = xlDef "word_lsr_def" 680
   `$>>> (w:bool ** 'a) n =
     (FCP i. i + n < ^WL /\ w %% (i + n)):bool ** 'a`;
+
+val _ = print "foo";
 
 val word_asr_def = xlDef "word_asr_def" 680
   `$>> (w:bool ** 'a) n =
@@ -166,9 +176,13 @@ val word_asr_def = xlDef "word_asr_def" 680
             else
               w %% (i + n)):bool ** 'a`;
 
+val _ = print "foo";
+
 val word_ror_def = xlDef "word_ror_def" 680
   `$#>> (w:bool ** 'a) n =
     (FCP i. w %% ((i + n) MOD ^WL)):bool ** 'a`;
+
+val _ = print "foo";
 
 val word_rol_def = xlDef "word_rol_def" 680
   `$#<< (w:bool ** 'a) n =
@@ -189,7 +203,8 @@ val word_concat_def = xDef "word_concat_def" 700
   `($@@ (v:bool ** 'a) (w:bool ** 'b)):bool ** ('a + 'b) =
     let cv = (w2w v):bool ** ('a + 'b)
     and cw = (w2w w):bool ** ('a + 'b)
-    in word_or (cv << (dimindex (UNIV:'b->bool))) cw`;
+    in  (cv << (dimindex (UNIV:'b->bool))) !! cw`;
+
 
 (* ------------------------------------------------------------------------- *)
 (*  Orderings : definitions                                                  *)
