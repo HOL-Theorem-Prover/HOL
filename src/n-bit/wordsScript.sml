@@ -151,7 +151,6 @@ val _ = overload_on ("-",   Term`$word_sub`);
 val _ = overload_on ("-",   Term`$word_2comp`);
 val _ = overload_on ("*",   Term`$word_mul`);
 
-val _ = print "gooble";
 
 (* ------------------------------------------------------------------------- *)
 (*  Shifts : definitions                                                     *)
@@ -161,13 +160,9 @@ val word_lsl_def = xlDef "word_lsl_def" 680
   `$<< (w:bool ** 'a) n =
     (FCP i. i < ^WL /\ n <= i /\ w %% (i - n)):bool ** 'a`;
 
-val _ = print "foo";
-
 val word_lsr_def = xlDef "word_lsr_def" 680
   `$>>> (w:bool ** 'a) n =
     (FCP i. i + n < ^WL /\ w %% (i + n)):bool ** 'a`;
-
-val _ = print "foo";
 
 val word_asr_def = xlDef "word_asr_def" 680
   `$>> (w:bool ** 'a) n =
@@ -176,13 +171,9 @@ val word_asr_def = xlDef "word_asr_def" 680
             else
               w %% (i + n)):bool ** 'a`;
 
-val _ = print "foo";
-
 val word_ror_def = xlDef "word_ror_def" 680
   `$#>> (w:bool ** 'a) n =
     (FCP i. w %% ((i + n) MOD ^WL)):bool ** 'a`;
-
-val _ = print "foo";
 
 val word_rol_def = xlDef "word_rol_def" 680
   `$#<< (w:bool ** 'a) n =
