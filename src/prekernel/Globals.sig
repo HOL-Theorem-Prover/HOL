@@ -28,6 +28,8 @@ sig
   val guessing_overloads      : bool ref
   val notify_on_tyvar_guess   : bool ref
   val allow_schema_definition : bool ref
+  val checking_type_names     : bool ref
+  val checking_const_names    : bool ref
 
   val interactive             : bool ref
   val print_thy_loads         : bool ref

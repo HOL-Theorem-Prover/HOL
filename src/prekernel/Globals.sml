@@ -130,6 +130,14 @@ val guessing_overloads = ref true;
 
 val notify_on_tyvar_guess = ref true;
 
+(*---------------------------------------------------------------------------*
+ * Whether or not to be strict about what name a type or constant has.       *
+ * Checked in Theory.new_type and Theory.new_constant.                       *
+ *---------------------------------------------------------------------------*)
+
+val checking_type_names   = ref true;
+val checking_const_names  = ref true;
+
 (* ----------------------------------------------------------------------
     The syntax used to highlight out-of-date constants in the
     prettyprinters for types and terms - must generate unique names
