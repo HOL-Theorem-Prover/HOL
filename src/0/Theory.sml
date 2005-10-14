@@ -388,13 +388,17 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun new_type (Name,Arity) =
- (if Lexis.allowed_type_constant Name then ()
-  else WARN "new_type" (Lib.quote Name^" is not a standard type name")
+ (if not (Lexis.allowed_type_constant Name) andalso
+     !Globals.checking_type_names
+   then WARN "new_type" (Lib.quote Name^" is not a standard type name")
+   else ()
   ; add_typeCT {name=Name, arity=Arity, theory = CTname()};());
 
 fun new_constant (Name,Ty) =
-  (if Lexis.allowed_term_constant Name then ()
-   else WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
+  (if not (Lexis.allowed_term_constant Name) andalso
+     !Globals.checking_const_names
+   then WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
+   else ()
    ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
 
 (*---------------------------------------------------------------------------
