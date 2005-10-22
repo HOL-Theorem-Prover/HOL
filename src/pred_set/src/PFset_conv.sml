@@ -380,7 +380,11 @@ local val SIGMA_EMPTY = CONJUNCT1 (SPEC_ALL SUM_IMAGE_THM)
           (`!f s e. FINITE s ==> 
                   (SIGMA f (e INSERT s) = 
                      f e + (if e IN s then SIGMA f s - f e else SIGMA f s))`,
-           metisLib.METIS_TAC [SUM_IMAGE_THM,SUM_IMAGE_DELETE])
+           REPEAT STRIP_TAC THEN 
+           IMP_RES_TAC (CONJUNCT2 (SPEC_ALL SUM_IMAGE_THM)) THEN
+           ASM_REWRITE_TAC[] THEN
+           IMP_RES_TAC SUM_IMAGE_DELETE THEN
+           ASM_REWRITE_TAC [])
 in
 fun SUM_IMAGE_CONV tm = 
  let open numSyntax

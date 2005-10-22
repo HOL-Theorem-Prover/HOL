@@ -50,6 +50,7 @@ val infinite_tm = prim_mk_const{Name = "INFINITE", Thy = "pred_set"}
 val sing_tm     = prim_mk_const{Name = "SING",     Thy = "pred_set"}
 val subset_tm   = prim_mk_const{Name = "SUBSET",   Thy = "pred_set"}
 val psubset_tm  = prim_mk_const{Name = "PSUBSET",  Thy = "pred_set"}
+val pow_tm      = prim_mk_const{Name = "POW",      Thy = "pred_set"}
 val disjoint_tm = prim_mk_const{Name = "DISJOINT", Thy = "pred_set"}
 val bigunion_tm = prim_mk_const{Name = "BIGUNION", Thy = "pred_set"}
 val biginter_tm = prim_mk_const{Name = "BIGINTER", Thy = "pred_set"}
@@ -327,9 +328,22 @@ fun mk_psubset (tm1,tm2) =
   handle HOL_ERR _ => raise ERR "mk_psubset" 
                    "element type disagrees with set type";
 val dest_psubset = 
-  dest_binop psubset_tm (ERR "dest_psubset" "not an PSUBSET term");
+  dest_binop psubset_tm (ERR "dest_psubset" "not a PSUBSET term");
 
 val is_psubset = Lib.can dest_psubset;
+
+(*---------------------------------------------------------------------------*)
+(* Power set                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_pow tm =
+ list_mk_comb(inst[alpha |-> eltype tm] pow_tm, [tm])
+  handle HOL_ERR _ => raise ERR "mk_pow" 
+                   "element type disagrees with set type";
+val dest_pow = 
+  dest_monop pow_tm (ERR "dest_pow" "not a POW term");
+
+val is_pow = Lib.can dest_pow;
 
 (*---------------------------------------------------------------------------*)
 (* Disjointness                                                              *)

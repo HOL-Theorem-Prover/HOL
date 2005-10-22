@@ -24,6 +24,7 @@ sig
   val infinite_tm : term
   val sing_tm     : term
   val subset_tm   : term
+  val pow_tm      : term
   val psubset_tm  : term
   val disjoint_tm : term
   val bigunion_tm : term
@@ -62,6 +63,7 @@ sig
   val mk_sing     : term -> term
   val mk_subset   : term * term -> term
   val mk_psubset  : term * term -> term
+  val mk_pow      : term -> term
   val mk_disjoint : term * term -> term
   val mk_bigunion : term -> term
   val mk_biginter : term -> term
@@ -99,6 +101,7 @@ sig
   val dest_sing   : term -> term
   val dest_subset : term -> term * term
   val dest_psubset : term -> term * term
+  val dest_pow    : term -> term
   val dest_disjoint : term -> term * term
   val dest_bigunion : term -> term
   val dest_biginter : term -> term
@@ -135,6 +138,7 @@ sig
   val is_sing     : term -> bool
   val is_subset   : term -> bool
   val is_psubset  : term -> bool
+  val is_pow      : term -> bool
   val is_disjoint : term -> bool
   val is_bigunion : term -> bool
   val is_biginter : term -> bool

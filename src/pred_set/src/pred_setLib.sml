@@ -44,7 +44,7 @@ val _ = computeLib.add_convs
 val T_INTRO = 
  let open boolLib Drule
  in Rewrite.PURE_ONCE_REWRITE_RULE 
-                      [SYM (hd(tl (CONJUNCTS (SPEC_ALL EQ_CLAUSES))))]
+              [SYM (hd(tl (CONJUNCTS (SPEC_ALL EQ_CLAUSES))))]
  end;
 
 val _ = 
@@ -69,7 +69,7 @@ val _ =
       CARD_EMPTY, SUM_SET_DEF,
       CONJUNCT1 (SPEC_ALL SUM_IMAGE_THM),
       UNIV_DEF,
-      SET_EQ_SUBSET, IN_COMPL
+      SET_EQ_SUBSET, IN_COMPL, POW_EQNS
      ]
  end;
 

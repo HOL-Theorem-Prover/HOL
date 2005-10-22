@@ -30,7 +30,7 @@ val arith_ss = bool_ss ++ numSimps.ARITH_ss
 
 val _ = new_theory "pred_set";
 
-val _ = type_abbrev ("set", Type`:'a -> bool`);
+val _ = type_abbrev ("set", ``:'a -> bool``);
 
 
 (* =====================================================================*)
@@ -1182,7 +1182,6 @@ val SING_IFF_EMPTY_REST =
       ASM_REWRITE_TAC [EXTENSION,IN_SING,CHOICE_SING]]);
 
 
-
 (* ===================================================================== *)
 (* The image of a function on a set.					 *)
 (* ===================================================================== *)
@@ -1902,7 +1901,6 @@ val CARD_EXISTS = TAC_PROOF(([],
 (* ---------------------------------------------------------------------*)
 
 val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
-
 
 (* ---------------------------------------------------------------------*)
 (* Various cardinality results.						*)
@@ -3669,6 +3667,121 @@ val MAX_SET_UNION = Q.store_thm
  in METIS_TAC [lem]
  end);;
 
+val set_ss = arith_ss ++ SET_SPEC_ss ++ 
+             rewrites [CARD_INSERT,CARD_EMPTY,FINITE_EMPTY,FINITE_INSERT,
+                       NOT_IN_EMPTY];
+
+(*---------------------------------------------------------------------------*)
+(* POW s is the powerset of s                                                *)
+(*---------------------------------------------------------------------------*)
+
+val POW_DEF = 
+ new_definition 
+  ("POW_DEF",
+   ``POW set = {s | s SUBSET set}``); 
+
+val IN_POW = Q.store_thm
+("IN_POW",
+ `!set e. e IN POW set = e SUBSET set`,
+ RW_TAC bool_ss [POW_DEF,GSPECIFICATION]);
+
+val SUBSET_POW = Q.store_thm
+("SUBSET_POW",
+ `!s1 s2. s1 SUBSET s2 ==> (POW s1) SUBSET (POW s2)`,
+ RW_TAC set_ss [POW_DEF,SUBSET_DEF]);
+
+val SUBSET_INSERT_RIGHT = Q.store_thm
+("SUBSET_INSERT_RIGHT",
+ `!e s1 s2. s1 SUBSET s2 ==> s1 SUBSET (e INSERT s2)`,
+ RW_TAC set_ss [SUBSET_DEF,IN_INSERT]);
+
+val SUBSET_DELETE_BOTH = Q.store_thm
+("SUBSET_DELETE_BOTH",
+ `!s1 s2 x. s1 SUBSET s2 ==> (s1 DELETE x) SUBSET (s2 DELETE x)`,
+ RW_TAC set_ss [SUBSET_DEF,SUBSET_DELETE,IN_DELETE]);
+
+(*---------------------------------------------------------------------------*)
+(* Recursion equations for POW                                               *)
+(*---------------------------------------------------------------------------*)
+
+val POW_INSERT = Q.store_thm
+("POW_INSERT",
+ `!e s. POW (e INSERT s) = IMAGE ($INSERT e) (POW s) UNION (POW s)`,
+ RW_TAC set_ss [EXTENSION,IN_UNION,IN_POW] THEN
+ Cases_on `e IN x` THENL
+ [EQ_TAC THEN RW_TAC set_ss [] THENL
+  [DISJ1_TAC 
+    THEN RW_TAC set_ss [IN_IMAGE,IN_POW]
+    THEN Q.EXISTS_TAC `x DELETE e`
+    THEN RW_TAC set_ss [INSERT_DELETE]
+    THEN IMP_RES_TAC SUBSET_DELETE_BOTH
+    THEN POP_ASSUM (MP_TAC o Q.SPEC `e`)
+    THEN RW_TAC set_ss [DELETE_INSERT]
+    THEN METIS_TAC [DELETE_SUBSET,SUBSET_TRANS],
+   FULL_SIMP_TAC set_ss 
+     [IN_IMAGE,IN_POW,SUBSET_INSERT_RIGHT,INSERT_SUBSET,IN_INSERT],
+   FULL_SIMP_TAC set_ss [SUBSET_DEF] 
+    THEN METIS_TAC [IN_INSERT]],
+  RW_TAC set_ss [SUBSET_INSERT] 
+    THEN EQ_TAC THEN RW_TAC set_ss [IN_IMAGE]
+    THEN METIS_TAC [IN_INSERT]]);
+
+val POW_EQNS = Q.store_thm
+("POW_EQNS",
+ `(POW {} = {{}} : 'a set set) /\
+  (!e:'a. 
+   !s. POW (e INSERT s) = let ps = POW s
+                            in (IMAGE ($INSERT e) ps) UNION ps)`,
+ CONJ_TAC THENL 
+ [RW_TAC set_ss [POW_DEF,SUBSET_EMPTY,EXTENSION,NOT_IN_EMPTY,IN_INSERT], 
+  METIS_TAC [POW_INSERT,LET_THM]]);
+
+val FINITE_POW = Q.store_thm
+("FINITE_POW",
+ `!s. FINITE s ==> FINITE (POW s)`,
+ HO_MATCH_MP_TAC FINITE_INDUCT 
+  THEN CONJ_TAC THENL
+  [METIS_TAC [POW_EQNS,FINITE_EMPTY,FINITE_INSERT],
+   RW_TAC set_ss [POW_EQNS,LET_THM,FINITE_UNION,IMAGE_FINITE]]);
+
+val lem = Q.prove
+(`!n. 2 * 2**n = 2**n + 2**n`,
+ RW_TAC arith_ss [EXP]);
+
+(*---------------------------------------------------------------------------*)
+(* Cardinality of the power set of a finite set                              *)
+(*---------------------------------------------------------------------------*)
+
+val CARD_POW = Q.store_thm
+("CARD_POW",
+ `!s. FINITE s ==> (CARD (POW s) = 2 EXP (CARD s))`,
+ SET_INDUCT_TAC 
+  THEN RW_TAC set_ss [POW_EQNS,LET_THM,EXP]
+  THEN `FINITE (POW s) /\ 
+        FINITE (IMAGE ($INSERT e) (POW s))` 
+    by METIS_TAC[FINITE_POW,IMAGE_FINITE]
+  THEN `CARD (IMAGE ($INSERT e) (POW s) UNION POW s) = 
+        CARD (IMAGE ($INSERT e) (POW s)) + CARD(POW s)`
+    by 
+   (`CARD ((IMAGE ($INSERT e) (POW s)) INTER (POW s)) = 0`
+      by (RW_TAC set_ss [CARD_EQ_0,INTER_FINITE] THEN 
+          RW_TAC set_ss [EXTENSION,IN_INTER,IN_POW,IN_IMAGE] THEN
+          RW_TAC set_ss [SUBSET_DEF,IN_INSERT] THEN METIS_TAC[])
+     THEN METIS_TAC [CARD_UNION,ADD_CLAUSES])
+  THEN POP_ASSUM SUBST_ALL_TAC
+  THEN Q.PAT_ASSUM `X = 2 ** (CARD s)` (ASSUME_TAC o SYM)
+  THEN ASM_REWRITE_TAC [lem, EQ_ADD_RCANCEL]
+  THEN `BIJ ($INSERT e) (POW s) (IMAGE ($INSERT e) (POW s))`
+    by (RW_TAC set_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_IMAGE,IN_POW]
+        THENL
+         [METIS_TAC [IN_POW],
+          `~(e IN x) /\ ~(e IN y)` by METIS_TAC [SUBSET_DEF] 
+            THEN FULL_SIMP_TAC set_ss [EXTENSION, IN_INSERT] 
+            THEN METIS_TAC[],
+          METIS_TAC [IN_POW],METIS_TAC[]])
+  THEN METIS_TAC [FINITE_BIJ_CARD_EQ]);
+
+
 (* ----------------------------------------------------------------------
     Simple lemmas about GSPECIFICATIONs
    ---------------------------------------------------------------------- *)
@@ -3765,6 +3878,9 @@ val EMPTY_NOT_IN_partition = store_thm(
   SRW_TAC [][partition_def, EXTENSION] THEN
   METIS_TAC [equiv_on_def]);
 
+(* Invocation(s) of PROVE_TAC are slow, but METIS seems to be 
+   possibly slower
+*)
 val partition_elements_disjoint = store_thm(
   "partition_elements_disjoint",
   ``R equiv_on s ==>
@@ -3884,7 +4000,6 @@ val KoenigsLemma_WF = store_thm(
              relationTheory.inv_DEF] THEN
   METIS_TAC [KoenigsLemma]);
 
-val set_ss = arith_ss ++ SET_SPEC_ss;
 
 val SET_EQ_SUBSET = Q.store_thm
 ("SET_EQ_SUBSET",
@@ -4072,6 +4187,7 @@ val _ =
     :: MLSIG "val MAX_SET  : num set -> num"
     :: MLSIG "val MIN_SET  : num set -> num"
     :: MLSIG "val count    : num -> num set"
+    :: MLSIG "val POW      : ''a set -> ''a set set"
     ::
     (map (DEFN_NOSIG o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o reshape)
      [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT,
@@ -4093,7 +4209,7 @@ val _ =
       in CONJ c1 (UNDISCH (SPEC_ALL c2)) end,
       let val [c1,c2] = CONJUNCTS MAX_SET_THM
       in CONJ MAX_SET_EMPTY (CONJ c1 (UNDISCH (SPEC_ALL c2))) end,
-      CONJ MIN_SET_EMPTY MIN_SET_THM, count_EQN]
+      CONJ MIN_SET_EMPTY MIN_SET_THM, count_EQN,POW_EQNS]
     @
      [MLSIG "val fromList : 'a list -> 'a set",
       MLSIG "val toList   : 'a set -> 'a list",
