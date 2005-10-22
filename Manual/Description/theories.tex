@@ -3416,13 +3416,15 @@ $((\alpha\to\konst{bool})\to\konst{bool})\to (\alpha\to\konst{bool})$.
 
 \paragraph{Subsets}
 
-Set inclusion (\holtxt{SUBSET}, infix) and proper set inclusion
-(\holtxt{PSUBSET}, infix) are defined as follows:
+Set inclusion (\holtxt{SUBSET}, infix), proper set inclusion
+(\holtxt{PSUBSET}, infix), and power set (\holtxt{PSUBSET}) 
+are defined as follows:
 %
 \begin{hol}
 \begin{verbatim}
    SUBSET_DEF  |- !s t. s SUBSET t = !x. x IN s ==> x IN t
    PSUBSET_DEF |- !s t. s PSUBSET t = s SUBSET t /\ ~(s = t)
+   POW_DEF     |- !set. POW set = {s | s SUBSET set}
 \end{verbatim}
 \end{hol}
 
