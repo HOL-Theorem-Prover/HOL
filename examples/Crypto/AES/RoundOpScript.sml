@@ -55,7 +55,10 @@ val _ = type_abbrev("w8x4",  Type`:word8 # word8 # word8 # word8`);
 
 val ZERO_BLOCK_def = 
  Define
-   `ZERO_BLOCK = (0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,0w) : block`;
+   `ZERO_BLOCK = (0w,0w,0w,0w,
+                  0w,0w,0w,0w,
+                  0w,0w,0w,0w,
+                  0w,0w,0w,0w) : block`;
 
 (*---------------------------------------------------------------------------*)
 (* Case analysis on a block.                                                 *)

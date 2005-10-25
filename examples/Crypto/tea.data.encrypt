@@ -598,6 +598,26 @@ val M = ``[(1,NONE); (13,SOME T); (257,SOME F)]``;
 val key = ``(1w,2w,3w,4w)``;
 val v =   ``(5w,10w)``;
 
+EVAL ``encode_list (encode_prod encode_num (encode_option encode_bool))
+        [(1,NONE); (13,SOME T); (257,SOME F)]``;
+> val it =
+    |- encode_list (encode_prod encode_num (encode_option encode_bool))
+         [(1,NONE); (13,SOME T); (257,SOME F)] =
+       [T; T; F; T; T; F; T; T; F; F; F; T; T; T; T; T; T; F; F; T; F; T; F;
+        T; F; T; F; T; F; T; F; T; T; T; F; F] : thm
+
+EVAL ``PAD (encode_list 
+               (encode_prod encode_num (encode_option encode_bool))
+        [(1,NONE); (13,SOME T); (257,SOME F)])``;
+> val it =
+    |- PAD
+         (encode_list (encode_prod encode_num (encode_option encode_bool))
+            [(1,NONE); (13,SOME T); (257,SOME F)]) =
+       [T; T; F; T; T; F; T; T; F; F; F; T; T; T; T; T; T; F; F; T; F; T; F;
+        T; F; T; F; T; F; T; F; T; T; T; F; F; F; F; F; F; F; F; F; F; F; F;
+        F; F; F; F; F; F; F; F; F; F; F; F; F; T; T; T; F; F] : thm
+ 
+
 (*---------------------------------------------------------------------------*)
 (* Encode and encrypt to a list (length 1) of pairs of 32-bit words          *)
 (*---------------------------------------------------------------------------*)
@@ -606,6 +626,14 @@ val ev1 = Count.apply EVAL
   ``(CBC_ENC XORB (TEAEncrypt ^key) ^v o BLOCK o WORD32 o PAD o
      encode_list (encode_prod encode_num (encode_option encode_bool)))
         ^M``;
+
+val ev1 =
+    |- (CBC_ENC XORB (TEAEncrypt (1w,2w,3w,4w)) (5w,10w) o BLOCK o WORD32 o
+        PAD o
+        encode_list (encode_prod encode_num (encode_option encode_bool)))
+         [(1,NONE); (13,SOME T); (257,SOME F)] =
+       [(3008902428w,1274536877w)] : thm
+
 (*---------------------------------------------------------------------------*)
 (* Decrypt and generate a bit list, padding removed                          *)
 (*---------------------------------------------------------------------------*)

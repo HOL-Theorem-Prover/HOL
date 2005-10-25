@@ -1,19 +1,19 @@
-(*                                   RC6 Block Cipher
-                                        -- implemented in HOL
-
- This is an Standard ML implementation of the encryption algorithm:
-         RC6 by Ron Rivest and RSA Labs
- which is a candidate algorithm in the Advanced Encryption Standard
- For detailed information about RC6, please refer to
-        http://www.rsasecurity.com/rsalabs/node.asp?id=2512
- in which algorithm specification, Security and performance evaluation, 
- etc. can be found.
-*)
+(*---------------------------------------------------------------------------*)
+(*                                   RC6 Block Cipher                        *)
+(*                                        -- implemented in HOL              *)
+(*                                                                           *)
+(* This is a HOL implementation of the RC6 encryption algorithm due to       *)
+(* Ron Rivest and RSA Labs which was a candidate algorithm in the Advanced   *)
+(* Encryption Standard. For detailed information about RC6, please refer to  *)
+(*        http://www.rsasecurity.com/rsalabs/node.asp?id=2512                *)
+(* in which algorithm specification, Security and performance evaluation,    *)
+(* etc. can be found.                                                        *)
+(*---------------------------------------------------------------------------*)
 
 (* For interactive work
   quietdec := true;
-  app load ["arithmeticTheory","metisLib","word32Theory","listTheory"];
-  open arithmeticTheory word32Theory pairTheory metisLib listTheory;
+  app load ["arithmeticTheory","word32Theory"];
+  open arithmeticTheory word32Theory pairTheory listTheory;
   quietdec := false;
 *)
 
@@ -152,8 +152,8 @@ val GETKEYS_def =
 
 (*---------------------------------------------------------------------------*)
 (* Pre-Whitening and post-whitening in the encryption and the decryption     *)
-(* Note the difference of the key schedules between Round and InRound. We    *)
-(* should make sure that corresponding Round and INVRound use the same keys  *)
+(* Note the difference of the key schedules between Round and InvRound. We   *)
+(* should make sure that corresponding Round and InvRound use the same keys  *)
 (*---------------------------------------------------------------------------*)
 
 val PreWhitening_def = Define
@@ -187,31 +187,25 @@ val Whitening_Inversion = Q.store_thm
 (* Round operations in the encryption and the decryption                     *)
 (*---------------------------------------------------------------------------*)
 
-val (Round_def, Round_ind) = Defn.tprove
- (Hol_defn
-   "Round"
+val Round_def = 
+ Define
    `Round n (k:keysched) (b:block) =
      if n=0
       then PostWhitening k b
-      else Round (n-1) (ROTKEYS k) (FwdRound b (GETKEYS k))`,
-  WF_REL_TAC `measure FST`);
+      else Round (n-1) (ROTKEYS k) (FwdRound b (GETKEYS k))`;
+
    
 (*---------------------------------------------------------------------------*)
 (* Note the difference between Round and InvRound -- we should make sure     *)
 (* that PreWhitening and PostWhitening use the same key pair                 *)
 (*---------------------------------------------------------------------------*)
 
-val (InvRound_def,InvRound_ind) = Defn.tprove
- (Hol_defn
-   "InvRound"
+val InvRound_def = 
+ Define
    `InvRound n k b =
       if n=0
        then InvPreWhitening k b
-       else BwdRound (InvRound (n-1) (ROTKEYS k) b) (GETKEYS k)`,
-  WF_REL_TAC `measure FST`);
-
-val _ = save_thm ("Round_def", Round_def);
-val _ = save_thm ("InvRound_def", InvRound_def);
+       else BwdRound (InvRound (n-1) (ROTKEYS k) b) (GETKEYS k)`;
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
