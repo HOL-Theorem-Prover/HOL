@@ -34,7 +34,7 @@ val _ = let
         bv_cin+e*(bv_c+wb_a+wb_b)+wbs_a+wbs_b)
      ==>
      (2n*e*bv_cout+e*wb_sum+wbs_sum = bv_cin+e*wb_a+e*wb_b+wbs_a+wbs_b)``
-  val result = SOME (numLib.ARITH_CONV t) handle HOL_ERR _ => NONE
+  val result = SOME (Arith.ARITH_CONV t) handle HOL_ERR _ => NONE
 in
   case result of
     SOME th => if rhs (concl th) = boolSyntax.T then print "OK\n"
