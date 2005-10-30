@@ -219,8 +219,17 @@ val terms_to_test =
           n + (u' * m + m) < m ==> u' * m + m <= n ==> F`, "NONPB1"),
   L (Term`((n :num) = (r :num) + (i :num) * (m :num)) ==>
           r < m ==> (n MOD m = r) ==> (n DIV m = i) ==>
-          ~(m = (0 :num))`, "NONPB2")
-
+          ~(m = (0 :num))`, "NONPB2"),
+  L (Term`(e*bv_c+e*(2*bv_cout+wb_sum)+wbs_sum =
+             bv_cin+e*(bv_c+wb_a+wb_b)+wbs_a+wbs_b)
+          ==>
+           (2n*e*bv_cout+e*wb_sum+wbs_sum = bv_cin+e*wb_a+e*wb_b+wbs_a+wbs_b)`,
+     "AG_NAT"),
+  L (Term`(e*bv_c+e*(2*bv_cout+wb_sum)+wbs_sum =
+             bv_cin+e*(bv_c+wb_a+wb_b)+wbs_a+wbs_b)
+          ==>
+           (2i*e*bv_cout+e*wb_sum+wbs_sum = bv_cin+e*wb_a+e*wb_b+wbs_a+wbs_b)`,
+     "AG_INT")
 ];
 
 val goals_to_test = [
