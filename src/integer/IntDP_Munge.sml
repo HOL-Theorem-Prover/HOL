@@ -337,7 +337,9 @@ in
 
 val dealwith_nats = let
   val phase1 =
-      tacCONV (ONCE_DEPTH_CONV normalise_mult THENC
+      tacCONV (PURE_REWRITE_CONV [arithmeticTheory.LEFT_ADD_DISTRIB,
+                                  arithmeticTheory.RIGHT_ADD_DISTRIB] THENC
+               ONCE_DEPTH_CONV normalise_mult THENC
                elim_div_mod THENC
                (* eliminate nasty subtractions *)
                TOP_DEPTH_CONV (Thm_convs.SUB_NORM_CONV ORELSEC
@@ -417,6 +419,8 @@ end
 
 fun BASIC_CONV DPname DP tm = let
   val (natgoal, natvalidation) = dealwith_nats tm
+  val stage1 = PURE_REWRITE_CONV [INT_LDISTRIB, INT_RDISTRIB] THENC
+               ONCE_DEPTH_CONV normalise_mult
   fun stage2 tm =
     case non_presburger_subterms0 [] tm of
       [] => decide_fv_presburger DPname DP tm
@@ -448,7 +452,7 @@ fun BASIC_CONV DPname DP tm = let
             ("Not in the allowed subset; consider "^Parse.term_to_string t)
       end
 in
-  natvalidation (stage2 natgoal)
+  natvalidation ((stage1 THENC stage2) natgoal)
 end
 
 fun ok_asm th = let

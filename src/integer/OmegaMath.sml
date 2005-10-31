@@ -399,16 +399,24 @@ end tm
     NORMALISE_MULT tm
 
     normalises the multiplicative term tm, gathering up coefficients,
-    and turning it into the form n * (v1 * v2 * ... vn), where
-    n is a numeral and the v's are the variables in the term, sorted
-    into the order specified by Term.compare.  Works over both :num
-    and :int.
+    and ususally turning it into the form n * (v1 * v2 * ... vn),
+    where n is a numeral and the v's are the other multiplicands in
+    the term, sorted into the order specified by Term.compare.  Works
+    over both :num and :int.  Negations are also lifted out, so that only
+    the numeral is negated.
+
+    If the term is a multiplication of numerals, will reduce to just
+    one numeral.  If the term includes no numerals, no extra 'n' will
+    be introduced but the multiplicands will be sorted.
+
+    Fails if the term is not a multiplication.
+
    ---------------------------------------------------------------------- *)
 
 fun NORMALISE_MULT0 t = let
   open arithmeticTheory
   (* t is a multiplication term, over either :num or :int *)
-  val (dest, strip, mk, listmk, AC, is_lit, MULT_LID) =
+  val (dest, strip, mk, listmk, AC, is_lit, MULT_LID, one_tm) =
       if numSyntax.is_mult t then
         (numSyntax.dest_mult,
          numSyntax.strip_mult,
@@ -416,7 +424,8 @@ fun NORMALISE_MULT0 t = let
          numSyntax.list_mk_mult,
          EQT_ELIM o AC_CONV (MULT_ASSOC, MULT_COMM),
          numSyntax.is_numeral,
-         GSYM arithmeticTheory.MULT_LEFT_1)
+         GSYM arithmeticTheory.MULT_LEFT_1,
+         numSyntax.term_of_int 1)
       else if intSyntax.is_mult t then
         (intSyntax.dest_mult,
          intSyntax.strip_mult,
@@ -424,33 +433,30 @@ fun NORMALISE_MULT0 t = let
          intSyntax.list_mk_mult,
          EQT_ELIM o AC_CONV (INT_MUL_ASSOC, INT_MUL_COMM),
          intSyntax.is_int_literal,
-         GSYM INT_MUL_LID)
+         GSYM INT_MUL_LID,
+         intSyntax.one_tm)
       else raise ERR "NORMALISE_MULT" "Term not a multiplication"
+  val ms = strip t
+  val (nums, others) = partition is_lit ms
+  fun sort nums others t = let
+    val newt = mk(listmk nums, listmk (Listsort.sort Term.compare others))
+  in
+    K (AC(mk_eq(t,newt))) THENC LAND_CONV REDUCE_CONV
+  end t
 in
-  case strip t of
-    [ _ ] => if is_lit t then NO_CONV else REWR_CONV MULT_LID
-  | ms => let
-      val (nums, others) = partition is_lit ms
-    in
-      if null nums then
-        REWR_CONV MULT_LID
-      else if length nums = 1 andalso hd nums = #1 (dest t) then
-        NO_CONV
-      else if null others then
-        REDUCE_CONV
-      else let
-          val newt =
-              mk(listmk nums, listmk (Listsort.sort Term.compare others))
-        in
-          K (AC (mk_eq(t,newt))) THENC LAND_CONV REDUCE_CONV
-        end
-    end
+  if null others then REDUCE_CONV
+  else if null nums then
+    REWR_CONV MULT_LID THENC sort [one_tm] others
+  else
+    sort nums others
 end t
 
 val NORMALISE_MULT  =
     NORMALISE_MULT0 THENC REWRITE_CONV [GSYM INT_NEG_RMUL, GSYM INT_NEG_LMUL,
                                         INT_NEGNEG] THENC
-    REWRITE_CONV [INT_NEG_LMUL]
+    REWRITE_CONV [INT_NEG_LMUL] THENC
+    TRY_CONV (FIRST_CONV (map REWR_CONV [arithmeticTheory.MULT_LEFT_1,
+                                         INT_MUL_LID]))
 
 
 (* ----------------------------------------------------------------------

@@ -229,7 +229,9 @@ val terms_to_test =
              bv_cin+e*(bv_c+wb_a+wb_b)+wbs_a+wbs_b)
           ==>
            (2i*e*bv_cout+e*wb_sum+wbs_sum = bv_cin+e*wb_a+e*wb_b+wbs_a+wbs_b)`,
-     "AG_INT")
+     "AG_INT"),
+  L (Term`x * y < y * x + 1i`, "IMUL_NORM"),
+  L (Term`x * y < y * x + 1n`, "NMUL_NORM")
 ];
 
 val goals_to_test = [
