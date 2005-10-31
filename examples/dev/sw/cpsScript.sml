@@ -133,7 +133,6 @@ val CPS2_INTRO = Q.store_thm
  `!f. CPS2 f = CPS_TEST (CPS f)`,
  RW_TAC std_ss [CPS_def, CPS2_def, CPS_TEST_def, FUN_EQ_THM]);
 
-
 (*---------------------------------------------------------------------------*)
 (* Recursion. We want                                                        *)
 (*                                                                           *)
@@ -274,6 +273,14 @@ val CPS_REC_INTRO = Q.store_thm
   THEN RW_TAC std_ss [] 
   THEN FULL_SIMP_TAC std_ss [CPS_def, CPS2_def]);
 
+val CPS_REC_def = Define
+`CPS_REC e f g = \k arg. k (Rec (e (\x.x)) (f (\x.x)) (g (\x.x)) arg)` 
+
+val CPS_REC_INTRO = Q.store_thm
+("CPS_REC_INTRO",
+ `!e f g. CPS (Rec e f g) = CPS_REC (CPS e) (CPS f) (CPS g)`,
+ RW_TAC std_ss [CPS_def, CPS_REC_def] THEN
+ METIS_TAC [])
 
 (*---------------------------------------------------------------------------*)
 (* Support for translation into combinator form. Slightly awkward because    *)
