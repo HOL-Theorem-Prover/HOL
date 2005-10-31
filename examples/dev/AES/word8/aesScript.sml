@@ -6,7 +6,7 @@
 structure aesScript =
 struct
 (*
-  app load ["RoundOpTheory", "metisLib"];
+  app load ["RoundOpTheory"];
 *)
 open HolKernel Parse boolLib bossLib RoundOpTheory pairTheory metisLib;
 
@@ -64,9 +64,8 @@ val DUMMY_KEYS_def =
 (* Orchestrate the round computations.                                       *)
 (*---------------------------------------------------------------------------*)
 
-val (Round_def,_) = Defn.tprove
- (Hol_defn 
-   "Round"
+val Round_def = 
+ Define
    `Round (n:num,keys:keysched,state:state) = 
      if n=0 
       then (ROTKEYS keys,
@@ -76,13 +75,10 @@ val (Round_def,_) = Defn.tprove
                   AddRoundKey (FST keys) 
                     (MixColumns 
                       (ShiftRows 
-                         (SubBytes state))))`,
-  WF_REL_TAC `measure FST`);
+                         (SubBytes state))))`;
 
-
-val (InvRound_def,_) = Defn.tprove
- (Hol_defn 
-   "InvRound"
+val InvRound_def = 
+ Define
    `InvRound (n:num,keys:keysched,state:state) =
       if n=0 
        then (ROTKEYS keys,
@@ -92,11 +88,8 @@ val (InvRound_def,_) = Defn.tprove
                      InvMixColumns 
                        (AddRoundKey (FST keys) 
                          (InvSubBytes 
-                           (InvShiftRows state))))`,
-  WF_REL_TAC `measure FST`);
+                           (InvShiftRows state))))`;
 
-val _ = save_thm ("Round_def", Round_def);
-val _ = save_thm ("InvRound_def", InvRound_def);
 
 val Rnd_def = Define `Rnd n k s = SND(Round(n,k,s))`;
 val InvRnd_def = Define `InvRnd n k s = SND(InvRound(n,k,s))`;
@@ -198,13 +191,20 @@ val mk_keysched_def = Define
 (* Sanity check                                                              *)
 (*---------------------------------------------------------------------------*)
 val _ = Globals.priming := SOME"";
+
+(*
+val PolyExp = Q.prove
+(`(PolyExp x 0 = 1w) /\
+  (PolyExp x (SUC n) = x ** PolyExp x n)`,
+*)
+
 (*
 val keysched_length = Count.apply Q.prove
 (`!key. LENGTH (mk_keysched key) = 11`,
  SIMP_TAC std_ss [FORALL_BLOCK,mk_keysched_def]
   THEN REPEAT GEN_TAC 
   THEN NTAC 42
-     (fn x => (RW_TAC list_ss [Once expand_def] 
+     (fn x => (RW_TAC list_ss [Once expand_def,LET_THM] 
        THEN FULL_SIMP_TAC list_ss [markerTheory.Abbrev_def]
        THEN RW_TAC list_ss [XOR8x4_def, SubWord_def, RotWord_def, Rcon_def,
                             tablesTheory.Sbox_def,MultTheory.PolyExp_def]) x)

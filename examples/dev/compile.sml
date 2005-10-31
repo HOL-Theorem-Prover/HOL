@@ -641,7 +641,7 @@ fun hwDefine defq =
                  (rhs(concl defth))
               then (print "definition of "; 
                     print (fst(dest_const(fst(strip_comb(lhs(concl defth))))));
-                    print " is recusive; must have a measure";
+                    print " is recursive; must have a measure";
                     raise ERR "hwDefine" "recursive definition without a measure")
               else ()
             val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
