@@ -1,0 +1,91 @@
+(*---------------------------------------------------------------------------*)
+(* A version of TEA, taken from examples/Crypto/TEA                          *)
+(*---------------------------------------------------------------------------*)
+
+  loadPath := ".." :: !loadPath;
+
+  quietdec := true;
+  app load ["word32Theory","ANF"];
+  open word32Theory pairTheory arithmeticTheory ANF;
+  quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* Cipher types                                                              *)
+(*---------------------------------------------------------------------------*)
+
+val _ = type_abbrev("block", ``:word32 # word32``);
+val _ = type_abbrev("key",   ``:word32 # word32 # word32 # word32``);
+val _ = type_abbrev("state", ``:block # key # word32``);
+
+(* --------------------------------------------------------------------------*)
+(* Definitions used in Round computations                                    *)
+(* --------------------------------------------------------------------------*)
+
+val env0 = [];
+
+val DELTA_def = Define `DELTA = 0x9e3779b9w`;
+
+(* Fails ... what to do about constants? *)
+toANF [] DELTA_def;   
+
+val ShiftXor_def = 
+ Define 
+   `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
+
+val env1 = toANF env0 ShiftXor_def;
+
+(* --------------------------------------------------------------------------*)
+(*	One round forward computation and one round backward computation     *)
+(* --------------------------------------------------------------------------*)
+
+val Round_def = Define
+   `Round ((y,z),(k0,k1,k2,k3),sum):state  = 
+      ((y + ShiftXor(z, sum+DELTA, k0, k1),
+        z + ShiftXor(y + ShiftXor(z, sum+DELTA, k0, k1), sum+DELTA, k2, k3)),
+       (k0,k1,k2,k3), 
+       sum+DELTA)`;
+
+val env2 = toANF env1 Round_def;
+
+val InvRound_def = Define
+   `InvRound((y,z),(k0,k1,k2,k3),sum)  =
+        ((y - ShiftXor(z - ShiftXor(y, sum, k2, k3), sum, k0, k1),
+          z - ShiftXor(y, sum, k2, k3)), 
+	 (k0,k1,k2,k3), 
+         sum-DELTA)`;
+
+val env3 = toANF env2 InvRound_def;
+
+(*---------------------------------------------------------------------------*)
+(* Arbitrary number of cipher rounds                                         *)
+(*---------------------------------------------------------------------------*)
+
+val Rounds_def = 
+ Define
+   `Rounds (n,s:state) = if n=0 then s else Rounds (n-1, Round s)`;
+
+val env4 = toANF env3 Rounds_def;
+
+val InvRounds_def =
+ Define
+   `InvRounds (n,s:state) = if n=0 then s else InvRounds (n-1,InvRound s)`;
+
+val env5 = toANF env4 InvRounds_def;
+
+
+(*---------------------------------------------------------------------------*)
+(* Encrypt and Decrypt (32 rounds)                                           *)
+(*---------------------------------------------------------------------------*)
+
+val TEAEncrypt_def = 
+ Define 
+   `TEAEncrypt (keys,txt) = FST (Rounds(32,(txt,keys,0w)))`;
+
+val env6 = toANF env5 TEAEncrypt_def;
+
+val TEADecrypt_def = 
+ Define 
+   `TEADecrypt (keys,txt) = FST (InvRounds(32,(txt,keys,DELTA << 5)))`;
+
+val env7 = toANF env6 TEADecrypt_def;
+
