@@ -51,7 +51,7 @@ val CPS_CONST = store_thm
 
 val UNCPS = store_thm
 ("UNCPS",
- ``CPS f k x = (let z = f x in k z)``,
+ ``CPS f k = \arg. let z = f arg in k z``,
  METIS_TAC [CPS_def]);
 
 (*---------------------------------------------------------------------------*)
@@ -293,15 +293,14 @@ val Rec_INTRO = store_thm
  ``!f f1 f2 f3.
      (!x:'a. f x = if f1(x) then f2(x) else f(f3 x)) 
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
-     ==> (f:'a->'b = f2 o Rec f1 I f3)``,
+     ==> (f:'a->'b = Rec f1 f2 f3)``,
  REPEAT (GEN_TAC ORELSE STRIP_TAC)
   THEN ONCE_REWRITE_TAC [FUN_EQ_THM]
-  THEN SIMP_TAC std_ss [combinTheory.o_THM]
   THEN HO_MATCH_MP_TAC Rec_ind 
   THEN GEN_TAC THEN STRIP_TAC
-  THEN IMP_RES_TAC (INST_TYPE [beta |-> alpha] (DISCH_ALL Rec_def))
+  THEN IMP_RES_TAC (DISCH_ALL Rec_def)
   THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC[th])
-  THEN METIS_TAC[combinTheory.I_THM]);
+  THEN METIS_TAC[]);
    
 (*---------------------------------------------------------------------------*)
 (* Misc. lemmas                                                              *)

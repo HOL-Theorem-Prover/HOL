@@ -287,7 +287,7 @@ fun RecConvert defth =
    let val fb = mk_pabs(args,b)
        val f1 = mk_pabs(args,t1)
        val f2 = mk_pabs(args,rand t2)
-       val thm = ISPECL[func,fb,f1,f2] Rec_INTRO_ALT
+       val thm = ISPECL[func,fb,f1,f2] Rec_INTRO
        val M = fst(dest_imp(concl thm))
        val (v,body) = dest_forall M
        val M' = rhs(concl(DEPTH_CONV PBETA_CONV 
@@ -311,13 +311,11 @@ fun RecConvert defth =
        val thm4 = PURE_REWRITE_RULE[NeqN'] thm3
        val thm5 = UNDISCH thm4
        val thm6 = CONV_RULE (RHS_CONV
-                   (RATOR_CONV(RAND_CONV Convert_CONV)) THENC
-                   (RAND_CONV(RAND_CONV(RAND_CONV Convert_CONV))) THENC
-                   (RAND_CONV(RAND_CONV
-                      (RATOR_CONV(RATOR_CONV(RAND_CONV Convert_CONV))))))
+                   (RAND_CONV Convert_CONV THENC
+                    RATOR_CONV(RAND_CONV Convert_CONV) THENC
+                    RATOR_CONV(RATOR_CONV(RAND_CONV Convert_CONV))))
                   thm5
-       val thm7 = PURE_ONCE_REWRITE_RULE [Seq_o] thm6
-    in thm7
+    in thm6
     end
   else if occurs_in func rt
    then (print "definition of: "; print_term func; 
@@ -346,11 +344,11 @@ fun toComb def =
 (* the returned value is in "A-Normal" form (uses lets).                     *)
 (*---------------------------------------------------------------------------*)
 
-fun nonRec_to_ANF thm =
+fun ANFof thm =
  let val thm1 = Q.AP_TERM `CPS` thm
-     val thm2 = SIMP_RULE bool_ss [CPS_SEQ_INTRO, CPS_PAR_INTRO,
+     val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,CPS_REC_INTRO,
                                    CPS_ITE_INTRO,CPS2_INTRO] thm1
-     val thm3 = SIMP_RULE bool_ss [CPS_SEQ_def, CPS_PAR_def, CPS_ITE_def] thm2
+     val thm3 = SIMP_RULE bool_ss [CPS_SEQ_def, CPS_PAR_def, CPS_ITE_def,CPS_REC_def] thm2
      val thm4 = SIMP_RULE bool_ss [UNCPS] thm3
      val thm5 = SIMP_RULE bool_ss [CPS_def, FUN_EQ_THM, CPS_TEST_def] thm4
      val thm6 = CONV_RULE (DEPTH_CONV ((HO_REWR_CONV MY_LET_RAND) ORELSEC
@@ -373,7 +371,7 @@ fun nonRec_to_ANF thm =
 (* replaced by CPS_REC. In order to get rid of CPS_REC, by rewriting with    *)
 (* CPS_REC_THM, something similar has to be done.                            *)
 (*---------------------------------------------------------------------------*)
-
+(*
 fun Rec_to_ANF thm =
  let val (f1,f2) = dest_seq (rhs (concl thm))
      val args = fst(dest_pabs f2)
@@ -408,7 +406,7 @@ fun Rec_to_ANF thm =
      val thm9 = PBETA_RULE thm8
  in thm9
  end;
-
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Given an environment and a possibly (tail) recursive definition, convert  *)
@@ -418,9 +416,7 @@ fun Rec_to_ANF thm =
 
 fun toANF env def = 
  let val (is_recursive,func,const_eq_comb) = toComb def
-     val anf = if is_recursive 
-                then Rec_to_ANF const_eq_comb
-                else nonRec_to_ANF const_eq_comb
+     val anf = ANFof const_eq_comb
  in 
    (func,(is_recursive,def,anf,const_eq_comb))::env
  end;
