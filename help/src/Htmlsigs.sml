@@ -315,7 +315,7 @@ fun printHTMLBase version bgcolor HOLpath pred header (sigfile, outfile) =
 	val os = TextIO.openOut outfile
 	fun out s = TextIO.output(os, s)
 	fun href anchor target =
-	    app out ["<A HREF=\"file://", target, "\">", anchor, "</A>"]
+	    app out ["<A HREF=\"", target, "\">", anchor, "</A>"]
 	fun idhref file line anchor =
 	    href anchor (concat [file, ".html#line", Int.toString line])
 	fun strhref file anchor =
