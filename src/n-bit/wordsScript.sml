@@ -12,7 +12,7 @@
 
 open HolKernel Parse boolLib bossLib;
 open Q arithmeticTheory pred_setTheory;
-open bitTheory sum_numTheory fcpTheory numeral_bitTheory;
+open bitTheory sum_numTheory fcpTheory;
 
 val _ = new_theory "words";
 
@@ -241,8 +241,8 @@ val _ = overload_on (">=", Term`word_ge`);
 (*  Theorems                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val DIMINDEX_GT_0 =
-  PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``!s. 0 < dimindex s``;
+val DIMINDEX_GT_0 = save_thm("DIMINDEX_GT_0",
+  PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``!s. 0 < dimindex s``);
 
 val DIMINDEX_LT =
   (GEN_ALL o CONJUNCT2 o SPEC_ALL o SIMP_RULE std_ss [DIMINDEX_GT_0] o
@@ -250,6 +250,10 @@ val DIMINDEX_LT =
 
 val EXISTS_HB = save_thm("EXISTS_HB",
   PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``);
+
+val MOD_DIMINDEX = store_thm("MOD_DIMINDEX",
+  `!n. n MOD 2 ** ^WL = BITS (^WL - 1) 0 n`,
+  STRIP_ASSUME_TAC EXISTS_HB \\ ASM_SIMP_TAC arith_ss [BITS_ZERO3]);
 
 val SUB1_SUC = DECIDE (Term `!n. 0 < n ==> (SUC (n - 1) = n)`);
 val SUB_SUC1 = DECIDE (Term `!n. ~(n = 0) ==> (SUC (n - 1) = n)`);
@@ -581,6 +585,28 @@ val word_modify_n2w = store_thm("word_modify_n2w",
          (n2w (BIT_MODIFY ^WL f n)):bool ** 'a`,
   FIELD_WORD_TAC \\ ASM_SIMP_TAC arith_ss [BIT_MODIFY_THM]);
 
+val w2n_w2w = store_thm("w2n_w2w",
+  `!w:bool ** 'a. w2n ((w2w w):bool ** 'b) =
+      if ^WL <= dimindex (UNIV:'b->bool) then
+        w2n w
+      else
+        w2n ((dimindex (UNIV:'b->bool) - 1 -- 0) w)`,
+  Cases_word
+    \\ STRIP_ASSUME_TAC EXISTS_HB
+    \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> beta] EXISTS_HB)
+    \\ ASM_SIMP_TAC arith_ss [BITS_COMP_THM2,w2w_def,word_bits_n2w,
+          REWRITE_RULE [MOD_DIMINDEX] w2n_n2w]
+    \\ RW_TAC arith_ss [MIN_DEF]
+    \\ `m' = m` by DECIDE_TAC \\ ASM_REWRITE_TAC []);
+
+val w2w_n2w = store_thm("w2w_n2w",
+  `!n. w2w ((n2w n):bool ** 'a):bool ** 'b =
+         if dimindex (UNIV:'b->bool) <= ^WL then
+           n2w n
+         else
+           n2w (BITS (^WL - 1) 0 n)`,
+  RW_TAC arith_ss [MIN_DEF,MOD_DIMINDEX,BITS_COMP_THM2,w2n_n2w,w2w_def,n2w_11]);
+
 val WORD_EQ = store_thm("WORD_EQ",
   `!v:bool ** 'a w. (!x. x < ^WL ==> (word_bit x v = word_bit x w)) = (v = w)`,
   REPEAT Cases_word \\ FIELD_WORD_TAC);
@@ -660,6 +686,14 @@ val WORD_SLICE_COMP_THM = store_thm("WORD_SLICE_COMP_THM",
       ((h <> l) w):bool ** 'a)`,
   FIELD_WORD_TAC \\ `i <= m \/ m + 1 <= i` by DECIDE_TAC
     \\ ASM_SIMP_TAC arith_ss []);
+
+val word_extract = (GSYM o SIMP_RULE std_ss [] o
+  REWRITE_RULE [FUN_EQ_THM]) word_extract_def;
+
+val WORD_EXTRACT_BITS_COMP = save_thm("WORD_EXTRACT_BITS_COMP",
+ (SIMP_RULE std_ss [word_extract] o
+  SIMP_CONV std_ss [word_extract_def,WORD_BITS_COMP_THM])
+  ``(j >< k) ((h -- l) n)``);
 
 val WORD_SLICE_OVER_BITWISE = store_thm("WORD_SLICE_OVER_BITWISE",
   `(!h l v:bool ** 'a w:bool ** 'a.

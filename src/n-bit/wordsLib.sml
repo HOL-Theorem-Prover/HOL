@@ -8,7 +8,6 @@ struct
 open HolKernel Parse boolLib bossLib computeLib;
 open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
 
-
 (* ------------------------------------------------------------------------- *)
 
 fun is_fcp_thm s =
