@@ -1,26 +1,17 @@
-(*****************************************************************************)
-(* FILE          : gen_arith.sml                                             *)
-(* DESCRIPTION   : Generalised arithmetic proof procedure.                   *)
-(*                                                                           *)
-(* READS FILES   : <none>                                                    *)
-(* WRITES FILES  : <none>                                                    *)
-(*                                                                           *)
-(* AUTHOR        : R.J.Boulton, University of Cambridge                      *)
-(* DATE          : 30th January 1992                                         *)
-(*                                                                           *)
-(* TRANSLATOR    : R.J.Boulton, University of Cambridge                      *)
-(* DATE          : 16th February 1993                                        *)
-(*                                                                           *)
-(* LAST MODIFIED : R.J.Boulton                                               *)
-(* DATE          : 16th November 1995                                        *)
-(*****************************************************************************)
+(* ----------------------------------------------------------------------
+    FILE          : gen_arith.sml
+    DESCRIPTION   : Generalised arithmetic proof procedure.
+
+    AUTHOR        : R.J.Boulton, University of Cambridge
+    DATE          : 30th January 1992
+   ---------------------------------------------------------------------- *)
 
 structure Gen_arith :> Gen_arith =
 struct
 
 open Arbint HolKernel boolLib Rsyntax
-     Arith_cons Solve Exists_arith 
-     Sub_and_cond Prenex Instance RJBConv; 
+     Arith_cons Solve Exists_arith
+     Sub_and_cond Prenex Instance RJBConv;
 
 infix THENC;
 
@@ -119,6 +110,39 @@ val num_ty = Arith_cons.num_ty
 fun is_num_var tm = is_var tm andalso type_of tm = num_ty
 val is_presburger = (all is_num_var) o non_presburger_subterms;
 
+
+(* ----------------------------------------------------------------------
+    EXPAND_NORM_MULTS_CONV : term -> thm
+
+    expands multiplications over additions (e.g., x * (y + z) becomes
+    x * y + x * z), and then normalises multiplications so that
+    non-numeral multiplicands always appear in the same order, and
+    grouped together, possibly with an isolated numeral coefficient.
+   ---------------------------------------------------------------------- *)
+
+fun EXPAND_NORM_MULTS_CONV tm = let
+  open arithmeticTheory numSyntax Psyntax
+  fun norm_mult t = let
+    val ms = strip_mult t
+    val _ = Int.>(length ms, 1) orelse failwith "not a mult"
+    val (nums, others) = partition is_numeral ms
+    val sorted_others = Listsort.sort Term.compare others
+    val AC = EQT_ELIM o AC_CONV(MULT_ASSOC, MULT_COMM)
+  in
+    if null others then reduceLib.REDUCE_CONV
+    else if null nums then
+      K (AC (mk_eq(t, list_mk_mult sorted_others)))
+    else
+      K (AC (mk_eq(t, mk_mult(list_mk_mult nums,
+                              list_mk_mult sorted_others)))) THENC
+      LAND_CONV reduceLib.REDUCE_CONV
+  end t
+in
+  PURE_REWRITE_CONV [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB] THENC
+  ONCE_DEPTH_CONV norm_mult
+end tm
+
+
 (*---------------------------------------------------------------------------*)
 (* ARITH_CONV : conv                                                         *)
 (*                                                                           *)
@@ -140,15 +164,17 @@ val is_presburger = (all is_num_var) o non_presburger_subterms;
 (* specified above, but there is some incompleteness.                        *)
 (*---------------------------------------------------------------------------*)
 
+
 val ARITH_CONV =
  let val BOOL_SIMP_CONV = REWRITE_CONV []
      fun GEN_ARITH_CONV tm =
        (if is_exists tm
        then EXISTS_ARITH_CONV tm
-       else INSTANCE_T_CONV non_presburger_subterms FORALL_ARITH_CONV tm)
+       else (EXPAND_NORM_MULTS_CONV THENC
+             INSTANCE_T_CONV non_presburger_subterms FORALL_ARITH_CONV) tm)
        handle e => raise (wrap_exn "Gen_arith" "ARITH_CONV" e)
- in 
-   SUB_AND_COND_ELIM_CONV THENC BOOL_SIMP_CONV THENC 
+ in
+   SUB_AND_COND_ELIM_CONV THENC BOOL_SIMP_CONV THENC
    (fn tm => if (is_T tm) orelse (is_F tm) then ALL_CONV tm
              else (PRENEX_CONV THENC GEN_ARITH_CONV) tm)
  end;
