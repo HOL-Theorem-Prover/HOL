@@ -263,6 +263,8 @@ val GCD_EFFICIENTLY = store_thm(
   SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
   CONV_TAC (RAND_CONV (REWR_CONV GCD_SYM)) THEN REWRITE_TAC []);
 
+val _ = computeLib.add_persistent_funs [("GCD_EFFICIENTLY",GCD_EFFICIENTLY)];
+
 val _ = export_theory();
 
 end;
