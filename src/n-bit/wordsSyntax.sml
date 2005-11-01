@@ -307,10 +307,9 @@ val dest_word_bit =
   dest_binop word_bit_tm (ERR "dest_word_bit" "");
 
 fun dest_word_extract tm =
- let val (app,ty) = with_exn dest_comb tm (ERR "dest_word_extract" "")
-   val (n1,n2,w) = dest_triop word_extract_tm (ERR "dest_word_extract" "") app
+ let val (n1,n2,w) = dest_triop word_extract_tm (ERR "dest_word_extract" "") tm
  in 
-   (n1,n2,w,ty)
+   (n1,n2,w,dim_of tm)
  end
 
 val dest_word_lsl = 
@@ -355,11 +354,11 @@ val dest_word_1comp =
 val dest_word_2comp = 
   dest_monop word_2comp_tm (ERR "dest_word_2comp" "");
 
-val dest_w2w = 
-  dest_monop w2w_tm (ERR "dest_w2w" "");
+fun dest_w2w M = 
+  (dest_monop w2w_tm (ERR "dest_w2w" "") M, dim_of M);
 
-val dest_n2w = 
-  dest_monop n2w_tm (ERR "dest_n2w" "");
+fun dest_n2w M = 
+  (dest_monop n2w_tm (ERR "dest_n2w" "") M, dim_of M);
 
 val dest_w2n = 
   dest_monop w2n_tm (ERR "dest_w2n" "");
