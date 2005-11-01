@@ -152,6 +152,7 @@ fun set_skip compset c opt =
  end
  handle HOL_ERR _ => raise ERR "set_skip" "";
 
+
 (*---------------------------------------------------------------------------
        Support for a global compset.
  ---------------------------------------------------------------------------*)
@@ -175,6 +176,9 @@ val the_compset = bool_compset();
 
 val add_funs = Lib.C add_thms the_compset;
 val add_convs = List.app (Lib.C add_conv the_compset);
+
+val del_consts = List.app (scrub_const the_compset);
+val del_funs = Lib.C scrub_thms the_compset;
 
 val EVAL_CONV = CBV_CONV the_compset;
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
@@ -232,6 +236,36 @@ fun add_persistent_funs [] = ()
               pr_list_to_ppstream ppstrm
                  PP.add_string (C PP.add_string ",")
                  (C PP.add_break (0,0)) names;
+              PP.end_block ppstrm;
+              PP.add_string ppstrm "];";
+              PP.add_break ppstrm (2,0);
+              PP.end_block ppstrm))}
+     end
+
+(*---------------------------------------------------------------------------*)
+(* Once we delete a constant from a compset, we will probably want to make   *)
+(* sure that the constant doesn't get re-added when the theory is exported   *)
+(*---------------------------------------------------------------------------*)
+
+fun del_persistent_consts [] = ()
+  | del_persistent_consts clist =
+     let open Portable
+         val plist = map (fn c => let val {Name,Thy,Ty} = dest_thy_const c
+                                  in (Name,Thy) end) clist
+         val plist' = map (Lib.mlquote##Lib.mlquote) plist 
+         fun prec (s1,s2) = "Term.prim_mk_const{Name = "^s1^", Thy = "^s2^"}"
+         val plist'' = map prec plist'
+     in
+       del_consts clist
+       ; Theory.adjoin_to_theory
+          {sig_ps = NONE,
+           struct_ps = SOME(fn ppstrm =>
+             (PP.begin_block ppstrm CONSISTENT 0;
+              PP.add_string ppstrm "val _ = computeLib.del_consts [";
+              PP.begin_block ppstrm INCONSISTENT 0;
+              pr_list_to_ppstream ppstrm
+                 PP.add_string (C PP.add_string ",")
+                 (C PP.add_break (0,0)) plist'';
               PP.end_block ppstrm;
               PP.add_string ppstrm "];";
               PP.add_break ppstrm (2,0);

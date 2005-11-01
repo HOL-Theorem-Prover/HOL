@@ -184,6 +184,10 @@ fun set_skip (rws as RWS htbl) p sk =
   in rl := (db,sk)
   end;
 
+fun scrub_const (RWS htbl) c = 
+  let val {Thy,Name,Ty} = dest_thy_const c
+  in Polyhash.remove htbl (Name,Thy) ; ()
+  end;
 
 fun from_term (rws,env,t) =
   let fun down (env,t,c) =
@@ -264,6 +268,14 @@ fun from_list lthm =
   in add_thms lthm rws
    ; rws
   end;
+
+fun scrub_thms lthm rws =
+ let val tmlist = map (concl o hd o BODY_CONJUNCTS) lthm
+     val clist = map (fst o strip_comb o lhs o snd o strip_forall) tmlist
+ in List.app (scrub_const rws) clist
+ end
+ handle e => raise wrap_exn "clauses" "del_list" e;
+
 
 end
 
