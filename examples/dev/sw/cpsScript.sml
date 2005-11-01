@@ -144,6 +144,7 @@ val CPS_ITE_INTRO = Q.store_thm
  RW_TAC std_ss [CPS_def, Ite_def, CPS_ITE_def, FUN_EQ_THM, COND_RAND, LET_THM])
 
 
+(*
 (*---------------------------------------------------------------------------*)
 (* Recursion. We want                                                        *)
 (*                                                                           *)
@@ -283,6 +284,7 @@ val CPS_REC_INTRO = Q.store_thm
   THEN POP_ASSUM (fn x => ONCE_REWRITE_TAC [x]) 
   THEN RW_TAC std_ss [] 
   THEN FULL_SIMP_TAC std_ss [CPS_def, CPS2_def]);
+*)
 
 val CPS_REC_def = Define
 `CPS_REC e f g = \k arg. k (Rec (e (\x.x)) (f (\x.x)) (g (\x.x)) arg)` 
@@ -294,9 +296,7 @@ val CPS_REC_INTRO = Q.store_thm
  METIS_TAC [])
 
 (*---------------------------------------------------------------------------*)
-(* Support for translation into combinator form. Slightly awkward because    *)
-(* of types. We project out the final answer with f2 after the iteration     *)
-(* finishes, instead of in the last step, which is a trivial difference.     *)
+(* Support for translation into combinator form.                             *)
 (*---------------------------------------------------------------------------*)
 
 val Rec_INTRO = store_thm

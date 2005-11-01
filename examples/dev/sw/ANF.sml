@@ -343,8 +343,8 @@ fun toComb def =
 (* function, and returns the CPS-ed version of <combinator-form>. Actually,  *)
 (* the returned value is in "A-Normal" form (uses lets).                     *)
 (*---------------------------------------------------------------------------*)
-val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
+val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
 fun ANFof thm =
  let val thm1 = Q.AP_TERM `CPS` thm
