@@ -539,6 +539,10 @@ val w2w_w2w = store_thm("w2w_w2w",
     \\ PROVE_TAC [DECIDE ``0 < n /\ ~(i < n) ==> ~(i <= n - 1)``,
          DIMINDEX_GT_0]);
 
+val word_bit = store_thm("word_bit",
+  `!w:bool ** 'a b.  b < dimindex (UNIV:'a->bool) ==>
+     (w %% b = word_bit b w)`, RW_TAC arith_ss [word_bit_def]);
+
 val word_slice_n2w = store_thm("word_slice_n2w",
   `!h l n. (h <> l) (n2w n):bool ** 'a =
              (n2w (SLICE (MIN h ^HB) l n)):bool ** 'a`,
@@ -556,6 +560,14 @@ val word_bit_n2w = store_thm("word_bit_n2w",
   FIELD_WORD_TAC \\ Cases_on `b <= ^HB`
     \\ ASM_SIMP_TAC fcp_ss [DIMINDEX_GT_0,
          DECIDE ``0 < b /\ a <= b - 1 ==> a < b:num``]);
+
+val word_index_n2w = store_thm("word_index_n2w",
+  `!n. (n2w n):bool ** 'a %% i =
+      if i < dimindex (UNIV:'a->bool) then
+        BIT i n
+      else
+        (n2w n):bool ** 'a %% i`,
+  RW_TAC arith_ss [word_bit,word_bit_n2w]);
 
 val MIN_lem = prove(
  `(!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m`,
