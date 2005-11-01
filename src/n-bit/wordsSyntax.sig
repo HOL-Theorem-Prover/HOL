@@ -111,7 +111,7 @@ sig
   val dest_word_slice : term -> term * term * term
   val dest_word_bits : term -> term * term * term
   val dest_word_bit  : term -> term * term
-  val dest_word_extract : term -> term * term * term * term
+  val dest_word_extract : term -> term * term * term * hol_type
   val dest_word_lsl  : term -> term * term
   val dest_word_lsr  : term -> term * term
   val dest_word_asr  : term -> term * term
@@ -126,8 +126,8 @@ sig
   val dest_word_or   : term -> term * term
   val dest_word_1comp : term -> term
   val dest_word_2comp : term -> term
-  val dest_w2w       : term -> term
-  val dest_n2w       : term -> term
+  val dest_w2w       : term -> term * hol_type
+  val dest_n2w       : term -> term * hol_type
   val dest_w2n       : term -> term
   val dest_sw2sw     : term -> term
 
