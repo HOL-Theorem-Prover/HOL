@@ -113,7 +113,7 @@ val CPS_PAR_INTRO = Q.store_thm
 (*---------------------------------------------------------------------------*)
 (* CPSing if-then-else                                                       *)
 (*---------------------------------------------------------------------------*)
-
+(*
 val CPS_ITE_def = 
   Define
    `CPS_ITE e f g = \k arg. let k2 = k in e (\ret. f k2 arg) (\ret. g k2 arg) arg`;
@@ -132,6 +132,17 @@ val CPS2_INTRO = Q.store_thm
 ("CPS2_INTRO",
  `!f. CPS2 f = CPS_TEST (CPS f)`,
  RW_TAC std_ss [CPS_def, CPS2_def, CPS_TEST_def, FUN_EQ_THM]);
+*)
+
+val CPS_ITE_def = 
+  Define
+   `CPS_ITE e f g = \k arg. e (\ret. let k2 = k in if ret then f k2 arg else g k2 arg) arg`;
+
+val CPS_ITE_INTRO = Q.store_thm
+("CPS_ITE_INTRO",
+ `!e f g.  CPS (Ite e f g) = CPS_ITE (CPS e) (CPS f) (CPS g)`,
+ RW_TAC std_ss [CPS_def, Ite_def, CPS_ITE_def, FUN_EQ_THM, COND_RAND, LET_THM])
+
 
 (*---------------------------------------------------------------------------*)
 (* Recursion. We want                                                        *)

@@ -343,23 +343,29 @@ fun toComb def =
 (* function, and returns the CPS-ed version of <combinator-form>. Actually,  *)
 (* the returned value is in "A-Normal" form (uses lets).                     *)
 (*---------------------------------------------------------------------------*)
+val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
+
 
 fun ANFof thm =
  let val thm1 = Q.AP_TERM `CPS` thm
      val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,CPS_REC_INTRO,
-                                   CPS_ITE_INTRO,CPS2_INTRO] thm1
-     val thm3 = SIMP_RULE bool_ss [CPS_SEQ_def, CPS_PAR_def, CPS_ITE_def,CPS_REC_def] thm2
-     val thm4 = SIMP_RULE bool_ss [UNCPS] thm3
-     val thm5 = SIMP_RULE bool_ss [CPS_def, FUN_EQ_THM, CPS_TEST_def] thm4
-     val thm6 = CONV_RULE (DEPTH_CONV ((HO_REWR_CONV MY_LET_RAND) ORELSEC
-                          (HO_REWR_CONV (GSYM COND_RAND)) ORELSEC
-                          (HO_REWR_CONV UNLET))) thm5
-     val x = mk_var("x",fst (dom_rng (type_of 
-                         (fst (dest_forall (concl thm6))))))
-     val thm7 = ISPEC (mk_abs(x,x)) thm6
-     val thm8 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm7
-     val thm9 = PBETA_RULE thm8
- in thm9
+                                   CPS_ITE_INTRO] thm1
+     val thm3 = CONV_RULE (DEPTH_CONV (REWR_CONV CPS_SEQ_def ORELSEC
+                                       REWR_CONV CPS_PAR_def ORELSEC
+                                       REWR_CONV CPS_ITE_def ORELSEC
+                                       REWR_CONV CPS_REC_def)) thm2 
+     val thm4 = CONV_RULE (DEPTH_CONV (REWR_CONV UNCPS)) thm3
+     val thm5 = CONV_RULE (LAND_CONV (REWR_CONV CPS_def)) thm4
+     val thm6 = CONV_RULE (REPEATC (STRIP_QUANT_CONV (HO_REWR_CONV FUN_EQ_THM)))
+                          thm5
+     val thm7 = BETA_RULE thm6
+     val thm8 = BETA_RULE thm7
+     val thm9 = Q.ISPEC `\x:^(ty_antiq (fst (dom_rng (type_of (fst (dest_forall (concl thm8))))))).x` thm8
+     val thm10 = SIMP_RULE bool_ss [LET_ID] thm9
+     (* Generating thm11 takes about half the time on TEA's Round function *)
+     val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10
+     val thm12 = PBETA_RULE thm11
+ in thm12
  end;
 
 (*---------------------------------------------------------------------------*)
