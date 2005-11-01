@@ -10,7 +10,7 @@ let
   fun dotload f = (print dotchar; load f)
 in
   print prelude;
-  print "[loading HOL power tools ";
+  print "[loading theories and proof tools ";
   app dotload ["optionTheory", "pairLib", "sumTheory",
                "numTheory", "arithmeticTheory", "Arith",
                "numLib", "mesonLib", "BasicProvers",
