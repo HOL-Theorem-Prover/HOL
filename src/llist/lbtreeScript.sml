@@ -740,21 +740,23 @@ val mmindex_EXISTS = store_thm(
     FULL_SIMP_TAC (srw_ss()) [] THEN
     METIS_TAC [],
     SIMP_TAC (srw_ss()) [] THEN Q.UNABBREV_TAC `Inds`  THEN
-    SRW_TAC [][] THEN
-    Cases_on `f (EL i' l)` THEN SRW_TAC [][] THENL [
+    ASM_SIMP_TAC (srw_ss()) [] THEN Q.X_GEN_TAC `n` THEN
+    STRIP_TAC THEN Q.X_GEN_TAC `i` THEN STRIP_TAC THEN
+    Cases_on `f (EL i l)` THEN SRW_TAC [][] THENL [
       `P x` by (SRW_TAC [][Abbr`P`] THEN METIS_TAC []) THEN
       Q.UNABBREV_TAC `min_d` THEN LEAST_ELIM_TAC THEN
       SRW_TAC [][] THEN1 METIS_TAC [] THEN
       METIS_TAC [DECIDE ``x <= y = ~(y < x)``],
       `P x` by (SRW_TAC [][Abbr`P`] THEN METIS_TAC []) THEN
       Q.UNABBREV_TAC `min_d` THEN LEAST_ELIM_TAC THEN
-      SRW_TAC [][] THEN1 METIS_TAC [] THEN
-      `(LEAST x. P x) = n'`
+      CONJ_TAC THEN1 METIS_TAC [] THEN
+      Q.X_GEN_TAC `m` THEN STRIP_TAC THEN
+      `(LEAST x. P x) = m`
          by (LEAST_ELIM_TAC THEN SRW_TAC [][] THEN1 METIS_TAC [] THEN
              METIS_TAC [DECIDE ``(x = y) = ~(x < y) /\ ~(y < x)``]) THEN
       POP_ASSUM SUBST_ALL_TAC THEN
-      `n' <= x` by METIS_TAC [DECIDE ``~(x < y) = y <= x``] THEN
-      Q_TAC SUFF_TAC `~(n' = x)` THEN1 DECIDE_TAC THEN
+      `m <= x` by METIS_TAC [DECIDE ``~(x < y) = y <= x``] THEN
+      Q_TAC SUFF_TAC `~(m = x)` THEN1 DECIDE_TAC THEN
       METIS_TAC []
     ]
   ]);
