@@ -5,7 +5,7 @@ let
   val (prelude, dotchar) =
       if terminfo <> "emacs" andalso terminfo <> "dumb"
       then
-        ("                          ____________ ]\r", "*")
+        ("                                   ____________ ]\r", "*")
       else ("", ".")
   fun dotload f = (print dotchar; load f)
 in
