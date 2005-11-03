@@ -27,7 +27,7 @@ in
   else die "FAILED!\n"
 end
 
-val _ = pr "Testing Alexey Gottsman's arith d.p. problem ... "
+val _ = pr "Testing Alexey Gotsman's arith d.p. problem ... "
 val _ = let
   val t =
    ``(e*bv_c+e*(2*bv_cout+wb_sum)+wbs_sum =
