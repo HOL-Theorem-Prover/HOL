@@ -187,14 +187,14 @@ val ARITH_TAC   = CONV_TAC ARITH_CONV;
 (* bounded quantifications.                                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun BOUNDED_FORALL_CONV cnv M = 
+fun BOUNDED_FORALL_CONV cnv M =
  let open reduceLib arithmeticTheory
      val c = snd(dest_less(fst(dest_imp(snd(dest_forall M)))))
-     val thm = MP (SPEC c BOUNDED_FORALL_THM) 
+     val thm = MP (SPEC c BOUNDED_FORALL_THM)
                   (EQT_ELIM(REDUCE_CONV (mk_less(zero_tm,c))))
- in 
+ in
    (HO_REWR_CONV thm THENC LAND_CONV cnv THENC REDUCE_CONV) M
- end 
+ end
  handle e => raise wrap_exn "numLib" "BOUNDED_FORALL_CONV" e;
 
 
@@ -208,16 +208,50 @@ fun BOUNDED_FORALL_CONV cnv M =
 (* bounded quantifications.                                                  *)
 (*---------------------------------------------------------------------------*)
 
-fun BOUNDED_EXISTS_CONV cnv M = 
+fun BOUNDED_EXISTS_CONV cnv M =
  let open reduceLib arithmeticTheory
      val c = snd(dest_less(fst(dest_conj(snd(dest_exists M)))))
-     val thm = MP (SPEC c BOUNDED_EXISTS_THM) 
+     val thm = MP (SPEC c BOUNDED_EXISTS_THM)
                   (EQT_ELIM(REDUCE_CONV (mk_less(zero_tm,c))))
- in 
+ in
    (HO_REWR_CONV thm THENC LAND_CONV cnv THENC REDUCE_CONV) M
- end 
+ end
  handle e => raise wrap_exn "numLib" "BOUNDED_EXISTS_CONV" e;
 
+(* ----------------------------------------------------------------------
+    LEAST_ELIM_TAC : tactic
+
+    Turns
+
+       A ?- Q ($LEAST P)
+
+    (where P is free) into
+
+       A ?- (?n. P n) /\ (!n. (!m. m < n ==> ~P m) /\ P n ==> Q n)
+
+    Picks an arbitrary LEAST-subterm if there are multiple such.
+   ---------------------------------------------------------------------- *)
+
+fun LEAST_ELIM_TAC (asl, w) = let
+  val least_terms = find_terms numSyntax.is_least w
+  val tbc = TRY_CONV BETA_CONV
+  fun doit t =
+    if free_in t w then
+      CONV_TAC (UNBETA_CONV t) THEN
+      MATCH_MP_TAC whileTheory.LEAST_ELIM THEN
+      CONV_TAC
+        (FORK_CONV
+           (BINDER_CONV tbc, (* ?n. P n *)
+            BINDER_CONV      (* !n. (!m. m < n ==> ~P m) /\ P n ==> Q n *)
+              (FORK_CONV
+                 (FORK_CONV
+                    (BINDER_CONV (RAND_CONV (RAND_CONV tbc)), (* !m.... *)
+                     tbc), (* P n *)
+                    tbc))))
+    else NO_TAC
+in
+  FIRST (map doit least_terms)
+end (asl, w)
 
 (*---------------------------------------------------------------------------
     Simplification set for numbers (and booleans).

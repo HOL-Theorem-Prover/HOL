@@ -15,6 +15,7 @@ sig
  val SUC_TO_NUMERAL_DEFN_CONV : conv
  val num_CONV                 : conv
  val INDUCT_TAC               : tactic
+ val LEAST_ELIM_TAC           : tactic
 
  val REDUCE_CONV              : conv
  val REDUCE_RULE              : thm -> thm
