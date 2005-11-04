@@ -659,13 +659,10 @@ val SCC_FOLD_STEP = save_thm("SCC_FOLD_STEP",prove(``!f g pf R s sh k n.
 REPEAT STRIP_TAC
 THEN FULL_SIMP_TAC std_ss [SET_SPEC,IN_DEF]
 THEN EQ_TAC THEN DISCH_TAC THEN (TRY CONJ_TAC) THEN (TRY (Induct_on `j`)) THEN RW_TAC std_ss [] THENL [
- PAT_ASSUM ``!j. t`` (fn t => ASSUME_TAC (SPEC ``0`` t)) THEN FULL_SIMP_TAC arith_ss [],
  Cases_on `j=n`
  THEN FULL_SIMP_TAC arith_ss [],
- PAT_ASSUM ``!j. t`` (fn t => ASSUME_TAC (SPEC ``0`` t)) THEN FULL_SIMP_TAC arith_ss [],
  Cases_on `j=n`
- THEN FULL_SIMP_TAC arith_ss [],
- PAT_ASSUM ``!j. t`` (fn t => ASSUME_TAC (SPEC ``SUC n`` t)) THEN FULL_SIMP_TAC arith_ss []
+ THEN FULL_SIMP_TAC arith_ss []
 ]));
 
 val SCC_INNER_FOLD_BASE1 = save_thm("SCC_INNER_FOLD_BASE1",prove(``!R j f pf s. SCC (R 0) (f 0 j) (pf 0 s) = s IN {s | !i. i<=0 ==> SCC (R i) (f i j) (pf i s)}``,
@@ -690,12 +687,9 @@ val SCC_INNER_FOLD_STEP = save_thm("SCC_INNER_FOLD_STEP",prove(``!f pf R s sh j 
 REPEAT STRIP_TAC
 THEN FULL_SIMP_TAC std_ss [SET_SPEC,IN_DEF]
 THEN EQ_TAC THEN DISCH_TAC THEN (TRY CONJ_TAC) THEN (TRY (Induct_on `i`)) THEN RW_TAC std_ss [] THENL [
- PAT_ASSUM ``!i. t`` (fn t => ASSUME_TAC (SPEC ``0`` t)) THEN FULL_SIMP_TAC arith_ss [],
  Cases_on `i=n`
  THEN FULL_SIMP_TAC arith_ss []
  THEN PAT_ASSUM ``!i. t`` (fn t => ASSUME_TAC (SPEC ``SUC i`` t)) THEN FULL_SIMP_TAC arith_ss [],
- PAT_ASSUM ``!i. t`` (fn t => ASSUME_TAC (SPEC ``0`` t)) THEN FULL_SIMP_TAC arith_ss [],
- PAT_ASSUM ``!i. t`` (fn t => ASSUME_TAC (SPEC ``SUC i`` t)) THEN FULL_SIMP_TAC arith_ss [],
  FULL_SIMP_TAC arith_ss []
 ]));
 
@@ -705,20 +699,11 @@ val SCC_REL = save_thm("SCC_REL",prove(``!R s si. R_EQR R ==> (s IN SCC R si = R
 val SCC_REL_IMP = save_thm("SCC_REL_IMP",prove(``!R s1 s2 si. R_EQR R ==> (s1 IN SCC R si /\ s2 IN SCC R si) ==> R(s1,s2)``,
 PROVE_TAC [SCC_REL,R_EQR_def,R_SYM_def,R_TRANS_def]));
 
-val BIGOR_OVER_AND = save_thm("BIGOR_OVER_AND",prove(``!P Q k. (?i. i<=k /\ P i) /\ (?i. i<=k /\ Q i)
-						     =  ?i j. i<=k /\ j<=k /\ (P i /\ Q j)``,
-RW_TAC std_ss []
-THEN EQ_TAC THENL
-[
- RW_TAC std_ss []
- THEN MAP_EVERY Q.EXISTS_TAC [`i`,`i'`]
- THEN FULL_SIMP_TAC arith_ss [],
- RW_TAC std_ss [] THENL
- [
-  Q.EXISTS_TAC `i` THEN FULL_SIMP_TAC arith_ss [],
-  Q.EXISTS_TAC `j` THEN FULL_SIMP_TAC arith_ss []
- ]
-]));
+val BIGOR_OVER_AND = store_thm(
+  "BIGOR_OVER_AND",
+  ``!P Q k. (?i. i<=k /\ P i) /\ (?i. i<=k /\ Q i)
+         =  ?i j. i<=k /\ j<=k /\ (P i /\ Q j)``,
+  PROVE_TAC []);
 
 val abst_lem1 = save_thm("abst_lem1",prove(``!f sh k i j. ((!i. i<=k /\ f i sh ==> !j. j<=k /\ f j sh ==> (i=j)) ==> i<=k /\ j<=k /\ f i sh /\ f j sh ==> (i=j))``,
 REPEAT STRIP_TAC THEN RES_TAC));

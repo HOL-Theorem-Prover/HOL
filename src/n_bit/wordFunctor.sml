@@ -221,7 +221,7 @@ val MULT_CLAUSES_QT = prove(
 
 (* -------------------------------------------------------- *)
 
-val MSBn_def     = Def "MSBn_def" 
+val MSBn_def     = Def "MSBn_def"
                        `MSBn = BIT HB`;
 val ONE_COMP_def = Def "ONE_COMP_def"
                        `ONE_COMP x = 2 EXP WL - 1 - MOD_WL x`;
@@ -1613,7 +1613,8 @@ val WORD_BIT_ROR = store_thm("WORD_BIT_ROR",
         THEN SIMP_TAC std_ss [BITS_DIV_THM]
         THEN SIMP_TAC std_ss [(GSYM o ONCE_REWRITE_RULE [ADD_COMM] o REWRITE_RULE [MIN_IDEM] o
                SPECL [`p + (WL - n MOD WL)`,`WL - n MOD WL`,`p`,`p`]) BITS_COMP_THM2]
-        THEN SIMP_TAC std_ss [DECIDE (Term `(x:num) <= x + p`),BITS_ZERO4]
+        THEN SIMP_TAC bool_ss [DECIDE (Term `(x:num) <= x + p`),BITS_ZERO4]
+        THEN SIMP_TAC std_ss []
         THEN `p <= n MOD WL - 1` by DECIDE_TAC
         THEN ASM_SIMP_TAC std_ss [ADD_0,BITS_COMP_THM2,DECIDE (Term `(a:num) + b - a = b`),MIN_IDEM,lem6]
         THEN `p < WL` by DECIDE_TAC THEN STRIP_ASSUME_TAC (SPEC `n` lem5)
@@ -2791,7 +2792,7 @@ val _ =
      val TOPstr = term_to_string (rhs(concl TOPNUM_THMa))
      val MAXstr = term_to_string (rhs(concl MAXNUM_THMa))
      val deNUMERAL = PURE_REWRITE_RULE[NUMERAL_DEF]
- in exportML MLpath 
+ in exportML MLpath
    (wordn,
     OPEN ["num", "bits", "numeral_bits"]
     :: EQDATATYPE ([],ParseDatatype.parse [QUOTE (wordn^" = n2w of num")])

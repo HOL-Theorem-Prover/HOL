@@ -759,7 +759,7 @@ val encode_then_decode_blist = store_thm
    ++ CONJ_TAC >> PROVE_TAC [wf_encode_blist, wf_dec2enc, wf_enc2dec]
    ++ RW_TAC std_ss [APPEND_11]
    ++ POP_ASSUM (K ALL_TAC)
-   ++ POP_ASSUM MP_TAC 
+   ++ POP_ASSUM MP_TAC
    ++ Q.SPEC_TAC (`l`, `l`)
    ++ Induct_on `m`
    ++ RW_TAC std_ss [lift_blist_def, encode_blist_def, APPEND_11]
@@ -989,7 +989,7 @@ val dec_bnum_lt = store_thm
    ++ REPEAT GEN_TAC
    ++ SIMP_TAC arith_ss [dec_bnum_def]
    ++ REPEAT CASE_TAC
-   ++ RW_TAC std_ss [GSYM EXP2_LT]
+   ++ RW_TAC bool_ss [GSYM EXP2_LT]
    ++ ONCE_REWRITE_TAC [MULT_COMM]
    ++ SIMP_TAC arith_ss [DIV_MULT]
    ++ PROVE_TAC []);
@@ -1211,13 +1211,13 @@ val decode_tree = store_thm
      RW_TAC std_ss
      [decode_tree_def, dec2enc_enc2dec, wf_dec2enc, wf_encode_tree]]]);
 
-val _ = computeLib.add_persistent_funs 
-         [("decode_unit",decode_unit), 
-          ("decode_bool",decode_bool), 
+val _ = computeLib.add_persistent_funs
+         [("decode_unit",decode_unit),
+          ("decode_bool",decode_bool),
           ("decode_num",decode_num)];
 
-(* decode_prod, decode_sum, decode_option, decode_list, decode_blist, 
-   decode_bnum, and decode_tree all have preconditions that need 
+(* decode_prod, decode_sum, decode_option, decode_list, decode_blist,
+   decode_bnum, and decode_tree all have preconditions that need
    to be eliminated *)
 
 val _ = export_theory ();

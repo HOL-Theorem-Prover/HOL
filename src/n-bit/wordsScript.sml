@@ -32,7 +32,7 @@ val HB = ``^WL - 1``;
 val TOP = ``2 ** ^WL``;
 val MSB = ``2 ** ^HB``;
 
-fun Def s q = Definition.new_definition(s,Parse.Term q) 
+fun Def s q = Definition.new_definition(s,Parse.Term q)
               handle e => Raise e;
 fun xDef s n t = boolSyntax.new_infixr_definition(s, Parse.Term t, n)
                  handle e => Raise e;
@@ -1381,7 +1381,7 @@ val HB_0_NOT_MSB = prove(
   Cases_word \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC fcp_ss [word_msb_n2w,n2w_11,ZERO_MOD,ZERO_LT_TWOEXP,
          GSYM BITS_ZERO3]
-    \\ METIS_TAC [DECIDE ``(SUC m - 1 = 0) ==> (m = 0)``,BIT_def,NOT_BITS2]);
+    \\ METIS_TAC [DECIDE ``SUC m <= 1 = (m = 0)``,BIT_def,NOT_BITS2]);
 
 val DIMINDEX_1 = prove(
   `(^WL - 1 = 0) ==> (^WL = 1)`,

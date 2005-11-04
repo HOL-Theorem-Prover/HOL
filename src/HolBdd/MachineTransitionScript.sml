@@ -793,11 +793,8 @@ val ReachIn_revrec =
        THEN RW_TAC bool_ss [DECIDE``m + 2 = m + 1 + 1``, ADD1],
       Q.EXISTS_TAC `\i. if (i=0) then state1 else f(i-1)`
        THEN RW_TAC std_ss [DECIDE ``(SUC n - 1 = n) /\ (n+1-1 = n)``]
-       THEN IMP_RES_TAC(DECIDE``~(m+1=0)``)
-       THEN IMP_RES_TAC(DECIDE``~(m=0) ==> (m < SUC n) ==> (m-1 < n)``)
-       THEN RES_TAC
-       THEN IMP_RES_TAC(DECIDE``~(m=0) ==> (m - 1 + 1 = m)``)
-       THEN ASSUM_LIST(fn thl => ACCEPT_TAC(REWRITE_RULE[el 1 thl](el 3 thl)))]);
+       THEN FIRST_X_ASSUM (Q.SPEC_THEN `m - 1` MP_TAC)
+       THEN RW_TAC arith_ss []]);
 
 val Total_def = Define `Total R = !s.?s'. R(s,s')`;
 
