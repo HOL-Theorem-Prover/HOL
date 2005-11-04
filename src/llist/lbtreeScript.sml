@@ -802,13 +802,6 @@ val EL_APPEND = prove(
     FULL_SIMP_TAC (srw_ss()) [arithmeticTheory.ADD_CLAUSES]
   ]);
 
-(* am definitely going to fiddle with listSimps to make this work
-   properly *)
-val EL1 = prove(
-  ``EL 1 (h::t) = HD t``,
-  SIMP_TAC bool_ss [listTheory.EL, arithmeticTheory.ONE, listTheory.TL]);
-val _ = augment_srw_ss [rewrites [EL1]]
-
 val optmin_EQ_NONE = prove(
   ``(optmin n m = NONE) = (n = NONE) /\ (m = NONE)``,
   Cases_on `n` THEN Cases_on `m` THEN SRW_TAC [][optmin_def]);

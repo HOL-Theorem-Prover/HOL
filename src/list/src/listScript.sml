@@ -277,7 +277,7 @@ val LIST_INDUCT_TAC = INDUCT_THEN list_INDUCT ASSUME_TAC;
 (* |- (!l. P l) = P [] /\ !h t. P t ==> P (h::t)                             *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_LIST = Q.store_thm 
+val FORALL_LIST = Q.store_thm
  ("FORALL_LIST",
   `(!l. P l) = P [] /\ !h t. P t ==> P (h::t)`,
   METIS_TAC [list_INDUCT]);
@@ -576,6 +576,21 @@ val APPEND_11 = store_thm(
 val EL_compute = store_thm("EL_compute",
 Term `!n. EL n l = if n=0 then HD l else EL (PRE n) (TL l)`,
 INDUCT_TAC THEN ASM_REWRITE_TAC [NOT_SUC, EL, PRE]);
+
+(* a version of the above that is safe to use in the simplifier *)
+(* only bother with BIT1/2 cases because the zero case is already provided
+   by the definition. *)
+val EL_simp = store_thm(
+  "EL_simp",
+  ``(EL (NUMERAL (BIT1 n)) l = EL (PRE (NUMERAL (BIT1 n))) (TL l)) /\
+    (EL (NUMERAL (BIT2 n)) l = EL (NUMERAL (BIT1 n)) (TL l))``,
+  REWRITE_TAC [arithmeticTheory.NUMERAL_DEF,
+               arithmeticTheory.BIT1, arithmeticTheory.BIT2,
+               arithmeticTheory.ADD_CLAUSES,
+               prim_recTheory.PRE, EL]);
+val _ = export_rewrites ["EL_simp"]
+
+
 
 val WF_LIST_PRED = store_thm("WF_LIST_PRED",
 Term`WF \L1 L2. ?h:'a. L2 = h::L1`,
