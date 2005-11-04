@@ -21,7 +21,7 @@ val RUNION = relationTheory.RUNION
 (* finiteness of developments : section 11.2 of Barendregt *)
 
 (* ----------------------------------------------------------------------
-    substitutivity etc 
+    substitutivity etc
    ---------------------------------------------------------------------- *)
 
 val lsubstitutive_def = Define`
@@ -39,27 +39,27 @@ val RUNION_lsubstitutive = store_thm(
   SRW_TAC [][lsubstitutive_def, relationTheory.RUNION] THEN SRW_TAC [][]);
 
 val lsubstitutive_lpermutative = store_thm(
-  "lsubstitutive_lpermutative",  
+  "lsubstitutive_lpermutative",
   ``lsubstitutive R ==> lpermutative R``,
-  SRW_TAC [][lsubstitutive_def, lpermutative_def] THEN 
-  Induct_on `pi` THEN SRW_TAC [][] THEN 
-  `?x y. h = (x,y)` by (Cases_on `h` THEN METIS_TAC []) THEN 
-  SRW_TAC [][] THEN 
-  `(ltpm ((x,y)::pi) M = ltpm [(x,y)] (ltpm pi M)) /\ 
-   (ltpm ((x,y)::pi) N = ltpm [(x,y)] (ltpm pi N))` 
-     by SRW_TAC [][GSYM ltpm_APPEND] THEN 
-  SRW_TAC [][] THEN 
-  Q.MATCH_ABBREV_TAC `R (ltpm [(x,y)] MM) (ltpm [(x,y)] NN)` THEN 
-  Q_TAC (NEW_TAC "z") `{x;y} UNION FV MM UNION FV NN` THEN 
+  SRW_TAC [][lsubstitutive_def, lpermutative_def] THEN
+  Induct_on `pi` THEN SRW_TAC [][] THEN
+  `?x y. h = (x,y)` by (Cases_on `h` THEN METIS_TAC []) THEN
+  SRW_TAC [][] THEN
+  `(ltpm ((x,y)::pi) M = ltpm [(x,y)] (ltpm pi M)) /\
+   (ltpm ((x,y)::pi) N = ltpm [(x,y)] (ltpm pi N))`
+     by SRW_TAC [][GSYM ltpm_APPEND] THEN
+  SRW_TAC [][] THEN
+  Q.MATCH_ABBREV_TAC `R (ltpm [(x,y)] MM) (ltpm [(x,y)] NN)` THEN
+  Q_TAC (NEW_TAC "z") `{x;y} UNION FV MM UNION FV NN` THEN
   Q_TAC SUFF_TAC `(ltpm [(x,y)] MM = [VAR y/z] ([VAR x/y] ([VAR z/x] MM))) /\
                   (ltpm [(x,y)] NN = [VAR y/z] ([VAR x/y] ([VAR z/x] NN)))`
-        THEN1 SRW_TAC [][] THEN 
-  ASM_SIMP_TAC (srw_ss()) [GSYM fresh_ltpm_subst, GSYM ltpm_APPEND] THEN 
-  Q_TAC SUFF_TAC `[(x,y)] == [(y,z); (x,y); (z,x)]` 
-        THEN1 METIS_TAC [nomsetTheory.is_perm_def, ltpm_is_perm] THEN 
-  SRW_TAC [][nomsetTheory.permeq_def, FUN_EQ_THM] THEN 
-  Cases_on `x' = x` THEN SRW_TAC [][] THEN 
-  Cases_on `x' = z` THEN SRW_TAC [][] THEN 
+        THEN1 SRW_TAC [][] THEN
+  ASM_SIMP_TAC (srw_ss()) [GSYM fresh_ltpm_subst, GSYM ltpm_APPEND] THEN
+  Q_TAC SUFF_TAC `[(x,y)] == [(y,z); (x,y); (z,x)]`
+        THEN1 METIS_TAC [nomsetTheory.is_perm_def, ltpm_is_perm] THEN
+  SRW_TAC [][nomsetTheory.permeq_def, FUN_EQ_THM] THEN
+  Cases_on `x' = x` THEN SRW_TAC [][] THEN
+  Cases_on `x' = z` THEN SRW_TAC [][] THEN
   Cases_on `x' = y` THEN SRW_TAC [][]);
 
 (* ----------------------------------------------------------------------
@@ -90,51 +90,51 @@ val strong_labelled_redn_ind = save_thm(
 val labelled_redn_bvc_ind = store_thm(
   "labelled_redn_bvc_ind",
   ``!P X. FINITE X /\
-          (!v M N. ~(v IN X) /\ ~(v IN FV N) ==> 
+          (!v M N. ~(v IN X) /\ ~(v IN FV N) ==>
                    P (LAM v M @@ N) [] ([N/v]M)) /\
           (!z x y pos. P x pos y ==> P (x @@ z) (Lt::pos) (y @@ z)) /\
           (!z x y pos. P x pos y ==> P (z @@ x) (Rt::pos) (z @@ y)) /\
-          (!v x y pos. ~(v IN X) /\ P x pos y ==> 
+          (!v x y pos. ~(v IN X) /\ P x pos y ==>
                        P (LAM v x) (In::pos) (LAM v y)) ==>
           !M pos N. labelled_redn beta M pos N ==> P M pos N``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
-  Q_TAC SUFF_TAC 
-        `!M pos N. labelled_redn beta M pos N ==> 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC
+        `!M pos N. labelled_redn beta M pos N ==>
                    !p. P (tpm p M) pos (tpm p N)`
-        THEN1 METIS_TAC [tpm_NIL] THEN 
+        THEN1 METIS_TAC [tpm_NIL] THEN
   HO_MATCH_MP_TAC labelled_redn_ind THEN SRW_TAC [][beta_def] THENL [
-    SRW_TAC [][tpm_subst] THEN 
-    Q.MATCH_ABBREV_TAC `P (LAM v M @@ N) [] ([N/v]M)` THEN 
-    Q_TAC (NEW_TAC "z") `X UNION FV M UNION FV N` THEN 
-    `LAM v M = LAM z (tpm [(z,v)] M)` by SRW_TAC [][tpm_ALPHA] THEN 
-    `[N/v] M = [N/z] ([VAR z/v] M)` by SRW_TAC [][lemma15a] THEN 
+    SRW_TAC [][tpm_subst] THEN
+    Q.MATCH_ABBREV_TAC `P (LAM v M @@ N) [] ([N/v]M)` THEN
+    Q_TAC (NEW_TAC "z") `X UNION FV M UNION FV N` THEN
+    `LAM v M = LAM z (tpm [(z,v)] M)` by SRW_TAC [][tpm_ALPHA] THEN
+    `[N/v] M = [N/z] ([VAR z/v] M)` by SRW_TAC [][lemma15a] THEN
     SRW_TAC [][GSYM tpm_APPEND, GSYM fresh_tpm_subst],
 
-    Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN 
-    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN 
+    Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN
+    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `(LAM vv MM = LAM z (tpm [(z,vv)] MM)) /\
      (LAM vv NN = LAM z (tpm [(z,vv)] NN))`
-        by SRW_TAC [][tpm_ALPHA] THEN 
+        by SRW_TAC [][tpm_ALPHA] THEN
     SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM tpm_APPEND]
   ]);
 
 val labelled_redn_beta_tpm_imp = store_thm(
   "labelled_redn_beta_tpm_imp",
-  ``!M pos N. labelled_redn beta M pos N ==> 
+  ``!M pos N. labelled_redn beta M pos N ==>
               !pi. labelled_redn beta (tpm pi M) pos (tpm pi N)``,
-  HO_MATCH_MP_TAC labelled_redn_ind THEN 
-  SRW_TAC [][beta_def, labelled_redn_rules] THEN 
-  SRW_TAC [][tpm_subst] THEN 
+  HO_MATCH_MP_TAC labelled_redn_ind THEN
+  SRW_TAC [][beta_def, labelled_redn_rules] THEN
+  SRW_TAC [][tpm_subst] THEN
   METIS_TAC [beta_def, labelled_redn_rules]);
 
 val labelled_redn_beta_tpm_eqn = store_thm(
   "labelled_redn_beta_tpm_eqn",
-  ``labelled_redn beta (tpm p M) pos N = 
+  ``labelled_redn beta (tpm p M) pos N =
     labelled_redn beta M pos (tpm (REVERSE p) N)``,
   METIS_TAC [labelled_redn_beta_tpm_imp, tpm_inverse]);
-  
 
-(* relationship to unlabelled reductions *)    
+
+(* relationship to unlabelled reductions *)
 val cc_labelled_redn = store_thm(
   "cc_labelled_redn",
   ``!R M N. compat_closure R M N ==> ?pos. labelled_redn R M pos N``,
@@ -170,15 +170,15 @@ val strong_lrcc_ind = save_thm(
 
 val lrcc_bvc_b01_ind = store_thm(
   "lrcc_bvc_b01_ind",
-  ``!P X. 
+  ``!P X.
        FINITE X /\
        (!v M N. ~(v IN X) /\ ~(v IN FV N) ==>
                 P (LAM v M @@ N) [] ([N/v]M)) /\
-       (!n v M N. ~(v IN X) /\ ~(v IN FV N) ==> 
+       (!n v M N. ~(v IN X) /\ ~(v IN FV N) ==>
                   P (LAMi n v M N) [] ([N/v]M)) /\
        (!M M' N pos. P M pos M' ==> P (M @@ N) (Lt::pos) (M' @@ N)) /\
        (!M N N' pos. P N pos N' ==> P (M @@ N) (Rt::pos) (M @@ N')) /\
-       (!v M M' pos. ~(v IN X) /\ P M pos M' ==> 
+       (!v M M' pos. ~(v IN X) /\ P M pos M' ==>
                  P (LAM v M) (In::pos) (LAM v M')) /\
        (!n v M M' N pos. ~(v IN FV N) /\ ~(v IN X) /\ P M pos M' ==>
                          P (LAMi n v M N) (Lt::In::pos) (LAMi n v M' N)) /\
@@ -186,56 +186,56 @@ val lrcc_bvc_b01_ind = store_thm(
                          P N pos N' ==>
                          P (LAMi n v M N) (Rt::pos) (LAMi n v M N')) ==>
        !M pos N. lrcc (beta0 RUNION beta1) M pos N ==> P M pos N``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
-  Q_TAC SUFF_TAC `!M pos N. lrcc (beta0 RUNION beta1) M pos N ==> 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!M pos N. lrcc (beta0 RUNION beta1) M pos N ==>
                             !p. P (ltpm p M) pos (ltpm p N)`
-        THEN1 METIS_TAC [ltpm_NIL] THEN 
-  HO_MATCH_MP_TAC lrcc_ind THEN SRW_TAC [][beta0_def, beta1_def, RUNION] 
+        THEN1 METIS_TAC [ltpm_NIL] THEN
+  HO_MATCH_MP_TAC lrcc_ind THEN SRW_TAC [][beta0_def, beta1_def, RUNION]
   THENL [
-    SRW_TAC [][ltpm_subst] THEN 
-    Q.MATCH_ABBREV_TAC `P (LAMi n vv MM NN) [] ([NN/vv]MM)` THEN 
-    Q.RM_ALL_ABBREVS_TAC THEN 
-    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN 
+    SRW_TAC [][ltpm_subst] THEN
+    Q.MATCH_ABBREV_TAC `P (LAMi n vv MM NN) [] ([NN/vv]MM)` THEN
+    Q.RM_ALL_ABBREVS_TAC THEN
+    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `LAMi n vv MM NN = LAMi n z (ltpm [(z,vv)] MM) NN`
-       by SRW_TAC [][ltpm_ALPHAi] THEN 
-    `[NN/vv]MM = [NN/z] ([VAR z/vv] MM)` by SRW_TAC [][l15a] THEN 
-    SRW_TAC [][GSYM fresh_ltpm_subst], 
-    SRW_TAC [][ltpm_subst] THEN 
-    Q.MATCH_ABBREV_TAC `P (LAM vv MM @@ NN) [] ([NN/vv]MM)` THEN 
-    Q.RM_ALL_ABBREVS_TAC THEN 
-    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN 
-    `LAM vv MM = LAM z (ltpm [(z,vv)] MM)` by SRW_TAC [][ltpm_ALPHA] THEN 
-    `[NN/vv]MM = [NN/z] ([VAR z/vv] MM)` by SRW_TAC [][l15a] THEN 
-    SRW_TAC [][GSYM fresh_ltpm_subst], 
-    Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN 
-    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN 
+       by SRW_TAC [][ltpm_ALPHAi] THEN
+    `[NN/vv]MM = [NN/z] ([VAR z/vv] MM)` by SRW_TAC [][l15a] THEN
+    SRW_TAC [][GSYM fresh_ltpm_subst],
+    SRW_TAC [][ltpm_subst] THEN
+    Q.MATCH_ABBREV_TAC `P (LAM vv MM @@ NN) [] ([NN/vv]MM)` THEN
+    Q.RM_ALL_ABBREVS_TAC THEN
+    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
+    `LAM vv MM = LAM z (ltpm [(z,vv)] MM)` by SRW_TAC [][ltpm_ALPHA] THEN
+    `[NN/vv]MM = [NN/z] ([VAR z/vv] MM)` by SRW_TAC [][l15a] THEN
+    SRW_TAC [][GSYM fresh_ltpm_subst],
+    Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN
+    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `(LAM vv MM = LAM z (ltpm [(z,vv)] MM)) /\
      (LAM vv NN = LAM z (ltpm [(z,vv)] NN))` by SRW_TAC [][ltpm_ALPHA] THEN
     SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
     Q.MATCH_ABBREV_TAC `P (LAMi n vv ZZ MM) (Rt::Pos) (LAMi n vv ZZ NN)` THEN
-    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN 
+    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv ZZ MM = LAMi n z (ltpm [(z,vv)] ZZ) MM) /\
      (LAMi n vv ZZ NN = LAMi n z (ltpm [(z,vv)] ZZ) NN)`
-       by SRW_TAC [][ltpm_ALPHAi] THEN 
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND], 
-    Q.MATCH_ABBREV_TAC 
-      `P (LAMi n vv MM ZZ) (Lt::In::pos) (LAMi n vv NN ZZ)` THEN 
-    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN 
+       by SRW_TAC [][ltpm_ALPHAi] THEN
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
+    Q.MATCH_ABBREV_TAC
+      `P (LAMi n vv MM ZZ) (Lt::In::pos) (LAMi n vv NN ZZ)` THEN
+    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv MM ZZ = LAMi n z (ltpm [(z,vv)] MM) ZZ) /\
      (LAMi n vv NN ZZ = LAMi n z (ltpm [(z,vv)] NN) ZZ)`
-       by SRW_TAC [][ltpm_ALPHAi] THEN 
+       by SRW_TAC [][ltpm_ALPHAi] THEN
     SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND]
   ]);
 
 val lrcc_bvc_ind = store_thm(
-  "lrcc_bvc_ind",  
-  ``!P X. 
+  "lrcc_bvc_ind",
+  ``!P X.
        FINITE X /\
        lpermutative R /\
        (!M N. R M N ==> P M [] N) /\
        (!M M' N pos. P M pos M' ==> P (M @@ N) (Lt::pos) (M' @@ N)) /\
        (!M N N' pos. P N pos N' ==> P (M @@ N) (Rt::pos) (M @@ N')) /\
-       (!v M M' pos. ~(v IN X) /\ P M pos M' ==> 
+       (!v M M' pos. ~(v IN X) /\ P M pos M' ==>
                  P (LAM v M) (In::pos) (LAM v M')) /\
        (!n v M M' N pos. ~(v IN FV N) /\ ~(v IN X) /\ P M pos M' ==>
                          P (LAMi n v M N) (Lt::In::pos) (LAMi n v M' N)) /\
@@ -243,29 +243,29 @@ val lrcc_bvc_ind = store_thm(
                          P N pos N' ==>
                          P (LAMi n v M N) (Rt::pos) (LAMi n v M N')) ==>
        !M pos N. lrcc R M pos N ==> P M pos N``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
-  Q_TAC SUFF_TAC `!M pos N. lrcc R M pos N ==> 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Q_TAC SUFF_TAC `!M pos N. lrcc R M pos N ==>
                             !p. P (ltpm p M) pos (ltpm p N)`
-        THEN1 METIS_TAC [ltpm_NIL] THEN 
+        THEN1 METIS_TAC [ltpm_NIL] THEN
   HO_MATCH_MP_TAC lrcc_ind THEN SRW_TAC [][] THENL [
     METIS_TAC [lpermutative_def],
-    Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN 
-    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN 
+    Q.MATCH_ABBREV_TAC `P (LAM vv MM) (In::pos) (LAM vv NN)` THEN
+    Q_TAC (NEW_TAC "z") `X UNION FV MM UNION FV NN` THEN
     `(LAM vv MM = LAM z (ltpm [(z,vv)] MM)) /\
      (LAM vv NN = LAM z (ltpm [(z,vv)] NN))` by SRW_TAC [][ltpm_ALPHA] THEN
     SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
     Q.MATCH_ABBREV_TAC `P (LAMi n vv ZZ MM) (Rt::Pos) (LAMi n vv ZZ NN)` THEN
-    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN 
+    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv ZZ MM = LAMi n z (ltpm [(z,vv)] ZZ) MM) /\
      (LAMi n vv ZZ NN = LAMi n z (ltpm [(z,vv)] ZZ) NN)`
-       by SRW_TAC [][ltpm_ALPHAi] THEN 
-    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND], 
-    Q.MATCH_ABBREV_TAC 
-      `P (LAMi n vv MM ZZ) (Lt::In::pos) (LAMi n vv NN ZZ)` THEN 
-    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN 
+       by SRW_TAC [][ltpm_ALPHAi] THEN
+    SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND],
+    Q.MATCH_ABBREV_TAC
+      `P (LAMi n vv MM ZZ) (Lt::In::pos) (LAMi n vv NN ZZ)` THEN
+    Q_TAC (NEW_TAC "z") `FV ZZ UNION FV MM UNION FV NN UNION X` THEN
     `(LAMi n vv MM ZZ = LAMi n z (ltpm [(z,vv)] MM) ZZ) /\
      (LAMi n vv NN ZZ = LAMi n z (ltpm [(z,vv)] NN) ZZ)`
-       by SRW_TAC [][ltpm_ALPHAi] THEN 
+       by SRW_TAC [][ltpm_ALPHAi] THEN
     SRW_TAC [][Abbr`MM`, Abbr`NN`, GSYM ltpm_APPEND]
   ]);
 
@@ -275,7 +275,7 @@ val lrcc_labelled_redn = store_thm(
   ``!x r y.
       lrcc (beta0 RUNION beta1) x r y ==>
       labelled_redn beta (strip_label x) r (strip_label y)``,
-  HO_MATCH_MP_TAC lrcc_bvc_b01_ind THEN Q.EXISTS_TAC `{}` THEN 
+  HO_MATCH_MP_TAC lrcc_bvc_b01_ind THEN Q.EXISTS_TAC `{}` THEN
   SRW_TAC [][strip_label_subst, labelled_redn_rules] THEN
   METIS_TAC [beta_def, labelled_redn_rules]);
 
@@ -329,7 +329,7 @@ val beta0_lsubstitutive = store_thm(
      by SRW_TAC [][ltpm_ALPHAi] THEN
   ASM_SIMP_TAC (srw_ss()) [lSUB_THM] THEN
   MAP_EVERY Q.EXISTS_TAC [`n`, `z`, `[L/v] ([VAR z/v'] t)`, `[L/v]u`] THEN
-  ASM_SIMP_TAC (srw_ss()) [GSYM lSUBSTITUTION_LEMMA, l15a, 
+  ASM_SIMP_TAC (srw_ss()) [GSYM lSUBSTITUTION_LEMMA, l15a,
                            fresh_ltpm_subst]);
 
 val beta1_lsubstitutive = store_thm(
@@ -341,7 +341,7 @@ val beta1_lsubstitutive = store_thm(
   Q_TAC (NEW_TAC "z") `{v; v'} UNION FV t UNION FV L` THEN
   `LAM v' t = LAM z (ltpm [(z,v')] t)` by SRW_TAC [][ltpm_ALPHA] THEN
   MAP_EVERY Q.EXISTS_TAC [`z`, `[L/v]([VAR z/v']t)`] THEN
-  ASM_SIMP_TAC (srw_ss()) [GSYM lSUBSTITUTION_LEMMA, l15a, 
+  ASM_SIMP_TAC (srw_ss()) [GSYM lSUBSTITUTION_LEMMA, l15a,
                            fresh_ltpm_subst]);
 
 val lrcc_lsubstitutive = store_thm(
@@ -349,22 +349,22 @@ val lrcc_lsubstitutive = store_thm(
   ``!R. lsubstitutive R ==>
         !M pos N.
            lrcc R M pos N ==> !v L. lrcc R ([L/v]M) pos ([L/v]N)``,
-  GEN_TAC THEN REPEAT STRIP_TAC THEN 
-  Q.UNDISCH_THEN `lrcc R M pos N` MP_TAC THEN 
-  MAP_EVERY Q.ID_SPEC_TAC [`N`, `pos`, `M`] THEN 
-  HO_MATCH_MP_TAC lrcc_bvc_ind THEN Q.EXISTS_TAC `v INSERT FV L` THEN 
-  SRW_TAC [][lsubstitutive_lpermutative, lrcc_rules] THEN 
+  GEN_TAC THEN REPEAT STRIP_TAC THEN
+  Q.UNDISCH_THEN `lrcc R M pos N` MP_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`N`, `pos`, `M`] THEN
+  HO_MATCH_MP_TAC lrcc_bvc_ind THEN Q.EXISTS_TAC `v INSERT FV L` THEN
+  SRW_TAC [][lsubstitutive_lpermutative, lrcc_rules] THEN
   METIS_TAC [lsubstitutive_def, lrcc_rules]);
 
 val labelled_redn_beta_sub = store_thm(
   "labelled_redn_beta_sub",
   ``!M pos N. labelled_redn beta M pos N ==>
               !t v. labelled_redn beta ([t/v]M) pos ([t/v]N)``,
-  REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN 
-  MAP_EVERY Q.ID_SPEC_TAC [`N`, `pos`, `M`] THEN 
-  HO_MATCH_MP_TAC labelled_redn_bvc_ind THEN 
-  Q.EXISTS_TAC `v INSERT FV t` THEN 
-  SRW_TAC [][labelled_redn_rules, SUB_THM] THEN 
+  REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN
+  MAP_EVERY Q.ID_SPEC_TAC [`N`, `pos`, `M`] THEN
+  HO_MATCH_MP_TAC labelled_redn_bvc_ind THEN
+  Q.EXISTS_TAC `v INSERT FV t` THEN
+  SRW_TAC [][labelled_redn_rules, SUB_THM] THEN
   METIS_TAC [substitution_lemma, labelled_redn_rules, beta_def]);
 
 val lrcc_beta_sub = store_thm(
@@ -376,16 +376,16 @@ val lrcc_beta_sub = store_thm(
 
 val lrcc_b01_ltpm_imp = store_thm(
   "lrcc_b01_ltpm_imp",
-  ``!M pos N. lrcc (beta0 RUNION beta1) M pos N ==> 
+  ``!M pos N. lrcc (beta0 RUNION beta1) M pos N ==>
               lrcc (beta0 RUNION beta1) (ltpm p M) pos (ltpm p N)``,
-  HO_MATCH_MP_TAC lrcc_ind THEN 
-  SRW_TAC [][lrcc_rules, beta0_def, beta1_def, RUNION] THEN 
-  SRW_TAC [][ltpm_subst] THEN 
+  HO_MATCH_MP_TAC lrcc_ind THEN
+  SRW_TAC [][lrcc_rules, beta0_def, beta1_def, RUNION] THEN
+  SRW_TAC [][ltpm_subst] THEN
   METIS_TAC [lrcc_rules, RUNION, beta0_def, beta1_def]);
 
 val lrcc_b01_ltpm_eqn = store_thm(
   "lrcc_b01_ltpm_eqn",
-  ``lrcc (beta0 RUNION beta1) (ltpm p M) pos N = 
+  ``lrcc (beta0 RUNION beta1) (ltpm p M) pos N =
     lrcc (beta0 RUNION beta1) M pos (ltpm (REVERSE p) N)``,
   METIS_TAC [lrcc_b01_ltpm_imp, ltpm_inverse]);
 
@@ -403,11 +403,11 @@ val lrcc_beta_lam = store_thm(
             (pos = In :: pos0) /\ (N = LAM v N0)``,
   CONV_TAC (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV lrcc_cases))) THEN
   REPEAT GEN_TAC THEN EQ_TAC THEN
-  SRW_TAC [][relationTheory.RUNION, beta0_def, beta1_def, lLAM_eq_thm, 
-             ltpm_eqr] THEN 
+  SRW_TAC [][relationTheory.RUNION, beta0_def, beta1_def, lLAM_eq_thm,
+             ltpm_eqr] THEN
   FULL_SIMP_TAC (srw_ss()) [lrcc_b01_ltpm_eqn, ltpm_flip_args] THENL [
-    MAP_EVERY IMP_RES_TAC [lrcc_lcc, lcc_beta_FV] THEN 
-    FULL_SIMP_TAC (srw_ss()) [] THEN 
+    MAP_EVERY IMP_RES_TAC [lrcc_lcc, lcc_beta_FV] THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
     PROVE_TAC [basic_swapTheory.swapstr_def],
     METIS_TAC []
   ]);
@@ -421,19 +421,19 @@ val rcc_beta_matched = prove(
   HO_MATCH_MP_TAC labelled_redn_ind THEN REPEAT STRIP_TAC THENL [
     PROVE_TAC [beta_matched, lrcc_rules],
     POP_ASSUM MP_TAC THEN
-    Q.SPEC_THEN `M'` STRUCT_CASES_TAC lterm_CASES THEN 
+    Q.SPEC_THEN `M'` STRUCT_CASES_TAC lterm_CASES THEN
     SRW_TAC [][] THENL [
       PROVE_TAC [strip_label_thm, lrcc_rules],
-      POP_ASSUM (Q.SPEC_THEN `LAM v N'` MP_TAC) THEN 
-      SRW_TAC [][lrcc_beta_lam] THEN 
+      POP_ASSUM (Q.SPEC_THEN `LAM v N'` MP_TAC) THEN
+      SRW_TAC [][lrcc_beta_lam] THEN
       Q.EXISTS_TAC `LAMi n v N0 P` THEN
       SRW_TAC [][lrcc_rules]
     ],
-    POP_ASSUM MP_TAC THEN 
-    Q.SPEC_THEN `M'` STRUCT_CASES_TAC lterm_CASES THEN 
-    SRW_TAC [][] THEN 
+    POP_ASSUM MP_TAC THEN
+    Q.SPEC_THEN `M'` STRUCT_CASES_TAC lterm_CASES THEN
+    SRW_TAC [][] THEN
     PROVE_TAC [strip_label_thm, lrcc_rules],
-    POP_ASSUM MP_TAC THEN SRW_TAC [][strip_label_eq_lam] THEN 
+    POP_ASSUM MP_TAC THEN SRW_TAC [][strip_label_eq_lam] THEN
     PROVE_TAC [strip_label_thm, lrcc_rules]
   ]);
 
@@ -568,7 +568,7 @@ val is_redex_occurrence_thm = store_thm(
     FULL_SIMP_TAC (srw_ss()) [] THEN PROVE_TAC [],
     FIRST_X_ASSUM SUBST_ALL_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN PROVE_TAC [],
-    FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm] THEN 
+    FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm] THEN
     PROVE_TAC [labelled_redn_beta_sub, fresh_tpm_subst],
     PROVE_TAC []
   ]);
@@ -594,18 +594,18 @@ val IN_term_IN_redex_posns = store_thm(
 
 val supp_discrete_fun = prove(
   ``supp (fnpm (K I) (K I)) f = {}``,
-  MATCH_MP_TAC nomsetTheory.supp_unique_apart THEN 
-  SRW_TAC [][nomsetTheory.support_def, FUN_EQ_THM, 
+  MATCH_MP_TAC nomsetTheory.supp_unique_apart THEN
+  SRW_TAC [][nomsetTheory.support_def, FUN_EQ_THM,
              nomsetTheory.fnpm_def]);
 
 val n_posns_exists =
-    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o GEN_ALL o 
-     CONV_RULE (LAND_CONV 
+    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o GEN_ALL o
+     CONV_RULE (LAND_CONV
                   (SIMP_CONV (srw_ss()) [FUN_EQ_THM, supp_discrete_fun,
                                          nomsetTheory.fnpm_def,
-                                         nomsetTheory.support_def])) o 
-     Q.INST [`vr` |-> `\s. {}`, 
-             `A` |-> `{}`, 
+                                         nomsetTheory.support_def])) o
+     Q.INST [`vr` |-> `\s. {}`,
+             `A` |-> `{}`,
              `apm` |-> `K I`,
              `ap` |-> `\rm rn.
                           IMAGE (CONS Lt) rm UNION IMAGE (CONS Rt) rn`,
@@ -613,19 +613,19 @@ val n_posns_exists =
              `li` |-> `\n v rm rn.
                           IMAGE (APPEND [Lt; In]) rm UNION
                           IMAGE (CONS Rt) rn UNION
-                          (if n = m then {[]} else {})`] o 
+                          (if n = m then {[]} else {})`] o
      SPEC_ALL o INST_TYPE [alpha |-> ``:posn set``])
      ltm_recursion
 
-val n_posns_def = new_specification("n_posns_def", ["n_posns"], 
+val n_posns_def = new_specification("n_posns_def", ["n_posns"],
                                     n_posns_exists);
 val _ = export_rewrites ["n_posns_def"]
 
 val n_posns_vsubst_invariant = Store_Thm(
   "n_posns_vsubst_invariant",
   ``!M m u w. n_posns m ([VAR u/w] M) = n_posns m M``,
-  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `M` THEN 
-  HO_MATCH_MP_TAC lterm_bvc_induction THEN 
+  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `M` THEN
+  HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `{u;w}` THEN SRW_TAC [][lSUB_VAR]);
 
 (* ----------------------------------------------------------------------
@@ -644,7 +644,7 @@ val ltpm_iteration = let
              `ap` |-> `\t u. (ap (FST t) (FST u) (SND t) (SND u),
                               SND t @@ SND u)`,
              `lm` |-> `\v t. (lm (FST t) v (SND t), LAM v (SND t))`,
-             `li` |-> `\n v t u. (li (FST t) (FST u) n v (SND t) (SND u), 
+             `li` |-> `\n v t u. (li (FST t) (FST u) n v (SND t) (SND u),
                                   LAMi n v (SND t) (SND u))`,
              `apm` |-> `pairpm apm ltpm`] o
      SPEC_ALL o
@@ -659,7 +659,7 @@ val ltpm_iteration = let
              ?f. ((!s. f (VAR s) = vr s) /\
                   (!M N. f (M @@ N) = ap (f M) (f N) M N) /\
                   (!v M. ~(v IN A) ==> (f (LAM v M) = lm (f M) v M)) /\
-                  (!n v M N. ~(v IN A) ==> 
+                  (!n v M N. ~(v IN A) ==>
                              (f (LAMi n v M N) = li (f M) (f N) n v M N))) /\
                  (!x y t. ~(x IN A) /\ ~(y IN A) ==>
                           (f (ltpm [(x,y)] t) = apm [(x,y)] (f t)))``,
@@ -689,10 +689,10 @@ end
 
 val supp_LAMi = prove(
   ``supp (fnpm ltpm ltpm) (LAMi n v M) = FV M DELETE v``,
-  MATCH_MP_TAC supp_unique_apart THEN 
+  MATCH_MP_TAC supp_unique_apart THEN
   SRW_TAC [][support_def, FUN_EQ_THM, fnpm_def] THENL [
-    SRW_TAC [][ltpm_fresh] THEN 
-    Cases_on `x = v` THEN SRW_TAC [][lLAMi_eq_thm, ltpm_fresh] THEN 
+    SRW_TAC [][ltpm_fresh] THEN
+    Cases_on `x = v` THEN SRW_TAC [][lLAMi_eq_thm, ltpm_fresh] THEN
     Cases_on `y = v` THEN SRW_TAC [][ltpm_fresh],
     SRW_TAC [CONJ_ss][lLAMi_eq_thm],
     SRW_TAC [CONJ_ss][lLAMi_eq_thm, ltpm_flip_args],
@@ -705,34 +705,34 @@ val supp_LAMi = prove(
   ]);
 
 val complicated_lemma = prove(
-  ``supp (fnpm (pairpm (fnpm ltpm ltpm) ltpm) 
+  ``supp (fnpm (pairpm (fnpm ltpm ltpm) ltpm)
                (pairpm (fnpm ltpm ltpm) ltpm))
-         (\u. ($@@ (LAMi n a x (SND u)), LAMi n a x (SND u))) = 
+         (\u. ($@@ (LAMi n a x (SND u)), LAMi n a x (SND u))) =
     FV x DELETE a``,
-  MATCH_MP_TAC supp_unique_apart THEN 
-  SRW_TAC [][FUN_EQ_THM, fnpm_def, support_def, lLAMi_eq_thm] THEN 
+  MATCH_MP_TAC supp_unique_apart THEN
+  SRW_TAC [][FUN_EQ_THM, fnpm_def, support_def, lLAMi_eq_thm] THEN
   SRW_TAC [][] THENL [
-    Cases_on `x' = a` THEN SRW_TAC [CONJ_ss][ltpm_flip_args] THEN 
+    Cases_on `x' = a` THEN SRW_TAC [CONJ_ss][ltpm_flip_args] THEN
     Cases_on `y = a` THEN SRW_TAC [][ltpm_fresh],
     SRW_TAC [CONJ_ss][],
     SRW_TAC [CONJ_ss][ltpm_fresh, ltpm_flip_args],
-    Cases_on `a = b` THEN SRW_TAC [][] THEN 
+    Cases_on `a = b` THEN SRW_TAC [][] THEN
     METIS_TAC [ltpm_apart, ltpm_flip_args],
     Cases_on `a = b` THEN SRW_TAC [][]
-  ]); 
+  ]);
 
-val rAPP_exists = 
-    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o 
-     GEN_ALL o 
-     SIMP_RULE (srw_ss()) [FUN_EQ_THM, fnpm_def, supp_LAMi, 
-                           complicated_lemma] o 
-     Q.INST [`ap` |-> `\rt ru t u. (@@) (t @@ u)`, 
+val rAPP_exists =
+    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o
+     GEN_ALL o
+     SIMP_RULE (srw_ss()) [FUN_EQ_THM, fnpm_def, supp_LAMi,
+                           complicated_lemma] o
+     Q.INST [`ap` |-> `\rt ru t u. (@@) (t @@ u)`,
              `vr` |-> `\s. (@@) (VAR s)`,
              `lm` |-> `\rt v t. LAMi n v t`,
              `li` |-> `\rt ru n v t u. (@@) (LAMi n v t u)`,
-             `apm` |-> `fnpm ltpm ltpm`] o 
-     SPEC_ALL o 
-     INST_TYPE [alpha |-> ``:lterm -> lterm``]) 
+             `apm` |-> `fnpm ltpm ltpm`] o
+     SPEC_ALL o
+     INST_TYPE [alpha |-> ``:lterm -> lterm``])
     ltpm_iteration
 
 val rAPP_def = new_specification("rAPP_def", ["rAPP"], rAPP_exists)
@@ -743,69 +743,69 @@ val FINITE_UPPERBOUND_SETS = store_thm(
   ``!L P. FINITE L /\ (!s. s IN P ==> s SUBSET L) ==> FINITE P``,
   Q_TAC SUFF_TAC `!L. FINITE L ==> !P. (!s. s IN P ==> s SUBSET L) ==>
                                        FINITE P`
-        THEN1 METIS_TAC [] THEN 
+        THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][] THENL [
     Q_TAC SUFF_TAC `(P = {}) \/ (P = {{}})` THEN1 SRW_TAC [][DISJ_IMP_THM] THEN
     Q.ISPEC_THEN `P` FULL_STRUCT_CASES_TAC SET_CASES THEN SRW_TAC [][] THEN
-    ONCE_REWRITE_TAC [EXTENSION] THEN SRW_TAC [][] THEN 
+    ONCE_REWRITE_TAC [EXTENSION] THEN SRW_TAC [][] THEN
     SRW_TAC [][EQ_IMP_THM],
     `P = {s | s IN P /\ e IN s} UNION {s | s IN P /\ ~(e IN s)}`
-       by (SIMP_TAC (srw_ss()) [EXTENSION] THEN METIS_TAC []) THEN 
+       by (SIMP_TAC (srw_ss()) [EXTENSION] THEN METIS_TAC []) THEN
     POP_ASSUM SUBST1_TAC THEN SRW_TAC [][] THENL [
-      `{s | s IN P /\ e IN s} = 
+      `{s | s IN P /\ e IN s} =
          IMAGE ((INSERT) e) (IMAGE (\s. s DELETE e) {s | s IN P /\ e IN s})`
-        by (ONCE_REWRITE_TAC [EXTENSION] THEN 
-            SRW_TAC [DNF_ss][] THEN 
+        by (ONCE_REWRITE_TAC [EXTENSION] THEN
+            SRW_TAC [DNF_ss][] THEN
             SRW_TAC [][EQ_IMP_THM] THENL [
-              Q.EXISTS_TAC `x` THEN SRW_TAC [][EXTENSION] THEN 
+              Q.EXISTS_TAC `x` THEN SRW_TAC [][EXTENSION] THEN
               Cases_on `x' = e` THEN SRW_TAC [][],
-              `e INSERT s' DELETE e = s'` 
-                 by (SRW_TAC [][EXTENSION] THEN 
-                     Cases_on `x = e` THEN SRW_TAC [][]) THEN 
+              `e INSERT s' DELETE e = s'`
+                 by (SRW_TAC [][EXTENSION] THEN
+                     Cases_on `x = e` THEN SRW_TAC [][]) THEN
               SRW_TAC [][],
               SRW_TAC [][]
-            ]) THEN 
-      POP_ASSUM SUBST1_TAC THEN 
-      MATCH_MP_TAC IMAGE_FINITE THEN 
-      FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN 
+            ]) THEN
+      POP_ASSUM SUBST1_TAC THEN
+      MATCH_MP_TAC IMAGE_FINITE THEN
+      FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
       FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN METIS_TAC [],
-      FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN 
+      FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
       FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN METIS_TAC []
     ]
-  ]); 
-              
+  ]);
+
 val supp_gack = prove(
-  ``~(a IN supp (fnpm (K I) ltpm) 
-                (\ps : posn set. LAM a (f ({p | In::p IN ps} INTER 
-                                           redex_posns M))))``, 
-  SRW_TAC [][supp_def, FUN_EQ_THM, fnpm_def, INFINITE_DEF, 
-             lLAM_eq_thm] THEN 
+  ``~(a IN supp (fnpm (K I) ltpm)
+                (\ps : posn set. LAM a (f ({p | In::p IN ps} INTER
+                                           redex_posns M))))``,
+  SRW_TAC [][supp_def, FUN_EQ_THM, fnpm_def, INFINITE_DEF,
+             lLAM_eq_thm] THEN
   `!b t. ~(b = a) \/ ~(ltpm [(a,b)] t = t) = ~(b = a)`
-     by (GEN_TAC THEN Cases_on `a = b` THEN SRW_TAC [][]) THEN 
-  SRW_TAC [CONJ_ss][ltpm_flip_args] THEN 
-  Q.MATCH_ABBREV_TAC `FINITE set` THEN 
-  `set = BIGUNION (IMAGE (\ps: posn set. 
+     by (GEN_TAC THEN Cases_on `a = b` THEN SRW_TAC [][]) THEN
+  SRW_TAC [CONJ_ss][ltpm_flip_args] THEN
+  Q.MATCH_ABBREV_TAC `FINITE set` THEN
+  `set = BIGUNION (IMAGE (\ps: posn set.
                                 FV (f ({p | In::p IN ps} INTER redex_posns M)))
                          UNIV) INTER {b | ~(b = a)}`
-     by (SRW_TAC [][Abbr`set`, EXTENSION] THEN 
-         EQ_TAC THEN SRW_TAC [][] THEN SRW_TAC [][] THEN 
-         METIS_TAC []) THEN 
-  Q.RM_ALL_ABBREVS_TAC THEN SRW_TAC [][] THEN 
-  MATCH_MP_TAC INTER_FINITE THEN 
+     by (SRW_TAC [][Abbr`set`, EXTENSION] THEN
+         EQ_TAC THEN SRW_TAC [][] THEN SRW_TAC [][] THEN
+         METIS_TAC []) THEN
+  Q.RM_ALL_ABBREVS_TAC THEN SRW_TAC [][] THEN
+  MATCH_MP_TAC INTER_FINITE THEN
   SRW_TAC [][FINITE_BIGUNION_EQ] THENL [
-    Q.HO_MATCH_ABBREV_TAC `FINITE (IMAGE (\ps. FV (g ps)) UNIV)` THEN 
-    `(\ps. FV (g ps)) = FV o g` by SRW_TAC [][FUN_EQ_THM] THEN 
-    SRW_TAC [][IMAGE_COMPOSE] THEN 
-    MATCH_MP_TAC IMAGE_FINITE THEN 
-    Q.ABBREV_TAC 
-      `h = \ps : posn set. {p | In::p IN ps} INTER redex_posns M` THEN 
-    `g = f o h` by SRW_TAC [][Abbr`g`, Abbr`h`, FUN_EQ_THM] THEN 
-    SRW_TAC [][IMAGE_COMPOSE] THEN 
-    MATCH_MP_TAC IMAGE_FINITE THEN 
-    MATCH_MP_TAC FINITE_UPPERBOUND_SETS THEN 
-    Q.EXISTS_TAC `redex_posns M` THEN 
+    Q.HO_MATCH_ABBREV_TAC `FINITE (IMAGE (\ps. FV (g ps)) UNIV)` THEN
+    `(\ps. FV (g ps)) = FV o g` by SRW_TAC [][FUN_EQ_THM] THEN
+    SRW_TAC [][IMAGE_COMPOSE] THEN
+    MATCH_MP_TAC IMAGE_FINITE THEN
+    Q.ABBREV_TAC
+      `h = \ps : posn set. {p | In::p IN ps} INTER redex_posns M` THEN
+    `g = f o h` by SRW_TAC [][Abbr`g`, Abbr`h`, FUN_EQ_THM] THEN
+    SRW_TAC [][IMAGE_COMPOSE] THEN
+    MATCH_MP_TAC IMAGE_FINITE THEN
+    MATCH_MP_TAC FINITE_UPPERBOUND_SETS THEN
+    Q.EXISTS_TAC `redex_posns M` THEN
     SRW_TAC [][Abbr`h`] THENL [
-      METIS_TAC [SUBSET_DEF, SUBSET_FINITE, redex_posns_are_valid, 
+      METIS_TAC [SUBSET_DEF, SUBSET_FINITE, redex_posns_are_valid,
                  valid_posns_FINITE],
       SRW_TAC [][INTER_SUBSET]
     ],
@@ -813,26 +813,26 @@ val supp_gack = prove(
   ]);
 
 val ltpm_if = prove(
-  ``ltpm [(x,y)] (if P then M else N) = 
+  ``ltpm [(x,y)] (if P then M else N) =
     if P then ltpm [(x,y)] M else ltpm [(x,y)] N``,
   SRW_TAC [][]);
 
-val nlabel_exists = 
-    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o 
-     GEN_ALL o 
-     SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def, supp_gack, 
-                           ltpm_if] o 
-     Q.INST 
+val nlabel_exists =
+    (SIMP_RULE (srw_ss()) [SKOLEM_THM, FORALL_AND_THM] o
+     GEN_ALL o
+     SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def, supp_gack,
+                           ltpm_if] o
+     Q.INST
        [`apm` |-> `fnpm (K I) ltpm`,
         `vr` |-> `\s ps. VAR s`,
-        `ap` |-> `\rt ru t u ps. 
-                    if [] IN ps then 
+        `ap` |-> `\rt ru t u ps.
+                    if [] IN ps then
                       rAPP n (rt {p | Lt::p IN ps}) (ru {p | Rt::p IN ps})
-                    else 
+                    else
                       (rt {p | Lt::p IN ps}) @@ (ru {p | Rt::p IN ps})`,
-        `lm` |-> `\rt v t ps. 
-                     LAM v (rt ({p | In::p IN ps} INTER redex_posns t))`] o 
-     INST_TYPE [alpha |-> ``:posn set -> lterm``] o 
+        `lm` |-> `\rt v t ps.
+                     LAM v (rt ({p | In::p IN ps} INTER redex_posns t))`] o
+     INST_TYPE [alpha |-> ``:posn set -> lterm``] o
      SPEC_ALL) tm_recursion_nosideset
 
 val nlabel_def = new_specification("nlabel_def", ["nlabel"], nlabel_exists)
@@ -845,22 +845,22 @@ val FV_rAPP = Store_Thm(
 val FV_nlabel = Store_Thm(
   "FV_nlabel",
   ``!M n ps. FV (nlabel n M ps) = FV M``,
-  HO_MATCH_MP_TAC simple_induction THEN 
+  HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][nlabel_def] THEN SRW_TAC [][]);
 
 val rAPP_vsubst_commutes = store_thm(
   "rAPP_vsubst_commutes",
   ``!M. [VAR v/u](rAPP n M N) = rAPP n ([VAR v/u]M) ([VAR v/u]N)``,
-  HO_MATCH_MP_TAC lterm_bvc_induction THEN 
+  HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `FV N UNION {u;v}` THEN SRW_TAC [][lSUB_VAR]);
 
 val nlabel_vsubst_commutes = store_thm(
   "nlabel_vsubst_commutes",
   ``!n M w u ps. nlabel n ([VAR w/u] M) ps = [VAR w/u](nlabel n M ps)``,
   REPEAT GEN_TAC THEN
-  MAP_EVERY Q.ID_SPEC_TAC [`ps`, `M`] THEN 
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;w}` THEN 
-  SRW_TAC [][SUB_THM, nlabel_def, SUB_VAR] THEN 
+  MAP_EVERY Q.ID_SPEC_TAC [`ps`, `M`] THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;w}` THEN
+  SRW_TAC [][SUB_THM, nlabel_def, SUB_VAR] THEN
   SRW_TAC [][rAPP_vsubst_commutes]);
 
 
@@ -871,7 +871,7 @@ val strip_label_rAPP = Store_Thm(
 val strip_label_nlabel = Store_Thm(
   "strip_label_nlabel",
   ``!M ps. strip_label (nlabel n M ps) = M``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][nlabel_def] THEN 
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][nlabel_def] THEN
   SRW_TAC [][]);
 
 val not_abs_rAPP_APP = Store_Thm(
@@ -882,11 +882,11 @@ val not_abs_rAPP_APP = Store_Thm(
 val nlabel_eq_inter = store_thm(
   "nlabel_eq_inter",
   ``!M m ps. nlabel m M ps = nlabel m M (ps INTER redex_posns M)``,
-  ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN 
+  ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][nlabel_def] THENL [
-    SRW_TAC [][redex_posns_thm] THEN 
-    Cases_on `is_abs M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN 
-    SRW_TAC [][GSPEC_AND], 
+    SRW_TAC [][redex_posns_thm] THEN
+    Cases_on `is_abs M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    SRW_TAC [][GSPEC_AND],
     SRW_TAC [][redex_posns_thm] THEN SRW_TAC [][GSPEC_AND]
   ]);
 
@@ -1002,7 +1002,7 @@ val n_posns_sub = store_thm(
   ``!M t v n. n_posns n ([t/v] M) =
                 n_posns n M UNION
                 { APPEND vp np | vp IN lv_posns v M /\ np IN n_posns n t }``,
-  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `M` THEN 
+  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `M` THEN
   HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `v INSERT FV t` THEN SRW_TAC [][] THENL [
     SRW_TAC [][lv_posns_thm, lSUB_THM, n_posns_def, EXTENSION],
@@ -1118,27 +1118,27 @@ val stripped_equal = store_thm(
     FULL_SIMP_TAC (srw_ss()) [rpos_UNION_11] THENL [
       METIS_TAC [],
       METIS_TAC [],
-      Q.EXISTS_TAC `n` THEN SRW_TAC [][EXTENSION] THEN 
+      Q.EXISTS_TAC `n` THEN SRW_TAC [][EXTENSION] THEN
       Q.EXISTS_TAC `[]` THEN SRW_TAC [][]
     ],
-    SRW_TAC [][strip_label_eq_lam] THEN 
+    SRW_TAC [][strip_label_eq_lam] THEN
     SRW_TAC [][IMAGE_CONS_11] THEN PROVE_TAC [],
     SRW_TAC [][strip_label_eq_redex] THENL [
       Q.EXISTS_TAC `n` THEN SRW_TAC [][EXTENSION] THEN
       Q.EXISTS_TAC `[]` THEN SRW_TAC [][],
       Cases_on `n = n'` THENL [
         Cases_on `M' = t'` THENL [
-          FULL_SIMP_TAC (srw_ss()) [LAMI_partly_11] THEN 
-          `?m. ~(n_posns m M'' = n_posns m u')` by METIS_TAC [] THEN 
-          Q.EXISTS_TAC `m` THEN 
-          FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN 
+          FULL_SIMP_TAC (srw_ss()) [LAMI_partly_11] THEN
+          `?m. ~(n_posns m M'' = n_posns m u')` by METIS_TAC [] THEN
+          Q.EXISTS_TAC `m` THEN
+          FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN
           Q.EXISTS_TAC `Rt::x` THEN SRW_TAC [][],
-          `?m. ~(n_posns m M' = n_posns m t')` by METIS_TAC [] THEN 
-          Q.EXISTS_TAC `m` THEN 
-          FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN 
+          `?m. ~(n_posns m M' = n_posns m t')` by METIS_TAC [] THEN
+          Q.EXISTS_TAC `m` THEN
+          FULL_SIMP_TAC (srw_ss()) [EXTENSION] THEN
           Q.EXISTS_TAC `Lt::In::x` THEN SRW_TAC [][]
         ],
-        Q.EXISTS_TAC `n'` THEN SRW_TAC [][EXTENSION] THEN 
+        Q.EXISTS_TAC `n'` THEN SRW_TAC [][EXTENSION] THEN
         Q.EXISTS_TAC `[]` THEN SRW_TAC [][]
       ]
     ]
@@ -1378,12 +1378,12 @@ val labelled_redn_lam = store_thm(
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [labelled_redn_cases])) THEN
     SRW_TAC [][beta_def] THEN
-    FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, tpm_eqr, tpm_flip_args] THEN 
-    SRW_TAC [][] THEN 
-    FULL_SIMP_TAC (srw_ss()) [labelled_redn_beta_tpm_eqn] THEN 
+    FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, tpm_eqr, tpm_flip_args] THEN
+    SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [labelled_redn_beta_tpm_eqn] THEN
     `!a. a IN FV (tpm [(v,v')] y') ==> a IN FV t`
-      by METIS_TAC [labelled_redn_cc, cc_beta_FV_SUBSET, 
-                    SUBSET_DEF] THEN 
+      by METIS_TAC [labelled_redn_cc, cc_beta_FV_SUBSET,
+                    SUBSET_DEF] THEN
     POP_ASSUM (Q.SPEC_THEN `v'` MP_TAC) THEN SRW_TAC [][],
     SRW_TAC [][] THEN SRW_TAC [][labelled_redn_rules]
   ]);
@@ -1394,8 +1394,8 @@ val labelled_redn_vposn_sub = store_thm(
          p IN v_posns v body /\
          labelled_redn beta x r y ==>
          ?M. labelled_redn beta ([x/v] body) (APPEND p r) M``,
-  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `body`] THEN 
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV x` THEN 
+  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `body`] THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV x` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]THEN REPEAT CONJ_TAC THEN
   METIS_TAC [labelled_redn_rules, listTheory.APPEND]);
 
@@ -1450,7 +1450,7 @@ val position_maps_exist = store_thm(
                                    (v_posns x'' body)` THEN
       REPEAT STRIP_TAC THEN
       (`v_posns x'' body = lv_posns v t`
-           by FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, lv_posns_def] THEN 
+           by FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm, lv_posns_def] THEN
        POP_ASSUM SUBST_ALL_TAC THEN
        SRW_TAC [][n_posns_def, GSYM IMAGE_COMPOSE,
                   combinTheory.o_DEF, BIGUNION_IMAGE_SING] THEN
@@ -1786,8 +1786,8 @@ val lterm_INJECTIVITY_LEMMA1 = store_thm(
   SRW_TAC [][lLAM_eq_thm] THEN SRW_TAC [][fresh_ltpm_subst, l15a]);
 val lterm_INJECTIVITY_LEMMA1i = store_thm(
   "lterm_INJECTIVITY_LEMMA1i",
-  ``!n1 n2 v1 v2 t1 t2 u1 u2. 
-        (LAMi n1 v1 t1 u1 = LAMi n2 v2 t2 u2) ==> 
+  ``!n1 n2 v1 v2 t1 t2 u1 u2.
+        (LAMi n1 v1 t1 u1 = LAMi n2 v2 t2 u2) ==>
         (n1 = n2) /\ (u1 = u2) /\ (t2 = [VAR v2/v1] t1)``,
   SRW_TAC [][lLAMi_eq_thm] THEN SRW_TAC [][fresh_ltpm_subst, l15a]);
 
@@ -1963,8 +1963,8 @@ val update_weighing_vsubst = store_thm(
   "update_weighing_vsubst",
   ``!t p u v w. p IN redex_posns t ==>
                 (update_weighing ([VAR v/u]t) p w = update_weighing t p w)``,
-  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`w`, `p`,`t`] THEN 
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`w`, `p`,`t`] THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][redex_posns_thm, SUB_THM] THEN
   SRW_TAC [][update_weighing_thm]);
 
@@ -2061,8 +2061,8 @@ val w_at_exists =
                             (Lt::p0) -> rt p0 (\p. w (Lt::p))
                          || (Rt::p0) -> ru p0 (\p. w (Rt::p))
                          || _ -> term_weight (t @@ u) w`,
-           `vr` |-> `\s p w. term_weight (VAR s) w`, 
-           `apm` |-> `K I`] o SPEC_ALL o 
+           `vr` |-> `\s p w. term_weight (VAR s) w`,
+           `apm` |-> `K I`] o SPEC_ALL o
    INST_TYPE [alpha |-> ``:redpos list -> (redpos list -> num) -> num``])
   tm_recursion_nosideset
 
@@ -2092,8 +2092,8 @@ val weight_at_vsubst = Store_Thm(
   "weight_at_vsubst",
   ``!t w v u p. p IN valid_posns t ==>
                 (weight_at p w ([VAR v/u] t) = weight_at p w t)``,
-  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `w`, `t`] THEN 
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `w`, `t`] THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][valid_posns_thm, SUB_THM] THEN
   SRW_TAC [][weight_at_def, term_weight_thm]);
 
@@ -2233,11 +2233,11 @@ val decreasing_weights_exist = store_thm(
     REPEAT STRIP_TAC THEN
     Q.EXISTS_TAC `w o TL` THEN
     SRW_TAC [ETA_ss][combinTheory.o_THM],
-    MAP_EVERY Q.X_GEN_TAC [`t1`,`t2`] THEN 
+    MAP_EVERY Q.X_GEN_TAC [`t1`,`t2`] THEN
     DISCH_THEN (CONJUNCTS_THEN2 (Q.X_CHOOSE_THEN `w1` STRIP_ASSUME_TAC)
                                 (Q.X_CHOOSE_THEN `w2` STRIP_ASSUME_TAC)) THEN
-    GEN_TAC THEN 
-    Q.EXISTS_TAC `\p. if HD p = Lt then 
+    GEN_TAC THEN
+    Q.EXISTS_TAC `\p. if HD p = Lt then
                         (lterm_weight t2 w2 + 1) * w1 (TL (TL p))
                       else w2 (TL p)` THEN
     SRW_TAC [ETA_ss][nonzero_def] THENL [
@@ -2348,9 +2348,9 @@ val WF_wterm_ordering = store_thm(
   "WF_wterm_ordering",
   ``WF wterm_ordering``,
   `wterm_ordering = measure (\p. lterm_weight (FST p) (SND p))`
-     by SIMP_TAC (srw_ss()) [prim_recTheory.measure_def, FUN_EQ_THM, 
+     by SIMP_TAC (srw_ss()) [prim_recTheory.measure_def, FUN_EQ_THM,
                              pairTheory.FORALL_PROD, wterm_ordering_def,
-                             relationTheory.inv_image_def] THEN 
+                             relationTheory.inv_image_def] THEN
   SRW_TAC [][prim_recTheory.WF_measure]);
 
 val weighing_at_def = Define`weighing_at l w = w o APPEND l`;
@@ -2392,26 +2392,26 @@ val v_posns_LE_term_weight = store_thm(
 
 val size_vsubst = prove(
   ``!M:term. size ([VAR v/u] M) = size M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
 val old_induction = prove(
   ``!P. (!x. P (VAR x)) /\
         (!t u. P t /\ P u ==> P (t @@ u)) /\
-        (!x u. (!y'. P ([VAR y'/x] u)) ==> P (LAM x u)) ==> 
+        (!x u. (!y'. P ([VAR y'/x] u)) ==> P (LAM x u)) ==>
         !u:term. P u``,
-  REPEAT STRIP_TAC THEN 
-  completeInduct_on `size u` THEN GEN_TAC THEN 
-  Q.SPEC_THEN `u` STRUCT_CASES_TAC term_CASES THEN 
+  REPEAT STRIP_TAC THEN
+  completeInduct_on `size u` THEN GEN_TAC THEN
+  Q.SPEC_THEN `u` STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][] THENL [
-    FIRST_X_ASSUM MATCH_MP_TAC THEN 
-    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN 
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
     SRW_TAC [numSimps.ARITH_ss][],
-    FIRST_X_ASSUM MATCH_MP_TAC THEN 
-    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN 
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    FULL_SIMP_TAC (srw_ss()) [GSYM RIGHT_FORALL_IMP_THM] THEN
     SRW_TAC [numSimps.ARITH_ss][size_vsubst]
   ]);
-    
+
 
 val weight_at_subst = store_thm(
   "weight_at_subst",
@@ -2626,7 +2626,7 @@ val weight_at_subst = store_thm(
                    SUM_IMAGE_THM],
         ALL_TAC
       ] THEN
-      ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [weight_at_thm] THEN GEN_TAC THEN 
+      ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [weight_at_thm] THEN GEN_TAC THEN
       FIRST_X_ASSUM (Q.SPECL_THEN [`z`,`u`,`v`,`x'`] MP_TAC) THEN
       SIMP_TAC (srw_ss() ++ DNF_ss) [update_weighing_def, bv_posns_thm] THEN
       ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [v_posns_thm, v_posns_vsubst] THEN
@@ -2845,8 +2845,8 @@ val FV_weights_update_weighing = store_thm(
 val nonzero_term_weight = store_thm(
   "nonzero_term_weight",
   ``!t w. nonzero t w ==> 0 < lterm_weight t w``,
-  HO_MATCH_MP_TAC simple_lterm_induction THEN 
-  SRW_TAC [][nonzero_thm, lterm_weight_thm] THEN 
+  HO_MATCH_MP_TAC simple_lterm_induction THEN
+  SRW_TAC [][nonzero_thm, lterm_weight_thm] THEN
   RES_TAC THEN SRW_TAC [ARITH_ss][]);
 
 val weighted_reduction_reduces_ordering = store_thm(
@@ -3200,10 +3200,7 @@ val weighted_reduction_reduces_ordering = store_thm(
         SRW_TAC [][SUM_IMAGE_THM, SUM_IMAGE_IMAGE,
                    combinTheory.o_DEF] THEN
         `~(v IN FV t)` by PROVE_TAC [v_posns_FV_EQ, FV_strip_label] THEN
-        Q.MATCH_ABBREV_TAC `X < X + Y` THEN 
-        Q_TAC SUFF_TAC `0 < Y` THEN1 SRW_TAC [ARITH_ss][] THEN 
-        Q.UNABBREV_TAC `Y` THEN 
-        SRW_TAC [][GSYM lvar_posns_def, GSYM lterm_weight_def] THEN 
+        SRW_TAC [][GSYM lvar_posns_def, GSYM lterm_weight_def] THEN
         METIS_TAC [nonzero_term_weight],
         ALL_TAC
       ] THEN
@@ -3251,7 +3248,7 @@ val weighted_reduction_reduces_ordering = store_thm(
     SIMP_TAC (srw_ss() ++ ETA_ss)
              [update_weighing_def, strip_label_thm,
               decreasing_thm, nonzero_thm, wterm_ordering_def,
-              lterm_term_weight, term_weight_thm, 
+              lterm_term_weight, term_weight_thm,
               lv_posns_def] THEN
     REPEAT STRIP_TAC THEN
     MATCH_MP_TAC arithmeticTheory.LESS_EQ_LESS_TRANS THEN
@@ -3607,8 +3604,8 @@ val lcc_cosubstitutive = store_thm(
   "lcc_cosubstitutive",
   ``!P M N v. lcompat_closure R M N ==>
               RTC (lcompat_closure R) ([M/v] P) ([N/v] P)``,
-  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `P` THEN 
-  HO_MATCH_MP_TAC lterm_bvc_induction THEN 
+  REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `P` THEN
+  HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `v INSERT FV M UNION FV N` THEN SRW_TAC [][lSUB_VAR] THENL [
     PROVE_TAC [relationTheory.RTC_RULES],
     PROVE_TAC [relationTheory.RTC_RULES],
@@ -3624,16 +3621,16 @@ val strong_lcc_ind =
 val beta0_LAMi = store_thm(
   "beta0_LAMi",
   ``beta0 (LAMi n v M N) P = (P = [N/v] M)``,
-  SRW_TAC [][beta0_def, EQ_IMP_THM, lLAMi_eq_thm] THEN 
+  SRW_TAC [][beta0_def, EQ_IMP_THM, lLAMi_eq_thm] THEN
   SRW_TAC [][fresh_ltpm_subst, l15a] THEN
   PROVE_TAC []);
 
 val lcc_b0_tpm_imp = store_thm(
   "lcc_b0_tpm_imp",
-  ``!M N. lcompat_closure beta0 M N ==> 
+  ``!M N. lcompat_closure beta0 M N ==>
           !p. lcompat_closure beta0 (ltpm p M) (ltpm p N)``,
-  HO_MATCH_MP_TAC lcompat_closure_ind THEN 
-  SRW_TAC [][lcompat_closure_rules, beta0_def] THEN 
+  HO_MATCH_MP_TAC lcompat_closure_ind THEN
+  SRW_TAC [][lcompat_closure_rules, beta0_def] THEN
   SRW_TAC [][ltpm_subst] THEN METIS_TAC [lcompat_closure_rules, beta0_def]);
 
 val lcc_beta0_LAMi = store_thm(
@@ -3645,12 +3642,12 @@ val lcc_beta0_LAMi = store_thm(
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [lcompat_closure_cases])) THEN
   SRW_TAC [][EQ_IMP_THM, beta0_LAMi] THENL [
     DISJ2_TAC THEN DISJ1_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [lLAMi_eq_thm] THEN 
+    FULL_SIMP_TAC (srw_ss()) [lLAMi_eq_thm] THEN
     Q.EXISTS_TAC `ltpm [(v,v')] y` THEN
-    SRW_TAC [][ltpm_flip_args, lcc_b0_tpm_imp] THEN 
+    SRW_TAC [][ltpm_flip_args, lcc_b0_tpm_imp] THEN
     PROVE_TAC [lcc_beta_FV, lrcc_RUNION, lrcc_lcompat_closure],
     DISJ2_TAC THEN DISJ2_TAC THEN
-    FULL_SIMP_TAC (srw_ss()) [lLAMi_eq_thm, ltpm_flip_args], 
+    FULL_SIMP_TAC (srw_ss()) [lLAMi_eq_thm, ltpm_flip_args],
     PROVE_TAC [],
     PROVE_TAC []
   ]);
@@ -3672,10 +3669,10 @@ val lcc_beta0_LAM = store_thm(
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [lcompat_closure_cases])) THEN
   SRW_TAC [][beta0_def, EQ_IMP_THM] THENL [
     FULL_SIMP_TAC (srw_ss()) [lLAM_eq_thm] THEN
-    Q.EXISTS_TAC `ltpm [(v,v')] y` THEN 
-    SRW_TAC [][lcc_b0_tpm_imp, ltpm_flip_args] THEN 
+    Q.EXISTS_TAC `ltpm [(v,v')] y` THEN
+    SRW_TAC [][lcc_b0_tpm_imp, ltpm_flip_args] THEN
     PROVE_TAC [lcc_beta_FV, lrcc_RUNION, lrcc_lcompat_closure],
-    
+
     PROVE_TAC []
   ]);
 
