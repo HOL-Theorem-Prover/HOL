@@ -128,8 +128,8 @@ sig
   val dest_word_2comp : term -> term
   val dest_w2w       : term -> term * hol_type
   val dest_n2w       : term -> term * hol_type
+  val dest_sw2sw     : term -> term * hol_type
   val dest_w2n       : term -> term
-  val dest_sw2sw     : term -> term
 
   val is_word_T      : term -> bool
   val is_word_L      : term -> bool

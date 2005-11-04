@@ -240,17 +240,17 @@ fun mk_sw2sw(w,ty) =
 
 fun dest_word_T tm = 
   if same_const word_T_tm tm 
-   then type_of tm 
+   then dim_of tm 
     else raise ERR "dest_word_T" "";
 
 fun dest_word_L tm = 
   if same_const word_L_tm tm 
-   then type_of tm 
+   then dim_of tm 
     else raise ERR "dest_word_L" "";
 
 fun dest_word_H tm = 
   if same_const word_H_tm tm 
-   then type_of tm 
+   then dim_of tm 
     else raise ERR "dest_word_H" "";
 
 val dest_word_modify = 
@@ -360,11 +360,12 @@ fun dest_w2w M =
 fun dest_n2w M = 
   (dest_monop n2w_tm (ERR "dest_n2w" "") M, dim_of M);
 
+fun dest_sw2sw M = 
+  (dest_monop sw2sw_tm (ERR "dest_sw2sw" "") M, dim_of M);
+
 val dest_w2n = 
   dest_monop w2n_tm (ERR "dest_w2n" "");
 
-val dest_sw2sw = 
-  dest_monop sw2sw_tm (ERR "dest_sw2sw" "");
 
 (*---------------------------------------------------------------------------*)
 (* Discriminators                                                            *)
