@@ -89,7 +89,7 @@ val std_ss =
       numSimps.REDUCE_ss ++ sumSimps.SUM_ss ++ combinSimps.COMBIN_ss ++
       numSimps.ARITH_RWTS_ss)
 
-val arith_ss = std_ss ++ numSimps.ARITH_ss
+val arith_ss = std_ss ++ numSimps.ARITH_DP_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss
 val ARITH_ss = numSimps.ARITH_ss
 
