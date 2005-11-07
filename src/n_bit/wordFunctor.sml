@@ -2716,6 +2716,51 @@ val WORD_PRED_THM = Q.store_thm
   THEN RW_TAC arith_ss [lem]);
 
 
+val LT_DIV2 = Q.prove
+(`!x. LT_WL x /\ 0<x ==> LT_WL (x DIV 2)`,
+ RW_TAC arith_ss [LT_WL_def] THEN
+  `1 < 2` by EVAL_TAC THEN
+  `x DIV 2 < x` by METIS_TAC [DIV_LESS] THEN
+  METIS_TAC [LESS_TRANS]);
+
+
+val LSR1_LESS = Q.store_thm
+("LSR1_LESS",
+ `!w. ~(w = 0w) ==> w2n (w >>> 1) < w2n w`,
+ SIMP_TAC arith_ss [FORALL_WORD,w2n_EVAL,LSR_EVAL,n2w_11] 
+   THEN RW_TAC std_ss []
+   THEN `MOD_WL 0 = 0` 
+      by RW_TAC arith_ss [ZERO_MOD_WL,MOD_WL_def,bitsTheory.ZERO_LT_TWOEXP]
+   THEN POP_ASSUM SUBST_ALL_TAC
+   THEN `LT_WL (MOD_WL n)` by METIS_TAC [LT_WL_MOD_WL]
+   THEN `0 < MOD_WL n` by RW_TAC arith_ss []
+   THEN `LT_WL (MOD_WL n DIV 2)` by METIS_TAC [LT_DIV2]
+   THEN RW_TAC arith_ss [DIV_LESS,MOD_WL_IDEM]);
+
+
+val ZERO_SHIFT3 = Q.store_thm
+("ZERO_SHIFT3",
+ `!n. 0w >>> n = 0w`,
+ RW_TAC arith_ss [n2w_11,LSR_EVAL,ZERO_MOD_WL,ZERO_DIV,
+          MOD_WL_def,bitsTheory.ZERO_LT_TWOEXP]);
+
+val LSR_LESS = Q.store_thm
+("LSR_LESS",
+ `!n w. ~(w = 0w) /\ 0 < n ==> w2n (w >>> n) < w2n w`,
+ Induct THEN RW_TAC arith_ss [] 
+   THEN `w >>> SUC n = (w >>> 1) >>> n`
+         by METIS_TAC [ADD_CLAUSES,ONE,LSR_ADD]
+   THEN POP_ASSUM SUBST_ALL_TAC
+  THEN Cases_on `w>>>1 = 0w` THENL 
+  [RW_TAC arith_ss [ZERO_SHIFT3] 
+     THEN Q.PAT_ASSUM `~p` MP_TAC
+     THEN Q.ID_SPEC_TAC `w`
+     THEN SIMP_TAC arith_ss [FORALL_WORD,w2n_EVAL,n2w_11] 
+     THEN RW_TAC arith_ss [ZERO_MOD_WL,MOD_WL_def,bitsTheory.ZERO_LT_TWOEXP],
+   Cases_on `n` 
+    THEN FULL_SIMP_TAC arith_ss [] 
+    THEN METIS_TAC [ZERO_SHIFT2,LSR1_LESS,LESS_TRANS]]);
+
 (* -------------------------------------------------------- *)
 
 val _ = overload_on ("<",  Term`word_lt`);
