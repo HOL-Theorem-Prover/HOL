@@ -87,4 +87,6 @@ sig
    val GSYM                  : thm -> thm
    val RENAME_VARS_CONV      : string list -> conv
    val SWAP_VARS_CONV        : conv
-end;
+   val PRINT_CONV            : conv
+
+end

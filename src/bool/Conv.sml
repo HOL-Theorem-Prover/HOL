@@ -1832,5 +1832,10 @@ in
 
 end
 
+(*---------------------------------------------------------------------------*)
+(* Support for debugging complicated conversions                             *)
+(*---------------------------------------------------------------------------*)
+
+fun PRINT_CONV tm = (Parse.print_term tm; print "\n"; ALL_CONV tm);
 
 end (* Conv *)
