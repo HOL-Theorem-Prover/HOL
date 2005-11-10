@@ -261,11 +261,13 @@ val TIMES_2EXP_lem = prove(
     [EXP,CONJUNCT1 FUNPOW,FUNPOW_SUC,iDUB,GSYM TIMES2]);
 
 val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
-  `!x n. TIMES_2EXP (NUMERAL x) (NUMERAL n) =
+  `(!n. TIMES_2EXP n 0 = 0) /\ (!x. TIMES_2EXP 0 x = x) /\
+  !x n. TIMES_2EXP (NUMERAL x) (NUMERAL n) =
      (NUMERAL n) * NUMERAL (FUNPOW iDUB (NUMERAL x) (BIT1 ZERO))`,
   `BIT1 ZERO = 1` by REWRITE_TAC [NUMERAL_DEF,BIT1,ALT_ZERO]
     THEN POP_ASSUM SUBST1_TAC
-    THEN REWRITE_TAC [TIMES_2EXP_def,TIMES_2EXP_lem,NUMERAL_DEF]);
+    THEN REWRITE_TAC [TIMES_2EXP_def,TIMES_2EXP_lem,NUMERAL_DEF]
+    THEN SIMP_TAC std_ss [EXP]);
 
 (* ------------------------------------------------------------------------- *)
 

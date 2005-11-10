@@ -24,6 +24,9 @@ fun NUMERAL_ONLY_RULE l n x =
      ((GEN_ALL o Q.INST [n |-> `NUMERAL n`]) y)
   end;
 
+val MOD_WL = 
+  (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (ONCE_REWRITE_CONV [GSYM n2w_mod]))));
+
 val thms = machine_sizes @
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, LSB_def, BITV_def,
@@ -40,11 +43,13 @@ val thms = machine_sizes @
    word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,
    word_concat_def, word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
-   word_2comp_n2w, word_add_n2w, word_sub_def, word_mul_n2w,
+   word_2comp_n2w, word_sub_def,
+   MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
    word_asr_n2w, word_lsr_n2w, word_lsl_n2w,
    word_ror_n2w, word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, word_index_n2w,
-   word_bits_n2w, word_slice_n2w, word_extract_def,
+   word_bits_n2w, word_slice_n2w,
+   SIMP_RULE std_ss [FUN_EQ_THM] word_extract_def,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w];
 
