@@ -1,33 +1,19 @@
-This directory contains a correctness proof for a variant of the ARM6
-microprocessor design.
+This example contains a correctness proof for the ARM6 microprocessor design.
 
 The files are as follows:  
 
- * armScript.sml: A HOL specification of the ARM instruction set.  This is
-    loosely based on Dominic Pajak's ML specification done at Leeds.
+ * armScript.sml: A HOL specification of the ARM instruction set (v4).
 
  * coreScript.sml: A HOL specification of the ARM6 micro-architecture.
-    This is based on Daniel Schostak's specification done at Leeds. 
+    This is based on Daniel Schostak's specification (Leeds). 
 
  * onestepScript.sml and io_onestepScript.sml: A framework for carrying out
     processor verifications.
 
- * compLib.sml and lemmasLib.sml: Tactics and simpsets used in the verification.
+ * lemmasScript.sml: Some basic theorems about the ARM models.
 
- * my_listScript.sml, lemmasScript.sml, blockScript.sml,
-   interruptsScript.sml and memoryScript.sml:
-     Various lemmas to the main correctness result. 
+ * armLib: Some simple tactics and simpsets.
 
- * correctScript.sml:  The proof of correctness.
+ * correctness/: contains a proof of correctness (be patient when running!).
 
- * armLib.sml, coreLib.sml, simScript.sml, patriciaLib.sml, testScript.sml: 
-    Initial work on executing the models.
-
-
-TODO:
-
- * Currently working on (symbolic) execution with a simple GUI front end.
-
- * Should change ISA to make sure it only accepts interrupts when the I and F
-   masks are not set (masked).  This requires an initialisation function an
-   the ISA level and would require some further verification work.
+ * evaluation/: some work on running the models (see guide/).
