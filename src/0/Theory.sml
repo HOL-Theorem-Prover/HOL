@@ -577,7 +577,7 @@ fun save_thm (name,th) =
        ; if !save_thm_reporting = 0 then ()
          else if not (!Globals.interactive) orelse !save_thm_reporting > 1
          then
-           mesg ("Saving theorem " ^ name ^ "\n")
+           mesg ("Saved theorem " ^ name ^ "\n")
          else ()
        ; th)
 
