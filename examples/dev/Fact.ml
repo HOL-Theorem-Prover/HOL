@@ -7,12 +7,11 @@
 quietdec := true;
 val _ = set_trace "show_alias_printing_choices" 0;
 loadPath :="dff" :: !loadPath;
-map load  ["compile","intLib","vsynth","dffTheory"];
-open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
+map load  ["compile","vsynth","dffTheory"];
+open arithmeticTheory pairLib pairTheory PairRules combinTheory
      devTheory composeTheory compileTheory compile vsynth dffTheory;
 infixr 3 THENR;
 infixr 3 ORELSER;
-val _ = intLib.deprecate_int();
 quietdec := false;
 
 

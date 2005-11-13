@@ -1646,8 +1646,6 @@ fun ptime a f x =
    then (print (a^":  "); time f x)
    else f x;
 
-fun PRINT_CONV tm = (print_term tm; ALL_CONV tm);
-
 val comb_tm = ``COMB``
 val bus_concat_tm = ``BUS_CONCAT``;
 
@@ -1908,6 +1906,7 @@ val _ =
 (*****************************************************************************)
 (* Compile a device implementation into a clocked circuit represented in HOL *)
 (*****************************************************************************)
+(* Unoptimized *)
 fun MAKE_CIRCUIT devth =
  (DISCH_ALL                                                                  o
   LIST_ANTE_EXISTS_INTRO                                                     o 
@@ -1939,6 +1938,44 @@ fun MAKE_CIRCUIT devth =
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,o_THM]) devth;
 
+
+(*---------------------------------------------------------------------------*)
+(* Optimized                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun EXISTSL_CONV tm = 
+  ((LEFT_IMP_EXISTS_CONV THENC QUANT_CONV EXISTSL_CONV) ORELSEC ALL_CONV) tm;
+
+fun NEW_MAKE_CIRCUIT devth =
+ (DISCH_ALL                                                                  o
+  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o 
+  (ptime "14" (I ## AP_ANTE_IMP_TRANS 
+                      (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))))    o
+  (ptime "13" (I ## REWRITE_RULE[at_CONCAT]))                                o
+  (ptime "12" (at_SPEC_ALL ``clk:num->bool``))                               o
+  (ptime "11" GEN_ALL)                                                       o
+(* (ptime"10"(Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT])) o *)
+  (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
+  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT])) o 
+  (ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+  (ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
+  (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
+(*  SIMP_RULE std_ss [UNCURRY]                                                 o
+  Ho_Rewrite.REWRITE_RULE
+   [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]                   o
+*)
+  (ptime "6-7" (Ho_Rewrite.REWRITE_RULE [UNCURRY,FST,SND]))           o
+  (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
+  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV))))         o
+  (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                   o
+  (ptime "4" STEP4)          o
+  (ptime "3" GEN_BETA_RULE)  o
+  (ptime "2" IN_OUT_SPLIT)   o
+  (ptime "1" (REWRITE_RULE 
+   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+    Ite_def,Par_def,Seq_def,o_THM]))) devth;
+
 (*****************************************************************************)
 (* Invoke hwDefine and then apply MAKE_CIRCUIT and REFINE_ALL to the         *)
 (* device                                                                    *)
@@ -1948,3 +1985,4 @@ fun cirDefine qdef =
  in
   (def, ind, MAKE_CIRCUIT(REFINE_ALL dev))
  end;
+ 

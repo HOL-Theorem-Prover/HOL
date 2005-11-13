@@ -38,7 +38,7 @@ open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
 (*****************************************************************************)
 (* Error reporting function                                                  *)
 (*****************************************************************************)
-val ERR = mk_HOL_ERR "compile";
+val ERR = mk_HOL_ERR "vsynth";
 
 (*****************************************************************************)
 (* Date and time                                                             *)

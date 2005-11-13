@@ -13,10 +13,9 @@
 quietdec := true;
 loadPath :="dff" :: !loadPath;
 map load  
- ["metisLib","composeTheory","devTheory","dffTheory","intLib","Cooper"];
+ ["metisLib","composeTheory","devTheory","dffTheory"];
 open arithmeticTheory pairLib pairTheory PairRules combinTheory 
-     composeTheory devTheory dffTheory tempabsTheory metisLib intLib Cooper;
-val _ = intLib.deprecate_int();
+     composeTheory devTheory dffTheory tempabsTheory metisLib;
 quietdec := false;
 *)
 
@@ -29,12 +28,7 @@ open HolKernel Parse boolLib bossLib;
 * Open theories
 ******************************************************************************)
 open metisLib arithmeticTheory pairLib pairTheory PairRules combinTheory 
-     composeTheory dffTheory tempabsTheory devTheory intLib Cooper;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+     composeTheory dffTheory tempabsTheory devTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
