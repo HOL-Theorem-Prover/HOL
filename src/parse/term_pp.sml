@@ -492,12 +492,12 @@ fun pp_term (G : grammar) TyG = let
   val polyty_uprinter = Binarymap.peek(uprinters, {Name = "'a", Thy = ""})
 
 
-  fun pr_term binderp showtypes showtypes_v vars_seen pps tm
+  fun pr_term binderp showtypes showtypes_v vars_seen pps ratorp tm
               pgrav lgrav rgrav depth = let
     val _ =
         if printers_exist then let
             fun sysprint (pg,lg,rg) depth tm =
-                pr_term false showtypes showtypes_v vars_seen pps tm
+                pr_term false showtypes showtypes_v vars_seen pps false tm
                         pg lg rg depth
             val printfn_for_ty =
                 case Lib.total dest_thy_type (type_of tm) of
@@ -517,7 +517,7 @@ fun pp_term (G : grammar) TyG = let
 
     val {fvars_seen, bvars_seen} = vars_seen
     val full_pr_term = pr_term
-    val pr_term = pr_term binderp showtypes showtypes_v vars_seen pps
+    val pr_term = pr_term binderp showtypes showtypes_v vars_seen pps false
     val {add_string, add_break, begin_block, end_block,...} =
       with_ppstream pps
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
@@ -572,8 +572,9 @@ fun pp_term (G : grammar) TyG = let
 
     fun pr_vstruct bv = let
       val pr_t =
-        if showtypes then full_pr_term true true showtypes_v vars_seen pps
-        else full_pr_term true false showtypes_v vars_seen pps
+        if showtypes then
+          full_pr_term true true showtypes_v vars_seen pps false
+        else full_pr_term true false showtypes_v vars_seen pps false
     in
       case bv of
         Simple tm => let
@@ -1041,7 +1042,8 @@ fun pp_term (G : grammar) TyG = let
     in
       pbegin addparens;
       begin_block INCONSISTENT 2;
-      pr_term t1 prec lprec prec (decdepth depth);
+      full_pr_term binderp showtypes showtypes_v vars_seen pps true t1
+                   prec lprec prec (decdepth depth);
       add_break (1, 0);
       pr_term t2 prec prec rprec (decdepth depth);
       end_block();
@@ -1421,7 +1423,11 @@ fun pp_term (G : grammar) TyG = let
             (true, false, true) => add_prim_name()
           | (true, true, true) => with_type add_prim_name
           | (true, true, false) => with_type normal_const
-          | _ => normal_const()
+          | _ => if !show_types andalso not ratorp andalso
+                    const_is_polymorphic r
+                 then
+                   with_type normal_const
+                 else normal_const()
         end
       | COMB(Rator, Rand) => let
           val (f, args) = strip_comb Rator
@@ -1568,7 +1574,7 @@ in
                (!Globals.show_types orelse !Globals.show_types_verbosely)
                (!Globals.show_types_verbosely)
                (start_names())
-               pps t RealTop RealTop RealTop (!Globals.max_print_depth);
+               pps false t RealTop RealTop RealTop (!Globals.max_print_depth);
        Portable.end_block pps
     end
 end
