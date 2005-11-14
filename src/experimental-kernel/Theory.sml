@@ -339,12 +339,16 @@ end;
  *---------------------------------------------------------------------------*)
 
 fun new_type (Name,Arity) =
- (if Lexis.allowed_type_constant Name then ()
+ (if Lexis.allowed_type_constant Name orelse
+     not (!Globals.checking_type_names)
+  then ()
   else WARN "new_type" (Lib.quote Name^" is not a standard type name")
   ; add_typeCT {name=Name, arity=Arity, theory = CTname()};());
 
 fun new_constant (Name,Ty) =
-  (if Lexis.allowed_term_constant Name then ()
+  (if Lexis.allowed_term_constant Name orelse
+      not (!Globals.checking_const_names)
+   then ()
    else WARN "new_constant" (Lib.quote Name^" is not a standard constant name")
    ; add_termCT {name=Name, theory=CTname(), htype=Ty}; ())
 
@@ -443,7 +447,7 @@ fun save_thm (name,th) =
        ; if !save_thm_reporting = 0 then ()
          else if not (!Globals.interactive) orelse !save_thm_reporting > 1
          then
-           mesg ("Saving theorem " ^ name ^ "\n")
+           mesg ("Saved theorem " ^ name ^ "\n")
          else ()
        ; th)
 
