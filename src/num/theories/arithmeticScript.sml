@@ -2314,6 +2314,17 @@ val DIV_P = store_thm(
     MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `r` THEN ASM_REWRITE_TAC []
   ]);
 
+val DIV_P_UNIV = store_thm(
+  "DIV_P_UNIV",
+  ``!P m n. 0 < n ==> (P (m DIV n) = !q r. (m = q * n + r) /\ r < n ==> P q)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    Q_TAC SUFF_TAC `m DIV n = q`
+          THEN1 (DISCH_THEN (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC []) THEN
+    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `r` THEN ASM_REWRITE_TAC [],
+    FIRST_X_ASSUM MATCH_MP_TAC THEN Q.EXISTS_TAC `m MOD n` THEN
+    MATCH_MP_TAC DIVISION THEN ASM_REWRITE_TAC []
+  ]);
+
 val MOD_P = store_thm(
   "MOD_P",
   ``!P p q. 0 < q ==>
@@ -2325,6 +2336,18 @@ val MOD_P = store_thm(
     Q.SUBGOAL_THEN `p MOD q = r` (fn th => SUBST1_TAC th THEN
                                            FIRST_ASSUM ACCEPT_TAC) THEN
     MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `k` THEN ASM_REWRITE_TAC []
+  ]);
+
+val MOD_P_UNIV = store_thm(
+  "MOD_P_UNIV",
+  ``!P m n. 0 < n ==>
+            (P (m MOD n) = !q r. (m = q * n + r) /\ r < n ==> P r)``,
+  REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    Q_TAC SUFF_TAC `m MOD n = r`
+          THEN1 (DISCH_THEN (SUBST1_TAC o SYM) THEN ASM_REWRITE_TAC []) THEN
+    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `q` THEN ASM_REWRITE_TAC [],
+    FIRST_X_ASSUM MATCH_MP_TAC THEN Q.EXISTS_TAC `m DIV n` THEN
+    MATCH_MP_TAC DIVISION THEN ASM_REWRITE_TAC []
   ]);
 
 (* Could generalise this to work over arbitrary operators by making the
