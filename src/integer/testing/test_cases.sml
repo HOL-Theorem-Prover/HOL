@@ -236,7 +236,7 @@ val terms_to_test =
 
 val omega_test_terms = [
   L (``(x MOD 1001 + y MOD 1001) MOD 1001 = (x + y) MOD 1001``, "MOD_ADD1001"),
-  L (``((n DIV 100000) MOD 2 = 0) ==> n DIV 200000 < 100000``, "DIV_LT100000")
+  L (``((n DIV 100000) MOD 2 = 0) ==> n MOD 200000 < 100000``, "DIV_LT100000")
 ]
 
 val goals_to_test = [
