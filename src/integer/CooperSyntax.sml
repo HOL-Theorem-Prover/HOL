@@ -331,6 +331,8 @@ val bmarker_tm = prim_mk_const { Name = "bmarker", Thy = "int_arith"};
 val mk_bmark_thm = GSYM int_arithTheory.bmarker_def
 fun mk_bmark tm = SPEC tm mk_bmark_thm
 
+val NOT_NOT = tautLib.TAUT_PROVE ``~~p:bool = p``
+
 fun mark_conjunct P tm = let
 in
   if is_conj tm then
@@ -338,6 +340,8 @@ in
   else if is_neg tm then
     if is_disj (rand tm) then
       REWR_CONV NOT_OR THENC mark_conjunct P
+    else if is_neg (rand tm) then
+      REWR_CONV NOT_NOT THENC mark_conjunct P
     else if P tm then
       mk_bmark
     else NO_CONV

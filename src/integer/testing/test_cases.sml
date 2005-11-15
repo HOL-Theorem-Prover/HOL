@@ -234,6 +234,10 @@ val terms_to_test =
   L (Term`x * y < y * x + 1n`, "NMUL_NORM")
 ];
 
+val omega_test_terms = [
+  L (``(x MOD 1001 + y MOD 1001) MOD 1001 = (x + y) MOD 1001``, "MOD_ADD1001")
+]
+
 val goals_to_test = [
   ("van Leeuwen",
    ([``0i <= i``, ``i :int < maxchar``,
@@ -266,6 +270,8 @@ fun perform_tests conv tactic =
     (print "Testing goals\n";
      List.all (test_goal tactic) goals_to_test)
 
-
+fun perform_omega_tests conv =
+    (print "Testing Omega terms\n";
+     List.all (test_term conv) omega_test_terms)
 
 end; (* struct *)

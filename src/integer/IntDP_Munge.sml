@@ -250,25 +250,33 @@ local
                   INT_NUM_ODD]
   val p_var = mk_var("p", num)
   val q_var = mk_var("q", num)
-  fun elim_div_mod0 t = let
+  fun elim_div_mod0 exp t = let
     val divmods =
         HOLset.listItems (find_free_terms (fn t => is_mod t orelse is_div t) t)
     fun elim_t to_elim = let
-      val ((num,divisor), thm) = (dest_div to_elim, DIV_P)
-          handle HOL_ERR _ => (dest_mod to_elim, MOD_P)
+      val ((num,divisor), (thm, c)) =
+          (dest_div to_elim, if exp then (DIV_P, RAND_CONV)
+                             else (DIV_P_UNIV, I))
+          handle HOL_ERR _ => (dest_mod to_elim, if exp then (MOD_P, RAND_CONV)
+                                                 else (MOD_P_UNIV, I))
       val div_nzero = EQT_ELIM (REDUCE_CONV (mk_less(zero_tm, divisor)))
-      val rwt = MP (Thm.INST [p_var |-> num, q_var |-> divisor] (SPEC_ALL thm))
-                   div_nzero
+      fun findinst thm =
+          Thm.INST (#1 (match_term (rand (lhs (#2 (dest_imp (concl thm)))))
+                                   to_elim))
+                   thm
+      val rwt = MP (findinst (SPEC_ALL thm)) div_nzero
     in
       UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
-      STRIP_QUANT_CONV (RAND_CONV (RAND_CONV BETA_CONV))
+      STRIP_QUANT_CONV (RAND_CONV (c BETA_CONV))
     end
   in
     case divmods of
       [] => ALL_CONV
-    | _ => FIRST_CONV (map elim_t divmods) THENC elim_div_mod0
+    | _ => FIRST_CONV (map elim_t divmods) THENC elim_div_mod0 exp
   end t
   fun elim_div_mod t = let
+    val exp = goal_qtype t = qsEXISTS andalso
+              HOLset.isEmpty (nat_nonpresburgers t)
     fun recurse passed_a_binder tm = let
     in
       if is_exists tm orelse is_forall tm orelse is_exists1 tm then
@@ -276,7 +284,8 @@ local
       else if is_abs tm then
         ABS_CONV (recurse true)
       else
-        (if passed_a_binder then TRY_CONV elim_div_mod0 else ALL_CONV) THENC
+        (if passed_a_binder then TRY_CONV (elim_div_mod0 exp)
+         else ALL_CONV) THENC
         SUB_CONV (recurse false)
     end tm
   in
