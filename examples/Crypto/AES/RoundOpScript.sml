@@ -126,7 +126,6 @@ val from_state_def = Define
               b3,b7,b11,b15) :state)
  = (b0,b1,b2,b3,b4,b5,b6,b7,b8,b9,b10,b11,b12,b13,b14,b15) : block`;
 
-
 val to_state_Inversion = Q.store_thm
   ("to_state_Inversion",
    `!s:state. from_state(to_state s) = s`,

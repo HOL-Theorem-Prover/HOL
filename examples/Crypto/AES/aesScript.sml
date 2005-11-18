@@ -96,6 +96,9 @@ val Round_def = Define `Round n k s = SND(SND(RoundTuple(n,k,s)))`;
 val InvRound_def = Define `InvRound n k s = SND(SND(InvRoundTuple(n,k,s)))`;
 
 
+val Round_def = Define `Round n k s = SND(SND(RoundTuple(n,k,s)))`;
+val InvRound_def = Define `InvRound n k s = SND(SND(InvRoundTuple(n,k,s)))`;
+
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
 (*---------------------------------------------------------------------------*)
@@ -106,7 +109,6 @@ val AES_FWD_def =
     from_state o Round 9 (ROTKEYS keys) 
                o AddRoundKey (FST keys) o to_state`;
      
-
 val AES_BWD_def = 
  Define 
   `AES_BWD keys = 

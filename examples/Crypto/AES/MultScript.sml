@@ -69,11 +69,7 @@ val (ConstMult_def,ConstMult_ind) =
         if LSB b1
            then b2 # ((b1 >>> 1) ** xtime b2)
            else      ((b1 >>> 1) ** xtime b2)`,
-   WF_REL_TAC `measure (w2n o FST)` THEN 
-   (* It would be nice to use LSR1_LESS instead of brute force, but
-      I didn't finish proving it.  *)
-   STRIP_TAC THEN word8Cases_on `b1` THEN 
-   RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN WORD_TAC)
+   WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [LSR1_LESS])
 
 val _ = save_thm("ConstMult_def",ConstMult_def);
 val _ = save_thm("ConstMult_ind",ConstMult_ind);
@@ -102,9 +98,7 @@ val defn = Hol_defn
 val (IterConstMult_def,IterConstMult_ind) = 
  Defn.tprove
   (defn,
-   WF_REL_TAC `measure (w2n o FST)` THEN STRIP_TAC THEN
-   word8Cases_on `b1` THEN 
-   RW_TAC std_ss [] THEN REPEAT (POP_ASSUM MP_TAC) THEN WORD_TAC);
+   WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [LSR1_LESS]);
 
 val _ = save_thm("IterConstMult_def",IterConstMult_def);
 val _ = save_thm("IterConstMult_ind",IterConstMult_ind);
@@ -139,12 +133,23 @@ val instantiate =
 
 val IterMult2 = UNROLL_RULE 1 IterConstMult_def
 
-val mult_thm =
-LIST_CONJ (map instantiate [``0x2w ** x``, ``0x3w ** x``, ``0x9w ** x``,
-                            ``0xBw ** x``, ``0xDw ** x``, ``0xEw ** x``])
+(*---------------------------------------------------------------------------*)
+(* mult_unroll =                                                             *)
+(*    |- (2w ** x = xtime x) /\                                              *)
+(*       (3w ** x = x # xtime x) /\                                          *)
+(*       (9w ** x = x # xtime (xtime (xtime x))) /\                          *)
+(*       (11w ** x = x # xtime (x # xtime (xtime x))) /\                     *)
+(*       (13w ** x = x # xtime (xtime (x # xtime x))) /\                     *)
+(*       (14w ** x = xtime (x # xtime (x # xtime x)))                        *)
+(*---------------------------------------------------------------------------*)
 
-val eval_mult =
-WORD_RULE o PURE_REWRITE_CONV [mult_thm, xtime_def]
+val mult_unroll = save_thm 
+ ("mult_unroll", 
+  LIST_CONJ 
+    (map instantiate [``0x2w ** x``, ``0x3w ** x``, ``0x9w ** x``,
+                      ``0xBw ** x``, ``0xDw ** x``, ``0xEw ** x``]));
+
+val eval_mult = WORD_RULE o PURE_REWRITE_CONV [mult_unroll, xtime_def]
 
 fun build_table arg1 = word8GenCases `$** ^arg1` eval_mult
 
@@ -159,18 +164,6 @@ let val (ifs, tables) =
 in
 (LIST_CONJ tables, LIST_CONJ ifs)
 end
-
-(*---------------------------------------------------------------------------*)
-(* mult_unroll                                                               *)
-(*    |- (2w ** x = xtime x) /\                                              *)
-(*       (3w ** x = x # xtime x) /\                                          *)
-(*       (9w ** x = x # xtime (xtime (xtime x)))      /\                     *)
-(*       (11w ** x = x # xtime (x # xtime (xtime x))) /\                     *)
-(*       (13w ** x = x # xtime (xtime (x # xtime x))) /\                     *)
-(*       (14w ** x = xtime (x # xtime (x # xtime x)))                        *)
-(*---------------------------------------------------------------------------*)
-
-val _ = save_thm ("mult_unroll", mult_thm)
 
 (*---------------------------------------------------------------------------*)
 (* Multiplication by constant implemented by one-step rewrites.              *)
