@@ -73,6 +73,7 @@ src/HolBdd
 src/HolCheck
 src/temporal/src
 src/temporal/smv.2.4.3
+src/rational
 src/path
 src/word/theories
 src/word/src

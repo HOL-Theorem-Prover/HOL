@@ -117,6 +117,9 @@ val keepers =
      (* Quotations *)
      "Q.sig",
 
+     (* rational numbers *)
+     "ratTheory.sig", "ratLib.sig","ratSyntax.sig","ratRingLib.sig",
+
      (* real numbers *)
      "limTheory.sig", "realTheory.sig",
      "RealArith.sig", "netsTheory.sig", "realaxTheory.sig",
