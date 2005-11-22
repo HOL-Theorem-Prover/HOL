@@ -183,9 +183,7 @@ val ADD_0 = store_thm("ADD_0",
 
 val ADD_SUC = store_thm("ADD_SUC",
    --`!m n. SUC(m + n) = (m + SUC n)`--,
-   INDUCT_TAC
-   THEN GEN_TAC
-   THEN ASM_REWRITE_TAC[ADD]);
+   INDUCT_TAC THEN ASM_REWRITE_TAC[ADD]);
 
 val ADD_CLAUSES = store_thm("ADD_CLAUSES",
    --`(0 + m = m)              /\
@@ -197,7 +195,6 @@ val ADD_CLAUSES = store_thm("ADD_CLAUSES",
 val ADD_SYM = store_thm ("ADD_SYM",
   --`!m n. m + n = n + m`--,
   INDUCT_TAC
-   THEN GEN_TAC
    THEN ASM_REWRITE_TAC[ADD_0, ADD, ADD_SUC]);
 
 val ADD_COMM = save_thm("ADD_COMM", ADD_SYM);
@@ -380,10 +377,7 @@ val LESS_CASES = store_thm("LESS_CASES",
 
 val ADD_INV_0 = store_thm("ADD_INV_0",
    --`!m n. (m + n = m) ==> (n = 0)`--,
-   REPEAT GEN_TAC
-    THEN SPEC_TAC(--`(m:num)`--,--`(m:num)`--)
-    THEN INDUCT_TAC
-    THEN ASM_REWRITE_TAC[ADD_CLAUSES, INV_SUC_EQ]);
+   INDUCT_TAC THEN ASM_REWRITE_TAC[ADD_CLAUSES, INV_SUC_EQ]);
 
 val LESS_EQ_ADD = store_thm ("LESS_EQ_ADD",
    --`!m n. m <= m + n`--,
