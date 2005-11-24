@@ -355,7 +355,7 @@ handle HOL_ERR _ => raise ERR "FRAC_DNM_CONV" "";
  *  frac_nmr_tac : term*term -> tactic
  *--------------------------------------------------------------------------*)
 
-fun frac_nmr_tac (asm_list:term list) (nmr,dnm) =
+    fun frac_nmr_tac (asm_list:term list) (nmr,dnm) =
 	let
 		val asm_thm = frac_pos_conv asm_list dnm;
 		val sub_thm = DISCH_ALL (FRAC_NMR_CONV ``nmr( abs_frac (^nmr, ^dnm) )``);
@@ -387,9 +387,11 @@ fun frac_dnm_tac (asm_list:term list) (nmr,dnm) =
 
 fun FRAC_NMRDNM_TAC (asm_list, goal) =
 let
-	val term_list = extract_frac_fun [``frac_nmr``,``frac_dnm``] goal;
-	val nmr_term_list  = map (fn x => let val (rator,nmr,dnm) = x in (nmr,dnm) end) (filter (fn x => let val (a1,a2,a3) = x in a1=``frac_nmr`` end) term_list);
-	val dnm_term_list  = map (fn x => let val (rator,nmr,dnm) = x in (nmr,dnm) end) (filter (fn x => let val (a1,a2,a3) = x in a1=``frac_dnm`` end) term_list);
+  val term_list = extract_frac_fun [``frac_nmr``,``frac_dnm``] goal
+  val nmr_term_list  = map (fn (rator,nmr,dnm) => (nmr,dnm))
+                           (filter (fn (a1,_,_) => a1=``frac_nmr``) term_list)
+  val dnm_term_list  = map (fn (rator,nmr,dnm) => (nmr,dnm))
+                           (filter (fn (a1,_,_) => a1=``frac_dnm``) term_list)
 in
 	(
 		MAP_EVERY (frac_nmr_tac asm_list) nmr_term_list THEN
@@ -992,28 +994,34 @@ val FRAC_MINV_SAVE = store_thm("FRAC_MINV_SAVE",``!a1 b1. ~(a1=0) ==> (frac_minv
  *	frac_save (a1 * a2) (b1 * b2 + b1 + b2)
  *--------------------------------------------------------------------------*)
 
-val FRAC_ADD_SAVE = store_thm("FRAC_ADD_SAVE", ``!a1 b1 a2 b2. frac_add (frac_save a1 b1) (frac_save a2 b2) = frac_save (a1 * &b2 + a2 * &b1 + a1 + a2) (b1 * b2 + b1 + b2)``,
-	REPEAT GEN_TAC THEN
-	REWRITE_TAC[frac_add_def, frac_save_def] THEN
-	ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
-	ASSUME_TAC (ARITH_PROVE ``0i < &b2 + 1``) THEN
-	FRAC_NMRDNM_TAC THEN
-	FRAC_EQ_TAC THEN
-	REWRITE_TAC[INT_ADD_CALCULATE, INT_MUL_CALCULATE, INT_EQ_CALCULATE] THEN
-	REWRITE_TAC[GSYM INT_ADD, GSYM INT_MUL] THEN
-	RW_TAC arith_ss [arithmeticTheory.LEFT_ADD_DISTRIB, arithmeticTheory.RIGHT_ADD_DISTRIB] THEN
-	ARITH_TAC );
+val FRAC_ADD_SAVE = store_thm(
+  "FRAC_ADD_SAVE",
+  ``!a1 b1 a2 b2.
+         frac_add (frac_save a1 b1) (frac_save a2 b2) =
+         frac_save (a1 * &b2 + a2 * &b1 + a1 + a2) (b1 * b2 + b1 + b2)``,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[frac_add_def, frac_save_def] THEN
+  ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
+  ASSUME_TAC (ARITH_PROVE ``0i < &b2 + 1``) THEN
+  FRAC_NMRDNM_TAC THEN
+  FRAC_EQ_TAC THEN
+  SIMP_TAC (srw_ss()) [INT_LDISTRIB, INT_RDISTRIB, GSYM INT_ADD,
+                       AC INT_ADD_COMM INT_ADD_ASSOC]);
 
-val FRAC_MUL_SAVE = store_thm("FRAC_MUL_SAVE", ``!a1 b1 a2 b2. frac_mul (frac_save a1 b1) (frac_save a2 b2) = frac_save (a1 * a2) (b1 * b2 + b1 + b2)``,
-	REPEAT GEN_TAC THEN
-	REWRITE_TAC[frac_mul_def, frac_save_def] THEN
-	ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
-	ASSUME_TAC (ARITH_PROVE ``0i < &b2 + 1``) THEN
-	FRAC_NMRDNM_TAC THEN
-	FRAC_EQ_TAC THEN
-	REWRITE_TAC[INT_ADD_CALCULATE, INT_MUL_CALCULATE, INT_EQ_CALCULATE] THEN
-	RW_TAC arith_ss [arithmeticTheory.LEFT_ADD_DISTRIB, arithmeticTheory.RIGHT_ADD_DISTRIB] THEN
-	ARITH_TAC );
+val FRAC_MUL_SAVE = store_thm(
+  "FRAC_MUL_SAVE",
+  ``!a1 b1 a2 b2. frac_mul (frac_save a1 b1) (frac_save a2 b2) =
+                  frac_save (a1 * a2) (b1 * b2 + b1 + b2)``,
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[frac_mul_def, frac_save_def] THEN
+  ASSUME_TAC (ARITH_PROVE ``0i < &b1 + 1``) THEN
+  ASSUME_TAC (ARITH_PROVE ``0i < &b2 + 1``) THEN
+  FRAC_NMRDNM_TAC THEN
+  FRAC_EQ_TAC THEN
+  REWRITE_TAC[INT_ADD_CALCULATE, INT_MUL_CALCULATE, INT_EQ_CALCULATE] THEN
+  RW_TAC arith_ss [arithmeticTheory.LEFT_ADD_DISTRIB,
+                   arithmeticTheory.RIGHT_ADD_DISTRIB] THEN
+  ARITH_TAC);
 
 (*==========================================================================
  * end of theory
