@@ -246,12 +246,9 @@ val LESS_TRANS = store_thm ("LESS_TRANS",
 
 val LESS_ANTISYM = store_thm  ("LESS_ANTISYM",
    --`!m n. ~((m < n) /\ (n < m))`--,
-   INDUCT_TAC
-    THEN REPEAT STRIP_TAC
+   REPEAT STRIP_TAC
     THEN IMP_RES_TAC LESS_TRANS
-    THEN IMP_RES_TAC LESS_REFL
-    THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]);
+    THEN IMP_RES_TAC LESS_REFL);
 
 val LESS_LESS_SUC = store_thm ("LESS_LESS_SUC",
    --`!m n. ~((m < n) /\ (n < SUC m))`--,
