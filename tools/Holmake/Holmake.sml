@@ -1228,12 +1228,13 @@ fun generate_all_plausible_targets () = let
     | SOME fname => if P fname then fname::find_files ds P
                                else find_files ds P
   val cds = FileSys.openDir "."
+  fun not_a_dot f = not (String.isPrefix "." f)
   fun ok_file f =
     case (toFile f) of
       SIG _ => true
     | SML _ => true
     | _ => false
-  val src_files = find_files cds ok_file
+  val src_files = find_files cds (fn s => ok_file s andalso not_a_dot s)
   fun src_to_target (SIG (Script s)) = UO (Theory s)
     | src_to_target (SML (Script s)) = UO (Theory s)
     | src_to_target (SML s) = (UO s)
