@@ -146,6 +146,7 @@ val rat_calculate_table = [
  *    |- r1 = abs_rat(f1)
  *--------------------------------------------------------------------------*)
 
+
 fun RAT_CALC_CONV (t1:term) =
 let
 	val thm = REFL t1;
@@ -155,6 +156,9 @@ in
 	(* do nothing if term is already in the form abs_rat(...) *)
 	if top_rator=``abs_rat`` then
 		thm
+	(* if it is a numeral, simply rewrite it *)
+	else if (top_rator=``rat_of_num``) then
+		SUBST [``x:rat`` |-> SPEC (rand t1) (RAT_OF_NUM_CALCULATE)] ``^t1 = x:rat`` thm
 	(* if there is an entry in the calculation table, calculate it *)
 	else if (isSome calc_table_entry) then
 		let
@@ -428,16 +432,22 @@ end;
 (* rewrites to calculate operations on fractions *)
 val frac_rewrites = [FRAC_0_SAVE, FRAC_1_SAVE, FRAC_AINV_SAVE, FRAC_ADD_SAVE, FRAC_MUL_SAVE];
 (* rewrites to calculate operations on rational numbers *)
-val rat_basic_rewrites = [rat_0_def, rat_1_def, RAT_AINV_CALCULATE, RAT_ADD_CALCULATE, RAT_MUL_CALCULATE] @ frac_rewrites;
+val rat_basic_rewrites = [rat_0, rat_1, rat_0_def, rat_1_def, RAT_AINV_CALCULATE, RAT_ADD_CALCULATE, RAT_MUL_CALCULATE] @ frac_rewrites;
 (* rewrites to additionally decide equalities and inequalities on rational numbers *)
 val rat_rewrites = [RAT_EQ_CALCULATE, RAT_LES_CALCULATE, rat_gre_def, rat_leq_def, rat_geq_def, FRAC_NMR_SAVE, FRAC_DNM_SAVE] @ rat_basic_rewrites;
+(* rewrites to decide equalities on rationals in numeral form *)
+val rat_num_rewrites = [RAT_ADD_NUM_CALCULATE, RAT_MUL_NUM_CALCULATE, RAT_EQ_NUM_CALCULATE, RAT_AINV_AINV, RAT_AINV_0] @ num_rewrites;
 
 (*--------------------------------------------------------------------------
  * RAT_PRECALC_CONV
+ * RAT_POSTCALC_CONV
  *--------------------------------------------------------------------------*)
 
 val RAT_PRECALC_CONV =
-	SIMP_CONV int_ss [rat_cons_def, SGN_def] THENC REWRITE_CONV[RAT_SUB_ADDAINV, RAT_DIV_MULMINV] THENC FRAC_SAVE_CONV;
+	SIMP_CONV int_ss [rat_cons_def, RAT_SAVE_NUM, SGN_def] THENC REWRITE_CONV[RAT_SUB_ADDAINV, RAT_DIV_MULMINV] THENC FRAC_SAVE_CONV;
+
+val RAT_POSTCALC_CONV =
+	REWRITE_CONV[GSYM RAT_SUB_ADDAINV, GSYM RAT_DIV_MULMINV] THENC SIMP_CONV int_ss [RAT_SAVE_TO_CONS, RAT_CONS_TO_NUM];
 
 (*--------------------------------------------------------------------------
  * RAT_BASIC_ARITH_CONV

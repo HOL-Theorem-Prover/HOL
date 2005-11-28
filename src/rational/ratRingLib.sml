@@ -26,6 +26,7 @@ fun is_computable_frac t =
 
 fun is_computable_rat t =
 	mem t [``rat_0``,``rat_1``] orelse
+	(* ((is_comb t) andalso (rator t)=``rat_of_num``) andalso (numSyntax.is_numeral (rand t)) orelse *)
 	((is_comb t) andalso (rator t)=``abs_rat``) andalso (is_computable_frac (rand t));
 
 (* test cases:
@@ -48,7 +49,7 @@ val _ = ringLib.declare_ring
  *--------------------------------------------------------------------------*)
 
 val PRE_CONV = RAT_PRECALC_CONV;
-val POST_CONV = ALL_CONV;
+val POST_CONV = RAT_POSTCALC_CONV;
 
 val RAT_RING_NORM_CONV = PRE_CONV THENC ringLib.RING_NORM_CONV THENC POST_CONV;
 val RAT_RING_CONV = PRE_CONV THENC ringLib.RING_CONV THENC POST_CONV;

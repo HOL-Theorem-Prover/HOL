@@ -28,6 +28,7 @@ sig
 
 	(* conversions *)
 	val RAT_PRECALC_CONV : conv
+	val RAT_POSTCALC_CONV : conv
 	val RAT_BASIC_ARITH_CONV : conv
 	val RAT_ELIMINATE_MINV_EQ_CONV : conv
 	val RAT_ELIMINATE_MINV_CONV : conv
@@ -41,5 +42,6 @@ sig
 	val int_rewrites : thm list;
 	val rat_basic_rewrites : thm list;
 	val rat_rewrites : thm list;
+	val rat_num_rewrites : thm list;
 
 end;

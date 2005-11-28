@@ -23,7 +23,7 @@ val _ = new_theory "ratRing";
  *  |- is_ring (ring rat_0 rat_1 rat_add rat_mul rat_ainv)
  *--------------------------------------------------------------------------*)
 
-val RAT_IS_RING = store_thm("RAT_IS_RING",``is_ring (ring rat_0 rat_1 rat_add rat_mul rat_ainv)``,
+val RAT_IS_RING = store_thm("RAT_IS_RING",``is_ring (ring 0q 1q rat_add rat_mul rat_ainv)``,
 	RW_TAC intLib.int_ss[ ringTheory.is_ring_def, ringTheory.ring_accessors,
 		RAT_ADD_ASSOC, RAT_MUL_ASSOC,
 		RAT_ADD_LID, RAT_MUL_LID,
