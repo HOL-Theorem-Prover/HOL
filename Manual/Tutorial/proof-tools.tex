@@ -271,8 +271,7 @@ The \ml{REWR\_CONV} function applies a single (first-order) rewrite at
 the top of a term.  These uses of \ml{REWR\_CONV} are done within
 calls to the \ml{CONV\_RULE} function.  This lifts a conversion $c$ (a
 function taking a term $t$ and producing a theorem $\vdash t = t'$),
-so that $\ml{CONV\_RULE}\;c$ takes the theorem $\vdash t$ to $\vdash
-t = t'$.
+so that $\ml{CONV\_RULE}\;c$ takes the theorem $\vdash t$ to $\vdash t'$.
 
 
 \subsection{Conversion to Conjunctive Normal Form}
@@ -697,7 +696,7 @@ a variable or the negation of a variable.  This makes \ml{DPLL\_UNIV}
 a little unfriendly when it comes to using it as part of the proof of
 a goal.  In this section, we will write one further ``wrapper''
 layer to wrap around \ml{DPLL\_UNIV}, producing a tool that can be
-applied to many more goal.  
+applied to many more goals.
 
 \paragraph{Relaxing the Quantification Requirement}  The first step is
 to allow formulas that are not closed.  In order to hand on a formula
@@ -711,12 +710,12 @@ an exception.
 Code implementing this is shown below:
 \begin{hol}
 \begin{verbatim}
-   fun nonuniv_wrap t = let 
+   fun nonuniv_wrap t = let
      val fvs = free_vars t
      val gen_t = list_mk_forall(fvs, t)
      val gen_t_eq = DPLL_UNIV gen_t
    in
-     if rhs (concl gen_t_eq) = boolSyntax.T then let 
+     if rhs (concl gen_t_eq) = boolSyntax.T then let
          val gen_th = EQT_ELIM gen_t_eq
        in
          EQT_INTRO (SPECL fvs gen_th)
@@ -733,18 +732,18 @@ just the free variables (which we have conveniently assumed will only
 be boolean), we can turn any leaf part of the term that is not a
 variable or a negated variable into a fresh variable.  We first
 extract those boolean-valued leaves that are not the constants true or
-false. 
+false.
 \begin{hol}
 \begin{verbatim}
-   fun var_leaves acc t = let 
-     val (l,r) = dest_conj t handle HOL_ERR _ => 
-                 dest_disj t handle HOL_ERR _ => 
-                 dest_imp t handle HOL_ERR _ => 
-                 dest_bool_eq t 
+   fun var_leaves acc t = let
+     val (l,r) = dest_conj t handle HOL_ERR _ =>
+                 dest_disj t handle HOL_ERR _ =>
+                 dest_imp t handle HOL_ERR _ =>
+                 dest_bool_eq t
    in
-     var_leaves (var_leaves acc l) r 
-   end handle HOL_ERR _ => 
-     if type_of t <> bool then 
+     var_leaves (var_leaves acc l) r
+   end handle HOL_ERR _ =>
+     if type_of t <> bool then
        raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
      else if t = boolSyntax.T then acc
      else if t = boolSyntax.F then acc
@@ -759,9 +758,9 @@ also used a function \ml{dest\_bool\_eq} designed to pull apart only
 those equalities which are over boolean values.  Its definition is
 \begin{hol}
 \begin{verbatim}
-   fun dest_bool_eq t = let 
+   fun dest_bool_eq t = let
      val (l,r) = dest_eq t
-     val _ = type_of l = bool orelse 
+     val _ = type_of l = bool orelse
              raise mk_HOL_ERR "dpll" "dest_bool_eq" "Eq not on bools"
    in
      (l,r)
@@ -778,8 +777,8 @@ Now we can finally write our final \ml{DPLL\_TAUT} function:
          val vars = map (fn t => genvar bool) insts
          val theta = map2 (curry (op |->)) insts vars
          val tm'' = list_mk_forall (vars,subst theta tm')
-     in 
-         EQT_INTRO (GENL univs 
+     in
+         EQT_INTRO (GENL univs
                       (SPECL insts (EQT_ELIM (DPLL_UNIV tm''))))
      end
 \end{verbatim}

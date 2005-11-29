@@ -264,7 +264,8 @@ Meson search level: .....
 - drop();
 OK..
 > val it = There are currently no proofs. : proofs
-\end{verbatim}\end{session}
+\end{verbatim}
+\end{session}
 
 We have used \ml{PROVE\_TAC} in this way to prove the following
 collection of theorems about \ml{divides}. As mentioned previously, the
@@ -750,7 +751,8 @@ making a single tactic out of the sequence of tactic invocations we have
 just made. We assume that the sequence of invocations has been kept
 track of in a file or a text editor buffer. We would thus have something
 like the following:
-{\small \begin{verbatim}
+\begin{hol}
+\begin{verbatim}
     e (ARW_TAC [LESS_EQ_EXISTS]);
     e (Induct_on `p`);
     (*1*)
@@ -763,25 +765,29 @@ like the following:
     (*2*)
     e (ARW_TAC [FACT, ADD_CLAUSES]);
     e (PROVE_TAC [DIVIDES_LMUL]);
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 \noindent
 
 We have added a numbering scheme to keep track of the branches in the
 proof. We can stitch the above directly into the following compound
 tactic:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
     ARW_TAC [LESS_EQ_EXISTS]
      THEN Induct_on `p`
      THENL [ARW_TAC [] THEN Cases_on `m`
             THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
                    ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
             ARW_TAC [FACT, ADD_CLAUSES] THEN PROVE_TAC [DIVIDES_LMUL]]
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 \noindent This can be tested to see that we have made no errors:
 
-\begin{session}\begin{verbatim}
+\begin{session}
+\begin{verbatim}
 - restart();
 
 > ...
@@ -798,21 +804,24 @@ Meson search level: ..
 > val it =
     Initial goal proved.
     |- !m n. 0 < m /\ m <= n ==> m divides FACT n
-\end{verbatim}\end{session}
-    For many users, this would be the end of dealing with this proof:
-    the tactic can now be packaged into an invocation of
-    \ml{prove}\footnote{The \ml{prove} function takes a term and a
-      tactic and attempts to prove the term using the supplied tactic.
-      It returns the proved theorem if the tactic succeeds.  It
-      doesn't save the theorem to the developing theory.} or
-    \ml{store\_thm} and that would be the end of it. However, another
-    class of user would notice that this tactic could be shortened.
+\end{verbatim}
+\end{session}
+
+For many users, this would be the end of dealing with this proof: the
+tactic can now be packaged into an invocation of
+\ml{prove}\footnote{The \ml{prove} function takes a term and a tactic
+  and attempts to prove the term using the supplied tactic.  It
+  returns the proved theorem if the tactic succeeds.  It doesn't save
+  the theorem to the developing theory.} or \ml{store\_thm} and that
+would be the end of it. However, another class of user would notice
+that this tactic could be shortened.
 
 To start, both arms of the induction start with an invocation of
 \ml{ARW\_TAC}, and the semantics of \ml{THEN} allow us to merge the
 occurrences of \ml{ARW\_TAC} above the \ml{THENL}. The recast tactic
 is
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
     ARW_TAC [LESS_EQ_EXISTS]
       THEN Induct_on `p`
       THEN ARW_TAC [FACT, ADD_CLAUSES]
@@ -820,14 +829,16 @@ is
               THENL [PROVE_TAC [DECIDE ``!x. ~(x < x)``],
                      ARW_TAC [FACT, DIVIDES_RMUL, DIVIDES_REFL]],
              PROVE_TAC [DIVIDES_LMUL]]
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 (Of course, when a tactic has been revised, it should be tested to see
 if it still proves the goal!) Now recall that the use of \ml{ARW\_TAC}
 in the base case could be replaced by a call to \ml{PROVE\_TAC}. Thus
 it seems possible to merge the two sub-cases of the base case into a
 single invocation of \ml{PROVE\_TAC}:
 
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
     ARW_TAC [LESS_EQ_EXISTS]
       THEN Induct_on `p`
       THEN ARW_TAC [FACT, ADD_CLAUSES]
@@ -835,7 +846,8 @@ single invocation of \ml{PROVE\_TAC}:
               THEN PROVE_TAC [DECIDE ``!x. ~(x < x)``,
                               FACT, DIVIDES_RMUL, DIVIDES_REFL],
              PROVE_TAC [DIVIDES_LMUL]]
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 \noindent
 Finally, pushing this dubious revisionism nearly to its limit, we'd
@@ -846,14 +858,16 @@ as in the current incarnation of the tactic, but we will let the
 inductive case pass unaltered through the \ml{THENL}. This is achieved
 by using \verb+ALL_TAC+, which is a tactic that acts as an identity
 function on the goal.
-{\small\begin{verbatim}
+\begin{hol}
+\begin{verbatim}
     ARW_TAC [LESS_EQ_EXISTS]
       THEN Induct_on `p`
       THEN ARW_TAC [FACT, ADD_CLAUSES]
       THENL [Cases_on `m`, ALL_TAC]
       THEN PROVE_TAC [DECIDE ``!x. ~(x < x)``, FACT,
                       DIVIDES_RMUL, DIVIDES_REFL, DIVIDES_LMUL]
-\end{verbatim}}
+\end{verbatim}
+\end{hol}
 
 \noindent
 The result is that there will be three subgoals emerging from the
