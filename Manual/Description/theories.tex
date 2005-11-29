@@ -1951,6 +1951,48 @@ Term `1i = &(1n + 0n)`;
 \end{session}
 
 
+\subsection{Rational numbers}\label{rationals}
+\index{rational numbers, the HOL theory of@rationals, the \HOL{} theory of|(}
+
+The type of rationals is constructed as a quotient on ordered pairs of
+integers (the numerator and the denominator of a fraction) whose second
+component must not be zero. To make things easier in the \HOL\ theory,
+the sign of a rational number is always moved to the numerator.
+So, the denominator is always positive.
+
+A standard collection of operators, which are overloaded with similar
+operations on the integers, are defined. These include those found in
+the following table. Injection from natural numbers is supported
+by the overloaded symbol {\small\verb+& : num -> rat+} and the
+suffix {\small\verb+q+}.
+
+
+\begin{center}
+{\small
+\begin{tabular}{@{}cccc}
+Constant & Overloaded symbol & Strength & Associativity \\ \hline
+{\small\verb+rat_geq+} &{\small\verb+>=+} & 450 & right \\
+{\small\verb+rat_leq+} &{\small\verb+<=+} & 450 & right \\
+{\small\verb+rat_gre+} &{\small\verb+>+}  & 450 & right \\
+{\small\verb+rat_les+} &{\small\verb+<+}  & 450 & right \\
+{\small\verb+rat_add+} &{\small\verb%+%} & 500 & left \\
+{\small\verb+rat_sub+} &{\small\verb%-%} & 500 & left \\
+{\small\verb+rat_ainv+} &{\small\verb%~%} & 900 & trueprefix \\
+{\small\verb+rat_minv+} & & & \\
+{\small\verb+rat_mul+} &{\small\verb%*%} & 600 & left \\
+{\small\verb+rat_div+} &{\small\verb%/%} & 600 & left \\
+{\small\verb+rat_of_num+} &{\small\verb%&%} & & \\
+\end{tabular}}
+\end{center}
+
+The theorems in the theory of rational numbers include field properties,
+arithmetic rules, manipulation of (in)equations and their reduction to
+(in)equations between integers, properties of less-than relations and the
+density of rational numbers. For details, consult \REFERENCE\ and the
+source files.
+
+\index{rational numbers, the HOL theory of@rationals, the \HOL{} theory of|)}
+
 \subsection{Real numbers}\label{reals}
 \index{real numbers, the HOL theory of@real numbers, the \HOL{} theory of|(}
 
