@@ -102,10 +102,7 @@ end;
  ---------------------------------------------------------------------------*)
 
 local open boolTheory
-      val non_datatype_congs = 
-         ref [LET_CONG, COND_CONG, IMP_CONG,
-              REWRITE_RULE[AND_IMP_INTRO] RES_FORALL_CONG,
-              REWRITE_RULE[AND_IMP_INTRO] RES_EXISTS_CONG]
+      val non_datatype_congs = ref [LET_CONG, COND_CONG, IMP_CONG]
 in
   fun read_congs() = !non_datatype_congs
   fun write_congs L = (non_datatype_congs := L)
