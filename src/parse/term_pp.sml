@@ -153,6 +153,13 @@ fun dollarise s = if !dollar_escape then "$" ^ s
 
 val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
 
+(* ----------------------------------------------------------------------
+    A flag controlling printing of set comprehensions
+   ---------------------------------------------------------------------- *)
+
+val unamb_comp = ref false
+val _ = Feedback.register_btrace ("pp_unambiguous_comprehensions", unamb_comp)
+
 open term_pp_types
 fun grav_name (Prec(n, s)) = s | grav_name _ = ""
 fun grav_prec (Prec(n,s)) = n | grav_prec _ = ~1
@@ -785,16 +792,41 @@ fun pp_term (G : grammar) TyG = let
       val _ = (* check for set comprehensions *)
         if
           is_const t1 andalso fst (dest_const t1) = "GSPEC" andalso
-          my_is_abs t2 then let
-            val (_, body) = my_dest_abs t2
+          my_is_abs t2
+        then let
+            val (vs, body) = my_dest_abs t2
+            val vfrees = FVL [vs] empty_tmset
             val (l, r) = dest_pair body
+            val lfrees = FVL [l] empty_tmset
+            val rfrees = FVL [r] empty_tmset
+            open HOLset
           in
-            begin_block CONSISTENT 0;
-            add_string "{"; begin_block CONSISTENT 0;
-            pr_term l Top Top Top (decdepth depth);
-            add_string " |"; spacep true;
-            pr_term r Top Top Top (decdepth depth);
-            end_block(); add_string "}"; end_block(); raise SimpleExit
+            if (equal(intersection(lfrees,rfrees), vfrees) orelse
+                (isEmpty lfrees andalso equal(rfrees, vfrees)) orelse
+                (isEmpty rfrees andalso equal(lfrees, vfrees)))
+               andalso not (!unamb_comp)
+            then
+              (begin_block CONSISTENT 0;
+               add_string "{"; begin_block CONSISTENT 0;
+               pr_term l Top Top Top (decdepth depth);
+               add_string " |"; spacep true;
+               pr_term r Top Top Top (decdepth depth);
+               end_block();
+               add_string "}";
+               end_block();
+               raise SimpleExit)
+            else
+              (begin_block CONSISTENT 0;
+               add_string "{"; begin_block CONSISTENT 0;
+               pr_term l Top Top Top (decdepth depth);
+               add_string " |"; spacep true;
+               pr_term vs Top Top Top (decdepth depth);
+               add_string " |"; spacep true;
+               pr_term r Top Top Top (decdepth depth);
+               end_block();
+               add_string "}";
+               end_block();
+               raise SimpleExit)
           end handle HOL_ERR _ => ()
         else ()
 

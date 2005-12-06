@@ -471,6 +471,15 @@ local open Parse_support Absyn
     | binder(VPAIR(l,v1,v2))  = make_vstruct l [binder v1, binder v2] NONE
     | binder(VAQ (l,x))       = make_aq_binding_occ l x
     | binder(VTYPED(l,v,pty)) = make_vstruct l [binder v] (SOME pty)
+  fun to_vstruct t =
+      case t of
+        APP(l, APP(_, IDENT (_, ","), t1), t2) => VPAIR(l, to_vstruct t1,
+                                                        to_vstruct t2)
+      | AQ p => VAQ p
+      | IDENT p  => VIDENT p
+      | TYPED(l, t, pty) => VTYPED(l, to_vstruct t, pty)
+      | _ => raise ERRORloc "Term" (locn_of_absyn t)
+                            "Bad variable-structure"
 in
   fun absyn_to_preterm_in_env ginfo t = let
     open parse_term Absyn Parse_support
@@ -479,6 +488,13 @@ in
     case t of
       APP(l,APP(_,IDENT (_,"gspec special"), t1), t2) =>
         make_set_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
+    | APP(l,APP(_,APP(_,IDENT (_, "gspec2 special"), t1), t2), t3) => let
+        val l3 = locn_of_absyn t3
+        val newbody = APP(l3, APP(l3, QIDENT(l3, "pair", ","), t1), t3)
+      in
+        to_ptmInEnv (APP(l, QIDENT(l, "pred_set", "GSPEC"),
+                         LAM(l, to_vstruct t2, newbody)))
+      end
 (*    |  APP(l,APP(_,IDENT (_,"seq_spec special"), t1), t2) =>
         make_seq_abs l (to_ptmInEnv t1, to_ptmInEnv t2)
 *)

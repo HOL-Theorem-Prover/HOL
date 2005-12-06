@@ -3459,7 +3459,7 @@ $((\alpha\to\konst{bool})\to\konst{bool})\to (\alpha\to\konst{bool})$.
 \paragraph{Subsets}
 
 Set inclusion (\holtxt{SUBSET}, infix), proper set inclusion
-(\holtxt{PSUBSET}, infix), and power set (\holtxt{PSUBSET}) 
+(\holtxt{PSUBSET}, infix), and power set (\holtxt{PSUBSET})
 are defined as follows:
 %
 \begin{hol}
@@ -3696,11 +3696,13 @@ the set of all $t$s such that $p$. In \HOL, such syntax parses to:
 \ml{GSPEC(\bs($x_1$,$\ldots$,$x_n$).($t$,$p$))}
 %
 \noindent where $x_1, \ldots, x_n$ are those free variables that
-occur in both $t$ and $p$.  If there are no such free variables
-then an error results. The order in which the variables are listed in
-the variable structure of the paired abstraction is an unspecified
-function of the structure of $t$ (it is approximately left to
-right). For example,
+occur in both $t$ and $p$ if both have at least one free variable. If
+$t$ or $p$ has no free variables, then $x_1,\ldots,x_n$ are taken to
+be the free variables of the other term.  If both terms have free
+variables, but there is no overlap, then an error results. The order
+in which the variables are listed in the variable structure of the
+paired abstraction is an unspecified function of the structure of $t$
+(it is approximately left to right). For example,
 %
 \begin{hol}
 \begin{verbatim}
@@ -3765,6 +3767,58 @@ syntax:
    ?(p,q). (a = p+q) /\ (p < q /\ q < r)
 \end{verbatim}
 \end{hol}
+
+\paragraph{Unambiguous set comprehensions} There is also
+an unambiguous set comprehension syntax, which allows the user to
+specify which variables are to be quantified over in the abstraction
+that is the argument of \holtxt{GSPEC}.  Terms of the form
+\begin{hol}
+\begin{verbatim}
+   { t | vs | P }
+\end{verbatim}
+\end{hol}
+generate sets containing values of the form given by \holtxt{t}, where
+the variables mentioned in \holtxt{vs} must satisfy the constraint
+\holtxt{P}.  For example, the set
+\begin{hol}
+\begin{verbatim}
+   { x + y | x | x < y }
+\end{verbatim}
+\end{hol}
+is the set of numbers from \holtxt{y} up to but not including
+\holtxt{2~*~y}.  The set can be ``read'' computationally: draw out all
+those \holtxt{x} that are less than \holtxt{y}, and to each such
+\holtxt{x} add \holtxt{y}, thereby generating a set of numbers.
+
+In the example above, the underlying \holtxt{GSPEC} term will be
+\begin{hol}
+\begin{verbatim}
+   GSPEC (\x. (x + y, x < y))
+\end{verbatim}
+\end{hol}
+
+The \holtxt{vs} component of the unambiguous notation must be a single
+``variable structure'' that might appear underneath a possibly paired
+abstraction as in section~\ref{HOL-varstruct}.  In other words, this
+\begin{hol}
+\begin{verbatim}
+   { x + y | (x,y) | x < y }
+\end{verbatim}
+\end{hol}
+is fine, but this
+\begin{hol}
+\begin{verbatim}
+   { x + y | x y | x < y }
+\end{verbatim}
+\end{hol}
+will raise an error.  (Additionally, the outermost parentheses around
+pairs in the \holtxt{vs} position can be omitted.)
+
+The unambiguous notation is printed by the pretty-printer whenever the
+set to be printed can not be expressed with the default notation, or
+if the trace variable with name \ml{pp\_unambiguous\_comprehensions}
+is set to \ml{true}.
+
 
 \subsection{Multisets (\theoryimp{bag})}\label{multiset}
 

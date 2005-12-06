@@ -25,6 +25,30 @@ html1/DTD/xhtml1-strict.dtd">
 <h2 id="new-features">New features:</h2>
 
 <ul>
+  <li> There is a new unambiguous notation for set comprehensions that
+  allows one to specify exactly what variables can &ldquo;vary&rdquo;
+  to generate the set.  For example, the current notation interprets
+<pre>
+         { x + y | x &lt; y }
+</pre>
+      as the set that takes all pairs of numbers such that the first
+      component is less than the other, and then sums them (generating
+      the set of all non-zero numbers).  The new notation allows one
+      to specify that only the <code>x</code> should vary by writing
+<pre>
+         { x + y | x | x &lt; y }
+</pre>
+      This denotes the set of numbers from <code>y</code> up to but not
+      including <code>2&nbsp;*&nbsp;y</code>.  To express the first set
+      in the new notation, one would write
+<pre>
+         { x + y | x,y | x &lt; y }
+</pre>
+      The parser accepts both notations.  The pretty-printer prefers
+      the old notation unless it can not express the set being
+      printed.  Further details are in the Description.  Thanks to
+      John Harrison for discussion leading to the adoption of this
+      syntax. </li>
 
 </ul>
 

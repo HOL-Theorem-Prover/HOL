@@ -135,6 +135,11 @@ val _ = add_rule{term_name = "gspec special", fixity = Closefix,
                  paren_style = OnlyIfNecessary,
                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))};
 
+val _ = add_rule{term_name = "gspec2 special", fixity = Closefix,
+                 pp_elements = [TOK "{",TM, TOK "|", TM, TOK "|", TM, TOK "}"],
+                 paren_style = OnlyIfNecessary,
+                 block_style = (AroundEachPhrase, (PP.CONSISTENT, 0))}
+
 (* the phrase "gspec special" is dealt with in the translation from
    pre-pre-terms to terms *)
 
@@ -3667,7 +3672,7 @@ val MAX_SET_UNION = Q.store_thm
  in METIS_TAC [lem]
  end);;
 
-val set_ss = arith_ss ++ SET_SPEC_ss ++ 
+val set_ss = arith_ss ++ SET_SPEC_ss ++
              rewrites [CARD_INSERT,CARD_EMPTY,FINITE_EMPTY,FINITE_INSERT,
                        NOT_IN_EMPTY];
 
@@ -3675,10 +3680,10 @@ val set_ss = arith_ss ++ SET_SPEC_ss ++
 (* POW s is the powerset of s                                                *)
 (*---------------------------------------------------------------------------*)
 
-val POW_DEF = 
- new_definition 
+val POW_DEF =
+ new_definition
   ("POW_DEF",
-   ``POW set = {s | s SUBSET set}``); 
+   ``POW set = {s | s SUBSET set}``);
 
 val IN_POW = Q.store_thm
 ("IN_POW",
@@ -3710,7 +3715,7 @@ val POW_INSERT = Q.store_thm
  RW_TAC set_ss [EXTENSION,IN_UNION,IN_POW] THEN
  Cases_on `e IN x` THENL
  [EQ_TAC THEN RW_TAC set_ss [] THENL
-  [DISJ1_TAC 
+  [DISJ1_TAC
     THEN RW_TAC set_ss [IN_IMAGE,IN_POW]
     THEN Q.EXISTS_TAC `x DELETE e`
     THEN RW_TAC set_ss [INSERT_DELETE]
@@ -3718,28 +3723,28 @@ val POW_INSERT = Q.store_thm
     THEN POP_ASSUM (MP_TAC o Q.SPEC `e`)
     THEN RW_TAC set_ss [DELETE_INSERT]
     THEN METIS_TAC [DELETE_SUBSET,SUBSET_TRANS],
-   FULL_SIMP_TAC set_ss 
+   FULL_SIMP_TAC set_ss
      [IN_IMAGE,IN_POW,SUBSET_INSERT_RIGHT,INSERT_SUBSET,IN_INSERT],
-   FULL_SIMP_TAC set_ss [SUBSET_DEF] 
+   FULL_SIMP_TAC set_ss [SUBSET_DEF]
     THEN METIS_TAC [IN_INSERT]],
-  RW_TAC set_ss [SUBSET_INSERT] 
+  RW_TAC set_ss [SUBSET_INSERT]
     THEN EQ_TAC THEN RW_TAC set_ss [IN_IMAGE]
     THEN METIS_TAC [IN_INSERT]]);
 
 val POW_EQNS = Q.store_thm
 ("POW_EQNS",
  `(POW {} = {{}} : 'a set set) /\
-  (!e:'a. 
+  (!e:'a.
    !s. POW (e INSERT s) = let ps = POW s
                             in (IMAGE ($INSERT e) ps) UNION ps)`,
- CONJ_TAC THENL 
- [RW_TAC set_ss [POW_DEF,SUBSET_EMPTY,EXTENSION,NOT_IN_EMPTY,IN_INSERT], 
+ CONJ_TAC THENL
+ [RW_TAC set_ss [POW_DEF,SUBSET_EMPTY,EXTENSION,NOT_IN_EMPTY,IN_INSERT],
   METIS_TAC [POW_INSERT,LET_THM]]);
 
 val FINITE_POW = Q.store_thm
 ("FINITE_POW",
  `!s. FINITE s ==> FINITE (POW s)`,
- HO_MATCH_MP_TAC FINITE_INDUCT 
+ HO_MATCH_MP_TAC FINITE_INDUCT
   THEN CONJ_TAC THENL
   [METIS_TAC [POW_EQNS,FINITE_EMPTY,FINITE_INSERT],
    RW_TAC set_ss [POW_EQNS,LET_THM,FINITE_UNION,IMAGE_FINITE]]);
@@ -3755,16 +3760,16 @@ val lem = Q.prove
 val CARD_POW = Q.store_thm
 ("CARD_POW",
  `!s. FINITE s ==> (CARD (POW s) = 2 EXP (CARD s))`,
- SET_INDUCT_TAC 
+ SET_INDUCT_TAC
   THEN RW_TAC set_ss [POW_EQNS,LET_THM,EXP]
-  THEN `FINITE (POW s) /\ 
-        FINITE (IMAGE ($INSERT e) (POW s))` 
+  THEN `FINITE (POW s) /\
+        FINITE (IMAGE ($INSERT e) (POW s))`
     by METIS_TAC[FINITE_POW,IMAGE_FINITE]
-  THEN `CARD (IMAGE ($INSERT e) (POW s) UNION POW s) = 
+  THEN `CARD (IMAGE ($INSERT e) (POW s) UNION POW s) =
         CARD (IMAGE ($INSERT e) (POW s)) + CARD(POW s)`
-    by 
+    by
    (`CARD ((IMAGE ($INSERT e) (POW s)) INTER (POW s)) = 0`
-      by (RW_TAC set_ss [CARD_EQ_0,INTER_FINITE] THEN 
+      by (RW_TAC set_ss [CARD_EQ_0,INTER_FINITE] THEN
           RW_TAC set_ss [EXTENSION,IN_INTER,IN_POW,IN_IMAGE] THEN
           RW_TAC set_ss [SUBSET_DEF,IN_INSERT] THEN METIS_TAC[])
      THEN METIS_TAC [CARD_UNION,ADD_CLAUSES])
@@ -3775,8 +3780,8 @@ val CARD_POW = Q.store_thm
     by (RW_TAC set_ss [BIJ_DEF,INJ_DEF,SURJ_DEF,IN_IMAGE,IN_POW]
         THENL
          [METIS_TAC [IN_POW],
-          `~(e IN x) /\ ~(e IN y)` by METIS_TAC [SUBSET_DEF] 
-            THEN FULL_SIMP_TAC set_ss [EXTENSION, IN_INSERT] 
+          `~(e IN x) /\ ~(e IN y)` by METIS_TAC [SUBSET_DEF]
+            THEN FULL_SIMP_TAC set_ss [EXTENSION, IN_INSERT]
             THEN METIS_TAC[],
           METIS_TAC [IN_POW],METIS_TAC[]])
   THEN METIS_TAC [FINITE_BIJ_CARD_EQ]);
@@ -3878,7 +3883,7 @@ val EMPTY_NOT_IN_partition = store_thm(
   SRW_TAC [][partition_def, EXTENSION] THEN
   METIS_TAC [equiv_on_def]);
 
-(* Invocation(s) of PROVE_TAC are slow, but METIS seems to be 
+(* Invocation(s) of PROVE_TAC are slow, but METIS seems to be
    possibly slower
 *)
 val partition_elements_disjoint = store_thm(
