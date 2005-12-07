@@ -12,7 +12,8 @@
 *)
 
 open HolKernel boolLib bossLib;
-open Q arithmeticTheory whileTheory bitTheory wordsTheory wordsLib;
+open Parse Q arithmeticTheory whileTheory bitTheory wordsTheory wordsLib;
+open listTheory rich_listTheory my_listTheory;
 open onestepTheory armTheory coreTheory lemmasTheory;
 
 val _ = new_theory "sim";
@@ -256,74 +257,110 @@ val DECODE_INST_THM = store_thm("DECODE_INST_THM",
 
 (* ------------------------------------------------------------------------- *)
 
-val Sa_def = Define `Sa = $:-`;
-val Sb_def = Define `Sb = $:-`;
+val word_ss = armLib.fcp_ss ++ wordsLib.SIZES_ss ++ ARITH_ss;
 
-val Sab_EQ = store_thm("Sab_EQ",
-  `(Sb a e (Sa a d m) = Sa a e m) /\
-   (Sb a e (Sb a d m) = Sb a e m) /\
-   (Sa a e (Sa a d m) = Sa a e m)`,
-  RW_TAC std_ss [Sa_def,Sb_def,SUBST_EQ]);
+val LESS_THM =
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
-val Sa_EVAL = store_thm("Sa_EVAL",
-  `!a w b. Sa a w m b = if a = b then w else m b`,
-  RW_TAC std_ss [Sa_def,SUBST_def]);
+val lem = prove(
+  `!w:word32 i. i < 5 ==> (((4 >< 0) w) :word5 %% i = w %% i)`,
+  RW_TAC word_ss [word_extract_def,word_bits_def,w2w]);
+  
+val PSR_CONS = store_thm("PSR_CONS",
+   `!w:word32. w =
+       let m = DECODE_MODE ((4 >< 0) w) in
+         if m = safe then
+           SET_NZCV (w %% 31, w %% 30, w %% 29, w %% 28) ((27 -- 0) w)
+         else
+           SET_NZCV (w %% 31, w %% 30, w %% 29, w %% 28)
+             (SET_IFMODE (w %% 7) (w %% 6) m (0xFFFFF20w && w))`,
+  RW_TAC word_ss [SET_IFMODE_def,SET_NZCV_def,word_modify_def,n2w_def]
+    \\ RW_TAC word_ss [word_bits_def]
+    << [
+      `(i = 31) \/ (i = 30) \/ (i = 29) \/ (i = 28) \/ (i < 28)`
+        by DECIDE_TAC
+        \\ ASM_SIMP_TAC arith_ss [],
+      `(i = 31) \/ (i = 30) \/ (i = 29) \/ (i = 28) \/
+       (7 < i /\ i < 28) \/ (i = 7) \/ (i = 6) \/ (i = 5) \/ (i < 5)`
+        by DECIDE_TAC
+        \\ ASM_SIMP_TAC (word_ss++ARITH_ss) [word_and_def]
+        << [
+          FULL_SIMP_TAC std_ss [LESS_THM]
+            \\ FULL_SIMP_TAC arith_ss [] \\ EVAL_TAC,
+          EVAL_TAC, 
+          `~(mode_num m = 0w)`
+            by (Cases_on `m` \\ RW_TAC std_ss [mode_num_def] \\ EVAL_TAC)
+            \\ POP_ASSUM MP_TAC \\ UNABBREV_TAC `m`
+            \\ RW_TAC (word_ss++ARITH_ss)
+                 [DECODE_MODE_def,mode_num_def,n2w_def,lem]
+            \\ POP_ASSUM MP_TAC \\ ASM_SIMP_TAC word_ss []]]);
 
-val Sb_EVAL = store_thm("Sb_EVAL",
-  `!a w b. Sb a w m b = if a = b then w else m b`,
-  RW_TAC std_ss [Sb_def,SUBST_def]);
+val REG_WRITE_PSR = save_thm("REG_WRITE_PSR",
+  SIMP_CONV std_ss [SET_NZCV_def,SET_IFMODE_def]
+  ``REG_WRITE reg mode Rd (SET_NZCV (n,z,c,v) x)``);
 
-(* --- *)
+val REG_WRITE_PSR2 = save_thm("REG_WRITE_PSR2",
+  SIMP_CONV std_ss [SET_NZCV_def,SET_IFMODE_def]
+  ``REG_WRITE reg mode Rd (SET_NZCV (n,z,c,v) (SET_IFMODE imask fmask m x))``);
 
-val SUBST_COMMUTES4 = store_thm("SUBST_COMMUTES4",
-  `!m a b d e. register2num a < register2num b ==>
-     ((a :- e) ((b :- d) m) = (b :- d) ((a :- e) m))`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
-    \\ IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
-    \\ RW_TAC bool_ss [SUBST_def]
-    \\ FULL_SIMP_TAC bool_ss [register2num_11]);
+val word_modify_PSR = save_thm("word_modify_PSR",
+  SIMP_CONV std_ss [SET_NZCV_def,SET_IFMODE_def]
+  ``word_modify f (SET_NZCV (n,z,c,v) x)``);
 
-val Sa_RULE4 = store_thm("Sa_RULE4",
-  `!m a b d e. Sa a e (Sa b d m) =
-     if register2num a < register2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sa b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES4]);
+val word_modify_PSR2 = save_thm("word_modify_PSR2",
+  SIMP_CONV std_ss [SET_NZCV_def,SET_IFMODE_def]
+  ``word_modify f (SET_NZCV (n,z,c,v) (SET_IFMODE imask fmask m x))``);
 
-val Sb_RULE4 = store_thm("Sb_RULE4",
-  `!m a b d e. Sa a e (Sb b d m) =
-     if register2num a < register2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sb b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES4]);
+val CPSR_WRITE_n2w = save_thm("CPSR_WRITE_n2w", GEN_ALL
+  ((PURE_ONCE_REWRITE_CONV [PSR_CONS] THENC PURE_REWRITE_CONV [CPSR_WRITE_def])
+   ``CPSR_WRITE psr (n2w n)``));
 
-(* --- *)
+val SPSR_WRITE_n2w = save_thm("SPSR_WRITE_n2w", GEN_ALL
+  ((PURE_ONCE_REWRITE_CONV [PSR_CONS] THENC PURE_REWRITE_CONV [SPSR_WRITE_def])
+   ``SPSR_WRITE psr mode (n2w n)``));
 
-val SUBST_COMMUTES_PSR = store_thm("SUBST_COMMUTES_PSR",
-  `!m a b d e. psrs2num b < psrs2num a ==>
-     ((a :- e) ((b :- d) m) = (b :- d) ((a :- e) m))`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
-    \\ IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
-    \\ RW_TAC bool_ss [SUBST_def]
-    \\ FULL_SIMP_TAC bool_ss [psrs2num_11]);
+(*
+val word_ss = armLib.fcp_ss ++ wordsLib.SIZES_ss;
 
-val Sa_RULE_PSR = store_thm("Sa_RULE_PSR",
-  `!m a b d e. Sa a e (Sa b d m) =
-     if psrs2num a < psrs2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sa b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES_PSR]);
+val mode_num_11 = store_thm("mode_num_11",
+  `!m1 m2. (mode_num m1 = mode_num m2) = (m1 = m2)`,
+  Cases \\ Cases \\ RW_TAC std_ss [mode_num_def] \\ EVAL_TAC);
 
-val Sb_RULE_PSR = store_thm("Sb_RULE_PSR",
-  `!m a b d e. Sa a e (Sb b d m) =
-     if psrs2num a < psrs2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sb b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES_PSR]);
+fun Cases_on_nzcv tm =
+  FULL_STRUCT_CASES_TAC (SPEC tm (armLib.tupleCases
+  ``(n,z,c,v):bool#bool#bool#bool``));
+
+val PSR_EQ = store_thm("PSR_EQ",
+  `(SET_NZCV flags1 (SET_IFMODE i1 f1 m1 w1) =
+    SET_NZCV flags2 (SET_IFMODE i2 f2 m2 w2)) =
+   ((flags1 = flags2) /\ (i1 = i2) /\ (f1 = f2) /\ (m1 = m2) /\
+    ((27 -- 8) w1 = (27 -- 8) w2)) /\ (w1 %% 5 = w2 %% 5)`,
+  Cases_on_nzcv `flags1` \\ Cases_on_nzcv `flags2`
+    \\ EQ_TAC
+    \\ RW_TAC word_ss
+         [SET_NZCV_def,SET_IFMODE_def,word_modify_def,word_bits_def]
+    << [
+      POP_ASSUM (SPEC_THEN `31` (STRIP_ASSUME_TAC o SIMP_RULE std_ss [])),
+      POP_ASSUM (SPEC_THEN `30` (STRIP_ASSUME_TAC o SIMP_RULE std_ss [])),
+      POP_ASSUM (SPEC_THEN `29` (STRIP_ASSUME_TAC o SIMP_RULE std_ss [])),
+      POP_ASSUM (SPEC_THEN `28` (STRIP_ASSUME_TAC o SIMP_RULE std_ss [])),
+      POP_ASSUM (SPEC_THEN `7` (STRIP_ASSUME_TAC o SIMP_RULE std_ss [])),
+      POP_ASSUM (SPEC_THEN `6` (STRIP_ASSUME_TAC o SIMP_RULE std_ss [])),
+      `!i. i < 5 ==> (mode_num m1 %% i = mode_num m2 %% i)`
+        by (STRIP_TAC \\ POP_ASSUM (SPEC_THEN `i` ASSUME_TAC)
+              \\ STRIP_TAC \\ FULL_SIMP_TAC arith_ss [])
+        \\ `mode_num m1 = mode_num m2` by RW_TAC word_ss [mode_num_def]
+        \\ ASM_REWRITE_TAC [GSYM mode_num_11],
+      PAT_ASSUM `!i. P` (SPEC_THEN `i + 8` ASSUME_TAC)
+        \\ Cases_on `i + 8 <= 27 /\ i + 8 <= 31`
+        \\ FULL_SIMP_TAC arith_ss [],
+      POP_ASSUM (SPEC_THEN `5` (STRIP_ASSUME_TAC o SIMP_RULE std_ss [])),
+      PAT_ASSUM `!i. P` (SPEC_THEN `i - 8` ASSUME_TAC)
+        \\ `(i = 31) \/ (i = 30) \/ (i = 29) \/ (i = 28) \/
+            (7 < i /\ i < 28) \/ (i = 7) \/ (i = 6) \/ (i = 5) \/ (i < 5)`
+        by DECIDE_TAC
+        \\ FULL_SIMP_TAC arith_ss []]);
+*)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -401,6 +438,238 @@ val MLA_MUL_DUR_n2w = store_thm("MLA_MUL_DUR_n2w",
          DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,GSYM EXP_ADD]
     \\ CONV_TAC (DEPTH_CONV reduceLib.ADD_CONV)
     \\ REWRITE_TAC []);
+
+(* ------------------------------------------------------------------------- *)
+
+val Sa_def = Define `Sa = $:-`;
+val Sb_def = Define `Sb = $:-`;
+
+val Sab_EQ = store_thm("Sab_EQ",
+  `(Sb a e (Sa a d m) = Sa a e m) /\
+   (Sb a e (Sb a d m) = Sb a e m) /\
+   (Sa a e (Sa a d m) = Sa a e m)`,
+  RW_TAC std_ss [Sa_def,Sb_def,SUBST_EQ]);
+
+(*
+val Sa_EVAL = store_thm("Sa_EVAL",
+  `!a w b. Sa a w m b = if a = b then w else m b`,
+  RW_TAC std_ss [Sa_def,SUBST_def]);
+
+val Sb_EVAL = store_thm("Sb_EVAL",
+  `!a w b. Sb a w m b = if a = b then w else m b`,
+  RW_TAC std_ss [Sb_def,SUBST_def]);
+*)
+
+val SUBST_EVAL = store_thm("SUBST_EVAL",
+  `!a w b. (a :- w) m b = if a = b then w else m b`,
+  RW_TAC std_ss [SUBST_def]);
+
+(* --- *)
+
+val SUBST_COMMUTES4 = store_thm("SUBST_COMMUTES4",
+  `!m a b d e. register2num a < register2num b ==>
+     ((a :- e) ((b :- d) m) = (b :- d) ((a :- e) m))`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
+    \\ IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
+    \\ RW_TAC bool_ss [SUBST_def]
+    \\ FULL_SIMP_TAC bool_ss [register2num_11]);
+
+val Sa_RULE4 = store_thm("Sa_RULE4",
+  `!m a b d e. Sa a e (Sa b d m) =
+     if register2num a < register2num b then
+       Sb b d (Sa a e m)
+     else
+       Sb a e (Sa b d m)`,
+  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES4]);
+
+val Sb_RULE4 = store_thm("Sb_RULE4",
+  `!m a b d e. Sa a e (Sb b d m) =
+     if register2num a < register2num b then
+       Sb b d (Sa a e m)
+     else
+       Sb a e (Sb b d m)`,
+  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES4]);
+
+(* --- *)
+
+val SUBST_COMMUTES_PSR = store_thm("SUBST_COMMUTES_PSR",
+  `!m a b d e. psrs2num b < psrs2num a ==>
+     ((a :- e) ((b :- d) m) = (b :- d) ((a :- e) m))`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
+    \\ IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
+    \\ RW_TAC bool_ss [SUBST_def]
+    \\ FULL_SIMP_TAC bool_ss [psrs2num_11]);
+
+val Sa_RULE_PSR = store_thm("Sa_RULE_PSR",
+  `!m a b d e. Sa a e (Sa b d m) =
+     if psrs2num a < psrs2num b then
+       Sb b d (Sa a e m)
+     else
+       Sb a e (Sa b d m)`,
+  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES_PSR]);
+
+val Sb_RULE_PSR = store_thm("Sb_RULE_PSR",
+  `!m a b d e. Sa a e (Sb b d m) =
+     if psrs2num a < psrs2num b then
+       Sb b d (Sa a e m)
+     else
+       Sb a e (Sb b d m)`,
+  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES_PSR]);
+
+(* ------------------------------------------------------------------------- *)
+
+val _ = set_fixity "::-" (Infixr 325);
+val _ = set_fixity "::->" (Infixr 325);
+val _ = set_fixity "::-<" (Infixr 325);
+
+val BSUBST_def = xDefine "BSUBST"
+  `$::- a l = \m b.
+      if a <=+ b /\ w2n b - w2n a < LENGTH l then
+        EL (w2n b - w2n a) l
+      else m b`;
+
+val BSa_def = xDefine "BSa" `$::-> = $::-`;
+val BSb_def = xDefine "BSb" `$::-< = $::-`;
+
+val JOIN_def = new_definition("new_definition",
+  `JOIN n x y =
+    let lx = LENGTH x and ly = LENGTH y in
+    let j = MIN n lx in
+       GENLIST
+         (\i. if i < n then
+                if i < lx then EL i x else EL (i - j) y
+              else
+                if i - j < ly then EL (i - j) y else EL i x)
+         (MAX (j + ly) lx)`);
+
+(* ------------------------------------------------------------------------- *)
+
+val JOIN_lem = prove(`!a b. MAX (SUC a) (SUC b) = SUC (MAX a b)`,
+   RW_TAC std_ss [MAX_DEF]);
+
+val JOIN_TAC =
+  CONJ_TAC >> RW_TAC list_ss [LENGTH_GENLIST,MAX_DEF,MIN_DEF]
+    \\ Cases
+    \\ RW_TAC list_ss [MAX_DEF,MIN_DEF,LENGTH_GENLIST,EL_GENLIST,
+         ADD_CLAUSES,HD_GENLIST]
+    \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
+    \\ RW_TAC arith_ss [GENLIST,TL_SNOC,EL_SNOC,NULL_LENGTH,EL_GENLIST,
+         LENGTH_TL,LENGTH_GENLIST,LENGTH_SNOC,(GSYM o CONJUNCT2) EL]
+    \\ SIMP_TAC list_ss [];
+
+val JOIN = store_thm("JOIN",
+  `(!n ys. JOIN n [] ys = ys) /\
+   (!xs. JOIN 0 xs [] = xs) /\
+   (!x xs y ys. JOIN 0 (x::xs) (y::ys) = y :: JOIN 0 xs ys) /\
+   (!n xs y ys. JOIN (SUC n) (x::xs) ys = x :: (JOIN n xs ys))`,
+  RW_TAC (list_ss++boolSimps.LET_ss) [JOIN_def,JOIN_lem]
+    \\ MATCH_MP_TAC LIST_EQ
+    << [
+      Cases_on `n` >> RW_TAC arith_ss [LENGTH_GENLIST,EL_GENLIST] \\ JOIN_TAC
+        \\ `?p. LENGTH ys = SUC p` by METIS_TAC [ADD1,LESS_ADD_1,ADD_CLAUSES]
+        \\ ASM_SIMP_TAC list_ss [HD_GENLIST],
+      RW_TAC arith_ss [LENGTH_GENLIST,EL_GENLIST],
+      JOIN_TAC, JOIN_TAC]);
+
+(* ------------------------------------------------------------------------- *)
+
+val BSUBST_EVAL = store_thm("BSUBST_EVAL",
+  `!a b l m. (a ::- l) m b =
+      let na = w2n a and nb = w2n b in
+      let d = nb - na in
+        if na <= nb /\ d < LENGTH l then EL d l else m b`,
+  NTAC 2 wordsLib.Cases_word
+    \\ RW_TAC (std_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def]
+    \\ FULL_SIMP_TAC arith_ss []);
+
+val SUBST_BSUBST = store_thm("SUBST_BSUBST",
+   `!a b m. (a :- b) m = (a ::- [b]) m`,
+  RW_TAC (std_ss++boolSimps.LET_ss) [FUN_EQ_THM,BSUBST_def,SUBST_def]
+    \\ Cases_on `a = x`
+    \\ ASM_SIMP_TAC list_ss [WORD_LOWER_EQ_REFL]
+    \\ ASM_SIMP_TAC arith_ss [WORD_LOWER_OR_EQ,WORD_LO]);
+
+val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
+  `!a b x y m. (a ::- y) ((b ::- x) m) =
+     let lx = LENGTH x and ly = LENGTH y in
+        if a <=+ b then
+          if w2n b - w2n a <= ly then
+            if ly - (w2n b - w2n a) < lx then
+              (a ::- y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
+            else
+              (a ::- y) m
+          else
+            (a ::- y) ((b ::- x) m)
+        else (* b <+ a *)
+          if w2n a - w2n b < lx then
+            (b ::- JOIN (w2n a - w2n b) x y) m
+          else
+            (b ::- x) ((a ::- y) m)`,
+  REPEAT STRIP_TAC \\ SIMP_TAC (bool_ss++boolSimps.LET_ss) []
+    \\ Cases_on `a <=+ b`
+    \\ FULL_SIMP_TAC std_ss [WORD_NOT_LOWER_EQUAL,WORD_LS,WORD_LO]
+    << [
+      Cases_on `w2n b <= w2n a + LENGTH y` \\ ASM_SIMP_TAC std_ss []
+        \\ `w2n b - w2n a <= LENGTH y` by DECIDE_TAC
+        \\ Cases_on `LENGTH x = 0`
+        \\ Cases_on `LENGTH y = 0`
+        \\ IMP_RES_TAC LENGTH_NIL
+        \\ FULL_SIMP_TAC list_ss [FUN_EQ_THM,WORD_LS,BSUBST_def,BUTFIRSTN]
+        >> (`w2n a = w2n b` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [])
+        \\ NTAC 2 (RW_TAC std_ss [])
+        \\ FULL_SIMP_TAC arith_ss
+             [NOT_LESS,NOT_LESS_EQUAL,EL_APPEND1,EL_APPEND2,EL_BUTFIRSTN]
+        \\ FULL_SIMP_TAC arith_ss []
+        \\ `LENGTH y + w2n a - w2n b <= LENGTH x` by DECIDE_TAC
+        \\ FULL_SIMP_TAC arith_ss [LENGTH_BUTFIRSTN],
+      REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC arith_ss []
+        << [
+          RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def,JOIN_def,
+                 EL_GENLIST,LENGTH_GENLIST,MIN_DEF,MAX_DEF]
+            \\ FULL_SIMP_TAC arith_ss [],
+          FULL_SIMP_TAC arith_ss [NOT_LESS]
+            \\ IMP_RES_TAC LENGTH_NIL
+            \\ RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def]
+            \\ FULL_SIMP_TAC arith_ss []]]);
+
+(* ------------------------------------------------------------------------- *)
+
+val tm1 = `!a b x y m. (a ::-> y) ((b ::-> x) m) =
+     let lx = LENGTH x and ly = LENGTH y in
+        if a <=+ b then
+          if w2n b - w2n a <= ly then
+            if ly - (w2n b - w2n a) < lx then
+              (a ::-> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
+            else
+              (a ::-> y) m
+          else
+            (a ::-< y) ((b ::-> x) m)
+        else (* b <+ a *)
+          if w2n a - w2n b < lx then
+            (b ::-> JOIN (w2n a - w2n b) x y) m
+          else
+            (b ::-> x) ((a ::-> y) m)`
+
+val tm2 = `!a b x y m. (a ::-> y) ((b ::-< x) m) =
+     let lx = LENGTH x and ly = LENGTH y in
+        if a <=+ b then
+          if w2n b - w2n a <= ly then
+            if ly - (w2n b - w2n a) < lx then
+              (a ::-> y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
+            else
+              (a ::-> y) m
+          else
+            (a ::-< y) ((b ::-< x) m)
+        else (* b <+ a *)
+          if w2n a - w2n b < lx then
+            (b ::-> JOIN (w2n a - w2n b) x y) m
+          else
+            (b ::-> x) ((a ::-> y) m)`
+
+val BSa_RULE =
+  store_thm("BSa_RULE", tm1, METIS_TAC [BSa_def,BSb_def,BSUBST_BSUBST]);
+val BSb_RULE =
+  store_thm("BSb_RULE", tm2, METIS_TAC [BSa_def,BSb_def,BSUBST_BSUBST]);
 
 (* ------------------------------------------------------------------------- *)
 

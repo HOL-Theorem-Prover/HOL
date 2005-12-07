@@ -7,12 +7,11 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsLib", "rich_listTheory", "io_onestepTheory"];
+  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "io_onestepTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
-open Q prim_recTheory rich_listTheory wordsLib;
-open io_onestepTheory;
+open Q wordsLib wordsSyntax rich_listTheory io_onestepTheory;
 
 val _ = new_theory "arm";
 
@@ -71,7 +70,7 @@ val _ = set_fixity ":-" (Infixr 325);
 
 val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
 
-val Rg = inst [alpha |-> ``:i32``, beta |-> ``:i4``] ``$><``;
+val Rg = inst [alpha |-> ``:i32``, beta |-> ``:i4``] word_extract_tm;
 
 val USER_def = Define `USER mode = (mode = usr) \/ (mode = safe)`;
 

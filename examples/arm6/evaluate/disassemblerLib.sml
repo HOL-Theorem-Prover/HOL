@@ -489,66 +489,38 @@ fun word_print f sys (pgrav, lgrav, rgrav) d pps t =
      pend addparens
   end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-fun pr_psr t =
-  ["CPSR: "^((psr_string o numeral2num o rhs o concl o
-   REWRITE_CONV [armTheory.SUBST_def] o mk_comb) (t,``CPSR``))]
-  handle Conv.UNCHANGED => [];
-
 val pr_opcode = opcode_string o numeral2num;
 
-(* - *)
-fun pr_dp_psr t = pr_psr ((snd o dest_comb o (funpow 5 (fst o dest_comb))) t);
+fun pr_arm_ex t =
+  let val l = (snd o strip_comb) t in
+    ["ireg: " ^ pr_opcode (List.nth(l,1))] handle HOL_ERR _ => []
+  end;
 
-(* - *)
 fun pr_pipe t = let
-  val t1 = funpow 33 (fst o dest_comb) t
-  val (t2,t3) = dest_comb t1
-  val ireg = ["ireg: " ^ pr_opcode t3] handle HOL_ERR _ => []
-  val (t4,t5) = (dest_comb o fst o dest_comb) t2
-  val pipeb = ["pipeb: " ^ pr_opcode t5] handle HOL_ERR _ => []
-  val pipea = ["pipea: " ^ (pr_opcode o snd o dest_comb o fst o dest_comb) t4]
-                 handle HOL_ERR _ => []
+  val l = (snd o strip_comb) t
+  val pipea = ["ireg: " ^ pr_opcode (List.nth(l,0))] handle HOL_ERR _ => []
+  val pipeb = ["ireg: " ^ pr_opcode (List.nth(l,2))] handle HOL_ERR _ => []
+  val ireg  = ["ireg: " ^ pr_opcode (List.nth(l,4))] handle HOL_ERR _ => []
 in
   pipea @ pipeb @ ireg
 end;
 
-(* - *)
-fun pr_arm_ex t =
-  let val t1 = (snd o dest_comb o fst o dest_comb) t in
-    ["ireg: " ^ pr_opcode t1] handle HOL_ERR _ => []
-  end;
+(* ------------------------------------------------------------------------- *)
 
-(* - *)
-fun pr_arm t = pr_psr ((snd o dest_comb) t);
-
-fun pp_word_psr() = Parse.temp_add_user_printer (
-  {Tyop = "dp", Thy = "core"}, word_print pr_dp_psr);
-
-fun pp_word_pipe() = Parse.temp_add_user_printer (
-  {Tyop = "ctrl", Thy = "core"}, word_print pr_pipe);
-
-fun pp_word_arm_ex() = Parse.temp_add_user_printer (
+fun pp_arm() = Parse.temp_add_user_printer (
   {Tyop = "state_arm_ex", Thy = "arm"}, word_print pr_arm_ex);
 
-fun pp_word_arm() = Parse.temp_add_user_printer (
-  {Tyop = "state_arm", Thy = "arm"}, word_print pr_arm);
+fun npp_arm() = (Parse.temp_remove_user_printer
+  {Tyop = "state_arm_ex", Thy = "arm"};());
 
-fun npp_word_psr() =
-  (Parse.temp_remove_user_printer {Tyop = "dp", Thy = "core"};());
+fun pp_arm6() = Parse.temp_add_user_printer (
+  {Tyop = "ctrl", Thy = "core"}, word_print pr_pipe);
 
-fun npp_word_pipe() =
-  (Parse.temp_remove_user_printer {Tyop = "ctrl", Thy = "core"};());
+fun npp_arm6() = (Parse.temp_remove_user_printer
+  {Tyop = "ctrl", Thy = "core"};());
 
-fun npp_word_arm_ex() =
-  (Parse.temp_remove_user_printer {Tyop = "state_arm_ex", Thy = "arm"};());
-
-fun npp_word_arm() =
-  (Parse.temp_remove_user_printer {Tyop = "state_arm", Thy = "arm"};());
-
-val _ = pp_word_psr();
-val _ = pp_word_pipe();
-val _ = pp_word_arm_ex();
-val _ = pp_word_arm();
+val _ = pp_arm();
+val _ = pp_arm6();
 
 (*
 val _ = ``ARM6 (DP reg (\x. 0w) areg din alua alub dout)
@@ -557,6 +529,8 @@ val _ = ``ARM6 (DP reg (\x. 0w) areg din alua alub dout)
            onfq ooonfq oniq oooniq pipeaabt pipebabt iregabt2 dataabt2
            aregn2 mrq2 nbw nrw sctrlreg psrfb oareg mask orp oorp mul mul2
            borrow2 mshift)``;
+
+val _ = ``ARM_EX banks 1w exc``;
 *)
 
 end

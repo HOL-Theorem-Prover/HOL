@@ -286,14 +286,8 @@ val SUB8_INV = store_thm("SUB8_INV",
 
 (* ------------------------------------------------------------------------- *)
 
-val NOT_A_OR_B = store_thm("NOT_A_OR_B",
-  `!A B. ~A \/ B = ~(A /\ ~B)`, DECIDE_TAC);
-
 val IF_NEG = store_thm("IF_NEG",
   `!a b c. (if ~a then b else c) = (if a then c else b)`, PROVE_TAC []);
-
-val DISJ_TO_CONJ = store_thm("DISJ_TO_CONJ",
-  `!a b c d. (~a /\ ~b) \/ (c /\ d) = ~((a \/ b) /\ (~c \/ ~d))`, DECIDE_TAC);
 
 val UP_DOWN_THM = store_thm("UP_DOWN_THM",
   `!b x y. (if b then x + y else x - y) = UP_DOWN b x y`,

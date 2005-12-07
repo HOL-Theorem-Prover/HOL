@@ -7,7 +7,7 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsLib", "armTheory"];
+  app load ["armTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;

@@ -528,6 +528,13 @@ val UIMMERSION_ONE = store_thm("UIMMERSION_ONE",
   RW_TAC bool_ss [UIMMERSION_def,IS_IMAP_INIT_def,IMAP_def,ONE,ADD_0]
     \\ ASM_REWRITE_TAC []);
 
+val IMAP_NEXT = store_thm("IMAP_NEXT",
+  `!f init next. IMAP f init next ==>
+      (f t a = b) /\ (next b = c) ==>
+      (f (t + 1) a = c)`,
+  RW_TAC std_ss [IMAP_def,ADD1]
+);
+
 (* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *)
 
 val _ = export_theory();

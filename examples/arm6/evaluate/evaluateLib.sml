@@ -1,6 +1,6 @@
 (* ========================================================================= *)
 (* FILE          : evaluateLib.sml                                           *)
-(* DESCRIPTION   : Code for executing the ARM specifications                 *)
+(* DESCRIPTION   : Code for evaluating the ARM specifications                *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2003 - 2005                                               *)
@@ -54,9 +54,9 @@ in
   val n8 = fromInt 8
   val n31 = fromInt 31
   val n32 = fromInt 32
-  val n256 = Arbnum.fromInt 256
-  val n65536 = Arbnum.fromInt 65536
-  val n16777216 = Arbnum.fromInt 16777216
+  val n256 = fromInt 256
+  val n65536 = fromInt 65536
+  val n16777216 = fromInt 16777216
   val block_size_num = fromInt block_size
   val block_size_bytes = block_size_num * n4
 
@@ -483,11 +483,6 @@ val _ = save_data EXC_HANDLER Arbnum.zero n31 false;
 
 (* ------------------------------------------------------------------------- *)
 
-val INITIAL_PSR = (rhsc o SUBST_RULE o modelsLib.ARM_CONV)
-  ``CPSR_WRITE (SPSR_WRITE ARB svc
-       (SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w)))
-       (SET_NZCV (F,F,F,F) (SET_IFMODE F F svc 0w))``;
-
 val ARM_SPEC_NEXT =
   MATCH_MP io_onestepTheory.IMAP_NEXT armTheory.STATE_ARM_THM;
 
@@ -599,13 +594,16 @@ fun state t x =
 (* ------------------------------------------------------------------------- *)
 
 (*
-val _ = npp_word_arm_ex();
-val _ = npp_word_arm();
-val _ = npp_word_pipe();
-val _ = npp_word_psr();
+val _ = npp_arm();
+val _ = npp_arm6();
 *)
 
 (*
+val INITIAL_PSR = (rhs o concl o SUBST_RULE o modelsLib.ARM_CONV)
+  ``CPSR_WRITE (SPSR_WRITE ARB svc
+       (SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w)))
+       (SET_NZCV (F,F,F,F) (SET_IFMODE F F svc 0w))``;
+
 val r0 =
    (subst [``reg:register -> word32`` |-> ``(r15 :- (0w:word32)) ARB``,
            ``onfq:bool`` |-> ``T``,
