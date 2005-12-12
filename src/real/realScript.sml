@@ -8,17 +8,13 @@ struct
 
 (*
 app load ["numLib",
-          "PairedLambda",
-          "listTheory",
+          "pairLib",
           "mesonLib",
           "tautLib",
-          "pred_setTheory",
           "simpLib",
-          "boolSimps",
-          "pairSimps",
-          "arithSimps",
-          "Ho_rewrite",
+          "Ho_Rewrite",
           "AC",
+          "hol88Lib",
           "jrhUtils",
           "realaxTheory"];
 *)
@@ -27,10 +23,12 @@ app load ["numLib",
 open HolKernel Parse boolLib hol88Lib numLib reduceLib pairLib
      arithmeticTheory numTheory prim_recTheory whileTheory
      mesonLib tautLib simpLib Ho_Rewrite Arithconv
-     jrhUtils Canon_Port AC hratTheory hrealTheory realaxTheory
-     BasicProvers SingleStep TotalDefn metisLib;
+     jrhUtils Canon_Port hratTheory hrealTheory realaxTheory
+     BasicProvers SingleStep TotalDefn metisLib bossLib;
 
 val _ = new_theory "real";
+
+val AC = AC.AC;
 
 val num_EQ_CONV = Arithconv.NEQ_CONV;
 
@@ -2767,7 +2765,7 @@ val REAL_IMP_MIN_LE2 = store_thm
    THEN RW_TAC boolSimps.bool_ss [REAL_MIN_LE]);
 
 (* ------------------------------------------------------------------------- *)
-(* Define the minimum of two real numbers                                    *)
+(* Define the maximum of two real numbers                                    *)
 (* ------------------------------------------------------------------------- *)
 
 val max_def = Define `max (x : real) y = if x <= y then y else x`;
@@ -3548,7 +3546,170 @@ val lt_int = store_thm(
   ]);
 
 
+(*---------------------------------------------------------------------------*)
+(* Floor and ceiling (nums)                                                  *)
+(*---------------------------------------------------------------------------*)
 
+val NUM_FLOOR_def = 
+ Define
+   `NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x`;
+
+val NUM_CEILING_def = 
+ Define
+   `NUM_CEILING (x:real) = LEAST (n:num). x <= real_of_num(n)`;
+
+val _ = overload_on ("flr",``NUM_FLOOR``);
+val _ = overload_on ("clg",``NUM_CEILING``);
+
+val lem = SIMP_RULE arith_ss [REAL_POS,REAL_ADD_RID]
+              (Q.SPECL[`y`,`&n`,`0r`,`1r`] REAL_LTE_ADD2);
+
+val add1_gt_exists = prove(
+  ``!y : real. ?n. & (n + 1) > y``,
+  GEN_TAC THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH THEN
+  SIMP_TAC (srw_ss()) [] THEN
+  DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
+  Q.EXISTS_TAC `n` THEN
+  SIMP_TAC arith_ss [GSYM REAL_ADD,real_gt,REAL_LT_ADDL,REAL_LT_ADDR] THEN 
+  METIS_TAC [lem]);
+
+val lt_add1_exists = prove(
+  ``!y: real. ?n. y < &(n + 1)``,
+  GEN_TAC THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH THEN
+  SIMP_TAC (srw_ss()) [] THEN
+  DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
+  Q.EXISTS_TAC `n` THEN
+  SIMP_TAC bool_ss [GSYM REAL_ADD] THEN METIS_TAC [lem]);
+
+val NUM_FLOOR_LE = store_thm
+("NUM_FLOOR_LE",
+  ``0 <= x ==> &(NUM_FLOOR x) <= x``,
+  SRW_TAC [][NUM_FLOOR_def] THEN
+  LEAST_ELIM_TAC THEN 
+  SRW_TAC [][add1_gt_exists] THEN
+  Cases_on `n` THEN SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
+  SRW_TAC [numSimps.ARITH_ss] [real_gt, REAL_NOT_LT, ADD1]);
+
+val NUM_FLOOR_LE2 = store_thm
+("NUM_FLOOR_LE2",
+ ``0 <= y ==> (x <= NUM_FLOOR y = &x <= y)``,
+  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THEN 
+  SRW_TAC [][lt_add1_exists, real_gt,REAL_NOT_LT, EQ_IMP_THM]
+  THENL [
+    Cases_on `n` THENL [
+      FULL_SIMP_TAC (srw_ss()) [],
+      FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
+      FULL_SIMP_TAC (bool_ss ++ numSimps.ARITH_ss)
+                    [ADD1, GSYM REAL_ADD, GSYM REAL_LE] THEN
+      METIS_TAC [REAL_LE_TRANS]
+    ],
+    `&x < &(n + 1):real` by PROVE_TAC [REAL_LET_TRANS] THEN
+    FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
+  ]);
+
+val NUM_FLOOR_LET = store_thm
+("NUM_FLOOR_LET",
+ ``(NUM_FLOOR x <= y) = (x < &y + 1)``,
+  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THEN
+  SRW_TAC [][lt_add1_exists, real_gt,REAL_NOT_LT, EQ_IMP_THM]
+  THENL [
+    FULL_SIMP_TAC bool_ss [GSYM REAL_LE,GSYM REAL_ADD] THEN
+    MATCH_MP_TAC REAL_LTE_TRANS THEN
+    Q.EXISTS_TAC `&n + 1` THEN SRW_TAC [][],
+    Cases_on `n` THEN SRW_TAC [][] THEN
+    FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
+    FULL_SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [ADD1] THEN 
+    STRIP_TAC THEN
+    `&(n' + 1) < &(y + 1):real` by METIS_TAC [REAL_LET_TRANS] THEN
+    FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
+  ]);
+
+val NUM_FLOOR_DIV = store_thm
+("NUM_FLOOR_DIV",
+  ``0 <= x /\ 0 < y ==> &(NUM_FLOOR (x / y)) * y <= x``,
+  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THEN
+  SRW_TAC [][add1_gt_exists] THEN 
+  Cases_on `n` THEN1 SRW_TAC [][] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
+  SRW_TAC [numSimps.ARITH_ss] [real_gt,REAL_NOT_LT,ADD1,REAL_LE_RDIV_EQ]);
+
+val NUM_FLOOR_DIV_LOWERBOUND = store_thm
+("NUM_FLOOR_DIV_LOWERBOUND",
+ ``0 <= x:real /\ 0 < y:real ==> x < &(NUM_FLOOR (x/y) + 1) * y ``,
+  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THEN
+  SRW_TAC [][add1_gt_exists] THEN Cases_on `n` THEN
+  POP_ASSUM MP_TAC THEN SRW_TAC [][real_gt, REAL_LT_LDIV_EQ]);
+
+val NUM_FLOOR_EQNS = store_thm(
+ "NUM_FLOOR_EQNS",
+  ``(NUM_FLOOR (real_of_num n) = n) /\
+    (0 < m ==> (NUM_FLOOR (real_of_num n / real_of_num m) = n DIV m))``,
+  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THENL [
+    SIMP_TAC (srw_ss()) [real_gt, REAL_LT] THEN
+    CONJ_TAC THENL
+     [Q.EXISTS_TAC`n` THEN RW_TAC arith_ss [],
+      Cases_on `n'` THEN FULL_SIMP_TAC arith_ss []
+        THEN STRIP_TAC
+        THEN Q.PAT_ASSUM `$! M` (MP_TAC o Q.SPEC `n''`)
+        THEN RW_TAC arith_ss []],
+    ASM_SIMP_TAC (srw_ss()) [real_gt, REAL_LT_LDIV_EQ] THEN
+    CONJ_TAC THENL [
+      Q.EXISTS_TAC `n` THEN
+      SRW_TAC [][RIGHT_ADD_DISTRIB] THEN
+      MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+      Q.EXISTS_TAC `n * m` THEN
+      SRW_TAC [numSimps.ARITH_ss][] THEN
+      CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+      SRW_TAC [numSimps.ARITH_ss][],
+      Q.HO_MATCH_ABBREV_TAC 
+         `!p:num. (!i. i < p ==> ~(n < (i + 1) * m)) /\ n < (p + 1) * m
+                   ==> (p = n DIV m)` THEN
+      REPEAT STRIP_TAC THEN
+      CONV_TAC (REWR_CONV EQ_SYM_EQ) THEN
+      MATCH_MP_TAC DIV_UNIQUE THEN
+      `(p = 0) \/ (?p0. p = SUC p0)`
+         by PROVE_TAC [TypeBase.nchotomy_of "num"] THEN
+      FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss)
+                    [ADD1,RIGHT_ADD_DISTRIB] THEN
+      FIRST_X_ASSUM (Q.SPEC_THEN `p0` MP_TAC) THEN
+      SRW_TAC [numSimps.ARITH_ss][NOT_LESS] THEN
+      Q.EXISTS_TAC `n - (m + p0 * m)` THEN
+      SRW_TAC [numSimps.ARITH_ss][]
+    ]
+  ]);
+
+val NUM_FLOOR_LOWER_BOUND = store_thm(
+  "NUM_FLOOR_LOWER_BOUND",
+  ``(x:real < &n) = (NUM_FLOOR(x+1) <= n)``,
+  MP_TAC (Q.INST [`x` |-> `x + 1`, `y` |-> `n`] NUM_FLOOR_LET) THEN
+  SIMP_TAC (srw_ss()) []);
+
+val NUM_FLOOR_UPPER_BOUND = store_thm(
+  "NUM_FLOOR_upper_bound",
+  ``(&n <= x:real) = (n < NUM_FLOOR(x + 1))``,
+  MP_TAC (AP_TERM negation NUM_FLOOR_LOWER_BOUND) THEN
+  PURE_REWRITE_TAC [REAL_NOT_LT, NOT_LESS_EQUAL,IMP_CLAUSES]);
+
+(*---------------------------------------------------------------------------*)
+(* Ceiling function                                                          *)
+(*---------------------------------------------------------------------------*)
+
+val LE_NUM_CEILING = store_thm
+("LE_NUM_CEILING",
+ ``!x. x <= &(clg x)``,
+ RW_TAC std_ss [NUM_CEILING_def] 
+   THEN numLib.LEAST_ELIM_TAC 
+   THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH 
+   THEN SIMP_TAC (srw_ss()) [] 
+   THEN METIS_TAC [REAL_LT_IMP_LE]);
+
+val NUM_CEILING_LE = store_thm
+("NUM_CEILING_LE",
+ ``!x n. x <= &n ==> clg(x) <= n``,
+ RW_TAC std_ss [NUM_CEILING_def] 
+   THEN numLib.LEAST_ELIM_TAC
+   THEN METIS_TAC [NOT_LESS_EQUAL]);
 
 val _ = export_theory();
 
