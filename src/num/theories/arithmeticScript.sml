@@ -727,6 +727,11 @@ val LESS_MONO_MULT = store_thm ("LESS_MONO_MULT",
                           LESS_EQ_LESS_EQ_MONO)
     THEN ASM_REWRITE_TAC[]);
 
+val LESS_MONO_MULT2 = store_thm(
+  "LESS_MONO_MULT2",
+  ``!m n i j. m <= i /\ n <= j ==> m * n <= i * j``,
+  mesonLib.MESON_TAC [LESS_EQ_TRANS, LESS_MONO_MULT, MULT_COMM]);
+
 (* Proof modified for new IMP_RES_TAC                   [TFM 90.04.25]  *)
 
 val RIGHT_SUB_DISTRIB = store_thm ("RIGHT_SUB_DISTRIB",
@@ -2518,6 +2523,29 @@ val DIV_LE_X = store_thm(
   ASM_REWRITE_TAC []);
 
 
+val DIV_MOD_MOD_DIV = store_thm(
+  "DIV_MOD_MOD_DIV",
+  ``!m n k. 0 < n /\ 0 < k ==> ((m DIV n) MOD k = (m MOD (n * k)) DIV n)``,
+  REPEAT STRIP_TAC THEN
+  Q.SUBGOAL_THEN `0 < n * k` ASSUME_TAC THENL [
+    ASM_REWRITE_TAC [ZERO_LESS_MULT],
+    ALL_TAC
+  ] THEN
+  Q.SPEC_THEN `n * k` MP_TAC DIVISION THEN
+  ASM_REWRITE_TAC [] THEN DISCH_THEN (Q.SPEC_THEN `m` STRIP_ASSUME_TAC) THEN
+  Q.ABBREV_TAC `q = m DIV (n * k)` THEN
+  Q.ABBREV_TAC `r = m MOD (n * k)` THEN
+  Q.RM_ALL_ABBREVS_TAC THEN
+  ASM_REWRITE_TAC [] THEN
+  Q.SUBGOAL_THEN `q * (n * k) = (q * k) * n` SUBST1_TAC THENL [
+    SIMP_TAC bool_ss [AC MULT_ASSOC MULT_COMM],
+    ALL_TAC
+  ] THEN ASM_SIMP_TAC bool_ss [ADD_DIV_ADD_DIV, MOD_TIMES] THEN
+  MATCH_MP_TAC LESS_MOD THEN ASM_SIMP_TAC bool_ss [DIV_LT_X] THEN
+  FULL_SIMP_TAC bool_ss [AC MULT_ASSOC MULT_COMM]);
+
+
+
 (* ----------------------------------------------------------------------
     Some additional theorems (nothing to do with DIV and MOD)
    ---------------------------------------------------------------------- *)
@@ -2692,6 +2720,38 @@ val EXP_SUB = Q.store_thm
    RW_TAC bool_ss [GSYM EXP_ADD,ADD_CLAUSES] THEN
    METIS_TAC [SUB_ADD] end);
 
+val EXP_BASE_MULT = store_thm(
+  "EXP_BASE_MULT",
+  ``!z x y. (x * y) ** z = (x ** z) * (y ** z)``,
+  INDUCT_TAC THEN
+  ASM_SIMP_TAC bool_ss [EXP, MULT_CLAUSES, AC MULT_ASSOC MULT_COMM]);
+
+val EXP_EXP_MULT = store_thm(
+ "EXP_EXP_MULT",
+ ``!z x y. x ** (y * z) = (x ** y) ** z``,
+  INDUCT_TAC THEN ASM_REWRITE_TAC [EXP, MULT_CLAUSES, EXP_1, EXP_ADD]);
+
+val EXP_BASE_LEQ_MONO = store_thm(
+  "EXP_BASE_LEQ_MONO",
+  ``!n x y. x <= y ==> x ** n <= y ** n``,
+  INDUCT_TAC THEN REWRITE_TAC [EXP, LESS_EQ_REFL] THEN
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC LESS_MONO_MULT2 THEN
+  ASM_SIMP_TAC bool_ss []);
+
+val EXP_EXP_LEQ_MONO = store_thm(
+  "EXP_EXP_LEQ_MONO",
+  ``!n m b. 0 < b /\ m <= n ==> b ** m <= b ** n``,
+  REPEAT STRIP_TAC THEN
+  IMP_RES_TAC LESS_EQUAL_ADD THEN ASM_REWRITE_TAC [EXP_ADD] THEN
+  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+  ASM_REWRITE_TAC [LE_MULT_LCANCEL, EXP_EQ_0, ONE, GSYM LESS_EQ] THEN
+  FULL_SIMP_TAC bool_ss [GSYM NOT_ZERO_LT_ZERO, EXP_EQ_0]);
+
+(*  |- m <= n ==> SUC b ** m <= SUC b ** n *)
+val EXP_EXP_LEQ_MONO_SUC = save_thm(
+  "EXP_EXP_LEQ_MONO_SUC",
+  (REWRITE_RULE [LESS_0] o Q.INST [`b` |-> `SUC b`] o SPEC_ALL)
+  EXP_EXP_LEQ_MONO);
 
 (* ********************************************************************** *)
 (* Maximum and minimum                                                    *)
