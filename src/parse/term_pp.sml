@@ -96,45 +96,62 @@ fun dest_ty_antiq tm =
 
 val is_ty_antiq = Lib.can dest_ty_antiq
 
+val casesplit_munger = ref (NONE: (term -> term * (term * term)list) option)
+fun init_casesplit_munger f =
+    case casesplit_munger of
+      ref NONE => casesplit_munger := SOME f
+    | _ => raise PP_ERR "init_casesplit_munger"
+                        "casesplit munger already initialised"
 
 exception CaseConversionFailed
-fun convert_case tm = let
-  val (casef, args) = strip_comb tm
-  val {Name = casefname, Thy = casefthy, ...} = dest_thy_const casef
-  val prim_case_t = prim_mk_const {Name = casefname, Thy = casefthy}
-  val (prim_fargs, _) = strip_fun (type_of prim_case_t)
-  val _ = length prim_fargs = length args orelse raise CaseConversionFailed
-  val (cases, split_on) = front_last args
-  val split_on_ty = type_of split_on
-  val (tyopname, _) = dest_type split_on_ty
-  val cs0 = type_constructors tyopname
-  val _ = length cs0 <> 0 orelse raise CaseConversionFailed
-  val _ = length cases = length cs0 orelse
-          raise CaseConversionFailed
-  (* life is complicated at this point by the fact that the constructors *)
-  (* may be polymorphic, and the actual split_on term may be an instance *)
-  (* of that polymorphic type *)
-  val (_, basety) = strip_fun (type_of (hd cs0))
-  (* We rely on the fact that types stored in the TypeBase will *)
-  (* never be functions, so we can just strip arrows to get at the *)
-  (* possibly polymorphic base type *)
-  val substitution = Type.match_type basety split_on_ty
-  val cs = map (inst substitution) cs0
+fun convert_case tm =
+    case casesplit_munger of
+      ref NONE => let
+        val (casef, args) = strip_comb tm
+        val {Name = casefname, Thy = casefthy, ...} = dest_thy_const casef
+        val prim_case_t = prim_mk_const {Name = casefname, Thy = casefthy}
+        val (prim_fargs, _) = strip_fun (type_of prim_case_t)
+        val _ = length prim_fargs = length args orelse
+                raise CaseConversionFailed
+        val (cases, split_on) = front_last args
+        val split_on_ty = type_of split_on
+        val (tyopname, _) = dest_type split_on_ty
+        val cs0 = type_constructors tyopname
+        val _ = length cs0 <> 0 orelse raise CaseConversionFailed
+        val _ = length cases = length cs0 orelse
+                raise CaseConversionFailed
+        (* life is complicated at this point by the fact that the constructors
+           may be polymorphic, and the actual split_on term may be an
+           instance of that polymorphic type *)
+        val (_, basety) = strip_fun (type_of (hd cs0))
+        (* We rely on the fact that types stored in the TypeBase will
+           never be functions, so we can just strip arrows to get at the
+           possibly polymorphic base type *)
+        val substitution = Type.match_type basety split_on_ty
+        val cs = map (inst substitution) cs0
 
-  fun mk_arrow (constructor, case_t) =
-    mk_casearrow(apply_absargs constructor case_t)
-  val arrows = ListPair.map mk_arrow (cs, cases)
-               handle HOL_ERR _ => raise CaseConversionFailed
-  (* this previous might fail if someone has a case term that has a split *)
-  (* term which isn't actually an abstraction of the right number of *)
-  (* variables. *)
-  (* For example, the defining theorem for list_case: *)
-  (* |- (list_case x f [] = x) /\ (list_case x f (h::t) = f h t) *)
-  (* In neither conjunct is the f an abstraction over two variables *)
-  val split = list_mk_split arrows
-in
-  mk_case(split_on, split)
-end
+        fun mk_arrow (constructor, case_t) =
+            mk_casearrow(apply_absargs constructor case_t)
+        val arrows = ListPair.map mk_arrow (cs, cases)
+            handle HOL_ERR _ => raise CaseConversionFailed
+        (* this previous might fail if someone has a case term that has a split
+           term which isn't actually an abstraction of the right number of
+           variables.
+           For example, the defining theorem for list_case:
+           |- (list_case x f [] = x) /\ (list_case x f (h::t) = f h t)
+           In neither conjunct is the f an abstraction over two variables *)
+        val split = list_mk_split arrows
+      in
+        mk_case(split_on, split)
+      end
+    | ref (SOME f) => let
+        val (split_on, splits) = f tm
+        val _ = not (null splits) orelse raise CaseConversionFailed
+        val arrows = map mk_casearrow splits
+        val joined_splits = list_mk_split arrows
+      in
+        mk_case(split_on, joined_splits)
+      end
 
 (* ----------------------------------------------------------------------
     A flag controlling whether to print escaped syntax with a dollar
@@ -1447,6 +1464,8 @@ fun pp_term (G : grammar) TyG = let
                       cope_with_rules Name
                     else
                       add_prim_name()
+                else if s = "case" then
+                  cope_with_rules Name
                 else
                   cope_with_rules s
           end
