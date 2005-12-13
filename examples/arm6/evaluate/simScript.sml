@@ -666,10 +666,11 @@ val tm2 = `!a b x y m. (a ::-> y) ((b ::-< x) m) =
           else
             (b ::-> x) ((a ::-> y) m)`
 
-val BSa_RULE =
-  store_thm("BSa_RULE", tm1, METIS_TAC [BSa_def,BSb_def,BSUBST_BSUBST]);
-val BSb_RULE =
-  store_thm("BSb_RULE", tm2, METIS_TAC [BSa_def,BSb_def,BSUBST_BSUBST]);
+val BSa_RULE = store_thm("BSa_RULE", tm1,
+  METIS_TAC [BSa_def,BSb_def,BSUBST_BSUBST]);
+
+val BSb_RULE = store_thm("BSb_RULE", tm2,
+  METIS_TAC [BSa_def,BSb_def,BSUBST_BSUBST]);
 
 (* ------------------------------------------------------------------------- *)
 

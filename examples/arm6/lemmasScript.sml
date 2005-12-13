@@ -321,6 +321,14 @@ val STR_IMP_BITS = store_thm("STR_IMP_BITS",
   `!i. (DECODE_INST i = str) ==> ~(i %% 20)`,
   RW_TAC arith_ss [DECODE_INST_def]);
 
+val DECODE_INST_LDM = store_thm("DECODE_INST_LDM",
+  `!i. (DECODE_INST i = ldm) ==> i %% 20`,
+  RW_TAC arith_ss [DECODE_INST_def]);
+
+val DECODE_INST_STM = store_thm("DECODE_INST_STM",
+  `!i. (DECODE_INST i = stm) ==> ~(i %% 20)`,
+  RW_TAC arith_ss [DECODE_INST_def]);
+
 (* ------------------------------------------------------------------------- *)
 
 val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",

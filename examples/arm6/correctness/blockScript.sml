@@ -709,6 +709,13 @@ val LDM_LIST_EMPTY = store_thm("LDM_LIST_EMPTY",
   `!reg mode. LDM_LIST reg mode [] [] = reg`,
   SIMP_TAC list_ss [LDM_LIST_def]);
 
+val WORD_BITS_150_ZERO = store_thm("WORD_BITS_150_ZERO",
+  `(!i:word32. (((15 >< 0) i = 0w:word16) ==> ~(i %% 15))) /\
+    !i:word32. (i %% 15 = ((15 >< 0) i):word16 %% 15)`,
+  STRIP_TAC \\ REWRITE_TAC [GSYM WORD_EQ]
+    \\ RW_TAC (fcp_ss++ARITH_ss++SIZES_ss) [word_bit_def,word_0,
+         word_extract_def,word_bits_def,w2w]);
+
 (* ------------------------------------------------------------------------- *)
 
 val IS_ABORT_ZERO = prove(
@@ -1123,23 +1130,6 @@ val NEXT_CORE_STM_TN_W1 = save_thm("NEXT_CORE_STM_TN_W1",
           Abbrev (nbs = DECODE_MODE ((4 >< 0) cpsr)) /\
           Abbrev (cpsr = CPSR_READ psr)` o SPEC_ALL o
    SIMP_RULE std_ss [WORD_ADD_0,WORD_MULT_CLAUSES]) NEXT_CORE_STM_TN_W1);
-
-(* ------------------------------------------------------------------------- *)
-
-val DECODE_INST_LDM = store_thm("DECODE_INST_LDM",
-  `!i. (DECODE_INST i = ldm) ==> i %% 20`,
-  RW_TAC arith_ss [DECODE_INST_def]);
-
-val DECODE_INST_STM = store_thm("DECODE_INST_STM",
-  `!i. (DECODE_INST i = stm) ==> ~(i %% 20)`,
-  RW_TAC arith_ss [DECODE_INST_def]);
-
-val WORD_BITS_150_ZERO = store_thm("WORD_BITS_150_ZERO",
-  `(!i:word32. (((15 >< 0) i = 0w:word16) ==> ~(i %% 15))) /\
-    !i:word32. (i %% 15 = ((15 >< 0) i):word16 %% 15)`,
-  STRIP_TAC \\ REWRITE_TAC [GSYM WORD_EQ]
-    \\ RW_TAC (fcp_ss++ARITH_ss++SIZES_ss) [word_bit_def,word_0,
-         word_extract_def,word_bits_def,w2w]);
 
 (* ------------------------------------------------------------------------- *)
 
