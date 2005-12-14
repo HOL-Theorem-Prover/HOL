@@ -18,6 +18,14 @@ val _ = new_theory "numeral_bit";
 
 (* ------------------------------------------------------------------------- *)
 
+infix \\ << >>
+
+val op \\ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
+
+(* ------------------------------------------------------------------------- *)
+
 val BIT_REV_def =
   Prim_rec.new_recursive_definition
   {name = "BIT_REV_def",
@@ -30,22 +38,22 @@ val BIT_R = ``\(x,y). (x DIV 2, 2 * y + SBIT (BIT 0 x) 0)``;
 
 val BIT_R_FUNPOW = prove(
   `!n x y. FUNPOW ^BIT_R (SUC n) (x,y) =
-       (x DIV 2 ** (SUC n), 2 * (SND (FUNPOW ^BIT_R n (x, y))) + SBIT (BIT n x) 0)`,
-  Induct THEN1 SIMP_TAC arith_ss [FUNPOW]
-    THEN `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
+   (x DIV 2 ** (SUC n), 2 * (SND (FUNPOW ^BIT_R n (x, y))) + SBIT (BIT n x) 0)`,
+  Induct >> SIMP_TAC arith_ss [FUNPOW]
+    \\ `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
       by SIMP_TAC std_ss [BIT_def,BITS_THM,BITS_COMP_THM2,DIV_1,SUC_SUB]
-    THEN ASM_SIMP_TAC std_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
+    \\ ASM_SIMP_TAC std_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
            (GSYM o ONCE_REWRITE_RULE [MULT_COMM]) EXP]);
 
 val BIT_R_BIT_REV = prove(
   `!n a y. SND (FUNPOW ^BIT_R n (a, y)) = BIT_REV n a y`,
-  Induct THEN1 SIMP_TAC std_ss [FUNPOW,BIT_REV_def]
-    THEN ASM_SIMP_TAC std_ss [FUNPOW,BIT_REV_def,LSB_def,GSYM LSB_ODD]);
+  Induct >> SIMP_TAC std_ss [FUNPOW,BIT_REV_def]
+    \\ ASM_SIMP_TAC std_ss [FUNPOW,BIT_REV_def,LSB_def,GSYM LSB_ODD]);
 
 val BIT_REVERSE_REV = prove(
   `!m n. BIT_REVERSE m n = SND (FUNPOW ^BIT_R m (n, 0))`,
-  Induct THEN1 SIMP_TAC std_ss [BIT_REVERSE_def,FUNPOW]
-    THEN ASM_SIMP_TAC arith_ss [BIT_REVERSE_def,BIT_R_FUNPOW]);
+  Induct >> SIMP_TAC std_ss [BIT_REVERSE_def,FUNPOW]
+    \\ ASM_SIMP_TAC arith_ss [BIT_REVERSE_def,BIT_R_FUNPOW]);
 
 val BIT_REVERSE_EVAL = save_thm("BIT_REVERSE_EVAL",
   REWRITE_RULE [BIT_R_BIT_REV] BIT_REVERSE_REV);
@@ -57,10 +65,13 @@ val BIT_MODF_def =
   {name = "BIT_MODF_def",
    def = ``(BIT_MODF 0 f x b e y = y)
         /\ (BIT_MODF (SUC n) f x b e y =
-              BIT_MODF n f (x DIV 2) (b + 1) (2 * e) (if f b (ODD x) then e + y else y))``,
+              BIT_MODF n f (x DIV 2) (b + 1) (2 * e)
+                (if f b (ODD x) then e + y else y))``,
    rec_axiom = prim_recTheory.num_Axiom};
 
-val BIT_M = ``\(y,f,x,b,e). (if f b (BIT 0 x) then e + y else y, f, x DIV 2, b + 1, 2 * e)``;
+val BIT_M =
+  ``\(y,f,x,b,e).
+       (if f b (BIT 0 x) then e + y else y, f, x DIV 2, b + 1, 2 * e)``;
 
 val BIT_M_FUNPOW = prove(
   `!n f x b e y. FUNPOW ^BIT_M (SUC n) (y,f,x,b,e) =
@@ -68,22 +79,22 @@ val BIT_M_FUNPOW = prove(
         then 2 ** n * e + FST (FUNPOW ^BIT_M n (y,f,x,b,e))
         else FST (FUNPOW ^BIT_M n (y,f,x,b,e)),
         f, x DIV 2 ** (SUC n), b + SUC n, 2 ** SUC n * e)`,
-  Induct THEN1 SIMP_TAC arith_ss [FUNPOW]
-    THEN `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
+  Induct >> SIMP_TAC arith_ss [FUNPOW]
+    \\ `!x n. BIT 0 (x DIV 2 ** n) = BIT n x`
       by SIMP_TAC std_ss [BIT_def,BITS_THM,BITS_COMP_THM2,DIV_1,SUC_SUB]
-    THEN ASM_SIMP_TAC arith_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
+    \\ ASM_SIMP_TAC arith_ss [FUNPOW_SUC,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,
            (GSYM o ONCE_REWRITE_RULE [MULT_COMM]) EXP]
-    THEN SIMP_TAC (std_ss++numSimps.ARITH_AC_ss) [EXP]);
+    \\ SIMP_TAC (std_ss++numSimps.ARITH_AC_ss) [EXP]);
 
 val BIT_M_BIT_MODF = prove(
   `!n f x b e y. FST (FUNPOW ^BIT_M n (y,f,x,b,e)) = BIT_MODF n f x b e y`,
-  Induct THEN1 SIMP_TAC std_ss [FUNPOW,BIT_MODF_def]
-    THEN ASM_SIMP_TAC std_ss [FUNPOW,BIT_MODF_def,LSB_def,GSYM LSB_ODD]);
+  Induct >> SIMP_TAC std_ss [FUNPOW,BIT_MODF_def]
+    \\ ASM_SIMP_TAC std_ss [FUNPOW,BIT_MODF_def,LSB_def,GSYM LSB_ODD]);
 
 val BIT_MODIFY_MODF = prove(
   `!m f n. BIT_MODIFY m f n = FST (FUNPOW ^BIT_M m (0,f,n,0,1))`,
-  Induct THEN1 SIMP_TAC std_ss [BIT_MODIFY_def,FUNPOW]
-    THEN RW_TAC arith_ss [SBIT_def,BIT_MODIFY_def,BIT_M_FUNPOW]);
+  Induct >> SIMP_TAC std_ss [BIT_MODIFY_def,FUNPOW]
+    \\ RW_TAC arith_ss [SBIT_def,BIT_MODIFY_def,BIT_M_FUNPOW]);
 
 val BIT_MODIFY_EVAL = save_thm("BIT_MODIFY_EVAL",
   REWRITE_RULE [BIT_M_BIT_MODF] BIT_MODIFY_MODF);
@@ -113,7 +124,7 @@ val iBITWISE = prove(
        if opr (ODD a) (ODD b) then BIT1 w else iDUB w)`,
   RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_BIT1,SBIT_def,EXP,
                    LSB_ODD,GSYM DIV2_def,BITWISE_EVAL,LET_THM]
-    THEN REWRITE_TAC [BITWISE_def,ALT_ZERO]);
+    \\ REWRITE_TAC [BITWISE_def,ALT_ZERO]);
 
 val iBITWISE = save_thm("iBITWISE", SUC_RULE iBITWISE);
 
@@ -132,7 +143,7 @@ val NUMERAL_DIV2 = store_thm("NUMERAL_DIV2",
      (!n. DIV2 (NUMERAL (BIT1 n)) = NUMERAL n) /\
      (!n. DIV2 (NUMERAL (BIT2 n)) = NUMERAL (SUC n))`,
   RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2]
-    THEN SIMP_TAC arith_ss [DIV2_def,
+    \\ SIMP_TAC arith_ss [DIV2_def,
            ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
 
 val DIV_2EXP = prove(
@@ -152,7 +163,7 @@ val NUMERAL_BIT_REV = prove(
       BIT_REV n (DIV2 (NUMERAL x)) (if ODD x then BIT1 y else iDUB y))`,
   RW_TAC bool_ss [BIT_REV_def,SBIT_def,NUMERAL_DEF,DIV2_def,
            ADD,ADD_0,BIT2,BIT1,iDUB,ALT_ZERO]
-    THEN FULL_SIMP_TAC arith_ss []);
+    \\ FULL_SIMP_TAC arith_ss []);
 
 val NUMERAL_BIT_REV = save_thm("NUMERAL_BIT_REV", SUC_RULE NUMERAL_BIT_REV);
 
@@ -172,7 +183,7 @@ val NUMERAL_BIT_MODF = prove(
               (if f b (ODD x) then (NUMERAL e) + y else y))`,
   RW_TAC bool_ss [BIT_MODF_def,SBIT_def,NUMERAL_DEF,DIV2_def,
            ADD,ADD_0,BIT2,BIT1,iDUB,ALT_ZERO]
-    THEN FULL_SIMP_TAC arith_ss []);
+    \\ FULL_SIMP_TAC arith_ss []);
 
 val NUMERAL_BIT_MODF = save_thm("NUMERAL_BIT_MODF", SUC_RULE NUMERAL_BIT_MODF);
 
@@ -210,12 +221,13 @@ val lem = prove(
 val BITS_SUC2 = prove(
   `!h n. BITS (SUC h) 0 n = 2 * BITS h 0 (n DIV 2) + SBIT (ODD n) 0`,
   RW_TAC arith_ss [SBIT_def]
-    THEN FULL_SIMP_TAC arith_ss [GSYM EVEN_ODD,EVEN_EXISTS,ODD_EXISTS,
-           BITS_ZERO3,ADD_DIV_ADD_DIV2,SPEC_MOD_COMMON_FACTOR,
-           ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
-    THEN SUBST1_TAC (SPEC `2 * m` ADD1)
-    THEN ONCE_REWRITE_TAC [SPEC_MOD_PLUS]
-    THEN SIMP_TAC bool_ss [LESS_MOD,ZERO_LT_TWOEXP,SPEC_TWOEXP_MONO,LESS_MOD,lem]);
+    \\ FULL_SIMP_TAC arith_ss [GSYM EVEN_ODD,EVEN_EXISTS,ODD_EXISTS,
+         BITS_ZERO3,ADD_DIV_ADD_DIV2,SPEC_MOD_COMMON_FACTOR,
+         ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
+    \\ SUBST1_TAC (SPEC `2 * m` ADD1)
+    \\ ONCE_REWRITE_TAC [SPEC_MOD_PLUS]
+    \\ SIMP_TAC bool_ss [LESS_MOD,ZERO_LT_TWOEXP,SPEC_TWOEXP_MONO,LESS_MOD,lem]
+);
 
 val MOD_2EXP_ZERO = prove(
   `!x. MOD_2EXP x 0 = 0`,
@@ -224,14 +236,14 @@ val MOD_2EXP_ZERO = prove(
 val iMOD_2EXP = prove(
   `!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)`,
   REWRITE_TAC [NUMERAL_DEF]
-    THEN Induct
-    THEN1 SIMP_TAC arith_ss [iMOD_2EXP_def,MOD_2EXP_def]
-    THEN STRIP_TAC THEN REWRITE_TAC [iMOD_2EXP_def]
-    THEN POP_ASSUM (SUBST1_TAC o SYM o SPEC `n DIV 2`)
-    THEN Cases_on `x`
-    THEN1 (SIMP_TAC arith_ss [MOD_2EXP_def,MOD_2,EVEN_ODD,SBIT_def]
-             THEN PROVE_TAC [])
-    THEN REWRITE_TAC [BITS_SUC2,(GSYM o REWRITE_RULE [GSYM MOD_2EXP_def])
+    \\ Induct
+    >> SIMP_TAC arith_ss [iMOD_2EXP_def,MOD_2EXP_def]
+    \\ STRIP_TAC \\ REWRITE_TAC [iMOD_2EXP_def]
+    \\ POP_ASSUM (SUBST1_TAC o SYM o SPEC `n DIV 2`)
+    \\ Cases_on `x`
+    >> (SIMP_TAC arith_ss [MOD_2EXP_def,MOD_2,EVEN_ODD,SBIT_def]
+             \\ PROVE_TAC [])
+    \\ REWRITE_TAC [BITS_SUC2,(GSYM o REWRITE_RULE [GSYM MOD_2EXP_def])
            BITS_ZERO3]);
 
 val iMOD_2EXP_CLAUSES = prove(
@@ -241,14 +253,14 @@ val iMOD_2EXP_CLAUSES = prove(
    (!x n. iMOD_2EXP (SUC x) (BIT2 n) = iDUB (iMOD_2EXP x (SUC n)))`,
   RW_TAC arith_ss [iMOD_2EXP_def,iDUB,SBIT_def,numeral_evenodd,GSYM DIV2_def,
     REWRITE_RULE [SYM ALT_ZERO,NUMERAL_DEF,ADD1] NUMERAL_DIV2]
-    THENL [
+    << [
       REWRITE_TAC [ALT_ZERO],
       REWRITE_TAC [ALT_ZERO]
-        THEN REWRITE_TAC [MOD_2EXP_ZERO,(GSYM o
+        \\ REWRITE_TAC [MOD_2EXP_ZERO,(GSYM o
                REWRITE_RULE [NUMERAL_DEF]) iMOD_2EXP],
       SIMP_TAC arith_ss [SPEC `iMOD_2EXP x n` BIT1],
       ONCE_REWRITE_TAC [(SYM o REWRITE_CONV [NUMERAL_DEF]) ``1``]
-        THEN REWRITE_TAC [ADD1]]);
+        \\ REWRITE_TAC [ADD1]]);
 
 val iMOD_2EXP = save_thm("iMOD_2EXP",CONJ MOD_2EXP_ZERO iMOD_2EXP);
 
@@ -257,7 +269,7 @@ val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP",
 
 val TIMES_2EXP_lem = prove(
   `!n. FUNPOW iDUB n 1 = 2 ** n`,
-  Induct THEN ASM_SIMP_TAC arith_ss
+  Induct \\ ASM_SIMP_TAC arith_ss
     [EXP,CONJUNCT1 FUNPOW,FUNPOW_SUC,iDUB,GSYM TIMES2]);
 
 val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
@@ -265,9 +277,9 @@ val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
   !x n. TIMES_2EXP (NUMERAL x) (NUMERAL n) =
      (NUMERAL n) * NUMERAL (FUNPOW iDUB (NUMERAL x) (BIT1 ZERO))`,
   `BIT1 ZERO = 1` by REWRITE_TAC [NUMERAL_DEF,BIT1,ALT_ZERO]
-    THEN POP_ASSUM SUBST1_TAC
-    THEN REWRITE_TAC [TIMES_2EXP_def,TIMES_2EXP_lem,NUMERAL_DEF]
-    THEN SIMP_TAC std_ss [EXP]);
+    \\ POP_ASSUM SUBST1_TAC
+    \\ REWRITE_TAC [TIMES_2EXP_def,TIMES_2EXP_lem,NUMERAL_DEF]
+    \\ SIMP_TAC std_ss [EXP]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -275,45 +287,35 @@ val iLOG2_def =
  Definition.new_definition("iLOG2_def", ``iLOG2 n = LOG2 (n + 1)``);
 
 val LOG2_1 = (SIMP_RULE arith_ss [] o SPECL [`1`,`0`]) LOG2_UNIQUE;
-val LOG2_BIT2 = (GEN_ALL o SIMP_RULE arith_ss [LEFT_ADD_DISTRIB] o
-  ONCE_REWRITE_RULE [DECIDE ``!a b. (a = b) = (2 * a = 2 * b)``] o
-  SIMP_RULE arith_ss [] o SPEC `n + 1`) LOG2;
-val LOG2_BIT1 = (REWRITE_RULE [DECIDE ``!a. a + 2 + 1 = a + 3``] o
-  ONCE_REWRITE_RULE [DECIDE ``!a b. (a = b) = (a + 1 = b + 1)``]) LOG2_BIT2;
-
-val LESS_MULT_MONO_2 = 
-  (GEN_ALL o numLib.REDUCE_RULE o INST [`n` |-> `1`] o SPEC_ALL) LESS_MULT_MONO;
-
-val lem = prove(
-  `!a b. 2 * (a MOD 2 ** b) < 2 ** (b + 1)`,
-  METIS_TAC [MOD_2EXP_LT,ADD1,EXP,LESS_MULT_MONO_2]);
-
-val lem2 = prove(
-  `!a b. 2 * (a MOD 2 ** b) + 1 < 2 ** (b + 1)`,
-  METIS_TAC [MOD_2EXP_LT,ADD1,EXP,LESS_MULT_MONO_2,
-    DECIDE ``a < b ==> 2 * a + 1 < 2 * b``]);
 
 val numeral_ilog2 = store_thm("numeral_ilog2",
   `(iLOG2 ZERO = 0) /\
    (!n. iLOG2 (BIT1 n) = 1 + iLOG2 n) /\
    (!n. iLOG2 (BIT2 n) = 1 + iLOG2 n)`,
   RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def]
-    THEN SIMP_TAC arith_ss [LOG2_1]
-    THENL [
+    \\ SIMP_TAC arith_ss [LOG2_1]
+    << [
       MATCH_MP_TAC ((SIMP_RULE arith_ss [] o
-        SPECL [`2 * n + 2`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
-        THEN EXISTS_TAC `2 * ((n + 1) MOD 2 ** LOG2 (n + 1))`
-        THEN SIMP_TAC arith_ss [LOG2_BIT2,EXP_ADD,lem],
+              SPECL [`2 * n + 2`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
+        \\ SIMP_TAC arith_ss [EXP_ADD,LOG2_def]
+        \\ SIMP_TAC arith_ss [GSYM ADD1,EXP,logrootTheory.LOG,
+            DECIDE ``(2 * n + 2 = (n + 1) * 2) /\ (a * 2 < 2 * b = a < b)``]
+        \\ SIMP_TAC arith_ss [GSYM EXP,logrootTheory.LOG],
       MATCH_MP_TAC ((SIMP_RULE arith_ss [] o
-        SPECL [`2 * n + 3`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
-        THEN EXISTS_TAC `2 * ((n + 1) MOD 2 ** LOG2 (n + 1)) + 1`
-        THEN SIMP_TAC arith_ss [LOG2_BIT1,EXP_ADD,lem2]]);
+              SPECL [`2 * n + 3`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
+        \\ SIMP_TAC arith_ss [EXP_ADD,LOG2_def]
+        \\ SIMP_TAC arith_ss [GSYM ADD1,EXP,logrootTheory.LOG,
+             DECIDE ``(2 * n + 3 = (n + 1) * 2 + 1)``,
+             DECIDE ``a <= b ==> a * 2 <= SUC (b * 2)``]
+        \\ SIMP_TAC arith_ss [
+             DECIDE ``a < b ==> SUC (a * 2) < 2 * b``,
+             (Once o GSYM) EXP,logrootTheory.LOG]]);
 
 val numeral_log2 = store_thm("numeral_log2",
   `(!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (iDUB n)) /\
    (!n. LOG2 (NUMERAL (BIT2 n)) = iLOG2 (BIT1 n))`,
   RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def,numeralTheory.iDUB]
-    THEN SIMP_TAC arith_ss []);
+    \\ SIMP_TAC arith_ss []);
 
 (* ------------------------------------------------------------------------- *)
 
