@@ -37,7 +37,7 @@ The {pp_element} lists passed to this function for the {separator},
 {leftdelim} and {rightdelim} fields are interpreted as by the
 {add_rule} function.  These lists must have exactly one {TOK} element
 (this provides the string that will be printed), and other formatting
-elements such as {BreakSpace}
+elements such as {BreakSpace}.
 
 In common with the {add_rule} function, there is no requirement that
 the {cons} and {nilstr} fields be the names of constants; the
