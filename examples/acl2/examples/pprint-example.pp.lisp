@@ -1,0 +1,4 @@
+(IN-PACKAGE "ACL2")
+
+(DEFUN EQUAL2 (X Y) (AND (= X Y) T))
+
