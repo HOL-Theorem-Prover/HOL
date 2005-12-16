@@ -1,0 +1,18 @@
+The files here are part of joint project between Mike Gordon
+(University of Cambridge) and Warren Hunt and Matt Kaufmann
+(University of Texas) to develop a logically sound and robust link
+between the HOL4 and ACL2 proof tools.
+
+This is work in progress. For further details see:
+
+ http://www.cl.cam.ac.uk/users/mjcg/hol2acl2/
+
+The directories here are:
+
+ml ............................ ML and HOL files
+lisp .......................... Lisp and ACL2 files
+examples ...................... Examples
+
+
+Mike Gordon
+16 Dec, 2005

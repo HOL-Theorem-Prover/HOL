@@ -1,6 +1,10 @@
 # Editable variables (but see also BOOKS below).  Or, just use, e.g.:
 #   make ACL2_SAVED=/local/scratch/mjcg/ACL2/matt/v2-9-3
 
+
+# ACL2_SAVED = /usr/bin
+# IMAGE_NAME = acl2
+
 ACL2_SAVED = /local/scratch/mjcg/ACL2/matt/v2-9-3
 IMAGE_NAME = saved_acl2
 

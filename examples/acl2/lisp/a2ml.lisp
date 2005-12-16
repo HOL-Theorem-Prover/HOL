@@ -1,7 +1,12 @@
 ; Input file: ACL2 s-expressions.
+; Tweaked by MJCG on 24.Oct.205 to update acl2_list_ref
 
-; Output file: val acl2_list = [x1,x2,...,xk] where each xi is the translation
-; of the i-th input file expression.
+; Output file: acl2_list_ref := [x1,x2,...,xk] 
+; where each xi is the translation of the i-th input file expression.
+
+; To do: If a2ml is run in other than the ACL2 package, then cons and nil could
+; print out with package prefixes, which is not what is desired.  This may
+; require some thought.
 
 (in-package "ACL2")
 (set-state-ok t)
@@ -64,13 +69,7 @@
 |#
 
 (defun pprint-object (obj channel state)
-  (mv-let (erp val state)
-    (state-global-let*
-     ((write-for-read t))
-     (pprogn (fms "~f0" (list (cons #\0 obj)) channel state nil)
-             (value nil)))
-    (declare (ignore erp val))
-    state))
+  (fms "~f0" (list (cons #\0 obj)) channel state nil))
 
 (defun pprint-objects-to-ml (list sep channel state)
   (if (endp list)
@@ -81,33 +80,46 @@
             (newline channel state)
             (pprint-objects-to-ml (cdr list) sep channel state))))
 
+(defun print-current-package (pkg-form channel state)
+  (let ((pkg (if (and (true-listp pkg-form)
+                      (eq (car pkg-form) 'in-package)
+                      (stringp (cadr pkg-form)))
+                 (cadr pkg-form)
+               "ACL2")))
+    (pprogn (fms "val _ = current_package :=~| implode(map chr ~x0);~|~%"
+                 (list (cons #\0 (s2conses pkg (length pkg) nil)))
+                 channel state nil))))
+
 (defun a2ml-fn (infile outfile state)
   (declare (xargs :guard (and (stringp infile)
                               (stringp outfile))
                   :stobjs state))
-  (downcase
-   (let ((ctx 'a2ml))
-     (er-let*
-      ((list (read-list infile ctx state)))
-      (mv-let (channel state)
-              (open-output-channel outfile :character state)
-              (if channel
-                  (mv-let
-                   (col state)
-                   (fmt1 "Writing ml file ~x0.~%" (list (cons #\0 outfile))
-                         0 (standard-co state) state nil)
-                   (declare (ignore col))
-                   (pprogn (princ$ "val acl2_list = [" channel state)
-                           (newline channel state)
-                           (let ((state (pprint-objects-to-ml
-                                         list "," channel state)))
-                             (pprogn (princ$ "];" channel state)
-                                     (newline channel state)
-                                     (close-output-channel channel state)
-                                     (value :invisible)))))
-                (er soft ctx
-                    "Unable to open file ~s0 for :character output."
-                    outfile)))))))
+  (state-global-let*
+   ((write-for-read t))
+   (downcase
+    (let ((ctx 'a2ml))
+      (er-let*
+       ((list (read-list infile ctx state)))
+       (mv-let (channel state)
+         (open-output-channel outfile :character state)
+         (if channel
+             (mv-let
+               (col state)
+               (fmt1 "Writing ml file ~x0.~%" (list (cons #\0 outfile))
+                     0 (standard-co state) state nil)
+               (declare (ignore col))
+               (pprogn (print-current-package (car list) channel state)
+                       (princ$ "val _ = sexp.acl2_list_ref := [" channel state)
+                       (newline channel state)
+                       (let ((state (pprint-objects-to-ml
+                                     list "," channel state)))
+                         (pprogn (princ$ "];" channel state)
+                                 (newline channel state)
+                                 (close-output-channel channel state)
+                                 (value :invisible)))))
+           (er soft ctx
+               "Unable to open file ~s0 for :character output."
+               outfile))))))))
 
 (defmacro a2ml (infile outfile)
   (declare (xargs :guard (and (stringp infile)

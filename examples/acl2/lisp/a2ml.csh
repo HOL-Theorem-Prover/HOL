@@ -2,6 +2,8 @@
 
 # BEGIN editable variables
 
+# set acl2 = /usr/bin/acl2
+
 set acl2 = /local/scratch/mjcg/ACL2/matt/v2-9-3/saved_acl2
 set a2ml = /local/scratch/mjcg/HOL98/hol98/examples/acl2/lisp/a2ml
 
