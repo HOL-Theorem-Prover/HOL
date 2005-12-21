@@ -38,7 +38,8 @@ val env1 = toANF env0 ShiftXor_def;
 (*	One round forward computation and one round backward computation     *)
 (* --------------------------------------------------------------------------*)
 
-val Round_def = Define
+val Round_def = 
+ Define
    `Round ((y,z),(k0,k1,k2,k3),sum):state  = 
       ((y + ShiftXor(z, sum+DELTA, k0, k1),
         z + ShiftXor(y + ShiftXor(z, sum+DELTA, k0, k1), sum+DELTA, k2, k3)),
@@ -47,7 +48,8 @@ val Round_def = Define
 
 val env2 = toANF env1 Round_def;
 
-val InvRound_def = Define
+val InvRound_def = 
+ Define
    `InvRound((y,z),(k0,k1,k2,k3),sum)  =
         ((y - ShiftXor(z - ShiftXor(y, sum, k2, k3), sum, k0, k1),
           z - ShiftXor(y, sum, k2, k3)), 
