@@ -57,6 +57,7 @@ val test3_def = Define
 
 (*
     val arm1 = link2 test1_def;
+    printarm arm1;
     val ARM1 = mk_ARM arm1;
 
         simT ARM1;
@@ -112,7 +113,28 @@ Return:
     val ARM6 = mk_ARM arm6;
 	
 	simT ARM6;
- 
+
+val thm = fetch "-" "instB_def";
+
+val instB_thm = Q.prove
+(`(instB 0 =  ((MOV,NONE,F),SOME (REG 12),[REG 13],NONE)) /\
+  (instB 1 = ((STMFD,NONE,F),SOME (WREG 13), [REG 0; REG 2; REG 3; REG 11; REG 12; REG 14; REG 15],NONE)) /\
+  (instB 2 = ((SUB,NONE,F),SOME (REG 11),[REG 12; NCONST 1], NONE)) /\
+  (instB 3 = ((MOV,NONE,F),SOME (REG 2),[WCONST 0w],NONE)) /\
+  (instB 4 = ((CMP,NONE,F),NONE,[REG 0; REG 2],NONE)) /\
+  (instB 5 = ((B,SOME EQ,F),NONE,[REG 2],SOME (POS 8))) /\
+  (instB 6 = ((MOV,NONE,F),SOME (REG 2),[WCONST 1w],NONE)) /\
+  (instB 7 = ((SUB,NONE,F),SOME (REG 3), [REG 0; REG 2],NONE)) /\
+  (instB 8 = ((MUL,NONE,F),SOME (REG 2), [REG 0; REG 1],NONE)) /\
+  (instB 9 = ((STMFD,NONE,F),SOME (WREG 13), [REG 3; REG 2],NONE)) /\
+  (instB 10 = ((LDMFD,NONE,F),SOME (REG 13),[REG 0; REG 1],NONE)) /\
+  (instB 11 = ((ADD,NONE,F),SOME (REG 13),[REG 13; NCONST 2],NONE)) /\
+  (instB 12 = ((B,SOME AL,F),NONE,[],SOME (NEG 9))) /\
+  (instB 13 = ((MOV,NONE,F),SOME (REG 0),[REG 1],NONE)) /\
+  (instB 14 = ((SUB,NONE,F),SOME (REG 13),[REG 11; NCONST 5],NONE)) /\
+  (instB 15 = ((LDMFD,NONE,F),SOME (REG 13), [REG 0; REG 2; REG 3; REG 11; REG 13; REG 15],SOME INR))`
+,
+ REPEAT CONJ_TAC THEN EVAL_TAC); 
 
   TAC0 [] THEN
   Induct_on `w2n Ir3` THEN REPEAT STRIP_TAC THENL [
