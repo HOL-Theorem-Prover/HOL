@@ -1,9 +1,10 @@
 structure preARMSyntax =
 struct
 
-open HolKernel Parse boolLib preARMTheory pairLib 
-     numSyntax optionSyntax listSyntax;
-
+local
+  open HolKernel Parse boolLib preARMTheory pairLib 
+       numSyntax optionSyntax listSyntax
+in
 (*----------------------------------------------------------------------------*)
 (* Generate ARM programs                                                      *)
 (*----------------------------------------------------------------------------*)
@@ -77,4 +78,5 @@ fun mk_ARM arm =
      )
   end
 
+end (* local open *)
 end (* structure *)

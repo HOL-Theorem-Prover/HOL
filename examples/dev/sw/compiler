@@ -1,4 +1,15 @@
-app load ["Link", "Verify", "preARMSyntax"]
+(*---------------------------------------------------------------------------*)
+(* Interactive access to the compiler                                        *)
+(*---------------------------------------------------------------------------*)
+
+app load ["Link", "Verify", "preARMSyntax","ANF"];
+quietdec := true;
+open Portable Link Assem Verify preARMSyntax preARMTheory word32Theory ANF;
+quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* Old-style conditional statements                                          *)
+(*---------------------------------------------------------------------------*)
 
 val _ = add_rule{term_name   = "COND",
 fixity      = Infix (HOLgrammars.RIGHT, 3),
