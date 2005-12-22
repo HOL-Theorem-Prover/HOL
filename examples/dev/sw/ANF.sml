@@ -16,6 +16,40 @@ val _ = (Globals.priming := SOME "");
 
 
 (*---------------------------------------------------------------------------*)
+(* Ensure that each let-bound variable name in a term is different than the  *)
+(* others.                                                                   *)
+(*---------------------------------------------------------------------------*)
+
+fun std_bvars stem tm = 
+ let open Lib
+     fun num2name i = stem^Lib.int_to_string i
+     val nameStrm = Lib.mk_istream (fn x => x+1) 0 num2name
+     fun next_name () = state(next nameStrm)
+     fun trav M = 
+       if is_comb M then 
+            let val (M1,M2) = dest_comb M
+                val M1' = trav M1
+                val M2' = trav M2 
+            in mk_comb(M1',M2')
+            end else 
+       if is_abs M then 
+           let val (v,N) = dest_abs(rename_bvar (next_name()) M)
+           in mk_abs(v,trav N)
+           end
+       else M
+ in 
+   trav tm
+ end; 
+
+fun STD_BVARS_CONV stem tm = 
+ let val tm' = std_bvars stem tm
+ in Thm.ALPHA tm tm'
+ end;
+
+val STD_BVARS = CONV_RULE o STD_BVARS_CONV;
+val STD_BVARS_TAC = CONV_TAC o STD_BVARS_CONV;
+
+(*---------------------------------------------------------------------------*)
 (* Compiler frontend ... largely pinched from examples/dev/compile.sml       *)
 (*---------------------------------------------------------------------------*)
 
@@ -333,7 +367,8 @@ fun toComb def =
  let val (l,r) = dest_eq(snd(strip_forall(concl def)))
      val (func,_) = strip_comb l
      val is_recursive = Lib.can (find_term (aconv func)) r
-     val comb_exp_thm = if is_recursive then RecConvert def else Convert def
+(* val comb_exp_thm = if is_recursive then RecConvert def else Convert def *)
+     val comb_exp_thm = Convert def
  in 
    (is_recursive,lhs(concl comb_exp_thm), comb_exp_thm)
  end;
@@ -346,73 +381,42 @@ fun toComb def =
 
 val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
+fun VAR_LET_CONV M =
+ let open pairSyntax
+     val (_,tm) = dest_let M
+ in 
+   if is_vstruct tm
+   then (REWR_CONV LET_THM THENC GEN_BETA_CONV) M
+   else raise ERR "VAR_LET_CONV" ""
+ end;
+
+
 fun ANFof thm =
  let val thm1 = Q.AP_TERM `CPS` thm
-     val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,CPS_REC_INTRO,
+     val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,(* CPS_REC_INTRO, *)
                                    CPS_ITE_INTRO] thm1
+     val thm2a = REWRITE_RULE [CPS2_def] thm2
      val thm3 = CONV_RULE (DEPTH_CONV (REWR_CONV CPS_SEQ_def ORELSEC
                                        REWR_CONV CPS_PAR_def ORELSEC
-                                       REWR_CONV CPS_ITE_def ORELSEC
-                                       REWR_CONV CPS_REC_def)) thm2 
+                                       REWR_CONV CPS_ITE_def 
+(* ORELSEC REWR_CONV CPS_REC_def *))) thm2a 
      val thm4 = CONV_RULE (DEPTH_CONV (REWR_CONV UNCPS)) thm3
      val thm5 = CONV_RULE (LAND_CONV (REWR_CONV CPS_def)) thm4
      val thm6 = CONV_RULE (REPEATC (STRIP_QUANT_CONV (HO_REWR_CONV FUN_EQ_THM)))
                           thm5
      val thm7 = BETA_RULE thm6
      val thm8 = BETA_RULE thm7
-     val thm9 = Q.ISPEC `\x:^(ty_antiq (fst (dom_rng (type_of (fst (dest_forall (concl thm8))))))).x` thm8
+     val x = mk_var("x",fst (dom_rng (type_of (fst (dest_forall (concl thm8))))))
+     val thm9 = ISPEC (mk_abs(x,x)) thm8
      val thm10 = SIMP_RULE bool_ss [LET_ID] thm9
      (* Generating thm11 takes about half the time on TEA's Round function *)
      val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10
      val thm12 = PBETA_RULE thm11
- in thm12
+     val thm13 = SIMP_RULE bool_ss [pairTheory.LAMBDA_PROD] thm12
+     val thm14 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm13
+ in thm14
  end;
 
-(*---------------------------------------------------------------------------*)
-(* Takes theorem |- f = <combinator-form> , where f is a recursive function, *)
-(* and returns the ANF'ed version of <combinator-form>.                      *)
-(* Much re-use of code from nonRec_to_ANF. Mostly, the new code just arranges*)
-(* to use the hypothesis of thm (termination conditions) to prove the        *)
-(* antecedent of CPS_REC_INTRO so that it can be applied. This allows Rec to *)
-(* replaced by CPS_REC. In order to get rid of CPS_REC, by rewriting with    *)
-(* CPS_REC_THM, something similar has to be done.                            *)
-(*---------------------------------------------------------------------------*)
-(*
-fun Rec_to_ANF thm =
- let val (f1,f2) = dest_seq (rhs (concl thm))
-     val args = fst(dest_pabs f2)
-     val (e,f,g) = dest_rec f1
-     val CPS_REC_INTRO1 = ISPECL [e,f,g] CPS_REC_INTRO
-     val N = fst(dest_imp(concl CPS_REC_INTRO1))
-     val (R,tm) = dest_exists N
-     val (tm1,tm2) = dest_conj tm
-     val (v,body) = dest_forall tm2
-     val tm2' = rhs(concl
-                  (SIMP_CONV std_ss [Seq_def,Par_def,Ite_def]
-                    (mk_pforall(args,subst [v |-> args]body))))
-     val N' = mk_exists(R,mk_conj(tm1,tm2'))
-     val NeqN' = prove(mk_eq(N,N'),
-                    SIMP_TAC std_ss [LAMBDA_PROD,Seq_def,Par_def,Ite_def])
-     val CPS_REC_INTRO2 = PURE_REWRITE_RULE[NeqN'] CPS_REC_INTRO1
-     val CPS_REC_INTRO3 = MATCH_MP CPS_REC_INTRO2 (ASSUME (hd(hyp thm)))
-     val thm1 = Q.AP_TERM `CPS` thm
-     val thm2 = SIMP_RULE bool_ss [CPS_SEQ_INTRO, CPS_PAR_INTRO,
-                                   CPS_ITE_INTRO,CPS2_INTRO,
-                                   CPS_REC_INTRO3] thm1
-     val thm3 = SIMP_RULE bool_ss [CPS_SEQ_def, CPS_PAR_def, CPS_ITE_def] thm2
-     val thm4 = SIMP_RULE bool_ss [UNCPS] thm3
-     val thm5 = SIMP_RULE bool_ss [CPS_def, FUN_EQ_THM, CPS_TEST_def] thm4
-     val thm6 = CONV_RULE (DEPTH_CONV ((HO_REWR_CONV MY_LET_RAND) ORELSEC
-                          (HO_REWR_CONV (GSYM COND_RAND)) ORELSEC
-                          (HO_REWR_CONV UNLET))) thm5
-     val x = mk_var("x",fst (dom_rng 
-                         (type_of (fst (dest_forall (concl thm6))))))
-     val thm7 = ISPEC (mk_abs(x,x)) thm6
-     val thm8 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm7
-     val thm9 = PBETA_RULE thm8
- in thm9
- end;
-*)
 
 (*---------------------------------------------------------------------------*)
 (* Given an environment and a possibly (tail) recursive definition, convert  *)
@@ -422,7 +426,7 @@ fun Rec_to_ANF thm =
 
 fun toANF env def = 
  let val (is_recursive,func,const_eq_comb) = toComb def
-     val anf = ANFof const_eq_comb
+     val anf = STD_BVARS "v" (ANFof const_eq_comb)
  in 
    (func,(is_recursive,def,anf,const_eq_comb))::env
  end;
