@@ -25,13 +25,14 @@ val spillOneOnce = ref (true);
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Inputs of the whole program 												*)
 (* ---------------------------------------------------------------------------------------------------------------------*)
+
 fun intOrder (s1:int,s2:int) =
   if s1 > s2 then GREATER
   else if s1 = s2 then EQUAL
   else LESS;
 
 val precolored : (int S.set) ref = ref (S.empty intOrder);
-val first4ArgL : (int list) ref = ref [];
+val firstnArgL : (int list) ref = ref [];
 val inArgs : (int S.set) ref = ref (S.empty intOrder);
 
 val tmpTable : (string T.table) ref = ref (T.empty);
@@ -52,8 +53,6 @@ fun newTmp () =
    end;
 
 val cfg : (({def : int list, inst : Assem.instr, use : int list}, edgeLab) G.graph) ref  = ref (G.empty);
-
-fun getTmp n = T.look(!tmpTable,n);
 
 val sp = ref (~1);					(* the stack pointer pointing at the next available memory slot for spilling	*)
 
@@ -179,17 +178,13 @@ fun PrintProgram (cfg : ({inst : Assem.instr, use : int list, def : int list}, e
     List.map (fn inst => print ((Assem.formatInst inst) ^ "\n"))
 		(CFG.linearizeCFG cfg);
 
-(* ---------------------------------------------------------------------------------------------------------------------*)
-(* Register Allocation                                                                                                  *)
-(* ---------------------------------------------------------------------------------------------------------------------*)
-
-(* When a valid allocation isn't found, the whole process is needed to restart. Procedure init() initializes
-   data structures													*) 
-
-fun isMoveInst  (Assem.OPER _) = false
- |  isMoveInst  (Assem.LABEL _) = false
- |  isMoveInst  (Assem.MOVE {dst = Assem.TEMP _, src = Assem.TEMP _}) = true
+fun isMoveInst  (Assem.MOVE {dst = Assem.TEMP d1, src = Assem.TEMP s1}) = true
  |  isMoveInst _ = false
+
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Calculate liveness of a program	                                                                                *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun computeUseDef (gr : ({inst:Assem.instr, use:int list, def:int list}, edgeLab) Graph.graph) = 
       G.ufold (fn ((predL,nodeNo,inst,sucL),
@@ -244,6 +239,13 @@ fun CalLiveness (cfg)
         round (inS,outS)
   end;
 
+
+(* -------------------------------------------------------------------------------------------------------------------*)
+(* Initialize data structures, then compute the values of these structures                                            *)
+(* -------------------------------------------------------------------------------------------------------------------*)
+
+(* When a valid allocation isn't found, the whole process is needed to restart. Procedure init() initializes
+   data structures													*) 
 
 fun init (cfg, tmpTable) = 
     (
@@ -357,12 +359,16 @@ fun MakeWorklist() =
 	    simplifyWorklist := S.add(!simplifyWorklist,n))
 
       val _ = List.foldl (fn (i,s) => round i) () (S.listItems (!initial));
-      val first4Args = S.addList(S.empty intOrder, !first4ArgL)
+      val firstnArgs = S.addList(S.empty intOrder, !firstnArgL)
    in
-      (  spillWorklist := S.difference (!spillWorklist, first4Args);
+      (  spillWorklist := S.difference (!spillWorklist, firstnArgs);
          toBeSpilled := !spillWorklist
       )	
    end;
+
+(* -------------------------------------------------------------------------------------------------------------------*)
+(* Merge moves, push simplified nodes into the stack			                                              *)
+(* -------------------------------------------------------------------------------------------------------------------*)
 
 fun Adjacent n = 
    S.difference (T.look(!adjList, n), 
@@ -511,6 +517,10 @@ fun SelectSpill () =
       FreezeMoves m)
    end;	
 
+(* -------------------------------------------------------------------------------------------------------------------*)
+(* Assign colors to nodes, spill nodes when a valid allocation couldn't be found                                      *)
+(* -------------------------------------------------------------------------------------------------------------------*)
+
 fun AssignColors () = 
    let
 
@@ -520,10 +530,10 @@ fun AssignColors () =
      fun assign_precolored () =
         List.foldl (fn (n,c) => (color := T.enter(!color,n,c);c+1)) 0 (S.listItems (!precolored));
 
-     fun assign_first4Args () =
+     fun assign_firstnArgs () =
         List.foldl (fn (n,c) => 
 		(coloredNodes := S.add(!coloredNodes,n);
-		 color := T.enter(!color,n,c);c+1)) 0 (!first4ArgL);
+		 color := T.enter(!color,n,c);c+1)) 0 (!firstnArgL);
 
      fun spillNodes n =
         if (!spillOneOnce) then
@@ -537,7 +547,7 @@ fun AssignColors () =
 	    chaseColor (GetAlias n)
 	else c end;
 
-     val first4ArgS = S.addList(S.empty intOrder, !first4ArgL);
+     val firstnArgS = S.addList(S.empty intOrder, !firstnArgL);
 
      fun assign () =
       let val n = Stack.top (!selectStack);
@@ -550,7 +560,7 @@ fun AssignColors () =
 				(S.listItems (T.look(!adjList,n)))
       in
 
-	if S.member(first4ArgS, n) andalso not (Stack.isEmpty (!selectStack)) then
+	if S.member(firstnArgS, n) andalso not (Stack.isEmpty (!selectStack)) then
 		assign()
 	else if S.isEmpty(okColors) then
 	      (spilledNodes := spillNodes n;
@@ -559,19 +569,23 @@ fun AssignColors () =
 	    ( coloredNodes := S.add(!coloredNodes, n);
 	      color := T.enter(!color, n, hd (S.listItems okColors));
 	      if not (Stack.isEmpty (!selectStack)) then assign() 
-	      else ()
+	      else 
+		(List.foldl (fn (n,s) => color := T.enter(!color,n,chaseColor n))
+                 ()
+                 (S.listItems (!coalescedNodes));
+		 ())
 	    )
       end
 
    in
-	( assign_first4Args ();
-	  assign();
-	  List.foldl (fn (n,s) => color := T.enter(!color,n,chaseColor n))
-                 ()
-                 (S.listItems (!coalescedNodes))
+	( assign_firstnArgs ();
+	  assign()
         )
    end;
 
+(* -------------------------------------------------------------------------------------------------------------------*)
+(* When a node is spilled, we modify the program by replacing the temporary with a memory slot                        *)
+(* -------------------------------------------------------------------------------------------------------------------*)
 
 fun updateNode(cfg, n:int, inst) =
    let
@@ -614,6 +628,26 @@ fun updateProgram (old_cfg, spilled : int S.set) =
 	    Assem.MOVE {dst = if rhs andalso d1 = old then new else d1, 
 		src = if lhs andalso s1 = old then new else s1};
 
+     fun not_bl (Assem.OPER {oper = (Assem.BL, NONE, false), ...}) = false
+      |  not_bl _ = true
+     fun is_nop (Assem.OPER {oper = (Assem.NOP, NONE, false), ...}) = true
+             |  is_nop _ = false
+
+
+     fun update_node gr nodeNo (varNo,newVarNo) (for_lhs,for_rhs) =
+         let
+              val {inst = curInst, def = df, use = us} = #3 (G.context(nodeNo,gr))
+         in
+	      updateNode(gr, nodeNo,
+			{ def = if for_lhs then List.filter (fn n => not (n = varNo)) df else df,
+                          use = if for_rhs then List.filter (fn n => not (n = varNo)) us else us,
+			  inst = if not_bl curInst andalso not (is_nop curInst) then
+                          		substituteVars curInst (Assem.TEMP varNo) (Assem.TEMP newVarNo) for_lhs for_rhs
+				 else
+                              		substituteVars curInst (Assem.TEMP varNo) (Assem.TMEM (!sp)) for_lhs for_rhs
+			})
+          end
+
      fun insertLoadInst gr nodeNo varNo =
 	   let val newVarNo = newTmp ();
 	       val {inst = curInst, def = df, use = us} = #3 (G.context(nodeNo,gr)); 
@@ -622,11 +656,11 @@ fun updateProgram (old_cfg, spilled : int S.set) =
 						 src = [Assem.TMEM (!sp)], 
 						 jump = NONE},
 			      def = [newVarNo], use = []};
-	       val gr = updateNode(gr,nodeNo, 
-			{inst = substituteVars curInst (Assem.TEMP varNo) (Assem.TEMP newVarNo) false true,
-			 def = df, use = replace us varNo newVarNo})
+	       val gr1 = update_node gr nodeNo (varNo,newVarNo) (false,true)
 	   in 
-	       insertBefore(gr, nodeNo, newInst)
+	       if not_bl curInst andalso not (is_nop curInst) then
+	      	   insertBefore(gr1, nodeNo, newInst)
+	       else gr1
            end;
 
      fun insertStoreInst gr nodeNo varNo =
@@ -637,11 +671,11 @@ fun updateProgram (old_cfg, spilled : int S.set) =
 						 src = [Assem.TEMP newVarNo], 
 						 jump = NONE},
 			     def = [], use = [newVarNo]};
-	       val gr = updateNode(gr,nodeNo, 
-			{inst = substituteVars curInst (Assem.TEMP varNo) (Assem.TEMP newVarNo) true false,
-			 def = replace df varNo newVarNo, use = us})
+	       val gr1 = update_node gr nodeNo (varNo,newVarNo) (true,false)
            in 
-               insertAfter(gr, nodeNo, newInst)
+               if not_bl curInst andalso not (is_nop curInst) then
+                   insertAfter(gr1, nodeNo, newInst)
+	       else gr1
            end;
 
     fun process_one_variable gr varNo =
@@ -649,25 +683,26 @@ fun updateProgram (old_cfg, spilled : int S.set) =
 	    val _ = (sp:= !sp + 1;
 		     memT := T.enter(!memT, varNo, !sp)
 		    )
-
-	    fun is_nop (Assem.OPER {oper = (Assem.NOP, NONE, false), ...}) = true  
-	     |  is_nop _ = false
-
 	in
 	    G.ufold (fn ((predL,nodeNo,inst,sucL),gr) =>
             	  let val (def,use) = (#def inst, #use inst);
-                    val (def,use) = (S.addList(S.empty intOrder, def), S.addList(S.empty intOrder, use));
-                    val gr1 = if is_nop (#inst inst) then
-				updateNode(gr, nodeNo, {def = List.filter (fn n => not (n = varNo)) (#def inst), 
-						use = List.filter (fn n => not (n = varNo)) (#use inst), 
-						inst = #inst inst})
-		              else if S.member(use, varNo) then
-                                insertLoadInst gr nodeNo varNo
-                              else gr 
+                      val (def,use) = (S.addList(S.empty intOrder, def), S.addList(S.empty intOrder, use));
+		      val gr1 = if S.member(use, varNo) then
+				  (if isMoveInst (#inst inst) then
+				     	let val (Assem.MOVE {dst = d1, src = s1}) = #inst inst in 
+				            updateNode(gr,nodeNo,
+					        {inst = Assem.OPER {oper = (Assem.LDR,NONE,false), dst = [d1],
+						  	            src = [Assem.TMEM (!sp)], jump = NONE},
+                                	   	 def = #def inst, use = []})
+				     	end
+				   else
+                                	insertLoadInst gr nodeNo varNo
+				  )
+                              else gr
 		  in
-                    if S.member(def, varNo) andalso not (is_nop (#inst inst)) then
-                        insertStoreInst gr1 nodeNo varNo
-                    else gr1 end)
+		      if S.member(def, varNo) then
+                       	  insertStoreInst gr1 nodeNo varNo
+                      else gr1 end)
 	        gr gr
 	end
 
@@ -680,6 +715,11 @@ fun RewriteProgram () =
       (	cfg := updateProgram (!cfg,!spilledNodes);
 	init (!cfg,!tmpTable)
       );
+
+
+(* -------------------------------------------------------------------------------------------------------------------*)
+(* Register Allocation				                                                                      *)
+(* -------------------------------------------------------------------------------------------------------------------*)
 
 fun printAllocation () =
   let 
@@ -753,8 +793,8 @@ fun RegisterAllocation (gr, tmpT, preC, argL, K) =
 
     precolored := S.addList(S.empty intOrder, preC);
     inArgs := S.addList(S.empty intOrder,argL);
-    first4ArgL := (if length argL < 4 then argL
-	else List.take(argL,4));
+    firstnArgL := (if length argL < K then argL
+	else List.take(argL,K));
 
     cfg := gr;
     NumRegs := K;

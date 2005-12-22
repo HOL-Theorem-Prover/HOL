@@ -12,10 +12,12 @@ open HolKernel Parse boolLib bossLib numLib
 val _ = new_theory "preARM";
 
 (*----------------------------------------------------------------------------*)
-(* Registers	                                                              *)
+(* Registers and such                                                         *)
 (*----------------------------------------------------------------------------*)
 
 val _ = type_abbrev("REGISTER",``:num``);
+val _ = type_abbrev("ADDR", Type`:num`);
+val _ = type_abbrev("DATA", Type`:word32`);
 
 (*----------------------------------------------------------------------------*)
 (* CPSR, In user programs only the top 4 bits of the CPSR are relevant        *)
@@ -77,20 +79,24 @@ val COND_cases = TypeBase.nchotomy_of "COND";
 (* Expressions			                                                 *)
 (*-------------------------------------------------------------------------------*)
 
-val _ = Hol_datatype 
-         `EXP = MEM of num # num	(* (register, offset) *) 
-              | NCONST of num
-	      | WCONST of word32
-              | REG of REGISTER
-	      | WREG of REGISTER
-         `;
+val _ = 
+ Hol_datatype `OFFSET = POS of ADDR
+               | NEG of ADDR
+	       | INR
+             `;
+
+
+val _ = 
+ Hol_datatype `EXP = MEM of num # OFFSET	(* (register, offset) *) 
+                  | NCONST of num
+		  | WCONST of word32
+                  | REG of REGISTER
+		  | WREG of REGISTER
+             `;
 
 val _ = type_abbrev("ADDR", Type`:num`);
 val _ = type_abbrev("DATA", Type`:word32`);
 
-val _ = Hol_datatype `OFFSET = POS of ADDR
-               | NEG of ADDR
-             `;
 
 (*-------------------------------------------------------------------------------*)
 (* Operations                                                                    *)
@@ -102,12 +108,6 @@ val _ = type_abbrev("OPERATION", ``:OPERATOR # (COND option) # bool``);
 
 val _ = type_abbrev("INST", 
             ``:OPERATION # (EXP option) # (EXP list) # (OFFSET option)``);
-
-val FORALL_INST = Q.store_thm
-  ("FORALL_INST",
-    `(!s:INST. P s) = !op dst src jump. P (op,dst,src,jump)`,
-    SIMP_TAC std_ss [FORALL_PROD]);
-
 
 (*---------------------------------------------------------------------------------*)
 (* Memory	                                                                   *)
@@ -142,20 +142,29 @@ val FORALL_STATE = Q.store_thm
 (*---------------------------------------------------------------------------------*)
 
 val read_def =
-  Define `
-    read ((regs,mem):(ADDR->DATA)#(ADDR->DATA)) (exp:EXP) =
+ Define 
+   `read ((regs,mem):(ADDR->DATA)#(ADDR->DATA)) (exp:EXP) =
       case exp of
-        MEM (r,offset) -> mem (w2n (regs r) + offset)	||
+        MEM (r,offset) -> 
+	    (case offset of 
+		  POS k -> mem (w2n (regs r) + k) ||
+		  NEG k -> mem (w2n (regs r) - k)
+	    )	||
 	NCONST i -> n2w i     ||
         WCONST w -> w         ||
         REG r -> regs r
   `;
             
 val write_def =
-  Define `
-    write ((regs,mem):(ADDR->DATA)#(ADDR->DATA)) (exp:EXP) (v:DATA)=
+ Define 
+   `write ((regs,mem):(ADDR->DATA)#(ADDR->DATA)) (exp:EXP) (v:DATA)=
       case exp of
-        MEM (r,offset) -> (regs, STORE mem (w2n (regs r) + offset) v) ||
+        MEM (r,offset) -> 
+	    (regs,
+             (case offset of
+                   POS k -> STORE mem (w2n (regs r) + k) v ||
+                   NEG k -> STORE mem (w2n (regs r) - k) v
+             ))   	 ||
         REG r -> ((\k. if k = r then v
                         else regs k),
                    mem ) ||
@@ -169,98 +178,106 @@ val write_def =
 
 val goto_def =
   Define `
-    goto (pc:ADDR, SOME jump) =
+    goto (pc, SOME jump) =
         case jump of
             POS n -> pc + n  || 
-            NEG n -> pc - n
+            NEG n -> pc - n  ||
+	    INR ->   pc
    `;
 
+val read_pc_def = 
+  Define `
+    read_pc (cpsr,s) = (w2n (read s (REG 15)), cpsr, s)`;
+
+val set_pc_def =
+  Define `
+    set_pc s pc = (pc, FST s, write (SND s) (REG 15) (n2w pc))`;
 
 val decode1_def = 
   Define `
   decode1 (pc,cpsr,s) (op,dst,src,jump) =
      case op of
-          MOV -> (pc+1, cpsr, (write s (THE dst) (read s (HD src))))
+          MOV -> (cpsr, write s (THE dst) (read s (HD src)))
               ||
 
 	  LDMFD -> (case THE dst of
 			REG r ->
-                                (pc+1, cpsr,
-                                 FST (FOLDL (\(s,i) reg. (write s reg (read s (MEM(r,i+1))), i)) (s,0) src)) ||
+			    (cpsr, FST (FOLDL (\(s,i) reg. (write s reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
+                    ||
                         WREG r ->
-                                (pc+1, cpsr,
-                                 write (FST (FOLDL (\(s,i) reg. (write s reg (read s (MEM(r,i+1))), i)) (s,0) src))
-                                        (REG r) (read s (REG r) + n2w (LENGTH src)))
+			    (cpsr, write (FST (FOLDL (\(s,i) reg. (write s reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
+						 (REG r) (read s (REG r) + n2w (LENGTH src)))
 		   )
 	      ||
+
 	  STMFD -> (case THE dst of
                         REG r ->
-                                (pc+1, cpsr,
-                                 FST (FOLDR (\reg (s,i). (write s (MEM(r,i)) (read s reg), i)) (s,0) src)) ||
+                                (cpsr,
+                                 FST (FOLDL (\(s,i) reg. (write s (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src))) ||
                         WREG r ->
-                                (pc+1, cpsr,
-				 write (FST (FOLDR (\reg (s,i). (write s (MEM(r,i)) (read s reg), i)) (s,0) src))
+                                (cpsr,
+				 write (FST (FOLDL (\(s,i) reg. (write s (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
 				 	(REG r) (read s (REG r) - n2w (LENGTH src)))
-		    )
+		   )
 	      ||
-          ADD -> (pc+1, cpsr, (write s (THE dst) (read s (HD src) + read s (HD (TL (src))))))
+          ADD -> (cpsr, (write s (THE dst) (read s (HD src) + read s (HD (TL (src))))))
               ||
-          SUB -> (pc+1, cpsr, (write s (THE dst) (read s (HD src) - read s (HD (TL (src))))))
+          SUB -> (cpsr, (write s (THE dst) (read s (HD src) - read s (HD (TL (src))))))
               ||
-          RSB -> (pc+1, cpsr, (write s (THE dst) (read s (HD (TL (src))) - read s (HD src))))
+          RSB -> (cpsr, (write s (THE dst) (read s (HD (TL (src))) - read s (HD src))))
               ||
-          MUL -> (pc+1, cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))))))
+          MUL -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))))))
               ||
-	  MLA -> (pc+1, cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) + 
+	  MLA -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) + 
 						  read s (HD (TL (TL (src)))) )))
               ||
-          AND -> (pc+1, cpsr, (write s (THE dst) (read s (HD src) & read s (HD (TL (src))))))
+          AND -> (cpsr, (write s (THE dst) (read s (HD src) & read s (HD (TL (src))))))
               ||
-          ORR -> (pc+1, cpsr, (write s (THE dst) (read s (HD src) | read s (HD (TL (src))))))
+          ORR -> (cpsr, (write s (THE dst) (read s (HD src) | read s (HD (TL (src))))))
               ||
-          EOR -> (pc+1, cpsr, (write s (THE dst) (read s (HD src) # read s (HD (TL (src))))))
+          EOR -> (cpsr, (write s (THE dst) (read s (HD src) # read s (HD (TL (src))))))
               ||
 
-          LSL -> (pc+1, cpsr, (write s (THE dst) 
+          LSL -> (cpsr, (write s (THE dst) 
 				(read s (HD src) << w2n (read s (HD (TL (src)))))))
               ||
-          LSR -> (pc+1, cpsr, (write s (THE dst) 
+          LSR -> (cpsr, (write s (THE dst) 
 				(read s (HD src) >>> w2n (read s (HD (TL (src)))))))
               ||
-          ASR -> (pc+1, cpsr, (write s (THE dst) 
+          ASR -> (cpsr, (write s (THE dst) 
 				(read s (HD src) >> w2n (read s (HD (TL (src)))))))
               ||
-          ROR -> (pc+1, cpsr, (write s (THE dst) 
+          ROR -> (cpsr, (write s (THE dst) 
 				(read s (HD src) #>> w2n (read s (HD (TL (src)))))))
               ||
 
           CMP -> if read s (HD src) = read s (HD (TL (src))) then
-                      (pc+1, setS 0w SZ, s)
+                      (setS 0w SZ, s)
                  else if read s (HD src) < read s (HD (TL (src))) then
-                      (pc+1, setS 0w SN, s)
-                 else (pc+1, setS 0w SC, s)
+                      (setS 0w SN, s)
+                 else (setS 0w SC, s)
               ||
           TST -> if read s (HD src) & read s (HD (TL (src))) = 0w then
-                      (pc+1, setS cpsr SZ, s)
-                 else (pc+1, cpsr, s)
+                      (setS cpsr SZ, s)
+                 else (cpsr, s)
               ||
 
-          LDR -> (pc+1, cpsr, (write s (THE dst) (read s (HD src))))
+          LDR -> (cpsr, (write s (THE dst) (read s (HD src))))
 		(* write the value in src (i.e. the memory) to the dst (i.e. the register)*)
               ||
 
-          STR -> (pc+1, cpsr, (write s (HD src) (read s (THE dst))))   
+          STR -> (cpsr, (write s (HD src) (read s (THE dst))))   
 		(* write the value in src (i.e. the register) to the dst (i.e. the memory)*)
               ||
 
-          MSR -> (pc+1, read s (HD src), s)
+          MSR -> (read s (HD src), s)
               ||
-          MRS -> (pc+1, cpsr, (write s (THE dst) cpsr))
+          MRS -> (cpsr, (write s (THE dst) cpsr))
 	      ||
 
-	  B   -> (goto(pc,jump), cpsr, s)
+	  B   -> (cpsr, write s (REG 15) (n2w (goto(pc,jump))))
 	      || 
-          BL ->  (goto(pc,jump), cpsr, write s (REG 14) (word_suc (n2w pc)))
+          BL ->  (cpsr, write (write s (REG 14) (word_suc (n2w pc))) (REG 15) (n2w (goto(pc,jump))))
               ||
 
           _  ->  ARB
@@ -271,31 +288,31 @@ val decode2_def =
   Define `
     decode2 ((pc,cpsr,s):STATE) (((op,cond,sflag), dst, src, jump):INST) =
         case cond of
-            NONE -> decode1 (pc,cpsr,s) (op, dst, src, jump)	
+            NONE -> set_pc (decode1 (pc,cpsr,s) (op,dst,src,jump)) (pc+1)
                 ||
             SOME c -> 
 		(case c of 
-		     EQ -> if getS cpsr SZ then decode1 (pc,cpsr,s) (op,dst,src,jump)
-			    else (pc+1,cpsr,s)
+		     EQ -> if getS cpsr SZ then read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
+			    else (pc+1, cpsr, write s (REG 15) (n2w (pc+1)))
 		 ||  
-		     NE -> if getS cpsr SZ then (pc+1, cpsr, s)
-                            else decode1 (pc,cpsr,s) (op,dst,src,jump)
+		     NE -> if getS cpsr SZ then (pc+1, cpsr, write s (REG 15) (n2w (pc+1)))
+                            else read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
                  ||
-            	     GT -> if getS cpsr SC then decode1 (pc,cpsr,s) (op,dst,src,jump)
-			   else (pc+1,cpsr,s)
+            	     GT -> if getS cpsr SC then read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
+			   else (pc+1, cpsr, write s (REG 15) (n2w (pc+1)))
                  ||
-            	     LE -> if getS cpsr SC then (pc+1,cpsr,s)
-			   else decode1 (pc,cpsr,s) (op,dst,src,jump)
+            	     LE -> if getS cpsr SC then (pc+1, cpsr, write s (REG 15) (n2w (pc+1)))
+			   else read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
                  ||
-            	     GE -> if getS cpsr SN then (pc+1, cpsr, s)
-                                     else decode1 (pc,cpsr,s) (op,dst,src,jump)
+            	     GE -> if getS cpsr SN then (pc+1, cpsr, write s (REG 15) (n2w (pc+1)))
+                                     else read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
                  ||  
-	             LT -> if getS cpsr SN then decode1 (pc,cpsr,s) (op,dst,src,jump)
-                                     else (pc+1, cpsr, s)
+	             LT -> if getS cpsr SN then read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
+                                     else (pc+1, cpsr, write s (REG 15) (n2w (pc+1)))
                  ||
-		     AL -> decode1 (pc,cpsr,s) (op,dst,src,jump)
+		     AL -> read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
                  ||
-                     NV -> (pc+1, cpsr, s)
+                     NV -> (pc+1, cpsr, write s (REG 15) (n2w (pc+1)))
 		)
   `;
 
@@ -351,7 +368,10 @@ val uploadSeg_def = Define `
 val UPLOADSEG_LEM = Q.store_thm
   ("UPLOADSEG_LEM",
    `!n segs instB. uploadSeg n segs instB = 
-	(if n > 0 then upload (EL (PRE n) segs) (uploadSeg (PRE n) segs instB) (10 * (PRE n)) else instB)`,
+	if n > 0 
+          then upload (EL (PRE n) segs) 
+                      (uploadSeg (PRE n) segs instB) (10 * (PRE n)) 
+          else instB`,
     Cases_on `n` THEN RW_TAC list_ss [uploadSeg_def]
   );
 
@@ -451,8 +471,8 @@ val terminated_def =
 
 val TERMINATED_THM = Q.store_thm
   ("TERMINATED_THM",
-   `!m s iB byn n. (terminated (iB,byn) s) ==>
-        (terminated (iB,byn) (run m (iB,byn) s))`,
+   `!m s iB byn n. 
+       terminated (iB,byn) s ==> terminated (iB,byn) (run m (iB,byn) s)`,
   RW_TAC list_ss [terminated_def, GSYM RUN_THM_1] THEN
   ONCE_REWRITE_TAC [ADD_SYM] THEN 
   RW_TAC list_ss [RUN_THM_1] THEN
@@ -625,14 +645,6 @@ val COND_COMP = Q.store_thm (
                 if getCond c then runL m1 tblk c
                 else runL m2 fblk c`,
 *)
-
-(*---------------------------------------------------------------------------------*)
-(* Arguments and outputs                                                           *)
-(*---------------------------------------------------------------------------------*)
-
-val initS_def = 
- Define `
-   initS = (0,0w,((\r:REGISTER.ARB:DATA), (\addr:ADDR.ARB:DATA)))`;
 
 (*---------------------------------------------------------------------------------*)
 (* Simulate ARM codes as functions                                                 *)

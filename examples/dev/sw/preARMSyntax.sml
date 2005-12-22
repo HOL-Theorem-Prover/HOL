@@ -9,7 +9,10 @@ open HolKernel Parse boolLib preARMTheory pairLib
 (*----------------------------------------------------------------------------*)
 
 fun eval_exp (Assem.MEM {reg = regNo, offset = offset, wback = flag}) =
-      mk_comb(Term`MEM:(num # num) -> EXP`, mk_pair(term_of_int regNo, term_of_int offset))
+      mk_comb(Term`MEM:(num # num) -> EXP`, 
+              	mk_pair(term_of_int regNo, 
+	          mk_comb(if offset >= 0 then Term`POS` else Term`NEG`, 
+                          term_of_int offset)))
  |  eval_exp (Assem.NCONST e) =
       mk_comb(Term`NCONST`, term_of_int e)
  |  eval_exp (Assem.WCONST e) =
@@ -25,7 +28,6 @@ fun eval_exp (Assem.MEM {reg = regNo, offset = offset, wback = flag}) =
 
 fun mk_ARM arm =
   let
-
     val (fname, ftype, args,stms,outs) = arm;
 
     fun mk_stm (Assem.OPER {oper = (op1, cond1, flag), dst = dlist, src = slist, jump = jumps}) =
@@ -34,6 +36,16 @@ fun mk_ARM arm =
 				     if cond1 = NONE then mk_none (Type `:COND`)
 				     else mk_comb(Term`SOME:COND->COND option`, mk_const(Assem.print_cond cond1, Type `:COND`)), 
 				     boolSyntax.F]
+            val j1 = case (List.find (fn e => e = Assem.REG 15 orelse e = Assem.WREG 15) dlist)	of  (* check whether the pc is in the destination list *)  
+			NONE => (case jumps of
+                         	       NONE => mk_none (Type `:OFFSET`)
+                      		    |  SOME l =>
+                                		if Symbol.name (hd l) = "+" then
+                                        		mk_some (mk_comb(Term`POS`, term_of_int (Symbol.index (hd l))))
+                                		else mk_some (mk_comb(Term`NEG`, term_of_int (Symbol.index (hd l))))
+                     		) |
+			SOME l => mk_some (Term`INR`)	(* the pc is modified to be the value in a register *)
+
 	    val (slist,dlist) = if op1 = Assem.LDMFD orelse op1 = Assem.STR then (dlist,slist)
 				else if op1 = Assem.CMP then (slist, [])
 				else (slist,dlist)
@@ -41,13 +53,6 @@ fun mk_ARM arm =
 			mk_none (Type `:EXP`)
 		     else mk_some (eval_exp (hd dlist));
             val s1 = mk_list (List.map eval_exp slist, Type `:EXP`);
-            val j1 = (case jumps of
-                         NONE => mk_none (Type `:OFFSET`)
-                      |  SOME l =>
-                                if Symbol.name (hd l) = "+" then
-                                        mk_some (mk_comb(Term`POS`, term_of_int (Symbol.index (hd l))))
-                                else mk_some (mk_comb(Term`NEG`, term_of_int (Symbol.index (hd l))))
-                     )
         in
             list_mk_pair [ops,d1,s1,j1]
         end

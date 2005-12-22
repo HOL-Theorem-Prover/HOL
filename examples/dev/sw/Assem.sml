@@ -135,37 +135,42 @@ structure Assem = struct
     |  eval_exp _ =
 	    0
 
-    fun one_exp (TMEM e) =
-	     "[" ^ Int.toString e ^ "]"
-     |  one_exp (MEM {reg = r, offset = j, wback = w}) =
-           (if j = 0 then
-                "[" ^ printReg r ^ "]"
-           else
-                "[" ^ printReg r ^ ", " ^ "#" ^ Int.toString (j * !address_stride) ^ "]") ^
-           (if w then "!" else "")
-     |  one_exp (TEMP e) =
-	     "t" ^ Int.toString e
-     |  one_exp (NAME e) =
-             Symbol.name e
-     |  one_exp (NCONST e) =
-             "#" ^ Int.toString e
-     |  one_exp (WCONST e) =
-             "#" ^ (Int.toString e) ^ "w"
-     |  one_exp (REG e) =
-             printReg e
-     |  one_exp (WREG e) =
-             printReg e ^ "!"
-     |  one_exp (CALL(f, args)) =
-             "BL " ^ (one_exp f)
-     |  one_exp (PAIR(e1,e2)) =
-             "(" ^ one_exp e1 ^ "," ^ one_exp e2 ^ ")"
-     |  one_exp _ =
-	     raise invalidAssemExp
-
-
     fun toLowerCase str =
                 Substring.translate (Char.toString o Char.toLower)
                 (Substring.substring (str, 0, String.size str))
+
+    fun one_exp exp = 
+	let
+    	    fun format_exp (TMEM e) =
+	    	 "[" ^ Int.toString e ^ "]"
+     	     |  format_exp (MEM {reg = r, offset = j, wback = w}) =
+           	    (if j = 0 then
+                	"[" ^ printReg r ^ "]"
+           	     else
+                	"[" ^ printReg r ^ ", " ^ "#" ^ Int.toString (j * !address_stride) ^ "]") ^
+           	    (if w then "!" else "")
+     	     |  format_exp (TEMP e) =
+	     		"t" ^ Int.toString e
+     	     |  format_exp (NAME e) =
+             		Symbol.name e
+     	     |  format_exp (NCONST e) =
+             		"#" ^ Int.toString e
+     	     |  format_exp (WCONST e) =
+             		"#" ^ (Int.toString e) ^ "w"
+     	     |  format_exp (REG e) =
+             		printReg e
+     	     |  format_exp (WREG e) =
+             		printReg e ^ "!"
+     	     |  format_exp (CALL(f, args)) =
+             		"BL " ^ (format_exp f)
+     	     |  format_exp (PAIR(e1,e2)) =
+             		"(" ^ format_exp e1 ^ "," ^ format_exp e2 ^ ")"
+     	     |  format_exp _ =
+	     		raise invalidAssemExp
+	in
+	    if !use_capital then format_exp exp
+            else toLowerCase (format_exp exp)
+	end
 
     fun formatInst (OPER {oper = (op1, cond1, flag1), src = sl, dst = dl, jump = jl}) =
 	let 
@@ -185,6 +190,13 @@ structure Assem = struct
 	 	 if op1 = STMFD orelse op1 = LDMFD then
             	 	(one_exp (hd dl)) ^ ", {" ^ one_exp (hd sl) ^ 
 					(List.foldl (fn (n,s) => (s ^ "," ^ one_exp n)) "" (tl sl)) ^ "}"
+		 else if op1 = BL then
+			(if null dl then ""
+			 else 
+			    "(" ^ one_exp (hd dl) ^ (List.foldl (fn (n,s) => (s ^ "," ^ one_exp n)) "" (tl dl)) ^ "), " ^
+			    "(" ^ one_exp (hd sl) ^ (List.foldl (fn (n,s) => (s ^ "," ^ one_exp n)) "" (tl sl)) ^ ")"
+			) ^ 
+			Symbol.name (hd (valOf jl)) ^ " (" ^ Int.toString (Symbol.index (hd (valOf jl))) ^ ")"
          	 else
 	           	(if null dl then "" else (one_exp (hd dl))) ^
            		(if null sl orelse op1 = B then ""
@@ -198,8 +210,8 @@ structure Assem = struct
              		   |  SOME labs => Symbol.name (hd labs) ^ " (" ^ Int.toString (Symbol.index (hd labs)) ^ ")")
         		)
         in
-	    if !use_capital then inst
-	    else toLowerCase inst
+            if !use_capital then inst
+            else toLowerCase inst
 	end
 
    |  formatInst (LABEL {lab = v}) = Symbol.name v ^ ":"

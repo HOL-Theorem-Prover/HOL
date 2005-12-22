@@ -3,9 +3,8 @@ struct
 
 local 
 open HolKernel Parse boolLib
-structure S = Binaryset;
-structure G = Graph;
 structure T = IntMapTable(type key = int  fun getInt n = n);
+structure S = Binaryset
 in
 exception invalidArgs;
 exception linkingError;
@@ -17,7 +16,8 @@ fun strOrder (s1:string,s2:string) =
     else LESS;
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
-(*                                                                                           *)
+(* The configuaration for passing parameters, returning results and allocating stack space                              *)
+(* The stack goes downward. 												*)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (*
                 Address goes downward!!!
@@ -206,13 +206,13 @@ fun write_one_arg (Assem.REG r) (regNo,offset) =
                                       jump = NONE}]
  |  write_one_arg (Assem.MEM v) (regNo,offset) = [
                  Assem.OPER {oper = (Assem.LDR, NONE, false),
-                             dst = [Assem.REG 10],
+                             dst = [Assem.REG (!numAvaiRegs)],
                              src = [Assem.MEM v],
                              jump = NONE},
                  Assem.OPER {oper = (Assem.STR, NONE, false),
                              dst = [Assem.MEM {reg = regNo,
                                                offset = offset, wback = false}],
-                             src = [Assem.REG 10],
+                             src = [Assem.REG (!numAvaiRegs)],
                              jump = NONE}]
  |  write_one_arg _ _  =
                  raise invalidArgs
@@ -227,23 +227,23 @@ fun read_one_arg (Assem.REG r) (regNo,offset) =
                               jump = NONE}]
  |  read_one_arg (Assem.MEM v) (regNo,offset) = [
                  Assem.OPER {oper = (Assem.LDR, NONE, false),
-                             dst = [Assem.REG 10],
+                             dst = [Assem.REG (!numAvaiRegs)],
                              src = [Assem.MEM {reg = regNo,
                                                offset = offset, wback = false}],
                              jump = NONE},
                  Assem.OPER {oper = (Assem.STR, NONE, false),
                              dst = [Assem.MEM v],
-                             src = [Assem.REG 10],
+                             src = [Assem.REG (!numAvaiRegs)],
                              jump = NONE}]
  |  read_one_arg _ _ =
                  raise invalidArgs
 
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
 (* push arguments to the stack. If the argument comes from a register, and store it into the stack directly; 		*)
 (* if it comes from memory, then first load it into R0, and then store it into the stack				*) 
-
-val argL1 = [Assem.MEM {reg = 10, offset = 1, wback = false}, Assem.REG 0, Assem.REG 1, Assem.MEM {reg = 10, offset = 0, wback = false},
-          Assem.REG 4, Assem.REG 8]
 
 fun pass_args argL =
    let 
@@ -297,7 +297,7 @@ fun send_results outL numArgs =
 
 fun get_results outL numArgs =
    let
-       val sOffset = numArgs + 1;  (* skip the arguments and the saved pc *)
+       val sOffset = numArgs;  (* skip the arguments and the saved pc *)
 
        val (regLs, memL) = mk_reg_segments outL
 
@@ -423,6 +423,8 @@ fun expand (fun_name,args,stms,outs,rs) =
 	  outs1)
   end      
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun rm_redundancy stms = 
   let 
@@ -446,9 +448,8 @@ fun rm_redundancy stms =
 
 fun link prog = 
 
-  let 
-    val (fname, ftype, args, stms, outs, rs) = 
-         regAllocation.convert_to_ARM (prog, !numAvaiRegs);
+  let
+    val (fname, ftype, args, stms, outs, rs) = regAllocation.convert_to_ARM (prog, !numAvaiRegs);
     val _ = (called := Binaryset.add (Binaryset.empty strOrder, fname))
     val (args1, stms1, outs1) = expand (fname, args, stms, outs, rs)
   in
@@ -484,7 +485,7 @@ fun rm_labels stms =
   end
 
 fun link2 prog =
- let
+  let
      val (fname, ftype, args, stms, outs) = link prog
      val stms1 = rm_labels stms;
      val stms2 = stms1 
@@ -492,6 +493,8 @@ fun link2 prog =
      (fname, ftype, args, stms2, outs)
   end
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun printInsts stms = 
   let val lineNo = ref ~1;
@@ -522,12 +525,11 @@ fun printarm (fname,ftype,args,stms,outs) =
 
 fun compileEnv (env:(term * (bool * thm * thm * thm)) list) =
      let val _ = List.foldr (fn ((name, (flag,src,anf,cps)), state) =>
-		(link anf; ())) () (tl env);
+		(if declFuncs.is_decl (#1 (dest_const name)) then () else (link anf;()))) () (tl env);
          val (name, (flag,src,anf,cps)) = hd env
      in 
 	link2 anf
      end
-
 end (* local structure ... *)
 
 end (* structure *)
