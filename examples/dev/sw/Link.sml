@@ -395,8 +395,7 @@ fun expand (fun_name,args,stms,outs,rs) =
       val return_stm = [Assem.MOVE {dst = Assem.REG (Assem.fromAlias Assem.PC),
 				    src = Assem.REG (Assem.fromAlias Assem.LR)}]
 
-      val rs = S.listItems rs;
-      val (args1, stms1, outs1, numLocal) = calculate_relative_address(args,stms,outs,length rs)
+      val (args1, stms1, outs1, numLocal) = calculate_relative_address(args,stms,outs,0)
 
       val (p_lab, q_lab) = ( Assem.LABEL {lab = Temp.namedlabel fun_name},
 			     Assem.LABEL {lab = Temp.namedlabel (fun_name ^ "_0")})	
@@ -404,7 +403,7 @@ fun expand (fun_name,args,stms,outs,rs) =
       val move_sp =
                 Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.SP)],
-                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (numLocal + length rs + 1)],
+                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (numLocal + 1)],
                      jump = NONE}
 
       fun callees () = 
@@ -415,11 +414,11 @@ fun expand (fun_name,args,stms,outs,rs) =
   in
 	( args1,
 	  p_lab ::
-          entry_stms rs @
+          entry_stms [] @
 	  [q_lab] @
 	  tl (one_program(fun_name,args1,stms1,outs1)) @ 
 	  [move_sp] @ 			(* skip save_lr,save_sp,save_fp and local variables *)
-	  exit_stms rs @ callees (), 
+	  exit_stms [] @ callees (), 
 	  outs1)
   end      
 
