@@ -29,7 +29,7 @@ val (fact_def, fact_ind) = Defn.tprove
 (*  |- fact =                                                                *)
 (*        Ite (Seq (Par (\(x,a). x) (\(x,a). 0w)) (UNCURRY $=)) (\(x,a). a)  *)
 (*            (Seq (Par (Seq (Par (\(x,a). x) (\(x,a). 1w)) (UNCURRY $-))    *)
-(*            (Seq (Par (\(x,a). x) (\(x,a). a)) (UNCURRY $*))) fact)        *)
+(*            (Seq (Par (\(x,a). x) (\(x,a). a)) (UNCURRY $* ))) fact)       *)
 (*                                                                           *)
 (*   fact_anf =                                                              *)
 (*    |- !v1 v2.                                                             *)
@@ -115,7 +115,7 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (*---------------------------------------------------------------------------*)
 
 val fact_arm = compileEnv factoids;
-val _ = print_arm fact_arm;
+val _ = printarm fact_arm;
 
 (*---------------------------------------------------------------------------*)
 (* Then the machine program (an ML data value) is converted to a HOL term    *)
@@ -301,6 +301,10 @@ RW_TAC std_ss [decode2_def]);
 val ss = srw_ss() ++ 
          rewrites [read_def, write_def, set_pc_def, STORE_def, instB_thm,decode1_thm,decode2_thm];
 
+val ss = std_ss ++ rewrites
+          (type_rws "COND" @ type_rws "OFFSET" @ type_rws "COND"
+                @ type_rws "OPERATOR" @ type_rws "EXP" @ type_rws "SRS");
+
 val lem1 = Q.prove
 (`(w2n x = 0) = (x = 0w)`,
  RW_TAC ss [EQ_IMP_THM] THENL
@@ -326,8 +330,18 @@ e (`terRun (instB,16)
     = (pc1,cpsr1,regs1,mems1)`  by METIS_TAC [TERRUN_THM]);
 e (POP_ASSUM MP_TAC THEN POP_ASSUM (K ALL_TAC));
 e (SIMP_TAC std_ss [Once run_def]);
-e (SIMP_TAC list_ss [instB_thm,decode2_thm,decode1_thm,write_def,read_def]);
+e (SIMP_TAC ss []);
 
+val LDM_TAC = 
+  CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
+    THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
+                    THENC REWRITE_CONV ([read_def,pair_case_def]@ type_rws"EXP")
+                    THENC SIMP_CONV ss []
+                    THENC WORD_CONV
+                    THENC reduceLib.REDUCE_CONV
+                    THENC REWRITE_CONV ([write_def, STORE_def,pair_case_def]@type_rws"EXP")
+                    THENC SIMP_CONV ss []))));
+	THEN ASM_REWRITE_TAC [] THEN
 
 (* Step case *)
 
