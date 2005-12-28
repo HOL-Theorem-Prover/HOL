@@ -22,9 +22,6 @@
 ******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
-(*
-loadPath := "rationals" :: !loadPath;
-*)
 map 
  load  
  ["complex_rationalTheory", "sexp", "package_alistTheory"];
