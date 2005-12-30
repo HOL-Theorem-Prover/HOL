@@ -29,6 +29,34 @@ quietdec := false;                            (* restore printing of output  *)
 (*****************************************************************************)
 new_theory "example_axioms";
 
+
+(*****************************************************************************)
+(* From axioms.lisp                                                          *)
+(*                                                                           *)
+(* ; Convention:  when a term p is used as a formula it means                *)
+(* ; (not (equal p nil))   [MJCG changed "t" to "p" here]                    *)
+(*                                                                           *)
+(* |= p is defined below to mean "p is true in the HOL model of ACL2"        *)
+(*                                                                           *)
+(*****************************************************************************)
+set_fixity "|=" (TruePrefix 11);                (* Give "|=" weak precedence *)
+val ACL2_THM_def =
+ xDefine "ACL2_THM"
+  `(|= p) = (not(equal p nil) = t)`;
+
+(*****************************************************************************)
+(* Sanity checking theorem                                                   *)
+(*****************************************************************************)
+val ACL2_THM =
+ store_thm
+  ("ACL2_THM",
+   ``!p. (|= p) = ~(p = nil)``,
+   Induct
+    THEN ACL2_SIMP_TAC [ACL2_THM_def]
+    THEN PROVE_TAC[T_NIL,sexp_11]);
+
+add_acl2_simps[ACL2_THM];
+
 (*****************************************************************************)
 (* Load ML file created from example_axioms.lisp with a2ml.csh               *)
 (*****************************************************************************)
@@ -39,36 +67,48 @@ use "example_axioms.lisp.ml";
 (* example_axioms.lisp to ML friendly names based on the ACL2 names          *)
 (* (replace "-" by "_") and then turn variables like ACL2::FOO to foo.       *)
 (*****************************************************************************)
-val [CAR_CDR_ELIM,CAR_CONS,CDR_CONS,CONS_EQUAL,BOOLEAN_CHARACTERP] = 
+val [CAR_CDR_ELIM,CAR_CONS,CDR_CONS,CONS_EQUAL,BOOLEAN_CHARACTERP,
+     ZERO,COMMUTATIVITY_OF_BINARY_ADD,DISTRIBUTIVITY,TRICHOTOMY,
+     RATIONAL_IMPLIES2,LOWEST_TERMS,INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME,
+     SYMBOL_PACKAGE_NAME_PKG_WITNESS_NAME,NIL_IS_NOT_CIRCULAR,
+     COMPLETION_OF_BINARY_MULT] = 
  map 
   (clean_acl2_term o #3 o def_to_term) 
   (!sexp.acl2_list_ref);
 
+(*
+ map 
+  ((fn(x,y,z) => (x,y,clean_acl2_term z)) o def_to_term) 
+  (!sexp.acl2_list_ref);
+
+ map mk_def (!sexp.acl2_list_ref);
+*)
+
 val CAR_CDR_ELIM_AX =
  time store_thm
   ("CAR_CDR_ELIM_AX",
-   ``~(^CAR_CDR_ELIM = nil)``,
+   ``|= ^CAR_CDR_ELIM``,
    Cases_on `x`
     THEN ACL2_SIMP_TAC[]);
 
 val CAR_CONS_AX =
  time store_thm
   ("CAR_CONS_AX",
-   ``~(^CAR_CONS = nil)``,
+   ``|= ^CAR_CONS``,
    Cases_on `x`
     THEN ACL2_SIMP_TAC[]);
 
 val CDR_CONS_AX =
  time store_thm
   ("CDR_CONS_AX",
-   ``~(^CDR_CONS = nil)``,
+   ``|= ^CDR_CONS``,
    Cases_on `x`
     THEN ACL2_SIMP_TAC[]);
 
 val CONS_EQUAL_AX =
  time store_thm  (* brute force proof below takes a few minutes *)
   ("CONS_EQUAL_AX",
-   ``~(^CONS_EQUAL = nil)``,
+   ``|= ^CONS_EQUAL``,
    Cases_on `x1` THEN Cases_on `x2` THEN Cases_on `y1` THEN Cases_on `y2`
     THEN ACL2_SIMP_TAC[]
     THEN PROVE_TAC[]);
@@ -76,8 +116,105 @@ val CONS_EQUAL_AX =
 val BOOLEAN_CHARACTERP_AX =
  time store_thm
   ("BOOLEAN_CHARACTERP_AX",
-   ``~(^BOOLEAN_CHARACTERP = nil)``,
+   ``|= ^BOOLEAN_CHARACTERP``,
    Cases_on `x`
     THEN ACL2_SIMP_TAC[]);
+
+val ZERO_AX =
+ time store_thm
+  ("ZERO_AX",
+   ``|= ^ZERO``,
+   ACL2_SIMP_TAC[less_def,cpx_def,ratTheory.RAT_LES_REF]);
+
+val COMMUTATIVITY_OF_BINARY_ADD_AX =
+ time store_thm
+  ("COMMUTATIVITY_OF_BINARY_ADD_AX",
+   ``|= ^COMMUTATIVITY_OF_BINARY_ADD``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[]
+    THEN Cases_on `c` THEN Cases_on `c'`
+    THEN PROVE_TAC
+          [complex_rationalTheory.COMPLEX_ADD_def,ratTheory.RAT_ADD_COMM]);
+
+val rat_0 =
+ store_thm
+  ("rat_0",
+   ``rat 0 1 = rat_0``,
+   PROVE_TAC[rat_def,ratTheory.rat_0_def,fracTheory.frac_0_def]);
+
+(* runtime: 260.682s,    gctime: 6.265s,     systime: 0.393s. *)
+val DISTRIBUTIVITY_AX =
+ time store_thm
+  ("DISTRIBUTIVITY_AX",
+   ``|= ^DISTRIBUTIVITY``,
+   Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
+    THEN ACL2_SIMP_TAC
+          [rat_0,int_def,cpx_def,complex_rationalTheory.COMPLEX_ADD_def,
+           ratTheory.RAT_0,ratTheory.RAT_ADD_LID]
+    THEN Cases_on `c` THEN TRY(Cases_on `c'`) THEN TRY(Cases_on `c''` )
+    THEN FULL_SIMP_TAC arith_ss
+          [complex_rationalTheory.COMPLEX_ADD_def,
+           complex_rationalTheory.COMPLEX_MULT_def,
+           ratTheory.RAT_MUL_LZERO, ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
+           ratTheory.RAT_SUB_LID,ratTheory.RAT_SUB_RID,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_SUB_LDISTRIB, ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_LDISTRIB, ratTheory.RAT_RDISTRIB,
+           complex_rationalTheory.complex_rational_11]
+    THEN METIS_TAC 
+          [ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM,
+           ratTheory.RAT_RSUB_EQ,ratTheory.RAT_LSUB_EQ,
+           ratTheory.RAT_MUL_LZERO, ratTheory.RAT_MUL_RZERO]);
+(*
+val TRICHOTOMY_AX =
+ time store_thm
+  ("TRICHOTOMY_AX",
+   ``|= ^TRICHOTOMY``,
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC
+          [rat_0,int_def,cpx_def,ratTheory.RAT_0,ratTheory.RAT_LES_REF]
+    THEN Cases_on `c` 
+    THEN FULL_SIMP_TAC arith_ss (!acl2_simps)
+
+    THEN FULL_SIMP_TAC arith_ss
+          [complex_rationalTheory.COMPLEX_ADD_def,
+           complex_rationalTheory.COMPLEX_MULT_def,
+           ratTheory.RAT_MUL_LZERO, ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
+           ratTheory.RAT_SUB_LID,ratTheory.RAT_SUB_RID,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_SUB_LDISTRIB, ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_LDISTRIB, ratTheory.RAT_RDISTRIB,
+           complex_rationalTheory.complex_rational_11]
+    THEN METIS_TAC 
+          [ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM,
+           ratTheory.RAT_RSUB_EQ,ratTheory.RAT_LSUB_EQ,
+           ratTheory.RAT_MUL_LZERO, ratTheory.RAT_MUL_RZERO]);
+
+val RATIONAL_IMPLIES2_AX =
+ time store_thm
+  ("RATIONAL_IMPLIES2_AX",
+   ``|= ^RATIONAL_IMPLIES2``,
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC[]
+    THEN Cases_on `c` 
+    THEN FULL_SIMP_TAC arith_ss (!acl2_simps)
+    THEN Cases_on `r0 = rat_0`
+    THEN RW_TAC arith_ss []
+    THENL
+     [FULL_SIMP_TAC arith_ss
+      [
+       PROVE_TAC[]]);
+
+val INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME _AX =
+ time store_thm
+  ("INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME _AX",
+   ``|= ^INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME ``,
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC
+          [rat_0,int_def,cpx_def,ratTheory.RAT_0,ratTheory.RAT_LES_REF]
+    THEN Cases_on `c` 
+    THEN FULL_SIMP_TAC arith_ss (!acl2_simps)
+
+*)
 
 export_theory();

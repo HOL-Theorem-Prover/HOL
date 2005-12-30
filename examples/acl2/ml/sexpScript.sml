@@ -770,7 +770,7 @@ val LOOKUP_def =
 val BASIC_INTERN_def =
  Define
   `BASIC_INTERN sym_name pkg_name =
-    sym sym_name (LOOKUP pkg_name ACL2_PACKAGE_ALIST sym_name)`;
+    sym (LOOKUP pkg_name ACL2_PACKAGE_ALIST sym_name) sym_name`;
 
 (*****************************************************************************)
 (* symbolp                                                                   *)
@@ -781,7 +781,9 @@ val BASIC_INTERN_def =
 (*****************************************************************************)
 val symbolp_def =
  acl2Define "COMMON-LISP::SYMBOLP"
-  `symbolp (sym p n) = if BASIC_INTERN n p = sym p n then t else nil`;
+  `(symbolp (sym p n) = if BASIC_INTERN n p = sym p n then t else nil)
+   /\
+   (symbolp _ = nil)`;
 
 (*****************************************************************************)
 (* bad-atom<=                                                                *)
@@ -896,9 +898,5 @@ val intern_in_package_of_symbol_def =
    /\
    (intern_in_package_of_symbol _ _ = nil)`;
 
-
 val _ = export_acl2_theory();
 
-(*
-val _ = export_theory();
-*)
