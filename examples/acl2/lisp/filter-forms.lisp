@@ -24,7 +24,7 @@
   (let* ((wrld (w state))
          (event-type (car form))
          (body (case event-type
-                 (defun (car (last form)))
+                 ((defun defund) (car (last form)))
                  ((defaxiom defthm) (third form)))))
     (er-let* ((tbody (translate body t t t 'top-level wrld state)))
              (let ((new-body
@@ -33,10 +33,10 @@
                       tbody)))
                (value
                 (case event-type
-                  (defun (list event-type
-                               (cadr form)
-                               (caddr form)
-                               new-body))
+                  ((defun defund) (list 'defun
+                                        (cadr form)
+                                        (caddr form)
+                                        new-body))
                   ((defaxiom defthm) (list event-type
                                            (cadr form)
                                            new-body))
