@@ -781,7 +781,8 @@ val BASIC_INTERN_def =
 (*****************************************************************************)
 val symbolp_def =
  acl2Define "COMMON-LISP::SYMBOLP"
-  `(symbolp (sym p n) = if BASIC_INTERN n p = sym p n then t else nil)
+  `(symbolp (sym p n) = 
+     if (BASIC_INTERN n p = sym p n) /\ ~(p = "") then t else nil)
    /\
    (symbolp _ = nil)`;
 

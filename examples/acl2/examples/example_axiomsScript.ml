@@ -205,16 +205,67 @@ val RATIONAL_IMPLIES2_AX =
       [
        PROVE_TAC[]]);
 
+(* Proof outline from Matt:
+First, the comment inside the axiom itself (in source file axioms.lisp)
+explains how we can prove (symbolp y) from the other hypotheses.
+
+(defaxiom intern-in-package-of-symbol-symbol-name
+
+; This axiom assumes a model of packages in which "" is not the name of any
+; package, but is instead used as a default value when symbol-package-name is
+; applied to a non-symbol.  So, the following hypotheses imply (symbolp y).
+; Perhaps we should just add (symbolp y) or else add an axiom that (symbolp y)
+; if and only if (symbol-package-name y) is not "".  (Or is this provable
+; already?)  See also chk-acceptable-defpkg for a related comment, in which a
+; proof of nil is shown using this axiom when "" is not disallowed as a package
+; name.
+
+  (implies (and (symbolp x)
+                (equal (symbol-package-name x) (symbol-package-name y)))
+           (equal (intern-in-package-of-symbol (symbol-name x) y) x)))
+
+So, I'll assume that x and y are both symbolps.  I'm assuming that we can find
+HOL terms px, py, nx, and ny such that we can prove the following in HOL
+(from the definition of symbolp, though I don't know how to do this).
+
+  x = sym px nx
+  y = sym py ny
+
+Then from (equal (symbol-package-name x) (symbol-package-name y)) we know
+
+  px = py
+
+Then:
+
+  intern-in-package-of-symbol (symbol-name x) y
+= intern-in-package-of-symbol (symbol-name (sym px nx)) (sym py ny)
+= {since py=px, as shown above}
+  intern-in-package-of-symbol (symbol-name (sym px nx)) (sym px ny)
+= {by definition of symbol-name}
+  intern-in-package-of-symbol (str nx) (sym px ny)
+= {by definition of intern-in-package-of-symbol}
+  BASIC_INTERN nx px
+= {by symbolp(x), hence symbolp(sym px nx)}
+  sym px nx
+= x
+*)
+
 val INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME _AX =
  time store_thm
   ("INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME _AX",
    ``|= ^INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME ``,
-   Cases_on `x` 
-    THEN ACL2_SIMP_TAC
-          [rat_0,int_def,cpx_def,ratTheory.RAT_0,ratTheory.RAT_LES_REF]
-    THEN Cases_on `c` 
-    THEN FULL_SIMP_TAC arith_ss (!acl2_simps)
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[]
+    THEN Cases_on `BASIC_INTERN s0 s = sym s s0` 
+    THEN RW_TAC std_ss []
+    THENL
+     [POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th,sexp_11,T_NIL])
+       THEN Cases_on `y`
+       THEN FULL_SIMP_TAC arith_ss (sexp_11::(!acl2_simps))
 
 *)
 
-export_theory();
+(*
+val _ = export_acl2_theory();
+*)
+
