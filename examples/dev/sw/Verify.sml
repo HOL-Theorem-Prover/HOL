@@ -3,7 +3,7 @@ struct
 
 local open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
         numSyntax listSyntax
-        pairTheory listTheory optionTheory preARMTheory word32Theory
+        pairTheory arithmeticTheory listTheory optionTheory preARMTheory word32Theory
 in
 
 (*------------------------------------------------------------------------------------------------------*)
@@ -234,7 +234,7 @@ val CMP_TAC =
 
 val BRANCH_TAC = 
      REWRITE_TAC [getS_thm] THEN WORD_TAC THEN
-     REWRITE_TAC [decode1_thm, read_thm, write_thm, goto_thm, read_pc]
+     REWRITE_TAC [decode1_thm, read_thm, write_thm, goto_thm, read_pc_def]
 
 
 val BRANCH_LINK_TAC = 
@@ -277,7 +277,7 @@ fun get_pc (tassum, tg) =
   in 
      int_of_term (hd (strip_pair (List.nth(ts, length ts - 1))))
   end
-
+  handle e => raise ERR "get_pc" "";
 
 exception tacError;
 
@@ -330,7 +330,7 @@ val ONE_STEP_TAC =
 	    REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
             reduceLib.REDUCE_TAC THEN
 	    REWRITE_TAC [decode2_thm] THEN
-	    tac1 THEN REWRITE_TAC [set_pc, write_thm, read_thm] THEN
+	    tac1 THEN REWRITE_TAC [set_pc_def, write_thm, read_thm] THEN
 	    WORD_TAC THEN
 	    SIMP_TAC bool_ss []
 	  ) g
@@ -344,7 +344,7 @@ fun ONE_INST_TAC tac1 =
             REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
             reduceLib.REDUCE_TAC THEN
             REWRITE_TAC [decode2_thm, decode1_thm] THEN
-            tac1 THEN REWRITE_TAC [set_pc, write_thm, read_thm] THEN
+            tac1 THEN REWRITE_TAC [set_pc_def, write_thm, read_thm] THEN
             WORD_TAC THEN
             SIMP_TAC bool_ss []
           ) g
@@ -354,19 +354,18 @@ fun ONE_INST_TAC tac1 =
 
 fun prove_arm defs =
   let 
-      fun one_step () =
-          let val g1 = hd (#1 (ONCE_ASM_REWRITE_TAC [] (top_goal())))
-              val pc = get_pc g1
-          in
-      	      if pc = length (!cur_insts) then 
-	  	  e (STOP_TAC defs)
-      	      else
-	  	  ( e (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))));
-		    one_step())
-  	  end
+      fun one_step (asl,g) =
+		(    let val pc = get_pc (asl,g)
+		    in if pc = length (!cur_insts) then
+			STOP_TAC defs (asl,g)
+		       else (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))) THEN
+			     one_step) (asl,g)
+		    end
+		)
   in
-     ( e (TAC0 (length (!cur_insts)));
-       one_step ()
+     (  TAC0 (length (!cur_insts)) THEN
+	ONCE_ASM_REWRITE_TAC [] THEN
+       one_step
      )
   end 
 
