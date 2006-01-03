@@ -1,6 +1,10 @@
 structure declFuncs = 
 struct
 
+local
+open HolKernel Parse
+in
+
   exception undeclFunc;
 
   val k = ref 0;
@@ -10,7 +14,8 @@ struct
 
   structure T = IntMapTable(type key = int  fun getInt n = n);
 
-  type func = {name:string, args:Assem.exp, stms:Assem.instr list, outs:Assem.exp, regs:Assem.exp Binaryset.set};
+  type func = {name:string, ftype:hol_type, args:Assem.exp, stms:Assem.instr list, outs:Assem.exp, 
+	regs:Assem.exp Binaryset.set};
   val decls : (func T.table) ref = ref (T.empty);
 
   fun is_decl fun_name = 
@@ -23,14 +28,17 @@ struct
 	T.look(!decls,i)
       end;
 
-  fun putFunc (name,args,stms,outs,rs) =
+  fun putFunc (name,tp,args,stms,outs,rs) =
       let 
 	  val _ = Polyhash.insert (!hashtable) (name, !k)
       in
-            ( decls := T.enter(!decls,!k, {name = name, args = args, 
+            ( decls := T.enter(!decls,!k, {name = name, ftype = tp, args = args, 
 					   stms = stms, outs = outs, regs = rs});
 	      k := !k + 1
             )
       end
 
-end
+end (* local structure ... *)
+
+end (* structure *)
+

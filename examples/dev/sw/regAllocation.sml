@@ -2,13 +2,15 @@ structure regAllocation =
 struct
 
 local open HolKernel Parse boolLib pairLib bossLib
+
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Definition of types		                                                                                        *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 structure T = IntMapTable(type key = int 
-			  fun getInt n = n);
+				fun getInt n = n);
 structure S = Binaryset;
 structure G = Graph;
+
 in
 
 type edgeLab = int;
@@ -249,10 +251,11 @@ fun CalLiveness (cfg)
 
 fun init (cfg, tmpTable) = 
     (
+	
+	spilledTmps := S.union (!spilledNodes, !spilledTmps);
+
        	initial := S.difference (S.difference(S.addList(S.empty intOrder, T.listKeys tmpTable),
                 	 !precolored), !spilledTmps);
-
-	spilledTmps := S.union (!spilledNodes, !spilledTmps);
 
 	simplifyWorklist := S.empty intOrder;
 	freezeWorklist := S.empty intOrder;
@@ -639,13 +642,19 @@ fun updateProgram (old_cfg, spilled : int S.set) =
               val {inst = curInst, def = df, use = us} = #3 (G.context(nodeNo,gr))
          in
 	      updateNode(gr, nodeNo,
-			{ def = if for_lhs then List.filter (fn n => not (n = varNo)) df else df,
-                          use = if for_rhs then List.filter (fn n => not (n = varNo)) us else us,
-			  inst = if not_bl curInst andalso not (is_nop curInst) then
-                          		substituteVars curInst (Assem.TEMP varNo) (Assem.TEMP newVarNo) for_lhs for_rhs
-				 else
-                              		substituteVars curInst (Assem.TEMP varNo) (Assem.TMEM (!sp)) for_lhs for_rhs
-			})
+			(if not_bl curInst andalso not (is_nop curInst) then
+				{ def = if for_lhs andalso List.exists (fn n => n = varNo) df then newVarNo :: 
+					(List.filter (fn n => not (n = varNo orelse n = newVarNo)) df) else df,
+                          	  use = if for_rhs andalso List.exists (fn n => n = varNo) us then newVarNo :: 
+					(List.filter (fn n => not (n = varNo orelse n = newVarNo)) us) else us,
+			  	  inst = substituteVars curInst (Assem.TEMP varNo) (Assem.TEMP newVarNo) for_lhs for_rhs
+				}
+			 else 
+                                { def = if for_lhs then (List.filter (fn n => not (n = varNo)) df) else df,
+                                  use = if for_rhs then (List.filter (fn n => not (n = varNo)) us) else us,
+				  inst = substituteVars curInst (Assem.TEMP varNo) (Assem.TMEM (!sp)) for_lhs for_rhs
+                                }
+			 ))
           end
 
      fun insertLoadInst gr nodeNo varNo =
@@ -854,7 +863,7 @@ fun convert_to_ARM (prog,K) =
     val rs = getModifiedRegs stms
 
   in
-    ( declFuncs.putFunc (fun_name, args, stms, outs, rs);
+    ( declFuncs.putFunc (fun_name, fun_type, args, stms, outs, rs);
       (fun_name, fun_type, args, stms, outs, rs)
     )
   end
@@ -911,3 +920,4 @@ fun check_allocation prog =
 
 end (* local open *)
 end (* structure *)
+

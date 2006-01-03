@@ -94,7 +94,7 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (*        r0 r1                                                              *)
 (*    Body:                                                                  *)
 (*        0:          mov     ip, sp                                         *)
-(*        1:          stmfd   sp!, {r0,r2,r3,fp,ip,lr,pc}                    *)
+(*        1:          stmfd   sp!, {fp,ip,lr,pc}                    *)
 (*        2:          sub     fp, ip, #1                                     *)
 (*        3:          mov     r2, #0w                                        *)
 (*        4:          cmp     r0, r2                                         *)
@@ -108,7 +108,7 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (*       12:          bal     - (9)                                          *)
 (*       13:          mov     r0, r1                                         *)
 (*       14:          sub     sp, fp, #5                                     *)
-(*       15:          ldmfd   sp, {r0,r2,r3,fp,sp,pc}                        *)
+(*       15:          ldmfd   sp, {fp,sp,pc}                        *)
 (*    Return:                                                                *)
 (*        r0                                                                 *)
 (*                                                                           *)
@@ -183,127 +183,8 @@ val instB_thm = Q.prove
  ,
  REPEAT CONJ_TAC THEN EVAL_TAC); 
 
-val decode1_thm = Q.prove
-(`!pc cpsr s dst src jump.
-  (decode1 (pc,cpsr,s) (MOV,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src)))) /\
-  (decode1 (pc,cpsr,s) (ADD,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) + read s (HD (TL src))))) /\
-  (decode1 (pc,cpsr,s) (SUB,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) - read s (HD (TL src))))) /\
-  (decode1 (pc,cpsr,s) (RSB,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD (TL src)) - read s (HD src)))) /\
-  (decode1 (pc,cpsr,s) (MUL,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) * read s (HD (TL src))))) /\
-  (decode1 (pc,cpsr,s) (MLA,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) * read s (HD (TL src)) + read s (HD (TL (TL src)))))) /\
-  (decode1 (pc,cpsr,s) (AND,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) & read s (HD (TL src))))) /\
-  (decode1 (pc,cpsr,s) (ORR,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) | read s (HD (TL src))))) /\
-  (decode1 (pc,cpsr,s) (EOR,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) # read s (HD (TL src))))) /\
-  (decode1 (pc,cpsr,s) (CMP,dst,src,jump) = (if read s (HD src) = read s (HD (TL src)) 
-                                             then (setS 0w SZ,s)
-                                             else (if read s (HD src) < read s (HD (TL src)) 
-                                                   then (setS 0w SN,s)
-                                                   else (setS 0w SC,s)))) /\
-  (decode1 (pc,cpsr,s) (TST,dst,src,jump) = (if read s (HD src) & read s (HD (TL src)) = 0w 
-                                             then (setS cpsr SZ,s) else (cpsr,s))) /\
-  (decode1 (pc,cpsr,s) (LSL,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) << w2n (read s (HD (TL src)))))) /\
-  (decode1 (pc,cpsr,s) (LSR,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) >>> w2n (read s (HD (TL src)))))) /\
-  (decode1 (pc,cpsr,s) (ASR,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) >> w2n (read s (HD (TL src)))))) /\
-  (decode1 (pc,cpsr,s) (ROR,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src) #>> w2n (read s (HD (TL src)))))) /\
-  (decode1 (pc,cpsr,s) (LDR,dst,src,jump) = (cpsr,write s (THE dst) (read s (HD src)))) /\
-  (decode1 (pc,cpsr,s) (STR,dst,src,jump) = (cpsr,write s (HD src) (read s (THE dst)))) /\
-  (decode1 (pc,cpsr,s) (LDMFD,dst,src,jump) = 
-              (case THE dst of
-                  MEM v -> ARB
-               || NCONST v2 -> ARB
-               || WCONST v4 -> ARB
-               || REG v6 ->
-                    (cpsr,
-                     FST
-                       (FOLDL
-                          (\(s,i) reg.
-                             (write s reg (read s (MEM (v6,POS (i + 1)))),
-                              i + 1)) (s,0) src))
-               || WREG v7 ->
-                    (cpsr,
-                     write
-                       (FST
-                          (FOLDL
-                             (\(s,i) reg.
-                                (write s reg
-                                   (read s (MEM (v7,POS (i + 1)))),i + 1))
-                             (s,0) src)) (REG v7)
-                       (read s (REG v7) + n2w (LENGTH src))))) /\
-  (decode1 (pc,cpsr,s) (STMFD,dst,src,jump) = 
-              (case THE dst of
-                  MEM v -> ARB
-               || NCONST v2 -> ARB
-               || WCONST v4 -> ARB
-               || REG v6 ->
-                    (cpsr,
-                     FST
-                       (FOLDL
-                          (\(s,i) reg.
-                             (write s (MEM (v6,NEG i)) (read s reg),i + 1))
-                          (s,0) (REVERSE src)))
-               || WREG v7 ->
-                    (cpsr,
-                     write
-                       (FST
-                          (FOLDL
-                             (\(s,i) reg.
-                                (write s (MEM (v7,NEG i)) (read s reg),
-                                 i + 1)) (s,0) (REVERSE src))) (REG v7)
-                       (read s (REG v7) - n2w (LENGTH src))))) /\
-  (decode1 (pc,cpsr,s) (MRS,dst,src,jump) = (cpsr,write s (THE dst) cpsr)) /\
-  (decode1 (pc,cpsr,s) (MSR,dst,src,jump) = (read s (HD src),s)) /\
-  (decode1 (pc,cpsr,s) (B,dst,src,jump) = (cpsr,write s (REG 15) (n2w (goto (pc,jump))))) /\
-  (decode1 (pc,cpsr,s) (BL,dst,src,jump) = (cpsr,write (write s (REG 14) (word_suc (n2w pc))) (REG 15) 
-                                                    (n2w (goto (pc,jump))))) /\
-  (decode1 (pc,cpsr,s) (SWI,dst,src,jump) = ARB) /\
-  (decode1 (pc,cpsr,s) (DCD,dst,src,jump) = ARB) /\
-  (decode1 (pc,cpsr,s) (NOP,dst,src,jump) = ARB)`,
-RW_TAC std_ss [decode1_def]);
-
-
-val decode2_thm = Q.prove
-(`!pc cpsr s op sflag dst src jump.
-  (decode2 (pc,cpsr,s) ((op,NONE,sflag),dst,src,jump) = set_pc (decode1 (pc,cpsr,s) (op,dst,src,jump)) (pc + 1)) /\
-  (decode2 (pc,cpsr,s) ((op,SOME EQ,sflag),dst,src,jump) = 
-              (if getS cpsr SZ then
-                 read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
-               else
-                 (pc + 1,cpsr,write s (REG 15) (n2w (pc + 1))))) /\
-  (decode2 (pc,cpsr,s) ((op,SOME NE,sflag),dst,src,jump) = 
-              (if getS cpsr SZ then
-                 (pc + 1,cpsr,write s (REG 15) (n2w (pc + 1)))
-               else
-                 read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump)))) /\
-  (decode2 (pc,cpsr,s) ((op,SOME GE,sflag),dst,src,jump) = 
-              (if getS cpsr SN then
-                 (pc + 1,cpsr,write s (REG 15) (n2w (pc + 1)))
-               else
-                 read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump)))) /\
-  (decode2 (pc,cpsr,s) ((op,SOME LE,sflag),dst,src,jump) = 
-              (if getS cpsr SC then
-                 (pc + 1,cpsr,write s (REG 15) (n2w (pc + 1)))
-               else
-                 read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump)))) /\
-  (decode2 (pc,cpsr,s) ((op,SOME GT,sflag),dst,src,jump) = 
-              (if getS cpsr SC then
-                 read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
-               else
-                 (pc + 1,cpsr,write s (REG 15) (n2w (pc + 1))))) /\
-  (decode2 (pc,cpsr,s) ((op,SOME LT,sflag),dst,src,jump) = 
-              (if getS cpsr SN then
-                 read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))
-               else
-                 (pc + 1,cpsr,write s (REG 15) (n2w (pc + 1))))) /\
-  (decode2 (pc,cpsr,s) ((op,SOME AL,sflag),dst,src,jump) = read_pc (decode1 (pc,cpsr,s) (op,dst,src,jump))) /\
-  (decode2 (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc + 1,cpsr,write s (REG 15) (n2w (pc + 1))))`,
-RW_TAC std_ss [decode2_def]);
-
 val ss = srw_ss() ++ 
          rewrites [read_def, write_def, set_pc_def, STORE_def, instB_thm,decode1_thm,decode2_thm];
-
-val ss = std_ss ++ rewrites
-          (type_rws "COND" @ type_rws "OFFSET" @ type_rws "COND"
-                @ type_rws "OPERATOR" @ type_rws "EXP" @ type_rws "SRS");
 
 val lem1 = Q.prove
 (`(w2n x = 0) = (x = 0w)`,

@@ -1,7 +1,7 @@
-structure Link = 
+structure Link =
 struct
 
-local 
+local
 open HolKernel Parse boolLib
 structure T = IntMapTable(type key = int  fun getInt n = n);
 structure S = Binaryset
@@ -313,9 +313,31 @@ fun get_results outL numArgs =
 	load_mems @ load_regs @ [inc_p Assem.SP (length outL - final_upper)] 
    end;
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Remove redundant instructions											*)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
+fun rm_redundancy stms =
+  let
+     val isPrevBAL = ref false;
+
+     fun isValid (Assem.MOVE{dst = d, src = r}) =
+                not (d = r)
+      |  isValid (Assem.OPER {oper = (Assem.B, SOME (Assem.AL), flag), ...}) =
+                let val flag = !isPrevBAL
+                in (isPrevBAL := true; not flag)
+                end
+      |  isValid (Assem.OPER{oper = (op1,cond1,flag), dst = dst1, src = src1, jump = jp1}) =
+              not ( length src1 = 2 andalso (hd dst1 = hd src1) andalso (hd (tl src1) = Assem.NCONST 0) andalso
+                    (op1 = Assem.ADD orelse op1 = Assem.SUB orelse op1 = Assem.LSL orelse
+                     op1 = Assem.LSR orelse op1 = Assem.ASR orelse op1 = Assem.ROR))
+      |  isValid _ = true
+  in
+     List.filter isValid stms
+  end;
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
-(*                                                                                           *)
+(* Link caller and callees together                                                                                     *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 val called = ref(Binaryset.empty strOrder);
@@ -334,7 +356,7 @@ fun one_program (caller_name,args,stms,outs) =
 		 [inc_p Assem.SP (length caller_src)] @	(* drop from the stack the arguments/results of this round	*)
 		 [Assem.OPER {oper = (Assem.B,SOME (Assem.AL),false), dst = [], src = [],
 		  	      jump = SOME [Temp.namedlabel (callee_name ^ "_0")]}]
-		(* We don't need to get the results here due to tail recursion wouldn't use it		*)    		
+		(* We don't need to get the results here because tail recursion wouldn't use it		*)    		
             else
 	   	let
 		    val _ = called := Binaryset.add(!called, callee_name);
@@ -362,34 +384,35 @@ fun one_program (caller_name,args,stms,outs) =
 	
 fun callee_procedure name =
     let
-        val {name = fun_name, args = callee_args, stms = callee_stms, outs = callee_outs, regs = rs} 
+        val {name = fun_name, ftype = fun_type, args = callee_args, stms = callee_stms, outs = callee_outs, regs = rs} 
 		= declFuncs.getFunc name;
 
 	val (p_lab, q_lab) = ( Assem.LABEL {lab = Temp.namedlabel fun_name},
                                Assem.LABEL {lab = Temp.namedlabel (fun_name ^ "_0")})
 
         val modifiedRegs = Binaryset.listItems rs;
-	val (args1, stms1, outs1, numLocal) = calculate_relative_address(callee_args,callee_stms,callee_outs,length modifiedRegs) 
+	val (args1, stms1, outs1, numLocal) = calculate_relative_address
+				(callee_args,callee_stms,callee_outs,length modifiedRegs) 
 
 	val move_sp = 
 		Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.SP)],
                      src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (numLocal + length modifiedRegs + 2)],
                      jump = NONE}
-	
+	val stms1 =  p_lab ::
+          	     entry_stms modifiedRegs @
+          	     [q_lab] @
+          	     tl (one_program (fun_name,args1,stms1,outs1)) @
+          	     send_results (Assem.pair2list outs1) (length (Assem.pair2list args1)) @
+          	     [move_sp] @   (* skip save_lr,save_sp,save_fp and local variables *)
+          	     exit_stms modifiedRegs
 
     in
-        p_lab :: 
-	entry_stms modifiedRegs @
-	[q_lab] @
-	tl (one_program (fun_name,args1,stms1,outs1)) @
-	send_results (Assem.pair2list outs1) (length (Assem.pair2list args1)) @
-	[move_sp] @	(* skip save_lr,save_sp,save_fp and local variables *)
-	exit_stms modifiedRegs
+	( fun_name, fun_type, callee_args, rm_redundancy stms1, callee_outs, rs)
     end
 
 
-fun expand (fun_name,args,stms,outs,rs) = 
+fun expand (fun_name,fun_type,args,stms,outs,rs) = 
   let val _ = (called := Binaryset.add(Binaryset.empty strOrder, fun_name); processed := !called);
 
       val return_stm = [Assem.MOVE {dst = Assem.REG (Assem.fromAlias Assem.PC),
@@ -403,59 +426,36 @@ fun expand (fun_name,args,stms,outs,rs) =
       val move_sp =
                 Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.SP)],
-                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (numLocal + 1)],
+                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (numLocal + 2)],
                      jump = NONE}
 
       fun callees () = 
 	if Binaryset.equal(!called, !processed) then [] else
 	let val p = hd (Binaryset.listItems (Binaryset.difference(!called, !processed))); 
 	    val _ = processed := Binaryset.add(!processed, p)
-        in (callee_procedure p) @ callees () end
+        in (callee_procedure p) :: callees () end
+
+      val stms1 =  p_lab ::
+          	   entry_stms [] @
+          	   [q_lab] @
+          	   tl (one_program(fun_name,args1,stms1,outs1)) @
+          	   [move_sp] @                   (* skip save_lr,save_sp,save_fp and local variables *)
+          	   exit_stms []
+
   in
-	( args1,
-	  p_lab ::
-          entry_stms [] @
-	  [q_lab] @
-	  tl (one_program(fun_name,args1,stms1,outs1)) @ 
-	  [move_sp] @ 			(* skip save_lr,save_sp,save_fp and local variables *)
-	  exit_stms [] @ callees (), 
-	  outs1)
-  end      
-
-(* ---------------------------------------------------------------------------------------------------------------------*)
-(* ---------------------------------------------------------------------------------------------------------------------*)
-
-fun rm_redundancy stms = 
-  let 
-     val isPrevBAL = ref false;
-
-     fun isValid (Assem.MOVE{dst = d, src = r}) =
-		not (d = r)
-      |  isValid (Assem.OPER {oper = (Assem.B, SOME (Assem.AL), flag), ...}) =
-		let val flag = !isPrevBAL
-		in (isPrevBAL := true; not flag)
-		end
-      |  isValid (Assem.OPER{oper = (op1,cond1,flag), dst = dst1, src = src1, jump = jp1}) =
-	      not ( length src1 = 2 andalso (hd dst1 = hd src1) andalso (hd (tl src1) = Assem.NCONST 0) andalso
-		    (op1 = Assem.ADD orelse op1 = Assem.SUB orelse op1 = Assem.LSL orelse
-		     op1 = Assem.LSR orelse op1 = Assem.ASR orelse op1 = Assem.ROR))
-      |  isValid _ = true	       
-  in
-     List.filter isValid stms
-  end;
-
+	(fun_name, fun_type, args1, rm_redundancy stms1, outs1, rs)
+	:: callees()
+  end
 
 fun link prog = 
-
   let
     val (fname, ftype, args, stms, outs, rs) = regAllocation.convert_to_ARM (prog, !numAvaiRegs);
     val _ = (called := Binaryset.add (Binaryset.empty strOrder, fname))
-    val (args1, stms1, outs1) = expand (fname, args, stms, outs, rs)
   in
-    (fname, ftype, args1, rm_redundancy stms1, outs1)
+    expand (fname, ftype, args, stms, outs, rs)
   end;
 
-fun rm_labels stms = 
+fun rm_labels arm = 
   let
     exception label_not_found
     val hashtable : ((string,int) Polyhash.hash_table) =
@@ -463,6 +463,9 @@ fun rm_labels stms =
 
     val index = ref 0;
     
+    val stms = List.foldl (fn ((fname,ftype,args,insts,outs,rs),insts1) => 
+				insts1 @ insts) [] arm;
+
     val new_stms = List.filter (fn (Assem.LABEL {lab = l}) => (
 					Polyhash.insert (hashtable) (Symbol.name l,!index);
 					false)
@@ -476,28 +479,29 @@ fun rm_labels stms =
 	      else (Assem.OPER {oper = op1, dst = d1, src = s1, jump = SOME [Symbol.mkSymbol "-" (!index - k)]});
 	    val _ = index := !index + 1
 	in
-	    new_stm
+	    [new_stm]
 	end
-    | one_stm inst = (index := !index + 1;inst)
+    | one_stm (Assem.LABEL {...}) = []
+    | one_stm inst = (index := !index + 1;[inst])
+
+    fun one_fun (fname,ftype,args,insts,outs,rs) = 
+	(fname, ftype, args, List.foldl (fn (inst,L) => L @ one_stm inst) [] insts, outs, rs)
+
   in
-    (index := 0; List.map one_stm new_stms)
+    (index := 0; List.map one_fun arm)
   end
 
 fun link2 prog =
-  let
-     val (fname, ftype, args, stms, outs) = link prog
-     val stms1 = rm_labels stms;
-     val stms2 = stms1 
-  in
-     (fname, ftype, args, stms2, outs)
-  end
+  rm_labels (link prog);
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
+(* Print ARM programs													*)
 (* ---------------------------------------------------------------------------------------------------------------------*)
+
+val lineNo = ref ~1;
 
 fun printInsts stms = 
-  let val lineNo = ref ~1;
-
+  let 
       fun formatNextLineNo () =
           ( lineNo := !lineNo + 1;
             "  " ^
@@ -511,16 +515,36 @@ fun printInsts stms =
       List.map (fn stm => print ((formatNextLineNo() ^  "  " ^ Assem.formatInst stm) ^ "\n")) stms
   end
 
-fun printarm (fname,ftype,args,stms,outs) =
-   ( print ("Name: " ^ fname ^ "\n");
-     print "Arguments: \n    ";
-     List.map (fn arg => print (Assem.one_exp arg ^ " ")) (Assem.pair2list args);
-     print "\nBody: \n";
-     printInsts stms;
-     print "Return: \n    ";
-     List.map (fn arg => print (Assem.one_exp arg ^ " ")) (Assem.pair2list outs)
-   )
+val print_structure = ref true;
 
+fun printarm progL =
+   let 
+       val _ = lineNo := ~1;
+       fun one_fun flag(fname,ftype,args,stms,outs,rs) = 
+   	 ( 
+	  (if flag then 
+	      ( print "*****************************************************************\n";
+	    	print ("  Name              : " ^ fname ^ "\n");
+     	        print "  Arguments         : ";
+     	        List.map (fn arg => print (Assem.one_exp arg ^ " ")) (Assem.pair2list args);
+	        print "\n  Modified Registers: ";
+                List.map (fn arg => print (Assem.one_exp arg ^ " ")) (Binaryset.listItems rs);
+	        print "\n  Returns           : ";
+                List.map (fn arg => print (Assem.one_exp arg ^ " ")) (Assem.pair2list outs);
+     	        print "\n  Body: \n"
+	      )
+	   else print "");
+     	  printInsts stms
+   	 )
+   in
+      ( one_fun true (hd progL); 
+        List.map (one_fun (!print_structure)) (tl progL)
+      )
+   end
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Compile the environment given by the CPS/ANF compiler                                                                *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun compileEnv (env:(term * (bool * thm * thm * thm)) list) =
      let val _ = List.foldr (fn ((name, (flag,src,anf,cps)), state) =>
@@ -529,6 +553,7 @@ fun compileEnv (env:(term * (bool * thm * thm * thm)) list) =
      in 
 	link2 anf
      end
+
 end (* local structure ... *)
 
 end (* structure *)

@@ -1,4 +1,4 @@
-structure Verify = 
+structure Verify =
 struct
 
 local open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
@@ -32,7 +32,7 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
                   mk_eq (v2,v1)
               end
         in
-           List.foldl (fn (v,p) => mk_conj(p, one_var v)) boolSyntax.T ls_unchanged
+	      List.foldl (fn (v,p) => mk_conj(p, one_var v)) (Term`T`) ls_unchanged
         end
 
     fun mk_pc pc value =
@@ -79,7 +79,7 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 			      assumption,
 			      mk_comb(mk_comb(Term`terminated`, tr_iB), list_mk_pair [pre_pc, pre_cpsr, pre_st])]
 		in
-			mk_conj(mk_eq(mk_comb(Term`w2n`, mk_comb(pre_reg, Term`14`)), #2 (dest_pair (tr_iB))), 
+			mk_conj(mk_eq(mk_comb(pre_reg,Term`14`), mk_comb (Term`n2w`, #2 (dest_pair (tr_iB)))), 
 				assum1)
 		end
 	else 
@@ -94,10 +94,11 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 
 
 (*------------------------------------------------------------------------------------------------------*)
-(* Simulate a ARM program for n steps					                                *)
+(* Upload the instructions into the instruction buffer					                *)
 (*------------------------------------------------------------------------------------------------------*)
 
-val INSTB_LEM : thm ref = ref TRUTH; 
+val INSTB_LEM : (thm ref) = ref (DECIDE (Term`T`)); 
+val cur_insts : (Assem.instr list) ref = ref [];
 
 (* Upload the code to the instruction buffer, store the lemma about this buffer as INSTB_LEM		*) 
 
@@ -119,7 +120,7 @@ fun uploadCode stms =
      val tr_instL = #1 (dest_list stms);
 
      val mk_instB_items = #2 (List.foldl (fn (elm, (i,tr)) =>
-        (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), List.nth(tr_instL, i))))) (0,boolSyntax.T) tr_instL);
+        (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), List.nth(tr_instL, i))))) (0,Term`T`) tr_instL);
 
      val _ = INSTB_LEM := prove (mk_instB_items, EVAL_TAC);
 
@@ -128,6 +129,10 @@ fun uploadCode stms =
   in
      cur_instB
   end
+
+(*------------------------------------------------------------------------------------------------------*)
+(* Simulate a ARM program for n steps                                                                   *)
+(*------------------------------------------------------------------------------------------------------*)
 
 fun simN (fname, ftype, args, stms, outs) n =
   let
@@ -144,10 +149,18 @@ fun simN (fname, ftype, args, stms, outs) n =
 	      )
   end;		
 
-fun simT (fname, ftype, args, stms, outs) =
+(*------------------------------------------------------------------------------------------------------*)
+(* Simulate a ARM program until it terminates                                                           *)
+(*------------------------------------------------------------------------------------------------------*)
+
+fun simT (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts) 
+  =
   let
-     val cur_instB = uploadCode stms;
+     val (fname, ftype, args, stms, outs, rs) = hd arm;
+     val cur_instB = uploadCode insts;
      val cur_byn = #2 (dest_pair cur_instB)
+     val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
+                                		stms1 @ stms) [] arm 
   in
      set_goal ( [],
                 mk_pred true cur_instB
@@ -159,7 +172,260 @@ fun simT (fname, ftype, args, stms, outs) =
               )
   end;
 
+fun simR (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts)
+  =
+  let
+     val (fname, ftype, args, stms, outs, rs) = hd arm;
+     val cur_instB = uploadCode insts;
+     val cur_byn = #2 (dest_pair cur_instB)
+     val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
+                                                stms1 @ stms) [] arm
+  in
+     set_goal ( [Term`!x. ~(x < 0w)`],
+                mk_pred true cur_instB
+                (0, int_of_term cur_byn)
+                (args,outs)
+                []
+                0
+                (mk_const (fname, ftype))
+              )
+  end;
 
+(*------------------------------------------------------------------------------------------------------*)
+(* TACs for simulation									                *)
+(*------------------------------------------------------------------------------------------------------*)
+
+val MOVE_TAC = 
+    REWRITE_TAC [decode1_thm, HD, write_thm, read_thm];
+
+val ARITH_TAC = 
+    REWRITE_TAC [decode1_thm, HD, TL, write_thm, read_thm];
+
+val LOGICAL_TAC = ARITH_TAC
+
+val LDR_TAC = MOVE_TAC
+
+val STR_TAC = 
+    MOVE_TAC;
+
+val [FOLDL_NIL, FOLDL_CONS] = CONJUNCTS FOLDL;
+
+val LDM_TAC = 
+    REWRITE_TAC [decode1_thm] THEN
+    CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
+        THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV 
+		THENC REWRITE_CONV [read_thm]
+        	THENC WORD_CONV
+        	THENC reduceLib.REDUCE_CONV
+        	THENC REWRITE_CONV [write_thm]))))
+    THEN WORD_TAC;
+
+val STM_TAC = 
+    REWRITE_TAC [decode1_thm, REVERSE_DEF, LENGTH, APPEND] THEN
+    CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
+        THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
+                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
+                THENC reduceLib.REDUCE_CONV)))) THEN
+    ASM_REWRITE_TAC [];
+
+val CMP_TAC = 
+     REWRITE_TAC [decode1_thm, read_thm, HD, TL, setS_thm] THEN
+     WORD_TAC THEN ASM_REWRITE_TAC [];       
+
+val BRANCH_TAC = 
+     REWRITE_TAC [getS_thm] THEN WORD_TAC THEN
+     REWRITE_TAC [decode1_thm, read_thm, write_thm, goto_thm, read_pc]
+
+
+val BRANCH_LINK_TAC = 
+     BRANCH_TAC
+
+
+
+fun STOP_TAC defs = 
+    RW_TAC std_ss [run_def, TERRUN_STOP] THEN
+    RW_TAC list_ss ([LET_THM] @ defs) THEN
+    REPEAT (CHANGED_TAC WORD_TAC)
+
+(*------------------------------------------------------------------------------------------------------*)
+(* Automatic reasoning                                                                                  *)
+(*------------------------------------------------------------------------------------------------------*)
+
+(*
+fun get_pc (tassum, tg) = 
+  let   
+      fun toDecode2 t = 
+	  let val (fterm, ts) = 
+		strip_comb t
+	  in 
+	      if same_const fterm (Term`run`) then
+		 int_of_term (hd (strip_pair (List.nth(ts, length ts - 1))))
+	      else toDecode2 (List.nth (ts, length ts - 1))
+	  end
+  in
+	toDecode2 tg
+  end
+*)
+
+fun get_pc (tassum, tg) =
+  let
+      fun found t = 
+	let val (fterm, ts) = strip_comb t in
+	  same_const fterm (Term`run`)
+	end
+      val ts = #2 (strip_comb (find_term found tg)) 
+  in 
+     int_of_term (hd (strip_pair (List.nth(ts, length ts - 1))))
+  end
+
+
+exception tacError;
+
+fun select_tac (Assem.MOVE {...}) = MOVE_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.MRS,cond,flag), ...}) = MOVE_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.MSR,cond,flag), ...}) = MOVE_TAC
+
+ |  select_tac (Assem.OPER {oper = (Assem.ADD,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.SUB,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.RSB,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.MUL,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.MLA,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.LSL,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.LSR,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.ASR,cond,flag), ...}) = ARITH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.ROR,cond,flag), ...}) = ARITH_TAC
+
+ |  select_tac (Assem.OPER {oper = (Assem.CMP,cond,flag), ...}) = CMP_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.TST,cond,flag), ...}) = CMP_TAC
+
+ |  select_tac (Assem.OPER {oper = (Assem.AND,cond,flag), ...}) = LOGICAL_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.ORR,cond,flag), ...}) = LOGICAL_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.EOR,cond,flag), ...}) = LOGICAL_TAC
+
+ |  select_tac (Assem.OPER {oper = (Assem.LDR,cond,flag), ...}) = LDR_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.STR,cond,flag), ...}) = STR_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.LDMFD,cond,flag), ...}) = LDM_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.STMFD,cond,flag), ...}) = STM_TAC
+
+ |  select_tac (Assem.OPER {oper = (Assem.B,cond,flag), ...}) = BRANCH_TAC
+ |  select_tac (Assem.OPER {oper = (Assem.BL,cond,flag), ...}) = BRANCH_LINK_TAC
+
+ |  select_tac _ = raise tacError;
+
+
+fun TAC0 n = 
+  REWRITE_TAC [read_thm] THEN
+  REPEAT STRIP_TAC THEN
+  IMP_RES_TAC (SPEC (term_of_int n) TERRUN_THM) THEN
+  ONCE_ASM_REWRITE_TAC [] THEN
+  POP_ASSUM (K ALL_TAC);
+
+
+val ONE_STEP_TAC =
+  (fn g =>
+     ( let val g1 = hd (#1 (ONCE_ASM_REWRITE_TAC [] g))
+	    val tac1 = select_tac (List.nth(!cur_insts, get_pc g1))
+       in
+	  ( ASM_REWRITE_TAC [] THEN
+	    REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
+            reduceLib.REDUCE_TAC THEN
+	    REWRITE_TAC [decode2_thm] THEN
+	    tac1 THEN REWRITE_TAC [set_pc, write_thm, read_thm] THEN
+	    WORD_TAC THEN
+	    SIMP_TAC bool_ss []
+	  ) g
+       end
+     )
+  );
+
+fun ONE_INST_TAC tac1 =
+  (fn g =>
+     (   ( ASM_REWRITE_TAC [] THEN
+            REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
+            reduceLib.REDUCE_TAC THEN
+            REWRITE_TAC [decode2_thm, decode1_thm] THEN
+            tac1 THEN REWRITE_TAC [set_pc, write_thm, read_thm] THEN
+            WORD_TAC THEN
+            SIMP_TAC bool_ss []
+          ) g
+     )
+  );
+
+
+fun prove_arm defs =
+  let 
+      fun one_step () =
+          let val g1 = hd (#1 (ONCE_ASM_REWRITE_TAC [] (top_goal())))
+              val pc = get_pc g1
+          in
+      	      if pc = length (!cur_insts) then 
+	  	  e (STOP_TAC defs)
+      	      else
+	  	  ( e (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))));
+		    one_step())
+  	  end
+  in
+     ( e (TAC0 (length (!cur_insts)));
+       one_step ()
+     )
+  end 
+
+(*------------------------------------------------------------------------------------------------------*)
+(* Some theorems about words					                                        *)
+(*------------------------------------------------------------------------------------------------------*)
+
+val WORD_IND_LEM = Q.prove (
+ `!v x. (SUC v = w2n x) ==>
+          ((v = w2n (x - 1w)) /\ ~(x = 0w))`,
+   REPEAT STRIP_TAC THENL [
+        `n2w v = x - 1w` by METIS_TAC [w2n_ELIM, SUC_ONE_ADD, ADD_EVAL, WORD_EQ_SUB_RADD, WORD_ADD_COMM] THEN
+                `SUC v < 2 ** WL` by METIS_TAC [w2n_LT] THEN
+                `v < 2 ** WL` by RW_TAC list_ss [LESS_EQ_SUC_REFL] THEN
+                `v MOD 2 ** WL = w2n (x - 1w)` by METIS_TAC [w2n_EVAL, MOD_WL_def] THEN
+                METIS_TAC [LESS_MOD],
+        FULL_SIMP_TAC arith_ss [] THEN
+                NTAC 2 (POP_ASSUM MP_TAC) THEN
+                WORD_TAC THEN
+                RW_TAC arith_ss []]
+   );
+
+(*
+val TAC1 = 
+  (fn g => 
+    (   ONCE_ASM_REWRITE_TAC [] THEN
+  	REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
+  	reduceLib.REDUCE_TAC THEN
+  	REWRITE_TAC ([decode2_def] @ type_rws "option") THEN BETA_TAC THEN
+	REWRITE_TAC (type_rws "COND") THEN
+	REWRITE_TAC ([decode1_def, THE_DEF] @ type_rws "OPERATOR" @ type_rws "EXP") THEN
+	reduceLib.REDUCE_TAC THEN 
+
+	REWRITE_TAC [REVERSE_DEF, LENGTH, APPEND] THEN
+
+        CONV_TAC (ONCE_DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
+	    THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
+                    THENC REWRITE_CONV ([read_def, write_def, STORE_def,pair_case_def] @ type_rws"EXP" @ type_rws "OFFSET")
+                    THENC reduceLib.REDUCE_CONV
+                    THENC DEPTH_CONV GEN_BETA_CONV
+                    THENC reduceLib.REDUCE_CONV
+		    THENC REWRITE_CONV (type_rws "OFFSET")
+		    THENC DEPTH_CONV BETA_CONV
+                    THENC TOP_DEPTH_CONV (REWR_CONV cond_thm)))))
+	THEN ASM_REWRITE_TAC [] THEN
+
+
+  	REWRITE_TAC ([decode1_def, read_def, write_def, STORE_def, setS, getS, 
+                             goto_def, WORD_ADD1, listTheory.HD, listTheory.TL, THE_DEF]
+                @ type_rws "COND" @ type_rws "OFFSET" @ type_rws "COND"
+                @ type_rws "OPERATOR" @ type_rws "EXP" @ type_rws "SRS") THEN
+  	reduceLib.REDUCE_TAC THEN
+	MEM_TAC THEN
+ 
+	REWRITE_TAC [w2n_ELIM, WORD_SUB_ADD] THEN 
+  	WORD_TAC
+    ) g
+  ); 
+*)
 (*------------------------------------------------------------------------------------------------------*)
 (* Find the inputs, outputs and changed registers/memory slots within a segment of code                 *)
 (*------------------------------------------------------------------------------------------------------*)
@@ -272,72 +538,9 @@ fun getIOC prog pc0 n =
 	(ins, changed, outs)
      end
 
+
 *)
-
-(*
-val (tr_iB,(pc1,pc2),(ins,outs), ls_unchanged, n,tr_f) = 
-	(``(instB,2)``, (0,2),(args,outs), [Assem.REG 10], 3,``test0``);
-set_goal ([], mk_pred ``(instB,3)`` (0,3) (args,outs) [] 3 ``test0``);
-*)
-
-(*------------------------------------------------------------------------------------------------------*)
-(* TACs for simulation									                *)
-(*------------------------------------------------------------------------------------------------------*)
-
-val MEM_TAC = 
-  REWRITE_TAC ([write_def, read_pc_def, set_pc_def, read_def] @ type_rws "EXP")
-    THEN BETA_TAC 
-    THEN CONV_TAC 
-          (ONCE_DEPTH_CONV (REWRITE_CONV ([write_def, STORE_def] @ 
-                                 type_rws "EXP" @ type_rws "OFFSET") 
-		  THENC BETA_CONV 
-		  THENC reduceLib.REDUCE_CONV))
-
-fun TAC0 defs = 
-  REWRITE_TAC (defs @ [read_def] @ (type_rws "EXP")) THEN
-  GEN_BETA_TAC
-
-val cond_thm = Q.prove
-(`(if x then p else (if x then q else z)) = (if x then p else z)`,
- RW_TAC std_ss []);
-
-val [FOLDL_NIL, FOLDL_CONS] = CONJUNCTS FOLDL;
-
-val TAC1 = 
-  (fn g => 
-    (   ONCE_ASM_REWRITE_TAC [] THEN
-  	REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
-  	reduceLib.REDUCE_TAC THEN
-  	REWRITE_TAC ([decode2_def] @ type_rws "option") THEN BETA_TAC THEN
-	REWRITE_TAC (type_rws "COND") THEN
-	REWRITE_TAC ([decode1_def, THE_DEF] @ type_rws "OPERATOR" @ type_rws "EXP") THEN
-	reduceLib.REDUCE_TAC THEN 
-
-	REWRITE_TAC [REVERSE_DEF, LENGTH, APPEND] THEN
-
-        CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
-	    THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                    THENC REWRITE_CONV ([read_def, write_def, STORE_def,pair_case_def]@ type_rws"EXP")
-                    THENC reduceLib.REDUCE_CONV
-                    THENC DEPTH_CONV GEN_BETA_CONV
-                    THENC reduceLib.REDUCE_CONV
-		    THENC REWRITE_CONV (type_rws "OFFSET")
-		    THENC DEPTH_CONV BETA_CONV
-                    THENC TOP_DEPTH_CONV (REWR_CONV cond_thm)))))
-	THEN ASM_REWRITE_TAC [] THEN
-
-
-  	REWRITE_TAC ([decode1_def, read_def, write_def, STORE_def, setS_def, getS_def, 
-                             goto_def, WORD_ADD1, listTheory.HD, listTheory.TL, THE_DEF]
-                @ type_rws "COND" @ type_rws "OFFSET" @ type_rws "COND"
-                @ type_rws "OPERATOR" @ type_rws "EXP" @ type_rws "SRS") THEN
-  	reduceLib.REDUCE_TAC THEN
-	MEM_TAC THEN
- 
-	REWRITE_TAC [w2n_ELIM, WORD_SUB_ADD] THEN 
-  	WORD_TAC
-    ) g
-  ); 
 
 end (* local open *)
 end (* structure *)
+
