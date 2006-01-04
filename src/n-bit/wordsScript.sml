@@ -1994,7 +1994,7 @@ val WORD_PRED_THM = store_thm("WORD_PRED_THM",
 
 val sizes = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 32, 64];
 
-fun mk_word_type n =
+fun mk_word_size n =
   let val _ = fcpLib.mk_index_type n
       val sn = Int.toString n
       val TYPE = mk_type("cart", [bool, mk_type("i"^sn, [])])
@@ -2002,7 +2002,7 @@ fun mk_word_type n =
     type_abbrev("word"^sn, TYPE)
   end;
 
-val _ = List.app mk_word_type sizes;
+val _ = List.app mk_word_size sizes;
 
 (* ------------------------------------------------------------------------- *)
 

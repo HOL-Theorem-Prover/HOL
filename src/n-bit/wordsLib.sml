@@ -73,10 +73,10 @@ end;
 
 val _ = add_thms thms computeLib.the_compset;
 
-val mk_index_type = fcpLib.mk_index_type;
+val mk_index_size = fcpLib.mk_index_type;
 
-fun mk_word_type n =
-  let val _ = mk_index_type n
+fun mk_word_size n =
+  let val _ = mk_index_size n
       val sn = Int.toString n
       val TYPE = mk_type("cart", [bool, mk_type("i"^sn, [])])
   in
