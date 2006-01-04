@@ -6,7 +6,7 @@ app load ["Link", "Verify", "preARMSyntax","ANF"];
 
 quietdec := true;
 open Portable Link Assem Verify preARMSyntax preARMTheory word32Theory ANF
-     pairTheory listTheory arithmeticTheory word32Lib;
+     pairTheory listTheory arithmeticTheory word32Lib PairedLambda;
 quietdec := false;
 
 (*---------------------------------------------------------------------------*)

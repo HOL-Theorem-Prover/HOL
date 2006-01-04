@@ -308,7 +308,7 @@ val decode1_def =
 
           CMP -> if read s (HD src) = read s (HD (TL (src))) then
                       (setS 0w SZ, s)
-                 else if read s (HD src) < read s (HD (TL (src))) then
+                 else if read s (HD src) <. read s (HD (TL (src))) then
                       (setS 0w SN, s)
                  else (setS 0w SC, s)
               ||
@@ -352,7 +352,7 @@ val decode1_thm = Q.store_thm
   (decode1 (pc,cpsr,s) (EOR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) # read s (HD (TL src))))) /\
   (decode1 (pc,cpsr,s) (CMP,NONE,src,jump) = (if read s (HD src) = read s (HD (TL src))
                                              then (setS 0w SZ,s)
-                                             else (if read s (HD src) < read s (HD (TL src))
+                                             else (if read s (HD src) <. read s (HD (TL src))
                                                    then (setS 0w SN,s)
                                                    else (setS 0w SC,s)))) /\
   (decode1 (pc,cpsr,s) (TST,NONE,src,jump) = (if read s (HD src) & read s (HD (TL src)) = 0w

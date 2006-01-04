@@ -172,25 +172,6 @@ fun simT (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * 
               )
   end;
 
-fun simR (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts)
-  =
-  let
-     val (fname, ftype, args, stms, outs, rs) = hd arm;
-     val cur_instB = uploadCode insts;
-     val cur_byn = #2 (dest_pair cur_instB)
-     val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
-                                                stms1 @ stms) [] arm
-  in
-     set_goal ( [Term`!x. ~(x < 0w)`],
-                mk_pred true cur_instB
-                (0, int_of_term cur_byn)
-                (args,outs)
-                []
-                0
-                (mk_const (fname, ftype))
-              )
-  end;
-
 (*------------------------------------------------------------------------------------------------------*)
 (* TACs for simulation									                *)
 (*------------------------------------------------------------------------------------------------------*)
@@ -352,7 +333,7 @@ fun ONE_INST_TAC tac1 =
   );
 
 
-fun prove_arm defs =
+fun ARM_TAC defs =
   let 
       fun one_step (asl,g) =
 		(    let val pc = get_pc (asl,g)
@@ -375,7 +356,7 @@ fun prove_arm defs =
 
 val WORD_IND_LEM = Q.prove (
  `!v x. (SUC v = w2n x) ==>
-          ((v = w2n (x - 1w)) /\ ~(x = 0w))`,
+          ((v = w2n (x - 1w)) /\ ~(x = 0w) /\ ~(x <. 0w))`,
    REPEAT STRIP_TAC THENL [
         `n2w v = x - 1w` by METIS_TAC [w2n_ELIM, SUC_ONE_ADD, ADD_EVAL, WORD_EQ_SUB_RADD, WORD_ADD_COMM] THEN
                 `SUC v < 2 ** WL` by METIS_TAC [w2n_LT] THEN
@@ -385,46 +366,14 @@ val WORD_IND_LEM = Q.prove (
         FULL_SIMP_TAC arith_ss [] THEN
                 NTAC 2 (POP_ASSUM MP_TAC) THEN
                 WORD_TAC THEN
-                RW_TAC arith_ss []]
+                RW_TAC arith_ss [],
+	`?n. n2w n <. 0w` by METIS_TAC [word_nchotomy] THEN
+		POP_ASSUM MP_TAC THEN
+		RW_TAC arith_ss [LO_EVAL, MOD_WL_def, ZERO_MOD_WL]
+	]
    );
 
-(*
-val TAC1 = 
-  (fn g => 
-    (   ONCE_ASM_REWRITE_TAC [] THEN
-  	REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
-  	reduceLib.REDUCE_TAC THEN
-  	REWRITE_TAC ([decode2_def] @ type_rws "option") THEN BETA_TAC THEN
-	REWRITE_TAC (type_rws "COND") THEN
-	REWRITE_TAC ([decode1_def, THE_DEF] @ type_rws "OPERATOR" @ type_rws "EXP") THEN
-	reduceLib.REDUCE_TAC THEN 
 
-	REWRITE_TAC [REVERSE_DEF, LENGTH, APPEND] THEN
-
-        CONV_TAC (ONCE_DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
-	    THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                    THENC REWRITE_CONV ([read_def, write_def, STORE_def,pair_case_def] @ type_rws"EXP" @ type_rws "OFFSET")
-                    THENC reduceLib.REDUCE_CONV
-                    THENC DEPTH_CONV GEN_BETA_CONV
-                    THENC reduceLib.REDUCE_CONV
-		    THENC REWRITE_CONV (type_rws "OFFSET")
-		    THENC DEPTH_CONV BETA_CONV
-                    THENC TOP_DEPTH_CONV (REWR_CONV cond_thm)))))
-	THEN ASM_REWRITE_TAC [] THEN
-
-
-  	REWRITE_TAC ([decode1_def, read_def, write_def, STORE_def, setS, getS, 
-                             goto_def, WORD_ADD1, listTheory.HD, listTheory.TL, THE_DEF]
-                @ type_rws "COND" @ type_rws "OFFSET" @ type_rws "COND"
-                @ type_rws "OPERATOR" @ type_rws "EXP" @ type_rws "SRS") THEN
-  	reduceLib.REDUCE_TAC THEN
-	MEM_TAC THEN
- 
-	REWRITE_TAC [w2n_ELIM, WORD_SUB_ADD] THEN 
-  	WORD_TAC
-    ) g
-  ); 
-*)
 (*------------------------------------------------------------------------------------------------------*)
 (* Find the inputs, outputs and changed registers/memory slots within a segment of code                 *)
 (*------------------------------------------------------------------------------------------------------*)
