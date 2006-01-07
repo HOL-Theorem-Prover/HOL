@@ -703,7 +703,7 @@ fun print_mlsexp (out:string->unit) (sym as mlsym(_,_))  =
  | print_mlsexp (out:string->unit) (mlnum(an,ad,bn,bd)) =
     if (bn = "0") andalso (bd = "1")
      then (out an; out "/"; out ad)
-     else (out "(COMPLEX ";
+     else (out "(COMMON-LISP::COMPLEX ";
            out an; out "/"; out ad; 
            out " ";
            out bn; out "/"; out bd; 
