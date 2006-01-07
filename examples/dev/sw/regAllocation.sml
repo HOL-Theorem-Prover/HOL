@@ -868,6 +868,9 @@ fun convert_to_ARM (prog,K) =
     )
   end
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Verification of register allocation on origial program                                                               *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun RewrBody rules body =
  let
@@ -901,6 +904,24 @@ fun check_allocation prog =
      val rw =   (RewrBody (mk_mem_rules (Type `:num`))) o (RewrBody (mk_mem_rules (Type `:word32`))) o
 		(RewrBody (mk_reg_rules (Type `:num`))) o (RewrBody (mk_reg_rules (Type `:word32`)));
 
+     fun replace exp =
+        if is_let exp then
+            let val (lt, rhs) = dest_let exp;
+                val (lhs, rest) = dest_pabs lt
+            in
+                mk_let (mk_pabs(replace lhs, replace rest), replace rhs)
+            end
+        else if is_cond exp then
+            let val (c,t,f) = dest_cond exp
+            in
+                mk_cond (replace c, replace t, replace f)
+            end
+        else if is_pair exp then
+            let val (t1,t2) = dest_pair exp
+            in  mk_pair (replace t1, replace t2)
+            end
+        else rw exp
+
      val (decl,body) =
            dest_eq(concl(SPEC_ALL prog))
            handle HOL_ERR _
@@ -909,12 +930,12 @@ fun check_allocation prog =
      val (f, args) = dest_comb decl;
 
      val newDecl = mk_comb (f, rw args)
-     val newProg = mk_eq(newDecl, rw body)
+     val newProg = mk_eq(newDecl, replace body)
 
   in
     GEN_ALL (prove (
         newProg,
-        RW_TAC list_ss [prog, LET_THM]
+        METIS_TAC [prog, LET_THM]
     ))
   end
 

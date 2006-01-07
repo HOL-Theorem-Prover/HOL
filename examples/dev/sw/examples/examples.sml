@@ -135,7 +135,8 @@ val fact_tac =
     		    2:          sub     fp, ip, #1
         *)
 
-  `?pc' cpsr' regs' mems'. run 3 (instB,16) (pc0,cpsr0,regs0,mems0) = (pc',cpsr',regs',mems')` by METIS_TAC [ABS_PAIR_THM] THEN
+  `?pc' cpsr' regs' mems'. run 3 (instB,16) (pc0,cpsr0,regs0,mems0) = (pc',cpsr',regs',mems')` 
+		by METIS_TAC [ABS_PAIR_THM] THEN
   `terminated (instB,16) (pc',cpsr',regs',mems')` by METIS_TAC [TERMINATED_THM] THEN
   `terRun (instB,16) (0,cpsr0,regs0,mems0) = terRun (instB,16) (pc',cpsr',regs',mems')` by METIS_TAC [TERRUN_THM] THEN
   ASM_REWRITE_TAC [] THEN 
@@ -214,8 +215,8 @@ val fact_tac =
 
         `?pc1 cpsr1 regs1 mems1. run k (instB,16)
                (3,cpsr0, (\k. k = 15 => 3w | k = 11 => 99w | k = 13 => 96w | k = 12 => 100w | regs0 k),
-                (\addr. addr = 97 => regs0 11 | addr = 98 => 100w | addr = 99 => 16w | addr = 100 => 1w | mems0 addr)) = (pc1,cpsr1,regs1,mems1)` 
-			by METIS_TAC [ABS_PAIR_THM] THEN
+                (\addr. addr = 97 => regs0 11 | addr = 98 => 100w | addr = 99 => 16w | addr = 100 => 1w | mems0 addr)) 
+			= (pc1,cpsr1,regs1,mems1)` by METIS_TAC [ABS_PAIR_THM] THEN
 	`terminated (instB,16) (pc1,cpsr1,regs1,mems1)` by METIS_TAC [TERMINATED_THM] THEN
 	FULL_SIMP_TAC list_ss [] THEN
 	`terRun (instB,16) (14,cpsr1,regs1,mems1) =
