@@ -160,8 +160,22 @@ fun mem_write byt n w =
 
 (* ------------------------------------------------------------------------- *)
 
-val ARM_CONV = modelsLib.ARM_CONV;
-val ARM6_CONV = modelsLib.ARM6_CONV;
+val SORT_SUBST_CONV =
+let open armTheory simTheory computeLib
+    fun add_rws f rws =
+      let val cmp_set = f()
+          val _ = add_thms rws cmp_set
+      in cmp_set end
+    val compset = add_rws reduceLib.num_compset
+        [register_EQ_register,register2num_thm,psrs_EQ_psrs,psrs2num_thm,
+         SYM Sa_def,Sab_EQ,Sa_RULE4,Sb_RULE4,Sa_RULE_PSR,Sb_RULE_PSR,
+         combinTheory.o_THM]
+in
+  CBV_CONV compset THENC PURE_REWRITE_CONV [Sa_def,Sb_def]
+end;
+
+val ARM_CONV = modelsLib.ARM_CONV THENC SORT_SUBST_CONV;
+val ARM6_CONV = modelsLib.ARM6_CONV THENC SORT_SUBST_CONV;
 
 local
   val thms = [armTheory.SET_IFMODE_def,armTheory.SET_NZCV_def,
@@ -563,7 +577,7 @@ fun next_state p =
                        (if copro then ``SOME Undef``
                         else ``NONE : interrupts option``),
                        ``data : word32 list`` |-> out]
-               ``(irpt : interrupts option,F,IREG : word32,data : word32 list)``
+               ``(irpt : interrupts option,T,IREG : word32,data : word32 list)``
       val ns = ARM_CONV (subst [``x:state_arm_ex`` |-> get_state p,
                 ``i:interrupts option # bool # word32 # word32 list `` |-> inp]
                 ``NEXT_ARM x i``)
