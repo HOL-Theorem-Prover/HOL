@@ -203,6 +203,46 @@ val collapse_subst = store_thm(
     FULL_SIMP_TAC (srw_ss() ++ COND_elim_ss) [SING_INTER, SUB_THM, lemma14b]
   ]);
 
+
+val x_IN_capt_x = store_thm(
+  "x_IN_capt_x",
+  ``!t. ~(x IN capt x t)``,
+  Induct THEN SRW_TAC [][capt_def]);
+
+val capt_subst2 = prove(
+  ``!t.
+       ~(v IN capt x t) /\ ~(v IN fv t) ==>
+       ~(x IN capt v (subst (var v) x t))``,
+  Induct THEN SRW_TAC [][capt_def, subst_def, fv_def, fv_vsubst] THEN
+  FULL_SIMP_TAC (srw_ss()) []);
+
+val ialpha_sym = store_thm(
+  "ialpha_sym",
+  ``!y t1 t2. ialpha y t1 t2 ==> ?z. ialpha z t2 t1``,
+  HO_MATCH_MP_TAC ialpha_ind THEN SRW_TAC [][] THENL [
+    Cases_on `x = y` THENL [
+      SRW_TAC [][renaming_sanity1] THEN
+      Q.EXISTS_TAC `x` THEN
+      Q_TAC SUFF_TAC `~(x IN fv (subst (var x) x e))` THEN
+            METIS_TAC [ialpha_rules, renaming_sanity1,
+                       pred_setTheory.IN_UNION],
+      `~(x IN fv (subst (var y) x e))`
+          by SRW_TAC [][fv_vsubst] THEN
+      Q_TAC SUFF_TAC `~(x IN capt y (subst (var y) x e))`
+            THEN1 METIS_TAC [renaming_sanity4, ialpha_rules,
+                             pred_setTheory.IN_UNION] THEN
+      SRW_TAC [][capt_subst2]
+    ],
+    METIS_TAC [ialpha_rules],
+    METIS_TAC [ialpha_rules],
+    METIS_TAC [ialpha_rules]
+  ]);
+
+val alpha_sym = store_thm(
+  "alpha_sym",
+  ``alpha x y ==> alpha y x``,
+  METIS_TAC [alpha_def, ialpha_sym]);
+
 val alpha_CONG = store_thm(
   "alpha_CONG",
   ``!t t'. alpha t t' ==>
@@ -524,5 +564,93 @@ val ccbeta_beta_EQ = store_thm(
     SRW_TAC [][O_DEF] THEN
     PROVE_TAC [alpha_collapse, beta_ccbeta]
   ]);
+
+(* ----------------------------------------------------------------------
+    having established this much, confluence results about the
+    quotiented type can be transferred to the raw type
+   ---------------------------------------------------------------------- *)
+
+open diagsTheory
+
+val onto_collapse = store_thm(
+  "onto_collapse",
+  ``onto collapse``,
+  SRW_TAC [][onto_def, collapse_ONTO]);
+
+val skernel_collapse = store_thm(
+  "skernel_collapse",
+  ``skernel alpha collapse``,
+  SRW_TAC [][skernel_def, EQC_alpha_collapse_EQ]);
+
+val scollapse_collapse = store_thm(
+  "scollapse_collapse",
+  ``scollapse alpha collapse``,
+  SRW_TAC [][scollapse_def] THEN
+  METIS_TAC [EQC_alpha_collapse_EQ, EQC_R]);
+
+val Rhomo_collapse = store_thm(
+  "Rhomo_collapse",
+  ``Rhomo collapse beta (compat_closure beta)``,
+  SRW_TAC [][O_DEF, ccbeta_beta_EQ, Rhomo_def] THEN
+  METIS_TAC [EQC_REFL]);
+
+val ARSh_collapse = store_thm(
+  "ARSh_collapse",
+  ``ARSh collapse beta (compat_closure beta)``,
+  SRW_TAC [][ARSh_alt, onto_collapse, Rhomo_collapse]);
+
+val full_collapse = store_thm(
+  "full_collapse",
+  ``full collapse beta (compat_closure beta)``,
+  SRW_TAC [][full_def] THEN
+  `(?a1. b1 = collapse a1) /\ (?a2. b2 = collapse a2)`
+    by METIS_TAC [collapse_ONTO] THEN
+  FULL_SIMP_TAC (srw_ss()) [ccbeta_beta_EQ, O_DEF] THEN
+  METIS_TAC [alpha_collapse]);
+
+
+val ofree_alpha = store_thm(
+  "ofree_alpha",
+  ``ofree alpha``,
+  REWRITE_TAC [ofree_def] THEN
+  HO_MATCH_MP_TAC EQC_INDUCTION THEN REPEAT CONJ_TAC THENL [
+    METIS_TAC [RTC_RULES],
+    METIS_TAC [RTC_RULES],
+    METIS_TAC [TC_RC_EQNS, alpha_sym, symmetric_RC, symmetric_TC,
+               symmetric_def],
+    METIS_TAC [RTC_RTC]
+  ]);
+
+val lrfull_eq_full_lambda = prove(
+  ``lrfull collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta)) =
+    full collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
+  METIS_TAC [onto_collapse, skernel_collapse, ofree_alpha, note_lemma9]);
+
+val lrfull_collapse_RTC = prove(
+  ``lrfull collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
+  REWRITE_TAC [lrfull_eq_full_lambda] THEN
+  METIS_TAC [note_prop10_1, full_collapse, onto_collapse, skernel_collapse,
+             ofree_alpha]);
+
+val Rhomo_collapse_RTC = store_thm(
+  "Rhomo_collapse_RTC",
+  ``Rhomo collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
+  SRW_TAC [][onto_collapse, Rhomo_structure_RTC, Rhomo_collapse,
+             scollapse_collapse]);
+
+val collapse_preserves_diagrams = store_thm(
+  "collapse_preserves_diagrams",
+  ``!Fa G. eval Fa G (\i. RTC (beta RUNION alpha)) =
+           eval Fa G (\i. RTC (compat_closure beta))``,
+  MATCH_MP_TAC diagram_preservation THEN Q.EXISTS_TAC `collapse` THEN
+  SRW_TAC [][lrfull_collapse_RTC, Rhomo_collapse_RTC, onto_collapse]);
+
+val raw_diamond = store_thm(
+  "raw_diamond",
+  ``diamond (RTC (beta RUNION alpha))``,
+  SRW_TAC [][GSYM diamond_eval, collapse_preserves_diagrams] THEN
+  SRW_TAC [][diamond_eval] THEN
+  METIS_TAC [chap3Theory.beta_CR, chap3Theory.CR_def,
+             chap3Theory.reduction_def]);
 
 val _ = export_theory();
