@@ -655,12 +655,9 @@ argument N, sets the trace to that value in particular."
   (hol-toggle-trace "simplifier" arg))
 
 (defun hol-toggle-show-types (arg)
-  "Toggles the global show_types variable. With prefix ARG toggles the related
-variable show_types_verbosely instead."
+  "Toggles the global show_types variable. With prefix ARG sets trace to this value (setting trace to 2, is the same as setting the show_types_verbosely variable)."
   (interactive "P")
-  (if arg
-      (hol-toggle-var "Globals.show_types_verbosely")
-    (hol-toggle-var "Globals.show_types")))
+  (hol-toggle-trace "types" arg))
 
 (defun hol-toggle-show-numeral-types()
   "Toggles the global show_numeral_types variable."
