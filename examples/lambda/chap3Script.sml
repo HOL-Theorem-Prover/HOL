@@ -303,7 +303,6 @@ val beta_alt = store_thm(
 val strong_bvc_term_ind = store_thm(
   "strong_bvc_term_ind",
   ``!P fv. (!s x. P (VAR s) x) /\
-           (!k x. P (CON k) x) /\
            (!M N x. (!x. P M x) /\ (!x. P N x) ==> P (M @@ N) x) /\
            (!v x M. ~(v IN fv x) /\ (!x. P M x) ==> P (LAM v M) x) /\
            (!x. FINITE (fv x)) ==>
