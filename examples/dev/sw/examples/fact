@@ -2,6 +2,8 @@
 (* Factorial (on word32)                                                     *)
 (*---------------------------------------------------------------------------*)
 
+loadPath := ".." :: !loadPath;
+
 use "compiler";
 
 val _ = set_fixity "word_suc" Prefix;   (* correct parse directive *)
@@ -57,21 +59,20 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (* First phase of optimization is carried on this intermedate representation  	*)
 (* Linearizing this tree would give us a sequence of statements          	*)
 (*                                                                       	*)
-(* val fact_args = Tree.PAIR(Tree.TEMP 1, Tree.TEMP 3) : exp	 	    	*)
+(* val fact_args = PAIR(TEMP 1, TEMP 3) : exp	 	    	                *)
 (*                                                                       	*)
 (* val fact_stms =							  	*)
-(*  [Tree.LABEL<symbol>, Tree.MOVE(Tree.TEMP 0, Tree.WCONST 0),	                *)
-(*   Tree.MOVE(Tree.TEMP 2, Tree.RELOP(Tree.EQ, Tree.TEMP 1, Tree.TEMP 0)),	*)
-(*   Tree.CJUMP(Tree.TEMP 2, <symbol>), Tree.MOVE(Tree.TEMP 5, Tree.WCONST 1),	*)
-(*   Tree.MOVE(Tree.TEMP 6, Tree.BINOP(Tree.MINUS, Tree.TEMP 1, Tree.TEMP 5)),	*)
-(*   Tree.MOVE(Tree.TEMP 7, Tree.BINOP(Tree.MUL, Tree.TEMP 1, Tree.TEMP 3)),	*)
-(*   Tree.MOVE(Tree.TEMP 8,							*)
-(*             Tree.CALL(Tree.NAME<symbol>, [Tree.TEMP 6, Tree.TEMP 7])),	*)
-(*   Tree.MOVE(Tree.TEMP 4, Tree.TEMP 8), Tree.JUMP<symbol>,			*)
-(*   Tree.LABEL<symbol>, Tree.MOVE(Tree.TEMP 4, Tree.TEMP 3),			*)
-(*   Tree.LABEL<symbol>] : stm list						*)
+(*  [LABEL<symbol>, MOVE(TEMP 0, WCONST 0),	                                *)
+(*   MOVE(TEMP 2, RELOP(EQ, TEMP 1, TEMP 0)),	                                *)
+(*   CJUMP(TEMP 2, <symbol>), MOVE(TEMP 5, WCONST 1),	                        *)
+(*   MOVE(TEMP 6, BINOP(MINUS, TEMP 1, TEMP 5)),	                        *)
+(*   MOVE(TEMP 7, BINOP(MUL, TEMP 1, TEMP 3)),	                                *)
+(*   MOVE(TEMP 8, CALL(NAME<symbol>, [TEMP 6, TEMP 7])),	                *)
+(*   MOVE(TEMP 4, TEMP 8), JUMP<symbol>,			                *)
+(*   LABEL<symbol>, MOVE(TEMP 4, TEMP 3),			                *)
+(*   LABEL<symbol>] : stm list						        *)
 (*                                                                       	*)
-(* val fact_outs = Tree.TEMP 4							*)
+(* val fact_outs = TEMP 4							*)
 (*------------------------------------------------------------------------------*)
 
 
@@ -83,24 +84,24 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (* Use and defition information is added for each instruction        		*)
 (* Linearizing this tree would give us a sequence of instructions               *)
 (*                                                                              *)
-(* val fact_args = Assem.PAIR(TEMP 1, TEMP 3) : exp                    		*)
+(* val fact_args = PAIR(TEMP 1, TEMP 3) : exp                    		*)
 (*                                                                              *)
 (* val fact_stms =								*)
-(* [LABEL{lab = <symbol>}, MOVE{dst = TEMP 0, src = Assem.WCONST 0},		*)
-(*   OPER{dst = [TEMP 2], jump = NONE, oper = (Assem.CMP, NONE, false),		*)
+(* [LABEL{lab = <symbol>}, MOVE{dst = TEMP 0, src = WCONST 0},		        *)
+(*   OPER{dst = [TEMP 2], jump = NONE, oper = (CMP, NONE, false),		*)
 (*        src = [TEMP 1, TEMP 0]},						*)
 (*   OPER{dst = [], jump = SOME [<symbol>],					*)
-(*        oper = (Assem.B, SOME Assem.EQ, false), src = [TEMP 2]},		*)
-(*   MOVE{dst = TEMP 5, src = Assem.WCONST 1},					*)
-(*   OPER{dst = [TEMP 6], jump = NONE, oper = (Assem.SUB, NONE, false),		*)
+(*        oper = (B, SOME EQ, false), src = [TEMP 2]},		                *)
+(*   MOVE{dst = TEMP 5, src = WCONST 1},					*)
+(*   OPER{dst = [TEMP 6], jump = NONE, oper = (SUB, NONE, false),		*)
 (*        src = [TEMP 1, TEMP 5]},						*)
-(*   OPER{dst = [TEMP 7], jump = NONE, oper = (Assem.MUL, NONE, false),		*)
+(*   OPER{dst = [TEMP 7], jump = NONE, oper = (MUL, NONE, false),		*)
 (*        src = [TEMP 1, TEMP 3]},						*)
 (*   OPER{dst = [TEMP 8], jump = SOME [<symbol>],				*)
-(*        oper = (Assem.BL, NONE, false), src = [TEMP 6, TEMP 7]},		*)
+(*        oper = (BL, NONE, false), src = [TEMP 6, TEMP 7]},		        *)
 (*   MOVE{dst = TEMP 4, src = TEMP 8},						*)
 (*   OPER{dst = [], jump = SOME [<symbol>],					*)
-(*        oper = (Assem.B, SOME Assem.AL, false), src = []},			*)
+(*        oper = (B, SOME AL, false), src = []},			        *)
 (*   LABEL{lab = <symbol>}, MOVE{dst = TEMP 4, src = TEMP 3},			*)
 (*   LABEL{lab = <symbol>}] 							*)
 (*                                                                              *)
@@ -133,28 +134,28 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (* When there are no sufficient available registers, some temporaries are 	*)
 (* into the memory 								*)  
 (*                                                                           	*)
-(* val args = Assem.PAIR(Assem.REG 0, Assem.REG 1) : exp			*)
+(* val args = PAIR(REG 0, REG 1) : exp			                        *)
 (*                                                                           	*)
 (* val stms =									*)
-(*    [LABEL{lab = <symbol>}, MOVE{dst = Assem.REG 2, src = Assem.WCONST 0},	*)
-(*     OPER{dst = [Assem.REG 2], jump = NONE, oper = (Assem.CMP, NONE, false),	*)
-(*          src = [Assem.REG 0, Assem.REG 2]},					*)
+(*    [LABEL{lab = <symbol>}, MOVE{dst = REG 2, src = WCONST 0},	        *)
+(*     OPER{dst = [REG 2], jump = NONE, oper = (CMP, NONE, false),	        *)
+(*          src = [REG 0, REG 2]},					        *)
 (*     OPER{dst = [], jump = SOME [<symbol>],					*)
-(*          oper = (Assem.B, SOME Assem.EQ, false), src = [Assem.REG 2]},	*)
-(*     MOVE{dst = Assem.REG 2, src = Assem.WCONST 1},				*)
-(*     OPER{dst = [Assem.REG 3], jump = NONE, oper = (Assem.SUB, NONE, false),	*)
-(*          src = [Assem.REG 0, Assem.REG 2]},					*)
-(*     OPER{dst = [Assem.REG 2], jump = NONE, oper = (Assem.MUL, NONE, false),	*)
-(*          src = [Assem.REG 0, Assem.REG 1]},					*)
-(*     OPER{dst = [Assem.REG 0], jump = SOME [<symbol>],			*)
-(*          oper = (Assem.BL, NONE, false), src = [Assem.REG 3, Assem.REG 2]},	*)
-(*     MOVE{dst = Assem.REG 0, src = Assem.REG 0},				*)
+(*          oper = (B, SOME EQ, false), src = [REG 2]},	                        *)
+(*     MOVE{dst = REG 2, src = WCONST 1},				        *)
+(*     OPER{dst = [REG 3], jump = NONE, oper = (SUB, NONE, false),	        *)
+(*          src = [REG 0, REG 2]},					        *)
+(*     OPER{dst = [REG 2], jump = NONE, oper = (MUL, NONE, false),	        *)
+(*          src = [REG 0, REG 1]},					        *)
+(*     OPER{dst = [REG 0], jump = SOME [<symbol>],			        *)
+(*          oper = (BL, NONE, false), src = [REG 3, REG 2]},	                *)
+(*     MOVE{dst = REG 0, src = REG 0},				                *)
 (*     OPER{dst = [], jump = SOME [<symbol>],					*)
-(*          oper = (Assem.B, SOME Assem.AL, false), src = []},			*)
-(*     LABEL{lab = <symbol>}, MOVE{dst = Assem.REG 0, src = Assem.REG 1},	*)
+(*          oper = (B, SOME AL, false), src = []},			        *)
+(*     LABEL{lab = <symbol>}, MOVE{dst = REG 0, src = REG 1},	                *)
 (*     LABEL{lab = <symbol>}] : instr list					*)
 (*                                                                           	*)
-(*  val outs = Assem.REG 0 : exp						*)
+(*  val outs = REG 0 : exp						        *)
 (*                                                                           	*)
 (* Here's a more readable rendering:                                         	*)
 (*                                                                           	*)
@@ -208,39 +209,39 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (*                                                                              *)
 (* val arm_fact =								*) 
 (*  [("fact", ``:word32 # word32 -> word32``,					*)
-(*     Assem.PAIR(Assem.REG 0, Assem.REG 1),					*)
-(*     [LABEL{lab = <symbol>}, MOVE{dst = Assem.REG 12, src = Assem.REG 13},	*)
-(*      OPER{dst = [Assem.WREG 13], jump = NONE,				*)
-(*           oper = (Assem.STMFD, NONE, false),					*)
-(*           src = [Assem.REG 11, Assem.REG 12, Assem.REG 14, Assem.REG 15]},	*)
-(*      OPER{dst = [Assem.REG 11], jump = NONE, oper = (Assem.SUB, NONE, false),*)
-(*           src = [Assem.REG 12, Assem.NCONST 1]}, LABEL{lab = <symbol>},	*)
-(*      MOVE{dst = Assem.REG 2, src = Assem.WCONST 0},				*)
-(*      OPER{dst = [Assem.REG 2], jump = NONE, oper = (Assem.CMP, NONE, false),	*)
-(*           src = [Assem.REG 0, Assem.REG 2]},					*)
+(*     PAIR(REG 0, REG 1),					                *)
+(*     [LABEL{lab = <symbol>}, MOVE{dst = REG 12, src = REG 13},	        *)
+(*      OPER{dst = [WREG 13], jump = NONE,				        *)
+(*           oper = (STMFD, NONE, false),					*)
+(*           src = [REG 11, REG 12, REG 14, REG 15]},	                        *)
+(*      OPER{dst = [REG 11], jump = NONE, oper = (SUB, NONE, false),            *)
+(*           src = [REG 12, NCONST 1]}, LABEL{lab = <symbol>},	                *)
+(*      MOVE{dst = REG 2, src = WCONST 0},				        *)
+(*      OPER{dst = [REG 2], jump = NONE, oper = (CMP, NONE, false),	        *)
+(*           src = [REG 0, REG 2]},					        *)
 (*      OPER{dst = [], jump = SOME [<symbol>],					*)
-(*           oper = (Assem.B, SOME Assem.EQ, false), src = [Assem.REG 2]},	*)
-(*      MOVE{dst = Assem.REG 2, src = Assem.WCONST 1},				*)
-(*      OPER{dst = [Assem.REG 3], jump = NONE, oper = (Assem.SUB, NONE, false),	*)
-(*           src = [Assem.REG 0, Assem.REG 2]},					*)
-(*      OPER{dst = [Assem.REG 2], jump = NONE, oper = (Assem.MUL, NONE, false),	*)
-(*           src = [Assem.REG 0, Assem.REG 1]},					*)
-(*      OPER{dst = [Assem.WREG 13], jump = NONE,				*)
-(*           oper = (Assem.STMFD, NONE, false),					*)
-(*           src = [Assem.REG 3, Assem.REG 2]},					*)
-(*      OPER{dst = [Assem.REG 0, Assem.REG 1], jump = NONE,			*)
-(*           oper = (Assem.LDMFD, NONE, false), src = [Assem.REG 13]},		*)
-(*      OPER{dst = [Assem.REG 13], jump = NONE, oper = (Assem.ADD, NONE, false),*)
-(*           src = [Assem.REG 13, Assem.NCONST 2]},				*)
+(*           oper = (B, SOME EQ, false), src = [REG 2]},                        *)
+(*      MOVE{dst = REG 2, src = WCONST 1},				        *)
+(*      OPER{dst = [REG 3], jump = NONE, oper = (SUB, NONE, false),	        *)
+(*           src = [REG 0, REG 2]},					        *)
+(*      OPER{dst = [REG 2], jump = NONE, oper = (MUL, NONE, false),	        *)
+(*           src = [REG 0, REG 1]},					        *)
+(*      OPER{dst = [WREG 13], jump = NONE,				        *)
+(*           oper = (STMFD, NONE, false),					*)
+(*           src = [REG 3, REG 2]},				        	*)
+(*      OPER{dst = [REG 0, REG 1], jump = NONE,			                *)
+(*           oper = (LDMFD, NONE, false), src = [REG 13]},		        *)
+(*      OPER{dst = [REG 13], jump = NONE, oper = (ADD, NONE, false),            *)
+(*           src = [REG 13, NCONST 2]},				                *)
 (*      OPER{dst = [], jump = SOME [<symbol>],					*)
-(*           oper = (Assem.B, SOME Assem.AL, false), src = []},			*)
-(*      LABEL{lab = <symbol>}, MOVE{dst = Assem.REG 0, src = Assem.REG 1},	*)
+(*           oper = (B, SOME AL, false), src = []},			        *)
+(*      LABEL{lab = <symbol>}, MOVE{dst = REG 0, src = REG 1},	                *)
 (*      LABEL{lab = <symbol>},							*)
-(*      OPER{dst = [Assem.REG 13], jump = NONE, oper = (Assem.SUB, NONE, false),*)
-(*           src = [Assem.REG 11, Assem.NCONST 3]},				*)
-(*      OPER{dst = [Assem.REG 11, Assem.REG 13, Assem.REG 15], jump = NONE,	*)
-(*           oper = (Assem.LDMFD, NONE, false), src = [Assem.REG 13]}],		*)
-(*      Assem.REG 0, <set>)]							*)
+(*      OPER{dst = [REG 13], jump = NONE, oper = (SUB, NONE, false),            *)
+(*           src = [REG 11, NCONST 3]},				                *)
+(*      OPER{dst = [REG 11, REG 13, REG 15], jump = NONE,	                *)
+(*           oper = (LDMFD, NONE, false), src = [REG 13]}],		        *)
+(*      REG 0, <set>)]							        *)
 (*										*)
 (* Here's a more readable rendering:                                            *)
 (*                                                                              *)
@@ -308,8 +309,8 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (*										*)
 (* If print in capital letters and without register alias                       *)
 (*										*)
-(* - Assem.use_alias := false;							*)
-(* - Assem.use_capital := true;							*)
+(* - use_alias := false;							*)
+(* - use_capital := true;							*)
 (* *****************************************************************		*)
 (*  Name              : fact							*)
 (*  Arguments         : R0 R1							*)
@@ -400,31 +401,55 @@ val instB_thm = Q.prove
   (instB 11 = ((ADD,NONE,F),SOME (REG 13),[REG 13; NCONST 2],NONE)) /\
   (instB 12 = ((B,SOME AL,F),NONE,[],SOME (NEG 9))) /\
   (instB 13 = ((MOV,NONE,F),SOME (REG 0),[REG 1],NONE)) /\
-  (instB 14 = ((SUB,NONE,F),SOME (REG 13),[REG 11; NCONST 5],NONE)) /\
+  (instB 14 = ((SUB,NONE,F),SOME (REG 13),[REG 11; NCONST 3],NONE)) /\
   (instB 15 = ((LDMFD,NONE,F),SOME (REG 13), [REG 11; REG 13; REG 15],SOME INR))`
  ,
  REPEAT CONJ_TAC THEN EVAL_TAC); 
 
+open BasicProvers;
 
 (*---------------------------------------------------------------------------*)
 (* The proof by simulation                                    		     *)
 (* It goes by inducting on the first argument whose value is stored in r0    *)
 (*---------------------------------------------------------------------------*)
 
-  REWRITE_TAC [read_thm] THEN
-  REPEAT STRIP_TAC THEN
+ SIMP_TAC list_ss [read_thm] THEN REPEAT STRIP_TAC 
+ THEN  (*  Process the first three instructions :
+            0:   mov     ip, sp
+            1:   stmfd   sp!, {fp,ip,lr,pc}
+            2:   sub     fp, ip, #1           *)
+ `?pc' cpsr' regs' mems'. 
+     run 3 (instB,16) (0,cpsr0,regs0,mems0) = (pc',cpsr',regs',mems')`
+   by METIS_TAC [ABS_PAIR_THM] THEN
+ `terRun (instB,16) (0,cpsr0,regs0,mems0) = 
+  terRun (instB,16) (pc',cpsr',regs',mems')` 
+     by METIS_TAC [TERMINATED_THM,TERRUN_THM]
+ THEN POP_ASSUM SUBST_ALL_TAC
+ THEN POP_ASSUM MP_TAC
+ THEN NTAC 3 ONE_STEP_TAC
+ 
 
-        (*  Process the first three instructions :
-                    0:          mov     ip, sp
-                    1:          stmfd   sp!, {fp,ip,lr,pc}
-                    2:          sub     fp, ip, #1
-        *)
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
-  `?pc' cpsr' regs' mems'. run 3 (instB,16) (pc0,cpsr0,regs0,mems0) = (pc',cpsr',regs',mems')`
-                by METIS_TAC [ABS_PAIR_THM] THEN
-  `terminated (instB,16) (pc',cpsr',regs',mems')` by METIS_TAC [TERMINATED_THM] THEN
-  `terRun (instB,16) (0,cpsr0,regs0,mems0) = terRun (instB,16) (pc',cpsr',regs',mems')` by METIS_TAC [TERRUN_THM] THEN
-  ASM_REWRITE_TAC [] THEN
+
+ REWRITE_TAC [read_thm] THEN REPEAT STRIP_TAC 
+ THEN
+
+ (*  Process the first three instructions :
+          0:          mov     ip, sp
+          1:          stmfd   sp!, {fp,ip,lr,pc}
+          2:          sub     fp, ip, #1
+ *)
+
+ `?pc' cpsr' regs' mems'. 
+       run 3 (instB,16) (pc0,cpsr0,regs0,mems0) = (pc',cpsr',regs',mems')`
+     by METIS_TAC [ABS_PAIR_THM] THEN
+  `terminated (instB,16) (pc',cpsr',regs',mems')` 
+     by METIS_TAC [TERMINATED_THM] THEN
+  `terRun (instB,16) (0,cpsr0,regs0,mems0) = 
+   terRun (instB,16) (pc',cpsr',regs',mems')` 
+     by METIS_TAC [TERRUN_THM] THEN
+  ASM_REWRITE_TAC []	 THEN
 
   Q.PAT_ASSUM `run 3 (instB,16) x = y` MP_TAC THEN
   NTAC 3 ONE_STEP_TAC THEN
@@ -434,31 +459,47 @@ val instB_thm = Q.prove
   FULL_SIMP_TAC std_ss [] THEN
   NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN
 
-       (*  Process the recursive body                  *)
+ (*  Now process the recursive body *)
 
-  `!cpsr mems. ?k. let (pc',cpsr',regs',mems') = run k (instB,16) (3,cpsr,
-                                (\k. k = 15 => 3w | k = 11 => 99w | k = 13 => 96w | k = 12 => 100w | regs0 k), mems) in
-                                (pc' = 14) /\  (regs' 0 = f6(regs0 0,regs0 1)) /\
-                                (regs' 11 = 99w) /\ (regs' 12 = 100w) /\ (regs' 13 = 96w)` by ALL_TAC THENL [
+  `!cpsr mems. 
+   ?k. let (pc',cpsr',regs',mems') = 
+           run k (instB,16) (3,cpsr,
+                            (\k. k = 15 => 3w | 
+                                 k = 11 => 99w | 
+                                 k = 13 => 96w | 
+                                 k = 12 => 100w | regs0 k), mems) 
+       in
+          (pc' = 14) /\  
+          (regs' 0 = fact(regs0 0,regs0 1)) /\
+          (regs' 11 = 99w) /\ 
+          (regs' 12 = 100w) /\ 
+          (regs' 13 = 96w)` by ALL_TAC THENL [
 
         NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN
         Induct_on `w2n (regs0 0)` THEN REPEAT STRIP_TAC THENL [
 
-                (* Basic case                                   *)
+                (* Base case *)
 
                 `regs0 0 = n2w 0` by METIS_TAC [w2n_ELIM] THEN
                 Q.PAT_ASSUM  `0 = i` (K ALL_TAC) THEN
                 Q.EXISTS_TAC `4` THEN
-                NTAC 4 ONE_STEP_TAC THEN REWRITE_TAC [Once f6_def, run_def] THEN
+                NTAC 4 ONE_STEP_TAC THEN REWRITE_TAC [Once fact_def, run_def] THEN
                 RW_TAC list_ss [ABS_PAIR_THM],
 
-                (* Inductive case                                   *)
+                (* Inductive case  *)
 
                 FULL_SIMP_TAC list_ss [GSYM RIGHT_FORALL_IMP_THM] THEN
-                `?pc1 cpsr1 regs1 mems1. run 10 (instB,16) (3,cpsr,(\k. k = 15 => 3w | k = 11 => 99w | k = 13 => 96w | k
-                                        = 12 => 100w | regs0 k),mems) = (pc1,cpsr1,regs1,mems1)`
+                `?pc1 cpsr1 regs1 mems1. 
+                    run 10 (instB,16) 
+                           (3,cpsr,
+                           (\k. k = 15 => 3w | 
+                                k = 11 => 99w | 
+                                k = 13 => 96w |
+                                k = 12 => 100w | regs0 k),mems) 
+                     = (pc1,cpsr1,regs1,mems1)`
                         by METIS_TAC [ABS_PAIR_THM] THEN
-                PAT_ASSUM ``!regs01 cpsr mems.x`` (ASSUME_TAC o Q.SPECL [`regs1`,`cpsr1`,`mems1`]) THEN
+                PAT_ASSUM ``!regs01 cpsr mems.x`` 
+                            (ASSUME_TAC o Q.SPECL [`regs1`,`cpsr1`,`mems1`]) THEN
                 FULL_SIMP_TAC list_ss [GSYM RIGHT_EXISTS_IMP_THM] THEN
 
                 Q.EXISTS_TAC `10 + k` THEN REWRITE_TAC [RUN_THM_1] THEN
@@ -473,14 +514,18 @@ val instB_thm = Q.prove
                 `v = w2n (regs1 0)` by RW_TAC list_ss [] THEN reduceLib.REDUCE_TAC THEN
                 FULL_SIMP_TAC list_ss [ABS_PAIR_THM] THEN
 
-                `(\k1. k1 = 15 => n2w pc1 | k1 = 11 => 99w | k1 = 13 => 96w | k1 = 12 => 100w | regs1 k1) = regs1` by
+                `(\k1. k1 = 15 => n2w pc1 | 
+                       k1 = 11 => 99w | 
+                       k1 = 13 => 96w | 
+                       k1 = 12 => 100w | regs1 k1) 
+                  = regs1` by
                         RW_TAC arith_ss [FUN_EQ_THM] THENL [
                                 NTAC 6 (POP_ASSUM (K ALL_TAC)) THEN RW_TAC arith_ss [] THEN
                                 FULL_SIMP_TAC arith_ss [],
 
-                        REWRITE_TAC [Once f6_def] THEN
-                        WORD_TAC THEN
-                        `(regs1 0 = regs0 0 + 4294967295w) /\ (regs1 1 = regs0 0 * regs0 1)` by RW_TAC arith_ss [] THEN
+                        REWRITE_TAC [Once fact_def] THEN WORD_TAC THEN
+                        `(regs1 0 = regs0 0 + 4294967295w) /\ 
+                         (regs1 1 = regs0 0 * regs0 1)` by RW_TAC arith_ss [] THEN
                         FULL_SIMP_TAC list_ss [ABS_PAIR_THM, LET_THM]
                         ]
                 ],
@@ -490,22 +535,29 @@ val instB_thm = Q.prove
                   15:          ldmfd   sp, {fp,sp,pc}
         *)
 
-        POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [LET_THM] o (Q.SPECL [`cpsr0`, `(\addr. addr = 97 => regs0 11
+        POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [LET_THM] o 
+                   (Q.SPECL [`cpsr0`, `(\addr. addr = 97 => regs0 11
                                         | addr = 98 => 100w
-                                        | addr = 99 => 16w | addr = 100 => 1w | mems0 addr)`])) THEN
+                                        | addr = 99 => 16w | 
+                                        addr = 100 => 1w | mems0 addr)`])) THEN
         Q.PAT_ASSUM `terminated (instB,16) (pc0,cpsr0,regs0,mems0)` (K ALL_TAC) THEN
         IMP_RES_TAC (Q.SPEC `k` TERRUN_THM) THEN
         POP_ASSUM (ASSUME_TAC o Q.SPEC `k`) THEN
         ONCE_ASM_REWRITE_TAC [] THEN POP_ASSUM (K ALL_TAC) THEN
 
-        `?pc1 cpsr1 regs1 mems1. run k (instB,16)
-               (3,cpsr0, (\k. k = 15 => 3w | k = 11 => 99w | k = 13 => 96w | k = 12 => 100w | regs0 k),
-                (\addr. addr = 97 => regs0 11 | addr = 98 => 100w | addr = 99 => 16w | addr = 100 => 1w | mems0 addr)) 
-					= (pc1,cpsr1,regs1,mems1)` by METIS_TAC [ABS_PAIR_THM] THEN
+        `?pc1 cpsr1 regs1 mems1. 
+           run k (instB,16)
+               (3,cpsr0, (\k. k = 15 => 3w | k = 11 => 99w | 
+                              k = 13 => 96w | k = 12 => 100w | regs0 k),
+                (\addr. addr = 97 => regs0 11 | addr = 98 => 100w | 
+                        addr = 99 => 16w | addr = 100 => 1w | mems0 addr)) 
+           = (pc1,cpsr1,regs1,mems1)` by METIS_TAC [ABS_PAIR_THM] THEN
         `terminated (instB,16) (pc1,cpsr1,regs1,mems1)` by METIS_TAC [TERMINATED_THM] THEN
         FULL_SIMP_TAC list_ss [] THEN
-        `terRun (instB,16) (14,cpsr1,regs1,mems1) =
-           terRun (instB,16) (run 2 (instB,16) (pc1,cpsr1,regs1,mems1))` by METIS_TAC [TERRUN_THM] THEN
+        `terRun (instB,16) (14,cpsr1,regs1,mems1) 
+           =
+         terRun (instB,16) (run 2 (instB,16) (pc1,cpsr1,regs1,mems1))` 
+          by METIS_TAC [TERRUN_THM] THEN
         ONCE_ASM_REWRITE_TAC [] THEN
         POP_ASSUM (K ALL_TAC) THEN
         NTAC 2 ONE_STEP_TAC THEN
