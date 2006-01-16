@@ -69,7 +69,10 @@ use "example_axioms.lisp.ml";
 (*****************************************************************************)
 val [CAR_CDR_ELIM,CAR_CONS,CDR_CONS,CONS_EQUAL,BOOLEAN_CHARACTERP,
      ZERO,COMMUTATIVITY_OF_BINARY_ADD,DISTRIBUTIVITY,TRICHOTOMY,
-     RATIONAL_IMPLIES2,LOWEST_TERMS,INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME,
+     RATIONAL_IMPLIES2,LOWEST_TERMS,
+     COMPLETION_OF_SYMBOL_NAME, DEFAULT_SYMBOL_NAME, 
+     COMPLETION_OF_SYMBOL_PACKAGE_NAME,
+     INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME,
      SYMBOL_PACKAGE_NAME_PKG_WITNESS_NAME,NIL_IS_NOT_CIRCULAR,
      COMPLETION_OF_BINARY_MULT] = 
  map 
@@ -204,6 +207,70 @@ val RATIONAL_IMPLIES2_AX =
      [FULL_SIMP_TAC arith_ss
       [
        PROVE_TAC[]]);
+*)
+
+val COMPLETION_OF_SYMBOL_NAME =
+ time store_thm
+  ("COMPLETION_OF_SYMBOL_NAME",
+   ``|= ^COMPLETION_OF_SYMBOL_NAME``,
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC[]);
+
+val implies =
+ store_thm
+  ("implies",
+   ``!x y. (|= implies x y) = (|= x) ==> (|= y)``,
+   REPEAT GEN_TAC
+    THEN Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC []
+    THEN PROVE_TAC[]);
+
+val not =
+ store_thm
+  ("not",
+   ``!x. (|= not x) = ~(|= x)``,
+   REPEAT GEN_TAC
+    THEN Cases_on `x`
+    THEN ACL2_SIMP_TAC []
+    THEN PROVE_TAC[]);
+
+(*
+val DEFAULT_SYMBOL_NAME =
+ time store_thm
+  ("DEFAULT_SYMBOL_NAME",
+   ``|= ^DEFAULT_SYMBOL_NAME``,
+   RW_TAC std_ss [implies,not]
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC[]
+    THEN Cases_on `s = ""`
+    THEN ACL2_SIMP_TAC[]
+*)
+
+val COMPLETION_OF_SYMBOL_PACKAGE_NAME =
+ time store_thm
+  ("COMPLETION_OF_SYMBOL_PACKAGE_NAME",
+   ``|= ^COMPLETION_OF_SYMBOL_PACKAGE_NAME``,
+   Cases_on `x` 
+    THEN SIMP_TAC std_ss [symbol_name_def,symbolp_def]
+    THEN SIMP_TAC std_ss [GSYM symbolp_def]
+
+(*
+   Should I try to prove:
+
+    (implies
+      (and (symbolp x)
+           (equal (symbol-package-name x) (symbol-package-name y)))
+      (symbolp y))
+
+... sure, you could try to prove that implication.  Here's a hand
+proof:
+
+From (symbolp x) and the assumption about the package system,
+(symbol-package-name x) != nil.  On the other hand, if (not (symbolp y)), then
+by the axiom completion-of-symbol-package-name, (symbol-package-name y) = nil.
+So we have contradicted the second hypothesis.
+*)
+
 
 (* Proof outline from Matt:
 First, the comment inside the axiom itself (in source file axioms.lisp)
@@ -250,9 +317,9 @@ Then:
 = x
 *)
 
-val INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME _AX =
+val INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME_AX =
  time store_thm
-  ("INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME _AX",
+  ("INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME_AX",
    ``|= ^INTERN_IN_PACKAGE_OF_SYMBOL_SYMBOL_NAME ``,
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[]

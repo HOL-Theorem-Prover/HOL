@@ -956,6 +956,8 @@ fun mlsexp_to_term (sym as mlsym(_,_)) =
             (list_mk_comb(opr,args)
              handle HOL_ERR _ => 
               (print "Can't make term\n";
+               print(mlsexp_to_string p);
+               print "\n";
                err "mlsexp_to_term" "bad mlsexp")) 
             end else
      (print "attempt to translate a non-list to a term\n";
@@ -1013,6 +1015,79 @@ fun MK_DEF_EQ th =
         (fst(strip_abs(rhs(concl(SPEC_ALL th)))))
   else th;
 
+(* Old less general version
+(*****************************************************************************)
+(* Conversion ``(\x. t) y`` --> |- (\x. t) y = let x = y in t                *)
+(*****************************************************************************)
+fun LET_INTRO_CONV tm =
+ if is_comb tm andalso is_abs(rator tm)
+  then GSYM(REWR_CONV LET_THM ``LET ^(rator tm) ^(rand tm)``)
+  else ALL_CONV tm;
+*)
+
+val VACUOUS_LET_PRUNE =
+ prove
+  (``(let x=x in f x) = f x``,
+   RW_TAC std_ss []);
+
+(*****************************************************************************)
+(* Conversion                                                                *)
+(*                                                                           *)
+(* ``(\x1 ... xn. t) y1 .. yn``                                              *)
+(* -->                                                                       *)
+(* |- (\x1 ... xn. t) y1 .. yn = let x1 = y1 in (... (let xn = yn in t) ...) *)
+(*                                                                           *)
+(*****************************************************************************)
+fun LET_INTRO_CONV tm =
+ let val (opr, args) = strip_comb tm
+     val (params,bdy) = strip_abs opr
+     val param_arg_list = filter 
+                           (fn (v1,v2) => not(aconv v1 v2)) 
+                           (zip params args)
+     val let_tm = foldr
+                   (fn ((v,a),t) => ``LET (\^v. ^t) ^a``) 
+                   bdy 
+                   param_arg_list
+     val th1 = DEPTH_CONV (REWR_CONV LET_THM) let_tm
+     val tm' = rhs(concl th1)
+     val th2 = DEPTH_CONV BETA_CONV tm
+     val th3 = DEPTH_CONV BETA_CONV tm'
+ in
+  GSYM(TRANS(TRANS th1 th3)(GSYM th2))
+ end;
+
+(*****************************************************************************)
+(* Rule to introduce let throughout a term                                   *)
+(*****************************************************************************)
+val LET_INTRO = CONV_RULE(RHS_CONV(TOP_DEPTH_CONV LET_INTRO_CONV));
+(*
+val LET_INTRO = CONV_RULE ALL_CONV;
+*)
+
+(*****************************************************************************)
+(* Test if a string only contains letters, numbers, "_" and "-"              *)
+(* and starts with a letter                                                  *)
+(*****************************************************************************)
+fun is_simple_acl2_name s =
+  let val chars = explode s
+  in
+   not(null chars) 
+    andalso Char.isAlpha(hd chars)
+    andalso List.all 
+             (fn c => Char.isAlphaNum c orelse c = #"_" orelse c = #"-" ) 
+             (tl chars)
+  end;
+
+(*****************************************************************************)
+(* Convert a simple ACL2 name to a HOL name by lowering the case of all      *)
+(* letters and converting "-" to "_"                                         *)
+(*****************************************************************************)
+fun convert_acl2_name_to_hol_name s =
+ implode
+  (map
+    (fn c => if c = #"-" then #"_" else Char.toLower c)
+    (explode s));
+
 (*****************************************************************************)
 (* ML datatype to represent defs sent from ACL2                              *)
 (*****************************************************************************)
@@ -1044,8 +1119,34 @@ fun clean_acl2_term tm =
 (*****************************************************************************)
 (* Clean all the free variables in a theorem                                 *)
 (*****************************************************************************)
-fun CLEAN_ACL2_THM th =
+fun CLEAN_ACL2_FREES th =
  INST (map (fn v => v |-> clean_acl2_var v) (thm_frees th)) th;
+
+(*****************************************************************************)
+(* Conversion to clean a bound variable of an abstraction                    *)
+(*****************************************************************************)
+fun CLEAN_ACL2_ALPHA_CONV tm =
+ let val (v,bdy) = dest_abs tm
+     val (vname,vty) = dest_var v
+     val (pkg,nam) = split_acl2_name vname
+ in
+  if pkg = !current_package andalso is_simple_acl2_name nam
+   then ALPHA_CONV 
+         (mk_var(convert_acl2_name_to_hol_name nam, type_of v))
+         tm
+   else ALL_CONV tm
+ end;
+
+(*****************************************************************************)
+(* Conversion to clean all bound variables in a term                         *)
+(*****************************************************************************)
+val CLEAN_ACL2_BOUND_CONV = DEPTH_CONV CLEAN_ACL2_ALPHA_CONV;
+
+(*****************************************************************************)
+(* Rule to clean all variables in a theorem                                  *)
+(*****************************************************************************)
+val CLEAN_ACL2_VARS = 
+ LET_INTRO o CLEAN_ACL2_FREES o CONV_RULE CLEAN_ACL2_BOUND_CONV;
 
 (*****************************************************************************)
 (* Apply def_to_term and then create an acl2def                              *)
@@ -1078,7 +1179,7 @@ fun mk_def d =
             val defun_thm = 
                  save_thm
                   (defun_name,
-                   CLEAN_ACL2_THM
+                   CLEAN_ACL2_VARS
                     (MK_DEF_EQ(mk_oracle_thm(Tag.read "ACL2_DEFUN")([],deftm))))
         in
          defun(defun_name, defun_thm)
@@ -1128,7 +1229,7 @@ local
 fun drop_until_close [] = []              (* drop chars until comment closes *)
  |  drop_until_close (#"*" :: #")" :: l) = l
  |  drop_until_close (c :: l) =  drop_until_close l 
-fun strip_comments [] = []                               (* remove comments *)
+fun strip_comments [] = []                                (* remove comments *)
  |  strip_comments (#"(" :: #"*" :: l) = strip_comments(drop_until_close l)
  |  strip_comments (c :: l) =  c :: strip_comments l 
 fun strip_loc s = implode(strip_comments(explode s))
@@ -1197,7 +1298,6 @@ fun print_acl2_defun_script thy ql name_alist =
       ^ date() ^ " *)\n\n");    
   out "open HolKernel Parse boolLib bossLib;\n";
   out "open stringLib complex_rationalTheory gcdTheory sexp sexpTheory;\n";
-(*out "val _ = (acl2_simps := (!acl2_simps)@(CONJUNCTS ACL2_SIMPS));\n";*)
   out ("val _ = new_theory \"" ^ thy ^ "\";");
   out "\n\n";
   out "val name_alist = \n";
@@ -1212,6 +1312,26 @@ fun print_acl2_defun_script thy ql name_alist =
  end;
 
 (*****************************************************************************)
+(* Apply mk_def and then if the ACL2 name is simple, create the              *)
+(* corresponding HOL name with convert_acl2_name_to_hol_name and overload    *)
+(* this onto the ACL2 name                                                   *)
+(*****************************************************************************)
+fun mk_defun_and_overload mlsexp =
+ let val th =
+      case mk_def mlsexp
+       of defun(_,defth) => defth
+       |   _             => err "simple_mk_defun" "not a defun"
+     val (opr,_) = strip_comb(lhs(concl(SPEC_ALL th)))
+     val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
+     val (pkg,nam) = split_acl2_name opr_name
+     val _ = if (pkg = !current_package) andalso is_simple_acl2_name nam
+              then overload_on(convert_acl2_name_to_hol_name nam,opr)
+              else ()
+ in
+  th
+ end;
+
+(*****************************************************************************)
 (* Apply mk_def and then overload a hol name on the defined constant,        *)
 (* if it is found in a supplied alist                                        *)
 (*****************************************************************************)
@@ -1219,7 +1339,7 @@ fun define_and_overload name_alist mlsexp =
  let val th =
       case mk_def mlsexp
        of defun(_,defth) => defth
-       |   _             => err "new_defuns" "not a defun"
+       |   _             => err "define_and_overload" "not a defun"
      val (opr,_) = strip_comb(lhs(concl(SPEC_ALL th)))
      val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
      val _ = case assoc2 opr_name name_alist
@@ -1228,7 +1348,6 @@ fun define_and_overload name_alist mlsexp =
  in
   th
  end;
-
 
 (*****************************************************************************)
 (* Add theory load time code to restore binding of acl2_simps in theory      *)
