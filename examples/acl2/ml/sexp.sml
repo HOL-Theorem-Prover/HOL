@@ -1015,21 +1015,6 @@ fun MK_DEF_EQ th =
         (fst(strip_abs(rhs(concl(SPEC_ALL th)))))
   else th;
 
-(* Old less general version
-(*****************************************************************************)
-(* Conversion ``(\x. t) y`` --> |- (\x. t) y = let x = y in t                *)
-(*****************************************************************************)
-fun LET_INTRO_CONV tm =
- if is_comb tm andalso is_abs(rator tm)
-  then GSYM(REWR_CONV LET_THM ``LET ^(rator tm) ^(rand tm)``)
-  else ALL_CONV tm;
-*)
-
-val VACUOUS_LET_PRUNE =
- prove
-  (``(let x=x in f x) = f x``,
-   RW_TAC std_ss []);
-
 (*****************************************************************************)
 (* Conversion                                                                *)
 (*                                                                           *)
@@ -1060,9 +1045,6 @@ fun LET_INTRO_CONV tm =
 (* Rule to introduce let throughout a term                                   *)
 (*****************************************************************************)
 val LET_INTRO = CONV_RULE(RHS_CONV(TOP_DEPTH_CONV LET_INTRO_CONV));
-(*
-val LET_INTRO = CONV_RULE ALL_CONV;
-*)
 
 (*****************************************************************************)
 (* Test if a string only contains letters, numbers, "_" and "-"              *)
