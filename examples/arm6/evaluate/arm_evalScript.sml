@@ -24,7 +24,9 @@ val _ = mk_word_size 30;
 
 val _ = type_abbrev("mem", ``:word30->word32``);
 
-val _ = Hol_datatype `state_arme = ARM_EVAL of state_arm=>mem=>bool`;
+val _ = Hol_datatype
+ `state_arme = <| registers : reg; psrs : psr;
+                  memory : mem; undefined : bool |>`;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -58,18 +60,19 @@ val TRANSFERS_def = Define`
    || _ -> TRANSFERS mem data rs)`;
 
 val NEXT_ARMe_def = Define`
-  NEXT_ARMe (ARM_EVAL (ARM reg psr) mem undef) =
-    let pc = FETCH_PC reg in
-    let ireg = mem (ADDR30 pc) in
-    let s = ARM_EX (ARM reg psr) ireg (if undef then undefined else software) in
+  NEXT_ARMe state =
+    let pc = FETCH_PC state.registers in
+    let ireg = state.memory (ADDR30 pc) in
+    let s = ARM_EX (ARM state.registers state.psrs) ireg
+              (if state.undefined then undefined else software) in
     let mrqs = OUT_ARM s in
-    let (str_mem,data) = TRANSFERS mem [] mrqs in
-    let ns = EXEC_INST s NONE data T
-    and (flags,i,f,m) = DECODE_PSR (CPSR_READ psr)
-    in
-      ARM_EVAL ns str_mem
-        (~undef /\ CONDITION_PASSED flags ireg /\
-         DECODE_INST ireg IN {cdp_und; mrc; mcr; stc; ldc})`;
+    let (next_mem,data) = TRANSFERS state.memory [] mrqs
+    and (flags,i,f,m) = DECODE_PSR (CPSR_READ state.psrs)
+    in case EXEC_INST s NONE data T of
+      ARM reg psr -> 
+         <| registers := reg; psrs := psr; memory := next_mem;
+           undefined := (~state.undefined /\ CONDITION_PASSED flags ireg /\
+            DECODE_INST ireg IN {cdp_und; mrc; mcr; stc; ldc}) |>`;
 
 val STATE_ARMe_def = Define`
   (STATE_ARMe 0 s = s) /\
@@ -110,41 +113,24 @@ val SUBST_EQ2 = store_thm("SUBST_EQ2",
 
 (* ------------------------------------------------------------------------- *)
 
-(*
 val ABS_ARMe_def = Define`
-  ABS_ARMe (ARM_EVAL s mem undef) =
-    case s of
-      ARM reg psrs ->
-        ARM_EX s (mem (ADDR30 (FETCH_PC reg)))
-          (if undef then undefined else software)`;
+  ABS_ARMe state  =
+     ARM_EX (ARM state.registers state.psrs)
+       (state.memory (ADDR30 (FETCH_PC state.registers)))
+       (if state.undefined then undefined else software)`;
 
 val ABS_STRMe_def = Define`
   ABS_STRMe a t =
-    case (STATE_ARMe t a, STATE_ARMe (SUC t) a) of
-      (ARM_EVAL (ARM reg0 psr0) mem0 undef0,
-       ARM_EVAL (ARM reg1 psr1) mem1 undef1) ->
-        (if undef1 then SOME Undef else NONE, T, mem1 (ADDR30 (FETCH_PC reg1)),
-         SND (TRANSFERS mem0 [] (OUT_ARM (ABS_ARMe (STATE_ARMe t a)))))`;
+    let s0 = STATE_ARMe t a and s1 = STATE_ARMe (SUC t) a in
+      (if s1.undefined then SOME Undef else NONE, T,
+       s1.memory (ADDR30 (FETCH_PC s1.registers)),
+       SND (TRANSFERS s0.memory [] (OUT_ARM (ABS_ARMe s0))))`;
 
-local
-  val trans = GEN_ALL o SIMP_CONV (srw_ss()) [SNOC,HD,TRANSFERS_def]
-  val TRANSFER_LDR = trans ``TRANSFERS mem [] [MemRead a]``
-  val TRANSFER_STR = trans ``TRANSFERS mem [] [MemWrite B a d]``
-  val TRANSFER_SWP = trans ``TRANSFERS mem [] [MemRead a; MemWrite B a2 d]``
-in
-  val ARMe_CORRECT_TAC =
-    RW_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-      [EXEC_INST_def,NEXT_ARM_def,EXCEPTION_def,PROJ_IF_FLAGS_def,
-       IS_Reset_def,IS_Dabort_def,DECODE_PSR_def,interrupt2exception_def,
-       TRANSFER_LDR,TRANSFER_STR,TRANSFER_SWP,
-       LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def,
-       LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def,
-       SWP_def,DECODE_SWP_def,MLA_MUL_def,DECODE_MLA_MUL_def,
-       MRS_def,DECODE_MRS_def,MSR_def,DECODE_MSR_def,
-       DATA_PROCESSING_def,ADDR_MODE1_def,BRANCH_def,DECODE_BRANCH_def]
-      \\ FULL_SIMP_TAC std_ss [];
-end;
-
+(*
+val trans = GEN_ALL o SIMP_CONV (srw_ss()) [SNOC,HD,TRANSFERS_def]
+val TRANSFER_LDR = trans ``TRANSFERS mem [] [MemRead a]``
+val TRANSFER_STR = trans ``TRANSFERS mem [] [MemWrite B a d]``
+val TRANSFER_SWP = trans ``TRANSFERS mem [] [MemRead a; MemWrite B a2 d]``
 val alu_nchotomy = METIS_PROVE [pairTheory.ABS_PAIR_THM]
   ``!a. ?n z c v r. (a:(bool # bool # bool # bool) # word32) = ((n,z,c,v),r)``;
 
@@ -156,15 +142,48 @@ val ARMe_CORRECT = Count.apply store_thm("ARMe_CORRECT",
   Induct \\ STRIP_TAC \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss)
          [STATE_ARM_def,STATE_ARMe_def,ABS_STRMe_def]
     \\ POP_ASSUM (SUBST1_TAC o SYM o SPEC `a`)
-    \\ Cases_on `STATE_ARMe t a` \\ Cases_on `s`
-    \\ RW_TAC (std_ss++armLib.PBETA_ss++boolSimps.LET_ss)
+    \\ ABBREV_TAC `s = STATE_ARMe t a`
+    \\ ABBREV_TAC `ns = NEXT_ARMe s` \\ POP_ASSUM MP_TAC
+    \\ ABBREV_TAC `ireg = s.memory (ADDR30 (FETCH_PC s.registers))`
+    \\ ABBREV_TAC `mode = DECODE_MODE ((4 >< 0) (CPSR_READ s.psrs))`
+    \\ SIMP_TAC (srw_ss()++armLib.PBETA_ss++boolSimps.LET_ss)
          [IS_Reset_def,IS_Dabort_def,ABS_ARMe_def,OUT_ARM_def,DECODE_PSR_def,
-          NEXT_ARMe_def,NEXT_ARM_def,CONJUNCT1 TRANSFERS_def]
-    \\ NTAC 2 (FULL_SIMP_TAC (srw_ss()) [])
-    \\ MAP_EVERY IMP_RES_TAC [DECODE_INST_LDM,DECODE_INST_STM]
-    \\ ARMe_CORRECT_TAC
-    \\ TRY (PAT_ABBREV_TAC `alu = ALU opc rn op2 c` \\ Cases_on_alu `alu`)
-    \\ ARMe_CORRECT_TAC);
+          NEXT_ARMe_def,NEXT_ARM_def]
+    \\ Cases_on `s.undefined`
+    \\ ASM_SIMP_TAC (srw_ss()) [CONJUNCT1 TRANSFERS_def]
+    << [
+      SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
+             [EXEC_INST_def,EXCEPTION_def]
+        \\ STRIP_TAC \\ UNABBREV_TAC `ns`
+        \\ SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
+             [PROJ_IF_FLAGS_def,interrupt2exception_def],
+       Tactical.REVERSE
+        (Cases_on `CONDITION_PASSED (NZCV (CPSR_READ s.psrs)) ireg`)
+        \\ ASM_SIMP_TAC (srw_ss()) [CONJUNCT1 TRANSFERS_def]
+        << [
+          ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
+                 [EXEC_INST_def,DECODE_PSR_def]
+            \\ STRIP_TAC \\ UNABBREV_TAC `ns`
+            \\ SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
+                 [PROJ_IF_FLAGS_def,interrupt2exception_def],
+          Cases_on `DECODE_INST ireg`
+            \\ MAP_EVERY IMP_RES_TAC [DECODE_INST_LDM,DECODE_INST_STM]
+            \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
+              [EXEC_INST_def,NEXT_ARM_def,EXCEPTION_def,PROJ_IF_FLAGS_def,
+               IS_Reset_def,IS_Dabort_def,DECODE_PSR_def,
+               TRANSFER_LDR,TRANSFER_STR,TRANSFER_SWP,
+               LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def,
+               LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def,
+               SWP_def,DECODE_SWP_def,MLA_MUL_def,DECODE_MLA_MUL_def,
+               MRS_def,DECODE_MRS_def,MSR_def,DECODE_MSR_def,
+               DATA_PROCESSING_def,ADDR_MODE1_def,
+               BRANCH_def,DECODE_BRANCH_def]
+            \\ TRY (PAT_ABBREV_TAC `alu = ALU opc rn op2 c` \\
+                    Cases_on_alu `alu`)
+            \\ STRIP_TAC \\ UNABBREV_TAC `ns`
+            \\ RW_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
+                 [PROJ_IF_FLAGS_def,DECODE_PSR_def,interrupt2exception_def]
+            \\ FULL_SIMP_TAC (srw_ss()) []]]);
 *)
 
 (* ------------------------------------------------------------------------- *)

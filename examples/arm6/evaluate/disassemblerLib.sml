@@ -17,8 +17,8 @@ datatype iclass = swp | mrs | msr | Data_proc of shiftmode | mla_mul |
 
 (* ------------------------------------------------------------------------- *)
 
-val toUpperString = I;
-(* val toUpperString = String.map Char.toUpper; *)
+(* val toUpperString = I; *)
+val toUpperString = String.map Char.toUpper;
 val max_width = 8;
 fun nspaces_string n = funpow n (fn x => x ^ " ") "";
 fun mnemonic s = (toUpperString s) ^ (nspaces_string (max_width - size s))
@@ -60,8 +60,8 @@ fun Rm l = bits 3 0 l;
 fun decode_shift z l = toUpperString(
   case l of
     [0,0] => "lsl"
-  | [0,1] => "lsr"
-  | [1,0] => "asr"
+  | [0,1] => "lsr" ^ (if z then " #32" else "")
+  | [1,0] => "asr" ^ (if z then " #32" else "")
   | [1,1] => if z then "rrx" else "ror"
   | _ => raise HOL_ERR { origin_structure = "disassemlerLib",
                          origin_function = "decode_shift",
@@ -243,7 +243,8 @@ fun decode_data_proc l =
 
 fun decode_mrs l = {R = bit 22 l, Rd = Rd l};
 
-fun decode_msr l = {I = bit 25 l, R = bit 22 l, Rm = Rm l};
+fun decode_msr l =
+  {I = bit 25 l, R = bit 22 l, bit19 = bit 19 l, bit16 = bit 16 l, Rm = Rm l};
 
 fun decode_mla_mul l =
   {A = bit 21 l, S = bit 20 l, Rd = Rn l, Rn = Rd l, Rs = Rs l, Rm = Rm l};
@@ -285,10 +286,9 @@ fun psr_string n =
 fun shift_immediate_string (y:{Imm : int, Rm : int, Sh : string}) =
   register_string (#Rm y) ^
   (let val imm = #Imm y in
-     if imm = 0 then
-        toUpperString (if #Sh y = "rrx" then ", rrx" else "")
+     if (imm = 0) andalso (#Sh y = toUpperString "lsl") then ""
      else
-       ", " ^ (#Sh y) ^ " #" ^ int_to_string imm
+       ", " ^ (#Sh y) ^ (if imm = 0 then "" else " #" ^ int_to_string imm)
    end);
 
 fun branch_string l conds =
@@ -325,13 +325,21 @@ fun msr_string l conds =
       val h = mnemonic ("msr" ^ conds)
   in
     h ^ (if #R dl then "SPSR" else "CPSR") ^
-      (if #I dl then "_f, #" ^ Arbnum.toString (decode_immediate l)
-       else ", " ^ register_string (#Rm dl))
+      (if #bit19 dl andalso not (#bit16 dl) then
+         "_f, "
+       else if not (#bit19 dl) andalso #bit16 dl then
+         "_c, "
+       else
+         ", ") ^
+      (if #I dl then
+         "#" ^ Arbnum.toString (decode_immediate l)
+       else
+         register_string (#Rm dl))
   end;
 
 fun mla_mul_string l conds =
   let val dl = decode_mla_mul l
-      val h = mnemonic ((if #A dl then "MLA" else "MUL") ^ conds ^
+      val h = mnemonic ((if #A dl then "mla" else "mul") ^ conds ^
                 (if #S dl then "S" else ""))
   in
     h ^ register_string (#Rd dl) ^ ", " ^ register_string (#Rm dl) ^ ", " ^
@@ -343,7 +351,7 @@ fun ldr_str_string l conds =
   let val dl = decode_ldr_str l
       val offset =
        (if #I dl then
-          (if not (#U dl) then "-" else "") ^
+          (if not (#U dl) then ", -" else ", ") ^
              shift_immediate_string (decode_immediate_shift (#offset dl))
         else let val n = list2num (#offset dl) in
           if n = Arbnum.zero then "" else
@@ -368,13 +376,13 @@ fun ldm_stm_string l conds =
 
 fun swp_string l conds =
   let val dl = decode_swp l
-      val h = mnemonic ("swp" ^ conds ^ (if #B dl then "B" else ""))
+      val h = mnemonic ("swp" ^ conds ^ (if #B dl then "b" else ""))
   in
     h ^ register_string (#Rd dl) ^ ", " ^ register_string (#Rm dl) ^ ", [" ^
       register_string (#Rn dl) ^ "]"
   end;
 
-fun swi_ex_string conds = mnemonic ("swi" ^ conds);
+fun swi_ex_string conds = toUpperString ("swi" ^ conds);
 
 fun cdp_string l conds = let
   val dl = decode_cdp l

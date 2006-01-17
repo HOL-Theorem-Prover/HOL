@@ -11,12 +11,12 @@ struct
 
 (* interactive use:
   app load ["Unix", "computeLib", "onestepTheory", "modelsLib",
-            "disassemblerLib", "arm_evalTheory"];
+            "disassemblerLib", "arm_evalTheory", "instructionTheory"];
 *)
 
 open HolKernel boolLib bossLib;
 open Parse Q computeLib wordsSyntax rich_listTheory;
-open armTheory arm_evalTheory;
+open armTheory arm_evalTheory bsubstTheory;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -37,7 +37,10 @@ in cmp_set end;
 
 fun arm_eval_compset () = let open simTheory in
   add_rws modelsLib.arm_compset 
-    [ADDR30_def,SET_BYTE_def,BSUBST_EVAL,dimindex_30,finite_30,memop_case_def,
+    [state_arme_accessors, state_arme_updates_eq_literal,
+     state_arme_accfupds, state_arme_fupdfupds, state_arme_literal_11,
+     state_arme_fupdfupds_comp, state_arme_fupdcanon,state_arme_fupdcanon_comp,
+     ADDR30_def,SET_BYTE_def,BSUBST_EVAL,dimindex_30,finite_30,memop_case_def,
      MEM_WRITE_BYTE_def,MEM_WRITE_WORD_def,MEM_WRITE_def,TRANSFERS_def,
      SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARMe_def]
 end;
@@ -72,6 +75,21 @@ end;
 
 val SUBST_EQ_CONV = SIMP_CONV (srw_ss()) [SUBST_EQ2,simTheory.SUBST_EVAL];
 
+val ARM_ASSEMBLE_CONV = let open instructionTheory
+  val compset = add_rws wordsLib.words_compset
+       [transfer_options_accessors,transfer_options_updates_eq_literal,
+        transfer_options_accfupds,transfer_options_fupdfupds,
+        transfer_options_literal_11,transfer_options_fupdfupds_comp,
+        transfer_options_fupdcanon,transfer_options_fupdcanon_comp,
+        condition2num_thm,arm_instruction_case_def,addr_mode1_case_def,
+        addr_mode2_case_def,msr_mode_case_def,condition_encode_def,
+        shift_encode_def,addr_mode1_encode_def,addr_mode2_encode_def,
+        msr_mode_encode_def,msr_psr_encode_def,options_encode_def,
+        instruction_encode_def,combinTheory.K_THM]
+in
+  computeLib.CBV_CONV compset
+end;
+
 val rhsc = rhs o concl;
 
 fun printn s = print (s ^ "\n");
@@ -85,7 +103,7 @@ fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:i32``);
 fun eval_word t = (numSyntax.dest_numeral o rhsc o FOLD_SUBST_CONV o mk_w2n) t;
 
 val subst_tm  = prim_mk_const{Name = ":-",  Thy = "arm"};
-val bsubst_tm = prim_mk_const{Name = "::-", Thy = "sim"};
+val bsubst_tm = prim_mk_const{Name = "::-", Thy = "bsubst"};
 
 fun mk_subst (a,b,m) =
    list_mk_comb(inst[alpha |-> type_of a,beta |-> type_of b] subst_tm,[a,b,m])
@@ -100,16 +118,23 @@ val dest_subst  = dest_triop subst_tm  (ERR "dest_word_slice" "");
 val dest_bsubst = dest_triop bsubst_tm (ERR "dest_word_slice" "");
 
 fun dest_arm_eval t =
-  let val (h,l) = strip_comb t
-      val (h2, l2) = strip_comb (hd l)
-  in
-    if term_eq h ``ARM_EVAL`` andalso term_eq h2 ``ARM`` then
-      case (tl l,l2) of
-        ([m, u], [r, s]) => {mem = m, reg = r, psrs = s, undef = u}
-      | _ => raise ERR "dest_arm_eval" ""
-    else raise ERR "dest_arm_eval" ""
-  end
-  handle HOL_ERR _ => raise ERR "dest_arm_eval" "";
+  case TypeBase.dest_record t of
+     [("registers", reg), ("psrs", psrs),
+      ("memory", mem), ("undefined", undef)] =>
+         {mem = mem, reg = reg, psrs = psrs, undef = undef}
+  | _ => raise ERR "dest_arm_eval" "";
+
+(* ------------------------------------------------------------------------- *)
+
+fun hol_assemble m a l = let
+  val code = map (rhsc o ARM_ASSEMBLE_CONV o
+                  (curry mk_comb ``instruction_encode``) o Term) l
+  val block = listSyntax.mk_list(code,``:word32``)
+in
+  rhsc (SORT_BSUBST_CONV (mk_bsubst(mk_word30 a,block,m)))
+end;
+
+fun hol_assemble1 m a t = hol_assemble m a [t];
 
 (* ------------------------------------------------------------------------- *)
 (* Funtions for memory loading and saving *)
@@ -209,7 +234,8 @@ fun list_mem n m a =
 (* ------------------------------------------------------------------------- *)
 (* Set the general purpose and program status registers *)
 
-val foldl_tm = ``FOLDL (\m (r,v). if v = m r then m else (r :- v) m) x y``;
+val foldl_tm =
+  ``FOLDL (\m (r:'a,v:'b). if v = m r then m else (r :- v) m) x y``;
 
 fun set_registers reg rvs  =
  (rhsc o FOLD_SUBST_CONV o
@@ -229,7 +255,8 @@ fun set_status_registers psr rvs  = (rhsc o
 fun init m r s =
    (PURE_ONCE_REWRITE_CONV [CONJUNCT1 STATE_ARMe_def] o
     subst [``mem:mem`` |-> m, ``reg:reg`` |-> r, ``psr:psr`` |-> s])
-   ``STATE_ARMe 0 (ARM_EVAL (ARM reg psr) mem F)``;
+   ``STATE_ARMe 0 <| registers := reg; psrs :=  psr;
+                     memory := mem; undefined := F |>``;
 
 fun next t =
   let val t1 = rhsc t

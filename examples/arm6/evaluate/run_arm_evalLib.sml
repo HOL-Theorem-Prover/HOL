@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Examples using arm_evalLib                                *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2005                                                      *)
+(* DATE          : 2005-2006                                                 *)
 (* ========================================================================= *)
 
 (* interactive use:
@@ -17,6 +17,54 @@ open arm_evalLib;
 
 val zero = Arbnum.zero;
 val max = valOf Int.maxInt;
+
+(* A selection of instructions, encoded in HOL *)
+
+val l = [
+  `B AL 4w`,
+  `BL EQ ($- 4w)`,
+  `ADD CS F 4w 3w (Dp_immediate 0w 5w)`,
+  `AND VS T 4w 3w (Dp_shift_immediate (LSL 2w) 0w)`,
+  `TST AL 4w (Dp_shift_immediate (LSL 2w) 1w)`,
+  `MOV AL F 4w (Dp_shift_immediate (ASR 2w) 0w)`,
+  `MVN AL T 4w (Dp_shift_immediate (ROR 2w) 0w)`,
+  `RSC AL F 4w 3w (Dp_shift_register (LSL 2w) 1w)`,
+  `MRS AL F 1w`,
+  `MRS AL T 1w`,
+  `MSR AL CPSR_f (Msr_immediate 2w 5w)`,
+  `MSR AL CPSR_c (Msr_immediate 2w 5w)`,
+  `MSR AL SPSR_a (Msr_immediate 2w 5w)`,
+  `MSR AL SPSR_a (Msr_register 5w)`,
+  `MUL AL T 4w 3w 2w`,
+  `MLA AL F 4w 3w 2w 1w`,
+  `LDR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w (Dt_immediate 0w)`,
+  `LDR AL <|Pre := F;Up := F;BS := T;Wb := T|> 4w 3w (Dt_immediate 4w)`,
+  `LDR AL <|Pre := T;Up := T;BS := T;Wb := T|> 4w 3w (Dt_immediate 4w)`,
+  `LDR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w
+          (Dt_shift_immediate (LSL 2w) 0w)`,
+  `LDR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w
+          (Dt_shift_immediate (ROR 2w) 0w)`,
+  `STR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w
+          (Dt_shift_immediate (LSL 2w) 4w)`,
+  `STR AL <|Pre := T;Up := T;BS := T;Wb := T|> 4w 3w
+          (Dt_shift_immediate (LSL 2w) 4w)`,
+  `LDM AL <|Pre := T;Up := T;BS := T;Wb := T|> 4w 0xF0FFw`,
+  `STM AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 0x8000w`,
+  `SWP AL F 3w 2w 1w`,
+  `SWP AL T 3w 2w 1w`,
+  `SWI AL`,
+  `UND AL`
+];
+
+val hol_prog = hol_assemble ``\x:word30. 0w:word32`` zero l;
+
+(* translate into ARM assembly code *)
+
+fun printn s = print (s ^ "\n");
+
+val _ = map printn (disassemble (length l) hol_prog zero);
+
+(* ------------------------------------------------------------------------- *)
 
 (* Assemble a rudimentary exception handler *)
 
@@ -41,7 +89,7 @@ val reg = set_registers ``(\x. 0w):reg``
  ``[(r0,0w);  (r1,0w);  (r2,0w);  (r3,0w);
     (r4,0w);  (r5,0w);  (r6,0w);  (r7,0w);
     (r8,0w);  (r9,0w);  (r10,0w); (r11,0w);
-    (r12,0w); (r13,0w); (r14,0w); (r15,0w);
+    (r12,0w); (r13,0w); (r14,0w); (r15,32w);
     (r8_fiq,0w); (r9_fiq,0w); (r10_fiq,0w); (r11_fiq,0w);
     (r12_fiq,0w); (r13_fiq,0w); (r14_fiq,0w);
     (r13_irq,0w); (r14_irq,0w);
@@ -53,11 +101,19 @@ val reg = set_registers ``(\x. 0w):reg``
 
 val psr = set_status_registers
  ``(\x. SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w)):psr``
- ``[(CPSR,SET_NZCV (F,F,F,F) (SET_IFMODE F F svc 0w))]: (psrs # word32) list``;
+ ``[(CPSR,SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w))]: (psrs # word32) list``;
 
 (* ------------------------------------------------------------------------- *)
 
 (* Testing/Examples *)
+
+val prog = assemble mem (Arbnum.fromInt 8)
+  ["mov r0, #0xFF00",
+   "mov r1, #37",
+   "str r1, [r0], #4",
+   "ldr r2, [r0, #-4]!"];
+
+val res = evaluate max prog reg psr;
 
 val prog1 = assemble1 mem (Arbnum.fromInt 8) "mov r0, #1";
 

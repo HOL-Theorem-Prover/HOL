@@ -4,6 +4,8 @@ sig
 
    val ARMe_CONV            : conv
 
+   val hol_assemble1        : term -> Arbnum.num -> term frag list -> term
+   val hol_assemble         : term -> Arbnum.num -> term frag list list -> term
    val assemble1            : term -> Arbnum.num -> string -> term
    val assemble             : term -> Arbnum.num -> string list -> term
    val disassemble1         : term -> Arbnum.num -> string
