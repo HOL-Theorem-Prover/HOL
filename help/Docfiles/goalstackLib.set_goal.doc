@@ -23,7 +23,7 @@ Fails unless all terms in the goal are of type {bool}.
     1. Incomplete:
          Initial goal:
          (HD [1; 2; 3] = 1) /\ (TL [1; 2; 3] = [2; 3])
-         
+
      : proofs
 }
 
@@ -63,5 +63,5 @@ saved.
 
 
 \SEEALSO
-goalstackLib.b, goalstackLib.backup, goalstackLib.set_backup, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.rotate, goalstackLib.top_goal, goalstackLib.top_thm.
+goalstackLib.b, goalstackLib.backup, goalstackLib.set_backup, goalstackLib.e, goalstackLib.expand, goalstackLib.expandf, goalstackLib.g, goalstackLib.p, goalstackLib.r, goalstackLib.top_goal, goalstackLib.top_thm.
 \ENDDOC
