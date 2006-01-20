@@ -381,11 +381,18 @@ fun toComb def =
 
 val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
+fun is_word_literal tm = 
+  let val (c,args) = strip_comb tm
+      val {Name,Thy,Ty} = dest_thy_const c
+  in Name = "n2w" andalso numSyntax.is_numeral (hd args)
+  end 
+  handle HOL_ERR _ => raise ERR "is_word_literal" "";
+
 fun VAR_LET_CONV M =
- let open pairSyntax
+ let open pairSyntax numSyntax
      val (_,tm) = dest_let M
  in 
-   if is_vstruct tm
+   if is_vstruct tm orelse is_word_literal tm
    then (REWR_CONV LET_THM THENC GEN_BETA_CONV) M
    else raise ERR "VAR_LET_CONV" ""
  end;

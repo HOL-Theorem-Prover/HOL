@@ -6,6 +6,7 @@ loadPath := ".." :: !loadPath;
 
 use "compiler";
 
+open Assem BasicProvers;
 val _ = set_fixity "word_suc" Prefix;   (* correct parse directive *)
 
 (*---------------------------------------------------------------------------*)
@@ -336,7 +337,6 @@ val factoids as [(fact_const,(_,_, fact_anf, fact_ast))] = toANF [] fact_def;
 (*										*)
 (*------------------------------------------------------------------------------*)
 
-
 val fact_arm = compileEnv factoids;
 val _ = printarm fact_arm;
 
@@ -359,20 +359,17 @@ val _ = printarm fact_arm;
 (*                                                                           *)
 (* The final state is computed by terRun and put in (pc1,cpsr1,regs1,mems1)  *)
 (*                                                                           *)
-(*   !pc0 cpsr0 regs0 mems0.                                                 *)
-(*        (w2n (regs0 14) = 16) /\                                           *)
-(*        (regs0 13 = 100w) /\                                               *)
-(*        (pc0 = 0) /\                                                       *)
-(*        terminated (instB,16) (pc0,cpsr0,regs0,mems0)                      *)
-(*       ==>                                                                 *)
-(*        let (pc1,cpsr1,regs1,mems1) =                                      *)
-(*            terRun (instB,16) (pc0,cpsr0,regs0,mems0)                      *)
-(*        in                                                                 *)
-(*           (pc1 = 16) /\                                                   *)
-(*           (read (regs1,mems1) (REG 0)                                     *)
-(*              =                                                            *)
-(*            fact (read (regs0,mems0) (REG 0),                              *)
-(*                  read (regs0,mems0) (REG 1)))                             *)
+(*    (w2n (regs0 14) = 16) /\                                               *)
+(*    (regs0 13 = 100w) /\                                                   *)
+(*    (pc0 = 0) /\                                                           *)
+(*    terminated (instB,16) (pc0,cpsr0,regs0,mems0) /\                       *)
+(*    ((pc1,cpsr1,regs1,mems1) = terRun (instB,16) (pc0,cpsr0,regs0,mems0)   *)
+(*   ==>                                                                     *)
+(*     (pc1 = 16) /\                                                         *)
+(*     (read (regs1,mems1) (REG 0)                                           *)
+(*        =                                                                  *)
+(*      fact (read (regs0,mems0) (REG 0),                                    *)
+(*            read (regs0,mems0) (REG 1)))                                   *)
 (*                                                                           *)
 (*---------------------------------------------------------------------------*)
 
@@ -384,34 +381,177 @@ simT fact_arm_term;  (* create goal and put it into the goalstack *)
 (* Setting up instruction buffer rewrites                                    *)
 (*---------------------------------------------------------------------------*)
 
-val thm = fetch "-" "instB_def";
+*---------------------------------------------------------------------------*)
+(* Setting up instruction buffer rewrites                                    *)
+(*---------------------------------------------------------------------------*)
 
-val instB_thm = Q.prove
-(`(instB 0 = ((MOV,NONE,F),SOME (REG 12),[REG 13],NONE)) /\
-  (instB 1 = ((STMFD,NONE,F),SOME (WREG 13), [REG 11; REG 12; REG 14; REG 15],NONE)) /\
-  (instB 2 = ((SUB,NONE,F),SOME (REG 11),[REG 12; NCONST 1], NONE)) /\
-  (instB 3 = ((MOV,NONE,F),SOME (REG 2),[WCONST 0w],NONE)) /\
-  (instB 4 = ((CMP,NONE,F),NONE,[REG 0; REG 2],NONE)) /\
-  (instB 5 = ((B,SOME EQ,F),NONE,[REG 2],SOME (POS 8))) /\
-  (instB 6 = ((MOV,NONE,F),SOME (REG 2),[WCONST 1w],NONE)) /\
-  (instB 7 = ((SUB,NONE,F),SOME (REG 3), [REG 0; REG 2],NONE)) /\
-  (instB 8 = ((MUL,NONE,F),SOME (REG 2), [REG 0; REG 1],NONE)) /\
-  (instB 9 = ((STMFD,NONE,F),SOME (WREG 13), [REG 3; REG 2],NONE)) /\
-  (instB 10 = ((LDMFD,NONE,F),SOME (REG 13),[REG 0; REG 1],NONE)) /\
-  (instB 11 = ((ADD,NONE,F),SOME (REG 13),[REG 13; NCONST 2],NONE)) /\
-  (instB 12 = ((B,SOME AL,F),NONE,[],SOME (NEG 9))) /\
-  (instB 13 = ((MOV,NONE,F),SOME (REG 0),[REG 1],NONE)) /\
-  (instB 14 = ((SUB,NONE,F),SOME (REG 13),[REG 11; NCONST 3],NONE)) /\
-  (instB 15 = ((LDMFD,NONE,F),SOME (REG 13), [REG 11; REG 13; REG 15],SOME INR))`
- ,
- REPEAT CONJ_TAC THEN EVAL_TAC); 
-
-open BasicProvers;
+val instB_thm = !Verify.INSTB_LEM;
 
 (*---------------------------------------------------------------------------*)
-(* The proof by simulation                                    		     *)
+(* The proof by simulation                                                   *)
 (* It goes by inducting on the first argument whose value is stored in r0    *)
 (*---------------------------------------------------------------------------*)
+
+fun get_pc c =
+let val set_pc_app = rand(last(snd(strip_comb(rhs(fst(dest_imp c))))))
+    val (_,[decode1_app,_]) = strip_comb set_pc_app
+    val (_,[st,i]) = strip_comb decode1_app
+    val (pc,_) = dest_pair st
+in numSyntax.int_of_term pc
+end
+handle HOL_ERR _ => raise ERR "get_pc" "";
+
+fun INSTR_TAC (asl,g) =
+let val i = get_pc g
+in
+  select_tac (List.nth(!cur_insts, i)) (asl,g)
+   handle HOL_ERR _ => raise ERR "INSTR_TAC"
+       ("Unable to select tactic for "^Int.toString i^"-th instruction")
+end;
+
+fun ONE_STEP_TAC x =
+ (REWRITE_TAC [Once run_def, instB_thm] THEN
+  reduceLib.REDUCE_TAC THEN
+  REWRITE_TAC [decode2_thm] THEN
+  INSTR_TAC THEN
+  REWRITE_TAC [set_pc_def, write_thm, read_thm] THEN
+  WORD_TAC THEN
+  SIMP_TAC bool_ss []) x;
+
+val run_compset = word32Lib.word_compset();
+
+val base_run_ss = 
+ let open computeLib pairTheory sumTheory oneTheory optionTheory listTheory
+    val thms' = map lazyfy_thm
+                     [CLOSED_PAIR_EQ, FST, SND,pair_case_thm,
+                     CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM] 
+                 @
+                map lazyfy_thm
+                     [ISL,ISR,OUTL,OUTR,INR_INL_11,
+                      sum_distinct,sum_distinct1,sum_case_def,one_case_def]
+                 @
+                map lazyfy_thm
+                     [NOT_NONE_SOME,NOT_SOME_NONE,SOME_11,
+                      option_case_compute,OPTION_MAP_DEF,
+                      IS_SOME_DEF,IS_NONE_DEF,THE_DEF,
+                      OPTION_JOIN_DEF]
+                 @
+                [APPEND,APPEND_NIL, FLAT, HD, TL,
+                 LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,
+                 EVERY_DEF, ZIP, UNZIP, FILTER, FOLDL, FOLDR,
+                 FOLDL, REVERSE_DEF, EL_compute, ALL_DISTINCT,
+                 computeLib.lazyfy_thm list_case_compute,
+                 list_size_def,FRONT_DEF,LAST_DEF]
+                 @
+                [run_def,decode2_thm, decode1_thm, read_thm, write_thm, 
+                 setS_thm,getS_thm,goto_thm,read_pc_def, set_pc_def]
+ in 
+   add_thms thms' run_compset;
+   std_ss ++ rewrites thms'   
+ end;
+
+fun GEN_RUN_CONV instB_thm =
+  let open computeLib
+      val _ = add_thms [instB_thm] run_compset
+  in CBV_CONV run_compset
+  end;
+
+val RUN_CONV = GEN_RUN_CONV instB_thm;
+
+val run_ss = base_run_ss ++ rewrites [instB_thm];
+
+
+val ZERO_LEM = Q.prove
+(`!x. (w2n x = 0) = (x = 0w)`,
+ GEN_TAC THEN EQ_TAC THEN RW_TAC std_ss [] THENL 
+ [METIS_TAC [w2n_ELIM], WORD_TAC]);
+
+val SUC_LEM = Q.prove
+(`!x m. (w2n x = SUC m) ==> ~(x = 0w) /\ ~(x <. 0w)`,
+ RW_TAC std_ss [WORD_LO_THM] THENL 
+  [METIS_TAC [ZERO_LEM,numTheory.NOT_SUC],WORD_TAC]);
+
+val TERRUN_LEM = Q.prove
+(`!m s s' x.
+    terminated x s /\ (run m x s = s') 
+   ==> 
+    terminated x s' /\ !k. terRun x s' = terRun x (run k x s')`,
+ METIS_TAC [TERRUN_THM,TERMINATED_THM,ABS_PAIR_THM]);
+
+val TERRUN_LEM_1 = Q.prove
+(`!m s s' x.
+    terminated x s /\ (run m x s = s') ==> terminated x s' `,
+ METIS_TAC [TERRUN_LEM]);
+
+val TERRUN_LEM_2 = Q.prove
+(`!k m s s' x.
+    terminated x s /\ (run m x s = s') ==> (terRun x s' = terRun x (run k x s'))`,
+ METIS_TAC [TERRUN_LEM]);
+
+
+(* The following is clumsy, will get cleaned up. *)
+e (RW_TAC list_ss [read_thm]);
+r 1;
+e (POP_ASSUM MP_TAC THEN IMP_RES_THEN SUBST1_TAC (Q.SPEC `3` TERRUN_THM));
+(* slow
+e (ASM_SIMP_TAC run_ss [] THEN WORD_TAC); 
+*)
+(* fast *)
+val tm = rand(rhs(fst(dest_imp(snd(top_goal())))));
+e (MP_TAC (RUN_CONV tm));
+e (ASM_REWRITE_TAC [] THEN WORD_TAC THEN SIMP_TAC bool_ss [] THEN STRIP_TAC);
+
+e (Induct_on `w2n (regs0 0)` THEN REPEAT STRIP_TAC);
+(* Base case *)
+e (POP_ASSUM MP_TAC);
+e (POP_ASSUM (fn runthm =>
+   POP_ASSUM (fn terminatedthm => 
+      SUBST1_TAC (MATCH_MP (Q.SPEC `4` TERRUN_LEM_2) (CONJ terminatedthm runthm))
+   THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm)))));
+
+e (`regs0 0 = n2w 0` by METIS_TAC [w2n_ELIM] THEN Q.PAT_ASSUM  `0 = i` (K ALL_TAC));
+e (ASM_REWRITE_TAC []);
+(*
+e (ASM_SIMP_TAC run_ss [] THEN WORD_TAC);
+e (ASM_SIMP_TAC run_ss [] THEN WORD_TAC);
+*)
+val tm1 = rand(rhs(fst(dest_imp(snd(top_goal())))));
+val th1 = SIMP_RULE std_ss []
+             ((RUN_CONV THENC REWRITE_CONV (map ASSUME (fst(top_goal())))
+               THENC RUN_CONV) tm1);
+expandf (ASSUME_TAC th1);
+
+(* Last two steps *)
+e (POP_ASSUM (fn runthm =>
+   POP_ASSUM (fn regthm => 
+   POP_ASSUM (fn terminatedthm => 
+      SUBST1_TAC (MATCH_MP (Q.SPEC `2` TERRUN_LEM_2) (CONJ terminatedthm runthm))
+   THEN ASSUME_TAC regthm
+   THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm))))));
+val tm2 = rand(rhs(fst(dest_imp(snd(top_goal())))));
+e (PURE_REWRITE_TAC [RUN_CONV tm2]);
+e (RW_TAC list_ss [TERRUN_STOP,Once fact_def]);
+ THEN STRIP_TAC);
+
+(*Step Case*)
+
+e (POP_ASSUM MP_TAC);
+e (POP_ASSUM (fn runthm =>
+   POP_ASSUM (fn terminatedthm => 
+      SUBST1_TAC (MATCH_MP (Q.SPEC `10` TERRUN_LEM_2) (CONJ terminatedthm runthm))
+   THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm)))));
+
+e (`~(regs0 0 = 0w) /\ ~(regs0 0 <. 0w)` by METIS_TAC [SUC_LEM]);
+
+val tm1a = rand(rhs(fst(dest_imp(snd(top_goal())))));
+val th1a = SIMP_RULE std_ss []
+             ((RUN_CONV THENC REWRITE_CONV (map ASSUME (fst(top_goal())))
+               THENC RUN_CONV) tm1a);
+e (NTAC 2 (POP_ASSUM (K ALL_TAC)));
+expandf (PURE_REWRITE_TAC [th1a]);
+
+
+
 
  SIMP_TAC list_ss [read_thm] THEN REPEAT STRIP_TAC 
  THEN  (*  Process the first three instructions :

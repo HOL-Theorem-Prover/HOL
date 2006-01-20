@@ -6,8 +6,8 @@ local open HolKernel Parse boolLib pairLib bossLib
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Definition of types		                                                                                        *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
-structure T = IntMapTable(type key = int 
-				fun getInt n = n);
+
+structure T = IntMapTable(type key = int fun getInt n = n);
 structure S = Binaryset;
 structure G = Graph;
 

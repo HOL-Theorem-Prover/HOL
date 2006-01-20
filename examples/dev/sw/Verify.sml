@@ -2,8 +2,10 @@ structure Verify =
 struct
 
 local open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
-        numSyntax listSyntax
-        pairTheory arithmeticTheory listTheory optionTheory preARMTheory word32Theory
+           numSyntax listSyntax
+           pairTheory arithmeticTheory listTheory optionTheory preARMTheory 
+           word32Theory Assem
+  val ERR = mk_HOL_ERR "Verify"
 in
 
 (*------------------------------------------------------------------------------------------------------*)
@@ -15,8 +17,7 @@ in
 val init_sp = ref 100;
 
 fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
-   let
-
+ let
     exception invalidExp;
 
     fun mk_reads s (Assem.PAIR (e1,e2)) =
@@ -35,8 +36,7 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 	      List.foldl (fn (v,p) => mk_conj(p, one_var v)) (Term`T`) ls_unchanged
         end
 
-    fun mk_pc pc value =
-	mk_eq (pc, term_of_int value);
+    fun mk_pc pc value = mk_eq (pc, term_of_int value);
 
     val (pre_pc, post_pc) = ( mk_var ("pc0", Type `:ADDR`),
 			      mk_var ("pc1", Type `:ADDR`));	
@@ -44,9 +44,9 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 				 mk_var ("cpsr1", Type `:CPSR`));
 
     val (pre_reg, post_reg) = 
-	( mk_var ("regs0", Type `:(ADDR->DATA)`),  mk_var ("regs1", Type `:(ADDR->DATA)`));
+	(mk_var ("regs0", Type `:(ADDR->DATA)`),  mk_var ("regs1", Type `:(ADDR->DATA)`));
     val (pre_mem, post_mem) =
-	( mk_var ("mems0", Type `:(ADDR->DATA)`),  mk_var ("mems1", Type `:(ADDR->DATA)`));
+	(mk_var ("mems0", Type `:(ADDR->DATA)`),  mk_var ("mems1", Type `:(ADDR->DATA)`));
 
     val (pre_st, post_st) = 
 	( mk_pair (pre_reg, pre_mem ),
@@ -55,41 +55,52 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 
     fun mk_outF outs =
 	let 
-	    val outP0 = mk_pc post_pc pc2;							(* pc's values *)
-	    val outP1 = mk_conj(outP0, mk_unchanged pre_st post_st);				(* unchanged values *)
-	    val outP2 = mk_conj(outP1, mk_eq(mk_reads post_st outs, mk_comb (tr_f, mk_reads pre_st ins)));
-												(* equality to the original function *)
+	    val outP0 = mk_pc post_pc pc2;  (* pc's values *)
+            val unch = mk_unchanged pre_st post_st
+	    val outP1 = if unch = boolSyntax.T then outP0
+                        else mk_conj(outP0, unch);  (* unchanged values *)
+	    val outP2 = mk_conj(outP1,     (* equality to the original function *)
+                                mk_eq(mk_reads post_st outs, 
+                                      mk_comb (tr_f, mk_reads pre_st ins)));
 	    val s1 = if runT then
 			mk_comb (mk_comb(Term`terRun`, tr_iB),
-                                        list_mk_pair [pre_pc, pre_cpsr, pre_st])
+                                 list_mk_pair [pre_pc, pre_cpsr, pre_st])
 		     else
 			mk_comb (mk_comb(mk_comb(Term`run`,term_of_int n), tr_iB), 
-					list_mk_pair [pre_pc, pre_cpsr, pre_st]);
+                                 list_mk_pair [pre_pc, pre_cpsr, pre_st]);
 
-	    val outP3 = mk_let(mk_pabs(list_mk_pair [post_pc, post_cpsr, post_st],
-				outP2), s1)
+            val foo = mk_eq(list_mk_pair [post_pc, post_cpsr, post_st],s1)
+(*	    val outP3 = mk_let(mk_pabs(list_mk_pair [post_pc, post_cpsr, post_st],
+				outP2), s1) *)
 	in
-	    outP3
+	    (foo,outP2)
 	end
 
-    val assumption = mk_pc pre_pc pc1;
-    val assumption = if runT then 
-		let val assum1 = 
-			list_mk_conj [mk_eq( mk_comb(pre_reg,Term`13`), mk_comb (Term`n2w`, term_of_int (!init_sp))),
-			      assumption,
-			      mk_comb(mk_comb(Term`terminated`, tr_iB), list_mk_pair [pre_pc, pre_cpsr, pre_st])]
-		in
-			mk_conj(mk_eq(mk_comb(pre_reg,Term`14`), mk_comb (Term`n2w`, #2 (dest_pair (tr_iB)))), 
-				assum1)
-		end
-	else 
-		assumption
+    val assumption0 = mk_pc pre_pc pc1;
+    val assumption = 
+         if runT then 
+           let val assum1 = list_mk_conj 
+                   [mk_eq(mk_comb(pre_reg,Term`13`), 
+                          mk_comb (Term`n2w`, term_of_int (!init_sp))),
+                    assumption0,
+                    mk_comb(mk_comb(Term`terminated`, tr_iB), 
+                            list_mk_pair [pre_pc, pre_cpsr, pre_st])
+                   ]
+           in
+             mk_conj(mk_eq(mk_comb(pre_reg,Term`14`), 
+                           mk_comb (Term`n2w`, #2 (dest_pair (tr_iB)))), 
+                     assum1)
+           end
+	 else 
+           assumption0
 
-    val pred = mk_imp(assumption, mk_outF outs)
+    val (evaluate,post) = mk_outF outs
+    val ant = list_mk_conj (strip_conj assumption @ [evaluate])
+    val pred = mk_imp(ant, post)
 
-   in
-        list_mk_forall( [pre_pc, pre_cpsr, pre_reg, pre_mem], pred)
-   end;
+ in
+   list_mk_forall([pre_pc, pre_cpsr, pre_reg, pre_mem], pred)
+ end;
 
 
 
@@ -120,9 +131,12 @@ fun uploadCode stms =
      val tr_instL = #1 (dest_list stms);
 
      val mk_instB_items = #2 (List.foldl (fn (elm, (i,tr)) =>
-        (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), List.nth(tr_instL, i))))) (0,Term`T`) tr_instL);
+        (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), 
+                                  List.nth(tr_instL, i))))) 
+        (0,boolSyntax.T) tr_instL);
 
-     val _ = INSTB_LEM := prove (mk_instB_items, EVAL_TAC);
+     val _ = INSTB_LEM := REWRITE_RULE [GSYM CONJ_ASSOC]
+                          (prove (mk_instB_items, EVAL_TAC));
 
      val tr_byn = term_of_int (length tr_instL);
      val cur_instB = mk_pair(Term`instB`, tr_byn)
@@ -149,18 +163,18 @@ fun simN (fname, ftype, args, stms, outs) n =
 	      )
   end;		
 
-(*------------------------------------------------------------------------------------------------------*)
-(* Simulate a ARM program until it terminates                                                           *)
-(*------------------------------------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Simulate a ARM program until it terminates                                *)
+(*---------------------------------------------------------------------------*)
 
-fun simT (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts) 
+fun simT (arm:(string*hol_type*exp*instr list*exp*(exp Binaryset.set)) list,
+          insts)
   =
   let
-     val (fname, ftype, args, stms, outs, rs) = hd arm;
-     val cur_instB = uploadCode insts;
+     val (fname, ftype, args, stms, outs, rs) = hd arm
+     val cur_instB = uploadCode insts
      val cur_byn = #2 (dest_pair cur_instB)
-     val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
-                                		stms1 @ stms) [] arm 
+     val _ = cur_insts := List.foldl (fn ((_,_,_,stms,_,_),stms1) => stms1 @ stms) [] arm 
   in
      set_goal ( [],
                 mk_pred true cur_instB
@@ -172,9 +186,9 @@ fun simT (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * 
               )
   end;
 
-(*------------------------------------------------------------------------------------------------------*)
-(* TACs for simulation									                *)
-(*------------------------------------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* TACs for simulation                                                       *)
+(*---------------------------------------------------------------------------*)
 
 val MOVE_TAC = 
     REWRITE_TAC [decode1_thm, HD, write_thm, read_thm];
@@ -491,4 +505,3 @@ fun getIOC prog pc0 n =
 
 end (* local open *)
 end (* structure *)
-

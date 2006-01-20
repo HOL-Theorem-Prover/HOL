@@ -1,3 +1,7 @@
+(* 
+ loadPath := ".." :: !loadPath;
+*)
+
 use "compiler";
 
 (*---------------------------------------------------------------------------*)
@@ -119,8 +123,6 @@ Return:
 	
     simT (mk_ARM arm6);
 
-  simT (mk_ARM arm6),
-
 
   The proof:
 
@@ -147,7 +149,7 @@ val fact_tac =
 
   POP_ASSUM (ASSUME_TAC o SYM) THEN 
   FULL_SIMP_TAC std_ss [] THEN
-  NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN
+  REPEAT VAR_EQ_TAC
 
   	(*  Process the recursive body			*)
 
@@ -189,6 +191,13 @@ val fact_tac =
 		FULL_SIMP_TAC list_ss [ABS_PAIR_THM] THEN 
 
 		`(\k1. k1 = 15 => n2w pc1 | k1 = 11 => 99w | k1 = 13 => 96w | k1 = 12 => 100w | regs1 k1) = regs1` by 
+(*
+REPEAT VAR_EQ_TAC THEN REPEAT (POP_ASSUM (K ALL_TAC))
+THEN SIMP_TAC std_ss [FUN_EQ_THM] 
+THEN GEN_TAC THEN 
+REPEAT (COND_CASES_TAC THEN TRY (VAR_EQ_TAC THEN REDUCE_TAC))
+THEN REWRITE_TAC []
+*)
 			RW_TAC arith_ss [FUN_EQ_THM] THENL [
 				NTAC 6 (POP_ASSUM (K ALL_TAC)) THEN RW_TAC arith_ss [] THEN
 				FULL_SIMP_TAC arith_ss [],  

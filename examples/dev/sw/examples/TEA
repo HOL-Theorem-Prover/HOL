@@ -1,6 +1,3 @@
-...
-
-sdf
 (*---------------------------------------------------------------------------*)
 (* A version of TEA, taken from examples/Crypto/TEA                          *)
 (*---------------------------------------------------------------------------*)
@@ -49,7 +46,9 @@ val Round_def =
        (k0,k1,k2,k3), 
        sum+DELTA)`;
 
-val env2 = toANF env1 Round_def;
+val Round_def' = REWRITE_RULE [DELTA_def] Round_def;
+
+val env2 = toANF env1 Round_def';
 
 val InvRound_def = 
  Define
