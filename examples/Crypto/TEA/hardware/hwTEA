@@ -103,6 +103,27 @@ val (InvRound_def,_,InvRound_cir) =
          sum-0x9e3779b9w)`;
 
 (*---------------------------------------------------------------------------*)
+(* More conventional and readable presentation of the Round and InvRound     *)
+(* functions.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+val RoundThm = Q.prove
+(`Round ((y,z),(k0,k1,k2,k3),sum):state  = 
+    let sum' = sum + 0x9e3779b9w in
+    let t = y + ShiftXor(z,sum',k0,k1)
+    in 
+      ((t, z + ShiftXor(t,sum',k2,k3)), (k0,k1,k2,k3), sum')`,
+ RW_TAC list_ss [Round_def]);
+
+
+val InvRoundThm = Q.prove
+(`InvRound ((y,z),(k0,k1,k2,k3),sum):state  = 
+    let t = z - ShiftXor(y,sum,k2,k3)
+    in 
+      ((y - ShiftXor(t,sum,k0,k1),t), (k0,k1,k2,k3), sum-0x9e3779b9w)`,
+ RW_TAC list_ss [InvRound_def]);
+
+(*---------------------------------------------------------------------------*)
 (* Arbitrary rounds of computation, indexed by word32                        *)
 (*---------------------------------------------------------------------------*)
 
