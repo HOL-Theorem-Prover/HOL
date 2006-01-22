@@ -138,21 +138,31 @@ val (wRounds_def,wRounds_ind) =
 (* Need to extract the totality of the function (should be automatic).       *)
 (*---------------------------------------------------------------------------*)
 
-local
- val defth = SPEC_ALL wRounds_def
- val (lt,rt) = boolSyntax.dest_eq(concl defth)
- val (func,args) = dest_comb lt
- val (b1,t1,t2) = dest_cond rt
- val fb = mk_pabs(args,b1)
- val f1 = mk_pabs(args,t1)
- val f2 = mk_pabs(args,rand t2)
-in
-val Total_wRounds = Q.prove
-(`TOTAL(^fb,^f1,^f2)`,
- RW_TAC list_ss [composeTheory.TOTAL_def] THEN
- WF_REL_TAC `(w2n o FST)` THEN 
- METIS_TAC [WORD_PRED_THM])
-end;
+val total_tm = prim_mk_const{Name="TOTAL",Thy="compose"};
+
+fun mk_total (tm1,tm2,tm3) = 
+ 
+fun getTotal def = 
+ let 
+     val defth = SPEC_ALL def
+     val (lt,rt) = boolSyntax.dest_eq(concl defth)
+     val (func,args) = dest_comb lt
+     val (b1,t1,t2) = dest_cond rt
+     val fb = mk_pabs(args,b1)
+     val f1 = mk_pabs(args,t1)
+     val f2 = mk_pabs(args,rand t2)
+ in
+   mk_total(fb,f1,f2)
+ end
+ handle e as HOL_ERR _ => raise wrap_exn "getTotal" "failed" e;
+
+
+val Total_wRounds = 
+ prove(getTotal wRounds_def,
+   RW_TAC list_ss [composeTheory.TOTAL_def] THEN
+   WF_REL_TAC `(w2n o FST)` THEN 
+   METIS_TAC [WORD_PRED_THM]);
+
 
 (*---------------------------------------------------------------------------*)
 (* Get the "AST" form of the circuit                                         *)
