@@ -389,10 +389,11 @@ fun is_word_literal tm =
   handle HOL_ERR _ => raise ERR "is_word_literal" "";
 
 fun VAR_LET_CONV M =
- let open pairSyntax numSyntax
+ let open pairSyntax 
      val (_,tm) = dest_let M
  in 
    if is_vstruct tm orelse is_word_literal tm
+                    orelse numSyntax.is_numeral tm
    then (REWR_CONV LET_THM THENC GEN_BETA_CONV) M
    else raise ERR "VAR_LET_CONV" ""
  end;

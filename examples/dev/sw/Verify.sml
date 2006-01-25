@@ -127,7 +127,8 @@ fun uploadCode stms =
      val mk_instB_items = #2 (List.foldl (fn (elm, (i,tr)) =>
         (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), List.nth(tr_instL, i))))) (0,Term`T`) tr_instL);
 
-     val _ = INSTB_LEM := prove (mk_instB_items, EVAL_TAC);
+     val _ = INSTB_LEM := REWRITE_RULE[GSYM CONJ_ASSOC]
+                            (prove (mk_instB_items, EVAL_TAC))
 
      val tr_byn = term_of_int (length tr_instL);
      val cur_instB = mk_pair(Term`instB`, tr_byn)
