@@ -1,0 +1,390 @@
+(*---------------------------------------------------------------------------*)
+(*                                   RC6 Block Cipher                        *)
+(*                                        -- implemented in HOL              *)
+(*                                                                           *)
+(* This is a HOL implementation of the RC6 encryption algorithm due to       *)
+(* Ron Rivest and RSA Labs which was a candidate algorithm in the Advanced   *)
+(* Encryption Standard. For detailed information about RC6, please refer to  *)
+(*        http://www.rsasecurity.com/rsalabs/node.asp?id=2512                *)
+(* in which algorithm specification, Security and performance evaluation,    *)
+(* etc. can be found.                                                        *)
+(*                                                                           *)
+(* This file is currently in a mangled state ...                             *)
+(*---------------------------------------------------------------------------*)
+
+
+(*---------------------------------------------------------------------------*)
+(* Make bindings to pre-existing stuff                                       *)
+(*---------------------------------------------------------------------------*)
+
+loadPath := ".." :: 
+            Path.concat(HOLDIR,"examples/dev") ::
+            Path.concat(HOLDIR,"examples/dev/dff") :: !loadPath;
+
+quietdec := true;
+app load ["word32Lib", "compile", "vsynth"];
+open word32Theory word32Lib pairTheory arithmeticTheory compile ;
+quietdec := false;
+
+val ARW_TAC = RW_TAC arith_ss;
+val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
+
+compile.monitor_netlist_construction := true;
+
+fun cirDefine qdef =
+ let val (def,ind,dev) = hwDefine qdef
+ in
+  (def, ind, NEW_MAKE_CIRCUIT(REFINE_ALL dev))
+ end;
+
+(* --------------------------------------------------------------------------*)
+(*  Rotation operators with word32 multiplicities                            *)
+(* --------------------------------------------------------------------------*)
+
+val LeftRotate_def =  Define `LeftRotate x w  = x #<< ((w2n w) MOD WL)`;
+val RightRotate_def = Define `RightRotate x w = x #>> ((w2n w) MOD WL)`;
+                                                                                                                                               
+val _ = 
+  (overload_on ("<<<",``$LeftRotate``); 
+   set_fixity "<<<" (Infixl 625));
+
+val _ = 
+  (overload_on (">>>",``$RightRotate``);
+   set_fixity ">>>" (Infixl 625));
+
+
+(*---------------------------------------------------------------------------*)
+(* Tell the compiler which components are combinational                      *)
+(*---------------------------------------------------------------------------*)
+
+val _ = 
+ add_combinational 
+   ["word_lsl","word_lsr", "bitwise_eor", "LeftShift", "RightShift",
+    "word_mul", "word_add", "word_sub", "n2w","w2n"];
+
+vsynth.AddBinop ("XOR32",   (``UNCURRY $#  : word32#word32->word32``,  "^"));
+vsynth.AddBinop ("MUL32",   (``UNCURRY $*  : word32#word32->word32``,  "*"));
+vsynth.AddBinop ("ADD32",   (``UNCURRY $+  : word32#word32->word32``,  "+"));
+vsynth.AddBinop ("SUB32",   (``UNCURRY $-  : word32#word32->word32``,  "-"));
+vsynth.AddBinop ("EQ32",    (``UNCURRY $=  : word32#word32->bool``,    "=="));
+(* Currently need definition *)
+vsynth.AddBinop ("ROL32",    (``UNCURRY $<<<  : word32#word32->word32``, "ROL"));
+vsynth.AddBinop ("ROR32",    (``UNCURRY $>>>  : word32#word32->word32``, "ROR"));
+
+(*---------------------------------------------------------------------------*)
+(* Type definitions for the cipher                                           *)
+(*---------------------------------------------------------------------------*)
+
+type_abbrev("block", ``:word32 # word32 # word32 # word32``);
+
+type_abbrev("state", ``:word32 # word32 # word32 # word32 # word32 # word32``);
+
+type_abbrev("key",   ``:word32 # word32``);
+
+type_abbrev("keysched",  (* word32 x 44 *)
+        ``:word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+           word32 # word32 # word32 # word32 # word32 # word32 # word32 # 
+           word32 # word32``);
+
+(* --------------------------------------------------------------------------*)
+(*	One round forward computation and one round backward computation     *)
+(* --------------------------------------------------------------------------*)
+
+val (ut_def,_,ut_dev) = 
+ hwDefine
+    `ut x = (x * (x+x + 1w)) <<< 5w`;
+
+val (FwdRound_def,_,FwdRound_dev) = 
+ hwDefine
+    `FwdRound ((a,b,c,d):block,((k0,k1):key)) = 
+      (b, ((c#ut d) <<< ut b) + k1,  
+       d, ((a#ut b) <<< ut d) + k0)`;
+
+val (BwdRound_def,_,BwdRound_dev) = 
+ hwDefine
+    `BwdRound ((a,b,c,d):block,((k0,k1):key)) = 
+	(((d - k0) >>> ut c) # ut a, a,
+	 ((b - k1) >>> ut a) # ut c, c)`;
+
+(*---------------------------------------------------------------------------*)
+(* Rotate keys and get a pair of keys from the head of the key schedule      *)
+(*---------------------------------------------------------------------------*)
+
+val (ROTKEYS_def,_,ROTKEYS_dev) =
+ hwDefine
+   `ROTKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,
+      k13,k14,k15,k16,k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,
+      k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43) 
+    =
+     (k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,
+      k19,k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,
+      k34,k35,k36,k37,k38,k39,k40,k41,k42,k43,k0,k1) : keysched`;
+
+val (GETKEYS_def,_,GETKEYS_dev) =
+ hwDefine
+   `GETKEYS ((k0,k1,_):keysched)  = (k0,k1):key`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Pre-whitening and post-whitening in the encryption and the decryption.    *)
+(*---------------------------------------------------------------------------*)
+
+val (PreWhitening_def,_,PreWhitening_dev) = 
+ hwDefine
+   `PreWhitening ((a,b,c,d):block,(k0,k1)) = (a, b+k0, c, d+k1) : block`;
+
+val (PostWhitening_def,_,PostWhitening_dev) = 
+ hwDefine
+   `PostWhitening  ((a,b,c,d):block,(k0,k1)) = (a+k0, b, c+k1, d) : block`;
+
+val (InvPreWhitening_def,_,InvPreWhitening_dev) =
+ hwDefine
+   `InvPreWhitening ((a,b,c,d):block,(k0,k1)) =  (a-k1, b, c-k0, d) : block`;
+
+val (InvPostWhitening_def,_,InvPostWhitening_dev) = 
+ hwDefine
+   `InvPostWhitening ((a,b,c,d):block,(k0,k1)) = (a, b-k1, c, d-k0) : block`;
+
+(*---------------------------------------------------------------------------*)
+(* Round operations for encryption and decryption                            *)
+(*---------------------------------------------------------------------------*)
+
+val (Rounds_def,Rounds_ind) = 
+ Defn.tprove
+  (Hol_defn
+    "Rounds"
+    `Rounds (n,k:keysched,b:block) =
+       if n=0w
+        then (0w, ROTKEYS k, PostWhitening (b,GETKEYS k))
+        else Rounds (n-1w, ROTKEYS k, FwdRound (b,GETKEYS k))`,
+   WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [WORD_PRED_THM]);
+ 
+
+val (InvRounds_def,InvRounds_ind) = 
+ Defn.tprove
+  (Hol_defn
+    "InvRounds"
+    `InvRounds (n,k:keysched,b:block) =
+      if n=0w
+       then (0w, ROTKEYS k, InvPostWhitening (b,GETKEYS k))
+       else InvRounds (n-1w, ROTKEYS k, BwdRound(b,GETKEYS k))`,
+   WF_REL_TAC `measure (w2n o FST)` THEN METIS_TAC [WORD_PRED_THM]);
+
+val Total_Rounds = 
+ prove(getTotal Rounds_def,
+   RW_TAC list_ss [composeTheory.TOTAL_def] THEN
+   WF_REL_TAC `(w2n o FST)` THEN 
+   METIS_TAC [WORD_PRED_THM]);
+
+val Total_InvRounds = 
+ prove(getTotal InvRounds_def,
+   RW_TAC list_ss [composeTheory.TOTAL_def] THEN
+   WF_REL_TAC `(w2n o FST)` THEN 
+   METIS_TAC [WORD_PRED_THM]);
+
+val Rounds_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+        (RecCompileConvert (SPEC_ALL Rounds_def) Total_Rounds);
+
+val InvRounds_dev =
+  PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+        (RecCompileConvert (SPEC_ALL InvRounds_def) Total_InvRounds);
+
+hwDefineLib := (Rounds_def,Rounds_ind,Rounds_dev) ::
+               (InvRounds_def,InvRounds_ind,InvRounds_dev) :: !hwDefineLib;
+ 
+
+(*---------------------------------------------------------------------------*)
+(* Encrypt and Decrypt                                                       *)
+(* The number of rounds is 20. It is easy to change it into any value, but   *)
+(* in this case you should redefine the type keysched 			     *) 
+(*---------------------------------------------------------------------------*)
+
+val (RC6_FWD_def,_,RC6_FWD_dev) =
+ hwDefine
+   `RC6_FWD (keys,b) = Rounds (20w, ROTKEYS keys,
+                               PreWhitening (b,GETKEYS keys))`;
+
+val (RC6_BWD_def,_,RC6_BWD_dev) =
+ hwDefine
+   `RC6_BWD (keys,b) = InvRounds (20w, ROTKEYS keys,
+                                  InvPreWhitening (b,GETKEYS keys))`;
+
+val dev = REFINE_ALL RC6_FWD_dev;
+val RC6_FWD_netlist = MAKE_NETLIST dev;
+
+(*===========================================================================*)
+(*  Proofs                                                                   *)
+(*===========================================================================*)
+
+(*---------------------------------------------------------------------------*)
+(* Case analysis on blocks and keys.                                         *)
+(*---------------------------------------------------------------------------*)
+
+val FORALL_BLOCK = Q.store_thm
+  ("FORALL_BLOCK", 
+    `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
+    SIMP_TAC std_ss [FORALL_PROD]);
+
+val FORALL_KEYS = Q.prove
+(`(!x:key. P x) = !k0 k1. P(k0,k1)`,
+  SIMP_TAC std_ss [FORALL_PROD]);
+
+(*---------------------------------------------------------------------------*)
+(* Rotation lemmas                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val Rotate_Lemma = Q.store_thm
+   ("Rotate_Lemma",
+   `!w. (w2n w) MOD WL < WL`,
+    ARW_TAC [WL_def, HB_def] THEN ARW_TAC [DIVISION]);
+
+val Rotate_Inversion = Q.store_thm
+  ("Rotate_Inversion",
+  `!s n. (s >>> n <<< n = s) /\ (s <<< n >>> n = s)`,
+  ASSUME_TAC Rotate_Lemma THEN
+  REWRITE_TAC [LeftRotate_def, RightRotate_def] THEN ARW_TAC [SHIFT_Inversion]);
+
+val OneRound_Inversion = Q.store_thm
+  ("OneRound_Inversion",
+  `!b:block k:key. BwdRound (FwdRound (b,k), k) = b`,
+  SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] THEN 
+  SIMP_TAC std_ss [FwdRound_def, BwdRound_def] THEN 
+  REWRITE_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] THEN
+  REWRITE_TAC [Rotate_Inversion] THEN
+  METIS_TAC [WORD_EOR_ASSOC, WORD_EOR_INV, WORD_EOR_ID]  
+  );
+
+val Whitening_Inversion = Q.store_thm
+("Whitening_Inversion",
+ `!b k0 k1. 
+    (InvPostWhitening (PreWhitening (b,(k0,k1)),(k0,k1)) = b) /\ 
+    (InvPreWhitening (PostWhitening (b,(k0,k1)),(k0,k1)) = b)`,
+  SIMP_TAC std_ss [FORALL_BLOCK] THEN
+  SIMP_TAC std_ss [InvPostWhitening_def, PreWhitening_def, 
+                   InvPreWhitening_def, PostWhitening_def] THEN
+  METIS_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] 
+  );
+
+(*---------------------------------------------------------------------------*)
+(* Main lemma                                                                *)
+(*---------------------------------------------------------------------------*)
+
+val [FwdRound] = decls "FwdRound";
+val [BwdRound] = decls "BwdRound";
+
+val RC6_LEMMA = Q.store_thm
+("RC6_LEMMA",
+ `!(plaintext:block) (keys:keysched).
+     RC6_BWD (keys,RC6_FWD (keys,plaintext)) = plaintext`,
+   RESTR_EVAL_TAC [FwdRound, BwdRound] THEN
+   RW_TAC std_ss [OneRound_Inversion, Whitening_Inversion]);
+
+(*---------------------------------------------------------------------------*)
+(* Build the keyschedule from a key.                                         *)
+(*---------------------------------------------------------------------------*)
+
+val LIST_TO_KEYS_def =
+ Define
+  `(LIST_TO_KEYS [] acc = acc) /\
+   (LIST_TO_KEYS (h::t) 
+      (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
+       k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,
+       k38,k39,k40,k41,k42,k43)
+     =
+      LIST_TO_KEYS t 
+       (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
+        k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,
+        k37,k38,k39,k40,k41,k42,k43))`;
+
+val REVKEYS_def = 
+ Define
+  `REVKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
+       k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,
+       k38,k39,k40,k41,k42,k43) = 
+   [k43; k42; k41; k40; k39; k38; k37; k36; k35; k34; k33; k32; k31;
+    k30; k29; k28; k27; k26; k25; k24; k23; k22; k21; k20; k19; k18;
+    k17; k16; k15; k14; k13; k12; k11; k10; k9; k8; k7; k6; k5; k4; k3;
+    k2; k1; k0]`;
+
+
+val DUMMY_KEYS_def =
+ Define
+  `DUMMY_KEYS = 
+     (0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w,0w,0w,0w,0w,0w,0w,
+      0w,0w,0w,0w)`;
+
+val Pw_def = Define `Pw = 0xB7E15163w`;
+
+val Qw_def = Define `Qw = 0x9E3779B9w`;
+
+val init_S_def = 
+ Define 
+  `(init_S 0 = [Pw]) /\
+   (init_S (SUC n) = (HD (init_S n) + Qw) :: init_S n)`;
+ 
+val setKeys_def = 
+ Define 
+  `(setKeys 0 S1 L a b = []) /\
+   (setKeys (SUC n) S1 L a b = 
+     let a = (HD S1 + a + b) #<< 3 in
+     let b = (HD L + a + b) <<< (a+b) 
+     in
+         a::setKeys n (TL S1 ++ [a]) (TL L ++ [b]) a b)`;
+
+val mk_keysched_def = 
+ Define
+   `mk_keysched(L) = setKeys (20*2+4) (REVERSE(init_S (2*20-3))) L 0w 0w`;
+
+
+val setKeys_length = Q.prove
+ (`!i S1 L a b. i>0 ==> 
+	(LENGTH (setKeys i S1 L a b) = SUC(LENGTH (setKeys (i-1) S1 L a b)))`,
+  Induct_on `i` THENL [
+    RW_TAC list_ss [],
+    RW_TAC list_ss [Ntimes setKeys_def 1] THEN 
+    Cases_on `i=0` THENL [
+	RW_TAC list_ss [setKeys_def],
+	Q.SUBGOAL_THEN 
+         `!i S1 L1 a1 b1 S2 L2 a2 b2. 
+             LENGTH (setKeys i S1 L1 a1 b1) = LENGTH (setKeys i S2 L2 a2 b2)` 
+        ASSUME_TAC THENL [
+    	    NTAC 4 (POP_ASSUM (K ALL_TAC)) THEN 
+    	    Induct_on `i` THENL [
+	        RW_TAC list_ss [setKeys_def],
+	        RW_TAC list_ss [setKeys_def] THEN RW_TAC list_ss [LENGTH]], 
+  	RW_TAC list_ss []]]]
+  );
+
+(*---------------------------------------------------------------------------*)
+(* Sanity check                                                              *)
+(*---------------------------------------------------------------------------*)
+
+val keysched_length = Q.prove
+ (`!L. LENGTH (mk_keysched L) = 20*2 + 4`,
+    RW_TAC list_ss [mk_keysched_def, r_def] THEN
+    RW_TAC list_ss [setKeys_length] THEN
+    RW_TAC arith_ss [setKeys_def, LENGTH] 
+  );
+
+(*---------------------------------------------------------------------------*)
+(* Basic theorem about encryption/decryption                                 *)
+(*---------------------------------------------------------------------------*)
+
+val RC6_CORRECT = Q.store_thm
+  ("RC6_CORRECT",
+   `!key keys plaintext.
+       (keys = LIST_TO_KEYS (mk_keysched key) DUMMY_KEYS)
+       ==>
+       (RC6_BWD (REVKEYS keys) 
+           (RC6_FWD keys plaintext) = plaintext)`,
+         RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]);
+
+val _ = export_theory();
