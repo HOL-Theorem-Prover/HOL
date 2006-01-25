@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib bossLib numLib
-     arithmeticTheory word32Theory pairTheory listTheory whileTheory;
+     arithmeticTheory word32Theory pairTheory listTheory whileTheory finite_mapTheory;
 
 val _ = new_theory "preARM";
 
@@ -7,11 +7,13 @@ val _ = new_theory "preARM";
 (* Preprocessing                                                              *)
 (*----------------------------------------------------------------------------*)
 
+(*
 val _ = add_rule{term_name   = "COND",
 fixity      = Infix (HOLgrammars.RIGHT, 3),
 pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|", HardSpace 1],
 paren_style = OnlyIfNecessary,
 block_style = (AroundEachPhrase, (PP.INCONSISTENT, 0))};
+*)
 
 (*
 val _ = add_rule{term_name   = "COND",
@@ -91,16 +93,11 @@ val _ = Hol_datatype ` OPERATOR = MOV |
                         SWI
              `;
 
-val OPERATOR_cases = TypeBase.nchotomy_of "OPERATOR";
-
 (*-------------------------------------------------------------------------------*)
 (* Condition Codes                                                                      *)
 (*-------------------------------------------------------------------------------*)
 
-val _ = Hol_datatype ` COND = EQ | NE | GE | LE | GT | LT | AL | NV
-             `;
-
-val COND_cases = TypeBase.nchotomy_of "COND";
+val _ = Hol_datatype ` COND = EQ | NE | GE | LE | GT | LT | AL | NV`;
 
 (*-------------------------------------------------------------------------------*)
 (* Expressions			                                                 *)
@@ -127,31 +124,19 @@ val _ = type_abbrev("DATA", Type`:word32`);
 (* Operations                                                                    *)
 (*-------------------------------------------------------------------------------*)
 
-(* An operation: (operator, condition code, set flags, destination, source, jump)					 *)
+(* An instruction: ((operator, condition code, set flags), destination, source, jump)					 *)
 val _ = type_abbrev("OPERATION", Type`:OPERATOR # (COND option) # bool`);
 val _ = type_abbrev("INST", Type`:OPERATION # (EXP option) # (EXP list) # (OFFSET option)`);
-
-(*---------------------------------------------------------------------------------*)
-(* Memory	                                                                   *)
-(*---------------------------------------------------------------------------------*)
-
-(* store to the instruction buffer or the data buffer (both in the memory)	   *)               
-val STORE_def =
-  Define `
-     STORE (mem:ADDR->'a) addr v =
-        \k. if k = addr then v
-            else mem k
-  `;
 
 (*---------------------------------------------------------------------------------*)
 (* State                                                                           *)
 (*---------------------------------------------------------------------------------*)
   
-val _ = type_abbrev("STATE", Type`: ADDR # CPSR # (REGISTER -> DATA) # (ADDR -> DATA)`);
+val _ = type_abbrev("STATE", Type`: ADDR # CPSR # (REGISTER |-> DATA) # (ADDR |-> DATA)`);
 
 val FORALL_STATUS = Q.store_thm
   ("FORALL_STATUS",
-    `(!s:CPSR # (REGISTER -> DATA) # (ADDR -> DATA). P s) = 
+    `(!s:CPSR # (REGISTER |-> DATA) # (ADDR |-> DATA). P s) = 
 	!pcsr regs mem. P (pcsr,(regs,mem))`,
     SIMP_TAC std_ss [FORALL_PROD]);
 
@@ -166,54 +151,49 @@ val FORALL_STATE = Q.store_thm
 
 val read_def =
   Define `
-    read ((regs,mem):(ADDR->DATA)#(ADDR->DATA)) (exp:EXP) =
+    read (regs,mem) (exp:EXP) =
       case exp of
         MEM (r,offset) -> 
 	    (case offset of 
-		  POS k -> mem (w2n (regs r) + k) ||
-		  NEG k -> mem (w2n (regs r) - k)
+		  POS k -> mem ' (w2n (regs ' r) + k) ||
+		  NEG k -> mem ' (w2n (regs ' r) - k)
 	    )	||
 	NCONST i -> n2w i     ||
         WCONST w -> w         ||
-        REG r -> regs r
+        REG r -> regs ' r
   `;
 
 val read_thm = Q.store_thm (
   "read_thm",
-  ` (read (regs,mem) (MEM (r,POS k)) = mem (w2n (regs r) + k)) /\
-    (read (regs,mem) (MEM (r,NEG k)) = mem (w2n (regs r) - k)) /\
+  ` (read (regs,mem) (MEM (r,POS k)) = mem ' (w2n (regs ' r) + k)) /\
+    (read (regs,mem) (MEM (r,NEG k)) = mem ' (w2n (regs ' r) - k)) /\
     (read (regs,mem) (NCONST i) = n2w i) /\
     (read (regs,mem) (WCONST w) = w) /\
-    (read (regs,mem) (REG r) = regs r)`,
+    (read (regs,mem) (REG r) = regs ' r)`,
     RW_TAC std_ss [read_def]);
 
             
 val write_def =
   Define `
-    write ((regs,mem):(ADDR->DATA)#(ADDR->DATA)) (exp:EXP) (v:DATA)=
+    write (regs,mem) (exp:EXP) (v:DATA)=
       case exp of
         MEM (r,offset) -> 
 	    (regs,
              (case offset of
-                   POS k -> STORE mem (w2n (regs r) + k) v ||
-                   NEG k -> STORE mem (w2n (regs r) - k) v
+                   POS k -> mem |+ (w2n (regs ' r) + k, v) ||
+                   NEG k -> mem |+ (w2n (regs ' r) - k, v)
              ))   	 ||
-        REG r -> ((\k. if k = r then v
-                        else regs k),
+        REG r -> ( regs |+ (r, v),
                    mem ) ||
         _ -> (regs, mem)
   `;
 
 val write_thm = Q.store_thm (
   "write_thm",
-  ` (write (regs,mem) (MEM (r,POS k)) v = (regs, (\addr. if addr = w2n (regs r) + k then v
-            				      	      else mem addr))) /\
-    (write (regs,mem) (MEM (r,NEG k)) v = (regs, (\addr. if addr = w2n (regs r) - k then v
-                                                      else mem addr))) /\
-    (write (regs,mem) (REG r) v = ((\k. if k = r then v
-                        		else regs k),
-                   		   mem ))`,
-    RW_TAC std_ss [write_def, STORE_def]);                      
+  ` (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (w2n (regs ' r) + k, v))) /\
+    (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (w2n (regs ' r) - k, v))) /\
+    (write (regs,mem) (REG r) v = (regs |+ (r, v), mem))`,
+    RW_TAC std_ss [write_def]);                      
 
 (*---------------------------------------------------------------------------------*)
 (* Decoding and execution of an instruction                                        *)
@@ -257,10 +237,11 @@ val decode1_def =
 
 	  LDMFD -> (case THE dst of
 			REG r ->
-			    (cpsr, FST (FOLDL (\(s,i) reg. (write s reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
+			     (* We must read values from the original state instead of the updated state *)
+			    (cpsr, FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
                     ||
                         WREG r ->
-			    (cpsr, write (FST (FOLDL (\(s,i) reg. (write s reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
+			    (cpsr, write (FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
 						 (REG r) (read s (REG r) + n2w (LENGTH src)))
 		   )
 	      ||
@@ -268,10 +249,11 @@ val decode1_def =
 	  STMFD -> (case THE dst of
                         REG r ->
                                 (cpsr,
-                                 FST (FOLDL (\(s,i) reg. (write s (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src))) ||
+			         (* We must read values from the original state instead of the updated state *)
+                                 FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src))) ||
                         WREG r ->
                                 (cpsr,
-				 write (FST (FOLDL (\(s,i) reg. (write s (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
+				 write (FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
 				 	(REG r) (read s (REG r) - n2w (LENGTH src)))
 		   )
 	      ||
@@ -332,7 +314,7 @@ val decode1_def =
 
 	  B   -> (cpsr, write s (REG 15) (n2w (goto(pc,jump))))
 	      || 
-          BL ->  (cpsr, write (write s (REG 14) (word_suc (n2w pc))) (REG 15) (n2w (goto(pc,jump))))
+          BL ->  (cpsr, write (write s (REG 14) (n2w (pc+1))) (REG 15) (n2w (goto(pc,jump))))
               ||
 
           _  ->  ARB
@@ -365,33 +347,33 @@ val decode1_thm = Q.store_thm
   (decode1 (pc,cpsr,s) (STR,SOME dst,src,jump) = (cpsr, write s (HD src) (read s dst))) /\
   (decode1 (pc,cpsr,s) (LDMFD, SOME (REG r),src,jump) =
               (cpsr, FST (FOLDL
-                          (\(s,i) reg.
-                             (write s reg (read s (MEM (r,POS (i + 1)))),
+                          (\(s1,i) reg.
+                             (write s1 reg (read s (MEM (r,POS (i + 1)))),
                               i + 1)) (s,0) src))) /\
   (decode1 (pc,cpsr,s) (LDMFD,SOME (WREG r),src,jump) =
               (cpsr, write (FST
                              (FOLDL
-                               (\(s,i) reg.
-                                (write s reg
+                               (\(s1,i) reg.
+                                (write s1 reg
                                    (read s (MEM (r,POS (i + 1)))),i + 1))
                                (s,0) src)) (REG r)
                        	     (read s (REG r) + n2w (LENGTH src)))) /\
   (decode1 (pc,cpsr,s) (STMFD,SOME (REG r),src,jump) =
                   (cpsr, FST (FOLDL
-                          (\(s,i) reg.
-                             (write s (MEM (r,NEG i)) (read s reg),i + 1))
+                          (\(s1,i) reg.
+                             (write s1 (MEM (r,NEG i)) (read s reg),i + 1))
                           (s,0) (REVERSE src)))) /\
   (decode1 (pc,cpsr,s) (STMFD,SOME (WREG r),src,jump) =
                   (cpsr, write (FST
                           (FOLDL
-                             (\(s,i) reg.
-                                (write s (MEM (r,NEG i)) (read s reg),
+                             (\(s1,i) reg.
+                                (write s1 (MEM (r,NEG i)) (read s reg),
                                  i + 1)) (s,0) (REVERSE src))) (REG r)
                        (read s (REG r) - n2w (LENGTH src)))) /\
   (decode1 (pc,cpsr,s) (MRS,SOME dst,src,jump) = (cpsr,write s dst cpsr)) /\
   (decode1 (pc,cpsr,s) (MSR,NONE,src,jump) = (read s (HD src),s)) /\
   (decode1 (pc,cpsr,s) (B,NONE,src,jump) = (cpsr,write s (REG 15) (n2w (goto (pc,jump))))) /\
-  (decode1 (pc,cpsr,s) (BL,NONE,src,jump) = (cpsr,write (write s (REG 14) (word_suc (n2w pc))) (REG 15)
+  (decode1 (pc,cpsr,s) (BL,NONE,src,jump) = (cpsr,write (write s (REG 14) (n2w (pc+1))) (REG 15)
                                                     (n2w (goto (pc,jump)))))`,
  
    RW_TAC std_ss [decode1_def]);
@@ -568,35 +550,67 @@ val RUN_LEM_2 = Q.store_thm
    Induct_on `n` THEN RW_TAC list_ss [RUN_LEM_1]
   );
 
+val FORALL_INSTM = Q.store_thm
+  ("FORALL_INSTM",
+    `(!instM : (num -> INST) # num. P instM) = 
+	!instB byn. P (instB,byn)`,
+    SIMP_TAC std_ss [FORALL_PROD]);
+
 val RUN_THM_1 = Q.store_thm
   ("RUN_THM_1",
-   `!m n s instB byn.
-        (run (m+n) (instB,byn) s = run n (instB,byn) (run m 
-(instB,byn) s))`,
+   `!m n s instM.
+        (run (m+n) instM s = run n instM (run m instM s))`,
+  SIMP_TAC std_ss [FORALL_INSTM] THEN
   Induct_on `m` THEN REPEAT GEN_TAC THENL [
         RW_TAC list_ss [RUN_LEM_1],
-        `SUC m + n = SUC (m + n)` by RW_TAC list_ss [ADD_SUC] 
-THEN
+        `SUC m + n = SUC (m + n)` by RW_TAC list_ss [ADD_SUC] THEN
         ASM_REWRITE_TAC [] THEN RW_TAC list_ss [RUN_LEM_1] THEN
         RW_TAC list_ss [RUN_LEM_2]]
   );
 
 val RUN_THM_2 = Q.store_thm
   ("RUN_THM_2",
-   `!m n s instB byn. m <= n ==>
-        (run n (instB,byn) s = run (n-m) (instB,byn) (run m 
-(instB,byn) s))`,
-  RW_TAC list_ss [] THEN `?k. n = k + m` by PROVE_TAC 
-[LESS_EQUAL_ADD, ADD_SYM] THEN
-  ASM_REWRITE_TAC [] THEN METIS_TAC [SUB_ADD, RUN_THM_1, 
-ADD_SYM]
+   `!m n s instM. m <= n ==>
+        (run n instM s = run (n-m) instM (run m instM s))`,
+  RW_TAC list_ss [FORALL_INSTM] THEN `?k. n = k + m` by PROVE_TAC [LESS_EQUAL_ADD, ADD_SYM] THEN
+  ASM_REWRITE_TAC [] THEN METIS_TAC [SUB_ADD, RUN_THM_1, ADD_SYM]
   );
 
 
 val _ = Globals.priming := NONE;
 
 (*---------------------------------------------------------------------------------*)
-(* Run to termination                                                              *)
+(* Stop at a particular position                                                   *)
+(*---------------------------------------------------------------------------------*)
+
+val stopAt_def =
+ Define
+   `stopAt k instM s = ?n. FST (run n instM s) = k`;
+
+val STOPAT_AFTER_N_STEPS = Q.store_thm
+  ("STOPAT_AFTER_N_STEPS",
+   `!m k s instM.
+       stopAt k instM (run m instM s) ==> stopAt k instM s`,
+  RW_TAC list_ss [stopAt_def, GSYM RUN_THM_1] THEN
+  METIS_TAC []
+  );
+
+(*
+val STOPAT_THM = Q.store_thm
+  ("STOPAT_THM",
+   `!m k s instM.
+       stopAt k instM s ==> stopAt k instM (run m instM s)`,
+  SIMP_TAC std_ss [FORALL_INSTM] THEN
+  RW_TAC list_ss [stopAt_def, GSYM RUN_THM_1] THEN
+  ONCE_REWRITE_TAC [ADD_SYM] THEN
+  RW_TAC list_ss [RUN_THM_1] THEN
+  Q.EXISTS_TAC `n` THEN
+  METIS_TAC [RUN_LEM_2]
+  );
+*)
+
+(*---------------------------------------------------------------------------------*)
+(* Run for the minimum number of steps to stop at a given position                 *)
 (*---------------------------------------------------------------------------------*)
 
 val LEAST_ADD_LEM = Q.store_thm
@@ -620,8 +634,123 @@ val LEAST_ADD_LEM = Q.store_thm
         ]]
   );
 
-(* terminate: specifies that the instL, when exeucted, would terminates at the label (pc0+len) within n steps                   *)
-(* n is the maximum numbers for all paths of the program to terminate                                                           *)
+
+(* minStep2 is the minimum number of steps for the program to stop at position k           *)
+
+val minStep2_def =
+  Define `minStep2 k instM s = LEAST n. FST (run n instM s) = k`;
+
+(*
+val STOPAT_MINSTEP_LEM = Q.store_thm
+  ("STOPAT_MINSTEP_LEM",
+   `!k0 k1 s0 s1 instM. 
+   (stopAt k0 instM s0 /\ (s1 = runTo k0 instM s0) /\ stopAt k1 instM s1) ==>     
+        minStep k0 instM s0 <= minStep k1 instM s0 /\ minStep k1 instM s1 <= minStep k1 instM s0`,
+    RW_TAC list_ss [stopAt_def, minStep_def, runTo_def] THENL [
+
+    RW_TAC list_ss [ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1] THEN
+    ONCE_REWRITE_TAC [ADD_SYM] THEN
+    HO_MATCH_MP_TAC LEAST_ADD_LEM THEN
+    METIS_TAC []]
+  );
+*)
+
+val MINSTEP2_THM = Q.store_thm
+  ("MINSTEP2_THM",
+   `!s instM m k.
+       (stopAt k instM s) /\
+       (m <= minStep2 k instM s) ==>
+       (minStep2 k instM s = (minStep2 k instM (run m instM s) + m))`,
+    RW_TAC list_ss [stopAt_def, minStep2_def] THEN
+    RW_TAC list_ss [ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1] THEN
+    ONCE_REWRITE_TAC [ADD_SYM] THEN
+    HO_MATCH_MP_TAC LEAST_ADD_LEM THEN
+    METIS_TAC []
+  );
+
+(*---------------------------------------------------------------------------------*)
+(* Run to a particular position                                                    *)
+(*---------------------------------------------------------------------------------*)
+
+(* Given a instruction memory, run from a given state until the pc reaches a particular position k *)
+
+val runTo_def =
+ Define
+   `runTo k instM s = run (minStep2 k instM s) instM s`;
+
+(*
+val RUNTO_LEM_1 = Q.store_thm
+  ("RUNTO_LEM_1",
+   `!k s instM. (stopAt k instM s) ==>
+        (runTo k instM (runTo k instM s) = runTo k instM s)`,
+    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
+    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+        METIS_TAC [],
+        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+             REWRITE_TAC [GSYM RUN_THM_1] THEN
+             Q.EXISTS_TAC `0` THEN
+             RW_TAC arith_ss [],
+	     METIS_TAC [RUN_LEM_2]]
+    ]
+   );
+
+val RUNTO_LEM_2 = Q.store_thm
+  ("RUNTO_LEM_2",
+   `!k s instM m. (stopAt k instM s /\ m > minStep k instM s) ==>
+        (runTo k instM s = run m instM s)`,
+    RW_TAC list_ss [runTo_def, stopAt_def] THEN
+    `?k. m = minStep (iB,byn) s + k` by METIS_TAC [GREATER_DEF, LESS_EQ_EXISTS, LESS_IMP_LESS_OR_EQ, ADD_SYM]
+    THEN ASM_REWRITE_TAC [] THEN
+    RW_TAC list_ss [minStep_def, RUN_THM_1] THEN
+    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+        METIS_TAC [],
+        METIS_TAC [RUN_LEM_2]
+        ]
+   );
+*)
+
+
+
+(*---------------------------------------------------------------------------------*)
+(* A breakpoint of the problem is at the critical path iff it is at the shorest    *)
+(* runnning path of an execution                                                   *)
+(*---------------------------------------------------------------------------------*)
+
+val atCritPath_def =
+  Define `atCritPath p t instM s = 
+         minStep2 p instM s +  minStep2 t instM (runTo p instM s) <= minStep2 t instM s`;
+
+val ATCRITPATH_LEM = Q.store_thm
+  ("ATCRITPATH_LEM",
+   `!p t instM s. 
+    atCritPath p t instM s ==>     
+        minStep2 p instM s <= minStep2 t instM s /\ minStep2 t instM (runTo p instM s) <= minStep2 t instM s`,
+    RW_TAC list_ss [atCritPath_def]
+  );
+
+(*---------------------------------------------------------------------------------*)
+(* Basic theorems about runTo                                                      *)
+(*---------------------------------------------------------------------------------*)
+
+(*
+val RUNTO_THM = Q.store_thm
+  ("RUNTO_THM",
+   `!P k0 s0 instM k. 
+   (stopAt k0 instM s0 /\ atCritPath k0 k instM s0 /\ (s1 = runTo k0 instM s0) /\ stopAt k instM s1 /\ P (runTo k instM s1)) ==>     
+        P (runTo k instM s0)`,
+  RW_TAC list_ss [stopAt_def, runTo_def] THEN
+  IMP_RES_TAC ATCRITPATH_LEM THEN
+  FULL_SIMP_TAC list_ss [ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1] THEN
+  
+     METIS_TAC [NOT_LESS_EQUAL, GREATER_DEF, TERRUN_LEM_2, TERRUN_LEM_1]]
+  );
+*)
+
+(*---------------------------------------------------------------------------------*)
+(* Run to termination                                                              *)
+(*---------------------------------------------------------------------------------*)
+
+(* terminate: specifies that the execution of instructions would terminates at the label (pc0+len) within n steps               *)
 
 val terminated_def =
  Define
@@ -638,6 +767,8 @@ val TERMINATED_THM = Q.store_thm
   Q.EXISTS_TAC `n` THEN
   METIS_TAC [RUN_LEM_2]
   );
+
+(* minStep is the minimum number of steps for the program to terminate                                                           *)
 
 val minStep_def =
   Define `minStep (instB,byn) s = LEAST n. FST (run n (instB,byn) s) = byn`;
@@ -671,6 +802,7 @@ val TERRUN_LEM_1 = Q.store_thm
         LEAST_ELIM_TAC THEN RW_TAC list_ss [] THEN
         METIS_TAC [RUN_LEM_2]]
    );
+
 val TERRUN_LEM_2 = Q.store_thm
   ("TERRUN_LEM_2",
    `!s iB byn m. (terminated (iB,byn) s /\ m > minStep (iB,byn) s) ==>
@@ -726,9 +858,9 @@ val TERRUN_STOP = Q.store_thm
   );
 
 
-(*---------------------------------------------------------------------------------*)
-(* Recursion and loops	                                                           *)
-(*---------------------------------------------------------------------------------*)
+(*------------------------------------------------------------------------------------------------------------------------------*)
+(* Run a segment of code.	                                                           					*)
+(*------------------------------------------------------------------------------------------------------------------------------*)
 
 (* one entry and one exit													*)
 (* The following high-level definition says that if the running of L1 doesn't go beyond its range (never execute L2's), 	*)

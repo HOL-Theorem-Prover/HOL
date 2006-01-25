@@ -113,7 +113,7 @@ fun entry_stms rs =
                   jump = NONE},
       Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.FP)],
-                     src = [Assem.REG (Assem.fromAlias Assem.IP), Assem.NCONST 1],
+                     src = [Assem.REG (Assem.fromAlias Assem.IP), Assem.NCONST Arbint.one],
                      jump = NONE}
     ]
 
@@ -127,21 +127,25 @@ fun exit_stms rs =
 
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
-(*                                                                                           *)
+(*  Decrease and increase the value of a register by n                                                                  *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun dec_p pt n = 
 	Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias pt)],
-                     src = [Assem.REG (Assem.fromAlias pt), Assem.NCONST n],
+                     src = [Assem.REG (Assem.fromAlias pt), Assem.NCONST (Arbint.fromInt n)],
                      jump = NONE}
 
 fun inc_p pt n =
         Assem.OPER  {oper = (Assem.ADD, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias pt)],
-                     src = [Assem.REG (Assem.fromAlias pt), Assem.NCONST n],
+                     src = [Assem.REG (Assem.fromAlias pt), Assem.NCONST (Arbint.fromInt n)],
                      jump = NONE};
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(*  Given a list of registers and memory slots, group consecutive registers together to be used by LDM and STM          *)
+(*  For example, [r1,r2,m1,m3,r3,m2,r4,r5] is segmented to [r1,r2],[m1],[m2],[r3],[m2],[r4,r5]                          *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun mk_reg_segments argL =
   let val isBroken = ref false;      
@@ -170,6 +174,11 @@ fun mk_reg_segments argL =
       (invRegLs, memL)
   end
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(*  Given a list of registers, generate a LDM or STM statement                                                          *)
+(*  If the list contain only one resiter, then use LDR and STR instead                                                  *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
 fun mk_ldm_stm isLoad dataL =
     if isLoad then
 	if length dataL = 1 then
@@ -194,8 +203,12 @@ fun mk_ldm_stm isLoad dataL =
                   src = dataL,
                   jump = NONE}
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(*  Write and read one argument to the memory slot referred by regNo and offset			                        *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
-(* write one argument to the memory slot referred by regNo and offset						*)
+(* push arguments to the stack. If the argument comes from a register, and store it into the stack directly; 		*)
+(* if it comes from memory, then first load it into R10, and then store it into the stack				*) 
 
 fun write_one_arg (Assem.REG r) (regNo,offset) = 
 		[Assem.OPER  {oper = (Assem.STR, NONE, false),
@@ -240,23 +253,14 @@ fun read_one_arg (Assem.REG r) (regNo,offset) =
 
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
+(* Pass by the caller the parameters to the callee                                                                      *)
+(* The first four parameters are placed at r0-r4 by default (done by the callee), the rest are passed through the stack *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
-
-(* push arguments to the stack. If the argument comes from a register, and store it into the stack directly; 		*)
-(* if it comes from memory, then first load it into R0, and then store it into the stack				*) 
 
 fun pass_args argL =
    let 
-       val regs0_4 = [Assem.REG 0, Assem.REG 1, Assem.REG 2, Assem.REG 3] 	
-       val (inRegs, res0_4) = if length argL < 4 then (argL, List.take(regs0_4,length argL))
-		      else (List.take(argL,4), regs0_4) 
-
-       val first4Args =  
-		[ Assem.OPER {oper = (Assem.LDMFD,NONE,false),
-		   	      src = [Assem.REG (Assem.fromAlias (Assem.SP))],
-			      dst = res0_4,
-			      jump = NONE}
-		]
+       val inRegs = if length argL < 4 then argL
+		    else List.take(argL,4) 
 
        val (regLs, memL) = mk_reg_segments argL
 
@@ -268,9 +272,35 @@ fun pass_args argL =
 				[] memL
    in
 	(* save in-memory arguments first, then STMFD the register segments		*)  
-	store_mems @ store_regs @ [dec_p Assem.SP final_upper] @ first4Args 
+	store_mems @ store_regs @ [dec_p Assem.SP final_upper] 
    end
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* The callee obtains the arguments passed by the caller though the stack                                               *)
+(* By default, the first four arguments are loaded into r0-r4                                                           *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
+fun get_args argL =
+   let 
+       val regs0_4 = [Assem.REG 0, Assem.REG 1, Assem.REG 2, Assem.REG 3] 	
+       val res0_4 = if length argL < 4 then List.take(regs0_4,length argL)
+		    else regs0_4 
+
+       val first4Args =  
+		[ Assem.OPER {oper = (Assem.LDMFD,NONE,false),
+		   	      src = [Assem.REG (Assem.fromAlias (Assem.IP))],      (* Callee's IP equals to caller's sp *) 
+			      dst = res0_4,
+			      jump = NONE}
+		]
+   in
+	first4Args 
+   end
+
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Pass by the callee the results to the caller                                                                         *)
+(* All results are passed through the stack                                                                             *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun send_results outL numArgs =
    let
@@ -288,12 +318,15 @@ fun send_results outL numArgs =
    in
 	Assem.OPER { oper = (Assem.ADD,NONE,false),
 		     dst = [Assem.REG (Assem.fromAlias Assem.SP)],
-		     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST sOffset],
+		     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt sOffset)],
 		     jump = NONE
 		   }
  	:: store_mems @ store_regs
    end
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* The caller retreives the results passed by the callee though the stack                                               *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun get_results outL numArgs =
    let
@@ -313,6 +346,26 @@ fun get_results outL numArgs =
 	load_mems @ load_regs @ [inc_p Assem.SP (length outL - final_upper)] 
    end;
 
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Tail recursive procedure gets back the resutls returned by previous round                                               *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
+fun get_results_by_recursive_procedure outL =
+   let
+       val (regLs, memL) = mk_reg_segments outL
+
+       val (load_regs, final_upper) = List.foldl (fn ((outL,offset), (instL,upper)) =>
+                                (instL @ [inc_p Assem.SP (offset - upper)] @
+                                 [mk_ldm_stm true outL], offset))
+                        ([],0) (rev regLs)
+       val load_mems = List.foldl (fn ((out,offset),instL) => instL @ read_one_arg out (13, offset))
+                                [] memL
+   in
+        load_mems @ load_regs
+   end;
+
+
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Remove redundant instructions											*)
 (* ---------------------------------------------------------------------------------------------------------------------*)
@@ -328,7 +381,7 @@ fun rm_redundancy stms =
                 in (isPrevBAL := true; not flag)
                 end
       |  isValid (Assem.OPER{oper = (op1,cond1,flag), dst = dst1, src = src1, jump = jp1}) =
-              not ( length src1 = 2 andalso (hd dst1 = hd src1) andalso (hd (tl src1) = Assem.NCONST 0) andalso
+              not ( length src1 = 2 andalso (hd dst1 = hd src1) andalso (hd (tl src1) = Assem.NCONST Arbint.zero) andalso
                     (op1 = Assem.ADD orelse op1 = Assem.SUB orelse op1 = Assem.LSL orelse
                      op1 = Assem.LSR orelse op1 = Assem.ASR orelse op1 = Assem.ROR))
       |  isValid _ = true
@@ -343,7 +396,7 @@ fun rm_redundancy stms =
 val called = ref(Binaryset.empty strOrder);
 val processed = ref(Binaryset.empty strOrder);
 
-fun one_program (caller_name,args,stms,outs) =
+fun caller_procedure (caller_name,args,stms,outs) =
   let
 
     fun one_stm (fun_name,args) (Assem.OPER {oper = (Assem.BL,c1,flag), dst = caller_dst, src = caller_src, jump = SOME labs}) =
@@ -352,11 +405,11 @@ fun one_program (caller_name,args,stms,outs) =
         in
 
 	    if callee_name = fun_name then 	(* tail recursion	*)
-		 (pass_args caller_src) @ 
+		 (pass_args caller_src) @ (get_results_by_recursive_procedure (Assem.pair2list args)) @
 		 [inc_p Assem.SP (length caller_src)] @	(* drop from the stack the arguments/results of this round	*)
 		 [Assem.OPER {oper = (Assem.B,SOME (Assem.AL),false), dst = [], src = [],
 		  	      jump = SOME [Temp.namedlabel (callee_name ^ "_0")]}]
-		(* We don't need to get the results here because tail recursion wouldn't use it		*)    		
+
             else
 	   	let
 		    val _ = called := Binaryset.add(!called, callee_name);
@@ -397,12 +450,13 @@ fun callee_procedure name =
 	val move_sp = 
 		Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.SP)],
-                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (numLocal + length modifiedRegs + 2)],
+                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt (numLocal + length modifiedRegs + 2))],
                      jump = NONE}
 	val stms1 =  p_lab ::
           	     entry_stms modifiedRegs @
+		     get_args (Assem.pair2list args1) @
           	     [q_lab] @
-          	     tl (one_program (fun_name,args1,stms1,outs1)) @
+          	     tl (caller_procedure (fun_name,args1,stms1,outs1)) @
           	     send_results (Assem.pair2list outs1) (length (Assem.pair2list args1)) @
           	     [move_sp] @   (* skip save_lr,save_sp,save_fp and local variables *)
           	     exit_stms modifiedRegs
@@ -426,7 +480,7 @@ fun expand (fun_name,fun_type,args,stms,outs,rs) =
       val move_sp =
                 Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.SP)],
-                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (numLocal + 2)],
+                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt (numLocal + 2))],
                      jump = NONE}
 
       fun callees () = 
@@ -438,7 +492,7 @@ fun expand (fun_name,fun_type,args,stms,outs,rs) =
       val stms1 =  p_lab ::
           	   entry_stms [] @
           	   [q_lab] @
-          	   tl (one_program(fun_name,args1,stms1,outs1)) @
+          	   tl (caller_procedure (fun_name,args1,stms1,outs1)) @
           	   [move_sp] @                   (* skip save_lr,save_sp,save_fp and local variables *)
           	   exit_stms []
 

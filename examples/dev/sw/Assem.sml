@@ -19,8 +19,8 @@ structure Assem = struct
 
   datatype exp = NAME of Temp.label
 	       | TEMP of int
-	       | NCONST of int
-	       | WCONST of int 
+	       | NCONST of Arbint.int
+	       | WCONST of Arbint.int 
 	       | PAIR of exp * exp
 	       | CALL of exp * exp list
 	       | TMEM of int
@@ -66,7 +66,7 @@ structure Assem = struct
    |  print_op MLA = "MLA"
    |  print_op AND = "AND"
    |  print_op ORR = "ORR"
-   |  print_op EOR = "XOR"
+   |  print_op EOR = "EOR"
    |  print_op CMP = "CMP"
    |  print_op TST = "TST"
    |  print_op LSL = "LSL"
@@ -119,9 +119,9 @@ structure Assem = struct
     |  eval_exp (NAME e) =
             Symbol.index e
     |  eval_exp (NCONST e) =
-            e
+            Arbint.toInt e
     |  eval_exp (WCONST e) =
-            e
+            Arbint.toInt e
     |  eval_exp (TMEM e) =
             e
     |  eval_exp (MEM {reg = r, offset = j, wback = w}) =
@@ -154,9 +154,9 @@ structure Assem = struct
      	     |  format_exp (NAME e) =
              		Symbol.name e
      	     |  format_exp (NCONST e) =
-             		"#" ^ Int.toString e
+             		"#" ^ Arbint.toString e
      	     |  format_exp (WCONST e) =
-             		"#" ^ (Int.toString e) ^ "w"
+             		"#" ^ (Arbint.toString e) ^ "w"
      	     |  format_exp (REG e) =
              		printReg e
      	     |  format_exp (WREG e) =

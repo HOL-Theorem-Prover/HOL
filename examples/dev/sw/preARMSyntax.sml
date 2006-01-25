@@ -10,14 +10,14 @@ in
 (*----------------------------------------------------------------------------*)
 
 fun eval_exp (Assem.MEM {reg = regNo, offset = offset, wback = flag}) =
-      mk_comb(Term`MEM:(num # num) -> EXP`,
+      mk_comb(Term`MEM:(num # OFFSET) -> EXP`,
                 mk_pair(term_of_int regNo,
                   mk_comb(if offset >= 0 then Term`POS` else Term`NEG`,
                           term_of_int offset)))
  |  eval_exp (Assem.NCONST e) =
-      mk_comb(Term`NCONST`, term_of_int e)
+      mk_comb(Term`NCONST`, mk_numeral (Arbint.toNat e))
  |  eval_exp (Assem.WCONST e) =
-      mk_comb(Term`WCONST`, mk_comb (Term`n2w`, term_of_int e))
+      mk_comb(Term`WCONST`, mk_comb (Term`n2w`, mk_numeral (Arbint.toNat e)))
  |  eval_exp (Assem.REG e) =
       mk_comb(Term`REG`, term_of_int e)
  |  eval_exp (Assem.WREG e) =
@@ -32,8 +32,14 @@ fun mk_ARM arm =
 
     fun mk_stm (Assem.OPER {oper = (op1, cond1, flag), dst = dlist, src = slist, jump = jumps}) =
         let
-            val ops = list_mk_pair [mk_const(Assem.print_op op1, Type `:OPERATOR`),
-                                     if cond1 = NONE then mk_none (Type `:COND`)
+            val ops = list_mk_pair [ mk_thy_const {Name = Assem.print_op op1, Thy = "preARM", Ty = Type `:OPERATOR`},
+
+				     (* For instruction BL, jump is always effective; and, when the pc appears in the destination list, then
+					a jump occurs												*) 
+                                     if op1 = Assem.BL orelse not (List.find (fn r => r = Assem.REG 15 orelse r = Assem.WREG 15) dlist = NONE)  then 
+						Term(`SOME AL:COND option`)         (* always jumps *)
+
+				     else if cond1 = NONE then mk_none (Type `:COND`)
                                      else mk_comb(Term`SOME:COND->COND option`,
                                                    mk_const(Assem.print_cond cond1, Type `:COND`)),
                                      Term`F`]

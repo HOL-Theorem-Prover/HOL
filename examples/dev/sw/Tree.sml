@@ -15,8 +15,8 @@ datatype stm = SEQ of stm * stm
              | TEMP of Temp.temp
              | ESEQ of stm * exp
              | NAME of Temp.label
-             | NCONST of int
-	     | WCONST of int
+             | NCONST of Arbint.int
+	     | WCONST of Arbint.int
 	     | CALL of exp * exp list
 	     | PAIR of exp * exp
 
@@ -51,8 +51,8 @@ datatype stm = SEQ of stm * stm
              | TEMP of Temp.temp
              | ESEQ of stm * exp
              | NAME of Temp.label
-             | NCONST of int
-	     | WCONST of int
+             | NCONST of Arbint.int
+	     | WCONST of Arbint.int
 	     | CALL of exp * exp list
 	     | PAIR of exp * exp
 

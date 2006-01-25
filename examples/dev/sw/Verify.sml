@@ -1,23 +1,24 @@
+(*
 structure Verify =
 struct
+*)
 
-local open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
-           numSyntax listSyntax
-           pairTheory arithmeticTheory listTheory optionTheory preARMTheory 
-           word32Theory Assem
-  val ERR = mk_HOL_ERR "Verify"
-in
+(*local*) open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
+        numSyntax listSyntax
+        pairTheory arithmeticTheory listTheory optionTheory preARMTheory word32Theory finite_mapTheory
+(*in*)
 
 (*------------------------------------------------------------------------------------------------------*)
 (* mk_pred - Given an (instB,byn), (initial pc, final pc), (inputs, outputs), a list of unchanged       *)
 (* registers/memory slots, the number of steps to be executed n, and a function f, it sets up a goal on *)
-(* the property of the segment of code within initial pc to final pc.					*) 
+(* the property of the segment of code when run from the initial pc up to the final pc			*)
 (*------------------------------------------------------------------------------------------------------*)
 
 val init_sp = ref 100;
 
 fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
- let
+   let
+
     exception invalidExp;
 
     fun mk_reads s (Assem.PAIR (e1,e2)) =
@@ -36,7 +37,8 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 	      List.foldl (fn (v,p) => mk_conj(p, one_var v)) (Term`T`) ls_unchanged
         end
 
-    fun mk_pc pc value = mk_eq (pc, term_of_int value);
+    fun mk_pc pc value =
+	mk_eq (pc, term_of_int value);
 
     val (pre_pc, post_pc) = ( mk_var ("pc0", Type `:ADDR`),
 			      mk_var ("pc1", Type `:ADDR`));	
@@ -44,63 +46,55 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 				 mk_var ("cpsr1", Type `:CPSR`));
 
     val (pre_reg, post_reg) = 
-	(mk_var ("regs0", Type `:(ADDR->DATA)`),  mk_var ("regs1", Type `:(ADDR->DATA)`));
+	( mk_var ("regs0", Type `:(ADDR |-> DATA)`),  mk_var ("regs1", Type `:(ADDR |-> DATA)`));
     val (pre_mem, post_mem) =
-	(mk_var ("mems0", Type `:(ADDR->DATA)`),  mk_var ("mems1", Type `:(ADDR->DATA)`));
+	( mk_var ("mems0", Type `:(ADDR |-> DATA)`),  mk_var ("mems1", Type `:(ADDR |-> DATA)`));
 
     val (pre_st, post_st) = 
 	( mk_pair (pre_reg, pre_mem ),
 	  mk_pair (post_reg, post_mem)
 	);
 
+    val assumption0 = mk_pc pre_pc pc1;
+    val assumption1 = if runT then
+                let val assum1 =
+                        list_mk_conj [mk_eq( list_mk_comb(Term `FAPPLY : (ADDR |-> DATA) -> ADDR -> DATA`, [pre_reg,Term`13`]),
+                                             mk_comb (Term`n2w`, term_of_int (!init_sp))),
+                                      assumption0,
+                                      mk_comb(mk_comb(Term`terminated`, tr_iB), list_mk_pair [pre_pc, pre_cpsr, pre_st])]
+                in
+                        mk_conj(mk_eq(list_mk_comb(Term `FAPPLY : (ADDR |-> DATA) -> ADDR -> DATA`, [pre_reg,Term`14`]),
+                                      mk_comb (Term`n2w`, #2 (dest_pair (tr_iB)))),
+                                assum1)
+                end
+        else
+                assumption0
+    val assumption2 =
+	    mk_conj (assumption1,
+		     mk_eq (list_mk_pair [post_pc, post_cpsr, post_st],  
+		     	    if runT then
+                        	mk_comb (mk_comb(Term`terRun`, tr_iB),
+                                        list_mk_pair [pre_pc, pre_cpsr, pre_st])
+                    	    else
+                        	mk_comb (mk_comb(mk_comb(Term`run`,term_of_int n), tr_iB),
+                                        list_mk_pair [pre_pc, pre_cpsr, pre_st])
+			   )
+		    );
+
     fun mk_outF outs =
 	let 
-	    val outP0 = mk_pc post_pc pc2;  (* pc's values *)
-            val unch = mk_unchanged pre_st post_st
-	    val outP1 = if unch = boolSyntax.T then outP0
-                        else mk_conj(outP0, unch);  (* unchanged values *)
-	    val outP2 = mk_conj(outP1,     (* equality to the original function *)
-                                mk_eq(mk_reads post_st outs, 
-                                      mk_comb (tr_f, mk_reads pre_st ins)));
-	    val s1 = if runT then
-			mk_comb (mk_comb(Term`terRun`, tr_iB),
-                                 list_mk_pair [pre_pc, pre_cpsr, pre_st])
-		     else
-			mk_comb (mk_comb(mk_comb(Term`run`,term_of_int n), tr_iB), 
-                                 list_mk_pair [pre_pc, pre_cpsr, pre_st]);
-
-            val foo = mk_eq(list_mk_pair [post_pc, post_cpsr, post_st],s1)
-(*	    val outP3 = mk_let(mk_pabs(list_mk_pair [post_pc, post_cpsr, post_st],
-				outP2), s1) *)
+	    val outP0 = mk_pc post_pc pc2;							(* pc's values *)
+	    val outP1 = mk_conj(outP0, mk_unchanged pre_st post_st);				(* unchanged values *)
+	    val outP2 = mk_conj(outP1, mk_eq(mk_reads post_st outs, mk_comb (tr_f, mk_reads pre_st ins)));
 	in
-	    (foo,outP2)
+	    outP2
 	end
 
-    val assumption0 = mk_pc pre_pc pc1;
-    val assumption = 
-         if runT then 
-           let val assum1 = list_mk_conj 
-                   [mk_eq(mk_comb(pre_reg,Term`13`), 
-                          mk_comb (Term`n2w`, term_of_int (!init_sp))),
-                    assumption0,
-                    mk_comb(mk_comb(Term`terminated`, tr_iB), 
-                            list_mk_pair [pre_pc, pre_cpsr, pre_st])
-                   ]
-           in
-             mk_conj(mk_eq(mk_comb(pre_reg,Term`14`), 
-                           mk_comb (Term`n2w`, #2 (dest_pair (tr_iB)))), 
-                     assum1)
-           end
-	 else 
-           assumption0
+    val pred = mk_imp(assumption2, mk_outF outs)
 
-    val (evaluate,post) = mk_outF outs
-    val ant = list_mk_conj (strip_conj assumption @ [evaluate])
-    val pred = mk_imp(ant, post)
-
- in
-   list_mk_forall([pre_pc, pre_cpsr, pre_reg, pre_mem], pred)
- end;
+   in
+        list_mk_forall( [pre_pc, pre_cpsr, pre_reg, post_mem, post_pc, post_cpsr, post_reg, post_mem], pred)
+   end;
 
 
 
@@ -131,12 +125,9 @@ fun uploadCode stms =
      val tr_instL = #1 (dest_list stms);
 
      val mk_instB_items = #2 (List.foldl (fn (elm, (i,tr)) =>
-        (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), 
-                                  List.nth(tr_instL, i))))) 
-        (0,boolSyntax.T) tr_instL);
+        (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), List.nth(tr_instL, i))))) (0,Term`T`) tr_instL);
 
-     val _ = INSTB_LEM := REWRITE_RULE [GSYM CONJ_ASSOC]
-                          (prove (mk_instB_items, EVAL_TAC));
+     val _ = INSTB_LEM := prove (mk_instB_items, EVAL_TAC);
 
      val tr_byn = term_of_int (length tr_instL);
      val cur_instB = mk_pair(Term`instB`, tr_byn)
@@ -148,62 +139,116 @@ fun uploadCode stms =
 (* Simulate a ARM program for n steps                                                                   *)
 (*------------------------------------------------------------------------------------------------------*)
 
-fun simN (fname, ftype, args, stms, outs) n =
+fun simN (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts) n =
   let
-     val cur_instB = uploadCode stms;
+     val (fname, ftype, args, stms, outs, rs) = hd arm;
+     val cur_instB = uploadCode insts;
      val cur_byn = #2 (dest_pair cur_instB)
-  in
-     set_goal ( [], 
-		mk_pred true cur_instB 
-		(0, int_of_term cur_byn) 
-		(args,outs) 
-		[] 
-		n 
-		(mk_const (fname, ftype))
-	      )
-  end;		
+     val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
+                                                stms1 @ stms) [] arm
+     val g1 = mk_pred false cur_instB
+                (0, int_of_term cur_byn)
+                (args,outs)
+                []
+                n
+                (mk_const (fname, ftype))
 
-(*---------------------------------------------------------------------------*)
-(* Simulate a ARM program until it terminates                                *)
-(*---------------------------------------------------------------------------*)
-
-fun simT (arm:(string*hol_type*exp*instr list*exp*(exp Binaryset.set)) list,
-          insts)
-  =
-  let
-     val (fname, ftype, args, stms, outs, rs) = hd arm
-     val cur_instB = uploadCode insts
-     val cur_byn = #2 (dest_pair cur_instB)
-     val _ = cur_insts := List.foldl (fn ((_,_,_,stms,_,_),stms1) => stms1 @ stms) [] arm 
   in
      set_goal ( [],
-                mk_pred true cur_instB
+                #2 (dest_eq (concl (REWRITE_CONV [read_thm] g1)))
+              )
+  end;
+
+
+(*------------------------------------------------------------------------------------------------------*)
+(* Simulate a ARM program until it terminates                                                           *)
+(*------------------------------------------------------------------------------------------------------*)
+
+fun simT (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts) 
+  =
+  let
+     val (fname, ftype, args, stms, outs, rs) = hd arm;
+     val cur_instB = uploadCode insts;
+     val cur_byn = #2 (dest_pair cur_instB)
+     val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
+                                		stms1 @ stms) [] arm
+     val g1 = mk_pred true cur_instB
                 (0, int_of_term cur_byn)
                 (args,outs)
                 []
                 0
                 (mk_const (fname, ftype))
+
+  in
+     set_goal ( [],
+                #2 (dest_eq (concl (REWRITE_CONV [read_thm] g1)))
               )
   end;
 
-(*---------------------------------------------------------------------------*)
-(* TACs for simulation                                                       *)
-(*---------------------------------------------------------------------------*)
+(*
+val (runT,tr_iB,pc1,pc2,ins,outs,ls_unchanged,n,tr_f) = 
+	(true, cur_instB, 0, int_of_term cur_byn, args, outs, [], 0, mk_const(fname,ftype));
+*)
+
+(*------------------------------------------------------------------------------------------------------*)
+(* Additional theorems for finite maps					                                *)
+(*------------------------------------------------------------------------------------------------------*)
+
+(* Sort in ascending order                                                                              *)
+val FUPDATE_LT_COMMUTES = Q.store_thm (
+  "FUPDATE_LT_COMMUTES",
+  ` !f a b c d. c < a ==> (f |+ (a:num, b:word32) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+    RW_TAC arith_ss [FUPDATE_COMMUTES]
+    );
+
+(* Sort in descending order                                                                             *)
+val FUPDATE_GT_COMMUTES = Q.store_thm (
+  "FUPDATE_GT_COMMUTES",
+  ` !f a b c d. c > a ==> (f |+ (a:ADDR,b:'b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+    RW_TAC arith_ss [FUPDATE_COMMUTES]
+    );
+
+(*------------------------------------------------------------------------------------------------------*)
+(* TACs for simulation									                *)
+(*------------------------------------------------------------------------------------------------------*)
+
+val MOVE_RULE =
+    SIMP_RULE std_ss [FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] o 
+    REWRITE_RULE [decode1_thm, HD, write_thm, read_thm];
 
 val MOVE_TAC = 
-    REWRITE_TAC [decode1_thm, HD, write_thm, read_thm];
+    REWRITE_TAC [decode1_thm, HD, write_thm, read_thm] THEN
+    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM];
+
+val ARITH_RULE =
+    SIMP_RULE std_ss [FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] o 
+    REWRITE_RULE [decode1_thm, HD, TL, write_thm, read_thm];
+
 
 val ARITH_TAC = 
-    REWRITE_TAC [decode1_thm, HD, TL, write_thm, read_thm];
+    REWRITE_TAC [decode1_thm, HD, TL, write_thm, read_thm] THEN
+    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM];
 
+val LOGICAL_RULE = ARITH_RULE
 val LOGICAL_TAC = ARITH_TAC
 
+val LDR_RULE = MOVE_RULE
 val LDR_TAC = MOVE_TAC
 
-val STR_TAC = 
-    MOVE_TAC;
+val STR_RULE = MOVE_RULE
+val STR_TAC = MOVE_TAC;
 
 val [FOLDL_NIL, FOLDL_CONS] = CONJUNCTS FOLDL;
+
+val LDM_RULE =
+    WORD_RULE o 
+    (CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
+        THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
+                THENC REWRITE_CONV [read_thm]
+                THENC WORD_CONV
+                THENC reduceLib.REDUCE_CONV
+                THENC REWRITE_CONV [write_thm]))))) o
+    REWRITE_RULE [decode1_thm];
 
 val LDM_TAC = 
     REWRITE_TAC [decode1_thm] THEN
@@ -212,57 +257,65 @@ val LDM_TAC =
 		THENC REWRITE_CONV [read_thm]
         	THENC WORD_CONV
         	THENC reduceLib.REDUCE_CONV
-        	THENC REWRITE_CONV [write_thm]))))
-    THEN WORD_TAC;
+        	THENC REWRITE_CONV [write_thm] 
+		THENC SIMP_CONV std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM])))) THEN
+    WORD_TAC;
+
+
+val STM_RULE =
+    ASM_REWRITE_RULE [] o 
+    (CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
+        THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
+                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
+                THENC reduceLib.REDUCE_CONV))))) o
+    REWRITE_RULE [decode1_thm, REVERSE_DEF, LENGTH, APPEND];
 
 val STM_TAC = 
     REWRITE_TAC [decode1_thm, REVERSE_DEF, LENGTH, APPEND] THEN
     CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
         THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
                 THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
-                THENC reduceLib.REDUCE_CONV)))) THEN
+                THENC reduceLib.REDUCE_CONV 
+		THENC SIMP_CONV std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM]
+		)))) THEN
     ASM_REWRITE_TAC [];
+
+val CMP_RULE =
+     ASM_REWRITE_RULE [] o
+     WORD_RULE o
+     REWRITE_RULE [decode1_thm, read_thm, HD, TL, setS_thm];
 
 val CMP_TAC = 
      REWRITE_TAC [decode1_thm, read_thm, HD, TL, setS_thm] THEN
      WORD_TAC THEN ASM_REWRITE_TAC [];       
+
+val BRANCH_RULE =
+     REWRITE_RULE [decode1_thm, read_thm, write_thm, goto_thm, read_pc_def] o
+     WORD_RULE o
+     REWRITE_RULE [getS_thm]
 
 val BRANCH_TAC = 
      REWRITE_TAC [getS_thm] THEN WORD_TAC THEN
      REWRITE_TAC [decode1_thm, read_thm, write_thm, goto_thm, read_pc_def]
 
 
+val BRANCH_LINK_RULE =
+     BRANCH_RULE
+
 val BRANCH_LINK_TAC = 
      BRANCH_TAC
 
-
-
 fun STOP_TAC defs = 
-    RW_TAC std_ss [run_def, TERRUN_STOP] THEN
-    RW_TAC list_ss ([LET_THM] @ defs) THEN
+    SIMP_TAC list_ss [run_def, TERRUN_STOP] THEN
+    REWRITE_TAC ([LET_THM] @ defs) THEN
+    RW_TAC list_ss [FUPDATE_LT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] THEN
     REPEAT (CHANGED_TAC WORD_TAC)
 
 (*------------------------------------------------------------------------------------------------------*)
 (* Automatic reasoning                                                                                  *)
 (*------------------------------------------------------------------------------------------------------*)
 
-(*
-fun get_pc (tassum, tg) = 
-  let   
-      fun toDecode2 t = 
-	  let val (fterm, ts) = 
-		strip_comb t
-	  in 
-	      if same_const fterm (Term`run`) then
-		 int_of_term (hd (strip_pair (List.nth(ts, length ts - 1))))
-	      else toDecode2 (List.nth (ts, length ts - 1))
-	  end
-  in
-	toDecode2 tg
-  end
-*)
-
-fun get_pc (tassum, tg) =
+fun get_pc_from_goal (tassum, tg) =
   let
       fun found t = 
 	let val (fterm, ts) = strip_comb t in
@@ -275,6 +328,38 @@ fun get_pc (tassum, tg) =
   handle e => raise ERR "get_pc" "";
 
 exception tacError;
+
+fun select_rule (Assem.MOVE {...}) = MOVE_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.MRS,cond,flag), ...}) = MOVE_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.MSR,cond,flag), ...}) = MOVE_RULE
+
+ |  select_rule (Assem.OPER {oper = (Assem.ADD,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.SUB,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.RSB,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.MUL,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.MLA,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.LSL,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.LSR,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.ASR,cond,flag), ...}) = ARITH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.ROR,cond,flag), ...}) = ARITH_RULE
+
+ |  select_rule (Assem.OPER {oper = (Assem.CMP,cond,flag), ...}) = CMP_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.TST,cond,flag), ...}) = CMP_RULE
+
+ |  select_rule (Assem.OPER {oper = (Assem.AND,cond,flag), ...}) = LOGICAL_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.ORR,cond,flag), ...}) = LOGICAL_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.EOR,cond,flag), ...}) = LOGICAL_RULE
+
+ |  select_rule (Assem.OPER {oper = (Assem.LDR,cond,flag), ...}) = LDR_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.STR,cond,flag), ...}) = STR_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.LDMFD,cond,flag), ...}) = LDM_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.STMFD,cond,flag), ...}) = STM_RULE
+
+ |  select_rule (Assem.OPER {oper = (Assem.B,cond,flag), ...}) = BRANCH_RULE
+ |  select_rule (Assem.OPER {oper = (Assem.BL,cond,flag), ...}) = BRANCH_LINK_RULE
+
+ |  select_rule _ = raise tacError;
+
 
 fun select_tac (Assem.MOVE {...}) = MOVE_TAC
  |  select_tac (Assem.OPER {oper = (Assem.MRS,cond,flag), ...}) = MOVE_TAC
@@ -308,28 +393,43 @@ fun select_tac (Assem.MOVE {...}) = MOVE_TAC
  |  select_tac _ = raise tacError;
 
 
-fun TAC0 n = 
-  REWRITE_TAC [read_thm] THEN
-  REPEAT STRIP_TAC THEN
+fun TAC0 n =
+  REPEAT GEN_TAC THEN
+  STRIP_TAC THEN
+  POP_ASSUM MP_TAC THEN
   IMP_RES_TAC (SPEC (term_of_int n) TERRUN_THM) THEN
   ONCE_ASM_REWRITE_TAC [] THEN
   POP_ASSUM (K ALL_TAC);
 
-
 val ONE_STEP_TAC =
   (fn g =>
      ( let val g1 = hd (#1 (ONCE_ASM_REWRITE_TAC [] g))
-	    val tac1 = select_tac (List.nth(!cur_insts, get_pc g1))
+	    val tac1 = select_tac (List.nth(!cur_insts, get_pc_from_goal g1))
        in
 	  ( ASM_REWRITE_TAC [] THEN
 	    REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
             reduceLib.REDUCE_TAC THEN
 	    REWRITE_TAC [decode2_thm] THEN
-	    tac1 THEN REWRITE_TAC [set_pc_def, write_thm, read_thm] THEN
-	    WORD_TAC THEN
-	    SIMP_TAC bool_ss []
+	    tac1 THEN REWRITE_TAC [write_thm, read_thm, set_pc_def, read_pc_def] THEN
+	    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] THEN
+	    WORD_TAC
 	  ) g
        end
+     )
+  );
+
+
+fun ONE_INST_RULE rule1 =
+  (fn thm =>
+     (   (  
+            (SIMP_RULE bool_ss []) o
+	    WORD_RULE o
+	    REWRITE_RULE [set_pc_def, write_thm, read_thm] o
+	    rule1 o 
+	    REWRITE_RULE [decode2_thm, decode1_thm] o
+	    reduceLib.REDUCE_RULE o 
+	    REWRITE_RULE [Once run_def, !INSTB_LEM]
+          ) thm
      )
   );
 
@@ -338,31 +438,118 @@ fun ONE_INST_TAC tac1 =
      (   ( ASM_REWRITE_TAC [] THEN
             REWRITE_TAC [Once run_def, !INSTB_LEM] THEN
             reduceLib.REDUCE_TAC THEN
-            REWRITE_TAC [decode2_thm, decode1_thm] THEN
-            tac1 THEN REWRITE_TAC [set_pc_def, write_thm, read_thm] THEN
-            WORD_TAC THEN
-            SIMP_TAC bool_ss []
+            REWRITE_TAC [decode2_thm] THEN
+            tac1 THEN 
+	    REWRITE_TAC [set_pc_def, write_thm, read_thm, read_pc_def] THEN
+	    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] THEN
+            WORD_TAC
           ) g
      )
   );
 
+val ONE_STEP_TAC =
+  (fn g =>
+     ( let val g1 = hd (#1 (ONCE_ASM_REWRITE_TAC [] g))
+	    val tac1 = select_tac (List.nth(!cur_insts, get_pc_from_goal g1))
+       in
+	  ONE_INST_TAC tac1 g
+       end
+     )
+  );
 
-fun ARM_TAC defs =
+
+fun SEQ_TAC defs =
   let 
       fun one_step (asl,g) =
-		(    let val pc = get_pc (asl,g)
-		    in if pc = length (!cur_insts) then
-			STOP_TAC defs (asl,g)
-		       else (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))) THEN
+		(    let val pc = get_pc_from_goal (asl,g)
+			 val _ = if pc < length (!cur_insts) then 
+			            print ("Verifying instruction #" ^ Int.toString pc ^ (Assem.formatInst (List.nth(!cur_insts,pc))) ^ "\n")
+				 else
+				    print "Finishing...\n"
+		     in if pc = length (!cur_insts) then
+			     STOP_TAC defs (asl,g)
+		       else 
+			    (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))) THEN
 			     one_step) (asl,g)
 		    end
 		)
   in
      (  TAC0 (length (!cur_insts)) THEN
 	ONCE_ASM_REWRITE_TAC [] THEN
-       one_step
+        one_step
      )
   end 
+
+
+(*------------------------------------------------------------------------------------------------------*)
+(* Run to a designated position                                                                         *)
+(*------------------------------------------------------------------------------------------------------*)
+
+val RUN_ONE_MORE_STEP = Q.store_thm
+  ("RUN_ONE_MORE_STEP",
+   `!m. run 1 instM (run m instM s) = run (m+1) instM s`,
+    RW_TAC arith_ss [RUN_THM_1]
+  );
+
+fun get_instM_state tg =
+  let
+      fun found t =
+        let val (fterm, ts) = strip_comb t in
+          (same_const fterm (Term`run`)) orelse (same_const fterm (Term `terRun`))
+        end
+      val ts = #2 (strip_comb (find_term found tg))
+  in
+     (List.nth(ts, length ts - 2), List.nth(ts, length ts - 1))
+  end
+  handle e => raise ERR "get_pc" "";
+
+fun get_pc s = 
+  let val ts =  #2 (strip_comb s)
+  in int_of_term (hd (strip_pair (List.nth(ts, length ts - 1))))    
+  end
+
+fun runTo k instM s =
+  let
+      val cur_s = ref (mk_comb (mk_comb(Term`run 0`, instM), s));
+      val cur_pc = ref (get_pc (!cur_s));
+      val cur_th = ref (GEN_ALL (SIMP_CONV std_ss [run_def] (!cur_s)));
+
+      fun get_cur_pc ts = 
+	let val s1 = find_term (fn t => type_of t = Type `:STATE`) ts
+	in int_of_term (hd (strip_pair s1))
+	end
+
+      fun expand_once instM s =
+
+      (* ???   REWRITE_CONV [RUN_ONE_MORE_STEP, th0] (mk_comb (mk_comb(Term`run 1`, instM), s));     *)
+
+	  REWRITE_RULE [!cur_th] (REWRITE_CONV [RUN_ONE_MORE_STEP] (mk_comb (mk_comb(Term`run 1`, instM), s)));
+
+      fun one_step () =
+                (    if !cur_pc = k then
+                            ()
+                     else 
+			     let val rule1 = select_rule (List.nth(!cur_insts,!cur_pc));
+				 val th0 = expand_once instM (!cur_s);
+				 val th1 = ONE_INST_RULE rule1 th0
+				 val th2 = REWRITE_RULE [RUN_LEM_1] th1
+			     in
+				 (cur_th := GSYM th2; cur_s := #2 (dest_eq (concl th2)); cur_pc := get_cur_pc (concl th2);
+				  one_step())
+			     end 
+                )
+  
+  in
+        (one_step ();
+	 !cur_th
+	)
+  end
+
+
+fun getThm k =   
+  let val (instM, s) = get_instM_state (#2 (top_goal ()))
+  in runTo k instM s
+  end
 
 (*------------------------------------------------------------------------------------------------------*)
 (* Some theorems about words					                                        *)
@@ -503,5 +690,7 @@ fun getIOC prog pc0 n =
 
 *)
 
+(*
 end (* local open *)
 end (* structure *)
+*)

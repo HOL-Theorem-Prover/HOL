@@ -166,7 +166,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
         end
 
      else if is_numeral exp then
-	Tree.NCONST (int_of_term exp)
+	Tree.NCONST (Arbint.fromNat (dest_numeral exp))
 
      else if not (is_comb exp) then
 	if is_var exp then
@@ -174,7 +174,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
       	        Tree.TEMP (inspectVar v)
             end
 	else
-	    Tree.NCONST 0
+	    Tree.NCONST Arbint.zero
 
      else if is_cond exp then
         let val (c,t,f) = dest_cond exp;
@@ -215,7 +215,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	    else Tree.BINOP (convert_binop operator, analyzeExp operands, analyzeExp operands)    (* UNIOP of uniop * exp  *)
 
 	else if same_const operator n2w_tm then				(* words		*)
-		Tree.WCONST (int_of_term operands)	    
+		Tree.WCONST (Arbint.fromNat (dest_numeral operands))	    
         else 								(* function call		*)
 	    let val (fun_name, fun_type) = dest_const operator in
 	        Tree.CALL (Tree.NAME (Temp.namedlabel fun_name), 
@@ -320,9 +320,9 @@ fun print_stm ir =
    |  one_exp (Tree.NAME e) =
         Symbol.name e
    |  one_exp (Tree.NCONST e) =
-        Int.toString e
+        Arbint.toString e
    |  one_exp (Tree.WCONST e) =
-        (Int.toString e) ^ "w"
+        (Arbint.toString e) ^ "w"
    |  one_exp (Tree.CALL(f, args)) =
         "CALL " ^ (one_exp f)
    |  one_exp (Tree.PAIR(e1,e2)) =

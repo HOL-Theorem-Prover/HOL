@@ -553,32 +553,32 @@ fun AssignColors () =
      val firstnArgS = S.addList(S.empty intOrder, !firstnArgL);
 
      fun assign () =
-      let val n = Stack.top (!selectStack);
-	val _ = (selectStack := Stack.pop(!selectStack));
-	val okColors = initColors ((!NumRegs)-1);
-	val okColors = List.foldl (fn (w,s) => if S.member(S.union(!coloredNodes,!precolored),GetAlias w) then
+      if Stack.isEmpty (!selectStack) then 
+	  (List.foldl (fn (n,s) => color := T.enter(!color,n,chaseColor n))
+			 ()
+			 (S.listItems (!coalescedNodes));
+			 ())
+      else
+	  let val n = Stack.top (!selectStack);
+	      val _ = (selectStack := Stack.pop(!selectStack));
+	      val okColors = initColors ((!NumRegs)-1);
+	      val okColors = List.foldl (fn (w,s) => if S.member(S.union(!coloredNodes,!precolored),GetAlias w) then
 					S.difference (s, S.add(S.empty intOrder, T.look(!color, GetAlias w)))
 				  		else s)
 		    		okColors 
 				(S.listItems (T.look(!adjList,n)))
-      in
-
-	if S.member(firstnArgS, n) andalso not (Stack.isEmpty (!selectStack)) then
-		assign()
-	else if S.isEmpty(okColors) then
-	      (spilledNodes := spillNodes n;
-	       selectStack := Stack.empty ())
-	else
-	    ( coloredNodes := S.add(!coloredNodes, n);
-	      color := T.enter(!color, n, hd (S.listItems okColors));
-	      if not (Stack.isEmpty (!selectStack)) then assign() 
-	      else 
-		(List.foldl (fn (n,s) => color := T.enter(!color,n,chaseColor n))
-                 ()
-                 (S.listItems (!coalescedNodes));
-		 ())
-	    )
-      end
+	  in
+	      if S.member(firstnArgS, n) then         (* the colors of the first arguments have been assigned *) 
+		  assign()
+	      else if S.isEmpty(okColors) then
+		  (spilledNodes := spillNodes n;
+		   selectStack := Stack.empty ())
+	      else
+		  ( coloredNodes := S.add(!coloredNodes, n);
+		    color := T.enter(!color, n, hd (S.listItems okColors));
+		    assign() 
+		  )
+	  end
 
    in
 	( assign_firstnArgs ();
