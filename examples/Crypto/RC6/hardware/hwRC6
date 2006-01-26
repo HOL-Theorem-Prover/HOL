@@ -43,7 +43,7 @@ fun cirDefine qdef =
 
 val LeftRotate_def =  Define `LeftRotate x w  = x #<< ((w2n w) MOD WL)`;
 val RightRotate_def = Define `RightRotate x w = x #>> ((w2n w) MOD WL)`;
-                                                                                                                                               
+
 val _ = 
   (overload_on ("<<<",``$LeftRotate``); 
    set_fixity "<<<" (Infixl 625));
@@ -59,7 +59,7 @@ val _ =
 
 val _ = 
  add_combinational 
-   ["word_lsl","word_lsr", "bitwise_eor", "LeftShift", "RightShift",
+   ["word_lsl","word_lsr", "bitwise_eor", "LeftRotate", "RightRotate",
     "word_mul", "word_add", "word_sub", "n2w","w2n"];
 
 vsynth.AddBinop ("XOR32",   (``UNCURRY $#  : word32#word32->word32``,  "^"));
@@ -107,8 +107,8 @@ val (FwdRound_def,_,FwdRound_dev) =
 val (BwdRound_def,_,BwdRound_dev) = 
  hwDefine
     `BwdRound ((a,b,c,d):block,((k0,k1):key)) = 
-	(((d - k0) >>> ut c) # ut a, a,
-	 ((b - k1) >>> ut a) # ut c, c)`;
+	(((d - k1) >>> ut c) # ut a, a,
+	 ((b - k0) >>> ut a) # ut c, c)`;
 
 (*---------------------------------------------------------------------------*)
 (* Rotate keys and get a pair of keys from the head of the key schedule      *)
@@ -206,13 +206,13 @@ hwDefineLib := (Rounds_def,Rounds_ind,Rounds_dev) ::
 
 val (RC6_FWD_def,_,RC6_FWD_dev) =
  hwDefine
-   `RC6_FWD (keys,b) = Rounds (20w, ROTKEYS keys,
-                               PreWhitening (b,GETKEYS keys))`;
+   `RC6_FWD (keys,b) = 
+      SND (SND (Rounds (20w, ROTKEYS keys, PreWhitening (b,GETKEYS keys))))`;
 
 val (RC6_BWD_def,_,RC6_BWD_dev) =
  hwDefine
-   `RC6_BWD (keys,b) = InvRounds (20w, ROTKEYS keys,
-                                  InvPreWhitening (b,GETKEYS keys))`;
+   `RC6_BWD (keys,b) = 
+     SND(SND(InvRounds(20w, ROTKEYS keys, InvPreWhitening (b,GETKEYS keys))))`;
 
 val dev = REFINE_ALL RC6_FWD_dev;
 val RC6_FWD_netlist = MAKE_NETLIST dev;
@@ -231,27 +231,32 @@ val FORALL_BLOCK = Q.store_thm
     SIMP_TAC std_ss [FORALL_PROD]);
 
 val FORALL_KEYS = Q.prove
-(`(!x:key. P x) = !k0 k1. P(k0,k1)`,
+(`(!k:keysched. P k) = 
+  !k0 k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11 k12 
+      k13 k14 k15 k16 k17 k18 k19 k20 k21 k22 k23 k24 k25 k26 k27 
+      k28 k29 k30 k31 k32 k33 k34 k35 k36 k37 k38 k39 k40 k41 k42 k43. 
+   P(k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,
+      k13,k14,k15,k16,k17,k18,k19,k20,k21,k22,k23,k24,k25,k26,k27,
+      k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,k38,k39,k40,k41,k42,k43)`,
   SIMP_TAC std_ss [FORALL_PROD]);
 
 (*---------------------------------------------------------------------------*)
 (* Rotation lemmas                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val Rotate_Lemma = Q.store_thm
-   ("Rotate_Lemma",
-   `!w. (w2n w) MOD WL < WL`,
+val lemma = Q.prove
+   (`!w. (w2n w) MOD WL < WL`,
     ARW_TAC [WL_def, HB_def] THEN ARW_TAC [DIVISION]);
 
 val Rotate_Inversion = Q.store_thm
   ("Rotate_Inversion",
   `!s n. (s >>> n <<< n = s) /\ (s <<< n >>> n = s)`,
-  ASSUME_TAC Rotate_Lemma THEN
+  ASSUME_TAC lemma THEN
   REWRITE_TAC [LeftRotate_def, RightRotate_def] THEN ARW_TAC [SHIFT_Inversion]);
 
 val OneRound_Inversion = Q.store_thm
   ("OneRound_Inversion",
-  `!b:block k:key. BwdRound (FwdRound (b,k), k) = b`,
+  `!b:block k0 k1. BwdRound (FwdRound (b,k0,k1), k1,k0) = b`,
   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] THEN 
   SIMP_TAC std_ss [FwdRound_def, BwdRound_def] THEN 
   REWRITE_TAC [WORD_ADD_SUB_ASSOC, WORD_SUB_REFL, WORD_ADD_0] THEN
@@ -262,8 +267,8 @@ val OneRound_Inversion = Q.store_thm
 val Whitening_Inversion = Q.store_thm
 ("Whitening_Inversion",
  `!b k0 k1. 
-    (InvPostWhitening (PreWhitening (b,(k0,k1)),(k0,k1)) = b) /\ 
-    (InvPreWhitening (PostWhitening (b,(k0,k1)),(k0,k1)) = b)`,
+    (InvPostWhitening (PreWhitening (b,(k0,k1)),(k1,k0)) = b) /\ 
+    (InvPreWhitening (PostWhitening (b,(k0,k1)),(k1,k0)) = b)`,
   SIMP_TAC std_ss [FORALL_BLOCK] THEN
   SIMP_TAC std_ss [InvPostWhitening_def, PreWhitening_def, 
                    InvPreWhitening_def, PostWhitening_def] THEN
@@ -277,10 +282,23 @@ val Whitening_Inversion = Q.store_thm
 val [FwdRound] = decls "FwdRound";
 val [BwdRound] = decls "BwdRound";
 
+val REVKEYS_def = 
+ Define
+  `REVKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
+       k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,
+       k38,k39,k40,k41,k42,k43):keysched = 
+   (k43,k42,k41,k40,k39,k38,k37,k36,k35,k34,k33,k32,k31,
+    k30,k29,k28,k27,k26,k25,k24,k23,k22,k21,k20,k19,k18,
+    k17,k16,k15,k14,k13,k12,k11,k10,k9,k8,k7,k6,k5,k4,k3,
+    k2,k1,k0)`;
+
 val RC6_LEMMA = Q.store_thm
 ("RC6_LEMMA",
- `!(plaintext:block) (keys:keysched).
-     RC6_BWD (keys,RC6_FWD (keys,plaintext)) = plaintext`,
+ `!plaintext keys.
+     RC6_BWD (REVKEYS keys, RC6_FWD (keys,plaintext)) = plaintext`,
+   GEN_TAC THEN 
+   SIMP_TAC std_ss [FORALL_KEYS] THEN
+   REPEAT GEN_TAC THEN
    RESTR_EVAL_TAC [FwdRound, BwdRound] THEN
    RW_TAC std_ss [OneRound_Inversion, Whitening_Inversion]);
 
@@ -299,17 +317,8 @@ val LIST_TO_KEYS_def =
       LIST_TO_KEYS t 
        (h,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
         k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,
-        k37,k38,k39,k40,k41,k42,k43))`;
+        k37,k38,k39,k40,k41,k42,k43))`,
 
-val REVKEYS_def = 
- Define
-  `REVKEYS (k0,k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11,k12,k13,k14,k15,k16,k17,k18,k19,
-       k20,k21,k22,k23,k24,k25,k26,k27,k28,k29,k30,k31,k32,k33,k34,k35,k36,k37,
-       k38,k39,k40,k41,k42,k43) = 
-   [k43; k42; k41; k40; k39; k38; k37; k36; k35; k34; k33; k32; k31;
-    k30; k29; k28; k27; k26; k25; k24; k23; k22; k21; k20; k19; k18;
-    k17; k16; k15; k14; k13; k12; k11; k10; k9; k8; k7; k6; k5; k4; k3;
-    k2; k1; k0]`;
 
 
 val DUMMY_KEYS_def =
