@@ -158,7 +158,8 @@ fun ac_term_ord(tm1,tm2) =
               else ()
 
             val _ = if isperm andalso ac_term_ord(l, r) <> GREATER then
-                      failwith "permutative rewr: not applied" else ()
+                     (trace(4, IGNORE("possibly looping",conditional_eqn)); 
+                      failwith "permutative rewr: not applied") else ()
             val _ = if null conditions then ()
                     else trace(if isperm then 2 else 1, REWRITING(tm,th))
 	    val new_stack = conditions@stack

@@ -47,7 +47,7 @@ fun tty_trace (LZ_TEXT fs) = (say "  "; say (fs ()); say "\n")
     (say "  "; print_term tm; say " via "; say s; say " simplifies to: ";
      print_term (rhs (concl thm)) handle HOL_ERR _ => print_thm thm; say "\n")
   | tty_trace (IGNORE (s,thm)) =
-    (say "  ignoring "; say s; say " rewrite "; print_thm thm; say "\n")
+    (say "  Ignoring "; say s; say " rewrite\n     "; print_thm thm; say "\n")
   | tty_trace (MORE_CONTEXT thm) =
     (say "  more context: "; print_thm thm; say "\n");
 
