@@ -565,6 +565,8 @@ fun termToVerilog_CONSTANT (out:string->unit) tm =
      andalso is_const(fst(strip_comb tm))
      andalso (fst(dest_const(fst(strip_comb tm))) = "CONSTANT")
      andalso ((rand(rator tm) = ``0``)
+              orelse (rand(rator tm) = ``F``)
+              orelse (rand(rator tm) = ``T``)
               orelse is_comb(rand(rator tm))
                      andalso is_const(rator(rand(rator tm)))
                      andalso mem 
@@ -578,9 +580,13 @@ fun termToVerilog_CONSTANT (out:string->unit) tm =
          ("value",
           let val num = rand(rator tm)
               val n = 
-               if (num = ``0``) orelse (fst(dest_const(rator num)) = "NUMERAL")
-                then num
-                else rand num
+               if (num = ``F``) 
+                  then ``0``
+               else if (num = ``T``)
+                  then ``1``
+               else if (num = ``0``) orelse (fst(dest_const(rator num)) = "NUMERAL")
+                  then num
+               else rand num
           in
            Arbnum.toString(numSyntax.dest_numeral n)
           end)]
@@ -1130,11 +1136,11 @@ fun MAKE_VERILOG name thm out =
                        end
      val _ = if not(null(subtract module_names 
                         (map ((removeTag "dev") o fst) (!module_lib))))
-              then (print "unknown module in circuit: ";
+              then (print "unKnown module in circuit: ";
                     print(hd(subtract module_names (map ((removeTag "dev") o fst)
                                                               (!module_lib))));
                     print "\n";
-                    raise ERR "MAKE_VERILOG" "unknown modules in circuit")
+                    raise ERR "MAKE_VERILOG" "unkNown modules in circuit")
               else ()
  in
  (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
@@ -1349,10 +1355,10 @@ fun MAKE_NET_VERILOG name thm out =
           [load_name] @ inp_names @ [done_name] @ out_names;
      val module_names  = map (fst o dest_const o fst o strip_comb) modules
      val _ = if not(null(subtract module_names (map fst (!module_lib))))
-              then (print "unknown module in circuit: ";
+              then (print "Unknown module in circuit: ";
                     print(hd(subtract module_names (map fst (!module_lib))));
                     print "\n";
-                    raise ERR "MAKE_NET_VERILOG" "unknown modules in circuit")
+                    raise ERR "MAKE_NET_VERILOG" "Unknown modules in circuit")
               else ()
  in
  (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
@@ -1478,7 +1484,7 @@ fun vlogger name =
      val _ = if isSuccess code
               then print(vlogger_command ^ "\n")
               else print
-                    ("Warning:\n Process.system reports failure signal returned by\n "
+                   ("Warning:\n Process.system reports failure signal returned by\n "
                      ^ vlogger_command ^ "\n")
  in
   ()
