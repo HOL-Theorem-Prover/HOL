@@ -1359,7 +1359,7 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
           end
      else if is_comb bdy andalso is_combinational_const(rator bdy)
      then let val arg = rand bdy
-              val v = genvar ``:^time_ty -> ^(type_of arg)`` (* change here*)
+              val v = genvar ``:^time_ty -> ^(type_of arg)``
               val goal =
                    ``^tm = ?^v. COMB ^(mk_pabs(args, arg)) (^in_bus,^v) 
                                 /\
