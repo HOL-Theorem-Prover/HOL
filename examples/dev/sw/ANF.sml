@@ -96,6 +96,14 @@ val SimpThms = [Seq_def,Par_def,Ite_def,Rec_def];
 (*                                                                           *)
 (*****************************************************************************)
 
+val LET_SEQ_PAR_THM = Q.prove
+(`!f1 f2 f3. Seq (Par f1 f2) f3 = \x. let v = f2 x in f3 (f1 x,v)`,
+ RW_TAC std_ss [Seq_def, Par_def, LET_DEF]);
+
+val SEQ_PAR_I_THM = Q.prove
+(`!f2 f3. Seq (Par (\x.x) f2) f3 = \x. let v = f2 x in f3 (x,v)`,
+ RW_TAC std_ss [LET_SEQ_PAR_THM,combinTheory.I_THM]);
+  
 fun Convert_CONV f =
  let val (args,t) = 
          dest_pabs f
@@ -169,6 +177,25 @@ fun Convert_CONV f =
           else (print "bad Ite case\n"; 
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
+  else if is_let t   (*  t = LET (\v. N) M  *)
+   then let val (v,M,N) = dest_plet t
+            val f1 = mk_pabs(args,args)
+            val f2 = mk_pabs(args,M)
+            val f3 = mk_pabs(mk_pair(args,v),N)
+            val th1 = ISPECL [f1,f2,f3] LET_SEQ_PAR_THM
+            val th2 = CONV_RULE(RHS_CONV(SIMP_CONV std_ss [LAMBDA_PROD])) th1
+            val th3 = TRANS th2 (PALPHA (rhs(concl th2)) f)
+            val th4 = GSYM th3
+        in
+         if aconv (lhs(concl th4)) f 
+          then CONV_RULE
+                (RHS_CONV 
+                  ((RAND_CONV Convert_CONV) 
+                   THENC (RATOR_CONV(RAND_CONV (RAND_CONV Convert_CONV)))))
+                th4
+          else (print "bad let case\n"; 
+                raise ERR "Convert_CONV" "shouldn't happen")
+        end
   else if is_comb t 
    then let val th0 = (REWR_CONV (GSYM UNCURRY_DEF) ORELSEC REFL) t
             val (t1,t2) = dest_comb(rhs(concl th0))
@@ -186,7 +213,7 @@ fun Convert_CONV f =
                 (RHS_CONV 
                   (RATOR_CONV(RAND_CONV Convert_CONV)))
                 th5
-          else (print "bad Seq case\n"; 
+          else (print "bad Seq case\n";
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
   else (print_term f; print "\n";
@@ -365,12 +392,12 @@ fun RecConvert defth =
 
 fun toComb def = 
  let val (l,r) = dest_eq(snd(strip_forall(concl def)))
-     val (func,_) = strip_comb l
+     val (func,args) = dest_comb l
      val is_recursive = Lib.can (find_term (aconv func)) r
 (* val comb_exp_thm = if is_recursive then RecConvert def else Convert def *)
      val comb_exp_thm = Convert def
  in 
-   (is_recursive,lhs(concl comb_exp_thm), comb_exp_thm)
+   (is_recursive,lhs(concl comb_exp_thm), args, comb_exp_thm)
  end;
 
 (*---------------------------------------------------------------------------*)
@@ -399,7 +426,7 @@ fun VAR_LET_CONV M =
  end;
 
 
-fun ANFof thm =
+fun ANFof (args,thm) =
  let val thm1 = Q.AP_TERM `CPS` thm
      val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,(* CPS_REC_INTRO, *)
                                    CPS_ITE_INTRO] thm1
@@ -417,12 +444,13 @@ fun ANFof thm =
      val x = mk_var("x",fst (dom_rng (type_of (fst (dest_forall (concl thm8))))))
      val thm9 = ISPEC (mk_abs(x,x)) thm8
      val thm10 = SIMP_RULE bool_ss [LET_ID] thm9
-     (* Generating thm11 takes about half the time on TEA's Round function *)
-     val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10
+     val thm10a = SPEC args thm10
+     val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10a
      val thm12 = PBETA_RULE thm11
      val thm13 = SIMP_RULE bool_ss [pairTheory.LAMBDA_PROD] thm12
-     val thm14 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm13
- in thm14
+     val thm14 = PURE_REWRITE_RULE [FST,SND] thm13
+     val thm15 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm14
+ in thm15
  end;
 
 
@@ -433,10 +461,11 @@ fun ANFof thm =
 (*---------------------------------------------------------------------------*)
 
 fun toANF env def = 
- let val (is_recursive,func,const_eq_comb) = toComb def
-     val anf = STD_BVARS "v" (ANFof const_eq_comb)
+ let val (is_recursive,func,args,const_eq_comb) = toComb def
+     val anf = STD_BVARS "v" (ANFof (args,const_eq_comb))
  in 
    (func,(is_recursive,def,anf,const_eq_comb))::env
  end;
 
 end
+ 

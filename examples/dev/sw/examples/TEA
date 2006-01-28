@@ -1,11 +1,12 @@
-<<<<<<< TEA
-...
-
-=======
->>>>>>> 1.5
 (*---------------------------------------------------------------------------*)
 (* A version of TEA, taken from examples/Crypto/TEA                          *)
 (*---------------------------------------------------------------------------*)
+
+loadPath := ".." :: !loadPath;
+
+use "compiler";
+
+open Assem BasicProvers;
 
 (*---------------------------------------------------------------------------*)
 (* Cipher types                                                              *)
@@ -23,17 +24,14 @@ val env0 = [];
 
 val DELTA_def = Define `DELTA = 0x9e3779b9w`;
 
-(* Fails ... what to do about constants? *)
-(*toANF [] DELTA_def;*)   
-
 val ShiftXor_def = 
  Define 
    `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
 
-val env1 = toANF [] ShiftXor_def;
+val env1 = toANF env0 ShiftXor_def;
 val arm1 = compileEnv env1;
-
-(******************************************************************
+printarm arm1;
+(*****************************************************************
   Name              : ShiftXor
   Arguments         : r0 r1 r2 r3 
   Modified Registers: r0 r1 r2 r4 
@@ -42,27 +40,25 @@ val arm1 = compileEnv env1;
     0:          mov     ip, sp
     1:          stmfd   sp!, {fp,ip,lr,pc}
     2:          sub     fp, ip, #1i
-    3:          mov     r4, #4i
-    4:          lsl     r4, r0, r4
-    5:          add     r2, r4, r2
-    6:          add     r1, r0, r1
-    7:          eor     r2, r2, r1
-    8:          mov     r1, #5i
-    9:          asr     r0, r0, r1
-   10:          add     r0, r0, r3
-   11:          eor     r0, r2, r0
-   12:          sub     sp, fp, #3i
-   13:          ldmfd   sp, {fp,sp,pc}
+    3:          lsl     r4, r0, #4i
+    4:          add     r2, r4, r2
+    5:          add     r1, r0, r1
+    6:          eor     r1, r2, r1
+    7:          asr     r0, r0, #5i
+    8:          add     r0, r0, r3
+    9:          eor     r0, r1, r0
+   10:          sub     sp, fp, #3i
+   11:          ldmfd   sp, {fp,sp,pc}
 
   simT (mk_ARM arm1);
 
-  SEQ_TAC [ShiftXor_def];
+  SEQ_TAC [ShiftXor_def];
 
 *)
 
-(* --------------------------------------------------------------------------*)
-(*	One round forward computation and one round backward computation     *)
-(* --------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*  One round forward computation and one round backward computation         *)
+(*---------------------------------------------------------------------------*)
 
 val Round_def = 
  Define
@@ -73,10 +69,9 @@ val Round_def =
        sum+DELTA)`;
 
    val env2 = toANF env1 (REWRITE_RULE [DELTA_def] Round_def);	
-
    val arm2 = compileEnv env2;
-
-(******************************************************************
+   printarm arm2;
+(*****************************************************************
   Name              : Round
   Arguments         : r0 r1 r2 r3 r4 r5 r6 
   Modified Registers: r0 r1 r7 r8 
@@ -112,7 +107,7 @@ val Round_def =
    27:          add     r0, r6, #2654435769iw
    28:          sub     sp, fp, #3i
    29:          ldmfd   sp, {fp,sp,pc}
-  *****************************************************************
+*****************************************************************
   Name              : ShiftXor
   Arguments         : r0 r1 r2 r3 
   Modified Registers: r0 r1 r2 r4 
@@ -122,30 +117,36 @@ val Round_def =
    31:          stmfd   sp!, {r0,r1,r2,r4,fp,ip,lr,pc}
    32:          sub     fp, ip, #1i
    33:          ldmfd   ip, {r0,r1,r2,r3}
-   34:          mov     r4, #4i
-   35:          lsl     r4, r0, r4
-   36:          add     r2, r4, r2
-   37:          add     r1, r0, r1
-   38:          eor     r2, r2, r1
-   39:          mov     r1, #5i
-   40:          asr     r0, r0, r1
-   41:          add     r0, r0, r3
-   42:          eor     r0, r2, r0
-   43:          add     sp, fp, #6i
-   44:          str     r0, [sp]
-   45:          sub     sp, fp, #7i
-   46:          ldmfd   sp, {r0,r1,r2,r4,fp,sp,pc}   
+   34:          lsl     r4, r0, #4i
+   35:          add     r2, r4, r2
+   36:          add     r1, r0, r1
+   37:          eor     r1, r2, r1
+   38:          asr     r0, r0, #5i
+   39:          add     r0, r0, r3
+   40:          eor     r0, r1, r0
+   41:          add     sp, fp, #6i
+   42:          str     r0, [sp]
+   43:          sub     sp, fp, #7i
+   44:          ldmfd   sp, {r0,r1,r2,r4,fp,sp,pc}
 
    simT (mk_ARM arm2);
    
-
 *)
 
-=======
+(* With lets *)
+val Round_def = 
+ Define
+   `Round (((y,z),(k0,k1,k2,k3),s):state)  = 
+      let s' = s + DELTA in
+      let y' = ShiftXor(z, s', k0, k1) 
+      in
+       ((y', z + ShiftXor(y', s', k2, k3)), (k0,k1,k2,k3), s')`;
+
 val Round_def' = REWRITE_RULE [DELTA_def] Round_def;
 
 val env2 = toANF env1 Round_def';
->>>>>>> 1.5
+val arm2 = compileEnv env2;
+printarm arm2;
 
 val InvRound_def = 
  Define
