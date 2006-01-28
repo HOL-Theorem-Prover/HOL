@@ -52,7 +52,7 @@ printarm arm1;
 
   simT (mk_ARM arm1);
 
-  SEQ_TAC [ShiftXor_def];
+  SEQ_TAC [ShiftXor_def];
 
 *)
 

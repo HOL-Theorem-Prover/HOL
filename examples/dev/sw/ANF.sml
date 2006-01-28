@@ -8,7 +8,7 @@ struct
   quietdec := false;
 *)
 open HolKernel Parse boolLib bossLib 
-     pairLib pairTheory PairRules cpsTheory cpsSyntax;
+     pairLib pairSyntax pairTheory PairRules cpsTheory cpsSyntax;
 
 type env = (term * (bool * thm * thm * thm)) list;
 
