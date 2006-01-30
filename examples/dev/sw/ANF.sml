@@ -4,7 +4,7 @@ struct
 (* For interactive use:
  app load ["pairLib", "cpsSyntax"]; 
   quietdec := true;
-  open pairLib pairTheory PairRules cpsTheory cpsSyntax; 
+  open pairLib pairTheory PairRules pairSyntax cpsTheory cpsSyntax; 
   quietdec := false;
 *)
 open HolKernel Parse boolLib bossLib 
@@ -184,8 +184,8 @@ fun Convert_CONV f =
             val f3 = mk_pabs(mk_pair(args,v),N)
             val th1 = ISPECL [f1,f2,f3] LET_SEQ_PAR_THM
             val th2 = CONV_RULE(RHS_CONV(SIMP_CONV std_ss [LAMBDA_PROD])) th1
-            val th3 = TRANS th2 (PALPHA (rhs(concl th2)) f)
-            val th4 = GSYM th3
+            val th3 = TRANS th2 (SYM (QCONV (SIMP_CONV std_ss [LAMBDA_PROD]) f))
+            val th4 = SYM th3
         in
          if aconv (lhs(concl th4)) f 
           then CONV_RULE
@@ -444,8 +444,7 @@ fun ANFof (args,thm) =
      val x = mk_var("x",fst (dom_rng (type_of (fst (dest_forall (concl thm8))))))
      val thm9 = ISPEC (mk_abs(x,x)) thm8
      val thm10 = SIMP_RULE bool_ss [LET_ID] thm9
-     val thm10a = SPEC args thm10
-     val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10a
+     val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10
      val thm12 = PBETA_RULE thm11
      val thm13 = SIMP_RULE bool_ss [pairTheory.LAMBDA_PROD] thm12
      val thm14 = PURE_REWRITE_RULE [FST,SND] thm13

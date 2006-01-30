@@ -138,9 +138,9 @@ val Round_def =
  Define
    `Round (((y,z),(k0,k1,k2,k3),s):state)  = 
       let s' = s + DELTA in
-      let y' = ShiftXor(z, s', k0, k1) 
+      let y' = y + ShiftXor(z,s',k0,k1) 
       in
-       ((y', z + ShiftXor(y', s', k2, k3)), (k0,k1,k2,k3), s')`;
+       ((y', z + ShiftXor(y',s',k2,k3)), (k0,k1,k2,k3), s')`;
 
 val Round_def' = REWRITE_RULE [DELTA_def] Round_def;
 
@@ -150,13 +150,17 @@ printarm arm2;
 
 val InvRound_def = 
  Define
-   `InvRound((y,z),(k0,k1,k2,k3),sum)  =
-        ((y - ShiftXor(z - ShiftXor(y, sum, k2, k3), sum, k0, k1),
-          z - ShiftXor(y, sum, k2, k3)), 
-	 (k0,k1,k2,k3), 
-         sum-DELTA)`;
+   `InvRound((y,z),(k0,k1,k2,k3),sum) =
+      let z' = z - ShiftXor(y, sum, k2, k3)
+      in
+         ((y - ShiftXor(z', sum, k0, k1), z'), 
+	  (k0,k1,k2,k3), sum-DELTA)`;
 
-val env3 = toANF env2 InvRound_def;
+val InvRound_def' = REWRITE_RULE [DELTA_def] InvRound_def;
+
+val env3 = toANF env2 InvRound_def';
+val arm3 = compileEnv env3;
+printarm arm3;
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of cipher rounds                                         *)
@@ -167,13 +171,16 @@ val Rounds_def =
    `Rounds (n,s:state) = if n=0 then s else Rounds (n-1, Round s)`;
 
 val env4 = toANF env3 Rounds_def;
+val arm4 = compileEnv env4;
+printarm arm4;
 
 val InvRounds_def =
  Define
    `InvRounds (n,s:state) = if n=0 then s else InvRounds (n-1,InvRound s)`;
 
 val env5 = toANF env4 InvRounds_def;
-
+val arm5 = compileEnv env5;
+printarm arm5;
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt (32 rounds)                                           *)
@@ -181,9 +188,13 @@ val env5 = toANF env4 InvRounds_def;
 
 val TEAEncrypt_def = 
  Define 
-   `TEAEncrypt (keys,txt) = FST (Rounds(32,(txt,keys,0w)))`;
+   `TEAEncrypt (keys,txt) = 
+      let (result,keys,x) = Rounds(32,txt,keys,0w)
+      in result`;
 
 val env6 = toANF env5 TEAEncrypt_def;
+val arm6 = compileEnv env6;   (* currently dies *)
+printarm arm5;
 
 val TEADecrypt_def = 
  Define 
