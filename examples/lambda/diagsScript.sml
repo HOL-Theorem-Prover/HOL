@@ -22,23 +22,23 @@ val diamond_eval = store_thm(
   ``eval (\i m n. (i = 0) /\ ((m = 0) /\ (n = 1) \/ (m = 0) /\ (n = 2)))
          (\i m n. (i = 0) /\ ((m = INL 1) /\ (n = INR 0) \/
                               (m = INL 2) /\ (n = INR 0)))
-         (\i. R)
-     = diamond R``,
+         R
+     = diamond (R 0)``,
   SRW_TAC [DNF_ss][diamond_def, eval_def, EQ_IMP_THM] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x
                                     else if n = 1 then y
                                     else z`
                    MP_TAC) THEN
     SRW_TAC [DNF_ss][] THEN METIS_TAC [],
-    `?u. R (f 1) u /\ R (f 2) u` by METIS_TAC [] THEN
+    `?u. R 0 (f 1) u /\ R 0 (f 2) u` by METIS_TAC [] THEN
     Q.EXISTS_TAC `K u` THEN SRW_TAC [][]
   ]);
 
 val totality_eval = store_thm(
   "totality_eval",
   ``eval (\i m n. F) (\i m n. (i = 0) /\ (m = (INL 0)) /\ (n = (INL 1)))
-         (\i. R) =
-    !x y. R x y``,
+         R =
+    !x y. R 0 x y``,
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `\i. if i = 0 then x else y` MP_TAC) THEN
   SRW_TAC [][]);
@@ -48,14 +48,12 @@ val sequentialisation_eval = store_thm(
   ``eval (\i m n. (i = 0) /\ (m = 0) /\ (n = 1))
          (\i m n. (i = 1) /\ (m = INL 0) /\ (n = INR 0) \/
                   (i = 2) /\ (m = INR 0) /\ (n = INL 1))
-         (\i. if i = 0 then R1
-              else if i = 1 then R2
-              else R3) =
-    (!x y. R1 x y ==> ?z. R2 x z /\ R3 z y)``,
+         R =
+    (!x y. R 0 x y ==> ?z. R 1 x z /\ R 2 z y)``,
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x else y` MP_TAC) THEN
     SRW_TAC [DNF_ss][] THEN METIS_TAC [],
-    `?z. R2 (f 0) z /\ R3 z (f 1)` by METIS_TAC [] THEN
+    `?z. R 1 (f 0) z /\ R 2 z (f 1)` by METIS_TAC [] THEN
     Q.EXISTS_TAC `K z` THEN SRW_TAC [][]
   ]);
 
@@ -69,12 +67,12 @@ val relationally_reflected = store_thm(
          (\i m n. (i = 1) /\ (m = INR 0) /\ (n = INL 0) \/
                   (i = 1) /\ (m = INR 1) /\ (n = INL 1) \/
                   (i = 2) /\ (m = INR 0) /\ (n = INR 1))
-         (\i. if i = 0 then R1 else if i = 1 then R2 else R3) =
-    (!x y. R1 x y ==> ?u v. R2 u x /\ R2 v y /\ R3 u v)``,
+         R =
+    (!x y. R 0 x y ==> ?u v. R 1 u x /\ R 1 v y /\ R 2 u v)``,
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x else y` MP_TAC) THEN
     SRW_TAC [DNF_ss][] THEN METIS_TAC [],
-    `?u v. R2 u (f 0) /\ R2 v (f 1) /\ R3 u v` by METIS_TAC [] THEN
+    `?u v. R 1 u (f 0) /\ R 1 v (f 1) /\ R 2 u v` by METIS_TAC [] THEN
     Q.EXISTS_TAC `\n. if n = 0 then u else v` THEN
     SRW_TAC [][]
   ]);
@@ -186,9 +184,9 @@ val scollapse_def = Define`
 
 val Rhomo_structure_RTC = store_thm(
   "Rhomo_structure_RTC",
-  ``Rhomo f R1 R2 /\ onto f /\ scollapse s f ==>
+  ``Rhomo f R1 R2 /\ scollapse s f ==>
     Rhomo f (RTC (R1 RUNION s)) (RTC R2)``,
-  SIMP_TAC (srw_ss()) [Rhomo_def, onto_def, scollapse_def] THEN STRIP_TAC THEN
+  SIMP_TAC (srw_ss()) [Rhomo_def, scollapse_def] THEN STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][RTC_RULES, RUNION] THEN
   METIS_TAC [RTC_RULES]);
 
