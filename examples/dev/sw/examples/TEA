@@ -31,6 +31,7 @@ val ShiftXor_def =
 val env1 = toANF env0 ShiftXor_def;
 val arm1 = compileEnv env1;
 printarm arm1;
+
 (*****************************************************************
   Name              : ShiftXor
   Arguments         : r0 r1 r2 r3 
@@ -71,6 +72,7 @@ val Round_def =
    val env2 = toANF env1 (REWRITE_RULE [DELTA_def] Round_def);	
    val arm2 = compileEnv env2;
    printarm arm2;
+
 (*****************************************************************
   Name              : Round
   Arguments         : r0 r1 r2 r3 r4 r5 r6 
@@ -132,6 +134,7 @@ val Round_def =
    simT (mk_ARM arm2);
    
 *)
+
 
 (* With lets *)
 val Round_def = 

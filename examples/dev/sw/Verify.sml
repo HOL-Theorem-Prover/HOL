@@ -1,12 +1,12 @@
-(*
 structure Verify =
 struct
-*)
 
-(*local*) open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
+local
+ open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
         numSyntax listSyntax
-        pairTheory arithmeticTheory listTheory optionTheory preARMTheory word32Theory finite_mapTheory
-(*in*)
+        pairTheory arithmeticTheory listTheory optionTheory preARMTheory 
+        word32Theory finite_mapTheory
+in
 
 (*------------------------------------------------------------------------------------------------------*)
 (* mk_pred - Given an (instB,byn), (initial pc, final pc), (inputs, outputs), a list of unchanged       *)
@@ -209,26 +209,58 @@ val FUPDATE_GT_COMMUTES = Q.store_thm (
     RW_TAC arith_ss [FUPDATE_COMMUTES]
     );
 
+(*---------------------------------------------------------------------------*)
+(* It's difficult to apply this rule in the simplifier, so we install a      *)
+(* conversion in order to have it be applied as necessary.                   *)
+(*---------------------------------------------------------------------------*)
+
+val fupdate_normalizer = 
+ let val thm = SPEC_ALL FUPDATE_LT_COMMUTES
+     val pat = lhs(snd(dest_imp(concl thm)))
+ in
+   {name = "Finite map normalization",
+    trace = 2,
+    key = SOME([],pat), 
+    conv = let fun reducer tm =
+                 let val (theta,ty_theta) = match_term pat tm
+                     val thm' = INST theta (INST_TYPE ty_theta thm)
+                     val constraint = fst(dest_imp(concl thm'))
+                     val cthm = EQT_ELIM(reduceLib.REDUCE_CONV constraint)
+                 in MP thm' cthm
+                 end
+           in
+               K (K reducer)
+           end}
+ end;
+
+val finmap_conv_frag =
+ simpLib.SSFRAG
+     {convs = [fupdate_normalizer],
+      rewrs = [], ac=[],filter=NONE,dprocs=[],congs=[]};
+
+val finmap_ss = bossLib.std_ss ++ finmap_conv_frag
+                               ++ rewrites [FUPDATE_EQ, FAPPLY_FUPDATE_THM];
+
 (*------------------------------------------------------------------------------------------------------*)
 (* TACs for simulation									                *)
 (*------------------------------------------------------------------------------------------------------*)
 
 val MOVE_RULE =
-    SIMP_RULE std_ss [FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] o 
+    SIMP_RULE finmap_ss [(* FUPDATE_GT_COMMUTES *)] o 
     REWRITE_RULE [decode1_thm, HD, write_thm, read_thm];
 
 val MOVE_TAC = 
     REWRITE_TAC [decode1_thm, HD, write_thm, read_thm] THEN
-    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM];
+    SIMP_TAC finmap_ss [(*FUPDATE_GT_COMMUTES*)];
 
 val ARITH_RULE =
-    SIMP_RULE std_ss [FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] o 
+    SIMP_RULE finmap_ss [(*FUPDATE_GT_COMMUTES*)] o 
     REWRITE_RULE [decode1_thm, HD, TL, write_thm, read_thm];
 
 
 val ARITH_TAC = 
     REWRITE_TAC [decode1_thm, HD, TL, write_thm, read_thm] THEN
-    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM];
+    SIMP_TAC finmap_ss [(*FUPDATE_GT_COMMUTES*)];
 
 val LOGICAL_RULE = ARITH_RULE
 val LOGICAL_TAC = ARITH_TAC
@@ -259,7 +291,7 @@ val LDM_TAC =
         	THENC WORD_CONV
         	THENC reduceLib.REDUCE_CONV
         	THENC REWRITE_CONV [write_thm] 
-		THENC SIMP_CONV std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM])))) THEN
+		THENC SIMP_CONV finmap_ss [(*FUPDATE_GT_COMMUTES*)])))) THEN
     WORD_TAC;
 
 
@@ -272,14 +304,15 @@ val STM_RULE =
     REWRITE_RULE [decode1_thm, REVERSE_DEF, LENGTH, APPEND];
 
 val STM_TAC = 
-    REWRITE_TAC [decode1_thm, REVERSE_DEF, LENGTH, APPEND] THEN
-    CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
-        THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
-                THENC reduceLib.REDUCE_CONV 
-		THENC SIMP_CONV std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM]
-		)))) THEN
-    ASM_REWRITE_TAC [];
+ REWRITE_TAC [decode1_thm, REVERSE_DEF, LENGTH, APPEND] 
+  THEN CONV_TAC (DEPTH_CONV 
+      ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL) THENC 
+       RATOR_CONV (RAND_CONV 
+         (DEPTH_CONV GEN_BETA_CONV
+            THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
+            THENC reduceLib.REDUCE_CONV 
+            THENC SIMP_CONV finmap_ss [(*FUPDATE_GT_COMMUTES*)])))) 
+  THEN ASM_REWRITE_TAC [];
 
 val CMP_RULE =
      ASM_REWRITE_RULE [] o
@@ -309,7 +342,7 @@ val BRANCH_LINK_TAC =
 fun STOP_TAC defs = 
     SIMP_TAC list_ss [run_def, TERRUN_STOP] THEN
     REWRITE_TAC ([LET_THM] @ defs) THEN
-    RW_TAC list_ss [FUPDATE_LT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] THEN
+    RW_TAC (list_ss ++ finmap_conv_frag) [FUPDATE_EQ, FAPPLY_FUPDATE_THM] THEN
     REPEAT (CHANGED_TAC WORD_TAC)
 
 (*------------------------------------------------------------------------------------------------------*)
@@ -412,7 +445,7 @@ val ONE_STEP_TAC =
             reduceLib.REDUCE_TAC THEN
 	    REWRITE_TAC [decode2_thm] THEN
 	    tac1 THEN REWRITE_TAC [write_thm, read_thm, set_pc_def, read_pc_def] THEN
-	    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] THEN
+	    SIMP_TAC finmap_ss [] THEN
 	    WORD_TAC
 	  ) g
        end
@@ -442,7 +475,7 @@ fun ONE_INST_TAC tac1 =
             REWRITE_TAC [decode2_thm] THEN
             tac1 THEN 
 	    REWRITE_TAC [set_pc_def, write_thm, read_thm, read_pc_def] THEN
-	    SIMP_TAC std_ss [FUPDATE_LT_COMMUTES, FUPDATE_GT_COMMUTES, FUPDATE_EQ, FAPPLY_FUPDATE_THM] THEN
+	    SIMP_TAC finmap_ss [(* FUPDATE_GT_COMMUTES *)] THEN
             WORD_TAC
           ) g
      )
@@ -461,30 +494,28 @@ val ONE_STEP_TAC =
 
 fun SEQ_TAC defs =
   let 
-      fun one_step (asl,g) =
-		(    let val pc = get_pc_from_goal (asl,g)
-			 val _ = if pc < length (!cur_insts) then 
-			            print ("Verifying instruction #" ^ Int.toString pc ^ (Assem.formatInst (List.nth(!cur_insts,pc))) ^ "\n")
-				 else
-				    print "Finishing...\n"
-		     in if pc = length (!cur_insts) then
-			     STOP_TAC defs (asl,g)
-		       else 
-			    (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))) THEN
-			     one_step) (asl,g)
-		    end
-		)
+      fun single_steps (asl,g) =
+	let val pc = get_pc_from_goal (asl,g)
+	    val _ = if pc < length (!cur_insts) then 
+		      print ("Verifying instruction #" ^ 
+                             Int.toString pc ^ 
+                             (Assem.formatInst (List.nth(!cur_insts,pc))) ^ "\n")
+		    else
+		      print "Finishing...\n"
+        in if pc = length (!cur_insts) then STOP_TAC defs (asl,g)
+           else (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))) 
+                   THEN single_steps) (asl,g)
+        end
   in
-     (  TAC0 (length (!cur_insts)) THEN
-	ONCE_ASM_REWRITE_TAC [] THEN
-        one_step
-     )
+     TAC0 (length (!cur_insts)) THEN
+     ONCE_ASM_REWRITE_TAC [] THEN
+     single_steps
   end 
 
 
-(*------------------------------------------------------------------------------------------------------*)
-(* Run to a designated position                                                                         *)
-(*------------------------------------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Run to a designated position                                              *)
+(*---------------------------------------------------------------------------*)
 
 val RUN_ONE_MORE_STEP = Q.store_thm
   ("RUN_ONE_MORE_STEP",
@@ -691,7 +722,5 @@ fun getIOC prog pc0 n =
 
 *)
 
-(*
 end (* local open *)
 end (* structure *)
-*)
