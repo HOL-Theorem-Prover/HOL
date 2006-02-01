@@ -1208,6 +1208,24 @@ fun BUS_MATCH vst bus =
   handle HOL_ERR _ => [];
 
 (*****************************************************************************)
+(* Convert a varstruct to a matching bus                                     *)
+(* Example: varstruct_to_bus ty ``(v1,(v2,v3),v4)`` = ``v1<>(v2<>v3)<>v4``   *)
+(* (where types are lifted to functions from domain ty)                      *)
+(*****************************************************************************)
+fun varstruct_to_bus time_ty vs =
+ if is_var vs 
+  then let val (name,ty) = dest_var vs
+       in 
+        mk_var(name,``:^time_ty -> ^ty``)
+       end
+  else if is_pair vs
+  then let val (vs1,vs2) = dest_pair vs
+       in
+        ``^(varstruct_to_bus time_ty vs1) <> ^(varstruct_to_bus time_ty vs2)``
+       end
+  else raise ERR "varstruct_to_bus" "bad varstruct";
+
+(*****************************************************************************)
 (* A pure abstraction has the form ``\<varstruct>. <body>`` where            *)
 (* <body> is built out of variables in <varstruct> and combinational         *)
 (* constants using pairing.                                                  *)
@@ -1412,25 +1430,25 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
      else if is_let bdy 
      then let val (let_abs,let_tm) = dest_let bdy
               val (let_var, let_bdy) = dest_pabs let_abs
-              val v = genvar ``:^time_ty -> ^(type_of let_var)``
+              val bus = varstruct_to_bus time_ty let_var
+              val bus_match = BUS_MATCH let_var bus
               val goal = 
-                   ``^tm = ?^v. 
-                       COMB ^(mk_pabs(args, let_tm)) (^in_bus,^v) /\ 
-                       COMB ^(mk_pabs(mk_pair(args,let_var), let_bdy)) 
-                            (^in_bus <> ^v,^out_bus)``
+                   mk_eq
+                    (tm,
+                     list_mk_exists
+                      (rev(free_vars bus),
+                       ``COMB ^(mk_pabs(args, let_tm)) (^in_bus,^bus) /\ 
+                         COMB ^(mk_pabs(mk_pair(args,let_var), let_bdy)) 
+                            (^in_bus <> ^bus,^out_bus)``))
               val _ = (if_print "\n COMB_SYNTH_CONV case 7:\n "; 
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,BUS_CONCAT_def] 
-              THEN GEN_BETA_TAC 
+             RW_TAC std_ss [COMB_def,BUS_CONCAT_def,LET_DEF,FORALL_AND_THM]
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
-              THEN EQ_TAC 
-              THEN REWRITE_TAC[LET_DEF]
-              THEN GEN_BETA_TAC 
-              THEN REWRITE_TAC[])
+              THEN RW_TAC std_ss [])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
