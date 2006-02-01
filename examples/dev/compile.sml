@@ -452,11 +452,11 @@ fun CompileExp tm =
      | "Ite" => MATCH_MP ITE_INTRO (LIST_CONJ(map CompileExp args))
      | "Rec" => let val thl = map (CompileExp) args
                     val var_list = map (rand o rand o concl o SPEC_ALL) thl
-                   in
-                    MATCH_MP
-                     (UNDISCH(SPEC_ALL(ISPECL var_list REC_INTRO)))
-                     (LIST_CONJ thl)
-                   end
+                in
+                 MATCH_MP
+                  (UNDISCH(SPEC_ALL(ISPECL var_list REC_INTRO)))
+                  (LIST_CONJ thl)
+                end
      | _     => raise ERR "CompileExp" "this shouldn't happen"
  end;
 
@@ -1411,7 +1411,7 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
           end
      else if is_let bdy 
      then let val (let_abs,let_tm) = dest_let bdy
-              val (let_var, let_bdy) = dest_abs let_abs
+              val (let_var, let_bdy) = dest_pabs let_abs
               val v = genvar ``:^time_ty -> ^(type_of let_var)``
               val goal = 
                    ``^tm = ?^v. 
