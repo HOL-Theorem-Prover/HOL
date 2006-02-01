@@ -822,25 +822,24 @@ fun RegisterAllocation (gr, tmpT, preC, argL, K) =
     (RewrWithReg (), !tmpTable)
   );
 
-fun getModifiedRegs stms =
+ fun getModifiedRegs stms =
   let
      fun regOrder (r1,r2) =
-    	let val (Assem.REG n1, Assem.REG n2) = (r1, r2) in
-    		if n1 > n2 then GREATER
-    		else if n1 = n2 then EQUAL
-    		else LESS
-    	end
+        let val (Assem.REG n1, Assem.REG n2) = (r1, r2) in
+                if n1 > n2 then GREATER
+                else if n1 = n2 then EQUAL
+                else LESS
+        end
   in
-      List.foldl (fn (Assem.OPER {dst = d, ...}, regs) => 
-		if null d then regs else
-            	(case (hd d) of
-                      Assem.REG r => Binaryset.add(regs,Assem.REG r)
-              	  |   _ => regs)
+      List.foldl (fn (Assem.OPER {dst = d, ...}, regs) =>
+                (List.foldl (fn (Assem.REG r, regs)  => Binaryset.add(regs,Assem.REG r)
+                                     |   _ => regs) regs d)
               |  (Assem.MOVE {dst = d, ...}, regs) => Binaryset.add(regs,d)
               |  (_,regs) => regs
              )
              (Binaryset.empty regOrder) stms
   end;
+
 
 fun convert_to_ARM (prog,K) =
   let

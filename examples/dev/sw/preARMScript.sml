@@ -552,8 +552,8 @@ val RUN_LEM_2 = Q.store_thm
 
 val FORALL_INSTM = Q.store_thm
   ("FORALL_INSTM",
-    `(!instM : (num -> INST) # num. P instM) = 
-	!instB byn. P (instB,byn)`,
+    `(!instM : (num -> INST) # num. P instM) =
+        !instB byn. P (instB,byn)`,
     SIMP_TAC std_ss [FORALL_PROD]);
 
 val RUN_THM_1 = Q.store_thm
@@ -576,38 +576,18 @@ val RUN_THM_2 = Q.store_thm
   ASM_REWRITE_TAC [] THEN METIS_TAC [SUB_ADD, RUN_THM_1, ADD_SYM]
   );
 
+val RUN_ONE_STEP = Q.store_thm
+  ("RUN_ONE_STEP",
+   `!instB byn pc cpsr st. run 1 (instB,byn) (pc,cpsr,st) = 
+            if pc = byn then (pc,cpsr,st)
+            else
+                decode2 (pc,cpsr,st) (instB pc)`,
+  RW_TAC std_ss [Once run_def] THEN
+  RW_TAC std_ss [RUN_LEM_1]
+  );
+
 
 val _ = Globals.priming := NONE;
-
-(*---------------------------------------------------------------------------------*)
-(* Stop at a particular position                                                   *)
-(*---------------------------------------------------------------------------------*)
-
-val stopAt_def =
- Define
-   `stopAt k instM s = ?n. FST (run n instM s) = k`;
-
-val STOPAT_AFTER_N_STEPS = Q.store_thm
-  ("STOPAT_AFTER_N_STEPS",
-   `!m k s instM.
-       stopAt k instM (run m instM s) ==> stopAt k instM s`,
-  RW_TAC list_ss [stopAt_def, GSYM RUN_THM_1] THEN
-  METIS_TAC []
-  );
-
-(*
-val STOPAT_THM = Q.store_thm
-  ("STOPAT_THM",
-   `!m k s instM.
-       stopAt k instM s ==> stopAt k instM (run m instM s)`,
-  SIMP_TAC std_ss [FORALL_INSTM] THEN
-  RW_TAC list_ss [stopAt_def, GSYM RUN_THM_1] THEN
-  ONCE_REWRITE_TAC [ADD_SYM] THEN
-  RW_TAC list_ss [RUN_THM_1] THEN
-  Q.EXISTS_TAC `n` THEN
-  METIS_TAC [RUN_LEM_2]
-  );
-*)
 
 (*---------------------------------------------------------------------------------*)
 (* Run for the minimum number of steps to stop at a given position                 *)
@@ -634,120 +614,8 @@ val LEAST_ADD_LEM = Q.store_thm
         ]]
   );
 
-
-(* minStep2 is the minimum number of steps for the program to stop at position k           *)
-
-val minStep2_def =
-  Define `minStep2 k instM s = LEAST n. FST (run n instM s) = k`;
-
-(*
-val STOPAT_MINSTEP_LEM = Q.store_thm
-  ("STOPAT_MINSTEP_LEM",
-   `!k0 k1 s0 s1 instM. 
-   (stopAt k0 instM s0 /\ (s1 = runTo k0 instM s0) /\ stopAt k1 instM s1) ==>     
-        minStep k0 instM s0 <= minStep k1 instM s0 /\ minStep k1 instM s1 <= minStep k1 instM s0`,
-    RW_TAC list_ss [stopAt_def, minStep_def, runTo_def] THENL [
-
-    RW_TAC list_ss [ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1] THEN
-    ONCE_REWRITE_TAC [ADD_SYM] THEN
-    HO_MATCH_MP_TAC LEAST_ADD_LEM THEN
-    METIS_TAC []]
-  );
-*)
-
-val MINSTEP2_THM = Q.store_thm
-  ("MINSTEP2_THM",
-   `!s instM m k.
-       (stopAt k instM s) /\
-       (m <= minStep2 k instM s) ==>
-       (minStep2 k instM s = (minStep2 k instM (run m instM s) + m))`,
-    RW_TAC list_ss [stopAt_def, minStep2_def] THEN
-    RW_TAC list_ss [ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1] THEN
-    ONCE_REWRITE_TAC [ADD_SYM] THEN
-    HO_MATCH_MP_TAC LEAST_ADD_LEM THEN
-    METIS_TAC []
-  );
-
 (*---------------------------------------------------------------------------------*)
-(* Run to a particular position                                                    *)
-(*---------------------------------------------------------------------------------*)
-
-(* Given a instruction memory, run from a given state until the pc reaches a particular position k *)
-
-val runTo_def =
- Define
-   `runTo k instM s = run (minStep2 k instM s) instM s`;
-
-(*
-val RUNTO_LEM_1 = Q.store_thm
-  ("RUNTO_LEM_1",
-   `!k s instM. (stopAt k instM s) ==>
-        (runTo k instM (runTo k instM s) = runTo k instM s)`,
-    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
-    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-        METIS_TAC [],
-        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-             REWRITE_TAC [GSYM RUN_THM_1] THEN
-             Q.EXISTS_TAC `0` THEN
-             RW_TAC arith_ss [],
-	     METIS_TAC [RUN_LEM_2]]
-    ]
-   );
-
-val RUNTO_LEM_2 = Q.store_thm
-  ("RUNTO_LEM_2",
-   `!k s instM m. (stopAt k instM s /\ m > minStep k instM s) ==>
-        (runTo k instM s = run m instM s)`,
-    RW_TAC list_ss [runTo_def, stopAt_def] THEN
-    `?k. m = minStep (iB,byn) s + k` by METIS_TAC [GREATER_DEF, LESS_EQ_EXISTS, LESS_IMP_LESS_OR_EQ, ADD_SYM]
-    THEN ASM_REWRITE_TAC [] THEN
-    RW_TAC list_ss [minStep_def, RUN_THM_1] THEN
-    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-        METIS_TAC [],
-        METIS_TAC [RUN_LEM_2]
-        ]
-   );
-*)
-
-
-
-(*---------------------------------------------------------------------------------*)
-(* A breakpoint of the problem is at the critical path iff it is at the shorest    *)
-(* runnning path of an execution                                                   *)
-(*---------------------------------------------------------------------------------*)
-
-val atCritPath_def =
-  Define `atCritPath p t instM s = 
-         minStep2 p instM s +  minStep2 t instM (runTo p instM s) <= minStep2 t instM s`;
-
-val ATCRITPATH_LEM = Q.store_thm
-  ("ATCRITPATH_LEM",
-   `!p t instM s. 
-    atCritPath p t instM s ==>     
-        minStep2 p instM s <= minStep2 t instM s /\ minStep2 t instM (runTo p instM s) <= minStep2 t instM s`,
-    RW_TAC list_ss [atCritPath_def]
-  );
-
-(*---------------------------------------------------------------------------------*)
-(* Basic theorems about runTo                                                      *)
-(*---------------------------------------------------------------------------------*)
-
-(*
-val RUNTO_THM = Q.store_thm
-  ("RUNTO_THM",
-   `!P k0 s0 instM k. 
-   (stopAt k0 instM s0 /\ atCritPath k0 k instM s0 /\ (s1 = runTo k0 instM s0) /\ stopAt k instM s1 /\ P (runTo k instM s1)) ==>     
-        P (runTo k instM s0)`,
-  RW_TAC list_ss [stopAt_def, runTo_def] THEN
-  IMP_RES_TAC ATCRITPATH_LEM THEN
-  FULL_SIMP_TAC list_ss [ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1] THEN
-  
-     METIS_TAC [NOT_LESS_EQUAL, GREATER_DEF, TERRUN_LEM_2, TERRUN_LEM_1]]
-  );
-*)
-
-(*---------------------------------------------------------------------------------*)
-(* Run to termination                                                              *)
+(* Termination and minimum number of steps                                         *)
 (*---------------------------------------------------------------------------------*)
 
 (* terminate: specifies that the execution of instructions would terminates at the label (pc0+len) within n steps               *)
@@ -787,85 +655,173 @@ val MINSTEP_THM = Q.store_thm
     METIS_TAC []
   );
 
+(*---------------------------------------------------------------------------------*)
+(*                    Run to a particular position                                 *)
+(*---------------------------------------------------------------------------------*)
+
+val runTo_def = Define `
+  !instB byn s pcS.
+  runTo instB byn s =
+      WHILE (\s. ~(FST s = byn))
+           (\s. decode2 s (instB (FST s))) s`;
+
+val RUNTO_LEM_1 = Q.store_thm
+  ("RUNTO_LEM_1",
+   `!n instB byn s.
+       runTo instB byn s =
+           if FST s = byn then s
+           else runTo instB byn (decode2 s (instB (FST s)))`,
+   REPEAT STRIP_TAC THEN Cases_on `FST s = byn` THENL [
+       RW_TAC list_ss [runTo_def, Once WHILE],
+       RW_TAC list_ss [runTo_def, Once WHILE]]
+  );
+
+val RUNTO_LEM_2 = Q.store_thm
+  ("RUNTO_LEM_2",
+   `!instB s pcS. runTo instB (FST s) s = s`,
+   METIS_TAC [RUNTO_LEM_1]
+  );
+
+
+val RUNTO_AFTER_N_STEPS = Q.store_thm
+  ("RUNTO_AFTER_N_STEPS",
+   `!m instB byn s. runTo instB byn s = runTo instB byn (run m (instB,byn) s)`,
+    Induct_on `m` THENL [
+        RW_TAC list_ss [RUN_LEM_1],
+        REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN 
+        ASSUME_TAC ( REWRITE_RULE [ADD_SYM, GSYM SUC_ONE_ADD] (Q.SPECL [`m`, `1`] RUN_THM_1)) THEN
+        `1 = SUC 0` by SIMP_TAC std_ss [] THEN
+        ASM_REWRITE_TAC [] THEN
+        REWRITE_TAC [Once RUN_LEM_1] THEN
+        REWRITE_TAC [Once RUN_LEM_1] THEN
+        STRIP_TAC THEN
+        Cases_on `FST (run m (instB,byn) s) = byn` THENL [
+            METIS_TAC [],
+            METIS_TAC [RUNTO_LEM_1]
+        ]
+    ]
+   );
+
+(*
+val RUNTO_THM = Q.store_thm
+  ("RUNTO_THM",
+   `!k instB t s0 s1 pcS0 pcS1. (((s1,pcS1) = run instB k (s0,pcS0)) /\ ~(t IN pcS1)) ==>
+        (run instB t (s0,pcS0) = run instB t (s1,pcS1))`,
+
+    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
+    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+        METIS_TAC [],
+        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+             REWRITE_TAC [GSYM RUN_THM_1] THEN
+             Q.EXISTS_TAC `0` THEN
+             RW_TAC arith_ss [],
+             METIS_TAC [RUN_LEM_2]]
+    ]
+   );
+*)
+
+
+(*
+val runTo_def = Define `
+  !instB byn s pcS.
+  runTo instB byn (s,pcS) =
+      WHILE (\(s,pcS). ~(FST s = byn))
+           (\(s,pcS). (decode2 s (instB (FST s)),FST s INSERT pcS)) (s,pcS)`;
+
+val RUNTO_LEM_1 = Q.store_thm
+  ("RUNTO_LEM_1",
+   `!n instB byn s.
+       runTo instB byn (s,pcS) =
+           if FST s = byn then (s,pcS)
+           else runTo instB byn (decode2 s (instB (FST s)), (FST s) INSERT pcS)`,
+   REPEAT STRIP_TAC THEN Cases_on `FST s = byn` THENL [
+       RW_TAC list_ss [runTo_def, Once WHILE],
+       RW_TAC list_ss [runTo_def, Once WHILE]]
+  );
+
+val RUNTO_LEM_2 = Q.store_thm
+  ("RUNTO_LEM_2",
+   `!instB s pcS. runTo instB (FST s) (s,pcS) = (s,pcS)`,
+   METIS_TAC [RUN_LEM_1]
+  );
+
+
+val RUNTO_THM_1 = Q.store_thm
+  ("RUNTO_THM_1",
+   `!m instB byn s. runTo instB byn (run m (instB,byn) s)`,
+
+    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
+    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+        METIS_TAC [],
+
+        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+             REWRITE_TAC [GSYM RUN_THM_1] THEN
+             Q.EXISTS_TAC `0` THEN
+             RW_TAC arith_ss [],
+             METIS_TAC [RUN_LEM_2]]
+    ]
+   );
+
+
+val RUNTO_THM_1 = Q.store_thm
+  ("RUNTO_THM_1",
+   `!k instB t s0 s1 pcS0 pcS1. (((s1,pcS1) = run instB k (s0,pcS0)) /\ ~(t IN pcS1)) ==>
+        (run instB t (s0,pcS0) = run instB t (s1,pcS1))`,
+
+    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
+    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+        METIS_TAC [],
+        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
+             REWRITE_TAC [GSYM RUN_THM_1] THEN
+             Q.EXISTS_TAC `0` THEN
+             RW_TAC arith_ss [],
+             METIS_TAC [RUN_LEM_2]]
+    ]
+   );
+
+*)
+
+(*---------------------------------------------------------------------------------*)
+(* A breakpoint of the problem is at the critical path iff it is at the shorest    *)
+(* runnning path of an execution                                                   *)
+(*---------------------------------------------------------------------------------*)
+
+(*
+val atCritPath_def =
+  Define `atCritPath p t instM s = 
+         minStep2 p instM s +  minStep2 t instM (runTo p instM s) <= minStep2 t instM s`;
+
+val ATCRITPATH_LEM = Q.store_thm
+  ("ATCRITPATH_LEM",
+   `!p t instM s. 
+    atCritPath p t instM s ==>     
+        minStep2 p instM s <= minStep2 t instM s /\ minStep2 t instM (runTo p instM s) <= minStep2 t instM s`,
+    RW_TAC list_ss [atCritPath_def]
+  );
+*)
+
+(*---------------------------------------------------------------------------------*)
+(* Run to termination                                                              *)
+(*---------------------------------------------------------------------------------*)
 
 val terRun_def =
   Define
-   `terRun (instB,byn) s = run (minStep (instB,byn) s) (instB,byn) s`;
-
-val TERRUN_LEM_1 = Q.store_thm
-  ("TERRUN_LEM_1",
-   `!s iB byn. (terminated (iB,byn) s) ==>
-        (terRun (iB,byn) (terRun (iB,byn) s) = terRun (iB,byn) s)`,
-    RW_TAC list_ss [terRun_def, minStep_def, terminated_def] THEN
-    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-        METIS_TAC [],
-        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THEN
-        METIS_TAC [RUN_LEM_2]]
-   );
-
-val TERRUN_LEM_2 = Q.store_thm
-  ("TERRUN_LEM_2",
-   `!s iB byn m. (terminated (iB,byn) s /\ m > minStep (iB,byn) s) ==>
-        (terRun (iB,byn) s = run m (iB,byn) s)`,
-    RW_TAC list_ss [terRun_def, terminated_def] THEN
-    `?k. m = minStep (iB,byn) s + k` by METIS_TAC [GREATER_DEF, LESS_EQ_EXISTS, LESS_IMP_LESS_OR_EQ, ADD_SYM]
-    THEN ASM_REWRITE_TAC [] THEN
-    RW_TAC list_ss [minStep_def, RUN_THM_1] THEN
-    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-        METIS_TAC [],
-        METIS_TAC [RUN_LEM_2]
-        ]
-   );
+   `terRun (instB,byn) s = runTo instB byn s`;
 
 val TERRUN_THM = Q.store_thm
   ("TERRUN_THM",
-   `!m s iB byn n. (terminated (iB,byn) s) ==>
+   `!m s iB byn n.
         (terRun (iB,byn) s = terRun (iB,byn) (run m (iB,byn) s))`,
-  REPEAT STRIP_TAC THEN
-  Cases_on `m <= minStep (iB,byn) s` THENL [
-     RW_TAC list_ss [terRun_def] THEN
-     METIS_TAC [MINSTEP_THM,ADD_SYM,ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1],
-     METIS_TAC [NOT_LESS_EQUAL, GREATER_DEF, TERRUN_LEM_2, TERRUN_LEM_1]]
+   RW_TAC arith_ss [terRun_def, RUNTO_AFTER_N_STEPS]
   );
-
-val TERMINATED_EXPAND_1 = Q.store_thm
-  ("TERMINATED_EXPAND_1",
-   `!s iB byn. terminated (iB,byn) s ==> (FST s) < byn ==>
-        terminated (iB,byn) (decode2 s (iB (FST s)))`,
-  RW_TAC list_ss [terminated_def] THEN
-  Cases_on `n` THEN FULL_SIMP_TAC list_ss [RUN_LEM_1] THEN
-  METIS_TAC []
-  );
-
-val TERRUN_EXPAND_1 = Q.store_thm
-  ("TERRUN_EXPAND_1",
-   `!s iB byn. terminated (iB,byn) s ==> (FST s) < byn ==>
-        (terRun (iB,byn) s = terRun (iB,byn) (decode2 s (iB (FST s))))`,
-  RW_TAC list_ss [] THEN ASSUME_TAC (Q.SPEC `1` TERRUN_THM) THEN
-  RES_TAC THEN
-  `1 = SUC 0` by RW_TAC arith_ss [] THEN
-  ASM_REWRITE_TAC [] THEN
-  RW_TAC list_ss [RUN_LEM_1]
-  );
-
 
 val TERRUN_STOP = Q.store_thm
   ("TERRUN_STOP",
    `!s iB byn. (FST s = byn) ==>
         (terRun (iB,byn) s = s)`,
   RW_TAC list_ss [terRun_def] THEN
-  RW_TAC list_ss [RUN_LEM_2]
+  RW_TAC list_ss [RUNTO_LEM_2]
   );
-
-
-(*------------------------------------------------------------------------------------------------------------------------------*)
-(* Run a segment of code.	                                                           					*)
-(*------------------------------------------------------------------------------------------------------------------------------*)
-
-(* one entry and one exit													*)
-(* The following high-level definition says that if the running of L1 doesn't go beyond its range (never execute L2's), 	*)
-(* then this running is one-entry-one-exit											*)
-
 
 (*---------------------------------------------------------------------------------*)
 (* ARM program destruction                                                         *)
@@ -907,6 +863,36 @@ val COND_COMP = Q.prove (
 val EL_THM = Q.prove
   (`!n:num. EL n (h::t) = (if n > 0 then EL (PRE n) t else h)`,
     Cases_on `n` THEN RW_TAC list_ss [EL]
+  );
+
+
+
+
+(*---------------------------------------------------------------------------------*)
+(* Restriction on the modelling of registers and memory                            *)
+(*---------------------------------------------------------------------------------*)
+
+val in_regs_dom_def = Define `
+  in_regs_dom regs = 
+      0 IN (FDOM regs) /\ 1 IN (FDOM regs) /\ 2 IN (FDOM regs) /\ 3 IN (FDOM regs) /\
+      4 IN (FDOM regs) /\ 5 IN (FDOM regs) /\ 6 IN (FDOM regs) /\ 7 IN (FDOM regs) /\
+      8 IN (FDOM regs) /\ 9 IN (FDOM regs) /\ 10 IN (FDOM regs) /\ 11 IN (FDOM regs) /\
+      12 IN (FDOM regs) /\ 13 IN (FDOM regs) /\ 14 IN (FDOM regs) /\ 15 IN (FDOM regs)`;
+
+  
+val in_mem_dom_def = Define `
+  in_mem_dom mem = 
+       !i:num. i IN (FDOM mem)`;
+
+
+val FUPDATE_REFL = Q.store_thm
+  ("FUPDATE_REFL",
+   `!i f. i IN FDOM f ==> (f |+ (i,f ' i) = f)`,
+  RW_TAC list_ss [fmap_EXT] THENL [
+       RW_TAC list_ss [FDOM_EQ_FDOM_FUPDATE],
+       Cases_on `x = i` THEN
+       RW_TAC list_ss [FAPPLY_FUPDATE_THM]
+  ]
   );
 
 (*---------------------------------------------------------------------------------*)

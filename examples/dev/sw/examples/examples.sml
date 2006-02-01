@@ -30,22 +30,14 @@ val test1_def = Define
     5:          sub     sp, fp, #3i
     6:          ldmfd   sp, {fp,sp,pc}
 
-  Initial goal:
-         !pc0 cpsr0 regs0 pc1 cpsr1 regs1 mems1.
-           ((regs0 ' 14 = 7w) /\ (regs0 ' 13 = 100w) /\ (pc0 = 0) /\
-            terminated (instB,7) (pc0,cpsr0,regs0,mems0)) /\
-           ((pc1,cpsr1,regs1,mems1) =
-            terRun (instB,7) (pc0,cpsr0,regs0,mems0)) ==>
-           (pc1 = 7) /\
-           ((regs1 ' 2,regs1 ' 0) = test1 (regs0 ' 0,regs0 ' 1))
+*)
 
   val arm1 = link2 test1_def;
   
-  simT (mk_ARM arm1);
-
-  SEQ_TAC [test1_def];
-  
-*)
+  val test1_CORRECT = prove (
+      simT (mk_ARM arm1),
+      SEQ_TAC [test1_def]
+  );
 
 (*---------------------------------------------------------------------------*)
 (* Example 2: A functions calls another function                             *)
@@ -85,15 +77,16 @@ val test2_def = Define
   Returns           : r2 r0 
   Body: 
    12:          mov     ip, sp
-   13:          stmfd   sp!, {r0,r2,fp,ip,lr,pc}
+   13:          stmfd   sp!, {r0,r1,r2,ip,fp,ip,lr,pc}
    14:          sub     fp, ip, #1i
    15:          ldmfd   ip, {r0,r1}
-   16:          add     r2, r0, r1
-   17:          sub     r0, r0, r1
-   18:          add     sp, fp, #5i
-   19:          stmfd   sp!, {r2,r0}
-   20:          sub     sp, fp, #5i
-   21:          ldmfd   sp, {r0,r2,fp,sp,pc}
+   16:          add     ip, ip, #2i
+   17:          add     r2, r0, r1
+   18:          sub     r0, r0, r1
+   19:          add     sp, fp, #5i
+   20:          stmfd   sp!, {r2,r0}
+   21:          sub     sp, fp, #7i
+   22:          ldmfd   sp, {r0,r1,r2,ip,fp,sp,pc}
 
   or,
 
@@ -118,22 +111,25 @@ val test2_def = Define
    10:          sub     sp, fp, #3i
    11:          ldmfd   sp, {fp,sp,pc}
    12:          mov     ip, sp
-   13:          stmfd   sp!, {r0,r2,fp,ip,lr,pc}
+   13:          stmfd   sp!, {r0,r1,r2,ip,fp,ip,lr,pc}
    14:          sub     fp, ip, #1i
    15:          ldmfd   ip, {r0,r1}
-   16:          add     r2, r0, r1
-   17:          sub     r0, r0, r1
-   18:          add     sp, fp, #5i
-   19:          stmfd   sp!, {r2,r0}
-   20:          sub     sp, fp, #5i
-   21:          ldmfd   sp, {r0,r2,fp,sp,pc}
+   16:          add     ip, ip, #2i
+   17:          add     r2, r0, r1
+   18:          sub     r0, r0, r1
+   19:          add     sp, fp, #5i
+   20:          stmfd   sp!, {r2,r0}
+   21:          sub     sp, fp, #7i
+   22:          ldmfd   sp, {r0,r1,r2,ip,fp,sp,pc}
+*)
 
   val arm2 = link2 test2_def;
-  simT (mk_ARM arm2);
 
-  SEQ_TAC [test1_def, test2_def]  
-  
-*)
+  val test2_CORRECT = prove (
+      simT (mk_ARM arm2),
+      SEQ_TAC [test1_def, test2_def]  
+  );
+
 
 
 (*---------------------------------------------------------------------------*)
@@ -174,15 +170,6 @@ val (f6_def, f6_ind) = Defn.tprove
    11:          mov     r0, r1
    12:          sub     sp, fp, #3i
    13:          ldmfd   sp, {fp,sp,pc}
-
- Initial goal:
-     !pc0 cpsr0 regs0 pc1 cpsr1 regs1 mems1.
-           ((regs0 ' 14 = 14w) /\ (regs0 ' 13 = 100w) /\ (pc0 = 0) /\
-            terminated (instB,14) (pc0,cpsr0,regs0,mems0)) /\
-           ((pc1,cpsr1,regs1,mems1) =
-            terRun (instB,14) (pc0,cpsr0,regs0,mems0)) ==>
-           (pc1 = 14) /\ (regs1 ' 0 = f6 (regs0 ' 0,regs0 ' 1))
-
 
     val env6 = toANF [] f6_def;
     val arm6 = compileEnv env6;

@@ -132,92 +132,86 @@ fun exit_stms rs =
 
 fun dec_p pt n = 
 	Assem.OPER  {oper = (Assem.SUB, NONE, false),
-                     dst = [Assem.REG (Assem.fromAlias pt)],
-                     src = [Assem.REG (Assem.fromAlias pt), Assem.NCONST (Arbint.fromInt n)],
+                     dst = [Assem.REG pt],
+                     src = [Assem.REG pt, Assem.NCONST (Arbint.fromInt n)],
                      jump = NONE}
 
 fun inc_p pt n =
         Assem.OPER  {oper = (Assem.ADD, NONE, false),
-                     dst = [Assem.REG (Assem.fromAlias pt)],
-                     src = [Assem.REG (Assem.fromAlias pt), Assem.NCONST (Arbint.fromInt n)],
+                     dst = [Assem.REG pt],
+                     src = [Assem.REG pt, Assem.NCONST (Arbint.fromInt n)],
                      jump = NONE};
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (*  Given a list of registers and memory slots, group consecutive registers together to be used by LDM and STM          *)
-(*  For example, [r1,r2,m1,m3,r3,m2,r4,r5] is segmented to [r1,r2],[m1],[m2],[r3],[m2],[r4,r5]                          *)
+(*  For example, [r1,r2,m1,m3,r3,4w,r4,r5] is segmented to                                                              *)
+(*  ([r1,r2],true, 0),(m1,false,2),(m3,false,3),([r3],true,4),(4w,false,5),([r4,r5],true,6)                             *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun mk_reg_segments argL =
   let val isBroken = ref false;      
 
-      fun one_arg (Assem.REG r, (invRegLs, memL, i)) =
+      (* proceeds in reverse order of the list *)
+      fun one_arg (Assem.REG r, (invRegLs, i)) =
 	let val flag = !isBroken
 	    val _ = isBroken := false
 	in
 	    if null invRegLs orelse flag then
-	        (([Assem.REG r], i) :: invRegLs, memL, i+1)
+	        (([Assem.REG r], true, i) :: invRegLs, i-1)
 	    else
-	        let val (cur_segL, j) = hd invRegLs
+	        let val (cur_segL, a, j) = hd invRegLs
 	        in 
-	  	    if null cur_segL then (([Assem.REG r], i) :: (tl invRegLs), memL, i+1)  
-	  	    else ((cur_segL @ [Assem.REG r], j) :: (tl invRegLs), memL, i+1)
+	  	    if null cur_segL then (([Assem.REG r], true, i) :: (tl invRegLs), i-1)  
+	  	    else ((Assem.REG r :: cur_segL, true, i) :: (tl invRegLs), i-1)
 	        end
 	end
-      |	  one_arg (Assem.MEM v, (invRegLs, memL, i)) = 
-		(isBroken := true; (invRegLs, memL @ [(Assem.MEM v,i)], i+1)) 
-      |   one_arg _ = 
-		raise invalidArgs
+      |	  one_arg (exp, (invRegLs, i)) = 
+		(isBroken := true; (([exp],false, i) :: invRegLs, i-1)) 
 
-      val (invRegLs, memL, i) = List.foldl one_arg ([],[],0) argL 
+      val (invRegLs, i) = List.foldr one_arg ([], length argL - 1) argL 
 
   in
-      (invRegLs, memL)
+      invRegLs
   end
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (*  Given a list of registers, generate a LDM or STM statement                                                          *)
+(*  The sp is assumed to be in the right position                                                                       *)
 (*  If the list contain only one resiter, then use LDR and STR instead                                                  *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
-fun mk_ldm_stm isLoad dataL =
+fun mk_ldm_stm isLoad r dataL =
     if isLoad then
 	if length dataL = 1 then
 	        Assem.OPER {oper = (Assem.LDR, NONE, false),
-                  src = [Assem.MEM {reg = Assem.fromAlias Assem.SP, offset = 1, wback = false}],
+                  src = [Assem.MEM {reg = r, offset = 1, wback = false}],
                   dst = dataL,
                   jump = NONE}
 	else	    
         	Assem.OPER {oper = (Assem.LDMFD, NONE, false),
-                  src = [Assem.REG (Assem.fromAlias Assem.SP)],
+                  src = [Assem.REG r],
                   dst = dataL,
                   jump = NONE}
     else 
 	if length dataL = 1 then
                 Assem.OPER {oper = (Assem.STR, NONE, false),
-                  dst = [Assem.MEM {reg = Assem.fromAlias Assem.SP, offset = 0, wback = false}],
+                  dst = [Assem.MEM {reg = r, offset = 0, wback = false}],
                   src = dataL,
                   jump = NONE}
 	else
 		Assem.OPER {oper = (Assem.STMFD, NONE, false),
-                  dst = [Assem.WREG (Assem.fromAlias Assem.SP)],
+                  dst = [Assem.WREG r],
                   src = dataL,
                   jump = NONE}
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
-(*  Write and read one argument to the memory slot referred by regNo and offset			                        *)
+(*  Write one argument to the memory slot referred by regNo and offset      			                        *)
+(*  Push arguments to the stack. If the argument comes from a register, and store it into the stack directly; 		*)
+(*  if it comes from memory, then first load it into R10, and then store it into the stack;				*) 
+(*  if it is a constant, then assign it to r10 first then store it into the stack.                                      *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
-(* push arguments to the stack. If the argument comes from a register, and store it into the stack directly; 		*)
-(* if it comes from memory, then first load it into R10, and then store it into the stack				*) 
-
-fun write_one_arg (Assem.REG r) (regNo,offset) = 
-		[Assem.OPER  {oper = (Assem.STR, NONE, false),
-                                      dst = [Assem.MEM {reg = regNo,
-                                                        offset = offset,
-                                                        wback = false}],
-                                      src = [Assem.REG r],
-                                      jump = NONE}]
- |  write_one_arg (Assem.MEM v) (regNo,offset) = [
+fun write_one_arg (Assem.MEM v) (regNo,offset) = [
                  Assem.OPER {oper = (Assem.LDR, NONE, false),
                              dst = [Assem.REG (!numAvaiRegs)],
                              src = [Assem.MEM v],
@@ -227,9 +221,29 @@ fun write_one_arg (Assem.REG r) (regNo,offset) =
                                                offset = offset, wback = false}],
                              src = [Assem.REG (!numAvaiRegs)],
                              jump = NONE}]
- |  write_one_arg _ _  =
-                 raise invalidArgs
+ |  write_one_arg (Assem.REG r) (regNo,offset) =   
+                 [Assem.OPER  {oper = (Assem.STR, NONE, false),
+                               dst = [Assem.MEM {reg = regNo,
+                                                 offset = offset,
+                                                 wback = false}],
+                               src = [Assem.REG r],
+                               jump = NONE}]
+ |  write_one_arg v (regNo,offset) =   (* v = NONCST n or WCONST w *)
+                 [Assem.MOVE {dst = Assem.REG 10, src = v},
+		  Assem.OPER  {oper = (Assem.STR, NONE, false),
+                               dst = [Assem.MEM {reg = regNo,
+                                                 offset = offset,
+                                                 wback = false}],
+                               src = [Assem.REG 10],
+                               jump = NONE}]
 
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(*  Read one argument from the memory slot referred by regNo and offset                                                 *)
+(*  If the destination is a register, then load it into the register directly;                                          *)
+(*  if it is in the memory, then first load the value into R10, and then store it into that memory location;            *)
+(*  The destination couldn't be a constant                                                                              *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun read_one_arg (Assem.REG r) (regNo,offset) = 
 		[Assem.OPER  {oper = (Assem.LDR, NONE, false),
@@ -251,99 +265,141 @@ fun read_one_arg (Assem.REG r) (regNo,offset) =
  |  read_one_arg _ _ =
                  raise invalidArgs
 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Push a list of values that may be constants or in registers or in memory into the stack                              *)
+(* [1,2,3,...]                                                                                                          *)
+(* pointer | 1 |                                                                                                        *)
+(*         | 2 |                                                                                                        *)
+(*         | 3 |                                                                                                        *)
+(*         ...                                                                                                          *)
+(* new pointer                                                                                                          *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
+fun pushL regNo argL =
+  let
+      val offset = ref 0;
+
+      fun one_seg (regL, true, i) =
+              if length regL = 1 then
+                    write_one_arg (hd regL) (regNo, i - !offset)
+              else
+                  let val k = !offset in
+                    ( offset := i + length regL;
+                      [dec_p regNo (i - k),
+		       (* reverse the regL in accordance with the order of STM *)
+                       mk_ldm_stm false regNo (List.rev regL)])
+                  end
+       | one_seg ([v], false, i) =
+                  write_one_arg v (regNo, i - !offset)
+       | one_seg _ = raise invalidArgs
+  in
+      (List.foldl (fn (x,s) => s @ one_seg x) [] (mk_reg_segments argL)) @ 
+       [dec_p regNo (length argL - !offset)]
+  end
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Pop from the stack a list of values that may be in registers or in memory into the stack                             *)
+(*           ...                                                                                                        *)
+(*           | 3 |                                                                                                      *)
+(*           | 2 |                                                                                                      *)
+(*           | 1 |                                                                                                      *)
+(*  pointer                                                                                                             *)
+(*  be read to the list [1,2,3,...]                                                                                     *) 
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
+fun popL regNo argL =
+  let
+      val offset = ref 0;
+
+      fun one_seg (regL, true, i) =
+              if length regL = 1 then
+                    read_one_arg (hd regL) (regNo, i - !offset + 1)
+              else
+                  let val k = !offset in
+                    ( offset := i;
+                      [inc_p regNo (i - k),
+                       mk_ldm_stm true regNo regL])
+                  end
+       | one_seg ([v], false, i) =
+                  read_one_arg v (regNo, i - !offset + 1)
+       | one_seg _ = raise invalidArgs
+  in
+      (List.foldl (fn (x,s) => s @ one_seg x) [] (mk_reg_segments argL)) @ 
+       [inc_p regNo (length argL - !offset)]
+  end
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Pass by the caller the parameters to the callee                                                                      *)
-(* The first four parameters are placed at r0-r4 by default (done by the callee), the rest are passed through the stack *)
+(* All arguments are passed through the stack                                                                           *)
+(* Stack status after passing                                                                                           *)
+(*          ...                                                                                                         *)
+(*        | arg 3 |                                                                                                     *)
+(*        | arg 2 |                                                                                                     *)
+(* sp     | arg 1 |                                                                                                     *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun pass_args argL =
-   let 
-       val inRegs = if length argL < 4 then argL
-		    else List.take(argL,4) 
-
-       val (regLs, memL) = mk_reg_segments argL
-
-       val (store_regs, final_upper) = List.foldl (fn ((argL,offset), (instL,upper)) => 
-				(instL @ [dec_p Assem.SP (upper - offset - length argL)] @ 
-				 [mk_ldm_stm false argL], offset))    
-			([],length argL) regLs
-       val store_mems = List.foldl (fn ((arg,offset),instL) => instL @ write_one_arg arg (13,~1 * offset)) 
-				[] memL
-   in
-	(* save in-memory arguments first, then STMFD the register segments		*)  
-	store_mems @ store_regs @ [dec_p Assem.SP final_upper] 
-   end
+  pushL (Assem.fromAlias Assem.SP) (List.rev argL)
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* The callee obtains the arguments passed by the caller though the stack                                               *)
 (* By default, the first four arguments are loaded into r0-r4                                                           *)
+(* The rest arguments has been in the right positions. That is, we need not to get them explicitly                      *)
+(* Note that the register allocation assumes above convention                                                           *)  
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun get_args argL =
    let 
-       val regs0_4 = [Assem.REG 0, Assem.REG 1, Assem.REG 2, Assem.REG 3] 	
-       val res0_4 = if length argL < 4 then List.take(regs0_4,length argL)
-		    else regs0_4 
-
-       val first4Args =  
-		[ Assem.OPER {oper = (Assem.LDMFD,NONE,false),
-		   	      src = [Assem.REG (Assem.fromAlias (Assem.IP))],      (* Callee's IP equals to caller's sp *) 
-			      dst = res0_4,
-			      jump = NONE}
-		]
-   in
-	first4Args 
-   end
-
+       val len = length argL;
+       val len1 = if len > 4 then 4 else len
+   in 
+       popL (Assem.fromAlias (Assem.IP)) 
+           (List.take ([Assem.REG 0, Assem.REG 1, Assem.REG 2, Assem.REG 3], len1))
+       (* Note that callee's IP equals to caller's sp, we use the IP here to load the arguments *) 
+   end;
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Pass by the callee the results to the caller                                                                         *)
 (* All results are passed through the stack                                                                             *)
+(* Stack status after passing                                                                                           *)
+(*   sp                                                                                                                 *)
+(*             ...                                                                                                      *)
+(*         | result 3 |                                                                                                 *)
+(*         | result 2 |                                                                                                 *)
+(*         | result 1 |                                                                                                 *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun send_results outL numArgs =
    let
-       val sOffset = length outL + numArgs + 1;  (* skip the arguments *)
-
-       val (regLs, memL) = mk_reg_segments outL
-
-       val (store_regs, final_upper) = List.foldl (fn ((outL,offset), (instL,upper)) =>
-                                (instL @ [dec_p Assem.SP (upper - offset - length outL)] @
-                                 [mk_ldm_stm false outL], offset))
-                        ([],length outL) regLs
-       val store_mems = List.foldl (fn ((out,offset),instL) => instL @ write_one_arg out (13,~1 * offset))
-                                [] memL
-
+       (* skip the arguments and the stored pc, then go to the starting pointer of the output area *)
+       val sOffset = length outL + numArgs + 1;  
+       val stms = pushL (Assem.fromAlias Assem.SP) (List.rev outL)
    in
 	Assem.OPER { oper = (Assem.ADD,NONE,false),
 		     dst = [Assem.REG (Assem.fromAlias Assem.SP)],
 		     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt sOffset)],
 		     jump = NONE
 		   }
- 	:: store_mems @ store_regs
+ 	:: stms
    end
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* The caller retreives the results passed by the callee though the stack                                               *)
+(* Stack status                                                                                                         *)
+(*                                                                                                                      *)
+(*             ...                                                                                                      *)
+(*         | result 3 |                                                                                                 *)
+(*         | result 2 |                                                                                                 *)
+(*         | result 1 |                                                                                                 *)
+(*     sp  |          |                                                                                                 *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun get_results outL numArgs =
    let
        val sOffset = numArgs;  (* skip the arguments and the saved pc *)
-
-       val (regLs, memL) = mk_reg_segments outL
-
-       val (load_regs, final_upper) = List.foldl (fn ((outL,offset), (instL,upper)) =>
-                                (instL @ [inc_p Assem.SP (offset - upper)] @
-                                 [mk_ldm_stm true outL], offset))
-                        ([],0) (rev regLs)
-       val load_mems = List.foldl (fn ((out,offset),instL) => instL @ read_one_arg out (13, offset))
-                                [] memL
-
    in
-	inc_p Assem.SP sOffset :: 
-	load_mems @ load_regs @ [inc_p Assem.SP (length outL - final_upper)] 
+	inc_p (Assem.fromAlias Assem.SP) sOffset :: 
+        popL (Assem.fromAlias (Assem.SP)) outL
    end;
 
 
@@ -352,39 +408,37 @@ fun get_results outL numArgs =
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun get_results_by_recursive_procedure outL =
-   let
-       val (regLs, memL) = mk_reg_segments outL
-
-       val (load_regs, final_upper) = List.foldl (fn ((outL,offset), (instL,upper)) =>
-                                (instL @ [inc_p Assem.SP (offset - upper)] @
-                                 [mk_ldm_stm true outL], offset))
-                        ([],0) (rev regLs)
-       val load_mems = List.foldl (fn ((out,offset),instL) => instL @ read_one_arg out (13, offset))
-                                [] memL
-   in
-        load_mems @ load_regs
-   end;
+    popL (Assem.fromAlias (Assem.SP)) outL;
 
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Remove redundant instructions											*)
+(* There are a couple of cases to be considered:                                                                        *)
+(*   1. When the destination register and source register of an MOVE instruction is the same, remove this instruction   *)
+(*   2. All instructions following an BAL instruction are dead codes provided that there are not the targets of some    *)
+(*         jumps (that is, these instructions will be kept only if the control flow would go back to them)              *)
+(*   3. For some arithmetic instructions and logical instructions, if one of the operands is 0, then the operations     *)
+(*         need not to be performed                                                                                     *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun rm_redundancy stms =
   let
-     val isPrevBAL = ref false;
+     val enterDeadCode = ref false;
 
      fun isValid (Assem.MOVE{dst = d, src = r}) =
-                not (d = r)
+                not (d = r) andalso not (!enterDeadCode)
       |  isValid (Assem.OPER {oper = (Assem.B, SOME (Assem.AL), flag), ...}) =
-                let val flag = !isPrevBAL
-                in (isPrevBAL := true; not flag)
+                let val flag = !enterDeadCode
+                in
+                    (enterDeadCode := true; not flag)
                 end
+      |  isValid (Assem.LABEL {...}) = 
+		  (enterDeadCode := false; true)
       |  isValid (Assem.OPER{oper = (op1,cond1,flag), dst = dst1, src = src1, jump = jp1}) =
+              not (!enterDeadCode) andalso
               not ( length src1 = 2 andalso (hd dst1 = hd src1) andalso (hd (tl src1) = Assem.NCONST Arbint.zero) andalso
                     (op1 = Assem.ADD orelse op1 = Assem.SUB orelse op1 = Assem.LSL orelse
                      op1 = Assem.LSR orelse op1 = Assem.ASR orelse op1 = Assem.ROR))
-      |  isValid _ = true
   in
      List.filter isValid stms
   end;
@@ -406,7 +460,6 @@ fun caller_procedure (caller_name,args,stms,outs) =
 
 	    if callee_name = fun_name then 	(* tail recursion	*)
 		 (pass_args caller_src) @ (get_results_by_recursive_procedure (Assem.pair2list args)) @
-		 [inc_p Assem.SP (length caller_src)] @	(* drop from the stack the arguments/results of this round	*)
 		 [Assem.OPER {oper = (Assem.B,SOME (Assem.AL),false), dst = [], src = [],
 		  	      jump = SOME [Temp.namedlabel (callee_name ^ "_0")]}]
 
@@ -419,7 +472,7 @@ fun caller_procedure (caller_name,args,stms,outs) =
 		    (* then modify the sp to point to the real position of the returning arguments	*)
 
 		    val reserve_space_for_outputs = 
-			dec_p Assem.SP (length caller_dst)
+			dec_p (Assem.fromAlias Assem.SP) (length caller_dst)
 		in
 			reserve_space_for_outputs :: 
 			pass_args caller_src @ 
@@ -443,9 +496,12 @@ fun callee_procedure name =
 	val (p_lab, q_lab) = ( Assem.LABEL {lab = Temp.namedlabel fun_name},
                                Assem.LABEL {lab = Temp.namedlabel (fun_name ^ "_0")})
 
-        val modifiedRegs = Binaryset.listItems rs;
 	val (args1, stms1, outs1, numLocal) = calculate_relative_address
-				(callee_args,callee_stms,callee_outs,length modifiedRegs) 
+				(callee_args,callee_stms,callee_outs, S.numItems rs) 
+
+        val stms_to_get_args = get_args (Assem.pair2list args1)
+
+        val modifiedRegs = Binaryset.listItems (S.union (rs, regAllocation.getModifiedRegs stms_to_get_args));
 
 	val move_sp = 
 		Assem.OPER  {oper = (Assem.SUB, NONE, false),
@@ -454,7 +510,7 @@ fun callee_procedure name =
                      jump = NONE}
 	val stms1 =  p_lab ::
           	     entry_stms modifiedRegs @
-		     get_args (Assem.pair2list args1) @
+		     stms_to_get_args @
           	     [q_lab] @
           	     tl (caller_procedure (fun_name,args1,stms1,outs1)) @
           	     send_results (Assem.pair2list outs1) (length (Assem.pair2list args1)) @
