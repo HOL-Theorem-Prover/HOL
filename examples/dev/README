@@ -340,7 +340,6 @@ in general invalid). Examples:
  AddBinop ("LESS32",  (``UNCURRY $< : word32#word32->bool``,    "<"));
  AddBinop ("EQ32",    (``UNCURRY $= : word32#word32->bool``,    "=="))
 
-
 If one doesn't intend to generate Verilog, then just give an arbitrary
 string as the Verilog operator (invoking PRINT_VERILOG will then print
 a module that uses this string, but you will only get an error when

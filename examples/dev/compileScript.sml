@@ -438,6 +438,23 @@ val _ = set_fixity "<>" (Infixr 510);
 val _ = overload_on ("<>", ``BUS_CONCAT``);
 
 (*****************************************************************************)
+(* Eliminate let-terms, preserving sharing                                   *)
+(* (not currently used as COMB_SYNTH_CONV does the proof on-the-fly)         *)
+(*****************************************************************************)
+val COMB_LET =
+ store_thm
+  ("COMB_LET",
+   ``COMB (\x. (let y = f1 x in f2(x,y))) (inp,out)
+     =
+    ?v. COMB f1 (inp,v) /\ COMB f2 (inp <> v,out)``,
+   EQ_TAC
+    THEN RW_TAC std_ss [COMB_def,BUS_CONCAT_def,LET_DEF]
+    THENL
+     [Q.EXISTS_TAC `\t. f1 (inp t)`
+       THEN RW_TAC std_ss [],
+      PROVE_TAC[]]);
+
+(*****************************************************************************)
 (* Identitly device (i.e. piece of wire)                                     *)
 (*****************************************************************************)
 val COMB_ID =

@@ -1409,6 +1409,32 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
+     else if is_let bdy 
+     then let val (let_abs,let_tm) = dest_let bdy
+              val (let_var, let_bdy) = dest_abs let_abs
+              val v = genvar ``:^time_ty -> ^(type_of let_var)``
+              val goal = 
+                   ``^tm = ?^v. 
+                       COMB ^(mk_pabs(args, let_tm)) (^in_bus,^v) /\ 
+                       COMB ^(mk_pabs(mk_pair(args,let_var), let_bdy)) 
+                            (^in_bus <> ^v,^out_bus)``
+              val _ = (if_print "\n COMB_SYNTH_CONV case 7:\n "; 
+                       if_print_term goal; if_print "\n")
+              val _ = comb_synth_goalref := goal
+          in
+           prove
+            (goal,
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def] 
+              THEN GEN_BETA_TAC 
+              THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
+              THEN EQ_TAC 
+              THEN REWRITE_TAC[LET_DEF]
+              THEN GEN_BETA_TAC 
+              THEN REWRITE_TAC[])
+           handle HOL_ERR _ =>
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+          end
      else if is_comb bdy 
               andalso is_comb(rator bdy) 
               andalso is_const(rator(rator bdy))
@@ -1422,7 +1448,7 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                        COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\ 
                        COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\ 
                        COMB (UNCURRY ^opr) (^v1 <> ^v2, ^out_bus)``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 7:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 8:\n "; 
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
