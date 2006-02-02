@@ -1053,4 +1053,10 @@ val BUS_CONCAT_LIFTERS1 = Q.store_thm
 
 val Let_def = Define `Let f1 f2 = \x:'a. let v:'c = f1(x) in f2(x,v):'b`;
 
+val Let =
+ store_thm
+  ("Let",
+   ``Let f1 f2 = Seq (Par (\x.x) f1) f2``,
+   RW_TAC std_ss [Let_def,Seq_def,Par_def,LET_DEF]);
+
 val _ = export_theory();

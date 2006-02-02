@@ -16,6 +16,10 @@ map load
  ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
 open arithmeticTheory pairLib pairTheory PairRules pairSyntax 
      combinTheory listTheory unwindLib composeTheory compileTheory;
+
+load "compile";
+open compile;
+
 quietdec := false;
 *)
 
@@ -422,9 +426,11 @@ fun getTotal def =
  end
  handle e as HOL_ERR _ => raise wrap_exn "getTotal" "failed" e;
 
+
+
 (*****************************************************************************)
 (* Check if term tm is a well-formed expression built out of Seq, Par, Ite,  *)
-(* and Rec and if so return a pair (constructor, args), else return (tm,[])  *)
+(* Rec or Let. If so return a pair (constructor, args), else return (tm,[])  *)
 (*****************************************************************************)
 fun dest_exp tm =
  if not(fst(dest_type(type_of tm)) = "fun")
@@ -435,7 +441,7 @@ fun dest_exp tm =
           andalso is_const(fst(strip_comb tm))
           andalso mem 
                    (fst(dest_const(fst(strip_comb tm))))
-                   ["Seq","Par","Ite","Rec"]
+                   ["Seq","Par","Ite","Rec","Let"]
   then
    let val (opr,args) = strip_comb tm
    in
@@ -452,6 +458,9 @@ fun dest_exp tm =
     | "Rec" => if length args = 3
                 then (opr, args) 
                 else raise ERR "dest_exp" "bad Rec"
+    | "Let" => if length args = 2 
+                then (opr, args) 
+                else raise ERR "dest_exp" "bad Let"
     | _     => raise ERR "dest_exp" "this shouldn't happen"
    end
   else (tm,[]);
@@ -463,8 +472,8 @@ fun dest_exp tm =
 (*****************************************************************************)
 val combinational_constants = 
  ref["T","F","/\\","\\/","~",",","o","CURRY","UNCURRY","COND",
-     "FST","SND","=","Seq","Par","Ite","0","NUMERAL","BIT1","BIT2","ZERO",
-     "+","-"];
+     "FST","SND","=","Seq","Par","Ite","Let",
+     "0","NUMERAL","BIT1","BIT2","ZERO","+","-"];
 
 fun add_combinational l = 
  (combinational_constants := union l (!combinational_constants)); 
@@ -488,7 +497,7 @@ fun is_combinational_const tm =
   orelse (is_comb tm
            andalso is_combinational_const(rator tm)
            andalso is_combinational_const(rand tm));
-   
+
 (*****************************************************************************)
 (* CompileExp exp                                                            *)
 (* -->                                                                       *)
@@ -531,6 +540,11 @@ fun CompileExp tm =
                  MATCH_MP
                   (UNDISCH(SPEC_ALL(ISPECL var_list REC_INTRO)))
                   (LIST_CONJ thl)
+                end
+     | "Let" => let val th1 = REWR_CONV Let tm
+                    val th2 = CompileExp(rhs(concl th1))
+                in
+                 CONV_RULE (RAND_CONV(RAND_CONV(REWR_CONV(SYM th1)))) th2
                 end
      | _     => raise ERR "CompileExp" "this shouldn't happen"
  end;
@@ -1314,6 +1328,18 @@ fun is_pure_abs tm =
      (strip_pair(snd(dest_pabs tm)))
      (strip_pair(fst(dest_pabs tm))));
 
+(* Not used
+(*****************************************************************************)
+(* Test for ``Let f1 f2``                                                    *)
+(*****************************************************************************)
+fun is_Let tm =
+ is_comb tm 
+   andalso is_const(fst(strip_comb tm))
+   andalso (fst(dest_const(fst(strip_comb tm))) = "Let")
+   andalso (length(snd(strip_comb tm)) = 2);
+*)
+
+
 (*****************************************************************************)
 (* Synthesise combinational circuits.                                        *)
 (* Examples (derived from FactScript.sml):                                   *)
@@ -2061,7 +2087,7 @@ fun MAKE_CIRCUIT devth =
   REWRITE_RULE 
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-    Ite_def,Par_def,Seq_def,o_THM]) devth;
+    Ite_def,Par_def,Seq_def,Let_def,o_THM]) devth;
 
 (*---------------------------------------------------------------------------*)
 (* Optimized                                                                 *)
@@ -2102,13 +2128,21 @@ fun NEW_MAKE_CIRCUIT devth =
     Ite_def,Par_def,Seq_def,o_THM]))) devth;
 
 (*****************************************************************************)
+(* Expand occurrences of component names into their definitions              *)
+(*****************************************************************************)
+fun EXPAND_COMPONENTS th = (* Eta expanded to prevent !hwDefineLib expansion *)
+ CONV_RULE
+  (RATOR_CONV
+   (REWRITE_CONV(mapfilter (Convert o #1) (!hwDefineLib))))
+ th;
+
+(*****************************************************************************)
 (* Invoke hwDefine and then apply MAKE_CIRCUIT and REFINE_ALL to the         *)
 (* device                                                                    *)
 (*****************************************************************************)
-
 fun cirDefine qdef =
  let val (def,ind,dev) = hwDefine qdef
  in
-  (def, ind, MAKE_CIRCUIT(REFINE_ALL dev))
+  (def, ind, MAKE_CIRCUIT(EXPAND_COMPONENTS(REFINE_ALL dev)))
  end;
  
