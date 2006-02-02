@@ -14,8 +14,8 @@ quietdec := true;
 loadPath :="dff" :: !loadPath;
 map load  
  ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
-open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
-     unwindLib composeTheory compileTheory;
+open arithmeticTheory pairLib pairTheory PairRules pairSyntax 
+     combinTheory listTheory unwindLib composeTheory compileTheory;
 quietdec := false;
 *)
 
@@ -27,8 +27,8 @@ open HolKernel Parse boolLib bossLib compileTheory;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open arithmeticTheory pairLib pairTheory PairRules combinTheory listTheory
-     unwindLib composeTheory compileTheory;
+open arithmeticTheory pairLib pairTheory PairRules pairSyntax
+     combinTheory listTheory unwindLib composeTheory compileTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -90,6 +90,15 @@ fun dest_dev_imp tm =
 (* Notice that curried operators are uncurried.                              *)
 (*                                                                           *)
 (*****************************************************************************)
+
+val LET_SEQ_PAR_THM = Q.prove
+(`!f1 f2 f3. Seq (Par f1 f2) f3 = \x. let v = f2 x in f3 (f1 x,v)`,
+ RW_TAC std_ss [Seq_def, Par_def, LET_DEF]);
+
+val SEQ_PAR_I_THM = Q.prove
+(`!f2 f3. Seq (Par (\x.x) f2) f3 = \x. let v = f2 x in f3 (x,v)`,
+ RW_TAC std_ss [LET_SEQ_PAR_THM,combinTheory.I_THM]);
+
 fun Convert_CONV f =
  let val (args,t) = 
          dest_pabs f
@@ -163,6 +172,45 @@ fun Convert_CONV f =
           else (print "bad Ite case\n"; 
                 raise ERR "Convert_CONV" "shouldn't happen")
         end
+  else if is_let t   (*  t = LET (\v. N) M  *)
+   then let val (v,M,N) = dest_plet t
+            val f1 = mk_pabs(args,M)
+            val f2 = mk_pabs(mk_pair(args,v),N)
+            val th1 = ISPECL [f1,f2] Let_def
+            val th2 = CONV_RULE(RHS_CONV(SIMP_CONV std_ss [LAMBDA_PROD])) th1
+            val th3 = TRANS th2 (SYM (QCONV (SIMP_CONV std_ss [LAMBDA_PROD]) f))
+            val th4 = SYM th3
+        in
+         if aconv (lhs(concl th4)) f 
+          then CONV_RULE
+                (RHS_CONV 
+                  ((RAND_CONV Convert_CONV) 
+                   THENC RATOR_CONV(RAND_CONV Convert_CONV)))
+                th4
+          else (print "bad let case\n"; 
+                raise ERR "Convert_CONV" "shouldn't happen")
+        end
+(*  else if is_let t   (*  t = LET (\v. N) M  *)
+   then let val (v,M,N) = dest_plet t
+            val f1 = mk_pabs(args,args)
+            val f2 = mk_pabs(args,M)
+            val f3 = mk_pabs(mk_pair(args,v),N)
+            val th1 = ISPECL [f1,f2,f3] LET_SEQ_PAR_THM
+            val th2 = CONV_RULE(RHS_CONV(SIMP_CONV std_ss [LAMBDA_PROD])) th1
+            val th3 = TRANS th2 (SYM (QCONV (SIMP_CONV std_ss [LAMBDA_PROD]) f))
+            val th4 = SYM th3
+        in
+         if aconv (lhs(concl th4)) f 
+          then CONV_RULE
+                (RHS_CONV 
+                  ((RAND_CONV Convert_CONV) 
+                   THENC (RATOR_CONV(RAND_CONV (RAND_CONV Convert_CONV)))))
+                th4
+          else (print "bad let case\n"; 
+                raise ERR "Convert_CONV" "shouldn't happen")
+        end
+*)
+
   else if is_comb t 
    then let val th0 = (REWR_CONV (GSYM UNCURRY_DEF) ORELSEC REFL) t
             val (t1,t2) = dest_comb(rhs(concl th0))
@@ -346,6 +394,33 @@ fun RecConvert defth totalth =
          raise ERR "RecConvert" "not tail recursive")
    else raise ERR "RecConvert" "this shouldn't happen"
  end;
+
+(*---------------------------------------------------------------------------*)
+(* Extract totality predicate of the form TOTAL (f1,f2,f3) for a recursive   *)
+(* function of the form f(x) = if f1(x) then f2(x) else f (f3(x))            *)
+(*---------------------------------------------------------------------------*)
+
+val total_tm = prim_mk_const{Name="TOTAL",Thy="compose"};
+
+fun mk_total (tm1,tm2,tm3) = 
+ let val ty1 = fst(dom_rng(type_of tm1))
+     val ty2 = type_of tm2
+ in
+   mk_comb(inst[alpha |-> ty1, beta |-> ty2] total_tm,
+           pairLib.list_mk_pair[tm1,tm2,tm3])
+ end;
+ 
+fun getTotal def = 
+ let val (lt,rt) = boolSyntax.dest_eq(concl (SPEC_ALL def))
+     val (func,args) = dest_comb lt
+     val (b1,t1,t2) = dest_cond rt
+     val fb = mk_pabs(args,b1)
+     val f1 = mk_pabs(args,t1)
+     val f2 = mk_pabs(args,rand t2)
+ in
+   mk_total(fb,f1,f2)
+ end
+ handle e as HOL_ERR _ => raise wrap_exn "getTotal" "failed" e;
 
 (*****************************************************************************)
 (* Check if term tm is a well-formed expression built out of Seq, Par, Ite,  *)
@@ -1838,7 +1913,11 @@ val STEP4f =
 val STEP4 = STEP4f o STEP4e o STEP4d o STEP4c o STEP4b o STEP4a;
 
 (*---------------------------------------------------------------------------*)
-(* STEP 5                                                                    *)
+(* STEP 5 applies theorem                                                    *)
+(*                                                                           *)
+(*  BUS_CONCAT_ELIM = |- (\x1. P1 x1) <> (\x2. P2 x2) = (\x. (P1 x,P2 x))    *)
+(*                                                                           *)
+(* Contorted code because of efficiency hacks.                               *)
 (*---------------------------------------------------------------------------*)
 
 fun CONCAT_CONV c M =
@@ -1868,7 +1947,9 @@ fun STEP5_CONV tm =
     | other => raise ERR "STEP5_CONV" ""
 end;
 
-         
+val STEP5_CONV = Ho_Rewrite.REWRITE_CONV
+   [BUS_CONCAT_ELIM(*,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def*)]
+
 (*---------------------------------------------------------------------------*)
 (* Translate a DEV into a netlist                                            *)
 (*---------------------------------------------------------------------------*)
@@ -1877,7 +1958,7 @@ fun MAKE_NETLIST devth =
  ((ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
   (ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
-  (ptime "6" (REWRITE_RULE [UNCURRY,FST,SND]))           o
+  (ptime "6" (REWRITE_RULE [UNCURRY,FST,SND])) o
   (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV)))) o
   (ptime "4" STEP4) o 
   (ptime "3" GEN_BETA_RULE)  o
@@ -1885,7 +1966,7 @@ fun MAKE_NETLIST devth =
   (ptime "1" (REWRITE_RULE 
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-    Ite_def,Par_def,Seq_def,o_THM]))) devth;
+    Let_def,Ite_def,Par_def,Seq_def,o_THM]))) devth;
 
 (*----------------ORIGINAL (mostly)----------------------------------
 val OLD_STEP4 = 
@@ -1982,7 +2063,6 @@ fun MAKE_CIRCUIT devth =
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,o_THM]) devth;
 
-
 (*---------------------------------------------------------------------------*)
 (* Optimized                                                                 *)
 (*---------------------------------------------------------------------------*)
@@ -2009,6 +2089,7 @@ fun NEW_MAKE_CIRCUIT devth =
    [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]                   o
 *)
   (ptime "6-7" (Ho_Rewrite.REWRITE_RULE [UNCURRY,FST,SND]))           o
+(* Consider (PURE_REWRITE_RULE [UNCURRY,FST,SND]))           o  *)
   (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
   (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV))))         o
   (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                   o
@@ -2024,6 +2105,7 @@ fun NEW_MAKE_CIRCUIT devth =
 (* Invoke hwDefine and then apply MAKE_CIRCUIT and REFINE_ALL to the         *)
 (* device                                                                    *)
 (*****************************************************************************)
+
 fun cirDefine qdef =
  let val (def,ind,dev) = hwDefine qdef
  in

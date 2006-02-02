@@ -1050,4 +1050,7 @@ val BUS_CONCAT_LIFTERS1 = Q.store_thm
      (!f a. K a <> f = ($, a) o f)`,
    RW_TAC std_ss [FUN_EQ_THM,BUS_CONCAT_def]);
 
+
+val Let_def = Define `Let f1 f2 = \x:'a. let v:'c = f1(x) in f2(x,v):'b`;
+
 val _ = export_theory();
