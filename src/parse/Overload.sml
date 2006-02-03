@@ -41,7 +41,7 @@ type overload_info = ((string,overloaded_op_info) Binarymap.dict *
 fun nthy_rec_cmp ({Name = n1, Thy = thy1}, {Name = n2, Thy = thy2}) =
     pair_compare (String.compare, String.compare) ((thy1, n1), (thy2, n2))
 
-val null_oinfo : overload_info = 
+val null_oinfo : overload_info =
   (Binarymap.mkDict String.compare,
    Binarymap.mkDict nthy_rec_cmp)
 
@@ -83,17 +83,18 @@ local
        case result of
          NONE =>
            if not (is_vartype ty1) andalso not (is_vartype ty2) then let
-             val (tyop1,args1) = dest_type ty1
-             val (tyop2,args2) = dest_type ty2
-           in
-             if tyop1 = tyop2 then
-               mmap au (ListPair.zip (args1, args2)) >-
-               (fn tylist => return (mk_type(tyop1, tylist)))
-             else
-               newtyvar >- (fn new_ty =>
-                            extend ((ty1, ty2), new_ty) >>
-                            return new_ty)
-           end
+               val {Thy = thy1, Tyop = tyop1, Args = args1} = dest_thy_type ty1
+               val {Thy = thy2, Tyop = tyop2, Args = args2} = dest_thy_type ty2
+             in
+               if tyop1 = tyop2 andalso thy1 = thy2 then
+                 mmap au (ListPair.zip (args1, args2)) >-
+                 (fn tylist =>
+                   return (mk_thy_type{Thy = thy1, Tyop = tyop1,
+                                       Args = tylist}))
+               else
+                 newtyvar >- (fn new_ty => extend ((ty1, ty2), new_ty) >>
+                              return new_ty)
+             end
            else
              newtyvar >- (fn new_ty =>
                           extend ((ty1, ty2), new_ty) >>
