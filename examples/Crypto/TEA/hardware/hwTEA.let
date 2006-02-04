@@ -101,6 +101,8 @@ val (InvRound_def,_,InvRound_dev) =
        in 
          ((y - ShiftXor(t,s,k0,k1),t), (k0,k1,k2,k3), s-0x9e3779b9w)`;
 
+add_combinational ["Round","InvRound"];
+
 (*---------------------------------------------------------------------------*)
 (* Arbitrary rounds of computation, indexed by word32                        *)
 (*---------------------------------------------------------------------------*)
@@ -157,9 +159,9 @@ hwDefineLib := (wInvRounds_def,wInvRounds_ind,wInvRounds_dev) :: !hwDefineLib;
 (* Encrypt and Decrypt (32 rounds)                                           *)
 (*---------------------------------------------------------------------------*)
 
-val (TEAEncrypt_def,_,TEAEncrypt_cir) = 
+val (TEA_Encrypt_def,_,TEA_Encrypt_cir) = 
  cirDefine 
-   `TEAEncrypt (keys,txt) = 
+   `TEA_Encrypt (keys,txt) = 
       let (result,keys,s) = wRounds (32w, (txt,keys,0w))
       in result`;
 
@@ -167,28 +169,51 @@ val (TEAEncrypt_def,_,TEAEncrypt_cir) =
 (* Much more efficient than the previous                                     *)
 (*---------------------------------------------------------------------------*)
 
-val (TEAEncrypt_def,_,TEAEncrypt_cir) = 
+val (TEA_Encrypt_def,_,TEA_Encrypt_cir) = 
  cirDefine 
-   `TEAEncrypt (keys,txt) = FST (wRounds (32w, (txt,keys,0w)))`;
+   `TEA_Encrypt (keys,txt) = FST (wRounds (32w, (txt,keys,0w)))`;
 
 
 (*---------------------------------------------------------------------------*)
 (* |- 0x9e3779b9w << 5 = 3337565984w                                         *)
 (*---------------------------------------------------------------------------*)
 
-val (TEADecrypt_def,_,TEADecrypt_cir) = 
+val (TEA_Decrypt_def,_,TEA_Decrypt_cir) = 
  cirDefine 
-   `TEADecrypt (keys,txt) = FST (wInvRounds (32w, (txt,keys,3337565984w)))`;
+   `TEA_Decrypt (keys,txt) = FST (wInvRounds (32w, (txt,keys,3337565984w)))`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Tester : the first one compiles correctly, the second has trouble with    *)
+(* the occurrences of (0w,1w,2w,3w)                                          *)
+(*---------------------------------------------------------------------------*)
+
+val (TEA_Test_def,_,TEA_Test_cir) = 
+ cirDefine 
+    `TEA_Test pt = 
+        let keys = (0w,1w,2w,3w) in
+        let pt' = TEA_Decrypt (keys,TEA_Encrypt (keys,pt))
+         in
+           (FST pt' = FST pt) /\ (SND pt' = SND pt)`;
+
+val (TEA_Test_def,_,TEA_Test_cir) = 
+ cirDefine 
+    `TEA_Test pt = 
+        let pt' = TEA_Decrypt ((0w,1w,2w,3w),
+                     TEA_Encrypt ((0w,1w,2w,3w),pt))
+         in
+           (FST pt' = FST pt) /\ (SND pt' = SND pt)`;
 
 (*---------------------------------------------------------------------------*)
 (* Generate Verilog for the encryptor and decryptor                          *)
 (*---------------------------------------------------------------------------*)
 
-val _ = vsynth.PRINT_VERILOG TEAEncrypt_cir;
-val _ = vsynth.PRINT_VERILOG TEADecrypt_cir;
+val _ = vsynth.PRINT_VERILOG TEA_Encrypt_cir;
+val _ = vsynth.PRINT_VERILOG TEA_Decrypt_cir;
+val _ = vsynth.PRINT_VERILOG TEA_Test_cir;
 
-val _ = print "Verilog for TEAEncrypt and TEADecrypt has been generated.\n\
-            \See TEAEncrypt.vl and TEADecrypt.vl\n";
+val _ = print "Verilog for TEA_Encrypt, TEA_Decrypt, and TEA_Test has been generated.\n\
+            \See TEA_Encrypt.vl, TEA_Decrypt.vl, and TEA_Test.vl.\n";
 
 (*===========================================================================*)
 (* Proofs                                                                    *)
@@ -280,8 +305,8 @@ val Rounds_LEM_2 = Q.prove
 val TEA_CORRECT = Q.store_thm
 ("TEA_CORRECT",
  `!(plaintext:block) (keys:key).
-     TEADecrypt (keys, TEAEncrypt(keys,plaintext)) = plaintext`,
- RW_TAC list_ss [TEAEncrypt_def, TEADecrypt_def] 
+     TEA_Decrypt (keys, TEA_Encrypt(keys,plaintext)) = plaintext`,
+ RW_TAC list_ss [TEA_Encrypt_def, TEA_Decrypt_def] 
   THEN ASSUME_TAC ((REWRITE_RULE [WORD_ADD_CLAUSES] o 
                     Q.SPECL [`0w`,`plaintext`,`keys`]) Rounds_LEM_2) 
   THEN ASSUME_TAC (Q.SPECL [`32w`,`0w`,`plaintext`,`keys`] Rounds_LEM_1) 
