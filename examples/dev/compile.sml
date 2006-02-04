@@ -17,8 +17,9 @@ map load
 open arithmeticTheory pairLib pairTheory PairRules pairSyntax 
      combinTheory listTheory unwindLib composeTheory compileTheory;
 
-load "compile";
-open compile;
+loadPath := "Fact32" :: !loadPath;
+map load ["word32Theory","word32Lib","compile"];
+open word32Theory word32Lib compile ;
 
 quietdec := false;
 *)
@@ -490,7 +491,7 @@ fun is_combinational tm =
 
 (*****************************************************************************)
 (* Test if a term is built from combinational constants using only           *)
-(* function applicationn.                                                    *)
+(* function application.                                                     *)
 (*****************************************************************************)
 fun is_combinational_const tm =
  (is_const tm andalso  mem (fst(dest_const tm))  (!combinational_constants))
@@ -2130,15 +2131,15 @@ fun NEW_MAKE_CIRCUIT devth =
 (*****************************************************************************)
 (* Expand occurrences of component names into their definitions              *)
 (*****************************************************************************)
-fun EXPAND_COMPONENTS th = (* Eta expanded to prevent !hwDefineLib expansion *)
+fun EXPAND_COMPONENTS th = (* Eta expanded to block !hwDefineLib evaluation  *)
  CONV_RULE
   (RATOR_CONV
    (REWRITE_CONV(mapfilter (Convert o #1) (!hwDefineLib))))
  th;
 
 (*****************************************************************************)
-(* Invoke hwDefine and then apply MAKE_CIRCUIT and REFINE_ALL to the         *)
-(* device                                                                    *)
+(* Invoke hwDefine and then apply MAKE_CIRCUIT, EXPAND_COMPONENTS and        *)
+(* REFINE_ALL to the device                                                  *)
 (*****************************************************************************)
 fun cirDefine qdef =
  let val (def,ind,dev) = hwDefine qdef

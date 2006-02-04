@@ -185,9 +185,11 @@ fun add_modules name_vdef_list =
  module_lib := (!module_lib) @ name_vdef_list;
 
 (*****************************************************************************)
-(* Library of functions for printing terms to Verilog                        *)
+(* Library of functions for printing terms to Verilog.                       *)
+(* For debugging, each function is paired with a string descriptor           *)
 (*****************************************************************************)
-val termToVerilog_lib = ref([]:((string -> unit) -> term -> unit) list);
+val termToVerilog_lib = 
+ ref([]:(string * ((string -> unit) -> term -> unit)) list);
 
 fun add_termToVerilog fl =
  (termToVerilog_lib := (!termToVerilog_lib) @ fl);
@@ -340,7 +342,7 @@ fun AddUnop(name, (hunop,vunop)) =
   (add_combinational_components[combth];
    add_temporal_abstractions[atth];
    add_modules[(name, nameVlogDef)];
-   add_termToVerilog[nameTermToVerilog])
+   add_termToVerilog[("Unop",nameTermToVerilog)])
  end;
 
 (*****************************************************************************)
@@ -509,7 +511,7 @@ fun AddBinop(name, (hbinop,vbinop)) =
   (add_combinational_components[combth];
    add_temporal_abstractions[atth];
    add_modules[(name, nameVlogDef)];
-   add_termToVerilog[nameTermToVerilog])
+   add_termToVerilog[("Binop",nameTermToVerilog)])
  end;
 
 
@@ -585,9 +587,12 @@ fun termToVerilog_CONSTANT (out:string->unit) tm =
            Arbnum.toString(numSyntax.dest_numeral n)
           end)]
         (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_CONSTANT" "bad component term";
+  else (if_print "termToVerilog_CONSTANT failed on:\n";
+        if_print_term tm;
+        if_print "\n(currently only numerals can be constants)\n";
+        raise ERR "termToVerilog_CONSTANT" "bad component term");
 
-val _ = add_termToVerilog[termToVerilog_CONSTANT];
+val _ = add_termToVerilog[("CONSTANT",termToVerilog_CONSTANT)];
 val _ = add_modules[("CONSTANT",CONSTANTvDef)];
 
 (*****************************************************************************)
@@ -625,7 +630,8 @@ fun ClockvInst (out:string->unit) [("period",period)] [clk_name] =
 (* Combinational boolean inverter                                            *)
 (*****************************************************************************)
 val NOTvDef= UnopVlogDef "devNOT" (``$~:bool->bool``,"!");
-val _ = add_termToVerilog[UnopTermToVerilog (UnopVlogInstFun "devNOT") "NOT"];
+val _ = add_termToVerilog
+         [("NOT",UnopTermToVerilog (UnopVlogInstFun "devNOT") "NOT")];
 val _ = add_modules[("devNOT",NOTvDef)];
 
 (*****************************************************************************)
@@ -666,7 +672,7 @@ fun termToVerilog_TRUE (out:string->unit) tm =
   then TRUEvInst tm out [] [fst(dest_var(rand tm))]
   else raise ERR "termToVerilog_TRUE" "bad component term";
 
-val _ = add_termToVerilog[termToVerilog_TRUE];
+val _ = add_termToVerilog[("TRUE",termToVerilog_TRUE)];
 val _ = add_modules[("TRUE",TRUEvDef)];
 
 (*****************************************************************************)
@@ -717,21 +723,23 @@ fun termToVerilog_MUX (out:string->unit) tm =
         (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_MUX" "bad component term";
 
-val _ = add_termToVerilog[termToVerilog_MUX];
+val _ = add_termToVerilog[("MUX",termToVerilog_MUX)];
 val _ = add_modules[("devMUX",MUXvDef)];
 
 (*****************************************************************************)
 (* Combinational Boolean and-gate                                            *)
 (*****************************************************************************)
 val ANDvDef = BinopVlogDef "devAND" (``UNCURRY $/\ :bool#bool->bool``,"&&");
-val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "devAND") "AND"];
+val _ = add_termToVerilog
+         [("AND",BinopTermToVerilog (BinopVlogInstFun "devAND") "AND")];
 val _ = add_modules[("devAND",ANDvDef)];
 
 (*****************************************************************************)
 (* Combinational Boolean or-gate                                             *)
 (*****************************************************************************)
 val ORvDef = BinopVlogDef "devOR" (``UNCURRY $\/ :bool#bool->bool``,"||");
-val _ = add_termToVerilog[BinopTermToVerilog (BinopVlogInstFun "devOR") "OR"];
+val _ = add_termToVerilog
+         [("OR",BinopTermToVerilog (BinopVlogInstFun "devOR") "OR")];
 val _ = add_modules[("devOR",ORvDef)];
 
 (*****************************************************************************)
@@ -781,7 +789,7 @@ fun termToVerilog_DEL (out:string->unit) tm =
         (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_DEL" "bad component term";
 
-val _ = add_termToVerilog[termToVerilog_DEL];
+val _ = add_termToVerilog[("DEL",termToVerilog_DEL)];
 val _ = add_modules[("DEL",DELvDef)];
 
 (*****************************************************************************)
@@ -832,7 +840,7 @@ fun termToVerilog_DFF (out:string->unit) tm =
         (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_DFF" "bad component term";
 
-val _ = add_termToVerilog[termToVerilog_DFF];
+val _ = add_termToVerilog[("DFF",termToVerilog_DFF)];
 val _ = add_modules[("DFF",DFFvDef)];
 
 (*****************************************************************************)
@@ -886,7 +894,7 @@ fun termToVerilog_Dtype (out:string->unit) tm =
         (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_Dtype" "bad component term";
 
-val _ = add_termToVerilog[termToVerilog_Dtype];
+val _ = add_termToVerilog[("Dtype",termToVerilog_Dtype)];
 val _ = add_modules[("Dtype",DtypevDef)];
 
 (*****************************************************************************)
@@ -933,7 +941,7 @@ fun termToVerilog_DtypeT (out:string->unit) tm =
   then DtypeTvInst tm out [] (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_DtypeT" "bad component term";
 
-val _ = add_termToVerilog[termToVerilog_DtypeT];
+val _ = add_termToVerilog[("DtypeT",termToVerilog_DtypeT)];
 val _ = add_modules[("DtypeT",DtypeTvDef)];
 
 (*****************************************************************************)
@@ -979,7 +987,7 @@ fun termToVerilog_DtypeF (out:string->unit) tm =
   then DtypeFvInst tm out [] (map (fst o dest_var) (strip_pair(rand tm)))
   else raise ERR "termToVerilog_DtypeF" "bad component term";
 
-val _ = add_termToVerilog[termToVerilog_DtypeF];
+val _ = add_termToVerilog[("DtypeF",termToVerilog_DtypeF)];
 val _ = add_modules[("DtypeF",DtypeFvDef)];
 
 (*****************************************************************************)
@@ -991,7 +999,7 @@ val _ = add_modules[("DtypeF",DtypeFvDef)];
 (*****************************************************************************)
 fun termToVerilog out tm =
  let val results =
-          mapfilter (fn f => f out tm) (!termToVerilog_lib);
+          mapfilter (fn (_,f) => f out tm) (!termToVerilog_lib);
  in
   if (length results = 0)
    then (if_print "termToVerilog failed on:\n";
