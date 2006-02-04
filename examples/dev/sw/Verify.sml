@@ -107,6 +107,7 @@ fun mk_pred runT tr_iB (pc1,pc2) (ins,outs) ls_unchanged n tr_f =
 
 val INSTB_LEM : (thm ref) = ref (DECIDE (Term`T`)); 
 val cur_insts : (Assem.instr list) ref = ref [];
+val cur_defs : (thm list) ref = ref [];
 
 (* Upload the code to the instruction buffer, store the lemma about this buffer as INSTB_LEM		*) 
 
@@ -139,33 +140,10 @@ fun uploadCode stms =
   end
 
 (*------------------------------------------------------------------------------------------------------*)
-(* Simulate a ARM program for n steps                                                                   *)
-(*------------------------------------------------------------------------------------------------------*)
-
-fun simN (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts) n =
-  let
-     val (fname, ftype, args, stms, outs, rs) = hd arm;
-     val cur_instB = uploadCode insts;
-     val cur_byn = #2 (dest_pair cur_instB)
-     val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
-                                                stms1 @ stms) [] arm
-     val g1 = mk_pred false cur_instB
-                (0, int_of_term cur_byn)
-                (args,outs)
-                []
-                n
-                (mk_const (fname, ftype))
-
-  in
-      #2 (dest_eq (concl (REWRITE_CONV [read_thm] g1)))
-  end;
-
-
-(*------------------------------------------------------------------------------------------------------*)
 (* Simulate a ARM program until it terminates                                                           *)
 (*------------------------------------------------------------------------------------------------------*)
 
-fun simT (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list,insts) 
+fun simT ((arm,anfs) : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * (Assem.exp Binaryset.set)) list * thm list,insts) 
   =
   let
      val (fname, ftype, args, stms, outs, rs) = hd arm;
@@ -173,6 +151,8 @@ fun simT (arm : (string * hol_type * Assem.exp * Assem.instr list * Assem.exp * 
      val cur_byn = #2 (dest_pair cur_instB)
      val _ = cur_insts := List.foldl (fn ((name,tp,ins,stms,outs,rs),stms1) =>
                                 		stms1 @ stms) [] arm
+     val _ = cur_defs := List.map (GSYM o WORD_RULE o (SIMP_RULE std_ss [LET_THM])) anfs;
+
      val g1 = mk_pred true cur_instB
                 (0, int_of_term cur_byn)
                 (args,outs)
@@ -276,13 +256,14 @@ val [FOLDL_NIL, FOLDL_CONS] = CONJUNCTS FOLDL;
 
 val LDM_RULE =
     WORD_RULE o 
+    (SIMP_RULE finmap_ss []) o 
     (CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
         THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
                 THENC REWRITE_CONV [read_thm]
                 THENC WORD_CONV
                 THENC reduceLib.REDUCE_CONV
                 THENC REWRITE_CONV [write_thm]
-		THENC SIMP_CONV finmap_ss []))))) o
+		THENC SIMP_CONV std_ss [FAPPLY_FUPDATE_THM]))))) o
     REWRITE_RULE [decode1_thm];
 
 val LDM_TAC = 
@@ -293,17 +274,21 @@ val LDM_TAC =
         	THENC WORD_CONV
         	THENC reduceLib.REDUCE_CONV
         	THENC REWRITE_CONV [write_thm] 
-		THENC SIMP_CONV finmap_ss [])))) THEN
+		THENC SIMP_CONV std_ss [FAPPLY_FUPDATE_THM]
+		THENC WORD_CONV
+	        )))) THEN
+    SIMP_TAC finmap_ss [] THEN
     WORD_TAC;
 
 
 val STM_RULE =
     ASM_REWRITE_RULE [] o 
+    (SIMP_RULE finmap_ss []) o
     (CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
         THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
                 THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
                 THENC reduceLib.REDUCE_CONV 
-                THENC SIMP_CONV finmap_ss []))))) o
+                THENC SIMP_CONV std_ss [FAPPLY_FUPDATE_THM]))))) o
     REWRITE_RULE [decode1_thm, REVERSE_DEF, LENGTH, APPEND];
 
 val STM_TAC = 
@@ -312,7 +297,9 @@ val STM_TAC =
         THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
                 THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
                 THENC reduceLib.REDUCE_CONV 
-		THENC SIMP_CONV finmap_ss [])))) THEN
+		THENC SIMP_CONV std_ss [FAPPLY_FUPDATE_THM]
+		)))) THEN
+    SIMP_TAC finmap_ss [] THEN 
     ASM_REWRITE_TAC [];
 
 val CMP_RULE =
@@ -345,7 +332,8 @@ fun STOP_TAC defs =
     SIMP_TAC list_ss [run_def, TERRUN_STOP] THEN
     REWRITE_TAC ([LET_THM] @ defs) THEN
     RW_TAC finmap_ss [] THEN
-    REPEAT (CHANGED_TAC WORD_TAC)
+    REPEAT (CHANGED_TAC WORD_TAC) THEN
+    RW_TAC std_ss (!cur_defs)
 
 (*------------------------------------------------------------------------------------------------------*)
 (* Automatic reasoning                                                                                  *)
@@ -500,19 +488,30 @@ val ONE_STEP_TAC =
 
 fun RUNTO_TAC n =
   let 
-      fun one_step (asl,g) =
-		(    let val pc = get_pc_from_goal (asl,g)
-			 val _ = if pc < n then 
-			            print ("Verifying instruction #" ^ Int.toString pc ^ (Assem.formatInst (List.nth(!cur_insts,pc))) ^ "\n")
-			       else
-				    print "\n"
-		     in if pc = n then
-			     REWRITE_TAC [] (asl,g)
-		        else 
-			    (ONE_INST_TAC (select_tac (List.nth(!cur_insts,pc))) THEN
-			     one_step) (asl,g)
-		    end
-		)
+
+    fun at_proc_end (Assem.OPER {oper = (op1, cond1, flag), dst = dlist, src = slist, jump = jumps}) =
+	(op1 = Assem.LDMFD andalso not (List.find (fn r => r = Assem.REG 15 orelse r = Assem.WREG 15) dlist = NONE))
+     |  at_proc_end (Assem.MOVE {dst = Assem.REG 15, src = Assem.REG 14}) = true
+     |  at_proc_end _ = false
+
+    fun one_step (asl,g) =
+	(    let val pc = get_pc_from_goal (asl,g)
+	     in
+		 if pc = n then
+		     REWRITE_TAC [] (asl,g)
+		 else
+		     let 
+			 val inst = List.nth(!cur_insts,pc);
+			 val _ = print ("Verifying instruction #" ^ Int.toString pc ^ (Assem.formatInst inst) ^ "\n")
+			 val tac = if at_proc_end inst then 
+			               REWRITE_TAC (!cur_defs) THEN select_tac inst 
+				   else 
+				       select_tac inst
+		     in
+			(ONE_INST_TAC tac THEN one_step) (asl,g)
+		     end
+	     end
+        )
   in
      one_step
   end 

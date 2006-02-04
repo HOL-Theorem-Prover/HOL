@@ -56,6 +56,7 @@ fun strOrder (s1:string,s2:string) =
 
 fun calculate_relative_address (args,stms,outs,numSavedRegs) =
   let
+    (* Identify those TMEMs that are actually arguments *)
     val argT = #1 (List.foldl (fn (Assem.TMEM n, (t,i)) =>
                         (T.enter(t, n, i), i+1)
                     |  (arg, (t,i)) => (t, i+1)
@@ -65,12 +66,24 @@ fun calculate_relative_address (args,stms,outs,numSavedRegs) =
                   );
 
     val i = ref 0
+    val localT = ref (T.empty);   (* Table for the local variables *)
 
+    (* For those TMEMs that are local variables, assign them in the stack according to the order of their apprearance *)
+ 
     fun filter_mems (Assem.TMEM n) =
         ( case T.peek (argT, n) of
                 SOME k => (Assem.MEM {reg = Assem.fromAlias (Assem.FP), offset = 2 + k, wback = false})		(* inputs *)
-           |     NONE => ( i := !i + 1; 
-			   Assem.MEM {reg = Assem.fromAlias (Assem.FP), offset = ~3 - (!i - 1) - numSavedRegs, wback = false}) (* local variables *)
+           |     NONE => 
+		( case T.peek(!localT, n) of 
+		      SOME j => Assem.MEM {reg = Assem.fromAlias (Assem.FP), offset = ~3 - j - numSavedRegs, 
+					   wback = false} (* existing local variable *)
+		   |  NONE => 
+			  ( localT := T.enter(!localT, n, !i);
+			    i := !i + 1;
+			    Assem.MEM {reg = Assem.fromAlias (Assem.FP), offset = ~3 - (!i - 1) - numSavedRegs, 
+				       wback = false} (* local variables *)
+			  )
+		 )
         )
      |  filter_mems v = v
 
@@ -91,7 +104,7 @@ fun calculate_relative_address (args,stms,outs,numSavedRegs) =
 		filter_mems e 
 
   in
-        (adjust_exp args, List.map one_stm stms, adjust_exp outs, !i + 1)
+        (adjust_exp args, List.map one_stm stms, adjust_exp outs, T.numItems (!localT))
   end
 
 
@@ -268,11 +281,12 @@ fun read_one_arg (Assem.REG r) (regNo,offset) =
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Push a list of values that may be constants or in registers or in memory into the stack                              *)
 (* [1,2,3,...]                                                                                                          *)
-(* pointer | 1 |                                                                                                        *)
-(*         | 2 |                                                                                                        *)
-(*         | 3 |                                                                                                        *)
-(*         ...                                                                                                          *)
+(* old pointer | 1 |                                                                                                    *)
+(*             | 2 |                                                                                                    *)
+(*             | 3 |                                                                                                    *)
+(*              ...                                                                                                     *)
 (* new pointer                                                                                                          *)
+(* Note that the elements in the list are stored in the memory from high addresses to low addressed                     *) 
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun pushL regNo argL =
@@ -281,7 +295,7 @@ fun pushL regNo argL =
 
       fun one_seg (regL, true, i) =
               if length regL = 1 then
-                    write_one_arg (hd regL) (regNo, i - !offset)
+                    write_one_arg (hd regL) (regNo, !offset - i) (* relative offset should be negative *)
               else
                   let val k = !offset in
                     ( offset := i + length regL;
@@ -290,7 +304,7 @@ fun pushL regNo argL =
                        mk_ldm_stm false regNo (List.rev regL)])
                   end
        | one_seg ([v], false, i) =
-                  write_one_arg v (regNo, i - !offset)
+                  write_one_arg v (regNo, !offset - i)
        | one_seg _ = raise invalidArgs
   in
       (List.foldl (fn (x,s) => s @ one_seg x) [] (mk_reg_segments argL)) @ 
@@ -313,7 +327,7 @@ fun popL regNo argL =
 
       fun one_seg (regL, true, i) =
               if length regL = 1 then
-                    read_one_arg (hd regL) (regNo, i - !offset + 1)
+                    read_one_arg (hd regL) (regNo, i - !offset + 1) (* relative address should be positive *)
               else
                   let val k = !offset in
                     ( offset := i;
@@ -351,10 +365,13 @@ fun pass_args argL =
 fun get_args argL =
    let 
        val len = length argL;
-       val len1 = if len > 4 then 4 else len
+       val len1 = if len < (!numAvaiRegs) then len else (!numAvaiRegs)
+
+       fun mk_regL 0 = [Assem.REG 0]
+	|  mk_regL n = mk_regL (n-1) @ [Assem.REG n];
+
    in 
-       popL (Assem.fromAlias (Assem.IP)) 
-           (List.take ([Assem.REG 0, Assem.REG 1, Assem.REG 2, Assem.REG 3], len1))
+       popL (Assem.fromAlias (Assem.IP)) argL
        (* Note that callee's IP equals to caller's sp, we use the IP here to load the arguments *) 
    end;
 
@@ -362,17 +379,18 @@ fun get_args argL =
 (* Pass by the callee the results to the caller                                                                         *)
 (* All results are passed through the stack                                                                             *)
 (* Stack status after passing                                                                                           *)
-(*   sp                                                                                                                 *)
+(*                                                                                                                      *)
 (*             ...                                                                                                      *)
 (*         | result 3 |                                                                                                 *)
 (*         | result 2 |                                                                                                 *)
 (*         | result 1 |                                                                                                 *)
+(*    sp                                                                                                                *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun send_results outL numArgs =
    let
-       (* skip the arguments and the stored pc, then go to the starting pointer of the output area *)
-       val sOffset = length outL + numArgs + 1;  
+       (* skip the arguments and the stored pc, then go to the position right before the first output*)
+       val sOffset = numArgs + length outL + 1;  
        val stms = pushL (Assem.fromAlias Assem.SP) (List.rev outL)
    in
 	Assem.OPER { oper = (Assem.ADD,NONE,false),
@@ -501,20 +519,24 @@ fun callee_procedure name =
 
         val stms_to_get_args = get_args (Assem.pair2list args1)
 
-        val modifiedRegs = Binaryset.listItems (S.union (rs, regAllocation.getModifiedRegs stms_to_get_args));
+        val modifiedRegs = Binaryset.listItems (S.difference(S.union (rs, regAllocation.getModifiedRegs stms_to_get_args),
+				     S.add(S.empty regAllocation.regOrder, Assem.REG (Assem.fromAlias Assem.IP))));
+
+	val reverse_space_for_locals = [dec_p (Assem.fromAlias Assem.SP) numLocal];
 
 	val move_sp = 
 		Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.SP)],
-                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt (numLocal + length modifiedRegs + 2))],
+                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt (length modifiedRegs + 3))],
                      jump = NONE}
 	val stms1 =  p_lab ::
           	     entry_stms modifiedRegs @
+		     reverse_space_for_locals @
 		     stms_to_get_args @
           	     [q_lab] @
           	     tl (caller_procedure (fun_name,args1,stms1,outs1)) @
           	     send_results (Assem.pair2list outs1) (length (Assem.pair2list args1)) @
-          	     [move_sp] @   (* skip save_lr,save_sp,save_fp and local variables *)
+          	     [move_sp] @   (* skip save_lr,save_sp,save_fp and saved registers *)
           	     exit_stms modifiedRegs
 
     in
@@ -532,11 +554,13 @@ fun expand (fun_name,fun_type,args,stms,outs,rs) =
 
       val (p_lab, q_lab) = ( Assem.LABEL {lab = Temp.namedlabel fun_name},
 			     Assem.LABEL {lab = Temp.namedlabel (fun_name ^ "_0")})	
-      
+
+      val reverse_space_for_locals = [dec_p (Assem.fromAlias Assem.SP) numLocal];
+
       val move_sp =
                 Assem.OPER  {oper = (Assem.SUB, NONE, false),
                      dst = [Assem.REG (Assem.fromAlias Assem.SP)],
-                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt (numLocal + 2))],
+                     src = [Assem.REG (Assem.fromAlias Assem.FP), Assem.NCONST (Arbint.fromInt 3)],
                      jump = NONE}
 
       fun callees () = 
@@ -547,9 +571,10 @@ fun expand (fun_name,fun_type,args,stms,outs,rs) =
 
       val stms1 =  p_lab ::
           	   entry_stms [] @
+		   reverse_space_for_locals @
           	   [q_lab] @
           	   tl (caller_procedure (fun_name,args1,stms1,outs1)) @
-          	   [move_sp] @                   (* skip save_lr,save_sp,save_fp and local variables *)
+          	   [move_sp] @                   (* skip save_lr,save_sp,save_fp *)
           	   exit_stms []
 
   in
@@ -627,7 +652,7 @@ fun printInsts stms =
 
 val print_structure = ref true;
 
-fun printarm progL =
+fun printarm (progL,anfL) =
    let 
        val _ = lineNo := ~1;
        fun one_fun flag(fname,ftype,args,stms,outs,rs) = 
@@ -657,11 +682,11 @@ fun printarm progL =
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
 fun compileEnv (env:(term * (bool * thm * thm * thm)) list) =
-     let val _ = List.foldr (fn ((name, (flag,src,anf,cps)), state) =>
-		(if declFuncs.is_decl (#1 (dest_const name)) then () else (link anf;()))) () (tl env);
+     let val defs = List.foldr (fn ((name, (flag,src,anf,cps)), state) =>
+		(if declFuncs.is_decl (#1 (dest_const name)) then (src::state) else (link anf;src::state))) [] (tl env);
          val (name, (flag,src,anf,cps)) = hd env
      in 
-	link2 anf
+	(link2 anf, src::defs)
      end
 
 end (* local structure ... *)

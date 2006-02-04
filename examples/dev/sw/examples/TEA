@@ -49,7 +49,7 @@ val arm1 = compileEnv env1;
 
 val ShiftXor_CORRECT = prove (
    simT (mk_ARM arm1),
-   SEQ_TAC [ShiftXor_def]
+   SEQ_TAC []
   ); 
 
 (******************************************************************
@@ -79,25 +79,26 @@ val ShiftXor_CORRECT = prove (
 val Round_def = 
  Define
    `Round ((y,z),(k0,k1,k2,k3),sum):state  = 
-      ((y + ShiftXor(z, sum+DELTA, k0, k1),
-        z + ShiftXor(y + ShiftXor(z, sum+DELTA, k0, k1), sum+DELTA, k2, k3)),
-       (k0,k1,k2,k3), 
-       sum+DELTA)`;
+	let sum1 = sum + DELTA in
+	let v0 = ShiftXor(z, sum1, k0, k1) in
+	let v1 = y + v0 in
+	((v1, z + ShiftXor(v1, sum1, k2, k3)),
+	 (k0,k1,k2,k3),
+	  sum1)`;
 
-   val env2 = toANF env1 (REWRITE_RULE [DELTA_def] Round_def);	
-   val arm2 = compileEnv env2;
+val env2 = toANF env1 (REWRITE_RULE [DELTA_def] Round_def);	
+val arm2 = compileEnv env2;
 
 val Round_CORRECT = prove (
    simT (mk_ARM arm2),
-   SEQ_TAC [Round_def, ShiftXor_def, DELTA_def]
+   SEQ_TAC [DELTA_def]
   );
-
 
 (******************************************************************
   Name              : Round
   Arguments         : r0 r1 r2 r3 r4 r5 r6 
-  Modified Registers: r0 r1 r7 r8 
-  Returns           : r8 r1 r2 r3 r4 r5 r0 
+  Modified Registers: r0 r6 r7 
+  Returns           : r6 r0 r2 r3 r4 r5 r7 
   Body: 
     0:          mov     ip, sp
     1:          stmfd   sp!, {fp,ip,lr,pc}
@@ -105,84 +106,48 @@ val Round_CORRECT = prove (
     3:          add     r7, r6, #2654435769iw
     4:          sub     sp, sp, #1i
     5:          stmfd   sp!, {r1,r7,r2,r3}
-    6:          bl      + (24)
+    6:          bl      + (14)
     7:          add     sp, sp, #4i
-    8:          ldr     r7, [sp, #1]
+    8:          ldr     r6, [sp, #1]
     9:          add     sp, sp, #1i
-   10:          add     r8, r0, r7
-   11:          add     r7, r6, #2654435769iw
-   12:          sub     sp, sp, #1i
-   13:          stmfd   sp!, {r1,r7,r2,r3}
-   14:          bl      + (16)
-   15:          add     sp, sp, #4i
-   16:          ldr     r7, [sp, #1]
-   17:          add     sp, sp, #1i
-   18:          add     r7, r0, r7
-   19:          add     r0, r6, #2654435769iw
-   20:          sub     sp, sp, #1i
-   21:          stmfd   sp!, {r7,r0,r4,r5}
-   22:          bl      + (8)
-   23:          add     sp, sp, #4i
-   24:          ldr     r0, [sp, #1]
-   25:          add     sp, sp, #1i
-   26:          add     r1, r1, r0
-   27:          add     r0, r6, #2654435769iw
-   28:          sub     sp, fp, #3i
-   29:          ldmfd   sp, {fp,sp,pc}
-  *****************************************************************
+   10:          add     r6, r0, r6
+   11:          sub     sp, sp, #1i
+   12:          stmfd   sp!, {r6,r7,r4,r5}
+   13:          bl      + (7)
+   14:          add     sp, sp, #4i
+   15:          ldr     r0, [sp, #1]
+   16:          add     sp, sp, #1i
+   17:          add     r0, r1, r0
+   18:          sub     sp, fp, #3i
+   19:          ldmfd   sp, {fp,sp,pc}
+*****************************************************************
   Name              : ShiftXor
   Arguments         : r0 r1 r2 r3 
   Modified Registers: r0 r1 r2 r4 
   Returns           : r0 
   Body: 
-   30:          mov     ip, sp
-   31:          stmfd   sp!, {r0,r1,r2,r3,r4,ip,fp,ip,lr,pc}
-   32:          sub     fp, ip, #1i
-   33:          ldmfd   ip, {r0,r1,r2,r3}
-   34:          add     ip, ip, #4i
-   35:          lsl     r4, r0, #4i
-   36:          add     r2, r4, r2
-   37:          add     r1, r0, r1
-   38:          eor     r1, r2, r1
-   39:          asr     r0, r0, #5i
-   40:          add     r0, r0, r3
-   41:          eor     r0, r1, r0
-   42:          add     sp, fp, #6i
-   43:          str     r0, [sp]
-   44:          sub     sp, sp, #1i
-   45:          sub     sp, fp, #9i
-   46:          ldmfd   sp, {r0,r1,r2,r3,r4,ip,fp,sp,pc}
+   20:          mov     ip, sp
+   21:          stmfd   sp!, {r0,r1,r2,r3,r4,fp,ip,lr,pc}
+   22:          sub     fp, ip, #1i
+   23:          ldmfd   ip, {r0,r1,r2,r3}
+   24:          add     ip, ip, #4i
+   25:          lsl     r4, r0, #4i
+   26:          add     r2, r4, r2
+   27:          add     r1, r0, r1
+   28:          eor     r1, r2, r1
+   29:          asr     r0, r0, #5i
+   30:          add     r0, r0, r3
+   31:          eor     r0, r1, r0
+   32:          add     sp, fp, #6i
+   33:          str     r0, [sp]
+   34:          sub     sp, sp, #1i
+   35:          sub     sp, fp, #8i
+   36:          ldmfd   sp, {r0,r1,r2,r3,r4,fp,sp,pc}
 *)
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary number of cipher rounds                                         *)
 (*---------------------------------------------------------------------------*)
-
-(* In the following, we work on a simpler Round function while proceeding the Rounds *)
-
-val Round_def =
- Define
-   `Round ((y,z),(k0,k1,k2,k3),sum):state  =
-      ((y,z),
-       (k0,k1,k2,k3),
-       sum+1w)`;
-
-val env2 = toANF [] Round_def;
-val arm2 = compileEnv env2;
-
-(*****************************************************************
-  Name              : Round
-  Arguments         : r0 r1 r2 r3 r4 r5 r6 
-  Modified Registers: r6 
-  Returns           : r0 r1 r2 r3 r4 r5 r6 
-  Body: 
-    0:          mov     ip, sp
-    1:          stmfd   sp!, {fp,ip,lr,pc}
-    2:          sub     fp, ip, #1i
-    3:          add     r6, r6, #1iw
-    4:          sub     sp, fp, #3i
-    5:          ldmfd   sp, {fp,sp,pc}
-*)
 
 val (Rounds_def, Rounds_ind) = Defn.tprove
  (Hol_defn
@@ -194,7 +159,7 @@ val (Rounds_def, Rounds_ind) = Defn.tprove
 val env3 = toANF env2 (SIMP_RULE std_ss [FORALL_TEA_STATE, Round_def, DELTA_def] (GEN_ALL Rounds_def));
 val arm3 = compileEnv env3;
 
-(******************************************************************
+(********************************************************************
   Name              : Rounds
   Arguments         : r0 r8 r5 r4 r3 r2 r6 r7 
   Modified Registers: r0 r1 r2 r3 r4 r5 r8 r9 
@@ -203,21 +168,78 @@ val arm3 = compileEnv env3;
     0:          mov     ip, sp
     1:          stmfd   sp!, {fp,ip,lr,pc}
     2:          sub     fp, ip, #1i
-    3:          cmp     r0, #0iw
-    4:          beq     + (7)
-    5:          sub     r9, r0, #1iw
-    6:          add     r1, r7, #1iw
-    7:          stmfd   sp!, {r9,r8,r5,r4,r3,r2,r6,r1}
-    8:          ldmfd   sp, {r0,r8,r5,r4,r3,r2,r6,r7}
-    9:          add     sp, sp, #8i
-   10:          bal     - (7)
-   11:          mov     r1, r6
-   12:          mov     r0, r7
-   13:          sub     sp, fp, #13i
-   14:          ldmfd   sp, {fp,sp,pc}
+    3:          sub     sp, sp, #7i
+    4:          cmp     r0, #0iw
+    5:          beq     + (37)
+    6:          sub     r1, r0, #1iw
+    7:          str     r1, [fp, #~3]
+    8:          add     r1, r7, #2654435769iw
+    9:          str     r1, [fp, #~4]
+   10:          sub     sp, sp, #1i
+   11:          stmfd   sp!, {r4,r3}
+   12:          ldr     r10, [fp, #~4]
+   13:          str     r10, [sp]
+   14:          str     r5, [sp, #~1]
+   15:          sub     sp, sp, #2i
+   16:          bl      + (30)
+   17:          add     sp, sp, #4i
+   18:          ldr     r1, [sp, #1]
+   19:          add     sp, sp, #1i
+   20:          add     r9, r8, r1
+   21:          sub     sp, sp, #1i
+   22:          stmfd   sp!, {r2,r6}
+   23:          ldr     r10, [fp, #~4]
+   24:          str     r10, [sp]
+   25:          str     r9, [sp, #~1]
+   26:          sub     sp, sp, #2i
+   27:          bl      + (19)
+   28:          add     sp, sp, #4i
+   29:          ldr     r1, [sp, #1]
+   30:          add     sp, sp, #1i
+   31:          add     r1, r5, r1
+   32:          ldr     r10, [fp, #~4]
+   33:          str     r10, [sp]
+   34:          sub     sp, sp, #1i
+   35:          stmfd   sp!, {r9,r1,r4,r3,r2,r6}
+   36:          ldr     r10, [fp, #~3]
+   37:          str     r10, [sp]
+   38:          sub     sp, sp, #1i
+   39:          ldmfd   sp, {r0,r8,r5,r4,r3,r2,r6,r7}
+   40:          add     sp, sp, #8i
+   41:          bal     - (37)
+   42:          mov     r1, r6
+   43:          mov     r0, r7
+   44:          sub     sp, fp, #3i
+   45:          ldmfd   sp, {fp,sp,pc}
+*****************************************************************
+  Name              : ShiftXor
+  Arguments         : r0 r1 r2 r3 
+  Modified Registers: r0 r1 r2 r4 
+  Returns           : r0 
+  Body: 
+   46:          mov     ip, sp
+   47:          stmfd   sp!, {r0,r1,r2,r3,r4,fp,ip,lr,pc}
+   48:          sub     fp, ip, #1i
+   49:          ldmfd   ip, {r0,r1,r2,r3}
+   50:          add     ip, ip, #4i
+   51:          lsl     r4, r0, #4i
+   52:          add     r2, r4, r2
+   53:          add     r1, r0, r1
+   54:          eor     r1, r2, r1
+   55:          asr     r0, r0, #5i
+   56:          add     r0, r0, r3
+   57:          eor     r0, r1, r0
+   58:          add     sp, fp, #6i
+   59:          str     r0, [sp]
+   60:          sub     sp, sp, #1i
+   61:          sub     sp, fp, #8i
+   62:          ldmfd   sp, {r0,r1,r2,r3,r4,fp,sp,pc}
 *)
 
 (*
+
+
+
   set_goal ([], simT (mk_ARM arm3))
 
   REPEAT GEN_TAC THEN
@@ -230,15 +252,15 @@ val arm3 = compileEnv env3;
     		2:          sub     fp, ip, #1i
         *)
 
-  NTAC 3 (ONE_STEP_TAC) THEN
+  RUNTO_TAC 4 THEN
 
   	(*  Process the recursive body			*)
 
-	REPEAT (POP_ASSUM (K ALL_TAC)) THEN
+	NTAC 3 (POP_ASSUM (K ALL_TAC) THEN
              
         `!cpsr regs mems. ?k. (((pc',cpsr',regs',mems') = run k (instB,15) (3,cpsr,regs,mems)) /\ 
-			(regs ' 13 = 96w)) ==>
-		((pc' = 13) /\  (((regs' ' 8,regs' ' 5),(regs' ' 4,regs' ' 3,regs' ' 2,regs' ' 1),regs' ' 0) =
+			(regs ' 13 = 89w) /\ in_regs_dom regs0 /\ in_mem_dom mems0) ==>
+		((pc' = 44) /\  (((regs' ' 8,regs' ' 5),(regs' ' 4,regs' ' 3,regs' ' 2,regs' ' 1),regs' ' 0) =
        			Rounds (regs ' 0,(regs ' 8,regs ' 5), (regs ' 4,regs ' 3,regs ' 2,regs ' 6),regs ' 7)))` 
 				by ALL_TAC THENL [
 	    Induct_on `w2n (regs ' 0)` THEN REPEAT STRIP_TAC THENL [
@@ -301,12 +323,19 @@ val arm3 = compileEnv env3;
 val TEAEncrypt_def = 
  Define 
    `TEAEncrypt (keys,txt) = 
-      let (cipheredtxt,keys,sum) = Rounds(32w,(txt,keys,0w)) in
+      let (cipheredtxt,keys,sum) = Rounds(1w,(txt,keys,0w)) in
       cipheredtxt`;
 
 
 val env4 = toANF env3 (SIMP_RULE std_ss [FORALL_TEA_BLOCK, FORALL_TEA_KEY] (GEN_ALL TEAEncrypt_def));
 val arm4 = compileEnv env4;
+
+val TEAEncrypt_CORRECT = prove (
+   simT (mk_ARM arm4),
+   SEQ_TAC [DELTA_def] THEN
+   SIMP_TAC std_ss [TEAEncrypt_def, Ntimes Rounds_def 2, Round_def, DELTA_def] THEN
+   WORD_TAC
+  );
 
 (******************************************************************
   Name              : TEAEncrypt
@@ -322,7 +351,7 @@ val arm4 = compileEnv env4;
     5:          str     r10, [sp]
     6:          sub     sp, sp, #1i
     7:          stmfd   sp!, {r4,r5,r0,r1,r2,r3}
-    8:          mov     r10, #32iw
+    8:          mov     r10, #1iw
     9:          str     r10, [sp]
    10:          sub     sp, sp, #1i
    11:          bl      + (6)
@@ -333,10 +362,84 @@ val arm4 = compileEnv env4;
    16:          ldmfd   sp, {fp,sp,pc}
 *****************************************************************
   Name              : Rounds
-  ...
-
+  Arguments         : r0 r8 r5 r4 r3 r2 r6 r7 
+  Modified Registers: r0 r1 r2 r3 r4 r5 r8 r9 
+  Returns           : r8 r5 r4 r3 r2 r1 r0 
+  Body: 
+   17:          mov     ip, sp
+   18:          stmfd   sp!, {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,fp,ip,lr,pc}
+   19:          sub     fp, ip, #1i
+   20:          sub     sp, sp, #7i
+   21:          ldmfd   ip, {r0,r8,r5,r4,r3,r2,r6,r7}
+   22:          add     ip, ip, #8i
+   23:          cmp     r0, #0iw
+   24:          beq     + (37)
+   25:          sub     r1, r0, #1iw
+   26:          str     r1, [fp, #~11]
+   27:          add     r1, r7, #2654435769iw
+   28:          str     r1, [fp, #~12]
+   29:          sub     sp, sp, #1i
+   30:          stmfd   sp!, {r4,r3}
+   31:          ldr     r10, [fp, #~12]
+   32:          str     r10, [sp]
+   33:          str     r5, [sp, #~1]
+   34:          sub     sp, sp, #2i
+   35:          bl      + (32)
+   36:          add     sp, sp, #4i
+   37:          ldr     r1, [sp, #1]
+   38:          add     sp, sp, #1i
+   39:          add     r9, r8, r1
+   40:          sub     sp, sp, #1i
+   41:          stmfd   sp!, {r2,r6}
+   42:          ldr     r10, [fp, #~12]
+   43:          str     r10, [sp]
+   44:          str     r9, [sp, #~1]
+   45:          sub     sp, sp, #2i
+   46:          bl      + (21)
+   47:          add     sp, sp, #4i
+   48:          ldr     r1, [sp, #1]
+   49:          add     sp, sp, #1i
+   50:          add     r1, r5, r1
+   51:          ldr     r10, [fp, #~12]
+   52:          str     r10, [sp]
+   53:          sub     sp, sp, #1i
+   54:          stmfd   sp!, {r9,r1,r4,r3,r2,r6}
+   55:          ldr     r10, [fp, #~11]
+   56:          str     r10, [sp]
+   57:          sub     sp, sp, #1i
+   58:          ldmfd   sp, {r0,r8,r5,r4,r3,r2,r6,r7}
+   59:          add     sp, sp, #8i
+   60:          bal     - (37)
+   61:          mov     r1, r6
+   62:          mov     r0, r7
+   63:          add     sp, fp, #16i
+   64:          stmfd   sp!, {r8,r5,r4,r3,r2,r1,r0}
+   65:          sub     sp, fp, #13i
+   66:          ldmfd   sp, {r0,r1,r2,r3,r4,r5,r6,r7,r8,r9,fp,sp,pc}
+*****************************************************************
+  Name              : ShiftXor
+  Arguments         : r0 r1 r2 r3 
+  Modified Registers: r0 r1 r2 r4 
+  Returns           : r0 
+  Body: 
+   67:          mov     ip, sp
+   68:          stmfd   sp!, {r0,r1,r2,r3,r4,fp,ip,lr,pc}
+   69:          sub     fp, ip, #1i
+   70:          ldmfd   ip, {r0,r1,r2,r3}
+   71:          add     ip, ip, #4i
+   72:          lsl     r4, r0, #4i
+   73:          add     r2, r4, r2
+   74:          add     r1, r0, r1
+   75:          eor     r1, r2, r1
+   76:          asr     r0, r0, #5i
+   77:          add     r0, r0, r3
+   78:          eor     r0, r1, r0
+   79:          add     sp, fp, #6i
+   80:          str     r0, [sp]
+   81:          sub     sp, sp, #1i
+   82:          sub     sp, fp, #8i
+   83:          ldmfd   sp, {r0,r1,r2,r3,r4,fp,sp,pc}
 *)
-
 
 (* --------------------------------------------------------------------------*) 
 (* --------------------------------------------------------------------------*) 

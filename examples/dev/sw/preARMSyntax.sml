@@ -13,7 +13,7 @@ fun eval_exp (Assem.MEM {reg = regNo, offset = offset, wback = flag}) =
       mk_comb(Term`MEM:(num # OFFSET) -> EXP`,
                 mk_pair(term_of_int regNo,
                   mk_comb(if offset >= 0 then Term`POS` else Term`NEG`,
-                          term_of_int offset)))
+                          term_of_int (abs offset))))
  |  eval_exp (Assem.NCONST e) =
       mk_comb(Term`NCONST`, mk_numeral (Arbint.toNat e))
  |  eval_exp (Assem.WCONST e) =
@@ -27,7 +27,7 @@ fun eval_exp (Assem.MEM {reg = regNo, offset = offset, wback = flag}) =
  |  eval_exp _ =
       raise ERR "ARM" ("invalid expression")
 
-fun mk_ARM arm =
+fun mk_ARM (arm,anfs) =
   let
 
     fun mk_stm (Assem.OPER {oper = (op1, cond1, flag), dst = dlist, src = slist, jump = jumps}) =
@@ -83,7 +83,7 @@ fun mk_ARM arm =
         List.map mk_stm stms;
 
   in
-     (arm,
+     ((arm,anfs),
       mk_list(List.foldl (fn (f,instL) => instL @ (one_fun f)) [] arm, Type `:INST`)
      )
   end

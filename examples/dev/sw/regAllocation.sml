@@ -22,6 +22,8 @@ type edgeLab = int;
 (* NumRegs is the number of registers 	*)
 val NumRegs = ref (11);
 
+(* The following flag controls whether we spill only one node at a time         *)
+(* If set to be false, then all potential nodes are spilled at once.            *)
 val spillOneOnce = ref (true);
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
@@ -463,7 +465,8 @@ fun Coalesce () =
 	val inst = getNodeLab m;
 	val (def,use) = (#def inst, #use inst);
         val (x,y) = (GetAlias (hd def), GetAlias (hd use)); 
-	val (u,v) = if (S.member(!precolored,y)) then (y,x) else (x,y)
+	val (u,v) = if (S.member(!precolored,y))
+			then (y,x) else (x,y)
    in
 	(worklistMoves := S.delete (!worklistMoves,m);
 	 if u = v then 
@@ -524,7 +527,76 @@ fun SelectSpill () =
 (* Assign colors to nodes, spill nodes when a valid allocation couldn't be found                                      *)
 (* -------------------------------------------------------------------------------------------------------------------*)
 
-fun AssignColors () = 
+val APCS_level = ref 0;
+
+(* Make no effort to comply with the APCS *)
+fun AssignColors_1 () =
+   let
+
+     fun initColors ~1 = S.empty intOrder
+      |  initColors n = S.add(initColors (n-1),n);
+
+     fun assign_precolored () =
+        List.foldl (fn (n,c) => (color := T.enter(!color,n,c);c+1)) 0 (S.listItems (!precolored));
+
+     fun assign_firstnArgs () =
+        List.foldl (fn (n,c) =>
+                (coloredNodes := S.add(!coloredNodes,n);
+                 color := T.enter(!color,n,c);c+1)) 0 (!firstnArgL);
+
+     fun spillNodes n =
+        if (!spillOneOnce) then
+                S.add(S.empty intOrder, spillPriorities (!toBeSpilled))
+        else
+            (!toBeSpilled)
+
+     fun chaseColor n =
+        let val c = T.look(!color, GetAlias n) in
+        if (c = ~1) then
+            chaseColor (GetAlias n)
+        else c end;
+
+     val firstnArgS = S.addList(S.empty intOrder, !firstnArgL);
+
+     fun assign () =
+      if Stack.isEmpty (!selectStack) then
+          (List.foldl (fn (n,s) => color := T.enter(!color,n,chaseColor n))
+                         ()
+                         (S.listItems (!coalescedNodes));
+                         ())
+
+      else
+          let val n = Stack.top (!selectStack);
+              val _ = (selectStack := Stack.pop(!selectStack));
+              val okColors = initColors ((!NumRegs)-1);
+              val okColors = List.foldl (fn (w,s) => if S.member(S.union(!coloredNodes,!precolored),GetAlias w) then
+                                        S.difference (s, S.add(S.empty intOrder, T.look(!color, GetAlias w)))
+                                                else s)
+                                okColors
+                                (S.listItems (T.look(!adjList,n)))
+          in
+              if S.member(firstnArgS, n) then         (* the colors of the first arguments have been assigned *)
+                  assign()
+              else if S.isEmpty(okColors) then
+                  (spilledNodes := spillNodes n;
+                   selectStack := Stack.empty ())
+              else
+                  ( coloredNodes := S.add(!coloredNodes, n);
+                    color := T.enter(!color, n, hd (S.listItems okColors));
+                    assign()
+                  )
+          end
+
+   in
+        ( assign_firstnArgs ();
+          assign()
+        )
+   end;
+
+(* In a effort to compile with the APCS standard *)
+(* The arguemtns are in r0-r9 and then the stack *)
+
+fun AssignColors_2 () = 
    let
 
      fun initColors ~1 = S.empty intOrder
@@ -538,6 +610,17 @@ fun AssignColors () =
 		(coloredNodes := S.add(!coloredNodes,n);
 		 color := T.enter(!color,n,c);c+1)) 0 (!firstnArgL);
 
+     fun filter_coaleasced_args () =
+          List.foldl (fn (n,s) => 
+		      case List.find (fn m => n = m) (!firstnArgL) of
+			  NONE => ()
+		       |  SOME v => (color := T.enter(!color,GetAlias n,n);
+				     coalescedNodes := S.delete (!coalescedNodes, n);
+				     coloredNodes := S.add(!coloredNodes,GetAlias n))
+		      )
+                      ()
+                      (S.listItems (!coalescedNodes));
+
      fun spillNodes n =
         if (!spillOneOnce) then
 		S.add(S.empty intOrder, spillPriorities (!toBeSpilled))
@@ -550,11 +633,12 @@ fun AssignColors () =
 	    chaseColor (GetAlias n)
 	else c end;
 
+
      val firstnArgS = S.addList(S.empty intOrder, !firstnArgL);
 
      fun assign () =
       if Stack.isEmpty (!selectStack) then 
-	  (List.foldl (fn (n,s) => color := T.enter(!color,n,chaseColor n))
+	  (List.foldl (fn (n,s) => color := T.enter(!color,n,T.look(!color, GetAlias n)))
 			 ()
 			 (S.listItems (!coalescedNodes));
 			 ())
@@ -568,7 +652,7 @@ fun AssignColors () =
 		    		okColors 
 				(S.listItems (T.look(!adjList,n)))
 	  in
-	      if S.member(firstnArgS, n) then         (* the colors of the first arguments have been assigned *) 
+	      if S.member(!coalescedNodes, n) then         (* the color has been assigned *) 
 		  assign()
 	      else if S.isEmpty(okColors) then
 		  (spilledNodes := spillNodes n;
@@ -582,9 +666,16 @@ fun AssignColors () =
 
    in
 	( assign_firstnArgs ();
+	  filter_coaleasced_args ();
 	  assign()
         )
    end;
+
+fun AssignColors () =
+  if !APCS_level = 0 then
+      AssignColors_1 ()
+  else 
+      AssignColors_2 ()
 
 (* -------------------------------------------------------------------------------------------------------------------*)
 (* When a node is spilled, we modify the program by replacing the temporary with a memory slot                        *)
@@ -822,15 +913,14 @@ fun RegisterAllocation (gr, tmpT, preC, argL, K) =
     (RewrWithReg (), !tmpTable)
   );
 
- fun getModifiedRegs stms =
-  let
-     fun regOrder (r1,r2) =
-        let val (Assem.REG n1, Assem.REG n2) = (r1, r2) in
+ fun regOrder (r1,r2) =
+      let val (Assem.REG n1, Assem.REG n2) = (r1, r2) in
                 if n1 > n2 then GREATER
                 else if n1 = n2 then EQUAL
                 else LESS
-        end
-  in
+      end
+
+ fun getModifiedRegs stms =
       List.foldl (fn (Assem.OPER {dst = d, ...}, regs) =>
                 (List.foldl (fn (Assem.REG r, regs)  => Binaryset.add(regs,Assem.REG r)
                                      |   _ => regs) regs d)
@@ -838,8 +928,6 @@ fun RegisterAllocation (gr, tmpT, preC, argL, K) =
               |  (_,regs) => regs
              )
              (Binaryset.empty regOrder) stms
-  end;
-
 
 fun convert_to_ARM (prog,K) =
   let
