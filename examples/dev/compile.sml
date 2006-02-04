@@ -1549,7 +1549,7 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
             (goal,
              RW_TAC std_ss [COMB_def,BUS_CONCAT_def,LET_DEF,FORALL_AND_THM]
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
-              THEN RW_TAC std_ss [])
+              THEN RW_TAC std_ss [GSYM CONJ_ASSOC])
            handle HOL_ERR _ =>
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")

@@ -35,10 +35,10 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 compile.monitor_netlist_construction := true;
 
-fun cirDefine qdef =
+fun newcirDefine qdef =
  let val (def,ind,dev) = hwDefine qdef
  in
-  (def, ind, NEW_MAKE_CIRCUIT(EXPAND_COMPONENTS (REFINE_ALL dev)))
+  (def, ind, NEW_MAKE_CIRCUIT(EXPAND_COMPONENTS(REFINE_ALL dev)))
  end;
 
 
@@ -75,11 +75,11 @@ val _ = type_abbrev("state", ``:block # key # word32``);
 (* but we have used the literal instead.                                     *)
 (* --------------------------------------------------------------------------*)
 
-add_combinational ["ShiftXor"];
-
 val (ShiftXor_def,_,ShiftXor_dev) = 
  hwDefine 
    `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
+
+add_combinational ["ShiftXor"];
 
 (* --------------------------------------------------------------------------*)
 (* One round forward computation and one round backward computation          *)
@@ -87,41 +87,19 @@ val (ShiftXor_def,_,ShiftXor_dev) =
 
 val (Round_def,_,Round_dev) = 
  hwDefine
-    `Round ((y,z),(k0,k1,k2,k3),sum):state = 
-      ((y + ShiftXor(z, sum+0x9e3779b9w, k0, k1),
-        z + ShiftXor(y + ShiftXor(z, sum+0x9e3779b9w, k0, k1), 
-                     sum+0x9e3779b9w, k2, k3)),
-       (k0,k1,k2,k3), 
-       sum+0x9e3779b9w)`;
+    `Round ((y,z),(k0,k1,k2,k3),s):state  = 
+       let s' = s + 0x9e3779b9w in
+       let t = y + ShiftXor(z,s',k0,k1)
+        in 
+          ((t, z + ShiftXor(t,s',k2,k3)), 
+           (k0,k1,k2,k3), s')`;
 
 val (InvRound_def,_,InvRound_dev) = 
  hwDefine
-    `InvRound ((y,z),(k0,k1,k2,k3),sum) =
-        ((y - ShiftXor(z - ShiftXor(y, sum, k2, k3), sum, k0, k1),
-          z - ShiftXor(y, sum, k2, k3)), 
-	 (k0,k1,k2,k3), 
-         sum-0x9e3779b9w)`;
-
-(*---------------------------------------------------------------------------*)
-(* More conventional and readable presentation of the Round and InvRound     *)
-(* functions.                                                                *)
-(*---------------------------------------------------------------------------*)
-
-val RoundThm = Q.prove
-(`Round ((y,z),(k0,k1,k2,k3),sum):state  = 
-    let sum' = sum + 0x9e3779b9w in
-    let t = y + ShiftXor(z,sum',k0,k1)
-    in 
-      ((t, z + ShiftXor(t,sum',k2,k3)), (k0,k1,k2,k3), sum')`,
- RW_TAC list_ss [Round_def]);
-
-
-val InvRoundThm = Q.prove
-(`InvRound ((y,z),(k0,k1,k2,k3),sum):state  = 
-    let t = z - ShiftXor(y,sum,k2,k3)
-    in 
-      ((y - ShiftXor(t,sum,k0,k1),t), (k0,k1,k2,k3), sum-0x9e3779b9w)`,
- RW_TAC list_ss [InvRound_def]);
+    `InvRound ((y,z),(k0,k1,k2,k3),s):state  = 
+       let t = z - ShiftXor(y,s,k2,k3)
+       in 
+         ((y - ShiftXor(t,s,k0,k1),t), (k0,k1,k2,k3), s-0x9e3779b9w)`;
 
 (*---------------------------------------------------------------------------*)
 (* Arbitrary rounds of computation, indexed by word32                        *)
@@ -181,7 +159,18 @@ hwDefineLib := (wInvRounds_def,wInvRounds_ind,wInvRounds_dev) :: !hwDefineLib;
 
 val (TEAEncrypt_def,_,TEAEncrypt_cir) = 
  cirDefine 
+   `TEAEncrypt (keys,txt) = 
+      let (result,keys,s) = wRounds (32w, (txt,keys,0w))
+      in result`;
+
+(*---------------------------------------------------------------------------*)
+(* Much more efficient than the previous                                     *)
+(*---------------------------------------------------------------------------*)
+
+val (TEAEncrypt_def,_,TEAEncrypt_cir) = 
+ cirDefine 
    `TEAEncrypt (keys,txt) = FST (wRounds (32w, (txt,keys,0w)))`;
+
 
 (*---------------------------------------------------------------------------*)
 (* |- 0x9e3779b9w << 5 = 3337565984w                                         *)
@@ -257,7 +246,7 @@ val OneRound_Inversion = Q.store_thm
  ("OneRound_Inversion",
   `!s:state. InvRound (Round s) = s`,
   SIMP_TAC std_ss [FORALL_STATE] THEN
-  RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB] 
+  RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM] 
   );
 
 val Rounds_LEM_1 = Q.prove 
@@ -270,7 +259,7 @@ val Rounds_LEM_1 = Q.prove
    RW_TAC std_ss [FORALL_BLOCK, FORALL_KEYS] 
      THEN `v = w2n (i - 1w)` by METIS_TAC [SUC_EQ_W2N]
      THEN RES_THEN (ASSUME_TAC o GSYM) 
-     THEN RW_TAC arith_ss [Once wRounds_def,Round_def]]);
+     THEN RW_TAC arith_ss [Once wRounds_def,Round_def,LET_THM]]);
 
 val [Round,InvRound] = flatten(map decls ["Round", "InvRound"]);
 
