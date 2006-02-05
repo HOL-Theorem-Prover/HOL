@@ -1956,6 +1956,7 @@ val STEP4 = STEP4f o STEP4e o STEP4d o STEP4c o STEP4b o STEP4a;
 (* Contorted code because of efficiency hacks.                               *)
 (*---------------------------------------------------------------------------*)
 
+(*
 fun CONCAT_CONV c M =
   if is_abs M then ABS_CONV (CONCAT_CONV c) M else
   case strip_comb M
@@ -1973,9 +1974,9 @@ local (* partial evaluation instantiates term-nets once *)
        PURE_ONCE_REWRITE_CONV [GSYM ETA_THM] THENC
        PURE_REWRITE_CONV [K_THM,C_THM,I_THM] THENC DEPTH_CONV BETA_CONV)))
 in
-fun STEP5_CONV tm =
+fun STEP5a_CONV tm =
   case strip_comb tm
-   of (c,[f,x]) =>
+   of (c,[f,x]) =>x
         if same_const c comb_tm andalso 
            Lib.can (find_term (same_const bus_concat_tm)) f
          then SIMPLIFY tm
@@ -1985,6 +1986,25 @@ end;
 
 val STEP5_CONV = Ho_Rewrite.REWRITE_CONV
    [BUS_CONCAT_ELIM(*,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def*)]
+*)
+
+fun LAMBDA_CONCAT_CONV tm =
+ let val (t1,t2) = dest_bus_concat tm
+     val _ = assert is_abs t1
+     val _ = assert is_abs t2
+     val bus_concat_thm = ISPECL [t1,t2] BUS_CONCAT_def
+ in 
+   CONV_RULE (RHS_CONV (ABS_CONV (BINOP_CONV BETA_CONV))) 
+             bus_concat_thm
+ end
+
+fun STEP5_CONV tm =
+  case strip_comb tm
+   of (c,[f,x]) =>
+        if same_const c comb_tm 
+         then RATOR_CONV(RAND_CONV(DEPTH_CONV LAMBDA_CONCAT_CONV)) tm
+         else raise ERR "STEP5_CONV" ""
+    | other => raise ERR "STEP5_CONV" ""
 
 (*---------------------------------------------------------------------------*)
 (* Translate a DEV into a netlist                                            *)
@@ -1995,7 +2015,8 @@ fun MAKE_NETLIST devth =
   (ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
   (ptime "6" (REWRITE_RULE [UNCURRY,FST,SND])) o
-  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV)))) o
+(*   (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV)))) o *)
+  (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV)))) o
   (ptime "4" STEP4) o 
   (ptime "3" GEN_BETA_RULE)  o
   (ptime "2" IN_OUT_SPLIT)   o
@@ -2130,7 +2151,8 @@ fun NEW_MAKE_CIRCUIT devth =
   (ptime "6-7" (Ho_Rewrite.REWRITE_RULE [UNCURRY,FST,SND]))           o
 (* Consider (PURE_REWRITE_RULE [UNCURRY,FST,SND]))           o  *)
   (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
-  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV))))         o
+  (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV)))) o
+(*  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV))))       o *)
   (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                   o
   (ptime "4" STEP4)          o
   (ptime "3" GEN_BETA_RULE)  o
@@ -2138,7 +2160,7 @@ fun NEW_MAKE_CIRCUIT devth =
   (ptime "1" (REWRITE_RULE 
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-    Ite_def,Par_def,Seq_def,o_THM]))) devth;
+    Ite_def,Par_def,Seq_def,Let_def,o_THM]))) devth;
 
 (*****************************************************************************)
 (* Expand occurrences of component names into their definitions              *)
