@@ -2010,12 +2010,11 @@ fun STEP5_CONV tm =
 (* Translate a DEV into a netlist                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun MAKE_NETLIST devth =
+val MAKE_NETLIST =
  ((ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
   (ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
-  (ptime "6" (REWRITE_RULE [UNCURRY,FST,SND])) o
-(*   (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV)))) o *)
+  (ptime "6" (PURE_REWRITE_RULE [UNCURRY,FST,SND])) o
   (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV)))) o
   (ptime "4" STEP4) o 
   (ptime "3" GEN_BETA_RULE)  o
@@ -2023,7 +2022,8 @@ fun MAKE_NETLIST devth =
   (ptime "1" (REWRITE_RULE 
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-    Let_def,Ite_def,Par_def,Seq_def,o_THM]))) devth;
+    Let_def,Ite_def,Par_def,Seq_def,o_THM])));
+
 
 (*----------------ORIGINAL (mostly)----------------------------------
 val OLD_STEP4 = 
@@ -2130,8 +2130,8 @@ fun MAKE_CIRCUIT devth =
 fun EXISTSL_CONV tm = 
   ((LEFT_IMP_EXISTS_CONV THENC QUANT_CONV EXISTSL_CONV) ORELSEC ALL_CONV) tm;
 
-fun NEW_MAKE_CIRCUIT devth =
- (DISCH_ALL                                                                  o
+val NEW_MAKE_CIRCUIT =
+ (DISCH_ALL o
   (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o 
   (ptime "14" (I ## AP_ANTE_IMP_TRANS 
                       (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))))    o
@@ -2148,11 +2148,10 @@ fun NEW_MAKE_CIRCUIT devth =
   Ho_Rewrite.REWRITE_RULE
    [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]                   o
 *)
-  (ptime "6-7" (Ho_Rewrite.REWRITE_RULE [UNCURRY,FST,SND]))           o
-(* Consider (PURE_REWRITE_RULE [UNCURRY,FST,SND]))           o  *)
+(*  (ptime "6-7" (Ho_Rewrite.REWRITE_RULE [UNCURRY,FST,SND]))           o *)
+  (ptime "6-7" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))           o
   (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
   (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV)))) o
-(*  (ptime "5" (CONV_RULE (CIRC_CONV (DEPTH_CONV STEP5_CONV))))       o *)
   (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                   o
   (ptime "4" STEP4)          o
   (ptime "3" GEN_BETA_RULE)  o
@@ -2160,7 +2159,7 @@ fun NEW_MAKE_CIRCUIT devth =
   (ptime "1" (REWRITE_RULE 
    [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
-    Ite_def,Par_def,Seq_def,Let_def,o_THM]))) devth;
+    Ite_def,Par_def,Seq_def,Let_def,o_THM])));
 
 (*****************************************************************************)
 (* Expand occurrences of component names into their definitions              *)
@@ -2179,5 +2178,11 @@ fun cirDefine qdef =
  let val (def,ind,dev) = hwDefine qdef
  in
   (def, ind, MAKE_CIRCUIT(EXPAND_COMPONENTS(REFINE_ALL dev)))
+ end;
+
+fun newcirDefine qdef =
+ let val (def,ind,dev) = hwDefine qdef
+ in
+  (def, ind, NEW_MAKE_CIRCUIT(EXPAND_COMPONENTS(REFINE_ALL dev)))
  end;
  
