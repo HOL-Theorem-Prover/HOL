@@ -587,10 +587,7 @@ fun termToVerilog_CONSTANT (out:string->unit) tm =
            Arbnum.toString(numSyntax.dest_numeral n)
           end)]
         (map (fst o dest_var) (strip_pair(rand tm)))
-  else (if_print "termToVerilog_CONSTANT failed on:\n";
-        if_print_term tm;
-        if_print "\n(currently only numerals can be constants)\n";
-        raise ERR "termToVerilog_CONSTANT" "bad component term");
+  else raise ERR "termToVerilog_CONSTANT" "bad component term";
 
 val _ = add_termToVerilog[("CONSTANT",termToVerilog_CONSTANT)];
 val _ = add_modules[("CONSTANT",CONSTANTvDef)];
