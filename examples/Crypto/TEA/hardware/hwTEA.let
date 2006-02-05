@@ -160,7 +160,7 @@ hwDefineLib := (wInvRounds_def,wInvRounds_ind,wInvRounds_dev) :: !hwDefineLib;
 (*---------------------------------------------------------------------------*)
 
 val (TEA_Encrypt_def,_,TEA_Encrypt_cir) = 
- cirDefine 
+ newcirDefine 
    `TEA_Encrypt (keys,txt) = 
       let (result,keys,s) = wRounds (32w, (txt,keys,0w))
       in result`;
@@ -170,7 +170,7 @@ val (TEA_Encrypt_def,_,TEA_Encrypt_cir) =
 (*---------------------------------------------------------------------------*)
 
 val (TEA_Encrypt_def,_,TEA_Encrypt_cir) = 
- cirDefine 
+ newcirDefine 
    `TEA_Encrypt (keys,txt) = FST (wRounds (32w, (txt,keys,0w)))`;
 
 
@@ -179,7 +179,7 @@ val (TEA_Encrypt_def,_,TEA_Encrypt_cir) =
 (*---------------------------------------------------------------------------*)
 
 val (TEA_Decrypt_def,_,TEA_Decrypt_cir) = 
- cirDefine 
+ newcirDefine 
    `TEA_Decrypt (keys,txt) = FST (wInvRounds (32w, (txt,keys,3337565984w)))`;
 
 
@@ -189,15 +189,15 @@ val (TEA_Decrypt_def,_,TEA_Decrypt_cir) =
 (*---------------------------------------------------------------------------*)
 
 val (TEA_Test_def,_,TEA_Test_cir) = 
- cirDefine 
-    `TEA_Test pt = 
+ newcirDefine 
+    `TEA_Test (w1,w2) = 
         let keys = (0w,1w,2w,3w) in
-        let pt' = TEA_Decrypt (keys,TEA_Encrypt (keys,pt))
+        let (w1',w2') = TEA_Decrypt (keys,TEA_Encrypt (keys,(w1,w2)))
          in
-           (FST pt' = FST pt) /\ (SND pt' = SND pt)`;
+           (w1 = w1') /\ (w2 = w2')`;
 
 val (TEA_Test_def,_,TEA_Test_cir) = 
- cirDefine 
+ newcirDefine 
     `TEA_Test pt = 
         let pt' = TEA_Decrypt ((0w,1w,2w,3w),
                      TEA_Encrypt ((0w,1w,2w,3w),pt))
@@ -214,6 +214,37 @@ val _ = vsynth.PRINT_VERILOG TEA_Test_cir;
 
 val _ = print "Verilog for TEA_Encrypt, TEA_Decrypt, and TEA_Test has been generated.\n\
             \See TEA_Encrypt.vl, TEA_Decrypt.vl, and TEA_Test.vl.\n";
+
+(*---------------------------------------------------------------------------*)
+(* Some half-baked stuff on a general test harness (higher order) that       *)
+(* can be instantiated, simplified to first order, and then synthesized to   *)
+(* hardware.                                                                 *)
+(*---------------------------------------------------------------------------*)
+
+val TEST_def = Define `TEST (f:'a->'b) (e:'b) (x:'a) = (f x = e)`;
+val TESTS_def = 
+ Define 
+   `TESTS (f:'a->'b) exlist = 
+      FOLDL (\(ok,inp) (x,e). if ok=F then (ok,inp) else (TEST f e x,x))
+            (T,ARB) exlist`;
+
+(*---------------------------------------------------------------------------*)
+(*     |- TESTS TEA_Test [((1w,1w),T); ((12w,10001w),T)] =                   *)
+(*          if ~TEA_Test (1w,1w) then                                        *)
+(*             (F,1w,1w)                                                     *)
+(*          else                                                             *)
+(*             TEA_Test (12w,10001w),12w,10001w)                             *)
+(*---------------------------------------------------------------------------*)
+
+val CONCRETE_TESTS_def = 
+  Define 
+   `CONCRETE_TESTS (x:bool) = 
+      TESTS TEA_Test [((1w,1w),T); 
+                      ((12w,10001w),T);
+                      ((1211w,314126w),T)]`;
+
+val CONCRETE_TESTS_THM = 
+  SIMP_RULE std_ss [TESTS_def, FOLDL, TEST_def] CONCRETE_TESTS_def;
 
 (*===========================================================================*)
 (* Proofs                                                                    *)
