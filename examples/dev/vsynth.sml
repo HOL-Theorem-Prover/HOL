@@ -851,9 +851,7 @@ val DtypevDef =
 \ input clk;\n\
 \ input  [size:0] d;\n\
 \ output [size:0] q;\n\
-\ reg    [size:0] q;\n\
-\\n\
-\ initial q = 0;\n\
+\ reg    [size:0] q = 0;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
@@ -903,9 +901,7 @@ val DtypeTvDef =
 \module DtypeT (clk,d,q);\n\
 \ input clk,d;\n\
 \ output q;\n\
-\ reg q;\n\
-\\n\
-\ initial q = 1;\n\
+\ reg q = 1;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
@@ -949,9 +945,7 @@ val DtypeFvDef =
 \module DtypeF (clk,d,q);\n\
 \ input clk,d;\n\
 \ output q;\n\
-\ reg q;\n\
-\\n\
-\ initial q = 0;\n\
+\ reg q = 0;\n\
 \\n\
 \ always @(posedge clk) q <= d;\n\
 \\n\
