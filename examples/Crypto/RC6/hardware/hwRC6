@@ -31,7 +31,7 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 compile.monitor_netlist_construction := true;
 
-fun cirDefine qdef =
+fun newcirDefine qdef =
  let val (def,ind,dev) = hwDefine qdef
  in
   (def, ind, NEW_MAKE_CIRCUIT(REFINE_ALL dev))
@@ -98,6 +98,8 @@ val (ut_def,_,ut_dev) =
  hwDefine
     `ut x = (x * (x+x + 1w)) <<< 5w`;
 
+add_combinational ["ut"];
+
 val (FwdRound_def,_,FwdRound_dev) = 
  hwDefine
     `FwdRound ((a,b,c,d):block,((k0,k1):key)) = 
@@ -109,6 +111,8 @@ val (BwdRound_def,_,BwdRound_dev) =
     `BwdRound ((a,b,c,d):block,((k0,k1):key)) = 
 	(((d - k1) >>> ut c) # ut a, a,
 	 ((b - k0) >>> ut a) # ut c, c)`;
+
+add_combinational ["FwdRound","BwdRound"];
 
 (*---------------------------------------------------------------------------*)
 (* Rotate keys and get a pair of keys from the head of the key schedule      *)
@@ -126,8 +130,9 @@ val (ROTKEYS_def,_,ROTKEYS_dev) =
 
 val (GETKEYS_def,_,GETKEYS_dev) =
  hwDefine
-   `GETKEYS ((k0,k1,_):keysched)  = (k0,k1):key`;
+   `GETKEYS ((k0,k1,_):keysched) = (k0,k1):key`;
 
+add_combinational ["ROTKEYS","GETKEYS"];
 
 (*---------------------------------------------------------------------------*)
 (* Pre-whitening and post-whitening in the encryption and the decryption.    *)
@@ -148,6 +153,9 @@ val (InvPreWhitening_def,_,InvPreWhitening_dev) =
 val (InvPostWhitening_def,_,InvPostWhitening_dev) = 
  hwDefine
    `InvPostWhitening ((a,b,c,d):block,(k0,k1)) = (a, b-k1, c, d-k0) : block`;
+
+add_combinational ["PreWhitening","PostWhitening",
+                   "InvPreWhitening","InvPostWhitening"];
 
 (*---------------------------------------------------------------------------*)
 (* Round operations for encryption and decryption                            *)
@@ -204,18 +212,23 @@ hwDefineLib := (Rounds_def,Rounds_ind,Rounds_dev) ::
 (* in this case you should redefine the type keysched 			     *) 
 (*---------------------------------------------------------------------------*)
 
-val (RC6_FWD_def,_,RC6_FWD_dev) =
- hwDefine
-   `RC6_FWD (keys,b) = 
+val (RC6_Encrypt_def,_,RC6_Encrypt_cir) =
+ newcirDefine
+   `RC6_Encrypt (keys,b) = 
       SND (SND (Rounds (20w, ROTKEYS keys, PreWhitening (b,GETKEYS keys))))`;
 
-val (RC6_BWD_def,_,RC6_BWD_dev) =
+val _ = vsynth.PRINT_VERILOG RC6_Encrypt_cir;
+
+val _ = print "Verilog for RC6_Encrypt has been generated.\n\
+            \See RC6_Encrypt.vl.\n";
+
+val (RC6_Decrypt_def,_,RC6_Decrypt_dev) =
  hwDefine
-   `RC6_BWD (keys,b) = 
+   `RC6_Decrypt (keys,b) = 
      SND(SND(InvRounds(20w, ROTKEYS keys, InvPreWhitening (b,GETKEYS keys))))`;
 
-val dev = REFINE_ALL RC6_FWD_dev;
-val RC6_FWD_netlist = MAKE_NETLIST dev;
+val dev = REFINE_ALL RC6_Encrypt_dev;
+val RC6_Encrypt_netlist = MAKE_NETLIST dev;
 
 (*===========================================================================*)
 (*  Proofs                                                                   *)
@@ -295,7 +308,7 @@ val REVKEYS_def =
 val RC6_LEMMA = Q.store_thm
 ("RC6_LEMMA",
  `!plaintext keys.
-     RC6_BWD (REVKEYS keys, RC6_FWD (keys,plaintext)) = plaintext`,
+     RC6_Decrypt (REVKEYS keys, RC6_Encrypt (keys,plaintext)) = plaintext`,
    GEN_TAC THEN 
    SIMP_TAC std_ss [FORALL_KEYS] THEN
    REPEAT GEN_TAC THEN
@@ -392,8 +405,8 @@ val RC6_CORRECT = Q.store_thm
    `!key keys plaintext.
        (keys = LIST_TO_KEYS (mk_keysched key) DUMMY_KEYS)
        ==>
-       (RC6_BWD (REVKEYS keys) 
-           (RC6_FWD keys plaintext) = plaintext)`,
+       (RC6_Decrypt (REVKEYS keys) 
+           (RC6_Encrypt keys plaintext) = plaintext)`,
          RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]);
 
 val _ = export_theory();
