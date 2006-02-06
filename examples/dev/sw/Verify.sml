@@ -131,7 +131,8 @@ fun uploadCode stms =
      val mk_instB_items = #2 (List.foldl (fn (elm, (i,tr)) =>
         (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), List.nth(tr_instL, i))))) (0,Term`T`) tr_instL);
 
-     val _ = INSTB_LEM := prove (mk_instB_items, EVAL_TAC);
+     val _ = (print "Setting up the instruction buffer represented by the INSTB_LEM ...\n"; 
+	      INSTB_LEM := prove (mk_instB_items, EVAL_TAC));
 
      val tr_byn = term_of_int (length tr_instL);
      val cur_instB = mk_pair(Term`instB`, tr_byn)
@@ -230,27 +231,29 @@ val MOVE_RULE =
     REWRITE_RULE [decode1_thm, HD, write_thm, read_thm];
 
 val MOVE_TAC = 
-    REWRITE_TAC [decode1_thm, HD, write_thm, read_thm] THEN
-    SIMP_TAC finmap_ss [];
-
+    REWRITE_TAC [decode1_thm, HD, write_thm, read_thm, FAPPLY_FUPDATE_THM] THEN
+    reduceLib.REDUCE_TAC;
 
 val ARITH_RULE =
     SIMP_RULE finmap_ss [] o 
     REWRITE_RULE [decode1_thm, HD, TL, write_thm, read_thm];
 
 val ARITH_TAC = 
-    REWRITE_TAC [decode1_thm, HD, TL, write_thm, read_thm] THEN
-    SIMP_TAC finmap_ss [];
+    REWRITE_TAC [decode1_thm, HD, TL, write_thm, read_thm, FAPPLY_FUPDATE_THM] THEN
+    reduceLib.REDUCE_TAC;
 
 
 val LOGICAL_RULE = ARITH_RULE
 val LOGICAL_TAC = ARITH_TAC
 
 val LDR_RULE = MOVE_RULE
-val LDR_TAC = MOVE_TAC
 
-val STR_RULE = MOVE_RULE
-val STR_TAC = MOVE_TAC;
+val LDR_TAC = 
+    REWRITE_TAC [decode1_thm, HD, write_thm, read_thm, FAPPLY_FUPDATE_THM] THEN
+    WORD_TAC
+
+val STR_RULE = LDR_RULE
+val STR_TAC = LDR_TAC;
 
 val [FOLDL_NIL, FOLDL_CONS] = CONJUNCTS FOLDL;
 
@@ -266,15 +269,14 @@ val LDM_RULE =
 		THENC SIMP_CONV std_ss [FAPPLY_FUPDATE_THM]))))) o
     REWRITE_RULE [decode1_thm];
 
+
 val LDM_TAC = 
     REWRITE_TAC [decode1_thm] THEN
     CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
         THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV 
-		THENC REWRITE_CONV [read_thm]
+		THENC REWRITE_CONV [read_thm, FAPPLY_FUPDATE_THM]
         	THENC WORD_CONV
-        	THENC reduceLib.REDUCE_CONV
-        	THENC REWRITE_CONV [write_thm] 
-		THENC SIMP_CONV std_ss [FAPPLY_FUPDATE_THM]
+        	THENC REWRITE_CONV [write_thm, FAPPLY_FUPDATE_THM]
 		THENC WORD_CONV
 	        )))) THEN
     SIMP_TAC finmap_ss [] THEN
@@ -295,9 +297,8 @@ val STM_TAC =
     REWRITE_TAC [decode1_thm, REVERSE_DEF, LENGTH, APPEND] THEN
     CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
         THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
-                THENC reduceLib.REDUCE_CONV 
-		THENC SIMP_CONV std_ss [FAPPLY_FUPDATE_THM]
+                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def, FAPPLY_FUPDATE_THM]
+                THENC WORD_CONV
 		)))) THEN
     SIMP_TAC finmap_ss [] THEN 
     ASM_REWRITE_TAC [];
@@ -502,7 +503,7 @@ fun RUNTO_TAC n =
 		 else
 		     let 
 			 val inst = List.nth(!cur_insts,pc);
-			 val _ = print ("Verifying instruction #" ^ Int.toString pc ^ (Assem.formatInst inst) ^ "\n")
+			 val _ = print ("Simulating instruction #" ^ Int.toString pc ^ (Assem.formatInst inst) ^ "\n")
 			 val tac = if at_proc_end inst then 
 			               REWRITE_TAC (!cur_defs) THEN select_tac inst 
 				   else 
@@ -521,9 +522,12 @@ fun RUNTO_TAC n =
 (* The TAC for simulating the program in sequential manner                                              *)
 (*------------------------------------------------------------------------------------------------------*)
 
+val PRE_TAC = 
+    REPEAT GEN_TAC THEN STRIP_TAC THEN POP_ASSUM MP_TAC THEN
+     ONCE_ASM_REWRITE_TAC [];
+
 fun SEQ_TAC defs =
-     REPEAT GEN_TAC THEN STRIP_TAC THEN POP_ASSUM MP_TAC THEN
-     ONCE_ASM_REWRITE_TAC [] THEN
+     PRE_TAC THEN
      RUNTO_TAC (length (!cur_insts)) THEN
      STOP_TAC defs;
 

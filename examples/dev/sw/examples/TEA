@@ -323,7 +323,7 @@ val arm3 = compileEnv env3;
 val TEAEncrypt_def = 
  Define 
    `TEAEncrypt (keys,txt) = 
-      let (cipheredtxt,keys,sum) = Rounds(1w,(txt,keys,0w)) in
+      let (cipheredtxt,keys,sum) = Rounds(2w,(txt,keys,0w)) in
       cipheredtxt`;
 
 
@@ -333,7 +333,7 @@ val arm4 = compileEnv env4;
 val TEAEncrypt_CORRECT = prove (
    simT (mk_ARM arm4),
    SEQ_TAC [DELTA_def] THEN
-   SIMP_TAC std_ss [TEAEncrypt_def, Ntimes Rounds_def 2, Round_def, DELTA_def] THEN
+   SIMP_TAC std_ss [TEAEncrypt_def, Ntimes Rounds_def 3, Round_def, DELTA_def, LET_THM] THEN
    WORD_TAC
   );
 
@@ -347,7 +347,7 @@ val TEAEncrypt_CORRECT = prove (
     1:          stmfd   sp!, {fp,ip,lr,pc}
     2:          sub     fp, ip, #1i
     3:          sub     sp, sp, #7i
-    4:          mov     r10, #0iw
+    4:          mov     r10, #2iw
     5:          str     r10, [sp]
     6:          sub     sp, sp, #1i
     7:          stmfd   sp!, {r4,r5,r0,r1,r2,r3}
