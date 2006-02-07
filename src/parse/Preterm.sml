@@ -514,7 +514,7 @@ fun remove_case_magic tm0 =
                 in
                   if Name = case_special andalso Thy = "bool"
                   then let
-                      val _ = length args = 2 orelse
+                      val _ = length args >= 2 orelse
                               raise ERR "remove_case_magic"
                                     "case constant has wrong # of args"
                       val split_on_t = hd args
@@ -525,7 +525,8 @@ fun remove_case_magic tm0 =
                                        ("Case expression has invalid syntax "^
                                         "where there should be arrows")
                       val split_on_t_ty = type_of split_on_t
-                      val result_ty = type_of t
+                      val result_ty =
+                          type_of (list_mk_comb(f, List.take(args,2)))
                       val fakef = genvar (split_on_t_ty --> result_ty)
                       val fake_eqns =
                           list_mk_conj(map (fn (l,r) =>
@@ -533,8 +534,11 @@ fun remove_case_magic tm0 =
                                        patbody_pairs)
                       val functional =
                           GrammarSpecials.compile_pattern_match fake_eqns
+                      val case_t =
+                          mk_comb(rator (#2 (strip_abs functional)),
+                                  split_on_t)
                     in
-                      mk_comb(rator (#2 (strip_abs functional)), split_on_t)
+                      list_mk_comb(case_t, tl (tl args))
                     end
                   else
                     list_mk_comb(f, args)
