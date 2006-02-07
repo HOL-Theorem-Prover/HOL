@@ -1,9 +1,11 @@
 open HolKernel Parse boolTheory boolLib
 
+fun tprint s = print (StringCvt.padRight #" " 60 (s ^ " ... "))
+
 fun substtest (M, x, N, result) = let
 in
-  print("Testing ["^term_to_string M^"/"^term_to_string x^"] ("^
-        term_to_string N^") = "^term_to_string result^" ... ");
+  tprint("Testing ["^term_to_string M^"/"^term_to_string x^"] ("^
+         term_to_string N^") = "^term_to_string result);
   if aconv (Term.subst[x |-> M] N) result then (print "OK\n"; true)
   else (print "FAILED!\n"; false)
 end
@@ -28,7 +30,7 @@ val tests = [(x,x,y,y),
 (* test for the INST_TYPE bug that allows instantiation to cause a
    free variable to become captured.  *)
 val inst_type_test = let
-  val _ = print "Testing HOL Light INST_TYPE bug ... "
+  val _ = tprint "Testing HOL Light INST_TYPE bug"
   val ximpnx = prove(
     ``(x ==> ~x) = ~x``,
     ASM_CASES_TAC ``x:bool`` THEN ASM_REWRITE_TAC [])
@@ -85,7 +87,7 @@ val _ = Process.atExit (fn () => let
 
 fun test f x = f x orelse (print "FAILED!\n"; Process.exit Process.failure)
 val oldconstants_test = let
-  val _ = print "Identity of old constants test  ... "
+  val _ = tprint "Identity of old constants test"
   val defn1_t = mk_eq(mk_var("foo", bool), boolSyntax.T)
   val defn2_t = mk_eq(mk_var("foo", bool), boolSyntax.F)
   val defn1 = new_definition("foo", defn1_t)
@@ -113,6 +115,14 @@ val oldconstants_test = let
 in
   print "OK\n"
 end
+
+val t = Parse.Term `(case T of T -> (\x. x) || F -> (~)) y`
+val _ = tprint "Testing parsing of case expressions with function type"
+val _ = case Lib.total (find_term (same_const ``bool_case``)) t of
+          NONE => (print "FAILED\n"; Process.exit Process.failure)
+        | SOME _ => print "OK\n"
+
+
 
 val _ = Process.exit (if List.all substtest tests then Process.success
                       else Process.failure)
