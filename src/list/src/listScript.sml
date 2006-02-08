@@ -90,7 +90,7 @@ val _ = add_rule {term_name = "CONS", fixity = Infixr 450,
 (* Prove the axiomatization of lists                                         *)
 (*---------------------------------------------------------------------------*)
 
-val list_Axiom = TypeBase.axiom_of "list";
+val list_Axiom = TypeBase.axiom_of ("-", "list");
 
 val list_Axiom_old = store_thm(
   "list_Axiom_old",
@@ -100,7 +100,7 @@ val list_Axiom_old = store_thm(
     ASSUME_TAC list_Axiom THEN
     POP_ASSUM (ACCEPT_TAC o BETA_RULE o Q.SPECL [`x`, `\x y z. f z x y`]),
     REPEAT STRIP_TAC THEN CONV_TAC FUN_EQ_CONV THEN
-    HO_MATCH_MP_TAC (TypeBase.induction_of "list") THEN
+    HO_MATCH_MP_TAC (TypeBase.induction_of ("-", "list")) THEN
     simpLib.ASM_SIMP_TAC boolSimps.bool_ss []
   ]);
 
@@ -261,7 +261,7 @@ val NULL = store_thm ("NULL",
 (* |- P [] /\ (!t. P t ==> !h. P(h::t)) ==> (!x.P x)                         *)
 (*---------------------------------------------------------------------------*)
 
-val list_INDUCT0 = TypeBase.induction_of "list";
+val list_INDUCT0 = TypeBase.induction_of ("-", "list");
 
 val list_INDUCT = Q.store_thm
 ("list_INDUCT",
@@ -286,7 +286,7 @@ val FORALL_LIST = Q.store_thm
 (* Cases theorem: |- !l. (l = []) \/ (?t h. l = h::t)                        *)
 (*---------------------------------------------------------------------------*)
 
-val list_cases = TypeBase.nchotomy_of "list";
+val list_cases = TypeBase.nchotomy_of ("-", "list");
 
 val list_CASES = store_thm
 ("list_CASES",
@@ -299,7 +299,7 @@ val list_nchotomy = save_thm("list_nchotomy", list_CASES);
 (* Definition of list_case more suitable to call-by-value computations       *)
 (*---------------------------------------------------------------------------*)
 
-val list_case_def = TypeBase.case_def_of "list"
+val list_case_def = TypeBase.case_def_of ("-", "list")
 val list_case_compute = store_thm("list_case_compute",
  --`!(l:'a list). list_case (b:'b) f l =
                   if NULL l then b else f (HD l) (TL l)`--,
@@ -309,9 +309,10 @@ val list_case_compute = store_thm("list_case_compute",
 (* CONS_11:  |- !h t h' t'. (h::t = h' :: t') = (h = h') /\ (t = t')         *)
 (*---------------------------------------------------------------------------*)
 
-val CONS_11 = save_thm("CONS_11", TypeBase.one_one_of "list");
+val CONS_11 = save_thm("CONS_11", TypeBase.one_one_of ("-", "list"));
 
-val NOT_NIL_CONS = save_thm("NOT_NIL_CONS", TypeBase.distinct_of "list");
+val NOT_NIL_CONS = save_thm("NOT_NIL_CONS",
+                            TypeBase.distinct_of ("-", "list"));
 
 val NOT_CONS_NIL = save_thm("NOT_CONS_NIL",
    CONV_RULE(ONCE_DEPTH_CONV SYM_CONV) NOT_NIL_CONS);
@@ -611,7 +612,8 @@ REWRITE_TAC[relationTheory.WF_DEF] THEN BETA_TAC THEN GEN_TAC
  ---------------------------------------------------------------------------*)
 
 val list_size_def =
-  REWRITE_RULE [arithmeticTheory.ADD_ASSOC] (#2 (TypeBase.size_of "list"))
+  REWRITE_RULE [arithmeticTheory.ADD_ASSOC]
+               (#2 (TypeBase.size_of ("-", "list")))
 
 val Induct = INDUCT_THEN list_INDUCT STRIP_ASSUME_TAC;
 
@@ -1073,7 +1075,7 @@ val _ = adjoin_to_theory
    S "        end;";
    NL(); NL();
    S "val _ =";
-   S "  let val list_info = Option.valOf (TypeBase.read \"list\")";
+   S "  let val list_info = Option.valOf (TypeBase.read {Thy = \"list\",Tyop=\"list\"})";
    S "      val lift_list = mk_var(\"listSyntax.lift_list\",Parse.Type`:'type -> ('a -> 'term) -> 'a list -> 'term`)";
    S "      val list_info' = TypeBasePure.put_lift lift_list list_info";
    S "  in TypeBase.write [list_info']";

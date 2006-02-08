@@ -17,7 +17,7 @@ local
   (* Booleans                                                             *)
   (*----------------------------------------------------------------------*)
 
-  val bool_info = Option.valOf (TypeBase.read "bool");
+  val bool_info = Option.valOf (TypeBase.read {Thy="min", Tyop = "bool"});
   val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_arb bool)),
                         TypeBasePure.ORIG boolTheory.bool_case_ID)
   val ty = mk_vartype "'type"
@@ -40,14 +40,14 @@ local
      end,
      TypeBasePure.ORIG pairTheory.UNCURRY_DEF)
 
-  val prod_info' = TypeBasePure.put_size prod_size_info 
-                     (Option.valOf (TypeBase.read"prod"))
+  val prod_info' = TypeBasePure.put_size prod_size_info
+                     (Option.valOf (TypeBase.read {Tyop="prod", Thy="pair"}))
 
   (*----------------------------------------------------------------------*)
   (* Sums                                                                 *)
   (*----------------------------------------------------------------------*)
 
-  val sum_info = Option.valOf(TypeBase.read "sum");
+  val sum_info = Option.valOf(TypeBase.read {Tyop="sum", Thy="sum"});
   val sum_case = prim_mk_const{Name="sum_case", Thy="sum"}
   val num = numSyntax.num
   val sum_case_into_num = inst [alpha |-> num] sum_case
@@ -62,7 +62,7 @@ local
   (* Unit type                                                            *)
   (*----------------------------------------------------------------------*)
 
-  val one_info = Option.valOf (TypeBase.read "one")
+  val one_info = Option.valOf (TypeBase.read {Tyop="one",Thy="one"})
   val one_size_info = (rator(oneSyntax.mk_one_case zero_tm),
                         TypeBasePure.ORIG oneTheory.one_case_rw)
   val ty = mk_vartype "'type"
@@ -75,7 +75,7 @@ local
   (* Options                                                              *)
   (*----------------------------------------------------------------------*)
 
-  val option_info = Option.valOf (TypeBase.read "option")
+  val option_info = Option.valOf (TypeBase.read {Tyop="option", Thy="option"})
   val option_case_tm = prim_mk_const{Name="option_case",Thy="option"}
   val option_size_info =
        (let val f = mk_var("f",alpha --> num)

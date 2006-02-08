@@ -10,7 +10,7 @@ type ppstream = Portable.ppstream
 
 val ERR = mk_HOL_ERR "TypeBasePure";
 
-fun type_names ty = 
+fun type_names ty =
   let val {Thy,Tyop,Args} = Type.dest_thy_type ty
   in (Thy,Tyop)
   end;
@@ -26,7 +26,7 @@ fun thm_of (ORIG x)     = x
 
 
 datatype tyinfo =
-  FACTS of (string * string) * 
+  FACTS of (string * string) *
            {axiom        : shared_thm,
             induction    : shared_thm,
             case_def     : thm,
@@ -77,13 +77,13 @@ fun lift_of(FACTS(_,{lift,...})) = lift;
 
 fun put_nchotomy th (FACTS(sp,
  {axiom, case_const,case_cong,case_def,constructors,
-  induction, nchotomy, distinct, one_one, fields, simpls, 
+  induction, nchotomy, distinct, one_one, fields, simpls,
   size, encode, lift}))
   =
   FACTS(sp,{axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=induction, nchotomy=th, distinct=distinct,
-            one_one=one_one, fields=fields, simpls=simpls, 
+            one_one=one_one, fields=fields, simpls=simpls,
             size=size, encode=encode,lift=lift})
 
 fun put_simpls thl (FACTS(sp,
@@ -93,7 +93,7 @@ fun put_simpls thl (FACTS(sp,
   FACTS(sp, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def,constructors=constructors,
             induction=induction, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields, simpls=thl, 
+            one_one=one_one, fields=fields, simpls=thl,
             size=size, encode=encode,lift=lift});
 
 fun put_induction th (FACTS(sp,
@@ -103,7 +103,7 @@ fun put_induction th (FACTS(sp,
   FACTS(sp, {axiom=axiom, case_const=case_const,
             case_cong=case_cong,case_def=case_def, constructors=constructors,
             induction=th, nchotomy=nchotomy, distinct=distinct,
-            one_one=one_one, fields=fields, simpls=simpls, 
+            one_one=one_one, fields=fields, simpls=simpls,
             size=size, encode=encode,lift=lift})
 
 fun put_size (size_tm,size_rw) (FACTS(sp,
@@ -219,7 +219,7 @@ fun gen_tyinfo {ax, ind, case_defs} =
                  "Number of theorems automatically proved doesn't match up"
      val tyinfo_1 = mk_tyinfo
            {ax=ORIG ax, induction=ORIG ind,
-            case_def=hd case_defs, case_cong=hd case_congs, nchotomy=hd nchotomyl, 
+            case_def=hd case_defs, case_cong=hd case_congs, nchotomy=hd nchotomyl,
             size=NONE, encode=NONE, lift=NONE, fields=[],
             one_one=hd one_ones, distinct=hd distincts}
  in
@@ -255,7 +255,7 @@ fun pp_tyinfo ppstrm (FACTS(ty_names,recd)) =
    add_string "Primitive recursion:"; add_break (1,0);
        (case axiom
          of ORIG thm  => pp_thm thm
-          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp))); 
+          | COPY(sp,_) => add_string ("see "^Lib.quote (name_pair sp)));
         end_block();
    add_break(1,0);
    begin_block CONSISTENT 1; add_string "Case analysis:";
@@ -324,7 +324,12 @@ val empty =
                (ty_name_of f1, ty_name_of f2));
 
 fun prim_get db sp = Binaryset.find (fn f => (sp = ty_name_of f)) db;
-fun get db s = Binaryset.find (fn f => (s = snd(ty_name_of f))) db;
+fun get db s =
+    Binaryset.foldr (fn (tyi, acc) => if #2 (ty_name_of tyi) = s then
+                                        tyi::acc
+                                      else acc)
+                    []
+                    db
 fun add db f = Binaryset.add(db,f);
 val listItems = Binaryset.listItems;
 
@@ -345,8 +350,8 @@ fun typeValue (theta,gamma,undef) =
       case theta ty
        of SOME fvar => fvar
         | NONE =>
-          let val (Tyop,Args) = dest_type ty
-          in case gamma Tyop
+          let val {Thy,Tyop,Args} = dest_thy_type ty
+          in case gamma (Thy,Tyop)
               of SOME f =>
                   let val vty = drop Args (type_of f)
                       val sigma = match_type vty ty
@@ -367,7 +372,7 @@ local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
         handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs(mk_var("v",ty),Zero())
       fun tysize_env db = Option.map fst o
-                          Option.composePartial (size_of,get db)
+                          Option.composePartial (size_of,prim_get db)
 in
 fun type_size db ty =
    let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
@@ -381,7 +386,7 @@ end
 
 local
   fun tyencode_env db =
-    Option.map fst o Option.composePartial (encode_of, get db)
+    Option.map fst o Option.composePartial (encode_of, prim_get db)
   fun undef _ = raise ERR "type_encode" "unknown type"
   fun theta ty =
     if is_vartype ty then raise ERR "type_encode" "type variable" else NONE
@@ -396,7 +401,7 @@ end;
 (* compound HOL type.                                                        *)
 (*---------------------------------------------------------------------------*)
 
-local 
+local
   val string_tyv = mk_vartype "'string"
   val type_tyv   = mk_vartype "'type"
   val typelist_tyv = mk_vartype "'typelist"
@@ -404,7 +409,7 @@ local
   val mk_type_var = mk_var("mk_type", stringXtypelist_tyv --> type_tyv)
   val cons_var  = mk_var ("cons",type_tyv --> typelist_tyv --> typelist_tyv)
   val nil_var   = mk_var ("nil",typelist_tyv)
-  val comma_var = mk_var (",",string_tyv --> typelist_tyv 
+  val comma_var = mk_var (",",string_tyv --> typelist_tyv
                                           --> stringXtypelist_tyv)
   val mk_vartype_var = mk_var("mk_vartype",string_tyv --> type_tyv)
   fun Cons x y = list_mk_comb(cons_var,[x,y])
@@ -414,7 +419,7 @@ local
   val bool_var = mk_var("bool",type_tyv)
 in
 fun enc_type ty =
-  if is_vartype ty 
+  if is_vartype ty
   then mk_comb(mk_vartype_var,
                mk_var(Lib.quote (dest_vartype ty),string_tyv))
   else
@@ -424,7 +429,7 @@ fun enc_type ty =
       val enc_args = to_list(map enc_type args)
       val enc_tyop = tyop_var tyop
       val pair = Pair enc_tyop enc_args
-  in 
+  in
     mk_comb(mk_type_var,pair)
   end
 end;
@@ -443,32 +448,33 @@ local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty))
 in
 fun tyValue (theta,gamma,undef) =
- let fun tyVal ty = 
+ let fun tyVal ty =
       case theta ty  (* map type variable *)
        of SOME x => x
         | NONE =>    (* map compound type *)
-          let val (Tyop,Args) = dest_type ty
-          in case gamma Tyop
+          let val {Thy,Tyop,Args} = dest_thy_type ty
+          in case gamma (Thy,Tyop)
               of SOME f =>
                   let val vty = drop (alpha::Args) (type_of f)
                       val sigma = match_type vty ty
-                  in list_mk_comb(inst sigma f, 
+                  in list_mk_comb(inst sigma f,
                                   enc_type ty::map tyVal Args)
                   end
-               | NONE => undef Tyop
+               | NONE => undef (Thy,Tyop)
           end
   in tyVal
   end
 end
 
-fun Undef tyop = raise ERR "Undef"
-                           (Lib.quote tyop^" is an unknown type operator");
+fun Undef (thy,tyop) =
+    raise ERR "Undef"
+              (Lib.quote (thy^"$"^tyop)^" is an unknown type operator");
 
 (*---------------------------------------------------------------------------*)
 (* Used to synthesize lifters                                                *)
 (*---------------------------------------------------------------------------*)
 
-local fun mk_K_1(tm,ty) = 
+local fun mk_K_1(tm,ty) =
         let val ty1 = type_of tm
             val K = mk_thy_const{Name="K",Thy="combin",
                                  Ty = ty1 --> ty --> ty1}
@@ -479,8 +485,8 @@ fun type_lift db ty =
   let val TYV = type_vars ty
       val tyv_fns = map (fn tyv => mk_K_1(boolSyntax.mk_arb tyv, tyv)) TYV
       val Theta = C assoc (zip TYV tyv_fns)
-      val Gamma = Option.composePartial (lift_of, get db)
-  in 
+      val Gamma = Option.composePartial (lift_of, prim_get db)
+  in
      tyValue (total Theta, Gamma, Undef) ty
   end
 end;
@@ -522,7 +528,7 @@ fun mk_case tybase (exp, plist) =
            val theta = match_type (type_of c) ty'
        in list_mk_comb(inst theta c,fns@[exp])
        end;
-                         
+
 (*---------------------------------------------------------------------------*)
 (* dest_case destructs one level of pattern matching. To deal with nested    *)
 (* patterns, use strip_case.                                                 *)
@@ -531,7 +537,7 @@ fun mk_case tybase (exp, plist) =
 local fun build_case_clause((ty,constr),rhs) =
  let val (args,tau) = strip_fun (type_of constr)
      fun peel  [] N = ([],N)
-       | peel (_::tys) N = 
+       | peel (_::tys) N =
            let val (v,M) = dest_abs N
                val (V,M') = peel tys M
            in (v::V,M')
@@ -539,16 +545,16 @@ local fun build_case_clause((ty,constr),rhs) =
      val (V,rhs') = peel args rhs
      val theta = match_type (type_of constr) (list_mk_fun (map type_of V, ty))
      val constr' = inst theta constr
- in 
+ in
    (list_mk_comb(constr',V), rhs')
   end
 in
-fun dest_case tybase M = 
+fun dest_case tybase M =
   let val (c,args) = strip_comb M
       val (cases,arg) = front_last args
   in case prim_get tybase (type_names (type_of arg))
       of NONE => raise ERR "dest_case" "unable to destruct case expression"
-       | SOME tyinfo => 
+       | SOME tyinfo =>
           let val d = case_const_of tyinfo
           in if same_const c d
            then let val constrs = constructors_of tyinfo
@@ -560,16 +566,16 @@ fun dest_case tybase M =
   end
 end
 
-fun is_case tybase M = 
+fun is_case tybase M =
   let val (c,args) = strip_comb M
       val (tynames as (_,tyop)) = type_names (type_of (last args))
   in case prim_get tybase tynames
       of NONE => raise ERR "is_case" ("unknown type operator: "^Lib.quote tyop)
-       | SOME tyinfo => same_const c (case_const_of tyinfo) 
-  end 
+       | SOME tyinfo => same_const c (case_const_of tyinfo)
+  end
   handle HOL_ERR _ => false;
 
-local fun dest tybase (pat,rhs) = 
+local fun dest tybase (pat,rhs) =
   let val patvars = free_vars pat
   in if is_case tybase rhs
        then let val (case_tm,exp,clauses) = dest_case tybase rhs
@@ -584,12 +590,12 @@ local fun dest tybase (pat,rhs) =
        else [(pat,rhs)]
   end
 in
-fun strip_case tybase M = 
+fun strip_case tybase M =
   case total (dest_case tybase) M
    of NONE => (M,[])
     | SOME(case_tm,exp,cases) => (exp, flatten (map (dest tybase) cases))
 end;
-        
+
 
 (*---------------------------------------------------------------------------*)
 (* Support for syntactic operations for record types.                        *)
@@ -598,7 +604,7 @@ end;
 fun is_record_type tybase ty =
   not (null (fields_of (valOf (prim_get tybase (type_names ty)))))
   handle HOL_ERR _ => false;
-     
+
 fun is_record tybase M = is_record_type tybase (type_of M);
 
 (*---------------------------------------------------------------------------*)
@@ -610,11 +616,11 @@ fun is_record tybase M = is_record_type tybase (type_of M);
 (* element of a record type.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_K_1 (tm,ty) = 
+fun mk_K_1 (tm,ty) =
   let val K_tm = prim_mk_const{Name="K",Thy="combin"}
   in mk_comb(inst [alpha |-> type_of tm, beta |-> ty] K_tm,tm)
   end;
-fun dest_K_1 tm = 
+fun dest_K_1 tm =
   let val K_tm = prim_mk_const{Name="K",Thy="combin"}
   in dest_monop K_tm (ERR "dest_K_1" "not a K-term") tm
   end;
@@ -624,9 +630,9 @@ fun get_field_name s1 s2 =
       val rest = String.extract(s2,String.size s1 + 1, NONE)
       val middle = String.extract(rest,0,SOME(String.size rest - 5))
       val suffix = String.extract(rest,String.size middle, NONE)
-  in 
+  in
     if prefix = s1 andalso suffix = "_fupd"
-      then middle 
+      then middle
       else raise ERR "get_field" ("unable to parse "^Lib.quote s2)
   end;
 
@@ -642,7 +648,7 @@ fun dest_field tm =
       val (updf,arg) = dest_comb tm
       val (name0,ty) = dest_const updf
       val name = get_field_name tyname name0
-  in 
+  in
     (name,dest_K_1 arg)
   end
   handle HOL_ERR _ => raise ERR "dest_field" "unexpected term structure";
@@ -656,12 +662,12 @@ fun dest_record tybase tm =
             end
        handle HOL_ERR _ => raise ERR "dest_record" "unexpected term structure"
   in
-   if is_record tybase tm then dest tm 
+   if is_record tybase tm then dest tm
     else raise ERR "dest_record" "not a record"
   end;
-     
 
-fun mk_record tybase ty fields = 
+
+fun mk_record tybase ty fields =
  if is_record_type tybase ty
   then let val (Thy,Tyop) = type_names ty
         val upd_names = map (fn p => String.concat [Tyop,"_",fst p,"_fupd"]) fields
@@ -671,7 +677,7 @@ fun mk_record tybase ty fields =
                     in inst theta c
                     end
         val updfns' = map ifn updfns
-        fun mk_field (updfn,v) tm = 
+        fun mk_field (updfn,v) tm =
               mk_comb(mk_comb(updfn, mk_K_1(v,type_of v)),tm)
        in
          itlist mk_field (zip updfns' (map snd fields)) (mk_arb ty)

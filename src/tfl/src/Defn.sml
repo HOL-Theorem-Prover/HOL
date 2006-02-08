@@ -1006,16 +1006,20 @@ in
 fun non_wfrec_defn (facts,bind,eqns) =
  let val ((_,args),_) = dest_hd_eqn eqns
  in if Lib.exists is_constructor args
-    then case TypeBasePure.get facts
-                 (fst(dest_type(type_of(first is_constructor args))))
-       of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
-        | SOME tyinfo =>
+    then let
+      val {Thy=cthy,Tyop=cty, ...} =
+          dest_thy_type (type_of(first is_constructor args))
+      in
+        case TypeBasePure.prim_get facts (cthy,cty)
+        of NONE => raise ERR "non_wfrec_defn" "unexpected lhs in definition"
+         | SOME tyinfo =>
            let val def = Prim_rec.new_recursive_definition
                           {name=bind,def=eqns,
                            rec_axiom=TypeBasePure.axiom_of tyinfo}
                val ind = TypeBasePure.induction_of tyinfo
            in PRIMREC{eqs=def, ind=ind, bind=bind}
            end
+      end
     else ABBREV {eqn=new_definition (bind,eqns), bind=bind}
  end
 end;

@@ -8,9 +8,9 @@ structure Encode :> Encode =
 struct
 
 open HolKernel boolLib Parse pairSyntax numSyntax listSyntax
-  combinSyntax arithmeticTheory boolSimps 
+  combinSyntax arithmeticTheory boolSimps
   optionTheory listSyntax EncodeTheory PreListEncode;
-  
+
 infix 0 THEN |->;
 infixr 1 -->;
 
@@ -60,9 +60,9 @@ fun mk_tyvar_encode vty (V,away) =
   end
 end;
 
-fun tyencode_env db = 
-     Option.map fst o 
-     Option.composePartial (TypeBasePure.encode_of, TypeBasePure.get db)
+fun tyencode_env db =
+     Option.map fst o
+     Option.composePartial (TypeBasePure.encode_of, TypeBasePure.prim_get db)
 
 (*---------------------------------------------------------------------------*)
 (* Term encoding, as a function of types. The function gamma maps type       *)
@@ -97,8 +97,8 @@ fun tyencode (theta,omega,gamma) clause ty =
              (first (fn (f,sz) => Lib.can (find_term(OK f ty)) (rhs clause))
                   alist)
         | NONE =>
-           let val (Tyop,Args) = dest_type ty
-           in case gamma Tyop
+           let val {Thy,Tyop,Args} = dest_thy_type ty
+           in case gamma (Thy,Tyop)
                of SOME f =>
                    let val vty = drop Args (type_of f)
                        val sigma = Type.match_type vty ty
@@ -122,7 +122,7 @@ fun crunch [] = []
 fun unflatten f =
  let fun h (x, s) =
       let val k = f x
-      in case List.partition (equal k o fst) s 
+      in case List.partition (equal k o fst) s
           of ([(_,l)], r) => (k, x :: l) :: r
            | otherwise    => (k, [x]) :: s
       end
@@ -130,7 +130,7 @@ fun unflatten f =
     rev o map (rev o snd) o foldl h []
   end;
 
-fun tyconst_names ty = 
+fun tyconst_names ty =
   let val {Thy,Tyop,Args} = dest_thy_type ty
   in (Thy,Tyop)
   end;
@@ -152,8 +152,8 @@ fun define_encode ax db =
      fun proto_const n ty =
          mk_var(n, itlist (curry op-->) fparams_tyl (ty --> bool_list))
      fun tyop_binding ty =
-       let val root_tyop = fst(dest_type ty)
-       in (root_tyop, (ty, proto_const("encode_" ^ root_tyop) ty))
+       let val {Tyop=root_tyop,Thy=root_thy,...} = dest_thy_type ty
+       in ((root_thy,root_tyop), (ty, proto_const("encode_" ^ root_tyop) ty))
        end
      val tyvar_map = zip tyvars fparams
      val tyop_map = map tyop_binding dtys
@@ -223,13 +223,13 @@ fun define_encode ax db =
  ---------------------------------------------------------------------------*)
 
 fun insert_encode {def, const_tyopl} tyinfol =
- case tyinfol 
+ case tyinfol
   of [] => raise ERR "build_tyinfos" "empty tyinfo list"
    | tyinfo::rst =>
      let val first_tyname = TypeBasePure.ty_name_of tyinfo
          fun ins_encode info encode_eqs =
           let val tyname = TypeBasePure.ty_name_of info
-          in case assoc2 tyname const_tyopl 
+          in case assoc2 tyname const_tyopl
               of SOME(c,tyop) => TypeBasePure.put_encode(c,encode_eqs) info
                | NONE => (HOL_MESG ("Can't find encode constant for"
                                  ^Lib.quote(pair_string tyname));
@@ -242,14 +242,14 @@ fun insert_encode {def, const_tyopl} tyinfol =
      handle HOL_ERR _ => tyinfol;
 
 fun add_encode tyinfol =
-  if List.exists (Option.isSome o TypeBasePure.encode_of0) tyinfol 
+  if List.exists (Option.isSome o TypeBasePure.encode_of0) tyinfol
    then tyinfol
    else let
       val db = TypeBase.theTypeBase ()
       val recursion = TypeBasePure.axiom_of (hd tyinfol)
       val tyname = TypeBasePure.ty_name_of (hd tyinfol)
     in
-      case define_encode recursion db 
+      case define_encode recursion db
        of SOME s => insert_encode s tyinfol
         | NONE => (HOL_MESG("Couldn't define encode function for type "
                             ^Lib.quote (pair_string tyname))

@@ -24,7 +24,7 @@ fun match_term thry tm1 tm2 = Term.match_term tm1 tm2;
 fun match_type thry ty1 ty2 = Type.match_type ty1 ty2;
 
 fun match_info db s =
-case TypeBasePure.get db s
+case TypeBasePure.prim_get db s
  of SOME facts => SOME{case_const = TypeBasePure.case_const_of facts,
                        constructors = TypeBasePure.constructors_of facts}
   | NONE => NONE
@@ -176,9 +176,9 @@ fun mk_case ty_info ty_match FV range_ty =
           end
      else
      let val pty = type_of p
-         val ty_name = (fst o dest_type) pty
+         val {Thy=ty_thy,Tyop=ty_name,...} = dest_thy_type pty
      in
-     case ty_info ty_name
+     case ty_info (ty_thy,ty_name)
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
         let val case_const_name = fst(dest_const case_const)
@@ -254,10 +254,10 @@ fun mk_functional thy eqs =
      fun int_eq i1 (i2:int) =  (i1=i2)
      val inaccessibles = gather(fn x => not(op_mem int_eq x finals)) originals
      fun accessible p = not(op_mem int_eq (row_of_pat p) inaccessibles)
-     val patts3 = (if null inaccessibles then I else filter accessible) patts2 
-     val _ = if null patts3 
+     val patts3 = (if null inaccessibles then I else filter accessible) patts2
+     val _ = if null patts3
                 then err "patterns in definition aren't acceptable" else
-             if null inaccessibles then () 
+             if null inaccessibles then ()
              else msg("\n   The following input rows (counting from zero) in\
                  \ the definition\n   are inaccessible: "^stringize inaccessibles
      ^".\n   This is because of overlapping patterns. Those rows have been ignored."

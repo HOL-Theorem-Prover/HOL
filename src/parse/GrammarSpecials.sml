@@ -31,7 +31,8 @@ struct
 
   open HolKernel
   val compilefn = ref (NONE : (term -> term) option)
-  val constructorsfn = ref (NONE : (string -> term list) option)
+  val constructorsfn =
+      ref (NONE : ({Thy:string,Tyop:string} -> term list) option)
 
   fun compile_pattern_match t =
       case !compilefn of

@@ -1,7 +1,7 @@
 structure DataSize :> DataSize =
 struct
 
-open HolKernel Parse boolLib Prim_rec 
+open HolKernel Parse boolLib Prim_rec
 val ERR = mk_HOL_ERR "DataSize";
 
 val num = numSyntax.num
@@ -11,7 +11,7 @@ val defn_const =
 
 val head = Lib.repeat rator;
 
-fun tyconst_names ty = 
+fun tyconst_names ty =
   let val {Thy,Tyop,Args} = dest_thy_type ty
   in (Thy,Tyop)
   end;
@@ -37,7 +37,7 @@ end;
 
 fun tysize_env db =
      Option.map fst o
-     Option.composePartial (TypeBasePure.size_of, TypeBasePure.get db)
+     Option.composePartial (TypeBasePure.size_of, TypeBasePure.prim_get db)
 
 (*---------------------------------------------------------------------------*
  * Term size, as a function of types. The function gamma maps type           *
@@ -69,8 +69,8 @@ fun tysize (theta,omega,gamma) clause ty =
              (first (fn (f,sz) => Lib.can (find_term(OK f ty)) (rhs clause))
                   alist)
         | NONE =>
-           let val (Tyop,Args) = dest_type ty
-           in case gamma Tyop
+           let val {Tyop,Thy,Args} = dest_thy_type ty
+           in case gamma (Thy,Tyop)
                of SOME f =>
                    let val vty = drop Args (type_of f)
                        val sigma = Type.match_type vty ty
@@ -113,8 +113,8 @@ fun define_size ax db =
      fun proto_const n ty =
          mk_var(n, itlist (curry op-->) fparams_tyl (ty --> num))
      fun tyop_binding ty =
-       let val root_tyop = fst(dest_type ty)
-       in (root_tyop, (ty, proto_const(root_tyop^"_size") ty))
+       let val {Tyop=root_tyop,Thy=root_thy,...} = dest_thy_type ty
+       in ((root_thy,root_tyop), (ty, proto_const(root_tyop^"_size") ty))
        end
      val tyvar_map = zip tyvars fparams
      val tyop_map = map tyop_binding dtys

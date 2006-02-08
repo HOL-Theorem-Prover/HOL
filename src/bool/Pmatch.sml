@@ -3,8 +3,8 @@ struct
 
 open HolKernel boolSyntax;
 
-type thry   = string -> {case_const : term,
-                         constructors : term list} option
+type thry   = {Tyop : string, Thy : string} ->
+              {case_const : term, constructors : term list} option
 
 val ERR = mk_HOL_ERR "Functional";
 
@@ -199,12 +199,12 @@ fun mk_case ty_info ty_match FV range_ty =
           end
      else
      let val pty = type_of p
-         val (ty_name,_) = dest_type pty
+         val {Tyop = ty_name, Thy,...} = dest_thy_type pty
      in
-     case ty_info ty_name
+     case ty_info {Thy = Thy, Tyop = ty_name}
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
-        let val case_const_name = #1(dest_const case_const)
+        let val {Name = case_const_name, Thy,...} = dest_thy_const case_const
             val nrows = flatten (map (expand constructors pty) rows)
             val subproblems = divide(constructors, pty, range_ty, nrows)
             val groups      = map #group subproblems
@@ -216,8 +216,9 @@ fun mk_case ty_info ty_match FV range_ty =
             val (pat_rect,dtrees) = unzip rec_calls
             val case_functions = map list_mk_abs(zip new_formals dtrees)
             val types = map type_of (case_functions@[u])
-            val case_const' = mk_const(case_const_name,
-                                       list_mk_fun(types, range_ty))
+            val case_const' = mk_thy_const{Name = case_const_name,
+                                           Thy = Thy,
+                                           Ty = list_mk_fun(types, range_ty)}
             val tree = list_mk_comb(case_const', case_functions@[u])
             val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
         in
@@ -239,7 +240,7 @@ fun FV_multiset tm =
       | COMB(Rator,Rand) => FV_multiset Rator @ FV_multiset Rand
       | LAMB _ => raise ERR"FV_multiset" "lambda";
 
-fun no_repeat_vars thy pat =
+fun no_repeat_vars pat =
  let fun check [] = true
        | check (v::rst) =
          if Lib.op_mem aconv v rst
@@ -264,7 +265,7 @@ fun mk_functional thy eqs =
      val fs = Lib.op_mk_set aconv funcs
      val f0 = if length fs = 1 then hd fs else err "function name not unique"
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
-     val _  = map (no_repeat_vars thy) pats
+     val _  = map no_repeat_vars pats
      val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
      val fvs = free_varsl R
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))

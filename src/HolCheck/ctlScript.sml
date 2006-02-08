@@ -244,7 +244,8 @@ val SUB_xnum_xnum_def =
 val SUB =
  save_thm
   ("SUB",
-   LIST_CONJ(type_rws "xnum"@[SUB_num_xnum_def,SUB_xnum_num_def,SUB_xnum_xnum_def]));
+   LIST_CONJ(type_rws ("-", "xnum") @
+             [SUB_num_xnum_def,SUB_xnum_num_def,SUB_xnum_xnum_def]));
 
 val _ = overload_on("-", ``SUB_num_xnum``);
 val _ = overload_on("-", ``SUB_xnum_num``);
@@ -322,12 +323,12 @@ val ALL_IN_INF = save_thm("ALL_IN_INF",prove(``!j. j IN 0 to INFINITY``, SIMP_TA
 val PATH_def = Define `PATH M p s = IS_INFINITE p /\ (ELEM p 0 = s) /\ (!n. M.R(ELEM p n, ELEM p (n+1)))`;
 
 val PATH_INF = save_thm("PATH_INF",prove(``!M p s. PATH M p s ==> (PLENGTH p = INFINITY)``,
-Induct_on `p` THEN 
+Induct_on `p` THEN
 SIMP_TAC std_ss [IS_FINITE_def,PATH_def,IS_INFINITE_def,PLENGTH_def]));
 
 val ALL_IN_INF_PATH = save_thm("ALL_IN_INF_PATH",prove(``!M p s j. PATH M p s ==> j IN 0 to PLENGTH p``,
 Induct_on `p`
-THENL [ 
+THENL [
  SIMP_TAC arith_ss [PATH_def,IS_INFINITE_def],
  SIMP_TAC std_ss [ALL_IN_INF,PLENGTH_def]
 ]));
@@ -342,8 +343,8 @@ val C_SEM_def =
    (C_SEM M (C_NOT f) s = ~(C_SEM M f s)) /\
    (C_SEM M (C_AND(f1,f2)) s = C_SEM M f1 s /\ C_SEM M f2 s) /\
    (C_SEM M (C_EX f) s = CEX M (C_SEM M f) s) /\
-   (C_SEM M (C_EU(f1,f2)) s = CEU M (C_SEM M f1, C_SEM M f2) s) /\ 
-   (C_SEM M (C_EG f) s = CEG M (C_SEM M f) s) /\ 
+   (C_SEM M (C_EU(f1,f2)) s = CEU M (C_SEM M f1, C_SEM M f2) s) /\
+   (C_SEM M (C_EG f) s = CEG M (C_SEM M f) s) /\
    (CEX M X s = ?p. PATH M p s /\ (ELEM p 1) IN X) /\
    (CEU M (X1,X2) s = ?p. PATH M p s /\ ?k :: (0 to PLENGTH p). (ELEM p k) IN X2 /\ !j. j < k ==> (ELEM p j) IN X1) /\
    (CEG M X s = ?p. PATH M p s /\ !j :: (0 to PLENGTH p). (ELEM p j) IN X)
@@ -389,10 +390,10 @@ val _ = overload_on ("F",Term`F:bool`); val _ = overload_on ("F",Term`B_FALSE`);
 (* FIXME: these NNF defs are not right because they do not move all negs inwards to atoms (because OR is defined in terms of AND, etc)*)
 val BEXP_NNF = Define `
 (BEXP_NNF B_TRUE                = B_TRUE) /\
-(BEXP_NNF (B_PROP p)            = B_PROP p) /\ 
-(BEXP_NNF (B_AND(b1,b2))        = B_AND(BEXP_NNF b1,BEXP_NNF b2)) /\ 
+(BEXP_NNF (B_PROP p)            = B_PROP p) /\
+(BEXP_NNF (B_AND(b1,b2))        = B_AND(BEXP_NNF b1,BEXP_NNF b2)) /\
 (BEXP_NNF (B_NOT B_TRUE)        = B_FALSE) /\
-(BEXP_NNF (B_NOT (B_PROP p))    = B_NOT (B_PROP p)) /\ 
+(BEXP_NNF (B_NOT (B_PROP p))    = B_NOT (B_PROP p)) /\
 (BEXP_NNF (B_NOT (B_NOT b))     = BEXP_NNF b) /\
 (BEXP_NNF (B_NOT (B_AND(b1,b2)))= B_OR(BEXP_NNF (B_NOT b1),BEXP_NNF (B_NOT b2)))`
 
@@ -409,23 +410,23 @@ val CTL_NNF = Define `
 (CTL_NNF (C_NOT (C_EG f)) = (C_AF (CTL_NNF (C_NOT f)))) /\
 (CTL_NNF (C_NOT (C_EU(f,g))) = (C_AR(CTL_NNF (C_NOT f),CTL_NNF (C_NOT g))))`;
 
-val ctl_size_def = snd (TypeBase.size_of "ctl")
+val ctl_size_def = snd (TypeBase.size_of ("", "ctl"))
 val ctl_size2_def = Define `ctl_size2 (f: 'prop ctl) =  ctl_size (\(a:('prop)).0) f`
-val bexp_size_def = snd (TypeBase.size_of "bexp");
+val bexp_size_def = snd (TypeBase.size_of ("", "bexp"));
 val bexp_size2_def = Define `bexp_size2 (b: 'prop bexp) =  bexp_size (\(a:('prop)).0) b`
 
 val bexp_pstv_size = Define `
 (bexp_pstv_size B_TRUE                = 0) /\
-(bexp_pstv_size (B_PROP p)            = 1) /\ 
-(bexp_pstv_size (B_AND(b1,b2))        = 1+(bexp_pstv_size b1)+(bexp_pstv_size b2)) /\ 
+(bexp_pstv_size (B_PROP p)            = 1) /\
+(bexp_pstv_size (B_AND(b1,b2))        = 1+(bexp_pstv_size b1)+(bexp_pstv_size b2)) /\
 (bexp_pstv_size (B_NOT b)             = (bexp_pstv_size b))`
 
 val ctl_pstv_size = Define `
-(ctl_pstv_size (C_BOOL b) = 1+(bexp_pstv_size b)) /\ 
+(ctl_pstv_size (C_BOOL b) = 1+(bexp_pstv_size b)) /\
 (ctl_pstv_size (C_AND(f1,f2)) = 1+(ctl_pstv_size f1) + (ctl_pstv_size f2)) /\
 (ctl_pstv_size (C_NOT f) = (ctl_pstv_size f)) /\
-(ctl_pstv_size (C_EX f) = 1+(ctl_pstv_size f)) /\ 
-(ctl_pstv_size (C_EG f) = 1+(ctl_pstv_size f)) /\ 
+(ctl_pstv_size (C_EX f) = 1+(ctl_pstv_size f)) /\
+(ctl_pstv_size (C_EG f) = 1+(ctl_pstv_size f)) /\
 (ctl_pstv_size (C_EU(f1,f2)) =1+(ctl_pstv_size f1) + (ctl_pstv_size f2))`
 
 (*val cdefn = Defn.Hol_defn "CTL_NNF" `
@@ -442,10 +443,10 @@ val ctl_pstv_size = Define `
 (CTL_NNF (C_NOT (C_EU(f,g))) = (C_AR(CTL_NNF (C_NOT f),CTL_NNF (C_NOT g))))`;
 
 val (CTL_NNF_def,CTL_NNF_ind) = Defn.tprove(cdefn,
- WF_REL_TAC `measure ctl_pstv_size` 
+ WF_REL_TAC `measure ctl_pstv_size`
  THEN REPEAT (FIRST [Induct_on `f`,Induct_on `g`,Induct_on `b`])
  THEN FULL_SIMP_TAC arith_ss [ctl_pstv_size,bexp_pstv_size,C_AX_def,C_AR_def,C_AF_def,BEXP_NNF,B_OR_def,B_FALSE_def]*)
-   
+
 val CTL_BOOL_SUB = Define `
 (CTL_BOOL_SUB g (B_PROP (b:'prop)) = (g = B_PROP b)) /\
 (CTL_BOOL_SUB g (B_NOT be1) = (CTL_BOOL_SUB g be1) \/ (g = B_NOT be1)) /\
@@ -490,7 +491,7 @@ val RESTN_INFINITE =
           [REST_INFINITE,ETA_AX,RESTN_def,
            DECIDE``i + (n + 1) = n + SUC i``]);
 
-val REST_FINITE = 
+val REST_FINITE =
  store_thm
   ("REST_FINITE",
    ``!l. REST (FINITE l) = FINITE(TL l)``,

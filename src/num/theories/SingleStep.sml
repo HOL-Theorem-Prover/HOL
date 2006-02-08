@@ -98,8 +98,8 @@ fun find_subterm qtm (g as (asl,w)) =
 
 fun primCases_on st (g as (_,w)) =
  let val ty = cat_tyof st
-     val (Tyop,_) = dest_type ty
- in case TypeBase.read Tyop
+     val {Thy,Tyop,...} = dest_thy_type ty
+ in case TypeBase.read {Tyop=Tyop,Thy=Thy}
      of SOME facts =>
         let val thm = TypeBasePure.nchotomy_of facts
         in case st
@@ -164,9 +164,11 @@ fun primInduct st ind_tac (g as (asl,c)) =
 val is_mutind_thm = is_conj o snd o strip_imp o snd o strip_forall o concl;
 
 fun induct_on_type st ty =
- let val (Tyop,_) = with_exn dest_type ty (ERR "induct_on_type"
-                     "No induction theorems available for variable types")
- in case TypeBase.read Tyop
+ let val {Thy,Tyop,...} =
+         with_exn dest_thy_type ty
+                  (ERR "induct_on_type"
+                       "No induction theorems available for variable types")
+ in case TypeBase.read {Thy=Thy,Tyop=Tyop}
      of SOME facts =>
         let val thm = TypeBasePure.induction_of facts
         in if is_mutind_thm thm
@@ -263,7 +265,7 @@ fun rename_tuple tm [] = (tm,[])
           in (mk_pair (p1',p2'), vlist'')
           end;
 fun rename_tuples [] vlist = ([],vlist)
-  | rename_tuples (tmlist as (h::t)) vlist = 
+  | rename_tuples (tmlist as (h::t)) vlist =
     let val (tuple,vlist') = rename_tuple h vlist
         val (tuples,vlist'') = rename_tuples t vlist'
     in (tuple::tuples, vlist'')
@@ -273,10 +275,10 @@ fun rename_tuples [] vlist = ([],vlist)
 fun ndest_forall n trm =
   let fun dest (0,tm,V) = (rev V,tm)
         | dest (n,tm,V) =
-           let val (Bvar,Body) = dest_forall tm 
-                  handle _ => raise ERR "ndest_forall" 
+           let val (Bvar,Body) = dest_forall tm
+                  handle _ => raise ERR "ndest_forall"
                   "too few quantified variables in goal"
-           in dest(n-1,Body, Bvar::V) 
+           in dest(n-1,Body, Bvar::V)
            end
   in dest(n,trm,[])
   end;
@@ -289,7 +291,7 @@ fun recInduct thm =
       fun tac (asl,w) =
        let val (V,body) = ndest_forall n w
            val (vstrl,extras) = rename_tuples Pargs V
-           val _ = if not (null extras) 
+           val _ = if not (null extras)
                      then raise ERR "recInduct" "internal error" else ()
            val P = list_mk_pabs(vstrl,body)
            val thm' = GEN_BETA_RULE (ISPEC P thm)
@@ -445,7 +447,7 @@ local
     exists_p o map (case_p o TypeBasePure.case_const_of) o
     TypeBasePure.listItems o TypeBase.theTypeBase;
 
-  fun free_thing tm = 
+  fun free_thing tm =
     let
       val cp = cases_p ()
 
@@ -469,7 +471,7 @@ in
     let val t = first_subterm (free_thing tm) tm in Cases_on `^t` g end;
 end
 
-local    
+local
   fun case_rws tyi =
     List.mapPartial I
     [SOME (TypeBasePure.case_def_of tyi),

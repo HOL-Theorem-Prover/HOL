@@ -511,7 +511,9 @@ end;
 
 fun repair_type_decls (DATATYPE decls) =
      let val type_names = map fst decls
-         val tyax = TypeBase.axiom_of (hd type_names)
+         val candidate_tyis =
+             TypeBasePure.get (TypeBase.theTypeBase()) (hd type_names)
+         val tyax = TypeBasePure.axiom_of (hd candidate_tyis)
          val newtypes = Prim_rec.doms_of_tyaxiom tyax
          val tyvars = map dest_vartype (snd (dest_type (hd newtypes)))
          val alist = map (fn x => (fst(dest_type x),pretype_of x)) newtypes

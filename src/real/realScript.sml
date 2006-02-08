@@ -3550,11 +3550,11 @@ val lt_int = store_thm(
 (* Floor and ceiling (nums)                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val NUM_FLOOR_def = 
+val NUM_FLOOR_def =
  Define
    `NUM_FLOOR (x:real) = LEAST (n:num). real_of_num (n+1) > x`;
 
-val NUM_CEILING_def = 
+val NUM_CEILING_def =
  Define
    `NUM_CEILING (x:real) = LEAST (n:num). x <= real_of_num(n)`;
 
@@ -3570,7 +3570,7 @@ val add1_gt_exists = prove(
   SIMP_TAC (srw_ss()) [] THEN
   DISCH_THEN (Q.SPEC_THEN `y` STRIP_ASSUME_TAC) THEN
   Q.EXISTS_TAC `n` THEN
-  SIMP_TAC arith_ss [GSYM REAL_ADD,real_gt,REAL_LT_ADDL,REAL_LT_ADDR] THEN 
+  SIMP_TAC arith_ss [GSYM REAL_ADD,real_gt,REAL_LT_ADDL,REAL_LT_ADDR] THEN
   METIS_TAC [lem]);
 
 val lt_add1_exists = prove(
@@ -3585,7 +3585,7 @@ val NUM_FLOOR_LE = store_thm
 ("NUM_FLOOR_LE",
   ``0 <= x ==> &(NUM_FLOOR x) <= x``,
   SRW_TAC [][NUM_FLOOR_def] THEN
-  LEAST_ELIM_TAC THEN 
+  LEAST_ELIM_TAC THEN
   SRW_TAC [][add1_gt_exists] THEN
   Cases_on `n` THEN SRW_TAC [][] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
@@ -3594,7 +3594,7 @@ val NUM_FLOOR_LE = store_thm
 val NUM_FLOOR_LE2 = store_thm
 ("NUM_FLOOR_LE2",
  ``0 <= y ==> (x <= NUM_FLOOR y = &x <= y)``,
-  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THEN 
+  SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THEN
   SRW_TAC [][lt_add1_exists, real_gt,REAL_NOT_LT, EQ_IMP_THM]
   THENL [
     Cases_on `n` THENL [
@@ -3619,7 +3619,7 @@ val NUM_FLOOR_LET = store_thm
     Q.EXISTS_TAC `&n + 1` THEN SRW_TAC [][],
     Cases_on `n` THEN SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
-    FULL_SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [ADD1] THEN 
+    FULL_SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [ADD1] THEN
     STRIP_TAC THEN
     `&(n' + 1) < &(y + 1):real` by METIS_TAC [REAL_LET_TRANS] THEN
     FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
@@ -3629,7 +3629,7 @@ val NUM_FLOOR_DIV = store_thm
 ("NUM_FLOOR_DIV",
   ``0 <= x /\ 0 < y ==> &(NUM_FLOOR (x / y)) * y <= x``,
   SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THEN
-  SRW_TAC [][add1_gt_exists] THEN 
+  SRW_TAC [][add1_gt_exists] THEN
   Cases_on `n` THEN1 SRW_TAC [][] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
   SRW_TAC [numSimps.ARITH_ss] [real_gt,REAL_NOT_LT,ADD1,REAL_LE_RDIV_EQ]);
@@ -3662,14 +3662,14 @@ val NUM_FLOOR_EQNS = store_thm(
       SRW_TAC [numSimps.ARITH_ss][] THEN
       CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
       SRW_TAC [numSimps.ARITH_ss][],
-      Q.HO_MATCH_ABBREV_TAC 
+      Q.HO_MATCH_ABBREV_TAC
          `!p:num. (!i. i < p ==> ~(n < (i + 1) * m)) /\ n < (p + 1) * m
                    ==> (p = n DIV m)` THEN
       REPEAT STRIP_TAC THEN
       CONV_TAC (REWR_CONV EQ_SYM_EQ) THEN
       MATCH_MP_TAC DIV_UNIQUE THEN
       `(p = 0) \/ (?p0. p = SUC p0)`
-         by PROVE_TAC [TypeBase.nchotomy_of "num"] THEN
+         by PROVE_TAC [arithmeticTheory.num_CASES] THEN
       FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss)
                     [ADD1,RIGHT_ADD_DISTRIB] THEN
       FIRST_X_ASSUM (Q.SPEC_THEN `p0` MP_TAC) THEN
@@ -3698,16 +3698,16 @@ val NUM_FLOOR_UPPER_BOUND = store_thm(
 val LE_NUM_CEILING = store_thm
 ("LE_NUM_CEILING",
  ``!x. x <= &(clg x)``,
- RW_TAC std_ss [NUM_CEILING_def] 
-   THEN numLib.LEAST_ELIM_TAC 
-   THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH 
-   THEN SIMP_TAC (srw_ss()) [] 
+ RW_TAC std_ss [NUM_CEILING_def]
+   THEN numLib.LEAST_ELIM_TAC
+   THEN Q.SPEC_THEN `1` MP_TAC REAL_ARCH
+   THEN SIMP_TAC (srw_ss()) []
    THEN METIS_TAC [REAL_LT_IMP_LE]);
 
 val NUM_CEILING_LE = store_thm
 ("NUM_CEILING_LE",
  ``!x n. x <= &n ==> clg(x) <= n``,
- RW_TAC std_ss [NUM_CEILING_def] 
+ RW_TAC std_ss [NUM_CEILING_def]
    THEN numLib.LEAST_ELIM_TAC
    THEN METIS_TAC [NOT_LESS_EQUAL]);
 

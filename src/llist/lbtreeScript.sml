@@ -122,7 +122,7 @@ val path_follow_is_lbtree = prove(
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC is_lbtree_coinduction THEN SRW_TAC [][] THEN
   `(g x = NONE) \/ ?a b1 b2. g x = SOME (a, b1, b2)`
-     by METIS_TAC (map TypeBase.nchotomy_of ["prod", "option"])
+     by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES]
   THENL [
     DISJ1_TAC THEN SRW_TAC [][FUN_EQ_THM] THEN
     Cases_on `x'` THEN SRW_TAC [][path_follow_def, Lfrep_def],
@@ -182,7 +182,7 @@ val lbtree_ue_Axiom = store_thm(
     Q.EXISTS_TAC `\x. lbtree_abs (path_follow f x)` THEN
     SRW_TAC [][] THEN
     `(f x = NONE) \/ ?a b1 b2. f x = SOME(a,b1,b2)`
-       by METIS_TAC (map TypeBase.nchotomy_of ["prod", "option"])
+       by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES]
     THENL [
       SRW_TAC [][Lf_def, lbtree_abs_11, is_lbtree_rules,
                  path_follow_is_lbtree] THEN
@@ -207,7 +207,7 @@ val lbtree_ue_Axiom = store_thm(
       SIMP_TAC (srw_ss()) [path_follow_def] THEN
       GEN_TAC THEN
       `(f x = NONE) \/ ?a b1 b2. f x = SOME (a, b1, b2)`
-          by METIS_TAC (map TypeBase.nchotomy_of ["prod", "option"]) THEN
+          by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES] THEN
       POP_ASSUM SUBST_ALL_TAC THENL [
         SIMP_TAC (srw_ss()) [Lf_def, lbtree_repabs', is_lbtree_rules] THEN
         SRW_TAC [][Lfrep_def],
@@ -217,7 +217,7 @@ val lbtree_ue_Axiom = store_thm(
       ONCE_ASM_REWRITE_TAC [] THEN SIMP_TAC (srw_ss()) [path_follow_def] THEN
       REPEAT GEN_TAC THEN POP_ASSUM MP_TAC THEN
       `(f x = NONE) \/ ?a b1 b2. f x = SOME (a, b1, b2)`
-          by METIS_TAC (map TypeBase.nchotomy_of ["prod", "option"]) THEN
+          by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES] THEN
       POP_ASSUM SUBST_ALL_TAC THENL [
         SIMP_TAC (srw_ss()) [Lf_def, lbtree_repabs', is_lbtree_rules] THEN
         SIMP_TAC (srw_ss()) [Lfrep_def],

@@ -863,7 +863,7 @@ The following functions use information in the database to ease the
 application of \HOL's underlying functionality:
 
 \begin{verbatim}
-   type_rws     : string -> thm list
+   type_rws     : (string * string) -> thm list
    Induct       : tactic
    Cases        : tactic
    Cases_on     : term quotation -> tactic
@@ -873,14 +873,15 @@ application of \HOL's underlying functionality:
 \index{type_rws@\ml{type\_rws}}
 \index{TypeBase@\ml{TypeBase}}
 %
-The function \ml{type\_rws} will search for the given type by name in
-the underlying \ml{TypeBase} database and return useful rewrite rules
-for that type. The rewrite rules of the datatype are built from the
-injectivity and distinctness theorems, along with the case constant
-definition. The simplification tactics \ml{RW\_TAC}, \ml{SRW\_TAC},
-and the \simpset{} \ml{(srw\_ss())} automatically include these
-theorems.  Other tactics used with other \simpset{}s will need these
-theorems to be manually added.
+The function \ml{type\_rws} will search for the given type (specified
+by a theory-operator name pair) in the underlying \ml{TypeBase}
+database and return useful rewrite rules for that type. The rewrite
+rules of the datatype are built from the injectivity and distinctness
+theorems, along with the case constant definition. The simplification
+tactics \ml{RW\_TAC}, \ml{SRW\_TAC}, and the \simpset{}
+\ml{(srw\_ss())} automatically include these theorems.  Other tactics
+used with other \simpset{}s will need these theorems to be manually
+added.
 
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for algebraic data types}
 %

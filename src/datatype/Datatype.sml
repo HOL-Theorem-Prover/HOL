@@ -173,7 +173,7 @@ fun check_constrs_unique_in_theory asts = let
   val constrs = List.concat (map cnames asts)
   val current_types = set_diff (map fst (types "-")) newtypes
   fun current_constructors (tyname, fm) = let
-    val tys_cons = TypeBase.constructors_of tyname
+    val tys_cons = TypeBase.constructors_of ("-", tyname)
                    handle HOL_ERR _ => []
     fun foldthis (c,fm) =
         if uptodate_term c then

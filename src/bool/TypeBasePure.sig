@@ -63,17 +63,18 @@ sig
    val empty           : typeBase
    val add             : typeBase -> tyinfo -> typeBase
    val prim_get        : typeBase -> string * string -> tyinfo option
-   val get             : typeBase -> string -> tyinfo option
+   val get             : typeBase -> string -> tyinfo list
+       (* get returns list of tyinfos for types with that tyop *)
    val listItems       : typeBase -> tyinfo list
 
   (* Support for polytypism *)
 
    val typeValue       : (hol_type -> term option) *
-                         (string -> term option)   *
+                         (string * string -> term option)   *
                          (hol_type -> term) -> hol_type -> term
    val tyValue         : (hol_type -> term option) *
-                         (string -> term option)   *
-                         (string -> term) -> hol_type -> term
+                         (string * string -> term option)   *
+                         (string * string -> term) -> hol_type -> term
 
    val type_size       : typeBase -> hol_type -> term
    val type_encode     : typeBase -> hol_type -> term

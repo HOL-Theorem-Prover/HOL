@@ -115,8 +115,8 @@ fun convert_case tm =
                 raise CaseConversionFailed
         val (cases, split_on) = front_last args
         val split_on_ty = type_of split_on
-        val (tyopname, _) = dest_type split_on_ty
-        val cs0 = type_constructors tyopname
+        val {Tyop=tyopname, Thy,...} = dest_thy_type split_on_ty
+        val cs0 = type_constructors {Tyop = tyopname, Thy = Thy}
         val _ = length cs0 <> 0 orelse raise CaseConversionFailed
         val _ = length cases = length cs0 orelse
                 raise CaseConversionFailed

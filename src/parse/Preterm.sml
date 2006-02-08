@@ -103,48 +103,52 @@ val _ =
                      Globals.notify_on_tyvar_guess)
 
 fun to_term tm =
- if !Globals.guessing_tyvars
- then
- let fun cleanup tm =
-       let open optmonad infix >> >-
-           val clean = Pretype.clean o Pretype.remove_made_links
-       in case tm
-           of Var{Name,Ty,...} => Pretype.replace_null_links Ty >- (fn _
-               => return (Term.mk_var(Name, clean Ty)))
-            | Const{Name,Thy,Ty,...} => Pretype.replace_null_links Ty >- (fn _
-               => return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
-            | Comb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
-                                => cleanup Rand  >- (fn Rand'
-                  => return (Term.mk_comb(Rator', Rand'))))
-            | Abs{Bvar, Body,...} => cleanup Bvar >- (fn Bvar'
-                              => cleanup Body >- (fn Body'
-                  => return (Term.mk_abs(Bvar', Body'))))
-            | Antiq{Tm,...} => return Tm
-            | Constrained{Ptm,...} => cleanup Ptm
-            | Overloaded _ => raise ERRloc "to_term" (locn tm) "applied to Overloaded"
-       end
-    val V = tyVars tm
-    val (newV, result) = cleanup tm V
-    val guessed_vars = List.take(newV, length newV - length V)
-    val _ =
-      if not (null guessed_vars) andalso !Globals.notify_on_tyvar_guess
-         andalso !Globals.interactive
-      then Feedback.HOL_MESG (String.concat
-              ("inventing new type variable names: "
-               :: Lib.commafy (List.rev guessed_vars)))
-      else ()
- in
-    valOf result
- end
- else
- let fun shr l ty =
-      if has_free_uvar ty
-      then raise ERRloc "typecheck.to_term" l
-         "Unconstrained type variable (and Globals.guessing_tyvars is false)"
-      else Pretype.clean (Pretype.remove_made_links ty)
- in
-   clean shr tm
- end
+    if !Globals.guessing_tyvars then let
+        fun cleanup tm = let
+          open optmonad
+          infix >> >-
+          val clean = Pretype.clean o Pretype.remove_made_links
+        in
+          case tm of
+            Var{Name,Ty,...} => Pretype.replace_null_links Ty >- (fn _ =>
+                                return (Term.mk_var(Name, clean Ty)))
+          | Const{Name,Thy,Ty,...} =>
+                Pretype.replace_null_links Ty >- (fn _ =>
+                return (Term.mk_thy_const{Name=Name, Thy=Thy, Ty=clean Ty}))
+          | Comb{Rator, Rand,...} => cleanup Rator >- (fn Rator'
+                                  => cleanup Rand  >- (fn Rand'
+                                  => return (Term.mk_comb(Rator', Rand'))))
+          | Abs{Bvar, Body,...} => cleanup Bvar >- (fn Bvar'
+                                => cleanup Body >- (fn Body'
+                                => return (Term.mk_abs(Bvar', Body'))))
+          | Antiq{Tm,...} => return Tm
+          | Constrained{Ptm,...} => cleanup Ptm
+          | Overloaded _ => raise ERRloc "to_term" (locn tm)
+                                         "applied to Overloaded"
+        end
+        val V = tyVars tm
+        val (newV, result) = cleanup tm V
+        val guessed_vars = List.take(newV, length newV - length V)
+        val _ =
+            if not (null guessed_vars) andalso !Globals.notify_on_tyvar_guess
+               andalso !Globals.interactive
+            then Feedback.HOL_MESG (String.concat
+                                      ("inventing new type variable names: "
+                                       :: Lib.commafy (List.rev guessed_vars)))
+            else ()
+      in
+        valOf result
+      end
+    else let
+        fun shr l ty =
+            if has_free_uvar ty then
+              raise ERRloc "typecheck.to_term" l
+                           "Unconstrained type variable (and Globals.\
+                           \guessing_tyvars is false)"
+            else Pretype.clean (Pretype.remove_made_links ty)
+      in
+        clean shr tm
+      end
 
 
 

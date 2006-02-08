@@ -13,8 +13,9 @@ fun enum_list s 0 = []
   | enum_list s 1 = [s]
   | enum_list s n = for 1 n (Lib.concat s o Int.toString);
 
-fun Undef tyop = 
-  raise Fail ("Undef: "^Lib.quote tyop^" is an unknown type operator");
+fun Undef (thy,tyop) =
+  raise Fail ("Undef: "^Lib.quote (thy^"$"^tyop)^
+              " is an unknown type operator");
 
 fun apply_interp interp tm = mk_comb(interp (type_of tm), tm);
 
@@ -27,12 +28,12 @@ local val typety = mk_vartype "'type"
       fun Cons x y  = list_mk_comb(cons_var,[x,y])
       fun Pair x y  = list_mk_comb(comma_var,[x,y])
       fun to_list alist = itlist Cons alist nil_var
-      fun genargs c = 
+      fun genargs c =
         let val argtys = fst (strip_fun (type_of c))
             val argvs = map mk_var (zip (enum_list "v" (length argtys)) argtys)
         in argvs
         end
-      fun RW tm = PURE_REWRITE_CONV [combinTheory.K_THM] tm 
+      fun RW tm = PURE_REWRITE_CONV [combinTheory.K_THM] tm
                   handle _ => REFL tm
       fun ELIM_K tm = boolSyntax.rhs (snd(dest_thm (RW tm)))
       fun unc c = let val (cname,ty) = dest_const c
@@ -42,7 +43,7 @@ local val typety = mk_vartype "'type"
                   in mk_var(cname,ty')
                   end
 in
-fun lift_def_syntax (Gamma,tyop) = 
+fun lift_def_syntax (Gamma,tyop) =
  let val Clist = TypeBase.constructors_of tyop
      val ty = snd(strip_fun(type_of (hd Clist)))
      val args = snd(dest_type ty)
@@ -56,15 +57,15 @@ fun lift_def_syntax (Gamma,tyop) =
      val K_lift_ty = mk_K_1 (lift_var,typety)
      fun Gamma' c = if c=tyop then SOME K_lift_ty else Gamma c
      val Interp = TypeBasePure.tyValue (total Theta, Gamma', Undef)
-     fun mk_clause (C,Cname) = 
+     fun mk_clause (C,Cname) =
        let val args = genargs C
-           val paired_args = if null args then args 
+           val paired_args = if null args then args
                              else [pairSyntax.list_mk_pair args]
            val Capp = list_mk_comb (unc C,paired_args)
            val lhs  = list_mk_comb(lift_var,flist@[Capp])
-           val rhs  = mk_comb(list_mk_comb_var, 
+           val rhs  = mk_comb(list_mk_comb_var,
                               Pair (mk_var(Cname,termty))
-                                (to_list 
+                                (to_list
                                   (map (apply_interp Interp) args)))
        in ELIM_K (mk_eq(lhs,rhs))
        end
@@ -79,25 +80,25 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun pp_lifter_def ppstrm tyop =
- let open Portable 
+ let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val pp_term = Parse.pp_term ppstrm
      val db = TypeBase.theTypeBase()
-     val Gamma = Option.composePartial (TypeBasePure.lift_of, 
-                                        TypeBasePure.get db)
+     val Gamma = Option.composePartial (TypeBasePure.lift_of,
+                                        TypeBasePure.prim_get db)
      val (flistnames,Clistnames,clauses) = lift_def_syntax (Gamma,tyop)
  in
   begin_block CONSISTENT 0;
   add_string "local val Clist = TypeBase.constructors_of ";
-  add_string (Lib.quote tyop); 
+  add_string ("("^Lib.quote (#1 tyop)^","^Lib.quote (#2 tyop)^")");
   add_break (1,0);
   add_string "in";
   add_break (1,0);
-  add_string ("fun lift_"^tyop^" ty = "); 
+  add_string ("fun lift_"^ #2 tyop^" ty = ");
   add_newline();
   add_string "  let val ";
-  begin_block INCONSISTENT 1; 
+  begin_block INCONSISTENT 1;
        add_string "[";
        pr_list add_string (fn () => add_string ",") (fn () => add_break(0,0))
                Clistnames;
@@ -108,7 +109,7 @@ fun pp_lifter_def ppstrm tyop =
   begin_block CONSISTENT 4;
   add_string "fun ";
   pr_list pp_term
-          (fn () => add_string " | ") 
+          (fn () => add_string " | ")
           (fn () => add_break (0,0))
           clauses;
   end_block();

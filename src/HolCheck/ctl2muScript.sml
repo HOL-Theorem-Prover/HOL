@@ -33,7 +33,8 @@ open res_quanLib
 
 val _ = numLib.prefer_num();
 
-fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
+fun tsimps ty =
+    let val {convs,rewrs} = TypeBase.simpls_of ("", ty) in rewrs end;
 
 val BEXP2MU_def = Define `
 (BEXP2MU (B_TRUE: 'prop bexp) = (TR:'prop mu)) /\

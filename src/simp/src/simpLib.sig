@@ -66,7 +66,7 @@ sig
   val dproc_ss    : Traverse.reducer -> ssfrag
   val ac_ss       : (thm * thm) list -> ssfrag
   val merge_ss    : ssfrag list -> ssfrag
-  val type_ssfrag : string -> ssfrag
+  val type_ssfrag : string * string -> ssfrag
 
    (* ---------------------------------------------------------------------
     * mk_simpset: Joins several ssfrag fragments to make a simpset.

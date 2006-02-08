@@ -293,7 +293,7 @@ val llist_ue_Axiom = store_thm(
       FULL_SIMP_TAC (srw_ss()) [LHD],
       GEN_TAC THEN
       `(f a = NONE) \/ (?a' b. f a = SOME (a', b))`
-          by METIS_TAC (map TypeBase.nchotomy_of ["prod", "option"])
+          by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES]
       THENL [
         `(LHD (g a) = NONE) /\ (LHD (g' a) = NONE)`
            by ASM_SIMP_TAC std_ss [] THEN
@@ -353,7 +353,7 @@ val llist_Axiom_1ue = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     ONCE_ASM_REWRITE_TAC [] THEN REPEAT STRIP_TAC THEN
     `(f x = NONE) \/  (?a b. f x = SOME(a,b))`
-       by METIS_TAC (map TypeBase.nchotomy_of ["prod", "option"]) THEN
+       by METIS_TAC [pairTheory.pair_CASES, optionTheory.option_CASES] THEN
     POP_ASSUM SUBST1_TAC THEN SIMP_TAC (srw_ss()) []
   ]);
 
@@ -1135,7 +1135,7 @@ val least_lemma = prove(
         SRW_TAC [][] THEN
         `~(SUC n' < p)` by PROVE_TAC [] THEN
         `(p = SUC n') \/ (p < SUC n')` by DECIDE_TAC THEN
-        `?p0. p = SUC p0` by METIS_TAC [TypeBase.nchotomy_of "num"] THEN
+        `?p0. p = SUC p0` by METIS_TAC [arithmeticTheory.num_CASES] THEN
         FULL_SIMP_TAC (srw_ss()) []
       ]
     ]

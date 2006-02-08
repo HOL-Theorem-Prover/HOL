@@ -35,40 +35,54 @@ in
     end;
 end;
 
-fun read s = get (theTypeBase()) s;
+fun read {Thy,Tyop} = prim_get (theTypeBase()) (Thy,Tyop);
+fun fancyread (Thy,Tyop) =
+    if Thy = "" then
+      case get (theTypeBase()) Tyop of
+        [] => raise ERR "read" ("No type of name "^Tyop)
+      | [x] => x
+      | x::_ => (HOL_WARNING "TypeBase" "read"
+                             ("Multiple types of name "^Tyop);
+                 x)
+    else let
+        val Thy = if Thy = "-" then current_theory() else Thy
+      in
+        case prim_get (theTypeBase()) (Thy,Tyop) of
+          NONE => raise ERR "read" ("No such type: "^Thy^"$"^Tyop)
+        | SOME tyi => tyi
+      end
+
 val elts = listItems o theTypeBase;
 
-fun valOf s opt =
+fun print_sp_type (thy,tyop) = if thy = "" then tyop
+                               else thy ^ "$" ^ tyop
+
+fun valOf2 sp t opt =
   case opt of
-    NONE => raise ERR "read" ("No type of name "^s)
+    NONE => raise ERR t ("No "^t^" information for type "^print_sp_type sp)
   | SOME x => x
 
-fun valOf2 s t opt =
-  case opt of
-    NONE => raise ERR t ("No "^t^" information for type "^s)
-  | SOME x => x
-
-fun axiom_of s        = TypeBasePure.axiom_of (valOf s (read s))
-fun induction_of s    = TypeBasePure.induction_of (valOf s (read s))
-fun constructors_of s = TypeBasePure.constructors_of (valOf s (read s))
-fun case_const_of s   = TypeBasePure.case_const_of (valOf s (read s))
-fun case_cong_of s    = TypeBasePure.case_cong_of (valOf s (read s))
-fun case_def_of s     = TypeBasePure.case_def_of (valOf s (read s))
-fun nchotomy_of s     = TypeBasePure.nchotomy_of (valOf s (read s))
-fun fields_of s       = TypeBasePure.fields_of (valOf s (read s))
+fun axiom_of s        = TypeBasePure.axiom_of (fancyread s)
+fun induction_of s    = TypeBasePure.induction_of (fancyread s)
+fun constructors_of s = TypeBasePure.constructors_of (fancyread s)
+fun case_const_of s   = TypeBasePure.case_const_of (fancyread s)
+fun case_cong_of s    = TypeBasePure.case_cong_of (fancyread s)
+fun case_def_of s     = TypeBasePure.case_def_of (fancyread s)
+fun nchotomy_of s     = TypeBasePure.nchotomy_of (fancyread s)
+fun fields_of s       = TypeBasePure.fields_of (fancyread s)
 fun distinct_of s     = valOf2 s "distinct_of"
-                            (TypeBasePure.distinct_of (valOf s (read s)))
+                            (TypeBasePure.distinct_of (fancyread s))
 fun one_one_of s      = valOf2 s "one_one_of"
-                            (TypeBasePure.one_one_of (valOf s (read s)))
-fun simpls_of s       = TypeBasePure.simpls_of (valOf s (read s))
+                            (TypeBasePure.one_one_of (fancyread s))
+fun simpls_of s       = TypeBasePure.simpls_of (fancyread s)
 fun size_of s         = valOf2 s "size_of"
-                            (TypeBasePure.size_of (valOf s (read s)))
+                            (TypeBasePure.size_of (fancyread s))
 fun encode_of s       = valOf2 s "encode_of"
-                            (TypeBasePure.encode_of (valOf s (read s)))
-fun axiom_of0 s       = TypeBasePure.axiom_of0 (valOf s (read s))
-fun induction_of0 s   = TypeBasePure.induction_of0 (valOf s (read s))
-fun size_of0 s        = TypeBasePure.size_of0 (valOf s (read s))
-fun encode_of0 s      = TypeBasePure.encode_of0 (valOf s (read s))
+                            (TypeBasePure.encode_of (fancyread s))
+fun axiom_of0 s       = TypeBasePure.axiom_of0 (fancyread s)
+fun induction_of0 s   = TypeBasePure.induction_of0 (fancyread s)
+fun size_of0 s        = TypeBasePure.size_of0 (fancyread s)
+fun encode_of0 s      = TypeBasePure.encode_of0 (fancyread s)
 
 
 

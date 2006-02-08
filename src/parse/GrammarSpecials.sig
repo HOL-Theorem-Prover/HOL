@@ -28,9 +28,10 @@ sig
   val case_arrow_special : string
 
   val set_case_specials :
-      ((Term.term -> Term.term) * (string -> Term.term list)) -> unit
+      ((Term.term -> Term.term) *
+       ({Thy:string,Tyop:string} -> Term.term list)) -> unit
   val compile_pattern_match : Term.term -> Term.term
-  val type_constructors : string -> Term.term list
+  val type_constructors : {Thy:string,Tyop:string} -> Term.term list
   val case_initialised : unit -> bool
 
 

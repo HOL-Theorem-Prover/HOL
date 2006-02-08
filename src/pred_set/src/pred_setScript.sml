@@ -3990,7 +3990,7 @@ val KoenigsLemma = store_thm(
      by METIS_TAC [KL_lemma3] THEN
   Q.SPECL_THEN [`x`, `\n r. g r`]
                (Q.X_CHOOSE_THEN `f` STRIP_ASSUME_TAC o BETA_RULE)
-               (TypeBase.axiom_of "num") THEN
+               (TypeBase.axiom_of ("num", "num")) THEN
   Q.EXISTS_TAC `f` THEN ASM_REWRITE_TAC [] THEN
   Q_TAC SUFF_TAC
         `!n. R (f n) (g (f n)) /\ ~FINITE { x | RTC R (f n) x}` THEN1

@@ -734,8 +734,8 @@ end
  *     Required stuff for sum types                                          *
  *---------------------------------------------------------------------------*)
 
-val sum_INDUCT = TypeBase.induction_of "sum"
-val sum_RECURSION = TypeBase.axiom_of "sum"
+val sum_INDUCT = TypeBase.induction_of ("sum", "sum")
+val sum_RECURSION = TypeBase.axiom_of ("sum", "sum")
 
 val OUTL = sumTheory.OUTL;
 val OUTR = sumTheory.OUTR;
@@ -1374,9 +1374,9 @@ local
 
   fun create_auxiliary_clauses nty avoids = let
     val id = fst(dest_var(safeid_genvar Type.bool))
-    val (tycon,tyargs) = dest_type nty
+    val {Thy,Tyop=tycon,Args=tyargs} = dest_thy_type nty
     val (k,ith0,rth0) =
-      valOf (get_nestedty_info tycon)
+      valOf (get_nestedty_info {Thy = Thy, Tyop = tycon})
       handle Option.Option =>
         raise ERR "define_type_nested"
                ("Can't find definition for nested type: "^ tycon)

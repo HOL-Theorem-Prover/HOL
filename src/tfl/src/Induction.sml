@@ -12,7 +12,7 @@ val monitoring = ref false
 fun induct_info db s =
  Option.map (fn facts => {nchotomy = TypeBasePure.nchotomy_of facts,
                           constructors = TypeBasePure.constructors_of facts})
-           (TypeBasePure.get db s);
+           (TypeBasePure.prim_get db s);
 
 (* -----------------------  Miscellaneous function  --------------------------
  *
@@ -124,9 +124,9 @@ fun mk_case ty_info FV thy =
           in mk{path=rstp, rows=zip pat_rectangle' rights'}
           end
      else               (* column 0 is all constructors *)
-     let val ty_name = (fst o dest_type o type_of) p
+     let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
      in
-     case ty_info ty_name
+     case ty_info (Thy,ty_name)
       of NONE => fail("Not a known datatype: "^ty_name)
          (* tyinfo rqt: `constructors' must line up exactly with constrs
             in disjuncts of `nchotomy'. *)
@@ -253,7 +253,7 @@ fun prove_case f thy (tm,TCs_locals,thm) =
 
 
 fun detuple newvar =
-  let fun detup M = 
+  let fun detup M =
      if pairLib.is_pair M
      then let val (M1,M2) = pairLib.dest_pair M
               val ((M1',vars1), (M2',vars2)) = (detup M1, detup M2)
@@ -281,7 +281,7 @@ val _ = Feedback.register_trace("tfl_ind",monitoring,1);
  *---------------------------------------------------------------------------*)
 
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
-let fun f() = 
+let fun f() =
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
     val (pats,TCsl) = unzip pat_TCs_list
     val case_thm = complete_cases thy pats
@@ -307,7 +307,7 @@ in
    GEN P (DISCH (concl Rinduct_assum) dc')
 end
 handle e => raise wrap_exn "Induction" "mk_induction" e
-in 
+in
   if !monitoring > 0 then Count.apply f () else f()
 end
 

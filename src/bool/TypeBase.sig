@@ -12,28 +12,28 @@ sig
 
    val theTypeBase        : unit -> typeBase
    val write              : tyinfo list -> tyinfo list
-   val read               : string -> tyinfo option
+   val read               : {Thy :string, Tyop: string} -> tyinfo option
    val elts               : unit -> tyinfo list
    val register_update_fn : (tyinfo list -> tyinfo list) -> unit
 
-   val axiom_of           : string -> thm
-   val induction_of       : string -> thm
-   val constructors_of    : string -> term list
-   val case_const_of      : string -> term
-   val case_cong_of       : string -> thm
-   val case_def_of        : string -> thm
-   val nchotomy_of        : string -> thm
-   val distinct_of        : string -> thm
-   val fields_of          : string -> (string * hol_type) list
-   val one_one_of         : string -> thm
-   val simpls_of          : string -> simpfrag.simpfrag
-   val size_of            : string -> term * thm
-   val encode_of          : string -> term * thm
+   val axiom_of           : string * string -> thm
+   val induction_of       : string * string -> thm
+   val constructors_of    : string * string -> term list
+   val case_const_of      : string * string -> term
+   val case_cong_of       : string * string -> thm
+   val case_def_of        : string * string -> thm
+   val nchotomy_of        : string * string -> thm
+   val distinct_of        : string * string -> thm
+   val fields_of          : string * string -> (string * hol_type) list
+   val one_one_of         : string * string -> thm
+   val simpls_of          : string * string -> simpfrag.simpfrag
+   val size_of            : string * string -> term * thm
+   val encode_of          : string * string -> term * thm
 
-   val axiom_of0          : string -> shared_thm
-   val induction_of0      : string -> shared_thm
-   val size_of0           : string -> (term * shared_thm) option
-   val encode_of0         : string -> (term * shared_thm) option
+   val axiom_of0          : string * string -> shared_thm
+   val induction_of0      : string * string -> shared_thm
+   val size_of0           : string * string -> (term * shared_thm) option
+   val encode_of0         : string * string -> (term * shared_thm) option
 
    val is_constructor     : term -> bool
 

@@ -72,11 +72,17 @@ html1/DTD/xhtml1-strict.dtd">
       generated with bogus links.  Thanks to Hasan Amjad for the
       report of this bug. </li>
 
+  <li> Expressions using <code>case</code>-expressions with
+      function-types and applied to arguments failed to parse
+      correctly.</li>
+
 </ul>
 
 
 <h2 id="new-theories">New theories:</h2>
 <ul>
+  <li> A theory of the rational numbers, thanks to Jens Brandt.</li>
+
 </ul>
 
 <h2 id="new-tools">New tools:</h2>
@@ -96,6 +102,18 @@ html1/DTD/xhtml1-strict.dtd">
       picking up a set of &ldquo;obvious&rdquo; rewrites that used to
       be in <code>arith_ss</code>.  Now the latter simpset adds just
       the decision procedure for Presburger arithmetic.</li>
+
+  <li> Functions such as <code>induction_of</code> in the
+      <code>TypeBase</code> structure that used to take a string (the
+      name of a type operator), now take a pair of strings.  The
+      second string is the name of the type operator, and the first is
+      the name of the theory that the type is from.  If the first
+      string is <code>""</code>, then the information is returned for
+      an arbitrary type of the given name (i.e., this should only be
+      relied on if you <em>know</em> there is just one type of the
+      given name in the current signature).  If the first string is
+      <code>"-"</code>, then this is expanded to the name of the
+      current theory.</li>
 </ul>
 
 

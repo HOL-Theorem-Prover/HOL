@@ -1190,9 +1190,9 @@ val SUBMAP_FUPDATE = Q.store_thm
     Iterated updates
    ---------------------------------------------------------------------- *)
 
-val FUPDATE_LIST = 
+val FUPDATE_LIST =
  new_definition
-  ("FUPDATE_LIST", 
+  ("FUPDATE_LIST",
    ``FUPDATE_LIST = FOLDL FUPDATE``);
 
 val _ = overload_on ("|++", ``FUPDATE_LIST``);
@@ -1314,10 +1314,10 @@ val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
   CONV_TAC (BINDER_CONV SWAP_VARS_CONV THENC SWAP_VARS_CONV) THEN
   Induct THEN ASM_SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN
   REPEAT GEN_TAC THEN
-  `?k v. h = (k,v)` by PROVE_TAC [TypeBase.nchotomy_of "prod"] THEN
+  `?k v. h = (k,v)` by PROVE_TAC [pair_CASES] THEN
   POP_ASSUM SUBST_ALL_TAC THEN SIMP_TAC (srw_ss()) [] THEN
   `(kvl2 = []) \/ ?k2 v2 t2. kvl2 = (k2,v2) :: t2` by
-       PROVE_TAC (map TypeBase.nchotomy_of ["prod", "list"]) THEN
+       PROVE_TAC [pair_CASES, listTheory.list_CASES] THEN
   POP_ASSUM SUBST_ALL_TAC THEN SIMP_TAC (srw_ss()) [] THEN
   SIMP_TAC (srw_ss()) [FUPDATE_LIST_THM] THEN STRIP_TAC THEN
   `kvl1 = t2` by PROVE_TAC [] THEN POP_ASSUM SUBST_ALL_TAC THEN
@@ -1325,7 +1325,7 @@ val FUPDATE_LIST_SAME_KEYS_UNWIND = store_thm(
                SRW_TAC [][FUPDATE_LIST_APPLY_NOT_MEM]) THEN
   SRW_TAC [][] THEN
   `(kvl = []) \/ (?k' v' t. kvl = (k',v') :: t)` by
-     PROVE_TAC (map TypeBase.nchotomy_of ["prod", "list"]) THEN
+     PROVE_TAC [pair_CASES, listTheory.list_CASES] THEN
   POP_ASSUM SUBST_ALL_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   Q.PAT_ASSUM `fm : 'a |-> 'b = fm1` MP_TAC THEN
   SIMP_TAC (srw_ss()) [GSYM FUPDATE_LIST_THM] THEN
