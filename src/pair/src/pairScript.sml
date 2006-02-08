@@ -32,7 +32,7 @@ val pairfn = Term `\a b. (a=x) /\ (b=y)`;
 
 val PAIR_EXISTS = Q.prove
 (`?p:'a -> 'b -> bool. (\p. ?x y. p = ^pairfn) p`,
- BETA_TAC 
+ BETA_TAC
   THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `x`
   THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `y`
   THEN EXISTS_TAC pairfn
@@ -40,7 +40,7 @@ val PAIR_EXISTS = Q.prove
 
 val ABS_REP_prod =
  let val tydef = new_type_definition("prod", PAIR_EXISTS)
- in 
+ in
    define_new_type_bijections
       {ABS="ABS_prod", REP="REP_prod",
        name="ABS_REP_prod", tyax=tydef}
@@ -55,7 +55,7 @@ val REP_ABS_PAIR = Q.prove
 (`!x y. REP_prod (ABS_prod ^pairfn) = ^pairfn`,
  REPEAT GEN_TAC
   THEN REWRITE_TAC [SYM (SPEC pairfn (CONJUNCT2 ABS_REP_prod))]
-  THEN BETA_TAC 
+  THEN BETA_TAC
   THEN MAP_EVERY Q.EXISTS_TAC [`x`, `y`]
   THEN REFL_TAC);
 
@@ -64,9 +64,9 @@ val REP_ABS_PAIR = Q.prove
 (*  Define the constructor for pairs, and install grammar rule for it.       *)
 (*---------------------------------------------------------------------------*)
 
-val COMMA_DEF = 
+val COMMA_DEF =
  Q.new_definition
-  ("COMMA_DEF", 
+  ("COMMA_DEF",
    `$, x y = ABS_prod ^pairfn`);
 
 val _ = add_rule {term_name = ",", fixity = Infixr 50,
@@ -112,6 +112,8 @@ val ABS_PAIR_THM = Q.store_thm
   THEN MAP_EVERY Q.EXISTS_TAC [`a`, `b`]
   THEN REFL_TAC);
 
+val pair_CASES = save_thm("pair_CASES", ABS_PAIR_THM)
+
 
 (*---------------------------------------------------------------------------*
  * Surjective pairing and definition of projection functions.                *
@@ -121,7 +123,7 @@ val ABS_PAIR_THM = Q.store_thm
  *        SND  = |- !x y. SND (x,y) = y                                      *
  *---------------------------------------------------------------------------*)
 
-val PAIR = 
+val PAIR =
  Definition.new_specification
   ("PAIR", ["FST","SND"],
    Ho_Rewrite.REWRITE_RULE[SKOLEM_THM] (GSYM ABS_PAIR_THM));
@@ -149,8 +151,8 @@ val PAIR_FST_SND_EQ = store_thm(
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-val CURRY_DEF = Q.new_definition 
-  ("CURRY_DEF", 
+val CURRY_DEF = Q.new_definition
+  ("CURRY_DEF",
    `CURRY f x y :'c = f (x,y)`);
 
 val UNCURRY = Q.new_definition
@@ -439,16 +441,16 @@ val FORALL_UNCURRY = store_thm(
 
 val PAIR_FUN_THM = Q.store_thm
 ("PAIR_FUN_THM",
- `!P. (?!f:'a->('b#'c). P f) = 
+ `!P. (?!f:'a->('b#'c). P f) =
       (?!p:('a->'b)#('a->'c). P(\a.(FST p a, SND p a)))`,
-RW_TAC bool_ss [EXISTS_UNIQUE_THM] 
+RW_TAC bool_ss [EXISTS_UNIQUE_THM]
  THEN EQ_TAC THEN RW_TAC bool_ss []
  THENL
   [Q.EXISTS_TAC `FST o f, SND o f`
     THEN RW_TAC bool_ss [FST,SND,combinTheory.o_THM,PAIR,ETA_THM],
-   STRIP_ASSUME_TAC (Q.ISPEC `p:('a -> 'b) # ('a -> 'c)` ABS_PAIR_THM) THEN 
-   STRIP_ASSUME_TAC (Q.ISPEC `p':('a -> 'b) # ('a -> 'c)` ABS_PAIR_THM) 
-    THEN RW_TAC bool_ss [] 
+   STRIP_ASSUME_TAC (Q.ISPEC `p:('a -> 'b) # ('a -> 'c)` ABS_PAIR_THM) THEN
+   STRIP_ASSUME_TAC (Q.ISPEC `p':('a -> 'b) # ('a -> 'c)` ABS_PAIR_THM)
+    THEN RW_TAC bool_ss []
     THEN RULE_ASSUM_TAC (REWRITE_RULE [FST,SND])
     THEN ``(\a:'a. (q a:'b,r a:'c)) = (\a:'a. (q' a:'b,r' a:'c))`` via RES_TAC
     THEN simpLib.FULL_SIMP_TAC bool_ss [FUN_EQ_THM,PAIR_EQ],
@@ -770,7 +772,7 @@ val _ = EmitML.is_comma_hook := Term.same_const comma_tm;
 val _ = EmitML.is_pair_hook := is_pair
 val _ = EmitML.dest_pair_hook := dest_pair
 
-val _ = 
+val _ =
   EmitML.exportML (!Globals.exportMLPath)
    ("pair",
      map EmitML.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM]);
