@@ -1337,15 +1337,17 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
        val inp_name = var_name inp_var
        val out_name = var_name out_var
    in 
-    (out "always @(posedge "; out clk_name; out ") ";
-     out out_name; out " <= "; out inp_name; out ";\n")
+    (out "/*\n"; out(term2string tm); out "\n*/\n";
+     out "always @(posedge "; out clk_name; out ") ";
+     out out_name; out " <= "; out inp_name; out ";\n\n")
    end else
  if is_CONSTANT tm
   then
    let val (c, out_var) = dest_CONSTANT tm
        val out_name = var_name out_var
    in 
-    (out "assign "; out out_name; out " = "; out c; out ";\n")
+    (out "/*\n"; out(term2string tm); out "\n*/\n";
+     out "assign "; out out_name; out " = "; out c; out ";\n\n")
    end else
  if is_COMB tm
   then
@@ -1359,7 +1361,8 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
                                    print_term(fst(dest_pair(rand tm))); print "\n";
                                    raise e))
    in 
-    (out "assign "; out out_name; out " = "; out vstring; out ";\n")
+    (out "/*\n"; out(term2string tm); out "\n*/\n";
+     out "assign "; out out_name; out " = "; out vstring; out ";\n\n")
    end 
    else (print "Can't generate Verilog for:\n";
          print_term tm; print "\n";
@@ -1406,7 +1409,6 @@ fun MAKE_VERILOG name thm out =
    wire_vars;
   out "\n";
   map (MAKE_COMPONENT_VERILOG out) modules;
-  out "\n";
   out"endmodule\n\n")
  end;
 
