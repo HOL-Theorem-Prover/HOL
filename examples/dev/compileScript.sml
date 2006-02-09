@@ -541,6 +541,15 @@ val COMB_OR =
    ``COMB (UNCURRY $\/) (in1<>in2,out) = OR(in1,in2,out)``,
    RW_TAC std_ss [COMB_def,OR_def,BUS_CONCAT_def]);
 
+val COMB_MUX =
+ store_thm
+  ("COMB_MUX",
+   ``COMB 
+      (\(sw,in1,in2). if sw then in1 else in2) 
+      (in1<>in2<>in3,out) = 
+     MUX(in1,in2,in3,out)``,
+   RW_TAC std_ss [COMB_def,MUX_def,BUS_CONCAT_def]);
+
 val OR_at =
  store_thm
   ("OR_at",
@@ -658,6 +667,25 @@ val MUX_CONCAT =
     THEN RW_TAC std_ss []
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(SPEC_ALL(el 2 thl)))
     THEN PROVE_TAC[PAIR_EQ]);
+
+(* Not needed
+val COMB_COND_CONCAT =
+ store_thm
+  ("COMB_COND_CONCAT",
+   ``COMB (\(sw,in1,in2). (if sw then in1 else in2))
+       (sel <> (inp11 <> inp12) <> inp21 <> inp22,out1 <> out2) =
+     COMB (\(sw,in1,in2). (if sw then in1 else in2))
+       (sel <> inp11 <> inp21,out1) /\
+     COMB (\(sw,in1,in2). (if sw then in1 else in2))
+       (sel <> inp12 <> inp22,out2)``,
+   RW_TAC std_ss [COMB_def,BUS_CONCAT_def]
+    THEN EQ_TAC
+    THEN RW_TAC std_ss []
+    THEN Cases_on `sel t`
+    THEN RW_TAC std_ss []
+    THEN ASSUM_LIST(fn thl => ASSUME_TAC(SPEC_ALL(el 2 thl)))
+    THEN PROVE_TAC[PAIR_EQ]);
+*)
 
 val BUS_CONCAT_ELIM =
  store_thm
@@ -900,6 +928,12 @@ val DtypeT_def =
 val DtypeF_def =
  Define `DtypeF(ck,d,q) = (q 0 = F) /\ Dtype(ck,d,q)`;
 
+(*****************************************************************************)
+(* General Dtype parameterised on initial state                              *)
+(*****************************************************************************)
+val DTYPE_def =
+ Define `DTYPE v (ck,d,q) = (q 0 = v) /\ Dtype(ck,d,q)`;
+
 val at_CONCAT =
  store_thm
   ("at_CONCAT",
@@ -912,11 +946,19 @@ val at_CONCAT =
 val InfRise_def =
  Define `InfRise clk = Inf(Rise clk)`;
 
+(* Old version
 val DEL_IMP =
  store_thm
   ("DEL_IMP",
    ``InfRise clk ==> !d q. Dtype(clk,d,q) ==> DEL(d at clk, q at clk)``,
    PROVE_TAC[Dtype_correct,DEL_def,Del,InfRise_def,at_def]);
+*)
+
+val DEL_IMP =
+ store_thm
+  ("DEL_IMP",
+   ``InfRise clk ==> !d q. (?v. DTYPE v (clk,d,q)) ==> DEL(d at clk, q at clk)``,
+   METIS_TAC[DTYPE_def,Dtype_correct,DEL_def,Del,InfRise_def,at_def]);
 
 val Dtype0 =
  store_thm
@@ -952,6 +994,7 @@ val IstimeofTimeof0 =
       METIS_TAC
        [BETA_RULE(Q.ISPEC `\t. sig t /\ !t'. t' < t ==> ~sig t'` SELECT_UNIQUE)]]);
 
+(* Old versions
 val DELT_IMP =
  store_thm
   ("DELT_IMP",
@@ -970,6 +1013,31 @@ val DELF_IMP =
    ``InfRise clk ==> !d q. DtypeF(clk,d,q) ==> DELF(d at clk, q at clk)``,
    RW_TAC std_ss[PURE_REWRITE_RULE[GSYM DEL_def]DELF_def,
                  Del,DtypeF_def,DEL_IMP,Istimeof_thm7,InfRise_def]
+    THEN RW_TAC std_ss [at_def,when,Timeof]
+    THEN `?t. Istimeof 0 (Rise clk) t` by PROVE_TAC[]
+    THEN IMP_RES_TAC Dtype0
+    THEN RW_TAC std_ss [GSYM Timeof]
+    THEN METIS_TAC[IstimeofTimeof0,DECIDE``t <= t``]);
+*)
+
+val DELT_IMP =
+ store_thm
+  ("DELT_IMP",
+   ``InfRise clk ==> !d q. DTYPE T (clk,d,q) ==> DELT(d at clk, q at clk)``,
+   RW_TAC std_ss[PURE_REWRITE_RULE[GSYM DEL_def]DELT_def,
+                 Del,DTYPE_def,DEL_IMP,Istimeof_thm7,InfRise_def]
+    THEN RW_TAC std_ss [at_def,when,Timeof]
+    THEN `?t. Istimeof 0 (Rise clk) t` by PROVE_TAC[]
+    THEN IMP_RES_TAC Dtype0
+    THEN RW_TAC std_ss [GSYM Timeof]
+    THEN METIS_TAC[IstimeofTimeof0,DECIDE``t <= t``]);
+
+val DELF_IMP =
+ store_thm
+  ("DELF_IMP",
+   ``InfRise clk ==> !d q. DTYPE F (clk,d,q) ==> DELF(d at clk, q at clk)``,
+   RW_TAC std_ss[PURE_REWRITE_RULE[GSYM DEL_def]DELF_def,
+                 Del,DTYPE_def,DEL_IMP,Istimeof_thm7,InfRise_def]
     THEN RW_TAC std_ss [at_def,when,Timeof]
     THEN `?t. Istimeof 0 (Rise clk) t` by PROVE_TAC[]
     THEN IMP_RES_TAC Dtype0

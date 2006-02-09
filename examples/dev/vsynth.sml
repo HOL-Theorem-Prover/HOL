@@ -514,7 +514,6 @@ fun AddBinop(name, (hbinop,vbinop)) =
    add_termToVerilog[("Binop",nameTermToVerilog)])
  end;
 
-
 (*****************************************************************************)
 (* Each kind of module M generates an instance M_n, where n starts at 0 and  *)
 (* is increased each time a new instance is created.                         *)
@@ -1167,6 +1166,248 @@ fun MAKE_VERILOG name thm out =
    (termToVerilog out)
    modules;
   out"endmodule\n")
+ end;
+
+
+(*****************************************************************************)
+(*  ``DTYPE c (clk,inp,out)``     --> (``c``, (``clk``,``inp``,``out``))     *)
+(*  ``?v. DTYPE v (clk,inp,out)`` --> (``v``, (``clk``,``inp``,``out``))     *)
+(*****************************************************************************)
+fun dest_DTYPE tm =
+ if is_comb tm 
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DTYPE")
+  then 
+   let val vl = strip_pair(last(snd(strip_comb tm)))
+   in
+   (rand(rator tm), (el 1 vl, el 2 vl, el 3 vl))
+   end else
+ if is_exists tm
+  then dest_DTYPE(snd(strip_exists tm))
+  else raise ERR "dest_DTYPE" "bad arg"
+
+val is_DTYPE = can dest_DTYPE;
+
+(*****************************************************************************)
+(* Extract the reg variable of a DTYPE; fail on everything else              *)
+(*                                                                           *)
+(*  ``DTYPE T (clk,inp,out:bool)``     --> ``out``                           *)
+(*  ``?v. DTYPE v (clk,inp,out:bool)`` --> ``out``                           *)
+(*****************************************************************************)
+exception get_reg_FAIL;
+fun get_reg tm =
+ if is_DTYPE tm
+  then let val (_,(_,_,out)) = dest_DTYPE tm in out end
+  else raise get_reg_FAIL;
+
+(*****************************************************************************)
+(* Test a term has the form ``CONSTANT c out``,                              *)
+(* where c is 0 or NUMERAL n or n2w n                                        *)
+(*****************************************************************************)
+fun is_CONSTANT tm =
+ is_comb tm
+  andalso is_const(fst(strip_comb tm))
+  andalso (fst(dest_const(fst(strip_comb tm))) = "CONSTANT")
+  andalso ((rand(rator tm) = ``0``)
+           orelse is_comb(rand(rator tm))
+                  andalso is_const(rator(rand(rator tm)))
+                  andalso mem
+                           (fst(dest_const(rator(rand(rator tm)))))
+                           ["NUMERAL","n2w"])
+  andalso is_var (rand tm);
+
+(*****************************************************************************)
+(* ``CONSTANT c out`` --> ("c", ``out``) where c is Verilog form of c        *)
+(*****************************************************************************)
+fun dest_CONSTANT tm =
+ let val num = rand(rator tm)
+     val n = if (num = ``0``) orelse (fst(dest_const(rator num)) = "NUMERAL")
+              then num
+              else rand num
+  in
+   (Arbnum.toString(numSyntax.dest_numeral n), rand tm)
+  end;
+
+(*****************************************************************************)
+(* ``COMB f (i1<>...<>in,out)`` --> (f, ["i1",...,"in"], "out")             *)
+(*****************************************************************************)
+fun dest_COMB tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "COMB")
+     andalso (length(strip_prod(hd(fst(strip_fun(type_of(rand(rator tm))))))) 
+              = length(strip_BUS_CONCAT(fst(dest_pair(rand tm)))))
+ then (rand(rator tm), 
+       map var_name (strip_BUS_CONCAT(fst(dest_pair(rand tm)))),
+       var_name(snd(dest_pair(rand tm))))
+ else (print "dest_COMB fails on: \n";
+       print_term tm; print "\n";
+       raise ERR "dest_COMB" "bad argument");
+
+val is_COMB = can dest_COMB;
+
+
+(*****************************************************************************)
+(* Library associating HOL terms with ML functions for generating            *)
+(* combinational Verilog. Typical example:                                   *)
+(*                                                                           *)
+(*  add_vsynth                                                               *)
+(*   [(``\(in1,in2). in1 >> in2``,                                           *)
+(*     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2))),        *)
+(*    (``UNCURRY $>>``,                                                      *)
+(*     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2)))]        *)
+(*                                                                           *)
+(* which will cause both                                                     *)
+(*                                                                           *)
+(*  ``COMB (\(in1,in2). in1 >> in2) (x<>y, z)``                              *)
+(*                                                                           *)
+(* and                                                                       *)
+(*                                                                           *)
+(*  ``COMB (UNCURRY $>>) (x<>y, z)``                                         *)
+(*                                                                           *)
+(* to generate the Verilog statement                                         *)
+(*                                                                           *)
+(*  assign z = {{31{x[31]}},x} >> y;                                         *)
+(*****************************************************************************)
+val vsynth_lib = ref([] : (term * (string list -> string)) list);
+
+(*****************************************************************************)
+(* Add a list of entries to front of vsynth_lib                              *)
+(*****************************************************************************)
+fun add_vsynth pl = (vsynth_lib := pl @ (!vsynth_lib));
+
+(*****************************************************************************)
+(* Lookup in vsynth_lib                                                      *)
+(*****************************************************************************)
+fun lookup_vsynth_lib [] tm = 
+     raise ERR "lookup_vsynth" "not in vsynth_lib"
+ |  lookup_vsynth_lib ((t, f : string list -> string)::vl) tm = 
+     if aconv t tm then f else lookup_vsynth_lib vl tm;
+
+fun lookup_vsynth tm = lookup_vsynth_lib (!vsynth_lib) tm;
+
+
+(*****************************************************************************)
+(* Useful initial vsynth_lib                                                 *)
+(*****************************************************************************)
+val _ =
+ add_vsynth
+  [(``$~``, 
+    fn[i] => ("~ " ^ i)),
+   (``UNCURRY $/\``, 
+    fn[i1,i2] => (i1 ^ " && " ^ i2)),
+   (``UNCURRY $\/``, 
+    fn[i1,i2] => (i1 ^ " || " ^ i2)),
+   (``\(sel:bool,in1:bool,in2:bool). if sel then in1 else in2``,
+    fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3)),
+   (``\(sel:bool,in1:num,in2:num). if sel then in1 else in2``,
+    fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))
+  ];
+
+
+(******************************************************************************
+Needed for crypto examples
+add_vsynth
+   [(``\(in1,in2). in1 >> in2``,
+     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2))),
+    (``UNCURRY $>>``,
+     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2)))];
+******************************************************************************)
+
+(*****************************************************************************)
+(* Version of AddBinop for testing                                           *)
+(*****************************************************************************)
+fun AddBinop (_:string, (hbinop,vbinop)) =
+ add_vsynth[(hbinop, fn[i1,i2] => (i1 ^ " " ^ vbinop ^ " " ^ i2))];
+
+
+(*****************************************************************************)
+(* Generate Verilog statement to implement a component                       *)
+(*                                                                           *)
+(*  ``DTYPE T (clk,inp,out)``     --> always @(posedge clk) out <= inp;      *)
+(*  ``?v. DTYPE v (clk,inp,out)`` --> always @(posedge clk) out <= inp;      *)
+(*  ``CONSTANT v out``            --> assign out = v;                        *)
+(*  ``COMB f (i1<>...<>in,out)``  --> call generate_verilog ``f``            *)
+(*****************************************************************************)
+fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
+ if is_DTYPE tm
+  then
+   let val (c, (clk_var,inp_var,out_var)) = dest_DTYPE tm
+       val clk_name = var_name clk_var
+       val inp_name = var_name inp_var
+       val out_name = var_name out_var
+   in 
+    (out "always @(posedge "; out clk_name; out ") ";
+     out out_name; out " <= "; out inp_name; out ";\n")
+   end else
+ if is_CONSTANT tm
+  then
+   let val (c, out_var) = dest_CONSTANT tm
+       val out_name = var_name out_var
+   in 
+    (out "assign "; out out_name; out " = "; out c; out ";\n")
+   end else
+ if is_COMB tm
+  then
+   let val (f, in_names,out_name) = dest_COMB tm
+       val ml_fun = (lookup_vsynth f
+                      handle e => (print_term f; print " not in vsynth_lib\n";
+                                   raise e))
+       val vstring = (ml_fun in_names
+                      handle e => (print "ML function associated in vsynth_lib with:\n";
+                                   print_term f; print "\nfails on\n";
+                                   print_term(fst(dest_pair(rand tm))); print "\n";
+                                   raise e))
+   in 
+    (out "assign "; out out_name; out " = "; out vstring; out ";\n")
+   end 
+   else (print "Can't generate Verilog for:\n";
+         print_term tm; print "\n";
+         raise ERR "MAKE_COMPONENT_VERILOG" "bad component term");
+
+(* New version that generates only one module of behavioral Verilog *)
+fun MAKE_VERILOG name thm out =
+ let val (spec_tm,
+          (clk, load_tm,inpl,done_tm,outl), 
+          vars, 
+          modules) = dest_cir thm
+     val clk_name = var_name clk
+     val load_name = var_name load_tm
+     val inp_names = map var_name inpl
+     val done_name = var_name done_tm
+     val out_names = map var_name outl
+     val reg_vars = mapfilter get_reg modules
+     val wire_vars = subtract vars reg_vars
+     val module_args = 
+          [clk_name,load_name] @ inp_names @ [done_name] @ out_names
+ in
+ (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
+  out "module ";
+  out name; 
+  out " (";
+  map out (add_commas module_args);
+  out ");\n";
+  out(" input " ^ clk_name ^ "," ^ load_name ^ ";\n");
+  map 
+   (fn v => out(" input [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   inpl;
+  out(" output " ^ done_name ^ ";\n");
+  map 
+   (fn v => out(" output [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   outl;
+  out(" wire " ^ clk_name ^ "," ^ done_name ^ ";\n");
+  out "\n";
+  map 
+   (fn v => out(" reg [" ^ var2size v ^ ":0] " ^ var_name v ^ " = 1;\n")) 
+   reg_vars;
+  out "\n";
+  map 
+   (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
+   wire_vars;
+  out "\n";
+  map (MAKE_COMPONENT_VERILOG out) modules;
+  out "\n";
+  out"endmodule\n\n")
  end;
 
 

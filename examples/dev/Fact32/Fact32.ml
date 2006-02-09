@@ -42,6 +42,14 @@ AddBinop ("LESS32",  (``UNCURRY $< : word32#word32->bool``,    "<"));
 AddBinop ("EQ32",    (``UNCURRY $= : word32#word32->bool``,    "=="));
 
 (*****************************************************************************)
+(* 32-bit MUX                                                                *)
+(*****************************************************************************)
+add_vsynth
+ [(``\(sel:bool,in1:word32,in2:word32). if sel then in1 else in2``,
+   fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))
+ ];
+
+(*****************************************************************************)
 (* We implement multiplication with a naive iterative multiplier function    *)
 (* (works by repeated addition)                                              *)
 (*****************************************************************************)

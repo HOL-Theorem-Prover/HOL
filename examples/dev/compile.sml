@@ -2123,6 +2123,38 @@ fun MAKE_CIRCUIT devth =
     ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
     Ite_def,Par_def,Seq_def,Let_def,o_THM]) devth;
 
+(* Only generates DTYPE, CONSTANT, COMB *)
+fun MAKE_CIRCUIT devth =
+ (DISCH_ALL                                                                  o
+  LIST_ANTE_EXISTS_INTRO                                                     o 
+  (I ## AP_ANTE_IMP_TRANS (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))) o
+  (I ## Ho_Rewrite.REWRITE_RULE[at_CONCAT])                                  o
+  at_SPEC_ALL ``clk:num->bool``                                              o
+  GEN_ALL                                                                    o
+  Ho_Rewrite.REWRITE_RULE
+   [GSYM COMB_NOT, GSYM COMB_AND, GSYM COMB_OR, GSYM COMB_MUX,
+    GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT]                                     o
+  CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                           o
+  CONV_RULE 
+   (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                    o
+  SIMP_RULE std_ss [UNCURRY]                                                 o
+  Ho_Rewrite.REWRITE_RULE
+   [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]                   o
+  DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)                                          o
+  Ho_Rewrite.REWRITE_RULE
+    [FUN_EXISTS_PROD,LAMBDA_PROD,COMB_ID,
+     COMB_FST,COMB_SND,GSYM BUS_CONCAT_def,
+     BUS_CONCAT_PAIR,BUS_CONCAT_o,
+     FST,SND,BUS_CONCAT_ETA,ID_CONST,ID_o,o_ID,DEL_CONCAT,DFF_CONCAT,
+     MUX_CONCAT,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def,
+     COMB_CONCAT_FST,COMB_CONCAT_SND,COMB_OUT_SPLIT]                         o
+  GEN_BETA_RULE                                                              o
+  IN_OUT_SPLIT                                                               o
+  REWRITE_RULE 
+   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+    Ite_def,Par_def,Seq_def,Let_def,o_THM]) devth;
+
 (*---------------------------------------------------------------------------*)
 (* Optimized                                                                 *)
 (*---------------------------------------------------------------------------*)
