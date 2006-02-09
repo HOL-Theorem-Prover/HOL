@@ -315,7 +315,7 @@ val FactIterAbs =
         THEN `n * acc * FACT (n - 1) < 2 ** WL` by PROVE_TAC[MULT_SYM,MULT_ASSOC]
         THEN RW_TAC arith_ss []
         THEN `1 <= n` by DECIDE_TAC
-        THEN `LT_WL 1` by PROVE_TAC[EVAL `` LT_WL 1``]
+        THEN `LT_WL 1` by PROVE_TAC[LT_WL_def, EVAL ``1 < 2 ** WL``]
         THEN RW_TAC arith_ss [GSYM WORD_SUB_LT_EQ]
         THEN `n * acc < 2 ** WL` 
               by PROVE_TAC
@@ -369,7 +369,7 @@ val FactAbs =
        THEN RW_TAC arith_ss [FACT],
       `n < 2 ** WL` by PROVE_TAC[DECIDE ``m:num <= n /\ n < p ==> m < p``,FACT_LESS_EQ]
        THEN RW_TAC arith_ss [MultAbsCor2,MultAbsCor2,WORD_MULT_CLAUSES]
-       THEN `LT_WL 1` by PROVE_TAC[EVAL ``LT_WL 1``]
+       THEN `LT_WL 1` by PROVE_TAC[LT_WL_def, EVAL ``1 < 2 ** WL``]
        THEN Cases_on `n=0`
        THEN FULL_SIMP_TAC arith_ss []
        THEN `1 <= n` by DECIDE_TAC
