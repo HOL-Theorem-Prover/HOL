@@ -46,7 +46,7 @@ fun get_constructors possible_types = let
                  acc
                  (TypeBasePure.constructors_of tyinfo)
   fun get_cs_from_name(nm, acc) =
-      case TypeBase.read nm of
+      case TypeBase.read {Thy = current_theory(), Tyop = nm} of
         NONE => acc
       | SOME tyi => get_cs(tyi, acc)
   val result0 = List.foldl get_cs_from_name empty_set possible_types
