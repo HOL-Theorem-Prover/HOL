@@ -2,13 +2,14 @@ loadPath := "../" ::
             Path.concat(HOLDIR,"examples/dev") ::
             Path.concat(HOLDIR,"examples/dev/dff") :: !loadPath;
 
-app load ["word8CasesLib", "compile", "aesTheory"];
+app load ["word8CasesLib", "compile", "vsynth", "aesTheory"];
 
 quietdec := true;
-open word8Theory compile MultTheory RoundOpTheory aesTheory;
+open word8Theory compile vsynth MultTheory RoundOpTheory aesTheory;
 quietdec := false;
 
 val _ = Globals.priming := SOME "";
+
 val MAKE_NETLIST = Count.apply MAKE_NETLIST;
 
 val initial_combinational = !combinational_constants;
