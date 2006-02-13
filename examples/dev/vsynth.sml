@@ -390,8 +390,8 @@ add_vsynth
 val DTYPEvDef =
 "// Variable width edge triggered Dtype register (default initial value 1)\n\
 \// DTYPE v (clk,d,q) = (q 0 = v) /\\\
-\  !t. q(t+1) = if Rise clk t then d t else q t\n\n\
-\module DTYPE (clk,d,q);\n\
+\ !t. q(t+1) = if Rise clk t then d t else q t\n\n\
+\module dtype (clk,d,q);\n\
 \ parameter size = 31;\n\
 \ parameter value = 1;\n\
 \ input clk;\n\
@@ -411,11 +411,11 @@ val DTYPEvInst_count = ref 0;
 fun DTYPEvInst tm (out:string->unit) [("size",size)] [clk_name,in_name,out_name] =
  let val count = !DTYPEvInst_count
      val _ = (DTYPEvInst_count := count+1);
-     val inst_name = "DTYPE" ^ "_" ^ Int.toString count
+     val inst_name = "dtype" ^ "_" ^ Int.toString count
  in
  (out "/*\n";
   out(term2string tm); out "\n*/\n";
-  out "DTYPE   "; out inst_name;
+  out "dtype   "; out inst_name;
   out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
   out "   defparam ";out inst_name; out ".size = "; out size; 
   out ";\n\n")
@@ -477,8 +477,8 @@ fun AddBinop (_:string, (hbinop,vbinop)) =
 (*****************************************************************************)
 (* Generate Verilog statement to implement a component                       *)
 (*                                                                           *)
-(*  ``DTYPE T (clk,inp,out)``     --> always @(posedge clk) out <= inp;      *)
-(*  ``?v. DTYPE v (clk,inp,out)`` --> always @(posedge clk) out <= inp;      *)
+(*  ``DTYPE T (clk,inp,out)``     --> dtype dtype_<n> (clk,inp,out)          *)
+(*  ``?v. DTYPE v (clk,inp,out)`` --> dtype dtype_<n> (clk,inp,out)          *)
 (*  ``CONSTANT v out``            --> assign out = v;                        *)
 (*  ``COMB f (i1<>...<>in,out)``  --> call generate_verilog ``f``            *)
 (*****************************************************************************)
