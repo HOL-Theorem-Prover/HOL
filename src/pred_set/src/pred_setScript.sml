@@ -1766,6 +1766,27 @@ val INJECTIVE_IMAGE_FINITE = store_thm(
   ]);
 val _ = export_rewrites ["INJECTIVE_IMAGE_FINITE"]
 
+val lem = Q.prove
+(`!t. FINITE t ==> !s f. INJ f s t ==> FINITE s`,
+ SET_INDUCT_TAC 
+  THEN RW_TAC bool_ss [INJ_EMPTY,FINITE_EMPTY]
+  THEN Cases_on `?a. a IN s' /\ (f a = e)`
+  THEN POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE bool_ss []) THENL
+     [RW_TAC bool_ss [] 
+       THEN IMP_RES_TAC INJ_DELETE
+       THEN FULL_SIMP_TAC bool_ss [DELETE_INSERT]
+       THEN METIS_TAC [DELETE_NON_ELEMENT,FINITE_DELETE],
+      Q.PAT_ASSUM `INJ x y z` MP_TAC
+       THEN RW_TAC bool_ss [INJ_DEF]
+       THEN `!x. x IN s' ==> f x IN s` by METIS_TAC [IN_INSERT]
+       THEN `INJ f s' s` by METIS_TAC [INJ_DEF]
+       THEN METIS_TAC[]]);
+
+val FINITE_INJ = Q.store_thm
+("FINITE_INJ",
+ `!(f:'a->'b) s t. INJ f s t /\ FINITE t ==> FINITE s`,
+ METIS_TAC [lem]);
+
 (* =====================================================================*)
 (* Cardinality 								*)
 (* =====================================================================*)
@@ -2173,6 +2194,38 @@ val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   ASM_REWRITE_TAC [prim_recTheory.measure_def,
                    relationTheory.inv_image_def] THEN
   BETA_TAC THEN mesonLib.ASM_MESON_TAC [PSUBSET_FINITE, CARD_PSUBSET]);
+
+val lem = Q.prove
+(`!s. FINITE s ==> 
+  !t. FINITE t ==>
+  !f. INJ f s t ==> CARD s <= CARD t`,
+ SET_INDUCT_TAC 
+  THEN RW_TAC arith_ss [CARD_DEF]
+  THEN `INJ f ((e INSERT s) DELETE e) (t DELETE (f e))` 
+       by METIS_TAC [INJ_DELETE,IN_INSERT]
+  THEN FULL_SIMP_TAC bool_ss [DELETE_INSERT]
+  THEN `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT] 
+  THEN POP_ASSUM SUBST_ALL_TAC
+  THEN `FINITE (t DELETE (f e))` by RW_TAC bool_ss [FINITE_DELETE]
+  THEN `CARD s <= CARD (t DELETE (f e))` by METIS_TAC []
+  THEN `f e IN t` by METIS_TAC [INJ_DEF, IN_INSERT]
+  THEN `CARD(t DELETE (f e)) = CARD t - 1` by RW_TAC arith_ss [CARD_DELETE]
+  THEN POP_ASSUM SUBST_ALL_TAC
+  THEN MATCH_MP_TAC (AP ``!m n. 0 < n /\ m<=n-1 ==> SUC m <= n``)
+  THEN ASM_REWRITE_TAC []
+  THEN STRIP_ASSUME_TAC (ISPEC ``t:'b set`` SET_CASES) 
+  THEN RW_TAC bool_ss []
+  THEN FULL_SIMP_TAC arith_ss [NOT_IN_EMPTY,CARD_DEF,FINITE_INSERT]);
+
+val INJ_CARD = Q.store_thm
+("INJ_CARD",
+ `!(f:'a->'b) s t. INJ f s t /\ FINITE t ==> CARD s <= CARD t`,
+ METIS_TAC [lem, FINITE_INJ]);
+
+val PHP = Q.store_thm
+("PHP",
+ `!(f:'a->'b) s t. FINITE t /\ CARD t < CARD s ==> ~INJ f s t`,
+ METIS_TAC [INJ_CARD, AP ``x < y = ~(y <= x)``]);
 
 (* =====================================================================*)
 (* Infiniteness								*)
