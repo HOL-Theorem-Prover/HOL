@@ -254,35 +254,20 @@ fun add_commas [] = []
 
 
 (*****************************************************************************)
-(*  ``DTYPE c (clk,inp,out)``     --> (``c``, (``clk``,``inp``,``out``))     *)
-(*  ``?v. DTYPE v (clk,inp,out)`` --> (``v``, (``clk``,``inp``,``out``))     *)
+(*  ``DTYPE c (clk,inp,out)``     --> ``DTYPE c (clk,inp,out)``              *)
+(*  ``?v. DTYPE v (clk,inp,out)`` --> ``DTYPE c (clk,inp,out)``              *)
 (*****************************************************************************)
 fun dest_DTYPE tm =
  if is_comb tm 
      andalso is_const(fst(strip_comb tm))
      andalso (fst(dest_const(fst(strip_comb tm))) = "DTYPE")
-  then 
-   let val vl = strip_pair(last(snd(strip_comb tm)))
-   in
-   (rand(rator tm), (el 1 vl, el 2 vl, el 3 vl))
-   end else
+  then tm else
  if is_exists tm
   then dest_DTYPE(snd(strip_exists tm))
   else raise ERR "dest_DTYPE" "bad arg"
 
 val is_DTYPE = can dest_DTYPE;
 
-(*****************************************************************************)
-(* Extract the reg variable of a DTYPE; fail on everything else              *)
-(*                                                                           *)
-(*  ``DTYPE T (clk,inp,out:bool)``     --> ``out``                           *)
-(*  ``?v. DTYPE v (clk,inp,out:bool)`` --> ``out``                           *)
-(*****************************************************************************)
-exception get_reg_FAIL;
-fun get_reg tm =
- if is_DTYPE tm
-  then let val (_,(_,_,out)) = dest_DTYPE tm in out end
-  else raise get_reg_FAIL;
 
 (*****************************************************************************)
 (* Test a term has the form ``CONSTANT c out``,                              *)
@@ -398,6 +383,58 @@ add_vsynth
      (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2)))];
 ******************************************************************************)
 
+(*****************************************************************************)
+(* Positive edge triggered Dtype register.                                   *)
+(* Default: 32-bits wide, initial value = 1.                                 *)
+(*****************************************************************************)
+val DTYPEvDef =
+"// Variable width edge triggered Dtype register (default initial value 1)\n\
+\// DTYPE v (clk,d,q) = (q 0 = v) /\\\
+\  !t. q(t+1) = if Rise clk t then d t else q t\n\n\
+\module DTYPE (clk,d,q);\n\
+\ parameter size = 31;\n\
+\ parameter value = 1;\n\
+\ input clk;\n\
+\ input  [size:0] d;\n\
+\ output [size:0] q;\n\
+\ reg    [size:0] q = value;\n\
+\\n\
+\ always @(posedge clk) q <= d;\n\
+\\n\
+\endmodule\n\
+\\n";
+
+(*****************************************************************************)
+(* Print an instance of a Dtype with a given size and default initial value  *)
+(*****************************************************************************)
+val DTYPEvInst_count = ref 0;
+fun DTYPEvInst tm (out:string->unit) [("size",size)] [clk_name,in_name,out_name] =
+ let val count = !DTYPEvInst_count
+     val _ = (DTYPEvInst_count := count+1);
+     val inst_name = "DTYPE" ^ "_" ^ Int.toString count
+ in
+ (out "/*\n";
+  out(term2string tm); out "\n*/\n";
+  out "DTYPE   "; out inst_name;
+  out " (";out clk_name;out",";out in_name;out",";out out_name; out ");";
+  out "   defparam ";out inst_name; out ".size = "; out size; 
+  out ";\n\n")
+ end;
+
+fun termToVerilog_DTYPE (out:string->unit) tm =
+ if is_comb tm
+     andalso is_const(fst(strip_comb tm))
+     andalso (fst(dest_const(fst(strip_comb tm))) = "DTYPE")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
+  then DTYPEvInst 
+        tm
+        out 
+        [("size", var2size(last(strip_pair(rand tm))))] 
+        (map (fst o dest_var) (strip_pair(rand tm)))
+  else raise ERR "termToVerilog_DTYPE" "bad component term";
+
 
 (*****************************************************************************)
 (* Clock. Default has 10 units of simulation time between edges              *)
@@ -425,7 +462,7 @@ fun ClockvInst (out:string->unit) [("period",period)] [clk_name] =
      val inst_name = "Clock" ^ "_" ^ Int.toString count
  in
  (out " Clock      "; out inst_name;
-  out " (";out clk_name; out ");\n";
+  out " (";out clk_name; out ");";
   out "   defparam ";out inst_name; out ".period = "; out period; 
   out ";\n\n")
  end;
@@ -447,16 +484,7 @@ fun AddBinop (_:string, (hbinop,vbinop)) =
 (*****************************************************************************)
 fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
  if is_DTYPE tm
-  then
-   let val (c, (clk_var,inp_var,out_var)) = dest_DTYPE tm
-       val clk_name = var_name clk_var
-       val inp_name = var_name inp_var
-       val out_name = var_name out_var
-   in 
-    (out "/*\n"; out(term2string tm); out "\n*/\n";
-     out "always @(posedge "; out clk_name; out ") ";
-     out out_name; out " <= "; out inp_name; out ";\n\n")
-   end else
+  then termToVerilog_DTYPE (out:string->unit)(dest_DTYPE tm) else
  if is_CONSTANT tm
   then
    let val (c, out_var) = dest_CONSTANT tm
@@ -512,23 +540,24 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
 *)
 
 
-(* New version that generates only one module of behavioral Verilog *)
+(* New version that generates behavioral Verilog for combinational logic *)
 fun MAKE_VERILOG name thm out =
  let val (spec_tm,
           (clk, load_tm,inpl,done_tm,outl), 
-          vars, 
+          wire_vars, 
           modules) = dest_cir thm
      val clk_name = var_name clk
      val load_name = var_name load_tm
      val inp_names = map var_name inpl
      val done_name = var_name done_tm
      val out_names = map var_name outl
-     val reg_vars = mapfilter get_reg modules
-     val wire_vars = subtract vars reg_vars
      val module_args = 
           [clk_name,load_name] @ inp_names @ [done_name] @ out_names
  in
- (out("// Definition of module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
+ (out("// This file defines module " ^ name ^ " [Created: " ^ date() ^ "]\n\n");
+  out("// Definition of Dtype register component\n\n");
+  out DTYPEvDef;
+  out("\n// Definition of module " ^ name ^ "\n");
   out "module ";
   out name; 
   out " (";
@@ -543,10 +572,6 @@ fun MAKE_VERILOG name thm out =
    (fn v => out(" output [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
    outl;
   out(" wire " ^ clk_name ^ "," ^ done_name ^ ";\n");
-  out "\n";
-  map 
-   (fn v => out(" reg [" ^ var2size v ^ ":0] " ^ var_name v ^ " = 1;\n")) 
-   reg_vars;
   out "\n";
   map 
    (fn v => out(" wire [" ^ var2size v ^ ":0] " ^ var_name v ^ ";\n")) 
