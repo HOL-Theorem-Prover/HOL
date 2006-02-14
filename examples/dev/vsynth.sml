@@ -261,6 +261,9 @@ fun dest_DTYPE tm =
  if is_comb tm 
      andalso is_const(fst(strip_comb tm))
      andalso (fst(dest_const(fst(strip_comb tm))) = "DTYPE")
+     andalso is_pair(rand tm)
+     andalso (length(strip_pair(rand tm)) = 3)
+     andalso all is_var (strip_pair(rand tm))
   then tm else
  if is_exists tm
   then dest_DTYPE(snd(strip_exists tm))
@@ -422,18 +425,14 @@ fun DTYPEvInst tm (out:string->unit) [("size",size)] [clk_name,in_name,out_name]
  end;
 
 fun termToVerilog_DTYPE (out:string->unit) tm =
- if is_comb tm
-     andalso is_const(fst(strip_comb tm))
-     andalso (fst(dest_const(fst(strip_comb tm))) = "DTYPE")
-     andalso is_pair(rand tm)
-     andalso (length(strip_pair(rand tm)) = 3)
-     andalso all is_var (strip_pair(rand tm))
-  then DTYPEvInst 
-        tm
-        out 
-        [("size", var2size(last(strip_pair(rand tm))))] 
-        (map (fst o dest_var) (strip_pair(rand tm)))
-  else raise ERR "termToVerilog_DTYPE" "bad component term";
+ let val dest_tm = dest_DTYPE tm
+ in
+  DTYPEvInst 
+   tm
+   out 
+   [("size", var2size(last(strip_pair(rand dest_tm))))] 
+   (map (fst o dest_var) (strip_pair(rand dest_tm)))
+  end;
 
 
 (*****************************************************************************)
@@ -484,7 +483,7 @@ fun AddBinop (_:string, (hbinop,vbinop)) =
 (*****************************************************************************)
 fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
  if is_DTYPE tm
-  then termToVerilog_DTYPE (out:string->unit)(dest_DTYPE tm) else
+  then termToVerilog_DTYPE (out:string->unit) tm else
  if is_CONSTANT tm
   then
    let val (c, out_var) = dest_CONSTANT tm
