@@ -274,13 +274,15 @@ val is_DTYPE = can dest_DTYPE;
 
 (*****************************************************************************)
 (* Test a term has the form ``CONSTANT c out``,                              *)
-(* where c is 0 or NUMERAL n or n2w n                                        *)
+(* where c is 0 or T, F or NUMERAL n or n2w n                                *)
 (*****************************************************************************)
 fun is_CONSTANT tm =
  is_comb tm
   andalso is_const(fst(strip_comb tm))
   andalso (fst(dest_const(fst(strip_comb tm))) = "CONSTANT")
   andalso ((rand(rator tm) = ``0``)
+           orelse (rand(rator tm) = ``F``) 
+           orelse (rand(rator tm) = ``T``) 
            orelse is_comb(rand(rator tm))
                   andalso is_const(rator(rand(rator tm)))
                   andalso mem
@@ -293,12 +295,15 @@ fun is_CONSTANT tm =
 (*****************************************************************************)
 fun dest_CONSTANT tm =
  let val num = rand(rator tm)
-     val n = if (num = ``0``) orelse (fst(dest_const(rator num)) = "NUMERAL")
-              then num
-              else rand num
+     val n = if (num = ``F``) then ``0``      
+             else if (num = ``T``) then ``1`` 
+             else if (num = ``0``) orelse (fst(dest_const(rator num)) = "NUMERAL")
+             then num
+             else rand num
   in
    (Arbnum.toString(numSyntax.dest_numeral n), rand tm)
   end;
+
 
 (*****************************************************************************)
 (* ``COMB f (i1<>...<>in,out)`` --> (f, ["i1",...,"in"], "out")             *)
