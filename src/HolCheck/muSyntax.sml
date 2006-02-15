@@ -415,7 +415,7 @@ fun NNF_RVNEG_CONV f =
 	val _ = List.app print_term frvnl val _ = print " frvnl\n"(*DBG*)
 	val gl = ``!Q. SUBFORMULA (~(RV Q)) (NNF ^f) = ^(list_mk_disj2 (List.map (fn t => mk_eq(``Q:string``,t)) frvnl))``
 	val _ = print_term gl val _ = print " goal\n"(*DBG*)
-	val res = prove(gl,SIMP_TAC std_ss (MU_SUB_def::RVNEG_def::NNF_def::(tsimps "mu")) THEN PROVE_TAC [])
+	val res = prove(gl,SIMP_TAC std_ss (MU_SUB_def::RVNEG_def::NNF_def::(tsimps ``:'a mu``)) THEN PROVE_TAC [])
 	val _ = print "NNF_RVNEG_CONV done\n"(*DBG*)
     in  res end
 

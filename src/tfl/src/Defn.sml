@@ -51,7 +51,9 @@ fun dest_hd_eqnl (hd_eqn::_) =
 fun extract_info constset db =
     let open TypeBasePure
         fun foldthis (tyinfo, (R, C)) =
-            if List.exists (same_const (case_const_of tyinfo)) constset then
+            if List.exists 
+                (fn x => same_const (case_const_of tyinfo) x
+                         handle HOL_ERR _ => false) constset then
               (case_def_of tyinfo::R, case_cong_of tyinfo::C)
             else (R, C)
       val (rws,congs) = foldl foldthis ([], []) (listItems db)

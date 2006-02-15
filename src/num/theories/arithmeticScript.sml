@@ -3339,7 +3339,7 @@ val _ = adjoin_to_theory
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
    S "val _ = TypeBase.write";
-   S "  [TypeBasePure.mk_tyinfo";
+   S "  [TypeBasePure.mk_datatype_info";
    S "     {ax=TypeBasePure.ORIG prim_recTheory.num_Axiom,";
    S "      case_def=num_case_def,";
    S "      case_cong=num_case_cong,";

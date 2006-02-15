@@ -45,10 +45,10 @@ val _ = bossLib.Hol_datatype `
         | mu of string => mu   (* lfp *)
         | nu of string => mu` (* mfp *)
 
-val tsimps_mu = tsimps ("-", "mu")
+val tsimps_mu = tsimps ``:'prop mu``;
 
 
-val mu_size_def = snd (TypeBase.size_of ("-", "mu"))
+val mu_size_def = snd (TypeBase.size_of ``:'prop mu``)
 val mu_size2_def = Define `mu_size2 (f: 'prop mu) = mu_size (\(a:('prop)).0) f`
 
 val _ = add_rule
@@ -241,7 +241,7 @@ val AP_SUBST_def = Define `
 
 val RVNEG_SYM = save_thm("RVNEG_SYM",prove(``!Q Q' (f:'prop mu). RVNEG Q (RVNEG Q' f) = RVNEG Q' (RVNEG Q f)``,
 REPEAT GEN_TAC
-THEN Induct_on `f` THEN SIMP_TAC std_ss (RVNEG_def::(tsimps ("-", "mu"))) THEN
+THEN Induct_on `f` THEN SIMP_TAC std_ss (RVNEG_def::tsimps ``:'prop mu``) THEN
 FULL_SIMP_TAC std_ss [] THENL [
 ASSUM_LIST PROVE_TAC,
 ASSUM_LIST PROVE_TAC,

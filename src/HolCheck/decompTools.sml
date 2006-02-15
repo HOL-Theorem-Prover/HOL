@@ -72,7 +72,7 @@ fun prove_ap_ext_sub ks_def s f =
     in 
 	prove (``!p. AP p SUBF ^f ==> p IN (^ksname).ap``,
 	       SIMP_TAC std_ss (IN_INSERT::ks_def::KS_accfupds::combinTheory.K_DEF::
-				MU_SUB_def::NNF_def::RVNEG_def::(tsimps "mu"))
+				MU_SUB_def::NNF_def::RVNEG_def::(tsimps ``:'a mu``))
 	       THEN RW_TAC std_ss [])
     end
 
@@ -161,7 +161,7 @@ let val p_ty = muSyntax.get_prop_type f'
     val gl =  list_mk_forall([avar,g],mk_neg(list_mk_comb(get_mu_ty_sub_tm p_ty,
 						   [mu_dmd avar g,mk_comb(get_mu_ty_nnf_tm p_ty,f')])))
     in prove (gl,Induct_on `g` THEN SIMP_TAC std_ss ([AP_EXT_def,(GSYM APEXT_NNF),MU_SUB_def,NNF_def,RVNEG_def]
-						     @(tsimps "mu"))) end
+						     @(tsimps ``:'a mu``))) end
 
 fun spec_prove_par_sync_decomp gpsdth f imfth = 
     let val ps_ty = List.hd(snd(dest_type(get_prop_type f))) (* unlifted state type*)

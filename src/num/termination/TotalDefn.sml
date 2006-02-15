@@ -107,7 +107,6 @@ fun list_mk_prod_tyl L =
      end) front last'
  end
 
-
 (*---------------------------------------------------------------------------*)
 (* perms delivers all permutations of a list. By Peter Sestoft.              *)
 (* Pinched from MoscowML distribution (examples/small/perms.sml).            *)

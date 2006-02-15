@@ -30,32 +30,32 @@ val AP_EXT_def = Define `
 
 
 val APEXT_RV = prove(``!f Q. (RV Q = AP_EXT f) = (f = RV Q)``,
-Induct_on `f` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,MU_SUB_def]@(tsimps "mu")) THEN PROVE_TAC [])
+Induct_on `f` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,MU_SUB_def]@(tsimps ``:'a mu``)) THEN PROVE_TAC [])
 
 val APEXT_RV_SUBF = prove(``!f (Q:string). ~RV Q SUBF f = ~RV Q SUBF (AP_EXT f)``,
-Induct_on `f` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,MU_SUB_def]@(tsimps "mu"))
+Induct_on `f` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,MU_SUB_def]@(tsimps ``:'a mu``))
 THEN METIS_TAC [APEXT_RV])
 
 val APEXT_RVNEG = prove(``!f Q. AP_EXT (RVNEG Q f) = RVNEG Q (AP_EXT f)``,
-Induct_on `f` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps "mu")) THENL [
+Induct_on `f` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps ``:'a mu``)) THENL [
  REPEAT GEN_TAC THEN Cases_on `Q=s` THENL [
-  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps "mu")),
+  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps ``:'a mu``)),
   METIS_TAC [APEXT_RV]
  ],
- REPEAT GEN_TAC THEN Cases_on `Q=s` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps "mu")),
- REPEAT GEN_TAC THEN Cases_on `Q=s` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps "mu"))
+ REPEAT GEN_TAC THEN Cases_on `Q=s` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps ``:'a mu``)),
+ REPEAT GEN_TAC THEN Cases_on `Q=s` THEN  FULL_SIMP_TAC std_ss ([AP_EXT_def,RVNEG_def]@(tsimps ``:'a mu``))
 ])
 
 val APEXT_NNF =  save_thm("APEXT_NNF",prove(``!f. AP_EXT (NNF f) = NNF (AP_EXT f)``,
 recInduct NNF_IND_def THEN REPEAT CONJ_TAC THEN BETA_TAC 
-THEN RW_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def,AP_EXT_def]@(tsimps "mu"))
-THEN  FULL_SIMP_TAC std_ss ([APEXT_RVNEG,AP_EXT_def,RVNEG_def]@(tsimps "mu"))))
+THEN RW_TAC std_ss ([MU_SUB_def,NNF_def,RVNEG_def,AP_EXT_def]@(tsimps ``:'a mu``))
+THEN  FULL_SIMP_TAC std_ss ([APEXT_RVNEG,AP_EXT_def,RVNEG_def]@(tsimps ``:'a mu``))))
 
 val APEXT_IMF = save_thm("APEXT_IMF",prove(``!f. IMF f = IMF (AP_EXT f)``,
 recInduct NNF_IND_def THEN REPEAT CONJ_TAC THEN BETA_TAC 
-THEN RW_TAC std_ss ([IMF_def,MU_SUB_def,NNF_def,RVNEG_def,AP_EXT_def]@(tsimps "mu")) THENL [
- METIS_TAC ([APEXT_NNF,APEXT_RV_SUBF,AP_EXT_def,RVNEG_def]@(tsimps "mu")),
- METIS_TAC ([APEXT_NNF,APEXT_RV_SUBF,AP_EXT_def,RVNEG_def]@(tsimps "mu")),
+THEN RW_TAC std_ss ([IMF_def,MU_SUB_def,NNF_def,RVNEG_def,AP_EXT_def]@(tsimps ``:'a mu``)) THENL [
+ METIS_TAC ([APEXT_NNF,APEXT_RV_SUBF,AP_EXT_def,RVNEG_def]@(tsimps ``:'a mu``)),
+ METIS_TAC ([APEXT_NNF,APEXT_RV_SUBF,AP_EXT_def,RVNEG_def]@(tsimps ``:'a mu``)),
  REWRITE_TAC [GSYM APEXT_NNF,GSYM APEXT_RV_SUBF]
  THEN METIS_TAC [APEXT_RVNEG,IMF_INV_RVNEG],
  REWRITE_TAC [GSYM APEXT_NNF,GSYM APEXT_RV_SUBF]
@@ -103,7 +103,7 @@ THEN METIS_TAC [AP_EXT_def], (* \/ *)
 RW_TAC std_ss [STATES_def,SET_SPEC,IN_UNIV,wfKS_def,AP_EXT_def]
 THEN FULL_SIMP_TAC std_ss [IN_DEF], (* RV *)
 RW_TAC std_ss [STATES_def,SET_SPEC,IN_UNIV,wfKS_def,AP_EXT_def]
-THEN FULL_SIMP_TAC std_ss (MU_SUB_def::(tsimps "mu"))
+THEN FULL_SIMP_TAC std_ss (MU_SUB_def::(tsimps ``:'a mu``))
 THEN SELECT_ELIM_TAC
 THEN ASSUM_LIST PROVE_TAC, (* AP *)
 RW_TAC std_ss [STATES_def,SET_SPEC,IN_UNIV,AP_EXT_def]

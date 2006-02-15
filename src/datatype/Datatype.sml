@@ -25,7 +25,7 @@
  * Notice that, at least using the current mechanism for defining types,     *
  * a great many theories get loaded in: numbers, lists, trees, etc. when     *
  * this module is loaded. If your formalization doesn't want to have these   *
- * as parents, then TypeBasePure.mk_tyinfo can be used directly.             *
+ * as parents, then TypeBasePure.mk_datatype_info can be used directly.      *
  *---------------------------------------------------------------------------*)
 
 (* Interactive:
@@ -172,9 +172,12 @@ fun check_constrs_unique_in_theory asts = let
   val newtypes = map #1 asts
   val constrs = List.concat (map cnames asts)
   val current_types = set_diff (map fst (types "-")) newtypes
+  val all_constructors = filter TypeBase.is_constructor (constants "-")
+  fun ty_constr tyname c = (fst(dest_type(snd(strip_fun(type_of c)))) = tyname)
   fun current_constructors (tyname, fm) = let
-    val tys_cons = TypeBase.constructors_of ("-", tyname)
-                   handle HOL_ERR _ => []
+    val tys_cons = filter (ty_constr tyname) all_constructors
+(*    val tys_cons = TypeBase.constructors_of ("-", tyname)
+                   handle HOL_ERR _ => [] *)
     fun foldthis (c,fm) =
         if uptodate_term c then
           Binarymap.insert(fm, #Name (dest_thy_const c), tyname)
@@ -190,6 +193,7 @@ fun check_constrs_unique_in_theory asts = let
         NONE => acc
       | SOME ty' => (tyname, conname, ty') :: acc
   val common = List.rev (foldl calculate_intersection [] constrs)
+
   fun warn (newty, conname, oldty) =
       HOL_WARNING "Datatype" "Hol_datatype"
       ("Constructor \""^conname^"\" in new type \""^newty^"\"\n\
@@ -319,7 +323,7 @@ in
 
 fun build_tyinfos db {induction,recursion} =
  let val case_defs = Prim_rec.define_case_constant recursion
-     val tyinfol = TypeBasePure.gen_tyinfo
+     val tyinfol = TypeBasePure.gen_datatype_info
                     {ax=recursion, ind=induction, case_defs=case_defs}
  in
    case define_size recursion db
@@ -1098,7 +1102,7 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
             one_one,distinct,encode,lift,size,fields}, extra_simpls_string) =
             (S "    let";                                               NL();
              S "      open TypeBasePure";                               NL();
-             S "      val tyinfo0 = mk_tyinfo";                         NL();
+             S "      val tyinfo0 = mk_datatype_info";                  NL();
              S("        {ax="^ax^",");                                  NL();
              S("         case_def="^case_def^",");                      NL();
              S("         case_cong="^case_cong^",");                    NL();

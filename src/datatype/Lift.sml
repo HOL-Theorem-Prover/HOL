@@ -44,7 +44,9 @@ local val typety = mk_vartype "'type"
                   end
 in
 fun lift_def_syntax (Gamma,tyop) =
- let val Clist = TypeBase.constructors_of tyop
+ let val Clist = TypeBasePure.constructors_of
+                  (Option.valOf
+                    (TypeBase.read {Thy=fst tyop,Tyop=snd tyop}))
      val ty = snd(strip_fun(type_of (hd Clist)))
      val args = snd(dest_type ty)
      val Clistnames = enum_list "C" (length Clist)
@@ -55,7 +57,7 @@ fun lift_def_syntax (Gamma,tyop) =
      val lift_type = list_mk_fun(flist_types@[ty],termty)
      val lift_var = mk_var("lift",lift_type)
      val K_lift_ty = mk_K_1 (lift_var,typety)
-     fun Gamma' c = if c=tyop then SOME K_lift_ty else Gamma c
+     fun Gamma' c = if tyop=c then SOME K_lift_ty else Gamma c
      val Interp = TypeBasePure.tyValue (total Theta, Gamma', Undef)
      fun mk_clause (C,Cname) =
        let val args = genargs C
@@ -124,6 +126,5 @@ fun pp_lifter_def ppstrm tyop =
   add_newline();
   end_block()
  end;
-
 
 end

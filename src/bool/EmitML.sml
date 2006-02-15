@@ -921,6 +921,9 @@ fun exportML path (s,elems) =
   end handle Io _ =>
              HOL_WARNING "EmitML" "exportML"
               ("I/O error prevented exporting files to "^Lib.quote path)
-           | e => Raise e;
+           | e => HOL_WARNING "EmitML" "exportML"
+                     (exn_to_string e 
+                        ^" prevents export of ML files to "
+                        ^Lib.quote path)
 
 end (* struct *)

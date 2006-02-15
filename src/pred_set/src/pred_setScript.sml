@@ -1928,6 +1928,17 @@ val CARD_EXISTS = TAC_PROOF(([],
 
 val CARD_DEF = new_specification ("CARD_DEF", ["CARD"], CARD_EXISTS);
 
+(*---------------------------------------------------------------------------*)
+(* Support for Cases_on ... still preliminary                                *)
+(*---------------------------------------------------------------------------*)
+
+val set_tyinfo = TypeBasePure.mk_nondatatype_info
+                      (``:'a set``,
+                       {nchotomy = SOME SET_CASES,size=NONE,encode=NONE});
+
+val _ = TypeBase.write [set_tyinfo];
+
+
 (* ---------------------------------------------------------------------*)
 (* Various cardinality results.						*)
 (* ---------------------------------------------------------------------*)
@@ -2213,8 +2224,7 @@ val lem = Q.prove
   THEN POP_ASSUM SUBST_ALL_TAC
   THEN MATCH_MP_TAC (AP ``!m n. 0 < n /\ m<=n-1 ==> SUC m <= n``)
   THEN ASM_REWRITE_TAC []
-  THEN STRIP_ASSUME_TAC (ISPEC ``t:'b set`` SET_CASES) 
-  THEN RW_TAC bool_ss []
+  THEN Cases_on `t`
   THEN FULL_SIMP_TAC arith_ss [NOT_IN_EMPTY,CARD_DEF,FINITE_INSERT]);
 
 val INJ_CARD = Q.store_thm
@@ -4043,7 +4053,7 @@ val KoenigsLemma = store_thm(
      by METIS_TAC [KL_lemma3] THEN
   Q.SPECL_THEN [`x`, `\n r. g r`]
                (Q.X_CHOOSE_THEN `f` STRIP_ASSUME_TAC o BETA_RULE)
-               (TypeBase.axiom_of ("num", "num")) THEN
+               (TypeBase.axiom_of ``:num``) THEN
   Q.EXISTS_TAC `f` THEN ASM_REWRITE_TAC [] THEN
   Q_TAC SUFF_TAC
         `!n. R (f n) (g (f n)) /\ ~FINITE { x | RTC R (f n) x}` THEN1

@@ -29,7 +29,7 @@ fun fromMLnum n = numSyntax.mk_numeral(Arbnum.fromInt n);
 
 (************ HOL **************)
 
-fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ("", ty) in rewrs end;
+fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
 
 fun get_ss_rewrs ss =
 let val simpLib.SSFRAG{rewrs,ac,congs,convs,dprocs,filter} = ss in rewrs end

@@ -767,7 +767,7 @@ fun init_prop (nf,mf) ee ksname state wfKS_ks vm githms msp prop_ty =
 						 val _ = dbgTools.DST (dpfx^  " v\n")  (*DBG*)
                                              in () end) frv_thms val _ = dbgTools.DST (dpfx^  " frv_thms\n") (*DBG*)*)
 	val _ = profTools.bgt (dpfx^"init_prop_adoimf")(*PRF*)
-	val imf_thms = mk_ado_imf_thms mf seth (tsimps "mu") frv_thms imf_thms
+	val imf_thms = mk_ado_imf_thms mf seth (tsimps ``:'a mu``) frv_thms imf_thms
 	val _ = profTools.ent (dpfx^"init_prop_adoimf")(*PRF*)
 	(*val _ = Binarymap.app (fn (k,v) => let val _ = dbgTools.DTM (dpfx^k) (*DBG*) 
 						 val _ = dbgTools.DST (dpfx^  " key\n")  (*DBG*)

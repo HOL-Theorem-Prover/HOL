@@ -461,6 +461,7 @@ RW_TAC bool_ss [EXISTS_UNIQUE_THM]
                           PAIR,PAIR_EQ,FUN_EQ_THM,ETA_THM]
      THEN PROVE_TAC [PAIR_EQ,PAIR]]);
 
+
 (*---------------------------------------------------------------------------
        TFL support.
  ---------------------------------------------------------------------------*)
@@ -500,7 +501,7 @@ val _ = adjoin_to_theory
    in
       S "val pair_rws = [PAIR, FST, SND];";                  NL();
       S "val _ = TypeBase.write";                            NL();
-      S "  [TypeBasePure.mk_tyinfo";                         NL();
+      S "  [TypeBasePure.mk_datatype_info";                  NL();
       S "     {ax=TypeBasePure.ORIG pair_Axiom,";            NL();
       S "      case_def=pair_case_thm,";                     NL();
       S "      case_cong=pair_case_cong,";                   NL();

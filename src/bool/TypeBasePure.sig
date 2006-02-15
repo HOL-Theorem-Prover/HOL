@@ -8,28 +8,37 @@ sig
    type tyinfo
    type typeBase
    type simpfrag = simpfrag.simpfrag
+
    datatype shared_thm = ORIG of thm
                        | COPY of (string * string) * thm
 
-   val gen_tyinfo      : {ax  : thm,
-                          ind : thm,
-                          case_defs : thm list} -> tyinfo list
+   val mk_datatype_info 
+           : {ax        : shared_thm,
+              induction : shared_thm,
+              case_def  : thm,
+              case_cong : thm,
+              nchotomy  : thm,
+              size      : (term * shared_thm) option,
+              encode    : (term * shared_thm) option,
+              lift      : term option,
+              one_one   : thm option,
+              distinct  : thm option,
+              fields    : (string * hol_type) list} -> tyinfo
 
-   val mk_tyinfo       : {ax        : shared_thm,
-                          induction : shared_thm,
-                          case_def  : thm,
-                          case_cong : thm,
-                          nchotomy  : thm,
-                          size      : (term * shared_thm) option,
-                          encode    : (term * shared_thm) option,
-                          lift      : term option,
-                          one_one   : thm option,
-                          distinct  : thm option,
-                          fields    : (string * hol_type) list} -> tyinfo
+   val gen_datatype_info 
+           : {ax  : thm, ind : thm, case_defs : thm list} -> tyinfo list
+
+   val mk_nondatatype_info 
+           : hol_type * 
+             {nchotomy : thm option,
+              size     : (term * thm) option,
+              encode   : (term * thm) option} -> tyinfo
 
    val pp_tyinfo       : ppstream -> tyinfo -> unit
 
+   val ty_of           : tyinfo -> hol_type
    val ty_name_of      : tyinfo -> string * string
+
    val axiom_of        : tyinfo -> thm
    val induction_of    : tyinfo -> thm
    val constructors_of : tyinfo -> term list
@@ -61,6 +70,9 @@ sig
    (* Functional databases of datatype facts and associated operations *)
 
    val empty           : typeBase
+   val insert          : typeBase -> tyinfo -> typeBase
+   val fetch           : typeBase -> hol_type -> tyinfo option
+
    val add             : typeBase -> tyinfo -> typeBase
    val prim_get        : typeBase -> string * string -> tyinfo option
    val get             : typeBase -> string -> tyinfo list

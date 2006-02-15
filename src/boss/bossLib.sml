@@ -32,7 +32,7 @@ val ERR = mk_HOL_ERR "bossLib";
             Datatype definition
  *---------------------------------------------------------------------------*)
 
-fun type_rws tyn = #rewrs (TypeBase.simpls_of tyn)
+fun type_rws ty = #rewrs (TypeBase.simpls_of ty)
 
 val Hol_datatype = Datatype.Hol_datatype;
 

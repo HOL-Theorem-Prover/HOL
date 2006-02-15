@@ -6,12 +6,11 @@ structure sortingScript =
 struct
 
 (* interactive use:
-app load ["permTheory","bossLib"];
+app load ["bossLib"];
 *)
 
 open HolKernel Parse boolLib bossLib labelLib
-
-open combinTheory pairTheory relationTheory listTheory 
+     combinTheory pairTheory relationTheory listTheory metisLib
      BasicProvers
 
 
@@ -319,9 +318,9 @@ val PERM_MEM_EQ = Q.store_thm(
 
 val SORTED_DEF = 
  Define 
-   `(SORTED R [] = T) /\ 
-    (SORTED R [x] = T) /\
-    (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
+  `(SORTED R [] = T) /\ 
+   (SORTED R [x] = T) /\
+   (SORTED R (x::y::rst) = R x y /\ SORTED R (y::rst))`;
 
 
 val SORTS_DEF =
@@ -468,7 +467,7 @@ val QSORT_defn =
      (QSORT ord (h::t) =
            let (l1,l2) = PARTITION (\y. ord y h) t
            in
-             QSORT ord l1 ++ [h] ++ QSORT ord l2)`;
+            QSORT ord l1 ++ [h] ++ QSORT ord l2)`;
 
 
 (*---------------------------------------------------------------------------
@@ -511,7 +510,7 @@ val QSORT_PERM = Q.store_thm
   THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
   THEN MATCH_MP_TAC CONS_PERM
   THEN MATCH_MP_TAC PERM_TRANS
-  THEN Q.EXISTS_TAC `l1 ++ l2`
+  THEN Q.EXISTS_TAC`l1 ++ l2`
   THEN RW_TAC std_ss [] THENL
   [METIS_TAC [APPEND,APPEND_NIL,PART_PERM],
    METIS_TAC [PERM_CONG]]);

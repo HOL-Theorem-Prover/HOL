@@ -34,7 +34,7 @@ open res_quanLib
 val _ = numLib.prefer_num();
 
 fun tsimps ty =
-    let val {convs,rewrs} = TypeBase.simpls_of ("", ty) in rewrs end;
+    let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
 
 val BEXP2MU_def = Define `
 (BEXP2MU (B_TRUE: 'prop bexp) = (TR:'prop mu)) /\
@@ -244,7 +244,7 @@ val fol4 = prove(``!x y z. ((x==>y)/\(x==>z))==>(x==>(y/\z))``,PROVE_TAC []);
 val fol5 = prove(``!a b c. (a = c) ==> (a /\ b = c /\ b)``,PROVE_TAC []);
 
 val IMF_CTL_LEM8a1 = prove(``!f Q Q'. ~(Q IN FV f) = ~(Q IN (FV (RVNEG Q' f)))``,
-Induct_on `f` THEN SIMP_TAC std_ss ([FV_def,UNION_DEF,DELETE_DEF,DIFF_DEF,SET_SPEC,IN_SING,RVNEG_def]@(tsimps "mu"))
+Induct_on `f` THEN SIMP_TAC std_ss ([FV_def,UNION_DEF,DELETE_DEF,DIFF_DEF,SET_SPEC,IN_SING,RVNEG_def]@(tsimps ``:'a mu``))
 THENL [ (* 8 *)
 FULL_SIMP_TAC std_ss [],
 ASSUM_LIST PROVE_TAC,
@@ -271,7 +271,7 @@ REPEAT GEN_TAC THEN CASE_TAC THENL [ (* 2 *)
 
 val IMF_CTL_LEM8a = prove(``!f Q. ~(Q IN FV f) ==> IMF f ==> ~SUBFORMULA (~RV Q) (NNF f)``,
 recInduct NNF_IND_def
-THEN SIMP_TAC std_ss ([MU_SUB_def,IMF_def,FV_def,NNF_def,UNION_DEF,SET_SPEC,DELETE_DEF,DIFF_DEF,RVNEG_def,IN_SING]@(tsimps "mu"))
+THEN SIMP_TAC std_ss ([MU_SUB_def,IMF_def,FV_def,NNF_def,UNION_DEF,SET_SPEC,DELETE_DEF,DIFF_DEF,RVNEG_def,IN_SING]@(tsimps ``:'a mu``))
 THEN REPEAT CONJ_TAC THENL [ (* 3 *)
 NTAC 6 STRIP_TAC THENL [(* 2 *)
  FULL_SIMP_TAC std_ss [],
@@ -313,12 +313,12 @@ val IMF_CTL = save_thm("IMF_CTL",prove(``!f. IMF  (CTL2MU f)``,
 recInduct (theorem "CTL2MU_ind") THEN REPEAT CONJ_TAC THENL [
  REWRITE_TAC [CTL2MU_def]
  THEN recInduct (theorem "BEXP2MU_ind")
- THEN FULL_SIMP_TAC std_ss ([IMF_def,BEXP2MU_def,NNF_def,MU_SUB_def,RVNEG_def]@(tsimps "mu")), (* C_BOOL *)
+ THEN FULL_SIMP_TAC std_ss ([IMF_def,BEXP2MU_def,NNF_def,MU_SUB_def,RVNEG_def]@(tsimps ``:'a mu``)), (* C_BOOL *)
  SIMP_TAC std_ss [CTL2MU_def,IMF_def], (* C_NOT *)
  SIMP_TAC std_ss [CTL2MU_def,IMF_def], (* C_AND *)
  SIMP_TAC std_ss [CTL2MU_def,IMF_def], (* C_EX *)
- SIMP_TAC std_ss ([CTL2MU_def,IMF_def,NNF_def,MU_SUB_def,RVNEG_def,IMF_CTL_LEM]@(tsimps "mu")), (* C_EG *)
- SIMP_TAC std_ss ([CTL2MU_def,IMF_def,NNF_def,MU_SUB_def,RVNEG_def,IMF_CTL_LEM]@(tsimps "mu"))  (* C_EU *)
+ SIMP_TAC std_ss ([CTL2MU_def,IMF_def,NNF_def,MU_SUB_def,RVNEG_def,IMF_CTL_LEM]@(tsimps ``:'a mu``)), (* C_EG *)
+ SIMP_TAC std_ss ([CTL2MU_def,IMF_def,NNF_def,MU_SUB_def,RVNEG_def,IMF_CTL_LEM]@(tsimps ``:'a mu``))  (* C_EU *)
 ]));
 
 val Nf = Define `(Nf (R:'state # 'state -> bool) (s:'state) (q:'state) (0:num) = s) /\ (Nf R s q (SUC n) = if (n=0) then q else (@r. R(Nf R s q n,r)))`;

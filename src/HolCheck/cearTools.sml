@@ -393,7 +393,7 @@ let val _ = dbgTools.DEN dpfx "macmt"(*DBG*)
     val _ = profTools.bgt (dpfx^"macmt_no_rv_gl")(*PRF*)
     val glno_rv = mk_glno_rv p_ty mf (*``!Q. ~SUBFORMULA (~RV Q) (NNF (^mf))``*)
     val _ = profTools.ent (dpfx^"macmt_no_rv_gl")(*PRF*)
-    val jfno_rv = (fn _ =>  (prove (glno_rv,SIMP_TAC std_ss (MU_SUB_def::NNF_def::RVNEG_def::(tsimps "mu")))))
+    val jfno_rv = (fn _ =>  (prove (glno_rv,SIMP_TAC std_ss (MU_SUB_def::NNF_def::RVNEG_def::(tsimps ``:'a mu``)))))
     val no_rv = mk_lthm (fn _ =>  (glno_rv,jfno_rv)) jfno_rv
     val _ = lazyTools.testlz (dpfx^"macmt_no_rv") jfno_rv no_rv(*DBG*)  
     val _ = profTools.ent (dpfx^"macmt_no_rv")(*PRF*)
@@ -401,7 +401,7 @@ let val _ = dbgTools.DEN dpfx "macmt"(*DBG*)
     val _ = profTools.bgt (dpfx^"macmt_no_dmd_gl")(*PRF*)
     val glno_dmd = mk_glno_dmd p_ty mf (*``(!a g. ~SUBFORMULA <<a>> g (NNF (^mf)))``*)
     val _ = profTools.ent (dpfx^"macmt_no_dmd_gl")(*PRF*)
-    val jfno_dmd = (fn _ =>  (prove (glno_dmd,Induct_on `g` THEN SIMP_TAC std_ss (MU_SUB_def::NNF_def::RVNEG_def::(tsimps "mu")))))
+    val jfno_dmd = (fn _ =>  (prove (glno_dmd,Induct_on `g` THEN SIMP_TAC std_ss (MU_SUB_def::NNF_def::RVNEG_def::(tsimps ``:'a mu``)))))
     val no_dmd = mk_lthm (fn _ =>  (glno_dmd,jfno_dmd)) jfno_dmd
     val _ = lazyTools.testlz (dpfx^"macmt_no_dmd") jfno_dmd no_dmd(*DBG*)  
     val _ = profTools.ent (dpfx^"macmt_no_dmd")(*PRF*)
@@ -409,12 +409,12 @@ let val _ = dbgTools.DEN dpfx "macmt"(*DBG*)
     val _ = profTools.bgt (dpfx^"macmt_p_in_ap_gl")(*PRF*)
     val glp_in_ap = mk_glp_in_ap p_ty mf ksname (*``!p. SUBFORMULA (AP p) (^mf) ==> p IN (^(lhs(concl ks_def))).ap``*)
     val _ = dbgTools.CBTM (dpfx^"macmt_glp") glp_in_ap (*DBG*) 
-    val _ = dbgTools.CBTHL (dpfx^"macmt_glpl1") (ks_def::KS_accfupds::combinTheory.K_DEF::MU_SUB_def::NNF_def::RVNEG_def::(tsimps "mu"))
+    val _ = dbgTools.CBTHL (dpfx^"macmt_glpl1") (ks_def::KS_accfupds::combinTheory.K_DEF::MU_SUB_def::NNF_def::RVNEG_def::(tsimps ``:'a mu``))
     val _ = profTools.ent (dpfx^"macmt_p_in_ap_gl")(*PRF*)
     val jfp_in_ap = (fn _ =>  (prove (glp_in_ap,
 		       PURE_REWRITE_TAC (*SIMP_TAC std_ss *)
 				(List.map lazyTools.prove_lthm 
-					  (ks_def::KS_accfupds::combinTheory.K_DEF::MU_SUB_def::NNF_def::RVNEG_def::(tsimps "mu")))
+					  (ks_def::KS_accfupds::combinTheory.K_DEF::MU_SUB_def::NNF_def::RVNEG_def::(tsimps ``:'a mu``)))
 		       THEN BETA_TAC 
 		       THEN RW_TAC pure_ss [] 
 		       THEN CONV_TAC (pred_setLib.IN_CONV (AP_EQ vm)))))

@@ -28,7 +28,13 @@ val ERR = mk_HOL_ERR "ind_types";
 
 (* Fix the grammar used by this file *)
 val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
+val _ = 
+ let val (tyg1,tmg1) = arithmeticTheory.arithmetic_grammars
+     val (tyg2,tmg2) = sumTheory.sum_grammars
+ in Parse.temp_set_grammars 
+     (type_grammar.merge_grammars(tyg1,tyg2),
+      term_grammar.merge_grammars(tmg1,tmg2))
+ end;
 
 
 (*---------------------------------------------------------------------------
@@ -734,8 +740,8 @@ end
  *     Required stuff for sum types                                          *
  *---------------------------------------------------------------------------*)
 
-val sum_INDUCT = TypeBase.induction_of ("sum", "sum")
-val sum_RECURSION = TypeBase.axiom_of ("sum", "sum")
+val sum_INDUCT = TypeBase.induction_of ``:'a + 'b``
+val sum_RECURSION = TypeBase.axiom_of ``:'a + 'b``;
 
 val OUTL = sumTheory.OUTL;
 val OUTR = sumTheory.OUTR;

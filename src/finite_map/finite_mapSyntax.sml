@@ -1,7 +1,6 @@
 structure finite_mapSyntax :> finite_mapSyntax =
 struct
 
-
   open HolKernel boolLib
 
   val ERR = mk_HOL_ERR "finite_mapSyntax"
@@ -90,11 +89,7 @@ struct
   end
   val is_fdom = can dest_fdom
 
-
-
-
 end;
-
 
 
 

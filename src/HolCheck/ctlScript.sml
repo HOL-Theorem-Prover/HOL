@@ -244,7 +244,7 @@ val SUB_xnum_xnum_def =
 val SUB =
  save_thm
   ("SUB",
-   LIST_CONJ(type_rws ("-", "xnum") @
+   LIST_CONJ(type_rws ``:xnum`` @
              [SUB_num_xnum_def,SUB_xnum_num_def,SUB_xnum_xnum_def]));
 
 val _ = overload_on("-", ``SUB_num_xnum``);
@@ -410,9 +410,9 @@ val CTL_NNF = Define `
 (CTL_NNF (C_NOT (C_EG f)) = (C_AF (CTL_NNF (C_NOT f)))) /\
 (CTL_NNF (C_NOT (C_EU(f,g))) = (C_AR(CTL_NNF (C_NOT f),CTL_NNF (C_NOT g))))`;
 
-val ctl_size_def = snd (TypeBase.size_of ("", "ctl"))
+val ctl_size_def = snd (TypeBase.size_of ``:'a ctl``)
 val ctl_size2_def = Define `ctl_size2 (f: 'prop ctl) =  ctl_size (\(a:('prop)).0) f`
-val bexp_size_def = snd (TypeBase.size_of ("", "bexp"));
+val bexp_size_def = snd (TypeBase.size_of ``:'a bexp``);
 val bexp_size2_def = Define `bexp_size2 (b: 'prop bexp) =  bexp_size (\(a:('prop)).0) b`
 
 val bexp_pstv_size = Define `

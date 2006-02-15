@@ -15,7 +15,8 @@ fun tm_free_eq M N P =
  * of a SUBST1_TAC.                                                          *
  *---------------------------------------------------------------------------*)
 
-val VAR_INTRO_TAC = REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC;
+val VAR_INTRO_TAC = REPEAT_TCL STRIP_THM_THEN 
+                      (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th);
 
 val TERM_INTRO_TAC =
  REPEAT_TCL STRIP_THM_THEN
@@ -99,7 +100,7 @@ fun find_subterm qtm (g as (asl,w)) =
 fun primCases_on st (g as (_,w)) =
  let val ty = cat_tyof st
      val {Thy,Tyop,...} = dest_thy_type ty
- in case TypeBase.read {Tyop=Tyop,Thy=Thy}
+ in case TypeBase.fetch ty
      of SOME facts =>
         let val thm = TypeBasePure.nchotomy_of facts
         in case st
@@ -113,7 +114,7 @@ fun primCases_on st (g as (_,w)) =
                             else TERM_INTRO_TAC (ISPEC M thm) g
         end
       | NONE => raise ERR "primCases_on"
-                   ("No cases theorem found for type: "^Lib.quote Tyop)
+                ("No cases theorem found for type: "^Lib.quote (Thy^"$"^Tyop))
  end
 
 fun Cases_on qtm g = primCases_on (find_subterm qtm g) g

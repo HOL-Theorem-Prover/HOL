@@ -33,9 +33,7 @@ open envTheory
 
 infix &&; infix 8 by;
 
-fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ("", ty) in
-                  rewrs
-                end
+fun tsimps ty = let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end
 
 
 (* semantics of mu-calc: [|formula|]_{ks,e} = set of states in which formula is true, for a given (k)ripke (s)tructure and (e)nv *)
@@ -276,7 +274,8 @@ val STATES_MONO_LEM5 = prove(``
       (STATES (RVNEG Q ~f) ks e[[[Q'<--X]]][[[Q<--UNIV DIFF X']]] SUBSET STATES (RVNEG Q ~f) ks e'[[[Q'<--Y]]][[[Q<--UNIV DIFF Y']]])``,
 FULL_SIMP_TAC std_ss [])
 
-val STATES_MONO_NEG_NU_LEM1 = prove(``!Q' Q (f:'prop mu) . SUBFORMULA (~RV Q') (NNF ~nu Q.. f) = SUBFORMULA (~RV Q') (NNF (RVNEG Q ~f))``,SIMP_TAC std_ss ([NNF_def,MU_SUB_def]@(tsimps "mu")))
+val STATES_MONO_NEG_NU_LEM1 = prove(``!Q' Q (f:'prop mu) . SUBFORMULA (~RV Q') (NNF ~nu Q.. f) = SUBFORMULA (~RV Q') (NNF (RVNEG Q ~f))``,
+SIMP_TAC std_ss ([NNF_def,MU_SUB_def]@(tsimps ``:'prop mu``)))
 
 val STATES_MONO_LEM7 = prove(``  ((~SUBFORMULA (~RV Q') (NNF (f:'prop mu))) /\
  (X SUBSET Y) /\ (!Q'.   (if SUBFORMULA (~RV Q') (NNF f) then e Q' = e' Q' else e Q' SUBSET e' Q'))) ==>
@@ -307,7 +306,7 @@ recInduct NNF_IND_def THEN REPEAT CONJ_TAC THEN BETA_TAC THENL [ (* 21 subgoals 
 RW_TAC std_ss [STATES_def,NNF_def,SUBSET_DEF,IN_UNIV], (* T *)
 RW_TAC std_ss [STATES_def,NNF_def,SUBSET_DEF,NOT_IN_EMPTY], (* F *)
 REWRITE_TAC [IMF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,INTER_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,INTER_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ASSUME_TAC (GEN ``Q:string`` (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``(e:string -> 'state -> bool) Q``,``(e':string -> 'state -> bool) Q``] EQ_IMP_SUBSET)))
 THEN IMP_RES_TAC (BETA_RULE (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``\Q. SUBFORMULA (~RV Q) (NNF (f:'prop mu))``,``\Q. SUBFORMULA (~RV Q) (NNF (g:'prop mu))``,``\Q. ((e:string -> 'state -> bool) Q = (e':string -> 'state -> bool) Q)``,``\Q.((e:string -> 'state -> bool) Q SUBSET (e':string -> 'state -> bool) Q)``] GEN_COND_SPLIT_LEM)))
 THEN PAT_ASSUM ``IMF f`` (fn t => ALL_TAC)
@@ -319,7 +318,7 @@ THEN `!x. x IN STATES (NNF (g:'prop mu)) (ks:('prop,'state) KS) e[[[Q<--X]]] ==>
 THEN `!x. x IN STATES (NNF (f:'prop mu)) (ks:('prop,'state) KS)  e[[[Q<--X]]] ==> x IN STATES (NNF f) ks e'[[[Q<--Y]]]` by RES_TAC
 THEN FULL_SIMP_TAC std_ss [], (* /\ *)
 REWRITE_TAC [IMF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,UNION_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,UNION_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ASSUME_TAC (GEN ``Q:string`` (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``(e:string -> 'state -> bool) Q``,``(e':string -> 'state -> bool) Q``] EQ_IMP_SUBSET)))
 THEN IMP_RES_TAC (BETA_RULE (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``\Q. SUBFORMULA (~RV Q) (NNF (f:'prop mu))``,``\Q. SUBFORMULA (~RV Q) (NNF (g:'prop mu))``,``\Q. ((e:string -> 'state -> bool) Q = (e':string -> 'state -> bool) Q)``,``\Q.((e:string -> 'state -> bool) Q SUBSET (e':string -> 'state -> bool) Q)``] GEN_COND_SPLIT_LEM)))
 THEN PAT_ASSUM ``IMF f`` (fn t => ALL_TAC)
@@ -340,11 +339,11 @@ THEN Cases_on `Q'=Q` THENL [
  THEN ASSUME_TAC STATES_MONO_LEM8
  THEN ASSUM_LIST PROVE_TAC], (* RV *)
 REWRITE_TAC [IMF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ` !x. x IN STATES (NNF (f:'prop mu)) (ks:('prop,'state) KS) e[[[Q<--X]]] ==> x IN STATES (NNF f) ks e'[[[Q<--Y]]]` by RES_TAC
 THEN POP_ASSUM (fn t => PROVE_TAC [t]), (* <> *)
 REWRITE_TAC [IMF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ` !x. x IN STATES (NNF (f:'prop mu)) (ks:('prop,'state) KS) e[[[Q<--X]]] ==> x IN STATES (NNF f) ks e'[[[Q<--Y]]]` by RES_TAC
 THEN POP_ASSUM (fn t => PROVE_TAC [t]), (* [] *)
 SIMP_TAC std_ss [IMF_def,STATES_NNF_ID] THEN REPEAT STRIP_TAC
@@ -384,7 +383,7 @@ THEN FULL_SIMP_TAC std_ss []], (* nu *)
 RW_TAC std_ss [STATES_def,NNF_def,SUBSET_DEF,NOT_IN_EMPTY], (* ~T *)
 RW_TAC std_ss [STATES_def,NNF_def,SUBSET_DEF,IN_UNIV], (* ~F *)
 REWRITE_TAC [IMF_def,NNF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,UNION_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,UNION_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ASSUME_TAC (GEN ``Q:string`` (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``(e:string -> 'state -> bool) Q``,``(e':string -> 'state -> bool) Q``] EQ_IMP_SUBSET)))
 THEN IMP_RES_TAC (BETA_RULE (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``\Q. SUBFORMULA (~RV Q) (NNF (f:'prop mu))``,``\Q. SUBFORMULA (~RV Q) (NNF (g:'prop mu))``,``\Q. ((e:string -> 'state -> bool) Q = (e':string -> 'state -> bool) Q)``,``\Q.((e:string -> 'state -> bool) Q SUBSET (e':string -> 'state -> bool) Q)``] GEN_COND_SPLIT_LEM)))
 THEN PAT_ASSUM ``IMF f`` (fn t => ALL_TAC)
@@ -396,7 +395,7 @@ THEN `!x. x IN STATES (NNF ~(g:'prop mu)) (ks:('prop,'state) KS) e[[[Q<--X]]] ==
 THEN `!x. x IN STATES (NNF ~(f:'prop mu)) (ks:('prop,'state) KS) e[[[Q<--X]]] ==> x IN STATES (NNF ~f) ks e'[[[Q<--Y]]]` by RES_TAC
 THEN ASSUM_LIST (fn t => PROVE_TAC [hd t, hd (tl t)]), (* ~/\ *)
 REWRITE_TAC [IMF_def,NNF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,INTER_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,INTER_DEF,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ASSUME_TAC (GEN ``Q:string`` (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``(e:string -> 'state -> bool) Q``,``(e':string -> 'state -> bool) Q``] EQ_IMP_SUBSET)))
 THEN IMP_RES_TAC (BETA_RULE (ONCE_REWRITE_RULE [SUBSET_DEF] (ISPECL [``\Q. SUBFORMULA (~RV Q) (NNF (f:'prop mu))``,``\Q. SUBFORMULA (~RV Q) (NNF (g:'prop mu))``,``\Q. ((e:string -> 'state -> bool) Q = (e':string -> 'state -> bool) Q)``,``\Q.((e:string -> 'state -> bool) Q SUBSET (e':string -> 'state -> bool) Q)``] GEN_COND_SPLIT_LEM)))
 THEN PAT_ASSUM ``IMF f`` (fn t => ALL_TAC)
@@ -417,11 +416,11 @@ THEN ONCE_REWRITE_TAC [SUBSET_DEST]
 THEN DISJ2_TAC
 THEN ASSUM_LIST (fn t=> PROVE_TAC (STATES_MONO_LEM9::t)), (* ~ RV *)
 REWRITE_TAC [IMF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ` !x. x IN STATES (NNF ~(f:'prop mu)) (ks:('prop,'state) KS) e[[[Q<--X]]] ==> x IN STATES (NNF ~f) ks e'[[[Q<--Y]]]` by RES_TAC
 THEN POP_ASSUM (fn t => PROVE_TAC [t]), (* ~<> *)
 REWRITE_TAC [IMF_def] THEN REPEAT STRIP_TAC
-THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps "mu")
+THEN FULL_SIMP_TAC std_ss ([STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,MU_SUB_def]@tsimps ``:'prop mu``)
 THEN ` !x. x IN STATES (NNF ~(f:'prop mu)) (ks:('prop,'state) KS) e[[[Q<--X]]] ==> x IN STATES (NNF ~f) ks e'[[[Q<--Y]]]` by RES_TAC
 THEN POP_ASSUM (fn t => PROVE_TAC [t]), (* ~[] *)
 FULL_SIMP_TAC std_ss [STATES_def,NNF_def,SUBSET_DEF,SET_SPEC,IMF_def], (* ~~ *)

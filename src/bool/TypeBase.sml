@@ -26,8 +26,9 @@ in
   fun write tyinfos =
     let
       fun write1 tyinfo =
-        (dBase := add (theTypeBase()) tyinfo;
-         Parse.temp_overload_on("case", case_const_of tyinfo))
+        (dBase := insert (theTypeBase()) tyinfo;
+         Parse.temp_overload_on("case", case_const_of tyinfo)
+         handle HOL_ERR _ => ())
       val tyinfos = list_compose (!update_fns) tyinfos
       val () = app write1 tyinfos
     in
@@ -52,37 +53,49 @@ fun fancyread (Thy,Tyop) =
         | SOME tyi => tyi
       end
 
+fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
+
 val elts = listItems o theTypeBase;
 
-fun print_sp_type (thy,tyop) = if thy = "" then tyop
-                               else thy ^ "$" ^ tyop
+fun print_sp_type ty = 
+  let val {Thy,Tyop,Args} = dest_thy_type ty
+  in Thy ^ "$" ^ Tyop
+  end;
 
-fun valOf2 sp t opt =
+fun valOf2 ty t opt =
   case opt of
-    NONE => raise ERR t ("No "^t^" information for type "^print_sp_type sp)
+    NONE => raise ERR t ("No "^t^" information for type "^print_sp_type ty)
   | SOME x => x
 
-fun axiom_of s        = TypeBasePure.axiom_of (fancyread s)
-fun induction_of s    = TypeBasePure.induction_of (fancyread s)
-fun constructors_of s = TypeBasePure.constructors_of (fancyread s)
-fun case_const_of s   = TypeBasePure.case_const_of (fancyread s)
-fun case_cong_of s    = TypeBasePure.case_cong_of (fancyread s)
-fun case_def_of s     = TypeBasePure.case_def_of (fancyread s)
-fun nchotomy_of s     = TypeBasePure.nchotomy_of (fancyread s)
-fun fields_of s       = TypeBasePure.fields_of (fancyread s)
-fun distinct_of s     = valOf2 s "distinct_of"
-                            (TypeBasePure.distinct_of (fancyread s))
-fun one_one_of s      = valOf2 s "one_one_of"
-                            (TypeBasePure.one_one_of (fancyread s))
-fun simpls_of s       = TypeBasePure.simpls_of (fancyread s)
-fun size_of s         = valOf2 s "size_of"
-                            (TypeBasePure.size_of (fancyread s))
-fun encode_of s       = valOf2 s "encode_of"
-                            (TypeBasePure.encode_of (fancyread s))
-fun axiom_of0 s       = TypeBasePure.axiom_of0 (fancyread s)
-fun induction_of0 s   = TypeBasePure.induction_of0 (fancyread s)
-fun size_of0 s        = TypeBasePure.size_of0 (fancyread s)
-fun encode_of0 s      = TypeBasePure.encode_of0 (fancyread s)
+fun pfetch s ty = 
+ case TypeBasePure.fetch (theTypeBase()) ty
+  of SOME x => x
+   | NONE => raise ERR s 
+              ("unable to find "^
+               Lib.quote (print_sp_type ty)^" in the TypeBase");
+
+fun axiom_of ty        = TypeBasePure.axiom_of (pfetch "axiom_of" ty)
+fun induction_of ty    = TypeBasePure.induction_of (pfetch "induction_of" ty)
+fun constructors_of ty = TypeBasePure.constructors_of (pfetch "constructors_of" ty)
+fun case_const_of ty   = TypeBasePure.case_const_of (pfetch "case_const_of" ty)
+fun case_cong_of ty    = TypeBasePure.case_cong_of (pfetch "case_cong_of" ty)
+fun case_def_of ty     = TypeBasePure.case_def_of (pfetch "case_def_of" ty)
+fun nchotomy_of ty     = TypeBasePure.nchotomy_of (pfetch "nchotomy_of" ty)
+fun fields_of ty       = TypeBasePure.fields_of (pfetch "fields_of" ty)
+fun simpls_of ty       = TypeBasePure.simpls_of (pfetch "simpls_of" ty)
+fun axiom_of0 ty       = TypeBasePure.axiom_of0 (pfetch "axiom_of" ty)
+fun induction_of0 ty   = TypeBasePure.induction_of0 (pfetch "induction_of0" ty)
+
+fun distinct_of ty     = valOf2 ty "distinct_of"
+                           (TypeBasePure.distinct_of (pfetch "distinct_of" ty))
+fun one_one_of ty      = valOf2 ty "one_one_of"
+                            (TypeBasePure.one_one_of (pfetch "one_one_of" ty))
+fun size_of0 ty        = TypeBasePure.size_of0 (pfetch "size_of0" ty)
+fun encode_of0 ty      = TypeBasePure.encode_of0 (pfetch "encode_of0" ty)
+fun size_of ty         = valOf2 ty "size_of"
+                           (TypeBasePure.size_of (pfetch "size_of" ty))
+fun encode_of ty       = valOf2 ty "encode_of"
+                            (TypeBasePure.encode_of (pfetch "encode_of" ty))
 
 
 
@@ -90,9 +103,10 @@ fun encode_of0 s      = TypeBasePure.encode_of0 (fancyread s)
  * Install datatype facts for booleans into theTypeBase.                     *
  *---------------------------------------------------------------------------*)
 
-val [bool_info] = TypeBasePure.gen_tyinfo {ax=boolTheory.boolAxiom,
-                              ind=boolTheory.bool_INDUCT,
-                              case_defs = [boolTheory.bool_case_thm]};
+val [bool_info] = TypeBasePure.gen_datatype_info 
+                         {ax=boolTheory.boolAxiom,
+                          ind=boolTheory.bool_INDUCT,
+                          case_defs = [boolTheory.bool_case_thm]};
 
 val _ = write [bool_info];
 

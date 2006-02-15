@@ -19,12 +19,12 @@ val compare_def = Define `
 /\ (compare EQUAL   lt eq gt = eq)
 /\ (compare GREATER lt eq gt = gt) `
 
-fun type_rws tyn = #rewrs (TypeBase.simpls_of ("-", tyn))
+fun type_rws ty = #rewrs (TypeBase.simpls_of ty)
 
 val thms =
   LIST_CONJ
-    (INST_TYPE[Type.alpha |-> Type`:ordering`] REFL_CLAUSE
-     :: tl (type_rws "ordering"));
+    (INST_TYPE[Type.alpha |-> ``:ordering``] REFL_CLAUSE
+     :: tl (type_rws ``:ordering``));
 
 val ordering_eq_dec = save_thm("ordering_eq_dec",
   PURE_REWRITE_RULE[GSYM (hd (rev (CONJUNCTS (SPEC_ALL EQ_CLAUSES))))] thms);

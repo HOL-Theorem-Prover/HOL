@@ -357,17 +357,18 @@ fun enum_type_to_tyinfo (ty, constrs) = let
   val case_cong = Prim_rec.case_cong_thm nchotomy case_def
   open TypeBasePure
   val tyinfo0 =
-      mk_tyinfo { ax = ORIG initiality,
-                  induction = ORIG induction,
-                  case_def = case_def,
-                  case_cong = case_cong,
-                  nchotomy = nchotomy,
-                  size = size,
-                  encode = NONE,
-                  lift = NONE,
-                  one_one = NONE,
-                  fields = [],
-                  distinct = distinct }
+      mk_datatype_info 
+         {ax = ORIG initiality,
+          induction = ORIG induction,
+          case_def = case_def,
+          case_cong = case_cong,
+          nchotomy = nchotomy,
+          size = size,
+          encode = NONE,
+          lift = NONE,
+          one_one = NONE,
+          fields = [],
+          distinct = distinct }
 in
   case distinct of
     NONE => (update_tyinfo ty eq_elim_th rep_thm tyinfo0,
@@ -387,8 +388,8 @@ end (* struct *)
 (*
 
 val {TYPE,constrs,defs, ABSconst, REPconst,
-     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO, simpls}
-  = define_enum_type
+     ABS_REP, REP_ABS, ABS_11, REP_11, ABS_ONTO, REP_ONTO}
+  = time define_enum_type
             ("colour", ["red", "green", "blue", "brown", "white"],
              "num2colour", "colour2num");
 

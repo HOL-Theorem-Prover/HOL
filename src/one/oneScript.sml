@@ -160,7 +160,7 @@ val _ = adjoin_to_theory
        fun NL() = PP.add_newline ppstrm
    in
       S "val _ = TypeBase.write";               NL();
-      S "  (TypeBasePure.gen_tyinfo";           NL();
+      S "  (TypeBasePure.gen_datatype_info";    NL();
       S "     {ax=one_prim_rec,";               NL();
       S "      ind=one_induction,";             NL();
       S "      case_defs = [one_case_thm]});";  NL();

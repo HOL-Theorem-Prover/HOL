@@ -121,7 +121,7 @@ in
            dprocs = [], ac = [], congs = []}
 end
 
-fun add_simpls tyinfo ss = ss ++ tyi_to_ssdata tyinfo
+fun add_simpls tyinfo ss = (ss ++ tyi_to_ssdata tyinfo) handle HOL_ERR _ => ss;
 
 fun is_dneg tm = 1 < snd(strip_neg tm);
 
@@ -390,7 +390,8 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl;
 
-fun update_fn tyi = augment_srw_ss [tyi_to_ssdata tyi]
+fun update_fn tyi = 
+  augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 
 val () =
   TypeBase.register_update_fn (fn tyinfos => (app update_fn tyinfos; tyinfos))

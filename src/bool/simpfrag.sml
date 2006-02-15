@@ -10,6 +10,8 @@ type convdata = { name: string,
 
 type simpfrag = { convs: convdata list, rewrs: thm list}
 
+val empty_simpfrag = {convs = [], rewrs = []};
+
 fun add_rwts {convs, rewrs} newrwts = {convs = convs, rewrs = rewrs @ newrwts};
 
 end;

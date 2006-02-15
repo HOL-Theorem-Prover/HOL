@@ -415,7 +415,7 @@ val _ = adjoin_to_theory
        fun NL() = PP.add_newline ppstrm
    in
       S "val _ = TypeBase.write";                           NL();
-      S "  [TypeBasePure.mk_tyinfo";                        NL();
+      S "  [TypeBasePure.mk_datatype_info";                 NL();
       S "     {ax=TypeBasePure.ORIG sum_Axiom,";            NL();
       S "      case_def=sum_case_def,";                     NL();
       S "      case_cong=sum_case_cong,";                   NL();
@@ -436,7 +436,7 @@ val _ = adjoin_to_theory
    end)};
 
 val _ = TypeBase.write
-  [TypeBasePure.mk_tyinfo
+  [TypeBasePure.mk_datatype_info
      {ax=TypeBasePure.ORIG sum_Axiom,
       case_def=sum_case_def,
       case_cong=sum_case_cong,

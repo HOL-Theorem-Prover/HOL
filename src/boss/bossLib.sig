@@ -44,7 +44,7 @@ sig
   val list_ss        : simpset
   val srw_ss         : unit -> simpset
   val ARITH_ss       : ssfrag            (* arithmetic d.p. + some rewrites *)
-  val type_rws       : string * string -> thm list
+  val type_rws       : hol_type -> thm list
   val rewrites       : thm list -> ssfrag
   val augment_srw_ss : ssfrag list -> unit
 

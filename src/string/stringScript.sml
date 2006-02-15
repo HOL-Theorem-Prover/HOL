@@ -251,7 +251,7 @@ val STRLEN_DEF = new_recursive_definition
 
 
 val _ = TypeBase.write
-     [TypeBasePure.mk_tyinfo
+     [TypeBasePure.mk_datatype_info
        {ax=TypeBasePure.ORIG string_Axiom,
         case_def=STRING_CASE_DEF,
         case_cong=STRING_CASE_CONG,
@@ -268,11 +268,12 @@ val _ = TypeBase.write
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
 (*---------------------------------------------------------------------------*)
 
-val DEST_STRING = new_recursive_definition
-{name = "DEST_STRING",
- def = ``(DEST_STRING "" = NONE) /\
-         (DEST_STRING (STRING c rst) = SOME(c,rst))``,
- rec_axiom = string_Axiom};
+val DEST_STRING = 
+ new_recursive_definition
+   {name = "DEST_STRING",
+    def = ``(DEST_STRING "" = NONE) /\
+            (DEST_STRING (STRING c rst) = SOME(c,rst))``,
+    rec_axiom = string_Axiom};
 
 
 val DEST_STRING_LEMS = Q.store_thm
@@ -499,7 +500,7 @@ val _ = adjoin_to_theory
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
    S "val _ = TypeBase.write";
-   S "  [TypeBasePure.mk_tyinfo";
+   S "  [TypeBasePure.mk_datatype_info";
    S "     {ax=TypeBasePure.ORIG string_Axiom,";
    S "      case_def=STRING_CASE_DEF,";
    S "      case_cong=STRING_CASE_CONG,";

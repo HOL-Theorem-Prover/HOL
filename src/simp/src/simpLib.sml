@@ -311,8 +311,8 @@ fun FULL_SIMP_TAC ss l =
     creating per-type ssdata values
    ---------------------------------------------------------------------- *)
 
-fun type_ssfrag s = let
-  val {rewrs, convs} = TypeBase.simpls_of s
+fun type_ssfrag ty = let
+  val {rewrs, convs} = TypeBase.simpls_of ty
 in
   SSFRAG {convs = convs, rewrs = rewrs, filter = NONE,
            dprocs = [], ac = [], congs = []}

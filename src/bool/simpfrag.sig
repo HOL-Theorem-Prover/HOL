@@ -9,6 +9,7 @@ sig
 
   type simpfrag = { convs: convdata list, rewrs: thm list}
 
+  val empty_simpfrag : simpfrag
   val add_rwts : simpfrag -> thm list -> simpfrag
 
 end;

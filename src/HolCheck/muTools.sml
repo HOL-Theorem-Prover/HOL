@@ -17,13 +17,13 @@ val IS_PROP_tm = ``muSyntax$IS_PROP``; (* FIXME: this should be in muSyntax? *)
 val _ = set_trace "notify type variable guesses" 0;
 
 fun mk_tysimps sel p_ty = 
-(fn _ => ((List.hd(CONJUNCTS(List.last(tsimps "mu"))))
+(fn _ => ((List.hd(CONJUNCTS(List.last(tsimps ``:'a mu``))))
 				     ::((List.filter (fn th => can (match_term 
 									(``~(((RV a):'prop mu) = (b:'prop mu))``)) 
-								   (concl (SPEC_ALL th))) (tsimps "mu"))@
+								   (concl (SPEC_ALL th))) (tsimps ``:'a mu``))@
 					(List.filter (fn th => can (match_term 
 									(``~(((Not a):'prop mu) = (b:'prop mu))``)) 
-								   (concl (SPEC_ALL th))) (tsimps "mu"))),sel))
+								   (concl (SPEC_ALL th))) (tsimps ``:'a mu``))),sel))
 
 fun mk_imf_thm imftm mf tysimps prop_type = 
     let val jf = (fn _ => 
