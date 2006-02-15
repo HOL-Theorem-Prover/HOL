@@ -1,5 +1,5 @@
 (* app load ["bitsTheory","word32Theory"]; *)
-open HolKernel boolLib bossLib Parse Q arithmeticTheory whileTheory bitsTheory word32Theory;
+open bitsLib simpLib HolKernel boolLib bossLib Parse Q arithmeticTheory whileTheory bitsTheory word32Theory;
 
 val _ = type_abbrev("word", ``:word32``);
 
@@ -28,6 +28,8 @@ val _ = Hol_datatype `state_BOOTH = BOOTH of num=>num=>bool=>num=>word=>word`;
 val MOD_CNTW_def = Define `MOD_CNTW n = n MOD (WL DIV 2)`;
 
 (* -------------------------------------------------------- *)
+
+
 
 val MSHIFT_def = Define`
   MSHIFT borrow mul count1 =
@@ -241,7 +243,7 @@ val MUST_BE_THREE = prove(
 
 (* -------------------------------------------------------- *)
 
-val ssd = simpLib.SIMPSET {ac = [(SPEC_ALL WORD_ADD_ASSOC, SPEC_ALL WORD_ADD_COMM),
+val ssd = simpLib.SSFRAG {ac = [(SPEC_ALL WORD_ADD_ASSOC, SPEC_ALL WORD_ADD_COMM),
                                  (SPEC_ALL WORD_MULT_ASSOC, SPEC_ALL WORD_MULT_COMM)],
                 congs = [], convs = [], dprocs = [], filter = NONE, rewrs = []};
 val word_ss = bool_ss++ssd;

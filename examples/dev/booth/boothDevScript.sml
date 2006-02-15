@@ -20,47 +20,126 @@ and computes (rm * rs + (if a then rn else 0w)).
 quietdec := true;
 loadPath := ".." :: "../dff" :: !loadPath;
 map load
- ["boothTheory","compileTheory","compile","metisLib","intLib"];
-open boothTheory compile metisLib;
+ ["inlineCompile","fpgaCodeGenerator",
+  "word32Theory","boothTheory","compile","metisLib",
+  "arithmeticTheory","intLib","vsynth"];
+open boothTheory vsynth compile metisLib inlineCompile;
 val _ = intLib.deprecate_int();
 val _ = (if_print_flag := false);
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+
+(*-----------------------------------------------------------------------------
+  Boilerplate needed for compilation
+-----------------------------------------------------------------------------*)
+open HolKernel Parse boolLib bossLib metisLib;
 
 
 (* ---------------------------------------------------------------
    Open theories
 --------------------------------------------------------------- *)
-open boothTheory compileTheory compile metisLib intLib;
+open word32Theory boothTheory compile metisLib intLib 
+     vsynth arithmeticTheory inlineCompile
+     fpgaCodeGenerator;
 
 
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
+(*-----------------------------------------------------------------------------
+  Set default parsing to natural numbers rather than integers
+-----------------------------------------------------------------------------*)
 val _ = intLib.deprecate_int();
 
-
-(*****************************************************************************)
+(*---------------------------------------------------------------------------*)
 (* END BOILERPLATE                                                           *)
-(*****************************************************************************)
+(*---------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Start new theory "boothDev"                                               *)
+(*---------------------------------------------------------------------------*)
+val _ = new_theory "boothDev"; 
+infixr 3 THENR;
+val _ = type_abbrev("word",``:word32``);
+
+(*---------------------------------------------------------------------------*)
+(* Converts the value of HB_def into a string                                *)
+(*---------------------------------------------------------------------------*)
+fun HB() = let fun tm2str tm = let val saved_val = !show_types
+                                   val _ = (show_types := false)
+                                   val s = Parse.term_to_string tm
+                                   val _ = (show_types := saved_val)
+                               in s 
+                               end
+           in tm2str ((snd o dest_eq o snd o dest_thm) HB_def)
+           end;
+
+val _ = add_vsynth 
+ [(``\(sw:bool,in1:num,in2:num). if sw then in1 else in2``,
+    (fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))),
+  (``\(sw:bool,in1:word,in2:word). if sw then in1 else in2``,
+    (fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))),
+  (``\(sw:bool,in1:bool,in2:bool). if sw then in1 else in2``,
+    (fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))),
+  (``(UNCURRY ($= :num->num->bool))``,(fn[inp1,inp2] => inp1 ^ " == " ^ inp2)),
+  (``(UNCURRY ($+ :num->num->num))``,(fn[inp1,inp2] => inp1 ^ " + " ^ inp2)),
+  (``(UNCURRY ($+ :word->word->word))``,(fn[inp1,inp2] => inp1 ^ " + " ^ inp2)),
+  (``(UNCURRY ($MOD :num->num->num))``,(fn[inp1,inp2] => inp1 ^ " % " ^ inp2)),
+  (``(UNCURRY ($* :num->num->num))``,(fn[inp1,inp2] => inp1 ^ " * " ^ inp2)),
+  (``(UNCURRY ($<< :word->num->word))``,(fn[inp1,inp2] => inp1 ^ " << " ^ inp2)),
+  (``(UNCURRY ($- :word->word->word))``,(fn[inp1,inp2] => inp1 ^ " - " ^ inp2)),
+  (``(UNCURRY ($- :num->num->num))``,(fn[inp1,inp2] => inp1 ^ " - " ^ inp2)),
+  (``(UNCURRY BIT)``,(fn[inp1,inp2] => ("("^inp2^" << ("^HB()^"-" ^inp1^")) >> "^HB()))),
+  (``(UNCURRY ($DIV :num->num->num))``,(fn[inp1,inp2] => inp1 ^ " / " ^ inp2)),
+  (``(UNCURRY $/\)``,(fn[inp1,inp2] => inp1 ^ " && " ^ inp2)),
+  (``(UNCURRY $\/)``,(fn[inp1,inp2] => inp1 ^ " || " ^ inp2)),
+  (``w2n``,(fn[inp] => inp)),
+  (``($~ :bool->bool)``,(fn[inp] => ("!" ^ inp))),
+  (``(BITS 31 1)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+1)"))),
+  (``(BITS 1 0)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-1)) >> (("^HB()^"-1)+0)"))),
+  (``(BITS 31 3)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+3)"))),
+  (``(BITS 31 5)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+5)"))),
+  (``(BITS 31 7)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+7)"))),
+  (``(BITS 31 9)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+9)"))),
+  (``(BITS 31 11)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+11)"))),
+  (``(BITS 31 13)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+13)"))),
+  (``(BITS 31 15)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+15)"))),
+  (``(BITS 31 17)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+17)"))),
+  (``(BITS 31 19)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+19)"))),
+  (``(BITS 31 21)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+21)"))),
+  (``(BITS 31 23)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+23)"))),
+  (``(BITS 31 25)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+25)"))),
+  (``(BITS 31 27)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+27)"))),
+  (``(BITS 31 29)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+29)"))),
+  (``(BITS HB 02)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-" ^ HB()^")) >> (("^HB()^"-"^HB()^")+2)"))),
+  (``(BITS 31 02)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-31)) >> (("^HB()^"-31)+2)"))),
+  (``(BITS (HB-2) 0)``, 
+      (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-(" ^ HB()^"-2))) >> (("^HB()^"-("^HB()^"-2))+0)"))),
+  (``(BITS 29 0)``, 
+       (fn[inp] => ("(" ^ inp ^ " << (" ^ HB() ^ "-29)) >> (("^HB()^"-29)+0)")))
+ ];
+
 
 (*****************************************************************************)
 (* Turn of COMB_SYNTH_COMB messages                                          *)
 (*****************************************************************************)
 val _ = (if_print_flag := false);
-
-(* ---------------------------------------------------------------
-   Start a new theory
---------------------------------------------------------------- *)
-val _ = new_theory "boothDev";
-
-infixr 3 THENR;
-val _ = type_abbrev("word",``:word32``);
 
 (* ---------------------------------------------------------------
    MOD_CNTWd counts the number of shifts to be performed
@@ -69,19 +148,20 @@ val _ = type_abbrev("word",``:word32``);
    The constant WL is the word length.
 --------------------------------------------------------------- *)
 
-val _ = add_combinational ["MOD","WL","DIV"];
+val _ = add_combinational ["MOD","WL","DIV","*","uBITS","BITS","HB","w2n","n2w",
+                           "word_lsl","word_mul","word_add","word_sub",
+                           "HB","BITT","BITTT"];
 
-val (MOD_CNTWd_def,_,MOD_CNTWd_dev) = hwDefine
+val (MOD_CNTWd_def,_,MOD_CNTWd_dev,MOD_CNTWd_comb,_) = hwDefine2
 
     `MOD_CNTWd n = n MOD (WL DIV 2)`;
 
-val MOD_CNTWd_cir =
- MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) MOD_CNTWd_dev);
+
 
 (* ---------------------------------------------------------------
    MSHIFTd
 --------------------------------------------------------------- *)
-val (MSHIFTd_def,_,MSHIFTd_dev) = hwDefine
+val (MSHIFTd_def,_,MSHIFTd_dev,MSHIFTd_comb,_) = hwDefine2
 
     `MSHIFTd(borrow,mul,count1) = count1 * 2 +
                      if borrow /\ (mul=1) \/
@@ -92,9 +172,7 @@ val (MSHIFTd_def,_,MSHIFTd_dev) = hwDefine
    ALUd
 --------------------------------------------------------------- *)
 
-val _ = add_combinational ["word_add","word_sub"];
-
-val (ALUd_def,_,ALUd_dev) = hwDefine
+val (ALUd_def,_,ALUd_dev,ALUd_comb,_) = hwDefine2
 
     `ALUd(borrow2,mul,alua,alub) =
                   if ~borrow2 /\ (mul = 0) \/
@@ -105,8 +183,6 @@ val (ALUd_def,_,ALUd_dev) = hwDefine
                   else
                      alua - alub`;
 
-val ALUd_cir =
- MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ALUd_dev);
 
 (* ---------------------------------------------------------------
    INITd
@@ -116,9 +192,7 @@ val ALUd_cir =
    The variable rd stores the result of the multiplication.
 --------------------------------------------------------------- *)
 
-val _ = add_combinational ["BITS","HB","w2n","n2w"];
-
-val (INITd_def,_,INITd_dev) = hwDefine
+val (INITd_def,_,INITd_dev,INITd_comb,_) = hwDefine2
 
     `INITd(a,rm:word,rs,rn) = (BITS 1 0 (w2n rs),
                                BITS HB 2 (w2n rs),
@@ -127,15 +201,11 @@ val (INITd_def,_,INITd_dev) = hwDefine
                                rm,
                                if a then rn else 0w)`;
 
-val INITd_cir =
- MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) INITd_dev);
-
 
 (* ---------------------------------------------------------------
    NEXTd computes the next state from the current one
 --------------------------------------------------------------- *)
-val (NEXTd_def,_,NEXTd_dev) = hwDefine
-
+val (NEXTd_def,_,NEXTd_dev,NEXTd_comb,_) = hwDefine2
     `NEXTd(mul,mul2,borrow2,mshift,rm:word,rd) =
                    (BITS 1 0 (BITS (HB-2) 0 mul2),
                     BITS HB 2 (BITS (HB-2) 0 mul2),
@@ -147,11 +217,11 @@ val (NEXTd_def,_,NEXTd_dev) = hwDefine
                     ALUd(borrow2,mul,rd,rm << mshift))`;
 
 
-
 (* ---------------------------------------------------------------
    APPLY_NEXTd applies the next state function t times
 --------------------------------------------------------------- *)
-val (APPLY_NEXTd_def,_,APPLY_NEXTd_dev) = hwDefine
+val (APPLY_NEXTd_def,_,APPLY_NEXTd_dev,
+     APPLY_NEXTd_comb,APPLY_NEXTd_tot) = hwDefine2
 
    `(APPLY_NEXTd(t,inp) = if t=0 then inp
                           else APPLY_NEXTd(t-1,NEXTd inp))
@@ -162,7 +232,7 @@ val (APPLY_NEXTd_def,_,APPLY_NEXTd_dev) = hwDefine
    STATEd computes the initial state and applies the next
    state function t times
 --------------------------------------------------------------- *)
-val (STATEd_def,_,STATEd_dev) = hwDefine
+val (STATEd_def,_,STATEd_dev,STATEd_comb,_) = hwDefine2
 
     `STATEd(t,(a,rm,rs,rn)) = APPLY_NEXTd(t,INITd(a,rm,rs,rn))`;
 
@@ -171,7 +241,7 @@ val (STATEd_def,_,STATEd_dev) = hwDefine
    DURd returns the duration or the number of transitions
    taken for the state-machine to compute the multiplication.
 --------------------------------------------------------------- *)
-val (DURd_def,_,DURd_dev) = hwDefine
+val (DURd_def,_,DURd_dev,DURd_comb,_) = hwDefine2
 
     `DURd w = if      BITS 31  1 (w2n w) = 0 then  1
               else if BITS 31  3 (w2n w) = 0 then  2
@@ -195,7 +265,7 @@ val (DURd_def,_,DURd_dev) = hwDefine
    PROJ_RDd projects the result of the multiplication from
    the state
 --------------------------------------------------------------- *)
-val (PROJ_RDd_def,_,PROJ_RDd_dev) = hwDefine
+val (PROJ_RDd_def,_,PROJ_RDd_dev,PROJ_RDd_comb,_) = hwDefine2
 
     `PROJ_RDd(mul:num, mul2:num, borrow2:bool,
               mshift:num, rm:word32, rd:word32) = rd`;
@@ -207,7 +277,8 @@ val (PROJ_RDd_def,_,PROJ_RDd_dev) = hwDefine
    that |- BOOTHMULTPLY a rm rs rn
            = (rm * rs + (if a then rn else 0w))
 --------------------------------------------------------------- *)
-val (BOOTHMULTIPLYd_def,_,BOOTHMULTIPLYd_dev) = hwDefine
+val (BOOTHMULTIPLYd_def,_,BOOTHMULTIPLYd_dev,
+     BOOTHMULTIPLYd_comb,_) = hwDefine2
 
     `BOOTHMULTIPLYd(a,rm,rs,rn) = PROJ_RDd(STATEd(DURd rs,a,rm,rs,rn))`;
 
@@ -216,7 +287,7 @@ val (BOOTHMULTIPLYd_def,_,BOOTHMULTIPLYd_dev) = hwDefine
 (* ---------------------------------------------------------------
    MULTd is the main function.
 --------------------------------------------------------------- *)
-val (MULTd_def,_,MULTd_dev) = hwDefine
+val (MULTd_def,_,MULTd_dev,MULTd_comb,_) = hwDefine2
 
     `MULTd(a,b) = BOOTHMULTIPLYd(F,a,b,0w)`;
 
@@ -234,7 +305,6 @@ val MULTd_dev = save_thm("MULTd_dev",
                 THENR DEPTHR (LIB_REFINE [NEXTd_dev])
                 THENR DEPTHR (LIB_REFINE [ALUd_dev,MSHIFTd_dev,MOD_CNTWd_dev])
                 THENR DEPTHR ATM_REFINE) MULTd_dev);
-
 
 
 (* ---------------------------------------------------------------
@@ -450,22 +520,52 @@ val MULTd_CORRECT = store_thm("MULTd_CORRECT",
 (* ---------------------------------------------------------------
    Circuit ===> Dev MULT32
 --------------------------------------------------------------- *)
-val MULTd_dev = save_thm("MULTd",
+val MULTd_dev0 = save_thm("MULTd",
         REWRITE_RULE [MULTd_CORRECT] MULTd_dev);
 
-(* runtime: 39.867s,    gctime: 14.104s,     systime: 0.155s.   *)
+val MULTd_dev = inlineCompile (fst(dest_eq(concl MULTd_comb)))
+                           [BOOTHMULTIPLYd_comb,
+                            DURd_comb,STATEd_comb,PROJ_RDd_comb,
+                            INITd_comb,APPLY_NEXTd_comb,
+                            NEXTd_comb,ALUd_comb,MSHIFTd_comb,
+                            MOD_CNTWd_comb, MULTd_comb]
+                           [APPLY_NEXTd_tot];
+
+(* runtime: 39.867s,    gctime: 14.104s,     systime: 0.155s.   
 val MULTd_net = time MAKE_NETLIST MULTd_dev;
 
-(* Takes rather a long time:
+ Takes rather a long time:
 val MULTd_cir = time MAKE_CIRCUIT MULTd_dev;
-   runtime: 626.740s,    gctime: 233.581s,     systime: 1.850s.
-val MULTd_cir = time MAKE_CIRCUIT MULTd_dev;
+val MULTd_cir = MAKE_CIRCUIT ((SIMP_RULE std_ss [DIVISION,WL_def,HB_def])
+                               MULTd_dev);
 *)
+
+val MULTd_cir = MAKE_CIRCUIT ((SIMP_RULE std_ss [DIVISION,WL_def,HB_def])
+                              MULTd_dev);
+
+(*
+val _ = PRINT_VERILOG MULTd_cir;
+
+val _ = load "fpgaCodeGenerator";
+val _ = fpgaCodeGenerator.programFPGA MULTd_cir;
+*)
+
+
+(* Simulation
+val period  = 5;
+val file_name = "MULTd_SIM";
+val thm = MULTd_cir;
+val stimulus =[("inp1", "5"),("inp2","7")];
+val name = "MULTd_SIM";
+val dump_all = true;
+
+printToFile "MULTd_SIM.vl" (MAKE_SIMULATION name thm period stimulus dump_all);
+*)
+
 
 (*****************************************************************************)
 (* Temporary hack to work around a system prettyprinter bug                  *)
 (*****************************************************************************)
 val _ = temp_overload_on(" * ", numSyntax.mult_tm);
-
 
 val _ = export_theory();
