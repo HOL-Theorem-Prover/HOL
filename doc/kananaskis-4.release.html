@@ -105,15 +105,14 @@ html1/DTD/xhtml1-strict.dtd">
 
   <li> Functions such as <code>induction_of</code> in the
       <code>TypeBase</code> structure that used to take a string (the
-      name of a type operator), now take a pair of strings.  The
-      second string is the name of the type operator, and the first is
-      the name of the theory that the type is from.  If the first
-      string is <code>""</code>, then the information is returned for
-      an arbitrary type of the given name (i.e., this should only be
-      relied on if you <em>know</em> there is just one type of the
-      given name in the current signature).  If the first string is
-      <code>"-"</code>, then this is expanded to the name of the
-      current theory.</li>
+      name of a type operator), now take a type.  Thus, instead of
+<pre>
+         TypeBase.induction_of "num"
+</pre> use
+<pre>
+         TypeBase.induction_of ``:num``
+</pre>
+</li>
 </ul>
 
 
