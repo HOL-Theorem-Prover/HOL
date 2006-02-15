@@ -166,18 +166,23 @@ in
 val duplicate_names = find_dup o Listsort.sort String.compare
 end;
 
+fun prim_mk_type (Thy, Tyop) = let
+  val arity = valOf (Type.op_arity {Thy = Thy, Tyop = Tyop})
+in
+  Type.mk_thy_type {Thy = Thy, Tyop = Tyop,
+                    Args = List.tabulate (arity, fn n => Type.alpha)}
+end
+
 fun check_constrs_unique_in_theory asts = let
   fun cnames (s, Record _) = [(s,s)]
     | cnames (s, Constructors l) = map (fn s' => (s, #1 s')) l
   val newtypes = map #1 asts
   val constrs = List.concat (map cnames asts)
   val current_types = set_diff (map fst (types "-")) newtypes
-  val all_constructors = filter TypeBase.is_constructor (constants "-")
-  fun ty_constr tyname c = (fst(dest_type(snd(strip_fun(type_of c)))) = tyname)
   fun current_constructors (tyname, fm) = let
-    val tys_cons = filter (ty_constr tyname) all_constructors
-(*    val tys_cons = TypeBase.constructors_of ("-", tyname)
-                   handle HOL_ERR _ => [] *)
+    val tys_cons =
+        TypeBase.constructors_of (prim_mk_type (current_theory(), tyname))
+        handle HOL_ERR _ => []
     fun foldthis (c,fm) =
         if uptodate_term c then
           Binarymap.insert(fm, #Name (dest_thy_const c), tyname)
