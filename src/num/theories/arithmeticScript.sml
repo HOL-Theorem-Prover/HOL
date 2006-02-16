@@ -2544,6 +2544,33 @@ val DIV_MOD_MOD_DIV = store_thm(
   MATCH_MP_TAC LESS_MOD THEN ASM_SIMP_TAC bool_ss [DIV_LT_X] THEN
   FULL_SIMP_TAC bool_ss [AC MULT_ASSOC MULT_COMM]);
 
+(* useful if x and z are both constants *)
+val MULT_EQ_DIV = store_thm(
+  "MULT_EQ_DIV",
+  ``0 < x ==> ((x * y = z) = (y = z DIV x) /\ (z MOD x = 0))``,
+  STRIP_TAC THEN EQ_TAC THENL [
+    DISCH_THEN (SUBST_ALL_TAC o SYM) THEN
+    ONCE_REWRITE_TAC [MULT_COMM] THEN
+    ASM_SIMP_TAC bool_ss [MOD_EQ_0, MULT_DIV],
+    Q.SPEC_THEN `x` MP_TAC DIVISION THEN ASM_REWRITE_TAC [] THEN
+    DISCH_THEN (Q.SPEC_THEN `z` STRIP_ASSUME_TAC) THEN
+    REPEAT STRIP_TAC THEN
+    FULL_SIMP_TAC bool_ss [ADD_CLAUSES, MULT_COMM] THEN
+    ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN FIRST_ASSUM ACCEPT_TAC
+  ]);
+
+(* as they are here *)
+val NUMERAL_MULT_EQ_DIV = store_thm(
+  "NUMERAL_MULT_EQ_DIV",
+  ``((NUMERAL (BIT1 x) * y = NUMERAL z) =
+       (y = NUMERAL z DIV NUMERAL (BIT1 x)) /\
+       (NUMERAL z MOD NUMERAL(BIT1 x) = 0)) /\
+    ((NUMERAL (BIT2 x) * y = NUMERAL z) =
+       (y = NUMERAL z DIV NUMERAL (BIT2 x)) /\
+       (NUMERAL z MOD NUMERAL(BIT2 x) = 0))``,
+  CONJ_TAC THEN MATCH_MP_TAC MULT_EQ_DIV THEN
+  REWRITE_TAC [NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, LESS_0]);
+
 
 
 (* ----------------------------------------------------------------------
