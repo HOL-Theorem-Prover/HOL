@@ -12,12 +12,20 @@ val _ = if not (aconv (rhs (concl th)) ``(f:'a -> 'a) (f x)``) then
           die "FAILED!\n"
         else print "OK\n"
 
-val _ = pr "Testing coefficient gathering in ARITH_ss ... "
 val arith_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss
+val SIMP_CONV = fn ss => fn thl => QCONV (SIMP_CONV ss thl)
+val _ = pr "Testing coefficient gathering in ARITH_ss (1) ... "
 val _ = if not (aconv (rhs (concl (SIMP_CONV arith_ss [] ``x + x + x``)))
                       ``3 * x``)
         then die "FAILED!\n"
         else print "OK\n"
+val _ = pr "Testing coefficient gathering in ARITH_ss (2) ... "
+val _ = if not (aconv (rhs (concl (SIMP_CONV arith_ss [] ``x + x * 2``)))
+                      ``3 * x``)
+        then die "FAILED\n"
+        else print "OK\n"
+
+
 
 val _ = pr "Testing arith on ground ctxt ...              "
 val _ = let
