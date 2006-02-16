@@ -119,7 +119,8 @@ val arithmetic_rewrites = [
    MIN_MAX_EQ, MIN_MAX_LT,
 
    (* mods and divs *)
-   X_MOD_Y_EQ_X, DIVMOD_ID, DIV_1, MOD_1, LESS_MOD, ZERO_MOD, MOD_MOD
+   X_MOD_Y_EQ_X, DIVMOD_ID, DIV_1, MOD_1, LESS_MOD, ZERO_MOD, MOD_MOD,
+   NUMERAL_MULT_EQ_DIV
    ]
 end;
 
