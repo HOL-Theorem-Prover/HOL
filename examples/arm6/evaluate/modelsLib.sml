@@ -2,26 +2,35 @@ structure modelsLib :> modelsLib =
 struct
 
 (* interactive use:
-  app load ["pred_setSimps", "io_onestepTheory", "armTheory",
-            "coreThoery", "simTheory"];
+  app load ["pred_setSimps", "io_onestepTheory", "armTheory", "wordsLib",
+            "coreTheory", "simTheory", "instructionTheory"];
 *)
 
 open HolKernel boolLib bossLib;
 open Q computeLib listTheory pairTheory optionTheory wordsTheory;
 open io_onestepTheory armTheory coreTheory simTheory lemmasTheory;
+open instructionTheory;
 
 (* ------------------------------------------------------------------------- *)
 
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
-fun NUMERAL_ONLY_RULE n x =
+fun NUM_ONLY_RULE n x =
   let val y = SPEC_ALL x
   in CONJ
-      ((GEN_ALL o simpLib.SIMP_RULE bossLib.arith_ss [] o INST [n |-> `0`]) y)
+      ((GEN_ALL o INST [n |-> `0`]) y)
       ((GEN_ALL o INST [n |-> `NUMERAL n`]) y)
   end;
 
-val EXTRACT_RULE = SIMP_RULE std_ss [w2w_def,word_extract_def];
+fun WORD_ONLY_RULE n x =
+  let val y = SPEC_ALL x
+  in CONJ
+      ((GEN_ALL o CONV_RULE (RHS_CONV EVAL_CONV) o INST [n |-> `0w`]) y)
+      ((GEN_ALL o INST [n |-> `n2w (NUMERAL n)`]) y)
+  end;
+
+val EXTRACT_RULE1 = SIMP_RULE std_ss [w2w_def,word_extract_def];
+val EXTRACT_RULE2 = CONV_RULE (CBV_CONV (wordsLib.words_compset()));
 
 val common_thms =
   [FST,SND,SUC_RULE EL,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,
@@ -38,19 +47,19 @@ val common_thms =
    SUBST_EVAL,
 
    SET_NZC_def,NZCV_def,USER_def,INC_IS,INC_IS_def,mode_num_def,
-   EXTRACT_RULE DECODE_IFMODE_SET_NZCV,DECODE_NZCV_SET_NZCV,
-   EXTRACT_RULE DECODE_IFMODE_SET_IFMODE,DECODE_NZCV_SET_IFMODE,
+   EXTRACT_RULE1 DECODE_IFMODE_SET_NZCV,DECODE_NZCV_SET_NZCV,
+   EXTRACT_RULE1 DECODE_IFMODE_SET_IFMODE,DECODE_NZCV_SET_IFMODE,
    SET_NZCV_IDEM,SET_IFMODE_IDEM,SET_IFMODE_NZCV_SWP,
    DECODE_PSR_def,DECODE_MODE_def,DECODE_PSR_THM,
    CPSR_READ_def,CPSR_WRITE_def,SPSR_READ_def,SPSR_WRITE_def,
    CPSR_WRITE_n2w,SPSR_WRITE_n2w,mode_reg2num_def,mode2psr_def,
    REG_READ_def,REG_WRITE_def,INC_PC_def,FETCH_PC_def,REG_READ6_def,
-   REG_WRITE_PSR,REG_WRITE_PSR2,word_modify_PSR,word_modify_PSR2,
+   word_modify_PSR,word_modify_PSR2,
    ALU_arith_def,ALU_arith_neg_def,ALU_logic_def,SUB_def,ADD_def,
    AND_def,EOR_def,ORR_def,ALU_def,
    LSL_def,LSR_def,ASR_def,ROR_def,RRX_def,
-   CONDITION_PASSED_def,CONDITION_PASSED2_def,
-   NUMERAL_ONLY_RULE `n` DECODE_INST_THM,MLA_MUL_DUR_n2w];
+   WORD_ONLY_RULE `ireg` CONDITION_PASSED_def,CONDITION_PASSED2_def,
+   DECODE_INST_THM,MLA_MUL_DUR_n2w];
 
 fun arm_compset () =
   let val compset = wordsLib.words_compset ()
@@ -64,14 +73,42 @@ fun arm_compset () =
         state_out_accfupds, state_out_fupdfupds, state_out_literal_11,
         state_out_fupdfupds_comp, state_out_fupdcanon,
         state_out_fupdcanon_comp,
+        transfer_options_accessors, transfer_options_updates_eq_literal,
+        transfer_options_accfupds, transfer_options_fupdfupds,
+        transfer_options_literal_11, transfer_options_fupdfupds_comp,
+        transfer_options_fupdcanon, transfer_options_fupdcanon_comp,
+        state_arm_case_def,shift_case_def,
 
         DECODE_BRANCH_THM,DECODE_DATAP_THM,DECODE_MRS_THM,
         DECODE_MSR_THM,DECODE_LDR_STR_THM,DECODE_SWP_THM,
         DECODE_LDM_STM_THM,DECODE_MLA_MUL_THM,DECODE_LDC_STC_THM,
+        DECODE_PSRD_def, CONDITION_PASSED3_def,
+
+   cond_pass_enc_br, cond_pass_enc_coproc, cond_pass_enc_swp,
+   cond_pass_enc_data_proc, cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,
+   cond_pass_enc_ldm_stm, cond_pass_enc_ldr_str, cond_pass_enc_mla_mul,
+   cond_pass_enc_mrs, cond_pass_enc_msr, cond_pass_enc_swi,
+
+   decode_enc_br, decode_enc_coproc, decode_enc_swp,
+   decode_enc_data_proc, decode_enc_data_proc2, decode_enc_data_proc3,
+   decode_enc_reg_shift, decode_enc_reg_shift2, decode_enc_reg_shift3,
+   decode_enc_ldm_stm, decode_enc_ldr_str, decode_enc_mla_mul,
+   decode_enc_mrs, decode_enc_msr, decode_enc_swi,
+
+   decode_br_enc, decode_ldc_stc_enc, decode_mrc_enc,
+   decode_data_proc_enc, decode_data_proc_enc2, decode_data_proc_enc3,
+   decode_ldm_stm_enc, decode_ldr_str_enc, decode_mla_mul_enc,
+   decode_mrs_enc, decode_msr_enc, decode_swp_enc,
+
+   EXTRACT_RULE2 immediate_enc, EXTRACT_RULE2 immediate_enc2,
+   EXTRACT_RULE2 shift_immediate_enc, EXTRACT_RULE2 shift_immediate_enc2,
+   EXTRACT_RULE2 shift_immediate_shift_register, EXTRACT_RULE2 shift_register_enc,
 
         CARRY_def,BW_READ_def,
         SHIFT_IMMEDIATE2_def,SHIFT_REGISTER2_def,
-        SHIFT_IMMEDIATE_THM,SHIFT_REGISTER_THM,IMMEDIATE_def,
+        NUM_ONLY_RULE `opnd2` SHIFT_IMMEDIATE_THM,
+        NUM_ONLY_RULE `opnd2` SHIFT_REGISTER_THM,
+        WORD_ONLY_RULE `opnd2` IMMEDIATE_def,
         ALU_multiply_def,ARITHMETIC_def,TEST_OR_COMP_def,UP_DOWN_def,
         ADDR_MODE1_def,ADDR_MODE2_def,ADDR_MODE4_def,ADDR_MODE5_def,
         REGISTER_LIST_THM,ADDRESS_LIST_def,FIRST_ADDRESS_def,WB_ADDRESS_def,

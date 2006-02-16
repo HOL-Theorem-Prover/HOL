@@ -7,7 +7,7 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  load "arm_evalLib";
+  app load ["arm_evalLib"];
 *)
 
 open HolKernel boolLib bossLib;
@@ -16,61 +16,58 @@ open arm_evalLib;
 (* ------------------------------------------------------------------------- *)
 
 val zero = Arbnum.zero;
+val eight = Arbnum.fromInt 8;
 val max = valOf Int.maxInt;
 
-(* A selection of instructions, encoded in HOL *)
+(* A selection of instructions *)
 
 val l = [
-  `B AL 4w`,
-  `BL EQ ($- 4w)`,
-  `ADD CS F 4w 3w (Dp_immediate 0w 5w)`,
-  `AND VS T 4w 3w (Dp_shift_immediate (LSL 2w) 0w)`,
-  `TST AL 4w (Dp_shift_immediate (LSL 2w) 1w)`,
-  `MOV AL F 4w (Dp_shift_immediate (ASR 2w) 0w)`,
-  `MVN AL T 4w (Dp_shift_immediate (ROR 2w) 0w)`,
-  `RSC AL F 4w 3w (Dp_shift_register (LSL 2w) 1w)`,
-  `MRS AL F 1w`,
-  `MRS AL T 1w`,
-  `MSR AL CPSR_f (Msr_immediate 2w 5w)`,
-  `MSR AL CPSR_c (Msr_immediate 2w 5w)`,
-  `MSR AL SPSR_a (Msr_immediate 2w 5w)`,
-  `MSR AL SPSR_a (Msr_register 5w)`,
-  `MUL AL T 4w 3w 2w`,
-  `MLA AL F 4w 3w 2w 1w`,
-  `LDR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w (Dt_immediate 0w)`,
-  `LDR AL <|Pre := F;Up := F;BS := T;Wb := T|> 4w 3w (Dt_immediate 4w)`,
-  `LDR AL <|Pre := T;Up := T;BS := T;Wb := T|> 4w 3w (Dt_immediate 4w)`,
-  `LDR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w
-          (Dt_shift_immediate (LSL 2w) 0w)`,
-  `LDR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w
-          (Dt_shift_immediate (ROR 2w) 0w)`,
-  `STR AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 3w
-          (Dt_shift_immediate (LSL 2w) 4w)`,
-  `STR AL <|Pre := T;Up := T;BS := T;Wb := T|> 4w 3w
-          (Dt_shift_immediate (LSL 2w) 4w)`,
-  `LDM AL <|Pre := T;Up := T;BS := T;Wb := T|> 4w 0xF0FFw`,
-  `STM AL <|Pre := F;Up := F;BS := F;Wb := F|> 4w 0x8000w`,
-  `SWP AL F 3w 2w 1w`,
-  `SWP AL T 3w 2w 1w`,
-  `SWI AL`,
-  `UND AL`
-];
+ "B 24",
+ "BL -24",
+ "SWI",
+ "ADDCS r4, r3, #5",
+ "ANDVSS r4, r3, r2",
+ "TST r4, r2, LSL #1",
+ "MOV r4, r2, ASR #32",
+ "MVNS r4, r2, RRX",
+ "RSC r4, r3, r2, LSL r1",
+ "MULS r4, r3, r2",
+ "MLA r4, r3, r2, r1",
+ "LDR r4, [r3]",
+ "LDRB r4, [r3], #-4",
+ "LDRB r4, [r3, #4]!",
+ "LDR r4, [r3], -r2",
+ "LDR r4, [r3], -r2, RRX",
+ "STR r4, [r3], -r2, LSL #4",
+ "STRB r4, [r3, r2, LSL #4]!",
+ "LDMIB r4!, {r0-r7, r12-r15}^",
+ "STMDA r4, {r15}",
+ "SWP r3, r2, [r1]",
+ "SWPB r3, r2, [r1]",
+ "MRS r1, CPSR",
+ "MRS r1, SPSR",
+ "MSR CPSR_f, #1342177280",
+ "MSR CPSR_c, #1342177280",
+ "MSR SPSR, #1342177280",
+ "MSR SPSR, r5",
+ "CDP p1, 2, c3, c4, c5, 6",
+ "LDC p1, c2, [r3], #-16",
+ "STC p1, c2, [r3, #16]!",
+ "MCR p1, 2, r3, c4, c5, 6",
+ "MRC p1, 2, r3, c4, c5, 6",
+ "0xE6000010"];
 
-val hol_prog = hol_assemble ``\x:word30. 0w:word32`` zero l;
+(* val _ = pp_instruction(); *)
 
-(* translate into ARM assembly code *)
-
-fun printn s = print (s ^ "\n");
-
-val _ = map printn (disassemble (length l) hol_prog zero);
+val hol_prog = assemble ``(\x. 0w):mem`` zero l;
 
 (* ------------------------------------------------------------------------- *)
 
 (* Assemble a rudimentary exception handler *)
 
-val mem = assemble ``\x:word30. 0xE6000010w:word32`` zero
+val mem = assemble ``(\x. 0xE6000010w):mem`` zero
   ["movs pc, #32",
-   "label: b label",
+   "b 0",
    "movs pc, r14",
    "subs pc, r14, #4",
    "subs pc, r14, #8",
@@ -78,10 +75,7 @@ val mem = assemble ``\x:word30. 0xE6000010w:word32`` zero
    "subs pc, r14, #4",
    "subs pc, r14, #4"];
 
-(*
-val EXC_HANDLER = "handler";
-val _ = save_mem EXC_HANDLER zero (Arbnum.fromInt 7) false mem;
-*)
+(* val _ = save_mem "handler" zero (Arbnum.fromInt 7) false mem; *)
 
 (* Initial general purpose register values *)
 
@@ -107,7 +101,12 @@ val psr = set_status_registers
 
 (* Testing/Examples *)
 
-val prog = assemble mem (Arbnum.fromInt 8)
+(* To execute machine code...
+val compile = rhs o concl o ARM_ASSEMBLE_CONV;
+val mem = compile mem;
+*)
+
+val prog = assemble mem eight
   ["mov r0, #0xFF00",
    "mov r1, #37",
    "str r1, [r0], #4",
@@ -115,11 +114,11 @@ val prog = assemble mem (Arbnum.fromInt 8)
 
 val res = evaluate max prog reg psr;
 
-val prog1 = assemble1 mem (Arbnum.fromInt 8) "mov r0, #1";
+val prog1 = assemble1 mem eight "mov r0, #1";
 
 val res1 = evaluate max prog1 reg psr;
 
-val prog2 = assemble mem (Arbnum.fromInt 8)
+val prog2 = assemble mem eight
   ["mov r0, #12",
    "mov r1, #10",
    "eor r2, r0, r1",
@@ -129,15 +128,15 @@ val prog2 = assemble mem (Arbnum.fromInt 8)
 
 val res2 = evaluate max prog2 reg psr;
 
-val prog3 = assemble mem (Arbnum.fromInt 8)
-  [       "mov r0, #10",
-   "label: add r0, r0, #1",
-          "cmp r0, #12",
-          "bne label"];
+val prog3 = assemble mem eight
+  ["mov r0, #10",
+   "add r0, r0, #1",
+   "cmp r0, #12",
+   "bne -8"];
 
 val res3 = evaluate max prog3 reg psr;
 
-val prog4 = assemble mem (Arbnum.fromInt 8)
+val prog4 = assemble mem eight
   ["mov r0, #0xF",
    "mov r1, #4",
    "mvn r2, r0, lsl r1",
@@ -148,7 +147,7 @@ val prog4 = assemble mem (Arbnum.fromInt 8)
 
 val res4 = evaluate max prog4 reg psr;
 
-val prog5 = assemble mem (Arbnum.fromInt 8)
+val prog5 = assemble mem eight
   ["mov r0, #0xF",
    "mov r1, #4",
    "mvn r2, r0, lsl r1",
@@ -159,7 +158,7 @@ val prog5 = assemble mem (Arbnum.fromInt 8)
 
 val res5 = evaluate max prog5 reg psr;
 
-val prog6 = assemble mem (Arbnum.fromInt 8)
+val prog6 = assemble mem eight
   ["mov r0, #8",
    "mov r1, #12",
    "mul r2, r0, r1",
@@ -167,7 +166,7 @@ val prog6 = assemble mem (Arbnum.fromInt 8)
 
 val res6 = evaluate max prog6 reg psr;
 
-val prog7 = assemble mem (Arbnum.fromInt 8)
+val prog7 = assemble mem eight
   ["mov  r0, #0xFF",
    "mul  r0, r0, r0",
    "str  r0, [r0], #4",
@@ -177,13 +176,13 @@ val prog7 = assemble mem (Arbnum.fromInt 8)
 
 val res7 = evaluate max prog7 reg psr;
 
-val prog8 = assemble mem (Arbnum.fromInt 8)
+val prog8 = assemble mem eight
   ["ldmia r0, {r1-r10}",
    "stmdb r1, {r1-r10}"];
 
 val res8 = evaluate max prog8 reg psr;
 
-val prog9 = assemble mem (Arbnum.fromInt 8)
+val prog9 = assemble mem eight
   ["mov  r0, #77",
    "mov  r1, #88",
    "mov  r2, #0xF00",
@@ -192,7 +191,7 @@ val prog9 = assemble mem (Arbnum.fromInt 8)
 
 val res9 = evaluate max prog9 reg psr;
 
-val prog10 = assemble ``\x:word30. 0xE6000010w:word32`` zero
+val prog10 = assemble ``(\x. 0xE6000010w):mem`` zero
   ["mrs r0, CPSR",
    "mrs r1, SPSR",
    "mov r2, #0xF0000000",
@@ -200,6 +199,6 @@ val prog10 = assemble ``\x:word30. 0xE6000010w:word32`` zero
    "msr CPSR, r2",
    "msr SPSR_c, r2"];
 
-val res10 = evaluate 6 prog10 reg psr;
+val res10 = evaluate 6 prog10 ``(\x. 0w):reg`` psr;
 
 (* ------------------------------------------------------------------------- *)

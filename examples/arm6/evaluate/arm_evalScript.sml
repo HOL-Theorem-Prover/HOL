@@ -56,7 +56,7 @@ val TRANSFERS_def = Define`
   (TRANSFERS mem data (r::rs) =
    case r of
       MemRead addr -> TRANSFERS mem (SNOC (mem (ADDR30 addr)) data) rs
-   || MemWrite B addr word -> TRANSFERS (MEM_WRITE B mem word addr) data rs
+   || MemWrite b addr word -> TRANSFERS (MEM_WRITE b mem word addr) data rs
    || _ -> TRANSFERS mem data rs)`;
 
 val NEXT_ARMe_def = Define`

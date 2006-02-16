@@ -44,12 +44,13 @@ val _ = Hol_datatype
   `msr_psr = CPSR_c | CPSR_f | CPSR_a | SPSR_c | SPSR_f | SPSR_a`;
 
 val _ = Hol_datatype
-  `transfer_options = <| Pre : bool; Up : bool; BS :bool; Wb : bool |>`;
+  `transfer_options = <| Pre : bool; Up : bool; BSN :bool; Wb : bool |>`;
 
 val _ = Hol_datatype
  `arm_instruction =
     B of condition=>word24
   | BL of condition=>word24
+  | SWI of condition
   | AND of condition=>bool=>word4=>word4=>addr_mode1
   | EOR of condition=>bool=>word4=>word4=>addr_mode1
   | SUB of condition=>bool=>word4=>word4=>addr_mode1
@@ -66,8 +67,6 @@ val _ = Hol_datatype
   | MOV of condition=>bool=>word4=>addr_mode1
   | BIC of condition=>bool=>word4=>word4=>addr_mode1
   | MVN of condition=>bool=>word4=>addr_mode1
-  | MRS of condition=>bool=>word4
-  | MSR of condition=>msr_psr=>msr_mode
   | MUL of condition=>bool=>word4=>word4=>word4
   | MLA of condition=>bool=>word4=>word4=>word4=>word4
   | LDR of condition=>transfer_options=>word4=>word4=>addr_mode2
@@ -75,7 +74,13 @@ val _ = Hol_datatype
   | LDM of condition=>transfer_options=>word4=>word16
   | STM of condition=>transfer_options=>word4=>word16
   | SWP of condition=>bool=>word4=>word4=>word4
-  | SWI of condition
+  | MRS of condition=>bool=>word4
+  | MSR of condition=>msr_psr=>msr_mode
+  | CDP of condition=>word4=>word4=>word4=>word4=>word4=>word3
+  | LDC of condition=>transfer_options=>word4=>word4=>word4=>word8
+  | STC of condition=>transfer_options=>word4=>word4=>word4=>word8
+  | MRC of condition=>word4=>word3=>word4=>word4=>word4=>word3
+  | MCR of condition=>word4=>word3=>word4=>word4=>word4=>word3
   | UND of condition`;
 
 (* ------------------------------------------------------------------------- *)
@@ -85,10 +90,10 @@ val condition_encode_def = Define`
     (w2w (n2w (condition2num cond):word4 #<< 1) << 28):word32`;
 
 val shift_encode_def = Define`
-  (shift_encode (LSL Rn) = (w2w Rn):word32) /\
-  (shift_encode (LSR Rn) = 0x20w !! (w2w Rn):word32) /\
-  (shift_encode (ASR Rn) = 0x40w !! (w2w Rn):word32) /\
-  (shift_encode (ROR Rn) = 0x60w !! (w2w Rn):word32)`;
+  (shift_encode (LSL Rm) = (w2w Rm):word32) /\
+  (shift_encode (LSR Rm) = 0x20w !! w2w Rm) /\
+  (shift_encode (ASR Rm) = 0x40w !! w2w Rm) /\
+  (shift_encode (ROR Rm) = 0x60w !! w2w Rm)`;
 
 val addr_mode1_encode_def = Define`
   addr_mode1_encode op2 =
@@ -121,13 +126,14 @@ val msr_psr_encode_def = Define`
 val options_encode_def = Define`
   options_encode opt =
     word_modify (\i b. (i = 24) /\ opt.Pre \/ (i = 23) /\ opt.Up \/
-                       (i = 22) /\ opt.BS  \/ (i = 21) /\ opt.Wb) 0w`;
+                       (i = 22) /\ opt.BSN \/ (i = 21) /\ opt.Wb) (0w:word32)`;
 
 val instruction_encode_def = Define`
   instruction_encode i =
     case i of
        B  cond offset24 -> condition_encode cond !! 0xA000000w !! w2w offset24
     || BL cond offset24 -> condition_encode cond !! 0xB000000w !! w2w offset24
+    || SWI cond -> condition_encode cond !! 0xF000000w
     || AND cond s Rd Rn Op2 ->
          condition_encode cond !! (s => 0x100000w | 0w) !!
          w2w Rn << 16 !! w2w Rd << 12 !! addr_mode1_encode Op2
@@ -176,12 +182,6 @@ val instruction_encode_def = Define`
     || MVN cond s Rd Op2 ->
          condition_encode cond !! (s => 0x1F00000w | 0x1E00000w) !!
          w2w Rd << 12 !! addr_mode1_encode Op2
-    || MRS cond R Rd ->
-         condition_encode cond !! (R => 0x14F0000w | 0x10F0000w) !!
-         w2w Rd << 12
-    || MSR cond dpsr Op ->
-         condition_encode cond !! 0x120F000w !! msr_psr_encode dpsr !!
-         (msr_mode_encode Op)
     || MUL cond s Rd Rm Rs ->
          condition_encode cond !! (s => 0x100090w | 0x90w) !!
          w2w Rd << 16 !! w2w Rs << 8 !! w2w Rm
@@ -203,7 +203,30 @@ val instruction_encode_def = Define`
     || SWP cond byte Rd Rm Rn ->
          condition_encode cond !! (byte => 0x1400090w | 0x1000090w) !!
          w2w Rn << 16 !! w2w Rd << 12 !! w2w Rm
-    || SWI cond -> condition_encode cond !! 0xF000000w
+    || MRS cond R Rd ->
+         condition_encode cond !! (R => 0x14F0000w | 0x10F0000w) !!
+         w2w Rd << 12
+    || MSR cond psrd Op ->
+         condition_encode cond !! 0x120F000w !! msr_psr_encode psrd !!
+         (msr_mode_encode Op)
+    || CDP cond CPn Cop1 CRd CRn CRm Cop2 ->
+         condition_encode cond !! 0xE000000w !! w2w Cop1 << 20 !!
+         w2w CRn << 16 !! w2w CRd << 12 !! w2w CPn << 8 !!
+         w2w Cop2 << 5 !! w2w CRm
+    || LDC cond options CPn CRd Rn offset8 ->
+         condition_encode cond !! 0xC100000w !! options_encode options !!
+         w2w Rn << 16 !! w2w CRd << 12 !! w2w CPn << 8 !! w2w offset8
+    || STC cond options CPn CRd Rn offset8 ->
+         condition_encode cond !! 0xC000000w !! options_encode options !!
+         w2w Rn << 16 !! w2w CRd << 12 !! w2w CPn << 8 !! w2w offset8
+    || MRC cond CPn Cop1b Rd CRn CRm Cop2 ->
+         condition_encode cond !! 0xE100010w !! w2w Cop1b << 21 !!
+         w2w CRn << 16 !! w2w Rd << 12 !! w2w CPn << 8 !!
+         w2w Cop2 << 5 !! w2w CRm
+    || MCR cond CPn Cop1b Rd CRn CRm Cop2 ->
+         condition_encode cond !! 0xE000010w !! w2w Cop1b << 21 !!
+         w2w CRn << 16 !! w2w Rd << 12 !! w2w CPn << 8 !!
+         w2w Cop2 << 5 !! w2w CRm
     || UND cond -> condition_encode cond !! 0x6000010w`;
 
 (* ------------------------------------------------------------------------- *)
