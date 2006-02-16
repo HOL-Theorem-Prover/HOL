@@ -934,6 +934,26 @@ val DtypeF_def =
 val DTYPE_def =
  Define `DTYPE v (ck,d,q) = (q 0 = v) /\ Dtype(ck,d,q)`;
 
+(*****************************************************************************)
+(* Compute output signal of DTYPE                                            *)
+(*****************************************************************************)
+val DTYPE_FUN_def =
+ Define
+  `(DTYPE_FUN v ck d 0 = v) 
+   /\
+   (DTYPE_FUN v ck d (SUC t) = if Rise ck t then d t else DTYPE_FUN v ck d t)`;
+
+(*****************************************************************************)
+(* Delete a DTYPE if its output isn't connected to anything                  *)
+(*****************************************************************************)
+val DTYPE_ELIM =
+ store_thm
+  ("DTYPE_ELIM",
+   ``(?q. DTYPE v (ck,d,q)) = T``,
+   RW_TAC std_ss [DTYPE_def,Dtype]
+    THEN Q.EXISTS_TAC `DTYPE_FUN v ck d`
+    THEN RW_TAC std_ss [DTYPE_FUN_def,GSYM ADD1]);
+
 val at_CONCAT =
  store_thm
   ("at_CONCAT",
