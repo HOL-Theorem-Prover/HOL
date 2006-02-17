@@ -1,13 +1,10 @@
-(*
 structure Verify =
 struct
-*)
 
-(*local*) open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
+open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
         numSyntax listSyntax
         pairTheory arithmeticTheory listTheory optionTheory preARMTheory word32Theory finite_mapTheory
-(*in*)
-
+in
 (*------------------------------------------------------------------------------------------------------*)
 (* mk_pred - Given an (instB,byn), (initial pc, final pc), (inputs, outputs), a list of unchanged       *)
 (* registers/memory slots, the number of steps to be executed n, and a function f, it sets up a goal on *)
@@ -132,7 +129,8 @@ fun uploadCode stms =
         (i+1, mk_conj (tr, mk_eq (mk_comb (Term`instB`, term_of_int i), List.nth(tr_instL, i))))) (0,Term`T`) tr_instL);
 
      val _ = (print "Setting up the instruction buffer represented by the INSTB_LEM ...\n"; 
-	      INSTB_LEM := prove (mk_instB_items, EVAL_TAC));
+	      INSTB_LEM := REWRITE_RULE[GSYM CONJ_ASSOC]
+                            (prove (mk_instB_items, EVAL_TAC)));
 
      val tr_byn = term_of_int (length tr_instL);
      val cur_instB = mk_pair(Term`instB`, tr_byn)
@@ -626,6 +624,58 @@ val WORD_IND_LEM = Q.prove (
    );
 
 
+(*---------------------------------------------------------------------------*)
+(* Move assertions about registers from assumptions to the goal              *)
+(*---------------------------------------------------------------------------*)
+val terrun_tm = ``terRun``;
+val in_regs_dom_tm = ``in_regs_dom``;
+
+fun dest_terRun tm = 
+  let val (c,[x,s]) = strip_comb tm
+  in if same_const c terrun_tm
+      then (x,s)
+     else raise ERR "dest_terRun" ""
+  end;
+
+fun strip_fupdate tm = 
+  let val (f,p) = dest_fupdate tm
+      val (c,L) = strip_fupdate f
+  in (c,p::L)
+  end
+  handle HOL_ERR _ => (tm,[]);
+
+fun terrun_args tm = dest_terRun(rhs(fst(dest_imp tm)));
+
+val FUPDATE_REFL' = Q.prove
+(`!f i. i IN FDOM f ==> (f |+ (i,f ' i) = f)`,
+ METIS_TAC [FUPDATE_REFL]);
+
+fun UPDATE_REGS_TAC (asl,c) = 
+  let val in_regs_dom_tm = ``in_regs_dom``
+      val args = terrun_args c
+      val [pc,psr,regs,mem] = strip_pair (snd args)
+      val (regsv,updates) = strip_fupdate regs
+      val asms = filter (fn x => (fst(dest_fapply(lhs x)) = regsv) 
+                           handle HOL_ERR _ => false) asl
+      val asthl = map ASSUME asms
+      val in_regs_thm = 
+            ASSUME (hd(filter (fn a => same_const(rator a) in_regs_dom_tm
+                                        handle HOL_ERR _ => false) asl))
+      val indices = map (fn x => snd(dest_fapply(lhs x))) asms
+      fun step index = 
+         SYM (REWRITE_RULE [REWRITE_RULE [in_regs_dom_def] in_regs_thm]
+                     (ISPEC index (ISPEC regsv FUPDATE_REFL')))
+  in 
+  REWRITE_TAC 
+     [itlist (fn index => fn rw => 
+           TRANS rw 
+             (REWRITE_RULE asthl
+               (PURE_ONCE_REWRITE_CONV [step index] (rhs (concl rw)))))
+         indices (REFL regs)]
+   THEN MAP_EVERY (fn tm => UNDISCH_THEN tm (K ALL_TAC)) asms
+  end (asl,c)
+;
+
 (*------------------------------------------------------------------------------------------------------*)
 (* Find the inputs, outputs and changed registers/memory slots within a segment of code                 *)
 (*------------------------------------------------------------------------------------------------------*)
@@ -741,7 +791,7 @@ fun getIOC prog pc0 n =
 
 *)
 
-(*
+
 end (* local open *)
+
 end (* structure *)
-*)
