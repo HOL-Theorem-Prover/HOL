@@ -1210,13 +1210,15 @@ be appropriate on occasion:
 \begin{hol}
 \begin{verbatim}
 - SIMP_CONV bossLib.arith_ss [LEFT_ADD_DISTRIB] ``p * (n + 1)``;
-> val it = |- p * (n + 1) = p + p * n : thm
+> val it = |- p * (n + 1) = p + n * p : thm
 \end{verbatim}
 \end{hol}
 \end{session}
 Note how the \ml{arith\_ss} \simpset{} has not only simplified the
 intermediate \ml{(p * 1)} term, but also re-ordered the addition to
-put the simpler term on the left.
+put the simpler term on the left, and sorted the multiplication's
+arguments.
+
 
 \subsection{Simplification tactics}
 \label{sec:simplification-tactics}

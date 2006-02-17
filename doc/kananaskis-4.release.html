@@ -113,6 +113,14 @@ html1/DTD/xhtml1-strict.dtd">
          TypeBase.induction_of ``:num``
 </pre>
 </li>
+
+  <li> The normalisation of arithmetic terms performed by
+      the <code>ARITH_ss</code> simpset fragment (and thus, the
+      simpset <code>bossLib.arith_ss</code>) is more aggressive.  This
+      can break proofs.  The <code>bossLib</code> library now exports
+      <code>old_arith_ss</code> and <code>old_ARITH_ss</code>
+      entry-points if users wish to avoid having to adjust their
+      proofs.</li>
 </ul>
 
 
