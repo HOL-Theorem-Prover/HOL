@@ -2,6 +2,12 @@
 (* A version of TEA, taken from examples/Crypto/TEA                          *)
 (*---------------------------------------------------------------------------*)
 
+loadPath := ".." :: !loadPath;
+
+use "compiler";
+
+open Assem BasicProvers;
+
 (*---------------------------------------------------------------------------*)
 (* Cipher types                                                              *)
 (*---------------------------------------------------------------------------*)
@@ -53,6 +59,7 @@ val ShiftXor_CORRECT = prove (
   ); 
 
 (******************************************************************
+  printarm arm1;
   Name              : ShiftXor
   Arguments         : r0 r1 r2 r3
   Modified Registers: r0 r1 r2 r4
@@ -95,6 +102,8 @@ val Round_CORRECT = prove (
   );
 
 (******************************************************************
+  printarm arm2;
+
   Name              : Round
   Arguments         : r0 r1 r2 r3 r4 r5 r6 
   Modified Registers: r0 r6 r7 
@@ -160,6 +169,8 @@ val env3 = toANF env2 (SIMP_RULE std_ss [FORALL_TEA_STATE, Round_def, DELTA_def]
 val arm3 = compileEnv env3;
 
 (********************************************************************
+  printarm arm3;
+
   Name              : Rounds
   Arguments         : r0 r8 r5 r4 r3 r2 r6 r7 
   Modified Registers: r0 r1 r2 r3 r4 r5 r8 r9 
@@ -238,9 +249,7 @@ val arm3 = compileEnv env3;
 
 (*
 
-
-
-  set_goal ([], simT (mk_ARM arm3))
+  set_goal ([], simT (mk_ARM arm3));
 
   REPEAT GEN_TAC THEN
   STRIP_TAC THEN POP_ASSUM MP_TAC THEN
@@ -263,6 +272,7 @@ val arm3 = compileEnv env3;
 		((pc' = 44) /\  (((regs' ' 8,regs' ' 5),(regs' ' 4,regs' ' 3,regs' ' 2,regs' ' 1),regs' ' 0) =
        			Rounds (regs ' 0,(regs ' 8,regs ' 5), (regs ' 4,regs ' 3,regs ' 2,regs ' 6),regs ' 7)))` 
 				by ALL_TAC THENL [
+
 	    Induct_on `w2n (regs ' 0)` THEN REPEAT STRIP_TAC THENL [
 
 		(* Basic case					*)
