@@ -49,36 +49,36 @@ val ihr_bvc_ind = store_thm(
   ``!P X. FINITE X /\
           (!v M N. ~(v IN X) /\ ~(v IN FV N) ==> P [] (LAM v M @@ N)) /\
           (!v M p. ~(v IN X) /\ P p M ==> P (In::p) (LAM v M)) /\
-          (!M N L p. P p (M @@ N) ==> P (Lt::p) ((M @@ N) @@ L)) ==> 
+          (!M N L p. P p (M @@ N) ==> P (Lt::p) ((M @@ N) @@ L)) ==>
           !p M. p is_head_redex M ==> P p M``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN 
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!p M. p is_head_redex M ==> !pi. P p (tpm pi M)`
-        THEN1 METIS_TAC [tpm_NIL] THEN 
-  HO_MATCH_MP_TAC is_head_redex_ind THEN 
+        THEN1 METIS_TAC [tpm_NIL] THEN
+  HO_MATCH_MP_TAC is_head_redex_ind THEN
   SRW_TAC [][is_head_redex_rules] THENL [
-    Q.MATCH_ABBREV_TAC `P [] (LAM vv MM @@ NN)` THEN 
-    Q.RM_ALL_ABBREVS_TAC THEN 
-    Q_TAC (NEW_TAC "z") `FV MM UNION FV NN UNION X` THEN 
-    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN 
+    Q.MATCH_ABBREV_TAC `P [] (LAM vv MM @@ NN)` THEN
+    Q.RM_ALL_ABBREVS_TAC THEN
+    Q_TAC (NEW_TAC "z") `FV MM UNION FV NN UNION X` THEN
+    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
     SRW_TAC [][],
-    Q.MATCH_ABBREV_TAC `P (In::p) (LAM vv MM)` THEN 
-    Q_TAC (NEW_TAC "z") `FV MM UNION X` THEN 
-    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN 
+    Q.MATCH_ABBREV_TAC `P (In::p) (LAM vv MM)` THEN
+    Q_TAC (NEW_TAC "z") `FV MM UNION X` THEN
+    `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
     SRW_TAC [][GSYM tpm_APPEND, Abbr`MM`]
   ]);
 
 val is_head_redex_subst_invariant = store_thm(
   "is_head_redex_subst_invariant",
   ``!p t u v. p is_head_redex t ==> p is_head_redex [u/v] t``,
-  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`t`, `p`] THEN 
-  HO_MATCH_MP_TAC ihr_bvc_ind THEN Q.EXISTS_TAC `v INSERT FV u` THEN 
+  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`t`, `p`] THEN
+  HO_MATCH_MP_TAC ihr_bvc_ind THEN Q.EXISTS_TAC `v INSERT FV u` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, is_head_redex_rules]);
 
 val is_head_redex_tpm_invariant = Store_Thm(
   "is_head_redex_tpm_invariant",
   ``p is_head_redex (tpm pi t) = p is_head_redex t``,
   Q_TAC SUFF_TAC `!p t. p is_head_redex t ==> !pi. p is_head_redex (tpm pi t)`
-        THEN1 METIS_TAC [tpm_inverse] THEN 
+        THEN1 METIS_TAC [tpm_inverse] THEN
   HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][is_head_redex_rules]);
 
 val is_head_redex_unique = store_thm(
@@ -130,8 +130,8 @@ val head_redex_is_redex = store_thm(
 val is_head_redex_vsubst_invariant = store_thm(
   "is_head_redex_vsubst_invariant",
   ``!t v x p. p is_head_redex ([VAR v/x] t) = p is_head_redex t``,
-  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN 
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v}` THEN 
+  REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v}` THEN
   SRW_TAC [][is_head_redex_thm, SUB_THM, SUB_VAR]);
 
 val _ = add_infix("is_internal_redex", 750, NONASSOC)
@@ -289,7 +289,7 @@ val nlabel_eq = store_thm(
     Q.SPEC_THEN `t1` STRUCT_CASES_TAC term_CASES THEN
     SRW_TAC [][nlabel_thm],
     Q.SPEC_THEN `t1` STRUCT_CASES_TAC term_CASES THEN
-    SRW_TAC [][nlabel_thm] THEN 
+    SRW_TAC [][nlabel_thm] THEN
     SRW_TAC [][lLAMi_eq_thm, lLAM_eq_thm, EQ_IMP_THM, LAM_eq_thm] THENL [
       SRW_TAC [][tpm_eqr, nlabel_def, tpm_flip_args],
       SRW_TAC [][nlabel_def, ltpm_flip_args]
@@ -701,7 +701,7 @@ val FV_zero = Store_Thm(
 val zero_subst = store_thm(
   "zero_subst",
   ``!t. zero n ([u/v] t) = [zero n u/v] (zero n t)``,
-  HO_MATCH_MP_TAC lterm_bvc_induction THEN 
+  HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `v INSERT FV u` THEN SRW_TAC [][zero_thm, lSUB_VAR]);
 
 val lrcc_zero = store_thm(
@@ -1125,7 +1125,7 @@ val foldl_snoc = prove(
   Induct THEN SRW_TAC [][]);
 
 val size_nonzero = prove(``!t:term. 0 < size t``,
-                         HO_MATCH_MP_TAC simple_induction THEN 
+                         HO_MATCH_MP_TAC simple_induction THEN
                          SRW_TAC [ARITH_ss][])
 
 val size_nz =
@@ -1142,8 +1142,8 @@ val cant_ireduce_to_atom = prove(
                           (size N = 1) ==> ~(r is_internal_redex M)`
         THEN1 PROVE_TAC [i_reduce1_def] THEN
   HO_MATCH_MP_TAC labelled_redn_ind THEN
-  SRW_TAC [] [is_internal_redex_def, redex_posns_thm, size_thm, size_nz, 
-              beta_def] THEN 
+  SRW_TAC [] [is_internal_redex_def, redex_posns_thm, size_thm, size_nz,
+              beta_def] THEN
   SRW_TAC [][redex_posns_thm, is_head_redex_thm]);
 
 val i_reduce_to_LAM_underneath = prove(
@@ -1459,9 +1459,9 @@ val i_reduces_to_LAMl = prove(
 val size_vsubst = Store_Thm(
   "size_vsubst",
   ``!M:term. size ([VAR v/u] M) = size M``,
-  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN 
+  HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_VAR, SUB_THM]);
-  
+
 
 val size_ISUB = prove(
   ``!R N:term. RENAMING R ==> (size (N ISUB R) = size N)``,
@@ -1792,7 +1792,7 @@ val standard_reduction_thm = store_thm(
       SRW_TAC [][better_standard_reduction, GSYM arithmeticTheory.ADD1] THEN
       Cases_on `j` THENL [
         FULL_SIMP_TAC (srw_ss()) [seg_def] THEN
-        `?n. i = SUC n` by METIS_TAC [TypeBase.nchotomy_of "num",
+        `?n. i = SUC n` by METIS_TAC [TypeBase.nchotomy_of ``:num``,
                                       DECIDE ``0 < n = ~(n = 0)``] THEN
         FULL_SIMP_TAC (srw_ss()) [] THEN
         `n IN PL p` by METIS_TAC [PL_downward_closed,
@@ -1815,7 +1815,7 @@ val standard_reduction_thm = store_thm(
         METIS_TAC [posn_lt_irrefl],
 
         FULL_SIMP_TAC (srw_ss()) [] THEN
-        `?m. i = SUC m` by METIS_TAC [TypeBase.nchotomy_of "num",
+        `?m. i = SUC m` by METIS_TAC [TypeBase.nchotomy_of ``:num``,
                                       DECIDE ``~(SUC n < 0)``] THEN
         FULL_SIMP_TAC (srw_ss()) [] THEN
         `n < SUC m` by DECIDE_TAC THEN
@@ -2001,7 +2001,7 @@ val standard_reductions_join_over_comb = store_thm(
 
 val ISUB_APP = prove(
   ``!sub M N. (M @@ N) ISUB sub = (M ISUB sub) @@ (N ISUB sub)``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def, 
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def,
                                        SUB_THM]);
 
 val FOLDL_APP_ISUB = prove(

@@ -131,7 +131,7 @@ val cond16_implies_freshness_ok = prove(
 val base =
     SPECL [``\(s:string) p. vr (perm_of p s) : 'a``]
           (INST_TYPE [alpha |-> ``:(string # string) list -> 'a``]
-                     (TypeBase.axiom_of "preterm"))
+                     (TypeBase.axiom_of ``:preterm$preterm``))
 val full0 = Q.SPECL [`\t u r1 r2 p. ap (r1 p) (r2 p)`,
                     `\a t s pi. fresh apm ^h`] base
 
@@ -490,7 +490,8 @@ val [FV_thm, FV_tpm, simple_induction, tpm_thm, term_distinct, term_11,
      welldefs = [lam_respects_aeq, app_respects_aeq, var_respects_aeq, aeq_fv,
                  SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] aeq_ptpm_lemma
                  ],
-     old_thms = [fv_def, ptpm_fv', TypeBase.induction_of "preterm", ptpm_def,
+     old_thms = [fv_def, ptpm_fv',
+                 TypeBase.induction_of ``:preterm$preterm``, ptpm_def,
                  aeq_distinct, aeq_ptm_11,
                  lam_aeq_thm, fresh_swap, (* ptpm_is_perm,*)
                  Q.INST [`lamf` |-> `lm`] recursion0, finite_fv,

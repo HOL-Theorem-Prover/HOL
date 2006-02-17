@@ -116,7 +116,7 @@ val substitutive_implies_permutative = store_thm(
   ``substitutive R ==> permutative R``,
   SRW_TAC [][substitutive_def, permutative_def] THEN
   Induct_on `p` THEN SRW_TAC [][] THEN
-  `?x y. h = (x,y)` by METIS_TAC [TypeBase.nchotomy_of "prod"] THEN
+  `?x y. h = (x,y)` by METIS_TAC [pairTheory.pair_CASES] THEN
   SRW_TAC [][] THEN
   Q_TAC (NEW_TAC "z") `{x; y} UNION FV (tpm p M) UNION FV (tpm p M')` THEN
   `(tpm ((x,y)::p) M = [VAR y/z] ([VAR x/y] ([VAR z/x] (tpm p M)))) /\

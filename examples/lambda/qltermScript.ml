@@ -224,7 +224,7 @@ val _ = print "done\n"
 val base =
     SPECL [``\(s:string) p. vr (perm_of p s) : 'a``]
           (INST_TYPE [alpha |-> ``:(string # string) list -> 'a``]
-                     (TypeBase.axiom_of "l0term"))
+                     (TypeBase.axiom_of ``:prelterm$l0term``))
 val full0 = Q.SPECL [`\t u r1 r2 p. ap (r1 p) (r2 p)`,
                     `\a t s pi. fresh apm ^h`,
                     `\n a t1 t2 s s2 pi. fresh (fnpm apm apm) ^i (s2 pi)`] base
@@ -850,7 +850,8 @@ val [FV_thm, simple_lterm_induction, ltpm_thm, LAM_distinct, lterm_11,
                  lami_respects_aeq, aeq_fv,
                  SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM] aeq_ptpm_lemma
                  ],
-     old_thms = [fv_def, TypeBase.induction_of "l0term", ptpm_def,
+     old_thms = [fv_def, TypeBase.induction_of ``:prelterm$l0term``,
+                 ptpm_def,
                  aeq_distinct, CONJ aeq_var_11 aeq_app_11,
                  lam_aeq_thm, lami_aeq_thm, fresh_swap, (* ptpm_is_perm,*)
                  Q.INST [`lamf` |-> `lm`, `limf` |-> `li`] recursion0,

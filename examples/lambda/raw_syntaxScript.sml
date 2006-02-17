@@ -593,7 +593,8 @@ val ccbeta_beta_EQ = store_thm(
 
 (* ----------------------------------------------------------------------
     having established this much, confluence results about the
-    quotiented type can be transferred to the raw type
+    quotiented type can be transferred to the raw type, using the abstract
+    machinery from diagsTheory
    ---------------------------------------------------------------------- *)
 
 open diagsTheory
@@ -606,7 +607,8 @@ val onto_collapse = store_thm(
 val kSound_collapse = store_thm(
   "kSound_collapse",
   ``kSound alpha collapse``,
-  SRW_TAC [][kSound_def, EQC_alpha_collapse_EQ]);
+  SIMP_TAC (srw_ss()) [kSound_def] THEN
+  METIS_TAC [EQC_alpha_collapse_EQ, EQC_R]);
 
 val kCompl_collapse = store_thm(
   "kCompl_collapse",
@@ -619,11 +621,6 @@ val Pres_collapse = store_thm(
   ``Pres collapse beta (compat_closure beta)``,
   SRW_TAC [][O_DEF, ccbeta_beta_EQ, Pres_def] THEN
   METIS_TAC [EQC_REFL]);
-
-val aRefl_collapse = store_thm(
-  "aRefl_collapse",
-  ``aRefl collapse beta (compat_closure beta)``,
-  SRW_TAC [][aRefl_def, onto_collapse]);
 
 val sRefl_collapse = store_thm(
   "sRefl_collapse",
@@ -647,29 +644,29 @@ val ofree_alpha = store_thm(
     METIS_TAC [RTC_RTC]
   ]);
 
-val lrfull_eq_full_lambda = prove(
-  ``lrfull collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta)) =
-    full collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
-  METIS_TAC [onto_collapse, skernel_collapse, ofree_alpha, note_lemma9]);
+val aRefl_eq_sRefl_lambda = prove(
+  ``aRefl collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta)) =
+    sRefl collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
+  METIS_TAC [onto_collapse, kCompl_collapse, ofree_alpha, note_lemma9]);
 
-val lrfull_collapse_RTC = prove(
-  ``lrfull collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
-  REWRITE_TAC [lrfull_eq_full_lambda] THEN
-  METIS_TAC [note_prop10_1, full_collapse, onto_collapse, skernel_collapse,
+val aRefl_collapse_RTC = prove(
+  ``aRefl collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
+  REWRITE_TAC [aRefl_eq_sRefl_lambda] THEN
+  METIS_TAC [note_prop10_1, sRefl_collapse, onto_collapse, kCompl_collapse,
              ofree_alpha]);
 
-val Rhomo_collapse_RTC = store_thm(
-  "Rhomo_collapse_RTC",
-  ``Rhomo collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
-  SRW_TAC [][onto_collapse, Rhomo_structure_RTC, Rhomo_collapse,
-             scollapse_collapse]);
+val Pres_collapse_RTC = store_thm(
+  "Pres_collapse_RTC",
+  ``Pres collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
+  SRW_TAC [][onto_collapse, Pres_structure_RTC, Pres_collapse,
+             kSound_collapse]);
 
 val collapse_preserves_diagrams = store_thm(
   "collapse_preserves_diagrams",
   ``!Fa G. eval Fa G (\i. RTC (beta RUNION alpha)) =
            eval Fa G (\i. RTC (compat_closure beta))``,
   MATCH_MP_TAC diagram_preservation THEN Q.EXISTS_TAC `collapse` THEN
-  SRW_TAC [][lrfull_collapse_RTC, Rhomo_collapse_RTC, onto_collapse]);
+  SRW_TAC [][aRefl_collapse_RTC, Pres_collapse_RTC, onto_collapse]);
 
 val raw_diamond = store_thm(
   "raw_diamond",
