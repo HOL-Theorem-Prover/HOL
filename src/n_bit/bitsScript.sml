@@ -2,6 +2,7 @@
 open HolKernel Parse boolLib bossLib Q simpLib numLib
      arithmeticTheory prim_recTheory wordUtil;
 
+val arith_ss = old_arith_ss
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "bits";
@@ -10,10 +11,10 @@ val _ = new_theory "bits";
 
 fun Def s = curry Definition.new_definition s o Parse.Term;
 
-val DIV2_def        = Def "DIV2_def" 
+val DIV2_def        = Def "DIV2_def"
                           `DIV2 n = n DIV 2`;
 
-val TIMES_2EXP_def  = Def "TIMES_2EXP_def" 
+val TIMES_2EXP_def  = Def "TIMES_2EXP_def"
                           `TIMES_2EXP x n = n * 2 EXP x`;
 
 val DIV_2EXP_def    = Def "DIV_2EXP_def"
@@ -31,10 +32,10 @@ val SBIT_def        = Def "SBIT_def"
 val BITS_def        = Def "BITS_def"
                           `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
 
-val BITV_def        = Def "BITV_def" 
+val BITV_def        = Def "BITV_def"
                           `BITV n b = BITS b b n`;
 
-val BIT_def         = Def "BIT_def" 
+val BIT_def         = Def "BIT_def"
                           `BIT b n = (BITS b b n = 1)`;
 
 val SLICE_def       = Def "SLICE_def"
@@ -495,12 +496,12 @@ val BITS_SUM = store_thm("BITS_SUM",
   `!h l a b. b < 2 ** l ==> (BITS h l (a * 2 ** l + b) = BITS h l (a * 2 ** l))`,
   RW_TAC bool_ss [BITS_THM,DIV_MULT,MULT_DIV,ZERO_LT_TWOEXP]
 );
- 
+
 val BITS_SUM2 = store_thm("BITS_SUM2",
   `!h l a b. BITS h l (a * 2 ** SUC h + b) = BITS h l b`,
   RW_TAC bool_ss [BITS_THM2,MOD_TIMES,ZERO_LT_TWOEXP]
 );
- 
+
 val SLICE_TWOEXP = prove(
   `!h l a n. SLICE (h + n) (l + n) (a * 2 ** n) = (SLICE h l a) * 2 ** n`,
   REPEAT STRIP_TAC
@@ -508,10 +509,10 @@ val SLICE_TWOEXP = prove(
     THEN RW_TAC bool_ss [(GSYM o CONJUNCT2) ADD,SLICE_THM,BITS_THM,MULT_DIV,EXP_ADD,GSYM DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]
     THEN SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]
 );
- 
+
 val SPEC_SLICE_TWOEXP =
   (GEN_ALL o SIMP_RULE arith_ss [] o DISCH `n <= l /\ n <= h` o SPECL [`h - n`,`l - n`,`a`,`n`]) SLICE_TWOEXP;
- 
+
 val SLICE_COMP_THM2 = store_thm("SLICE_COMP_THM2",
   `!h l x y n.
       h <= x /\ y <= l ==>
@@ -529,7 +530,7 @@ val SLICE_COMP_THM2 = store_thm("SLICE_COMP_THM2",
 (* -------------------------------------------------------- *)
 
 val lem  = prove(`!c a b. (a = b) ==> (a DIV c = b DIV c)`, A_RW_TAC []);
-val lem2 = prove(`!a b c. a * (b * c) = a * c * b`, 
+val lem2 = prove(`!a b c. a * (b * c) = a * c * b`,
                  SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]);
 
 val lem3 = prove(
@@ -561,12 +562,12 @@ val BITS_SUM = store_thm("BITS_SUM",
   `!h l a b. b < 2 ** l ==> (BITS h l (a * 2 ** l + b) = BITS h l (a * 2 ** l))`,
   RW_TAC bool_ss [BITS_THM,DIV_MULT,MULT_DIV,ZERO_LT_TWOEXP]
 );
- 
+
 val BITS_SUM2 = store_thm("BITS_SUM2",
   `!h l a b. BITS h l (a * 2 ** SUC h + b) = BITS h l b`,
   RW_TAC bool_ss [BITS_THM2,MOD_TIMES,ZERO_LT_TWOEXP]
 );
- 
+
 val SLICE_TWOEXP = prove(
   `!h l a n. SLICE (h + n) (l + n) (a * 2 ** n) = (SLICE h l a) * 2 ** n`,
   REPEAT STRIP_TAC
@@ -574,10 +575,10 @@ val SLICE_TWOEXP = prove(
     THEN RW_TAC bool_ss [(GSYM o CONJUNCT2) ADD,SLICE_THM,BITS_THM,MULT_DIV,EXP_ADD,GSYM DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]
     THEN SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]
 );
- 
+
 val SPEC_SLICE_TWOEXP =
   (GEN_ALL o SIMP_RULE arith_ss [] o DISCH `n <= l /\ n <= h` o SPECL [`h - n`,`l - n`,`a`,`n`]) SLICE_TWOEXP;
- 
+
 val SLICE_COMP_THM2 = store_thm("SLICE_COMP_THM2",
   `!h l x y n.
       h <= x /\ y <= l ==>
@@ -811,12 +812,12 @@ val BITS_SUC2 = prove(
   `!n a. BITS (SUC n) 0 a = SLICE (SUC n) (SUC n) a + BITS n 0 a`,
   A_RW_TAC [GSYM SLICE_ZERO_THM,SLICE_COMP_THM]
 );
- 
+
 val lem = prove(
   `!n a. a < 2 EXP SUC n ==> ~(2 EXP SUC n < a + 1)`,
   A_RW_TAC [NOT_LESS,EXP]
 );
- 
+
 val lem2 = MATCH_MP lem (REWRITE_RULE [SUB_0] (SPECL [`n`,`0`,`a`] BITSLT_THM));
 
 val BITWISE_ONE_COMP_LEM = store_thm("BITWISE_ONE_COMP_LEM",
@@ -843,21 +844,21 @@ val BIT_SET_NOT_ZERO = prove(
     THEN `a = 0` by DECIDE_TAC
     THEN A_FULL_SIMP_TAC [ZERO_MOD]
 );
- 
+
 val BIT_SET_NOT_ZERO_COR = prove(
   `!x n op a b. x < n ==> op (BIT x a) (BIT x b) ==> (1 <= (BITWISE n op a b DIV 2 EXP x))`,
   REPEAT STRIP_TAC THEN ASM_B_SIMP_TAC [BITWISE_COR,BIT_SET_NOT_ZERO]
 );
- 
+
 val BIT_SET_NOT_ZERO_COR2 = REWRITE_RULE [DIV_1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
- 
+
 val ADD_DIV_ADD_DIV2 = ONCE_REWRITE_RULE [MULT_COMM] (SIMP_RULE arith_ss [] (SPEC `2` ADD_DIV_ADD_DIV));
- 
+
 val BIT_DIV2 = prove(
   `!i. BIT n (i DIV 2) = BIT (SUC n) i`,
   A_RW_TAC [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]
 );
- 
+
 val SBIT_MULT = store_thm("SBIT_MULT",
   `!b m n. (SBIT b n) * 2 ** m = SBIT b (n + m)`,
   RW_TAC arith_ss [SBIT_def,EXP_ADD]
@@ -880,7 +881,7 @@ val lemma3 = prove(
     THEN B_RW_TAC [GSYM LSBn_def,LSB_ODD,ODD_MOD2_LEM,SBIT_def,EXP]
     THEN B_FULL_SIMP_TAC [GSYM NOT_MOD2_LEM]
 );
- 
+
 val lemma4 = prove(
   `!n op a b. 0 < n /\ BITWISE n op a b <= SBIT (op (LSBn a) (LSBn b)) 0 ==>
               (BITWISE n op a b = SBIT (op (LSBn a) (LSBn b)) 0)`,
@@ -897,7 +898,7 @@ val BITWISE_ISTEP = prove(
     THEN Cases_on `n = 0` THEN1 A_RW_TAC [BITWISE_def,SBIT_def,BIT_DIV2]
     THEN B_FULL_SIMP_TAC [NOT_ZERO_LT_ZERO,BITWISE_def,SUC_SUB1,BIT_DIV2,lemma1]
 );
- 
+
 val BITWISE_EVAL = store_thm("BITWISE_EVAL",
   `!n op a b. BITWISE (SUC n) op a b =
          2 * (BITWISE n op (a DIV 2) (b DIV 2)) + SBIT (op (LSBn a) (LSBn b)) 0`,
@@ -1098,17 +1099,17 @@ val LOG2_UNIQUE = store_thm("LOG2_UNIQUE",
 
 (* -------------------------------------------------------- *)
 
-val _ = 
- let open EmitML 
- in 
+val _ =
+ let open EmitML
+ in
    exportML (!Globals.exportMLPath)
-  ("bits", 
-    MLSIG "type num = numML.num" :: OPEN ["num"] 
+  ("bits",
+    MLSIG "type num = numML.num" :: OPEN ["num"]
     ::
     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-        [TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def, 
-         DIVMOD_2EXP, SBIT_def, BITS_def, 
-         BITV_def, BIT_def, SLICE_def,LSBn_def, 
+        [TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def,
+         DIVMOD_2EXP, SBIT_def, BITS_def,
+         BITV_def, BIT_def, SLICE_def,LSBn_def,
          SIGN_EXTEND_def])
  end;;
 

@@ -16,6 +16,8 @@ open bitTheory;
 
 val _ = new_theory "numeral_bit";
 
+val arith_ss = old_arith_ss
+
 (* ------------------------------------------------------------------------- *)
 
 infix \\ << >>
@@ -103,7 +105,7 @@ val BIT_MODIFY_EVAL = save_thm("BIT_MODIFY_EVAL",
 
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
-val iMOD_2EXP_def = 
+val iMOD_2EXP_def =
  Prim_rec.new_recursive_definition
   {name = "iMOD_2EXP_def",
    def = ``(iMOD_2EXP 0 n = 0) /\
@@ -111,7 +113,7 @@ val iMOD_2EXP_def =
               2 * (iMOD_2EXP x (n DIV 2)) + SBIT (ODD n) 0)``,
    rec_axiom = prim_recTheory.num_Axiom};
 
-val iBITWISE_def = 
+val iBITWISE_def =
   Definition.new_definition("iBITWISE_def", ``iBITWISE = BITWISE``);
 
 val SIMP_BIT1 = (GSYM o SIMP_RULE arith_ss []) BIT1;
@@ -283,7 +285,7 @@ val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
 
 (* ------------------------------------------------------------------------- *)
 
-val iLOG2_def = 
+val iLOG2_def =
  Definition.new_definition("iLOG2_def", ``iLOG2 n = LOG2 (n + 1)``);
 
 val LOG2_1 = (SIMP_RULE arith_ss [] o SPECL [`1`,`0`]) LOG2_UNIQUE;
@@ -319,11 +321,11 @@ val numeral_log2 = store_thm("numeral_log2",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = 
+val _ =
  let open EmitML
  in exportML (!Globals.exportMLPath)
-   ("numeral_bits", 
-     MLSIG  "type num = numML.num" :: OPEN ["num"] 
+   ("numeral_bits",
+     MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
          [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE,

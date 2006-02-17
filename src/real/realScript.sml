@@ -2640,9 +2640,9 @@ val REAL_SUB = store_thm
   ("REAL_SUB",
    ``!m n : num.
        (& m : real) - & n = if m - n = 0 then ~(& (n - m)) else & (m - n)``,
-   RW_TAC bossLib.arith_ss [REAL_EQ_SUB_RADD, REAL_ADD]
+   RW_TAC old_arith_ss [REAL_EQ_SUB_RADD, REAL_ADD]
    THEN ONCE_REWRITE_TAC [REAL_ADD_SYM]
-   THEN RW_TAC bossLib.arith_ss [GSYM real_sub, REAL_EQ_SUB_LADD, REAL_ADD]);
+   THEN RW_TAC old_arith_ss [GSYM real_sub, REAL_EQ_SUB_LADD, REAL_ADD]);
 
 (* ------------------------------------------------------------------------- *)
 (* Define a constant for extracting "the positive part" of real numbers.     *)
@@ -3324,8 +3324,8 @@ val add_ints = store_thm(
     (~&n + ~&m = ~&(n + m))``,
   `!x y. ~x + y = y + ~x` by SRW_TAC [][REAL_ADD_COMM] THEN
   SRW_TAC [][GSYM REAL_NEG_ADD, GSYM real_sub, REAL_SUB] THEN
-  FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) [] THEN
-  `m = n` by SRW_TAC [numSimps.ARITH_ss][] THEN SRW_TAC [][])
+  FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss) [] THEN
+  `m = n` by SRW_TAC [old_ARITH_ss][] THEN SRW_TAC [][])
 
 val mult_rat = store_thm(
   "mult_rat",
@@ -3436,7 +3436,7 @@ val eq_ints = store_thm(
     `0 <= ~&m` by METIS_TAC [REAL_LE_TRANS, REAL_LE,
                              arithmeticTheory.ZERO_LESS_EQ] THEN
     `m <= 0` by METIS_TAC [REAL_LE, REAL_NEG_GE0] THEN
-    `m = 0` by SRW_TAC [numSimps.ARITH_ss][] THEN
+    `m = 0` by SRW_TAC [old_ARITH_ss][] THEN
     FULL_SIMP_TAC (srw_ss()) [],
     SRW_TAC [][]
   ]);
@@ -3479,7 +3479,7 @@ val le_rat = store_thm(
                        else if m = 0 then x/ &n <= unint(u/0)
                        else &m * x <= &n * u``,
   SRW_TAC [][ui] THEN
-  `0 < m /\ 0 < n` by SRW_TAC [numSimps.ARITH_ss][] THEN
+  `0 < m /\ 0 < n` by SRW_TAC [old_ARITH_ss][] THEN
   `0 < &m * &n` by SRW_TAC [][REAL_LT_MUL] THEN
   POP_ASSUM (ASSUME_TAC o MATCH_MP REAL_LE_LMUL) THEN
   POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [GSYM th]))) THEN
@@ -3515,7 +3515,7 @@ val lt_rat = store_thm(
                       else if m = 0 then x / & n < unint(u/0)
                       else &m * x < &n * u``,
   SRW_TAC [][ui] THEN
-  `0 < m /\ 0 < n` by SRW_TAC [numSimps.ARITH_ss][] THEN
+  `0 < m /\ 0 < n` by SRW_TAC [old_ARITH_ss][] THEN
   `0 < &m * &n` by SRW_TAC [][REAL_LT_MUL] THEN
   POP_ASSUM (ASSUME_TAC o MATCH_MP REAL_LT_LMUL) THEN
   POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [GSYM th]))) THEN
@@ -3538,9 +3538,9 @@ val lt_int = store_thm(
     (&n < ~&m = F) /\
     (~&n < ~&m = m < n)``,
   SRW_TAC [][REAL_LT_NEG] THENL [
-    Cases_on `m` THEN SRW_TAC [numSimps.ARITH_ss][REAL_NEG_LT0] THEN
+    Cases_on `m` THEN SRW_TAC [old_ARITH_ss][REAL_NEG_LT0] THEN
     MATCH_MP_TAC REAL_LET_TRANS THEN Q.EXISTS_TAC `0` THEN
-    SRW_TAC [numSimps.ARITH_ss][REAL_NEG_LE0],
+    SRW_TAC [old_ARITH_ss][REAL_NEG_LE0],
     SRW_TAC [][REAL_NOT_LT] THEN MATCH_MP_TAC REAL_LE_TRANS THEN
     Q.EXISTS_TAC `0` THEN SRW_TAC [][REAL_NEG_LE0]
   ]);
@@ -3589,7 +3589,7 @@ val NUM_FLOOR_LE = store_thm
   SRW_TAC [][add1_gt_exists] THEN
   Cases_on `n` THEN SRW_TAC [][] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
-  SRW_TAC [numSimps.ARITH_ss] [real_gt, REAL_NOT_LT, ADD1]);
+  SRW_TAC [old_ARITH_ss] [real_gt, REAL_NOT_LT, ADD1]);
 
 val NUM_FLOOR_LE2 = store_thm
 ("NUM_FLOOR_LE2",
@@ -3600,12 +3600,12 @@ val NUM_FLOOR_LE2 = store_thm
     Cases_on `n` THENL [
       FULL_SIMP_TAC (srw_ss()) [],
       FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
-      FULL_SIMP_TAC (bool_ss ++ numSimps.ARITH_ss)
+      FULL_SIMP_TAC (bool_ss ++ old_ARITH_ss)
                     [ADD1, GSYM REAL_ADD, GSYM REAL_LE] THEN
       METIS_TAC [REAL_LE_TRANS]
     ],
     `&x < &(n + 1):real` by PROVE_TAC [REAL_LET_TRANS] THEN
-    FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
+    FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss) []
   ]);
 
 val NUM_FLOOR_LET = store_thm
@@ -3619,10 +3619,10 @@ val NUM_FLOOR_LET = store_thm
     Q.EXISTS_TAC `&n + 1` THEN SRW_TAC [][],
     Cases_on `n` THEN SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
-    FULL_SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [ADD1] THEN
+    FULL_SIMP_TAC (bool_ss ++ old_ARITH_ss) [ADD1] THEN
     STRIP_TAC THEN
     `&(n' + 1) < &(y + 1):real` by METIS_TAC [REAL_LET_TRANS] THEN
-    FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss) []
+    FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss) []
   ]);
 
 val NUM_FLOOR_DIV = store_thm
@@ -3632,7 +3632,7 @@ val NUM_FLOOR_DIV = store_thm
   SRW_TAC [][add1_gt_exists] THEN
   Cases_on `n` THEN1 SRW_TAC [][] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `n'` MP_TAC) THEN
-  SRW_TAC [numSimps.ARITH_ss] [real_gt,REAL_NOT_LT,ADD1,REAL_LE_RDIV_EQ]);
+  SRW_TAC [old_ARITH_ss] [real_gt,REAL_NOT_LT,ADD1,REAL_LE_RDIV_EQ]);
 
 val NUM_FLOOR_DIV_LOWERBOUND = store_thm
 ("NUM_FLOOR_DIV_LOWERBOUND",
@@ -3648,20 +3648,20 @@ val NUM_FLOOR_EQNS = store_thm(
   SRW_TAC [][NUM_FLOOR_def] THEN LEAST_ELIM_TAC THENL [
     SIMP_TAC (srw_ss()) [real_gt, REAL_LT] THEN
     CONJ_TAC THENL
-     [Q.EXISTS_TAC`n` THEN RW_TAC arith_ss [],
-      Cases_on `n'` THEN FULL_SIMP_TAC arith_ss []
+     [Q.EXISTS_TAC`n` THEN RW_TAC old_arith_ss [],
+      Cases_on `n'` THEN FULL_SIMP_TAC old_arith_ss []
         THEN STRIP_TAC
         THEN Q.PAT_ASSUM `$! M` (MP_TAC o Q.SPEC `n''`)
-        THEN RW_TAC arith_ss []],
+        THEN RW_TAC old_arith_ss []],
     ASM_SIMP_TAC (srw_ss()) [real_gt, REAL_LT_LDIV_EQ] THEN
     CONJ_TAC THENL [
       Q.EXISTS_TAC `n` THEN
       SRW_TAC [][RIGHT_ADD_DISTRIB] THEN
       MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
       Q.EXISTS_TAC `n * m` THEN
-      SRW_TAC [numSimps.ARITH_ss][] THEN
+      SRW_TAC [old_ARITH_ss][] THEN
       CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
-      SRW_TAC [numSimps.ARITH_ss][],
+      SRW_TAC [old_ARITH_ss][],
       Q.HO_MATCH_ABBREV_TAC
          `!p:num. (!i. i < p ==> ~(n < (i + 1) * m)) /\ n < (p + 1) * m
                    ==> (p = n DIV m)` THEN
@@ -3670,12 +3670,12 @@ val NUM_FLOOR_EQNS = store_thm(
       MATCH_MP_TAC DIV_UNIQUE THEN
       `(p = 0) \/ (?p0. p = SUC p0)`
          by PROVE_TAC [arithmeticTheory.num_CASES] THEN
-      FULL_SIMP_TAC (srw_ss() ++ numSimps.ARITH_ss)
+      FULL_SIMP_TAC (srw_ss() ++ old_ARITH_ss)
                     [ADD1,RIGHT_ADD_DISTRIB] THEN
       FIRST_X_ASSUM (Q.SPEC_THEN `p0` MP_TAC) THEN
-      SRW_TAC [numSimps.ARITH_ss][NOT_LESS] THEN
+      SRW_TAC [old_ARITH_ss][NOT_LESS] THEN
       Q.EXISTS_TAC `n - (m + p0 * m)` THEN
-      SRW_TAC [numSimps.ARITH_ss][]
+      SRW_TAC [old_ARITH_ss][]
     ]
   ]);
 

@@ -11,6 +11,8 @@ open HolKernel boolLib Parse bossLib pairTheory pairTools
      arithmeticTheory listTheory rich_listTheory EncodeTheory
      metisLib optionTheory normalForms combinTheory;
 
+val arith_ss = old_arith_ss
+
 val () = new_theory "Decode";
 
 infixr 0 ++ || <<;

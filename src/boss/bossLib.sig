@@ -41,9 +41,11 @@ sig
   val bool_ss        : simpset
   val std_ss         : simpset           (* bool + option + pair + sum *)
   val arith_ss       : simpset
+  val old_arith_ss   : simpset
   val list_ss        : simpset
   val srw_ss         : unit -> simpset
   val ARITH_ss       : ssfrag            (* arithmetic d.p. + some rewrites *)
+  val old_ARITH_ss   : ssfrag
   val type_rws       : hol_type -> thm list
   val rewrites       : thm list -> ssfrag
   val augment_srw_ss : ssfrag list -> unit

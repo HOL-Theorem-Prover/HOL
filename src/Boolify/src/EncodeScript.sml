@@ -6,6 +6,8 @@ app load
 open HolKernel boolLib Parse bossLib pairTheory pairTools combinTheory
      arithmeticTheory listTheory rich_listTheory optionTheory metisLib;
 
+val arith_ss = old_arith_ss
+
 val _ = new_theory "Encode";
 
 infixr 0 ++ || <<;
@@ -286,7 +288,7 @@ val _ = adjoin_to_theory
         Bounded lists
  ---------------------------------------------------------------------------*)
 
-val encode_blist_def = 
+val encode_blist_def =
   Define
   `(encode_blist 0 e l = []) /\
    (encode_blist (SUC m) e l = APPEND (e (HD l)) (encode_blist m e (TL l)))`;

@@ -3,6 +3,8 @@ struct
 
 open HolKernel boolLib Parse bossLib simpLib;
 
+val arith_ss = old_arith_ss
+
 val definition = DB.fetch "-";
 
 val LEFT_REWRITE_TAC  = GEN_REWRITE_TAC (RATOR_CONV o DEPTH_CONV) empty_rewrites;

@@ -25,6 +25,8 @@ open
 	fracTheory fracLib ratUtils jbUtils
 	quotient schneiderUtils;
 
+val arith_ss = old_arith_ss
+
 val _ = new_theory "rat";
 
 (*--------------------------------------------------------------------------*
@@ -2505,7 +2507,7 @@ val RAT_MUL_NUM1 = prove(``!n m. &n *  &m =  &(n*m)``,
 	`!x. SUC x = x + 1` by ARITH_TAC THEN
 	`(n+1) * (m+1) = n * m + n + m + 1:num` by ARITH_TAC THEN
 	ASM_REWRITE_TAC[GSYM RAT_ADD_NUM1, RAT_LDISTRIB, RAT_RDISTRIB, RAT_ADD_ASSOC, RAT_MUL_ASSOC, RAT_MUL_LID, RAT_MUL_RID, MULT_CLAUSES] THEN
-	PROVE_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM] );
+	METIS_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM, MULT_COMM] );
 
 val RAT_MUL_NUM2 = prove(``!n m. ~&n *  &m = ~&(n*m)``,
 	PROVE_TAC[GSYM RAT_AINV_LMUL, RAT_EQ_AINV, RAT_MUL_NUM1] );

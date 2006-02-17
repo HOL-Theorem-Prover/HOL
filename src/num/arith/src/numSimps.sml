@@ -14,10 +14,13 @@ open Arbint HolKernel Parse boolLib liteLib
      Arith reduceLib Arith_cons
      simpLib Traverse Cache Trace;
 
-local  (* Fix the grammar used by this file *)
-  val ambient_grammars = Parse.current_grammars();
-  val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
-in
+
+structure Parse = (* Fix the grammar used by this file *)
+struct
+  open Parse
+  val (Type,Term) = parse_from_grammars arithmeticTheory.arithmetic_grammars
+end
+open Parse
 
 val num_ty = numSyntax.num
 val zero_tm  = numSyntax.zero_tm
@@ -255,8 +258,56 @@ fun lin_of_term tm =
   handle HOL_ERR _ =>
   mk_lin([(tm,one)], zero);
 
-
 val linear_reduction = term_of_lin o lin_of_term;
+
+(* ----------------------------------------------------------------------
+    normalising multiplication terms
+
+    This is at least the third time I have written this code, but the first
+    time for use in the simplifier, where you need to be careful that it will
+    raise UNCHANGED rather than just an instance of reflexivity.
+
+   ---------------------------------------------------------------------- *)
+
+fun ok_noncoeff t = let
+  open numSyntax
+  fun ok t = not (is_mult t) andalso not (is_numeral t)
+  val (l,r) = dest_mult t
+  fun recurse last t = let
+    val (l,r) = dest_mult t
+  in
+    ok r andalso Term.compare(r,last) <> GREATER andalso recurse r l
+  end handle HOL_ERR _ => ok t andalso Term.compare(t,last) <> GREATER
+in
+  ok r andalso recurse r l
+end handle HOL_ERR _ => not (numSyntax.is_numeral t)
+
+fun bad_mult t = let
+  open numSyntax
+  val (l,r) = dest_mult t
+in
+  if is_numeral l then not (ok_noncoeff r)
+  else not (ok_noncoeff t)
+end handle HOL_ERR _ => false
+
+fun fix_bad_mult t = let
+  open numSyntax arithmeticTheory
+  val args = strip_mult t
+  val (nums,others) = partition is_numeral args
+  fun AC new old = EQT_ELIM (AC_CONV (MULT_ASSOC, MULT_COMM) (mk_eq(old,new)))
+  val others' = Listsort.sort Term.compare others
+in
+  if null nums then AC (list_mk_mult others')
+  else if null others then REDUCE_CONV
+  else
+    AC (mk_mult(list_mk_mult nums, list_mk_mult others')) THENC
+    LAND_CONV REDUCE_CONV
+end t
+
+fun NORM_MULT_CONV t =
+    if bad_mult t then fix_bad_mult t
+    else ALL_CONV t
+
 
 (* ---------------------------------------------------------------------
  * is_arith
@@ -477,9 +528,14 @@ end;
 (*---------------------------------------------------------------------------*)
 
 val ARITH_DP_ss =
-    simpLib.SSFRAG
-    { convs = [], rewrs = [], congs = [],
-      filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+    SSFRAG { convs = [{conv = K (K NORM_MULT_CONV),
+                       key = SOME([], ``x * y``),
+                       name = "NORM_MULT_CONV", trace = 2}],
+             rewrs = [], congs = [],
+             filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+
+val old_dp_ss = SSFRAG { convs = [], rewrs = [], congs = [],
+                         filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
 (*---------------------------------------------------------------------------*)
 (* And one containing the dec. proc. and the set of arithmetic rewrites. But *)
@@ -487,6 +543,7 @@ val ARITH_DP_ss =
 (*---------------------------------------------------------------------------*)
 
 val ARITH_ss = merge_ss [ARITH_RWTS_ss, ARITH_DP_ss];
+val old_ARITH_ss = merge_ss [ARITH_RWTS_ss, old_dp_ss];
 
 fun clear_arith_caches() = clear_cache arith_cache;
 
@@ -578,8 +635,5 @@ val SUC_FILTER_ss =
     { convs = [], rewrs = [], congs = [],
       filter = SOME numfilter, ac = [], dprocs = []}
  end;
-
-val _ = Parse.temp_set_grammars ambient_grammars
-end;
 
 end (* numSimps *)

@@ -1768,11 +1768,11 @@ val _ = export_rewrites ["INJECTIVE_IMAGE_FINITE"]
 
 val lem = Q.prove
 (`!t. FINITE t ==> !s f. INJ f s t ==> FINITE s`,
- SET_INDUCT_TAC 
+ SET_INDUCT_TAC
   THEN RW_TAC bool_ss [INJ_EMPTY,FINITE_EMPTY]
   THEN Cases_on `?a. a IN s' /\ (f a = e)`
   THEN POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE bool_ss []) THENL
-     [RW_TAC bool_ss [] 
+     [RW_TAC bool_ss []
        THEN IMP_RES_TAC INJ_DELETE
        THEN FULL_SIMP_TAC bool_ss [DELETE_INSERT]
        THEN METIS_TAC [DELETE_NON_ELEMENT,FINITE_DELETE],
@@ -1944,6 +1944,7 @@ val _ = TypeBase.write [set_tyinfo];
 (* ---------------------------------------------------------------------*)
 
 val CARD_EMPTY = save_thm("CARD_EMPTY",CONJUNCT1 CARD_DEF);
+val _ = export_rewrites ["CARD_EMPTY"]
 
 val CARD_INSERT = save_thm("CARD_INSERT",CONJUNCT2 CARD_DEF);
 
@@ -2207,15 +2208,15 @@ val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   BETA_TAC THEN mesonLib.ASM_MESON_TAC [PSUBSET_FINITE, CARD_PSUBSET]);
 
 val lem = Q.prove
-(`!s. FINITE s ==> 
+(`!s. FINITE s ==>
   !t. FINITE t ==>
   !f. INJ f s t ==> CARD s <= CARD t`,
- SET_INDUCT_TAC 
+ SET_INDUCT_TAC
   THEN RW_TAC arith_ss [CARD_DEF]
-  THEN `INJ f ((e INSERT s) DELETE e) (t DELETE (f e))` 
+  THEN `INJ f ((e INSERT s) DELETE e) (t DELETE (f e))`
        by METIS_TAC [INJ_DELETE,IN_INSERT]
   THEN FULL_SIMP_TAC bool_ss [DELETE_INSERT]
-  THEN `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT] 
+  THEN `s DELETE e = s` by METIS_TAC [DELETE_NON_ELEMENT]
   THEN POP_ASSUM SUBST_ALL_TAC
   THEN `FINITE (t DELETE (f e))` by RW_TAC bool_ss [FINITE_DELETE]
   THEN `CARD s <= CARD (t DELETE (f e))` by METIS_TAC []
@@ -3513,13 +3514,18 @@ val SUM_SAME_IMAGE = Q.store_thm
      ==> !f p. p IN P /\ (!q. q IN P ==> (f p = f q))
                ==> (SUM_IMAGE f P = CARD P * f p)`,
   SET_INDUCT_TAC THEN
-  RW_TAC arith_ss [CARD_EMPTY, SUM_IMAGE_THM, CARD_INSERT] THEN
-  FULL_SIMP_TAC arith_ss [DELETE_NON_ELEMENT,
-                          arithmeticTheory.RIGHT_ADD_DISTRIB,
-                          Q.prove (`(SUC x) = 1 + x`, RW_TAC arith_ss [])] THEN
-  Cases_on `s = {}` THENL
-  [RW_TAC arith_ss [SUM_IMAGE_THM, CARD_EMPTY, COMPONENT],
-  METIS_TAC [COMPONENT, IN_INSERT, MEMBER_NOT_EMPTY]]);
+  RW_TAC arith_ss [CARD_EMPTY, SUM_IMAGE_THM, CARD_INSERT, ADD1] THEN
+  SRW_TAC [][delete_non_element] THEN
+  `(s = {}) \/ (?x t. s = x INSERT t)`
+      by METIS_TAC [TypeBase.nchotomy_of ``:'a set``]
+  THENL [
+    SRW_TAC [][SUM_IMAGE_THM],
+    `(f e = f x) /\ (f p = f x)`
+        by (FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []) THEN
+    Q_TAC SUFF_TAC `SIGMA f s = CARD s * f x`
+          THEN1 SRW_TAC [numSimps.ARITH_ss][] THEN
+    FULL_SIMP_TAC (srw_ss() ++ DNF_ss) []
+  ]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -4107,7 +4113,7 @@ val _ = export_rewrites
      "BIGUNION_INSERT", "BIGUNION_UNION",
      "DISJOINT_BIGUNION", "BIGINTER_EMPTY", "BIGINTER_INSERT",
      (* cardinality theorems *)
-     "CARD_EMPTY", "CARD_DIFF", "CARD_EQ_0", "CARD_INSERT",
+     "CARD_DIFF", "CARD_EQ_0", "CARD_INSERT",
      "CARD_INTER_LESS_EQ", "CARD_DELETE", "CARD_DIFF",
      (* complement theorems *)
      "COMPL_CLAUSES", "COMPL_COMPL", "COMPL_EMPTY", "IN_COMPL",

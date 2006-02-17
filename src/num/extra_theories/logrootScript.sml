@@ -4,7 +4,7 @@ open SingleStep Parse BasicProvers metisLib simpLib
 
 open arithmeticTheory pairTheory combinTheory
 
-val arith_ss = srw_ss() ++ numSimps.ARITH_ss
+val arith_ss = srw_ss() ++ numSimps.old_ARITH_ss
 val Define = TotalDefn.Define
 
 
@@ -16,11 +16,10 @@ val DECIDE = EQT_ELIM o Arith.ARITH_CONV
 val _ = new_theory "logroot";
 
 val lt_mult2 = prove(``a < c /\ b < d  ==> a * b < c * d:num``,
-  Induct_on `c` THEN RW_TAC arith_ss [ADD1,RIGHT_ADD_DISTRIB] THEN
-  Cases_on `a = 0` THEN
-  Cases_on `a < c` THEN RW_TAC arith_ss [] THEN
-  `a = c` by DECIDE_TAC THEN RW_TAC arith_ss [] THEN
-  MATCH_MP_TAC (DECIDE ``a < b ==> a < c + b:num``) THEN RW_TAC arith_ss []);
+  STRIP_TAC THEN
+  `0 < d` by DECIDE_TAC THEN
+  METIS_TAC [LE_MULT_LCANCEL, LT_MULT_RCANCEL, LESS_EQ_LESS_TRANS,
+             LESS_OR_EQ]);
 
 val exp_lemma1 = prove(``0 < r ==> (x ** r < (SUC x) ** r)``,
   Induct_on `r`  THEN Cases_on `r = 0` THEN RW_TAC arith_ss [EXP] THEN
@@ -90,19 +89,32 @@ val ROOT_UNIQUE = store_thm("ROOT_UNIQUE",
   METIS_TAC [DECIDE ``a < b ==> SUC a <= b``,exp_lemma3,LESS_EQ_TRANS,
    DECIDE ``a <= b ==> ~(b < a:num)``,ROOT]);
 
-val LOG_exists = store_thm("LOG_exists",
-  ``?log. !a n. 1n < a /\ 0n < n ==>
-     a ** log a n <= n /\ n < a ** SUC (log a n)``,
-  EXISTS_TAC ``\a n. @v. a:num ** v <= n /\ n < a ** SUC v`` THEN
-  RW_TAC arith_ss [] THEN SELECT_ELIM_TAC THEN RW_TAC arith_ss [] THEN
-  (Induct_on `n` THEN RW_TAC arith_ss [] THEN
-    Cases_on `n = 0` THENL [EXISTS_TAC ``0n``,ALL_TAC] THEN
-    FULL_SIMP_TAC arith_ss [EXP] THEN
-    Cases_on `a * a ** x <= SUC n` THENL
-    [EXISTS_TAC ``SUC x``,EXISTS_TAC ``x:num``] THEN
-    FULL_SIMP_TAC arith_ss [EXP] THEN
-    MATCH_MP_TAC (DECIDE ``!a b c. a < b /\ b < c ==> SUC a < c``) THEN
-    EXISTS_TAC ``a:num * a ** x`` THEN RW_TAC arith_ss []));
+val log_exists = prove(
+  ``!a n. 1 < a /\ 0 < n ==> ?log. a ** log <= n /\ n < a ** SUC log``,
+  REPEAT STRIP_TAC THEN
+  Q.EXISTS_TAC `LEAST x. n < a ** SUC x` THEN
+  CONV_TAC (UNBETA_CONV ``LEAST x. n < a ** SUC x``) THEN
+  MATCH_MP_TAC whileTheory.LEAST_ELIM THEN CONJ_TAC THENL [
+    SRW_TAC [][EXP] THEN
+    `?m. n <= a ** m` by METIS_TAC [EXP_ALWAYS_BIG_ENOUGH] THEN
+    Q.EXISTS_TAC `m` THEN MATCH_MP_TAC LESS_EQ_LESS_TRANS THEN
+    Q.EXISTS_TAC `a ** m` THEN SRW_TAC [][] THEN
+    METIS_TAC [MULT_CLAUSES, LT_MULT_RCANCEL, EXP_EQ_0,
+               DECIDE ``1 < x ==> ~(x = 0)``, DECIDE ``~(x = 0) = 0 < x``],
+    Q.X_GEN_TAC `m` THEN SRW_TAC [][] THEN
+    `(m = 0) \/ ?k. m = SUC k`
+       by METIS_TAC [TypeBase.nchotomy_of ``:num``]
+    THENL [
+      RW_TAC arith_ss [EXP],
+      FIRST_X_ASSUM (Q.SPEC_THEN `k` MP_TAC) THEN
+      SRW_TAC [][EXP, NOT_LESS]
+    ]
+  ]);
+
+val LOG_exists = save_thm(
+  "LOG_exists",
+  SIMP_RULE bool_ss [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM]
+            log_exists);
 
 val LOG = new_specification("LOG",["LOG"],LOG_exists);
 
@@ -122,12 +134,11 @@ val LOG_ADD1 = store_thm("LOG_ADD1",
   ``!n a b. 0n < n /\ 1n < a /\ 0 < b ==>
     (LOG a (a ** SUC n * b) = SUC (LOG a (a ** n * b)))``,
   RW_TAC arith_ss [] THEN MATCH_MP_TAC LOG_UNIQUE THEN
-  `~(a = 0) /\ 0 < a` by DECIDE_TAC THEN
-  ASSUM_LIST (fn list => REWRITE_TAC
-    ([EXP,LE_MULT_LCANCEL,LT_MULT_LCANCEL,GSYM MULT_ASSOC] @ list)) THEN
+  `~(a = 0) /\ 0 < a /\ ~(b = 0)` by DECIDE_TAC THEN
+  ASM_SIMP_TAC arith_ss [EXP] THEN
+  ASM_REWRITE_TAC [GSYM MULT_ASSOC, LT_MULT_LCANCEL, LE_MULT_LCANCEL] THEN
   REWRITE_TAC [GSYM EXP] THEN MATCH_MP_TAC LOG THEN
-  RW_TAC arith_ss [EXP,LE_MULT_LCANCEL,LT_MULT_LCANCEL] THEN
-  Cases_on `a` THEN RW_TAC arith_ss [ZERO_LESS_EXP,LESS_MULT2]);
+  ASM_SIMP_TAC arith_ss [DECIDE ``0 < x = ~(x = 0)``, EXP_EQ_0]);
 
 val square = prove(``a:num ** 2 = a * a``,
   REWRITE_TAC [EXP,EXP_1,TWO]);
@@ -137,21 +148,18 @@ val LOG_BASE = store_thm("LOG_BASE",``!a. 1n < a ==> (LOG a a = 1)``,
   RW_TAC arith_ss [LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,EXP_ADD,ADD1,EXP_1,square]);
 
 fun AC_THM term = CONV_RULE bool_EQ_CONV (AC_CONV (MULT_ASSOC,MULT_COMM) term);
+val ARITH_ss = numSimps.ARITH_ss
 
 val LOG_EXP = store_thm("LOG_EXP",
   ``!n a b. 1n < a /\ 0 < b ==> (LOG a (a ** n * b) = n + LOG a b)``,
-  REPEAT STRIP_TAC THEN Induct_on `n` THEN RW_TAC arith_ss [LOG_ADD1,EXP] THEN
-  Cases_on `n = 0` THEN RW_TAC arith_ss [EXP_1,LOG_ADD1] THEN
-  MATCH_MP_TAC LOG_UNIQUE THEN
-  FULL_SIMP_TAC arith_ss
-    [EXP_ADD,DECIDE ``SUC (a + 1) = SUC a + 1``,EXP_1,EXP] THENL [
-    METIS_TAC [MULT_COMM,EXP,LOG,LE_MULT_LCANCEL],
-    RW_TAC bool_ss [LOG,LT_MULT_LCANCEL,DECIDE ``1 < a ==> 0n < a``,
-      GSYM MULT_ASSOC] THEN
-    `0 < a ** n` by
-      (Cases_on `a` THEN REWRITE_TAC [ZERO_LESS_EXP] THEN DECIDE_TAC)] THEN
-    REWRITE_TAC [AC_THM ``a * (a ** n * c) = a ** n * (a * c:num)``,
-      GSYM EXP,LT_MULT_LCANCEL] THEN METIS_TAC [LOG]);
+  REPEAT STRIP_TAC  THEN MATCH_MP_TAC LOG_UNIQUE THEN
+  RW_TAC arith_ss [EXP, EXP_ADD, EXP_EQ_0] THENL [
+    METIS_TAC [LOG],
+    Q_TAC SUFF_TAC `a ** n * b < a ** n * (a * a ** LOG a b)`
+          THEN1 SIMP_TAC bool_ss [AC MULT_COMM MULT_ASSOC] THEN
+    SRW_TAC [ARITH_ss][GSYM NOT_ZERO_LT_ZERO, EXP_EQ_0] THEN
+    METIS_TAC [EXP, LOG]
+  ]);
 
 val LOG_1 = store_thm("LOG_1",``!a. 1n < a ==> (LOG a 1 = 0)``,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LOG_UNIQUE THEN
@@ -290,8 +298,7 @@ val LOG2_MOD = store_thm("LOG_MOD",
          ASM_REWRITE_TAC [DECIDE ``SUC (a + b) = SUC a + b``]]] THEN
     Q.EXISTS_TAC `0` THEN Q.EXISTS_TAC `SUC c` THEN RW_TAC arith_ss [EXP]);
 
-val lem = prove(``0 < r ==> (0 ** r = 0)``,
-  Induct_on `r` THEN RW_TAC arith_ss [EXP]);
+val lem = prove(``0 < r ==> (0 ** r = 0)``, RW_TAC arith_ss [EXP_EQ_0])
 
 val ROOT_COMPUTE = store_thm("ROOT_COMPUTE",
   ``!r n. 0 < r ==> (ROOT r 0 = 0) /\

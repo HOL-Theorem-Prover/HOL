@@ -4,7 +4,7 @@ struct
 open HolKernel boolLib Prim_rec Parse simpLib boolSimps
      numTheory prim_recTheory arithmeticTheory InductiveDefinition;
 
-val hol_ss = bool_ss ++ numSimps.ARITH_ss ++ numSimps.REDUCE_ss
+val hol_ss = bool_ss ++ numSimps.old_ARITH_ss ++ numSimps.REDUCE_ss
 
 val lhand = rand o rator
 val AND_FORALL_THM = GSYM FORALL_AND_THM;

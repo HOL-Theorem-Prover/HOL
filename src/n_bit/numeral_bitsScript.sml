@@ -2,6 +2,8 @@
 open HolKernel Parse boolLib bossLib Q wordUtil
      arithmeticTheory numeralTheory bitsTheory;
 
+val arith_ss = old_arith_ss
+
 (* -------------------------------------------------------- *)
 
 val _ = new_theory "numeral_bits";
@@ -12,7 +14,7 @@ val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 (* -------------------------------------------------------- *)
 
-val iMOD_2EXP_def = 
+val iMOD_2EXP_def =
  Prim_rec.new_recursive_definition
   {name = "iMOD_2EXP_def",
    def = ``(iMOD_2EXP 0 n = 0) /\
@@ -20,7 +22,7 @@ val iMOD_2EXP_def =
               2 * (iMOD_2EXP x (n DIV 2)) + SBIT (ODD n) 0)``,
    rec_axiom = prim_recTheory.num_Axiom};
 
-val iBITWISE_def = 
+val iBITWISE_def =
   Definition.new_definition("iBITWISE_def", ``iBITWISE = BITWISE``);
 
 (* -------------------------------------------------------- *)
@@ -135,7 +137,7 @@ val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP", SUC_RULE iMOD_2EXP_CLAUSES);
 
 (* -------------------------------------------------------- *)
 
-val iLOG2_def = 
+val iLOG2_def =
  Definition.new_definition("iLOG2_def", ``iLOG2 n = LOG2 (n + 1)``);
 
 val LOG2_1 = (SIMP_RULE arith_ss [] o SPECL [`1`,`0`]) LOG2_UNIQUE;
@@ -145,7 +147,7 @@ val LOG2_BIT2 = (GEN_ALL o SIMP_RULE arith_ss [LEFT_ADD_DISTRIB] o
 val LOG2_BIT1 = (REWRITE_RULE [DECIDE ``!a. a + 2 + 1 = a + 3``] o
                  ONCE_REWRITE_RULE [DECIDE ``!a b. (a = b) = (a + 1 = b + 1)``]) LOG2_BIT2;
 
-val LESS_MULT_MONO_2 = 
+val LESS_MULT_MONO_2 =
    (GEN_ALL o numLib.REDUCE_RULE o INST [`n` |-> `1`] o SPEC_ALL) LESS_MULT_MONO;
 
 val lem = prove(
@@ -186,11 +188,11 @@ val numeral_log2 = store_thm("numeral_log2",
 
 (* -------------------------------------------------------- *)
 
-val _ = 
+val _ =
  let open EmitML
  in exportML (!Globals.exportMLPath)
-   ("numeral_bits", 
-     MLSIG  "type num = numML.num" :: OPEN ["num"] 
+   ("numeral_bits",
+     MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
          [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE,

@@ -1,7 +1,7 @@
 structure gcdScript =
 struct
 
-open HolKernel Parse boolLib TotalDefn BasicProvers SingleStep 
+open HolKernel Parse boolLib TotalDefn BasicProvers SingleStep
      arithmeticTheory dividesTheory simpLib boolSimps;
 
 val arith_ss = bool_ss ++ numSimps.ARITH_ss
@@ -251,17 +251,16 @@ val GCD_EFFICIENTLY = store_thm(
     ASM_SIMP_TAC arith_ss [GCD_0L, GCD_0R, ZERO_MOD],
     ALL_TAC
   ] THEN
-  Q.SPEC_THEN `a` MP_TAC DIVISION THEN
-  ASM_SIMP_TAC arith_ss [] THEN
-  DISCH_THEN (Q.SPEC_THEN `b` STRIP_ASSUME_TAC) THEN
+  `(b = (b DIV a) * a + b MOD a) /\ b MOD a < a`
+    by (MATCH_MP_TAC DIVISION THEN ASM_SIMP_TAC arith_ss []) THEN
   Q.ABBREV_TAC `q = b DIV a` THEN Q.ABBREV_TAC `r = b MOD a` THEN
   NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN
   `q * a <= q * a + r` by SIMP_TAC arith_ss [] THEN
   POP_ASSUM (SUBST_ALL_TAC o ONCE_REWRITE_RULE [GCD_SYM] o
              MATCH_MP gcd_lemma) THEN
-  SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
-  CONV_TAC (RAND_CONV (REWR_CONV GCD_SYM)) THEN REWRITE_TAC []);
+  ASM_SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
+  SIMP_TAC bool_ss [GCD_SYM]);
 
 val _ = computeLib.add_persistent_funs [("GCD_EFFICIENTLY",GCD_EFFICIENTLY)];
 

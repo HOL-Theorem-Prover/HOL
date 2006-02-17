@@ -90,8 +90,10 @@ val std_ss =
       numSimps.ARITH_RWTS_ss)
 
 val arith_ss = std_ss ++ numSimps.ARITH_DP_ss
+val old_arith_ss = std_ss ++ numSimps.old_ARITH_ss
 val list_ss  = arith_ss ++ listSimps.LIST_ss
 val ARITH_ss = numSimps.ARITH_ss
+val old_ARITH_ss = numSimps.old_ARITH_ss
 
 end
 

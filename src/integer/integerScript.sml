@@ -32,7 +32,7 @@ open jrhUtils quotient liteLib
      simpLib numLib boolTheory liteLib metisLib BasicProvers;
 
 
-val int_ss = boolSimps.bool_ss ++ numSimps.ARITH_ss ++ pairSimps.PAIR_ss;
+val int_ss = boolSimps.bool_ss ++ numSimps.old_ARITH_ss ++ pairSimps.PAIR_ss;
 
 (*---------------------------------------------------------------------------*)
 (* Following incantation needed since pairLib is now loaded, and that adds   *)
@@ -585,11 +585,15 @@ val INT_ADD_LID =
     store_thm("INT_ADD_LID",
               Term`!x:int. 0 + x = x`,
               SIMP_TAC int_ss [GSYM INT_0, INT_ADD_LID]);
+val _ = export_rewrites ["INT_ADD_LID"]
+
 
 val INT_ADD_RID =
     store_thm("INT_ADD_RID",
 	      Term `!x:int. x + 0 = x`,
 	      PROVE_TAC [INT_ADD_COMM,INT_ADD_LID])
+val _ = export_rewrites ["INT_ADD_RID"]
+
 
 (* already defined, but using the wrong term for 0 *)
 val INT_ADD_LINV =
@@ -676,12 +680,14 @@ val INT_MUL_LZERO =
 	      GEN_TAC THEN SUBST1_TAC
 	      (SYM(Q.SPECL [`0 * x`, `0 * x`] INT_ADD_LID_UNIQ))
 	      THEN REWRITE_TAC[GSYM INT_RDISTRIB, INT_ADD_RID]);
+val _ = export_rewrites ["INT_MUL_LZERO"]
 
 val INT_MUL_RZERO
     = store_thm("INT_MUL_RZERO",
 		Term `!x. x * 0i = 0`,
 		GEN_TAC THEN ONCE_REWRITE_TAC[INT_MUL_SYM] THEN
 		SIMP_TAC int_ss [INT_MUL_LZERO]);
+val _ = export_rewrites ["INT_MUL_RZERO"]
 
 val INT_NEG_LMUL =
     store_thm("INT_NEG_LMUL",
@@ -1849,7 +1855,7 @@ val INT_MOD = store_thm(
   Term`!n m. ~(m = 0) ==> (&n % &m = &(n MOD m))`,
   SIMP_TAC int_ss [int_mod, INT_INJ, INT_DIV, INT_MUL, INT_EQ_SUB_RADD,
                    INT_ADD, INT_INJ] THEN
-  PROVE_TAC [ADD_COMM, DIVISION, NOT_ZERO_LT_ZERO]);
+  PROVE_TAC [ADD_COMM, DIVISION, NOT_ZERO_LT_ZERO, MULT_COMM]);
 
 val INT_MOD_NEG = store_thm(
   "INT_MOD_NEG",
@@ -1894,7 +1900,8 @@ val negcase = prove(
   REPEAT STRIP_TAC THEN
   `m < q * n` by
      PROVE_TAC [NOT_LESS_EQUAL, lessmult_lemma, LESS_LESS_EQ_TRANS] THEN
-  CONV_TAC (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [INT_ADD_COMM]))) THEN
+  Q_TAC SUFF_TAC `(&m + ~&q * &n) / &n = ~&q`
+        THEN1 SRW_TAC [][INT_ADD_COMM] THEN
   REWRITE_TAC [GSYM int_sub, GSYM INT_NEG_LMUL] THEN
   ONCE_REWRITE_TAC [GSYM INT_NEG_SUB] THEN
   ASM_SIMP_TAC int_ss [INT_SUB, INT_MUL, INT_LE,
@@ -1906,29 +1913,25 @@ val negcase = prove(
                        INT_NEGNEG, NUM_OF_INT, INT_EQ_NEG,
                        INT_ADD_RID, GSYM INT_NEG_ADD, INT_ADD]
   THENL [
-    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
-    Q_TAC SUFF_TAC `m = 0` THEN1 ASM_SIMP_TAC int_ss [] THEN
+    Q.MATCH_ABBREV_TAC `tot DIV n = q` THEN
+    Q.ABBREV_TAC `q' = tot DIV n` THEN
+    Q.ABBREV_TAC `r = tot MOD n` THEN
     `0 < n` by ASM_SIMP_TAC int_ss [] THEN
-    Q.SPEC_THEN `n` (IMP_RES_THEN (Q.SPEC_THEN `q * n - m` MP_TAC))
-                DIVISION THEN
-    ASM_SIMP_TAC bool_ss [ADD_CLAUSES] THEN
-    Q.ABBREV_TAC `k = (q * n - m) DIV n` THEN
-    ASM_SIMP_TAC int_ss [SUB_RIGHT_EQ] THEN STRIP_TAC THEN
-    `divides n (k * n + m)` by PROVE_TAC [divides_def, ADD_COMM] THEN
-    `divides n m` by PROVE_TAC [DIVIDES_ADD_2, divides_def] THEN
-    `?x. m = x * n` by PROVE_TAC [divides_def] THEN
-    `x = 0` by PROVE_TAC [lessmult_lemma] THEN
-    ASM_SIMP_TAC bool_ss [MULT_CLAUSES],
+    `(tot = q' * n + r) /\ r < n` by METIS_TAC [DIVISION] THEN
+    `q * n = q' * n + m` by ASM_SIMP_TAC int_ss [Abbr`tot`] THEN
+    `(q * n) DIV n = (q' * n + m) DIV n` by SRW_TAC [][] THEN
+    FULL_SIMP_TAC (srw_ss()) [ASSUME ``0n < n``, MULT_DIV,
+                              ASSUME ``(m:num) < n``, DIV_MULT],
     Q_TAC SUFF_TAC `(q * n - m) DIV n = q - 1` THEN1
        ASM_SIMP_TAC int_ss [] THEN
     MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `n - m` THEN
     `n <= q * n` by PROVE_TAC [lessmult_lemma, NOT_LESS_EQUAL] THEN
-    ASM_SIMP_TAC bool_ss [RIGHT_SUB_DISTRIB, MULT_CLAUSES,
-                          ARITH_PROVE ``x:num < y ==> x <= y``,
-                          GSYM LESS_EQ_ADD_SUB, SUB_ADD] THEN
+    ASM_SIMP_TAC int_ss [RIGHT_SUB_DISTRIB, MULT_CLAUSES,
+                         ARITH_PROVE ``x:num < y ==> x <= y``,
+                         GSYM LESS_EQ_ADD_SUB, SUB_ADD] THEN
     Q_TAC SUFF_TAC `~(m = 0)` THEN1 ASM_SIMP_TAC int_ss [] THEN
     DISCH_THEN SUBST_ALL_TAC THEN
-    FULL_SIMP_TAC bool_ss [SUB_0] THEN PROVE_TAC [MOD_EQ_0]
+    FULL_SIMP_TAC bool_ss [SUB_0] THEN PROVE_TAC [MOD_EQ_0, MULT_COMM]
   ]);
 
 val INT_DIV_UNIQUE = store_thm(
@@ -1946,7 +1949,7 @@ val INT_DIV_UNIQUE = store_thm(
     FULL_SIMP_TAC int_ss [INT_LT, INT_LE] THEN
     STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THENL [
       FULL_SIMP_TAC int_ss [INT_MUL, INT_ADD, INT_DIV, INT_INJ] THEN
-      PROVE_TAC [ADD_COMM, DIV_UNIQUE],
+      PROVE_TAC [ADD_COMM, DIV_UNIQUE, MULT_COMM],
       PROVE_TAC [negcase],
       ASM_SIMP_TAC int_ss [INT_MUL_LZERO, INT_ADD_LID, INT_DIV, INT_INJ,
                            LESS_DIV_EQ_ZERO]
@@ -1959,7 +1962,7 @@ val INT_DIV_UNIQUE = store_thm(
     STRUCT_CASES_TAC (Q.SPEC `q` INT_NUM_CASES) THENL [
       ASM_SIMP_TAC int_ss [INT_NEG_RMUL, INT_NEGNEG, INT_NEG_ADD, INT_DIV,
                            INT_INJ, INT_ADD, INT_MUL] THEN
-      PROVE_TAC [DIV_UNIQUE, ADD_COMM],
+      PROVE_TAC [DIV_UNIQUE, ADD_COMM, MULT_COMM],
       ASM_SIMP_TAC bool_ss [INT_NEG_MUL2, negcase, INT_NEG_ADD, INT_NEGNEG,
                             INT_NEG_LMUL],
       ASM_SIMP_TAC int_ss [INT_MUL_LZERO, INT_ADD_LID, INT_DIV, INT_INJ,
@@ -2060,12 +2063,7 @@ val INT_DIV_P = store_thm(
             (P (x / c) = ?k r. (x = k * c + r) /\
                                (c < 0 /\ c < r /\ r <= 0 \/
                                 ~(c < 0) /\ 0 <= r /\ r < c) /\ P k)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
-    PROVE_TAC [INT_DIVISION],
-    PROVE_TAC [INT_DIV_UNIQUE],
-    PROVE_TAC [INT_DIV_UNIQUE]
-  ]);
+  METIS_TAC [INT_DIVISION, INT_DIV_UNIQUE]);
 
 val INT_MOD_P = store_thm(
   "INT_MOD_P",
@@ -2073,12 +2071,25 @@ val INT_MOD_P = store_thm(
             (P (x % c) = ?k r. (x = k * c + r) /\
                                (c < 0 /\ c < r /\ r <= 0 \/
                                 ~(c < 0) /\ 0 <= r /\ r < c) /\ P r)``,
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
-    MAP_EVERY Q.EXISTS_TAC [`x / c`, `x % c`] THEN
-    PROVE_TAC [INT_DIVISION],
-    PROVE_TAC [INT_MOD_UNIQUE],
-    PROVE_TAC [INT_MOD_UNIQUE]
-  ]);
+  METIS_TAC [INT_DIVISION, INT_MOD_UNIQUE]);
+
+val INT_DIV_FORALL_P = store_thm(
+  "INT_DIV_FORALL_P",
+  ``!P x c. ~(c = 0) ==>
+            (P (x / c) = !k r. (x = k * c + r) /\
+                               (c < 0 /\ c < r /\ r <= 0 \/
+                                ~(c < 0) /\ 0 <= r /\ r < c) ==>
+                               P k)``,
+  METIS_TAC [INT_DIV_UNIQUE, INT_DIVISION]);
+
+val INT_MOD_FORALL_P = store_thm(
+  "INT_MOD_FORALL_P",
+  ``!P x c. ~(c = 0) ==>
+            (P (x % c) = !q r. (x = q * c + r) /\
+                               (c < 0 /\ c < r /\ r <= 0 \/
+                                ~(c < 0) /\ 0 <= r /\ r < c) ==>
+                               P r)``,
+  METIS_TAC [INT_MOD_UNIQUE, INT_DIVISION]);
 
 (*----------------------------------------------------------------------*)
 (* Define absolute value                                                *)
@@ -2282,7 +2293,8 @@ val INT_ABS_QUOT = store_thm(
   ASM_SIMP_TAC int_ss [INT_INJ, INT_NEG_EQ0, GSYM INT_NEG_LMUL,
                        GSYM INT_NEG_RMUL, INT_NEG_MUL2, INT_MUL, INT_LE,
                        INT_QUOT, INT_QUOT_NEG, INT_ABS_NEG, INT_ABS_NUM] THEN
-  PROVE_TAC [DIVISION, LESS_EQ_EXISTS, NOT_ZERO_LT_ZERO, ZERO_DIV]);
+  PROVE_TAC [DIVISION, LESS_EQ_EXISTS, NOT_ZERO_LT_ZERO, ZERO_DIV,
+             MULT_COMM]);
 
 (* can now prove uniqueness of / and % *)
 fun case_tac s =
@@ -2369,7 +2381,7 @@ val INT_REM = store_thm(
   ``!p q. ~(q = 0) ==> (&p rem &q = &(p MOD q))``,
   SIMP_TAC int_ss [int_rem, INT_INJ, int_sub, lem1, lem2, lem3, lem3a,
                    INT_QUOT, INT_MUL, INT_ADD] THEN
-  PROVE_TAC [DIVISION, NOT_ZERO_LT_ZERO]);
+  PROVE_TAC [DIVISION, NOT_ZERO_LT_ZERO, MULT_COMM]);
 
 val newlemma = prove(
   ``!x y. (~x + y <= 0 = y <= x) /\ (0 <= x + ~y = y <= x)``,
@@ -3145,8 +3157,8 @@ val INT_DISCRETE = store_thm(
   ]);
 
 val _ = BasicProvers.export_rewrites
-        ["INT_ADD_LID", "INT_ADD_LID_UNIQ", "INT_ADD_LINV",
-         "INT_ADD_RID", "INT_ADD_RID_UNIQ", "INT_ADD_RINV",
+        ["INT_ADD_LID_UNIQ", "INT_ADD_LINV",
+         "INT_ADD_RID_UNIQ", "INT_ADD_RINV",
          "INT_ADD_SUB", "INT_ADD_SUB2", "INT_DIVIDES_0",
          "INT_DIVIDES_1", "INT_DIVIDES_LADD", "INT_DIVIDES_LMUL",
          "INT_DIVIDES_LSUB", "INT_DIVIDES_MUL", "INT_DIVIDES_NEG",

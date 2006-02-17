@@ -1,7 +1,7 @@
 signature numSimps =
 sig
- include Abbrev
- type ctxt
+  include Abbrev
+type ctxt
 
      val ARITH_ss           : simpLib.ssfrag
      val REDUCE_ss          : simpLib.ssfrag
@@ -15,6 +15,9 @@ sig
      val is_arith           : term -> bool
      val is_arith_asm       : term -> bool
      val arith_cache        : Cache.cache
+
+    (* deprecated *)
+    val old_ARITH_ss        : simpLib.ssfrag
 end
 
 (*
@@ -47,5 +50,9 @@ end
    hypothesis without confusing ARITH_CONV.
 
    [arith_cache] is the cache on which ARITH_ss relies.
+
+   [old_ARITH_ss] is an old version of ARITH_ss that does less
+   normalisation of arithmetic expressions.  Here for some backwards
+   compatibility support.
 
 *)

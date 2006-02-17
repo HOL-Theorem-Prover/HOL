@@ -18,7 +18,7 @@ val RIGHT_REWRITE_RULE =
      GEN_REWRITE_RULE (RAND_CONV o DEPTH_CONV) empty_rewrites;
 
 val std_ss = std_ss ++ rewrites [LET_THM]
-val arith_ss = arith_ss ++ rewrites [LET_THM]
+val arith_ss = old_arith_ss ++ rewrites [LET_THM]
 
 (* -------------------------------------------------------- *)
 
@@ -2727,9 +2727,9 @@ val LT_DIV2 = Q.prove
 val LSR1_LESS = Q.store_thm
 ("LSR1_LESS",
  `!w. ~(w = 0w) ==> w2n (w >>> 1) < w2n w`,
- SIMP_TAC arith_ss [FORALL_WORD,w2n_EVAL,LSR_EVAL,n2w_11] 
+ SIMP_TAC arith_ss [FORALL_WORD,w2n_EVAL,LSR_EVAL,n2w_11]
    THEN RW_TAC std_ss []
-   THEN `MOD_WL 0 = 0` 
+   THEN `MOD_WL 0 = 0`
       by RW_TAC arith_ss [ZERO_MOD_WL,MOD_WL_def,bitsTheory.ZERO_LT_TWOEXP]
    THEN POP_ASSUM SUBST_ALL_TAC
    THEN `LT_WL (MOD_WL n)` by METIS_TAC [LT_WL_MOD_WL]
@@ -2747,18 +2747,18 @@ val ZERO_SHIFT3 = Q.store_thm
 val LSR_LESS = Q.store_thm
 ("LSR_LESS",
  `!n w. ~(w = 0w) /\ 0 < n ==> w2n (w >>> n) < w2n w`,
- Induct THEN RW_TAC arith_ss [] 
+ Induct THEN RW_TAC arith_ss []
    THEN `w >>> SUC n = (w >>> 1) >>> n`
          by METIS_TAC [ADD_CLAUSES,ONE,LSR_ADD]
    THEN POP_ASSUM SUBST_ALL_TAC
-  THEN Cases_on `w>>>1 = 0w` THENL 
-  [RW_TAC arith_ss [ZERO_SHIFT3] 
+  THEN Cases_on `w>>>1 = 0w` THENL
+  [RW_TAC arith_ss [ZERO_SHIFT3]
      THEN Q.PAT_ASSUM `~p` MP_TAC
      THEN Q.ID_SPEC_TAC `w`
-     THEN SIMP_TAC arith_ss [FORALL_WORD,w2n_EVAL,n2w_11] 
+     THEN SIMP_TAC arith_ss [FORALL_WORD,w2n_EVAL,n2w_11]
      THEN RW_TAC arith_ss [ZERO_MOD_WL,MOD_WL_def,bitsTheory.ZERO_LT_TWOEXP],
-   Cases_on `n` 
-    THEN FULL_SIMP_TAC arith_ss [] 
+   Cases_on `n`
+    THEN FULL_SIMP_TAC arith_ss []
     THEN METIS_TAC [ZERO_SHIFT2,LSR1_LESS,LESS_TRANS]]);
 
 (* -------------------------------------------------------- *)
