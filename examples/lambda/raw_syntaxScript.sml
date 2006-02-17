@@ -469,6 +469,32 @@ val gmbeta_beta = store_thm(
   `~(v IN FV (collapse t1))` by METIS_TAC [LAM_INJ_ALPHA_FV] THEN
   SRW_TAC [][lemma15a]);
 
+val beta_some_reflected = store_thm(
+  "beta_some_reflected",
+  ``!M N. compat_closure beta M N ==>
+          ?t u. (M = collapse t) /\ (N = collapse u) /\
+                beta t u``,
+  HO_MATCH_MP_TAC ccbeta_ind THEN Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THENL [
+    `?m n. (collapse m = M) /\ (collapse n = N)`
+       by METIS_TAC [collapse_ONTO] THEN
+    `?m'. EQC alpha m m' /\ (capt v m' INTER fv n = {})`
+       by METIS_TAC [alpha_eq_safe_subst] THEN
+    MAP_EVERY Q.EXISTS_TAC [`app (lam v m') n`, `subst n v m'`] THEN
+    SRW_TAC [][collapse_def, GSYM EQC_alpha_collapse_EQ, collapse_subst]
+    THENL [
+      METIS_TAC [EQC_alpha_collapse_EQ],
+      METIS_TAC [INTER_COMM, beta_rules]
+    ],
+    `?n. collapse n = N'` by METIS_TAC [collapse_ONTO] THEN
+    MAP_EVERY Q.EXISTS_TAC [`app t n`, `app u n`] THEN
+    SRW_TAC [][collapse_def, beta_rules],
+    `?m. collapse m = M` by METIS_TAC [collapse_ONTO] THEN
+    MAP_EVERY Q.EXISTS_TAC [`app m t`, `app m u`] THEN
+    SRW_TAC [][collapse_def, beta_rules],
+    MAP_EVERY Q.EXISTS_TAC [`lam v t`, `lam v u`] THEN
+    SRW_TAC [][collapse_def, beta_rules]
+  ]);
+
 val ccbeta_beta_lemma = prove(
   ``!M N. compat_closure beta M N ==>
           !t u. (M = collapse t) /\ (N = collapse u) ==>
@@ -577,32 +603,32 @@ val onto_collapse = store_thm(
   ``onto collapse``,
   SRW_TAC [][onto_def, collapse_ONTO]);
 
-val skernel_collapse = store_thm(
-  "skernel_collapse",
-  ``skernel alpha collapse``,
-  SRW_TAC [][skernel_def, EQC_alpha_collapse_EQ]);
+val kSound_collapse = store_thm(
+  "kSound_collapse",
+  ``kSound alpha collapse``,
+  SRW_TAC [][kSound_def, EQC_alpha_collapse_EQ]);
 
-val scollapse_collapse = store_thm(
-  "scollapse_collapse",
-  ``scollapse alpha collapse``,
-  SRW_TAC [][scollapse_def] THEN
+val kCompl_collapse = store_thm(
+  "kCompl_collapse",
+  ``kCompl alpha collapse``,
+  SRW_TAC [][kCompl_def] THEN
   METIS_TAC [EQC_alpha_collapse_EQ, EQC_R]);
 
-val Rhomo_collapse = store_thm(
-  "Rhomo_collapse",
-  ``Rhomo collapse beta (compat_closure beta)``,
-  SRW_TAC [][O_DEF, ccbeta_beta_EQ, Rhomo_def] THEN
+val Pres_collapse = store_thm(
+  "Pres_collapse",
+  ``Pres collapse beta (compat_closure beta)``,
+  SRW_TAC [][O_DEF, ccbeta_beta_EQ, Pres_def] THEN
   METIS_TAC [EQC_REFL]);
 
-val ARSh_collapse = store_thm(
-  "ARSh_collapse",
-  ``ARSh collapse beta (compat_closure beta)``,
-  SRW_TAC [][ARSh_alt, onto_collapse, Rhomo_collapse]);
+val aRefl_collapse = store_thm(
+  "aRefl_collapse",
+  ``aRefl collapse beta (compat_closure beta)``,
+  SRW_TAC [][aRefl_def, onto_collapse]);
 
-val full_collapse = store_thm(
-  "full_collapse",
-  ``full collapse beta (compat_closure beta)``,
-  SRW_TAC [][full_def] THEN
+val sRefl_collapse = store_thm(
+  "sRefl_collapse",
+  ``sRefl collapse beta (compat_closure beta)``,
+  SRW_TAC [][sRefl_def] THEN
   `(?a1. b1 = collapse a1) /\ (?a2. b2 = collapse a2)`
     by METIS_TAC [collapse_ONTO] THEN
   FULL_SIMP_TAC (srw_ss()) [ccbeta_beta_EQ, O_DEF] THEN
