@@ -1,8 +1,9 @@
 structure Verify =
 struct
 
+local
 open HolKernel Parse boolLib bossLib pairLib word32Lib goalstackLib
-        numSyntax listSyntax
+        numSyntax listSyntax finite_mapSyntax
         pairTheory arithmeticTheory listTheory optionTheory preARMTheory word32Theory finite_mapTheory
 in
 (*------------------------------------------------------------------------------------------------------*)
@@ -627,8 +628,8 @@ val WORD_IND_LEM = Q.prove (
 (*---------------------------------------------------------------------------*)
 (* Move assertions about registers from assumptions to the goal              *)
 (*---------------------------------------------------------------------------*)
-val terrun_tm = ``terRun``;
-val in_regs_dom_tm = ``in_regs_dom``;
+val terrun_tm = Term`terRun`;
+val in_regs_dom_tm = Term`in_regs_dom`;
 
 fun dest_terRun tm = 
   let val (c,[x,s]) = strip_comb tm
@@ -651,7 +652,7 @@ val FUPDATE_REFL' = Q.prove
  METIS_TAC [FUPDATE_REFL]);
 
 fun UPDATE_REGS_TAC (asl,c) = 
-  let val in_regs_dom_tm = ``in_regs_dom``
+  let val in_regs_dom_tm = Term`in_regs_dom`
       val args = terrun_args c
       val [pc,psr,regs,mem] = strip_pair (snd args)
       val (regsv,updates) = strip_fupdate regs
@@ -790,7 +791,6 @@ fun getIOC prog pc0 n =
 
 
 *)
-
 
 end (* local open *)
 
