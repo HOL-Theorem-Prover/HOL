@@ -35,13 +35,6 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 
 compile.monitor_netlist_construction := true;
 
-fun newcirDefine qdef =
- let val (def,ind,dev) = hwDefine qdef
- in
-  (def, ind, NEW_MAKE_CIRCUIT(EXPAND_COMPONENTS(REFINE_ALL dev)))
- end;
-
-
 (*---------------------------------------------------------------------------*)
 (* Tell the system what the combinational components are                     *)
 (*---------------------------------------------------------------------------*)
@@ -51,11 +44,28 @@ val _ = add_combinational
             "word_add", "word_sub", "w2n","n2w"];
 
 vsynth.AddBinop ("XOR32",   (``UNCURRY $#  : word32#word32->word32``,  "^"));
+vsynth.AddBinop ("AND32",   (``UNCURRY $&  : word32#word32->word32``,  "&"));
+vsynth.AddBinop ("OR32",    (``UNCURRY $|  : word32#word32->word32``,  "|"));
 vsynth.AddBinop ("ADD32",   (``UNCURRY $+  : word32#word32->word32``,  "+"));
 vsynth.AddBinop ("SUB32",   (``UNCURRY $-  : word32#word32->word32``,  "-"));
-vsynth.AddBinop ("LSL32",   (``UNCURRY $<< : word32#num->word32``,     "<<"));
-vsynth.AddBinop ("ASR32",   (``UNCURRY $>> : word32#num->word32``,     ">>"));
 vsynth.AddBinop ("EQ32",    (``UNCURRY $=  : word32#word32->bool``,    "=="));
+
+vsynth.add_vsynth
+   [(``\(in1,in2). in1 >> in2``,
+     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2))),
+    (``UNCURRY $>>``,
+     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} >> " ^i2)))];
+
+vsynth.add_vsynth
+   [(``\(in1,in2). in1 << in2``,
+     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} << " ^i2))),
+    (``UNCURRY $<<``,
+     (fn[i1,i2] => ("{{31{" ^ i1 ^ "[31]}}," ^ i1 ^ "} << " ^i2)))];
+
+vsynth.add_vsynth
+ [(``\(sel:bool,in1:word32,in2:word32). if sel then in1 else in2``,
+   fn [i1,i2,i3] => (i1 ^ " ? " ^ i2 ^ " : " ^ i3))
+ ];
 
 
 (*---------------------------------------------------------------------------*)
