@@ -2012,11 +2012,14 @@ fun STEP5_CONV tm =
 
 val MAKE_NETLIST =
  ((ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
-  (ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
+  (ptime "8" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, 
+                     GSYM COMB_AND, GSYM COMB_OR, GSYM COMB_MUX])) o 
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
-  (ptime "6" (PURE_REWRITE_RULE [UNCURRY,FST,SND])) o
+  (ptime "6" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))                o
+  (ptime "5-6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
   (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV)))) o
-  (ptime "4" STEP4) o 
+  (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                o
+  (ptime "4" STEP4)          o 
   (ptime "3" GEN_BETA_RULE)  o
   (ptime "2" IN_OUT_SPLIT)   o
   (ptime "1" (REWRITE_RULE 
@@ -2170,20 +2173,14 @@ val NEW_MAKE_CIRCUIT =
   (ptime "13" (I ## REWRITE_RULE[at_CONCAT]))                                o
   (ptime "12" (at_SPEC_ALL ``clk:num->bool``))                               o
   (ptime "11" GEN_ALL)                                                       o
-(* (ptime"10"(Ho_Rewrite.REWRITE_RULE[GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT])) o *)
   (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
-  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT])) o 
+  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
+               GSYM COMB_OR, GSYM COMB_MUX])) o 
   (ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
-  (ptime "8" (PURE_REWRITE_RULE (!combinational_components))) o
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
-(*  SIMP_RULE std_ss [UNCURRY]                                                 o
-  Ho_Rewrite.REWRITE_RULE
-   [BUS_CONCAT_ELIM,DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]                   o
-*)
-(*  (ptime "6-7" (Ho_Rewrite.REWRITE_RULE [UNCURRY,FST,SND]))           o *)
-  (ptime "6-7" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))           o
+  (ptime "6-7" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))                 o
   (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
-  (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV)))) o
+  (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV))))    o
   (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                   o
   (ptime "4" STEP4)          o
   (ptime "3" GEN_BETA_RULE)  o
@@ -2217,4 +2214,14 @@ fun newcirDefine qdef =
  in
   (def, ind, NEW_MAKE_CIRCUIT(EXPAND_COMPONENTS(REFINE_ALL dev)))
  end;
- 
+
+(*---------------------------------------------------------------------------*)
+(* Don't go all the way to circuits. Instead stop at netlists built from     *)
+(* COMB, CONSTANT, DEL and DELT.                                             *)
+(*---------------------------------------------------------------------------*)
+
+fun netDefine qdef =
+ let val (def,ind,dev) = hwDefine qdef
+ in
+   (def,ind,MAKE_NETLIST(EXPAND_COMPONENTS(REFINE_ALL dev)))
+ end;
