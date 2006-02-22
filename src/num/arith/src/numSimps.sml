@@ -140,6 +140,114 @@ val ARITH_RWTS_ss =
 
 val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
+(* ----------------------------------------------------------------------
+    basic canonisers
+   ---------------------------------------------------------------------- *)
+
+(* first define the records containing the necessary information for the
+   generic canoniser *)
+
+(* for addition - right-associated for backwards compatibility *)
+local
+  open numSyntax arithmeticTheory GenPolyCanon
+  fun is_good t = let
+    val (l,r) = dest_mult t
+  in
+    is_numeral l
+  end handle HOL_ERR _ => false
+  fun non_coeff t = if is_good t then rand t
+                    else if is_numeral t then mk_var("   ", num)
+                    else t
+  fun add_coeff (t:term) : thm = if is_good t then ALL_CONV t
+                    else REWR_CONV (GSYM MULT_LEFT_1) t
+  val distrib = GSYM RIGHT_ADD_DISTRIB
+  fun merge t = let
+    val (l,r) = dest_plus t
+  in
+    if is_numeral l andalso is_numeral r then
+      reduceLib.REDUCE_CONV
+    else
+      Conv.BINOP_CONV add_coeff THENC
+      REWR_CONV distrib THENC LAND_CONV reduceLib.REDUCE_CONV
+  end t
+in
+  val rnatadd_gci =
+      GCI { dest = dest_plus,
+            assoc_mode = R,
+            assoc = ADD_ASSOC,
+            symassoc = GSYM ADD_ASSOC,
+            comm = ADD_COMM,
+            r_asscomm = derive_r_asscomm ADD_ASSOC ADD_COMM,
+            l_asscomm = derive_l_asscomm ADD_ASSOC ADD_COMM,
+            is_literal = is_numeral,
+            non_coeff = non_coeff, merge = merge,
+            postnorm = REWR_CONV (CONJUNCT1 (SPEC_ALL MULT)) ORELSEC
+            TRY_CONV (REWR_CONV MULT_LEFT_1),
+            left_id = CONJUNCT1 ADD,
+            right_id = ADD_0,
+            reducer = reduceLib.REDUCE_CONV}
+  val lnatadd_gci =
+      GCI { dest = dest_plus,
+            assoc_mode = L,
+            assoc = ADD_ASSOC,
+            symassoc = GSYM ADD_ASSOC,
+            comm = ADD_COMM,
+            r_asscomm = derive_r_asscomm ADD_ASSOC ADD_COMM,
+            l_asscomm = derive_l_asscomm ADD_ASSOC ADD_COMM,
+            is_literal = is_numeral,
+            non_coeff = non_coeff, merge = merge,
+            postnorm = REWR_CONV (CONJUNCT1 (SPEC_ALL MULT)) ORELSEC
+            TRY_CONV (REWR_CONV MULT_LEFT_1),
+            left_id = CONJUNCT1 ADD,
+            right_id = ADD_0,
+            reducer = reduceLib.REDUCE_CONV}
+end
+
+val ADDL_CANON_CONV = GenPolyCanon.gencanon lnatadd_gci
+val ADDR_CANON_CONV = GenPolyCanon.gencanon rnatadd_gci
+
+(* multiplication *)
+val lcnatmult_gci = let
+  open GenPolyCanon numSyntax arithmeticTheory
+  fun is_good t = let
+    val (l,r) = dest_exp t
+  in
+    is_numeral r
+  end handle HOL_ERR _ => false
+  fun non_coeff t = if is_good t then rand (rator t)
+                    else if is_numeral t then mk_numeral Arbnum.one
+                    else t
+  fun add_coeff t = if is_good t then ALL_CONV t
+                    else REWR_CONV (GSYM (CONJUNCT2 (SPEC_ALL EXP_1))) t
+  val distrib = GSYM EXP_ADD
+  fun merge t = let
+    val (l,r) = dest_mult t
+  in
+    if is_numeral l andalso is_numeral r then reduceLib.REDUCE_CONV
+    else Conv.BINOP_CONV add_coeff THENC REWR_CONV distrib THENC
+         reduceLib.REDUCE_CONV
+  end t
+in
+  GCI { dest = dest_mult,
+        is_literal = is_numeral,
+        assoc_mode = L_Cflipped,
+        assoc = MULT_ASSOC,
+        symassoc = GSYM MULT_ASSOC,
+        comm = MULT_COMM,
+        r_asscomm = derive_r_asscomm MULT_ASSOC MULT_COMM,
+        l_asscomm = derive_l_asscomm MULT_ASSOC MULT_COMM,
+        non_coeff = non_coeff,
+        merge = merge,
+        postnorm = REWR_CONV (CONJUNCT1 (SPEC_ALL EXP)) ORELSEC
+                   TRY_CONV (REWR_CONV (CONJUNCT2 (SPEC_ALL EXP_1))),
+        right_id = MULT_RIGHT_1,
+        left_id = MULT_LEFT_1,
+        reducer = reduceLib.REDUCE_CONV}
+end
+
+val MUL_CANON_CONV = GenPolyCanon.gencanon lcnatmult_gci
+
+
 (* ---------------------------------------------------------------------*
  * LIN: Linear arithmetic expressions                                   *
  * ---------------------------------------------------------------------*)
@@ -260,55 +368,6 @@ fun lin_of_term tm =
 
 val linear_reduction = term_of_lin o lin_of_term;
 
-(* ----------------------------------------------------------------------
-    normalising multiplication terms
-
-    This is at least the third time I have written this code, but the first
-    time for use in the simplifier, where you need to be careful that it will
-    raise UNCHANGED rather than just an instance of reflexivity.
-
-   ---------------------------------------------------------------------- *)
-
-fun ok_noncoeff t = let
-  open numSyntax
-  fun ok t = not (is_mult t) andalso not (is_numeral t)
-  val (l,r) = dest_mult t
-  fun recurse last t = let
-    val (l,r) = dest_mult t
-  in
-    ok r andalso Term.compare(r,last) <> GREATER andalso recurse r l
-  end handle HOL_ERR _ => ok t andalso Term.compare(t,last) <> GREATER
-in
-  ok r andalso recurse r l
-end handle HOL_ERR _ => not (numSyntax.is_numeral t)
-
-fun bad_mult t = let
-  open numSyntax
-  val (l,r) = dest_mult t
-in
-  if is_numeral l then not (ok_noncoeff r)
-  else not (ok_noncoeff t)
-end handle HOL_ERR _ => false
-
-fun fix_bad_mult t = let
-  open numSyntax arithmeticTheory
-  val args = strip_mult t
-  val (nums,others) = partition is_numeral args
-  fun AC new old = EQT_ELIM (AC_CONV (MULT_ASSOC, MULT_COMM) (mk_eq(old,new)))
-  val others' = Listsort.sort Term.compare others
-in
-  if null nums then AC (list_mk_mult others')
-  else if null others then REDUCE_CONV
-  else
-    AC (mk_mult(list_mk_mult nums, list_mk_mult others')) THENC
-    LAND_CONV REDUCE_CONV
-end t
-
-fun NORM_MULT_CONV t =
-    if bad_mult t then fix_bad_mult t
-    else ALL_CONV t
-
-
 (* ---------------------------------------------------------------------
  * is_arith
  *
@@ -389,6 +448,7 @@ val is_arith_asm = is_arith_thm o ASSUME
 
 type ctxt = thm list;
 
+fun contains_minus t = List.exists numSyntax.is_minus (numSyntax.strip_plus t)
 
 fun CTXT_ARITH thms tm =
   if
@@ -410,7 +470,7 @@ fun CTXT_ARITH thms tm =
     trace(1,PRODUCE(tm,"ARITH",thm)); thm
   end
   else
-    if (type_of tm = num_ty) then let
+    if type_of tm = num_ty  then let
         val _ = trace(5, LZ_TEXT (fn () => "Linear reduction on "^
                                            term_to_string tm))
         val reduction = linear_reduction tm
@@ -418,7 +478,7 @@ fun CTXT_ARITH thms tm =
         if aconv reduction tm then
           (trace (5, TEXT ("No reduction possible"));
            failwith "CTXT_ARITH: no reduction possible")
-        else let
+        else if contains_minus tm then let
             val context = map concl thms
             val gl = list_mk_imp(context,mk_eq(tm,reduction))
             val _ = trace(6, LZ_TEXT (fn () => "Calling ARITH on reduction: "^
@@ -427,6 +487,7 @@ fun CTXT_ARITH thms tm =
           in
             trace(1,PRODUCE(tm,"ARITH",thm)); thm
           end
+        else ADDR_CANON_CONV tm
       end
     else failwith "CTXT_ARITH: not applicable";
 
@@ -528,14 +589,15 @@ end;
 (*---------------------------------------------------------------------------*)
 
 val ARITH_DP_ss =
-    SSFRAG { convs = [{conv = K (K NORM_MULT_CONV),
+    SSFRAG { convs = [{conv = K (K MUL_CANON_CONV),
                        key = SOME([], ``x * y``),
-                       name = "NORM_MULT_CONV", trace = 2}],
+                       name = "MUL_CANON_CONV", trace = 2}],
              rewrs = [], congs = [],
              filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
 
-val old_dp_ss = SSFRAG { convs = [], rewrs = [], congs = [],
-                         filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
+val old_dp_ss =
+    SSFRAG { convs = [], rewrs = [], congs = [], filter = NONE, ac = [],
+             dprocs = [ARITH_REDUCER]};
 
 (*---------------------------------------------------------------------------*)
 (* And one containing the dec. proc. and the set of arithmetic rewrites. But *)

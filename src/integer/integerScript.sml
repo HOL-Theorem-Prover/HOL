@@ -2888,7 +2888,7 @@ val INT_DIV_CALCULATE = save_thm(
 
 val NB_NOT_0 = prove(
   ``!n. ~(BIT1 n = 0) /\ ~(BIT2 n = 0)``,
-  SIMP_TAC int_ss [BIT1, BIT2]);
+  SIMP_TAC bool_ss [BIT1, BIT2, ADD_CLAUSES, SUC_NOT]);
 val INT_DIV_REDUCE = store_thm(
   "INT_DIV_REDUCE",
   Term`!m n.
@@ -2950,8 +2950,9 @@ val INT_QUOT_REDUCE = store_thm(
             &(NUMERAL m DIV NUMERAL (BIT1 n))) /\
          (~&(NUMERAL m) quot ~&(NUMERAL (BIT2 n)) =
             &(NUMERAL m DIV NUMERAL (BIT2 n)))`,
-  SIMP_TAC int_ss [INT_QUOT, INT_QUOT_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG,
-                   NUMERAL_DEF, BIT1, BIT2, ZERO_DIV]);
+  SIMP_TAC bool_ss [INT_QUOT, INT_QUOT_NEG, INT_INJ, INT_NEG_EQ0, INT_NEGNEG,
+                    NUMERAL_DEF, BIT1, BIT2, ZERO_DIV, ADD_CLAUSES, NOT_SUC,
+                    prim_recTheory.LESS_0]);
 
 val INT_MOD_CALCULATE = save_thm(
   "INT_MOD_CALCULATE",
@@ -3130,7 +3131,7 @@ val INT_DIVIDES_REDUCE = store_thm(
   SIMP_TAC bool_ss [INT_DIVIDES_NEG] THEN
   SIMP_TAC bool_ss [INT_DIVIDES_MOD0, INT_EQ_CALCULATE,
                     INT_MOD_REDUCE] THEN
-  SIMP_TAC int_ss [NUMERAL_DEF, BIT1, BIT2] THEN
+  SIMP_TAC bool_ss [NUMERAL_DEF, BIT1, BIT2, ADD_CLAUSES, SUC_NOT] THEN
   PROVE_TAC [INT_MOD0]);
 
 (* more theorems *)

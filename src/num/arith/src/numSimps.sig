@@ -16,6 +16,11 @@ type ctxt
      val is_arith_asm       : term -> bool
      val arith_cache        : Cache.cache
 
+     val ADDL_CANON_CONV     : conv
+     val ADDR_CANON_CONV     : conv
+     val MUL_CANON_CONV     : conv
+
+
     (* deprecated *)
     val old_ARITH_ss        : simpLib.ssfrag
 end
@@ -50,6 +55,21 @@ end
    hypothesis without confusing ARITH_CONV.
 
    [arith_cache] is the cache on which ARITH_ss relies.
+
+   [ADDR_CANON_CONV t] normalises additive term t, collecting up terms with
+   common bases and summing coefficients.  Additions are right-associated with
+   constants appearing to the right.
+
+   [ADDL_CANON_CONV t] normalises additive term t, collecting up terms with
+   common bases and summing coefficients.  Additions are left-associated with
+   constants appearing to the right.
+
+   [MUL_CANON_CONV t] normalises multiplicative term t, collecting up terms
+   with common bases and summing exponents.  Multiplications are left-
+   associated, except that constants appear separately to the left (thus
+   making such terms appropriate coefficient-base pairs).
+
+
 
    [old_ARITH_ss] is an old version of ARITH_ss that does less
    normalisation of arithmetic expressions.  Here for some backwards
