@@ -95,31 +95,42 @@
                               (stringp outfile))
                   :stobjs state))
   (state-global-let*
-   ((write-for-read t))
+   ((write-for-read t)
+    (current-package (f-get-global 'current-package state)))
    (downcase
     (let ((ctx 'a2ml))
       (er-let*
-       ((list (read-list infile ctx state)))
-       (mv-let (channel state)
-         (open-output-channel outfile :character state)
-         (if channel
-             (mv-let
-               (col state)
-               (fmt1 "Writing ml file ~x0.~%" (list (cons #\0 outfile))
-                     0 (standard-co state) state nil)
-               (declare (ignore col))
-               (pprogn (print-current-package (car list) channel state)
-                       (princ$ "val _ = sexp.acl2_list_ref := [" channel state)
-                       (newline channel state)
-                       (let ((state (pprint-objects-to-ml
-                                     list "," channel state)))
-                         (pprogn (princ$ "];" channel state)
-                                 (newline channel state)
-                                 (close-output-channel channel state)
-                                 (value :invisible)))))
-           (er soft ctx
-               "Unable to open file ~s0 for :character output."
-               outfile))))))))
+       ((list0 (read-list infile ctx state)))
+       (mv-let
+        (pkg list)
+        (if (and (consp (car list0))
+                 (eq (caar list0) 'in-package))
+            (mv (cadr (car list0)) (cdr list0))
+          (mv nil list0))
+        (er-progn
+         (if pkg
+             (set-current-package pkg state)
+           (value nil))
+         (mv-let (channel state)
+                 (open-output-channel outfile :character state)
+                 (if channel
+                     (mv-let
+                      (col state)
+                      (fmt1 "Writing ml file ~x0.~%" (list (cons #\0 outfile))
+                            0 (standard-co state) state nil)
+                      (declare (ignore col))
+                      (pprogn (print-current-package (car list) channel state)
+                              (princ$ "val _ = sexp.acl2_list_ref := [" channel state)
+                              (newline channel state)
+                              (let ((state (pprint-objects-to-ml
+                                            list "," channel state)))
+                                (pprogn (princ$ "];" channel state)
+                                        (newline channel state)
+                                        (close-output-channel channel state)
+                                        (value :invisible)))))
+                   (er soft ctx
+                       "Unable to open file ~s0 for :character output."
+                       outfile))))))))))
 
 (defmacro a2ml (infile outfile)
   (declare (xargs :guard (and (stringp infile)

@@ -166,7 +166,7 @@
   (cond ((endp forms)
          (revappend defuns (reverse non-defuns)))
         ((and (consp (car forms))
-              (member-eq (caar forms) '(defun mutual-recursion progn)))
+              (member-eq (caar forms) '(defun mutual-recursion progn in-package)))
          (push-defuns-to-front (cdr forms) non-defuns (cons (car forms) defuns)))
         (t
          (push-defuns-to-front (cdr forms) (cons (car forms) non-defuns) defuns))))
