@@ -108,24 +108,30 @@ fun nat_nonpresburgers tm =
 
 val x_var = mk_var("x", int_ty)
 val c_var = mk_var("c", int_ty)
-fun elim_div_mod0 t = let
+fun elim_div_mod0 exp t = let
   val divmods =
       HOLset.listItems (find_free_terms (fn t => is_mod t orelse is_div t) t)
   fun elim_t to_elim = let
-    val ((num,divisor), thm) = (dest_div to_elim, INT_DIV_P)
-        handle HOL_ERR _ => (dest_mod to_elim, INT_MOD_P)
+    val ((num,divisor), c1, c2, thm) = let
+      val (c1, c2) = if exp then (RAND_CONV o LAND_CONV, RAND_CONV o RAND_CONV)
+                     else (LAND_CONV o RAND_CONV, RAND_CONV)
+    in
+      (dest_div to_elim, c1, c2, if exp then INT_DIV_P else INT_DIV_FORALL_P)
+      handle HOL_ERR _ => (dest_mod to_elim, c1, c2,
+                           if exp then INT_MOD_P else INT_MOD_FORALL_P)
+    end
     val div_nzero = EQT_ELIM (REDUCE_CONV (mk_neg(mk_eq(divisor, zero_tm))))
     val abs_div = REDUCE_CONV (mk_absval divisor)
     val rwt = MP (Thm.INST [x_var |-> num, c_var |-> divisor] (SPEC_ALL thm))
                  div_nzero
   in
     UNBETA_CONV to_elim THENC REWR_CONV rwt THENC
-    STRIP_QUANT_CONV (RAND_CONV (FORK_CONV (REDUCE_CONV, BETA_CONV)))
+    STRIP_QUANT_CONV (c1 REDUCE_CONV THENC c2 BETA_CONV)
   end
 in
   case divmods of
     [] => ALL_CONV
-  | _ => FIRST_CONV (map elim_t divmods) THENC elim_div_mod0
+  | _ => FIRST_CONV (map elim_t divmods) THENC elim_div_mod0 exp
 end t
 
 fun elim_div_mod t = let
@@ -133,13 +139,15 @@ fun elim_div_mod t = let
      elimination of x/c relies on x being free.  So we need to traverse
      the term underneath the quantifiers.  It may also help to get the
      quantifiers to have scope over as little of the term as possible. *)
+  val exp = goal_qtype t = qsEXISTS
   fun recurse passed_a_binder tm = let
   in
     if is_exists tm orelse is_forall tm orelse is_exists1 tm then
       BINDER_CONV (recurse true)
     else if is_abs tm then ABS_CONV (recurse true)
     else
-      (if passed_a_binder then TRY_CONV elim_div_mod0 else ALL_CONV) THENC
+      (if passed_a_binder then TRY_CONV (elim_div_mod0 exp)
+       else ALL_CONV) THENC
       SUB_CONV (recurse false)
   end tm
 in

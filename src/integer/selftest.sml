@@ -16,7 +16,7 @@ val _ = print "Testing normalisers\n"
 fun test (s, f, orig, answer) = let
   val result = QCONV f orig
 in
-  print (StringCvt.padRight #" " 60 (s ^ " " ^ term_to_string orig));
+  print (StringCvt.padRight #" " 60 (s ^ "  ``" ^ term_to_string orig ^ "``"));
   if aconv (rhs (concl result)) answer then print "OK\n"
   else die "FAILED!\n"
 end

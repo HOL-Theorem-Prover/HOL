@@ -236,7 +236,15 @@ val terms_to_test =
 
 val omega_test_terms = [
   L (``(x MOD 1001 + y MOD 1001) MOD 1001 = (x + y) MOD 1001``, "MOD_ADD1001"),
-  L (``((n DIV 100000) MOD 2 = 0) ==> n MOD 200000 < 100000``, "DIV_LT100000")
+  L (``((n DIV 100000) MOD 2 = 0) ==> n MOD 200000 < 100000``, "DIV_LT100000"),
+  L (``i < (nb - 1) % 256 /\ 0 <= nb /\ nb < 256 /\ 0 <= i /\ i < 256 ==>
+       i < (i + 1) % 256``, "MATTHEWS_I256"),
+  L (``i < (nb - 1) MOD 256 /\ 0 <= nb /\ nb < 256 /\ 0 <= i /\ i < 256 ==>
+       i < (i + 1) MOD 256``, "MATTHEWS_N256"),
+  L (``i < (nb - 1) % 2147483648 /\ 0 <= nb /\ nb < 2147483648 /\ 0 <= i /\
+       i < 2147483648 ==> i < (i + 1) % 2147483648``, "MATTHEWS_I2^31"),
+  L (``i < (nb - 1) MOD 2147483648 /\ 0 <= nb /\ nb < 2147483648 /\ 0 <= i /\
+       i < 2147483648 ==> i < (i + 1) MOD 2147483648``, "MATTHEWS_N2^31")
 ]
 
 val goals_to_test = [
