@@ -757,7 +757,7 @@ val LFINITE = store_thm(
 
 val (llength_rel_rules,llength_rel_ind,llength_rel_cases) = Hol_reln`
   llength_rel [||] 0  /\
-  (!n t. llength_rel t n ==> llength_rel (h:::t) (SUC n))
+  (!h n t. llength_rel t n ==> llength_rel (h:::t) (SUC n))
 `;
 
 val llength_lfinite = prove(
