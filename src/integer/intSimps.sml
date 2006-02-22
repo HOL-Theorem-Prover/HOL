@@ -87,10 +87,14 @@ end (* local *) ;
 
 val _ = BasicProvers.augment_srw_ss [INT_REDUCE_ss];
 
-(*---------------------------------------------------------------------------*)
-(* Accumulate literal additions in integer expressions                       *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    integer normalisations
+   ---------------------------------------------------------------------- *)
 
+(* Accumulate literal additions in integer expressions
+    (doesn't do coefficient gathering - just adds up literals, and
+     reassociates along the way)
+*)
 fun collect_additive_consts tm = let
   val summands = strip_plus tm
 in
@@ -115,6 +119,57 @@ in
         end
     end
 end
+
+local
+  open intSyntax integerTheory GenPolyCanon
+  val assoc = INT_ADD_ASSOC
+  val comm = INT_ADD_COMM
+  fun is_good t = let
+    val (l,r) = dest_mult t
+  in
+    is_int_literal l
+  end handle HOL_ERR _ => false
+  fun non_coeff t = if is_good t then rand t
+                    else if is_negated t then rand t
+                    else t
+  fun add_coeff t =
+      if is_good t then ALL_CONV t
+      else if is_negated t then REWR_CONV INT_NEG_MINUS1 t
+      else REWR_CONV (GSYM INT_MUL_LID) t
+  val distrib = GSYM INT_RDISTRIB
+  fun merge t = let
+    val (l,r) = dest_plus t
+  in
+    if is_int_literal l andalso is_int_literal r then
+      REDUCE_CONV
+    else BINOP_CONV add_coeff THENC
+         REWR_CONV distrib THENC
+         LAND_CONV REDUCE_CONV
+  end t
+in
+  val lintadd_gci =
+      GCI { dest = dest_plus,
+            assoc_mode = L,
+            is_literal = is_int_literal,
+            assoc = assoc,
+            symassoc = GSYM assoc,
+            comm = comm,
+            l_asscomm = derive_l_asscomm assoc comm,
+            r_asscomm = derive_r_asscomm assoc comm,
+            non_coeff = non_coeff,
+            merge = merge,
+            postnorm = REWR_CONV INT_MUL_LZERO ORELSEC
+                       REWR_CONV INT_MUL_LID ORELSEC
+                       TRY_CONV (REWR_CONV (GSYM INT_NEG_MINUS1)),
+            left_id = INT_ADD_LID,
+            right_id = INT_ADD_RID,
+            reducer = REDUCE_CONV }
+  val rintadd_gci = update_mode R lintadd_gci
+  val ADDL_CANON_CONV = gencanon lintadd_gci
+  val ADDR_CANON_CONV = gencanon rintadd_gci
+end
+
+
 
 (*---------------------------------------------------------------------------*)
 (* Support for ordered AC rewriting                                          *)

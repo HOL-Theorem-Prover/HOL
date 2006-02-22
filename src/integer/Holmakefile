@@ -1,4 +1,4 @@
 EXTRA_CLEANS = selftest.exe
 
-selftest.exe: selftest.sml
+selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<

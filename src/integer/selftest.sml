@@ -1,4 +1,37 @@
+structure selftest =
+struct
+
+open HolKernel boolLib Parse
+
+structure Parse =
+struct
+open Parse
+val (Type,Term) = parse_from_grammars integerTheory.integer_grammars
+end
+open Parse
+
 fun die s = (print (s^"\n"); Process.exit Process.failure)
+
+val _ = print "Testing normalisers\n"
+fun test (s, f, orig, answer) = let
+  val result = QCONV f orig
+in
+  print (StringCvt.padRight #" " 60 (s ^ " " ^ term_to_string orig));
+  if aconv (rhs (concl result)) answer then print "OK\n"
+  else die "FAILED!\n"
+end
+val _ = let
+  open intSimps
+  val AL = ADDL_CANON_CONV
+  val AR = ADDR_CANON_CONV
+in
+  app test
+  [("ADDL_CANON_CONV", AL, ``~3 + ~y + x + x + 4``, ``2 * x + ~y + 1``),
+   ("ADDL_CANON_CONV", AL, ``~3 + ~y + x + x + 4 + y``, ``2 * x + 1``),
+   ("ADDR_CANON_CONV", AR, ``~3 + ~y + x + x + 4``, ``2 * x + (~y + 1)``),
+   ("ADDR_CANON_CONV", AR, ``~3 + ~y + x + x + 4 + y``, ``2 * x + 1``)]
+end
+
 
 val progs = ["test_omega.exe", "test_coopers.exe"]
 
@@ -36,3 +69,4 @@ val _ = Process.atExit (ignore o cleanup)
 
 val _ = Process.exit (if List.all run progs then Process.success
                       else Process.failure)
+end; (* struct *)

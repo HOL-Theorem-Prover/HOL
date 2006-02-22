@@ -23,4 +23,11 @@ sig
      the collected numeral always appears on the right,
      fails if there is no collecting to be done *)
 
+  val ADDL_CANON_CONV : term -> thm
+    (* collects up all terms, summing coefficients.  Does more than
+       collect_additive_consts therefore.  Left-associates. *)
+  val ADDR_CANON_CONV : term -> thm
+    (* collects up all terms, summing coefficients.  Does more than
+       collect_additive_consts therefore.  Right-associates. *)
+
 end;

@@ -21,6 +21,15 @@ datatype gci =
                  right_id : thm (* id on right can be rewritten away *),
                  reducer : term -> thm}
 
+fun update_mode m (GCI {dest,is_literal,assoc,symassoc,comm,assoc_mode,
+                        l_asscomm,r_asscomm, non_coeff, merge, postnorm,
+                        left_id, right_id, reducer}) =
+    GCI {dest = dest, is_literal = is_literal, comm = comm, assoc = assoc,
+         symassoc = symassoc, l_asscomm = l_asscomm, r_asscomm = r_asscomm,
+         non_coeff = non_coeff, merge = merge, postnorm = postnorm,
+         left_id = left_id, right_id = right_id, reducer = reducer,
+         assoc_mode = m}
+
 fun gencanon (gci as GCI g) = let
   val {dest,non_coeff,comm,assoc,symassoc,merge,postnorm,is_literal,...} = g
   val REDUCE_CONV = #reducer g
@@ -32,7 +41,9 @@ fun gencanon (gci as GCI g) = let
       (l', (fn c => REWR_CONV assoc THENC LAND_CONV c), LAND_CONV,
        REWR_CONV (#r_asscomm g))
     end handle HOL_ERR _ => (r,I,I,REWR_CONV comm)
-    val swap_action = swapper THENC RAND_CONV ra_swapmerge THENC
+    val swap_action = swapper THENC
+                      RAND_CONV (ra_swapmerge THENC
+                                 TRY_CONV (REWR_CONV (#left_id g))) THENC
                       TRY_CONV (REWR_CONV (#right_id g))
     val eq_action = merge_conval merge THENC post_conval postnorm
     val non_action = LAND_CONV postnorm
@@ -57,7 +68,9 @@ fun gencanon (gci as GCI g) = let
     end handle HOL_ERR _ => (l,I,I,REWR_CONV comm)
     val non_action = RAND_CONV postnorm
     val eq_action = merge_conval merge THENC post_conval postnorm
-    val swap_action = swapper THENC LAND_CONV la_swapmerge THENC
+    val swap_action = swapper THENC
+                      LAND_CONV (la_swapmerge THENC
+                                 TRY_CONV (REWR_CONV (#right_id g))) THENC
                       TRY_CONV (REWR_CONV (#left_id g))
   in
     case
@@ -139,39 +152,6 @@ end (* struct *)
 
 (*
 
-val intadd_gci = let
-  open intSyntax integerTheory intLib
-  val assoc = SPEC_ALL INT_ADD_ASSOC
-  val comm = SPEC_ALL INT_ADD_COMM
-  fun is_good t = let
-    val (l,r) = dest_mult t
-  in
-    is_int_literal l
-  end handle HOL_ERR _ => false
-  fun non_coeff t = if is_good t then rand t
-                    else if is_negated t then rand t
-                    else t
-  fun add_coeff t =
-      if is_good t then ALL_CONV t
-      else if is_negated t then REWR_CONV INT_NEG_MINUS1 t
-      else REWR_CONV (GSYM INT_MUL_LID) t
-in
-  GCI { dest = dest_plus,
-        assoc = assoc,
-        symassoc = SYM assoc,
-        comm = comm,
-        asscomm = derive_asscomm assoc comm,
-        non_coeff = non_coeff,
-        distrib = GSYM INT_RDISTRIB,
-        distrib_left = true,
-        add_coeff = add_coeff,
-        postnorm = REWR_CONV INT_MUL_LZERO ORELSEC
-                   REWR_CONV INT_MUL_LID ORELSEC
-                   TRY_CONV (REWR_CONV (GSYM INT_NEG_MINUS1)),
-        left_id = INT_ADD_LID,
-        right_id = INT_ADD_RID,
-        reducer = REDUCE_CONV }
-end
 
 val realadd_gci = let
   open realTheory realSyntax

@@ -20,6 +20,7 @@ datatype gci =
                  right_id : thm ,
                  reducer : term -> thm}
 
+val update_mode : assoc_mode -> gci -> gci
 val gencanon : gci -> term -> thm
 
 val derive_l_asscomm : thm -> thm -> thm
@@ -71,6 +72,9 @@ end;
 
   To handle literals, get non_coeff to return a base of 1 for them, and then
   handle their merging separately in the merge function.
+
+  [update_mode m g] returns a g' that is identical to g except that
+  the assoc_mode field of the record has been updated to have value m.
 
   [gencanon g t] returns a theorem of the form |- t = t', where t' is a normal
   form.  The polynomial will be right-associated (for backwards compatibility
