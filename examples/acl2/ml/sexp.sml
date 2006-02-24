@@ -644,7 +644,23 @@ fun term_to_mlsexp tm =
         print_term tm; print ". Use \"nat\", \"int\" or \"cpx\".\n";
         err "term_to_mlsexp" "bad occurrence of an integer numeral") else
  if is_let tm
-  then term_to_mlsexp(mk_comb(dest_let tm)) else
+  then 
+   let val (pabs,arg_tuple) = dest_let tm
+       val (param_tuple,bdy) = pairSyntax.dest_pabs pabs
+       val args = pairSyntax.strip_pair arg_tuple
+       val params = pairSyntax.strip_pair param_tuple
+   in 
+    if not(length params = length args)
+     then (print_term tm; print "\n";
+           print "different numbers of formal and actual parameters\n";
+           err "term_to_mlsexp" "formal/actual mismatch")
+     else mk_mlsexp_list
+          (mk_mlsexp_list
+            [mllambda, 
+             mk_mlsexp_list(map term_to_mlsexp params), 
+             term_to_mlsexp bdy]
+           :: map term_to_mlsexp args)
+   end else
  if is_comb tm
   then 
    let val (opr,args) = strip_comb tm
@@ -1022,7 +1038,7 @@ fun MK_DEF_EQ th =
 (* -->                                                                       *)
 (* |- (\x1 ... xn. t) y1 .. yn = let x1 = y1 in (... (let xn = yn in t) ...) *)
 (*                                                                           *)
-(*****************************************************************************)
+(******************************************************************************
 fun LET_INTRO_CONV tm =
  let val (opr, args) = strip_comb tm
      val (params,bdy) = strip_abs opr
@@ -1040,11 +1056,44 @@ fun LET_INTRO_CONV tm =
  in
   GSYM(TRANS(TRANS th1 th3)(GSYM th2))
  end;
+******************************************************************************)
+
+(*****************************************************************************)
+(* Conversion                                                                *)
+(*                                                                           *)
+(* ``(\x1 ... xn. t) y1 .. yn``                                              *)
+(* -->                                                                       *)
+(* |- (\x1 ... xn. t) y1 .. yn = let (x1,...,xn) = (y1,...,yn) in t          *)
+(*                                                                           *)
+(*****************************************************************************)
+fun LET_INTRO_CONV tm =
+ let val (opr, args) = strip_comb tm
+     val (params,bdy) = strip_abs opr
+     val param_arg_list = filter 
+                           (fn (v1,v2) => not(aconv v1 v2)) 
+                           (zip params args)
+     val let_tm = ``LET 
+                     ^(pairSyntax.mk_pabs(pairSyntax.list_mk_pair params,bdy))
+                     ^(pairSyntax.list_mk_pair args)``
+     val th1 = DEPTH_CONV (REWR_CONV LET_THM) let_tm
+     val th2 = DEPTH_CONV BETA_CONV tm
+     val th3 = DEPTH_CONV PairRules.PBETA_CONV(rhs(concl th1))
+ in
+  GSYM(TRANS(TRANS th1 th3)(GSYM th2))
+ end;
+
+(*****************************************************************************)
+(* Flag to determine whether to introduce lets                               *)
+(*****************************************************************************)
+val let_flag = ref true;
 
 (*****************************************************************************)
 (* Rule to introduce let throughout a term                                   *)
 (*****************************************************************************)
-val LET_INTRO = CONV_RULE(RHS_CONV(TOP_DEPTH_CONV LET_INTRO_CONV));
+fun LET_INTRO th = 
+ if !let_flag 
+  then CONV_RULE (RHS_CONV(TOP_DEPTH_CONV LET_INTRO_CONV)) th
+  else th;
 
 (*****************************************************************************)
 (* Test if a string only contains letters, numbers, "_" and "-"              *)
@@ -1074,12 +1123,12 @@ fun convert_acl2_name_to_hol_name s =
 (* ML datatype to represent defs sent from ACL2                              *)
 (*****************************************************************************)
 datatype acl2def =
-   defun    of string * thm
- | defaxiom of string * term
- | defthm   of string * term;
+   defun       of string * thm
+ | defaxiom    of string * term
+ | defthm      of string * term;
 
 (*****************************************************************************)
-(* ``ACL2::FOO`` |--> ``foo``                                                *)
+(* ``ACL2::NAME`` |--> ``name``                                              *)
 (*****************************************************************************)
 fun clean_acl2_var tm =
  if is_var tm
@@ -1298,6 +1347,7 @@ fun print_acl2_defun_script thy ql name_alist =
 (* corresponding HOL name with convert_acl2_name_to_hol_name and overload    *)
 (* this onto the ACL2 name                                                   *)
 (*****************************************************************************)
+(* Old code. Remove when replacement below tested
 fun mk_defun_and_overload mlsexp =
  let val th =
       case mk_def mlsexp
@@ -1312,11 +1362,27 @@ fun mk_defun_and_overload mlsexp =
  in
   th
  end;
+*)
+
+fun mk_defun_and_overload mlsexp =
+ case mk_def mlsexp
+  of defun(_,defth) => 
+      let val (opr,_) = strip_comb(lhs(concl(SPEC_ALL defth)))
+          val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
+          val (pkg,nam) = split_acl2_name opr_name
+          val _ = if (pkg = !current_package) andalso is_simple_acl2_name nam
+                   then overload_on(convert_acl2_name_to_hol_name nam,opr)
+                   else ()
+      in
+       defth
+      end
+  |   _             => err "simple_mk_defun" "not a defun";
 
 (*****************************************************************************)
 (* Apply mk_def and then overload a hol name on the defined constant,        *)
 (* if it is found in a supplied alist                                        *)
 (*****************************************************************************)
+(* Old code. Remove when replacement below tested
 fun define_and_overload name_alist mlsexp =
  let val th =
       case mk_def mlsexp
@@ -1330,6 +1396,21 @@ fun define_and_overload name_alist mlsexp =
  in
   th
  end;
+*)
+
+fun define_and_overload name_alist mlsexp =
+ case mk_def mlsexp
+  of defun(_,defth) => 
+   let val (opr,_) = strip_comb(lhs(concl(SPEC_ALL defth)))
+       val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
+       val _ = case assoc2 opr_name name_alist
+                of SOME(nam,_) => overload_on(nam,opr)
+                |  _           => ()
+   in
+    defth
+   end
+  |  _             => err "define_and_overload" "not a defun";
+
 
 (*****************************************************************************)
 (* Add theory load time code to restore binding of acl2_simps in theory      *)
