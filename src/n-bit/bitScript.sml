@@ -12,8 +12,6 @@
 open HolKernel Parse boolLib bossLib;
 open Q simpLib numLib arithmeticTheory logrootTheory prim_recTheory;
 
-val arith_ss = old_arith_ss
-
 val _ = new_theory "bit";
 
 (* ------------------------------------------------------------------------- *)
@@ -155,8 +153,8 @@ val BITSLT_THM = store_thm("BITSLT_THM",
 
 val DIV_MULT_LEM = prove(
   `!m n. 0 < n ==> m DIV n * n <= m`,
-  RW_TAC arith_ss [LESS_EQ_EXISTS] \\ EXISTS_TAC `m MOD n`
-    \\ RW_TAC arith_ss [GSYM DIVISION]);
+  RW_TAC std_ss [LESS_EQ_EXISTS] \\ EXISTS_TAC `m MOD n`
+    \\ RW_TAC std_ss [GSYM DIVISION]);
 
 (* |- !x n. n DIV 2 ** x * 2 ** x <= n *)
 val DIV_MULT_LESS_EQ = GEN_ALL (SIMP_RULE bool_ss [ZERO_LT_TWOEXP]
@@ -275,9 +273,9 @@ val BIT_B_NEQ = store_thm("BIT_B_NEQ",
     \\ IMP_RES_TAC (DECIDE ``!(a:num) b. ~(a = b) ==> (a < b) \/ (b < a)``)
     << [
       IMP_RES_TAC LESS_ADD_1
-        \\ ASM_SIMP_TAC arith_ss [ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,
+        \\ ASM_SIMP_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,
              EXP_ADD,MOD_EQ_0,ZERO_LT_TWOEXP],
-      IMP_RES_TAC TWOEXP_MONO \\ ASM_SIMP_TAC arith_ss [LESS_DIV_EQ_ZERO]]);
+      IMP_RES_TAC TWOEXP_MONO \\ ASM_SIMP_TAC std_ss [LESS_DIV_EQ_ZERO]]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -340,8 +338,8 @@ RW_TAC std_ss [BIT_def, BITS_def,MOD_2EXP_def, DIV_2EXP_def] \\
 RW_TAC arith_ss [SUC_SUB, NOT_MOD2_LEM2, GSYM EVEN_MOD2] \\
 RW_TAC arith_ss [DIV_P, ZERO_LT_TWOEXP] \\
 Q.EXISTS_TAC `a * 2 ** (s - n)` \\ Q.EXISTS_TAC `0` \\
-RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT,
-                 EVEN_EXP])
+RW_TAC std_ss [ZERO_LT_TWOEXP,GSYM MULT_ASSOC, GSYM EXP_ADD, EVEN_MULT] \\
+ASM_SIMP_TAC arith_ss [EVEN_EXP])
 
 val BIT_OF_BITS_THM2 = store_thm("BIT_OF_BITS_THM2",
   `!h l x n.  h < l + x ==> ~BIT x (BITS h l n)`,
@@ -480,7 +478,7 @@ val SLICE_TWOEXP = prove(
     \\ SUBST1_TAC (SPECL [`l`,`n`] ADD_COMM)
     \\ RW_TAC bool_ss [(GSYM o CONJUNCT2) ADD,SLICE_THM,BITS_THM,
          MULT_DIV,EXP_ADD,GSYM DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]
-    \\ SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]);
+    \\ SIMP_TAC arith_ss []);
 
 val SPEC_SLICE_TWOEXP =
   (GEN_ALL o SIMP_RULE arith_ss [] o DISCH `n <= l /\ n <= h` o
@@ -495,20 +493,19 @@ val SLICE_COMP_THM2 = store_thm("SLICE_COMP_THM2",
     \\ `y <= h` by DECIDE_TAC
     \\ SUBST1_TAC (SPECL [`n`,`x`,`y`] SLICE_THM)
     \\ ASM_SIMP_TAC bool_ss [SPEC_SLICE_TWOEXP]
-    \\ ASM_SIMP_TAC arith_ss [SLICE_THM,BITS_COMP_THM2,MIN_DEF]
-    \\ SIMP_TAC bool_ss [GSYM MULT_ASSOC,GSYM EXP_ADD]
-    \\ ASM_SIMP_TAC arith_ss []);
+    \\ ASM_SIMP_TAC arith_ss [ONCE_REWRITE_RULE [MULT_COMM] SLICE_THM,
+         BITS_COMP_THM2,MIN_DEF]
+    \\ ASM_SIMP_TAC arith_ss [GSYM EXP_ADD]);
 
 (* ------------------------------------------------------------------------- *)
 
 val lem  = prove(`!c a b. (a = b) ==> (a DIV c = b DIV c)`, RW_TAC arith_ss []);
-val lem2 = prove(`!a b c. a * (b * c) = a * c * b`,
-                 SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]);
+val lem2 = prove(`!a b c. a * (b * c) = a * c * b`, SIMP_TAC arith_ss []);
 
 val lem3 = prove(
   `!a m n. n <= m ==> (a * 2 ** m DIV 2 ** n = a * 2 ** (m - n))`,
   REPEAT STRIP_TAC \\ IMP_RES_TAC LESS_EQUAL_ADD
-    \\ ASM_SIMP_TAC arith_ss [EXP_ADD,MULT_DIV,ZERO_LT_TWOEXP,lem2]);
+    \\ ASM_SIMP_TAC std_ss [EXP_ADD,MULT_DIV,ZERO_LT_TWOEXP,lem2]);
 
 (* |- !a m n. n < m ==> (a * 2 ** m DIV 2 ** n = a * 2 ** (m - n)) *)
 val lem4 = SIMP_PROVE std_ss [LESS_IMP_LESS_OR_EQ,lem3]
@@ -526,41 +523,6 @@ val BIT_COMP_THM3 = store_thm("BIT_COMP_THM3",
          (ONCE_REWRITE_RULE [ADD_COMM] (SPEC `l` th)))
     \\ `l < SUC m` by ASM_SIMP_TAC arith_ss []
     \\ FULL_SIMP_TAC arith_ss [lem4,ADD_DIV_ADD_DIV,MULT_DIV,ZERO_LT_TWOEXP]);
-
-(* ------------------------------------------------------------------------- *)
-
-val BITS_SUM = store_thm("BITS_SUM",
-  `!h l a b. b < 2 ** l ==>
-      (BITS h l (a * 2 ** l + b) = BITS h l (a * 2 ** l))`,
-  RW_TAC bool_ss [BITS_THM,DIV_MULT,MULT_DIV,ZERO_LT_TWOEXP]);
-
-val BITS_SUM2 = store_thm("BITS_SUM2",
-  `!h l a b. BITS h l (a * 2 ** SUC h + b) = BITS h l b`,
-  RW_TAC bool_ss [BITS_THM2,MOD_TIMES,ZERO_LT_TWOEXP]);
-
-val SLICE_TWOEXP = prove(
-  `!h l a n. SLICE (h + n) (l + n) (a * 2 ** n) = (SLICE h l a) * 2 ** n`,
-  REPEAT STRIP_TAC
-    \\ SUBST1_TAC (SPECL [`l`,`n`] ADD_COMM)
-    \\ RW_TAC bool_ss [(GSYM o CONJUNCT2) ADD,SLICE_THM,BITS_THM,MULT_DIV,
-         EXP_ADD,GSYM DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]
-    \\ SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM]);
-
-val SPEC_SLICE_TWOEXP =
-  (GEN_ALL o SIMP_RULE arith_ss [] o DISCH `n <= l /\ n <= h` o
-   SPECL [`h - n`,`l - n`,`a`,`n`]) SLICE_TWOEXP;
-
-val SLICE_COMP_THM2 = store_thm("SLICE_COMP_THM2",
-  `!h l x y n.  h <= x /\ y <= l ==>
-        (SLICE h l (SLICE x y n) = SLICE h l n)`,
-  REPEAT STRIP_TAC
-    \\ Cases_on `h < l` >> ASM_SIMP_TAC bool_ss [SLICE_ZERO]
-    \\ `y <= h` by DECIDE_TAC
-    \\ SUBST1_TAC (SPECL [`n`,`x`,`y`] SLICE_THM)
-    \\ ASM_SIMP_TAC bool_ss [SPEC_SLICE_TWOEXP]
-    \\ ASM_SIMP_TAC arith_ss [SLICE_THM,BITS_COMP_THM2,MIN_DEF]
-    \\ SIMP_TAC bool_ss [GSYM MULT_ASSOC,GSYM EXP_ADD]
-    \\ ASM_SIMP_TAC arith_ss []);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -611,12 +573,13 @@ val BIT_SLICE_THM4 = store_thm("BIT_SLICE_THM4",
          SPECL [`b`,`b`] BITS_THM,SUC_SUB,NOT_MOD2_LEM2]
     << [
       IMP_RES_TAC LESS_ADD_1
-        \\ ASM_SIMP_TAC arith_ss [MULT_ASSOC,MULT_DIV,ZERO_LT_TWOEXP,
-             ONCE_REWRITE_RULE [ADD_COMM] EXP_ADD]
+        \\ ASM_SIMP_TAC arith_ss [ONCE_REWRITE_RULE [ADD_COMM] EXP_ADD]
+        \\ SIMP_TAC std_ss [MULT_DIV,ZERO_LT_TWOEXP,
+             DECIDE ``a * (b * c) = (a * c) * b``]
         \\ METIS_TAC [MOD_EQ_0,DECIDE ``0 < 2``,MULT_ASSOC,MULT_COMM],
       `SUC h <= b` by DECIDE_TAC
-        \\ `BITS h l n * 2 ** l < 2 ** b` by METIS_TAC [TWOEXP_MONO2,
-             GSYM SLICE_THM,SLICELT_THM,LESS_LESS_EQ_TRANS]
+        \\ `2 ** l * BITS h l n < 2 ** b` by METIS_TAC [TWOEXP_MONO2,
+             GSYM SLICE_THM,SLICELT_THM,LESS_LESS_EQ_TRANS,MULT_COMM]
         \\ ASM_SIMP_TAC std_ss [LESS_DIV_EQ_ZERO]]);
 
 val SUB_BITS = prove(
@@ -646,7 +609,9 @@ val BITS_SUC = store_thm("BITS_SUC",
       `l <= h` by ASM_SIMP_TAC arith_ss []
         \\ IMP_RES_TAC LESS_EQ_IMP_LESS_SUC
         \\ ASM_SIMP_TAC arith_ss [SBIT_DIV,BIT_SLICE_THM,SLICE_THM,
-             lem4,SPECL [`SUC h`,`h`] BIT_COMP_THM3]]);
+             ONCE_REWRITE_RULE [MULT_COMM] lem4,
+             (ONCE_REWRITE_RULE [MULT_COMM] o
+              SPECL [`SUC h`,`h`]) BIT_COMP_THM3]]);
 
 val BITS_SUC_THM = store_thm("BITS_SUC_THM",
   `!h l n. BITS (SUC h) l n =
@@ -818,9 +783,6 @@ val BIT_SET_NOT_ZERO_COR = prove(
 val BIT_SET_NOT_ZERO_COR2 =
   REWRITE_RULE [DIV_1,EXP] (SPEC `0` BIT_SET_NOT_ZERO_COR);
 
-val ADD_DIV_ADD_DIV2 = ONCE_REWRITE_RULE [MULT_COMM]
-  (SIMP_RULE arith_ss [] (SPEC `2` ADD_DIV_ADD_DIV));
-
 val BIT_DIV2 = prove(
   `!i. BIT n (i DIV 2) = BIT (SUC n) i`,
   RW_TAC arith_ss [BIT_def,BITS_THM,EXP,ZERO_LT_TWOEXP,DIV_DIV_DIV_MULT]);
@@ -832,7 +794,8 @@ val SBIT_MULT = store_thm("SBIT_MULT",
 val lemma1 = prove(
   `!a b n. 0 < n ==> ((a + SBIT b n) DIV 2 = a DIV 2 + SBIT b (n - 1))`,
   RW_TAC arith_ss [SBIT_def] \\ IMP_RES_TAC LESS_ADD_1
-    \\ FULL_SIMP_TAC arith_ss [GSYM ADD1,ADD_DIV_ADD_DIV2,EXP]);
+    \\ FULL_SIMP_TAC arith_ss [GSYM ADD1,EXP,
+         (SIMP_RULE arith_ss [] o SPEC `2`) ADD_DIV_ADD_DIV]);
 
 val lemma2 = (ONCE_REWRITE_RULE [MULT_COMM] o REWRITE_RULE [EXP_1] o
               INST [`m` |-> `1`] o SPEC_ALL) SBIT_MULT;

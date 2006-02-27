@@ -16,8 +16,6 @@ open bitTheory;
 
 val _ = new_theory "numeral_bit";
 
-val arith_ss = old_arith_ss
-
 (* ------------------------------------------------------------------------- *)
 
 infix \\ << >>
@@ -197,7 +195,7 @@ val NUMERAL_BIT_MODIFY = store_thm("NUMERAL_BIT_MODIFY",
 
 (* ------------------------------------------------------------------------- *)
 
-val ADD_DIV_ADD_DIV2 = (GEN_ALL o ONCE_REWRITE_RULE [MULT_COMM] o
+val ADD_DIV_ADD_DIV2 = (GEN_ALL o
   SIMP_RULE arith_ss [GSYM ADD1] o SPECL [`n`,`1`] o
   SIMP_RULE bool_ss [DECIDE (Term `0 < 2`)] o SPEC `2`) ADD_DIV_ADD_DIV;
 
@@ -301,16 +299,16 @@ val numeral_ilog2 = store_thm("numeral_ilog2",
               SPECL [`2 * n + 2`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
         \\ SIMP_TAC arith_ss [EXP_ADD,LOG2_def]
         \\ SIMP_TAC arith_ss [GSYM ADD1,EXP,logrootTheory.LOG,
-            DECIDE ``(2 * n + 2 = (n + 1) * 2) /\ (a * 2 < 2 * b = a < b)``]
+            DECIDE ``(2 * n + 2 = (n + 1) * 2) /\ (2 * a < 4 * b = a < 2 * b)``]
         \\ SIMP_TAC arith_ss [GSYM EXP,logrootTheory.LOG],
       MATCH_MP_TAC ((SIMP_RULE arith_ss [] o
               SPECL [`2 * n + 3`,`LOG2 (n + 1) + 1`]) LOG2_UNIQUE)
         \\ SIMP_TAC arith_ss [EXP_ADD,LOG2_def]
         \\ SIMP_TAC arith_ss [GSYM ADD1,EXP,logrootTheory.LOG,
-             DECIDE ``(2 * n + 3 = (n + 1) * 2 + 1)``,
-             DECIDE ``a <= b ==> a * 2 <= SUC (b * 2)``]
+             DECIDE ``(2 * n + 3 = 2 * (n + 1) + 1)``,
+             DECIDE ``a <= b ==> 2 * a <= SUC (2 * b)``]
         \\ SIMP_TAC arith_ss [
-             DECIDE ``a < b ==> SUC (a * 2) < 2 * b``,
+             DECIDE ``a < 2 * b ==> SUC (2 * a) < 4 * b``,
              (Once o GSYM) EXP,logrootTheory.LOG]]);
 
 val numeral_log2 = store_thm("numeral_log2",

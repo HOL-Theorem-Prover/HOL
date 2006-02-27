@@ -14,9 +14,6 @@ open HolKernel Parse boolLib bossLib;
 open Q arithmeticTheory pred_setTheory;
 open bitTheory sum_numTheory fcpTheory;
 
-val arith_ss = old_arith_ss
-val ARITH_ss = old_ARITH_ss
-
 val _ = new_theory "words";
 
 (* ------------------------------------------------------------------------- *)
@@ -35,13 +32,7 @@ val HB = ``^WL - 1``;
 val TOP = ``2 ** ^WL``;
 val MSB = ``2 ** ^HB``;
 
-fun Def s q = Definition.new_definition(s,Parse.Term q)
-              handle e => Raise e;
-fun xDef s n t = boolSyntax.new_infixr_definition(s, Parse.Term t, n)
-                 handle e => Raise e;
-fun xlDef s n t = boolSyntax.new_infixl_definition(s, Parse.Term t, n)
-                  handle e => Raise e;
-
+fun Def s q = Definition.new_definition(s,Parse.Term q) handle e => Raise e;
 
 (* ------------------------------------------------------------------------- *)
 (*  Domain transforming maps : definitions                                   *)
@@ -79,22 +70,28 @@ val word_H_def = Define`
 val word_1comp_def = Def "word_1comp_def"
   `word_1comp (w:bool ** 'a) = (FCP i. ~(w %% i)):bool ** 'a`;
 
-val word_and_def = xDef "word_and_def" 400
-  `$&& (v:bool ** 'a) (w:bool ** 'a) =
+val word_and_def = Def "word_and_def"
+  `word_and (v:bool ** 'a) (w:bool ** 'a) =
     (FCP i. (v %% i) /\ (w %% i)):bool ** 'a`;
 
-val word_or_def = xDef "word_or_def" 300
-  `$!! (v:bool ** 'a) (w:bool ** 'a) =
+val word_or_def = Def "word_or_def"
+  `word_or (v:bool ** 'a) (w:bool ** 'a) =
     (FCP i. (v %% i) \/ (w %% i)):bool ** 'a`;
 
-val word_xor_def = xDef "word_xor_def" 300
-  `$?? (v:bool ** 'a) (w:bool ** 'a) =
+val word_xor_def = Def "word_xor_def"
+  `word_xor (v:bool ** 'a) (w:bool ** 'a) =
     (FCP i. ~((v %% i) = (w %% i))):bool ** 'a`;
 
-val bool_not = Term`$~`
 val _ = overload_on ("~", Term`$word_1comp`);
-val _ = overload_on ("~", bool_not);
-val _ = overload_on ("Tw", ``word_T``);
+val _ = overload_on ("~", Term`bool$~`);
+val _ = overload_on ("&&",Term`$word_and`);
+val _ = overload_on ("!!",Term`$word_or`);
+val _ = overload_on ("??",Term`$word_xor`);
+val _ = overload_on ("Tw",Term`word_T`);
+
+val _ = add_infix("&&",400,HOLgrammars.RIGHT);
+val _ = add_infix("!!",300,HOLgrammars.RIGHT);
+val _ = add_infix("??",300,HOLgrammars.RIGHT);
 
 (* ------------------------------------------------------------------------- *)
 (*  Bit field operations : definitions                                       *)
@@ -106,17 +103,16 @@ val word_lsb_def = Def "word_lsb_def"
 val word_msb_def = Def "word_msb_def"
   `word_msb (w:bool ** 'a) = w %% ^HB`;
 
-val word_slice_def = xDef "word_slice_def" 350
-  `$<> h l = \w:bool ** 'a.
+val word_slice_def = Def "word_slice_def"
+  `word_slice h l = \w:bool ** 'a.
     (FCP i. l <= i /\ i <= MIN h ^HB /\ w %% i):bool ** 'a`;
 
-val word_bits_def = xDef "word_bits_def" 350
-  `$-- h l = \w:bool ** 'a.
+val word_bits_def = Def "word_bits_def"
+  `word_bits h l = \w:bool ** 'a.
     (FCP i. i + l <= MIN h ^HB /\ w %% (i + l)):bool ** 'a`;
 
-val _ = set_fixity "><" (Infixr 350);
-
-val word_extract_def = xDefine "word_extract" `h >< l = w2w o (h -- l)`;
+val word_extract_def = Def "word_extract_def"
+  `word_extract h l = w2w o word_bits h l`;
 
 val word_bit_def = Def "word_bit_def"
   `word_bit b (w:bool ** 'a) = b <= ^HB /\ w %% b`;
@@ -126,6 +122,17 @@ val word_reverse_def = Def "word_reverse_def"
 
 val word_modify_def = Def "word_modify_def"
   `word_modify f (w:bool ** 'a) = (FCP i. f i (w %% i)):bool ** 'a`;
+
+val word_len_def = Define`
+  word_len (w:bool ** 'a) = dimindex (UNIV:'a->bool)`;
+
+val _ = overload_on ("<>",Term`$word_slice`);
+val _ = overload_on ("--",Term`$word_bits`);
+val _ = overload_on ("><",Term`$word_extract`);
+
+val _ = add_infix("<>",350,HOLgrammars.RIGHT);
+val _ = add_infix("--",350,HOLgrammars.RIGHT);
+val _ = add_infix("><",350,HOLgrammars.RIGHT);
 
 (* ------------------------------------------------------------------------- *)
 (*  Word arithmetic: definitions                                             *)
@@ -149,56 +156,92 @@ val word_mul_def = Def "word_mul_def"
 val word_log2_def = Def "word_log2_def"
   `word_log2 (w:bool ** 'a) = (n2w (LOG2 (w2n w)):bool ** 'a)`;
 
-val _ = overload_on ("+",   Term`$word_add`);
-val _ = overload_on ("-",   Term`$word_sub`);
-val _ = overload_on ("-",   Term`$word_2comp`);
-val _ = overload_on ("*",   Term`$word_mul`);
+val word_div_def = Define`
+  word_div (v: bool ** 'a) (w: bool ** 'a) =
+    n2w:num->(bool ** 'a) (w2n v DIV w2n w)`;
 
+val word_sdiv_def = Define`
+  word_sdiv a b =
+    if word_msb a then
+      if word_msb b then
+        word_div (word_2comp a) (word_2comp b)
+      else
+        word_2comp (word_div (word_2comp a) b)
+    else
+      if word_msb b then
+        word_2comp (word_div a (word_2comp b))
+      else
+        word_div a b`;
+
+val _ = overload_on ("+", Term`$word_add`);
+val _ = overload_on ("-", Term`$word_sub`);
+val _ = overload_on ("-", Term`$word_2comp`);
+val _ = overload_on ("*", Term`$word_mul`);
+val _ = overload_on ("//",Term`$word_div`);
+val _ = overload_on ("/", Term`$word_sdiv`);
+
+val _ = set_fixity "//" (Infixl 600);
+val _ = set_fixity "/"  (Infixl 600);
 
 (* ------------------------------------------------------------------------- *)
 (*  Shifts : definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val word_lsl_def = xlDef "word_lsl_def" 680
-  `$<< (w:bool ** 'a) n =
+val word_lsl_def = Def "word_lsl_def"
+  `word_lsl (w:bool ** 'a) n =
     (FCP i. i < ^WL /\ n <= i /\ w %% (i - n)):bool ** 'a`;
 
-val word_lsr_def = xlDef "word_lsr_def" 680
-  `$>>> (w:bool ** 'a) n =
+val word_lsr_def = Def "word_lsr_def"
+  `word_lsr (w:bool ** 'a) n =
     (FCP i. i + n < ^WL /\ w %% (i + n)):bool ** 'a`;
 
-val word_asr_def = xlDef "word_asr_def" 680
-  `$>> (w:bool ** 'a) n =
+val word_asr_def = Def "word_asr_def"
+  `word_asr (w:bool ** 'a) n =
     (FCP i. if ^WL <= i + n then
               word_msb w
             else
               w %% (i + n)):bool ** 'a`;
 
-val word_ror_def = xlDef "word_ror_def" 680
-  `$#>> (w:bool ** 'a) n =
+val word_ror_def = Def "word_ror_def"
+  `word_ror (w:bool ** 'a) n =
     (FCP i. w %% ((i + n) MOD ^WL)):bool ** 'a`;
 
-val word_rol_def = xlDef "word_rol_def" 680
-  `$#<< (w:bool ** 'a) n =
-    w #>> (^WL - n MOD ^WL)`;
+val word_rol_def = Def "word_rol_def"
+  `word_rol (w:bool ** 'a) n =
+    word_ror w (^WL - n MOD ^WL)`;
 
 val word_rrx_def = Def "word_rrx_def"
   `word_rrx (w:bool ** 'a) c =
     (FCP i. if i = ^HB then
               c
             else
-              (w >>> 1) %% i):bool ** 'a`;
+              (word_lsr w 1) %% i):bool ** 'a`;
+
+val _ = overload_on ("<<", Term`$word_lsl`);
+val _ = overload_on (">>", Term`$word_asr`);
+val _ = overload_on (">>>",Term`$word_lsr`);
+val _ = overload_on ("#>>",Term`$word_ror`);
+val _ = overload_on ("#<<",Term`$word_rol`);
+
+val _ = add_infix("<<", 680,HOLgrammars.LEFT);
+val _ = add_infix(">>", 680,HOLgrammars.LEFT);
+val _ = add_infix(">>>",680,HOLgrammars.LEFT);
+val _ = add_infix("#>>",680,HOLgrammars.LEFT);
+val _ = add_infix("#<<",680,HOLgrammars.LEFT);
 
 (* ------------------------------------------------------------------------- *)
 (*  Concatenation : definition                                               *)
 (* ------------------------------------------------------------------------- *)
 
-val word_concat_def = xDef "word_concat_def" 700
-  `($@@ (v:bool ** 'a) (w:bool ** 'b)):bool ** ('a + 'b) =
+val word_concat_def = Def "word_concat_def"
+  `(word_concat (v:bool ** 'a) (w:bool ** 'b)):bool ** ('a + 'b) =
     let cv = (w2w v):bool ** ('a + 'b)
     and cw = (w2w w):bool ** ('a + 'b)
     in  (cv << (dimindex (UNIV:'b->bool))) !! cw`;
 
+val _ = overload_on ("@@",Term`$word_concat`);
+
+val _ = add_infix("@@",700,HOLgrammars.RIGHT);
 
 (* ------------------------------------------------------------------------- *)
 (*  Orderings : definitions                                                  *)
@@ -223,22 +266,31 @@ val word_le_def = Def "word_le_def"
 val word_ge_def = Def "word_ge_def"
   `word_ge a b = let (n,z,c,v) = nzcv a b in n = v`;
 
-val word_ls_def = xDef "word_ls_def" 450
-  `$<=+ a b = let (n,z,c,v) = nzcv a b in ~c \/ z`;
+val word_ls_def = Def "word_ls_def"
+  `word_ls a b = let (n,z,c,v) = nzcv a b in ~c \/ z`;
 
-val word_hi_def = xDef "word_hi_def" 450
-  `$>+ a b = let (n,z,c,v) = nzcv a b in c /\ ~z`;
+val word_hi_def = Def "word_hi_def"
+  `word_hi a b = let (n,z,c,v) = nzcv a b in c /\ ~z`;
 
-val word_lo_def = xDef "word_lo_def" 450
-  `$<+ a b = let (n,z,c,v) = nzcv a b in ~c`;
+val word_lo_def = Def "word_lo_def"
+  `word_lo a b = let (n,z,c,v) = nzcv a b in ~c`;
 
-val word_hs_def = xDef "word_hs_def" 450
-  `$>=+ a b = let (n,z,c,v) = nzcv a b in c`;
+val word_hs_def = Def "word_hs_def"
+  `word_hs a b = let (n,z,c,v) = nzcv a b in c`;
 
 val _ = overload_on ("<",  Term`word_lt`);
-val _ = overload_on ("<=", Term`word_le`);
 val _ = overload_on (">",  Term`word_gt`);
+val _ = overload_on ("<=", Term`word_le`);
 val _ = overload_on (">=", Term`word_ge`);
+val _ = overload_on ("<=+",Term`word_ls`);
+val _ = overload_on (">+", Term`word_hi`);
+val _ = overload_on ("<+", Term`word_lo`);
+val _ = overload_on (">=+",Term`word_hs`);
+
+val _ = add_infix("<+", 450,HOLgrammars.RIGHT);
+val _ = add_infix(">+", 450,HOLgrammars.RIGHT);
+val _ = add_infix("<=+",450,HOLgrammars.RIGHT);
+val _ = add_infix(">=+",450,HOLgrammars.RIGHT);
 
 (* ------------------------------------------------------------------------- *)
 (*  Theorems                                                                 *)
@@ -299,18 +351,18 @@ val n2w_w2n_lem = prove(
     << [
       IMP_RES_TAC LESS_ADD_1
         \\ `SBIT (f n) n = (if f n then 1 else 0) * 2 ** p * 2 ** (SUC i)`
-        by RW_TAC (arith_ss++numSimps.ARITH_AC_ss) [SBIT_def,EXP_ADD,EXP]
+        by RW_TAC (std_ss++numSimps.ARITH_AC_ss) [SBIT_def,EXP_ADD,EXP]
         \\ FULL_SIMP_TAC std_ss [BITS_SUM2,BIT_def],
       PAT_ASSUM `!f i. P` (SPECL_THEN [`f`,`i`] ASSUME_TAC)
         \\ `SUM n (\i. SBIT (f i) i) < 2 ** n` by METIS_TAC [SUM_SBIT_LT]
         \\ IMP_RES_TAC LESS_EQUAL_ADD
         \\ `SBIT (f n) n = (if f n then 1 else 0) * 2 ** n`
         by RW_TAC arith_ss [SBIT_def]
-        \\ ASM_SIMP_TAC arith_ss [BITS_SUM,
+        \\ ASM_SIMP_TAC std_ss [BITS_SUM,
              (GSYM o REWRITE_RULE [LESS_EQ_REFL] o
               SPECL [`p`,`n + p`,`n`]) BIT_OF_BITS_THM]
-        \\ FULL_SIMP_TAC arith_ss [BIT_def,BITS_COMP_THM2]
-        \\ Cases_on `p = 0` \\ RW_TAC arith_ss [BITS_ZERO2]
+        \\ FULL_SIMP_TAC std_ss [BIT_def,BITS_COMP_THM2]
+        \\ Cases_on `p = 0` \\ RW_TAC std_ss [BITS_ZERO2]
         \\ ASM_SIMP_TAC arith_ss [GSYM BIT_def,BIT_B,BIT_B_NEQ]]);
 
 val n2w_w2n = store_thm("n2w_w2n",
@@ -821,7 +873,8 @@ val WORD_ADD_ASSOC = store_thm("WORD_ADD_ASSOC",
   `!v:bool ** 'a w x. v + (w + x) = v + w + x`, ARITH_WORD_TAC);
 
 val WORD_MULT_ASSOC = store_thm("WORD_MULT_ASSOC",
-  `!v:bool ** 'a w x. v * (w * x) = v * w * x`, ARITH_WORD_TAC);
+  `!v:bool ** 'a w x. v * (w * x) = v * w * x`,
+  REPEAT Cases_word \\ ASM_SIMP_TAC (fcp_ss++WORD_ss) [MULT_ASSOC]);
 
 val WORD_ADD_COMM = store_thm("WORD_ADD_COMM",
   `!v:bool ** 'a w. v + w = w + v`, ARITH_WORD_TAC);
@@ -1176,12 +1229,11 @@ val word_lsl_n2w = store_thm("word_lsl_n2w",
     \\ ASM_REWRITE_TAC [ADD1,GSYM LSL_ADD]
     \\ Cases_on `dimindex (UNIV:'a -> bool) - 1 < n`
     \\ ASM_SIMP_TAC arith_ss [ZERO_SHIFT]
-    \\ RW_TAC (arith_ss++numSimps.ARITH_AC_ss)
-         [LSL_ONE,EXP_ADD,word_add_n2w]
+    \\ RW_TAC arith_ss [LSL_ONE,EXP_ADD,word_add_n2w]
     \\ `n = dimindex (UNIV:'a -> bool) - 1` by DECIDE_TAC
     \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
-    \\ ASM_SIMP_TAC std_ss [GSYM EXP,SUB1_SUC,MOD_EQ_0,ZERO_MOD,
-         ZERO_LT_TWOEXP,DIMINDEX_GT_0]);
+    \\ ASM_SIMP_TAC (std_ss++numSimps.ARITH_AC_ss) [GSYM EXP,SUB1_SUC,
+         MOD_EQ_0,ZERO_MOD,ZERO_LT_TWOEXP,DIMINDEX_GT_0]);
 
 val word_lsr_n2w = store_thm("word_lsr_n2w",
   `!w:bool ** 'a n. w >>> n = (^HB -- n) w`,
@@ -1200,7 +1252,7 @@ val LSL_TRUE = store_thm("LSL_TRUE",
              DECIDE ``a <= b ==> (a - b = 0)``],
       FULL_SIMP_TAC arith_ss [NOT_LESS,RIGHT_SUB_DISTRIB]
         \\ `n < ^WL` by DECIDE_TAC \\ IMP_RES_TAC TWOEXP_MONO
-        \\ `^TOP * 2 ** n - 2 ** n = (2 ** n - 1) * ^TOP + (^TOP - 2 ** n)`
+        \\ `2 ** n * ^TOP - 2 ** n = (2 ** n - 1) * ^TOP + (^TOP - 2 ** n)`
         by (`^TOP <= 2 ** n * ^TOP` by ASM_SIMP_TAC arith_ss [lem]
               \\ ASM_SIMP_TAC std_ss [MULT_LEFT_1,RIGHT_SUB_DISTRIB,
                    GSYM LESS_EQ_ADD_SUB,LESS_IMP_LESS_OR_EQ,SUB_ADD]
@@ -1239,7 +1291,7 @@ val word_ror_n2w = store_thm("word_ror_n2w",
   SIMP_TAC (bool_ss++boolSimps.LET_ss) [Once (GSYM ROR_MOD)]
     \\ RW_TAC fcp_ss [word_ror_def,n2w_def,DIVISION,DIMINDEX_GT_0]
     \\ STRIP_ASSUME_TAC EXISTS_HB
-    \\ FULL_SIMP_TAC arith_ss []
+    \\ FULL_SIMP_TAC arith_ss [] \\ ONCE_REWRITE_TAC [MULT_COMM]
     \\ Cases_on `i < SUC m - n MOD SUC m`
     << [
       `i + n MOD SUC m < SUC m` by DECIDE_TAC

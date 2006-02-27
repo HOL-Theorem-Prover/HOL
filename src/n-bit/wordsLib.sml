@@ -2,7 +2,7 @@ structure wordsLib :> wordsLib =
 struct
 
 (* interactive use:
-  app load ["fcpLib", "numeral_bitTheory", "wordsTheory"];
+  app load ["fcpLib", "numeral_bitTheory", "wordsTheory", "wordsSyntax"];
 *)
 
 open HolKernel Parse boolLib bossLib computeLib;
@@ -39,11 +39,11 @@ val thms = machine_sizes @
    NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
    NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def,
    numeral_log2,numeral_ilog2,
-   n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def,
+   n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,
    word_concat_def, word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
-   word_2comp_n2w, word_sub_def,
+   word_2comp_n2w, word_sub_def, word_div_def, word_sdiv_def,
    MOD_WL word_add_n2w, MOD_WL word_mul_n2w,
    word_asr_n2w, word_lsr_n2w, word_lsl_n2w,
    word_ror_n2w, word_rol_def, word_rrx_n2w,
