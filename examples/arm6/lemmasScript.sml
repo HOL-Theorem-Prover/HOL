@@ -394,17 +394,16 @@ val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
     >> ASM_REWRITE_TAC [WORD_SLICE_BITS_THM,SHIFT_ZERO]
     \\ Cases_on_word `a`
     \\ RW_TAC arith_ss [MIN_DEF,word_slice_n2w,word_bits_n2w,BITS_COMP_THM2,
-         SLICE_THM,w2n_n2w] << [
+         SLICE_THM,w2n_n2w]
+    << [
       Cases_on `h < l` >> ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]
-        \\ `l <= dimindex (UNIV:'a->bool) - 1` by DECIDE_TAC
-        \\ RW_TAC arith_ss [BITS_ZERO3,ADD1,ZERO_LT_TWOEXP,MOD_EQ_0,
-             lem,word_ror_n2w]
-        \\ ASM_SIMP_TAC arith_ss [GSYM SLICE_THM,BITS_SLICE_THM2],
+        \\ `l <= dimindex (UNIV:'a->bool) - 1` by DECIDE_TAC,
       Cases_on `dimindex (UNIV:'a->bool) - 1 < l`
-        >> ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]
-        \\ RW_TAC arith_ss [BITS_ZERO3,ADD1,ZERO_LT_TWOEXP,MOD_EQ_0,
-             lem,word_ror_n2w]
-        \\ REWRITE_TAC [GSYM SLICE_THM,BITS_SLICE_THM]]);
+        >> ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]]
+    \\ RW_TAC arith_ss [BITS_ZERO3,ADD1,lem,word_ror_n2w,
+         ZERO_LT_TWOEXP,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
+    \\ ASM_SIMP_TAC arith_ss [BITS_SLICE_THM2,
+          (GSYM o ONCE_REWRITE_RULE [MULT_COMM]) SLICE_THM]);
 
 val SHIFT_ALIGN = store_thm("SHIFT_ALIGN",
   `!x:word32. w2n (8w:word8 * w2w (((1 >< 0) x):word2)) =

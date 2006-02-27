@@ -80,7 +80,7 @@ val MULX_DONE_def = prove(
          MIN_LEM,BITS_COMP_THM2,NOT_LESS,word_bits_n2w,word_extract_def]
     \\ FULL_SIMP_TAC (arith_ss++SIZES_ss)
          [w2w_def,w2n_n2w,word_mul_n2w,word_add_n2w,word_bits_n2w,n2w_11,
-          BITS_THM,DIV_MULT,MULT_DIV,
+          BITS_THM,COMM_DIV_MULT,COMM_MULT_DIV,
           DECIDE ``!a b c. (a \/ b = a \/ c) = (~a ==> (b = c))``]);
 
 val word_extract = (GSYM o SIMP_RULE std_ss [] o
@@ -197,7 +197,7 @@ val MUL1_SUC = prove(
 
 val COUNT1 = prove(
   `!n b. (n * 2 + (if b then 1 else 0)) DIV 2 = n`,
-  RW_TAC arith_ss [MULT_DIV,DIV_MULT]);
+  RW_TAC arith_ss [COMM_MULT_DIV,COMM_DIV_MULT]);
 
 val BITS_X_SUB2_1 = (SIMP_RULE arith_ss [] o SPEC `1`) BITS_X_SUB2;
 val MUL1_SUC_1 = (SIMP_RULE arith_ss [] o SPEC `0`) MUL1_SUC;
@@ -423,7 +423,7 @@ val LSL_MULT_EXP = prove(
 val MULT_TWO_LSL = prove(
   `!rm t. rm << (2 * t + 1) = (rm << (2 * t)) * n2w 2`,
   SIMP_TAC arith_ss [LSL_MULT_EXP,GSYM WORD_MULT_ASSOC,word_mul_n2w,
-    GSYM ADD1,EXP,MULT_COMM]);
+    GSYM ADD1,EXP]);
 
 val MULT_FOUR_LSL = prove(
   `!t rm. rm << (2 * (t + 1)) = (rm << (2 * t)) * n2w 4`,
@@ -473,28 +473,29 @@ val MUL_1EXP = prove(
 val MUL_2EXP = prove(
   `!a n. a * 2w << n = a << (n + 1)`,
   Cases_word
-    \\ RW_TAC (arith_ss++numSimps.ARITH_AC_ss)
-         [WORD_MULT_CLAUSES,EXP_ADD,word_lsl_n2w,word_mul_n2w]
+    \\ RW_TAC arith_ss [WORD_MULT_CLAUSES,EXP_ADD,word_lsl_n2w,word_mul_n2w]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
     << [`n' = m` by DECIDE_TAC, `m = 0` by DECIDE_TAC]
-    \\ ASM_SIMP_TAC arith_ss [Once (GSYM n2w_mod),ZERO_LT_TWOEXP,
-         GSYM EXP,MOD_EQ_0]);
+    \\ ASM_SIMP_TAC arith_ss [Once (GSYM n2w_mod),ZERO_LT_TWOEXP,MOD_EQ_0,
+         simpLib.SIMP_PROVE arith_ss [EXP]
+           ``2 * (a * 2 ** b) = a * 2 ** SUC b``,
+         ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
 
 val MUL_3EXP = prove(
   `!a n. a * 3w << n = a << (n + 1) + a << n`,
   Cases_word
     \\ RW_TAC arith_ss [WORD_MULT_CLAUSES,EXP_ADD,GSYM LEFT_ADD_DISTRIB,
          word_lsl_n2w,word_mul_n2w,word_add_n2w]
-    \\ SIMP_TAC std_ss [DECIDE ``3 * n = n * 2 + n``]
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
     << [`n' = m` by DECIDE_TAC,
         `m = 0` by DECIDE_TAC \\
-           ONCE_REWRITE_TAC [DECIDE ``n * 3 = n * 2 + n``]]
+           ONCE_REWRITE_TAC [DECIDE ``3 * n = n * 2 + n``]]
     \\ ASM_SIMP_TAC std_ss [Once (GSYM n2w_mod),LEFT_ADD_DISTRIB,
          ZERO_LT_TWOEXP,MOD_TIMES,
-         (GSYM o ONCE_REWRITE_RULE [MULT_COMM]) EXP]
+         simpLib.SIMP_PROVE arith_ss [EXP]
+           ``3 * (a * 2 ** b) = a * 2 ** SUC b + a * 2 ** b``]
     \\ METIS_TAC [n2w_mod,EVAL ``2 ** (SUC 0) = 2``]);
 
 val WORD_LEFT_ADD_DISTRIB_1 =
@@ -611,8 +612,8 @@ val MSHIFT_SUC = prove(
          (w2w ((n2w n):word4) * (2w:word5) + (if b then 1w else 0w)) + 1w =
        n2w (n + 1):word4`,
   RW_TAC (arith_ss++SIZES_ss) [BITS_COMP_THM2,
-        (SIMP_RULE std_ss [] o SPECL [`4`,`1`]) BITS_ZERO4,
-        (SIMP_RULE std_ss [] o SPECL [`4`,`1`,`a`,`1`]) BITS_SUM,
+        (SIMP_RULE arith_ss [] o SPECL [`4`,`1`]) BITS_ZERO4,
+        (SIMP_RULE arith_ss [] o SPECL [`4`,`1`,`a`,`1`]) BITS_SUM,
         word_extract_def,word_bits_n2w,n2w_11,MOD_DIMINDEX,
         word_mul_n2w,word_add_n2w,w2w_n2w]
     \\ SIMP_TAC std_ss [BITS_ZERO3,ONCE_REWRITE_RULE [ADD_COMM] MOD_PLUS_RIGHT]
