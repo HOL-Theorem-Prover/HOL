@@ -2602,10 +2602,14 @@ invoked through \ml{DECIDE} and \ml{DECIDE\_TAC}, both found in
 The \ml{intLib} library comprises \ml{integerTheory}, an extensive
 theory of the integers, plus two decision procedures
 for full Presburger arithmetic. These are available as
-\ml{intLib.COOPER\_CONV} and \ml{intLib.OMEGA\_CONV}. These
+\ml{intLib.COOPER\_CONV} and \ml{intLib.ARITH\_CONV}. These
 decision procedures are able to deal with linear arithmetic
 over the integers and the natural numbers, as well as dealing
-with arbitrary alternation of quantifiers.
+with arbitrary alternation of quantifiers.  The \ml{ARITH\_CONV}
+procedure is an implementation of the Omega Test, and seems to
+generally perform better than Cooper's algorithm.  There are problems
+for which this is not true however, so it is useful to have both
+procedures available.
 
 \paragraph{realLib}
 
