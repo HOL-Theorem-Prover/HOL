@@ -210,13 +210,13 @@ have been constructed and bound to \ML{} identifers, \eg, \ml{alpha}
 is the type variable \ml{'a} and \ml{beta} is the type variable
 \ml{'b}.  Thus the \ML\ code \ml{alpha --> bool} is equal to, but much more concise than
 %
-{\small
+\begin{hol}
 \begin{verbatim}
   mk_thy_type{Tyop="fun", Thy="min",
               Args=[mk_vartype "'a",
                     mk_thy_type{Tyop="bool", Thy="bool", Args=[]}}
 \end{verbatim}
-}
+\end{hol}
 
 %\paragraph{Taking types apart}
 
