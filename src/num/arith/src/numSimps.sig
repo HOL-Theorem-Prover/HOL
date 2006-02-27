@@ -39,7 +39,8 @@ end
    [ARITH_RWTS_ss] is a collection of "obvious" arithmetic identities.
 
    [ARITH_AC_ss] is an "AC" simpset fragment comprising the assoc-comm
-   rules for addition and multiplication.
+   rules for addition and multiplication.  NB: in general this fragment
+   cannot be used in conjunction with arith_ss or ARITH_ss.
 
    [REDUCE_ss] is a "simpset fragment" that reduces ground arithmetic
    expressions.  I.e., ``2 EXP 100``, but not ``x * 3``.
