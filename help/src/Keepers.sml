@@ -78,9 +78,11 @@ val keepers =
      "Canon_Port.sig","jrhTactics.sig","mesonLib.sig",
 
      (* n-bit *)
+     "fcpTheory.sig",
      "bitTheory.sig",
      "wordsTheory.sig",
      "wordsSyntax.sig",
+     "fcpLib.sig",
      "wordsLib.sig",
 
      (* num *)
