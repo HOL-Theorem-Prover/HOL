@@ -15,4 +15,11 @@ sig
 
     val Cases_on_word : term frag list -> tactic
     val Cases_word    : tactic
+
+    val pp_word       : (hol_type -> radix) -> unit
+
+    val pp_word_bin   : unit -> unit
+    val pp_word_oct   : unit -> unit
+    val pp_word_hex   : unit -> unit
+    val pp_word_dec   : unit -> term_pp_types.userprinter option
 end

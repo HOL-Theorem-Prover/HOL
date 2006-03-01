@@ -87,11 +87,41 @@ val WORDS_CONV = CBV_CONV (words_compset());
 val WORDS_RULE = CONV_RULE WORDS_CONV;
 val WORDS_TAC = CONV_TAC WORDS_CONV;
 
+(* ------------------------------------------------------------------------- *)
+
 fun Cases_on_word tm = Q.ISPEC_THEN tm FULL_STRUCT_CASES_TAC word_nchotomy;
 
 fun Cases_word (g as (_,w)) =
   let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
   in (STRIP_TAC THEN STRUCT_CASES_TAC (Drule.ISPEC Bvar word_nchotomy)) g
   end;
+
+(* ------------------------------------------------------------------------- *)
+
+fun print_word base_map sys gravs d pps t = let
+   open Portable term_pp_types
+   val (n,x) = dest_n2w t
+   val m = numSyntax.dest_numeral n
+in
+  add_string pps
+   ((case base_map x of
+       StringCvt.DEC => Arbnum.toString m
+     | StringCvt.BIN => "0b"^(Arbnum.toBinString m)
+     | StringCvt.OCT => "0" ^(Arbnum.toOctString m)
+     | StringCvt.HEX => "0x"^(Arbnum.toHexString m)) ^ "w")
+end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
+
+fun pp_word base_map = Parse.temp_add_user_printer
+  ({Tyop = "cart", Thy = "fcp"}, print_word base_map);
+
+fun pp_word_bin() = pp_word (fn x => StringCvt.BIN);
+fun pp_word_oct() = pp_word (fn x => StringCvt.OCT);
+fun pp_word_hex() = pp_word (fn x => StringCvt.HEX);
+
+fun pp_word_dec() = Parse.remove_user_printer {Tyop="cart", Thy="fcp"};
+
+(* Example:
+val _ = pp_word (fn x => if Type.compare(x,``:i32``) = EQUAL then
+                           StringCvt.HEX else StringCvt.DEC);       *)
 
 end
