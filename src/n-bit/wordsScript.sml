@@ -25,7 +25,7 @@ val op << = op THENL;
 val op >> = op THEN1;
 
 val Abbr = BasicProvers.Abbr;
-val fcp_ss = std_ss ++ rewrites [FCP_BETA,FCP_ETA,CART_EQ];
+val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 
 val WL = ``dimindex (UNIV:'a->bool)``;
 val HB = ``^WL - 1``;
@@ -651,6 +651,10 @@ val word_modify_n2w = store_thm("word_modify_n2w",
   `!f n. word_modify f ((n2w n):bool ** 'a) =
          (n2w (BIT_MODIFY ^WL f n)):bool ** 'a`,
   FIELD_WORD_TAC \\ ASM_SIMP_TAC arith_ss [BIT_MODIFY_THM]);
+
+val fcp_n2w = store_thm("fcp_n2w",
+  `!f. $FCP f = word_modify (\i b. f i) 0w`,
+  RW_TAC fcp_ss [word_modify_def]);
 
 val w2n_w2w = store_thm("w2n_w2w",
   `!w:bool ** 'a. w2n ((w2w w):bool ** 'b) =

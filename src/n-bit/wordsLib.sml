@@ -48,7 +48,7 @@ val thms = machine_sizes @
    word_asr_n2w, word_lsr_n2w, word_lsl_n2w,
    word_ror_n2w, word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, word_index_n2w,
-   word_bits_n2w, word_slice_n2w,
+   word_bits_n2w, word_slice_n2w, fcp_n2w,
    SIMP_RULE std_ss [FUN_EQ_THM] word_extract_def,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w];
