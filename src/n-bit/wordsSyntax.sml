@@ -46,6 +46,7 @@ val word_mul_tm     = prim_mk_const{Name = "word_mul", Thy="words"}
 val word_log2_tm    = prim_mk_const{Name = "word_log2", Thy="words"}
 val word_msb_tm     = prim_mk_const{Name = "word_msb", Thy="words"}
 val word_lsb_tm     = prim_mk_const{Name = "word_lsb", Thy="words"}
+val word_join_tm    = prim_mk_const{Name = "word_join", Thy="words"}
 val word_concat_tm  = prim_mk_const{Name = "word_concat", Thy="words"}
 val word_slice_tm   = prim_mk_const{Name = "word_slice", Thy="words"}
 val word_bit_tm     = prim_mk_const{Name = "word_bit", Thy="words"}
@@ -129,6 +130,10 @@ fun mk_word_mul(w1,w2) =
 fun mk_word_rrx(w,b) = 
   list_mk_comb(inst[alpha|->dim_of w]word_rrx_tm,[w,b])
   handle HOL_ERR _ => raise ERR "mk_word_rrx" "";
+
+fun mk_word_join(w1,w2) = 
+  list_mk_comb(inst[alpha|->dim_of w1, beta|->dim_of w2]word_join_tm,[w1,w2])
+  handle HOL_ERR _ => raise ERR "mk_word_join" "";
 
 fun mk_word_concat(w1,w2) = 
   list_mk_comb(inst[alpha|->dim_of w1, beta|->dim_of w2]word_concat_tm,[w1,w2])
@@ -284,6 +289,9 @@ val dest_word_mul =
 
 val dest_word_rrx = 
   dest_binop word_rrx_tm (ERR "dest_word_rrx" "");
+
+val dest_word_join = 
+  dest_binop word_join_tm (ERR "dest_word_join" "");
 
 val dest_word_concat = 
   dest_binop word_concat_tm (ERR "dest_word_concat" "");

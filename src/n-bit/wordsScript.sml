@@ -233,11 +233,14 @@ val _ = add_infix("#<<",680,HOLgrammars.LEFT);
 (*  Concatenation : definition                                               *)
 (* ------------------------------------------------------------------------- *)
 
-val word_concat_def = Def "word_concat_def"
-  `(word_concat (v:bool ** 'a) (w:bool ** 'b)):bool ** ('a + 'b) =
+val word_join_def = Define`
+  (word_join (v:bool ** 'a) (w:bool ** 'b)):bool ** ('a + 'b) =
     let cv = (w2w v):bool ** ('a + 'b)
     and cw = (w2w w):bool ** ('a + 'b)
     in  (cv << (dimindex (UNIV:'b->bool))) !! cw`;
+
+val word_concat_def = Define`
+  word_concat (v:bool ** 'a) (w:bool ** 'b) = w2w (word_join v w)`;
 
 val _ = overload_on ("@@",Term`$word_concat`);
 
