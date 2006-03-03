@@ -238,8 +238,6 @@ val ROR_def = Define`
     if n = 0w then LSL m 0w c else
       (m %% (w2n ((w2w n):word5) - 1), m #>> w2n n)`;
 
-val RRX_def = Define `RRX (m:word32) c = (m %% 0, word_rrx m c)`;
-
 val IMMEDIATE_def = Define`
   IMMEDIATE C (opnd2:word12) =
     let rot = (11 >< 8) opnd2
@@ -253,7 +251,7 @@ val SHIFT_IMMEDIATE2_def = Define`
       if sh = 0w then LSL rm 0w c  else
       if sh = 1w then LSR rm 32w c else
       if sh = 2w then ASR rm 32w c else
-      (* sh = 3w *)   RRX rm c
+      (* sh = 3w *)   word_rrx (c,rm)
     else
       if sh = 0w then LSL rm shift c else
       if sh = 1w then LSR rm shift c else
@@ -393,16 +391,16 @@ val MSR_def = Define`
     if (USER mode /\ (R \/ (~bit19 /\ bit16))) \/ (~bit19 /\ ~bit16) then
       ARM (INC_PC reg) psr
     else
-      let xpsr = if R then SPSR_READ psr mode else CPSR_READ psr
+      let psrd = if R then SPSR_READ psr mode else CPSR_READ psr
       and  src = if I then SND (IMMEDIATE F opnd) else REG_READ reg mode Rm in
-      let xpsr' = word_modify
+      let psrd' = word_modify
              (\i b. (28 <= i) /\ (if bit19 then src %% i else b) \/
                     (8 <= i) /\ (i <= 27) /\ b \/
                     (i <= 7) /\ (if bit16 /\ ~USER mode then src %% i else b))
-             xpsr
+             psrd
       in
         ARM (INC_PC reg)
-         (if R then SPSR_WRITE psr mode xpsr' else CPSR_WRITE psr xpsr')`;
+         (if R then SPSR_WRITE psr mode psrd' else CPSR_WRITE psr psrd')`;
 
 (* ------------------------------------------------------------------------- *)
 (* The Multiply (and Accumulate) instruction class (mla_mul)                 *)

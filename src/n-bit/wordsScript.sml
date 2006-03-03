@@ -7,7 +7,7 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["pred_setTheory", "bitTheory", "sum_numTheory", "fcpTheory"];
+  app load ["pred_setTheory", "bitTheory", "sum_numTheory", "fcpLib"];
 *)
 
 open HolKernel Parse boolLib bossLib;
@@ -211,11 +211,9 @@ val word_rol_def = Def "word_rol_def"
     word_ror w (^WL - n MOD ^WL)`;
 
 val word_rrx_def = Def "word_rrx_def"
-  `word_rrx (w:bool ** 'a) c =
-    (FCP i. if i = ^HB then
-              c
-            else
-              (word_lsr w 1) %% i):bool ** 'a`;
+  `word_rrx(c, w:bool ** 'a) =
+    (word_lsb w,
+     (FCP i. if i = ^HB then c else (word_lsr w 1) %% i):bool ** 'a)`;
 
 val _ = overload_on ("<<", Term`$word_lsl`);
 val _ = overload_on (">>", Term`$word_asr`);
@@ -1119,8 +1117,9 @@ val WORD_RIGHT_SUB_DISTRIB = save_thm("WORD_RIGHT_SUB_DISTRIB",
 (* ------------------------------------------------------------------------- *)
 
 val WORD_ss = rewrites [word_msb_def,word_lsl_def,word_lsr_def,word_asr_def,
-  word_ror_def,word_rol_def,word_rrx_def,word_T,word_or_def,
-  word_and_def,word_xor_def,n2w_def,BIT_ZERO,DIMINDEX_LT,MOD_PLUS_RIGHT];
+  word_ror_def,word_rol_def,word_rrx_def,word_T,word_or_def,word_lsb_def,
+  word_and_def,word_xor_def,n2w_def,DIMINDEX_GT_0,BIT_ZERO,DIMINDEX_LT,
+  MOD_PLUS_RIGHT];
 
 val SHIFT_WORD_TAC = RW_TAC (fcp_ss++ARITH_ss++WORD_ss) [];
 
@@ -1320,9 +1319,10 @@ val word_ror_n2w = store_thm("word_ror_n2w",
              ADD_MODULUS,lem2]]);
 
 val word_rrx_n2w = store_thm("word_rrx_n2w",
-  `!c a. word_rrx ((n2w a):bool ** 'a) c =
-       (n2w (BITS ^HB 1 a + SBIT c ^HB)):bool ** 'a`,
-  SHIFT_WORD_TAC \\ RW_TAC arith_ss [SBIT_def,BIT_OF_BITS_THM]
+  `!c a. word_rrx(c, (n2w a):bool ** 'a) =
+       (ODD a, (n2w (BITS ^HB 1 a + SBIT c ^HB)):bool ** 'a)`,
+  SHIFT_WORD_TAC
+    \\ RW_TAC arith_ss [GSYM LSB_def,LSB_ODD,SBIT_def,BIT_OF_BITS_THM]
     \\ STRIP_ASSUME_TAC EXISTS_HB \\ FULL_SIMP_TAC arith_ss []
     << [
       METIS_TAC [BITSLT_THM,SUC_SUB1,BITS_SUM1,BIT_def,BIT_B],

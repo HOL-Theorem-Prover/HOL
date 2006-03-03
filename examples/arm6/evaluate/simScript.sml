@@ -943,7 +943,7 @@ val shift_immediate_enc = store_thm("shift_immediate_enc",
            LSL Rm -> arm$LSL (REG_READ reg m Rm) 0w c
         || LSR Rm -> arm$LSR (REG_READ reg m Rm) 32w c
         || ASR Rm -> arm$ASR (REG_READ reg m Rm) 32w c
-        || ROR Rm -> arm$RRX (REG_READ reg m Rm) c
+        || ROR Rm -> word_rrx(c, REG_READ reg m Rm)
       else
         case sh of
            LSL Rm -> arm$LSL (REG_READ reg m Rm) (w2w i) c
@@ -966,7 +966,7 @@ val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
            LSL Rm -> arm$LSL (REG_READ reg m Rm) 0w c
         || LSR Rm -> arm$LSR (REG_READ reg m Rm) 32w c
         || ASR Rm -> arm$ASR (REG_READ reg m Rm) 32w c
-        || ROR Rm -> arm$RRX (REG_READ reg m Rm) c
+        || ROR Rm -> word_rrx(c, REG_READ reg m Rm)
       else
         case sh of
            LSL Rm -> arm$LSL (REG_READ reg m Rm) (w2w i) c

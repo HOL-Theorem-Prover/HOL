@@ -105,7 +105,7 @@ sig
   val dest_word_add  : term -> term * term
   val dest_word_sub  : term -> term * term
   val dest_word_mul  : term -> term * term
-  val dest_word_rrx  : term -> term * term
+  val dest_word_rrx  : term -> term
   val dest_word_join : term -> term * term
   val dest_word_concat : term -> term * term
   val dest_word_log2 : term -> term

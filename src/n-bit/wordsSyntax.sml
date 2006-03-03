@@ -127,8 +127,8 @@ fun mk_word_mul(w1,w2) =
   list_mk_comb(inst[alpha|->dim_of w1]word_mul_tm,[w1,w2])
   handle HOL_ERR _ => raise ERR "mk_word_mul" "";
 
-fun mk_word_rrx(w,b) = 
-  list_mk_comb(inst[alpha|->dim_of w]word_rrx_tm,[w,b])
+fun mk_word_rrx(b,w) = 
+  mk_comb(inst[alpha|->dim_of w]word_rrx_tm,pairSyntax.mk_pair(b,w))
   handle HOL_ERR _ => raise ERR "mk_word_rrx" "";
 
 fun mk_word_join(w1,w2) = 
@@ -288,7 +288,7 @@ val dest_word_mul =
   dest_binop word_mul_tm (ERR "dest_word_mul" "");
 
 val dest_word_rrx = 
-  dest_binop word_rrx_tm (ERR "dest_word_rrx" "");
+  dest_monop word_rrx_tm (ERR "dest_word_rrx" "");
 
 val dest_word_join = 
   dest_binop word_join_tm (ERR "dest_word_join" "");

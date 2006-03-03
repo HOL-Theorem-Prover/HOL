@@ -57,7 +57,7 @@ val common_thms =
    word_modify_PSR,word_modify_PSR2,
    ALU_arith_def,ALU_arith_neg_def,ALU_logic_def,SUB_def,ADD_def,
    AND_def,EOR_def,ORR_def,ALU_def,
-   LSL_def,LSR_def,ASR_def,ROR_def,RRX_def,
+   LSL_def,LSR_def,ASR_def,ROR_def,
    WORD_ONLY_RULE `ireg` CONDITION_PASSED_def,CONDITION_PASSED2_def,
    DECODE_INST_THM,MLA_MUL_DUR_n2w];
 
