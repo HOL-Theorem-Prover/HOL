@@ -1,4 +1,4 @@
-open HolKernel Parse boolLib bossLib numLib
+open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
      arithmeticTheory word32Theory pairTheory listTheory whileTheory finite_mapTheory;
 
 val _ = new_theory "preARM";
@@ -116,6 +116,7 @@ val _ = Hol_datatype `EXP = MEM of num # OFFSET			(* (register, offset) *)
 		  | WCONST of word32
                   | REG of REGISTER
 		  | WREG of REGISTER
+                  | PR of EXP # EXP
              `;
 
 val _ = type_abbrev("DATA", Type`:word32`);
@@ -172,7 +173,17 @@ val read_thm = Q.store_thm (
     (read (regs,mem) (REG r) = regs ' r)`,
     RW_TAC std_ss [read_def]);
 
-            
+
+val mread_def =
+  Define `
+    ( mread s (PR (exp1,exp2)) = 
+         PR (mread s exp1, mread s exp2)
+    ) /\
+    ( mread s exp = 
+         WCONST (read s exp)
+    )
+  `;
+
 val write_def =
   Define `
     write (regs,mem) (exp:EXP) (v:DATA)=
@@ -194,6 +205,29 @@ val write_thm = Q.store_thm (
     (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (w2n (regs ' r) - k, v))) /\
     (write (regs,mem) (REG r) v = (regs |+ (r, v), mem))`,
     RW_TAC std_ss [write_def]);                      
+
+
+val mwrite_def =
+  Define `
+    ( mwrite s (PR (pos1,pos2)) (PR (v1,v2)) = 
+         mwrite (mwrite s pos1 v1) pos2 v2) /\
+    ( mwrite s exp (WCONST v) = 
+         write s exp v)
+  `;
+
+
+val mwrite_thm = Q.prove (
+  ` ( mwrite s (PR (pos1,pos2)) (PR (v1,v2)) = 
+         mwrite (mwrite s pos1 v1) pos2 v2) /\
+    ( mwrite s (REG r) (WCONST v) = 
+         write s (REG r) v) /\
+    ( mwrite s (WREG r) (WCONST v) = 
+         write s (WREG r) v) /\
+    ( mwrite s (MEM m) (WCONST v) = 
+         write s (MEM m) v)`,
+  RW_TAC std_ss [mwrite_def]
+ );
+
 
 (*---------------------------------------------------------------------------------*)
 (* Decoding and execution of an instruction                                        *)
@@ -510,17 +544,17 @@ val UPLOADSEG_LEM = Q.store_thm
 
 (*---------------------------------------------------------------------------------*)
 (* Running of a ARM program                                                        *)
+(* Run the instruction in the instruction buffer for n steps                       *)
 (*---------------------------------------------------------------------------------*)
 
 val (run_def,run_ind) =
  Defn.tprove
   (Hol_defn "run"
-    `run n (instB,byn) (pc,cpsr,st) =
+    `run n instB P (pc,cpsr,st) =
         if n = 0 then (pc,cpsr,st)
         else
-            if pc = byn then (pc,cpsr,st)
-            else
-                run (n-1) (instB,byn) (decode2 (pc,cpsr,st) (instB pc))`,
+	   if P (pc,cpsr,st) then (pc,cpsr,st)
+           else run (n-1) instB P (decode2 (pc,cpsr,st) (instB pc))`,
     WF_REL_TAC `measure FST`);
 
 val _ = save_thm("run_def", run_def);
@@ -528,64 +562,46 @@ val _ = save_thm("run_ind", run_ind);
 
 val RUN_LEM_1 = Q.store_thm
   ("RUN_LEM_1",
-   `!n instB byn s.
-        (run (SUC n) (instB,byn) s =
-                if FST s = byn then s
-                else run n (instB,byn) (decode2 s (instB (FST s)))
+   `!n instB s.
+        (run (SUC n) instB P s =
+		if P s then s
+                else run n instB P (decode2 s (instB (FST s)))
         ) /\
-        (run 0 (instB,byn) s = s)`,
+        (run 0 instB P s = s)`,
    SIMP_TAC list_ss [FORALL_STATE] THEN REPEAT GEN_TAC THEN
    RW_TAC list_ss [Once run_def, LET_THM] THENL [
         RW_TAC list_ss [Once run_def, LET_THM],
-        RW_TAC list_ss [Once run_def, LET_THM] THEN
-        Q.ABBREV_TAC `x = decode2 (pc,pcsr,regs,mem) (instB pc)` THEN
-        ` x = (FST x, FST (SND x), SND (SND x))` by RW_TAC list_ss [] THEN
-        ONCE_ASM_REWRITE_TAC [] THEN RW_TAC list_ss []]
+        RW_TAC list_ss [Once run_def, LET_THM]
+   ]
   );
 
 val RUN_LEM_2 = Q.store_thm
   ("RUN_LEM_2",
-   `!n instB s. run n (instB,FST s) s = s`,
+   `!n instB P s. P s ==> (run n instB P s = s)`,
    SIMP_TAC list_ss [FORALL_STATE] THEN
    Induct_on `n` THEN RW_TAC list_ss [RUN_LEM_1]
   );
 
-val FORALL_INSTM = Q.store_thm
-  ("FORALL_INSTM",
-    `(!instM : (num -> INST) # num. P instM) =
-        !instB byn. P (instB,byn)`,
-    SIMP_TAC std_ss [FORALL_PROD]);
 
 val RUN_THM_1 = Q.store_thm
   ("RUN_THM_1",
-   `!m n s instM.
-        (run (m+n) instM s = run n instM (run m instM s))`,
-  SIMP_TAC std_ss [FORALL_INSTM] THEN
+   `!m n s instB.
+        (run (m+n) instB P s = run n instB P (run m instB P s))`,
   Induct_on `m` THEN REPEAT GEN_TAC THENL [
         RW_TAC list_ss [RUN_LEM_1],
         `SUC m + n = SUC (m + n)` by RW_TAC list_ss [ADD_SUC] THEN
         ASM_REWRITE_TAC [] THEN RW_TAC list_ss [RUN_LEM_1] THEN
-        RW_TAC list_ss [RUN_LEM_2]]
+	RW_TAC list_ss [RUN_LEM_2]
+  	]
   );
 
 val RUN_THM_2 = Q.store_thm
   ("RUN_THM_2",
-   `!m n s instM. m <= n ==>
-        (run n instM s = run (n-m) instM (run m instM s))`,
+   `!m n s instB P. m <= n ==>
+        (run n instB P s = run (n-m) instB P (run m instB P s))`,
   RW_TAC list_ss [FORALL_INSTM] THEN `?k. n = k + m` by PROVE_TAC [LESS_EQUAL_ADD, ADD_SYM] THEN
   ASM_REWRITE_TAC [] THEN METIS_TAC [SUB_ADD, RUN_THM_1, ADD_SYM]
   );
-
-val RUN_ONE_STEP = Q.store_thm
-  ("RUN_ONE_STEP",
-   `!instB byn pc cpsr st. run 1 (instB,byn) (pc,cpsr,st) = 
-            if pc = byn then (pc,cpsr,st)
-            else
-                decode2 (pc,cpsr,st) (instB pc)`,
-  RW_TAC std_ss [Once run_def] THEN
-  RW_TAC std_ss [RUN_LEM_1]
-  );
-
 
 val _ = Globals.priming := NONE;
 
@@ -614,78 +630,422 @@ val LEAST_ADD_LEM = Q.store_thm
         ]]
   );
 
-(*---------------------------------------------------------------------------------*)
-(* Termination and minimum number of steps                                         *)
-(*---------------------------------------------------------------------------------*)
+(*----------------------------------------------------------------------------*)
+(* Assistant theorems for the FUNPOW                                          *)
+(*----------------------------------------------------------------------------*)
 
-(* terminate: specifies that the execution of instructions would terminates at the label (pc0+len) within n steps               *)
-
-val terminated_def =
- Define
-   `terminated (instB,byn) s = ?n. FST (run n (instB,byn) s) = byn`;
-
-
-val TERMINATED_THM = Q.store_thm
-  ("TERMINATED_THM",
-   `!m s iB byn n.
-       terminated (iB,byn) s ==> terminated (iB,byn) (run m (iB,byn) s)`,
-  RW_TAC list_ss [terminated_def, GSYM RUN_THM_1] THEN
-  ONCE_REWRITE_TAC [ADD_SYM] THEN
-  RW_TAC list_ss [RUN_THM_1] THEN
-  Q.EXISTS_TAC `n` THEN
-  METIS_TAC [RUN_LEM_2]
+val FUNPOW_THM_1 = Q.prove (
+  ` (!f. FUNPOW f 0 = \x.x) /\
+    (!f n. FUNPOW f (SUC n) = f o (FUNPOW f n))`,
+   RW_TAC list_ss [FUN_EQ_THM, FUNPOW_SUC] THEN
+   RW_TAC list_ss [FUNPOW]
   );
 
-(* minStep is the minimum number of steps for the program to terminate                                                           *)
+val FUNPOW_THM_2 = Q.prove (
+  ` (!f. FUNPOW f 0 = \x.x) /\
+    (!f n. FUNPOW f (SUC n) = (FUNPOW f n) o f)`,
+   RW_TAC list_ss [FUN_EQ_THM, FUNPOW]
+  );
 
-val minStep_def =
-  Define `minStep (instB,byn) s = LEAST n. FST (run n (instB,byn) s) = byn`;
+val FUNPOW_FUNPOW = Q.prove (
+  ` !f m n. (FUNPOW f m) o (FUNPOW f n) = FUNPOW f (m+n)`,
+   Induct_on `m` THENL [
+       RW_TAC list_ss [FUNPOW_THM_1] THEN
+       METIS_TAC [],
+       RW_TAC list_ss [FUNPOW_THM_1, GSYM SUC_ADD_SYM]
+   ]
+  );
 
 
-val MINSTEP_THM = Q.store_thm
-  ("MIN_STEP_THM",
-   `!s instB byn m.
-       (terminated (instB,byn) s) /\
-       (m <= minStep (instB,byn) s) ==>
-       (minStep (instB,byn) s = (minStep (instB,byn) (run m (instB,byn) s) + m))`,
-    RW_TAC list_ss [terminated_def, minStep_def] THEN
-    RW_TAC list_ss [ONCE_REWRITE_RULE [EQ_SYM_EQ] RUN_THM_1] THEN
-    ONCE_REWRITE_TAC [ADD_SYM] THEN
+(*----------------------------------------------------------------------------*)
+(* Assistant theorems for the WHILE                                           *)
+(*----------------------------------------------------------------------------*)
+
+val stopAt_def = Define `
+   stopAt P g x =
+       ?n. P (FUNPOW g n x)`;
+
+
+val shortest_def = Define `
+    shortest P g x =
+        LEAST n. P (FUNPOW g n x)`;
+
+
+val STOPAT_THM = Q.store_thm
+  ("STOPAT_THM",
+   `!m P g x.
+       stopAt P g x /\
+       m <= shortest P g x ==>
+       stopAt P g (FUNPOW g m x)`,
+    Cases_on `m` THENL [
+        RW_TAC std_ss [shortest_def, stopAt_def, FUNPOW],
+        RW_TAC std_ss [stopAt_def,shortest_def] THEN
+        `~(n1 < LEAST n. P (FUNPOW g n x))` by METIS_TAC [Q.SPEC `\n. P(FUNPOW g n x)` LESS_LEAST] THEN
+        `SUC n <= n1` by RW_TAC arith_ss [] THEN
+        Q.EXISTS_TAC `n1 - SUC n` THEN
+        RW_TAC arith_ss [SIMP_RULE std_ss [FUN_EQ_THM] FUNPOW_FUNPOW]
+    ]
+  );
+
+val SHORTEST_LEM = Q.store_thm
+  ("SHORTEST_LEM",
+   `!x P g.
+       (P x ==> (shortest P g x = 0)) /\
+       (stopAt P g x ==>
+       ((0 = shortest P g x) ==> P x) /\
+       (~(P x) = 1 <= shortest P g x))`,
+    REWRITE_TAC [stopAt_def, shortest_def] THEN REPEAT GEN_TAC THEN 
+    `(P x ==> ((LEAST n. P (FUNPOW g n x)) = 0))` by ALL_TAC THENL [
+       STRIP_TAC THEN
+       `P (FUNPOW g 0 x)` by METIS_TAC [FUNPOW] THEN
+	    `~(0 < (LEAST n. P (FUNPOW g n x)))` by METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`\n.P (FUNPOW g n x)`, `0`] LESS_LEAST)] THEN
+	    RW_TAC arith_ss [],
+       STRIP_TAC THENL [
+           RW_TAC std_ss [],
+           STRIP_TAC THEN
+           `(0 = LEAST n. P (FUNPOW g n x)) ==> P x` by METIS_TAC [Q.SPEC `\n. P (FUNPOW g n x)` LEAST_EXISTS_IMP, FUNPOW] THEN
+           RW_TAC std_ss [] THEN EQ_TAC THEN STRIP_TAC THEN
+           FULL_SIMP_TAC arith_ss []
+       ]]
+  );
+	       
+val SHORTEST_THM = Q.store_thm
+  ("SHORTEST_THM",
+   `!x P g m.
+       stopAt P g x /\
+       m <= shortest P g x ==>
+       (shortest P g x = (shortest P g (FUNPOW g m x) + m))`,
+    RW_TAC std_ss [shortest_def, stopAt_def] THEN
+    REWRITE_TAC [SIMP_RULE std_ss [FUN_EQ_THM] FUNPOW_FUNPOW] THEN
+    CONV_TAC (DEPTH_CONV (ONCE_REWRITE_CONV [Once ADD_SYM])) THEN
     HO_MATCH_MP_TAC LEAST_ADD_LEM THEN
     METIS_TAC []
   );
 
+val SHORTEST_CASES = Q.store_thm
+  ("SHORTEST_CASES",
+   `!x P g.
+       stopAt P g x ==>
+       (P x ==> (shortest P g x = 0)) /\
+       (~P x ==> (shortest P g x = SUC (shortest P g (g x))))`,
+    RW_TAC std_ss [] THENL [
+         METIS_TAC [SHORTEST_LEM],
+         `1 <= shortest P g x` by METIS_TAC [SHORTEST_LEM] THEN
+           IMP_RES_TAC SHORTEST_THM THEN
+           ASSUME_TAC (DECIDE ``1 = SUC 0``) THEN
+           METIS_TAC [FUNPOW, SUC_ONE_ADD, ADD_SYM]
+   ]
+  );
+
+val TERD_WHILE_EQ_UNROLL = Q.store_thm
+  ("TERD_WHILE_EQ_UNROLL",
+   `!x P g.
+    stopAt P g x ==>
+        (WHILE ($~ o P) g x = FUNPOW g (shortest P g x) x)`,
+   Induct_on `shortest P g x` THENL [
+       REWRITE_TAC [Once EQ_SYM_EQ] THEN
+           REPEAT STRIP_TAC THEN
+           IMP_RES_TAC SHORTEST_LEM THEN
+           RW_TAC std_ss [Once WHILE, FUNPOW],
+        
+        REPEAT GEN_TAC THEN
+           POP_ASSUM (ASSUME_TAC o (Q.SPECL [`P`, `g:'a ->'a`, `g (x:'a)`])) THEN 
+           REWRITE_TAC [Once EQ_SYM_EQ] THEN
+           REPEAT STRIP_TAC THEN
+           `1 <= shortest P g x` by RW_TAC arith_ss [] THEN
+           IMP_RES_TAC SHORTEST_THM THEN
+	   `~( P x)` by METIS_TAC [SHORTEST_LEM] THEN
+           `stopAt P g (g x)` by ALL_TAC THENL [
+               FULL_SIMP_TAC std_ss [stopAt_def] THEN
+                   Cases_on `n` THEN
+	           FULL_SIMP_TAC std_ss [FUNPOW] THEN
+                   METIS_TAC [],
+	       PAT_ASSUM ``shortest P g x = k + 1`` (ASSUME_TAC o REWRITE_RULE [REWRITE_RULE [Once ADD_SYM] (GSYM SUC_ONE_ADD)]) THEN
+                   ASSUME_TAC (DECIDE ``1 = SUC 0``) THEN
+                   REWRITE_TAC [Once WHILE] THEN
+                   `v = shortest P g (g x)` by METIS_TAC [FUNPOW, numTheory.INV_SUC] THEN
+		   FULL_SIMP_TAC std_ss [FUNPOW]
+           ]
+   ]
+  );                 
+
+
+val UNROLL_ADVANCE = Q.store_thm
+  ("UNROLL_ADVANCE",
+   `!P g x.
+        stopAt P g x ==>
+        (FUNPOW g (shortest P g x) x =
+                if (P x) then x
+                else FUNPOW g (shortest P g (g x)) (g x)
+        )`,
+   RW_TAC list_ss [] THEN
+   METIS_TAC [SHORTEST_CASES, FUNPOW]
+  );
+
+val WHILE_STILL = Q.store_thm
+  ("WHILE_STILL",
+   `!P g x.
+        stopAt P g x ==>
+	    (WHILE ($~ o P) g (WHILE ($~ o P) g x) = WHILE ($~ o P) g x)`,
+   SIMP_TAC std_ss [TERD_WHILE_EQ_UNROLL] THEN
+   RW_TAC std_ss [stopAt_def, shortest_def] THEN
+   IMP_RES_TAC (SIMP_RULE std_ss [] (Q.SPEC `\n.P (FUNPOW g n x)` LEAST_EXISTS_IMP)) THEN
+   RW_TAC std_ss [Once WHILE]
+  );
+
+
 (*---------------------------------------------------------------------------------*)
 (*                    Run to a particular position                                 *)
+(* Run the instructions in the instruction buffer until the pc reaches a specific  *)
+(*	position. The running may not terminate and keep going on                  *) 
 (*---------------------------------------------------------------------------------*)
 
+val step_def = Define `
+  step instB =
+       \(s,pcS).(decode2 s (instB (FST s)),FST s INSERT pcS)`;
+
+val step_FORM1 = Q.store_thm
+  ("step_FORM1",
+   `!instB. step instB =
+	 \s.(decode2 (FST s) (instB (FST (FST s))),FST (FST s) INSERT (SND s))`,
+   RW_TAC std_ss [FUN_EQ_THM] THEN
+   `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
+   RW_TAC std_ss [step_def]
+  );
+
 val runTo_def = Define `
-  !instB byn s pcS.
-  runTo instB byn s =
-      WHILE (\s. ~(FST s = byn))
-           (\s. decode2 s (instB (FST s))) s`;
+  runTo instB j (s,pcS) =
+	WHILE (\(s,pcS). ~(FST s = j)) (step instB) (s,pcS)`;
 
-val RUNTO_LEM_1 = Q.store_thm
-  ("RUNTO_LEM_1",
-   `!n instB byn s.
-       runTo instB byn s =
-           if FST s = byn then s
-           else runTo instB byn (decode2 s (instB (FST s)))`,
-   REPEAT STRIP_TAC THEN Cases_on `FST s = byn` THENL [
-       RW_TAC list_ss [runTo_def, Once WHILE],
-       RW_TAC list_ss [runTo_def, Once WHILE]]
+val runTo_FORM1 = Q.store_thm
+  ("runTo_FORM1",
+   `!instB j s. runTo instB j s =
+	WHILE (\s. ~(FST (FST s) = j)) (step instB) s`,
+   REPEAT GEN_TAC THEN
+   `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
+   RW_TAC std_ss [runTo_def] THEN
+   `(\s:STATEPCS. ~(FST (FST s) = j)) = (\(s,pcS). ~(FST s = j))` by ALL_TAC THENL [
+       RW_TAC std_ss [FUN_EQ_THM] THEN
+           `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
+           RW_TAC std_ss [],
+       RW_TAC std_ss []
+   ]
   );
 
-val RUNTO_LEM_2 = Q.store_thm
-  ("RUNTO_LEM_2",
-   `!instB s pcS. runTo instB (FST s) s = s`,
-   METIS_TAC [RUNTO_LEM_1]
+   
+   
+
+val RUNTO_ADVANCE = Q.store_thm
+  ("RUNTO_ADVANCE",
+   `!instB j s pcS.
+        (runTo instB j (s,pcS) =
+                if (FST s = j) then (s,pcS)
+                else runTo instB j (decode2 s (instB (FST s)), FST s INSERT pcS)
+        )`,
+   RW_TAC list_ss [runTo_def, step_def] THENL [
+        RW_TAC list_ss [Once WHILE],
+        RW_TAC list_ss [Once WHILE]
+	]
+  );
+
+val _ = type_abbrev("STATEPCS", Type`:STATE # (num->bool)`);
+
+
+val UNROLL_RUNTO = Q.store_thm
+  ("UNROLL_RUNTO",
+   `!instB j s.
+       stopAt (\s:STATEPCS. (FST (FST s) = j)) (step instB) s ==>
+          (runTo instB j s = FUNPOW (step instB) (shortest (\s.(FST (FST s) = j)) (step instB) s) s)`,
+
+    RW_TAC std_ss [runTo_FORM1] THEN
+    ASSUME_TAC (INST_TYPE [alpha |-> Type `:STATEPCS`] TERD_WHILE_EQ_UNROLL) THEN
+    RES_TAC THEN
+    `$~ o (\s:STATEPCS. (FST (FST s) = j)) = (\s:STATEPCS. ~(FST (FST s) = j))` by RW_TAC std_ss [FUN_EQ_THM] THEN
+    METIS_TAC []
+  );
+
+val terd_def = Define `
+  terd instB j s =
+	stopAt (\s:STATEPCS.FST (FST s) = j) (step instB) s`;
+
+val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
+
+
+val RUNTO_STILL = Q.store_thm
+  ("RUNTO_STILL",
+  `!j k instB s.
+        terd instB j s ==>
+        (runTo instB j (runTo instB j s) =
+                 runTo instB j s)`,
+   RW_TAC std_ss [terd_def, runTo_FORM1] THEN
+   `$~ o (\s:STATEPCS. FST (FST s) = j) = (\s:STATEPCS. ~(FST (FST s) = j))` by RW_TAC std_ss [FUN_EQ_THM] THEN
+   METIS_TAC [WHILE_STILL]
   );
 
 
+val RUNTO_PCS_GROW = Q.store_thm
+  ("RUNTO_PCS_GROW",
+   `!n j instB s.
+        (SND s) SUBSET SND (FUNPOW (step instB) n s)`,
+   RW_TAC std_ss [terd_def] THEN
+   Q.ID_SPEC_TAC `s` THEN
+   Induct_on `n` THENL [
+           RW_TAC std_ss [FUNPOW] THEN
+               RW_TAC set_ss [Once step_FORM1],
+           RW_TAC std_ss [FUNPOW] THEN 
+               FULL_SIMP_TAC std_ss [FUNPOW, SIMP_RULE std_ss [FUN_EQ_THM] FUNPOW_FUNPOW] THEN
+               POP_ASSUM (ASSUME_TAC o Q.SPECL [`step instB s`]) THEN
+               POP_ASSUM MP_TAC THEN
+               RW_TAC std_ss [Once step_FORM1] THEN
+               `SND s SUBSET (FST (FST s) INSERT SND s)` by RW_TAC set_ss [SUBSET_INSERT_RIGHT] THEN
+               METIS_TAC [SUBSET_TRANS]
+           ]
+   );
+  
+
+val RUNTO_PCS_MEMBERS = Q.store_thm
+  ("RUNTO_PCS_MEMBERS",
+   `!n m j instB s. m < n ==>
+        FST (FST (FUNPOW (step instB) m s)) IN (SND (FUNPOW(step instB) n s))`,
+   Induct_on `n` THEN
+   RW_TAC std_ss [] THEN
+   Cases_on `m = n` THENL [
+       RW_TAC std_ss [FUNPOW_SUC] THEN
+       Q.ABBREV_TAC `f = FUNPOW (step instB) m` THEN
+       RW_TAC set_ss [Once step_FORM1],
+       RW_TAC std_ss [FUNPOW_SUC] THEN
+       `m < n` by RW_TAC arith_ss [] THEN
+       `SND (FUNPOW (step instB) n s) SUBSET SND (FUNPOW (step instB) (SUC 0) (FUNPOW (step instB) n s))` by METIS_TAC [RUNTO_PCS_GROW]
+       THEN FULL_SIMP_TAC set_ss [FUNPOW, SUBSET_DEF]
+   ]
+ );
+
+       
+val RUNTO_COMPOSITION = Q.store_thm
+  ("RUNTO_COMPOSITION",
+   `!j k instB s0 pcS0.
+        terd instB j (s0,pcS0) ==>
+        let (s1,pcS1) = runTo instB j (s0,pcS0) in
+	    ~(k IN ((FST s0) INSERT pcS1)) ==>
+	        (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))`,
+  REPEAT GEN_TAC THEN
+  Cases_on `k = j` THENL [
+      RW_TAC std_ss [] THEN
+      METIS_TAC [RUNTO_STILL],
+
+      POP_ASSUM MP_TAC THEN Q.ID_SPEC_TAC `j` THEN
+      Q.ID_SPEC_TAC `s0` THEN  Q.ID_SPEC_TAC `pcS0` THEN
+      SIMP_TAC std_ss [terd_def, UNROLL_RUNTO, FORALL_STATE] THEN
+      Induct_on `shortest (\s. FST (FST s) = j) (step instB) ((pc,pcsr,regs,mem),pcS0)` THENL [
+          REWRITE_TAC [Once EQ_SYM_EQ] THEN
+              RW_TAC std_ss [FUNPOW],
+          REWRITE_TAC [Once EQ_SYM_EQ] THEN
+              REPEAT GEN_TAC THEN
+              `?pc1 cpsr1 regs1 mem1 pcS1. step instB ((pc,pcsr,regs,mem),pcS0) = ((pc1,cpsr1,regs1,mem1),pcS1)` by METIS_TAC [ABS_PAIR_THM] THEN
+          PAT_ASSUM ``!j instB pcsr regs mem pcS0. P`` (ASSUME_TAC o Q.SPECL [`j`,`instB`,`pc1`,`cpsr1`,`regs1`,`mem1`,`pcS1`]) THEN
+          REPEAT STRIP_TAC THEN
+          Q.ABBREV_TAC `s0 = (pc,pcsr,regs,mem)` THEN
+          Q.ABBREV_TAC `s1 = (pc1,cpsr1,regs1,mem1)` THEN  
+          `1 <= shortest (\s. FST (FST s) = j) (step instB) (s0,pcS0)` by RW_TAC arith_ss [] THEN
+          `shortest (\s. FST (FST s) = j) (step instB) (s0,pcS0) = 
+	      SUC (shortest (\s. FST (FST s) = j) (step instB) (s1,pcS1))` by METIS_TAC [SHORTEST_LEM, SHORTEST_CASES] THEN
+          ASM_REWRITE_TAC [FUNPOW] THEN
+          FULL_SIMP_TAC std_ss [] THEN
+
+          `stopAt (\s. FST (FST s) = j) (step instB) (FUNPOW (step instB) (SUC 0) (s0,pcS0))` by 
+	       METIS_TAC [ONE, Q.SPECL [`1`,`(\s:STATEPCS. FST (FST s) = j)`] 
+			  (INST_TYPE [alpha |-> Type `:STATE # (num->bool)`] STOPAT_THM)] THEN
+          POP_ASSUM MP_TAC THEN
+          ASM_REWRITE_TAC [FUNPOW] THEN
+          STRIP_TAC THEN RES_TAC THEN
+          `?Sn pcSn. FUNPOW (step instB) v (s1,pcS1) = (Sn,pcSn)` by METIS_TAC [ABS_PAIR_THM] THEN
+          FULL_SIMP_TAC std_ss [LET_THM] THEN
+          STRIP_TAC THEN
+          Q.UNABBREV_TAC `s0` THEN
+          Cases_on `pc = k` THENL [
+	      FULL_SIMP_TAC set_ss [],
+              Cases_on `v` THENL [
+                  FULL_SIMP_TAC set_ss [FUNPOW] THEN
+                      RW_TAC std_ss [runTo_def, Once WHILE],
+                  
+                  ASSUME_TAC (DECIDE ``n < SUC n``) THEN
+                  `FST (FST (FUNPOW (step instB) n (s1,pcS1))) IN pcSn /\ pcS1 SUBSET SND (FUNPOW (step instB) n (s1,pcS1))` 
+		            by METIS_TAC [RUNTO_PCS_GROW, RUNTO_PCS_MEMBERS, SND] THEN
+                  FULL_SIMP_TAC set_ss [] THEN
+                   ASSUME_TAC (DECIDE ``0 < SUC n``) THEN
+                   IMP_RES_TAC RUNTO_PCS_MEMBERS THEN
+                   `FST (FST (s1,pcS1)) IN SND (Sn,pcSn)` by METIS_TAC [FUNPOW] THEN
+                   Q.UNABBREV_TAC `s1` THEN
+                   FULL_SIMP_TAC set_ss [] THEN
+                   `~(k = pc1)` by (ALL_TAC THEN STRIP_TAC THEN (FULL_SIMP_TAC std_ss [IN_DEF])) THEN
+                   `runTo instB k ((pc,pcsr,regs,mem),pcS0) = runTo instB k ((pc1,cpsr1,regs1,mem1),pcS1)` by 
+				  FULL_SIMP_TAC std_ss [runTo_def, Once WHILE] THEN
+                   METIS_TAC []
+	  ]
+        ]
+     ]
+    ]
+  );
+
+
+(*----------------------------------------------------------------------------*)
+(* Run from a state until reaching another pc.                                *)
+(* The running may be trapped in a loop and not terminate                     *)
+(*----------------------------------------------------------------------------*)
+
+val runS_def = Define `
+  runS instB i j =
+     \(s,pcS). s
+	runTo instB j (s, pcS)`;
+
+
+val set_pc_LEM = Q.store_thm
+  ("set_pc_LEM",
+   `!g s:STATE. set_pc (SND s) (FST (g s)) = g s`,
+   SIMP_TAC std_ss [FORALL_STATE] THEN
+   RW_TAC list_ss [runTo_def, step_def] THENL [
+        RW_TAC list_ss [Once WHILE],
+        RW_TAC list_ss [Once WHILE]
+	]
+  );
+
+
+val RUNS_COMPOSITION = Q.store_thm
+  ("RUNS_COMPOSITION",
+   `!i j k instB s0 pcS0.
+        terS instB i j (s0,pcS0) ==>
+        let (s1,pcS1) = runS instB i j (s0,pcS0) in
+	    ~(k IN pcS1) ==> 
+	        (runS instB i k (s0,pcS0) = runS instB j k (s1,pcS1))`,
+  SIMP_TAC std_ss [runS_def, terS_def, UNROLL_RUNTO, FORALL_STATE] THEN
+  Induct_on `shortest (\(s,pcS). FST s = j) (step instB) (set_pc (pcsr,regs,mem) i,pcS0)` THENL [
+      REWRITE_TAC [Once EQ_SYM_EQ] THEN
+          RW_TAC std_ss [FUNPOW] THEN
+          FULL_SIMP_TAC std_ss [set_pc_def, write_thm] THEN
+          `(\(s,pcS).FST s = j) ((i,pcsr,regs |+ (15,n2w i),mem),pcS0)` by METIS_TAC [SHORTEST_LEM] THEN
+          FULL_SIMP_TAC std_ss [] THEN
+          SIMP_TAC finmap_ss [],
+      REWRITE_TAC [Once EQ_SYM_EQ] THEN
+          REPEAT GEN_TAC THEN
+          `?pc1 cpsr1 regs1 mem1 pcS1. step instB ((set_pc (pcsr,regs,mem) i,pcS0)) = ((pc1,cpsr1,regs1,mem1),pcS1)` by METIS_TAC [ABS_PAIR_THM] THEN
+          PAT_ASSUM ``!j instB pcsr regs mem i pcS0. P`` (ASSUME_TAC o Q.SPECL [`j`,`instB`,`cpsr1`,`regs1`,`mem1`,`i`,`pcS1`]) THEN
+          REPEAT STRIP_TAC THEN
+          `1 <= shortest (\(s,pcS). FST s = j) (step instB) (set_pc (pcsr,regs,mem) i,pcS0)` by RW_TAC arith_ss [] THEN
+          `shortest (\(s,pcS). FST s = j) (step instB) (set_pc (pcsr,regs,mem) i,pcS0) = 
+	      SUC (shortest (\(s,pcS). FST s = j) (step instB) ((pc1,cpsr1,regs1,mem1),pcS1))` by METIS_TAC [SHORTEST_LEM, SHORTEST_CASES] THEN
+          ASM_REWRITE_TAC [FUNPOW] THEN
+
+
+
+          Q.ABBREV_TAC `len = shortest (\(s,pcS). FST s = j) (step instB) (set_pc (cpsr1,regs,mem) i,pcS0)` THEN
+          
+  
+  );
+
+(*
 val RUNTO_AFTER_N_STEPS = Q.store_thm
   ("RUNTO_AFTER_N_STEPS",
-   `!m instB byn s. runTo instB byn s = runTo instB byn (run m (instB,byn) s)`,
+   `!m instB byn s. runTo instB byn s = runTo instB byn (run m instB s)`,
     Induct_on `m` THENL [
         RW_TAC list_ss [RUN_LEM_1],
         REPEAT STRIP_TAC THEN POP_ASSUM MP_TAC THEN 
@@ -695,109 +1055,12 @@ val RUNTO_AFTER_N_STEPS = Q.store_thm
         REWRITE_TAC [Once RUN_LEM_1] THEN
         REWRITE_TAC [Once RUN_LEM_1] THEN
         STRIP_TAC THEN
-        Cases_on `FST (run m (instB,byn) s) = byn` THENL [
+        Cases_on `FST (run m instB s) = byn` THENL [
             METIS_TAC [],
             METIS_TAC [RUNTO_LEM_1]
         ]
     ]
    );
-
-(*
-val RUNTO_THM = Q.store_thm
-  ("RUNTO_THM",
-   `!k instB t s0 s1 pcS0 pcS1. (((s1,pcS1) = run instB k (s0,pcS0)) /\ ~(t IN pcS1)) ==>
-        (run instB t (s0,pcS0) = run instB t (s1,pcS1))`,
-
-    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
-    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-        METIS_TAC [],
-        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-             REWRITE_TAC [GSYM RUN_THM_1] THEN
-             Q.EXISTS_TAC `0` THEN
-             RW_TAC arith_ss [],
-             METIS_TAC [RUN_LEM_2]]
-    ]
-   );
-*)
-
-
-(*
-val runTo_def = Define `
-  !instB byn s pcS.
-  runTo instB byn (s,pcS) =
-      WHILE (\(s,pcS). ~(FST s = byn))
-           (\(s,pcS). (decode2 s (instB (FST s)),FST s INSERT pcS)) (s,pcS)`;
-
-val RUNTO_LEM_1 = Q.store_thm
-  ("RUNTO_LEM_1",
-   `!n instB byn s.
-       runTo instB byn (s,pcS) =
-           if FST s = byn then (s,pcS)
-           else runTo instB byn (decode2 s (instB (FST s)), (FST s) INSERT pcS)`,
-   REPEAT STRIP_TAC THEN Cases_on `FST s = byn` THENL [
-       RW_TAC list_ss [runTo_def, Once WHILE],
-       RW_TAC list_ss [runTo_def, Once WHILE]]
-  );
-
-val RUNTO_LEM_2 = Q.store_thm
-  ("RUNTO_LEM_2",
-   `!instB s pcS. runTo instB (FST s) (s,pcS) = (s,pcS)`,
-   METIS_TAC [RUN_LEM_1]
-  );
-
-
-val RUNTO_THM_1 = Q.store_thm
-  ("RUNTO_THM_1",
-   `!m instB byn s. runTo instB byn (run m (instB,byn) s)`,
-
-    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
-    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-        METIS_TAC [],
-
-        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-             REWRITE_TAC [GSYM RUN_THM_1] THEN
-             Q.EXISTS_TAC `0` THEN
-             RW_TAC arith_ss [],
-             METIS_TAC [RUN_LEM_2]]
-    ]
-   );
-
-
-val RUNTO_THM_1 = Q.store_thm
-  ("RUNTO_THM_1",
-   `!k instB t s0 s1 pcS0 pcS1. (((s1,pcS1) = run instB k (s0,pcS0)) /\ ~(t IN pcS1)) ==>
-        (run instB t (s0,pcS0) = run instB t (s1,pcS1))`,
-
-    RW_TAC list_ss [runTo_def, minStep_def, stopAt_def] THEN
-    LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-        METIS_TAC [],
-        LEAST_ELIM_TAC THEN RW_TAC list_ss [] THENL [
-             REWRITE_TAC [GSYM RUN_THM_1] THEN
-             Q.EXISTS_TAC `0` THEN
-             RW_TAC arith_ss [],
-             METIS_TAC [RUN_LEM_2]]
-    ]
-   );
-
-*)
-
-(*---------------------------------------------------------------------------------*)
-(* A breakpoint of the problem is at the critical path iff it is at the shorest    *)
-(* runnning path of an execution                                                   *)
-(*---------------------------------------------------------------------------------*)
-
-(*
-val atCritPath_def =
-  Define `atCritPath p t instM s = 
-         minStep2 p instM s +  minStep2 t instM (runTo p instM s) <= minStep2 t instM s`;
-
-val ATCRITPATH_LEM = Q.store_thm
-  ("ATCRITPATH_LEM",
-   `!p t instM s. 
-    atCritPath p t instM s ==>     
-        minStep2 p instM s <= minStep2 t instM s /\ minStep2 t instM (runTo p instM s) <= minStep2 t instM s`,
-    RW_TAC list_ss [atCritPath_def]
-  );
 *)
 
 (*---------------------------------------------------------------------------------*)
@@ -822,51 +1085,6 @@ val TERRUN_STOP = Q.store_thm
   RW_TAC list_ss [terRun_def] THEN
   RW_TAC list_ss [RUNTO_LEM_2]
   );
-
-(*---------------------------------------------------------------------------------*)
-(* ARM program destruction                                                         *)
-(*---------------------------------------------------------------------------------*)
-
-(* Theorem of Sequential Composition                                      			                                  *)
-(*
-val RUN_LEM_1 = Q.prove (
-    `!blk m start status.
-	(FST (runL m blk (start,status)) + start = FST (run m (upload blk start) (start,status))) /\
-	(SND (runL m blk (start,status)) = SND (run m (upload blk start) (start,status)))`,
-     SIMP_TAC std_ss [FORALL_STATUS] THEN 
-     RW_TAC list_ss [runL_def, uploadCode_def] THEN Induct_on `m` THENL [
-	RW_TAC list_ss [run_def],
-
-	RW_TAC list_ss [run_def, LET_THM] THEN POP_ASSUM (ASSUME_TAC o SYM) THEN
-	ASM_REWRITE_TAC [] THEN 
-
-	RW_TAC list_ss [runL_def, run_def],
-
-
-val SEQ_COMP = Q.prove (
-    `!blk1 blk2 m1 m2 s. e1e1 m1 blk1 s ==>
-        (SND (runL m2 blk2 (runL m1 blk1 s)) = SND (runL (m1+m2) (blk1 ++ blk2) s))`,
-    SIMP_TAC std_ss [FORALL_STATE] THEN Induct_on `m2` THENL [
-    RW_TAC list_ss [e1e1_def] THEN RW_TAC list_ss [Once runL_def, run_def],
-    
-  );
-
-   
-val COND_COMP = Q.prove (
-    `(terminate cond /\ terminate tblk /\ terminate fblk) ==>
-        !s. ?m1 m2 m3. runL m3 (cond ++ tblk ++ fblk) s =
-                let c = runL m0 cond s in
-                if getCond c then runL m1 tblk c
-                else runL m2 fblk c`,
-*)
-
-val EL_THM = Q.prove
-  (`!n:num. EL n (h::t) = (if n > 0 then EL (PRE n) t else h)`,
-    Cases_on `n` THEN RW_TAC list_ss [EL]
-  );
-
-
-
 
 (*---------------------------------------------------------------------------------*)
 (* Restriction on the modelling of registers and memory                            *)
@@ -898,5 +1116,6 @@ val FUPDATE_REFL = Q.store_thm
 (*---------------------------------------------------------------------------------*)
 (* Bisimulation. Compare source codes and  ARM codes synchronously                 *)
 (*---------------------------------------------------------------------------------*)
+
 
 val _ = export_theory();
