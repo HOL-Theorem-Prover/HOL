@@ -14,6 +14,7 @@ open Arbint HolKernel Parse boolLib liteLib
      Arith reduceLib Arith_cons
      simpLib Traverse Cache Trace;
 
+open NumRelNorms
 
 structure Parse = (* Fix the grammar used by this file *)
 struct
@@ -140,112 +141,8 @@ val ARITH_RWTS_ss =
 
 val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
 
-(* ----------------------------------------------------------------------
-    basic canonisers
-   ---------------------------------------------------------------------- *)
 
-(* first define the records containing the necessary information for the
-   generic canoniser *)
 
-(* for addition - right-associated for backwards compatibility *)
-local
-  open numSyntax arithmeticTheory GenPolyCanon
-  fun is_good t = let
-    val (l,r) = dest_mult t
-  in
-    is_numeral l
-  end handle HOL_ERR _ => false
-  fun non_coeff t = if is_good t then rand t
-                    else if is_numeral t then mk_var("   ", num)
-                    else t
-  fun add_coeff (t:term) : thm = if is_good t then ALL_CONV t
-                    else REWR_CONV (GSYM MULT_LEFT_1) t
-  val distrib = GSYM RIGHT_ADD_DISTRIB
-  fun merge t = let
-    val (l,r) = dest_plus t
-  in
-    if is_numeral l andalso is_numeral r then
-      reduceLib.REDUCE_CONV
-    else
-      Conv.BINOP_CONV add_coeff THENC
-      REWR_CONV distrib THENC LAND_CONV reduceLib.REDUCE_CONV
-  end t
-in
-  val rnatadd_gci =
-      GCI { dest = dest_plus,
-            assoc_mode = R,
-            assoc = ADD_ASSOC,
-            symassoc = GSYM ADD_ASSOC,
-            comm = ADD_COMM,
-            r_asscomm = derive_r_asscomm ADD_ASSOC ADD_COMM,
-            l_asscomm = derive_l_asscomm ADD_ASSOC ADD_COMM,
-            is_literal = is_numeral,
-            non_coeff = non_coeff, merge = merge,
-            postnorm = REWR_CONV (CONJUNCT1 (SPEC_ALL MULT)) ORELSEC
-            TRY_CONV (REWR_CONV MULT_LEFT_1),
-            left_id = CONJUNCT1 ADD,
-            right_id = ADD_0,
-            reducer = reduceLib.REDUCE_CONV}
-  val lnatadd_gci =
-      GCI { dest = dest_plus,
-            assoc_mode = L,
-            assoc = ADD_ASSOC,
-            symassoc = GSYM ADD_ASSOC,
-            comm = ADD_COMM,
-            r_asscomm = derive_r_asscomm ADD_ASSOC ADD_COMM,
-            l_asscomm = derive_l_asscomm ADD_ASSOC ADD_COMM,
-            is_literal = is_numeral,
-            non_coeff = non_coeff, merge = merge,
-            postnorm = REWR_CONV (CONJUNCT1 (SPEC_ALL MULT)) ORELSEC
-            TRY_CONV (REWR_CONV MULT_LEFT_1),
-            left_id = CONJUNCT1 ADD,
-            right_id = ADD_0,
-            reducer = reduceLib.REDUCE_CONV}
-end
-
-val ADDL_CANON_CONV = GenPolyCanon.gencanon lnatadd_gci
-val ADDR_CANON_CONV = GenPolyCanon.gencanon rnatadd_gci
-
-(* multiplication *)
-val lcnatmult_gci = let
-  open GenPolyCanon numSyntax arithmeticTheory
-  fun is_good t = let
-    val (l,r) = dest_exp t
-  in
-    is_numeral r
-  end handle HOL_ERR _ => false
-  fun non_coeff t = if is_good t then rand (rator t)
-                    else if is_numeral t then mk_numeral Arbnum.one
-                    else t
-  fun add_coeff t = if is_good t then ALL_CONV t
-                    else REWR_CONV (GSYM (CONJUNCT2 (SPEC_ALL EXP_1))) t
-  val distrib = GSYM EXP_ADD
-  fun merge t = let
-    val (l,r) = dest_mult t
-  in
-    if is_numeral l andalso is_numeral r then reduceLib.REDUCE_CONV
-    else Conv.BINOP_CONV add_coeff THENC REWR_CONV distrib THENC
-         reduceLib.REDUCE_CONV
-  end t
-in
-  GCI { dest = dest_mult,
-        is_literal = is_numeral,
-        assoc_mode = L_Cflipped,
-        assoc = MULT_ASSOC,
-        symassoc = GSYM MULT_ASSOC,
-        comm = MULT_COMM,
-        r_asscomm = derive_r_asscomm MULT_ASSOC MULT_COMM,
-        l_asscomm = derive_l_asscomm MULT_ASSOC MULT_COMM,
-        non_coeff = non_coeff,
-        merge = merge,
-        postnorm = REWR_CONV (CONJUNCT1 (SPEC_ALL EXP)) ORELSEC
-                   TRY_CONV (REWR_CONV (CONJUNCT2 (SPEC_ALL EXP_1))),
-        right_id = MULT_RIGHT_1,
-        left_id = MULT_LEFT_1,
-        reducer = reduceLib.REDUCE_CONV}
-end
-
-val MUL_CANON_CONV = GenPolyCanon.gencanon lcnatmult_gci
 
 
 (* ---------------------------------------------------------------------*
