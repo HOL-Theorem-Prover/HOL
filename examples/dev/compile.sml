@@ -652,15 +652,6 @@ fun RecCompileConvert defth totalth =
 (* For termination prover.                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val default_termination_simps =
-    [combinTheory.o_DEF,
-     combinTheory.I_THM,
-     prim_recTheory.measure_def,
-     relationTheory.inv_image_def,
-     pairTheory.LEX_DEF];
-
-val termination_simps = ref default_termination_simps;
-
 (*---------------------------------------------------------------------------*)
 (* Single entrypoint for definitions where proof of termination will succeed *)
 (* Allows measure function to be indicated in same quotation as definition,  *)
@@ -691,56 +682,60 @@ val hwDefineLib = ref([] : (thm * thm * thm)list);
 fun hwDefine defq =
  let val absyn0 = Parse.Absyn defq
  in 
-   case absyn0
-    of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
-        let val (deftm,names) = Defn.parse_defn def
-            val hdeqn = hd (boolSyntax.strip_conj deftm)
-            val (l,r) = boolSyntax.dest_eq hdeqn
-            val domty = pairSyntax.list_mk_prod 
-                          (map type_of (snd (boolSyntax.strip_comb l)))
-            val fty = Pretype.fromType (domty --> numSyntax.num)
-            val typedf = Parse.absyn_to_term 
-                             (Parse.term_grammar())
-                             (Absyn.TYPED(loc,f,fty))
-            val defn = Defn.mk_defn (hd names) deftm
-            val tac = EXISTS_TAC (numSyntax.mk_cmeasure typedf)
-                       THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps)
-            val (defth,ind) = Defn.tprove(defn, tac)
-            val (lt,rt) = boolSyntax.dest_eq(concl defth)
-            val (func,args) = dest_comb lt
-            val (test,t1,t2) = dest_cond rt
-            val fb = mk_pabs(args,test)
-            val f1 = mk_pabs(args,t1)
-            val f2 = mk_pabs(args,rand t2)
-            val totalth = prove
-                    (Term`TOTAL(^fb,^f1,^f2)`,
-                     RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
-                      THEN EXISTS_TAC typedf
-                      THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps))
+  case absyn0
+  of Absyn.APP(_,Absyn.APP(_,Absyn.IDENT(loc,"measuring"),def),f) =>
+       let val (deftm,names) = Defn.parse_defn def
+           val hdeqn = hd (boolSyntax.strip_conj deftm)
+           val (l,r) = boolSyntax.dest_eq hdeqn
+           val domty = pairSyntax.list_mk_prod 
+                         (map type_of (snd (boolSyntax.strip_comb l)))
+           val fty = Pretype.fromType (domty --> numSyntax.num)
+           val typedf = Parse.absyn_to_term 
+                            (Parse.term_grammar())
+                            (Absyn.TYPED(loc,f,fty))
+           val defn = Defn.mk_defn (hd names) deftm
+           val tac = EXISTS_TAC (numSyntax.mk_cmeasure typedf)
+                      THEN CONJ_TAC THENL
+                      [TotalDefn.WF_TAC, TotalDefn.TC_SIMP_TAC]
+           val (defth,ind) = Defn.tprove(defn, tac)
+           val totalth = prove
+                 (getTotal defth,
+                  RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
+                  THEN EXISTS_TAC typedf THEN TotalDefn.TC_SIMP_TAC)
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                           (RecCompileConvert defth totalth)
         in
          hwDefineLib := (defth,ind,devth) :: !hwDefineLib;
          (defth,ind,devth)
         end
-     | otherwise => 
-        let val defth = SPEC_ALL(Define defq)
-            val _ =
-             if occurs_in 
-                 (fst(strip_comb(lhs(concl defth)))) 
-                 (rhs(concl defth))
-              then (print "definition of "; 
-                    print (fst(dest_const(fst(strip_comb(lhs(concl defth))))));
-                    print " is recursive; must have a measure";
-                    raise ERR "hwDefine" "recursive definition without a measure")
-              else ()
-            val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
-                          (CompileConvert defth)
-        in 
-         hwDefineLib := (defth,boolTheory.TRUTH,devth) :: !hwDefineLib;
-         (defth,boolTheory.TRUTH,devth)
-        end
- end;
+   | otherwise =>
+     let val (deftm,names) = Defn.parse_defn absyn0
+         val defn = Defn.mk_defn (hd names) deftm
+     in 
+      case TotalDefn.primDefine defn
+       of (defth,NONE,NONE) =>   (* non-recursive *)
+          let val defth' = SPEC_ALL defth
+              val devth = PURE_REWRITE_RULE[GSYM DEV_IMP_def] 
+                              (CompileConvert defth')
+          in 
+             hwDefineLib := (defth',boolTheory.TRUTH,devth) :: !hwDefineLib;
+             (defth',boolTheory.TRUTH,devth)
+          end
+       | (defth, SOME ind, SOME terminates) =>  (* recursive *)
+          let val reln = rand(concl(CONJUNCT1 terminates))
+              val totalth = prove (getTotal defth,
+                      RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
+                      THEN EXISTS_TAC (rand reln) THEN TotalDefn.TC_SIMP_TAC)
+              val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
+                                (RecCompileConvert defth totalth)
+          in 
+            hwDefineLib := (defth,ind,devth) :: !hwDefineLib;
+            (defth,ind,devth)
+          end
+        | otherwise => raise ERR "hwDefine" "should not happen"
+     end
+ end
+ handle e as HOL_ERR _ => raise wrap_exn "hwDefine" "failed" e;
 
 (*****************************************************************************)
 (* Recognisers, destructors and constructors for harware combinatory         *)
