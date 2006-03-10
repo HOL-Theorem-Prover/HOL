@@ -465,8 +465,8 @@ val QSORT_defn =
  Hol_defn "QSORT"
     `(QSORT ord [] = []) /\
      (QSORT ord (h::t) =
-           let (l1,l2) = PARTITION (\y. ord y h) t
-           in
+         let (l1,l2) = PARTITION (\y. ord y h) t
+         in
             QSORT ord l1 ++ [h] ++ QSORT ord l2)`;
 
 

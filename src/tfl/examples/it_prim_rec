@@ -3,8 +3,6 @@
      We start with Ackermann's function.
  ---------------------------------------------------------------------------*)
 
-load "bossLib"; open bossLib;
-
 (* Based on iteration alone *)
 val Ackermann_Existence = Q.prove
 (`?f. (!n. f 0 n = n + 1) /\ 
@@ -18,32 +16,25 @@ val Ackermann_Existence = Q.prove
 (* Using WFREC *)
 
 val Ack_def = 
- Hol_defn "Ack" 
+ Define
   `(Ack (0,n) =  n+1) /\
    (Ack (SUC m,0) = Ack (m, 1)) /\
    (Ack (SUC m, SUC n) = Ack (m, Ack (SUC m, n)))`;
 
-
-val pred = Term `\x y. y = SUC x`;
-
-val (Ack_eqns,Ack_ind) = 
-Defn.tprove
-  (Ack_def, 
-   WF_REL_TAC `^pred LEX ^pred`);
+val Ack_ind = fetch "-" "Ack_ind";
 
 val Ack_positive = Q.prove
 (`!x y. 0 < Ack(x,y)`,
   recInduct Ack_ind 
-    THEN ONCE_REWRITE_TAC[Ack_eqns] 
+    THEN ONCE_REWRITE_TAC[Ack_def] 
     THEN PROVE_TAC [DECIDE (Term`0 < x + 1`)]);
 
 
 val Ack_grows_faster_than_plus = Q.prove
 (`!x y. x+y < Ack(x,y)`,
  recInduct Ack_ind
-  THEN ONCE_REWRITE_TAC[Ack_eqns] 
+  THEN ONCE_REWRITE_TAC[Ack_def] 
   THEN RW_TAC arith_ss []);
-
 
 
 (*---------------------------------------------------------------------------*
@@ -53,27 +44,19 @@ val Ack_grows_faster_than_plus = Q.prove
  *---------------------------------------------------------------------------*)
 
 val Sudan_def = 
- Hol_defn "Sudan" 
+ Define
    `(Sudan 0 (x,y)           = x+y)
  /\ (Sudan (SUC n) (x,0)     = x)
  /\ (Sudan (SUC n) (x,SUC y) = Sudan n (Sudan (SUC n) (x,y), 
                                         Sudan (SUC n) (x,y) + SUC y))`;
-
-val (Sudan_eqns, Sudan_ind) = 
-  Defn.tprove(Sudan_def, WF_REL_TAC `^pred LEX (inv_image ^pred SND)`);
-
 
 (*---------------------------------------------------------------------------
        A Harvey Friedman function (from May 1999 FOM posting).
  ---------------------------------------------------------------------------*)
 
 val V_def = 
- Hol_defn "V" 
+ Define
    `(V (SUC 0, n, m)                = n) 
 /\  (V (SUC(SUC k), n, SUC 0)       = V (SUC k, SUC n, SUC n))
 /\  (V (SUC(SUC k), n, SUC (SUC m)) = V (SUC k, V(SUC(SUC k),n,SUC m)+1,
                                                 V(SUC(SUC k),n,SUC m)+1))`;
-
-val (V_eqns, V_ind) = 
-  Defn.tprove (V_def, WF_REL_TAC `^pred LEX ^pred LEX ^pred`);
-

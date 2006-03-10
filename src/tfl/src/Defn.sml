@@ -1306,12 +1306,19 @@ fun mangle th [] = th
     Have to take care with how the assumptions are discharged. Hence mangle.
  ---------------------------------------------------------------------------*)
 
+val WF_tm = prim_mk_const{Name="WF",Thy="relation"};
+
+fun get_WF tmlist = 
+ pluck (same_const WF_tm o rator) tmlist
+ handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
+
 fun TC_TAC defn =
- let infix THEN
-     val E = LIST_CONJ (eqns_of defn)
+ let val E = LIST_CONJ (eqns_of defn)
      val I = Option.valOf (ind_of defn)
      val th = CONJ E I
-     val tac = MATCH_MP_TAC (GEN_ALL (mangle th (hyp th)))
+     val (wfr,rest) = get_WF (hyp th)
+     val hyps' = wfr::rest
+     val tac = MATCH_MP_TAC (GEN_ALL (mangle th hyps'))
      val goal = ([],concl th)
  in
    case tac goal
@@ -1326,6 +1333,7 @@ fun tgoal0 defn =
         in goalstackLib.add (GoalstackPure.prim_set_goal g validation)
         end handle HOL_ERR _ => raise ERR "tgoal" "";
 
+fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
 
 (*---------------------------------------------------------------------------
      The error handling here is pretty coarse.
@@ -1344,9 +1352,7 @@ fun tprove0 (defn,tactic) =
   handle e => (goalstackLib.drop(); raise (wrap_exn "Defn" "tprove" e))
 
 
-fun tgoal defn = Lib.with_flag (goalstackLib.chatting,false) tgoal0 defn;
-
-fun tprove p   =
+fun tprove p =
   let
     val (eqns,ind) = Lib.with_flag (goalstackLib.chatting,false) tprove0 p
     val () = if not (!computeLib.auto_import_definitions) then ()

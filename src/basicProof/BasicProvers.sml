@@ -326,6 +326,7 @@ fun SPLIT_SIMP simp = TRY IF_CASES_TAC THEN simp ;
 fun PRIM_NORM_TAC ss =
  let val has_constr_eqn = mkCSET()
      val ASM_SIMP = simpLib.ASM_SIMP_TAC ss []
+(*     val IfCases =  *)
   in
     REPEAT (GEN_TAC ORELSE CONJ_TAC)
      THEN REPEAT VAR_EQ_TAC

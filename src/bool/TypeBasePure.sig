@@ -82,11 +82,11 @@ sig
   (* Support for polytypism *)
 
    val typeValue       : (hol_type -> term option) *
-                         (string * string -> term option)   *
+                         (hol_type -> term option) *
                          (hol_type -> term) -> hol_type -> term
    val tyValue         : (hol_type -> term option) *
-                         (string * string -> term option)   *
-                         (string * string -> term) -> hol_type -> term
+                         (hol_type -> term option) *
+                         (hol_type -> term) -> hol_type -> term
 
    val type_size       : typeBase -> hol_type -> term
    val type_encode     : typeBase -> hol_type -> term

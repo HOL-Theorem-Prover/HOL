@@ -51,10 +51,11 @@ val thms =
    numeral_log2,numeral_ilog2
   ] ;
 
+val _ = add_thms thms computeLib.the_compset
+
 fun bits_compset () =
   let val compset = reduceLib.num_compset()
       val _ = add_thms thms compset
-      val _ = add_thms thms computeLib.the_compset
    (*   val _ = add_conv (``$LOG2``, 1, cbv_LOG2_CONV) compset *)
 in
   compset

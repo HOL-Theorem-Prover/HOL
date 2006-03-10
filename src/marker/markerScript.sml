@@ -87,6 +87,15 @@ val unint_def = new_definition(
 
 val Abbrev_def = new_definition("Abbrev_def", ``Abbrev (x:bool) = x``)
 
+
+(* ----------------------------------------------------------------------
+   For telling the simplifier to case-split on if-then-else terms in
+   the goal
+   ---------------------------------------------------------------------- *)
+
+val IfCases_def = new_definition("IfCases_def", ``IfCases = T``)
+
+
 (*---------------------------------------------------------------------------*)
 (* Support for the simplifier                                                *)
 (*---------------------------------------------------------------------------*)

@@ -119,10 +119,11 @@ val thms = [LT_EVAL, LE_EVAL, GT_EVAL, GE_EVAL,
       MSB_EVAL2, LSB_EVAL2,MSBn_def
       ];
 
+val _ = add_thms thms computeLib.the_compset
+
 fun word_compset () =
   let val rws = bitsLib.bits_compset()
       val _ = add_thms thms rws
-      val _ = add_thms thms computeLib.the_compset
 in
    rws
 end;

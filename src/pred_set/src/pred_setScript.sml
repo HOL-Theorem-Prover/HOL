@@ -9,10 +9,8 @@
 (* REVISED: Tom Melham (extensively revised and extended)		*)
 (* DATE:    January 1992						*)
 (* =====================================================================*)
-
 structure pred_setScript =
 struct
-
 (* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
           "Defn", "TotalDefn", "metisLib"];
@@ -448,9 +446,9 @@ val INTER_SUBSET =
      PURE_REWRITE_TAC [SUBSET_DEF,IN_INTER] THEN
      REPEAT STRIP_TAC);
 
-val SUBSET_INTER = store_thm(
-  "SUBSET_INTER",
-  ``!s t u. s SUBSET (t INTER u) = s SUBSET t /\ s SUBSET u``,
+val SUBSET_INTER = Q.store_thm
+("SUBSET_INTER",
+ `!s t u. s SUBSET (t INTER u) = s SUBSET t /\ s SUBSET u`,
   PROVE_TAC [IN_INTER, SUBSET_DEF]);
 
 val SUBSET_INTER_ABSORPTION =
@@ -553,19 +551,19 @@ val DISJOINT_UNION = store_thm ("DISJOINT_UNION",
                          STRIP_ASSUME_TAC (SPEC (--`x:'a`--) th)) THEN
      ASM_REWRITE_TAC []);
 
-val DISJOINT_UNION_BOTH = store_thm(
-  "DISJOINT_UNION_BOTH",
-  ``!s t u:'a set.
+val DISJOINT_UNION_BOTH = Q.store_thm
+("DISJOINT_UNION_BOTH",
+ `!s t u:'a set.
         (DISJOINT (s UNION t) u = DISJOINT s u /\ DISJOINT t u) /\
-        (DISJOINT u (s UNION t) = DISJOINT s u /\ DISJOINT t u)``,
+        (DISJOINT u (s UNION t) = DISJOINT s u /\ DISJOINT t u)`,
   PROVE_TAC [DISJOINT_UNION, DISJOINT_SYM]);
 
-val DISJOINT_SUBSET = store_thm(
-  "DISJOINT_SUBSET",
-  ``!s t u. DISJOINT s t /\ u SUBSET t ==> DISJOINT s u``,
+val DISJOINT_SUBSET = Q.store_thm
+("DISJOINT_SUBSET",
+  `!s t u. DISJOINT s t /\ u SUBSET t ==> DISJOINT s u`,
   REWRITE_TAC [DISJOINT_DEF, SUBSET_DEF, IN_INTER, NOT_IN_EMPTY,
                EXTENSION] THEN
-  PROVE_TAC [])
+  PROVE_TAC []);
 
 
 (* ===================================================================== *)
@@ -621,9 +619,9 @@ val DIFF_EQ_EMPTY =
      PURE_ONCE_REWRITE_TAC [DISJ_SYM] THEN
      REWRITE_TAC [EXCLUDED_MIDDLE]);
 
-val DIFF_SUBSET = store_thm(
-  "DIFF_SUBSET",
-  ``!s t. (s DIFF t) SUBSET s``,
+val DIFF_SUBSET = Q.store_thm
+("DIFF_SUBSET",
+  `!s t. (s DIFF t) SUBSET s`,
   REWRITE_TAC [SUBSET_DEF, IN_DIFF] THEN PROVE_TAC []);
 
 
@@ -1703,9 +1701,9 @@ val FINITE_DIFF =
        FIRST_ASSUM (fn th => fn g => ASSUME_TAC (SPEC (--`t:'a set`--)th) g)
        THEN IMP_RES_THEN MATCH_ACCEPT_TAC FINITE_INSERT]]);
 
-val FINITE_DIFF_down = store_thm(
-  "FINITE_DIFF_down",
-  ``!P Q. FINITE (P DIFF Q) /\ FINITE Q ==> FINITE P``,
+val FINITE_DIFF_down = Q.store_thm
+("FINITE_DIFF_down",
+  `!P Q. FINITE (P DIFF Q) /\ FINITE Q ==> FINITE P`,
   Q_TAC SUFF_TAC `!Q. FINITE Q ==> !P. FINITE (P DIFF Q) ==> FINITE P` THEN1
     PROVE_TAC [] THEN
   HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][DIFF_EMPTY] THEN
@@ -1735,10 +1733,9 @@ val IMAGE_FINITE =
      [REWRITE_TAC [IMAGE_EMPTY,FINITE_EMPTY],
       ASM_REWRITE_TAC [IMAGE_INSERT,FINITE_INSERT]]);
 
-val FINITELY_INJECTIVE_IMAGE_FINITE = store_thm(
-  "FINITELY_INJECTIVE_IMAGE_FINITE",
-  ``!f. (!x. FINITE { y | x = f y }) ==>
-        !s. FINITE (IMAGE f s) = FINITE s``,
+val FINITELY_INJECTIVE_IMAGE_FINITE = Q.store_thm
+("FINITELY_INJECTIVE_IMAGE_FINITE",
+  `!f. (!x. FINITE { y | x = f y }) ==> !s. FINITE (IMAGE f s) = FINITE s`,
   GEN_TAC THEN STRIP_TAC THEN
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM, IMAGE_FINITE] THEN
   Q_TAC SUFF_TAC `!Q. FINITE Q ==> !P. (IMAGE f P = Q) ==> FINITE P` THEN1
@@ -1752,10 +1749,10 @@ val FINITELY_INJECTIVE_IMAGE_FINITE = store_thm(
   `FINITE (P DIFF { y | e = f y})` by PROVE_TAC [] THEN
   METIS_TAC [FINITE_DIFF_down]);
 
-val INJECTIVE_IMAGE_FINITE = store_thm(
-  "INJECTIVE_IMAGE_FINITE",
-  ``!f. (!x y. (f x = f y) = (x = y)) ==>
-        !s. FINITE (IMAGE f s) = FINITE s``,
+val INJECTIVE_IMAGE_FINITE = Q.store_thm
+("INJECTIVE_IMAGE_FINITE",
+  `!f. (!x y. (f x = f y) = (x = y)) ==> 
+       !s. FINITE (IMAGE f s) = FINITE s`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC FINITELY_INJECTIVE_IMAGE_FINITE THEN
   GEN_TAC THEN Cases_on `?e. x = f e` THENL [
     POP_ASSUM STRIP_ASSUME_TAC THEN
@@ -2189,8 +2186,9 @@ RW_TAC arith_ss []);
 
 val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",
-  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x)
-       ==> !x. FINITE x ==> P x`,
+  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x) 
+      ==> 
+       !x. FINITE x ==> P x`,
   GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ((BETA_RULE o
                  Q.ISPEC `\x. FINITE x ==> P x` o
@@ -2262,9 +2260,9 @@ val NOT_IN_FINITE =
       REPEAT STRIP_TAC THEN RES_THEN STRIP_ASSUME_TAC THEN
       ASSUME_TAC (SPEC (--`x:'a`--) IN_UNIV) THEN RES_TAC]);
 
-val INFINITE_INHAB = store_thm(
-  "INFINITE_INHAB",
-  Term`!P. INFINITE P ==> ?x. x IN P`,
+val INFINITE_INHAB = Q.store_thm
+("INFINITE_INHAB",
+ `!P. INFINITE P ==> ?x. x IN P`,
   REWRITE_TAC [MEMBER_NOT_EMPTY, INFINITE_DEF] THEN REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN POP_ASSUM MP_TAC THEN
   REWRITE_TAC [FINITE_EMPTY]);
@@ -2737,9 +2735,9 @@ val FINITE_ISO_NUM =
      REWRITE_TAC [ASSUME (--`n < CARD (s:'a set)`--)]]]]);
 
 
-val FINITE_WEAK_ENUMERATE = store_thm(
-  "FINITE_WEAK_ENUMERATE",
-  ``!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)``,
+val FINITE_WEAK_ENUMERATE = Q.store_thm
+("FINITE_WEAK_ENUMERATE",
+ `!s. FINITE s = ?f b. !e. e IN s = ?n. n < b /\ (e = f n)`,
   ONCE_REWRITE_TAC [EQ_IMP_THM] THEN
   SIMP_TAC bool_ss [FORALL_AND_THM] THEN CONJ_TAC THENL [
     HO_MATCH_MP_TAC FINITE_INDUCT THEN
@@ -2751,7 +2749,7 @@ val FINITE_WEAK_ENUMERATE = store_thm(
         Q.EXISTS_TAC `b` THEN ASM_SIMP_TAC arith_ss [],
         RES_TAC THEN Q.EXISTS_TAC `n` THEN ASM_SIMP_TAC arith_ss [],
         POP_ASSUM MP_TAC THEN BETA_TAC THEN COND_CASES_TAC THEN
-        ASM_MESON_TAC [AP ``~(x = y) /\ x < y + 1 ==> x < y``]
+        ASM_MESON_TAC [AP (Term`~(x = y) /\ x < y + 1 ==> x < y`)]
       ]
     ],
 
@@ -2787,7 +2785,7 @@ val FINITE_WEAK_ENUMERATE = store_thm(
         ],
         FIRST_X_ASSUM MATCH_MP_TAC THEN Q.EXISTS_TAC `f` THEN
         POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss []) THEN
-        ASM_MESON_TAC [AP ``!x y. x < y ==> x < SUC y``]
+        ASM_MESON_TAC [AP (Term`!x y. x < y ==> x < SUC y`)]
       ]
     ]
   ]);
@@ -2796,44 +2794,43 @@ val FINITE_WEAK_ENUMERATE = store_thm(
 (* Big union (union of set of sets)                                      *)
 (* ===================================================================== *)
 
-val BIGUNION = new_definition(
-  "BIGUNION",
-  Term`BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
+val BIGUNION = Q.new_definition
+ ("BIGUNION",
+  `BIGUNION P = { x | ?s. s IN P /\ x IN s}`);
 
-val IN_BIGUNION = store_thm(
-  "IN_BIGUNION",
-  ``!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos``,
+val IN_BIGUNION = Q.store_thm
+("IN_BIGUNION",
+ `!x sos. x IN (BIGUNION sos) = ?s. x IN s /\ s IN sos`,
   SIMP_TAC bool_ss [GSPECIFICATION, BIGUNION, pairTheory.PAIR_EQ] THEN
   MESON_TAC []);
 
-val BIGUNION_EMPTY = store_thm(
-  "BIGUNION_EMPTY",
-  ``BIGUNION EMPTY = EMPTY``,
+val BIGUNION_EMPTY = Q.store_thm
+("BIGUNION_EMPTY",
+ `BIGUNION EMPTY = EMPTY`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, NOT_IN_EMPTY]);
 
-val BIGUNION_EQ_EMPTY = store_thm(
-  "BIGUNION_EQ_EMPTY",
-  ``!P. ((BIGUNION P = {}) = (P = {}) \/ (P = {{}})) /\
-        (({} = BIGUNION P) = (P = {}) \/ (P = {{}}))``,
+val BIGUNION_EQ_EMPTY = Q.store_thm
+("BIGUNION_EQ_EMPTY",
+  `!P. ((BIGUNION P = {}) = (P = {}) \/ (P = {{}})) /\
+        (({} = BIGUNION P) = (P = {}) \/ (P = {{}}))`,
   SRW_TAC [][EXTENSION, IN_BIGUNION, EQ_IMP_THM, FORALL_AND_THM] THEN
   METIS_TAC [EXTENSION]);
 val _ = export_rewrites ["BIGUNION_EQ_EMPTY"]
 
-val BIGUNION_SING = store_thm(
-  "BIGUNION_SING",
-  ``!x. BIGUNION {x} = x``,
+val BIGUNION_SING = Q.store_thm
+("BIGUNION_SING",
+ `!x. BIGUNION {x} = x`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_INSERT, NOT_IN_EMPTY] THEN
   SIMP_TAC bool_ss [GSYM EXTENSION]);
 
-val BIGUNION_UNION = store_thm(
-  "BIGUNION_UNION",
-  ``!s1 s2. BIGUNION (s1 UNION s2) = (BIGUNION s1) UNION (BIGUNION s2)``,
+val BIGUNION_UNION = Q.store_thm
+("BIGUNION_UNION",
+ `!s1 s2. BIGUNION (s1 UNION s2) = (BIGUNION s1) UNION (BIGUNION s2)`,
   SIMP_TAC bool_ss [EXTENSION, IN_UNION, IN_BIGUNION, LEFT_AND_OVER_OR,
                     EXISTS_OR_THM]);
 
-val DISJOINT_BIGUNION_lemma = prove(
-  ``!s t. DISJOINT (BIGUNION s) t =
-          !s'. s' IN s ==> DISJOINT s' t``,
+val DISJOINT_BIGUNION_lemma = Q.prove
+(`!s t. DISJOINT (BIGUNION s) t = !s'. s' IN s ==> DISJOINT s' t`,
   REPEAT GEN_TAC THEN EQ_TAC THEN
   SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, IN_BIGUNION, IN_INTER,
                     NOT_IN_EMPTY] THEN MESON_TAC []);
@@ -2844,31 +2841,31 @@ val DISJOINT_BIGUNION = save_thm(
   CONJ DISJOINT_BIGUNION_lemma
        (ONCE_REWRITE_RULE [DISJOINT_SYM] DISJOINT_BIGUNION_lemma));
 
-val BIGUNION_INSERT = store_thm(
-  "BIGUNION_INSERT",
-  ``!s P. BIGUNION (s INSERT P) = s UNION (BIGUNION P)``,
+val BIGUNION_INSERT = Q.store_thm
+("BIGUNION_INSERT",
+ `!s P. BIGUNION (s INSERT P) = s UNION (BIGUNION P)`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGUNION, IN_UNION, IN_INSERT] THEN
   MESON_TAC []);
 
-val BIGUNION_SUBSET = store_thm(
-  "BIGUNION_SUBSET",
-  ``!X P. BIGUNION P SUBSET X = (!Y. Y IN P ==> Y SUBSET X)``,
+val BIGUNION_SUBSET = Q.store_thm
+("BIGUNION_SUBSET",
+ `!X P. BIGUNION P SUBSET X = (!Y. Y IN P ==> Y SUBSET X)`,
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   FULL_SIMP_TAC bool_ss [IN_BIGUNION, SUBSET_DEF] THEN
   PROVE_TAC []);
 
-val FINITE_BIGUNION = store_thm(
-  "FINITE_BIGUNION",
-  ``!P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)``,
+val FINITE_BIGUNION = Q.store_thm
+("FINITE_BIGUNION",
+ `!P. FINITE P /\ (!s. s IN P ==> FINITE s) ==> FINITE (BIGUNION P)`,
   SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
   HO_MATCH_MP_TAC FINITE_INDUCT THEN
   SIMP_TAC bool_ss [NOT_IN_EMPTY, FINITE_EMPTY, BIGUNION_EMPTY,
                     IN_INSERT, DISJ_IMP_THM, FORALL_AND_THM,
                     BIGUNION_INSERT, FINITE_UNION]);
 
-val FINITE_BIGUNION_EQ = store_thm(
-  "FINITE_BIGUNION_EQ",
-  ``!P. FINITE (BIGUNION P) = FINITE P /\ (!s. s IN P ==> FINITE s)``,
+val FINITE_BIGUNION_EQ = Q.store_thm
+("FINITE_BIGUNION_EQ",
+ `!P. FINITE (BIGUNION P) = FINITE P /\ (!s. s IN P ==> FINITE s)`,
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM, FINITE_BIGUNION] THEN
   Q_TAC SUFF_TAC
         `!P. FINITE P ==>
@@ -2917,48 +2914,48 @@ val _ = export_rewrites ["FINITE_BIGUNION_EQ"]
     BIGINTER (intersection of a set of sets)
    ---------------------------------------------------------------------- *)
 
-val BIGINTER = new_definition(
-  "BIGINTER",
-  ``BIGINTER P = { x | !s. s IN P ==> x IN s}``);
+val BIGINTER = Q.new_definition
+("BIGINTER",
+ `BIGINTER P = { x | !s. s IN P ==> x IN s}`);
 
-val IN_BIGINTER = store_thm(
-  "IN_BIGINTER",
-  ``x IN BIGINTER B = !P. P IN B ==> x IN P``,
+val IN_BIGINTER = Q.store_thm
+("IN_BIGINTER",
+ `x IN BIGINTER B = !P. P IN B ==> x IN P`,
   SIMP_TAC bool_ss [BIGINTER, GSPECIFICATION, pairTheory.PAIR_EQ]);
 
-val BIGINTER_INSERT = store_thm(
-  "BIGINTER_INSERT",
-  ``!P B. BIGINTER (P INSERT B) = P INTER BIGINTER B``,
+val BIGINTER_INSERT = Q.store_thm
+("BIGINTER_INSERT",
+ `!P B. BIGINTER (P INSERT B) = P INTER BIGINTER B`,
   REPEAT GEN_TAC THEN CONV_TAC (REWR_CONV EXTENSION) THEN
   SIMP_TAC bool_ss [IN_BIGINTER, IN_INSERT, IN_INTER, DISJ_IMP_THM,
                     FORALL_AND_THM]);
 
-val BIGINTER_EMPTY = store_thm(
-  "BIGINTER_EMPTY",
-  ``BIGINTER {} = UNIV``,
+val BIGINTER_EMPTY = Q.store_thm
+("BIGINTER_EMPTY",
+ `BIGINTER {} = UNIV`,
   REWRITE_TAC [EXTENSION, IN_BIGINTER, NOT_IN_EMPTY, IN_UNIV]);
 
-val BIGINTER_INTER = store_thm(
-  "BIGINTER_INTER",
-  ``!P Q. BIGINTER {P; Q} = P INTER Q``,
+val BIGINTER_INTER = Q.store_thm
+("BIGINTER_INTER",
+ `!P Q. BIGINTER {P; Q} = P INTER Q`,
   REWRITE_TAC [BIGINTER_EMPTY, BIGINTER_INSERT, INTER_UNIV]);
 
-val BIGINTER_SING = store_thm(
-  "BIGINTER_SING",
-  ``!P. BIGINTER {P} = P``,
+val BIGINTER_SING = Q.store_thm
+("BIGINTER_SING",
+ `!P. BIGINTER {P} = P`,
   SIMP_TAC bool_ss [EXTENSION, IN_BIGINTER, IN_SING] THEN
   SIMP_TAC bool_ss [GSYM EXTENSION]);
 
-val SUBSET_BIGINTER = store_thm(
-  "SUBSET_BIGINTER",
-  ``!X P. X SUBSET BIGINTER P = !Y. Y IN P ==> X SUBSET Y``,
+val SUBSET_BIGINTER = Q.store_thm
+("SUBSET_BIGINTER",
+ `!X P. X SUBSET BIGINTER P = !Y. Y IN P ==> X SUBSET Y`,
   REPEAT STRIP_TAC THEN FULL_SIMP_TAC bool_ss [IN_BIGINTER, SUBSET_DEF] THEN
   PROVE_TAC []);
 
-val DISJOINT_BIGINTER = store_thm(
-  "DISJOINT_BIGINTER",
-  ``!X Y P. Y IN P /\ DISJOINT Y X ==>
-            DISJOINT X (BIGINTER P) /\ DISJOINT (BIGINTER P) X``,
+val DISJOINT_BIGINTER = Q.store_thm
+("DISJOINT_BIGINTER",
+ `!X Y P. Y IN P /\ DISJOINT Y X ==>
+            DISJOINT X (BIGINTER P) /\ DISJOINT (BIGINTER P) X`,
   SIMP_TAC bool_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER,
                     IN_BIGINTER] THEN PROVE_TAC []);
 
@@ -2967,9 +2964,9 @@ val DISJOINT_BIGINTER = store_thm(
 (* ====================================================================== *)
 
 
-val CROSS_DEF = new_definition(
+val CROSS_DEF = Q.new_definition(
   "CROSS_DEF",
-  ``CROSS P Q = { p | FST p IN P /\ SND p IN Q }``);
+  `CROSS P Q = { p | FST p IN P /\ SND p IN Q }`);
 val _ = set_fixity "CROSS" (Infixl 600);
 
 val IN_CROSS = store_thm(
@@ -3245,11 +3242,11 @@ val _ = save_thm("ITSET_EMPTY",
 
     PROVE_TAC [FINITE_INSERT,ITSET_THM,NOT_INSERT_EMPTY]);
 *)
-val ITSET_INSERT = store_thm(
-  "ITSET_INSERT",
-  ``!s. FINITE s ==>
+val ITSET_INSERT = Q.store_thm
+("ITSET_INSERT",
+ `!s. FINITE s ==>
         !f x b. ITSET f (x INSERT s) b =
-                ITSET f (REST (x INSERT s)) (f (CHOICE (x INSERT s)) b)``,
+                ITSET f (REST (x INSERT s)) (f (CHOICE (x INSERT s)) b)`,
   REPEAT STRIP_TAC THEN
   POP_ASSUM (fn th =>
     `FINITE (x INSERT s)` by PROVE_TAC [th, FINITE_INSERT]) THEN
@@ -3260,17 +3257,16 @@ val ITSET_INSERT = store_thm(
 val absorption = #1 (EQ_IMP_RULE (SPEC_ALL ABSORPTION))
 val delete_non_element = #1 (EQ_IMP_RULE (SPEC_ALL DELETE_NON_ELEMENT))
 
-val COMMUTING_ITSET_INSERT = store_thm(
-  "COMMUTING_ITSET_INSERT",
-  ``!f s. (!x y z. f x (f y z) = f y (f x z)) /\
+val COMMUTING_ITSET_INSERT = Q.store_thm
+("COMMUTING_ITSET_INSERT",
+ `!f s. (!x y z. f x (f y z) = f y (f x z)) /\
           FINITE s ==>
-          !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)``,
+          !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   completeInduct_on `CARD s` THEN
-  POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM,
-                                             AND_IMP_INTRO]) THEN
-  GEN_TAC THEN
-  SIMP_TAC bool_ss [ITSET_INSERT] THEN
+  POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss 
+        [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) THEN
+  GEN_TAC THEN SIMP_TAC bool_ss [ITSET_INSERT] THEN
   REPEAT STRIP_TAC THEN
   Q.ABBREV_TAC `t = REST (x INSERT s)` THEN
   Q.ABBREV_TAC `y = CHOICE (x INSERT s)` THEN
@@ -3311,7 +3307,6 @@ val COMMUTING_ITSET_INSERT = store_thm(
   POP_ASSUM SUBST_ALL_TAC THEN
   FULL_SIMP_TAC bool_ss [IN_INSERT, FINITE_INSERT, CARD_INSERT,
                          DELETE_INSERT, delete_non_element] THEN
-  Q.RM_ALL_ABBREVS_TAC THEN
   `t = x INSERT u` by
      (FULL_SIMP_TAC bool_ss [EXTENSION, IN_INSERT] THEN PROVE_TAC []) THEN
   ASM_SIMP_TAC arith_ss [delete_non_element]);
@@ -4009,10 +4004,6 @@ METIS_TAC [FINITE_partition, BIGUNION_partition, DISJ_BIGUNION_CARD,
     A proof of Koenig's Lemma
    ---------------------------------------------------------------------- *)
 
-val finitely_branching_def = new_definition(
-  "finitely_branching_def",
-  ``finitely_branching R = !x. FINITE {y | R x y}``);
-
 (* a counting exercise for R-trees.  If x0 has finitely many successors, and
    each of these successors has finite trees underneath, then x0's tree is
    also finite *)
@@ -4032,17 +4023,22 @@ val KL_lemma1 = prove(
     RES_TAC
   ]);
 
-(* effectively taking the contrapositive of the above, saying that if R is
-   finitely branching, and we're on top of an infinite R tree, then one of
-   the immediate children is on top of an infinite R tree *)
-val KL_lemma2 = prove(
-  ``finitely_branching R ==>
-    !y. ~ FINITE {x | RTC R y x} ==>
-        ?z. R y z /\ ~FINITE { x | RTC R z x}``,
-  METIS_TAC [KL_lemma1, finitely_branching_def]);
 
-(* now throw in the unavoidable use of the axiom of choice, and say that
-   there's a function to do this for us. *)
+(*---------------------------------------------------------------------------*)
+(* Effectively taking the contrapositive of the above, saying that if R is   *)
+(* finitely branching, and we're on top of an infinite R tree, then one of   *)
+(* the immediate children is on top of an infinite R tree                    *)
+(*---------------------------------------------------------------------------*)
+
+val KL_lemma2 = prove(
+  ``(!x. FINITE {y | R x y}) ==>
+    !y. ~ FINITE {x | RTC R y x} ==> ?z. R y z /\ ~FINITE { x | RTC R z x}``,
+  METIS_TAC [KL_lemma1]);
+
+(*---------------------------------------------------------------------------*)
+(* Now throw in the unavoidable use of the axiom of choice, and say that     *)
+(* there's a function to do this for us.                                     *)
+(*---------------------------------------------------------------------------*)
 
 val KL_lemma3 =
     CONV_RULE (ONCE_DEPTH_CONV RIGHT_IMP_EXISTS_CONV THENC
@@ -4050,7 +4046,7 @@ val KL_lemma3 =
 
 val KoenigsLemma = store_thm(
   "KoenigsLemma",
-  ``!R. finitely_branching R ==>
+  ``!R. (!x. FINITE {y | R x y}) ==>
         !x. ~FINITE {y | RTC R x y} ==>
             ?f. (f 0 = x) /\ !n. R (f n) (f (SUC n))``,
   REPEAT STRIP_TAC THEN
@@ -4068,7 +4064,7 @@ val KoenigsLemma = store_thm(
 
 val KoenigsLemma_WF = store_thm(
   "KoenigsLemma_WF",
-  ``!R. finitely_branching R /\ WF (inv R) ==> !x. FINITE {y | RTC R x y}``,
+  ``!R. (!x. FINITE {y | R x y}) /\ WF (inv R) ==> !x. FINITE {y | RTC R x y}``,
   SRW_TAC [][prim_recTheory.WF_IFF_WELLFOUNDED,
              prim_recTheory.wellfounded_def,
              relationTheory.inv_DEF] THEN

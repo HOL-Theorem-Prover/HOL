@@ -109,10 +109,11 @@ val div_def = Define
 (* Test nested lets *)
 val div_def = Define
    `(Div(0,x) = (0,0)) /\
-    (Div(SUC x, y) = let q = FST(Div(x,y)) 
-                     and r = SND(Div(x,y))
-                     in (y <= SUC r => (SUC q,0) 
-                        | (*otherwise*) (q, SUC r)))`;
+    (Div(SUC x, y) = 
+       let q = FST(Div(x,y)) 
+       and r = SND(Div(x,y))
+       in 
+         if y <= SUC r then (SUC q,0) else (q, SUC r))`;
 
 (* Test nested ifs *)
 val smaller_def = Define
@@ -198,6 +199,29 @@ val sumf_def =
      `(sumf f [] = 0) /\
       (sumf f (h::t) = f h + sumf f t)`;
 
+(*---------------------------------------------------------------------------
+     Iterated primitive recursion (see it_prim_rec)
+ ---------------------------------------------------------------------------*)
+
+val Ack_def = 
+ Define
+  `(Ack (0,n) =  n+1) /\
+   (Ack (SUC m,0) = Ack (m, 1)) /\
+   (Ack (SUC m, SUC n) = Ack (m, Ack (SUC m, n)))`;
+
+val Sudan_def = 
+ Define
+   `(Sudan 0 (x,y)           = x+y)
+ /\ (Sudan (SUC n) (x,0)     = x)
+ /\ (Sudan (SUC n) (x,SUC y) = Sudan n (Sudan (SUC n) (x,y), 
+                                        Sudan (SUC n) (x,y) + SUC y))`;
+
+val V_def = 
+ Define
+   `(V (SUC 0, n, m)                = n) 
+/\  (V (SUC(SUC k), n, SUC 0)       = V (SUC k, SUC n, SUC n))
+/\  (V (SUC(SUC k), n, SUC (SUC m)) = V (SUC k, V(SUC(SUC k),n,SUC m)+1,
+                                                V(SUC(SUC k),n,SUC m)+1))`;
 
 (*---------------------------------------------------------------------------
              Schematic definitions
@@ -549,12 +573,11 @@ end;
         labelled n-ary trees (built from constructor "Node").
  ---------------------------------------------------------------------------*)
  
-
 app load ["numLib"]; open numLib listTheory;
 
 val _ = Hol_datatype `ltree = LNODE of 'a => ltree list`;
 
-val ltree_size_def = snd (TypeBase.size_of "ltree");
+val ltree_size_def = snd (TypeBase.size_of ``:'a ltree``);
 
 val ltree_map_def =
   Defn.Hol_defn "ltree_map"

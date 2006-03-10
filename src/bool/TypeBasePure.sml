@@ -463,6 +463,7 @@ fun insert dbs (x as DFACTS _) = add dbs x
       the supplied function undef is applied.
  ---------------------------------------------------------------------------*)
 
+(*
 local fun drop [] ty = fst(dom_rng ty)
         | drop (_::t) ty = drop t (snd(dom_rng ty))
 in
@@ -483,6 +484,25 @@ fun typeValue (theta,gamma,undef) =
   in tyValue
   end
 end
+*)
+
+(* Not sure this will work ... *)
+fun typeValue (theta,gamma,undef) =
+ let fun tyValue ty =
+      case theta ty
+       of SOME fvar => fvar
+        | NONE =>
+           case gamma ty
+              of SOME f =>
+                  let val (tys,rng) = strip_fun (type_of f)
+                      val vty = last tys
+                      val sigma = match_type vty ty handle HOL_ERR _ => []
+                      val args = snd(dest_type ty)
+                  in list_mk_comb(inst sigma f, map tyValue args)
+                  end
+               | NONE => undef ty
+ in tyValue
+ end
 
 (*---------------------------------------------------------------------------
     Map a HOL type (ty) into a term having type :ty -> num.
@@ -493,7 +513,7 @@ local fun num() = mk_thy_type{Tyop="num",Thy="num",Args=[]}
         handle HOL_ERR _ => raise ERR "type_size.Zero()" "Numbers not declared"
       fun K0 ty = mk_abs(mk_var("v",ty),Zero())
       fun tysize_env db = Option.map fst o
-                          Option.composePartial (size_of,prim_get db)
+                          Option.composePartial (size_of,fetch db)
 in
 fun type_size db ty =
    let fun theta ty = if is_vartype ty then SOME (K0 ty) else NONE
@@ -507,7 +527,7 @@ end
 
 local
   fun tyencode_env db =
-    Option.map fst o Option.composePartial (encode_of, prim_get db)
+    Option.map fst o Option.composePartial (encode_of, fetch db)
   fun undef _ = raise ERR "type_encode" "unknown type"
   fun theta ty =
     if is_vartype ty then raise ERR "type_encode" "type variable" else NONE
@@ -574,22 +594,22 @@ fun tyValue (theta,gamma,undef) =
        of SOME x => x
         | NONE =>    (* map compound type *)
           let val {Thy,Tyop,Args} = dest_thy_type ty
-          in case gamma (Thy,Tyop)
+          in case gamma ty
               of SOME f =>
                   let val vty = drop (alpha::Args) (type_of f)
                       val sigma = match_type vty ty
                   in list_mk_comb(inst sigma f,
                                   enc_type ty::map tyVal Args)
                   end
-               | NONE => undef (Thy,Tyop)
+               | NONE => undef ty
           end
   in tyVal
   end
 end
 
-fun Undef (thy,tyop) =
+fun Undef ty =
     raise ERR "Undef"
-              (Lib.quote (thy^"$"^tyop)^" is an unknown type operator");
+              (Lib.quote (Parse.type_to_string ty)^" is an unknown type");
 
 (*---------------------------------------------------------------------------*)
 (* Used to synthesize lifters                                                *)
@@ -606,7 +626,7 @@ fun type_lift db ty =
   let val TYV = type_vars ty
       val tyv_fns = map (fn tyv => mk_K_1(boolSyntax.mk_arb tyv, tyv)) TYV
       val Theta = C assoc (zip TYV tyv_fns)
-      val Gamma = Option.composePartial (lift_of, prim_get db)
+      val Gamma = Option.composePartial (lift_of, fetch db)
   in
      tyValue (total Theta, Gamma, Undef) ty
   end

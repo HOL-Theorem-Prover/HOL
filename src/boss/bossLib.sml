@@ -14,7 +14,7 @@
 structure bossLib :> bossLib =
 struct
 
-open HolKernel Parse boolLib pairLib simpLib;
+open HolKernel Parse boolLib pairLib simpLib metisLib;
 
 (* This makes the dependency on listTheory and optionTheory explicit.
    Without it, the theories can change, and bossLib won't get recompiled.

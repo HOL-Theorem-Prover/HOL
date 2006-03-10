@@ -132,7 +132,10 @@ fun mk_inv_image(R,f) =
     list_mk_comb(inst[beta |-> ty1, alpha |-> ty2] inv_image_tm,[R,f])
   end;
 
-val list_mk_lex = end_itlist (curry pairSyntax.mk_lex);
+fun list_mk_lex []  = raise ERR "list_mk_lex" "empty list"
+  | list_mk_lex [x] = x
+  | list_mk_lex L   = end_itlist (curry pairSyntax.mk_lex) L;
+
 val nless_lex = list_mk_lex o copies numSyntax.less_tm;
 
 val strip_lex = strip_binop (total pairSyntax.dest_lex);
@@ -145,17 +148,30 @@ val strip_lex = strip_binop (total pairSyntax.dest_lex);
 (*                  (size_of(tyi)(vi), ..., size_of(tym)(vm)))               *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_sized_subsets argvars sizedlist =
+fun mk_lex_reln argvars sizedlist arrangement = 
   let val lex_comb = nless_lex (length sizedlist)
       val pargvars = list_mk_pair argvars
-      fun mk_reln arrangement = 
-          mk_inv_image (lex_comb, mk_pabs(pargvars,list_mk_pair arrangement))
-  in 
-     map mk_reln (perms sizedlist)
+  in
+     mk_inv_image (lex_comb, mk_pabs(pargvars,list_mk_pair arrangement))
   end;
 
+fun take 0 L = []
+  | take n [] = raise ERR "take" "not enough elements"
+  | take n (h::t) = h::take (n-1) t;
+
+fun mk_sized_subsets argvars sizedlist = 
+ let val permutations = 
+         if length sizedlist > 4
+         then (WARN "mk_sized_subsets" 
+                 "too many permutations (more than 24): chopping some";
+               perms (take 4 sizedlist))
+         else perms sizedlist
+ in 
+  map (mk_lex_reln argvars sizedlist) permutations
+ end;
+
 fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
-               
+
 (*---------------------------------------------------------------------------*
  * The general idea behind this is to try 2 termination measures. The first  *
  * measure takes the size of all subterms meeting the following criteria:    *
@@ -178,18 +194,28 @@ fun guessR defn =
   case reln_of defn
    of NONE => []
     | SOME R =>
-       let val domty   = fst(dom_rng(type_of R))
+       let val domty  = fst(dom_rng(type_of R))
            val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
            fun size_app v = mk_comb(tysize (type_of v),v)
            val (_,tcs) = Lib.pluck isWFR (tcs_of defn)
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
-           val chf1     = projects check1
-           val domtyl_1  = strip_prod_ty chf1 domty
+           val chf1    = projects check1
+           val domtyl_1 = strip_prod_ty chf1 domty
            val domty0  = list_mk_prod_tyl domtyl_1
+           (* deal with possible iterated prim_rec *)
+           val indices_1 = Lib.upto 1 (length domtyl_1)
+           val (argvars_1,subset_1) = 
+             itlist2 (fn i => fn (b,ty) => fn (alist,slist) =>
+                        let val v = imk_var(i,ty)
+                        in (v::alist, if b then size_app v::slist else slist)
+                        end) indices_1 domtyl_1 ([],[])
+           val it_prim_rec = SOME (mk_lex_reln argvars_1 subset_1 subset_1)
+                              handle HOL_ERR _ => NONE
+           (* deal with other lex. combos *)
            val check2  = map (map (not o uncurry aconv)) matrix
            val chf2    = projects check2
-           val domtyl_2  = strip_prod_ty chf2 domty
+           val domtyl_2 = strip_prod_ty chf2 domty
            val indices = Lib.upto 1 (length domtyl_2)
            val (argvars,subset) = 
              itlist2 (fn i => fn (b,ty) => fn (alist,slist) =>
@@ -197,124 +223,138 @@ fun guessR defn =
                         in (v::alist, if b then size_app v::slist else slist)
                         end) indices domtyl_2 ([],[])
            val lex_combs = mk_sized_subsets argvars subset
+        
        in
-          [mk_cmeasure domty0,
-           mk_cmeasure (TypeBasePure.type_size
-                         (TypeBase.theTypeBase()) domty)]
+          [mk_cmeasure domty0,mk_cmeasure (tysize domty)]
+          @ (if Option.isSome it_prim_rec 
+             then [Option.valOf it_prim_rec] else [])
           @ lex_combs
        end
 end;
 
+(*---------------------------------------------------------------------------*)
+(* Wellfoundedness and termination provers (parameterized by theorems).      *)
+(* The default TC simplifier and prover is terribly terribly naive, but      *)
+(* still useful. It knows all about the sizes of types.                      *)
+(*---------------------------------------------------------------------------*)
 
-fun proveTotal tac defn =
-  let val thm = Tactical.default_prover
-                  (list_mk_conj (Defn.tcs_of defn), tac)
-  in
-    (Defn.elim_tcs defn (CONJUNCTS thm), thm)
-  end;
+(*---------------------------------------------------------------------------*)
+(* Wellfoundedness prover for combinations of wellfounded relations.         *)
+(*---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------
-      Default TC simplifier and prover. Terribly terribly naive, but
-      still useful. It knows all about the sizes of types.
- ---------------------------------------------------------------------------*)
+val default_WF_thms = 
+ let open relationTheory prim_recTheory pairTheory
+ in
+   ref [WF_inv_image, WF_measure, WF_LESS, 
+        WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
+ end;
 
-fun get_orig (TypeBasePure.ORIG th) = th
-  | get_orig _ = raise ERR "get_orig" "not the original"
+fun BC_TAC th =
+  if is_imp (#2 (strip_forall (concl th)))
+  then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
+    else MATCH_ACCEPT_TAC th;
 
-val default_simps =
-         [combinTheory.o_DEF,
+fun PRIM_WF_TAC thl = REPEAT (MAP_FIRST BC_TAC thl ORELSE CONJ_TAC);
+fun WF_TAC g = PRIM_WF_TAC (!default_WF_thms) g;
+
+(*--------------------------------------------------------------------------*)
+(* Basic simplification and proof for remaining termination conditions.     *)
+(*--------------------------------------------------------------------------*)
+
+val default_termination_simps =
+     ref [combinTheory.o_DEF,
           combinTheory.I_THM,
           prim_recTheory.measure_def,
           relationTheory.inv_image_def,
           pairTheory.LEX_DEF];
 
+val term_ss = 
+ let open simpLib
+      infix ++
+ in boolSimps.bool_ss ++ pairSimps.PAIR_ss 
+                      ++ numSimps.REDUCE_ss 
+                      ++ numSimps.ARITH_RWTS_ss
+ end; 
 
-fun TC_SIMP_CONV simps tm =
- (REPEATC
+fun get_orig (TypeBasePure.ORIG th) = th
+  | get_orig _ = raise ERR "get_orig" "not the original"
+
+fun PRIM_TC_SIMP_CONV simps tm =
+ let open arithmeticTheory
+     val els = TypeBasePure.listItems (TypeBase.theTypeBase())
+ in
+  REPEATC
    (CHANGED_CONV
-     (Rewrite.REWRITE_CONV
-        (simps @ default_simps @ mapfilter TypeBasePure.case_def_of
-               (TypeBasePure.listItems (TypeBase.theTypeBase())))
+     (Rewrite.REWRITE_CONV(simps @ mapfilter TypeBasePure.case_def_of els)
        THENC REDEPTH_CONV GEN_BETA_CONV))
   THENC Rewrite.REWRITE_CONV
           (pairTheory.pair_rws @
-           mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0)
-               (TypeBasePure.listItems (TypeBase.theTypeBase())))
+           mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els)
   THENC REDEPTH_CONV BETA_CONV
-  THENC Rewrite.REWRITE_CONV [arithmeticTheory.ADD_CLAUSES]) tm;
+  THENC simpLib.SIMP_CONV term_ss (ADD_CLAUSES::simps)
+ end tm;
 
-
-(*---------------------------------------------------------------------------
- * Trivial wellfoundedness prover for combinations of wellfounded relations.
- *--------------------------------------------------------------------------*)
-
-local fun BC_TAC th =
-        if (is_imp (#2 (strip_forall (concl th))))
-        then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
-        else MATCH_ACCEPT_TAC th;
-      open relationTheory prim_recTheory pairTheory
-      val WFthms = [WF_inv_image, WF_measure, WF_LESS, WF_EMPTY_REL,
-                    WF_PRED, WF_RPROD, WF_LEX, WF_TC]
-in
-fun WF_TAC thms = REPEAT (MAP_FIRST BC_TAC (thms@WFthms) ORELSE CONJ_TAC)
-end;
-
-val ARITH_TAC = CONV_TAC Arith.ARITH_CONV;
+fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!default_termination_simps) tm;
 
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
     THEN REPEAT (POP_ASSUM
          (fn th => if numSimps.is_arith (concl th)
                    then MP_TAC th else ALL_TAC))
-    THEN ARITH_TAC;
+    THEN CONV_TAC Arith.ARITH_CONV;
 
-fun TC_SIMP_TAC WFthl thl =
-   WF_TAC WFthl THEN
-   CONV_TAC (TC_SIMP_CONV thl) THEN
-   TRY ASM_ARITH_TAC;
+fun PRIM_TC_SIMP_TAC thl = 
+  CONV_TAC (PRIM_TC_SIMP_CONV thl) THEN TRY ASM_ARITH_TAC;
+
+fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC (!default_termination_simps) g;
+
+(*---------------------------------------------------------------------------*)
+(* Instantiate the termination relation with q and then try to prove         *)
+(* wellfoundedness and remaining termination conditions.                     *)
+(*---------------------------------------------------------------------------*)
+
+fun PRIM_WF_REL_TAC q WFthms simps g =
+  (Q.EXISTS_TAC q THEN CONJ_TAC THENL 
+   [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps]) g;
 
 
-(*---------------------------------------------------------------------------
-    Rquote is a quotation denoting the termination relation.
- ---------------------------------------------------------------------------*)
-
-fun PRIM_WF_REL_TAC Rquote WFthms simps g =
-  (Q.EXISTS_TAC Rquote THEN TC_SIMP_TAC WFthms simps) g;
-
-
-fun WF_REL_TAC Rquote = PRIM_WF_REL_TAC Rquote [] default_simps;
-
+fun WF_REL_TAC q = PRIM_WF_REL_TAC q (!default_WF_thms) 
+                                     (!default_termination_simps);
 
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt
        to prove termination. If the termination proof
        fails, the definition attempt fails.
  ---------------------------------------------------------------------------*)
-
-
-(*---------------------------------------------------------------------------
-      The default prover is invoked on goals involving measure
-      functions, so the wellfoundedness proofs for the guessed
-      termination relations (which are measure functions) are
-      trivial and can be blown away with rewriting.
- ---------------------------------------------------------------------------*)
-
-local fun mesg tac (g as (_,tm)) =
-        (if !Defn.monitoring
-           then print(String.concat
-                   ["\nCalling ARITH on\n",term_to_string tm,"\n"])
-           else ();
-         tac g)
+ 
+local 
+ fun mesg tac (g as (_,tm)) =
+  (if !Defn.monitoring
+   then print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
+   else ();
+   tac g)
 in
-fun default_prover g =
- let open prim_recTheory relationTheory
- in (CONV_TAC (TC_SIMP_CONV (WF_measure::WF_LESS::WF_EMPTY_REL::default_simps))
-     THEN mesg ASM_ARITH_TAC) g
- end
+fun DEFINE_TERM_TAC g =
+ (CONJ_TAC THENL
+  [WF_TAC, CONV_TAC TC_SIMP_CONV THEN mesg ASM_ARITH_TAC]) g
 end;
 
+val WF_tm = prim_mk_const{Name="WF",Thy="relation"};
+
+fun get_WF tmlist = 
+ pluck (same_const WF_tm o rator) tmlist
+ handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
+
+fun proveTotal tac defn =
+  let val (WFR,rest) = get_WF (Defn.tcs_of defn)
+      val form = list_mk_conj(WFR::rest)
+      val thm = Tactical.default_prover(form,tac)
+  in
+    (Defn.elim_tcs defn (CONJUNCTS thm), thm)
+  end;
+
 local open Defn
-      val term_prover = proveTotal default_prover
+      val term_prover = proveTotal DEFINE_TERM_TAC
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
       fun should_try_to_prove_termination defn rhs_frees =
          let val tcs = tcs_of defn

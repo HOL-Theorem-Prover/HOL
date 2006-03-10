@@ -13,8 +13,8 @@ fun enum_list s 0 = []
   | enum_list s 1 = [s]
   | enum_list s n = for 1 n (Lib.concat s o Int.toString);
 
-fun Undef (thy,tyop) =
-  raise Fail ("Undef: "^Lib.quote (thy^"$"^tyop)^
+fun Undef ty =
+  raise Fail ("Undef: "^Lib.quote (Parse.type_to_string ty)^
               " is an unknown type operator");
 
 fun apply_interp interp tm = mk_comb(interp (type_of tm), tm);
@@ -43,10 +43,9 @@ local val typety = mk_vartype "'type"
                   in mk_var(cname,ty')
                   end
 in
-fun lift_def_syntax (Gamma,tyop) =
+fun lift_def_syntax (Gamma,typ) =
  let val Clist = TypeBasePure.constructors_of
-                  (Option.valOf
-                    (TypeBase.read {Thy=fst tyop,Tyop=snd tyop}))
+                  (Option.valOf(TypeBase.fetch typ))
      val ty = snd(strip_fun(type_of (hd Clist)))
      val args = snd(dest_type ty)
      val Clistnames = enum_list "C" (length Clist)
@@ -57,7 +56,7 @@ fun lift_def_syntax (Gamma,tyop) =
      val lift_type = list_mk_fun(flist_types@[ty],termty)
      val lift_var = mk_var("lift",lift_type)
      val K_lift_ty = mk_K_1 (lift_var,typety)
-     fun Gamma' c = if tyop=c then SOME K_lift_ty else Gamma c
+     fun Gamma' c = if typ=c then SOME K_lift_ty else Gamma c
      val Interp = TypeBasePure.tyValue (total Theta, Gamma', Undef)
      fun mk_clause (C,Cname) =
        let val args = genargs C
@@ -81,15 +80,16 @@ end;
 (* proposed definition to ppstrm.                                            *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_lifter_def ppstrm tyop =
+fun pp_lifter_def ppstrm typ =
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val pp_term = Parse.pp_term ppstrm
      val db = TypeBase.theTypeBase()
      val Gamma = Option.composePartial (TypeBasePure.lift_of,
-                                        TypeBasePure.prim_get db)
-     val (flistnames,Clistnames,clauses) = lift_def_syntax (Gamma,tyop)
+                                        TypeBasePure.fetch db)
+     val (flistnames,Clistnames,clauses) = lift_def_syntax (Gamma,typ)
+     val tyop = let val {Thy,Tyop,Args} = dest_thy_type typ in (Thy,Tyop) end
  in
   begin_block CONSISTENT 0;
   add_string "local val Clist = TypeBase.constructors_of ";

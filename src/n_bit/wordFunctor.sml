@@ -584,9 +584,11 @@ val bool_not = Term`$~`
 val _ = overload_on ("~", Term`$word_2comp`);
 val _ = overload_on ("~", bool_not);
 
-val mk_word    = prim_mk_const {Name = "word"^sbits^"_ABS",Thy = "word"^sbits};
-val dest_word  = prim_mk_const {Name = "word"^sbits^"_REP",Thy = "word"^sbits};
-(*val word_ty_aq = ty_antiq (mk_type ("word"^sbits, []));*)
+val thyname = "word"^sbits;
+
+val mk_word    = prim_mk_const {Name = "word"^sbits^"_ABS",Thy = thyname};
+val dest_word  = prim_mk_const {Name = "word"^sbits^"_REP",Thy = thyname};
+val word_type = mk_thy_type{Tyop="word"^sbits, Thy=thyname,Args=[]};
 
 val n2w_def = Def "n2w_def" `n2w n = ^mk_word n`;
 val w2n_def = Def "w2n_def" `w2n w = MOD_WL (^dest_word w)`;
@@ -918,6 +920,22 @@ val word_nchotomy = store_thm("word_nchotomy",
   `!w. ?n. w = n2w n`,
   PROVE_TAC [n2w_def,word_abs_fn_onto]
 );
+
+
+(*---------------------------------------------------------------------------*)
+(* Support for case analysis and termination proofs of recursive definitions *)
+(*---------------------------------------------------------------------------*)
+
+val w2n_tm = prim_mk_const{Name="w2n",Thy=thyname};
+
+val word_tyinfo = 
+  TypeBasePure.mk_nondatatype_info
+       (word_type,
+        {nchotomy = SOME word_nchotomy,
+         size = SOME (w2n_tm,CONJUNCT1(SPEC_ALL boolTheory.AND_CLAUSES)),
+         encode=NONE});
+
+val _ = TypeBase.write [word_tyinfo];
 
 (*---------------------------------------------------------------------------*)
 (* Alternative way to do case analysis                                       *)
@@ -2760,6 +2778,30 @@ val LSR_LESS = Q.store_thm
    Cases_on `n`
     THEN FULL_SIMP_TAC arith_ss []
     THEN METIS_TAC [ZERO_SHIFT2,LSR1_LESS,LESS_TRANS]]);
+
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = TotalDefn.default_termination_simps := ";
+   S "    LSR_LESS :: WORD_PRED_THM :: !TotalDefn.default_termination_simps";
+   S " ";
+   S "val _ = ";
+   S "  let open Lib boolSyntax";
+   S "      val word_type = type_of (fst(dest_forall(concl word_nchotomy)))";
+   S "      val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))";
+   S "  in";
+   S "  TypeBase.write";
+   S "  [TypeBasePure.mk_nondatatype_info";
+   S "   (word_type, ";
+   S "     {nchotomy = SOME word_nchotomy,";
+   S "      size = SOME (w2n_tm,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),";
+   S "      encode=NONE})]";
+   S "  end;"
+ end)};
 
 (* -------------------------------------------------------- *)
 
