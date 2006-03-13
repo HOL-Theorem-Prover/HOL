@@ -318,9 +318,11 @@ with the following command-line options:
   \holmake{}.  Fatal error messages will still be written to the
   standard error stream.  Other programs called by \holmake{} will not
   be affected.
-\item[{\tt --rebuild\_deps} or {\tt -r}] Forces \holmake{} to
-  always rebuild the dependency information, whether or not it thinks
-  it needs to.
+\item[{\tt --rebuild\_deps} or {\tt -r}] Forces \holmake{} to always
+  rebuild the dependency information for files it examines, whether or
+  not it thinks it needs to.  This option is implemented by having
+  \holmake{} wipe all of its dependency cache (as per the
+  \texttt{cleanDeps} option above) before proceeding with the build.
 \end{description}
 
 \noindent \holmake{} should never exit with the Moscow~ML message ``Uncaught
@@ -645,3 +647,8 @@ Total: 165.
 \index{timing of HOL evaluations@timing of \HOL{} evaluations|)}
 
 
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:

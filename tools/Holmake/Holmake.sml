@@ -784,7 +784,7 @@ in
     val argname = fromFile arg
     val depfile = mk_depfile_name argname
     val _ =
-      if always_rebuild_deps orelse argname forces_update_of depfile then
+      if argname forces_update_of depfile then
         runholdep arg depfile
       else ()
     val phase1 =
@@ -1198,7 +1198,7 @@ fun do_target x = let
     true
   end handle OS.SysErr (mesg, _) => let
              in
-                print ("make cleanAll failed with message: "^mesg^"\n");
+                print ("make cleanDeps failed with message: "^mesg^"\n");
                 false
              end
            | DirNotFound => true
@@ -1264,7 +1264,11 @@ fun deal_with_targets list = let
   in
     recurse true tgts
   end
-  val strategy = if keep_going_flag then keep_going else stop_on_failure
+  fun strategy tgts = let
+    val tgts = if always_rebuild_deps then "cleanDeps" :: tgts else tgts
+  in
+    if keep_going_flag then keep_going tgts else stop_on_failure tgts
+  end
 in
   case list of
     [] => let
