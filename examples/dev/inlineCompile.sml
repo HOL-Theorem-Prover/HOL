@@ -74,7 +74,7 @@ fun hwDefine2 defq =
                              (Absyn.TYPED(loc,f,fty))
             val defn = Defn.mk_defn (hd names) deftm
             val tac = EXISTS_TAC (numSyntax.mk_cmeasure typedf)
-                       THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps)
+                       THEN CONJ_TAC THENL [TotalDefn.WF_TAC, TotalDefn.TC_SIMP_TAC]
             val (defth,ind) = Defn.tprove(defn, tac)
             val (lt,rt) = boolSyntax.dest_eq(concl defth)
             val (func,args) = dest_comb lt
@@ -86,7 +86,7 @@ fun hwDefine2 defq =
                     (Term`TOTAL(^fb,^f1,^f2)`,
                      RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
                       THEN EXISTS_TAC typedf
-                      THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps))
+                      THEN TotalDefn.TC_SIMP_TAC) 
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                                  (RecCompileConvert defth totalth)
         in
