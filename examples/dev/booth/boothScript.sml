@@ -1,4 +1,4 @@
-(* app load ["bitsTheory","word32Theory"]; *)
+(* app load ["bitsLib","bitsTheory","word32Theory"]; *)
 open bitsLib simpLib HolKernel boolLib bossLib Parse Q arithmeticTheory whileTheory bitsTheory word32Theory;
 
 val _ = type_abbrev("word", ``:word32``);
@@ -280,19 +280,20 @@ val MULT_MOD_SUC_T = REWRITE_RULE [MULT_LEM,WORD_SLICE_THM,GSYM word_lsl] MULT_M
 val WORD_DOUBLE = prove(
   `!a. a + a = a * 2w`,
   STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
-    THEN SIMP_TAC arith_ss [MULT_COMM,ADD_EVAL,MUL_EVAL]
+    THEN SIMP_TAC arith_ss [(* MULT_COMM,*)ADD_EVAL,MUL_EVAL]
 );
 
 val MULT_FOUR = prove(
   `!a. a * 4w = (a * 2w) + (a * 2w)`,
   STRIP_TAC THEN STRUCT_CASES_TAC (SPEC `a` word_nchotomy)
-    THEN SIMP_TAC arith_ss [AC MULT_ASSOC MULT_COMM,ADD_EVAL,MUL_EVAL]
+    THEN SIMP_TAC arith_ss [ADD_EVAL,MUL_EVAL]
 );
 
 val MULT_TWO_LSL = prove(
   `!rm t. (rm << (2 * t)) * 2w = rm << (2 * t + 1)`,
-  SIMP_TAC arith_ss [word_lsl,GSYM WORD_MULT_ASSOC,MUL_EVAL,GSYM ADD1,EXP,MULT_COMM]
-);
+  SIMP_TAC arith_ss [word_lsl,GSYM WORD_MULT_ASSOC,MUL_EVAL,GSYM ADD1,EXP]);
+
+ (*,MULT_COMM]*)
 
 val MULT_FOUR_LSL = prove(
   `!t rm. rm << (2 * (t + 1)) = (rm << (2 * t)) * 4w`,
@@ -411,22 +412,27 @@ val WL_DIV_MULT_TWO_ID = (SYM o ONCE_REWRITE_RULE [MULT_COMM] o SIMP_RULE arith_
                           CONJUNCT1 o SPEC `WL` o numLib.REDUCE_RULE o SPEC `2`) DIVISION;
 
 val DONE_LESS_EQUAL_WL = prove(
-  `!n. (!m. m < n ==> ~DONE rs m) /\ DONE rs n ==> 2 * n <= WL`,
-  RW_TAC bool_ss [DONE_def,NOT_LESS]
+    `!n. (!m. m < n ==> ~DONE rs m) /\ DONE rs n ==> 2 * n <= WL`,
+    RW_TAC bool_ss [DONE_def,NOT_LESS]
     THENL [
-       FULL_SIMP_TAC arith_ss [BORROW2_def]
+      FULL_SIMP_TAC arith_ss [BORROW2_def]
          THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
          THEN RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS_EQUAL])
          THEN IMP_RES_TAC DIV_TWO_MONO_EVEN
          THEN PAT_ASSUM `!m. m < n ==> P` IMP_RES_TAC
-         THEN FULL_SIMP_TAC arith_ss [WL_DIV_MULT_TWO_ID],
-       Cases_on `2 * n = WL` THEN1 ASM_SIMP_TAC arith_ss []
+         THEN `2 * (WL DIV 2) = (WL DIV 2) * 2` by PROVE_TAC [MULT_COMM]
+              THEN FULL_SIMP_TAC arith_ss [WL_DIV_MULT_TWO_ID]
+      ,
+      Cases_on `2 * n = WL` THEN1 ASM_SIMP_TAC arith_ss []
          THEN `WL < 2 * n` by DECIDE_TAC
          THEN IMP_RES_TAC DIV_TWO_MONO_EVEN
          THEN PAT_ASSUM `!m. m < n ==> P` IMP_RES_TAC
+         THEN `2 * (WL DIV 2) = WL DIV 2 * 2` by PROVE_TAC [MULT_COMM]
          THEN FULL_SIMP_TAC arith_ss [WL_DIV_MULT_TWO_ID]
-    ]  
-);
+     ]);
+
+
+
 
 val DUR_LT_EQ_HWL = prove(
   `!rs. 2 * (DUR rs) <= WL`,
