@@ -278,11 +278,9 @@ fun mk_swi_ex c = subst [``c:condition`` |-> mk_condition c] ``SWI c``;
 
 local
   fun num2imm(x,n) =
-  let val x8 = Arbnum.mod(x,Arbnum.fromInt 256)
-      val x2 = Arbnum.mod(x,Arbnum.fromInt 4)
-  in
+  let val x8 = Arbnum.mod(x,Arbnum.fromInt 256) in
     if x8 = x then
-      (Arbnum.fromInt n,x8)
+      (Arbnum.fromInt (Int.mod(16 - n, 16)),x8)
     else let val (q,r) = Arbnum.divmod(x,Arbnum.fromInt 4) in
       if n < 12 andalso r = Arbnum.zero then
         num2imm(q, n + 1)

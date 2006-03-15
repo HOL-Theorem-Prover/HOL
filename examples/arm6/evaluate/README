@@ -1,5 +1,9 @@
 Evaluating the ARM models.
 
+When using HOL interactively in this directory use:
+
+$ hol -I ..
+
 The files are as follows:  
 
  * Data.sml, Lexer.sml, Parser.sml: A parser for ARM instructions.
