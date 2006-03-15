@@ -62,9 +62,8 @@ val _ = AddBinop ("EQ",   (``UNCURRY $= : num#num->bool``, "=="));
 (*****************************************************************************)
 val (FactIter,FactIter_ind,FactIter_dev) =
  hwDefine
-  `(FactIter (n,acc) =
-      if n = 0 then (n,acc) else FactIter (n - 1,n * acc))
-   measuring FST`;
+  `FactIter (n,acc) =
+      if n = 0 then (n,acc) else FactIter (n - 1,n * acc)`;
 
 (*****************************************************************************)
 (* To implement ``$*`` we build a naive iterative multiplier function        *)
@@ -72,9 +71,9 @@ val (FactIter,FactIter_ind,FactIter_dev) =
 (*****************************************************************************)
 val (MultIter,MultIter_ind,MultIter_dev) =
  hwDefine
-  `(MultIter (m,n,acc) =
-      if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc))
-   measuring FST`;
+  `MultIter (m,n,acc) =
+      if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc)`;
+
 
 (*****************************************************************************)
 (* Verify that MultIter does compute multiplication                          *)
@@ -142,7 +141,7 @@ val FactIterRecThm =  (* proof from KXS *)
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter,FACT]
       THEN Cases_on `n` 
-      THEN FULL_SIMP_TAC arith_ss [FACT, AC MULT_ASSOC MULT_SYM]));
+      THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]));
 
 (*****************************************************************************)
 (* Implement a function Fact to compute SND(FactIter (n,1))                  *)
