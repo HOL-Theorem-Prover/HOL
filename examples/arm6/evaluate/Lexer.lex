@@ -12,7 +12,7 @@
    | 4  => R4  | 5  => R5  | 6  => R6  | 7 => R7
    | 8  => R8  | 9  => R9  | 10 => R10 | 11 => R11
    | 12 => R12 | 13 => R13 | 14 => R14 | 15 => R15
-   | _ =>  raise ERR "int2register" "not a register list";
+   | _ =>  raise Parse "not a register list";
 
  fun str2cond skp s =
    (case String.map Char.toLower (String.extract(s,skp,SOME 2)) of
@@ -28,7 +28,7 @@
    | "add" => ADD | "adc" => ADC | "sbc" => SBC | "rsc" => RSC
    | "tst" => TST | "teq" => TEQ | "cmp" => CMP | "cmn" => CMN
    | "orr" => ORR | "mov" => MOV | "bic" => BIC | "mvn" => MVN
-   | _ => raise ERR "str2opc" "not an opcode";
+   | _ => raise Parse "not an opcode";
 
  fun strSkip n s = String.extract(s,n,NONE);
 

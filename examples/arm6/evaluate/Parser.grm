@@ -12,7 +12,7 @@
   end;
 
   fun sh_imm1_to_imm2 (DpShiftImmediate x) = DtShiftImmediate x
-    | sh_imm1_to_imm2 _ = raise ERR "sh_imm1_to_imm2" "not a DpShiftImmediate"
+    | sh_imm1_to_imm2 _ = raise Parse "not a DpShiftImmediate"
 
   fun register2int r =
   case r of
@@ -28,6 +28,8 @@
     Word.toInt (foldl (fn (i,w) => Word.orb(w,Word.<<(w1,i))) w0 lw)
   end;
 
+  fun fst (a, b) = a;
+  fun snd (a, b) = b;
   val toi = Arbnum.toInt o snd;
 
   fun cptoi x =

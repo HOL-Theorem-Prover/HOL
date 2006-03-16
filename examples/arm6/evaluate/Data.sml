@@ -1,5 +1,3 @@
-open HolKernel boolLib Parse bossLib;
-
 datatype shift = LSL | LSR | ASR | ROR;
 
 datatype condition = EQ | NE | CS | CC | MI | PL | VS | VC
@@ -12,7 +10,7 @@ datatype opcode = AND | EOR | SUB | RSB | ADD | ADC | SBC | RSC
                 | TST | TEQ | CMP | CMN | ORR | MOV | BIC | MVN;
 
 datatype addr_mode1 =
-   DpImmediate of num
+   DpImmediate of Arbnum.num
  | DpShiftImmediate of {Imm : int, Rm : register, Sh : shift}
  | DpShiftRegister of {Rm : register, Rs : register, Sh : shift};
 
@@ -20,7 +18,7 @@ datatype addr_mode2 =
    DtImmediate of int
  | DtShiftImmediate of {Imm : int, Rm : register, Sh : shift};
 
-datatype msr_mode = MsrImmediate of num | MsrRegister of register;
+datatype msr_mode = MsrImmediate of Arbnum.num | MsrRegister of register;
 
 datatype ARM_instruction =
     Br of {L : bool, offset : int}
@@ -46,6 +44,7 @@ datatype ARM_instruction =
 
 datatype instruction =
    Instruction of ARM_instruction * condition
- | Data of num;
+ | Data of Arbnum.num;
 
 exception BadInstruction of string;
+exception Parse of string;

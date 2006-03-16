@@ -113,6 +113,7 @@ local
              else mror32 ((div2 x) + smsb (mod2 x = one)) (Int.-(n, 1))
   fun ror32 x n = mror32 x (Int.mod(n, 32))
 in
+  fun rol32 x n = ror32 x (Int.-(32,Int.mod(n, 32)))
   fun mk_immediate rot imm = ror32 imm (Int.*(2, rot))
   fun dec_immediate l =
         mk_immediate (list2int (bits 11 8 l)) (list2num (bits 7 0 l))
@@ -280,13 +281,12 @@ local
   fun num2imm(x,n) =
   let val x8 = Arbnum.mod(x,Arbnum.fromInt 256) in
     if x8 = x then
-      (Arbnum.fromInt (Int.mod(16 - n, 16)),x8)
-    else let val (q,r) = Arbnum.divmod(x,Arbnum.fromInt 4) in
-      if n < 12 andalso r = Arbnum.zero then
-        num2imm(q, n + 1)
+      (Arbnum.fromInt n, x8)
+    else
+      if n < 15 then
+        num2imm(rol32 x 2, n + 1)
       else
         raise ERR "num2immediate" "number cannot be represented as an immediate"
-    end
   end
 in
   fun num2immediate n = num2imm(n, 0)
