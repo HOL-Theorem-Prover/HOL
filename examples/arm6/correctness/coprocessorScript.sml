@@ -7,7 +7,7 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["mnUtils", "pred_setSimps", "wordsLib", "armLib",
+  app load ["pred_setSimps", "wordsLib", "armLib",
             "my_listTheory", "io_onestepTheory", "iclass_compLib",
             "armTheory", "coreTheory", "lemmasTheory"];
 *)
@@ -359,13 +359,13 @@ val FINISH_OFF3 = let val
   rw_tac = RW_TAC arith_ss ([Abbr`wb_addr`,Abbr`Rn`,GSYM WORD_ADD_SUB_ASSOC,
              AC WORD_ADD_ASSOC WORD_ADD_COMM] @ finish_rws)
  in
-     CONJ_TAC >> rw_tac
-  \\ CONJ_TAC >> rw_tac
-  \\ CONJ_TAC >> (RW_TAC arith_ss [] \\
-       POP_ASSUM_LIST (K ALL_TAC) \\ PROVE_TAC [])
-  \\ RW_TAC (arith_ss++SIZES_ss) [AREGN1_def,n2w_11]
-  \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
-  \\ POP_ASSUM_LIST (K ALL_TAC) \\ METIS_TAC [EXISTS_AREGN]
+   REPEAT CONJ_TAC << [
+     rw_tac, rw_tac,
+     RW_TAC arith_ss [] \\ POP_ASSUM_LIST (K ALL_TAC) \\ PROVE_TAC [],
+     RW_TAC (arith_ss++SIZES_ss) [AREGN1_def,n2w_11]
+       \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]
+       \\ POP_ASSUM_LIST (K ALL_TAC) \\ METIS_TAC [EXISTS_AREGN],
+     POP_ASSUM_LIST (K ALL_TAC) \\ METIS_TAC []]
  end;
 
 val LDC_STC_THM = store_thm("LDC_STC_THM",
@@ -450,7 +450,7 @@ val LDC_STC_THM = store_thm("LDC_STC_THM",
              [IF_NEG,TO_WRITE_READ6,LSL_ZERO,LSL_TWO,ALUOUT_ALU_logic,
               ALUOUT_ADD,ALUOUT_SUB,METIS_PROVE [] ``a /\ b \/ a = a``]
         \\ FULL_SIMP_TAC arith_ss [state_arm6_11,dp_11,ctrl_11,iseq_distinct]
-        \\ CONV_TAC (DEPTH_CONV mnUtils.EXIN_CONJ_CONV)
+        \\ CONV_TAC (DEPTH_CONV EXISTS_AND_REORDER_CONV)
         \\ FINISH_OFF3,
       `w' < p + w' /\ p + w' <= w` by DECIDE_TAC
         \\ PAT_ASSUM `q ==> r ==> s` IMP_RES_TAC
@@ -468,7 +468,7 @@ val LDC_STC_THM = store_thm("LDC_STC_THM",
               ALUOUT_ADD,ALUOUT_SUB,METIS_PROVE [] ``a /\ b \/ a = a``]
         \\ FULL_SIMP_TAC arith_ss [state_arm6_11,dp_11,ctrl_11,ADD1,
              LEFT_ADD_DISTRIB,GSYM word_add_n2w]
-        \\ CONV_TAC (DEPTH_CONV mnUtils.EXIN_CONJ_CONV)
+        \\ CONV_TAC (DEPTH_CONV EXISTS_AND_REORDER_CONV)
         \\ FINISH_OFF3]);
 
 val NOT_INTERRUPT = GEN_ALL (prove(
