@@ -12,25 +12,6 @@ val lhand = rand o rator
 val ambient_grammars = Parse.current_grammars();
 val _ = Parse.temp_set_grammars integerTheory.integer_grammars;
 
-
-fun EXIN_CONJ_CONV t = let
-  val (var,bdy) = dest_exists t
-  val conjs = strip_conj bdy
-in
-  case partition (free_in var) conjs of
-    ([], _) => REWR_CONV EXISTS_SIMP t
-  | (_, []) => NO_CONV t
-  | (there, notthere) => let
-      val newbdy = mk_conj(list_mk_conj there, list_mk_conj notthere)
-      val newthm = EQT_ELIM(AC_CONV (CONJ_ASSOC, CONJ_COMM)
-                            (mk_eq(bdy, newbdy)))
-    in
-      BINDER_CONV (K newthm) THENC EXISTS_AND_CONV
-    end t
-end
-
-
-
 val simple_disj_congruence =
   tautLib.TAUT_PROVE (Term`!p q r. (~p ==> (q = r)) ==>
                                    (p \/ q = p \/ r)`)
