@@ -878,19 +878,7 @@ val FA_OUT_CONV = REDEPTH_CONV (
                           RIGHT_OR_FORALL_CONV ORELSEC
   LEFT_IMP_FORALL_CONV ORELSEC RIGHT_IMP_FORALL_CONV ORELSEC
   NOT_FORALL_CONV)
-fun EXIN_CONJ_CONV t =
-    let val (var,bdy) = dest_exists t
-                        handle _ => failwith "EXIN_CONJ_CONV" "Not an exists"
-        val conjs = strip_conj bdy
-        val (notthere, there) = partition (not o free_in var) conjs
-        val newbody = list_mk_conj (notthere @ there)
-        val bdys_eq_thm = EQT_ELIM (
-            AC_CONV (CONJ_ASSOC, CONJ_SYM) (mk_eq(bdy, newbody)))
-            handle _ => failwith "EXIN_CONJ_CONV" "AC_CONV is a crock"
-    in
-        (dest_quant_CONV (K bdys_eq_thm) THENC
-         rmove_in var) t
-    end
+val EXIN_CONJ_CONV = EXISTS_AND_REORDER_CONV
 val EXDISJ_THMS = [LEFT_AND_EXISTS_THM, RIGHT_AND_EXISTS_THM,
                    LEFT_AND_OVER_OR, RIGHT_AND_OVER_OR,
                    EXISTS_OR_THM, DE_MORGAN_THM, GSYM DISJ_ASSOC]

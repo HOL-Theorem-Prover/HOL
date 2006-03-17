@@ -56,6 +56,7 @@ sig
    val LEFT_OR_EXISTS_CONV   : conv
    val RIGHT_OR_EXISTS_CONV  : conv
    val EXISTS_AND_CONV       : conv
+   val EXISTS_AND_REORDER_CONV : conv
    val AND_EXISTS_CONV       : conv
    val LEFT_AND_EXISTS_CONV  : conv
    val RIGHT_AND_EXISTS_CONV : conv

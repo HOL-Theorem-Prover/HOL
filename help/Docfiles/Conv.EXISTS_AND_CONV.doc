@@ -33,5 +33,5 @@ And if {x} is free in neither {P} nor {Q}, then the result is:
 variable {x} is free in both {P} and {Q}.
 
 \SEEALSO
-Conv.AND_EXISTS_CONV, Conv.LEFT_AND_EXISTS_CONV, Conv.RIGHT_AND_EXISTS_CONV.
+Conv.AND_EXISTS_CONV, Conv.EXISTS_AND_REORDER_CONV, Conv.LEFT_AND_EXISTS_CONV, Conv.RIGHT_AND_EXISTS_CONV.
 \ENDDOC

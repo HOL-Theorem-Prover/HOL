@@ -832,6 +832,10 @@ fun EXISTS_AND_CONV tm =
 			origin_function = "EXISTS_AND_CONV",...}) => raise e
         | HOL_ERR _ => raise ERR"EXISTS_AND_CONV" "";
 
+
+
+
+
 (* ---------------------------------------------------------------------*)
 (* AND_EXISTS_CONV : move existential quantifier out of conjunction.	*)
 (*									*)
@@ -1831,6 +1835,30 @@ in
   end
 
 end
+
+(* ----------------------------------------------------------------------
+    EXISTS_AND_REORDER_CONV
+
+    moves an existential quantifier into a conjunctive body, first sorting
+    the body so that conjuncts where the bound variable appears are
+    put first.
+   ---------------------------------------------------------------------- *)
+
+fun EXISTS_AND_REORDER_CONV t = let
+  open Psyntax
+  val (var, body) = dest_exists t
+      handle HOL_ERR _ => raise ERR "EXISTS_AND_REORDER_CONV"
+                                    "Term not an existential"
+  val conjs = strip_conj body
+  val _ = length conjs > 1 orelse raise UNCHANGED
+  val (there, notthere) = partition (free_in var) conjs
+  val _ = (not (null notthere) andalso not (null there)) orelse raise UNCHANGED
+  val newbody = mk_conj (list_mk_conj notthere, list_mk_conj there)
+  val bodies_eq_thm =
+      EQT_ELIM (AC_CONV (CONJ_ASSOC, CONJ_COMM) (mk_eq(body, newbody)))
+in
+  QUANT_CONV (K bodies_eq_thm) THENC EXISTS_AND_CONV
+end t
 
 (*---------------------------------------------------------------------------*)
 (* Support for debugging complicated conversions                             *)

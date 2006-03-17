@@ -1436,7 +1436,7 @@ val position_maps_exist = store_thm(
                                REWR_CONV IMP_CONJ_THM,
                                RIGHT_IMP_FORALL_CONV])) THEN
       SRW_TAC [][strip_label_thm, n_posns_sub] THEN
-      CONV_TAC mnUtils.EXIN_CONJ_CONV THEN
+      CONV_TAC EXISTS_AND_REORDER_CONV THEN
       REWRITE_TAC [CONJ_ASSOC] THEN CONJ_TAC THENL [
         REPEAT STRIP_TAC THEN
         SRW_TAC [][strip_label_subst] THEN
