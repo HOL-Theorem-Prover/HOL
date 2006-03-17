@@ -9,7 +9,7 @@ A database of facts stemming from datatype declarations
 type, datatype, constructor, induction, primitive recursion.
 
 \DESCRIBE
-The structure {TypeBase} provides an interface to a database that 
+The structure {TypeBase} provides an interface to a database that
 is updated when a new datatype is introduced with {Hol_datatype}.
 When a new datatype is declared, a collection of theorems "about" the
 type can be automatically derived. These are indeed proved, and are
@@ -21,12 +21,12 @@ of high-level tools for reasoning about datatypes.
 
 \EXAMPLE
 {
-   - Hol_datatype `tree = Leaf 
+   - Hol_datatype `tree = Leaf
                          | Node of 'a => tree => tree`;
    <<HOL message: Defined type: "tree">>
    > val it = () : unit
-   
-   - TypeBase.read "tree";
+
+   - TypeBase.read {Thy = current_theory(), Tyop = "tree"};
    > val it =
     SOME-----------------------
         -----------------------

@@ -162,7 +162,7 @@ worried about "polluting" the signature, one can also use
 {prove_rec_fn_exists} from the {Prim_rec} structure:
 {
    val Weight =
-     Prim_rec.prove_rec_fn_exists (TypeBase.axiom_of "btree")
+     Prim_rec.prove_rec_fn_exists (TypeBase.axiom_of ("", "btree"))
       (Term`(Weight (Leaf) = 0) /\
             (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`);
 
@@ -283,10 +283,10 @@ compared lexicographically with respect to less-than ({<}).
    OK..
    2 subgoals:
    > val it =
-    !rs ss s p. 
+    !rs ss s p.
       (p=s) ==> LENGTH rs < LENGTH rs \/ LENGTH ss < LENGTH (s::ss)
-    
-    
+
+
     !ss rs s p.
       ~(p = s) /\ ~NULL rs ==>
       LENGTH (TL rs) < LENGTH rs \/
@@ -295,8 +295,8 @@ compared lexicographically with respect to less-than ({<}).
 The first subgoal needs a case-split on {rs} before it is proved by
 rewriting, and the seconds is also easy to prove by rewriting.
 
-As a final example, one occasionally needs to recurse over 
-non-concrete data, such as finite sets or multisets. We can define a 
+As a final example, one occasionally needs to recurse over
+non-concrete data, such as finite sets or multisets. We can define a
 `fold` function (of questionable utility) for finite sets as follows:
 {
    load "pred_setTheory"; open pred_setTheory;
