@@ -58,5 +58,7 @@ val DEF_CNF_CONV         : conv         (* NNF + PURE + CLEANUP *)
 
 val PURE_DEF_CNF_VECTOR_CONV : conv
 val DEF_CNF_VECTOR_CONV      : conv     (* NNF + PURE + CLEANUP *)
-  
+
+val dcnfgv : (unit -> Term.term) ref
+  val ndefs : Term.term ref
 end

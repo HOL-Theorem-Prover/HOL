@@ -157,10 +157,15 @@ val ELIM_DEFS_CONV = EQT_INTRO o ELIM_DEFS;
 val pure_def_cnf_cleanup =
   CONV_RULE (LAND_CONV ((LAND_CONV ELIM_DEFS_CONV) THENC AND_TRUEL_CONV));
 
+val dcnfgv = ref (K (genvar (num --> bool)))
+val ndefs = ref T
+
 fun PURE_DEF_CNF_VECTOR_CONV tm =
   let
-    val (defs, tm') = conj_cnf (genvar (num --> bool), zero, []) tm
+    (*val (defs, tm') = conj_cnf (genvar (num --> bool), zero, []) tm*)
+    val (defs, tm') = conj_cnf ((!dcnfgv)(), zero, []) tm
     val (vec, n, ds) = defs
+    val _ = (ndefs:=n)
     val eqs = map mk_eq ds
     val th1 = SYM (REWRITE_CONV (map ASSUME eqs) tm')
   in

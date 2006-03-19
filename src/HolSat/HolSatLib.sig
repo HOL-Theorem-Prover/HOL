@@ -1,3 +1,4 @@
+
 signature HolSatLib = sig
  datatype sat_solver = 
  SatSolver of
@@ -17,10 +18,13 @@ signature HolSatLib = sig
   val grasp  : sat_solver
   val zchaff  : sat_solver
   val minisat : sat_solver
-  val showSatVarMap : unit -> int * (string * int) list
+  val minisatp : sat_solver
+  val showSatVarMap : unit -> int * (Term.term * int) list
+  val termToDimacsFile : string option -> Term.term -> int -> string
   val readDimacs : string -> Term.term
   val satProve : sat_solver -> Term.term -> Thm.thm
   val satOracle : sat_solver -> Term.term -> Thm.thm
+  val SAT_TAUT_PROVE : Term.term -> Thm.thm
 (*
   exception satSolveError
   exception lookup_sat_numError

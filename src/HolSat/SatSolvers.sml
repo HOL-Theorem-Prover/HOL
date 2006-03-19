@@ -86,4 +86,20 @@ val minisat =
    start_string   = "v",
    end_string     = "0"};
 
+val minisatp =
+ SatSolver
+  {name           = "minisatp", 
+   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat/cgi/MiniSat_v1.13_linux.cgi",
+   executable     = if isSome (Process.getEnv "OS") andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
+			then "sat_solvers/minisat/minisat.exe"
+			else "sat_solvers/minisat/minisat",
+   notime_run     = (fn ex => fn (infile,outfile) => 
+                      (ex ^ " -r " ^ outfile ^ " -p " ^ outfile ^ ".proof " ^ infile ^ " > " ^ outfile ^".stats")),
+   time_run       = (fn ex => fn ((infile,outfile),time) => 
+                      (ex ^ " " ^ infile ^ " " ^ (Int.toString time) ^ " > " ^ outfile)),
+   only_true      = false,
+   failure_string = "UNSAT",
+   start_string   = "SAT",
+   end_string     = "0"};
+
 end

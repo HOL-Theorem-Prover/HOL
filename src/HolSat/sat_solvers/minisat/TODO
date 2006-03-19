@@ -1,0 +1,73 @@
+==================================================
+The 'ok' flag...
+==================================================
+
+The vector 'clauses[]' store all clauses of size >= 2, the vector
+'assigns[]' store clauses of size 1, the boolean 'ok' stores clauses
+of size 0 -- and there is only one such clause, the empty clause, so
+in other words, 'ok' stores "is there an empty clause or not".
+
+As Niklas Sörensson pointed out, the 'ok' flag is a bit error prone
+and probably best viewed as an abstraction provided by the public
+member functions for user convenience (you don't have to watch the
+return value after each 'addClause()'). This is currently not
+implemented, and the 'ok' flag is still present in the internal
+methods. This will change in the future.
+
+
+==================================================
+Assumptions
+==================================================
+
+The handling of assumptions and the 'root_level' is a bit clumsy.  We
+will probably change so that the conflict driven backtracking can undo
+beyond the 'root_level', and then let the assumptions be
+remade. Currently we have to put in a hack to assure unit clauses have
+a 'level' of zero, or else the 'analyzeFinal()' method will not work
+properly. These unit clauses will also be forgotten before the next
+incremental SAT, which is also undesirable (but doesn't seem to
+degrade performance).
+
+
+==================================================
+Floating points
+==================================================
+
+The IEEE standard allows, in principle, floating points to behave
+identical on different systems. However, the FPU can be set in different
+modes, and Linux defaults to 80 bits mantissa, while most other systems,
+including Free BSD, defaults to 64 bits. The latter is preferd, as 
+the 80 bit precision in Linux is only preserved as long as the 'double'
+is kept in a register (which depends on the C-compiler -- you have 
+no control). With proper #ifdef's for differnt systems, the FPU can
+be put into the right mode.
+
+Of course it doesn't affect the efficiency of the solver, but since we
+use floats in our activity heuristic, eventually the same solver can
+behave different on different systems. The most stop-gap incarnation
+of this is a statically linked Linux binary, which when ran on
+identical hardware but under FreeBSD, can produce different behavior.
+
+
+==================================================
+Proof logging (for the '1.14p' version)
+==================================================
+
+Proof logging is still missing the implementation of the 'compress()'
+method, that will pull out the "proof" from the "trace", i.e. remove
+the derivation of clauses that did not participate in the final
+conflict (deriving the empty clause).  It's just work, and it will
+happen, but currently you can only traverse the whole trace (which is
+still very useful).
+
+
+==================================================
+Conflict clause minimization & 'trail_pos[]'
+==================================================
+
+In proof logging mode, the order of literals in 'trail[]' (the
+assignment stack) must be recorded to do the logging correctly for
+conflict clause minimization. However, this position could actually,
+with some modification, replace the 'level[]' vector all together. It
+makes a lot of sense to do this, but for the time being we record
+both. This will change in the future.
