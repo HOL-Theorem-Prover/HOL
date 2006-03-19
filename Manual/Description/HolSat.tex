@@ -72,6 +72,10 @@ SAT. \HOL{} can be used to deductively manipulate terms into CNF as
 required for SAT analysis, and then the results of the analysis
 can be reimported into \HOL{} and either checked or just trusted.
 
+{\tt HolSatLib} comes with MINISAT pre-installed. A special function {\tt SAT\_TAUT\_PROVE} 
+is provided that attempts to prove propositional tautologies deductively, using
+the proof logging feature of MINISAT.
+ 
 Currently {\tt HolSatLib} has only been tested under Linux, though it should be
 possible to run it under Windows.
 
@@ -92,10 +96,15 @@ The following example illustrates {\tt{HolSatLib}} in action.
 - satProve grasp ``(x \/ ~y \/ z) /\ (~z \/ y)``;
 > val it = [oracles: DISK_THM ] [axioms: ] [] 
            |- z /\ y ==> (x \/ ~y \/ z) /\ (~z \/ y) : thm
-\end{verbatim}\end{session}
+
+- SAT_TAUT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
+> val it = [oracles: DISK_THM ] [axioms: ] [] 
+           |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
+\end{verbatim}
+\end{session}
 
 Setting \t{show\_tags} to \t{true} makes the \HOL{} top
-level print theorem tags. The \t{DISK\_THM} oracle tag has nothing to do with \t{HolSatLib}. It just indicates the use of theorems from \HOL{} libraries read in from permanent storage. 
+level print theorem tags. The \t{DISK\_THM} oracle tag has nothing to do with \t{HolSatLib}. It just indicates the use of theorems from \HOL{} libraries read in from permanent storage. Note that \t{SAT\_TAUT\_PROVE} does not require the user to specify the solver.
 
 The function \t{satOracle} \index{HolSatLib!satOracle@\ml{satOracle}} takes a supported SAT solver and a term
 $t$ and
@@ -170,8 +179,8 @@ fun SAT_TAUT_CHECK sat_solver t =
 %$
 \subsection{Installing SAT solvers for {\tt HolSatLib}}\label{install}\index{HolSatLib!installing}
 
-Download SATO, GRASP, ZCHAFF and MINISAT into the directories {\tt sato}, {\tt grasp},
-{\tt zchaff}, {\tt minisat} respectively, in {\tt hol98/src/HolSat/sat\_solvers}. Create links of the same name as the directory name, to point to the executables, or rename the executables.
+Download SATO, GRASP, or ZCHAFF into the directories {\tt sato}, {\tt grasp},
+{\tt zchaff}  respectively, in {\tt hol98/src/HolSat/sat\_solvers}. Create links of the same name as the directory name, to point to the executables, or rename the executables.
 
 You should now be able to step through the examples in Section~\ref{sec:HolSatLib}.
 
@@ -183,11 +192,14 @@ You should now be able to step through the examples in Section~\ref{sec:HolSatLi
 
 \begin{tabular}{ll}
 {\bf Module} & {\bf Description} \\ \hline
-{\tt HolSatLib} & functions for invoking SAT solvers\\
+{\tt HolSatLib} & wrapper for commonly used functions\\
+{\tt satTools} & functions for invoking SAT solvers\\
+{\tt dimacsTools} & functions for term conversion to/from DIMACS files\\
 {\tt SatSolvers} & specifications of the supported SAT solvers\\
 {\tt defCNF} & tool for converting \HOL{} terms to CNF (from Joe Hurd)
 \end{tabular}
 
+There are several other modules used internally by \t{SAT\_TAUT\_PROVE}. We shall not cover them here.
 \medskip
 
 \subsubsection{Contents of {\tt HolSatLib} module}
@@ -208,17 +220,18 @@ signature HolSatLib = sig
     failure_string : string,
     start_string   : string,  
     end_string     : string}
-  val sato          : sat_solver
-  val grasp         : sat_solver
-  val zchaff        : sat_solver
+  val sato           : sat_solver
+  val grasp          : sat_solver
+  val zchaff         : sat_solver
   val minisat        : sat_solver
-  val tmp_name      : string ref
-  val sat_command   : string ref
-  val prefix        : string ref
-  val showSatVarMap : unit -> int * (string * int) list
-  val satOracle     : sat_solver -> Term.term -> Thm.th
-  val satProve      : sat_solver -> Term.term -> Thm.thm
-  val readDimacs    : string -> Term.term
+  val tmp_name       : string ref
+  val sat_command    : string ref
+  val prefix         : string ref
+  val showSatVarMap  : unit -> int * (string * int) list
+  val satOracle      : sat_solver -> Term.term -> Thm.th
+  val satProve       : sat_solver -> Term.term -> Thm.thm
+  val SAT_TAUT_PROVE : Term.term -> Thm.thm
+  val readDimacs     : string -> Term.term
 \end{verbatim}}
 
 \paragraph{\tt sat\_solver}${}$\\
@@ -339,6 +352,21 @@ the exception \\ \t{satProveError} is raised.
 
 \end{enumerate}
 
+\paragraph{\tt SAT\_TAUT\_PROVE}${}$\\
+\index{HolSatLib!SAT\_TAUT\_PROVE@\ml{SAT\_TAUT\_PROVE}}
+
+Attempts to prove that the supplied term is a tautology by
+
+\begin{enumerate}
+\item Negating the input term
+\item Converting that to definitional CNF
+\item Passing it to MINISAT with proof logging turned on
+\item If unsatisfiable, using the proof log to construct a ground refutation in HOL
+\end{enumerate}
+
+If MINISAT was not properly installed or fails for some other reason, \t{SAT\_TAUT\_PROVE} 
+falls back to \t{tautLib.TAUT\_PROVE}, which is significantly slower by comparison. 
+
 \paragraph{\tt readDimacs}${}$\\
 
 {\small{\tt readDimacs}~{\it file}} reads a DIMACS format file and returns
@@ -358,7 +386,7 @@ has the following fields.
 
 \medskip
 
-\begin{tabular}{lp{3.75in}}
+\begin{tabular}{lp{4.75in}}
 \t{name} & name of the SAT solver \\
 
 \t{URL} & URL of the SAT executable for downloading\\
