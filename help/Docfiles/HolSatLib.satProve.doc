@@ -25,7 +25,8 @@ Fails if a model cannot be found for the supplied term, or if the SAT solver fai
  If one is prepared to trust the solver, then one can use {satOracle} which returns a tagged theorem. The SAT solver must be a supported one: see the HolSat section of the HOL System Description for details.
 
 \SEEALSO 
-HolSatLib.satOracle.
+HolSatLib.satOracle,
+HolSatLib.SAT_TAUT_PROVE.
 
 \ENDDOC
 

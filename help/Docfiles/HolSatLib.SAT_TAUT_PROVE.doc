@@ -1,0 +1,33 @@
+\DOC SAT_TAUT_PROVE
+
+\TYPE {val SAT_TAUT_PROVE : Term.term -> Thm.thm}
+
+\SYNOPSIS
+
+Proves that the supplied term is a tautology.
+
+\DESCRIBE
+The supplied term should be a term of propositional logic. {SAT_TAUT_PROVE} uses the MiniSat SAT-solver's proof logging feature to construct a resolution refutation for the negation of the supplied term. 
+
+\FAILURE
+Fails if the supplied term is not a tautology.
+
+\EXAMPLE
+{
+- load "HolSatLib"; open HolSatLib;
+(* output omitted *)
+> val it = () : unit
+- SAT_TAUT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
+> val it = |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
+}
+ 
+\COMMENTS
+ If MiniSat fails abnormally for some reason, SAT_TAUT_PROVE falls back to TAUT_PROVE.
+
+\SEEALSO 
+HolSatLib.satOracle,
+HolSatLib.satProve.
+
+\ENDDOC
+
+
