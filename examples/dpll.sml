@@ -126,22 +126,22 @@ in
     end
 end
 
-fun dest_bool_eq t = let 
+fun dest_bool_eq t = let
   val (l,r) = dest_eq t
-  val _ = type_of l = bool orelse 
+  val _ = type_of l = bool orelse
           raise mk_HOL_ERR "dpll" "dest_bool_eq" "Eq not on bools"
 in
   (l,r)
 end
-fun var_leaves acc t = let 
-  val (l,r) = dest_conj t handle HOL_ERR _ => 
-              dest_disj t handle HOL_ERR _ => 
-              dest_imp t handle HOL_ERR _ => 
-              dest_bool_eq t 
+fun var_leaves acc t = let
+  val (l,r) = dest_conj t handle HOL_ERR _ =>
+              dest_disj t handle HOL_ERR _ =>
+              dest_imp t handle HOL_ERR _ =>
+              dest_bool_eq t
 in
-  var_leaves (var_leaves acc l) r 
-end handle HOL_ERR _ => 
-           if type_of t <> bool then 
+  var_leaves (var_leaves acc l) r
+end handle HOL_ERR _ =>
+           if type_of t <> bool then
              raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
            else if t = boolSyntax.T then acc
            else if t = boolSyntax.F then acc
@@ -153,11 +153,11 @@ fun DPLL_TAUT tm =
         val vars = map (fn t => genvar bool) insts
         val theta = map2 (curry (op |->)) insts vars
         val tm'' = list_mk_forall (vars,subst theta tm')
-    in 
-      EQT_INTRO (GENL univs 
+    in
+      EQT_INTRO (GENL univs
                       (SPECL insts (EQT_ELIM (DPLL_UNIV tm''))))
     end
-      
+
 
 
 (* implementation of DPLL ends *)
@@ -232,9 +232,10 @@ end
 
 (* example in tutorial is *)
 
-val example = gen_all (mk_adder_test 4 3)
+val example = gen_all (mk_adder_test 3 2)
 
 (* test them here:
 time DPLL_UNIV example;
 time tautLib.TAUT_PROVE example;
+time HolSatLib.SAT_TAUT_PROVE (#2 (strip_forall example));
 *)
