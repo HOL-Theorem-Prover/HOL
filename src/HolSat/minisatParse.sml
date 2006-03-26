@@ -4,8 +4,8 @@ struct
 
 local 
 
-open Globals Parse HolKernel bossLib 
-open Array boolSyntax boolTheory AC Drule Conv Rewrite BinIO Feedback
+open Globals Parse HolKernel  
+open Array boolSyntax Drule Conv Rewrite BinIO 
 open satCommonTools dimacsTools 
 
  

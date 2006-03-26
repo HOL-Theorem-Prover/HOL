@@ -7,9 +7,7 @@ local
 
 open Globals HolKernel Parse goalstackLib Feedback
 
-open bossLib pairTheory pred_setTheory pred_setLib stringLib simpLib pairSyntax pairLib Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory stringTheory boolSimps pureSimps numLib sumSyntax sumTheory listTheory satTheory Term
-
-val dpfx = "scomt_"
+open Binarymap boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory satTheory Term numSyntax
 
 in
 
@@ -26,9 +24,9 @@ fun log2 n = Math.ln n / Math.ln 2.0
 (* taken from Mike's HOL history paper. Attributed to C. Strachey. *)
 fun cartprod L = List.foldr (fn (k,z) => List.foldr (fn (x,y) => List.foldr (fn (p,q) => (x::p)::q) y z) [] k) [[]] L
 
-fun fromMLnum n = numSyntax.mk_numeral(Arbnum.fromInt n);
+fun fromMLnum n = mk_numeral(Arbnum.fromInt n);
 
-fun fromHOLnum n = Arbnum.toInt(numSyntax.dest_numeral n)
+fun fromHOLnum n = Arbnum.toInt(dest_numeral n)
 
 (************ strings ************)
 
@@ -226,111 +224,6 @@ fun gen_dest_cond_aux (c,f1,f2) =
 (* destroy general conditional, returning (list of tests,value) pairs *)
 fun gen_dest_cond t = if is_cond t then gen_dest_cond_aux (dest_cond t) else []
 
-(* conversion for pushing in implications in an implication chain *)
-
-(* push outermost implication in one step *)
-(* assume tm is of the form t0 ==> .... ==> tn, where n is at least 2 *)
-
-(*fun PUSH_IMP_CONV tm = PURE_ONCE_REWRITE_CONV [PUSH_IMP_THM] tm
-
-fun PUSHN_IMP_CONV  n = if n=0 then REFL else PUSH_IMP_CONV THENC RAND_CONV (PUSHN_IMP_CONV (n-1))*)
-
-(* my own version of ELIM_TULPED_QUANT_CONV *)
-
-(* vacuous quantification. Will fail if v is free in tm *)
-fun MK_VACUOUS_QUANT_CONV mk_quant v tm = 
-    let val t2 = mk_quant(v,tm)
-    in prove(mk_eq(tm,t2),REWRITE_TAC []) end (* FIXME: stop being lazy and make this quicker *)
-
-(* push outermost quantifier inwards n times through same quants. Will fail if there aren't enough quants or if they are not the same *)
-fun PUSH_QUANT_CONV swap_quant_conv n = 
-    if n=0 then REFL else swap_quant_conv THENC QUANT_CONV (PUSH_QUANT_CONV swap_quant_conv (n-1))
-
-(* my own version of pairTools.ELIM_TUPLED_QUANT_CONV that fixes the "impreciseness" (see comments in pairTools) *)
-(* also fixes a crash if the target term is of the form ``\quant <varstruct> othervars. body``. Now works if othervars are present *)
-(* also leaves non-paired quants unchanged rather than crashing *)
-local 
-  val is_uncurry_tm  = same_const pairSyntax.uncurry_tm
-  val is_universal   = same_const boolSyntax.universal
-  val is_existential = same_const boolSyntax.existential
-  val CONV = fn n => EVERY_CONV (List.tabulate(n,fn n => Ho_Rewrite.PURE_ONCE_REWRITE_CONV [pairTheory.ELIM_UNCURRY])) THENC
-				DEPTH_CONV BETA_CONV THENC
-				Ho_Rewrite.PURE_REWRITE_CONV [pairTheory.ELIM_PEXISTS,pairTheory.ELIM_PFORALL]
-
-  fun dest_tupled_quant tm =
-    case total dest_comb tm
-     of NONE => NONE
-      | SOME(f,x) =>
-        if is_comb x andalso is_uncurry_tm (rator x)
-        then if is_existential f then SOME (strip_exists, list_mk_exists, pairSyntax.dest_pexists,
-					 fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_exists v) 
-								THENC (PUSH_QUANT_CONV SWAP_EXISTS_CONV n)))) else
-             if is_universal f   then SOME (strip_forall, list_mk_forall, pairSyntax.dest_pforall,
-					 fn v => fn n => CONV_RULE (RHS_CONV ((MK_VACUOUS_QUANT_CONV mk_forall v) 
-								THENC (PUSH_QUANT_CONV SWAP_VARS_CONV n)))) 
-             else NONE
-        else NONE
-in
-
-fun ELIM_TUPLED_QUANT_CONV tm =
-    if not (is_pair (fst ((if is_pforall tm then dest_pforall else dest_pexists) tm))) then REFL tm 
-    else case dest_tupled_quant tm
-	  of NONE => raise Fail "TUPLED_QUANT_CONV"
-	   | SOME (strip_quant, list_mk_quant, dest_pquant,thm_rule) => 
-	     let val (tmq,tmbody) = dest_pquant tm
-		 val V = strip_pair tmq
-		 val thm = CONV ((List.length V)-1) tm
-		 val bodyvarset = Binaryset.addList(Binaryset.empty Term.compare, free_vars tmbody)
-		 val Vset = Binaryset.addList(Binaryset.empty Term.compare, V)
-		 val rside = rhs(concl thm)
-		 val ((W,W'),body) = ((fn l => split_list l (List.length V)) ## I) (strip_quant rside)
-	     in TRANS thm (ALPHA rside (list_mk_quant(V@W', subst(map2 (curry op|->) W V) body))) 
-	     end	
-end
-
-(*********** sums **************)
-
-fun mk_sum_component_aux n i s = 
-    if (i=0) then sumSyntax.mk_inl(s,mk_vartype("'a"^(int_to_string i))) 
-    else if (i=1 andalso n=2) then sumSyntax.mk_inr(s,mk_vartype("'a"^(int_to_string i))) 
-    else sumSyntax.mk_inr(mk_sum_component_aux (n-1) (i-1) s,mk_vartype("'a"^(int_to_string i))) 
-
-(* returns s tagged with INL's and INR's so that its type is the i'th component of the sum ty_0+ty_1+...+ty_(n-1) *)
-fun mk_sum_component ty i s = 
-    if ((List.length (sumSyntax.strip_sum ty)) = 1) then s
-    else let val tys = sumSyntax.strip_sum ty
-	     val n = List.length tys
-	     val res = mk_sum_component_aux n i s
-	     val tysp = split_after i tys
-	     val stl = if (i=(n-1)) then [] else [(sumSyntax.list_mk_sum o List.tl) (snd tysp)] 
-             val nl = if i = (n-1) then List.tabulate(n-1,fn n => n +1) else List.tabulate(n-(n-i)+1,I)   
-	 in inst (List.map (fn (j,t) => mk_vartype("'a"^(int_to_string j)) |-> t) 
-			   (ListPair.zip(List.rev nl,(fst tysp)@stl))) res 
-	 end
-
-(* returns s:(ty_0+ty_1+...+ty_(n-1)) tagged with OUTL's and OUTR's to strip away the sum type 
- assuming s is the i'th component in the sum *)
-fun dest_sum_component styl n i s =
-    let 
-	
-	
-	val res = 
-	    if (n=1) then s (* there is only one component *)
-	    else if (i = 0) then mk_comb(inst [alpha |-> List.hd styl,beta |-> list_mk_sum (List.tl styl)] outl_tm,s)
-	    else if (i = 1 andalso n = 2) then mk_comb(inst [alpha |-> List.hd styl,beta |-> list_mk_sum (List.tl styl)] outr_tm,s)
-	    else dest_sum_component (List.tl styl) (n-1) (i-1) (mk_comb(inst [alpha |-> List.hd styl,
-									      beta |->list_mk_sum (List.tl styl)] outr_tm,s))
-	
-    in res end
-
-fun isIN t = let val s = term_to_string2 t in String.compare(s,"INL")=EQUAL orelse String.compare(s,"INR")=EQUAL end
-
-(* t is a term that is 1..several applications of INL/INR to some value x. Return x *) 
-fun strip_in t = 
-    if is_comb t 
-    then let val (a,b) = dest_comb t
-	 in if isIN a then strip_in b else t end
-    else t
 
 (************ HOL **************)
 
@@ -347,38 +240,6 @@ in new_specification(nm^"_def",[nm],EXISTS (mk_exists(x,mk_eq(x,rhs)),rhs) (REFL
 fun LIST_ACCEPT_TAC l (asl,w) = 
     let val th = hd(List.filter (aconv w o concl) l)
     in ACCEPT_TAC th (asl,w) end
-
-(* simpset that is just beta reduction *)
-val BETA_ss = SSFRAG
-  {convs=[{name="BETA_CONV (beta reduction)",
-           trace=2,
-           key=SOME ([],(--`(\x:'a. y:'b) z`--)),
-	   conv=K (K BETA_CONV)}],
-   rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
-
-val REDUCE_ss = SSFRAG
-  {convs=[{name="REDUCE_CONV (num reduction)",
-           trace=2,
-           key=SOME ([],(--`(x:num)-1`--)),
-	   conv=K (K REDUCE_CONV)}],
-   rewrs=[], congs = [], filter = NONE, ac = [], dprocs = []};
-
-(* FIXME: commented out to suppress a type guess warning because of EL. Fix this when I can be bothered
-val EL_ss = SSFRAG
-  {convs=[{name="num_CONV (num to suc conversion)",
-           trace=2,
-           key=SOME ([],(--`EL (x:num)`--)),
-	   conv=K (K (RAND_CONV numLib.num_CONV))}],
-   rewrs=[EL,HD,TL], congs = [], filter = NONE, ac = [], dprocs = []};
-*)
-
-(* FIXME: Conv.QCONV does the same thing *)
-fun UNCHANGED_CONV conv tm = conv tm handle UNCHANGED => REFL tm
-
-fun NCONV n conv = if n=0 then ALL_CONV else conv THENC NCONV (n-1) conv
-
-(* given p IN {s_1,...,s_n}, proves = to \/_i p = s_i *)
-fun IN_FIN_CONV t = PURE_REWRITE_CONV [NOT_IN_EMPTY,IN_INSERT,GEN_ALL (List.nth(CONJUNCTS (SPEC_ALL OR_CLAUSES),3))] t
 
 fun ERC lt tm =
     if is_comb lt 

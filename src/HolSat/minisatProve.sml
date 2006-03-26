@@ -5,7 +5,7 @@ struct
 local
 
 open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
-open satTools dimacsTools SatSolvers minisatResolve satCommonTools satTheory minisatParse
+open satTools dimacsTools SatSolvers minisatResolve satCommonTools minisatParse satTheory
 
  
 in 

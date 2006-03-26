@@ -3,9 +3,9 @@ structure minisatResolve = struct
 
 local 
 
-open Globals Parse HolKernel bossLib 
-open Array boolSyntax boolTheory AC Drule Conv Rewrite
-open satCommonTools dimacsTools satTheory minisatParse
+open Globals Parse HolKernel  
+open Array boolSyntax boolTheory Drule Conv Rewrite
+open satCommonTools dimacsTools minisatParse satTheory
 
 structure RBM = Redblackmap;
 
@@ -49,7 +49,7 @@ fun dualise' th =
     let val c = rand (land (concl th))
     in if is_disj c
        then let val (d0,d1) = dest_disj c
-		val th1 = EQ_MP (INST [A|->d0,B|->d1] OR_DUAL) th
+		val th1 = EQ_MP (INST [A|->d0,B|->d1] satScript.OR_DUAL) th
 		val th2 = if is_neg d0 then CONV_RULE (LAND_CONV NOT_NOT_CONV) th1 else th1
 	    in dualise' (UNDISCH th2) end
        else UNDISCH (if is_neg c then CONV_RULE (LAND_CONV NOT_NOT_CONV) th else th)
