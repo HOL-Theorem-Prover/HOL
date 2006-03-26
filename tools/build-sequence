@@ -51,6 +51,8 @@ src/boss
 # Up to this point is needed for hol.unquote (which loads bossLib).
 # (Maybe unwind could be omitted).
 
+src/HolSat/sat_solvers/minisat
+src/HolSat
 src/sort
 src/string
 src/pred_set/src
@@ -66,8 +68,6 @@ src/integer
 src/hol88
 src/real
 src/prob
-src/HolSat/sat_solvers/minisat
-src/HolSat
 src/muddy/muddyC
 src/muddy
 src/HolBdd
