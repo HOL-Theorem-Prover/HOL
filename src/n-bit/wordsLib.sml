@@ -75,7 +75,7 @@ end;
 
 val _ = add_thms thms computeLib.the_compset;
 
-val mk_index_size = fcpLib.mk_index_type;
+fun mk_index_size n = (fcpLib.mk_index_type n;());
 
 fun mk_word_size n =
   let val _ = mk_index_size n

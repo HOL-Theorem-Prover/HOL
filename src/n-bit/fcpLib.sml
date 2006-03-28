@@ -59,42 +59,20 @@ fun mk_index_type n =
       val univ_term = mk_const("UNIV",TYPE --> bool)
       val image_thm = prove_image_thm abs_term n_term bij
       val bij_abs_thm = prove_bij_image_thm abs_term n_term bij
-      val finite_thm = save_thm("finite_"^N, prove_finite_thm image_thm abs_term n_term)
-      val size_thm = REWRITE_RULE [image_thm] (MATCH_MP index_size bij_abs_thm)
+      val finite_thm = save_thm("finite_"^N,
+            prove_finite_thm image_thm abs_term n_term)
+      val size_thm = save_thm("size_"^N,
+            REWRITE_RULE [image_thm] (MATCH_MP index_size bij_abs_thm))
       val dimindex_thm =
             store_thm("dimindex_"^N, `dimindex ^univ_term = ^n_term`,
               PROVE_TAC [finite_thm,size_thm,dimindex])
-      
+      val _ = computeLib.add_thms [finite_thm, size_thm, dimindex_thm]
+              computeLib.the_compset
   in
-     computeLib.add_thms [finite_thm, dimindex_thm] computeLib.the_compset
-      
+    (finite_thm, size_thm, dimindex_thm)
   end
 end
-local val _ = set_trace "meson" 0 in
-fun mk_index_type_thm n =
-  let val N = Int.toString n
-      val ABS = "abs_"^N
-      val REP = "rep_"^N
-      val tydef = new_type_definition("i"^N, type_exists n)
-      val bij = BETA_RULE (define_new_type_bijections {ABS=ABS, REP=REP,
-                  name="index"^N^"_bij", tyax=tydef})
-      val TYPE = mk_type("i"^N, [])
-      val n_term = (mk_numeral o Arbnum.fromInt) n
-      val abs_term = mk_const(ABS,num --> TYPE)
-      val rep_term = mk_const(REP,TYPE --> num)
-      val univ_term = mk_const("UNIV",TYPE --> bool)
-      val image_thm = prove_image_thm abs_term n_term bij
-      val bij_abs_thm = prove_bij_image_thm abs_term n_term bij
-      val finite_thm = save_thm("finite_"^N, prove_finite_thm image_thm abs_term n_term)
-      val size_thm = REWRITE_RULE [image_thm] (MATCH_MP index_size bij_abs_thm)
-      val dimindex_thm =
-          store_thm("dimindex_"^N, `dimindex ^univ_term = ^n_term`,
-              PROVE_TAC [finite_thm,size_thm,dimindex])
-      val _ = computeLib.add_thms [finite_thm, dimindex_thm] computeLib.the_compset
-  in
-      (finite_thm,size_thm)
-  end
-end
+
 val FCP_ss = rewrites [FCP_BETA,FCP_ETA,CART_EQ];
 
 end
