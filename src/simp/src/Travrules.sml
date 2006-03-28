@@ -45,7 +45,7 @@ fun ERR x = STRUCT_ERR "Travrules" x;
    fun mk_preorder (TRANS_THM,REFL_THM) =
        PREORDER (name_of_const(rator(rator(snd(dest_forall(concl REFL_THM))))),
 		 ARB_TRANS TRANS_THM,
-		 fn x => SPEC x REFL_THM);
+		 fn x => ISPEC x REFL_THM);
 
    (* ---------------------------------------------------------------------
     * travrules objects and basic operations on them
