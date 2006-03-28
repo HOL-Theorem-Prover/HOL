@@ -41,12 +41,12 @@ val SET_BYTE_def = Define`
       (24 <= i /\ i < 32) /\ (if oareg = 3w then b %% (i - 24) else x)) w`;
 
 val MEM_WRITE_BYTE_def = Define`
-  MEM_WRITE_BYTE (mem:mem) (word:word32) addr =
+  MEM_WRITE_BYTE (mem:mem) addr (word:word32) =
     let addr30 = ADDR30 addr in
       (addr30 :- SET_BYTE ((1 >< 0) addr) ((7 >< 0) word) (mem addr30)) mem`;
 
 val MEM_WRITE_WORD_def = Define`
-  MEM_WRITE_WORD (mem:mem) word addr = (ADDR30 addr :- word) mem`;
+  MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr :- word) mem`;
 
 val MEM_WRITE_def = Define`
   MEM_WRITE b = if b then MEM_WRITE_BYTE else MEM_WRITE_WORD`;
@@ -56,7 +56,7 @@ val TRANSFERS_def = Define`
   (TRANSFERS mem data (r::rs) =
    case r of
       MemRead addr -> TRANSFERS mem (SNOC (mem (ADDR30 addr)) data) rs
-   || MemWrite b addr word -> TRANSFERS (MEM_WRITE b mem word addr) data rs
+   || MemWrite b addr word -> TRANSFERS (MEM_WRITE b mem addr word) data rs
    || _ -> TRANSFERS mem data rs)`;
 
 val NEXT_ARMe_def = Define`

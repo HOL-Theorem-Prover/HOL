@@ -132,6 +132,10 @@ val NULL_LENGTH = store_thm("NULL_LENGTH",
   `!l. NULL l = (LENGTH l = 0)`,
   Cases \\ METIS_TAC [LENGTH,NULL,SUC_NOT]);
 
+val APPEND_SNOC1 = store_thm("APPEND_SNOC1",
+  `!l1 x l2. SNOC x l1 ++ l2 = l1 ++ x::l2`,
+  METIS_TAC [SNOC_APPEND,CONS_APPEND, APPEND_ASSOC]);
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();
