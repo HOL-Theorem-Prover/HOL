@@ -109,7 +109,7 @@ val basic_context =
 fun cntxt c i = list_mk_conj
   (mk_eq(``s.memory ((31 >< 2) (s.registers r15))``,i):: (c @ basic_context));
 
-val word_index = METIS_PROVE [word_index_n2w] 
+val word_index = METIS_PROVE [word_index_n2w]
   ``!i n. i < dimindex (UNIV:'a->bool) ==>
       ((n2w n):bool ** 'a %% i = BIT i n)``;
 
@@ -155,6 +155,102 @@ val ARM_ss = rewrites [NEXT_ARMe_def,EXEC_INST_def,OUT_ARM_def,DECODE_PSR_def,
 fun SYMBOLIC_EVAL_CONV frag context = GEN_ALL (Thm.DISCH context (SIMP_CONV
     (srw_ss()++boolSimps.LET_ss++SIZES_ss++armLib.PBETA_ss++ARM_ss++frag)
     [Thm.ASSUME context] ``NEXT_ARMe s``));
+
+(* ......................................................................... *)
+
+val UNDEF_ss = rewrites [EXCEPTION_def,cond_pass_enc_swi,decode_enc_swi,
+    exception2mode_def,exception2num_thm];
+
+val ARM_UNDEF = SYMBOLIC_EVAL_CONV UNDEF_ss ``s.undefined``;
+
+val nop_context =
+  [``Abbrev (cpsr = CPSR_READ s.psrs)``,
+   ``~CONDITION_PASSED3 (NZCV cpsr) c``,
+   ``~s.undefined``];
+
+fun nop_cntxt i = list_mk_conj
+  (mk_eq(``s.memory ((31 >< 2) (s.registers r15))``,i):: nop_context);
+
+(* ......................................................................... *)
+
+val NOP_ss = rewrites [cond_pass_enc_data_proc,
+  cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,cond_pass_enc_coproc,
+  cond_pass_enc_mla_mul,cond_pass_enc_br,cond_pass_enc_swi,
+  cond_pass_enc_ldr_str,cond_pass_enc_ldm_stm,cond_pass_enc_swp];
+
+fun eval_nop t = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  (subst [``f:condition -> bool -> bool ** i4 ->
+              bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
+   ``enc ((f:condition -> bool -> bool ** i4 ->
+             bool ** i4 -> addr_mode1 -> arm_instruction) c x Rd Rm Op2)``));
+
+val thms = map eval_nop
+   [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
+    ``instruction$RSB``,``instruction$ADD``,``instruction$ADC``,
+    ``instruction$SBC``,``instruction$RSC``,``instruction$ORR``,
+    ``instruction$BIC``];
+
+val (ARM_AND_NOP,thms) = hd_tl thms;
+val (ARM_EOR_NOP,thms) = hd_tl thms;
+val (ARM_SUB_NOP,thms) = hd_tl thms;
+val (ARM_RSB_NOP,thms) = hd_tl thms;
+val (ARM_ADD_NOP,thms) = hd_tl thms;
+val (ARM_ADC_NOP,thms) = hd_tl thms;
+val (ARM_SBC_NOP,thms) = hd_tl thms;
+val (ARM_RSC_NOP,thms) = hd_tl thms;
+val (ARM_ORR_NOP,thms) = hd_tl thms;
+val ARM_BIC_NOP = hd thms;
+
+val ARM_MOV_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MOV c x Rd Op2)``);
+
+val ARM_MVN_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MVN c x Rd Op2)``);
+
+val ARM_TST_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$TST c Rm Op2)``);
+
+val ARM_TEQ_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$TEQ c Rm Op2)``);
+
+val ARM_CMP_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$CMP c Rm Op2)``);
+
+val ARM_CMN_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$CMN c Rm Op2)``);
+
+val ARM_MUL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MUL c x Rd Rs Rm)``);
+
+val ARM_MLA_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MLA c x Rd Rs Rm Rn)``);
+
+val ARM_B_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$B c offset)``);
+
+val ARM_BL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$BL c offset)``);
+
+val ARM_SWI_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$SWI c)``);
+
+val ARM_UND_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$UND c)``);
+
+val ARM_LDR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$LDR c opt Rd Rn Op2)``);
+
+val ARM_STR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$STR c opt Rd Rn Op2)``);
+
+val ARM_SWP_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$SWP c b Rd Rm Rn)``);
+
+val ARM_LDM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$LDM c opt Rd list)``);
+
+val ARM_STM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$STM c opt Rd list)``);
 
 (* ......................................................................... *)
 
@@ -487,11 +583,17 @@ val ARM_BL = SYMBOLIC_EVAL_CONV BRANCH_ss (list_mk_conj
 (* ......................................................................... *)
 
 val SWI_EX_ss =
-  rewrites [EXCEPTION_def,cond_pass_enc_swi,decode_enc_swi,
-    exception2mode_def,exception2num_thm];
+  rewrites [EXCEPTION_def,exception2mode_def,exception2num_thm,
+    cond_pass_enc_swi,decode_enc_swi,cond_pass_enc_coproc,decode_enc_coproc];
 
 val ARM_SWI = SYMBOLIC_EVAL_CONV SWI_EX_ss (list_mk_conj
   [``s.memory ((31 >< 2) (s.registers r15)) = enc (instruction$SWI c)``,
+   ``Abbrev (cpsr = CPSR_READ s.psrs)``,
+   ``CONDITION_PASSED3 (NZCV cpsr) c``,
+   ``~s.undefined``]);
+
+val ARM_UND = SYMBOLIC_EVAL_CONV SWI_EX_ss (list_mk_conj
+  [``s.memory ((31 >< 2) (s.registers r15)) = enc (instruction$UND c)``,
    ``Abbrev (cpsr = CPSR_READ s.psrs)``,
    ``CONDITION_PASSED3 (NZCV cpsr) c``,
    ``~s.undefined``]);
@@ -745,9 +847,40 @@ val ARM_STM = SYMBOLIC_EVAL_CONV LDM_STM_ss (cntxt
 
 (* ------------------------------------------------------------------------- *)
 
+val _ = save_thm("ARM_UNDEF", ARM_UNDEF);
+
+val _ = save_thm("ARM_B_NOP",   ARM_B_NOP);
+val _ = save_thm("ARM_BL_NOP",  ARM_BL_NOP);
+val _ = save_thm("ARM_SWI_NOP", ARM_SWI_NOP);
+val _ = save_thm("ARM_AND_NOP", ARM_AND_NOP);
+val _ = save_thm("ARM_EOR_NOP", ARM_EOR_NOP);
+val _ = save_thm("ARM_SUB_NOP", ARM_SUB_NOP);
+val _ = save_thm("ARM_RSB_NOP", ARM_RSB_NOP);
+val _ = save_thm("ARM_ADD_NOP", ARM_ADD_NOP);
+val _ = save_thm("ARM_ADC_NOP", ARM_ADC_NOP);
+val _ = save_thm("ARM_SBC_NOP", ARM_SBC_NOP);
+val _ = save_thm("ARM_RSC_NOP", ARM_RSC_NOP);
+val _ = save_thm("ARM_TST_NOP", ARM_TST_NOP);
+val _ = save_thm("ARM_TEQ_NOP", ARM_TEQ_NOP);
+val _ = save_thm("ARM_CMP_NOP", ARM_CMP_NOP);
+val _ = save_thm("ARM_CMN_NOP", ARM_CMN_NOP);
+val _ = save_thm("ARM_ORR_NOP", ARM_ORR_NOP);
+val _ = save_thm("ARM_MOV_NOP", ARM_MOV_NOP);
+val _ = save_thm("ARM_BIC_NOP", ARM_BIC_NOP);
+val _ = save_thm("ARM_MVN_NOP", ARM_MVN_NOP);
+val _ = save_thm("ARM_MUL_NOP", ARM_MUL_NOP);
+val _ = save_thm("ARM_MLA_NOP", ARM_MLA_NOP);
+val _ = save_thm("ARM_LDR_NOP", ARM_LDR_NOP);
+val _ = save_thm("ARM_STR_NOP", ARM_STR_NOP);
+val _ = save_thm("ARM_LDM_NOP", ARM_LDM_NOP);
+val _ = save_thm("ARM_STM_NOP", ARM_STM_NOP);
+val _ = save_thm("ARM_SWP_NOP", ARM_SWP_NOP);
+val _ = save_thm("ARM_UND_NOP", ARM_UND_NOP);
+
 val _ = save_thm("ARM_B",   ARM_B);
 val _ = save_thm("ARM_BL",  ARM_BL);
 val _ = save_thm("ARM_SWI", ARM_SWI);
+val _ = save_thm("ARM_UND", ARM_UND);
 
 val _ = save_thm("ARM_TST", ARM_TST);
 val _ = save_thm("ARM_TEQ", ARM_TEQ);
