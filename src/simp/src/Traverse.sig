@@ -64,7 +64,8 @@ sig
          addcontext : context * thm list -> context,
          apply: {solver:term list -> term -> thm, 
 		 context: context,
-		 stack:term list} -> conv
+		 stack:term list,
+     relation : Travrules.preorder} -> conv
        };
 
    (* ---------------------------------------------------------------------
@@ -99,11 +100,12 @@ sig
     * TRAVERSE never fails, though it may diverge.  Bad congruence rules
     * may cause very strange behaviour.
     * ---------------------------------------------------------------------*)
+   
+   type traverse_data = {rewriters: reducer list,
+                         dprocs: reducer list,
+                         travrules: Travrules.travrules,
+                         relation: term};
 
-   val TRAVERSE : 
-       {rewriters: reducer list,
-	dprocs: reducer list,
-	travrules: Travrules.travrules,
-	relation: term} -> thm list -> conv
+   val TRAVERSE : traverse_data -> thm list -> conv
 
 end (* sig *)

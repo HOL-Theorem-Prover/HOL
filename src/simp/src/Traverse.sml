@@ -38,7 +38,7 @@ datatype reducer =
   REDUCER of {initial: context,
               addcontext : context * Thm.thm list -> context,
               apply: {solver:term list -> term -> thm, context: context,
-                      stack: term list} -> conv
+                      stack: term list, relation : preorder} -> conv
               };
 fun dest_reducer (REDUCER x) = x
 
@@ -212,7 +212,7 @@ let val add_context' = add_context rewriters dprocs
          EQT_ELIM o trav stack (change_relation' (context,equality))
        fun apply_reducer (REDUCER rdata) context =
          (#apply rdata) {solver=ctxt_solver,context=context,
-                         stack=stack}
+                         stack=stack, relation=relation}
        val high_priority =
          FIRST_CONV (mapfilter2 apply_reducer rewriters contexts1)
        val low_priority =
@@ -253,6 +253,10 @@ end;
  * TRAVERSE
  *
  * ---------------------------------------------------------------------*)
+type traverse_data = {rewriters: reducer list,
+                      dprocs: reducer list,
+                      travrules: Travrules.travrules,
+                      relation: term};
 
 fun TRAVERSE (data as {dprocs,rewriters,travrules,relation}) thms =
    let val context' = add_context rewriters dprocs (initial_context data,thms)
