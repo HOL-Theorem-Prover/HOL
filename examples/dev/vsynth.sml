@@ -75,17 +75,25 @@ fun string2int s =
 fun is_word_type wty =
  let val (opr, tyargs) = dest_type wty
      val oprl = explode opr
- in
-  (tyargs = []      andalso
-   length oprl > 4  andalso
-   el 1 oprl = #"w" andalso
-   el 2 oprl = #"o" andalso
-   el 3 oprl = #"r" andalso
-   el 4 oprl = #"d" andalso
-   (case Int.fromString(implode(tl(tl(tl(tl oprl))))) of
-       SOME _ => true
-     | NONE   => false))
- end;
+ in if (length tyargs) = 2 then (* e.g,  [``:bool``, ``:i16``] *)
+       let val (opr',tyargs') = dest_type (hd(tl tyargs))
+           val oprl' = explode opr'
+       in tyargs' = [] andalso
+          length oprl' > 1 andalso
+          el 1 oprl' = #"i" andalso
+          (case Int.fromString(implode(tl oprl')) of
+             SOME _ => true | NONE => false)
+       end
+    else tyargs = [] andalso
+         length oprl > 4  andalso
+         el 1 oprl = #"w" andalso
+         el 2 oprl = #"o" andalso
+         el 3 oprl = #"r" andalso
+         el 4 oprl = #"d" andalso
+         (case Int.fromString(implode(tl(tl(tl(tl oprl))))) of
+            SOME _ => true
+          | NONE   => false)
+  end;
 
 (*****************************************************************************)
 (* Extraxt <n> from ``:word<n>``                                             *)
@@ -93,8 +101,12 @@ fun is_word_type wty =
 fun dest_word_type wty =
  let val (opr, tyargs) = dest_type wty
      val oprl = explode opr
- in
-  string2int(implode(tl(tl(tl(tl oprl)))))
+ in if tyargs = [] then
+       string2int(implode(tl(tl(tl(tl oprl)))))
+    else let val (opr',_) = dest_type (hd(tl tyargs))
+             val oprl' = explode opr'
+         in string2int(implode(tl(oprl')))
+         end
  end;
 
 (*****************************************************************************)
@@ -128,7 +140,7 @@ fun ty2size ty =
 (*****************************************************************************)
 val numWarning = ref true;
 fun var2size tm =
- let val ("fun", [_,ty]) = dest_type(type_of tm)
+ let val (str, [_,ty]) = dest_type(type_of tm)
      val _ = if (ty = ``:num``) andalso (!numWarning)
               then 
                (print "Warning: type of ";
@@ -138,6 +150,7 @@ fun var2size tm =
  in
   ty2size ty
  end;
+
 
 (*****************************************************************************)
 (* ``:ty1 --> ty2`` --> (``:ty1``,``:ty2``)                                  *)
