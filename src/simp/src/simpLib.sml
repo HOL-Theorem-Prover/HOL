@@ -205,7 +205,7 @@ with
                          (List.mapPartial mk_rewr_convdata
                            (flatten (map mk_rewrs thms))))
           end
-        fun apply {solver,context,stack} tm =
+        fun apply {solver,context,stack,relation} tm =
           let val net = (raise context) handle CONVNET net => net
           in tryfind (fn conv => conv solver stack tm) (lookup tm net)
           end
@@ -213,11 +213,14 @@ with
                 initial=CONVNET initial_net}
     end;
 
-  fun SIMP_QCONV (ss as (SS ssdata)) =
-      TRAVERSE {rewriters=[rewriter_for_ss ss],
-		dprocs= #dprocs ssdata,
-		relation= boolSyntax.equality,
-		travrules= merge_travrules [EQ_tr,#travrules ssdata]};
+  fun traversedata_for_ss (ss as (SS ssdata)) =
+      {rewriters=[rewriter_for_ss ss],
+    dprocs= #dprocs ssdata,
+    relation= boolSyntax.equality,
+    travrules= merge_travrules [EQ_tr,#travrules ssdata]};
+
+  fun SIMP_QCONV ss =
+      TRAVERSE (traversedata_for_ss ss);
 
 end (* abstype for SS *)
 

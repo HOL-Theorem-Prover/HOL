@@ -87,6 +87,8 @@ sig
   val ++         : simpset * ssfrag -> simpset  (* infix *)
   val &&         : simpset * thm list -> simpset  (* infix *)
 
+  val traversedata_for_ss: simpset -> Traverse.traverse_data
+
    (* ---------------------------------------------------------------------
     * SIMP_CONV : simpset -> conv
     *
@@ -149,5 +151,6 @@ sig
    (* ---------------------------------------------------------------------
     * Simpset pretty printing
     * ---------------------------------------------------------------------*)
+
 
 end
