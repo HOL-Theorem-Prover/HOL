@@ -85,7 +85,7 @@ val EQ_tr = gen_mk_travrules
 
 fun mk_travrules congs = TRAVRULES
   {relations=equality,
-   congprocs=map (CONGPROC REFL) congs,
+   congprocs=map (CONGPROC (fn t => REFL)) congs,
    weakenprocs=[]};
 
 
