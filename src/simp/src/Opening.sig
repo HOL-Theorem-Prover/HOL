@@ -75,7 +75,7 @@ signature Opening = sig
                     solver : term -> thm,
                     freevars: term list,
 		    depther : (thm list * term) -> conv} -> conv
-   val CONGPROC           :  conv ->  thm -> congproc
+   val CONGPROC           :  (term -> conv) ->  thm -> congproc
    val rel_of_congrule    : thm -> term  
    val nconds_of_congrule : thm -> int
   

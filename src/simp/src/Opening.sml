@@ -170,7 +170,7 @@ in fn {relation,solver,depther,freevars} =>
                 val rewr_thm =
                   (depther (reprocessed_assum_thms,oper) orig)
                   handle HOL_ERR _ =>
-                  let val thm = refl orig
+                  let val thm = refl oper orig
                   in (trace(5,PRODUCE(orig,"UNCHANGED",thm));thm)
                   end
                 val abs_rewr_thm =
