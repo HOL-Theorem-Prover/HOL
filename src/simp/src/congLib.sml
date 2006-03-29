@@ -42,22 +42,20 @@ val AP_TERM_THM = prove (``!f x. (f x x) ==>
 );
 
 
-fun mk_congproc preorders cong =
+fun mk_preorder_refl preorders preorderTerm =
   let
-    val congr_concl_term = (concl (UNDISCH_ALL cong));
-    val preorderTerm = rator (rator congr_concl_term);
     val preorder = find_relation preorderTerm preorders;
-    val refl = extract_preorder_refl preorder;
   in
-    (CONGPROC refl) cong
+    extract_preorder_refl preorder
   end;
 
 
 fun mk_congprocs preorders congs =
   let
     val congs = flatten (map BODY_CONJUNCTS congs)
+    val gen_refl = mk_preorder_refl preorders;
   in
-    map (mk_congproc preorders) congs
+    map (fn cong => ((CONGPROC gen_refl) cong)) congs
   end
 
 
@@ -71,7 +69,9 @@ fun mk_eq_congproc preorder =
     val thm = MATCH_MP AP_TERM_THM reflThm
     val thm = SPEC_ALL thm
   in
-    (CONGPROC refl) thm
+    (*The only congruence occuring in an antecedent is =. Thus t == ``$=`` holds for all
+      calls and we can use REFL *)
+    (CONGPROC (fn t => REFL)) thm 
   end;
 
 
