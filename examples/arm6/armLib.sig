@@ -8,9 +8,11 @@ sig
     val PBETA_ss     : simpLib.ssfrag
     val STATE_INP_ss : simpLib.ssfrag
 
-    val combCases    : term -> thm
-    val tupleCases   : term -> thm
+    val combCases    : conv
+    val tupleCases   : conv
 
     val RES_MP1_TAC  : (term frag list, term frag list) subst -> thm -> tactic
     val RES_MP_TAC   : (term frag list, term frag list) subst -> thm -> tactic
+
+    val UNABBREV_RULE : term frag list -> rule
 end

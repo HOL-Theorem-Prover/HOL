@@ -32,6 +32,99 @@ val SND_COND_RAND = ISPEC `SND` COND_RAND;
 
 fun hd_tl l = (hd l, tl l);
 
+fun UNABBREVL_RULE l t =
+   GEN_ALL (foldl (fn (x,t) => armLib.UNABBREV_RULE x t) (SPEC_ALL t) l);
+
+(* ------------------------------------------------------------------------- *)
+
+val REG_READ_READ6 = store_thm("REG_READ_READ6",
+  `!r m n. ~(n = 15w) ==> (REG_READ6 r m n = REG_READ r m n)`,
+  SIMP_TAC bool_ss [coreTheory.REG_READ6_def]);
+
+val REG_READ_WRITE_PC =
+  (GEN_ALL o SIMP_RULE std_ss [REG_READ_READ6] o INST [`n2` |-> `n`] o
+   DISCH `~(n2 = 15w)` o CONJUNCT2) lemmasTheory.REG_READ_WRITE_PC;
+
+val REG_READ_INC_PC = store_thm("REG_READ_INC_PC",
+  `!r m n. ~(n = 15w) ==> (REG_READ (INC_PC r) m n = REG_READ r m n)`,
+  SIMP_TAC bool_ss [lemmasTheory.TO_WRITE_READ6,REG_READ_WRITE_PC]);
+
+val REG_WRITE_INC_PC = store_thm("REG_WRITE_INC_PC",
+  `!r m n. ~(n = 15w) ==>
+      (REG_WRITE (INC_PC r) m n d = INC_PC (REG_WRITE r m n d))`,
+  SIMP_TAC bool_ss [TO_WRITE_READ6,REG_READ_WRITE_NEQ,REG_WRITE_WRITE_PC]);
+
+val REG_READ_WRITE =
+  (GEN_ALL o SIMP_RULE std_ss [REG_READ_READ6] o
+   DISCH `~(n = 15w)` o SPEC_ALL o CONJUNCT2) lemmasTheory.REG_READ_WRITE;
+
+val REG_WRITE_READ =
+  (GEN_ALL o SIMP_RULE std_ss [REG_READ_READ6] o
+   DISCH `~(n2 = 15w)` o SPEC_ALL o CONJUNCT1) lemmasTheory.REG_READ_WRITE;
+
+val INC_PC = save_thm("INC_PC",
+  (SIMP_RULE std_ss [coreTheory.REG_READ6_def,FETCH_PC_def] o
+   hd o tl o CONJUNCTS) TO_WRITE_READ6);
+
+val REG_WRITEL_def = Define`
+  (REG_WRITEL r m [] = r) /\
+  (REG_WRITEL r m ((n,d)::l) = REG_WRITE (REG_WRITEL r m l) m n d)`;
+
+val REG_WRITEL = store_thm("REG_WRITEL",
+  `!r m l. REG_WRITEL r m l = FOLDR (\h r. REG_WRITE r m (FST h) (SND h)) r l`,
+  Induct_on `l` \\ TRY (Cases_on `h`) \\ ASM_SIMP_TAC list_ss [REG_WRITEL_def]);
+
+val REG_WRITE_WRITEL = store_thm("REG_WRITE_WRITEL",
+  `!r m n d. REG_WRITE r m n d = REG_WRITEL r m [(n,d)]`,
+  SIMP_TAC std_ss [REG_WRITEL_def]);
+
+val REG_WRITEL_WRITEL = store_thm("REG_WRITEL_WRITEL",
+  `!r m l1 l2. REG_WRITEL (REG_WRITEL r m l1) m l2 = REG_WRITEL r m (l2 ++ l1)`,
+  SIMP_TAC std_ss [REG_WRITEL,rich_listTheory.FOLDR_APPEND]);
+
+val REG_WRITE_WRITE_THM = store_thm("REG_WRITE_WRITE_THM",
+  `!m n r m e d. x <=+ y ==>
+      (REG_WRITE (REG_WRITE r m x e) m y d =
+         if x = y then
+           REG_WRITE r m y d
+         else
+           REG_WRITE (REG_WRITE r m y d) m x e)`,
+  RW_TAC std_ss [WORD_LOWER_OR_EQ,WORD_LO,REG_WRITE_WRITE]
+    \\ METIS_TAC [REG_WRITE_def,not_reg_eq,SUBST_NE_COMMUTES,
+         mode_reg2num_lt,num2register_11]);
+
+val REG_READ_WRITEL = store_thm("REG_READ_WRITEL",
+  `(!r m n. REG_READ (REG_WRITEL r m []) m n = REG_READ r m n) /\
+   (!r m n a b l. ~(n = 15w) ==>
+      (REG_READ (REG_WRITEL r m ((a,b)::l)) m n =
+       if a = n then b else REG_READ (REG_WRITEL r m l) m n))`,
+  RW_TAC std_ss [REG_WRITEL_def,REG_WRITE_READ]);
+
+val mode_reg2num_15 = (GEN_ALL o SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o
+  SPECL [`m`,`15w`]) mode_reg2num_def;
+
+val lem = (SIMP_RULE std_ss[lemmasTheory.REG_READ_WRITE_PC,
+  TO_WRITE_READ6,WORD_ADD_SUB] o SPECL [`r`,`m`,`15w`,`d + 8w`]) READ_TO_READ6;
+
+val lem2 = prove(
+  `!r m m2 n d. ~(n = 15w) ==>
+     (REG_READ (REG_WRITE r m n d) m2 15w = REG_READ r m2 15w)`,
+  RW_TAC std_ss [REG_READ_def,REG_WRITE_def,SUBST_def,
+         r15,mode_reg2num_lt,num2register_11]
+    \\ METIS_TAC [mode_reg2num_15,not_reg_eq]);
+
+val REG_READ_WRITEL_PC = store_thm("REG_READ_WRITEL_PC",
+  `!r m m2 a b l. REG_READ (REG_WRITEL r m ((a,b)::l)) m2 15w =
+       if a = 15w then b + 8w else REG_READ (REG_WRITEL r m l) m2 15w`,
+  RW_TAC std_ss [REG_WRITEL_def,TO_WRITE_READ6,lem,lem2]);
+
+val REG_READ_WRITEL_PC2 = store_thm("REG_READ_WRITEL_PC2",
+  `!r m a b l. (REG_WRITEL r m ((a,b)::l)) r15 =
+       if a = 15w then b else (REG_WRITEL r m l) r15`,
+  RW_TAC std_ss [REG_WRITEL_def,REG_WRITE_def,SUBST_def,
+         r15,mode_reg2num_lt,num2register_11]
+    \\ METIS_TAC [mode_reg2num_15,not_reg_eq]);
+
 (* ------------------------------------------------------------------------- *)
 
 val MOD_0 = (GSYM o REWRITE_RULE [ZERO_LT_TWOEXP] o
@@ -115,29 +208,8 @@ val word_index = METIS_PROVE [word_index_n2w]
 
 val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x %% 29``;
 
-val REG_READ_READ6 = store_thm("REG_READ_READ6",
-  `!r m n. ~(n = 15w) ==> (REG_READ6 r m n = REG_READ r m n)`,
-  SIMP_TAC bool_ss [coreTheory.REG_READ6_def]);
-
-val REG_READ_WRITE_PC =
-  (GEN_ALL o SIMP_RULE std_ss [REG_READ_READ6] o INST [`n2` |-> `n`] o
-   DISCH `~(n2 = 15w)` o CONJUNCT2) lemmasTheory.REG_READ_WRITE_PC;
-
-val REG_READ_INC_PC = store_thm("REG_READ_INC_PC",
-  `!r m n. ~(n = 15w) ==> (REG_READ (INC_PC r) m n = REG_READ r m n)`,
-  SIMP_TAC bool_ss [lemmasTheory.TO_WRITE_READ6,REG_READ_WRITE_PC]);
-
-val REG_WRITE_INC_PC = store_thm("REG_WRITE_INC_PC",
-  `!r m n. ~(n = 15w) ==>
-      (REG_WRITE (INC_PC r) m n d = INC_PC (REG_WRITE r m n d))`,
-  SIMP_TAC bool_ss [TO_WRITE_READ6,REG_READ_WRITE_NEQ,REG_WRITE_WRITE_PC]);
-
-val REG_READ_WRITE =
-  (GEN_ALL o SIMP_RULE std_ss [REG_READ_READ6] o
-   DISCH `~(n = 15w)` o SPEC_ALL o CONJUNCT2) lemmasTheory.REG_READ_WRITE;
-
 fun DISCH_AND_IMP t =
-  (GEN_ALL o SIMP_RULE std_ss [REG_WRITE_INC_PC,AND_IMP_INTRO] o
+  (GEN_ALL o SIMP_RULE (srw_ss()) [REG_WRITE_INC_PC,AND_IMP_INTRO] o
    DISCH t o SPEC_ALL);
 
 val PC_ss = rewrites
@@ -176,7 +248,8 @@ fun nop_cntxt i = list_mk_conj
 val NOP_ss = rewrites [cond_pass_enc_data_proc,
   cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,cond_pass_enc_coproc,
   cond_pass_enc_mla_mul,cond_pass_enc_br,cond_pass_enc_swi,
-  cond_pass_enc_ldr_str,cond_pass_enc_ldm_stm,cond_pass_enc_swp];
+  cond_pass_enc_ldr_str,cond_pass_enc_ldm_stm,cond_pass_enc_swp,
+  cond_pass_enc_mrs,cond_pass_enc_msr];
 
 fun eval_nop t = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   (subst [``f:condition -> bool -> bool ** i4 ->
@@ -252,6 +325,12 @@ val ARM_LDM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
 val ARM_STM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   ``enc (instruction$STM c opt Rd list)``);
 
+val ARM_MRS_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MRS c r Rd)``);
+
+val ARM_MSR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MSR c psrd op2)``);
+
 (* ......................................................................... *)
 
 val LSL_NOT_ZERO = prove(
@@ -271,12 +350,87 @@ val WORD_1COMP_ZERO =
 val DP_ss =
   rewrites [DATA_PROCESSING_def,ARITHMETIC_def,TEST_OR_COMP_def,
     ALU_def,LSL_def,LSR_def,AND_def,ORR_def,EOR_def,ALU_logic_def,SET_NZC_def,
-    ADDR_MODE1_def,LSL_NOT_ZERO,WORD_NEG_cor,WORD_1COMP_ZERO,
+    ADDR_MODE1_def,LSL_NOT_ZERO,WORD_NEG_cor,WORD_1COMP_ZERO,SND_ROR,
     ALU_ADD_NO_CARRY,ALU_SUB_NO_CARRY,ALU_ADD_CARRY,ALU_SUB_CARRY,
     cond_pass_enc_data_proc, decode_enc_data_proc, decode_data_proc_enc,
     cond_pass_enc_data_proc2,decode_enc_data_proc2,decode_data_proc_enc2,
     cond_pass_enc_data_proc3,decode_enc_data_proc3,decode_data_proc_enc3,
-    shift_immediate_enc,shift_immediate_shift_register];
+    immediate_enc,shift_immediate_enc,shift_immediate_shift_register];
+
+(* ......................................................................... *)
+
+val abbrev_imm =
+ ``Abbrev (n:word32 = w2w (imm:word8) #>> w2n (2w:word8 * w2w (rot:word4)))``;
+
+fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt (abbrev_imm::c)
+  (subst [``f:condition -> bool -> bool ** i4 ->
+              bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
+   ``enc ((f:condition -> bool -> bool ** i4 ->
+             bool ** i4 -> addr_mode1 -> arm_instruction)
+       c F Rd Rm (Dp_immediate rot imm))``));
+
+val thms = map (eval_op [])
+   [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
+    ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
+    ``instruction$BIC``];
+
+val (ARM_AND_IMM,thms) = hd_tl thms;
+val (ARM_EOR_IMM,thms) = hd_tl thms;
+val (ARM_SUB_IMM,thms) = hd_tl thms;
+val (ARM_RSB_IMM,thms) = hd_tl thms;
+val (ARM_ADD_IMM,thms) = hd_tl thms;
+val (ARM_ORR_IMM,thms) = hd_tl thms;
+val ARM_BIC_IMM = hd thms;
+
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+
+val (ARM_ADC_IMM_CARRY,thms) = hd_tl thms;
+val (ARM_SBC_IMM_CARRY,thms) = hd_tl thms;
+val ARM_RSC_IMM_CARRY = hd thms;
+
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+
+val (ARM_ADC_IMM_NO_CARRY,thms) = hd_tl thms;
+val (ARM_SBC_IMM_NO_CARRY,thms) = hd_tl thms;
+val ARM_RSC_IMM_NO_CARRY = hd thms;
+
+fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt
+  (``Abbrev (n:word32 =
+        w2w (imm:word8) #>> w2n (2w:word8 * w2w (rot:word4)))``::c)
+  (subst [``f:condition -> bool -> bool ** i4 ->
+              bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
+   ``enc ((f:condition -> bool -> bool ** i4 ->
+             bool ** i4 -> addr_mode1 -> arm_instruction)
+       c T Rd Rm (Dp_immediate rot imm))``));
+
+val thms = map (eval_op [])
+   [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
+    ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
+    ``instruction$BIC``];
+
+val (ARM_ANDS_IMM,thms) = hd_tl thms;
+val (ARM_EORS_IMM,thms) = hd_tl thms;
+val (ARM_SUBS_IMM,thms) = hd_tl thms;
+val (ARM_RSBS_IMM,thms) = hd_tl thms;
+val (ARM_ADDS_IMM,thms) = hd_tl thms;
+val (ARM_ORRS_IMM,thms) = hd_tl thms;
+val ARM_BICS_IMM = hd thms;
+
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+
+val (ARM_ADCS_IMM_CARRY,thms) = hd_tl thms;
+val (ARM_SBCS_IMM_CARRY,thms) = hd_tl thms;
+val ARM_RSCS_IMM_CARRY = hd thms;
+
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+
+val (ARM_ADCS_IMM_NO_CARRY,thms) = hd_tl thms;
+val (ARM_SBCS_IMM_NO_CARRY,thms) = hd_tl thms;
+val ARM_RSCS_IMM_NO_CARRY = hd thms;
 
 (* ......................................................................... *)
 
@@ -300,14 +454,14 @@ val (ARM_ADD,thms) = hd_tl thms;
 val (ARM_ORR,thms) = hd_tl thms;
 val ARM_BIC = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADC_CARRY,thms) = hd_tl thms;
 val (ARM_SBC_CARRY,thms) = hd_tl thms;
 val ARM_RSC_CARRY = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADC_NO_CARRY,thms) = hd_tl thms;
@@ -334,14 +488,14 @@ val (ARM_ADDS,thms) = hd_tl thms;
 val (ARM_ORRS,thms) = hd_tl thms;
 val ARM_BICS = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADCS_CARRY,thms) = hd_tl thms;
 val (ARM_SBCS_CARRY,thms) = hd_tl thms;
 val ARM_RSCS_CARRY = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADCS_NO_CARRY,thms) = hd_tl thms;
@@ -370,14 +524,14 @@ val (ARM_ADD_LSL,thms) = hd_tl thms;
 val (ARM_ORR_LSL,thms) = hd_tl thms;
 val ARM_BIC_LSL = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADC_LSL_CARRY,thms) = hd_tl thms;
 val (ARM_SBC_LSL_CARRY,thms) = hd_tl thms;
 val ARM_RSC_LSL_CARRY = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADC_LSL_NO_CARRY,thms) = hd_tl thms;
@@ -404,14 +558,14 @@ val (ARM_ADDS_LSL,thms) = hd_tl thms;
 val (ARM_ORRS_LSL,thms) = hd_tl thms;
 val ARM_BICS_LSL = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADCS_LSL_CARRY,thms) = hd_tl thms;
 val (ARM_SBCS_LSL_CARRY,thms) = hd_tl thms;
 val ARM_RSCS_LSL_CARRY = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADCS_LSL_NO_CARRY,thms) = hd_tl thms;
@@ -440,14 +594,14 @@ val (ARM_ADD_LSR,thms) = hd_tl thms;
 val (ARM_ORR_LSR,thms) = hd_tl thms;
 val ARM_BIC_LSR = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADC_LSR_CARRY,thms) = hd_tl thms;
 val (ARM_SBC_LSR_CARRY,thms) = hd_tl thms;
 val ARM_RSC_LSR_CARRY = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADC_LSR_NO_CARRY,thms) = hd_tl thms;
@@ -474,14 +628,14 @@ val (ARM_ADDS_LSR,thms) = hd_tl thms;
 val (ARM_ORRS_LSR,thms) = hd_tl thms;
 val ARM_BICS_LSR = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
+val thms = map (eval_op [``(cpsr:word32) %% 29``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADCS_LSR_CARRY,thms) = hd_tl thms;
 val (ARM_SBCS_LSR_CARRY,thms) = hd_tl thms;
 val ARM_RSCS_LSR_CARRY = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
+val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
    [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
 
 val (ARM_ADCS_LSR_NO_CARRY,thms) = hd_tl thms;
@@ -502,11 +656,17 @@ val ARM_MOVS = SYMBOLIC_EVAL_CONV DP_ss (cntxt []
 val ARM_MVNS = SYMBOLIC_EVAL_CONV DP_ss (cntxt []
   ``enc (instruction$MVN c T Rd (Dp_shift_immediate (LSL Rn) 0w))``);
 
+val ARM_MOV_IMM = SYMBOLIC_EVAL_CONV DP_ss (cntxt []
+  ``enc (instruction$MOV c F Rd (Dp_immediate rot imm))``);
+
 val ARM_MOV_LSL = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   ``enc (instruction$MOV c F Rd (Dp_shift_immediate (LSL Rn) n))``);
 
 val ARM_MOV_LSR = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   ``enc (instruction$MOV c F Rd (Dp_shift_immediate (LSR Rn) n))``);
+
+val ARM_MVN_IMM = SYMBOLIC_EVAL_CONV DP_ss (cntxt []
+  ``enc (instruction$MVN c F Rd (Dp_immediate rot imm))``);
 
 val ARM_MVN_LSL = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   ``enc (instruction$MVN c F Rd (Dp_shift_immediate (LSL Rn) n))``);
@@ -514,11 +674,17 @@ val ARM_MVN_LSL = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
 val ARM_MVN_LSR = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   ``enc (instruction$MVN c F Rd (Dp_shift_immediate (LSR Rn) n))``);
 
+val ARM_MOVS_IMM = SYMBOLIC_EVAL_CONV DP_ss (cntxt [abbrev_imm]
+  ``enc (instruction$MOV c T Rd (Dp_immediate rot imm))``);
+
 val ARM_MOVS_LSL = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   ``enc (instruction$MOV c T Rd (Dp_shift_immediate (LSL Rn) n))``);
 
 val ARM_MOVS_LSR = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   ``enc (instruction$MOV c T Rd (Dp_shift_immediate (LSR Rn) n))``);
+
+val ARM_MVNS_IMM = SYMBOLIC_EVAL_CONV DP_ss (cntxt [abbrev_imm]
+  ``enc (instruction$MVN c T Rd (Dp_immediate rot imm))``);
 
 val ARM_MVNS_LSL = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   ``enc (instruction$MVN c T Rd (Dp_shift_immediate (LSL Rn) n))``);
@@ -568,35 +734,21 @@ val BRANCH_ss =
   rewrites [BRANCH_def,REG_READ_def,
     cond_pass_enc_br,decode_enc_br,decode_br_enc];
 
-val ARM_B = SYMBOLIC_EVAL_CONV BRANCH_ss (list_mk_conj
-  [``s.memory ((31 >< 2) (s.registers r15)) = enc (instruction$B c offset)``,
-   ``CONDITION_PASSED3 (NZCV (CPSR_READ s.psrs)) c``,
-   ``~s.undefined``]);
+val ARM_B = UNABBREVL_RULE [`Reg`,`mode`]
+  (SYMBOLIC_EVAL_CONV BRANCH_ss (cntxt [] ``enc (instruction$B c offset)``));
 
-val ARM_BL = SYMBOLIC_EVAL_CONV BRANCH_ss (list_mk_conj
-  [``s.memory ((31 >< 2) (s.registers r15)) = enc (instruction$BL c offset)``,
-   ``Abbrev (mode = DECODE_MODE ((4 >< 0) (cpsr:word32)))``,
-   ``Abbrev (cpsr = CPSR_READ s.psrs)``,
-   ``CONDITION_PASSED3 (NZCV cpsr) c``,
-   ``~s.undefined``]);
-
-(* ......................................................................... *)
+val ARM_BL = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV BRANCH_ss (cntxt [] ``enc (instruction$BL c offset)``));
 
 val SWI_EX_ss =
   rewrites [EXCEPTION_def,exception2mode_def,exception2num_thm,
     cond_pass_enc_swi,decode_enc_swi,cond_pass_enc_coproc,decode_enc_coproc];
 
-val ARM_SWI = SYMBOLIC_EVAL_CONV SWI_EX_ss (list_mk_conj
-  [``s.memory ((31 >< 2) (s.registers r15)) = enc (instruction$SWI c)``,
-   ``Abbrev (cpsr = CPSR_READ s.psrs)``,
-   ``CONDITION_PASSED3 (NZCV cpsr) c``,
-   ``~s.undefined``]);
+val ARM_SWI = UNABBREVL_RULE [`Reg`,`mode`]
+  (SYMBOLIC_EVAL_CONV SWI_EX_ss (cntxt [] ``enc (instruction$SWI c)``));
 
-val ARM_UND = SYMBOLIC_EVAL_CONV SWI_EX_ss (list_mk_conj
-  [``s.memory ((31 >< 2) (s.registers r15)) = enc (instruction$UND c)``,
-   ``Abbrev (cpsr = CPSR_READ s.psrs)``,
-   ``CONDITION_PASSED3 (NZCV cpsr) c``,
-   ``~s.undefined``]);
+val ARM_UND = UNABBREVL_RULE [`Reg`,`mode`]
+  (SYMBOLIC_EVAL_CONV SWI_EX_ss (cntxt [] ``enc (instruction$UND c)``));
 
 (* ......................................................................... *)
 
@@ -845,6 +997,57 @@ val ARM_STM = SYMBOLIC_EVAL_CONV LDM_STM_ss (cntxt
   ``enc (instruction$STM c <| Pre := F; Up := T; BSN := F; Wb := F |>
          Rd list)``);
 
+(* ......................................................................... *)
+
+val lem = METIS_PROVE [DECIDE ``!i. ~(28 <= i \/ i <= 7) = 8 <= i /\ i <= 27``]
+ ``!rm. (\i b. 28 <= i /\ (rm:word32) %% i \/
+                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ rm %% i) =
+   (\i b. if i <= 7 \/ 28 <= i then rm %% i else b)``;
+
+val lem2 = METIS_PROVE [DECIDE ``!i. ~(28 <= i) = 8 <= i /\ i <= 27 \/ i <= 7``]
+ ``!rm. (\i b. 28 <= i /\ (rm:word32) %% i \/
+                8 <= i /\ i <= 27 /\ b \/ i <= 7 /\ b) =
+   (\i b. if 28 <= i then rm %% i else b)``;
+
+val lem3 = SIMP_RULE (std_ss++armLib.PBETA_ss) [] (prove(
+  `!op2 c.  let (I,R,bit19,bit16,Rm,opnd) =
+              DECODE_MSR (enc (instruction$MSR c SPSR_a op2)) in
+     (R \/ (~bit19 /\ bit16)) \/ (~bit19 /\ ~bit16)`,
+  Cases \\ SIMP_TAC std_ss [DECODE_PSRD_def,decode_msr_enc]));
+
+val MRS_MSR_ss =
+  rewrites [MSR_def,MRS_def,DECODE_PSRD_def,SND_ROR,lem,lem2,lem3,
+    immediate_enc,cond_pass_enc_msr,decode_enc_msr,decode_msr_enc,
+    cond_pass_enc_mrs,decode_enc_mrs,decode_mrs_enc];
+
+val ARM_MSR_SPSR_USR = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [``USER mode``]
+   ``enc (instruction$MSR c SPSR_a op2)``));
+
+val ARM_MSR_CPSR_USR = SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [``USER mode``]
+  ``enc (instruction$MSR c CPSR_a (Msr_register Rm))``);
+
+val ARM_MSR_CPSR_SYS = SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [``~USER mode``]
+  ``enc (instruction$MSR c CPSR_a (Msr_register Rm))``);
+
+val ARM_MSR_SPSR_SYS = SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [``~USER mode``]
+  ``enc (instruction$MSR c SPSR_a (Msr_register Rm))``);
+
+val ARM_MSR_CPSR_IMM_USR = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [``USER mode``]
+   ``enc (instruction$MSR c CPSR_a (Msr_immediate rot imm))``));
+
+val ARM_MSR_CPSR_IMM_SYS = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [``~USER mode``]
+   ``enc (instruction$MSR c CPSR_a (Msr_immediate rot imm))``));
+
+val ARM_MSR_SPSR_IMM_SYS = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [``~USER mode``]
+   ``enc (instruction$MSR c SPSR_a (Msr_immediate rot imm))``));
+
+val ARM_MRS = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [] ``enc (instruction$MRS c r Rd)``));
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = save_thm("ARM_UNDEF", ARM_UNDEF);
@@ -875,6 +1078,8 @@ val _ = save_thm("ARM_STR_NOP", ARM_STR_NOP);
 val _ = save_thm("ARM_LDM_NOP", ARM_LDM_NOP);
 val _ = save_thm("ARM_STM_NOP", ARM_STM_NOP);
 val _ = save_thm("ARM_SWP_NOP", ARM_SWP_NOP);
+val _ = save_thm("ARM_MRS_NOP", ARM_MRS_NOP);
+val _ = save_thm("ARM_MSR_NOP", ARM_MSR_NOP);
 val _ = save_thm("ARM_UND_NOP", ARM_UND_NOP);
 
 val _ = save_thm("ARM_B",   ARM_B);
@@ -908,6 +1113,16 @@ val _ = save_thm("ARM_MOV", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MOV);
 val _ = save_thm("ARM_BIC", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_BIC);
 val _ = save_thm("ARM_MVN", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MVN);
 
+val _ = save_thm("ARM_AND_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_AND_IMM);
+val _ = save_thm("ARM_EOR_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_EOR_IMM);
+val _ = save_thm("ARM_SUB_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SUB_IMM);
+val _ = save_thm("ARM_RSB_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSB_IMM);
+val _ = save_thm("ARM_ADD_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADD_IMM);
+val _ = save_thm("ARM_ORR_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ORR_IMM);
+val _ = save_thm("ARM_MOV_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MOV_IMM);
+val _ = save_thm("ARM_BIC_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_BIC_IMM);
+val _ = save_thm("ARM_MVN_IMM", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MVN_IMM);
+
 val _ = save_thm("ARM_AND_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_AND_LSL);
 val _ = save_thm("ARM_EOR_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_EOR_LSL);
 val _ = save_thm("ARM_SUB_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SUB_LSL);
@@ -937,6 +1152,16 @@ val _ = save_thm("ARM_ORR_PC", SPEC_TO_PC ARM_ORR);
 val _ = save_thm("ARM_MOV_PC", SPEC_TO_PC ARM_MOV);
 val _ = save_thm("ARM_BIC_PC", SPEC_TO_PC ARM_BIC);
 val _ = save_thm("ARM_MVN_PC", SPEC_TO_PC ARM_MVN);
+
+val _ = save_thm("ARM_AND_IMM_PC", SPEC_TO_PC ARM_AND_IMM);
+val _ = save_thm("ARM_EOR_IMM_PC", SPEC_TO_PC ARM_EOR_IMM);
+val _ = save_thm("ARM_SUB_IMM_PC", SPEC_TO_PC ARM_SUB_IMM);
+val _ = save_thm("ARM_RSB_IMM_PC", SPEC_TO_PC ARM_RSB_IMM);
+val _ = save_thm("ARM_ADD_IMM_PC", SPEC_TO_PC ARM_ADD_IMM);
+val _ = save_thm("ARM_ORR_IMM_PC", SPEC_TO_PC ARM_ORR_IMM);
+val _ = save_thm("ARM_MOV_IMM_PC", SPEC_TO_PC ARM_MOV_IMM);
+val _ = save_thm("ARM_BIC_IMM_PC", SPEC_TO_PC ARM_BIC_IMM);
+val _ = save_thm("ARM_MVN_IMM_PC", SPEC_TO_PC ARM_MVN_IMM);
 
 val _ = save_thm("ARM_AND_LSL_PC", SPEC_TO_PC ARM_AND_LSL);
 val _ = save_thm("ARM_EOR_LSL_PC", SPEC_TO_PC ARM_EOR_LSL);
@@ -968,15 +1193,25 @@ val _ = save_thm("ARM_MOVS", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MOVS);
 val _ = save_thm("ARM_BICS", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_BICS);
 val _ = save_thm("ARM_MVNS", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MVNS);
 
-val _ = save_thm("ARM_ANDS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_AND_LSL);
-val _ = save_thm("ARM_EORS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_EOR_LSL);
-val _ = save_thm("ARM_SUBS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SUB_LSL);
-val _ = save_thm("ARM_RSBS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSB_LSL);
-val _ = save_thm("ARM_ADDS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADD_LSL);
-val _ = save_thm("ARM_ORRS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ORR_LSL);
-val _ = save_thm("ARM_MOVS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MOV_LSL);
-val _ = save_thm("ARM_BICS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_BIC_LSL);
-val _ = save_thm("ARM_MVNS_LSL", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MVN_LSL);
+val _ = save_thm("ARM_ANDS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ANDS_IMM);
+val _ = save_thm("ARM_EORS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_EORS_IMM);
+val _ = save_thm("ARM_SUBS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SUBS_IMM);
+val _ = save_thm("ARM_RSBS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSBS_IMM);
+val _ = save_thm("ARM_ADDS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADDS_IMM);
+val _ = save_thm("ARM_ORRS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ORRS_IMM);
+val _ = save_thm("ARM_MOVS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MOVS_IMM);
+val _ = save_thm("ARM_BICS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_BICS_IMM);
+val _ = save_thm("ARM_MVNS_IMM",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MVNS_IMM);
+
+val _ = save_thm("ARM_ANDS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ANDS_LSL);
+val _ = save_thm("ARM_EORS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_EORS_LSL);
+val _ = save_thm("ARM_SUBS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SUBS_LSL);
+val _ = save_thm("ARM_RSBS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSBS_LSL);
+val _ = save_thm("ARM_ADDS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADDS_LSL);
+val _ = save_thm("ARM_ORRS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ORRS_LSL);
+val _ = save_thm("ARM_MOVS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MOVS_LSL);
+val _ = save_thm("ARM_BICS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_BICS_LSL);
+val _ = save_thm("ARM_MVNS_LSL",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_MVNS_LSL);
 
 val _ = save_thm("ARM_ANDS_LSR",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ANDS_LSR);
 val _ = save_thm("ARM_EORS_LSR",DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_EORS_LSR);
@@ -997,6 +1232,16 @@ val _ = save_thm("ARM_ORRS_PC", SPEC_TO_PC ARM_ORRS);
 val _ = save_thm("ARM_MOVS_PC", SPEC_TO_PC ARM_MOVS);
 val _ = save_thm("ARM_BICS_PC", SPEC_TO_PC ARM_BICS);
 val _ = save_thm("ARM_MVNS_PC", SPEC_TO_PC ARM_MVNS);
+
+val _ = save_thm("ARM_ANDS_IMM_PC", SPEC_TO_PC ARM_ANDS_IMM);
+val _ = save_thm("ARM_EORS_IMM_PC", SPEC_TO_PC ARM_EORS_IMM);
+val _ = save_thm("ARM_SUBS_IMM_PC", SPEC_TO_PC ARM_SUBS_IMM);
+val _ = save_thm("ARM_RSBS_IMM_PC", SPEC_TO_PC ARM_RSBS_IMM);
+val _ = save_thm("ARM_ADDS_IMM_PC", SPEC_TO_PC ARM_ADDS_IMM);
+val _ = save_thm("ARM_ORRS_IMM_PC", SPEC_TO_PC ARM_ORRS_IMM);
+val _ = save_thm("ARM_MOVS_IMM_PC", SPEC_TO_PC ARM_MOVS_IMM);
+val _ = save_thm("ARM_BICS_IMM_PC", SPEC_TO_PC ARM_BICS_IMM);
+val _ = save_thm("ARM_MVNS_IMM_PC", SPEC_TO_PC ARM_MVNS_IMM);
 
 val _ = save_thm("ARM_ANDS_LSL_PC", SPEC_TO_PC ARM_ANDS_LSL);
 val _ = save_thm("ARM_EORS_LSL_PC", SPEC_TO_PC ARM_EORS_LSL);
@@ -1037,6 +1282,26 @@ val _ = save_thm("ARM_RSCS_CARRY_PC", SPEC_TO_PC ARM_RSCS_CARRY);
 val _ = save_thm("ARM_ADCS_NO_CARRY_PC", SPEC_TO_PC ARM_ADCS_NO_CARRY);
 val _ = save_thm("ARM_SBCS_NO_CARRY_PC", SPEC_TO_PC ARM_SBCS_NO_CARRY);
 val _ = save_thm("ARM_RSCS_NO_CARRY_PC", SPEC_TO_PC ARM_RSCS_NO_CARRY);
+
+val _ = save_thm("ARM_ADCS_IMM_CARRY",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_IMM_CARRY);
+val _ = save_thm("ARM_SBCS_IMM_CARRY",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_IMM_CARRY);
+val _ = save_thm("ARM_RSCS_IMM_CARRY",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_IMM_CARRY);
+val _ = save_thm("ARM_ADCS_IMM_NO_CARRY",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_IMM_NO_CARRY);
+val _ = save_thm("ARM_SBCS_IMM_NO_CARRY",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_IMM_NO_CARRY);
+val _ = save_thm("ARM_RSCS_IMM_NO_CARRY",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_IMM_NO_CARRY);
+
+val _ = save_thm("ARM_ADCS_IMM_CARRY_PC", SPEC_TO_PC ARM_ADCS_IMM_CARRY);
+val _ = save_thm("ARM_SBCS_IMM_CARRY_PC", SPEC_TO_PC ARM_SBCS_IMM_CARRY);
+val _ = save_thm("ARM_RSCS_IMM_CARRY_PC", SPEC_TO_PC ARM_RSCS_IMM_CARRY);
+val _ = save_thm("ARM_ADCS_IMM_NO_CARRY_PC", SPEC_TO_PC ARM_ADCS_IMM_NO_CARRY);
+val _ = save_thm("ARM_SBCS_IMM_NO_CARRY_PC", SPEC_TO_PC ARM_SBCS_IMM_NO_CARRY);
+val _ = save_thm("ARM_RSCS_IMM_NO_CARRY_PC", SPEC_TO_PC ARM_RSCS_IMM_NO_CARRY);
 
 val _ = save_thm("ARM_ADCS_LSL_CARRY",
   DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_LSL_CARRY);
@@ -1119,6 +1384,17 @@ val _ = save_thm("ARM_STR_BYTE_PRE_UP_WB_IMM", ARM_STR_BYTE_PRE_UP_WB_IMM);
 val _ = save_thm("ARM_STR_BYTE_PRE_UP_WB_REG", ARM_STR_BYTE_PRE_UP_WB_REG);
 val _ = save_thm("ARM_STR_BYTE_PRE_UP_WB_LSL_REG",
   ARM_STR_BYTE_PRE_UP_WB_LSL_REG);
+
+val _ = save_thm("ARM_MRS",ARM_MRS);
+
+val _ = save_thm("ARM_MSR_CPSR_USR",ARM_MSR_CPSR_USR);
+val _ = save_thm("ARM_MSR_CPSR_IMM_USR",ARM_MSR_CPSR_IMM_USR);
+val _ = save_thm("ARM_MSR_CPSR_SYS",ARM_MSR_CPSR_SYS);
+val _ = save_thm("ARM_MSR_CPSR_IMM_SYS",ARM_MSR_CPSR_IMM_SYS);
+
+val _ = save_thm("ARM_MSR_SPSR_USR",ARM_MSR_SPSR_USR);
+val _ = save_thm("ARM_MSR_SPSR_SYS",ARM_MSR_SPSR_SYS);
+val _ = save_thm("ARM_MSR_SPSR_IMM_SYS",ARM_MSR_SPSR_IMM_SYS);
 
 (* ------------------------------------------------------------------------- *)
 

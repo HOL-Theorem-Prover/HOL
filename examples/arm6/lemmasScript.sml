@@ -194,7 +194,7 @@ val mode_reg2num_15 = (GEN_ALL o
   SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o
   SPECL [`m`,`15w`]) mode_reg2num_def;
 
-val mode_reg2num_lt = prove(
+val mode_reg2num_lt = store_thm("mode_reg2num_lt",
   `!w m w. mode_reg2num m w < 31`,
   ASSUME_TAC REGISTER_RANGES
     \\ RW_TAC std_ss [mode_reg2num_def,USER_def,DECIDE ``n < 16 ==> n < 31``]
@@ -206,7 +206,7 @@ val mode_reg2num_lt = prove(
 val not_reg_eq_lem = prove(`!v w. ~(v = w) ==> ~(w2n v = w2n w)`,
   REPEAT Cases_word \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
 
-val not_reg_eq = prove(
+val not_reg_eq = store_thm("not_reg_eq",
   `!v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)`,
   NTAC 4 STRIP_TAC
     \\ `w2n v < 16 /\ w2n w < 16` by REWRITE_TAC [REGISTER_RANGES]

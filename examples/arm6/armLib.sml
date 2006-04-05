@@ -5,7 +5,7 @@ struct
  app load ["fcpLib", "armTheory", "coreTheory"];
 *)
 
-open HolKernel boolLib bossLib;
+open HolKernel boolLib bossLib Parse;
 open Q pairTheory;
 open onestepTheory armTheory coreTheory;
 
@@ -79,5 +79,33 @@ fun RES_MP1_TAC s t =
  end;
 
 fun RES_MP_TAC s t = RES_MP1_TAC s t THEN1 METIS_TAC [];
+
+fun mk_abbrev v  = mk_comb(``Abbrev``,mk_eq(v,genvar (type_of v)));
+
+val dest_abbrev = dest_eq o snd o dest_comb;
+
+fun is_abbrev_match m t =
+let val v = fst (dest_abbrev m)
+    val rrl = match_term m t
+in
+  null (snd rrl) andalso
+  not (isSome (List.find (fn x => term_eq (#redex x) v) (fst rrl)))
+end;
+
+fun total_is_abbrev_match m t =
+  case total (is_abbrev_match m) t of
+    SOME b => b
+  | _ => false;
+
+fun get_abbrev_match m t = find_term (total_is_abbrev_match m) t;
+
+fun UNABBREV_RULE q thm =
+let val t = concl thm
+    val m = mk_abbrev (parse_in_context (free_vars t) q)
+    val mt = get_abbrev_match m t
+    val (l,r) = dest_abbrev mt
+in
+  SIMP_RULE bool_ss [SPEC `T` markerTheory.Abbrev_def] (Thm.INST [l |-> r] thm)
+end;
 
 end
