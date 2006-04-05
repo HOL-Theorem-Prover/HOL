@@ -176,6 +176,11 @@ fun CompileExp2 tm =
                      (UNDISCH(SPEC_ALL(ISPECL var_list REC_INTRO)))
                      (LIST_CONJ thl)
                    end
+     | "Let" => let val th1 = REWR_CONV Let tm
+                    val th2 = CompileExp(rhs(concl th1))
+                in
+                 CONV_RULE (RAND_CONV(RAND_CONV(REWR_CONV(SYM th1)))) th2
+                end
      | _     => raise ERR "CompileExp2" "this shouldn't happen"
  end;
 

@@ -580,6 +580,22 @@ val FUN_FORALL_PROD =
     THEN POP_ASSUM(ASSUME_TAC o Q.SPECL[`FST o f`,`SND o f`])
     THEN FULL_SIMP_TAC std_ss [ETA_THM]);
 
+val BUS_SPLIT =
+ store_thm
+  ("BUS_SPLIT",
+   ``!v. ?v1 v2. v = v1 <> v2``,
+   RW_TAC std_ss [BUS_CONCAT_def,FUN_EQ_THM]
+    THEN Q.EXISTS_TAC `FST o v`
+    THEN Q.EXISTS_TAC `SND o v`
+    THEN RW_TAC std_ss []);
+
+val BUS_SPLIT_UNIQUE = (* Not used *)
+ store_thm
+  ("BUS_SPLIT_UNIQUE",
+   ``!v1 v2 v1' v2'. (v1 <> v2 = v1' <> v2') = (v1 = v1') /\ (v2 = v2')``,
+   RW_TAC std_ss [BUS_CONCAT_def,FUN_EQ_THM]
+    THEN PROVE_TAC[]);
+
 val BUS_CONCAT_ETA =
  store_thm
   ("BUS_CONCAT_ETA",

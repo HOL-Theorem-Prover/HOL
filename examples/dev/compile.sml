@@ -13,7 +13,7 @@
 quietdec := true;
 loadPath :="dff" :: !loadPath;
 map load  
- ["composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
+ ["List","composeTheory","compileTheory", "hol88Lib" (*for subst*),"unwindLib"];
 open arithmeticTheory pairLib pairTheory PairRules pairSyntax 
      combinTheory listTheory unwindLib composeTheory compileTheory;
 
@@ -1337,6 +1337,27 @@ fun is_Let tm =
 
 
 (*****************************************************************************)
+(* Generate a bus made of fresh variables from the type of a term            *)
+(*****************************************************************************)
+fun genbus time_ty v =
+    let fun concatbus(tm1,tm2) = ``^tm1 <> ^tm2``
+        fun makebus ty =
+            let val tys = (snd(dest_type ty))
+            in if tys = [] then
+                  let val tm = genvar ``:^time_ty -> ^ty``
+                  in (tm,[tm])
+                  end
+               else let val busesdecs =  map makebus tys
+                        val buses = map fst busesdecs
+                        val decs = map snd busesdecs
+                    in (foldr concatbus (List.last buses) (List.take(buses,length buses-1)),
+                        flatten decs)
+                    end
+            end
+    in makebus (type_of v)
+    end;
+                                                                                                              
+(*****************************************************************************)
 (* Synthesise combinational circuits.                                        *)
 (* Examples (derived from FactScript.sml):                                   *)
 (*                                                                           *)
@@ -1387,30 +1408,44 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
        val time_ty = hd(snd(dest_type(type_of in_bus)))
        val args_match = BUS_MATCH args in_bus
    in
-    if is_pair bdy andalso is_BUS_CONCAT out_bus
-     then let val (bdy1,bdy2) = dest_pair bdy
-              val (out_bus1,out_bus2) = dest_BUS_CONCAT out_bus
-              val goal = 
-                   ``^tm = 
-                     COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\
-                     COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 4:\n "; 
-                       if_print_term goal; if_print "\n")
-              val _ = comb_synth_goalref := goal
-          in
-          prove
-           (goal,
-            REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
-             THEN GEN_BETA_TAC 
-             THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
-             THEN REWRITE_TAC[PAIR_EQ]
-             THEN EQ_TAC
-             THEN RW_TAC bool_ss []
-             THEN PROVE_TAC[])
-           handle HOL_ERR _ =>
-           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
-            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
-          end
+    if is_pair bdy 
+     then (if is_BUS_CONCAT out_bus
+            then let val (bdy1,bdy2) = dest_pair bdy
+                     val (out_bus1,out_bus2) = dest_BUS_CONCAT out_bus
+                     val goal = 
+                          ``^tm = 
+                            COMB ^(mk_pabs(args, bdy1)) (^in_bus,^out_bus1) /\
+                            COMB ^(mk_pabs(args, bdy2)) (^in_bus,^out_bus2)``
+                     val _ = (if_print "\n COMB_SYNTH_CONV case 4a:\n "; 
+                              if_print_term goal; if_print "\n")
+                     val _ = comb_synth_goalref := goal
+                 in
+                 prove
+                  (goal,
+                   REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+                    THEN GEN_BETA_TAC 
+                    THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
+                    THEN REWRITE_TAC[PAIR_EQ]
+                    THEN EQ_TAC
+                    THEN RW_TAC bool_ss []
+                    THEN PROVE_TAC[])
+                  handle HOL_ERR _ =>
+                  (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+                   if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+                 end
+            else let val (arg1,arg2) = dest_pair bdy
+                     val v1 = genvar ``:^time_ty -> ^(type_of arg1)``
+                     val v2 = genvar ``:^time_ty -> ^(type_of arg2)``
+                     val goal = ``^tm = ?^v1 ^v2. ^(rator tm) (^in_bus, ^v1 <> ^v2) 
+                                                  /\
+                                                  (^out_bus = ^v1 <> ^v2)``
+                 in
+                 prove
+                  (goal, PROVE_TAC[BUS_SPLIT])
+                  handle HOL_ERR _ =>
+                  (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+                   if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+                 end)      
      else if is_pure_abs abstr
      then let val bdy_match = BUS_MATCH bdy out_bus
               val goal =
@@ -1550,6 +1585,34 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
            (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
             if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
           end
+     else if is_eq bdy 
+              andalso is_pair(lhs bdy) 
+              andalso is_pair(rhs bdy)
+     then let val (l1,l2) = dest_pair(lhs bdy)
+              val (r1,r2) = dest_pair(rhs bdy)
+              val v1 = genvar ``:^time_ty -> bool``
+              val v2 = genvar ``:^time_ty -> bool``
+              val goal = 
+                   ``^tm = ?^v1 ^v2. 
+                       COMB ^(mk_pabs(args, mk_eq(l1,r1))) (^in_bus,^v1) /\ 
+                       COMB ^(mk_pabs(args, mk_eq(l2,r2))) (^in_bus,^v2) /\ 
+                       COMB (UNCURRY $/\) (^v1 <> ^v2, ^out_bus)``
+              val _ = (if_print "\n COMB_SYNTH_CONV case 8:\n "; 
+                       if_print_term goal; if_print "\n")
+              val _ = comb_synth_goalref := goal
+          in
+           prove
+            (goal,
+             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM,PAIR_EQ,UNCURRY] 
+              THEN GEN_BETA_TAC 
+              THEN REWRITE_TAC[FST,SND]
+              THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
+              THEN REWRITE_TAC[]
+              THEN PROVE_TAC[])
+           handle HOL_ERR _ =>
+           (if_print "COMB_SYNTH_CONV warning, can't prove:\n";if_print_term goal; 
+            if_print"\n"; raise ERR "COMB_SYNTH_CONV" "proof validation failure")
+          end
      else if is_comb bdy 
               andalso is_comb(rator bdy) 
               andalso is_const(rator(rator bdy))
@@ -1563,15 +1626,15 @@ fun COMB_SYNTH_CONV tm =    (* need to refactor: ORELSEC smaller conversions *)
                        COMB ^(mk_pabs(args, arg1)) (^in_bus,^v1) /\ 
                        COMB ^(mk_pabs(args, arg2)) (^in_bus,^v2) /\ 
                        COMB (UNCURRY ^opr) (^v1 <> ^v2, ^out_bus)``
-              val _ = (if_print "\n COMB_SYNTH_CONV case 8:\n "; 
+              val _ = (if_print "\n COMB_SYNTH_CONV case 9:\n "; 
                        if_print_term goal; if_print "\n")
               val _ = comb_synth_goalref := goal
           in
            prove
             (goal,
-             REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
+             PURE_REWRITE_TAC[COMB_def,BUS_CONCAT_def,FUN_EQ_THM] 
               THEN GEN_BETA_TAC 
-              THEN REWRITE_TAC[UNCURRY]
+              THEN PURE_REWRITE_TAC[UNCURRY,FST,SND]
               THEN CONV_TAC(RHS_CONV(UNWIND_AUTO_CONV THENC PRUNE_CONV))
               THEN REWRITE_TAC[]
               THEN PROVE_TAC[])
@@ -1592,6 +1655,7 @@ val COMB_SYNTH_CONV =
             (print "\nTRACE:\n";print_thm th;print "\n\n"; th)
            end);
 *)
+
 
 (*****************************************************************************)
 (* If                                                                        *)
@@ -2171,6 +2235,32 @@ val NEW_MAKE_CIRCUIT =
   (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
   (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
                GSYM COMB_OR, GSYM COMB_MUX])) o 
+  (ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+  (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
+  (ptime "6-7" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))                 o
+  (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
+  (ptime "5" (CONV_RULE (CIRC_CONV (ONCE_DEPTH_CONV STEP5_CONV))))    o
+  (ptime "4-5" (DEV_IMP (DEPTH_IMP DFF_IMP_INTRO)))                   o
+  (ptime "4" STEP4)          o
+  (ptime "3" GEN_BETA_RULE)  o
+  (ptime "2" IN_OUT_SPLIT)   o
+  (ptime "1" (REWRITE_RULE 
+   [POSEDGE_IMP,CALL,SELECT,FINISH,ATM,SEQ,PAR,ITE,REC,
+    ETA_THM,PRECEDE_def,FOLLOW_def,PRECEDE_ID,FOLLOW_ID,
+    Ite_def,Par_def,Seq_def,Let_def,o_THM])));
+
+val NEW_MAKE_CIRCUIT' =
+ (DISCH_ALL o
+  (ptime "15" LIST_ANTE_EXISTS_INTRO)                                        o 
+  (ptime "14" (I ## AP_ANTE_IMP_TRANS 
+                      (DEPTH_IMP (IMP_REFINEL(!temporal_abstractions)))))    o
+  (ptime "13" (I ## REWRITE_RULE[at_CONCAT]))                                o
+  (ptime "12" (at_SPEC_ALL ``clk:num->bool``))                               o
+  (ptime "11" GEN_ALL)                                                       o
+  (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
+  (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
+               GSYM COMB_OR, GSYM COMB_MUX])) o 
+  (ptime "4f again" STEP4f)          o  (* jmi: put this again to reduce MUXs *)
   (ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
   (ptime "6-7" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))                 o

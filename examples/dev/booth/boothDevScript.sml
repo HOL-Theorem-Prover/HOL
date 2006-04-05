@@ -540,7 +540,7 @@ val MULTd_cir = MAKE_CIRCUIT ((SIMP_RULE std_ss [DIVISION,WL_def,HB_def])
                                MULTd_dev);
 *)
 
-val MULTd_cir = MAKE_CIRCUIT ((SIMP_RULE std_ss [DIVISION,WL_def,HB_def])
+val MULTd_cir = NEW_MAKE_CIRCUIT ((SIMP_RULE std_ss [DIVISION,WL_def,HB_def])
                               MULTd_dev);
 
 (*
