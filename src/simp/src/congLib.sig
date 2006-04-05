@@ -99,6 +99,7 @@ sig
 
   val CONGRUENCE_SIMP_CONV: term -> congset -> simpLib.simpset -> thm list -> term -> thm
 
+
   (*
   * CONGRUENCE_SIMP_QCONV
   *
@@ -106,6 +107,27 @@ sig
   * it can not simplify x. CONGRUENCE_SIMP_QCONV will fail in this case.
   *)
   val CONGRUENCE_SIMP_QCONV: term -> congset -> simpLib.simpset -> thm list -> term -> thm
+
+
+  (* ---------------------------------------------------------------------
+  * CONGRUENCE_EQ_SIMP_CONV
+  *
+  * CONGRUENCE_SIMP_CONV with the equality relation, i.e. CONGRUENCE_SIMP_CONV ``$=``
+  * ---------------------------------------------------------------------*)
+  val CONGRUENCE_EQ_SIMP_CONV: congset -> simpLib.simpset -> thm list -> term -> thm
+
+
+  (* ---------------------------------------------------------------------
+  * Tactics and rule similar to simpLib. They all use the equality relation as
+  * starting relation. However, by congruence rules, some other relations may be used
+  * for subterms
+  * ---------------------------------------------------------------------*)
+
+  val CONGRUENCE_SIMP_RULE : congset -> simpLib.simpset -> thm list -> thm -> thm
+  val CONGRUENCE_SIMP_TAC : congset -> simpLib.simpset -> thm list -> tactic
+  val ASM_CONGRUENCE_SIMP_TAC : congset -> simpLib.simpset -> thm list -> tactic
+  val FULL_CONGRUENCE_SIMP_TAC : congset -> simpLib.simpset -> thm list -> tactic
+
 
 end
 
