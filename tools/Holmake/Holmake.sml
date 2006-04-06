@@ -924,35 +924,45 @@ fun build_command c arg = let
   exception FileNotFound
 in
   case c of
-    MOSMLC =>
-     let val file = fromFile arg
-         val _ = exists_readable file orelse
-                  (print ("Wanted to compile "^file^", but it wasn't there\n");
-                   raise FileNotFound)
-         val _ = print ("Compiling "^file^"\n")
-         open Process
-         val res =
-          if has_unquoter()
-            (* force to always use unquoter if present, so as to generate
-               location pragmas. Must test for existence, for bootstrapping.
-               Was: has_dq (normPath file) (* handle double-backquotes *) *)
-          then let val clone = variant file
-                   val _ = FileSys.rename {old=file, new=clone}
-                   fun revert() = (FileSys.remove file handle _ => ();
-                                   FileSys.rename{old=clone, new=file})
-               in
-                 if unquote_to clone file = Process.success
-                 then let
+    MOSMLC => let
+      val file = fromFile arg
+      val _ = exists_readable file orelse
+              (print ("Wanted to compile "^file^", but it wasn't there\n");
+               raise FileNotFound)
+      val _ = print ("Compiling "^file^"\n")
+      open Process
+      val res =
+          if has_unquoter() then let
+              (* force to always use unquoter if present, so as to generate
+                 location pragmas. Must test for existence, for bootstrapping.
+              *)
+              val clone = variant file
+              val _ = FileSys.rename {old=file, new=clone}
+              fun revert() =
+                  if FileSys.access (clone, [FileSys.A_READ]) then
+                    (FileSys.remove file handle _ => ();
+                     FileSys.rename{old=clone, new=file})
+                  else ()
+            in
+              (if unquote_to clone file = Process.success
+                  handle e => (revert();
+                               print ("Unquoting "^file^
+                                      " raised exception\n");
+                               raise CompileFailed)
+               then let
                    val res =
-                     compile debug ("-q"::(include_flags @ ["-c"] @
-                                           overlay_stringl @ [file]))
-                     handle e => (revert();
-                                  print("Unable to compile: "^file^"\n");
-                                  raise CompileFailed)
-                 in revert(); res
+                       compile debug ("-q"::(include_flags @ ["-c"] @
+                                             overlay_stringl @ [file]))
+                 in
+                   revert();
+                   res
                  end
-                 else (revert(); raise CompileFailed)
-               end
+               else (revert(); raise CompileFailed))
+              handle CompileFailed => raise CompileFailed
+                   | e => (revert();
+                           print("Unable to compile: "^file^"\n");
+                           raise CompileFailed)
+            end
           else compile debug ("-q"::(include_flags@ ("-c"::(overlay_stringl @
                                                             [file]))))
      in
