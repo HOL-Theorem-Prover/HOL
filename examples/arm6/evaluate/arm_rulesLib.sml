@@ -10,7 +10,7 @@ structure arm_rulesLib :> arm_rulesLib =
 struct
 
 (* interactive use:
-  app load ["arm_rulesTheory"];
+  app load ["instructionSyntax", "arm_rulesTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
@@ -18,7 +18,9 @@ open Q wordsTheory arm_rulesTheory;
 
 (* ------------------------------------------------------------------------- *)
 
-val wrd_ss = std_ss ++ rewrites [dimindex_4,word_ls_n2w,n2w_11];
+val DIMINDEX4 = SIMP_RULE std_ss [dimindex_4] o INST_TYPE [`:'a` |-> `:i4`];
+
+val wrd_ss = std_ss ++ rewrites [DIMINDEX4 word_ls_n2w,DIMINDEX4 n2w_11];
 
 val REG_WRITE_WRITE_PC = (GEN_ALL o GSYM o SIMP_RULE std_ss [] o
   INST [`m1` |-> `usr`,`m2` |-> `m`] o DISCH `~(n = 15w)` o
@@ -43,7 +45,7 @@ val SORT_REG_WRITEL_CONV =
 
 val REG_READ_WRITEL_CONV = SIMP_CONV std_ss
     [CONJUNCT1 REG_WRITEL_def,REG_READ_WRITEL,REG_READ_WRITEL_PC,
-     REG_READ_WRITEL_PC2,dimindex_4,n2w_11];
+     REG_READ_WRITEL_PC2,DIMINDEX4 n2w_11];
 
 val REG_WRITEL_CONV = SORT_REG_WRITEL_CONV THENC REG_READ_WRITEL_CONV;
 
@@ -79,6 +81,27 @@ end;
 
 fun UNABBREVL_RULE l t =
    GEN_ALL (foldl (fn (x,t) => UNABBREV_RULE x t) (SPEC_ALL t) l);
+
+(* ------------------------------------------------------------------------- *)
+
+val dest_enc_term = snd o dest_comb o snd o dest_eq;
+
+fun is_enc_term t = type_of (dest_enc_term t) = ``:arm_instruction``
+  handle HOL_ERR _ => false;
+
+fun MATCH_ARM_RULE m r = GEN_ALL (PART_MATCH
+  (fn t => (dest_enc_term o valOf)
+      (List.find is_enc_term ((strip_conj o fst o dest_imp) t))) r m);
+
+val arm_rules = map snd
+  (filter (fn x => substring(fst x, 0, 3) = "ARM") (theorems "arm_rules"));
+
+fun FIND_ARM_RULE m = filter (can (MATCH_ARM_RULE m)) arm_rules;
+
+fun GET_ARM_RULE m = filter (fn x => not (term_eq (concl x) T))
+  (map (SIMP_RULE wrd_ss [] o MATCH_ARM_RULE m) (FIND_ARM_RULE m));
+
+val GET_ARM = GET_ARM_RULE o instructionSyntax.mk_instruction; 
 
 (* ------------------------------------------------------------------------- *)
 

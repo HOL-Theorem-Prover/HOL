@@ -156,6 +156,11 @@ val ALU_ADD_NO_CARRY =
 val ALU_ADD_CARRY =
   (SIMP_RULE bossLib.arith_ss [] o SPEC `T`) ALU_ADD;
 
+val lem = prove(`!a b c. ADD a b c = if c then ADD a b T else ADD a b F`,
+  RW_TAC bool_ss []);
+
+val ALU_ADD = SIMP_RULE std_ss [ALU_ADD_NO_CARRY,ALU_ADD_CARRY] lem;
+
 (* ......................................................................... *)
 
 val n2w_2EXP_32 =
@@ -189,6 +194,11 @@ val ALU_SUB_NO_CARRY =
 val ALU_SUB_CARRY = (SIMP_RULE arith_ss
   [WORD_SUB_RZERO,WORD_EQ_SUB_RADD,WORD_ADD_0,WORD_HIGHER_EQ] o
   SPEC `T`) ALU_SUB;
+
+val lem = prove(`!a b c. SUB a b c = if c then SUB a b T else SUB a b F`,
+  RW_TAC bool_ss []);
+
+val ALU_SUB = SIMP_RULE std_ss [ALU_SUB_NO_CARRY,ALU_SUB_CARRY] lem;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -348,28 +358,30 @@ val WORD_1COMP_ZERO =
   METIS_PROVE [WORD_NOT_NOT,WORD_NOT_T] ``!a. (~a = 0w) = (a = Tw)``;
 
 val DP_ss =
-  rewrites [DATA_PROCESSING_def,ARITHMETIC_def,TEST_OR_COMP_def,
-    ALU_def,LSL_def,LSR_def,AND_def,ORR_def,EOR_def,ALU_logic_def,SET_NZC_def,
-    ADDR_MODE1_def,LSL_NOT_ZERO,WORD_NEG_cor,WORD_1COMP_ZERO,SND_ROR,
-    ALU_ADD_NO_CARRY,ALU_SUB_NO_CARRY,ALU_ADD_CARRY,ALU_SUB_CARRY,
-    cond_pass_enc_data_proc, decode_enc_data_proc, decode_data_proc_enc,
-    cond_pass_enc_data_proc2,decode_enc_data_proc2,decode_data_proc_enc2,
-    cond_pass_enc_data_proc3,decode_enc_data_proc3,decode_data_proc_enc3,
-    immediate_enc,shift_immediate_enc,shift_immediate_shift_register];
+  rewrites [DATA_PROCESSING_def,ARITHMETIC_def,TEST_OR_COMP_def,ALU_def,
+   ALU_ADD,ALU_SUB,LSL_def,LSR_def,AND_def,ORR_def,EOR_def,ALU_logic_def,
+   SET_NZC_def,ADDR_MODE1_def,LSL_NOT_ZERO,WORD_NEG_cor,WORD_1COMP_ZERO,SND_ROR,
+   cond_pass_enc_data_proc, decode_enc_data_proc, decode_data_proc_enc,
+   cond_pass_enc_data_proc2,decode_enc_data_proc2,decode_data_proc_enc2,
+   cond_pass_enc_data_proc3,decode_enc_data_proc3,decode_data_proc_enc3,
+   immediate_enc,shift_immediate_enc,shift_immediate_shift_register];
 
 (* ......................................................................... *)
+
+val PAIR_RULE =
+  SIMP_RULE (srw_ss()) [FST_COND_RAND,SND_COND_RAND] o PairRules.PBETA_RULE;
 
 val abbrev_imm =
  ``Abbrev (n:word32 = w2w (imm:word8) #>> w2n (2w:word8 * w2w (rot:word4)))``;
 
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt (abbrev_imm::c)
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt [abbrev_imm]
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c F Rd Rm (Dp_immediate rot imm))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -382,30 +394,22 @@ val (ARM_ADD_IMM,thms) = hd_tl thms;
 val (ARM_ORR_IMM,thms) = hd_tl thms;
 val ARM_BIC_IMM = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADC_IMM_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_IMM_CARRY,thms) = hd_tl thms;
-val ARM_RSC_IMM_CARRY = hd thms;
+val (ARM_ADC_IMM,thms) = hd_tl thms;
+val (ARM_SBC_IMM,thms) = hd_tl thms;
+val ARM_RSC_IMM = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADC_IMM_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_IMM_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSC_IMM_NO_CARRY = hd thms;
-
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt
-  (``Abbrev (n:word32 =
-        w2w (imm:word8) #>> w2n (2w:word8 * w2w (rot:word4)))``::c)
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt
+  [``Abbrev (n:word32 = w2w (imm:word8) #>> w2n (2w:word8 * w2w (rot:word4)))``]
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c T Rd Rm (Dp_immediate rot imm))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -418,30 +422,23 @@ val (ARM_ADDS_IMM,thms) = hd_tl thms;
 val (ARM_ORRS_IMM,thms) = hd_tl thms;
 val ARM_BICS_IMM = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADCS_IMM_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_IMM_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_IMM_CARRY = hd thms;
-
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADCS_IMM_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_IMM_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_IMM_NO_CARRY = hd thms;
+val (ARM_ADCS_IMM,thms) = hd_tl thms;
+val (ARM_SBCS_IMM,thms) = hd_tl thms;
+val ARM_RSCS_IMM = hd thms;
 
 (* ......................................................................... *)
 
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt c
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt []
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c F Rd Rm (Dp_shift_immediate (LSL Rn) 0w))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -454,28 +451,21 @@ val (ARM_ADD,thms) = hd_tl thms;
 val (ARM_ORR,thms) = hd_tl thms;
 val ARM_BIC = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADC_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_CARRY,thms) = hd_tl thms;
-val ARM_RSC_CARRY = hd thms;
+val (ARM_ADC,thms) = hd_tl thms;
+val (ARM_SBC,thms) = hd_tl thms;
+val ARM_RSC = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADC_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSC_NO_CARRY = hd thms;
-
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt c
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt []
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c T Rd Rm (Dp_shift_immediate (LSL Rn) 0w))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -488,30 +478,23 @@ val (ARM_ADDS,thms) = hd_tl thms;
 val (ARM_ORRS,thms) = hd_tl thms;
 val ARM_BICS = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADCS_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_CARRY = hd thms;
-
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADCS_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_NO_CARRY = hd thms;
+val (ARM_ADCS,thms) = hd_tl thms;
+val (ARM_SBCS,thms) = hd_tl thms;
+val ARM_RSCS = hd thms;
 
 (* ......................................................................... *)
 
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt (``~(n = 0w:word5)``::c)
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c F Rd Rm (Dp_shift_immediate (LSL Rn) n))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -524,28 +507,21 @@ val (ARM_ADD_LSL,thms) = hd_tl thms;
 val (ARM_ORR_LSL,thms) = hd_tl thms;
 val ARM_BIC_LSL = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADC_LSL_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_LSL_CARRY,thms) = hd_tl thms;
-val ARM_RSC_LSL_CARRY = hd thms;
+val (ARM_ADC_LSL,thms) = hd_tl thms;
+val (ARM_SBC_LSL,thms) = hd_tl thms;
+val ARM_RSC_LSL = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADC_LSL_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_LSL_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSC_LSL_NO_CARRY = hd thms;
-
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt (``~(n = 0w:word5)``::c)
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c T Rd Rm (Dp_shift_immediate (LSL Rn) n))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -558,30 +534,23 @@ val (ARM_ADDS_LSL,thms) = hd_tl thms;
 val (ARM_ORRS_LSL,thms) = hd_tl thms;
 val ARM_BICS_LSL = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADCS_LSL_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_LSL_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_LSL_CARRY = hd thms;
-
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADCS_LSL_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_LSL_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_LSL_NO_CARRY = hd thms;
+val (ARM_ADCS_LSL,thms) = hd_tl thms;
+val (ARM_SBCS_LSL,thms) = hd_tl thms;
+val ARM_RSCS_LSL = hd thms;
 
 (* ......................................................................... *)
 
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt (``~(n = 0w:word5)``::c)
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c F Rd Rm (Dp_shift_immediate (LSR Rn) n))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -594,28 +563,21 @@ val (ARM_ADD_LSR,thms) = hd_tl thms;
 val (ARM_ORR_LSR,thms) = hd_tl thms;
 val ARM_BIC_LSR = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADC_LSR_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_LSR_CARRY,thms) = hd_tl thms;
-val ARM_RSC_LSR_CARRY = hd thms;
+val (ARM_ADC_LSR,thms) = hd_tl thms;
+val (ARM_SBC_LSR,thms) = hd_tl thms;
+val ARM_RSC_LSR = hd thms;
 
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADC_LSR_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBC_LSR_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSC_LSR_NO_CARRY = hd thms;
-
-fun eval_op c t = SYMBOLIC_EVAL_CONV DP_ss (cntxt (``~(n = 0w:word5)``::c)
+fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(n = 0w:word5)``]
   (subst [``f:condition -> bool -> bool ** i4 ->
               bool ** i4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> bool ** i4 ->
              bool ** i4 -> addr_mode1 -> arm_instruction)
        c T Rd Rm (Dp_shift_immediate (LSR Rn) n))``));
 
-val thms = map (eval_op [])
+val thms = map eval_op
    [``instruction$AND``,``instruction$EOR``,``instruction$SUB``,
     ``instruction$RSB``,``instruction$ADD``,``instruction$ORR``,
     ``instruction$BIC``];
@@ -628,19 +590,12 @@ val (ARM_ADDS_LSR,thms) = hd_tl thms;
 val (ARM_ORRS_LSR,thms) = hd_tl thms;
 val ARM_BICS_LSR = hd thms;
 
-val thms = map (eval_op [``(cpsr:word32) %% 29``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
+val thms = map (PAIR_RULE o eval_op)
+   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``];
 
-val (ARM_ADCS_LSR_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_LSR_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_LSR_CARRY = hd thms;
-
-val thms = map (eval_op [``~((cpsr:word32) %% 29)``])
-   [``instruction$ADC``,``instruction$SBC``,``instruction$RSC``]
-
-val (ARM_ADCS_LSR_NO_CARRY,thms) = hd_tl thms;
-val (ARM_SBCS_LSR_NO_CARRY,thms) = hd_tl thms;
-val ARM_RSCS_LSR_NO_CARRY = hd thms;
+val (ARM_ADCS_LSR,thms) = hd_tl thms;
+val (ARM_SBCS_LSR,thms) = hd_tl thms;
+val ARM_RSCS_LSR = hd thms;
 
 (* ......................................................................... *)
 
@@ -1263,85 +1218,87 @@ val _ = save_thm("ARM_MOVS_LSR_PC", SPEC_TO_PC ARM_MOVS_LSR);
 val _ = save_thm("ARM_BICS_LSR_PC", SPEC_TO_PC ARM_BICS_LSR);
 val _ = save_thm("ARM_MVNS_LSR_PC", SPEC_TO_PC ARM_MVNS_LSR);
 
-val _ = save_thm("ARM_ADCS_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_CARRY);
-val _ = save_thm("ARM_SBCS_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_CARRY);
-val _ = save_thm("ARM_RSCS_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_CARRY);
-val _ = save_thm("ARM_ADCS_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_NO_CARRY);
-val _ = save_thm("ARM_SBCS_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_NO_CARRY);
-val _ = save_thm("ARM_RSCS_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_NO_CARRY);
+val _ = save_thm("ARM_ADC", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADC);
+val _ = save_thm("ARM_SBC", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBC);
+val _ = save_thm("ARM_RSC", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSC);
 
-val _ = save_thm("ARM_ADCS_CARRY_PC", SPEC_TO_PC ARM_ADCS_CARRY);
-val _ = save_thm("ARM_SBCS_CARRY_PC", SPEC_TO_PC ARM_SBCS_CARRY);
-val _ = save_thm("ARM_RSCS_CARRY_PC", SPEC_TO_PC ARM_RSCS_CARRY);
-val _ = save_thm("ARM_ADCS_NO_CARRY_PC", SPEC_TO_PC ARM_ADCS_NO_CARRY);
-val _ = save_thm("ARM_SBCS_NO_CARRY_PC", SPEC_TO_PC ARM_SBCS_NO_CARRY);
-val _ = save_thm("ARM_RSCS_NO_CARRY_PC", SPEC_TO_PC ARM_RSCS_NO_CARRY);
+val _ = save_thm("ARM_ADC_PC", SPEC_TO_PC ARM_ADC);
+val _ = save_thm("ARM_SBC_PC", SPEC_TO_PC ARM_SBC);
+val _ = save_thm("ARM_RSC_PC", SPEC_TO_PC ARM_RSC);
 
-val _ = save_thm("ARM_ADCS_IMM_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_IMM_CARRY);
-val _ = save_thm("ARM_SBCS_IMM_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_IMM_CARRY);
-val _ = save_thm("ARM_RSCS_IMM_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_IMM_CARRY);
-val _ = save_thm("ARM_ADCS_IMM_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_IMM_NO_CARRY);
-val _ = save_thm("ARM_SBCS_IMM_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_IMM_NO_CARRY);
-val _ = save_thm("ARM_RSCS_IMM_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_IMM_NO_CARRY);
+val _ = save_thm("ARM_ADC_IMM",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADC_IMM);
+val _ = save_thm("ARM_SBC_IMM",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBC_IMM);
+val _ = save_thm("ARM_RSC_IMM",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSC_IMM);
 
-val _ = save_thm("ARM_ADCS_IMM_CARRY_PC", SPEC_TO_PC ARM_ADCS_IMM_CARRY);
-val _ = save_thm("ARM_SBCS_IMM_CARRY_PC", SPEC_TO_PC ARM_SBCS_IMM_CARRY);
-val _ = save_thm("ARM_RSCS_IMM_CARRY_PC", SPEC_TO_PC ARM_RSCS_IMM_CARRY);
-val _ = save_thm("ARM_ADCS_IMM_NO_CARRY_PC", SPEC_TO_PC ARM_ADCS_IMM_NO_CARRY);
-val _ = save_thm("ARM_SBCS_IMM_NO_CARRY_PC", SPEC_TO_PC ARM_SBCS_IMM_NO_CARRY);
-val _ = save_thm("ARM_RSCS_IMM_NO_CARRY_PC", SPEC_TO_PC ARM_RSCS_IMM_NO_CARRY);
+val _ = save_thm("ARM_ADC_IMM_PC", SPEC_TO_PC ARM_ADC_IMM);
+val _ = save_thm("ARM_SBC_IMM_PC", SPEC_TO_PC ARM_SBC_IMM);
+val _ = save_thm("ARM_RSC_IMM_PC", SPEC_TO_PC ARM_RSC_IMM);
 
-val _ = save_thm("ARM_ADCS_LSL_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_LSL_CARRY);
-val _ = save_thm("ARM_SBCS_LSL_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_LSL_CARRY);
-val _ = save_thm("ARM_RSCS_LSL_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_LSL_CARRY);
-val _ = save_thm("ARM_ADCS_LSL_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_LSL_NO_CARRY);
-val _ = save_thm("ARM_SBCS_LSL_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_LSL_NO_CARRY);
-val _ = save_thm("ARM_RSCS_LSL_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_LSL_NO_CARRY);
+val _ = save_thm("ARM_ADC_LSL",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADC_LSL);
+val _ = save_thm("ARM_SBC_LSL",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBC_LSL);
+val _ = save_thm("ARM_RSC_LSL",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSC_LSL);
 
-val _ = save_thm("ARM_ADCS_LSL_CARRY_PC", SPEC_TO_PC ARM_ADCS_LSL_CARRY);
-val _ = save_thm("ARM_SBCS_LSL_CARRY_PC", SPEC_TO_PC ARM_SBCS_LSL_CARRY);
-val _ = save_thm("ARM_RSCS_LSL_CARRY_PC", SPEC_TO_PC ARM_RSCS_LSL_CARRY);
-val _ = save_thm("ARM_ADCS_LSL_NO_CARRY_PC", SPEC_TO_PC ARM_ADCS_LSL_NO_CARRY);
-val _ = save_thm("ARM_SBCS_LSL_NO_CARRY_PC", SPEC_TO_PC ARM_SBCS_LSL_NO_CARRY);
-val _ = save_thm("ARM_RSCS_LSL_NO_CARRY_PC", SPEC_TO_PC ARM_RSCS_LSL_NO_CARRY);
+val _ = save_thm("ARM_ADC_LSL_PC", SPEC_TO_PC ARM_ADC_LSL);
+val _ = save_thm("ARM_SBC_LSL_PC", SPEC_TO_PC ARM_SBC_LSL);
+val _ = save_thm("ARM_RSC_LSL_PC", SPEC_TO_PC ARM_RSC_LSL);
 
-val _ = save_thm("ARM_ADCS_LSR_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_LSR_CARRY);
-val _ = save_thm("ARM_SBCS_LSR_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_LSR_CARRY);
-val _ = save_thm("ARM_RSCS_LSR_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_LSR_CARRY);
-val _ = save_thm("ARM_ADCS_LSR_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_LSR_NO_CARRY);
-val _ = save_thm("ARM_SBCS_LSR_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_LSR_NO_CARRY);
-val _ = save_thm("ARM_RSCS_LSR_NO_CARRY",
-  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_LSR_NO_CARRY);
+val _ = save_thm("ARM_ADC_LSR",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADC_LSR);
+val _ = save_thm("ARM_SBC_LSR",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBC_LSR);
+val _ = save_thm("ARM_RSC_LSR",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSC_LSR);
 
-val _ = save_thm("ARM_ADCS_LSR_CARRY_PC", SPEC_TO_PC ARM_ADCS_LSR_CARRY);
-val _ = save_thm("ARM_SBCS_LSR_CARRY_PC", SPEC_TO_PC ARM_SBCS_LSR_CARRY);
-val _ = save_thm("ARM_RSCS_LSR_CARRY_PC", SPEC_TO_PC ARM_RSCS_LSR_CARRY);
-val _ = save_thm("ARM_ADCS_LSR_NO_CARRY_PC", SPEC_TO_PC ARM_ADCS_LSR_NO_CARRY);
-val _ = save_thm("ARM_SBCS_LSR_NO_CARRY_PC", SPEC_TO_PC ARM_SBCS_LSR_NO_CARRY);
-val _ = save_thm("ARM_RSCS_LSR_NO_CARRY_PC", SPEC_TO_PC ARM_RSCS_LSR_NO_CARRY);
+val _ = save_thm("ARM_ADC_LSR_PC", SPEC_TO_PC ARM_ADC_LSR);
+val _ = save_thm("ARM_SBC_LSR_PC", SPEC_TO_PC ARM_SBC_LSR);
+val _ = save_thm("ARM_RSC_LSR_PC", SPEC_TO_PC ARM_RSC_LSR);
+
+val _ = save_thm("ARM_ADCS", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS);
+val _ = save_thm("ARM_SBCS", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS);
+val _ = save_thm("ARM_RSCS", DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS);
+
+val _ = save_thm("ARM_ADCS_PC", SPEC_TO_PC ARM_ADCS);
+val _ = save_thm("ARM_SBCS_PC", SPEC_TO_PC ARM_SBCS);
+val _ = save_thm("ARM_RSCS_PC", SPEC_TO_PC ARM_RSCS);
+
+val _ = save_thm("ARM_ADCS_IMM",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_IMM);
+val _ = save_thm("ARM_SBCS_IMM",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_IMM);
+val _ = save_thm("ARM_RSCS_IMM",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_IMM);
+
+val _ = save_thm("ARM_ADCS_IMM_PC", SPEC_TO_PC ARM_ADCS_IMM);
+val _ = save_thm("ARM_SBCS_IMM_PC", SPEC_TO_PC ARM_SBCS_IMM);
+val _ = save_thm("ARM_RSCS_IMM_PC", SPEC_TO_PC ARM_RSCS_IMM);
+
+val _ = save_thm("ARM_ADCS_LSL",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_LSL);
+val _ = save_thm("ARM_SBCS_LSL",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_LSL);
+val _ = save_thm("ARM_RSCS_LSL",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_LSL);
+
+val _ = save_thm("ARM_ADCS_LSL_PC", SPEC_TO_PC ARM_ADCS_LSL);
+val _ = save_thm("ARM_SBCS_LSL_PC", SPEC_TO_PC ARM_SBCS_LSL);
+val _ = save_thm("ARM_RSCS_LSL_PC", SPEC_TO_PC ARM_RSCS_LSL);
+
+val _ = save_thm("ARM_ADCS_LSR",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_ADCS_LSR);
+val _ = save_thm("ARM_SBCS_LSR",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_SBCS_LSR);
+val _ = save_thm("ARM_RSCS_LSR",
+  DISCH_AND_IMP `~(Rd = 15w:word4)` ARM_RSCS_LSR);
+
+val _ = save_thm("ARM_ADCS_LSR_PC", SPEC_TO_PC ARM_ADCS_LSR);
+val _ = save_thm("ARM_SBCS_LSR_PC", SPEC_TO_PC ARM_SBCS_LSR);
+val _ = save_thm("ARM_RSCS_LSR_PC", SPEC_TO_PC ARM_RSCS_LSR);
 
 val _ = save_thm("ARM_MUL", ARM_MUL);
 val _ = save_thm("ARM_MLA", ARM_MLA);
