@@ -407,6 +407,11 @@ val w2n_lt = store_thm("w2n_lt",
 val word_0_n2w = store_thm("word_0_n2w",
   `w2n 0w = 0`, SIMP_TAC arith_ss [w2n_n2w,ZERO_LT_TWOEXP]);
 
+val w2n_eq_0 = store_thm("w2n_eq_0",
+  `(w2n w = 0) = (w = 0w)`,
+  Q.SPEC_THEN `w` STRUCT_CASES_TAC word_nchotomy \\
+  SRW_TAC [][w2n_n2w, n2w_11, ZERO_LT_TWOEXP]);
+
 val word_add_n2w = store_thm("word_add_n2w",
   `!m n. n2w m + n2w n = n2w (m + n)`,
   SIMP_TAC fcp_ss [word_add_def,w2n_n2w] \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
