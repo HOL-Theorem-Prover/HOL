@@ -37,6 +37,22 @@ fun UNABBREVL_RULE l t =
 
 (* ------------------------------------------------------------------------- *)
 
+val SPSR_WRITE_THM = store_thm("SPSR_WRITE_THM",
+  `!psr m x. USER m ==> (SPSR_WRITE psr m x = psr)`,
+  SIMP_TAC std_ss [SPSR_WRITE_def]);
+
+val SPSR_WRITE_WRITE = store_thm("SPSR_WRITE_WRITE",
+  `!psr m x y. SPSR_WRITE (SPSR_WRITE psr m x) m y = SPSR_WRITE psr m y`,
+  RW_TAC std_ss [SPSR_WRITE_def,SUBST_EQ]);
+
+val SPSR_WRITE_READ = store_thm("SPSR_WRITE_READ",
+  `!psr m x. ~USER m ==> (SPSR_READ (SPSR_WRITE psr m x) m = x) /\
+                         (SPSR_READ (CPSR_WRITE psr x) m = SPSR_READ psr m)`,
+  RW_TAC std_ss [SPSR_WRITE_def,CPSR_WRITE_def,SPSR_READ_def,SUBST_def]
+    \\ Cases_on `m` \\ FULL_SIMP_TAC (srw_ss()) [USER_def,mode2psr_def]);
+
+(* ------------------------------------------------------------------------- *)
+
 val REG_READ_READ6 = store_thm("REG_READ_READ6",
   `!r m n. ~(n = 15w) ==> (REG_READ6 r m n = REG_READ r m n)`,
   SIMP_TAC bool_ss [coreTheory.REG_READ6_def]);

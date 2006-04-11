@@ -18,6 +18,20 @@ open Q wordsTheory arm_rulesTheory;
 
 (* ------------------------------------------------------------------------- *)
 
+val SIMP_USR = SIMP_RULE bool_ss [armTheory.USER_def];
+
+val PSR_CONV = let open lemmasTheory in
+  SIMP_CONV std_ss
+  [SIMP_USR SPSR_READ_THM2,SIMP_USR SPSR_WRITE_THM,SIMP_USR SPSR_WRITE_READ,
+   SPSR_WRITE_WRITE,CPSR_WRITE_READ,CONJUNCT1 CPSR_READ_WRITE,CPSR_WRITE_WRITE,
+   PSR_WRITE_COMM,SPSR_READ_WRITE,armTheory.mode_distinct,
+   DECODE_IFMODE_SET_NZCV,DECODE_NZCV_SET_NZCV,
+   DECODE_IFMODE_SET_IFMODE,DECODE_NZCV_SET_IFMODE,
+   SET_NZCV_IDEM,SET_IFMODE_IDEM,SET_IFMODE_NZCV_SWP]
+end;
+
+(* ------------------------------------------------------------------------- *)
+
 val DIMINDEX4 = SIMP_RULE std_ss [dimindex_4] o INST_TYPE [`:'a` |-> `:i4`];
 
 val wrd_ss = std_ss ++ rewrites [DIMINDEX4 word_ls_n2w,DIMINDEX4 n2w_11];
@@ -93,15 +107,23 @@ fun MATCH_ARM_RULE m r = GEN_ALL (PART_MATCH
   (fn t => (dest_enc_term o valOf)
       (List.find is_enc_term ((strip_conj o fst o dest_imp) t))) r m);
 
-val arm_rules = map snd
-  (filter (fn x => substring(fst x, 0, 3) = "ARM") (theorems "arm_rules"));
+val all_arm_rules =
+  filter (fn x => substring(fst x, 0, 3) = "ARM") (theorems "arm_rules");
 
-fun FIND_ARM_RULE m = filter (can (MATCH_ARM_RULE m)) arm_rules;
+val (nop_rules,arm_rules) =
+  List.partition (fn x => String.extract(fst x,size (fst x) - 3,NONE) = "NOP")
+    all_arm_rules;
 
-fun GET_ARM_RULE m = filter (fn x => not (term_eq (concl x) T))
-  (map (SIMP_RULE wrd_ss [] o MATCH_ARM_RULE m) (FIND_ARM_RULE m));
+fun RULE_FIND m l = filter (can (MATCH_ARM_RULE m)) l;
 
-val GET_ARM = GET_ARM_RULE o instructionSyntax.mk_instruction; 
+fun RULE_GET m l = filter (fn x => not (term_eq (concl x) T))
+  (map (SIMP_RULE wrd_ss [] o MATCH_ARM_RULE m) (RULE_FIND m l));
+
+fun RULE_GET_ARM m = hd (RULE_GET m (map snd arm_rules));
+fun RULE_GET_NOP m = hd (RULE_GET m (map snd nop_rules));
+
+val GET_ARM = RULE_GET_ARM o instructionSyntax.mk_instruction; 
+val GET_NOP = RULE_GET_NOP o instructionSyntax.mk_instruction; 
 
 (* ------------------------------------------------------------------------- *)
 
