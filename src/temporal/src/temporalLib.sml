@@ -755,8 +755,8 @@ fun TEMP_DEFS_CONV t =
 		val new_r = mk_abs{Bvar=x,Body=r}
 	     in mk_eq{lhs=ell,rhs=(eta_conv new_r)}
 	    end
-	fun beta_conv t = rhs(concl( (REPEATC (CHANGED_CONV(DEPTH_CONV BETA_CONV))) t))
-	val hdefs = map (fun_eta_conv o temporal2hol) defs
+	fun beta_conv t = rhs(concl ((QCONV (REPEATC (DEPTH_CONV BETA_CONV))) t))
+	val hdefs = map (fun_eta_conv o temporal2hol) defs 
 	val hpt = mk_comb{Rator=(temporal2hol pt),Rand=(--`0`--)}
 	val hpt = beta_conv hpt
 	val hdefs = map beta_conv hdefs
@@ -813,7 +813,7 @@ fun UNSAFE_TEMP_DEFS_CONV t =
 		val new_r = mk_abs{Bvar=x,Body=r}
 	     in mk_eq{lhs=ell,rhs=(eta_conv new_r)}
 	    end
-	fun beta_conv t = rhs(concl( (REPEATC (CHANGED_CONV(DEPTH_CONV BETA_CONV))) t))
+  fun beta_conv t = rhs(concl ((QCONV (REPEATC (DEPTH_CONV BETA_CONV))) t))
 	val hdefs = map (fun_eta_conv o temporal2hol) defs
 	val hpt = mk_comb{Rator=(temporal2hol pt),Rand=(--`0`--)}
 	val hpt = beta_conv hpt
@@ -927,7 +927,7 @@ fun LTL2OMEGA_CONV t =
 	    let val {Bvar=x,Body=t} = dest_exists g
 	     in EXISTS_TAC x (asm,g)
 	    end
-	val tac = PURE_REWRITE_TAC[(REPEATC(CHANGED_CONV(DEPTH_CONV FORALL_AND_CONV))) trans_rel]
+	val tac = PURE_REWRITE_TAC[(QCONV (REPEATC(DEPTH_CONV FORALL_AND_CONV))) trans_rel]
 		  THEN REWRITE_TAC def2omega_thms
 		  THEN REWRITE_TAC past_nx_thms
 		  THEN (CONV_TAC(DEPTH_CONV FUN_EQ_CONV)) THEN BETA_TAC
@@ -1157,11 +1157,11 @@ fun TEMP_NORMALIZE_CONV t =
 	    	 in BETA_RULE(SPEC b exists_eventual_thm)
 	    	end
 	    else REFL t
-	val thm1 =
+	val thm1 = (QCONV
 		((DEPTH_CONV FUN_EQ_CONV) THENC
 		 (DEPTH_CONV BETA_CONV) THENC
 		 (DEPTH_CONV (CHANGED_CONV QUAN_TEMP_CONV))
-		) t
+		)) t
 	val thm2 = Arith.PRENEX_CONV t
      in
 	TRANS (SYM thm2) thm1
@@ -1378,7 +1378,9 @@ fun print_smv_info smv_info =
 (* ************************************************************************************	*)
 
 fun SMV_AUTOMATON_CONV automaton =
-    let val smv_program = genbuechi2smv_string automaton
+    
+    let 
+  val smv_program = genbuechi2smv_string automaton
 	val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
  	val _ = (
 		TextIO.output(file_st,smv_program);
