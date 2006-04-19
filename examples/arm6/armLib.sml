@@ -105,7 +105,8 @@ let val t = concl thm
     val mt = get_abbrev_match m t
     val (l,r) = dest_abbrev mt
 in
-  SIMP_RULE bool_ss [SPEC `T` markerTheory.Abbrev_def] (Thm.INST [l |-> r] thm)
+  PURE_REWRITE_RULE [METIS_PROVE [] ``Abbrev (x = x)``,
+    AND_CLAUSES,OR_CLAUSES,IMP_CLAUSES] (Thm.INST [l |-> r] thm)
 end;
 
 end
