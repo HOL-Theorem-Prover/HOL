@@ -276,12 +276,14 @@ val SUBSET_UNIV =
     ("SUBSET_UNIV",
      (--`!s:'a set. s SUBSET UNIV`--),
      REWRITE_TAC [SUBSET_DEF,IN_UNIV]);
+val  _ = export_rewrites ["SUBSET_UNIV"]
 
 val UNIV_SUBSET =
     store_thm
     ("UNIV_SUBSET",
      (--`!s:'a set. UNIV SUBSET s = (s = UNIV)`--),
      REWRITE_TAC [SUBSET_DEF,IN_UNIV,EXTENSION]);
+val _ = export_rewrites ["UNIV_SUBSET"]
 
 (* ===================================================================== *)
 (* Proper subset.							 *)
@@ -1751,7 +1753,7 @@ val FINITELY_INJECTIVE_IMAGE_FINITE = Q.store_thm
 
 val INJECTIVE_IMAGE_FINITE = Q.store_thm
 ("INJECTIVE_IMAGE_FINITE",
-  `!f. (!x y. (f x = f y) = (x = y)) ==> 
+  `!f. (!x y. (f x = f y) = (x = y)) ==>
        !s. FINITE (IMAGE f s) = FINITE s`,
   REPEAT STRIP_TAC THEN MATCH_MP_TAC FINITELY_INJECTIVE_IMAGE_FINITE THEN
   GEN_TAC THEN Cases_on `?e. x = f e` THENL [
@@ -2186,8 +2188,8 @@ RW_TAC arith_ss []);
 
 val FINITE_COMPLETE_INDUCTION = Q.store_thm(
   "FINITE_COMPLETE_INDUCTION",
-  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x) 
-      ==> 
+  `!P. (!x. (!y. y PSUBSET x ==> P y) ==> FINITE x ==> P x)
+      ==>
        !x. FINITE x ==> P x`,
   GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC ((BETA_RULE o
@@ -3162,6 +3164,12 @@ val COMPL_EMPTY = store_thm
    ``COMPL {} = UNIV``,
    SIMP_TAC bool_ss [EXTENSION, IN_COMPL, NOT_IN_EMPTY, IN_UNIV]);
 
+val COMPL_INTER = store_thm(
+  "COMPL_INTER",
+  ``(x INTER COMPL x = {}) /\ (COMPL x INTER x = {})``,
+  SRW_TAC [][EXTENSION, IN_COMPL, IN_INTER]);
+val _ = export_rewrites ["COMPL_INTER"]
+
 (* ====================================================================== *)
 (* Sets of size n.                                                        *)
 (* ====================================================================== *)
@@ -3264,7 +3272,7 @@ val COMMUTING_ITSET_INSERT = Q.store_thm
           !x b. ITSET f (x INSERT s) b = ITSET f (s DELETE x) (f x b)`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   completeInduct_on `CARD s` THEN
-  POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss 
+  POP_ASSUM (ASSUME_TAC o SIMP_RULE bool_ss
         [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) THEN
   GEN_TAC THEN SIMP_TAC bool_ss [ITSET_INSERT] THEN
   REPEAT STRIP_TAC THEN
