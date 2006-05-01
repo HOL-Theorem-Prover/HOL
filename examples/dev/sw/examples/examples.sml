@@ -11,8 +11,8 @@ use "compiler";
 
 val test1_def = Define
   `test1 (t1:word32,t2:word32) =
-            (let k1 = UNCURRY $+ (t1,t2) in
-	     let k2 = UNCURRY $- (t1,t2) in
+            (let k1 = t1 + t2 in
+	     let k2 = t1 - t2 in
                 (k1,k2)
             )
     `;
@@ -30,14 +30,48 @@ val test1_def = Define
     5:          sub     sp, fp, #3i
     6:          ldmfd   sp, {fp,sp,pc}
 
-*)
+  val env1 = toANF [] test1_def;
+  val arm1 = compileEnv env1;
 
-  val arm1 = link2 test1_def;
+  set_goal ([], simT (mk_ARM arm1));
+  e (PRE_TAC);
+
+  val test1'_def = Define
+    `test1' [t1; t2] =
+            (let k1 = t1 + t2 in
+             let k2 = t1 - t2 in
+                [k1; k2]
+            )
+    `;
+
+
+  val (_,_, args,stms,outs,_) = hd (#1 arm1);
+  val th1 = hd (sim_to_n [6])
+  val (instM, s0) =  get_instM_state (#2 (top_goal()));
+  val s1 = rhs (concl th1);
+   
+  val p1 = mk_Pd ([], (args,``test1'``,outs)) (s0,s1);
+
+  val result0 = SIMP_RULE finmap_ss [] (EVAL p1);	(* Get the predicate	*)
+  val result1 = REWRITE_RULE [GSYM th1] result0;
+*)
+  
+  val env1 = toANF [] test1_def;
+  val arm1 = compileEnv env1;
   
   val test1_CORRECT = prove (
       simT (mk_ARM arm1),
       SEQ_TAC [test1_def]
   );
+
+  val test1'_def = Define
+  `test1' [t1; t2] =
+            (let k1 = t1 + t2 in
+             let k2 = t1 - t2 in
+                [k1; k2]
+            )
+    `;
+
 
 (*---------------------------------------------------------------------------*)
 (* Example 2: A functions calls another function                             *)
