@@ -239,6 +239,14 @@ val REG_WRITE_WRITE = store_thm("REG_WRITE_WRITE",
   `!r m n d1 d2. REG_WRITE (REG_WRITE r m n d1) m n d2 = REG_WRITE r m n d2`,
   RW_TAC bool_ss [REG_WRITE_def,SUBST_EQ]);
 
+val REG_WRITE_WRITE_COMM = store_thm("REG_WRITE_WRITE_COMM",
+  `!r m n1 n2 d1 d2.
+     ~(n1 = n2) ==>
+      (REG_WRITE (REG_WRITE r m n1 d1) m n2 d2 =
+       REG_WRITE (REG_WRITE r m n2 d2) m n1 d1)`,
+  RW_TAC std_ss [REG_WRITE_def,SUBST_NE_COMMUTES,not_reg_eq]
+    mode_reg2num_lt,num2register_11]);
+
 val REG_WRITE_WRITE_PC = store_thm("REG_WRITE_WRITE_PC",
   `!r m1 m2 n d p.
      REG_WRITE (REG_WRITE r m1 15w p) m2 n d =
