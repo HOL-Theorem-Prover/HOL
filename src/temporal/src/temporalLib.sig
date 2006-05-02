@@ -16,4 +16,5 @@ signature temporalLib =
     val UNSAFE_LTL2OMEGA_CONV : term -> thm
     val UNSAFE_LTL_CONV : conv
     val SMV_AUTOMATON_CONV : term -> thm
+    val SMV_RUN : string -> bool
   end

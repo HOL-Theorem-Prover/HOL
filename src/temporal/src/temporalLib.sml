@@ -1359,8 +1359,6 @@ fun print_smv_info smv_info =
 	     s_print "===============================================\n";
 	     s_print (String.concat resources);
 	     s_print "===============================================\n";
-	     s_print "SMV_AUTOMATON_CONV fails now!!!\n";
-	     s_print "===============================================\n";
 	    ()
 	    )
     end
@@ -1377,39 +1375,47 @@ fun print_smv_info smv_info =
 (* automaton.										*)
 (* ************************************************************************************	*)
 
+
+
+fun SMV_RUN smv_program =
+    let 
+  val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
+  val _ = (
+    TextIO.output(file_st,smv_program);
+    TextIO.flushOut file_st;
+    TextIO.closeOut file_st)
+  val _ = Process.system
+      ((!smv_path)^(!smv_call)^" "
+      ^(!smv_tmp_dir)^"smv_file.smv > "
+      ^(!smv_tmp_dir)^"smv_out")
+  val file_in = TextIO.openIn((!smv_tmp_dir)^"smv_out")
+  val s = ref (TextIO.inputLine file_in)
+  val sl = ref ([]:string list)
+  val _ = while ((!s)<>"") do (sl:=(!s)::(!sl); s:=TextIO.inputLine file_in)
+  val _ = TextIO.closeIn file_in
+  val p = interpret_smv_output(rev(!sl))
+  val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_file.smv")
+  val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_out")
+     in
+      if #Proved(p) then true
+      else
+        (print "SMV computes the following countermodel:\n";
+          print_smv_info p;
+          false
+        )
+    end
+
+
 fun SMV_AUTOMATON_CONV automaton =
     
     let 
   val smv_program = genbuechi2smv_string automaton
-	val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
- 	val _ = (
-		TextIO.output(file_st,smv_program);
-		TextIO.flushOut file_st;
-		TextIO.closeOut file_st)
-	val _ = Process.system
-			((!smv_path)^(!smv_call)^" "
-			^(!smv_tmp_dir)^"smv_file.smv > "
-			^(!smv_tmp_dir)^"smv_out")
-	val file_in = TextIO.openIn((!smv_tmp_dir)^"smv_out")
-	val s = ref (TextIO.inputLine file_in)
-	val sl = ref ([]:string list)
-	val _ = while ((!s)<>"") do (sl:=(!s)::(!sl); s:=TextIO.inputLine file_in)
-	val _ = TextIO.closeIn file_in
-	val p = interpret_smv_output(rev(!sl))
-	val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_file.smv")
-	val _ = Process.system("rm "^(!smv_tmp_dir)^"smv_out")
-     in
-	if #Proved(p) then mk_thm([],mk_eq{lhs=automaton,rhs=(--`F`--)})
-	else
-	   (print "SMV computes the following countermodel:\n";
-	    print_smv_info p;
-	    (NO_CONV (--`F`--))
-	   )
-    end
-
-
-
-
+  val proved = SMV_RUN smv_program
+  in
+    if (proved) then mk_thm([],mk_eq{lhs=automaton,rhs=(--`F`--)})
+    else
+      (NO_CONV (--`F`--))
+  end;
 
 
 (* ************************************************************************************	*)
