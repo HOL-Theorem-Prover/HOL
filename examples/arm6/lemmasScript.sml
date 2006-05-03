@@ -244,7 +244,7 @@ val REG_WRITE_WRITE_COMM = store_thm("REG_WRITE_WRITE_COMM",
      ~(n1 = n2) ==>
       (REG_WRITE (REG_WRITE r m n1 d1) m n2 d2 =
        REG_WRITE (REG_WRITE r m n2 d2) m n1 d1)`,
-  RW_TAC std_ss [REG_WRITE_def,SUBST_NE_COMMUTES,not_reg_eq]
+  RW_TAC std_ss [REG_WRITE_def,SUBST_NE_COMMUTES,not_reg_eq,
     mode_reg2num_lt,num2register_11]);
 
 val REG_WRITE_WRITE_PC = store_thm("REG_WRITE_WRITE_PC",
