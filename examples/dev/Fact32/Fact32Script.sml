@@ -10,11 +10,14 @@
 ******************************************************************************) 
 (* 
 quietdec := true;
-loadPath := "../" :: "word32" :: !loadPath;
+loadPath := "../" :: "word32" :: "../dff/" :: !loadPath;
 map load
- ["metisLib","intLib","word32Theory","word32Lib"];
+ ["metisLib","intLib","word32Theory","word32Lib",
+  "devTheory","compileTheory","compile","vsynth"];
 open metisLib word32Theory word32Lib;
-open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory;
+open arithmeticTheory intLib pairLib pairTheory PairRules combinTheory
+     devTheory composeTheory compileTheory compile vsynth 
+     dffTheory tempabsTheory;
 val _ = intLib.deprecate_int();
 quietdec := false;
 *) 
