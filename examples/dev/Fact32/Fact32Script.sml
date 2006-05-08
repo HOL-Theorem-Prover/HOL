@@ -46,33 +46,13 @@ val _ = intLib.deprecate_int();
 (*****************************************************************************) 
 val _ = new_theory "Fact32"; 
 
-fun mk_measure tm =
-   let open numSyntax
-       val measure_tm = prim_mk_const{Name="measure",Thy="prim_rec"}
-       val theta = match_type (alpha --> num) (type_of tm)
-   in mk_comb(inst theta measure_tm, tm)
-   end;
 
+val MultIter_def =
+ Define
+   `MultIter (m:num,n:num,acc:num) =
+       if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc)`;
 
-val default_termination_simps =
-    [combinTheory.o_DEF,
-     combinTheory.I_THM,
-     prim_recTheory.measure_def,
-     relationTheory.inv_image_def,
-     pairTheory.LEX_DEF];
-
-val termination_simps = ref default_termination_simps;
-
-val _ = (termination_simps := (word32Theory.WORD_PRED_THM :: !termination_simps));
-
-val (MultIter_def,MultIter_ind) =
- Defn.tprove
-  (Hol_defn
-    "MultIter"
-    `(MultIter (m:num,n:num,acc:num) =
-       if m = 0 then (0,n,acc) else MultIter(m-1,n,n + acc))`,
-   EXISTS_TAC (mk_measure ``(FST:num # num # num -> num)``)
-    THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps));
+val MultIter_ind = fetch "-" "MultIter_ind";
 
 (*****************************************************************************)
 (* Create an implementation of a multiplier from MultIter                    *)
@@ -103,14 +83,12 @@ val MultThm =
    ``Mult = UNCURRY $*``,
    RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult_def,MultIterThm]);
 
-val (Mult32Iter_def,Mult32Iter_ind) =
- Defn.tprove
-  (Hol_defn
-    "Mult32Iter"
-    `(Mult32Iter (m,n,acc) =
-       if m = 0w then (0w,n,acc) else Mult32Iter(m-1w,n,n + acc))`,
-   EXISTS_TAC (mk_measure ``w2n o (FST:word32 # word32 # word32 -> word32)``)
-    THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps));
+val Mult32Iter_def = 
+ Define
+   `Mult32Iter (m,n,acc) =
+       if m = 0w then (0w,n,acc) else Mult32Iter(m-1w,n,n + acc)`;
+
+val Mult32Iter_ind = fetch "-" "Mult32Iter_ind";
 
 (*****************************************************************************)
 (* Create an implementation of a multiplier from Mult32Iter                  *)
@@ -212,14 +190,12 @@ val MultAbsCor2 =
       (Mult32(n2w m, n2w n) = n2w m * n2w n)``,
    PROVE_TAC[w2n_ELIM,MUL_EVAL,MultAbsCor1]);
 
-val (FactIter_def,FactIter_ind) =
- Defn.tprove
-  (Hol_defn
-    "FactIter"
-    `(FactIter (n,acc) =
-       if n = 0 then (n,acc) else FactIter (n - 1,n * acc))`,
-    EXISTS_TAC (mk_measure ``(FST:num # num -> num)``)
-     THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps));
+val FactIter_def = 
+ Define
+   `FactIter (n,acc) =
+       if n = 0 then (n,acc) else FactIter (n - 1,n * acc)`;
+
+val FactIter_ind = fetch "-" "FactIter_ind";
 
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
@@ -232,19 +208,15 @@ val FactIterThm =                                       (* proof from KXS *)
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter_def,FACT]
       THEN Cases_on `n` 
-      THEN FULL_SIMP_TAC arith_ss [FACT, AC MULT_ASSOC MULT_SYM]));
+      THEN FULL_SIMP_TAC arith_ss [FACT]));
 
 (*****************************************************************************)
 (* Implement iterative function as a step to implementing factorial          *)
 (*****************************************************************************)
-val (Fact32Iter_def,Fact32Iter_ind) =
- Defn.tprove
-  (Hol_defn
-    "Fact32Iter"
-    `(Fact32Iter (n,acc) =
-       if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc)))`,
-   EXISTS_TAC (mk_measure ``w2n o (FST:word32 # word32 -> word32)``)
-    THEN TotalDefn.TC_SIMP_TAC [] (!termination_simps));
+val Fact32Iter_def = 
+ Define
+   `Fact32Iter (n,acc) =
+       if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc))`;
 
 val FACT_0 =
  store_thm
@@ -312,15 +284,16 @@ val FactIterAbs =
         THEN PROVE_TAC[LESS_MOD],
        `n = SUC(n-1)` by DECIDE_TAC
         THEN `FACT n = n * FACT(n-1)` by PROVE_TAC[FACT]
-        THEN `n * acc * FACT (n - 1) < 2 ** WL` by PROVE_TAC[MULT_SYM,MULT_ASSOC]
+        THEN `acc * n * FACT (n - 1) < 2 ** WL` by PROVE_TAC[MULT_SYM,MULT_ASSOC]
         THEN RW_TAC arith_ss []
         THEN `1 <= n` by DECIDE_TAC
         THEN `LT_WL 1` by PROVE_TAC[LT_WL_def, EVAL ``1 < 2 ** WL``]
         THEN RW_TAC arith_ss [GSYM WORD_SUB_LT_EQ]
         THEN `n * acc < 2 ** WL` 
               by PROVE_TAC
-                  [FACT_0,MULT_LESS_LEMMA,
+                  [FACT_0,MULT_LESS_LEMMA,MULT_SYM,
                    DECIDE``m:num <= n /\ n < p ==> m < p``]
+        THEN ONCE_REWRITE_TAC [MULT_SYM]
         THEN RW_TAC arith_ss [MultAbsCor1,w2n_ELIM]]);
 
 (*****************************************************************************)
@@ -334,7 +307,7 @@ val FactIterThm =                                       (* proof from KXS *)
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter_def,FACT]
       THEN Cases_on `n` 
-      THEN FULL_SIMP_TAC arith_ss [FACT, AC MULT_ASSOC MULT_SYM]));
+      THEN FULL_SIMP_TAC arith_ss [FACT]));
 
 val FactIterAbsCor =
  store_thm
