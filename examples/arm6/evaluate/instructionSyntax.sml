@@ -7,7 +7,8 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsSyntax", "instructionTheory", "Lexer", "Parser", "Data"];
+  app load ["Nonstdio","wordsSyntax", "instructionTheory",
+            "Lexer", "Parser", "Data"];
 *)
 
 open HolKernel boolLib Parse bossLib;
@@ -574,12 +575,12 @@ local open Arbnum
 in
   fun num1comp n = (max - one) - n mod max
   fun num2comp n = (max - n mod max) mod max
+  fun add32 a b = (a + b) mod max
 end;
 
 local
   fun ipow2 x = Word.toInt (Word.<<(Word.fromInt 1,Word.fromInt x))
   val (n12,n16,n24) = (ipow2 12,ipow2 16,ipow2 24)
-  val n32 = Arbnum.pow(Arbnum.two,Arbnum.fromInt 32)
 in
   fun validate_instruction (Data n) = Data n
     | validate_instruction (ic as Instruction(i,c)) =
@@ -639,11 +640,55 @@ in
     | Ldc_stc x =>
         if 15  < #CP x     then raise BadInstruction "CP# too large" else
         if 255 < #offset x then raise BadInstruction "offset too large" else ic
-    | _ => ic
+    | _ => ic;
+
+  fun branch_to_arm (c,link,address) line =
+        let open Arbnum
+            val t = address - (fromInt 8)
+            val jmp = add32 t (num2comp line)
+            val offset = (jmp div (fromInt 4)) mod (fromInt n24)
+            val ok = (if line <= t then jmp else num2comp jmp) <=
+                     (fromHexString "FFFFFF")
+        in
+           if ok then
+             Instruction(Br {L = link, offset = toInt offset},c)
+           else
+             raise Data.Parse "Invalid branch an instruction"
+         end;
+
+  fun assembler_to_instruction a =
+    case a of
+      [Code c] => c
+    | [Mark line,BranchN (c,link,address)] =>
+         branch_to_arm (c,link,address) line
+    | [BranchN (c,link,address)] =>
+         branch_to_arm (c,link,address) Arbnum.zero
+    | [Label s, BranchS (c,link,l)] =>
+         if s = l then
+           Instruction(Br {L = link,
+             offset = Arbnum.toInt (Arbnum.fromHexString "FFFFFE")},c)
+         else
+           raise Data.Parse "Not an instruction"
+    | _ => raise Data.Parse "Not an instruction";
 end;
 
-fun string_to_arm s =
-  validate_instruction (Parser.Main Lexer.Token (Lexing.createLexerString s));
+val parse_arm_buf = Parser.Main Lexer.Token;
+
+val string_to_arm =
+  validate_instruction o assembler_to_instruction o
+  parse_arm_buf o Lexing.createLexerString;
+
+fun createLexerStream (is : BasicIO.instream) =
+  Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n);
+
+fun parse_arm file =
+  let val is = Nonstdio.open_in_bin file
+      val lexbuf = createLexerStream is
+      val expr = parse_arm_buf lexbuf handle exn =>
+                   (BasicIO.close_in is; raise exn)
+  in
+    BasicIO.close_in is; expr
+  end;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1246,7 +1291,9 @@ local
   val n25 = Word.toInt (Word.<<(Word.fromInt 1,Word.fromInt 25))
   val n26 = Word.toInt (Word.<<(Word.fromInt 1,Word.fromInt 26))
   fun offset2comp i = Int.mod(n26 - i,n26)
-  fun offset_string i =
+  fun abs_offset_string i j =
+        "0x" ^ Arbnum.toHexString(Arbnum.+(i,Arbnum.fromInt (4 * j + 8)))
+  fun rel_offset_string i =
       let val j = Int.mod(Int.mod((i + 2) * 4,n26),n26) in
         if j < n25 then
           int_to_string j
@@ -1255,16 +1302,23 @@ local
       end
   val err = ERR "br_to_string" "not a branch instruction"
 in
-  fun br_to_string a (Instruction(x,c)) =
+  fun br_to_string l a (Instruction(x,c)) =
    (case x of
       Br y =>
         let val h = mnemonic a ("b" ^ (if #L y then "l" else "") ^
                       condition2string c)
         in
-           h ^ offset_string (#offset y)
+           h ^ (if isSome l then abs_offset_string (valOf l) (#offset y)
+                            else rel_offset_string (#offset y) ^ "; relative")
         end
     | _ => raise err)
-   | br_to_string _ _ = raise err
+   | br_to_string _ _ _ = raise err
+  fun branch_to_string (BranchS(c,l,d)) =
+        mnemonic false ("b" ^ (if l then "l" else "") ^ condition2string c) ^ d
+    | branch_to_string (BranchN(c,l,n)) =
+        mnemonic false ("b" ^ (if l then "l" else "") ^ condition2string c) ^
+          "0x" ^ Arbnum.toHexString n
+    | branch_to_string _ = raise err
 end;
 
 fun swi_ex_to_string c = toUpperString ("swi" ^ condition2string c);
@@ -1486,9 +1540,9 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
-fun arm_to_string a (i as Instruction (x,c)) =
+fun arm_to_string l a (i as Instruction (x,c)) =
  (case x of
-    Br y        => br_to_string a i
+    Br y        => br_to_string l a i
   | Swi_ex      => swi_ex_to_string c
   | Data_proc y => data_proc_to_string a i
   | Mla_mul y   => mla_mul_to_string a i
@@ -1501,14 +1555,23 @@ fun arm_to_string a (i as Instruction (x,c)) =
   | Mcr_mrc y   => mcr_mrc_to_string a i
   | Ldc_stc y   => ldc_stc_to_string a i
   | Undef       => "0x" ^ Arbnum.toHexString (arm_to_num i))
- | arm_to_string _ (Data n) = "0x" ^ Arbnum.toHexString n;
+ | arm_to_string _ _ (Data n) = "0x" ^ Arbnum.toHexString n;
+
+fun assembler_to_string i a l =
+  let val s = if isSome l then (valOf l) ^ ": " else "" in
+    case a of
+      Data.Code c => s ^ arm_to_string i false c
+    | Data.BranchS b => s ^ branch_to_string a
+    | Data.BranchN b => s ^ branch_to_string a
+    | _ => ""
+  end;
 
 (* ------------------------------------------------------------------------- *)
 
 val encode_arm = arm_to_num o string_to_arm;
-val decode_arm = (arm_to_string false) o num_to_arm;
-val decode_arm_dec = decode_arm o Arbnum.fromString;
-val decode_arm_hex = decode_arm o Arbnum.fromHexString;
+fun decode_arm i n = arm_to_string i false (num_to_arm n);
+fun decode_arm_dec i n = decode_arm i (Arbnum.fromString n);
+fun decode_arm_hex i n = decode_arm i (Arbnum.fromHexString n);
 
 val encode_instruction = arm_to_num o term_to_arm;
 val decode_instruction = arm_to_term o num_to_arm;
@@ -1516,55 +1579,6 @@ val decode_instruction_dec = decode_instruction o Arbnum.fromString;
 val decode_instruction_hex = decode_instruction o Arbnum.fromHexString;
 
 val mk_instruction = arm_to_term o string_to_arm;
-val dest_instruction = (arm_to_string false) o term_to_arm;
-
-(* ------------------------------------------------------------------------- *)
-
-open Portable term_pp_types;
-
-val comb_prec = 20;
-
-fun add_comment pps s =
-  (begin_block pps INCONSISTENT 2;
-   add_break pps (1,0);add_string pps "(*";
-   add_break pps (1,0);add_string pps s;
-   add_break pps (1,0);add_string pps "*)";
-   end_block pps);
- 
-fun instruction_print sys (pgrav, lgrav, rgrav) d pps t =
-  let val s = dest_instruction t
-      val (t1,t2) = dest_comb t
-      fun pbegin b = add_string pps (if b then "(" else "")
-      fun pend b = add_string pps (if b then ")" else "")
-      fun decdepth d = if d < 0 then d else d - 1
-
-      val add_l =
-        case lgrav of
-           Prec (n, _) => (n >= comb_prec)
-         | _ => false
-      val add_r =
-        case rgrav of
-          Prec (n, _) => (n > comb_prec)
-        | _ => false
-      val addparens = add_l orelse add_r
-      val prec = Prec(comb_prec, GrammarSpecials.fnapp_special)
-      val lprec = if addparens then Top else lgrav
-      val rprec = if addparens then Top else rgrav
-  in
-     pbegin addparens;
-     begin_block pps INCONSISTENT 2;
-     sys (prec, lprec, prec) (decdepth d) t1;
-     add_break pps (1, 0);
-     sys (prec, prec, rprec) (decdepth d) t2;
-     end_block pps;
-     add_comment pps s;
-     pend addparens
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
-
-fun pp_instruction() = Parse.temp_add_user_printer
-  ({Tyop = "arm_instruction", Thy = "instruction"}, instruction_print);
-
-fun remove_pp_instruction() = (Parse.temp_remove_user_printer
-  {Tyop = "arm_instruction", Thy = "instruction"};());
+fun dest_instruction i t = arm_to_string i false (term_to_arm t);
 
 (* ------------------------------------------------------------------------- *)

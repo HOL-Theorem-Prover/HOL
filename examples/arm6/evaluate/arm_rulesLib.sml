@@ -21,7 +21,7 @@ open Q wordsTheory arm_rulesTheory;
 val SIMP_USR = SIMP_RULE bool_ss [armTheory.USER_def];
 
 val PSR_CONV = let open lemmasTheory in
-  SIMP_CONV std_ss
+  SIMP_CONV pure_ss
   [SIMP_USR SPSR_READ_THM2,SIMP_USR SPSR_WRITE_THM,SIMP_USR SPSR_WRITE_READ,
    SPSR_WRITE_WRITE,CPSR_WRITE_READ,CONJUNCT1 CPSR_READ_WRITE,CPSR_WRITE_WRITE,
    PSR_WRITE_COMM,SPSR_READ_WRITE,armTheory.mode_distinct,

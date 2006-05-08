@@ -10,8 +10,8 @@ structure arm_evalLib :> arm_evalLib =
 struct
 
 (* interactive use:
-  app load ["computeLib", "onestepTheory", "modelsLib", "arm_evalTheory",
-            "instructionTheory", "instructionSyntax"];
+  app load ["computeLib", "onestepTheory", "modelsLib",
+            "arm_evalTheory", "instructionTheory", "instructionSyntax"];
 *)
 
 open HolKernel boolLib bossLib;
@@ -29,7 +29,7 @@ let val cmp_set = f()
 in cmp_set end;
 
 fun arm_eval_compset () = let open simTheory in
-  add_rws modelsLib.arm_compset 
+  add_rws modelsLib.arm_compset
     [state_arme_accessors, state_arme_updates_eq_literal,
      state_arme_accfupds, state_arme_fupdfupds, state_arme_literal_11,
      state_arme_fupdfupds_comp, state_arme_fupdcanon,state_arme_fupdcanon_comp,
@@ -90,10 +90,6 @@ fun printn s = print (s ^ "\n");
 (* ------------------------------------------------------------------------- *)
 (* Syntax *)
 
-val _ = overload_on("enc", ``instruction_encode``);
-
-fun mk_enc t = mk_comb(``enc``,t);
-
 fun mk_word30 n = mk_n2w(numSyntax.mk_numeral n,``:i30``);
 fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:i32``);
 
@@ -133,15 +129,90 @@ end;
 
 fun hol_assemble1 m a t = hol_assemble m a [t];
 
-fun assemble m a l = let
-  val code = map ((fn t => if type_of t = ``:word32`` then t else mk_enc t) o
-                  mk_instruction) l
-  val block = listSyntax.mk_list(code,``:word32``)
-in
-  rhsc (SORT_BSUBST_CONV (mk_bsubst(mk_word30 a,block,m)))
-end;
+local
+  fun add1 a = Data.add32 a Arbnum.one;
+  fun div4 a = Arbnum.div(a,Arbnum.fromInt 4);
+  fun mul4 a = Arbnum.*(a,Arbnum.fromInt 4);
+  val start = Arbnum.zero;
 
-fun assemble1 m a t = assemble m a [t];
+  fun label_table() =
+    Polyhash.mkPolyTable
+      (100,HOL_ERR {message = "Cannot find ARM label\n",
+                    origin_function = "", origin_structure = "arm_evalLib"});
+
+  fun mk_links [] ht n = ()
+    | mk_links (h::r) ht n =
+        case h of
+          Data.Code c => mk_links r ht (add1 n)
+        | Data.BranchS b => mk_links r ht (add1 n)
+        | Data.BranchN b => mk_links r ht (add1 n)
+        | Data.Label s =>
+            (Polyhash.insert ht (s, "0x" ^ Arbnum.toHexString (mul4 n));
+             mk_links r ht n)
+        | Data.Mark m => mk_links r ht (div4 m);
+
+  fun mk_link_table code = let val ht = label_table() in
+    mk_links code ht start; ht
+  end;
+
+  fun br_to_term (cond,link,label) ht n =
+    let val s = assembler_to_string NONE (Data.BranchS(cond,link,"")) NONE
+        val address = Polyhash.find ht label
+    in
+      mk_instruction ("0x" ^ Arbnum.toHexString (mul4 n) ^ ": " ^ s ^ address)
+    end;
+
+  fun mk_enc t = if type_of t = ``:word32`` then t else mk_comb(``enc``, t);
+
+  fun is_label (Data.Label s) = true | is_label _ = false;
+
+  fun lcons h [] = [[h]]
+    | lcons h (x::l) = (h::x)::l;
+
+  fun do_link m l [] ht n = zip m l
+    | do_link m l (h::r) ht n =
+        case h of
+           Data.Code c =>
+             do_link m (lcons (mk_enc (arm_to_term (validate_instruction c))) l)
+               r ht (add1 n)
+         | Data.BranchS b =>
+             do_link m (lcons (mk_enc (br_to_term b ht n)) l) r ht (add1 n)
+         | Data.BranchN b =>
+             let val t = mk_enc (arm_to_term (branch_to_arm b (mul4 n))) in
+               do_link m (lcons t l) r ht (add1 n)
+             end
+         | Data.Label s => do_link m l r ht n
+         | Data.Mark mk => let val k = div4 mk in
+               if k = n then
+                 do_link m l r ht n
+               else if null (hd l) then
+                 do_link (k::(tl m)) l r ht k
+               else
+                 do_link (k::m) ([]::l) r ht k
+             end;
+
+  fun do_links code =
+        let val l = do_link [start] [[]] code (mk_link_table code) start in
+          rev (map (fn (a,b) => (a,rev b)) l)
+        end;
+
+  fun assemble_assambler m a = let
+    val l = do_links a
+    val b = map (fn (m,c) => (mk_word30 m,listSyntax.mk_list(c,``:word32``))) l
+    val t = foldr (fn ((a,c),t) => mk_bsubst(a,c,t)) m b
+  in
+    rhsc (SORT_BSUBST_CONV t)
+  end
+in
+  fun assemble m file = assemble_assambler m (parse_arm file);
+  fun list_assemble m l =
+    let val nll = String.concat (map (fn s => s ^ "\n") l)
+        val c = substring(nll,0,size nll - 1)
+    in
+      assemble_assambler m (parse_arm_buf (Lexing.createLexerString c))
+    end;
+  fun assemble1 m t = list_assemble m [t];
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Funtions for memory loading and saving *)
@@ -204,7 +275,7 @@ fun set_registers reg rvs  =
   subst [``x:reg`` |-> reg, ``y:(register # word32) list`` |-> rvs] o
   inst [alpha |-> ``:register``, beta |-> ``:word32``]) foldl_tm;
 
-fun set_status_registers psr rvs  = (rhsc o 
+fun set_status_registers psr rvs  = (rhsc o
   (FOLD_SUBST_CONV
      THENC PURE_ONCE_REWRITE_CONV [SPEC `n2w n` simTheory.PSR_CONS]
      THENC ARMe_CONV) o
@@ -227,7 +298,7 @@ let val t1 = rhsc t
     val t2 = ((ARMe_CONV THENC
                  ONCE_DEPTH_CONV (RAND_CONV (RAND_CONV SORT_BSUBST_CONV)) THENC
                  ONCE_DEPTH_CONV (RATOR_CONV SORT_SUBST_CONV) THENC
-                 ONCE_DEPTH_CONV (RATOR_CONV (RAND_CONV SORT_SUBST_CONV)) THENC
+                 ONCE_DEPTH_CONV (RAND_CONV (RATOR_CONV SORT_SUBST_CONV)) THENC
                  RATOR_CONV ARM_ASSEMBLE_CONV) o
                  subst [``s:state_arme`` |-> t1]) ``NEXT_ARMe s``
   in

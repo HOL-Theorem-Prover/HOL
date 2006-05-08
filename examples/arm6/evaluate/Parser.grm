@@ -1,16 +1,6 @@
 %{
   open Data;
 
-  local open Arbnum
-    val n24 = pow(two, fromInt 24)
-    val n26 = pow(two, fromInt 26)
-    val n32 = pow(two, fromInt 32)
-  in
-    fun two_comp26 n = (n26 - n mod n26) mod n26
-    fun two_comp32 n = (n32 - n mod n32) mod n32
-    fun subtwo24 n = (n + (n24 - two)) mod n24
-  end;
-
   fun sh_imm1_to_imm2 (DpShiftImmediate x) = DtShiftImmediate x
     | sh_imm1_to_imm2 _ = raise Parse "not a DpShiftImmediate"
 
@@ -41,6 +31,7 @@
 
 %token <Arbnum.num> NUMBER
 %token <Data.register> REG COREG
+%token <string> LABEL
 %token <int> COPROC
 %token <Data.shift> SHIFT
 %token <bool * bool * bool> PSRF
@@ -50,12 +41,15 @@
 %token <Data.condition * bool> BRANCH MULT MULTA SWAP MCR_MRC
 %token <bool * Data.condition * bool> STRANS LDC_STC
 %token <bool * Data.condition * bool * bool> BTRANS
-%token RRX LBRACE RBRACE LSQUARE RSQUARE HASH MINUS PLUS EXCLAIM COMMA HAT
+%token RRX LBRACE RBRACE LSQUARE RSQUARE HASH MINUS PLUS
+       EXCLAIM COLON COMMA HAT BAR
 %token EOF
 
 %start Main
-%type <Data.instruction> Main Inst
-%type <int> Target
+%type <Data.assembler list> Main
+%type <Data.assembler> Line
+%type <Data.instruction> Code Inst
+%type <Arbnum.num> Target
 %type <bool * Arbnum.num> Number
 %type <Data.addr_mode1> ShiftImmediate AddrMode1
 %type <bool * bool * bool * Data.addr_mode2> AddrMode2
@@ -65,13 +59,23 @@
 %%
 
 Main:
-    Inst EOF    { $1 }
-  | Number EOF  { Data (if fst $1 then two_comp32 (snd $1) else snd $1) }
+    Line EOF       { [$1] }
+  | Line Main      { $1 :: $2 }
+
+Line:
+    Code          { Code $1 }
+  | BRANCH LABEL  { BranchS (fst $1, snd $1, $2) }
+  | BRANCH Target { BranchN (fst $1, snd $1, $2) }
+  | LABEL COLON   { Label $1 }
+  | NUMBER COLON  { Mark $1 }
+  | BAR LABEL BAR { Label $2 }
+    
+Code:
+    Inst   { $1 }
+  | Number { Data (if fst $1 then two_comp32 (snd $1) else snd $1) }
 
 Inst:
     SWI_EX                     { Instruction(Swi_ex,$1) }
-  | BRANCH Target              { Instruction(Br {L = snd $1, offset = $2},
-                                   fst $1) }
   | DPROC1 REG COMMA AddrMode1 { let val (opc,cond,s) = $1 in
                                    Instruction(Data_proc {opc = opc, S = s,
                                      Rd = $2, Rn = $2, op2 = $4},cond) end }
@@ -150,14 +154,14 @@ Inst:
 
 Target:
     NUMBER         { let open Arbnum in
-                       if $1 <= fromHexString "1FFFFFF" then
-                         toInt (subtwo24 ($1 div (fromInt 4)))
-                       else raise BadInstruction "Branch offset too large"
+                       if $1 <= fromHexString "FFFFFFFF" then
+                         align32 $1
+                       else raise BadInstruction "Branch address too large"
                      end }
   | MINUS NUMBER   { let open Arbnum in
-                       if $2 <= fromHexString "2000000" then
-                         toInt (subtwo24 ((two_comp26 $2) div (fromInt 4)))
-                       else raise BadInstruction "Branch offset too large"
+                       if $2 <= fromHexString "FFFFFFFF" then
+                         (two_comp32 o align32) $2
+                       else raise BadInstruction "Branch address too large"
                      end }
 
 Number:

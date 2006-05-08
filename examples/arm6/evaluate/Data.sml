@@ -46,5 +46,25 @@ datatype instruction =
    Instruction of ARM_instruction * condition
  | Data of Arbnum.num;
 
+datatype assembler =
+   Label of string
+ | Mark of Arbnum.num
+ | BranchS of condition * bool * string
+ | BranchN of condition * bool * Arbnum.num
+ | Code of instruction
+
 exception BadInstruction of string;
 exception Parse of string;
+
+local open Arbnum
+  val n4  = fromInt 4
+  val n24 = pow(two, fromInt 24)
+  val n26 = pow(two, fromInt 26)
+  val n32 = pow(two, fromInt 32)
+in
+  fun two_comp26 n = (n26 - n mod n26) mod n26
+  fun two_comp32 n = (n32 - n mod n32) mod n32
+  fun align32 n = (n div n4) * n4
+  fun add32 a b = (a + b) mod n32
+  fun sub32 a b = add32 a (two_comp32 b)
+end;

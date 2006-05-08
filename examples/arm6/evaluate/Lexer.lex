@@ -80,6 +80,9 @@ rule Token = parse
   | C `1`[`0`-`5`]          { COREG (reg1 lexbuf) }
   | P [`0`-`9`]             { COPROC (str2int (getLexeme lexbuf)) }
   | P `1`[`0`-`5`]          { COPROC (str2int (getLexeme lexbuf)) }
+  | S L                     { REG R10 }
+  | F P                     { REG R11 }
+  | I P                     { REG R12 }
   | S P                     { REG R13 }
   | L R                     { REG R14 }
   | P C                     { REG R15 }
@@ -140,8 +143,12 @@ rule Token = parse
   | `-`                     { MINUS }
   | `+`                     { PLUS }
   | `!`                     { EXCLAIM }
+  | `:`                     { COLON }
   | `,`                     { COMMA }
   | `^`                     { HAT }
+  | `|`                     { BAR }
+  | [`.``_``a`-`z``A`-`Z``0`-`9`]+ { LABEL (getLexeme lexbuf) }
+  | [`;``@`][^`\n`]*        { Token lexbuf }
   | eof                     { EOF }
   | _                       { lexerError lexbuf "Illegal symbol in input" }
 ;

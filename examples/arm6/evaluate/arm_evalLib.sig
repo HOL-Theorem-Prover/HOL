@@ -7,8 +7,9 @@ sig
 
    val hol_assemble1        : term -> Arbnum.num -> term frag list -> term
    val hol_assemble         : term -> Arbnum.num -> term frag list list -> term
-   val assemble1            : term -> Arbnum.num -> string -> term
-   val assemble             : term -> Arbnum.num -> string list -> term
+   val list_assemble        : term -> string list -> term
+   val assemble1            : term -> string -> term
+   val assemble             : term -> string -> term
 
    val set_registers        : term -> term -> term
    val set_status_registers : term -> term -> term
