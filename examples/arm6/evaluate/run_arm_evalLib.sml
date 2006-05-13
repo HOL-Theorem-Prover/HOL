@@ -55,7 +55,7 @@ val psr = set_status_registers
 
 (* Load test program *)
 
-val hol_prog = assemble ``(\x. 0w):mem`` "test.s";
+val prog = assemble ``(\x. 0w):mem`` "test.s";
 
 (* Testing/Examples *)
 
