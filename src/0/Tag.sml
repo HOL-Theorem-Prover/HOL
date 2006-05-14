@@ -24,14 +24,18 @@ fun ax_tag r = TAG ([],[r])
 val isEmpty = equal empty_tag;
 val isDisk = equal disk_only_tag;
 
-(*---------------------------------------------------------------------------*
- * Create a tag. The input string should be an alphanumeric identifier,      *
- * starting with an alphabetic charater.                                     *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(* Create a tag. A tag is a string with only printable characters (as        *)
+(* defined by Char.isPrint) and without spaces.                              *)
+(*---------------------------------------------------------------------------*)
 
 fun read s = 
- if Lexis.ok_identifier s then TAG ([s],[])
-  else raise ERR "read" (Lib.quote s^" is not an identifier");
+ let open Substring
+ in if isEmpty(dropl Char.isGraph (all s))
+     then TAG ([s],[])
+     else raise ERR "read" 
+           (Lib.quote s^" has embedded spaces or unprintable characters")
+ end;
 
 (*---------------------------------------------------------------------------
       Merge two tags
