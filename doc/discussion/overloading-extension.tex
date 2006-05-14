@@ -15,10 +15,6 @@
   might be made to the existing HOL systems.  Later changes require
   previous changes, but we might choose adopt a prefix of the three
   changes.
-
-  Assume that all definitions are equations.  Further, pretend that
-  HOL4's implementation of (\texttt{new\_specification}) translates to
-  an equation that uses Hilbert-choice (as is done in HOL~Light).
 \end{abstract}
 
 \section{Deferred Definition}
@@ -38,12 +34,17 @@ After a declaration has been made, a constant can be defined.  Such a
 definition must be for a term of the same type and name of an existing
 declaration.\footnote{Clearly ``declare-and-define'' could be provided
   as a derived principle.} The rules for validity of definitions
-should be unchanged, except possibly to require definitions to have
-the now already existing constant on the LHS rather than a variable.
-The result of a definition is to add a new theorem to the theory.
+should be unchanged, except possibly to require equational definitions
+to have the now already existing constant on the LHS rather than a
+variable.  The result of a definition is to add a new theorem to the
+theory.
 
 To prevent circular definitions, the implementation must record the
-dependency graph for constant definitions and prohibit loops.
+dependency graph for constant definitions and prohibit loops.  In an
+equational definition, the new constant depends on those constants
+that appear on the right-hand side of the equation.  In a definition
+made by \texttt{new\_specification}, the new constants depend on those
+constants that appear within the (existential) theorem.
 
 \begin{description}
 \item[Advantages] Allows a nice presentation style which separates
@@ -71,8 +72,11 @@ dependency graph for constant definitions and prohibit loops.
 When a definition is made, the type of the constant does not have to
 be exactly the same as that given in the constant's declaration.
 Instead, the \emph{defined type} can be an instance of the
-(polymorphic) \emph{declared type}.  As before, the resulting equation
-is added to the evolving theory.
+(polymorphic) \emph{declared type}.  However, the instance must be
+monomorphic.  Any references to other, possibly overloaded, constants
+will therefore be monomorphic as well (otherwise the definition would
+fall foul of the rule forbidding extra type variables). As before, the
+resulting equation is added to the evolving theory.
 
 Now the situation is effectively that there are multiple constants of
 the same name but different types.  Without the monomorphism
@@ -96,10 +100,10 @@ it's clearly \emph{not} OK to have
 
 To figure out whether the latter is safe or not is the problem of
 determining if a rewriting system is strongly normalising.  It is this
-problem that Stephen Obua's paper attempts to solve.  If we force
-definitions at different instances to be monomorphic then we avoid
-this problem because we can just check each monomorphic constant's
-dependency graph independently.
+problem that Steven Obua's paper~\cite{Obua-RTA06} solves.  If we
+force definitions at different instances to be monomorphic then we
+avoid this problem because we can just check each monomorphic
+constant's dependency graph independently.
 
 \begin{description}
 \item[Advantages] Allows a simple emulation of type classes, such that
@@ -130,7 +134,7 @@ really one from name-type pairs to lists of the same.
 
 The restriction we thought would work in our discussion via e-mail was
 to require all recursion to occur on smaller types ``structurally''.
-But this wouldn't directly prevent the second (and unsound) scenario
+But this wouldn't directly prevent the second (unsound) scenario
 above.  Instead, some sort of circular dependency test would have to
 reject it.  But this same circular dependency test would probably
 reject a legitimate recursion via an intermediate constant.  To
@@ -143,9 +147,12 @@ problem.
   on a polymorphic type like \texttt{:'a~matrix} in terms of addition
   on \texttt{:'a}.
 \item[Disadvantages] We don't have a known-to-be-sound restriction
-  other than Stephen Obua's, which is a very complicated piece of code
+  other than Steven Obua's, which is a very complicated piece of code
   to be putting into a kernel.
 \end{description}
+
+\bibliographystyle{plain}
+\bibliography{overloading-extension}
 
 \end{document}
 
