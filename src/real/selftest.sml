@@ -27,7 +27,11 @@ val tests = [(``~~3r``, ``3r``),
              (``3r * 3/4``, ``9/4``),
              (``6/~8``, ``~3/4``),
              (``1/3 + 1/2``, ``5/6``),
-             (``1/2 = 0``, ``F``)]
+             (``1/2 = 0``, ``F``),
+             (``0 + 3r``, ``3r``),
+             (``3r * 0``, ``0r``),
+             (``~0r``, ``0r``),
+             (``1r - 0``, ``1r``)]
 
 val _ = Process.exit (if List.all test tests then Process.success
                       else Process.failure)

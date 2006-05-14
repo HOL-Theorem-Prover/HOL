@@ -6,10 +6,13 @@ struct
 
 open HolKernel Parse boolLib realTheory simpLib realSyntax
 
-local  (* Fix the grammar used by this file *)
-  val ambient_grammars = Parse.current_grammars();
-  val _ = Parse.temp_set_grammars realTheory.real_grammars
-in
+
+(* Fix the grammar used by this file *)
+structure Parse = struct
+  open Parse
+  val (Type,Term) = parse_from_grammars realTheory.real_grammars
+end
+open Parse
 
 val arith_ss = boolSimps.bool_ss ++ pairSimps.PAIR_ss ++ numSimps.ARITH_ss ++
                numSimps.REDUCE_ss
@@ -117,11 +120,19 @@ fun splitfn posneg = posnegonly
   | splitfn nb12 = two_nats
 
 fun transform vs th = let
-  val simp = REWRITE_RULE ([REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0, num_eq_0,
-                            REAL_LT, REAL_LE, REAL_MUL_RZERO, REAL_MUL_LZERO,
-                            arithmeticTheory.ZERO_LESS_EQ] @
-                           (map (fn n => List.nth(CONJUNCTS le_int, n))
-                                [1,3]))
+  val T_imp = hd (CONJUNCTS (SPEC_ALL IMP_CLAUSES))
+  val rwt =
+      REWRITE_CONV ([REAL_INJ, REAL_NEGNEG, REAL_NEG_EQ0,
+                     num_eq_0, REAL_LT, REAL_LE,
+                     REAL_MUL_RZERO, REAL_MUL_LZERO,
+                     arithmeticTheory.ZERO_LESS_EQ] @
+                    (map (fn n => List.nth(CONJUNCTS le_int, n)) [1,3]))
+  fun simp t = let
+    val impconv = if is_imp t then LAND_CONV rwt THENC REWR_CONV T_imp
+                  else ALL_CONV
+  in
+    impconv THENC RAND_CONV rwt
+  end t
   val nvs = map (fn (t,_) => mk_var(#1 (dest_var t), numSyntax.num)) vs
 
   fun recurse vs nvs th =
@@ -129,7 +140,7 @@ fun transform vs th = let
       else let
           val (v,split) = hd vs
           val nv = hd nvs
-          val newths = map simp (splitfn split v nv th)
+          val newths = map (CONV_RULE simp) (splitfn split v nv th)
         in
           List.concat (map (recurse (tl vs) (tl nvs)) newths)
         end
@@ -153,15 +164,15 @@ val mult_rats =
 val mult_ratls = transform [(x, posneg), (y, nb12), (z, posneg)] mult_ratl
 val mult_ratrs = transform [(x, posneg), (y, posneg), (z, nb12)] mult_ratr
 
-val neg_ths = transform [(y, nb12)] neg_rat
+val neg_ths = REAL_NEG_0 :: transform [(y, nb12)] neg_rat
 
 val sub1 = SPECL [mk_div(x,y), mk_div(u,v)] real_sub
 val sub1 = transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] sub1
 val sub2 = SPECL [x, mk_div(u,v)] real_sub
-val sub2 = transform [(x, posneg), (u, posneg), (v, nb12)] sub2
+val sub2 = transform [(x, posneg0), (u, posneg), (v, nb12)] sub2
 val sub3 = SPECL [mk_div(x,y), z] real_sub
-val sub3 = transform [(x, posneg), (y, nb12), (z, posneg)] sub3
-val sub4 = transform [(x, posneg), (y, posneg)] (SPEC_ALL real_sub)
+val sub3 = transform [(x, posneg), (y, nb12), (z, posneg0)] sub3
+val sub4 = transform [(x, posneg0), (y, posneg0)] (SPEC_ALL real_sub)
 
 val div_rats = transform [(x, posneg), (y, nb12), (u, posneg), (v, nb12)] div_rat
 val div_ratls = transform [(x, posneg), (y, nb12), (z, nb12)] div_ratl
@@ -202,6 +213,10 @@ fun to_numeraln th = INST [n |-> mk_comb(numSyntax.numeral_tm, n),
 
 val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO,
                REAL_NEGNEG] @
+              transform [(x,posneg0)] (SPEC_ALL REAL_ADD_LID) @
+              transform [(x,posneg)] (SPEC_ALL REAL_ADD_RID) @
+              transform [(x,posneg0)] (SPEC_ALL REAL_MUL_LZERO) @
+              transform [(x,posneg)] (SPEC_ALL REAL_MUL_RZERO) @
               neg_ths @
               add_rats @ add_ratls @ add_ratrs @
               mult_rats @ mult_ratls @ mult_ratrs @
@@ -544,8 +559,5 @@ val REAL_ARITH_ss =
     simpLib.SSFRAG
     { convs = [], rewrs = [], congs = [],
       filter = NONE, ac = [], dprocs = [ARITH_REDUCER]};
-
-val _ = Parse.temp_set_grammars ambient_grammars
-end;
 
 end

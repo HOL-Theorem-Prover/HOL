@@ -1,6 +1,9 @@
 signature realSimps =
 sig
 
+  (* eliminates common factors in divisions *)
+  val elim_common_factor : Term.term -> Thm.thm
+
   (* Useful rewrites for basic real arithmetic *)
   val real_SS : simpLib.ssfrag
 

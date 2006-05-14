@@ -971,11 +971,13 @@ val REAL_LT_NEG = prove_thm("REAL_LT_NEG",
   REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_LINV, REAL_ADD_LID] THEN
   ONCE_REWRITE_TAC[REAL_ADD_SYM] THEN
   REWRITE_TAC[REAL_ADD_ASSOC, REAL_ADD_RINV, REAL_ADD_LID]);
+val _ = export_rewrites ["REAL_LT_NEG"]
 
 val REAL_LE_NEG = prove_thm("REAL_LE_NEG",
   (--`!x y. ~x <= ~y = y <= x`--),
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM REAL_NOT_LT] THEN
   REWRITE_TAC[REAL_LT_NEG]);
+val _ = export_rewrites ["REAL_LE_NEG"]
 
 val REAL_ADD2_SUB2 = prove_thm("REAL_ADD2_SUB2",
   (--`!a b c d. (a + b) - (c + d) = (a - c) + (b - d)`--),
@@ -985,10 +987,12 @@ val REAL_ADD2_SUB2 = prove_thm("REAL_ADD2_SUB2",
 val REAL_SUB_LZERO = prove_thm("REAL_SUB_LZERO",
   (--`!x. 0 - x = ~x`--),
   GEN_TAC THEN REWRITE_TAC[real_sub, REAL_ADD_LID]);
+val _ = export_rewrites ["REAL_SUB_LZERO"]
 
 val REAL_SUB_RZERO = prove_thm("REAL_SUB_RZERO",
   (--`!x. x - 0 = x`--),
   GEN_TAC THEN REWRITE_TAC[real_sub, REAL_NEG_0, REAL_ADD_RID]);
+val _ = export_rewrites ["REAL_SUB_RZERO"]
 
 val REAL_LET_ADD2 = prove_thm("REAL_LET_ADD2",
   (--`!w x y z. w <= x /\ y < z ==> (w + y) < (x + z)`--),
