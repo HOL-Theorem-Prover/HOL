@@ -3,7 +3,8 @@
 \BLTYPE
 add_listform :
   {separator : pp_element list, leftdelim : pp_element list,
-   rightdelim : pp_element list, cons : string, nilstr : string} ->
+   rightdelim : pp_element list, cons : string, nilstr : string,
+   block_info : term_grammar.block_info } ->
   unit
 \ELTYPE
 
@@ -39,6 +40,17 @@ The {pp_element} lists passed to this function for the {separator},
 (this provides the string that will be printed), and other formatting
 elements such as {BreakSpace}.
 
+The {block_info} field is a pair consisting of a ``consistency''
+({PP.CONSISTENT}, or {PP.INCONSISTENT}), and an indentation depth (an
+integer).  The standard value for this field is {(PP.INCONSISTENT,
+0)}, which will cause lists too long to fit in a single line to print
+with as many elements on the first line as will fit, and for
+subsequent elements to appear unindented on subsequent lines.
+Changing the ``consistency'' to {PP.CONSISTENT} would cause lists too
+long for a single line to print with one element per line.  The
+indentation level number specifies the number of extra spaces to be
+inserted when a line-break occurs.
+
 In common with the {add_rule} function, there is no requirement that
 the {cons} and {nilstr} fields be the names of constants; the
 parser/grammar combination will generate variables with these names if
@@ -63,13 +75,15 @@ is:
 {
    add_listform {separator = [TOK ";", BreakSpace(1,0)],
                  leftdelim = [TOK "["], rightdelim = [TOK "]"],
-                 cons = "CONS", nilstr = "NIL"};
+                 cons = "CONS", nilstr = "NIL",
+                 block_info = (PP.INCONSISTENT, 0)};
 }
 while the set syntax is defined similarly:
 {
    add_listform {leftdelim = [TOK "{"], rightdelim = TOK ["}"],
                  separator = [";", BreakSpace(1,0)],
-                 cons = "INSERT", nilstr = "EMPTY"};
+                 cons = "INSERT", nilstr = "EMPTY",
+                 block_info = (PP.INCONSISTENT, 0)};
 }
 
 

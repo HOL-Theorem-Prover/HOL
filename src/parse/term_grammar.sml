@@ -83,7 +83,8 @@ datatype infix_rule =
 
 type listspec =
   {separator : pp_element list, leftdelim : pp_element list,
-   rightdelim : pp_element list, cons : string, nilstr : string}
+   rightdelim : pp_element list, cons : string, nilstr : string,
+   block_info : block_info}
 
 datatype grammar_rule =
          PREFIX of prefix_rule
@@ -324,6 +325,7 @@ val stdhol : grammar =
              LISTRULE [{separator = [RE (TOK ";"), BreakSpace(1,0)],
                         leftdelim = [RE (TOK "<|")],
                         rightdelim = [RE (TOK "|>")],
+                        block_info = (PP.INCONSISTENT, 0),
                         cons = reccons_special, nilstr = recnil_special}])],
    specials = {lambda = "\\", type_intro = ":", endbinding = ".",
                restr_binders = [], res_quanop = "::"},
@@ -970,8 +972,8 @@ fun prettyprint_grammar pstrm (G :grammar) = let
                                          n))
         0
         oinfo
-      fun pr_ov (overloaded_op, 
-                (r as {actual_ops,...}:Overload.overloaded_op_info)) = 
+      fun pr_ov (overloaded_op,
+                (r as {actual_ops,...}:Overload.overloaded_op_info)) =
        let
         fun pr_name (r:Overload.const_rec) =
           case Term.decls (#Name r) of

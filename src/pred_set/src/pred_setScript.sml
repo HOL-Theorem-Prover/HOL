@@ -641,7 +641,8 @@ val INSERT_DEF =
 
 val _ = add_listform {leftdelim = [TOK "{"], rightdelim = [TOK "}"],
                       separator = [TOK ";", BreakSpace(1,0)],
-                      cons = "INSERT", nilstr = "EMPTY"};
+                      cons = "INSERT", nilstr = "EMPTY",
+                      block_info = (PP.INCONSISTENT, 0)};
 
 (* --------------------------------------------------------------------- *)
 (* Theorems about INSERT.						 *)

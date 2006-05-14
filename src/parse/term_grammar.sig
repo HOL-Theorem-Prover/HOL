@@ -65,6 +65,7 @@ sig
      {separator  : pp_element list,
       leftdelim  : pp_element list,
       rightdelim : pp_element list,
+      block_info : block_info,
       cons       : string,
       nilstr     : string}
 

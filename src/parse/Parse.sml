@@ -844,17 +844,20 @@ fun temp_add_listform x = let open term_grammar in
     term_grammar_changed := true
   end
 
-fun add_listform (x as {separator,leftdelim,rightdelim,cons,nilstr}) = let in
-    temp_add_listform x;
-    update_grms "add_listform"
-                ("temp_add_listform",
-                 String.concat
-                   ["{separator = [",   pplistToString separator, "]\n",
-                    ", leftdelim = [",  pplistToString leftdelim, "]\n",
-                    ", rightdelim = [", pplistToString rightdelim, "]\n",
-                    ", cons = ",       quote cons,
-                    ", nilstr = ",     quote nilstr,
-                    "}"])
+fun add_listform x = let
+  val {separator,leftdelim,rightdelim,cons,nilstr,block_info} = x
+in
+  temp_add_listform x;
+  update_grms "add_listform"
+              ("temp_add_listform",
+               String.concat
+                 ["{separator = [",   pplistToString separator, "]\n",
+                  ", leftdelim = [",  pplistToString leftdelim, "]\n",
+                  ", rightdelim = [", pplistToString rightdelim, "]\n",
+                  ", cons = ",        quote cons,
+                  ", nilstr = ",      quote nilstr,
+                  ", block_info = ",  block_infoToString block_info,
+                  "}"])
  end
 
 fun temp_add_bare_numeral_form x =

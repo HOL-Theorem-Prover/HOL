@@ -72,7 +72,7 @@ signature Parse = sig
                     block_style : PhraseBlockStyle * block_info} -> unit
   val add_listform : {separator : pp_element list, leftdelim : pp_element list,
                       rightdelim : pp_element list, cons : string,
-                      nilstr : string} -> unit
+                      nilstr : string, block_info : block_info} -> unit
   val add_numeral_form : (char * string option) -> unit
   val add_bare_numeral_form : (char * string option) -> unit
   val give_num_priority : char -> unit
@@ -114,7 +114,7 @@ signature Parse = sig
   val temp_add_listform : {separator : pp_element list,
                            leftdelim : pp_element list,
                            rightdelim : pp_element list, cons : string,
-                           nilstr : string} -> unit
+                           nilstr : string, block_info : block_info} -> unit
   val temp_add_numeral_form : (char * string option) -> unit
   val temp_add_bare_numeral_form : (char * string option) -> unit
   val temp_give_num_priority : char -> unit

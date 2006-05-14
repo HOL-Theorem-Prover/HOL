@@ -1254,11 +1254,12 @@ fun pp_term (G : grammar) TyG = let
           end_block()
         end
       | LISTRULE lrules => let
-          val (r as {nilstr, cons, ...}) =
+          val (r as {nilstr, cons, block_info,...}) =
             valOf (List.find (fn r => #cons r = fname) lrules)
           val sep = #separator r
           val rdelim = #rightdelim r
           val ldelim = #leftdelim r
+          val (consistency, breakspacing) = block_info
           (* list will never be empty *)
           fun pr_list tm = let
             fun recurse depth tm = let
@@ -1279,7 +1280,7 @@ fun pp_term (G : grammar) TyG = let
             end
           in
             print_ellist (Top,Top,Top) (ldelim, []) ;
-            begin_block INCONSISTENT 0;
+            begin_block consistency breakspacing;
             recurse depth tm;
             end_block();
             ignore (print_ellist (Top,Top,Top) (rdelim, []))

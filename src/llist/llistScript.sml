@@ -117,7 +117,8 @@ val LTL_LCONS = store_thm(
 
 val _ = add_listform {separator = [TOK ";", BreakSpace(1,0)],
                       leftdelim = [TOK "[|"], rightdelim = [TOK "|]"],
-                      cons = "LCONS", nilstr = "LNIL"};
+                      cons = "LCONS", nilstr = "LNIL",
+                      block_info = (PP.INCONSISTENT, 0)};
 
 val _ = add_rule {term_name = "LCONS", fixity = Infixr 450,
                   pp_elements = [TOK ":::", BreakSpace(0,2)],

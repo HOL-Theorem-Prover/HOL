@@ -54,7 +54,8 @@ val BAG_INSERT = new_definition (
 
 val _ = add_listform {cons = "BAG_INSERT", nilstr = "EMPTY_BAG",
                       separator = [TOK ";", BreakSpace(1,0)],
-                      leftdelim = [TOK "{|"], rightdelim = [TOK "|}"]};
+                      leftdelim = [TOK "{|"], rightdelim = [TOK "|}"],
+                      block_info = (PP.INCONSISTENT, 0)};
 
 val BAG_cases = Q.store_thm(
   "BAG_cases",
@@ -1684,7 +1685,7 @@ val COMMUTING_ITBAG_RECURSES = store_thm(
   ]);
 
 (*---------------------------------------------------------------------------*)
-(* The ML representation of bags is a datatype, not a function. So we need   *) 
+(* The ML representation of bags is a datatype, not a function. So we need   *)
 (* to re-create the functional aspect, via BAG_VAL.                          *)
 (*---------------------------------------------------------------------------*)
 
@@ -1711,9 +1712,9 @@ val BAG_DIFF_EQNS = Q.store_thm
 ("BAG_DIFF_EQNS",
  `(!b:'a bag. BAG_DIFF b {||} = b) /\
   (!b:'a bag. BAG_DIFF {||} b = {||}) /\
-  (!(x:'a) b (y:'a). BAG_DIFF (BAG_INSERT x b) {|y|} = 
+  (!(x:'a) b (y:'a). BAG_DIFF (BAG_INSERT x b) {|y|} =
             if x = y then b else BAG_INSERT x (BAG_DIFF b {|y|})) /\
-  (!(b1:'a bag) y (b2:'a bag). 
+  (!(b1:'a bag) y (b2:'a bag).
       BAG_DIFF b1 (BAG_INSERT y b2) = BAG_DIFF (BAG_DIFF b1 {|y|}) b2)`,
  RW_TAC hol_ss [BAG_DIFF,FUN_EQ_THM,BAG_INSERT,EMPTY_BAG] THEN
  RW_TAC hol_ss[]);
@@ -1722,9 +1723,9 @@ val BAG_INTER_EQNS = Q.store_thm
 ("BAG_INTER_EQNS",
  `(!b:'a bag. BAG_INTER {||} b = {||}) /\
   (!b: 'a bag. BAG_INTER b {||} = {||}) /\
-  (!(x:'a) b1 (b2:'a bag). 
-     BAG_INTER (BAG_INSERT x b1) b2 = 
-        if BAG_IN x b2 
+  (!(x:'a) b1 (b2:'a bag).
+     BAG_INTER (BAG_INSERT x b1) b2 =
+        if BAG_IN x b2
            then BAG_INSERT x (BAG_INTER b1 (BAG_DIFF b2 {|x|}))
            else BAG_INTER b1 b2)`,
  RW_TAC hol_ss [BAG_INTER, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
@@ -1732,15 +1733,15 @@ val BAG_INTER_EQNS = Q.store_thm
  THEN FULL_SIMP_TAC hol_ss []
  THEN RW_TAC hol_ss []
  THEN FULL_SIMP_TAC hol_ss [BAG_IN, BAG_INN]
- THEN REPEAT (POP_ASSUM MP_TAC) 
+ THEN REPEAT (POP_ASSUM MP_TAC)
  THEN RW_TAC hol_ss []);
 
 val BAG_MERGE_EQNS = Q.store_thm
 ("BAG_MERGE_EQNS",
  `(!b:'a bag. BAG_MERGE {||} b = b) /\
   (!b:'a bag. BAG_MERGE b {||} = b) /\
-  (!x:'a. !b1 b2:'a bag. 
-         BAG_MERGE (BAG_INSERT x b1) b2 = 
+  (!x:'a. !b1 b2:'a bag.
+         BAG_MERGE (BAG_INSERT x b1) b2 =
              BAG_INSERT x (BAG_MERGE b1 (BAG_DIFF b2 {|x|})))`,
  RW_TAC hol_ss [BAG_MERGE, EMPTY_BAG,FUN_EQ_THM,BAG_INSERT,BAG_DIFF]
  THEN RW_TAC hol_ss []
@@ -1754,8 +1755,8 @@ fun DECIDE_TAC (g as (asl,_)) =
 val SUB_BAG_EQNS = Q.store_thm
 ("SUB_BAG_EQNS",
  `(!b:'a bag. SUB_BAG {||} b = T) /\
-  (!x:'a. !b1 b2:'a bag. 
-      SUB_BAG (BAG_INSERT x b1) b2 = 
+  (!x:'a. !b1 b2:'a bag.
+      SUB_BAG (BAG_INSERT x b1) b2 =
              BAG_IN x b2 /\ SUB_BAG b1 (BAG_DIFF b2 {|x|}))`,
  RW_TAC hol_ss [SUB_BAG_EMPTY,SUB_BAG, BAG_INSERT, BAG_INN,
           BAG_IN, BAG_DIFF,EMPTY_BAG, ARITH`!m. 0 >= m = (m=0)`]
@@ -1775,16 +1776,16 @@ val PSUB_BAG_LEM = Q.prove
 val SET_OF_BAG_EQNS = Q.prove
 (`(SET_OF_BAG ({||}:'a bag) = ({}:'a set)) /\
   (!(x:'a) b. SET_OF_BAG (BAG_INSERT x b) = x INSERT (SET_OF_BAG b))`,
- REWRITE_TAC [SET_OF_BAG_INSERT] THEN 
+ REWRITE_TAC [SET_OF_BAG_INSERT] THEN
  RW_TAC hol_ss [SET_OF_BAG,EMPTY_BAG,FUN_EQ_THM,NOT_IN_EMPTY_BAG,
                 pred_setTheory.EMPTY_DEF]);
 
 val BAG_OF_SET_EQNS = Q.prove
 (`(BAG_OF_SET ({}:'a set) = ({||}:'a bag)) /\
-  (!(x:'a) (s:'a set). 
-      BAG_OF_SET (x INSERT s) = if x IN s then BAG_OF_SET s 
+  (!(x:'a) (s:'a set).
+      BAG_OF_SET (x INSERT s) = if x IN s then BAG_OF_SET s
                                  else BAG_INSERT x (BAG_OF_SET s))`,
- RW_TAC bool_ss [SET_OF_EMPTY] THEN 
+ RW_TAC bool_ss [SET_OF_EMPTY] THEN
  RW_TAC hol_ss [BAG_OF_SET,FUN_EQ_THM,BAG_INSERT] THEN
  METIS_TAC [pred_setTheory.IN_INSERT]);
 
@@ -1796,25 +1797,25 @@ fun tupled_constructor capp =
      val argtys = map type_of args
      val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
      val new = list_mk_abs(args,mk_comb(cvar,list_mk_pair args))
- in 
+ in
     mk_thm([],mk_eq(c,new))
  end;
 
-val reshape = BETA_RULE o 
+val reshape = BETA_RULE o
               PURE_REWRITE_RULE [tupled_constructor (Term`BAG_INSERT x b`),
                                  tupled_constructor (Term`x INSERT s`)];
 
-fun scoped_parse q = 
+fun scoped_parse q =
  let val (tyg,tmg) = (type_grammar(),term_grammar())
      val tyg' = type_grammar.remove_abbreviation tyg "bag"
      val _ = temp_set_grammars(tyg',tmg)
      val astl = ParseDatatype.parse q
      val _ = temp_set_grammars(tyg,tmg)
- in 
+ in
    astl
  end;
 
-val _ = 
+val _ =
  let open EmitML combinSyntax
      val bagdecl = scoped_parse `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`
      val _ = new_type("bag",1)
@@ -1845,10 +1846,10 @@ val _ =
     (map (DEFN_NOSIG o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o reshape)
     [BAG_VAL_THM, BAG_IN_EQNS, BAG_INN_EQN,
      INST_TYPE [beta |-> alpha]
-       (CONJ (CONJUNCT1 (CONJUNCT2 BAG_UNION_EMPTY)) 
+       (CONJ (CONJUNCT1 (CONJUNCT2 BAG_UNION_EMPTY))
              (CONJUNCT1 (SPEC_ALL (Q.SPEC `x` BAG_UNION_INSERT)))),
      BAG_DIFF_EQNS, BAG_INTER_EQNS, BAG_MERGE_EQNS,
-     SUB_BAG_EQNS, PSUB_BAG_LEM, 
+     SUB_BAG_EQNS, PSUB_BAG_LEM,
      CONJ BAG_FILTER_EMPTY (BAG_FILTER_BAG_INSERT),
      CONJ (INST_TYPE [alpha |-> beta, beta |-> alpha] BAG_IMAGE_EMPTY)
           (UNDISCH (SPEC_ALL BAG_IMAGE_FINITE_INSERT)),
