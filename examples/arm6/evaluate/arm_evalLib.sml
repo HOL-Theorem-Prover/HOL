@@ -323,7 +323,7 @@ fun evaluate n m r s = hd (eval n m r s);
 fun myprint sys (pg,lg,rg) d pps t = let
       open Portable term_pp_types
       val (l,typ) = listSyntax.dest_list t
-      val _ = if typ = ``:word32`` then () else raise UserPP_Failed
+      val _ = typ = ``:word32`` andalso not (null l) orelse raise UserPP_Failed
       fun delim act = case pg of
                         Prec(_, "CONS") => ()
                       | _ => act()
