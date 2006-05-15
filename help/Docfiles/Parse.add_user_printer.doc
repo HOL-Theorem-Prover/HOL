@@ -147,9 +147,9 @@ itself only with printing conjunctions:
       add_string pps "CONJ:";
       add_break pps (1,0);
       sys (Top, Top, Top) (d - 1) l;
-      add_string " and then ";
+      add_string pps " and then ";
       sys (Top, Top, Top) (d - 1) r;
-      add_string "ENDCONJ"
+      add_string pps "ENDCONJ"
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
   > val ('a, 'b) myprint = fn :
     (grav * grav * grav -> int -> term -> 'a) -> 'b -> int ->
