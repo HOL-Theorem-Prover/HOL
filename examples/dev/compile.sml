@@ -2195,8 +2195,10 @@ fun MAKE_CIRCUIT devth =
   GEN_ALL                                                                    o
   Ho_Rewrite.REWRITE_RULE
    [GSYM COMB_NOT, GSYM COMB_AND, GSYM COMB_OR, GSYM COMB_MUX,
-    GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT]                                     o
+    GSYM LEFT_FORALL_IMP_THM,DEL_CONCAT,COMB_COND_CONCAT]   (* new *)        o
   CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV))                           o
+  Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_PAIR]                  (* new *)        o
+  CONV_RULE (TOP_SWEEP_CONV FUN_EXISTS_PROD_CONV)           (* new *)        o
   CONV_RULE 
    (RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV))))                    o
   SIMP_RULE std_ss [UNCURRY]                                                 o

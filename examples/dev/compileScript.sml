@@ -589,13 +589,6 @@ val BUS_SPLIT =
     THEN Q.EXISTS_TAC `SND o v`
     THEN RW_TAC std_ss []);
 
-val BUS_SPLIT_UNIQUE = (* Not used *)
- store_thm
-  ("BUS_SPLIT_UNIQUE",
-   ``!v1 v2 v1' v2'. (v1 <> v2 = v1' <> v2') = (v1 = v1') /\ (v2 = v2')``,
-   RW_TAC std_ss [BUS_CONCAT_def,FUN_EQ_THM]
-    THEN PROVE_TAC[]);
-
 val BUS_CONCAT_ETA =
  store_thm
   ("BUS_CONCAT_ETA",
@@ -684,7 +677,6 @@ val MUX_CONCAT =
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(SPEC_ALL(el 2 thl)))
     THEN PROVE_TAC[PAIR_EQ]);
 
-(* Not needed
 val COMB_COND_CONCAT =
  store_thm
   ("COMB_COND_CONCAT",
@@ -701,7 +693,6 @@ val COMB_COND_CONCAT =
     THEN RW_TAC std_ss []
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(SPEC_ALL(el 2 thl)))
     THEN PROVE_TAC[PAIR_EQ]);
-*)
 
 val BUS_CONCAT_ELIM =
  store_thm

@@ -319,7 +319,9 @@ fun dest_CONSTANT tm =
 
 
 (*****************************************************************************)
-(* ``COMB f (i1<>...<>in,out)`` --> (f, ["i1",...,"in"], "out")             *)
+(* ``COMB f (i1<>...<>im,out1<>...<>outn)``                                  *)
+(* -->                                                                       *)
+(* (f, ["i1",...,"im"], ["out1",...,"outn"])                                 *)
 (*****************************************************************************)
 fun dest_COMB tm =
  if is_comb tm
@@ -329,13 +331,12 @@ fun dest_COMB tm =
               = length(strip_BUS_CONCAT(fst(dest_pair(rand tm)))))
  then (rand(rator tm), 
        map var_name (strip_BUS_CONCAT(fst(dest_pair(rand tm)))),
-       var_name(snd(dest_pair(rand tm))))
+       map var_name (strip_BUS_CONCAT(snd(dest_pair(rand tm)))))
  else (print "dest_COMB fails on: \n";
        print_term tm; print "\n";
        raise ERR "dest_COMB" "bad argument");
 
 val is_COMB = can dest_COMB;
-
 
 (*****************************************************************************)
 (* Library associating HOL terms with ML functions for generating            *)
@@ -512,9 +513,10 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
    end else
  if is_COMB tm
   then
-   let val (f, in_names,out_name) = dest_COMB tm
+   let val (f, in_names, out_names) = dest_COMB tm
        val ml_fun = (lookup_vsynth f
-                      handle e => (print_term f; print " not in vsynth_lib\n";
+                      handle e => (print_term f; 
+                                   print "\n"; print "not in vsynth_lib\n";
                                    raise e))
        val vstring = (ml_fun in_names
                       handle e => (print "ML function associated in vsynth_lib with:\n";
@@ -523,7 +525,14 @@ fun MAKE_COMPONENT_VERILOG (out:string->unit) tm =
                                    raise e))
    in 
     (out "/*\n"; out(term2string tm); out "\n*/\n";
-     out "assign "; out out_name; out " = "; out vstring; out ";\n\n")
+     out "assign "; 
+     if null(tl out_names) 
+      then out(hd out_names)
+      else (out "{"; 
+            out(hd out_names);
+            map (fn s => (out ","; out s)) (tl out_names);
+            out "}");
+     out " = "; out vstring; out ";\n\n")
    end 
    else (print "Can't generate Verilog for:\n";
          print_term tm; print "\n";
