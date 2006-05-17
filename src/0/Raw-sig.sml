@@ -141,27 +141,10 @@ sig
   val pp_raw_term    : (term -> int) -> Portable.ppstream -> term -> unit
 end;
 
-
-signature RawTag =
-sig
-  type tag = KernelTypes.tag
-  val empty_tag     : tag
-  val ax_tag        : string ref -> tag
-  val isEmpty       : tag -> bool
-  val isDisk        : tag -> bool
-  val merge         : tag -> tag -> tag
-  val read          : string -> tag
-  val read_disk_tag : string -> tag
-  val axioms_of     : tag -> string ref list
-  val pp_tag        : Portable.ppstream -> tag -> unit
-  val pp_to_disk    : Portable.ppstream -> tag -> unit
-end
-
-
 signature RawThm =
 sig
   type thm
-  type tag      = KernelTypes.tag
+  type tag      = Tag.tag
   type term     = KernelTypes.term
   type hol_type = KernelTypes.hol_type
   type 'a set   = 'a HOLset.set

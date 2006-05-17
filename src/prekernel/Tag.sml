@@ -20,12 +20,24 @@ fun oracles_of (TAG(O,_)) = O;
 fun axioms_of  (TAG(_,A)) = A;
 
 val empty_tag  = TAG ([],[])
-val disk_tag  = TAG (["DISK"],[])
+val disk_only_tag  = TAG (["DISK_THM"],[])
 fun ax_tag r = TAG ([],[r])
 
 val isEmpty = equal empty_tag;
-val isDisk = equal disk_tag;
+val isDisk = equal disk_only_tag;
 
+(*---------------------------------------------------------------------------*)
+(* Create a tag. A tag is a string with only printable characters (as        *)
+(* defined by Char.isPrint) and without spaces.                              *)
+(*---------------------------------------------------------------------------*)
+
+fun read s =
+ let open Substring
+ in if isEmpty(dropl Char.isGraph (all s))
+     then TAG ([s],[])
+     else raise ERR "read"
+           (Lib.quote s^" has embedded spaces or unprintable characters")
+ end;
 
 (*---------------------------------------------------------------------------
       Merge two tags
@@ -33,6 +45,7 @@ val isDisk = equal disk_tag;
 
 local fun smerge t1 [] = t1
         | smerge [] t2 = t2
+        | smerge (t as ["DISK_THM"]) ["DISK_THM"] = t
         | smerge (l0 as s0::rst0) (l1 as s1::rst1) =
             case String.compare (s0,s1)
              of LESS    => s0::smerge rst0 l1
@@ -40,20 +53,10 @@ local fun smerge t1 [] = t1
               | EQUAL   => s0::smerge rst0 rst1
 in
 fun merge (TAG(o1,ax1)) (TAG(o2,ax2)) = TAG(smerge o1 o2, Lib.union ax1 ax2)
+fun read_disk_tag s  =
+     if s = "" then disk_only_tag
+               else TAG (smerge ["DISK_THM"] (Lib.words2 " " s), [])
 end;
-
-(*---------------------------------------------------------------------------*
- * Create a tag. The input string should be an alphanumeric identifier,      *
- * starting with an alphabetic charater.                                     *
- *---------------------------------------------------------------------------*)
-
-fun read s =
- if Lexis.ok_identifier s then TAG ([s],[])
-  else raise ERR "read" (Lib.quote s^" is not an identifier");
-
-val empty_disk_tag = TAG(["DISK_THM"], [])
-fun read_disk_tag "" = empty_disk_tag
-  | read_disk_tag s  = merge empty_disk_tag (TAG (Lib.words2 " " s, []))
 
 
 (*---------------------------------------------------------------------------*

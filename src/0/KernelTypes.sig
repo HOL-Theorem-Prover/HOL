@@ -58,9 +58,7 @@ datatype term = Fv of string * hol_type
      The representation of theorems, and their tags
  ---------------------------------------------------------------------------*)
 
-datatype tag = TAG of string list * string ref list
-
-datatype thm = THM of tag * term HOLset.set * term
+datatype thm = THM of Tag.tag * term HOLset.set * term
 
 
 (*---------------------------------------------------------------------------

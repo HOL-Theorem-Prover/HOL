@@ -15,7 +15,7 @@
 structure Thm : RawThm =
 struct
 
-open Feedback Lib Term KernelTypes
+open Feedback Lib Term KernelTypes Tag
 
 type 'a set = 'a HOLset.set;
 
@@ -646,15 +646,15 @@ fun GEN x th =
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
-fun GENL vs th = let 
+fun GENL vs th = let
   val (asl,c) = sdest_thm th
 in
-  if exists (fn v => var_occursl v asl) vs then 
+  if exists (fn v => var_occursl v asl) vs then
     ERR "GENL" "variable occurs free in hypotheses"
   else
-    make_thm 
-      Count.Gen(tag th, asl, 
-                list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"})) 
+    make_thm
+      Count.Gen(tag th, asl,
+                list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"}))
                                (vs,c))
     handle HOL_ERR _ => ERR "GENL" ""
 end
@@ -1181,7 +1181,7 @@ end;
 fun lexer (ss1,qs1) =
   case Substring.getc (Lib.deinitcommentss ss1)
                       (* was: (Substring.dropl Char.isSpace ss1) *)
-   of NONE => (case qs1 
+   of NONE => (case qs1
                 of (QUOTE s::qs2) => lexer (Substring.all s,qs2)
                  | []             => NONE
                  | _              => ERR "raw lexer" "expected a quotation")

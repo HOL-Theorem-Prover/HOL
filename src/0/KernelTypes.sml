@@ -66,9 +66,7 @@ datatype term = Fv of string * hol_type
       of strings, and axioms are lists of string refs.
  ---------------------------------------------------------------------------*)
 
-datatype tag = TAG of string list * string ref list
-
-datatype thm = THM of tag * term HOLset.set * term
+datatype thm = THM of Tag.tag * term HOLset.set * term
 
 (*---------------------------------------------------------------------------
      The type of witnesses for definitions, used in Theory.
