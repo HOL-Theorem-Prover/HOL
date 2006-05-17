@@ -1682,59 +1682,82 @@ val FXP_MAIN_ERROR_BOUND_THEOREM_UNSIGNED = prove_thm (
 
 val FXP_ERROR_BOUND_LEMMA1_POS_SIGNED = prove_thm (
   "FXP_ERROR_BOUND_LEMMA1_POS_SIGNED",
-  (--`! (x:real) (n: num) (m: num) (s: num). ((&0:real) <= x) /\ (x <= ((&2:real) pow (streamlength (n,m,s) - 1)) /
-      (&2:real) pow fracbits (n,m,s)) /\ validAttr (n,m,s) /\ ~(is_unsigned (n,m,s)) ==>
-      (?(k:num) . (k < (2 EXP (streamlength (n,m,s) - 1))) /\ ((&k:real) / (&2 pow (fracbits (n,m,s))) <= x) /\
-      (x <= (& (SUC k) / ((&2:real) pow (fracbits (n,m,s))))))`--),
-  REPEAT STRIP_TAC THEN Cases_on `(x = ((&2:real) pow (streamlength (n,m,s) - 1)) / ((&2:real) pow fracbits (n,m,s)))` THENL [
-  EXISTS_TAC (--`2 EXP (streamlength (n,m,s) - 1) - 1`--) THEN REWRITE_TAC [streamlength] THEN Cases_on `n` THENL [
-    RW_TAC arith_ss [] THENL [
-      REWRITE_TAC [GSYM REAL_OF_NUM_LT, GSYM REAL_OF_NUM_POW] THEN RW_TAC arith_ss [POW_2_LT] THEN
-      REWRITE_TAC [streamlength] THEN RW_TAC arith_ss [PWFLT_REAL] THEN RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN
-      RW_TAC arith_ss [EXP ] THEN MP_TAC twogz THEN DISCH_THEN(MP_TAC o SPEC (--`0 : num`--)) THEN
-      REWRITE_TAC [REAL_LT_IMP_LE], RW_TAC arith_ss [EXP ] THEN REWRITE_TAC [streamlength] THEN
-      RW_TAC arith_ss [PWFLT_REAL] THEN RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN RW_TAC arith_ss [pow] THEN
-      RW_TAC arith_ss [REAL_OF_NUM_LE]],
-    RW_TAC arith_ss [] THENL [
-      RW_TAC arith_ss [GSYM REAL_OF_NUM_LT,GSYM REAL_OF_NUM_POW,twogz], REWRITE_TAC [streamlength] THEN
-      RW_TAC arith_ss [PWFLT_REAL] THEN RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN
-      RW_TAC arith_ss [REAL_OF_NUM_LE,REAL_OF_NUM_POW], RW_TAC arith_ss [PWFLT_REAL] THEN
-      RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN REWRITE_TAC [streamlength] THEN
-      REWRITE_TAC [SUC_SUB1] THEN REWRITE_TAC [SUC_ONE_ADD] THEN RW_TAC arith_ss [GSYM REAL_OF_NUM_ADD] THEN
-      RW_TAC arith_ss [twoexpgo,GSYM REAL_OF_NUM_SUB] THEN ONCE_REWRITE_TAC[REAL_ARITH (--`((a:real) + (b - a)) = b`--)] THEN
-      RW_TAC arith_ss [GSYM REAL_OF_NUM_POW] THEN REAL_ARITH_TAC]],
-  MP_TAC(SPEC (--`\ (k:num). ((&k:real) / (((&2:real) pow fracbits (n,m,s)):real) <= (x:real))`--) (EXISTS_GREATEST )) THEN
-  REWRITE_TAC [] THEN W(C SUBGOAL_THEN MP_TAC o lhs o lhand o snd) THENL [
-    CONJ_TAC THENL [
-      EXISTS_TAC (--`0:num`--) THEN RW_TAC arith_ss [REAL_MUL_LZERO,real_div],
-      EXISTS_TAC (--`(2 EXP (streamlength (n,m,s) - 1))`--) THEN
-      X_GEN_TAC (--`k:num`--) THEN DISCH_TAC THEN RW_TAC arith_ss [REAL_OF_NUM_POW] THEN
-      RW_TAC arith_ss [GSYM real_lt] THEN MATCH_MP_TAC REAL_LT_LCANCEL_IMP THEN
-      EXISTS_TAC (--`inv((&2:real) pow (fracbits (n,m,s)))`--) THEN RW_TAC arith_ss [] THENL [
-        RW_TAC arith_ss [invfracgt0], RW_TAC arith_ss [REAL_LT_LMUL,invfracgt0] THEN
-        RW_TAC arith_ss [GSYM REAL_OF_NUM_POW] THEN RW_TAC arith_ss [pwvfraclt] THEN
-        RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN UNDISCH_TAC (--`k > 2 EXP (streamlength (n,m,s)-1)`--) THEN
-        REWRITE_TAC [GREATER_DEF] THEN DISCH_TAC THEN
-        UNDISCH_TAC (--`x <= ((&2:real) pow (streamlength (n,m,s) - 1) / (&2:real) pow fracbits (n,m,s))`--) THEN
-        REWRITE_TAC [pwvfracle111] THEN UNDISCH_TAC (--`2 EXP (streamlength (n,m,s)-1) < k`--) THEN
-        REWRITE_TAC [GSYM REAL_OF_NUM_LT, GSYM REAL_OF_NUM_POW] THEN REAL_ARITH_TAC]],
-    DISCH_THEN(fn th => REWRITE_TAC[th]) THEN DISCH_THEN(X_CHOOSE_THEN (--`k:num`--) MP_TAC) THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN DISCH_THEN(MP_TAC o SPEC (--`SUC k`--)) THEN
-    REWRITE_TAC[REAL_NOT_LE] THEN DISCH_TAC THEN EXISTS_TAC (--`k:num`--) THEN REPEAT CONJ_TAC THENL [
-      RW_TAC arith_ss [GSYM REAL_OF_NUM_POW ,GSYM REAL_OF_NUM_LT ] THEN RW_TAC arith_ss [GSYM otwoexpsl11] THEN
-      UNDISCH_TAC (--`(\k. (& k:real) / (&2 :real) pow fracbits (n,m,s) <= x) k`--) THEN
-      UNDISCH_TAC (--` x <= (&2:real) pow (streamlength (n,m,s) - 1) / (&2:real) pow fracbits (n,m,s)`--) THEN
-      REWRITE_TAC[TAUT (`(a ==> b ==> c) = (b /\ a ==> c)`)] THEN RW_TAC arith_ss [real_gt, GSYM real_lte] THEN
-      UNDISCH_TAC (--`x <= ((&2:real) pow (streamlength (n,m,s) - 1) / (&2:real) pow fracbits (n,m,s))`--) THEN
-      REWRITE_TAC[REAL_LE_LT] THEN
-      UNDISCH_TAC (--`~(x = (&2:real) pow (streamlength (n,m,s) - 1) / (&2:real) pow fracbits (n,m,s))`--) THEN
-      RW_TAC arith_ss [] THEN
-      UNDISCH_TAC (--`x < ((&2:real) pow (streamlength (n,m,s) - 1) / (&2:real) pow fracbits (n,m,s))`--) THEN
-      UNDISCH_TAC (--`(& k / (&2:real) pow fracbits (n,m,s) <= x)`--) THEN REWRITE_TAC[TAUT (`(a ==> b ==> c) = (a /\ b ==> c)`)] THEN
-      REWRITE_TAC [pwvfracle21,pwvfraclt111] THEN REAL_ARITH_TAC, UNDISCH_TAC (--`(\k. & k / (&2:real) pow fracbits (n,m,s) <= x) k`--) THEN
-      RW_TAC arith_ss [], UNDISCH_TAC (--`SUC k > k ==> ~(\k. & k / (&2:real) pow fracbits (n,m,s) <= x) (SUC k)`--) THEN
-      RW_TAC arith_ss [] THEN UNDISCH_TAC (--`~(& (SUC k) / (&2:real) pow fracbits (n,m,s) <= x)`--) THEN
-      REWRITE_TAC [REAL_NOT_LE] THEN REWRITE_TAC [REAL_LT_IMP_LE]]]]);
+  ``! (x:real) (n: num) (m: num) (s: num).
+         0r <= x /\ (x <= (2r pow (streamlength (n,m,s) - 1)) /
+                           2r pow fracbits (n,m,s)) /\
+         validAttr (n,m,s) /\ ~(is_unsigned (n,m,s)) ==>
+         ? (k:num). k < (2 EXP (streamlength (n,m,s) - 1)) /\
+                    (&k:real) / (&2 pow (fracbits (n,m,s))) <= x /\
+                    x <= (& (SUC k) / (2r pow (fracbits (n,m,s))))``,
+  REPEAT STRIP_TAC THEN
+  Cases_on
+    `x = (2r pow (streamlength (n,m,s) - 1)) / (2r pow fracbits (n,m,s))`
+  THENL [
+    EXISTS_TAC (--`2 EXP (streamlength (n,m,s) - 1) - 1`--) THEN
+    REWRITE_TAC [streamlength] THEN Cases_on `n` THENL [
+      RW_TAC arith_ss [] THENL [
+        REWRITE_TAC [GSYM REAL_OF_NUM_LT, GSYM REAL_OF_NUM_POW] THEN
+        RW_TAC arith_ss [POW_2_LT] THEN
+        REWRITE_TAC [streamlength] THEN RW_TAC arith_ss [PWFLT_REAL] THEN
+        RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN
+        RW_TAC arith_ss [EXP ] THEN MP_TAC twogz THEN
+        DISCH_THEN(MP_TAC o SPEC (--`0 : num`--)) THEN
+        REWRITE_TAC [REAL_LT_IMP_LE],
+
+        RW_TAC arith_ss [EXP ] THEN REWRITE_TAC [streamlength] THEN
+        RW_TAC arith_ss [PWFLT_REAL] THEN
+        RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN
+        RW_TAC arith_ss [pow] THEN
+        RW_TAC arith_ss [REAL_OF_NUM_LE]
+      ],
+      RW_TAC arith_ss [] THENL [
+        REWRITE_TAC [streamlength] THEN
+        RW_TAC arith_ss [PWFLT_REAL] THEN
+        RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN
+        RW_TAC arith_ss [REAL_OF_NUM_LE,REAL_OF_NUM_POW],
+
+        RW_TAC arith_ss [PWFLT_REAL] THEN
+        RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN
+        REWRITE_TAC [streamlength] THEN
+        REWRITE_TAC [SUC_SUB1] THEN REWRITE_TAC [SUC_ONE_ADD] THEN
+        RW_TAC arith_ss [GSYM REAL_OF_NUM_ADD] THEN
+        RW_TAC arith_ss [twoexpgo,GSYM REAL_OF_NUM_SUB] THEN
+        ONCE_REWRITE_TAC[REAL_ARITH (--`((a:real) + (b - a)) = b`--)] THEN
+        RW_TAC arith_ss [GSYM REAL_OF_NUM_POW] THEN REAL_ARITH_TAC
+      ]
+    ],
+    MP_TAC(SPEC (--`\ (k:num). ((&k:real) / ((2r pow fracbits (n,m,s)):real) <= (x:real))`--) (EXISTS_GREATEST )) THEN
+    REWRITE_TAC [] THEN W(C SUBGOAL_THEN MP_TAC o lhs o lhand o snd) THENL [
+      CONJ_TAC THENL [
+        EXISTS_TAC (--`0:num`--) THEN RW_TAC arith_ss [REAL_MUL_LZERO,real_div],
+        EXISTS_TAC (--`(2 EXP (streamlength (n,m,s) - 1))`--) THEN
+        X_GEN_TAC (--`k:num`--) THEN DISCH_TAC THEN RW_TAC arith_ss [REAL_OF_NUM_POW] THEN
+        RW_TAC arith_ss [GSYM real_lt] THEN MATCH_MP_TAC REAL_LT_LCANCEL_IMP THEN
+        EXISTS_TAC (--`inv(2r pow (fracbits (n,m,s)))`--) THEN RW_TAC arith_ss [] THENL [
+          RW_TAC arith_ss [invfracgt0], RW_TAC arith_ss [REAL_LT_LMUL,invfracgt0] THEN
+          RW_TAC arith_ss [GSYM REAL_OF_NUM_POW] THEN RW_TAC arith_ss [pwvfraclt] THEN
+          RW_TAC arith_ss [REAL_DIV_LMUL,vfracnot0] THEN UNDISCH_TAC (--`k > 2 EXP (streamlength (n,m,s)-1)`--) THEN
+          REWRITE_TAC [GREATER_DEF] THEN DISCH_TAC THEN
+          UNDISCH_TAC (--`x <= (2r pow (streamlength (n,m,s) - 1) / 2r pow fracbits (n,m,s))`--) THEN
+          REWRITE_TAC [pwvfracle111] THEN UNDISCH_TAC (--`2 EXP (streamlength (n,m,s)-1) < k`--) THEN
+          REWRITE_TAC [GSYM REAL_OF_NUM_LT, GSYM REAL_OF_NUM_POW] THEN REAL_ARITH_TAC]],
+      DISCH_THEN(fn th => REWRITE_TAC[th]) THEN DISCH_THEN(X_CHOOSE_THEN (--`k:num`--) MP_TAC) THEN
+      DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN DISCH_THEN(MP_TAC o SPEC (--`SUC k`--)) THEN
+      REWRITE_TAC[REAL_NOT_LE] THEN DISCH_TAC THEN EXISTS_TAC (--`k:num`--) THEN REPEAT CONJ_TAC THENL [
+        RW_TAC arith_ss [GSYM REAL_OF_NUM_POW ,GSYM REAL_OF_NUM_LT ] THEN RW_TAC arith_ss [GSYM otwoexpsl11] THEN
+        UNDISCH_TAC (--`(\k. (& k:real) / (&2 :real) pow fracbits (n,m,s) <= x) k`--) THEN
+        UNDISCH_TAC (--` x <= 2r pow (streamlength (n,m,s) - 1) / 2r pow fracbits (n,m,s)`--) THEN
+        REWRITE_TAC[TAUT (`(a ==> b ==> c) = (b /\ a ==> c)`)] THEN RW_TAC arith_ss [real_gt, GSYM real_lte] THEN
+        UNDISCH_TAC (--`x <= (2r pow (streamlength (n,m,s) - 1) / 2r pow fracbits (n,m,s))`--) THEN
+        REWRITE_TAC[REAL_LE_LT] THEN
+        UNDISCH_TAC (--`~(x = 2r pow (streamlength (n,m,s) - 1) / 2r pow fracbits (n,m,s))`--) THEN
+        RW_TAC arith_ss [] THEN
+        UNDISCH_TAC (--`x < (2r pow (streamlength (n,m,s) - 1) / 2r pow fracbits (n,m,s))`--) THEN
+        UNDISCH_TAC (--`(& k / 2r pow fracbits (n,m,s) <= x)`--) THEN REWRITE_TAC[TAUT (`(a ==> b ==> c) = (a /\ b ==> c)`)] THEN
+        REWRITE_TAC [pwvfracle21,pwvfraclt111] THEN REAL_ARITH_TAC, UNDISCH_TAC (--`(\k. & k / 2r pow fracbits (n,m,s) <= x) k`--) THEN
+        RW_TAC arith_ss [], UNDISCH_TAC (--`SUC k > k ==> ~(\k. & k / 2r pow fracbits (n,m,s) <= x) (SUC k)`--) THEN
+        RW_TAC arith_ss [] THEN UNDISCH_TAC (--`~(& (SUC k) / 2r pow fracbits (n,m,s) <= x)`--) THEN
+        REWRITE_TAC [REAL_NOT_LE] THEN REWRITE_TAC [REAL_LT_IMP_LE]]]]);
 
 (*---------------------------------------*)
 
@@ -1931,8 +1954,8 @@ val exp2 = prove(
 
 val FXP_ERROR_BOUND_LEMMA3_NEG_SIGNED = prove_thm (
   "FXP_ERROR_BOUND_LEMMA3_NEG_SIGNED",
-  (--`! (x:real) (n: num) (m: num) (s: num). (&0 <= ~x) /\ (~x <= ((&2:real) pow (streamlength (n,m,s) - 1)) /
-      (&2:real) pow fracbits (n,m,s)) /\ validAttr (n,m,s) /\ ~(is_unsigned (n,m,s)) ==>
+  (--`! (x:real) (n: num) (m: num) (s: num). (&0 <= ~x) /\ (~x <= (2r pow (streamlength (n,m,s) - 1)) /
+      2r pow fracbits (n,m,s)) /\ validAttr (n,m,s) /\ ~(is_unsigned (n,m,s)) ==>
       (?(w:bool word) . abs (value (fxp (w,(n,m,s))) - x) <= inv (&2 pow (fracbits (n,m,s))) /\ (WORDLEN (w) = n))`--),
   REPEAT GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC o MATCH_MP FXP_ERROR_BOUND_LEMMA2_NEG_SIGNED) THEN
   DISCH_THEN(X_CHOOSE_THEN (--`k:num`--) MP_TAC) THEN STRIP_TAC THEN Cases_on `k` THENL [

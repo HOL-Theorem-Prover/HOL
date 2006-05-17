@@ -284,27 +284,27 @@ val BIT_B_NEQ = store_thm("BIT_B_NEQ",
 (* -------------------------------------------------------- *)
 
 val BITS_COMP_THM2 = store_thm("BITS_COMP_THM2",
-  `!h1 l1 h2 l2 n. BITS h2 l2 (BITS h1 l1 n) = BITS (MIN h1 (h2 + l1)) (l2 + l1) n`,
-  B_RW_TAC [MIN_DEF,REWRITE_RULE [GSYM NOT_LESS] BITS_COMP_THM]
-    THEN Cases_on `h2 = 0` THEN1 A_FULL_SIMP_TAC [BITS_ZERO,BITS_ZERO2]
+  `!h1 l1 h2 l2 n. BITS h2 l2 (BITS h1 l1 n) =
+                   BITS (MIN h1 (h2 + l1)) (l2 + l1) n`,
+  RW_TAC bool_ss [MIN_DEF,REWRITE_RULE [GSYM NOT_LESS] BITS_COMP_THM]
+    THEN Cases_on `h2 = 0` THEN1 FULL_SIMP_TAC arith_ss [BITS_ZERO,BITS_ZERO2]
     THEN RULE_ASSUM_TAC (REWRITE_RULE [NOT_ZERO_LT_ZERO])
-    THEN Cases_on `h1 < l1` THEN1 A_FULL_SIMP_TAC [BITS_ZERO,BITS_ZERO2]
+    THEN Cases_on `h1 < l1` THEN1 FULL_SIMP_TAC arith_ss [BITS_ZERO,BITS_ZERO2]
     THEN RULE_ASSUM_TAC (ONCE_REWRITE_RULE [ADD_COMM])
     THEN IMP_RES_TAC SUB_RIGHT_LESS
     THEN POP_ASSUM (fn th => ASSUME_TAC
-                   (MATCH_MP TWOEXP_MONO (ONCE_REWRITE_RULE [GSYM LESS_MONO_EQ] th)))
+           (MATCH_MP TWOEXP_MONO (ONCE_REWRITE_RULE [GSYM LESS_MONO_EQ] th)))
     THEN ASSUME_TAC (SPECL [`h1`,`l1`,`n`] BITSLT_THM)
     THEN Cases_on `h1 = l1`
     THENL [
-      A_FULL_SIMP_TAC [SYM ONE,SUC_SUB]
-        THEN `BITS h1 l1 n < 2 EXP SUC h2` by IMP_RES_TAC LESS_TRANS
-        THEN ASM_A_SIMP_TAC [BITS_LT_HIGH,BITS_DIV_THM],
+      FULL_SIMP_TAC bool_ss [SUC_SUB, SUB_EQUAL_0, SYM ONE]
+        THEN `BITS l1 l1 n < 2 ** SUC h2` by IMP_RES_TAC LESS_TRANS
+        THEN ASM_SIMP_TAC arith_ss [BITS_LT_HIGH,BITS_DIV_THM],
       `~(h1 <= l1)` by DECIDE_TAC
-        THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (SIMP_RULE bool_ss [th,SUB_LEFT_SUC]))
-        THEN `BITS h1 l1 n < 2 EXP SUC h2` by IMP_RES_TAC LESS_TRANS
-        THEN ASM_A_SIMP_TAC [BITS_LT_HIGH,BITS_DIV_THM]
-    ]
-);
+        THEN POP_ASSUM (fn th => RULE_ASSUM_TAC
+               (SIMP_RULE bool_ss [th,SUB_LEFT_SUC]))
+        THEN `BITS h1 l1 n < 2 ** SUC h2` by IMP_RES_TAC LESS_TRANS
+        THEN ASM_SIMP_TAC arith_ss [BITS_LT_HIGH,BITS_DIV_THM]]);
 
 (* -------------------------------------------------------- *)
 
@@ -379,7 +379,6 @@ val LESS_EQ_EXP_MULT = store_thm("LESS_EQ_EXP_MULT",
   `!a b. a <= b ==> ?p. 2 EXP b = p * 2 EXP a`,
   REPEAT STRIP_TAC
     THEN IMP_RES_TAC LESS_EQUAL_ADD
-    THEN RULE_ASSUM_TAC (ONCE_REWRITE_RULE [SIMP_RULE arith_ss [] (SPEC `2` (GSYM EXP_INJECTIVE))])
     THEN EXISTS_TAC `2 EXP p`
     THEN FULL_SIMP_TAC arith_ss [EXP_ADD,MULT_COMM]
 );
@@ -745,9 +744,8 @@ val LESS_EXP_MULT2 = prove(
   `!a b. a < b ==> ?p. 2 EXP b = 2 EXP (p + 1) * 2 EXP a`,
   REPEAT STRIP_TAC
     THEN IMP_RES_TAC LESS_ADD_1
-    THEN RULE_ASSUM_TAC (ONCE_REWRITE_RULE [SIMP_RULE arith_ss [] (SPEC `2` (GSYM EXP_INJECTIVE))])
     THEN EXISTS_TAC `p`
-    THEN FULL_SIMP_TAC arith_ss [EXP_ADD,MULT_COMM]
+    THEN FULL_SIMP_TAC arith_ss [EXP_ADD]
 );
 
 val BITWISE_LEM = prove(
@@ -1005,6 +1003,33 @@ val LOG2_exists = prove(
 
 val LOG2 = new_specification ("LOG2", ["LOG2"], LOG2_exists);
 
+val LOG2_LBOUND = prove(
+  `!m. 0 < m ==> 2 ** LOG2 m <= m`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC LOG2 THEN
+  POP_ASSUM (fn th => CONV_TAC (RAND_CONV (K th)))THEN DECIDE_TAC)
+val LOG2_UBOUND = prove(
+  `!m. 0 < m ==> m < 2 ** (LOG2 m + 1)`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC LOG2 THEN
+  POP_ASSUM (fn th => CONV_TAC (LAND_CONV (K th))) THEN
+  SRW_TAC [][EXP_ADD, DECIDE ``x * 2 = x + x``, MOD_LESS])
+
+val LOG2_UNIQUE_BOUNDS = store_thm(
+  "LOG2_UNIQUE_BOUNDS",
+  `!m n. 2 ** n <= m /\ m < 2 ** (n + 1) ==> (LOG2 m = n)`,
+  REPEAT STRIP_TAC THEN
+  SPOSE_NOT_THEN ASSUME_TAC THEN
+  `0 < m` by PROVE_TAC [LESS_LESS_EQ_TRANS, ZERO_LT_TWOEXP] THEN
+  `LOG2 m < n \/ n < LOG2 m` by DECIDE_TAC THENL [
+     `LOG2 m + 1 <= n` by DECIDE_TAC THEN
+     `2 ** (LOG2 m + 1) <= 2 ** n` by SRW_TAC [][] THEN
+     `m < 2 ** (LOG2 m + 1)` by SRW_TAC [][LOG2_UBOUND] THEN
+     DECIDE_TAC,
+     `n + 1 <= LOG2 m` by DECIDE_TAC THEN
+     `2 ** (n + 1) <= 2 ** LOG2 m` by SRW_TAC [][] THEN
+     `2 ** LOG2 m <= m` by SRW_TAC [][LOG2_LBOUND] THEN
+     DECIDE_TAC
+  ])
+
 val LOG2_2EXPN =
   (GEN_ALL o
     SIMP_RULE arith_ss [ZERO_LT_TWOEXP,DECIDE ``!a b. 0 < b ==> 0 < a + b``] o
@@ -1023,18 +1048,10 @@ val lem = prove(
 
 val LOG2_POWER = prove(
   `!q. q = LOG2 (2 ** q)`,
-  STRIP_TAC THEN Cases_on `q < LOG2 (2 ** q)`
-    THENL [
-       POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP TWOEXP_MONO th))
-         THEN ASSUME_TAC (SPEC `q` LOG2_2EXPN_0)
-         THEN FULL_SIMP_TAC arith_ss [],
-       Tactical.REVERSE (Cases_on `LOG2 (2 ** q) < q`) THEN1 DECIDE_TAC
-         THEN IMP_RES_TAC lem
-         THEN PAT_ASSUM `a < b` (fn th => ASSUME_TAC (MATCH_MP TWOEXP_MONO th))
-         THEN ASSUME_TAC (SPEC `q` LOG2_2EXPN_0)
-         THEN FULL_SIMP_TAC arith_ss []
-    ]
-);
+  GEN_TAC THEN
+  Q_TAC SUFF_TAC `2 ** q <= 2 ** q /\ 2 ** q < 2 ** (q + 1)` THEN1
+        METIS_TAC [LOG2_UNIQUE_BOUNDS] THEN
+  SRW_TAC [][])
 
 val lem2 = DECIDE ``!a b c. a < c /\ b < c ==> a + b < d + (c * 2 + 1)``;
 
@@ -1065,37 +1082,8 @@ val lem4 = prove(
 
 val LOG2_UNIQUE = store_thm("LOG2_UNIQUE",
   `!n q. (?r. (n = 2 ** q + r) /\ r < 2 ** q) ==> (LOG2 n = q)`,
-  RW_TAC arith_ss []
-    THEN Cases_on `q < LOG2 (2 ** q + r)`
-    THENL [
-      IMP_RES_TAC (DECIDE ``!a b. a < b ==> (a + 1 <= b)``)
-        THEN POP_ASSUM (K ALL_TAC)
-        THEN POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP TWOEXP_MONO2 th))
-        THEN `2 ** q + r < 2 ** (q + 1)` by ASM_SIMP_TAC arith_ss [EXP_ADD]
-        THEN `2 ** q + r < 2 ** LOG2 (2 ** q + r)`
-          by METIS_TAC [lem,LESS_LESS_EQ_TRANS,LESS_TRANS]
-        THEN ASSUME_TAC (SPECL [`r`,`q`] LOG2_2EXPN)
-        THEN FULL_SIMP_TAC (arith_ss++numSimps.ARITH_AC_ss) [],
-      Cases_on `r` THEN1 METIS_TAC [ADD,LOG2_POWER]
-        THEN Cases_on `q = LOG2 (2 ** q + SUC n)` THEN FULL_SIMP_TAC arith_ss []
-        THEN `LOG2 (SUC n + 2 ** q) < q` by DECIDE_TAC
-        THEN `LOG2 (SUC n + 2 ** q) <= q - 1` by DECIDE_TAC
-        THEN IMP_RES_TAC lem4
-        THEN `LOG2 (SUC n + 2 ** q) <= q - 2` by DECIDE_TAC
-        THEN POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP MOD_2EXP_MONO th))
-        THEN `~(q - 1 = 0)` by DECIDE_TAC
-        THEN FULL_SIMP_TAC std_ss [DECIDE ``!n. ~(n - 1 = 0) ==> (SUC (n - 2) = n - 1)``]
-        THEN POP_ASSUM (K ALL_TAC)
-        THEN POP_ASSUM (ASSUME_TAC o SPEC `SUC n + 2 ** q`)
-        THEN `(SUC n + 2 ** q) MOD 2 ** LOG2 (SUC n + 2 ** q) < 2 ** (q - 1)`
-          by METIS_TAC [MOD_2EXP_LT,LESS_EQ_LESS_TRANS]
-        THEN IMP_RES_TAC lem3
-        THEN POP_ASSUM (K ALL_TAC)
-        THEN POP_ASSUM (ASSUME_TAC o SPEC `n`)
-        THEN ASSUME_TAC (SPECL [`SUC n`,`q`] LOG2_2EXPN)
-        THEN FULL_SIMP_TAC arith_ss []
-    ]
-);
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC LOG2_UNIQUE_BOUNDS THEN
+  SRW_TAC [ARITH_ss][EXP_ADD])
 
 (* -------------------------------------------------------- *)
 

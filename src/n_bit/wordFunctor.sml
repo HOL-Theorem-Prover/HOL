@@ -395,11 +395,10 @@ val WORD_NEG_1_QT = prove(
   SIMP_TAC arith_ss [TWO_COMP_def,ONE_COMP_def,AONE_def,COMP0_def,
                     MOD_WL_def,ZERO_MOD,ZERO_LT_TWOEXP]
     THEN Cases_on `WL` THEN1 ASM_SIMP_TAC arith_ss [MOD_WL_def,EQUIV_def]
-    THEN `0 < SUC n` by DECIDE_TAC
-    THEN POP_ASSUM (fn th => ASSUME_TAC (MATCH_MP TWOEXP_MONO th))
-    THEN RULE_ASSUM_TAC (SIMP_RULE arith_ss [])
-    THEN ASM_SIMP_TAC bool_ss [EQUIV_def,LESS_MOD]
-);
+    THEN Q_TAC SUFF_TAC `1 < 2 ** SUC n` THEN1
+           SRW_TAC [][LESS_MOD,EQUIV_REFL]
+    THEN METIS_TAC [prim_recTheory.LESS_0, EXP, TWOEXP_MONO]
+)
 
 (* -------------------------------------------------------- *)
 
@@ -928,7 +927,7 @@ val word_nchotomy = store_thm("word_nchotomy",
 
 val w2n_tm = prim_mk_const{Name="w2n",Thy=thyname};
 
-val word_tyinfo = 
+val word_tyinfo =
   TypeBasePure.mk_nondatatype_info
        (word_type,
         {nchotomy = SOME word_nchotomy,
@@ -1443,10 +1442,7 @@ val lem9 = prove(
 
 val lem10 = prove(
   `!a b. 2 EXP a <= 2 EXP (a - b) ==> (a = 0) \/ (b = 0)`,
-  REPEAT STRIP_TAC
-    THEN ASSUME_TAC (SPEC_ALL EXP_SUB_LESS_EQ)
-    THEN `2 EXP (a - b) = 2 EXP a` by IMP_RES_TAC LESS_EQUAL_ANTISYM
-    THEN A_FULL_SIMP_TAC [SUB_EQ_EQ_0,REDUCE_RULE (SPEC `2` EXP_INJECTIVE)]
+  SRW_TAC [ARITH_ss][]
 );
 
 val lem11 = (GEN_ALL o REWRITE_RULE [EXP,GSYM NOT_LESS_EQUAL])
@@ -1476,12 +1472,11 @@ val ASR_THM = store_thm("ASR_THM",
        A_RW_TAC [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
        `x = HB` by DECIDE_TAC
          THEN A_RW_TAC [WL_def,SUB_RIGHT_ADD,EXP,EXP_1,TWOEXP_LT_EQ1],
-       A_RW_TAC [WL_def,SUB_RIGHT_ADD,EXP,EXP_SUB_LESS_EQ]
-         THEN IMP_RES_TAC lem10
-         THEN A_FULL_SIMP_TAC [lem11]
-         THEN REWRITE_TAC [TIMES2]
-         THEN ONCE_REWRITE_TAC [DECIDE (Term `(a:num) + b + c = a + c + b`)]
-         THEN REWRITE_TAC [ADD_SUB]
+       `HB - x <= HB` by DECIDE_TAC THEN
+       `2 ** (HB - x) <= 2 ** HB` by SRW_TAC [][] THEN
+       SRW_TAC [ARITH_ss]
+               [DECIDE (Term`!m n p. n <= m ==> (m - n + p = m + p - n)`),
+                WL_def, EXP]
     ]
 );
 
@@ -1494,13 +1489,11 @@ val ASR_LIMIT = store_thm("ASR_LIMIT",
   `!x w. HB <= x ==> (w >> x = if MSB w then word_T else 0w)`,
   REPEAT STRIP_TAC
     THEN Cases_on_word `w`
-    THEN A_RW_TAC [ASR_THM,MSB_EVAL,MSBn_def,BIT_def,MIN_LEM,NOT_BITS2,WL_SUB_HB,SUB_RIGHT_ADD,word_T]
-    THEN RULE_ASSUM_TAC (REWRITE_RULE [(SYM o REWRITE_RULE [GSYM (CONJUNCT2 EXP),SYM WL_def]
-                                            o REWRITE_RULE [MULT_RIGHT_1,SYM TWO]
-                                            o SPECL [`2 EXP HB`,`1`,`1`]) MULT_LESS_EQ_SUC])
-    THEN ASSUME_TAC (SPEC `HB` ZERO_LT_TWOEXP)
-    THEN `2 EXP HB = 1` by DECIDE_TAC
-    THEN ASM_A_SIMP_TAC [WL_def,EXP]
+    THEN A_RW_TAC [ASR_THM,MSB_EVAL,MSBn_def,BIT_def,MIN_LEM,NOT_BITS2,
+                   WL_SUB_HB,SUB_RIGHT_ADD,word_T]
+    THEN FULL_SIMP_TAC (srw_ss()) [WL_def]
+    THEN `HB = 0` by DECIDE_TAC
+    THEN SRW_TAC [][]
 );
 
 (* -------------------------------------------------------- *)
@@ -1815,7 +1808,9 @@ val WORD_HS = save_thm("WORD_HS",
 
 (* -------------------------------------------------------- *)
 
-val SPEC_LESS_EXP_SUC_MONO = (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`n`,`0`]) LESS_EXP_SUC_MONO;
+val SPEC_LESS_EXP_SUC_MONO = prove(
+  `!n. 2 ** n < 2 ** SUC n`,
+  SRW_TAC [][])
 
 val SPLIT_2_EXP_WL = prove(`2 ** WL = 2 ** HB + 2 ** HB`,SIMP_TAC arith_ss [EXP,WL_def]);
 

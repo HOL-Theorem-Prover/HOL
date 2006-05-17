@@ -128,15 +128,14 @@ val th = (SPEC_ALL o REWRITE_RULE [ZERO_LT_TWOEXP] o SPEC `2 ** n`) DIVISION;
 val MOD_2EXP_LT = save_thm("MOD_2EXP_LT", (GEN_ALL o CONJUNCT2) th);
 
 (* |- !n k. k = k DIV 2 ** n * 2 ** n + k MOD 2 ** n *)
-val TWOEXP_DIVISION = save_thm("TWOEXP_DIVISION", (GEN_ALL o CONJUNCT1) th);
+val TWOEXP_DIVISION = save_thm("TWOEXP_DIVISION", (GEN_ALL o CONJUNCT1) th)
 
-local
-  val sp2 = GEN `a` o GEN `b` o fst o EQ_IMP_RULE o
-            SPEC_ALL o SIMP_RULE std_ss [] o SPEC `2`
-in
-  val TWOEXP_MONO  = save_thm("TWOEXP_MONO",  sp2 LT_EXP_ISO)
-  val TWOEXP_MONO2 = save_thm("TWOEXP_MONO2", sp2 LE_EXP_ISO)
-end;
+val TWOEXP_MONO  = store_thm("TWOEXP_MONO",
+                             `!a b. a < b ==> 2 ** a < 2 ** b`,
+                             SRW_TAC [][])
+val TWOEXP_MONO2 = store_thm("TWOEXP_MONO2",
+                             `!a b. a <= b ==> 2 ** a <= 2 ** b`,
+                             SRW_TAC [][])
 
 val EXP_SUB_LESS_EQ = store_thm("EXP_SUB_LESS_EQ",
   `!a b. 2 ** (a - b) <= 2 ** a`,
@@ -293,8 +292,8 @@ val BITS_COMP_THM2 = store_thm("BITS_COMP_THM2",
     \\ ASSUME_TAC (SPECL [`h1`,`l1`,`n`] BITSLT_THM)
     \\ Cases_on `h1 = l1`
     << [
-      FULL_SIMP_TAC arith_ss [SYM ONE,SUC_SUB]
-        \\ `BITS h1 l1 n < 2 ** SUC h2` by IMP_RES_TAC LESS_TRANS
+      FULL_SIMP_TAC bool_ss [SUC_SUB, SUB_EQUAL_0, SYM ONE]
+        \\ `BITS l1 l1 n < 2 ** SUC h2` by IMP_RES_TAC LESS_TRANS
         \\ ASM_SIMP_TAC arith_ss [BITS_LT_HIGH,BITS_DIV_THM],
       `~(h1 <= l1)` by DECIDE_TAC
         \\ POP_ASSUM (fn th => RULE_ASSUM_TAC
@@ -359,10 +358,8 @@ val LESS_EQ_EXP_MULT = store_thm("LESS_EQ_EXP_MULT",
   `!a b. a <= b ==> ?p. 2 ** b = p * 2 ** a`,
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC LESS_EQUAL_ADD
-    \\ RULE_ASSUM_TAC (ONCE_REWRITE_RULE [SIMP_RULE arith_ss []
-         (SPEC `2` (GSYM EXP_INJECTIVE))])
     \\ EXISTS_TAC `2 ** p`
-    \\ FULL_SIMP_TAC arith_ss [EXP_ADD,MULT_COMM]);
+    \\ FULL_SIMP_TAC arith_ss [EXP_ADD]);
 
 val LESS_EXP_MULT = SIMP_PROVE bool_ss [LESS_IMP_LESS_OR_EQ,LESS_EQ_EXP_MULT]
   ``!a b. a < b ==> ?p. 2 ** b = p * 2 ** a``;
@@ -684,9 +681,7 @@ val LESS_EXP_MULT2 = prove(
   `!a b. a < b ==> ?p. 2 ** b = 2 ** (p + 1) * 2 ** a`,
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC LESS_ADD_1
-    \\ RULE_ASSUM_TAC (ONCE_REWRITE_RULE [SIMP_RULE arith_ss []
-           (SPEC `2` (GSYM EXP_INJECTIVE))])
-    \\ EXISTS_TAC `p` \\ FULL_SIMP_TAC arith_ss [EXP_ADD,MULT_COMM]);
+    \\ EXISTS_TAC `p` \\ FULL_SIMP_TAC arith_ss [EXP_ADD]);
 
 val BITWISE_LEM = prove(
   `!n op a b. BIT n (BITWISE (SUC n) op a b) = op (BIT n a) (BIT n b)`,

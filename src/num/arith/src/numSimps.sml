@@ -96,6 +96,10 @@ val arithmetic_rewrites = [
    SUB_EQUAL_0, SUC_SUB1, SUB_0, ADD_SUB, add_sym ADD_SUB, SUB_EQ_0,
    sym_lhs SUB_EQ_0, SUB_LESS_EQ, SUB_MONO_EQ, SUB_RIGHT_GREATER,
    SUB_RIGHT_LESS, SUB_RIGHT_GREATER_EQ, SUB_RIGHT_LESS_EQ, prim_recTheory.PRE,
+   (* exponentiation *)
+   EXP_EQ_0, EXP_1, EXP_EQ_1, ZERO_LT_EXP, EXP_EXP_INJECTIVE,
+   EXP_BASE_INJECTIVE,
+   EXP_BASE_LT_MONO, EXP_BASE_LE_MONO, EXP_EXP_LT_MONO, EXP_EXP_LE_MONO,
 
    (* order relations and arith. ops *)
    LESS_EQ_0, prim_recTheory.LESS_0, LESS_EQ_ADD,

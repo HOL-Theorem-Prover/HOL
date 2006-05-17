@@ -210,8 +210,9 @@ val SPEC_MOD_COMMON_FACTOR2 = (GEN_ALL o
 val SPEC_MOD_PLUS = (GEN_ALL o GSYM o
   SIMP_RULE bool_ss [ZERO_LT_TWOEXP] o SPEC `2 ** n`) MOD_PLUS;
 
-val SPEC_TWOEXP_MONO = (GEN_ALL o SIMP_RULE arith_ss [] o
-  SPECL [`0`,`SUC b`]) TWOEXP_MONO;
+val SPEC_TWOEXP_MONO = prove(
+  `!a b. 1 < 2 ** SUC b`,
+  METIS_TAC [EXP,prim_recTheory.LESS_0,EXP_BASE_LT_MONO,DECIDE ``1 < 2``])
 
 val lem = prove(
   `!m n. (2 * m) MOD 2 ** SUC n + 1 < 2 ** SUC n`,

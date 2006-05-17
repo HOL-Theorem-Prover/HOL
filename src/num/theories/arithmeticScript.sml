@@ -15,6 +15,7 @@ structure arithmeticScript =
 struct
 
 open HolKernel boolLib Parse Prim_rec simpLib boolSimps metisLib;
+open BasicProvers
 
 
 (* interactive use:
@@ -1254,6 +1255,7 @@ val ZERO_LESS_EXP = store_thm("ZERO_LESS_EXP",
    IMP_RES_TAC NOT_EXP_0
    end);
 
+
 val ODD_OR_EVEN = store_thm("ODD_OR_EVEN",
  --`!n. ?m. (n = (SUC(SUC 0) * m)) \/ (n = ((SUC(SUC 0) * m) + 1))`--,
    REWRITE_TAC [ONE] THEN
@@ -1459,7 +1461,7 @@ val EVEN_EXP = Q.store_thm (
 "EVEN_EXP",
 `!m n. 0 < n /\ EVEN m ==> EVEN (m ** n)`,
 REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (Q.SPEC `n` num_CASES) THEN
-BasicProvers.RW_TAC bool_ss [EXP, EVEN_MULT] THEN
+RW_TAC bool_ss [EXP, EVEN_MULT] THEN
 METIS_TAC [prim_recTheory.NOT_LESS_0]);
 
 (* --------------------------------------------------------------------- *)
@@ -2431,7 +2433,7 @@ val DIV_LE_MONOTONE = store_thm(
   Q.ABBREV_TAC `r = y DIV n` THEN POP_ASSUM (K ALL_TAC) THEN
   Q.ABBREV_TAC `d = x MOD n` THEN POP_ASSUM (K ALL_TAC) THEN
   Q.ABBREV_TAC `e = y MOD n` THEN POP_ASSUM (K ALL_TAC) THEN
-  BasicProvers.SRW_TAC [][] THEN CCONTR_TAC THEN
+  SRW_TAC [][] THEN CCONTR_TAC THEN
   POP_ASSUM (ASSUME_TAC o REWRITE_RULE [NOT_LEQ]) THEN  (* SUC r < q *)
   Q.SPECL_THEN [`SUC r`, `n`, `q`] MP_TAC LE_MULT_RCANCEL THEN
   ASM_REWRITE_TAC [] THEN STRIP_TAC THEN       (* SUC r * n <= q * n *)
@@ -2698,6 +2700,11 @@ val EXP_EQ_0 = store_thm(
     ASM_REWRITE_TAC []
   ]);
 
+val ZERO_LT_EXP = store_thm(
+  "ZERO_LT_EXP",
+  ``0 < x EXP y = 0 < x \/ (y = 0)``,
+  METIS_TAC [NOT_ZERO_LT_ZERO, EXP_EQ_0]);
+
 val EXP_1 = store_thm(
   "EXP_1",
   Term`!n. (1 EXP n = 1) /\ (n EXP 1 = n)`,
@@ -2716,27 +2723,113 @@ val EXP_EQ_1 = store_thm(
     ASM_REWRITE_TAC [EXP]
   ]);
 
-val EXP_INJECTIVE = store_thm(
-  "EXP_INJECTIVE",
-  Term`!b. 1 < b ==> !n m. (b EXP n = b EXP m) = (n = m)`,
-  GEN_TAC THEN STRIP_TAC THEN
-  Q.SUBGOAL_THEN `~(b = 1)` ASSUME_TAC THENL [
-    DISCH_THEN SUBST_ALL_TAC THEN POP_ASSUM MP_TAC THEN
-    REWRITE_TAC [LESS_REFL],
-    ALL_TAC
-  ] THEN INDUCT_TAC THEN INDUCT_TAC THEN
-  ASM_REWRITE_TAC [EXP, NOT_SUC, GSYM NOT_SUC, MULT_EQ_1, INV_SUC_EQ,
-     CONV_RULE (QUANT_CONV (QUANT_CONV (LHS_CONV
-                    (ONCE_REWRITE_CONV [EQ_SYM_EQ])))) MULT_EQ_1] THEN
-  REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC (Q.SPEC `b` num_CASES) THENL [
-    IMP_RES_TAC NOT_LESS_0,
-    ASM_REWRITE_TAC [MULT_MONO_EQ]
+(* theorems about exponentiation where the base is held constant *)
+
+val expbase_le_mono = prove(
+  ``1 < b /\ m <= n ==> b ** m <= b ** n``,
+  STRIP_TAC THEN
+  Q.SUBGOAL_THEN `?q. n = m + q` STRIP_ASSUME_TAC THEN1
+    METIS_TAC [LESS_EQUAL_ADD] THEN
+  SRW_TAC [][EXP_ADD] THEN
+  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+  ASM_REWRITE_TAC [LE_MULT_LCANCEL, EXP_EQ_0, ONE, GSYM LESS_EQ,
+                   ZERO_LT_EXP] THEN
+  METIS_TAC [ONE, LESS_TRANS, LESS_0])
+val expbase_lt_mono = prove(
+  ``1 < b /\ m < n ==> b ** m < b ** n``,
+  STRIP_TAC THEN
+  Q.SUBGOAL_THEN `?q. n = m + q` STRIP_ASSUME_TAC THEN1
+    METIS_TAC [LESS_ADD, ADD_COMM] THEN
+  SRW_TAC [][EXP_ADD] THEN
+  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+  ASM_REWRITE_TAC [LT_MULT_LCANCEL, ZERO_LT_EXP] THEN
+  Q.SUBGOAL_THEN `0 < b` ASSUME_TAC
+    THEN1 METIS_TAC [ONE, LESS_TRANS, LESS_0] THEN
+  Q.SUBGOAL_THEN `1 < b ** q \/ b ** q < 1 \/ (b ** q = 1)` STRIP_ASSUME_TAC
+    THEN1 METIS_TAC [LESS_CASES, LESS_OR_EQ] THEN
+  ASM_REWRITE_TAC [] THENL [
+    Q.SUBGOAL_THEN `b ** q = 0` ASSUME_TAC THEN1
+      METIS_TAC [LESS_MONO_EQ, NOT_LESS_0, num_CASES, ONE] THEN
+    FULL_SIMP_TAC (srw_ss()) [EXP_EQ_0, NOT_LESS_0],
+    FULL_SIMP_TAC (srw_ss()) [EXP_EQ_1] THEN
+    FULL_SIMP_TAC (srw_ss()) [LESS_REFL, ADD_CLAUSES]
   ]);
+
+val EXP_BASE_LE_MONO = store_thm(
+  "EXP_BASE_LE_MONO",
+  ``!b. 1 < b ==> !n m. b ** m <= b ** n = m <= n``,
+  METIS_TAC [expbase_lt_mono, expbase_le_mono, NOT_LESS_EQUAL]);
+val EXP_BASE_LT_MONO = store_thm(
+  "EXP_BASE_LT_MONO",
+  ``!b. 1 < b ==> !n m. b ** m < b ** n = m < n``,
+  METIS_TAC [expbase_lt_mono, expbase_le_mono, NOT_LESS]);
+
+val EXP_BASE_INJECTIVE = store_thm(
+  "EXP_BASE_INJECTIVE",
+  ``!b. 1 < b ==> !n m. (b EXP n = b EXP m) = (n = m)``,
+  METIS_TAC [LESS_EQUAL_ANTISYM, LESS_EQ_REFL, EXP_BASE_LE_MONO]);
+
+val EXP_BASE_LEQ_MONO_IMP = store_thm(
+  "EXP_BASE_LEQ_MONO_IMP",
+  ``!n m b. 0 < b /\ m <= n ==> b ** m <= b ** n``,
+  REPEAT STRIP_TAC THEN
+  IMP_RES_TAC LESS_EQUAL_ADD THEN ASM_REWRITE_TAC [EXP_ADD] THEN
+  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
+  ASM_REWRITE_TAC [LE_MULT_LCANCEL, EXP_EQ_0, ONE, GSYM LESS_EQ] THEN
+  FULL_SIMP_TAC bool_ss [GSYM NOT_ZERO_LT_ZERO, EXP_EQ_0]);
+
+(*  |- m <= n ==> SUC b ** m <= SUC b ** n *)
+val EXP_BASE_LEQ_MONO_SUC_IMP = save_thm(
+  "EXP_BASE_LEQ_MONO_SUC_IMP",
+  (REWRITE_RULE [LESS_0] o Q.INST [`b` |-> `SUC b`] o SPEC_ALL)
+  EXP_BASE_LEQ_MONO_IMP);
+
+
+(* theorems about exponentiation where the exponent is held constant *)
+val LT_MULT_IMP = prove(
+  ``a < b /\ x < y ==> a * x < b * y``,
+  STRIP_TAC THEN
+  Q.SUBGOAL_THEN `0 < y` ASSUME_TAC THEN1 METIS_TAC [NOT_ZERO_LT_ZERO,
+                                                     NOT_LESS_0] THEN
+  METIS_TAC [LE_MULT_LCANCEL, LT_MULT_RCANCEL, LESS_EQ_LESS_TRANS,
+             LESS_OR_EQ])
+val LE_MULT_IMP = prove(
+  ``a <= b /\ x <= y ==> a * x <= b * y``,
+  METIS_TAC [LE_MULT_LCANCEL, LE_MULT_RCANCEL, LESS_EQ_TRANS]);
+
+val EXP_LT_MONO_0 = prove(
+  ``!n. 0 < n ==> !a b. a < b ==> a EXP n < b EXP n``,
+  INDUCT_TAC THEN SRW_TAC [][NOT_LESS_0, LESS_0, EXP] THEN
+  Q.SPEC_THEN `n` STRIP_ASSUME_TAC num_CASES THEN
+  FULL_SIMP_TAC (srw_ss()) [EXP, MULT_CLAUSES, LESS_0] THEN
+  SRW_TAC [][LT_MULT_IMP])
+val EXP_LE_MONO_0 = prove(
+  ``!n. 0 < n ==> !a b. a <= b ==> a EXP n <= b EXP n``,
+  INDUCT_TAC THEN SRW_TAC [][EXP, LESS_EQ_REFL] THEN
+  Q.SPEC_THEN `n` STRIP_ASSUME_TAC num_CASES THEN
+  FULL_SIMP_TAC (srw_ss()) [EXP, MULT_CLAUSES, LESS_0] THEN
+  SRW_TAC [][LE_MULT_IMP]);
+
+val EXP_EXP_LT_MONO = store_thm(
+  "EXP_EXP_LT_MONO",
+  ``!a b. a EXP n < b EXP n = a < b /\ 0 < n``,
+  METIS_TAC [EXP_LT_MONO_0, NOT_LESS, EXP_LE_MONO_0, EXP, LESS_REFL,
+             NOT_ZERO_LT_ZERO]);
+
+val EXP_EXP_LE_MONO = store_thm(
+  "EXP_EXP_LE_MONO",
+  ``!a b. a EXP n <= b EXP n = a <= b \/ (n = 0)``,
+  METIS_TAC [EXP_LE_MONO_0, NOT_LESS_EQUAL, EXP_LT_MONO_0, EXP, LESS_EQ_REFL,
+             NOT_ZERO_LT_ZERO]);
+
+val EXP_EXP_INJECTIVE = store_thm(
+  "EXP_EXP_INJECTIVE",
+  ``!b1 b2 x. (b1 EXP x = b2 EXP x) = (x = 0) \/ (b1 = b2)``,
+  METIS_TAC [EXP_EXP_LE_MONO, LESS_EQUAL_ANTISYM, LESS_EQ_REFL]);
 
 val EXP_SUB = Q.store_thm
 ("EXP_SUB",
   `!p q n. 0 < n /\ q <= p ==> (n ** (p - q) = n ** p DIV n ** q)`,
-   let open BasicProvers in
    REPEAT STRIP_TAC THEN
    ``0 < n ** p /\ 0 < n ** q`` via
         (STRIP_ASSUME_TAC (Q.SPEC`n` num_CASES) THEN
@@ -2745,7 +2838,7 @@ val EXP_SUB = Q.store_thm
    RW_TAC bool_ss [DIV_P] THEN
    Q.EXISTS_TAC `0` THEN
    RW_TAC bool_ss [GSYM EXP_ADD,ADD_CLAUSES] THEN
-   METIS_TAC [SUB_ADD] end);
+   METIS_TAC [SUB_ADD]);
 
 val EXP_BASE_MULT = store_thm(
   "EXP_BASE_MULT",
@@ -2758,27 +2851,6 @@ val EXP_EXP_MULT = store_thm(
  ``!z x y. x ** (y * z) = (x ** y) ** z``,
   INDUCT_TAC THEN ASM_REWRITE_TAC [EXP, MULT_CLAUSES, EXP_1, EXP_ADD]);
 
-val EXP_BASE_LEQ_MONO = store_thm(
-  "EXP_BASE_LEQ_MONO",
-  ``!n x y. x <= y ==> x ** n <= y ** n``,
-  INDUCT_TAC THEN REWRITE_TAC [EXP, LESS_EQ_REFL] THEN
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC LESS_MONO_MULT2 THEN
-  ASM_SIMP_TAC bool_ss []);
-
-val EXP_EXP_LEQ_MONO = store_thm(
-  "EXP_EXP_LEQ_MONO",
-  ``!n m b. 0 < b /\ m <= n ==> b ** m <= b ** n``,
-  REPEAT STRIP_TAC THEN
-  IMP_RES_TAC LESS_EQUAL_ADD THEN ASM_REWRITE_TAC [EXP_ADD] THEN
-  CONV_TAC (LAND_CONV (REWR_CONV (GSYM MULT_RIGHT_1))) THEN
-  ASM_REWRITE_TAC [LE_MULT_LCANCEL, EXP_EQ_0, ONE, GSYM LESS_EQ] THEN
-  FULL_SIMP_TAC bool_ss [GSYM NOT_ZERO_LT_ZERO, EXP_EQ_0]);
-
-(*  |- m <= n ==> SUC b ** m <= SUC b ** n *)
-val EXP_EXP_LEQ_MONO_SUC = save_thm(
-  "EXP_EXP_LEQ_MONO_SUC",
-  (REWRITE_RULE [LESS_0] o Q.INST [`b` |-> `SUC b`] o SPEC_ALL)
-  EXP_EXP_LEQ_MONO);
 
 (* ********************************************************************** *)
 (* Maximum and minimum                                                    *)
@@ -2789,7 +2861,6 @@ val _ = print "Minimums and maximums\n"
 val MAX = new_definition("MAX_DEF", ``MAX m n = if m < n then n else m``);
 val MIN = new_definition("MIN_DEF", ``MIN m n = if m < n then m else n``);
 
-open BasicProvers
 val ARW = RW_TAC bool_ss
 
 val MAX_COMM = store_thm(

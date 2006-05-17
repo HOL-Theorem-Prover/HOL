@@ -79,7 +79,9 @@ val SPEC_MOD_COMMON_FACTOR2 = (GEN_ALL o SYM o SIMP_RULE arith_ss [GSYM EXP,ZERO
             SPECL [`2`,`m`,`2 ** h`]) MOD_COMMON_FACTOR;
 
 val SPEC_MOD_PLUS = (GEN_ALL o GSYM o SIMP_RULE bool_ss [ZERO_LT_TWOEXP] o SPEC `2 EXP n`) MOD_PLUS;
-val SPEC_TWOEXP_MONO = (GEN_ALL o SIMP_RULE arith_ss [] o SPECL [`0`,`SUC b`]) TWOEXP_MONO;
+val SPEC_TWOEXP_MONO = prove(
+  `!b. 1 < 2 ** SUC b`,
+  METIS_TAC [TWOEXP_MONO, EXP, prim_recTheory.LESS_0])
 
 val lem = prove(
   `!m n. (2 * m) MOD 2 ** SUC n + 1 < 2 ** SUC n`,

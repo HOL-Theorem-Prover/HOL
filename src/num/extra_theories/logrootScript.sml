@@ -21,10 +21,6 @@ val lt_mult2 = prove(``a < c /\ b < d  ==> a * b < c * d:num``,
   METIS_TAC [LE_MULT_LCANCEL, LT_MULT_RCANCEL, LESS_EQ_LESS_TRANS,
              LESS_OR_EQ]);
 
-val exp_lemma1 = prove(``0 < r ==> (x ** r < (SUC x) ** r)``,
-  Induct_on `r`  THEN Cases_on `r = 0` THEN RW_TAC arith_ss [EXP] THEN
-  MATCH_MP_TAC lt_mult2 THEN RW_TAC arith_ss []);
-
 val exp_lemma2 = prove(``!a b r. 0 < r ==> a < b ==> a ** r < b ** r``,
   REPEAT STRIP_TAC THEN Induct_on `r` THEN RW_TAC arith_ss [EXP] THEN
   Cases_on `r = 0` THEN RW_TAC arith_ss [EXP] THEN MATCH_MP_TAC lt_mult2 THEN
@@ -65,20 +61,20 @@ val EXP_LE_ISO = store_thm("EXP_LE_ISO",
   PROVE_TAC [NOT_LESS,exp_lemma3,exp_lemma2,LESS_OR_EQ,NOT_LESS]);
 
 val ROOT_exists = store_thm("ROOT_exists",
-  ``?root. !r n. 0 < r ==> root r n ** r <= n /\ n < SUC (root r n) ** r``,
-  EXISTS_TAC ``\r n. @v. v ** r <= n /\ n < SUC v ** r`` THEN
-  RW_TAC arith_ss [] THEN SELECT_ELIM_TAC THEN RW_TAC arith_ss [] THEN
-  (Induct_on `n` THEN RW_TAC arith_ss [] THENL
-    [EXISTS_TAC ``0n``,
-     Cases_on `SUC x ** r <= SUC n` THENL
-       [EXISTS_TAC ``SUC x``,EXISTS_TAC ``x:num``]] THENL [
-    Induct_on `r` THEN Cases_on `r = 0` THEN FULL_SIMP_TAC arith_ss [EXP],
-      RW_TAC arith_ss [] THEN
-      MATCH_MP_TAC (DECIDE ``!a b c. a < b /\ b < c ==> SUC a < c``) THEN
-      EXISTS_TAC ``SUC x ** r`` THEN RW_TAC arith_ss [exp_lemma1],
-    FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL,DECIDE ``a <= b ==> a <= SUC b``]]));
+  ``!r n. 0 < r ==> ?rt. rt ** r <= n /\ n < SUC rt ** r``,
+  Induct_on `n` THEN RW_TAC arith_ss [] THEN
+  REPEAT STRIP_TAC THEN FIRST_X_ASSUM (Q.SPEC_THEN `r` MP_TAC) THEN
+  SRW_TAC [][] THEN
+  Cases_on `SUC n < SUC rt ** r` THEN1
+    (Q.EXISTS_TAC `rt` THEN SRW_TAC [numSimps.ARITH_ss][]) THEN
+  POP_ASSUM (ASSUME_TAC o SIMP_RULE (srw_ss()) [NOT_LESS]) THEN
+  Q.EXISTS_TAC `SUC rt` THEN SRW_TAC [][] THEN
+  `SUC n = SUC rt ** r` by RW_TAC arith_ss [] THEN
+  RW_TAC arith_ss [])
 
-val ROOT = new_specification("ROOT",["ROOT"],ROOT_exists);
+val ROOT = new_specification("ROOT",
+  ["ROOT"],
+  SIMP_RULE (srw_ss()) [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] ROOT_exists);
 
 val ROOT_UNIQUE = store_thm("ROOT_UNIQUE",
   ``!r n p. (p ** r <= n /\ n < SUC p ** r) ==> (ROOT r n = p)``,
