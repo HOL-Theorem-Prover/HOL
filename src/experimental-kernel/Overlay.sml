@@ -12,5 +12,5 @@ infixr 3 -->;
 infix 8 via by;
 
 structure Term = Term :> RestrictedTerm where type term = Term.term
-structure Tag = Tag :> RestrictedTag
+structure Tag = Tag :> RestrictedTag where type tag = Tag.tag
 
