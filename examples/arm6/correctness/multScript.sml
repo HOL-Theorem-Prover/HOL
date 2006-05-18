@@ -288,7 +288,7 @@ val DONE_IMP_ZERO_MSBS = prove(
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:i32``] EXISTS_HB)
     \\ `Abbrev (m = 31)`
     by FULL_SIMP_TAC (arith_ss++SIZES_ss) [markerTheory.Abbrev_def]
-    \\ RW_TAC std_ss [SUC_SUB1,w2n_n2w,MLA_MUL_DONE_def]
+    \\ RW_TAC bool_ss [SUC_SUB1,w2n_n2w,MLA_MUL_DONE_def]
     << [
       Cases_on `n'` >> FULL_SIMP_TAC arith_ss [ZERO_MOD]
         \\ FULL_SIMP_TAC bool_ss [GSYM BITS_ZERO3,
@@ -311,7 +311,7 @@ val DONE_IMP_ZERO_MSBS = prove(
         \\ IMP_RES_TAC LESS_EQUAL_ADD
         \\ POP_ASSUM (fn th => `2 * n' = SUC (31 + p)`
         by SIMP_TAC arith_ss [th])
-        \\ RW_TAC arith_ss [GSYM BITS_ZERO3,BITS_COMP_THM2,MIN_DEF]
+        \\ RW_TAC bool_ss [ADD_0,GSYM BITS_ZERO3,BITS_COMP_THM2,MIN_DEF]
         \\ `p = 0` by DECIDE_TAC
         \\ FULL_SIMP_TAC arith_ss [ADD1]]);
 

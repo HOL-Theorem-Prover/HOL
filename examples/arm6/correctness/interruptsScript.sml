@@ -303,8 +303,9 @@ val num2exception_word3 = store_thm("num2exception_word3",
     !aregn:word3. (num2exception (w2n aregn) = fast)      = (aregn = 7w)`,
   REPEAT STRIP_TAC \\ `w2n aregn < 8`
     by PROVE_TAC [w2n_lt,EVAL ``2 ** dimindex (UNIV:i3->bool)``]
-    \\ FULL_SIMP_TAC (srw_ss()++SIZES_ss)
-         [num2exception_thm,GSYM w2n_11,w2n_n2w,LESS_THM]);
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss)
+         [num2exception_thm,exception_EQ_exception,exception2num_thm,
+          GSYM w2n_11,w2n_n2w,LESS_THM]);
 
 val INTERRUPT_ADDRESS = store_thm("INTERRUPT_ADDRESS",
   `!aregn2:word3. n2w (4 * exception2num (num2exception (w2n aregn2))) =
