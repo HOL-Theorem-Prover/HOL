@@ -295,6 +295,18 @@ and mldefthm   = mksym "ACL2"        "DEFTHM";
 
 
 (*****************************************************************************)
+(* "tag_ty:nam" |--> ("tag_ty","nam")                                        *)
+(*****************************************************************************) 
+val split_tag =
+ let 
+  fun split_tag_chars acc [] = ([],rev acc)
+   |  split_tag_chars acc (#":" :: l) = (rev acc,l)
+   |  split_tag_chars acc (c :: l) = split_tag_chars (c :: acc) l
+ in
+  (implode ## implode) o split_tag_chars [] o explode
+end;
+
+(*****************************************************************************)
 (* "pkg::nam" |--> ("pkg","nam")                                             *)
 (*****************************************************************************) 
 val split_acl2_name =
@@ -758,7 +770,12 @@ fun pr_sexp t = pr_mlsexp(term_to_mlsexp t);
 (*  (defun f (x1 ... xn) ^(term_to_mlsexp e))                                *)
 (*****************************************************************************)
 fun mk_mlsexp_defun th =
- let val (_,concl) = dest_thm(SPEC_ALL th)
+ let val (asl, concl) = dest_thm(SPEC_ALL th)
+     val _ = if not(asl = []) 
+               then(print_thm th;
+                    print "\n"; print"should not have any assumptions\n";
+                    err "mk_mlsexp_defthm" "assumptions not allowed")
+               else ()
      val (l,r) = dest_eq concl
      val (opr, args) = strip_comb l
  in
@@ -767,6 +784,32 @@ fun mk_mlsexp_defun th =
     string_to_mlsym(fst((if is_var opr then dest_var else dest_const) opr)),
     mk_mlsexp_list(map term_to_mlsexp args),
     term_to_mlsexp r]
+ end;    
+
+(*****************************************************************************)
+(* Translate a hol-acl2 thm |- |= tm with a name nam to an ML s-expression   *)
+(* representing                                                              *)
+(*                                                                           *)
+(*  (defthm nam  ^(term_to_mlsexp tm))                                       *)
+(*****************************************************************************)
+fun mk_mlsexp_defthm(nam, th) =
+ let val (asl, concl) = dest_thm(SPEC_ALL th)
+     val _ = if not(asl = []) 
+               then(print_thm th;
+                    print "\n"; print"should not have any assumptions\n";
+                    err "mk_mlsexp_defthm" "assumptions not allowed") 
+               else ()
+     val (con,tm) = dest_comb concl
+     val _ = if not(is_const con andalso (fst(dest_const con) = "|="))
+               then(print_thm th;
+                    print " should have form |= ...\n";
+                    err "mk_mlsexp_defthm" "missing |=")
+               else ()
+ in
+  mk_mlsexp_list
+   [mksym "COMMON-LISP" "DEFTHM",
+    string_to_mlsym nam,
+    term_to_mlsexp tm]
  end;    
 
 (*****************************************************************************)
@@ -1211,7 +1254,9 @@ fun mk_def d =
                  save_thm
                   (defun_name,
                    CLEAN_ACL2_VARS
-                    (MK_DEF_EQ(mk_oracle_thm(Tag.read "ACL2_DEFUN")([],deftm))))
+                    (MK_DEF_EQ
+                      (mk_oracle_thm
+                        (Tag.read("ACL2_DEFUN:" ^ sym_name))([],deftm))))
         in
          defun(defun_name, defun_thm)
         end else
