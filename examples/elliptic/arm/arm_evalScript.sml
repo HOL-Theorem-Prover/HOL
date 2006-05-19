@@ -834,7 +834,7 @@ val BIT_NUMERAL = CONJ (SPECL [`0`,`NUMERAL n`] BIT_def)
 fun BIT_CASE_TAC t = POP_ASSUM (SPEC_THEN t
     (STRIP_ASSUME_TAC o SIMP_RULE fcp_ss [BIT_NUMERAL,BITS_THM]));
 
-val decode_enc_lem = prove(
+val decode_enc_lem = prove( 
   `(!w:word32. (((27 -- 26) w = 0w) = ~(w %% 27) /\ ~(w %% 26))) /\
    (!w:word32. (((27 -- 26) w = 1w) = ~(w %% 27) /\ (w %% 26))) /\
    (!w:word32. (((27 -- 26) w = 2w) = (w %% 27) /\ ~(w %% 26))) /\
@@ -843,11 +843,11 @@ val decode_enc_lem = prove(
     \\ SIMP_TAC fcp_ss [word_bits_def,n2w_def,BIT_ZERO,
           DECIDE ``(i + 26 <= 27 /\ i + 26 <= 31) = (i = 0) \/ (i = 1)``]
     \\ (EQ_TAC \\ RW_TAC arith_ss []
-    << [BIT_CASE_TAC `1`,BIT_CASE_TAC `0`,
+    << [BIT_CASE_TAC `1`,BIT_CASE_TAC `0`, 
      STRIP_ASSUME_TAC (DECIDE ``(i = 0) \/ (i = 1) \/ (2 <= i)``)
        \\ FULL_SIMP_TAC fcp_ss word2_bits
        \\ IMP_RES_TAC TWOEXP_MONO2
-       \\ FULL_SIMP_TAC arith_ss [BIT_def,BITS_THM,SUC_SUB,LESS_DIV_EQ_ZERO]]));
+       \\ FULL_SIMP_TAC bool_ss [EVAL ``2 ** 2``,BIT_def,BITS_THM,SUC_SUB]       \\ ASM_SIMP_TAC arith_ss [LESS_DIV_EQ_ZERO]]));
 
 val decode_enc_lem2 = prove(
   `!w:word32. ((6 -- 5) w = 0w) = ~(w %% 6) /\ ~(w %% 5)`,
@@ -859,7 +859,7 @@ val decode_enc_lem2 = prove(
      STRIP_ASSUME_TAC (DECIDE ``(i = 0) \/ (i = 1) \/ (2 <= i)``)
        \\ FULL_SIMP_TAC fcp_ss word2_bits
        \\ IMP_RES_TAC TWOEXP_MONO2
-       \\ FULL_SIMP_TAC arith_ss [BIT_def,BITS_THM,SUC_SUB,LESS_DIV_EQ_ZERO]]);
+       \\ FULL_SIMP_TAC bool_ss [EVAL ``2 ** 2``,BIT_def,BITS_THM,SUC_SUB]       \\ ASM_SIMP_TAC arith_ss [LESS_DIV_EQ_ZERO]]);
 
 val decode_enc_lem3 = prove(
   `!w:word32. ((11 -- 5) w = 4w) =
@@ -870,7 +870,7 @@ val decode_enc_lem3 = prove(
          DECIDE ``(i + 5 <= 11 /\ i + 5 <= 31) =
             (i = 0) \/ (i = 1) \/ (i = 2) \/ (i = 3) \/
             (i = 4) \/ (i = 5) \/ (i = 6)``]
-    \\ EQ_TAC \\ RW_TAC arith_ss []
+    \\ EQ_TAC \\ RW_TAC bool_ss []
     << [BIT_CASE_TAC `6`,BIT_CASE_TAC `5`,BIT_CASE_TAC `4`,
         BIT_CASE_TAC `3`,BIT_CASE_TAC `2`,BIT_CASE_TAC `1`,
         BIT_CASE_TAC `0`,
@@ -878,7 +878,8 @@ val decode_enc_lem3 = prove(
           (i = 3) \/ (i = 4) \/ (i = 5) \/ (i = 6) \/ (7 <= i)``)
        \\ FULL_SIMP_TAC fcp_ss [BIT_NUMERAL,BITS_THM]
        \\ IMP_RES_TAC TWOEXP_MONO2
-       \\ FULL_SIMP_TAC arith_ss [BIT_def,BITS_THM,SUC_SUB,LESS_DIV_EQ_ZERO]]);
+       \\ FULL_SIMP_TAC bool_ss [EVAL ``2 ** 7``,BIT_def,BITS_THM,SUC_SUB]
+       \\ ASM_SIMP_TAC arith_ss [LESS_DIV_EQ_ZERO]]);
 
 val condition_encode_lem = prove(
   `!cond i. i < 28 ==> ~(condition_encode cond %% i)`,

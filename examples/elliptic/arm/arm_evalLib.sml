@@ -16,8 +16,8 @@ struct
 
 open HolKernel boolLib bossLib;
 open Q Parse computeLib pairTheory wordsTheory wordsSyntax
-     optionTheory rich_listTheory;
-open armTheory arm_evalTheory bsubstTheory instructionTheory instructionSyntax;
+     optionTheory rich_listTheory armTheory arm_evalTheory
+     bsubstTheory instructionTheory instructionSyntax;
 
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
@@ -150,6 +150,13 @@ fun arm_eval_compset () =
 
 val ARM_CONV = CBV_CONV (arm_eval_compset());
 val ARM_RULE = CONV_RULE ARM_CONV;
+
+val EVAL_SUBST_CONV =
+let val compset = add_rws reduceLib.num_compset
+          [register_EQ_register,register2num_thm,SUBST_EVAL]
+in
+  computeLib.CBV_CONV compset
+end;
 
 val SORT_SUBST_CONV = let open arm_evalTheory
   val compset = add_rws reduceLib.num_compset
@@ -405,6 +412,9 @@ fun init m r s =
 
 fun next t =
 let val t1 = rhsc t
+    val reg = #reg (dest_arm_eval t1)
+    val pc = (eval_word o rhsc o EVAL_SUBST_CONV) (mk_comb(reg, ``r15``))
+    val _ = printn ("pc = " ^ Arbnum.toHexString pc)
     val t2 = ((ARM_CONV THENC
                  ONCE_DEPTH_CONV (RAND_CONV (RAND_CONV SORT_BSUBST_CONV)) THENC
                  ONCE_DEPTH_CONV (RATOR_CONV SORT_SUBST_CONV) THENC
@@ -424,8 +434,14 @@ fun state n [] = []
         if done t then nl else state (n - 1) nl
       end;
 
+fun fstate n s =
+  if n = 0 then s
+  else let val ns = time next s in
+    if done s then ns else fstate (n - 1) ns
+  end;
+
 fun eval n m r s = state n [init m r s];
-fun evaluate n m r s = hd (eval n m r s);
+fun evaluate n m r s = fstate n (init m r s);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -451,8 +467,8 @@ fun myprint sys (pg,lg,rg) d pps t = let
                        end_block pps))
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = add_user_printer
-  ({Tyop = "list", Thy = "list"}, myprint, "arm_evalLib.myprint");
+val _ = temp_add_user_printer
+  ({Tyop = "list", Thy = "list"}, myprint);
 
 (* ------------------------------------------------------------------------- *)
 
