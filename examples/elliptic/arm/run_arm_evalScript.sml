@@ -77,10 +77,8 @@ fun num2wordsn n s =
   in
     if n < ll then
       List.take(l, n)
-    else if n = ll then
-      l
     else
-      List.tabulate(n - ll, fn _ => "0x0") @ l
+      l @ List.tabulate(n - ll, fn _ => "0x0")
   end;
 
 fun prefix_hd s [] = [s]
