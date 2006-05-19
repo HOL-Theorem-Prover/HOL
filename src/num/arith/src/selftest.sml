@@ -35,6 +35,17 @@ in
   else die "FAILED!\n"
 end
 
+val _ = pr "Testing with hypothesis-less context ..."
+val _ = let
+  val _ = new_constant("foo", ``:num``)
+  val foo_ax = new_axiom("foo_ax", ``3 < foo``)
+  val goal = ``1 < foo``
+  val (res, vfn) = ASM_SIMP_TAC arith_ss [foo_ax] ([], goal)
+in
+  if null res andalso aconv (concl (vfn [])) goal then print "OK\n"
+  else die "FAILED\n"
+end
+
 val _ = pr "Testing Alexey Gotsman's arith d.p. problem ... "
 val _ = let
   val t =

@@ -342,8 +342,7 @@ fun contains_forall sense tm =
    the goal to be rejected.  *)
 
 fun is_arith_thm thm =
-  not (null (hyp thm)) andalso is_arith (concl thm) andalso
-   (not (contains_forall true (concl thm)));
+  is_arith (concl thm) andalso not (contains_forall true (concl thm))
 
 val is_arith_asm = is_arith_thm o ASSUME
 
