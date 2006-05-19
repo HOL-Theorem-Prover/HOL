@@ -1,7 +1,7 @@
 signature numSimps =
 sig
   include Abbrev
-type ctxt
+  type ctxt = thm list
 
      val ARITH_ss           : simpLib.ssfrag
      val REDUCE_ss          : simpLib.ssfrag
