@@ -154,18 +154,18 @@ fun term_to_ML openthys ppstrm =
   and pp_cond i tm =
          let val (b,a1,a2) = dest_cond tm
          in begin_block CONSISTENT 0;
-            lparen i 5000;
+            lparen i 70;
             begin_block INCONSISTENT 2;
             add_string"if ";
-            begin_block CONSISTENT 0; pp minprec b; end_block();
+            begin_block CONSISTENT 0; pp 70 b; end_block();
             add_break(1,0);
             add_string"then ";
-            begin_block CONSISTENT 0; pp minprec a1; end_block();
+            begin_block CONSISTENT 0; pp 70 a1; end_block();
             add_break(1,0);
             add_string"else ";
             begin_block CONSISTENT 0; pp minprec a2; end_block();
             end_block();
-            rparen i 5000;
+            rparen i 70;
             end_block()
          end
   and pp_num_literal tm =
@@ -278,7 +278,7 @@ fun term_to_ML openthys ppstrm =
       end
   and pp_case i (a,cases) =
       ( begin_block CONSISTENT 1
-        ; lparen i 5000
+        ; lparen i 7  (* from HOL term grammar *)
         ; begin_block INCONSISTENT 2
         ; add_string "case"
         ; add_break(1,0)
@@ -286,21 +286,21 @@ fun term_to_ML openthys ppstrm =
         ; end_block()
         ; add_break(1,0)
         ; begin_block CONSISTENT 1
-        ; add_string"of "
+        ; add_string "of "
         ; pp_case_clause (hd cases)
         ; add_break(1,0)
         ; pr_list (fn cl => (add_string "| "; pp_case_clause cl))
                   (fn () => ())
                   (fn () => add_break(1,0)) (tl cases)
         ; end_block()
-        ; rparen i 5000
+        ; rparen i 7
         ; end_block())
   and pp_case_clause (pat,rhs) =
         (begin_block CONSISTENT 3
          ; pp minprec pat
          ; add_string " =>"
          ; add_break (1,0)
-         ; pp minprec rhs
+         ; pp 7 rhs
          ; end_block()
         )
   and pp_fail i tm =
@@ -375,28 +375,27 @@ fun pp_defn_as_ML openthys ppstrm =
  let open Portable
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
-     val toMLprim = term_to_ML openthys ppstrm
-     val toML = pp_term_as_ML openthys ppstrm
-     fun pp_clause eq =
+     val toML = term_to_ML openthys ppstrm
+     fun pp_clause i eq =
          let val (L,R) = dest_eq eq
          in begin_block INCONSISTENT 2
-          ; toML L
+          ; toML minprec L
           ; add_break(1,0)
           ; add_string "="
           ; add_break(1,0)
-          ; toMLprim 100 R
+          ; toML i R
           ; end_block()
          end
      fun pp_clauses (s,els) =
        let val s' = if is_fn_app(lhs(hd els)) then s else "val"
        in  begin_block CONSISTENT 2
          ; add_string (s'^" ")
-         ; pp_clause (hd els)
+         ; pp_clause (if length els = 1 then minprec else 100) (hd els)
          ; add_newline()
          ; case tl els
             of [] => ()
              | els' =>
-                 (pr_list (fn c => (add_string "| "; pp_clause c))
+                 (pr_list (fn c => (add_string "| "; pp_clause 100 c))
                     (fn () => ())
                     (fn () => add_newline()) els';
                   add_newline())
