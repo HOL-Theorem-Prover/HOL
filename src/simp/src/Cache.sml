@@ -166,16 +166,24 @@ in
   | _ => mk_links fvs G
 end
 
-(* Creates a graph. Each node is a term where two terms are linked
-   if each appears in a term from tmlist.  The function parameter fvs_of
-   calculates which sub-terms should be inserted into the graph.
+(* Creates a graph. Each node is a term where two terms are linked (by
+   the transitive closure of the adjacency relation) if each appears
+   in a term from tmlist.  The function parameter fvs_of calculates
+   which sub-terms should be inserted into the graph.
 
    The "idea" is that only free variables are linked, but the
    specified fvs_of function may additionally cause other sorts of
-   sub-terms to be treated as variables. *)
-fun build_graph fvs_of
-   tmlist = List.foldl (make_links fvs_of) (Binarymap.mkDict
-   Term.compare) tmlist
+   sub-terms to be treated as variables.
+
+   The implementation (see make_links) just creates a linear sub-graph
+   for each element of tmlist.  In other words, if a term gives rise
+   to n subterms, the K_n subgraph is not inserted, only a connected
+   linear graph of those n subterms.  The later connected components
+   analysis will realise that all of these sub-terms are part of the
+   same component anyway.
+*)
+fun build_graph fvs_of tmlist =
+    List.foldl (make_links fvs_of) (Binarymap.mkDict Term.compare) tmlist
 
 (* given a list of list of variables; build a map where all the variables
    in the same list point to the same updatable reference cell *)
@@ -282,9 +290,14 @@ fun RCACHE (dpfvs, check, conv) = let
     | SOME (_, NONE) => raise Fail "RCACHE: Invariant failure"
     | NONE => let
         (* do connected component analysis to test for false *)
-        val ctxt_ts0 = map concl ctxt
-        val (ctxt_ts,ground_ctxts) =
-            List.partition (not o null o dpfvs) ctxt_ts0
+        fun foldthis (th, (ctxt_ts, ground_ths)) = let
+          val c = concl th
+        in
+          if null (dpfvs c) then (ctxt_ts, th::ground_ths)
+          else (c::ctxt_ts, ground_ths)
+        end
+        val (ctxt_ts,ground_ctxt_ths) =
+            List.foldl foldthis ([], []) ctxt
         val G = build_graph dpfvs (t::ctxt_ts)
                 (* G a map from v to v's neighbours *)
         val vs = Binarymap.foldl (fn (k,v,acc) => k::acc) [] G
@@ -313,7 +326,8 @@ fun RCACHE (dpfvs, check, conv) = let
            unto itself *)
         val divided_clist =
             divided_clist0 @
-            map (fn t => (HOLset.add(empty_tmset, t), [ASSUME t])) ground_ctxts
+            map (fn th => (HOLset.add(empty_tmset, concl th), [th]))
+                ground_ctxt_ths
 
         val (glhyps, thmlist) = !glstmtref
         fun oknone (prev, NONE) = glhyps << prev
