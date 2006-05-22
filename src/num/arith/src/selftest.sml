@@ -61,4 +61,18 @@ in
   | NONE => die "FAILED!\n"
 end
 
+val _ = pr "Testing r-cache behaviour with CONJ_ss ..."
+val _ = let
+  val t = ``(168 = 0) /\ (13 = 13) /\ (105 = 1)``
+  open boolSimps
+  val result =
+      SIMP_CONV (bool_ss ++ CONJ_ss ++ numSimps.ARITH_ss) [] t
+in
+  if null (hyp result) andalso rhs (concl result) = boolSyntax.F then
+    print "OK\n"
+  else die "FAILED!\n"
+end
+
+
+
 val _ = Process.exit Process.success
