@@ -2274,21 +2274,23 @@ often not the intended type \eg{} the type \ty{word32} will be preferred to
 
 \paragraph{Signed and unsigned words}
 
-Words can be \emph{viewed} as being either signed (using the two's complement
-representation) or as being unsigned.  However, this is not made explicit
-within the theory\footnote{Words are not tagged as being signed/unsigned and
-mappings to/from the integers are not provided (although it would not be
-difficult to implement this).} and all of the arithmetic operations are defined
-using the natural numbers \ie{} via \holtxt{w2n} and \holtxt{n2w}.  In
-particular, addition and multiplication work naturally (have the same
-definition) under the two's complement representation.  This is not the case
-however with word-to-word conversion, orderings, division and right shifting,
-where signed and unsigned variants are needed.  When operating over the natural
-numbers, some of the two's complement versions have slightly unnatural looking
-presentations.  For example, with the signed (two's complement) version of
-``less than'' we have \holtxt{255w < 0w:word8} because the word  \holtxt{n2w
-255} is actually taken to be representing the integer $-1$, whereas the
-unsigned version appears to be more natural: \holtxt{0w <+ 255w:word8}.
+Words can be \emph{viewed} as being either signed (using the two's
+complement representation) or as being unsigned.  However, this is not
+made explicit within the theory\footnote{Words are not tagged as being
+  signed/unsigned.  Mappings to/from the integers (\holtxt{w2i} and
+  \holtxt{i2w}) are provided in the theory \theoryimp{integer\_word}.}
+and all of the arithmetic operations are defined using the natural
+numbers \ie{} via \holtxt{w2n} and \holtxt{n2w}.  In particular,
+addition and multiplication work naturally (have the same definition)
+under the two's complement representation.  This is not the case
+however with word-to-word conversion, orderings, division and right
+shifting, where signed and unsigned variants are needed.  When
+operating over the natural numbers, some of the two's complement
+versions have slightly unnatural looking presentations.  For example,
+with the signed (two's complement) version of ``less than'' we have
+\holtxt{255w < 0w:word8} because the word \holtxt{n2w 255} is actually
+taken to be representing the integer $-1$, whereas the unsigned
+version appears to be more natural: \holtxt{0w <+ 255w:word8}.
 
 \paragraph{Bit field operations}
 
@@ -2461,10 +2463,9 @@ pretty-printing.
 > val it = |- (word_log2 ## I) (0x42w,36w) = (0x6w,36w) : thm
 \end{verbatim}
 \end{session}
-Note that type annotation is used to designate word sizes.\footnote{At the time
-of writing, even with \ml{show\_types:=true}, the type of a word literal will
-not be printed.}  Any number base can be used in parsing a literal, but the
-reference \ml{allow\_octal\_input} must be true in order to parse octal numbers.
+Note that type annotation is used to designate word sizes.  Any number
+base can be used in parsing a literal, but the reference
+\ml{allow\_octal\_input} must be true in order to parse octal numbers.
 
 \subsubsection{Word Constants and Operations}
 
