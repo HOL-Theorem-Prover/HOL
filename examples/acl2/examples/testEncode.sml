@@ -1,0 +1,214 @@
+(*****************************************************************************)
+(* File: testEncode.sml                                                      *)
+(* Author: James Reynolds                                                    *)
+(*                                                                           *)
+(* Runs some simple tests of encodeLib                                       *)
+(*****************************************************************************)
+
+val loadPath := "../ml/" :: !loadPath;
+load "encodeLib";
+open encodeLib arithmeticTheory;
+
+(*****************************************************************************)
+(* Example, originating from Matt Kaufmann, showing the flow                 *)
+(* from HOL to HOL/SEXP and then to ACL2.                                    *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* The example is a machine that processes read and write instructions       *)
+(* N.B. Maybe write should be curried -- will change if necessary?           *)
+(*****************************************************************************)
+
+val read_def = Define `read x = (F,x:num,0n)`;
+val write_def = Define `write (x,y) = (T,x:num,y:num)`;
+
+(*****************************************************************************)
+(* read_step addr [(a1,v1);...;(an,vn)] returns vi where addr=ai,            *)
+(* scanning from left (i.e. from i=1)                                        *)
+(*****************************************************************************)
+val read_step_def =
+ Define
+  `(read_step (addr:num) [] = 0n)
+   /\
+   (read_step addr ((addr',v)::alist) = 
+     if addr = addr' then v else read_step addr alist)`;
+
+(*****************************************************************************)
+(* write_step addr v [(a1,v1);...;(ai,vi);...;(an,vn)] =                     *)
+(*   [(a1,v1);...;(ai,v);...;(an,vn)]                                        *)
+(*                                                                           *)
+(* where addr=ai, scanning from left (i.e. from i=1)                         *)
+(*****************************************************************************)
+val write_step_def =
+ Define
+  `(write_step (addr:num) (v:num) [] = [(addr,v)])
+   /\
+   (write_step addr v ((addr',v')::alist) =
+     if addr = addr' 
+      then (addr,v)::alist 
+      else (addr',v')::(write_step addr v alist))`;
+
+(*****************************************************************************)
+(* run [ins1;...;insn] [(a1,v1);...;(ai,vi);...;(an,vn)] [v1;...;vp] =       *)
+(*  [v1;...;vp;vq...;vr]                                                     *)
+(*                                                                           *)
+(* where [vq;...;vr] is the reversed list of values read (by a read          *)
+(* instruction) when executing [ins1;...;insn] (in that order)               *)
+(*                                                                           *)
+(* Example:                                                                  *)
+(*                                                                           *)
+(*     |- run                                                                *)
+(*          [write (92,1); read 38; write (79,3); read 21; write (66,5);     *)
+(*           read 4; write (53,7); read 87; write (40,9); read 70;           *)
+(*           write (27,11); read 53; write (14,13); read 36; write (1,15);   *)
+(*           read 19; write (88,17); read 2; write (75,19); read 85;         *)
+(*           write (62,21); read 68; write (49,23); read 51; write (36,25);  *)
+(*           read 34; write (23,27); read 17; write (10,29); read 0] [] []   *)
+(*        [0; 0; 0; 0; 0; 0; 0; 0; 0; 7; 0; 0; 0; 0; 0] : thm                *)
+(*****************************************************************************)
+val run_def =
+ Define
+  `(run [] alist reversed_values_read = reversed_values_read)
+   /\
+   (run ((T,addr,v)::instrs) alist reversed_values_read =
+     run instrs (write_step addr v alist) reversed_values_read)
+   /\
+   (run ((F,addr,v)::instrs) alist reversed_values_read =
+     run instrs alist (read_step addr alist::reversed_values_read))`;
+
+(*****************************************************************************)
+(* The function make_instrs generates a program to run. For example:         *)
+(*                                                                           *)
+(*     |- make_instrs 0 10 F 10 [] =                                         *)
+(*        [write (62,1); read 68; write (49,3); read 51;                     *)
+(*         write (36,5); read 34; write (23,7); read 17;                     *)
+(*         write (10,9); read 0]                                             *)
+(*                                                                           *)
+(* This was generated by EVAL ``make_instrs 0 10 F 10 []``.                  *)
+(*                                                                           *)
+(* Note that as an accumulator is used, the list returned is the list of     *)
+(* instructions in the reverse order to which they were created.             *)
+(*****************************************************************************)
+val write_increment_def = 
+ Define `write_increment = 13n`;
+
+val read_increment_def = 
+ Define `read_increment = 17n`;
+
+val max_addr_def = 
+ Define `max_addr = 100n`;
+
+val fix_address_def = Define  `fix_address a b = if a >= b /\ ~(b = 0) then fix_address (a - b) b else a:num`;
+
+val make_instrs_def =
+ Define
+  `(make_instrs read_start write_start flag 0 acc = acc)
+   /\
+   (make_instrs read_start write_start flag (SUC n) acc = 
+     if flag
+      then make_instrs read_start
+                       (fix_address (write_start + write_increment) max_addr)
+                       (~flag)
+                       n
+                       (write(write_start,SUC n) :: acc)
+      else make_instrs (fix_address (read_start + read_increment) max_addr)
+                       write_start
+                       (~flag)
+                       n
+                       (read read_start :: acc))`;
+
+(*****************************************************************************)
+(* Version using a conditional rather than pattern matching on ``0`` and     *)
+(* ``SUC n`` (needed to amke computeLib.EVAL happy)                          *)
+(*****************************************************************************)
+val make_instrs_def =
+ prove
+  (``make_instrs read_start write_start flag n acc =
+      if n=0
+       then acc 
+       else if flag
+             then make_instrs read_start
+                              (fix_address (write_start + write_increment) max_addr)
+                              (~flag)
+                              (n - 1)
+                              (write(write_start,n) :: acc)
+             else make_instrs (fix_address (read_start + read_increment) max_addr)
+                              write_start
+                              (~flag)
+                              (n - 1)
+                              (read read_start :: acc)``,
+   Cases_on `n`
+    THEN RW_TAC arith_ss [make_instrs_def]);
+
+val _ = computeLib.add_funs[make_instrs_def];
+
+
+(**** Examples ***************************************************************
+
+val basic_result = time EVAL ``run (make_instrs 0 10 F 100 []) [] []``;
+runtime: 2.405s,    gctime: 0.224s,     systime: 0.000s.
+> val basic_result =
+    |- run (make_instrs 0 10 F 100 []) [] [] =
+       [39; 21; 3; 0; 0; 0; 0; 0; 0; 77; 59; 41; 23; 5; 0; 0; 0; 0; 0; 0; 0;
+        0; 43; 25; 7; 0; 0; 0; 0; 0; 0; 0; 0; 0; 27; 9; 0; 0; 0; 0; 0; 0; 0;
+        0; 0; 0; 0; 0; 0; 0] : thm
+
+Example that is too big (segmentation fault on trout).
+
+val medium_instr_list  = time EVAL ``make_instrs 0 10 F 1000 []``;
+
+val medium_instr_list_def =
+ Define
+  `medium_instr_list = ^(rhs(concl(time EVAL ``make_instrs 0 10 F 1000 []``)))`;
+
+val medium_result = time EVAL ``run medium_instr_list [] []``;
+
+val medium_result = time EVAL ``run (make_instrs 0 10 F 1000 []) [] []``;
+
+val big_instr_list  = time EVAL ``make_instrs 0 10 F 1000000 []``;
+
+val big_instr_list_def =
+ Define
+  `big_instr_list = ^(rhs(concl(time EVAL ``make_instrs 0 10 F 1000000 []``)))`;
+
+val basic_result = time EVAL ``run big_instr_list [] []``;
+
+******************************************************************************)
+
+(*****************************************************************************)
+(* Lots and lots of output....                                               *)
+(*****************************************************************************)
+
+app add_stage (for 1 9 I);
+
+(*****************************************************************************)
+(* Some simple arithmetic functions                                          *)
+(* encodeLib still doesn't cope with let expressions, hence the 'simp'       *)
+(*****************************************************************************)
+
+val simp = SIMP_RULE (std_ss ++ boolSimps.LET_ss) [];
+
+val acl2_exp_def = 		convert_definition "acl2_exp" EXP;
+val acl2_fact_def =             convert_definition "acl2_fact" FACT;
+val acl2_findq_def = 		convert_definition "acl2_findq" (simp findq_thm);
+val acl2_divmod_def = 		convert_definition "acl2_divmod" (simp DIVMOD_THM);
+
+(*****************************************************************************)
+(* Encoding of Matt's example given earlier                                  *)
+(*****************************************************************************)
+
+val acl2_read_def = 		convert_definition "acl2_read" read_def;
+val acl2_write_def = 		convert_definition "acl2_write" write_def;
+val acl2_read_step_def = 	convert_definition "acl2_read_step" read_step_def;
+val acl2_write_step_def = 	convert_definition "acl2_write_step" write_step_def;
+val acl2_run_def = 		convert_definition "acl2_run" run_def;
+val acl2_write_increment_def = 	convert_definition "acl2_write_increment" write_increment_def;
+val acl2_read_increment_def = 	convert_definition "acl2_read_increment" read_increment_def;
+val acl2_max_addr_def = 	convert_definition "acl2_max_addr" max_addr_def;
+val acl2_fix_address_def = 	convert_definition "acl2_fix_address" fix_address_def;
+val acl2_make_instrs_def = 	convert_definition "acl2_make_instrs" make_instrs_def;
+
+
+
+
+
