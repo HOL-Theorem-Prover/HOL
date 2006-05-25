@@ -1085,18 +1085,45 @@ fun pp_term (G : grammar) TyG = let
         end
         else ()
 
+      val (f, args) = strip_comb tm
+      val comb_show_type = let
+        val _ = (showtypes andalso not ratorp) orelse raise PP_ERR "" ""
+        val {Thy,Name,...} = dest_thy_const f
+        val base_const = prim_mk_const {Thy = Thy, Name = Name}
+        val base_ty = type_of base_const
+        val empty_tyset = HOLset.empty Type.compare
+        fun arg_tyvars acc args ty =
+            case args of
+              [] => (acc, ty)
+            | _ :: rest => let
+                val (dom,rng) = dom_rng ty
+              in
+                arg_tyvars (HOLset.addList(acc, type_vars dom)) rest rng
+              end
+        val (consumed_types, rest_type) =
+            arg_tyvars empty_tyset args base_ty
+        val rng_types = HOLset.addList(empty_tyset, type_vars rest_type)
+      in
+        not (HOLset.isEmpty (HOLset.difference(consumed_types, rng_types)))
+      end handle HOL_ERR _ => false
+
+
       val prec = Prec(comb_prec, fnapp_special)
       val lprec = if addparens then Top else lgrav
       val rprec = if addparens then Top else rgrav
     in
-      pbegin addparens;
+      pbegin (addparens orelse comb_show_type);
       begin_block INCONSISTENT 2;
       full_pr_term binderp showtypes showtypes_v vars_seen pps true t1
                    prec lprec prec (decdepth depth);
       add_break (1, 0);
       pr_term t2 prec prec rprec (decdepth depth);
+      if comb_show_type then
+        (add_string (" "^type_intro); add_break (0,0);
+         type_pp.pp_type_with_depth TyG pps (decdepth depth) (type_of tm))
+      else ();
       end_block();
-      pend addparens
+      pend (addparens orelse comb_show_type)
     end handle SimpleExit => ()
 
     fun pr_sole_name n rules = let
