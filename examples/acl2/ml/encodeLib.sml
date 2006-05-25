@@ -1,3 +1,10 @@
+(*****************************************************************************)
+(* File: encodeLib.sml                                                       *)
+(* Author: James Reynolds                                                    *)
+(*                                                                           *)
+(* Provides the functions to encode HOL into ACL2                            *)
+(*****************************************************************************)
+
 (******************** To do *******************)
 
 (* 1) Reduce_judgements is done very very badly, might want to consider re-doing it *)
@@ -55,15 +62,9 @@
 		- Modified reduce_judgement to keep lists of conjunctions to save time *)
 (* 23/05	- Added functions to create list predicates (Stage 10) *)
 
-(*****************************************************************************)
-(* File: encodeLib.sml                                                       *)
-(* Author: James Reynolds                                                    *)
-(*                                                                           *)
-(* Provides the functions to encode HOL into ACL2                            *)
-(*****************************************************************************)
 
 (* Interactive stuff ... 
-val _ = loadPath := "/homes/j291/hol98/examples/acl2/examples/" :: !loadPath;
+val _ = loadPath := "../ml/" :: !loadPath;
 
 app load ["translateTheory","listLib"];
 
@@ -1160,6 +1161,12 @@ in
 end;
 
 (*****************************************************************************)
+(* Pre-processing: Remove let expressions and beta reduce                    *)
+(*****************************************************************************)
+
+val PRE_PROCESS = LIST_CONJ o (map (CONV_RULE (STRIP_QUANT_CONV (RAND_CONV (REDEPTH_CONV (BETA_CONV ORELSEC PairedLambda.let_CONV)))))) o CONJUNCTS;
+
+(*****************************************************************************)
 (* Finishing up:  add the typing theorems and correctness proofs to the rule *)
 (*                set used for encoding                                      *)
 (*****************************************************************************)
@@ -1177,7 +1184,8 @@ fun update_lists (encoded:encoded_function) =
 
 fun convert_definition name function = 
 let 	val _ = print ("Encoding function: " ^ name ^ "\n")
-	val stage3 = encode_decode_function (curry_single_function (convert_tc (argument_list function) function))
+	val function' = PRE_PROCESS function
+	val stage3 = encode_decode_function (curry_single_function (convert_tc (argument_list function') function'))
 	val stage4 = acl2_define_function name stage3
 	val stage5 = convert_acl2 stage3 stage4  (!rewrite_thms) (!acl2_constants)
 	val (stage7d,stage7r) = define_and_resolve (resolve_hypothesis stage5 (!judgement_thms))

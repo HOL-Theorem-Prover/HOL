@@ -5,7 +5,7 @@
 (* Runs some simple tests of encodeLib                                       *)
 (*****************************************************************************)
 
-val loadPath := "../ml/" :: !loadPath;
+val _ = loadPath := "../ml/" :: !loadPath;
 load "encodeLib";
 open encodeLib arithmeticTheory;
 
@@ -186,12 +186,10 @@ app add_stage (for 1 9 I);
 (* encodeLib still doesn't cope with let expressions, hence the 'simp'       *)
 (*****************************************************************************)
 
-val simp = SIMP_RULE (std_ss ++ boolSimps.LET_ss) [];
-
 val acl2_exp_def = 		convert_definition "acl2_exp" EXP;
 val acl2_fact_def =             convert_definition "acl2_fact" FACT;
-val acl2_findq_def = 		convert_definition "acl2_findq" (simp findq_thm);
-val acl2_divmod_def = 		convert_definition "acl2_divmod" (simp DIVMOD_THM);
+val acl2_findq_def = 		convert_definition "acl2_findq" findq_thm;
+val acl2_divmod_def = 		convert_definition "acl2_divmod" DIVMOD_THM;
 
 (*****************************************************************************)
 (* Encoding of Matt's example given earlier                                  *)
