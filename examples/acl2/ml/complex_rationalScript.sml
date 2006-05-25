@@ -30,7 +30,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories (including ratTheory from Jens Brandt)
 ******************************************************************************)
-open gcdTheory fracLib ratLib;
+open gcdTheory fracLib ratLib ratTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
