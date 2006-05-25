@@ -1104,7 +1104,7 @@ fun pp_term (G : grammar) TyG = let
             arg_tyvars empty_tyset args base_ty
         val rng_types = HOLset.addList(empty_tyset, type_vars rest_type)
       in
-        not (HOLset.isEmpty (HOLset.difference(consumed_types, rng_types)))
+        not (HOLset.isEmpty (HOLset.difference(rng_types, consumed_types)))
       end handle HOL_ERR _ => false
 
 
