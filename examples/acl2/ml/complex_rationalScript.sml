@@ -106,6 +106,48 @@ val COMPLEX_RECIPROCAL_def =
   `COMPLEX_RECIPROCAL (com a b) = com (a/(a*a + b*b)) ((~b)/(a*a + b*b))`;
 
 (*****************************************************************************)
+(* Complex comparisions                                                      *)
+(*****************************************************************************)
+
+val COMPLEX_LT_def = Define `COMPLEX_LT (com ra ia) (com rb ib) = (ra < rb) \/ ((ra = rb) /\ (ia < ib))`;
+val COMPLEX_LE_def = Define `COMPLEX_LE (com ra ia) (com rb ib) = (ra < rb) \/ ((ra = rb) /\ (ia <= ib))`;
+val COMPLEX_GT_def = Define `COMPLEX_GT (com ra ia) (com rb ib) = (ra > rb) \/ ((ra = rb) /\ (ia > ib))`;
+val COMPLEX_GE_def = Define `COMPLEX_GE (com ra ia) (com rb ib) = (ra > rb) \/ ((ra = rb) /\ (ia >= ib))`;
+
+(*****************************************************************************)
+(* Overload "<", ">", "<=",">=" onto complex comparisons                     *)
+(*****************************************************************************)
+
+val _ = overload_on("<",``COMPLEX_LT``);
+val _ = overload_on("<=",``COMPLEX_LE``);
+val _ = overload_on(">",``COMPLEX_GT``);
+val _ = overload_on(">=",``COMPLEX_GE``);
+
+(*****************************************************************************)
+(* Complex negation                                                          *)
+(*****************************************************************************)
+
+val COMPLEX_NEG_def = Define `COMPLEX_NEG a = com_0 - a`;
+
+(*****************************************************************************)
+(* Overload "~" onto complex negation                                        *)
+(*****************************************************************************)
+
+val _ = overload_on("~",``COMPLEX_NEG``);
+
+(*****************************************************************************)
+(* Complex division                                                          *)
+(*****************************************************************************)
+
+val COMPLEX_DIV_def = Define `COMPLEX_DIV a b = a * (COMPLEX_RECIPROCAL b)`;
+
+(*****************************************************************************)
+(* Overload "/" onto complex division                                        *)
+(*****************************************************************************)
+
+val _ = overload_on("/",``COMPLEX_DIV``);
+
+(*****************************************************************************)
 (* DIVIDES : int->int->bool  tests if first argument divides second argument *)
 (*                                                                           *)
 (* Uses:                                                                     *)
@@ -158,5 +200,21 @@ val reduced_nmr_def =
 val reduced_dnm_def =
  Define
   `reduced_dnm r = SND(reduce(rep_frac(rep_rat r)))`;
+
+
+(*****************************************************************************)
+(* Multiplication theorems for use in translation                            *)
+(*****************************************************************************)
+
+val COMPLEX_MULT_COMM = store_thm("COMPLEX_MULT_COMM",``a * b = b * a:complex_rational``,
+	Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [COMPLEX_MULT_def] THEN METIS_TAC [RAT_MUL_COMM,RAT_ADD_COMM]);
+
+val COMPLEX_MULT_ASSOC = store_thm("COMPLEX_MULT_ASSOC",``a * (b * c) = a * b * c:complex_rational``,	
+	Cases_on `a` THEN Cases_on `b` THEN Cases_on `c` THEN 
+	RW_TAC std_ss [COMPLEX_MULT_def,RAT_LDISTRIB,RAT_RDISTRIB,RAT_SUB_ADDAINV,GSYM RAT_AINV_LMUL,GSYM RAT_AINV_RMUL,RAT_ADD_ASSOC,RAT_MUL_ASSOC,RAT_AINV_ADD] THEN	
+	METIS_TAC [RAT_MUL_COMM,RAT_MUL_ASSOC,RAT_ADD_COMM,RAT_ADD_ASSOC]);
+
+val COMPLEX_MULT_RID = store_thm ("COMPLEX_MULT_RID",``a * com_1 = a``,
+	Cases_on `a` THEN RW_TAC std_ss [com_1_def,COMPLEX_MULT_def,GSYM rat_0,rat_0_def,GSYM rat_1,rat_1_def,RAT_MUL_RID,RAT_MUL_RZERO,RAT_ADD_RID,RAT_SUB_RID]);
 
 val _ = export_theory();
