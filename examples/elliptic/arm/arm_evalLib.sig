@@ -2,6 +2,9 @@ signature arm_evalLib =
 sig
    include Abbrev
 
+   type mode
+   type arm_state
+
    val ARM_CONV             : conv
    val ARM_RULE             : rule
    val ARM_ASSEMBLE_CONV    : conv
@@ -14,6 +17,15 @@ sig
 
    val set_registers        : term -> term -> term
    val set_status_registers : term -> term -> term
+
+   val dest_arm_eval    : term -> arm_state
+
+   val print_all_regs   : term -> unit
+   val print_usr_regs   : term -> unit
+   val print_std_regs   : term -> unit
+   val print_regs       : (int * mode) list -> term -> unit
+   val print_mem_range  : term -> Arbnum.num * int -> unit
+   val print_mem_block  : term -> int -> unit
 
    val load_mem  : string -> int -> Arbnum.num -> term -> term
    val save_mem  : string -> Arbnum.num -> Arbnum.num -> bool -> term -> unit

@@ -41,6 +41,19 @@ val list2int = Arbnum.toInt o list2num;
 fun bits h l (n:bool list) = List.take(List.drop(n,l),h + 1 - l);
 fun bit b n = (bits b b n = [true]);
 
+fun sign_extend l h n =
+  let open Arbnum
+      val ln = fromInt l
+      val exp_l_sub1 = pow(two, ln - one)
+      val exp_l = exp_l_sub1 * two
+      val m = n mod exp_l
+  in
+    if mod2 (n div exp_l_sub1) = one then
+      pow(two, fromInt h) - exp_l + m
+    else
+      m
+  end;
+
 (* ------------------------------------------------------------------------- *)
 
 fun register2int r =
@@ -650,16 +663,17 @@ in
 
   fun branch_to_arm (c,link,address) line =
         let open Arbnum
-            val t = address - (fromInt 8)
-            val jmp = add32 t (num2comp line)
-            val offset = (jmp div (fromInt 4)) mod (fromInt n24)
-            val ok = (if line <= t then jmp else num2comp jmp) <=
-                     (fromHexString "FFFFFF")
+            val n4 = fromInt 4
+            val n8 = fromInt 8
+            val jmp = add32 address (num2comp (line + n8))
+            val offset = (jmp div n4) mod (fromInt n24)
+            val ok = (address =
+                      add32 (line + n8) (sign_extend 24 32 offset * n4))
         in
            if ok then
              Instruction(Br {L = link, offset = toInt offset},c)
            else
-             raise Data.Parse "Invalid branch an instruction"
+             raise Data.Parse "Invalid branch instruction"
          end;
 
   fun assembler_to_instruction a =
@@ -1348,8 +1362,11 @@ local
   val n25 = Word.toInt (Word.<<(Word.fromInt 1,Word.fromInt 25))
   val n26 = Word.toInt (Word.<<(Word.fromInt 1,Word.fromInt 26))
   fun offset2comp i = Int.mod(n26 - i,n26)
-  fun abs_offset_string i j =
-        "0x" ^ Arbnum.toHexString(Arbnum.+(i,Arbnum.fromInt (4 * j + 8)))
+  fun abs_offset_string i j = let open Arbnum
+            val x = sign_extend 24 32 (fromInt j)
+        in
+          "0x" ^ toHexString(add32 (i + fromInt 8) (x * fromInt 4))
+        end;
   fun rel_offset_string i =
       let val j = Int.mod(Int.mod((i + 2) * 4,n26),n26) in
         if j < n25 then

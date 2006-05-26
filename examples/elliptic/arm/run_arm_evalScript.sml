@@ -118,6 +118,33 @@ val run_add17 = save_thm("run_add17", evaluate max prog reg psr);
 (* ------------------------------------------------------------------------- *)
 
 (*
+val p = Arbnum.fromString
+  "68647976601306097149819007990813932172694353\
+  \00143305409394463459185543183397656052122559\
+  \64066145455497729631139148085803712198799971\
+  \6643812574028291115057151";
+
+val a = random_word 34;
+
+val eval_srd521 = save_thm("eval_srd521",
+  EVAL (numSyntax.mk_mod(numLib.mk_numeral a, numLib.mk_numeral p)));
+
+val prog = list_assemble
+  (assemble exc_mem "../code/srd521.s")
+ (["0x20:\
+   \mov sp, #0xA000",
+   "mov r0, sp",
+   "add r1, r0, #"^i2s(4 * 34),
+   "bl 0x8000"] @
+   (prefix_hd "0xA000: "
+    (num2wordsn 34 a)));
+
+val run_srd521 = save_thm("run_srd521", evaluate max prog reg psr);
+*)
+
+(* ------------------------------------------------------------------------- *)
+
+(*
 val _ = wordsLib.mk_word_size (18 * 32);
 
 fun mk_word576 n = wordsSyntax.mk_n2w (numLib.mk_numeral n, ``:i576``);

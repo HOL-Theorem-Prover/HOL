@@ -10,7 +10,7 @@ structure arm_evalLib :> arm_evalLib =
 struct
 
 (* interactive use:
-  app load ["computeLib", "arm_evalTheory",
+  app load ["wordsLib", "computeLib", "pred_setSimps", "arm_evalTheory",
             "instructionTheory", "instructionSyntax"];
 *)
 
@@ -180,7 +180,7 @@ val FOLD_SUBST_CONV =
 let val compset = add_rws wordsLib.words_compset
       [SET_IFMODE_def,SET_NZCV_def,FOLDL,arm_evalTheory.SUBST_EVAL,
        mode_num_def,mode_case_def,register_EQ_register,register2num_thm,
-       psrs_EQ_psrs,psrs2num_thm]
+       psrs_EQ_psrs,psrs2num_thm,dimindex_30,finite_30]
 in
   computeLib.CBV_CONV compset THENC SORT_SUBST_CONV
 end;
@@ -202,8 +202,37 @@ in
 end;
 
 val rhsc = rhs o concl;
+val lhsc = lhs o concl;
+val fdest_comb = fst o dest_comb;
+val sdest_comb = snd o dest_comb;
 
 fun printn s = print (s ^ "\n");
+
+fun findi p l =
+  let fun findin _ [] _ = NONE
+        | findin p (h::t) n =
+            if p h then SOME n else findin p t (n + 1)
+  in
+    findin p l 0
+  end;
+
+fun mapi f l =
+  let fun m f [] i = []
+        | m f (h::t) i = (f(i, h))::m f t (i + 1)
+  in
+    m f l 0
+  end;
+
+local
+  fun take_dropn(l,n) a =
+        if n = 0 then (rev a,l)
+        else
+          case l of
+            [] => raise Subscript
+          | (h::t) => take_dropn(t,n - 1) (h::a)
+in
+  fun take_drop(l,n) = take_dropn(l,n) []
+end;
 
 (* ------------------------------------------------------------------------- *)
 (* Syntax *)
@@ -227,6 +256,192 @@ fun mk_bsubst (a,b,m) =
 
 val dest_subst  = dest_triop subst_tm  (ERR "dest_word_slice" "");
 val dest_bsubst = dest_triop bsubst_tm (ERR "dest_word_slice" "");
+
+local
+  fun do_dest_subst_reg t a =
+        let val (i,d,m) = dest_subst t in
+          do_dest_subst_reg m
+              (if isSome (List.find (fn a => term_eq (fst a) i) a) then a
+               else ((i,d)::a))
+        end handle HOL_ERR _ => (``ARB:register``,t)::a;
+
+  fun do_dest_subst_mem t a =
+       let val (i,d,m) = dest_bsubst t in
+          do_dest_subst_mem m ((i,fst (listSyntax.dest_list d))::a)
+       end handle HOL_ERR _ =>
+         let val (i,d,m) = dest_subst t in
+            do_dest_subst_mem m ((i,[d])::a)
+         end handle HOL_ERR _ => (``ARB:register``,[t])::(rev a);
+in
+  fun dest_subst_reg t = do_dest_subst_reg t []
+  fun dest_subst_mem t = do_dest_subst_mem t []
+end;
+
+fun get_reg l rest r =
+      case List.find (fn a => term_eq (fst a) r) l of
+        SOME (x,y) => y
+      | _ => (rhsc o EVAL_SUBST_CONV o mk_comb) (rest,r);
+
+fun get_pc t =
+ let val regs = dest_subst_reg t
+     val l = tl regs
+     val rest = snd (hd regs)
+ in
+   get_reg l rest ``r15``
+ end;
+
+datatype mode = USR | FIQ | IRQ | SVC | ABT | UND;
+
+local
+  val split_enum = (snd o strip_comb o sdest_comb o concl);
+  val und_regs = split_enum armTheory.datatype_register;
+  val (usr_regs,und_regs) = take_drop(und_regs,16)
+  val (fiq_regs,und_regs) = take_drop(und_regs,7)
+  val (irq_regs,und_regs) = take_drop(und_regs,2)
+  val (svc_regs,und_regs) = take_drop(und_regs,2)
+  val (abt_regs,und_regs) = take_drop(und_regs,2)
+
+  fun mode2int m =
+    case m of
+      USR => 0
+    | FIQ => 1
+    | IRQ => 2
+    | SVC => 3
+    | ABT => 4
+    | UND => 5;
+
+  fun mode_compare(a,b) = Int.compare(mode2int a, mode2int b);
+
+  fun rm_duplicates (h1::h2::l) =
+        if h1 = h2 then rm_duplicates (h2::l)
+        else h1::(rm_duplicates (h2::l))
+    | rm_duplicates l = l;
+
+  fun print_reg l rest r =
+        (print_term r; print "="; print_term (get_reg l rest r); print "; ");
+
+  fun print_usr_reg l rest n =
+        if n <= 15 then
+          print_reg l rest (List.nth(usr_regs,n))
+        else ();
+
+  fun print_fiq_reg l rest n =
+        if 8 <= n andalso n <= 14 then
+          (print_reg l rest (List.nth(fiq_regs,n - 8)))
+        else ();
+
+  fun print_irq_reg l rest n =
+        if 12 < n andalso n < 15 then
+          (print_reg l rest (List.nth(irq_regs,n - 13)))
+        else ();
+
+  fun print_svc_reg l rest n =
+        if 12 < n andalso n < 15 then
+          (print_reg l rest (List.nth(svc_regs,n - 13)))
+        else ();
+
+  fun print_abt_reg l rest n =
+        if 12 < n andalso n < 15 then
+          (print_reg l rest (List.nth(abt_regs,n - 13)))
+        else ();
+
+  fun print_und_reg l rest n =
+        if 12 < n andalso n < 15 then
+          (print_reg l rest (List.nth(und_regs,n - 13)))
+        else ();
+  
+  fun mode2printer m =
+    case m of
+      USR => print_usr_reg
+    | FIQ => print_fiq_reg
+    | IRQ => print_irq_reg
+    | SVC => print_svc_reg
+    | ABT => print_abt_reg
+    | UND => print_und_reg;
+
+  val all_modes = [USR,FIQ,IRQ,SVC,ABT,UND];
+
+  fun pprint_regs p t =
+        let val regs = dest_subst_reg t
+            val l = tl regs
+            val rest = snd (hd regs)
+        in
+          for_se 0 15 (fn i =>
+            let val newline =
+               foldl (fn (m,e) => if p (i,m) then
+                                    ((mode2printer m) l rest i; true)
+                                  else e) false all_modes
+            in
+              if newline then print "\n" else ()
+            end)
+        end
+in
+  val print_all_regs = pprint_regs (K true);
+  val print_usr_regs = pprint_regs (fn (i,m) => m = USR);
+  val print_std_regs = pprint_regs (fn (i,m) => (m = USR) orelse (m = UND));
+  fun print_regs l = pprint_regs (fn x => mem x l);
+end;
+
+local
+  fun compute_bound (t, tl) =
+  let open Arbnum
+      val n4 = fromInt 4
+      val l = eval_word t
+  in
+    (l, l + fromInt (Int.-(length tl, 1)))
+  end;
+
+  fun get_blocki bounds n =
+    findi (fn (x,y) => Arbnum.<=(x, n) andalso Arbnum.<=(n, y)) bounds;
+
+  fun get_mem_val blocks rest bounds n =
+         case get_blocki bounds n of
+           SOME i => List.nth(List.nth(blocks, i),
+                       Arbnum.toInt (Arbnum.-(n, fst (List.nth(bounds, i)))))
+         | NONE   => (rhsc o EVAL_SUBST_CONV o mk_comb) (rest,mk_word30 n)
+in
+  fun read_mem_range m start n =
+  let val dm = dest_subst_mem m
+      val rest = hd (snd (hd (dm)))
+      val bounds = map compute_bound (tl dm)
+      val blocks = map snd (tl dm)
+      val sa = Arbnum.div(start,Arbnum.fromInt 4)
+      val f = get_mem_val blocks rest bounds
+      val n4 = Arbnum.fromInt 4
+  in
+    List.tabulate(n, fn i => let val x = Arbnum.+(sa, Arbnum.fromInt i) in
+                                 (Arbnum.*(x, n4), f x) end)
+  end
+end;
+
+fun read_mem_block m n =
+  let open Arbnum
+      val dm = List.nth(dest_subst_mem m, n)
+      val sa = eval_word (fst dm)
+      val bl = snd dm
+      val n4 = fromInt 4
+      val addrs = List.tabulate(length bl, fn i => (sa + fromInt i) * n4)
+  in
+     zip addrs bl
+  end;
+
+fun mem_val_to_string(n, t) =
+  "0x" ^ Arbnum.toHexString n ^ ": " ^
+  (let val (l, r) = dest_comb t in
+    if term_eq l ``enc`` then
+      dest_instruction (SOME n) r
+    else
+      term_to_string t
+   end handle HOL_ERR _ => term_to_string t);
+
+fun print_mem_range m (start, n) =
+  app printn (map mem_val_to_string (read_mem_range m start n));
+
+fun print_mem_block m n =
+  app printn (map mem_val_to_string (read_mem_block m n))
+  handle HOL_ERR _ => ();
+
+type arm_state = {mem : term, psrs : term, reg : term, undef : term};
 
 fun dest_arm_eval t =
   case TypeBase.dest_record t of
@@ -412,9 +627,6 @@ fun init m r s =
 
 fun next t =
 let val t1 = rhsc t
-    val reg = #reg (dest_arm_eval t1)
-    val pc = (eval_word o rhsc o EVAL_SUBST_CONV) (mk_comb(reg, ``r15``))
-    val _ = printn ("pc = " ^ Arbnum.toHexString pc)
     val t2 = ((ARM_CONV THENC
                  ONCE_DEPTH_CONV (RAND_CONV (RAND_CONV SORT_BSUBST_CONV)) THENC
                  ONCE_DEPTH_CONV (RATOR_CONV SORT_SUBST_CONV) THENC
@@ -427,21 +639,33 @@ let val t1 = rhsc t
 
 fun done t = term_eq T (#undef (dest_arm_eval (rhsc t)));
 
-fun state n [] = []
-  | state n (l as (t::ts)) =
+fun state _ _ [] = []
+  | state (tmr,prtr) n (l as (t::ts)) =
       if n = 0 then l
-      else let val nl = (time next t) :: l in
-        if done t then nl else state (n - 1) nl
-      end;
+      else
+        let val _ = prtr (dest_arm_eval (rhsc t))
+            val nl = (tmr next t) :: l
+        in
+          if done t then nl else state (tmr,prtr) (n - 1) nl
+        end;
 
-fun fstate n s =
+fun fstate (tmr,prtr) n s =
   if n = 0 then s
-  else let val ns = time next s in
-    if done s then ns else fstate (n - 1) ns
+   else
+     let val _ = prtr (dest_arm_eval (rhsc s))
+         val ns = tmr next s
+     in
+       if done s then ns else fstate (tmr,prtr) (n - 1) ns
+     end;
+
+fun pc_ptr (x : arm_state) =
+  let val pc = eval_word (get_pc (#reg x))
+  in
+    print_mem_range (#mem x) (pc, 1)
   end;
 
-fun eval n m r s = state n [init m r s];
-fun evaluate n m r s = fstate n (init m r s);
+fun eval n m r s = state (time,pc_ptr) n [init m r s];
+fun evaluate n m r s = fstate (A,pc_ptr)  n (init m r s);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -467,8 +691,7 @@ fun myprint sys (pg,lg,rg) d pps t = let
                        end_block pps))
     end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
 
-val _ = temp_add_user_printer
-  ({Tyop = "list", Thy = "list"}, myprint);
+val _ = temp_add_user_printer ({Tyop = "list", Thy = "list"}, myprint);
 
 (* ------------------------------------------------------------------------- *)
 
