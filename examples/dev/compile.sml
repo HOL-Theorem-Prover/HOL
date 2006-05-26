@@ -2237,7 +2237,13 @@ val NEW_MAKE_CIRCUIT =
   (ptime "10-11" (CONV_RULE EXISTSL_CONV)) o
   (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
                GSYM COMB_OR, GSYM COMB_MUX])) o 
-  (ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+  (ptime "9-2" (Ho_Rewrite.REWRITE_RULE
+                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR, 
+                 GSYM COMB_MUX,GSYM LEFT_FORALL_IMP_THM,
+                 DEL_CONCAT,COMB_COND_CONCAT])) o                   (* new *)
+  (ptime "9-1" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+  (ptime "8-2" (Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_PAIR])) o        (* new *)
+  (ptime "8-1" (CONV_RULE (TOP_SWEEP_CONV FUN_EXISTS_PROD_CONV))) o (* new *)
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
   (ptime "6-7" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))                 o
   (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
@@ -2263,7 +2269,13 @@ val NEW_MAKE_CIRCUIT' =
   (ptime "10" (PURE_REWRITE_RULE[DEL_CONCAT,GSYM COMB_NOT, GSYM COMB_AND, 
                GSYM COMB_OR, GSYM COMB_MUX])) o 
   (ptime "4f again" STEP4f)          o  (* jmi: put this again to reduce MUXs *)
-  (ptime "9" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+  (ptime "9-2" (Ho_Rewrite.REWRITE_RULE
+                [GSYM COMB_NOT,GSYM COMB_AND,GSYM COMB_OR, 
+                 GSYM COMB_MUX,GSYM LEFT_FORALL_IMP_THM,
+                 DEL_CONCAT,COMB_COND_CONCAT])) o                   (* new *)
+  (ptime "9-1" (CONV_RULE(RATOR_CONV(RAND_CONV EXISTS_OUT_CONV)))) o
+  (ptime "8-2" (Ho_Rewrite.REWRITE_RULE[BUS_CONCAT_PAIR])) o        (* new *)
+  (ptime "8-1" (CONV_RULE (TOP_SWEEP_CONV FUN_EXISTS_PROD_CONV))) o (* new *)
   (ptime "7" (CONV_RULE(RATOR_CONV(RAND_CONV(REDEPTH_CONV(COMB_SYNTH_CONV)))))) o
   (ptime "6-7" (PURE_REWRITE_RULE [UNCURRY,FST,SND]))                 o
   (ptime "6" (REWRITE_RULE [DFF_IMP_def,POSEDGE_IMP_def,LATCH_def]))  o
