@@ -471,6 +471,44 @@ val word_msb_n2w = store_thm("word_msb_n2w",
   `!n. word_msb ((n2w n):'a word)  = BIT ^HB n`,
   SIMP_TAC (fcp_ss++ARITH_ss) [word_msb_def,n2w_def,DIMINDEX_GT_0]);
 
+val word_msb_n2w_numeric = store_thm(
+  "word_msb_n2w_numeric",
+  `word_msb (n2w n : 'a word) =
+       2 ** (dimindex (UNIV : 'a set) - 1) <=
+       n MOD (2 ** dimindex (UNIV : 'a set))`,
+  Q.ABBREV_TAC `HB = 2n ** (dimindex (UNIV : 'a set) - 1)` THEN
+  Q.ABBREV_TAC `WL = 2n ** dimindex (UNIV : 'a set)` THEN
+  `WL = 2 * HB`
+     by (SRW_TAC [][Abbr`WL`, Abbr`HB`] THEN
+         `0 < dimindex (UNIV : 'a set)` by SRW_TAC [][DIMINDEX_GT_0] THEN
+         `?m. dimindex (UNIV : 'a set) = SUC m`
+             by (Cases_on `dimindex (UNIV : 'a set)` THEN
+                 FULL_SIMP_TAC (srw_ss()) []) THEN
+         SRW_TAC [][EXP]) THEN
+  `0 < WL` by SRW_TAC [][Abbr`WL`, DIMINDEX_GT_0] THEN
+  `(n = (n DIV WL) * WL + n MOD WL) /\ n MOD WL < WL`
+     by METIS_TAC [DIVISION] THEN
+  Q.ABBREV_TAC `q = n DIV WL` THEN
+  Q.ABBREV_TAC `r = n MOD WL` THEN
+  ASM_SIMP_TAC (srw_ss())[word_msb_n2w, bitTheory.BIT_def, bitTheory.BITS_def,
+             bitTheory.MOD_2EXP_def, bitTheory.DIV_2EXP_def,
+             DECIDE ``SUC x - x = 1``, EQ_IMP_THM] THEN REPEAT STRIP_TAC
+  THENL [
+    SPOSE_NOT_THEN ASSUME_TAC THEN
+    `r < HB` by SRW_TAC [ARITH_ss][Abbr`r`] THEN
+    `n DIV HB = 2 * q`
+       by (SRW_TAC [][] THEN METIS_TAC [DIV_MULT,
+                                        MULT_COMM,
+                                        MULT_ASSOC]) THEN
+    METIS_TAC [DECIDE ``~(0n = 1) /\ 0 < 2n``, MOD_EQ_0, MULT_COMM],
+
+    MATCH_MP_TAC MOD_UNIQUE THEN
+    Q.EXISTS_TAC `q` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
+    MATCH_MP_TAC DIV_UNIQUE THEN
+    Q.EXISTS_TAC `r - HB` THEN
+    DECIDE_TAC
+  ])
+
 val word_and_n2w = store_thm("word_and_n2w",
   `!n m. (n2w n):'a word && (n2w m) = n2w (BITWISE ^WL (/\) n m)`,
   SIMP_TAC fcp_ss [word_and_def,n2w_11,n2w_def,BITWISE_THM]);
@@ -986,6 +1024,7 @@ val WORD_NOT = store_thm("WORD_NOT",
 val WORD_NEG_0 = store_thm("WORD_NEG_0",
   `$- 0w = 0w`,
    ARITH_WORD_TAC);
+val _ = BasicProvers.export_rewrites ["WORD_NEG_0"]
 
 val WORD_NEG_ADD = store_thm("WORD_NEG_ADD",
   `!v:'a word w. $- (v + w) = $- v + $- w`,
@@ -1002,6 +1041,7 @@ val WORD_NEG_NEG = store_thm("WORD_NEG_NEG",
     \\ `$- ($- w) + $- w = w + $- w`
     by SIMP_TAC std_ss [WORD_NEG_0,WORD_ADD_0,WORD_ADD_LINV,WORD_ADD_RINV]
     \\ METIS_TAC [WORD_EQ_ADD_RCANCEL]);
+val _ = BasicProvers.export_rewrites ["WORD_NEG_NEG"]
 
 val WORD_SUB_LNEG = save_thm("WORD_SUB_LNEG",
   (REWRITE_RULE [GSYM word_sub_def] o GSYM) WORD_NEG_ADD);
@@ -1076,6 +1116,7 @@ val WORD_NEG_EQ = save_thm("WORD_NEG_EQ",
 
 val WORD_NEG_EQ_0 = save_thm("WORD_NEG_EQ_0",
   (REWRITE_RULE [WORD_NEG_0] o SPECL [`v`,`0w`]) WORD_EQ_NEG);
+val _ = BasicProvers.export_rewrites ["WORD_NEG_EQ_0"]
 
 val WORD_SUB = save_thm("WORD_SUB",
   (ONCE_REWRITE_RULE [WORD_ADD_COMM] o GSYM) word_sub_def);
