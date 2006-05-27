@@ -7,7 +7,8 @@ open wordsTheory integerTheory intLib arithmeticTheory
 val _ = new_theory "integer_word"
 
 val i2w_def = Define`
-  i2w (i : int) = if i < 0 then word_2comp (n2w (Num ~i)) else n2w (Num i)
+  i2w (i : int) : 'a word =
+    if i < 0 then $- (n2w (Num ~i)) else n2w (Num i)
 `;
 
 val w2i_def = Define`
@@ -92,9 +93,8 @@ val w2i_n2w_neg = store_thm(
 val i2w_w2i = store_thm(
   "i2w_w2i",
   ``i2w (w2i w) = w``,
-  SRW_TAC [][w2i_def, i2w_def, n2w_w2n] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
-
+  SRW_TAC [][i2w_def, w2i_def] THEN
+  FULL_SIMP_TAC (srw_ss()) [])
 
 val w2i_i2w = store_thm(
   "w2i_i2w",
@@ -134,6 +134,66 @@ val w2i_i2w = store_thm(
     `n MOD (2 * HB) = n` by (MATCH_MP_TAC MOD_UNIQUE THEN
                              Q.EXISTS_TAC `0` THEN DECIDE_TAC) THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+  ])
+
+val mod_lemma = prove(
+  ``0 < k ==> (~x % k = (k - x % k) % k)``,
+  STRIP_TAC THEN
+  `~(k = 0)` by intLib.ARITH_TAC THEN
+  IMP_RES_TAC INT_DIVISION THEN
+  `~(k < 0)` by intLib.ARITH_TAC THEN
+  FULL_SIMP_TAC (srw_ss()) [] THEN
+  REPEAT (FIRST_X_ASSUM (fn th => Q.SPEC_THEN `~x` ASSUME_TAC th THEN
+                                  Q.SPEC_THEN `x` ASSUME_TAC th)) THEN
+  Q.ABBREV_TAC `q1 = ~x / k` THEN
+  Q.ABBREV_TAC `r1 = ~x % k` THEN
+  Q.ABBREV_TAC `q2 = x / k` THEN
+  Q.ABBREV_TAC `r2 = x % k` THEN
+  `(q1 + q2) * k + r1 + r2 = 0` by intLib.ARITH_TAC THEN
+  Cases_on `r1 + r2 = 0` THENL [
+    `(r1 = 0) /\ (r2 = 0)` by intLib.ARITH_TAC THEN
+    ASM_SIMP_TAC (srw_ss()) [],
+    Q_TAC SUFF_TAC `q1 + q2 = ~1` THEN1
+      (STRIP_TAC THEN
+       `~1 * k + r1 + r2 = 0` by FULL_SIMP_TAC (srw_ss()) [] THEN
+       `k - r2 = r1` by intLib.ARITH_TAC THEN
+       POP_ASSUM SUBST1_TAC THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
+       MATCH_MP_TAC INT_MOD_UNIQUE THEN Q.EXISTS_TAC `0` THEN
+       SRW_TAC [][]) THEN
+    `(q1 + q2) * k < 0` by intLib.ARITH_TAC THEN
+    `q1 + q2 < 0` by METIS_TAC [INT_MUL_SIGN_CASES] THEN
+    Q_TAC SUFF_TAC `~(q1 + q2 <= ~2)` THEN1 intLib.ARITH_TAC THEN
+    STRIP_TAC THEN
+    `(q1 + q2) * k <= ~2 * k` by METIS_TAC [INT_LE_MONO, INT_MUL_COMM] THEN
+    intLib.ARITH_TAC
+  ])
+
+val word_msb_i2w = store_thm(
+  "word_msb_i2w",
+  ``word_msb (i2w i : 'a word) =
+      2 ** (dimindex (UNIV:'a set) - 1) <= i % 2 ** dimindex (UNIV : 'a set)``,
+  Q.ABBREV_TAC `WL = 2n ** dimindex (UNIV : 'a set)` THEN
+  Q.ABBREV_TAC `HB = 2n ** (dimindex (UNIV : 'a set) - 1)` THEN
+  `WL = 2 * HB`
+     by (SRW_TAC [][Abbr`WL`, Abbr`HB`] THEN
+         `0 < dimindex (UNIV : 'a set)` by SRW_TAC [][DIMINDEX_GT_0] THEN
+         `?m. dimindex (UNIV : 'a set) = SUC m` by intLib.ARITH_TAC THEN
+         SRW_TAC [][EXP]) THEN
+  `0 < WL` by SRW_TAC [][Abbr`WL`, DIMINDEX_GT_0] THEN
+  `1 <= HB /\ 1 <= WL` by SRW_TAC [][Abbr`WL`, Abbr`HB`] THEN
+  ASM_SIMP_TAC (srw_ss()) [i2w_def] THEN
+  Cases_on `i < 0` THENL [
+    `?n. (i = ~&n) /\ ~(n = 0)`
+        by (Q.SPEC_THEN `i` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+            FULL_SIMP_TAC (srw_ss()) []) THEN
+    `n MOD (2 * HB) < 2 * HB` by SRW_TAC [ARITH_ss][DIVISION] THEN
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_2comp_n2w, word_msb_n2w_numeric,
+                                         mod_lemma, INT_MOD, INT_SUB],
+
+    `?n. (i = &n)`
+        by (Q.SPEC_THEN `i` STRIP_ASSUME_TAC INT_NUM_CASES THEN
+            FULL_SIMP_TAC (srw_ss()) []) THEN
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_msb_n2w_numeric, INT_MOD]
   ])
 
 val _ = export_theory()
