@@ -1,5 +1,5 @@
 
-\chapter{Euclid's Theorem}
+\chapter{Example: Euclid's Theorem}
 \label{chap:euclid}
 
 \setcounter{sessioncount}{0}
@@ -9,8 +9,8 @@ prime number that is larger, \ie, that the prime numbers form an
 infinite sequence. This proof has been excerpted and adapted from a
 much larger example due to John Harrison, in which he proved the $n =
 4$ case of Fermat's Last Theorem. The proof development will be
-performed using the facilities of \ml{bossLib}, one of \HOL's many
-libraries and is intended to serve as an introduction to performing
+performed using the facilities of \ml{bossLib}, one of \HOL's 
+libraries, and is intended to serve as an introduction to performing
 high-level interactive proofs in \holn.  Many of the details may be
 difficult to grasp for the novice reader; nonetheless, it is
 recommended that the example be followed through in order to gain a
@@ -431,7 +431,7 @@ included in the search. Let's look in the theory of arithmetic for the
 subterm to be rewritten.
 
 \begin{session}\begin{verbatim}
-- DB.match ["arithmetic"] (Term`SUC n * x`);
+- DB.match ["arithmetic"] ``SUC n * x``;
 
 > val it =
    [(("arithmetic", "FACT"),
@@ -458,7 +458,7 @@ focus the search by stipulating that the pattern look like a rewrite
 rule:
 
 \begin{session}\begin{verbatim}
-- DB.match [] (Term`SUC n * x = M`);
+- DB.match [] ``SUC n * x = M``;
 
 > val it =
     [(("arithmetic", "MULT"),

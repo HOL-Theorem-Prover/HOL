@@ -1,6 +1,6 @@
 \chapter{Advanced Definition Principles}\label{HOLdefinitions}
 
-\section{Datatype Definition}\label{sec:datatype}
+\section{Datatypes}\label{sec:datatype}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!algebraic types}
 
 Although the \HOL{} logic provides primitive definition principles
@@ -600,7 +600,7 @@ The pretty-printing of big records can be controlled with the
 \texttt{pp\_bigrecs} trace-flag.
 
 
-\section{Quotient Type Definition}\label{quotients}
+\section{Quotient Types}\label{quotients}
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!quotients|(}
 \index{quotient types, definition of}
 
@@ -795,7 +795,7 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic!quotients|)}
 
 
-\section{Function Definition}\label{TFL}
+\section{Recursive Functions}\label{TFL}
 
 HOL{} provides a function definition mechanism based on the
 wellfounded recursion theorem proved in \theoryimp{relationTheory},
@@ -1808,7 +1808,7 @@ for the variables are found, then the constraints may be eliminated
 by finding a suitable wellfounded relation for \holtxt{R} and then
 proving the other constraints.
 
-\section{Defining Inductive Relations}
+\section{Inductive Relations}
 
 Inductive definitions are made with the function \ml{Hol\_reln}, found
 in the \ml{bossLib} structure.  The \ml{Hol\_reln} function takes a

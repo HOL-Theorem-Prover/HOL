@@ -6,9 +6,9 @@ documents making up the documentation for \HOL:
 
 \begin{myenumerate}
 \item \TUTORIAL: a tutorial introduction to \HOL.
-\item \DESCRIPTION: a description of higher order logic, the \ML\
-  programming language, and theorem proving methods in the \HOL\
-  system;
+\item \DESCRIPTION: a description of the syntax and semantics of 
+      the \HOL\ logic, as well as pre-built theorem proving infrastructure
+      in the \HOL\ system;
 \item \REFERENCE: the reference documentation of the tools available
   in \HOL.
 \end{myenumerate}
@@ -20,7 +20,7 @@ This document, \TUTORIAL, is intended to be the first item read by new
 users of \HOL.  It provides a self-study introduction to the structure
 and use of the system.  The tutorial is intended to give a `hands-on'
 feel for the way \HOL{} is used, but it does not systematically explain
-all the underlying principles (\DESCRIPTION, explains these).  After
+all the underlying principles (\DESCRIPTION\ explains these).  After
 working through \TUTORIAL\ the reader should be capable of using \HOL\
 for simple tasks, and should also be in a position to consult the
 other two documents.
@@ -30,32 +30,31 @@ other two documents.
 Chapter~\ref{install} explains how to get and install \HOL.  Once this
 is done, the potential \HOL{} user should become familiar with the
 following subjects:
-
+%
 \begin{enumerate}
-\item The programming meta-language \ML, and how to interact with it
-  through an editor.
+\item The programming meta-language \ML, and how to interact with it.
 \item The formal logic supported by the \HOL{} system (higher order
   logic) and its manipulation via \ML.
 \item Forward proof and derived rules of inference.
-\item Goal directed proof, tactics and tacticals.
+\item Goal directed proof, tactics, and tacticals.
 \end{enumerate}
+%
+Chapters 2 and 3 introduce these topics.
+Chapter~\ref{chap:euclid} then develops an extended example---Euclid's
+proof of the infinitude of primes---to illustrate how \HOL{} is used
+to prove theorems. 
 
-Chapters 1--3 introduce the first two of these topics.
-Chapter~\ref{chap:euclid} then develops an extended example (Euclid's
-proof of the infinitude of primes) to demonstrate how \HOL{} is used
-to prove theorems.  This example is intended to demonstrate \HOL{}'s
-capabilities and to explain some of the issues at a high level.
-Chapters~\ref{proof} and~\ref{tactics} then describe forward and goal
-directed proof in much greater detail.
+%Chapter~\ref{proof} then describes forward and goal
+%directed proof in much greater detail.
 
-Chapter~\ref{parity} consists of a worked example: the specification
+Chapter~\ref{parity} features another worked example: the specification
 and verification of a simple sequential parity checker.  The intention
-is to accomplish two things: (i) to present a complete piece of work
-with \HOL; and (ii) to give an idea of what it is like to use the
-\HOL{} system for a tricky proof.  Chapter~\ref{chap:combin} is
-another worked example: the proof of confluence for combinatory logic.
-Again, the aim is to present a complete piece of non-trivial work.
-This third example also demonstrates another application area for \HOL.
+is to accomplish two things: (i) to present another complete piece of
+work with \HOL; and (ii) to give an idea of what it is like to use the
+\HOL{} system for a tricky proof.  Chapter~\ref{chap:combin} is a more
+extensive example: the proof of confluence for combinatory
+logic.  Again, the aim is to present a complete piece of non-trivial
+work.  
 
 Chapter~\ref{chap:proof-tools} gives an example of implementing a
 proof tool of one's own.  This demonstrates the programmability of
@@ -86,7 +85,7 @@ examples distributed with \holn{} in the \ml{examples} directory.
 \noindent \TUTORIAL{} has been kept short so that new users of \HOL{} can get
 going as fast as possible. Sometimes details have been simplified. It
 is recommended that as soon as a topic in \TUTORIAL\ has been
-digested, the relevant bits of \DESCRIPTION\ and \REFERENCE\ be
+digested, the relevant parts of \DESCRIPTION\ and \REFERENCE\ be
 studied.
 
 %%% Local Variables:

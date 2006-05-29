@@ -1,5 +1,4 @@
-\chapter{Introduction to Proof with HOL}
-\label{proof}
+\chapter{Introduction to Proof with HOL}\label{proof}
 
 \newcommand\tacticline{\hline \hline}
 \newenvironment{proofenumerate}{\begin{enumerate}}{\end{enumerate}}
@@ -15,17 +14,17 @@ are using \texttt{<holdir>/bin/hol}.
 
 \setcounter{sessioncount}{0}
 
-For a logician, a formal proof is a sequence, each of whose elements
-is either an {\it axiom\/} or follows from earlier members of the
-sequence by a {\it rule of inference\/}.  A theorem is the last
-element of a proof.
+For a logician, one definition of a formal proof is that it is a
+sequence, each of whose elements is either an {\it axiom\/} or follows
+from earlier members of the sequence by a {\it rule of inference\/}.
+A theorem is the last element of a proof.
 
 Theorems are represented in \HOL{} by values of an abstract type
-{\small\verb|thm|}.  The  only way  to create theorems is by generating a
-proof.  In \HOL{} (following \LCF), this consists in applying \ML{} functions
-representing {\it rules of inference\/} to  axioms or previously generated
-theorems.  The sequence of such applications  directly corresponds to a
-logician's proof.
+{\small\verb|thm|}.  The only way to create theorems is by generating
+such a proof.  In \HOL, following \LCF, this consists in applying
+\ML{} functions representing {\it rules of inference\/} to axioms or
+previously generated theorems.  The sequence of such applications
+directly corresponds to a logician's proof.
 
 There are five axioms of the \HOL{} logic and eight primitive
 inference rules. The axioms are bound to ML names. For example, the Law of
@@ -384,7 +383,7 @@ The rules \ml{ADD\_ASSUM} and \ml{UNDISCH} are the first derived rules
 defined when the \HOL{} system is built. For a description of the main
 rules see the section on derived rules in \DESCRIPTION.
 
-\section{Rewriting}
+\subsection{Rewriting}
 
 An important derived rule is \ml{REWRITE\_RULE}.  This takes a list of
 conjunctions of equations, \ie\ a list of theorems of the form:
@@ -449,7 +448,7 @@ This can then be rewritten using another pre-proved theorem
     orders; \ml{REWRITE\_RULE} is the tip of an iceberg, see
     \DESCRIPTION\ for more details.
 
-\chapter{Goal Oriented Proof: Tactics and Tacticals}
+\section{Goal Oriented Proof: Tactics and Tacticals}
 \label{backward}\label{tactics}
 
 The style of forward proof described in the previous chapter is
@@ -725,7 +724,7 @@ has no effect. {\small\verb|ALL_TAC|} is useful for writing complex
 tactics using tacticals.
 
 
-\section{Using tactics to prove theorems}
+\subsection{Using tactics to prove theorems}
 \label{using-tactics}
 
 Suppose goal $g$ is to be solved. If $g$ is simple it might be
@@ -999,7 +998,7 @@ Remaining subgoals:
     \ml{THENL}.  Tacticals are higher order operations for combining
     tactics.
 
-\section{Tacticals}
+\subsection{Tacticals}
 \label{tacticals}
 
 A {\it tactical\/} is an \ML{} function that takes one or more tactics
@@ -1008,7 +1007,7 @@ tactic as its result.  The various parameters passed to tacticals are
 reflected in the various \ML{} types that the built-in tacticals have.
 Some important tacticals in the \HOL{} system are listed below.
 
-\subsection{\tt THENL : tactic -> tactic list -> tactic}
+\subsubsection{\tt THENL : tactic -> tactic list -> tactic}
 
 If tactic $T$ produces $n$ subgoals and $T_1$, $\ldots$ , $T_n$ are
 tactics then $T${\small\verb| THENL|}
@@ -1046,7 +1045,7 @@ The tactical {\small\verb|THENL|} is useful for doing different things
 to different subgoals. The tactical \ml{THEN} can be used to apply the
 same tactic to all subgoals.
 
-\subsection{\tt THEN : tactic -> tactic -> tactic}\label{THEN}
+\subsubsection{\tt THEN : tactic -> tactic -> tactic}\label{THEN}
 
 The tactical {\small\verb|THEN|} is an \ML{} infix. If $T_1$ and $T_2$
 are tactics, then the \ML{} expression $T_1${\small\verb| THEN |}$T_2$
@@ -1111,7 +1110,7 @@ proofs for this built-in theory can be found in the file
 \ml{src/num/arithmeticScript.sml}.
 
 
-\subsection{\tt ORELSE : tactic -> tactic -> tactic}\label{ORELSE}
+\subsubsection{\tt ORELSE : tactic -> tactic -> tactic}\label{ORELSE}
 
 The tactical {\small\verb|ORELSE|} is an \ML{} infix. If $T_1$ and
 $T_2$ are tactics,
@@ -1127,7 +1126,7 @@ applies $T_1$ unless that fails; if it fails, it applies $T_2$.
 \end{hol}
 %\index{alternation!of tactics|)}
 
-\subsection{\tt REPEAT : tactic -> tactic}
+\subsubsection{\tt REPEAT : tactic -> tactic}
 
 If $T$ is a tactic then {\small\verb|REPEAT |}$T$ is a tactic which
 repeatedly applies $T$ until it fails. This can be illustrated in
@@ -1171,7 +1170,7 @@ OK..
     x + (y + z) = x + y + z
 \end{verbatim}\end{session}
 
-\section{Some tactics built into HOL}
+\subsection{Some tactics built into HOL}
 
 This section contains a summary of some of the tactics built into the
 \HOL{} system (including those already discussed).  The tactics given
@@ -1183,7 +1182,7 @@ abbreviates {\small\verb|thm->tactic|}, and the type
   Larry Paulson's theory of conversions \cite{lcp_rewrite}.}
 abbreviates {\small\verb|term->thm|}.
 
-\subsection{\tt REWRITE\_TAC : thm list -> tactic}
+\subsubsection{\tt REWRITE\_TAC : thm list -> tactic}
 \label{rewrite}
 
 \begin{itemize}
@@ -1229,7 +1228,7 @@ $\{t_1, \ldots , t_m\}t'$
 \end{itemize}
 
 
-\subsection{\tt CONJ\_TAC : tactic}\label{CONJTAC}
+\subsubsection{\tt CONJ\_TAC : tactic}\label{CONJTAC}
 
 \begin{itemize}
 
@@ -1251,7 +1250,7 @@ $t_1$ & $t_2$ \\
 
 
 
-\subsection{\tt EQ\_TAC : tactic}\label{EQTAC}
+\subsubsection{\tt EQ\_TAC : tactic}\label{EQTAC}
 
 
 \begin{itemize}
@@ -1279,7 +1278,7 @@ $u\; \ml{==>}\; v$ & $\quad v\; \ml{==>}\; u$ \\
 
 
 
-\subsection{\tt DISCH\_TAC : tactic}\label{DISCHTAC}
+\subsubsection{\tt DISCH\_TAC : tactic}\label{DISCHTAC}
 
 \begin{itemize}
 
@@ -1302,7 +1301,7 @@ $\{u\}v$
 {\small\verb|STRIP_TAC|} (see below) will invoke {\small\verb|DISCH_TAC|} on implicative goals.
 \end{itemize}
 
-\subsection{\tt GEN\_TAC : tactic}
+\subsubsection{\tt GEN\_TAC : tactic}
 
 \begin{itemize}
 
@@ -1328,7 +1327,7 @@ universal quantifiers and is often the first thing one does in a proof.
 \end{itemize}
 
 
-\subsection{\tt bossLib.PROVE\_TAC : thm list -> tactic}
+\subsubsection{\tt PROVE\_TAC : thm list -> tactic}
 
 \begin{itemize}
 \item {\bf Summary:} Used to do first order reasoning, solving the
@@ -1342,7 +1341,7 @@ universal quantifiers and is often the first thing one does in a proof.
 \end{itemize}
 
 
-\subsection{\tt STRIP\_TAC : tactic}
+\subsubsection{\tt STRIP\_TAC : tactic}
 
 \begin{itemize}
 
@@ -1357,7 +1356,7 @@ then {\small\verb|STRIP_TAC|} makes each $t_i$ into a separate assumption.
 Often the best thing to do first is {\small\verb|REPEAT STRIP_TAC|}.
 \end{itemize}
 
-\subsection{\tt SUBST\_TAC : thm list -> tactic}
+\subsubsection{\tt SUBST\_TAC : thm list -> tactic}
 
 \begin{itemize}
 
@@ -1371,7 +1370,7 @@ Often the best thing to do first is {\small\verb|REPEAT STRIP_TAC|}.
 \end{itemize}
 
 
-\subsection{\tt ACCEPT\_TAC : thm -> tactic}\label{ACCEPTTAC}
+\subsubsection{\tt ACCEPT\_TAC : thm -> tactic}\label{ACCEPTTAC}
 
 
 \begin{itemize}
@@ -1398,7 +1397,7 @@ list to the subgoals produced by \ml{T}.
 
 
 
-\subsection{\tt ALL\_TAC : tactic}
+\subsubsection{\tt ALL\_TAC : tactic}
 
 \begin{itemize}
 \item{\bf Summary:} Identity tactic for the tactical {\small\verb%THEN%}
@@ -1415,23 +1414,10 @@ the tactic to use is $T${\small\verb% THENL[%}$T_1${\small\verb|;ALL_TAC]|}.
 \end{enumerate}
 \end{itemize}
 
-\subsection{\tt NO\_TAC : tactic}
+\subsubsection{\tt NO\_TAC : tactic}
 
 \begin{itemize}
 \item{\bf Summary:} Tactic that always fails.
 
 \item{\bf Uses:} Writing tacticals.
 \end{itemize}
-
-
-
-
-
-
-
-
-
-%%% Local Variables:
-%%% mode: latex
-%%% TeX-master: "tutorial"
-%%% End:
