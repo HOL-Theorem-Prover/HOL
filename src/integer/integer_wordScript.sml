@@ -136,38 +136,6 @@ val w2i_i2w = store_thm(
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
   ])
 
-val mod_lemma = prove(
-  ``0 < k ==> (~x % k = (k - x % k) % k)``,
-  STRIP_TAC THEN
-  `~(k = 0)` by intLib.ARITH_TAC THEN
-  IMP_RES_TAC INT_DIVISION THEN
-  `~(k < 0)` by intLib.ARITH_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN
-  REPEAT (FIRST_X_ASSUM (fn th => Q.SPEC_THEN `~x` ASSUME_TAC th THEN
-                                  Q.SPEC_THEN `x` ASSUME_TAC th)) THEN
-  Q.ABBREV_TAC `q1 = ~x / k` THEN
-  Q.ABBREV_TAC `r1 = ~x % k` THEN
-  Q.ABBREV_TAC `q2 = x / k` THEN
-  Q.ABBREV_TAC `r2 = x % k` THEN
-  `(q1 + q2) * k + r1 + r2 = 0` by intLib.ARITH_TAC THEN
-  Cases_on `r1 + r2 = 0` THENL [
-    `(r1 = 0) /\ (r2 = 0)` by intLib.ARITH_TAC THEN
-    ASM_SIMP_TAC (srw_ss()) [],
-    Q_TAC SUFF_TAC `q1 + q2 = ~1` THEN1
-      (STRIP_TAC THEN
-       `~1 * k + r1 + r2 = 0` by FULL_SIMP_TAC (srw_ss()) [] THEN
-       `k - r2 = r1` by intLib.ARITH_TAC THEN
-       POP_ASSUM SUBST1_TAC THEN ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
-       MATCH_MP_TAC INT_MOD_UNIQUE THEN Q.EXISTS_TAC `0` THEN
-       SRW_TAC [][]) THEN
-    `(q1 + q2) * k < 0` by intLib.ARITH_TAC THEN
-    `q1 + q2 < 0` by METIS_TAC [INT_MUL_SIGN_CASES] THEN
-    Q_TAC SUFF_TAC `~(q1 + q2 <= ~2)` THEN1 intLib.ARITH_TAC THEN
-    STRIP_TAC THEN
-    `(q1 + q2) * k <= ~2 * k` by METIS_TAC [INT_LE_MONO, INT_MUL_COMM] THEN
-    intLib.ARITH_TAC
-  ])
-
 val word_msb_i2w = store_thm(
   "word_msb_i2w",
   ``word_msb (i2w i : 'a word) =
@@ -187,8 +155,13 @@ val word_msb_i2w = store_thm(
         by (Q.SPEC_THEN `i` STRIP_ASSUME_TAC INT_NUM_CASES THEN
             FULL_SIMP_TAC (srw_ss()) []) THEN
     `n MOD (2 * HB) < 2 * HB` by SRW_TAC [ARITH_ss][DIVISION] THEN
+    `~(&(2 * HB) = 0)` by SRW_TAC [ARITH_ss][] THEN
+    `(& (2 * HB) - &n) % &(2 * HB) =
+        (&(2 * HB) - &n % &(2 * HB)) % &(2 * HB)`
+       by METIS_TAC [INT_MOD_MOD, INT_MOD_SUB] THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_2comp_n2w, word_msb_n2w_numeric,
-                                         mod_lemma, INT_MOD, INT_SUB],
+                                         INT_MOD_NEG_NUMERATOR, INT_MOD,
+                                         INT_SUB],
 
     `?n. (i = &n)`
         by (Q.SPEC_THEN `i` STRIP_ASSUME_TAC INT_NUM_CASES THEN

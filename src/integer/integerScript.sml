@@ -2057,6 +2057,89 @@ val INT_ADD_DIV = store_thm(
     PROVE_TAC [INT_DIVISION, INT_ADD_COMM]
   ]);
 
+val INT_MOD_ADD0 = prove(
+  ``0 <= r /\ r < k ==> ((q * k + r) % k = r)``,
+  STRIP_TAC THEN
+  MATCH_MP_TAC INT_MOD_UNIQUE THEN
+  Q.EXISTS_TAC `q` THEN
+  METIS_TAC [INT_LET_TRANS, INT_LT_TRANS, INT_LT_REFL])
+
+val INT_MOD_ADD1 = prove(
+  ``k < r /\ r <= 0 ==> ((q * k + r) % k = r)``,
+  STRIP_TAC THEN
+  MATCH_MP_TAC INT_MOD_UNIQUE THEN
+  Q.EXISTS_TAC `q` THEN
+  METIS_TAC [INT_LTE_TRANS])
+
+val INT_MOD_ADD_MULTIPLES = store_thm(
+  "INT_MOD_ADD_MULTIPLES",
+  ``~(k = 0) ==> ((q * k + r) % k = r % k)``,
+  STRIP_TAC THEN
+  `0 < k \/ k < 0` by METIS_TAC [INT_LT_TRANS, INT_LT_TOTAL] THENL [
+     `(r = r / k * k + r % k) /\ 0 <= r % k /\ r % k < k`
+        by METIS_TAC [INT_DIVISION, INT_LT_TRANS, INT_LT_REFL] THEN
+     Q.ABBREV_TAC `R = r % k` THEN
+     Q.ABBREV_TAC `Q = r / k` THEN
+     Q_TAC SUFF_TAC `q * k + r = (q + Q) * k + R` THEN1
+       SRW_TAC [][INT_MOD_ADD0] THEN
+     SRW_TAC [][INT_RDISTRIB, INT_ADD_ASSOC],
+
+     `(r = r / k * k + r % k) /\ k < r % k /\ r % k <= 0`
+        by METIS_TAC [INT_DIVISION] THEN
+     Q.ABBREV_TAC `R = r % k` THEN
+     Q.ABBREV_TAC `Q = r / k` THEN
+     Q_TAC SUFF_TAC `q * k + r = (q + Q) * k + R` THEN1
+       SRW_TAC [][INT_MOD_ADD1] THEN
+     SRW_TAC [][INT_RDISTRIB, INT_ADD_ASSOC]
+  ]);
+
+val INT_MOD_NEG_NUMERATOR = store_thm(
+  "INT_MOD_NEG_NUMERATOR",
+  ``~(k = 0) ==> (~x % k = (k - x) % k)``,
+  METIS_TAC [int_sub, INT_MUL_LID, INT_MOD_ADD_MULTIPLES])
+
+val INT_MOD_PLUS = store_thm(
+  "INT_MOD_PLUS",
+  ``~(k = 0) ==> ((i % k + j % k) % k = (i + j) % k)``,
+  STRIP_TAC THEN
+  `(i = i / k * k + i % k) /\ (j = j/k * k + j%k)`
+     by METIS_TAC [INT_DIVISION] THEN
+  Q.ABBREV_TAC `Qi = i / k` THEN
+  Q.ABBREV_TAC `Ri = i % k` THEN
+  Q.ABBREV_TAC `Qj = j / k` THEN
+  Q.ABBREV_TAC `Rj = j % k` THEN
+  Q.RM_ALL_ABBREVS_TAC THEN
+  SRW_TAC [][] THEN
+  `Qi * k + Ri + (Qj * k + Rj) = Qi * k + (Qj * k + (Ri + Rj))`
+     by SRW_TAC [][AC INT_ADD_ASSOC INT_ADD_COMM] THEN
+  SRW_TAC [][INT_MOD_ADD_MULTIPLES])
+
+(* surprisingly, this is not an easy consequence of INT_MOD_PLUS  and
+   INT_MOD_NEG_NUMERATOR
+*)
+val INT_MOD_SUB = store_thm(
+  "INT_MOD_SUB",
+  ``~(k = 0) ==> ((i % k - j % k) % k = (i - j) % k)``,
+  STRIP_TAC THEN
+  `(i = i / k * k + i % k) /\ (j = j / k * k + j % k)`
+     by METIS_TAC [INT_DIVISION] THEN
+  Q.ABBREV_TAC `Qi = i / k` THEN
+  Q.ABBREV_TAC `Ri = i % k` THEN
+  Q.ABBREV_TAC `Qj = j / k` THEN
+  Q.ABBREV_TAC `Rj = j % k` THEN
+  Q.RM_ALL_ABBREVS_TAC THEN
+  SRW_TAC [][int_sub, INT_NEG_ADD, INT_NEG_LMUL] THEN
+  `Qi * k + Ri + (~Qj * k + ~Rj) = Qi * k + (~Qj * k + (Ri + ~Rj))`
+     by SRW_TAC [][AC INT_ADD_ASSOC INT_ADD_COMM] THEN
+  SRW_TAC [][INT_MOD_ADD_MULTIPLES])
+
+val INT_MOD_MOD = store_thm(
+  "INT_MOD_MOD",
+  ``~(k = 0) ==> (j % k % k = j % k)``,
+  STRIP_TAC THEN MATCH_MP_TAC INT_MOD_UNIQUE THEN Q.EXISTS_TAC `0` THEN
+  SRW_TAC [][] THEN METIS_TAC [INT_DIVISION])
+val _ = export_rewrites ["INT_MOD_MOD"]
+
 val INT_DIV_P = store_thm(
   "INT_DIV_P",
   ``!P x c. ~(c = 0) ==>
