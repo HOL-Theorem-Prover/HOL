@@ -177,7 +177,7 @@ fun CompileExp2 tm =
                      (LIST_CONJ thl)
                    end
      | "Let" => let val th1 = REWR_CONV Let tm
-                    val th2 = CompileExp(rhs(concl th1))
+                    val th2 = CompileExp2(rhs(concl th1))
                 in
                  CONV_RULE (RAND_CONV(RAND_CONV(REWR_CONV(SYM th1)))) th2
                 end
@@ -248,7 +248,7 @@ fun inlineCompile maintm defths totalths =
            val maindef = hd(filter findMain defths)
            val auxdefths = filter (fn th => not(findMain th)) defths
            val mainth = REFINE (DEPTHR ATM_REFINE)
-                   (Compile2 ((CONV_RULE (REWRITE_CONV auxdefths)) maindef))
+              (Compile2 ((CONV_RULE (REWRITE_CONV (Let::auxdefths))) maindef))
        in prove(concl mainth,
                 METIS_TAC ((DISCH_ALL mainth) :: 
                            (totalths @ (map (convertTotal defths) totalths))))
