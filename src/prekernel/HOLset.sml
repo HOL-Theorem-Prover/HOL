@@ -1,5 +1,5 @@
 structure HOLset :> HOLset = 
 struct
-  exception NotFound = Redblackset.NotFound
-  open Redblackset
+  exception NotFound = Randomset.NotFound
+  open Randomset
 end;
