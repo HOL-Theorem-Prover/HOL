@@ -927,7 +927,7 @@ val _ =
 \  fun fromHexString dstr = \n\
 \    let val nlist = List.map UNHEX (String.explode dstr) \n\
 \    in \n\
-\      List.foldl (fn (a,b) =>  + a ( * b EIGHT)) (hd nlist) (tl nlist) \n\
+\      List.foldl (fn (a,b) =>  + a ( * b SIXTEEN)) (hd nlist) (tl nlist) \n\
 \    end; \n\
 \ \n\
 \  (* Installed in MoscowML with Meta.installPP *) \n\
