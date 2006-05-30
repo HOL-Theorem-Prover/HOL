@@ -3993,6 +3993,23 @@ val DATATYPE_BOOL = save_thm("DATATYPE_BOOL",
     SPEC (list_mk_comb(bvar,[T,F])) thm1
  end);
 
+(* ----------------------------------------------------------------------
+    Set up the "itself" type constructor and its one value
+   ---------------------------------------------------------------------- *)
+
+val ITSELF_TYPE_DEF = let
+  val itself_exists = SPEC (Term`ARB:'a`) EXISTS_REFL
+  val eq_sym_eq' =
+      AP_TERM (Term`$? :('a -> bool) -> bool`)
+              (ABS (Term`x:'a`) (SPECL [Term`x:'a`, Term`ARB:'a`] EQ_SYM_EQ))
+in
+  new_type_definition("itself", EQ_MP eq_sym_eq' itself_exists)
+end
+val _ = add_type "itself"
+
+val _ = new_constant("the_value", Type`:'a itself`)
+val _ = add_const "the_value"
+
 val _ = export_theory();
 
 end (* boolScript *)

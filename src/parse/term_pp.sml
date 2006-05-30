@@ -1465,9 +1465,20 @@ fun pp_term (G : grammar) TyG = let
               else add_string s
             end
           in
-            case Overload.overloading_of_term overload_info tm of
-              NONE => add_prim_name()
-            | SOME s =>
+            if Name = "the_value" andalso Thy = "bool" then let
+                val {Args,...} = dest_thy_type Ty
+              in
+                add_string "(";
+                begin_block CONSISTENT 0;
+                add_string type_intro;
+                type_pp.pp_type_with_depth TyG pps depth (hd Args);
+                end_block ();
+                add_string ")"
+              end
+            else
+              case Overload.overloading_of_term overload_info tm of
+                NONE => add_prim_name()
+              | SOME s =>
                 (* term is overloaded *)
                 if isPrefix recsel_special s orelse
                    isPrefix recupd_special s orelse

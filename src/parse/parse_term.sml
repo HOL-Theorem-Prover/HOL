@@ -526,12 +526,10 @@ fun parse_term (G : grammar) typeparser = let
   val num_info = numeral_info G
   val overload_info = overload_info G
   val closed_lefts = find_prefix_lhses G
-  val ty_annote_prec = let
-    val ty_annote =
-      findpos (fn (SUFFIX TYPE_annotation) => true | _ => false) Grules
-  in
-    #1 (valOf ty_annote)
-  end handle Option => raise Fail "Grammar must allow type annotation"
+  val _ =
+      isSome (findpos (fn (SUFFIX TYPE_annotation) => true | _ => false)
+                      Grules)
+      orelse raise Fail "Grammar must allow type annotation"
   val prec_matrix = mk_prec_matrix G
   val rule_db = mk_ruledb G
   val is_binder = is_binder G
@@ -551,7 +549,11 @@ fun parse_term (G : grammar) typeparser = let
   val keyword_table = Polyhash.mkPolyTable (50, Fail "")
   val _ = app (fn v => Polyhash.insert keyword_table (v, ())) grammar_tokens
 
-  fun transform (in_vs as (vs_state, nparens)) (t:'a lookahead_item locn.located option) =
+  (* transform takes an input token (of the sort that comes out of the
+     lexer), and turns it into a token of the sort used internally by the
+     parser. *)
+  fun transform (in_vs as (vs_state, nparens))
+                (t:'a lookahead_item locn.located option) =
     case t of
       NONE => (EOS, locn.Loc_None, NONE)
     | SOME (tt as Token x,locn) => let
@@ -709,35 +711,41 @@ fun parse_term (G : grammar) typeparser = let
             | suffix_rule  s => if top_was_tm then false else
                                 FAILloc lrlocn ("missing first argument to "^s)
             | _              => top_was_tm
-      (* rhs' is the actual stack segment matched by the rule, and llocn' is its left edge,
-         unlike rhs and llocn which may contain a spurious TM on the left *)
+      (* rhs' is the actual stack segment matched by the rule, and llocn' is
+         its left edge, unlike rhs and llocn which may contain a spurious TM
+         on the left *)
       val rhs' = if ignore_top_item then tl rhs else rhs
       val ((_,llocn'),_) = List.hd rhs'
       val lrlocn' = locn.between llocn' rlocn
-      fun seglocs xs als mal = (* extract TM items, and locations of right edges of
-                                  maximal initial segments containing them *)
+      fun seglocs xs als mal =
+          (* extract TM items, and locations of right edges of
+             maximal initial segments containing them *)
           case (xs,mal) of
-              ((((NonTerminal p,locn),_)::xs), NONE       ) => seglocs xs      als  (SOME((p,locn),locn))
-            | ((((NonTerminal p,locn),_)::xs), SOME al    ) => seglocs xs (al::als) (SOME((p,locn),locn))
-            | ((((_            ,locn),_)::xs), NONE       ) => seglocs xs als mal
-            | ((((_            ,locn),_)::xs), SOME (pl,_)) => seglocs xs als (SOME(pl,locn))
-            | ([]                            , NONE       ) => List.rev als
-            | ([]                            , SOME al    ) => List.rev (al::als)
+            ((((NonTerminal p,locn),_)::xs), NONE       ) => seglocs xs      als  (SOME((p,locn),locn))
+          | ((((NonTerminal p,locn),_)::xs), SOME al    ) => seglocs xs (al::als) (SOME((p,locn),locn))
+          | ((((_            ,locn),_)::xs), NONE       ) => seglocs xs als mal
+          | ((((_            ,locn),_)::xs), SOME (pl,_)) => seglocs xs als (SOME(pl,locn))
+          | ([]                            , NONE       ) => List.rev als
+          | ([]                            , SOME al    ) => List.rev (al::als)
       val args_w_seglocs = seglocs rhs' [] NONE
       fun CCOMB((x,locn),y) = (COMB(y,x),locn.between (#2 y) locn)
       val newterm =
         case rule of
           listfix_rule r => let
             fun mk_list [] = (VAR (#nilstr r),rlocn)
-              | mk_list ((x,_)::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),#2 x), mk_list xs),locn.between (#2 x) rlocn)
+              | mk_list ((x,_)::xs) = (COMB((COMB((VAR (#cons r),#2 x), x),
+                                             #2 x),
+                                            mk_list xs),
+                                       locn.between (#2 x) rlocn)
           in
             mk_list args_w_seglocs
           end
         | _ =>
           List.foldl CCOMB (VAR (summary_toString rule),llocn') args_w_seglocs
     in
-      repeatn (length rhs') pop >> push ((NonTerminal (#1 newterm),lrlocn'), XXX)
-                            (* lrlocn: force location to entire RHS, including tokens *)
+      repeatn (length rhs') pop >>
+      push ((NonTerminal (#1 newterm),lrlocn'), XXX)
+        (* lrlocn: force location to entire RHS, including tokens *)
     end
   else
     case rhs of
@@ -818,8 +826,10 @@ fun parse_term (G : grammar) typeparser = let
     | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
        ((NonTerminal t,llocn), _)::rest) => let
       in
-        repeatn 3 pop >> push ((NonTerminal (TYPED ((t,llocn), (ty,rlocn))),locn.between llocn rlocn),
-                               XXX)
+        repeatn 3 pop >>
+        push ((NonTerminal (TYPED ((t,llocn), (ty,rlocn))),
+               locn.between llocn rlocn),
+              XXX)
       end
     | (((Terminal TypeTok,rlocn), PreType ty)::((Terminal TypeColon,_), _)::
        ((NonTermVS vsl,llocn), _)::rest) => let
@@ -827,6 +837,16 @@ fun parse_term (G : grammar) typeparser = let
          repeatn 3 pop >> push ((NonTermVS (map (fn (v as (_,locn)) => (TYPEDV(v,(ty,rlocn)),locn)) vsl),locn.between llocn rlocn),
                                 XXX)
        end
+    | [((Terminal TypeTok,rlocn), PreType ty), ((Terminal TypeColon,_), _)] =>
+      let
+        val nonterm0 = (QIDENT("bool", "the_value"), rlocn)
+        val type_annotation =
+            (Pretype.Tyop{Thy="bool", Tyop = "itself", Args = [ty]},
+             rlocn)
+      in
+        pop >> pop >>
+        push ((NonTerminal (TYPED(nonterm0, type_annotation)), rlocn), XXX)
+      end
     | (((NonTerminal t,rlocn), _)::((Terminal EndBinding,_), _)::
        ((NonTermVS vsl,_), _)::((Terminal (STD_HOL_TOK binder),llocn), _)::rest) => let
        exception Urk of string in let
@@ -887,14 +907,22 @@ fun parse_term (G : grammar) typeparser = let
                     "No restricted quantifier associated with lambda"
         val vsl = List.rev vsl
         val abs_t =
-          List.foldr (if binder = lambda then abs_fn else comb_abs_fn) (t,rlocn) vsl
+          List.foldr (if binder = lambda then abs_fn else comb_abs_fn)
+                     (t,rlocn) vsl
       in
         repeatn 4 pop >> push (liftlocn NonTerminal abs_t, XXX)
-      end handle Urk s => (WARNloc "parse_term" (locn.between llocn rlocn) s; fail) end
+      end handle Urk s => (WARNloc "parse_term" (locn.between llocn rlocn) s;
+                           fail) end
     | (((Terminal(STD_HOL_TOK ")"),rlocn), _)::(vsl as ((NonTermVS _,_),_))::
        ((Terminal(STD_HOL_TOK "("),llocn), _)::rest) => let
       in
-        repeatn 3 pop >> push vsl  (* don't bother expanding locn; would add no useful info *)
+        (* need a rule here because
+             1. a NonTermVS makes this a non-standard rule; and
+             2. bracket-removal in the remove_specials code won't see
+                the parentheses in the binding "var-struct" position
+        *)
+        repeatn 3 pop >> push vsl  (* don't bother expanding locn; would add no
+                                      useful info *)
       end
     | (((NonTermVS vsl1,rlocn), _)::((Terminal(STD_HOL_TOK ","),_), _)::
        ((NonTermVS vsl2,llocn), _)::rest) => let val lrlocn = locn.between llocn rlocn
@@ -908,8 +936,12 @@ fun parse_term (G : grammar) typeparser = let
     | (((NonTerminal t,rlocn), _)::((Terminal ResquanOpTok,_), _)::
        ((NonTermVS vsl,llocn), _)::rest) => let
       in
-         repeatn 3 pop >> push ((NonTermVS (map (fn (v as (_,locn))=> (RESTYPEDV(v,(t,rlocn)),locn)) vsl),locn.between llocn rlocn),
-                                XXX) >>
+         repeatn 3 pop >>
+         push ((NonTermVS
+                  (map (fn (v as (_,locn))=>
+                           (RESTYPEDV(v,(t,rlocn)),locn)) vsl),
+                  locn.between llocn rlocn),
+               XXX) >>
          leave_restm
       end
     | _ => let
@@ -1012,14 +1044,18 @@ fun parse_term (G : grammar) typeparser = let
       fun require (s:string option) =
           getstack >-
           (fn [] => fail
-            | (tt :: _ ) =>
-              (case tt of
-                 ((Terminal (STD_HOL_TOK s'),locn), _) =>
-                 (case s of NONE => pop >> return (s',locn)
-                          | SOME s'' => if s' = s'' then
-                                          pop >> return (s',locn)
-                                        else fail)
-               | _ => fail))
+            | (tt :: _ ) => let
+              in
+                case tt of
+                  ((Terminal (STD_HOL_TOK s'),locn), _) => let
+                  in
+                    case s of
+                      NONE => pop >> return (s',locn)
+                    | SOME s'' => if s' = s'' then pop >> return (s',locn)
+                                  else fail
+                  end
+                | _ => fail
+              end)
     in
       if input_term = STD_HOL_TOK ")" then
           require NONE >-
@@ -1142,7 +1178,8 @@ fun remove_specials t =
               VAR fldname => APP(#2 t, IDENT (#2 t2, recsel_special ^ fldname),
                                  remove_specials f)
             | _ => raise ParseTermError
-                ("Record selection must have single id to right (possibly non-integer numeric literal)",#2 t2)
+                ("Record selection must have single id to right \
+                 \(possibly non-integer numeric literal)",#2 t2)
           else if s = reccons_special then
             remove_recupdate (#2 t) f t2 (IDENT (locn.Loc_None,"ARB"))
           else if s = recwith_special then
@@ -1150,7 +1187,8 @@ fun remove_specials t =
           else
             if s = recupd_special orelse s = recfupd_special then
               raise ParseTermError
-                ("May not use record update functions at top level (possibly missing semicolon)",slocn)
+                ("May not use record update functions at top level \
+                 \(possibly missing semicolon)",slocn)
             else
               APP(#2 t, remove_specials t1, remove_specials t2)
         end
