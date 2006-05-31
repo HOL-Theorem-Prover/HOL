@@ -39,6 +39,7 @@ val prob_then_demon = Count.apply prove
    RW_TAC arith_ss
    [wp_def, Probchoice_def, Probs_def, Demonchoice_def, assign_eta, lin_eta,
     Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
+   ++ Q.UNABBREV_ALL_TAC
    ++ FULL_SIMP_TAC int_ss []
    ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
 
@@ -48,6 +49,7 @@ val demon_then_prob = Count.apply prove
    RW_TAC arith_ss
    [wp_def, Probchoice_def, Probs_def, Demonchoice_def, assign_eta, lin_eta,
     Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
+   ++ Q.UNABBREV_ALL_TAC
    ++ FULL_SIMP_TAC int_ss []
    ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
 
@@ -161,6 +163,7 @@ val montyhall = Count.apply prove
    ++ RW_TAC std_ss [wp_incognito_def]
    ++ RW_TAC int_ss [monty_hide_def, MAP, wp_def, Demonchoice_def,
                      Demons_def, Min_def, assign_def]
+   ++ Q.UNABBREV_ALL_TAC
    ++ RW_TAC posreal_reduce_ss []);
   
 (* ------------------------------------------------------------------------- *)
@@ -180,7 +183,9 @@ val lurch_once = Count.apply prove
           (1 / 2) * r (\w. if w = "n" then v"n" - 1 else v w) +
           (1 / 2) * r (\w. if w = "n" then v"n" + 1 else v w))``,
    RW_TAC posreal_ss
-   [wp_def, lurch_def, bound1_basic, COND_RAND, assign_eta, lin_eta]
+   [wp_def, lurch_def, bound1_basic, COND_RAND, assign_eta, lin_eta,
+    FUN_EQ_THM]
+   ++ Q.UNABBREV_ALL_TAC
    ++ RW_TAC posreal_reduce_ss []);
 
 val lurch_once_home = Count.apply prove

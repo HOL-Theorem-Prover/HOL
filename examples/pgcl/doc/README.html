@@ -1,56 +1,57 @@
 <html>
 <head>
 <title>
-pGCL (Probabilistic Guarded Command Language) formalized in HOL.
+pGCL formalized in HOL
 </title>
 </head>
 
 <body>
 <h1>
-pGCL (Probabilistic Guarded Command Language) formalized in HOL.
+pGCL formalized in HOL
 </h1>
+
+<h2>Overview</h2>
+
+<p>This is a HOL formalization of pGCL (the Probabilistic Guarded
+Command Language), featuring
+<ul><li>a proof that weakest precondition
+expectation transformers are healthy,</li>
+<li>a verification condition generator for pGCL programs,
+and</li><li>a verification of the probabilistic voting scheme of
+Rabin's mutual exclusion protocol.</li></ul></p>
+
+<p>To build the formalization, type <kbd>make</kbd> in the
+<kbd>examples/pgcl</kbd> directory. You can clean everything by
+typing <kbd>make clean</kbd> in the same directory.</p>
+
+<h2>History</h2>
+
+<p>The formalization was initially created by Joe Hurd while visiting
+Annabelle McIver and Carroll Morgan in December 2002.</p>
+
+<p>Aaron Coble ported the example to the latest version of HOL4 in May
+2006.</p>
+
+<h2>Files</h2>
 
 The following provides a brief annotation of the theory
 (<kbd>*Script</kbd>), tool (<kbd>*Tools</kbd>), library
 (<kbd>*Lib</kbd>) and example files developed so far.
 
-<p>
-
-To build the example, type <kbd>make</kbd> in the
-<kbd>examples/pgcl</kbd> directory.
-
-<p>
-
-Joe Hurd, 8 April 2003.
-
-<p>
-<hr>
-<a href="../src/posetScript.sml"><kbd>posetScript.sml</kbd></a>
-
-<p>
+<h3><a href="../src/posetScript.sml"><kbd>posetScript.sml</kbd></a></h3>
 
 Sets up the foundational theory of partially-ordered sets (posets),
 leading up to the theory of complete lattices and the Knaster-Tarski
 theorem. This is needed to define fixed-points over expectations.
 
-<p>
-
-<hr>
-<a href="../src/posrealScript.sml"><kbd>posrealScript.sml</kbd></a>
-
-<p>
+<h3><a href="../src/posrealScript.sml"><kbd>posrealScript.sml</kbd></a></h3>
 
 The theory of positive reals (posreals), where a positive real lies
 between 0 and +infinity inclusive. This is mainly just a lifting of
 useful results from realTheory.
 
-<p>
-
-<hr>
-<a href="../src/posrealTools.sig"><kbd>posrealTools.sig</kbd></a><br>
-<a href="../src/posrealTools.sml"><kbd>posrealTools.sml</kbd></a>
-
-<p>
+<h3><a href="../src/posrealTools.sig"><kbd>posrealTools.sig</kbd></a><br />
+<a href="../src/posrealTools.sml"><kbd>posrealTools.sml</kbd></a></h3>
 
 Proof tools for reasoning about posreals, including:
 <ul>
@@ -67,36 +68,20 @@ Proof tools for reasoning about posreals, including:
 <li>an associative-commutative (AC) rewriter for normalizing
 multiplications (<kbd>permute_mul_conv</kbd>).
 </ul>
-<p>
 
-<p>
-
-<hr>
-<a href="../src/posrealLib.sig"><kbd>posrealLib.sig</kbd></a><br>
-<a href="../src/posrealLib.sml"><kbd>posrealLib.sml</kbd></a>
-
-<p>
+<h3><a href="../src/posrealLib.sig"><kbd>posrealLib.sig</kbd></a><br />
+<a href="../src/posrealLib.sml"><kbd>posrealLib.sml</kbd></a></h3>
 
 At the moment this library only contains the tools in
 <kbd>posrealTools</kbd>, but more may be added in the future.
 
-<p>
-
-<hr>
-<a href="../src/expectationScript.sml"><kbd>expectationScript.sml</kbd></a>
-
-<p>
+<h3><a href="../src/expectationScript.sml"><kbd>expectationScript.sml</kbd></a></h3>
 
 The theory of expectation transformers, including: the definition and
 consequences of the healthiness condition; least and greatest
 fixed-points; and a basic theory of refinement.
 
-<p>
-
-<hr>
-<a href="../src/wpScript.sml"><kbd>wpScript.sml</kbd></a>
-
-<p>
+<h3><a href="../src/wpScript.sml"><kbd>wpScript.sml</kbd></a></h3>
 
 This theory defines a miniature programming language with
 probabilistic choice, demonic choice and while loops, and defines
@@ -105,47 +90,27 @@ weakest precondition (<kbd>wp</kbd>) and weakest liberal precondition
 transformers. The main result is that all programs give rise to
 healthy expectation transformers.
 
-<p>
-
-<hr>
-<a href="../src/wpTools.sig"><kbd>wpTools.sig</kbd></a><br>
-<a href="../src/wpTools.sml"><kbd>wpTools.sml</kbd></a>
-
-<p>
+<h3><a href="../src/wpTools.sig"><kbd>wpTools.sig</kbd></a><br />
+<a href="../src/wpTools.sml"><kbd>wpTools.sml</kbd></a></h3>
 
 Tools for reasoning about <kbd>wp</kbd> and <kbd>wlp</kbd>. The most
 useful tool at present is a verification condition generator tactic
 <kbd>wlp_tac</kbd> for reducing goals of the form <kbd>Leq pre (wlp
 prog post)</kbd>.
 
-<p>
-
-<hr>
-<a href="../src/pgclLib.sig"><kbd>pgclLib.sig</kbd></a><br>
-<a href="../src/pgclLib.sml"><kbd>pgclLib.sml</kbd></a>
-
-<p>
+<h3><a href="../src/pgclLib.sig"><kbd>pgclLib.sig</kbd></a><br />
+<a href="../src/pgclLib.sml"><kbd>pgclLib.sml</kbd></a></h3>
 
 At the moment this library only contains the tools in
 <kbd>wpTools</kbd>, but more may be added in the future.
 
-<p>
-
-<hr>
-<a href="../src/qtl"><kbd>qtlScript.sml</kbd></a>
-
-<p>
+<h3><a href="../src/qtl"><kbd>qtlScript.sml</kbd></a></h3>
 
 A theory of quantative temporal logic (qtl) where the semantics are
 defined in terms of expectation transformers. <font color="red">This
 theory is currently broken.</font>
 
-<p>
-
-<hr>
-<a href="../examples/verification.sml"><kbd>verification.sml</kbd></a>
-
-<p>
+<h3><a href="../examples/verification.sml"><kbd>verification.sml</kbd></a></h3>
 
 A collection of example verifications of pGCL programs:
 
@@ -164,8 +129,6 @@ demon.</li>
 verification of the probabilistic voting scheme.</li>
 
 </ul>
-
-<hr>
 
 </body>
 

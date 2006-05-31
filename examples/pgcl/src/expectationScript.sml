@@ -692,7 +692,9 @@ val continuity_not_redundant = store_thm
    Q.EXISTS_TAC `\e s. inf (\r. ?n. e n = r)`
    ++ RW_TAC real_ss [feasible_def, sublinear_def, up_continuous_def]
    << [CONV_TAC FUN_EQ_CONV
-       ++ RW_TAC std_ss [Zero_def, GSYM le_zero, inf_le],
+       ++ RW_TAC std_ss [Zero_def, GSYM le_zero, inf_le]
+       ++ POP_ASSUM MATCH_MP_TAC
+       ++ RW_TAC std_ss [le_refl],
        RW_TAC std_ss [le_inf]
        ++ MATCH_MP_TAC sub_mono
        ++ RW_TAC real_ss []

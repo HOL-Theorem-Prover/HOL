@@ -41,7 +41,7 @@ end;
 (* Useful rewrites for basic posreal arithmetic.                             *)
 (* ------------------------------------------------------------------------- *)
 
-val posreal_SS = simpLib.SIMPSET
+val posreal_SS = simpLib.SSFRAG
   {ac = [],
    congs = [],
    convs = [],
@@ -129,7 +129,7 @@ fun rat_reduce_conv tm =
 val rat_reduce_pat =
   Term `preal_div (posreal_of_num (NUMERAL x)) (posreal_of_num (NUMERAL y))`;
 
-val posreal_reduce_SS = simpLib.SIMPSET
+val posreal_reduce_SS = simpLib.SSFRAG
   {ac = [],
    congs = [],
    convs = [{name = "rat_reduce_conv (posreals)", conv = K (K rat_reduce_conv),

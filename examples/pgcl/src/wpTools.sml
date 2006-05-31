@@ -19,10 +19,10 @@ local
   open folTools;
 
   val prolog_parm =
-    {equality   = false,
-     boolean    = false,
+    {equality = false,
+     boolean = false,
      combinator = false,
-     mapping    = {higher_order = false, with_types = true}};
+     mapping_parm = {higher_order = false, with_types = true}};
 in
   val prolog = fn ths =>
     let
@@ -150,7 +150,7 @@ local
   val if_f = (GEN_ALL o CONJUNCT2 o SPEC_ALL) COND_CLAUSES;
   val if_ss = simpLib.++
     (pureSimps.pure_ss,
-     simpLib.SIMPSET {ac = [], congs = [], convs = [], dprocs = [],
+     simpLib.SSFRAG {ac = [], congs = [], convs = [], dprocs = [],
                       filter = NONE, rewrs = [if_t, if_f]});
 in
   fun if_cases_tac thtac (asl,g) =
@@ -200,6 +200,7 @@ in
     THEN REPEAT (if_cases_tac wlp_assume_tac)
     THEN elim_redundant_lam_tac
     THEN RW_TAC posreal_ss []
+    THEN Q.UNABBREV_ALL_TAC
     THEN RW_TAC posreal_reduce_ss [bound1_def];
 end;
 

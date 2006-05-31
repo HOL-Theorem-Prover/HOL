@@ -14,11 +14,11 @@ sig
   val pcases3_on : Term.term frag list -> Tactic.tactic
 
   (* Useful rewrites for basic posreal arithmetic *)
-  val posreal_SS : simpLib.ssdata
+  val posreal_SS : simpLib.ssfrag
   val posreal_ss : simpLib.simpset                (* real + posreal *)
 
   (* A calculator for rational posreals *)
-  val posreal_reduce_SS : simpLib.ssdata
+  val posreal_reduce_SS : simpLib.ssfrag
   val posreal_reduce_ss : simpLib.simpset         (* reduce + posreal_reduce *)
 
   (* AC normalizer for multiplication *)

@@ -25,3 +25,4 @@ Example Verifications:
 - n-location rendezvous problem (strat n "i") a derived command
 - Miller-Rabin
 - Pugh's skip lists
+- Randomly balanced trees?

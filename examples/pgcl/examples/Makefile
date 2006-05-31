@@ -3,7 +3,7 @@
 #  Created by Joe Hurd, June 2002
 ###############################################################################
 
-HOL = hol.bare.unquote
+HOL = ../../../bin/hol.bare
 
 verification-log: verification.sml ../src/pgclLib.uo
 	$(HOL) <verification.sml | tee verification-log

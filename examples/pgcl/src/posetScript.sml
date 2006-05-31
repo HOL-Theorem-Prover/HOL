@@ -201,7 +201,9 @@ val complete_pointwise = store_thm
     ++ CONJ_TAC >> METIS_TAC []
     ++ CONJ_TAC >> METIS_TAC []
     ++ RW_TAC bool_ss []
-    ++ Q.PAT_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x'`)
+    ++ Q.PAT_ASSUM `!y. t y ==> P y /\ Q y /\ R y`
+         (fn th =>
+          POP_ASSUM (fn th' => MP_TAC (MATCH_MP th th') ++ ASSUME_TAC th'))
     ++ RW_TAC bool_ss []
     ++ POP_ASSUM MATCH_MP_TAC
     ++ CONJ_TAC >> METIS_TAC []
@@ -222,7 +224,9 @@ val complete_pointwise = store_thm
     ++ CONJ_TAC >> METIS_TAC []
     ++ CONJ_TAC >> METIS_TAC []
     ++ RW_TAC bool_ss []
-    ++ Q.PAT_ASSUM `!y. t y ==> P y /\ Q y /\ R y` (MP_TAC o Q.SPEC `x'`)
+    ++ Q.PAT_ASSUM `!y. t y ==> P y /\ Q y /\ R y`
+         (fn th =>
+          POP_ASSUM (fn th' => MP_TAC (MATCH_MP th th') ++ ASSUME_TAC th'))
     ++ RW_TAC bool_ss []
     ++ POP_ASSUM MATCH_MP_TAC
     ++ CONJ_TAC >> METIS_TAC []

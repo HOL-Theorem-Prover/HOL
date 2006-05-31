@@ -267,7 +267,8 @@ val posreal_of_num_sub = store_thm
    ``!a b. posreal_of_num a - posreal_of_num b = posreal_of_num (a - b)``,
    RW_TAC std_ss [posreal_of_num_def, preal_sub, REAL_POS, REAL_SUB]
    ++ RW_TAC std_ss
-      [GSYM posreal_of_num_def, preal_eq_zero, REAL_NEG_LE0, REAL_POS]);
+      [GSYM posreal_of_num_def, preal_eq_zero, REAL_NEG_LE0, REAL_POS,
+       DECIDE ``(a:num) <= b ==> (a - b = 0)``]);
 
 val preal_le = store_thm
   ("preal_le",
@@ -1825,7 +1826,7 @@ val add_ratr = store_thm
        else if a = 0 then & c
        else if b = 0 then infty
        else & (c * b + a) / & b``,
-   METIS_TAC [add_ratl, ADD_COMM, add_comm, MULT_COMM]);
+   METIS_TAC [add_lzero, preal_div_def, mul_lzero, add_rzero, div_rzero, add_rinfty, add_ratl, ADD_COMM, add_comm, MULT_COMM]);
 
 val sub_rat = store_thm
   ("sub_rat",
