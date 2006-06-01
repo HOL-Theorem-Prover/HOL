@@ -23,8 +23,10 @@
 quietdec := true;
 map 
  load  
- ["intSyntax","stringLib","stringSimps", "rich_listTheory","pred_setLib"];
-open stringLib numLib stringSimps rich_listTheory pred_setLib;
+ ["intSyntax","pairSyntax","listSyntax","stringLib","stringSimps", 
+  "rich_listTheory","pred_setLib"];
+open pairSyntax listSyntax stringLib numLib stringSimps 
+     rich_listTheory pred_setLib;
 printDepth := 1000;
 printLength := 1000;
 Globals.checking_const_names := false;
@@ -39,7 +41,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories
 ******************************************************************************)
-open intSyntax stringLib numLib;
+open intSyntax pairSyntax listSyntax stringLib numLib;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -658,9 +660,9 @@ fun term_to_mlsexp tm =
  if is_let tm
   then 
    let val (pabs,arg_tuple) = dest_let tm
-       val (param_tuple,bdy) = pairSyntax.dest_pabs pabs
-       val args = pairSyntax.strip_pair arg_tuple
-       val params = pairSyntax.strip_pair param_tuple
+       val (param_tuple,bdy) = dest_pabs pabs
+       val args = strip_pair arg_tuple
+       val params = strip_pair param_tuple
    in 
     if not(length params = length args)
      then (print_term tm; print "\n";
@@ -915,6 +917,15 @@ fun mlquote_to_term (sym as mlsym(pkg,nam)) =
  |  mlquote_to_term (mlpair(x,y)) =
      ``cons ^(mlquote_to_term x) ^(mlquote_to_term y)``;
 
+(* Measure time used by mlquote_to_term
+val mlquote_to_term = 
+ fn sym => 
+  (print "\nmkquote_to_term:\n";
+   print(mlquote_to_string sym); 
+   print "\n\n";
+   time mlquote_to_term sym);
+*)
+
 (*****************************************************************************)
 (* Convert an mlsexp representing a term to a string.                        *)
 (*                                                                           *)
@@ -1116,8 +1127,8 @@ fun LET_INTRO_CONV tm =
                            (fn (v1,v2) => not(aconv v1 v2)) 
                            (zip params args)
      val let_tm = ``LET 
-                     ^(pairSyntax.mk_pabs(pairSyntax.list_mk_pair params,bdy))
-                     ^(pairSyntax.list_mk_pair args)``
+                     ^(mk_pabs(list_mk_pair params,bdy))
+                     ^(list_mk_pair args)``
      val th1 = DEPTH_CONV (REWR_CONV LET_THM) let_tm
      val th2 = DEPTH_CONV BETA_CONV tm
      val th3 = DEPTH_CONV PairRules.PBETA_CONV(rhs(concl th1))
@@ -1284,19 +1295,19 @@ val chars_to_string = implode o (map chr);
 (*****************************************************************************)
 fun print_acl2def out (defun(nam,th)) =
      (out "; Defun:    "; out nam; out "\n";
-      print_mlsexp out (mk_mlsexp_defun th); out "\n\n")
+      print_mlsexp out (mk_mlsexp_defun th); out "\n")
  |  print_acl2def out (defaxiom(nam,tm)) =
      (out "; Defaxiom: "; out nam; out "\n";
       print_mlsexp out
        (mk_mlsexp_list
          [mldefaxiom, string_to_mlsym nam, term_to_mlsexp tm]); 
-      out "\n\n")
+      out "\n")
  |  print_acl2def out (defthm(nam,tm)) =
      (out "; Defthm:   "; out nam; out "\n";
       print_mlsexp out
        (mk_mlsexp_list
          [mldefthm, string_to_mlsym nam, term_to_mlsexp tm]); 
-      out "\n\n");
+      out "\n");
 
 (*****************************************************************************)
 (* Convert a preterm to a string (used for inputting ACL2)                   *)
