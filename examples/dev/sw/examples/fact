@@ -370,7 +370,8 @@ val _ = printarm fact_arm;
 
 val fact_arm_term = mk_ARM fact_arm;
 
-simT fact_arm_term;  (* create goal and put it into the goalstack *)
+(* create goal and put it into the goalstack *)
+set_goal([],simT fact_arm_term); 
 
 (*---------------------------------------------------------------------------*)
 (* Setting up instruction buffer rewrites                                    *)
