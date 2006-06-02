@@ -945,11 +945,11 @@ val _ =
  let open EmitML
  in
    exportML (!Globals.exportMLPath)
-  ("bits",
+  ("bit",
     MLSIG "type num = numML.num" :: OPEN ["num"]
     ::
     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-        [TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def,
+        [DIV_2EXP_def, MOD_2EXP_def,
          DIVMOD_2EXP, SBIT_def, BITS_def,
          BITV_def, BIT_def, SLICE_def,LSB_def,
          SIGN_EXTEND_def])

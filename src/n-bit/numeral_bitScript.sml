@@ -323,11 +323,14 @@ val numeral_log2 = store_thm("numeral_log2",
 val _ =
  let open EmitML
  in exportML (!Globals.exportMLPath)
-   ("numeral_bits",
+   ("numeral_bit",
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-         [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE,
+         [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE, NUMERAL_TIMES_2EXP,
+          NUMERAL_BIT_MODF, NUMERAL_BIT_MODIFY,
+          NUMERAL_BIT_REV, NUMERAL_BIT_REVERSE,
+          numeral_ilog2, numeral_log2,
           NUMERAL_MOD_2EXP,iMOD_2EXP, NUMERAL_DIV_2EXP])
  end;
 
