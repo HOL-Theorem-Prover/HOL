@@ -3207,6 +3207,59 @@ val IS_PREFIX_APPENDS = store_thm
    INDUCT_THEN list_INDUCT ASSUME_TAC
    THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]);
 
+(*---------------------------------------------------------------------------*)
+(* Export ML versions of rich_list functions                                 *)
+(*---------------------------------------------------------------------------*)
+
+val nil_tm = Term.prim_mk_const{Name="NIL",Thy="list"};
+val cons_tm = Term.prim_mk_const{Name="CONS",Thy="list"};
+
+fun dest_cons M =
+  case strip_comb M
+   of (c,[p,q]) => if Term.same_const c cons_tm then (p,q)
+                   else raise ERR "rich_listScript" "dest_cons"
+    | otherwise => raise ERR "rich_listScript" "dest_cons" ;
+
+fun dest_list M =   case total dest_cons M
+    of NONE => if same_const nil_tm M then []
+               else raise ERR "dest_list" "not terminated with nil"
+     | SOME(h,t) => h::dest_list t
+
+val _ = EmitML.dest_cons_hook := dest_cons;
+val _ = EmitML.dest_list_hook := dest_list;
+val _ = EmitML.is_list_hook   := can dest_list;
+
+val BUTFIRSTN_NIL = Q.prove(
+  `!n. BUTFIRSTN (SUC n) [] =
+     FAIL BUTFIRSTN ^(mk_var("List too short",bool)) (SUC n) []`,
+  REWRITE_TAC [combinTheory.FAIL_THM]);
+
+val FIRSTN_NIL = Q.prove(
+  `!n. FIRSTN (SUC n) [] =
+     FAIL FIRSTN ^(mk_var("List too short",bool)) (SUC n) []`,
+  REWRITE_TAC [combinTheory.FAIL_THM]);
+
+val SEG_NIL = Q.prove(
+  `!m k. SEG (SUC m) k [] =
+     FAIL SEG ^(mk_var("List too short",bool)) (SUC m) k []`,
+  REWRITE_TAC [combinTheory.FAIL_THM]);
+
+val _ =
+ let open EmitML
+ in exportML (!Globals.exportMLPath)
+      ("rich_list",
+         MLSIG "type num = numML.num"
+         :: OPEN ["list"]
+         ::
+         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF] o
+              CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV)
+             [AND_EL_DEF,CONJ BUTFIRSTN BUTFIRSTN_NIL,
+              ELL,SNOC,GENLIST,CONJ FIRSTN FIRSTN_NIL,
+              IS_PREFIX,IS_SUBLIST,OR_EL_DEF,SPLITP,PREFIX_DEF,
+              REPLICATE,SCANL,SCANR,CONJ SEG SEG_NIL,
+              SUFFIX_DEF,UNZIP_FST_DEF,UNZIP_SND_DEF])
+ end;
+
 val _ = export_theory();
 
 end;
