@@ -53,4 +53,7 @@ preARMSyntax.uo: preARMSyntax.sml preARMTheory.uo
 	HOLMOSMLC -c -toplevel Assem.ui Symbol.ui Table.ui preARMSyntax.sml
 
 Link.uo: Link.sml declFuncs.uo regAllocation.uo 
-	HOLMOSMLC -c -toplevel regAllocation.ui gr_t.ui Assem.ui Symbol.ui Temp.ui declFuncs.ui Table.ui Link.sml
+	HOLMOSMLC -c -toplevel regAllocation.ui gr_t.ui Assem.ui Symbol.ui Temp.ui CFG.ui declFuncs.ui Table.ui Link.sml
+
+annotatedIL.uo: annotatedIL.sml ILTheory.uo
+	HOLMOSMLC -c -toplevel Table.ui gr_t.ui ANF.ui Assem.ui CFG.ui regAllocation.ui annotatedIL.sml

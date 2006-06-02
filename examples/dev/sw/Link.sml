@@ -584,10 +584,10 @@ fun expand (fun_name,fun_type,args,stms,outs,rs) =
 
 fun link prog = 
   let
-    val (fname, ftype, args, stms, outs, rs) = regAllocation.convert_to_ARM (prog, !numAvaiRegs);
+    val (fname, ftype, args, gr, outs, rs) = regAllocation.convert_to_ARM prog;
     val _ = (called := Binaryset.add (Binaryset.empty strOrder, fname))
   in
-    expand (fname, ftype, args, stms, outs, rs)
+    expand (fname, ftype, args, CFG.linearizeCFG gr, outs, rs)
   end;
 
 fun rm_labels arm = 
