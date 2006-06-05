@@ -1,4 +1,5 @@
 EXTRA_CLEANS = Data.ui Data.uo Lexer.sml Parser.sig Parser.sml
+INCLUDES = /local/scratch/acjf3/hol98/src/theoryML
 
 Data.uo : Data.sml
 	HOLMOSMLC -c Data.sml

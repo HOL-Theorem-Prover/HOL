@@ -22,7 +22,7 @@ val _ = new_theory "arm";
 val _ = Hol_datatype `state_inp = <| state : 'a; inp : num -> 'b |>`;
 val _ = Hol_datatype `state_out = <| state : 'a; out : 'b |>`;
 
-val _ = Hol_datatype `register =
+val register_decl = `register =
  r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
  r8     | r9     | r10     | r11     | r12     | r13     | r14     | r15 |
  r8_fiq | r9_fiq | r10_fiq | r11_fiq | r12_fiq | r13_fiq | r14_fiq |
@@ -30,18 +30,21 @@ val _ = Hol_datatype `register =
                                                  r13_svc | r14_svc |
                                                  r13_abt | r14_abt |
                                                  r13_und | r14_und`;
-val _ = Hol_datatype`
-  psrs = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
+
+val psrs_decl =
+  `psrs = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
+
+val exceptions_decl =
+  `exceptions = reset | undefined | software | pabort |
+                dabort | address |interrupt | fast`;
+
+val _ = map Hol_datatype [register_decl, psrs_decl, exceptions_decl];
 
 val _ = type_abbrev("reg", ``:register->word32``);
 val _ = type_abbrev("psr", ``:psrs->word32``);
 
-val _ = Hol_datatype`
-  exception = reset | undefined | software | pabort |
-              dabort | address |interrupt | fast`;
-
 val _ = Hol_datatype `state_arm = ARM of reg=>psr`;
-val _ = Hol_datatype `state_arm_ex = ARM_EX of state_arm=>word32=>exception`;
+val _ = Hol_datatype `state_arm_ex = ARM_EX of state_arm=>word32=>exceptions`;
 
 (* ......................................................................... *)
 
@@ -54,16 +57,18 @@ val _ = Hol_datatype`
   interrupts = Reset of state_arm | Undef | Prefetch |
                Dabort of num | Fiq | Irq`;
 
-val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | safe`;
+val mode_decl = `mode = usr | fiq | irq | svc | abt | und | safe`;
 
-val _ = Hol_datatype`
-  condition  = EQ | CS | MI | VS | HI | GE | GT | AL |
-               NE | CC | PL | VC | LS | LT | LE | NV`;
+val condition_decl =
+  `condition  = EQ | CS | MI | VS | HI | GE | GT | AL |
+                NE | CC | PL | VC | LS | LT | LE | NV`;
 
-val _ = Hol_datatype`
-  iclass = swp | mrs_msr | data_proc | reg_shift | mla_mul |
-           ldr | str | ldm | stm | br | swi_ex | cdp_und |
-           mcr | mrc | ldc | stc | unexec`;
+val iclass_decl =
+  `iclass = swp | mrs_msr | data_proc | reg_shift | mla_mul |
+            ldr | str | ldm | stm | br | swi_ex | cdp_und |
+            mcr | mrc | ldc | stc | unexec`;
+
+val _ = map Hol_datatype [mode_decl, condition_decl, iclass_decl];
 
 (* ------------------------------------------------------------------------- *)
 (*  General Purpose Register operations                                      *)
@@ -177,8 +182,8 @@ val SPSR_WRITE_def = Define`
 (* The Sofware Interrupt/Exception instruction class (swi_ex)                *)
 (* ------------------------------------------------------------------------- *)
 
-val exception2mode_def = Define`
-  exception2mode e =
+val exceptions2mode_def = Define`
+  exceptions2mode e =
     case e of
        reset     -> svc
     || undefined -> und
@@ -193,8 +198,8 @@ val EXCEPTION_def = Define`
   EXCEPTION (ARM reg psr) type =
     let cpsr = CPSR_READ psr in
     let fiq' = ((type = reset) \/ (type = fast)) \/ cpsr %% 6
-    and mode' = exception2mode type
-    and pc = n2w (4 * exception2num type):word32 in
+    and mode' = exceptions2mode type
+    and pc = n2w (4 * exceptions2num type):word32 in
     let reg' = REG_WRITE reg mode' 14w (FETCH_PC reg + 4w) in
       ARM (REG_WRITE reg' usr 15w pc)
          (CPSR_WRITE (SPSR_WRITE psr mode' cpsr)
@@ -760,8 +765,8 @@ val IS_Reset_def = Define`
 val PROJ_Dabort_def = Define `PROJ_Dabort (SOME (Dabort x)) = x`;
 val PROJ_Reset_def  = Define `PROJ_Reset  (SOME (Reset x))  = x`;
 
-val interrupt2exception_def = Define`
-  interrupt2exception (ARM_EX (ARM reg psr) ireg exc) (i',f') irpt =
+val interrupt2exceptions_def = Define`
+  interrupt2exceptions (ARM_EX (ARM reg psr) ireg exc) (i',f') irpt =
     let (flags,i,f,m) = DECODE_PSR (CPSR_READ psr) in
     let pass = (exc = software) /\ CONDITION_PASSED flags ireg
     and ic = DECODE_INST ireg in
@@ -803,7 +808,7 @@ val NEXT_ARM_def = Define`
           data cp_interrupt
       in
         ARM_EX state' ireg
-          (interrupt2exception state (PROJ_IF_FLAGS state') irpt)`;
+          (interrupt2exceptions state (PROJ_IF_FLAGS state') irpt)`;
 
 val OUT_ARM_def = Define`
   OUT_ARM (ARM_EX (ARM reg psr) ireg exc) =
@@ -918,5 +923,22 @@ val SUBST_EQ = store_thm("SUBST_EQ",
   REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
 
 (* ------------------------------------------------------------------------- *)
+(* Export ML versions of functions                                           *)
+(*---------------------------------------------------------------------------*)
+
+val _ =
+ let open EmitML
+ in exportML (!Globals.exportMLPath)
+      ("arm",
+         map (fn decl => ABSDATATYPE ([], ParseDatatype.parse decl))
+             [register_decl, psrs_decl, exceptions_decl,
+              mode_decl, condition_decl, iclass_decl] @
+         MLSIG "type num = numML.num"
+         :: OPEN ["rich_list"]
+         ::
+         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
+             [SUBST_def,USER_def,mode2psr_def,exceptions2mode_def,
+              CONDITION_PASSED2_def])
+ end;
 
 val _ = export_theory();

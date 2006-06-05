@@ -364,6 +364,9 @@ val REG_READ_WRITEL_PC2 = store_thm("REG_READ_WRITEL_PC2",
 
 (* ------------------------------------------------------------------------- *)
 
+val LESS_THM =
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
+
 fun Cases_on_nzcv tm =
   FULL_STRUCT_CASES_TAC (SPEC tm (armLib.tupleCases
   ``(n,z,c,v):bool#bool#bool#bool``));
@@ -421,6 +424,11 @@ val DECODE_NZCV_SET_IFMODE = store_thm("DECODE_NZCV_SET_IFMODE",
    (!i f m n. (SET_IFMODE i f m n) %% 5 = n %% 5)`,
   RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
     [SET_IFMODE_def,word_modify_def,word_bits_def]);
+
+val SET_NZCV_ID = store_thm("SET_NZCV_ID",
+  `!a. SET_NZCV (a %% 31,a %% 30,a %% 29,a %% 28) a = a`,
+  SRW_TAC [fcpLib.FCP_ss,SIZES_ss] [SET_NZCV_def,word_modify_def]
+    \\ FULL_SIMP_TAC std_ss [LESS_THM]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -492,9 +500,6 @@ val word_ss = arith_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss++
     DIV2_def,ODD_MOD2_LEM,DIV_DIV_DIV_MULT,MOD_2EXP_def];
 
 val REDUCE_RULE = numLib.REDUCE_RULE;
-
-val LESS_THM =
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
 val SUC2NUM = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
@@ -1723,7 +1728,7 @@ val ARMe_CORRECT = Count.apply store_thm("ARMe_CORRECT",
              [EXEC_INST_def,EXCEPTION_def]
         \\ STRIP_TAC \\ UNABBREV_TAC `ns`
         \\ SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-             [PROJ_IF_FLAGS_def,interrupt2exception_def],
+             [PROJ_IF_FLAGS_def,interrupt2exceptions_def],
        Tactical.REVERSE
         (Cases_on `CONDITION_PASSED (NZCV (CPSR_READ s.psrs)) ireg`)
         \\ ASM_SIMP_TAC (srw_ss()) [CONJUNCT1 TRANSFERS_def]
@@ -1732,7 +1737,7 @@ val ARMe_CORRECT = Count.apply store_thm("ARMe_CORRECT",
                  [EXEC_INST_def,DECODE_PSR_def]
             \\ STRIP_TAC \\ UNABBREV_TAC `ns`
             \\ SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-                 [PROJ_IF_FLAGS_def,interrupt2exception_def],
+                 [PROJ_IF_FLAGS_def,interrupt2exceptions_def],
           Cases_on `DECODE_INST ireg`
             \\ MAP_EVERY IMP_RES_TAC [DECODE_INST_LDM,DECODE_INST_STM]
             \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
@@ -1749,6 +1754,6 @@ val ARMe_CORRECT = Count.apply store_thm("ARMe_CORRECT",
                     Cases_on_alu `alu`)
             \\ STRIP_TAC \\ UNABBREV_TAC `ns`
             \\ RW_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-                 [PROJ_IF_FLAGS_def,DECODE_PSR_def,interrupt2exception_def]
+                 [PROJ_IF_FLAGS_def,DECODE_PSR_def,interrupt2exceptions_def]
             \\ FULL_SIMP_TAC (srw_ss()) []]]);
 *)

@@ -56,8 +56,8 @@ fun arm_compset () = add_rws wordsLib.words_compset
    mode_EQ_mode,mode2num_thm,mode_case_def,
    psrs_EQ_psrs,psrs2num_thm,
    iclass_EQ_iclass,iclass2num_thm,
-   exception_EQ_exception,exception2num_thm,exception_case_def,
-   num2exception_thm,exception2mode_def,
+   exceptions_EQ_exceptions,exceptions2num_thm,exceptions_case_def,
+   num2exceptions_thm,exceptions2mode_def,
    num2condition_thm,condition2num_thm,condition_case_def,
    interrupts_case_def,
    SUBST_EVAL,
@@ -132,7 +132,7 @@ fun arm_compset () = add_rws wordsLib.words_compset
    MLA_MUL_def,SWP_def,MRC_def,MCR_OUT_def,MSR_def,LDM_STM_def,LDC_STC_def,
 
    SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) []
-      interrupt2exception_def,
+      interrupt2exceptions_def,
    IS_Dabort_def,IS_Reset_def,PROJ_Dabort_def,PROJ_Reset_def,
    THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,
    option_case_ID,option_case_SOME_ID,

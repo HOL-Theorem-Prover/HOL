@@ -221,7 +221,7 @@ fun SYMBOLIC_EVAL_CONV frag context = GEN_ALL (Thm.DISCH context (SIMP_CONV
 (* ......................................................................... *)
 
 val UNDEF_ss = rewrites [EXCEPTION_def,cond_pass_enc_swi,decode_enc_swi,
-    exception2mode_def,exception2num_thm];
+    exceptions2mode_def,exceptions2num_thm];
 
 val ARM_UNDEF = SYMBOLIC_EVAL_CONV UNDEF_ss ``s.undefined``;
 
@@ -732,7 +732,7 @@ val ARM_BL = UNABBREVL_RULE [`Reg`]
   (SYMBOLIC_EVAL_CONV BRANCH_ss (cntxt [] ``enc (instruction$BL c offset)``));
 
 val SWI_EX_ss =
-  rewrites [EXCEPTION_def,exception2mode_def,exception2num_thm,
+  rewrites [EXCEPTION_def,exceptions2mode_def,exceptions2num_thm,
     cond_pass_enc_swi,decode_enc_swi,cond_pass_enc_coproc,decode_enc_coproc];
 
 val ARM_SWI = UNABBREVL_RULE [`Reg`,`mode`]
