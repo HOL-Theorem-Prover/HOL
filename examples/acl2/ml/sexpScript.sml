@@ -95,6 +95,19 @@ val _ = declare_names ("ACL2_STRING",    "str");
 val _ = declare_names ("ACL2_CHARACTER", "chr");
 
 (*****************************************************************************)
+(* Introduce some constants to abbreviate common package names.              *)
+(*****************************************************************************)
+val ACL2_def        = Define `ACL2        = "ACL2"`
+and COMMON_LISP_def = Define `COMMON_LISP = "COMMON-LISP"`;
+
+val _ =
+ add_string_abbrevs
+  [("ACL2",        lhs(concl ACL2_def )),
+   ("COMMON-LISP", lhs(concl COMMON_LISP_def))
+  ];
+
+
+(*****************************************************************************)
 (* Definition of primitive constants and functions.                          *)
 (*****************************************************************************)
 val nil_def = 

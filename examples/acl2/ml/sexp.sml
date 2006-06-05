@@ -619,6 +619,77 @@ fun mlsym_to_string (sym as mlsym(pkg,nam)) = (pkg^"::"^nam)
  |  mlsym_to_string _ = err "mlsym_to_string" "non sym argument";
 
 (*****************************************************************************)
+(* Association list of pairs of the form ("xyz", c), where c is a            *)
+(* constant defined by |- c = "xyz". Used to avoid building terms with       *)
+(* lots of string literals.                                                  *)
+(*****************************************************************************)
+val string_abbrevs = ref([]: (string * term)list);
+
+(*****************************************************************************)
+(* Function to add a list of string abbreviations to string_abbrevs          *)
+(*****************************************************************************)
+fun add_string_abbrevs thl = (string_abbrevs := (!string_abbrevs) @ thl);
+
+(*****************************************************************************)
+(* Declare constants ACL2_STRING_ABBREV_n, ACL2_STRING_ABBREV_n+1 etc to     *)
+(* abbreviate strings in a supplied list. The starting point n is kept in    *)
+(* the reference string_abbrev_count.                                        *)
+(*****************************************************************************)
+val string_abbrev_count = ref 0;
+
+local
+fun make_string_abbrevs_aux count [] = ()
+ |  make_string_abbrevs_aux count (s::sl) =
+     (add_string_abbrevs
+       [(s, lhs
+             (concl
+               (SPEC_ALL
+                (Define
+                  `^(mk_var
+                     (("ACL2_STRING_ABBREV_" ^ Int.toString count),
+                      ``:string``)) =
+                   ^(fromMLstring s)`)))
+        )];
+
+      make_string_abbrevs_aux (count+1) sl)
+in
+val make_string_abbrevs = make_string_abbrevs_aux(!string_abbrev_count)
+end;
+
+
+(*****************************************************************************)
+(* Print !string_abbrevs to a string (used in adjoin_to_theory).             *)
+(* There may be a better way of doing this!                                  *)
+(*****************************************************************************)
+local
+fun string_abbrevs_to_string_aux [] = ""
+ |  string_abbrevs_to_string_aux [(s,c)] = 
+    ("(\"" ^ s ^ "\",``" ^ fst(dest_const c) ^"``)")
+ |  string_abbrevs_to_string_aux ((s,c)::pl) = 
+    ("(\"" ^ s ^ "\",``" ^ fst(dest_const c) ^"``)," ^ 
+    string_abbrevs_to_string_aux pl)
+in
+fun string_abbrevs_to_string pl =
+ ("[" ^ string_abbrevs_to_string_aux pl ^ "]")
+end;
+
+(*****************************************************************************)
+(* Version of fromMLstring that looks up in string_abbrevs. Convert an ML    *)
+(* string to a term: return constant from string_abbrevs if one is found,    *)
+(* otherwise return a string literal.                                        *)
+(*****************************************************************************)
+fun abbrevMLstring s =
+ assoc s (!string_abbrevs)
+  handle HOL_ERR _ => fromMLstring s;
+
+(*****************************************************************************)
+(* Version of fromHOLstring that looks up in string_abbrevs.                 *)
+(*****************************************************************************)
+fun abbrevHOLstring c =
+ rev_assoc c (!string_abbrevs)
+  handle HOL_ERR _ => fromHOLstring c;
+
+(*****************************************************************************)
 (* Get the HOL name from ACL2 name.                                          *)
 (* If there is no HOL name (e.g. an ACL2 variable) the ACL2 name is          *)
 (* returned.                                                                 *)
@@ -682,9 +753,9 @@ fun term_to_mlsexp tm =
     if is_const opr
      then (case fst(dest_const opr)
            of "ACL2_SYMBOL"    => mk_mlquote
-                                   (mlsym(fromHOLstring(hd args), 
-                                          fromHOLstring(hd(tl args))))
-           |  "ACL2_STRING"    => mlstr(fromHOLstring(hd args))
+                                   (mlsym(abbrevHOLstring(hd args), 
+                                          abbrevHOLstring(hd(tl args))))
+           |  "ACL2_STRING"    => mlstr(abbrevHOLstring(hd args))
            |  "ACL2_CHARACTER" => mlchr(fromHOLchar(hd args))
            |  "ACL2_NUMBER"    => (print_term tm; print "\n";
                                    print "term built with num not supported";
@@ -904,9 +975,9 @@ fun mlquote_to_string (mlsym(pkg,nam)) =
 fun mlquote_to_term (sym as mlsym(pkg,nam)) = 
      if sym = mlnil then ``nil`` else
      if sym = mlt   then ``t``   else
-     ``sym ^(fromMLstring pkg) ^(fromMLstring nam)``
+     ``sym ^(abbrevMLstring pkg) ^(abbrevMLstring nam)``
  |  mlquote_to_term (mlstr s) = 
-     ``str ^(fromMLstring s)``
+     ``str ^(abbrevMLstring s)``
  |  mlquote_to_term (mlchr c) = 
      ``chr ^(fromMLchar c)``
  |  mlquote_to_term (mlnum(an,ad,bn,bd)) = 
@@ -998,7 +1069,7 @@ val list_mk_fun = list_mk_abs;
 (*****************************************************************************)
 fun mlsexp_to_term (sym as mlsym(_,_)) =
     acl2_name_to_term sym ``:sexp``
- |  mlsexp_to_term (mlstr s) = ``str ^(fromMLstring s)``
+ |  mlsexp_to_term (mlstr s) = ``str ^(abbrevMLstring s)``
  |  mlsexp_to_term (mlchr c) = ``chr ^(fromMLchar c)``
  |  mlsexp_to_term (mlnum(an,ad,bn,bd)) = 
      ``cpx ^(string_to_int_term an) 
@@ -1511,13 +1582,29 @@ fun save_acl2_name_list () =
  };
 
 (*****************************************************************************)
-(* Save the acl2_simps, current_package, acl2_name_list then export theory   *)
+(* Add theory load time code to restore binding of string_abbrevs in theory  *)
+(*****************************************************************************)
+fun save_string_abbrevs () =
+ adjoin_to_theory
+ {sig_ps = NONE,
+  struct_ps =
+    SOME(fn ppstrm => 
+          PP.add_string ppstrm
+           ("val _ = sexp.add_string_abbrevs " ^ 
+            string_abbrevs_to_string(!string_abbrevs) ^
+            ";\n\n"))
+ };
+
+(*****************************************************************************)
+(* Save the acl2_simps, current_package, acl2_name_list, string_abbrevs      *)
+(* then export theory                                                        *)
 (*****************************************************************************)
 fun export_acl2_theory () =
  (save_thm("ACL2_SIMPS", LIST_CONJ(!acl2_simps));
   save_acl2_simps();
   save_current_package();
   save_acl2_name_list();
+  save_string_abbrevs();
   export_theory());
   
 (* Various snippets for testing
