@@ -17,32 +17,32 @@ val w2i_def = Define`
 `;
 
 val UINT_MAX_def = Define`
-  UINT_MAX (x: 'a set) = 2n ** dimindex (UNIV : 'a set) - 1
+  UINT_MAX (:'a) :int = &(TOP(:'a)) - 1
 `;
 
 val INT_MAX_def = Define`
-  INT_MAX (x: 'a set) = 2i ** (dimindex (UNIV: 'a set) - 1) - 1
+  INT_MAX (:'a) :int = &(MSB(:'a)) - 1
 `;
 val INT_MIN_def = Define`
-  INT_MIN x = ~INT_MAX x - 1
+  INT_MIN(:'a) = ~INT_MAX(:'a) - 1
 `
 
 val INT_MAX_32 = store_thm(
   "INT_MAX_32",
-  ``INT_MAX (s: i32 set) = 2147483647``,
-  SRW_TAC [][INT_MAX_def, dimindex_32]);
+  ``INT_MAX (:i32) = 2147483647``,
+  SRW_TAC [][INT_MAX_def, dimindex_32, MSB_def]);
 val _ = export_rewrites ["INT_MAX_32"]
 
 val INT_MIN_32 = store_thm(
   "INT_MIN_32",
-  ``INT_MIN (s: i32 set) = ~2147483648``,
+  ``INT_MIN (:i32) = ~2147483648``,
   SRW_TAC [][INT_MIN_def]);
 val _ = export_rewrites ["INT_MIN_32"]
 
 val UINT_MAX_32 = store_thm(
   "UINT_MAX_32",
-  ``UINT_MAX (s: i32 set) = 4294967295``,
-  SRW_TAC [][UINT_MAX_def, dimindex_32]);
+  ``UINT_MAX (: i32) = 4294967295``,
+  SRW_TAC [][UINT_MAX_def, dimindex_32, TOP_def]);
 val _ = export_rewrites ["UINT_MAX_32"]
 
 val ONE_LE_TWOEXP = store_thm(
@@ -53,42 +53,44 @@ val _ = export_rewrites ["ONE_LE_TWOEXP"]
 
 val w2i_n2w_pos = store_thm(
   "w2i_n2w_pos",
-  ``&n <= INT_MAX (UNIV:'a set) ==>
+  ``n < MSB (:'a) ==>
     (w2i (n2w n : bool ** 'a) = &n)``,
-  SRW_TAC [][w2i_def, word_msb_n2w, bitTheory.BIT_def, INT_SUB,
-             bitTheory.BITS_def, DECIDE ``SUC x - x = 1``,
+  SRW_TAC [][w2i_def, word_msb_n2w, bitTheory.BIT_def, INT_SUB, TOP_def,
+             bitTheory.BITS_def, DECIDE ``SUC x - x = 1``, MSB_def,
              bitTheory.DIV_2EXP_def, bitTheory.MOD_2EXP_def,
              w2n_n2w, INT_MAX_def, bitTheory.ZERO_LT_TWOEXP,
              DECIDE ``0n < y ==> (x <= y - 1 = x < y)``] THEN
   FULL_SIMP_TAC (srw_ss()) [LESS_DIV_EQ_ZERO] THEN
   MATCH_MP_TAC LESS_TRANS THEN
-  Q.EXISTS_TAC `2 ** (dimindex (UNIV:'a set) - 1)` THEN
+  Q.EXISTS_TAC `2 ** (dimindex (:'a) - 1)` THEN
   SRW_TAC [ARITH_ss][DIMINDEX_GT_0, bitTheory.TWOEXP_MONO]);
 
 val w2i_n2w_neg = store_thm(
   "w2i_n2w_neg",
-  ``INT_MAX (UNIV: 'a set) < &n /\ n <= UINT_MAX (UNIV: 'a set) ==>
-      (w2i (n2w n : bool ** 'a) =
-          ~(2 ** dimindex (UNIV: 'a set) - &n))``,
-  SRW_TAC [][w2i_def, word_msb_n2w, bitTheory.BIT_def, INT_SUB,
-             bitTheory.BITS_def, DECIDE ``SUC x - x = 1``,
-             bitTheory.DIV_2EXP_def, bitTheory.MOD_2EXP_def,
-             w2n_n2w, word_2comp_n2w, INT_MAX_def, UINT_MAX_def,
-             DECIDE ``0n < y ==> (x <= y - 1 = x < y)``]
+  ``MSB (:'a) <= n /\ n < TOP (:'a) ==>
+      (w2i (n2w n : 'a word) = ~ &(TOP(:'a) - n))``,
+  SRW_TAC [ARITH_ss][w2i_def, word_msb_n2w, bitTheory.BIT_def, TOP_def,
+                     bitTheory.BITS_def, DECIDE ``SUC x - x = 1``, MSB_def,
+                     bitTheory.DIV_2EXP_def, bitTheory.MOD_2EXP_def,
+                     w2n_n2w, word_2comp_n2w]
   THENL [
-    SRW_TAC [ARITH_ss][GSYM INT_SUB],
-    `n DIV 2 ** (dimindex (UNIV: 'a set) - 1) = 1`
+    Q_TAC SUFF_TAC `0n < 2 ** (dimindex (:'a) - 1)` THEN1 DECIDE_TAC THEN
+    SRW_TAC [][],
+
+    Q_TAC SUFF_TAC
+          `~(2 ** (dimindex(:'a) - 1) <= n /\ n < 2 ** dimindex(:'a))`
+          THEN1 METIS_TAC [] THEN STRIP_TAC THEN
+    `n DIV 2 ** (dimindex (:'a) - 1) = 1`
        by (MATCH_MP_TAC DIV_UNIQUE THEN
-           Q.EXISTS_TAC `n - 2 ** (dimindex (UNIV: 'a set) - 1)` THEN
+           Q.EXISTS_TAC `n - 2 ** (dimindex (:'a) - 1)` THEN
            SRW_TAC [ARITH_ss][bitTheory.ZERO_LT_TWOEXP] THEN
            SRW_TAC [][GSYM (CONJUNCT2 EXP)] THEN
-           Q_TAC SUFF_TAC `SUC (dimindex (UNIV: 'a set) - 1) =
-                           dimindex (UNIV: 'a set)` THEN1 SRW_TAC [][] THEN
-           Q_TAC SUFF_TAC `0 < dimindex (UNIV: 'a set)` THEN1 DECIDE_TAC THEN
+           Q_TAC SUFF_TAC `SUC (dimindex (:'a) - 1) =
+                           dimindex (:'a)` THEN1 SRW_TAC [][] THEN
+           Q_TAC SUFF_TAC `0 < dimindex (:'a)` THEN1 DECIDE_TAC THEN
            SRW_TAC [][DIMINDEX_GT_0]) THEN
     FULL_SIMP_TAC (srw_ss()) []
   ]);
-
 
 val i2w_w2i = store_thm(
   "i2w_w2i",
@@ -98,20 +100,13 @@ val i2w_w2i = store_thm(
 
 val w2i_i2w = store_thm(
   "w2i_i2w",
-  ``INT_MIN (UNIV : 'a set) <= i /\
-    i <= INT_MAX (UNIV : 'a set)
+  ``INT_MIN (:'a) <= i /\ i <= INT_MAX (:'a)
       ==>
-    (w2i (i2w i : bool ** 'a) = i)``,
+    (w2i (i2w i : 'a word) = i)``,
   SIMP_TAC (srw_ss()) [INT_MIN_def, INT_MAX_def] THEN
-  Q.ABBREV_TAC `WL = 2n ** dimindex (UNIV : 'a set)` THEN
-  Q.ABBREV_TAC `HB = 2n ** (dimindex (UNIV : 'a set) - 1)` THEN
-  `WL = 2 * HB`
-     by (SRW_TAC [][Abbr`WL`, Abbr`HB`] THEN
-         `0 < dimindex (UNIV : 'a set)` by SRW_TAC [][DIMINDEX_GT_0] THEN
-         `?m. dimindex (UNIV : 'a set) = SUC m` by intLib.ARITH_TAC THEN
-         SRW_TAC [][EXP]) THEN
-  `0 < WL` by SRW_TAC [][Abbr`WL`, DIMINDEX_GT_0] THEN
-  `1 <= HB /\ 1 <= WL` by SRW_TAC [][Abbr`WL`, Abbr`HB`] THEN
+  `TOP(:'a) = 2 * MSB(:'a)` by ACCEPT_TAC TOP_IS_TWICE_MSB THEN
+  `0 < TOP(:'a)` by ACCEPT_TAC ZERO_LT_TOP THEN
+  `1 <= MSB(:'a) /\ 1 <= TOP(:'a)` by DECIDE_TAC THEN
   ASM_SIMP_TAC (srw_ss()) [w2i_def, i2w_def, WORD_NEG_NEG, word_2comp_n2w,
                            INT_LE, INT_SUB, INT_LE_SUB_RADD,
                            NOT_LESS_EQUAL] THEN
@@ -121,9 +116,9 @@ val w2i_i2w = store_thm(
            FULL_SIMP_TAC (srw_ss()) []) THEN
     ASM_SIMP_TAC (srw_ss()) [word_msb_n2w_numeric, word_2comp_n2w] THEN
     STRIP_TAC THEN
-    `n MOD (2 * HB) = n` by (MATCH_MP_TAC MOD_UNIQUE THEN
-                             Q.EXISTS_TAC `0` THEN DECIDE_TAC) THEN
-    `2 * HB - n < 2 * HB` by DECIDE_TAC THEN
+    `n MOD (2 * MSB(:'a)) = n` by (MATCH_MP_TAC MOD_UNIQUE THEN
+                                   Q.EXISTS_TAC `0` THEN DECIDE_TAC) THEN
+    `2 * MSB(:'a) - n < 2 * MSB(:'a)` by DECIDE_TAC THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [LESS_MOD],
 
     `?n. i = &n`
@@ -131,33 +126,26 @@ val w2i_i2w = store_thm(
            FULL_SIMP_TAC (srw_ss()) []) THEN
     ASM_SIMP_TAC (srw_ss()) [word_msb_n2w_numeric, word_2comp_n2w] THEN
     STRIP_TAC THEN
-    `n MOD (2 * HB) = n` by (MATCH_MP_TAC MOD_UNIQUE THEN
-                             Q.EXISTS_TAC `0` THEN DECIDE_TAC) THEN
+    `n MOD (2 * MSB(:'a)) = n` by (MATCH_MP_TAC MOD_UNIQUE THEN
+                                   Q.EXISTS_TAC `0` THEN DECIDE_TAC) THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
   ])
 
 val word_msb_i2w = store_thm(
   "word_msb_i2w",
-  ``word_msb (i2w i : 'a word) =
-      2 ** (dimindex (UNIV:'a set) - 1) <= i % 2 ** dimindex (UNIV : 'a set)``,
-  Q.ABBREV_TAC `WL = 2n ** dimindex (UNIV : 'a set)` THEN
-  Q.ABBREV_TAC `HB = 2n ** (dimindex (UNIV : 'a set) - 1)` THEN
-  `WL = 2 * HB`
-     by (SRW_TAC [][Abbr`WL`, Abbr`HB`] THEN
-         `0 < dimindex (UNIV : 'a set)` by SRW_TAC [][DIMINDEX_GT_0] THEN
-         `?m. dimindex (UNIV : 'a set) = SUC m` by intLib.ARITH_TAC THEN
-         SRW_TAC [][EXP]) THEN
-  `0 < WL` by SRW_TAC [][Abbr`WL`, DIMINDEX_GT_0] THEN
-  `1 <= HB /\ 1 <= WL` by SRW_TAC [][Abbr`WL`, Abbr`HB`] THEN
+  ``word_msb (i2w i : 'a word) = &(MSB(:'a)) <= i % &(TOP(:'a))``,
+  `TOP(:'a) = 2 * MSB(:'a)` by ACCEPT_TAC TOP_IS_TWICE_MSB THEN
+  `0 < TOP(:'a)` by ACCEPT_TAC ZERO_LT_TOP THEN
+  `1 <= MSB(:'a) /\ 1 <= TOP(:'a)` by DECIDE_TAC THEN
   ASM_SIMP_TAC (srw_ss()) [i2w_def] THEN
   Cases_on `i < 0` THENL [
     `?n. (i = ~&n) /\ ~(n = 0)`
         by (Q.SPEC_THEN `i` STRIP_ASSUME_TAC INT_NUM_CASES THEN
             FULL_SIMP_TAC (srw_ss()) []) THEN
-    `n MOD (2 * HB) < 2 * HB` by SRW_TAC [ARITH_ss][DIVISION] THEN
-    `~(&(2 * HB) = 0)` by SRW_TAC [ARITH_ss][] THEN
-    `(& (2 * HB) - &n) % &(2 * HB) =
-        (&(2 * HB) - &n % &(2 * HB)) % &(2 * HB)`
+    `n MOD (2 * MSB(:'a)) < 2 * MSB(:'a)` by SRW_TAC [ARITH_ss][DIVISION] THEN
+    `~(&(2 * MSB(:'a)) = 0)` by SRW_TAC [ARITH_ss][] THEN
+    `(& (2 * MSB(:'a)) - &n) % &(2 * MSB(:'a)) =
+        (&(2 * MSB(:'a)) - &n % &(2 * MSB(:'a))) % &(2 * MSB(:'a))`
        by METIS_TAC [INT_MOD_MOD, INT_MOD_SUB] THEN
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [word_2comp_n2w, word_msb_n2w_numeric,
                                          INT_MOD_NEG_NUMERATOR, INT_MOD,

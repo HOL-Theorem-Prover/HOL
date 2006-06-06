@@ -56,7 +56,9 @@ fun mk_index_type n =
       val n_term = (mk_numeral o Arbnum.fromInt) n
       val abs_term = mk_const(ABS,num --> TYPE)
       val rep_term = mk_const(REP,TYPE --> num)
-      val univ_term = mk_const("UNIV",TYPE --> bool)
+      val tyitself = mk_thy_type{Args = [TYPE], Thy = "bool", Tyop = "itself"}
+      val univ_term = mk_thy_const{Name = "the_value", Thy = "bool",
+                                   Ty = tyitself}
       val image_thm = prove_image_thm abs_term n_term bij
       val bij_abs_thm = prove_bij_image_thm abs_term n_term bij
       val finite_thm = save_thm("finite_"^N,

@@ -127,14 +127,15 @@ val FINITE_IMAGE_IMAGE = prove(
 (* Dimension of such a type, and indexing over it.                           *)
 (* ------------------------------------------------------------------------- *)
 
-val dimindex = Definition.new_definition("dimindex",
-  Parse.Term `dimindex(s:'a->bool) =
-        if FINITE(UNIV:'a->bool) then CARD(UNIV:'a->bool) else 1`);
+val dimindex_def = Define`
+  dimindex(:'a) = if FINITE(UNIV:'a->bool) then CARD(UNIV:'a->bool) else 1
+`
+val dimindex = save_thm("dimindex", dimindex_def)
 
 val HAS_SIZE_FINITE_IMAGE = prove(
-  `!s. (UNIV:'a finite_image->bool) HAS_SIZE dimindex(s:'a->bool)`,
-  GEN_TAC THEN REWRITE_TAC[dimindex, FINITE_IMAGE_IMAGE] THEN
-  MP_TAC finite_image_tybij THEN 
+  `(UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)`,
+  REWRITE_TAC[dimindex, FINITE_IMAGE_IMAGE] THEN
+  MP_TAC finite_image_tybij THEN
   COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
   MATCH_MP_TAC HAS_SIZE_IMAGE_INJ THEN
   ASM_REWRITE_TAC [HAS_SIZE, IN_UNIV, IN_SING] THEN
@@ -143,7 +144,7 @@ val HAS_SIZE_FINITE_IMAGE = prove(
   PROVE_TAC[]);
 
 val CARD_FINITE_IMAGE = prove(
-  `!s. CARD(UNIV:'a finite_image->bool) = dimindex(s:'a->bool)`,
+  `CARD(UNIV:'a finite_image->bool) = dimindex(:'a)`,
   PROVE_TAC[HAS_SIZE_FINITE_IMAGE, HAS_SIZE]);
 
 val FINITE_FINITE_IMAGE = prove(
@@ -151,29 +152,28 @@ val FINITE_FINITE_IMAGE = prove(
   PROVE_TAC[HAS_SIZE_FINITE_IMAGE, HAS_SIZE]);
 
 val DIMINDEX_NONZERO = prove(
-  `!s:'a->bool. ~(dimindex(s) = 0)`,
-  GEN_TAC THEN DISCH_TAC THEN
-  MP_TAC(ISPEC `s:'a->bool` HAS_SIZE_FINITE_IMAGE) THEN
+  `~(dimindex(:'a) = 0)`,
+  DISCH_TAC THEN
+  MP_TAC HAS_SIZE_FINITE_IMAGE THEN
   ASM_REWRITE_TAC[HAS_SIZE_0,UNIV_NOT_EMPTY]);
 
 val DIMINDEX_GE_1 = store_thm("DIMINDEX_GE_1",
-  `!s:'a->bool. 1 <= dimindex(s)`,
+  `1 <= dimindex(:'a)`,
   REWRITE_TAC[DECIDE ``1 <= x = ~(x = 0)``, DIMINDEX_NONZERO]);
 
 val DIMINDEX_FINITE_IMAGE = prove(
-  `!s t. dimindex(s:'a finite_image->bool) = dimindex(t:'a->bool)`,
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV empty_rewrites [dimindex] THEN
-  MP_TAC(ISPEC `t:'a->bool` HAS_SIZE_FINITE_IMAGE) THEN
+  `dimindex(:'a finite_image) = dimindex(:'a)`,
+  GEN_REWRITE_TAC LAND_CONV empty_rewrites [dimindex] THEN
+  MP_TAC HAS_SIZE_FINITE_IMAGE THEN
   SIMP_TAC std_ss [FINITE_FINITE_IMAGE, HAS_SIZE]);
 
 val finite_index = Define`
   finite_index =
-    @f:num->'a. !x:'a. ?!n. n < dimindex(UNIV:'a->bool) /\ (f n = x)`;
+    @f:num->'a. !x:'a. ?!n. n < dimindex(:'a) /\ (f n = x)`;
 
 val FINITE_INDEX_WORKS_FINITE = prove(
-  `FINITE(UNIV:'n->bool)
-   ==> !i:'n. ?!n. n < dimindex(UNIV:'n->bool) /\
-                  (finite_index n = i)`,
+  `FINITE(UNIV:'n->bool) ==>
+   !i:'n. ?!n. n < dimindex(:'n) /\ (finite_index n = i)`,
   DISCH_TAC THEN ASM_REWRITE_TAC[finite_index, dimindex] THEN
   CONV_TAC SELECT_CONV THEN
   SUBGOAL_THEN `(UNIV:'n->bool) HAS_SIZE CARD(UNIV:'n->bool)`
@@ -183,13 +183,12 @@ val FINITE_INDEX_WORKS_FINITE = prove(
 
 val FINITE_INDEX_WORKS = prove
  (`!i:'a finite_image.
-        ?!n. n < dimindex(UNIV:'a->bool) /\ (finite_index n = i)`,
+        ?!n. n < dimindex(:'a) /\ (finite_index n = i)`,
   MP_TAC(MATCH_MP FINITE_INDEX_WORKS_FINITE FINITE_FINITE_IMAGE) THEN
   PROVE_TAC[DIMINDEX_FINITE_IMAGE]);
 
 val FINITE_INDEX_INJ = prove
- (`!i j. i < dimindex(UNIV:'a->bool) /\
-         j < dimindex(UNIV:'a->bool)
+ (`!i j. i < dimindex(:'a) /\ j < dimindex(:'a)
          ==> ((finite_index i :'a = finite_index j) = (i = j))`,
   ASM_CASES_TAC `FINITE(UNIV:'a->bool)` THEN ASM_REWRITE_TAC[dimindex] THENL
    [FIRST_ASSUM(MP_TAC o MATCH_MP FINITE_INDEX_WORKS_FINITE) THEN
@@ -198,7 +197,7 @@ val FINITE_INDEX_INJ = prove
 
 val FORALL_FINITE_INDEX = prove
  (`(!k:'n finite_image. P k) =
-   (!i. i < dimindex(UNIV:'n->bool) ==> P(finite_index i))`,
+   (!i. i < dimindex(:'n) ==> P(finite_index i))`,
   PROVE_TAC[FINITE_INDEX_WORKS]);
 
 (* ------------------------------------------------------------------------- *)
@@ -221,19 +220,19 @@ val _ = overload_on ("%%", Term`$index`);
 
 val CART_EQ = store_thm("CART_EQ",
   `!(x:'a ** 'b) y.
-    (x = y) = (!i. i < dimindex(UNIV:'b->bool) ==> (x %% i = y %% i))`,
+    (x = y) = (!i. i < dimindex(:'b) ==> (x %% i = y %% i))`,
   REPEAT GEN_TAC THEN SIMP_TAC std_ss [index_def, GSYM FORALL_FINITE_INDEX] THEN
   REWRITE_TAC[GSYM FUN_EQ_THM, ETA_AX] THEN PROVE_TAC[cart_tybij]);
 
 val FCP = new_binder_definition("FCP",
   ``($FCP) = \g.
-     @(f:'a ** 'b). (!i. i < dimindex(UNIV:'b->bool) ==> (f %% i = g i))``);
+     @(f:'a ** 'b). (!i. i < dimindex(:'b) ==> (f %% i = g i))``);
 
 val FCP_BETA = store_thm("FCP_BETA",
-  `!i. i < dimindex(UNIV:'b->bool)
+  `!i. i < dimindex(:'b)
        ==> (((FCP) g:'a ** 'b) %% i = g i)`,
   SIMP_TAC std_ss [FCP] THEN CONV_TAC SELECT_CONV THEN
-  EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(UNIV:'b->bool) /\
+  EXISTS_TAC `mk_cart(\k. g(@i. i < dimindex(:'b) /\
                                 (finite_index i = k))):'a ** 'b` THEN
   SIMP_TAC std_ss [index_def, cart_tybij] THEN
   REPEAT STRIP_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC SELECT_UNIQUE THEN
@@ -242,7 +241,7 @@ val FCP_BETA = store_thm("FCP_BETA",
 
 val FCP_UNIQUE = prove
  (`!(f:'a ** 'b) g.
-        (!i. i < dimindex(UNIV:'b->bool) ==> (f %% i = g i)) =
+        (!i. i < dimindex(:'b) ==> (f %% i = g i)) =
         ((FCP) g = f)`,
   SIMP_TAC std_ss [CART_EQ, FCP_BETA] THEN PROVE_TAC[]);
 
@@ -313,11 +312,11 @@ val isl_isr_union = prove(
     isl_isr_inter,isl_isr_finite]);
 
 val index_sum = store_thm("index_sum",
-  `dimindex (UNIV:('a+'b)->bool) =
+  `dimindex(:('a+'b)) =
    if FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool) then
-     dimindex (UNIV:'a->bool) + dimindex (UNIV:'b->bool)
+     dimindex(:'a) + dimindex(:'b)
    else
-     dimindex (UNIV:('a+'b)->bool)`,
+     dimindex(:('a+'b))`,
   RW_TAC std_ss [dimindex,sum_union,isl_isr_union,isl_isr_univ,FINITE_UNION]
     THEN METIS_TAC [isl_isr_finite]);
 
