@@ -1376,17 +1376,11 @@ fun print_smv_info smv_info =
 (* ************************************************************************************	*)
 
 
-
-fun SMV_RUN smv_program =
+fun SMV_RUN_FILE smv_file =
     let 
-  val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
-  val _ = (
-    TextIO.output(file_st,smv_program);
-    TextIO.flushOut file_st;
-    TextIO.closeOut file_st)
   val _ = Process.system
       ((!smv_path)^(!smv_call)^" "
-      ^(!smv_tmp_dir)^"smv_file.smv > "
+      ^smv_file^" > "
       ^(!smv_tmp_dir)^"smv_out")
   val file_in = TextIO.openIn((!smv_tmp_dir)^"smv_out")
   val s = ref (TextIO.inputLine file_in)
@@ -1404,6 +1398,19 @@ fun SMV_RUN smv_program =
           false
         )
     end
+
+fun SMV_RUN smv_program =
+    let 
+  val file_st = TextIO.openOut((!smv_tmp_dir)^"smv_file.smv")
+  val _ = (
+    TextIO.output(file_st,smv_program);
+    TextIO.flushOut file_st;
+    TextIO.closeOut file_st)
+  in
+    SMV_RUN_FILE ((!smv_tmp_dir)^"smv_file.smv")
+  end
+
+
 
 
 fun SMV_AUTOMATON_CONV automaton =
