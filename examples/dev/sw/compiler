@@ -6,8 +6,8 @@ app load ["Link", "ANF", "word32Lib", "pairTheory", "pairLib", "arithmeticTheory
       "preARMSyntax", "preARMTheory", "ARMCompositionTheory", "ILTheory","annotatedIL"];
 
 quietdec := true;
-open Portable Link Assem preARMSyntax preARMTheory word32Theory ANF
-     pairTheory pairLib listTheory arithmeticTheory word32Lib PairedLambda ILTheory annotatedIL;
+open Portable Link Assem word32Theory ANF pairTheory pairLib listTheory arithmeticTheory word32Lib PairedLambda 
+     preARMTheory ILTheory annotatedIL;
 quietdec := false;
 
 (*---------------------------------------------------------------------------*)
@@ -28,4 +28,5 @@ pp_elements = [PPBlock([TOK "if", BreakSpace(1,2), TM, BreakSpace(1,0),TOK "then
 paren_style = Always,
 block_style = (AroundEachPhrase, (CONSISTENT, 0))};
 *)
+
 

@@ -546,12 +546,10 @@ fun convert_exp (MEM (regNo, offset)) =
 
  (*---------------------------------------------------------------------------------*)
  (*      Set input, output and context information                                  *)
+ (*      Assistant functions                                                        *)
  (*---------------------------------------------------------------------------------*)
 
    structure S = Binaryset;
-
-   fun list2pair [] = NA
-    |  list2pair (h::ts) = PAIR (h, list2pair ts);
 
    fun index_of_exp (MEM (base,offset)) =
          10000 + offset
@@ -569,73 +567,133 @@ fun convert_exp (MEM (regNo, offset)) =
           else if i1 = i2 then EQUAL
           else LESS
       end;
- 
+
+   fun list2pair l = 
+     if null l then NA
+     else 
+        let fun f [h] = h
+             |  f (h::ts) = PAIR (h, f ts)
+             |  f _ = raise Fail "list2pair fails"
+        in f l
+        end
+
+   fun list2set l = 
+       if null l then S.empty expOrder
+       else S.addList(S.empty expOrder, l);
+
+   fun set2list s = List.filter (fn n => not (n = NA)) (S.listItems s);
+
    fun get_annt (BLK (stmL,info)) = info
     |  get_annt (SC(s1,s2,info)) = info
     |  get_annt (CJ(cond,s1,s2,info)) = info
     |  get_annt (TR(cond,s,info)) = info
-    |  get_annt _ =  raise ERR "annotatedIR.get_annt" ("invalid IR tree")
+    |  get_annt (STM stmL) = {ins = NA, outs = NA, context = [], spec = Term`T`};
 
-   fun bottom_up (STM stmL) =
+
+ (*---------------------------------------------------------------------------------*)
+ (*      Set input, output and context information                                  *)
+ (*      Alignment functions                                                        *)
+ (*---------------------------------------------------------------------------------*)
+
+   (* Adjust the inputs to be consistent with the outputs of the previous ir  *)
+
+   fun adjust_ins ir (outer_info as ({ins = outer_ins, outs = outer_outs, context = outer_context, ...}:annt)) =
+        let val {ins = inner_ins, context = inner_context, outs = inner_outs, spec = inner_spec} = get_annt ir;
+            val (inner_inS,outer_inS) = ((list2set o pair2list) inner_ins, (list2set o pair2list) outer_ins);
+        in  if S.isSubset (outer_inS,inner_inS) then
+               ir
+            else
+               case ir of
+                   (BLK (stmL, info)) => 
+                       BLK (stmL, {ins = outer_ins, context = inner_context, outs = inner_outs, spec = inner_spec})
+                |  (SC (s1,s2,info)) =>
+                       SC (adjust_ins s1 outer_info, s2, outer_info)
+                |  (CJ (cond,s1,s2,info)) =>
+                       CJ (cond, adjust_ins s1 outer_info, adjust_ins s2 outer_info, outer_info)
+                |  (TR (cond,s,info)) =>
+                       TR(cond, adjust_ins s info, info)
+                |  _ => 
+                       raise Fail "adjust_ins: invalid IR tree"
+        end
+
+   (* Given the outputs and the context of an ir, calculate its inputs *)
+
+   fun back_trace (STM stmL) ({outs = outer_outs, context = contextL, ...}:annt) = 
           let 
-              val (ins', temps', outs') =  getIO stmL
+              val (inner_inL, inner_tempL, inner_outL) =  getIO stmL
+              val gap = S.difference ((list2set o pair2list) outer_outs, list2set (inner_tempL @ inner_outL));
+              val inS = S.union (list2set inner_inL,gap)
           in 
-              BLK(stmL, {spec = Term `T`, ins = list2pair ins', outs = list2pair outs', context = []})
+              BLK (stmL, {ins = (list2pair o set2list) inS, outs = outer_outs, context = contextL, spec = Term `T`}) 
           end
-    |  bottom_up (SC(s1,s2,info)) =
-          let val {ins = ins1, outs = outs1, context = context1, ...} = get_annt (bottom_up s1);
-              val {ins = ins2, outs = outs2, context = context2, ...} = get_annt (bottom_up s2);
-              val context_0 = S.listItems(S.intersection(S.addList(S.empty expOrder,context1), S.addList(S.empty expOrder,context2)))
+
+    |  back_trace (SC(s1,s2,info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
+           let 
+              val s2' = back_trace s2 outer_info
+              val (s1_info, s2_info) = (get_annt s1, get_annt s2');
+              val s2'' = if #outs s1_info <> NA then adjust_ins s2' 
+                                  {ins = #outs s1_info, context = #context s2_info, outs = #outs s2_info, spec = Term`T`}
+                         else s2';
+              val s2_info = get_annt s2'';
+              val s1' = back_trace s1 {outs = #ins s2_info, context = #context s2_info, ins = NA, spec = Term`T`}
+              val s1_info = get_annt s1'
+           in
+              SC(s1',s2'',{ins = #ins s1_info, outs = outer_outs, context = contextL, spec = Term`T`})
+           end
+
+    |  back_trace (CJ(cond, s1, s2, info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
+          let 
+              fun filter_exp (REG e) = [REG e]
+               |  filter_exp (MEM e) = [MEM e]
+               |  filter_exp _ = []
+
+              val cond_expL = filter_exp (#1 cond) @ filter_exp (#3 cond);
+              val s1' = back_trace s1 outer_info
+              val s2' = back_trace s2 outer_info
+              val ({ins = ins1, outs = outs1, ...}, {ins = ins2, outs = outs2, ...}) = (get_annt s1', get_annt s2');
+              val inS_0 = list2pair (set2list (list2set (cond_expL @ (pair2list ins1) @ (pair2list ins2)))); (* union *)
+              val info_0 = {ins = inS_0, outs = outer_outs, context = contextL, spec = Term`T`}
           in
-              SC(s1,s2,{spec = Term `T`, ins = ins1, outs = outs2, context = context_0})
+              CJ(cond, adjust_ins s1' info_0, adjust_ins s2' info_0, info_0)
           end
-    |  bottom_up (TR(cond,s,info)) =
-          TR(cond,bottom_up s,info)
-    |  bottom_up (CJ(cond, s1, s2, info)) =
-          let val {ins = ins1, outs = outs1, context = context1, ...} = get_annt (bottom_up s1);
-              val {ins = ins2, outs = outs2, context = context2, ...} = get_annt (bottom_up s2);
-              val ins_0 = S.listItems(S.union (S.addList(S.empty expOrder,(pair2list ins1)), 
-                                               S.addList(S.empty expOrder,(pair2list ins2))));
-              val outs_0 = S.listItems(S.union (S.addList(S.empty expOrder,(pair2list outs1)), 
-                                                S.addList(S.empty expOrder,(pair2list outs2))));
-              val context_0 = S.listItems(S.intersection(S.addList(S.empty expOrder,context1), S.addList(S.empty expOrder,context2)))
+
+    |  back_trace (TR (cond, s, info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
+           let 
+              val extra_outs = S.difference ((list2set o pair2list) outer_outs, (list2set o pair2list) (#outs info));
+              val contextL' = set2list (list2set (contextL @ (set2list extra_outs)));  (* union *)
+              val s' = back_trace s {outs = #outs info, context = contextL', ins = NA, spec = Term `T`}
+              val info_0 = {ins = #ins info, outs = #outs info, context = contextL', spec = Term`T`}
           in
-              CJ(cond,s1,s2,{spec = Term `T`, ins = list2pair ins_0, outs = list2pair outs_0, context = context_0})
+              TR(cond, adjust_ins s' info_0, info_0)
           end
-    |  bottom_up _ =  raise ERR "annotatedIR.bottom_up" ("invalid IR tree");
 
-
-   fun list2set l = S.addList(S.empty expOrder,l);
-   fun set2list s = List.filter (fn n => not (n = NA)) (S.listItems s);
-
-
-   fun top_down (BLK (s,x)) info = BLK (s,info)
-    |  top_down (STM s) info = BLK (s,info)
-    |  top_down (SC(s1,s2,x)) info = SC (top_down s1 info, top_down s2 info, info)
-
-    |  top_down (CJ(cond,s1,s2,x)) info = CJ (cond, top_down s1 info, top_down s2 info, info)
-
-    |  top_down (TR(cond,body, tr_info as {ins = tr_ins, outs = tr_outs, context = tr_context, ...})) 
-                 {ins = ins', outs = outs', context = context', ...} = 
-          let val context_0 = set2list (S.union(list2set context',S.difference((list2set o pair2list) outs', (list2set o pair2list) tr_outs)))
-          in 
-              TR(cond, top_down body {ins = tr_ins, outs = tr_outs, context = context_0, spec = Term `T`}, tr_info)
-          end
-  
-    |  top_down _ _ = raise Fail "top_down: unsupported IR structure";
+    |  back_trace _ _ = 
+          raise Fail "back_trace:invalid IR tree";
 
 
    fun set_info (ins,ir,outs) = 
-       top_down (bottom_up ir) {spec = Term`T`, ins = ins, outs = outs, context = []};
+       let 
+          fun extract_outputs ir' = 
+              let val info' = get_annt ir';
+                  val (inner_outS, outer_outS) = ((list2set o pair2list) (#outs info'), (list2set o pair2list) outs)
+              in  if S.equal(inner_outS, outer_outS) then ir'
+                  else SC (ir', BLK ([], {context = #context info', ins = #outs info', outs = outs, spec = Term`T`}),
+                            {context = #context info', ins = ins, outs = outs, spec = #spec info'})
+              end
+          val info =  {spec = Term`T`, ins = ins, outs = outs, context = []}
+       in
+          extract_outputs (back_trace ir info)
+       end;
+
 
  (*---------------------------------------------------------------------------------*)
  (*      Interface                                                                  *)
  (*---------------------------------------------------------------------------------*)
 
-   fun build_ir (fname, ftype, args, gr, outs, rs) = 
+   fun build_ir (fname, ftype, f_args, f_gr, f_outs, f_rs) = 
       let
-         val (ins,outs) = (to_exp args, to_exp outs)
-         val ir0 = convert_module (ins,gr,outs)
+         val (ins, outs) = (to_exp f_args, to_exp f_outs)
+         val ir0 = convert_module (ins, f_gr, outs)
          val ir1 = (merge_stm o rm_dummy_inst) ir0
          val ir2 = set_info (ins,ir1,outs)
       in
@@ -644,10 +702,13 @@ fun convert_exp (MEM (regNo, offset)) =
 
    fun sfl2ir prog =
      let
-       val foids as [(f_const,(_,_, f_anf, f_ast))] = ANF.toANF [] prog;
-       val setting as (f_name, f_type, f_args, f_gr, f_outs, f_rs) = regAllocation.convert_to_ARM (f_anf);
+        val env = ANF.toANF [] prog;
+        val defs = List.map (fn (name, (flag,src,anf,cps)) => src) env;
+        val (f_const,(_, f_defs, f_anf, f_ast)) = hd env
+        val setting as (f_name, f_type, f_args, f_gr, f_outs, f_rs) = regAllocation.convert_to_ARM (f_anf); 
+        val f_ir = build_ir setting
      in
-       build_ir setting
+        (f_name, f_type, f_ir, defs)
      end
 
 end

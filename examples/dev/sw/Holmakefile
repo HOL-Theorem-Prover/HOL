@@ -57,3 +57,6 @@ Link.uo: Link.sml declFuncs.uo regAllocation.uo
 
 annotatedIL.uo: annotatedIL.sml ILTheory.uo
 	HOLMOSMLC -c -toplevel Table.ui gr_t.ui ANF.ui Assem.ui CFG.ui regAllocation.ui annotatedIL.sml
+
+mechReasoning.uo: rulesTheory.uo annotatedIL.uo
+	HOLMOSMLC -c -toplevel mechReasoning.sml ILTheory.uo

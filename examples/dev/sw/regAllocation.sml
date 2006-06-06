@@ -36,6 +36,7 @@ fun intOrder (s1:int,s2:int) =
   else LESS;
 
 val precolored : (int S.set) ref = ref (S.empty intOrder);
+val firstnArgL : (int list) ref = ref []; 
 
 val tmpTable : (string T.table) ref = ref (T.empty);
 fun newTmp () =
@@ -294,7 +295,7 @@ fun AddEdge (u:G.node, v:G.node) =
 
 fun Build (cfg) =
   let
-    
+
     val (inS,outS) = CalLiveness cfg;
 
     fun investigate_one_node nodeNo =
@@ -318,28 +319,10 @@ fun Build (cfg) =
 		live (S.listItems def)
       in
         S.union(use, S.difference(live, def))
-      end;
-
-(*
-    fun process_precolored () =
-	( List.foldl (fn (i,s1) => List.foldl 
-		(fn (j,s2) => (AddEdge(i,j);())) () (S.listItems (!precolored)))
-		() (S.listItems (!precolored));
-	  List.foldl (fn (i,s1) => degree := T.enter (!degree,i, MAX_DEGREE)) () (S.listItems (!precolored))
-	)
-
-    fun process_inArgs () =
-	let val L1 = S.listItems (S.difference(!inArgs, !spilledTmps)) in
-        ( List.foldl (fn (i,s1) =>  List.foldl (fn (j,s2) => (AddEdge(i,j);())) () L1)
-                () L1
-        ) end
-*)
+      end
 
   in
-     ( List.map investigate_one_node (G.nodes cfg)
-(*       process_precolored ();
-       process_inArgs() *)
-     )
+      List.map investigate_one_node (G.nodes cfg)
   end;
 
 
@@ -360,9 +343,7 @@ fun MakeWorklist() =
 
       val _ = List.foldl (fn (i,s) => round i) () (S.listItems (!initial))
    in
-      (
          toBeSpilled := !spillWorklist
-      )	
    end;
 
 (* -------------------------------------------------------------------------------------------------------------------*)
@@ -458,7 +439,7 @@ fun Combine (u,v) =
      moveList := T.enter (!moveList, u, S.union(T.look(!moveList,u), T.look(!moveList,v)));
      EnableMoves (S.add(S.empty intOrder,v));
      List.foldl (fn (t,s) => (AddEdge(t,u);DecrementDegree t)) () 
-		(S.listItems (S.difference(Adjacent v,!precolored)));
+		(S.listItems (Adjacent v));
      if T.look(!degree,u)>=(!NumRegs) andalso S.member(!freezeWorklist,u) then
 	(freezeWorklist := S.delete (!freezeWorklist,u);
 	 spillWorklist := S.add (!spillWorklist,u))
@@ -532,73 +513,6 @@ fun SelectSpill () =
 (* Assign colors to nodes, spill nodes when a valid allocation couldn't be found                                      *)
 (* -------------------------------------------------------------------------------------------------------------------*)
 
-val APCS_level = ref 0;
-
-(* Make no effort to comply with the APCS *)
-(*
-fun AssignColors_1 () =
-   let
-
-     fun initColors ~1 = S.empty intOrder
-      |  initColors n = S.add(initColors (n-1),n);
-
-     fun assign_precolored () =
-        List.foldl (fn (n,c) => (color := T.enter(!color,n,c);c+1)) 0 (S.listItems (!precolored));
-
-     fun assign_firstnArgs () =
-        List.foldl (fn (n,c) =>
-                (coloredNodes := S.add(!coloredNodes,n);
-                 color := T.enter(!color,n,c);c+1)) 0 (!firstnArgL);
-
-     fun spillNodes n =
-        if (!spillOneOnce) then
-                S.add(S.empty intOrder, spillPriorities (!toBeSpilled))
-        else
-            (!toBeSpilled)
-
-     fun chaseColor n =
-        let val c = T.look(!color, GetAlias n) in
-        if (c = ~1) then
-            chaseColor (GetAlias n)
-        else c end;
-
-     val firstnArgS = S.addList(S.empty intOrder, !firstnArgL);
-
-     fun assign () =
-      if Stack.isEmpty (!selectStack) then
-          (List.foldl (fn (n,s) => color := T.enter(!color,n,chaseColor n))
-                         ()
-                         (S.listItems (!coalescedNodes));
-                         ())
-
-      else
-          let val n = Stack.top (!selectStack);
-              val _ = (selectStack := Stack.pop(!selectStack));
-              val okColors = initColors ((!NumRegs)-1);
-              val okColors = List.foldl (fn (w,s) => if S.member(S.union(!coloredNodes,!precolored),GetAlias w) then
-                                        S.difference (s, S.add(S.empty intOrder, T.look(!color, GetAlias w)))
-                                                else s)
-                                okColors
-                                (S.listItems (T.look(!adjList,n)))
-          in
-              if S.member(firstnArgS, n) then         (* the colors of the first arguments have been assigned *)
-                  assign()
-              else if S.isEmpty(okColors) then
-                  (spilledNodes := spillNodes n;
-                   selectStack := Stack.empty ())
-              else
-                  ( coloredNodes := S.add(!coloredNodes, n);
-                    color := T.enter(!color, n, hd (S.listItems okColors));
-                    assign()
-                  )
-          end
-
-   in
-        ( assign_firstnArgs ();
-          assign()
-        )
-   end;
-*)
 (* In a effort to compile with the APCS standard *)
 (* The arguemtns are in r0-r9 and then the stack *)
 
@@ -609,7 +523,7 @@ fun AssignColors () =
       |  initColors n = S.add(initColors (n-1),n);
 
      fun assign_precolored () =
-        List.foldl (fn (n,c) => (color := T.enter(!color,n,c);c+1)) 0 (S.listItems (!precolored));
+        List.foldl (fn (n,c) => (color := T.enter(!color,n,c);c+1)) 0 (!firstnArgL);
 
      fun spillNodes n =
         if (!spillOneOnce) then
@@ -653,14 +567,6 @@ fun AssignColors () =
 	  assign()
         )
    end;
-
-(*
-fun AssignColors () =
-  if !APCS_level = 0 then
-      AssignColors_1 ()
-  else 
-      AssignColors_2 ()
-*)
 
 (* -------------------------------------------------------------------------------------------------------------------*)
 (* When a node is spilled, we modify the program by replacing the temporary with a memory slot                        *)
@@ -876,7 +782,8 @@ fun RewrWithReg () =
 fun RegisterAllocation (gr, tmpT, preC) =
   ( tmpTable := tmpT;
 
-    precolored := S.addList(S.empty intOrder, preC);
+    firstnArgL := List.take (preC, if length preC > !NumRegs then !NumRegs else length preC);
+    precolored := S.addList(S.empty intOrder, !firstnArgL);
 
     cfg := gr;
 
@@ -923,15 +830,15 @@ fun convert_to_ARM prog =
  
     val ((fun_name, fun_type, args, gr, outs), t) = CFG.convert_to_CFG prog;
     val argL = List.map Assem.eval_exp (Assem.pair2list args);
-    val (gr,t) = RegisterAllocation (gr, t, argL);
+    val (gr',t) = RegisterAllocation (gr, t, argL);
 
     val (args,outs) = (replace_with_regs args, replace_with_regs outs);
-    val stms = CFG.linearizeCFG gr;
+    val stms = CFG.linearizeCFG gr';
     val rs = getModifiedRegs stms
 
   in
     ( (* declFuncs.putFunc (fun_name, fun_type, args, stms, outs, rs); *)
-      (fun_name, fun_type, args, gr, outs, rs)
+      (fun_name, fun_type, args, gr', outs, rs)
     )
   end
 
