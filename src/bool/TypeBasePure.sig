@@ -101,7 +101,7 @@ sig
    val is_case         : typeBase -> term -> bool
    val strip_case      : typeBase -> term -> term * (term * term) list
 
-   val mk_record       : typeBase -> hol_type -> (string * term) list -> term
-   val dest_record     : typeBase -> term -> (string * term) list
+   val mk_record       : typeBase -> hol_type * (string * term) list -> term
+   val dest_record     : typeBase -> term -> hol_type * (string * term) list
    val is_record       : typeBase -> term -> bool
 end

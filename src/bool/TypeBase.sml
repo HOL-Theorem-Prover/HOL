@@ -57,7 +57,7 @@ fun fetch ty = TypeBasePure.fetch (theTypeBase()) ty;
 
 val elts = listItems o theTypeBase;
 
-fun print_sp_type ty =
+fun print_sp_type ty = 
   let val {Thy,Tyop,Args} = dest_thy_type ty
   in Thy ^ "$" ^ Tyop
   end;
@@ -67,10 +67,10 @@ fun valOf2 ty t opt =
     NONE => raise ERR t ("No "^t^" information for type "^print_sp_type ty)
   | SOME x => x
 
-fun pfetch s ty =
+fun pfetch s ty = 
  case TypeBasePure.fetch (theTypeBase()) ty
   of SOME x => x
-   | NONE => raise ERR s
+   | NONE => raise ERR s 
               ("unable to find "^
                Lib.quote (print_sp_type ty)^" in the TypeBase");
 
@@ -103,21 +103,12 @@ fun encode_of ty       = valOf2 ty "encode_of"
  * Install datatype facts for booleans into theTypeBase.                     *
  *---------------------------------------------------------------------------*)
 
-val [bool_info] = TypeBasePure.gen_datatype_info
+val [bool_info] = TypeBasePure.gen_datatype_info 
                          {ax=boolTheory.boolAxiom,
                           ind=boolTheory.bool_INDUCT,
                           case_defs = [boolTheory.bool_case_thm]};
 
 val _ = write [bool_info];
-
-(* and similarly for the itself type constructor *)
-val [itself_info] = let
-  open boolTheory
-in
-  TypeBasePure.gen_datatype_info {ax = itself_Axiom, ind = itself_induction,
-                                  case_defs = [itself_case_thm]}
-end
-val _ = write [itself_info]
 
 (* ---------------------------------------------------------------------- *
  * Install case transformation function for parser                        *
@@ -157,7 +148,7 @@ fun strip_case x = TypeBasePure.strip_case (theTypeBase()) x
 (* Syntax operations on records                                              *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_record x y   = TypeBasePure.mk_record (theTypeBase()) x y
+fun mk_record x  = TypeBasePure.mk_record (theTypeBase()) x
 fun dest_record x = TypeBasePure.dest_record (theTypeBase()) x
 fun is_record x   = TypeBasePure.is_record (theTypeBase()) x;
 

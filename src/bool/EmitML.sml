@@ -146,6 +146,7 @@ fun term_to_ML openthys ppstrm =
      if !is_pabs_hook tm then pp_abs i tm else
      if !is_fail_hook tm then pp_fail i tm else
      if !is_one_hook tm  then pp_one tm else
+     if TypeBase.is_record tm then pp_record i (TypeBase.dest_record tm) else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
      if is_const tm then pp_const i tm else
      if is_comb tm then pp_comb i tm
@@ -303,6 +304,8 @@ fun term_to_ML openthys ppstrm =
          ; pp 7 rhs
          ; end_block()
         )
+  and pp_record i (ty,flds) = 
+       pp_open_comb i (hd(TypeBase.constructors_of ty), map snd flds)
   and pp_fail i tm =
        let val (f,s,args) = !dest_fail_hook tm
            val fname = fst(dest_const f)
@@ -328,8 +331,8 @@ fun term_to_ML openthys ppstrm =
        else add_string (const_map tm)
   and pp_one tm = add_string "()"
   and pp_nil tm = add_string "[]"
-  and pp_comb i tm =
-       let val (f,args) = strip_comb tm
+  and pp_open_comb i (f,args) =
+       let
        in begin_block CONSISTENT 0
         ; lparen i maxprec
         ; if TypeBase.is_constructor f
@@ -346,6 +349,7 @@ fun term_to_ML openthys ppstrm =
         ; rparen i maxprec
         ; end_block()
        end
+  and pp_comb i tm = pp_open_comb i (strip_comb tm)
   and pp_abs i tm =
        let val (vstruct,body) = !dest_pabs_hook tm
        in lparen i 5000
@@ -574,20 +578,26 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
        | pp_decl (tyvars,_) (name,Record flist) =
            let open ParseDatatype
                val fields = map (I##pretypeToType) flist
-               fun pp_field (s,ty) =
-                 (begin_block CONSISTENT 2;
-                  add_string s; add_break (1,0);
-                  add_string" : "; ppty ty; end_block())
+               fun pp_field (s,ty) = 
+                if Lib.can dom_rng ty
+                 then (add_string "("; ppty ty; add_string")")
+                 else ppty ty
+(*                 (begin_block CONSISTENT 2;
+                  add_string s; add_break (1,0); add_string" : "; 
+                  ppty ty; end_block())
+*)
            in begin_block CONSISTENT 0;
               add_string "datatype";
               pp_tyvars tyvars;
               add_string(" "^name^" = ");
-              add_string(name^"C of {");
+(*               add_string(name^"C of {"); *)
+(*              add_string(name^" of {"); *)
+              add_string(name^" of ");
               begin_block INCONSISTENT 0;
-              pr_list pp_field (fn () => add_string",")
+              pr_list pp_field (fn () => add_string" *")
                                (fn () => add_break(1,0)) fields;
               end_block();
-              add_string"}";
+(*              add_string"}"; *)
               end_block()
            end
  in
@@ -798,8 +808,7 @@ local open ParseDatatype
 in
 fun constructors [] = []
   | constructors ((s,Constructors clist)::rst) = clist@constructors rst
-  | constructors ((s,Record _)::rst) = raise ERR "constructors"
-                                                 "records not yet handled"
+  | constructors ((s,Record flds)::rst) = [(s, map snd flds)]@constructors rst
 end;
 
 (*---------------------------------------------------------------------------*)
@@ -901,11 +910,16 @@ fun emit_adjoin_call thy consts =
 val sigSuffix = ref "ML.sig";
 val structSuffix = ref "ML.sml";
 
-fun exportML path (s,elems) =
-  let val (sigStrm,sigPPstrm) = mk_file_ppstream (path^s^ !sigSuffix)
-      val (structStrm,structPPstrm) = mk_file_ppstream (path^s^ !structSuffix)
-      val consts = install_consts s elems
-  in
+fun exportML p (s,elems) =
+ let val path = if p="" then FileSys.getDir() else p
+     val pathPrefix = Path.concat(path,s)
+     val sigfile = pathPrefix^ !sigSuffix
+     val structfile = pathPrefix^ !structSuffix
+ in
+   let val (sigStrm,sigPPstrm) = mk_file_ppstream sigfile
+       val (structStrm,structPPstrm) = mk_file_ppstream structfile
+       val consts = install_consts s elems
+   in
    (pp_sig sigPPstrm (s,elems);
     pp_struct structPPstrm (s,elems,map (fst o dest_const) consts);
     TextIO.closeOut sigStrm;
@@ -917,12 +931,13 @@ fun exportML path (s,elems) =
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
                 raise wrap_exn "EmitML" "exportML" e)
-  end handle Io _ =>
+   end handle Io _ =>
              HOL_WARNING "EmitML" "exportML"
               ("I/O error prevented exporting files to "^Lib.quote path)
            | e => HOL_WARNING "EmitML" "exportML"
                      (exn_to_string e 
-                        ^" prevents export of ML files to "
+                        ^" prevents writing ML files to "
                         ^Lib.quote path)
+ end
 
 end (* struct *)

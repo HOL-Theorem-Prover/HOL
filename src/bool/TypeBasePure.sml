@@ -743,10 +743,12 @@ end;
 (*---------------------------------------------------------------------------*)
 
 fun is_record_type tybase ty =
-  not (null (fields_of (valOf (prim_get tybase (type_names ty)))))
+  (case prim_get tybase (type_names ty)
+   of NONE => false
+    | SOME tyinfo => not (null (fields_of tyinfo)))
   handle HOL_ERR _ => false;
 
-fun is_record tybase M = is_record_type tybase (type_of M);
+fun has_record_type tybase M = is_record_type tybase (type_of M);
 
 (*---------------------------------------------------------------------------*)
 (* The function                                                              *)
@@ -803,12 +805,14 @@ fun dest_record tybase tm =
             end
        handle HOL_ERR _ => raise ERR "dest_record" "unexpected term structure"
   in
-   if is_record tybase tm then dest tm
-    else raise ERR "dest_record" "not a record"
+   if has_record_type tybase tm 
+     then (type_of tm, dest tm)
+     else raise ERR "dest_record" "not a record"
   end;
 
+fun is_record tybase = can (dest_record tybase);
 
-fun mk_record tybase ty fields =
+fun mk_record tybase (ty,fields) =
  if is_record_type tybase ty
   then let val (Thy,Tyop) = type_names ty
         val upd_names = map (fn p => String.concat [Tyop,"_",fst p,"_fupd"]) fields
