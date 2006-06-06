@@ -4010,6 +4010,72 @@ val _ = add_type "itself"
 val _ = new_constant("the_value", Type`:'a itself`)
 val _ = add_const "the_value"
 
+(* prove uniqueness of the itself value:
+     |- !i:'a itself. i = (:'a)
+*)
+val ITSELF_UNIQUE = let
+  val typedef_asm = ASSUME (#2 (dest_exists (concl ITSELF_TYPE_DEF)))
+  val typedef_eq0 =
+      AP_THM (INST_TYPE [beta |-> ``:'a itself``] TYPE_DEFINITION)
+             ``$= (ARB:'a)``
+  val typedef_eq0 = RIGHT_BETA typedef_eq0
+  val typedef_eq = AP_THM typedef_eq0 ``rep:'a itself -> 'a``
+  val typedef_eq = RIGHT_BETA typedef_eq
+  val (typedef_11, typedef_onto) = CONJ_PAIR (EQ_MP typedef_eq typedef_asm)
+  val onto' = INST [``x:'a`` |-> ``(rep:'a itself -> 'a) i``]
+                   (#2 (EQ_IMP_RULE (SPEC_ALL typedef_onto)))
+  val allreps_arb = let
+    val ex' = EXISTS (``?x':'a itself. rep i = rep x':'a``, ``i:'a itself``)
+                     (REFL ``(rep:'a itself -> 'a) i``)
+  in
+    SYM (MP onto' ex')
+  end
+  val allreps_repthevalue =
+      TRANS allreps_arb
+            (SYM (INST [``i:'a itself`` |-> ``bool$the_value``] allreps_arb))
+  val all_eq_thevalue =
+      GEN_ALL (MP (SPECL [``i:'a itself``, ``bool$the_value``] typedef_11)
+                  allreps_repthevalue)
+in
+  save_thm("ITSELF_UNIQUE",
+           CHOOSE (``rep:'a itself -> 'a``, ITSELF_TYPE_DEF) all_eq_thevalue)
+end
+
+(* prove a datatype axiom for the type, allowing definitions of the form
+    f (:'a) = ...
+*)
+val itself_Axiom = let
+  val witness = ``(\x:'b itself. e : 'a)``
+  val fn_behaves = BETA_CONV  (mk_comb(witness, ``(:'b)``))
+  val fn_exists = EXISTS (``?f:'b itself -> 'a. f (:'b) = e``, witness)
+                  fn_behaves
+in
+  save_thm("itself_Axiom", GEN_ALL fn_exists)
+end
+
+(* prove induction *)
+val itself_induction = let
+  val pval = ASSUME ``P (:'a) : bool``
+  val pi =
+      EQ_MP (SYM (AP_TERM ``P:'a itself -> bool`` (SPEC_ALL ITSELF_UNIQUE)))
+            pval
+in
+  save_thm("itself_induction", GEN_ALL (DISCH_ALL (GEN_ALL pi)))
+end
+
+(* define case operator *)
+val itself_case_thm = let
+  val witness = ``\(b:'b) (i:'a itself). b``
+  val witness_applied1 = BETA_CONV (mk_comb(witness, ``b:'b``))
+  val witness_applied2 = RIGHT_BETA (AP_THM witness_applied1 ``(:'a)``)
+in
+  new_specification("itself_case_thm",
+                    ["itself_case"],
+                    EXISTS (``?f:'b -> 'a itself -> 'b. !b. f b (:'a) = b``,
+                            witness)
+                           (GEN_ALL witness_applied2))
+end
+
 val _ = export_theory();
 
 end (* boolScript *)
