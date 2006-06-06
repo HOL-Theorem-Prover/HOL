@@ -31,7 +31,7 @@ val op >> = op THEN1;
 val std_ss = std_ss ++ boolSimps.LET_ss;
 val arith_ss = arith_ss ++ boolSimps.LET_ss;
 
-val WL = ``dimindex (UNIV:'a->bool)``;
+val WL = ``dimindex (:'a)``;
 
 val tt = set_trace "types";
 
@@ -93,7 +93,7 @@ val BIT_w2n = prove(
   `!i w:bool ** 'a. i < ^WL ==> (BIT i (w2n w) = w %% i)`,
   STRIP_TAC \\ Cases_word \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss)
-         [w2n_n2w,BIT_def,MIN_DEF,BITS_COMP_THM2,GSYM BITS_ZERO3]
+         [w2n_n2w,TOP_def,BIT_def,MIN_DEF,BITS_COMP_THM2,GSYM BITS_ZERO3]
     \\ ASM_SIMP_TAC fcp_ss [BIT_def,n2w_def]);
 
 val MASKN_ZERO = store_thm("MASKN_ZERO",

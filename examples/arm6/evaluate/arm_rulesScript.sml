@@ -143,12 +143,11 @@ val REG_READ_WRITEL_PC2 = store_thm("REG_READ_WRITEL_PC2",
 
 (* ------------------------------------------------------------------------- *)
 
-val MOD_0 = (GSYM o REWRITE_RULE [ZERO_LT_TWOEXP] o
-  SPEC `2 ** dimindex (UNIV:i32->bool)`) ZERO_MOD;
+val MOD_0 = (GSYM o REWRITE_RULE [ZERO_LT_TOP] o SPEC `TOP (:i32)`) ZERO_MOD;
 
 val MOD_2EXP_32 =
-  simpLib.SIMP_PROVE (std_ss++wordsLib.SIZES_ss) [MOD_2EXP_def]
-  ``MOD_2EXP 32 n = n MOD 2 ** dimindex (UNIV:i32->bool)``;
+  simpLib.SIMP_PROVE (std_ss++wordsLib.SIZES_ss) [MOD_2EXP_def,TOP_def]
+  ``MOD_2EXP 32 n = n MOD TOP (:i32)``;
 
 val MSB_lem = (GSYM o GEN_ALL o SIMP_CONV std_ss
   [BIT_def,BITS_def,MOD_2EXP_def,SUC_SUB,EXP_1,GSYM ODD_MOD2_LEM]) ``BIT x n``;
@@ -179,12 +178,9 @@ val ALU_ADD = SIMP_RULE std_ss [ALU_ADD_NO_CARRY,ALU_ADD_CARRY] lem;
 
 (* ......................................................................... *)
 
-val n2w_2EXP_32 =
-  (EQT_ELIM o EVAL) ``n2w (2 ** dimindex (UNIV:i32->bool)) = 0w:word32``;
+val n2w_2EXP_32 = (EQT_ELIM o EVAL) ``n2w (TOP (:i32)) = 0w:word32``;
 
-val n2w_sub1 = EVAL
- ``n2w (2 ** dimindex (UNIV:i32->bool) -
-  1 MOD 2 ** dimindex (UNIV:i32->bool))``;
+val n2w_sub1 = EVAL ``n2w (TOP (:i32) - 1 MOD TOP (:i32))``;
 
 val ALU_SUB = prove(
   `!c a b. SUB a b c =
@@ -229,8 +225,7 @@ fun cntxt c i = list_mk_conj
   (mk_eq(``s.memory ((31 >< 2) (s.registers r15))``,i):: (c @ basic_context));
 
 val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (UNIV:'a->bool) ==>
-      ((n2w n):bool ** 'a %% i = BIT i n)``;
+  ``!i n. i < dimindex (:'a) ==> ((n2w n):bool ** 'a %% i = BIT i n)``;
 
 val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x %% 29``;
 

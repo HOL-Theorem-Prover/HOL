@@ -604,8 +604,7 @@ fun Cases_on_nzcv tm = FULL_STRUCT_CASES_TAC (SPEC tm (armLib.tupleCases
   ``(n,z,c,v):bool#bool#bool#bool``));
 
 val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (UNIV:'a->bool) ==>
-       (((n2w n):bool ** 'a) %% i = BIT i n)``;
+  ``!i n. i < dimindex (:'a) ==> (((n2w n):bool ** 'a) %% i = BIT i n)``;
 
 val fcp_ss = arith_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss;
 
@@ -1170,15 +1169,15 @@ val BITS_ZERO5 = prove(
   RW_TAC arith_ss [BITS_THM,LESS_DIV_EQ_ZERO,ZERO_LT_TWOEXP]);
 
 val BITS_w2n_ZERO = prove(
-  `!w: bool ** 'a. dimindex (UNIV:'a->bool) <= l ==> (BITS h l (w2n w) = 0)`,
-  METIS_TAC [TWOEXP_MONO2,LESS_LESS_EQ_TRANS,BITS_ZERO5,w2n_lt]);
+  `!w: bool ** 'a. dimindex (:'a) <= l ==> (BITS h l (w2n w) = 0)`,
+  METIS_TAC [TOP_def,TWOEXP_MONO2,LESS_LESS_EQ_TRANS,BITS_ZERO5,w2n_lt]);
 
 val WORD_BITS_LSL = prove(
   `!h l n w:bool ** 'a.
-      n <= h /\ n <= l /\ l <= h /\ h < dimindex (UNIV:'a->bool) ==>
+      n <= h /\ n <= l /\ l <= h /\ h < dimindex (:'a) ==>
       ((h -- l) (w << n) = ((h - n) -- (l - n)) w)`,
   RW_TAC (arith_ss++fcpLib.FCP_ss) [WORD_EQ,word_lsl_def,word_bits_def]
-    \\ Cases_on `i + l < dimindex (UNIV:'a->bool)`
+    \\ Cases_on `i + l < dimindex (:'a)`
     \\ FULL_SIMP_TAC (arith_ss++fcpLib.FCP_ss) [NOT_LESS_EQUAL,NOT_LESS]);
 
 val condition_code_lem = prove(

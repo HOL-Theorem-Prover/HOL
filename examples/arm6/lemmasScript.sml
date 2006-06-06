@@ -127,7 +127,7 @@ val SHIFT_REGISTER_THM2 = store_thm("SHIFT_REGISTER_THM2",
 
 val w2w_extract = store_thm("w2w_extract",
   `!w:bool ** 'a. w2w (((h >< l) w):bool ** 'b) =
-     (MIN h (dimindex (UNIV:'b->bool) - 1 + l) -- l) w`,
+     (MIN h (dimindex (:'b) - 1 + l) -- l) w`,
   SIMP_TAC arith_ss [word_extract_def,w2w_w2w,w2w_id,
     WORD_BITS_COMP_THM]);
 
@@ -366,12 +366,12 @@ val NZ_ADD = save_thm("NZ_ADD",
 val ALUOUT_ADD_CARRY = store_thm("ALUOUT_ADD_CARRY",
   `!a b. SND (ADD a b T) = a + b + 1w`,
   REWRITE_TAC [GSYM WORD_ADD_ASSOC]
-    \\ SIMP_TAC arith_ss [ADD_def,ALU_arith_def,DIVMOD_2EXP,
+    \\ SIMP_TAC arith_ss [TOP_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,
          w2n_n2w,word_add_def]
     \\ SIMP_TAC bool_ss [(SIMP_RULE (bool_ss++SIZES_ss) [] o
            Thm.INST_TYPE [alpha |-> ``:i32``]) n2w_mod,
            MOD_PLUS_RIGHT,MOD_2EXP_def,ZERO_LT_TWOEXP]
-    \\ SIMP_TAC bool_ss [n2w_11,MOD_PLUS_RIGHT,ZERO_LT_TWOEXP]);
+    \\ SIMP_TAC bool_ss [TOP_def,n2w_11,MOD_PLUS_RIGHT,ZERO_LT_TWOEXP]);
 
 val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   `!a b. SND (SUB a b T) = a - b`,
@@ -405,8 +405,8 @@ val SLICE_ROR_THM = store_thm("SLICE_ROR_THM",
          SLICE_THM,w2n_n2w]
     << [
       Cases_on `h < l` >> ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]
-        \\ `l <= dimindex (UNIV:'a->bool) - 1` by DECIDE_TAC,
-      Cases_on `dimindex (UNIV:'a->bool) - 1 < l`
+        \\ `l <= dimindex (:'a) - 1` by DECIDE_TAC,
+      Cases_on `dimindex (:'a) - 1 < l`
         >> ASM_SIMP_TAC arith_ss [BITS_ZERO,ZERO_SHIFT]]
     \\ RW_TAC arith_ss [BITS_ZERO3,ADD1,lem,word_ror_n2w,
          ZERO_LT_TWOEXP,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]

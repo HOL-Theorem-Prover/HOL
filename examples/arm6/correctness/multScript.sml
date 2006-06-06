@@ -33,7 +33,7 @@ val arith_ss = arith_ss ++ boolSimps.LET_ss;
 
 val fcp_ss   = armLib.fcp_ss;
 
-val WL = ``dimindex (UNIV:'a->bool)``;
+val WL = ``dimindex (:'a)``;
 
 val tt = set_trace "types";
 
@@ -288,7 +288,7 @@ val DONE_IMP_ZERO_MSBS = prove(
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:i32``] EXISTS_HB)
     \\ `Abbrev (m = 31)`
     by FULL_SIMP_TAC (arith_ss++SIZES_ss) [markerTheory.Abbrev_def]
-    \\ RW_TAC bool_ss [SUC_SUB1,w2n_n2w,MLA_MUL_DONE_def]
+    \\ RW_TAC bool_ss [TOP_def,SUC_SUB1,w2n_n2w,MLA_MUL_DONE_def]
     << [
       Cases_on `n'` >> FULL_SIMP_TAC arith_ss [ZERO_MOD]
         \\ FULL_SIMP_TAC bool_ss [GSYM BITS_ZERO3,
@@ -300,7 +300,7 @@ val DONE_IMP_ZERO_MSBS = prove(
         by FULL_SIMP_TAC (arith_ss++SIZES_ss) [NOT_LESS]
         \\ `SLICE 31 (SUC (2 * n'' + 1)) n = 0`
         by (PAT_ASSUM `q = 0w` MP_TAC \\
-              ASM_SIMP_TAC arith_ss [GSYM BITS_ZERO3,SLICE_THM,MIN_DEF,
+              ASM_SIMP_TAC arith_ss [TOP_def,GSYM BITS_ZERO3,SLICE_THM,MIN_DEF,
                 BITS_COMP_THM2,ZERO_LT_TWOEXP,word_bits_n2w,n2w_11] \\
               SIMP_TAC arith_ss [Abbr`m`])
         \\ IMP_RES_TAC ((GSYM o SIMP_RULE arith_ss [ADD1,SLICE_ZERO_THM] o
@@ -342,7 +342,7 @@ val MOD_4_BITS = prove(
   `!a:word32. w2n a MOD 4 = w2n ((1 -- 0) a)`,
   Cases_word
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:i32``] EXISTS_HB)
-    \\ ASM_SIMP_TAC bool_ss [GSYM BITS_ZERO3,BITS_COMP_THM2,
+    \\ ASM_SIMP_TAC bool_ss [TOP_def,GSYM BITS_ZERO3,BITS_COMP_THM2,
          (EQT_ELIM o EVAL) ``4 = 2 ** SUC 1``,word_bits_n2w,w2n_n2w]
     \\ FULL_SIMP_TAC (arith_ss++SIZES_ss) [MIN_DEF]);
 
@@ -403,7 +403,7 @@ val MULT_MOD_SUC_T = prove(
          WORD_BITS_COMP_THM,WORD_LEFT_ADD_DISTRIB,WORD_ADD_COMM]
     \\ Cases_on_word `b`
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:i32``] EXISTS_HB)
-    \\ ASM_SIMP_TAC std_ss [GSYM BITS_ZERO3,SLICE_BITS_THM,SUC_SUB1,
+    \\ ASM_SIMP_TAC std_ss [TOP_def,GSYM BITS_ZERO3,SLICE_BITS_THM,SUC_SUB1,
          word_slice_n2w,w2n_n2w]);
 
 val MULT_MOD_SUC_T = save_thm("MULT_MOD_SUC_T",
@@ -418,7 +418,8 @@ val LSL_MULT_EXP = prove(
     \\ POP_ASSUM (SUBST1_TAC o SIMP_RULE std_ss [DIMINDEX_GT_0,
          DECIDE ``0 < n ==> (n - 1 + (p + 1) = p + n)``])
     \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
-    \\ SIMP_TAC std_ss [EXP_ADD,MULT_ASSOC,MOD_EQ_0,ZERO_MOD,ZERO_LT_TWOEXP]);
+    \\ SIMP_TAC std_ss
+         [TOP_def,EXP_ADD,MULT_ASSOC,MOD_EQ_0,ZERO_MOD,ZERO_LT_TWOEXP]);
 
 val MULT_TWO_LSL = prove(
   `!rm t. rm << (2 * t + 1) = (rm << (2 * t)) * n2w 2`,
@@ -480,7 +481,7 @@ val MUL_2EXP = prove(
     \\ ASM_SIMP_TAC arith_ss [Once (GSYM n2w_mod),ZERO_LT_TWOEXP,MOD_EQ_0,
          simpLib.SIMP_PROVE arith_ss [EXP]
            ``2 * (a * 2 ** b) = a * 2 ** SUC b``,
-         ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
+         TOP_def,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
 
 val MUL_3EXP = prove(
   `!a n. a * 3w << n = a << (n + 1) + a << n`,
@@ -493,10 +494,10 @@ val MUL_3EXP = prove(
         `m = 0` by DECIDE_TAC \\
            ONCE_REWRITE_TAC [DECIDE ``3 * n = n * 2 + n``]]
     \\ ASM_SIMP_TAC std_ss [Once (GSYM n2w_mod),LEFT_ADD_DISTRIB,
-         ZERO_LT_TWOEXP,MOD_TIMES,
+         ZERO_LT_TWOEXP,MOD_TIMES,TOP_def,
          simpLib.SIMP_PROVE arith_ss [EXP]
            ``3 * (a * 2 ** b) = a * 2 ** SUC b + a * 2 ** b``]
-    \\ METIS_TAC [n2w_mod,EVAL ``2 ** (SUC 0) = 2``]);
+    \\ METIS_TAC [n2w_mod,TOP_def,EVAL ``2 ** (SUC 0) = 2``]);
 
 val WORD_LEFT_ADD_DISTRIB_1 =
   (GEN_ALL o REWRITE_RULE [WORD_MULT_CLAUSES] o
@@ -512,7 +513,7 @@ fun MUST_BE_TAC th =
 
 val word_add_n2w_mod = prove(
   `!m n. ((n2w m):bool ** 'a) + n2w n = n2w ((m + n) MOD 2 ** ^WL)`,
-  REWRITE_TAC [n2w_mod,word_add_n2w]);
+  PROVE_TAC [TOP_def,n2w_mod,word_add_n2w]);
 
 val _ = computeLib.add_thms [word_add_n2w_mod] computeLib.the_compset;
 
@@ -711,7 +712,7 @@ val MLA_MUL_INVARIANT = Count.apply prove(
     >> (SIMP_TAC (arith_ss++armLib.ICLASS_ss++armLib.STATE_INP_ss)
           [state_arm6_11,ctrl_11,io_onestepTheory.state_out_literal_11,FUNPOW,
            BORROW2_def,MSHIFT,RD_INVARIANT_ZERO,MASK_def,WORD_MULT_CLAUSES,
-           DONE_NEQ_ZERO,io_onestepTheory.ADVANCE_ZERO,EVAL ``w2w 0w``,
+           DONE_NEQ_ZERO,io_onestepTheory.ADVANCE_ZERO,EVAL ``w2w (0w:word4)``,
            WORD_ADD_0] \\ SIMP_TAC std_ss [word_extract_def,WORD_BITS_COMP_THM]
           \\ METIS_TAC [interrupt_exists])
     \\ REWRITE_TAC [FUNPOW_SUC]
@@ -736,7 +737,8 @@ val MLA_MUL_INVARIANT = Count.apply prove(
              AREGN1_def,(GSYM o BETA_RULE o ISPEC `\x. x = 0w`) COND_RAND,
              REG_READ_WRITE,TO_WRITE_READ6,REG_WRITE_WRITE,REG_READ_WRITE_PC,
              MSHIFT_ZERO,IF_NEG,RD_INVARIANT_ONE,RD_ONE,WORD_EXTRACT_BITS_COMP,
-             EVAL ``w2w 0w``,WORD_MULT_CLAUSES,WORD_ADD_0,w2n_w2w,ctrl_11]
+             EVAL ``w2w (0w:word4)``,WORD_MULT_CLAUSES,WORD_ADD_0,
+             w2n_w2w,ctrl_11]
         \\ UNABBREV_TAC `rm` \\ POP_ASSUM_LIST (K ALL_TAC)
         \\ EXISTS_TAC `pipebabt`
         \\ EXISTS_TAC `if dataabt2 \/ ~(cpsr %% 6) /\ ~ooonfq \/ pipebabt \/
