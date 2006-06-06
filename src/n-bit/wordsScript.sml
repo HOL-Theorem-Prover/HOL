@@ -331,8 +331,8 @@ val EXISTS_HB = save_thm("EXISTS_HB",
   PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``);
 
 val MOD_DIMINDEX = store_thm("MOD_DIMINDEX",
-  `!n. n MOD 2 ** ^WL = BITS (^WL - 1) 0 n`,
-  STRIP_ASSUME_TAC EXISTS_HB \\ ASM_SIMP_TAC arith_ss [BITS_ZERO3]);
+  `!n. n MOD TOP (:'a) = BITS (^WL - 1) 0 n`,
+  STRIP_ASSUME_TAC EXISTS_HB \\ ASM_SIMP_TAC arith_ss [TOP_def,BITS_ZERO3]);
 
 val SUB1_SUC = DECIDE (Term `!n. 0 < n ==> (SUC (n - 1) = n)`);
 val SUB_SUC1 = DECIDE (Term `!n. ~(n = 0) ==> (SUC (n - 1) = n)`);

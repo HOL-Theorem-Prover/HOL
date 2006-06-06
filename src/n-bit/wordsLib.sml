@@ -15,7 +15,7 @@ fun is_fcp_thm s =
 
 val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
-val SIZES_ss = rewrites machine_sizes;
+val SIZES_ss = rewrites (TOP_def::machine_sizes);
 
 fun NUMERAL_ONLY_RULE l n x =
   let val y = SPEC_ALL x
@@ -38,7 +38,7 @@ val thms = machine_sizes @
    NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` BITS_def,
    NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
    NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def,
-   numeral_log2,numeral_ilog2,
+   numeral_log2,numeral_ilog2, TOP_def,
    n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,
    word_join_def, word_concat_def,
