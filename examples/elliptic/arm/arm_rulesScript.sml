@@ -333,8 +333,8 @@ val ARM_MSR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
 
 val LSL_NOT_ZERO = prove(
   `!n. ~(n = 0w:word5) ==> ~(w2w n = 0w:word8)`,
-  Cases_word \\ RW_TAC (bool_ss++SIZES_ss)
-       [ZERO_MOD,ZERO_LT_TWOEXP,w2w_def,n2w_11,w2n_n2w]
+  Cases_word \\ RW_TAC bool_ss [TOP_def,ZERO_MOD,ZERO_LT_TWOEXP,
+         w2w_def,n2w_11,w2n_n2w,dimindex_5,dimindex_8]
     \\ ASSUME_TAC (DECIDE ``5 < 8``) \\ IMP_RES_TAC TWOEXP_MONO
     \\ METIS_TAC [MOD_2EXP_LT,LESS_TRANS,LESS_MOD]);
 

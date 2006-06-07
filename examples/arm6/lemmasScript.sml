@@ -153,8 +153,7 @@ val start_tac =
   SIMP_TAC (arith_ss++SIZES_ss) [TEST_OR_COMP_def,ARITHMETIC_def,
          WORD_BITS_COMP_THM,word_extract_def,word_bits_w2w]
     \\ Cases_word \\ SIMP_TAC (std_ss++SIZES_ss) [word_bits_n2w,w2w_def]
-    \\ ASM_SIMP_TAC (bool_ss++SIZES_ss) [w2n_n2w,n2w_11,
-         num_CONV ``32``,num_CONV ``4``,GSYM BITS_ZERO3];
+    \\ ASM_SIMP_TAC bool_ss [w2n_n2w,n2w_11,MOD_DIMINDEX];
 
 val TEST_OR_COMP_THM = store_thm("TEST_OR_COMP_THM",
   `!i:word32. TEST_OR_COMP ((24 >< 21) i) = i %% 24 /\ ~(i %% 23)`,
@@ -307,9 +306,8 @@ val DECODE_INST_NOT_UNEXEC = store_thm("DECODE_INST_NOT_UNEXEC",
   `!n. ~(DECODE_INST n = unexec)`, RW_TAC std_ss [DECODE_INST_def]);
 
 val tac = Cases_word 
-  \\ RW_TAC (bool_ss++SIZES_ss) [combinTheory.o_THM,MIN_DEF,DECODE_INST_def,
-       BITS_COMP_THM2,GSYM BITS_ZERO3,num_CONV ``32``,w2w_def,w2n_n2w,
-       word_extract_def,word_bits_n2w]
+  \\ RW_TAC bool_ss [combinTheory.o_THM,MIN_DEF,DECODE_INST_def,BITS_COMP_THM2,
+       MOD_DIMINDEX,w2w_def,w2n_n2w,word_extract_def,word_bits_n2w]
   \\ FULL_SIMP_TAC (fcp_ss++SIZES_ss++ARITH_ss)
       [BIT_def,BITS_COMP_THM2,n2w_def];
 
@@ -339,6 +337,9 @@ val DECODE_INST_STM = store_thm("DECODE_INST_STM",
 
 (* ------------------------------------------------------------------------- *)
 
+val n2w_mod32 = (REWRITE_RULE [TOP_def,dimindex_32] o
+  Thm.INST_TYPE [alpha |-> ``:i32``]) n2w_mod;
+
 val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",
   `!a. SND (ALU_logic a) = a`,
   SIMP_TAC std_ss [ALU_logic_def]);
@@ -351,8 +352,7 @@ val NZ_ALU_logic = store_thm("NZ_ALU_logic",
 val ALUOUT_ADD = store_thm("ALUOUT_ADD",
   `!a b. SND (ADD a b F) = a + b`,
   SIMP_TAC arith_ss [ADD_def,ALU_arith_def,DIVMOD_2EXP,word_add_def]
-    \\ SIMP_TAC bool_ss [(SIMP_RULE (bool_ss++SIZES_ss) [] o
-         Thm.INST_TYPE [alpha |-> ``:i32``]) n2w_mod,MOD_2EXP_def]);
+    \\ SIMP_TAC bool_ss [n2w_mod32,MOD_2EXP_def]);
 
 val NZ_ADD_lem = prove(
   `!c. (!a b. FST (FST (ADD a b c)) = word_msb (SND (ADD a b c))) /\
@@ -368,17 +368,14 @@ val ALUOUT_ADD_CARRY = store_thm("ALUOUT_ADD_CARRY",
   REWRITE_TAC [GSYM WORD_ADD_ASSOC]
     \\ SIMP_TAC arith_ss [TOP_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,
          w2n_n2w,word_add_def]
-    \\ SIMP_TAC bool_ss [(SIMP_RULE (bool_ss++SIZES_ss) [] o
-           Thm.INST_TYPE [alpha |-> ``:i32``]) n2w_mod,
-           MOD_PLUS_RIGHT,MOD_2EXP_def,ZERO_LT_TWOEXP]
+    \\ SIMP_TAC bool_ss [n2w_mod32,MOD_PLUS_RIGHT,MOD_2EXP_def,ZERO_LT_TWOEXP]
     \\ SIMP_TAC bool_ss [TOP_def,n2w_11,MOD_PLUS_RIGHT,ZERO_LT_TWOEXP]);
 
 val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   `!a b. SND (SUB a b T) = a - b`,
   SIMP_TAC arith_ss [SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,
          word_sub_def,word_add_def]
-    \\ SIMP_TAC bool_ss [(SIMP_RULE (bool_ss++SIZES_ss) [] o
-         Thm.INST_TYPE [alpha |-> ``:i32``]) n2w_mod,MOD_2EXP_def]);
+    \\ SIMP_TAC bool_ss [n2w_mod32,MOD_2EXP_def]);
 
 val NZ_SUB_lem = prove(
   `!c. (!a b. FST (FST (SUB a b c)) = word_msb (SND (SUB a b c))) /\

@@ -639,10 +639,9 @@ val PENCZ_THM = store_thm("PENCZ_THM",
 
 val PENCZ_THM2 = store_thm("PENCZ_THM2",
   `!list. (list = 0w) = (LENGTH (REGISTER_LIST list) = 0)`,
-  Cases_word \\ SIMP_TAC (bool_ss++SIZES_ss)
-         [LENGTH_REGISTER_LIST,BITV_def,GSYM SUM_ZERO,BITS_COMP_THM2,
-          numLib.num_CONV ``16``,GSYM BITS_ZERO3,GSYM WORD_EQ,
-          word_bit_n2w,BIT_def,BITS_ZERO2,w2n_n2w]
+  Cases_word \\ SIMP_TAC bool_ss
+         [LENGTH_REGISTER_LIST,BITV_def,GSYM SUM_ZERO,BITS_COMP_THM2,w2n_n2w,
+          MOD_DIMINDEX,GSYM WORD_EQ,word_bit_n2w,BIT_def,BITS_ZERO2,dimindex_16]
     \\ SIMP_TAC arith_ss [MIN_DEF,NOT_BITS2]);
 
 val PENCZ_THM3 = store_thm("PENCZ_THM3",
