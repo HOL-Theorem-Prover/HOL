@@ -2114,7 +2114,7 @@ where $n$ is the size of \ty{'b}.  The type \ty{'b} could be
 infinite\footnote{\HOL{}'s type system does not allow type variables to range
 over finite types only.} and so the dimension $n$ is actually taken to be:
 \begin{hol}
-dimindex (UNIV:\ty{'b}\rarr\bool)
+dimindex (:\ty{'b})
 \end{hol}
 where \holtxt{dimindex} has value one when the universe is infinite, and
 otherwise it is the cardinality of the set.  For example, \fcp{'a}{\num} is
@@ -2135,7 +2135,7 @@ The following theorem shows that two Cartesian products \holtxt{x} and
 \oo{y}{i} are equal:
 \begin{hol}
 \begin{verbatim}
-CART_EQ: |- !x y. (x = y) = !i. i < dimindex UNIV ==> (x %% i = y %% i)
+CART_EQ: |- !x y. (x = y) = !i. i < dimindex (:'a) ==> (x %% i = y %% i)
 \end{verbatim}
 \end{hol}
 
@@ -2143,7 +2143,7 @@ In order to define Cartesian products, the theory \theoryimp{fcp} introduces a
 binder \holtxt{FCP}, which is characterised by the following theorems:
 \begin{hol}
 \begin{verbatim}
-FCP_BETA: |- !i. i < dimindex UNIV ==> ($FCP g %% i = g i)
+FCP_BETA: |- !i. i < dimindex (:'a) ==> ($FCP g %% i = g i)
 FCP_ETA:  |- !x. (FCP i. x %% i) = x
 \end{verbatim}
 \end{hol}
@@ -2162,8 +2162,8 @@ size \ie{} it cannot be called twice to create two distinct types of size 128.}
 theorems:
 \begin{hol}
 \begin{verbatim}
-finite_128:   |- FINITE (UNIV :i128 -> bool)
-dimindex_128: |- dimindex (UNIV :i128 -> bool) = 128 .
+finite_128:   |- FINITE (UNIV :i128 set)
+dimindex_128: |- dimindex (:i128) = 128 .
 \end{verbatim}
 \end{hol}
 
@@ -2313,7 +2313,7 @@ example, \holtxt{word\_bits} is defined as follows:
 \begin{hol}
 \begin{verbatim}
 |- !h l x.
-     (h -- l) x = FCP i. i + l <= MIN h (dimindex UNIV - 1) /\ x %% (i + l) .
+     (h -- l) x = FCP i. i + l <= MIN h (dimindex (:'a) - 1) /\ x %% (i + l) .
 \end{verbatim}
 \end{hol}
 
@@ -2372,7 +2372,7 @@ they are defined in a similar manner to the other bit field operations.  For
 example, rotating right is defined by:
 \begin{hol}
 \begin{verbatim}
-|- !w n. w #>> n = FCP i. w %% (i + n) MOD dimindex UNIV .
+|- !w n. w #>> n = FCP i. w %% (i + n) MOD dimindex (:'a) .
 \end{verbatim}
 \end{hol}
 Rotating left by $x$ places is defined as rotating right by $n - x \bmod n$
