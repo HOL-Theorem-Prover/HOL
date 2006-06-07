@@ -26,6 +26,8 @@ sig
    val nchotomy_of        : hol_type -> thm
    val distinct_of        : hol_type -> thm
    val fields_of          : hol_type -> (string * hol_type) list
+   val accessors_of       : hol_type -> thm list
+   val updates_of         : hol_type -> thm list
    val one_one_of         : hol_type -> thm
    val simpls_of          : hol_type -> simpfrag.simpfrag
    val size_of            : hol_type -> term * thm

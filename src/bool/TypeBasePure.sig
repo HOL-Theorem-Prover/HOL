@@ -23,7 +23,9 @@ sig
               lift      : term option,
               one_one   : thm option,
               distinct  : thm option,
-              fields    : (string * hol_type) list} -> tyinfo
+              fields    : (string * hol_type) list,
+              accessors : thm list,
+              updates   : thm list} -> tyinfo
 
    val gen_datatype_info 
            : {ax  : thm, ind : thm, case_defs : thm list} -> tyinfo list
@@ -49,6 +51,8 @@ sig
    val distinct_of     : tyinfo -> thm option
    val one_one_of      : tyinfo -> thm option
    val fields_of       : tyinfo -> (string * hol_type) list
+   val accessors_of    : tyinfo -> thm list
+   val updates_of      : tyinfo -> thm list
    val simpls_of       : tyinfo -> simpfrag
    val size_of         : tyinfo -> (term * thm) option
    val encode_of       : tyinfo -> (term * thm) option
@@ -66,6 +70,8 @@ sig
    val put_encode      : term * shared_thm -> tyinfo -> tyinfo
    val put_lift        : term -> tyinfo -> tyinfo
    val put_fields      : (string * hol_type) list -> tyinfo -> tyinfo
+   val put_accessors   : thm list -> tyinfo -> tyinfo
+   val put_updates     : thm list -> tyinfo -> tyinfo
 
    (* Functional databases of datatype facts and associated operations *)
 
