@@ -944,7 +944,7 @@ in
 end;
 
 fun dest_options t =
-  case TypeBase.dest_record t of
+  case snd (TypeBase.dest_record t) of
     [("Pre", p), ("Up", u), ("BSN", b), ("Wb", w)] =>
        (dest_bool p, dest_bool u, dest_bool b, dest_bool w)
   | _ => raise ERR "dest_options" "not an instance of type :transfer_options";

@@ -446,7 +446,7 @@ fun print_mem_block m n =
 type arm_state = {mem : term, psrs : term, reg : term, undef : term};
 
 fun dest_arm_eval t =
-  case TypeBase.dest_record t of
+  case snd (TypeBase.dest_record t) of
      [("registers", reg), ("psrs", psrs),
       ("memory", mem), ("undefined", undef)] =>
          {mem = mem, reg = reg, psrs = psrs, undef = undef}
