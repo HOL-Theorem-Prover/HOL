@@ -27,14 +27,15 @@ val op >> = op THEN1;
 val Abbr = BasicProvers.Abbr;
 val export_rewrites = BasicProvers.export_rewrites
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
+val ai = computeLib.auto_import_definitions;
 
 val WL = ``dimindex (:'a)``;
 val HB = ``^WL - 1``;
 
-fun Def s q = Definition.new_definition(s,Parse.Term q) handle e => Raise e;
+val _ = ai := false;
 
 val TOP_def = Define `TOP (:'a) = 2 ** ^WL`
-val TOP = TOP_def
+val TOP = save_thm("TOP", TOP_def)
 val TOP_ML = rhs (#2 (strip_forall (concl TOP)))
 
 val ZERO_LT_TOP = store_thm(
@@ -43,8 +44,8 @@ val ZERO_LT_TOP = store_thm(
   SRW_TAC [][TOP])
 val _ = export_rewrites ["ZERO_LT_TOP"]
 
-val MSB_def = Define`MSB (:'a) = 2 ** ^HB`
-val MSB = MSB_def
+val MSB_def = Define `MSB (:'a) = 2 ** ^HB`
+val MSB = save_thm("MSB", MSB_def)
 val MSB_ML = rhs (#2 (strip_forall (concl MSB)))
 
 val TOP_IS_TWICE_MSB = store_thm(
@@ -62,11 +63,13 @@ val _ = type_abbrev("word", ``:bool ** 'a``);
 (*  Domain transforming maps : definitions                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val w2n_def = Def "w2n_def"
-  `w2n (w:'a word) = SUM ^WL (\i. SBIT (w %% i) i)`;
+val w2n_def = Define`
+  w2n (w:'a word) = SUM ^WL (\i. SBIT (w %% i) i)`;
 
-val n2w_def = Def "n2w_def"
-  `(n2w:num->('a word)) n = FCP i. BIT i n`;
+val n2w_def = Define`
+  (n2w:num->('a word)) n = FCP i. BIT i n`;
+
+val _ = ai := true;
 
 val w2w_def = Define`
   (w2w:'a word -> 'b word) w = n2w (w2n w)`;
@@ -90,19 +93,21 @@ val word_L_def = Define`
 val word_H_def = Define`
   word_H = n2w:num->('a word) (MSB(:'a) - 1)`;
 
-val word_1comp_def = Def "word_1comp_def"
-  `word_1comp (w:'a word) = (FCP i. ~(w %% i)):'a word`;
+val _ = ai := false;
 
-val word_and_def = Def "word_and_def"
-  `word_and (v:'a word) (w:'a word) =
+val word_1comp_def = Define`
+  word_1comp (w:'a word) = (FCP i. ~(w %% i)):'a word`;
+
+val word_and_def = Define`
+  word_and (v:'a word) (w:'a word) =
     (FCP i. (v %% i) /\ (w %% i)):'a word`;
 
-val word_or_def = Def "word_or_def"
-  `word_or (v:'a word) (w:'a word) =
+val word_or_def = Define`
+  word_or (v:'a word) (w:'a word) =
     (FCP i. (v %% i) \/ (w %% i)):'a word`;
 
-val word_xor_def = Def "word_xor_def"
-  `word_xor (v:'a word) (w:'a word) =
+val word_xor_def = Define`
+  word_xor (v:'a word) (w:'a word) =
     (FCP i. ~((v %% i) = (w %% i))):'a word`;
 
 val _ = overload_on ("~", Term`$word_1comp`);
@@ -120,34 +125,38 @@ val _ = add_infix("??",300,HOLgrammars.RIGHT);
 (*  Bit field operations : definitions                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val word_lsb_def = Def "word_lsb_def"
-  `word_lsb (w:'a word) = w %% 0`;
+val word_lsb_def = Define`
+  word_lsb (w:'a word) = w %% 0`;
 
-val word_msb_def = Def "word_msb_def"
-  `word_msb (w:'a word) = w %% ^HB`;
+val word_msb_def = Define`
+  word_msb (w:'a word) = w %% ^HB`;
 
-val word_slice_def = Def "word_slice_def"
-  `word_slice h l = \w:'a word.
+val word_slice_def = Define`
+  word_slice h l = \w:'a word.
     (FCP i. l <= i /\ i <= MIN h ^HB /\ w %% i):'a word`;
 
-val word_bits_def = Def "word_bits_def"
-  `word_bits h l = \w:'a word.
+val word_bits_def = Define`
+  word_bits h l = \w:'a word.
     (FCP i. i + l <= MIN h ^HB /\ w %% (i + l)):'a word`;
 
-val word_extract_def = Def "word_extract_def"
-  `word_extract h l = w2w o word_bits h l`;
+val word_extract_def = Define`
+  word_extract h l = w2w o word_bits h l`;
 
-val word_bit_def = Def "word_bit_def"
-  `word_bit b (w:'a word) = b <= ^HB /\ w %% b`;
+val word_bit_def = Define`
+  word_bit b (w:'a word) = b <= ^HB /\ w %% b`;
 
-val word_reverse_def = Def "word_reverse_def"
-  `word_reverse (w:'a word) = (FCP i. w %% (^HB - i)):'a word`;
+val word_reverse_def = Define`
+  word_reverse (w:'a word) = (FCP i. w %% (^HB - i)):'a word`;
 
-val word_modify_def = Def "word_modify_def"
-  `word_modify f (w:'a word) = (FCP i. f i (w %% i)):'a word`;
+val word_modify_def = Define`
+  word_modify f (w:'a word) = (FCP i. f i (w %% i)):'a word`;
+
+val _ = ai := true;
 
 val word_len_def = Define`
   word_len (w:'a word) = dimindex (:'a)`;
+
+val _ = ai := false;
 
 val _ = overload_on ("<>",Term`$word_slice`);
 val _ = overload_on ("--",Term`$word_bits`);
@@ -161,23 +170,25 @@ val _ = add_infix("><",350,HOLgrammars.RIGHT);
 (*  Word arithmetic: definitions                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val word_2comp_def = Def "word_2comp_def"
-  `word_2comp (w:'a word) =
+val word_2comp_def = Define`
+  word_2comp (w:'a word) =
     n2w:num->('a word) (TOP(:'a) - w2n w)`;
 
-val word_add_def = Def "word_add_def"
-  `word_add (v:'a word) (w:'a word) =
+val word_add_def = Define`
+  word_add (v:'a word) (w:'a word) =
     n2w:num->('a word) (w2n v + w2n w)`;
+
+val word_mul_def = Define`
+  word_mul (v:'a word) (w:'a word) =
+    n2w:num->('a word) (w2n v * w2n w)`;
+
+val word_log2_def = Define`
+  word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`;
+
+val _ = ai := true;
 
 val word_sub_def = Define`
   word_sub (v:'a word) (w:'a word) = word_add v (word_2comp w)`;
-
-val word_mul_def = Def "word_mul_def"
-  `word_mul (v:'a word) (w:'a word) =
-    n2w:num->('a word) (w2n v * w2n w)`;
-
-val word_log2_def = Def "word_log2_def"
-  `word_log2 (w:'a word) = (n2w (LOG2 (w2n w)):'a word)`;
 
 val word_div_def = Define`
   word_div (v: 'a word) (w: 'a word) =
@@ -196,6 +207,8 @@ val word_sdiv_def = Define`
       else
         word_div a b`;
 
+val _ = ai := false;
+
 val _ = overload_on ("+", Term`$word_add`);
 val _ = overload_on ("-", Term`$word_sub`);
 val _ = overload_on ("-", Term`$word_2comp`);
@@ -210,31 +223,31 @@ val _ = set_fixity "/"  (Infixl 600);
 (*  Shifts : definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val word_lsl_def = Def "word_lsl_def"
-  `word_lsl (w:'a word) n =
+val word_lsl_def = Define`
+  word_lsl (w:'a word) n =
     (FCP i. i < ^WL /\ n <= i /\ w %% (i - n)):'a word`;
 
-val word_lsr_def = Def "word_lsr_def"
-  `word_lsr (w:'a word) n =
+val word_lsr_def = Define`
+  word_lsr (w:'a word) n =
     (FCP i. i + n < ^WL /\ w %% (i + n)):'a word`;
 
-val word_asr_def = Def "word_asr_def"
-  `word_asr (w:'a word) n =
+val word_asr_def = Define`
+  word_asr (w:'a word) n =
     (FCP i. if ^WL <= i + n then
               word_msb w
             else
               w %% (i + n)):'a word`;
 
-val word_ror_def = Def "word_ror_def"
-  `word_ror (w:'a word) n =
+val word_ror_def = Define`
+  word_ror (w:'a word) n =
     (FCP i. w %% ((i + n) MOD ^WL)):'a word`;
 
-val word_rol_def = Def "word_rol_def"
-  `word_rol (w:'a word) n =
+val word_rol_def = Define`
+  word_rol (w:'a word) n =
     word_ror w (^WL - n MOD ^WL)`;
 
-val word_rrx_def = Def "word_rrx_def"
-  `word_rrx(c, w:'a word) =
+val word_rrx_def = Define`
+  word_rrx(c, w:'a word) =
     (word_lsb w,
      (FCP i. if i = ^HB then c else (word_lsr w 1) %% i):'a word)`;
 
@@ -253,6 +266,8 @@ val _ = add_infix("#<<",680,HOLgrammars.LEFT);
 (* ------------------------------------------------------------------------- *)
 (*  Concatenation : definition                                               *)
 (* ------------------------------------------------------------------------- *)
+
+val _ = ai := true;
 
 val word_join_def = Define`
   (word_join (v:'a word) (w:'b word)):bool ** ('a + 'b) =
@@ -278,29 +293,31 @@ val nzcv_def = Define `
       (word_msb r,r = 0w,BIT ^WL q \/ (b = 0w),
      ~(word_msb a = word_msb b) /\ ~(word_msb r = word_msb a))`;
 
-val word_lt_def = Def "word_lt_def"
-  `word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)`;
+val _ = ai := false;
 
-val word_gt_def = Def "word_gt_def"
-  `word_gt a b = let (n,z,c,v) = nzcv a b in ~z /\ (n = v)`;
+val word_lt_def = Define`
+  word_lt a b = let (n,z,c,v) = nzcv a b in ~(n = v)`;
 
-val word_le_def = Def "word_le_def"
-  `word_le a b = let (n,z,c,v) = nzcv a b in z \/ ~(n = v)`;
+val word_gt_def = Define`
+  word_gt a b = let (n,z,c,v) = nzcv a b in ~z /\ (n = v)`;
 
-val word_ge_def = Def "word_ge_def"
-  `word_ge a b = let (n,z,c,v) = nzcv a b in n = v`;
+val word_le_def = Define`
+  word_le a b = let (n,z,c,v) = nzcv a b in z \/ ~(n = v)`;
 
-val word_ls_def = Def "word_ls_def"
-  `word_ls a b = let (n,z,c,v) = nzcv a b in ~c \/ z`;
+val word_ge_def = Define`
+  word_ge a b = let (n,z,c,v) = nzcv a b in n = v`;
 
-val word_hi_def = Def "word_hi_def"
-  `word_hi a b = let (n,z,c,v) = nzcv a b in c /\ ~z`;
+val word_ls_def = Define`
+  word_ls a b = let (n,z,c,v) = nzcv a b in ~c \/ z`;
 
-val word_lo_def = Def "word_lo_def"
-  `word_lo a b = let (n,z,c,v) = nzcv a b in ~c`;
+val word_hi_def = Define`
+  word_hi a b = let (n,z,c,v) = nzcv a b in c /\ ~z`;
 
-val word_hs_def = Def "word_hs_def"
-  `word_hs a b = let (n,z,c,v) = nzcv a b in c`;
+val word_lo_def = Define`
+  word_lo a b = let (n,z,c,v) = nzcv a b in ~c`;
+
+val word_hs_def = Define`
+  word_hs a b = let (n,z,c,v) = nzcv a b in c`;
 
 val _ = overload_on ("<",  Term`word_lt`);
 val _ = overload_on (">",  Term`word_gt`);
@@ -2137,9 +2154,16 @@ val WORD_PRED_THM = store_thm("WORD_PRED_THM",
 val sizes = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 32, 64];
 
 fun mk_word_size n =
-  let val _ = fcpLib.mk_index_type n
+  let val (_, _, dimindex_thm) = fcpLib.mk_index_type n
       val sn = Int.toString n
-      val TYPE = mk_type("cart", [bool, mk_type("i"^sn, [])])
+      val ityp = mk_type("i"^sn, [])
+      val TYPE = mk_type("cart", [bool, ityp])
+      val msb = save_thm("msb_" ^ sn,
+                  (SIMP_RULE std_ss [dimindex_thm] o
+                   Thm.INST_TYPE [``:'a`` |-> ityp]) MSB)
+      val top = save_thm("top_" ^ sn,
+                  (SIMP_RULE std_ss [msb] o
+                   Thm.INST_TYPE [``:'a`` |-> ityp]) TOP_IS_TWICE_MSB)
   in
     type_abbrev("word"^sn, TYPE)
   end;

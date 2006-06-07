@@ -127,15 +127,11 @@ val FINITE_IMAGE_IMAGE = prove(
 (* Dimension of such a type, and indexing over it.                           *)
 (* ------------------------------------------------------------------------- *)
 
-(*
+val _ = computeLib.auto_import_definitions := false;
+
 val dimindex_def = Define`
-  dimindex(:'a) = if FINITE(UNIV:'a->bool) then CARD(UNIV:'a->bool) else 1`
-val dimindex = save_thm("dimindex", dimindex_def)
-*)
-val dimindex_def = Definition.new_definition("dimindex_def",
-  Parse.Term `dimindex(s:'a itself) =
-        if FINITE(UNIV:'a->bool) then CARD(UNIV:'a->bool) else 1`);
-val dimindex = save_thm("dimindex", Q.SPEC `the_value` dimindex_def);
+  dimindex(:'a) = if FINITE(UNIV:'a->bool) then CARD(UNIV:'a->bool) else 1`;
+val dimindex = save_thm("dimindex", dimindex_def);
 
 val HAS_SIZE_FINITE_IMAGE = prove(
   `(UNIV:'a finite_image->bool) HAS_SIZE dimindex(:'a)`,

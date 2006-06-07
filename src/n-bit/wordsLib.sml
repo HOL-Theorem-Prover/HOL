@@ -11,11 +11,12 @@ open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
 (* ------------------------------------------------------------------------- *)
 
 fun is_fcp_thm s =
-  String.isPrefix "finite_" s orelse String.isPrefix "dimindex_" s;
+  String.isPrefix "finite_" s orelse String.isPrefix "dimindex_" s orelse
+  String.isPrefix "top_" s orelse String.isPrefix "msb_"s;
 
 val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
-val SIZES_ss = rewrites (TOP_def::machine_sizes);
+val SIZES_ss = rewrites machine_sizes;
 
 fun NUMERAL_ONLY_RULE l n x =
   let val y = SPEC_ALL x
@@ -38,7 +39,7 @@ val thms = machine_sizes @
    NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` BITS_def,
    NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
    NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def,
-   numeral_log2,numeral_ilog2, TOP_def,
+   numeral_log2,numeral_ilog2,
    n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,
    word_join_def, word_concat_def,
@@ -78,9 +79,17 @@ val _ = add_thms thms computeLib.the_compset;
 fun mk_index_size n = (fcpLib.mk_index_type n;());
 
 fun mk_word_size n =
-  let val _ = mk_index_size n
+  let val (_, _, dimindex_thm) = fcpLib.mk_index_type n
       val sn = Int.toString n
-      val TYPE = mk_type("cart", [bool, mk_type("i"^sn, [])])
+      val ityp = mk_type("i"^sn, [])
+      val TYPE = mk_type("cart", [bool, ityp])
+      val msb = save_thm("msb_" ^ sn,
+                (SIMP_RULE std_ss [dimindex_thm] o
+                 Thm.INST_TYPE [``:'a`` |-> ityp]) MSB)
+      val top = save_thm("top_" ^ sn,
+                (SIMP_RULE std_ss [msb] o
+                 Thm.INST_TYPE [``:'a`` |-> ityp]) TOP_IS_TWICE_MSB)
+      val _ = add_thms [msb,top] computeLib.the_compset
   in
     type_abbrev("word"^sn, TYPE)
   end;
