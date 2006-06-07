@@ -227,5 +227,6 @@ struct
 
 fun lift_num ty arbnum = mk_numeral arbnum
 
+val _ = EmitML.is_num_literal_hook := is_numeral;
 
 end
