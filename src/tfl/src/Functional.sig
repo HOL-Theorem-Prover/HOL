@@ -4,7 +4,9 @@ sig
   type term = Term.term
   type thry = TypeBasePure.typeBase
 
-   datatype pattern
+  val allow_new_clauses : bool ref
+
+  datatype pattern
         = GIVEN   of term * int
         | OMITTED of term * int
 
@@ -13,4 +15,4 @@ sig
 
    val mk_functional : thry -> term -> {functional:term, pats: pattern list}
 
-end;
+end

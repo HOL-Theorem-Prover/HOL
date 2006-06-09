@@ -321,6 +321,8 @@ val _ = adjoin_to_theory
     S "      size=NONE,";                                    NL();
     S "      encode=NONE,";                                  NL();
     S "      fields=[],";                                    NL();
+    S "      accessors=[],";                                 NL();
+    S "      updates=[],";                                   NL();
     S "      lift=SOME(mk_var(\"optionSyntax.lift_option\",Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),";
     NL();
     S "      one_one=SOME SOME_11,";                         NL();
@@ -349,7 +351,7 @@ val _ = TypeBase.write
       nchotomy=option_nchotomy,
       size=NONE,
       encode=NONE,
-      fields=[],
+      fields=[], accessors=[], updates=[],
       lift=SOME(mk_var("optionSyntax.lift_option",
                 Parse.Type`:'type -> ('a -> 'term) -> 'a option -> 'term`)),
       one_one=SOME SOME_11,

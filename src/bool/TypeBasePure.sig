@@ -27,8 +27,7 @@ sig
               accessors : thm list,
               updates   : thm list} -> tyinfo
 
-   val gen_datatype_info 
-           : {ax  : thm, ind : thm, case_defs : thm list} -> tyinfo list
+   val gen_datatype_info : {ax:thm,ind:thm,case_defs:thm list} -> tyinfo list
 
    val mk_nondatatype_info 
            : hol_type * 

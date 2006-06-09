@@ -76,7 +76,8 @@ val define_type = ind_types.define_type;
 
 (*---------------------------------------------------------------------------*)
 (* Generate a string that, when evaluated as ML, will create the given type. *)
-(* Copied from TheoryPP.sml. Parameterized by strings representing *)
+(* Copied from TheoryPP.sml. Parameterized by strings representing code that *)
+(* builds type variables or compound types.                                  *)
 (*---------------------------------------------------------------------------*)
 
 fun extern_type mk_vartype_str mk_thy_type_str ppstrm ty =
@@ -983,8 +984,7 @@ in
     in
       (db, tyinfos)
     end
-  else if is_enum_type_spec astl then
-    (db, build_enum_tyinfos astl)
+  else if is_enum_type_spec astl then (db, build_enum_tyinfos astl)
   else (db,
         map add_record_facts
             (zip (build_tyinfos db (new_asts_datatype astl))
@@ -1064,6 +1064,8 @@ fun primHol_datatype db q =
         9. one_one          (* one-one-ness of the constructors *)
         10. distinct        (* distinctness of the constructors *)
         11. fields          (* fields, if it is a record type *)
+        12. accessors       (* accessors, if it is a record type *)
+        13. updates         (* update fns, if it is a record type *)
 
    We also adjoin some ML to the current theory so that if the theory
    gets exported and loaded in a later session, these "datatype"
@@ -1071,11 +1073,13 @@ fun primHol_datatype db q =
 
  ---------------------------------------------------------------------------*)
 
-val (type_to_string, term_to_string) = let
+val (type_to_string, term_to_string) = 
+ let
   val (pty, ptm) = print_from_grammars boolTheory.bool_grammars
-in
+ in
   ((fn ty => ":" ^ PP.pp_to_string 70 pty ty), PP.pp_to_string 70 ptm)
-end
+ end;
+
 
 fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
   | adjoin (string_etc0 :: strings_etc) =
@@ -1103,8 +1107,10 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
                end
           fun do_extras extra_string =
               (S ("      val tyinfo0 = " ^ extra_string ^ "tyinfo0"); NL())
-          fun do_string_etc ({ax,case_def,case_cong,induction,nchotomy,
-            one_one,distinct,encode,lift,size,fields}, extra_simpls_string) =
+          fun do_string_etc 
+             ({ax,case_def,case_cong,induction,nchotomy,
+               one_one,distinct,encode,lift,size,fields,accessors,updates}, 
+              extra_simpls_string) =
             (S "    let";                                               NL();
              S "      open TypeBasePure";                               NL();
              S "      val tyinfo0 = mk_datatype_info";                  NL();
@@ -1118,7 +1124,9 @@ fun adjoin [] = raise ERR "Hol_datatype" "no tyinfos"
              S("         lift=NONE,");                                  NL();
              S("         one_one="^one_one^",");                        NL();
              S("         distinct="^distinct^",");                      NL();
-             S("         fields="^fields^"}");                      NL();
+             S("         fields="^fields^",");                          NL();
+             S("         accessors="^accessors^",");                    NL();
+             S("         updates="^updates^"}");                        NL();
              do_extras extra_simpls_string;
              S "      val () = computeLib.write_datatype_info tyinfo0"; NL();
              S "    in";                                                NL();
@@ -1136,7 +1144,8 @@ fun string_pair(s1,s2) = "("^Lib.quote s1^","^Lib.quote s2^")";
 
 fun write_tyinfo tyinfo =
  let open TypeBasePure
-     fun name s = snd(ty_name_of tyinfo) ^ s
+     val tname = snd(ty_name_of tyinfo)
+     fun name s = tname ^ s
      val one_one_name =
        case one_one_of tyinfo
         of NONE => "NONE"
@@ -1190,6 +1199,18 @@ fun write_tyinfo tyinfo =
             => SOME (tm, "COPY ("^string_pair sp^",encode_"^snd(sp)^"_def)")
        end
      val lift_info = NONE
+     val accessors_list = 
+       let val acc_name = name"_accessors"
+       in case accessors_of tyinfo
+           of [] => "[]"
+            | other => "CONJUNCTS "^acc_name
+       end
+     val updates_list = 
+       let val upd_name = name"_fn_updates"
+       in case updates_of tyinfo
+           of [] => "[]"
+            | other => "CONJUNCTS "^upd_name
+       end
  in
    {ax        = axiom_name,
     induction = induction_name,
@@ -1201,6 +1222,8 @@ fun write_tyinfo tyinfo =
     lift      = lift_info,
     one_one   = one_one_name,
     fields    = Portable.pp_to_string 60 pp_fields (fields_of tyinfo),
+    accessors = accessor_list,
+    updates   = updates_list,
     distinct  = distinct_name}
  end;
 
@@ -1211,7 +1234,7 @@ fun persistent_tyinfo tyinfos_etc =
       val tyinfos = TypeBase.write tyinfos
       val () = app computeLib.write_datatype_info tyinfos
   in
-    write_tyinfos (zip tyinfos etc)
+    write_tyinfos tyinfos_etc
   end;
 
 (*---------------------------------------------------------------------------*)

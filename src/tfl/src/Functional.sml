@@ -5,12 +5,9 @@ open HolKernel boolSyntax wfrecUtils;
 
 type thry = TypeBasePure.typeBase
 
-infixr 3 -->;
-infix 3 |->;
-infix 4 ##;
-
 val ERR = mk_HOL_ERR "Functional";
 
+val allow_new_clauses = ref true;
 
 (*---------------------------------------------------------------------------
       Miscellaneous support
@@ -227,17 +224,16 @@ fun no_repeat_vars thy pat =
  in check (FV_multiset pat)
  end;
 
-local fun err s = raise ERR "mk_functional" s
-      fun msg s = HOL_MESG ("mk_functional: "^s)
-in
 fun mk_functional thy eqs =
- let val clauses = strip_conj eqs
+ let fun err s = raise ERR "mk_functional" s
+     fun msg s = HOL_MESG ("mk_functional: "^s)
+     val clauses = strip_conj eqs
      val (L,R) = unzip (map (dest_eq o snd o strip_forall) clauses)
      val (funcs,pats) = unzip(map dest_comb L)
      val fs = Lib.op_mk_set aconv funcs
      val f0 = if length fs = 1 then hd fs else err "function name not unique"
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
-     val _  = map (no_repeat_vars thy) pats
+     val  _ = map (no_repeat_vars thy) pats
      val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
      val fvs = free_varsl (L@R)
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
@@ -251,6 +247,15 @@ fun mk_functional thy eqs =
      val patts2 = sort(fn p1=>fn p2=> row_of_pat p1 < row_of_pat p2) patts1
      val finals = map row_of_pat patts2
      val originals = map (row_of_pat o #2) rows
+     val new_rows = length finals - length originals
+     val _ = if new_rows > 0 
+             then (msg ("pattern completion has added "^
+                            Int.toString new_rows^
+                            " clauses to the original specification.");
+                   if !allow_new_clauses then () else 
+                   err ("new clauses not allowed under current setting of "^
+                        Lib.quote("Functional.allow_new_clauses")^" flag"))
+             else ()
      fun int_eq i1 (i2:int) =  (i1=i2)
      val inaccessibles = gather(fn x => not(op_mem int_eq x finals)) originals
      fun accessible p = not(op_mem int_eq (row_of_pat p) inaccessibles)
@@ -265,7 +270,6 @@ fun mk_functional thy eqs =
  in
    {functional = list_mk_abs ([f,a], case_tm),
     pats = patts3}
- end
-end;
+ end;
 
 end

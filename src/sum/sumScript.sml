@@ -424,6 +424,8 @@ val _ = adjoin_to_theory
       S "      size=NONE,";                                 NL();
       S "      encode=NONE,";                               NL();
       S "      fields=[],";                                 NL();
+      S "      accessors=[],";                              NL();
+      S "      updates=[],";                                NL();
       S "      lift=SOME(mk_var(\"sumSyntax.lift_sum\",Parse.Type`:'type -> ('a -> 'term) -> ('b -> 'term) -> ('a,'b)sum -> 'term`)),";
       S "      one_one=SOME INR_INL_11,";                   NL();
       S "      distinct=SOME sum_distinct}];";              NL();
@@ -444,7 +446,7 @@ val _ = TypeBase.write
       nchotomy=sum_CASES,
       size=NONE,
       encode=NONE,
-      fields=[],
+      fields=[], accessors=[], updates=[],
       lift=SOME(mk_var("sumSyntax.lift_sum",
                        Parse.Type`:'type -> ('a -> 'term) ->
                                             ('b -> 'term) -> ('a,'b)sum -> 'term`)),
