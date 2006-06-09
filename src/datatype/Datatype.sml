@@ -832,40 +832,43 @@ in
   (tyname, [(liteq_name, literal_equality), (lit11_name, literal_11)])
 end
 
-(* ----------------------------------------------------------------------
-    do the hard work of type definition
-   ---------------------------------------------------------------------- *)
+(*---------------------------------------------------------------------------*)
+(*   Do the hard work of type definition                                     *)
+(*                                                                           *)
+(* [tyis] is a list of tyinfos coupled with strings representing how to      *)
+(*   recreate them (strings which when eval-ed will be a function of type    *)
+(*   tyinfo -> tyinfo; these functions will be applied to the basic tyinfo   *)
+(*   created for the record type).                                           *)
+(*                                                                           *)
+(* [thminfo_list] is of type                                                 *)
+(*        (string * (string * thm) list * (string * hol_type) list) list,    *)
+(*                                                                           *)
+(*   basically an association list from type names to extra stuff.           *)
+(*   The second component of each triple is theorems which need to be        *)
+(*   added to the corresponding tyinfos, and they are accompanied by         *)
+(*   the names under which they have been stored in the theory               *)
+(*   segment.  The third component is field information for that type.       *)
+(*                                                                           *)
+(* [persistp] is true iff we need to adjoin stuff to make the change         *)
+(*    persistent.                                                            *)
+(*---------------------------------------------------------------------------*)
+
+fun tyi_compare((ty1, _), (ty2, _)) =
+   Lib.pair_compare(String.compare,String.compare)
+        (TypeBasePure.ty_name_of ty1,
+         TypeBasePure.ty_name_of ty2);
+
+fun alist_comp ((s1,_,_), (s2,_,_)) = String.compare(s1,s2);
 
 fun augment_tyinfos persistp tyis thminfo_list = let
-  (* [tyis] is a list of tyinfos coupled with strings representing how to
-     recreate them (strings which when eval-ed will be a function of type
-     tyinfo -> tyinfo; these functions will be applied to the basic tyinfo
-     created for the record type).
-
-     [thminfo_list] is of type
-        (string * (string * thm) list * (string * hol_type) list) list,
-
-     basically an association list from type names to extra stuff.
-     The second component of each triple is theorems which need to be
-     added to the corresponding tyinfos, and they are accompanied by
-     the names under which they have been stored in the theory
-     segment.  The third component is field information for that type.
-
-     [persistp] is true iff we need to adjoin stuff to make the change
-     persistent. *)
-  fun tyi_compare((ty1, _), (ty2, _)) =
-      Lib.pair_compare(String.compare,String.compare)
-            (TypeBasePure.ty_name_of ty1,
-             TypeBasePure.ty_name_of ty2)
   val tyis = Listsort.sort tyi_compare tyis
-  fun alist_comp ((s1,_,_), (s2,_,_)) = String.compare(s1, s2)
   val thminfo_list = Listsort.sort alist_comp thminfo_list
   type thmdata = (string * thm) list
-  type flddata = (string * hol_type) list
+  type flddata = (string * hol_type) list * thm list * thm list
   fun merge acc tyis (thmi_list : (string * thmdata * flddata) list) =
       case (tyis, thmi_list) of
         ([], _ :: _ ) => raise Fail "Datatype.sml: invariant failure 101"
-      | ([], []) => acc
+      | ([],[]) => acc
       | (_, []) => tyis @ acc
       | ((tyi_s as (tyi, ty_s))::tyi_rest, (th_s, thms, flds)::thmi_rest) => let
         in
@@ -940,23 +943,25 @@ local
       fun recurse acc alist1 alist2 =
           case (alist1, alist2) of
               ([], []) => List.rev acc
-            | (_, []) => List.rev acc @ map (fn (s,d) => (s, d, [])) alist1
-            | ([], _) => List.rev acc @ map (fn (s,d) => (s, [], d)) alist2
+            | (_, []) => List.rev acc @ map (fn (s,d) => (s, d, ([],[],[]))) alist1
+            | ([], _) => List.rev acc @ map (fn (s,d) => (s, [],(d,[],[]))) alist2
             | ((a1k, a1d)::a1s, (a2k, a2d)::a2s) =>
               case String.compare (a1k, a2k) of
-                  LESS => recurse ((a1k,a1d,[]) :: acc) a1s alist2
-                | EQUAL => recurse ((a1k,a1d,a2d) :: acc) a1s a2s
-                | GREATER => recurse ((a2k,[],a2d) :: acc) alist1 a2s
+                  LESS => recurse ((a1k,a1d,([],[],[])) :: acc) a1s alist2
+                | EQUAL => recurse ((a1k,a1d,(a2d,[],[])) :: acc) a1s a2s
+                | GREATER => recurse ((a2k,[],(a2d,[],[])) :: acc) alist1 a2s
       fun alistcomp ((s1, d1), (s2, d2)) = String.compare(s1, s2)
   in
       recurse [] (Listsort.sort alistcomp alist1) (Listsort.sort alistcomp alist2)
   end
 
 in
+(*---------------------------------------------------------------------------*)
+(* precondition: astl has been sorted, so that, for example,  those          *)
+(* ast elements not referring to any others will be present only as          *)
+(*     singleton lists                                                       *)
+(*---------------------------------------------------------------------------*)
 fun prim_define_type_from_astl prevtypes f db astl0 = let
-  (* precondition: astl has been sorted, so that, for example,  those
-     ast elements not referring to any others will be present only as
-     singleton lists *)
   val astl = insert_tyarguments prevtypes astl0
 in
   if includes_big_record astl then let
@@ -1014,9 +1019,13 @@ fun dtForm_vartypes (dtf, acc) =
 
 
 val empty_stringset = HOLset.empty String.compare
-(* prevtypes below is an association list mapping the names of types
-   previously defined in this "session" to the list of type variables that
-   occurred on the RHS of the type definitions *)
+
+(*---------------------------------------------------------------------------*)
+(* prevtypes below is an association list mapping the names of types         *)
+(* previously defined in this "session" to the list of type variables that   *)
+(* occurred on the RHS of the type definitions.                              *)
+(*---------------------------------------------------------------------------*)
+
 fun define_type_from_astl prevtypes db astl = let
   val sorted_astll = sort_astl astl
   val f = define_type_from_astl
@@ -1032,8 +1041,7 @@ fun define_type_from_astl prevtypes db astl = let
      List.foldl addtyi db new_tyinfos,
      tyinfo_acc @ new_tyinfos)
   end
-  val (_, db, tyinfos) =
-      List.foldl handle_astl (prevtypes, db, []) sorted_astll
+  val (_,db,tyinfos) = List.foldl handle_astl (prevtypes, db, []) sorted_astll
 in
   (db, tyinfos)
 end
@@ -1203,13 +1211,13 @@ fun write_tyinfo tyinfo =
        let val acc_name = name"_accessors"
        in case accessors_of tyinfo
            of [] => "[]"
-            | other => "CONJUNCTS "^acc_name
+            | other => "Drule.CONJUNCTS "^acc_name
        end
      val updates_list = 
        let val upd_name = name"_fn_updates"
        in case updates_of tyinfo
            of [] => "[]"
-            | other => "CONJUNCTS "^upd_name
+            | other => "Drule.CONJUNCTS "^upd_name
        end
  in
    {ax        = axiom_name,
@@ -1222,7 +1230,7 @@ fun write_tyinfo tyinfo =
     lift      = lift_info,
     one_one   = one_one_name,
     fields    = Portable.pp_to_string 60 pp_fields (fields_of tyinfo),
-    accessors = accessor_list,
+    accessors = accessors_list,
     updates   = updates_list,
     distinct  = distinct_name}
  end;

@@ -2243,8 +2243,10 @@ val PHP = Q.store_thm
 (* Infiniteness								*)
 (* =====================================================================*)
 
-val INFINITE_DEF = new_definition ("INFINITE_DEF",
-(--`!s:'a set. INFINITE s = ~FINITE s`--));
+val INFINITE_DEF = 
+ new_definition 
+   ("INFINITE_DEF", 
+    ``!s:'a set. INFINITE s = ~FINITE s``);
 
 val NOT_IN_FINITE =
     store_thm

@@ -68,10 +68,10 @@ fun app_letter ty =
 local
   fun nrecfilter fnc [] n       = []
     | nrecfilter fnc (hd::tl) n =
-      if (not (fnc (n,hd))) then
+      if not (fnc (n,hd)) then
         nrecfilter fnc tl (n+1)
       else
-        hd::(nrecfilter fnc tl (n+1))
+        hd::nrecfilter fnc tl (n+1)
 in
 fun nfilter fnc l = nrecfilter fnc l 1
 end
@@ -89,13 +89,13 @@ fun crosslessdiag l1 l2 =
       nfilter (fn (n,_) => not (n mod diaglength = 1)) cross
     end
 
-fun update_tyinfo fields new_simpls tyinfo = 
+fun update_tyinfo opt new_simpls tyinfo = 
  let open TypeBasePure
      val existing_simpls = simpls_of tyinfo
      fun add_rwts {convs,rewrs} newrwts = {convs=convs, rewrs=rewrs @ newrwts}
      val base = put_simpls (add_rwts existing_simpls new_simpls) tyinfo
  in
-  case fields of 
+  case opt of 
     NONE => base
   | SOME (flds,accs,upds) => 
       put_accessors accs
@@ -516,11 +516,10 @@ fun prove_recordtype_thms (tyinfo, fields) = let
 
   val thm_str_list =
      map (concat typename)
-     (["_accessors", "_updates_eq_literal", "_accfupds", "_fupdfupds",
-       "_literal_11", "_fupdfupds_comp"] @
-      (if not (null fupdcanon_thms) then
-         ["_fupdcanon", "_fupdcanon_comp"]
-       else []))
+     (["_accessors", "_updates_eq_literal", "_accfupds", 
+       "_fupdfupds", "_literal_11", "_fupdfupds_comp"] 
+      @
+      (if not(null fupdcanon_thms) then ["_fupdcanon","_fupdcanon_comp"] else []))
   in
     (new_tyinfo,
      "RecordType.update_tyinfo NONE ["^String.concat (Lib.commafy thm_str_list)^

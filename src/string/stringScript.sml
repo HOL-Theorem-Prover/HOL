@@ -261,6 +261,8 @@ val _ = TypeBase.write
         encode=NONE, lift=NONE,
         one_one=SOME STRING_11,
         fields = [],
+        accessors = [],
+        updates = [],
        distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];
 
 (*---------------------------------------------------------------------------*)
@@ -511,6 +513,8 @@ val _ = adjoin_to_theory
    S "      lift=SOME(mk_var(\"stringSyntax.lift_string\",Parse.Type`:'type -> string -> 'term`)),";
    S "      one_one=SOME STRING_11,";
    S "      fields = [],";
+   S "      accessors = [],";
+   S "      updates = [],";
    S "      distinct=SOME (CONJUNCT1 STRING_DISTINCT)}];";
    S " ";
    S "val _ = computeLib.add_funs";
