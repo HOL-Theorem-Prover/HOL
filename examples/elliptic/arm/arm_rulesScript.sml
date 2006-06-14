@@ -37,11 +37,12 @@ fun UNABBREVL_RULE l t =
 
 (* ------------------------------------------------------------------------- *)
 
-val MOD_0 = (GSYM o REWRITE_RULE [ZERO_LT_TOP] o SPEC `TOP (:i32)`) ZERO_MOD;
+val MOD_0 =
+  (GSYM o REWRITE_RULE [ZERO_LT_dimword] o SPEC `dimword (:i32)`) ZERO_MOD;
 
 val MOD_2EXP_32 =
-  simpLib.SIMP_PROVE (std_ss++wordsLib.SIZES_ss) [MOD_2EXP_def,TOP_def]
-  ``MOD_2EXP 32 n = n MOD TOP (:i32)``;
+  simpLib.SIMP_PROVE (std_ss++wordsLib.SIZES_ss) [MOD_2EXP_def,dimword_def]
+  ``MOD_2EXP 32 n = n MOD dimword (:i32)``;
 
 val MSB_lem = (GSYM o GEN_ALL o SIMP_CONV std_ss
   [BIT_def,BITS_def,MOD_2EXP_def,SUC_SUB,EXP_1,GSYM ODD_MOD2_LEM]) ``BIT x n``;
@@ -72,9 +73,9 @@ val ALU_ADD = SIMP_RULE std_ss [ALU_ADD_NO_CARRY,ALU_ADD_CARRY] lem;
 
 (* ......................................................................... *)
 
-val n2w_2EXP_32 = (EQT_ELIM o EVAL) ``n2w (TOP (:i32)) = 0w:word32``;
+val n2w_2EXP_32 = (EQT_ELIM o EVAL) ``n2w (dimword (:i32)) = 0w:word32``;
 
-val n2w_sub1 = EVAL ``n2w (TOP (:i32) - 1 MOD TOP (:i32))``;
+val n2w_sub1 = EVAL ``n2w (dimword (:i32) - 1 MOD dimword (:i32))``;
 
 val ALU_SUB = prove(
   `!c a b. SUB a b c =
@@ -333,7 +334,7 @@ val ARM_MSR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
 
 val LSL_NOT_ZERO = prove(
   `!n. ~(n = 0w:word5) ==> ~(w2w n = 0w:word8)`,
-  Cases_word \\ RW_TAC bool_ss [TOP_def,ZERO_MOD,ZERO_LT_TWOEXP,
+  Cases_word \\ RW_TAC bool_ss [dimword_def,ZERO_MOD,ZERO_LT_TWOEXP,
          w2w_def,n2w_11,w2n_n2w,dimindex_5,dimindex_8]
     \\ ASSUME_TAC (DECIDE ``5 < 8``) \\ IMP_RES_TAC TWOEXP_MONO
     \\ METIS_TAC [MOD_2EXP_LT,LESS_TRANS,LESS_MOD]);

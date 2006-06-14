@@ -842,8 +842,6 @@ val ARM_SPEC_def = Define`
 
 (* The State Space --------------------------------------------------------- *)
 
-val _ = mk_word_size 30;
-
 val _ = type_abbrev("mem", ``:word30->word32``);
 
 val _ = Hol_datatype

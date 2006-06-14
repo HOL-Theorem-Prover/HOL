@@ -1409,7 +1409,7 @@ val BITS_ZERO5 = prove(
 
 val BITS_w2n_ZERO = prove(
   `!w: bool ** 'a. dimindex (:'a) <= l ==> (BITS h l (w2n w) = 0)`,
-  METIS_TAC [TOP_def,TWOEXP_MONO2,LESS_LESS_EQ_TRANS,BITS_ZERO5,w2n_lt]);
+  METIS_TAC [dimword_def,TWOEXP_MONO2,LESS_LESS_EQ_TRANS,BITS_ZERO5,w2n_lt]);
 
 val WORD_BITS_LSL = prove(
   `!h l n w:bool ** 'a.

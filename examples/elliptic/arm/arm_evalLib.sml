@@ -144,7 +144,7 @@ fun arm_eval_compset () =
     [state_arme_accessors, state_arme_updates_eq_literal,memop_case_def,
      state_arme_accfupds, state_arme_fupdfupds, state_arme_literal_11,
      state_arme_fupdfupds_comp, state_arme_fupdcanon,state_arme_fupdcanon_comp,
-     ADDR30_def,SET_BYTE_def,BSUBST_EVAL,dimindex_30,finite_30,top_30,msb_30,
+     ADDR30_def,SET_BYTE_def,BSUBST_EVAL,
      MEM_WRITE_BYTE_def,MEM_WRITE_WORD_def,MEM_WRITE_def,TRANSFERS_def,
      SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARMe_def];
 
@@ -170,8 +170,7 @@ end;
 
 val SORT_BSUBST_CONV = let open arm_evalTheory
   val compset = add_rws wordsLib.words_compset
-        [dimindex_30,finite_30,top_30,msb_30,
-         LENGTH,SUC2NUM JOIN,SUC2NUM BUTFIRSTN,
+        [LENGTH,SUC2NUM JOIN,SUC2NUM BUTFIRSTN,
          APPEND,SUBST_BSUBST,BSa_RULE,BSb_RULE,
          GSYM BSa_def,combinTheory.o_THM]
 in
@@ -182,7 +181,7 @@ val FOLD_SUBST_CONV =
 let val compset = add_rws wordsLib.words_compset
       [SET_IFMODE_def,SET_NZCV_def,FOLDL,arm_evalTheory.SUBST_EVAL,
        mode_num_def,mode_case_def,register_EQ_register,register2num_thm,
-       psrs_EQ_psrs,psrs2num_thm,dimindex_30,finite_30,top_30,msb_30]
+       psrs_EQ_psrs,psrs2num_thm]
 in
   computeLib.CBV_CONV compset THENC SORT_SUBST_CONV
 end;

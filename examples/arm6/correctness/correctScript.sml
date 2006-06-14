@@ -261,7 +261,7 @@ val arm6state_inp = ``<|state := ARM6 (DP reg psr areg din alua alub dout)
      sctrlreg psrfb oareg mask orp oorp mul mul2 borrow2 mshift);
   inp := (inp : num -> bool # bool # bool # bool # word32 # bool # bool) |>``;
 
-val arm6state = (snd o hd o TypeBase.dest_record) arm6state_inp;
+val arm6state = (snd o hd o snd o TypeBase.dest_record) arm6state_inp;
 
 val INIT_ARM6 = SIMP_RULE std_ss [ABORTINST_def,NXTIC_def] INIT_ARM6_def;
 
@@ -1159,7 +1159,7 @@ val FILTER_LDM_MEMOPS_X = prove(
     \\ RW_TAC bossLib.std_ss [IS_MEMOP_def]);
 
 fun PAT_TAC (asl, w) =
-  let val g = (snd o strip_comb o snd o dest_comb o snd o hd o
+  let val g = (snd o strip_comb o snd o dest_comb o snd o hd o snd o
                TypeBase.dest_record o rhs o snd o dest_comb o fst o dest_imp) w
   in
     (MAP_EVERY (fn x => ABBREV_TAC `x = ^(List.nth(g,x))` \\ POP_LAST_TAC)

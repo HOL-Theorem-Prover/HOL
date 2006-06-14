@@ -337,7 +337,7 @@ val DECODE_INST_STM = store_thm("DECODE_INST_STM",
 
 (* ------------------------------------------------------------------------- *)
 
-val n2w_mod32 = (REWRITE_RULE [TOP_def,dimindex_32] o
+val n2w_mod32 = (REWRITE_RULE [dimword_def,dimindex_32] o
   Thm.INST_TYPE [alpha |-> ``:i32``]) n2w_mod;
 
 val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",
@@ -366,10 +366,10 @@ val NZ_ADD = save_thm("NZ_ADD",
 val ALUOUT_ADD_CARRY = store_thm("ALUOUT_ADD_CARRY",
   `!a b. SND (ADD a b T) = a + b + 1w`,
   REWRITE_TAC [GSYM WORD_ADD_ASSOC]
-    \\ SIMP_TAC arith_ss [TOP_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,
+    \\ SIMP_TAC arith_ss [dimword_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,
          w2n_n2w,word_add_def]
     \\ SIMP_TAC bool_ss [n2w_mod32,MOD_PLUS_RIGHT,MOD_2EXP_def,ZERO_LT_TWOEXP]
-    \\ SIMP_TAC bool_ss [TOP_def,n2w_11,MOD_PLUS_RIGHT,ZERO_LT_TWOEXP]);
+    \\ SIMP_TAC bool_ss [dimword_def,n2w_11,MOD_PLUS_RIGHT,ZERO_LT_TWOEXP]);
 
 val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   `!a b. SND (SUB a b T) = a - b`,

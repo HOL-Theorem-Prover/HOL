@@ -91,7 +91,6 @@ fun random_word l =
 
 (* 544-bit Addition *)
 
-(*
 val _ = wordsLib.mk_word_size (17 * 32);
 
 fun mk_word544 n = wordsSyntax.mk_n2w (numLib.mk_numeral n, ``:i544``);
@@ -115,7 +114,6 @@ val prog = list_assemble
     (num2wordsn 17 b));
 
 val run_add17 = save_thm("run_add17", evaluate max prog reg psr);
-*)
 
 (* ------------------------------------------------------------------------- *)
 

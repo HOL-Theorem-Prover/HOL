@@ -30,10 +30,10 @@ in cmp_set end;
 
 fun arm_eval_compset () = let open simTheory in
   add_rws modelsLib.arm_compset
-    [state_arme_accessors, state_arme_updates_eq_literal,
+    [state_arme_accessors, state_arme_updates_eq_literal,memop_case_def,
      state_arme_accfupds, state_arme_fupdfupds, state_arme_literal_11,
      state_arme_fupdfupds_comp, state_arme_fupdcanon,state_arme_fupdcanon_comp,
-     ADDR30_def,SET_BYTE_def,BSUBST_EVAL,dimindex_30,finite_30,memop_case_def,
+     ADDR30_def,SET_BYTE_def,BSUBST_EVAL,dimindex_30,finite_30,top_30,msb_30,
      MEM_WRITE_BYTE_def,MEM_WRITE_WORD_def,MEM_WRITE_def,TRANSFERS_def,
      SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARMe_def]
 end;
@@ -53,8 +53,10 @@ end;
 
 val SORT_BSUBST_CONV = let open simTheory
   val compset = add_rws wordsLib.words_compset
-        [dimindex_30,finite_30,LENGTH,SUC2NUM JOIN,SUC2NUM BUTFIRSTN,
-         APPEND,SUBST_BSUBST,BSa_RULE,BSb_RULE,GSYM BSa_def,combinTheory.o_THM]
+        [dimindex_30,finite_30,top_30,msb_30,
+         LENGTH,SUC2NUM JOIN,SUC2NUM BUTFIRSTN,
+         APPEND,SUBST_BSUBST,BSa_RULE,BSb_RULE,
+         GSYM BSa_def,combinTheory.o_THM]
 in
   computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [BSa_def,BSb_def]
 end;
