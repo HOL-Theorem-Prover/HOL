@@ -12,7 +12,7 @@ open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
 
 fun is_fcp_thm s =
   String.isPrefix "finite_" s orelse String.isPrefix "dimindex_" s orelse
-  String.isPrefix "top_" s orelse String.isPrefix "msb_"s;
+  String.isPrefix "dimword_" s orelse String.isPrefix "INT_MIN_"s;
 
 val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
@@ -83,13 +83,13 @@ fun mk_word_size n =
       val sn = Int.toString n
       val ityp = mk_type("i"^sn, [])
       val TYPE = mk_type("cart", [bool, ityp])
-      val msb = save_thm("msb_" ^ sn,
-                (SIMP_RULE std_ss [dimindex_thm] o
-                 Thm.INST_TYPE [``:'a`` |-> ityp]) MSB)
-      val top = save_thm("top_" ^ sn,
-                (SIMP_RULE std_ss [msb] o
-                 Thm.INST_TYPE [``:'a`` |-> ityp]) TOP_IS_TWICE_MSB)
-      val _ = add_thms [msb,top] computeLib.the_compset
+      val INT_MIN = save_thm("INT_MIN_" ^ sn,
+                  (SIMP_RULE std_ss [dimindex_thm] o
+                   Thm.INST_TYPE [``:'a`` |-> ityp]) INT_MIN_def)
+      val dimword = save_thm("dimword_" ^ sn,
+                  (SIMP_RULE std_ss [INT_MIN] o
+                   Thm.INST_TYPE [``:'a`` |-> ityp]) dimword_IS_TWICE_INT_MIN)
+      val _ = add_thms [INT_MIN,dimword] computeLib.the_compset
   in
     type_abbrev("word"^sn, TYPE)
   end;
