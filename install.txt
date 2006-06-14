@@ -1,13 +1,9 @@
 Getting and Building the HOL system
 -----------------------------------
 
-Get the HOL sources by WWW from
+Get the HOL sources by WWW from SourceForge at http://hol.sourceforge.net
 
-     http://www.cl.cam.ac.uk/Research/HVG/FTP/
-
-or from SourceForge (links to which are on the page above).
-
-You will also need the Moscow ML compiler (version 2.00) from
+You will also need the Moscow ML compiler (version 2.01) from
 
      http://www.dina.kvl.dk/~sestoft/mosml.html
 
@@ -46,7 +42,9 @@ A. First, install Moscow ML. This is usually straightforward. The
      environment variables as described in the installation
      instructions for Moscow ML.  Windows won't find the MoscowML DLL
      without the appropriate entry in PATH, and Moscow ML won't run
-     without knowing where its library is.
+     without knowing where its library is.  These variables will be
+     set for you by the latest self-installing executable available
+     from the Moscow ML home-page.
 
 
 B. Unpack HOL with the commands
@@ -90,7 +88,7 @@ C. Enter the "tools" directory and type
    Linux or Solaris, it is OK to just put "unix"; however, this will
    imply that the robdd library will not be usable (it currently only
    builds on linux and solaris).  "winNT" stands in for all versions
-   of "Windows NT", "Windows 2000", and (we believe) "Windows XP".
+   of "Windows NT", "Windows 2000", and "Windows XP".
 
    It's possible that in order to get the muddy library to build, you
    will need to change the binding for GNUMAKE, which is made in the
@@ -140,9 +138,11 @@ E. If bin/build completes, successfully, you are done. From <hol-dir>
 External tools.
 ----------------
 
-The HOL installation currently includes a C library (in HolBddLib) and
-the C sources for the SMV model-checker (in temporalLib). Both of these
-require a C compiler to have been specified in tools/configure.sml.
+The HOL installation currently includes a C library (in HolBddLib),
+the C sources for the SMV model-checker (in temporalLib), and for a
+SAT solver (minisat) in HolSat. Building these under Unix requires a C
+compiler to have been specified in tools/configure.sml.  Under Windows,
+precompiled binaries are available for the library and for minisat.
 
 Loading the BDD libraries muddyLib or HolBddLib will fail unless
 MoscowML has been built with dynamic linking enabled.
