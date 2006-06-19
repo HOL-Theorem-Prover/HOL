@@ -115,5 +115,5 @@ sig
 
   (* Fetching theorems from disk *)
 
-  val disk_thm      : string * term list -> thm
+  val disk_thm      : string list * term list -> thm
 end;
