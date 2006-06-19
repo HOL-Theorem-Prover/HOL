@@ -48,18 +48,58 @@ open intSyntax pairSyntax listSyntax stringLib numLib;
 (*****************************************************************************)
 
 (*****************************************************************************)
+(* Print utility from Michael Norrish (may not end up being used):           *)
+(*                                                                           *)
+(* > Is there a way of redirecting output from print_term to a file?         *)
+(*                                                                           *)
+(* You need to turn an outstream (the thing you get back from a call to      *)
+(* TextIO.openOut) into a ppstream.  You could do this with                  *)
+(*                                                                           *)
+(*   fun mk_pp_from_out outstream =                                          *)
+(*      PP.mk_ppstream { consumer = (fn s => TextIO.output(outstream,s)),    *)
+(*                       linewidth = 80,                                     *)
+(*                       flush = (fn () => TextIO.flushOut outstream) }      *)
+(*                                                                           *)
+(* where I have chosen the linewidth arbitrarily.  Then you would use the    *)
+(* ppstream based pretty-printer Parse.pp_term.  So a complete solution      *)
+(* for outputting a single term to a given file would be                     *)
+(*****************************************************************************)
+fun mk_pp_from_out outstream =
+   PP.mk_ppstream { consumer = (fn s => TextIO.output(outstream,s)),
+                    linewidth = 80,
+                    flush = (fn () => TextIO.flushOut outstream) };
+
+fun print_term_to_file fname term = let
+  val outstr = TextIO.openOut fname
+  val pps = mk_pp_from_out outstr
+in
+  Parse.pp_term pps term;
+  PP.flush_ppstream pps;
+  TextIO.closeOut outstr
+end;
+
+
+(*****************************************************************************)
 (* Swich off warning messages when defining types and constants with         *)
 (* non-standard names (e.g. names originating from ACL2).                    *)
 (*****************************************************************************)
 val _ = (Globals.checking_const_names := false);
 
 (*****************************************************************************)
-(* Error reporting function (uses some HOL boilerplate I don't understand)   *)
+(* Flag to determine if HOL_ERR exceptions are printed                       *)
 (*****************************************************************************)
-fun err fn_name msg = raise(mk_HOL_ERR "sexp" fn_name msg);
+val print_err = ref false;
 
 (*****************************************************************************)
-(* Global variable holding current package name. Initially "ACL2"             *)
+(* Error reporting function (uses some HOL boilerplate I don't understand)   *)
+(*****************************************************************************)
+fun err fn_name msg = 
+ if !print_err 
+  then Raise(mk_HOL_ERR "sexp" fn_name msg)
+  else raise(mk_HOL_ERR "sexp" fn_name msg);
+
+(*****************************************************************************)
+(* Global variable holding current package name. Initially "ACL2".           *)
 (*****************************************************************************)
 val current_package = ref "ACL2";
 
@@ -93,19 +133,46 @@ val _ = add_acl2_simps[T_NIL];
 fun ACL2_SIMP_TAC thl = RW_TAC list_ss ((!acl2_simps) @ thl);
 
 (*****************************************************************************)
-(* Global association list of pairs (hol-name, acl2-name).                   *)
+(* Global association list of pairs (hol_name, acl2_name).                   *)
 (*****************************************************************************)
-val acl2_name_list = 
+val acl2_names = 
  ref([("ACL2_PAIR", "COMMON-LISP::CONS")]:(string*string)list);
 
 (*****************************************************************************)
-(* Function to add an entry to acl2_name_list                                *)
+(* Test if a name is already used                                            *)
 (*****************************************************************************)
-fun add_acl2_names names = 
- (acl2_name_list := union (!acl2_name_list) names);
+fun is_acl2_name s = can (assoc s) (!acl2_names);
 
 (*****************************************************************************)
-(* Print !acl2_name_list to a string (used in adjoin_to_theory).             *)
+(* Add a pair (hol_name, acl2_name) to acl2_names after checking that        *)
+(* hol_name is not already used.                                             *)
+(*****************************************************************************)
+fun add_acl2_name (hol_name, acl2_name) =
+ let val res = assoc1 hol_name (!acl2_names)
+ in
+  case res
+  of SOME(_,acl2_name')
+     => if acl2_name = acl2_name'
+         then ()
+         else (print "\"";
+               print hol_name;
+               print "\" is the name of \"";
+               print acl2_name';
+               print "\n\" so can't use it to name \"";
+               print acl2_name; print "\"\n";
+               err "add_acl2_name" "name already in use")
+  |  NONE
+     => (acl2_names := (hol_name, acl2_name) :: (!acl2_names))
+ end;
+
+(*****************************************************************************)
+(* Function to add an entry to acl2_names                                    *)
+(*****************************************************************************)
+fun add_acl2_names []      = ()
+ |  add_acl2_names (p::pl) = (add_acl2_name p; add_acl2_names pl);
+
+(*****************************************************************************)
+(* Print !acl2_names to a string (used in adjoin_to_theory).                 *)
 (* There may be a better way of doing this!                                  *)
 (*****************************************************************************)
 local
@@ -121,14 +188,14 @@ fun string_pair_list_to_string pl =
 end;
 
 (*****************************************************************************)
-(* declare_names("acl2-name","hol-name")                                     *)
+(* declare_names("acl2_name","hol_name")                                     *)
 (*                                                                           *)
-(*  1. Checks "acl2-name" is the name of exactly one constant.               *)
+(*  1. Checks "acl2_name" is the name of exactly one constant.               *)
 (*                                                                           *)
-(*  2. Checks "hol-name" isn't an existing abbreviation.                     *)
+(*  2. Checks "hol_name" isn't an existing abbreviation.                     *)
 (*                                                                           *)
-(*  3. Uses the HOL overloading mechanism to introduce "hol-name"            *)
-(*     as an alternative name for "acl2-name" ("hol-name" should be          *)
+(*  3. Uses the HOL overloading mechanism to introduce "hol_name"            *)
+(*     as an alternative name for "acl2_name" ("hol_name" should be          *)
 (*     a valid HOL identifier name).                                         *)
 (*****************************************************************************)
 fun declare_names (acl2_name,hol_name) =
@@ -138,6 +205,7 @@ fun declare_names (acl2_name,hol_name) =
   if null acl2_tml
    then (print "no constant named: ";
          print acl2_name;
+         print "\n";
          err "declare_names" "no term with acl2 name") else
   if not(length acl2_tml = 1)
    then (print "Warning -- there is more than one constant named: ";
@@ -221,7 +289,7 @@ fun print_lisp_file file_name printer =
      fun out s = TextIO.output(outstr,s)
  in
  (out("; File created from HOL using print_lisp_file on " ^ date() ^ "\n\n");  
-   (* Add time stamp                                                         *)  
+   (* Add time stamp                                                         *)
   out("(IN-PACKAGE \"ACL2\")\n\n");
    (* ACL2 initialisation                                                    *)
   printer out;
@@ -323,14 +391,20 @@ end;
 (*****************************************************************************)
 (* "pkg::nam" |--> mlsym("pkg","nam")                                        *)
 (* "nam"      |--> mlsym((!current_package),"nam") (when no "::" in "nam")   *)
-(*****************************************************************************) 
-fun string_to_mlsym s =
- if s = "ACL2_PAIR"
-  then mlcons
-  else let val (pkg,nam) = split_acl2_name s
+(*****************************************************************************)fun string_to_mlsym s =
+ case assoc1 s (!acl2_names)
+ of SOME(_,acl2_name) 
+    => let val (pkg,nam) = split_acl2_name acl2_name
        in
         mlsym(if pkg = "" then (!current_package) else pkg, nam)
-       end;
+       end
+ |  NONE
+   => if s = "ACL2_PAIR"
+       then mlcons
+       else let val (pkg,nam) = split_acl2_name s
+            in
+             mlsym(if pkg = "" then (!current_package) else pkg, nam)
+            end;
 
 (*****************************************************************************)
 (* Test for a proper list: (x1 . (x2 . ... . (xn . nil) ...))                *)
@@ -626,6 +700,11 @@ fun mlsym_to_string (sym as mlsym(pkg,nam)) = (pkg^"::"^nam)
 val string_abbrevs = ref([]: (string * term)list);
 
 (*****************************************************************************)
+(* Check if an abbreviation already exists                                   *)
+(*****************************************************************************)
+fun has_abbrev s = can (assoc s) (!string_abbrevs);
+
+(*****************************************************************************)
 (* Function to add a list of string abbreviations to string_abbrevs          *)
 (*****************************************************************************)
 fun add_string_abbrevs thl = (string_abbrevs := (!string_abbrevs) @ thl);
@@ -634,28 +713,35 @@ fun add_string_abbrevs thl = (string_abbrevs := (!string_abbrevs) @ thl);
 (* Declare constants ACL2_STRING_ABBREV_n, ACL2_STRING_ABBREV_n+1 etc to     *)
 (* abbreviate strings in a supplied list. The starting point n is kept in    *)
 (* the reference string_abbrev_count.                                        *)
+(*                                                                           *)
+(* If a string already has an abbreviation or is in a list !no_abbrev_list   *)
+(* of strings that shouldn't be abbreviated, then it is ignored.             *)
 (*****************************************************************************)
 val string_abbrev_count = ref 0;
+val no_abbrev_list      = ref(["NIL","QUOTE"]);
 
-local
-fun make_string_abbrevs_aux count [] = ()
- |  make_string_abbrevs_aux count (s::sl) =
-     (add_string_abbrevs
-       [(s, lhs
-             (concl
-               (SPEC_ALL
-                (Define
-                  `^(mk_var
-                     (("ACL2_STRING_ABBREV_" ^ Int.toString count),
-                      ``:string``)) =
-                   ^(fromMLstring s)`)))
-        )];
-
-      make_string_abbrevs_aux (count+1) sl)
-in
-val make_string_abbrevs = make_string_abbrevs_aux(!string_abbrev_count)
-end;
-
+fun make_string_abbrevs [] = ()
+ |  make_string_abbrevs (s::sl) =
+     if has_abbrev s 
+      then (print "Warning: \""; print s; print "\" already abbreviated by ";
+            print_term(assoc s (!string_abbrevs)); print "\n";
+            make_string_abbrevs sl) else
+     if mem s (!no_abbrev_list)
+      then (print "Warning: \""; print s; print "\" is in !no_abbrev_list\n";
+            make_string_abbrevs sl) 
+      else
+       (add_string_abbrevs
+         [(s, lhs
+               (concl
+                 (SPEC_ALL
+                  (Define
+                    `^(mk_var
+                       (("ACL2_STRING_ABBREV_" 
+                         ^ Int.toString(!string_abbrev_count)),
+                        ``:string``)) =
+                     ^(fromMLstring s)`))))];
+        (string_abbrev_count := (!string_abbrev_count)+1);
+        make_string_abbrevs sl);
 
 (*****************************************************************************)
 (* Print !string_abbrevs to a string (used in adjoin_to_theory).             *)
@@ -703,7 +789,7 @@ fun get_hol_name_from_acl2_name_aux [] sym =
       else get_hol_name_from_acl2_name_aux nl sym
 in
 fun get_hol_name_from_acl2_name sym = 
-     get_hol_name_from_acl2_name_aux (!acl2_name_list) sym
+     get_hol_name_from_acl2_name_aux (!acl2_names) sym
 end;
 
 (*****************************************************************************)
@@ -760,11 +846,14 @@ fun term_to_mlsexp tm =
            |  "ACL2_NUMBER"    => (print_term tm; print "\n";
                                    print "term built with num not supported";
                                    print " -- use nat, int or cpx\n";
-                                   err "term_to_mlsexp" "ACL2_NUMBER case unsupported")
+                                   err "term_to_mlsexp" 
+                                       "ACL2_NUMBER case unsupported")
            |  "cpx"            => (print_term tm; print "\n";
                                    print "bad use of cpx\n";
-                                   err "term_to_mlsexp" "badly formed application of cpx")
-           |  _                => mk_mlsexp_list(map term_to_mlsexp (opr::args))
+                                   err "term_to_mlsexp" 
+                                       "badly formed application of cpx")
+           |  _                => mk_mlsexp_list
+                                   (map term_to_mlsexp (opr::args))
 
           ) else
     if is_var opr
@@ -834,6 +923,20 @@ fun pr_mlsexp s = (print_mlsexp print s; print "\n");
 fun pr_sexp t = pr_mlsexp(term_to_mlsexp t);
 
 (*****************************************************************************)
+(* ``f x1 ... xn = e`` --> (defun f (x1 ... xn) ^(term_to_mlsexp e))         *)
+(*****************************************************************************)
+fun deftm_to_mlsexp_defun tm =
+ let val (l,r) = dest_eq tm
+     val (opr, args) = strip_comb l
+ in
+  mk_mlsexp_list
+   [mksym "COMMON-LISP" "DEFUN",
+    string_to_mlsym(fst((if is_var opr then dest_var else dest_const) opr)),
+    mk_mlsexp_list(map term_to_mlsexp args),
+    term_to_mlsexp r]
+ end;    
+
+(*****************************************************************************)
 (* Translate a hol-acl2 definition                                           *)
 (*                                                                           *)
 (*   |- f x1 ... xn = e                                                      *)
@@ -842,21 +945,15 @@ fun pr_sexp t = pr_mlsexp(term_to_mlsexp t);
 (*                                                                           *)
 (*  (defun f (x1 ... xn) ^(term_to_mlsexp e))                                *)
 (*****************************************************************************)
-fun mk_mlsexp_defun th =
+fun def_to_mlsexp_defun th =
  let val (asl, concl) = dest_thm(SPEC_ALL th)
      val _ = if not(asl = []) 
                then(print_thm th;
                     print "\n"; print"should not have any assumptions\n";
                     err "mk_mlsexp_defthm" "assumptions not allowed")
                else ()
-     val (l,r) = dest_eq concl
-     val (opr, args) = strip_comb l
  in
-  mk_mlsexp_list
-   [mksym "COMMON-LISP" "DEFUN",
-    string_to_mlsym(fst((if is_var opr then dest_var else dest_const) opr)),
-    mk_mlsexp_list(map term_to_mlsexp args),
-    term_to_mlsexp r]
+  deftm_to_mlsexp_defun concl
  end;    
 
 (*****************************************************************************)
@@ -894,7 +991,7 @@ fun mk_mlsexp_defthm(nam, th) =
 (*                                                                           *)
 (*  (defun f (x1 ... xn) ^(term_to_mlsexp e))                                *)
 (*****************************************************************************)
-fun pr_mlsexp_defun th = pr_mlsexp(mk_mlsexp_defun th);
+fun pr_mlsexp_defun th = pr_mlsexp(def_to_mlsexp_defun th);
 
 (*****************************************************************************)
 (* Code for processing ACL2 defuns slurped into HOL via Matt's a2ml tool     *)
@@ -1043,6 +1140,11 @@ fun param_to_var (sym as mlsym(_,_)) =
 (* Look up the HOL name of an ACL2 name and return the corresponding         *)
 (* term.  Return a variable with a supplied type if there is no HOL name.    *)
 (*****************************************************************************)
+val acl2_name_to_term_print_flag = ref false;
+
+local
+fun if_print s = if (!acl2_name_to_term_print_flag) then print s else ()
+in
 fun acl2_name_to_term sym ty = 
  if sym = mlt
   then ``t`` else
@@ -1050,8 +1152,18 @@ fun acl2_name_to_term sym ty =
   then ``nil`` else
  if sym = mlcons
   then ``ACL2_PAIR`` else
- mk_const(mlsym_to_string sym,ty)
-  handle HOL_ERR _ => mk_var(mlsym_to_string sym,ty);
+ let val sym_string = mlsym_to_string sym
+     val sym_terms = Term.decls sym_string
+     val sym_types = map (snd o dest_const) sym_terms
+ in
+  if mem ty sym_types
+   then mk_const(sym_string,ty)
+   else (if_print "Warning: \"";
+         if_print sym_string;
+         if_print "\" made a variable by acl2_name_to_term\n";
+         mk_var(sym_string,ty))
+ end
+end;
 
 (*****************************************************************************)
 (* n |--> ``:sexp -> ... -> sexp`` (n arguments)                             *)
@@ -1144,6 +1256,17 @@ fun def_to_term d =
   else err "def_to_term" "not a def";
 
 (*****************************************************************************)
+(* ``f = \x1 ... xn. bdy`` --> ``f x1 ... xn = bdy``                         *)
+(*****************************************************************************)
+fun mk_def_eq tm =
+ if is_eq tm
+  then foldl 
+        (fn (v,t) => mk_eq(mk_comb(lhs t,v),beta_conv(mk_comb(rhs t,v))))
+        tm 
+        (fst(strip_abs(rhs tm)))
+  else tm;
+
+(*****************************************************************************)
 (* |- f = \x1 ... xn. bdy                                                    *)
 (* ----------------------                                                    *)
 (*  |- f x1 ... xn = bdy                                                     *)
@@ -1155,33 +1278,6 @@ fun MK_DEF_EQ th =
         th 
         (fst(strip_abs(rhs(concl(SPEC_ALL th)))))
   else th;
-
-(*****************************************************************************)
-(* Conversion                                                                *)
-(*                                                                           *)
-(* ``(\x1 ... xn. t) y1 .. yn``                                              *)
-(* -->                                                                       *)
-(* |- (\x1 ... xn. t) y1 .. yn = let x1 = y1 in (... (let xn = yn in t) ...) *)
-(*                                                                           *)
-(******************************************************************************
-fun LET_INTRO_CONV tm =
- let val (opr, args) = strip_comb tm
-     val (params,bdy) = strip_abs opr
-     val param_arg_list = filter 
-                           (fn (v1,v2) => not(aconv v1 v2)) 
-                           (zip params args)
-     val let_tm = foldr
-                   (fn ((v,a),t) => ``LET (\^v. ^t) ^a``) 
-                   bdy 
-                   param_arg_list
-     val th1 = DEPTH_CONV (REWR_CONV LET_THM) let_tm
-     val tm' = rhs(concl th1)
-     val th2 = DEPTH_CONV BETA_CONV tm
-     val th3 = DEPTH_CONV BETA_CONV tm'
- in
-  GSYM(TRANS(TRANS th1 th3)(GSYM th2))
- end;
-******************************************************************************)
 
 (*****************************************************************************)
 (* Conversion                                                                *)
@@ -1217,13 +1313,14 @@ val let_flag = ref true;
 (*****************************************************************************)
 fun LET_INTRO th = 
  if !let_flag 
-  then CONV_RULE (RHS_CONV(TOP_DEPTH_CONV LET_INTRO_CONV)) th
+  then CONV_RULE (TRY_CONV(RHS_CONV(TOP_DEPTH_CONV LET_INTRO_CONV))) th
   else th;
 
 (*****************************************************************************)
 (* Test if a string only contains letters, numbers, "_" and "-"              *)
 (* and starts with a letter                                                  *)
 (*****************************************************************************)
+(* No longer used
 fun is_simple_acl2_name s =
   let val chars = explode s
   in
@@ -1233,36 +1330,154 @@ fun is_simple_acl2_name s =
              (fn c => Char.isAlphaNum c orelse c = #"_" orelse c = #"-" ) 
              (tl chars)
   end;
+*)
 
 (*****************************************************************************)
-(* Convert a simple ACL2 name to a HOL name by lowering the case of all      *)
-(* letters and converting "-" to "_"                                         *)
+(* Convert an ACL2 name to a HOL name by lowering the case of all letters    *)
+(* and performing the following substitutions:                               *)
+(*                                                                           *)
+(* "-" --> "_"                                                               *)
+(* "=" --> "_eq_"                                                            *)
+(* "<" --> "_ls_"                                                            *)
+(* ">" --> "_gt_"                                                            *)
+(* "/" --> "_slash_"                                                         *)
+(* "\\" --> "_backslash_"                                                    *)
+(* "?" --> "_question_"                                                      *)
+(* ":" --> "_colon_"                                                         *)
+(*                                                                           *)
+(* Keep a mapping between ACL2 names and their conversion to HOL names in    *)
+(* the assignable list acl2_hol_names                                        *)
+(*                                                                           *)
 (*****************************************************************************)
-fun convert_acl2_name_to_hol_name s =
- implode
-  (map
-    (fn c => if c = #"-" then #"_" else Char.toLower c)
-    (explode s));
+val acl2_hol_names = ref([] : (string * string)list);
+
+(*****************************************************************************)
+(* Function to add a string pair to acl2_hol_names.                          *)
+(* Checks that the acl2_name isn't already associated with a different name. *)
+(*****************************************************************************)
+fun add_acl2_hol_name_pair(acl2_name,hol_name) = 
+ (let val hol_name' = assoc acl2_name (!acl2_hol_names)
+  in
+   if hol_name=hol_name' 
+    then ()
+    else (print "attempt to associate \"";
+          print acl2_name;
+          print "\" with \"";
+          print hol_name;
+          print "\" when it is already associated with \"";
+          print hol_name';
+          print "\"\n")
+  end)
+ handle HOL_ERR _ =>
+ (acl2_hol_names 
+  := (!acl2_hol_names) @ [(acl2_name,hol_name)]);
+
+(*****************************************************************************)
+(* Add a list of pairs to acl2_hol_names                                     *)
+(*****************************************************************************)
+fun add_acl2_hol_name_pairs [] = ()
+ |  add_acl2_hol_name_pairs (p :: pl) = 
+     (add_acl2_hol_name_pair p; add_acl2_hol_name_pairs pl);
+
+(*****************************************************************************)
+(* ACL2 to HOL name conversion function.                                     *)
+(*****************************************************************************)
+fun acl2_name_to_hol_name acl2_name =
+ assoc acl2_name (!acl2_hol_names)
+ handle HOL_ERR _ =>
+ let val hol_name =
+      String.concat
+       (map
+         (fn c =>
+           if c = #"-" then "_"            else
+           if c = #"=" then "_eq_"         else
+           if c = #"<" then "_ls_"         else
+           if c = #">" then "_gt_"         else
+           if c = #"/" then "_slash_"      else
+           if c = #"\\" then "_backslash_" else
+           if c = #"?" then "_question_"   else
+           if c = #":" then "_colon_"      else Char.toString(Char.toLower c))
+         (explode acl2_name))
+ in
+ (add_acl2_hol_name_pair(acl2_name,hol_name);
+  hol_name)
+ end;
+
+(*****************************************************************************)
+(* Create a HOL-friendly name from a full ACL2 name and remember it in       *)
+(* acl2_names. No effect on names unchanged by acl2_name_to_hol_name.        *)
+(*                                                                           *)
+(* The package name is eliminated unless it's needed to disambiguate HOL     *)
+(* names (e.g. if the symbol symbol name occurs with two package names).     *)
+(*****************************************************************************)
+fun create_hol_name acl2_name =
+  let val long_hol_name = acl2_name_to_hol_name acl2_name
+  in
+   if long_hol_name = acl2_name
+    then long_hol_name
+    else
+    let val (pkg_name,sym_name) = split_acl2_name acl2_name
+        val hol_name = acl2_name_to_hol_name sym_name
+        val res = assoc1 hol_name (!acl2_names)
+    in
+     case res
+     of SOME(_,acl2_name')
+        => if acl2_name = acl2_name'
+            then hol_name
+            else 
+             let val res' = assoc1 long_hol_name (!acl2_names)
+             in
+              case res'
+              of SOME(_,acl2_name'')
+                 => if acl2_name = acl2_name''
+                     then long_hol_name
+                     else (print "\"";
+                           print hol_name;
+                           print "\" is the name of \"";
+                           print acl2_name';
+                           print "\"\nso can't use it to name \"";
+                           print acl2_name; print "\"\n";
+                           print "\"";
+                           print long_hol_name;
+                           print "\" is the name of \"";
+                           print acl2_name'';
+                           print "\"\nso can't use it to name \"";
+                           print acl2_name; print "\"\n";
+                           err "create_hol_name" "name already in use")
+              |  NONE
+                 => ((acl2_names := (long_hol_name, acl2_name)::(!acl2_names));
+                     long_hol_name)
+             end
+     |  NONE
+        => ((acl2_names := (hol_name, acl2_name)::(!acl2_names));
+            hol_name)
+    end
+  end;
 
 (*****************************************************************************)
 (* ML datatype to represent defs sent from ACL2                              *)
 (*****************************************************************************)
 datatype acl2def =
-   defun       of string * thm
+   defun       of string * term
  | defaxiom    of string * term
  | defthm      of string * term;
 
 (*****************************************************************************)
-(* ``ACL2::NAME`` |--> ``name``                                              *)
+(* Get kind of acl2def                                                       *)
+(*****************************************************************************)
+fun dest_acl2def (defun(s,_))    = ("DEFUN",s)
+ |  dest_acl2def (defaxiom(s,_)) = ("DEFAXIOM",s)
+ |  dest_acl2def (defthm(s,_))   = ("DEFTHM",s);
+
+(*****************************************************************************)
+(* ``PKG::SYM`` |--> create_hol_name "PKG::SYM"                              *)
 (*****************************************************************************)
 fun clean_acl2_var tm =
  if is_var tm
   then let val (s,ty) = dest_var tm
-           val (pkg,nam) = split_acl2_name s
+           val hol_name = create_hol_name s
        in
-        if pkg = !current_package
-         then mk_var(implode(map Char.toLower (explode nam)), ty)
-         else tm
+        mk_var(hol_name, ty)
        end
   else tm;
 
@@ -1284,13 +1499,11 @@ fun CLEAN_ACL2_FREES th =
 fun CLEAN_ACL2_ALPHA_CONV tm =
  let val (v,bdy) = dest_abs tm
      val (vname,vty) = dest_var v
-     val (pkg,nam) = split_acl2_name vname
+     val hol_vname = create_hol_name vname
  in
-  if pkg = !current_package andalso is_simple_acl2_name nam
-   then ALPHA_CONV 
-         (mk_var(convert_acl2_name_to_hol_name nam, type_of v))
-         tm
-   else ALL_CONV tm
+  if hol_vname = vname
+   then ALL_CONV tm
+   else ALPHA_CONV (mk_var(hol_vname, vty)) tm
  end;
 
 (*****************************************************************************)
@@ -1322,31 +1535,20 @@ val CLEAN_ACL2_VARS =
 (*****************************************************************************)
 fun mk_def d =
  let val (def_kind,sym,tm) = def_to_term d
+     val ty = type_of tm
+     val sym_name = mlsym_to_string sym
  in
   if def_kind = "DEFUN" 
-   then let val ty = type_of tm
-            val sym_name = mlsym_to_string sym
-            val _ = new_constant(sym_name,ty)
-            val newcon = mk_const(sym_name,ty)
-            val newvar = mk_var(sym_name,ty)
-            val newtm = subst[newvar |-> newcon]tm
-            val defun_name = sym_name ^ "_acl2_defun"
-            val deftm = mk_eq(newcon,newtm)
-            val defun_thm = 
-                 save_thm
-                  (defun_name,
-                   CLEAN_ACL2_VARS
-                    (MK_DEF_EQ
-                      (mk_oracle_thm
-                        (Tag.read("ACL2_DEFUN:" ^ sym_name))([],deftm))))
+   then let val newvar = mk_var(sym_name,ty)
+            val defun_tm = mk_def_eq(mk_eq(newvar,tm))
         in
-         defun(defun_name, defun_thm)
+         defun(sym_name, defun_tm)
         end else
   if def_kind = "DEFAXIOM" 
-   then defaxiom(mlsym_to_string sym, tm) else
+   then defaxiom(sym_name, ``|= ^tm``) else
   if def_kind = "DEFTHM" 
-   then defthm(mlsym_to_string sym, tm) else
-  err "mk_def" "bad argument"
+   then defthm(sym_name, ``|= ^tm``)
+   else err "mk_def" "bad argument"
  end;
 
 (*****************************************************************************)
@@ -1364,20 +1566,24 @@ val chars_to_string = implode o (map chr);
 (*****************************************************************************)
 (* Print an acl2def                                                          *)
 (*****************************************************************************)
-fun print_acl2def out (defun(nam,th)) =
+fun print_acl2def out (defun(nam,tm)) =
      (out "; Defun:    "; out nam; out "\n";
-      print_mlsexp out (mk_mlsexp_defun th); out "\n")
+      print_mlsexp out (deftm_to_mlsexp_defun tm); out "\n")
  |  print_acl2def out (defaxiom(nam,tm)) =
      (out "; Defaxiom: "; out nam; out "\n";
       print_mlsexp out
        (mk_mlsexp_list
-         [mldefaxiom, string_to_mlsym nam, term_to_mlsexp tm]); 
+         [mldefaxiom, 
+          string_to_mlsym nam, 
+          term_to_mlsexp tm]); 
       out "\n")
  |  print_acl2def out (defthm(nam,tm)) =
      (out "; Defthm:   "; out nam; out "\n";
       print_mlsexp out
        (mk_mlsexp_list
-         [mldefthm, string_to_mlsym nam, term_to_mlsexp tm]); 
+         [mldefthm, 
+          string_to_mlsym nam, 
+          term_to_mlsexp tm]); 
       out "\n");
 
 (*****************************************************************************)
@@ -1417,6 +1623,134 @@ val pp = ((!acl2_path) ^ "/lisp/pprint-file.csh");
 (* Reference into which mlsexp generated by a2ml is put                      *)
 (*****************************************************************************)
 val acl2_list_ref = ref([] : mlsexp list);
+
+(*****************************************************************************)
+(* Wrapper around mk_oracle_thm.                                             *)
+(* Saves strings used to create tags in acl2_tags.                           *)
+(*****************************************************************************)
+val acl2_tags = ref([]: (tag*(string*string))list);
+
+fun mk_acl2_thm defty acl2_name deftm =
+ let val tg = Tag.read(defty ^ "--" ^ acl2_name)
+ in
+ (acl2_tags := (tg,(defty,acl2_name)) :: (!acl2_tags);
+  mk_oracle_thm tg ([], deftm))
+ end;
+
+(*****************************************************************************)
+(* Sequentially process, install and save the contents of acl2_list_ref:     *)
+(*                                                                           *)
+(* 1. declare constants in defuns, then make definition using mk_oracle_thm; *)
+(*                                                                           *)
+(* 2. declare HOL-friendly names (declare_names) using names generated       *)
+(*    with create_hol_name.                                                  *)
+(*                                                                           *)
+(* 3. create theorems from defaxioms and defthms using mk_oracle_thm then    *)
+(*    save them using a HOL-friendly name with suffix "_def"                 *)
+(*****************************************************************************)
+fun install_def(defun(acl2_name, deftm)) =
+     let val (pkg_name,sym_name) = split_acl2_name acl2_name
+         val hol_name = create_hol_name acl2_name
+         val new_hol_name = 
+              (if null(Term.decls hol_name) then "" else "acl2_") ^ hol_name
+         val (l,r) = dest_eq deftm
+         val (opr,args) = strip_comb l
+         val (opr_name,opr_ty) = dest_var opr
+         val _ = if not(opr_name = acl2_name)
+                  then (print "Warning: ML defun name is \""; 
+                        print acl2_name;
+                        print "\" but name being defined is \"";
+                        print opr_name; print"\"\n\n")
+                  else ()
+         val _ = new_constant(opr_name,opr_ty)
+         val _ = declare_names(acl2_name,new_hol_name)
+         val con = mk_const(opr_name,opr_ty)
+         val newdeftm = subst[opr |-> con]deftm
+         val defun_thm =
+              save_thm
+               ((hol_name ^ "_def"),
+                CLEAN_ACL2_VARS(mk_acl2_thm "DEFUN" acl2_name newdeftm))
+     in
+      defun_thm
+     end
+ |  install_def(defaxiom(acl2_name, deftm)) =
+     let val (pkg_name,sym_name) = split_acl2_name acl2_name
+         val hol_name = create_hol_name acl2_name
+         val defaxiom_thm =
+              save_thm
+               ((hol_name ^ "_def"),
+                CLEAN_ACL2_VARS(mk_acl2_thm "DEFAXIOM" acl2_name deftm))
+     in
+      defaxiom_thm
+     end
+ |  install_def(defthm(acl2_name, deftm)) =
+     let val (pkg_name,sym_name) = split_acl2_name acl2_name
+         val hol_name = create_hol_name acl2_name
+         val defthm_thm =
+              save_thm
+               ((hol_name ^ "_def"),
+                CLEAN_ACL2_VARS(mk_acl2_thm "DEFTHM" acl2_name deftm))
+     in
+      defthm_thm
+     end;
+
+fun install_defs() = map install_def (flatten(map mk_defs (!acl2_list_ref)));
+
+(*****************************************************************************)
+(* Union a list of lists                                                     *)
+(*****************************************************************************)
+fun union_flatten []      = []
+ |  union_flatten (l::ll) = union l (union_flatten ll);;
+
+(*****************************************************************************)
+(* Gets the symbol names from an ML S-expression                             *)
+(*****************************************************************************)
+fun get_package_strings(mlsym(_,s)) = [s]
+ |  get_package_strings(mlpair(p1,p2)) =
+     union (get_package_strings p1) (get_package_strings p2)
+ |  get_package_strings _  = [];
+
+(*****************************************************************************)
+(* Match a defun -- identity function if match succeeds                      *)
+(*****************************************************************************)
+fun match_defun full_acl2_name mlsexp =
+ case mlsexp
+ of (mlpair(mlsym("COMMON-LISP", "DEFUN"),
+            mlpair(mlsym(pkg, sym), _))) 
+    => if (pkg, sym) = split_acl2_name full_acl2_name
+        then mlsexp
+        else raise err "match_defun"
+                       ("bad match: (\"" ^ pkg ^ "\",\"" ^ sym ^ "\")")
+ | _ => raise err "match_defun"
+                  ("bad case match: " ^ full_acl2_name);
+
+(*****************************************************************************)
+(* Match a defaxiom -- identity function if match succeeds                   *)
+(*****************************************************************************)
+fun match_defaxiom full_acl2_name mlsexp =
+ case mlsexp
+ of (mlpair(mlsym("ACL2", "DEFAXIOM"),
+            mlpair(mlsym(pkg, sym), _))) 
+    => if (pkg, sym) = split_acl2_name full_acl2_name
+        then mlsexp
+        else raise err "match_defaxiom"
+                       ("bad match: (\"" ^ pkg ^ "\",\"" ^ sym ^ "\")")
+ | _ => raise err "match_defaxiom"
+                  ("bad case match: " ^ full_acl2_name);
+
+(*****************************************************************************)
+(* Match a defthm -- identity function if match succeeds                     *)
+(*****************************************************************************)
+fun match_defthm full_acl2_name mlsexp =
+ case mlsexp
+ of (mlpair(mlsym("ACL2", "DEFTHM"),
+            mlpair(mlsym(pkg, sym), _))) 
+    => if (pkg, sym) = split_acl2_name full_acl2_name
+        then mlsexp
+        else raise err "match_defthm"
+                       ("bad match: (\"" ^ pkg ^ "\",\"" ^ sym ^ "\")")
+ | _ => raise err "match_defthm"
+                  ("bad case match: " ^ full_acl2_name);
 
 (*****************************************************************************)
 (* Convert a status to s string                                              *)
@@ -1470,74 +1804,45 @@ fun print_acl2_defun_script thy ql name_alist =
  end;
 
 (*****************************************************************************)
-(* Apply mk_def and then if the ACL2 name is simple, create the              *)
-(* corresponding HOL name with convert_acl2_name_to_hol_name and overload    *)
-(* this onto the ACL2 name                                                   *)
+(* Slurp in defaxioms.lisp.trans.ml. Need to supply "use" as argument.       *)
+(*                                                                           *)
+(* The protocol for using this is:                                           *)
+(*                                                                           *)
+(*  use (Globals.HOLDIR ^ "/examples/acl2/lisp/defaxioms.lisp.trans.ml");    *)
+(*  load_def_axioms();                                                       *)
+(*                                                                           *)
+(* Results are put into defaxioms (an assignable global variable)            *)
 (*****************************************************************************)
-(* Old code. Remove when replacement below tested
-fun mk_defun_and_overload mlsexp =
- let val th =
-      case mk_def mlsexp
-       of defun(_,defth) => defth
-       |   _             => err "simple_mk_defun" "not a defun"
-     val (opr,_) = strip_comb(lhs(concl(SPEC_ALL th)))
-     val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
-     val (pkg,nam) = split_acl2_name opr_name
-     val _ = if (pkg = !current_package) andalso is_simple_acl2_name nam
-              then overload_on(convert_acl2_name_to_hol_name nam,opr)
-              else ()
+val defaxioms = ref([]:thm list);
+
+fun load_defaxioms () =
+ let val acl2_package_strings =
+      union_flatten
+       (mapfilter
+         (get_package_strings o match_defaxiom "ACL2::ACL2-PACKAGE")
+         (!acl2_list_ref))
+      fun install_def_and_print a =
+          let val (kind,name) = dest_acl2def a
+              val _ = (print kind; print " "; print name; print "\n")
+              val th = install_def a
+              val _ = print_thm th
+              val _ = print "\n\n"
+          in
+           th
+          end  
+      val string_abbrev_count = length(!string_abbrevs)
  in
-  th
+ (print "Making string abbreviations ...\n";
+  make_string_abbrevs acl2_package_strings;
+  print(Int.toString(length(!string_abbrevs)-string_abbrev_count));
+  print " new string abbreviations made\n";
+  show_tags := true;
+  print "read "; print(Int.toString(length(!acl2_list_ref))); print " defs\n"; 
+  defaxioms := 
+   flatten(map (map install_def_and_print o mk_defs) (!acl2_list_ref)));
+  print 
+   "Imported defaxioms stored in global assignable variable defaxioms.\n\n"
  end;
-*)
-
-fun mk_defun_and_overload mlsexp =
- case mk_def mlsexp
-  of defun(_,defth) => 
-      let val (opr,_) = strip_comb(lhs(concl(SPEC_ALL defth)))
-          val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
-          val (pkg,nam) = split_acl2_name opr_name
-          val _ = if (pkg = !current_package) andalso is_simple_acl2_name nam
-                   then overload_on(convert_acl2_name_to_hol_name nam,opr)
-                   else ()
-      in
-       defth
-      end
-  |   _             => err "simple_mk_defun" "not a defun";
-
-(*****************************************************************************)
-(* Apply mk_def and then overload a hol name on the defined constant,        *)
-(* if it is found in a supplied alist                                        *)
-(*****************************************************************************)
-(* Old code. Remove when replacement below tested
-fun define_and_overload name_alist mlsexp =
- let val th =
-      case mk_def mlsexp
-       of defun(_,defth) => defth
-       |   _             => err "define_and_overload" "not a defun"
-     val (opr,_) = strip_comb(lhs(concl(SPEC_ALL th)))
-     val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
-     val _ = case assoc2 opr_name name_alist
-              of SOME(nam,_) => overload_on(nam,opr)
-              |  _           => ()
- in
-  th
- end;
-*)
-
-fun define_and_overload name_alist mlsexp =
- case mk_def mlsexp
-  of defun(_,defth) => 
-   let val (opr,_) = strip_comb(lhs(concl(SPEC_ALL defth)))
-       val opr_name = fst(dest_const opr handle HOL_ERR _ => dest_var opr)
-       val _ = case assoc2 opr_name name_alist
-                of SOME(nam,_) => overload_on(nam,opr)
-                |  _           => ()
-   in
-    defth
-   end
-  |  _             => err "define_and_overload" "not a defun";
-
 
 (*****************************************************************************)
 (* Add theory load time code to restore binding of acl2_simps in theory      *)
@@ -1552,7 +1857,6 @@ fun save_acl2_simps () =
             ^"  (!sexp.acl2_simps)@(Drule.CONJUNCTS ACL2_SIMPS));"))
  };
 
-
 (*****************************************************************************)
 (* Add theory load time code to restore binding of current_package in theory *)
 (*****************************************************************************)
@@ -1566,18 +1870,31 @@ fun save_current_package() =
             ^ (!current_package) ^ "\";"))
  };
 
-
 (*****************************************************************************)
-(* Add theory load time code to restore binding of acl2_name_list in theory  *)
+(* Add theory load time code to restore binding of acl2_names in theory.     *)
 (*****************************************************************************)
-fun save_acl2_name_list () =
+fun save_acl2_names () =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
     SOME(fn ppstrm => 
           PP.add_string ppstrm
            ("val _ = sexp.add_acl2_names " ^ 
-            string_pair_list_to_string(!acl2_name_list) ^
+            string_pair_list_to_string(!acl2_names) ^
+            ";"))
+ };
+
+(*****************************************************************************)
+(* Add theory load time code to restore binding of acl2_hol_names in theory  *)
+(*****************************************************************************)
+fun save_acl2_hol_names () =
+ adjoin_to_theory
+ {sig_ps = NONE,
+  struct_ps =
+    SOME(fn ppstrm => 
+          PP.add_string ppstrm
+           ("val _ = sexp.add_acl2_hol_name_pairs " ^ 
+            string_pair_list_to_string(!acl2_hol_names) ^
             ";"))
  };
 
@@ -1596,14 +1913,15 @@ fun save_string_abbrevs () =
  };
 
 (*****************************************************************************)
-(* Save the acl2_simps, current_package, acl2_name_list, string_abbrevs      *)
-(* then export theory                                                        *)
+(* Save the acl2_simps, current_package, acl2_names, acl2_hol_names,         *)
+(* string_abbrevs then export theory.                                        *)
 (*****************************************************************************)
 fun export_acl2_theory () =
  (save_thm("ACL2_SIMPS", LIST_CONJ(!acl2_simps));
   save_acl2_simps();
   save_current_package();
-  save_acl2_name_list();
+  save_acl2_names();
+  save_acl2_hol_names();
   save_string_abbrevs();
   export_theory());
   
@@ -1632,7 +1950,7 @@ print_lisp_file
 
 print_lisp_file 
  "TestFn" 
- (fn out => (print_mlsexp out (mk_mlsexp_defun th); out "\n\n"));
+ (fn out => (print_mlsexp out (def_to_mlsexp_defun th); out "\n\n"));
 
 val defaxioms_list = map mk_defs (!acl2_list_ref);
 

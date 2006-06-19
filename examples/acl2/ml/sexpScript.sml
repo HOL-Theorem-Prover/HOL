@@ -601,11 +601,11 @@ val code_char_def =
 (*          (list x y z)))                                                   *)
 (*                                                                           *)
 (* Can't overload "if" onto ``ACL2_IF`` because of HOL's                     *)
-(* `if ... then ... else` construct. Using "acl2_if" instead.                *)
+(* `if ... then ... else` construct. Using "cond" instead.                   *)
 (*****************************************************************************)
-val acl2_if_def =
+val cond_def =
  acl2Define "COMMON-LISP::IF"
-  `acl2_if x (y:sexp) (z:sexp) = if x = nil then z else y`;
+  `cond x (y:sexp) (z:sexp) = if x = nil then z else y`;
 
 (*****************************************************************************)
 (* If f : 'a -> sexp then list_to_sexp f : num list : 'a list -> sexp.       *)
@@ -3609,7 +3609,7 @@ val bad_atom_less_def =
 (*****************************************************************************)
 val symbol_name_def =
  acl2Define "COMMON-LISP::SYMBOL-NAME"
-  `(symbol_name (sym p n) = acl2_if (symbolp (sym p n)) (str n) (str ""))
+  `(symbol_name (sym p n) = cond (symbolp (sym p n)) (str n) (str ""))
    /\
    (symbol_name _ = (str ""))`;
 
@@ -3625,7 +3625,7 @@ val symbol_name_def =
 val symbol_package_name_def =
  acl2Define "ACL2::SYMBOL-PACKAGE-NAME"
   `(symbol_package_name (sym p n) =
-     acl2_if (symbolp (sym p n)) (str p) (str ""))
+     cond (symbolp (sym p n)) (str p) (str ""))
    /\
    (symbol_package_name _ = (str ""))`;
 
@@ -3652,7 +3652,7 @@ val symbol_package_name_def =
 val pkg_witness_def =
  acl2Define "ACL2::PKG-WITNESS"
   `pkg_witness (str x) =
-    let s = BASIC_INTERN "PKG-WITNESS" x in acl2_if (symbolp s) s nil`;
+    let s = BASIC_INTERN "PKG-WITNESS" x in cond (symbolp s) s nil`;
 
 (*****************************************************************************)
 (* intern-in-package-of-symbol                                               *)
@@ -3674,9 +3674,22 @@ val pkg_witness_def =
 val intern_in_package_of_symbol_def =
  acl2Define "ACL2::INTERN-IN-PACKAGE-OF-SYMBOL"
   `(intern_in_package_of_symbol (str x) (sym p n) =
-     acl2_if (symbolp (sym p n)) (BASIC_INTERN x p) nil)
+     cond (symbolp (sym p n)) (BASIC_INTERN x p) nil)
    /\
    (intern_in_package_of_symbol _ _ = nil)`;
+
+(*****************************************************************************)
+(* Auxiliary definitions.                                                    *)
+(*****************************************************************************)
+
+(*****************************************************************************)
+(* |= t, where t:sexp, means t is a theorem of ACL2                          *)
+(*****************************************************************************)
+val _ = set_fixity "|=" (TruePrefix 11);        (* Give "|=" weak precedence *)
+
+val ACL2_TRUE_def =
+ xDefine "ACL2_TRUE"
+  `(|= p) = (cond (equal p nil) nil t = t)`;
 
 val _ = export_acl2_theory();
 
