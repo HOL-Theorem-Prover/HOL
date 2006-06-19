@@ -279,34 +279,33 @@ val DP_ss =
   rewrites [DATA_PROCESSING_def,ARITHMETIC_def,TEST_OR_COMP_def,ALU_def,
    ALU_ADD,ALU_SUB,LSL_def,LSR_def,AND_def,ORR_def,EOR_def,ALU_logic_def,
    SET_NZC_def,WORD_ADD_0,WORD_SUB_RZERO,WORD_EQ_SUB_RADD,WORD_HIGHER_EQ,
-   (*LSL_NOT_ZERO,SND_ROR,*) WORD_NEG_cor,WORD_1COMP_ZERO, NOT_REG_SHIFT,
+   REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO, NOT_REG_SHIFT,
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ r m n`) COND_RAND,
    cond_pass_enc_data_proc, decode_enc_data_proc, decode_data_proc_enc,
    cond_pass_enc_data_proc2,decode_enc_data_proc2,decode_data_proc_enc2,
    cond_pass_enc_data_proc3,decode_enc_data_proc3,decode_data_proc_enc3];
 
-val not_sh_reg = ``~IS_REG_SHIFT Op2``;
-
 val abbrev_mode1 =
   ``Abbrev (op2 = ADDR_MODE1 state.registers mode (cpsr:word32 %% 29)
       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2)))``;
 
-val ARM_TST = SYMBOLIC_EVAL_CONV DP_ss (cntxt [not_sh_reg,abbrev_mode1]
-  ``enc (instruction$TST c Rm Op2)``);
+val ARM_TST = SYMBOLIC_EVAL_CONV DP_ss (cntxt
+  [``~(Rm = 15w:word4)``,abbrev_mode1] ``enc (instruction$TST c Rm Op2)``);
 
-val ARM_TEQ = SYMBOLIC_EVAL_CONV DP_ss (cntxt [not_sh_reg,abbrev_mode1]
-  ``enc (instruction$TEQ c Rm Op2)``);
+val ARM_TEQ = SYMBOLIC_EVAL_CONV DP_ss (cntxt
+  [``~(Rm = 15w:word4)``,abbrev_mode1] ``enc (instruction$TEQ c Rm Op2)``);
 
-val ARM_CMP = SYMBOLIC_EVAL_CONV DP_ss (cntxt [not_sh_reg,abbrev_mode1]
-  ``enc (instruction$CMP c Rm Op2)``);
+val ARM_CMP = SYMBOLIC_EVAL_CONV DP_ss (cntxt
+  [``~(Rm = 15w:word4)``,abbrev_mode1] ``enc (instruction$CMP c Rm Op2)``);
 
-val ARM_CMN = SYMBOLIC_EVAL_CONV DP_ss (cntxt [not_sh_reg,abbrev_mode1]
-  ``enc (instruction$CMN c Rm Op2)``);
+val ARM_CMN = SYMBOLIC_EVAL_CONV DP_ss (cntxt
+  [``~(Rm = 15w:word4)``,abbrev_mode1] ``enc (instruction$CMN c Rm Op2)``);
 
 (* ......................................................................... *)
 
-fun eval_op t = SYMBOLIC_EVAL_CONV DP_ss (cntxt [not_sh_reg,abbrev_mode1]
+fun eval_op t =
+  SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(Rm = 15w:word4)``,abbrev_mode1]
   (subst [``f:condition -> bool -> word4 ->
               word4 -> addr_mode1 -> arm_instruction`` |-> t]
    ``enc ((f:condition -> bool -> word4 ->
@@ -323,10 +322,12 @@ val ARM_ADC = eval_op ``instruction$ADC``;
 val ARM_SBC = eval_op ``instruction$SBC``;
 val ARM_RSC = eval_op ``instruction$RSC``;
 
-val ARM_MOV = SYMBOLIC_EVAL_CONV DP_ss (cntxt [not_sh_reg,abbrev_mode1]
+val ARM_MOV =
+  SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(Rm = 15w:word4)``,abbrev_mode1]
   ``enc (instruction$MOV c s Rd Op2)``);
 
-val ARM_MVN = SYMBOLIC_EVAL_CONV DP_ss (cntxt [not_sh_reg,abbrev_mode1]
+val ARM_MVN =
+  SYMBOLIC_EVAL_CONV DP_ss (cntxt [``~(Rm = 15w:word4)``,abbrev_mode1]
   ``enc (instruction$MVN c s Rd Op2)``);
 
 (* ......................................................................... *)
