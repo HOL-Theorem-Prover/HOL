@@ -3,8 +3,9 @@ sig
      type tag
 
      val read    : string -> tag
-     val read_disk_tag : string -> tag
+     val read_disk_tag : string list -> tag
      val axioms_of : tag -> string ref list
+     val dest_tag : tag -> string list * string list
      val empty_tag : tag
      val isEmpty   : tag -> bool
      val isDisk    : tag -> bool
