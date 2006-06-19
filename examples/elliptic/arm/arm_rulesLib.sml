@@ -31,7 +31,9 @@ val PSR_CONV =
 
 (* ------------------------------------------------------------------------- *)
 
-val DIMINDEX4 = SIMP_RULE std_ss [dimindex_4] o INST_TYPE [`:'a` |-> `:i4`];
+val DIMINDEX4 =
+  SIMP_RULE std_ss [dimindex_4,dimword_4] o
+  INST_TYPE [`:'a` |-> `:i4`];
 
 val wrd_ss = std_ss ++ rewrites [DIMINDEX4 word_ls_n2w,DIMINDEX4 n2w_11];
 
@@ -106,12 +108,8 @@ fun MATCH_ARM_RULE m r = GEN_ALL (PART_MATCH
   (fn t => (dest_enc_term o valOf)
       (List.find is_enc_term ((strip_conj o fst o dest_imp) t))) r m);
 
-val all_arm_rules =
+val arm_rules =
   filter (fn x => substring(fst x, 0, 3) = "ARM") (theorems "arm_rules");
-
-val (nop_rules,arm_rules) =
-  List.partition (fn x => String.extract(fst x,size (fst x) - 3,NONE) = "NOP")
-    all_arm_rules;
 
 fun RULE_FIND m l = filter (can (MATCH_ARM_RULE m)) l;
 
@@ -119,10 +117,8 @@ fun RULE_GET m l = filter (fn x => not (term_eq (concl x) T))
   (map (SIMP_RULE wrd_ss [] o MATCH_ARM_RULE m) (RULE_FIND m l));
 
 fun RULE_GET_ARM m = hd (RULE_GET m (map snd arm_rules));
-fun RULE_GET_NOP m = hd (RULE_GET m (map snd nop_rules));
 
 val GET_ARM = RULE_GET_ARM o instructionSyntax.mk_instruction; 
-val GET_NOP = RULE_GET_NOP o instructionSyntax.mk_instruction; 
 
 (* ------------------------------------------------------------------------- *)
 

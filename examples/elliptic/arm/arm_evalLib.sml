@@ -96,6 +96,8 @@ fun arm_compset () = add_rws wordsLib.words_compset
    DECODE_MSR_THM,DECODE_LDR_STR_THM,DECODE_SWP_THM,
    DECODE_LDM_STM_THM,DECODE_MLA_MUL_THM,DECODE_LDC_STC_THM,
    DECODE_PSRD_def, CONDITION_PASSED3_def,
+   IS_REG_SHIFT_def, IS_DP_IMMEDIATE_def,
+   IS_DT_SHIFT_IMMEDIATE_def, IS_MSR_IMMEDIATE_def,
 
    cond_pass_enc_br, cond_pass_enc_coproc, cond_pass_enc_swp,
    cond_pass_enc_data_proc, cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,
@@ -104,7 +106,6 @@ fun arm_compset () = add_rws wordsLib.words_compset
 
    decode_enc_br, decode_enc_coproc, decode_enc_swp,
    decode_enc_data_proc, decode_enc_data_proc2, decode_enc_data_proc3,
-   decode_enc_reg_shift, decode_enc_reg_shift2, decode_enc_reg_shift3,
    decode_enc_ldm_stm, decode_enc_ldr_str, decode_enc_mla_mul,
    decode_enc_mrs, decode_enc_msr, decode_enc_swi,
 
@@ -116,7 +117,7 @@ fun arm_compset () = add_rws wordsLib.words_compset
    EXTRACT_RULE2 immediate_enc, EXTRACT_RULE2 immediate_enc2,
    EXTRACT_RULE2 shift_immediate_enc, EXTRACT_RULE2 shift_immediate_enc2,
    EXTRACT_RULE2 shift_immediate_shift_register,
-   EXTRACT_RULE2 shift_register_enc,
+   EXTRACT_RULE2 shift_register_enc, EXTRACT_RULE2 shift_register_enc2,
 
    CARRY_def,BW_READ_def,
    SHIFT_IMMEDIATE2_def,SHIFT_REGISTER2_def,
