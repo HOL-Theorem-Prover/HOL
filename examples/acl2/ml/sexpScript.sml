@@ -76,7 +76,7 @@ val _ = Hol_datatype
 (* other character sequences that HOL can't parse occurring in ACL2          *)
 (* names) we also provide a HOL friendly name which is overloaded onto the   *)
 (* ACL2 name. For example the ACL2 name "ACL2::BAD-ATOM<=" is given the      *)
-(* HOL friendly name "bad_atom_less".                                        *)
+(* HOL friendly name "bad_atom_less_equal".                                  *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -3594,9 +3594,9 @@ val SEXP_WF_LESS_def =
 (*****************************************************************************)
 (* ACL2_BAD_ATOM_LESS x y iff x is less then y in the well-founded relation  *)
 (*****************************************************************************)
-val bad_atom_less_def =
+val bad_atom_less_equal_def =
  acl2Define "ACL2::BAD-ATOM<="
-  `bad_atom_less x y = if SEXP_WF_LESS x y then t else nil`;
+  `bad_atom_less_equal x y = if SEXP_WF_LESS x y then t else nil`;
 
 (*****************************************************************************)
 (* symbol-name                                                               *)

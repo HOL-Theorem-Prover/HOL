@@ -1,22 +1,17 @@
-(* File created from HOL using print_acl2_defun_script on Thu Dec 15 17:10:21 2005 *)
+(* File created from HOL using print_acl2_defun_script on Mon Jun 19 15:43:10 2006 *)
 
 open HolKernel Parse boolLib bossLib;
 open stringLib complex_rationalTheory gcdTheory sexp sexpTheory;
 val _ = new_theory "basic_defaxioms";
 
 val name_alist = 
-[("iff","ACL2::IFF"),("booleanp","ACL2::BOOLEANP"),("implies","ACL2::IMPLIES"),("not","COMMON-LISP::NOT"),("hide","ACL2::HIDE"),("eq","COMMON-LISP::EQ"),("true_listp","ACL2::TRUE-LISTP"),("list_macro","ACL2::LIST-MACRO"),("and_macro","ACL2::AND-MACRO"),("or_macro","ACL2::OR-MACRO"),("integer_abs","ACL2::INTEGER-ABS"),("xxxjoin","ACL2::XXXJOIN"),("len","ACL2::LEN"),("length","COMMON-LISP::LENGTH"),("acl2_count","ACL2::ACL2-COUNT"),("cond_clauses","ACL2::COND-CLAUSESP"),("cond_macro","ACL2::COND-MACRO"),("eqlablep","ACL2::EQLABLEP"),("eqlable_listp","ACL2::EQLABLE-LISTP"),("atom","COMMON-LISP::ATOM"),("make_character_list","ACL2::MAKE-CHARACTER-LIST"),("eqlable_alistp","ACL2::EQLABLE-ALISTP"),("alistp","ACL2::ALISTP"),("acons","COMMON-LISP::ACONS"),("endp","COMMON-LISP::ENDP"),("must_be_equal","ACL2::MUST-BE-EQUAL"),("member_equal","ACL2::MEMBER-EQUAL"),("union_equal","ACL2::UNION-EQUAL"),("subsetp_equal","ACL2::SUBSETP-EQUAL"),("symbol_listp","ACL2::SYMBOL-LISTP"),("null","COMMON-LISP::NULL"),("member_eq","ACL2::MEMBER-EQ"),("subsetp_eq","ACL2::SUBSETP-EQ"),("symbol_alistp","ACL2::SYMBOL-ALISTP"),("assoc_eq","ACL2::ASSOC-EQ"),("assoc_equal","ACL2::ASSOC-EQUAL"),("assoc_eq_equal_alistp","ACL2::ASSOC-EQ-EQUAL-ALISTP"),("assoc_eq_equal","ACL2::ASSOC-EQ-EQUAL"),("no_duplicatesp_equal","ACL2::NO-DUPLICATESP-EQUAL"),("strip_cars","ACL2::STRIP-CARS"),("eql","COMMON-LISP::EQL"),("acl2_equal","COMMON-LISP::="),("acl2_not_equal","COMMON-LISP::/="),("zp","ACL2::ZP"),("zip","ACL2::ZIP"),("nth","COMMON-LISP::NTH"),("char","COMMON-LISP::CHAR"),("proper_consp","ACL2::PROPER-CONSP"),("improper_consp","ACL2::IMPROPER-CONSP"),("conjugate","COMMON-LISP::CONJUGATE"),("prog2","ACL2::PROG2$"),("time","ACL2::TIME$"),("fix","ACL2::FIX"),("force","ACL2::FORCE"),("immediate_force_modep","ACL2::IMMEDIATE-FORCE-MODEP"),("case_split","ACL2::CASE-SPLIT"),("synp","ACL2::SYNP"),("member","COMMON-LISP::MEMBER"),("no_duplicatesp","ACL2::NO-DUPLICATESP"),("assoc","COMMON-LISP::ASSOC"),("r_eqlable_alistp","ACL2::R-EQLABLE-ALISTP"),("rassoc","COMMON-LISP::RASSOC"),("rassoc_equal","ACL2::RASSOC-EQUAL"),("r_symbol_alistp","ACL2::R-SYMBOL-ALISTP"),("rassoc_eq","ACL2::RASSOC-EQ")];
+[("acl2_colon__colon_iff","ACL2::IFF"),("acl2_colon__colon_booleanp","ACL2::BOOLEANP"),("acl2_colon__colon_implies","ACL2::IMPLIES"),("common_lisp_colon__colon_not","COMMON-LISP::NOT"),("acl2_colon__colon_hide","ACL2::HIDE"),("common_lisp_colon__colon_eq","COMMON-LISP::EQ"),("acl2_colon__colon_true_listp","ACL2::TRUE-LISTP"),("acl2_colon__colon_list_macro","ACL2::LIST-MACRO"),("acl2_colon__colon_and_macro","ACL2::AND-MACRO"),("acl2_colon__colon_or_macro","ACL2::OR-MACRO"),("acl2_colon__colon_integer_abs","ACL2::INTEGER-ABS"),("acl2_colon__colon_xxxjoin","ACL2::XXXJOIN"),("acl2_colon__colon_len","ACL2::LEN"),("common_lisp_colon__colon_length","COMMON-LISP::LENGTH"),("acl2_colon__colon_acl2_count","ACL2::ACL2-COUNT"),("acl2_colon__colon_cond_clausesp","ACL2::COND-CLAUSESP"),("acl2_colon__colon_cond_macro","ACL2::COND-MACRO"),("acl2_colon__colon_eqlablep","ACL2::EQLABLEP"),("acl2_colon__colon_eqlable_listp","ACL2::EQLABLE-LISTP"),("common_lisp_colon__colon_atom","COMMON-LISP::ATOM"),("acl2_colon__colon_make_character_list","ACL2::MAKE-CHARACTER-LIST"),("acl2_colon__colon_eqlable_alistp","ACL2::EQLABLE-ALISTP"),("acl2_colon__colon_alistp","ACL2::ALISTP"),("common_lisp_colon__colon_acons","COMMON-LISP::ACONS"),("common_lisp_colon__colon_endp","COMMON-LISP::ENDP"),("acl2_colon__colon_must_be_equal","ACL2::MUST-BE-EQUAL"),("acl2_colon__colon_member_equal","ACL2::MEMBER-EQUAL"),("acl2_colon__colon_union_equal","ACL2::UNION-EQUAL"),("acl2_colon__colon_subsetp_equal","ACL2::SUBSETP-EQUAL"),("acl2_colon__colon_symbol_listp","ACL2::SYMBOL-LISTP"),("common_lisp_colon__colon_null","COMMON-LISP::NULL"),("acl2_colon__colon_member_eq","ACL2::MEMBER-EQ"),("acl2_colon__colon_subsetp_eq","ACL2::SUBSETP-EQ"),("acl2_colon__colon_symbol_alistp","ACL2::SYMBOL-ALISTP"),("acl2_colon__colon_assoc_eq","ACL2::ASSOC-EQ"),("acl2_colon__colon_assoc_equal","ACL2::ASSOC-EQUAL"),("acl2_colon__colon_assoc_eq_equal_alistp","ACL2::ASSOC-EQ-EQUAL-ALISTP"),("acl2_colon__colon_assoc_eq_equal","ACL2::ASSOC-EQ-EQUAL"),("acl2_colon__colon_no_duplicatesp_equal","ACL2::NO-DUPLICATESP-EQUAL"),("acl2_colon__colon_strip_cars","ACL2::STRIP-CARS"),("common_lisp_colon__colon_eql","COMMON-LISP::EQL"),("common_lisp_colon__colon__eq_","COMMON-LISP::="),("common_lisp_colon__colon__slash__eq_","COMMON-LISP::/="),("acl2_colon__colon_zp","ACL2::ZP"),("acl2_colon__colon_zip","ACL2::ZIP"),("common_lisp_colon__colon_nth","COMMON-LISP::NTH"),("common_lisp_colon__colon_char","COMMON-LISP::CHAR"),("acl2_colon__colon_proper_consp","ACL2::PROPER-CONSP"),("acl2_colon__colon_improper_consp","ACL2::IMPROPER-CONSP"),("common_lisp_colon__colon_conjugate","COMMON-LISP::CONJUGATE"),("acl2_colon__colon_prog2_dollar_","ACL2::PROG2$"),("acl2_colon__colon_time_dollar_","ACL2::TIME$"),("acl2_colon__colon_fix","ACL2::FIX"),("acl2_colon__colon_force","ACL2::FORCE"),("acl2_colon__colon_immediate_force_modep","ACL2::IMMEDIATE-FORCE-MODEP"),("acl2_colon__colon_case_split","ACL2::CASE-SPLIT"),("acl2_colon__colon_synp","ACL2::SYNP"),("common_lisp_colon__colon_member","COMMON-LISP::MEMBER"),("acl2_colon__colon_no_duplicatesp","ACL2::NO-DUPLICATESP"),("common_lisp_colon__colon_assoc","COMMON-LISP::ASSOC"),("acl2_colon__colon_r_eqlable_alistp","ACL2::R-EQLABLE-ALISTP"),("common_lisp_colon__colon_rassoc","COMMON-LISP::RASSOC"),("acl2_colon__colon_rassoc_equal","ACL2::RASSOC-EQUAL"),("acl2_colon__colon_r_symbol_alistp","ACL2::R-SYMBOL-ALISTP"),("acl2_colon__colon_rassoc_eq","ACL2::RASSOC-EQ")];
 
 
 val _ = current_package :=
  implode(map chr (cons 65 (cons 67 (cons 76 (cons 50 nil)))));
 
 val _ = sexp.acl2_list_ref := [
-
-(mkpair (mksym "COMMON-LISP" "IN-PACKAGE") (mkpair (mk_chars_str (
-chars_to_string (cons 65 (cons 67 (cons 76 (cons 50 nil)))))) (mksym 
-"COMMON-LISP" "NIL")))
-,
 
 (mkpair (mksym "COMMON-LISP" "DEFUN") (mkpair (mksym "ACL2" "IFF") (mkpair (
 mkpair (mksym "ACL2" "P") (mkpair (mksym "ACL2" "Q") (mksym "COMMON-LISP" 
@@ -1031,17 +1026,9 @@ mksym "COMMON-LISP" "CAR") (mkpair (mksym "ACL2" "ALIST") (mksym
 
 ];
 
-val thl = map (define_and_overload name_alist) (tl(!acl2_list_ref));
+val thl = flatten(map (map install_def_and_print o mk_defs) (!acl2_list_ref));
 
 val _ = (acl2_simps := (!acl2_simps) @ thl);
-
-val _ =
- map
-  (fn (hol,acl2) =>
-    set_MLname (acl2 ^ "_acl2_defun") (hol ^ "_acl2_defun"))
-  name_alist;
-
-val _ = acl2_name_list := union (!acl2_name_list) name_alist;
 
 val _ = export_acl2_theory();
 
