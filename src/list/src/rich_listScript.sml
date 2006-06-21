@@ -3251,7 +3251,8 @@ val _ =
          MLSIG "type num = numML.num"
          :: OPEN ["list"]
          ::
-         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF] o
+         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF,
+                                  GSYM arithmeticTheory.ALT_ZERO] o
               CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV)
              [AND_EL_DEF,CONJ BUTFIRSTN BUTFIRSTN_NIL,
               ELL,SNOC,GENLIST,CONJ FIRSTN FIRSTN_NIL,

@@ -196,7 +196,8 @@ val _ =
    ("numeral_bits",
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
-     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF,
+                               GSYM arithmeticTheory.ALT_ZERO])
          [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE,
           NUMERAL_MOD_2EXP,iMOD_2EXP, NUMERAL_DIV_2EXP])
  end;

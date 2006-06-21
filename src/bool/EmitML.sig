@@ -11,7 +11,7 @@ sig
   val is_let_hook              : (term -> bool) ref
   val is_pabs_hook             : (term -> bool) ref
   val is_one_hook              : (term -> bool) ref
-  val is_fail_hook              : (term -> bool) ref
+  val is_fail_hook             : (term -> bool) ref
 
   val dest_int_literal_hook    : (term -> Arbint.int) ref
   val dest_string_literal_hook : (term -> string) ref

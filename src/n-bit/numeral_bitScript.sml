@@ -320,18 +320,29 @@ val numeral_log2 = store_thm("numeral_log2",
 
 (* ------------------------------------------------------------------------- *)
 
+val TIMES_2EXP1 =
+ (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
+  Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
+
 val _ =
  let open EmitML
  in exportML (!Globals.exportMLPath)
-   ("numeral_bit",
+   ("bit",
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
-     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-         [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE, NUMERAL_TIMES_2EXP,
+     map (DEFN o PURE_REWRITE_RULE
+         [arithmeticTheory.NUMERAL_DEF, TIMES_2EXP1,
+          (GSYM o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
+             (CONJUNCT2 iMOD_2EXP),
+          GSYM arithmeticTheory.ALT_ZERO,iBITWISE_def])
+         [NUMERAL_DIV2,iBITWISE, NUMERAL_TIMES_2EXP,
           NUMERAL_BIT_MODF, NUMERAL_BIT_MODIFY,
           NUMERAL_BIT_REV, NUMERAL_BIT_REVERSE,
           numeral_ilog2, numeral_log2,
-          NUMERAL_MOD_2EXP,iMOD_2EXP, NUMERAL_DIV_2EXP])
+          NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP,
+          DIVMOD_2EXP, SBIT_def, BITS_def,
+          BITV_def, BIT_def, SLICE_def,LSB_def,
+          SIGN_EXTEND_def])
  end;
 
 val _ = export_theory();

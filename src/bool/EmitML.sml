@@ -148,6 +148,7 @@ fun term_to_ML openthys ppstrm =
      if !is_one_hook tm  then pp_one tm else
      if TypeBase.is_record tm then pp_record i (TypeBase.dest_record tm) else
      if TypeBase.is_case tm then pp_case i (TypeBase.strip_case tm) else
+     if is_the_value tm then pp_itself tm else
      if is_const tm then pp_const i tm else
      if is_comb tm then pp_comb i tm
      else raise ERR "term_to_ML"
@@ -321,6 +322,24 @@ fun term_to_ML openthys ppstrm =
        ; add_string "raise Fail \"\""
        ; end_block()
        ; rparen i maxprec)
+  and pp_itself tm =
+    let fun pp_itself_type typ =
+      if is_vartype typ then
+        add_string (String.extract(dest_vartype typ, 1, NONE))
+      else case (dest_type typ) of
+        (tyop, els) =>
+           (begin_block Portable.CONSISTENT 0
+          ; add_string ("(Tyop (\"" ^ tyop ^ "\", [")
+          ; begin_block Portable.CONSISTENT 0
+          ; Portable.pr_list pp_itself_type
+                  (fn () => add_string",")
+                  (fn () => add_break(0,0)) els
+          ; end_block()
+          ; add_string "]))"
+          ; end_block())
+    in
+      (pp_itself_type o hd o snd o dest_type o type_of) tm
+    end
 
   and pp_var tm = add_string(fst(dest_var tm))
   and pp_const i tm =
@@ -429,6 +448,7 @@ local open type_grammar HOLgrammars
       fun problem {opname="sum",  parse_string="+"} = true
         | problem {opname="prod", parse_string="#"} = true
         | problem {opname="fmap", parse_string="|->"} = true
+        | problem {opname="cart", parse_string="**"} = true
         | problem otherwise = false
       fun elim (r as (i,INFIX(list,a))) A =
             let val list' = gather (not o problem) list

@@ -22,6 +22,7 @@ sig
   val bool_case      : term
   val let_tm         : term
   val arb            : term
+  val the_value      : term
   val bounded_tm     : term
   val res_forall_tm  : term
   val res_exists_tm  : term
@@ -92,6 +93,7 @@ sig
   val is_bool_case           : term -> bool
   val is_let                 : term -> bool
   val is_arb                 : term -> bool
+  val is_the_value           : term -> bool
   val is_res_forall          : term -> bool
   val is_res_exists          : term -> bool
   val is_res_exists_unique   : term -> bool

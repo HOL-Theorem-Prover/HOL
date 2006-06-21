@@ -2184,4 +2184,77 @@ val _ = List.app mk_word_size sizes;
 
 (* ------------------------------------------------------------------------- *)
 
+val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n):bool ** 'a`;
+val w2w_itself_def = Define `w2w_itself (:'a) w = (w2w w): bool ** 'a`;
+val sw2sw_itself_def = Define `sw2sw_itself (:'a) w = (sw2sw w): bool ** 'a`;
+
+val word_extract_itself_def = Define`
+  word_extract_itself (:'a) h l w = (word_extract h l w): bool ** 'a`;
+
+val word_concat_itself_def = Define`
+  word_concat_itself (:'a) v w = (word_concat v w): bool ** 'a`;
+
+val fromNum_def = Define`
+  fromNum (n, (:'a)) = n2w_itself (n MOD dimword (:'a),(:'a))`;
+
+val _ = ConstMapML.insert ``dimword``;
+val _ = ConstMapML.insert ``dimindex``;
+val _ = ConstMapML.insert ``INT_MIN``;
+val _ = ConstMapML.insert ``n2w_itself``;
+
+local
+  open EmitML numeral_bitTheory
+  val ALPHA_BETA_RULE = GEN_ALL o INST [`a` |-> `m`, `b` |-> `n`] o SPEC_ALL
+  val MOD_WL =
+    (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (ONCE_REWRITE_CONV [GSYM n2w_mod]))))
+  val TIMES_2EXP1 =
+    (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
+     SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def
+  val word_join_n2w = SPECL [`n2w m`,`n2w n`] word_join_def
+  val word_div_n2w = SPECL [`n2w m`,`n2w n`] word_div_def
+  val word_asr_n2w = SPECL [`n`,`n2w m`] word_asr_n2w
+  val word_lsr_n2w = SPEC `n2w m` word_lsr_n2w
+  val word_rol_n2w = SPEC `n2w m` word_rol_def
+  val sw2sw_n2w = SPEC `n2w n` sw2sw_def
+  val word_extract_n2w = (SPECL [`h`,`l`,`n2w n`] o
+                          SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def
+in
+  val _ = exportML (!Globals.exportMLPath)
+    ("words", OPEN ["num", "fcp", "bit"]
+     :: MLSIG "type ('a, 'b) cart = ('a, 'b) fcpML.cart"
+     :: MLSIG "type ('a, 'b) sum = ('a, 'b) fcpML.sum"
+     :: MLSIG "type num = numML.num"
+     :: MLSIG "type 'a itself = fcpML.holtype"
+     :: MLSTRUCT
+            "val lookup_INT_MIN = ref (fn (a: holtype) =>\
+                 \ (raise IndexUndefined):num)\n\
+          \  fun INT_MIN a = !lookup_INT_MIN a\n\
+          \  val lookup_dimword = ref (fn (a: holtype) =>\
+                 \ (raise IndexUndefined):num)\n\
+          \  fun dimword a = !lookup_dimword a\n\n"
+     :: MLSIG "val lookup_INT_MIN : (fcpML.holtype -> num) ref\n\
+            \  val INT_MIN        : fcpML.holtype -> num\n\
+            \  val lookup_dimword : (fcpML.holtype -> num) ref\n\
+            \  val dimword        : fcpML.holtype -> num"
+     :: map (DEFN o REWRITE_RULE
+          [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
+           GSYM word_concat_itself_def, GSYM word_extract_itself_def,
+           word_T_def, word_L_def, word_H_def, TIMES_2EXP1] o ALPHA_BETA_RULE)
+          [UINT_MAX_def, INT_MAX_def,
+           w2n_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
+           word_bit_n2w, word_join_n2w, sw2sw_n2w, word_extract_n2w,
+           word_slice_n2w, word_concat_def, word_log2_n2w, word_reverse_n2w,
+           word_modify_n2w, word_lsb_n2w, word_msb_n2w,
+           word_1comp_n2w, word_and_n2w, word_xor_n2w,
+           word_2comp_n2w, word_div_n2w, word_sdiv_def,
+           MOD_WL word_add_n2w, word_sub_def, MOD_WL word_mul_n2w,
+           word_lsr_n2w, word_asr_n2w, word_ror_n2w, word_rol_n2w,
+           word_rrx_n2w, word_index_n2w,
+           word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
+           word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
+           fromNum_def])
+end;
+
+(* ------------------------------------------------------------------------- *)
+
 val _ = export_theory();

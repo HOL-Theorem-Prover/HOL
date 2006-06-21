@@ -34,6 +34,7 @@ val negation     = prim_mk_const {Name="~",         Thy="bool"};
 val conditional  = prim_mk_const {Name="COND",      Thy="bool"};
 val let_tm       = prim_mk_const {Name="LET",       Thy="bool"};
 val arb          = prim_mk_const {Name="ARB",       Thy="bool"};
+val the_value    = prim_mk_const {Name="the_value", Thy="bool"};
 val bool_case    = prim_mk_const {Name="bool_case", Thy="bool"};
 val bounded_tm   = prim_mk_const {Name="BOUNDED",   Thy="bool"};
 
@@ -147,6 +148,7 @@ val is_cond      = can dest_cond
 val is_let       = can dest_let
 val is_bool_case = can dest_bool_case
 val is_arb       = same_const arb
+val is_the_value = same_const the_value
 
 
 (*---------------------------------------------------------------------------*
