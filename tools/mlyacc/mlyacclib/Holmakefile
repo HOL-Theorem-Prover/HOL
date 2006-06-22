@@ -1,0 +1,19 @@
+all: base-sig.uo join.uo parser2.uo stream.uo
+
+base-sig.uo: base-sig.sml
+	$(MOSMLC) -toplevel -c $<
+
+join.uo: join.sml
+	$(MOSMLC) -toplevel -c base-sig.ui $<
+
+lrtable.uo: lrtable.sml base-sig.uo join.uo
+	$(MOSMLC) -toplevel -c base-sig.ui join.ui $<
+
+stream.uo: stream.sml base-sig.uo
+	$(MOSMLC) -toplevel -c base-sig.ui $<
+
+parser2.uo: parser2.sml base-sig.uo stream.uo lrtable.uo
+	$(MOSMLC) -toplevel -c base-sig.ui lrtable.ui stream.ui $<
+
+parser1.uo: parser1.sml base-sig.uo stream.uo lrtable.uo
+	$(MOSMLC) -toplevel -c base-sig.ui lrtable.ui stream.ui $<
