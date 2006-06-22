@@ -2220,9 +2220,9 @@ local
                           SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def
 in
   val _ = exportML (!Globals.exportMLPath)
-    ("words", OPEN ["num", "fcp", "bit"]
+    ("words", OPEN ["sum", "num", "fcp", "bit"]
      :: MLSIG "type ('a, 'b) cart = ('a, 'b) fcpML.cart"
-     :: MLSIG "type ('a, 'b) sum = ('a, 'b) fcpML.sum"
+     :: MLSIG "type ('a, 'b) sum = ('a, 'b) sumML.sum"
      :: MLSIG "type num = numML.num"
      :: MLSIG "type 'a itself = fcpML.holtype"
      :: MLSTRUCT
