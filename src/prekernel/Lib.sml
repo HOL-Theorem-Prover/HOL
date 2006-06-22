@@ -250,6 +250,16 @@ fun upto b t =
   in List.rev (up b [])
   end;
 
+fun appi f lst = let
+  fun recurse n lst =
+      case lst of
+        [] => ()
+      | h :: t => (f n h; recurse (n + 1) t)
+in
+  recurse 0 lst
+end
+
+
 type 'a cmp       = 'a * 'a -> order
 fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
@@ -529,8 +539,8 @@ fun with_flag (flag,b) f x =
   let val fval = !flag
       val () = flag := b
       val res = f x handle e => (flag := fval; raise e)
-  in 
-    flag := fval; 
+  in
+    flag := fval;
     res
   end;
 
