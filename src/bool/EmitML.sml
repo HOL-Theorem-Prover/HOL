@@ -69,8 +69,6 @@ val dest_fail_hook = ref (fn _ => raise ERR "dest_fail" "undefined")
 val strip_let_hook = ref (fn _ => raise ERR "strip_let" "undefined")
 val list_mk_prod_hook = ref (fn [x] => x
                               | _ => raise ERR "list_mk_prod" "undefined")
-val list_mk_pair_hook = ref (fn [x] => x
-                              | _ => raise ERR "list_mk_pair" "undefined")
 
 fun strip_cons M =
  case total (!dest_cons_hook) M
@@ -381,10 +379,11 @@ fun term_to_ML openthys side ppstrm =
         ; lparen i maxprec
         ; if TypeBase.is_constructor f
             then
-              (pp maxprec f;
-               case args of
-                 [a] => (add_string "("; pp minprec a; add_string ")")
-               | _ => pp minprec (!list_mk_pair_hook args))
+              (pp maxprec f; add_string "(";
+               pr_list (pp minprec)
+                       (fn () => add_string ",")
+                       (fn () => add_break(0,0)) args;
+               add_string ")")
             else (begin_block INCONSISTENT 2;
                   pr_list (pp maxprec) (fn () => ())
                           (fn () => add_break(1,0)) (f::args);

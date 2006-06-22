@@ -23,7 +23,6 @@ sig
   val dest_fail_hook           : (term -> term * string * term list) ref
   val strip_let_hook           : (term -> (term * term) list list * term) ref
   val list_mk_prod_hook        : (hol_type list -> hol_type) ref
-  val list_mk_pair_hook        : (term list -> term) ref
 
   datatype side = LEFT | RIGHT
 
