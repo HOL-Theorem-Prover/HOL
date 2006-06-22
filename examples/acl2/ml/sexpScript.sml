@@ -97,13 +97,17 @@ val _ = declare_names ("ACL2_CHARACTER", "chr");
 (*****************************************************************************)
 (* Introduce some constants to abbreviate common package names.              *)
 (*****************************************************************************)
-val ACL2_def        = Define `ACL2        = "ACL2"`
-and COMMON_LISP_def = Define `COMMON_LISP = "COMMON-LISP"`;
+val ACL2_def                = Define `ACL2                = "ACL2"`
+and COMMON_LISP_def         = Define `COMMON_LISP         = "COMMON-LISP"`
+and KEYWORD_def             = Define `KEYWORD             = "KEYWORD"`
+and ACL2_OUTPUT_CHANNEL_def = Define `ACL2_OUTPUT_CHANNEL = "ACL2-OUTPUT-CHANNEL"`;
 
 val _ =
  add_string_abbrevs
-  [("ACL2",        lhs(concl ACL2_def )),
-   ("COMMON-LISP", lhs(concl COMMON_LISP_def))
+  [("ACL2",                lhs(concl ACL2_def )),
+   ("COMMON-LISP",         lhs(concl COMMON_LISP_def)),
+   ("KEYWORD",             lhs(concl KEYWORD_def)),
+   ("ACL2-OUTPUT-CHANNEL", lhs(concl ACL2_OUTPUT_CHANNEL_def))
   ];
 
 
@@ -601,11 +605,11 @@ val code_char_def =
 (*          (list x y z)))                                                   *)
 (*                                                                           *)
 (* Can't overload "if" onto ``ACL2_IF`` because of HOL's                     *)
-(* `if ... then ... else` construct. Using "cond" instead.                   *)
+(* `if ... then ... else` construct. Using "ite" instead.                    *)
 (*****************************************************************************)
-val cond_def =
+val ite_def =
  acl2Define "COMMON-LISP::IF"
-  `cond x (y:sexp) (z:sexp) = if x = nil then z else y`;
+  `ite x (y:sexp) (z:sexp) = if x = nil then z else y`;
 
 (*****************************************************************************)
 (* If f : 'a -> sexp then list_to_sexp f : num list : 'a list -> sexp.       *)
@@ -3609,7 +3613,7 @@ val bad_atom_less_equal_def =
 (*****************************************************************************)
 val symbol_name_def =
  acl2Define "COMMON-LISP::SYMBOL-NAME"
-  `(symbol_name (sym p n) = cond (symbolp (sym p n)) (str n) (str ""))
+  `(symbol_name (sym p n) = ite (symbolp (sym p n)) (str n) (str ""))
    /\
    (symbol_name _ = (str ""))`;
 
@@ -3625,7 +3629,7 @@ val symbol_name_def =
 val symbol_package_name_def =
  acl2Define "ACL2::SYMBOL-PACKAGE-NAME"
   `(symbol_package_name (sym p n) =
-     cond (symbolp (sym p n)) (str p) (str ""))
+     ite (symbolp (sym p n)) (str p) (str ""))
    /\
    (symbol_package_name _ = (str ""))`;
 
@@ -3652,7 +3656,7 @@ val symbol_package_name_def =
 val pkg_witness_def =
  acl2Define "ACL2::PKG-WITNESS"
   `pkg_witness (str x) =
-    let s = BASIC_INTERN "PKG-WITNESS" x in cond (symbolp s) s nil`;
+    let s = BASIC_INTERN "PKG-WITNESS" x in ite (symbolp s) s nil`;
 
 (*****************************************************************************)
 (* intern-in-package-of-symbol                                               *)
@@ -3674,7 +3678,7 @@ val pkg_witness_def =
 val intern_in_package_of_symbol_def =
  acl2Define "ACL2::INTERN-IN-PACKAGE-OF-SYMBOL"
   `(intern_in_package_of_symbol (str x) (sym p n) =
-     cond (symbolp (sym p n)) (BASIC_INTERN x p) nil)
+     ite (symbolp (sym p n)) (BASIC_INTERN x p) nil)
    /\
    (intern_in_package_of_symbol _ _ = nil)`;
 
@@ -3689,7 +3693,7 @@ val _ = set_fixity "|=" (TruePrefix 11);        (* Give "|=" weak precedence *)
 
 val ACL2_TRUE_def =
  xDefine "ACL2_TRUE"
-  `(|= p) = (cond (equal p nil) nil t = t)`;
+  `(|= p) = (ite (equal p nil) nil t = t)`;
 
 val _ = export_acl2_theory();
 
