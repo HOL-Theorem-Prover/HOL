@@ -4241,11 +4241,14 @@ val MIN_SET_EMPTY = Q.prove
 
 val _ =
  let open EmitML combinSyntax
-     val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set`
+     val (tyg,tmg) = (type_grammar(),term_grammar())
+     val tyg' = type_grammar.remove_abbreviation tyg "set"
+     val _ = temp_set_grammars(tyg',tmg)
+(*     val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set` *)
      val _ = new_type("set",1)
   in try exportML (!Globals.exportMLPath)
    ("set",
-    ABSDATATYPE (["'a"], setdecl)
+    ABSDATATYPE (["'a"], `set = EMPTY | INSERT of 'a => set`)
     :: OPEN ["num"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "val EMPTY    : 'a set"

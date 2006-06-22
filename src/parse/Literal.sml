@@ -44,52 +44,70 @@ fun is_num2num_type ty =
    end handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------
-    Checks if t is a sequence of applications of BIT1 and BIT2 to ZERO
+    Checks if t is 0 or a sequence of applications of BIT1 and BIT2 to ZERO,
+    perhaps with an outer application of NUMERAL. In BNF :
+
+     <numeral> ::= 0 | NUMERAL <bits>
+     <bits>    ::= ZERO | BIT1 (<bits>) | BIT2 (<bits>)
  ---------------------------------------------------------------------------*)
 
-fun is_nb t =
-   if is_const t
-   then let val {Name, Thy, Ty} = dest_thy_const t
-        in Name = "ZERO" andalso Thy="arithmetic" andalso is_numtype Ty
-        end
-   else let val (Rator, Rand) = dest_comb t
-            val {Name, Thy, Ty} = dest_thy_const Rator
-        in (Name="BIT1" orelse Name="BIT2")
-            andalso Thy = "arithmetic"
-            andalso is_num2num_type Ty andalso is_nb Rand
-        end
+fun dest_zero t = 
+ case total dest_thy_const t 
+  of SOME {Name="0", Thy="num",...} => Arbnum.zero
+   | otherwise => raise ERR "dest_zero" "expected 0";
 
-fun is_numeral t =
-  if is_const t
-  then let val {Name,Thy,Ty} = dest_thy_const t
-       in is_numtype Ty andalso Name = "0" andalso Thy="num"
-       end
-  else let val (Rator,Rand) = dest_comb t
-           val {Name,Thy,Ty} = dest_thy_const Rator
-       in Name="NUMERAL" andalso Thy="arithmetic"
-          andalso is_num2num_type Ty andalso is_nb Rand
-       end handle HOL_ERR _ => false;
+fun dest_ZERO t = 
+ case total dest_thy_const t 
+  of SOME {Name="ZERO", Thy="arithmetic",...} => Arbnum.zero
+   | otherwise => raise ERR "dest_zero" "expected ZERO";
+
+fun dest_b1 tm = 
+ case total ((dest_thy_const##I) o dest_comb) tm
+  of SOME ({Name="BIT1", Thy="arithmetic",...},t) => t
+   | otherwise => raise ERR "dest_b1" "expected BIT1";
+
+fun dest_b2 tm = 
+ case total ((dest_thy_const##I) o dest_comb) tm
+  of SOME ({Name="BIT2", Thy="arithmetic",...},t) => t
+   | otherwise => raise ERR "dest_b2" "expected BIT2";
+
+local open Arbnum
+in
+fun dest_bare_numeral t =
+  dest_ZERO t 
+  handle HOL_ERR _ => two * dest_bare_numeral (dest_b1 t) + one 
+  handle HOL_ERR _ => two * dest_bare_numeral (dest_b2 t) + two
+end
+
+fun dest_numeral tm = 
+ dest_zero tm 
+ handle HOL_ERR _ =>
+    (case total ((dest_thy_const##I) o dest_comb) tm
+      of SOME ({Name="NUMERAL", Thy="arithmetic",...},t) 
+         => with_exn dest_bare_numeral t
+              (ERR "dest_numeral" "term is not a numeral")
+       | otherwise => raise ERR "dest_numeral" "term is not a numeral"
+    )
 
 
-fun dest_numeral t =
-  if not(is_numeral t) then raise ERR "dest_numeral" "term is not a numeral"
-  else
-  if is_const t then Arbnum.zero
-  else
-  let open Arbnum
-      fun dest t =
-         if is_comb t
-         then let val (Rator, Rand) = dest_comb t
-              in case fst(dest_const Rator)
-                  of "BIT1" => two * dest Rand + one
-                   | "BIT2" => two * dest Rand + two
-                   | otherwise => raise ERR "dest_numeral"
-                                    "This should never ever happen"
-              end
-         else zero
-  in
-     dest (rand t)
-  end;
+(*---------------------------------------------------------------------------
+   A "relaxed" numeral is one where the NUMERAL might not be there. These
+   occasionally occur, for example when the NUMERAL tag has been rewritten 
+   away. In BNF :
+
+     <relaxed_numeral> ::= 0 | NUMERAL <bits> | <bits>
+     <bits>            ::= ZERO | BIT1 (<bits>) | BIT2 (<bits>)
+ ---------------------------------------------------------------------------*)
+
+fun relaxed_dest_numeral tm =
+                     dest_numeral tm 
+ handle HOL_ERR _ => dest_bare_numeral tm 
+ handle HOL_ERR _ => raise ERR "relaxed_dest_numeral" "term is not a numeral";
+
+val is_zero = Lib.can dest_zero;
+val is_ZERO = Lib.can dest_ZERO;
+val is_bare_numeral = Lib.can dest_bare_numeral;
+val is_numeral = Lib.can dest_numeral;
 
 fun gen_mk_numeral {mk_comb, ZERO, ALT_ZERO, NUMERAL, BIT1, BIT2} n =
  let open Arbnum

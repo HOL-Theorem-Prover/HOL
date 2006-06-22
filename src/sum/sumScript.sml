@@ -476,7 +476,7 @@ val _ =
  let open EmitML combinSyntax
  in exportML (!Globals.exportMLPath)
     ("sum",
-      DATATYPE (ParseDatatype.parse `sum = INL of 'a | INR of 'b`)
+      DATATYPE `sum = INL of 'a | INR of 'b`
       :: map DEFN [CONJ OUTL OUTL_INR, OUTR, ISL_THM, ISR_THM])
  end;
 

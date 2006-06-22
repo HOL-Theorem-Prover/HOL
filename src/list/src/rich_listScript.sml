@@ -3220,7 +3220,8 @@ fun dest_cons M =
                    else raise ERR "rich_listScript" "dest_cons"
     | otherwise => raise ERR "rich_listScript" "dest_cons" ;
 
-fun dest_list M =   case total dest_cons M
+fun dest_list M = 
+  case total dest_cons M
     of NONE => if same_const nil_tm M then []
                else raise ERR "dest_list" "not terminated with nil"
      | SOME(h,t) => h::dest_list t
@@ -3249,7 +3250,7 @@ val _ =
  in exportML (!Globals.exportMLPath)
       ("rich_list",
          MLSIG "type num = numML.num"
-         :: OPEN ["list"]
+         :: OPEN ["pair","num","list"]
          ::
          map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF,
                                   GSYM arithmeticTheory.ALT_ZERO] o
@@ -3263,4 +3264,4 @@ val _ =
 
 val _ = export_theory();
 
-end;
+end

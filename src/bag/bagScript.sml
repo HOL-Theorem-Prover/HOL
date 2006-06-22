@@ -1817,11 +1817,13 @@ fun scoped_parse q =
 
 val _ =
  let open EmitML combinSyntax
-     val bagdecl = scoped_parse `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`
+     val (tyg,tmg) = (type_grammar(),term_grammar())
+     val tyg' = type_grammar.remove_abbreviation tyg "bag"
+     val _ = temp_set_grammars(tyg',tmg)
      val _ = new_type("bag",1)
   in try exportML (!Globals.exportMLPath)
    ("bag",
-    ABSDATATYPE (["'a"], bagdecl)
+    ABSDATATYPE (["'a"], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`)
     :: OPEN ["num", "set"]
     :: MLSIG "type num = numML.num"
     :: MLSIG "type 'a set = 'a setML.set"

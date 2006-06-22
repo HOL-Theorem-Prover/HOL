@@ -1,7 +1,6 @@
 signature ParseDatatype =
 sig
 
-
  datatype pretype =
    dVartype of string
  | dTyop of {Tyop : string, Thy : string option, Args : pretype list}

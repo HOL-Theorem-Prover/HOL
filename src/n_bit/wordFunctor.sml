@@ -2877,7 +2877,7 @@ val _ =
  in exportML MLpath
    (wordn,
     OPEN ["num", "bits", "numeral_bits"]
-    :: EQDATATYPE ([],ParseDatatype.parse [QUOTE (wordn^" = n2w of num")])
+    :: EQDATATYPE ([],[QUOTE (wordn^" = n2w of num")])
     :: MLSIG "type num = numML.num"
     :: MLSTRUCT "nonfix - + * < > <= >= ;"
     :: MLSTRUCT (String.concat

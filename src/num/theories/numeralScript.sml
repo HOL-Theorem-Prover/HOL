@@ -738,6 +738,11 @@ val _ = adjoin_to_theory
      NL()
   end)};
 
+(*
+val _ = EmitML.is_num_literal_hook := Literal.is_numeral;
+val _ = EmitML.dest_num_literal_hook := Literal.dest_numeral;
+*)
+
 (*---------------------------------------------------------------------------*)
 (* Export ML analogues of all these functions, plus some support for         *)
 (* prettyprinting nums.                                                      *)
@@ -748,9 +753,7 @@ val _ =
   in 
     exportML (!Globals.exportMLPath)
     ("num",
-     DATATYPE (ParseDatatype.parse `num = ZERO
-                                        | BIT1 of num
-                                        | BIT2 of num`)
+     DATATYPE `num = ZERO | BIT1 of num | BIT2 of num`
       ::
      OPEN ["combin"]
       ::
@@ -761,7 +764,7 @@ val _ =
           numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
           numeral_mult,iSQR,numeral_exp,even,odd,
           numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
-          WHILE, LEAST_DEF, findq_thm,DIVMOD_THM,div_eqns, mod_eqns]
+          WHILE,LEAST_DEF,findq_thm,DIVMOD_THM,div_eqns, mod_eqns]
      @ 
      [MLSIG "val ONE :num",
       MLSIG "val TWO :num",

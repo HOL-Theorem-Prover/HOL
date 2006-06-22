@@ -13,6 +13,7 @@ sig
   val is_one_hook              : (term -> bool) ref
   val is_fail_hook             : (term -> bool) ref
 
+  val dest_num_literal_hook    : (term -> Arbnum.num) ref
   val dest_int_literal_hook    : (term -> Arbint.int) ref
   val dest_string_literal_hook : (term -> string) ref
   val dest_list_hook           : (term -> term list) ref
@@ -23,16 +24,18 @@ sig
   val strip_let_hook           : (term -> (term * term) list list * term) ref
   val list_mk_prod_hook        : (hol_type list -> hol_type) ref
 
+  datatype side = LEFT | RIGHT
+
   val pp_type_as_ML     : ppstream -> hol_type -> unit
-  val pp_term_as_ML     : string list -> ppstream -> term -> unit
+  val pp_term_as_ML     : string list -> side -> ppstream -> term -> unit
   val pp_defn_as_ML     : string list -> ppstream -> term -> unit
   val pp_datatype_as_ML : ppstream -> string list * ParseDatatype.AST list -> unit
 
   datatype elem = DEFN of thm
                 | DEFN_NOSIG of thm
-                | DATATYPE of ParseDatatype.AST list
-                | EQDATATYPE of string list * ParseDatatype.AST list
-                | ABSDATATYPE of string list * ParseDatatype.AST list
+                | DATATYPE of hol_type quotation
+                | EQDATATYPE of string list * hol_type quotation
+                | ABSDATATYPE of string list * hol_type quotation
                 | OPEN of string list
                 | MLSIG of string
                 | MLSTRUCT of string
