@@ -1,19 +1,19 @@
-all: base-sig.uo join.uo parser2.uo stream.uo
+all: MLY_base-sig.uo MLY_join.uo MLY_parser2.uo MLY_stream.uo MLY_parser1.uo
 
-base-sig.uo: base-sig.sml
+MLY_base-sig.uo: MLY_base-sig.sml
 	$(MOSMLC) -toplevel -c $<
 
-join.uo: join.sml
-	$(MOSMLC) -toplevel -c base-sig.ui $<
+MLY_join.uo: MLY_join.sml
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui $<
 
-lrtable.uo: lrtable.sml base-sig.uo join.uo
-	$(MOSMLC) -toplevel -c base-sig.ui join.ui $<
+MLY_lrtable.uo: MLY_lrtable.sml MLY_base-sig.uo MLY_join.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui MLY_join.ui $<
 
-stream.uo: stream.sml base-sig.uo
-	$(MOSMLC) -toplevel -c base-sig.ui $<
+MLY_stream.uo: MLY_stream.sml MLY_base-sig.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui $<
 
-parser2.uo: parser2.sml base-sig.uo stream.uo lrtable.uo
-	$(MOSMLC) -toplevel -c base-sig.ui lrtable.ui stream.ui $<
+MLY_parser2.uo: MLY_parser2.sml MLY_base-sig.uo MLY_stream.uo MLY_lrtable.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui MLY_lrtable.ui MLY_stream.ui $<
 
-parser1.uo: parser1.sml base-sig.uo stream.uo lrtable.uo
-	$(MOSMLC) -toplevel -c base-sig.ui lrtable.ui stream.ui $<
+MLY_parser1.uo: MLY_parser1.sml MLY_base-sig.uo MLY_stream.uo MLY_lrtable.uo
+	$(MOSMLC) -toplevel -c MLY_base-sig.ui MLY_lrtable.ui MLY_stream.ui $<

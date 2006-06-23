@@ -1,25 +1,25 @@
 INCLUDES = ../mlyacclib
 EXTRA_CLEANS = mlyacc.exe yacc.lex.sml
 
-MLYLIBUIS = base-sig.ui lrtable.ui parser2.ui join.ui
+MLYLIBUIS = $(patsubst %,MLY_%.ui,base-sig lrtable parser2 join)
 
 mlyacc.exe: main.uo
 	$(MOSMLC) -o $@ $<
 
 utils-sig.uo: utils-sig.sml
-	$(MOSMLC) -toplevel utils-sig.sml
+	$(MOSMLC) -toplevel -c utils-sig.sml
 
 utils.uo: utils.sml utils-sig.uo
-	$(MOSMLC) -toplevel utils-sig.ui $<
+	$(MOSMLC) -toplevel -c utils-sig.ui $<
 
 sigs.uo: utils-sig.uo sigs.sml
-	$(MOSMLC) -toplevel utils-sig.ui  $(MLYLIBUIS) sigs.sml
+	$(MOSMLC) -toplevel -c utils-sig.ui  $(MLYLIBUIS) sigs.sml
 
 core.uo: core.sml utils-sig.uo utils.uo sigs.uo
-	$(MOSMLC) -toplevel utils-sig.ui utils.ui sigs.ui $(MLYLIBUIS) $<
+	$(MOSMLC) -toplevel -c utils-sig.ui utils.ui sigs.ui $(MLYLIBUIS) $<
 
 hdr.uo: hdr.sml sigs.uo
-	$(MOSMLC) -toplevel sigs.ui $<
+	$(MOSMLC) -toplevel -c sigs.ui $<
 
 yacc-grm-sig.uo: yacc-grm-sig.sml hdr.uo
 	$(MOSMLC) -toplevel -c $(MLYLIBUIS) hdr.ui  $<
