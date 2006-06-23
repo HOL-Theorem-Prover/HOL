@@ -12,6 +12,7 @@
 # then dir1 can not depend on dir2, but if dir1 is later than dir2,
 # then it may or may not depend on dir2.
 
+tools/mlyacc/mlyacclib
 # these three directories are required to even run hol.bare.unquote
 src/parse
 src/bool

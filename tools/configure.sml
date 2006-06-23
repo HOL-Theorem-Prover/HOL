@@ -270,6 +270,27 @@ val _ =
 handle _ => (print "*** Couldn't build Holmake\n";
              Process.exit Process.failure)
 
+(* ----------------------------------------------------------------------
+    Compile our local copy of mlyacc
+   ---------------------------------------------------------------------- *)
+
+val _ = let
+  val _ = echo "Making tooks/mlyacc/src/mlyacc.exe"
+  val cdir = FileSys.getDir()
+  val destdir = fullPath [holdir, "tools/mlyacc"]
+  val systeml = fn clist => if systeml clist <> Process.success then
+                              die "Failed to build mlyacc"
+                            else ()
+  val holmake = fullPath [holdir, "bin/Holmake"]
+in
+  FileSys.chDir destdir;
+  FileSys.chDir "mlyacclib";
+  systeml [holmake, "all"];
+  FileSys.chDir "../src";
+  systeml [holmake, "mlyacc.exe"];
+  FileSys.chDir cdir
+end
+
 (*---------------------------------------------------------------------------
     Compile build.sml, and put it in bin/build.
  ---------------------------------------------------------------------------*)
