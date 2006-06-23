@@ -30,10 +30,10 @@ Never fails.
 
 
 \COMMENTS
-In MoscowML, {Meta.installPP} won't install {pp_tag} in the top-level
+In MoscowML, {Meta.installPP} will install {pp_tag} in the top-level
 loop.
 
 \SEEALSO
-Hol_pp.pp_thm.
+Hol_pp.pp_thm, Tag.dest_tag.
 
 \ENDDOC
