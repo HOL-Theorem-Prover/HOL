@@ -1444,7 +1444,7 @@ val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 
 val _ =
  let open EmitML combinSyntax ParseDatatype arithmeticTheory
-  in try exportML (!Globals.exportMLPath)
+  in try emitML (!Globals.emitMLDir)
    ("fmap",
     ABSDATATYPE (["'a","'b"], `fmap = FEMPTY | FUPDATE of fmap => 'a#'b`)
     :: OPEN ["num", "list", "set", "option"]

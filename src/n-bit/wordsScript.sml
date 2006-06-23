@@ -2219,7 +2219,7 @@ local
   val word_extract_n2w = (SPECL [`h`,`l`,`n2w n`] o
                           SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def
 in
-  val _ = exportML (!Globals.exportMLPath)
+  val _ = emitML (!Globals.emitMLDir)
     ("words", OPEN ["sum", "num", "fcp", "bit"]
      :: MLSIG "type ('a, 'b) cart = ('a, 'b) fcpML.cart"
      :: MLSIG "type ('a, 'b) sum = ('a, 'b) sumML.sum"

@@ -776,7 +776,7 @@ val _ = EmitML.is_pair_hook := is_pair
 val _ = EmitML.dest_pair_hook := dest_pair
 
 val _ =
-  EmitML.exportML (!Globals.exportMLPath)
+  EmitML.emitML (!Globals.emitMLDir)
    ("pair",
      map EmitML.DEFN [CURRY_DEF,UNCURRY_DEF,FST,SND,PAIR_MAP_THM,LEX_DEF_THM]);
 

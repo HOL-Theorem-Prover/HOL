@@ -42,5 +42,5 @@ sig
 
   val sigSuffix : string ref 
   val structSuffix : string ref 
-  val exportML : string -> string * elem list -> unit
+  val emitML : string -> string * elem list -> unit
 end

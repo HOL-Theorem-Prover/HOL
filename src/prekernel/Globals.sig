@@ -35,5 +35,5 @@ sig
   val print_thy_loads         : bool ref
 
   val hol_clock               : Timer.cpu_timer
-  val exportMLPath            : string ref
+  val emitMLDir               : string ref
 end

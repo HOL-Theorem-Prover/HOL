@@ -1154,7 +1154,7 @@ val ZIP_THM = let val [a,b] = CONJUNCTS ZIP
 
 val _ =
  let open EmitML
- in exportML (!Globals.exportMLPath)
+ in emitML (!Globals.emitMLDir)
       ("list",
          MLSIG "type num = numML.num"
          :: OPEN ["num"]

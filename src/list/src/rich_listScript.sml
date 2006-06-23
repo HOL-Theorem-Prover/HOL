@@ -3247,7 +3247,7 @@ val SEG_NIL = Q.prove(
 
 val _ =
  let open EmitML
- in exportML (!Globals.exportMLPath)
+ in emitML (!Globals.emitMLDir)
       ("rich_list",
          MLSIG "type num = numML.num"
          :: OPEN ["pair","num","list"]

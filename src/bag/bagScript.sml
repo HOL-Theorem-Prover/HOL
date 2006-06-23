@@ -1821,7 +1821,7 @@ val _ =
      val tyg' = type_grammar.remove_abbreviation tyg "bag"
      val _ = temp_set_grammars(tyg',tmg)
      val _ = new_type("bag",1)
-  in try exportML (!Globals.exportMLPath)
+  in try emitML (!Globals.emitMLDir)
    ("bag",
     ABSDATATYPE (["'a"], `bag = EMPTY_BAG | BAG_INSERT of 'a => bag`)
     :: OPEN ["num", "set"]

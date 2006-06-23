@@ -181,6 +181,6 @@ val hol_clock = Timer.startCPUTimer()
 (* The default directory where ML extracted from theory files is written.    *)
 (*---------------------------------------------------------------------------*)
 
-val exportMLPath = ref (Path.concat(HOLDIR,"src/theoryML/"));
+val emitMLDir = ref (Path.concat(HOLDIR,"src/theoryML/"));
 
-end; (* Globals *)
+end (* Globals *)

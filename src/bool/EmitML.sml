@@ -363,7 +363,6 @@ fun term_to_ML openthys side ppstrm =
     in
       (pp_itself_type o hd o snd o dest_type o type_of) tm
     end
-
   and pp_var tm = add_string(fst(dest_var tm))
   and pp_const i tm =
       if same_const tm boolSyntax.conjunction
@@ -565,12 +564,12 @@ fun pretype_of ty =
 end;
 
 (*---------------------------------------------------------------------------*)
-(* Initially, datatype description do not have arguments to the type         *)
+(* Initially, datatype descriptions do not have arguments to the type        *)
 (* operators being defined. This function finds out what they should be      *)
 (* and substitutes them through the rhs of the datatype declaration.         *)
 (* The DATATYPE description requires looking info up in the type base, in    *)
 (* order to see what order multiple type variables should be in. The         *)
-(* EQDATATYPE clause expects the type variables to be given in the correct  *)
+(* EQDATATYPE clause expects the type variables to be given in the correct   *)
 (* order in the first argument.                                              *)
 (*---------------------------------------------------------------------------*)
 
@@ -605,6 +604,15 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val ppty = pp_type_as_ML ppstrm
+     fun pp_comp_ty ty = 
+          if Lib.can dom_rng ty orelse is_pair_type ty
+          then (add_string "("; ppty ty; add_string")")
+          else ppty ty
+     fun pp_tyl tyl = 
+        (begin_block INCONSISTENT 0
+         ; pr_list pp_comp_ty (fn () => add_string" *")
+                              (fn () => add_break(1,0)) tyl
+         ; end_block())
      fun pp_tyvars [] = ()
        | pp_tyvars [v] = add_string v
        | pp_tyvars vlist =
@@ -621,14 +629,13 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
               (begin_block INCONSISTENT 0;
                  begin_block CONSISTENT 0; add_string con; add_string " of ";
                  end_block();
-               begin_block INCONSISTENT 0;
-               ppty (!list_mk_prod_hook(map ParseDatatype.pretypeToType args));
-               end_block(); end_block()))
+               pp_tyl (map ParseDatatype.pretypeToType args);
+               end_block()))
      fun pp_decl (tyvars,r) (name,Constructors clauselist) =
          (begin_block CONSISTENT 5;
           begin_block CONSISTENT 0;
             if !r then (add_string "datatype"; r:=false) else ();
-            add_break(1,0); pp_tyvars tyvars; add_break(1,0);
+            add_break(1,0); pp_tyvars tyvars; add_break(0,0);
             add_string name;
           end_block();
           add_break(1,0);
@@ -640,19 +647,13 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
        | pp_decl (tyvars,_) (name,Record flist) =
            let open ParseDatatype
                val fields = map (I##pretypeToType) flist
-               fun pp_field (s,ty) = 
-                if Lib.can dom_rng ty orelse is_pair_type ty
-                 then (add_string "("; ppty ty; add_string")")
-                 else ppty ty
            in begin_block CONSISTENT 0;
               add_string "datatype";
+              add_break(1,0);
               pp_tyvars tyvars;
-              add_string(" "^name^" = ");
+              add_string(name^" = ");
               add_string(name^" of ");
-              begin_block INCONSISTENT 0;
-              pr_list pp_field (fn () => add_string" *")
-                               (fn () => add_break(1,0)) fields;
-              end_block();
+              pp_tyl (map snd fields);
               end_block()
            end
  in
@@ -965,7 +966,7 @@ fun emit_adjoin_call thy consts =
 val sigSuffix = ref "ML.sig";
 val structSuffix = ref "ML.sml";
 
-fun exportML p (s,elems_0) =
+fun emitML p (s,elems_0) =
  let val elems = map internalize elems_0
      val path = if p="" then FileSys.getDir() else p
      val pathPrefix = Path.concat(path,s)
@@ -980,17 +981,17 @@ fun exportML p (s,elems_0) =
     pp_struct structPPstrm (s,elems,map (fst o dest_const) consts);
     TextIO.closeOut sigStrm;
     TextIO.closeOut structStrm;
-    HOL_MESG ("exportML: wrote files "^s^ !sigSuffix ^" and \n\
-     \                                     "^s^ !structSuffix^" \n\
+    HOL_MESG ("emitML: wrote files "^s^ !sigSuffix ^" and \n\
+     \                                   "^s^ !structSuffix^" \n\
               \ in directory "^path);
     emit_adjoin_call s consts
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
-                raise wrap_exn "EmitML" "exportML" e)
+                raise wrap_exn "EmitML" "emitML" e)
    end handle Io _ =>
-             HOL_WARNING "EmitML" "exportML"
+             HOL_WARNING "EmitML" "emitML"
               ("I/O error prevented exporting files to "^Lib.quote path)
-           | e => HOL_WARNING "EmitML" "exportML"
+           | e => HOL_WARNING "EmitML" "emitML"
                      (exn_to_string e 
                         ^" prevents writing ML files to "
                         ^Lib.quote path)

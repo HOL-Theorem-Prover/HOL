@@ -547,7 +547,7 @@ val _ = adjoin_to_theory
 
 val _ =
  let open EmitML
- in exportML (!Globals.exportMLPath)
+ in emitML (!Globals.emitMLDir)
    ("string",
     OPEN ["num", "list", "option"]
     :: MLSIG "type num = numML.num"
@@ -567,6 +567,7 @@ val _ =
  end;
 
 val _ = export_theory();
+
 val _ = let
   val ^^ = Path.concat
   infix ^^

@@ -1090,16 +1090,18 @@ val LOG2_UNIQUE = store_thm("LOG2_UNIQUE",
 val _ =
  let open EmitML
  in
-   exportML (!Globals.exportMLPath)
+   emitML (!Globals.emitMLDir)
   ("bits",
-    MLSIG "type num = numML.num" :: OPEN ["num"]
-    ::
+    MLSIG "type num = numML.num" 
+     :: 
+    OPEN ["num"]
+     ::
     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
         [TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def,
          DIVMOD_2EXP, SBIT_def, BITS_def,
          BITV_def, BIT_def, SLICE_def,LSBn_def,
          SIGN_EXTEND_def])
- end;;
+ end;
 
 val _ = export_theory();
 val _ = export_doc_theorems();

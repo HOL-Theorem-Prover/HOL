@@ -393,7 +393,7 @@ val THE_NONE = Q.prove
 
 val _ = 
  let open EmitML combinSyntax
- in exportML (!Globals.exportMLPath)
+ in emitML (!Globals.emitMLDir)
       ("option",
         MLSIG "datatype option = datatype Option.option" ::
         MLSTRUCT "datatype option = datatype Option.option"

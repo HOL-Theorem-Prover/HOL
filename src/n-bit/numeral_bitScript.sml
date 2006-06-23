@@ -326,7 +326,7 @@ val TIMES_2EXP1 =
 
 val _ =
  let open EmitML
- in exportML (!Globals.exportMLPath)
+ in emitML (!Globals.emitMLDir)
    ("bit",
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::

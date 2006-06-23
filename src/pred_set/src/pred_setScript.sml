@@ -4246,7 +4246,7 @@ val _ =
      val _ = temp_set_grammars(tyg',tmg)
 (*     val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set` *)
      val _ = new_type("set",1)
-  in try exportML (!Globals.exportMLPath)
+  in try emitML (!Globals.emitMLDir)
    ("set",
     ABSDATATYPE (["'a"], `set = EMPTY | INSERT of 'a => set`)
     :: OPEN ["num"]

@@ -564,7 +564,7 @@ val _ = export_theory();
 
 val _ =
  let open EmitML
- in exportML (!Globals.exportMLPath)
+ in emitML (!Globals.emitMLDir)
     ("sorting",
        [OPEN ["list"],
         DEFN PART_DEF,

@@ -1,25 +1,25 @@
 fun UseErr() =
-(print("Usage: " ^ CommandLine.name() ^ " [-sys] [-MLpath p] n\n");
+(print("Usage: " ^ CommandLine.name() ^ " [-sys] [-MLdir p] n\n");
                 Process.exit Process.failure);
 
 (* --------------------------------------------------------------------- *)
 
-val (sys_inst,sn,MLpath) =
+val (sys_inst,sn,MLdir) =
   case CommandLine.arguments()
-   of ["-MLpath",p,"-sys",sn] => (true,sn,p)
-    | [sn,"-MLpath",p,"-sys"] => (true,sn,p)
-    | [sn,"-sys","-MLpath",p] => (true,sn,p)
-    | ["-MLpath",p,sn]        => (false,sn,p)
-    | [sn,"-MLpath",p]        => (false,sn,p)
-    | [sn]                    => (false,sn,!Globals.exportMLPath)
-    | otherwise               => UseErr()
+   of ["-MLdir",p,"-sys",sn] => (true,sn,p)
+    | [sn,"-MLdir",p,"-sys"] => (true,sn,p)
+    | [sn,"-sys","-MLdir",p] => (true,sn,p)
+    | ["-MLdir",p,sn]        => (false,sn,p)
+    | [sn,"-MLdir",p]        => (false,sn,p)
+    | [sn]                   => (false,sn,!Globals.emitMLDir)
+    | otherwise              => UseErr()
 
 val n = valOf (Int.fromString sn) handle _ => UseErr()
 
 (* --------------------------------------------------------------------- *)
 
 structure word = wordFunctor (val bits = n
-                              val MLpath = MLpath)
+                              val MLdir = MLdir)
 
 (* --------------------------------------------------------------------- *)
 

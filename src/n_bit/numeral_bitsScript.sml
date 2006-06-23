@@ -192,7 +192,7 @@ val numeral_log2 = store_thm("numeral_log2",
 
 val _ =
  let open EmitML
- in exportML (!Globals.exportMLPath)
+ in emitML (!Globals.emitMLDir)
    ("numeral_bits",
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::

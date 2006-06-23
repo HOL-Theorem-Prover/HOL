@@ -751,7 +751,7 @@ val _ = EmitML.dest_num_literal_hook := Literal.dest_numeral;
 val _ = 
   let open EmitML whileTheory pairSyntax combinSyntax
   in 
-    exportML (!Globals.exportMLPath)
+    emitML (!Globals.emitMLDir)
     ("num",
      DATATYPE `num = ZERO | BIT1 of num | BIT2 of num`
       ::
