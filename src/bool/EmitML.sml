@@ -614,7 +614,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
                               (fn () => add_break(1,0)) tyl
          ; end_block())
      fun pp_tyvars [] = ()
-       | pp_tyvars [v] = add_string v
+       | pp_tyvars [v] = (add_string v; add_break(1,0))
        | pp_tyvars vlist =
           (begin_block CONSISTENT 0;
            add_string"(";
@@ -635,8 +635,7 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
          (begin_block CONSISTENT 5;
           begin_block CONSISTENT 0;
             if !r then (add_string "datatype"; r:=false) else ();
-            add_break(1,0); pp_tyvars tyvars; add_break(0,0);
-            add_string name;
+            add_break(1,0); pp_tyvars tyvars; add_string name;
           end_block();
           add_break(1,0);
           begin_block CONSISTENT 0;
