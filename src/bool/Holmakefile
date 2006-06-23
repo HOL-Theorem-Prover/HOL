@@ -1,2 +1,32 @@
+CALL_YACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $< ; \
+            $(MV) DiskFiles.grm.sig DiskFiles.grm-sig.sml
+
+MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
+MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
+
+EXTRA_CLEANS = DiskFiles.grm-sig.sml DiskFiles.grm.sml
+
+DiskFiles.grm.sml: DiskFiles.grm
+	$(CALL_YACC)
+
+DiskFiles.grm-sig.sml: DiskFiles.grm
+	$(CALL_YACC)
+
+DiskFiles.grm-sig.uo: DiskFiles.grm-sig.sml
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
+
+DiskFiles.grm.uo: DiskFiles.grm.sml DiskFiles.grm-sig.uo
+	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm-sig.ui $<
+
+DiskFiles.lex.sml: DiskFiles.lex
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
+
+DiskFiles.lex.uo: DiskFiles.lex.sml
+	$(HOLMOSMLC) -toplevel -c DiskFiles.grm-sig.ui $<
+
+AssembleDiskFiles.uo: AssembleDiskFiles.sml AssembleDiskFiles.ui \
+                      DiskFiles.grm.uo DiskFiles.lex.uo
+	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm.ui DiskFiles.lex.ui $<
+
 selftest.exe: selftest.uo simpfrag.uo
 	$(HOLMOSMLC) -o $@ $<

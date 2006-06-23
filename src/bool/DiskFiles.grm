@@ -1,0 +1,126 @@
+open HolKernel
+type dftables = { idtable : {Thy:string,Other:string} list ref,
+                  tytable : hol_type list ref, tysize : int ref,
+                  tmtable : term list ref, tmsize : int ref}
+fun update_ids idlist ({idtable, ...} : dftables) = (idtable := idlist)
+fun lookup_id (d : dftables) i = List.nth(!(#idtable d), i)
+fun newtype ty ({tytable, tysize, ...} : dftables) = (tytable := ty:: !tytable;
+                                                      tysize := !tysize + 1)
+fun lookup_type ({tytable = ref tys, tysize = ref sz, ...} : dftables) i =
+    List.nth(tys, sz - i - 1)
+fun newterm ({tmtable,tmsize,...}:dftables) tm = (tmtable := tm :: !tmtable,
+                                                  tmsize := !tmsize + 1)
+fun lookup_term ({tmtable = ref tms, tmsize = ref sz, ...} : dftables) i =
+    List.nth(tms, sz - i - 1)
+
+
+%%
+%name DiskFiles
+%arg (dftables) : dftables
+%keyword IDS TYPES TERMS THEOREMS
+
+%nonterm begin of (string * thm) list
+       | theoryfile of (string * thm) list
+       | ids_section of unit
+       | idpair_list of {Thy : string, Other : string} list
+       | idpair of {Thy : string, Other: string}
+       | types_section
+       | typedecl_list
+       | typedecl
+       | intlist_ne of int list
+       | terms_section
+       | termdecl_list
+       | termdecl
+       | theorems of (string * thm) list
+       | namethm_list of (string * thm) list
+       | namethm of (string * thm)
+       | term of term
+       | term_a of term
+       | term_c of term
+       | base_term of term
+       | termlist of term list
+       | tmid of int
+
+
+
+
+%term EOF | ID of string | DOLLAR | FULLSTOP | LPAREN | RPAREN | BACKSLASH |
+      IDS | TYPES | TERMS | THEOREMS | LBRACKET | RBRACKET | NUMBER of int |
+      TYV | TYOP | TMV | TMC | TMREF
+
+%eop EOF
+%pos int
+%noshift EOF
+%verbose
+
+%start begin
+
+%%
+begin : theoryfile (theoryfile)
+
+theoryfile : ids_section types_section terms_section theorems (theorems)
+
+ids_section : IDS idpair_list (update_ids idpair_list dftables)
+
+idpair_list : ([])
+            | idpair idpair_list (idpair :: idpair_list)
+
+idpair : ID DOLLAR ID ( {Thy = ID1, Other = ID2 } )
+
+types_section : TYPES typedecl_list ()
+
+typedecl_list : ()
+              | typedecl typedecl_list ()
+
+typedecl : TYV ID (newtype (mk_vartype ID) dftables)
+         | TYOP LBRACKET intlist_ne RBRACKET
+              (let val {Thy,Other} = lookup_id dftables (hd intlist_ne)
+                   val args = map (lookup_type dftables) (tl intlist_ne)
+               in
+                 newtype (mk_thy_type{Thy = Thy, Tyop = Other, Args = args})
+                         dftables
+               end)
+
+intlist_ne : NUMBER ([NUMBER])
+           | NUMBER intlist_ne (NUMBER::intlist_ne)
+
+terms_section : TERMS termdecl_list ()
+
+termdecl_list : () | termdecl termdecl_list ()
+
+termdecl : TMV LBRACKET ID NUMBER RBRACKET
+             (let val ty = lookup_type dftables NUMBER
+              in
+                  newterm dftables (mk_var(ID, ty))
+              end)
+         | TMC LBRACKET NUMBER NUMBER RBRACKET
+             (let val {Thy,Other} = lookup_id dftables NUMBER1
+                  val ty = lookup_type dftables NUMBER2
+              in
+                  newterm dftables (mk_thy_const{Thy = Thy, Name = Other,
+                                                 Ty = ty})
+              end)
+
+theorems : THEOREMS namethm_list (namethm_list)
+
+namethm_list : ([]) | namethm namethm_list (namethm :: namethm_list)
+
+namethm : ID termlist ((ID, mk_thm(tl termlist, hd termlist)))
+
+termlist : term ([term])
+         | term termlist (term :: termlist)
+
+term : LPAREN term_a RPAREN (term_a)
+
+term_a :
+   BACKSLASH tmid FULLSTOP term_a (mk_abs(lookup_term dftables tmid, term_a))
+ | term_c (term_c)
+
+term_c : term_c base_term (mk_comb(term_c, base_term))
+       | base_term (base_term)
+
+base_term : LPAREN term_a RPAREN (term_a)
+          | tmid (lookup_term dftables tmid)
+
+tmid :  TMREF NUMBER (NUMBER)
+

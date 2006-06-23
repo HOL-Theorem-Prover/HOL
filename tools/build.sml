@@ -126,8 +126,8 @@ val SRCDIRS0 =
 val SRCDIRS =
     map (fn s => fullPath [HOLDIR, s])
         ("src/portableML" :: "src/prekernel" ::
-         (if use_expk then "src/experimental-kernel" else "src/0") ::
-         SRCDIRS0)
+         (if use_expk then "src/experimental-kernel"
+          else "src/0") :: SRCDIRS0)
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -301,7 +301,7 @@ in
                     warn "*** Not building HolCheck as Dynlib, and hence \
                          \HolBddLib, not available\n"
                   else Holmake dir
-  | "minisat" => let 
+  | "minisat" => let
     in case OS of
 	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
                                       "minisat.exe"])
@@ -311,7 +311,7 @@ in
                            ["\nMiniSat has NOT been built!! ",
                             "(continuing anyway).\n\n"])
                  else ()
-    end 
+    end
   | _ => Holmake dir
 end
 handle OS.SysErr(s, erropt) =>
@@ -342,7 +342,39 @@ fun upload (src,target,symlink) =
 
 fun buildDir symlink s = (build_dir s; upload(s,SIGOBJ,symlink));
 
-fun build_src symlink = List.app (buildDir symlink) SRCDIRS
+fun do_sharing_table_transfer () = let
+  fun expk s = fullPath [HOLDIR, "src/experimental-kernel", s]
+  fun bool s = fullPath [HOLDIR, "src/bool", s]
+  val smlfile = "SharingTables.sml"
+  val sigfile = "SharingTables.sig"
+in
+  if not use_expk then let
+    (* SharingTables code is generally useful, so I want it to be available
+       for standard kernel builds.  But it can't move to prekernel because
+       it depends on terms and hol_types.  Nor can it move to after the kernel
+       because it's used in the experimental kernel's implementation of
+       Theory pretty-printing.  So I copy it into src/bool before the build
+       starts if we're not being experimental.   Ugh. *)
+    in
+      update_copy copy (expk smlfile) (bool smlfile);
+      update_copy copy (expk sigfile) (bool sigfile)
+    end
+  else let
+      (* if we switch from a standard to an experimental build, and there
+         are additional copies of SharingTables hanging 'round, then this
+         causes pain, so in -expk land, delete all SharingTables stuff in
+         src/bool.  When doing such a switch it will also be necessary
+         to do a cleanAll, but this has always been true. *)
+      fun rem s = FileSys.remove s handle SysErr _ => ()
+    in
+      app (rem o bool) [smlfile, sigfile, "SharingTables.uo",
+                        "SharingTables.ui"]
+    end
+end
+
+
+fun build_src symlink = (do_sharing_table_transfer() ;
+                         List.app (buildDir symlink) SRCDIRS)
 
 (*---------------------------------------------------------------------------*)
 (* In clean_sigobj, we need to avoid removing the systeml stuff that will    *)
