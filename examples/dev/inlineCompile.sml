@@ -251,7 +251,7 @@ fun inlineCompile maintm defths totalths =
               (Compile2 ((CONV_RULE (REWRITE_CONV (Let::auxdefths))) maindef))
        in prove(concl mainth,
                 METIS_TAC ((DISCH_ALL mainth) :: 
-                           (totalths @ (map (convertTotal defths) totalths))))
+                           (totalths @ (map (convertTotal (Let::defths)) totalths))))
        end;
 
 
