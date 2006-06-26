@@ -224,7 +224,7 @@ val op_rwts = [to_numeraln mult_ints, to_numeraln add_ints, REAL_DIV_LZERO,
               div_rats @ div_ratls @ div_ratrs @ div_eq_1 @
               max_ratls @ max_ratrs @ max_rats @ max_ints @
               min_ratls @ min_ratrs @ min_rats @ min_ints @
-              abs1 @ abs2
+              (realTheory.REAL_ABS_0 :: abs1) @ abs2
 
 
 fun nat2nat th = let

@@ -2553,6 +2553,7 @@ val REAL_EQ_MUL_LCANCEL = prove_thm (
   REWRITE_TAC [REAL_EQ_LMUL]);
 
 val REAL_ABS_0 = save_thm ("REAL_ABS_0", ABS_0);
+val _ = export_rewrites ["REAL_ABS_0"]
 
 val REAL_ABS_TRIANGLE = save_thm ("REAL_ABS_TRIANGLE", ABS_TRIANGLE);
 
