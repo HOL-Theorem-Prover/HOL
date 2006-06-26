@@ -129,6 +129,107 @@ val no_terminal_object = store_thm(
     Q.EXISTS_TAC `\n. u` THEN SRW_TAC [][]
   ]);
 
+
+(* ----------------------------------------------------------------------
+    Propositional Diagrams
+   ---------------------------------------------------------------------- *)
+
+val _ = Hol_datatype`
+  diaform = Lf of (('n # 'a # 'a # bool # reltype) -> bool) =>
+                  (('n # ('a + 'b) # ('a + 'b) # bool # reltype) -> bool)
+          | /\ of diaform => diaform
+          | ~ of diaform
+`
+
+val evalform_def = Define`
+  (evalform (Lf fa ex) R = eval fa ex R) /\
+  (evalform (f1 /\ f2) R = evalform f1 R /\ evalform f2 R) /\
+  (evalform (~f) R = ~evalform f R)
+`;
+
+val R0_refl_def = Define`
+  R0_refl = Lf {} {(0,INL 0,INL 0,T,Atomic)}
+`
+
+val R0_refl_thm = store_thm(
+  "R0_refl_thm",
+  ``evalform R0_refl R = !x. R 0 x x``,
+  SRW_TAC [][evalform_def, eval_def, R0_refl_def, liftrel_def, EQ_IMP_THM])
+
+val R0_sym_def = Define`
+  R0_sym = Lf {(0,0,1,T,Atomic)} {(0,INL 1, INL 0,T,Atomic)}
+`;
+
+val R0_sym_thm = store_thm(
+  "R0_sym_thm",
+  ``evalform R0_sym R = !x y. R 0 x y ==> R 0 y x``,
+  SRW_TAC [][evalform_def, eval_def, R0_sym_def, liftrel_def, EQ_IMP_THM] THEN
+  FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x else y` MP_TAC) THEN
+  SRW_TAC [][])
+
+val R0_trans_def = Define`
+  R0_trans = Lf {(0,0,1,T,Atomic); (0,1,2,T,Atomic)}
+                {(0,INL 0, INL 2,T,Atomic)}
+`;
+val R0_trans_thm = store_thm(
+ "R0_trans_thm",
+  ``evalform R0_trans R = !x y z. R 0 x y /\ R 0 y z ==> R 0 x z``,
+  SRW_TAC [][evalform_def, eval_def, R0_trans_def, liftrel_def,
+             EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM]
+  THENL [
+    FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x
+                                    else if n = 1 then y
+                                    else z` MP_TAC) THEN
+    SRW_TAC [][],
+    METIS_TAC []
+  ]);
+
+
+val R0_cong_def = Define`
+  R0_cong n = Lf {(0,0,1,T,Atomic); (n,0,2,T,Atomic)}
+                 {(n,INL 1,INL 2,T,Atomic)} /\
+              Lf {(0,1,2,T,Atomic); (n,0,1,T,Atomic)}
+                 {(n,INL 0, INL 2,T,Atomic)}
+`
+val R0_cong_thm = store_thm(
+  "R0_cong_thm",
+  ``evalform (R0_cong n) R = (!x y z. R 0 x y /\ R n x z ==> R n y z) /\
+                             (!x y z. R n x y /\ R 0 y z ==> R n x z)``,
+  SRW_TAC [][evalform_def, eval_def, R0_cong_def, liftrel_def,
+             EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM]
+  THENL [
+    FIRST_X_ASSUM (fn th =>
+       Q.SPEC_THEN `\n. if n = 0 then x
+                        else if n = 1 then y else z` MP_TAC th THEN
+       SRW_TAC [][] THEN NO_TAC),
+    FIRST_X_ASSUM (fn th =>
+       Q.SPEC_THEN `\n. if n = 0 then x
+                        else if n = 1 then y else z` MP_TAC th THEN
+       SRW_TAC [][] THEN NO_TAC),
+    METIS_TAC [],
+    METIS_TAC []
+  ]);
+
+val imp_def = xDefine "imp" `
+  (f1:('a,'b,'c)diaform) ==> f2 = ~(f1 /\ ~f2)
+`
+val imp_thm = store_thm(
+  "imp_thm",
+  ``evalform (f ==> g) R = evalform f R ==> evalform g R``,
+  SRW_TAC [][imp_def, evalform_def] THEN METIS_TAC []);
+
+
+val R0_refl_cong_sym = store_thm(
+  "R0_refl_cong_sym",
+  ``evalform (R0_cong 0 /\ R0_refl ==> R0_sym) R``,
+  SRW_TAC [][imp_thm, R0_cong_thm, evalform_def, R0_refl_thm, R0_sym_thm] THEN
+  METIS_TAC [])
+
+val R0_cong_trans = store_thm(
+  "R0_cong_trans",
+  ``evalform (R0_cong 0 ==> R0_trans) R``,
+  METIS_TAC [imp_thm, R0_cong_thm, R0_trans_thm])
+
 (* ----------------------------------------------------------------------
     Theory of diagram equivalence
    ---------------------------------------------------------------------- *)
@@ -227,6 +328,15 @@ val diagram_preservation = store_thm(
     Q.EXISTS_TAC `invh o g` THEN SRW_TAC [][]
   ]);
 
+(* can prove that diagram formulas are also preserved *)
+val diaform_preservation = store_thm(
+  "diaform_preservation",
+  ``!R1 R2 h.
+       onto h /\ (!n. Pres h (R1 n) (R2 n) /\ aRefl h (R1 n) (R2 n)) ==>
+       !f. evalform f R1 = evalform f R2``,
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  Induct THEN SRW_TAC [][evalform_def] THEN
+  METIS_TAC [diagram_preservation])
 
 (* but aRefl is a strong requirement to make of a homomorphism...
      (some might argue that onto is as well)
