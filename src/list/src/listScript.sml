@@ -1015,6 +1015,46 @@ val IN_LIST_TO_SET = store_thm(
   SRW_TAC [][LIST_TO_SET, boolTheory.IN_DEF]);
 val _ = export_rewrites ["IN_LIST_TO_SET"]
 
+(* ----------------------------------------------------------------------
+    listRel
+       lifts a binary relation to its point-wise extension on pairs of
+       lists
+   ---------------------------------------------------------------------- *)
+
+val (listRel_rules, listRel_ind, listRel_cases) = IndDefLib.Hol_reln`
+  listRel R [] [] /\
+  (!h1 h2 t1 t2. R h1 h2 /\ listRel R t1 t2 ==>
+                 listRel R (h1::t1) (h2::t2))
+`;
+
+val listRel_NIL = store_thm(
+  "listRel_NIL",
+  ``(listRel R [] y = (y = [])) /\ (listRel R x [] = (x = []))``,
+  ONCE_REWRITE_TAC [listRel_cases] THEN SRW_TAC [][])
+val _ = export_rewrites ["listRel_NIL"]
+
+val listRel_CONS = store_thm(
+  "listRel_CONS",
+  ``(listRel R (h::t) y = ?h' t'. (y = h'::t') /\ R h h' /\ listRel R t t') /\
+    (listRel R x (h'::t') = ?h t. (x = h::t) /\ R h h' /\ listRel R t t')``,
+  CONJ_TAC THEN CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [listRel_cases])) THEN
+  SRW_TAC [][])
+
+val listRel_LENGTH = store_thm(
+  "listRel_LENGTH",
+  ``!x y. listRel R x y ==> (LENGTH x = LENGTH y)``,
+  HO_MATCH_MP_TAC listRel_ind THEN SRW_TAC [][LENGTH])
+
+val listRel_strong_ind = save_thm(
+  "listRel_strong_ind",
+  IndDefRules.derive_strong_induction(CONJUNCTS (SPEC_ALL listRel_rules),
+                                      listRel_ind))
+
+val listRel_monotone = store_thm(
+  "listRel_monotone",
+  ``(!x y. R x y ==> R' x y) ==> !x y. listRel R x y ==> listRel R' x y``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC listRel_ind THEN SRW_TAC [][listRel_rules])
+
 
 (*---------------------------------------------------------------------------*)
 (* Tail recursive versions for better memory usage when applied in ML        *)
