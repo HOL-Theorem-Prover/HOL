@@ -183,7 +183,7 @@ fun CONJ_MATCH_MP thm1 thm2 =
 (* Theorems required in the conversion process                               *)
 (*****************************************************************************)
 
-val IF_THMS = prove(``(acl2_if t a b = a) /\ (acl2_if nil a b = b)``,RW_TAC std_ss [cond_def,t_def,nil_def]);
+val IF_THMS = prove(``(acl2_if t a b = a) /\ (acl2_if nil a b = b)``,RW_TAC std_ss [ite_def,t_def,nil_def]);
 	
 
 (*****************************************************************************)
@@ -526,7 +526,7 @@ end;
 
 (* Define the function, then prove the rewrite *)
 fun acl2_define_function name stage3 = 
-let	val mp_thm = prove(``(X = acl2_if (bool P) a b) ==> (P ==> (a = X))``,Cases_on `P` THEN RW_TAC std_ss [cond_def,nil_def,t_def,bool_def])
+let	val mp_thm = prove(``(X = acl2_if (bool P) a b) ==> (P ==> (a = X))``,Cases_on `P` THEN RW_TAC std_ss [ite_def,nil_def,t_def,bool_def])
 	val function_clause = (lhs o concl) stage3;
 	val args = (map (repeat rand) o snd o strip_comb o rand) function_clause
 	val body = 
@@ -589,7 +589,7 @@ fun FULL_DISCH term thm = LIST_DISCH term (hyp thm) thm;
 
 local
 	val acl2_if_thm = prove(``(bool p = P) /\ (p ==> (f (a:'a) = A)) /\ (~p ==> (f b = B)) ==> (f (if p then a else b) = acl2_if P A B)``,
-		RW_TAC std_ss [bool_def,cond_def,nil_def,t_def])
+		RW_TAC std_ss [bool_def,ite_def,nil_def,t_def])
 	fun DISCH_BUT term thm hs = LIST_DISCH term (set_diff (hyp thm) hs) thm
 in
 fun ACL2_IF_CONV conv rewrite term = 
@@ -1069,7 +1069,7 @@ end;
 	
 (* Create the type judgement *)
 local
-val acl2_if_thm = prove(``(X = acl2_if P (f a) (f b)) /\ (!a. Q (f a)) ==> (!a. Q X)``,RW_TAC std_ss [cond_def,nil_def,t_def])
+val acl2_if_thm = prove(``(X = acl2_if P (f a) (f b)) /\ (!a. Q (f a)) ==> (!a. Q X)``,RW_TAC std_ss [ite_def,nil_def,t_def])
 fun do_judgement (func_encode:encoded_type) stage7d = 
 let	val stage7d' = CONV_RULE ((STRIP_QUANT_CONV o RAND_CONV o RAND_CONV) (REWR_CONV (GSYM (add_default_value (#encoder func_encode))))) stage7d
 in	
@@ -1106,7 +1106,7 @@ end;
 (*****************************************************************************)
 
 local 
-val rewr1 = prove(``(A = acl2_if P B C) = ((P = nil) ==> (A = C)) /\ (~(P = nil) ==> (A = B))``,RW_TAC std_ss [cond_def,nil_def,t_def])
+val rewr1 = prove(``(A = acl2_if P B C) = ((P = nil) ==> (A = C)) /\ (~(P = nil) ==> (A = B))``,RW_TAC std_ss [ite_def,nil_def,t_def])
 fun rewrite_definition_if stage7r stage7d = 
 let 	val (L,R) = CONJ_PAIR (CONV_RULE (REWR_CONV rewr1) (SPEC_ALL stage7d))
 in
@@ -1127,8 +1127,8 @@ val list_predicates = ref ([]:(thm * thm) list);
 
 val every_acl2_thm = prove(``bool (sexp_EVERY P a) = acl2_if (consp a) (acl2_if (bool (P (car a))) (bool (sexp_EVERY P (cdr a))) nil) (equal a nil)``,
 	Induct_on `a` THEN 
-	RW_TAC std_ss [sexp_EVERY_def,cond_def,equal_def,bool_def,consp_def,car_def,cdr_def,prove(``~(t = nil)``,RW_TAC std_ss [nil_def,t_def])] THEN
-	Cases_on `P a` THEN FULL_SIMP_TAC std_ss [bool_def,prove(``~(t = nil)``,RW_TAC std_ss [nil_def,t_def]),equal_def,cond_def]);
+	RW_TAC std_ss [sexp_EVERY_def,ite_def,equal_def,bool_def,consp_def,car_def,cdr_def,prove(``~(t = nil)``,RW_TAC std_ss [nil_def,t_def])] THEN
+	Cases_on `P a` THEN FULL_SIMP_TAC std_ss [bool_def,prove(``~(t = nil)``,RW_TAC std_ss [nil_def,t_def]),equal_def,ite_def]);
 
 (* BOOL_CONV: converts a bool () into an sexpression *)
 fun BOOL_CONV term = 

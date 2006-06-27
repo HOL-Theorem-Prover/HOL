@@ -8,15 +8,16 @@
 
 (* A brief changelog *)
 
-(* 17/05 	- Added LISTP_CONS function *)
+(* 17/05 	- Added LISTP_CONS function          *)
+(* 27/06        - switched to acl2_defsTheory (MJCG) *)
 
 (*****************************************************************************)
 (* Load base theories                                                        *)
 (*****************************************************************************)
 
 (*
-val _ = loadPath := "../ml" :: !loadPath;             (* add acl2/ml to load path    *)
-val _ = app                                           (* load infrastructure         *)
+val _ = loadPath := "../ml" :: !loadPath;     (* add acl2/ml to load path    *)
+val _ = app                                   (* load infrastructure         *)
  load 
  ["sexp",
   "sexpTheory",
@@ -25,8 +26,9 @@ val _ = app                                           (* load infrastructure    
 *)
 
 open sexp sexpTheory;                         (* open in current session     *)
-open arithmeticTheory fracTheory ratTheory integerTheory intLib complex_rationalTheory intExtensionTheory;
-open basic_defaxiomsTheory listTheory;
+open arithmeticTheory fracTheory ratTheory integerTheory intLib 
+     complex_rationalTheory intExtensionTheory
+     acl2_defsTheory listTheory;
 
 (*****************************************************************************)
 (* Start new theory "translate"                                              *)

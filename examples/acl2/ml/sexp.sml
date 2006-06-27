@@ -358,14 +358,13 @@ and mlmutual   = mksym "ACL2"        "MUTUAL-RECURSION"
 and mldefaxiom = mksym "ACL2"        "DEFAXIOM"
 and mldefthm   = mksym "ACL2"        "DEFTHM";
 
-
 (*****************************************************************************)
-(* "tag_ty:nam" |--> ("tag_ty","nam")                                        *)
+(* "tag_ty nam" |--> ("tag_ty","nam")                                        *)
 (*****************************************************************************) 
 val split_tag =
  let 
   fun split_tag_chars acc [] = ([],rev acc)
-   |  split_tag_chars acc (#":" :: l) = (rev acc,l)
+   |  split_tag_chars acc (#" " :: l) = (rev acc,l)
    |  split_tag_chars acc (c :: l) = split_tag_chars (c :: acc) l
  in
   (implode ## implode) o split_tag_chars [] o explode
@@ -384,8 +383,13 @@ val split_acl2_name =
 end;
 
 (*****************************************************************************)
-(* "pkg::nam" |--> mlsym("pkg","nam")                                        *)
-(* "nam"      |--> mlsym((!current_package),"nam") (when no "::" in "nam")   *)
+(* Lookup a string in acl2_names. If it corresponds to a full ACL2 name      *)
+(* (with package and symbol name separated by "::") then return the ACL2     *)
+(* name.  If it corresponds to an ACL2 name without a package name (which    *)
+(* shouldn't happen), then add the current_package as package name. If       *)
+(* the string isn't in acl2_names and is "ACL2_PAIR" then return             *)
+(* mlsym("COMMON-LISP", "CONS"), otherwise split at "::" (or using           *)
+(* current_package if no "::") and then use mlsym.                           *)
 (*****************************************************************************)
 fun string_to_mlsym s =
  case assoc1 s (!acl2_names)
@@ -746,9 +750,9 @@ fun make_string_abbrevs [] = ()
 local
 fun string_abbrevs_to_string_aux [] = ""
  |  string_abbrevs_to_string_aux [(s,c)] = 
-    ("(\"" ^ s ^ "\",``" ^ fst(dest_const c) ^"``)")
+    ("(\"" ^ s ^ "\",Parse.Term`" ^ fst(dest_const c) ^"`)")
  |  string_abbrevs_to_string_aux ((s,c)::pl) = 
-    ("(\"" ^ s ^ "\",``" ^ fst(dest_const c) ^"``)," ^ 
+    ("(\"" ^ s ^ "\",Parse.Term`" ^ fst(dest_const c) ^"`)," ^ 
     string_abbrevs_to_string_aux pl)
 in
 fun string_abbrevs_to_string pl =
@@ -1528,6 +1532,48 @@ fun dest_acl2def (defun(s,_))    = ("DEFUN",s)
  |  dest_acl2def (defthm(s,_))   = ("DEFTHM",s);
 
 (*****************************************************************************)
+(* Convert a thoerem obtained by slurping in ACL2 to an acl2def option.      *)
+(* Used for reproving ACL2 imports inside HOL and for round-trip printing.   *)
+(*****************************************************************************)
+local
+exception fail_for_mapfilter
+in
+fun dest_acl2_thm th =
+ let val tg = tag th
+     val (tgl1,tgl2) = Tag.dest_tag tg
+     val stgl = mapfilter
+                 (fn s => 
+                   let val (s1,s2) = split_tag s
+                   in
+                    if mem s1 ["DEFUN","DEFAXIOM","DEFTHM"]
+                     then (s1,s2)
+                     else raise fail_for_mapfilter
+                   end)
+                 tgl1
+ in
+ if length stgl > 1
+  then (print_thm th;
+        print " has more than one ACL2 def tags!\n";
+        err "dest_acl2_thm" "more than one ACL2 tag") else
+  if null stgl 
+   then NONE
+   else case (fst(hd stgl))
+        of "DEFUN"     => SOME(defun   (snd(hd stgl), concl th))
+        |  "DEFAXIOM"  => SOME(defaxiom(snd(hd stgl), concl th))
+        |  "DEFTHM"    => SOME(defthm  (snd(hd stgl), concl th))
+        |  _           => NONE
+ end
+end;
+
+(*****************************************************************************)
+(* Extraxt content from an option                                            *)
+(*****************************************************************************)
+fun dest_option (SOME x) = x
+ |  dest_option NONE     = err "dest_option" "NONE";
+
+
+
+(*****************************************************************************)
 (* ``PKG::SYM`` |--> create_hol_name "PKG::SYM"                              *)
 (*****************************************************************************)
 fun clean_acl2_var tm =
@@ -1626,7 +1672,8 @@ val chars_to_string = implode o (map chr);
 (*****************************************************************************)
 fun print_acl2def out (defun(nam,tm)) =
      (out "; Defun:    "; out nam; out "\n";
-      print_mlsexp out (deftm_to_mlsexp_defun tm); out "\n")
+      print_mlsexp out (deftm_to_mlsexp_defun tm); 
+      out "\n\n")
  |  print_acl2def out (defaxiom(nam,tm)) =
      (out "; Defaxiom: "; out nam; out "\n";
       print_mlsexp out
@@ -1634,7 +1681,7 @@ fun print_acl2def out (defun(nam,tm)) =
          [mldefaxiom, 
           string_to_mlsym nam, 
           term_to_mlsexp tm]); 
-      out "\n")
+      out "\n\n")
  |  print_acl2def out (defthm(nam,tm)) =
      (out "; Defthm:   "; out nam; out "\n";
       print_mlsexp out
@@ -1642,7 +1689,7 @@ fun print_acl2def out (defun(nam,tm)) =
          [mldefthm, 
           string_to_mlsym nam, 
           term_to_mlsexp tm]); 
-      out "\n");
+      out "\n\n");
 
 (*****************************************************************************)
 (* Convert a preterm to a string (used for inputting ACL2)                   *)
@@ -1904,6 +1951,20 @@ fun load_defaxioms () =
    "Imported defaxioms stored in global assignable variable defaxioms.\n\n"
  end;
 
+(*****************************************************************************)
+(* Print imported defaxioms for round-trip test.                             *)
+(*****************************************************************************)
+fun print_defaxioms file_name =
+ let val defs =
+      mapfilter 
+       dest_option
+       (map (dest_acl2_thm o snd) (theorems "defaxioms"))
+ in
+  print_lisp_file 
+   file_name
+   (fn out => map (print_acl2def out) defs)
+ end;
+     
 (*****************************************************************************)
 (* Add theory load time code to restore binding of acl2_simps in theory      *)
 (*****************************************************************************)
