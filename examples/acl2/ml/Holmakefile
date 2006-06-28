@@ -1,5 +1,5 @@
-defaxiomsTheory.uo: load_defaxioms.ml
-	/local/scratch-1/mjcg/HOL98/hol98/bin/hol.unquote /local/scratch-1/mjcg/HOL98/preface.ml < make_defaxioms.ml
+defaxiomsTheory.uo: make_defaxioms.ml
+	$(HOLDIR)/bin/hol.unquote $(HOLDIR)../preface.ml < make_defaxioms.ml
 
 
 
