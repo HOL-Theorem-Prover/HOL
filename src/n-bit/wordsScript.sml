@@ -7,7 +7,8 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["pred_setTheory", "bitTheory", "sum_numTheory", "fcpLib"];
+  app load ["pred_setTheory", "bitTheory", "numeral_bitTheory",
+            "sum_numTheory", "fcpLib"];
 *)
 
 open HolKernel Parse boolLib bossLib;
@@ -2187,6 +2188,7 @@ val _ = List.app mk_word_size sizes;
 val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n):bool ** 'a`;
 val w2w_itself_def = Define `w2w_itself (:'a) w = (w2w w): bool ** 'a`;
 val sw2sw_itself_def = Define `sw2sw_itself (:'a) w = (sw2sw w): bool ** 'a`;
+val word_eq_def = Define `word_eq (v: 'a word) w = (v = w)`;
 
 val word_extract_itself_def = Define`
   word_extract_itself (:'a) h l w = (word_extract h l w): bool ** 'a`;
@@ -2210,6 +2212,7 @@ local
   val TIMES_2EXP1 =
     (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
      SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def
+  val word_eq_n2w = REWRITE_RULE [n2w_11] (SPECL [`n2w m`,`n2w n`] word_eq_def)
   val word_join_n2w = SPECL [`n2w m`,`n2w n`] word_join_def
   val word_div_n2w = SPECL [`n2w m`,`n2w n`] word_div_def
   val word_asr_n2w = SPECL [`n`,`n2w m`] word_asr_n2w
@@ -2240,7 +2243,7 @@ in
           [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
            GSYM word_concat_itself_def, GSYM word_extract_itself_def,
            word_T_def, word_L_def, word_H_def, TIMES_2EXP1] o ALPHA_BETA_RULE)
-          [UINT_MAX_def, INT_MAX_def,
+          [UINT_MAX_def, INT_MAX_def, word_eq_n2w,
            w2n_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
            word_bit_n2w, word_join_n2w, sw2sw_n2w, word_extract_n2w,
            word_slice_n2w, word_concat_def, word_log2_n2w, word_reverse_n2w,
