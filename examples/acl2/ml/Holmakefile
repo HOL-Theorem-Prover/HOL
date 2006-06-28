@@ -1,4 +1,4 @@
-defaxiomsTheory.uo: make_defaxioms.ml
+defaxiomsTheory.uo: sexpTheory.sml make_defaxioms.ml
 	$(HOLDIR)/bin/hol.unquote $(HOLDIR)/../preface.ml < make_defaxioms.ml
 
 

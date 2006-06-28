@@ -290,8 +290,8 @@ fun print_lisp_file file_name printer =
  in
  (out("; File created from HOL using print_lisp_file on " ^ date() ^ "\n\n");  
    (* Add time stamp                                                         *)
-  out("(IN-PACKAGE \"ACL2\")\n\n");
-   (* ACL2 initialisation                                                    *)
+   (* out("(IN-PACKAGE \"ACL2\")\n\n");                                      *)
+   (* ACL2 initialisation (currently commented out at Matt's suggestion)     *)
   printer out;
   TextIO.flushOut outstr;
   TextIO.closeOut outstr)
@@ -957,32 +957,6 @@ fun def_to_mlsexp_defun th =
  end;    
 
 (*****************************************************************************)
-(* Translate a hol-acl2 thm |- |= tm with a name nam to an ML s-expression   *)
-(* representing                                                              *)
-(*                                                                           *)
-(*  (defthm nam  ^(term_to_mlsexp tm))                                       *)
-(*****************************************************************************)
-fun mk_mlsexp_defthm(nam, th) =
- let val (asl, concl) = dest_thm(SPEC_ALL th)
-     val _ = if not(asl = []) 
-               then(print_thm th;
-                    print "\n"; print"should not have any assumptions\n";
-                    err "mk_mlsexp_defthm" "assumptions not allowed") 
-               else ()
-     val (con,tm) = dest_comb concl
-     val _ = if not(is_const con andalso (fst(dest_const con) = "|="))
-               then(print_thm th;
-                    print " should have form |= ...\n";
-                    err "mk_mlsexp_defthm" "missing |=")
-               else ()
- in
-  mk_mlsexp_list
-   [mksym "COMMON-LISP" "DEFTHM",
-    string_to_mlsym nam,
-    term_to_mlsexp tm]
- end;    
-
-(*****************************************************************************)
 (* Print a hol-acl2 definition                                               *)
 (*                                                                           *)
 (*   |- f x1 ... xn = e                                                      *)
@@ -1532,6 +1506,20 @@ fun dest_acl2def (defun(s,_))    = ("DEFUN",s)
  |  dest_acl2def (defthm(s,_))   = ("DEFTHM",s);
 
 (*****************************************************************************)
+(* Strip ``|=`` from defthms and defaxioms                                   *)
+(*****************************************************************************)
+fun dest_ax_or_thm conc =
+ let val (con,tm) = dest_comb conc
+     val _ = if not(is_const con andalso (fst(dest_const con) = "|="))
+               then(print_term conc;
+                    print " should have form |= ...\n";
+                    err "dest_ax_or_thm" "missing |=")
+               else ()
+ in
+  tm
+ end;
+
+(*****************************************************************************)
 (* Convert a thoerem obtained by slurping in ACL2 to an acl2def option.      *)
 (* Used for reproving ACL2 imports inside HOL and for round-trip printing.   *)
 (*****************************************************************************)
@@ -1539,7 +1527,13 @@ local
 exception fail_for_mapfilter
 in
 fun dest_acl2_thm th =
- let val tg = tag th
+ let val (asl, conc) = dest_thm(SPEC_ALL th)
+     val _ = if not(asl = []) 
+               then(print_thm th;
+                    print "\n"; print"should not have any assumptions\n";
+                    err "dest_acl2_thm" "assumptions not allowed") 
+               else ()
+     val tg = tag th
      val (tgl1,tgl2) = Tag.dest_tag tg
      val stgl = mapfilter
                  (fn s => 
@@ -1558,9 +1552,9 @@ fun dest_acl2_thm th =
   if null stgl 
    then NONE
    else case (fst(hd stgl))
-        of "DEFUN"     => SOME(defun   (snd(hd stgl), concl th))
-        |  "DEFAXIOM"  => SOME(defaxiom(snd(hd stgl), concl th))
-        |  "DEFTHM"    => SOME(defthm  (snd(hd stgl), concl th))
+        of "DEFUN"     => SOME(defun   (snd(hd stgl), conc))
+        |  "DEFAXIOM"  => SOME(defaxiom(snd(hd stgl), dest_ax_or_thm conc))
+        |  "DEFTHM"    => SOME(defthm  (snd(hd stgl), dest_ax_or_thm conc))
         |  _           => NONE
  end
 end;
@@ -1570,7 +1564,6 @@ end;
 (*****************************************************************************)
 fun dest_option (SOME x) = x
  |  dest_option NONE     = err "dest_option" "NONE";
-
 
 
 (*****************************************************************************)
