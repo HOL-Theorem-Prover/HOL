@@ -135,7 +135,7 @@ fun SAT_TAUT_PROVE t =
 	    else let val nt = mk_neg t
  		     val _ = (defCNF.dcnfgv := K (mk_var("SP",numLib.num-->bool)))
 		     val nt_dcnf_th = defCNF.DEF_CNF_VECTOR_CONV nt
-		     val ngv = fromHOLnum (!defCNF.ndefs)
+		     val ngv = numSyntax.int_of_term (!defCNF.ndefs)
  		     val ovc = length (all_vars t)
 		     val vc = ngv + ovc  
  		     val (gv,ntdcnf) = strip_exists (rhs(concl nt_dcnf_th))
