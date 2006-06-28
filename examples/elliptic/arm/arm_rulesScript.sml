@@ -156,26 +156,11 @@ val WORD_SMULL = store_thm("WORD_SMULL",
 
 (* ------------------------------------------------------------------------- *)
 
-val PASSED_RAND = prove(
-  `!c r1 r2 s1 s2 m u.
-     (case (if c then ARM r1 s1 else ARM r2 s2) of
-        ARM a b ->
-          <|registers := a; psrs := b; memory := m;
-            undefined := u|>) =
-      <| registers := if c then r1 else r2; psrs := if c then s1 else s2;
-         memory := m; undefined := u |>`,
-  SRW_TAC [] []);
-
-val IF_NEG = prove(
-  `!c a b. (if ~c then a else b) = (if c then b else a)`,
-  SRW_TAC [] []);
-
-(* ------------------------------------------------------------------------- *)
-
 val basic_context =
   [``Abbrev (Reg = REG_READ state.registers mode)``,
    ``Abbrev (mode = DECODE_MODE ((4 >< 0) (cpsr:word32)))``,
    ``Abbrev (cpsr = CPSR_READ state.psrs)``,
+   ``CONDITION_PASSED3 (NZCV cpsr) c``,
    ``~state.undefined``];
 
 fun cntxt c i = list_mk_conj
@@ -196,19 +181,9 @@ val PC_ss = rewrites [TO_WRITE_READ6,REG_WRITE_WRITE];
 val SPEC_TO_PC = (SIMP_RULE (std_ss++PC_ss) [] o
    INST [`Rd` |-> `15w:word4`] o SPEC_ALL);
 
-val MERGE_IF = prove(
-  `!c1 c2 a b. (if c1 then (if c2 then a else b) else b) =
-               (if c1 /\ c2 then a else b)`,
-  SRW_TAC [] [] \\ PROVE_TAC []);
-
-val MERGE_IF2 = prove(
-  `!c1 c2 a b. (if c1 then (if c2 then a else b) else a) =
-               (if c1 /\ ~c2 then b else a)`,
-  SRW_TAC [] [] \\ PROVE_TAC []);
-
-val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,PASSED_RAND,NEXT_ARMe_def,
+val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARMe_def,
   EXEC_INST_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,FETCH_PC_def,
-  MERGE_IF,MERGE_IF2,IF_NEG,ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
+  ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
   word_index,BITS_THM,BIT_ZERO,(GEN_ALL o SPECL [`b`,`NUMERAL n`]) BIT_def,
   cond_pass_enc_data_proc,
   cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,cond_pass_enc_coproc,
@@ -226,6 +201,108 @@ val UNDEF_ss = rewrites [EXCEPTION_def,cond_pass_enc_swi,decode_enc_swi,
     exceptions2mode_def,exceptions2num_thm];
 
 val ARM_UNDEF = SYMBOLIC_EVAL_CONV UNDEF_ss ``state.undefined``;
+
+(* ......................................................................... *)
+
+val nop_context =
+  [``Abbrev (cpsr = CPSR_READ state.psrs)``,
+   ``~CONDITION_PASSED3 (NZCV cpsr) c``,
+   ``~state.undefined``];
+
+fun nop_cntxt i = list_mk_conj
+  (mk_eq(``state.memory ((31 >< 2) (state.registers r15))``,i):: nop_context);
+
+val NOP_ss = rewrites [cond_pass_enc_data_proc,
+  cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,cond_pass_enc_coproc,
+  cond_pass_enc_mla_mul,cond_pass_enc_br,cond_pass_enc_swi,
+  cond_pass_enc_ldr_str,cond_pass_enc_ldm_stm,cond_pass_enc_swp,
+  cond_pass_enc_mrs,cond_pass_enc_msr];
+
+fun eval_nop t = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  (subst [``f:condition -> bool -> word4 ->
+              word4 -> addr_mode1 -> arm_instruction`` |-> t]
+   ``enc ((f:condition -> bool -> word4 ->
+             word4 -> addr_mode1 -> arm_instruction) c s Rd Rm Op2)``));
+
+val ARM_AND_NOP = eval_nop ``instruction$AND``
+val ARM_EOR_NOP = eval_nop ``instruction$EOR``
+val ARM_SUB_NOP = eval_nop ``instruction$SUB``
+val ARM_RSB_NOP = eval_nop ``instruction$RSB``
+val ARM_ADD_NOP = eval_nop ``instruction$ADD``
+val ARM_ADC_NOP = eval_nop ``instruction$ADC``
+val ARM_SBC_NOP = eval_nop ``instruction$SBC``
+val ARM_RSC_NOP = eval_nop ``instruction$RSC``
+val ARM_ORR_NOP = eval_nop ``instruction$ORR``
+val ARM_BIC_NOP = eval_nop ``instruction$BIC``
+
+val ARM_MOV_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MOV c s Rd Op2)``);
+
+val ARM_MVN_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MVN c s Rd Op2)``);
+
+val ARM_TST_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$TST c Rm Op2)``);
+
+val ARM_TEQ_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$TEQ c Rm Op2)``);
+
+val ARM_CMP_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$CMP c Rm Op2)``);
+
+val ARM_CMN_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$CMN c Rm Op2)``);
+
+val ARM_MUL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MUL c s Rd Rs Rm)``);
+
+val ARM_MLA_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MLA c s Rd Rs Rm Rn)``);
+
+val ARM_UMULL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$UMULL c s RdHi RdLo Rs Rm)``);
+
+val ARM_UMLAL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$UMLAL c s RdHi RdLo Rs Rm)``);
+
+val ARM_SMULL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$SMULL c s RdHi RdLo Rs Rm)``);
+
+val ARM_SMLAL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$SMLAL c s RdHi RdLo Rs Rm)``);
+
+val ARM_B_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$B c offset)``);
+
+val ARM_BL_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$BL c offset)``);
+
+val ARM_SWI_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$SWI c)``);
+
+val ARM_UND_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$UND c)``);
+
+val ARM_LDR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$LDR c opt Rd Rn Op2)``);
+
+val ARM_STR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$STR c opt Rd Rn Op2)``);
+
+val ARM_SWP_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$SWP c b Rd Rm Rn)``);
+
+val ARM_LDM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$LDM c opt Rd list)``);
+
+val ARM_STM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$STM c opt Rd list)``);
+
+val ARM_MRS_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MRS c r Rd)``);
+
+val ARM_MSR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MSR c psrd op2)``);
 
 (* ......................................................................... *)
 
@@ -509,6 +586,40 @@ val ARM_MRS = UNABBREVL_RULE [`Reg`]
 (* ------------------------------------------------------------------------- *)
 
 val _ = save_thm("ARM_UNDEF", ARM_UNDEF);
+
+val _ = save_thm("ARM_B_NOP",   ARM_B_NOP);
+val _ = save_thm("ARM_BL_NOP",  ARM_BL_NOP);
+val _ = save_thm("ARM_SWI_NOP", ARM_SWI_NOP);
+val _ = save_thm("ARM_AND_NOP", ARM_AND_NOP);
+val _ = save_thm("ARM_EOR_NOP", ARM_EOR_NOP);
+val _ = save_thm("ARM_SUB_NOP", ARM_SUB_NOP);
+val _ = save_thm("ARM_RSB_NOP", ARM_RSB_NOP);
+val _ = save_thm("ARM_ADD_NOP", ARM_ADD_NOP);
+val _ = save_thm("ARM_ADC_NOP", ARM_ADC_NOP);
+val _ = save_thm("ARM_SBC_NOP", ARM_SBC_NOP);
+val _ = save_thm("ARM_RSC_NOP", ARM_RSC_NOP);
+val _ = save_thm("ARM_TST_NOP", ARM_TST_NOP);
+val _ = save_thm("ARM_TEQ_NOP", ARM_TEQ_NOP);
+val _ = save_thm("ARM_CMP_NOP", ARM_CMP_NOP);
+val _ = save_thm("ARM_CMN_NOP", ARM_CMN_NOP);
+val _ = save_thm("ARM_ORR_NOP", ARM_ORR_NOP);
+val _ = save_thm("ARM_MOV_NOP", ARM_MOV_NOP);
+val _ = save_thm("ARM_BIC_NOP", ARM_BIC_NOP);
+val _ = save_thm("ARM_MVN_NOP", ARM_MVN_NOP);
+val _ = save_thm("ARM_MUL_NOP", ARM_MUL_NOP);
+val _ = save_thm("ARM_MLA_NOP", ARM_MLA_NOP);
+val _ = save_thm("ARM_UMULL_NOP", ARM_UMULL_NOP);
+val _ = save_thm("ARM_UMLAL_NOP", ARM_UMLAL_NOP);
+val _ = save_thm("ARM_SMULL_NOP", ARM_SMULL_NOP);
+val _ = save_thm("ARM_SMLAL_NOP", ARM_SMLAL_NOP);
+val _ = save_thm("ARM_LDR_NOP", ARM_LDR_NOP);
+val _ = save_thm("ARM_STR_NOP", ARM_STR_NOP);
+val _ = save_thm("ARM_LDM_NOP", ARM_LDM_NOP);
+val _ = save_thm("ARM_STM_NOP", ARM_STM_NOP);
+val _ = save_thm("ARM_SWP_NOP", ARM_SWP_NOP);
+val _ = save_thm("ARM_MRS_NOP", ARM_MRS_NOP);
+val _ = save_thm("ARM_MSR_NOP", ARM_MSR_NOP);
+val _ = save_thm("ARM_UND_NOP", ARM_UND_NOP);
 
 val _ = save_thm("ARM_B",   ARM_B);
 val _ = save_thm("ARM_BL",  ARM_BL);

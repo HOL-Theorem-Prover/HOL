@@ -28,12 +28,6 @@ val _ = set_fixity "::-" (Infixr 325);
 val _ = set_fixity "::->" (Infixr 325);
 val _ = set_fixity "::-<" (Infixr 325);
 
-val BSUBST_def = xDefine "BSUBST"
-  `$::- a l = \m b.
-      if a <=+ b /\ w2n b - w2n a < LENGTH l then
-        EL (w2n b - w2n a) l
-      else m b`;
-
 val BSa_def = xDefine "BSa" `$::-> = $::-`;
 val BSb_def = xDefine "BSb" `$::-< = $::-`;
 

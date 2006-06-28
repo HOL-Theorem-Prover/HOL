@@ -11,13 +11,13 @@ struct
 
 (* interactive use:
   app load ["wordsLib", "computeLib", "pred_setSimps", "arm_evalTheory",
-            "instructionTheory", "instructionSyntax"];
+            "assemblerML", "instructionTheory", "instructionSyntax"];
 *)
 
 open HolKernel boolLib bossLib;
 open Q Parse computeLib pairTheory wordsTheory wordsSyntax
      optionTheory rich_listTheory armTheory arm_evalTheory
-     bsubstTheory instructionTheory instructionSyntax;
+     bsubstTheory instructionTheory instructionSyntax assemblerML;
 
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
@@ -245,7 +245,7 @@ fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:i32``);
 fun eval_word t = (numSyntax.dest_numeral o rhsc o FOLD_SUBST_CONV o mk_w2n) t;
 
 val subst_tm  = prim_mk_const{Name = ":-",  Thy = "arm"};
-val bsubst_tm = prim_mk_const{Name = "::-", Thy = "bsubst"};
+val bsubst_tm = prim_mk_const{Name = "::-", Thy = "arm"};
 
 fun mk_subst (a,b,m) =
    list_mk_comb(inst[alpha |-> type_of a,beta |-> type_of b] subst_tm,[a,b,m])

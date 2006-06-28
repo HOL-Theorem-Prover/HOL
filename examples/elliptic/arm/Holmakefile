@@ -1,4 +1,5 @@
-EXTRA_CLEANS = Data.ui Data.uo Lexer.sml Parser.sig Parser.sml
+EXTRA_CLEANS = assemblerML.ui assemblerML.uo Data.ui Data.uo\
+	Lexer.sml Parser.sig Parser.sml
 INCLUDES = /local/scratch/acjf3/hol98/src/theoryML
 
 Data.uo : Data.sml
@@ -12,3 +13,6 @@ Lexer.sml : Lexer.lex Parser.sml Data.uo
 
 Parser.ui Parser.uo Lexer.ui Lexer.uo: Parser.sml Lexer.sml
 	HOLMOSMLC -c Parser.sig Parser.sml Lexer.sml
+
+assemblerML.uo: Parser.sml Lexer.sml assemblerML.sml assemblerML.sig
+	HOLMOSMLC -c assemblerML.sml

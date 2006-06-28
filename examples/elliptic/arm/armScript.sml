@@ -78,6 +78,12 @@ val _ = set_fixity ":-" (Infixr 325);
 
 val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
 
+val BSUBST_def = xDefine "BSUBST"
+  `$::- a l = \m b.
+      if a <=+ b /\ w2n b - w2n a < LENGTH l then
+        EL (w2n b - w2n a) l
+      else m b`;
+
 val Rg = inst [alpha |-> ``:i32``,beta |-> ``:i4``] wordsSyntax.word_extract_tm;
 
 val USER_def = Define `USER mode = (mode = usr) \/ (mode = safe)`;
@@ -490,12 +496,12 @@ val LDR_STR_def = Define`
                  else
                    pc_reg
     in
-      <| state :=
-           ARM (if L ==> isdabort then
-                  wb_reg
-                else
-                  REG_WRITE wb_reg mode Rd (BW_READ B ((1 >< 0) addr) data))
-               psr;
+      <| state := ARM
+           (if L ==> isdabort then
+              wb_reg
+            else
+              REG_WRITE wb_reg mode Rd (BW_READ B ((1 >< 0) addr) (HD data)))
+           psr;
          out :=
            [if L then
               MemRead addr
@@ -726,7 +732,7 @@ val EXEC_INST_def = Define`
           BRANCH (ARM reg psr) mode ireg
         else if (ic = ldr) \/ (ic = str) then
           (LDR_STR (ARM reg psr) (CARRY nzcv) mode
-             (IS_SOME dabort_t) (HD data) ireg).state
+             (IS_SOME dabort_t) data ireg).state
         else if (ic = ldm) \/ (ic = stm) then
           (LDM_STM (ARM reg psr) mode dabort_t data ireg).state
         else if ic = swp then
@@ -924,19 +930,100 @@ val SUBST_EQ = store_thm("SUBST_EQ",
 (* Export ML versions of functions                                           *)
 (*---------------------------------------------------------------------------*)
 
-val _ =
- let open EmitML
- in exportML (!Globals.exportMLPath)
-      ("arm",
-         map (fn decl => ABSDATATYPE ([], ParseDatatype.parse decl))
-             [register_decl, psrs_decl, exceptions_decl,
-              mode_decl, condition_decl, iclass_decl] @
-         MLSIG "type num = numML.num"
-         :: OPEN ["rich_list"]
-         ::
-         map (DEFN o PURE_REWRITE_RULE[arithmeticTheory.NUMERAL_DEF])
-             [SUBST_def,USER_def,mode2psr_def,exceptions2mode_def,
-              CONDITION_PASSED2_def])
+val RHS_REWRITE_RULE =
+  GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
+
+fun tupled_constructor capp =
+ let open pairSyntax
+     val (c,args) = strip_comb capp
+     val target = type_of capp
+     val argtys = map type_of args
+     val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
+     val new = list_mk_abs(args,mk_comb(cvar,list_mk_pair args))
+ in
+    mk_thm([],mk_eq(c,new))
+ end;
+
+val reshape = BETA_RULE o
+              PURE_REWRITE_RULE [tupled_constructor (Term`x INSERT s`)];
+
+val OUT_ARM = SIMP_RULE (srw_ss()++boolSimps.LET_ss)
+  [LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def,
+   LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def,
+   SWP_def,DECODE_SWP_def,DECODE_PSR_def] OUT_ARM_def;
+
+val _ = ConstMapML.insert ``dimword``;
+val _ = ConstMapML.insert ``dimindex``;
+val _ = ConstMapML.insert ``INT_MIN``;
+val _ = ConstMapML.insert ``n2w_itself``;
+
+val _ = let open EmitML wordsTheory arithmeticTheory
+ in emitML (!Globals.emitMLDir)
+      ("arm", OPEN ["num", "set", "fcp", "list", "rich_list", "words"]
+         :: MLSIG "type ('a, 'b) cart = ('a, 'b) wordsML.cart"
+         :: map (fn decl => DATATYPE decl)
+             [register_decl, psrs_decl, mode_decl, condition_decl]
+          @ map (fn decl => DATATYPE (decl))
+             [exceptions_decl, iclass_decl]
+          @ ABSDATATYPE (["'a","'b"],
+              `state_inp = <| state : 'a; inp : num -> 'b |>`)
+         :: ABSDATATYPE (["'a","'b"],
+              `state_out = <| state : 'a; out : 'b |>`)
+         :: map (fn tm => ABSDATATYPE ([],tm))
+              [`i2 = i2`,`i4 = i4`,`i5 = i5`,`i8 = i8`,`i12 = i12`,`i16 = i16`,
+               `i24 = i24`,`i30 = i30`,`i32 = i32`]
+          @ DATATYPE (`state_arm = ARM of reg=>psr`)
+         :: DATATYPE (
+              `state_arm_ex = ARM_EX of state_arm=>word32=>exceptions`)
+         :: ABSDATATYPE ([],
+              `memop = MemRead of word32 | MemWrite of bool=>word32=>word32 |
+                       CPMemRead of bool=>word32 | CPMemWrite of bool=>word32 |
+                       CPWrite of word32`)
+         :: ABSDATATYPE ([],
+              `interrupts = Reset of state_arm | Undef | Prefetch |
+                            Dabort of num | Fiq | Irq`)
+         :: MLSIG "type num = numML.num"
+         :: DATATYPE (`state_arme = <| registers : reg; psrs : psr;
+                                       memory : mem; undefined : bool |>`)
+         :: map (DEFN o REWRITE_RULE
+             [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
+              GSYM word_concat_itself_def, GSYM word_extract_itself_def,
+              NUMERAL_DEF] o RHS_REWRITE_RULE [GSYM word_eq_def] o reshape)
+             [SUBST_def, BSUBST_def, USER_def, mode_reg2num_def,
+              definition "state_out_state", definition "state_out_out",
+              definition "state_arme_registers",definition "state_arme_memory",
+              definition "state_arme_psrs",definition "state_arme_undefined",
+              theorem "num2register_thm", theorem "num2condition_thm",
+              theorem "exceptions2num_thm",
+              REG_READ_def, REG_WRITE_def, INC_PC_def, FETCH_PC_def,
+              SET_NZCV_def, SET_NZC_def, SET_NZ_def, mode_num_def,
+              SET_IFMODE_def, DECODE_MODE_def, NZCV_def, DECODE_PSR_def,
+              CARRY_def, mode2psr_def, SPSR_READ_def,
+              CPSR_READ_def, CPSR_WRITE_def, SPSR_WRITE_def,
+              exceptions2mode_def, SPECL [`reg`,`psr`,`e`]  EXCEPTION_def,
+              DECODE_BRANCH_def, BRANCH_def, LSL_def, LSR_def, ASR_def, ROR_def,
+              IMMEDIATE_def, SHIFT_IMMEDIATE2_def, SHIFT_REGISTER2_def,
+              SHIFT_IMMEDIATE_def, SHIFT_REGISTER_def, ADDR_MODE1_def,
+              SPEC `f` ALU_arith_def, SPEC `f` ALU_arith_neg_def, ALU_logic_def,
+              SUB_def, ADD_def, AND_def, EOR_def, ORR_def, ALU_def,
+              ARITHMETIC_def, TEST_OR_COMP_def, DECODE_DATAP_def,
+              REWRITE_RULE [COND_RATOR] DATA_PROCESSING_def,
+              DECODE_MRS_def, MRS_def, DECODE_MSR_def, MSR_def,
+              ALU_multiply_def, DECODE_MLA_MUL_def, MLA_MUL_def,
+              BW_READ_def, UP_DOWN_def, ADDR_MODE2_def,
+              DECODE_LDR_STR_def, IMP_DISJ_THM, LDR_STR_def,
+              REGISTER_LIST_def, ADDRESS_LIST_def, WB_ADDRESS_def,
+              FIRST_ADDRESS_def, ADDR_MODE4_def, LDM_LIST_def, STM_LIST_def,
+              DECODE_LDM_STM_def, LDM_STM_def, DECODE_SWP_def, SWP_def,
+              MRC_def, MCR_OUT_def, DECODE_LDC_STC_def,
+              ADDR_MODE5_def, REWRITE_RULE [COND_RATOR] LDC_STC_def,
+              CONDITION_PASSED2_def, CONDITION_PASSED_def,
+              DECODE_INST_def, EXEC_INST_def,
+              IS_Dabort_def, IS_Reset_def, PROJ_Dabort_def, PROJ_Reset_def ,
+              interrupt2exceptions_def, PROJ_IF_FLAGS_def,
+              NEXT_ARM_def, OUT_ARM,
+              ADDR30_def, SET_BYTE_def, MEM_WRITE_BYTE_def, MEM_WRITE_WORD_def,
+              MEM_WRITE_def, TRANSFERS_def, NEXT_ARMe_def])
  end;
 
 val _ = export_theory();

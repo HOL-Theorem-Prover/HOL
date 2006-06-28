@@ -61,10 +61,17 @@ local open Arbnum
   val n24 = pow(two, fromInt 24)
   val n26 = pow(two, fromInt 26)
   val n32 = pow(two, fromInt 32)
+  fun smsb b = if b then pow(two,fromInt 31) else zero
+  fun mror32 x n =
+    if n = 0 then x
+             else mror32 ((div2 x) + smsb (mod2 x = one)) (Int.-(n, 1))
+  fun ror32 x n = mror32 x (Int.mod(n, 32))
 in
   fun two_comp26 n = (n26 - n mod n26) mod n26
   fun two_comp32 n = (n32 - n mod n32) mod n32
   fun align32 n = (n div n4) * n4
   fun add32 a b = (a + b) mod n32
   fun sub32 a b = add32 a (two_comp32 b)
+  fun rol32 x n = ror32 x (Int.-(32,Int.mod(n, 32)))
+  fun mk_immediate rot imm = ror32 imm (Int.*(2, rot))
 end;
