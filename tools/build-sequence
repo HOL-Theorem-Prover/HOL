@@ -47,6 +47,7 @@ src/datatype/equiv
 src/datatype/record
 src/datatype
 src/list/src
+src/datatype/inftree
 src/unwind
 src/boss
 # Up to this point is needed for hol.unquote (which loads bossLib).
