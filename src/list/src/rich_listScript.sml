@@ -3220,7 +3220,7 @@ fun dest_cons M =
                    else raise ERR "rich_listScript" "dest_cons"
     | otherwise => raise ERR "rich_listScript" "dest_cons" ;
 
-fun dest_list M = 
+fun dest_list M =
   case total dest_cons M
     of NONE => if same_const nil_tm M then []
                else raise ERR "dest_list" "not terminated with nil"
@@ -3284,7 +3284,7 @@ val SEG_compute = Q.prove(
                  (HD l)::SEG (PRE m) 0 (TL l)
                else
                  SEG m (PRE k) (TL l)`,
-  STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES
+  STRIP_TAC THEN Q.SPEC_THEN `m` STRUCT_CASES_TAC num_CASES
     THEN1 REWRITE_TAC [SEG]
     THEN STRIP_TAC THEN Q.SPEC_THEN `k` STRUCT_CASES_TAC num_CASES
     THEN STRIP_TAC THEN Q.SPEC_THEN `l` STRUCT_CASES_TAC list_CASES
