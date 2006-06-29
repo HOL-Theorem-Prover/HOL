@@ -320,6 +320,88 @@ val numeral_log2 = store_thm("numeral_log2",
 
 (* ------------------------------------------------------------------------- *)
 
+val PRE = prim_recTheory.PRE;
+val NOT_SUC = numTheory.NOT_SUC;
+
+val NUMERAL_1 = prove(
+  `!n. (NUMERAL (BIT1 n) = 1) = (n = 0)`,
+  REWRITE_TAC [GSYM (REWRITE_CONV [GSYM ALT_ZERO] ``NUMERAL (BIT1 0)``)]
+    \\ SIMP_TAC bool_ss [BIT1, NUMERAL_DEF]
+    \\ DECIDE_TAC);
+
+val NUMERAL_1b = prove(
+  `!n. ~(NUMERAL (BIT2 n) = 1)`,
+  REWRITE_TAC [GSYM (REWRITE_CONV [GSYM ALT_ZERO] ``NUMERAL (BIT1 0)``)]
+    \\ SIMP_TAC bool_ss [BIT1, BIT2, NUMERAL_DEF]
+    \\ DECIDE_TAC);
+
+val iDUB_SUC = prove(`!n. iDUB (SUC n) = BIT2 n`,
+  SIMP_TAC bool_ss [iDUB, BIT2, ADD1] \\ DECIDE_TAC);
+
+val DIV2_BIT1_SUC = prove(
+  `!n. DIV2 (NUMERAL (BIT1 (SUC n))) = n + 1`,
+  REWRITE_TAC [DIV2_def]
+    \\ GEN_REWRITE_TAC (DEPTH_CONV o RATOR_CONV o RAND_CONV) empty_rewrites
+         [BIT1, SPEC `BIT1 (SUC n)` NUMERAL_DEF]
+    \\ SIMP_TAC arith_ss [ADD1, ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
+
+val LOG2_compute = prove(
+  `!n. LOG2 n =
+         if n = 0 then
+           FAIL LOG2 ^(mk_var("undefined",bool)) n
+         else
+           if n = 1 then
+             0
+           else
+             1 + LOG2 (DIV2 n)`,
+  Cases \\ REWRITE_TAC [NOT_SUC, combinTheory.FAIL_THM]
+    \\ SPEC_TAC (`n'`,`n`) \\ CONV_TAC numLib.SUC_TO_NUMERAL_DEFN_CONV
+    \\ STRIP_TAC
+    << [
+       REWRITE_TAC [NUMERAL_1] \\ Cases \\ RW_TAC arith_ss [numeral_log2]
+         << [PROVE_TAC [iDUB_removal, numeral_ilog2, ALT_ZERO],
+             REWRITE_TAC [iDUB_SUC, DIV2_BIT1_SUC, numeral_ilog2]
+               \\ SIMP_TAC arith_ss [iLOG2_def]],
+       REWRITE_TAC [NUMERAL_1b, NUMERAL_DIV2, numeral_ilog2, numeral_log2,
+                    NUMERAL_DEF, iLOG2_def, ADD1]]);
+
+val BITWISE_compute = prove(
+  `!n opr a b.
+      BITWISE n opr a b =
+        if n = 0 then 0 else
+          2 * BITWISE (PRE n) opr (DIV2 a) (DIV2 b) +
+          (if opr (ODD a) (ODD b) then 1 else 0)`,
+  Cases >> REWRITE_TAC [CONJUNCT1 BITWISE_def]
+    \\ REWRITE_TAC
+         [DIV2_def, NOT_SUC, PRE, EXP, BITWISE_EVAL, LSB_ODD, SBIT_def]);
+
+val BIT_MODF_compute = prove(
+  `!n f x b e y.
+      BIT_MODF n f x b e y =
+        if n = 0 then y else
+          BIT_MODF (PRE n) f (DIV2 x) (b + 1) (2 * e)
+           (if f b (ODD x) then e + y else y)`,
+  Cases \\ REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_MODF_def]);
+
+val BIT_REV_compute = prove(
+  `!n x y.
+      BIT_REV n x y =
+        if n = 0 then y else
+          BIT_REV (PRE n) (DIV2 x) (2 * y + (if ODD x then 1 else 0))`,
+  Cases \\ REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_REV_def, EXP, SBIT_def]);
+
+val TIMES_2EXP_compute = prove(
+  `!n x. TIMES_2EXP n x = if x = 0 then 0 else x * FUNPOW iDUB n 1`,
+  RW_TAC bool_ss
+         [MULT, REWRITE_RULE [NUMERAL_DEF] NUMERAL_TIMES_2EXP,CONJUNCT1 FUNPOW]
+    \\ PROVE_TAC [NUMERAL_DEF]);
+
+val DIV_2EXP_compute = prove(
+  `!n x. DIV_2EXP n x = FUNPOW DIV2 n x`,
+  Induct \\ ASM_SIMP_TAC std_ss [DIV_2EXP_def, CONJUNCT1 FUNPOW, FUNPOW_SUC]
+    \\ POP_ASSUM (fn th => SIMP_TAC arith_ss [GSYM th, EXP_1, ADD1,
+         EXP_ADD, DIV2_def, DIV_2EXP_def, DIV_DIV_DIV_MULT]));
+
 val TIMES_2EXP1 =
  (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
   Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
@@ -330,19 +412,15 @@ val _ =
    ("bit",
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
-     map (DEFN o PURE_REWRITE_RULE
-         [arithmeticTheory.NUMERAL_DEF, TIMES_2EXP1,
-          (GSYM o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF])
-             (CONJUNCT2 iMOD_2EXP),
-          GSYM arithmeticTheory.ALT_ZERO,iBITWISE_def])
-         [NUMERAL_DIV2,iBITWISE, NUMERAL_TIMES_2EXP,
-          NUMERAL_BIT_MODF, NUMERAL_BIT_MODIFY,
-          NUMERAL_BIT_REV, NUMERAL_BIT_REVERSE,
-          numeral_ilog2, numeral_log2,
-          NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP,
-          DIVMOD_2EXP, SBIT_def, BITS_def,
-          BITV_def, BIT_def, SLICE_def,LSB_def,
-          SIGN_EXTEND_def])
+     map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1, arithmeticTheory.NUMERAL_DEF])
+         [TIMES_2EXP_compute,
+          NUMERAL_DIV2, NUMERAL_MOD_2EXP,iMOD_2EXP,
+          (* DIV2_def, MOD_2EXP_def, *)
+          DIV_2EXP_compute,
+          BITWISE_compute, BIT_MODF_compute, BIT_MODIFY_EVAL,
+          BIT_REV_compute, BIT_REVERSE_EVAL,
+          LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,
+          BITV_def, BIT_def, SLICE_def,LSB_def, SIGN_EXTEND_def])
  end;
 
 val _ = export_theory();
