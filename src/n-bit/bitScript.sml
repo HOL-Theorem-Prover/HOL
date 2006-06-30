@@ -16,72 +16,47 @@ val _ = new_theory "bit";
 
 (* ------------------------------------------------------------------------- *)
 
-fun Def s = curry Definition.new_definition s o Parse.Term;
+val _ = computeLib.auto_import_definitions := false;
 
-val DIV2_def        = Def "DIV2_def"
-                          `DIV2 n = n DIV 2`;
+val TIMES_2EXP_def  = Define `TIMES_2EXP x n = n * 2 ** x`;
 
-val TIMES_2EXP_def  = Def "TIMES_2EXP_def"
-                          `TIMES_2EXP x n = n * 2 ** x`;
+val DIV_2EXP_def    = Define `DIV_2EXP x n = n DIV 2 ** x`;
 
-val DIV_2EXP_def    = Def "DIV_2EXP_def"
-                          `DIV_2EXP x n = n DIV 2 ** x`;
+val DIVMOD_2EXP_def = Define `DIVMOD_2EXP x n = (n DIV 2 ** x,n MOD 2 ** x)`;
 
-val MOD_2EXP_def    = Def "MOD_2EXP_def"
-                          `MOD_2EXP x n = n MOD 2 ** x`;
+val SBIT_def        = Define `SBIT b n = if b then 2 ** n else 0`;
 
-val DIVMOD_2EXP_def = Def "DIVMOD_2EXP_def"
-                          `DIVMOD_2EXP x n = (n DIV 2 ** x,n MOD 2 ** x)`;
+val BITS_def        = Define `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
 
-val SBIT_def        = Def "SBIT_def"
-                          `SBIT b n = if b then 2 ** n else 0`;
+val BITV_def        = Define `BITV n b = BITS b b n`;
 
-val BITS_def        = Def "BITS_def"
-                          `BITS h l n = MOD_2EXP (SUC h-l) (DIV_2EXP l n)`;
+val BIT_def         = Define `BIT b n = (BITS b b n = 1)`;
 
-val BITV_def        = Def "BITV_def"
-                          `BITV n b = BITS b b n`;
+val SLICE_def       = Define `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`;
 
-val BIT_def         = Def "BIT_def"
-                          `BIT b n = (BITS b b n = 1)`;
+val LSB_def         = Define `LSB = BIT 0`;
 
-val SLICE_def       = Def "SLICE_def"
-                          `SLICE h l n = MOD_2EXP (SUC h) n - MOD_2EXP l n`;
+val LOG2_def        = Define `LOG2 = LOG 2`;
 
-val LSB_def         = Def "LSB_def"
-                          `LSB = BIT 0`;
+val BIT_REVERSE_def = Define`
+  (BIT_REVERSE 0 x = 0) /\
+  (BIT_REVERSE (SUC n) x =
+    (BIT_REVERSE n x) * 2 + SBIT (BIT n x) 0)`;
 
-val BIT_REVERSE_def =
-  Prim_rec.new_recursive_definition
-  {name = "BIT_REVERSE_def",
-   def = ``(BIT_REVERSE 0 x = 0)
-        /\ (BIT_REVERSE (SUC n) x =
-              (BIT_REVERSE n x) * 2 + SBIT (BIT n x) 0)``,
-   rec_axiom = prim_recTheory.num_Axiom};
+val BITWISE_def = Define`
+  (BITWISE 0 op x y = 0) /\
+  (BITWISE (SUC n) op x y =
+     BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)`;
 
-val BITWISE_def =
- Prim_rec.new_recursive_definition
-  {name = "BITWISE_def",
-   def = ``(BITWISE 0 op x y = 0)
-        /\ (BITWISE (SUC n) op x y =
-              BITWISE n op x y + SBIT (op (BIT n x) (BIT n y)) n)``,
-   rec_axiom = prim_recTheory.num_Axiom};
+val BIT_MODIFY_def = Define`
+  (BIT_MODIFY 0 f x = 0) /\
+  (BIT_MODIFY (SUC n) f x =
+     BIT_MODIFY n f x + SBIT (f n (BIT n x)) n)`;
 
-val BIT_MODIFY_def =
- Prim_rec.new_recursive_definition
-  {name = "BIT_MODIFY_def",
-   def = ``(BIT_MODIFY 0 f x = 0)
-        /\ (BIT_MODIFY (SUC n) f x =
-              BIT_MODIFY n f x + SBIT (f n (BIT n x)) n)``,
-   rec_axiom = prim_recTheory.num_Axiom};
-
-val SIGN_EXTEND_def =
-  Def "SIGN_EXTEND_def"
-      `SIGN_EXTEND l h n =
-         let m = n MOD 2 ** l in
-         if BIT (l - 1) n then 2 ** h - 2 ** l + m else m`;
-
-val LOG2_def = Def "LOG2_def" `LOG2 = LOG 2`;
+val SIGN_EXTEND_def = Define
+  `SIGN_EXTEND l h n =
+     let m = n MOD 2 ** l in
+       if BIT (l - 1) n then 2 ** h - 2 ** l + m else m`;
 
 val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
   (REWRITE_RULE [GSYM LOG2_def] o INST [`a` |-> `2`]) LOG_UNIQUE);

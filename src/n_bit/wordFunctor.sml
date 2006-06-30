@@ -2897,7 +2897,7 @@ val _ =
     :: map (DEFN o PURE_REWRITE_RULE [SYM HB_THM, SYM THE_WL_THM, SYM wL_thm, SYM wH_thm]
                  o PURE_REWRITE_RULE [NUMERAL_DEF, SYM TOPNUM_THM, SYM MAXNUM_THM])
        [word_T_thm, word_0, word_1,
-        NUMERAL_MOD_2EXP, iMOD_2EXP, MOD_WL_EVAL,NUMERAL_DIV_2EXP,
+        MOD_WL_EVAL,NUMERAL_DIV_2EXP,
         w2n_EVAL, MSB_EVAL_THM,  LSB_EVAL_THM,
         WORD_BIT_def, WORD_BITS_def, WORD_SLICE_def,
         ONE_COMP_THM, TWO_COMP_THM,

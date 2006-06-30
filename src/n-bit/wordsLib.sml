@@ -30,14 +30,15 @@ val MOD_WL =
 
 val thms = machine_sizes @
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
-   iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, LSB_def, BITV_def,
-   SIGN_EXTEND_def, SBIT_def,
-   DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP,
+   numeralTheory.numeral_div2,numeralTheory.numeral_imod_2exp,
+   numeralTheory.MOD_2EXP,
+   iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def,
+   SIGN_EXTEND_def, SBIT_def, DIVMOD_2EXP,
    NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP,
    NUMERAL_BIT_MODIFY, NUMERAL_BIT_MODF,
    NUMERAL_BIT_REVERSE, NUMERAL_BIT_REV,
-   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` BITS_def,
-   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
+   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` BITS_def,
+   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def,
    numeral_log2,numeral_ilog2,
    n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
@@ -64,7 +65,7 @@ val thms =
   let fun mrw th = map (REWRITE_RULE [th])
 in
     (mrw TIMES_2EXP1 o mrw (GSYM bitTheory.TIMES_2EXP_def) o
-     mrw (GSYM bitTheory.MOD_2EXP_def)) thms
+     mrw (GSYM arithmeticTheory.MOD_2EXP_def)) thms
 end;
 
 fun words_compset () =

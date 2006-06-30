@@ -42,11 +42,13 @@ fun cbv_LOG2_CONV tm =
 
 val thms = 
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
-   iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV2, SIGN_EXTEND_def,
-   DIVMOD_2EXP, iMOD_2EXP, NUMERAL_MOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
+   numeralTheory.numeral_div2,numeralTheory.numeral_imod_2exp,
+   numeralTheory.MOD_2EXP,
+   iBITWISE, NUMERAL_BITWISE, SIGN_EXTEND_def,
+   DIVMOD_2EXP, NUMERAL_DIV_2EXP, TIMES_2EXP_def,
    LSBn_def, BITV_def, SBIT_def,
-   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` BITS_def,
-   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,iMOD_2EXP] `n` SLICE_def,
+   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` BITS_def,
+   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def,
    numeral_log2,numeral_ilog2
   ] ;

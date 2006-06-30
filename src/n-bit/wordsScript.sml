@@ -528,7 +528,7 @@ val word_msb_n2w_numeric = store_thm(
   Q.ABBREV_TAC `q = n DIV WL` THEN
   Q.ABBREV_TAC `r = n MOD WL` THEN
   ASM_SIMP_TAC (srw_ss())[word_msb_n2w, bitTheory.BIT_def, bitTheory.BITS_def,
-             bitTheory.MOD_2EXP_def, bitTheory.DIV_2EXP_def,
+             MOD_2EXP_def, bitTheory.DIV_2EXP_def,
              DECIDE ``SUC x - x = 1``, EQ_IMP_THM] THEN REPEAT STRIP_TAC
   THENL [
     SPOSE_NOT_THEN ASSUME_TAC THEN

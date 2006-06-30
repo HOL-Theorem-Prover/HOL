@@ -103,14 +103,6 @@ val BIT_MODIFY_EVAL = save_thm("BIT_MODIFY_EVAL",
 
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
-val iMOD_2EXP_def =
- Prim_rec.new_recursive_definition
-  {name = "iMOD_2EXP_def",
-   def = ``(iMOD_2EXP 0 n = 0) /\
-           (iMOD_2EXP (SUC x) n =
-              2 * (iMOD_2EXP x (n DIV 2)) + SBIT (ODD n) 0)``,
-   rec_axiom = prim_recTheory.num_Axiom};
-
 val iBITWISE_def =
   Definition.new_definition("iBITWISE_def", ``iBITWISE = BITWISE``);
 
@@ -137,14 +129,6 @@ val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
     !x f a b. BITWISE x f (NUMERAL a) (NUMERAL b) =
                  NUMERAL (iBITWISE x f (NUMERAL a) (NUMERAL b))`,
   REWRITE_TAC [iBITWISE_def,NUMERAL_DEF]);
-
-val NUMERAL_DIV2 = store_thm("NUMERAL_DIV2",
-   `(DIV2 0 = 0) /\
-     (!n. DIV2 (NUMERAL (BIT1 n)) = NUMERAL n) /\
-     (!n. DIV2 (NUMERAL (BIT2 n)) = NUMERAL (SUC n))`,
-  RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2]
-    \\ SIMP_TAC arith_ss [DIV2_def,
-           ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
 
 val DIV_2EXP = prove(
   `(!n. DIV_2EXP 0 n = n) /\
@@ -194,79 +178,6 @@ val NUMERAL_BIT_MODIFY = store_thm("NUMERAL_BIT_MODIFY",
   SIMP_TAC bool_ss [NUMERAL_DEF,ALT_ZERO,BIT_MODIFY_EVAL]);
 
 (* ------------------------------------------------------------------------- *)
-
-val ADD_DIV_ADD_DIV2 = (GEN_ALL o
-  SIMP_RULE arith_ss [GSYM ADD1] o SPECL [`n`,`1`] o
-  SIMP_RULE bool_ss [DECIDE (Term `0 < 2`)] o SPEC `2`) ADD_DIV_ADD_DIV;
-
-val SPEC_MOD_COMMON_FACTOR = (GEN_ALL o
-   SIMP_RULE arith_ss [GSYM EXP,ZERO_LT_TWOEXP] o
-   SPECL [`2`,`m`,`2 ** SUC h`]) MOD_COMMON_FACTOR;
-
-val SPEC_MOD_COMMON_FACTOR2 = (GEN_ALL o
-   SYM o SIMP_RULE arith_ss [GSYM EXP,ZERO_LT_TWOEXP] o
-   SPECL [`2`,`m`,`2 ** h`]) MOD_COMMON_FACTOR;
-
-val SPEC_MOD_PLUS = (GEN_ALL o GSYM o
-  SIMP_RULE bool_ss [ZERO_LT_TWOEXP] o SPEC `2 ** n`) MOD_PLUS;
-
-val SPEC_TWOEXP_MONO = prove(
-  `!a b. 1 < 2 ** SUC b`,
-  METIS_TAC [EXP,prim_recTheory.LESS_0,EXP_BASE_LT_MONO,DECIDE ``1 < 2``])
-
-val lem = prove(
-  `!m n. (2 * m) MOD 2 ** SUC n + 1 < 2 ** SUC n`,
-  RW_TAC arith_ss [SPEC_MOD_COMMON_FACTOR2,EXP,DOUBLE_LT,MOD_2EXP_LT,
-    (GEN_ALL o numLib.REDUCE_RULE o SPECL [`m`,`i`,`1`]) LESS_MULT_MONO]);
-
-val BITS_SUC2 = prove(
-  `!h n. BITS (SUC h) 0 n = 2 * BITS h 0 (n DIV 2) + SBIT (ODD n) 0`,
-  RW_TAC arith_ss [SBIT_def]
-    \\ FULL_SIMP_TAC arith_ss [GSYM EVEN_ODD,EVEN_EXISTS,ODD_EXISTS,
-         BITS_ZERO3,ADD_DIV_ADD_DIV2,SPEC_MOD_COMMON_FACTOR,
-         ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
-    \\ SUBST1_TAC (SPEC `2 * m` ADD1)
-    \\ ONCE_REWRITE_TAC [SPEC_MOD_PLUS]
-    \\ SIMP_TAC bool_ss [LESS_MOD,ZERO_LT_TWOEXP,SPEC_TWOEXP_MONO,LESS_MOD,lem]
-);
-
-val MOD_2EXP_ZERO = prove(
-  `!x. MOD_2EXP x 0 = 0`,
-  SIMP_TAC arith_ss [MOD_2EXP_def,ZERO_MOD,ZERO_LT_TWOEXP]);
-
-val iMOD_2EXP = prove(
-  `!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)`,
-  REWRITE_TAC [NUMERAL_DEF]
-    \\ Induct
-    >> SIMP_TAC arith_ss [iMOD_2EXP_def,MOD_2EXP_def]
-    \\ STRIP_TAC \\ REWRITE_TAC [iMOD_2EXP_def]
-    \\ POP_ASSUM (SUBST1_TAC o SYM o SPEC `n DIV 2`)
-    \\ Cases_on `x`
-    >> (SIMP_TAC arith_ss [MOD_2EXP_def,MOD_2,EVEN_ODD,SBIT_def]
-             \\ PROVE_TAC [])
-    \\ REWRITE_TAC [BITS_SUC2,(GSYM o REWRITE_RULE [GSYM MOD_2EXP_def])
-           BITS_ZERO3]);
-
-val iMOD_2EXP_CLAUSES = prove(
-  `(!n. iMOD_2EXP 0 n = ZERO) /\
-   (!x n. iMOD_2EXP x ZERO = ZERO) /\
-   (!x n. iMOD_2EXP (SUC x) (BIT1 n) = BIT1 (iMOD_2EXP x n)) /\
-   (!x n. iMOD_2EXP (SUC x) (BIT2 n) = iDUB (iMOD_2EXP x (SUC n)))`,
-  RW_TAC arith_ss [iMOD_2EXP_def,iDUB,SBIT_def,numeral_evenodd,GSYM DIV2_def,
-    REWRITE_RULE [SYM ALT_ZERO,NUMERAL_DEF,ADD1] NUMERAL_DIV2]
-    << [
-      REWRITE_TAC [ALT_ZERO],
-      REWRITE_TAC [ALT_ZERO]
-        \\ REWRITE_TAC [MOD_2EXP_ZERO,(GSYM o
-               REWRITE_RULE [NUMERAL_DEF]) iMOD_2EXP],
-      SIMP_TAC arith_ss [SPEC `iMOD_2EXP x n` BIT1],
-      ONCE_REWRITE_TAC [(SYM o REWRITE_CONV [NUMERAL_DEF]) ``1``]
-        \\ REWRITE_TAC [ADD1]]);
-
-val iMOD_2EXP = save_thm("iMOD_2EXP",CONJ MOD_2EXP_ZERO iMOD_2EXP);
-
-val NUMERAL_MOD_2EXP = save_thm("NUMERAL_MOD_2EXP",
-  SUC_RULE iMOD_2EXP_CLAUSES);
 
 val TIMES_2EXP_lem = prove(
   `!n. FUNPOW iDUB n 1 = 2 ** n`,
@@ -362,7 +273,7 @@ val LOG2_compute = prove(
          << [PROVE_TAC [iDUB_removal, numeral_ilog2, ALT_ZERO],
              REWRITE_TAC [iDUB_SUC, DIV2_BIT1_SUC, numeral_ilog2]
                \\ SIMP_TAC arith_ss [iLOG2_def]],
-       REWRITE_TAC [NUMERAL_1b, NUMERAL_DIV2, numeral_ilog2, numeral_log2,
+       REWRITE_TAC [NUMERAL_1b, numeral_div2, numeral_ilog2, numeral_log2,
                     NUMERAL_DEF, iLOG2_def, ADD1]]);
 
 val BITWISE_compute = prove(
@@ -413,10 +324,7 @@ val _ =
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1, arithmeticTheory.NUMERAL_DEF])
-         [TIMES_2EXP_compute,
-          NUMERAL_DIV2, NUMERAL_MOD_2EXP,iMOD_2EXP,
-          (* DIV2_def, MOD_2EXP_def, *)
-          DIV_2EXP_compute,
+         [TIMES_2EXP_compute, DIV_2EXP_compute,
           BITWISE_compute, BIT_MODF_compute, BIT_MODIFY_EVAL,
           BIT_REV_compute, BIT_REVERSE_EVAL,
           LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,

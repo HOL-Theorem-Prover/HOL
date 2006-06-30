@@ -1888,6 +1888,13 @@ val DIVISION = new_specification ("DIVISION", ["MOD","DIV"], MOD_DIV_exist);
 val _ = set_fixity "MOD" (Infixl 650);
 val _ = set_fixity "DIV" (Infixl 600);
 
+val DIV2_def =
+  new_definition("DIV2_def",    --`DIV2 n = n DIV 2`--);
+
+val MOD_2EXP_def =
+  new_definition("MOD_2EXP_def",
+                 --`MOD_2EXP x n = n MOD 2 ** x`--);
+
 (* ---------------------------------------------------------------------*)
 (* Properties of MOD and DIV that don't depend on uniqueness.           *)
 (* ---------------------------------------------------------------------*)

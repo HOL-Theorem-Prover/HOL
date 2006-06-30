@@ -11,17 +11,11 @@ val _ = new_theory "bits";
 
 fun Def s = curry Definition.new_definition s o Parse.Term;
 
-val DIV2_def        = Def "DIV2_def"
-                          `DIV2 n = n DIV 2`;
-
 val TIMES_2EXP_def  = Def "TIMES_2EXP_def"
                           `TIMES_2EXP x n = n * 2 EXP x`;
 
 val DIV_2EXP_def    = Def "DIV_2EXP_def"
                           `DIV_2EXP x n = n DIV 2 EXP x`;
-
-val MOD_2EXP_def    = Def "MOD_2EXP_def"
-                          `MOD_2EXP x n = n MOD 2 EXP x`;
 
 val DIVMOD_2EXP_def = Def "DIVMOD_2EXP_def"
                          `DIVMOD_2EXP x n = (n DIV 2 EXP x,n MOD 2 EXP x)`;

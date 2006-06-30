@@ -687,6 +687,87 @@ val DIVMOD_NUMERAL_CALC = Q.store_thm
   (!m n. m MOD (BIT2 n) = SND(DIVMOD (ZERO,m,BIT2 n)))`,
  METIS_TAC [DIVMOD_CALC,numeral_lt,ALT_ZERO]);
 
+val numeral_div2 = Q.store_thm("numeral_div2",
+   `(DIV2 0 = 0) /\
+     (!n. DIV2 (NUMERAL (BIT1 n)) = NUMERAL n) /\
+     (!n. DIV2 (NUMERAL (BIT2 n)) = NUMERAL (SUC n))`,
+  RW_TAC bool_ss [ALT_ZERO, NUMERAL_DEF, BIT1, BIT2]
+    THEN REWRITE_TAC [DIV2_def, ADD_ASSOC, GSYM TIMES2]
+    THEN METIS_TAC [ZERO_DIV, ALT_ZERO, NUMERAL_DEF, DIVMOD_ID, ADD_CLAUSES,
+                    MULT_COMM, ADD_DIV_ADD_DIV, LESS_DIV_EQ_ZERO,
+                    numeral_lt, numeral_suc]);
+
+val BIT1n =
+  METIS_PROVE [ONE, ADD_ASSOC, BIT1, TIMES2] ``!n. BIT1 n = 2 * n + 1``;
+
+val BIT2n =
+  METIS_PROVE [ADD_ASSOC,ADD1,ADD,BIT2,TIMES2] ``!n. BIT2 n = 2 * (SUC n)``;
+
+val ZERO_LT_TWO = METIS_PROVE [TWO, LESS_0] ``0 < 2``;
+val ONE_LT_TWO = METIS_PROVE [ONE, TWO, LESS_SUC_REFL] ``1 < 2``;
+
+val ZERO_LT_TWOEXP =
+  (GEN_ALL o REWRITE_RULE [GSYM TWO] o Q.SPECL [`n`,`1`]) ZERO_LESS_EXP;
+
+val ONE_LT_TWOEXP =
+  METIS_PROVE [EXP_BASE_LT_MONO,EXP,ONE_LT_TWO,LESS_0] ``!n. 1 < 2 ** SUC n``;
+
+val DOUBLE_LT_COR = METIS_PROVE [DOUBLE_LT, LT_MULT_LCANCEL, ZERO_LT_TWO]
+    ``!a b. a < b ==> 2 * a + 1 < 2 * b``;
+
+val NUMERAL_MOD_2EXP = Q.prove(
+  `(!n. MOD_2EXP 0 n = ZERO) /\
+   (!x n. MOD_2EXP x ZERO = ZERO) /\
+   (!x n. MOD_2EXP (SUC x) (BIT1 n) = BIT1 (MOD_2EXP x n)) /\
+   (!x n. MOD_2EXP (SUC x) (BIT2 n) = iDUB (MOD_2EXP x (SUC n)))`,
+  RW_TAC bool_ss [MOD_2EXP_def,iDUB,GSYM DIV2_def,EXP,MOD_1,GSYM TIMES2,
+    REWRITE_RULE [SYM ALT_ZERO,NUMERAL_DEF,ADD1] numeral_div2] THENL
+     [REWRITE_TAC [ALT_ZERO],
+      METIS_TAC [ALT_ZERO,ZERO_MOD,ZERO_LT_TWOEXP],
+      STRIP_ASSUME_TAC (Q.SPEC `x` num_CASES)
+        THENL [
+          ASM_REWRITE_TAC [EXP, MULT_RIGHT_1, MOD_1]
+            THEN SUBST1_TAC (Q.SPEC `n` BIT1n)
+            THEN SIMP_TAC bool_ss [ONE_LT_TWO, MOD_MULT,Q.SPEC `0` BIT1n,
+                   ONCE_REWRITE_RULE [GSYM MULT_COMM] MOD_MULT,MULT_0,ADD],
+          POP_ASSUM SUBST1_TAC
+            THEN SUBST1_TAC (Q.SPEC `n` BIT1n)
+            THEN SIMP_TAC bool_ss
+                   [Once (GSYM MOD_PLUS), ZERO_LT_TWOEXP, GSYM EXP]
+            THEN SIMP_TAC bool_ss [Once EXP, GSYM MOD_COMMON_FACTOR,
+                    ZERO_LT_TWOEXP, ZERO_LT_TWO]
+            THEN SIMP_TAC bool_ss [LESS_MOD, ONE_LT_TWOEXP]
+            THEN METIS_TAC [BIT1n, DOUBLE_LT_COR, LESS_MOD, EXP,
+                            DIVISION, ZERO_LT_TWOEXP]],
+      Q.SPEC_THEN `n` SUBST1_TAC BIT2n
+        THEN METIS_TAC [MOD_COMMON_FACTOR,TWO,LESS_0,ZERO_LT_TWOEXP]]);
+
+val iMOD_2EXP = new_definition("iMOD_2EXP", ``iMOD_2EXP = MOD_2EXP``);
+
+val BIT1n = REWRITE_RULE [GSYM ADD1] BIT1n;
+
+val numeral_imod_2exp = Q.store_thm("numeral_imod_2exp",
+  `(!n. iMOD_2EXP 0 n = ZERO) /\ (!x n. iMOD_2EXP x ZERO = ZERO) /\
+       (!x n. iMOD_2EXP (NUMERAL (BIT1 x)) (BIT1 n) =
+          BIT1 (iMOD_2EXP (NUMERAL (BIT1 x) - 1) n)) /\
+       (!x n. iMOD_2EXP (NUMERAL (BIT2 x)) (BIT1 n) =
+          BIT1 (iMOD_2EXP (NUMERAL (BIT1 x)) n)) /\
+       (!x n. iMOD_2EXP (NUMERAL (BIT1 x)) (BIT2 n) =
+          iDUB (iMOD_2EXP (NUMERAL (BIT1 x) - 1) (SUC n))) /\
+        !x n. iMOD_2EXP (NUMERAL (BIT2 x)) (BIT2 n) =
+          iDUB (iMOD_2EXP (NUMERAL (BIT1 x)) (SUC n))`,
+  RW_TAC bool_ss [iMOD_2EXP, NUMERAL_MOD_2EXP]
+    THEN SUBST1_TAC (Q.SPEC `BIT1 x` NUMERAL_DEF)
+    THEN SUBST1_TAC (Q.SPEC `BIT2 x` NUMERAL_DEF)
+    THEN SUBST1_TAC (Q.SPEC `x` BIT1n)
+    THEN SUBST1_TAC (Q.SPEC `x` ((GSYM o hd o tl o CONJUNCTS) numeral_suc))
+    THEN SIMP_TAC bool_ss [NUMERAL_MOD_2EXP, SUC_SUB1, GSYM BIT1n]);
+
+val MOD_2EXP = save_thm("MOD_2EXP",
+  CONJ (REWRITE_RULE [ALT_ZERO] (hd (tl (CONJUNCTS NUMERAL_MOD_2EXP))))
+       (METIS_PROVE [NUMERAL_DEF,iMOD_2EXP]
+         ``!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)``));
+
 (*---------------------------------------------------------------------------*)
 (* Filter out the definitions and theorems needed to generate ML.            *)
 (*---------------------------------------------------------------------------*)
@@ -753,7 +834,7 @@ val _ =
   in 
     emitML (!Globals.emitMLDir)
     ("num",
-     DATATYPE `num = ZERO | BIT1 of num | BIT2 of num`
+     EQDATATYPE ([], `num = ZERO | BIT1 of num | BIT2 of num`)
       ::
      OPEN ["combin"]
       ::
@@ -764,9 +845,13 @@ val _ =
           numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
           numeral_mult,iSQR,numeral_exp,even,odd,
           numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
-          WHILE,LEAST_DEF,findq_thm,DIVMOD_THM,div_eqns, mod_eqns]
+          WHILE,LEAST_DEF,findq_thm,DIVMOD_THM,div_eqns, mod_eqns,
+          numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp]
      @ 
-     [MLSIG "val ONE :num",
+     [MLSIG "val ZERO :num",
+      MLSIG "val BIT1 :num -> num",
+      MLSIG "val BIT2 :num -> num",
+      MLSIG "val ONE :num",
       MLSIG "val TWO :num",
       MLSIG "val BASE : num -> num -> num list",
       MLSIG "val fromInt       : int -> num",
