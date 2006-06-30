@@ -229,7 +229,7 @@ val _ = adjoin_to_theory {
          string "in";                                     break 2;
          string   "TypeBase.write tyinfo";                break 0;
          string "end";
-         eblock()
+         eblock();                                        break 0
        end)
   };
 
