@@ -102,6 +102,11 @@ and COMMON_LISP_def         = Define `COMMON_LISP         = "COMMON-LISP"`
 and KEYWORD_def             = Define `KEYWORD             = "KEYWORD"`
 and ACL2_OUTPUT_CHANNEL_def = Define `ACL2_OUTPUT_CHANNEL = "ACL2-OUTPUT-CHANNEL"`;
 
+val asym_def = Define `asym = sym ACL2`;
+val csym_def = Define `csym = sym COMMON_LISP`;
+val ksym_def = Define `ksym = sym KEYWORD`;
+val osym_def = Define `osym = sym ACL2_OUTPUT_CHANNEL`;
+
 val _ =
  add_string_abbrevs
   [("ACL2",                lhs(concl ACL2_def )),
@@ -3694,6 +3699,194 @@ val _ = set_fixity "|=" (TruePrefix 11);        (* Give "|=" weak precedence *)
 val ACL2_TRUE_def =
  xDefine "ACL2_TRUE"
   `(|= p) = (ite (equal p nil) nil t = t)`;
+
+val caar_def =
+ Define
+  `caar x = car(car x)`;
+
+val cadr_def =
+ Define
+  `cadr x = car(cdr x)`;
+
+val cdar_def =
+ Define
+  `cdar x = cdr(car x)`;
+
+val cddr_def =
+ Define
+  `cddr x = cdr(cdr x)`;
+
+val caaar_def =
+ Define
+  `caaar x = car(car(car x))`;
+
+val cdaar_def =
+ Define
+  `cdaar x = cdr(car(car x))`;
+
+val cadar_def =
+ Define
+  `cadar x = car(cdr(car x))`;
+
+val cddar_def =
+ Define
+  `cddar x = cdr(cdr(car x))`;
+
+val caadr_def =
+ Define
+  `caadr x = car(car(cdr x))`;
+
+val cdadr_def =
+ Define
+  `cdadr x = cdr(car(cdr x))`;
+
+val caddr_def =
+ Define
+  `caddr x = car(cdr(cdr x))`;
+
+val cdddr_def =
+ Define
+  `cdddr x = cdr(cdr(cdr x))`;
+
+val caaaar_def =
+ Define
+  `caaaar x = car(car(car(car x)))`;
+
+val cadaar_def =
+ Define
+  `cadaar x = car(cdr(car(car x)))`;
+
+val caadar_def =
+ Define
+  `caadar x = car(car(cdr(car x)))`;
+
+val caddar_def =
+ Define
+  `caddar x = car(cdr(cdr(car x)))`;
+
+val caaadr_def =
+ Define
+  `caaadr x = car(car(car(cdr x)))`;
+
+val cadadr_def =
+ Define
+  `cadadr x = car(cdr(car(cdr x)))`;
+
+val caaddr_def =
+ Define
+  `caaddr x = car(car(cdr(cdr x)))`;
+
+val cadddr_def =
+ Define
+  `cadddr x = car(cdr(cdr(cdr x)))`;
+
+val cdaaar_def =
+ Define
+  `cdaaar x = cdr(car(car(car x)))`;
+
+val cddaar_def =
+ Define
+  `cddaar x = cdr(cdr(car(car x)))`;
+
+val cdadar_def =
+ Define
+  `cdadar x = cdr(car(cdr(car x)))`;
+
+val cdddar_def =
+ Define
+  `cdddar x = cdr(cdr(cdr(car x)))`;
+
+val cdaadr_def =
+ Define
+  `cdaadr x = cdr(car(car(cdr x)))`;
+
+val cddadr_def =
+ Define
+  `cddadr x = cdr(cdr(car(cdr x)))`;
+
+val cdaddr_def =
+ Define
+  `cdaddr x = cdr(car(cdr(cdr x)))`;
+
+val cddddr_def =
+ Define
+  `cddddr x = cdr(cdr(cdr(cdr x)))`;
+
+val List_def =
+ Define
+  `(List[s] = cons s nil)
+    /\
+   (List(s::sl) = cons s (List sl))`;
+
+val andl_def =
+ Define
+  `(andl[] = t)
+   /\
+   (andl[s] = s)
+   /\
+   (andl(x::y::l) = ite x (andl(y::l)) nil)`;
+
+val andl_fold =
+ store_thm
+  ("andl_fold",
+   ``(ite x y nil = andl[x;y]) /\ (andl[x; andl(y::l)] = andl(x::y::l))``,
+   RW_TAC std_ss [andl_def,ite_def,List_def]);
+
+val andl_append =
+ store_thm
+  ("andl_append",
+   ``!l1 l2. andl(andl l1 :: l2) = andl(l1 ++ l2)``,
+   Induct
+    THEN RW_TAC list_ss [andl_def,ite_def,List_def]
+    THENL
+     [Cases_on `l2`
+       THEN RW_TAC list_ss [andl_def,ite_def,List_def,EVAL ``t=nil``],
+      Cases_on `h=nil`
+       THEN RW_TAC list_ss [andl_def,ite_def,List_def,EVAL ``t=nil``]
+       THENL
+        [Cases_on `l1` THEN Cases_on `l2`
+          THEN RW_TAC list_ss [andl_def,ite_def,List_def,EVAL ``t=nil``],
+         Cases_on `l1`
+          THEN RW_TAC list_ss [andl_def,ite_def,List_def,EVAL ``t=nil``]]]);
+
+val andl_fold =
+ store_thm
+  ("andl_fold",
+   ``(ite x y nil = andl[x;y])
+     /\ 
+     (andl[x; andl(y::l)] = andl(x::(y::l)))
+     /\ 
+     (andl(andl(x::y::l1)::l2) = andl(x::y::(l1++l2)))``,
+   RW_TAC std_ss [andl_def,ite_def,List_def]
+    THENL
+     [Cases_on `l2`
+       THEN RW_TAC std_ss [andl_def,ite_def,List_def],
+      RW_TAC list_ss [andl_append]]);
+
+val itel_def =
+ Define
+  `(itel [] val'               = val')
+   /\
+   (itel ((test,val)::sl) val' = ite test val (itel sl val'))`;
+
+val itel_fold =
+ store_thm
+  ("itel_fold",
+   ``(ite x y z = itel [(x,y)] z)
+     /\
+     (itel [p] (itel pl v) = itel (p::pl) v)``,
+   Cases_on `p`
+    THEN RW_TAC std_ss [itel_def,ite_def]);
+
+val itel_append =
+ store_thm
+  ("itel_append",
+   ``itel l1 (itel l2 v) = itel (l1 ++ l2) v``,
+   Induct_on `l1`
+    THEN RW_TAC list_ss [itel_def,ite_def]
+    THEN Cases_on `h`
+    THEN Cases_on `q=nil`
+    THEN RW_TAC list_ss [itel_def,ite_def,List_def,EVAL ``t=nil``]);
 
 val _ = export_acl2_theory();
 
