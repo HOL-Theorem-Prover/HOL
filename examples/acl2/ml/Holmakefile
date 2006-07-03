@@ -3,8 +3,8 @@ defaxiomsTheory.uo defaxiomsTheory.ui: complex_rationalTheory.uo sexp.uo sexpThe
 
 #sexpTheory.uo sexpTheory.ui: sexp.uo make_sexp.ml
 #	$(HOLDIR)/bin/hol.unquote $(HOLDIR)/../preface.ml < make_sexp.ml
-#
-#acl2_defsTheory.uo acl2_defsTheory.ui: sexpTheory.uo
+
+
 
 
 
