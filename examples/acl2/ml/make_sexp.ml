@@ -2,20 +2,16 @@
 (* This file defines a type of s-expressions and various constants and       *)
 (* functions on this type (t, nil, car, cdr, cons etc).                      *)
 (*                                                                           *)
+(* See Holmakefile for how this file is used                                 *)
+(*                                                                           *)
 (* One goal is to construct a model of ACL2 by proving the axioms in         *)
 (* axioms.lisp.                                                              *)
 (*                                                                           *)
-(* File written by Mike Gordon and Matt Kaufmann; maintained by Mike Gordon. *)
+(* File originally written by Mike Gordon and Matt Kaufmann;                 *)
+(* now maintained by Mike Gordon.                                            *)
 (*                                                                           *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
 
 (******************************************************************************
 * Load theories
