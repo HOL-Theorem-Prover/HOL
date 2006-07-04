@@ -334,6 +334,11 @@ val (and_macro_def,and_macro_ind) =
      |- atom x = not (consp x),
 *)
 
+val atom_def =
+ acl2Define "COMMON-LISP::ATOM"
+  `atom x = not (consp x)`;
+
+
 (*
      [oracles: DEFUN ACL2::MAKE-CHARACTER-LIST, DISK_THM] [axioms: ] []
      |- acl2_make_character_list x =
@@ -491,7 +496,13 @@ val common_lisp_equal_def =
 
 val zp_def =
  acl2Define "ACL2::ZP"
-  `zp x = ite (integerp x) (not (less (nat 0) x)) t`;
+  `zp x = ite (integerp x) (not (less (cpx 0 1 0 1) x)) t`;
+
+val zp =
+ store_thm
+  ("zp",
+   ``zp x = ite (integerp x) (not (less (nat 0) x)) t``,
+   RW_TAC std_ss [zp_def,nat_def,int_def]);
 
 (*
      [oracles: DEFUN ACL2::ZIP, DISK_THM] [axioms: ] []
@@ -500,7 +511,13 @@ val zp_def =
 
 val zip_def =
  acl2Define "ACL2::ZIP"
-  `zip x = ite (integerp x) (common_lisp_equal x (nat 0)) t`;
+  `zip x = ite (integerp x) (equal x (cpx 0 1 0 1)) t`;
+
+val zip =
+ store_thm
+  ("zip",
+   ``zip x = ite (integerp x) (common_lisp_equal x (nat 0)) t``,
+   RW_TAC std_ss [common_lisp_equal_def,zip_def,nat_def,int_def]);
 
 (*
      [oracles: DEFUN COMMON-LISP::NTH, DISK_THM] [axioms: ] []
@@ -542,6 +559,16 @@ val zip_def =
      [oracles: DEFUN ACL2::FIX, DISK_THM] [axioms: ] []
      |- fix x = ite (acl2_numberp x) x (nat 0),
 *)
+
+val fix_def =
+ acl2Define "ACL2::FIX"
+  `fix x = ite (acl2_numberp x) x (cpx 0 1 0 1)`;
+
+val fix =
+ store_thm
+  ("fix",
+   ``fix x = ite (acl2_numberp x) x (nat 0)``,
+   RW_TAC std_ss [fix_def,nat_def,int_def]);
 
 (*
      [oracles: DEFUN ACL2::FORCE] [axioms: ] [] |- force x = x,

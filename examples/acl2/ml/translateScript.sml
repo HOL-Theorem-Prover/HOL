@@ -8,8 +8,8 @@
 
 (* A brief changelog *)
 
-(* 17/05 	- Added LISTP_CONS function          *)
-(* 27/06        - switched to acl2_defsTheory (MJCG) *)
+(* 17/05 	- Added LISTP_CONS function              *)
+(* 04/07        - switched to hol_defaxiomsTheory (MJCG) *)
 
 (*****************************************************************************)
 (* Load base theories                                                        *)
@@ -21,14 +21,14 @@ val _ = app                                   (* load infrastructure         *)
  load 
  ["sexp",
   "sexpTheory",
-  "basic_defaxiomsTheory",
+  "hol_defaxiomsTheory",
   "intLib","listLib"];
 *)
 
 open sexp sexpTheory;                         (* open in current session     *)
 open arithmeticTheory fracTheory ratTheory integerTheory intLib 
      complex_rationalTheory intExtensionTheory
-     acl2_defsTheory listTheory;
+     hol_defaxiomsTheory listTheory;
 
 (*****************************************************************************)
 (* Start new theory "translate"                                              *)
