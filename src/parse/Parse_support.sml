@@ -212,45 +212,38 @@ fun make_const l s E = (gen_const l s, E)
     Making preterm string literals.
  ---------------------------------------------------------------------------*)
 
-local val num_ty = Pretype.Tyop{Thy="num", Tyop = "num", Args = []}
-      val char_ty   = Pretype.Tyop{Thy="string", Tyop="char", Args = []}
-      val string_ty = Pretype.Tyop{Thy="string", Tyop="string", Args = []}
-      fun funty ty1 ty2 = Pretype.Tyop{Thy="min", Tyop="fun", Args=[ty1,ty2]}
-      fun mk_comb l (ptm1,ptm2) = Preterm.Comb{Rator=ptm1,Rand=ptm2,Locn=l}
-      val CHR = Preterm.Const
-                   {Name="CHR",Thy="string",Ty=funty num_ty char_ty,Locn=locn.Loc_None}
-      val STRING = Preterm.Const {Name="STRING",Thy="string",
-                      Ty=funty char_ty (funty string_ty string_ty), Locn=locn.Loc_None}
-      val EMPTY = Preterm.Const
-                      {Name="EMPTYSTRING",Thy="string",Ty=string_ty, Locn=locn.Loc_None}
-      fun mk_chr l ptm = Preterm.Comb{Rator=CHR,Rand=ptm,Locn=l}
-      fun mk_string l (ptm1,ptm2) =
-          Preterm.Comb{Rator=Preterm.Comb{Rator=STRING,Rand=ptm1,Locn=l},Rand=ptm2,Locn=l}
-      fun mk_numeral l = Literal.gen_mk_numeral
-          {mk_comb = mk_comb l,
-          ZERO = Preterm.Const {Name="0",Thy="num",Ty=num_ty,Locn=locn.Loc_None},
-          ALT_ZERO = Preterm.Const{Name="ZERO",Thy="arithmetic",Ty=num_ty,Locn=l},
-          NUMERAL = Preterm.Const
-                     {Name="NUMERAL",Thy="arithmetic",Ty=funty num_ty num_ty,Locn=l},
-          BIT1 = Preterm.Const {Name="BIT1",
-                                Thy="arithmetic",Ty=funty num_ty num_ty, Locn=l},
-          BIT2 = Preterm.Const {Name="BIT2",
-                                Thy="arithmetic",Ty=funty num_ty num_ty, Locn=l}}
+local
+  fun mk_chr ctm tm = mk_comb(ctm, tm)
+  fun mk_string stm (tm1,tm2) = list_mk_comb(stm, [tm1, tm2])
+  fun mk_numeral n =
+      Literal.gen_mk_numeral
+        {mk_comb = mk_comb,
+         ZERO = prim_mk_const{Name = "0", Thy = "num"},
+         ALT_ZERO = prim_mk_const{Name = "ZERO", Thy = "arithmetic"},
+         NUMERAL = prim_mk_const {Name="NUMERAL",Thy="arithmetic"},
+         BIT1 = prim_mk_const {Name="BIT1", Thy="arithmetic"},
+         BIT2 = prim_mk_const {Name="BIT2", Thy="arithmetic"}} n
+  fun fromMLC ctm c = mk_chr ctm (mk_numeral (Arbnum.fromInt (Char.ord c)))
 in
 fun make_string_literal l s =
     if not (mem "string" (ancestry "-")) andalso
        current_theory() <> "string"
     then
       Raise (ERRORloc "make_string_literal" l
-                   ("String literals not allowed - "^
-                    "load \"stringTheory\" first."))
-    else
-      Literal.mk_string_lit
-        {mk_string = mk_string l,
-         emptystring = EMPTY,
-         fromMLchar = fn ch =>
-                         mk_chr l(mk_numeral l(Arbnum.fromInt (Char.ord ch)))}
-        (String.substring(s,1,String.size s - 2))
+                      ("String literals not allowed - "^
+                       "load \"stringTheory\" first."))
+    else let
+        val stm = prim_mk_const {Name = "STRING", Thy = "string"}
+        val ctm = prim_mk_const {Name = "CHR", Thy = "string"}
+        val etm = prim_mk_const{Name = "EMPTYSTRING", Thy = "string"}
+      in
+        Preterm.Antiq {Locn = l,
+                       Tm = Literal.mk_string_lit
+                              {mk_string = mk_string stm,
+                               emptystring = etm,
+                               fromMLchar = fromMLC ctm}
+                              (String.substring(s,1,String.size s - 2))}
+      end
 fun make_char_literal l s =
     if not (mem "string" (ancestry "-")) andalso
        current_theory() <> "string"
@@ -258,8 +251,13 @@ fun make_char_literal l s =
       raise (ERRORloc "make_char_literal" l
                       "Char literals not allowed - \
                       \load \"stringTheory\" first.")
-    else mk_chr l (mk_numeral l (Arbnum.fromInt (Char.ord (String.sub(s,2)))))
-end;
+    else let
+        val ctm = prim_mk_const {Name = "CHR", Thy = "string"}
+        val n_t = mk_numeral (Arbnum.fromInt (Char.ord (String.sub(s,2))))
+      in
+        Preterm.Antiq{Locn = l, Tm = mk_chr ctm n_t}
+      end
+end (* local *)
 
 (*---------------------------------------------------------------------------
     "make_qconst" ignores overloading and visibility information. The
@@ -484,7 +482,7 @@ fun make_set_abs l (tm1,tm2) (E as {scope=scope0,...}:env) =
    end;
 
 (*---------------------------------------------------------------------------
- * Sequence abstractions [| tm1 | tm2 |]. 
+ * Sequence abstractions [| tm1 | tm2 |].
  *
  * You can't make a llist unless llistTheory is an ancestor.
  * The call to make_seq_comp_const ensure this.

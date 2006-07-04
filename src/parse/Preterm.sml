@@ -503,59 +503,117 @@ in
   mk_comb(mk_comb(c,t1),t2)
 end
 
+datatype rcm_action = Input of term
+                    | Ab of term * term
+                    | Cmb of int * term
+datatype rcm_out = Ch of term | Unch of term
+fun is_unch (Unch _) = true | is_unch _ = false
+fun dest_out (Ch t) = t | dest_out (Unch t) = t
+fun Pprefix P list = let
+  fun recurse pfx rest =
+      case rest of
+        [] => (list, [])
+      | h::t => if P h then recurse (h::pfx) t
+                else (List.rev pfx, rest)
+in
+  recurse [] list
+end
+
+fun recomb (outf, outargs, orig) = let
+  fun lmk(base, args) = List.foldl (fn (out,t) => mk_comb(t,dest_out out))
+                                   base args
+in
+  case outf of
+    Ch f => Ch (lmk(f, outargs))
+  | Unch f => let
+      val (_, badargs) = Pprefix is_unch outargs
+    in
+      if null badargs then Unch orig
+      else Ch (lmk(funpow (length badargs) rator orig, badargs))
+    end
+end
+
 fun remove_case_magic tm0 =
     if GrammarSpecials.case_initialised() then let
-        fun traverse t =
-            if is_abs t then
-              (mk_abs o (I ## traverse) o dest_abs) t
-            else if is_comb t then let
-                val (f0, args0) = strip_comb t
-                val args = map traverse args0
-                val f = traverse f0
+        fun traverse acc actions =
+            case actions of
+              [] => dest_out (hd acc)
+            | act :: rest => let
               in
-                let
-                  val {Name,Thy,Ty} = dest_thy_const f
-                in
-                  if Name = case_special andalso Thy = "bool"
-                  then let
-                      val _ = length args >= 2 orelse
-                              raise ERR "remove_case_magic"
-                                    "case constant has wrong # of args"
-                      val split_on_t = hd args
-                      val cases = strip_splits (hd (tl args))
-                      val patbody_pairs = map dest_case_arrow cases
-                          handle HOL_ERR _ =>
-                                 raise ERR "remove_case_magic"
-                                       ("Case expression has invalid syntax "^
-                                        "where there should be arrows")
-                      val split_on_t_ty = type_of split_on_t
-                      val result_ty =
-                          type_of (list_mk_comb(f, List.take(args,2)))
-                      val fakef = genvar (split_on_t_ty --> result_ty)
-                      val fake_eqns =
-                          list_mk_conj(map (fn (l,r) =>
-                                               mk_eq(mk_comb(fakef, l), r))
-                                       patbody_pairs)
-                      val functional =
-                          GrammarSpecials.compile_pattern_match fake_eqns
-                      val case_t =
-                          mk_comb(rator (#2 (strip_abs functional)),
-                                  split_on_t)
+                case act of
+                  Input t => let
+                  in
+                    if is_abs t then let
+                        val (v,body) = dest_abs t
+                      in
+                        traverse acc (Input body :: Ab (v,t) :: rest)
+                      end
+                    else if is_comb t then let
+                        val (f,args) = strip_comb t
+                        val in_args = map Input args
+                      in
+                        traverse acc (in_args @
+                                      [Input f, Cmb(length args, t)] @ rest)
+                      end
+                    else
+                      traverse (Unch t::acc) rest
+                  end
+                | Ab (v,orig) => let
+                  in
+                    case acc of
+                      Ch bod' :: acc0 => traverse (Ch (mk_abs(v,bod'))::acc0)
+                                                  rest
+                    | Unch _ :: acc0 => traverse (Unch orig :: acc0) rest
+                    | [] => raise Fail "Preterm.rcm: inv failed!"
+                  end
+                | Cmb(arglen, orig) => let
+                    val out_f = hd acc
+                    val f = dest_out out_f
+                    val acc0 = tl acc
+                    val acc_base = List.drop(acc0, arglen)
+                    val out_args = List.rev (List.take(acc0, arglen))
+                    val args = map dest_out out_args
+                    val newt = let
+                      val {Name,Thy,Ty} = dest_thy_const f
                     in
-                      list_mk_comb(case_t, tl (tl args))
-                    end
-                  else
-                    list_mk_comb(f, args)
-                end handle HOL_ERR _ => list_mk_comb(f, args)
+                      if Name = case_special andalso Thy = "bool" then let
+                          val _ = length args >= 2 orelse
+                                  raise ERR "remove_case_magic"
+                                            "case constant has wrong # of args"
+                          val split_on_t = hd args
+                          val cases = strip_splits (hd (tl args))
+                          val patbody_pairs = map dest_case_arrow cases
+                              handle HOL_ERR _ =>
+                              raise ERR "remove_case_magic"
+                                        ("Case expression has invalid syntax "^
+                                         "where there should be arrows")
+                          val split_on_t_ty = type_of split_on_t
+                          val result_ty =
+                              type_of (list_mk_comb(f, List.take(args,2)))
+                          val fakef = genvar (split_on_t_ty --> result_ty)
+                          val fake_eqns =
+                              list_mk_conj(map (fn (l,r) =>
+                                                   mk_eq(mk_comb(fakef, l), r))
+                                               patbody_pairs)
+                          val functional =
+                              GrammarSpecials.compile_pattern_match fake_eqns
+                          val case_t =
+                              mk_comb(rator (#2 (strip_abs functional)),
+                                      split_on_t)
+                        in
+                          Ch (list_mk_comb(case_t, tl (tl args)))
+                        end
+                      else
+                        recomb(out_f, out_args, orig)
+                    end handle HOL_ERR _ => recomb(out_f, out_args, orig)
+                  in
+                    traverse (newt::acc_base) rest
+                  end
               end
-            else t
       in
-        traverse tm0
+        traverse [] [Input tm0]
       end
     else tm0
-
-
-
 
 fun typecheck pfns ptm0 = let
   val () = TC pfns ptm0
@@ -575,12 +633,3 @@ end handle phase1_exn(l,s,ty) =>
 
 end; (* Preterm *)
 
-(* test the overloading :
-
-new_definition ("f", Term`f p q x = p x /\ q x`);
-allow_for_overloading_on ("/\\", Type`:'a -> 'a -> 'a`);
-overload_on ("/\\", mk_const{Name = "/\\", Ty = Type`:bool->bool->bool`});
-Term`p /\ q`;
-overload_on ("/\\", Term`f`);
-
-*)
