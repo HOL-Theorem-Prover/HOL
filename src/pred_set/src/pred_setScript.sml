@@ -9,9 +9,12 @@
 (* REVISED: Tom Melham (extensively revised and extended)		*)
 (* DATE:    January 1992						*)
 (* =====================================================================*)
+
 structure pred_setScript =
 struct
-(* interactive use
+
+
+(* interactive use 
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
           "Defn", "TotalDefn", "metisLib"];
 *)
@@ -45,7 +48,7 @@ val SPECIFICATION = store_thm(
   REWRITE_TAC [IN_DEF] THEN BETA_TAC THEN REWRITE_TAC []);
 
 (* ---------------------------------------------------------------------*)
-(* Axiom of extension: (s = t) iff !x. x IN s = x in t			*)
+(* Axiom of extension: (s = t) iff !x. x IN s = x IN t			*)
 (* ---------------------------------------------------------------------*)
 
 val EXTENSION = store_thm
@@ -4186,6 +4189,7 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
 (* Takes a curried constructor and maps it to a tupled version.              *)
 (*---------------------------------------------------------------------------*)
 
+(*
 fun tupled_constructor capp =
  let open pairSyntax
      val (c,args) = strip_comb capp
@@ -4200,9 +4204,6 @@ fun tupled_constructor capp =
 val reshape = BETA_RULE o
               PURE_REWRITE_RULE [tupled_constructor (Term`x INSERT s`)];
 
-val F_INTRO = PURE_REWRITE_RULE [PROVE[] (Term `~x = (x = F)`)];
-val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
-
 fun scoped_parse q =
  let val (tyg,tmg) = (type_grammar(),term_grammar())
      val tyg' = type_grammar.remove_abbreviation tyg "set"
@@ -4212,6 +4213,10 @@ fun scoped_parse q =
  in
    astl
  end;
+*)
+
+val F_INTRO = PURE_REWRITE_RULE [PROVE[] (Term `~x = (x = F)`)];
+val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 
 val BIGINTER_EMPTY = Q.prove
 (`BIGINTER EMPTY = FAIL BIGINTER ^(mk_var("empty set",bool)) EMPTY`,
@@ -4225,6 +4230,11 @@ val MIN_SET_EMPTY = Q.prove
 (`MIN_SET EMPTY = FAIL MIN_SET ^(mk_var("empty set",bool)) EMPTY`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
 
+val _ = EmitML.reshape_thm_hook := 
+ (fn thm => 
+   (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o 
+    pairLib.GEN_BETA_RULE o 
+    Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm);
 
 (*---------------------------------------------------------------------------*)
 (* Export an ML model of (finite) sets. Although the representation used in  *)
@@ -4244,7 +4254,6 @@ val _ =
      val (tyg,tmg) = (type_grammar(),term_grammar())
      val tyg' = type_grammar.remove_abbreviation tyg "set"
      val _ = temp_set_grammars(tyg',tmg)
-(*     val setdecl = scoped_parse `set = EMPTY | INSERT of 'a => set` *)
      val _ = new_type("set",1)
   in try emitML (!Globals.emitMLDir)
    ("set",
@@ -4273,7 +4282,7 @@ val _ =
     :: MLSIG "val count    : num -> num set"
     :: MLSIG "val POW      : ''a set -> ''a set set"
     ::
-    (map (DEFN_NOSIG o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o reshape)
+    (map DEFN_NOSIG 
      [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT,
       CONJ (CONJUNCT1 UNION_EMPTY) INSERT_UNION,
       CONJ (CONJUNCT1 INTER_EMPTY) INSERT_INTER,
@@ -4302,6 +4311,23 @@ val _ =
                \    | toList (INSERT(a,s)) = a::toList s"]))
 end;
 
+
+val _ = adjoin_to_theory 
+  {sig_ps = NONE,
+   struct_ps = SOME (fn ppstrm => 
+     let val S = PP.add_string ppstrm
+         fun NL() = PP.add_newline ppstrm
+     in S "val _ = EmitML.reshape_thm_hook := (fn thm => "; NL();
+        S "         (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o "; NL();
+        S "         pairLib.GEN_BETA_RULE o "; NL();
+        S "         Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm); "; NL();
+        NL();
+        S "val _ = EmitML.curried_const_equiv_tupled_var (Parse.Term `$INSERT`, 2);"; NL();
+        NL()
+     end)
+  }
+
 val _ = export_theory();
 
 end
+

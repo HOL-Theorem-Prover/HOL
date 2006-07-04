@@ -1423,23 +1423,6 @@ val o_f_EQNS = Q.prove
   ((f:'b->'c) o_f ((fm:'a|->'b) |+ (k,v)) = (f o_f fm \\ k) |+ (k,f v))`,
  METIS_TAC [o_f_FEMPTY, o_f_FUPDATE]);
 
-fun tupled_constructor capp =
- let open pairSyntax
-     val (c,args) = strip_comb capp
-     val target = type_of capp
-     val argtys = map type_of args
-     val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
-     val new = list_mk_pabs(args,mk_comb(cvar,list_mk_pair args))
- in
-    mk_thm([],mk_eq(c,new))
- end;
-
-val reshape =
-  PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o
-  pairLib.GEN_BETA_RULE o
-  PURE_REWRITE_RULE [tupled_constructor (Term`FUPDATE f (x,y)`),
-                     tupled_constructor (Term`x INSERT s`)];
-
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 
 val _ =
@@ -1454,22 +1437,22 @@ val _ =
     :: MLSIG "val FUPDATE  : ('a,'b) fmap * ('a * 'b) -> ('a,'b)fmap"
     :: MLSIG "val FDOM     : ('a,'b) fmap -> 'a set"
     ::
-    [DEFN_NOSIG(reshape(CONJ FDOM_FEMPTY FDOM_FUPDATE)),
-     DEFN (reshape (CONJ FAPPLY_FEMPTY FAPPLY_FUPDATE_THM)),
-     DEFN (reshape FCARD_DEF),
-     DEFN (reshape lookup_DEF),
-     DEFN (reshape FUPDATE_LIST),
-     DEFN (reshape(CONJ FUNION_FEMPTY_1
-                  (CONJ FUNION_FEMPTY_2 FUNION_FUPDATE_1))),
-     DEFN (reshape (CONJ DOMSUB_FEMPTY DOMSUB_FUPDATE_THM)),
-     DEFN (reshape (CONJ (T_INTRO (SPEC_ALL SUBMAP_FEMPTY)) SUBMAP_FUPDATE)),
-     DEFN (reshape DRESTRICT_PRED_THM),
-     DEFN (reshape RRESTRICT_PRED_THM),
+    [DEFN_NOSIG (CONJ FDOM_FEMPTY FDOM_FUPDATE),
+     DEFN ((CONJ FAPPLY_FEMPTY FAPPLY_FUPDATE_THM)),
+     DEFN (FCARD_DEF),
+     DEFN (lookup_DEF),
+     DEFN (FUPDATE_LIST),
+     DEFN ((CONJ FUNION_FEMPTY_1
+                (CONJ FUNION_FEMPTY_2 FUNION_FUPDATE_1))),
+     DEFN ((CONJ DOMSUB_FEMPTY DOMSUB_FUPDATE_THM)),
+     DEFN ((CONJ (T_INTRO (SPEC_ALL SUBMAP_FEMPTY)) SUBMAP_FUPDATE)),
+     DEFN (DRESTRICT_PRED_THM),
+     DEFN (RRESTRICT_PRED_THM),
      MLSIG "val FRANGE : (''a,'b)fmap -> 'b set",
-     DEFN_NOSIG (reshape FRANGE_EQNS),
-     DEFN (reshape o_f_EQNS),
-     DEFN (reshape (CONJ (T_INTRO (SPEC_ALL FEVERY_FEMPTY))
-                         (REWRITE_RULE [th] FEVERY_FUPDATE)))
+     DEFN_NOSIG (FRANGE_EQNS),
+     DEFN (o_f_EQNS),
+     DEFN ((CONJ (T_INTRO (SPEC_ALL FEVERY_FEMPTY))
+                 (REWRITE_RULE [th] FEVERY_FUPDATE)))
   ])
 end;
 

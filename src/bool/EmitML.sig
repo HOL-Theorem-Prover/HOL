@@ -23,6 +23,12 @@ sig
   val dest_fail_hook           : (term -> term * string * term list) ref
   val strip_let_hook           : (term -> (term * term) list list * term) ref
   val list_mk_prod_hook        : (hol_type list -> hol_type) ref
+  val list_mk_pair_hook        : (term list -> term) ref
+  val list_mk_pabs_hook        : (term list * term -> term) ref
+
+  val pseudo_constructors      : thm list ref
+  val reshape_thm_hook         : (thm -> thm) ref
+  val curried_const_equiv_tupled_var : term * int -> thm (* side effects pseudo_constructors *)
 
   datatype side = LEFT | RIGHT
 

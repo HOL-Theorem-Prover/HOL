@@ -1789,32 +1789,6 @@ val BAG_OF_SET_EQNS = Q.prove
  RW_TAC hol_ss [BAG_OF_SET,FUN_EQ_THM,BAG_INSERT] THEN
  METIS_TAC [pred_setTheory.IN_INSERT]);
 
-
-fun tupled_constructor capp =
- let open pairSyntax
-     val (c,args) = strip_comb capp
-     val target = type_of capp
-     val argtys = map type_of args
-     val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
-     val new = list_mk_abs(args,mk_comb(cvar,list_mk_pair args))
- in
-    mk_thm([],mk_eq(c,new))
- end;
-
-val reshape = BETA_RULE o
-              PURE_REWRITE_RULE [tupled_constructor (Term`BAG_INSERT x b`),
-                                 tupled_constructor (Term`x INSERT s`)];
-
-fun scoped_parse q =
- let val (tyg,tmg) = (type_grammar(),term_grammar())
-     val tyg' = type_grammar.remove_abbreviation tyg "bag"
-     val _ = temp_set_grammars(tyg',tmg)
-     val astl = ParseDatatype.parse q
-     val _ = temp_set_grammars(tyg,tmg)
- in
-   astl
- end;
-
 val _ =
  let open EmitML combinSyntax
      val (tyg,tmg) = (type_grammar(),term_grammar())
@@ -1845,7 +1819,7 @@ val _ =
     :: MLSIG "val SET_OF_BAG   : 'a bag -> 'a set"
 (*  :: MLSIG "val BAG_OF_SET   : ''a set -> ''a bag" *)
     ::
-    (map (DEFN_NOSIG o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o reshape)
+    (map DEFN_NOSIG
     [BAG_VAL_THM, BAG_IN_EQNS, BAG_INN_EQN,
      INST_TYPE [beta |-> alpha]
        (CONJ (CONJUNCT1 (CONJUNCT2 BAG_UNION_EMPTY))

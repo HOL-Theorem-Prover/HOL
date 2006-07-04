@@ -69,6 +69,8 @@ val dest_fail_hook = ref (fn _ => raise ERR "dest_fail" "undefined")
 val strip_let_hook = ref (fn _ => raise ERR "strip_let" "undefined")
 val list_mk_prod_hook = ref (fn [x] => x
                               | _ => raise ERR "list_mk_prod" "undefined")
+val list_mk_pair_hook = ref (fn _ => raise ERR "list_mk_pair" "undefined")
+val list_mk_pabs_hook = ref (fn _ => raise ERR "list_mk_pabs" "undefined")
 
 fun strip_cons M =
  case total (!dest_cons_hook) M
@@ -124,6 +126,53 @@ val maxprec = 9999;
 datatype side = LEFT | RIGHT;
 
 fun pick_name slist n (s1,s2) = if mem n slist then s1 else s2;
+
+(*---------------------------------------------------------------------------
+ * variants makes variables that are guaranteed not to be in avoid and
+ * furthermore, are guaranteed not to be equal to each other. The names of
+ * the variables will start with "v" and end in a number.
+ *---------------------------------------------------------------------------*)
+
+fun vars_of_types alist = 
+   map (fn (i,ty) => mk_var("v"^Int.toString i,ty)) 
+       (Lib.enumerate 0 alist);
+
+(*---------------------------------------------------------------------------*)
+(* Convert a constructor application (C t1 ... tn) to C'(t1,...,tn) where    *)
+(* C' is a variable with the same name as C. Uses mk_thm!                    *)
+(*---------------------------------------------------------------------------*)
+
+val pseudo_constructors = ref [] : thm list ref;
+
+local val emit_tag = Tag.read "EmitML"
+   fun nstrip_fun 0 ty = ([],ty)
+     | nstrip_fun n ty = 
+         let val (d,r) = dom_rng ty
+             val (f,b) = nstrip_fun (n-1) r
+         in (d::f,b)
+         end
+in
+fun curried_const_equiv_tupled_var (c,a) =
+ let val (argtys,target) = nstrip_fun a (type_of c)
+     val args = vars_of_types argtys
+     val pvar = mk_var(fst(dest_const c),!list_mk_prod_hook argtys --> target)
+     val new = !list_mk_pabs_hook(args,mk_comb(pvar,!list_mk_pair_hook args))
+     val thm = mk_oracle_thm emit_tag ([],mk_eq(c,new))
+ in
+    pseudo_constructors := thm :: !pseudo_constructors;
+    thm
+ end
+end;
+
+(* The following reference cell gets set in pred_setTheory *) 
+
+val reshape_thm_hook = ref Lib.I : (thm -> thm) ref;
+
+(*
+ [tupled_constructor (Term`FUPDATE f (x,y)`),
+ mk_tupled_app (Term`x INSERT s`)
+*)
+
 
 (*---------------------------------------------------------------------------*)
 (* A prettyprinter from HOL to very simple ML, dealing with basic paired     *)
@@ -510,6 +559,25 @@ fun pp_type_as_ML ppstrm ty =
    prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
                       ppstrm ty ;
 
+(*---------------------------------------------------------------------------*)
+(* Fetch the constructors out of a datatype declaration                      *)
+(*---------------------------------------------------------------------------*)
+
+local open ParseDatatype
+in
+fun constructors [] = []
+  | constructors ((s,Constructors clist)::rst) = clist@constructors rst
+  | constructors ((s,Record flds)::rst) = [(s, map snd flds)]@constructors rst
+
+fun constrl [] = []
+  | constrl ((s,Constructors clist)::rst) = (s,clist)::constrl rst
+  | constrl ((s,Record flds)::rst) = (s, [(s,map snd flds)])::constrl rst
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Elements of a theory presentation.                                        *)
+(*---------------------------------------------------------------------------*)
+
 datatype elem
     = DEFN of thm
     | DEFN_NOSIG of thm
@@ -519,6 +587,11 @@ datatype elem
     | OPEN of string list
     | MLSIG of string
     | MLSTRUCT of string;
+
+(*---------------------------------------------------------------------------*)
+(* Internal version (nearly identical, except that datatype declarations     *)
+(* have been parsed).                                                        *)
+(*---------------------------------------------------------------------------*)
 
 datatype elem_internal
     = iDEFN of thm
@@ -530,14 +603,44 @@ datatype elem_internal
     | iMLSIG of string
     | iMLSTRUCT of string;
 
-fun internalize (DEFN th) = iDEFN th
-  | internalize (DEFN_NOSIG th) = iDEFN_NOSIG th 
-  | internalize (DATATYPE q) = iDATATYPE (ParseDatatype.parse q)
-  | internalize (EQDATATYPE(sl,q)) = iEQDATATYPE(sl,ParseDatatype.parse q)
-  | internalize (ABSDATATYPE(sl,q)) = iABSDATATYPE(sl,ParseDatatype.parse q)
-  | internalize (OPEN sl) = iOPEN sl
-  | internalize (MLSIG s) = iMLSIG s
-  | internalize (MLSTRUCT s) = iMLSTRUCT s;
+
+(*---------------------------------------------------------------------------*)
+(* Map from external presentation to internal                                *)
+(*---------------------------------------------------------------------------*)
+
+(*
+         val pconstrs' = map (fn (n,tyast) => (mk_type(n,tyvl), tyast)) pconstrs
+         fun foo ty (s,ptyl) = 
+           if length ptyl > 1 
+             then mk_const(s,list_mk_fun(map pretypeToType ptyl,ty))
+             else failwith "elemi"
+         fun bar (ty,pclist) = mapfilter (foo ty) pclist
+         val mconstrs = flatten (map bar pconstrs')
+
+*)
+fun elemi (DEFN th) = iDEFN (!reshape_thm_hook th)
+  | elemi (DEFN_NOSIG th) = iDEFN_NOSIG (!reshape_thm_hook th) 
+  | elemi (DATATYPE q) = iDATATYPE (ParseDatatype.parse q)
+  | elemi (EQDATATYPE(sl,q)) = iEQDATATYPE(sl,ParseDatatype.parse q)
+  | elemi (ABSDATATYPE(sl,q)) = (* build fake rewrites for pseudo constructors *)
+     let open ParseDatatype
+         val tyAST = parse q
+         val pconstrs = constrl tyAST
+         val constr_names = flatten(map (map fst o snd) pconstrs)
+         val constr_arities = flatten(map (map (length o snd) o snd) pconstrs)
+         val constrs = map (hd o Term.decls) constr_names
+         val constrs' = zip constrs constr_arities
+         fun is_multi (_,n) = n >= 2
+         val mconstrs = filter is_multi constrs'
+         val _ = List.map curried_const_equiv_tupled_var mconstrs
+      in
+        iABSDATATYPE(sl,tyAST)
+      end
+  | elemi (OPEN sl) = iOPEN sl
+  | elemi (MLSIG s) = iMLSIG s
+  | elemi (MLSTRUCT s) = iMLSTRUCT s;
+
+fun internalize elems = map elemi elems;
 
 (*---------------------------------------------------------------------------*)
 (* Perhaps naive in light of the recent stuff of MN200 to eliminate flab     *)
@@ -856,17 +959,6 @@ fun munge_def_type def =
  handle e => raise wrap_exn "EmitML" "munge_def_type" e;
 
 (*---------------------------------------------------------------------------*)
-(* Fetch the constructors out of a datatype declaration                      *)
-(*---------------------------------------------------------------------------*)
-
-local open ParseDatatype
-in
-fun constructors [] = []
-  | constructors ((s,Constructors clist)::rst) = clist@constructors rst
-  | constructors ((s,Record flds)::rst) = [(s, map snd flds)]@constructors rst
-end;
-
-(*---------------------------------------------------------------------------*)
 (* Get the newly introduced constants out of a list of function definitions  *)
 (* and datatype definitions. We have to be aware that a constant may have    *)
 (* been defined in an ancestor theory.                                       *)
@@ -966,7 +1058,7 @@ val sigSuffix = ref "ML.sig";
 val structSuffix = ref "ML.sml";
 
 fun emitML p (s,elems_0) =
- let val elems = map internalize elems_0
+ let val elems = internalize elems_0
      val path = if p="" then FileSys.getDir() else p
      val pathPrefix = Path.concat(path,s)
      val sigfile = pathPrefix^ !sigSuffix
