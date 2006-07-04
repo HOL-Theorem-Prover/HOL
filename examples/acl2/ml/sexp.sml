@@ -1360,7 +1360,8 @@ fun acl2_char_to_hol_chars c =
 fun acl2_chars_to_hol_chars [] = []
  |  acl2_chars_to_hol_chars [c] = acl2_char_to_hol_chars c
  |  acl2_chars_to_hol_chars (c1::(cl as (c2::_))) = 
-     if isSpecial c1 orelse isSpecial c2
+     if (isSpecial c1 orelse isSpecial c2) 
+        andalso not(c1 = #"-") andalso not(c2 = #"-")
       then acl2_char_to_hol_chars c1@(#"_"::acl2_chars_to_hol_chars cl) 
       else acl2_char_to_hol_chars c1@acl2_chars_to_hol_chars cl;
 
@@ -1368,8 +1369,9 @@ fun acl2_chars_to_hol_chars [] = []
 (* ACL2 to HOL name conversion function. Treats first character specially.   *)
 (*****************************************************************************)
 fun acl2_name_to_hol_name acl2_name =
- rev_assoc acl2_name (!acl2_names)
- handle HOL_ERR _ => implode(acl2_chars_to_hol_chars(explode acl2_name));
+ case assoc2 acl2_name (!acl2_names)
+ of SOME (hol_name,_) => hol_name
+ |  NONE              => implode(acl2_chars_to_hol_chars(explode acl2_name));
 
 (*****************************************************************************)
 (* Create a HOL-friendly name from a full ACL2 name and remember it in       *)

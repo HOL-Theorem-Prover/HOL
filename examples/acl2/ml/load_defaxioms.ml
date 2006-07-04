@@ -1,11 +1,11 @@
 (*****************************************************************************)
-(* Slurp in defaxioms.lisp.trans.ml and put results on variable defaxioms.   *)
+(* Slurp in defaxioms.lisp.trans.ml and put results in variable defaxioms.   *)
 (*****************************************************************************)
 
 new_theory "defaxioms";
 
 use (Globals.HOLDIR ^ "/examples/acl2/ml/load_sexp.ml");
-use (Globals.HOLDIR ^ "/examples/acl2/lisp/defaxioms.lisp.trans.ml");
+use (Globals.HOLDIR ^ "/examples/acl2/ml/defaxioms.lisp.trans.ml");
 
 load_defaxioms();
 

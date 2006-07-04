@@ -982,10 +982,12 @@ val fix =
 *)
 
 (*
-     [oracles: DEFUN ACL2::LIST*-MACRO, DISK_THM] [axioms: ] []
-     |- list_star__macro lst =
+
+     [oracles: DEFUN ACL2::LIST*-MACRO] [axioms: ] []
+     |- list_star_macro lst =
         ite (endp (cdr lst)) (car lst)
-          (List [csym "CONS"; car lst; list_star__macro (cdr lst)]),
+          (cons (sym COMMON_LISP ACL2_STRING_ABBREV_714)
+             (cons (car lst) (cons (list_star_macro (cdr lst)) nil)))
 *)
 
 (*
@@ -1382,55 +1384,56 @@ val fix =
 *)
 
 (*
-     [oracles: DEFUN ACL2::LEGAL-LET*-P, DISK_THM] [axioms: ] []
-     |- legal_let_star__p bindings ignore_vars ignored_seen top_form =
-        itel
-          [(endp bindings,
-            ite (eq ignore_vars nil) (eq ignore_vars nil)
-              (hard_error (csym "LET*")
-                 (str
-                    "All variables declared IGNOREd in a LET* form must ~\n                          be bound, but ~&0 ~#0~[is~/are~] not bound in the ~\n                          form ~x1.")
-                 (List
-                    [cons (chr #"0") ignore_vars;
-                     cons (chr #"1") top_form])));
-           (member_eq (caar bindings) ignored_seen,
-            hard_error (csym "LET*")
-              (str
-                 "A variable bound twice in a LET* form may not be ~\n                      declared ignored.  However, the variable ~x0 is bound in ~\n                      the form ~x1 and yet is declared ignored.")
-              (List
-                 [cons (chr #"0") (caar bindings);
-                  cons (chr #"1") top_form]));
-           (member_eq (caar bindings) ignore_vars,
-            legal_let_star__p (cdr bindings)
-              (remove (caar bindings) ignore_vars)
-              (cons (caar bindings) ignored_seen) top_form)]
-          (legal_let_star__p (cdr bindings) ignore_vars ignored_seen
-             top_form),
+     [oracles: DEFUN ACL2::LEGAL-LET*-P] [axioms: ] []
+     |- legal_let_star_p bindings ignore_vars ignored_seen top_form =
+        ite (endp bindings)
+          (ite (eq ignore_vars nil) (eq ignore_vars nil)
+             (hard_error (sym COMMON_LISP ACL2_STRING_ABBREV_453)
+                (str
+                   "All variables declared IGNOREd in a LET* form must ~\n                          be bound, but ~&0 ~#0~[is~/are~] not bound in the ~\n                          form ~x1.")
+                (cons (cons (chr #"0") ignore_vars)
+                   (cons (cons (chr #"1") top_form) nil))))
+          (ite (member_eq (car (car bindings)) ignored_seen)
+             (hard_error (sym COMMON_LISP ACL2_STRING_ABBREV_453)
+                (str
+                   "A variable bound twice in a LET* form may not be ~\n                      declared ignored.  However, the variable ~x0 is bound in ~\n                      the form ~x1 and yet is declared ignored.")
+                (cons (cons (chr #"0") (car (car bindings)))
+                   (cons (cons (chr #"1") top_form) nil)))
+             (ite (member_eq (car (car bindings)) ignore_vars)
+                (legal_let_star_p (cdr bindings)
+                   (remove (car (car bindings)) ignore_vars)
+                   (cons (car (car bindings)) ignored_seen) top_form)
+                (legal_let_star_p (cdr bindings) ignore_vars ignored_seen
+                   top_form)))
 *)
 
 (*
      [oracles: DEFUN ACL2::LET*-MACRO, DISK_THM] [axioms: ] []
-     |- let_star__macro bindings ignore_vars body =
+     |- let_star_macro bindings ignore_vars body =
         ite (ite (endp bindings) (endp bindings) (endp (cdr bindings)))
-          (cons (csym "LET")
+          (cons (sym COMMON_LISP ACL2_STRING_ABBREV_455)
              (cons bindings
                 (ite ignore_vars
-                   (List
-                      [List
-                         [csym "DECLARE"; cons (csym "IGNORE") ignore_vars];
-                       body]) (List [body]))))
-          (cons (csym "LET")
-             (cons (List [car bindings])
-                (let rest =
-                       let_star__macro (cdr bindings)
-                         (remove (caar bindings) ignore_vars) body
+                   (cons
+                      (cons (sym COMMON_LISP ACL2_STRING_ABBREV_755)
+                         (cons
+                            (cons (sym COMMON_LISP ACL2_STRING_ABBREV_555)
+                               ignore_vars) nil)) (cons body nil))
+                   (cons body nil))))
+          (cons (sym COMMON_LISP ACL2_STRING_ABBREV_455)
+             (cons (cons (car bindings) nil)
+                (let (rest,ignore_vars,bindings) =
+                       (let_star_macro (cdr bindings)
+                          (remove (car (car bindings)) ignore_vars) body,
+                        ignore_vars,bindings)
                  in
-                   ite (member_eq (caar bindings) ignore_vars)
-                     (List
-                        [List
-                           [csym "DECLARE";
-                            List [csym "IGNORE"; caar bindings]]; rest])
-                     (List [rest])))),
+                   ite (member_eq (car (car bindings)) ignore_vars)
+                     (cons
+                        (cons (sym COMMON_LISP ACL2_STRING_ABBREV_755)
+                           (cons
+                              (cons (sym COMMON_LISP ACL2_STRING_ABBREV_555)
+                                 (cons (car (car bindings)) nil)) nil))
+                        (cons rest nil)) (cons rest nil))))
 *)
 
 (*
@@ -1625,20 +1628,22 @@ val fix =
 *)
 
 (*
-     [oracles: DEFUN ACL2::STRING<-L, DISK_THM] [axioms: ] []
-     |- string_less__l l1 l2 i =
-        itel
-          [(endp l1,ite (endp l2) nil i); (endp l2,nil);
-           (eql (car l1) (car l2),
-            string_less__l (cdr l1) (cdr l2) (add i (nat 1)))]
-          (andl [char_less (car l1) (car l2); i]),
+     [oracles: DEFUN ACL2::STRING<-L] [axioms: ] []
+     |- string_less_l l1 l2 i =
+        ite (endp l1) (ite (endp l2) nil i)
+          (ite (endp l2) nil
+             (ite (eql (car l1) (car l2))
+                (string_less_l (cdr l1) (cdr l2) (add i (cpx 1 1 0 1)))
+                (ite (char_less (car l1) (car l2)) i nil)))
 *)
 
 (*
-     [oracles: DEFUN COMMON-LISP::STRING<, DISK_THM] [axioms: ] []
+     DEFUN COMMON-LISP::STRING<
+     [oracles: DEFUN COMMON-LISP::STRING<] [axioms: ] []
      |- string_less str1 str2 =
-        string_less__l (coerce str1 (csym "LIST"))
-          (coerce str2 (csym "LIST")) (nat 0),
+        string_less_l (coerce str1 (sym COMMON_LISP ACL2_STRING_ABBREV_521))
+          (coerce str2 (sym COMMON_LISP ACL2_STRING_ABBREV_521))
+          (cpx 0 1 0 1)
 *)
 
 (*
@@ -1660,14 +1665,12 @@ val fix =
 
 (*
      [oracles: DEFUN ACL2::SYMBOL-<, DISK_THM] [axioms: ] []
-     |- symbol__less x y =
-        (let x1 = symbol_name x in
-           ite (string_less x1 (symbol_name y))
-             (string_less x1 (symbol_name y))
-             (andl
-                [equal x1 (symbol_name y);
-                 string_less (symbol_package_name x)
-                   (symbol_package_name y)])),
+     |- symbol_less x y =
+        (let (x1,y1,y,x) = (symbol_name x,symbol_name y,y,x) in
+           ite (string_less x1 y1) (string_less x1 y1)
+             (ite (equal x1 y1)
+                (string_less (symbol_package_name x) (symbol_package_name y))
+                nil))
 *)
 
 (*
@@ -1752,26 +1755,27 @@ val fix =
 *)
 
 (*
-     [oracles: DEFUN ACL2::ORDERED-SYMBOL-ALISTP, DISK_THM] [axioms: ] []
+     [oracles: DEFUN ACL2::ORDERED-SYMBOL-ALISTP] [axioms: ] []
      |- ordered_symbol_alistp x =
-        itel [(atom x,null x); (atom (car x),nil)]
-          (andl
-             [symbolp (caar x);
-              ite (atom (cdr x)) (atom (cdr x))
-                (andl
-                   [consp (cadr x); symbolp (caadr x);
-                    symbol__less (caar x) (caadr x)]);
-              ordered_symbol_alistp (cdr x)]),
+        ite (atom x) (null x)
+          (ite (atom (car x)) nil
+             (ite (symbolp (car (car x)))
+                (ite
+                   (ite (atom (cdr x)) (atom (cdr x))
+                      (ite (consp (car (cdr x)))
+                         (ite (symbolp (car (car (cdr x))))
+                            (symbol_less (car (car x)) (car (car (cdr x))))
+                            nil) nil)) (ordered_symbol_alistp (cdr x)) nil)
+                nil))
 *)
 
 (*
-     [oracles: DEFUN ACL2::ADD-PAIR, DISK_THM] [axioms: ] []
+     [oracles: DEFUN ACL2::ADD-PAIR] [axioms: ] []
      |- add_pair key value l =
-        itel
-          [(endp l,List [cons key value]);
-           (eq key (caar l),cons (cons key value) (cdr l));
-           (symbol__less key (caar l),cons (cons key value) l)]
-          (cons (car l) (add_pair key value (cdr l))),
+        ite (endp l) (cons (cons key value) nil)
+          (ite (eq key (car (car l))) (cons (cons key value) (cdr l))
+             (ite (symbol_less key (car (car l))) (cons (cons key value) l)
+                (cons (car l) (add_pair key value (cdr l)))))
 *)
 
 (*
@@ -2751,7 +2755,7 @@ val fix =
 (*
      [oracles: DEFUN ACL2::STATE-GLOBAL-LET*-GET-GLOBALS, DISK_THM]
      [axioms: ] []
-     |- state_global_let_star__get_globals bindings =
+     |- state_global_let_star_get_globals bindings =
         ite (endp bindings) nil
           (cons
              (List
@@ -2764,13 +2768,13 @@ val fix =
                     List
                       [asym "F-GET-GLOBAL";
                        List [csym "QUOTE"; caar bindings]; asym "STATE"]];
-                 nil]) (state_global_let_star__get_globals (cdr bindings))),
+                 nil]) (state_global_let_star_get_globals (cdr bindings))),
 *)
 
 (*
      [oracles: DEFUN ACL2::STATE-GLOBAL-LET*-PUT-GLOBALS, DISK_THM]
      [axioms: ] []
-     |- state_global_let_star__put_globals bindings =
+     |- state_global_let_star_put_globals bindings =
         ite (endp bindings) nil
           (cons
              (List
@@ -2779,12 +2783,12 @@ val fix =
                    [asym "CHECK-VARS-NOT-FREE";
                     List [asym "STATE-GLOBAL-LET*-CLEANUP-LST"];
                     cadar bindings]; asym "STATE"])
-             (state_global_let_star__put_globals (cdr bindings))),
+             (state_global_let_star_put_globals (cdr bindings))),
 *)
 
 (*
      [oracles: DEFUN ACL2::STATE-GLOBAL-LET*-CLEANUP, DISK_THM] [axioms: ] []
-     |- state_global_let_star__cleanup bindings cdr_expr =
+     |- state_global_let_star_cleanup bindings cdr_expr =
         ite (endp bindings) nil
           (cons
              (List
@@ -2796,7 +2800,7 @@ val fix =
                  List
                    [asym "MAKUNBOUND-GLOBAL";
                     List [csym "QUOTE"; caar bindings]; asym "STATE"]])
-             (state_global_let_star__cleanup (cdr bindings)
+             (state_global_let_star_cleanup (cdr bindings)
                 (List [csym "CDR"; cdr_expr]))),
 *)
 
@@ -3961,7 +3965,7 @@ val fix =
            (characterp y,nil);
            (stringp x,ite (stringp y) (andl [string_less_equal x y; t]) t);
            (stringp y,nil);
-           (symbolp x,ite (symbolp y) (not (symbol__less y x)) t);
+           (symbolp x,ite (symbolp y) (not (symbol_less y x)) t);
            (symbolp y,nil)] (bad_atom_less_equal x y),
 *)
 
@@ -5151,7 +5155,7 @@ val fix =
 
 (*
      [oracles: DEFTHM ACL2::STRING<-L-IRREFLEXIVE] [axioms: ] []
-     |- |= not (string_less__l x x i),
+     |- |= not (string_less_l x x i),
 *)
 
 (*
@@ -5666,47 +5670,47 @@ val fix =
      |- |= implies
              (andl
                 [eqlable_listp x1; eqlable_listp x2; integerp i;
-                 string_less__l x1 x2 i]) (not (string_less__l x2 x1 i)),
+                 string_less_l x1 x2 i]) (not (string_less_l x2 x1 i)),
 *)
 
 (*
      [oracles: DEFTHM ACL2::SYMBOL-<-ASYMMETRIC, DISK_THM] [axioms: ] []
      |- |= implies
-             (andl [symbolp sym1; symbolp sym2; symbol__less sym1 sym2])
-             (not (symbol__less sym2 sym1)),
+             (andl [symbolp sym1; symbolp sym2; symbol_less sym1 sym2])
+             (not (symbol_less sym2 sym1)),
 *)
 
 (*
      [oracles: DEFTHM ACL2::STRING<-L-TRANSITIVE, DISK_THM] [axioms: ] []
      |- |= implies
              (andl
-                [string_less__l x y i; string_less__l y z j; integerp i;
+                [string_less_l x y i; string_less_l y z j; integerp i;
                  integerp j; integerp k; character_listp x;
                  character_listp y; character_listp z])
-             (string_less__l x z k),
+             (string_less_l x z k),
 *)
 
 (*
      [oracles: DEFTHM ACL2::SYMBOL-<-TRANSITIVE, DISK_THM] [axioms: ] []
      |- |= implies
              (andl
-                [symbol__less x y; symbol__less y z; symbolp x; symbolp y;
-                 symbolp z]) (symbol__less x z),
+                [symbol_less x y; symbol_less y z; symbolp x; symbolp y;
+                 symbolp z]) (symbol_less x z),
 *)
 
 (*
      [oracles: DEFTHM ACL2::STRING<-L-TRICHOTOMY, DISK_THM] [axioms: ] []
      |- |= implies
              (andl
-                [not (string_less__l x y i); integerp i; integerp j;
+                [not (string_less_l x y i); integerp i; integerp j;
                  character_listp x; character_listp y])
-             (iff (string_less__l y x j) (not (equal x y))),
+             (iff (string_less_l y x j) (not (equal x y))),
 *)
 
 (*
      [oracles: DEFTHM ACL2::SYMBOL-<-TRICHOTOMY, DISK_THM] [axioms: ] []
-     |- |= implies (andl [symbolp x; symbolp y; not (symbol__less x y)])
-             (iff (symbol__less y x) (not (equal x y))),
+     |- |= implies (andl [symbolp x; symbolp y; not (symbol_less x y)])
+             (iff (symbol_less y x) (not (equal x y))),
 *)
 
 (*
@@ -5720,7 +5724,7 @@ val fix =
 
 (*
      [oracles: DEFTHM ACL2::SYMBOL-<-IRREFLEXIVE] [axioms: ] []
-     |- |= implies (symbolp x) (not (symbol__less x x)),
+     |- |= implies (symbolp x) (not (symbol_less x x)),
 *)
 
 (*
