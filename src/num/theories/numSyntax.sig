@@ -17,6 +17,8 @@ sig
   val exp_tm        : term
   val div_tm        : term
   val mod_tm        : term
+  val div2_tm       : term
+  val mod_2exp_tm   : term
   val less_tm       : term
   val greater_tm    : term
   val geq_tm        : term

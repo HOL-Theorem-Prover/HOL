@@ -30,8 +30,6 @@ val MOD_WL =
 
 val thms = machine_sizes @
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
-   numeralTheory.numeral_div2,numeralTheory.numeral_imod_2exp,
-   numeralTheory.MOD_2EXP,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def,
    SIGN_EXTEND_def, SBIT_def, DIVMOD_2EXP,
    NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP,

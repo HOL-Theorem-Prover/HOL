@@ -1081,6 +1081,16 @@ val LOG2_UNIQUE = store_thm("LOG2_UNIQUE",
 
 (* -------------------------------------------------------- *)
 
+val BITWISE_compute = prove(
+  `!n opr a b.
+      BITWISE n opr a b =
+        if n = 0 then 0 else
+          2 * BITWISE (PRE n) opr (DIV2 a) (DIV2 b) +
+          (if opr (ODD a) (ODD b) then 1 else 0)`,
+  Cases THEN1 REWRITE_TAC [CONJUNCT1 BITWISE_def]
+    THEN REWRITE_TAC [DIV2_def, numTheory.NOT_SUC,
+                      PRE, EXP, BITWISE_EVAL, LSB_ODD, SBIT_def]);
+
 val _ =
  let open EmitML
  in
@@ -1094,7 +1104,7 @@ val _ =
         [TIMES_2EXP_def, DIV_2EXP_def, MOD_2EXP_def,
          DIVMOD_2EXP, SBIT_def, BITS_def,
          BITV_def, BIT_def, SLICE_def,LSBn_def,
-         SIGN_EXTEND_def])
+         SIGN_EXTEND_def, BITWISE_compute])
  end;
 
 val _ = export_theory();

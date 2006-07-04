@@ -36,7 +36,7 @@ val numeral_redns =
       numeral_iisuc, numeral_add, numeral_mult, iDUB_removal,
       numeral_sub, numeral_lt, numeral_lte, iSUB_THM,
       numeral_exp, numeral_evenodd, iSQR, numeral_fact,numeral_funpow,
-      numeral_MAX, numeral_MIN];
+      numeral_MAX, numeral_MIN, numeral_div2, MOD_2EXP, numeral_imod_2exp];
 
 val div_thm =
     prove

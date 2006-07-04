@@ -27,6 +27,8 @@ struct
   val exp_tm       = prim_mk_const {Name="EXP",     Thy="arithmetic"}
   val div_tm       = prim_mk_const {Name="DIV",     Thy="arithmetic"}
   val mod_tm       = prim_mk_const {Name="MOD",     Thy="arithmetic"}
+  val div2_tm      = prim_mk_const {Name="DIV2",    Thy="arithmetic"}
+  val mod_2exp_tm  = prim_mk_const {Name="MOD_2EXP",Thy="arithmetic"}
   val greater_tm   = prim_mk_const {Name=">",       Thy="arithmetic"}
   val geq_tm       = prim_mk_const {Name=">=",      Thy="arithmetic"}
   val leq_tm       = prim_mk_const {Name="<=",      Thy="arithmetic"}

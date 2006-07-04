@@ -60,8 +60,9 @@ val REDUCE_ss =
            mk_unary_rconv odd_tm  ::
            mk_unary_rconv pre_tm  ::
            mk_unary_rconv suc_tm ::
+           mk_unary_rconv div2_tm ::
            map mk_redconv [mult_tm, plus_tm, minus_tm,
-                           div_tm, mod_tm, exp_tm,
+                           div_tm, mod_tm, exp_tm, mod_2exp_tm,
                            less_tm, leq_tm, greater_tm, geq_tm,
                            min_tm, max_tm, Term`$= : num -> num -> bool`],
       rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}

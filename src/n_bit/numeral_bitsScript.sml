@@ -110,17 +110,6 @@ val numeral_log2 = store_thm("numeral_log2",
 
 (* -------------------------------------------------------- *)
 
-val _ =
- let open EmitML
- in emitML (!Globals.emitMLDir)
-   ("numeral_bits",
-     MLSIG  "type num = numML.num" :: OPEN ["num"]
-     ::
-     map (DEFN o PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF,
-                               GSYM arithmeticTheory.ALT_ZERO])
-         [NUMERAL_DIV2,iBITWISE, NUMERAL_BITWISE, NUMERAL_DIV_2EXP])
- end;
-
 val _ = export_theory();
 val _ = export_doc_theorems();
 
