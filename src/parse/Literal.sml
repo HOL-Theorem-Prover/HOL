@@ -51,22 +51,22 @@ fun is_num2num_type ty =
      <bits>    ::= ZERO | BIT1 (<bits>) | BIT2 (<bits>)
  ---------------------------------------------------------------------------*)
 
-fun dest_zero t = 
- case total dest_thy_const t 
+fun dest_zero t =
+ case total dest_thy_const t
   of SOME {Name="0", Thy="num",...} => Arbnum.zero
    | otherwise => raise ERR "dest_zero" "expected 0";
 
-fun dest_ZERO t = 
- case total dest_thy_const t 
+fun dest_ZERO t =
+ case total dest_thy_const t
   of SOME {Name="ZERO", Thy="arithmetic",...} => Arbnum.zero
    | otherwise => raise ERR "dest_zero" "expected ZERO";
 
-fun dest_b1 tm = 
+fun dest_b1 tm =
  case total ((dest_thy_const##I) o dest_comb) tm
   of SOME ({Name="BIT1", Thy="arithmetic",...},t) => t
    | otherwise => raise ERR "dest_b1" "expected BIT1";
 
-fun dest_b2 tm = 
+fun dest_b2 tm =
  case total ((dest_thy_const##I) o dest_comb) tm
   of SOME ({Name="BIT2", Thy="arithmetic",...},t) => t
    | otherwise => raise ERR "dest_b2" "expected BIT2";
@@ -74,16 +74,16 @@ fun dest_b2 tm =
 local open Arbnum
 in
 fun dest_bare_numeral t =
-  dest_ZERO t 
-  handle HOL_ERR _ => two * dest_bare_numeral (dest_b1 t) + one 
+  dest_ZERO t
+  handle HOL_ERR _ => two * dest_bare_numeral (dest_b1 t) + one
   handle HOL_ERR _ => two * dest_bare_numeral (dest_b2 t) + two
 end
 
-fun dest_numeral tm = 
- dest_zero tm 
+fun dest_numeral tm =
+ dest_zero tm
  handle HOL_ERR _ =>
     (case total ((dest_thy_const##I) o dest_comb) tm
-      of SOME ({Name="NUMERAL", Thy="arithmetic",...},t) 
+      of SOME ({Name="NUMERAL", Thy="arithmetic",...},t)
          => with_exn dest_bare_numeral t
               (ERR "dest_numeral" "term is not a numeral")
        | otherwise => raise ERR "dest_numeral" "term is not a numeral"
@@ -92,7 +92,7 @@ fun dest_numeral tm =
 
 (*---------------------------------------------------------------------------
    A "relaxed" numeral is one where the NUMERAL might not be there. These
-   occasionally occur, for example when the NUMERAL tag has been rewritten 
+   occasionally occur, for example when the NUMERAL tag has been rewritten
    away. In BNF :
 
      <relaxed_numeral> ::= 0 | NUMERAL <bits> | <bits>
@@ -100,8 +100,8 @@ fun dest_numeral tm =
  ---------------------------------------------------------------------------*)
 
 fun relaxed_dest_numeral tm =
-                     dest_numeral tm 
- handle HOL_ERR _ => dest_bare_numeral tm 
+                     dest_numeral tm
+ handle HOL_ERR _ => dest_bare_numeral tm
  handle HOL_ERR _ => raise ERR "relaxed_dest_numeral" "term is not a numeral";
 
 val is_zero = Lib.can dest_zero;
@@ -147,9 +147,16 @@ fun dest_string_lit tm =
 
 val is_string_lit = can dest_string_lit
 
-fun mk_string_lit {mk_string,fromMLchar,emptystring} s =
-  itlist (curry mk_string)
-         (List.map fromMLchar (String.explode s)) emptystring
-
+fun mk_string_lit {mk_string,fromMLchar,emptystring} s = let
+  fun recurse (acc, i) =
+      if i < 0 then acc
+      else let
+          val c = String.sub(s,i)
+        in
+          recurse (mk_string (fromMLchar c, acc), i - 1)
+        end
+in
+  recurse (emptystring, String.size s - 1)
+end
 
 end (* Literal *)
