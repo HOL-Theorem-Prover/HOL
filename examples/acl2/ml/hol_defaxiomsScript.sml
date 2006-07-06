@@ -40,82 +40,6 @@ open stringLib complex_rationalTheory gcdTheory sexp sexpTheory;
 
 val _ = new_theory "hol_defaxioms";
 
-(*****************************************************************************)
-(* Infrastructure for making recursive definitions                           *)
-(* (from KXS):                                                               *)
-(*                                                                           *)
-(*                                                                           *)
-(* 1. Prove the analogue of COND_CONG (call it ITE_CONG):                    *)
-(*                                                                           *)
-(*     |- !P Q x x' y y'.                                                    *)
-(*          (P = Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>             *)
-(*          ((if P then x else y) = (if Q then x' else y')) : thm            *)
-(*                                                                           *)
-(* 2. Install ITE_CONG in the DefnBase:                                      *)
-(*                                                                           *)
-(*      DefnBase.write_congs (ITE_CONG :: DefnBase.read_congs());            *)
-(*                                                                           *)
-(* 3. Make the definition (with Hol_defn)                                    *)
-(*                                                                           *)
-(* 4. The resulting termination conditions should be trivial to prove.       *)
-(*****************************************************************************)
-
-val ITE_CONG1 =
- store_thm
-  ("ITE_CONG",
-   ``!p q x x' y y'.
-      (p = q) /\ (~(q = nil) ==> (x = x')) /\ ((q = nil) ==> (y = y')) 
-      ==>
-      (ite p x y = ite q x' y')``,
-   RW_TAC std_ss [ite_def]);
-
-val ITE_CONG2 =
- store_thm
-  ("ITE_CONG",
-   ``!p q x x' y y'.
-      (p = q) /\ ((|= q) ==> (x = x')) /\ (~(|= q) ==> (y = y')) 
-      ==>
-      (ite p x y = ite q x' y')``,
-   RW_TAC std_ss [ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
-
-val _ = DefnBase.write_congs (ITE_CONG1::ITE_CONG2::DefnBase.read_congs());
-
-val ANDL_CONSP_CONG =
- store_thm
-  ("ANDL_CONSP_CONG",
-   ``!p q x x'.
-      (p = q) /\ (~(consp p = nil) ==> (x = x')) 
-      ==> 
-      (andl[consp p;x] = andl[consp q;x'])``,
-   Cases
-    THEN RW_TAC std_ss [andl_def,ite_def]
-    THEN FULL_SIMP_TAC std_ss 
-          [andl_def,ite_def,ACL2_TRUE_def,consp_def,EVAL ``t=nil``]);
-
-val _ = DefnBase.write_congs (ANDL_CONSP_CONG::DefnBase.read_congs());
-
-(* Replced by auot-generated sexp_size
-val sexp_depth_def =
- Define
-  `(sexp_depth(cons x y)  = MAX (sexp_depth x) (sexp_depth y) + 1)
-   /\ 
-   (sexp_depth _ = 0:num)`;
-*)
-
-val sexp_size_car =
- store_thm
-  ("sexp_size_car",
-   ``!x. ~(consp x = nil) ==> (sexp_size (car x) < sexp_size x)``,
-   Cases
-    THEN RW_TAC arith_ss [car_def,sexp_size_def,nil_def,consp_def,arithmeticTheory.MAX_DEF]);
-
-val sexp_size_cdr =
- store_thm
-  ("sexp_size_cdr",
-   ``!x. ~(consp x = nil) ==> (sexp_size (cdr x) < sexp_size x)``,
-   Cases
-    THEN RW_TAC arith_ss [cdr_def,sexp_size_def,nil_def,consp_def,arithmeticTheory.MAX_DEF]);
-
 (*
      [oracles: DEFUN ACL2::IFF, DISK_THM] [axioms: ] []
      |- iff p q = itel [(p,andl [q; t]); (q,nil)] t,
@@ -192,10 +116,8 @@ val true_listp_def =
 *)
 
 val (true_listp_def,true_listp_ind) =
- Defn.tprove
-  (Hol_defn 
-    "true_listp"
-    `true_listp x = ite (consp x) (true_listp (cdr x)) (eq x nil)`,
+ acl2_defn "ACL2::TRUE-LISTP"
+  (`true_listp x = ite (consp x) (true_listp (cdr x)) (eq x nil)`,
    WF_REL_TAC `measure sexp_size`
     THEN RW_TAC arith_ss [sexp_size_cdr]);
 
@@ -206,20 +128,11 @@ val (true_listp_def,true_listp_ind) =
 *)
 
 val (list_macro_def,list_macro_ind) =
- Defn.tprove
-  (Hol_defn 
-    "list_macro"
-    `list_macro lst =
-      andl [consp lst; List [csym "CONS"; car lst; list_macro (cdr lst)]]`,
+ acl2_defn "ACL2::LIST-MACRO"
+  (`list_macro lst =
+    andl [consp lst; List [csym "CONS"; car lst; list_macro (cdr lst)]]`,
    WF_REL_TAC `measure sexp_size`
     THEN RW_TAC arith_ss [sexp_size_cdr]);
-
-(*
-val list_macro_def =
- acl2Define "ACL2::LIST-MACRO"
-  `list_macro lst =
-    andl [consp lst; List [csym "CONS"; car lst; list_macro (cdr lst)]]`;
-*)
 
 (*
      [oracles: DEFUN ACL2::AND-MACRO, DISK_THM] [axioms: ] []
@@ -231,15 +144,13 @@ val list_macro_def =
 *)
 
 val (and_macro_def,and_macro_ind) =
- Defn.tprove
-  (Hol_defn 
-    "and_macro"
-    `and_macro lst =
-      ite (consp lst)
-          (ite (consp (cdr lst))
-               (List [csym "IF"; car lst; and_macro (cdr lst); nil]) 
-               (car lst))
-          t`,
+ acl2_defn "ACL2::AND-MACRO"
+  (`and_macro lst =
+     ite (consp lst)
+         (ite (consp (cdr lst))
+              (List [csym "IF"; car lst; and_macro (cdr lst); nil]) 
+              (car lst))
+         t`,
    WF_REL_TAC `measure sexp_size`
     THEN RW_TAC arith_ss [sexp_size_cdr]);
 
@@ -337,7 +248,6 @@ val (and_macro_def,and_macro_ind) =
 val atom_def =
  acl2Define "COMMON-LISP::ATOM"
   `atom x = not (consp x)`;
-
 
 (*
      [oracles: DEFUN ACL2::MAKE-CHARACTER-LIST, DISK_THM] [axioms: ] []

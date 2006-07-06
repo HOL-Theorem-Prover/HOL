@@ -276,6 +276,52 @@ fun acl2Define acl2_name q =
  end;
 
 (*****************************************************************************)
+(* acl2_tgoal "acl2_name" `(foo ... = ...) /\ ... ` creates a termination    *)
+(* goal for the recursive definition with acl2_name replacing foo. Example:  *)
+(*                                                                           *)
+(*  acl2_tgoal "ACL2::TRUE-LISTP"                                            *)
+(*   `true_listp x = ite (consp x) (true_listp (cdr x)) (eq x nil)`          *)
+(*                                                                           *)
+(*                                                                           *)
+(*****************************************************************************)
+fun acl2_tgoal acl2_name q =
+ let val (hol_name,def) = non_standard_name_defn acl2_name q
+ in
+  (print "Creating termination goal for ";
+   print acl2_name;
+   print " ("; print hol_name; print ")\n";
+   Defn.tgoal def
+   handle e => Raise(wrap_exn "ACL2 support" "Hol_defn" e))
+ end;
+
+(*****************************************************************************)
+(* acl2_defn "acl2_name" (`(foo ... = ...) /\ ... `, tac) uses tac to        *)
+(* solve the termination goal for the recursive definition with acl2_name    *)
+(* replacing foo. Makes the definition of acl2_name and then overloads foo   *)
+(* on acl2_name. Example:                                                    *)
+(*                                                                           *)
+(* val (true_listp_def,true_listp_ind) =                                     *)
+(*  acl2_defn "ACL2::TRUE-LISTP"                                             *)
+(*   (`true_listp x = ite (consp x) (true_listp (cdr x)) (eq x nil)`,        *)
+(*    WF_REL_TAC `measure sexp_size`                                         *)
+(*     THEN RW_TAC arith_ss [sexp_size_cdr]);                                *)
+(*****************************************************************************)
+fun acl2_defn acl2_name (q,tac) =
+ let val (hol_name,def) = non_standard_name_defn acl2_name q
+     val (def_th,ind_th) = 
+          (Defn.tprove(def,tac)
+           handle e => Raise(wrap_exn "ACL2 support" "Defn.tgoal" e))
+ in
+  acl2_simps := (!acl2_simps) @ [def_th];
+  declare_names(acl2_name,hol_name);
+  (print"\""; 
+   print acl2_name; 
+   print "\" defined with HOL name \""; 
+   print hol_name; print "\"\n";
+   (def_th,ind_th))
+ end;
+
+(*****************************************************************************)
 (* Generate date and time for making file timestamps                         *)
 (*****************************************************************************)
 fun date() = Date.fmt "%c" (Date.fromTimeLocal (Time.now ()));

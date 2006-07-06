@@ -3888,5 +3888,86 @@ val itel_append =
     THEN Cases_on `q=nil`
     THEN RW_TAC list_ss [itel_def,ite_def,List_def,EVAL ``t=nil``]);
 
+(*****************************************************************************)
+(* Infrastructure for making recursive definitions                           *)
+(* (from KXS):                                                               *)
+(*                                                                           *)
+(*                                                                           *)
+(* 1. Prove the analogue of COND_CONG (call it ITE_CONG):                    *)
+(*                                                                           *)
+(*     |- !P Q x x' y y'.                                                    *)
+(*          (P = Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>             *)
+(*          ((if P then x else y) = (if Q then x' else y')) : thm            *)
+(*                                                                           *)
+(* 2. Install ITE_CONG in the DefnBase:                                      *)
+(*                                                                           *)
+(*      DefnBase.write_congs (ITE_CONG :: DefnBase.read_congs());            *)
+(*                                                                           *)
+(* 3. Make the definition (with Hol_defn)                                    *)
+(*                                                                           *)
+(* 4. The resulting termination conditions should be trivial to prove.       *)
+(*****************************************************************************)
+
+val ITE_CONG1 =
+ store_thm
+  ("ITE_CONG1",
+   ``!p q x x' y y'.
+      (p = q) /\ (~(q = nil) ==> (x = x')) /\ ((q = nil) ==> (y = y'))
+      ==>
+      (ite p x y = ite q x' y')``,
+   RW_TAC std_ss [ite_def]);
+
+val ITE_CONG2 =
+ store_thm
+  ("ITE_CONG2",
+   ``!p q x x' y y'.
+      (p = q) /\ ((|= q) ==> (x = x')) /\ (~(|= q) ==> (y = y'))
+      ==>
+      (ite p x y = ite q x' y')``,
+   RW_TAC std_ss [ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
+
+val _ = DefnBase.write_congs (ITE_CONG1::ITE_CONG2::DefnBase.read_congs());
+
+val ANDL_CONSP_CONG =
+ store_thm
+  ("ANDL_CONSP_CONG",
+   ``!p q x x'.
+      (p = q) /\ (~(consp p = nil) ==> (x = x'))
+      ==>
+      (andl[consp p;x] = andl[consp q;x'])``,
+   Cases
+    THEN RW_TAC std_ss [andl_def,ite_def]
+    THEN FULL_SIMP_TAC std_ss
+          [andl_def,ite_def,ACL2_TRUE_def,consp_def,EVAL ``t=nil``]);
+
+val _ = DefnBase.write_congs (ANDL_CONSP_CONG::DefnBase.read_congs());
+
+val sexp_size_car =
+ store_thm
+  ("sexp_size_car",
+   ``!x. ~(consp x = nil) ==> (sexp_size (car x) < sexp_size x)``,
+   Cases
+    THEN RW_TAC arith_ss
+          [car_def,nil_def,consp_def,arithmeticTheory.MAX_DEF,
+           fetch "-" "sexp_size_def"]);
+
+val sexp_size_cdr =
+ store_thm
+  ("sexp_size_cdr",
+   ``!x. ~(consp x = nil) ==> (sexp_size (cdr x) < sexp_size x)``,
+   Cases
+    THEN RW_TAC arith_ss
+          [cdr_def,nil_def,consp_def,arithmeticTheory.MAX_DEF,
+           fetch "-" "sexp_size_def"]);
+
+val _ = adjoin_to_theory
+         {sig_ps = NONE,
+          struct_ps = 
+           SOME (fn ppstrm =>
+                  PP.add_string ppstrm
+                   ("val _ = DefnBase.write_congs" ^
+                    "(ANDL_CONSP_CONG::ITE_CONG1::ITE_CONG2::DefnBase.read_congs());\n"))
+         };
+
 val _ = export_acl2_theory();
 
