@@ -168,11 +168,13 @@ end;
 
 val reshape_thm_hook = ref Lib.I : (thm -> thm) ref;
 
-(*
- [tupled_constructor (Term`FUPDATE f (x,y)`),
- mk_tupled_app (Term`x INSERT s`)
-*)
 
+fun generic_type_of tm = 
+  if is_const tm 
+   then let val {Name,Thy,...} = dest_thy_const tm
+        in type_of (prim_mk_const{Name=Name,Thy=Thy})
+        end
+   else type_of tm;
 
 (*---------------------------------------------------------------------------*)
 (* A prettyprinter from HOL to very simple ML, dealing with basic paired     *)
@@ -439,7 +441,22 @@ fun term_to_ML openthys side ppstrm =
         ; rparen i maxprec
         ; end_block()
        end
-  and pp_comb i tm = pp_open_comb i (strip_comb tm)
+  and pp_comb i tm = 
+       let val (h,args) = strip_comb tm
+           val (argtys,target) = strip_fun(generic_type_of h)
+       in if length argtys < length args
+          then let val (app,rst) = split_after (length argtys) args
+               in
+                 lparen i maxprec;
+                 pp maxprec (list_mk_comb(h,app));
+                 add_break (1,0);
+                 pr_list (pp maxprec)
+                       (fn () => ())
+                       (fn () => add_break(1,0)) rst;
+                 rparen i maxprec
+               end
+          else pp_open_comb i (h,args)
+       end
   and pp_abs i tm =
        let val (vstruct,body) = !dest_pabs_hook tm
        in lparen i 5000
