@@ -11,7 +11,6 @@ sig
                        NUMERAL : 'a,
                        BIT1    : 'a,
                        BIT2    : 'a} -> Arbnum.num -> 'a
- val relaxed_dest_numeral : term -> Arbnum.num
 
  val is_string_lit   : term -> bool
  val dest_string_lit : term -> String.string
@@ -22,4 +21,6 @@ sig
  val is_char_lit     : term -> bool
  val dest_char_lit   : term -> Char.char
 
+ val relaxed_dest_numeral : term -> Arbnum.num
+ val relaxed_dest_string_lit : term -> String.string
 end

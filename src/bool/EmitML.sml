@@ -49,7 +49,6 @@ val ERR = mk_HOL_ERR "EmitML";
 
 val is_num_literal_hook    = ref (K false)
 val is_int_literal_hook    = ref (K false)
-val is_string_literal_hook = ref (K false)
 val is_list_hook           = ref (K false)
 val is_comma_hook          = ref (K false)
 val is_pair_hook           = ref (K false)
@@ -60,7 +59,6 @@ val is_fail_hook           = ref (K false)
 
 val dest_num_literal_hook  = ref (fn _ => raise ERR "dest_num_literal" "undefined")
 val dest_int_literal_hook  = ref (fn _ => raise ERR "dest_int_literal" "undefined")
-val dest_string_literal_hook = ref (fn _ => raise ERR "dest_string_literal" "undefined")
 val dest_cons_hook = ref (fn _ => raise ERR "dest_cons" "undefined")
 val dest_list_hook = ref (fn _ => raise ERR "dest_list" "undefined")
 val dest_pair_hook = ref (fn _ => raise ERR "dest_pair" "undefined")
@@ -123,6 +121,12 @@ fun prec_of c =
 val minprec = ~1;
 val maxprec = 9999;
 
+(*---------------------------------------------------------------------------*)
+(* For support of ML code generation                                         *)
+(*---------------------------------------------------------------------------*)
+
+val is_string_literal = Lib.can Literal.relaxed_dest_string_lit;
+
 datatype side = LEFT | RIGHT;
 
 fun pick_name slist n (s1,s2) = if mem n slist then s1 else s2;
@@ -144,6 +148,12 @@ fun vars_of_types alist =
 
 val pseudo_constructors = ref [] : thm list ref;
 
+(*---------------------------------------------------------------------------*)
+(*  The following reference cell gets set in pred_setTheory                  *) 
+(*---------------------------------------------------------------------------*)
+
+val reshape_thm_hook = ref Lib.I : (thm -> thm) ref;
+
 local val emit_tag = Tag.read "EmitML"
    fun nstrip_fun 0 ty = ([],ty)
      | nstrip_fun n ty = 
@@ -163,11 +173,6 @@ fun curried_const_equiv_tupled_var (c,a) =
     thm
  end
 end;
-
-(* The following reference cell gets set in pred_setTheory *) 
-
-val reshape_thm_hook = ref Lib.I : (thm -> thm) ref;
-
 
 fun generic_type_of tm = 
   if is_const tm 
@@ -196,7 +201,7 @@ fun term_to_ML openthys side ppstrm =
      if is_arb tm then pp_arb i else
      if !is_num_literal_hook tm then pp_num_literal i tm else
      if !is_int_literal_hook tm then pp_int_literal tm else
-     if !is_string_literal_hook tm then pp_string tm else
+     if is_string_literal tm then pp_string tm else
      if !is_list_hook tm then pp_list tm else
      if is_cons tm then pp_cons i tm else
      if is_infix_app tm then pp_binop i tm else
@@ -266,7 +271,7 @@ fun term_to_ML openthys side ppstrm =
           ; add_string")"
           ; end_block()
          end
-  and pp_string tm = add_string (mlquote (!dest_string_literal_hook tm))
+  and pp_string tm = add_string (mlquote (Literal.relaxed_dest_string_lit tm))
   and pp_list tm =
        let val els = !dest_list_hook tm
        in begin_block CONSISTENT 0
@@ -472,7 +477,7 @@ fun term_to_ML openthys side ppstrm =
 
  in fn i => fn M =>
     (begin_block INCONSISTENT 0 ; pp i M ; end_block ())
- end
+ end;
 
 fun pp_term_as_ML openthys side ppstrm M = 
     term_to_ML openthys side ppstrm minprec M;

@@ -4,7 +4,6 @@ sig
 
   val is_num_literal_hook      : (term -> bool) ref
   val is_int_literal_hook      : (term -> bool) ref
-  val is_string_literal_hook   : (term -> bool) ref
   val is_list_hook             : (term -> bool) ref
   val is_comma_hook            : (term -> bool) ref
   val is_pair_hook             : (term -> bool) ref
@@ -15,7 +14,6 @@ sig
 
   val dest_num_literal_hook    : (term -> Arbnum.num) ref
   val dest_int_literal_hook    : (term -> Arbint.int) ref
-  val dest_string_literal_hook : (term -> string) ref
   val dest_list_hook           : (term -> term list) ref
   val dest_cons_hook           : (term -> term * term) ref
   val dest_pair_hook           : (term -> term * term) ref

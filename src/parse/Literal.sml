@@ -147,6 +147,23 @@ fun dest_string_lit tm =
 
 val is_string_lit = can dest_string_lit
 
+(*---------------------------------------------------------------------------*)
+(* Redefine dest_string_lit to handle cases where c in CHR (c) is either a   *)
+(* "bare" numeral or of the form (NUMERAL ...). Used in ML generation.       *)
+(*---------------------------------------------------------------------------*)
+
+local 
+  val fromHOLchar = Char.chr o Arbnum.toInt o relaxed_dest_numeral o dest_chr
+in
+fun relaxed_dest_string_lit tm = 
+ if is_emptystring tm then ""
+ else let val (front,e) = Lib.front_last (strip_binop (total dest_string) tm)
+      in if is_emptystring e
+         then String.implode (itlist (cons o fromHOLchar) front [])
+         else raise ERR "relaxed_dest_string_lit" "not terminated by EMPTYSTRING"
+      end
+end;
+
 fun mk_string_lit {mk_string,fromMLchar,emptystring} s = let
   fun recurse (acc, i) =
       if i < 0 then acc
