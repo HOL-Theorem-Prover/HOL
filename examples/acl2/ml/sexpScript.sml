@@ -3700,6 +3700,13 @@ val ACL2_TRUE_def =
  xDefine "ACL2_TRUE"
   `(|= p) = (ite (equal p nil) nil t = t)`;
 
+val ACL2_TRUE =
+ store_thm
+  ("ACL2_TRUE",
+   ``(|= p) = ~(p = nil)``,
+   ACL2_SIMP_TAC [ACL2_TRUE_def]
+    THEN PROVE_TAC[fetch "-" "sexp_11",T_NIL]);
+
 val caar_def =
  Define
   `caar x = car(car x)`;
@@ -3959,6 +3966,16 @@ val sexp_size_cdr =
     THEN RW_TAC arith_ss
           [cdr_def,nil_def,consp_def,arithmeticTheory.MAX_DEF,
            fetch "-" "sexp_size_def"]);
+
+val _ = 
+ add_acl2_simps 
+  [ACL2_TRUE,
+   caar_def,cadr_def,cdar_def,cddr_def,
+   caaar_def,cdaar_def,cadar_def,cddar_def,caadr_def,cdadr_def,caddr_def,cdddr_def,
+   caaaar_def,cadaar_def,caadar_def,caddar_def,caaadr_def,cadadr_def,caaddr_def,cadddr_def,
+   cdaaar_def,cddaar_def,cdadar_def,cdddar_def,cdaadr_def,cddadr_def,cdaddr_def,cddddr_def,
+   sexp_size_car,sexp_size_cdr,
+   List_def,andl_def];
 
 val _ = adjoin_to_theory
          {sig_ps = NONE,

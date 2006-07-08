@@ -127,10 +127,11 @@ val T_NIL = EVAL ``"T" = "NIL"``;
 val _ = add_acl2_simps[T_NIL];
 
 (*****************************************************************************)
-(* Tactic that simplifies with acl2_simps and other theorems supplied        *)
+(* Tactics that simplifies with acl2_simps and other theorems supplied       *)
 (* explicitly by the user                                                    *)
 (*****************************************************************************)
-fun ACL2_SIMP_TAC thl = RW_TAC list_ss ((!acl2_simps) @ thl);
+fun ACL2_SIMP_TAC      thl = RW_TAC        list_ss ((!acl2_simps) @ thl)
+and ACL2_FULL_SIMP_TAC thl = FULL_SIMP_TAC list_ss ((!acl2_simps) @ thl);
 
 (*****************************************************************************)
 (* Global association list of pairs (hol_name, acl2_name).                   *)
@@ -312,8 +313,10 @@ fun acl2_defn acl2_name (q,tac) =
           (Defn.tprove(def,tac)
            handle e => Raise(wrap_exn "ACL2 support" "Defn.tgoal" e))
  in
-  acl2_simps := (!acl2_simps) @ [def_th];
+(*acl2_simps := (!acl2_simps) @ [def_th];*)
   declare_names(acl2_name,hol_name);
+  save_thm((hol_name ^ "_def"),def_th);
+  save_thm((hol_name ^ "_ind"),ind_th);
   (print"\""; 
    print acl2_name; 
    print "\" defined with HOL name \""; 
