@@ -19,7 +19,7 @@ quietdec := true;
 map 
  load  
  ["stringLib","complex_rationalTheory","gcdTheory",
-  "sexp","sexpTheory","translateTheory"];
+  "sexp","sexpTheory"];
 open stringLib complex_rationalTheory gcdTheory 
      sexp sexpTheory;
 Globals.checking_const_names := false;
@@ -248,11 +248,12 @@ val eqlablep_def =
           (equal l nil),
 *)
 
-val eqlable_listp_def =
+val (eqlable_listp_def,eqlable_listp_ind) =
  acl2_defn
  "ACL2::EQLABLE-LISTP"
   (`eqlable_listp l =
-     ite (consp l) (andl [eqlablep (car l); eqlable_listp (cdr l)])
+     ite (consp l) 
+         (andl [eqlablep (car l); eqlable_listp (cdr l)])
          (equal l nil)`,
    WF_REL_TAC `measure sexp_size`
     THEN RW_TAC arith_ss [sexp_size_cdr]);
@@ -609,6 +610,30 @@ val fix =
         ite (atom l) (equal l nil)
           (andl [characterp (car l); character_listp (cdr l)]),
 *)
+
+(*
+acl2_tgoal "ACL2::CHARACTER-LISTP"
+ `character_listp l =
+     ite (atom l) (equal l nil)
+         (andl [characterp (car l); character_listp (cdr l)])`;
+
+e(
+ACL2_SIMP_TAC[]
+ THEN WF_REL_TAC `measure sexp_size`
+ THEN Cases
+ THEN ACL2_FULL_SIMP_TAC[sexp_11,T_NIL]
+);
+*)
+
+val (character_listp_def,character_listp_ind) =
+ acl2_defn "ACL2::CHARACTER-LISTP"
+  (`character_listp l =
+     ite (atom l) (equal l nil)
+         (andl [characterp (car l); character_listp (cdr l)])`,
+   ACL2_SIMP_TAC[]
+    THEN WF_REL_TAC `measure sexp_size`
+    THEN Cases
+    THEN ACL2_FULL_SIMP_TAC[]);
 
 (*
      [oracles: DEFUN COMMON-LISP::STRING, DISK_THM] [axioms: ] []

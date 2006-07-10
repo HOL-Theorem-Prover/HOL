@@ -3969,7 +3969,7 @@ val sexp_size_cdr =
 
 val _ = 
  add_acl2_simps 
-  [ACL2_TRUE,
+  [fetch "-" "sexp_11",ACL2_TRUE,
    caar_def,cadr_def,cdar_def,cddr_def,
    caaar_def,cdaar_def,cadar_def,cddar_def,caadr_def,cdadr_def,caddr_def,cdddr_def,
    caaaar_def,cadaar_def,caadar_def,caddar_def,caaadr_def,cadadr_def,caaddr_def,cadddr_def,
