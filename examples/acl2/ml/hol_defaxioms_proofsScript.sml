@@ -72,19 +72,42 @@ val closure_defaxiom =
      |- |= equal (add (add x y) z) (add x (add y z)),
 *)
 
-(*
 val associativity_of_plus_defaxiom =
  store_thm
   ("associativity_of_plus_defaxiom",
-   ``!x y z. |= equal (add (add x y) z) (add x (add y z))``
+   ``!x y z. |= equal (add (add x y) z) (add x (add y z))``,
    Cases THEN Cases THEN Cases
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
-*)
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN TRY(Cases_on `c''`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,
+           ratTheory.RAT_ADD_ASSOC]);
 
 (*
      [oracles: DEFAXIOM ACL2::COMMUTATIVITY-OF-+] [axioms: ] []
      |- |= equal (add x y) (add y x),
 *)
+
+val commutativity_of_plus_defaxiom =
+ store_thm
+  ("commutativity_of_plus_defaxiom",
+   ``!x y. |= equal (add x y) (add y x)``,
+   Cases THEN Cases
+    THEN ACL2_SIMP_TAC [int_def,cpx_def]
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]);
 
 (*
      [oracles: DEFAXIOM ACL2::UNICITY-OF-0, DISK_THM] [axioms: ] []
@@ -101,10 +124,57 @@ val associativity_of_plus_defaxiom =
      |- |= equal (mult (mult x y) z) (mult x (mult y z)),
 *)
 
+val associativity_of_star_defaxiom =
+ store_thm
+  ("associativity_of_star_defaxiom",
+   ``!x y z. |= equal (mult (mult x y) z) (mult x (mult y z))``,
+   Cases THEN Cases THEN Cases
+    THEN ACL2_SIMP_TAC [int_def,cpx_def]
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN TRY(Cases_on `c''`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_MULT_def,complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL]
+    THEN METIS_TAC[ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM]);
+
 (*
      [oracles: DEFAXIOM ACL2::COMMUTATIVITY-OF-*] [axioms: ] []
      |- |= equal (mult x y) (mult y x),
 *)
+
+val commutativity_of_star_defaxiom =
+ store_thm
+  ("commutativity_of_star_defaxiom",
+   ``!x y. |= equal (mult x y) (mult y x)``,
+   Cases THEN Cases
+    THEN ACL2_SIMP_TAC [int_def,cpx_def]
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_MULT_def,complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL]
+    THEN METIS_TAC[ratTheory.RAT_MUL_COMM,ratTheory.RAT_ADD_COMM]);
 
 (*
      [oracles: DEFAXIOM ACL2::UNICITY-OF-1, DISK_THM] [axioms: ] []
@@ -350,16 +420,26 @@ val characterp_rubout_defaxiom =
       2.  ~(character_listp s0 = sym "COMMON-LISP" "NIL")
       1.  eqlable_listp s0 = sym "COMMON-LISP" "NIL"
 
-val character_listp_forward_to_eqlable_listp_defaxiom =
+val character_listp_forward_to_eqlable_listp_defthm =
  store_thm
   ("character_listp_forward_to_eqlable_listp",
    ``|= implies (character_listp x) (eqlable_listp x)``,
+   REWRITE_TAC[implies]
+    THEN Induct_on `x`
+    THEN ACL2_FULL_SIMP_TAC [itel_def]
+    THEN Cases_on `s`
+    THEN ACL2_FULL_SIMP_TAC [itel_def]
+
+    THEN Cases_on `s0`
+    THEN ACL2_FULL_SIMP_TAC [itel_def]
+
    ONCE_REWRITE_TAC[eqlable_listp_def,character_listp_def]
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `x`
     THEN ACL2_FULL_SIMP_TAC []
     THEN Cases_on `s`
     THEN ACL2_FULL_SIMP_TAC [itel_def]
+
 *)
 
 (*

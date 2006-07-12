@@ -75,11 +75,17 @@ val implies_def =
  acl2Define "ACL2::IMPLIES"
   `implies p q = ite p (andl [q; t]) t`;
 
+val implies_ite =
+ store_thm
+  ("implies_ite",
+   ``implies p q = ite p (ite q t nil) t``,
+   RW_TAC std_ss [implies_def,ite_def,itel_def,andl_def]);
+
 val implies =
  store_thm
   ("implies",
-   ``implies p q = ite p (ite q t nil) t``,
-   RW_TAC std_ss [implies_def,ite_def,itel_def,andl_def]);
+   ``(|= implies p q) = (|= p) ==> (|= q)``,
+   ACL2_SIMP_TAC[]);
   
 (*
      [oracles: DEFUN COMMON-LISP::NOT, DISK_THM] [axioms: ] []
@@ -257,6 +263,29 @@ val (eqlable_listp_def,eqlable_listp_ind) =
          (equal l nil)`,
    WF_REL_TAC `measure sexp_size`
     THEN RW_TAC arith_ss [sexp_size_cdr]);
+
+val eqlable_listp =
+ store_thm
+  ("eqlable_listp",
+   ``(eqlable_listp (cons s s0) =
+       if itel 
+           [(acl2_numberp s,acl2_numberp s); 
+            (symbolp s,symbolp s)] (characterp s) = nil
+        then nil
+        else eqlable_listp s0)
+     /\
+     (eqlable_listp (num n) = nil)
+     /\
+     (eqlable_listp (chr c) = nil)
+     /\
+     (eqlable_listp (str st) = nil)
+     /\
+     (eqlable_listp (sym st st0) = if sym st st0 = nil then t else nil)``,
+   REPEAT CONJ_TAC
+    THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[eqlable_listp_def]))
+    THEN ACL2_SIMP_TAC[]);
+
+val _ = add_acl2_simps[eqlable_listp];
 
 (*
      [oracles: DEFUN COMMON-LISP::ATOM] [axioms: ] []
@@ -634,6 +663,25 @@ val (character_listp_def,character_listp_ind) =
     THEN WF_REL_TAC `measure sexp_size`
     THEN Cases
     THEN ACL2_FULL_SIMP_TAC[]);
+
+val character_listp =
+ store_thm
+  ("character_listp",
+   ``(character_listp (cons s s0) =
+       if characterp s = nil then nil else character_listp s0)
+     /\
+     (character_listp (num n) = nil)
+     /\
+     (character_listp (chr c) = nil)
+     /\
+     (character_listp (str st) = nil)
+     /\
+     (character_listp (sym st st0) = if sym st st0 = nil then t else nil)``,
+   REPEAT CONJ_TAC
+    THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[character_listp_def]))
+    THEN ACL2_SIMP_TAC[]);
+
+val _ = add_acl2_simps[character_listp];
 
 (*
      [oracles: DEFUN COMMON-LISP::STRING, DISK_THM] [axioms: ] []
