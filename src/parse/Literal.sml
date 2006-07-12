@@ -1,7 +1,7 @@
 (*---------------------------------------------------------------------------*
  *    Literals for numbers and strings.
  *
- * A numeral is a nest of NUMERAL_BIT{1,2}s built up from ALT_ZERO wrapped
+ * A numeral is a nest of BIT{1,2}s built up from ALT_ZERO wrapped
  * inside the NUMERAL tag, or it is a straight ZERO constant.  This
  * difference in treatment between zero and the other numerals leaves
  * zero as a constant in the logic, which is useful elsewhere.

@@ -92,11 +92,4 @@ val is_string_literal = Literal.is_string_lit
 fun lift_char ty c = fromMLchar c
 fun lift_string ty s = fromMLstring s;
 
-(*---------------------------------------------------------------------------*)
-(* For support of ML code generation                                         *)
-(*---------------------------------------------------------------------------*)
-
-val _ = EmitML.is_string_literal_hook := is_string_literal
-val _ = EmitML.dest_string_literal_hook := fromHOLstring
-
 end

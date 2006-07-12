@@ -15,7 +15,9 @@
    commands before trying to evaluate the ML that follows.
 
    fun mload s = (print ("Loading "^s^"\n"); load s);
-   app mload ["simpLib", "boolSimps", "arithmeticTheory", "Q", "mesonLib"];
+   app mload ["simpLib", "boolSimps", "arithmeticTheory", "Q", 
+              "mesonLib", "metisLib", "whileTheory", 
+              "pairSyntax", "combinSyntax"];
 *)
 
 open HolKernel boolLib arithmeticTheory simpLib Parse Prim_rec metisLib

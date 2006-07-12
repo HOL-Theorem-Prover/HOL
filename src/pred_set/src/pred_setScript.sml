@@ -4185,36 +4185,6 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
                           SOME (fn pps => PP.add_string pps sspec_conv_str)}
 
 
-(*---------------------------------------------------------------------------*)
-(* Takes a curried constructor and maps it to a tupled version.              *)
-(*---------------------------------------------------------------------------*)
-
-(*
-fun tupled_constructor capp =
- let open pairSyntax
-     val (c,args) = strip_comb capp
-     val target = type_of capp
-     val argtys = map type_of args
-     val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
-     val new = list_mk_abs(args,mk_comb(cvar,list_mk_pair args))
- in
-    mk_thm([],mk_eq(c,new))
- end;
-
-val reshape = BETA_RULE o
-              PURE_REWRITE_RULE [tupled_constructor (Term`x INSERT s`)];
-
-fun scoped_parse q =
- let val (tyg,tmg) = (type_grammar(),term_grammar())
-     val tyg' = type_grammar.remove_abbreviation tyg "set"
-     val _ = temp_set_grammars(tyg',tmg)
-     val astl = ParseDatatype.parse q
-     val _ = temp_set_grammars(tyg,tmg)
- in
-   astl
- end;
-*)
-
 val F_INTRO = PURE_REWRITE_RULE [PROVE[] (Term `~x = (x = F)`)];
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 

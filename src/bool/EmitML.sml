@@ -122,7 +122,11 @@ val minprec = ~1;
 val maxprec = 9999;
 
 (*---------------------------------------------------------------------------*)
-(* For support of ML code generation                                         *)
+(* Version of dest_string that doesn't care if characters look like          *)
+(*                                                                           *)
+(*        CHAR (NUMERAL n)                                                   *)
+(*                                                                           *)
+(* or    CHAR n                                                              *)
 (*---------------------------------------------------------------------------*)
 
 val is_string_literal = Lib.can Literal.relaxed_dest_string_lit;
@@ -626,25 +630,42 @@ datatype elem_internal
     | iMLSTRUCT of string;
 
 
+fun datatype_silent_defs tyAST =
+ let val tyop = hd (map fst tyAST)
+     val tyrecd = hd (Type.decls tyop)
+ in 
+  case TypeBase.read tyrecd
+   of NONE => raise ERR "datatype_silent_defs" 
+               ("No info in the TypeBase for "^Lib.quote tyop)
+    | SOME tyinfo =>
+        let open TypeBasePure
+            val size_def = [snd (valOf(size_of tyinfo))] handle _ => []
+            val updates_def = updates_of tyinfo handle HOL_ERR _ => [] 
+            val access_def = accessors_of tyinfo handle HOL_ERR _ => [] 
+        in 
+          map (iDEFN o !reshape_thm_hook)
+              (size_def @ updates_def @ access_def)
+        end
+ end;
+
+
 (*---------------------------------------------------------------------------*)
 (* Map from external presentation to internal                                *)
 (*---------------------------------------------------------------------------*)
 
-(*
-         val pconstrs' = map (fn (n,tyast) => (mk_type(n,tyvl), tyast)) pconstrs
-         fun foo ty (s,ptyl) = 
-           if length ptyl > 1 
-             then mk_const(s,list_mk_fun(map pretypeToType ptyl,ty))
-             else failwith "elemi"
-         fun bar (ty,pclist) = mapfilter (foo ty) pclist
-         val mconstrs = flatten (map bar pconstrs')
-
-*)
-fun elemi (DEFN th) = iDEFN (!reshape_thm_hook th)
-  | elemi (DEFN_NOSIG th) = iDEFN_NOSIG (!reshape_thm_hook th) 
-  | elemi (DATATYPE q) = iDATATYPE (ParseDatatype.parse q)
-  | elemi (EQDATATYPE(sl,q)) = iEQDATATYPE(sl,ParseDatatype.parse q)
-  | elemi (ABSDATATYPE(sl,q)) = (* build fake rewrites for pseudo constructors *)
+fun elemi (DEFN th) il = iDEFN (!reshape_thm_hook th) :: il
+  | elemi (DEFN_NOSIG th) il = iDEFN_NOSIG (!reshape_thm_hook th) :: il 
+  | elemi (DATATYPE q) il = 
+       let val tyAST = ParseDatatype.parse q
+           val defs = datatype_silent_defs tyAST
+       in defs @ (iDATATYPE tyAST :: il)
+       end
+  | elemi (EQDATATYPE(sl,q)) il = 
+       let val tyAST = ParseDatatype.parse q
+           val defs = datatype_silent_defs tyAST
+       in defs @ (iEQDATATYPE(sl,tyAST) :: il)
+       end
+  | elemi (ABSDATATYPE(sl,q)) il = (* build rewrites for pseudo constructors *)
      let open ParseDatatype
          val tyAST = parse q
          val pconstrs = constrl tyAST
@@ -656,13 +677,13 @@ fun elemi (DEFN th) = iDEFN (!reshape_thm_hook th)
          val mconstrs = filter is_multi constrs'
          val _ = List.map curried_const_equiv_tupled_var mconstrs
       in
-        iABSDATATYPE(sl,tyAST)
+        iABSDATATYPE(sl,tyAST) :: il
       end
-  | elemi (OPEN sl) = iOPEN sl
-  | elemi (MLSIG s) = iMLSIG s
-  | elemi (MLSTRUCT s) = iMLSTRUCT s;
+  | elemi (OPEN sl) il = iOPEN sl :: il
+  | elemi (MLSIG s) il = iMLSIG s :: il
+  | elemi (MLSTRUCT s) il = iMLSTRUCT s :: il;
 
-fun internalize elems = map elemi elems;
+fun internalize elems = rev (rev_itlist elemi elems []);
 
 (*---------------------------------------------------------------------------*)
 (* Perhaps naive in light of the recent stuff of MN200 to eliminate flab     *)
