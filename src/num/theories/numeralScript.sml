@@ -821,15 +821,17 @@ val _ = adjoin_to_theory
      NL()
   end)};
 
-(*
-val _ = EmitML.is_num_literal_hook := Literal.is_numeral;
-val _ = EmitML.dest_num_literal_hook := Literal.dest_numeral;
-*)
 
 (*---------------------------------------------------------------------------*)
 (* Export ML analogues of all these functions, plus some support for         *)
 (* prettyprinting nums.                                                      *)
 (*---------------------------------------------------------------------------*)
+
+val _ = EmitML.reshape_thm_hook := 
+ (fn thm => 
+   (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o 
+    pairLib.GEN_BETA_RULE o 
+    Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm);
 
 val _ =
   let open EmitML whileTheory pairSyntax combinSyntax
@@ -840,18 +842,23 @@ val _ =
       ::
      OPEN ["combin"]
       ::
-    (DEFN NUMERAL_DEF ::
-      map (DEFN o PURE_REWRITE_RULE [NUMERAL_DEF])
-         [numeral_suc,iZ,iiSUC,addition_thms,
-          numeral_lt, numeral_lte,GREATER_DEF,GREATER_OR_EQ,
-          numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
-          numeral_mult,iSQR,numeral_exp,even,odd,
-          numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
-          WHILE,LEAST_DEF,REWRITE_RULE [TIMES2,GSYM iDUB] findq_thm,
-          DIVMOD_THM,div_eqns, mod_eqns,
-          numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp]
+     MLSTRUCT "val num_size = I" (* Not sure this is needed *)
+      ::
+     MLSTRUCT "fun NUMERAL x = x"   (* Not sure this is needed *)
+      ::
+    (map DEFN
+        [numeral_suc,iZ,iiSUC,addition_thms,
+         numeral_lt, numeral_lte,GREATER_DEF,GREATER_OR_EQ,
+         numeral_pre,iDUB_removal,iSUB_THM, numeral_sub,
+         numeral_mult,iSQR,numeral_exp,even,odd,
+         numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
+         WHILE,LEAST_DEF,REWRITE_RULE [TIMES2,GSYM iDUB] findq_thm,
+         DIVMOD_THM,div_eqns, mod_eqns,
+         numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp]
      @
-     [MLSIG "val ZERO :num",
+     [MLSIG "val num_size : num -> num",
+      MLSIG "val NUMERAL  :num -> num",
+      MLSIG "val ZERO :num",
       MLSIG "val BIT1 :num -> num",
       MLSIG "val BIT2 :num -> num",
       MLSIG "val ONE :num",
@@ -1063,5 +1070,19 @@ val _ =
 \    end;\n\n"]))
 
 end;
+
+
+val _ = adjoin_to_theory 
+  {sig_ps = NONE,
+   struct_ps = SOME (fn ppstrm => 
+     let val S = PP.add_string ppstrm
+         fun NL() = PP.add_newline ppstrm
+     in S "val _ = EmitML.reshape_thm_hook := (fn thm => "; NL();
+        S "         (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o "; NL();
+        S "         pairLib.GEN_BETA_RULE o "; NL();
+        S "         Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm); "; NL();
+        NL()
+     end)
+  }
 
 val _ = export_theory();

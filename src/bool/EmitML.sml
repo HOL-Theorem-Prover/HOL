@@ -637,6 +637,7 @@ fun datatype_silent_defs tyAST =
  let val tyop = hd (map fst tyAST)
      val tyrecd = hd (Type.decls tyop)
  in 
+  if tyop = "num" then [] else 
   case TypeBase.read tyrecd
    of NONE => (WARN "datatype_silent_defs"
                 ("No info in the TypeBase for "^Lib.quote tyop); [])

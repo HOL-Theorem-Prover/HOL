@@ -4184,7 +4184,6 @@ val _ = adjoin_to_theory {sig_ps = SOME sigps,
                           struct_ps =
                           SOME (fn pps => PP.add_string pps sspec_conv_str)}
 
-
 val F_INTRO = PURE_REWRITE_RULE [PROVE[] (Term `~x = (x = F)`)];
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 
@@ -4199,12 +4198,6 @@ val MAX_SET_EMPTY = Q.prove
 val MIN_SET_EMPTY = Q.prove
 (`MIN_SET EMPTY = FAIL MIN_SET ^(mk_var("empty set",bool)) EMPTY`,
  REWRITE_TAC [combinTheory.FAIL_THM]);
-
-val _ = EmitML.reshape_thm_hook := 
- (fn thm => 
-   (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o 
-    pairLib.GEN_BETA_RULE o 
-    Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm);
 
 (*---------------------------------------------------------------------------*)
 (* Export an ML model of (finite) sets. Although the representation used in  *)
@@ -4281,18 +4274,12 @@ val _ =
                \    | toList (INSERT(a,s)) = a::toList s"]))
 end;
 
-
 val _ = adjoin_to_theory 
   {sig_ps = NONE,
    struct_ps = SOME (fn ppstrm => 
      let val S = PP.add_string ppstrm
          fun NL() = PP.add_newline ppstrm
-     in S "val _ = EmitML.reshape_thm_hook := (fn thm => "; NL();
-        S "         (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o "; NL();
-        S "         pairLib.GEN_BETA_RULE o "; NL();
-        S "         Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm); "; NL();
-        NL();
-        S "val _ = EmitML.curried_const_equiv_tupled_var (Parse.Term `$INSERT`, 2);"; NL();
+     in S "val _ = EmitML.curried_const_equiv_tupled_var (Parse.Term `$INSERT`, 2);"; NL();
         NL()
      end)
   }
