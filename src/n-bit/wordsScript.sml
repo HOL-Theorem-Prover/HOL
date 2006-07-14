@@ -2212,9 +2212,24 @@ local
   val TIMES_2EXP1 =
     (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
      SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def
+  val n2w_w2n_RULE = REWRITE_RULE [n2w_w2n] o SPEC `w2n w`
   val word_eq_n2w = REWRITE_RULE [n2w_11] (SPECL [`n2w m`,`n2w n`] word_eq_def)
+  val word_eq_n2w = n2w_w2n_RULE (GEN_ALL word_eq_n2w)
+  val word_or_n2w = n2w_w2n_RULE word_or_n2w
+  val word_and_n2w = n2w_w2n_RULE word_and_n2w
+  val word_xor_n2w = n2w_w2n_RULE word_xor_n2w
+  val word_add_n2w = n2w_w2n_RULE word_add_n2w
+  val word_mul_n2w = n2w_w2n_RULE word_mul_n2w
+  val word_ge_n2w = n2w_w2n_RULE word_ge_n2w
+  val word_gt_n2w = n2w_w2n_RULE word_gt_n2w
+  val word_hi_n2w = n2w_w2n_RULE word_hi_n2w
+  val word_hs_n2w = n2w_w2n_RULE word_hs_n2w
+  val word_le_n2w = n2w_w2n_RULE word_le_n2w
+  val word_lo_n2w = n2w_w2n_RULE word_lo_n2w
+  val word_ls_n2w = n2w_w2n_RULE word_ls_n2w
+  val word_lt_n2w = n2w_w2n_RULE word_lt_n2w
   val word_join_n2w = SPECL [`n2w m`,`n2w n`] word_join_def
-  val word_div_n2w = SPECL [`n2w m`,`n2w n`] word_div_def
+  val word_div_n2w = SPEC `n2w m` word_div_def
   val word_asr_n2w = SPECL [`n`,`n2w m`] word_asr_n2w
   val word_lsr_n2w = SPEC `n2w m` word_lsr_n2w
   val word_rol_n2w = SPEC `n2w m` word_rol_def
@@ -2243,9 +2258,9 @@ in
           [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
            GSYM word_concat_itself_def, GSYM word_extract_itself_def,
            word_T_def, word_L_def, word_H_def, TIMES_2EXP1] o ALPHA_BETA_RULE)
-          [UINT_MAX_def, INT_MAX_def, word_eq_n2w,
-           w2n_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
-           word_bit_n2w, word_join_n2w, sw2sw_n2w, word_extract_n2w,
+          [UINT_MAX_def, INT_MAX_def, w2n_n2w, word_eq_n2w,
+           w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
+           SPEC `c` word_bit_n2w, word_join_n2w, sw2sw_n2w, word_extract_n2w,
            word_slice_n2w, word_concat_def, word_log2_n2w, word_reverse_n2w,
            word_modify_n2w, word_lsb_n2w, word_msb_n2w,
            word_1comp_n2w, word_and_n2w, word_xor_n2w,
