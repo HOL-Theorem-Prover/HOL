@@ -8,7 +8,7 @@
 
 (* interactive use:
   app load ["Nonstdio","wordsSyntax", "instructionTheory",
-            "assemblerML", "Lexer", "Parser", "Data"];
+            "assemblerML", "Data"];
 *)
 
 open HolKernel boolLib Parse bossLib;
@@ -374,7 +374,7 @@ fun dest_word t = let val (n,typ) = dest_n2w t in
   Arbnum.mod(numLib.dest_numeral n,index_size typ) end;
 
 val dest_wordi    = Arbnum.toInt o dest_word;
-val dest_register = Lexer.int2register o dest_wordi;
+val dest_register = int2register o dest_wordi;
 
 fun dest_bool t =
   if term_eq t T then true else

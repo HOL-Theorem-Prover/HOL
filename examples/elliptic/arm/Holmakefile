@@ -1,18 +1,34 @@
-EXTRA_CLEANS = assemblerML.ui assemblerML.uo Data.ui Data.uo\
-	Lexer.sml Parser.sig Parser.sml
-INCLUDES = /local/scratch/acjf3/hol98/src/theoryML
+EXTRA_CLEANS = evalML.uo evalML.ui assemblerML.ui assemblerML.uo\
+	Data.ui Data.uo armParser.lex.sig armParser.lex.sml\
+        armParser.grm.sig armParser.grm.sml armParser.grm.desc
+
+CALL_YACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $< ; \
+            $(MV) armParser.grm.sig armParser.grm-sig.sml
+
+MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
+MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 Data.uo : Data.sml
 	HOLMOSMLC -c Data.sml
 
-Parser.sml : Parser.grm Data.uo
-	mosmlyac Parser.grm
+armParser.grm.sml: armParser.grm
+	$(CALL_YACC)
 
-Lexer.sml : Lexer.lex Parser.sml Data.uo
-	mosmllex Lexer.lex
+armParser.grm-sig.sml: armParser.grm
+	$(CALL_YACC)
 
-Parser.ui Parser.uo Lexer.ui Lexer.uo: Parser.sml Lexer.sml
-	HOLMOSMLC -c Parser.sig Parser.sml Lexer.sml
+armParser.grm-sig.uo: armParser.grm-sig.sml
+	HOLMOSMLC -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
 
-assemblerML.uo: Parser.sml Lexer.sml assemblerML.sml assemblerML.sig
-	HOLMOSMLC -c assemblerML.sml
+armParser.grm.uo : armParser.grm.sml armParser.grm-sig.uo
+	HOLMOSMLC -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) armParser.grm-sig.ui $<
+
+armParser.lex.sml : armParser.lex
+	$(protect $(HOLDIR)/tools/mllex/mllex.exe) $<
+
+armParser.lex.uo: armParser.lex.sml
+	HOLMOSMLC -toplevel -c Data.ui armParser.grm-sig.ui $<
+
+assemblerML.uo: assemblerML.sml assemblerML.ui \
+                armParser.grm.uo armParser.lex.uo
+	HOLMOSMLC -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) armParser.grm.ui armParser.lex.ui $<

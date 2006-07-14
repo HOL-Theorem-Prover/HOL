@@ -1,3 +1,5 @@
+structure Data =
+struct
 datatype shift = LSL | LSR | ASR | ROR;
 
 datatype condition = EQ | NE | CS | CC | MI | PL | VS | VC
@@ -74,4 +76,6 @@ in
   fun sub32 a b = add32 a (two_comp32 b)
   fun rol32 x n = ror32 x (Int.-(32,Int.mod(n, 32)))
   fun mk_immediate rot imm = ror32 imm (Int.*(2, rot))
-end;
+end
+
+end

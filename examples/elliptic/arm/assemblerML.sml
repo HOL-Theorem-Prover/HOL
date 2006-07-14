@@ -1,7 +1,26 @@
 (* interactive use:
-  val _ = loadPath := !loadPath @ "/local/scratch/acjf3/hol98/src/portableML"];
-  val _ = app load ["Arbnum", "Nonstdio", "Lexer", "Parser", "Data"];
+  val _ = loadPath := !loadPath @ 
+       ["/local/scratch/acjf3/hol98/tools/mlyacc/mlyacclib",
+        "/local/scratch/acjf3/hol98/tools/mlton/pre",
+        "/local/scratch/acjf3/hol98/src/portableML"];
+  val _ = load "armParser.grm";
+  val _ = load "armParser.lex";
+  val _ = app load ["Arbnum", "Nonstdio", "Data"];
 *)
+
+structure assemblerML :> assemblerML =
+struct
+
+structure armLrVals =
+    armLrValsFun(structure Token = LrParser.Token)
+
+structure armLex =
+    armLexFun(structure Tokens = armLrVals.Tokens)
+
+structure armParser =
+     Join(structure ParserData = armLrVals.ParserData
+          structure Lex = armLex
+          structure LrParser = LrParser)
 
 open Data;
 
@@ -64,6 +83,8 @@ fun sign_extend l h n =
 
 (* ------------------------------------------------------------------------- *)
 
+val int2register = armLex.UserDeclarations.int2register;
+
 fun register2int r =
   case r of
     R0  => 0  | R1  => 1  | R2  => 2  | R3  => 3
@@ -97,7 +118,7 @@ fun condition2string cond =
   | HI => "hi" | LS => "ls" | GE => "ge" | LT => "lt"
   | GT => "gt" | LE => "le" | AL => ""   | NV => "nv";
 
-val list2register = Lexer.int2register o list2int;
+val list2register = int2register o list2int;
 
 fun list2opcode l =
   case list2int l of
@@ -374,49 +395,33 @@ in
     | _ => raise Data.Parse "Not an instruction";
 end;
 
-fun simple_parse_arm_buf lexbuf =
-  let val expr = Parser.Main Lexer.Token lexbuf in
-    Parsing.clearParser(); expr
-  end handle exn => (Parsing.clearParser(); raise exn);
+fun invoke lexstream = let
+  fun print_error (s,i:int,_) =
+      TextIO.output(TextIO.stdErr, Int.toString i ^ ": " ^ s ^ "\n")
+in
+  #1 (armParser.parse(0,lexstream,print_error,()))
+end;
 
-val string_to_arm =
-  validate_instruction o assembler_to_instruction o
-  simple_parse_arm_buf o Lexing.createLexerString;
+fun string_to_code s = let
+  val done = ref false
+  val lexer = armParser.makeLexer
+        (fn _ => if !done then "" else (s before done := true))
+  val _ = armLex.UserDeclarations.pos := 1
+in
+  invoke lexer
+end;
 
-fun parse_arm_buf file stream lexbuf =
-  let val expr = Parser.Main Lexer.Token lexbuf
-            handle
-               Parsing.ParseError f =>
-                   let val pos1 = Lexing.getLexemeStart lexbuf
-                       val pos2 = Lexing.getLexemeEnd lexbuf
-                   in
-                       Location.errMsg (file, stream, lexbuf)
-                                       (Location.Loc(pos1, pos2))
-                                       "Syntax error."
-                   end
-             | Lexer.LexicalError(msg, pos1, pos2) =>
-                   if pos1 >= 0 andalso pos2 >= 0 then
-                       Location.errMsg (file, stream, lexbuf)
-                                       (Location.Loc(pos1, pos2))
-                                       ("Lexical error: " ^ msg)
-                   else
-                       (Location.errPrompt ("Lexical error: " ^ msg ^ "\n\n");
-                        raise Fail "Lexical error");
-  in
-    Parsing.clearParser(); expr
-  end handle exn => (Parsing.clearParser(); raise exn);
+fun string_to_arm s =
+  (validate_instruction o assembler_to_instruction o string_to_code) s;
 
-fun createLexerStream (is : BasicIO.instream) =
-  Lexing.createLexer (fn buff => fn n => Nonstdio.buff_input is buff 0 n);
+fun read_stream strm = let
+  val lexer = armParser.makeLexer (fn _ => TextIO.inputLine strm)
+  val _ = armLex.UserDeclarations.pos := 1
+in
+  invoke lexer before TextIO.closeIn strm
+end;
 
-fun parse_arm file =
-  let val is = Nonstdio.open_in_bin file
-      val lexbuf = createLexerStream is
-      val expr = parse_arm_buf file is lexbuf handle exn =>
-                   (BasicIO.close_in is; raise exn)
-  in
-    BasicIO.close_in is; expr
-  end;
+fun parse_arm fname = read_stream (TextIO.openIn fname);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -893,4 +898,4 @@ fun decode_arm i n = arm_to_string i false (num_to_arm n);
 fun decode_arm_dec i n = decode_arm i (Arbnum.fromString n);
 fun decode_arm_hex i n = decode_arm i (Arbnum.fromHexString n);
 
-(* ------------------------------------------------------------------------- *)
+end;

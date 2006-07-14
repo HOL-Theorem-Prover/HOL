@@ -1,6 +1,7 @@
 signature assemblerML =
 sig
    val register2int   : Data.register -> int
+   val int2register   : int -> Data.register
 
    val num_to_arm     : Arbnum.num -> Data.instruction
    val arm_to_num     : Data.instruction -> Arbnum.num
@@ -16,8 +17,7 @@ sig
 
    val assembler_to_string    : Arbnum.num option -> Data.assembler ->
                                 string option -> string
-   val parse_arm_buf          : string -> BasicIO.instream -> Lexing.lexbuf ->
-                                Data.assembler list
+   val string_to_code         : string -> Data.assembler list
    val parse_arm              : string -> Data.assembler list
    val validate_instruction   : Data.instruction -> Data.instruction
 end

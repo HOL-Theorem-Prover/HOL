@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsLib rich_listTheory;
+open Q wordsTheory rich_listTheory;
 
 val _ = new_theory "arm";
 
@@ -908,8 +908,11 @@ val STATE_ARMe_def = Define`
 (* Some useful theorems                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-infix \\
+infix \\ << >>
+
 val op \\ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
 
 val SUBST_NE_COMMUTES = store_thm ("SUBST_NE_COMMUTES",
   `!m a b c d. ~(a = b) ==>
@@ -919,7 +922,7 @@ val SUBST_NE_COMMUTES = store_thm ("SUBST_NE_COMMUTES",
 val SUBST_COMMUTES = store_thm("SUBST_COMMUTES",
   `!m a b c d. a <+ b ==>
      ((b :- d) ((a :- c) m) = (a :- c) ((b :- d) m))`,
-  REPEAT STRIP_TAC \\ IMP_RES_TAC wordsTheory.WORD_LOWER_NOT_EQ
+  REPEAT STRIP_TAC \\ IMP_RES_TAC WORD_LOWER_NOT_EQ
     \\ ASM_SIMP_TAC std_ss [SUBST_NE_COMMUTES]);
 
 val SUBST_EQ = store_thm("SUBST_EQ",
@@ -930,100 +933,382 @@ val SUBST_EQ = store_thm("SUBST_EQ",
 (* Export ML versions of functions                                           *)
 (*---------------------------------------------------------------------------*)
 
+open arithmeticTheory numeralTheory bitTheory;
+
+val std_ss = std_ss ++ boolSimps.LET_ss;
+val arith_ss = arith_ss ++ boolSimps.LET_ss;
+
+val word_ss = arith_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss++
+  rewrites [n2w_def,word_extract_def,word_bits_n2w,w2w,
+    BIT_def,BITS_THM,DIVMOD_2EXP_def,DIV_2EXP_def,DIV_1,
+    DIV2_def,ODD_MOD2_LEM,DIV_DIV_DIV_MULT,MOD_2EXP_def]
+
+val MOD_DIMINDEX_32 = (SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] o
+   Thm.INST_TYPE [alpha |-> ``:i32``]) MOD_DIMINDEX;
+
+val DECODE_INST = (SIMP_RULE (std_ss++wordsLib.SIZES_ss) [word_bit,
+    word_bits_n2w,word_bit_n2w,n2w_11,BITS_COMP_THM2,BITS_ZERO2,MOD_DIMINDEX_32,
+    EVAL ``BITS 31 0 1``,EVAL ``BITS 31 0 2``,EVAL ``BITS 31 0 4``] o
+  SPEC `n2w n`) DECODE_INST_def;
+
+val DECODE_TAC = SIMP_TAC std_ss [DECODE_PSR_def,DECODE_BRANCH_def,
+      DECODE_DATAP_def,DECODE_MRS_def,DECODE_MSR_def,DECODE_LDR_STR_def,
+      DECODE_MLA_MUL_def,DECODE_LDM_STM_def,DECODE_SWP_def,DECODE_LDC_STC_def,
+      SHIFT_IMMEDIATE_def,SHIFT_REGISTER_def,NZCV_def,DECODE_INST,
+      CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.GENLIST,
+      REGISTER_LIST_def, rich_listTheory.SNOC,word_extract_def]
+ \\ SIMP_TAC word_ss [];
+
+val DECODE_PSR_THM = store_thm("DECODE_PSR_THM",
+  `!n.  DECODE_PSR (n2w n) =
+     let (q0,m) = DIVMOD_2EXP 5 n in
+     let (q1,i) = DIVMOD_2EXP 1 (DIV2 q0) in
+     let (q2,f) = DIVMOD_2EXP 1 q1 in
+     let (q3,V) = DIVMOD_2EXP 1 (DIV_2EXP 20 q2) in
+     let (q4,C) = DIVMOD_2EXP 1 q3 in
+     let (q5,Z) = DIVMOD_2EXP 1 q4 in
+       ((ODD q5,Z=1,C=1,V=1),f = 1,i = 1,n2w m)`, DECODE_TAC);
+
+val DECODE_BRANCH_THM = store_thm("DECODE_BRANCH_THM",
+  `!n. DECODE_BRANCH (n2w n) =
+         let (L,offset) = DIVMOD_2EXP 24 n in (ODD L,n2w offset)`, DECODE_TAC);
+
+val DECODE_DATAP_THM = store_thm("DECODE_DATAP_THM",
+  `!n. DECODE_DATAP (n2w n) =
+     let (q0,opnd2) = DIVMOD_2EXP 12 n in
+     let (q1,Rd) = DIVMOD_2EXP 4 q0 in
+     let (q2,Rn) = DIVMOD_2EXP 4 q1 in
+     let (q3,S) = DIVMOD_2EXP 1 q2 in
+     let (q4,opcode) = DIVMOD_2EXP 4 q3 in
+       (ODD q4,n2w opcode,S = 1,n2w Rn,n2w Rd,n2w opnd2)`, DECODE_TAC);
+
+val DECODE_MRS_THM = store_thm("DECODE_MRS_THM",
+  `!n. DECODE_MRS (n2w n) =
+     let (q,Rd) = DIVMOD_2EXP 4 (DIV_2EXP 12 n) in
+      (ODD (DIV_2EXP 6 q),n2w Rd)`, DECODE_TAC);
+
+val DECODE_MSR_THM = store_thm("DECODE_MSR_THM",
+  `!n. DECODE_MSR (n2w n) =
+     let (q0,opnd) = DIVMOD_2EXP 12 n in
+     let (q1,bit16) = DIVMOD_2EXP 1 (DIV_2EXP 4 q0) in
+     let (q2,bit19) = DIVMOD_2EXP 1 (DIV_2EXP 2 q1) in
+     let (q3,R) = DIVMOD_2EXP 1 (DIV_2EXP 2 q2) in
+       (ODD (DIV_2EXP 2 q3),R = 1,bit19 = 1,bit16 = 1,
+        n2w (MOD_2EXP 4 opnd),n2w opnd)`,
+  DECODE_TAC \\ `4096 = 16 * 256` by numLib.ARITH_TAC
+    \\ ASM_REWRITE_TAC [] \\ SIMP_TAC arith_ss [MOD_MULT_MOD]);
+
+val DECODE_LDR_STR_THM = store_thm("DECODE_LDR_STR_THM",
+  `!n. DECODE_LDR_STR (n2w n) =
+    let (q0,offset) = DIVMOD_2EXP 12 n in
+    let (q1,Rd) = DIVMOD_2EXP 4 q0 in
+    let (q2,Rn) = DIVMOD_2EXP 4 q1 in
+    let (q3,L) = DIVMOD_2EXP 1 q2 in
+    let (q4,W) = DIVMOD_2EXP 1 q3 in
+    let (q5,B) = DIVMOD_2EXP 1 q4 in
+    let (q6,U) = DIVMOD_2EXP 1 q5 in
+    let (q7,P) = DIVMOD_2EXP 1 q6 in
+      (ODD q7,P = 1,U = 1,B = 1,W = 1,L = 1,n2w Rn,n2w Rd,n2w offset)`,
+   DECODE_TAC);
+
+val DECODE_MLA_MUL_THM = store_thm("DECODE_MLA_MUL_THM",
+  `!n. DECODE_MLA_MUL (n2w n) =
+    let (q0,Rm) = DIVMOD_2EXP 4 n in
+    let (q1,Rs) = DIVMOD_2EXP 4 (DIV_2EXP 4 q0) in
+    let (q2,Rn) = DIVMOD_2EXP 4 q1 in
+    let (q3,Rd) = DIVMOD_2EXP 4 q2 in
+    let (q4,S) = DIVMOD_2EXP 1 q3 in
+    let (q5,A) = DIVMOD_2EXP 1 q4 in
+    let (q6,Sgn) = DIVMOD_2EXP 1 q5 in
+      (ODD q6,Sgn = 1,A = 1,S = 1,n2w Rd,n2w Rn,n2w Rs,n2w Rm)`, DECODE_TAC);
+
+val DECODE_LDM_STM_THM = store_thm("DECODE_LDM_STM_THM",
+  `!n. DECODE_LDM_STM (n2w n) =
+    let (q0,list) = DIVMOD_2EXP 16 n in
+    let (q1,Rn) = DIVMOD_2EXP 4 q0 in
+    let (q2,L) = DIVMOD_2EXP 1 q1 in
+    let (q3,W) = DIVMOD_2EXP 1 q2 in
+    let (q4,S) = DIVMOD_2EXP 1 q3 in
+    let (q5,U) = DIVMOD_2EXP 1 q4 in
+      (ODD q5, U = 1, S = 1, W = 1, L = 1,n2w Rn,n2w list)`, DECODE_TAC);
+
+val DECODE_SWP_THM = store_thm("DECODE_SWP_THM",
+  `!n. DECODE_SWP (n2w n) =
+    let (q0,Rm) = DIVMOD_2EXP 4 n in
+    let (q1,Rd) = DIVMOD_2EXP 4 (DIV_2EXP 8 q0) in
+    let (q2,Rn) = DIVMOD_2EXP 4 q1 in
+      (ODD (DIV_2EXP 2 q2),n2w Rn,n2w Rd,n2w Rm)`, DECODE_TAC);
+
+val DECODE_LDC_STC_THM = store_thm("DECODE_LDC_STC_THM",
+  `!n. DECODE_LDC_STC (n2w n) =
+    let (q0,offset) = DIVMOD_2EXP 8 n in
+    let (q1,Rn) = DIVMOD_2EXP 4 (DIV_2EXP 8 q0) in
+    let (q2,L) = DIVMOD_2EXP 1 q1 in
+    let (q3,W) = DIVMOD_2EXP 1 q2 in
+    let (q4,U) = DIVMOD_2EXP 1 (DIV2 q3) in
+      (ODD q4,U = 1,W = 1,L = 1,n2w Rn,n2w offset)`, DECODE_TAC);
+
+(* ------------------------------------------------------------------------- *)
+
+fun w2w_n2w_sizes a b = (GSYM o SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] o
+  Thm.INST_TYPE [alpha |-> a, beta |-> b]) w2w_n2w;
+
+val SHIFT_IMMEDIATE_THM = store_thm("SHIFT_IMMEDIATE_THM",
+  `!reg mode C opnd2.
+     SHIFT_IMMEDIATE reg mode C (n2w opnd2) =
+       let (q0,Rm) = DIVMOD_2EXP 4 opnd2 in
+       let (q1,Sh) = DIVMOD_2EXP 2 (DIV2 q0) in
+       let shift = MOD_2EXP 5 q1 in
+       let rm = REG_READ reg mode (n2w Rm) in
+         SHIFT_IMMEDIATE2 (n2w shift) (n2w Sh) rm C`,
+  ONCE_REWRITE_TAC (map (w2w_n2w_sizes ``:i12``) [``:i8``, ``:i4``, ``:i2``])
+    \\ DECODE_TAC);
+
+val SHIFT_REGISTER_THM = store_thm("SHIFT_REGISTER_THM",
+  `!reg mode C opnd2.
+     SHIFT_REGISTER reg mode C (n2w opnd2) =
+       let (q0,Rm) = DIVMOD_2EXP 4 opnd2 in
+       let (q1,Sh) = DIVMOD_2EXP 2 (DIV2 q0) in
+       let Rs = MOD_2EXP 4 (DIV2 q1) in
+       let shift = MOD_2EXP 8 (w2n (REG_READ reg mode (n2w Rs)))
+       and rm = REG_READ (INC_PC reg) mode (n2w Rm) in
+         SHIFT_REGISTER2 (n2w shift) (n2w Sh) rm C`,
+  ONCE_REWRITE_TAC [w2w_n2w_sizes ``:i32`` ``:i8``]
+    \\ ONCE_REWRITE_TAC (map (w2w_n2w_sizes ``:i12``)
+          [``:i8``, ``:i4``, ``:i2``])
+    \\ SIMP_TAC std_ss [SHIFT_REGISTER_def,word_extract_def,
+         (GSYM o SIMP_RULE (std_ss++wordsLib.SIZES_ss) [n2w_w2n,BITS_THM,DIV_1,
+            (GSYM o SIMP_RULE std_ss [] o SPEC `8`) MOD_2EXP_def] o
+          SPECL [`7`,`0`,`w2n (a:word32)`] o
+          Thm.INST_TYPE [alpha |-> ``:i32``]) word_bits_n2w]
+    \\ SIMP_TAC word_ss []);
+
+(* ------------------------------------------------------------------------- *)
+
+val REGISTER_LIST_THM = store_thm("REGISTER_LIST_THM",
+  `!n. REGISTER_LIST (n2w n) =
+       let (q0,b0) = DIVMOD_2EXP 1 n in
+       let (q1,b1) = DIVMOD_2EXP 1 q0 in
+       let (q2,b2) = DIVMOD_2EXP 1 q1 in
+       let (q3,b3) = DIVMOD_2EXP 1 q2 in
+       let (q4,b4) = DIVMOD_2EXP 1 q3 in
+       let (q5,b5) = DIVMOD_2EXP 1 q4 in
+       let (q6,b6) = DIVMOD_2EXP 1 q5 in
+       let (q7,b7) = DIVMOD_2EXP 1 q6 in
+       let (q8,b8) = DIVMOD_2EXP 1 q7 in
+       let (q9,b9) = DIVMOD_2EXP 1 q8 in
+       let (q10,b10) = DIVMOD_2EXP 1 q9 in
+       let (q11,b11) = DIVMOD_2EXP 1 q10 in
+       let (q12,b12) = DIVMOD_2EXP 1 q11 in
+       let (q13,b13) = DIVMOD_2EXP 1 q12 in
+       let (q14,b14) = DIVMOD_2EXP 1 q13 in
+       MAP SND (FILTER FST
+         [(b0 = 1,0w); (b1 = 1,1w); (b2 = 1,2w); (b3 = 1,3w);
+          (b4 = 1,4w); (b5 = 1,5w); (b6 = 1,6w); (b7 = 1,7w);
+          (b8 = 1,8w); (b9 = 1,9w); (b10 = 1,10w); (b11 = 1,11w);
+          (b12 = 1,12w); (b13 = 1,13w); (b14 = 1,14w); (ODD q14,15w)])`,
+  DECODE_TAC);
+
+(* ------------------------------------------------------------------------- *)
+
+val DECODE_INST_THM = store_thm("DECODE_INST_THM",
+  `!n. DECODE_INST (n2w n) =
+        let (q0,b4) = DIVMOD_2EXP 1 (DIV_2EXP 4 n) in
+        let (q1,b65) = DIVMOD_2EXP 2 q0 in
+        let (q2,b7) = DIVMOD_2EXP 1 q1 in
+        let (q3,b20) = DIVMOD_2EXP 1 (DIV_2EXP 12 q2) in
+        let (q4,b21) = DIVMOD_2EXP 1 q3 in
+        let (q5,b23) = DIVMOD_2EXP 1 (DIV2 q4) in
+        let (q6,b24) = DIVMOD_2EXP 1 q5 in
+        let (q7,b25) = DIVMOD_2EXP 1 q6 in
+        let bits2726 = MOD_2EXP 2 q7 in
+        let (bit25,bit24,bit23,bit21,bit20,bit7,bits65,bit4) =
+             (b25 = 1,b24 = 1,b23 = 1,b21 = 1,b20 = 1,b7 = 1,b65,b4 = 1) in
+          if bits2726 = 0 then
+            if bit24 /\ ~bit23 /\ ~bit20 then
+                if bit25 \/ ~bit4 then
+                  mrs_msr
+                else
+                  if ~bit21 /\ (BITS 11 5 n = 4) then swp else cdp_und
+            else
+              if ~bit25 /\ bit4 then
+                if ~bit7 then
+                  reg_shift
+                else
+                  if ~bit24 /\ (bits65 = 0) then mla_mul else cdp_und
+              else
+                data_proc
+          else
+            if bits2726 = 1 then
+              if bit25 /\ bit4 then
+                cdp_und
+              else
+                if bit20 then ldr else str
+            else
+              if bits2726 = 2 then
+                if bit25 then br else
+                  if bit20 then ldm else stm
+              else
+                if bit25 then
+                  if bit24 then swi_ex else
+                    if bit4 then
+                      if bit20 then mrc else mcr
+                    else
+                      cdp_und
+                  else
+                    if bit20 then ldc else stc`, DECODE_TAC);
+
+(*---------------------------------------------------------------------------*)
+
+val num2register = prove(
+  `!n. num2register n =
+         if n = 0 then r0 else
+         if n = 1 then r1 else
+         if n = 2 then r2 else
+         if n = 3 then r3 else
+         if n = 4 then r4 else
+         if n = 5 then r5 else
+         if n = 6 then r6 else
+         if n = 7 then r7 else
+         if n = 8 then r8 else
+         if n = 9 then r9 else
+         if n = 10 then r10 else
+         if n = 11 then r11 else
+         if n = 12 then r12 else
+         if n = 13 then r13 else
+         if n = 14 then r14 else
+         if n = 15 then r15 else
+         if n = 16 then r8_fiq else
+         if n = 17 then r9_fiq else
+         if n = 18 then r10_fiq else
+         if n = 19 then r11_fiq else
+         if n = 20 then r12_fiq else
+         if n = 21 then r13_fiq else
+         if n = 22 then r14_fiq else
+         if n = 23 then r13_irq else
+         if n = 24 then r14_irq else
+         if n = 25 then r13_svc else
+         if n = 26 then r14_svc else
+         if n = 27 then r13_abt else
+         if n = 28 then r14_abt else
+         if n = 29 then r13_und else
+         if n = 30 then r14_und else
+           FAIL num2register ^(mk_var("30 < n",bool)) n`,
+  SRW_TAC [] [theorem "num2register_thm", combinTheory.FAIL_THM]);
+
+val num2condition = prove(
+  `!n. num2condition n =
+         if n = 0 then EQ else
+         if n = 1 then CS else
+         if n = 2 then MI else
+         if n = 3 then VS else
+         if n = 4 then HI else
+         if n = 5 then GE else
+         if n = 6 then GT else
+         if n = 7 then AL else
+         if n = 8 then NE else
+         if n = 9 then CC else
+         if n = 10 then PL else
+         if n = 11 then VC else
+         if n = 12 then LS else
+         if n = 13 then LT else
+         if n = 14 then LE else
+         if n = 15 then NV else
+           FAIL num2condition ^(mk_var("15 < n",bool)) n`,
+  SRW_TAC [] [theorem "num2condition_thm", combinTheory.FAIL_THM]);
+
+(*---------------------------------------------------------------------------*)
+
 val RHS_REWRITE_RULE =
   GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
 
-fun tupled_constructor capp =
- let open pairSyntax
-     val (c,args) = strip_comb capp
-     val target = type_of capp
-     val argtys = map type_of args
-     val cvar = mk_var(fst(dest_const c),list_mk_prod argtys --> target)
-     val new = list_mk_abs(args,mk_comb(cvar,list_mk_pair args))
- in
-    mk_thm([],mk_eq(c,new))
- end;
+val n2w_w2n_rule = GEN_ALL o SIMP_RULE bool_ss [wordsTheory.n2w_w2n];
 
-val reshape = BETA_RULE o
-              PURE_REWRITE_RULE [tupled_constructor (Term`x INSERT s`)];
+val spec_word_rule16 = n2w_w2n_rule o Q.SPEC `w2n (w:word16)`;
+val spec_word_rule32 = n2w_w2n_rule o Q.SPEC `w2n (w:word32)`;
+
+val spec_word_rule12 =
+  n2w_w2n_rule o INST [`opnd2` |-> `w2n (w:word12)`] o SPEC_ALL;
 
 val OUT_ARM = SIMP_RULE (srw_ss()++boolSimps.LET_ss)
   [LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def,
    LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def,
    SWP_def,DECODE_SWP_def,DECODE_PSR_def] OUT_ARM_def;
 
+fun mk_index i =
+  let val s = " i" ^ (Int.toString i) in
+    [EmitML.MLSTRUCT ("datatype" ^ s ^ " =" ^ s), EmitML.MLSIG ("eqtype" ^ s)]
+  end;
+
 val _ = ConstMapML.insert ``dimword``;
 val _ = ConstMapML.insert ``dimindex``;
 val _ = ConstMapML.insert ``INT_MIN``;
 val _ = ConstMapML.insert ``n2w_itself``;
 
-val _ = let open EmitML wordsTheory arithmeticTheory
- in emitML (!Globals.emitMLDir)
-      ("arm", OPEN ["num", "set", "fcp", "list", "rich_list", "words"]
+val _ = let open EmitML in emitML (!Globals.emitMLDir)
+    ("arm", OPEN ["num", "set", "fcp", "list", "rich_list", "words"]
          :: MLSIG "type ('a, 'b) cart = ('a, 'b) wordsML.cart"
+         :: MLSIG "type num = numML.num"
          :: map (fn decl => DATATYPE decl)
              [register_decl, psrs_decl, mode_decl, condition_decl]
-          @ map (fn decl => DATATYPE (decl))
+          @ map (fn decl => EQDATATYPE ([], decl))
              [exceptions_decl, iclass_decl]
           @ ABSDATATYPE (["'a","'b"],
               `state_inp = <| state : 'a; inp : num -> 'b |>`)
          :: ABSDATATYPE (["'a","'b"],
               `state_out = <| state : 'a; out : 'b |>`)
-         :: map (fn tm => ABSDATATYPE ([],tm))
-              [`i2 = i2`,`i4 = i4`,`i5 = i5`,`i8 = i8`,`i12 = i12`,`i16 = i16`,
-               `i24 = i24`,`i30 = i30`,`i32 = i32`]
+         :: List.concat (map mk_index [2,4,5,8,12,16,24,30,32])
           @ DATATYPE (`state_arm = ARM of reg=>psr`)
          :: DATATYPE (
               `state_arm_ex = ARM_EX of state_arm=>word32=>exceptions`)
-         :: ABSDATATYPE ([],
+         :: DATATYPE (
               `memop = MemRead of word32 | MemWrite of bool=>word32=>word32 |
                        CPMemRead of bool=>word32 | CPMemWrite of bool=>word32 |
                        CPWrite of word32`)
          :: ABSDATATYPE ([],
               `interrupts = Reset of state_arm | Undef | Prefetch |
                             Dabort of num | Fiq | Irq`)
-         :: MLSIG "type num = numML.num"
          :: DATATYPE (`state_arme = <| registers : reg; psrs : psr;
                                        memory : mem; undefined : bool |>`)
          :: map (DEFN o REWRITE_RULE
              [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
               GSYM word_concat_itself_def, GSYM word_extract_itself_def,
-              NUMERAL_DEF] o RHS_REWRITE_RULE [GSYM word_eq_def] o reshape)
-             [SUBST_def, BSUBST_def, USER_def, mode_reg2num_def,
+              NUMERAL_DEF] o RHS_REWRITE_RULE [GSYM word_eq_def])
+            (map spec_word_rule32 [
+              DECODE_PSR_THM, DECODE_BRANCH_THM, DECODE_DATAP_THM,
+              DECODE_MRS_THM, DECODE_MSR_THM, DECODE_LDR_STR_THM,
+              DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
+              DECODE_LDC_STC_THM, DECODE_INST_THM]
+           @ [SUBST_def, BSUBST_def, USER_def, mode_reg2num_def,
               definition "state_out_state", definition "state_out_out",
-              definition "state_arme_registers",definition "state_arme_memory",
-              definition "state_arme_psrs",definition "state_arme_undefined",
-              theorem "num2register_thm", theorem "num2condition_thm",
-              theorem "exceptions2num_thm",
+              num2register, num2condition, theorem "exceptions2num_thm",
               REG_READ_def, REG_WRITE_def, INC_PC_def, FETCH_PC_def,
               SET_NZCV_def, SET_NZC_def, SET_NZ_def, mode_num_def,
-              SET_IFMODE_def, DECODE_MODE_def, NZCV_def, DECODE_PSR_def,
+              SET_IFMODE_def, DECODE_MODE_def, NZCV_def,
               CARRY_def, mode2psr_def, SPSR_READ_def,
               CPSR_READ_def, CPSR_WRITE_def, SPSR_WRITE_def,
               exceptions2mode_def, SPECL [`reg`,`psr`,`e`]  EXCEPTION_def,
-              DECODE_BRANCH_def, BRANCH_def, LSL_def, LSR_def, ASR_def, ROR_def,
-              IMMEDIATE_def, SHIFT_IMMEDIATE2_def, SHIFT_REGISTER2_def,
-              SHIFT_IMMEDIATE_def, SHIFT_REGISTER_def, ADDR_MODE1_def,
+              BRANCH_def, LSL_def, LSR_def, ASR_def, ROR_def, IMMEDIATE_def,
+              SHIFT_IMMEDIATE2_def, SHIFT_REGISTER2_def,
+              spec_word_rule12 SHIFT_IMMEDIATE_THM,
+              spec_word_rule12 SHIFT_REGISTER_THM, ADDR_MODE1_def,
               SPEC `f` ALU_arith_def, SPEC `f` ALU_arith_neg_def, ALU_logic_def,
               SUB_def, ADD_def, AND_def, EOR_def, ORR_def, ALU_def,
-              ARITHMETIC_def, TEST_OR_COMP_def, DECODE_DATAP_def,
+              ARITHMETIC_def, TEST_OR_COMP_def,
               REWRITE_RULE [COND_RATOR] DATA_PROCESSING_def,
-              DECODE_MRS_def, MRS_def, DECODE_MSR_def, MSR_def,
-              ALU_multiply_def, DECODE_MLA_MUL_def, MLA_MUL_def,
+              MRS_def, MSR_def, ALU_multiply_def, MLA_MUL_def,
               BW_READ_def, UP_DOWN_def, ADDR_MODE2_def,
-              DECODE_LDR_STR_def, IMP_DISJ_THM, LDR_STR_def,
-              REGISTER_LIST_def, ADDRESS_LIST_def, WB_ADDRESS_def,
+              IMP_DISJ_THM, LDR_STR_def, spec_word_rule16 REGISTER_LIST_THM,
+              ADDRESS_LIST_def, WB_ADDRESS_def,
               FIRST_ADDRESS_def, ADDR_MODE4_def, LDM_LIST_def, STM_LIST_def,
-              DECODE_LDM_STM_def, LDM_STM_def, DECODE_SWP_def, SWP_def,
-              MRC_def, MCR_OUT_def, DECODE_LDC_STC_def,
+              LDM_STM_def, SWP_def, MRC_def, MCR_OUT_def,
               ADDR_MODE5_def, REWRITE_RULE [COND_RATOR] LDC_STC_def,
-              CONDITION_PASSED2_def, CONDITION_PASSED_def,
-              DECODE_INST_def, EXEC_INST_def,
+              CONDITION_PASSED2_def, CONDITION_PASSED_def, EXEC_INST_def,
               IS_Dabort_def, IS_Reset_def, PROJ_Dabort_def, PROJ_Reset_def ,
               interrupt2exceptions_def, PROJ_IF_FLAGS_def,
               NEXT_ARM_def, OUT_ARM,
               ADDR30_def, SET_BYTE_def, MEM_WRITE_BYTE_def, MEM_WRITE_WORD_def,
-              MEM_WRITE_def, TRANSFERS_def, NEXT_ARMe_def])
+              MEM_WRITE_def, TRANSFERS_def, NEXT_ARMe_def]))
  end;
 
 val _ = export_theory();

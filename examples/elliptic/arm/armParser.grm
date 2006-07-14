@@ -1,0 +1,281 @@
+local open Data in
+
+fun sh_imm1_to_imm2 (DpShiftImmediate x) = DtShiftImmediate x
+  | sh_imm1_to_imm2 _ = raise Parse "not a DpShiftImmediate"
+
+fun register2int r =
+  case r of
+    R0  => 0  | R1  => 1  | R2  => 2  | R3  => 3
+  | R4  => 4  | R5  => 5  | R6  => 6  | R7  => 7
+  | R8  => 8  | R9  => 9  | R10 => 10 | R11 => 11
+  | R12 => 12 | R13 => 13 | R14 => 14 | R15 => 15;
+
+fun intset2int s =
+  let val lw = map Word.fromInt (Intset.listItems s)
+      val w0 = Word.fromInt 0
+      val w1 = Word.fromInt 1 in
+    Word.toInt (foldl (fn (i,w) => Word.orb(w,Word.<<(w1,i))) w0 lw)
+  end;
+
+fun fst (a, b) = a;
+fun snd (a, b) = b;
+val toi = Arbnum.toInt o snd;
+
+fun cptoi x =
+  let val i = toi x
+      val _ = if i mod 4 = 0 then () else
+                print "Warning: offset was not aligned.\n"
+  in Int.div(i, 4) end;
+
+end
+
+%%
+
+%name arm
+
+%term EOF | RRX | LBRACE | RBRACE | LSQUARE | RSQUARE | HASH | MINUS | PLUS
+    | EXCLAIM | COLON | COMMA | HAT | BAR
+    | NUMBER of Arbnum.num
+    | REG of Data.register
+    | COREG of Data.register
+    | LABEL of string
+    | COPROC of int
+    | SHIFT of Data.shift
+    | PSRF of bool * bool * bool
+    | PSR of bool
+    | SWI_EX of Data.condition
+    | MRS of Data.condition
+    | MSR of Data.condition
+    | CDP of Data.condition
+    | DPROC1 of Data.opcode * Data.condition * bool
+    | DPROC2 of Data.opcode * Data.condition * bool
+    | BRANCH of Data.condition * bool
+    | MULT3 of Data.condition * bool
+    | SWAP of Data.condition * bool
+    | MCR_MRC of Data.condition * bool
+    | MULT4 of Data.condition * bool * bool * bool * bool
+    | STRANS of bool * Data.condition * bool
+    | LDC_STC of bool * Data.condition * bool
+    | BTRANS of bool * Data.condition * bool * bool
+
+%nonterm begin of Data.assembler list
+       | Main of Data.assembler list
+       | Line of Data.assembler
+       | Code of Data.instruction
+       | Inst of Data.instruction
+       | Target of Arbnum.num
+       | Number of bool * Arbnum.num
+       | ShiftImmediate of Data.addr_mode1
+       | AddrMode1 of Data.addr_mode1
+       | AddrMode2 of bool * bool * bool * Data.addr_mode2
+       | AddrMode5 of bool * bool * bool * int
+       | RegListEntry of Intset.intset
+       | RegList of Intset.intset
+
+%eop EOF
+%pos int
+%noshift EOF
+%verbose
+
+%start begin
+
+%%
+
+begin: Main (Main)
+
+Main:
+    Line           ( [Line] )
+  | Line Main      ( Line :: Main )
+
+Line:
+    Code          ( Data.Code Code )
+  | BRANCH LABEL  ( Data.BranchS (fst BRANCH, snd BRANCH, LABEL) )
+  | BRANCH Target ( Data.BranchN (fst BRANCH, snd BRANCH, Target) )
+  | LABEL COLON   ( Data.Label LABEL )
+  | NUMBER COLON  ( Data.Mark NUMBER )
+  | BAR LABEL BAR ( Data.Label LABEL )
+    
+Code:
+    Inst   ( Inst )
+  | Number ( Data.Data (if fst Number then Data.two_comp32 (snd Number)
+                        else snd Number) )
+
+Inst:
+    SWI_EX
+      ( Data.Instruction(Data.Swi_ex,SWI_EX) )
+  | DPROC1 REG COMMA AddrMode1
+      ( let val (opc,cond,s) = DPROC1 in
+           Data.Instruction(Data.Data_proc {opc = opc, S = s, Rd = REG,
+             Rn = REG, op2 = AddrMode1},cond)
+        end )
+  | DPROC2 REG COMMA REG COMMA AddrMode1
+      ( let val (opc,cond,s) = DPROC2 in
+           Data.Instruction(Data.Data_proc {opc = opc, S = s, Rd = REG1,
+             Rn = REG2, op2 = AddrMode1}, cond)
+         end )
+  | MULT3 REG COMMA REG COMMA REG
+      ( Data.Instruction(Data.Mla_mul {L = false, Signed = false, A = false,
+          S = snd MULT3, Rd = REG1, Rm = REG2, Rs = REG3, Rn = Data.R0},
+         fst MULT3) )
+  | MULT4 REG COMMA REG COMMA REG COMMA REG
+      ( let val (c,l,sgn,a,s) = MULT4 in
+          if l then
+            Data.Instruction(Data.Mla_mul {L = true, Signed = sgn, A = a,
+              S = s, Rd = REG1, Rm = REG3, Rs = REG4, Rn = REG2},c)
+          else
+            Data.Instruction(Data.Mla_mul {L = false, Signed = false, A = true,
+              S = s, Rd = REG1, Rm = REG2, Rs = REG3, Rn = REG4},c)
+        end )
+  | STRANS REG COMMA LSQUARE REG AddrMode2
+      ( let val (l,cond,b) = STRANS
+            val (p,u,w,offset) = AddrMode2 in
+          Data.Instruction(Data.Ldr_str {P = p, U = u, B = b, W = w, L = l,
+             Rd = REG1, Rn = REG2, offset = offset},cond)
+        end )
+  | BTRANS REG COMMA LBRACE RegList RBRACE
+      ( let val (l,c,p,u) = BTRANS in
+          Data.Instruction(Data.Ldm_stm {L = l, P = p, U = u, S = false,
+            W = false, Rn = REG, list = intset2int RegList},c)
+        end )
+  | BTRANS REG COMMA LBRACE RegList RBRACE HAT
+      ( let val (l,c,p,u) = BTRANS in
+          Data.Instruction(Data.Ldm_stm {L = l, P = p, U = u, S = true,
+            W = false, Rn = REG, list = intset2int RegList},c)
+        end )
+  | BTRANS REG EXCLAIM COMMA LBRACE RegList RBRACE
+      ( let val (l,c,p,u) = BTRANS in
+          Data.Instruction(Data.Ldm_stm {L = l, P = p, U = u, S = false,
+            W = true, Rn = REG, list = intset2int RegList},c)
+        end )
+  | BTRANS REG EXCLAIM COMMA LBRACE RegList RBRACE HAT
+      ( let val (l,c,p,u) = BTRANS in
+          Data.Instruction(Data.Ldm_stm {L = l, P = p, U = u, S = true,
+            W = true, Rn = REG, list = intset2int RegList},c)
+        end )
+  | SWAP REG COMMA REG COMMA LSQUARE REG RSQUARE
+      ( Data.Instruction(Data.Swp {B = snd SWAP, Rd = REG1, Rm = REG2,
+          Rn = REG3},fst SWAP) )
+  | MRS REG COMMA PSR
+      ( Data.Instruction(Data.Mrs {R = PSR, Rd = REG},MRS) )
+  | MSR PSR COMMA REG
+      ( Data.Instruction(Data.Msr {R = PSR, bit19 = true, bit16= true,
+          Op = Data.MsrRegister REG},MSR) )
+  | MSR PSRF COMMA REG
+      ( let val (r,b19,b16) = PSRF in
+          Data.Instruction(Data.Msr {R = r, bit19 = b19, bit16= b16,
+            Op = Data.MsrRegister REG},MSR)
+        end )
+  | MSR PSR COMMA HASH NUMBER
+      ( Data.Instruction(Data.Msr {R = PSR, bit19 = true, bit16= true,
+          Op = Data.MsrImmediate NUMBER},MSR) )
+  | MSR PSRF COMMA HASH NUMBER
+      ( let val (r,b19,b16) = PSRF in
+          Data.Instruction(Data.Msr {R = r, bit19 = b19, bit16= b16,
+            Op = Data.MsrImmediate NUMBER},MSR)
+        end )
+  | CDP COPROC COMMA NUMBER COMMA COREG COMMA COREG COMMA COREG
+      ( Data.Instruction(Data.Cdp {CP = COPROC, CRd = COREG1, CRn = COREG2,
+          Cop1 = Arbnum.toInt NUMBER, CRm = COREG3, Cop2 = 0},CDP) )
+  | CDP COPROC COMMA NUMBER COMMA COREG COMMA COREG COMMA COREG COMMA NUMBER
+      ( Data.Instruction(Data.Cdp {CP = COPROC, CRd = COREG1, CRn = COREG2,
+          Cop1 = Arbnum.toInt NUMBER1, CRm = COREG3,
+          Cop2 = Arbnum.toInt NUMBER2}, CDP) )
+  | MCR_MRC COPROC COMMA NUMBER COMMA REG COMMA COREG COMMA COREG
+      ( Data.Instruction(Data.Mcr_mrc {CP = COPROC, L = snd MCR_MRC, Rd = REG,
+           Cop1 = Arbnum.toInt NUMBER, CRn = COREG1, CRm = COREG2, Cop2 = 0},
+          fst MCR_MRC) )
+  | MCR_MRC COPROC COMMA NUMBER COMMA REG COMMA COREG COMMA COREG COMMA NUMBER
+      ( Data.Instruction(Data.Mcr_mrc {CP = COPROC, L = snd MCR_MRC, Rd = REG,
+          Cop1 = Arbnum.toInt NUMBER1, CRn = COREG1, CRm = COREG2,
+          Cop2 = Arbnum.toInt NUMBER2}, fst MCR_MRC) )
+  | LDC_STC COPROC COMMA COREG COMMA LSQUARE REG AddrMode5
+      ( let val (l,cond,n) = LDC_STC
+            val (p,u,w,offset) = AddrMode5 in
+          Data.Instruction(Data.Ldc_stc {P = p, U = u, N = n, CP = COPROC,
+            W = w, L = l, CRd = COREG, Rn = REG, offset = offset}, cond)
+        end )
+
+Target:
+    NUMBER        ( let open Arbnum in
+                      if NUMBER <= fromHexString "FFFFFFFF" then
+                        Data.align32 NUMBER
+                      else raise Data.BadInstruction "Branch address too large"
+                    end )
+  | MINUS NUMBER  ( let open Arbnum in
+                      if NUMBER <= fromHexString "FFFFFFFF" then
+                        (Data.two_comp32 o Data.align32) NUMBER
+                      else raise Data.BadInstruction "Branch address too large"
+                    end )
+
+Number:
+    NUMBER         ( (false,NUMBER) )
+  | MINUS NUMBER   ( (true, NUMBER) )
+
+ShiftImmediate:
+    REG             ( Data.DpShiftImmediate {Rm = REG, Sh = Data.LSL, Imm = 0} )
+  | REG COMMA RRX   ( Data.DpShiftImmediate {Rm = REG, Sh = Data.ROR, Imm = 0} )
+  | REG COMMA SHIFT HASH NUMBER
+      ( let val imm = Arbnum.toInt NUMBER in
+          if 32 < imm orelse imm = 32 andalso
+               ((SHIFT = Data.LSL) orelse (SHIFT = Data.ROR)) then
+            raise Data.BadInstruction "Immediate shift value too large"
+          else
+            Data.DpShiftImmediate {Rm = REG, Sh = SHIFT,
+               Imm = (if imm = 32 then 0 else imm)} end )
+
+AddrMode1:
+    ShiftImmediate      ( ShiftImmediate )
+  | REG COMMA SHIFT REG
+                 ( Data.DpShiftRegister {Rm = REG1, Sh = SHIFT, Rs = REG2} )
+  | HASH Number  ( Data.DpImmediate(if fst Number then
+                                      Data.two_comp32 (snd Number)
+                                    else snd Number) )
+
+AddrMode2:
+    RSQUARE
+       ( (true,true,false,Data.DtImmediate 0) )
+  | COMMA HASH Number RSQUARE
+       ( (true,not (fst Number),false,Data.DtImmediate (toi Number)) )
+  | COMMA HASH Number RSQUARE EXCLAIM
+       ( (true,not (fst Number),true,Data.DtImmediate (toi Number)) )
+  | COMMA ShiftImmediate RSQUARE
+       ( (true,true,false,sh_imm1_to_imm2 ShiftImmediate) )
+  | COMMA ShiftImmediate RSQUARE EXCLAIM
+       ( (true,true,true,sh_imm1_to_imm2 ShiftImmediate) )
+  | COMMA PLUS ShiftImmediate RSQUARE
+       ( (true,true,false,sh_imm1_to_imm2 ShiftImmediate) )
+  | COMMA PLUS ShiftImmediate RSQUARE EXCLAIM
+       ( (true,true,true,sh_imm1_to_imm2 ShiftImmediate) )
+  | COMMA MINUS ShiftImmediate RSQUARE
+       ( (true,false,false,sh_imm1_to_imm2 ShiftImmediate) )
+  | COMMA MINUS ShiftImmediate RSQUARE EXCLAIM
+       ( (true,false,true,sh_imm1_to_imm2 ShiftImmediate) )
+  | RSQUARE COMMA HASH Number
+       ( (false,not (fst Number),true,Data.DtImmediate (toi Number)) )
+  | RSQUARE COMMA ShiftImmediate
+       ( (false,true,true,sh_imm1_to_imm2 ShiftImmediate) )
+  | RSQUARE COMMA PLUS ShiftImmediate
+       ( (false,true,true,sh_imm1_to_imm2 ShiftImmediate) )
+  | RSQUARE COMMA MINUS ShiftImmediate
+       ( (false,false,true,sh_imm1_to_imm2 ShiftImmediate) )
+
+AddrMode5:
+    RSQUARE                      ( (true,true,false,0) )
+  | COMMA HASH Number RSQUARE    ( (true,not(fst Number),false,cptoi Number) )
+  | COMMA HASH Number RSQUARE EXCLAIM
+                                 ( (true,not(fst Number),true,cptoi Number) )
+  | RSQUARE COMMA HASH Number    ( (false,not(fst Number),true,cptoi Number) )
+  
+RegListEntry:
+    REG            ( Intset.singleton (register2int REG) )
+  | REG MINUS REG  ( let val nl = register2int REG1
+                         val nr = register2int REG2 in
+                       if nl < nr then
+                         Intset.addList(Intset.empty,
+                           List.tabulate(nr + 1 - nl, fn i => nl + i))
+                         else raise Data.BadInstruction "Invalid register list"
+                       end )
+
+RegList:
+    RegListEntry                ( RegListEntry )
+  | RegListEntry COMMA RegList  ( Intset.union(RegListEntry, RegList) )

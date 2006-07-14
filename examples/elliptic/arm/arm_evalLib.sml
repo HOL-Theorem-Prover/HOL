@@ -544,8 +544,7 @@ in
     let val nll = String.concat (map (fn s => s ^ "\n") l)
         val c = substring(nll,0,size nll - 1)
     in
-      assemble_assambler m
-        (parse_arm_buf "" BasicIO.std_in (Lexing.createLexerString c))
+      assemble_assambler m (string_to_code c)
     end;
   fun assemble1 m t = list_assemble m [t];
 end;
