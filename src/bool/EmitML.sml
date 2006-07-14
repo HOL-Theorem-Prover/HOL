@@ -42,6 +42,7 @@ struct
 open HolKernel boolSyntax Abbrev;
 
 val ERR = mk_HOL_ERR "EmitML";
+val WARN = HOL_WARNING "EmitML";
 
 (*---------------------------------------------------------------------------*)
 (* Forward references, to be patched up in the appropriate places.           *)
@@ -616,7 +617,9 @@ datatype elem
 
 (*---------------------------------------------------------------------------*)
 (* Internal version (nearly identical, except that datatype declarations     *)
-(* have been parsed).                                                        *)
+(* have been parsed) and some standard definitions from datatypes (e.g. size *)
+(* functions) and record types (accessor and field update functions) are     *)
+(* automatically added.                                                      *)
 (*---------------------------------------------------------------------------*)
 
 datatype elem_internal
@@ -635,8 +638,8 @@ fun datatype_silent_defs tyAST =
      val tyrecd = hd (Type.decls tyop)
  in 
   case TypeBase.read tyrecd
-   of NONE => raise ERR "datatype_silent_defs" 
-               ("No info in the TypeBase for "^Lib.quote tyop)
+   of NONE => (WARN "datatype_silent_defs"
+                ("No info in the TypeBase for "^Lib.quote tyop); [])
     | SOME tyinfo =>
         let open TypeBasePure
             val size_def = [snd (valOf(size_of tyinfo))] handle _ => []
@@ -647,7 +650,6 @@ fun datatype_silent_defs tyAST =
               (size_def @ updates_def @ access_def)
         end
  end;
-
 
 (*---------------------------------------------------------------------------*)
 (* Map from external presentation to internal                                *)
