@@ -1,3 +1,6 @@
+structure fcpML =
+struct
+
 open numML
 
 exception IndexUndefined
@@ -11,3 +14,5 @@ type 'a itself = holtype
 
 val lookup_dimindex = ref (fn (a: holtype) => (raise IndexUndefined):num)
 fun dimindex a = !lookup_dimindex a
+
+end
