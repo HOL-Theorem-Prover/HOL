@@ -309,7 +309,9 @@ fun define_recursive_term_function q = let
            handle e => (restore(); raise e)
   val _ = restore()
   val f_thm0 = prove_recursive_term_function_exists0 tm
-  val (f_t, th_body) = dest_exists (concl f_thm0)
+  val (f_t0, th_body0) = dest_exists (concl f_thm0)
+  val f_t = mk_var(fstr, type_of f_t0)
+  val th_body = subst [f_t0 |-> f_t] th_body0
   fun defining_conj c = let
     val fvs = List.filter (fn v => #1 (dest_var v) <> fstr) (free_vars c)
   in
