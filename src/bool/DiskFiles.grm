@@ -1,19 +1,4 @@
-open HolKernel
-type dftables = { idtable : {Thy:string,Other:string} list ref,
-                  tytable : hol_type list ref, tysize : int ref,
-                  tmtable : term list ref, tmsize : int ref}
-fun update_ids idlist ({idtable, ...} : dftables) = (idtable := idlist)
-fun lookup_id (d : dftables) i = List.nth(!(#idtable d), i)
-fun newtype ty ({tytable, tysize, ...} : dftables) = (tytable := ty:: !tytable;
-                                                      tysize := !tysize + 1)
-fun lookup_type ({tytable = ref tys, tysize = ref sz, ...} : dftables) i =
-    List.nth(tys, sz - i - 1)
-fun newterm ({tmtable,tmsize,...}:dftables) tm = (tmtable := tm :: !tmtable,
-                                                  tmsize := !tmsize + 1)
-fun lookup_term ({tmtable = ref tms, tmsize = ref sz, ...} : dftables) i =
-    List.nth(tms, sz - i - 1)
-
-
+open DiskFilesHeader HolKernel
 %%
 %name DiskFiles
 %arg (dftables) : dftables
@@ -22,9 +7,12 @@ fun lookup_term ({tmtable = ref tms, tmsize = ref sz, ...} : dftables) i =
 %nonterm begin of (string * thm) list
        | theoryfile of (string * thm) list
        | ids_section of unit
-       | idpair_list of {Thy : string, Other : string} list
-       | idpair of {Thy : string, Other: string}
+       | idpair_list
+       | idpair
        | types_section
+       | tysize_spec
+       | tmsize_spec
+       | idsize_spec
        | typedecl_list
        | typedecl
        | intlist_ne of int list
@@ -46,7 +34,7 @@ fun lookup_term ({tmtable = ref tms, tmsize = ref sz, ...} : dftables) i =
 
 %term EOF | ID of string | DOLLAR | FULLSTOP | LPAREN | RPAREN | BACKSLASH |
       IDS | TYPES | TERMS | THEOREMS | LBRACKET | RBRACKET | NUMBER of int |
-      TYV | TYOP | TMV | TMC | TMREF
+      TYV | TYOP | TMV | TMC
 
 %eop EOF
 %pos int
@@ -60,14 +48,18 @@ begin : theoryfile (theoryfile)
 
 theoryfile : ids_section types_section terms_section theorems (theorems)
 
-ids_section : IDS idpair_list (update_ids idpair_list dftables)
+ids_section : IDS idsize_spec idpair_list ()
 
-idpair_list : ([])
-            | idpair idpair_list (idpair :: idpair_list)
+idsize_spec : NUMBER (id_init dftables NUMBER)
 
-idpair : ID DOLLAR ID ( {Thy = ID1, Other = ID2 } )
+idpair_list : ()
+            | idpair idpair_list ()
 
-types_section : TYPES typedecl_list ()
+idpair : ID DOLLAR ID ( newid dftables {Thy = ID1, Other = ID2 }  )
+
+types_section : TYPES tysize_spec typedecl_list ()
+
+tysize_spec : NUMBER (type_init dftables NUMBER)
 
 typedecl_list : ()
               | typedecl typedecl_list ()
@@ -84,7 +76,9 @@ typedecl : TYV ID (newtype (mk_vartype ID) dftables)
 intlist_ne : NUMBER ([NUMBER])
            | NUMBER intlist_ne (NUMBER::intlist_ne)
 
-terms_section : TERMS termdecl_list ()
+terms_section : TERMS tmsize_spec termdecl_list ()
+
+tmsize_spec : NUMBER (term_init dftables NUMBER)
 
 termdecl_list : () | termdecl termdecl_list ()
 
@@ -122,5 +116,5 @@ term_c : term_c base_term (mk_comb(term_c, base_term))
 base_term : LPAREN term_a RPAREN (term_a)
           | tmid (lookup_term dftables tmid)
 
-tmid :  TMREF NUMBER (NUMBER)
+tmid :  NUMBER (NUMBER)
 

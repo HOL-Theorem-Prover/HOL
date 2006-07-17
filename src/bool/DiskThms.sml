@@ -38,7 +38,11 @@ struct
     val _ = PP.begin_block pps PP.CONSISTENT 0 (* whole file block *)
 
     val _ = PP.begin_block pps PP.CONSISTENT 2 (* IDs block *)
+    val _ = PP.begin_block pps PP.CONSISTENT 2 (* IDs title block *)
     val _ = out "IDS"
+    val _ = PP.add_break pps (1,0)
+    val _ = out (Int.toString (#idsize idtable))
+    val _ = PP.end_block pps                   (* end IDs title block *)
     val _ = PP.add_break pps (1,0)
     val _ = PP.begin_block pps PP.INCONSISTENT 0
     val _ =
@@ -47,11 +51,15 @@ struct
           (fn () => ()) (fn () => PP.add_break pps (1,0))
           (List.rev (#idlist idtable))
     val _ = PP.end_block pps
-    val _ = PP.end_block pps (* end IDs block *)
+    val _ = PP.end_block pps                   (* end IDs block *)
     val _ = PP.add_break pps (1,0)
 
     val _ = PP.begin_block pps PP.CONSISTENT 2 (* types block *)
+    val _ = PP.begin_block pps PP.CONSISTENT 2 (* type title block *)
     val _ = out "TYPES"
+    val _ = PP.add_break pps (1,0)
+    val _ = out (Int.toString (#tysize tytable))
+    val _ = PP.end_block pps                   (* end type title block *)
     val _ = PP.add_break pps (1,0)
     val _ = PP.begin_block pps PP.INCONSISTENT 0
     fun pr_sty sty =
@@ -75,7 +83,11 @@ struct
     val _ = PP.add_break pps (1,0)
 
     val _ = PP.begin_block pps PP.CONSISTENT 2 (* terms block *)
+    val _ = PP.begin_block pps PP.CONSISTENT 2 (* terms title block *)
     val _ = out "TERMS"
+    val _ = PP.add_break pps (1,0)
+    val _ = out (Int.toString (#termsize tmtable))
+    val _ = PP.end_block pps                   (* end terms title block *)
     val _ = PP.add_break pps (1,0)
     val _ = PP.begin_block pps PP.INCONSISTENT 0
     fun pr_stm stm =
@@ -103,7 +115,7 @@ struct
                              (fn () => PP.add_break pps (1,0))
                              (List.rev (#termlist tmtable))
     val _ = PP.end_block pps
-    val _ = PP.end_block pps (* end terms block *)
+    val _ = PP.end_block pps                   (* end terms block *)
     val _ = PP.add_break pps (1,0)
 
 
@@ -133,7 +145,7 @@ struct
           | _ => let
               val i = Map.find(#termmap tmtable, t)
             in
-              PP.add_string pps ("t"^Int.toString i)
+              PP.add_string pps (Int.toString i)
             end
     in
       PP.add_string pps "(";

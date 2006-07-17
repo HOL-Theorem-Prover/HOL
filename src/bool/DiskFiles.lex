@@ -32,7 +32,6 @@ idstring=\" ([^\"\\] | "\\\"" | "\\\\" | "\\n")* \";
 "TYPES"   => (Tokens.TYPES(!pos,!pos));
 "TERMS"   => (Tokens.TERMS(!pos,!pos));
 "THEOREMS"   => (Tokens.THEOREMS(!pos,!pos));
-"t" => (Tokens.TMREF(!pos,!pos));
 {integer} => (Tokens.NUMBER(Option.valOf (Int.fromString yytext),
                             !pos, !pos));
 {idstring} => (let val substr = String.substring(yytext,1,size yytext - 2)

@@ -15,7 +15,7 @@ DiskFiles.grm-sig.sml: DiskFiles.grm
 DiskFiles.grm-sig.uo: DiskFiles.grm-sig.sml
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
 
-DiskFiles.grm.uo: DiskFiles.grm.sml DiskFiles.grm-sig.uo
+DiskFiles.grm.uo: DiskFiles.grm.sml DiskFiles.grm-sig.uo DiskFilesHeader.ui
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm-sig.ui $<
 
 DiskFiles.lex.sml: DiskFiles.lex
@@ -25,7 +25,7 @@ DiskFiles.lex.uo: DiskFiles.lex.sml
 	$(HOLMOSMLC) -toplevel -c DiskFiles.grm-sig.ui $<
 
 AssembleDiskFiles.uo: AssembleDiskFiles.sml AssembleDiskFiles.ui \
-                      DiskFiles.grm.uo DiskFiles.lex.uo
+                      DiskFiles.grm.uo DiskFiles.lex.uo DiskFilesHeader.ui
 	$(HOLMOSMLC) -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) DiskFiles.grm.ui DiskFiles.lex.ui $<
 
 selftest.exe: selftest.uo simpfrag.uo

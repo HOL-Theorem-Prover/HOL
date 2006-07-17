@@ -21,8 +21,7 @@ struct
   end
 
   fun read_stream strm = let
-    val tables = { idtable = ref [], tytable = ref [], tysize = ref 0,
-                   tmtable = ref [], tmsize = ref 0}
+    val tables = DiskFilesHeader.initial_tables()
     val lexer = DiskFileParser.makeLexer (fn _ => TextIO.inputLine strm)
     val _ = DiskFilesLex.UserDeclarations.pos := 1
   in
