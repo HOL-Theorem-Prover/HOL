@@ -73,7 +73,7 @@ fun LIST_INDUCT (base,step) =
    let val {Bvar,Body} = dest_forall(concl step)
        val {ant,conseq} = dest_imp Body
        val {Bvar=h,Body=con} = dest_forall conseq
-       val P  = %`\^Bvar.^ant`
+       val P  = mk_abs(Bvar, ant)
        val b1 = genvar bool_ty
        val b2 = genvar bool_ty
        val base'  = EQ_MP (SYM(BETA_CONV (%`^P []`))) base
