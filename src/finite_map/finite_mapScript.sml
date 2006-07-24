@@ -484,19 +484,15 @@ val FM_PULL_APART = store_thm(
 val update_eq_not_x = Q.prove
 (`!(f:'a |-> 'b) x.
       ?f'. !y. (FUPDATE f (x,y) = FUPDATE f' (x,y)) /\ ~(x IN FDOM f')`,
- INDUCT_THEN fmap_SIMPLE_INDUCT ASSUME_TAC THENL
- [GEN_TAC THEN Q.EXISTS_TAC `FEMPTY`
-   THEN REWRITE_TAC [FDOM_FEMPTY, NOT_IN_EMPTY],
-  NTAC 3 GEN_TAC
-    THEN POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC`x'`)
-    THEN Q.ASM_CASES_TAC `x' = x` THENL
-    [Q.EXISTS_TAC `f'`
-       THEN ASM_REWRITE_TAC [FUPDATE_EQ]
-       THEN POP_ASSUM (fn th => ASM_REWRITE_TAC [SYM th]),
-     Q.EXISTS_TAC `FUPDATE f' (x,y)`
-       THEN IMP_RES_TAC FUPDATE_COMMUTES
-       THEN POP_ASSUM (ASSUME_TAC o (ONCE_REWRITE_RULE [EQ_SYM_EQ]))
-       THEN ASM_REWRITE_TAC [FDOM_FUPDATE, IN_INSERT]]]);
+ HO_MATCH_MP_TAC fmap_INDUCT THEN SRW_TAC [][] THENL [
+   Q.EXISTS_TAC `FEMPTY` THEN SRW_TAC [][],
+   FIRST_X_ASSUM (Q.SPEC_THEN `x'` STRIP_ASSUME_TAC) THEN
+   Cases_on `x = x'` THEN SRW_TAC [][] THENL [
+     Q.EXISTS_TAC `f` THEN SRW_TAC [][],
+     Q.EXISTS_TAC `f' |+ (x,y)` THEN
+     SRW_TAC [][] THEN METIS_TAC [FUPDATE_COMMUTES]
+   ]
+ ])
 
 val lemma9 = BETA_RULE (Q.prove
 (`!x y (f1:('a,'b)fmap) f2.
@@ -525,14 +521,14 @@ val fmap_EQ_2 = Q.prove(
     SRW_TAC [][FDOM_FEMPTY] THEN
     PROVE_TAC [FCARD_0_FEMPTY, CARD_EMPTY, FCARD_DEF],
     SRW_TAC [][FDOM_FUPDATE] THEN
-    `?h. (FUPDATE g (x, FAPPLY g x) = FUPDATE h (x, FAPPLY g x)) /\
-         ~(x IN FDOM h)` by PROVE_TAC [update_eq_not_x] THEN
+    `?h. (FUPDATE g (x, g ' x) = FUPDATE h (x, g ' x)) /\ ~(x IN FDOM h)`
+       by PROVE_TAC [update_eq_not_x] THEN
     `x IN FDOM g` by PROVE_TAC [IN_INSERT] THEN
-    `FUPDATE g (x, FAPPLY g x) = g` by PROVE_TAC [FUPDATE_ABSORB_THM] THEN
+    `FUPDATE g (x, g ' x) = g` by PROVE_TAC [FUPDATE_ABSORB_THM] THEN
     POP_ASSUM SUBST_ALL_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
-    `!v. FAPPLY (FUPDATE f (x, y)) v = FAPPLY (FUPDATE h (x, FAPPLY g x)) v`
+    `!v. (f |+ (x, y)) ' v = (h |+ (x, FAPPLY g x)) ' v`
         by SRW_TAC [][] THEN
-    `y = FAPPLY g x` by PROVE_TAC [FAPPLY_FUPDATE] THEN
+    `y = g ' x` by PROVE_TAC [FAPPLY_FUPDATE] THEN
     ASM_REWRITE_TAC [] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN CONJ_TAC THENL [
       FULL_SIMP_TAC (srw_ss()) [EXTENSION, FDOM_FUPDATE] THEN PROVE_TAC [],
@@ -781,9 +777,23 @@ val DRESTRICT_FUNION = Q.store_thm
     "assoc" for finite maps
  ---------------------------------------------------------------------------*)
 
-val lookup_DEF = Q.new_definition
-("lookup_DEF",
+val FLOOKUP_DEF = Q.new_definition
+("FLOOKUP_DEF",
  `FLOOKUP ^fmap x = if x IN FDOM f then SOME (FAPPLY f x) else NONE`);
+
+val FLOOKUP_EMPTY = store_thm(
+  "FLOOKUP_EMPTY",
+  ``FLOOKUP FEMPTY k = NONE``,
+  SRW_TAC [][FLOOKUP_DEF]);
+val _ = export_rewrites ["FLOOKUP_EMPTY"]
+
+val FLOOKUP_UPDATE = store_thm(
+  "FLOOKUP_UPDATE",
+  ``FLOOKUP (fm |+ (k1,v)) k2 = if k1 = k2 then SOME v else FLOOKUP fm k2``,
+  SRW_TAC [][FLOOKUP_DEF, FAPPLY_FUPDATE_THM] THEN
+  FULL_SIMP_TAC (srw_ss()) []);
+(* don't export this because of the if, though this is pretty paranoid *)
+
 
 (*---------------------------------------------------------------------------
        Universal quantifier on finite maps
@@ -1440,7 +1450,7 @@ val _ =
     [DEFN_NOSIG (CONJ FDOM_FEMPTY FDOM_FUPDATE),
      DEFN ((CONJ FAPPLY_FEMPTY FAPPLY_FUPDATE_THM)),
      DEFN (FCARD_DEF),
-     DEFN (lookup_DEF),
+     DEFN (FLOOKUP_DEF),
      DEFN (FUPDATE_LIST),
      DEFN ((CONJ FUNION_FEMPTY_1
                 (CONJ FUNION_FEMPTY_2 FUNION_FUPDATE_1))),
