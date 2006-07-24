@@ -14,18 +14,19 @@
 (include-book "misc/file-io" :dir :system)
 
 ; In what follows, basic-only means that we only want defaxiom, defthm, and
-; logic-mode defun forms, though we always allow input using progn and
-; mutual-recursion.  We never expect to see local forms.
+; logic-mode defun (and defund) forms, though we always allow input using
+; progn, mutual-recursion, and encapsulate with nil signature.  We drop local
+; forms.
 
 ; Either way, we drop all hints.  That could be changed.
 
-(defun expand-form (form untrans-flg basic-only state)
+(defun expand-form (form untrans-flg state)
   (declare (xargs :guard (true-listp form)))
   (let* ((wrld (w state))
          (event-type (car form))
          (body (case event-type
                  ((defun defund) (car (last form)))
-                 ((defaxiom defthm) (third form)))))
+                 ((defaxiom defthm defthmd) (third form)))))
     (er-let* ((tbody (translate body t t t 'top-level wrld state)))
              (let ((new-body
                     (if untrans-flg
@@ -37,10 +38,12 @@
                                         (cadr form)
                                         (caddr form)
                                         new-body))
-                  ((defaxiom defthm) (list event-type
-                                           (cadr form)
-                                           new-body))
-                  (otherwise (and (not basic-only) form))))))))
+                  ((defaxiom defthm defthmd) (list event-type
+                                                   (cadr form)
+                                                   new-body))
+                  (otherwise (er hard 'expand-form
+                                 "Unexpected form type: ~x0"
+                                 form))))))))
 
 (defun expand-forms (forms acc untrans-flg basic-only state)
 
@@ -53,30 +56,39 @@
                (let ((form (car forms)))
                  (cond ((atom form) (value acc))
                        (t (case (car form)
-                            ((progn mutual-recursion encapsulate)
-                             (let ((sub-forms (if (eq (car form) 'encapsulate)
-                                                  (cddr form)
-                                                (cdr form))))
-                               (er-let* ((defs (expand-forms sub-forms nil
-                                                             untrans-flg
-                                                             basic-only
-                                                             state)))
-                                        (value
-                                         (if (null defs) ; expect basic-only
-                                             acc
-                                           (append (reverse defs)
-                                                   acc))))))
-                            ((defaxiom defthm defun)
+                            (local (value acc))
+                            ((progn mutual-recursion)
+                             (er-let* ((defs (expand-forms (cdr form) nil
+                                                           untrans-flg
+                                                           basic-only
+                                                           state)))
+                                      (value
+                                       (if (null defs) ; expect basic-only
+                                           acc
+                                         (cons (cons (car form)
+                                                     (reverse defs))
+                                               acc)))))
+                            (encapsulate
+                             (if (null (cadr form))
+                                 (expand-forms (cddr form) acc untrans-flg
+                                               basic-only state)
+                               (er soft 'expand-forms
+                                   "EXPAND-FORMS cannot yet handle an ~
+                                    ENCAPSULATE form with a non-nil ~
+                                    signature, such as ~x0"
+                                   form)))
+                            ((defaxiom defthm defthmd defun defund)
                              (if (and basic-only
-                                      (eq (car form) 'defun)
+                                      (member-eq (car form) '(defun defund))
                                       (eq (symbol-class (cadr form) (w state))
                                           :program))
                                  (value acc)
                                (er-let*
-                                ((x (expand-form form untrans-flg basic-only
-                                                 state)))
+                                ((x (expand-form form untrans-flg state)))
                                 (value (cons x acc)))))
-                            (t (value acc))))))))
+                            (t (if basic-only
+                                   (value acc)
+                                 (value (cons form acc))))))))))
              (expand-forms (cdr forms) new-acc untrans-flg basic-only state))))
 
 (defun push-defuns-to-front (forms non-defuns defuns)

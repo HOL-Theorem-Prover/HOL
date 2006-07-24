@@ -117,17 +117,11 @@ val eq_def =
      |- true_listp x = ite (consp x) (true_listp (cdr x)) (eq x nil),
 *)
 
-(*
-val true_listp_def =
- acl2Define "ACL2::TRUE-LISTP"
-  `true_listp x = ite (consp x) (true_listp (cdr x)) (eq x nil)`;
-*)
-
 val (true_listp_def,true_listp_ind) =
  acl2_defn "ACL2::TRUE-LISTP"
   (`true_listp x = ite (consp x) (true_listp (cdr x)) (eq x nil)`,
    WF_REL_TAC `measure sexp_size`
-    THEN RW_TAC arith_ss [sexp_size_cdr]);
+    THEN ACL2_SIMP_TAC []);
 
 (*
      [oracles: DEFUN ACL2::LIST-MACRO, DISK_THM] [axioms: ] []
@@ -140,7 +134,7 @@ val (list_macro_def,list_macro_ind) =
   (`list_macro lst =
     andl [consp lst; List [csym "CONS"; car lst; list_macro (cdr lst)]]`,
    WF_REL_TAC `measure sexp_size`
-    THEN RW_TAC arith_ss [sexp_size_cdr]);
+    THEN ACL2_SIMP_TAC []);
 
 (*
      [oracles: DEFUN ACL2::AND-MACRO, DISK_THM] [axioms: ] []
@@ -160,7 +154,7 @@ val (and_macro_def,and_macro_ind) =
               (car lst))
          t`,
    WF_REL_TAC `measure sexp_size`
-    THEN RW_TAC arith_ss [sexp_size_cdr]);
+    THEN ACL2_SIMP_TAC []);
 
 (*
      [oracles: DEFUN ACL2::OR-MACRO, DISK_THM] [axioms: ] []
@@ -262,7 +256,7 @@ val (eqlable_listp_def,eqlable_listp_ind) =
          (andl [eqlablep (car l); eqlable_listp (cdr l)])
          (equal l nil)`,
    WF_REL_TAC `measure sexp_size`
-    THEN RW_TAC arith_ss [sexp_size_cdr]);
+    THEN ACL2_SIMP_TAC []);
 
 val eqlable_listp =
  store_thm
@@ -327,6 +321,10 @@ val atom_def =
 (*
      [oracles: DEFUN COMMON-LISP::ENDP] [axioms: ] [] |- endp x = atom x,
 *)
+
+val endp_def =
+ acl2Define "COMMON-LISP::ENDP"
+  `endp x = atom x`;
 
 (*
      [oracles: DEFUN ACL2::MUST-BE-EQUAL] [axioms: ] []
@@ -431,6 +429,10 @@ val atom_def =
 (*
      [oracles: DEFUN COMMON-LISP::EQL] [axioms: ] [] |- eql x y = equal x y,
 *)
+
+val eql_def =
+ acl2Define "COMMON-LISP::EQL"
+  `eql x y = equal x y`;
 
 (*
      [oracles: DEFUN COMMON-LISP::=] [axioms: ] []
@@ -550,6 +552,13 @@ val fix =
         itel [(endp l,nil); (eql x (car l),l)] (member x (cdr l)),
 *)
 
+val (member_def,member_ind) =
+ acl2_defn "COMMON-LISP::MEMBER"
+  (`member x l =
+     itel [(endp l,nil); (eql x (car l),l)] (member x (cdr l))`,
+   WF_REL_TAC `measure (sexp_size o SND)`
+    THEN ACL2_SIMP_TAC[]);
+
 (*
      [oracles: DEFUN ACL2::NO-DUPLICATESP, DISK_THM] [axioms: ] []
      |- no_duplicatesp l =
@@ -563,6 +572,14 @@ val fix =
         itel [(endp alist,nil); (eql x (caar alist),car alist)]
           (assoc x (cdr alist)),
 *)
+
+val (assoc_def,assoc_ind) =
+ acl2_defn "COMMON-LISP::MEMBER"
+  (`assoc x alist =
+      itel [(endp alist,nil); (eql x (caar alist),car alist)]
+           (assoc x (cdr alist))`,
+   WF_REL_TAC `measure (sexp_size o SND)`
+    THEN ACL2_SIMP_TAC[]);
 
 (*
      [oracles: DEFUN ACL2::R-EQLABLE-ALISTP, DISK_THM] [axioms: ] []
@@ -602,7 +619,7 @@ val fix =
 (*
      [oracles: DEFUN COMMON-LISP::STANDARD-CHAR-P, DISK_THM] [axioms: ] []
      |- standard_char_p x =
-        andl
+         andl
           [member x
              (List
                 [chr #"\n"; chr #" "; chr #"!"; chr #"\""; chr #"#";
@@ -624,6 +641,72 @@ val fix =
                  chr #"~"]); t],
 *)
 
+val standard_char_p_def =
+ acl2Define "COMMON-LISP::STANDARD-CHAR-P"
+  `standard_char_p x =
+         andl
+          [member x
+             (List
+              (MAP
+                chr
+                ^(mk_list
+                   (map
+                     fromMLchar
+                     [#"\n", #" ", #"!", #"\"", #"#",
+                      #"$", #"%", #"&", #"'", #"(", #")",
+                      #"*", #"+", #",", #"-", #".", #"/",
+                      #"0", #"1", #"2", #"3", #"4", #"5",
+                      #"6", #"7", #"8", #"9", #":", #";",
+                      #"<", #"=", #">", #"?", #"@", #"A",
+                      #"B", #"C", #"D", #"E", #"F", #"G",
+                      #"H", #"I", #"J", #"K", #"L", #"M",
+                      #"N", #"O", #"P", #"Q", #"R", #"S",
+                      #"T", #"U", #"V", #"W", #"X", #"Y",
+                      #"Z", #"[", #"\\", #"]", #"^", #"_",
+                      chr 96, (* HOL parser workaround *)
+                      #"a", #"b", #"c", #"d", #"e",
+                      #"f", #"g", #"h", #"i", #"j", #"k",
+                      #"l", #"m", #"n", #"o", #"p", #"q",
+                      #"r", #"s", #"t", #"u", #"v", #"w",
+                      #"x", #"y", #"z", #"{", #"|", #"}",
+                      #"~"], ``:char``)))); t]`;
+
+
+(*
+- REWRITE_RULE [listTheory.MAP]standard_char_p_def;
+> val it =
+    |- !x.
+         standard_char_p x =
+         andl
+           [member x
+              (List
+                 [chr #"\n"; chr #" "; chr #"!"; chr #"\""; chr #"#";
+                  chr #"$"; chr #"%"; chr #"&"; chr #"'"; chr #"(";
+                  chr #")"; chr #"*"; chr #"+"; chr #","; chr #"-";
+                  chr #"."; chr #"/"; chr #"0"; chr #"1"; chr #"2";
+                  chr #"3"; chr #"4"; chr #"5"; chr #"6"; chr #"7";
+                  chr #"8"; chr #"9"; chr #":"; chr #";"; chr #"<";
+                  chr #"="; chr #">"; chr #"?"; chr #"@"; chr #"A";
+                  chr #"B"; chr #"C"; chr #"D"; chr #"E"; chr #"F";
+                  chr #"G"; chr #"H"; chr #"I"; chr #"J"; chr #"K";
+                  chr #"L"; chr #"M"; chr #"N"; chr #"O"; chr #"P";
+                  chr #"Q"; chr #"R"; chr #"S"; chr #"T"; chr #"U";
+                  chr #"V"; chr #"W"; chr #"X"; chr #"Y"; chr #"Z";
+                  chr #"["; chr #"\\"; chr #"]"; chr #"^"; chr #"_";
+                  chr #"`"; chr #"a"; chr #"b"; chr #"c"; chr #"d";
+                  chr #"e"; chr #"f"; chr #"g"; chr #"h"; chr #"i";
+                  chr #"j"; chr #"k"; chr #"l"; chr #"m"; chr #"n";
+                  chr #"o"; chr #"p"; chr #"q"; chr #"r"; chr #"s";
+                  chr #"t"; chr #"u"; chr #"v"; chr #"w"; chr #"x";
+                  chr #"y"; chr #"z"; chr #"{"; chr #"|"; chr #"}";
+                  chr #"~"]); t] : thm
+*)
+
+val standard_char_p =
+ save_thm
+  ("standard_char_p",
+   REWRITE_RULE [listTheory.MAP]standard_char_p_def);
+
 (*
      [oracles: DEFUN ACL2::STANDARD-CHAR-LISTP, DISK_THM] [axioms: ] []
      |- standard_char_listp l =
@@ -633,25 +716,22 @@ val fix =
               standard_char_listp (cdr l)]) (equal l nil),
 *)
 
+val (standard_char_listp_def,standard_char_listp_ind) =
+ acl2_defn "ACL2::STANDARD-CHAR-LISTP"
+  (`standard_char_listp l =
+     ite (consp l)
+         (andl
+           [characterp (car l); standard_char_p (car l);
+            standard_char_listp (cdr l)]) 
+         (equal l nil)`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::CHARACTER-LISTP, DISK_THM] [axioms: ] []
      |- character_listp l =
         ite (atom l) (equal l nil)
           (andl [characterp (car l); character_listp (cdr l)]),
-*)
-
-(*
-acl2_tgoal "ACL2::CHARACTER-LISTP"
- `character_listp l =
-     ite (atom l) (equal l nil)
-         (andl [characterp (car l); character_listp (cdr l)])`;
-
-e(
-ACL2_SIMP_TAC[]
- THEN WF_REL_TAC `measure sexp_size`
- THEN Cases
- THEN ACL2_FULL_SIMP_TAC[sexp_11,T_NIL]
-);
 *)
 
 val (character_listp_def,character_listp_ind) =
@@ -690,6 +770,12 @@ val _ = add_acl2_simps[character_listp];
           (coerce (List [x]) (csym "STRING")),
 *)
 
+val string_def =
+ acl2Define "COMMON-LISP::STRING"
+  `string x =
+    itel [(stringp x,x); (symbolp x,symbol_name x)]
+         (coerce (List [x]) (csym "STRING"))`;
+
 (*
      [oracles: DEFUN COMMON-LISP::ALPHA-CHAR-P, DISK_THM] [axioms: ] []
      |- alpha_char_p x =
@@ -707,6 +793,22 @@ val _ = add_acl2_simps[character_listp];
                  chr #"W"; chr #"X"; chr #"Y"; chr #"Z"]); t],
 *)
 
+val alpha_char_p_def =
+ acl2Define "COMMON-LISP::ALPHA-CHAR-P"
+  `alpha_char_p x =
+    andl
+      [member x
+         (List
+            [chr #"a"; chr #"b"; chr #"c"; chr #"d"; chr #"e"; chr #"f";
+             chr #"g"; chr #"h"; chr #"i"; chr #"j"; chr #"k"; chr #"l";
+             chr #"m"; chr #"n"; chr #"o"; chr #"p"; chr #"q"; chr #"r";
+             chr #"s"; chr #"t"; chr #"u"; chr #"v"; chr #"w"; chr #"x";
+             chr #"y"; chr #"z"; chr #"A"; chr #"B"; chr #"C"; chr #"D";
+             chr #"E"; chr #"F"; chr #"G"; chr #"H"; chr #"I"; chr #"J";
+             chr #"K"; chr #"L"; chr #"M"; chr #"N"; chr #"O"; chr #"P";
+             chr #"Q"; chr #"R"; chr #"S"; chr #"T"; chr #"U"; chr #"V";
+             chr #"W"; chr #"X"; chr #"Y"; chr #"Z"]); t]`;
+
 (*
      [oracles: DEFUN COMMON-LISP::UPPER-CASE-P, DISK_THM] [axioms: ] []
      |- upper_case_p x =
@@ -720,6 +822,18 @@ val _ = add_acl2_simps[character_listp];
                  chr #"Y"; chr #"Z"]); t],
 *)
 
+val upper_case_p_def =
+ acl2Define "COMMON-LISP::UPPER-CASE-P"
+  `upper_case_p x =
+    andl
+      [member x
+         (List
+            [chr #"A"; chr #"B"; chr #"C"; chr #"D"; chr #"E"; chr #"F";
+             chr #"G"; chr #"H"; chr #"I"; chr #"J"; chr #"K"; chr #"L";
+             chr #"M"; chr #"N"; chr #"O"; chr #"P"; chr #"Q"; chr #"R";
+             chr #"S"; chr #"T"; chr #"U"; chr #"V"; chr #"W"; chr #"X";
+             chr #"Y"; chr #"Z"]); t]`;
+
 (*
      [oracles: DEFUN COMMON-LISP::LOWER-CASE-P, DISK_THM] [axioms: ] []
      |- lower_case_p x =
@@ -732,6 +846,18 @@ val _ = add_acl2_simps[character_listp];
                  chr #"s"; chr #"t"; chr #"u"; chr #"v"; chr #"w"; chr #"x";
                  chr #"y"; chr #"z"]); t],
 *)
+
+val lower_case_p_def =
+ acl2Define "COMMON-LISP::LOWER-CASE-P"
+  `lower_case_p x =
+    andl
+      [member x
+         (List
+            [chr #"a"; chr #"b"; chr #"c"; chr #"d"; chr #"e"; chr #"f";
+             chr #"g"; chr #"h"; chr #"i"; chr #"j"; chr #"k"; chr #"l";
+             chr #"m"; chr #"n"; chr #"o"; chr #"p"; chr #"q"; chr #"r";
+             chr #"s"; chr #"t"; chr #"u"; chr #"v"; chr #"w"; chr #"x";
+             chr #"y"; chr #"z"]); t]`;
 
 (*
      [oracles: DEFUN COMMON-LISP::CHAR-UPCASE, DISK_THM] [axioms: ] []
@@ -756,6 +882,28 @@ val _ = add_acl2_simps[character_listp];
            itel [(pair,cdr pair); (characterp x,x)] (code_char (nat 0))),
 *)
 
+val char_upcase_def =
+ acl2Define "COMMON-LISP::CHAR-UPCASE"
+  `char_upcase x =
+    (let pair =
+           assoc x
+             (List
+                [cons (chr #"a") (chr #"A"); cons (chr #"b") (chr #"B");
+                 cons (chr #"c") (chr #"C"); cons (chr #"d") (chr #"D");
+                 cons (chr #"e") (chr #"E"); cons (chr #"f") (chr #"F");
+                 cons (chr #"g") (chr #"G"); cons (chr #"h") (chr #"H");
+                 cons (chr #"i") (chr #"I"); cons (chr #"j") (chr #"J");
+                 cons (chr #"k") (chr #"K"); cons (chr #"l") (chr #"L");
+                 cons (chr #"m") (chr #"M"); cons (chr #"n") (chr #"N");
+                 cons (chr #"o") (chr #"O"); cons (chr #"p") (chr #"P");
+                 cons (chr #"q") (chr #"Q"); cons (chr #"r") (chr #"R");
+                 cons (chr #"s") (chr #"S"); cons (chr #"t") (chr #"T");
+                 cons (chr #"u") (chr #"U"); cons (chr #"v") (chr #"V");
+                 cons (chr #"w") (chr #"W"); cons (chr #"x") (chr #"X");
+                 cons (chr #"y") (chr #"Y"); cons (chr #"z") (chr #"Z")])
+     in
+       itel [(pair,cdr pair); (characterp x,x)] (code_char (nat 0)))`;
+
 (*
      [oracles: DEFUN COMMON-LISP::CHAR-DOWNCASE, DISK_THM] [axioms: ] []
      |- char_downcase x =
@@ -779,6 +927,28 @@ val _ = add_acl2_simps[character_listp];
            itel [(pair,cdr pair); (characterp x,x)] (code_char (nat 0))),
 *)
 
+val char_downcase_def =
+ acl2Define "COMMON-LISP::CHAR-DOWNCASE"
+  `char_downcase x =
+        (let pair =
+               assoc x
+                 (List
+                    [cons (chr #"A") (chr #"a"); cons (chr #"B") (chr #"b");
+                     cons (chr #"C") (chr #"c"); cons (chr #"D") (chr #"d");
+                     cons (chr #"E") (chr #"e"); cons (chr #"F") (chr #"f");
+                     cons (chr #"G") (chr #"g"); cons (chr #"H") (chr #"h");
+                     cons (chr #"I") (chr #"i"); cons (chr #"J") (chr #"j");
+                     cons (chr #"K") (chr #"k"); cons (chr #"L") (chr #"l");
+                     cons (chr #"M") (chr #"m"); cons (chr #"N") (chr #"n");
+                     cons (chr #"O") (chr #"o"); cons (chr #"P") (chr #"p");
+                     cons (chr #"Q") (chr #"q"); cons (chr #"R") (chr #"r");
+                     cons (chr #"S") (chr #"s"); cons (chr #"T") (chr #"t");
+                     cons (chr #"U") (chr #"u"); cons (chr #"V") (chr #"v");
+                     cons (chr #"W") (chr #"w"); cons (chr #"X") (chr #"x");
+                     cons (chr #"Y") (chr #"y"); cons (chr #"Z") (chr #"z")])
+         in
+           itel [(pair,cdr pair); (characterp x,x)] (code_char (nat 0)))`;
+
 (*
      [oracles: DEFUN ACL2::STRING-DOWNCASE1, DISK_THM] [axioms: ] []
      |- string_downcase1 l =
@@ -786,11 +956,24 @@ val _ = add_acl2_simps[character_listp];
           (cons (char_downcase (car l)) (string_downcase1 (cdr l))),
 *)
 
+val (string_downcase1_def,string_downcase1_ind) =
+ acl2_defn "ACL2::STRING-DOWNCASE1"
+  (`string_downcase1 l =
+     ite (atom l) nil
+         (cons (char_downcase (car l)) (string_downcase1 (cdr l)))`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN COMMON-LISP::STRING-DOWNCASE, DISK_THM] [axioms: ] []
      |- string_downcase x =
         coerce (string_downcase1 (coerce x (csym "LIST"))) (csym "STRING"),
 *)
+
+val string_downcase_def =
+ acl2Define "COMMON-LISP::STRING-DOWNCASE"
+  `string_downcase x =
+    coerce (string_downcase1 (coerce x (csym "LIST"))) (csym "STRING")`;
 
 (*
      [oracles: DEFUN ACL2::STRING-UPCASE1, DISK_THM] [axioms: ] []
@@ -799,11 +982,24 @@ val _ = add_acl2_simps[character_listp];
           (cons (char_upcase (car l)) (string_upcase1 (cdr l))),
 *)
 
+val (string_upcase1_def,string_upcase1_ind) =
+ acl2_defn "ACL2::STRING-UPCASE1"
+  (`string_upcase1 l =
+     ite (atom l) nil
+         (cons (char_upcase (car l)) (string_upcase1 (cdr l)))`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN COMMON-LISP::STRING-UPCASE, DISK_THM] [axioms: ] []
      |- string_upcase x =
         coerce (string_upcase1 (coerce x (csym "LIST"))) (csym "STRING"),
 *)
+
+val string_upcase_def =
+ acl2Define "COMMON-LISP::STRING-UPCASE"
+  `string_upcase x =
+    coerce (string_upcase1 (coerce x (csym "LIST"))) (csym "STRING")`;
 
 (*
      [oracles: DEFUN ACL2::OUR-DIGIT-CHAR-P, DISK_THM] [axioms: ] []
@@ -846,10 +1042,53 @@ val _ = add_acl2_simps[character_listp];
            andl [l; less (cdr l) radix; cdr l]),
 *)
 
+val our_digit_char_p_def =
+ acl2Define "ACL2::OUR-DIGIT-CHAR-P"
+  `our_digit_char_p ch radix =
+    (let l = assoc ch
+              (List
+                [cons (chr #"0") (nat 0); cons (chr #"1") (nat 1);
+                 cons (chr #"2") (nat 2); cons (chr #"3") (nat 3);
+                 cons (chr #"4") (nat 4); cons (chr #"5") (nat 5);
+                 cons (chr #"6") (nat 6); cons (chr #"7") (nat 7);
+                 cons (chr #"8") (nat 8); cons (chr #"9") (nat 9);
+                 cons (chr #"a") (nat 10); cons (chr #"b") (nat 11);
+                 cons (chr #"c") (nat 12); cons (chr #"d") (nat 13);
+                 cons (chr #"e") (nat 14); cons (chr #"f") (nat 15);
+                 cons (chr #"g") (nat 16); cons (chr #"h") (nat 17);
+                 cons (chr #"i") (nat 18); cons (chr #"j") (nat 19);
+                 cons (chr #"k") (nat 20); cons (chr #"l") (nat 21);
+                 cons (chr #"m") (nat 22); cons (chr #"n") (nat 23);
+                 cons (chr #"o") (nat 24); cons (chr #"p") (nat 25);
+                 cons (chr #"q") (nat 26); cons (chr #"r") (nat 27);
+                 cons (chr #"s") (nat 28); cons (chr #"t") (nat 29);
+                 cons (chr #"u") (nat 30); cons (chr #"v") (nat 31);
+                 cons (chr #"w") (nat 32); cons (chr #"x") (nat 33);
+                 cons (chr #"y") (nat 34); cons (chr #"z") (nat 35);
+                 cons (chr #"A") (nat 10); cons (chr #"B") (nat 11);
+                 cons (chr #"C") (nat 12); cons (chr #"D") (nat 13);
+                 cons (chr #"E") (nat 14); cons (chr #"F") (nat 15);
+                 cons (chr #"G") (nat 16); cons (chr #"H") (nat 17);
+                 cons (chr #"I") (nat 18); cons (chr #"J") (nat 19);
+                 cons (chr #"K") (nat 20); cons (chr #"L") (nat 21);
+                 cons (chr #"M") (nat 22); cons (chr #"N") (nat 23);
+                 cons (chr #"O") (nat 24); cons (chr #"P") (nat 25);
+                 cons (chr #"Q") (nat 26); cons (chr #"R") (nat 27);
+                 cons (chr #"S") (nat 28); cons (chr #"T") (nat 29);
+                 cons (chr #"U") (nat 30); cons (chr #"V") (nat 31);
+                 cons (chr #"W") (nat 32); cons (chr #"X") (nat 33);
+                 cons (chr #"Y") (nat 34); cons (chr #"Z") (nat 35)])
+     in
+       andl [l; less (cdr l) radix; cdr l])`;
+
 (*
      [oracles: DEFUN COMMON-LISP::CHAR-EQUAL] [axioms: ] []
      |- char_equal x y = eql (char_downcase x) (char_downcase y),
 *)
+
+val char_equal_def =
+ acl2Define "COMMON-LISP::CHAR-EQUAL"
+   `char_equal x y = eql (char_downcase x) (char_downcase y)`;
 
 (*
      [oracles: DEFUN ACL2::ATOM-LISTP, DISK_THM] [axioms: ] []
@@ -858,25 +1097,49 @@ val _ = add_acl2_simps[character_listp];
           (andl [atom (car lst); atom_listp (cdr lst)]),
 *)
 
+val (atom_listp_def,atom_listp_ind) =
+ acl2_defn "ACL2::ATOM-LISTP"
+  (`atom_listp lst =
+     ite (atom lst) (eq lst nil)
+         (andl [atom (car lst); atom_listp (cdr lst)])`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::IFIX, DISK_THM] [axioms: ] []
      |- ifix x = ite (integerp x) x (nat 0),
 *)
+
+val ifix_def =
+ acl2Define "ACL2::IFIX"
+  `ifix x = ite (integerp x) x (nat 0)`;
 
 (*
      [oracles: DEFUN ACL2::RFIX, DISK_THM] [axioms: ] []
      |- rfix x = ite (rationalp x) x (nat 0),
 *)
 
+val rfix_def =
+ acl2Define "ACL2::RFIX"
+  `rfix x = ite (rationalp x) x (nat 0)`;
+
 (*
      [oracles: DEFUN ACL2::REALFIX, DISK_THM] [axioms: ] []
      |- realfix x = ite (rationalp x) x (nat 0),
 *)
 
+val realfix_def =
+ acl2Define "ACL2::REALFIX"
+  `realfix x = ite (rationalp x) x (nat 0)`;
+
 (*
      [oracles: DEFUN ACL2::NFIX, DISK_THM] [axioms: ] []
      |- nfix x = ite (andl [integerp x; not (less x (nat 0))]) x (nat 0),
 *)
+
+val nfix_def =
+ acl2Define "ACL2::NFIX"
+  `nfix x = ite (andl [integerp x; not (less x (nat 0))]) x (nat 0)`;
 
 (*
      [oracles: DEFUN ACL2::STRING-EQUAL1, DISK_THM] [axioms: ] []
@@ -886,6 +1149,58 @@ val _ = add_acl2_simps[character_listp];
              (andl
                 [char_equal (char str1 i) (char str2 i);
                  string_equal1 str1 str2 (add (nat 1) i) maximum])),
+*)
+
+(*
+
+val sexp_to_num_def =
+ Define
+  `sexp_to_num s = @n. s = nat n`;
+
+Hol_defn "FOO"
+ `string_equal1 str1 str2 i maximum =
+        (let i = nfix i in
+           ite (not (less i (ifix maximum))) t
+             (andl
+                [char_equal (char str1 i) (char str2 i);
+                 string_equal1 str1 str2 (add (nat 1) i) maximum]))`;
+
+Defn.tgoal it;
+
+e(WF_REL_TAC 
+   `measure(\(str1,str2,i,maximum). (sexp_to_num maximum - sexp_to_num i))`);
+
+e(RW_TAC std_ss 
+   [DECIDE ``0 < ((m:num) - n) = n < m``]);
+
+DECIDE ``p <= m ==> ((m:num) < n + (m - p) = p < n)``;
+
+val less_nat_ref =
+ store_thm
+  ("less_nat_ref",
+   ``!n. less (nat n) (nat n) = nil``,
+   ACL2_SIMP_TAC
+    [nat_def,int_def,cpx_def,
+     ratTheory.RAT_LES_REF]);
+
+val less_int_ref =
+ store_thm
+  ("less_int_ref",
+   ``!n. less (int n) (int n) = nil``,
+   ACL2_SIMP_TAC
+    [nat_def,int_def,cpx_def,
+     ratTheory.RAT_LES_REF]);
+
+val sexp_to_num_less =
+ store_thm
+  ("sexp_to_num_less",
+   ``!m n.
+      (not (less (nfix m) (ifix n)) = nil)
+      ==>
+      sexp_to_num m < sexp_to_num n``
+   Cases THEN Cases
+    THEN ACL2_SIMP_TAC[nat_def,REWRITE_RULE[nil_def]less_int_ref]
+   
 *)
 
 (*
@@ -4009,104 +4324,6 @@ val _ = add_acl2_simps[character_listp];
                 [asym "SET-DIFFERENCE-THEORIES"; theory;
                  List [csym "QUOTE"; car e_slash_d_list]])
              (cdr e_slash_d_list) t),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::IFF-IS-AN-EQUIVALENCE, DISK_THM] [axioms: ] []
-     |- |= andl
-             [booleanp (iff x y); iff x x; implies (iff x y) (iff y x);
-              implies (andl [iff x y; iff y z]) (iff x z)],
-*)
-
-(*
-     [oracles: DEFTHM ACL2::IFF-IMPLIES-EQUAL-IMPLIES-1] [axioms: ] []
-     |- |= implies (iff y y_equiv) (equal (implies x y) (implies x y_equiv)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::IFF-IMPLIES-EQUAL-IMPLIES-2] [axioms: ] []
-     |- |= implies (iff x x_equiv) (equal (implies x y) (implies x_equiv y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::IFF-IMPLIES-EQUAL-NOT] [axioms: ] []
-     |- |= implies (iff x x_equiv) (equal (not x) (not x_equiv)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::BOOLEANP-COMPOUND-RECOGNIZER, DISK_THM]
-     [axioms: ] []
-     |- |= equal (booleanp x) (ite (equal x t) (equal x t) (equal x nil)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::EQLABLEP-RECOG, DISK_THM] [axioms: ] []
-     |- |= equal (eqlablep x)
-             (itel [(acl2_numberp x,acl2_numberp x); (symbolp x,symbolp x)]
-                (characterp x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ALISTP-FORWARD-TO-TRUE-LISTP] [axioms: ] []
-     |- |= implies (alistp x) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::EQLABLE-ALISTP-FORWARD-TO-ALISTP] [axioms: ] []
-     |- |= implies (eqlable_alistp x) (alistp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SYMBOL-LISTP-FORWARD-TO-TRUE-LISTP] [axioms: ] []
-     |- |= implies (symbol_listp x) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SYMBOL-ALISTP-FORWARD-TO-EQLABLE-ALISTP]
-     [axioms: ] [] |- |= implies (symbol_alistp x) (eqlable_alistp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ZP-COMPOUND-RECOGNIZER, DISK_THM] [axioms: ] []
-     |- |= equal (zp x)
-             (ite (not (integerp x)) (not (integerp x))
-                (not (less (nat 0) x))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ZP-OPEN, DISK_THM] [axioms: ] []
-     |- |= implies
-             (synp nil
-                (List
-                   [asym "SYNTAXP";
-                    List [csym "NOT"; List [asym "VARIABLEP"; asym "X"]]])
-                (List
-                   [csym "IF";
-                    List [csym "NOT"; List [csym "ATOM"; asym "X"]];
-                    List [csym "QUOTE"; t]; List [csym "QUOTE"; nil]]))
-             (equal (zp x) (ite (integerp x) (not (less (nat 0) x)) t)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ZIP-COMPOUND-RECOGNIZER, DISK_THM] [axioms: ] []
-     |- |= equal (zip x)
-             (ite (not (integerp x)) (not (integerp x)) (equal x (nat 0))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ZIP-OPEN, DISK_THM] [axioms: ] []
-     |- |= implies
-             (synp nil
-                (List
-                   [asym "SYNTAXP";
-                    List [csym "NOT"; List [asym "VARIABLEP"; asym "X"]]])
-                (List
-                   [csym "IF";
-                    List [csym "NOT"; List [csym "ATOM"; asym "X"]];
-                    List [csym "QUOTE"; t]; List [csym "QUOTE"; nil]]))
-             (equal (zip x)
-                (ite (not (integerp x)) (not (integerp x))
-                   (equal x (nat 0)))),
 *)
 
 val _ = export_acl2_theory();

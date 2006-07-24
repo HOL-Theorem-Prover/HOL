@@ -3833,12 +3833,6 @@ val andl_def =
    /\
    (andl(x::y::l) = ite x (andl(y::l)) nil)`;
 
-val andl_fold =
- store_thm
-  ("andl_fold",
-   ``(ite x y nil = andl[x;y]) /\ (andl[x; andl(y::l)] = andl(x::y::l))``,
-   RW_TAC std_ss [andl_def,ite_def,List_def]);
-
 val andl_append =
  store_thm
   ("andl_append",
@@ -3900,41 +3894,70 @@ val itel_append =
 (* (from KXS):                                                               *)
 (*                                                                           *)
 (*                                                                           *)
-(* 1. Prove the analogue of COND_CONG (call it ITE_CONG):                    *)
+(* 1. Prove the analogue of COND_CONG (call it ite_CONG):                    *)
 (*                                                                           *)
 (*     |- !P Q x x' y y'.                                                    *)
 (*          (P = Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>             *)
 (*          ((if P then x else y) = (if Q then x' else y')) : thm            *)
 (*                                                                           *)
-(* 2. Install ITE_CONG in the DefnBase:                                      *)
+(* 2. Install ite_CONG in the DefnBase:                                      *)
 (*                                                                           *)
-(*      DefnBase.write_congs (ITE_CONG :: DefnBase.read_congs());            *)
+(*      DefnBase.write_congs (ite_CONG :: DefnBase.read_congs());            *)
 (*                                                                           *)
 (* 3. Make the definition (with Hol_defn)                                    *)
 (*                                                                           *)
 (* 4. The resulting termination conditions should be trivial to prove.       *)
 (*****************************************************************************)
 
-val ITE_CONG1 =
+val ite_CONG1 =
  store_thm
-  ("ITE_CONG1",
+  ("ite_CONG1",
    ``!p q x x' y y'.
       (p = q) /\ (~(q = nil) ==> (x = x')) /\ ((q = nil) ==> (y = y'))
       ==>
       (ite p x y = ite q x' y')``,
    RW_TAC std_ss [ite_def]);
 
-val ITE_CONG2 =
+val ite_CONG2 =
  store_thm
-  ("ITE_CONG2",
+  ("ite_CONG2",
    ``!p q x x' y y'.
       (p = q) /\ ((|= q) ==> (x = x')) /\ (~(|= q) ==> (y = y'))
       ==>
       (ite p x y = ite q x' y')``,
    RW_TAC std_ss [ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
 
-val _ = DefnBase.write_congs (ITE_CONG1::ITE_CONG2::DefnBase.read_congs());
+val _ = DefnBase.write_congs (ite_CONG1::ite_CONG2::DefnBase.read_congs());
 
+val itel_CONG1 =
+ store_thm
+  ("itel_CONG1",
+   ``!p q x x' l l' y y'.
+      (p = q) 
+      /\ 
+      (~(q = nil) ==> (x = x')) 
+      /\ 
+      ((q = nil) ==> (itel l y = itel l' y'))
+      ==>
+      (itel ((p,x)::l) y = itel ((q,x')::l') y')``,
+   RW_TAC std_ss [itel_def,ite_def]);
+
+val itel_CONG2 =
+ store_thm
+  ("itel_CONG2",
+   ``!p q x x' l l' y y'.
+      (p = q) 
+      /\ 
+      ((|= q) ==> (x = x')) 
+      /\ 
+      (~(|= q) ==> (itel l y = itel l' y'))
+      ==>
+      (itel ((p,x)::l) y = itel ((q,x')::l') y')``,
+   RW_TAC std_ss [itel_def,ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
+
+val _ = DefnBase.write_congs (itel_CONG1::itel_CONG2::DefnBase.read_congs());
+
+(*
 val ANDL_CONSP_CONG =
  store_thm
   ("ANDL_CONSP_CONG",
@@ -3948,6 +3971,32 @@ val ANDL_CONSP_CONG =
           [andl_def,ite_def,ACL2_TRUE_def,consp_def,EVAL ``t=nil``]);
 
 val _ = DefnBase.write_congs (ANDL_CONSP_CONG::DefnBase.read_congs());
+
+val ANDL_ATOM_CONG =
+ store_thm
+  ("ANDL_ATOM_CONG",
+   ``!p q x x'.
+      (p = q) /\ (~(atom p = nil) ==> (x = x'))
+      ==>
+      (andl[atom p;x] = andl[atom q;x'])``,
+   Cases
+    THEN RW_TAC std_ss [andl_def,ite_def]
+    THEN FULL_SIMP_TAC std_ss
+          [not_def,andl_def,ite_def,ACL2_TRUE_def,atom_def,consp_def,
+           EVAL ``t=nil``]);
+
+val _ = DefnBase.write_congs (ANDL_ATOM_CONG::DefnBase.read_congs());
+*)
+
+val andl_CONG =
+ store_thm
+  ("andl_CONG",
+   ``!p q x x'.
+      (p = q) /\ (~(p = nil) ==> (x = x')) ==> (andl[p;x] = andl[q;x'])``,
+   Cases
+    THEN RW_TAC std_ss [andl_def,ite_def]);
+
+val _ = DefnBase.write_congs (andl_CONG::DefnBase.read_congs());
 
 val sexp_size_car =
  store_thm
@@ -3983,7 +4032,10 @@ val _ = adjoin_to_theory
            SOME (fn ppstrm =>
                   PP.add_string ppstrm
                    ("val _ = DefnBase.write_congs" ^
-                    "(ANDL_CONSP_CONG::ITE_CONG1::ITE_CONG2::DefnBase.read_congs());\n"))
+                    "(andl_CONG::\
+                     \ite_CONG1::ite_CONG2::\
+                     \itel_CONG1::itel_CONG2::\
+                     \DefnBase.read_congs());\n"))
          };
 
 val _ = export_acl2_theory();

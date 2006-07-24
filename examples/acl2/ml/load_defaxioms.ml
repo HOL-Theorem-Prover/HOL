@@ -37,7 +37,7 @@ val simps =
    [int_def,nat_def,List_def,asym_def,csym_def,ksym_def,osym_def]);
 
 val simp_defaxioms = ref([] : thm list);
-simp_defaxioms := !defaxioms;
+simp_defaxioms := !imported_acl2_theorems;
 
 simp_defaxioms := time (map(SIMP_RULE list_ss simps)) (!simp_defaxioms);
 

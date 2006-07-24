@@ -1964,18 +1964,18 @@ fun print_acl2_defun_script thy ql name_alist=
  end;
 
 (*****************************************************************************)
-(* Slurp in defaxioms.lisp.trans.ml. Need to supply "use" as argument.       *)
+(* Read contents of acl2_list_ref (which should be set by slurping in        *)
+(* ACL2 stuff), convert to tagged theorems and put the results in            *)
+(* imported_acl2_theorems (an assignable variable).                          *)
 (*                                                                           *)
 (* The protocol for using this is:                                           *)
 (*                                                                           *)
-(*  use (Globals.HOLDIR ^ "/examples/acl2/lisp/defaxioms.lisp.trans.ml");    *)
-(*  load_def_axioms();                                                       *)
-(*                                                                           *)
-(* Results are put into defaxioms (an assignable global variable)            *)
+(*  use (Globals.HOLDIR ^ "/examples/acl2/...");                             *)
+(*  load_imported_acl2_theorems();                                           *)
 (*****************************************************************************)
-val defaxioms = ref([]:thm list);
+val imported_acl2_theorems = ref([]:thm list);
 
-fun load_defaxioms () =
+fun load_imported_acl2_theorems () =
  let val acl2_package_strings =
       union_flatten
        (mapfilter
@@ -1989,20 +1989,21 @@ fun load_defaxioms () =
   print " new string abbreviations made\n";
   show_tags := true;
   print "read "; print(Int.toString(length(!acl2_list_ref))); print " defs\n"; 
-  defaxioms := 
+  imported_acl2_theorems := 
    flatten(map (map install_def_and_print o mk_defs) (!acl2_list_ref)));
   print 
-   "Imported defaxioms stored in global assignable variable defaxioms.\n\n"
+   "Imported ACL2 stored in assignable variable imported_acl2_theorems.\n\n"
  end;
 
 (*****************************************************************************)
-(* Print imported defaxioms for round-trip test.                             *)
+(* Print imported imported_acl2_thms, assumed installed in theory named      *)
+(* theory name, for round-trip test.                                         *)
 (*****************************************************************************)
-fun print_defaxioms file_name =
+fun print_imported_acl2_theorems theory_name file_name =
  let val defs =
       mapfilter 
        dest_option
-       (map (dest_acl2_thm o snd) (theorems "defaxioms"))
+       (map (dest_acl2_thm o snd) (theorems theory_name))
  in
   print_lisp_file 
    file_name

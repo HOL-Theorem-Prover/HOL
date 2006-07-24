@@ -18,7 +18,7 @@
 quietdec := true;
 map 
  load  
- ["stringLib","complex_rationalTheory","gcdTheory",
+ ["intLib","stringLib","complex_rationalTheory","gcdTheory",
   "sexp","sexpTheory","hol_defaxiomsTheory","translateTheory"];
 open stringLib complex_rationalTheory gcdTheory 
      sexp sexpTheory hol_defaxiomsTheory translateTheory;
@@ -75,8 +75,8 @@ val closure_defaxiom =
 val associativity_of_plus_defaxiom =
  store_thm
   ("associativity_of_plus_defaxiom",
-   ``!x y z. |= equal (add (add x y) z) (add x (add y z))``,
-   Cases THEN Cases THEN Cases
+   ``|= equal (add (add x y) z) (add x (add y z))``,
+   Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
     THEN TRY(Cases_on `c'`)
@@ -97,8 +97,8 @@ val associativity_of_plus_defaxiom =
 val commutativity_of_plus_defaxiom =
  store_thm
   ("commutativity_of_plus_defaxiom",
-   ``!x y. |= equal (add x y) (add y x)``,
-   Cases THEN Cases
+   ``|= equal (add x y) (add y x)``,
+   Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
     THEN TRY(Cases_on `c'`)
@@ -114,10 +114,40 @@ val commutativity_of_plus_defaxiom =
      |- |= equal (add (nat 0) x) (fix x),
 *)
 
+val unicity_of_0_defaxiom =
+ store_thm
+  ("unicity_of_0_defaxiom",
+   ``|= equal (add (nat 0) x) (fix x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN TRY(Cases_on `c`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,com_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
+           ratTheory.RAT_SUB_LID,ratTheory.RAT_ADD_RINV,
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]);
+
 (*
      [oracles: DEFAXIOM ACL2::INVERSE-OF-+, DISK_THM] [axioms: ] []
      |- |= equal (add x (unary_minus x)) (nat 0),
 *)
+
+val inverse_of_plus_defaxiom =
+ store_thm
+  ("inverse_of_plus_defaxiom",
+   ``|= equal (add x (unary_minus x)) (nat 0)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN TRY(Cases_on `c`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,com_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
+           ratTheory.RAT_SUB_LID,ratTheory.RAT_ADD_RINV,
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]);
 
 (*
      [oracles: DEFAXIOM ACL2::ASSOCIATIVITY-OF-*] [axioms: ] []
@@ -127,8 +157,8 @@ val commutativity_of_plus_defaxiom =
 val associativity_of_star_defaxiom =
  store_thm
   ("associativity_of_star_defaxiom",
-   ``!x y z. |= equal (mult (mult x y) z) (mult x (mult y z))``,
-   Cases THEN Cases THEN Cases
+   ``|= equal (mult (mult x y) z) (mult x (mult y z))``,
+   Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
     THEN TRY(Cases_on `c'`)
@@ -156,8 +186,8 @@ val associativity_of_star_defaxiom =
 val commutativity_of_star_defaxiom =
  store_thm
   ("commutativity_of_star_defaxiom",
-   ``!x y. |= equal (mult x y) (mult y x)``,
-   Cases THEN Cases
+   ``|= equal (mult x y) (mult y x)``,
+   Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
     THEN TRY(Cases_on `c'`)
@@ -181,11 +211,120 @@ val commutativity_of_star_defaxiom =
      |- |= equal (mult (nat 1) x) (fix x),
 *)
 
+val unicity_of_1_defaxiom =
+ store_thm
+  ("unicity_of_1_defaxiom",
+   ``|= equal (mult (nat 1) x) (fix x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN TRY(Cases_on `c`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,sexpTheory.rat_def,
+           GSYM fracTheory.frac_1_def,com_1_def,
+           GSYM ratTheory.rat_1,ratTheory.RAT_ADD_LID,
+           GSYM fracTheory.frac_0_def,GSYM ratTheory.rat_0,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_SUB_RID,
+           ratTheory.RAT_SUB_LID,ratTheory.RAT_ADD_RINV,ratTheory.RAT_MUL_LID,
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_1,ratTheory.RAT_ADD_COMM]);
+
 (*
      [oracles: DEFAXIOM ACL2::INVERSE-OF-*, DISK_THM] [axioms: ] []
      |- |= implies (andl [acl2_numberp x; not (equal x (nat 0))])
              (equal (mult x (reciprocal x)) (nat 1)),
 *)
+
+val RAT_SQ_SGN =
+ store_thm
+  ("RAT_SQ_SGN",
+   ``!(r:rat). 0 <= rat_sgn(r*r)``,
+   RW_TAC arith_ss [ratTheory.RAT_SGN_MUL,integerTheory.INT_LE_SQUARE]);
+
+val RAT_SQ_NONNEG =
+ store_thm
+  ("RAT_SQ_NONNEG",
+   ``!(r:rat). 0 <= r*r``,
+   GEN_TAC
+    THEN Cases_on `r*r = 0`
+    THEN RW_TAC arith_ss [ratTheory.RAT_MUL_LZERO,ratTheory.RAT_LEQ_REF]
+    THEN `0 <= rat_sgn(r*r)` by PROVE_TAC[RAT_SQ_SGN]
+    THEN DISJ_CASES_TAC(ISPEC ``(r:rat) * r`` ratTheory.RAT_SGN_TOTAL)
+    THENL
+     [PROVE_TAC[Cooper.COOPER_PROVE ``~(0 <= (n:int) /\ (n = ~1))``],
+      POP_ASSUM DISJ_CASES_TAC
+       THEN FULL_SIMP_TAC arith_ss 
+             [ratTheory.RAT_SGN_MUL,ratTheory.RAT_SGN_CLAUSES,
+              ratTheory.RAT_LES_IMP_LEQ,ratTheory.rat_gre_def,
+              integerTheory.INT_ENTIRE]]);
+
+val RAT_SQ_POS =
+ store_thm
+  ("RAT_SQ_POS",
+   ``!(r:rat). ~(r = 0) ==> 0 < r*r``,
+   GEN_TAC
+    THEN `0 <= r*r` by PROVE_TAC[RAT_SQ_NONNEG]
+    THEN FULL_SIMP_TAC arith_ss [ratTheory.rat_leq_def]
+    THEN POP_ASSUM(ASSUME_TAC o GSYM)
+    THEN FULL_SIMP_TAC arith_ss [GSYM ratTheory.RAT_NO_ZERODIV]);
+
+val RAT_SUM_SQ_POS =
+ store_thm
+  ("RAT_SUM_SQ_POS",
+   ``~(r1 = 0) /\ ~(r2 = 0) ==> 0 < r1*r1 + r2*r2``,
+   RW_TAC std_ss []
+    THEN IMP_RES_TAC RAT_SQ_POS
+    THEN RW_TAC std_ss [ratTheory.RAT_0LES_0LES_ADD]);
+
+val inverse_of_star_defaxiom = 
+ (* Would expect to be able to improve on this proof *)
+ store_thm
+  ("inverse_of_star_defaxiom",
+   ``|= implies (andl [acl2_numberp x; not (equal x (nat 0))])
+             (equal (mult x (reciprocal x)) (nat 1))``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN TRY(Cases_on `c`)
+    THEN ACL2_FULL_SIMP_TAC
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_RECIPROCAL_def,
+           complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,com_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
+           ratTheory.RAT_SUB_LID,ratTheory.RAT_ADD_RINV,
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]
+    THEN Cases_on `r = 0` THEN Cases_on `r0 = 0`
+    THEN ACL2_SIMP_TAC[]
+    THENL
+     [ASSUM_LIST(fn thl => ACL2_FULL_SIMP_TAC[el 3 thl] THEN ASSUME_TAC (el 3 thl)),
+      ASSUM_LIST(fn thl => ACL2_FULL_SIMP_TAC[el 3 thl] THEN ASSUME_TAC (el 3 thl)),
+      ASSUM_LIST(fn thl => ACL2_FULL_SIMP_TAC[el 1 thl,el 2 thl] 
+                            THEN ASSUME_TAC (el 1 thl) THEN ASSUME_TAC (el 2 thl))]
+    THEN ACL2_FULL_SIMP_TAC
+          [ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
+           ratTheory.RAT_DIV_MULMINV,COMPLEX_MULT_def,
+           GSYM fracTheory.frac_1_def,GSYM ratTheory.rat_1,
+           complex_rational_11,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_MUL_ASSOC,GSYM ratTheory.RAT_AINV_LMUL,
+           GSYM ratTheory.RAT_AINV_RMUL]
+    THEN IMP_RES_TAC
+          (PROVE[ratTheory.RAT_NO_ZERODIV_NEG]``~(r=0) ==> ~((r*r) = 0)``)
+    THEN ACL2_FULL_SIMP_TAC
+          [ratTheory.RAT_MUL_RINV,ratTheory.RAT_SUB_LID,
+           ratTheory.RAT_AINV_AINV,ratTheory.RAT_SUB_RID]
+    THEN `(r0 * r * rat_minv (r * r + r0 * r0) +
+            ~(r * r0 * rat_minv (r * r + r0 * r0)) = 0)`
+          by PROVE_TAC[ratTheory.RAT_ADD_RINV,ratTheory.RAT_MUL_COMM]
+    THEN POP_ASSUM(fn th => FULL_SIMP_TAC std_ss [th])
+    THEN ACL2_FULL_SIMP_TAC
+          [ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_AINV,
+           GSYM ratTheory.RAT_RDISTRIB,ratTheory.RAT_MUL_RINV]
+    THEN Cases_on `r * r + r0 * r0 = 0`
+    THEN ACL2_FULL_SIMP_TAC
+          [ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_AINV,
+           GSYM ratTheory.RAT_RDISTRIB,ratTheory.RAT_MUL_RINV]
+    THEN `0 < r * r + r0 * r0` by PROVE_TAC[RAT_SUM_SQ_POS]
+    THEN PROVE_TAC[ratTheory.RAT_LES_REF]);
 
 (*
      [oracles: DEFAXIOM ACL2::DISTRIBUTIVITY] [axioms: ] []
@@ -276,14 +415,6 @@ val commutativity_of_star_defaxiom =
      [oracles: DEFAXIOM ACL2::IMAGPART-COMPLEX, DISK_THM] [axioms: ] []
      |- |= implies (andl [rationalp x; rationalp y])
              (equal (imagpart (complex x y)) y),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::COMPLEX-EQUAL, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl [rationalp x1; rationalp y1; rationalp x2; rationalp y2])
-             (equal (equal (complex x1 y1) (complex x2 y2))
-                (andl [equal x1 x2; equal y1 y2])),
 *)
 
 (*
@@ -408,50 +539,49 @@ val characterp_rubout_defaxiom =
    ACL2_SIMP_TAC []);
 
 (*
-     [oracles: DEFTHM ACL2::CHARACTER-LISTP-FORWARD-TO-EQLABLE-LISTP]
-     [axioms: ] [] |- |= implies (character_listp x) (eqlable_listp x),
-*)
-
-(* Still need to show:
-
-> val it =
-    F
-    ------------------------------------
-      2.  ~(character_listp s0 = sym "COMMON-LISP" "NIL")
-      1.  eqlable_listp s0 = sym "COMMON-LISP" "NIL"
-
-val character_listp_forward_to_eqlable_listp_defthm =
- store_thm
-  ("character_listp_forward_to_eqlable_listp",
-   ``|= implies (character_listp x) (eqlable_listp x)``,
-   REWRITE_TAC[implies]
-    THEN Induct_on `x`
-    THEN ACL2_FULL_SIMP_TAC [itel_def]
-    THEN Cases_on `s`
-    THEN ACL2_FULL_SIMP_TAC [itel_def]
-
-    THEN Cases_on `s0`
-    THEN ACL2_FULL_SIMP_TAC [itel_def]
-
-   ONCE_REWRITE_TAC[eqlable_listp_def,character_listp_def]
-    THEN ACL2_SIMP_TAC []
-    THEN Cases_on `x`
-    THEN ACL2_FULL_SIMP_TAC []
-    THEN Cases_on `s`
-    THEN ACL2_FULL_SIMP_TAC [itel_def]
-
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STANDARD-CHAR-LISTP-FORWARD-TO-CHARACTER-LISTP]
-     [axioms: ] [] |- |= implies (standard_char_listp x) (character_listp x),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::COERCE-INVERSE-1, DISK_THM] [axioms: ] []
      |- |= implies (character_listp x)
              (equal (coerce (coerce x (csym "STRING")) (csym "LIST")) x),
 *)
+
+val list_EXPLODE_coerce =
+ store_thm
+  ("list_EXPLODE_coerce",
+   ``!s. (|= character_listp s)
+         ==>
+         (list_to_sexp 
+           chr
+           (EXPLODE(coerce_list_to_string(make_character_list s))) = s)``,
+   Induct
+    THEN ACL2_SIMP_TAC
+          [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
+           coerce_list_to_string_def,list_to_sexp_def,
+           EVAL ``EXPLODE ""``,make_character_list_def]
+    THEN FULL_SIMP_TAC std_ss [GSYM nil_def, GSYM ACL2_TRUE]
+    THEN Cases_on `s`
+    THEN ACL2_FULL_SIMP_TAC
+          [make_character_list_def,coerce_list_to_string_def,
+           stringTheory.EXPLODE_EQNS,list_to_sexp_def]);
+
+val coerce_inverse_1_defaxiom =
+ store_thm
+  ("coerce_inverse_1_defaxiom",
+   ``|= implies
+          (character_listp x)
+          (equal (coerce (coerce x (csym "STRING")) (csym "LIST")) x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC
+          [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
+           list_to_sexp_def,EVAL ``EXPLODE ""``]
+    THENL
+     [PROVE_TAC[sexp_11],
+      Cases_on `characterp s = sym "COMMON-LISP" "NIL"`
+       THEN ACL2_FULL_SIMP_TAC[make_character_list_def]
+       THEN Cases_on `s`
+       THEN ACL2_FULL_SIMP_TAC
+             [make_character_list_def,coerce_list_to_string_def,
+              stringTheory.EXPLODE_EQNS,list_to_sexp_def]
+       THEN PROVE_TAC[T_NIL,sexp_11,ACL2_TRUE,list_EXPLODE_coerce,nil_def]]);
 
 (*
      [oracles: DEFAXIOM ACL2::COERCE-INVERSE-2, DISK_THM] [axioms: ] []
@@ -459,97 +589,99 @@ val character_listp_forward_to_eqlable_listp_defthm =
              (equal (coerce (coerce x (csym "LIST")) (csym "STRING")) x),
 *)
 
+val true_listp_list_to_sexp = (* This is not used *)
+ store_thm
+  ("true_listp_list_to_sexp",
+   ``!l. |= true_listp(list_to_sexp f l)``,
+   Induct
+    THEN ACL2_SIMP_TAC[list_to_sexp_def]
+    THEN ONCE_REWRITE_TAC[true_listp_def]
+    THEN ACL2_FULL_SIMP_TAC[ACL2_TRUE]);
+
+val coerce_list_EXPLODE =
+ store_thm
+  ("coerce_list_EXPLODE",
+   ``!s. coerce 
+          (list_to_sexp chr (EXPLODE s))
+          (sym "COMMON-LISP" "STRING") =
+         str s``,
+   Induct
+    THEN ACL2_SIMP_TAC
+          [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
+           coerce_list_to_string_def,list_to_sexp_def,
+           EVAL ``EXPLODE ""``,stringTheory.EXPLODE_EQNS,
+           make_character_list_def]
+    THEN Cases_on `EXPLODE s`
+    THEN ACL2_FULL_SIMP_TAC
+          [make_character_list_def,coerce_list_to_string_def,
+           stringTheory.EXPLODE_EQNS,list_to_sexp_def,
+           stringTheory.EXPLODE_EQ_NIL,EVAL ``"STRING" = "LIST"``]);
+
+val coerce_inverse_2_defaxiom =
+ store_thm
+  ("coerce_inverse_2_defaxiom",
+   ``|= implies
+         (stringp x)
+         (equal (coerce (coerce x (csym "LIST")) (csym "STRING")) x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC
+          [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
+           list_to_sexp_def,EVAL ``EXPLODE ""``]
+    THEN PROVE_TAC[coerce_list_EXPLODE,sexp_11,T_NIL]);
+
 (*
      [oracles: DEFAXIOM ACL2::CHARACTER-LISTP-COERCE, DISK_THM] [axioms: ] []
      |- |= character_listp (coerce acl2_str (csym "LIST")),
 *)
 
-(*
-     [oracles: DEFTHM ACL2::LOWER-CASE-P-CHAR-DOWNCASE, DISK_THM] [axioms: ]
-     []
-     |- |= implies (andl [upper_case_p x; characterp x])
-             (lower_case_p (char_downcase x)),
-*)
+val character_listp_list_to_sexp = 
+ store_thm
+  ("character_listp_list_to_sexp",
+   ``!l. |= character_listp(list_to_sexp chr l)``,
+   Induct
+    THEN ACL2_SIMP_TAC[list_to_sexp_def]
+    THEN ACL2_FULL_SIMP_TAC[ACL2_TRUE,nil_def]);
 
-(*
-     [oracles: DEFTHM ACL2::UPPER-CASE-P-CHAR-UPCASE, DISK_THM] [axioms: ] []
-     |- |= implies (andl [lower_case_p x; characterp x])
-             (upper_case_p (char_upcase x)),
-*)
+val character_listp_coerce_defaxiom =
+ store_thm
+  ("character_listp_coerce_defaxiom",
+   ``|= character_listp (coerce acl2_str (csym "LIST"))``,
+   Cases_on `acl2_str`
+    THEN ACL2_SIMP_TAC
+          [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
+           coerce_list_to_string_def,list_to_sexp_def,
+           EVAL ``EXPLODE ""``,stringTheory.EXPLODE_EQNS,
+           make_character_list_def]
+    THEN PROVE_TAC[character_listp_list_to_sexp,nil_def,ACL2_TRUE]);
 
-(*
-     [oracles: DEFTHM ACL2::LOWER-CASE-P-FORWARD-TO-ALPHA-CHAR-P, DISK_THM]
-     [axioms: ] []
-     |- |= implies (andl [lower_case_p x; characterp x]) (alpha_char_p x),
-*)
+val assoc_nil =
+ store_thm
+  ("assoc_nil",
+   ``assoc x nil = nil``,
+   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
+    THEN ACL2_SIMP_TAC[itel_def]);
 
-(*
-     [oracles: DEFTHM ACL2::UPPER-CASE-P-FORWARD-TO-ALPHA-CHAR-P, DISK_THM]
-     [axioms: ] []
-     |- |= implies (andl [upper_case_p x; characterp x]) (alpha_char_p x),
-*)
+val assoc_cons =
+ store_thm
+  ("assoc_cons",
+   ``assoc x (cons (cons x' y) l) = 
+      if |= equal x x' then cons x' y else assoc x l``,
+   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
+    THEN ACL2_SIMP_TAC[itel_def]);
 
-(*
-     [oracles: DEFTHM ACL2::ALPHA-CHAR-P-FORWARD-TO-CHARACTERP] [axioms: ] []
-     |- |= implies (alpha_char_p x) (characterp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTERP-CHAR-DOWNCASE] [axioms: ] []
-     |- |= characterp (char_downcase x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTERP-CHAR-UPCASE] [axioms: ] []
-     |- |= characterp (char_upcase x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTER-LISTP-STRING-DOWNCASE-1] [axioms: ] []
-     |- |= character_listp (string_downcase1 x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTER-LISTP-STRING-UPCASE1-1] [axioms: ] []
-     |- |= character_listp (string_upcase1 x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ATOM-LISTP-FORWARD-TO-TRUE-LISTP] [axioms: ] []
-     |- |= implies (atom_listp x) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::EQLABLE-LISTP-FORWARD-TO-ATOM-LISTP] [axioms: ]
-     [] |- |= implies (eqlable_listp x) (atom_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTERP-NTH, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [character_listp x; integerp i; not (less i (nat 0));
-                 less i (len x)]) (characterp (nth i x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STANDARD-STRING-ALISTP-FORWARD-TO-ALISTP]
-     [axioms: ] [] |- |= implies (standard_string_alistp x) (alistp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::NATP-COMPOUND-RECOGNIZER, DISK_THM] [axioms: ] []
-     |- |= equal (natp x) (andl [integerp x; not (less x (nat 0))]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::POSP-COMPOUND-RECOGNIZER, DISK_THM] [axioms: ] []
-     |- |= equal (posp x) (andl [integerp x; less (nat 0) x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::O-P-IMPLIES-O<G] [axioms: ] []
-     |- |= implies (o_p a) (o_less_g a),
+(*     
+val lower_case_p_char_downcase_defaxiom =
+ store_thm
+  ("lower_case_p_char_downcase_defaxiom",
+   ``|= implies (andl [upper_case_p x; characterp x])
+                (lower_case_p (char_downcase x))``,
+   REWRITE_TAC[implies]
+    THEN STRIP_TAC
+    THEN SIMP_TAC std_ss [char_downcase_def,assoc_cons,List_def]
+    THEN CONV_TAC(DEPTH_CONV(pairLib.let_CONV))
+    THEN SIMP_TAC std_ss [itel_def,ite_def]
+    THEN ACL2_FULL_SIMP_TAC[assoc_cons,assoc_nil]
+    THEN REWRITE_TAC[COND_RAND]
 *)
 
 (*
@@ -565,11 +697,6 @@ val character_listp_forward_to_eqlable_listp_defthm =
 (*
      [oracles: DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS] [axioms: ] []
      |- |= symbolp (pkg_witness x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::KEYWORDP-FORWARD-TO-SYMBOLP] [axioms: ] []
-     |- |= implies (keywordp x) (symbolp x),
 *)
 
 (*
@@ -594,16 +721,6 @@ val character_listp_forward_to_eqlable_listp_defthm =
      [axioms: ] []
      |- |= equal (symbol_package_name (pkg_witness pkg_name))
              (ite (stringp pkg_name) pkg_name (str ACL2)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SYMBOL-EQUALITY, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [symbolp s1; symbolp s2;
-                 equal (symbol_name s1) (symbol_name s2);
-                 equal (symbol_package_name s1) (symbol_package_name s2)])
-             (equal s1 s2),
 *)
 
 (*
@@ -1183,61 +1300,6 @@ val character_listp_forward_to_eqlable_listp_defthm =
 *)
 
 (*
-     [oracles: DEFTHM ACL2::STANDARD-CHAR-LISTP-APPEND, DISK_THM] [axioms: ]
-     []
-     |- |= implies (true_listp x)
-             (equal (standard_char_listp (binary_append x y))
-                (andl [standard_char_listp x; standard_char_listp y])),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTER-LISTP-APPEND, DISK_THM] [axioms: ] []
-     |- |= implies (true_listp x)
-             (equal (character_listp (binary_append x y))
-                (andl [character_listp x; character_listp y])),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTER-LISTP-REMOVE-DUPLICATES-EQL] [axioms: ]
-     []
-     |- |= implies (character_listp x)
-             (character_listp (remove_duplicates_eql x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CHARACTER-LISTP-REVAPPEND, DISK_THM] [axioms: ]
-     []
-     |- |= implies (true_listp x)
-             (equal (character_listp (revappend x y))
-                (andl [character_listp x; character_listp y])),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::PSEUDO-TERM-LISTP-FORWARD-TO-TRUE-LISTP]
-     [axioms: ] [] |- |= implies (pseudo_term_listp x) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STANDARD-CHAR-P-NTH, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [standard_char_listp chars; not (less i (nat 0));
-                 less i (len chars)]) (standard_char_p (nth i chars)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::EXPT-TYPE-PRESCRIPTION-NON-ZERO-BASE, DISK_THM]
-     [axioms: ] []
-     |- |= implies (andl [acl2_numberp r; not (equal r (nat 0))])
-             (not (equal (expt r i) (nat 0))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::RATIONALP-EXPT-TYPE-PRESCRIPTION] [axioms: ] []
-     |- |= implies (rationalp r) (rationalp (expt r i)),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::CHAR-CODE-LINEAR, DISK_THM] [axioms: ] []
      |- |= less (char_code x) (nat 256),
 *)
@@ -1262,790 +1324,6 @@ val character_listp_forward_to_eqlable_listp_defthm =
              (equal (char_code (code_char n)) n),
 *)
 
-(*
-     [oracles: DEFTHM ACL2::STRING<-L-IRREFLEXIVE] [axioms: ] []
-     |- |= not (string_less_l x x i),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STRING<-IRREFLEXIVE] [axioms: ] []
-     |- |= not (string_less s s),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::WORLDP-FORWARD-TO-ASSOC-EQ-EQUAL-ALISTP]
-     [axioms: ] [] |- |= implies (worldp x) (assoc_eq_equal_alistp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ORDERED-SYMBOL-ALISTP-FORWARD-TO-SYMBOL-ALISTP]
-     [axioms: ] [] |- |= implies (ordered_symbol_alistp x) (symbol_alistp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TRUE-LIST-LISTP-FORWARD-TO-TRUE-LISTP] [axioms: ]
-     [] |- |= implies (true_list_listp x) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::EQUAL-CHAR-CODE, DISK_THM] [axioms: ] []
-     |- |= implies (andl [characterp x; characterp y])
-             (implies (equal (char_code x) (char_code y)) (equal x y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::BOUNDED-INTEGER-ALISTP-FORWARD-TO-EQLABLE-ALISTP]
-     [axioms: ] []
-     |- |= implies (bounded_integer_alistp x n) (eqlable_alistp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::KEYWORD-VALUE-LISTP-FORWARD-TO-TRUE-LISTP]
-     [axioms: ] [] |- |= implies (keyword_value_listp x) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::KEYWORD-VALUE-LISTP-ASSOC-KEYWORD] [axioms: ] []
-     |- |= implies (keyword_value_listp l)
-             (keyword_value_listp (assoc_keyword key l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CONSP-ASSOC-EQ, DISK_THM] [axioms: ] []
-     |- |= implies (alistp l)
-             (ite (consp (assoc_eq name l)) (consp (assoc_eq name l))
-                (equal (assoc_eq name l) nil)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ARRAY1P-FORWARD, DISK_THM] [axioms: ] []
-     |- |= implies (array1p name l)
-             (andl
-                [symbolp name; alistp l;
-                 keyword_value_listp (cdr (assoc_eq (ksym "HEADER") l));
-                 true_listp
-                   (cadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 equal
-                   (length
-                      (cadr
-                         (assoc_keyword (ksym "DIMENSIONS")
-                            (cdr (assoc_eq (ksym "HEADER") l))))) (nat 1);
-                 integerp
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 integerp
-                   (cadr
-                      (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less (nat 0)
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))))
-                   (cadr
-                      (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 not
-                   (less (nat 2147483647)
-                      (cadr
-                         (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                            (cdr (assoc_eq (ksym "HEADER") l)))));
-                 bounded_integer_alistp l
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))))]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ARRAY1P-LINEAR, DISK_THM] [axioms: ] []
-     |- |= implies (array1p name l)
-             (andl
-                [less (nat 0)
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))))
-                   (cadr
-                      (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 not
-                   (less (nat 2147483647)
-                      (cadr
-                         (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                            (cdr (assoc_eq (ksym "HEADER") l)))))]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ARRAY2P-FORWARD, DISK_THM] [axioms: ] []
-     |- |= implies (array2p name l)
-             (andl
-                [symbolp name; alistp l;
-                 keyword_value_listp (cdr (assoc_eq (ksym "HEADER") l));
-                 true_listp
-                   (cadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 equal
-                   (length
-                      (cadr
-                         (assoc_keyword (ksym "DIMENSIONS")
-                            (cdr (assoc_eq (ksym "HEADER") l))))) (nat 2);
-                 integerp
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 integerp
-                   (cadadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 integerp
-                   (cadr
-                      (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less (nat 0)
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less (nat 0)
-                   (cadadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less
-                   (mult
-                      (caadr
-                         (assoc_keyword (ksym "DIMENSIONS")
-                            (cdr (assoc_eq (ksym "HEADER") l))))
-                      (cadadr
-                         (assoc_keyword (ksym "DIMENSIONS")
-                            (cdr (assoc_eq (ksym "HEADER") l)))))
-                   (cadr
-                      (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 not
-                   (less (nat 2147483647)
-                      (cadr
-                         (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                            (cdr (assoc_eq (ksym "HEADER") l)))));
-                 bounded_integer_alistp2 l
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))))
-                   (cadadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))))]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ARRAY2P-LINEAR, DISK_THM] [axioms: ] []
-     |- |= implies (array2p name l)
-             (andl
-                [less (nat 0)
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less (nat 0)
-                   (cadadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 less
-                   (mult
-                      (caadr
-                         (assoc_keyword (ksym "DIMENSIONS")
-                            (cdr (assoc_eq (ksym "HEADER") l))))
-                      (cadadr
-                         (assoc_keyword (ksym "DIMENSIONS")
-                            (cdr (assoc_eq (ksym "HEADER") l)))))
-                   (cadr
-                      (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 not
-                   (less (nat 2147483647)
-                      (cadr
-                         (assoc_keyword (ksym "MAXIMUM-LENGTH")
-                            (cdr (assoc_eq (ksym "HEADER") l)))))]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CONSP-ASSOC, DISK_THM] [axioms: ] []
-     |- |= implies (alistp l)
-             (ite (consp (assoc name l)) (consp (assoc name l))
-                (equal (assoc name l) nil)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ARRAY1P-CONS, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [less n
-                   (caadr
-                      (assoc_keyword (ksym "DIMENSIONS")
-                         (cdr (assoc_eq (ksym "HEADER") l))));
-                 not (less n (nat 0)); integerp n; array1p name l])
-             (array1p name (cons (cons n val) l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ARRAY2P-CONS, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [less j (cadr (dimensions name l)); not (less j (nat 0));
-                 integerp j; less i (car (dimensions name l));
-                 not (less i (nat 0)); integerp i; array2p name l])
-             (array2p name (cons (cons (cons i j) val) l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::32-BIT-INTEGERP-FORWARD-TO-INTEGERP] [axioms: ]
-     [] |- |= implies (acl2_32_bit_integerp x) (integerp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::RATIONAL-LISTP-FORWARD-TO-TRUE-LISTP] [axioms: ]
-     [] |- |= implies (rational_listp x) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::INTEGER-LISTP-FORWARD-TO-RATIONAL-LISTP]
-     [axioms: ] [] |- |= implies (integer_listp x) (rational_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::32-BIT-INTEGER-LISTP-FORWARD-TO-INTEGER-LISTP]
-     [axioms: ] []
-     |- |= implies (acl2_32_bit_integer_listp x) (integer_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::KNOWN-PACKAGE-ALISTP-FORWARD-TO-TRUE-LIST-LISTP-AND-ALISTP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (known_package_alistp x)
-             (andl [true_list_listp x; alistp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TIMER-ALISTP-FORWARD-TO-TRUE-LIST-LISTP-AND-SYMBOL-ALISTP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (timer_alistp x)
-             (andl [true_list_listp x; symbol_alistp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TYPED-IO-LISTP-FORWARD-TO-TRUE-LISTP] [axioms: ]
-     [] |- |= implies (typed_io_listp x typ) (true_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::OPEN-CHANNEL1-FORWARD-TO-TRUE-LISTP-AND-CONSP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (open_channel1 x) (andl [true_listp x; consp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::OPEN-CHANNELS-P-FORWARD, DISK_THM] [axioms: ] []
-     |- |= implies (open_channels_p x)
-             (andl [ordered_symbol_alistp x; true_list_listp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::FILE-CLOCK-P-FORWARD-TO-INTEGERP] [axioms: ] []
-     |- |= implies (file_clock_p x) (natp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::READABLE-FILE-FORWARD-TO-TRUE-LISTP-AND-CONSP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (readable_file x) (andl [true_listp x; consp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::READABLE-FILES-LISTP-FORWARD-TO-TRUE-LIST-LISTP-AND-ALISTP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (readable_files_listp x)
-             (andl [true_list_listp x; alistp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::READABLE-FILES-P-FORWARD-TO-READABLE-FILES-LISTP]
-     [axioms: ] []
-     |- |= implies (readable_files_p x) (readable_files_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::WRITTEN-FILE-FORWARD-TO-TRUE-LISTP-AND-CONSP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (written_file x) (andl [true_listp x; consp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::WRITTEN-FILE-LISTP-FORWARD-TO-TRUE-LIST-LISTP-AND-ALISTP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (written_file_listp x)
-             (andl [true_list_listp x; alistp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::WRITTEN-FILES-P-FORWARD-TO-WRITTEN-FILE-LISTP]
-     [axioms: ] [] |- |= implies (written_files_p x) (written_file_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::READ-FILE-LISTP1-FORWARD-TO-TRUE-LISTP-AND-CONSP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (read_file_listp1 x) (andl [true_listp x; consp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::READ-FILE-LISTP-FORWARD-TO-TRUE-LIST-LISTP]
-     [axioms: ] [] |- |= implies (read_file_listp x) (true_list_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::READ-FILES-P-FORWARD-TO-READ-FILE-LISTP]
-     [axioms: ] [] |- |= implies (read_files_p x) (read_file_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::WRITABLE-FILE-LISTP1-FORWARD-TO-TRUE-LISTP-AND-CONSP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (writable_file_listp1 x) (andl [true_listp x; consp x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::WRITABLE-FILE-LISTP-FORWARD-TO-TRUE-LIST-LISTP]
-     [axioms: ] [] |- |= implies (writable_file_listp x) (true_list_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::WRITEABLE-FILES-P-FORWARD-TO-WRITABLE-FILE-LISTP]
-     [axioms: ] []
-     |- |= implies (writeable_files_p x) (writable_file_listp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STATE-P1-FORWARD, DISK_THM] [axioms: ] []
-     |- |= implies (state_p1 x)
-             (andl
-                [true_listp x; equal (length x) (nat 15);
-                 open_channels_p (nth (nat 0) x);
-                 open_channels_p (nth (nat 1) x);
-                 ordered_symbol_alistp (nth (nat 2) x);
-                 all_boundp
-                   (List
-                      [List [asym "ACCUMULATED-TTREE"];
-                       List [asym "ACCUMULATED-WARNINGS"];
-                       cons (asym "ACL2-VERSION") (str "ACL2 Version 2.9.3");
-                       List [asym "AXIOMSP"]; List [asym "BDDNOTES"];
-                       List [asym "CERTIFY-BOOK-FILE"];
-                       List [asym "CONNECTED-BOOK-DIRECTORY"];
-                       List [asym "CURRENT-ACL2-WORLD"];
-                       cons (asym "CURRENT-PACKAGE") (str ACL2);
-                       cons (asym "DEFAXIOMS-OKP-CERT") t;
-                       List [asym "ERROR-TRACE-STACK"];
-                       List [asym "EVISCERATE-HIDE-TERMS"];
-                       cons (asym "FMT-HARD-RIGHT-MARGIN") (nat 77);
-                       cons (asym "FMT-SOFT-RIGHT-MARGIN") (nat 65);
-                       List [asym "GSTACKP"];
-                       cons (asym "GUARD-CHECKING-ON") t;
-                       List [asym "IN-CERTIFY-BOOK-FLG"];
-                       List [asym "IN-LOCAL-FLG"];
-                       List [asym "IN-PROVE-FLG"];
-                       List [asym "INCLUDE-BOOK-ALIST-STATE"];
-                       List [asym "INFIXP"];
-                       List [asym "INHIBIT-OUTPUT-LST"; asym "SUMMARY"];
-                       cons (asym "LD-LEVEL") (nat 0);
-                       List [asym "LD-REDEFINITION-ACTION"];
-                       List [asym "LD-SKIP-PROOFSP"];
-                       List [asym "MATCH-FREE-ERROR"];
-                       cons (asym "MORE-DOC-MAX-LINES") (nat 45);
-                       cons (asym "MORE-DOC-MIN-LINES") (nat 35);
-                       List [asym "MORE-DOC-STATE"];
-                       List [asym "PACKAGES-CREATED-BY-DEFPKG"];
-                       cons (asym "PRINT-BASE") (nat 10);
-                       cons (asym "PRINT-CASE") (ksym "UPCASE");
-                       List [asym "PRINT-CLAUSE-IDS"];
-                       cons (asym "PRINT-DOC-START-COLUMN") (nat 15);
-                       cons (asym "PROMPT-FUNCTION")
-                         (asym "DEFAULT-PRINT-PROMPT");
-                       List [asym "PROOF-TREE-CTX"];
-                       cons (asym "PROOFS-CO")
-                         (osym "STANDARD-CHARACTER-OUTPUT-0");
-                       List
-                         [asym "RAW-ARITY-ALIST";
-                          cons (asym "ER-PROGN") (csym "LAST");
-                          cons (csym "EVAL-WHEN") (ksym "LAST");
-                          cons (csym "LET") (ksym "LAST");
-                          cons (csym "LET*") (ksym "LAST");
-                          cons (asym "MV-LET") (ksym "LAST");
-                          cons (asym "PROG2$") (ksym "LAST");
-                          cons (csym "PROGN") (ksym "LAST");
-                          cons (csym "THE") (ksym "LAST");
-                          cons (csym "TIME") (ksym "LAST");
-                          cons (csym "TRACE") (nat 1);
-                          cons (csym "UNTRACE") (nat 1)];
-                       List [asym "SAFE-MODE"];
-                       List [asym "SAVED-OUTPUT-REVERSED"];
-                       List [asym "SAVED-OUTPUT-TOKEN-LST"];
-                       List [asym "SAVED-OUTPUT-P"];
-                       cons (asym "SKIP-PROOFS-OKP-CERT") t;
-                       List [asym "SKIPPED-PROOFSP"];
-                       cons (asym "STANDARD-CO")
-                         (osym "STANDARD-CHARACTER-OUTPUT-0");
-                       cons (asym "STANDARD-OI")
-                         (osym "STANDARD-OBJECT-INPUT-0");
-                       List [asym "TAINTED-OKP"]; List [asym "TIMER-ALIST"];
-                       cons (asym "TRACE-CO")
-                         (osym "STANDARD-CHARACTER-OUTPUT-0");
-                       cons (asym "TRANSLATE-ERROR-DEPTH") (int ~1);
-                       cons (asym "TRIPLE-PRINT-PREFIX") (str " ");
-                       List [asym "UNDONE-WORLDS-KILL-RING"; nil; nil; nil];
-                       List [asym "WINDOW-INTERFACEP"];
-                       List [asym "WORMHOLE-NAME"];
-                       List [asym "WORMHOLE-OUTPUT"]]) (nth (nat 2) x);
-                 worldp
-                   (cdr (assoc (asym "CURRENT-ACL2-WORLD") (nth (nat 2) x)));
-                 symbol_alistp
-                   (fgetprop (asym "ACL2-DEFAULTS-TABLE")
-                      (asym "TABLE-ALIST") nil
-                      (cdr
-                         (assoc (asym "CURRENT-ACL2-WORLD")
-                            (nth (nat 2) x))));
-                 timer_alistp
-                   (cdr (assoc (asym "TIMER-ALIST") (nth (nat 2) x)));
-                 known_package_alistp
-                   (fgetprop (asym "KNOWN-PACKAGE-ALIST")
-                      (asym "GLOBAL-VALUE") nil
-                      (cdr
-                         (assoc (asym "CURRENT-ACL2-WORLD")
-                            (nth (nat 2) x)))); true_listp (nth (nat 3) x);
-                 acl2_32_bit_integer_listp (nth (nat 4) x);
-                 integerp (nth (nat 5) x); integer_listp (nth (nat 6) x);
-                 rational_listp (nth (nat 7) x);
-                 file_clock_p (nth (nat 8) x);
-                 readable_files_p (nth (nat 9) x);
-                 written_files_p (nth (nat 10) x);
-                 read_files_p (nth (nat 11) x);
-                 writeable_files_p (nth (nat 12) x);
-                 true_list_listp (nth (nat 13) x);
-                 symbol_alistp (nth (nat 14) x)]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STATE-P-IMPLIES-AND-FORWARD-TO-STATE-P1]
-     [axioms: ] [] |- |= implies (state_p state_state) (state_p1 state_state),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::INTEGER-RANGE-P-FORWARD, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [integer_range_p lower (add (nat 1) upper_1) x;
-                 integerp upper_1])
-             (andl [integerp x; not (less x lower); not (less upper_1 x)]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SIGNED-BYTE-P-FORWARD-TO-INTEGERP] [axioms: ] []
-     |- |= implies (signed_byte_p n x) (integerp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::UNSIGNED-BYTE-P-FORWARD-TO-NONNEGATIVE-INTEGERP,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (unsigned_byte_p n x)
-             (andl [integerp x; not (less x (nat 0))]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STRING<-L-ASYMMETRIC, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [eqlable_listp x1; eqlable_listp x2; integerp i;
-                 string_less_l x1 x2 i]) (not (string_less_l x2 x1 i)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SYMBOL-<-ASYMMETRIC, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl [symbolp sym1; symbolp sym2; symbol_less sym1 sym2])
-             (not (symbol_less sym2 sym1)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STRING<-L-TRANSITIVE, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [string_less_l x y i; string_less_l y z j; integerp i;
-                 integerp j; integerp k; character_listp x;
-                 character_listp y; character_listp z])
-             (string_less_l x z k),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SYMBOL-<-TRANSITIVE, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [symbol_less x y; symbol_less y z; symbolp x; symbolp y;
-                 symbolp z]) (symbol_less x z),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STRING<-L-TRICHOTOMY, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [not (string_less_l x y i); integerp i; integerp j;
-                 character_listp x; character_listp y])
-             (iff (string_less_l y x j) (not (equal x y))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SYMBOL-<-TRICHOTOMY, DISK_THM] [axioms: ] []
-     |- |= implies (andl [symbolp x; symbolp y; not (symbol_less x y)])
-             (iff (symbol_less y x) (not (equal x y))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ORDERED-SYMBOL-ALISTP-REMOVE-FIRST-PAIR,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies
-             (andl [ordered_symbol_alistp l; symbolp key; assoc_eq key l])
-             (ordered_symbol_alistp (remove_first_pair key l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::SYMBOL-<-IRREFLEXIVE] [axioms: ] []
-     |- |= implies (symbolp x) (not (symbol_less x x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ORDERED-SYMBOL-ALISTP-ADD-PAIR, DISK_THM]
-     [axioms: ] []
-     |- |= implies (andl [ordered_symbol_alistp gs; symbolp w5])
-             (ordered_symbol_alistp (add_pair w5 w6 gs)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ORDERED-SYMBOL-ALISTP-GETPROPS, DISK_THM]
-     [axioms: ] []
-     |- |= implies (andl [worldp w; symbolp world_name; symbolp key])
-             (ordered_symbol_alistp (getprops key world_name w)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TRUE-LIST-LISTP-FORWARD-TO-TRUE-LISTP-ASSOC-EQ]
-     [axioms: ] []
-     |- |= implies (true_list_listp l) (true_listp (assoc_eq key l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TRUE-LISTP-CADR-ASSOC-EQ-FOR-OPEN-CHANNELS-P,
-                DISK_THM]
-     [axioms: ] []
-     |- |= implies (open_channels_p alist)
-             (true_listp (cadr (assoc_eq key alist))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::NTH-UPDATE-NTH, DISK_THM] [axioms: ] []
-     |- |= equal (nth m (update_nth n val l))
-             (ite (equal (nfix m) (nfix n)) val (nth m l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TRUE-LISTP-UPDATE-NTH] [axioms: ] []
-     |- |= implies (true_listp l) (true_listp (update_nth key val l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::NTH-UPDATE-NTH-ARRAY, DISK_THM] [axioms: ] []
-     |- |= equal (nth m (update_nth_array n i val l))
-             (ite (equal (nfix m) (nfix n)) (update_nth i val (nth m l))
-                (nth m l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::LEN-UPDATE-NTH, DISK_THM] [axioms: ] []
-     |- |= equal (len (update_nth n val x))
-             (max (add (nat 1) (nfix n)) (len x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::UPDATE-RUN-TIMES-PRESERVES-STATE-P1, DISK_THM]
-     [axioms: ] []
-     |- |= implies (andl [state_p1 state; rational_listp times])
-             (state_p1 (update_run_times times state)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::READ-RUN-TIME-PRESERVES-STATE-P1, DISK_THM]
-     [axioms: ] []
-     |- |= implies (state_p1 state)
-             (state_p1 (nth (nat 1) (read_run_time state))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::NTH-0-READ-RUN-TIME-TYPE-PRESCRIPTION, DISK_THM]
-     [axioms: ] []
-     |- |= implies (state_p1 state)
-             (rationalp (nth (nat 0) (read_run_time state))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::RATIONALP-+, DISK_THM] [axioms: ] []
-     |- |= implies (andl [rationalp x; rationalp y]) (rationalp (add x y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::RATIONALP-*, DISK_THM] [axioms: ] []
-     |- |= implies (andl [rationalp x; rationalp y]) (rationalp (mult x y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::RATIONALP-UNARY--] [axioms: ] []
-     |- |= implies (rationalp x) (rationalp (unary_minus x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::RATIONALP-UNARY-/] [axioms: ] []
-     |- |= implies (rationalp x) (rationalp (reciprocal x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::RATIONALP-IMPLIES-ACL2-NUMBERP] [axioms: ] []
-     |- |= implies (rationalp x) (acl2_numberp x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::NTH-0-CONS, DISK_THM] [axioms: ] []
-     |- |= equal (nth (nat 0) (cons a l)) a,
-*)
-
-(*
-     [oracles: DEFTHM ACL2::NTH-ADD1, DISK_THM] [axioms: ] []
-     |- |= implies (andl [integerp n; not (less n (nat 0))])
-             (equal (nth (add (nat 1) n) (cons a l)) (nth n l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::MAIN-TIMER-TYPE-PRESCRIPTION, DISK_THM]
-     [axioms: ] []
-     |- |= implies (state_p1 state)
-             (andl [consp (main_timer state); true_listp (main_timer state)]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ORDERED-SYMBOL-ALISTP-ADD-PAIR-FORWARD, DISK_THM]
-     [axioms: ] []
-     |- |= implies (andl [symbolp key; ordered_symbol_alistp l])
-             (ordered_symbol_alistp (add_pair key value l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ASSOC-ADD-PAIR, DISK_THM] [axioms: ] []
-     |- |= implies (andl [symbolp sym2; ordered_symbol_alistp alist])
-             (equal (assoc sym1 (add_pair sym2 val alist))
-                (ite (equal sym1 sym2) (cons sym1 val) (assoc sym1 alist))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ADD-PAIR-PRESERVES-ALL-BOUNDP, DISK_THM]
-     [axioms: ] []
-     |- |= implies
-             (andl
-                [eqlable_alistp alist1; ordered_symbol_alistp alist2;
-                 all_boundp alist1 alist2; symbolp acl2_sym])
-             (all_boundp alist1 (add_pair acl2_sym val alist2)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STATE-P1-UPDATE-MAIN-TIMER, DISK_THM] [axioms: ]
-     []
-     |- |= implies (state_p1 state)
-             (state_p1
-                (update_nth (nat 2)
-                   (add_pair (asym "MAIN-TIMER") val (nth (nat 2) state))
-                   state)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ALL-BOUNDP-PRESERVES-ASSOC, DISK_THM] [axioms: ]
-     []
-     |- |= implies
-             (andl
-                [eqlable_alistp tbl1; eqlable_alistp tbl2;
-                 all_boundp tbl1 tbl2; symbolp x; assoc_eq x tbl1])
-             (assoc x tbl2),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::STATE-P1-UPDATE-NTH-2-WORLD, DISK_THM] [axioms: ]
-     []
-     |- |= implies
-             (andl
-                [state_p1 state; worldp wrld;
-                 known_package_alistp
-                   (fgetprop (asym "KNOWN-PACKAGE-ALIST")
-                      (asym "GLOBAL-VALUE") nil wrld);
-                 symbol_alistp
-                   (fgetprop (asym "ACL2-DEFAULTS-TABLE")
-                      (asym "TABLE-ALIST") nil wrld)])
-             (state_p1
-                (update_nth (nat 2)
-                   (add_pair (asym "CURRENT-ACL2-WORLD") wrld
-                      (nth (nat 2) state)) state)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TRUE-LIST-LISTP-FORWARD-TO-TRUE-LISTP-ASSOC-EQUAL]
-     [axioms: ] []
-     |- |= implies (true_list_listp l) (true_listp (assoc_equal key l)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::NATP-POSITION-AC, DISK_THM] [axioms: ] []
-     |- |= implies (andl [integerp acc; not (less acc (nat 0))])
-             (ite (equal (position_ac item lst acc) nil)
-                (equal (position_ac item lst acc) nil)
-                (andl
-                   [integerp (position_ac item lst acc);
-                    not (less (position_ac item lst acc) (nat 0))])),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::BOOLEAN-LISTP-CONS, DISK_THM] [axioms: ] []
-     |- |= equal (boolean_listp (cons x y))
-             (andl [booleanp x; boolean_listp y]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::BOOLEAN-LISTP-FORWARD, DISK_THM] [axioms: ] []
-     |- |= implies (boolean_listp (cons a lst))
-             (andl [booleanp a; boolean_listp lst]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::BOOLEAN-LISTP-FORWARD-TO-SYMBOL-LISTP] [axioms: ]
-     [] |- |= implies (boolean_listp x) (symbol_listp x),
-*)
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-+, DISK_THM] [axioms: ] []
@@ -2055,31 +1333,21 @@ val character_listp_forward_to_eqlable_listp_defthm =
                  (acl2_numberp y,y)] (nat 0)),
 *)
 
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-+-1] [axioms: ] []
-     |- |= implies (not (acl2_numberp x)) (equal (add x y) (fix y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-+-2] [axioms: ] []
-     |- |= implies (not (acl2_numberp y)) (equal (add x y) (fix x)),
-*)
+val completion_of_plus_defaxiom =
+ store_thm
+  ("completion_of_plus_defaxiom",
+   ``|= equal (add x y)
+              (itel
+                [(acl2_numberp x,ite (acl2_numberp y) (add x y) x);
+                 (acl2_numberp y,y)] (nat 0))``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]);
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-*, DISK_THM] [axioms: ] []
      |- |= equal (mult x y)
              (ite (acl2_numberp x) (ite (acl2_numberp y) (mult x y) (nat 0))
                 (nat 0)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-*-1, DISK_THM] [axioms: ] []
-     |- |= implies (not (acl2_numberp x)) (equal (mult x y) (nat 0)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-*-2, DISK_THM] [axioms: ] []
-     |- |= implies (not (acl2_numberp y)) (equal (mult x y) (nat 0)),
 *)
 
 (*
@@ -2090,22 +1358,10 @@ val character_listp_forward_to_eqlable_listp_defthm =
 *)
 
 (*
-     [oracles: DEFTHM ACL2::DEFAULT-UNARY-MINUS, DISK_THM] [axioms: ] []
-     |- |= implies (not (acl2_numberp x)) (equal (unary_minus x) (nat 0)),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-UNARY-/, DISK_THM] [axioms: ] []
      |- |= equal (reciprocal x)
              (ite (andl [acl2_numberp x; not (equal x (nat 0))])
                 (reciprocal x) (nat 0)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-UNARY-/, DISK_THM] [axioms: ] []
-     |- |= implies
-             (ite (not (acl2_numberp x)) (not (acl2_numberp x))
-                (equal x (nat 0))) (equal (reciprocal x) (nat 0)),
 *)
 
 (*
@@ -2125,23 +1381,8 @@ val character_listp_forward_to_eqlable_listp_defthm =
 *)
 
 (*
-     [oracles: DEFTHM ACL2::DEFAULT-<-1, DISK_THM] [axioms: ] []
-     |- |= implies (not (acl2_numberp x)) (equal (less x y) (less (nat 0) y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-<-2, DISK_THM] [axioms: ] []
-     |- |= implies (not (acl2_numberp y)) (equal (less x y) (less x (nat 0))),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-CAR, DISK_THM] [axioms: ] []
      |- |= equal (car x) (andl [consp x; car x]),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-CAR] [axioms: ] []
-     |- |= implies (not (consp x)) (equal (car x) nil),
 *)
 
 (*
@@ -2150,23 +1391,8 @@ val character_listp_forward_to_eqlable_listp_defthm =
 *)
 
 (*
-     [oracles: DEFTHM ACL2::DEFAULT-CDR] [axioms: ] []
-     |- |= implies (not (consp x)) (equal (cdr x) nil),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::CONS-CAR-CDR, DISK_THM] [axioms: ] []
-     |- |= equal (cons (car x) (cdr x)) (ite (consp x) x (List [nil])),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-CHAR-CODE, DISK_THM] [axioms: ]
      [] |- |= equal (char_code x) (ite (characterp x) (char_code x) (nat 0)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-CHAR-CODE, DISK_THM] [axioms: ] []
-     |- |= implies (not (characterp x)) (equal (char_code x) (nat 0)),
 *)
 
 (*
@@ -2185,91 +1411,11 @@ val character_listp_forward_to_eqlable_listp_defthm =
 *)
 
 (*
-     [oracles: DEFTHM ACL2::DEFAULT-COMPLEX-1, DISK_THM] [axioms: ] []
-     |- |= implies (not (rationalp x))
-             (equal (complex x y) (complex (nat 0) y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-COMPLEX-2, DISK_THM] [axioms: ] []
-     |- |= implies (not (rationalp y))
-             (equal (complex x y) (ite (rationalp x) x (nat 0))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::COMPLEX-0, DISK_THM] [axioms: ] []
-     |- |= equal (complex x (nat 0)) (rfix x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ADD-DEF-COMPLEX] [axioms: ] []
-     |- |= equal (add x y)
-             (complex (add (realpart x) (realpart y))
-                (add (imagpart x) (imagpart y))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::REALPART-+] [axioms: ] []
-     |- |= equal (realpart (add x y)) (add (realpart x) (realpart y)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::IMAGPART-+] [axioms: ] []
-     |- |= equal (imagpart (add x y)) (add (imagpart x) (imagpart y)),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-COERCE, DISK_THM] [axioms: ] []
      |- |= equal (coerce x y)
              (ite (equal y (csym "LIST"))
                 (andl [stringp x; coerce x (csym "LIST")])
                 (coerce (acl2_make_character_list x) (csym "STRING"))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-COERCE-1, DISK_THM] [axioms: ] []
-     |- |= implies (not (stringp x)) (equal (coerce x (csym "LIST")) nil),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::MAKE-CHARACTER-LIST-MAKE-CHARACTER-LIST]
-     [axioms: ] []
-     |- |= equal (acl2_make_character_list (acl2_make_character_list x))
-             (acl2_make_character_list x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-COERCE-2, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [synp nil
-                   (List
-                      [asym "SYNTAXP";
-                       List
-                         [csym "NOT";
-                          List
-                            [csym "EQUAL"; asym "Y";
-                             List
-                               [csym "QUOTE";
-                                List [csym "QUOTE"; csym "STRING"]]]]])
-                   (List
-                      [csym "IF";
-                       List
-                         [csym "NOT";
-                          List
-                            [csym "EQUAL"; asym "Y";
-                             List
-                               [csym "QUOTE";
-                                List [csym "QUOTE"; csym "STRING"]]]];
-                       List [csym "QUOTE"; t]; List [csym "QUOTE"; nil]]);
-                 not (equal y (csym "LIST"))])
-             (equal (coerce x y) (coerce x (csym "STRING"))),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-COERCE-3, DISK_THM] [axioms: ] []
-     |- |= implies (not (consp x))
-             (equal (coerce x (csym "STRING")) (str "")),
 *)
 
 (*
@@ -2279,18 +1425,8 @@ val character_listp_forward_to_eqlable_listp_defthm =
 *)
 
 (*
-     [oracles: DEFTHM ACL2::DEFAULT-DENOMINATOR, DISK_THM] [axioms: ] []
-     |- |= implies (not (rationalp x)) (equal (denominator x) (nat 1)),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-IMAGPART, DISK_THM] [axioms: ] []
      |- |= equal (imagpart x) (ite (acl2_numberp x) (imagpart x) (nat 0)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-IMAGPART, DISK_THM] [axioms: ] []
-     |- |= implies (not (acl2_numberp x)) (equal (imagpart x) (nat 0)),
 *)
 
 (*
@@ -2307,18 +1443,8 @@ val character_listp_forward_to_eqlable_listp_defthm =
 *)
 
 (*
-     [oracles: DEFTHM ACL2::DEFAULT-NUMERATOR, DISK_THM] [axioms: ] []
-     |- |= implies (not (rationalp x)) (equal (numerator x) (nat 0)),
-*)
-
-(*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-REALPART, DISK_THM] [axioms: ] []
      |- |= equal (realpart x) (ite (acl2_numberp x) (realpart x) (nat 0)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-REALPART, DISK_THM] [axioms: ] []
-     |- |= implies (not (acl2_numberp x)) (equal (realpart x) (nat 0)),
 *)
 
 (*
@@ -2327,42 +1453,12 @@ val character_listp_forward_to_eqlable_listp_defthm =
      |- |= equal (symbol_name x) (ite (symbolp x) (symbol_name x) (str "")),
 *)
 
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-SYMBOL-NAME] [axioms: ] []
-     |- |= implies (not (symbolp x)) (equal (symbol_name x) (str "")),
-*)
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-SYMBOL-PACKAGE-NAME, DISK_THM]
      [axioms: ] []
      |- |= equal (symbol_package_name x)
              (ite (symbolp x) (symbol_package_name x) (str "")),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::DEFAULT-SYMBOL-PACKAGE-NAME] [axioms: ] []
-     |- |= implies (not (symbolp x)) (equal (symbol_package_name x) (str "")),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::PSEUDO-TERM-LISTP-MFC-CLAUSE] [axioms: ] []
-     |- |= pseudo_term_listp (mfc_clause mfc),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::TYPE-ALISTP-MFC-TYPE-ALIST] [axioms: ] []
-     |- |= type_alistp (mfc_type_alist mfc),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::BAD-ATOM-COMPOUND-RECOGNIZER, DISK_THM]
-     [axioms: ] []
-     |- |= iff (bad_atom x)
-             (not
-                (itel
-                   [(consp x,consp x); (acl2_numberp x,acl2_numberp x);
-                    (symbolp x,symbolp x); (characterp x,characterp x)]
-                   (stringp x))),
 *)
 
 (*
@@ -2395,53 +1491,6 @@ val character_listp_forward_to_eqlable_listp_defthm =
      |- |= implies (andl [bad_atom x; bad_atom y])
              (ite (bad_atom_less_equal x y) (bad_atom_less_equal x y)
                 (bad_atom_less_equal y x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ALPHORDER-REFLEXIVE] [axioms: ] []
-     |- |= implies (not (consp x)) (alphorder x x),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ALPHORDER-TRANSITIVE, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [alphorder x y; alphorder y z; not (consp x); not (consp y);
-                 not (consp z)]) (alphorder x z),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ALPHORDER-ANTI-SYMMETRIC, DISK_THM] [axioms: ] []
-     |- |= implies
-             (andl
-                [not (consp x); not (consp y); alphorder x y; alphorder y x])
-             (equal x y),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::ALPHORDER-TOTAL, DISK_THM] [axioms: ] []
-     |- |= implies (andl [not (consp x); not (consp y)])
-             (ite (alphorder x y) (alphorder x y) (alphorder y x)),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::LEXORDER-REFLEXIVE] [axioms: ] []
-     |- |= lexorder x x,
-*)
-
-(*
-     [oracles: DEFTHM ACL2::LEXORDER-ANTI-SYMMETRIC, DISK_THM] [axioms: ] []
-     |- |= implies (andl [lexorder x y; lexorder y x]) (equal x y),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::LEXORDER-TRANSITIVE, DISK_THM] [axioms: ] []
-     |- |= implies (andl [lexorder x y; lexorder y z]) (lexorder x z),
-*)
-
-(*
-     [oracles: DEFTHM ACL2::LEXORDER-TOTAL, DISK_THM] [axioms: ] []
-     |- |= ite (lexorder x y) (lexorder x y) (lexorder y x)]
 *)
 
 val _ = export_acl2_theory();
