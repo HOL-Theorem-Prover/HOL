@@ -33,8 +33,6 @@ structure quotient :> quotient =
 struct
 
 open HolKernel Parse boolLib;
-infix THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL ## |->;
-infixr -->;
 
 (* In interactive sessions, do:
 
@@ -272,7 +270,7 @@ fun define_partial_quotient_type tyname abs rep equiv =
    If P c, then c is a suitable function to represent an nty.
 *)
 
-(* First we show that there is such a set of objects, that the 
+(* First we show that there is such a set of objects, that the
    predicate P is non-empty.  *)
 
         val r = Term.variant (free_vars REL) (mk_var{Name="r", Ty=ty})
@@ -281,7 +279,7 @@ fun define_partial_quotient_type tyname abs rep equiv =
         val cty = type_of rcl
         val c = Term.variant (free_vars rcl) (mk_var{Name="c", Ty=cty})
         val c' = prim_variant (c::free_vars rcl) c
-        val P = (--`\^c. ?^r. ^Rrr /\ (^c = ^rcl)`--)
+        val P = (--`\ ^c. ?^r. ^Rrr /\ (^c = ^rcl)`--)
         val x = Term.variant (free_vars P) (mk_var{Name="x", Ty=ty})
         val xcl = mk_comb{Rator=REL, Rand=x}
         val Rxx = mk_comb{Rator=xcl, Rand=x}
@@ -316,7 +314,7 @@ fun define_partial_quotient_type tyname abs rep equiv =
 
 (* This creates the new type, "nty", but only implicitly establishes its
    relationships to the original type of equivalence classes on ty.
-   To define the bijections to and from the new type, we use 
+   To define the bijections to and from the new type, we use
    'define_new_type_bijections'.  This defines
                    ty_ABS : (ty -> bool) -> nty
                    ty_REP : nty -> (ty -> bool) .
@@ -372,14 +370,14 @@ but it could look like
 *)
         val cty_REP_one_one = prove_rep_fn_one_one cty_ABS_REP
         val cty_REP_onto    = prove_rep_fn_onto    cty_ABS_REP
-        val cty_ABS_one_one = 
+        val cty_ABS_one_one =
               CONV_RULE (RAND_CONV (ALPHA_CONV c THENC
                                  ABS_CONV (RAND_CONV (ALPHA_CONV c' THENC
                                  ABS_CONV
                      (LAND_CONV BETA_CONV THENC
                       RAND_CONV (LAND_CONV BETA_CONV))))))
                               (prove_abs_fn_one_one ty_bijections)
-        val cty_ABS_onto    = 
+        val cty_ABS_onto    =
               CONV_RULE (RAND_CONV (ABS_CONV (RAND_CONV (ALPHA_CONV c THENC
                                ABS_CONV (RAND_CONV BETA_CONV)))))
                               (prove_abs_fn_onto ty_bijections)
@@ -511,7 +509,7 @@ but it could look like
 
         val ty_ABS_REP =
             (GEN atm o
-             REWRITE_RULE[ABS_REP] o 
+             REWRITE_RULE[ABS_REP] o
              CHOOSE (r, SPEC atm ty_REP_REL) o
              UNDISCH o CONV_RULE (REWR_CONV AND_IMP_INTRO) o DISCH_ALL o
              REWRITE_RULE[SYM inst] o
@@ -707,7 +705,7 @@ fun define_quotient_type tyname abs rep equiv =
 
 
     else
-         
+
     let
 
    (* Extract the existing type, ty, and the equivalence relation, REL. *)
@@ -735,13 +733,13 @@ fun define_quotient_type tyname abs rep equiv =
    That is, consider the sets of ty-values which are REL-equivalent.
    Let each such set be represented by its characteristic function,
    of type ty -> bool.  Then any set of ty-values is such an equivalence
-   set if and only if there is some ty, a, whose characteristic 
+   set if and only if there is some ty, a, whose characteristic
    function is the same as that of the given set.
 
    If P x, then x is a suitable function to represent an obj.
 *)
 
-(* First we show that there is such a set of objects, that the 
+(* First we show that there is such a set of objects, that the
    predicate P is non-empty.  *)
 
         val rtm = mk_var{Name="r", Ty=ty}
@@ -768,7 +766,7 @@ fun define_quotient_type tyname abs rep equiv =
 
 (* This creates the new type, "nty", but only implicitly establishes its
    relationships to the original type of equivalence classes on ty.
-   To define the bijections to and from the new type, we use 
+   To define the bijections to and from the new type, we use
    'define_new_type_bijections'.  This defines
                    ty_ABS : (ty -> bool) -> nty
                    ty_REP : nty -> (ty -> bool) .
@@ -866,7 +864,7 @@ fun define_quotient_type tyname abs rep equiv =
         val REP_ABS = CONJUNCT2 ty_bijections
 
         val ty_REP_REL =
-            let val th1 = 
+            let val th1 =
                 EQ_MP (SYM (SPEC (mk_comb{Rator=cty_REP, Rand=atm}) REP_ABS))
                       (AP_TERM cty_REP (SPEC atm ABS_REP))
             in
@@ -935,7 +933,7 @@ fun define_quotient_type tyname abs rep equiv =
 
         val ty_ABS_REP =
             (GEN atm o
-             REWRITE_RULE[ABS_REP] o 
+             REWRITE_RULE[ABS_REP] o
              CHOOSE (rtm, SPEC atm ty_REP_REL) o
              REWRITE_RULE[SYM inst] o
              REWRITE_RULE[ty_REL_SELECT_REL] o
@@ -1477,7 +1475,7 @@ fun prove_quotient_equiv_rep_one_one QUOTIENT =
    the original types, to similarly structured theorems dealing with
    values of the quotient types.
 
-   However, note that this function is partial, and not all theorems 
+   However, note that this function is partial, and not all theorems
    can be lifted by this function, even if the lifted versions are true.  *)
 (* ====================================================================== *)
 
@@ -1942,7 +1940,7 @@ It should take as arguments a list of specifications of each
 polymorphic function.  The specification for one polymorphic function
 would include
 
-   a. the constant, with as polymorphic a type as possible, 
+   a. the constant, with as polymorphic a type as possible,
       using the type variables 'a, 'b, 'c, etc. for the polymorphic types.
       These indicate the relevant quotient types/theorems needed
       in order in the antecedents of the theorem below.
@@ -1969,7 +1967,7 @@ would include
 
       Here abs_1, rep_1, R1 correspond to the type of the first argument
       of F, ... abs_m, rep_m, Rm correspond to the type of the m-th
-      argument of F, and abs_r, rep_r, Rr correspond to the type of the 
+      argument of F, and abs_r, rep_r, Rr correspond to the type of the
       result of F.  If one of these types is not lifted, then use
       I, I, and $= for that abs, rep, and R.
 *)
@@ -2039,7 +2037,7 @@ would include
                 val _ = assert (curry op = "QUOTIENT") ((#Name o dest_const) Q)
                 val rty = (hd o #Args o dest_type o type_of o hd o tl) Rar
                 val qth = get_quotient rty
-            in 
+            in
                (MATCH_MP th) qth
             end
 
@@ -2128,8 +2126,8 @@ would include
 
 HIGHER_RSP_TAC produces a tactic that reduces a goal whose conclusion
 is a substitution and/or type instance of R (C x1 ... xn) (C y1 ... yn)
-to a set of n subgoals which are the corresponding instances of 
-R_i_1 x1 y1 through R_i_n xn yn, IF for that substitution/type instance the 
+to a set of n subgoals which are the corresponding instances of
+R_i_1 x1 y1 through R_i_n xn yn, IF for that substitution/type instance the
 corresponding quotient theorem antecedents are resolvable.
 *)
         fun cname tm = #Name (dest_const (fst (strip_comb (rand (rator tm)))))
@@ -2149,7 +2147,7 @@ corresponding quotient theorem antecedents are resolvable.
    resolve the preservation theorem by proving and discharging the quotient
    antecedents.  The resulting simplified preservation theorem is returned.
 
-   In the special case where some of the quotient theorem resolvents may 
+   In the special case where some of the quotient theorem resolvents may
    have been identity quotients, the result may have to be simplified by
    rewriting with theorems FUN_MAP_I and/or I_THM.  Of course, rewriting
    with I_THM is not helpful if the operator being preserved is I itself.
@@ -2675,7 +2673,7 @@ R2 (f[x']) (g[y']).
 (* ------------------------------------------------------------------------- *)
 
         fun TRANSFORM_CONV tm =
-          let 
+          let
               val teq = mk_eq{lhs=tm, rhs=transconv tm}
               val th = TAC_PROOF (([],teq), REPEAT R_MK_COMB_TAC)
           in
@@ -2751,7 +2749,7 @@ R2 (f[x']) (g[y']).
                              (--`RES_EXISTS ^res ^tm1r`--)
                         else if name = "?!" then
                              (--`RES_EXISTS_EQUIV ^domREL ^tm1r`--)
-                        else 
+                        else
                              list_mk_comb(opp, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
@@ -2763,7 +2761,7 @@ R2 (f[x']) (g[y']).
                              list_mk_comb(--`SUBSETR ^elemREL`--, map regularize args)
                         else if name = "PSUBSET" then
                              list_mk_comb(--`PSUBSETR ^elemREL`--, map regularize args)
-                        else 
+                        else
                              list_mk_comb(opp, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
@@ -2782,7 +2780,7 @@ R2 (f[x']) (g[y']).
                              list_mk_comb(--`DELETER ^elemREL`--, map regularize args)
                         else if name = "DISJOINT" then
                              list_mk_comb(--`DISJOINTR ^elemREL`--, map regularize args)
-                        else 
+                        else
                              list_mk_comb(opp, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
@@ -2811,7 +2809,7 @@ R2 (f[x']) (g[y']).
                       in
                         if name = "IMAGE" then
                              list_mk_comb(--`IMAGER ^domREL ^rngREL`--, map regularize args)
-                        else 
+                        else
                              list_mk_comb(opp, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
@@ -2843,7 +2841,7 @@ R2 (f[x']) (g[y']).
                              (--`RES_EXISTS_EQUIV ^(tyREL dom) ^tm1r`--)
                         else if name = "RES_ABSTRACT" then
                              (--`RES_ABSTRACT ^res ^tm1r`--)
-                        else 
+                        else
                              list_mk_comb(opp, map regularize args)
                       end
                       handle _ => list_mk_comb(opp, map regularize args)
@@ -2894,18 +2892,18 @@ R2 (f[x']) (g[y']).
 
         val REGULARIZE_TAC = FIRST
           [
-           W(curry op THEN 
+           W(curry op THEN
                (FIRST (map MATCH_MP_TAC
                         [FORALL_REGULAR,EXISTS_REGULAR])) o
                X_GEN_TAC o #Bvar o dest_abs o rand o rand o rator o snd),
 
-           W(curry op THEN 
+           W(curry op THEN
                (FIRST (map MATCH_MP_TAC
                         [RES_FORALL_REGULAR,RES_EXISTS_REGULAR])) o
                X_GEN_TAC o #Bvar o dest_abs o rand o rand o rator o snd)
            THEN DISCH_THEN (ASSUME_TAC o REWRITE_RULE[RESPECTS]),
 
-           W(curry op THEN 
+           W(curry op THEN
                (MATCH_MP_TAC LEFT_RES_FORALL_REGULAR) o
                X_GEN_TAC o #Bvar o dest_abs o rand o rand o rator o snd)
            THEN CONJ_TAC
@@ -2920,17 +2918,17 @@ R2 (f[x']) (g[y']).
                    THEN CONV_TAC (RAND_CONV BETA_CONV)
                  ],
 
-           W(curry op THEN 
+           W(curry op THEN
                (MATCH_MP_TAC RIGHT_RES_FORALL_REGULAR) o
                X_GEN_TAC o #Bvar o dest_abs o rand o rand o rator o snd)
            THEN DISCH_THEN (ASSUME_TAC o CONV_RULE (REWR_CONV RESPECTS)),
 
-           W(curry op THEN 
+           W(curry op THEN
                (MATCH_MP_TAC LEFT_RES_EXISTS_REGULAR) o
                X_GEN_TAC o #Bvar o dest_abs o rand o rand o rator o snd)
            THEN DISCH_THEN (ASSUME_TAC o CONV_RULE (REWR_CONV RESPECTS)),
 
-           W(curry op THEN 
+           W(curry op THEN
                (MATCH_MP_TAC RIGHT_RES_EXISTS_REGULAR) o
                X_GEN_TAC o #Bvar o dest_abs o rand o rand o rator o snd)
            THEN CONJ_TAC
@@ -2990,7 +2988,7 @@ R2 (f[x']) (g[y']).
                   if tm = tm' then th
                   else
                     (* REGULARIZE th *)
-                    let 
+                    let
                         val rmp = mk_imp{ant=tm, conseq=tm'}
                         val rth = prove(rmp, REWRITE_TAC er_rws
                                              THEN REPEAT REGULARIZE_TAC)
@@ -3038,7 +3036,7 @@ R2 (f[x']) (g[y']).
                    }
              else ()
             )
-            
+
         fun CHECK_HIGH th = (check_high (concl th); th)
 
 
@@ -3144,7 +3142,7 @@ R2 (f[x']) (g[y']).
                          end)
 
     in
-       
+
        LIFT_RULE
     end;
 (* end of lift_theorem_by_quotients *)
