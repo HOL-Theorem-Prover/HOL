@@ -117,6 +117,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <comment>{newline} => (newline(yypos,yytext); lex());
 <tmcomment,tycomment,qcomment>{newline} => (qnewline(yypos,yytext); lex());
 <tmcomment,tycomment,qcomment>"\\" => (ECHO "\\\\"; lex());
+<tmcomment,tycomment,qcomment>"\"" => (ECHO "\\\""; lex());
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
 
 <quote,tmquote,tyquote>"\\^" => (ECHO "^"; lex());
