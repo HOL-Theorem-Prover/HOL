@@ -29,6 +29,14 @@ fun locpragma (s,pos) off
 nised
        when prepended by a paren or symbol char.  --KW
        See cvs log comment at rev 1.2 of src/parse/base_tokens.lex *)
+
+fun newline(yypos,yytext) = (print "\n"; TextIO.flushOut (!output_stream);
+                             nextline (yypos + size yytext));
+fun qnewline(yypos,yytext) =
+    (nextline (yypos + size yytext);
+     print (" \",\nQUOTE \""^locpragma (yytext,yypos) 0);
+     TextIO.flushOut (!output_stream))
+
 fun dolocpragma (s,pos)
   = let val ss = Substring.all s
         val sr = Substring.dropl (not o Char.isDigit) ss
@@ -44,7 +52,7 @@ type lexresult = (string * int)
 fun eof () = ("", 0)
 %%
 %structure filter
-%s string comment oldtyquote oldtmquote tyquote tmquote quote ANTIQ;
+%s string qstring tmstring comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
 
 letter = [A-Za-z];
 digit = [0-9];
@@ -63,20 +71,12 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>")" => (ECHO yytext; dec pardepth;
                  if !antiquote andalso !pardepth < 1 then (yytext,yypos)
                  else lex());
-<INITIAL>"==" {ws}* "`" => (print ("(Parse.Type [QUOTE \""^
-                                   locpragma (yytext,yypos) 0);
-                   YYBEGIN oldtyquote;
-                   lex());
-<INITIAL>"--" {ws}* "`" => (print ("(Parse.Term [QUOTE \""^
-                                   locpragma (yytext,yypos) 0);
-                   YYBEGIN oldtmquote;
-                   lex());
 <INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [(']) => (
                  print ("(Parse.Type [QUOTE \""^locpragma (yytext,yypos) 2);
                  print (drop_upto #":" yytext);
                  YYBEGIN tyquote;
                  lex());
-<INITIAL>"``" {ws}* ":^" => 
+<INITIAL>"``" {ws}* ":^" =>
               (print ("(Parse.Type [QUOTE \""^locpragma (yytext,yypos) 2^
                       ":\", ANTIQUOTE (");
                YYBEGIN ANTIQ;
@@ -88,83 +88,65 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>"`" => (print ("[QUOTE \""^locpragma (yytext,yypos) 0); YYBEGIN quote;
                  lex());
 <INITIAL>"\"" => (ECHO yytext; YYBEGIN string; lex());
-<INITIAL>{newline} => (print "\n"; TextIO.flushOut (!output_stream);
-                       nextline (yypos + size yytext);
-                       lex());
+<INITIAL>{newline} => (newline(yypos,yytext); lex());
 <INITIAL>. => (ECHO yytext;lex());
 
-<string>"\\\"" => (ECHO yytext; lex());
-<string>"\\\\" => (ECHO yytext; lex());
+<qstring,tmstring,string>"\\\"" => (ECHO yytext; lex());
+<qstring,tmstring,string>"\\\\" => (ECHO yytext; lex());
 <string>"\"" => (ECHO yytext; YYBEGIN INITIAL; lex());
-<string>{newline} => (print "\n"; TextIO.flushOut (!output_stream);
-                      nextline (yypos + size yytext);
-                      lex());
-<string>. => (ECHO yytext; lex());
+<tmstring>"\"" => (print "\\\""; YYBEGIN tmquote; lex());
+<qstring>"\"" => (print "\\\""; YYBEGIN quote; lex());
+<string>{newline} => (newline(yypos,yytext); lex());
+<qstring,tmstring>{newline} => (qnewline(yypos,yytext); lex());
+<qstring,tmstring,string>. => (ECHO yytext; lex());
 
-<comment>"(*" => (ECHO yytext; inc comdepth; lex());
+<comment,tmcomment,tycomment,qcomment>"(*" =>
+                (ECHO yytext; inc comdepth; lex());
 <comment>"*)" => (ECHO yytext; dec comdepth;
-                  if !comdepth < 1 then YYBEGIN INITIAL
-                  else ();
+                  if !comdepth < 1 then YYBEGIN INITIAL else ();
                   lex());
-<comment>{newline} => (print "\n"; TextIO.flushOut (!output_stream);
-                       nextline (yypos + size yytext);
-                       lex());
-<comment>. => (ECHO yytext; lex());
+<tmcomment>"*)" => (ECHO yytext; dec comdepth;
+                  if !comdepth < 1 then YYBEGIN tmquote else ();
+                  lex());
+<tycomment>"*)" => (ECHO yytext; dec comdepth;
+                  if !comdepth < 1 then YYBEGIN tyquote else ();
+                  lex());
+<qcomment>"*)" => (ECHO yytext; dec comdepth;
+                  if !comdepth < 1 then YYBEGIN quote else ();
+                  lex());
+<comment>{newline} => (newline(yypos,yytext); lex());
+<tmcomment,tycomment,qcomment>{newline} => (qnewline(yypos,yytext); lex());
+<comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
 
 <quote>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
+<quote>"(*" => (ECHO yytext; YYBEGIN qcomment; lex());
 <quote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                YYBEGIN quote; lex());
 <quote>"\\" => (print "\\\\"; lex());
-<quote>"\"" => (print "\\\""; lex());
+<quote>"\"" => (print "\\\""; YYBEGIN qstring; lex());
 <quote>"\t" => (print "\\t"; lex());
-<quote>{newline} => (nextline (yypos + size yytext);
-                     print (" \",\nQUOTE \""^locpragma (yytext,yypos) 0);
-                     TextIO.flushOut (!output_stream); lex());
+<quote>{newline} => (qnewline(yypos,yytext); lex());
 <quote>. => (ECHO yytext;lex());
 
 <tmquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
+<tmquote>"(*" => (ECHO yytext; YYBEGIN tmcomment; lex());
 <tmquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                  YYBEGIN tmquote; lex());
 <tmquote>"\\" => (print "\\\\"; lex());
-<tmquote>"\"" => (print "\\\""; lex());
+<tmquote>"\"" => (print "\\\""; YYBEGIN tmstring; lex());
 <tmquote>"\t" => (print "\\t"; lex());
-<tmquote>{newline} => (nextline (yypos + size yytext);
-                     print (" \",\nQUOTE \""^locpragma (yytext,yypos) 0);
-                     TextIO.flushOut (!output_stream); lex());
+<tmquote>{newline} => (qnewline(yypos,yytext); lex());
 <tmquote>. => (ECHO yytext; lex());
 
 <tyquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
+<tyquote>"(*" => (ECHO yytext; YYBEGIN tycomment; lex());
 <tyquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                  YYBEGIN tyquote; lex());
 <tyquote>"\\" => (print "\\\\"; lex());
 <tyquote>"\"" => (print "\\\""; lex());
 <tyquote>"\t" => (print "\\t"; lex());
-<tyquote>{newline} => (nextline (yypos + size yytext);
-                       print (" \",\nQUOTE \""^locpragma (yytext,yypos) 0);
-                       TextIO.flushOut (!output_stream); lex());
+<tyquote>{newline} => (qnewline(yypos,yytext); lex());
 <tyquote>. => (ECHO yytext; lex());
-
-<oldtmquote>"`" {ws}* "--" => (print "\"])"; YYBEGIN INITIAL; lex());
-<oldtmquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
-                 YYBEGIN oldtmquote; lex());
-<oldtmquote>"\\" => (print "\\\\"; lex());
-<oldtmquote>"\"" => (print "\\\""; lex());
-<oldtmquote>"\t" => (print "\\t"; lex());
-<oldtmquote>{newline} => (nextline (yypos + size yytext);
-                     print (" \",\nQUOTE \""^locpragma (yytext,yypos) 0);
-                     TextIO.flushOut (!output_stream); lex());
-<oldtmquote>. => (ECHO yytext; lex());
-
-<oldtyquote>"`" {ws}* "==" => (print "\"])"; YYBEGIN INITIAL; lex());
-<oldtyquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
-                    YYBEGIN oldtyquote; lex());
-<oldtyquote>"\\" => (print "\\\\"; lex());
-<oldtyquote>"\"" => (print "\\\""; lex());
-<oldtyquote>"\t" => (print "\\t"; lex());
-<oldtyquote>{newline} => (nextline (yypos + size yytext);
-                          print (" \",\nQUOTE \""^locpragma (yytext,yypos) 0);
-                          TextIO.flushOut (!output_stream); lex());
-<oldtyquote>. => (ECHO yytext; lex());
 
 <ANTIQ>{MLid} => (ECHO yytext;
                   print ("),QUOTE \""^locpragma (yytext,yypos) 0);
@@ -175,7 +157,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                      pardepth := 1;
                      antiquote := true;
                      YYBEGIN INITIAL;
-                     let val (yytext,yypos) = lex() 
+                     let val (yytext,yypos) = lex()
                      in
                        print ("),QUOTE \""^locpragma (yytext, yypos) 0);
                        antiquote := oldanti;
@@ -183,8 +165,5 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                      end
                end);
 <ANTIQ>{ws}+ => (lex());
-<ANTIQ>{newline} => (print "\n";
-                     TextIO.flushOut (!output_stream);
-                     nextline (yypos + size yytext);
-                     lex());
+<ANTIQ>{newline} => (newline(yypos,yytext); lex());
 <ANTIQ>. => (ECHO yytext; (yytext,yypos));
