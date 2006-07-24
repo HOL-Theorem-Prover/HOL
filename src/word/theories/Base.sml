@@ -5,7 +5,7 @@ infix THEN THENL |->;
 
 local
 
-open HolKernel Parse boolLib Prim_rec numLib 
+open HolKernel Parse boolLib Prim_rec numLib
      rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
 
   (* Fix the grammar used by this file *)
@@ -109,63 +109,8 @@ fun ARITH_TAC (asml,gl) =
  * entire library of lists.
  *---------------------------------------------------------------------------*)
 
-fun WORD_ERR{function,message} =
-     HOL_ERR{origin_structure="Word library",
-             origin_function = function,
-             message = message};
-
-open Rsyntax;
-
-val % = Parse.Term
-val alpha_ty = Type.alpha
-val bool_ty = Type.bool
-
-
-(* --------------------------------------------------------------------*)
-(*   LIST_INDUCT: (thm # thm) -> thm			               *)
-(*							               *)
-(*     A1 |- t[[]]      A2 |- !tl. t[tl] ==> !h. t[CONS h t]           *)
-(* ----------------------------------------------------------          *)
-(*                   A1 u A2 |- !l. t[l]			       *)
-(*							               *)
-(* --------------------------------------------------------------------*)
-
-fun LIST_INDUCT (base,step) =
-   let val {Bvar,Body} = dest_forall(concl step)
-       val {ant,conseq} = dest_imp Body
-       val {Bvar=h,Body=con} = dest_forall conseq
-       val P  = %`\^Bvar.^ant`
-       val b1 = genvar bool_ty
-       val b2 = genvar bool_ty
-       val base'  = EQ_MP (SYM(BETA_CONV (%`^P []`))) base
-       val step'  = DISCH ant (SPEC h (UNDISCH(SPEC Bvar step)))
-       val hypth  = SYM(RIGHT_BETA(REFL (%`^P ^Bvar`)))
-       val concth = SYM(RIGHT_BETA(REFL (%`^P(CONS ^h ^Bvar)`)))
-       val IND    = SPEC P (INST_TYPE [{redex=alpha_ty, residue = type_of h}]
-                                      list_INDUCT)
-       val th1 = SUBST[b1 |-> hypth, b2 |-> concth]
-                      (%`^(concl step') = (^b1 ==> ^b2)`)
-                      (REFL (concl step'))
-       val th2 = GEN Bvar (DISCH (%`^P ^Bvar`)
-                                 (GEN h(UNDISCH (EQ_MP th1 step'))))
-       val th3 = SPEC Bvar (MP IND (CONJ base' th2))
-   in
-   GEN Bvar (EQ_MP (BETA_CONV(concl th3)) th3)
-   end
-   handle _ => raise WORD_ERR{function="LIST_INDUCT", message = ""};
-
-
-(* --------------------------------------------------------------------*)
-(*							               *)
-(* LIST_INDUCT_TAC					               *)
-(*							               *)
-(*             [A] !l.t[l]				               *)
-(*  ================================			               *)
-(*   [A] t[[]],  [A,t[l]] !h. t[CONS h t]		               *)
-(*							               *)
-(* --------------------------------------------------------------------*)
-
-val LIST_INDUCT_TAC  = INDUCT_THEN list_INDUCT ASSUME_TAC;
+val LIST_INDUCT = ListConv1.LIST_INDUCT
+val LIST_INDUCT_TAC = ListConv1.LIST_INDUCT_TAC
 
 (* --------------------------------------------------------------------*)
 (*                                                                     *)
@@ -230,7 +175,7 @@ val EQ_LENGTH_SNOC_INDUCT_TAC =
 
 val _ = Rewrite.add_implicit_rewrites pairTheory.pair_rws;
 
-fun export_doc_theorems() = 
+fun export_doc_theorems() =
  let infix ^^
      val op^^ = Path.concat
  in
