@@ -16,8 +16,6 @@ open Cond_rewrite word_baseTheory word_bitopTheory word_numTheory;
 open Base;
 open res_quanTheory bossLib pred_setTheory;
 
-infix THEN THENL THENC ORELSE ORELSEC |->;
-
 val _ = new_theory "bword_num";
 
 val word_CASES_TAC =
@@ -433,8 +431,7 @@ val NBWORD_MOD = store_thm("NBWORD_MOD",
                  (SPECL [(--`1`--), (--`[x:'a]`--)] IN_PWORDLEN)))
             in
                map (fn t =>
-                    ISPEC (hd (#1 (listSyntax.dest_list
-                                   (#Rand(dest_comb t))))) lm) tms2
+                    ISPEC (hd (#1 (listSyntax.dest_list (rand t)))) lm) tms2
             end
         val lems3 =
             map (fn t => ISPECL (snd (strip_comb t)) PWORDLEN_NBWORD) tms1

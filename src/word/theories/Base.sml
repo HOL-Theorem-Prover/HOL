@@ -180,6 +180,4 @@ fun export_doc_theorems() =
 
 val _ = Parse.temp_set_grammars ambient_grammars
 
-open Rsyntax (* some files using this one rely on Rsyntax being opened - 
-                blech *)
 end

@@ -16,9 +16,6 @@ open rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory;
 open Cond_rewrite word_baseTheory;
 open res_quanTheory bossLib pred_setTheory;
 
-infix THEN THENL THENC ORELSE ORELSEC;
-
-
 val ARITH_TAC = Base.ARITH_TAC;
 
 val _ = new_theory "word_bitop";
@@ -423,7 +420,7 @@ val SHR_WSEG = store_thm("SHR_WSEG",
       (SHR F b(WSEG m k w) = WCAT(WORD[b],WSEG(m - 1)(k + 1)w),BIT k w) *)
 val SHR_WSEG_1F = save_thm("SHR_WSEG_1F",
     let val th1 = RESQ_SPECL [``n : num``, ``w : 'a word``, ``m : num``, ``k : num``] SHR_WSEG
-    val {Rator = P,Rand = v} = dest_comb(hd(hyp th1))
+    val (P,v) = dest_comb(hd(hyp th1))
     val ante = fst(strip_imp(concl th1))
     val th2 = SPEC ``b : 'a`` (CONV_RULE(ONCE_DEPTH_CONV COND_CONV)
         (SPEC (--`F`--) (UNDISCH_ALL th1)))
@@ -508,7 +505,7 @@ val SHL_WSEG = store_thm("SHL_WSEG",
       (!b. SHL F(WSEG m k w)b = BIT(k + (m - 1))w,WCAT(WSEG(m - 1)k w,WORD[b])) *)
 val SHL_WSEG_1F = save_thm("SHL_WSEG_1F",
     let val th1 = RESQ_SPECL [``n : num``, ``w : 'a word``, ``m : num``, ``k : num``] SHL_WSEG
-    val {Rator = P, Rand = v} = dest_comb(hd(hyp th1))
+    val (P,v) = dest_comb(hd(hyp th1))
     val ante = fst(strip_imp(concl th1))
     val th2 = SPEC ``b : 'a`` (CONV_RULE(ONCE_DEPTH_CONV COND_CONV)
         (SPEC (--`F`--) (UNDISCH_ALL th1)))
