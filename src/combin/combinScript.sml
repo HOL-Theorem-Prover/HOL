@@ -13,7 +13,7 @@
 structure combinScript =
 struct
 
-open HolKernel boolLib;
+open HolKernel Parse boolLib;
 
 val _ = new_theory "combin";
 
@@ -165,11 +165,11 @@ val _ = adjoin_to_theory
   end)};
 
 
-val _ = 
+val _ =
  let open EmitML
- in 
+ in
    emitML (!Globals.emitMLDir)
-     ("combin", 
+     ("combin",
        map DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM, FAIL_THM])
  end;
 
