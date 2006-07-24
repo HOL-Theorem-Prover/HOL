@@ -120,7 +120,6 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
 
 <quote,tmquote,tyquote>"\\^" => (ECHO "^"; lex());
-<quote,tmquote,tyquote>"\\`" => (ECHO "`"; lex());
 <quote>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
 <quote>"(*" => (ECHO yytext; YYBEGIN qcomment; lex());
 <quote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
