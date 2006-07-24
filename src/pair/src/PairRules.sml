@@ -3,7 +3,7 @@ struct
 
 infix THENC |-> THEN ## ORELSE; infixr -->;
 
-open HolKernel boolLib pairSyntax;
+open HolKernel Parse boolLib pairSyntax;
 
 val ERR = mk_HOL_ERR "PairRules"
 
@@ -490,12 +490,12 @@ val NOT_FORALL_THM = boolTheory.NOT_FORALL_THM;
 (* ------------------------------------------------------------------------- *)
 
 fun NOT_PFORALL_CONV tm =
-    let val (p,_) = dest_pforall (dest_neg tm) 
-	val f = rand (rand tm) 
-	val th = ISPEC f NOT_FORALL_THM 
+    let val (p,_) = dest_pforall (dest_neg tm)
+	val f = rand (rand tm)
+	val th = ISPEC f NOT_FORALL_THM
 	val th1 = CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV
-		    ETA_CONV)))) th 
-	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV p))) th1 
+		    ETA_CONV)))) th
+	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV p))) th1
     in
 	CONV_RULE
 	   (RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV PBETA_CONV))))
@@ -503,7 +503,7 @@ fun NOT_PFORALL_CONV tm =
     end
 handle HOL_ERR _ => raise ERR "NOT_PFORALL_CONV"
                               "argument must have the form `~!p.tm`";
-		     
+
 (* ------------------------------------------------------------------------- *)
 (* NOT_PEXISTS_CONV "~?p.t" = |- (~?p.t) = (!p.~t)                           *)
 (* ------------------------------------------------------------------------- *)
@@ -557,29 +557,29 @@ handle HOL_ERR _ => raise ERR "PFORALL_NOT_CONV"
 
 fun PFORALL_AND_CONV tm =
     let val (x,Body) = dest_pforall tm
-	val (P,Q) = dest_conj Body 
+	val (P,Q) = dest_conj Body
 	val f = mk_pabs(x,P)
 	val g = mk_pabs(x,Q)
-	val th = ISPECL [f,g] FORALL_AND_THM 
+	val th = ISPECL [f,g] FORALL_AND_THM
 	val th1 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RAND_CONV
 		    (PALPHA_CONV x))))
-		th 
+		th
 	val th2 =
 	    CONV_RULE
-		(RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV 
+		(RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV
 		    (RATOR_CONV (RAND_CONV PBETA_CONV))))))
-		    th1 
+		    th1
 	val th3 =
 	    CONV_RULE
-		(RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV 
+		(RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV
 		    (RAND_CONV PBETA_CONV)))))
-		    th2 
+		    th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
-		th3 
+		th3
     in
 	(CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV)))) th4
     end
@@ -596,15 +596,15 @@ fun PEXISTS_OR_CONV tm =
 	val (P,Q) = dest_disj Body
 	val f = mk_pabs(x,P)
 	val g = mk_pabs(x,Q)
-	val th = ISPECL [f,g] EXISTS_OR_THM 
+	val th = ISPECL [f,g] EXISTS_OR_THM
 	val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV
 						     (PALPHA_CONV x))))) th
-	val th2 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV 
+	val th2 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV
 	    (RATOR_CONV (RAND_CONV PBETA_CONV))))))) th1
-	val th3 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV 
+	val th3 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV
 	    (RAND_CONV PBETA_CONV)))))) th2
-	val th4 = (CONV_RULE (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV 
-	    ETA_CONV))))) th3 
+	val th4 = (CONV_RULE (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
+	    ETA_CONV))))) th3
     in
 	(CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV)))) th4
     end
@@ -617,20 +617,20 @@ handle HOL_ERR _ => raise ERR"PEXISTS_OR_CONV"
 (* ------------------------------------------------------------------------- *)
 
 fun AND_PFORALL_CONV tm =
-    let val (conj1,conj2) = dest_conj tm 
+    let val (conj1,conj2) = dest_conj tm
 	val (x,P) = dest_pforall conj1
 	and (y,Q) = dest_pforall conj2
     in
 	if (not (x=y)) then failwith""
 	else
 	    let val f = mk_pabs (x,P)
-		val g = mk_pabs(x,Q) 
-		val th = SYM (ISPECL [f,g] FORALL_AND_THM) 
-		val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RATOR_CONV 
-                                       (RAND_CONV (RAND_CONV ETA_CONV)))))) th 
-		val th2 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV 
-					(RAND_CONV ETA_CONV))))) th1 
-		val th3 = (CONV_RULE(RAND_CONV(RAND_CONV(PALPHA_CONV x)))) th2 
+		val g = mk_pabs(x,Q)
+		val th = SYM (ISPECL [f,g] FORALL_AND_THM)
+		val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RATOR_CONV
+                                       (RAND_CONV (RAND_CONV ETA_CONV)))))) th
+		val th2 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV
+					(RAND_CONV ETA_CONV))))) th1
+		val th3 = (CONV_RULE(RAND_CONV(RAND_CONV(PALPHA_CONV x)))) th2
 		val th4 = (CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV
 				    (RATOR_CONV (RAND_CONV PBETA_CONV)))))) th3
 	    in
@@ -641,7 +641,7 @@ fun AND_PFORALL_CONV tm =
 handle HOL_ERR _ => raise ERR "AND_PFORALL_CONV"
 		     "arguments must have form `(!p.P)/\\(!p.Q)`";
 
-    
+
 
 (* ------------------------------------------------------------------------- *)
 (* LEFT_AND_PFORALL_CONV "(!x.P) /\  Q" =                                    *)
@@ -649,12 +649,12 @@ handle HOL_ERR _ => raise ERR "AND_PFORALL_CONV"
 (* ------------------------------------------------------------------------- *)
 
 fun LEFT_AND_PFORALL_CONV tm =
-    let val (conj1,Q) = dest_conj tm 
+    let val (conj1,Q) = dest_conj tm
 	val (x,P) = dest_pforall conj1
-	val f = mk_pabs(x,P) 
-	val th = ISPECL [Q,f] LEFT_AND_FORALL_THM 
+	val f = mk_pabs(x,P)
+	val th = ISPECL [Q,f] LEFT_AND_FORALL_THM
 	val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV
-						 (RAND_CONV ETA_CONV)))))) th 
+						 (RAND_CONV ETA_CONV)))))) th
 	val th2 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th1
     in
 	(CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV
@@ -669,13 +669,13 @@ handle HOL_ERR _ => raise ERR "LEFT_AND_PFORALL_CONV"
 (* ------------------------------------------------------------------------- *)
 
 fun RIGHT_AND_PFORALL_CONV tm =
-    let val (P,conj2) = dest_conj tm 
+    let val (P,conj2) = dest_conj tm
 	val (x,Q) = dest_pforall conj2
-	val g = mk_pabs(x,Q) 
-	val th = (ISPECL [P,g] RIGHT_AND_FORALL_THM) 
-	val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV 
+	val g = mk_pabs(x,Q)
+	val th = (ISPECL [P,g] RIGHT_AND_FORALL_THM)
+	val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV
                                (RAND_CONV ETA_CONV))))) th
-	val th2 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th1 
+	val th2 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th1
     in
 	CONV_RULE
 	    (RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV PBETA_CONV))))
@@ -695,14 +695,14 @@ fun OR_PEXISTS_CONV tm =
     in
 	if (not (x=y)) then failwith""
 	else
-	    let val f = mk_pabs(x,P) 
-		val g = mk_pabs(x,Q) 
-		val th = SYM (ISPECL [f,g] EXISTS_OR_THM) 
-		val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RATOR_CONV 
-                                       (RAND_CONV (RAND_CONV ETA_CONV)))))) th 
-		val th2 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV 
-						  (RAND_CONV ETA_CONV))))) th1 
-		val th3 = (CONV_RULE(RAND_CONV(RAND_CONV(PALPHA_CONV x)))) th2 
+	    let val f = mk_pabs(x,P)
+		val g = mk_pabs(x,Q)
+		val th = SYM (ISPECL [f,g] EXISTS_OR_THM)
+		val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RATOR_CONV
+                                       (RAND_CONV (RAND_CONV ETA_CONV)))))) th
+		val th2 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV
+						  (RAND_CONV ETA_CONV))))) th1
+		val th3 = (CONV_RULE(RAND_CONV(RAND_CONV(PALPHA_CONV x)))) th2
 		val th4 = (CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV
 				    (RATOR_CONV (RAND_CONV PBETA_CONV)))))) th3
 	    in
@@ -713,7 +713,7 @@ fun OR_PEXISTS_CONV tm =
 handle HOL_ERR _ => raise ERR "OR_PEXISTS_CONV"
 		        "arguments must have form `(!p.P) \\/ (!p.Q)`";
 
-    
+
 
 (* ------------------------------------------------------------------------- *)
 (* LEFT_OR_PEXISTS_CONV (--`(?x.P) \/  Q`--) =                               *)
@@ -726,7 +726,7 @@ fun LEFT_OR_PEXISTS_CONV tm =
 	val f = mk_pabs(x,P)
 	val th = ISPECL [Q,f] LEFT_OR_EXISTS_THM
 	val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV
-	    (RAND_CONV ETA_CONV)))))) th 
+	    (RAND_CONV ETA_CONV)))))) th
 	val th2 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th1
 	in
 	    CONV_RULE
@@ -745,11 +745,11 @@ handle HOL_ERR _ => raise ERR "LEFT_OR_PEXISTS_CONV"
 fun RIGHT_OR_PEXISTS_CONV tm =
     let val (P,disj2) = dest_disj tm
 	val (x,Q) = dest_pexists disj2
-	val g = mk_pabs(x,Q) 
-	val th = (ISPECL [P, g] RIGHT_OR_EXISTS_THM) 
+	val g = mk_pabs(x,Q)
+	val th = (ISPECL [P, g] RIGHT_OR_EXISTS_THM)
 	val th1 = (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV
-	    ETA_CONV))))) th 
-	val th2 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th1 
+	    ETA_CONV))))) th
+	val th2 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th1
     in
 	CONV_RULE
 	    (RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV PBETA_CONV))))
@@ -757,8 +757,8 @@ fun RIGHT_OR_PEXISTS_CONV tm =
     end
 handle HOL_ERR _ => raise ERR "RIGHT_OR_PEXISTS_CONV"
 		        "expecting `P \\/ (?p.Q)`";
-    
-       
+
+
 
 (* ------------------------------------------------------------------------- *)
 (* PEXISTS_AND_CONV : move existential quantifier into conjunction.          *)
@@ -772,25 +772,25 @@ handle HOL_ERR _ => raise ERR "RIGHT_OR_PEXISTS_CONV"
 
 fun PEXISTS_AND_CONV tm =
     let val (x,Body) = dest_pexists tm
-	handle HOL_ERR _ => failwith "expecting `?x. P /\\ Q`" 
+	handle HOL_ERR _ => failwith "expecting `?x. P /\\ Q`"
 	val (P,Q) = dest_conj Body
-	    handle HOL_ERR _ => failwith "expecting `?x. P /\\ Q`" 
-	val oP = occs_in x P and oQ =  occs_in x Q 
+	    handle HOL_ERR _ => failwith "expecting `?x. P /\\ Q`"
+	val oP = occs_in x P and oQ =  occs_in x Q
     in
 	if (oP andalso oQ) then
 	    failwith "bound pair occurs in both conjuncts"
 	else if ((not oP) andalso (not oQ)) then
 	    let	val th1 = INST_TYPE[alpha |-> type_of x ] BOTH_EXISTS_AND_THM
-		val th2 = SPECL [P,Q] th1 
+		val th2 = SPECL [P,Q] th1
 		val th3 =
 		    CONV_RULE
 			(RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			th2 
+			th2
 		val th4 =
 		    CONV_RULE
 			(RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
 			    (PALPHA_CONV x)))))
-			th3 
+			th3
 		val th5 =
 		    CONV_RULE
 			(RAND_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))th4
@@ -798,16 +798,16 @@ fun PEXISTS_AND_CONV tm =
 		th5
 	    end
 	     else if oP then (* not free in Q *)
-		 let val f = mk_pabs(x,P) 
-		     val th1 = ISPECL [Q,f] LEFT_EXISTS_AND_THM 
+		 let val f = mk_pabs(x,P)
+		     val th1 = ISPECL [Q,f] LEFT_EXISTS_AND_THM
 		     val th2 = CONV_RULE
   			   (RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
 			   th1
 		     val th3 = CONV_RULE
-			(RATOR_CONV (RAND_CONV (RAND_CONV 
+			(RATOR_CONV (RAND_CONV (RAND_CONV
 			    (PABS_CONV (RATOR_CONV (RAND_CONV PBETA_CONV))))))
 			     th2
-		     val th4 = 
+		     val th4 =
 			 CONV_RULE
 			     (RAND_CONV
 			      (RATOR_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
@@ -821,13 +821,13 @@ fun PEXISTS_AND_CONV tm =
 		    val th2 =
 			CONV_RULE
 			   (RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			    th1 
-		    val th3 = 
+			    th1
+		    val th3 =
 			CONV_RULE
-			    (RATOR_CONV (RAND_CONV (RAND_CONV 
+			    (RATOR_CONV (RAND_CONV (RAND_CONV
 				    (PABS_CONV (RAND_CONV PBETA_CONV)))))
 			    th2
-		    val th4 = 
+		    val th4 =
 	             CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV))) th3
 		in
 		    th4
@@ -860,18 +860,18 @@ handle e => raise (wrap_exn "AND_EXISTS_CONV" "" e);
 (* LEFT_AND_PEXISTS_CONV "(?x.P) /\  Q" =                                    *)
 (*   |- (?x.P) /\ Q = (?x'. P[x'/x] /\ Q)                                    *)
 (* ------------------------------------------------------------------------- *)
-     
+
 fun LEFT_AND_PEXISTS_CONV tm =
     let val (conj1,Q) = dest_conj tm
 	val (x,P) = dest_pexists conj1
-	val f = mk_pabs(x,P) 
-	val th1 = SYM (ISPECL [Q,f] LEFT_EXISTS_AND_THM) 
+	val f = mk_pabs(x,P)
+	val th1 = SYM (ISPECL [Q,f] LEFT_EXISTS_AND_THM)
 	val th2 =
-	    CONV_RULE   
+	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
 		    ETA_CONV)))))
-		th1 
-	val th3 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th2 
+		th1
+	val th3 = (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x)))) th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV
@@ -880,7 +880,7 @@ fun LEFT_AND_PEXISTS_CONV tm =
     in
 	th4
     end
-handle HOL_ERR _ => raise (ERR "LEFT_AND_PEXISTS_CONV" 
+handle HOL_ERR _ => raise (ERR "LEFT_AND_PEXISTS_CONV"
                                "expecting `(?x.P) /\\ Q`");
 
 (* ------------------------------------------------------------------------- *)
@@ -892,12 +892,12 @@ fun RIGHT_AND_PEXISTS_CONV tm =
     let val (P,conj2) = dest_conj tm
 	val (x,Q) = dest_pexists conj2
 	val g = mk_pabs(x,Q)
-	val th1 = SYM (ISPECL [P,g] RIGHT_EXISTS_AND_THM) 
+	val th1 = SYM (ISPECL [P,g] RIGHT_EXISTS_AND_THM)
 	val th2 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
-		th1 
-	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2 
+		th1
+	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV PBETA_CONV))))
@@ -907,7 +907,7 @@ fun RIGHT_AND_PEXISTS_CONV tm =
     end
 handle HOL_ERR _ => raise ERR "RIGHT_AND_EXISTS_CONV"
 		               "expecting `P /\\ (?x.Q)`";
-    
+
 
 (* ------------------------------------------------------------------------- *)
 (* PFORALL_OR_CONV : move universal quantifier into disjunction.             *)
@@ -921,21 +921,21 @@ handle HOL_ERR _ => raise ERR "RIGHT_AND_EXISTS_CONV"
 
 fun PFORALL_OR_CONV tm =
     let val (x,Body) = dest_forall tm
-	    handle HOL_ERR _ => failwith "expecting `!x. P \\/ Q`" 
+	    handle HOL_ERR _ => failwith "expecting `!x. P \\/ Q`"
 	val (P,Q) = dest_disj Body
-	    handle HOL_ERR _ => failwith "expecting `!x. P \\/ Q`" 
-	val oP = occs_in x P and oQ =  occs_in x Q 
+	    handle HOL_ERR _ => failwith "expecting `!x. P \\/ Q`"
+	val oP = occs_in x P and oQ =  occs_in x Q
     in
 	if (oP andalso oQ) then
 		failwith "bound pair occurs in both conjuncts"
 	else if ((not oP) andalso (not oQ)) then
 	    let	val th1 =
 		INST_TYPE [alpha |-> type_of x] BOTH_FORALL_OR_THM
-		val th2 = SPECL [P,Q] th1 
+		val th2 = SPECL [P,Q] th1
 		val th3 =
 		    CONV_RULE
 			(RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			th2 
+			th2
 		val th4 =
 		    CONV_RULE
 			(RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
@@ -949,18 +949,18 @@ fun PFORALL_OR_CONV tm =
 		    th5
 	    end
 	     else if oP then (* not free in Q *)
-		 let val f = mk_pabs(x,P) 
-		     val th1 = ISPECL [Q,f] LEFT_FORALL_OR_THM 
+		 let val f = mk_pabs(x,P)
+		     val th1 = ISPECL [Q,f] LEFT_FORALL_OR_THM
 		     val th2 =
 			 CONV_RULE
 			   (RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			     th1 
-		     val th3 = 
+			     th1
+		     val th3 =
 			 CONV_RULE
-			    (RATOR_CONV (RAND_CONV (RAND_CONV 
+			    (RATOR_CONV (RAND_CONV (RAND_CONV
 			     (PABS_CONV (RATOR_CONV (RAND_CONV PBETA_CONV))))))
 			     th2
-		     val th4 = 
+		     val th4 =
 			 CONV_RULE
 			     (RAND_CONV
 			      (RATOR_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
@@ -969,16 +969,16 @@ fun PFORALL_OR_CONV tm =
 		     th4
 		 end
 		  else (* not free in P*)
-		      let val g = mk_pabs(x,Q) 
-			  val th1 = ISPECL [P,g] RIGHT_FORALL_OR_THM 
+		      let val g = mk_pabs(x,Q)
+			  val th1 = ISPECL [P,g] RIGHT_FORALL_OR_THM
 			  val th2 = CONV_RULE
   			   (RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-				  th1 
-			  val th3 = 
-			      (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV 
-				        (PABS_CONV (RAND_CONV PBETA_CONV)))))) 
+				  th1
+			  val th3 =
+			      (CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV
+				        (PABS_CONV (RAND_CONV PBETA_CONV))))))
 			      th2
-			  val th4 = (CONV_RULE (RAND_CONV 
+			  val th4 = (CONV_RULE (RAND_CONV
                                        (RAND_CONV (RAND_CONV ETA_CONV))))
 			            th3
 		      in
@@ -1015,7 +1015,7 @@ handle e => raise (wrap_exn "OR_FORALL_CONV" "" e);
 (* LEFT_OR_PFORALL_CONV "(!x.P) \/  Q" =                                     *)
 (*   |- (!x.P) \/ Q = (!x'. P[x'/x] \/ Q)                                    *)
 (* ------------------------------------------------------------------------- *)
-     
+
 fun LEFT_OR_PFORALL_CONV tm =
     let val ((x,P),Q) =
 	let val (disj1,Q) = dest_disj tm
@@ -1023,14 +1023,14 @@ fun LEFT_OR_PFORALL_CONV tm =
 	in
 	    ((x,P),Q)
 	end
-	val f = mk_pabs(x,P) 
-	val th1 = SYM (ISPECL [Q,f] LEFT_FORALL_OR_THM) 
+	val f = mk_pabs(x,P)
+	val th1 = SYM (ISPECL [Q,f] LEFT_FORALL_OR_THM)
 	val th2 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
 		    ETA_CONV)))))
-		th1 
-	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2 
+		th1
+	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV
@@ -1055,23 +1055,23 @@ fun RIGHT_OR_PFORALL_CONV tm =
 	in
 	    (P,(x,Q))
 	end
-	val g = mk_pabs(x,Q) 
-	val th1 = SYM (ISPECL [P,g] RIGHT_FORALL_OR_THM) 
+	val g = mk_pabs(x,Q)
+	val th1 = SYM (ISPECL [P,g] RIGHT_FORALL_OR_THM)
 	val th2 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
-		th1 
-	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2 
+		th1
+	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV PBETA_CONV))))
 		th3
     in
 	th4
-    end 
+    end
 handle HOL_ERR _ => raise (ERR "RIGHT_OR_FORALL_CONV"
 		               "expecting `P \\/ (!x.Q)`");
-	
+
 
 (* ------------------------------------------------------------------------- *)
 (* PFORALL_IMP_CONV, implements the following axiom schemes.                 *)
@@ -1090,8 +1090,8 @@ fun PFORALL_IMP_CONV tm =
 	in
 	    (Bvar,(ant,conseq))
 	end
-    handle HOL_ERR _ => failwith "expecting `!x. P ==> Q`" 
-	val oP = occs_in x P and oQ =  occs_in x Q 
+    handle HOL_ERR _ => failwith "expecting `!x. P ==> Q`"
+	val oP = occs_in x P and oQ =  occs_in x Q
     in
 	if (oP andalso oQ) then
 	    failwith "bound pair occurs in both sides of `==>`"
@@ -1101,12 +1101,12 @@ fun PFORALL_IMP_CONV tm =
 		val th3 =
 		    CONV_RULE
 			(RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			th2 
+			th2
 		val th4 =
 		    CONV_RULE
 			(RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
 			    (PALPHA_CONV x)))))
-			th3 
+			th3
 		val th5 =
 		    CONV_RULE
 			(RAND_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
@@ -1115,17 +1115,17 @@ fun PFORALL_IMP_CONV tm =
 		    th5
 	    end
 	     else if oP then (* not free in Q *)
-		let val f = mk_pabs(x,P) 
-		    val th1 = ISPECL [Q,f] LEFT_FORALL_IMP_THM 
+		let val f = mk_pabs(x,P)
+		    val th1 = ISPECL [Q,f] LEFT_FORALL_IMP_THM
 		    val th2 =
 			CONV_RULE
 			    (RATOR_CONV(RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			    th1 
-		    val th3 = 
+			    th1
+		    val th3 =
 			CONV_RULE
-			    (RATOR_CONV (RAND_CONV (RAND_CONV 
+			    (RATOR_CONV (RAND_CONV (RAND_CONV
 			       (PABS_CONV(RATOR_CONV(RAND_CONV PBETA_CONV))))))
-			    th2 
+			    th2
 		    val th4 = CONV_RULE
 	               (RAND_CONV(RATOR_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
 		       th3
@@ -1133,17 +1133,17 @@ fun PFORALL_IMP_CONV tm =
 		    th4
 		end
 	    else (* not free in P*)
-		let val g = mk_pabs(x,Q) 
-		    val th1 = ISPECL [P,g] RIGHT_FORALL_IMP_THM 
+		let val g = mk_pabs(x,Q)
+		    val th1 = ISPECL [P,g] RIGHT_FORALL_IMP_THM
 		    val th2 = CONV_RULE
 			    (RATOR_CONV(RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			    th1 
-		    val th3 = 
+			    th1
+		    val th3 =
 			CONV_RULE
 			    (RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV
 					       (RAND_CONV PBETA_CONV)))))
-			    th2 
-		    val th4 = 
+			    th2
+		    val th4 =
 			CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV)))
                                   th3
 		in
@@ -1164,13 +1164,13 @@ fun LEFT_IMP_PEXISTS_CONV tm =
 	in
 	    ((Bvar,Body),conseq)
 	end
-	val f = mk_pabs(x,P) 
-	val th = SYM (ISPECL [Q,f] LEFT_FORALL_IMP_THM) 
+	val f = mk_pabs(x,P)
+	val th = SYM (ISPECL [Q,f] LEFT_FORALL_IMP_THM)
 	val th1 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV
 		    (RAND_CONV ETA_CONV)))))
-		th 
+		th
 	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th1
     in
 	CONV_RULE
@@ -1188,19 +1188,19 @@ handle HOL_ERR _ => raise (ERR "LEFT_IMP_PEXISTS_CONV"
 (* ------------------------------------------------------------------------- *)
 
 fun RIGHT_IMP_PFORALL_CONV tm =
-    let val (P,(x,Q)) = 
+    let val (P,(x,Q)) =
 	let val (ant,conseq) = dest_imp tm
 	    val (Bvar,Body) = dest_pforall conseq
 	in
 	    (ant,(Bvar,Body))
 	end
-	val g = mk_pabs(x,Q) 
-	val th1 = SYM (ISPECL [P,g] RIGHT_FORALL_IMP_THM) 
+	val g = mk_pabs(x,Q)
+	val th1 = SYM (ISPECL [P,g] RIGHT_FORALL_IMP_THM)
 	val th2 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
-		th1 
-	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2 
+		th1
+	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV PBETA_CONV))))
@@ -1229,23 +1229,23 @@ fun  PEXISTS_IMP_CONV tm =
 	in
 	    (Bvar,(ant,conseq))
 	end
-    handle HOL_ERR _ => failwith "expecting `?x. P ==> Q`" 
-	val oP = occs_in x P and oQ =  occs_in x Q 
+    handle HOL_ERR _ => failwith "expecting `?x. P ==> Q`"
+	val oP = occs_in x P and oQ =  occs_in x Q
     in
 	if (oP andalso oQ) then
 		failwith "bound pair occurs in both sides of `==>`"
 	else if ((not oP) andalso (not oQ)) then
-	    let	val th1 = INST_TYPE[alpha |-> type_of x] BOTH_EXISTS_IMP_THM 
-		val th2 = SPECL [P,Q] th1 
+	    let	val th1 = INST_TYPE[alpha |-> type_of x] BOTH_EXISTS_IMP_THM
+		val th2 = SPECL [P,Q] th1
 		val th3 =
 		    CONV_RULE
 			(RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			th2 
+			th2
 		val th4 =
 		    CONV_RULE
 			(RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
 			    (PALPHA_CONV x)))))
-			th3 
+			th3
 		val th5 =
 		    CONV_RULE
 			(RAND_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
@@ -1254,18 +1254,18 @@ fun  PEXISTS_IMP_CONV tm =
 		th5
 	    end
 	     else if oP then (* not free in Q *)
-		let val f = mk_pabs(x,P) 
-		    val th1 = ISPECL [Q,f] LEFT_EXISTS_IMP_THM 
+		let val f = mk_pabs(x,P)
+		    val th1 = ISPECL [Q,f] LEFT_EXISTS_IMP_THM
 		    val th2 =
 			CONV_RULE
 			    (RATOR_CONV (RAND_CONV (RAND_CONV(PALPHA_CONV x))))
-			    th1 
-		    val th3 = 
+			    th1
+		    val th3 =
 			CONV_RULE
-			    (RATOR_CONV (RAND_CONV (RAND_CONV 
+			    (RATOR_CONV (RAND_CONV (RAND_CONV
 			       (PABS_CONV(RATOR_CONV(RAND_CONV PBETA_CONV))))))
-			    th2 
-		    val th4 = 
+			    th2
+		    val th4 =
 			CONV_RULE
 			    (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
 			        ETA_CONV))))
@@ -1274,18 +1274,18 @@ fun  PEXISTS_IMP_CONV tm =
 		    th4
 		end
 		  else (* not free in P*)
-		      let val g = mk_pabs(x,Q) 
-			  val th1 = ISPECL [P,g] RIGHT_EXISTS_IMP_THM 
+		      let val g = mk_pabs(x,Q)
+			  val th1 = ISPECL [P,g] RIGHT_EXISTS_IMP_THM
 			  val th2 = CONV_RULE
 			   (RATOR_CONV (RAND_CONV (RAND_CONV (PALPHA_CONV x))))
-			   th1 
-			  val th3 = 
+			   th1
+			  val th3 =
 			      CONV_RULE
-			          (RATOR_CONV (RAND_CONV (RAND_CONV 
+			          (RATOR_CONV (RAND_CONV (RAND_CONV
 					  (PABS_CONV (RAND_CONV PBETA_CONV)))))
-				  th2 
-			  val th4 = 
-			      CONV_RULE (RAND_CONV (RAND_CONV 
+				  th2
+			  val th4 =
+			      CONV_RULE (RAND_CONV (RAND_CONV
 						    (RAND_CONV ETA_CONV))) th3
 		      in
 			  th4
@@ -1306,14 +1306,14 @@ fun LEFT_IMP_PFORALL_CONV tm =
 	in
 	    ((Bvar,Body),conseq)
 	end
-	val f = mk_pabs(x,P) 
-	val th1 = SYM (ISPECL [Q,f] LEFT_EXISTS_IMP_THM) 
+	val f = mk_pabs(x,P)
+	val th1 = SYM (ISPECL [Q,f] LEFT_EXISTS_IMP_THM)
 	val th2 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RATOR_CONV (RAND_CONV (RAND_CONV
 		    ETA_CONV)))))
-		th1 
-	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2 
+		th1
+	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RAND_CONV (PABS_CONV
@@ -1338,12 +1338,12 @@ fun RIGHT_IMP_PEXISTS_CONV tm =
 	    (ant,(Bvar,Body))
 	end
 	val g = mk_pabs(x,Q)
-	val th1 = SYM (ISPECL [P,g] RIGHT_EXISTS_IMP_THM) 
+	val th1 = SYM (ISPECL [P,g] RIGHT_EXISTS_IMP_THM)
 	val th2 =
 	    CONV_RULE
 		(RATOR_CONV (RAND_CONV (RAND_CONV (RAND_CONV ETA_CONV))))
-		th1 
-	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2 
+		th1
+	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV x))) th2
 	val th4 =
 	    CONV_RULE
 		(RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV PBETA_CONV))))
@@ -1374,50 +1374,50 @@ val PEXISTS_THM = pairTheory.PEXISTS_THM;
 (* CURRY_FORALL_CONV "!(x,y).t" = (|- (!(x,y).t) = (!x y.t))                 *)
 (* ------------------------------------------------------------------------- *)
 
-    
-fun CURRY_FORALL_CONV tm = 
+
+fun CURRY_FORALL_CONV tm =
     let val (xy,bod) = dest_pforall tm
 	val (x,y) = pairSyntax.dest_pair xy
-	val result = list_mk_pforall ([x,y],bod) 
+	val result = list_mk_pforall ([x,y],bod)
 	val f = rand (rand tm)
-	val th1 = RAND_CONV (PABS_CONV (UNPBETA_CONV xy)) tm 
-	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV CURRY_CONV))) th1 
-	val th3 = (SYM (ISPEC f PFORALL_THM)) 
-	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV xy))) th3 
-	val th5 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV x)) (TRANS th2 th4) 
+	val th1 = RAND_CONV (PABS_CONV (UNPBETA_CONV xy)) tm
+	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV CURRY_CONV))) th1
+	val th3 = (SYM (ISPEC f PFORALL_THM))
+	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV xy))) th3
+	val th5 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV x)) (TRANS th2 th4)
 	val th6 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV
-						   (GEN_PALPHA_CONV y)))) th5 
-	val th7 = CONV_RULE(RAND_CONV(RAND_CONV(PABS_CONV (RAND_CONV 
+						   (GEN_PALPHA_CONV y)))) th5
+	val th7 = CONV_RULE(RAND_CONV(RAND_CONV(PABS_CONV (RAND_CONV
                                 (PABS_CONV(RATOR_CONV PBETA_CONV)))))) th6
 	val th8 =
-	    CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV 
+	    CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV
                          (PABS_CONV PBETA_CONV))))) th7
     in
         TRANS th8 (REFL result)
-    end    
+    end
     handle HOL_ERR _ => failwith "CURRY_FORALL_CONV" ;
 
 (* ------------------------------------------------------------------------- *)
 (* CURRY_EXISTS_CONV "?(x,y).t" = (|- (?(x,y).t) = (?x y.t))                 *)
 (* ------------------------------------------------------------------------- *)
 
-fun CURRY_EXISTS_CONV tm = 
-    let val (xy,bod) = dest_pexists tm 
-	val (x,y) = pairSyntax.dest_pair xy 
-	val result = list_mk_pexists ([x,y],bod) 
-	val f = rand (rand tm) 
-	val th1 = RAND_CONV (PABS_CONV (UNPBETA_CONV xy)) tm 
-	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV CURRY_CONV))) th1 
-	val th3 = (SYM (ISPEC f PEXISTS_THM)) 
-	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV xy))) th3 
-	val th5 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV x)) (TRANS th2 th4) 
+fun CURRY_EXISTS_CONV tm =
+    let val (xy,bod) = dest_pexists tm
+	val (x,y) = pairSyntax.dest_pair xy
+	val result = list_mk_pexists ([x,y],bod)
+	val f = rand (rand tm)
+	val th1 = RAND_CONV (PABS_CONV (UNPBETA_CONV xy)) tm
+	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV CURRY_CONV))) th1
+	val th3 = (SYM (ISPEC f PEXISTS_THM))
+	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV xy))) th3
+	val th5 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV x)) (TRANS th2 th4)
 	val th6 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV
-						   (GEN_PALPHA_CONV y)))) th5 
-	val th7 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV 
-                       (PABS_CONV (RATOR_CONV PBETA_CONV)))))) th6 
-	val th8 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV 
+						   (GEN_PALPHA_CONV y)))) th5
+	val th7 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV (RAND_CONV
+                       (PABS_CONV (RATOR_CONV PBETA_CONV)))))) th6
+	val th8 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV
                                (RAND_CONV (PABS_CONV PBETA_CONV))))) th7
-    in 
+    in
 	TRANS th8 (REFL result)
     end
 handle HOL_ERR _ => failwith "CURRY_EXISTS_CONV" ;
@@ -1432,17 +1432,17 @@ fun UNCURRY_FORALL_CONV tm =
 	val xy = pairSyntax.mk_pair(x,y)
 	val result = mk_pforall (xy,bod)
 	val th1 = (RAND_CONV (PABS_CONV (RAND_CONV (PABS_CONV
-						    (UNPBETA_CONV xy))))) tm 
+						    (UNPBETA_CONV xy))))) tm
 	val f = rand (rator (pbody (rand (pbody (rand (rand (concl th1)))))))
-	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV 
-                              (RAND_CONV (PABS_CONV CURRY_CONV))))) th1 
-	val th3 = ISPEC f PFORALL_THM 
-	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV x))) th3 
+	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV
+                              (RAND_CONV (PABS_CONV CURRY_CONV))))) th1
+	val th3 = ISPEC f PFORALL_THM
+	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV x))) th3
 	val th5 = CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV
-		(GEN_PALPHA_CONV y))))) th4 
-	val th6 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV xy)) (TRANS th2 th5) 
+		(GEN_PALPHA_CONV y))))) th4
+	val th6 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV xy)) (TRANS th2 th5)
 	val th7 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV (RATOR_CONV
-			    PBETA_CONV)))) th6 
+			    PBETA_CONV)))) th6
 	val th8 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV PBETA_CONV))) th7
     in
 	TRANS th8 (REFL result)
@@ -1459,17 +1459,17 @@ fun UNCURRY_EXISTS_CONV tm =
 	val xy = pairSyntax.mk_pair(x,y)
 	val result = mk_pexists (xy,bod)
 	val th1 = (RAND_CONV (PABS_CONV (RAND_CONV (PABS_CONV
-						    (UNPBETA_CONV xy))))) tm 
-	val f = rand (rator (pbody (rand (pbody (rand (rand (concl th1))))))) 
-	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV 
-                              (RAND_CONV (PABS_CONV CURRY_CONV))))) th1 
-	val th3 = ISPEC f PEXISTS_THM 
-	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV x))) th3 
+						    (UNPBETA_CONV xy))))) tm
+	val f = rand (rator (pbody (rand (pbody (rand (rand (concl th1)))))))
+	val th2 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV
+                              (RAND_CONV (PABS_CONV CURRY_CONV))))) th1
+	val th3 = ISPEC f PEXISTS_THM
+	val th4 = CONV_RULE (RATOR_CONV (RAND_CONV (GEN_PALPHA_CONV x))) th3
 	val th5 = CONV_RULE (RATOR_CONV (RAND_CONV (RAND_CONV (PABS_CONV
-			       (GEN_PALPHA_CONV y))))) th4 
-	val th6 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV xy)) (TRANS th2 th5) 
-	val th7 = CONV_RULE (RAND_CONV (RAND_CONV 
-                        (PABS_CONV (RATOR_CONV PBETA_CONV)))) th6 
+			       (GEN_PALPHA_CONV y))))) th4
+	val th6 = CONV_RULE (RAND_CONV (GEN_PALPHA_CONV xy)) (TRANS th2 th5)
+	val th7 = CONV_RULE (RAND_CONV (RAND_CONV
+                        (PABS_CONV (RATOR_CONV PBETA_CONV)))) th6
 	val th8 = CONV_RULE (RAND_CONV (RAND_CONV (PABS_CONV PBETA_CONV))) th7
     in
 	TRANS th8 (REFL result)
@@ -1506,18 +1506,18 @@ val PSPEC =
 	    DISCH_TAC THEN
 	    (PURE_ASM_REWRITE_TAC []) THEN
 	    BETA_TAC
-	) 
+	)
 	val gxty = Type.alpha
 	val gfty = alpha --> bool
-	val gx = genvar gxty 
-	val gf = genvar gfty 
-	val sth = ISPECL [gx,gf] spec_thm 
+	val gx = genvar gxty
+	val gf = genvar gfty
+	val sth = ISPECL [gx,gf] spec_thm
     in
 	fn x =>
 	fn th =>
-	let val f = rand (concl th) 
+	let val f = rand (concl th)
 	    val xty = type_of x
-	    and fty = type_of f 
+	    and fty = type_of f
 	    val gxinst = mk_var((fst o dest_var) gx, xty)
 	    and gfinst = mk_var((fst o dest_var) gf, fty)
 	in
@@ -1532,42 +1532,42 @@ handle HOL_ERR _ => failwith "PSPEC";
 fun PSPECL xl th = rev_itlist PSPEC xl th;
 
 fun IPSPEC x th =
-    let val (p,tm) = with_exn dest_pforall(concl th) 
+    let val (p,tm) = with_exn dest_pforall(concl th)
                     (ERR"IPSPEC" "input theorem not universally quantified")
-	val (_,inst) = match_term p x 
+	val (_,inst) = match_term p x
 	    handle HOL_ERR _ => raise (ERR "IPSPEC"
 			        "can't type-instantiate input theorem")
     in
-	PSPEC x (INST_TYPE inst th) handle HOL_ERR _ => 
+	PSPEC x (INST_TYPE inst th) handle HOL_ERR _ =>
         raise (ERR "IPSPEC" "type variable free in assumptions")
     end;
 
 val IPSPECL =
  let val tup = end_itlist (curry mk_pair)
      fun strip [] = K []
-       | strip (_::ts) = fn t => 
+       | strip (_::ts) = fn t =>
           let val (Bvar,Body) = dest_pforall t in Bvar::(strip ts Body) end
  in
   fn xl =>
     if (null xl) then I
-    else let val tupxl = tup xl 
-             val striper = strip xl 
+    else let val tupxl = tup xl
+             val striper = strip xl
          in
 	 fn th =>
-	  let val pl = with_exn striper (concl th) 
+	  let val pl = with_exn striper (concl th)
                        (ERR "IPSPECL"
                             "list of terms too long for theorem")
-	       val (_,inst) = match_term (tup pl) tupxl handle HOL_ERR _ => 
+	       val (_,inst) = match_term (tup pl) tupxl handle HOL_ERR _ =>
                   raise (ERR "IPSPECL"
                              "can't type-instantiate input theorem")
 	  in
-             PSPECL xl (INST_TYPE inst th) handle HOL_ERR _ => 
+             PSPECL xl (INST_TYPE inst th) handle HOL_ERR _ =>
               raise (ERR "IPSPECL" "type variable free in assumptions")
           end
          end
  end;
 
-					 
+
 val pvariant =
     let fun uniq [] = []
 	  | uniq (h::t) = h::uniq (filter (not o equal h) t)
@@ -1577,63 +1577,63 @@ val pvariant =
 	    in {residue=h',redex=h}::(variantl (h'::avl) t)
 	    end
     in
-  fn pl => 
+  fn pl =>
   fn p =>
-   let val avoid = (flatten (map ((map (assert is_var)) o strip_pair) pl)) 
-       val originals = uniq (map (assert (fn p => is_var p orelse is_const p)) 
+   let val avoid = (flatten (map ((map (assert is_var)) o strip_pair) pl))
+       val originals = uniq (map (assert (fn p => is_var p orelse is_const p))
                                  (strip_pair p))
-       val subl = variantl avoid originals 
+       val subl = variantl avoid originals
    in
      subst subl p
   end end;
 
 fun PSPEC_PAIR th =
-    let val (p,_) = dest_pforall (concl th) 
-	val p' = pvariant (free_varsl (hyp th)) p 
+    let val (p,_) = dest_pforall (concl th)
+	val p' = pvariant (free_varsl (hyp th)) p
     in
-	(p', PSPEC p' th) 
+	(p', PSPEC p' th)
     end;
 
 val PSPEC_ALL =
-    let fun f p (ps,l) = 
-	let val p' = pvariant ps p 
+    let fun f p (ps,l) =
+	let val p' = pvariant ps p
 	in
-	    ((free_vars p')@ps,p'::l) 
+	    ((free_vars p')@ps,p'::l)
 	end
     in
 	fn th =>
-	let val (hxs,con) = (free_varsl ## I) (dest_thm th) 
+	let val (hxs,con) = (free_varsl ## I) (dest_thm th)
 	    val fxs = free_vars con
-	    and pairs = fst(strip_pforall con) 
+	    and pairs = fst(strip_pforall con)
 	in
 	    PSPECL (snd(itlist f pairs (hxs @ fxs,[]))) th
 	end
     end;
 
 fun GPSPEC th =
-    let val (_,t) = dest_thm th 
+    let val (_,t) = dest_thm th
     in
 	if is_pforall t then
-	    GPSPEC (PSPEC 
+	    GPSPEC (PSPEC
              (genvarstruct (type_of (fst (dest_pforall t)))) th)
 	else
 	    th
     end;
-    
+
 
 fun PSPEC_TAC (t,x) =
     if (not (is_pair t)) andalso (is_var x) then
 	SPEC_TAC (t,x)
     else if (is_pair t) andalso (is_pair x) then
-	let val (t1,t2) = dest_pair t 
-	    val (x1,x2) = dest_pair x 
+	let val (t1,t2) = dest_pair t
+	    val (x1,x2) = dest_pair x
 	in
 	    (PSPEC_TAC (t2,x2)) THEN
 	    (PSPEC_TAC (t1,x1)) THEN
 	    (CONV_TAC UNCURRY_FORALL_CONV)
 	end
     else if (not (is_pair t)) andalso (is_pair x) then
-	let val x' = genvar (type_of x) 
+	let val x' = genvar (type_of x)
 	in
 	    (SPEC_TAC (t,x')) THEN
 	    (CONV_TAC (GEN_PALPHA_CONV x))
@@ -1646,7 +1646,7 @@ fun PSPEC_TAC (t,x) =
 	    (CONV_TAC (GEN_PALPHA_CONV x))
 	end
     handle HOL_ERR _ => failwith "PSPEC_TAC";
-		    
+
 (* ------------------------------------------------------------------------- *)
 (* Paired Generalisation:                                                    *)
 (*    A |- t                                                                 *)
@@ -1658,7 +1658,7 @@ fun PGEN p th =
     if is_var p then
 	GEN p th
     else (* is_pair p *)
-	let val (v1, v2) = dest_pair p 
+	let val (v1, v2) = dest_pair p
 	in
 	    CONV_RULE UNCURRY_FORALL_CONV (PGEN v1 (PGEN v2 th))
 	end
@@ -1667,20 +1667,20 @@ fun PGEN p th =
 fun PGENL xl th = itlist PGEN xl th;;
 
 fun P_PGEN_TAC p :tactic = fn (a,t) =>
-    let val (x,b) = with_exn dest_pforall t 
+    let val (x,b) = with_exn dest_pforall t
             (ERR "P_PGEN_TAC" "Goal not universally quantified")
     in
 	if (is_var x) andalso (is_var p) then
 	    X_GEN_TAC p (a,t)
 	else if (is_pair x) andalso (is_pair p) then
-	    let val (p1,p2) = dest_pair p 
+	    let val (p1,p2) = dest_pair p
 	    in
 		((CONV_TAC CURRY_FORALL_CONV) THEN
 		(P_PGEN_TAC p1) THEN
 		(P_PGEN_TAC p2)) (a,t)
 	    end
 	else if (is_var p) andalso (is_pair x) then
-	    let val x' = genvar (type_of p) 
+	    let val x' = genvar (type_of p)
 	    in
 		((CONV_TAC (GEN_PALPHA_CONV x')) THEN
 		 (X_GEN_TAC p)) (a,t)
@@ -1701,7 +1701,7 @@ val PGEN_TAC : tactic = fn (a,t)  =>
     in
 	P_PGEN_TAC (pvariant (free_varsl(t::a)) x) (a,t)
     end;
-    
+
 fun FILTER_PGEN_TAC tm : tactic = fn (a,t) =>
     if (is_pforall t) andalso (not (tm = (fst (dest_pforall t)))) then
 	PGEN_TAC (a,t)
@@ -1719,14 +1719,14 @@ val EXISTS_DEF = boolTheory.EXISTS_DEF;
 val EXISTS_UNIQUE_DEF = boolTheory.EXISTS_UNIQUE_DEF;
 
 fun mk_fun(y1,y2) = (y1 --> y2)
-	
+
 val PEXISTS_CONV =
     let val f = (--`f:'a->bool`--)
-	val th1 = AP_THM EXISTS_DEF f 
-	val th2 = GEN f ((CONV_RULE (RAND_CONV BETA_CONV)) th1) 
+	val th1 = AP_THM EXISTS_DEF f
+	val th2 = GEN f ((CONV_RULE (RAND_CONV BETA_CONV)) th1)
     in
 	fn tm =>
-	let val (p,b) = dest_pexists tm 
+	let val (p,b) = dest_pexists tm
 	    val g = mk_pabs(p,b)
 	in
 	    (CONV_RULE (RAND_CONV PBETA_CONV)) (ISPEC g th2)
@@ -1753,18 +1753,18 @@ val PSELECT_CONV =
 	else if is_abs tm then
 	    find_first p (body tm)
 	else if is_comb tm then
-	    let val (f,a) = dest_comb tm 
+	    let val (f,a) = dest_comb tm
 	    in
 		(find_first p f) handle HOL_ERR _ => (find_first p a)
 	    end
-	else    
+	else
 	    failwith""
     in
 	fn tm =>
 	let fun right t = is_pselect t andalso
 			   (rhs (concl (PBETA_CONV (mk_comb(rand t,t)))) = tm)
-	    val epi = find_first right tm 
-	    val (p,b) = dest_pselect epi 
+	    val epi = find_first right tm
+	    val (p,b) = dest_pselect epi
 	in
 	    SYM (PEXISTS_CONV (mk_pexists(p,b)))
 	end
@@ -1797,7 +1797,7 @@ val PSELECT_INTRO = SELECT_INTRO ;
 fun  PSELECT_ELIM th1 (v,th2) =
     let val (f,sf) = dest_comb (concl th1)
 	val t1 = MP (PSPEC sf (PGEN v (DISCH (mk_comb(f,v)) th2))) th1
-	val t2 = ALPHA (concl t1) (concl th2) 
+	val t2 = ALPHA (concl t1) (concl th2)
     in
 	EQ_MP t2 t1
     end
@@ -1812,10 +1812,10 @@ handle HOL_ERR _ => failwith "PSELECT_ELIM" ;
 fun PEXISTS (fm,tm) th =
     let val (p,b) = dest_pexists fm
 	val th1 = PBETA_CONV (mk_comb(mk_pabs(p,b),tm))
-	val th2 = EQ_MP (SYM th1) th 
-	val th3 = PSELECT_INTRO th2 
+	val th2 = EQ_MP (SYM th1) th
+	val th3 = PSELECT_INTRO th2
 	val th4 = AP_THM(INST_TYPE [alpha |-> type_of p] EXISTS_DEF)
-                        (mk_pabs(p, b)) 
+                        (mk_pabs(p, b))
 	val th5 = TRANS th4 (BETA_CONV(rhs(concl th4)))
     in
 	EQ_MP (SYM th5) th3
@@ -1830,16 +1830,16 @@ handle HOL_ERR _ => failwith "PEXISTS" ;
 
 val PCHOOSE =
     let val f = (--`f:'a->bool`--)
-	val t1 = AP_THM EXISTS_DEF f 
-	val t2 = GEN f ((CONV_RULE (RAND_CONV BETA_CONV)) t1) 
+	val t1 = AP_THM EXISTS_DEF f
+	val t2 = GEN f ((CONV_RULE (RAND_CONV BETA_CONV)) t1)
     in
         fn (v,th1) =>
 	fn th2 =>
-	let val p = rand (concl th1) 
-	    val th1' = EQ_MP (ISPEC p t2) th1 
-	    val u1 = UNDISCH (fst 
-                       (EQ_IMP_RULE (PBETA_CONV (mk_comb(p,v))))) 
-	    val th2' = PROVE_HYP u1 th2 
+	let val p = rand (concl th1)
+	    val th1' = EQ_MP (ISPEC p t2) th1
+	    val u1 = UNDISCH (fst
+                       (EQ_IMP_RULE (PBETA_CONV (mk_comb(p,v)))))
+	    val th2' = PROVE_HYP u1 th2
 	in
 	    PSELECT_ELIM th1' (v,th2')
 	end
@@ -1847,37 +1847,37 @@ val PCHOOSE =
 handle HOL_ERR _ => failwith "PCHOOSE" ;
 
 fun P_PCHOOSE_THEN v ttac pth :tactic =
-    let val (p,b) = dest_pexists (concl pth) 
-	handle HOL_ERR _ => failwith "P_PCHOOSE_THEN" 
+    let val (p,b) = dest_pexists (concl pth)
+	handle HOL_ERR _ => failwith "P_PCHOOSE_THEN"
     in
 	fn (asl,w) =>
 	let val th = itlist ADD_ASSUM (hyp pth)
 	                    (ASSUME
 			     (rhs(concl(PBETA_CONV
                                  (mk_comb(mk_pabs(p,b),v))))))
-	    val (gl,prf) = ttac th (asl,w) 
+	    val (gl,prf) = ttac th (asl,w)
 	in
-	    (gl, (PCHOOSE (v, pth)) o prf) 
+	    (gl, (PCHOOSE (v, pth)) o prf)
 	end
     end;
 
 fun PCHOOSE_THEN ttac pth :tactic =
-    let val (p,b) = dest_pexists (concl pth) 
-	handle HOL_ERR _ => failwith "CHOOSE_THEN" 
+    let val (p,b) = dest_pexists (concl pth)
+	handle HOL_ERR _ => failwith "CHOOSE_THEN"
     in
 	fn (asl,w) =>
-	let val q = pvariant ((thm_frees pth) @ (free_varsl (w::asl))) p 
+	let val q = pvariant ((thm_frees pth) @ (free_varsl (w::asl))) p
 	    val th =
 		itlist
 		    ADD_ASSUM
 		    (hyp pth)
 		    (ASSUME
 	              (rhs (concl
-	               (PairedLambda.PAIRED_BETA_CONV 
+	               (PairedLambda.PAIRED_BETA_CONV
                            (mk_comb(mk_pabs(p,b),q))))))
-	    val (gl,prf) = ttac th (asl,w) 
+	    val (gl,prf) = ttac th (asl,w)
 	in
-	    (gl, (PCHOOSE (q, pth)) o prf) 
+	    (gl, (PCHOOSE (q, pth)) o prf)
 	end
     end;
 
@@ -1893,7 +1893,7 @@ val PCHOOSE_TAC = PCHOOSE_THEN ASSUME_TAC ;
 (* ------------------------------------------------------------------------- *)
 
 fun PEXISTS_TAC v :tactic = fn (a, t) =>
-    let val (p,b) = dest_pexists t 
+    let val (p,b) = dest_pexists t
     in
 	([(a, rhs (concl (PBETA_CONV (mk_comb(mk_pabs(p,b),v)))))
          ],
@@ -1908,35 +1908,35 @@ handle HOL_ERR _ => failwith "PEXISTS_TAC" ;
 (* ------------------------------------------------------------------------- *)
 
 fun PEXISTENCE th =
-    let val (p,b) = dest_pabs (rand (concl th)) 
+    let val (p,b) = dest_pabs (rand (concl th))
 	val th1 =
 	    AP_THM
-	    (INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b)) 
-	val th2 = EQ_MP th1 th 
-	val th3 = CONV_RULE BETA_CONV th2 
+	    (INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b))
+	val th2 = EQ_MP th1 th
+	val th3 = CONV_RULE BETA_CONV th2
     in
-	CONJUNCT1 th3 
+	CONJUNCT1 th3
     end
 handle HOL_ERR _ => failwith "PEXISTENCE" ;
-    
+
 (* ------------------------------------------------------------------------- *)
 (* PEXISTS_UNIQUE_CONV "?!p. t[p]" =                                         *)
 (*   (|- (?!p. t[p]) = (?p. t[p] /\ !p p'. t[p] /\ t[p'] ==> (p='p)))        *)
 (* ------------------------------------------------------------------------- *)
 
 fun PEXISTS_UNIQUE_CONV tm =
-    let val (p,b) = dest_pabs (rand tm) 
-	val p' = pvariant (p::(free_vars tm)) p 
+    let val (p,b) = dest_pabs (rand tm)
+	val p' = pvariant (p::(free_vars tm)) p
 	val th1 =
 	    AP_THM
-	    (INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b)) 
-	val th2 = CONV_RULE (RAND_CONV BETA_CONV) th1 
-	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (ABS_CONV 
-				       (GEN_PALPHA_CONV p'))))) th2 
-	val th4 = CONV_RULE (RAND_CONV (RAND_CONV (GEN_PALPHA_CONV p))) th3 
+	    (INST_TYPE [alpha |-> type_of p] EXISTS_UNIQUE_DEF) (mk_pabs(p,b))
+	val th2 = CONV_RULE (RAND_CONV BETA_CONV) th1
+	val th3 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (ABS_CONV
+				       (GEN_PALPHA_CONV p'))))) th2
+	val th4 = CONV_RULE (RAND_CONV (RAND_CONV (GEN_PALPHA_CONV p))) th3
 	val th5 = CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (PABS_CONV
 		             (RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV
-			      (RATOR_CONV (RAND_CONV PBETA_CONV)))))))))) th4 
+			      (RATOR_CONV (RAND_CONV PBETA_CONV)))))))))) th4
     in
 	CONV_RULE (RAND_CONV (RAND_CONV (RAND_CONV (PABS_CONV
 	    (RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV
@@ -1959,8 +1959,8 @@ local fun BABY_P_PSKOLEM_CONV f =
 	raise ERR "P_SKOLEM_CONV" "first argument not a varstruct"
     else
 	fn tm =>
-	let val (xs,(y,P)) = (I ## dest_exists) (strip_pforall tm) 
-	    val fx = with_exn list_mk_comb(f,xs) 
+	let val (xs,(y,P)) = (I ## dest_exists) (strip_pforall tm)
+	    val fx = with_exn list_mk_comb(f,xs)
 		(ERR"P_SKOLEM_CONV" "function variable has the wrong type")
 	in
 	    if free_in f tm then
@@ -1968,14 +1968,14 @@ local fun BABY_P_PSKOLEM_CONV f =
 			  "skolem function free in the input term"
 	    else
 		let val pat = mk_exists(f,list_mk_pforall(xs,subst[y |-> fx]P))
-		    val fnc = list_mk_pabs(xs,mk_select(y,P)) 
-		    val bth = SYM(LIST_PBETA_CONV (list_mk_comb(fnc,xs))) 
+		    val fnc = list_mk_pabs(xs,mk_select(y,P))
+		    val bth = SYM(LIST_PBETA_CONV (list_mk_comb(fnc,xs)))
 		    val thm1 =
 			SUBST[y |-> bth] P (SELECT_RULE(PSPECL xs (ASSUME tm)))
-		    val imp1 = DISCH tm (EXISTS (pat,fnc) (PGENL xs thm1)) 
-		    val thm2 = PSPECL xs (ASSUME (snd(dest_exists pat))) 
+		    val imp1 = DISCH tm (EXISTS (pat,fnc) (PGENL xs thm1))
+		    val thm2 = PSPECL xs (ASSUME (snd(dest_exists pat)))
 		    val thm3 = PGENL xs (EXISTS (mk_exists(y,P),fx) thm2)
-		    val imp2 = DISCH pat (CHOOSE (f,ASSUME pat) thm3) 
+		    val imp2 = DISCH pat (CHOOSE (f,ASSUME pat) thm3)
 		in
 		    IMP_ANTISYM_RULE imp1 imp2
 		end
@@ -1992,25 +1992,25 @@ in
 		val FORALL_CONV =
 		     end_itlist
 			(curry (op o))
-			(map (K (RAND_CONV o PABS_CONV)) xs) 
+			(map (K (RAND_CONV o PABS_CONV)) xs)
 	    in
 		if is_var f then
 		    if is_var y then
 			BABY_P_PSKOLEM_CONV f tm
 		    else (* is_pair y *)
-			let val y' = genvar (type_of y) 
+			let val y' = genvar (type_of y)
 			    val tha1 =
 				(FORALL_CONV (RAND_CONV (PALPHA_CONV y'))) tm
 			in
 			    CONV_RULE (RAND_CONV (BABY_P_PSKOLEM_CONV f)) tha1
 			end
 		else (* is_par f *)
-		    let val (f1,f2) = dest_pair f 
-			val thb1 = 
+		    let val (f1,f2) = dest_pair f
+			val thb1 =
 			    if is_var y then
 				let val (y1',y2') =
-				    (genvar ## genvar) (dest_prod (type_of y)) 
-				    handle HOL_ERR _ => raise 
+				    (genvar ## genvar) (dest_prod (type_of y))
+				    handle HOL_ERR _ => raise
                                      ERR "P_PSKOLEM_CONV"
 			             "existential variable not of pair type"
 				in
@@ -2019,15 +2019,15 @@ in
 				   (PALPHA_CONV (mk_pair(y1',y2')))))tm
 				end
 			    else
-				REFL tm 
+				REFL tm
 			val thb2 =
 			    CONV_RULE
 			    (RAND_CONV (FORALL_CONV CURRY_EXISTS_CONV))
-			    thb1 
-			val thb3 = CONV_RULE (RAND_CONV (P_PSKOLEM_CONV f1)) 
-                                             thb2 
+			    thb1
+			val thb3 = CONV_RULE (RAND_CONV (P_PSKOLEM_CONV f1))
+                                             thb2
 			val thb4 = CONV_RULE(RAND_CONV
-					     (RAND_CONV (PABS_CONV 
+					     (RAND_CONV (PABS_CONV
 							 (P_PSKOLEM_CONV f2))))
                                             thb3
 		    in
@@ -2049,22 +2049,22 @@ end;
 val PSKOLEM_CONV =
     let fun mkfn tm tyl =
 	if is_var tm then
-	    let val (n,t) = dest_var tm 
+	    let val (n,t) = dest_var tm
 	    in
 		mk_var(n, itlist (curry (op -->)) tyl t)
 	    end
 	else
-	    let val (p1,p2) = dest_pair tm 
+	    let val (p1,p2) = dest_pair tm
 	    in
 		mk_pair(mkfn p1 tyl, mkfn p2 tyl)
 	    end
     in
 	fn tm =>
-	let val (xs,(y,P)) = (I ## dest_pexists) (strip_pforall tm) 
-	    val f = mkfn y (map type_of xs) 
+	let val (xs,(y,P)) = (I ## dest_pexists) (strip_pforall tm)
+	    val f = mkfn y (map type_of xs)
 	    val f' = pvariant (free_vars tm) f
 	in
-	    P_PSKOLEM_CONV f' tm 
+	    P_PSKOLEM_CONV f' tm
 	end
     end
 handle HOL_ERR _ => failwith "PSKOLEM_CONV: expecting `!x1...xn. ?y.tm`";
@@ -2081,7 +2081,7 @@ handle HOL_ERR _ => failwith "PSKOLEM_CONV: expecting `!x1...xn. ?y.tm`";
 (* ---------------------------------------------------------------------*)
 
 (* structure Pair_both2 :> Pair_both2 = struct *)
-	
+
 
 val PSTRIP_THM_THEN =
     FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, PCHOOSE_THEN];
@@ -2112,11 +2112,11 @@ val FILTER_PSTRIP_TAC = FILTER_PSTRIP_THEN PSTRIP_ASSUME_TAC;
 (* ------------------------------------------------------------------------- *)
 
 fun PEXT th =
-    let val (p,_) = dest_pforall (concl th) 
-	val p' = pvariant (thm_frees th) p 
-	val th1 = PSPEC p' th 
-	val th2 = PABS p' th1 
-	val th3 = (CONV_RULE (RATOR_CONV (RAND_CONV PETA_CONV))) th2 
+    let val (p,_) = dest_pforall (concl th)
+	val p' = pvariant (thm_frees th) p
+	val th1 = PSPEC p' th
+	val th2 = PABS p' th1
+	val th3 = (CONV_RULE (RATOR_CONV (RAND_CONV PETA_CONV))) th2
     in
 	(CONV_RULE (RAND_CONV PETA_CONV)) th3
     end
@@ -2130,19 +2130,19 @@ val P_FUN_EQ_CONV =
     let val gpty = alpha
 	val grange = beta
 	val gfty = alpha --> beta
-	val gf = genvar gfty 
-	val gg = genvar gfty 
-	val gp = genvar gpty 
-	val imp1 = DISCH_ALL (GEN gp (AP_THM (ASSUME (mk_eq(gf,gg))) gp)) 
-	val imp2 = DISCH_ALL (EXT (ASSUME 
+	val gf = genvar gfty
+	val gg = genvar gfty
+	val gp = genvar gpty
+	val imp1 = DISCH_ALL (GEN gp (AP_THM (ASSUME (mk_eq(gf,gg))) gp))
+	val imp2 = DISCH_ALL (EXT (ASSUME
                      (mk_forall(gp,mk_eq(mk_comb(gf,gp),mk_comb(gg,gp))))))
 	val ext_thm = IMP_ANTISYM_RULE imp1 imp2
     in
 	fn p =>
 	fn tm =>
-	let val (f,g) = dest_eq tm 
-	    val fty = type_of f 
-	    and pty = type_of p 
+	let val (f,g) = dest_eq tm
+	    val fty = type_of f
+	    and pty = type_of p
 	    val gfinst = mk_var((fst o dest_var)gf, fty)
 	    and gginst = mk_var((fst o dest_var)gg, fty)
 	    val rnge = hd (tl(snd(dest_type fty)))
@@ -2152,7 +2152,7 @@ val P_FUN_EQ_CONV =
 		     [{residue=pty,redex=gpty},{residue=rnge,redex=grange}])
 		    ext_thm
 	in
-	    (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV p)))) th 
+	    (CONV_RULE (RAND_CONV (RAND_CONV (PALPHA_CONV p)))) th
 	end
     end;
 
@@ -2164,13 +2164,13 @@ val P_FUN_EQ_CONV =
 (* ------------------------------------------------------------------------- *)
 
 fun MK_PABS th =
-    let val (p,_) = dest_pforall (concl th) 
+    let val (p,_) = dest_pforall (concl th)
 	val th1 = (CONV_RULE (RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV
-						   (UNPBETA_CONV p)))))) th 
+						   (UNPBETA_CONV p)))))) th
 	val th2 = (CONV_RULE (RAND_CONV (PABS_CONV (RAND_CONV
-					(UNPBETA_CONV p))))) th1 
-	val th3 = PEXT th2 
-	val th4 = (CONV_RULE (RATOR_CONV (RAND_CONV (PALPHA_CONV p)))) th3 
+					(UNPBETA_CONV p))))) th1
+	val th3 = PEXT th2
+	val th4 = (CONV_RULE (RATOR_CONV (RAND_CONV (PALPHA_CONV p)))) th3
     in
 	(CONV_RULE (RAND_CONV (PALPHA_CONV p))) th4
     end
@@ -2182,12 +2182,12 @@ handle HOL_ERR _ => failwith "MK_PABS";
 (*  A |- t = (\p. u)                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-fun HALF_MK_PABS th = 
-    let val (p,_) = dest_pforall (concl th) 
-	val th1 = (CONV_RULE (RAND_CONV (PABS_CONV (RAND_CONV 
-						    (UNPBETA_CONV p))))) th 
-	val th2 = PEXT th1 
-    in 
+fun HALF_MK_PABS th =
+    let val (p,_) = dest_pforall (concl th)
+	val th1 = (CONV_RULE (RAND_CONV (PABS_CONV (RAND_CONV
+						    (UNPBETA_CONV p))))) th
+	val th2 = PEXT th1
+    in
 	(CONV_RULE (RAND_CONV (PALPHA_CONV p))) th2
     end
 handle HOL_ERR _ => failwith "HALF_MK_PABS" ;
@@ -2199,7 +2199,7 @@ handle HOL_ERR _ => failwith "HALF_MK_PABS" ;
 (* ------------------------------------------------------------------------- *)
 
 fun MK_PFORALL th =
-    let val (p,_) = dest_pforall (concl th) 
+    let val (p,_) = dest_pforall (concl th)
     in
 	AP_TERM
 	(mk_const("!",(type_of p --> bool) --> bool))
@@ -2215,7 +2215,7 @@ handle HOL_ERR _ => failwith "MK_PFORALL" ;
 (* ------------------------------------------------------------------------- *)
 
 fun MK_PEXISTS th =
-    let val (p,_) = dest_pforall (concl th) 
+    let val (p,_) = dest_pforall (concl th)
     in
 	AP_TERM
 	(mk_const("?",(type_of p --> bool) --> bool))
@@ -2230,8 +2230,8 @@ handle HOL_ERR _ => failwith "MK_PEXISTS" ;
 (* ------------------------------------------------------------------------- *)
 
 fun MK_PSELECT th =
-    let val (p,_) = dest_pforall (concl th) 
-	val pty = type_of p 
+    let val (p,_) = dest_pforall (concl th)
+	val pty = type_of p
     in
 	AP_TERM
 	(mk_const("@",(pty --> bool)--> pty))
@@ -2246,7 +2246,7 @@ handle HOL_ERR _ => failwith "MK_PSELECT" ;
 (* ------------------------------------------------------------------------- *)
 
 fun PFORALL_EQ p th =
-   let val pty = type_of p 
+   let val pty = type_of p
    in
        AP_TERM
        (mk_const("!",(pty --> bool) --> bool))
@@ -2261,12 +2261,12 @@ handle HOL_ERR _ => failwith "PFORALL_EQ" ;
 (* ------------------------------------------------------------------------- *)
 
 fun PEXISTS_EQ p th =
-    let val pty = type_of p 
+    let val pty = type_of p
     in
 	AP_TERM
 	(mk_const("?",(pty --> bool) --> bool))
 	(PABS p th)
-    end 
+    end
 handle HOL_ERR _ => failwith "PEXISTS_EQ" ;
 
 (* ------------------------------------------------------------------------- *)
@@ -2276,7 +2276,7 @@ handle HOL_ERR _ => failwith "PEXISTS_EQ" ;
 (* ------------------------------------------------------------------------- *)
 
 fun PSELECT_EQ p th =
-    let val pty = type_of p 
+    let val pty = type_of p
     in
 	AP_TERM
 	(mk_const("@",(pty --> bool) --> pty))
@@ -2299,7 +2299,7 @@ val LIST_MK_PFORALL = itlist PFORALL_EQ ;
 (* ------------------------------------------------------------------------- *)
 
 val LIST_MK_PEXISTS = itlist PEXISTS_EQ ;
-		
+
 (* ------------------------------------------------------------------------- *)
 (*         A |- P ==> Q                                                      *)
 (* -------------------------- EXISTS_IMP "p"                                 *)
@@ -2307,12 +2307,12 @@ val LIST_MK_PEXISTS = itlist PEXISTS_EQ ;
 (* ------------------------------------------------------------------------- *)
 
 fun PEXISTS_IMP p th =
-    let val (a,c) = dest_imp (concl th) 
-	val th1 = PEXISTS (mk_pexists(p,c),p) (UNDISCH th) 
-	val asm = mk_pexists(p,a) 
-	val th2 = DISCH asm (PCHOOSE (p, ASSUME asm) th1) 
+    let val (a,c) = dest_imp (concl th)
+	val th1 = PEXISTS (mk_pexists(p,c),p) (UNDISCH th)
+	val asm = mk_pexists(p,a)
+	val th2 = DISCH asm (PCHOOSE (p, ASSUME asm) th1)
     in
-	(CONV_RULE (RAND_CONV (GEN_PALPHA_CONV p))) th2 
+	(CONV_RULE (RAND_CONV (GEN_PALPHA_CONV p))) th2
     end
 handle HOL_ERR _ => failwith "PEXISTS_IMP";
 
@@ -2323,13 +2323,13 @@ handle HOL_ERR _ => failwith "PEXISTS_IMP";
 val genlike = genvarstruct o type_of;
 
 fun SWAP_PFORALL_CONV pqt =
-    let val (p,qt) = dest_pforall pqt 
-	val (q,t) = dest_pforall qt 
-	val p' = genlike p 
-	val q' = genlike q 
-	val th1 = GEN_PALPHA_CONV p' pqt 
-	val th2 = CONV_RULE(RAND_CONV (RAND_CONV 
-				       (PABS_CONV (GEN_PALPHA_CONV q')))) th1 
+    let val (p,qt) = dest_pforall pqt
+	val (q,t) = dest_pforall qt
+	val p' = genlike p
+	val q' = genlike q
+	val th1 = GEN_PALPHA_CONV p' pqt
+	val th2 = CONV_RULE(RAND_CONV (RAND_CONV
+				       (PABS_CONV (GEN_PALPHA_CONV q')))) th1
         val t' = (snd o dest_pforall o snd o dest_pforall o rhs o concl)th2
 	val pqt' = list_mk_pforall([p',q'],t')
         and qpt' = list_mk_pforall([q',p'],t')
@@ -2337,7 +2337,7 @@ fun SWAP_PFORALL_CONV pqt =
 	          ((DISCH pqt' o PGENL[q',p'] o PSPECL[p',q'] o ASSUME)pqt')
 	          ((DISCH qpt' o PGENL[p',q'] o PSPECL[q',p'] o ASSUME)qpt')
 	val th4 = CONV_RULE(RAND_CONV(GEN_PALPHA_CONV q))th3
-	val th5 = CONV_RULE(RAND_CONV (RAND_CONV 
+	val th5 = CONV_RULE(RAND_CONV (RAND_CONV
 				       (PABS_CONV (GEN_PALPHA_CONV p)))) th4
     in
 	TRANS th2 th5
@@ -2369,13 +2369,13 @@ handle HOL_ERR _ => failwith "SWAP_PEXISTS_CONV";
 (* --------------------------------------------------------------------- *)
 
 fun PART_PMATCH partfn th =
-    let val pth = GPSPEC (GSPEC (GEN_ALL th))  
-	val pat = partfn (concl pth) 
-	val matchfn = match_term pat 
+    let val pth = GPSPEC (GSPEC (GEN_ALL th))
+	val pat = partfn (concl pth)
+	val matchfn = match_term pat
     in
 	fn tm => INST_TY_TERM (matchfn tm) pth
     end;
-    
+
 
 (* --------------------------------------------------------------------- *)
 (*  A ?- !v1...vi. t'                                                    *)
@@ -2386,28 +2386,28 @@ fun PART_PMATCH partfn th =
 (* --------------------------------------------------------------------- *)
 
 val PMATCH_MP_TAC : thm_tactic =
-    let fun efn p (tm,th) = 
+    let fun efn p (tm,th) =
 	let val ntm = mk_pexists(p,tm)
 	in
 	    (ntm, PCHOOSE (p, ASSUME ntm) th)
 	end
     in
 	fn thm =>
-	let val (tps,(ant,conseq)) = ((I ## dest_imp) o strip_pforall o concl) 
+	let val (tps,(ant,conseq)) = ((I ## dest_imp) o strip_pforall o concl)
                                      thm
 	    handle HOL_ERR _ => raise ERR "MATCH_MP_TAC" "not an implication"
 	    val (cps,con) = strip_forall conseq
 	    val th1 = PSPECL cps (UNDISCH (PSPECL tps thm))
-	    val eps = filter (fn p => not (occs_in p con)) tps 
+	    val eps = filter (fn p => not (occs_in p con)) tps
 	    val th2 = uncurry DISCH (itlist efn eps (ant,th1))
 	in
 	    fn (A,g) =>
-	    let val (gps,gl) = strip_pforall g 
-		val ins = match_term con gl handle HOL_ERR _ => 
+	    let val (gps,gl) = strip_pforall g
+		val ins = match_term con gl handle HOL_ERR _ =>
                 raise ERR "PMATCH_MP_TAC" "no match"
 		val ith = INST_TY_TERM ins th2
 		val newg = fst(dest_imp(concl ith))
-		val gth = PGENL gps (UNDISCH ith) handle HOL_ERR _ => 
+		val gth = PGENL gps (UNDISCH ith) handle HOL_ERR _ =>
                 raise ERR "PMATCH_MP_TAC" "generalized pair(s)"
 	    in
 		([(A,newg)], fn [th] => PROVE_HYP th gth)
@@ -2428,43 +2428,43 @@ fun gen_assoc (keyf,resf)item =
  in
     assc
  end;
-   
+
 
 val PMATCH_MP =
     let fun variants asl [] = []
-	  | variants asl (h::t) = 
-	    let val h' = variant (asl@(filter (fn e => not (e = h)) t)) h 
-	    in {residue=h',redex=h}::(variants (h'::asl) t) 
+	  | variants asl (h::t) =
+	    let val h' = variant (asl@(filter (fn e => not (e = h)) t)) h
+	    in {residue=h',redex=h}::(variants (h'::asl) t)
 	    end
 	fun frev_assoc e2 (l:(''a,''a)subst) = gen_assoc(#redex,#residue)e2 l
-	    handle HOL_ERR _ => e2 
+	    handle HOL_ERR _ => e2
     in
 	fn ith =>
 	let val t = (fst o dest_imp o snd o strip_pforall o concl) ith
 	    handle HOL_ERR _ => raise ERR "PMATCH_MP" "not an implication"
 	in
 	    fn th =>
-	    let val (B,t') = dest_thm th 
+	    let val (B,t') = dest_thm th
 		val ty_inst = snd (match_term t t')
 		val ith_ = INST_TYPE ty_inst ith
-		val (A_, forall_ps_t_imp_u_) = dest_thm ith_ 
-		val (ps_,t_imp_u_) = strip_pforall forall_ps_t_imp_u_ 
-		val (t_,u_) = dest_imp (t_imp_u_) 
-		val pvs = free_varsl ps_ 
-		val A_vs = free_varsl A_ 
-		val B_vs = free_varsl B 
-		val tm_inst = fst (match_term t_ t') 
-		val (match_vs, unmatch_vs) = partition (C free_in t_) 
-                                                       (free_vars u_) 
-		val rename = subtract unmatch_vs (subtract A_vs pvs) 
-		val new_vs = free_varsl (map (C frev_assoc tm_inst) match_vs) 
-		val renaming = variants (new_vs@A_vs@B_vs) rename 
+		val (A_, forall_ps_t_imp_u_) = dest_thm ith_
+		val (ps_,t_imp_u_) = strip_pforall forall_ps_t_imp_u_
+		val (t_,u_) = dest_imp (t_imp_u_)
+		val pvs = free_varsl ps_
+		val A_vs = free_varsl A_
+		val B_vs = free_varsl B
+		val tm_inst = fst (match_term t_ t')
+		val (match_vs, unmatch_vs) = partition (C free_in t_)
+                                                       (free_vars u_)
+		val rename = subtract unmatch_vs (subtract A_vs pvs)
+		val new_vs = free_varsl (map (C frev_assoc tm_inst) match_vs)
+		val renaming = variants (new_vs@A_vs@B_vs) rename
 		val (specs,insts) = partition (C mem (free_varsl pvs) o #redex)
-		    (renaming@tm_inst) 
-		val spec_list = map (subst specs) ps_ 
-		val mp_th = MP (PSPECL spec_list (INST insts ith_)) th 
-		val gen_ps = (filter (fn p => null (subtract (strip_pair p) 
-						             rename)) ps_) 
+		    (renaming@tm_inst)
+		val spec_list = map (subst specs) ps_
+		val mp_th = MP (PSPECL spec_list (INST insts ith_)) th
+		val gen_ps = (filter (fn p => null (subtract (strip_pair p)
+						             rename)) ps_)
 		val qs = map (subst renaming) gen_ps
 	    in
 		PGENL qs mp_th
