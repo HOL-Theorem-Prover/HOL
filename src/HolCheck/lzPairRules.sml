@@ -1,9 +1,7 @@
 structure lzPairRules :> lzPairRules =
 struct
 
-infix THENC |-> THEN ## ORELSE; infixr -->;
-
-open HolKernel boolLib pairSyntax lazyTools PairRules
+open HolKernel Parse boolLib pairSyntax lazyTools PairRules
 (*  open Globals HolKernel Parse boolSyntax Drule lazyTools PairRules pairSyntax Conv Tactic*)
 
 val dpfx = "lzpr_"
