@@ -1345,8 +1345,8 @@ val COND_CLAUSE1 =
                          (REFL (--`T`--)))
      val th6 = IMP_ANTISYM_RULE th4 th5
      val th7 = TRANS th1 (SYM(SELECT_EQ x th6))
-     val th8 = EQ_MP (SYM(BETA_CONV (--`(\^x.^x = ^t1) ^t1`--))) (REFL t1)
-     val th9 = MP (SPEC t1 (SPEC (--`\^x.^x = ^t1`--) SELECT_AX)) th8
+     val th8 = EQ_MP (SYM(BETA_CONV (--`(\ ^x.^x = ^t1) ^t1`--))) (REFL t1)
+     val th9 = MP (SPEC t1 (SPEC (--`\ ^x.^x = ^t1`--) SELECT_AX)) th8
  in
    GEN t1 (GEN t2 (TRANS th7 (EQ_MP (BETA_CONV(concl th9)) th9)))
  end;
@@ -1381,9 +1381,9 @@ val COND_CLAUSE2 =
                            (REFL (--`F`--)))
        val th6 = IMP_ANTISYM_RULE th4 th5
        val th7 = TRANS th1 (SYM(SELECT_EQ x th6))
-       val th8 = EQ_MP (SYM(BETA_CONV (--`(\^x.^x = ^t2) ^t2`--)))
+       val th8 = EQ_MP (SYM(BETA_CONV (--`(\ ^x.^x = ^t2) ^t2`--)))
                        (REFL t2)
-       val th9 = MP (SPEC t2 (SPEC (--`\^x.^x = ^t2`--) SELECT_AX)) th8
+       val th9 = MP (SPEC t2 (SPEC (--`\ ^x.^x = ^t2`--) SELECT_AX)) th8
    in
      GEN t1 (GEN t2 (TRANS th7 (EQ_MP (BETA_CONV(concl th9)) th9)))
    end;
@@ -2556,7 +2556,7 @@ let val b = --`b:bool`--
  in
    GENL [b,f,g]
       (TRANS (ABS x (SYM (SPECL [b,f,g,x] COND_RATOR)))
-             (ETA_CONV (--`\^x. (^b => ^f | ^g) ^x`--)))
+             (ETA_CONV (--`\ ^x. (^b => ^f | ^g) ^x`--)))
  end;
 
 val _ = save_thm("COND_ABS", COND_ABS);
