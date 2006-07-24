@@ -1,17 +1,12 @@
 structure Base =
 struct
 
-infix THEN THENL |->;
-
-local
-
 open HolKernel Parse boolLib Prim_rec numLib
      rich_listTheory pairTheory arithmeticTheory prim_recTheory numTheory
 
-  (* Fix the grammar used by this file *)
-  val ambient_grammars = Parse.current_grammars();
-  val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
-in
+(* set grammars used by this file *)
+val ambient_grammars = Parse.current_grammars();
+val _ = Parse.temp_set_grammars arithmeticTheory.arithmetic_grammars
 
 val LESS_EQ_SPLIT =
     let val asm_thm = ASSUME (--`(m + n) <= p`--)
@@ -184,6 +179,7 @@ fun export_doc_theorems() =
  end
 
 val _ = Parse.temp_set_grammars ambient_grammars
-end (* local *)
 
+open Rsyntax (* some files using this one rely on Rsyntax being opened - 
+                blech *)
 end
