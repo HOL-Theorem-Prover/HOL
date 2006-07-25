@@ -93,6 +93,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 
 <qstring,tmstring,string>"\\\"" => (ECHO yytext; lex());
 <qstring,tmstring,string>"\\\\" => (ECHO yytext; lex());
+<qstring,tmstring,string>"\t" => (ECHO "\\t"; lex());
 <string>"\"" => (ECHO yytext; YYBEGIN INITIAL; lex());
 <tmstring>"\"" => (print "\\\""; YYBEGIN tmquote; lex());
 <qstring>"\"" => (print "\\\""; YYBEGIN quote; lex());
@@ -118,6 +119,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <tmcomment,tycomment,qcomment>{newline} => (qnewline(yypos,yytext); lex());
 <tmcomment,tycomment,qcomment>"\\" => (ECHO "\\\\"; lex());
 <tmcomment,tycomment,qcomment>"\"" => (ECHO "\\\""; lex());
+<tmcomment,tycomment,qcomment>"\t" => (ECHO "\\t"; lex());
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
 
 <quote,tmquote,tyquote>"\\^" => (ECHO "^"; lex());
