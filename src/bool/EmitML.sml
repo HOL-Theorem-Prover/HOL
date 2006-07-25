@@ -125,9 +125,7 @@ val maxprec = 9999;
 (*---------------------------------------------------------------------------*)
 (* Version of dest_string that doesn't care if characters look like          *)
 (*                                                                           *)
-(*        CHAR (NUMERAL n)                                                   *)
-(*                                                                           *)
-(* or    CHAR n                                                              *)
+(*   CHAR (NUMERAL n)    or    CHAR n                                        *)
 (*---------------------------------------------------------------------------*)
 
 val is_string_literal = Lib.can Literal.relaxed_dest_string_lit;
@@ -656,19 +654,19 @@ fun datatype_silent_defs tyAST =
 (* Map from external presentation to internal                                *)
 (*---------------------------------------------------------------------------*)
 
-fun elemi (DEFN th) il = iDEFN (!reshape_thm_hook th) :: il
-  | elemi (DEFN_NOSIG th) il = iDEFN_NOSIG (!reshape_thm_hook th) :: il 
-  | elemi (DATATYPE q) il = 
+fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
+  | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il) 
+  | elemi (DATATYPE q) (cs,il) = 
        let val tyAST = ParseDatatype.parse q
            val defs = datatype_silent_defs tyAST
-       in defs @ (iDATATYPE tyAST :: il)
+       in (cs, defs @ (iDATATYPE tyAST :: il))
        end
-  | elemi (EQDATATYPE(sl,q)) il = 
+  | elemi (EQDATATYPE(sl,q)) (cs,il) = 
        let val tyAST = ParseDatatype.parse q
            val defs = datatype_silent_defs tyAST
-       in defs @ (iEQDATATYPE(sl,tyAST) :: il)
+       in (cs,defs @ (iEQDATATYPE(sl,tyAST) :: il))
        end
-  | elemi (ABSDATATYPE(sl,q)) il = (* build rewrites for pseudo constructors *)
+  | elemi (ABSDATATYPE(sl,q)) (cs,il) = (* build rewrites for pseudo constrs *)
      let open ParseDatatype
          val tyAST = parse q
          val pconstrs = constrl tyAST
@@ -680,13 +678,16 @@ fun elemi (DEFN th) il = iDEFN (!reshape_thm_hook th) :: il
          val mconstrs = filter is_multi constrs'
          val _ = List.map curried_const_equiv_tupled_var mconstrs
       in
-        iABSDATATYPE(sl,tyAST) :: il
+        (mconstrs@cs, iABSDATATYPE(sl,tyAST) :: il)
       end
-  | elemi (OPEN sl) il = iOPEN sl :: il
-  | elemi (MLSIG s) il = iMLSIG s :: il
-  | elemi (MLSTRUCT s) il = iMLSTRUCT s :: il;
+  | elemi (OPEN sl) (cs,il) = (cs,iOPEN sl :: il)
+  | elemi (MLSIG s) (cs,il) = (cs,iMLSIG s :: il)
+  | elemi (MLSTRUCT s) (cs,il) = (cs,iMLSTRUCT s :: il);
 
-fun internalize elems = rev (rev_itlist elemi elems []);
+fun internalize elems = 
+  let val (cs, ielems) = rev_itlist elemi elems ([],[])
+  in (rev cs, rev ielems)
+  end;
 
 (*---------------------------------------------------------------------------*)
 (* Perhaps naive in light of the recent stuff of MN200 to eliminate flab     *)
@@ -1056,13 +1057,19 @@ fun mk_file_ppstream file =
 (* definitions and datatype constructors exported as ML.                     *)
 (*---------------------------------------------------------------------------*)
 
-fun emit_adjoin_call thy consts =
+fun emit_adjoin_call thy (consts,pcs) =
  let fun eqtyvars c = map dest_vartype(gather is_eqtyvar(type_vars_in_term c))
      fun name_thy c = let val {Name,Thy,...} = dest_thy_const c in (Name,Thy) end
      val sclist = map (fn c => (eqtyvars c,name_thy c)) consts
      fun listify slist = "["^String.concat (commafy slist)^"]"
      fun paren2 (a,b) = "("^a^","^b^")"
      fun paren3 (a,(b,c)) = "("^listify a^","^b^","^c^")"
+     fun extern_pc (c,a) = 
+       let val (n,thy) = name_thy c
+           val n' = mlquote n
+           val thy' = mlquote thy
+       in ("(prim_mk_const{Name="^n'^",Thy="^thy'^"},"^Int.toString a^")")
+       end
  in
   Theory.adjoin_to_theory
   {sig_ps = NONE,
@@ -1073,7 +1080,7 @@ fun emit_adjoin_call thy consts =
         val BR = add_break ppstrm
     in
      S "val _ = "; NL();
-     S "   let fun foo thy c = "; NL();
+     S "   let fun dconst thy c = "; NL();
      S "         let val {Name,Ty,...} = Term.dest_thy_const c"; NL();
      S "         in (c,(thy,Name,Ty))"; NL();
      S "         end"; NL();
@@ -1086,9 +1093,20 @@ fun emit_adjoin_call thy consts =
      end_block ppstrm;
      S"]"; NL();
      S "   in "; NL();
-     S ("     List.app ConstMapML.prim_insert (map (foo "^Lib.quote thy^") clist)"); NL();
-     S "   end"; NL()
-        end)}
+     S ("     List.app ConstMapML.prim_insert (map (dconst "^Lib.quote thy^") clist)"); NL();
+     S "   end"; NL(); NL();
+     if null pcs then ()
+     else 
+     (S "val _ = List.map EmitML.curried_const_equiv_tupled_var"; NL();
+      S "                 [";
+      begin_block ppstrm INCONSISTENT 0;
+      Portable.pr_list S (fn () => S",")
+                         (fn () => BR(1,0))
+                         (map extern_pc pcs);
+      end_block ppstrm;
+     S"]"; 
+     NL(); NL())
+    end)}
    handle e => raise ERR "emit_adjoin_call" ""
  end;
 
@@ -1104,7 +1122,7 @@ val sigSuffix = ref "ML.sig";
 val structSuffix = ref "ML.sml";
 
 fun emitML p (s,elems_0) =
- let val elems = internalize elems_0
+ let val (pcs,elems) = internalize elems_0  (* pcs = pseudo-constrs *)
      val path = if p="" then FileSys.getDir() else p
      val pathPrefix = Path.concat(path,s)
      val sigfile = pathPrefix^ !sigSuffix
@@ -1121,7 +1139,7 @@ fun emitML p (s,elems_0) =
     HOL_MESG ("emitML: wrote files "^s^ !sigSuffix ^" and \n\
      \                                   "^s^ !structSuffix^" \n\
               \ in directory "^path);
-    emit_adjoin_call s consts
+    emit_adjoin_call s (consts,pcs)
    )
    handle e => (List.app TextIO.closeOut [sigStrm, structStrm];
                 raise wrap_exn "EmitML" "emitML" e)

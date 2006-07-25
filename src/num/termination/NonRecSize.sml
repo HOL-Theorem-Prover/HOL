@@ -18,8 +18,8 @@ local
   (*----------------------------------------------------------------------*)
 
   val bool_info = Option.valOf (TypeBase.read {Thy="min", Tyop = "bool"});
-  val bool_size_info = (rator(mk_bool_case(zero_tm,zero_tm,mk_arb bool)),
-                        TypeBasePure.ORIG boolTheory.bool_case_ID)
+  val bool_size_info = (mk_abs(mk_var("b",bool),zero_tm),
+                        TypeBasePure.ORIG boolTheory.TRUTH)
   val ty = mk_vartype "'type"
   val tm = mk_vartype "'term"
   val lift_bool_var = mk_var("boolSyntax.lift_bool",ty --> bool --> tm)
