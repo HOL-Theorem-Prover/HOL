@@ -97,12 +97,18 @@ val SET_TO_LIST_IN_MEM = Q.store_thm("SET_TO_LIST_IN_MEM",
 
 (* this version of the above is a more likely rewrite: a complicated LHS
    turns into a simple RHS *)
-val MEM_SET_TO_LIST = Q.store_thm
-("MEM_SET_TO_LIST",
- `!s. FINITE s ==> !x. MEM x (SET_TO_LIST s) = x IN s`,
+val MEM_SET_TO_LIST = Q.store_thm("MEM_SET_TO_LIST",
+`!s. FINITE s ==> !x. MEM x (SET_TO_LIST s) = x IN s`,
  PROVE_TAC [SET_TO_LIST_IN_MEM]);
-
 val _ = export_rewrites ["MEM_SET_TO_LIST"];
+
+val SET_TO_LIST_SING = store_thm(
+  "SET_TO_LIST_SING",
+  ``SET_TO_LIST {x} = [x]``,
+  SRW_TAC [][SET_TO_LIST_THM]);
+val _ = export_rewrites ["SET_TO_LIST_SING"]
+
+
 
 val UNION_APPEND = Q.store_thm
  ("UNION_APPEND",

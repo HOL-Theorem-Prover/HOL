@@ -14,7 +14,7 @@ structure pred_setScript =
 struct
 
 
-(* interactive use 
+(* interactive use
 app load ["pairLib", "numLib", "PGspec", "PSet_ind", "SingleStep", "Q",
           "Defn", "TotalDefn", "metisLib"];
 *)
@@ -1169,12 +1169,14 @@ val CHOICE_SING =
      GEN_TAC THEN
      MP_TAC (MATCH_MP CHOICE_DEF (SPEC (--`x:'a`--) NOT_SING_EMPTY)) THEN
      REWRITE_TAC [IN_SING]);
+val _ = export_rewrites ["CHOICE_SING"]
 
 val REST_SING =
     store_thm
     ("REST_SING",
      (--`!x:'a. REST {x} = EMPTY`--),
      REWRITE_TAC [CHOICE_SING,REST_DEF,SING_DELETE]);
+val _ = export_rewrites ["REST_SING"]
 
 val SING_IFF_EMPTY_REST =
     store_thm
@@ -2246,9 +2248,9 @@ val PHP = Q.store_thm
 (* Infiniteness								*)
 (* =====================================================================*)
 
-val INFINITE_DEF = 
- new_definition 
-   ("INFINITE_DEF", 
+val INFINITE_DEF =
+ new_definition
+   ("INFINITE_DEF",
     ``!s:'a set. INFINITE s = ~FINITE s``);
 
 val NOT_IN_FINITE =
@@ -4146,7 +4148,7 @@ val _ = export_rewrites
      (* "PSUBSET" *)
      "PSUBSET_IRREFL",
      (* "REST" *)
-     "REST_PSUBSET", "REST_SING", "REST_SUBSET",
+     "REST_PSUBSET", "REST_SUBSET",
      (* "SING" *)
      "SING", "SING_FINITE",
      (* "SUBSET" *)
@@ -4245,7 +4247,7 @@ val _ =
     :: MLSIG "val count    : num -> num set"
     :: MLSIG "val POW      : ''a set -> ''a set set"
     ::
-    (map DEFN_NOSIG 
+    (map DEFN_NOSIG
      [CONJ (F_INTRO NOT_IN_EMPTY) IN_INSERT,
       CONJ (CONJUNCT1 UNION_EMPTY) INSERT_UNION,
       CONJ (CONJUNCT1 INTER_EMPTY) INSERT_INTER,
@@ -4274,9 +4276,9 @@ val _ =
                \    | toList (INSERT(a,s)) = a::toList s"]))
 end;
 
-val _ = adjoin_to_theory 
+val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm => 
+   struct_ps = SOME (fn ppstrm =>
      let val S = PP.add_string ppstrm
          fun NL() = PP.add_newline ppstrm
      in S "val _ = EmitML.curried_const_equiv_tupled_var (Parse.Term `$INSERT`, 2);"; NL();
