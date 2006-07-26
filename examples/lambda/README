@@ -92,12 +92,6 @@ standardisationScript.sml :
                Barendregt's proof of the standardisation theorem, from
                section 11.4.
 
-raw_syntaxScript.sml :
-               a diversion: proof that a raw syntax of lambda terms
-               (not identified up to alpha equivalence) with its own
-               notions of substitution, alpha equivalence and beta
-               reduction can indeed be collapsed into the type of
-               terms from ncTheory.
 
           --------------------------------------------------
 
@@ -112,3 +106,38 @@ sttScript.sml :
                    equivalent to another relation, where the second
                    relation has an infinitary (universally quantified)
                    hypothesis in the rule for the abstraction case.
+
+          --------------------------------------------------
+
+diagsScript.sml :
+               a type of rewriting style diagrams and how rewriting
+               relations do or do not satisfy them.  Also a proof that
+               "diagram-satisfaction" is preserved and reflected by
+               strong onto homomorphisms.  (This is discussed in the
+               NICTA/JAIST technical report "Structural preservation
+               and reflection of diagrams", and is joint work with
+               Rene Vestergaard.)
+
+raw_syntaxScript.sml :
+               proof that a raw syntax of lambda terms (not identified
+               up to alpha equivalence) with its own notions of
+               substitution, alpha equivalence and beta reduction can
+               indeed be collapsed into the type of terms from
+               termTheory.  Use diagrams to show confluence for
+               beta-alpha reduction at this raw level by appeal to
+               result in chap3Theory.
+
+string_numScript.sml :
+               a proof by construction that strings and numbers are in
+               bijection
+
+pure_dBScript.sml :
+               mechanisation of the type of "pure" de Bruijn terms,
+               following Tobias Nipkow's paper "More Church-Rosser
+               Proofs".  (They are "pure" in contrast with Andy
+               Gordon's de Bruijn terms, which have indices for bound
+               variables and strings for free variables.)
+
+               Demonstration that this type and its notion of
+               beta-reduction is isomorphic to the quotiented type in
+               termTheory.
