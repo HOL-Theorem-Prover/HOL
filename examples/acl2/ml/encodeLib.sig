@@ -2,17 +2,19 @@ signature encodeLib =
 sig
 	include Abbrev
 
-	val convert_definition  : string -> thm ->
-				  {acl2_definition : thm, correctness : thm, rewrite_enc_dec : thm, rewrite_encode : thm, typing : thm}
-	val ACL2_DEPTH_CONV     : thm list -> thm -> term list -> term -> thm
-	
-	val list_predicates     : (thm * thm) list ref
-	val rewrite_thms        : thm list ref
-	val judgement_thms      : thm list ref
-	val acl2_constants      : term list ref
+	val convert_definition    : thm -> thm * thm
 
-	val add_stage           : int -> unit
-	val remove_stage        : int -> unit
+	val get_recogniser        : hol_type -> thm
+
+	val encode_type           : hol_type -> unit
+	val has_encoding          : hol_type -> bool
+	val get_encode_decode_thm : hol_type -> thm
+	val get_decode_encode_thm : hol_type -> thm
+	val get_detect_encode_thm : hol_type -> thm
+	val get_case_thm          : hol_type -> thm option
+	val get_judgement_thm     : hol_type -> thm option
+
+	val PROVE_TYPE_JUDGEMENT  : thm list -> term -> thm
 
 end
 
