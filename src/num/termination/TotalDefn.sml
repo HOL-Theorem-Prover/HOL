@@ -269,8 +269,7 @@ val default_termination_simps =
           pairTheory.LEX_DEF];
 
 val term_ss = 
- let open simpLib
-      infix ++
+ let open simpLib infix ++
  in boolSimps.bool_ss ++ pairSimps.PAIR_ss 
                       ++ numSimps.REDUCE_ss 
                       ++ numSimps.ARITH_RWTS_ss
@@ -280,9 +279,10 @@ fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
 fun PRIM_TC_SIMP_CONV simps tm =
- let open arithmeticTheory
+ let open arithmeticTheory 
      val els = TypeBasePure.listItems (TypeBase.theTypeBase())
  in
+  simpLib.SIMP_CONV boolSimps.bool_ss [] THENC 
   REPEATC
    (CHANGED_CONV
      (Rewrite.REWRITE_CONV(simps @ mapfilter TypeBasePure.case_def_of els)
