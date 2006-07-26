@@ -52,7 +52,7 @@ type lexresult = (string * int)
 fun eof () = ("", 0)
 %%
 %structure filter
-%s string qstring tmstring comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
+%s string comment qcomment tmcomment tycomment tyquote tmquote quote ANTIQ;
 
 letter = [A-Za-z];
 digit = [0-9];
@@ -91,15 +91,9 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>{newline} => (newline(yypos,yytext); lex());
 <INITIAL>. => (ECHO yytext;lex());
 
-<qstring,tmstring,string>"\\\"" => (ECHO yytext; lex());
-<qstring,tmstring,string>"\\\\" => (ECHO yytext; lex());
-<qstring,tmstring,string>"\t" => (ECHO "\\t"; lex());
 <string>"\"" => (ECHO yytext; YYBEGIN INITIAL; lex());
-<tmstring>"\"" => (print "\\\""; YYBEGIN tmquote; lex());
-<qstring>"\"" => (print "\\\""; YYBEGIN quote; lex());
 <string>{newline} => (newline(yypos,yytext); lex());
-<qstring,tmstring>{newline} => (qnewline(yypos,yytext); lex());
-<qstring,tmstring,string>. => (ECHO yytext; lex());
+<string>. => (ECHO yytext; lex());
 
 <comment,tmcomment,tycomment,qcomment>"(*" =>
                 (ECHO yytext; inc comdepth; lex());
@@ -120,38 +114,34 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <tmcomment,tycomment,qcomment>"\\" => (ECHO "\\\\"; lex());
 <tmcomment,tycomment,qcomment>"\"" => (ECHO "\\\""; lex());
 <tmcomment,tycomment,qcomment>"\t" => (ECHO "\\t"; lex());
+<tmcomment,tycomment,qcomment>"^`" => (ECHO "`"; lex());
+<tmcomment,tycomment>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
+<qcomment>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
 
-<quote,tmquote,tyquote>"\\^" => (ECHO "^"; lex());
+<quote,tmquote,tyquote>"^^" => (ECHO "^"; lex());
+<quote,tmquote,tyquote>"^`" => (ECHO "`"; lex());
+<quote,tmquote,tyquote>"\\" => (print "\\\\"; lex());
+<quote,tmquote,tyquote>"\"" => (print "\\\""; lex());
+<quote,tmquote,tyquote>"\t" => (print "\\t"; lex());
+<quote,tmquote,tyquote>{newline} => (qnewline(yypos,yytext); lex());
+
 <quote>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
+<tmquote,tyquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
+
 <quote>"(*" => (ECHO yytext; YYBEGIN qcomment; lex());
+<tmquote>"(*" => (ECHO yytext; YYBEGIN tmcomment; lex());
+<tyquote>"(*" => (ECHO yytext; YYBEGIN tycomment; lex());
+
 <quote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                YYBEGIN quote; lex());
-<quote>"\\" => (print "\\\\"; lex());
-<quote>"\"" => (print "\\\""; YYBEGIN qstring; lex());
-<quote>"\t" => (print "\\t"; lex());
-<quote>{newline} => (qnewline(yypos,yytext); lex());
-<quote>. => (ECHO yytext;lex());
-
-<tmquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
-<tmquote>"(*" => (ECHO yytext; YYBEGIN tmcomment; lex());
 <tmquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                  YYBEGIN tmquote; lex());
-<tmquote>"\\" => (print "\\\\"; lex());
-<tmquote>"\"" => (print "\\\""; YYBEGIN tmstring; lex());
-<tmquote>"\t" => (print "\\t"; lex());
-<tmquote>{newline} => (qnewline(yypos,yytext); lex());
-<tmquote>. => (ECHO yytext; lex());
-
-<tyquote>"``" => (print "\"])"; YYBEGIN INITIAL; lex());
-<tyquote>"(*" => (ECHO yytext; YYBEGIN tycomment; lex());
 <tyquote>"^" => (print "\", ANTIQUOTE ("; YYBEGIN ANTIQ; lex();
                  YYBEGIN tyquote; lex());
-<tyquote>"\\" => (print "\\\\"; lex());
-<tyquote>"\"" => (print "\\\""; lex());
-<tyquote>"\t" => (print "\\t"; lex());
-<tyquote>{newline} => (qnewline(yypos,yytext); lex());
-<tyquote>. => (ECHO yytext; lex());
+
+
+<quote,tmquote,tyquote>. => (ECHO yytext;lex());
 
 <ANTIQ>{MLid} => (ECHO yytext;
                   print ("),QUOTE \""^locpragma (yytext,yypos) 0);

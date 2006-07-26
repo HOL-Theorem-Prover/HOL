@@ -1,0 +1,8 @@
+"foo \
+	  \bar"
+(Parse.Term [QUOTE " (*#loc 3 3*)\"foo\""])
+[QUOTE " (*#loc 4 2*)foo = #\"`\""]
+[QUOTE " (*#loc 5 2*)\"\\\"\""]
+(Parse.Term [QUOTE " (*#loc 6 3*)\t"])
+(Parse.Term [QUOTE " (*#loc 7 3*)(* foo"])
+[QUOTE " (*#loc 8 2*)^"]

@@ -179,83 +179,6 @@ assign type variables for you, the global variable
 existence of unassigned type variables at the end of type inference
 will raise an exception.
 
-\subsubsection{Antiquotation}
-
-Within a quotation, expressions of the form {\small\verb+^(+}$t${\small\verb+)+}
-%
-\index{ antiquotation, in HOL logic@{\small\verb+^+} (antiquotation, in \HOL{} logic)}
-%
-(where $t$ is an \ML\ expression of type
-%
-\index{type checking, in HOL logic@type checking, in \HOL{} logic!antiquotation in}
-%
-{\small\verb+term+} or {\small\verb+type+}) are called {\it antiquotations\/}
-%
-\index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}.
-%
-An antiquotation \holtxt{\^{}($t$)} evaluates to the
-\ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
-evaluates to the same term as {\small\verb+``x \/ (y /\ z)``+}. The
-most common use of antiquotation is when the term $t$ is bound to an \ML\
-variable $x$. In this case {\small\verb+^(+}$x${\small\verb+)+} can be
-abbreviated by {\small\verb+^+}$x$.
-
-The following session illustrates antiquotation.
-
-\setcounter{sessioncount}{1}
-\begin{session}
-\begin{hol}
-\begin{verbatim}
-- val y = ``x+1``;
-> val y = ``x + 1`` : term
-
-val z = ``y = ^y``;
-> val z = ``y = x + 1`` : term
-
-- ``!x:num.?y:num.^z``;
-> val it = ``!x. ?y. y = x + 1`` : term
-\end{verbatim}
-\end{hol}
-\end{session}
-
-\noindent Types may be antiquoted as well:
-
-\setcounter{sessioncount}{1}
-\begin{session}
-\begin{hol}
-\begin{verbatim}
-- val pred = ``:'a -> bool``;
-> val pred = ``:'a -> bool`` : hol_type
-
-- ``:^pred -> bool``;
-> val it = ``:('a -> bool) -> bool`` : hol_type
-\end{verbatim}
-\end{hol}
-\end{session}
-
-\noindent Antiquoting a type into a term quotation requires the use of
-\holtxt{ty\_antiq}. For example,%
-%
-\index{ty_antiq@\ml{ty\_antiq}}
-
-\begin{session}
-\begin{hol}
-\begin{verbatim}
-- ``!P:^pred. P x ==> Q x``;
-
-! Toplevel input:
-! Term `!P:^pred. P x ==> Q x`;
-!           ^^^^
-! Type clash: expression of type
-!   hol_type
-! cannot have type
-!   term
-
-- ``!P:^(ty_antiq pred). P x ==> Q x``;
-> val it = `!P. P x ==> Q x` : term
-\end{verbatim}
-\end{hol}
-\end{session}
 
 \subsubsection{Overloading}
 
@@ -632,7 +555,7 @@ of printing
 meaning no maximum.  Subterms nested more deeply than the maximum
 print depth are printed as \holtxt{...}. For example:
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{hol}
 \begin{verbatim}
@@ -649,6 +572,159 @@ print depth are printed as \holtxt{...}. For example:
 \end{hol}
 \end{session}
 \index{default print depth, for HOL logic@default print depth, for \HOL{} logic|)}
+
+\subsection{Quotations and Antiquotation}
+
+Logic-related syntax in the HOL system is typically passed to the
+parser in special forms known as \emph{quotations}.  A basic quotation
+is delimited by single back-ticks (i.e., \ml{`}, ASCII character~96).  When
+quotation values are printed out by the ML interactive loop, they look
+rather ugly because of the special filtering that is done to these
+values before the ML interpreter even sees them:
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- val q = `f x = 3`;
+> val 'a q = [QUOTE " (*#loc 1 11*)f x = 3"] : 'a frag list
+\end{verbatim}
+\end{hol}
+\end{session}
+Quotations (Moscow ML prints the type as \ml{'a frag list}) are the
+raw input form expected by the various HOL parsers.  They are also
+polymorphic (to be explained below).  Thus the function
+\ml{Parse.Term} function takes a (term) quotation and returns a term,
+and is thus of type \[ \ml{term quotation -> term}
+\]
+
+The term and type parsers can also be called implicitly by using
+double back-ticks as delimiters.  For the type parser, the first
+non-space character after the leading delimiter must also be a colon.
+Thus:
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- val t = ``p /\ q``;
+> val t = ``p /\ q`` : term
+
+- val ty = ``:'a -> bool``;
+> val ty = ``:'a -> bool`` : hol_type
+\end{verbatim}
+\end{hol}
+\end{session}
+
+The expression bound to ML variable \ml{t} above is actually expanded
+to an application of the function \ml{Parse.Term} to the quotation
+argument \ml{`p /\bs{} q`}.  Similarly, the second expression expands
+into an application of \ml{Parse.Type} to the quotation \ml{`:'a -> bool`}.
+
+The significant advantage of quotations over normal \ML{} strings is
+that they can include new-line and backslash characters without
+requiring special quoting.  Newlines occur whenever terms get beyond
+the trivial in size, while backslashes occur in not just the
+representation of $\lambda$, but also the syntax for conjunction and
+disjunction.
+
+If a quotation is to include a back-quote character, then this should
+be done by using the quotation syntax's own escape character, the
+caret (\ml{\^}, ASCII character~94).  In order to get a bare caret,
+write two carets in a row. (This is analogous to the way in \ML{}
+string syntax treats the back-slash.) Thus:
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- ``f ^` x ``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+> val it = ``f ` x`` : term
+
+- ``f ^^ x``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+> val it = ``f ^ x`` : term
+\end{verbatim}
+\end{hol}
+\end{session}
+
+The main use of the caret is to introduce \emph{antiquotations}.
+Within a quotation, expressions of the form
+{\small\verb+^(+}$t${\small\verb+)+}
+%
+\index{ antiquotation, in HOL logic@{\small\verb+^+} (antiquotation, in \HOL{} logic)}
+%
+(where $t$ is an \ML\ expression of type
+%
+\index{type checking, in HOL logic@type checking, in \HOL{} logic!antiquotation in}
+%
+{\small\verb+term+} or {\small\verb+type+}) are called {\it antiquotations\/}
+%
+\index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}.
+%
+An antiquotation \holtxt{\^{}($t$)} evaluates to the
+\ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
+evaluates to the same term as {\small\verb+``x \/ (y /\ z)``+}. The
+most common use of antiquotation is when the term $t$ is bound to an \ML\
+variable $x$. In this case {\small\verb+^(+}$x${\small\verb+)+} can be
+abbreviated by {\small\verb+^+}$x$.
+
+The following session illustrates antiquotation.
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- val y = ``x+1``;
+> val y = ``x + 1`` : term
+
+val z = ``y = ^y``;
+> val z = ``y = x + 1`` : term
+
+- ``!x:num.?y:num.^z``;
+> val it = ``!x. ?y. y = x + 1`` : term
+\end{verbatim}
+\end{hol}
+\end{session}
+
+\noindent Types may be antiquoted as well:
+
+\setcounter{sessioncount}{1}
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- val pred = ``:'a -> bool``;
+> val pred = ``:'a -> bool`` : hol_type
+
+- ``:^pred -> bool``;
+> val it = ``:('a -> bool) -> bool`` : hol_type
+\end{verbatim}
+\end{hol}
+\end{session}
+
+\noindent Quotations are polymorphic, and the type variable of a
+quotation corresponds to the type of entity that can be antiquoted
+into that quotation.  Because the term parser expects only antiquoted
+terms, antiquoting a type into a term quotation requires the use of
+\holtxt{ty\_antiq}. For example,%
+%
+\index{ty_antiq@\ml{ty\_antiq}}
+
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- ``!P:^pred. P x ==> Q x``;
+
+! Toplevel input:
+! Term `!P:^pred. P x ==> Q x`;
+!           ^^^^
+! Type clash: expression of type
+!   hol_type
+! cannot have type
+!   term
+
+- ``!P:^(ty_antiq pred). P x ==> Q x``;
+> val it = `!P. P x ==> Q x` : term
+\end{verbatim}
+\end{hol}
+\end{session}
+
 
 
 \subsection{Backwards compatibility of syntax}
