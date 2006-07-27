@@ -8,3 +8,4 @@
 [QUOTE " (*#loc 8 2*)^"]
 "\"" (Parse.Term [QUOTE " (*#loc 9 8*)foo"])
 "\\" [QUOTE " (*#loc 10 7*)foo"]
+[QUOTE " (*#loc 11 2*)putting unescaped backticks into ", ANTIQUOTE ((antiquotes #"`")),QUOTE " (*#loc 11 53*) is fine"]

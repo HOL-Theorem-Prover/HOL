@@ -8,3 +8,4 @@
 `^^`
 "\"" ``foo``
 "\\" `foo`
+`putting unescaped backticks into ^(antiquotes #"`") is fine`
