@@ -1,3 +1,4 @@
+EXTRA_CLEANS = run run.sml
 OPTIONS = NO_OVERLAY
 MLYACC=$(HOLDIR)/tools/mlyacc/mlyacclib
 MLTON=$(HOLDIR)/tools/mlton/pre
@@ -30,11 +31,11 @@ run.sml: armML.sml armML.sig evalML.sml
 	    $(THEORY)/fcpML.sml $(THEORY)/wordsML.sig $(THEORY)/wordsML.sml\
 	    armML.sig armML.sml evalML.sml > run.sml
 
-armML.ui armML.uo:
-	@
+armML.uo:
+	HOLMOSMLC -c -I $(THEORY) armML.sig armML.sml
 
 evalML.uo:
-	@
+	HOLMOSMLC -c -I $(THEORY) -I .. armML.ui armML.uo evalML.sml
 
 ppstream.uo:
 	@
