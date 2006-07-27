@@ -6,3 +6,4 @@
 (Parse.Term [QUOTE " (*#loc 6 3*)\t"])
 (Parse.Term [QUOTE " (*#loc 7 3*)(* foo"])
 [QUOTE " (*#loc 8 2*)^"]
+"\"" (Parse.Term [QUOTE " (*#loc 9 8*)foo"])

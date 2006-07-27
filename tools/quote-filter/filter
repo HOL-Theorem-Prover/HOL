@@ -91,6 +91,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>{newline} => (newline(yypos,yytext); lex());
 <INITIAL>. => (ECHO yytext;lex());
 
+<string>"\\\"" => (ECHO yytext; lex());
 <string>"\"" => (ECHO yytext; YYBEGIN INITIAL; lex());
 <string>{newline} => (newline(yypos,yytext); lex());
 <string>. => (ECHO yytext; lex());
