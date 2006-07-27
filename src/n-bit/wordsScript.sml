@@ -363,6 +363,10 @@ val SUB1_SUC = DECIDE (Term `!n. 0 < n ==> (SUC (n - 1) = n)`);
 val SUB_SUC1 = DECIDE (Term `!n. ~(n = 0) ==> (SUC (n - 1) = n)`);
 val SUC_SUB2 = DECIDE (Term `!n. ~(n = 0) ==> (SUC n - 2 = n - 1)`);
 
+val MOD_2EXP_DIMINDEX = save_thm("MOD_2EXP_DIMINDEX",
+  SIMP_RULE std_ss [SUB1_SUC,BITS_ZERO3,DIMINDEX_GT_0,GSYM MOD_2EXP_def]
+     MOD_DIMINDEX);
+
 (* ------------------------------------------------------------------------- *)
 (*  Domain transforming maps : theorems                                      *)
 (* ------------------------------------------------------------------------- *)
@@ -528,8 +532,8 @@ val word_msb_n2w_numeric = store_thm(
   Q.ABBREV_TAC `q = n DIV WL` THEN
   Q.ABBREV_TAC `r = n MOD WL` THEN
   ASM_SIMP_TAC (srw_ss())[word_msb_n2w, bitTheory.BIT_def, bitTheory.BITS_def,
-             MOD_2EXP_def, bitTheory.DIV_2EXP_def,
-             DECIDE ``SUC x - x = 1``, EQ_IMP_THM] THEN REPEAT STRIP_TAC
+             MOD_2EXP_def, DIV_2EXP_def, DECIDE ``SUC x - x = 1``, EQ_IMP_THM]
+  THEN REPEAT STRIP_TAC
   THENL [
     SPOSE_NOT_THEN ASSUME_TAC THEN
     `r < INT_MIN(:'a)` by SRW_TAC [ARITH_ss][Abbr`r`] THEN
@@ -2254,10 +2258,10 @@ in
             \  val INT_MIN        : fcpML.holtype -> num\n\
             \  val lookup_dimword : (fcpML.holtype -> num) ref\n\
             \  val dimword        : fcpML.holtype -> num"
-     :: map (DEFN o REWRITE_RULE
-          [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
-           GSYM word_concat_itself_def, GSYM word_extract_itself_def,
-           word_T_def, word_L_def, word_H_def, TIMES_2EXP1] o ALPHA_BETA_RULE)
+     :: map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
+           GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
+           GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
+           TIMES_2EXP1] o ALPHA_BETA_RULE)
           [UINT_MAX_def, INT_MAX_def, w2n_n2w, word_eq_n2w,
            w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
            SPEC `c` word_bit_n2w, word_join_n2w, sw2sw_n2w, word_extract_n2w,

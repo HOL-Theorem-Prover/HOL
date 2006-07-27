@@ -770,6 +770,13 @@ val MOD_2EXP = save_thm("MOD_2EXP",
        (METIS_PROVE [NUMERAL_DEF,iMOD_2EXP]
          ``!x n. MOD_2EXP x (NUMERAL n) = NUMERAL (iMOD_2EXP x n)``));
 
+val DIV_2EXP = Q.store_thm("DIV_2EXP",
+  `!n x. DIV_2EXP n x = FUNPOW DIV2 n x`,
+  INDUCT_TAC THEN ASM_SIMP_TAC bool_ss
+          [DIV_2EXP_def, CONJUNCT1 FUNPOW, FUNPOW_SUC, CONJUNCT1 EXP, DIV_1]
+    THEN POP_ASSUM (fn th => SIMP_TAC bool_ss [GSYM th, EXP_1, ADD1, EXP_ADD,
+       DIV2_def, DIV_2EXP_def, DIV_DIV_DIV_MULT, ZERO_LT_TWO, ZERO_LT_TWOEXP]));
+
 (*---------------------------------------------------------------------------*)
 (* Filter out the definitions and theorems needed to generate ML.            *)
 (*---------------------------------------------------------------------------*)
@@ -854,7 +861,7 @@ val _ =
          numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
          WHILE,LEAST_DEF,REWRITE_RULE [TIMES2,GSYM iDUB] findq_thm,
          DIVMOD_THM,div_eqns, mod_eqns,
-         numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp]
+         numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp,DIV_2EXP]
      @
      [MLSIG "val num_size : num -> num",
       MLSIG "val NUMERAL  :num -> num",

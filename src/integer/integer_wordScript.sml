@@ -57,8 +57,7 @@ val w2i_n2w_pos = store_thm(
     (w2i (n2w n : bool ** 'a) = &n)``,
   SRW_TAC [][w2i_def, word_msb_n2w, bitTheory.BIT_def, INT_SUB, dimword_def,
              bitTheory.BITS_def, DECIDE ``SUC x - x = 1``,
-             wordsTheory.INT_MIN_def,
-             bitTheory.DIV_2EXP_def, MOD_2EXP_def,
+             wordsTheory.INT_MIN_def, DIV_2EXP_def, MOD_2EXP_def,
              w2n_n2w, INT_MAX_def, bitTheory.ZERO_LT_TWOEXP,
              DECIDE ``0n < y ==> (x <= y - 1 = x < y)``] THEN
   FULL_SIMP_TAC (srw_ss()) [LESS_DIV_EQ_ZERO] THEN
@@ -72,8 +71,7 @@ val w2i_n2w_neg = store_thm(
       (w2i (n2w n : 'a word) = ~ &(dimword(:'a) - n))``,
   SRW_TAC [ARITH_ss][w2i_def, word_msb_n2w, bitTheory.BIT_def, dimword_def,
                      bitTheory.BITS_def, DECIDE ``SUC x - x = 1``,
-                     wordsTheory.INT_MIN_def,
-                     bitTheory.DIV_2EXP_def, MOD_2EXP_def,
+                     wordsTheory.INT_MIN_def, DIV_2EXP_def, MOD_2EXP_def,
                      w2n_n2w, word_2comp_n2w]
   THENL [
     Q_TAC SUFF_TAC `0n < 2 ** (dimindex (:'a) - 1)` THEN1 DECIDE_TAC THEN

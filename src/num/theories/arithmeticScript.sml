@@ -1895,6 +1895,10 @@ val MOD_2EXP_def =
   new_definition("MOD_2EXP_def",
                  --`MOD_2EXP x n = n MOD 2 ** x`--);
 
+val DIV_2EXP_def =
+  new_definition("DIV_2EXP_def",
+                 --`DIV_2EXP x n = n DIV 2 ** x`--);
+
 (* ---------------------------------------------------------------------*)
 (* Properties of MOD and DIV that don't depend on uniqueness.           *)
 (* ---------------------------------------------------------------------*)

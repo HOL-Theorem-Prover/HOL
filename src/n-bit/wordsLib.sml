@@ -18,7 +18,7 @@ val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
 val SIZES_ss = rewrites machine_sizes;
 
-fun NUMERAL_ONLY_RULE l n x =
+fun NUM_RULE l n x =
   let val y = SPEC_ALL x
   in CONJ
      ((GEN_ALL o simpLib.SIMP_RULE bossLib.arith_ss l o Q.INST [n |-> `0`]) y)
@@ -30,14 +30,12 @@ val MOD_WL =
 
 val thms = machine_sizes @
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
-   iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def,
-   SIGN_EXTEND_def, SBIT_def, DIVMOD_2EXP,
-   NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP,
-   NUMERAL_BIT_MODIFY, NUMERAL_BIT_MODF,
+   iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SIGN_EXTEND_def, SBIT_def,
+   NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP, NUMERAL_BIT_MODIFY, NUMERAL_BIT_MODF,
    NUMERAL_BIT_REVERSE, NUMERAL_BIT_REV,
-   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` BITS_def,
-   NUMERAL_ONLY_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
-   NUMERAL_ONLY_RULE [BITS_ZERO2] `n`  BIT_def,
+   NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` BITS_def,
+   NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
+   NUM_RULE [BITS_ZERO2] `n`  BIT_def,
    numeral_log2,numeral_ilog2,
    n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,

@@ -130,16 +130,6 @@ val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
                  NUMERAL (iBITWISE x f (NUMERAL a) (NUMERAL b))`,
   REWRITE_TAC [iBITWISE_def,NUMERAL_DEF]);
 
-val DIV_2EXP = prove(
-  `(!n. DIV_2EXP 0 n = n) /\
-   (!x. DIV_2EXP x 0 = 0) /\
-   (!x n. DIV_2EXP (SUC x) (NUMERAL n) =
-            DIV_2EXP x (DIV2 (NUMERAL n)))`,
-  RW_TAC arith_ss [DIV_2EXP_def,DIV2_def,EXP,ZERO_DIV,
-    DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]);
-
-val NUMERAL_DIV_2EXP = save_thm("NUMERAL_DIV_2EXP", SUC_RULE DIV_2EXP);
-
 val NUMERAL_BIT_REV = prove(
   `(!x y. BIT_REV 0 x y = y) /\
    (!n y. BIT_REV (SUC n) 0 y = BIT_REV n 0 (iDUB y)) /\
@@ -192,6 +182,16 @@ val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
     \\ POP_ASSUM SUBST1_TAC
     \\ REWRITE_TAC [TIMES_2EXP_def,TIMES_2EXP_lem,NUMERAL_DEF]
     \\ SIMP_TAC std_ss [EXP]);
+
+val DIV_2EXP = prove(
+  `(!n. DIV_2EXP 0 n = n) /\
+   (!x. DIV_2EXP x 0 = 0) /\
+   (!x n. DIV_2EXP (SUC x) (NUMERAL n) =
+            DIV_2EXP x (DIV2 (NUMERAL n)))`,
+  RW_TAC arith_ss [DIV_2EXP_def,DIV2_def,EXP,ZERO_DIV,
+    DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]);
+    
+val NUMERAL_DIV_2EXP = save_thm("NUMERAL_DIV_2EXP", SUC_RULE DIV_2EXP);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -307,12 +307,6 @@ val TIMES_2EXP_compute = prove(
          [MULT, REWRITE_RULE [NUMERAL_DEF] NUMERAL_TIMES_2EXP,CONJUNCT1 FUNPOW]
     \\ PROVE_TAC [NUMERAL_DEF]);
 
-val DIV_2EXP_compute = prove(
-  `!n x. DIV_2EXP n x = FUNPOW DIV2 n x`,
-  Induct \\ ASM_SIMP_TAC std_ss [DIV_2EXP_def, CONJUNCT1 FUNPOW, FUNPOW_SUC]
-    \\ POP_ASSUM (fn th => SIMP_TAC arith_ss [GSYM th, EXP_1, ADD1,
-         EXP_ADD, DIV2_def, DIV_2EXP_def, DIV_DIV_DIV_MULT]));
-
 val TIMES_2EXP1 =
  (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
   Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
@@ -324,8 +318,8 @@ val _ =
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1, arithmeticTheory.NUMERAL_DEF])
-         [TIMES_2EXP_compute, DIV_2EXP_compute,
-          BITWISE_compute, BIT_MODF_compute, BIT_MODIFY_EVAL,
+         [TIMES_2EXP_compute, BITWISE_compute,
+          BIT_MODF_compute, BIT_MODIFY_EVAL,
           BIT_REV_compute, BIT_REVERSE_EVAL,
           LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,
           BITV_def, BIT_def, SLICE_def,LSB_def, SIGN_EXTEND_def])

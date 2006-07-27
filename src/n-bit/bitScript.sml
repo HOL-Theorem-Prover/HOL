@@ -20,8 +20,6 @@ val _ = computeLib.auto_import_definitions := false;
 
 val TIMES_2EXP_def  = Define `TIMES_2EXP x n = n * 2 ** x`;
 
-val DIV_2EXP_def    = Define `DIV_2EXP x n = n DIV 2 ** x`;
-
 val DIVMOD_2EXP_def = Define `DIVMOD_2EXP x n = (n DIV 2 ** x,n MOD 2 ** x)`;
 
 val SBIT_def        = Define `SBIT b n = if b then 2 ** n else 0`;
