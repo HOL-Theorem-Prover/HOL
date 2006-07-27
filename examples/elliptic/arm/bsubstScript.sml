@@ -24,7 +24,6 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
-val _ = set_fixity "::-" (Infixr 325);
 val _ = set_fixity "::->" (Infixr 325);
 val _ = set_fixity "::-<" (Infixr 325);
 

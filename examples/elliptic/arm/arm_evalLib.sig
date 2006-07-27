@@ -15,6 +15,9 @@ sig
    val assemble1            : term -> string -> term
    val assemble             : term -> string -> term
 
+   val empty_memory         : term
+   val empty_registers      : term
+
    val set_registers        : term -> term -> term
    val set_status_registers : term -> term -> term
 

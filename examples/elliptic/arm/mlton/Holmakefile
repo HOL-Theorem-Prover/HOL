@@ -1,0 +1,43 @@
+OPTIONS = NO_OVERLAY
+MLYACC=$(HOLDIR)/tools/mlyacc/mlyacclib
+MLTON=$(HOLDIR)/tools/mlton/pre
+PORTABLE=$(HOLDIR)/src/portableML
+THEORY=$(HOLDIR)/src/theoryML
+
+run: run.mlb run.sml
+	mlton -verbose 1 run.mlb
+
+run.sml: armML.sml armML.sig evalML.sml
+	@cat $(MLYACC)/MLY_base-sig.sml $(MLYACC)/MLY_lrtable.sml\
+	    $(MLYACC)/MLY_stream.sml $(MLYACC)/MLY_parser2.sml\
+	    $(MLYACC)/MLY_join.sml\
+	    $(MLTON)/PP.sig $(MLTON)/PP.sml\
+	    $(MLTON)/Intset.sig $(MLTON)/Intset.sml\
+	    $(MLTON)/Random.sig $(MLTON)/Random.sml\
+	    ppstream.sml $(PORTABLE)/Arbnum.sig $(PORTABLE)/Arbnum.sml\
+	    $(PORTABLE)/Redblackmap.sig $(PORTABLE)/Redblackmap.sml\
+	    ../Data.sml ../armParser.grm-sig.sml ../armParser.grm.sml\
+	    ../armParser.lex.sml ../assemblerML.sig ../assemblerML.sml\
+	    $(THEORY)/combinML.sig $(THEORY)/combinML.sml\
+	    $(THEORY)/pairML.sig $(THEORY)/pairML.sml\
+	    $(THEORY)/sumML.sig $(THEORY)/sumML.sml\
+	    $(THEORY)/numML.sig $(THEORY)/mlton/numML.sml\
+	    $(THEORY)/listML.sig $(THEORY)/listML.sml\
+	    $(THEORY)/setML.sig $(THEORY)/setML.sml\
+	    $(THEORY)/optionML.sig $(THEORY)/optionML.sml\
+	    $(THEORY)/rich_listML.sig $(THEORY)/rich_listML.sml\
+	    $(THEORY)/bitML.sig $(THEORY)/bitML.sml\
+	    $(THEORY)/fcpML.sml $(THEORY)/wordsML.sig $(THEORY)/wordsML.sml\
+	    armML.sig armML.sml evalML.sml > run.sml
+
+armML.ui armML.uo:
+	@
+
+evalML.uo:
+	@
+
+ppstream.uo:
+	@
+
+run.uo:
+	@

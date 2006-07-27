@@ -549,6 +549,9 @@ in
   fun assemble1 m t = list_assemble m [t];
 end;
 
+val empty_memory = rhsc empty_memory_def
+val empty_registers = rhsc empty_registers_def
+
 (* ------------------------------------------------------------------------- *)
 (* Funtions for memory loading and saving *)
 

@@ -75,6 +75,7 @@ val _ = map Hol_datatype [mode_decl, condition_decl, iclass_decl];
 (* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity ":-" (Infixr 325);
+val _ = set_fixity "::-" (Infixr 325);
 
 val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
 
@@ -1219,6 +1220,11 @@ val num2condition = prove(
 
 (*---------------------------------------------------------------------------*)
 
+val MEM_READ_def = Define `MEM_READ (m: mem, a) = m a`;
+val MEM_WRITE_BLOCK_def = Define `MEM_WRITE_BLOCK (m:mem) a c = (a ::- c) m`;
+val empty_memory_def = Define `empty_memory = (\a. 0xE6000010w):mem`;
+val empty_registers_def = Define `empty_registers = (\n. 0w):reg`;
+
 val RHS_REWRITE_RULE =
   GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
 
@@ -1229,6 +1235,8 @@ val spec_word_rule32 = n2w_w2n_rule o Q.SPEC `w2n (w:word32)`;
 
 val spec_word_rule12 =
   n2w_w2n_rule o INST [`opnd2` |-> `w2n (w:word12)`] o SPEC_ALL;
+
+val mem_read_rule = ONCE_REWRITE_RULE [GSYM MEM_READ_def];
 
 val OUT_ARM = SIMP_RULE (srw_ss()++boolSimps.LET_ss)
   [LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def,
@@ -1246,7 +1254,7 @@ val _ = ConstMapML.insert ``INT_MIN``;
 val _ = ConstMapML.insert ``n2w_itself``;
 
 val _ = let open EmitML in emitML (!Globals.emitMLDir)
-    ("arm", OPEN ["num", "set", "fcp", "list", "rich_list", "words"]
+    ("arm", OPEN ["num", "set", "fcp", "list", "rich_list", "bit", "words"]
          :: MLSIG "type ('a, 'b) cart = ('a, 'b) wordsML.cart"
          :: MLSIG "type num = numML.num"
          :: map (fn decl => DATATYPE decl)
@@ -1274,14 +1282,15 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
              [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
               GSYM word_concat_itself_def, GSYM word_extract_itself_def,
               NUMERAL_DEF] o RHS_REWRITE_RULE [GSYM word_eq_def])
-            (map spec_word_rule32 [
-              DECODE_PSR_THM, DECODE_BRANCH_THM, DECODE_DATAP_THM,
+             (map spec_word_rule32
+             [DECODE_PSR_THM, DECODE_BRANCH_THM, DECODE_DATAP_THM,
               DECODE_MRS_THM, DECODE_MSR_THM, DECODE_LDR_STR_THM,
               DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
               DECODE_LDC_STC_THM, DECODE_INST_THM]
            @ [SUBST_def, BSUBST_def, USER_def, mode_reg2num_def,
               definition "state_out_state", definition "state_out_out",
-              num2register, num2condition, theorem "exceptions2num_thm",
+              theorem "exceptions2num_thm", theorem "register2num_thm",
+              num2register, num2condition,
               REG_READ_def, REG_WRITE_def, INC_PC_def, FETCH_PC_def,
               SET_NZCV_def, SET_NZC_def, SET_NZ_def, mode_num_def,
               SET_IFMODE_def, DECODE_MODE_def, NZCV_def,
@@ -1293,22 +1302,23 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
               spec_word_rule12 SHIFT_IMMEDIATE_THM,
               spec_word_rule12 SHIFT_REGISTER_THM, ADDR_MODE1_def,
               SPEC `f` ALU_arith_def, SPEC `f` ALU_arith_neg_def, ALU_logic_def,
-              SUB_def, ADD_def, AND_def, EOR_def, ORR_def, ALU_def,
-              ARITHMETIC_def, TEST_OR_COMP_def,
-              REWRITE_RULE [COND_RATOR] DATA_PROCESSING_def,
+              numLib.REDUCE_RULE SUB_def, ADD_def, AND_def, EOR_def, ORR_def,
+              ALU_def, ARITHMETIC_def, TEST_OR_COMP_def, DATA_PROCESSING_def,
               MRS_def, MSR_def, ALU_multiply_def, MLA_MUL_def,
               BW_READ_def, UP_DOWN_def, ADDR_MODE2_def,
               IMP_DISJ_THM, LDR_STR_def, spec_word_rule16 REGISTER_LIST_THM,
-              ADDRESS_LIST_def, WB_ADDRESS_def,
-              FIRST_ADDRESS_def, ADDR_MODE4_def, LDM_LIST_def, STM_LIST_def,
-              LDM_STM_def, SWP_def, MRC_def, MCR_OUT_def,
-              ADDR_MODE5_def, REWRITE_RULE [COND_RATOR] LDC_STC_def,
+              ADDRESS_LIST_def, WB_ADDRESS_def, FIRST_ADDRESS_def,
+              ADDR_MODE4_def, LDM_LIST_def, STM_LIST_def, LDM_STM_def,
+              SWP_def, MRC_def, MCR_OUT_def, ADDR_MODE5_def,
+              REWRITE_RULE [COND_RATOR] LDC_STC_def,
               CONDITION_PASSED2_def, CONDITION_PASSED_def, EXEC_INST_def,
               IS_Dabort_def, IS_Reset_def, PROJ_Dabort_def, PROJ_Reset_def ,
-              interrupt2exceptions_def, PROJ_IF_FLAGS_def,
-              NEXT_ARM_def, OUT_ARM,
-              ADDR30_def, SET_BYTE_def, MEM_WRITE_BYTE_def, MEM_WRITE_WORD_def,
-              MEM_WRITE_def, TRANSFERS_def, NEXT_ARMe_def]))
+              interrupt2exceptions_def, PROJ_IF_FLAGS_def, NEXT_ARM_def,
+              OUT_ARM, ADDR30_def, SET_BYTE_def, MEM_READ_def,
+              mem_read_rule MEM_WRITE_BYTE_def, MEM_WRITE_WORD_def,
+              MEM_WRITE_def, MEM_WRITE_BLOCK_def, mem_read_rule TRANSFERS_def,
+              mem_read_rule NEXT_ARMe_def,
+              empty_memory_def, empty_registers_def]))
  end;
 
 val _ = export_theory();

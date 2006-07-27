@@ -28,7 +28,7 @@ val _ = overload_on("pc", ``r15``);
 
 (* A rudimentary exception handler *)
 
-val exc_mem = list_assemble ``(\x. 0xE6000010w):mem``
+val exc_mem = list_assemble empty_memory
   ["0x0: movs pc, #32",
    "label: b label",
    "movs pc, r14",
@@ -40,11 +40,8 @@ val exc_mem = list_assemble ``(\x. 0xE6000010w):mem``
 
 (* Initial general purpose register values *)
 
-val reg = set_registers ``(\x. 0w):reg``
- ``[(r0,0w);  (r1,0w); (r2,0w);  (r3,0w);
-    (r4,0w);  (r5,0w); (r6,0w);  (r7,0w);
-    (r8,0w);  (r9,0w); (r10,0w); (r11,0w);
-    (r12,0w); (sp,0w); (lr,0w);  (pc,0x20w)]: (register # word32) list``;
+val reg = set_registers empty_registers
+ ``[(pc,0x20w)]: (register # word32) list``;
 
 (* Initial program status register values *)
 
