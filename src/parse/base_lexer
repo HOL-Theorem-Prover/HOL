@@ -131,29 +131,30 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
 
 <string>\" => (let val e = LocP(nf,!r,yypos - !(#i yyarg))
                    val (clist, start) = !stracc
-                   val str = String.implode (List.rev(#"\"" :: clist))
+                   val str0 = String.implode (List.rev(#"\"" :: clist))
+                   val str1 =
+                       MLstring.scanMLstring
+                         (String.substring(str0, 1, size str0 - 2))
+                         handle MLstring.stringerror(i,s) =>
+                                raise LEX_ERR (s ^ " at string character "^
+                                               Int.toString i,
+                                               Loc(start,e))
+                   val str = String.concat ["\"", str1, "\""]
                in
                  stracc := ([], LocP(0,0,0));
                  YYBEGIN INITIAL;
                  (BT0_Ident str, Loc(start,e))
-               end);
-<string>"\\n" => (let val (clist, start) = !stracc
-                  in
-                    stracc := (#"\n" :: clist, start);
-                    continue()
-                  end);
-<string>"\\r" => (let val (clist, start) = !stracc
-                  in
-                    stracc := (#"\r" :: clist, start);
-                    continue()
-                  end);
+               end );
 <string>"\\\"" => (let val (clist, start) = !stracc
                    in
-                     stracc := (#"\"" :: clist, start);
+                     stracc := (#"\"" :: #"\\" :: clist, start);
                      continue()
                    end);
-<string>{newline} => (raise LEX_ERR ("newline inside quote-delimited string",
-                                   getLoc yyarg yypos yytext));
+<string>"\\\\" => (let val (clist, start) = !stracc
+                   in
+                     stracc := (#"\\" :: #"\\" :: clist, start);
+                     continue()
+                   end);
 <string>. =>  (let val (clist, start) = !stracc
                in
                  stracc := (String.sub(yytext,0) :: clist, start);
