@@ -3318,6 +3318,26 @@ hold:
 \end{verbatim}
 \end{hol}
 
+\index{character literals}
+Character literals can also be entered using \ML{} syntax, with a hash
+character immediately followed by a string literal of length one.
+Thus:
+\setcounter{sessioncount}{0}
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- val t = ``f #"c" #"\n"``;
+<<HOL message: inventing new type variable names: 'a>>
+> val t = ``f #"c" #"\n"`` : term
+
+- dest_term ``#"\t"``;
+> val it = COMB(``CHR``, ``9``) : lambda
+\end{verbatim}
+\end{hol}
+\end{session}
+
+
+
 \paragraph {Strings}
 
 The type \holtxt{string} is inductively characterized by the
@@ -3331,6 +3351,7 @@ constructors
    STRING      : char -> string -> string
 \end{verbatim}
 \end{hol}
+\index{string literals}
 The \HOL{} parser maps the syntax \holtxt{""} to \holtxt{EMPTYSTRING},
 and the \HOL{} printer inverts this.  The parser expands string
 literals of the form \holtxt{"$c_1 c_2 \ldots c_n$"} to the compound
@@ -3340,6 +3361,23 @@ term
  (\holtxt{STRING} \;c_{n-1} \; (\holtxt{STRING}\;
 c_n \; \holtxt{EMPTYSTRING})) \,\ldots\, )
 \]
+String literals can be constructed using the various special escape
+sequences that are used in \ML{}.  For example, \ml{\bs{}n} for the
+newline character, and a backslash followed by three decimal digits
+for characters of the given number.
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- val t = ``"foo bar\n\001"``;
+> val t = ``"foo bar\n\^A"`` : term
+\end{verbatim}
+\end{hol}
+\end{session}
+Note that if one wants to use the control-character syntax with the
+caret that the pretty-printer has chosen to use in printing the given
+string, and this occurs inside a quotation, then the caret will need
+to be doubled.  (See Section~\ref{sec:quotation-antiquotation}.)
+
 As a result of the characterization, the following basic theorems
 hold:
 %
