@@ -1,5 +1,5 @@
 (* tests for string and character parsing *)
-open HolKernel Parse bossLib
+open HolKernel Parse boolLib bossLib
 fun q (QUOTE s) = "Q\"" ^ String.toString s ^ "\""
   | q (ANTIQUOTE a) = "AQ"
 
@@ -50,6 +50,9 @@ val bar = Define`
                 \ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^^_^`\
                 \abcdefghijklmnopqrstuvwxyz{|}~"
 `
+
+val testthm = prove(``foo = bar``, SRW_TAC [][foo,bar]);
+
 
 
 val _ = OS.Process.exit OS.Process.success
