@@ -9,3 +9,7 @@
 "\"" ``foo``
 "\\" `foo`
 `putting unescaped backticks into ^(antiquotes #"`") is fine`
+``foo
+bar``
+``"an embedded string with \
+\protected newlines"``

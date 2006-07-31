@@ -9,7 +9,11 @@ fun printq [] = ""
 
 open stringSyntax
 val testdata = [(`#"("`, fromMLchar #"("),
-                (`"\n^`)"`, fromMLstring "\n`)")]
+                (`"\n^`)"`, fromMLstring "\n`)"),
+                (`"foo\
+    \bar"`, fromMLstring "foobar"),
+                (`"foo\n\
+\bar"`, fromMLstring "foo\nbar")]
 
 fun do_test (q,res) = let
   val _ = print (StringCvt.padRight #" " 40 (printq q))

@@ -160,6 +160,14 @@ locpragma = "(*#loc" {space}+ {numeric}* {space}+ {numeric}* {space}* "*)";
                  stracc := (String.sub(yytext,0) :: clist, start);
                  continue()
                end);
+<string>{newline} => (let val i = #i yyarg
+                          val (clist,start) = !stracc
+                      in
+                        r := !r + 1;
+                        i := yypos + size yytext;
+                        stracc := (#"\n" :: clist, start);
+                        continue()
+                      end);
 
 
 <comment>"*)" => (incommentp := !incommentp - 1;

@@ -34,7 +34,7 @@ fun newline(yypos,yytext) = (print "\n"; TextIO.flushOut (!output_stream);
                              nextline (yypos + size yytext));
 fun qnewline(yypos,yytext) =
     (nextline (yypos + size yytext);
-     print (" \",\nQUOTE \""^locpragma (yytext,yypos) 0);
+     print "\\n\\\n\\" ;
      TextIO.flushOut (!output_stream))
 
 fun dolocpragma (s,pos)
@@ -123,9 +123,6 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 
 <quote,tmquote,tyquote>"^^" => (ECHO "^"; lex());
 <quote,tmquote,tyquote>"^`" => (ECHO "`"; lex());
-<quote,tmquote,tyquote>"\\" => (print "\\\\"; lex());
-<quote,tmquote,tyquote>"\"" => (print "\\\""; lex());
-<quote,tmquote,tyquote>"\t" => (print "\\t"; lex());
 <quote,tmquote,tyquote>{newline} => (qnewline(yypos,yytext); lex());
 
 <quote>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
@@ -143,7 +140,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
                  YYBEGIN tyquote; lex());
 
 
-<quote,tmquote,tyquote>. => (ECHO yytext;lex());
+<quote,tmquote,tyquote>. => (ECHO (String.toString yytext); lex());
 
 <ANTIQ>{MLid} => (ECHO yytext;
                   print ("),QUOTE \""^locpragma (yytext,yypos) 0);
