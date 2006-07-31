@@ -24,15 +24,15 @@ fun s_has_nonagg_char s = length (String.fields nonagg_c s) <> 1
      All Idents fit into one of the following categories :
 
      * a double-quote delimited string
+     * a character literal, consisting of four characters, # " <anything> "
      * an alpha-numeric identifier (first character will be one
        of _ ' A-Z a-z), possibly preceded by a dollar sign
      * a symbolic identifier = a chain of symbol characters (again possibly
        preceded by a dollar sign).
 
      A symbol is any  printable ASCII character EXCEPT
-       A-Z a-z 0-9 ^ ` $ "
-     ^ and ` are excluded because of their use in quotation syntax at the
-     ML level.  " is used exclusively for strings, and $ is used for
+       A-Z a-z 0-9 $ "
+     " is used exclusively for strings, and $ is used for
      token 'quoting' as well as being the separator for qualified identifiers.
 *)
 
@@ -52,8 +52,9 @@ end
 open qbuf
 fun split_ident nonagg_specs s locn qb = let
   val s0 = String.sub(s, 0)
+  val is_char = s0 = #"#" andalso size s > 1 andalso String.sub(s,1) = #"\""
 in
-  if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" then
+  if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" orelse is_char then
     (advance qb; (s,locn))
   else if s0 = #"'" then
     if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
@@ -80,7 +81,7 @@ in
             else (advance qb; (s,locn))
           else if size s2 <> 0 then
             let val (locn',locn'') = locn.split_at (size s1) locn in
-            (* s2 is non-empty and begins with a non-aggreating character *)
+            (* s2 is non-empty and begins with a non-aggregating character *)
             (replace_current (BT_Ident s2,locn'') qb; (s1,locn')) end
           else
             (advance qb; (s,locn))
