@@ -1,2 +1,2 @@
-selftest.exe: selftest.uo stringSyntax.uo
+selftest.exe: selftest.uo stringSyntax.uo stringTheory.uo
 	$(HOLMOSMLC) -o $@ $<
