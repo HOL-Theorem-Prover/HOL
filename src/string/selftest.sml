@@ -1,5 +1,5 @@
 (* tests for string and character parsing *)
-open HolKernel Parse
+open HolKernel Parse bossLib
 fun q (QUOTE s) = "Q\"" ^ String.toString s ^ "\""
   | q (ANTIQUOTE a) = "AQ"
 
@@ -24,6 +24,33 @@ in
 end
 
 val _ = app do_test testdata
+
+val foo =
+ Define
+  `foo = [ #"\n"; #" "; #"!"; #"\""; #"#";
+           #"$"; #"%"; #"&"; #"'"; #"("; #")";
+           #"*"; #"+"; #";"; #"-"; #"."; #"/";
+           #"0"; #"1"; #"2"; #"3"; #"4"; #"5";
+           #"6"; #"7"; #"8"; #"9"; #":"; #";";
+           #"<"; #"="; #">"; #"?"; #"@"; #"A";
+           #"B"; #"C"; #"D"; #"E"; #"F"; #"G";
+           #"H"; #"I"; #"J"; #"K"; #"L"; #"M";
+           #"N"; #"O"; #"P"; #"Q"; #"R"; #"S";
+           #"T"; #"U"; #"V"; #"W"; #"X"; #"Y";
+           #"Z"; #"["; #"\\"; #"]"; #"^^"; #"_";
+           #"^`"; #"a"; #"b"; #"c"; #"d"; #"e";
+           #"f"; #"g"; #"h"; #"i"; #"j"; #"k";
+           #"l"; #"m"; #"n"; #"o"; #"p"; #"q";
+           #"r"; #"s"; #"t"; #"u"; #"v"; #"w";
+           #"x"; #"y"; #"z"; #"{"; #"|"; #"}";
+            #"~"]`;
+
+val bar = Define`
+  bar = EXPLODE "\n !\"#$%&'()*+;-./0123456789:;<=>?@\
+                \ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^^_^`\
+                \abcdefghijklmnopqrstuvwxyz{|}~"
+`
+
 
 val _ = OS.Process.exit OS.Process.success
 
