@@ -41,6 +41,7 @@ val CHAR_TYPE_FACTS =
 val ORD_11   = save_thm("ORD_11",prove_rep_fn_one_one CHAR_TYPE_FACTS)
 val CHR_11   = save_thm("CHR_11",
                          BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS));
+val _ = export_rewrites ["CHR_11"]
 val ORD_ONTO = save_thm("ORD_ONTO",
                          BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS));
 val CHR_ONTO = save_thm("CHR_ONTO",
@@ -270,7 +271,7 @@ val _ = TypeBase.write
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
 (*---------------------------------------------------------------------------*)
 
-val DEST_STRING = 
+val DEST_STRING =
  new_recursive_definition
    {name = "DEST_STRING",
     def = ``(DEST_STRING "" = NONE) /\
