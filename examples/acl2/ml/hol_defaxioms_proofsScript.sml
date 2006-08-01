@@ -507,10 +507,19 @@ val booleanp_characterp_defaxiom =
      |- |= characterp (chr #"\f"),
 *)
 
+(* Old version
 val characterp_page_defaxiom =
  store_thm
   ("characterp_page_defaxiom",
    ``|= characterp (chr ^(fromMLchar #"\f"))``,
+   (* Does HOL needs to be fixed to avoid antiquotation? *)
+   ACL2_SIMP_TAC []);
+*)
+
+val characterp_page_defaxiom =
+ store_thm
+  ("characterp_page_defaxiom",
+   ``|= characterp (chr #"\f")``,
    (* Does HOL needs to be fixed to avoid antiquotation? *)
    ACL2_SIMP_TAC []);
 
@@ -519,10 +528,19 @@ val characterp_page_defaxiom =
      |- |= characterp (chr #"\t"),
 *)
 
+(* Old version
 val characterp_tab_defaxiom =
  store_thm
   ("characterp_tab_defaxiom",
    ``|= characterp (chr ^(fromMLchar #"\t"))``,  
+   (* Does HOL needs to be fixed to avoid antiquotation? *)
+   ACL2_SIMP_TAC []);
+*)
+
+val characterp_tab_defaxiom =
+ store_thm
+  ("characterp_tab_defaxiom",
+   ``|= characterp (chr #"\t")``,  
    (* Does HOL needs to be fixed to avoid antiquotation? *)
    ACL2_SIMP_TAC []);
 
@@ -531,10 +549,19 @@ val characterp_tab_defaxiom =
      |- |= characterp (chr #"\127"),
 *)
 
+(* Old version
 val characterp_rubout_defaxiom =
  store_thm
   ("characterp_rubout_defaxiom",
    ``|= characterp (chr ^(fromMLchar #"\127"))``,  
+   (* Does HOL needs to be fixed to avoid antiquotation? *)
+   ACL2_SIMP_TAC []);
+*)
+
+val characterp_rubout_defaxiom =
+ store_thm
+  ("characterp_rubout_defaxiom",
+   ``|= characterp (chr #"\127")``,  
    (* Does HOL needs to be fixed to avoid antiquotation? *)
    ACL2_SIMP_TAC []);
 

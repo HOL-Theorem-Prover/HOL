@@ -166,12 +166,28 @@ val (and_macro_def,and_macro_ind) =
              (car lst)],
 *)
 
+val (or_macro_def,or_macro_ind) =
+ acl2_defn "ACL2::OR-MACRO"
+  (`or_macro lst =
+     andl
+      [consp lst;
+       ite (consp (cdr lst))
+           (List [csym "IF"; car lst; car lst; or_macro (cdr lst)])
+           (car lst)]`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::INTEGER-ABS, DISK_THM] [axioms: ] []
      |- integer_abs x =
         ite (integerp x) (ite (less x (nat 0)) (unary_minus x) x) (nat 0),
 *)
 
+val integer_abs_def =
+ acl2Define "ACL2::INTEGER-ABS"
+  `integer_abs x =
+    ite (integerp x) (ite (less x (nat 0)) (unary_minus x) x) (nat 0)`;
+  
 (*
      [oracles: DEFUN ACL2::XXXJOIN, DISK_THM] [axioms: ] []
      |- xxxjoin fn args =
@@ -179,15 +195,35 @@ val (and_macro_def,and_macro_ind) =
           (cons fn args),
 *)
 
+val (xxxjoin_def,xxxjoin_ind) =
+ acl2_defn "ACL2::XXXJOIN"
+  (`xxxjoin fn args =
+     ite (cddr args) 
+         (List [fn; car args; xxxjoin fn (cdr args)])
+         (cons fn args)`,
+   WF_REL_TAC `measure (sexp_size o SND)`
+    THEN Cases_on `args`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::LEN, DISK_THM] [axioms: ] []
      |- len x = ite (consp x) (add (nat 1) (len (cdr x))) (nat 0),
 *)
 
+val (len_def,len_ind) =
+ acl2_defn "ACL2::LEN"
+  (`len x = ite (consp x) (add (nat 1) (len (cdr x))) (nat 0)`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN COMMON-LISP::LENGTH, DISK_THM] [axioms: ] []
      |- length x = ite (stringp x) (len (coerce x (csym "LIST"))) (len x),
 *)
+
+val length_def =
+ acl2Define "COMMON-LISP::LENGTH"
+  `length x = ite (stringp x) (len (coerce x (csym "LIST"))) (len x)`;
 
 (*
      [oracles: DEFUN ACL2::ACL2-COUNT, DISK_THM] [axioms: ] []
@@ -202,6 +238,67 @@ val (and_macro_def,and_macro_ind) =
             add (nat 1)
               (add (acl2_count (realpart x)) (acl2_count (imagpart x))));
            (stringp x,length x)] (nat 0),
+*)
+
+(*
+val (acl2_count_def,acl2_count_ind) =
+ acl2_defn "ACL2::ACL2-COUNT"
+  (`acl2_count x =
+     itel
+       [(consp x,
+         add (nat 1)
+           (add (acl2_count (car x)) (acl2_count (cdr x))));
+        (rationalp x,
+         ite (integerp x) (integer_abs x)
+           (add (integer_abs (numerator x)) (denominator x)));
+        (complex_rationalp x,
+         add (nat 1)
+           (add
+              (ite (integerp (realpart x)) (integer_abs (realpart x))
+                 (add (integer_abs (numerator (realpart x)))
+                    (denominator (realpart x))))
+              (ite (integerp (imagpart x)) (integer_abs (imagpart x))
+                 (add (integer_abs (numerator (imagpart x)))
+                    (denominator (imagpart x)))))); 
+        (stringp x,length x)]
+       (nat 0)`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
+val acl2_count_tac =
+ ONCE_REWRITE_TAC[acl2_count_def] 
+  THEN ACL2_SIMP_TAC[itel_def]
+  THEN FULL_SIMP_TAC std_ss 
+        [GSYM nil_def,itel_def,GSYM t_def,rationalp_def,csym_def,COMMON_LISP_def];
+
+val acl2_count =
+ store_thm
+  ("acl2_count",
+   ``acl2_count x =
+     itel
+       [(consp x,
+         add (nat 1) (add (acl2_count (car x)) (acl2_count (cdr x))));
+        (rationalp x,
+         ite (integerp x) (integer_abs x)
+           (add (integer_abs (numerator x)) (denominator x)));
+        (complex_rationalp x,
+         add (nat 1)
+           (add (acl2_count (realpart x)) (acl2_count (imagpart x))));
+        (stringp x,length x)] (nat 0)``,
+
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC[itel_def,csym_def,COMMON_LISP_def]
+    THEN FULL_SIMP_TAC std_ss 
+          [GSYM nil_def,itel_def,GSYM t_def,rationalp_def,csym_def,COMMON_LISP_def]
+    THENL
+     [acl2_count_tac;
+      acl2_count_tac;
+      acl2_count_tac
+      acl2_count_tac;
+
+
+   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[acl2_count_def]))
+    THEN 
 *)
 
 (*
@@ -641,6 +738,7 @@ val (assoc_def,assoc_ind) =
                  chr #"~"]); t],
 *)
 
+(* Old version, but still needed *)
 val standard_char_p_def =
  acl2Define "COMMON-LISP::STANDARD-CHAR-P"
   `standard_char_p x =
@@ -671,6 +769,39 @@ val standard_char_p_def =
                       #"x", #"y", #"z", #"{", #"|", #"}",
                       #"~"], ``:char``)))); t]`;
 
+(* I was hoping the definition below would work, but it doesn't:
+
+Analysing hol_defaxiomsScript.sml
+File "hol_defaxiomsScript", line 827, characters 0-2:
+! <close comment>
+! ^^
+! Lexical error: unmatched comment bracket
+
+val standard_char_p_def =
+ acl2Define "COMMON-LISP::STANDARD-CHAR-P"
+  `standard_char_p x =
+    andl
+     [member x
+        (List
+          [ #"\n"; #" "; #"!"; #"\""; #"#";
+            #"$"; #"%"; #"&"; #"'"; #"("; #")";
+            #"*"; #"+"; #";"; #"-"; #"."; #"/";
+            #"0"; #"1"; #"2"; #"3"; #"4"; #"5";
+            #"6"; #"7"; #"8"; #"9"; #":"; #";";
+            #"<"; #"="; #">"; #"?"; #"@"; #"A";
+            #"B"; #"C"; #"D"; #"E"; #"F"; #"G";
+            #"H"; #"I"; #"J"; #"K"; #"L"; #"M";
+            #"N"; #"O"; #"P"; #"Q"; #"R"; #"S";
+            #"T"; #"U"; #"V"; #"W"; #"X"; #"Y";
+            #"Z"; #"["; #"\\"; #"]"; #"^^"; #"_";
+            #"^`"; #"a"; #"b"; #"c"; #"d"; #"e";
+            #"f"; #"g"; #"h"; #"i"; #"j"; #"k";
+            #"l"; #"m"; #"n"; #"o"; #"p"; #"q";
+            #"r"; #"s"; #"t"; #"u"; #"v"; #"w";
+            #"x"; #"y"; #"z"; #"{"; #"|"; #"}";
+            #"~"]); t]`;
+
+*)
 
 (*
 - REWRITE_RULE [listTheory.MAP]standard_char_p_def;

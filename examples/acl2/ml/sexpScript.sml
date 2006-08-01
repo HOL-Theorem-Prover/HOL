@@ -4016,6 +4016,26 @@ val sexp_size_cdr =
           [cdr_def,nil_def,consp_def,arithmeticTheory.MAX_DEF,
            fetch "-" "sexp_size_def"]);
 
+(* need "sexp" --> "-" [but this isn't true]
+val sexp_size_imagpart =
+ store_thm
+  ("sexp_size_imagpart",
+   ``!x. (consp x = nil) /\ (rationalp x = nil) /\ ~(complex_rationalp x = nil)
+         ==> (sexp_size (imagpart x) < sexp_size x)``,
+   Cases
+    THEN RW_TAC arith_ss
+          [complex_rationalp_def,imagpart_def,cdr_def,nil_def,consp_def,
+           arithmeticTheory.MAX_DEF, fetch "sexp" "sexp_size_def"]
+    THEN Cases_on `c`
+    THEN RW_TAC arith_ss
+          [complex_rationalp_def,imagpart_def,cdr_def,nil_def,consp_def,
+           arithmeticTheory.MAX_DEF, 
+           fetch "sexp" "sexp_size_def",
+           fetch "complex_rational" "complex_rational_size_def"]
+    THEN Cases_on `r0 = rat_0`
+    THEN FULL_SIMP_TAC std_ss [rationalp_def,complex_rationalp_def,sexp_11,T_NIL,t_def,nil_def]
+*)
+
 val _ = 
  add_acl2_simps 
   [fetch "-" "sexp_11",ACL2_TRUE,
