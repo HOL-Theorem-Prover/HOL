@@ -16,11 +16,11 @@
 ******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
-map 
- load  
+map
+ load
  ["stringLib","complex_rationalTheory","gcdTheory",
   "sexp","sexpTheory"];
-open stringLib complex_rationalTheory gcdTheory 
+open stringLib complex_rationalTheory gcdTheory
      sexp sexpTheory;
 Globals.checking_const_names := false;
 quietdec := false;
@@ -86,7 +86,7 @@ val implies =
   ("implies",
    ``(|= implies p q) = (|= p) ==> (|= q)``,
    ACL2_SIMP_TAC[]);
-  
+
 (*
      [oracles: DEFUN COMMON-LISP::NOT, DISK_THM] [axioms: ] []
      |- not p = ite p nil t,
@@ -150,7 +150,7 @@ val (and_macro_def,and_macro_ind) =
   (`and_macro lst =
      ite (consp lst)
          (ite (consp (cdr lst))
-              (List [csym "IF"; car lst; and_macro (cdr lst); nil]) 
+              (List [csym "IF"; car lst; and_macro (cdr lst); nil])
               (car lst))
          t`,
    WF_REL_TAC `measure sexp_size`
@@ -187,7 +187,7 @@ val integer_abs_def =
  acl2Define "ACL2::INTEGER-ABS"
   `integer_abs x =
     ite (integerp x) (ite (less x (nat 0)) (unary_minus x) x) (nat 0)`;
-  
+
 (*
      [oracles: DEFUN ACL2::XXXJOIN, DISK_THM] [axioms: ] []
      |- xxxjoin fn args =
@@ -198,7 +198,7 @@ val integer_abs_def =
 val (xxxjoin_def,xxxjoin_ind) =
  acl2_defn "ACL2::XXXJOIN"
   (`xxxjoin fn args =
-     ite (cddr args) 
+     ite (cddr args)
          (List [fn; car args; xxxjoin fn (cdr args)])
          (cons fn args)`,
    WF_REL_TAC `measure (sexp_size o SND)`
@@ -259,16 +259,16 @@ val (acl2_count_def,acl2_count_ind) =
                     (denominator (realpart x))))
               (ite (integerp (imagpart x)) (integer_abs (imagpart x))
                  (add (integer_abs (numerator (imagpart x)))
-                    (denominator (imagpart x)))))); 
+                    (denominator (imagpart x))))));
         (stringp x,length x)]
        (nat 0)`,
    WF_REL_TAC `measure sexp_size`
     THEN ACL2_SIMP_TAC []);
 
 val acl2_count_tac =
- ONCE_REWRITE_TAC[acl2_count_def] 
+ ONCE_REWRITE_TAC[acl2_count_def]
   THEN ACL2_SIMP_TAC[itel_def]
-  THEN FULL_SIMP_TAC std_ss 
+  THEN FULL_SIMP_TAC std_ss
         [GSYM nil_def,itel_def,GSYM t_def,rationalp_def,csym_def,COMMON_LISP_def];
 
 val acl2_count =
@@ -288,7 +288,7 @@ val acl2_count =
 
    Cases_on `x`
     THEN ACL2_SIMP_TAC[itel_def,csym_def,COMMON_LISP_def]
-    THEN FULL_SIMP_TAC std_ss 
+    THEN FULL_SIMP_TAC std_ss
           [GSYM nil_def,itel_def,GSYM t_def,rationalp_def,csym_def,COMMON_LISP_def]
     THENL
      [acl2_count_tac;
@@ -298,7 +298,7 @@ val acl2_count =
 
 
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[acl2_count_def]))
-    THEN 
+    THEN
 *)
 
 (*
@@ -349,7 +349,7 @@ val (eqlable_listp_def,eqlable_listp_ind) =
  acl2_defn
  "ACL2::EQLABLE-LISTP"
   (`eqlable_listp l =
-     ite (consp l) 
+     ite (consp l)
          (andl [eqlablep (car l); eqlable_listp (cdr l)])
          (equal l nil)`,
    WF_REL_TAC `measure sexp_size`
@@ -359,8 +359,8 @@ val eqlable_listp =
  store_thm
   ("eqlable_listp",
    ``(eqlable_listp (cons s s0) =
-       if itel 
-           [(acl2_numberp s,acl2_numberp s); 
+       if itel
+           [(acl2_numberp s,acl2_numberp s);
             (symbolp s,symbolp s)] (characterp s) = nil
         then nil
         else eqlable_listp s0)
@@ -738,51 +738,12 @@ val (assoc_def,assoc_ind) =
                  chr #"~"]); t],
 *)
 
-(* Old version, but still needed *)
-val standard_char_p_def =
- acl2Define "COMMON-LISP::STANDARD-CHAR-P"
-  `standard_char_p x =
-         andl
-          [member x
-             (List
-              (MAP
-                chr
-                ^(mk_list
-                   (map
-                     fromMLchar
-                     [#"\n", #" ", #"!", #"\"", #"#",
-                      #"$", #"%", #"&", #"'", #"(", #")",
-                      #"*", #"+", #",", #"-", #".", #"/",
-                      #"0", #"1", #"2", #"3", #"4", #"5",
-                      #"6", #"7", #"8", #"9", #":", #";",
-                      #"<", #"=", #">", #"?", #"@", #"A",
-                      #"B", #"C", #"D", #"E", #"F", #"G",
-                      #"H", #"I", #"J", #"K", #"L", #"M",
-                      #"N", #"O", #"P", #"Q", #"R", #"S",
-                      #"T", #"U", #"V", #"W", #"X", #"Y",
-                      #"Z", #"[", #"\\", #"]", #"^", #"_",
-                      chr 96, (* HOL parser workaround *)
-                      #"a", #"b", #"c", #"d", #"e",
-                      #"f", #"g", #"h", #"i", #"j", #"k",
-                      #"l", #"m", #"n", #"o", #"p", #"q",
-                      #"r", #"s", #"t", #"u", #"v", #"w",
-                      #"x", #"y", #"z", #"{", #"|", #"}",
-                      #"~"], ``:char``)))); t]`;
-
-(* I was hoping the definition below would work, but it doesn't:
-
-Analysing hol_defaxiomsScript.sml
-File "hol_defaxiomsScript", line 827, characters 0-2:
-! <close comment>
-! ^^
-! Lexical error: unmatched comment bracket
-
 val standard_char_p_def =
  acl2Define "COMMON-LISP::STANDARD-CHAR-P"
   `standard_char_p x =
     andl
      [member x
-        (List
+        (List (MAP chr
           [ #"\n"; #" "; #"!"; #"\""; #"#";
             #"$"; #"%"; #"&"; #"'"; #"("; #")";
             #"*"; #"+"; #";"; #"-"; #"."; #"/";
@@ -799,9 +760,9 @@ val standard_char_p_def =
             #"l"; #"m"; #"n"; #"o"; #"p"; #"q";
             #"r"; #"s"; #"t"; #"u"; #"v"; #"w";
             #"x"; #"y"; #"z"; #"{"; #"|"; #"}";
-            #"~"]); t]`;
+            #"~"])); t]`;
 
-*)
+
 
 (*
 - REWRITE_RULE [listTheory.MAP]standard_char_p_def;
@@ -853,7 +814,7 @@ val (standard_char_listp_def,standard_char_listp_ind) =
      ite (consp l)
          (andl
            [characterp (car l); standard_char_p (car l);
-            standard_char_listp (cdr l)]) 
+            standard_char_listp (cdr l)])
          (equal l nil)`,
    WF_REL_TAC `measure sexp_size`
     THEN ACL2_SIMP_TAC []);
@@ -1298,10 +1259,10 @@ Hol_defn "FOO"
 
 Defn.tgoal it;
 
-e(WF_REL_TAC 
+e(WF_REL_TAC
    `measure(\(str1,str2,i,maximum). (sexp_to_num maximum - sexp_to_num i))`);
 
-e(RW_TAC std_ss 
+e(RW_TAC std_ss
    [DECIDE ``0 < ((m:num) - n) = n < m``]);
 
 DECIDE ``p <= m ==> ((m:num) < n + (m - p) = p < n)``;
@@ -1331,7 +1292,7 @@ val sexp_to_num_less =
       sexp_to_num m < sexp_to_num n``
    Cases THEN Cases
     THEN ACL2_SIMP_TAC[nat_def,REWRITE_RULE[nil_def]less_int_ref]
-   
+
 *)
 
 (*
