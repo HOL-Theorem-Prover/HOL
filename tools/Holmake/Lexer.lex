@@ -190,10 +190,12 @@ and SkipString = parse
 and Quotation = parse
     "`" { NULL }
   | (eof | `\^Z`) { EOF }
+  | "^`" { Quotation lexbuf }
   | _ { Quotation lexbuf }
 and DQuotation = parse
     "``" { NULL }
   | (eof | `\^Z`) { EOF }
+  | "^`" { Quotation lexbuf }
   | _ {DQuotation lexbuf }
 
 ;

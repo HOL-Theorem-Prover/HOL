@@ -160,20 +160,36 @@ fun endentry() = (* for non-file-based Holdep *)
   else ""
 end;
 
-fun read assumes srcext objext filename =
- let val is       = BasicIO.open_in (addExt filename srcext)
-     val lexbuf   = createLexerStream is
-     val mentions = Polyhash.mkPolyTable (37, Subscript)
-     fun insert s = Polyhash.insert mentions (s,())
-     val names    = parseFile (filename, is) lexbuf
-     val _        = BasicIO.close_in is
-     val curr_dir = Path.dir filename
- in
-   beginentry objext (manglefilename filename);
-   app insert names;
-   Polyhash.apply (outname assumes curr_dir o manglefilename o #1) mentions;
-   endentry ()
- end
+fun read assumes srcext objext filename = let
+  open OS.FileSys Systeml
+  val op ^ = Path.concat
+  val unquote = xable_string(Systeml.HOLDIR ^ "bin" ^ "unquote")
+  val file0 = addExt filename srcext
+  val actualfile =
+      if access (unquote, [A_EXEC]) then let
+          val newname = tmpName()
+        in
+          if Systeml.systeml [unquote, file0, newname] = Process.success then
+            newname
+          else file0
+        end
+      else file0
+  val is       = BasicIO.open_in actualfile
+  val lexbuf   = createLexerStream is
+  val mentions = Polyhash.mkPolyTable (37, Subscript)
+  fun insert s = Polyhash.insert mentions (s,())
+  val names    = parseFile (filename, is) lexbuf
+  val _        = BasicIO.close_in is
+  val _        = if actualfile <> file0 then
+                   FileSys.remove actualfile handle _ => ()
+                 else ()
+  val curr_dir = Path.dir filename
+in
+  beginentry objext (manglefilename filename);
+  app insert names;
+  Polyhash.apply (outname assumes curr_dir o manglefilename o #1) mentions;
+  endentry ()
+end
   handle (e as Parsing.ParseError _) => (print "Parse error!\n"; raise e)
 
 
