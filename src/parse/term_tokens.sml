@@ -56,6 +56,16 @@ fun split_ident nonagg_specs s locn qb = let
 in
   if Char.isAlpha s0 orelse s0 = #"\"" orelse s0 = #"_" orelse is_char then
     (advance qb; (s,locn))
+  else if s = "#" then let
+      val _ = advance qb
+    in
+      case current qb of
+        (BT_Ident s2,locn2) => if String.sub(s2,0) = #"\"" then
+                                 (advance qb;
+                                  ("#" ^ s2, locn.between locn locn2))
+                               else (s,locn)
+      | _ => (s,locn)
+    end
   else if s0 = #"'" then
     if str_all (fn c => c = #"'") s then (advance qb; (s,locn))
     else raise LEX_ERR ("Term idents can't begin with prime characters",locn)
