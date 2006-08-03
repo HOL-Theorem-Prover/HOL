@@ -37,15 +37,6 @@ struct
          < >= <= := o before;
   
   open numML setML fcpML listML rich_listML bitML wordsML;
-
-  fun word_compare(v, w) =
-    let val m = w2n v and n = w2n w in
-      if m = n then
-        EQUAL
-      else
-        if < m n then LESS else GREATER
-    end
-
   datatype register
        = r0
        | r1
@@ -165,12 +156,9 @@ struct
        | CPMemWrite of bool * (bool, i32) cart
        | CPWrite of (bool, i32) cart
   fun memop_size (MemRead(a)) = ONE
-    | memop_size (MemWrite(a0,a1,a2)) =
-        + ONE (case a0 of true => ZERO | false => ZERO)
-    | memop_size (CPMemRead(a0,a1)) =
-        + ONE (case a0 of true => ZERO | false => ZERO)
-    | memop_size (CPMemWrite(a0,a1)) =
-        + ONE (case a0 of true => ZERO | false => ZERO)
+    | memop_size (MemWrite(a0,a1,a2)) = ONE
+    | memop_size (CPMemRead(a0,a1)) = ONE
+    | memop_size (CPMemWrite(a0,a1)) = ONE
     | memop_size (CPWrite(a)) = ONE
     
   datatype interrupts
@@ -180,11 +168,11 @@ struct
        | Dabort of num
        | Fiq
        | Irq
-  datatype state_arme = state_arme of
-     (register -> (bool, i32) cart) *
-     (psrs -> (bool, i32) cart) *
-     ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict *
-     bool
+  datatype
+  state_arme = state_arme of (register -> (bool, i32) cart) *
+                    (psrs -> (bool, i32) cart) *
+                    ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict *
+                    bool
   fun state_arme_undefined (state_arme(f,f0,f1,b)) = b
     
   fun state_arme_memory (state_arme(f,f0,f1,b)) = f1
@@ -205,8 +193,7 @@ struct
   fun state_arme_registers_fupd f2 (state_arme(f,f0,f1,b)) =
         state_arme(f2 f,f0,f1,b)
     
-  fun state_arme_size (state_arme(a0,a1,a2,a3)) =
-        + ONE (case a3 of true => ZERO | false => ZERO)
+  fun state_arme_size (state_arme(a0,a1,a2,a3)) = ONE
     
   fun DECODE_PSR w =
         let val (q0,m) = DIVMOD_2EXP (fromString"5") (w2n w)
@@ -1854,449 +1841,89 @@ struct
                end
     
   fun OUT_ARM (ARM_EX(ARM(reg,psr),ireg,exc)) =
-        if (exc = software)
-           andalso
-           CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg
-          then (if (DECODE_INST ireg = ldr)
-                   orelse
-                   (DECODE_INST ireg = str)
-                  then [if index ireg (fromString"20")
-                          then MemRead(if index ireg (fromString"24")
-                                         then UP_DOWN
-                                                (index ireg
-                                                   (fromString"23"))
-                                                (REG_READ reg
-                                                   (DECODE_MODE
-                                                      (word_extract_itself
-                                                         (Tyop ("i5", []))
-                                                         (fromString"4")
-                                                         ZERO
-                                                         (CPSR_READ
-                                                            psr)))
-                                                   (word_extract_itself
-                                                      (Tyop ("i4", []))
-                                                      (fromString"19")
-                                                      (fromString"16")
-                                                      ireg))
-                                                (if index ireg
-                                                      (fromString"25")
-                                                   then pairML.SND
-                                                          (SHIFT_IMMEDIATE
-                                                             reg
-                                                             (DECODE_MODE
-                                                                (word_extract_itself
-                                                                   (Tyop ("i5", []))
-                                                                   (
-                                                                   fromString
-                                                                   "4"
-                                                                   )
-                                                                   ZERO
-                                                                   (CPSR_READ
-                                                                      psr)))
-                                                             (CARRY
-                                                                (NZCV
-                                                                   (CPSR_READ
-                                                                      psr)))
-                                                             (word_extract_itself
-                                                                (Tyop ("i12", []))
-                                                                (
-                                                                fromString
-                                                                "11"
-                                                                ) ZERO
-                                                                ireg))
-                                                   else w2w_itself
-                                                          (Tyop ("i32", []))
-                                                          (word_extract_itself
-                                                             (Tyop ("i12", []))
-                                                             (
-                                                             fromString
-                                                             "11"
-                                                             ) ZERO
-                                                             ireg))
-                                         else REG_READ reg
-                                                (DECODE_MODE
-                                                   (word_extract_itself
-                                                      (Tyop ("i5", []))
-                                                      (fromString"4")
-                                                      ZERO
-                                                      (CPSR_READ psr)))
-                                                (word_extract_itself
-                                                   (Tyop ("i4", []))
-                                                   (fromString"19")
-                                                   (fromString"16")
-                                                   ireg))
-                          else MemWrite(index ireg (fromString"22"),
-                               if index ireg (fromString"24")
-                                 then UP_DOWN
-                                        (index ireg (fromString"23"))
-                                        (REG_READ reg
-                                           (DECODE_MODE
-                                              (word_extract_itself
-                                                 (Tyop ("i5", []))
-                                                 (fromString"4") ZERO
-                                                 (CPSR_READ psr)))
-                                           (word_extract_itself
-                                              (Tyop ("i4", []))
-                                              (fromString"19")
-                                              (fromString"16") ireg))
-                                        (if index ireg (fromString"25")
-                                           then pairML.SND
-                                                  (SHIFT_IMMEDIATE reg
-                                                     (DECODE_MODE
-                                                        (word_extract_itself
-                                                           (Tyop ("i5", []))
-                                                           (
-                                                           fromString
-                                                           "4"
-                                                           ) ZERO
-                                                           (CPSR_READ
-                                                              psr)))
-                                                     (CARRY
-                                                        (NZCV
-                                                           (CPSR_READ
-                                                              psr)))
-                                                     (word_extract_itself
-                                                        (Tyop ("i12", []))
-                                                        (fromString"11")
-                                                        ZERO ireg))
-                                           else w2w_itself
-                                                  (Tyop ("i32", []))
-                                                  (word_extract_itself
-                                                     (Tyop ("i12", []))
-                                                     (fromString"11")
-                                                     ZERO ireg))
-                                 else REG_READ reg
-                                        (DECODE_MODE
-                                           (word_extract_itself
-                                              (Tyop ("i5", []))
-                                              (fromString"4") ZERO
-                                              (CPSR_READ psr)))
-                                        (word_extract_itself
-                                           (Tyop ("i4", []))
-                                           (fromString"19")
-                                           (fromString"16") ireg),
-                               REG_READ (INC_PC reg)
-                                 (DECODE_MODE
-                                    (word_extract_itself
-                                       (Tyop ("i5", [])) (fromString"4")
-                                       ZERO (CPSR_READ psr)))
-                                 (word_extract_itself (Tyop ("i4", []))
-                                    (fromString"15") (fromString"12")
-                                    ireg))]
-                  else if (DECODE_INST ireg = ldm)
-                          orelse
-                          (DECODE_INST ireg = stm)
-                         then (if index ireg (fromString"20")
-                                 then MAP MemRead
-                                        (ADDRESS_LIST
-                                           (FIRST_ADDRESS
-                                              (index ireg
-                                                 (fromString"24"))
-                                              (index ireg
-                                                 (fromString"23"))
-                                              (REG_READ reg
-                                                 (DECODE_MODE
-                                                    (word_extract_itself
-                                                       (Tyop ("i5", []))
-                                                       (fromString"4")
-                                                       ZERO
-                                                       (CPSR_READ psr)))
-                                                 (word_extract_itself
-                                                    (Tyop ("i4", []))
-                                                    (fromString"19")
-                                                    (fromString"16")
-                                                    ireg))
-                                              (WB_ADDRESS
-                                                 (index ireg
-                                                    (fromString"23"))
-                                                 (REG_READ reg
-                                                    (DECODE_MODE
-                                                       (word_extract_itself
-                                                          (Tyop ("i5", []))
-                                                          (
-                                                          fromString
-                                                          "4"
-                                                          ) ZERO
-                                                          (CPSR_READ
-                                                             psr)))
-                                                    (word_extract_itself
-                                                       (Tyop ("i4", []))
-                                                       (fromString"19")
-                                                       (fromString"16")
-                                                       ireg))
-                                                 (LENGTH
-                                                    (REGISTER_LIST
-                                                       (word_extract_itself
-                                                          (Tyop ("i16", []))
-                                                          (
-                                                          fromString
-                                                          "15"
-                                                          ) ZERO
-                                                          ireg)))))
-                                           (LENGTH
-                                              (REGISTER_LIST
-                                                 (word_extract_itself
-                                                    (Tyop ("i16", []))
-                                                    (fromString"15")
-                                                    ZERO ireg))))
-                                 else STM_LIST
-                                        (if word_eq
-                                              (HD
-                                                 (REGISTER_LIST
-                                                    (word_extract_itself
-                                                       (Tyop ("i16", []))
-                                                       (fromString"15")
-                                                       ZERO ireg)))
-                                              (word_extract_itself
-                                                 (Tyop ("i4", []))
-                                                 (fromString"19")
-                                                 (fromString"16") ireg)
-                                           then INC_PC reg
-                                           else if index ireg
-                                                     (fromString"21")
-                                                   andalso
-                                                   not
-                                                     (word_eq
-                                                        (word_extract_itself
-                                                           (Tyop ("i4", []))
-                                                           (
-                                                           fromString
-                                                           "19"
-                                                           )
-                                                           (
-                                                           fromString
-                                                           "16"
-                                                           ) ireg)
-                                                        (n2w_itself
-                                                           ((
-                                                            fromString
-                                                            "15"
-                                                            ),(Tyop ("i4", [])))))
-                                                  then REG_WRITE
-                                                         (INC_PC reg)
-                                                         (if index ireg
-                                                               (
-                                                               fromString
-                                                               "22"
-                                                               )
-                                                            then usr
-                                                            else DECODE_MODE
-                                                                   (word_extract_itself
-                                                                      (Tyop ("i5", []))
-                                                                      (
-                                                                      fromString
-                                                                      "4"
-                                                                      )
-                                                                      ZERO
-                                                                      (CPSR_READ
-                                                                         psr)))
-                                                         (word_extract_itself
-                                                            (Tyop ("i4", []))
-                                                            (
-                                                            fromString
-                                                            "19"
-                                                            )
-                                                            (
-                                                            fromString
-                                                            "16"
-                                                            ) ireg)
-                                                         (WB_ADDRESS
-                                                            (index ireg
-                                                               (
-                                                               fromString
-                                                               "23"
-                                                               ))
-                                                            (REG_READ
-                                                               reg
-                                                               (DECODE_MODE
-                                                                  (word_extract_itself
-                                                                     (Tyop ("i5", []))
-                                                                     (
-                                                                     fromString
-                                                                     "4"
-                                                                     )
-                                                                     ZERO
-                                                                     (CPSR_READ
-                                                                        psr)))
-                                                               (word_extract_itself
-                                                                  (Tyop ("i4", []))
-                                                                  (
-                                                                  fromString
-                                                                  "19"
-                                                                  )
-                                                                  (
-                                                                  fromString
-                                                                  "16"
-                                                                  )
-                                                                  ireg))
-                                                            (LENGTH
-                                                               (REGISTER_LIST
-                                                                  (word_extract_itself
-                                                                     (Tyop ("i16", []))
-                                                                     (
-                                                                     fromString
-                                                                     "15"
-                                                                     )
-                                                                     ZERO
-                                                                     ireg))))
-                                                  else INC_PC reg)
-                                        (if index ireg (fromString"22")
-                                           then usr
-                                           else DECODE_MODE
-                                                  (word_extract_itself
-                                                     (Tyop ("i5", []))
-                                                     (fromString"4")
-                                                     ZERO
-                                                     (CPSR_READ psr)))
-                                        (ZIP
-                                           (REGISTER_LIST
-                                              (word_extract_itself
-                                                 (Tyop ("i16", []))
-                                                 (fromString"15") ZERO
-                                                 ireg),ADDRESS_LIST
-                                                         (FIRST_ADDRESS
-                                                            (index ireg
-                                                               (
-                                                               fromString
-                                                               "24"
-                                                               ))
-                                                            (index ireg
-                                                               (
-                                                               fromString
-                                                               "23"
-                                                               ))
-                                                            (REG_READ
-                                                               reg
-                                                               (DECODE_MODE
-                                                                  (word_extract_itself
-                                                                     (Tyop ("i5", []))
-                                                                     (
-                                                                     fromString
-                                                                     "4"
-                                                                     )
-                                                                     ZERO
-                                                                     (CPSR_READ
-                                                                        psr)))
-                                                               (word_extract_itself
-                                                                  (Tyop ("i4", []))
-                                                                  (
-                                                                  fromString
-                                                                  "19"
-                                                                  )
-                                                                  (
-                                                                  fromString
-                                                                  "16"
-                                                                  )
-                                                                  ireg))
-                                                            (WB_ADDRESS
-                                                               (index
-                                                                  ireg
-                                                                  (
-                                                                  fromString
-                                                                  "23"
-                                                                  ))
-                                                               (REG_READ
-                                                                  reg
-                                                                  (DECODE_MODE
-                                                                     (word_extract_itself
-                                                                        (Tyop ("i5", []))
-                                                                        (
-                                                                        fromString
-                                                                        "4"
-                                                                        )
-                                                                        ZERO
-                                                                        (CPSR_READ
-                                                                           psr)))
-                                                                  (word_extract_itself
-                                                                     (Tyop ("i4", []))
-                                                                     (
-                                                                     fromString
-                                                                     "19"
-                                                                     )
-                                                                     (
-                                                                     fromString
-                                                                     "16"
-                                                                     )
-                                                                     ireg))
-                                                               (LENGTH
-                                                                  (REGISTER_LIST
-                                                                     (word_extract_itself
-                                                                        (Tyop ("i16", []))
-                                                                        (
-                                                                        fromString
-                                                                        "15"
-                                                                        )
-                                                                        ZERO
-                                                                        ireg)))))
-                                                         (LENGTH
-                                                            (REGISTER_LIST
-                                                               (word_extract_itself
-                                                                  (Tyop ("i16", []))
-                                                                  (
-                                                                  fromString
-                                                                  "15"
-                                                                  ) ZERO
-                                                                  ireg))))))
-                         else if DECODE_INST ireg = swp
-                                then [MemRead(REG_READ reg
-                                                (DECODE_MODE
-                                                   (word_extract_itself
-                                                      (Tyop ("i5", []))
-                                                      (fromString"4")
-                                                      ZERO
-                                                      (CPSR_READ psr)))
-                                                (word_extract_itself
-                                                   (Tyop ("i4", []))
-                                                   (fromString"19")
-                                                   (fromString"16")
-                                                   ireg)),
-                                      MemWrite(index ireg
-                                                 (fromString"22"),
-                                      REG_READ reg
-                                        (DECODE_MODE
-                                           (word_extract_itself
-                                              (Tyop ("i5", []))
-                                              (fromString"4") ZERO
-                                              (CPSR_READ psr)))
-                                        (word_extract_itself
-                                           (Tyop ("i4", []))
-                                           (fromString"19")
-                                           (fromString"16") ireg),
-                                      REG_READ (INC_PC reg)
-                                        (DECODE_MODE
-                                           (word_extract_itself
-                                              (Tyop ("i5", []))
-                                              (fromString"4") ZERO
-                                              (CPSR_READ psr)))
-                                        (word_extract_itself
-                                           (Tyop ("i4", []))
-                                           (fromString"3") ZERO ireg))]
-                                else if (DECODE_INST ireg = ldc)
-                                        orelse
-                                        (DECODE_INST ireg = stc)
-                                       then state_out_out
-                                              (LDC_STC (ARM(reg,psr))
-                                                 (DECODE_MODE
-                                                    (word_extract_itself
-                                                       (Tyop ("i5", []))
-                                                       (fromString"4")
-                                                       ZERO
-                                                       (CPSR_READ psr)))
-                                                 ireg)
-                                       else if DECODE_INST ireg = mcr
-                                              then MCR_OUT
-                                                     (ARM(reg,psr))
-                                                     (DECODE_MODE
-                                                        (word_extract_itself
-                                                           (Tyop ("i5", []))
-                                                           (
-                                                           fromString
-                                                           "4"
-                                                           ) ZERO
-                                                           (CPSR_READ
-                                                              psr)))
-                                                     ireg else [])
-          else []
+        let val ic = DECODE_INST ireg
+            and (nzcv,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
+        in
+           if (exc = software) andalso CONDITION_PASSED nzcv ireg
+             then let val mode = DECODE_MODE m
+                  in
+                     if (ic = ldr) orelse (ic = str)
+                       then let val
+                                    (I,(P,(U,(B,(W,(L,(Rn,(Rd,offset))))))))
+                                    = DECODE_LDR_STR ireg
+                                val (addr,wb_addr) =
+                                    ADDR_MODE2 reg mode (CARRY nzcv) I P
+                                      U Rn offset
+                                val pc_reg = INC_PC reg
+                            in
+                               [if L then MemRead(addr)
+                                  else MemWrite(B,
+                                       addr,
+                                       REG_READ pc_reg mode Rd)]
+                            end
+                       else if (ic = ldm) orelse (ic = stm)
+                              then let val (P,(U,(S,(W,(L,(Rn,list))))))
+                                           = DECODE_LDM_STM ireg
+                                       val pc_in_list =
+                                           index list (fromString"15")
+                                       and rn = REG_READ reg mode Rn
+                                       val (rp_list,(addr_list,rn')) =
+                                           ADDR_MODE4 P U rn list
+                                       and mode' =
+                                           if S
+                                              andalso
+                                              ==> L (not pc_in_list)
+                                             then usr else mode
+                                       and pc_reg = INC_PC reg
+                                       val wb_reg =
+                                           if W
+                                              andalso
+                                              not
+                                                (word_eq Rn
+                                                   (n2w_itself
+                                                      ((
+                                                       fromString
+                                                       "15"
+                                                       ),(Tyop ("i4", [])))))
+                                             then REG_WRITE pc_reg
+                                                    (if L then mode
+                                                       else mode') Rn
+                                                    rn' else pc_reg
+                                   in
+                                      if L then MAP MemRead addr_list
+                                        else STM_LIST
+                                               (if word_eq (HD rp_list)
+                                                     Rn then pc_reg
+                                                  else wb_reg) mode'
+                                               (ZIP (rp_list,addr_list))
+                                   end
+                              else if ic = swp
+                                     then let val (B,(Rn,(Rd,Rm))) =
+                                                  DECODE_SWP ireg
+                                              val rn =
+                                                  REG_READ reg mode Rn
+                                              and pc_reg = INC_PC reg
+                                              val rm =
+                                                  REG_READ pc_reg mode
+                                                    Rm
+                                          in
+                                             [MemRead(rn),
+                                              MemWrite(B,rn,rm)]
+                                          end
+                                     else if (ic = ldc)
+                                             orelse
+                                             (ic = stc)
+                                            then state_out_out
+                                                   (LDC_STC
+                                                      (ARM(reg,psr))
+                                                      mode ireg)
+                                            else if ic = mcr
+                                                   then MCR_OUT
+                                                          (ARM(reg,psr))
+                                                          mode ireg
+                                                   else []
+                  end else []
+        end
     
   fun ADDR30 addr =
         word_extract_itself (Tyop ("i30", [])) (fromString"31") TWO addr
@@ -2331,7 +1958,7 @@ struct
 
   fun MEM_READ(m,a) = Redblackmap.find(m, a)
                        handle NotFound => fromNum32 "E6000010";
-
+    
   fun MEM_WRITE_BYTE mem addr word =
         let val addr30 = ADDR30 addr
         in
@@ -2346,7 +1973,7 @@ struct
         addr word = Redblackmap.insert(mem,ADDR30 addr,word)
 
   fun MEM_WRITE b = if b then MEM_WRITE_BYTE else MEM_WRITE_WORD
-    
+
   fun MEM_WRITE_BLOCK m (a: (bool, i30) cart) [] = m
     | MEM_WRITE_BLOCK m a (d::l) =
         MEM_WRITE_BLOCK (Redblackmap.insert(m, a, (d: (bool, i32) cart)))
@@ -2397,6 +2024,14 @@ struct
              
         end
     
+  fun word_compare(v, w) =
+    let val m = w2n v and n = w2n w in
+      if m = n then
+        EQUAL
+      else
+        if < m n then LESS else GREATER
+    end
+
   val empty_memory = (Redblackmap.mkDict word_compare):
         ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
     

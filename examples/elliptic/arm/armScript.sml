@@ -1220,6 +1220,54 @@ val num2condition = prove(
 
 (*---------------------------------------------------------------------------*)
 
+val LDR_STR_OUT = prove(
+  `!reg psr C mode ireg.
+    (LDR_STR (ARM reg psr) C mode ARB ARB ireg).out =
+      (let (I,P,U,B,W,L,Rn,Rd,offset) = DECODE_LDR_STR ireg in
+          let (addr,wb_addr) = ADDR_MODE2 reg mode C I P U Rn offset in
+          let pc_reg = INC_PC reg
+          in
+            [(if L then
+                MemRead addr
+              else
+                MemWrite B addr (REG_READ pc_reg mode Rd))])`,
+  SRW_TAC [boolSimps.LET_ss] [LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def]);
+
+val LDM_STM_OUT = prove(
+   `!reg psr mode ireg.
+     (LDM_STM (ARM reg psr) mode ARB ARB ireg).out =
+         (let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
+          let pc_in_list = list %% 15 and rn = REG_READ reg mode Rn in
+          let (rp_list,addr_list,rn') = ADDR_MODE4 P U rn list and
+              mode' = (if S /\ (L ==> ~pc_in_list) then usr else mode) and
+              pc_reg = INC_PC reg
+          in
+          let wb_reg =
+                (if W /\ ~(Rn = 15w) then
+                   REG_WRITE pc_reg (if L then mode else mode') Rn rn'
+                 else
+                   pc_reg)
+          in
+            (if L then
+               MAP MemRead addr_list
+             else
+               STM_LIST (if HD rp_list = Rn then pc_reg else wb_reg)
+                 mode' (ZIP (rp_list,addr_list))))`,
+  SRW_TAC [boolSimps.LET_ss] [LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def]);
+
+val SWP_OUT = prove(
+  `!reg psr mode ireg.
+    (SWP (ARM reg psr) mode ARB ARB ireg).out =
+         (let (B,Rn,Rd,Rm) = DECODE_SWP ireg in
+          let rn = REG_READ reg mode Rn and pc_reg = INC_PC reg in
+          let rm = REG_READ pc_reg mode Rm in
+              [MemRead rn; MemWrite B rn rm])`,
+  SRW_TAC [boolSimps.LET_ss] [SWP_def,DECODE_SWP_def]);
+
+val OUT_ARM = REWRITE_RULE [LDR_STR_OUT,LDM_STM_OUT,SWP_OUT] OUT_ARM_def;
+
+(*---------------------------------------------------------------------------*)
+
 val MEM_READ_def = Define `MEM_READ (m: mem, a) = m a`;
 val MEM_WRITE_BLOCK_def = Define `MEM_WRITE_BLOCK (m:mem) a c = (a ::- c) m`;
 val empty_memory_def = Define `empty_memory = (\a. 0xE6000010w):mem`;
@@ -1237,11 +1285,6 @@ val spec_word_rule12 =
   n2w_w2n_rule o INST [`opnd2` |-> `w2n (w:word12)`] o SPEC_ALL;
 
 val mem_read_rule = ONCE_REWRITE_RULE [GSYM MEM_READ_def];
-
-val OUT_ARM = SIMP_RULE (srw_ss()++boolSimps.LET_ss)
-  [LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def,
-   LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def,
-   SWP_def,DECODE_SWP_def,DECODE_PSR_def] OUT_ARM_def;
 
 fun mk_index i =
   let val s = " i" ^ (Int.toString i) in

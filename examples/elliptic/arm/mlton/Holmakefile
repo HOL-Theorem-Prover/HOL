@@ -1,14 +1,16 @@
-EXTRA_CLEANS = run run.sml
+EXTRA_CLEANS = run run.sml mosrun.exe
 OPTIONS = NO_OVERLAY
 MLYACC=$(HOLDIR)/tools/mlyacc/mlyacclib
 MLTON=$(HOLDIR)/tools/mlton/pre
 PORTABLE=$(HOLDIR)/src/portableML
 THEORY=$(HOLDIR)/src/theoryML
 
+all: run mosrun.exe
+
 run: run.mlb run.sml
 	mlton -verbose 1 run.mlb
 
-run.sml: armML.sml armML.sig evalML.sml
+run.sml: armML.sml armML.sig sizesML.sig sizesML.sml evalML.sml
 	@cat $(MLYACC)/MLY_base-sig.sml $(MLYACC)/MLY_lrtable.sml\
 	    $(MLYACC)/MLY_stream.sml $(MLYACC)/MLY_parser2.sml\
 	    $(MLYACC)/MLY_join.sml\
@@ -29,12 +31,18 @@ run.sml: armML.sml armML.sig evalML.sml
 	    $(THEORY)/rich_listML.sig $(THEORY)/rich_listML.sml\
 	    $(THEORY)/bitML.sig $(THEORY)/bitML.sml\
 	    $(THEORY)/fcpML.sml $(THEORY)/wordsML.sig $(THEORY)/wordsML.sml\
-	    armML.sig armML.sml evalML.sml > run.sml
+	    sizesML.sig sizesML.sml armML.sig armML.sml evalML.sml > run.sml
 
-armML.uo:
+mosrun.exe: armML.uo sizesML.uo evalML.uo
+	HOLMOSMLC -I $(THEORY) -I .. -o $@ evalML.uo
+
+armML.uo: armML.sig armML.sml
 	HOLMOSMLC -c -I $(THEORY) armML.sig armML.sml
 
-evalML.uo:
+sizesML.uo: sizesML.sig sizesML.sml
+	HOLMOSMLC -c -I $(THEORY) sizesML.sig sizesML.sml
+
+evalML.uo: armML.uo sizesML.uo evalML.sml
 	HOLMOSMLC -c -I $(THEORY) -I .. armML.ui armML.uo evalML.sml
 
 ppstream.uo:
