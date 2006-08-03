@@ -484,7 +484,7 @@ The rule for this is thus:
 
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!hiding constant status in|(}
 \index{HOL system@\HOL{} system!hiding constants in|(}
-\index{constants, in HOL logic@constants, in \HOL{} logic!hiding status of|(}
+\index{constants, in HOL logic@constants, in \HOL{} logic!hiding status of}
 %
 The following function can be used to hide the constant status of a
 name from the quotation parser.
@@ -532,7 +532,7 @@ The function
 \end{boxed}
 
 \noindent tests whether a string is the name of a hidden constant.
-\index{HOL system@\HOL{} system!adjustment of user interface of|)}
+\index{HOL system@\HOL{} system!adjustment of user interface of}
 \index{HOL system@\HOL{} system!hiding constants in|)}
 \index{parsing, of HOL logic@parsing, of \HOL{} logic!hiding constant status in|)}
 
@@ -576,6 +576,8 @@ print depth are printed as \holtxt{...}. For example:
 \subsection{Quotations and Antiquotation}
 \label{sec:quotation-antiquotation}
 
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!parser for}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|(}
 Logic-related syntax in the HOL system is typically passed to the
 parser in special forms known as \emph{quotations}.  A basic quotation
 is delimited by single back-ticks (i.e., \ml{`}, ASCII character~96).  When
@@ -655,9 +657,10 @@ Within a quotation, expressions of the form
 %
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!antiquotation in}
 %
-{\small\verb+term+} or {\small\verb+type+}) are called {\it antiquotations\/}
+\ml{term} or \ml{type}) are called antiquotations.
 %
-\index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}.
+\index{terms, in HOL logic@terms, in \HOL{} logic!antiquotation}
+\index{antiquotation, in HOL logic terms@antiquotation, in \HOL{} logic terms}
 %
 An antiquotation \holtxt{\^{}($t$)} evaluates to the
 \ML{} value of $t$. For example,{\small\verb+``x \/ ^(mk_conj(``y:bool``, ``z:bool``))``+}
@@ -668,7 +671,7 @@ abbreviated by {\small\verb+^+}$x$.
 
 The following session illustrates antiquotation.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{hol}
 \begin{verbatim}
@@ -686,7 +689,6 @@ val z = ``y = ^y``;
 
 \noindent Types may be antiquoted as well:
 
-\setcounter{sessioncount}{1}
 \begin{session}
 \begin{hol}
 \begin{verbatim}
@@ -725,6 +727,8 @@ terms, antiquoting a type into a term quotation requires the use of
 \end{verbatim}
 \end{hol}
 \end{session}
+%
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|)}
 
 
 

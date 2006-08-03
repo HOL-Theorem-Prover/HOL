@@ -61,7 +61,7 @@ avoided.
 %
 \index{identifiers, in HOL logic@identifiers, in \HOL{} logic|)}
 
-\subsubsection{Identifiers}\label{ident}
+\subsection{Identifiers}\label{ident}
 
 A \HOL{} identifier can be of two forms:
 \begin{myenumerate}
@@ -71,8 +71,15 @@ combination of the following characters:
 \begin{hol}
 \begin{verbatim}
   #  ?  +  *  /  \  =  <  >  &  %  @  !  ,  :  ;  _  |  ~  -
+  [  ]  (  )  {  }  ^  `
 \end{verbatim}
 \end{hol}
+Use of the characters in the second row above (the braces, brackets,
+parentheses, caret and back-tick) will typically cause lexical
+complexities; users of these characters should consult the
+\REFERENCE{} for the \ml{add\_rule} function, and
+Section~\ref{sec:quotation-antiquotation} below on using the caret and
+back-tick characters.
 \end{myenumerate}
 %
 A letter is a member of the list:
@@ -96,6 +103,8 @@ A \emph{number} is a string of one or more digits. In order to
 distinguish different kinds of numbers a single character suffix may
 be used: for example \verb+3n+ is a natural number while \verb+3i+ is
 an integer.
+\index{variables, in HOL logic@variables, in \HOL{} logic!names of|)}
+
 
 \paragraph{Separators}
 
@@ -135,7 +144,6 @@ variable names except for the last:
 
 The allowed types
 %
-\index{type constraint!in HOL logic@in \HOL{} logic}
 %
 depend on which type constants
 %
@@ -473,6 +481,7 @@ would be printed as:
 A leading colon is used to distinguish a type quotation from a term quotation:
 the former have the form \holquote{\ml{:}~$\cdots$~} and the latter have
 the form \holquote{~$\cdots$~}.
+\index{quotation, in HOL logic@quotation, in \HOL{} logic|)}
 
 
 \paragraph {Type inference}
@@ -534,6 +543,7 @@ The original quotation type checker was designed and implemented by
 Robin Milner\index{Milner, R.}.  It employs heuristics like the one
 above to infer a sensible type for all variables occurring in a term.
 
+\index{type constraint!in HOL logic@in \HOL{} logic}
 At times, the user may want to control the exact type of a subterm. To
 support such functionality, types can be explicitly indicated by
 following any subterm with a colon and then a type.  For example,
@@ -543,9 +553,9 @@ This treatment of types within quotations is inherited from
 \LCF.
 %
 \index{LCF@\LCF}
-\index{type constraint!in HOL logic@in \HOL{} logic|)}
 \index{ type quotes, in ML@\ml{``:$\cdots$``} (type quotes, in \ML)|)}
 \index{ term quotes, in ML@\ml{``$\cdots$``} (term quotes, in \ML)|)}
+\index{type inference!in HOL parser@in \HOL{} parser|)}
 
 \subsection{Viewing the grammar}
 
@@ -564,7 +574,7 @@ used in the startup context of \HOL{} has the type operators
 \verb+num+, \verb+option+, \verb+one+, \verb+label+, \verb+ind+, and
 \verb+bool+.
 
-\setcounter{sessioncount}{1}
+\setcounter{sessioncount}{0}
 \begin{session}
 \begin{verbatim}
 - type_grammar();
@@ -691,6 +701,7 @@ The expressions in the same row are equivalent.
 \index{ function type operator, in HOL logic@\ml{->} (function type operator, in \HOL{} logic)}
 \index{mk_vartype@\ml{mk\_vartype}}
 \index{mk_type@\ml{mk\_type}}
+\index{type quotes, in ML@\ml{`:$\cdots$`} (type quotes, in \ML)}
 \begin{tabular}{|l|l|l|} \hline
 \multicolumn{3}{|c|}{ } \\
 \multicolumn{3}{|c|}{\bf Types} \\
@@ -723,7 +734,6 @@ Compound type &
 \end{tabular}
 \end{center}
 
-\index{type quotes, in ML@\ml{`:$\cdots$`} (type quotes, in \ML)|)}
 
 \index{terms, in HOL logic@terms, in \HOL{} logic!syntax of|(}
 
@@ -1398,9 +1408,10 @@ can be extracted by
 
 
 \section{Theories}
-\index{theories, in HOL logic@theories, in \HOL{} logic!representation of|(}
 \label{theoryfns}
 
+\index{theories, in HOL logic@theories, in \HOL{} logic!representation of|(}
+%
 In Chapter~\ref{logic} a theory is described as a $4$-tuple
 
 \[ {\cal T}\ =\ \langle{\sf Struc}_{\cal T},\
@@ -1439,6 +1450,7 @@ of reachable segments is called the \emph{ancestry}
 \index{ancestry, of HOL system theories@ancestry, of \HOL{} system theories}
 \index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies of}
 of the segment.
+\index{theories, in HOL logic@theories, in \HOL{} logic!representation of|)}
 
 \subsection{ML functions for theory operations}
 \label{theoryprims}
@@ -1523,8 +1535,8 @@ in the theory hierarchy.
 \paragraph{Creating a theory segment}
 
 \index{theories, in HOL logic@theories, in \HOL{} logic!creation of|(}
-
-One creates a new theory segment by a call to \verb+new_theory+.
+%
+One creates a new theory segment by a call to \ml{new\_theory}.
 %
 \begin{boxed}
 \index{new_theory@\ml{new\_theory}|pin}
@@ -1569,6 +1581,9 @@ them surrounded by odd-looking syntax to alert the user.
 
 In contrast to the current segment, (proper) ancestor segments may not
 be altered.
+%
+\index{theories, in HOL logic@theories, in \HOL{} logic!creation of|)}
+
 
 \paragraph{Loading prebuilt theories}
 
@@ -1783,7 +1798,7 @@ constant definitions, constant specifications and type definitions.
 In Section~\ref{defs} a constant definition
 %
 \index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}
-\index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for|(}
+\index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for}
 %
 over a signature $\Sigma_{\Omega}$ is defined to be an equation, \ie\
 a formula of the form $c_{\sigma}=t_{\sigma}$, such that:
@@ -1838,7 +1853,9 @@ that does not occur in the type of $c$.
 \label{conspec}
 
 \index{specification of constants, in HOL logic@specification of constants, in \HOL{} logic|(}
+%
 \index{extension, of HOL logic@extension, of \HOL{} logic!by constant specification}
+%
 In Section~\ref{specs} a constant specification\index{constant specification extension, of HOL logic@constant specification extension, of \HOL{} logic!ML function for@\ML\ function for} for a theory ${\cal T}$
 is defined to be a pair:
 
@@ -1896,10 +1913,16 @@ with name $name$, as a definition in the current theory segment. A call to
 variables which occur in the term
 \holtxt{\bs$x_1\ \cdots\ x_n$. $t$[$x_1$, $\ldots$, $x_n$]}.
 \end{myenumerate}
+%
+\index{specification of constants, in HOL logic@specification of constants, in \HOL{} logic|)}
 
-\subsubsection{Type definitions}\index{extension, of HOL logic@extension, of \HOL{} logic!by type definition|(}
-\label{type-defs}\index{type definitions, in HOL logic@type definitions, in \HOL{} logic|(}
+\subsubsection{Type definitions}
+\label{type-defs}
 
+\index{extension, of HOL logic@extension, of \HOL{} logic!by type definition|(}
+%
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic|(}
+%
 In Section~\ref{tydefs} it is explained that
 defining\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!introduction of}\index{type definition extension, in HOL logic@type definition extension, in \HOL{} logic!ML function for@\ML\ function for|(}
 a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory ${\cal T}$ consists

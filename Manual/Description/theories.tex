@@ -83,7 +83,8 @@ textbook on type theory \cite{Andrews}.
 \noindent No theorems or axioms are placed in theory \theoryimp{min}.
 The primitive rules of inference of \HOL{} depend on the presence of
 \theoryimp{min}.
-
+%
+\index{min, the HOL theory@\ml{min}, the \HOL{} theory|)}
 
 \section{Basic Theories}
 
@@ -118,15 +119,10 @@ inference described in Section~\ref{rules}, constitute the core of the
 %
 \footnote{To simplify the porting of the LCF theorem-proving tools to
   the HOL system, the HOL logic was made as like PP$\lambda$ (the
-  logic built-in to LCF) as possible.} the particular
-axiomatization
-%
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
-%
+  logic built-in to LCF) as possible.} the particular axiomatization
 of higher order logic it uses differs from the classical
 axiomatization due to Church\index{Church, A.}  \cite{Church}.  The
-biggest difference is that in Church's formulation type
-variables
+biggest difference is that in Church's formulation type variables
 %
 \index{type variables, in HOL logic@type variables, in \HOL{} logic!differences from classical}
 %
@@ -592,8 +588,12 @@ $t\ t_1 \cdots t_n$ &
 \ml{list\_mk\_imp}\index{list_mk_imp@\ml{list\_mk\_imp}} and
 for conjunctions, disjunctions, and implications respectively.
 The corresponding destructor functions are called \ml{strip\_comb}, \etc,
+%
 \index{term constructors, in HOL logic@term constructors, in \HOL{} logic|)}
+%
 \index{terms, in HOL logic@terms, in \HOL{} logic!constructors for|)}
+%
+\index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|)}
 
 \subsubsection{Theorems}
 
@@ -784,7 +784,7 @@ required by the type definition principle.}
 The type operator {\small\verb%prod%} is defined
 by invoking \verb+new_type_definition+ with this theorem
  which results in the definitional axiom
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for products}
 \index{axioms!in bool theory@in \ml{bool} theory}
 \ml{prod\_TY\_DEF} shown below being asserted in the theory \ml{pair}.
 %
@@ -922,8 +922,9 @@ prove.
 \subsubsection{Paired abstractions}
 \label{HOL-varstruct}
 \index{pairs, in HOL logic@pairs, in \HOL{} logic!in abstractions|(}
+\index{pairs, in HOL logic@pairs, in \HOL{} logic!parsing of}
 \index{terms, in HOL logic@terms, in \HOL{} logic!pair|(}
-\index{parsing, of HOL logic@parsing, of \HOL{} logic!of quotation syntax|(}
+\index{parsing, of HOL logic@parsing, of \HOL{} logic!of paired abstractions}
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!paired|(}
 \index{function abstraction, in HOL logic@function abstraction, in \HOL{} logic!uncurrying, in paired|(}
 
@@ -1086,8 +1087,6 @@ destructor operations.  For example:
 The reader is recommended to convince himself or herself that the
 translations of \ml{let}-terms represent the intuitive meaning suggested by
 the surface syntax.
-\index{quotation, in HOL logic@quotation, in \HOL{} logic|)}
-\index{quotation, in HOL logic@quotation, in \HOL{} logic!of non-primitive terms|)}
 \index{terms, in HOL logic@terms, in \HOL{} logic!syntax of|)}
 \index{type checking, in HOL logic@type checking, in \HOL{} logic!special forms in|)}
 
@@ -1175,7 +1174,7 @@ relating the projection functions and the discriminators.
 \end{verbatim}
 \end{hol}
 
-\index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|}
+\index{disjoint unions, the HOL theory of@disjoint unions, the \HOL{} theory of|)}
 \index{sums (disjoint unions), the HOL theory of@sums (disjoint unions), the \HOL{} theory of|)}
 
 
@@ -1302,7 +1301,7 @@ and \ml{SUC} (the successor function) are defined
 and Peano's axioms
 \index{axioms!in num theory@in \ml{num} theory}
 \index{Peano's axioms}
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for natural numberrs}
 pre-proved in the form:
 
 \begin{hol}
@@ -1325,8 +1324,8 @@ logic because predicates (\eg\ \holtxt{P}) cannot be quantified.
 \subsubsection{The theory \theoryimp{prim\_rec}}
 \label{prim_rec}
 
-\index{primitive recursion theorem!for numbers|(}
-\index{prim_rec@\ml{prim\_rec}|(}
+\index{primitive recursion theorem!for numbers}
+\index{prim_rec, the HOL theory@\ml{prim\_rec}, the \HOL{} theory|(}
 In classical logic, unlike domain theory logics such as \PPL,
 %
 \index{PPlambda (same as PPLAMBDA), of LCF system@\ml{PP}$\lambda$ (same as \ml{PPLAMBDA}), of \ml{LCF} system}
@@ -1401,11 +1400,12 @@ characteristic function {\small\verb%P%}) that is downward
 closed\footnote{A set of numbers is \textit{downward closed} if whenever it
 contains the successor of a number, it also contains the number.} and
 contains {\small\verb%m%} but not {\small\verb%n%}.
+\index{prim_rec, the HOL theory@\ml{prim\_rec}, the \HOL{} theory|)}
+
 
 \subsubsection{Mechanizing primitive recursive definitions}
 \label{num-prim-rec}
 
-\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!primitive recursive|(}
 \index{recursive definitions, in HOL logic@recursive definitions, in \HOL{} logic!automated, for numbers}
 \index{primitive recursion theorem!automated use of, in HOL system@automated use of, in \HOL{} system|(}
 The primitive
@@ -2614,14 +2614,14 @@ into \holtxt{CONS $t_1$ (CONS $t_2$ $\cdots$ (CONS $t_n$ NIL)
 %
 reverses these transformations.
 
+\index{list theorems, in HOL logic@list theorems, in \HOL{} logic}
 Based on the inductive characterization of the type, the following
-fundamental theorems about lists
-\index{list theorems, in HOL logic@list theorems, in \HOL{} logic|(}
-are proved and stored in the theory \ml{list}.
+fundamental theorems about lists are proved and stored in the theory
+\ml{list}.
 
 \begin{hol}
 \index{list_Axiom@\ml{list\_Axiom}}
-\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic}
+\index{axioms!non-primitive, of HOL logic@non-primitive, of \HOL{} logic!for lists}
 \index{induction theorems, in HOL logic@induction theorems, in \HOL{} logic!for lists}
 \index{characterizing theorem!for lists}
 \begin{verbatim}
