@@ -132,9 +132,12 @@ struct
   val toHexString = LargeInt.fmt StringCvt.HEX
 
   val fromDecString = o valOf LargeInt.fromString
-  fun fromBinString s = fromDecString (Arbnum.toString (Arbnum.fromBinString s))
-  fun fromOctString s = fromDecString (Arbnum.toString (Arbnum.fromOctString s))
-  fun fromHexString s = fromDecString (Arbnum.toString (Arbnum.fromHexString s))
+  fun fromBinString s =
+        valOf (StringCvt.scanString (LargeInt.scan StringCvt.BIN) s)
+  fun fromOctString s =
+        valOf (StringCvt.scanString (LargeInt.scan StringCvt.OCT) s)
+  fun fromHexString s =
+        valOf (StringCvt.scanString (LargeInt.scan StringCvt.HEX) s)
 
   (* Installed in MoscowML with Meta.installPP *)
 
