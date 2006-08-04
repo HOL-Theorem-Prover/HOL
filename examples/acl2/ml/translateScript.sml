@@ -10,6 +10,10 @@
 
 (* 17/05 	- Added LISTP_CONS function              *)
 (* 04/07        - switched to hol_defaxiomsTheory (MJCG) *)
+(* 03/08	- Various improvements:                  
+		        switched to |= instead of =t/nil
+			added case & 'flat' theorems
+			created translateLib for CHOOSEP *)
 
 (*****************************************************************************)
 (* Load base theories                                                        *)
@@ -200,6 +204,9 @@ val TRUTH_REWRITES = save_thm("TRUTH_REWRITES",LIST_CONJ
 		[``~(nil = t)``,``(|= (if a then b else c)) = a /\ (|= b) \/ ~a /\ |= c``,``(consp nil = nil)``,``ite nil a b = b``,``ite t a b = a``,
 		``(x = nil) = ~(|= x)``,``~(x = nil) = (|= x)``,``|= t``,``~(|= nil)``,``(|= bool a) = a``]));
 
+val ANDL_JUDGEMENT = prove(``(|= andl []) /\ !a b. (|= a) /\ (|= andl b) ==> (|= andl (a::b))``,
+	STRIP_TAC THENL [ALL_TAC,GEN_TAC THEN Induct] THEN RW_TAC std_ss [andl_def,TRUTH_REWRITES,ite_def]);
+
 (*****************************************************************************)
 (* Judgement theorems                                                        *)
 (*****************************************************************************)
@@ -228,6 +235,9 @@ val LISTP_LIST = store_thm("LISTP_LIST",``(!a. |= p (f a)) ==> !a. |= listp p (l
 val TYPE_ITE = store_thm("TYPE_ITE",``((|= P) ==> (|= p a)) /\ (~(|= P) ==> (|= p b)) ==> |= p (ite P a b)``,
  	Cases_on `|= P` THEN RW_TAC std_ss [ite_def,TRUTH_REWRITES]);
  
+val TYPE_IMP = store_thm("TYPE_IMP",``((|= A) ==> (|= booleanp B)) ==> |= booleanp (implies A B)``,
+	Cases_on `|= A` THEN RW_TAC std_ss [implies_def,ite_def,andl_def,TRUTH_REWRITES,booleanp_def,equal_def]);
+
 (*****************************************************************************)
 (* Encode then decode proofs                                                 *)
 (*****************************************************************************)
@@ -1196,7 +1206,7 @@ val PAIR_THMS = save_thm("PAIR_THMS",
 
 
 val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
-	MK_THMS [	NATP_NAT,INTEGERP_INT,RATIONALP_RAT,ACL2_NUMBERP_NUM,BOOLEANP_BOOL,PAIRP_PAIR,
+	MK_THMS [	CONJUNCT1 ANDL_JUDGEMENT,CONJUNCT2 ANDL_JUDGEMENT,NATP_NAT,INTEGERP_INT,RATIONALP_RAT,ACL2_NUMBERP_NUM,BOOLEANP_BOOL,PAIRP_PAIR,
 			NATP_ADD,NATP_NFIX,NATP_MULT,NATP_DIV,NATP_EXP,NATP_MOD,
 			BOOLEANP_IMPLIES,BOOLEANP_ANDL,BOOLEANP_ANDL_NULL,
 			BOOLEANP_EQUAL,BOOLEANP_LESS,BOOLEANP_NOT,BOOLEANP_CONSP,BOOLEANP_IF,
@@ -1206,9 +1216,4 @@ val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
 			PAIR_JUDGEMENT,CONJUNCT1 LIST_JUDGEMENT,LISTP_TAIL,LISTP_CONS_HT,LISTP_CONS]);
 
 val _ = export_theory();
-
-
-
-
-
 
