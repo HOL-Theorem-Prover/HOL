@@ -312,6 +312,21 @@ val acl2_count =
                 (cond_clausesp (cdr clauses))]) (eq clauses nil),
 *)
 
+val (cond_clausesp_def,cond_clausesp_ind) =
+ acl2_defn
+ "ACL2::COND-CLAUSESP"
+  (`cond_clausesp clauses =
+     ite (consp clauses)
+         (andl
+           [consp (car clauses); true_listp (car clauses);
+            less (len (car clauses)) (nat 3);
+            ite (eq (caar clauses) t) 
+                (eq (cdr clauses) nil)
+                (cond_clausesp (cdr clauses))]) 
+         (eq clauses nil)`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::COND-MACRO, DISK_THM] [axioms: ] []
      |- cond_macro clauses =
@@ -671,7 +686,7 @@ val (member_def,member_ind) =
 *)
 
 val (assoc_def,assoc_ind) =
- acl2_defn "COMMON-LISP::MEMBER"
+ acl2_defn "COMMON-LISP::ASSOC"
   (`assoc x alist =
       itel [(endp alist,nil); (eql x (caar alist),car alist)]
            (assoc x (cdr alist))`,

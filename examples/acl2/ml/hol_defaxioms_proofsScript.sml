@@ -65,7 +65,8 @@ val closure_defaxiom =
    ``|= andl
          [acl2_numberp (add x y); acl2_numberp (mult x y);
           acl2_numberp (unary_minus x); acl2_numberp (reciprocal x)]``,
-   ACL2_SIMP_TAC []);
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC [int_def,cpx_def]);
 
 (*
      [oracles: DEFAXIOM ACL2::ASSOCIATIVITY-OF-+] [axioms: ] []
@@ -681,6 +682,13 @@ val character_listp_coerce_defaxiom =
            make_character_list_def]
     THEN PROVE_TAC[character_listp_list_to_sexp,nil_def,ACL2_TRUE]);
 
+(*
+     [oracles: DEFTHM ACL2::LOWER-CASE-P-CHAR-DOWNCASE, DISK_THM] [axioms: ]
+     []
+     |- |= implies (andl [upper_case_p x; characterp x])
+             (lower_case_p (char_downcase x))
+*)
+
 val assoc_nil =
  store_thm
   ("assoc_nil",
@@ -696,20 +704,54 @@ val assoc_cons =
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
     THEN ACL2_SIMP_TAC[itel_def]);
 
-(*     
+val member_nil =
+ store_thm
+  ("member_nil",
+   ``member x nil = nil``,
+   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[member_def]))
+    THEN ACL2_SIMP_TAC[itel_def]);
+
+val member_cons =
+ store_thm
+  ("member_cons",
+   ``member x (cons x' y) = 
+      if |= equal x x' then cons x' y else member x y``,
+   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[member_def]))
+    THEN ACL2_SIMP_TAC[itel_def]);
+
+val nil_t_if =
+ store_thm
+  ("nil_t_if",
+   ``((if p then t else nil) = nil) = ~p``,
+  RW_TAC std_ss [EVAL ``t = nil``]);
+
+val if_eq_imp =
+ store_thm
+  ("if_eq_imp",
+   ``((if p then a else b) = c) = (p ==> (a = c)) /\ (~p ==> (b = c))``,
+  RW_TAC std_ss []);
+
 val lower_case_p_char_downcase_defaxiom =
  store_thm
   ("lower_case_p_char_downcase_defaxiom",
    ``|= implies (andl [upper_case_p x; characterp x])
                 (lower_case_p (char_downcase x))``,
-   REWRITE_TAC[implies]
-    THEN STRIP_TAC
-    THEN SIMP_TAC std_ss [char_downcase_def,assoc_cons,List_def]
+   RW_TAC std_ss
+    [implies,upper_case_p_def,List_def,member_nil,member_cons,
+     ACL2_TRUE,andl_def,ite_def,equal_def,
+     nil_t_if,if_eq_imp]
+    THEN SIMP_TAC std_ss 
+          [List_def,assoc_nil,assoc_cons,char_downcase_def,equal_def,EVAL ``t = nil``,
+           ACL2_TRUE,nil_t_if,sexp_11]
+    THEN CONV_TAC(DEPTH_CONV char_EQ_CONV)
+    THEN SIMP_TAC std_ss []
     THEN CONV_TAC(DEPTH_CONV(pairLib.let_CONV))
-    THEN SIMP_TAC std_ss [itel_def,ite_def]
-    THEN ACL2_FULL_SIMP_TAC[assoc_cons,assoc_nil]
-    THEN REWRITE_TAC[COND_RAND]
-*)
+    THEN SIMP_TAC std_ss 
+          [itel_def,lower_case_p_def,andl_def,List_def,cdr_def,ite_def,
+           member_nil,member_cons,equal_def,ACL2_TRUE,EVAL ``t = nil``,
+           EVAL ``cons x y = nil``,sexp_11]
+    THEN CONV_TAC(DEPTH_CONV char_EQ_CONV)
+    THEN SIMP_TAC std_ss [EVAL ``cons x y = nil``,EVAL ``t = nil``]);
 
 (*
      [oracles: DEFAXIOM ACL2::STRINGP-SYMBOL-PACKAGE-NAME] [axioms: ] []
