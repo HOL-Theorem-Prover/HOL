@@ -50,66 +50,99 @@ html1/DTD/xhtml1-strict.dtd">
       John Harrison for discussion leading to the adoption of this
       syntax. </li>
 
+  <li> <p> The syntax of string and character literals is now the same as
+      that accepted by SML.  This means that escapes such as
+      <code>\n</code> (for the linefeed character) and
+      <code>\^E</code> (for ASCII character no.&nbsp;5) can be used
+      inside string and character literals.</p>
+
+      <p> The SML syntax which allows strings to be broken over
+      new-lines by using back-slashes is also supported.  This means
+      that one can write </p>
+<pre>
+         ``mystring = "the quick brown fox jumps over \
+                      \the lazy dog"``
+</pre>
+      <p> and have the actual string value generated exclude the
+      white-space appearing between the back-slashes.</p>
+      </li>
+
+
+  <li> <p> It is possible to include both <code>^</code> (caret) and
+      <code>`</code> back-tick characters inside quotations if they
+      are preceded by caret characters.  Usually these characters have
+      special meaning inside quotations: caret is used to introduce an
+      antiquotation, and the back-tick is used to end a quotation
+      (singly or doubly, depending on the sort of quotation).  In
+      effect, the caret is used as an &ldquo;escape&rdquo;-character.
+      For example, writing</p>
+<pre>
+         ``s1 ^^ s2``
+</pre>
+      <p> will result in the string <code>s1 ^ s2</code> being passed
+      to the HOL parser.  This string will then be treated in the
+      standard fashion.  E.g., if <code>^</code> is an infix, a
+      function application with it as the head operator will be
+      created. </p>
+
+      <p> Note that caret-escapes need to be applied even within
+      string literals and comments that occur inside quotations.</p></li>
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
 
 <ul>
-  <li> The <code>muddyC/muddy.c</code> file would not build with
-      <code>gcc-4</code>.
+  <li> <p> The <code>muddyC/muddy.c</code> file would not build with
+      <code>gcc-4</code>. </p>
   </li>
 
-  <li> The implementation of <code>Q.EXISTS</code> was incorrect
+  <li> <p> The implementation of <code>Q.EXISTS</code> was incorrect
       (would only work with witnesses of type <code>:bool</code>).
-      Thanks to Eunsuk Kang for the report of this bug.</li>
+      Thanks to Eunsuk Kang for the report of this bug. </p> </li>
 
-  <li> The natural number and integer decision procedures were not
+  <li> <p> The natural number and integer decision procedures were not
       normalising multiplicative expressions as much as they should,
       causing obvious goals to not get proved.  Thanks to Alexey
-      Gotsman for the report of this bug. </li>
+      Gotsman for the report of this bug. </p> </li>
 
-  <li> The theory and identifier indexes in the help pages were
+  <li> <p> The theory and identifier indexes in the help pages were
       generated with bogus links.  Thanks to Hasan Amjad for the
-      report of this bug. </li>
+      report of this bug. </p> </li>
 
-  <li> Expressions using <code>case</code>-expressions with
+  <li> <p> Expressions using <code>case</code>-expressions with
       function-types and applied to arguments failed to parse
-      correctly.</li>
+      correctly. </p> </li>
 
-  <li> The implementation of <code>Holmake</code>&rsquo;s
+  <li> <p> The implementation of <code>Holmake</code>&rsquo;s
       <code>--rebuild_deps</code> (or <code>-r</code>) option was
-      faulty.  Thanks to Tom Ridge for the report of this bug.</li>
+      faulty.  Thanks to Tom Ridge for the report of this bug. </p> </li>
 
 </ul>
 
 
 <h2 id="new-theories">New theories:</h2>
 <ul>
-  <li> A theory of the rational numbers, thanks to Jens Brandt.</li>
+  <li> <p> A theory of the rational numbers, thanks to Jens
+  Brandt.</p> </li>
 
 </ul>
 
 <h2 id="new-tools">New tools:</h2>
 
-<ul>
-</ul>
-
 <h2 id="new-examples">New examples:</h2>
-<ul>
-</ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
 <ul>
 
-  <li> The <code>std_ss</code> simpset has become more powerful,
+  <li> <p> The <code>std_ss</code> simpset has become more powerful,
       picking up a set of &ldquo;obvious&rdquo; rewrites that used to
       be in <code>arith_ss</code>.  Now the latter simpset adds just
-      the decision procedure for Presburger arithmetic.</li>
+      the decision procedure for Presburger arithmetic.</p> </li>
 
-  <li> Functions such as <code>induction_of</code> in the
+  <li> <p> Functions such as <code>induction_of</code> in the
       <code>TypeBase</code> structure that used to take a string (the
-      name of a type operator), now take a type.  Thus, instead of
+      name of a type operator), now take a type.  Thus, instead of</p>
 <pre>
          TypeBase.induction_of "num"
 </pre> use
