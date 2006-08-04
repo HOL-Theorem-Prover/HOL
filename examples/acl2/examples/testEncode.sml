@@ -456,4 +456,10 @@ val member_def = 		Define `	(member key LEAF = F) /\
 val acl2_member_def = 		convert_definition member_def;
 
 
+(*****************************************************************************)
+(* Theorem encoding...                                                       *)
+(*****************************************************************************)
+
+val acl2_division = convert_theorem DIVISION;
+
 
