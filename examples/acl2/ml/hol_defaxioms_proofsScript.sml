@@ -758,6 +758,13 @@ val lower_case_p_char_downcase_defaxiom =
      |- |= stringp (symbol_package_name x),
 *)
 
+val stringp_symbol_package_name_defaxiom =
+ store_thm
+  ("stringp_symbol_package_name_defaxiom",
+   ``|= stringp (symbol_package_name x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC[]);
+
 (*
      [oracles: DEFAXIOM ACL2::SYMBOLP-INTERN-IN-PACKAGE-OF-SYMBOL] [axioms: ]
      [] |- |= symbolp (intern_in_package_of_symbol x y),
@@ -767,6 +774,35 @@ val lower_case_p_char_downcase_defaxiom =
      [oracles: DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS] [axioms: ] []
      |- |= symbolp (pkg_witness x),
 *)
+
+val LOOKUP_PKG_WITNESS =
+ store_thm
+  ("LOOKUP_PKG_WITNESS",
+   ``LOOKUP s ACL2_PACKAGE_ALIST "PKG-WITNESS" = s``,
+   CONV_TAC EVAL);
+
+val symbolp_nil =
+ store_thm
+  ("symbolp_nil",
+   ``~(symbolp nil = nil)``,
+   CONV_TAC EVAL);
+
+val symbolp_pkg_witness_defaxiom =
+ store_thm
+  ("symbolp_pkg_witness_defaxiom",
+   ``|= symbolp (pkg_witness x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC[]
+    THEN FULL_SIMP_TAC std_ss [GSYM nil_def,markerTheory.Abbrev_def]
+    THEN SIMP_TAC std_ss [BASIC_INTERN_def]
+    THEN SIMP_TAC std_ss 
+          [BASIC_INTERN_def,
+           symbolp_def,sexp_11,nil_t_if,LOOKUP_PKG_WITNESS]
+    THEN CONV_TAC EVAL
+    THEN Cases_on  `s = ""`
+    THEN RW_TAC std_ss [symbolp_nil,GSYM nil_def]
+    THEN CONV_TAC EVAL
+    THEN RW_TAC std_ss []);
 
 (*
      [oracles: DEFAXIOM ACL2::INTERN-IN-PACKAGE-OF-SYMBOL-SYMBOL-NAME,

@@ -814,7 +814,7 @@ fun make_package_structure_term l =
         l,
         ``:string # string # string``))));
 
-val ACL2_PACKAGE_ALIST =
+val ACL2_PACKAGE_ALIST_def =
  time
   Define
   `ACL2_PACKAGE_ALIST =
@@ -3657,11 +3657,15 @@ val symbol_package_name_def =
 (*                                                                           *)
 (* ; Note that ACL2 refuses to parse (pkg-witness pkg) unless pkg is an      *)
 (* ; explicit string naming a package already known to ACL2.                 *)
+(* MJCG added catchall case after consulting Matt Kaufmann following failure *)
+(* to prove DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS                               *)
 (*****************************************************************************)
 val pkg_witness_def =
  acl2Define "ACL2::PKG-WITNESS"
-  `pkg_witness (str x) =
-    let s = BASIC_INTERN "PKG-WITNESS" x in ite (symbolp s) s nil`;
+  `(pkg_witness (str x) =
+     let s = BASIC_INTERN "PKG-WITNESS" x in ite (symbolp s) s nil)
+   /\
+   (pkg_witness _ = BASIC_INTERN "PKG-WITNESS" "ACL2")`;
 
 (*****************************************************************************)
 (* intern-in-package-of-symbol                                               *)
