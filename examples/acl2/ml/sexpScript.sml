@@ -632,7 +632,7 @@ val list_to_sexp_def =
 (*****************************************************************************)
 (* coerce                                                                    *)
 (*                                                                           *)
-(* ; First, we nee to translate this ACL2 definition:                        *)
+(* ; First, we need to translate this ACL2 definition:                       *)
 (*                                                                           *)
 (* (defun make-character-list (x)                                            *)
 (*   (cond ((atom x) nil)                                                    *)
@@ -760,9 +760,6 @@ val coerce_def =
 (* data structure as shown above), then:                                     *)
 (*                                                                           *)
 (*   BASIC_INTERN symbol_name pkg_name = (sym pkg_name symbol_name)          *)
-(*                                                                           *)
-(* Finally, if pkg_name is not the name of a known package, we return        *)
-(* an arbitrary value.                                                       *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -3601,11 +3598,20 @@ val SEXP_WF_LESS_def =
  Define `SEXP_WF_LESS = @R:sexp->sexp->bool. WF R`;
 
 (*****************************************************************************)
-(* ACL2_BAD_ATOM_LESS x y iff x is less then y in the well-founded relation  *)
+(* In ACL2, bad-atom<= is a non-strict order:                                *)
+(*                                                                           *)
+(* (defaxiom bad-atom<=-antisymmetric                                        *)
+(*   (implies (and (bad-atom x)                                              *)
+(*                 (bad-atom y)                                              *)
+(*                 (bad-atom<= x y)                                          *)
+(*                 (bad-atom<= y x))                                         *)
+(*            (equal x y))                                                   *)
+(*   :rule-classes nil)                                                      *)
 (*****************************************************************************)
 val bad_atom_less_equal_def =
  acl2Define "ACL2::BAD-ATOM<="
-  `bad_atom_less_equal x y = if SEXP_WF_LESS x y then t else nil`;
+  `bad_atom_less_equal x y = if SEXP_WF_LESS y x then nil else t`;
+
 
 (*****************************************************************************)
 (* symbol-name                                                               *)
