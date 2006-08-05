@@ -3,6 +3,7 @@ sig
  type term = HolKernel.term
  type num  = Arbnum.num
 
+ val is_zero        : term -> bool
  val is_numeral     : term -> bool
  val dest_numeral   : term -> Arbnum.num
  val gen_mk_numeral : {mk_comb : 'a * 'a -> 'a,

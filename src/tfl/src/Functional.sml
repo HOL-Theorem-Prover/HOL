@@ -65,6 +65,24 @@ fun fresh_constr ty_match colty gv c =
 
 (*---------------------------------------------------------------------------*
  * Goes through a list of rows and picks out the ones beginning with a       *
+ * pattern = Literal, or all those beginning with a variable if the pattern  *
+ * is a variable.                                                            *
+ *---------------------------------------------------------------------------*)
+
+fun mk_groupl Literal rows =
+  let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
+               if (is_var Literal andalso is_var p) orelse p = Literal
+               then if is_var Literal
+                    then (((prefix,p::rst), rhs)::in_group, not_in_group)
+                    else (((prefix,rst), rhs)::in_group, not_in_group)
+               else (in_group, row::not_in_group)
+        | func _ _ = raise ERR "mk_groupc" ""
+  in
+    itlist func rows ([],[])
+  end;
+
+(*---------------------------------------------------------------------------*
+ * Goes through a list of rows and picks out the ones beginning with a       *
  * pattern with constructor = Name.                                          *
  *---------------------------------------------------------------------------*)
 
@@ -79,6 +97,32 @@ fun mk_group Name rows =
   in
     itlist func rows ([],[])
   end;
+
+
+(*---------------------------------------------------------------------------*
+ * Partition the rows among literals. Not efficient.                         *
+ *---------------------------------------------------------------------------*)
+
+fun partitionl _ _ (_,_,_,[]) = raise ERR"partitionl" "no rows"
+  | partitionl gv ty_match
+              (constructors, colty, res_ty, rows as (((prefix,_),_)::_)) =
+let  fun part {constrs = [],      rows, A} = rev A
+       | part {constrs = c::crst, rows, A} =
+         let val (in_group, not_in_group) = mk_groupl c rows
+             val in_group' =
+                 if (null in_group)  (* Constructor not given *)
+                 then [((prefix, []), OMITTED (mk_arb res_ty, ~1))]
+                 else in_group
+             val gvars = if is_var c then [c] else []
+         in
+         part{constrs = crst,
+              rows = not_in_group,
+              A = {constructor = c,
+                   new_formals = gvars,
+                   group = in_group'}::A}
+         end
+in part{constrs=constructors, rows=rows, A=[]}
+end;
 
 
 (*---------------------------------------------------------------------------*
@@ -113,6 +157,15 @@ end;
  * Misc. routines used in mk_case
  *---------------------------------------------------------------------------*)
 
+fun mk_patl c =
+  let val L = if is_var c then 1 else 0
+      fun build (prefix,tag,plist) =
+          let val (args,plist') = wfrecUtils.gtake I (L, plist)
+              val c' = if is_var c then hd args else c
+           in (prefix,tag, c'::plist') end
+  in map build
+  end;
+
 fun mk_pat c =
   let val L = length(#1(strip_fun_type(type_of c)))
       fun build (prefix,tag,plist) =
@@ -127,6 +180,62 @@ fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
 fun v_to_pats (v::prefix,tag, pats) = (prefix, tag, v::pats)
   | v_to_pats _ = raise ERR"mk_case""v_to_pats";
 
+(* -------------------------------------------------------------- *)
+(* A literal is either a numeric, string, or character literal.   *)
+(* Boolean literals are handled as constructors of the bool type. *)
+(* -------------------------------------------------------------- *)
+
+local open Literal
+in
+fun is_lit tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+end
+
+fun is_lit_or_var tm = is_lit tm orelse is_var tm
+
+fun is_zero_or_var tm = Literal.is_zero tm orelse is_var tm
+
+fun mk_switch_tm1 _ [] = raise ERR "mk_switch_tm" "no literals"
+  | mk_switch_tm1 gv (literals as (lit::lits)) =
+    let val lty = type_of lit
+        val v = gv lty
+        fun mk_arg lit = if is_var lit then gv (lty --> alpha) else gv alpha
+        val args = map mk_arg literals
+        open boolSyntax
+        fun mk_switch [] = mk_const("ARB", lty)
+          | mk_switch ((lit,arg)::litargs) =
+                 if is_var lit then mk_comb(arg, v)
+                 else boolSyntax.mk_cond(mk_eq(v, lit), arg, mk_switch litargs)
+    in list_mk_abs(args@[v], mk_switch (zip literals args))
+    end
+
+fun mk_switch_tm _ [] = raise ERR "mk_switch_tm" "no literals"
+  | mk_switch_tm gv (literals as (lit::lits)) =
+    let val lty = type_of lit
+        val v = gv lty
+        fun mk_arg lit = if is_var lit then gv (lty --> alpha) else gv alpha
+        val args = map mk_arg literals
+        open boolSyntax
+        fun mk_switch [] = mk_const("ARB", lty)
+          | mk_switch ((lit,arg)::litargs) =
+                 if is_var lit then mk_comb(arg, v)
+                 else boolSyntax.mk_bool_case(arg, mk_switch litargs, mk_eq(v, lit))
+    in list_mk_abs(args@[v], mk_switch (zip literals args))
+    end
+
+fun depth_conv conv tm =
+  conv tm
+  handle _ =>
+  if is_abs tm then let val (v,bdy) = dest_abs tm
+                    in mk_abs(v, depth_conv conv bdy)
+                    end
+  else if is_comb tm then
+    let val (tm1,tm2) = dest_comb tm
+        val tm1' = depth_conv conv tm1
+        val tm2' = depth_conv conv tm2
+    in mk_comb(tm1', tm2')
+    end
+  else tm
+
 
 (*----------------------------------------------------------------------------
       Translation of pattern terms into nested case expressions.
@@ -140,7 +249,15 @@ fun mk_case ty_info ty_match FV range_ty =
  let
  fun mk_case_fail s = raise ERR"mk_case" s
  val fresh_var = wfrecUtils.vary FV
+ val dividel = partitionl fresh_var ty_match
  val divide = partition fresh_var ty_match
+ fun expandl literals ty ((_,[]), _) = mk_case_fail"expandl_var_row"
+   | expandl literals ty (row as ((prefix, p::rst), rhs)) =
+       if is_var p
+       then let fun expnd l =
+                     ((prefix, l::rst), psubst[p |-> l] rhs)
+            in map expnd literals  end
+       else [row]
  fun expand constructors ty ((_,[]), _) = mk_case_fail"expand_var_row"
    | expand constructors ty (row as ((prefix, p::rst), rhs)) =
        if is_var p
@@ -170,6 +287,34 @@ fun mk_case ty_info ty_match FV range_ty =
               val (pref_patl,tm) = mk{path = rstp,
                                       rows = zip pat_rectangle' rights'}
           in (map v_to_pats pref_patl, tm)
+          end
+     else
+     if all is_lit_or_var col0 andalso
+        not (all is_zero_or_var col0)
+     then let val pty = type_of p
+              val {Thy=ty_thy,Tyop=ty_name,...} = dest_thy_type pty
+              (* val case_const = ???
+                 val case_const_name = fst(dest_const case_const)          *)
+              val other_var = fresh_var pty
+              val constructors = rev (mk_set (rev (filter is_lit col0))) @ [other_var]
+              val switch_tm = mk_switch_tm1 fresh_var constructors
+                 val nrows = flatten (map (expandl constructors pty) rows)
+                 val subproblems = dividel(constructors, pty, range_ty, nrows)
+                 val groups        = map #group subproblems
+                 and new_formals   = map #new_formals subproblems
+                 and constructors' = map #constructor subproblems
+                 val news = map (fn (nf,rows) => {path = nf@rstp, rows=rows})
+                                (zip new_formals groups)
+                 val rec_calls = map mk news
+                 val (pat_rect,dtrees) = unzip rec_calls
+                 val case_functions = map list_mk_abs(zip new_formals dtrees)
+                 val switch_tm' = inst [alpha |-> range_ty] switch_tm
+                 val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
+                                       switch_tm' (case_functions@[u])
+                 val tree' = depth_conv beta_conv tree
+                 val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
+          in
+              (pat_rect1,tree')
           end
      else
      let val pty = type_of p
@@ -224,6 +369,45 @@ fun no_repeat_vars thy pat =
  in check (FV_multiset pat)
  end;
 
+
+(*---------------------------------------------------------------------------
+     Routines to repair the bound variable names found in cases
+ ---------------------------------------------------------------------------*)
+
+fun subst_inst (term_sub,type_sub) tm =
+    Term.subst term_sub (Term.inst type_sub tm);
+
+fun pat_match1 (pat,exp) given_pat =
+ let val (term_sub,type_sub) = Term.match_term pat given_pat
+ in (subst_inst (term_sub,type_sub) pat,
+     subst_inst (term_sub,type_sub) exp);
+    (term_sub,type_sub)
+ end
+
+fun pat_match2 pat_exps given_pat = tryfind (C pat_match1 given_pat) pat_exps
+                                    handle _ => ([],[])
+
+fun pat_match3 pat_exps given_pats =
+     (flatten ## flatten) (unzip (map (pat_match2 pat_exps) (rev given_pats)))
+
+fun purge_wildcards term_sub = filter (fn {redex,residue} =>
+        not (String.sub (fst (dest_var residue), 0) = #"_")
+        handle _ => false) term_sub
+
+fun rename_case sub cs =
+ if not (TypeBase.is_case cs) then subst_inst sub cs
+ else
+   let val (cnst,arg,pat_exps) = TypeBase.dest_case cs
+       val pat_exps' = map (fn (pat,exp) =>
+                            (rename_case sub pat,
+                             rename_case sub exp))
+                       pat_exps
+       val arg' = rename_case sub arg
+       val cs' = TypeBase.mk_case(arg', pat_exps')
+   in cs'
+   end
+
+
 fun mk_functional thy eqs =
  let fun err s = raise ERR "mk_functional" s
      fun msg s = HOL_MESG ("mk_functional: "^s)
@@ -267,8 +451,16 @@ fun mk_functional thy eqs =
                  \ the definition\n   are inaccessible: "^stringize inaccessibles
      ^".\n   This is because of overlapping patterns. Those rows have been ignored."
      ^ "\n   The definition is probably malformed, but we will continue anyway.")
+     (* The next 7 lines repair bound variable names in the nested case. *)
+     val case_tm' =
+         let val given_pats = givens patts3
+             val (arg,pat_exps) = TypeBase.strip_case case_tm
+             val sub = pat_match3 pat_exps given_pats
+             val sub' = (purge_wildcards ## I) sub
+         in rename_case sub' case_tm
+         end handle _ => case_tm
  in
-   {functional = list_mk_abs ([f,a], case_tm),
+   {functional = list_mk_abs ([f,a], case_tm'),
     pats = patts3}
  end;
 
