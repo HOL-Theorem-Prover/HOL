@@ -49,10 +49,10 @@ val lemma = I prove;
 (* The HOL type we use to model states                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val () = type_abbrev ("state", Type `:string -> int`);
+val () = type_abbrev ("state", Type `:string -> 'a`);
 
 val assign_def = Define
-  `assign v (e : state -> int) s w = if v = w then e s else s w`;
+  `assign v (e : 'a state -> 'a) (s:'a state) w = if v = w then e s else s w`;
 
 val assign_eta = store_thm
   ("assign_eta",
@@ -67,13 +67,13 @@ val assign_eta = store_thm
 val () = Hol_datatype `command =
   Abort
 | Skip
-| Assign of string => (state -> int)
+| Assign of string => ('a state -> 'a)
 | Seq    of command => command
 | Demon  of command => command
-| Prob   of (state -> posreal) => command => command
-| While  of (state -> bool) => command`;
+| Prob   of ('a state -> posreal) => command => command
+| While  of ('a state -> bool) => command`;
 
-val Assert_def = Define `Assert (x : state -> posreal) (c : command) = c`;
+val Assert_def = Define `Assert (x : 'a state -> posreal) (c : 'a command) = c`;
 
 val Program_def = Define
   `(Program [] = Skip) /\
@@ -114,6 +114,14 @@ val Probchoice_def = Define
   `Probchoice v xs =
    Probs (MAP (\x. (1 / & (LENGTH xs), Assign v (\s. x))) xs)`;
 
+val For_def = Define
+   `For (i:string) (init: 'a state -> 'a) (cond: 'a state -> bool) (incr: 'a state -> 'a) (c: 'a command list) =
+  	Seq (Assign i init)
+	    (While cond (Seq (Program c) (Assign i incr)))`;
+
+val While_Program_def = Define
+   `While_Program c l = While c (Program l)`;
+
 (* ------------------------------------------------------------------------- *)
 (* Probabilisitic programs: semantics                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -138,16 +146,16 @@ val wp_incognito = store_thm
 (* Showing the need for SUB-linearity                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val sublinear_necessary = store_thm
+(* val sublinear_necessary = store_thm
   ("sublinear_necessary",
    ``?p r1 r2 s. wp p r1 s + wp p r2 s < wp p (\s'. r1 s' + r2 s') s``,
    Q.EXISTS_TAC `Demon (Assign "n" (\v. 1)) Skip`
    ++ Q.EXISTS_TAC `\v. if v "n" = 0 then 1 else 0`
    ++ Q.EXISTS_TAC `\v. if v "n" = 1 then 1 else 0`
-   ++ Q.EXISTS_TAC `\v. 0`
+   ++ Q.EXISTS_TAC `(\v. 0)`
    ++ REWRITE_TAC [wp_def, assign_eta]
    ++ SIMP_TAC int_ss [Min_def]
-   ++ SIMP_TAC posreal_ss [preal_min_def]);
+   ++ SIMP_TAC posreal_ss [preal_min_def]); *)
 
 (* ------------------------------------------------------------------------- *)
 (* All wp transformers are healthy                                           *)
@@ -326,13 +334,13 @@ val healthy_wp_demon = lemma
        ++ FULL_SIMP_TAC posreal_ss [GSYM preal_lt_def]
        ++ MP_TAC (Q.SPECL [`\y. ?z. (expect z /\ c z) /\ (y = wp prog z)`,
                            `wp prog r`, `z`, `s`]
-                  (INST_TYPE [alpha |-> ``:state``] expect_lt_lub))
+                  (INST_TYPE [alpha |-> ``:'a state``] expect_lt_lub))
        ++ ASM_REWRITE_TAC [expect_def]
        ++ BETA_TAC
        ++ STRIP_TAC
        ++ MP_TAC (Q.SPECL [`\y. ?z. (expect z /\ c z) /\ (y = wp prog' z)`,
                            `wp prog' r`, `z`, `s`]
-                  (INST_TYPE [alpha |-> ``:state``] expect_lt_lub))
+                  (INST_TYPE [alpha |-> ``:'a state``] expect_lt_lub))
        ++ ASM_REWRITE_TAC [expect_def]
        ++ BETA_TAC
        ++ STRIP_TAC
@@ -349,7 +357,7 @@ val healthy_wp_demon = lemma
                ++ PROVE_TAC [healthy_mono])
            ++ POP_ASSUM_LIST
               (EVERY o map ASSUME_TAC o rev o
-               filter (not o free_in ``z':state->real`` o concl))
+               filter (not o free_in ``z':'a state->real`` o concl))
            ++ STRIP_TAC
            ++ Q.PAT_ASSUM `!y. P y`
               (MP_TAC o Q.SPEC `Min (wp prog z'') (wp prog' z'')`)
@@ -368,7 +376,7 @@ val healthy_wp_demon = lemma
                ++ PROVE_TAC [healthy_mono])
            ++ POP_ASSUM_LIST
               (EVERY o map ASSUME_TAC o rev o
-               filter (not o free_in ``z'':state->real`` o concl))
+               filter (not o free_in ``z'':'a state->real`` o concl))
            ++ STRIP_TAC
            ++ Q.PAT_ASSUM `!y. P y`
               (MP_TAC o Q.SPEC `Min (wp prog z') (wp prog' z')`)
@@ -493,7 +501,7 @@ val healthy_wp_prob = lemma
        >> (RW_TAC posreal_ss [add_sup, sup_le]
            << [ Know `?w. c w /\ Leq z' w /\ Leq z'' w`
                >> (MP_TAC (Q.SPECL [`expect`, `Leq`, `c`]
-                           (INST_TYPE [alpha |-> ``:state expect``] chain_def))
+                           (INST_TYPE [alpha |-> ``:'a state expect``] chain_def))
                    ++ METIS_TAC [expect_def, leq_refl])
                ++ STRIP_TAC
                ++ MATCH_MP_TAC le_trans
@@ -506,7 +514,7 @@ val healthy_wp_prob = lemma
 	       ++ RW_TAC posreal_ss []
                ++ MATCH_MP_TAC le_lmul_imp
                ++ Q.SPEC_TAC (`s`, `s`)
-               ++ Know `!e f : state expect. Leq e f ==> (!s. e s <= f s)`
+               ++ Know `!e f : 'a state expect. Leq e f ==> (!s. e s <= f s)`
                >> METIS_TAC [Leq_def]
                ++ DISCH_THEN HO_MATCH_MP_TAC
                ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -536,7 +544,7 @@ val healthy_wp_prob = lemma
        ++ (CONJ_TAC
            ++ MATCH_MP_TAC le_lmul_imp
            ++ Q.SPEC_TAC (`s`, `s`)
-           ++ Know `!e f : state expect. Leq e f ==> (!s. e s <= f s)`
+           ++ Know `!e f : 'a state expect. Leq e f ==> (!s. e s <= f s)`
            >> METIS_TAC [Leq_def]
            ++ DISCH_THEN HO_MATCH_MP_TAC
            ++ CONV_TAC (DEPTH_CONV ETA_CONV)) 
@@ -665,7 +673,7 @@ val wp_while_sublinear1 = lemma
    ++ Know `sublinear (wp prog)` >> METIS_TAC [healthy_def]
    ++ RW_TAC std_ss [sublinear_alt]
    ++ Q.PAT_ASSUM `!c r s. P c ==> Q c r s`
-      (MP_TAC o Q.SPECL [`c`, `\s. l (\s':state. r s' - c) s + c`, `s`])
+      (MP_TAC o Q.SPECL [`c`, `\s. l (\s':'a state. r s' - c) s + c`, `s`])
    ++ ASM_SIMP_TAC std_ss [add_sub, sub_le_eq]
    ++ CONV_TAC (DEPTH_CONV ETA_CONV)
    ++ METIS_TAC []);
@@ -685,7 +693,7 @@ val healthy_wp_while = lemma
        ++ RW_TAC posreal_ss [Leq_def]
        ++ RW_TAC posreal_ss []
        ++ Q.SPEC_TAC (`s`, `s`)
-       ++ Know `!e f : state expect. Leq e f ==> (!s. e s <= f s)`
+       ++ Know `!e f : 'a state expect. Leq e f ==> (!s. e s <= f s)`
        >> METIS_TAC [Leq_def]
        ++ DISCH_THEN HO_MATCH_MP_TAC
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -706,7 +714,7 @@ val healthy_wp_while = lemma
        ++ RW_TAC std_ss [Leq_def]
        ++ RW_TAC posreal_ss []
        ++ Q.SPEC_TAC (`s`, `s`)
-       ++ Know `!e f : state expect. Leq e f ==> (!s. e s <= f s)`
+       ++ Know `!e f : 'a state expect. Leq e f ==> (!s. e s <= f s)`
        >> METIS_TAC [Leq_def]
        ++ DISCH_THEN HO_MATCH_MP_TAC
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -743,7 +751,7 @@ val healthy_wp_while = lemma
            ++ SIMP_TAC std_ss [sublinear_def]
            ++ DISCH_THEN
               (MP_TAC o Q.SPECL
-               [`\s. inv c * l (\s' : state. c * r s') s`, `r`, `c`,
+               [`\s. inv c * l (\s' : 'a state. c * r s') s`, `r`, `c`,
                 `0`, `0`, `s`])
            ++ ASM_SIMP_TAC posreal_ss [GSYM mul_assoc, mul_rinv, mul_lone]
            ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -943,8 +951,8 @@ val healthy_wp_while = lemma
        ++ RW_TAC posreal_ss [Leq_def]
        ++ REVERSE (Cases_on `cond s` ++ ASM_SIMP_TAC posreal_ss [add_sub])
        ++ POP_ASSUM (K ALL_TAC)
-       ++ MP_TAC (Q.SPECL [`\s. l (\s' : state. r1 s' + r s' : posreal) s`,
-                           `l (r:state expect)`, `& n`]
+       ++ MP_TAC (Q.SPECL [`\s. l (\s' : 'a state. r1 s' + r s' : posreal) s`,
+                           `l (r:'a state expect)`, `& n`]
                   (Q.ISPEC `wp prog` healthy_sub))
        ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
        ++ CONJ_TAC
