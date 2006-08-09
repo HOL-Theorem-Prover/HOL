@@ -88,7 +88,7 @@ local
   fun mk_leq (a,b) = mk_comb (mk_comb (leq_tm, a), b);
 
   val vc_solve = prolog
-    [wlp_abort_vc, wlp_skip_vc, wlp_assign_vc, wlp_seq_vc, wlp_demon_vc,
+    [wlp_abort_vc, wlp_consume_vc, wlp_assign_vc, wlp_seq_vc, wlp_nondet_vc,
      wlp_prob_vc, wlp_while_vc, wlp_if_vc, wlp_assert_vc];
 in
   fun vc_tac (asl,goal) =
@@ -206,7 +206,8 @@ end;
 
 local
   val expand =
-    [Demonchoice_def, MAP, LENGTH, Demons_def, Probchoice_def, Probs_def,
+    [MAP, LENGTH,
+     Skip_def, Nondets_def, NondetAssign_def, Probs_def, ProbAssign_def,
      Program_def, Guards_def, guards_def];
 in
   val pure_wlp_tac =

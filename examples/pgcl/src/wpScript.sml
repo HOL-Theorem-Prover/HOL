@@ -64,37 +64,41 @@ val assign_eta = store_thm
 (* Probabilisitic programs: syntax                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype `command =
-  Abort
-| Skip
-| Assign of string => ('a state -> 'a)
-| Seq    of command => command
-| Demon  of command => command
-| Prob   of ('a state -> posreal) => command => command
-| While  of ('a state -> bool) => command`;
+val () = Hol_datatype
+  `command =
+       Abort
+     | Consume of ('a state -> posreal)
+     | Assign of string => ('a state -> 'a)
+     | Seq of command => command
+     | Nondet of command => command
+     | Prob of ('a state -> posreal) => command => command
+     | While of ('a state -> bool) => command`;
 
-val Assert_def = Define `Assert (x : 'a state -> posreal) (c : 'a command) = c`;
+val Assert_def = Define
+  `Assert (x : 'a state -> posreal) (c : 'a command) = c`;
+
+val Skip_def = Define `Skip = Consume (\s. 0)`;
 
 val Program_def = Define
   `(Program [] = Skip) /\
    (Program [c] = c) /\
    (Program (c :: c' :: cs) = Seq c (Program (c' :: cs)))`;
 
-val If_def = Define
-  `If c a b = Prob (\s. if c s then 1 else 0) a b`;
+val If_def = Define `If c a b = Prob (\s. if c s then 1 else 0) a b`;
 
-(* wp (Demons []) should evaluate to the identity for Demon, which is Magic. *)
-(* But we don't allow magic (i.e., miraculous) programs, so we underspecify  *)
-(* Demons to avoid this nasty case.                                          *)
-val Demons_def = Define
-  `(Demons [x] = x) /\
-   (Demons (x :: y :: z) = Demon x (Demons (y :: z)))`;
+(* wp (Nondets []) should evaluate to the identity for Nondet, which is *)
+(* Magic. But we don't allow magic (i.e., miraculous) programs, so we *)
+(* underspecify Nondets to avoid this nasty case. *)
 
-val Demonchoice_def = Define
-  `Demonchoice v xs = Demons (MAP (\x. Assign v (\s. x)) xs)`;
+val Nondets_def = Define
+  `(Nondets [x] = x) /\
+   (Nondets (x :: y :: z) = Nondet x (Nondets (y :: z)))`;
+
+val NondetAssign_def = Define
+  `NondetAssign v xs = Nondets (MAP (\x. Assign v (\s. x)) xs)`;
 
 val guards_def = Define
-  `(guards cs [] = if cs = [] then Abort else Demons cs) /\
+  `(guards cs [] = if cs = [] then Abort else Nondets cs) /\
    (guards cs ((p, c) :: rest) =
     If p (guards (c :: cs) rest) (guards cs rest))`;
 
@@ -110,52 +114,48 @@ val (Probs_def, _) = Defn.tprove
 
 val _ = save_thm ("Probs_def", Probs_def);
 
-val Probchoice_def = Define
-  `Probchoice v xs =
+val ProbAssign_def = Define
+  `ProbAssign v xs =
    Probs (MAP (\x. (1 / & (LENGTH xs), Assign v (\s. x))) xs)`;
 
 val For_def = Define
-   `For (i:string) (init: 'a state -> 'a) (cond: 'a state -> bool) (incr: 'a state -> 'a) (c: 'a command list) =
+   `For i init cond incr c =
   	Seq (Assign i init)
 	    (While cond (Seq (Program c) (Assign i incr)))`;
 
-val While_Program_def = Define
-   `While_Program c l = While c (Program l)`;
+val WhileProgram_def = Define `WhileProgram c l = While c (Program l)`;
 
 (* ------------------------------------------------------------------------- *)
-(* Probabilisitic programs: semantics                                        *)
+(* Probabilisitic programs: weakest precondition semantics.                  *)
 (* ------------------------------------------------------------------------- *)
 
 val wp_def = Define
   `(wp Abort = \r. Zero) /\
-   (wp Skip = \r. r) /\
+   (wp (Consume k) = \r. r) /\
    (wp (Assign v e) = \r s. r (assign v e s)) /\
    (wp (Seq a b) = \r. wp a (wp b r)) /\
-   (wp (Demon a b) = \r. Min (wp a r) (wp b r)) /\
+   (wp (Nondet a b) = \r. Min (wp a r) (wp b r)) /\
    (wp (Prob p a b) = \r. Lin p (wp a r) (wp b r)) /\
    (wp (While c b) = \r. expect_lfp (\e. Cond c (wp b e) r))`;
 
-val wp_incognito_def = Define `wp_incognito = wp`;
-
-val wp_incognito = store_thm
-  ("wp_incognito",
-   ``!a b. wp (Seq a b) = \r. wp_incognito a (wp b r)``,
-   RW_TAC std_ss [wp_def, wp_incognito_def]);
-
 (* ------------------------------------------------------------------------- *)
 (* Showing the need for SUB-linearity                                        *)
+(* (assuming there are at least two distinct values)                         *)
 (* ------------------------------------------------------------------------- *)
 
-(* val sublinear_necessary = store_thm
+val sublinear_necessary = store_thm
   ("sublinear_necessary",
-   ``?p r1 r2 s. wp p r1 s + wp p r2 s < wp p (\s'. r1 s' + r2 s') s``,
-   Q.EXISTS_TAC `Demon (Assign "n" (\v. 1)) Skip`
-   ++ Q.EXISTS_TAC `\v. if v "n" = 0 then 1 else 0`
-   ++ Q.EXISTS_TAC `\v. if v "n" = 1 then 1 else 0`
-   ++ Q.EXISTS_TAC `(\v. 0)`
-   ++ REWRITE_TAC [wp_def, assign_eta]
+   ``(?x y : 'a. ~(x = y)) ==>
+     ?prog r1 r2 s : 'a state.
+       wp prog r1 s + wp prog r2 s < wp prog (\s'. r1 s' + r2 s') s``,
+   RW_TAC std_ss []
+   ++ Q.EXISTS_TAC `Nondet (Assign "n" (\v. x)) Skip`
+   ++ Q.EXISTS_TAC `\v. if v "n" = x then 1 else 0`
+   ++ Q.EXISTS_TAC `\v. if v "n" = y then 1 else 0`
+   ++ Q.EXISTS_TAC `(\v. y)`
+   ++ REWRITE_TAC [wp_def, assign_eta, Skip_def]
    ++ SIMP_TAC int_ss [Min_def]
-   ++ SIMP_TAC posreal_ss [preal_min_def]); *)
+   ++ ASM_SIMP_TAC posreal_ss [preal_min_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* All wp transformers are healthy                                           *)
@@ -170,8 +170,8 @@ val healthy_wp_abort = lemma
 
 val () = print "wp Abort is healthy\n";
 
-val healthy_wp_skip = lemma
-  (``healthy (wp Skip)``,
+val healthy_wp_consume = lemma
+  (``!k. healthy (wp (Consume k))``,
    RW_TAC posreal_ss [wp_def, healthy_def, feasible_def, sublinear_def]
    ++ RW_TAC posreal_ss [up_continuous_def, lub_def]);
 
@@ -263,10 +263,10 @@ val healthy_wp_seq = lemma
 
 val () = print "wp Seq is healthy\n";
 
-val healthy_wp_demon = lemma
+val healthy_wp_nondet = lemma
   (``!prog prog'.
         healthy (wp prog) /\ healthy (wp prog') ==>
-        healthy (wp (Demon prog prog'))``,
+        healthy (wp (Nondet prog prog'))``,
    RW_TAC real_ss [wp_def]
    ++ RW_TAC real_ss [healthy_def]
    << [RW_TAC posreal_ss [feasible_def]
@@ -387,7 +387,7 @@ val healthy_wp_demon = lemma
            ++ RW_TAC posreal_ss [min_le]
            ++ RW_TAC posreal_ss [GSYM preal_lt_def]]]);
 
-val () = print "wp Demon is healthy\n";
+val () = print "wp Nondet is healthy\n";
 
 val healthy_wp_prob = lemma
   (``!f prog prog'.
@@ -501,7 +501,8 @@ val healthy_wp_prob = lemma
        >> (RW_TAC posreal_ss [add_sup, sup_le]
            << [ Know `?w. c w /\ Leq z' w /\ Leq z'' w`
                >> (MP_TAC (Q.SPECL [`expect`, `Leq`, `c`]
-                           (INST_TYPE [alpha |-> ``:'a state expect``] chain_def))
+                           (INST_TYPE [alpha |-> ``:'a state expect``]
+                                      chain_def))
                    ++ METIS_TAC [expect_def, leq_refl])
                ++ STRIP_TAC
                ++ MATCH_MP_TAC le_trans
@@ -972,10 +973,10 @@ val wp_healthy = store_thm
    ``!prog. healthy (wp prog)``,
    Induct
    << [PROVE_TAC [healthy_wp_abort],
-       PROVE_TAC [healthy_wp_skip],
+       PROVE_TAC [healthy_wp_consume],
        PROVE_TAC [healthy_wp_assign],
        PROVE_TAC [healthy_wp_seq],
-       PROVE_TAC [healthy_wp_demon],
+       PROVE_TAC [healthy_wp_nondet],
        PROVE_TAC [healthy_wp_prob],
        PROVE_TAC [healthy_wp_while]]);
 
@@ -1034,9 +1035,9 @@ val refines_abort = store_thm
 (* Probabilistic choice refines demonic choice                               *)
 (* ------------------------------------------------------------------------- *)
 
-val refines_demon_prob = store_thm
-  ("refines_demon_prob",
-   ``!f p q. refines (wp (Demon p q)) (wp (Prob f p q))``,
+val refines_nondet_prob = store_thm
+  ("refines_nondet_prob",
+   ``!f p q. refines (wp (Nondet p q)) (wp (Prob f p q))``,
    RW_TAC std_ss [refines_def, wp_def, Min_def, Leq_def, min_le_lin, Lin_def]
    ++ Q.UNABBREV_TAC `x`
    ++ RW_TAC posreal_ss [min_le_lin, Lin_def]);
@@ -1047,10 +1048,10 @@ val refines_demon_prob = store_thm
 
 val wlp_def = Define
   `(wlp Abort = \r. Magic) /\
-   (wlp Skip = \r. r) /\
+   (wlp (Consume k) = \r. r) /\
    (wlp (Assign v e) = \r s. r (assign v e s)) /\
    (wlp (Seq a b) = \r. wlp a (wlp b r)) /\
-   (wlp (Demon a b) = \r. Min (wlp a r) (wlp b r)) /\
+   (wlp (Nondet a b) = \r. Min (wlp a r) (wlp b r)) /\
    (wlp (Prob p a b) = \r. Lin p (wlp a r) (wlp b r)) /\
    (wlp (While c b) = \r. expect_gfp (\e. Cond c (wlp b e) r))`;
 
@@ -1126,9 +1127,9 @@ val wlp_abort_vc = store_thm
    ``!post. Leq Magic (wlp Abort post)``,
    RW_TAC posreal_ss [wlp_def, Leq_def, Magic_def]);
 
-val wlp_skip_vc = store_thm
-  ("wlp_skip_vc",
-   ``!post. Leq post (wlp Skip post)``,
+val wlp_consume_vc = store_thm
+  ("wlp_consume_vc",
+   ``!post k. Leq post (wlp (Consume k) post)``,
    RW_TAC std_ss [wlp_def, leq_refl]);
 
 val wlp_assign_vc = store_thm
@@ -1147,11 +1148,11 @@ val wlp_seq_vc = store_thm
    ++ RW_TAC std_ss []
    ++ METIS_TAC [wlp_mono, Leq_def]);
 
-val wlp_demon_vc = store_thm
-  ("wlp_demon_vc",
+val wlp_nondet_vc = store_thm
+  ("wlp_nondet_vc",
    ``!pre1 pre2 post c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
-       Leq (wlp_min pre1 pre2) (wlp (Demon c1 c2) post)``,
+       Leq (wlp_min pre1 pre2) (wlp (Nondet c1 c2) post)``,
    RW_TAC std_ss [wlp_def, Leq_def]
    ++ MATCH_MP_TAC le_trans
    ++ Q.EXISTS_TAC `wlp_min pre1 pre2 s`
