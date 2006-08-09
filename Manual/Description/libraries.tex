@@ -630,9 +630,12 @@ disjunction.
 
 If a quotation is to include a back-quote character, then this should
 be done by using the quotation syntax's own escape character, the
-caret (\ml{\^}, ASCII character~94).  In order to get a bare caret,
-write two carets in a row. (This is analogous to the way in \ML{}
-string syntax treats the back-slash.) Thus:
+caret (\ml{\^}, ASCII character~94).  To get a bare caret, things are
+slightly more complicated.  If a sequence of carets is followed by
+white-space (including a newline), then that sequence of carets is
+passed to the HOL parser unchanged.  Otherwise, one caret can be
+obtained by writing two in a row. (This last rule is analogous to the
+way in \ML{} string syntax treats the back-slash.) Thus:
 \begin{session}
 \begin{hol}
 \begin{verbatim}
@@ -640,16 +643,36 @@ string syntax treats the back-slash.) Thus:
 <<HOL message: inventing new type variable names: 'a, 'b, 'c>>
 > val it = ``f ` x`` : term
 
-- ``f ^^ x``;
+- ``f ^ x``;
 <<HOL message: inventing new type variable names: 'a, 'b, 'c>>
 > val it = ``f ^ x`` : term
 \end{verbatim}
 \end{hol}
 \end{session}
 
-The main use of the caret is to introduce \emph{antiquotations}.
-Within a quotation, expressions of the form
-{\small\verb+^(+}$t${\small\verb+)+}
+The rule for carets not followed by white-space is illustrated here,
+including an example of what happens when the quoting rule is not
+followed:
+\begin{session}
+\begin{hol}
+\begin{verbatim}
+- ``f ^^+ x``;
+<<HOL message: inventing new type variable names: 'a, 'b, 'c>>
+> val it = ``f ^+ x`` : term
+
+- ``f ^+ x``;
+! Toplevel input:
+! (Parse.Term [QUOTE " (*#loc 2 3*)f ", ANTIQUOTE (+),
+!              QUOTE " (*#loc 2 7*) x"]);
+!                                                  ^
+! Ill-formed infix expression
+\end{verbatim}
+\end{hol}
+\end{session}
+
+The main use of the caret is to introduce \emph{antiquotations} (as
+suggested in the last example above).  Within a quotation, expressions
+of the form {\small\verb+^(+}$t${\small\verb+)+}
 %
 \index{ antiquotation, in HOL logic@{\small\verb+^+} (antiquotation, in \HOL{} logic)}
 %

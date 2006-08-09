@@ -121,6 +121,10 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <qcomment>"`" => (print "\"]"; YYBEGIN INITIAL; lex());
 <comment,tmcomment,tycomment,qcomment>. => (ECHO yytext; lex());
 
+<quote,tmquote,tyquote>"^"+{ws} => (ECHO yytext; lex());
+<quote,tmquote,tyquote>"^"+{newline} =>
+   (ECHO (String.substring(yytext,0,size yytext - 1)); qnewline(yypos,yytext);
+    lex());
 <quote,tmquote,tyquote>"^^" => (ECHO "^"; lex());
 <quote,tmquote,tyquote>"^`" => (ECHO "`"; lex());
 <quote,tmquote,tyquote>{newline} => (qnewline(yypos,yytext); lex());
