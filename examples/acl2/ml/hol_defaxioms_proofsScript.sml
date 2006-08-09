@@ -23,6 +23,7 @@ map
 open stringLib complex_rationalTheory gcdTheory 
      sexp sexpTheory hol_defaxiomsTheory translateTheory;
 Globals.checking_const_names := false;
+set_trace "Subgoal number" 100;
 quietdec := false;
 *)
 
@@ -719,11 +720,62 @@ val member_cons =
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[member_def]))
     THEN ACL2_SIMP_TAC[itel_def]);
 
-val nil_t_if =
+(*****************************************************************************)
+(* Usefull lemma                                                             *)
+(*****************************************************************************)
+val if_t_nil =
  store_thm
-  ("nil_t_if",
-   ``((if p then t else nil) = nil) = ~p``,
+  ("if_t_nil",
+   ``(((if p then t else q) = nil) = ~p /\ (q = nil))
+     /\
+     (((if p then q else nil) = t) = p  /\ (q = t))
+     /\
+     (((if p then q else t) = nil) = p  /\ (q = nil))
+     /\
+     (((if p then nil else q) = t) = ~p /\ (q = t))
+     /\
+     (~((if p then q else nil) = nil) = p /\ ~(q = nil))
+     /\
+     (~((if p then nil else q) = nil) = ~p /\ ~(q = nil))
+     /\
+     (~((if p then q else t) = t) = p /\ ~(q = t))
+     /\
+     (~((if p then t else q) = t) = ~p /\ ~(q = t))``,
   RW_TAC std_ss [EVAL ``t = nil``]);
+
+(* Old versions
+val if_t_nil =
+ store_thm
+  ("if_t_nil",
+   ``(((if p then t else nil) = nil) = ~p)
+     /\
+     (((if p then t else nil) = t) = p)
+     /\
+     (((if p then nil else t) = nil) = p)
+     /\
+     (((if p then nil else t) = t) = ~p)``,
+  RW_TAC std_ss [EVAL ``t = nil``]);
+
+val not_if_t_nil =
+ store_thm
+  ("not_if_t_nil",
+   ``(~((if p then q else nil) = nil) = p /\ ~(q = nil))
+     /\
+     (~((if p then nil else q) = nil) = ~p /\ ~(q = nil))
+     /\
+     (~((if p then q else t) = t) = p /\ ~(q = t))
+     /\
+     (~((if p then t else q) = t) = ~p /\ ~(q = t))``,
+   RW_TAC std_ss []);
+
+val if_t =
+ store_thm
+  ("if_nil",
+   ``(((if p then q else t) = nil) = p /\ (q = nil))
+     /\
+     (((if p then t else q) = nil) = ~p /\ (q = nil))``,
+   RW_TAC std_ss [EVAL ``t = nil``]);
+*)
 
 val if_eq_imp =
  store_thm
@@ -739,10 +791,10 @@ val lower_case_p_char_downcase_defaxiom =
    RW_TAC std_ss
     [implies,upper_case_p_def,List_def,member_nil,member_cons,
      ACL2_TRUE,andl_def,ite_def,equal_def,
-     nil_t_if,if_eq_imp]
+     if_t_nil,if_eq_imp]
     THEN SIMP_TAC std_ss 
           [List_def,assoc_nil,assoc_cons,char_downcase_def,equal_def,EVAL ``t = nil``,
-           ACL2_TRUE,nil_t_if,sexp_11]
+           ACL2_TRUE,if_t_nil,sexp_11]
     THEN CONV_TAC(DEPTH_CONV char_EQ_CONV)
     THEN SIMP_TAC std_ss []
     THEN CONV_TAC(DEPTH_CONV(pairLib.let_CONV))
@@ -770,6 +822,22 @@ val stringp_symbol_package_name_defaxiom =
      [] |- |= symbolp (intern_in_package_of_symbol x y),
 *)
 
+(*****************************************************************************)
+(* val LOOKUP_NIL =                                                          *)
+(*  |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL" = "COMMON-LISP"         *)
+(*****************************************************************************)
+val LOOKUP_NIL = EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``;
+
+(*
+val symbolp_intern_in_package_of_symbol_defaxiom =
+ store_thm
+  ("symbolp_intern_in_package_of_symbol_defaxiom",
+   ``|= symbolp (intern_in_package_of_symbol x y)``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[BASIC_INTERN_def,LOOKUP_NIL]
+    THEN FULL_SIMP_TAC std_ss [GSYM t_def,GSYM nil_def,if_t_nil]
+*)
+
 (*
      [oracles: DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS] [axioms: ] []
      |- |= symbolp (pkg_witness x),
@@ -778,7 +846,7 @@ val stringp_symbol_package_name_defaxiom =
 val LOOKUP_PKG_WITNESS =
  store_thm
   ("LOOKUP_PKG_WITNESS",
-   ``LOOKUP s ACL2_PACKAGE_ALIST "PKG-WITNESS" = s``,
+   ``LOOKUP s ACL2_PACKAGE_ALIST "ACL2-PKG-WITNESS" = s``,
    CONV_TAC EVAL);
 
 val symbolp_nil =
@@ -797,7 +865,7 @@ val symbolp_pkg_witness_defaxiom =
     THEN SIMP_TAC std_ss [BASIC_INTERN_def]
     THEN SIMP_TAC std_ss 
           [BASIC_INTERN_def,
-           symbolp_def,sexp_11,nil_t_if,LOOKUP_PKG_WITNESS]
+           symbolp_def,sexp_11,if_t_nil,LOOKUP_PKG_WITNESS]
     THEN CONV_TAC EVAL
     THEN Cases_on  `s = ""`
     THEN RW_TAC std_ss [symbolp_nil,GSYM nil_def]
@@ -1573,6 +1641,18 @@ val completion_of_plus_defaxiom =
              (equal (bad_atom_less_equal x y) nil),
 *)
 
+val booleanp_bad_atom_less_equal_defaxiom =
+ store_thm
+  ("booleanp_bad_atom_less_equal_defaxiom",
+   ``|= ite (equal (bad_atom_less_equal x y) t)
+            (equal (bad_atom_less_equal x y) t)
+            (equal (bad_atom_less_equal x y) nil)``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[SEXP_SYM_LESS_EQ_def,SEXP_SYM_LESS_def]
+    THEN FULL_SIMP_TAC std_ss 
+          [GSYM nil_def, GSYM t_def, if_t_nil,
+           EVAL ``t = nil``, EVAL ``nil = t``]);
+
 (*
      [oracles: DEFAXIOM ACL2::BAD-ATOM<=-ANTISYMMETRIC, DISK_THM] [axioms: ]
      []
@@ -1581,6 +1661,26 @@ val completion_of_plus_defaxiom =
                 [bad_atom x; bad_atom y; bad_atom_less_equal x y;
                  bad_atom_less_equal y x]) (equal x y),
 *)
+
+val bad_atom_less_equal_antisymmetric_defaxiom =
+ time store_thm
+  ("bad_atom_less_equal_antisymmetric_defaxiom",
+   ``|= implies
+         (andl
+            [bad_atom x; bad_atom y; 
+             bad_atom_less_equal x y;
+             bad_atom_less_equal y x]) 
+         (equal x y)``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[]
+    THEN FULL_SIMP_TAC std_ss 
+          [GSYM nil_def, GSYM t_def, if_t_nil,itel_def,ite_def,
+           EVAL ``t = nil``, EVAL ``nil = t``]
+    THEN FULL_SIMP_TAC std_ss 
+          [BASIC_INTERN_def,sexp_11,if_t_nil,
+           SEXP_SYM_LESS_def,SEXP_SYM_LESS_EQ_def]
+    THEN RW_TAC std_ss []
+    THEN IMP_RES_TAC STRING_LESS_SYM);
 
 (*
      [oracles: DEFAXIOM ACL2::BAD-ATOM<=-TRANSITIVE, DISK_THM] [axioms: ] []
@@ -1591,11 +1691,67 @@ val completion_of_plus_defaxiom =
              (bad_atom_less_equal x z),
 *)
 
+val bad_atom_less_equal_transitive_defaxiom =
+ time store_thm
+  ("bad_atom_less_equal_transitive",
+   ``|= implies
+         (andl
+           [bad_atom_less_equal x y; 
+            bad_atom_less_equal y z;
+            bad_atom x; bad_atom y; bad_atom z])
+         (bad_atom_less_equal x z)``,
+   Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
+    THEN ACL2_SIMP_TAC[]
+    THEN FULL_SIMP_TAC std_ss 
+          [GSYM nil_def, GSYM t_def, if_t_nil,itel_def,ite_def,
+           EVAL ``t = nil``, EVAL ``nil = t``]
+    THEN FULL_SIMP_TAC std_ss 
+          [BASIC_INTERN_def,sexp_11,if_t_nil,
+           SEXP_SYM_LESS_def,SEXP_SYM_LESS_EQ_def]
+    THEN RW_TAC std_ss []
+    THEN IMP_RES_TAC STRING_LESS_TRANS
+    THEN METIS_TAC[]);
+
+(*
+    THEN IMP_RES_TAC STRING_LESS_EQ_TRANS_NOT
+    THEN IMP_RES_TAC STRING_LESS_EQ_ANTISYM);
+*)
+
 (*
      [oracles: DEFAXIOM ACL2::BAD-ATOM<=-TOTAL, DISK_THM] [axioms: ] []
      |- |= implies (andl [bad_atom x; bad_atom y])
              (ite (bad_atom_less_equal x y) (bad_atom_less_equal x y)
                 (bad_atom_less_equal y x)),
 *)
+
+(*****************************************************************************)
+(* |- LOOKUP "" ACL2_PACKAGE_ALIST s = ""                                    *)
+(* |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL" = "COMMON-LISP"          *)
+(*****************************************************************************)
+val LOOKUP_EMPTY = EVAL ``LOOKUP "" ACL2_PACKAGE_ALIST s``;
+val LOOKUP_NIL = EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``;
+
+val bad_atom_less_equal_total_defaxiom =
+ time store_thm
+  ("bad_atom_less_equal_total_defaxiom",
+   ``|= implies
+         (andl [bad_atom x; bad_atom y])
+         (ite (bad_atom_less_equal x y) 
+              (bad_atom_less_equal x y)
+              (bad_atom_less_equal y x))``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[]
+    THEN FULL_SIMP_TAC std_ss 
+          [GSYM nil_def, GSYM t_def, if_t_nil,andl_def,itel_def,ite_def,
+           EVAL ``t = nil``, EVAL ``nil = t``]
+    THEN FULL_SIMP_TAC std_ss 
+          [BASIC_INTERN_def,sexp_11,if_t_nil,
+           SEXP_SYM_LESS_def,SEXP_SYM_LESS_EQ_def]
+    THEN FULL_SIMP_TAC list_ss [if_eq_imp,nil_def]
+    THEN FULL_SIMP_TAC list_ss [sexp_11]
+    THEN RW_TAC std_ss []
+    THEN METIS_TAC
+          [LOOKUP_NIL,STRING_LESS_TRICHOTOMY,STRING_LESS_ANTISYM,
+           EVAL ``"COMMON-LISP" = ""``]);
 
 val _ = export_acl2_theory();

@@ -4368,6 +4368,17 @@ val sexp_to_num_less =
              (stringp x)),
 *)
 
+val bad_atom_def =
+ acl2Define "ACL2::BAD-ATOM"
+  `bad_atom x =
+    not
+     (itel
+       [(consp x,consp x); 
+        (acl2_numberp x,acl2_numberp x);
+        (symbolp x,symbolp x);
+        (characterp x,characterp x)]
+       (stringp x))`;
+
 (*
      [oracles: DEFUN ACL2::ALPHORDER, DISK_THM] [axioms: ] []
      |- alphorder x y =

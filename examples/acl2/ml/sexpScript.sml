@@ -3592,10 +3592,215 @@ val symbolp_def =
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Pick a well-founded relation on s-expressions                             *)
+(* Use the lexicographic order to lift an order from elements to lists       *)
 (*****************************************************************************)
-val SEXP_WF_LESS_def =
- Define `SEXP_WF_LESS = @R:sexp->sexp->bool. WF R`;
+val LIST_LEX_ORDER_def =
+ Define
+  `(LIST_LEX_ORDER R [] [] = F) 
+   /\
+   (LIST_LEX_ORDER R (a::al) [] = F) 
+   /\
+   (LIST_LEX_ORDER R [] (b::bl) = T) 
+   /\
+   (LIST_LEX_ORDER R (a::al) (b::bl) = 
+     R a b \/ ((a = b) /\ LIST_LEX_ORDER R al bl))`;
+
+val LIST_LEX_ORDER_IRREFLEXIVE =
+ store_thm
+  ("LIST_LEX_ORDER_IRREFLEXIVE",
+   ``(!x. ~(R x x)) ==> !xl. ~(LIST_LEX_ORDER R xl xl)``,
+   STRIP_TAC
+    THEN Induct
+    THEN RW_TAC list_ss [LIST_LEX_ORDER_def]);
+
+val LIST_LEX_ORDER_ANTISYM =
+ store_thm
+  ("LIST_LEX_ORDER_ANTISYM",
+   ``(!x y. ~(R x y /\ R y x)) 
+     ==> 
+     !xl yl. ~(LIST_LEX_ORDER R xl yl /\ LIST_LEX_ORDER R yl xl)``,
+   STRIP_TAC
+    THEN Induct
+    THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
+    THENL
+     [Induct
+       THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def],
+      GEN_TAC
+       THEN Induct
+       THEN RW_TAC list_ss [LIST_LEX_ORDER_def]
+       THEN PROVE_TAC[]]);
+
+val LIST_LEX_ORDER_TRANS =
+ store_thm
+  ("LIST_LEX_ORDER_TRANS",
+   ``(!x y z. R x y /\ R y z ==> R x z) 
+     ==> 
+     !xl yl zl. LIST_LEX_ORDER R xl yl /\ LIST_LEX_ORDER R yl zl
+                ==>
+                LIST_LEX_ORDER R xl zl``,
+   STRIP_TAC
+    THEN Induct
+    THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
+    THENL
+     [Induct
+       THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
+       THEN GEN_TAC
+       THEN Induct
+       THEN RW_TAC list_ss [LIST_LEX_ORDER_def],
+      GEN_TAC
+       THEN Induct
+       THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
+       THEN GEN_TAC
+       THEN Induct
+       THEN RW_TAC list_ss [LIST_LEX_ORDER_def]
+       THEN PROVE_TAC[]]);
+
+val LIST_LEX_ORDER_TRICHOTOMY =
+ store_thm
+  ("LIST_LEX_ORDER_TRICHOTOMY",
+   ``(!x y. R x y \/ R y x \/ (x = y)) 
+     ==> 
+     !xl yl. LIST_LEX_ORDER R xl yl \/ LIST_LEX_ORDER R yl xl \/ (xl = yl)``,
+   STRIP_TAC
+    THEN Induct
+    THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
+    THENL
+     [Induct
+       THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def],
+      GEN_TAC
+       THEN Induct
+       THEN RW_TAC list_ss [LIST_LEX_ORDER_def]
+       THEN PROVE_TAC[]]);
+
+(*****************************************************************************)
+(* Define an order on strings                                                *)
+(*****************************************************************************)
+val STRING_LESS_def =
+ Define
+  `STRING_LESS s1 s2 =
+    LIST_LEX_ORDER 
+     ($< : num->num->bool) 
+     (MAP ORD (EXPLODE s1)) 
+     (MAP ORD (EXPLODE s2))`;
+
+val STRING_LESS_EQ_def =
+ Define
+  `STRING_LESS_EQ s1 s2 = STRING_LESS s1 s2 \/ (s1 = s2)`;
+
+val STRING_LESS_IRREFLEXIVE =
+ store_thm
+  ("STRING_LESS_IRREFLEXIVE",
+   ``~(STRING_LESS s s)``,
+   METIS_TAC
+    [STRING_LESS_def,LIST_LEX_ORDER_IRREFLEXIVE,
+     DECIDE ``!(m:num). ~(m<m)``]);
+
+val STRING_LESS_SYM =
+ store_thm
+  ("STRING_LESS_SYM",
+   ``~(STRING_LESS s1 s2 /\ STRING_LESS s2 s1)``,
+   METIS_TAC
+    [STRING_LESS_def,LIST_LEX_ORDER_ANTISYM,
+     DECIDE ``!(m:num) n. ~(m<n /\ n<m)``]);
+
+val STRING_LESS_EQ_SYM =
+ store_thm
+  ("STRING_LESS_EQ_SYM",
+   ``STRING_LESS_EQ s1 s2 /\ STRING_LESS_EQ s2 s1 ==> (s1 = s2)``,
+   METIS_TAC
+    [STRING_LESS_EQ_def,STRING_LESS_def,LIST_LEX_ORDER_ANTISYM,
+     DECIDE ``!(m:num) n. ~(m<n /\ n<m)``]);
+
+val MAP_ORD_11 =
+ store_thm
+  ("MAP_ORD_11",
+   ``!l1 l2. (MAP ORD l1 = MAP ORD l2) = (l1 = l2)``,
+   Induct
+    THEN SIMP_TAC list_ss []
+    THENL
+     [PROVE_TAC[],
+      GEN_TAC
+       THEN Induct
+       THEN RW_TAC list_ss [stringTheory.ORD_11]]);
+
+val STRING_LESS_ANTISYM =
+ store_thm
+  ("STRING_LESS_ANTISYM",
+   ``~STRING_LESS s1 s2 /\ ~STRING_LESS s2 s1 ==> (s1 = s2)``,
+   METIS_TAC 
+    [STRING_LESS_def,
+     stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+
+val STRING_LESS_EQ_ANTISYM =
+ store_thm
+  ("STRING_LESS_EQ_ANTISYM",
+   ``~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s1 ==> (s1 = s2)``,
+   METIS_TAC 
+    [STRING_LESS_EQ_def,STRING_LESS_def,
+     stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+
+val STRING_LESS_TRICHOTOMY =
+ store_thm
+  ("STRING_LESS_TRICHOTOMY",
+   ``STRING_LESS s1 s2 \/ STRING_LESS s2 s1 \/ (s1 = s2)``,
+   METIS_TAC 
+    [STRING_LESS_def,
+     stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+
+val STRING_LESS_EQ_TRICHOTOMY =
+ store_thm
+  ("STRING_LESS_EQ_TRICHOTOMY",
+   ``STRING_LESS_EQ s1 s2 \/ STRING_LESS_EQ s2 s1``,
+   METIS_TAC 
+    [STRING_LESS_EQ_def,STRING_LESS_def,
+     stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+
+val STRING_LESS_TRANS =
+ store_thm
+  ("STRING_LESS_TRANS",
+   ``STRING_LESS s1 s2 /\ STRING_LESS s2 s3 ==> STRING_LESS s1 s3``,
+   RW_TAC list_ss [STRING_LESS_def]
+    THEN METIS_TAC
+         [LIST_LEX_ORDER_TRANS,stringTheory.EXPLODE_11,MAP_ORD_11,
+          DECIDE ``!(m:num) n p. m<n /\ n<p ==> m<p``]);
+
+val STRING_LESS_EQ_TRANS =
+ store_thm
+  ("STRING_LESS_EQ_TRANS",
+   ``STRING_LESS_EQ s1 s2 /\ STRING_LESS_EQ s2 s3 ==> STRING_LESS_EQ s1 s3``,
+   RW_TAC list_ss [STRING_LESS_EQ_def,STRING_LESS_def]
+    THEN Cases_on `s1 = s2`
+    THEN RW_TAC std_ss []
+    THEN Cases_on `s1 = s3`
+    THEN RW_TAC std_ss []
+    THEN METIS_TAC
+         [LIST_LEX_ORDER_TRANS,stringTheory.EXPLODE_11,MAP_ORD_11,
+          DECIDE ``!(m:num) n p. m<n /\ n<p ==> m<p``]);
+
+val STRING_LESS_TRANS_NOT =
+ store_thm
+  ("STRING_LESS_TRANS_NOT",
+   ``~STRING_LESS s1 s2 /\ ~STRING_LESS s2 s3 ==> ~STRING_LESS s1 s3``,
+   METIS_TAC[STRING_LESS_TRANS,STRING_LESS_ANTISYM]);
+
+val STRING_LESS_EQ_TRANS_NOT =
+ store_thm
+  ("STRING_LESS_EQ_TRANS_NOT",
+   ``~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s3 ==> ~STRING_LESS_EQ s1 s3``,
+   METIS_TAC[STRING_LESS_EQ_TRANS,STRING_LESS_EQ_ANTISYM]);
+
+val SEXP_SYM_LESS_def =
+ Define
+  `SEXP_SYM_LESS (sym p1 n1) (sym p2 n2) =
+    STRING_LESS p1 p2 \/ ((p1 = p2) /\ STRING_LESS n1 n2)`;
+
+val SEXP_SYM_LESS_EQ_def =
+ Define
+  `SEXP_SYM_LESS_EQ sym1 sym2 = SEXP_SYM_LESS sym1 sym2 \/ (sym1 = sym2)`;
 
 (*****************************************************************************)
 (* In ACL2, bad-atom<= is a non-strict order:                                *)
@@ -3610,8 +3815,7 @@ val SEXP_WF_LESS_def =
 (*****************************************************************************)
 val bad_atom_less_equal_def =
  acl2Define "ACL2::BAD-ATOM<="
-  `bad_atom_less_equal x y = if SEXP_WF_LESS y x then nil else t`;
-
+  `bad_atom_less_equal x y = if SEXP_SYM_LESS_EQ x y then t else nil`;
 
 (*****************************************************************************)
 (* symbol-name                                                               *)
@@ -3654,24 +3858,32 @@ val symbol_package_name_def =
 (*            pkg (known-package-alist *the-live-state* ))                   *)
 (*           (intern *pkg-witness-name* pkg)                                 *)
 (*         (throw-raw-ev-fncall (list 'pkg-witness-er pkg)))                 *)
-(*     (gv pkg-witness (pkg) nil)))                                          *)
+(*     (gv pkg-witness (pkg) (intern *pkg-witness-name* "ACL2"))             *)
 (*                                                                           *)
 (* ; Here, we treat the ACL2 constant *pkg-witness-name* as its value,       *)
-(* ; the string "PKG-WITNESS" -- in fact, ACL2 treates constants             *)
+(* ; the string "ACL2-PKG-WITNESS" -- in fact, ACL2 treates constants        *)
 (* ; (defconst events) much as it treats macros, in the sense that they      *)
 (* ; are eliminated when passing to internal terms.                          *)
 (*                                                                           *)
 (* ; Note that ACL2 refuses to parse (pkg-witness pkg) unless pkg is an      *)
 (* ; explicit string naming a package already known to ACL2.                 *)
+(*                                                                           *)
+(* ; The original default case, represented by the last argument of the gv   *)
+(* ; call shown above, was nil.  But in the course of this work, Matt        *)
+(* ; Kaufmann noticed that this default value was erroroneous, and he then   *)
+(* ; exploited this error to prove a contradiction in ACL2 Versions from 2.8 *)
+(* ; (where pkg-witness was introduced) up through 3.0.1.  That bug has been *)
+(* ; fixed, as shown in the gv call above, for subsequent versions of ACL2.  *)
+(*                                                                           *)
 (* MJCG added catchall case after consulting Matt Kaufmann following failure *)
 (* to prove DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS                               *)
 (*****************************************************************************)
 val pkg_witness_def =
  acl2Define "ACL2::PKG-WITNESS"
   `(pkg_witness (str x) =
-     let s = BASIC_INTERN "PKG-WITNESS" x in ite (symbolp s) s nil)
+     let s = BASIC_INTERN "ACL2-PKG-WITNESS" x in ite (symbolp s) s nil)
    /\
-   (pkg_witness _ = BASIC_INTERN "PKG-WITNESS" "ACL2")`;
+   (pkg_witness _ = BASIC_INTERN "ACL2-PKG-WITNESS" "ACL2")`;
 
 (*****************************************************************************)
 (* intern-in-package-of-symbol                                               *)
