@@ -1,7 +1,7 @@
 structure stringLib :> stringLib =
 struct
 
-open HolKernel boolLib numSyntax reduceLib 
+open HolKernel boolLib numSyntax reduceLib
      stringTheory stringSyntax;
 
 val ERR = mk_HOL_ERR "stringLib";
@@ -26,29 +26,29 @@ val string_eq_thms = STRING_11::STRING_DISTINCT::char_eq_thms
 val dest_char_eq = (dest_chr ## dest_chr) o dest_eq;
 val is_char_eq = can dest_char_eq;
 
-val char_EQ_CONV = 
+val char_EQ_CONV =
    let open computeLib reduceLib
        val compset = num_compset ()
        val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
        val _ = add_thms char_eq_thms compset
        val conv = CBV_CONV compset
-   in 
+   in
      fn tm =>
      if is_char_eq tm then conv tm
      else raise ERR "char_EQ_CONV" "not a char eq"
    end;
 
 
-val dest_string_eq = (dest_string ## dest_string) o dest_eq;
+val dest_string_eq = (fromHOLstring ## fromHOLstring) o dest_eq;
 val is_string_eq = can dest_string_eq;
 
-val string_EQ_CONV = 
+val string_EQ_CONV =
    let open computeLib reduceLib
        val compset = num_compset ()
        val _ = add_conv (ord_tm, 1, ORD_CHR_CONV) compset
        val _ = add_thms string_eq_thms compset
        val conv = CBV_CONV compset
-   in 
+   in
      fn tm =>
      if is_string_eq tm then conv tm
      else raise ERR "string_EQ_CONV" "not a string eq"
@@ -71,10 +71,10 @@ val _ = computeLib.add_convs [(ord_tm, 1, ORD_CHR_CONV)];
   test`"" = "abc"`;
   test`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyz"`;
   test`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyzA"`;
-  
+
   fun triv tm =
     let val thm = REFL (lhs tm)
-    in if concl thm = tm then EQT_INTRO thm 
+    in if concl thm = tm then EQT_INTRO thm
        else string_EQ_CONV tm
     end;
 
@@ -87,7 +87,7 @@ val _ = computeLib.add_convs [(ord_tm, 1, ORD_CHR_CONV)];
   test1`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyz"`;
   test1`"abcdefghijklmnopqrstuvwxyz" = "abcdefghijklmnopqrstuvwxyzA"`;
 
-  This shows that the reflexivity rewrite should be applied first, when 
+  This shows that the reflexivity rewrite should be applied first, when
   dealing with equality sub-terms. How do I teach the system to apply
   it first?
 
