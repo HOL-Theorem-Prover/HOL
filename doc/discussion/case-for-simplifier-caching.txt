@@ -1,0 +1,116 @@
+The basic simplification algorithm traverses terms according to the following method:
+    a. do rewrites at current level as much as possible,
+    b. descend into the term
+    c. if descent changed anything then
+          if a top-level rewrite changes the term
+             loop to (a)
+          else if a decision procedure changes the term
+             loop to (a)
+       else finish (return changedness according to (a))
+
+The problem with this algorithm is that sub-terms that never change under
+simplification may still get examined/traversed multiple times.  The
+following trace illustrates this, where the terms v1, v2 and v3
+(ultimately described as positions 1, 3 and 5 below) are looked at
+multiple times (counted in ExC "examination count" phrases).
+
+The rewrite system below is one used to simplify records.
+
+
+A     fld1_fu (K v1) (fld2_fu (K v2) (fld3_fu (K v3) ARB))  # rewr at top with |- fld1_fu f x = sub1fu (sfld1_fu f) x
+      0 . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
+B     sub1fu (sfld1_fu (K v1)) (fld2_fu (K v2) (fld3_fu (K v3) ARB))   # Nothing at top level so descend from 0 to 1 and 2 in succession
+                                                                       # actually look at comb of 0 and 1 as well.  ExC: 1(1)
+      0
+             1                 2
+
+
+C     sub1fu (sfld1_fu (K v1)) (fld2_fu (K v2) (fld3_fu (K v3) ARB))   # at posn 2, rewr with |- fld2_fu f x = sub1fu (sfld2_fu f) x
+                               2 . . . . . . . . . . . . . . . . . .
+
+
+D     sub1fu (sfld1_fu (K v1)) (sub1fu (sfld2_fu (K v2)) (fld3_fu (K v3) ARB))    # Nothing at 2, so descend to 2@3 and 4. ExC: 1(1), 3(1)
+
+      0
+             1                 2
+                                       3                 4
+
+
+E     sub1fu (sfld1_fu (K v1)) (sub1fu (sfld2_fu (K v2)) (fld3_fu (K v3) ARB))    # at posn 4, rewr with |- fld3_fu f x = sub1fu (sfld3_fu f) x
+                                                         4 . . . . . . . . . .
+
+
+F     sub1fu (sfld1_fu (K v1)) (sub1fu (sfld2_fu (K v2)) (sub1fu (sfld3_fu (K v3)) ARB))    # nothing at 4, so descend to 4@5 and 6, none of which
+                                                                                            # do anything, (ExC: 1(1), 3(1), 5(1)), so back out to caller at (D)
+      0
+             1                 2
+                                       3                 4
+                                                                 5                 6
+
+
+G     sub1fu (sfld1_fu (K v1)) (sub1fu (sfld2_fu (K v2)) (sub1fu (sfld3_fu (K v3)) ARB))    # back at 2, rewr with |- sub1fu f (sub1fu g x) = sub1fu (B f g) x
+                               2 . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+
+H     sub1fu (sfld1_fu (K v1)) (sub1fu (B (sfld2_fu (K v2)) (sfld3_fu (K v3))) ARB)             # because (G) changed something, loop; no changes at top-level
+                                                                                                # but descend to 2 @ 3', 2, 3' and 6.
+      0
+             1                 2
+                                       3'                                      6
+                                          3                 5
+
+I     sub1fu (sfld1_fu (K v1)) (sub1fu (B (sfld2_fu (K v2)) (sfld3_fu (K v3))) ARB)             # rewr at 3' with B (sfld2_fu f) (sfld3_fu g) = B (fld3_fu g) (sfld2_fu f)
+                                       3'. . . . . . . . . . . . . . . . . . .
+
+
+J     sub1fu (sfld1_fu (K v1)) (sub1fu (B (sfld3_fu (K v3)) (sfld2_fu (K v2))) ARB)             # no further rewrites at 3', so descend to subterms (ExC: 1(1), 3(2), 5(2)),
+                                                                                                # nothing changes. Back out to caller at (H) (position 2)
+      0
+             1                 2
+                                       3'                                      6
+                                          5                 3
+
+K     sub1fu (sfld1_fu (K v1)) (sub1fu (B (sfld3_fu (K v3)) (sfld2_fu (K v2))) ARB)             # after descent, there is no successful rewrite at this level, so
+                                                                                                # back out to caller at (B), position 0
+      0
+             1                 2
+                                       3'                                      6
+                                          5                 3
+
+L     sub1fu (sfld1_fu (K v1)) (sub1fu (B (sfld3_fu (K v3)) (sfld2_fu (K v2))) ARB)             # at position 0, after descent, there is a top level rewrite
+      0 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .             #  |- sub1fu f (sub1fu g x) = sub1fu (B f g) x
+
+
+M     sub1fu (B (sfld1_fu (K v1)) (B (sfld3_fu (K v3)) (sfld2_fu (K v2)))) ARB                  # no further rewrites at 0, but because we got one at L, descend once more
+                                                                                                # to 0 @ 1', 1' and 6
+      0
+             1'                                                            6
+                1                 3'
+                                     5                 3
+
+N     sub1fu (B (sfld1_fu (K v1)) (B (sfld3_fu (K v3)) (sfld2_fu (K v2)))) ARB                  # at 1', rewrite with
+             1' . . . . . . . . . . . . . . . . . . . . . . . . . . . . .                            |- B (sfld1_fu f (B (sfld3_fu g) h)) = B (sfld3_fu g) (B (sfld1_fu f) h)
+
+
+M     sub1fu (B (sfld3_fu (K v3)) (B (sfld1_fu (K v1)) (sfld2_fu (K v2)))) ARB                  # no further top-level rewrites at what has become level 1'', so descend
+                                                                                                # to 1'' @ 5, 5 and 3''  (ExC: 1(1), 3(2), 5(3)).
+      0
+             1''                                                           6
+                5                 3''
+                                     1                 3
+
+
+N     sub1fu (B (sfld3_fu (K v3)) (B (sfld1_fu (K v1)) (sfld2_fu (K v2)))) ARB                  # at level 3'', rewrite with
+                                  3'' . . . . . . . . . . . . . . . . . .                       #   |- B (sfld1_fu f) (sfld2_fu g) = B (sfld2_fu g) (sfld1_fu f)
+
+
+O     sub1fu (B (sfld3_fu (K v3)) (B (sfld2_fu (K v2)) (sfld1_fu (K v1)))) ARB                  # no further rewrites at 3'', so descend to 3 and 1 (ExC: 1(2), 3(3), 5(3))
+                                                                                                # these don't change anything, back out to caller at M, and position 1''.
+      0
+             1''                                                           6
+                5                 3''
+                                     3                 1
+
+P     sub1fu (B (sfld3_fu (K v3)) (B (sfld2_fu (K v2)) (sfld1_fu (K v1)))) ARB                  # no further rewrites at 1'', or anywhere else as the traversal backs out.
