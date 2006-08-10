@@ -13,13 +13,13 @@ val inc = Portable.inc
 
 
 datatype rule = Assume | Refl | Beta | Subst | Abs | Disch | Mp | InstType
-              | MkComb | ApTerm | ApThm | Alpha | EtaConv 
+              | MkComb | ApTerm | ApThm | Alpha | EtaConv
               | Sym | Trans | EqMp | EqImpRule | Inst
-              | Spec | Gen 
-              | Exists | Choose 
+              | Spec | Gen
+              | Exists | Choose
               | Conj | Conjunct1 | Conjunct2
               | Disj1 | Disj2 | DisjCases
-              | NotIntro | NotElim | Ccontr 
+              | NotIntro | NotElim | Ccontr
               | GenAbs
               | Definition  | Axiom | Disk | Oracle;
 
@@ -29,8 +29,8 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              MP         = ref 0, INST_TYPE  = ref 0,
              MK_COMB    = ref 0, AP_TERM = ref 0,
              AP_THM     = ref 0, ALPHA = ref 0,
-             ETA_CONV   = ref 0, SYM = ref 0, 
-             TRANS      = ref 0, EQ_MP = ref 0, 
+             ETA_CONV   = ref 0, SYM = ref 0,
+             TRANS      = ref 0, EQ_MP = ref 0,
              EQ_IMP_RULE = ref 0, INST = ref 0,
              SPEC       = ref 0, GEN = ref 0,
              EXISTS     = ref 0, CHOOSE = ref 0,
@@ -38,15 +38,15 @@ val count = {ASSUME     = ref 0, REFL = ref 0,
              CONJUNCT1  = ref 0, CONJUNCT2 = ref 0,
              DISJ1      = ref 0, DISJ2 = ref 0,
              DISJ_CASES = ref 0, NOT_INTRO = ref 0,
-             NOT_ELIM   = ref 0, CCONTR = ref 0, 
+             NOT_ELIM   = ref 0, CCONTR = ref 0,
              GEN_ABS    = ref 0,
              DEFINITION = ref 0,
              AXIOM      = ref 0, FROM_DISK  = ref 0,
              ORACLE     = ref 0,
              TOTAL      = ref 0};
 
-fun inc_count R = 
-  if !counting 
+fun inc_count R =
+  if !counting
   then (case R of
          Assume     => inc (#ASSUME count)
        | Refl       => inc (#REFL count)
@@ -89,7 +89,7 @@ fun inc_count R =
 
 local fun zero (r as ref _) = (r := 0)
 in
-fun reset_thm_count() = 
+fun reset_thm_count() =
     (zero (#ASSUME count);
      zero (#REFL count);
      zero (#BETA_CONV count);
@@ -131,15 +131,15 @@ end;
 
 fun prims() =
    !(#ASSUME count) + !(#REFL count) + !(#BETA_CONV count) +
-   !(#SUBST count) + !(#ABS count) + !(#DISCH count) + 
+   !(#SUBST count) + !(#ABS count) + !(#DISCH count) +
    !(#MP count) + !(#INST_TYPE count) + !(#MK_COMB count) +
    !(#AP_TERM count) + !(#AP_THM count) + !(#ALPHA count) +
-   !(#ETA_CONV count) + !(#SYM count) + !(#TRANS count) + 
+   !(#ETA_CONV count) + !(#SYM count) + !(#TRANS count) +
    !(#EQ_MP count) + !(#EQ_IMP_RULE count) +
    !(#INST count) + !(#SPEC count) + !(#GEN count) +
-   !(#EXISTS count) + !(#CHOOSE count) + 
-   !(#CONJ count) + !(#CONJUNCT1 count) + !(#CONJUNCT2 count) + 
-   !(#DISJ1 count) + !(#DISJ2 count) + !(#DISJ_CASES count) + 
+   !(#EXISTS count) + !(#CHOOSE count) +
+   !(#CONJ count) + !(#CONJUNCT1 count) + !(#CONJUNCT2 count) +
+   !(#DISJ1 count) + !(#DISJ2 count) + !(#DISJ_CASES count) +
    !(#NOT_INTRO count) + !(#NOT_ELIM count) + !(#CCONTR count) +
    !(#GEN_ABS count);
 
@@ -149,10 +149,10 @@ fun from_disk() = !(#FROM_DISK count)
 fun oracles()   = !(#ORACLE count);
 
 
-fun total() = 
+fun total() =
   prims() + defns() + axioms() + from_disk() + oracles();
 
-fun thm_count() = 
+fun thm_count() =
  {ASSUME     = !(#ASSUME count),    REFL       = !(#REFL count),
   BETA_CONV  = !(#BETA_CONV count), SUBST      = !(#SUBST count),
   ABS        = !(#ABS count),       DISCH      = !(#DISCH count),
@@ -175,20 +175,20 @@ fun thm_count() =
 
 type meter = {axioms:int, defns:int, oracles:int, disk:int, prims:int}
 
-fun mk_meter() = 
+fun mk_meter() =
  (counting_thms true;
   {prims=prims(), defns=defns(), axioms=axioms(),
-   disk=from_disk(), oracles = oracles()}); 
+   disk=from_disk(), oracles = oracles()});
 
 
 fun read {prims=p0,defns=d0,axioms=a0,disk=f0,oracles=or0} =
   let val {prims,defns,axioms,disk,oracles} = mk_meter()
   in
-    {prims = prims-p0,  defns = defns-d0, axioms = axioms-a0, 
+    {prims = prims-p0,  defns = defns-d0, axioms = axioms-a0,
       disk = disk-f0, oracles = oracles-or0}
   end;
 
-fun report {prims,defns,axioms,disk,oracles} = 
+fun report {prims,defns,axioms,disk,oracles} =
   (Lib.say ("Axioms asserted: " ^Lib.int_to_string axioms^".\n");
    Lib.say ("Definitions made: " ^Lib.int_to_string defns^".\n");
    Lib.say ("Oracle invocations: " ^Lib.int_to_string oracles^".\n");
@@ -198,9 +198,9 @@ fun report {prims,defns,axioms,disk,oracles} =
          ^Lib.int_to_string (prims + defns + axioms + oracles + disk)^".\n"));
 
 
-fun apply f x = 
+fun apply f x =
   let val m = mk_meter()
-      val res = Lib.try (Lib.time f) x
+      val res = Lib.time f x handle e => (report (read m); raise e)
    in
      report(read m);  res
    end

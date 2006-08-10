@@ -9,13 +9,14 @@ Measure how long a function application takes.
 time.
 
 \DESCRIBE
-An application {time f x} starts a clock, applies {f} to {x}, and then 
-checks the clock to see how long that took. It prints out the 
-elapsed runtime, garbage collection time, and system time 
+An application {time f x} starts a clock, applies {f} to {x}, and then
+checks the clock to see how long that took. It prints out the
+elapsed runtime, garbage collection time, and system time
 before returning the value of {f x}.
 
 \FAILURE
-If {f x} raises {e}, then {time f x} raises {e}.
+If {f x} raises {e}, then {time f x} raises {e}, but still reports
+elapsed time.
 
 \EXAMPLE
 {
@@ -35,9 +36,17 @@ runtime: 0.771s,    gctime: 0.121s,     systime: 0.771s.
    169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183,
    184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198,
    199, ...] : int list
+
+- fun f x = f (x + 1);
+> val 'a f = fn : int -> 'a
+
+- time f 0;
+runtime: 13.787s,    gctime: 0.000s,     systime: 0.035s.
+! Uncaught exception:
+! Overflow
 }
 
 
 \SEEALSO
-Lib.start_time, Lib.end_time.
+Lib.end_time, Lib.start_time, Count.thm_count.
 \ENDDOC

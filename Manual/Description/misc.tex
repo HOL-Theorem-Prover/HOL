@@ -569,22 +569,22 @@ inferences, axioms, definitions and use of oracles.  Such recording is
 enabled with the function
 
 \begin{boxed}
-\index{thm_counting@\ml{thm\_counting}|pin}
+\index{counting_thms@\ml{counting\_thms}|pin}
 \begin{verbatim}
-  val thm_counting : bool -> unit
+   val counting_thms : bool -> unit
 \end{verbatim}
 \end{boxed}
 
 \noindent (This function as with all the others in this section is
 found in the \texttt{Count} structure.)
 
-Calling \verb+thm_counting true+ enables counting, and
-\verb+thm_counting false+ disables it.  The default is for counting to
-be disabled.  If it is enabled, whenever \HOL\ performs a primitive
-inference (or accepts an axiom or definition) a
-counter is incremented.  A total count as well as counts per
-primitive inference are maintained.  The value of this counter is
-returned by the function:
+Calling \ml{counting\_thms true} enables counting, and
+\ml{counting_thms false} disables it.  The default is for counting to
+be disabled.  If it is enabled, whenever \HOL{} performs a primitive
+inference (or accepts an axiom or definition) a counter is
+incremented.  A total count as well as counts per primitive inference
+are maintained.  The value of this counter is returned by the
+function:
 
 \begin{boxed}
 \index{thm_count@\ml{thm\_count}|pin}

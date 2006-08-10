@@ -525,7 +525,7 @@ fun end_time timer =
 
 fun time f x =
   let val timer = start_time()
-      val y = f x
+      val y = f x handle e => (end_time timer; raise e)
   in
      end_time timer;  y
   end
