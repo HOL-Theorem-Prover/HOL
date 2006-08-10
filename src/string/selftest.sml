@@ -54,6 +54,31 @@ val bar = Define`
 
 val testthm = prove(``foo = bar``, SRW_TAC [][foo,bar]);
 
+(* ----------------------------------------------------------------------
+    string_eq_conv
+   ---------------------------------------------------------------------- *)
+
+open boolSyntax
+val sec_data = [(``"" = ""``, T),
+                (``"" = "a"``, F),
+                (``"a" = "b"``, F),
+                (``"a" = "a"``, T),
+                (``"abc" = "ab"``, F)]
+
+fun sectest (t1, rest) = let
+  val _ = print (StringCvt.padRight #" " 40 (term_to_string t1))
+  val (actual, ok) = let
+    val res = rhs (concl (stringLib.string_EQ_CONV t1))
+  in
+    (term_to_string res, aconv res rest)
+  end handle _ => ("EXN", false)
+in
+  print (StringCvt.padRight #" " 10 actual);
+  if ok then print "OK\n" else (print "FAILED!\n";
+                                OS.Process.exit OS.Process.failure)
+end
+
+val _ = app sectest sec_data
 
 
 val _ = OS.Process.exit OS.Process.success
