@@ -37,7 +37,7 @@ open HolKernel Parse boolLib bossLib;
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
 open stringLib complex_rationalTheory gcdTheory sexp sexpTheory
-     hol_defaxiomsTheory translateTheory;
+     acl2_packageTheory hol_defaxiomsTheory translateTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -786,15 +786,15 @@ val stringp_symbol_package_name_defaxiom =
 (*****************************************************************************)
 val LOOKUP_NIL = EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``;
 
-(*
 val symbolp_intern_in_package_of_symbol_defaxiom =
  store_thm
   ("symbolp_intern_in_package_of_symbol_defaxiom",
    ``|= symbolp (intern_in_package_of_symbol x y)``,
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[BASIC_INTERN_def,LOOKUP_NIL]
-    THEN FULL_SIMP_TAC std_ss [GSYM t_def,GSYM nil_def,if_t_nil]
-*)
+    THEN METIS_TAC
+           [GSYM t_def,GSYM nil_def,if_t_nil,VALID_ACL2_PACKAGE_ALIST,
+            LOOKUP_NOT_EMPTY_STRING,LOOKUP_IDEMPOTENT]);
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS] [axioms: ] []

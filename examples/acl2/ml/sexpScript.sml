@@ -803,6 +803,27 @@ val symbolp_def =
 (* Theorems about VALID_PACKAGE_TRIPLES. Maybe should be closer to their     *)
 (* use, e.g. in hol_defaxioms_proofsScript.sml                               *)
 (*****************************************************************************)
+
+(*****************************************************************************)
+(* Following theorem may not be needed                                       *)
+(*****************************************************************************)
+val VALID_PKG_TRIPLES =
+ store_thm
+  ("VALID_PKG_TRIPLES",
+   ``VALID_PKG_TRIPLES triples =
+       (triples = [])
+       \/
+       ((LOOKUP (SND(SND(HD triples))) triples (FST(HD triples)) =
+          (SND(SND(HD triples))))                 /\
+        ~((FST(HD triples)) = "ACL2-PKG-WITNESS") /\
+        ~((SND(SND(HD triples))) = "")            /\
+        (VALID_PKG_TRIPLES_AUX (TL triples) triples))``,
+   Induct_on `triples`
+    THEN RW_TAC list_ss [VALID_PKG_TRIPLES_def,VALID_PKG_TRIPLES_AUX_def]
+    THEN Cases_on `h`
+    THEN Cases_on `r`
+    THEN RW_TAC list_ss [VALID_PKG_TRIPLES_def,VALID_PKG_TRIPLES_AUX_def]);
+
 val LOOKUP_IDEMPOTENT_LEMMA =
  prove
   (``VALID_PKG_TRIPLES_AUX tail triples              /\
