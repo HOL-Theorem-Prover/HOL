@@ -412,6 +412,39 @@ val atom_def =
           (cons (code_char (nat 0)) (acl2_make_character_list (cdr x))),
 *)
 
+val (acl2_make_character_list_def,acl2_make_character_list_ind) =
+ acl2_defn
+ "ACL2::MAKE-CHARACTER-LIST"
+  (`acl2_make_character_list x =
+     itel
+      [(atom x,nil);
+       (characterp (car x),
+        cons (car x) (acl2_make_character_list (cdr x)))]
+      (cons (code_char (nat 0)) (acl2_make_character_list (cdr x)))`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
+val acl2_make_character_list =
+ store_thm
+  ("acl2_make_character_list",
+   ``(acl2_make_character_list (cons s s0) =
+       if characterp s = nil 
+        then cons (code_char (nat 0)) (acl2_make_character_list s0)
+        else cons s (acl2_make_character_list s0))
+     /\
+     (acl2_make_character_list (num n) = nil)
+     /\
+     (acl2_make_character_list (chr c) = nil)
+     /\
+     (acl2_make_character_list (str st) = nil)
+     /\
+     (acl2_make_character_list (sym st st0) = nil)``,
+   REPEAT CONJ_TAC
+    THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[acl2_make_character_list_def]))
+    THEN ACL2_SIMP_TAC[itel_def]);
+
+val _ = add_acl2_simps[acl2_make_character_list];
+
 (*
      [oracles: DEFUN ACL2::EQLABLE-ALISTP, DISK_THM] [axioms: ] []
      |- eqlable_alistp x =
@@ -419,16 +452,38 @@ val atom_def =
           (andl [consp (car x); eqlablep (caar x); eqlable_alistp (cdr x)]),
 *)
 
+val (eqlable_alistp_def,eqlable_alistp_ind) =
+ acl2_defn
+ "ACL2::EQLABLE-ALISTP"
+  (`eqlable_alistp x =
+     ite (atom x) 
+         (equal x nil)
+         (andl [consp (car x); eqlablep (caar x); eqlable_alistp (cdr x)])`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::ALISTP, DISK_THM] [axioms: ] []
      |- alistp l =
         ite (atom l) (eq l nil) (andl [consp (car l); alistp (cdr l)]),
 *)
 
+val (alistp_def,alistp_ind) =
+ acl2_defn
+ "ACL2::ALISTP"
+  (`alistp l =
+     ite (atom l) (eq l nil) (andl [consp (car l); alistp (cdr l)])`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN COMMON-LISP::ACONS] [axioms: ] []
      |- acons key datum alist = cons (cons key datum) alist,
 *)
+
+val acons_def =
+ acl2Define "COMMON-LISP::ACONS"
+  `acons key datum alist = cons (cons key datum) alist`;
 
 (*
      [oracles: DEFUN COMMON-LISP::ENDP] [axioms: ] [] |- endp x = atom x,
