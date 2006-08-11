@@ -1,0 +1,24 @@
+Main files:
+
+complex_rationalScript.sml ...... Script to build theory of complex rationals
+sexp.sml ........................ Version of sml for compiling
+sexp.ml ......................... Tool for interactively processing one ACL2 defun
+acl2_packageScript.sml .......... Script to build and validate package specification
+sexpScript.sml .................. Script to build theory of s-expressions
+kpa-v2-9-3.ml ................... Package structure specification (generated from ACL2)
+defaxioms.lisp.trans.ml ......... ACL2 generated version of axioms.lisp
+hol_defaxiomsScript.sml ......... HOL definitions of functions in defaxioms
+hol_defaxioms_proofsScript.sml .. HOL proofs of axioms in defaxioms
+hol_defaxioms_thmsScript.sml .... HOL proofs of theorems in defaxioms
+load_sexp.ml .................... Loads sexp and sexpTheory
+make_defaxioms.ml ............... Slurps in lisp/defaxioms.lisp.trans.ml
+Holmakefile ..................... Needed to build defaxiomsTheory
+
+To print out defaxioms as ACL2 (for round-trip testing), run hol and do:
+
+ load "defaxiomsTheory"; 
+ sexp.print_imported_acl2_theorems "defaxioms" "defaxioms.roundtrip";
+
+Mike Gordon
+16 Dec, 2005
+10 Aug, 2006
