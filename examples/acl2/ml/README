@@ -11,8 +11,26 @@ hol_defaxiomsScript.sml ......... HOL definitions of functions in defaxioms
 hol_defaxioms_proofsScript.sml .. HOL proofs of axioms in defaxioms
 hol_defaxioms_thmsScript.sml .... HOL proofs of theorems in defaxioms
 load_sexp.ml .................... Loads sexp and sexpTheory
-make_defaxioms.ml ............... Slurps in lisp/defaxioms.lisp.trans.ml
-Holmakefile ..................... Needed to build defaxiomsTheory
+make_defaxioms.ml ............... Makes defaxiomsTheory from lisp/defaxioms.lisp.trans.ml
+Holmakefile ..................... Specifies how to build defaxiomsTheory
+
+Notes
+-----
+
+Warning: acl2_packageTheory takes 26461.149s to build because proving
+VALID_ACL2_PACKAGE_ALIST involves a long check that the ACL2 package
+structure satisfies a characterisation (VALID_PKG_TRIPLES) that is
+subsequently used to prove axioms in hol_defaxioms_proofsTheory.
+
+The role of defaxiomsTheory is to define goals that are proved in the
+theories hol_defaxiomsTheory and hol_defaxioms_proofsTheory.  It
+contains ACL2-tagged theorems cretated by slurping in the ACL2
+generated file lisp/defaxioms.lisp.trans.ml, so its soundness relies
+on that of ACL2 and the linking infrastructure. In contrast,
+hol_defaxiomsTheory is a pure HOL theory. It defines a subset of the
+constants in defaxiomsTheory (namely those constants occurring in
+axioms), and hol_defaxioms_proofsTheory has pure HOL proofs of the
+axioms (currently incomplete).
 
 To print out defaxioms as ACL2 (for round-trip testing), run hol and do:
 
@@ -21,4 +39,4 @@ To print out defaxioms as ACL2 (for round-trip testing), run hol and do:
 
 Mike Gordon
 16 Dec, 2005
-10 Aug, 2006
+12 Aug, 2006
