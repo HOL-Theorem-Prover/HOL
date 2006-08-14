@@ -2,9 +2,12 @@ signature encodeLib =
 sig
 	include Abbrev
 
-	val convert_definition    : thm -> thm * thm
+	val convert_definition            : thm -> thm * thm
+	val convert_definition_restricted : term -> thm -> thm * thm
+	val convert_definition_full       : term option -> thm option -> thm -> thm * thm
+	val convert_theorem	          : thm -> thm
 
-	val get_recogniser        : hol_type -> thm
+	val get_recogniser        : hol_type -> thm * thm
 
 	val encode_type           : hol_type -> unit
 	val has_encoding          : hol_type -> bool
