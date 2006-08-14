@@ -8,12 +8,13 @@
 
 (* A brief changelog *)
 
-(* 17/05 	- Added LISTP_CONS function              *)
-(* 04/07        - switched to hol_defaxiomsTheory (MJCG) *)
-(* 03/08	- Various improvements:                  
+(* 	17/05/2006:	Added LISTP_CONS function              *)
+(* 	04/07/2006:	Switched to hol_defaxiomsTheory (MJCG) *)
+(* 	03/08/2006:	Various improvements:                  
 		        switched to |= instead of =t/nil
 			added case & 'flat' theorems
 			created translateLib for CHOOSEP *)
+(* 	14/08/2006:	Changed NAT_CASE to use PRE (which uses ~(n = 0)) *) 
 
 (*****************************************************************************)
 (* Load base theories                                                        *)
@@ -446,6 +447,9 @@ val NAT_ADD = prove(``!a b. nat (a + b) = add (nat a) (nat b)``,
 val NAT_SUC = prove(``!a. nat (SUC a) = add (nat a) (nat 1)``,
 	RW_TAC std_ss [NAT_ADD,ADD1]);
 
+val NAT_PRE = prove(``!a. ~(a = 0n) ==> (nat (PRE a) = add (nat a) (unary_minus (nat 1)))``,
+	Cases THEN RW_TAC arith_ss [nat_def,GSYM INT_UNARY_MINUS,GSYM INT_ADD] THEN AP_TERM_TAC THEN RW_TAC int_ss [ADD1,GSYM integerTheory.INT_ADD] THEN ARITH_TAC);
+
 val NAT_MULT = prove(``!a b. nat (a * b) = mult (nat a) (nat b)``,
 	RW_TAC std_ss [nat_def,mult_def,int_def,cpx_def,sexpTheory.rat_def,COMPLEX_MULT_def,rat_0_def,GSYM rat_0,GSYM frac_0_def,
 		RAT_MUL_RZERO,RAT_SUB_RID,rat_mul_def,frac_mul_def,RAT_ADD_RID] THEN
@@ -459,6 +463,9 @@ val NATP_ADD = prove(``!a b. (|= natp a) /\ (|= natp b) ==> |= natp (add a b)``,
 
 val NATP_MULT = prove(``!a b. (|= natp a) /\ (|= natp b) ==> |= natp (mult a b)``,
 	REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN RW_TAC std_ss [GSYM NAT_MULT,NATP_NAT]);
+
+val NATP_PRE = prove(``!a. (|= natp a) /\ ~(a = nat 0) ==> |= natp (add a (unary_minus (nat 1)))``,
+	REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN FULL_SIMP_TAC std_ss [GSYM NAT_PRE,NAT_CONG,NATP_NAT]);
 
 val NATP_NFIX = prove(``!a. |= natp (nfix a)``,RW_TAC std_ss [nfix_def,NATP_NAT,ite_def,TRUTH_REWRITES]);
 
@@ -635,7 +642,7 @@ val LIST_TL = prove(``~(l = []) ==> (list encode (TL l) = cdr (list encode l))``
 (* Case theorems                                                             *)
 (*****************************************************************************)
 
-val NAT_CASE = store_thm("NAT_CASE",``!a. encode (case a of 0 -> A || (SUC n) -> B n) = ite (equal (nat a) (nat 0)) (encode A) (encode (B (a - 1)))``,
+val NAT_CASE = store_thm("NAT_CASE",``!a. encode (case a of 0 -> A || (SUC n) -> B n) = ite (equal (nat a) (nat 0)) (encode A) (encode (B (PRE a)))``,
 		Cases THEN RW_TAC int_ss [equal_def,ite_def,TRUTH_REWRITES,NAT_CONG]);
 
 val PAIR_CASE = store_thm("PAIR_CASE",``
@@ -728,6 +735,11 @@ val NAT_SUB = prove(``!a b. nat (a - b) = nfix (add (nat a) (unary_minus (nat b)
 	RW_TAC int_ss [nat_def,GSYM INT_SUB,nfix_def,ite_def,TRUTH_REWRITES,natp_def,INTEGERP_INT,GSYM INT_EQUAL,GSYM INT_LT,INT_CONG] THEN
 	FULL_SIMP_TAC int_ss [INT_NOT_LT,INT_LE_SUB_RADD,INT_LT_SUB_LADD,integerTheory.INT_SUB] THEN FULL_SIMP_TAC int_ss [INT_EQ_SUB_LADD]);
 
+val NATP_SUB = prove(``!a b. (|= natp a) /\ (|= natp b) /\ (|= not (less a b)) ==> |= natp (add a (unary_minus b))``,
+	REPEAT STRIP_TAC THEN
+	CHOOSEP_TAC THEN
+	FULL_SIMP_TAC arith_ss [nat_def,GSYM INT_ADD,GSYM BOOL_NOT,GSYM INT_UNARY_MINUS,GSYM NAT_LT,TRUTH_REWRITES,integerTheory.INT_ADD_CALCULATE] THEN
+	RW_TAC arith_ss [GSYM nat_def,NATP_NAT]);
 
 val RAT_SUB = prove(``rat (a - b) = add (rat a) (unary_minus (rat b))``,
 	RW_TAC std_ss [rat_sub_def,frac_sub_def,GSYM RAT_ADD,GSYM RAT_UNARY_MINUS,rat_ainv_def,rat_add_def,frac_ainv_def,RAT_ADD_CONG]);
@@ -1181,7 +1193,7 @@ val MK_THMS = LIST_CONJ o (map GEN_ALL);
 
 val NAT_THMS = save_thm("NAT_THMS",
 	MK_THMS [	NAT_OF_SEXP_TO_NAT,NAT_EQUAL_0,NAT_EQUAL,NAT_0_LT,NAT_LT,NAT_LE,NAT_GE,NAT_GT,
-			NAT_ADD,NAT_SUC,NAT_MULT,NAT_SUB,NAT_EXP,NAT_DIV,NAT_MOD,NAT_EVEN,NAT_ODD]);
+			NAT_ADD,NAT_PRE,NAT_SUC,NAT_MULT,NAT_SUB,NAT_EXP,NAT_DIV,NAT_MOD,NAT_EVEN,NAT_ODD]);
 
 val INT_THMS = save_thm("INT_THMS",
 	MK_THMS [	INT_OF_SEXP_TO_INT,INT_EQUAL,INT_LT,INT_LE,INT_GE,INT_GT,
@@ -1207,7 +1219,7 @@ val PAIR_THMS = save_thm("PAIR_THMS",
 
 val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
 	MK_THMS [	CONJUNCT1 ANDL_JUDGEMENT,CONJUNCT2 ANDL_JUDGEMENT,NATP_NAT,INTEGERP_INT,RATIONALP_RAT,ACL2_NUMBERP_NUM,BOOLEANP_BOOL,PAIRP_PAIR,
-			NATP_ADD,NATP_NFIX,NATP_MULT,NATP_DIV,NATP_EXP,NATP_MOD,
+			NATP_ADD,NATP_PRE,NATP_SUB,NATP_NFIX,NATP_MULT,NATP_DIV,NATP_EXP,NATP_MOD,
 			BOOLEANP_IMPLIES,BOOLEANP_ANDL,BOOLEANP_ANDL_NULL,
 			BOOLEANP_EQUAL,BOOLEANP_LESS,BOOLEANP_NOT,BOOLEANP_CONSP,BOOLEANP_IF,
 			INTEGERP_ADD,INTEGERP_MULT,INTEGERP_DIV,INTEGERP_UNARY_MINUS,INTEGERP_MOD,

@@ -27,6 +27,7 @@
 (* 	11/08/2006:	Added a 'convert_definition_full' which allows addition of variant theorems to assist termination in ACL2, eg `!a. 0 < a ==> a DIV 2 < a'
 			Modified convert_theorem so |= implies a b is output, instead of (|= a) ==> (|= b) *)
 (*	12/08/2006:	Recursion theorems and restriction terms now have the forms: `!v0...vn. P v0...vn` and `\v0....vn. P v0...vn` *)
+(*	14/08/2006:	Bug-fixes to allow type checking of |= natp (add a (unary_minus (nat 1))), formed by modified NAT_CASE thm in translateTheory *)
 
 (* Interactive stuff... *)
 (*
@@ -2639,6 +2640,10 @@ local
 			raise (mk_HOL_ERR "encodeLib" "SEXP_TYPE_TERM_AS" "No matching detector")
 	end;
 
+	fun rstrip_imp term = 
+		if is_neg term then ([],term) else 
+			let val (a,(b,c)) = (I ## rstrip_imp) (dest_imp term) in (a::b,c) end handle e => ([],term);
+
 	fun get_detector_type term =
 	case (strip_comb term) 
 	of (d,[]) => fst (first (curry op= d o fst o snd) (!detectors))
@@ -2710,15 +2715,24 @@ local
 					rand o rand o dest_acl2_true) term
 	in	tryfind (DOUBLE_MATCH I (rator o dest_acl2_true) term) det_encs 
 	end
+	and try_prove_term thms term = 
+		if is_acl2_true term then SEXP_TYPE_TERM_AS' thms term else
+		(	tryfind (C (PART_MATCH (snd o rstrip_imp)) term) (filter (not o is_acl2_true o snd o rstrip_imp o concl o SPEC_ALL) thms)  handle e =>
+			let	val pos_num_thms = filter (fn x => exists (C free_in (concl x)) (free_vars term)) (mapfilter (CONV_RULE (REWRITE_CONV (map GSYM 
+							(flatten (map CONJUNCTS [BOOL_THMS,NAT_THMS,INT_THMS,RAT_THMS,COM_THMS]))) THENC 
+							REWR_CONV (last (CONJUNCTS TRUTH_REWRITES)))) thms)
+			in
+				foldl (uncurry PROVE_HYP) (UNDISCH_ALL (DECIDE (list_mk_imp(map concl pos_num_thms,term)))) pos_num_thms
+			end)
 	and sexp_type_match_thm_term thms term = 
-	let	val all_thms = mapfilter (DOUBLE_MATCH (snd o strip_imp) (rator o dest_acl2_true) term) 
+	let	val all_thms = mapfilter (DOUBLE_MATCH (snd o rstrip_imp) (rator o dest_acl2_true) term) 
 				(thms @ (!typing_cache))
 		val to_prove = 
-			map (fn thm => (thm,(map strip_forall o strip_conj o hd o fst o strip_imp o concl) thm) 
+			map (fn thm => (thm,(map strip_forall o strip_conj o hd o fst o rstrip_imp o concl) thm) 
 				handle _ => (thm,[])) all_thms
 	in	tryfind (fn (thm,terms) => if null terms then thm else 
 			(CUNDISCH_ALL o MATCH_MP thm) 
-				(LIST_CONJ (map (uncurry GENL o (I ## SEXP_TYPE_TERM_AS' thms)) terms))) to_prove
+				(LIST_CONJ (map (uncurry GENL o (I ## try_prove_term thms)) terms))) to_prove
 	end
 	and sexp_type_eq_detector_term thms term =
 	let	val detector = get_eq_detector term
@@ -3073,7 +3087,7 @@ end;
 			x = X	 		==>	equal (encode a) X
    and we can get the other things from the nchotomy_thm *)
 
-local		
+local	
 	fun RITE_CONV [] term = ALL_CONV term
 	  | RITE_CONV (x::xs) term = 
 		((RATOR_CONV o RATOR_CONV o RAND_CONV) (REWR_CONV x) THENC RAND_CONV (RITE_CONV xs)) term;
@@ -3246,7 +3260,7 @@ fun remove_converted_rec NONE h thm = thm
   | remove_converted_rec (SOME cr) h thm = 
 let	val (imps,c) = strip_imp h
 in
-	PROVE_HYP (foldr (uncurry DISCH) (UNDISCH (PART_MATCH (snd o strip_imp) (DISCH_ALL cr) c)) imps) thm handle e => thm
+	PROVE_HYP (foldr (fn (a,b) => DISCH_BUT a b []) (UNDISCH (PART_MATCH (snd o strip_imp) (DISCH_ALL cr) c)) imps) thm handle e => thm
 end;
 
 local
@@ -3280,7 +3294,7 @@ let	val oldPterm = (mk_acl2_true o rand o rator o rator o rhs o snd o strip_fora
 	val stage6 = 	(C (foldr (uncurry PROVE_HYP)) type_proofs o
 			C (foldr (uncurry PROVE_HYP)) (map (C (foldr (uncurry PROVE_HYP)) type_proofs) arg_proofs) o
 			do_all_hyp prove_nchotomy_cond o
-			do_all_hyp attempt_decision o CONV_HYP (REWRITE_CONV (mapfilter valOf [converted_arg])) o 
+			do_all_hyp attempt_decision o CONV_HYP (REWRITE_CONV (mapfilter valOf [converted_arg])) o clean_hyp_set o 
 			do_all_hyp (prove_type_judgement types) o 
 			do_all_hyp (remove_converted_rec converted_rec) o clean_hyp_set o
 			do_all_hyp split_hyp) (CONV_HYP (DEPTH_CONV BETA_CONV THENC REWRITE_CONV [ACL2_ANDL]) (INST [oldP |-> newPterm] stage5'));
@@ -3469,7 +3483,3 @@ in
 			(AP_TERM ((get_encode_term o type_of o lhs o concl) thm_b) 
 				(INST (map2 (curry op|->) vars arg_decodes) thm_b)))
 end;
-
-
-val (log2_def,log2_ind) = Defn.tprove(Hol_defn "log2" `(log2 0 = 0) /\ (log2 n = SUC (log2 (n DIV 2)))`,WF_REL_TAC `measure (\a.a)` THEN RW_TAC arith_ss [DIV_LT_X]);
-
