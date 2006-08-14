@@ -455,6 +455,19 @@ val member_def = 		Define `	(member key LEAF = F) /\
 						(member key (NODE col k left right) = if key < k then member key left else if k < key then member key right else T)`;
 val acl2_member_def = 		convert_definition member_def;
 
+(*****************************************************************************)
+(* Restricting the input domain of a function:                               *)
+(*****************************************************************************)
+
+val modpow_def = 		Define `(modpow a 0 n = 1) /\ (modpow a (SUC b) n = a * (modpow a b n) MOD n)`;
+val acl2_modpow_def = 		convert_definition_restricted ``\a b c. ~(c = 0n)`` modpow_def;
+
+(*****************************************************************************)
+(* Addition of a termination helper theorem:                                 *)
+(*****************************************************************************)
+
+val (log2_def,log2_ind) = 	Defn.tprove(Hol_defn "log2" `(log2 0 = 0) /\ (log2 a = SUC (log2 (a DIV 2)))`,WF_REL_TAC `measure (\a.a)` THEN RW_TAC arith_ss [DIV_LT_X]);
+val acl2_log2_def = 		convert_definition_full NONE (SOME (prove(``!a. 0 < a ==> a DIV 2 < a``,RW_TAC arith_ss [DIV_LT_X]))) log2_def;
 
 (*****************************************************************************)
 (* Theorem encoding...                                                       *)
