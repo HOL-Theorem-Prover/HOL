@@ -2,12 +2,11 @@
 (* Interactive access to the compiler                                        *)
 (*---------------------------------------------------------------------------*)
 
-app load ["Link", "ANF", "word32Lib", "pairTheory", "pairLib", "arithmeticTheory", "listTheory", "optionTheory", "word32Theory", "finite_mapTheory", 
-      "preARMSyntax", "preARMTheory", "ARMCompositionTheory", "ILTheory","annotatedIL"];
+app load ["ANF", "word32Lib", "pairTheory", "pairLib", "arithmeticTheory", "listTheory", "optionTheory", "word32Theory", "finite_mapTheory", 
+      "preARMSyntax", "preARMTheory", "ARMCompositionTheory", "ILTheory", "rulesTheory", "interface", "mechReasoning"];
 
 quietdec := true;
-open Portable Link Assem word32Theory ANF pairTheory pairLib listTheory arithmeticTheory word32Lib PairedLambda 
-     preARMTheory ILTheory annotatedIL;
+open Portable Assem word32Theory ANF pairTheory pairLib listTheory arithmeticTheory word32Lib PairedLambda interface mechReasoning;
 quietdec := false;
 
 (*---------------------------------------------------------------------------*)

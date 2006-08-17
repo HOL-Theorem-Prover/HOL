@@ -21,7 +21,7 @@ exception CFG
         Assem.WCONST e
   |  one_exp (Tree.CALL(f, args)) =
         Assem.CALL (one_exp f,
-                 List.map (fn e => one_exp e) args)
+                    one_exp args)
   |  one_exp (Tree.PAIR(e1,e2)) =
         Assem.PAIR(one_exp e1, one_exp e2)
   |  one_exp _ = raise CFG
@@ -93,11 +93,11 @@ fun buildCFG tmpT (args,stmList,outs) =
 	let val (Tree.NAME fun_name) = name;
 	    val outL = Tree.pair2list d in 
 	    { instr = Assem.OPER {oper = (Assem.BL,NONE,false), 
-				 dst = List.map (fn e => one_exp e) outL,
-				 src = List.map (fn e => one_exp e) args, 
+				 dst = [one_exp d],
+				 src = [one_exp args], 
 				 jump = SOME [fun_name]},
 	      def = tmpIndexL outL,
-	      use = tmpIndexL args
+	      use = tmpIndexL (Tree.pair2list args)
 	    }
         end
    |  one_stm (Tree.MOVE(d, s)) =

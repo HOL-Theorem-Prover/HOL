@@ -83,9 +83,10 @@ val _ = Hol_datatype ` COND = EQ | NE | GE | LE | GT | LT | AL | NV`;
 
 val _ = type_abbrev("ADDR", Type`:num`);
 val _ = type_abbrev("DATA", Type`:word32`);
+val _ = type_abbrev("DISTANCE", Type`:num`);
 
-val _ = Hol_datatype `OFFSET = POS of ADDR
-               | NEG of ADDR
+val _ = Hol_datatype `OFFSET = POS of DISTANCE
+               | NEG of DISTANCE
 	       | INR
              `;
 
@@ -190,6 +191,7 @@ val write_thm = Q.store_thm (
 
 (*---------------------------------------------------------------------------------*)
 (* Decoding and execution of an instruction                                        *)
+(* All instructions are executed conditionally                                     *)
 (*---------------------------------------------------------------------------------*)
 
 val goto_def =
@@ -217,6 +219,9 @@ val decode_op_def =
           MOV -> (cpsr, write s (THE dst) (read s (HD src)))
               ||
 
+          (* we assume that the stack goes from low addresses to high addresses even it is "FD",
+             change LDMFD to be LDMFA if necessary *)
+
 	  LDMFD -> (case THE dst of
 			REG r ->
 			     (* We must read values from the original state instead of the updated state *)
@@ -227,6 +232,9 @@ val decode_op_def =
 						 (REG r) (read s (REG r) + n2w (LENGTH src)))
 		   )
 	      ||
+
+          (* we assume that the stack goes from low addresses to high addresses even it is "FD",
+             change STMFA to be STMFD if necessary *)
 
 	  STMFD -> (case THE dst of
                         REG r ->
@@ -270,6 +278,8 @@ val decode_op_def =
 				(read s (HD src) #>> w2n (read s (HD (TL (src)))))))
               ||
 
+          (*  Here we assume the previous cpsr to be 0w in order to avoid being involved in the burdenous word operations. 
+              However, replacing 0w with cpsr would harm the correctness due to the property of bitwise-or   *)
           CMP -> if read s (HD src) = read s (HD (TL (src))) then
                       (setS 0w SZ, s)
                  else if read s (HD src) <. read s (HD (TL (src))) then
@@ -558,7 +568,7 @@ val RUN_THM_1 = Q.store_thm
 val _ = Globals.priming := NONE;
 
 (*---------------------------------------------------------------------------------*)
-(* Run for the minimum number of steps to stop at a given position                 *)
+(* An assistant theorem about LEAST                                                *)
 (*---------------------------------------------------------------------------------*)
 
 val LEAST_ADD_LEM = Q.store_thm
@@ -613,7 +623,8 @@ val FUNPOW_FUNPOW = Q.store_thm
 
 
 (*----------------------------------------------------------------------------*)
-(* Assistant theorems for the WHILE                                           *)
+(* Assistant theorems for the WHILE and LEAST                                 *)
+(* We use the "shortest" as a short-hand of the LEAST-FUNPOW                  *)
 (*----------------------------------------------------------------------------*)
 
 val stopAt_def = Define `
@@ -720,6 +731,11 @@ val SHORTEST_INDUCTIVE = Q.store_thm
     ]
   );
 
+
+(*----------------------------------------------------------------------------*)
+(* Stop when a specific condition holds                                       *)
+(*----------------------------------------------------------------------------*)
+
 val TERD_WHILE_EQ_UNROLL = Q.store_thm
   ("TERD_WHILE_EQ_UNROLL",
    `!x P g.
@@ -752,6 +768,9 @@ val TERD_WHILE_EQ_UNROLL = Q.store_thm
    ]
   );                 
 
+(*----------------------------------------------------------------------------*)
+(* Unroll the WHILE once, stop unrolling when a condition holds               *)
+(*----------------------------------------------------------------------------*)
 
 val UNROLL_ADVANCE = Q.store_thm
   ("UNROLL_ADVANCE",
@@ -863,6 +882,10 @@ val runTo_def = Define `
   runTo instB j (s,pcS) =
 	WHILE (\(s,pcS). ~(FST s = j)) (step instB) (s,pcS)`;
 
+(*----------------------------------------------------------------------------*)
+(* A bunch of theorems about runTo                                            *)
+(*----------------------------------------------------------------------------*)
+
 val runTo_FORM1 = Q.store_thm
   ("runTo_FORM1",
    `!instB j s. runTo instB j s =
@@ -916,6 +939,7 @@ val UNROLL_RUNTO = Q.store_thm
     `$~ o (\s:STATEPCS. (FST (FST s) = j)) = (\s:STATEPCS. ~(FST (FST s) = j))` by RW_TAC std_ss [FUN_EQ_THM] THEN
     METIS_TAC []
   );
+
 
 
 val terd_def = Define `
@@ -1137,7 +1161,7 @@ val in_regs_dom_def = Define `
       0 IN (FDOM regs) /\ 1 IN (FDOM regs) /\ 2 IN (FDOM regs) /\ 3 IN (FDOM regs) /\
       4 IN (FDOM regs) /\ 5 IN (FDOM regs) /\ 6 IN (FDOM regs) /\ 7 IN (FDOM regs) /\
       8 IN (FDOM regs) /\ 9 IN (FDOM regs) /\ 10 IN (FDOM regs) /\ 11 IN (FDOM regs) /\
-      12 IN (FDOM regs) /\ 13 IN (FDOM regs) /\ 14 IN (FDOM regs) /\ 15 IN (FDOM regs)`;
+      12 IN (FDOM regs) /\ 13 IN (FDOM regs) /\ 14 IN (FDOM regs)`;
 
   
 val in_mem_dom_def = Define `
@@ -1154,7 +1178,6 @@ val FUPDATE_REFL = Q.store_thm
        RW_TAC list_ss [FAPPLY_FUPDATE_THM]
   ]
   );
-
 
 (*------------------------------------------------------------------------------------------------------*)
 (* Additional theorems for finite maps                                                                  *)

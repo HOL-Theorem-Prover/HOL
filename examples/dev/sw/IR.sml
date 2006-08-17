@@ -219,7 +219,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
         else 								(* function call		*)
 	    let val (fun_name, fun_type) = dest_const operator in
 	        Tree.CALL (Tree.NAME (Temp.namedlabel fun_name), 
-		    Tree.pair2list (analyzeExp operands))
+		           analyzeExp operands)
             end
         end
 

@@ -220,42 +220,45 @@ val WF_TR_LEM_3 = Q.store_thm (
    );
 
 (*---------------------------------------------------------------------------------*)
-(*      Hoare Rules on Projection on Inputs and Ouputs                             *) 
+(*      Hoare Rules on Projection on Inputs and Ouputs                             *)
+(*      The pre-conditions and post-conditions (on data other than inputs and      *)
+(*        outputs) are also specified                                              *) 
 (*---------------------------------------------------------------------------------*)
 
 val PSPEC_def = Define `
-    PSPEC ir (in_f,f,out_f) = !v. HSPEC (\st. in_f st = v) ir (\st.out_f st = f v)`;
+    PSPEC ir (pre_p,post_p) (in_f,f,out_f) = !v. HSPEC (\st. (in_f st = v) /\ pre_p st) ir (\st. (out_f st = f v) /\ post_p st)`;
 
 val _ = type_abbrev("PSPEC_TYPE", type_of (Term `PSPEC`));
 
 val PROJ_POST_RULE = Q.store_thm (
    "PROJ_POST_RULE",
    `!ir in_f out_f convert_f.
-     PSPEC ir (in_f,f,out_f) 
+     PSPEC ir (pre_p,post_p) (in_f,f,out_f) 
        ==>
-       PSPEC ir (in_f, convert_f o f, convert_f o out_f)`,
+       PSPEC ir (pre_p, post_p) (in_f, convert_f o f, convert_f o out_f)`,
      RW_TAC std_ss [PSPEC_def, HSPEC_def]
    );
 
 val PROJ_SC_RULE = Q.store_thm (
    "PROJ_SC_RULE",
-   `!ir1 ir2 f1 f2 in_f1 out_f1 out_f2.
+   `!ir1 ir2 f1 f2 pre_p1 post_p1 post_p2 in_f1 out_f1 out_f2.
      WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
-     PSPEC ir1 (in_f1,f1,out_f1) /\ PSPEC ir2 (out_f1,f2,out_f2) 
+     PSPEC ir1 (pre_p1,post_p1) (in_f1,f1,out_f1) /\ PSPEC ir2 (post_p1,post_p2) (out_f1,f2,out_f2) 
        ==>
-       PSPEC (SC ir1 ir2) (in_f1,f2 o f1,out_f2)`,
+       PSPEC (SC ir1 ir2) (pre_p1,post_p2) (in_f1,f2 o f1,out_f2)`,
 
      RW_TAC std_ss [PSPEC_def] THEN
      METIS_TAC [SC_RULE]
    );
 
+(*
 val PROJ_SC_RULE_2 = Q.store_thm (
    "PROJ_SC_RULE_2",
    `!ir1 ir2 f1 f2 in_f1 out_f1 in_f2 out_f2 convert_f.
      WELL_FORMED ir1 /\ WELL_FORMED ir2 /\ (convert_f o out_f1 = in_f2) /\ 
-     PSPEC ir1 (in_f1,f1,out_f1) /\ PSPEC ir2 (in_f2,f2,out_f2) 
+     PSPEC ir1 (pre_p1,post_p1) (in_f1,f1,out_f1) /\ PSPEC ir2 (post_p1,post_p2) (in_f2,f2,out_f2) 
        ==>
-       PSPEC (SC ir1 ir2) (in_f1,f2 o convert_f o f1,out_f2)`,
+       PSPEC (SC ir1 ir2) (pre_p1,post_p2) (in_f1,f2 o convert_f o f1,out_f2)`,
 
      RW_TAC std_ss [PSPEC_def, HSPEC_def] THEN
      `!st. out_f2 (run_ir ir2 st) = (f2 o convert_f) (out_f1 st)` by RW_TAC std_ss [] THEN
@@ -265,14 +268,15 @@ val PROJ_SC_RULE_2 = Q.store_thm (
      NTAC 14 (POP_ASSUM (K ALL_TAC)) THEN
      METIS_TAC [combinTheory.o_THM]
    );
+*)
 
 val PROJ_CJ_RULE = Q.store_thm (
    "PROJ_CJ_RULE",
    `!ir_t ir_f f1 f2 in_f out_f cond_f. 
      WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
-     PSPEC ir_t (in_f,f1,out_f) /\ PSPEC ir_f (in_f,f2,out_f) /\ (!st. cond_f (in_f st) = eval_cond cond st)
+     PSPEC ir_t (pre_p,post_p) (in_f,f1,out_f) /\ PSPEC ir_f (pre_p, post_p) (in_f,f2,out_f) /\ (!st. cond_f (in_f st) = eval_cond cond st)
         ==>
-       PSPEC (CJ cond ir_t ir_f) (in_f, (\v.if cond_f v then f1 v else f2 v), out_f)`,
+       PSPEC (CJ cond ir_t ir_f) (pre_p,post_p) (in_f, (\v.if cond_f v then f1 v else f2 v), out_f)`,
      
      RW_TAC std_ss [PSPEC_def, HSPEC_def] THEN
      METIS_TAC [IR_SEMANTICS_CJ]
@@ -280,12 +284,13 @@ val PROJ_CJ_RULE = Q.store_thm (
 
 (* Need the theorems in ARMCompositionTheory to prove the PROJ_TR_RULE *)
 
+(* 
 val PROJ_TR_RULE = Q.store_thm (
    "PROJ_TR_RULE",
    `!cond ir prj_f f cond_f.
         WELL_FORMED ir /\  WF (\st1 st0. ~eval_cond cond st0 /\ (st1 = run_ir ir st0)) /\
-        (!st. cond_f (prj_f st) = eval_cond cond st) /\ PSPEC ir (prj_f,f,prj_f) ==> 
-          PSPEC (TR cond ir) (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
+        (!st. cond_f (prj_f st) = eval_cond cond st) /\ PSPEC ir (pre_p,pre_p) (prj_f,f,prj_f) ==> 
+          PSPEC (TR cond ir) (pre_p,pre_p) (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
 
     RW_TAC std_ss [PSPEC_def, HSPEC_def] THEN
     `WF_TR (cond,translate ir)` by METIS_TAC [WF_TR_LEM_1] THEN
@@ -327,6 +332,7 @@ val PROJ_TR_RULE_2 = Q.store_thm (
     `WF (\st1 st0. ~eval_cond cond st0 /\ (st1 = run_ir ir st0))` by METIS_TAC [WF_TR_LEM_2, WF_TR_LEM_3] THEN
     METIS_TAC [SIMP_RULE std_ss [PSPEC_def, HSPEC_def] PROJ_TR_RULE]
   );
+*)
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for Context                                                          *) 

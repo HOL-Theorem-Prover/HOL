@@ -22,7 +22,7 @@ structure Assem = struct
 	       | NCONST of Arbint.int
 	       | WCONST of Arbint.int 
 	       | PAIR of exp * exp
-	       | CALL of exp * exp list
+	       | CALL of exp * exp
 	       | TMEM of int
 	       | MEM of address
 	       | REG of int
@@ -222,4 +222,56 @@ structure Assem = struct
 	    if !use_capital then inst
 	    else toLowerCase inst
         end
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Print ARM programs													*)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
+val lineNo = ref ~1;
+
+fun printInsts stms = 
+  let 
+      fun formatNextLineNo () =
+          ( lineNo := !lineNo + 1;
+            "  " ^
+            ( if !lineNo < 10 then "  " ^ Int.toString (!lineNo)
+              else if !lineNo < 100 then " " ^ Int.toString (!lineNo)
+              else Int.toString (!lineNo)
+            ) ^
+            ":"
+          )
+  in
+      (lineNo := ~1;
+       List.map (fn stm => print ((formatNextLineNo() ^  "  " ^ formatInst stm) ^ "\n")) stms
+      )
+  end
+
+val print_structure = ref true;
+
+fun printarm progL =
+   let 
+       val _ = lineNo := ~1;
+       fun one_fun flag(fname,ftype,args,stms,outs,rs) = 
+   	 ( 
+	  (if flag then 
+	      ( print "*****************************************************************\n";
+	    	print ("  Name              : " ^ fname ^ "\n");
+     	        print "  Arguments         : ";
+     	        List.map (fn arg => print (one_exp arg ^ " ")) (pair2list args);
+	        print "\n  Modified Registers: ";
+                List.map (fn arg => print (one_exp arg ^ " ")) (Binaryset.listItems rs);
+	        print "\n  Returns           : ";
+                List.map (fn arg => print (one_exp arg ^ " ")) (pair2list outs);
+     	        print "\n  Body: \n"
+	      )
+	   else print "");
+     	  printInsts stms
+   	 )
+   in
+      ( one_fun true (hd progL); 
+        List.map (one_fun (!print_structure)) (tl progL)
+      )
+   end
+
 end
+

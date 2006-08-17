@@ -17,7 +17,7 @@ datatype stm = SEQ of stm * stm
              | NAME of Temp.label
              | NCONST of Arbint.int
 	     | WCONST of Arbint.int
-	     | CALL of exp * exp list
+	     | CALL of exp * exp
 	     | PAIR of exp * exp
 
       and binop = PLUS | MINUS | MUL | DIV 
@@ -53,7 +53,7 @@ datatype stm = SEQ of stm * stm
              | NAME of Temp.label
              | NCONST of Arbint.int
 	     | WCONST of Arbint.int
-	     | CALL of exp * exp list
+	     | CALL of exp * exp
 	     | PAIR of exp * exp
 
       and binop = PLUS | MINUS | MUL | DIV 

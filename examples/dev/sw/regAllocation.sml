@@ -837,9 +837,7 @@ fun convert_to_ARM prog =
     val rs = getModifiedRegs stms
 
   in
-    ( (* declFuncs.putFunc (fun_name, fun_type, args, stms, outs, rs); *)
-      (fun_name, fun_type, args, gr', outs, rs)
-    )
+    (fun_name, fun_type, args, gr', outs, rs)
   end
 
 (* ---------------------------------------------------------------------------------------------------------------------*)

@@ -15,17 +15,17 @@ structure annotatedIL = struct
                        mand | morr | meor |
                        mlsl | mlsr | masr | mror |
                        mldr | mstr | mpop | mpush |
-                       mmrs | mmsr
+                       mmrs | mmsr |
+                       mcall
 
   datatype alias = fp | ip | sp | lr | pc
 
   datatype exp = NCONST of Arbint.int
                | WCONST of Arbint.int
                | PAIR of exp * exp
-               | CALL of exp * exp list
                | MEM of int * int               (* base * offset *)
+               | TMEM of int
                | REG of int
-               | ALIAS of alias
                | SHIFT of operator * int
                | NA                             (* N/A, for undecided fields *)
 
@@ -54,26 +54,6 @@ structure annotatedIL = struct
    |  toAlias 15 = pc
    |  toAlias _ = raise invalidILExp
 
-  fun print_op mmov = "mmov"
-   |  print_op madd = "madd"
-   |  print_op msub = "msub"
-   |  print_op mrsb = "msrb"
-   |  print_op mmul = "mmul"
-   |  print_op mmla = "mmla"
-   |  print_op mand = "mand"
-   |  print_op morr = "morr"
-   |  print_op meor = "meor"
-   |  print_op mlsl = "mlsl"
-   |  print_op mlsr = "mlsr"
-   |  print_op masr = "masr"
-   |  print_op mror = "mror"
-   |  print_op mldr = "mldr"
-   |  print_op mstr = "mstr"
-   |  print_op mpop = "mpop"
-   |  print_op mpush = "mpush"
-   |  print_op mmrs = "mmrs"
-   |  print_op mmsr = "mmsr"
-
   fun convert_op mmov = Term(`MMOV`)
    |  convert_op madd = Term(`MADD`)
    |  convert_op msub = Term(`MSUB`)
@@ -93,15 +73,7 @@ structure annotatedIL = struct
    |  convert_op mpop = Term(`MPOP`)
    |  convert_op mmrs = Term(`MMRS`)
    |  convert_op mmsr = Term(`MMSR`)
-
-  fun print_rop (eq) = "eq"
-   |  print_rop (ne) = "ne"
-   |  print_rop (ge) = "ge"
-   |  print_rop (lt) = "lt"
-   |  print_rop (gt) = "gt"
-   |  print_rop (le) = "le"
-   |  print_rop (al) = "al"
-   |  print_rop (nv) = "nv"
+   |  convert_op mcall = raise ERR "annotatedIL" ("Cannot convert mcall to a term");
 
   fun convert_rop (eq) = Term(`EQ`)
    |  convert_rop (ne) = Term(`NE`)
@@ -113,6 +85,54 @@ structure annotatedIL = struct
    |  convert_rop (nv) = Term(`NV`)
 
 
+ (*---------------------------------------------------------------------------------*)
+ (*      Set input, output and context information                                  *)
+ (*      Assistant functions                                                        *)
+ (*---------------------------------------------------------------------------------*)
+
+   structure S = Binaryset;
+
+   fun index_of_exp (MEM (base,offset)) =
+         10000 + offset
+    |  index_of_exp (TMEM i) =
+         5000 + i
+    |  index_of_exp (REG e) =
+         e
+    |  index_of_exp NA =
+         ~1
+    |  index_of_exp _ =
+          raise ERR "annotatedIR.eval_exp" ("invalid expression")
+
+   fun expOrder (s1,s2) =
+      let val (i1,i2) = (index_of_exp s1, index_of_exp s2)
+      in
+          if i1 > i2 then GREATER
+          else if i1 = i2 then EQUAL
+          else LESS
+      end;
+
+   fun list2pair l = 
+     if null l then NA
+     else 
+        let fun f [h] = h
+             |  f (h::ts) = PAIR (h, f ts)
+             |  f _ = raise Fail "list2pair fails"
+        in f l
+        end
+
+   fun list2set l = 
+       if null l then S.empty expOrder
+       else S.addList(S.empty expOrder, l);
+
+   fun set2list s = List.filter (fn n => not (n = NA)) (S.listItems s);
+
+   val set2pair = list2pair o set2list;
+   val pair2set = list2set o pair2list;
+
+   fun trim_pair (PAIR (NA,e2)) = trim_pair e2
+    |  trim_pair (PAIR (e1,NA)) = trim_pair e1
+    |  trim_pair (PAIR (e1,e2)) = PAIR (trim_pair e1, trim_pair e2)
+    |  trim_pair e = e
 
  (*---------------------------------------------------------------------------------*)
  (*      Definition of Operations for Term-conversion                               *)
@@ -123,11 +143,15 @@ fun convert_reg (REG e) =
  |  convert_reg _ = 
      raise ERR "IL" ("invalid expression");
 
+fun convert_mem (MEM (regNo, offset)) =
+     mk_pair(term_of_int regNo,
+             mk_comb(if offset >= 0 then Term`POS` else Term`NEG`,
+                term_of_int (abs offset)))
+ |  convert_mem _ = 
+     raise ERR "IL" ("invalid expression");
+
 fun convert_exp (MEM (regNo, offset)) =
-      mk_comb(Term`MM`,
-                 mk_pair(term_of_int regNo,
-                    mk_comb(if offset >= 0 then Term`POS` else Term`NEG`,
-                          term_of_int (abs offset))))
+      mk_comb(Term`MM`, convert_mem (MEM (regNo, offset)))
  |  convert_exp (NCONST e) =
       mk_comb(Term`MC`, mk_comb (Term`word32$n2w`, mk_numeral (Arbint.toNat e)))
  |  convert_exp (WCONST e) =
@@ -142,12 +166,20 @@ fun convert_exp (MEM (regNo, offset)) =
 
  fun convert_stm ({oper = op1, dst = dlist, src = slist}) =
     let
-        val ops = convert_op op1;
-        val (slist,dlist) = if op1 = mpop orelse op1 = mstr then (dlist,slist)
-                            else (slist,dlist)
-        val (dL,sL) = (List.map convert_reg dlist, List.map convert_exp slist)
-    in
-        list_mk_comb (ops, dL @ sL)
+        val ops = convert_op op1
+    in 
+        if op1 = mpush then
+            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd dlist), 
+                          mk_list (List.map (term_of_int o index_of_exp) slist, Type `:num`)])
+        else if op1 = mpop then 
+            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd slist), 
+                          mk_list (List.map (term_of_int o index_of_exp) dlist, Type `:num`)])
+        else if op1 = mstr then
+            list_mk_comb (ops, (convert_mem (hd dlist)) :: [convert_reg (hd slist)])
+        else if op1 = mldr then
+            list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_mem (hd slist)])
+        else
+            list_mk_comb (ops, List.map convert_reg dlist @ List.map convert_exp slist)
     end
     handle e =>  raise ERR "IL" ("invalid statement!")
 
@@ -183,10 +215,13 @@ fun convert_exp (MEM (regNo, offset)) =
     |  to_op Assem.STMFD = mpush
     |  to_op Assem.MRS = mmrs
     |  to_op Assem.MSR = mmsr
+    |  to_op Assem.BL  = mcall
     |  to_op _ = raise ERR "IL" "No corresponding operator in IL"
 
    fun to_exp (Assem.MEM {reg = regNo, offset = offset, ...}) =
            MEM(regNo,offset)
+    |  to_exp (Assem.TMEM i) =
+           TMEM i
     |  to_exp (Assem.NCONST e) =
            NCONST e
     |  to_exp (Assem.WCONST e) =
@@ -215,7 +250,7 @@ fun convert_exp (MEM (regNo, offset)) =
  (*---------------------------------------------------------------------------------*)
 
    (* annotation at each node of the IR tree *)
-   type annt = {spec : term, ins : exp, outs : exp, context : exp list};
+   type annt = {fspec : thm, ins : exp, outs : exp, context : exp list, espec : thm};
 
    (* conditions of CJ and TR *)
    type cond = exp * rop * exp;
@@ -225,6 +260,8 @@ fun convert_exp (MEM (regNo, offset)) =
                    |  CJ of cond * anntIR * anntIR * annt
                    |  BLK of instr list * annt
                    |  STM of instr list
+                   |  CALL of string * anntIR * anntIR * anntIR * annt
+  
 
  (*---------------------------------------------------------------------------------*)
  (*      Assistant Graph Functions                                                  *)
@@ -364,7 +401,13 @@ fun convert_exp (MEM (regNo, offset)) =
    fun convert_cond (exp1, rop, exp2) = 
        (to_exp exp1, to_rop rop, to_exp exp2);
 
-   (* convert cfg consisting of SC and CJ structures to ir tree *)
+ (*---------------------------------------------------------------------------------*)
+ (*  Convert cfg consisting of SC, CJ and CALL structures to ir tree                *)
+ (*---------------------------------------------------------------------------------*)
+
+   val thm_t = DECIDE (Term `T`);
+   val init_info = {fspec = thm_t, ins = NA, outs = NA, context = [], espec = thm_t};
+
    fun convert cfg n =
         let 
            val (preL,_,{instr = inst', def = def', use = sue'},sucL) = G.context(n,cfg);
@@ -373,6 +416,13 @@ fun convert_exp (MEM (regNo, offset)) =
                Assem.OPER {oper = (Assem.NOP, _, _), ...} => 
                      if not (null sucL) then convert cfg (#2 (hd sucL)) else STM [] 
 
+           |   Assem.OPER {oper = (Assem.BL,_,_), dst = dList, src = sList, jump = jp} =>
+                     let val stm = CALL(Symbol.name(hd (valOf jp)), STM [], STM [], STM [], 
+                                       {fspec = thm_t, ins = list2pair (List.map to_exp sList), 
+                                        outs = list2pair (List.map to_exp dList), context = [], espec = thm_t})
+                     in  if null sucL then stm   
+                         else SC (stm, convert cfg (#2 (hd sucL)), init_info)
+                     end
            |   Assem.LABEL {...} =>
                      if not (null sucL) then convert cfg (#2 (hd sucL)) else STM [] 
 
@@ -380,21 +430,20 @@ fun convert_exp (MEM (regNo, offset)) =
                      let val (cond, ((t_cfg,t_start_node),(f_cfg,f_start_node)), join_node) = break_cj cfg n;
                               (* val rest_cfg = sub_graph gr join_node (fn k => k = end_node); *)
                      in 
-                         SC (CJ (convert_cond cond, convert t_cfg t_start_node, convert f_cfg f_start_node,  
-                                     {spec = Term`T`, ins = NA, outs = NA, context = []}),
-                             convert cfg join_node,
-                                     {spec = Term`T`, ins = NA, outs = NA, context = []}
-                             )
+                         SC (CJ (convert_cond cond, convert t_cfg t_start_node, convert f_cfg f_start_node, init_info),
+                             convert cfg join_node, init_info)
                      end
 
            |   x => 
                      if not (null sucL) then 
-                         SC (STM [to_inst x], convert cfg (#2 (hd sucL)),
-                             {spec = Term`T`, ins = NA, outs = NA, context = []})
+                         SC (STM [to_inst x], convert cfg (#2 (hd sucL)), init_info)
                      else STM [to_inst x]
         end
 
-   (* convert a cfg corresonding to a function to ir *)
+(*---------------------------------------------------------------------------------*)
+(*  Convert a cfg corresonding to a function to ir                                 *)
+(*---------------------------------------------------------------------------------*)
+
    fun convert_module (ins,cfg,outs) = 
       let 
          val (flag, lab_node) = is_rec cfg 0
@@ -413,21 +462,20 @@ fun convert_exp (MEM (regNo, offset)) =
                    (* [{oper = mpush, src = List.map to_exp rec_argL, dst = []}, 
                                             {oper = mpop, src = [], dst = inL}];  *)
 
-                val r_ir_1 = SC(r_ir,rec_args_pass_ir,{spec = Term`T`, ins = NA, outs = NA, context = []})
+                val r_ir_1 = SC(r_ir,rec_args_pass_ir, init_info)
 
                 val cond' = convert_cond cond
                 val tr_ir = case p_cfg of 
                                  NONE => 
-                                    SC (TR (cond', r_ir_1, {spec = Term`T`, ins = ins, outs = ins, context = []}),
-                                        b_ir,
-                                        {spec = Term`T`, ins = NA, outs = NA, context = []})
+                                    SC (TR (cond', r_ir_1, {fspec = thm_t, ins = ins, outs = ins, context = [], espec = thm_t}),
+                                        b_ir, init_info)
                                |  SOME p_gr =>
                                     let val p_ir = convert p_gr (valOf p_start_node);
-                                        val ir0 = SC (r_ir_1, p_ir, {spec = Term`T`, ins = NA, outs = NA, context = []})
-                                        val ir1 = TR (cond', ir0, {spec = Term`T`, ins = NA, outs = NA, context = []})                  
-                                        val ir2 = SC (ir1, b_ir, {spec = Term`T`, ins = ins, outs = ins, context = []})
+                                        val ir0 = SC (r_ir_1, p_ir, init_info)
+                                        val ir1 = TR (cond', ir0, {fspec = thm_t, ins = ins, outs = outs, context = [], espec = thm_t})            
+                                        val ir2 = SC (ir1, b_ir, {fspec = thm_t, ins = ins, outs = ins, context = [], espec = thm_t})
                                     in
-                                         SC (p_ir, ir2, {spec = Term`T`, ins = NA, outs = NA, context = []})
+                                         SC (p_ir, ir2, {fspec = thm_t, ins = ins, outs = outs, context = [], espec = thm_t})
                                     end
              in
                 tr_ir
@@ -438,31 +486,39 @@ fun convert_exp (MEM (regNo, offset)) =
  (*      Simplify the IR tree                                                       *)
  (*---------------------------------------------------------------------------------*)
 
+   fun is_dummy_inst ({oper = mmov, src = sList, dst = dList}) =
+         hd sList = hd dList
+    |  is_dummy_inst (stm as {oper = op', src = sList, dst = dList}) =
+         if length sList < 2 then false
+         else if hd dList = hd sList then
+            (hd (tl sList) = WCONST Arbint.zero andalso (op' = madd orelse op' = msub orelse op' = mlsl orelse
+                     op' = mlsr orelse op' = masr orelse op' = mror))
+         else if hd dList = hd (tl (sList)) then
+            hd sList = WCONST Arbint.zero andalso (op' = madd orelse op' = mrsb)
+         else
+            false;
+
    fun rm_dummy_inst (SC(ir1,ir2,info)) =
          SC (rm_dummy_inst ir1, rm_dummy_inst ir2, info)
     |  rm_dummy_inst (TR(cond,ir2,info)) = 
          TR(cond, rm_dummy_inst ir2, info)
     |  rm_dummy_inst (CJ(cond,ir1,ir2,info)) = 
          CJ(cond, rm_dummy_inst ir1, rm_dummy_inst ir2, info)
-    |  rm_dummy_inst (STM[]) =
-         STM[]
-    |  rm_dummy_inst (STM[{oper = mmov, src = sList, dst = dList}]) =
-         if hd sList = hd dList then STM[]
-         else STM[{oper = mmov, src = sList, dst = dList}]
-    |  rm_dummy_inst (STM[stm as {oper = op', src = sList, dst = dList}]) =
-         if hd dList = hd sList then 
-            if hd (tl sList) = WCONST Arbint.zero andalso (op' = madd orelse op' = msub orelse op' = mlsl orelse
-                     op' = mlsr orelse op' = masr orelse op' = mror) then
-               STM[]
-            else STM[stm]
-         else if hd dList = hd (tl (sList)) then
-            if hd sList = WCONST Arbint.zero andalso (op' = madd orelse op' = mrsb) then
-               STM[]
-            else STM[stm]
-         else 
-            STM[stm]
-    | rm_dummy_inst inst = 
-         inst
+    |  rm_dummy_inst (STM stmL) =
+         STM (List.filter (not o is_dummy_inst) stmL)
+    | rm_dummy_inst (CALL (fname,pre,body,post,info)) =
+         CALL (fname, rm_dummy_inst pre, rm_dummy_inst body, rm_dummy_inst post, info)
+    | rm_dummy_inst (BLK (instL, info)) =
+         BLK (List.filter (not o is_dummy_inst) instL,info)
+
+   fun merge_sc (SC(STM s1, STM s2, info)) = 
+         STM (s1 @ s2)
+    |  merge_sc (SC(STM [], s2, info)) = 
+         merge_sc s2
+    |  merge_sc (SC(s1, STM [], info)) = 
+         merge_sc s1
+    |  merge_sc s = 
+         s;
 
    fun merge_stm (SC(STM s1, STM s2, info)) = 
          STM (s1 @ s2)
@@ -471,9 +527,9 @@ fun convert_exp (MEM (regNo, offset)) =
     |  merge_stm (SC(s1, STM [], info)) = 
          merge_stm s1
     |  merge_stm (SC(s1, SC s,info)) = 
-         merge_stm (SC(merge_stm s1, merge_stm (SC s), info))
+         merge_sc (SC(merge_stm s1, merge_stm (SC s), info))
     |  merge_stm (SC(SC s, s2,info)) = 
-         merge_stm (SC(merge_stm (SC s), merge_stm s2, info))
+         merge_sc (SC(merge_stm (SC s), merge_stm s2, info))
     |  merge_stm (SC(s1,s2,info)) =
          SC (merge_stm s1, merge_stm s2, info)
     |  merge_stm (TR(cond, body, info)) = 
@@ -512,11 +568,11 @@ fun convert_exp (MEM (regNo, offset)) =
       |  ch_mode _ _ = raise Fail "ch_mode: invalidMode";
 
      fun update_mode (REG r) action = 
-	  regT := T.enter (!regT, r, ch_mode (peekT(!regT, r)) action)
-      |  update_mode (MEM (base,offset)) action =
-          memCT := T.enter (!memCT, offset, ch_mode (peekT(!memCT, offset)) action)
+	   regT := T.enter (!regT, r, ch_mode (peekT(!regT, r)) action)
+      |  update_mode (TMEM i) action = 
+           memCT := T.enter (!memCT, i, ch_mode (peekT(!memCT, i)) action)
       |  update_mode _ _ = 
-	  ();
+	   ();
 
      fun one_stm ({oper = op1, dst = dst1, src = src1}) =
 	  ( List.map (fn exp => update_mode exp READ) src1;
@@ -527,7 +583,7 @@ fun convert_exp (MEM (regNo, offset)) =
 	List.map (fn n => REG n) indexL;
 
      fun mk_memL indexL =
-	List.map (fn n => MEM (fromAlias fp,n)) indexL;
+	List.map TMEM indexL;
 
      fun filter_inputs mode = 
 	 mk_regL (List.filter (fn n => #1 (T.look (!regT,n)) = mode) (T.listKeys (!regT))) @ 
@@ -545,50 +601,59 @@ fun convert_exp (MEM (regNo, offset)) =
      end
 
  (*---------------------------------------------------------------------------------*)
- (*      Set input, output and context information                                  *)
  (*      Assistant functions                                                        *)
  (*---------------------------------------------------------------------------------*)
-
-   structure S = Binaryset;
-
-   fun index_of_exp (MEM (base,offset)) =
-         10000 + offset
-    |  index_of_exp (REG e) =
-         e
-    |  index_of_exp NA =
-         ~1
-    |  index_of_exp _ =
-          raise ERR "annotatedIR.eval_exp" ("invalid expression")
-
-   fun expOrder (s1,s2) =
-      let val (i1,i2) = (index_of_exp s1, index_of_exp s2)
-      in
-          if i1 > i2 then GREATER
-          else if i1 = i2 then EQUAL
-          else LESS
-      end;
-
-   fun list2pair l = 
-     if null l then NA
-     else 
-        let fun f [h] = h
-             |  f (h::ts) = PAIR (h, f ts)
-             |  f _ = raise Fail "list2pair fails"
-        in f l
-        end
-
-   fun list2set l = 
-       if null l then S.empty expOrder
-       else S.addList(S.empty expOrder, l);
-
-   fun set2list s = List.filter (fn n => not (n = NA)) (S.listItems s);
 
    fun get_annt (BLK (stmL,info)) = info
     |  get_annt (SC(s1,s2,info)) = info
     |  get_annt (CJ(cond,s1,s2,info)) = info
     |  get_annt (TR(cond,s,info)) = info
-    |  get_annt (STM stmL) = {ins = NA, outs = NA, context = [], spec = Term`T`};
+    |  get_annt (CALL(fname,pre,body,post,info)) = info
+    |  get_annt (STM stmL) = {ins = NA, outs = NA, fspec = thm_t, context = [], espec = thm_t};
 
+   fun replace_ins {ins = ins', outs = outs', context = context', fspec = fspec', espec = espec'} ins'' = 
+           {ins = ins'', outs = outs', context = context', fspec = fspec', espec = espec'};
+
+   fun replace_outs {ins = ins', outs = outs', context = context', fspec = fspec', espec = espec'} outs'' = 
+           {ins = ins', outs = outs'', context = context', fspec = fspec', espec = espec'};
+
+   fun replace_context {ins = ins', outs = outs', context = context', fspec = fspec', espec = espec'} context'' = 
+           {ins = ins', outs = outs', context = context'', fspec = fspec', espec = espec'};
+
+   fun replace_spec {ins = ins', outs = outs', context = context', fspec = fspec', espec = espec'} fspec'' = 
+           {ins = ins', outs = outs', context = context', fspec = fspec'', espec = espec'};
+
+   fun replace_sp {ins = ins', outs = outs', context = context', fspec = fspec', espec = espec'} espec'' = 
+           {ins = ins', outs = outs', context = context', fspec = fspec', espec = espec''};
+
+   fun apply_to_info (BLK (stmL,info)) f =  BLK (stmL, f info)
+    |  apply_to_info (SC(s1,s2,info)) f = SC(s1, s2, f info)
+    |  apply_to_info (CJ(cond,s1,s2,info)) f = CJ(cond, s1, s2, f info)
+    |  apply_to_info (TR(cond,s,info)) f = TR(cond, s, f info)
+    |  apply_to_info (CALL(fname,pre,body,post,info)) f = CALL(fname, pre, body, post, f info)
+    |  apply_to_info (STM stmL) f = STM stmL;
+
+
+ (*---------------------------------------------------------------------------------*)
+ (*      Calculate Modified Registers                                               *)
+ (*---------------------------------------------------------------------------------*)
+
+   fun one_stm_modified_regs ({oper = op1, dst = dlist, src = slist}) =
+       List.map (fn (REG r) => r | _ => ~1) (List.filter (fn (REG r) => true | _ => false) dlist);
+
+   fun get_modified_regs (SC(ir1,ir2,info)) =
+         (get_modified_regs ir1) @ (get_modified_regs ir2)
+    |  get_modified_regs (TR(cond,ir,info)) = 
+         get_modified_regs ir
+    |  get_modified_regs (CJ(cond,ir1,ir2,info)) = 
+         (get_modified_regs ir1) @ (get_modified_regs ir2)
+    |  get_modified_regs (CALL(fname,pre,body,post,info)) = 
+         List.map (fn (REG r) => r | _ => ~1) (List.filter (fn (REG r) => true | _ => false) (pair2list (#outs info)))
+    |  get_modified_regs (STM l) =
+         itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l [] 
+    |  get_modified_regs (BLK (l,info)) = 
+         itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l [];
+  
 
  (*---------------------------------------------------------------------------------*)
  (*      Set input, output and context information                                  *)
@@ -598,47 +663,53 @@ fun convert_exp (MEM (regNo, offset)) =
    (* Adjust the inputs to be consistent with the outputs of the previous ir  *)
 
    fun adjust_ins ir (outer_info as ({ins = outer_ins, outs = outer_outs, context = outer_context, ...}:annt)) =
-        let val {ins = inner_ins, context = inner_context, outs = inner_outs, spec = inner_spec} = get_annt ir;
+        let val inner_info as {ins = inner_ins, context = inner_context, outs = inner_outs, fspec = inner_spec, ...} = get_annt ir;
             val (inner_inS,outer_inS) = ((list2set o pair2list) inner_ins, (list2set o pair2list) outer_ins);
-        in  if S.isSubset (outer_inS,inner_inS) then
+        in  if outer_ins = inner_ins then
                ir
             else
                case ir of
                    (BLK (stmL, info)) => 
-                       BLK (stmL, {ins = outer_ins, context = inner_context, outs = inner_outs, spec = inner_spec})
+                       BLK (stmL, replace_ins inner_info outer_ins)
                 |  (SC (s1,s2,info)) =>
                        SC (adjust_ins s1 outer_info, s2, outer_info)
                 |  (CJ (cond,s1,s2,info)) =>
                        CJ (cond, adjust_ins s1 outer_info, adjust_ins s2 outer_info, outer_info)
                 |  (TR (cond,s,info)) =>
                        TR(cond, adjust_ins s info, info)
+                |  (CALL (fname,pre,body,post,info)) =>
+                       CALL(fname, pre, body, post, info)
                 |  _ => 
                        raise Fail "adjust_ins: invalid IR tree"
         end
 
+
+   fun args_diff (ins1, outs0) = 
+        set2pair (S.difference (pair2set ins1, pair2set outs0));
+
    (* Given the outputs and the context of an ir, calculate its inputs *)
 
-   fun back_trace (STM stmL) ({outs = outer_outs, context = contextL, ...}:annt) = 
+   fun back_trace (STM stmL) (info as {outs = outer_outs, context = contextL, ...}:annt) = 
           let 
               val (inner_inL, inner_tempL, inner_outL) =  getIO stmL
-              val gap = S.difference ((list2set o pair2list) outer_outs, list2set (inner_tempL @ inner_outL));
-              val inS = S.union (list2set inner_inL,gap)
+              val real_outS = list2set (inner_tempL @ inner_outL)
+              val contextS = S.difference (list2set contextL, real_outS)
           in 
-              BLK (stmL, {ins = (list2pair o set2list) inS, outs = outer_outs, context = contextL, spec = Term `T`}) 
+              BLK (stmL, {outs = outer_outs, ins = list2pair inner_inL, context = set2list contextS, fspec = #fspec info, espec = #espec info}) 
           end
 
     |  back_trace (SC(s1,s2,info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
            let 
               val s2' = back_trace s2 outer_info
               val (s1_info, s2_info) = (get_annt s1, get_annt s2');
-              val s2'' = if #outs s1_info <> NA then adjust_ins s2' 
-                                  {ins = #outs s1_info, context = #context s2_info, outs = #outs s2_info, spec = Term`T`}
-                         else s2';
+              val s2'' = if S.isSubset (pair2set (#outs s1_info), pair2set (#ins s2_info)) then s2'
+                         else adjust_ins s2' (replace_ins s2_info (#outs s1_info));
               val s2_info = get_annt s2'';
-              val s1' = back_trace s1 {outs = #ins s2_info, context = #context s2_info, ins = NA, spec = Term`T`}
+              val s1' = back_trace s1 {outs = #ins s2_info, ins = #ins s1_info, context = #context s2_info, fspec = #fspec s1_info, 
+			espec = #espec s1_info};
               val s1_info = get_annt s1'
            in
-              SC(s1',s2'',{ins = #ins s1_info, outs = outer_outs, context = contextL, spec = Term`T`})
+              SC(s1',s2'', {ins = #ins s1_info, outs = #outs s2_info, fspec = thm_t, context = contextL, espec = #espec s1_info})
            end
 
     |  back_trace (CJ(cond, s1, s2, info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
@@ -652,19 +723,26 @@ fun convert_exp (MEM (regNo, offset)) =
               val s2' = back_trace s2 outer_info
               val ({ins = ins1, outs = outs1, ...}, {ins = ins2, outs = outs2, ...}) = (get_annt s1', get_annt s2');
               val inS_0 = list2pair (set2list (list2set (cond_expL @ (pair2list ins1) @ (pair2list ins2)))); (* union *)
-              val info_0 = {ins = inS_0, outs = outer_outs, context = contextL, spec = Term`T`}
+              val info_0 = replace_ins outer_info inS_0
           in
               CJ(cond, adjust_ins s1' info_0, adjust_ins s2' info_0, info_0)
           end
 
-    |  back_trace (TR (cond, s, info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
+    |  back_trace (TR (cond, body, info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
            let 
-              val extra_outs = S.difference ((list2set o pair2list) outer_outs, (list2set o pair2list) (#outs info));
-              val contextL' = set2list (list2set (contextL @ (set2list extra_outs)));  (* union *)
-              val s' = back_trace s {outs = #outs info, context = contextL', ins = NA, spec = Term `T`}
-              val info_0 = {ins = #ins info, outs = #outs info, context = contextL', spec = Term`T`}
+              val extra_outs = args_diff (PAIR (outer_outs, list2pair contextL), #outs info)
+              val info' = replace_context info (pair2list extra_outs);
+              val body' = adjust_ins body info'
           in
-              TR(cond, adjust_ins s' info_0, info_0)
+              TR(cond, body', info')
+          end
+
+          (* the adjustment will be performed later in the funCall.sml *)
+    |  back_trace (CALL (fname, pre, body, post, info)) (outer_info as {outs = outer_outs, context = contextL, fspec = fout_spec, ...}) =
+          let 
+              val extra_outs = args_diff (PAIR (outer_outs, list2pair contextL), #outs info)
+          in
+              CALL (fname, pre, BLK ([], info), post, replace_ins outer_info (#ins info))
           end
 
     |  back_trace _ _ = 
@@ -673,24 +751,67 @@ fun convert_exp (MEM (regNo, offset)) =
 
    fun set_info (ins,ir,outs) = 
        let 
-          fun extract_outputs ir' = 
-              let val info' = get_annt ir';
-                  val (inner_outS, outer_outS) = ((list2set o pair2list) (#outs info'), (list2set o pair2list) outs)
-              in  if S.equal(inner_outS, outer_outS) then ir'
-                  else SC (ir', BLK ([], {context = #context info', ins = #outs info', outs = outs, spec = Term`T`}),
-                            {context = #context info', ins = ins, outs = outs, spec = #spec info'})
+          fun extract_outputs ir0 = 
+              let val info0 = get_annt ir0;
+                  val (inner_outS, outer_outS) = (pair2set (#outs info0), pair2set outs)
+                  val ir1 = if S.equal(inner_outS, outer_outS) then ir0
+                            else SC (ir0, BLK ([], {context = #context info0, ins = #outs info0, outs = outs, fspec = thm_t, espec = thm_t}),
+				     replace_outs info0 outs)
+                  val info1 = get_annt ir1
+              in
+                  if #ins info0 = ins then ir1
+                  else SC (BLK ([], {context = #context info1, ins = ins, outs = #ins info0, fspec = thm_t, espec = thm_t}),
+			   ir1, replace_ins info1 ins)
               end
-          val info =  {spec = Term`T`, ins = ins, outs = outs, context = []}
+          val info =  {ins = ins, outs = outs, context = [], fspec = thm_t, espec = thm_t}
        in
           extract_outputs (back_trace ir info)
        end;
+
+(* ---------------------------------------------------------------------------------------------------------------------*)
+(* Adjust the IR tree to make inputs and outputs consistent                                                             *)
+(* ---------------------------------------------------------------------------------------------------------------------*)
+
+  fun match_ins_outs (SC(s1,s2,info)) =
+      let 
+          val (ir1,ir2) = (match_ins_outs s1, match_ins_outs s2);
+          val (info1,info2) = (get_annt ir1, get_annt ir2);
+          val (outs1, ins2) = (#outs info1, #ins info2);
+      in
+          if outs1 = ins2 then 
+              SC(ir1,ir2,info)
+          else 
+              SC(ir1, 
+                 SC (BLK ([], {ins = outs1, outs = ins2, context = #context info2, espec = thm_t, fspec = thm_t}), ir2, 
+                          replace_ins info2 outs1),
+                 info)
+      end
+
+   |  match_ins_outs (ir as (CALL (fname, pre, body, post, info))) =
+      let
+          val ((pre_ins,post_outs),(outer_ins,outer_outs)) = ((#ins (get_annt pre), #outs (get_annt post)), (#ins info, #outs info))
+          val ir' = if post_outs = outer_outs then ir
+                    else
+			SC (ir,
+			    BLK ([], {ins = post_outs, outs = outer_outs, context = #context info, espec = thm_t, fspec = thm_t}),
+			    replace_ins info pre_ins)
+      in
+          if pre_ins = outer_ins then ir'
+          else
+              SC (BLK([], {ins = outer_ins, outs = pre_ins, context = #context info, espec = thm_t, fspec = thm_t}),
+                  ir',
+                  info)
+      end
+    
+   |  match_ins_outs ir = 
+      ir;
 
 
  (*---------------------------------------------------------------------------------*)
  (*      Interface                                                                  *)
  (*---------------------------------------------------------------------------------*)
 
-   fun build_ir (fname, ftype, f_args, f_gr, f_outs, f_rs) = 
+   fun build_ir (f_name, f_type, f_args, f_gr, f_outs, f_rs) = 
       let
          val (ins, outs) = (to_exp f_args, to_exp f_outs)
          val ir0 = convert_module (ins, f_gr, outs)
@@ -710,6 +831,137 @@ fun convert_exp (MEM (regNo, offset)) =
      in
         (f_name, f_type, f_ir, defs)
      end
+
+
+ (*---------------------------------------------------------------------------------*)
+ (*      Print a IR tree                                                            *)
+ (*---------------------------------------------------------------------------------*)
+
+  fun print_op mmov = "mmov"
+   |  print_op madd = "madd"
+   |  print_op msub = "msub"
+   |  print_op mrsb = "msrb"
+   |  print_op mmul = "mmul"
+   |  print_op mmla = "mmla"
+   |  print_op mand = "mand"
+   |  print_op morr = "morr"
+   |  print_op meor = "meor"
+   |  print_op mlsl = "mlsl"
+   |  print_op mlsr = "mlsr"
+   |  print_op masr = "masr"
+   |  print_op mror = "mror"
+   |  print_op mldr = "mldr"
+   |  print_op mstr = "mstr"
+   |  print_op mpop = "mpop"
+   |  print_op mpush = "mpush"
+   |  print_op mmrs = "mmrs"
+   |  print_op mmsr = "mmsr"
+   |  print_op mcall = "mcall"
+
+  fun print_rop (eq) = "="
+   |  print_rop (ne) = "!="
+   |  print_rop (ge) = ">="
+   |  print_rop (lt) = "<"
+   |  print_rop (gt) = ">"
+   |  print_rop (le) = "<="
+   |  print_rop (al) = "al"
+   |  print_rop (nv) = "nv"
+
+  fun printReg r =
+      let fun printAlias fp = "fp"
+           |  printAlias ip = "ip"
+           |  printAlias sp = "sp"
+           |  printAlias lr = "lr"
+           |  printAlias pc = "pc"
+      in
+          if r >= 11 then
+              printAlias (toAlias r)
+          else "r" ^ Int.toString r
+      end
+
+  val address_stride = ref 1;
+
+  fun format_exp (TMEM e) =
+        "[" ^ Int.toString e ^ "]"
+   |  format_exp (MEM (r,j)) =
+        (if j = 0 then
+             "[" ^ printReg r ^ "]"
+         else
+             "[" ^ printReg r ^ ", " ^ "#" ^ Int.toString (j * !address_stride) ^ "]")
+   |  format_exp (NCONST e) =
+             "#" ^ Int.toString (Arbint.toInt e)
+   |  format_exp (WCONST e) =
+             "#" ^ Int.toString (Arbint.toInt e) ^ "w"
+   |  format_exp (REG e) =
+             printReg e
+   |  format_exp (PAIR(e1,e2)) =
+             "(" ^ format_exp e1 ^ "," ^ format_exp e2 ^ ")"
+   |  format_exp _ = 
+             raise Fail "format_exp:invalid IR expression";
+
+  fun formatInst {oper = operator, src = sList, dst = dList} =
+      if operator = mpush then
+           print_op operator  ^ " " ^ format_exp (hd dList) ^ " {" ^ 
+           format_exp (hd sList) ^ itlist (curry (fn (exp,str) => "," ^ format_exp exp ^ str)) (tl sList) "" ^
+           "}"
+      else if operator = mpop then
+           print_op operator  ^ " " ^ format_exp (hd sList) ^ " {" ^
+           format_exp (hd dList) ^ itlist (curry (fn (exp,str) => "," ^ format_exp exp ^ str)) (tl dList) "" ^
+           "}"
+      else
+          print_op operator  ^ " " ^
+          itlist (curry (fn (exp,str) => format_exp exp ^ str)) dList "" ^ " " ^
+          (if null sList then ""
+           else format_exp (hd sList) ^
+               itlist (curry (fn (exp,str) => " " ^ format_exp exp ^ str)) (tl sList) "");
+
+  val show_call_detail = ref true;
+
+  fun print_ir (outstream, s0) =
+    let 
+
+      fun say s = TextIO.output(outstream,s)
+      fun sayln s= (say s; say "\n") 
+
+      fun indent 0 = ()
+        | indent i = (say " "; indent(i-1))
+
+      fun printtree(SC(s1,s2,info),d) =
+            (indent d; sayln "SC("; printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
+        | printtree(CJ((exp1,rop,exp2),s1,s2,info),d) = 
+            (indent d; say "CJ("; say (format_exp exp1 ^ " " ^ print_rop rop ^ " " ^ format_exp exp2); sayln ",";
+		       printtree(s1,d+2); sayln ","; printtree(s2,d+2); say ")")
+        | printtree(TR((exp1,rop,exp2),s,info),d) = 
+            (indent d; say "TR("; say (format_exp exp1 ^ " " ^ print_rop rop ^ format_exp exp2); sayln ",";
+		       printtree(s,d+2); say ")")
+        | printtree(CALL(fname,pre,body,post,info),d) =
+            if not (!show_call_detail) then 
+                (indent d; say ("CALL(" ^ fname ^ ")"))
+            else
+                let val ir' = SC (pre, SC (body, post, info), info)
+                    (* val ir'' = (merge_stm o rm_dummy_inst) ir' *)
+                in 
+                    printtree (ir', d)
+                end
+
+        | printtree(STM stmL,d) = 
+            (indent d; if null stmL then say ("[]") 
+                       else say ("[" ^ formatInst (hd stmL) ^
+                                 (itlist (curry (fn (stm,str) => "; " ^ formatInst stm ^ str)) (tl stmL) "") ^ "]"))
+        | printtree(BLK(stmL, info),d) =
+            printtree(STM stmL,d)
+
+    in  
+      printtree(s0,0); sayln ""; TextIO.flushOut outstream
+    end
+
+  fun printIR ir = print_ir (TextIO.stdOut, ir)
+
+  fun printIR2 (f_name, f_type, (ins,ir,outs), defs) = 
+      ( print ("Module: " ^ f_name ^ "\n");
+        print ("Inputs: " ^ format_exp ins ^ "\n" ^ "Outputs: " ^ format_exp outs ^ "\n");
+        printIR ir
+      )
 
 end
 end

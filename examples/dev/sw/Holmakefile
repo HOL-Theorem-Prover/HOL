@@ -43,20 +43,23 @@ IR.uo: IR.sml Tree.uo word32Theory.uo
 CFG.uo: CFG.sml Assem.uo gr_t.uo Tree.uo IR.uo
 	HOLMOSMLC -c -toplevel Assem.ui gr_t.ui Tree.ui Table.ui Symbol.ui IR.ui CFG.sml
 
-declFuncs.uo: declFuncs.sml
-	HOLMOSMLC -c -toplevel Table.ui Assem.ui declFuncs.sml
-
 regAllocation.uo: regAllocation.sml Stack.uo
-	HOLMOSMLC -c -toplevel gr_t.ui Temp.ui Stack.ui Assem.ui CFG.ui declFuncs.ui Table.ui regAllocation.sml
+	HOLMOSMLC -c -toplevel gr_t.ui Temp.ui Stack.ui Assem.ui CFG.ui Table.ui regAllocation.sml
 
 preARMSyntax.uo: preARMSyntax.sml preARMTheory.uo
 	HOLMOSMLC -c -toplevel Assem.ui Symbol.ui Table.ui preARMSyntax.sml
 
-Link.uo: Link.sml declFuncs.uo regAllocation.uo 
-	HOLMOSMLC -c -toplevel regAllocation.ui gr_t.ui Assem.ui Symbol.ui Temp.ui CFG.ui declFuncs.ui Table.ui Link.sml
+annotatedIL.uo: annotatedIL.sml ILTheory.uo regAllocation.uo
+	HOLMOSMLC -c -toplevel Table.ui gr_t.ui ANF.ui Assem.ui Symbol.ui regAllocation.ui CFG.ui annotatedIL.sml
 
-annotatedIL.uo: annotatedIL.sml ILTheory.uo
-	HOLMOSMLC -c -toplevel Table.ui gr_t.ui ANF.ui Assem.ui CFG.ui regAllocation.ui annotatedIL.sml
+declFuncs.uo: declFuncs.sml
+	HOLMOSMLC -c -toplevel Table.ui annotatedIL.ui declFuncs.sml
 
-mechReasoning.uo: rulesTheory.uo annotatedIL.uo
-	HOLMOSMLC -c -toplevel mechReasoning.sml ILTheory.uo
+funCall.uo: funCall.sml
+	HOLMOSMLC -c -toplevel Table.ui regAllocation.ui annotatedIL.ui declFuncs.ui funCall.sml
+
+mechReasoning.uo: mechReasoning.sml
+	HOLMOSMLC -c -toplevel annotatedIL.ui ILTheory.ui funCall.ui interface.ui preARMSyntax.ui Assem.ui mechReasoning.sml
+
+interface.uo: interface.sml
+	HOLMOSMLC -c -toplevel annotatedIL.ui funCall.ui interface.sml

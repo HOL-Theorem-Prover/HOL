@@ -14,8 +14,8 @@ in
 
   structure T = IntMapTable(type key = int  fun getInt n = n);
 
-  type func = {name:string, ftype:hol_type, args:Assem.exp, stms:Assem.instr list, outs:Assem.exp, 
-	regs:Assem.exp Binaryset.set};
+  type func = {name : string, ftype : hol_type, ir : annotatedIL.exp * annotatedIL.anntIR * annotatedIL.exp, 
+	regs : int Binaryset.set, localNum : int, def : thm};
   val decls : (func T.table) ref = ref (T.empty);
 
   fun is_decl fun_name = 
@@ -28,12 +28,11 @@ in
 	T.look(!decls,i)
       end;
 
-  fun putFunc (name,tp,args,stms,outs,rs) =
+  fun putFunc (name,tp,ir,rs,n,f_def) =
       let 
 	  val _ = Polyhash.insert (!hashtable) (name, !k)
       in
-            ( decls := T.enter(!decls,!k, {name = name, ftype = tp, args = args, 
-					   stms = stms, outs = outs, regs = rs});
+            ( decls := T.enter(!decls,!k, {name = name, ftype = tp, ir = ir, regs = rs, localNum = n, def = f_def});
 	      k := !k + 1
             )
       end
@@ -41,4 +40,3 @@ in
 end (* local structure ... *)
 
 end (* structure *)
-

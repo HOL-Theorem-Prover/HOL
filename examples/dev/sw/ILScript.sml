@@ -103,7 +103,7 @@ val toEXP_def = Define `
 val _ = Hol_datatype ` 
     DOPER = MLDR of MREG => MMEM |
            MSTR of MMEM => MREG |
-           MMOV of MREG => MEXP  |
+           MMOV of MREG => MEXP |
            MADD of MREG => MEXP => MEXP |
            MSUB of MREG => MEXP => MEXP | 
            MRSB of MREG => MEXP => MEXP |
@@ -114,13 +114,9 @@ val _ = Hol_datatype `
 	   MLSL of MREG => MEXP => MEXP |
 	   MLSR of MREG => MEXP => MEXP |
 	   MASR of MREG => MEXP => MEXP |
-	   MROR of MREG => MEXP => MEXP`;
-
-val _ = Hol_datatype ` 
-    SOPER =
-           PUSHL of REGISTER list |
-	   POPL of REGISTER list
-   `;
+	   MROR of MREG => MEXP => MEXP |
+           MPUSH of REGISTER => REGISTER list |
+	   MPOP of REGISTER => REGISTER list`;
 
 val _ = type_abbrev("CEXP", Type`:EXP # COND # EXP`);
 
@@ -134,20 +130,23 @@ val _ = Hol_datatype `CTL_STRUCTURE =
 (*---------------------------------------------------------------------------------*)
 (*      Macro machine                                                              *)
 (*      Stack Operations                                                           *)
+(*      Since a negative integeter minus 0 results in 0, we assume the stack goes  *)
+(*      up to avoid this problem                                                   *)
 (*---------------------------------------------------------------------------------*)
 
-(* Push data in multiple registers into the stack without writing-back to the sp   *)
- 
-val popL_def =
-  Define `popL st regL = 
-    FST (FOLDL (\(st1,i) reg. (write st1 (REG reg) (read st (MEM(13,POS(i+1)))), i+1)) (st,0) regL)`;
-
-(* Pop from the stack to multiple registers with writing-back to the sp            *)
+(* Push into the stack from multiple registers with writing-back to the sp              *)
 
 val pushL_def =
-  Define `pushL st regL = 
-   write (FST (FOLDL (\(st1,i) reg. (write st1 (MEM(13,NEG i)) (read st (REG reg)), i+1)) (st,0) (REVERSE regL)))
-                                        (REG 13) (read st (REG 13) - n2w (LENGTH regL))`;
+  Define `pushL st baseR regL = 
+   write (FST (FOLDL (\(st1,i) reg. (write st1 (MEM(baseR,NEG i)) (read st reg), i+1)) (st,0) (REVERSE (MAP REG regL))))
+         (REG baseR) (read st (REG baseR) - n2w (LENGTH regL))`;
+
+(* Pop into multiple registers from the stack with writing-back to the sp   *)
+ 
+val popL_def =
+  Define `popL st baseR regL = 
+   write (FST (FOLDL (\(st1,i) reg. (write st1 reg (read st (MEM(baseR, POS(i+1)))), i+1)) (st,0) (MAP REG regL)))
+         (REG baseR) (read st (REG baseR) + n2w (LENGTH regL))`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Decode assignment statement                                                *)
@@ -181,7 +180,12 @@ val mdecode_def = Define `
   (mdecode st (MASR dst src1 src2) =
       write st (toREG dst) (read st (toEXP src1) >> w2n (read st (toEXP src2)))) /\
   (mdecode st (MROR dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) #>> w2n (read st (toEXP src2))))`;
+      write st (toREG dst) (read st (toEXP src1) #>> w2n (read st (toEXP src2)))) /\
+  (mdecode st (MPUSH dst' srcL) =
+      pushL st dst' srcL) /\
+  (mdecode st (MPOP dst' srcL) =
+      popL st dst' srcL)
+  `;
 
 val translate_assignment_def = Define `
     (translate_assignment (MMOV dst src) = ((MOV,NONE,F),SOME (toREG dst), [toEXP src], NONE):INST) /\
@@ -197,7 +201,10 @@ val translate_assignment_def = Define `
     (translate_assignment (MASR dst src1 src2) = ((ASR,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
     (translate_assignment (MROR dst src1 src2) = ((ROR,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
     (!dst src.translate_assignment (MLDR dst src) = ((LDR,NONE,F),SOME (toREG dst), [toMEM src], NONE):INST) /\
-    (!dst src.translate_assignment (MSTR dst src) = ((STR,NONE,F),SOME (toREG src), [toMEM dst], NONE):INST)`;
+    (!dst src.translate_assignment (MSTR dst src) = ((STR,NONE,F),SOME (toREG src), [toMEM dst], NONE):INST) /\
+    (!dst srcL.translate_assignment (MPUSH dst srcL) = ((STMFD,NONE,F),SOME (WREG dst), MAP REG srcL, NONE):INST) /\
+    (!dst srcL.translate_assignment (MPOP dst srcL) = ((LDMFD,NONE,F),SOME (WREG dst), MAP REG srcL, NONE):INST)
+    `;
 
 
 val TRANSLATE_ASSIGMENT_CORRECT = Q.store_thm
@@ -206,8 +213,10 @@ val TRANSLATE_ASSIGMENT_CORRECT = Q.store_thm
        (SUC pc,cpsr,mdecode st stm) = decode_cond (pc,cpsr,st) (translate_assignment stm)`,
      SIMP_TAC std_ss [FORALL_DSTATE] THEN
      Cases_on `stm` THEN
-     RW_TAC list_ss [translate_assignment_def, decode_cond_thm, decode_op_thm, write_thm,  mdecode_def]
+     RW_TAC list_ss [translate_assignment_def, decode_cond_thm, decode_op_thm, write_thm,  mdecode_def] THEN
+     RW_TAC list_ss [pushL_def, popL_def]
   );
+
 
 val TRANSLATE_ASSIGMENT_CORRECT_2 = Q.store_thm
   ("TRANSLATE_ASSIGMENT_CORRECT_2",
