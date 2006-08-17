@@ -58,7 +58,7 @@ declFuncs.uo: declFuncs.sml
 funCall.uo: funCall.sml
 	HOLMOSMLC -c -toplevel Table.ui regAllocation.ui annotatedIL.ui declFuncs.ui funCall.sml
 
-mechReasoning.uo: mechReasoning.sml
+mechReasoning.uo: mechReasoning.sml preARMSyntax.uo  rulesTheory.uo
 	HOLMOSMLC -c -toplevel annotatedIL.ui ILTheory.ui funCall.ui interface.ui preARMSyntax.ui Assem.ui mechReasoning.sml
 
 interface.uo: interface.sml
