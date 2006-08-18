@@ -147,11 +147,16 @@ val delta  = Tyv "'d"
 val etyvar = Tyv "'e"
 val ftyvar = Tyv "'f"
 
+val varcomplain = ref true
+val _ = register_btrace ("Vartype Format Complaint", varcomplain)
+
 fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
   | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
   | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
-                   else (WARN "mk_vartype" "non-standard syntax"; Tyv s)
+                   else (if !varcomplain then
+                           WARN "mk_vartype" "non-standard syntax"
+                         else (); Tyv s)
 
 fun dest_vartype (Tyv s) = s
   | dest_vartype _ = raise ERR "dest_vartype" "not a type variable";
@@ -230,23 +235,23 @@ local
    in look end
 in
 fun tymatch [] [] Sids = Sids
-  | tymatch ((v as Tyv _)::ps) (ty::obs) (Sids as (S,ids)) = 
-     tymatch ps obs 
-       (case lookup v ids S 
+  | tymatch ((v as Tyv _)::ps) (ty::obs) (Sids as (S,ids)) =
+     tymatch ps obs
+       (case lookup v ids S
          of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
           | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
   | tymatch (Tyapp(c1,A1)::ps) (Tyapp(c2,A2)::obs) Sids =
-      if c1=c2 then tymatch (A1@ps) (A2@obs) Sids 
+      if c1=c2 then tymatch (A1@ps) (A2@obs) Sids
                else MERR "different tyops"
   | tymatch any other thing = MERR "different constructors"
 end
 (*
-fun raw_match_type (v as Tyv _) ty (Sids as (S,ids)) = 
-       (case lookup v ids S 
+fun raw_match_type (v as Tyv _) ty (Sids as (S,ids)) =
+       (case lookup v ids S
          of NONE => if v=ty then (S,v::ids) else ((v |-> ty)::S,ids)
           | SOME ty1 => if ty1=ty then Sids else MERR "double bind")
   | raw_match_type (Tyapp(c1,A1)) (Tyapp(c2,A2)) Sids =
-       if c1=c2 then rev_itlist2 raw_match_type A1 A2 Sids 
+       if c1=c2 then rev_itlist2 raw_match_type A1 A2 Sids
                 else MERR "different tyops"
   | raw_match_type _ _ _ = MERR "different constructors"
 *)

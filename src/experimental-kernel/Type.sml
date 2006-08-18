@@ -51,10 +51,10 @@ in
 end
 
 fun del_segment s = let
-  fun f (k, v) = if #Thy k = s then prim_delete_type k else () 
+  fun f (k, v) = if #Thy k = s then prim_delete_type k else ()
   val m = !operator_table
 in
-  Map.app f m 
+  Map.app f m
 end
 
 fun minseg s = {Thy = "min", Tyop = s}
@@ -193,11 +193,16 @@ val delta  = Tyv "'d"
 val etyvar = Tyv "'e"
 val ftyvar = Tyv "'f"
 
+val varcomplain = ref true
+val _ = register_btrace ("Vartype Format Complaint", varcomplain)
+
 fun mk_vartype "'a" = alpha  | mk_vartype "'b" = beta
   | mk_vartype "'c" = gamma  | mk_vartype "'d" = delta
   | mk_vartype "'e" = etyvar | mk_vartype "'f" = ftyvar
   | mk_vartype s = if Lexis.allowed_user_type_var s then Tyv s
-                   else (WARN "mk_vartype" "non-standard syntax"; Tyv s)
+                   else (if !varcomplain then
+                           WARN "mk_vartype" "non-standard syntax"
+                         else (); Tyv s)
 
 fun ty_sub [] _ = SAME
   | ty_sub theta (Tyapp(tyc,Args))
