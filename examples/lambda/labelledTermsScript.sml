@@ -1042,5 +1042,92 @@ val l15a = store_thm(
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `{x;v} UNION FV u` THEN
   SRW_TAC [][SUB_DEF]);
 
+(* ----------------------------------------------------------------------
+    set up lterm recursion (where recursive arguments are still available)
+   ---------------------------------------------------------------------- *)
+
+val ltm_precursion_ex =
+  (UNDISCH o
+   SIMP_RULE (srw_ss()) [support_def, FUN_EQ_THM, fnpm_def, pairpm_def,
+                         pairTheory.FORALL_PROD,
+                         ASSUME ``is_perm (apm: 'a pm)``] o
+   Q.INST [`vr` |-> `\s. (vr s, VAR s)`,
+           `ap` |-> `\t u. (ap (FST t) (FST u) (SND t) (SND u),
+                            SND t @@ SND u)`,
+           `lm` |-> `\v t. (lm (FST t) v (SND t), LAM v (SND t))`,
+           `li` |-> `\n v t u. (li (FST t) (FST u) n v (SND t) (SND u),
+                                LAMi n v (SND t) (SND u))`,
+           `apm` |-> `pairpm apm ltpm`] o
+   SPEC_ALL o
+   INST_TYPE [alpha |-> ``:'a # lterm``]) ltm_recursion
+
+val bod = #2 (dest_exists (concl ltm_precursion_ex))
+
+val ltm_snd_res = prove(
+  ``FINITE A ==> ^bod ==> !M. SND (f M) = M``,
+  NTAC 2 STRIP_TAC THEN HO_MATCH_MP_TAC lterm_bvc_induction THEN
+  Q.EXISTS_TAC `A` THEN SRW_TAC [][])
+
+val ltm_precursion_ex2 = prove(
+  ``FINITE A ==> ^bod ==>
+    ?f. ((!s. f (VAR s) = vr s) /\
+         (!M N. f (M @@ N) = ap (f M) (f N) M N) /\
+         (!v M. ~(v IN A) ==> (f (LAM v M) = lm (f M) v M)) /\
+         (!n v M N. ~(v IN A) ==>
+                       (f (LAMi n v M N) = li (f M) (f N) n v M N))) /\
+        (!x y t. ~(x IN A) /\ ~(y IN A) ==>
+                 (f (ltpm [(x,y)] t) = apm [(x,y)] (f t)))``,
+  REPEAT STRIP_TAC THEN Q.EXISTS_TAC `FST o f` THEN SRW_TAC [][] THEN
+  IMP_RES_TAC ltm_snd_res THEN SRW_TAC [][])
+
+val supp_lemma = prove(
+  ``is_perm apm ==> ((!x y t. f (ltpm [(x,y)] t) = apm [(x,y)] (f t)) =
+                     (!pi t. f (ltpm pi t) = apm pi (f t)))``,
+  SRW_TAC [][EQ_IMP_THM] THEN
+  Q.ID_SPEC_TAC `t`  THEN Induct_on `pi` THEN
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, is_perm_nil] THEN
+  MAP_EVERY Q.X_GEN_TAC [`a`,`b`,`M`] THEN
+  `ltpm ((a,b)::pi) M = ltpm [(a,b)] (ltpm pi M)`
+     by SRW_TAC [][GSYM tpm_APPEND] THEN SRW_TAC [][] THEN
+  SRW_TAC [][GSYM is_perm_decompose]);
+
+val ltm_recursion_nosideset = save_thm(
+  "ltm_recursion_nosideset",
+  (SIMP_RULE (srw_ss()) [AND_IMP_INTRO, supp_lemma] o
+   Q.INST [`A` |-> `{}`] o
+   DISCH_ALL o
+   CHOOSE(``f:lterm -> 'a # lterm``, ltm_precursion_ex) o UNDISCH o
+   UNDISCH) ltm_precursion_ex2);
+
+val term_info_string =
+    "local\n\
+    \fun k |-> v = {redex = k, residue = v}\n\
+    \val term_info = \n\
+    \   {nullfv = ``LAM \"\" (VAR \"\")``,\n\
+    \    rewrites = [],\n\
+    \    inst = [\"rFV\" |-> \
+    \              (fn () => ``labelledTerms$FV : lterm -> string set``),\n\
+    \            \"rswap\" |-> (fn () =>\n\
+    \                            ``\\(x:string) (y:string) (t:lterm).\n\
+    \                                   ltpm [(x,y)] t``),\n\
+    \            \"apm\" |-> (fn () =>\n\
+    \                           ``labelledTerms$ltpm : (string # string) list -> \n\
+    \                     labelledTerms$lterm -> labelledTerms$lterm``)]}\n\
+    \val _ = binderLib.range_database :=\n\
+    \          Binarymap.insert(!binderLib.range_database, \"lterm\", \n\
+    \                           term_info)\n\
+    \val _ = binderLib.type_db :=\n\
+    \          Binarymap.insert(!binderLib.type_db, \"lterm\",\n\
+    \                           ltm_recursion_nosideset)\n\
+    \in end;\n"
+
+val _ = adjoin_to_theory
+        { sig_ps = NONE,
+          struct_ps =
+          SOME (fn pps => PP.add_string pps term_info_string)}
+
+
+
+
 val _ = export_theory()
 

@@ -152,7 +152,7 @@ in
 end
 
 exception InfoProofFailed of term
-fun with_info_prove_recn_exists f dom_ty rng_ty lookup info = let
+fun with_info_prove_recn_exists f finisher dom_ty rng_ty lookup info = let
   val {nullfv, inst, rewrites} = info
   fun mk_simple_abstraction (c, (cargs, r)) = list_mk_abs(cargs, r)
   val recthm = valOf (recthm_for_type dom_ty)
@@ -212,7 +212,8 @@ fun with_info_prove_recn_exists f dom_ty rng_ty lookup info = let
   val precondition_discharged =
       CONV_RULE
         (LAND_CONV (SIMP_CONV (srw_ss()) rewrites THENC
-                    SIMP_CONV (srw_ss()) [pred_setTheory.SUBSET_DEF]))
+                    SIMP_CONV (srw_ss()) [pred_setTheory.SUBSET_DEF] THENC
+                    finisher))
         recursion_exists
 in
   MP precondition_discharged TRUTH
@@ -223,7 +224,7 @@ end;
 
 
 
-fun prove_recursive_term_function_exists0 tm = let
+fun prove_recursive_term_function_exists0 fin tm = let
   val (f, conjs) = check_for_errors tm
 
   val (dom_ty, rng_ty) = dom_rng (type_of f)
@@ -248,7 +249,7 @@ fun prove_recursive_term_function_exists0 tm = let
   (* order of keys is order of clauses in original definition request *)
   val alist = List.foldl insert_eqn [] conjs
   fun find_eqn c = lookup c alist
-  val callthis = with_info_prove_recn_exists f dom_ty rng_ty find_eqn
+  val callthis = with_info_prove_recn_exists f fin dom_ty rng_ty find_eqn
 in
   case Lib.total dest_type rng_ty of
     SOME (tyop, args) => let
@@ -258,7 +259,7 @@ in
       | SOME i => callthis i
         handle InfoProofFailed tm =>
                (HOL_WARNING
-                  "ncLib"
+                  "binderLib"
                   "prove_recursive_term_function_exists"
                   ("Couldn't prove function with swap over range - \n\
                    \goal was "^term_to_string tm^"\n\
@@ -286,7 +287,7 @@ in
 end
 
 fun prove_recursive_term_function_exists tm = let
-  val f_thm = prove_recursive_term_function_exists0 tm
+  val f_thm = prove_recursive_term_function_exists0 ALL_CONV tm
   val (f_v, f_body) = dest_exists (concl f_thm)
   val defining_body = CONJUNCT1 (ASSUME f_body)
   val result = EQT_ELIM (SIMP_CONV bool_ss [defining_body] tm)
@@ -297,7 +298,20 @@ end handle InfoProofFailed tm =>
                      ("Couldn't prove function with swap over range - \n\
                       \goal was "^term_to_string tm)
 
-fun define_recursive_term_function q = let
+fun prove_recursive_term_function_exists' fin tm = let
+  val f_thm = prove_recursive_term_function_exists0 fin tm
+  val (f_v, f_body) = dest_exists (concl f_thm)
+  val defining_body = CONJUNCT1 (ASSUME f_body)
+  val result = EQT_ELIM (SIMP_CONV bool_ss [defining_body] tm)
+in
+  CHOOSE (f_v, f_thm) (EXISTS (mk_exists(f_v, tm), f_v) result)
+end handle InfoProofFailed tm =>
+           raise ERR "prove_recursive_term_function_exists"
+                     ("Couldn't prove function with swap over range - \n\
+                      \goal was "^term_to_string tm)
+
+
+fun define_wrapper worker q = let
   val a = Absyn q
   val f = head_sym a
   val fstr = case f of
@@ -308,7 +322,7 @@ fun define_recursive_term_function q = let
   val tm = Parse.absyn_to_term (Parse.term_grammar()) a
            handle e => (restore(); raise e)
   val _ = restore()
-  val f_thm0 = prove_recursive_term_function_exists0 tm
+  val f_thm0 = worker tm
   val (f_t0, th_body0) = dest_exists (concl f_thm0)
   val f_t = mk_var(fstr, type_of f_t0)
   val th_body = subst [f_t0 |-> f_t] th_body0
@@ -351,6 +365,14 @@ in
 end
 
 
-val recursive_term_function_existence = prove_recursive_term_function_exists0
+fun define_recursive_term_function q =
+    define_wrapper (prove_recursive_term_function_exists0 ALL_CONV) q
+
+fun define_recursive_term_function' fin q =
+    define_wrapper (prove_recursive_term_function_exists0 fin) q
+
+
+val recursive_term_function_existence =
+    prove_recursive_term_function_exists0 ALL_CONV
 
 end (* struct *)

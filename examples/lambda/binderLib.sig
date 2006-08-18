@@ -11,6 +11,9 @@ sig
   val define_recursive_term_function :
       term quotation -> thm * thm
 
+  val define_recursive_term_function' :
+      conv -> term quotation -> thm * thm
+
   (* stores recursion theorems for types *)
   val type_db : (string,thm) Binarymap.dict ref
 
