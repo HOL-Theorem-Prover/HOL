@@ -1,10 +1,10 @@
 (***************************************************************************
  *
  *  intExtensionScript.sml
- *  
+ *
  *  extension of the theory of integers
  *  Jens Brandt
- *  
+ *
  ***************************************************************************)
 
 open HolKernel boolLib Parse bossLib;
@@ -17,9 +17,9 @@ app load ["integerTheory","intLib",
 *)
 open
 	arithmeticTheory pairTheory
-	integerTheory intLib 
+	integerTheory intLib
 	ringTheory ringLib integerRingLib
-	schneiderUtils;	
+	schneiderUtils;
 
 val _ = new_theory "intExtension";
 
@@ -222,29 +222,6 @@ val INT_GT_RMUL_EXP = store_thm("INT_GT_RMUL_EXP", ``!a:int b:int n:int. 0<n ==>
 	RW_TAC int_ss[INT_MUL_SYM] );
 
 (*--------------------------------------------------------------------------
-   ABS_NOT_0_POSITIVE : thm
-   |- !x. ~(x = 0) ==> 0 < ABS x
- *--------------------------------------------------------------------------*)
-
-val ABS_NOT_0_POSITIVE = store_thm("ABS_NOT_0_POSITIVE", ``!x:int. ~(x = 0i) ==> 0i < ABS x``,
-	REPEAT STRIP_TAC THEN
-	REWRITE_TAC[INT_ABS] THEN
-	ASM_CASES_TAC ``x<0i`` THENL
-	[
-		RW_TAC int_ss[] THEN
-		ONCE_REWRITE_TAC[GSYM INT_NEG_0] THEN
-		REWRITE_TAC[INT_LT_NEG] THEN
-		PROVE_TAC[]
-	,
-		RW_TAC int_ss[] THEN
-		UNDISCH_TAC ``~(x < 0i)`` THEN
-		UNDISCH_TAC ``~(x = 0i)`` THEN
-		REWRITE_TAC[IMP_DISJ_THM] THEN
-		PROVE_TAC[INT_LT_TOTAL]
-	]);
-
-
-(*--------------------------------------------------------------------------
    INT_ABS_CALCULATE_NEG : thm
    |- !a. a<0 ==> (ABS(a) = ~a)
  *--------------------------------------------------------------------------*)
@@ -357,6 +334,6 @@ val INT_LT_ADD_NEG = store_thm("INT_LT_ADD_NEG", ``!x y. x < 0i /\ y < 0i ==> x 
 	REWRITE_TAC[GSYM INT_NEG_GT0, INT_NEG_ADD] THEN
 	PROVE_TAC[INT_LT_ADD] );
 
-	
+
 val _ = export_theory();
 

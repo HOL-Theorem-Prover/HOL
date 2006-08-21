@@ -477,7 +477,7 @@ in
 
 		REPEAT STRIP_TAC THEN
 		REWRITE_TAC[frac_minv_def] THEN
-		ASSUME_TAC (UNDISCH_ALL (SPEC ``frac_nmr x`` ABS_NOT_0_POSITIVE)) THEN
+		ASSUME_TAC (UNDISCH_ALL (SPEC ``frac_nmr x`` INT_ABS_NOT0POS)) THEN
 		ASSUME_TAC (UNDISCH_ALL lemmaX) THEN
 		REWRITE_TAC[RAT_ABS_EQUIV] THEN
 		REWRITE_TAC[rat_equiv_def] THEN
@@ -1140,7 +1140,8 @@ in
 		REWRITE_TAC[frac_mul_def, frac_minv_def, frac_1_def] THEN
 		REWRITE_TAC[lemmaX] THEN
 		STRIP_TAC THEN
-		ASSUME_TAC (UNDISCH_ALL (SPEC ``frac_nmr (rep_rat a)`` ABS_NOT_0_POSITIVE)) THEN
+		ASSUME_TAC (UNDISCH_ALL (SPEC ``frac_nmr (rep_rat a)``
+                                              INT_ABS_NOT0POS)) THEN
 		RW_TAC int_ss[NMR,DNM] THEN
 		REWRITE_TAC[RAT_ABS_EQUIV, rat_equiv_def] THEN
 		ASSUME_TAC (UNDISCH_ALL (SPEC  ``ABS (frac_nmr (rep_rat a))`` (SPEC ``rep_rat a`` lemmaY)))  THEN
