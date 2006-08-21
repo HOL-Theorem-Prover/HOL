@@ -2,7 +2,8 @@ structure ANF :> ANF =
 struct
 
 (* For interactive use:
- app load ["pairLib", "cpsSyntax"]; 
+
+ app load ["pairLib", "cpsSyntax", "word32Lib"]; 
   quietdec := true;
   open pairLib pairTheory PairRules pairSyntax cpsTheory cpsSyntax; 
   quietdec := false;
@@ -103,7 +104,16 @@ val LET_SEQ_PAR_THM = Q.prove
 val SEQ_PAR_I_THM = Q.prove
 (`!f2 f3. Seq (Par (\x.x) f2) f3 = \x. let v = f2 x in f3 (x,v)`,
  RW_TAC std_ss [LET_SEQ_PAR_THM,combinTheory.I_THM]);
-  
+
+
+fun is_word_literal tm = 
+  ((is_comb tm) andalso
+  let val (c,args) = strip_comb tm
+      val {Name,Thy,Ty} = dest_thy_const c
+  in Name = "n2w" andalso numSyntax.is_numeral (hd args)
+  end)
+  handle HOL_ERR _ => raise ERR "is_word_literal" "";
+
 fun Convert_CONV f =
  let val (args,t) = 
          dest_pabs f
@@ -117,7 +127,7 @@ fun Convert_CONV f =
         print "has free variables: "; 
         map (fn t => (print_term t; print " "))(rev(free_vars f)); print "\n";
         raise ERR "Convert_CONV" "disallowed free variables")
-  else if null(free_vars t) orelse is_var t
+  else if is_var t orelse is_word_literal t orelse is_const t 
    then REFL f
   else if is_pair t
    then let val (t1,t2) = dest_pair t
@@ -235,7 +245,6 @@ fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 (* where p is a combinatory expression built from the combinators Seq, Par   *)
 (* and Ite.                                                                  *)
 (*****************************************************************************)
-
 fun Convert defth =
  let val (lt,rt) = 
          dest_eq(concl(SPEC_ALL defth))
@@ -408,22 +417,45 @@ fun toComb def =
 
 val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
-fun is_word_literal tm = 
-  let val (c,args) = strip_comb tm
-      val {Name,Thy,Ty} = dest_thy_const c
-  in Name = "n2w" andalso numSyntax.is_numeral (hd args)
-  end 
-  handle HOL_ERR _ => raise ERR "is_word_literal" "";
+
+fun check_occurences v t =
+  if (is_comb t) then
+    let
+      val (f, args) = strip_comb t;
+      val {Name,Thy,Ty} = dest_thy_const f;
+    in
+      if ((Name = "UNCURRY") andalso (Thy = "pair")) then
+        let
+          val pair = (el 2 args);
+          val (l, r) = dest_pair pair;
+        in
+          not (l = v)
+        end
+      else
+        all (check_occurences v) args
+    end
+  else if (is_abs t) then
+    let
+      val (_, s) = strip_abs t;
+    in
+      check_occurences v s
+    end
+  else true;
+
 
 fun VAR_LET_CONV M =
  let open pairSyntax 
-     val (_,tm) = dest_let M
+     val (abs_body,tm) = dest_let M;
+     val (v, body) = dest_abs abs_body;
  in 
-   if is_vstruct tm orelse is_word_literal tm
-                    orelse numSyntax.is_numeral tm
+   if is_vstruct tm orelse 
+      ((is_word_literal tm orelse numSyntax.is_numeral tm) andalso
+       (check_occurences v body))
+       
    then (REWR_CONV LET_THM THENC GEN_BETA_CONV) M
    else raise ERR "VAR_LET_CONV" ""
  end;
+
 
 
 fun ANFof (args,thm) =
@@ -448,8 +480,9 @@ fun ANFof (args,thm) =
      val thm12 = PBETA_RULE thm11
      val thm13 = SIMP_RULE bool_ss [pairTheory.LAMBDA_PROD] thm12
      val thm14 = PURE_REWRITE_RULE [FST,SND] thm13
-     val thm15 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm14
- in thm15
+     val thm15 = STD_BVARS "v" thm14
+     val thm16 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm15
+ in thm16
  end;
 
 
@@ -459,12 +492,14 @@ fun ANFof (args,thm) =
 (* environment.                                                              *)
 (*---------------------------------------------------------------------------*)
 
+
 fun toANF env def = 
  let val (is_recursive,func,args,const_eq_comb) = toComb def
      val anf = STD_BVARS "v" (ANFof (args,const_eq_comb))
  in 
    (func,(is_recursive,def,anf,const_eq_comb))::env
  end;
+
 
 end
  
