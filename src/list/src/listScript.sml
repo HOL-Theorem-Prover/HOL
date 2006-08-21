@@ -1047,8 +1047,7 @@ val listRel_LENGTH = store_thm(
 
 val listRel_strong_ind = save_thm(
   "listRel_strong_ind",
-  IndDefRules.derive_strong_induction(CONJUNCTS (SPEC_ALL listRel_rules),
-                                      listRel_ind))
+  IndDefRules.derive_strong_induction(listRel_rules, listRel_ind))
 
 val listRel_monotone = store_thm(
   "listRel_monotone",

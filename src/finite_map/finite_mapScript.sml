@@ -72,7 +72,7 @@ val rule_list as [is_fmap_empty, is_fmap_update] = CONJUNCTS rules;
 
 val is_fmap_RULE_INDUCT_TAC = IndDefRules.RULE_INDUCT_THEN ind STRIP_ASSUME_TAC;
 
-val strong_ind = IndDefRules.derive_strong_induction(rule_list, ind);
+val strong_ind = IndDefRules.derive_strong_induction(rules, ind);
 
 
 (*---------------------------------------------------------------------------
