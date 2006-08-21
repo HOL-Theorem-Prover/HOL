@@ -47,8 +47,9 @@ fun simp_axiom (ax,tm) =
 (* prove that tm1 ==> tm2 : both are conjuncts of terms, and tm2's are a subset
    of tm1's *)
 fun prove_asm tm1 tm2 =
-  DISCH_ALL (EQT_ELIM (PURE_REWRITE_CONV
-                         (AND_CLAUSES::CONJUNCTS (ASSUME tm1)) tm2))
+  DISCH_ALL
+    (EQT_ELIM (PURE_REWRITE_CONV
+                 (AND_CLAUSES::NOT_CLAUSES :: CONJUNCTS (ASSUME tm1)) tm2))
 
 fun simp_concl rul tm =
  let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
