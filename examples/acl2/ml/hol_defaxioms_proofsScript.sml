@@ -1,6 +1,11 @@
 
 (*****************************************************************************)
 (* HOL proofs of the ACL2 axioms and theorems in defaxioms.lisp.trans.       *)
+(*                                                                           *)
+(* Note that many of the proofs were starting by cutting-and-pasting         *)
+(* earlier similar proofs, so there are likely to be bloated tactics.        *)
+(*                                                                           *)
+(*                                                                           *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -44,6 +49,61 @@ open stringLib complex_rationalTheory gcdTheory sexp sexpTheory
 (*****************************************************************************)
 
 val _ = new_theory "hol_defaxioms_proofs";
+
+(*****************************************************************************)
+(* Usefull lemmas for eliminating equations between conditionals             *)
+(*****************************************************************************)
+val if_t_nil =
+ store_thm
+  ("if_t_nil",
+   ``(((if p then t else q) = nil) = ~p /\ (q = nil))
+     /\
+     (((if p then q else nil) = t) = p  /\ (q = t))
+     /\
+     (((if p then q else t) = nil) = p  /\ (q = nil))
+     /\
+     (((if p then nil else q) = t) = ~p /\ (q = t))
+     /\
+     (~((if p then q else nil) = nil) = p /\ ~(q = nil))
+     /\
+     (~((if p then nil else q) = nil) = ~p /\ ~(q = nil))
+     /\
+     (~((if p then q else t) = t) = p /\ ~(q = t))
+     /\
+     (~((if p then t else q) = t) = ~p /\ ~(q = t))``,
+  PROVE_TAC [EVAL ``t = nil``]);
+
+val t_nil_if =
+ store_thm
+  ("t_nil_if",
+   ``((nil = (if p then t else q)) = ~p /\ (q = nil))
+     /\
+     ((t = (if p then q else nil)) = p  /\ (q = t))
+     /\
+     ((nil = (if p then q else t)) = p  /\ (q = nil))
+     /\
+     ((t = (if p then nil else q)) = ~p /\ (q = t))
+     /\
+     (~(nil = (if p then q else nil)) = p /\ ~(q = nil))
+     /\
+     (~(nil = (if p then nil else q)) = ~p /\ ~(q = nil))
+     /\
+     (~(t = (if p then q else t)) = p /\ ~(q = t))
+     /\
+     (~(t = (if p then t else q)) = ~p /\ ~(q = t))``,
+  PROVE_TAC [EVAL ``t = nil``]);
+
+val if_eq_imp =
+ store_thm
+  ("if_eq_imp",
+   ``((if p then a else b) = c) = (p ==> (a = c)) /\ (~p ==> (b = c))``,
+  PROVE_TAC []);
+
+val eq_imp_if =
+ store_thm
+  ("eq_imp_if",
+   ``(c = (if p then a else b)) = (p ==> (a = c)) /\ (~p ==> (b = c))``,
+  PROVE_TAC []);
 
 (*****************************************************************************)
 (* Proof of ACL2 axioms                                                      *)
@@ -334,15 +394,86 @@ val inverse_of_star_defaxiom =
      |- |= equal (mult x (add y z)) (add (mult x y) (mult x z)),
 *)
 
+val distributivity_defaxiom =
+ store_thm
+  ("distributivity_defaxiom",
+   ``|= equal (mult x (add y z)) (add (mult x y) (mult x z))``,
+   Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [COMPLEX_ADD_def,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID]
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN TRY(Cases_on `c''`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_MULT_def,complex_rational_11,
+           sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL]
+    THEN PROVE_TAC[ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM]);
+
 (*
      [oracles: DEFAXIOM ACL2::<-ON-OTHERS, DISK_THM] [axioms: ] []
      |- |= equal (less x y) (less (add x (unary_minus y)) (nat 0)),
 *)
 
+val less_on_others_defaxiom =
+ store_thm
+  ("less_on_others_defaxiom",
+   ``|= equal (less x y) (less (add x (unary_minus y)) (nat 0))``,
+   Cases_on `x` THEN Cases_on `y` 
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [COMPLEX_ADD_def,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,ratTheory.RAT_LES_REF,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID]
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_0]
+    THEN Cases_on `0 < r`
+    THEN FULL_SIMP_TAC arith_ss [eq_imp_if]
+    THEN PROVE_TAC
+          [ratTheory.RAT_LEQ_LES,ratTheory.RAT_AINV_0,ratTheory.RAT_LES_AINV,
+           ratTheory.rat_leq_def,ratTheory.RAT_LES_TOTAL,
+           ratTheory.RAT_ADD_LINV,ratTheory.RAT_ADD_RINV,
+           ratTheory.RAT_LES_LADD,ratTheory.RAT_LES_RADD]);
+
 (*
      [oracles: DEFAXIOM ACL2::ZERO, DISK_THM] [axioms: ] []
      |- |= not (less (nat 0) (nat 0)),
 *)
+
+val zero_defaxiom =
+ store_thm
+  ("zero_defaxiom",
+   ``|= not (less (nat 0) (nat 0))``,
+   ACL2_SIMP_TAC [int_def,nat_def,cpx_def,ratTheory.RAT_LES_REF]);
 
 (*
      [oracles: DEFAXIOM ACL2::TRICHOTOMY, DISK_THM] [axioms: ] []
@@ -356,6 +487,52 @@ val inverse_of_star_defaxiom =
                 (not (less (nat 0) (unary_minus x)))],
 *)
 
+val trichotomy_defaxiom =
+ store_thm
+  ("trichotomy_defaxiom",
+   ``|= andl
+         [implies 
+           (acl2_numberp x)
+           (itel
+             [(less (nat 0) x,less (nat 0) x);
+              (equal x (nat 0),equal x (nat 0))]
+              (less (nat 0) (unary_minus x)));
+              ite (not (less (nat 0) x)) 
+                  (not (less (nat 0) x))
+                  (not (less (nat 0) (unary_minus x)))]``,
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [COMPLEX_ADD_def,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,ratTheory.RAT_LES_REF,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID]
+    THEN TRY(Cases_on `c`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_0]
+    THEN Cases_on `0 < r`
+    THEN FULL_SIMP_TAC arith_ss 
+          [eq_imp_if,itel_def,sexp_11,T_NIL,ite_def,t_def,nil_def]
+    THEN RW_TAC arith_ss []
+    THEN METIS_TAC
+          [ratTheory.RAT_LEQ_LES,ratTheory.RAT_AINV_0,ratTheory.RAT_LES_AINV,
+           ratTheory.rat_leq_def,ratTheory.RAT_LES_TOTAL,
+           ratTheory.RAT_ADD_LINV,ratTheory.RAT_ADD_RINV,
+           ratTheory.RAT_LES_LADD,ratTheory.RAT_LES_RADD]);
+
 (*
      [oracles: DEFAXIOM ACL2::POSITIVE, DISK_THM] [axioms: ] []
      |- |= andl
@@ -367,6 +544,57 @@ val inverse_of_star_defaxiom =
                     less (nat 0) y]) (less (nat 0) (mult x y))],
 *)
 
+val positive_defaxiom =
+ time store_thm
+  ("positive_defaxiom",
+   ``|= andl
+         [implies 
+           (andl [less (nat 0) x; less (nat 0) y])
+           (less (nat 0) (add x y));
+          implies
+           (andl
+             [rationalp x; rationalp y; less (nat 0) x;
+              less (nat 0) y]) 
+           (less (nat 0) (mult x y))]``,
+   Cases_on `x`  THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [COMPLEX_ADD_def,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,ratTheory.RAT_LES_REF,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID]
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN TRY(Cases_on `0 < r`) 
+    THEN TRY(Cases_on `0 < r'`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,rationalp_def,
+           t_def,nil_def]
+    THEN RW_TAC arith_ss []
+    THEN METIS_TAC
+          [ratTheory.RAT_LEQ_LES,ratTheory.RAT_AINV_0,ratTheory.RAT_LES_AINV,
+           ratTheory.rat_leq_def,ratTheory.RAT_LES_TOTAL,
+           ratTheory.RAT_ADD_LINV,ratTheory.RAT_ADD_RINV,
+           ratTheory.RAT_LES_LADD,ratTheory.RAT_LES_RADD,
+           ratTheory.RAT_0LES_0LES_ADD,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_LES_RMUL_POS]);
+
 (*
      [oracles: DEFAXIOM ACL2::RATIONAL-IMPLIES1, DISK_THM] [axioms: ] []
      |- |= implies (rationalp x)
@@ -375,21 +603,467 @@ val inverse_of_star_defaxiom =
                  less (nat 0) (denominator x)]),
 *)
 
+(*****************************************************************************)
+(* Note: Some of the auxiliary theorems below turned out not to be           *)
+(*       needed. I'm leaving them here as they might find uses later.        *)
+(*       Will tidy up when all the axioms are proved.                        *)
+(*****************************************************************************)
+
+val Num_EQ_0 =
+ store_thm
+  ("Num_EQ_0",
+   ``0 <= n ==> ((Num n = 0) = (n = 0))``,
+   STRIP_TAC
+    THEN EQ_TAC
+    THEN RW_TAC arith_ss [integerTheory.NUM_OF_INT]
+    THEN Cases_on `n = 0`
+    THEN RW_TAC arith_ss []
+    THEN `0 < n`  by intLib.ARITH_TAC
+    THEN `1 <= n` by intLib.ARITH_TAC
+    THEN `1 <= Num n` by PROVE_TAC[integerTheory.LE_NUM_OF_INT]
+    THEN intLib.ARITH_TAC);
+
+val Num_pos =
+ store_thm
+  ("Num_pos",
+   ``0 < n ==> 0 < Num n``,
+   STRIP_TAC
+    THEN `0 <= n`  by intLib.ARITH_TAC
+    THEN `0 <= Num n` by PROVE_TAC[integerTheory.LE_NUM_OF_INT]
+    THEN Cases_on `0 = Num n`
+    THEN IMP_RES_TAC Num_EQ_0
+    THEN Cooper.COOPER_TAC);
+
+val num_init_0_lemma =
+ store_thm
+  ("num_init_0_lemma",
+   ``!n:num. ~(n = 0) ==> ~((&n):int = 0)``,
+   Cooper.COOPER_TAC);
+
+val div_pos =
+ store_thm
+  ("div_pos",
+   ``!m n:int. 0 < n /\ n <= m  ==> 0 < (m/n)``,
+   RW_TAC arith_ss 
+    [Cooper.COOPER_PROVE ``(0:int) < n ==> ~(n = 0)``,
+     integerTheory.int_div,Cooper.COOPER_PROVE ``(0:int) = & 0``,
+     integerTheory.INT_LT,integerTheory.INT_ADD_CALCULATE]
+    THEN RW_TAC std_ss 
+          [integerTheory.int_div,Cooper.COOPER_PROVE ``(0:int) = ~& 0``,
+           integerTheory.INT_LT_CALCULATE]
+    THEN TRY Cooper.COOPER_TAC
+    THEN IMP_RES_TAC Num_pos
+    THEN RW_TAC arith_ss [arithmeticTheory.X_LT_DIV]
+    THEN RW_TAC arith_ss [GSYM integerTheory.INT_LE]
+    THEN `0 <= n` by Cooper.COOPER_TAC
+    THEN `&(Num n) = n` by PROVE_TAC[integerTheory.INT_OF_NUM]
+    THEN `&(Num m) = m` by PROVE_TAC[integerTheory.INT_OF_NUM]
+    THEN RW_TAC std_ss []);
+
+(* Also proved (differently) in translateScript.sml *)
+val gcd_less_eq =
+ store_thm
+  ("gcd_less_eq",
+   ``0 < n ==> gcd m n <= n``,
+   Cases_on `m = 0` THEN Cases_on `n = 0`
+    THEN RW_TAC arith_ss [gcdTheory.gcd_def]
+    THEN `?p q. (n = p * gcd n m) /\ (m = q * gcd n m) /\ (gcd p q = 1)`
+          by METIS_TAC[gcdTheory.FACTOR_OUT_GCD]
+    THEN `~(p = 0)` by METIS_TAC[arithmeticTheory.MULT_CLAUSES]
+    THEN `?a. p = SUC a` by Cooper.COOPER_TAC
+    THEN RW_TAC arith_ss []
+    THEN FULL_SIMP_TAC arith_ss [arithmeticTheory.MULT_CLAUSES]
+    THEN `?b. n = b + gcd m n` by METIS_TAC[gcdTheory.GCD_SYM]
+    THEN DECIDE_TAC);
+
+val gcd_mod1 =
+ store_thm
+  ("gcd_mod1",
+  ``!m n. ~(n = 0) /\ ~(m = 0) ==> (&m % &(gcd m n) = 0)``,
+  RW_TAC std_ss []
+   THEN `?p q. (m = p * gcd m n) /\ (n = q * gcd m n) /\ (gcd p q = 1)`
+         by METIS_TAC[FACTOR_OUT_GCD]
+   THEN `~(gcd m n = 0)` by METIS_TAC[gcdTheory.GCD_EQ_0]
+   THEN `(& m):int = (& ( p * (gcd m n)))` by METIS_TAC[]
+   THEN FULL_SIMP_TAC std_ss [GSYM integerTheory.INT_MUL]
+   THEN `~((&(gcd m n)):int = 0)` by Cooper.COOPER_TAC
+   THEN METIS_TAC[integerTheory.INT_MOD_EQ0]);
+
+val gcd_mod2 =
+ store_thm
+  ("gcd_mod2",
+  ``!m n. ~(n = 0) /\ ~(m = 0) ==> (&n % &(gcd m n) = 0)``,
+  METIS_TAC[gcd_mod1,gcdTheory.GCD_SYM]);
+
+(* From translateScript.sml *)
+local open integerTheory Cooper 
+in
+val num_abs_nz = 
+ prove
+  (``0 < b \/ ~(b = 0) ==> ~(Num (ABS b) = 0)``,
+   DISCH_TAC THEN ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] THEN
+    RW_TAC std_ss 
+     [snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_ABS_POS] THEN
+    COOPER_TAC)
+end;
+
+(* From translateScript.sml, where it is called "r2" *)
+local open integerTheory Cooper 
+in
+val eq_num = 
+ prove
+  (``0 < a ==> (a = & (Num a))``,
+   METIS_TAC [INT_NEG_GT0,INT_OF_NUM,INT_LT_IMP_LE]);
+end;
+
+val abs_rat_reduce =
+ store_thm
+  ("abs_rat_reduce",
+   ``0 < n 
+     ==> 
+     (abs_rat(abs_frac(reduce(m,n))) = abs_rat(abs_frac(m,n)))``,
+   RW_TAC std_ss 
+    [reduce_def,ratTheory.RAT_ABS_EQUIV,ratTheory.rat_equiv_def,
+     fracTheory.NMR,fracTheory.DNM]
+    THEN `0 <= n /\ ~(n =0)` by Cooper.COOPER_TAC
+    THEN `~(gcd (Num (ABS m)) (Num (ABS n)) = 0)`
+          by PROVE_TAC [integerTheory.INT_ABS_EQ0,
+                        integerTheory.INT_ABS_POS,
+                        Num_EQ_0,gcdTheory.GCD_EQ_0]
+    THEN IMP_RES_TAC num_init_0_lemma 
+    THEN `~(n' = 0)` 
+          by PROVE_TAC[markerTheory.Abbrev_def]
+    THEN `0 < Num(ABS n)` 
+          by PROVE_TAC[intExtensionTheory.ABS_NOT_0_POSITIVE,Num_pos]
+    THEN `gcd (Num (ABS m)) (Num (ABS n)) <= Num (ABS n)`
+          by METIS_TAC[gcd_less_eq]
+    THEN IMP_RES_TAC
+          (Cooper.COOPER_PROVE ``(m:num) <= n ==> (&m):int <= &n``)
+    THEN `n' <= &(Num (ABS n))` by PROVE_TAC[markerTheory.Abbrev_def]
+    THEN `0 < ABS n` 
+          by PROVE_TAC[intExtensionTheory.ABS_NOT_0_POSITIVE]
+    THEN `0 <= ABS n` by Cooper.COOPER_TAC
+    THEN `n' <= ABS n` by PROVE_TAC[integerTheory.INT_OF_NUM]
+    THEN `n' <= n` by Cooper.COOPER_TAC
+    THEN `0 <= n'` 
+          by PROVE_TAC
+              [Cooper.COOPER_PROVE ``(0:int) <= & n``,
+               markerTheory.Abbrev_def]
+    THEN `0 < n'` by Cooper.COOPER_TAC
+    THEN `0 < n/n'` by PROVE_TAC[div_pos]
+    THEN RW_TAC std_ss [fracTheory.NMR,fracTheory.DNM]
+    THEN `(m / n' * n = m * (n / n')) = 
+           ((m / n' * n') * n = m * ((n / n') * n'))`
+          by PROVE_TAC
+           [Q.SPECL 
+             [`m / n' * n `, `m * (n / n')`,`n'`]
+             intExtensionTheory.INT_EQ_RMUL_EXP,
+            integerTheory.INT_MUL_ASSOC,
+            integerTheory.INT_MUL_COMM]
+    THEN ASM_REWRITE_TAC[]
+    THEN POP_ASSUM(K ALL_TAC)
+    THEN Cases_on `m = 0`
+    THEN RW_TAC arith_ss 
+          [integerTheory.INT_MUL_REDUCE,integerTheory.INT_DIV_0]
+    THEN `& (Num (ABS m)) % n' = 0`
+          by METIS_TAC
+              [Q.SPECL[`Num(ABS m)`,`Num(ABS n)`]gcd_mod1,
+               markerTheory.Abbrev_def,num_abs_nz]
+    THEN `n % n' = 0`
+          by METIS_TAC
+              [Q.SPECL[`Num(ABS m)`,`Num(ABS n)`]gcd_mod2,
+               markerTheory.Abbrev_def,num_abs_nz,eq_num,
+               integerTheory.INT_ABS_EQ_ID]
+    THEN RW_TAC arith_ss [integerTheory.INT_DIV_MUL_ID]
+    THEN Cases_on `0 < m`
+    THENL
+     [`0 <= m` by Cooper.COOPER_TAC
+       THEN `m % n' = 0` 
+             by METIS_TAC[eq_num,integerTheory.INT_ABS_EQ_ID]
+       THEN RW_TAC arith_ss [integerTheory.INT_DIV_MUL_ID],
+      `m < 0` by Cooper.COOPER_TAC      
+       THEN `?m'. 0 < m' /\ (m = ~m')` by Cooper.COOPER_TAC
+       THEN RW_TAC arith_ss []
+       THEN FULL_SIMP_TAC arith_ss [integerTheory.INT_ABS_NEG]
+       THEN `0 <= m'` by Cooper.COOPER_TAC
+       THEN `m' % n' = 0` 
+             by METIS_TAC[eq_num,integerTheory.INT_ABS_EQ_ID]
+       THEN `m'/n' * n' = m'` 
+             by METIS_TAC[integerTheory.INT_DIV_MUL_ID]
+       THEN `~m' = (~1)*m'` 
+             by PROVE_TAC[integerTheory.INT_NEG_MINUS1]
+       THEN RW_TAC arith_ss [integerTheory.INT_MUL_DIV]
+       THEN METIS_TAC[integerTheory.INT_MUL_ASSOC]]);
+
+val frac_dnm_pos = 
+ store_thm
+   ("frac_dnm_pos",
+    ``0 < frac_dnm n``,
+    METIS_TAC[fracTheory.frac_dnm_def,fracTheory.frac_bij]);
+
+(*****************************************************************************)
+(*   |- abs_rat (abs_frac (reduce (rep_frac (rep_rat r)))) = r               *)
+(*****************************************************************************)
+val abs_rat_reduce_cor =
+ save_thm
+  ("abs_rat_reduce_cor",
+   SIMP_RULE std_ss
+    [GSYM fracTheory.frac_dnm_def,frac_dnm_pos,fracTheory.frac_bij,
+     ratTheory.RAT]
+    (Q.SPECL 
+      [`SND(rep_frac(rep_rat r))`,`FST(rep_frac (rep_rat r))`]
+      (GEN_ALL abs_rat_reduce)));
+
+(* From translateScript.sml *)
+local open integerTheory
+in
+val num_nz = 
+ prove
+  (``0 < a ==> ~(Num a = 0)``,
+   ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] 
+   THEN RW_TAC std_ss 
+         [snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_LT_IMP_LE] 
+   THEN Cooper.COOPER_TAC)
+end;
+
+(* From translateScript.sml *)
+local 
+open intLib integerTheory fracTheory 
+     intExtensionTheory arithmeticTheory
+in
+val reduced_dnm_pos = 
+ store_thm
+   ("reduced_dnm_pos",
+    ``0 < reduced_dnm x``,
+    FULL_SIMP_TAC int_ss [reduced_dnm_def] 
+     THEN SUBGOAL_THEN 
+           ``rep_frac (rep_rat x) = (frac_nmr (rep_rat x),frac_dnm (rep_rat x))`` 
+           SUBST_ALL_TAC 
+     THEN1 RW_TAC std_ss [frac_nmr_def,frac_dnm_def] 
+     THEN FULL_SIMP_TAC (int_ss ++ boolSimps.LET_ss) [reduce_def] 
+     THEN RW_TAC int_ss 
+           [FRAC_DNMPOS,INT_ABS_CALCULATE_POS,num_nz,gcdTheory.GCD_EQ_0,int_div] 
+     THEN FULL_SIMP_TAC arith_ss 
+           [num_nz,gcdTheory.GCD_EQ_0,DECIDE ``~(0 < a) = (a = 0n)``,
+            FRAC_DNMPOS,X_LT_DIV,gcd_less_eq,DECIDE ``~(a = 0n) ==> 0 < a``])
+end;
+
+val rational_implies1_defaxiom =
+ time store_thm
+  ("rational_implies1_defaxiom",
+   ``|= implies 
+         (rationalp x)
+         (andl
+           [integerp (denominator x); integerp (numerator x);
+            less (nat 0) (denominator x)])``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [COMPLEX_ADD_def,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,ratTheory.RAT_LES_REF,
+           GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID]
+    THEN TRY(Cases_on `c`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,
+           t_def,nil_def]
+    THEN RW_TAC arith_ss []
+    THEN FULL_SIMP_TAC std_ss 
+          [GSYM t_def,GSYM nil_def,integerp_def,
+           reduced_nmr_def,reduced_dnm_def,if_t_nil,(* DIVIDES_def, *)
+           IS_INT_EXISTS,ratTheory.RAT_0,less_def,ratTheory.RAT_LES_REF]
+    THEN Cases_on `0 < abs_rat (abs_frac (SND (reduce (rep_frac (rep_rat r))),1))`
+    THEN TRY (METIS_TAC [])
+    THEN FULL_SIMP_TAC intLib.int_ss 
+          [GSYM reduced_dnm_def,ratTheory.rat_les_def,
+           ratTheory.RAT_SUB_RID,ratTheory.RAT_SGN_CALCULATE,
+           fracTheory.FRAC_SGN_CALCULATE,intExtensionTheory.INT_SGN_CLAUSES,
+           integerTheory.int_gt,reduced_dnm_pos]);
+
 (*
      [oracles: DEFAXIOM ACL2::RATIONAL-IMPLIES2] [axioms: ] []
      |- |= implies (rationalp x)
              (equal (mult (reciprocal (denominator x)) (numerator x)) x),
 *)
 
+(* From translateScript.sml *)
+local open ratTheory
+in
+val rat_divshiftthm = 
+ store_thm
+  ("rat_divshiftthm",
+   ``a * (b / c) = a * b / c:rat``,
+   RW_TAC std_ss [RAT_DIV_MULMINV,RAT_MUL_ASSOC]);
+end;
+
+(* From translateScript.sml *)
+local 
+open ratTheory fracTheory translateTheory
+in
+val RAT_DIV = 
+ store_thm
+  ("RAT_DIV",
+   ``!a b. ~(b = 0) ==> (rat (a / b) = mult (rat a) (reciprocal (rat b)))``,
+   RW_TAC std_ss 
+     [translateTheory.rat_def,mult_def,reciprocal_def,COMPLEX_RECIPROCAL_def,rat_0_def,
+      GSYM rat_0,COMPLEX_MULT_def,RAT_MUL_RZERO,
+      RAT_ADD_RID,RAT_MUL_LZERO,RAT_ADD_LID,RAT_AINV_0,int_def,
+      RAT_SUB_RID,com_0_def,complex_rational_11,cpx_def,sexpTheory.rat_def,
+      GSYM frac_0_def,RAT_LDIV_EQ,rat_divshiftthm,RAT_NO_ZERODIV_NEG,
+      RAT_RDIV_EQ,RAT_MUL_ASSOC] 
+    THEN CONV_TAC (AC_CONV (RAT_MUL_ASSOC,RAT_MUL_COMM)));
+end;
+
+val rationalp_rat =
+ store_thm
+  ("rationalp_rat",
+   ``(|= rationalp x) = ?a. x = rat a``,
+   Cases_on `x`
+    THEN RW_TAC std_ss [ACL2_TRUE,rationalp_def,translateTheory.rat_def]
+    THEN Cases_on `c`
+    THEN ACL2_FULL_SIMP_TAC []
+    THEN Cases_on `r0 = rat_0`
+    THEN ACL2_FULL_SIMP_TAC [complex_rational_11]
+    THEN METIS_TAC[]);
+
+val mult_comm =
+ store_thm
+  ("mult_comm",
+   ``mult x y = mult y x``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC []
+    THEN METIS_TAC[complex_rationalTheory.COMPLEX_MULT_COMM]);
+
+(* From translateScript.sml *)
+val nmr_dnm_rewrite = 
+ store_thm
+  ("nmr_dnm_rewrite",
+   ``(numerator (rat a) = int (reduced_nmr a))
+     /\ 
+     (denominator (rat a) = int (reduced_dnm a))``,
+   RW_TAC std_ss 
+    [numerator_def,denominator_def,translateTheory.rat_def]);
+
+val nz_rat_1 =
+ store_thm
+  ("nz_rat_1",
+   ``0 < a ==> ~(abs_rat (abs_frac (a,1)) = 0)``,
+   RW_TAC intLib.int_ss
+     [ratTheory.rat_0,ratTheory.RAT_ABS_EQUIV,ratTheory.rat_equiv_def,
+      fracTheory.NMR,fracTheory.DNM,fracTheory.frac_0_def]
+    THEN Cooper.COOPER_TAC);
+
+val rational_implies2_defaxiom =
+ time store_thm
+  ("rational_implies2_defaxiom",
+   ``|= implies
+         (rationalp x)
+         (equal (mult (reciprocal (denominator x)) (numerator x)) x)``,
+   RW_TAC std_ss 
+    [implies,rationalp_rat,GSYM translateTheory.COM_THMS]
+    THEN ONCE_REWRITE_TAC[mult_comm]
+    THEN RW_TAC intLib.int_ss
+          [nmr_dnm_rewrite,int_def,cpx_def,sexpTheory.rat_def,
+           GSYM fracTheory.frac_0_def,GSYM ratTheory.rat_0_def,
+           GSYM translateTheory.rat_def]
+    THEN `0 < reduced_dnm a` by METIS_TAC[reduced_dnm_pos]
+    THEN `~(abs_rat (abs_frac (reduced_dnm a,1)) = 0)` by METIS_TAC[nz_rat_1]
+    THEN  RW_TAC std_ss [GSYM RAT_DIV]
+    THEN `~(frac_nmr(abs_frac (reduced_dnm a,1)) = 0)`
+          by METIS_TAC
+              [Cooper.COOPER_PROVE``(0:int) < 1``,
+               Cooper.COOPER_PROVE``(0:int) < n ==> ~(n = 0)``,
+               fracTheory.NMR]
+    THEN RW_TAC intLib.int_ss [ratTheory.RAT_DIV_CALCULATE]
+    THEN `(0:int) < 1` by Cooper.COOPER_TAC
+    THEN `~(reduced_dnm a = 0)` by Cooper.COOPER_TAC
+    THEN RW_TAC intLib.int_ss [fracTheory.FRAC_DIV_CALCULATE]
+    THEN RW_TAC intLib.int_ss [GSYM translateTheory.RAT_THMS,translateTheory.TRUTH_REWRITES]
+    THEN `ABS (reduced_dnm a) = reduced_dnm a` by Cooper.COOPER_TAC
+    THEN `reduced_dnm a > 0 ` by Cooper.COOPER_TAC
+    THEN `SGN (reduced_dnm a) = 1` by METIS_TAC[intExtensionTheory.INT_SGN_CLAUSES]
+    THEN RW_TAC intLib.int_ss []
+    THEN RW_TAC std_ss [reduced_nmr_def,reduced_dnm_def,abs_rat_reduce_cor]);
+
 (*
      [oracles: DEFAXIOM ACL2::INTEGER-IMPLIES-RATIONAL] [axioms: ] []
      |- |= implies (integerp x) (rationalp x),
 *)
 
+val integer_implies_rational_defaxiom =
+ store_thm
+  ("integer_implies_rational_defaxiom",
+   ``|= implies (integerp x) (rationalp x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC []
+    THEN Cases_on `c`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,
+           t_def,nil_def,IS_INT_EXISTS]);
+
 (*
      [oracles: DEFAXIOM ACL2::COMPLEX-IMPLIES1, DISK_THM] [axioms: ] []
      |- |= andl [rationalp (realpart x); rationalp (imagpart x)],
 *)
+
+val complex_implies1_defaxiom =
+ store_thm
+  ("complex_implies1_defaxiom",
+   ``|= andl [rationalp (realpart x); rationalp (imagpart x)]``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC []
+    THEN TRY(Cases_on `c`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS]);
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLEX-DEFINITION, DISK_THM] [axioms: ] []
@@ -476,6 +1150,13 @@ val integer_1_defaxiom =
      [oracles: DEFAXIOM ACL2::CAR-CDR-ELIM] [axioms: ] []
      |- |= implies (consp x) (equal (cons (car x) (cdr x)) x),
 *)
+
+val car_cdr_elim_defaxiom =
+ store_thm
+  ("car_dr_elim_defaxiom",
+   ``|= implies (consp x) (equal (cons (car x) (cdr x)) x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC[]);
 
 (*
      [oracles: DEFAXIOM ACL2::CAR-CONS] [axioms: ] []
@@ -712,35 +1393,6 @@ val member_cons =
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[member_def]))
     THEN ACL2_SIMP_TAC[itel_def]);
 
-(*****************************************************************************)
-(* Usefull lemma                                                             *)
-(*****************************************************************************)
-val if_t_nil =
- store_thm
-  ("if_t_nil",
-   ``(((if p then t else q) = nil) = ~p /\ (q = nil))
-     /\
-     (((if p then q else nil) = t) = p  /\ (q = t))
-     /\
-     (((if p then q else t) = nil) = p  /\ (q = nil))
-     /\
-     (((if p then nil else q) = t) = ~p /\ (q = t))
-     /\
-     (~((if p then q else nil) = nil) = p /\ ~(q = nil))
-     /\
-     (~((if p then nil else q) = nil) = ~p /\ ~(q = nil))
-     /\
-     (~((if p then q else t) = t) = p /\ ~(q = t))
-     /\
-     (~((if p then t else q) = t) = ~p /\ ~(q = t))``,
-  RW_TAC std_ss [EVAL ``t = nil``]);
-
-val if_eq_imp =
- store_thm
-  ("if_eq_imp",
-   ``((if p then a else b) = c) = (p ==> (a = c)) /\ (~p ==> (b = c))``,
-  RW_TAC std_ss []);
-
 val lower_case_p_char_downcase_defaxiom =
  store_thm
   ("lower_case_p_char_downcase_defaxiom",
@@ -784,7 +1436,7 @@ val stringp_symbol_package_name_defaxiom =
 (* val LOOKUP_NIL =                                                          *)
 (*  |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL" = "COMMON-LISP"         *)
 (*****************************************************************************)
-val LOOKUP_NIL = EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``;
+val LOOKUP_NIL = time EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``;
 
 val symbolp_intern_in_package_of_symbol_defaxiom =
  store_thm
