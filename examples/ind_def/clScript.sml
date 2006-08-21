@@ -90,18 +90,6 @@ val diamond_RTC = store_thm(
   ``!R. diamond R ==> diamond (RTC R)``,
   PROVE_TAC [diamond_def,diamond_RTC_lemma]);
 
-val strong' =
-  SIMP_RULE std_ss []
-  (GEN_ALL (BETA_RULE (Q.SPECL [`R`, `\x y. RTC R x y /\ P x y`] RTC_ind)));
-
-val strong = prove(
-  ``!R P. (!x. P x x) /\
-          (!x y z. R x y /\ RTC R y z /\ P y z ==> P x z) ==>
-          (!x y. RTC R x y ==> P x y)``,
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  HO_MATCH_MP_TAC strong' THEN REPEAT STRIP_TAC THEN
-  PROVE_TAC [RTC_rules]);
-
 val _ = set_fixity "-||->" (Infix(NONASSOC, 510));
 
 val (predn_rules, predn_ind, predn_cases) =
@@ -219,7 +207,7 @@ val Sxyz_predn = prove(
 val x_ap_y_predn = characterise ``x # y``;
 
 val predn_strong_ind =
-  IndDefRules.derive_strong_induction (CONJUNCTS predn_rules, predn_ind)
+  IndDefRules.derive_strong_induction (predn_rules, predn_ind)
 
 val predn_diamond_lemma = prove(
   ``!x y. x -||-> y ==>
