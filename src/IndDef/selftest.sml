@@ -19,6 +19,15 @@ val (rtc_rules, rtc_ind, rtc_cases) = Hol_reln`
 
 val strongrtc = derive_strong_induction (rtc_rules, rtc_ind)
 
+val _ = print "Testing inductive definitions - existential vars\n"
+
+val (rtc'_rules, rtc'_ind, rtc'_cases) = Hol_reln`
+  (!x. rtc' r x x) /\
+  (!x y. r x y /\ (?z. rtc' r z y) ==> rtc' r x y)
+`
+
+val strongrtc' = derive_strong_induction (rtc'_rules, rtc'_ind)
+
 val _ = OS.Process.exit OS.Process.success
 
 
