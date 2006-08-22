@@ -44,12 +44,36 @@ fun simp_axiom (ax,tm) =
    in DISCH asm (GENL vs th2)
    end
 
-(* prove that tm1 ==> tm2 : both are conjuncts of terms, and tm2's are a subset
-   of tm1's *)
-fun prove_asm tm1 tm2 =
-  DISCH_ALL
-    (EQT_ELIM (PURE_REWRITE_CONV
-                 (AND_CLAUSES::NOT_CLAUSES :: CONJUNCTS (ASSUME tm1)) tm2))
+(* prove that tm1 ==> tm2 : both are conjuncts of terms, but possibly with
+   additional existential quantifiers guarding some of the conjuncts.
+   tm2's conjuncts are a subset of tm1's and the existential variables all
+   have the same choice of names *)
+fun prove_asm tm1 tm2 = let
+  fun assums mp thm =
+      if is_conj (concl thm) then let
+          val (th1, th2) = CONJ_PAIR thm
+        in
+          assums (assums mp th1) th2
+        end
+      else if is_exists (concl thm) then let
+          val (_, body) = dest_exists (concl thm)
+        in
+          assums (Binarymap.insert(mp, concl thm, thm)) (ASSUME body)
+        end
+      else Binarymap.insert(mp, concl thm, thm)
+  val mp = assums (Binarymap.mkDict Term.compare) (ASSUME tm1)
+  fun prove_it tm =
+      if is_conj tm then uncurry CONJ ((prove_it ## prove_it) (dest_conj tm))
+      else if is_exists tm then let
+          val (v, body) = dest_exists tm
+          val th = EXISTS (tm, v) (prove_it body)
+        in
+          CHOOSE (v, Binarymap.find (mp, mk_exists(v, hd (hyp th)))) th
+        end
+      else Binarymap.find(mp, tm)
+in
+  DISCH_ALL (prove_it tm2)
+end
 
 fun simp_concl rul tm =
  let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
