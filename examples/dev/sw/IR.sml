@@ -1,14 +1,13 @@
 structure IR =
 struct
 
-open HolKernel Parse boolLib word32Theory pairLib
+
+open HolKernel Parse boolLib wordsTheory wordsLib pairLib
      numSyntax
 
-val w32 = mk_type("word32",[]);
+val w32 = Type `:word32`;
+val n2w_tm = Term `n2w:num -> word32`;
 
-infix -->
-
-val n2w_tm = mk_const("n2w",num --> w32)
 
 fun is_binop op1 =
   if not (is_comb op1) then false
@@ -22,14 +21,14 @@ fun is_binop op1 =
                         oper_name = "-" orelse
                         oper_name = "*" orelse
                         oper_name = "/" orelse
-                        oper_name = "&" orelse
-                        oper_name = "|" orelse
+                        oper_name = "&&" orelse
+                        oper_name = "!!" orelse
+                        oper_name = "??" orelse
                         oper_name = "<<" orelse
                         oper_name = ">>" orelse
                         oper_name = ">>#" orelse
-			oper_name = ">>>" orelse
-			oper_name = "#" orelse
-     			oper_name = "word_add" orelse
+     			oper_name = ">>>" orelse
+     			  oper_name = "word_add" orelse
       			oper_name = "word_sub" orelse
       			oper_name = "word_mul" orelse
       			oper_name = "bitwise_and" orelse
@@ -37,7 +36,10 @@ fun is_binop op1 =
       			oper_name = "word_lsl" orelse
       			oper_name = "word_lsr" orelse
       			oper_name = "word_asr" orelse
-      			oper_name = "word_ror" orelse
+            oper_name = "word_ror" orelse
+            oper_name = "word_and" orelse
+            oper_name = "word_or" orelse
+            oper_name = "word_xor" orelse
       			oper_name = "bitwise_eor"
                         then true
                 else false
@@ -75,14 +77,17 @@ fun convert_binop bop =
       else if oper_name = "-" then Tree.MINUS
       else if oper_name = "*" then Tree.MUL
       else if oper_name = "/" then Tree.DIV
-      else if oper_name = "&" then Tree.AND
-      else if oper_name = "|" then Tree.OR
       else if oper_name = "<<" then Tree.LSHIFT
       else if oper_name = ">>" then Tree.RSHIFT
       else if oper_name = ">>#" then Tree.ARSHIFT
       else if oper_name = ">>>" then Tree.ROR
-      else if oper_name = "#" then Tree.XOR
+      else if oper_name = "&&" then Tree.AND
+      else if oper_name = "||" then Tree.OR
+      else if oper_name = "??" then Tree.XOR
 
+      else if oper_name = "word_and" then Tree.AND
+      else if oper_name = "word_or" then Tree.OR
+      else if oper_name = "word_xor" then Tree.XOR
       else if oper_name = "word_add" then Tree.PLUS
       else if oper_name = "word_sub" then Tree.MINUS
       else if oper_name = "word_mul" then Tree.MUL
@@ -154,6 +159,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	Tree.PAIR(mk_PAIR e1, mk_PAIR e2)
   |  mk_PAIR exp =
 	  Tree.TEMP (inspectVar(Temp.makestring(Temp.newtemp())))  
+val exp = rhs
 
  fun analyzeExp exp =
 
@@ -174,7 +180,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
       	        Tree.TEMP (inspectVar v)
             end
 	else
-	    Tree.NCONST Arbint.zero
+      Tree.NCONST Arbint.zero
 
      else if is_cond exp then
         let val (c,t,f) = dest_cond exp;

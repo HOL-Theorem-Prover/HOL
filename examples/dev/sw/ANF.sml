@@ -3,7 +3,7 @@ struct
 
 (* For interactive use:
 
- app load ["pairLib", "cpsSyntax", "word32Lib"]; 
+ app load ["pairLib", "cpsSyntax", "wordsLib"]; 
   quietdec := true;
   open pairLib pairTheory PairRules pairSyntax cpsTheory cpsSyntax; 
   quietdec := false;
@@ -114,6 +114,7 @@ fun is_word_literal tm =
   end)
   handle HOL_ERR _ => raise ERR "is_word_literal" "";
 
+
 fun Convert_CONV f =
  let val (args,t) = 
          dest_pabs f
@@ -127,7 +128,7 @@ fun Convert_CONV f =
         print "has free variables: "; 
         map (fn t => (print_term t; print " "))(rev(free_vars f)); print "\n";
         raise ERR "Convert_CONV" "disallowed free variables")
-  else if is_var t orelse is_word_literal t orelse is_const t 
+  else if is_var t orelse is_word_literal t orelse numSyntax.is_numeral t orelse is_const t 
    then REFL f
   else if is_pair t
    then let val (t1,t2) = dest_pair t
@@ -245,6 +246,7 @@ fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 (* where p is a combinatory expression built from the combinators Seq, Par   *)
 (* and Ite.                                                                  *)
 (*****************************************************************************)
+
 fun Convert defth =
  let val (lt,rt) = 
          dest_eq(concl(SPEC_ALL defth))

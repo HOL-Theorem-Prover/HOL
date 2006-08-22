@@ -1,3 +1,15 @@
+(* interactive use:
+
+quietdec := true;
+loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
+
+app load ["preARMTheory", "pairLib", "simpLib", "bossLib",
+       "numSyntax", "optionSyntax", "listSyntax", "ILTheory", "Assem", "gr_t", "Tree"];
+
+quietdec := false;
+*)
+
+
 structure annotatedIL = struct
   local
   open HolKernel Parse boolLib preARMTheory pairLib simpLib bossLib
@@ -150,12 +162,35 @@ fun convert_mem (MEM (regNo, offset)) =
  |  convert_mem _ = 
      raise ERR "IL" ("invalid expression");
 
-fun convert_exp (MEM (regNo, offset)) =
-      mk_comb(Term`MM`, convert_mem (MEM (regNo, offset)))
- |  convert_exp (NCONST e) =
-      mk_comb(Term`MC`, mk_comb (Term`word32$n2w`, mk_numeral (Arbint.toNat e)))
+
+
+fun convert_shift_const e =
+  let 
+    fun remove_zero n c =
+      let
+        val (n1, n2) = (Arbint.divmod (n, Arbint.fromInt 4))
+      in
+        if (n2 = Arbint.zero) then
+          remove_zero n1 (Arbint.+ (c, Arbint.fromInt 1))
+        else
+          (n, c)
+      end;
+
+    val (n, c) = remove_zero e Arbint.zero
+    val _ = if (Arbint.> (n, Arbint.fromInt 255)) then 
+              raise ERR "" "Can't convert constant to shift expression"
+            else 
+              ()
+    val shift = mk_comb (Term`n2w:num->word4`, mk_numeral (Arbint.toNat c))
+    val const = mk_comb (Term`n2w:num->word8`, mk_numeral (Arbint.toNat n))
+  in
+    mk_comb (mk_comb(Term`MC`, shift), const)
+  end;
+    
+fun convert_exp (NCONST e) =
+      convert_shift_const e
  |  convert_exp (WCONST e) =
-      mk_comb(Term`MC`, mk_comb (Term`word32$n2w`, mk_numeral (Arbint.toNat e)))
+      convert_shift_const e
  |  convert_exp (REG e) =
       mk_comb (Term`MR`, convert_reg (REG e))
  |  convert_exp (PAIR(e1,e2)) =
@@ -163,6 +198,20 @@ fun convert_exp (MEM (regNo, offset)) =
  |  convert_exp _ =
       raise ERR "IL" ("invalid expression");
 
+local
+  fun convert_shift_internal e =
+    let
+      val _ = if (Arbint.>= (e, Arbint.fromInt 32)) then raise ERR "IL" ("invalid expression") else ();
+    in
+      mk_comb (Term`n2w:num->word5`, mk_numeral (Arbint.toNat e))
+    end;
+in
+
+fun convert_shift (NCONST e) = convert_shift_internal e
+ |  convert_shift (WCONST e) = convert_shift_internal e
+ |  convert_shift _ =
+      raise ERR "IL" ("invalid expression");
+end
 
  fun convert_stm ({oper = op1, dst = dlist, src = slist}) =
     let
@@ -174,12 +223,22 @@ fun convert_exp (MEM (regNo, offset)) =
         else if op1 = mpop then 
             list_mk_comb (ops, [(term_of_int o index_of_exp) (hd slist), 
                           mk_list (List.map (term_of_int o index_of_exp) dlist, Type `:num`)])
+        else if ((op1 = mlsl) orelse
+                 (op1 = mlsr) orelse
+                 (op1 = masr) orelse
+                 (op1 = mror)) then            
+            list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist), convert_shift (el 2 slist)])
+        else if (op1 = mmul) then            
+            list_mk_comb (ops, (convert_reg (hd dlist)) :: map convert_reg slist)
         else if op1 = mstr then
             list_mk_comb (ops, (convert_mem (hd dlist)) :: [convert_reg (hd slist)])
         else if op1 = mldr then
             list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_mem (hd slist)])
+        else if op1 = mmov then
+            list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_exp (hd slist)])
         else
-            list_mk_comb (ops, List.map convert_reg dlist @ List.map convert_exp slist)
+            list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist),
+            convert_exp (el 2 slist)])
     end
     handle e =>  raise ERR "IL" ("invalid statement!")
 

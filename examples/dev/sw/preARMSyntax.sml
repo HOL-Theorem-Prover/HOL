@@ -19,7 +19,7 @@ fun to_exp (Assem.MEM {reg = regNo, offset = offset, wback = flag}) =
  |  to_exp (Assem.NCONST e) =
       mk_comb(Term`NCONST`, mk_numeral (Arbint.toNat e))
  |  to_exp (Assem.WCONST e) =
-      mk_comb(Term`WCONST`, mk_comb (Term`n2w`, mk_numeral (Arbint.toNat e)))
+      mk_comb(Term`WCONST`, mk_comb (Term`n2w:num->word32`, mk_numeral (Arbint.toNat e)))
  |  to_exp (Assem.REG e) =
       mk_comb(Term`REG`, term_of_int e)
  |  to_exp (Assem.WREG e) =

@@ -1,5 +1,19 @@
+(* interactive use:
+
+
+quietdec := true;
+loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
+
+map load ["pred_setSimps", "pred_setTheory",
+     "arithmeticTheory", "wordsLib", "pairTheory",
+     "listTheory", "whileTheory", "finite_mapTheory"];
+
+quietdec := false;
+*)
+
 open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
-     arithmeticTheory word32Theory pairTheory listTheory whileTheory finite_mapTheory;
+     arithmeticTheory wordsLib pairTheory listTheory whileTheory finite_mapTheory;
+
 
 val _ = new_theory "preARM";
 
@@ -23,18 +37,18 @@ val _ = Hol_datatype `SRS = SN | SZ | SC | SV`;
 val getS_def = Define
         `getS (cpsr : CPSR) (flag:SRS) =
             case flag of
-                 SN -> MSB cpsr ||
-                 SZ -> MSB (cpsr << 1) ||
-                 SC -> MSB (cpsr << 2) ||
-                 SV -> MSB (cpsr << 3)
+                 SN -> cpsr %% 31 ||
+                 SZ -> cpsr %% 30 ||
+                 SC -> cpsr %% 29 ||
+                 SV -> cpsr %% 28
         `;
 
 val getS_thm = Q.store_thm (
 	"getS_thm",
-        `(getS (cpsr : CPSR) SN = MSB cpsr) /\ 
-	 (getS (cpsr : CPSR) SZ = MSB (cpsr << 1)) /\
-	 (getS (cpsr : CPSR) SC = MSB (cpsr << 2)) /\
-	 (getS (cpsr : CPSR) SV = MSB (cpsr << 3))
+        `(getS (cpsr : CPSR) SN = cpsr %% 31) /\ 
+	 (getS (cpsr : CPSR) SZ = cpsr %% 30) /\
+	 (getS (cpsr : CPSR) SC = cpsr %% 29) /\
+	 (getS (cpsr : CPSR) SV = cpsr %% 28)
 	`,
 	RW_TAC std_ss [getS_def]);
 
@@ -42,18 +56,18 @@ val getS_thm = Q.store_thm (
 val setS_def = Define
         `setS (cpsr : CPSR) (flag:SRS) =
             case flag of
-                 SN -> (cpsr | 0x80000000w) ||
-                 SZ -> (cpsr | 0x40000000w) ||
-                 SC -> (cpsr | 0x20000000w) ||
-                 SV -> (cpsr | 0x10000000w)
+                 SN -> (cpsr !! 0x80000000w) ||
+                 SZ -> (cpsr !! 0x40000000w) ||
+                 SC -> (cpsr !! 0x20000000w) ||
+                 SV -> (cpsr !! 0x10000000w)
         `;
 
 val setS_thm = Q.store_thm (
 	"setS_thm",
-        `(setS (cpsr : CPSR) SN = (cpsr | 0x80000000w)) /\
-	 (setS (cpsr : CPSR) SZ = (cpsr | 0x40000000w)) /\
-	 (setS (cpsr : CPSR) SC = (cpsr | 0x20000000w)) /\
-	 (setS (cpsr : CPSR) SV = (cpsr | 0x10000000w))
+        `(setS (cpsr : CPSR) SN = (cpsr !! 0x80000000w)) /\
+	 (setS (cpsr : CPSR) SZ = (cpsr !! 0x40000000w)) /\
+	 (setS (cpsr : CPSR) SC = (cpsr !! 0x20000000w)) /\
+	 (setS (cpsr : CPSR) SV = (cpsr !! 0x10000000w))
         `,
 	RW_TAC std_ss [setS_def]);
 
@@ -258,11 +272,11 @@ val decode_op_def =
 	  MLA -> (cpsr, (write s (THE dst) (read s (HD src) * read s (HD (TL (src))) + 
 						  read s (HD (TL (TL (src)))) )))
               ||
-          AND -> (cpsr, (write s (THE dst) (read s (HD src) & read s (HD (TL (src))))))
+          AND -> (cpsr, (write s (THE dst) (read s (HD src) && read s (HD (TL (src))))))
               ||
-          ORR -> (cpsr, (write s (THE dst) (read s (HD src) | read s (HD (TL (src))))))
+          ORR -> (cpsr, (write s (THE dst) (read s (HD src) !! read s (HD (TL (src))))))
               ||
-          EOR -> (cpsr, (write s (THE dst) (read s (HD src) # read s (HD (TL (src))))))
+          EOR -> (cpsr, (write s (THE dst) (read s (HD src) ?? read s (HD (TL (src))))))
               ||
 
           LSL -> (cpsr, (write s (THE dst) 
@@ -282,11 +296,11 @@ val decode_op_def =
               However, replacing 0w with cpsr would harm the correctness due to the property of bitwise-or   *)
           CMP -> if read s (HD src) = read s (HD (TL (src))) then
                       (setS 0w SZ, s)
-                 else if read s (HD src) <. read s (HD (TL (src))) then
+                 else if read s (HD src) <+ read s (HD (TL (src))) then
                       (setS 0w SN, s)
                  else (setS 0w SC, s)
               ||
-          TST -> if read s (HD src) & read s (HD (TL (src))) = 0w then
+          TST -> if read s (HD src) && read s (HD (TL (src))) = 0w then
                       (setS cpsr SZ, s)
                  else (cpsr, s)
               ||
@@ -318,15 +332,15 @@ val decode_op_thm = Q.store_thm
   (decode_op (pc,cpsr,s) (RSB,SOME dst,src,jump) = (cpsr, write s dst (read s (HD (TL src)) - read s (HD src)))) /\
   (decode_op (pc,cpsr,s) (MUL,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) * read s (HD (TL src))))) /\
   (decode_op (pc,cpsr,s) (MLA,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) * read s (HD (TL src)) + read s (HD (TL (TL src)))))) /\
-  (decode_op (pc,cpsr,s) (AND,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) & read s (HD (TL src))))) /\
-  (decode_op (pc,cpsr,s) (ORR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) | read s (HD (TL src))))) /\
-  (decode_op (pc,cpsr,s) (EOR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) # read s (HD (TL src))))) /\
+  (decode_op (pc,cpsr,s) (AND,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) && read s (HD (TL src))))) /\
+  (decode_op (pc,cpsr,s) (ORR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) !! read s (HD (TL src))))) /\
+  (decode_op (pc,cpsr,s) (EOR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) ?? read s (HD (TL src))))) /\
   (decode_op (pc,cpsr,s) (CMP,NONE,src,jump) = (if read s (HD src) = read s (HD (TL src))
                                              then (setS 0w SZ,s)
-                                             else (if read s (HD src) <. read s (HD (TL src))
+                                             else (if read s (HD src) <+ read s (HD (TL src))
                                                    then (setS 0w SN,s)
                                                    else (setS 0w SC,s)))) /\
-  (decode_op (pc,cpsr,s) (TST,NONE,src,jump) = (if read s (HD src) & read s (HD (TL src)) = 0w
+  (decode_op (pc,cpsr,s) (TST,NONE,src,jump) = (if read s (HD src) && read s (HD (TL src)) = 0w
                                              then (setS cpsr SZ,s) else (cpsr,s))) /\
   (decode_op (pc,cpsr,s) (LSL,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) << w2n (read s (HD (TL src)))))) /\
   (decode_op (pc,cpsr,s) (LSR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) >>> w2n (read s (HD (TL src)))))) /\

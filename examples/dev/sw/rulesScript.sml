@@ -22,9 +22,14 @@ val _ = Globals.priming := NONE;
 (*---------------------------------------------------------------------------------*)
 
 val mread_def = Define `
-    (mread st (MR r) = read st (toREG r)) /\
-    (mread st (MC c) = read st (WCONST c)) /\
-    (mread st (MM m) = read st (toMEM m))`;
+    (mread st mexp = read st (toEXP mexp))`;
+
+val mread_thm = store_thm ("mread_thm",
+        ``(!st r. mread st (MR r) = read st (toREG r)) /\
+          (!st s c. mread st (MC s c) = read st (WCONST (w2w c << (2 * w2n s))))``,
+
+        SIMP_TAC std_ss [mread_def, toEXP_def]);
+
        
 val _ = add_rule {term_name = "mread", fixity = Suffix 60,
 		  pp_elements = [TOK "<", TM, TOK ">"],

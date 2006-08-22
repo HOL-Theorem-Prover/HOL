@@ -1,9 +1,17 @@
-(*
-app load ["pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory"];
+(* interactive use:
+
+quietdec := true;
+loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
+
+app load ["pred_setSimps", "pred_setTheory",
+     "arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", "preARMTheory", "ARMCompositionTheory"];
+
+quietdec := false;
 *)
 
+
 open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
-     arithmeticTheory word32Theory pairTheory listTheory whileTheory finite_mapTheory preARMTheory ARMCompositionTheory;
+     arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory finite_mapTheory preARMTheory ARMCompositionTheory;
 
 (*---------------------------------------------------------------------------------*)
 (*---------------------------------------------------------------------------------*)
@@ -23,8 +31,7 @@ val _ = type_abbrev("MMEM", Type`:num # OFFSET`);      (* memory in ir *)
 
 val _ = Hol_datatype `
     MEXP = MR of MREG          (* registers *)
-         | MC of DATA          (* constants *)
-         | MM of MMEM          (* memory    *)
+         | MC of word4 => word8 (* constants *)
     `;
 
 val index_of_reg = Define `
@@ -89,12 +96,11 @@ val toREG_def = Define `
 
 val toMEM_def = Define `
     toMEM ((base,offset):MMEM) =
-       MEM (base,offset)`;        (* [base + offset] *)
+       preARM$MEM (base,offset)`;        (* [base + offset] *)
 
 val toEXP_def = Define `
     (toEXP (MR r) = toREG r) /\
-    (toEXP (MC c) = WCONST c) /\ 
-    (toEXP (MM m) = toMEM m)`;
+    (toEXP (MC shift c) = WCONST ((w2w c):word32 << (2*w2n shift)))`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Semantics of the intermediate language                                     *)
@@ -104,18 +110,18 @@ val _ = Hol_datatype `
     DOPER = MLDR of MREG => MMEM |
            MSTR of MMEM => MREG |
            MMOV of MREG => MEXP |
-           MADD of MREG => MEXP => MEXP |
-           MSUB of MREG => MEXP => MEXP | 
-           MRSB of MREG => MEXP => MEXP |
-           MMUL of MREG => MEXP => MEXP |
-           MAND of MREG => MEXP => MEXP |
-           MORR of MREG => MEXP => MEXP |
-	   MEOR of MREG => MEXP => MEXP |
-	   MLSL of MREG => MEXP => MEXP |
-	   MLSR of MREG => MEXP => MEXP |
-	   MASR of MREG => MEXP => MEXP |
-	   MROR of MREG => MEXP => MEXP |
-           MPUSH of REGISTER => REGISTER list |
+           MADD of MREG => MREG => MEXP |
+           MSUB of MREG => MREG => MEXP | 
+           MRSB of MREG => MREG => MEXP |
+           MMUL of MREG => MREG => MREG |
+           MAND of MREG => MREG => MEXP |
+           MORR of MREG => MREG => MEXP |
+	   MEOR of MREG => MREG => MEXP |
+	   MLSL of MREG => MREG => word5 |
+	   MLSR of MREG => MREG => word5 |
+	   MASR of MREG => MREG => word5 |
+	   MROR of MREG => MREG => word5 |
+     MPUSH of REGISTER => REGISTER list |
 	   MPOP of REGISTER => REGISTER list`;
 
 val _ = type_abbrev("CEXP", Type`:EXP # COND # EXP`);
@@ -160,27 +166,27 @@ val mdecode_def = Define `
   (mdecode st (MMOV dst src) =
       write st (toREG dst) (read st (toEXP src))) /\
   (mdecode st (MADD dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) + read st (toEXP src2))) /\
+      write st (toREG dst) (read st (toREG src1) + read st (toEXP src2))) /\
   (mdecode st (MSUB dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) - read st (toEXP src2))) /\
+      write st (toREG dst) (read st (toREG src1) - read st (toEXP src2))) /\
   (mdecode st (MRSB dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src2) - read st (toEXP src1))) /\
-  (mdecode st (MMUL dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) * read st (toEXP src2))) /\
+      write st (toREG dst) (read st (toEXP src2) - read st (toREG src1))) /\
+  (mdecode st (MMUL dst src1 src2_reg) =
+      write st (toREG dst) (read st (toREG src1) * read st (toREG src2_reg))) /\
   (mdecode st (MAND dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) & read st (toEXP src2))) /\
+      write st (toREG dst) (read st (toREG src1) && read st (toEXP src2))) /\
   (mdecode st (MORR dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) | read st (toEXP src2))) /\
+      write st (toREG dst) (read st (toREG src1) !! read st (toEXP src2))) /\
   (mdecode st (MEOR dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) # read st (toEXP src2))) /\
-  (mdecode st (MLSL dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) << w2n (read st (toEXP src2)))) /\
-  (mdecode st (MLSR dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) >>> w2n (read st (toEXP src2)))) /\  
-  (mdecode st (MASR dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) >> w2n (read st (toEXP src2)))) /\
-  (mdecode st (MROR dst src1 src2) =
-      write st (toREG dst) (read st (toEXP src1) #>> w2n (read st (toEXP src2)))) /\
+      write st (toREG dst) (read st (toREG src1) ?? read st (toEXP src2))) /\
+  (mdecode st (MLSL dst src2_reg src2_num) =
+      write st (toREG dst) (read st (toREG src2_reg) << w2n src2_num)) /\
+  (mdecode st (MLSR dst src2_reg src2_num) =
+      write st (toREG dst) (read st (toREG src2_reg) >>> w2n src2_num)) /\  
+  (mdecode st (MASR dst src2_reg src2_num) =
+      write st (toREG dst) (read st (toREG src2_reg) >> w2n src2_num)) /\
+  (mdecode st (MROR dst src2_reg src2_num) =
+      write st (toREG dst) (read st (toREG src2_reg) #>> w2n src2_num)) /\
   (mdecode st (MPUSH dst' srcL) =
       pushL st dst' srcL) /\
   (mdecode st (MPOP dst' srcL) =
@@ -189,17 +195,17 @@ val mdecode_def = Define `
 
 val translate_assignment_def = Define `
     (translate_assignment (MMOV dst src) = ((MOV,NONE,F),SOME (toREG dst), [toEXP src], NONE):INST) /\
-    (translate_assignment (MADD dst src1 src2) = ((ADD,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MSUB dst src1 src2) = ((SUB,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MRSB dst src1 src2) = ((RSB,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MMUL dst src1 src2) = ((MUL,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MAND dst src1 src2) = ((AND,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MORR dst src1 src2) = ((ORR,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MEOR dst src1 src2) = ((EOR,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MLSL dst src1 src2) = ((LSL,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MLSR dst src1 src2) = ((LSR,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MASR dst src1 src2) = ((ASR,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
-    (translate_assignment (MROR dst src1 src2) = ((ROR,NONE,F),SOME (toREG dst), [toEXP src1; toEXP src2], NONE):INST) /\
+    (translate_assignment (MADD dst src1 src2) = ((ADD,NONE,F),SOME (toREG dst), [toREG src1; toEXP src2], NONE):INST) /\
+    (translate_assignment (MSUB dst src1 src2) = ((SUB,NONE,F),SOME (toREG dst), [toREG src1; toEXP src2], NONE):INST) /\
+    (translate_assignment (MRSB dst src1 src2) = ((RSB,NONE,F),SOME (toREG dst), [toREG src1; toEXP src2], NONE):INST) /\
+    (translate_assignment (MMUL dst src1 src2_reg) = ((MUL,NONE,F),SOME (toREG dst), [toREG src1; toREG src2_reg], NONE):INST) /\
+    (translate_assignment (MAND dst src1 src2) = ((AND,NONE,F),SOME (toREG dst), [toREG src1; toEXP src2], NONE):INST) /\
+    (translate_assignment (MORR dst src1 src2) = ((ORR,NONE,F),SOME (toREG dst), [toREG src1; toEXP src2], NONE):INST) /\
+    (translate_assignment (MEOR dst src1 src2) = ((EOR,NONE,F),SOME (toREG dst), [toREG src1; toEXP src2], NONE):INST) /\
+    (translate_assignment (MLSL dst src2_reg src2_num) = ((LSL,NONE,F),SOME (toREG dst), [toREG src2_reg; WCONST (w2w src2_num)], NONE):INST) /\
+    (translate_assignment (MLSR dst src2_reg src2_num) = ((LSR,NONE,F),SOME (toREG dst), [toREG src2_reg; WCONST (w2w src2_num)], NONE):INST) /\
+    (translate_assignment (MASR dst src2_reg src2_num) = ((ASR,NONE,F),SOME (toREG dst), [toREG src2_reg; WCONST (w2w src2_num)], NONE):INST) /\
+    (translate_assignment (MROR dst src2_reg src2_num) = ((ROR,NONE,F),SOME (toREG dst), [toREG src2_reg; WCONST (w2w src2_num)], NONE):INST) /\
     (!dst src.translate_assignment (MLDR dst src) = ((LDR,NONE,F),SOME (toREG dst), [toMEM src], NONE):INST) /\
     (!dst src.translate_assignment (MSTR dst src) = ((STR,NONE,F),SOME (toREG src), [toMEM dst], NONE):INST) /\
     (!dst srcL.translate_assignment (MPUSH dst srcL) = ((STMFD,NONE,F),SOME (WREG dst), MAP REG srcL, NONE):INST) /\
@@ -214,9 +220,8 @@ val TRANSLATE_ASSIGMENT_CORRECT = Q.store_thm
      SIMP_TAC std_ss [FORALL_DSTATE] THEN
      Cases_on `stm` THEN
      RW_TAC list_ss [translate_assignment_def, decode_cond_thm, decode_op_thm, write_thm,  mdecode_def] THEN
-     RW_TAC list_ss [pushL_def, popL_def]
+     RW_TAC list_ss [pushL_def, popL_def, read_thm, w2n_w2w, dimindex_5, dimindex_32]
   );
-
 
 val TRANSLATE_ASSIGMENT_CORRECT_2 = Q.store_thm
   ("TRANSLATE_ASSIGMENT_CORRECT_2",
