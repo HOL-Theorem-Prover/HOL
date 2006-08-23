@@ -317,7 +317,7 @@ val index_sum = store_thm("index_sum",
    if FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool) then
      dimindex(:'a) + dimindex(:'b)
    else
-     dimindex(:('a+'b))`,
+     1`,
   RW_TAC std_ss [dimindex,sum_union,isl_isr_union,isl_isr_univ,FINITE_UNION]
     THEN METIS_TAC [isl_isr_finite]);
 

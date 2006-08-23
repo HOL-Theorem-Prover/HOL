@@ -868,6 +868,38 @@ val WORD_EXTRACT_BITS_COMP = save_thm("WORD_EXTRACT_BITS_COMP",
   SIMP_CONV std_ss [word_extract_def,WORD_BITS_COMP_THM])
   ``(j >< k) ((h -- l) n)``);
 
+val WORD_ALL_BITS = store_thm("WORD_ALL_BITS",
+  `!w:'a word. (h = dimindex (:'a) - 1) ==> ((h -- 0) w = w)`,
+  Cases_word 
+    \\ SRW_TAC [] [word_bits_n2w,GSYM MOD_DIMINDEX,DIVISION,DIMINDEX_GT_0]);
+
+val WORD_FULL_EXTRACT = store_thm("WORD_FULL_EXTRACT",
+  `!w:'a word. (h = dimindex (:'a) - 1) ==> ((h >< 0) w = w)`,
+  SRW_TAC [] [WORD_ALL_BITS,word_extract_def,w2w_id]);
+
+val CONCAT_EXTRACT = store_thm("CONCAT_EXTRACT",
+  `!h m l w:'a word.
+     (h - m = dimindex(:'b)) /\ (m + 1 - l = dimindex(:'c)) /\
+     (h + 1 - l = dimindex (:'d)) /\ ~(dimindex(:'b + 'c) = 1) ==>
+      (((h >< m + 1) w):'b word @@ ((m >< l) w):'c word =
+       ((h >< l) w):'d word)`,
+  SRW_TAC [boolSimps.LET_ss,ARITH_ss,fcpLib.FCP_ss]
+        [DIMINDEX_GT_0,word_concat_def,word_extract_def,word_join_def,
+         w2w,fcpTheory.index_sum,word_bits_def,word_or_def,word_lsl_def]
+    \\ PAT_ASSUM `~(x = 1)` (K ALL_TAC)
+    \\ Cases_on `dimindex (:'c) <= i`
+    \\ ASM_REWRITE_TAC [] \\ FULL_SIMP_TAC std_ss [NOT_LESS_EQUAL]
+    \\ Cases_on `i < dimindex (:'a)`
+    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [DIMINDEX_GT_0,w2w]
+    \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0,SUB_RIGHT_EQ,NOT_LESS,
+         DECIDE ``0 < x ==> (a + (b + c) <= x + c - 1 = a + b <= x - 1)``]
+    << [
+      METIS_TAC [DIMINDEX_GT_0,NOT_ZERO_LT_ZERO],
+      Cases_on `dimindex (:'a) + dimindex (:'c) <= i`
+        \\ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL]
+        \\ `i - dimindex (:'c) < dimindex (:'a)` by DECIDE_TAC
+        \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [DIMINDEX_GT_0]]);
+
 val WORD_SLICE_OVER_BITWISE = store_thm("WORD_SLICE_OVER_BITWISE",
   `(!h l v:'a word w:'a word.
       (h <> l) v && (h <> l) w = (h <> l) (v && w)) /\
