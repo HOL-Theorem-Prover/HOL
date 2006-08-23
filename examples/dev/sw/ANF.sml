@@ -3,7 +3,11 @@ struct
 
 (* For interactive use:
 
- app load ["pairLib", "cpsSyntax", "wordsLib"]; 
+ loadPath := 
+            (concat Globals.HOLDIR "/examples/dev/sw") :: 
+            !loadPath;
+
+app load ["pairLib", "cpsSyntax", "wordsLib"]; 
   quietdec := true;
   open pairLib pairTheory PairRules pairSyntax cpsTheory cpsSyntax; 
   quietdec := false;
@@ -420,29 +424,67 @@ fun toComb def =
 val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
 
-fun check_occurences v t =
+fun REPAIR_SYNTAX_RESTRICTIONS_CONV t =
   if (is_comb t) then
-    let
-      val (f, args) = strip_comb t;
+    let      
+      val (f, args) = strip_comb t;      
       val {Name,Thy,Ty} = dest_thy_const f;
     in
       if ((Name = "UNCURRY") andalso (Thy = "pair")) then
         let
           val pair = (el 2 args);
           val (l, r) = dest_pair pair;
+          val is_word_l = is_word_literal l;
+          val is_word_r = is_word_literal r;
+
+          val _ = if (is_word_l andalso is_word_r) then
+                     (raise (ERR "" "Can't repair syntax"))
+                  else ()
         in
-          not (l = v)
+          if (is_word_l orelse is_word_r) then
+            let
+              val oper = el 1 args;
+              val {Name,Thy,Ty} = dest_thy_const oper;
+
+              val _ = if (not (Thy="words")) then
+                        raise (ERR "" "Can't repair syntax")
+                      else ()
+
+              val _ = if ((Name = "word_mul")) then
+                        raise (ERR "" "Can't repair syntax")
+                      else ()
+
+
+              fun COMM_OPER_CONV t =
+                (CURRY_CONV THENC 
+                 ONCE_REWRITE_CONV [wordsTheory.WORD_ADD_COMM,
+                                    wordsTheory.WORD_OR_COMM,
+                                    wordsTheory.WORD_AND_COMM,
+                                    wordsTheory.WORD_XOR_COMM
+                                   ] THENC 
+                 UNCURRY_CONV) t
+              val _ = print Name;
+            in
+              if (is_word_l) then
+                if ((Name = "word_add") orelse
+                    (Name = "word_or") orelse
+                    (Name = "word_and") orelse
+                    (Name = "word_xor")) then
+                  COMM_OPER_CONV t
+                else
+                  raise (ERR "" "Can't repair syntax")
+              else REFL t
+            end
+          else
+            REFL t
         end
       else
-        all (check_occurences v) args
+        (COMB_CONV REPAIR_SYNTAX_RESTRICTIONS_CONV) t
     end
   else if (is_abs t) then
-    let
-      val (_, s) = strip_abs t;
-    in
-      check_occurences v s
-    end
-  else true;
+      (ABS_CONV REPAIR_SYNTAX_RESTRICTIONS_CONV) t
+  else
+    REFL t;
 
 
 fun VAR_LET_CONV M =
@@ -451,10 +493,10 @@ fun VAR_LET_CONV M =
      val (v, body) = dest_abs abs_body;
  in 
    if is_vstruct tm orelse 
-      ((is_word_literal tm orelse numSyntax.is_numeral tm) andalso
-       (check_occurences v body))
+      ((is_word_literal tm orelse numSyntax.is_numeral tm))
        
-   then (REWR_CONV LET_THM THENC GEN_BETA_CONV) M
+   then 
+      (REWR_CONV LET_THM THENC GEN_BETA_CONV THENC REPAIR_SYNTAX_RESTRICTIONS_CONV) M
    else raise ERR "VAR_LET_CONV" ""
  end;
 
@@ -493,7 +535,6 @@ fun ANFof (args,thm) =
 (* to combinator form, then to A-Normal form and add the result to the       *)
 (* environment.                                                              *)
 (*---------------------------------------------------------------------------*)
-
 
 fun toANF env def = 
  let val (is_recursive,func,args,const_eq_comb) = toComb def

@@ -24,7 +24,7 @@ structure mechReasoning = struct
   open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
      preARMSyntax Assem
      pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory annotatedIL ILTheory 
-     rulesTheory word32Lib word32Theory interface;
+     rulesTheory wordsLib wordsTheory interface;
   in
 
 infix ++ THENC ORELSEC THEN THENL ORELSE |-> ##;
@@ -101,7 +101,7 @@ fun mk_subst_rules expL =
 fun read_one_var s exp =
   let
      val v0 = list_mk_comb (Term`mread`, [s, convert_exp exp]);
-     val v1 = rhs (concl ((WORD_RULE o SIMP_CONV finmap_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm]) v0))
+     val v1 = rhs (concl ((WORDS_RULE o SIMP_CONV finmap_ss [mread_thm, toMEM_def, toREG_def, index_of_reg_def, read_thm]) v0))
   in
      v1
   end
@@ -117,7 +117,7 @@ val ACCESS_RULE = SIMP_RULE finmap_ss [mread_def, write_thm, read_thm, toMEM_def
 
 val SIM_RULE = 
     fn thm =>
-    (WORD_RULE o
+    (WORDS_RULE o
      REWRITE_RULE [GSYM WORD_ADD_ASSOC] o
      CONV_RULE (DEPTH_CONV (
 	REWRITE_CONV [Once mdecode_def] THENC 
@@ -142,7 +142,7 @@ val POP_TAC =
 
 val POP_RULE =
     fn th =>
-     (WORD_RULE o
+     (WORDS_RULE o
       REWRITE_RULE [GSYM WORD_ADD_ASSOC] o
       SIMP_RULE finmap_ss [write_thm] o
       CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
@@ -169,7 +169,7 @@ val PUSH_TAC =
 
 val PUSH_RULE =
     fn th =>
-     (WORD_RULE o
+     (WORDS_RULE o
       REWRITE_RULE [GSYM WORD_ADD_ASSOC] o
       SIMP_RULE finmap_ss [write_thm] o
       CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
@@ -232,12 +232,12 @@ fun sim_stms stms pre_p =
 
 (* val pre_p = ``\st.(mread st (MR R11) = 5w) /\ (mread st (MM (11,POS 1)) = 6w)``                  *)
 
-val basic_outL = [IR.REG 11, IR.REG 13];               (* fp and sp *)
+val basic_outL = [annotatedIL.REG 11, annotatedIL.REG 13];               (* fp and sp *)
 
 fun mk_fspec ir (pre_st,post_st) (ins,outs) pre_p = 
   let 
 
-      fun calculate_outs st (IR.PAIR (a,b)) =
+      fun calculate_outs st (annotatedIL.PAIR (a,b)) =
               mk_pair (calculate_outs st a, calculate_outs st b)
        |  calculate_outs st exp =
               read_one_var st exp
@@ -248,14 +248,14 @@ fun mk_fspec ir (pre_st,post_st) (ins,outs) pre_p =
             val eqs = strip_conj q1;
             val (qt_eqs, other_eqs) = (List.take(eqs,2), tl (tl eqs));
             val qt_rules = List.map (fn t => {redex = lhs t, residue = rhs t}) qt_eqs;
-            val other_eq' = List.map (rhs o concl o WORD_CONV o (subst qt_rules)) other_eqs
+            val other_eq' = List.map (rhs o concl o WORDS_CONV o (subst qt_rules)) other_eqs
         in
             list_mk_conj (qt_eqs @ other_eq')
         end
 
       (* the pt function *)
       val rules' = List.map (fn t => {redex = lhs t, residue = rhs t}) (strip_conj (simplify_pre_p (#2 (dest_pabs pre_p))));
-      val sim1 = rhs o concl o WORD_CONV o (subst rules');
+      val sim1 = rhs o concl o WORDS_CONV o (subst rules');
 
       (* the characteristic function *)
       val rules = mk_subst_rules (List.map (sim1 o (read_one_var pre_st)) (pair2list ins));
@@ -263,7 +263,7 @@ fun mk_fspec ir (pre_st,post_st) (ins,outs) pre_p =
       val f_c = mk_pabs (initV, subst rules (sim1 (calculate_outs post_st outs)));  (* the charateristic function *)
 
       val post_p0 = list_mk_conj (List.map 
-             (fn exp => mk_eq(read_one_var pre_st exp, ((subst rules') o rhs o concl o WORD_CONV) 
+             (fn exp => mk_eq(read_one_var pre_st exp, ((subst rules') o rhs o concl o WORDS_CONV) 
                              (subst rules' (read_one_var post_st exp)))) basic_outL);  
       val post_p1 = mk_pabs (pre_st, simplify_pre_p post_p0);
 
@@ -284,7 +284,8 @@ fun mk_fspec ir (pre_st,post_st) (ins,outs) pre_p =
 (* and the context about unchanged variables is maintained                                                   *) 
 (* Finally well_formed information is given                                                                  *)
 
-fun mk_blk_spec (IR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) pre_p = 
+
+fun mk_blk_spec (annotatedIL.BLK (instL,{ins = ins, outs = outs, context = context, ...})) pre_p = 
   let 
       val th = sim_stms instL pre_p;
       val (assm,t1) = let val t0 = concl th in if is_imp t0 then dest_imp t0 else (Term`T`, t0) end;
@@ -306,10 +307,10 @@ fun mk_blk_spec (IR.BLK (instL,{ins = ins, outs = outs, context = context, ...})
 
       val spec = prove (fspec,   (* set_goal ([],fspec) *)
              SIMP_TAC std_ss [LET_THM, PSPEC_def, HSPEC_def, UNCHANGED_def, FORALL_DSTATE, BLOCK_IS_WELL_FORMED, read_thm] THEN
-                 SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] THEN
+                 SIMP_TAC list_ss [mread_thm, toMEM_def, toREG_def, index_of_reg_def, read_thm] THEN
                  SIMP_TAC std_ss [th] THEN
                  SIMP_TAC finmap_ss [read_thm] THEN
-                 WORD_TAC THEN
+                 WORDS_TAC THEN
                  SIMP_TAC std_ss [pair_induction]
             )
    in
@@ -405,7 +406,7 @@ fun mk_sc_spec ir1_spec ir2_spec =
 fun compute_outL modifiedRegL =
     let val i = ref 0   
     in
-        List.map (fn e => (i := !i - 1; IR.MEM (11, !i))) ([12, 11] @ (List.rev modifiedRegL))  (* neglect pc and lr *)
+        List.map (fn e => (i := !i - 1; annotatedIL.MEM (11, !i))) ([12, 11] @ (List.rev modifiedRegL))  (* neglect pc and lr *)
     end
 
 fun mk_fc_spec (pre_spec, body_spec, post_spec) = 
@@ -486,7 +487,7 @@ fun mk_cond_f cond_t ins =                  (* the condition function *)
 fun guessR2 tp = 
     let val tp1 = List.nth(#2 (dest_type tp),1)
     in
-        inst [alpha |-> tp1] (Term`measure (w2n o FST )`)
+        inst [alpha |-> tp1] (Term`measure (w2n:word32->num o FST )`)
     end
 
 fun cheat_tac (asl,g) = ACCEPT_TAC(ASSUME g) (asl,g);
@@ -639,22 +640,22 @@ fun mk_cj_spec cond ir1_spec ir2_spec =
 (*---------------------------------------------------------------------------------*)
 
 (*
-fun fwd_reason (IR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = 
+fun fwd_reason (annotatedIL.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = 
       let val body_spec = fwd_reason body;
       in
           mk_tr_spec cond body_spec
       end
 
- |  fwd_reason (IR.SC (ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) =
+ |  fwd_reason (annotatedIL.SC (ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) =
       mk_sc_spec (fwd_reason ir1) (fwd_reason ir2)
 
- |  fwd_reason (IR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) =
+ |  fwd_reason (annotatedIL.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) =
       mk_cj_spec cond (fwd_reason ir1) (fwd_reason ir2)
 
- |  fwd_reason (IR.BLK blk_ir) =
-      mk_blk_spec (IR.BLK blk_ir)
+ |  fwd_reason (annotatedIL.BLK blk_ir) =
+      mk_blk_spec (annotatedIL.BLK blk_ir)
 
- |  fwd_reason (IR.CALL (fname, pre_ir, body_ir, post_ir, info)) =
+ |  fwd_reason (annotatedIL.CALL (fname, pre_ir, body_ir, post_ir, info)) =
       mk_fc_spec (pre_ir, fwd_reason body_ir, post_ir, info)
 
  |  fwd_reason _ = 
@@ -662,10 +663,10 @@ fun fwd_reason (IR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, co
  ;
 *)
 
-fun fwd_reason (IR.BLK blk_ir) pre_p =
-      mk_blk_spec (IR.BLK blk_ir) pre_p
+fun fwd_reason (annotatedIL.BLK blk_ir) pre_p =
+      mk_blk_spec (annotatedIL.BLK blk_ir) pre_p
 
- |  fwd_reason (IR.CALL (fname, pre_ir, body_ir, post_ir, info)) pre_p =
+ |  fwd_reason (annotatedIL.CALL (fname, pre_ir, body_ir, post_ir, info)) pre_p =
       let 
           val pre_spec = mk_blk_spec pre_ir pre_p;
           val pre_p' = #2 (dest_pair (get_p_spec pre_spec));
@@ -676,7 +677,7 @@ fun fwd_reason (IR.BLK blk_ir) pre_p =
           mk_fc_spec (pre_spec, body_spec, post_spec)
       end
 
- |  fwd_reason (IR.SC (ir1, ir2, info)) pre_p =
+ |  fwd_reason (annotatedIL.SC (ir1, ir2, info)) pre_p =
       let val spec1 = fwd_reason ir1 pre_p;
           val pre_p' = #2 (dest_pair (get_p_spec spec1))
           val spec2 = fwd_reason ir2 pre_p'
@@ -701,7 +702,8 @@ fun restore_f spec defs =
       val eq_th =  prove (eq_stat,   (* set_goal ([],eq_stat) *)
                         SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
                         REPEAT GEN_TAC THEN
-                        REPEAT (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, WORD_ADD_ASSOC] @ defs)), WORD_TAC])
+                        REPEAT (CHANGED_TAC (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM] @ defs)), WORDS_TAC])) THEN
+                        METIS_TAC[WORD_ADD_COMM, WORD_AND_COMM, WORD_OR_COMM, WORD_XOR_COMM]
 		        )
   in
       eq_th
@@ -740,10 +742,10 @@ fun extract_ir spec =
        val (f_name, _, (f_args,f_ir,f_outs), _, _) = spec;
     in
       (print ("  Name              : " ^ f_name ^ "\n");
-       print ("  Arguments         : " ^ (IR.format_exp f_args) ^ "\n");
-       print ("  Returns           : " ^ (IR.format_exp f_outs) ^ "\n");
+       print ("  Arguments         : " ^ (annotatedIL.format_exp f_args) ^ "\n");
+       print ("  Returns           : " ^ (annotatedIL.format_exp f_outs) ^ "\n");
        print  "  Body: \n";
-       IR.printIR f_ir
+       annotatedIL.printIR f_ir
       )
     end
 
@@ -757,12 +759,90 @@ fun extract_arm spec =
        val stms1 = preARMSyntax.dest_arm stms
     in          
       (print ("  Name              : " ^ f_name ^ "\n");
-       print ("  Arguments         : " ^ (IR.format_exp f_args) ^ "\n");
-       print ("  Returns           : " ^ (IR.format_exp f_outs) ^ "\n");
+       print ("  Arguments         : " ^ (annotatedIL.format_exp f_args) ^ "\n");
+       print ("  Returns           : " ^ (annotatedIL.format_exp f_outs) ^ "\n");
        print  "  Body: \n";
        Assem.printInsts stms1
       )
     end
+
+(*---------------------------------------------------------------------------------*)
+(*Preprocess definition to eliminate ugly constants                                *)
+(*---------------------------------------------------------------------------------*)
+
+fun wordsplit t =
+  let
+    fun term2Arbnum t =
+      let
+        val t = mk_comb (Term `w2n:word32->num`, t)
+        val t = rhs (concl (EVAL t));
+        val n = numLib.dest_numeral t;
+      in
+        n
+      end;
+
+    fun arbnum2term n =
+      let
+        val t = numLib.mk_numeral n;
+        val t = mk_comb (Term `n2w:num->word32`, t)
+        val t = rhs (concl (EVAL t));
+      in
+        t
+      end;
+
+
+    fun remove_zero n c =
+      let
+        val (n1, n2) = (Arbnum.divmod (n, Arbnum.fromInt 4))
+      in
+        if (n2 = Arbnum.zero) then
+          remove_zero n1 (Arbnum.plus1 c)
+        else
+          (n, c)
+      end;
+    
+
+    fun wordsplit_internal (n:num) l =
+      if (n = Arbnum.zero) then 
+        if (l = []) then [n] else l
+      else  
+      let
+        val (n_div, n_mod) = remove_zero n Arbnum.zero;
+        val n' = Arbnum.mod (n_div, Arbnum.fromInt 256);
+        val n' = Arbnum.* (n', Arbnum.pow (Arbnum.fromInt 4, n_mod));
+        val m = Arbnum.- (n, n');
+      in
+        wordsplit_internal m (n'::l)
+      end;
+
+    val l = wordsplit_internal (term2Arbnum t) [];
+    val l = map arbnum2term l;
+  in
+    l
+  end;
+
+fun needs_split t = not (length(wordsplit t) = 1)
+
+fun WORD_EVAL_CONV t =
+  if ((wordsSyntax.is_word_type(type_of t)) andalso (free_vars t = [])) then
+    (CHANGED_CONV WORDS_CONV t) else raise ERR "WORD_EVAL_CONV" ""
+
+
+fun DATA_RESTRICT_CONV t =
+  if (wordsSyntax.is_n2w t andalso needs_split t) then
+    let
+      val l = wordsplit t;
+      val (h, l) = (hd l, tl l);
+      val new_t = foldl (fn (x, y) => mk_comb (mk_comb (Term `($!!):word32->word32->word32`, x), y)) h l;
+    in
+      GSYM (WORDS_CONV new_t)
+    end
+  else raise ERR "DATA_RESTRICT_CONV" ""
+
+
+fun preprocess_def def =
+  CONV_RULE ((DEPTH_CONV WORD_EVAL_CONV) THENC (DEPTH_CONV DATA_RESTRICT_CONV)) def
+
 
 (*---------------------------------------------------------------------------------*)
 (*      Interface                                                                  *) 
@@ -774,34 +854,25 @@ fun extract_arm spec =
 (*val init_fp = ref (100);*)
 val init_sp = ref 100;
 
-(*
-fun get_spec prog = 
-  let
-    val (f_name, f_type, (f_args,f_ir,f_outs), defs) = sfl2ir prog;
-    val pre_p = let val st = mk_var ("st", Type `:DSTATE`);
-                      val (fp',sp') = (mk_mreads st (IR.REG 11), mk_mreads st (IR.REG 13));
-                      fun convert_pt v = if v < 0 then inst [alpha |-> Type `:DATA`] (Term `ARB`) else mk_comb (Term `n2w`, term_of_int v)
-                in  mk_abs (st, mk_conj ( mk_eq(fp', convert_pt (!init_sp)), mk_eq(sp', convert_pt (!init_sp)))) (* Initially fp = sp *)
-                end
-    val f_spec0 = #fspec (get_annt (fwd_reason f_ir pre_p));
-  in
-    f_spec0
-  end
-*)
+
+
+fun preprocess_def def =
+  CONV_RULE ((DEPTH_CONV WORD_EVAL_CONV) THENC (DEPTH_CONV DATA_RESTRICT_CONV)) def
 
 fun pp_compile prog = 
   let  
-      val (f_name, f_type, (f_args,f_ir,f_outs), defs) = funCall.link_ir prog;
+      val def = preprocess_def prog;
+      val (f_name, f_type, (f_args,f_ir,f_outs), defs) = funCall.link_ir def;
       val pre_p = let val st = mk_pair (mk_var ("regs", Type `:num |-> DATA`), mk_var ("mem", Type `:num |-> DATA`));
-                      val (fp',sp') = (read_one_var st (IR.REG 11), read_one_var st (IR.REG 13));
-                      fun convert_pt v = if v < 0 then inst [alpha |-> Type `:DATA`] (Term `ARB`) else mk_comb (Term `n2w`, term_of_int v)
+                      val (fp',sp') = (read_one_var st (annotatedIL.REG 11), read_one_var st (annotatedIL.REG 13));
+                      fun convert_pt v = if v < 0 then inst [alpha |-> Type `:DATA`] (Term `ARB`) else mk_comb (Term `n2w:num->word32`, term_of_int v)
                   in  mk_pabs (st, mk_conj ( mk_eq(fp', convert_pt (!init_sp)), mk_eq(sp', convert_pt (!init_sp)))) (* Initially fp = sp *)
                   end
       val f_spec0 = fwd_reason f_ir pre_p;
       val f_spec1 = SIMP_RULE std_ss [restore_f f_spec0 defs] f_spec0;
       val stat = f_correct f_spec1
   in
-      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat)
+      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat, f_spec1)
   end
 
 
