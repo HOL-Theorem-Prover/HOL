@@ -26,7 +26,7 @@ val mread_def = Define `
 
 val mread_thm = store_thm ("mread_thm",
         ``(!st r. mread st (MR r) = read st (toREG r)) /\
-          (!st s c. mread st (MC s c) = read st (WCONST (w2w c << (2 * w2n s))))``,
+          (!st s c. mread st (MC s c) = read st (WCONST (w2w c #>> (2 * w2n s))))``,
 
         SIMP_TAC std_ss [mread_def, toEXP_def]);
 

@@ -100,7 +100,7 @@ val toMEM_def = Define `
 
 val toEXP_def = Define `
     (toEXP (MR r) = toREG r) /\
-    (toEXP (MC shift c) = WCONST ((w2w c):word32 << (2*w2n shift)))`;
+    (toEXP (MC shift c) = WCONST ((w2w c):word32 #>> (2*w2n shift)))`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Semantics of the intermediate language                                     *)

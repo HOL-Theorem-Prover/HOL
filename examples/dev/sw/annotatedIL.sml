@@ -166,27 +166,33 @@ fun convert_mem (MEM (regNo, offset)) =
 
 fun convert_shift_const e =
   let 
-    fun remove_zero n c =
-      let
-        val (n1, n2) = (Arbint.divmod (n, Arbint.fromInt 4))
-      in
-        if (n2 = Arbint.zero) then
-          remove_zero n1 (Arbint.+ (c, Arbint.fromInt 1))
-        else
-          (n, c)
-      end;
+    fun smsb b = if b then Arbnum.pow(Arbnum.two,Arbnum.fromInt 31) else Arbnum.zero
+    fun mror32 x n =
+      if n = 0 then x
+              else mror32 (Arbnum.+ ((Arbnum.div2 x), smsb (Arbnum.mod2 x = Arbnum.one))) (Int.-(n, 1));
+    fun ror32 x n = mror32 x (Int.mod(n, 32));
+    fun rol32 x n = ror32 x (Int.-(32,Int.mod(n, 32)));
 
-    val (n, c) = remove_zero e Arbint.zero
-    val _ = if (Arbint.> (n, Arbint.fromInt 255)) then 
-              raise ERR "" "Can't convert constant to shift expression"
-            else 
-              ()
-    val shift = mk_comb (Term`n2w:num->word4`, mk_numeral (Arbint.toNat c))
-    val const = mk_comb (Term`n2w:num->word8`, mk_numeral (Arbint.toNat n))
+    fun num2imm(x,n) =
+    let val x8 = Arbnum.mod(x,Arbnum.fromInt 256) in
+      if x8 = x then
+        (Arbnum.fromInt n, x8)
+      else
+        if n < 15 then
+          num2imm(rol32 x 2, n + 1)
+        else
+          raise ERR ""
+            "num2immediate: number cannot be represented as an immediate"
+    end
+
+    val (s, c) = num2imm (Arbint.toNat e, 0)
+    val shift = mk_comb (Term`n2w:num->word4`, mk_numeral s)
+    val const = mk_comb (Term`n2w:num->word8`, mk_numeral c)
   in
     mk_comb (mk_comb(Term`MC`, shift), const)
   end;
-    
+
+
 fun convert_exp (NCONST e) =
       convert_shift_const e
  |  convert_exp (WCONST e) =
