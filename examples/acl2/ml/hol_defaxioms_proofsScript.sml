@@ -699,8 +699,9 @@ val gcd_mod2 =
 local open integerTheory Cooper 
 in
 val num_abs_nz = 
- prove
-  (``0 < b \/ ~(b = 0) ==> ~(Num (ABS b) = 0)``,
+ store_thm
+  ("num_abs_nz",
+   ``0 < b \/ ~(b = 0) ==> ~(Num (ABS b) = 0)``,
    DISCH_TAC THEN ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] THEN
     RW_TAC std_ss 
      [snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_ABS_POS] THEN
@@ -711,8 +712,9 @@ end;
 local open integerTheory Cooper 
 in
 val eq_num = 
- prove
-  (``0 < a ==> (a = & (Num a))``,
+ store_thm
+  ("eq_num",
+   ``0 < a ==> (a = & (Num a))``,
    METIS_TAC [INT_NEG_GT0,INT_OF_NUM,INT_LT_IMP_LE]);
 end;
 
@@ -1071,10 +1073,77 @@ val complex_implies1_defaxiom =
              (equal (complex x y) (add x (mult (cpx 0 1 1 1) y))),
 *)
 
+val complex_definition_defaxiom =
+ store_thm
+  ("complex_definition_defaxiom",
+   ``|= implies 
+          (andl [rationalp x; rationalp y])
+          (equal (complex x y) (add x (mult (cpx 0 1 1 1) y)))``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC []
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def]
+    THEN RW_TAC std_ss []
+    THEN FULL_SIMP_TAC std_ss 
+          [ratTheory.RAT_MUL_RZERO,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
+           GSYM fracTheory.frac_1_def,GSYM ratTheory.rat_1,
+           ratTheory.RAT_MUL_LID]);
+
 (*
      [oracles: DEFAXIOM ACL2::NONZERO-IMAGPART, DISK_THM] [axioms: ] []
      |- |= implies (complex_rationalp x) (not (equal (nat 0) (imagpart x))),
 *)
+
+val nonzero_imagpart_defaxiom =
+ store_thm
+  ("non_zero_imagpart_defaxiom",
+   ``|= implies (complex_rationalp x) (not (equal (nat 0) (imagpart x)))``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC []
+    THEN Cases_on `c`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def]
+    THEN RW_TAC std_ss []);
 
 (*
      [oracles: DEFAXIOM ACL2::REALPART-IMAGPART-ELIM] [axioms: ] []
@@ -1082,11 +1151,76 @@ val complex_implies1_defaxiom =
              (equal (complex (realpart x) (imagpart x)) x),
 *)
 
+val realpart_imagpart_elim_defaxiom =
+ store_thm
+  ("realpart_imagpart_elim_defaxiom",
+   ``|= implies 
+         (acl2_numberp x)
+         (equal (complex (realpart x) (imagpart x)) x)``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC []
+    THEN Cases_on `c`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def]
+    THEN RW_TAC std_ss []);
+
 (*
      [oracles: DEFAXIOM ACL2::REALPART-COMPLEX, DISK_THM] [axioms: ] []
      |- |= implies (andl [rationalp x; rationalp y])
              (equal (realpart (complex x y)) x),
 *)
+
+val realpart_complex_defaxiom =
+ store_thm
+  ("realpart_complex_defaxiom",
+   ``|= implies 
+         (andl [rationalp x; rationalp y])
+         (equal (realpart (complex x y)) x)``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC []
+    THEN Cases_on `c`
+    THEN Cases_on `c'`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def]
+    THEN RW_TAC std_ss []);
 
 (*
      [oracles: DEFAXIOM ACL2::IMAGPART-COMPLEX, DISK_THM] [axioms: ] []
@@ -1094,11 +1228,82 @@ val complex_implies1_defaxiom =
              (equal (imagpart (complex x y)) y),
 *)
 
+val imagpart_complex_defaxiom =
+ store_thm
+  ("imagpart_complex_defaxiom",
+   ``|= implies 
+         (andl [rationalp x; rationalp y])
+         (equal (imagpart (complex x y)) y)``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC []
+    THEN Cases_on `c`
+    THEN Cases_on `c'`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def]
+    THEN RW_TAC std_ss []);
+
 (*
      [oracles: DEFAXIOM ACL2::NONNEGATIVE-PRODUCT, DISK_THM] [axioms: ] []
      |- |= implies (rationalp x)
              (andl [rationalp (mult x x); not (less (mult x x) (nat 0))]),
 *)
+
+val nonnegative_product_defaxiom =
+ store_thm
+  ("nonnegative_product_defaxiom",
+   ``|= implies 
+         (rationalp x)
+         (andl [rationalp (mult x x); not (less (mult x x) (nat 0))])``,
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC []
+    THEN Cases_on `c`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def]
+    THEN RW_TAC std_ss []
+    THEN FULL_SIMP_TAC std_ss 
+          [ratTheory.RAT_MUL_RZERO,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
+           GSYM fracTheory.frac_1_def,GSYM ratTheory.rat_1,
+           ratTheory.RAT_MUL_LID,ratTheory.RAT_MUL_LZERO]
+    THEN METIS_TAC[RAT_SQ_NONNEG,ratTheory.RAT_LEQ_LES]);
 
 (*
      [oracles: DEFAXIOM ACL2::INTEGER-0, DISK_THM] [axioms: ] []
@@ -1137,6 +1342,47 @@ val integer_1_defaxiom =
              (andl [integerp (add x (nat 1)); integerp (add x (int ~1))]),
 *)
 
+val integer_step_defaxiom =
+ store_thm
+  ("integer_step_defaxiom",
+   ``|= implies
+         (integerp x)
+         (andl [integerp (add x (nat 1)); integerp (add x (int ~1))])``,
+   Cases_on `x` 
+    THEN ACL2_SIMP_TAC []
+    THEN Cases_on `c`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def]
+    THEN RW_TAC std_ss []
+    THEN FULL_SIMP_TAC intLib.int_ss
+          [ratTheory.RAT_MUL_RZERO,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
+           ratTheory.RAT_MUL_LID,ratTheory.RAT_MUL_LZERO,
+           ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE]
+    THEN `!c'. ~(abs_rat (abs_frac (c + ~1,1)) = abs_rat (abs_frac (c',1)))`
+          by METIS_TAC[]
+    THEN FULL_SIMP_TAC intLib.int_ss
+          [ratTheory.RAT_EQ_CALCULATE,fracTheory.NMR,fracTheory.DNM]);
+
 (*
      [oracles: DEFAXIOM ACL2::LOWEST-TERMS, DISK_THM] [axioms: ] []
      |- |= implies
@@ -1145,6 +1391,210 @@ val integer_1_defaxiom =
                  less (nat 0) n; equal (numerator x) (mult n r);
                  equal (denominator x) (mult n q)]) (equal n (nat 1)),
 *)
+
+val div_eq_mult =
+ store_thm
+  ("div_eq_mult",
+   ``!m n p:int. ~(n = 0) /\ (m % n = 0) ==> ((m / n = p) = (m = p * n))``,
+   RW_TAC intLib.int_ss []
+    THEN IMP_RES_TAC integerTheory.INT_DIV_MUL_ID
+    THEN EQ_TAC
+    THEN RW_TAC intLib.int_ss []
+    THEN FULL_SIMP_TAC std_ss [integerTheory.INT_EQ_RMUL]
+    THEN METIS_TAC[]);
+
+val num_abs_mod_0 =
+ store_thm
+  ("num_abs_mod_0",
+   ``~(n = 0) ==> ((& (Num (ABS m)) % n = 0) = (m % n = 0))``,
+   RW_TAC intLib.int_ss [integerTheory.INT_MOD_EQ0]
+    THEN EQ_TAC
+    THEN RW_TAC intLib.int_ss [] 
+    THENL
+     [`0 <= ABS m` by Cooper.COOPER_TAC
+       THEN `ABS m = k * n` by METIS_TAC[integerTheory.INT_OF_NUM]
+       THEN Cases_on `0 <= m`
+       THENL
+        [`ABS m = m` by Cooper.COOPER_TAC
+          THEN PROVE_TAC[],
+         `m = (~1 * k) * n` by Cooper.COOPER_TAC
+          THEN PROVE_TAC[]],
+      Cases_on `0 <= k * n`
+       THEN `0 <= ABS(k * n)` by Cooper.COOPER_TAC
+       THEN `& (Num (ABS (k * n))) = ABS (k * n)` 
+             by METIS_TAC[integerTheory.INT_OF_NUM]
+       THENL
+        [`ABS(k * n) = k * n` by Cooper.COOPER_TAC
+          THEN METIS_TAC[],
+         `ABS(k * n) = (~1 * k) * n` by Cooper.COOPER_TAC
+          THEN METIS_TAC[]]]);
+
+val and_num_abs =
+ store_thm
+  ("and_num_abs",
+   ``!n:int. &(Num(ABS n)) = ABS n``,
+   METIS_TAC[integerTheory.INT_OF_NUM,integerTheory.INT_ABS_POS]);
+
+val reduce0 =
+ store_thm
+  ("reduce0",
+   ``~(n = 0) ==> (reduce(0,n) = (0,SGN n))``,
+   RW_TAC intLib.int_ss [reduce_def]
+    THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def,gcdTheory.GCD_0L]
+    THEN `0 <= ABS n` by Cooper.COOPER_TAC
+    THEN `&(Num(ABS n)) = ABS n` by PROVE_TAC[integerTheory.INT_OF_NUM]
+    THEN RW_TAC intLib.int_ss []
+    THEN `~(ABS n = 0)` by Cooper.COOPER_TAC
+    THEN RW_TAC intLib.int_ss [integerTheory.INT_DIV_0]
+    THEN Cases_on `0 < n`
+    THENL
+     [`ABS n = n` by Cooper.COOPER_TAC
+       THEN RW_TAC intLib.int_ss 
+             [integerTheory.INT_DIV_ID,intExtensionTheory.INT_SGN_CLAUSES]
+       THEN Cooper.COOPER_TAC,
+      `(ABS n = ~n) /\ n < 0` by Cooper.COOPER_TAC
+       THEN `SGN n = ~1` by METIS_TAC[intExtensionTheory.INT_SGN_CLAUSES]
+       THEN RW_TAC intLib.int_ss [integerTheory.INT_DIV_NEG]
+       THEN `~n = ~1 * n` by Cooper.COOPER_TAC
+       THEN RW_TAC intLib.int_ss [integerTheory.INT_DIV_RMUL]]);
+
+val reduce_lowest_terms =
+ store_thm
+  ("reduce_lowest_terms",
+   ``~(SND r = 0) /\ (reduce r = (m*n1,m*n2)) ==> (Num (ABS m) = 1)``,
+   Cases_on `(FST r = 0)`
+    THENL
+     [Cases_on `r`
+       THEN FULL_SIMP_TAC std_ss []
+       THEN RW_TAC std_ss []
+       THEN `reduce (0,r') = (0, SGN r')` by METIS_TAC[reduce0]
+       THEN `(m*n1 = 0) /\ (m*n2 = SGN r')` by METIS_TAC[pairTheory.CLOSED_PAIR_EQ]
+       THEN Cases_on `r' > 0`
+       THENL
+        [`m * n2 = 1` 
+          by METIS_TAC
+              [intExtensionTheory.INT_SGN_CLAUSES]
+          THEN FULL_SIMP_TAC intLib.int_ss [integerTheory.INT_MUL_EQ_1],
+         `r' < 0` by Cooper.COOPER_TAC
+          THEN `m * n2 = ~1` by METIS_TAC[intExtensionTheory.INT_SGN_CLAUSES]
+          THEN `~(~(1:int) = 0)` by Cooper.COOPER_TAC
+          THEN `m * (~1 * n2) = ~1 * ~1` 
+                by METIS_TAC
+                    [integerTheory.INT_EQ_LMUL2,
+                     integerTheory.INT_MUL_ASSOC,integerTheory.INT_MUL_COMM]
+          THEN `m * (~1 * n2) = 1` by Cooper.COOPER_TAC
+          THEN FULL_SIMP_TAC intLib.int_ss [integerTheory.INT_MUL_EQ_1]
+          THEN TRY(Cooper.COOPER_TAC)
+          THEN `ABS(SGN r') = 1` by Cooper.COOPER_TAC
+          THEN RW_TAC intLib.int_ss []],
+      Cases_on `r`
+       THEN FULL_SIMP_TAC std_ss [reduce_def,LET_DEF]
+       THEN RW_TAC std_ss []
+       THEN Cases_on `& (gcd (Num (ABS q)) (Num (ABS r'))) = 0:int`
+       THENL
+        [FULL_SIMP_TAC intLib.int_ss 
+          [Cooper.COOPER_PROVE ``((&(n:num)):int = 0) = (n = 0)``,
+           gcdTheory.GCD_EQ_0]
+          THEN METIS_TAC[num_abs_nz],
+         `~(Num (ABS q) = 0) /\ ~(Num (ABS r') = 0)`
+          by METIS_TAC[num_abs_nz]
+          THEN `0 < Num (ABS q) /\ 0 < Num (ABS r') /\ 0 <= ABS q /\ 0 <= ABS r'` 
+                by Cooper.COOPER_TAC
+          THEN `&(Num (ABS q))  = ABS q`  by METIS_TAC [integerTheory.INT_OF_NUM]
+          THEN `&(Num (ABS r')) = ABS r'` by METIS_TAC [integerTheory.INT_OF_NUM]
+          THEN `& (Num (ABS q))  % & (gcd (Num (ABS q)) (Num (ABS r'))) = 0`
+                by METIS_TAC[gcd_mod1]
+          THEN `& (Num (ABS r')) % & (gcd (Num (ABS q)) (Num (ABS r'))) = 0`
+                by METIS_TAC[gcd_mod2]
+          THEN `q % &  (gcd (Num (ABS q)) (Num (ABS r'))) = 0`
+                by METIS_TAC[num_abs_mod_0]
+          THEN `r' % & (gcd (Num (ABS q)) (Num (ABS r'))) = 0`
+                by METIS_TAC[num_abs_mod_0]
+          THEN `(m * n1 * & (gcd (Num (ABS q)) (Num (ABS r'))) = q)
+                /\
+                (m * n2 * & (gcd (Num (ABS q)) (Num (ABS r'))) = r')` 
+                by METIS_TAC[div_eq_mult]
+          THEN `(ABS m * ABS n1 * (& (gcd (Num (ABS q)) (Num (ABS r')))) = ABS q)
+                /\
+                (ABS m * ABS n2 * (& (gcd (Num (ABS q)) (Num (ABS r')))) = ABS r')` 
+                by METIS_TAC[integerTheory.INT_ABS_MUL,integerTheory.INT_ABS_NUM]
+          THEN `(&(Num(ABS m)) * &(Num(ABS n1)) * (& (gcd (Num (ABS q)) (Num (ABS r')))) :int =
+                 &(Num(ABS q)))
+                /\
+                (&(Num(ABS m)) * &(Num(ABS n2)) * (& (gcd (Num (ABS q)) (Num (ABS r')))) :int = 
+                 &(Num(ABS r')))` 
+                by RW_TAC std_ss [and_num_abs]
+          THEN FULL_SIMP_TAC std_ss [integerTheory.INT_MUL,integerTheory.INT_EQ_CALCULATE]
+          THEN `divides (Num (ABS m) * gcd (Num (ABS q)) (Num (ABS r'))) (Num (ABS q))`
+                by METIS_TAC
+                    [dividesTheory.divides_def,arithmeticTheory.MULT_ASSOC,arithmeticTheory.MULT_COMM]
+          THEN `divides (Num (ABS m) * gcd (Num (ABS q)) (Num (ABS r'))) (Num (ABS r'))`
+                by METIS_TAC
+                    [dividesTheory.divides_def,arithmeticTheory.MULT_ASSOC,arithmeticTheory.MULT_COMM]
+          THEN `divides 
+                  (Num (ABS m) * gcd (Num (ABS q)) (Num (ABS r')))
+                  (gcd (Num (ABS q)) (Num (ABS r')))`
+                by METIS_TAC[gcdTheory.GCD_IS_GCD,gcdTheory.is_gcd_def]
+          THEN FULL_SIMP_TAC intLib.int_ss [dividesTheory.DIVIDES_MULT_LEFT]
+          THEN RES_TAC
+          THEN RW_TAC std_ss []]]);
+
+val lowest_terms_defaxiom =
+ time store_thm
+  ("lowest_terms_defaxiom",
+   ``|= implies
+         (andl
+           [integerp n; rationalp x; integerp r; integerp q;
+            less (nat 0) n; equal (numerator x) (mult n r);
+            equal (denominator x) (mult n q)])
+         (equal n (nat 1))``,
+   Cases_on `n`  THEN Cases_on `x` THEN Cases_on `r` THEN Cases_on `q` 
+    THEN ACL2_SIMP_TAC []
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN TRY(Cases_on `c''`)
+    THEN TRY(Cases_on `c'''`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def]
+    THEN RW_TAC std_ss []
+    THEN FULL_SIMP_TAC intLib.int_ss
+          [ratTheory.RAT_EQ_CALCULATE,fracTheory.NMR,fracTheory.DNM,
+           ratTheory.RAT_MUL_CALCULATE,fracTheory.FRAC_MULT_CALCULATE]
+    THEN `reduce (rep_frac (rep_rat r')) = (c*c',c*c'')`
+          by METIS_TAC[reduced_nmr_def,reduced_dnm_def,pairTheory.PAIR]
+    THEN `0 < SND(rep_frac (rep_rat r'))` 
+          by METIS_TAC[fracTheory.FRAC_DNMPOS,fracTheory.frac_dnm_def]
+    THEN `~(SND(rep_frac (rep_rat r')) = 0)`  by Cooper.COOPER_TAC
+    THEN `&(Num (ABS c)):int = & 1` 
+          by METIS_TAC[integerTheory.INT_EQ_CALCULATE,reduce_lowest_terms]
+    THEN `0 <= ABS c` by Cooper.COOPER_TAC
+    THEN `ABS c = 1` by METIS_TAC[integerTheory.INT_OF_NUM]
+    THEN FULL_SIMP_TAC intLib.int_ss
+          [GSYM ratTheory.RAT_0,ratTheory.rat_0_def,ratTheory.RAT_LES_CALCULATE,
+           fracTheory.frac_0_def,fracTheory.frac_nmr_def,fracTheory.frac_dnm_def,
+           SIMP_RULE intLib.int_ss [] (Q.SPEC `(0,1)` (CONJUNCT2 fracTheory.frac_bij)),
+           SIMP_RULE intLib.int_ss [] (Q.SPEC `(c,1)` (CONJUNCT2 fracTheory.frac_bij))]
+    THEN `c = 1` by Cooper.COOPER_TAC);
+
 
 (*
      [oracles: DEFAXIOM ACL2::CAR-CDR-ELIM] [axioms: ] []
@@ -1453,6 +1903,9 @@ val symbolp_intern_in_package_of_symbol_defaxiom =
      |- |= symbolp (pkg_witness x),
 *)
 
+(*****************************************************************************)
+(* |- LOOKUP s ACL2_PACKAGE_ALIST "ACL2-PKG-WITNESS" = s                     *)
+(*****************************************************************************)
 val LOOKUP_PKG_WITNESS =
  store_thm
   ("LOOKUP_PKG_WITNESS",
@@ -1493,18 +1946,118 @@ val symbolp_pkg_witness_defaxiom =
              (equal (intern_in_package_of_symbol (symbol_name x) y) x),
 *)
 
+val intern_in_package_of_symbol_symbol_name_defaxiom =
+ store_thm
+  ("intern_in_package_of_symbol_symbol_name_defaxiom",
+   ``|= implies
+         (andl
+           [symbolp x;
+            equal (symbol_package_name x) (symbol_package_name y)])
+         (equal (intern_in_package_of_symbol (symbol_name x) y) x)``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC []
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN `~(intern_in_package_of_symbol (str s0) (sym s' s0') = sym s s0)` by METIS_TAC[]
+    THEN ACL2_FULL_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,sexp_11,if_eq_imp,BASIC_INTERN_def,T_NIL]
+    THEN RW_TAC std_ss []
+    THEN TRY(`~(intern_in_package_of_symbol (str "") (sym s' so') = sym s s0)`
+              by METIS_TAC[])
+    THEN TRY(METIS_TAC[]));
+
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-NAME-PKG-WITNESS] [axioms: ] []
      |- |= equal (symbol_name (pkg_witness pkg_name))
              (str "ACL2-PKG-WITNESS"),
 *)
 
+val symbol_name_pkg_witness_defaxiom =
+ time store_thm
+  ("symbol_name_pkg_witness_defaxiom",
+   ``|= equal (symbol_name (pkg_witness pkg_name)) (str "ACL2-PKG-WITNESS")``,
+   Cases_on `pkg_name`
+    THEN ACL2_SIMP_TAC[BASIC_INTERN_def]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
+    THEN TRY
+          (METIS_TAC
+            [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
+             LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
+             EVAL``"ACL2" = ""``])
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
+    THEN Cases_on `s = ""`
+    THEN FULL_SIMP_TAC std_ss
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN RW_TAC std_ss []
+    THEN ACL2_FULL_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
+           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]
+    THEN ACL2_FULL_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
+           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]);
+
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-PACKAGE-NAME-PKG-WITNESS-NAME, DISK_THM]
      [axioms: ] []
      |- |= equal (symbol_package_name (pkg_witness pkg_name))
              (ite (stringp pkg_name) pkg_name (str ACL2)),
+
+Above turned out not to be true, so at Matt Kaufmann's suggestion the
+axiom was revised to:
+
+(defaxiom symbol-package-name-pkg-witness-name
+  (equal (symbol-package-name (pkg-witness pkg-name))
+         (if (and (stringp pkg-name)
+                  (not (equal pkg-name "")) ;;; NEW!!
+                  )
+             pkg-name
+           "ACL2")))
+
 *)
+
+val symbol_package_name_pkg_witness_name_defaxiom =
+ store_thm
+  ("symbol_package_name_pkg_witness_name_defaxiom",
+   ``|= equal (symbol_package_name (pkg_witness pkg_name))
+              (ite (andl[stringp pkg_name;not (equal pkg_name (str ""))])
+                   pkg_name
+                   (str ACL2))``,
+   Cases_on `pkg_name`
+    THEN ACL2_SIMP_TAC[BASIC_INTERN_def,ACL2_def]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
+    THEN TRY
+          (METIS_TAC
+            [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
+             LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
+             EVAL``"ACL2" = ""``])
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
+    THEN Cases_on `s = ""`
+    THEN FULL_SIMP_TAC std_ss
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN RW_TAC std_ss []
+    THEN ACL2_FULL_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
+           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]
+    THEN ACL2_FULL_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
+           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]);
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-NAME-INTERN-IN-PACKAGE-OF-SYMBOL,
@@ -1514,6 +2067,24 @@ val symbolp_pkg_witness_defaxiom =
              (equal (symbol_name (intern_in_package_of_symbol s any_symbol))
                 s),
 *)
+
+val symbol_name_intern_in_package_of_symbol_defaxiom =
+ store_thm
+  ("symbol_name_intern_in_package_of_symbol_defaxiom",
+   ``|= implies 
+          (andl [stringp s; symbolp any_symbol])
+          (equal 
+            (symbol_name (intern_in_package_of_symbol s any_symbol)) 
+            s)``,
+   Cases_on `s` THEN Cases_on `any_symbol`
+    THEN ACL2_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def]
+    THEN METIS_TAC
+          [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
+           LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT]);
 
 (*
      [oracles: DEFAXIOM ACL2::ACL2-INPUT-CHANNEL-PACKAGE, DISK_THM]
@@ -1526,6 +2097,29 @@ val symbolp_pkg_witness_defaxiom =
                 (str "ACL2-INPUT-CHANNEL")),
 *)
 
+val LOOKUP_INPUT = 
+ time EVAL ``LOOKUP "ACL2-INPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``;
+
+val acl2_input_channel_package_defaxiom =
+ store_thm
+  ("acl2_input_channel_package_defaxiom",
+   ``|= implies
+         (andl
+           [stringp x; symbolp y;
+            equal (symbol_package_name y) (str "ACL2-INPUT-CHANNEL")])
+         (equal (symbol_package_name (intern_in_package_of_symbol x y))
+                (str "ACL2-INPUT-CHANNEL"))``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def]
+    THEN RW_TAC std_ss []
+    THEN ACL2_FULL_SIMP_TAC
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
+           LOOKUP_INPUT]);
+
 (*
      [oracles: DEFAXIOM ACL2::ACL2-OUTPUT-CHANNEL-PACKAGE, DISK_THM]
      [axioms: ] []
@@ -1536,6 +2130,29 @@ val symbolp_pkg_witness_defaxiom =
              (equal (symbol_package_name (intern_in_package_of_symbol x y))
                 (str ACL2_OUTPUT_CHANNEL)),
 *)
+
+val LOOKUP_OUTPUT = 
+ time EVAL ``LOOKUP "ACL2-OUTPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``;
+
+val acl2_output_channel_package_defaxiom =
+ store_thm
+  ("acl2_output_channel_package_defaxiom",
+   ``|= implies
+         (andl
+           [stringp x; symbolp y;
+            equal (symbol_package_name y) (str ACL2_OUTPUT_CHANNEL)])
+         (equal (symbol_package_name (intern_in_package_of_symbol x y))
+                (str ACL2_OUTPUT_CHANNEL))``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[ACL2_OUTPUT_CHANNEL_def]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def]
+    THEN RW_TAC std_ss []
+    THEN ACL2_FULL_SIMP_TAC
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
+           LOOKUP_OUTPUT]);
 
 (*
      [oracles: DEFAXIOM ACL2::ACL2-PACKAGE, DISK_THM] [axioms: ] []
@@ -2041,6 +2658,515 @@ val symbolp_pkg_witness_defaxiom =
              (equal (symbol_package_name (intern_in_package_of_symbol x y))
                 (str ACL2)),
 *)
+
+(*
+val acl2_package_defaxiom =
+ store_thm
+  ("acl2_package_defaxiom",
+   ``|= implies
+         (andl
+           [stringp x;
+            not
+              (member_symbol_name x
+                 (List
+                    [csym "&ALLOW-OTHER-KEYS";
+                     csym "*PRINT-MISER-WIDTH*"; csym "&AUX";
+                     csym "*PRINT-PPRINT-DISPATCH*"; csym "&BODY";
+                     csym "*PRINT-PRETTY*"; csym "&ENVIRONMENT";
+                     csym "*PRINT-RADIX*"; csym "&KEY";
+                     csym "*PRINT-READABLY*"; csym "&OPTIONAL";
+                     csym "*PRINT-RIGHT-MARGIN*"; csym "&REST";
+                     csym "*QUERY-IO*"; csym "&WHOLE";
+                     csym "*RANDOM-STATE*"; csym "*";
+                     csym "*READ-BASE*"; csym "**";
+                     csym "*READ-DEFAULT-FLOAT-FORMAT*"; csym "***";
+                     csym "*READ-EVAL*"; csym "*BREAK-ON-SIGNALS*";
+                     csym "*READ-SUPPRESS*";
+                     csym "*COMPILE-FILE-PATHNAME*"; csym "*READTABLE*";
+                     csym "*COMPILE-FILE-TRUENAME*";
+                     csym "*STANDARD-INPUT*"; csym "*COMPILE-PRINT*";
+                     csym "*STANDARD-OUTPUT*"; csym "*COMPILE-VERBOSE*";
+                     csym "*TERMINAL-IO*"; csym "*DEBUG-IO*";
+                     csym "*TRACE-OUTPUT*"; csym "*DEBUGGER-HOOK*";
+                     csym "+"; csym "*DEFAULT-PATHNAME-DEFAULTS*";
+                     csym "++"; csym "*ERROR-OUTPUT*"; csym "+++";
+                     csym "*FEATURES*"; csym "-";
+                     csym "*GENSYM-COUNTER*"; csym "/";
+                     csym "*LOAD-PATHNAME*"; csym "//";
+                     csym "*LOAD-PRINT*"; csym "///";
+                     csym "*LOAD-TRUENAME*"; csym "/=";
+                     csym "*LOAD-VERBOSE*"; csym "1+";
+                     csym "*MACROEXPAND-HOOK*"; csym "1-";
+                     csym "*MODULES*"; csym "<"; csym "*PACKAGE*";
+                     csym "<="; csym "*PRINT-ARRAY*"; csym "=";
+                     csym "*PRINT-BASE*"; csym ">"; csym "*PRINT-CASE*";
+                     csym ">="; csym "*PRINT-CIRCLE*"; csym "ABORT";
+                     csym "*PRINT-ESCAPE*"; csym "ABS";
+                     csym "*PRINT-GENSYM*"; csym "ACONS";
+                     csym "*PRINT-LENGTH*"; csym "ACOS";
+                     csym "*PRINT-LEVEL*"; csym "ACOSH";
+                     csym "*PRINT-LINES*"; csym "ADD-METHOD";
+                     csym "ADJOIN"; csym "ATOM"; csym "BOUNDP";
+                     csym "ADJUST-ARRAY"; csym "BASE-CHAR";
+                     csym "BREAK"; csym "ADJUSTABLE-ARRAY-P";
+                     csym "BASE-STRING"; csym "BROADCAST-STREAM";
+                     csym "ALLOCATE-INSTANCE"; csym "BIGNUM";
+                     csym "BROADCAST-STREAM-STREAMS";
+                     csym "ALPHA-CHAR-P"; csym "BIT";
+                     csym "BUILT-IN-CLASS"; csym "ALPHANUMERICP";
+                     csym "BIT-AND"; csym "BUTLAST"; csym "AND";
+                     csym "BIT-ANDC1"; csym "BYTE"; csym "APPEND";
+                     csym "BIT-ANDC2"; csym "BYTE-POSITION";
+                     csym "APPLY"; csym "BIT-EQV"; csym "BYTE-SIZE";
+                     csym "APROPOS"; csym "BIT-IOR"; csym "CAAAAR";
+                     csym "APROPOS-LIST"; csym "BIT-NAND";
+                     csym "CAAADR"; csym "AREF"; csym "BIT-NOR";
+                     csym "CAAAR"; csym "ARITHMETIC-ERROR";
+                     csym "BIT-NOT"; csym "CAADAR";
+                     csym "ARITHMETIC-ERROR-OPERANDS"; csym "BIT-ORC1";
+                     csym "CAADDR"; csym "ARITHMETIC-ERROR-OPERATION";
+                     csym "BIT-ORC2"; csym "CAADR"; csym "ARRAY";
+                     csym "BIT-VECTOR"; csym "CAAR";
+                     csym "ARRAY-DIMENSION"; csym "BIT-VECTOR-P";
+                     csym "CADAAR"; csym "ARRAY-DIMENSION-LIMIT";
+                     csym "BIT-XOR"; csym "CADADR";
+                     csym "ARRAY-DIMENSIONS"; csym "BLOCK";
+                     csym "CADAR"; csym "ARRAY-DISPLACEMENT";
+                     csym "BOOLE"; csym "CADDAR";
+                     csym "ARRAY-ELEMENT-TYPE"; csym "BOOLE-1";
+                     csym "CADDDR"; csym "ARRAY-HAS-FILL-POINTER-P";
+                     csym "BOOLE-2"; csym "CADDR";
+                     csym "ARRAY-IN-BOUNDS-P"; csym "BOOLE-AND";
+                     csym "CADR"; csym "ARRAY-RANK"; csym "BOOLE-ANDC1";
+                     csym "CALL-ARGUMENTS-LIMIT";
+                     csym "ARRAY-RANK-LIMIT"; csym "BOOLE-ANDC2";
+                     csym "CALL-METHOD"; csym "ARRAY-ROW-MAJOR-INDEX";
+                     csym "BOOLE-C1"; csym "CALL-NEXT-METHOD";
+                     csym "ARRAY-TOTAL-SIZE"; csym "BOOLE-C2";
+                     csym "CAR"; csym "ARRAY-TOTAL-SIZE-LIMIT";
+                     csym "BOOLE-CLR"; csym "CASE"; csym "ARRAYP";
+                     csym "BOOLE-EQV"; csym "CATCH"; csym "ASH";
+                     csym "BOOLE-IOR"; csym "CCASE"; csym "ASIN";
+                     csym "BOOLE-NAND"; csym "CDAAAR"; csym "ASINH";
+                     csym "BOOLE-NOR"; csym "CDAADR"; csym "ASSERT";
+                     csym "BOOLE-ORC1"; csym "CDAAR"; csym "ASSOC";
+                     csym "BOOLE-ORC2"; csym "CDADAR"; csym "ASSOC-IF";
+                     csym "BOOLE-SET"; csym "CDADDR";
+                     csym "ASSOC-IF-NOT"; csym "BOOLE-XOR";
+                     csym "CDADR"; csym "ATAN"; csym "BOOLEAN";
+                     csym "CDAR"; csym "ATANH"; csym "BOTH-CASE-P";
+                     csym "CDDAAR"; csym "CDDADR"; csym "CLEAR-INPUT";
+                     csym "COPY-TREE"; csym "CDDAR";
+                     csym "CLEAR-OUTPUT"; csym "COS"; csym "CDDDAR";
+                     csym "CLOSE"; csym "COSH"; csym "CDDDDR";
+                     csym "CLRHASH"; csym "COUNT"; csym "CDDDR";
+                     csym "CODE-CHAR"; csym "COUNT-IF"; csym "CDDR";
+                     csym "COERCE"; csym "COUNT-IF-NOT"; csym "CDR";
+                     csym "COMPILATION-SPEED"; csym "CTYPECASE";
+                     csym "CEILING"; csym "COMPILE"; csym "DEBUG";
+                     csym "CELL-ERROR"; csym "COMPILE-FILE";
+                     csym "DECF"; csym "CELL-ERROR-NAME";
+                     csym "COMPILE-FILE-PATHNAME"; csym "DECLAIM";
+                     csym "CERROR"; csym "COMPILED-FUNCTION";
+                     csym "DECLARATION"; csym "CHANGE-CLASS";
+                     csym "COMPILED-FUNCTION-P"; csym "DECLARE";
+                     csym "CHAR"; csym "COMPILER-MACRO";
+                     csym "DECODE-FLOAT"; csym "CHAR-CODE";
+                     csym "COMPILER-MACRO-FUNCTION";
+                     csym "DECODE-UNIVERSAL-TIME";
+                     csym "CHAR-CODE-LIMIT"; csym "COMPLEMENT";
+                     csym "DEFCLASS"; csym "CHAR-DOWNCASE";
+                     csym "COMPLEX"; csym "DEFCONSTANT";
+                     csym "CHAR-EQUAL"; csym "COMPLEXP";
+                     csym "DEFGENERIC"; csym "CHAR-GREATERP";
+                     csym "COMPUTE-APPLICABLE-METHODS";
+                     csym "DEFINE-COMPILER-MACRO"; csym "CHAR-INT";
+                     csym "COMPUTE-RESTARTS"; csym "DEFINE-CONDITION";
+                     csym "CHAR-LESSP"; csym "CONCATENATE";
+                     csym "DEFINE-METHOD-COMBINATION"; csym "CHAR-NAME";
+                     csym "CONCATENATED-STREAM";
+                     csym "DEFINE-MODIFY-MACRO"; csym "CHAR-NOT-EQUAL";
+                     csym "CONCATENATED-STREAM-STREAMS";
+                     csym "DEFINE-SETF-EXPANDER";
+                     csym "CHAR-NOT-GREATERP"; csym "COND";
+                     csym "DEFINE-SYMBOL-MACRO"; csym "CHAR-NOT-LESSP";
+                     csym "CONDITION"; csym "DEFMACRO";
+                     csym "CHAR-UPCASE"; csym "CONJUGATE";
+                     csym "DEFMETHOD"; csym "CHAR/="; csym "CONS";
+                     csym "DEFPACKAGE"; csym "CHAR<"; csym "CONSP";
+                     csym "DEFPARAMETER"; csym "CHAR<=";
+                     csym "CONSTANTLY"; csym "DEFSETF"; csym "CHAR=";
+                     csym "CONSTANTP"; csym "DEFSTRUCT"; csym "CHAR>";
+                     csym "CONTINUE"; csym "DEFTYPE"; csym "CHAR>=";
+                     csym "CONTROL-ERROR"; csym "DEFUN";
+                     csym "CHARACTER"; csym "COPY-ALIST"; csym "DEFVAR";
+                     csym "CHARACTERP"; csym "COPY-LIST"; csym "DELETE";
+                     csym "CHECK-TYPE"; csym "COPY-PPRINT-DISPATCH";
+                     csym "DELETE-DUPLICATES"; csym "CIS";
+                     csym "COPY-READTABLE"; csym "DELETE-FILE";
+                     csym "CLASS"; csym "COPY-SEQ"; csym "DELETE-IF";
+                     csym "CLASS-NAME"; csym "COPY-STRUCTURE";
+                     csym "DELETE-IF-NOT"; csym "CLASS-OF";
+                     csym "COPY-SYMBOL"; csym "DELETE-PACKAGE";
+                     csym "DENOMINATOR"; csym "EQ";
+                     csym "DEPOSIT-FIELD"; csym "EQL"; csym "DESCRIBE";
+                     csym "EQUAL"; csym "DESCRIBE-OBJECT";
+                     csym "EQUALP"; csym "DESTRUCTURING-BIND";
+                     csym "ERROR"; csym "DIGIT-CHAR"; csym "ETYPECASE";
+                     csym "DIGIT-CHAR-P"; csym "EVAL"; csym "DIRECTORY";
+                     csym "EVAL-WHEN"; csym "DIRECTORY-NAMESTRING";
+                     csym "EVENP"; csym "DISASSEMBLE"; csym "EVERY";
+                     csym "DIVISION-BY-ZERO"; csym "EXP"; csym "DO";
+                     csym "EXPORT"; csym "DO*"; csym "EXPT";
+                     csym "DO-ALL-SYMBOLS"; csym "EXTENDED-CHAR";
+                     csym "DO-EXTERNAL-SYMBOLS"; csym "FBOUNDP";
+                     csym "DO-SYMBOLS"; csym "FCEILING";
+                     csym "DOCUMENTATION"; csym "FDEFINITION";
+                     csym "DOLIST"; csym "FFLOOR"; csym "DOTIMES";
+                     csym "FIFTH"; csym "DOUBLE-FLOAT";
+                     csym "FILE-AUTHOR"; csym "DOUBLE-FLOAT-EPSILON";
+                     csym "FILE-ERROR";
+                     csym "DOUBLE-FLOAT-NEGATIVE-EPSILON";
+                     csym "FILE-ERROR-PATHNAME"; csym "DPB";
+                     csym "FILE-LENGTH"; csym "DRIBBLE";
+                     csym "FILE-NAMESTRING"; csym "DYNAMIC-EXTENT";
+                     csym "FILE-POSITION"; csym "ECASE";
+                     csym "FILE-STREAM"; csym "ECHO-STREAM";
+                     csym "FILE-STRING-LENGTH";
+                     csym "ECHO-STREAM-INPUT-STREAM";
+                     csym "FILE-WRITE-DATE";
+                     csym "ECHO-STREAM-OUTPUT-STREAM"; csym "FILL";
+                     csym "ED"; csym "FILL-POINTER"; csym "EIGHTH";
+                     csym "FIND"; csym "ELT"; csym "FIND-ALL-SYMBOLS";
+                     csym "ENCODE-UNIVERSAL-TIME"; csym "FIND-CLASS";
+                     csym "END-OF-FILE"; csym "FIND-IF"; csym "ENDP";
+                     csym "FIND-IF-NOT"; csym "ENOUGH-NAMESTRING";
+                     csym "FIND-METHOD";
+                     csym "ENSURE-DIRECTORIES-EXIST";
+                     csym "FIND-PACKAGE";
+                     csym "ENSURE-GENERIC-FUNCTION";
+                     csym "FIND-RESTART"; csym "FIND-SYMBOL";
+                     csym "GET-INTERNAL-RUN-TIME"; csym "FINISH-OUTPUT";
+                     csym "GET-MACRO-CHARACTER"; csym "FIRST";
+                     csym "GET-OUTPUT-STREAM-STRING"; csym "FIXNUM";
+                     csym "GET-PROPERTIES"; csym "FLET";
+                     csym "GET-SETF-EXPANSION"; csym "FLOAT";
+                     csym "GET-UNIVERSAL-TIME"; csym "FLOAT-DIGITS";
+                     csym "GETF"; csym "FLOAT-PRECISION";
+                     csym "GETHASH"; csym "FLOAT-RADIX"; csym "GO";
+                     csym "FLOAT-SIGN"; csym "GRAPHIC-CHAR-P";
+                     csym "FLOATING-POINT-INEXACT"; csym "HANDLER-BIND";
+                     csym "FLOATING-POINT-INVALID-OPERATION";
+                     csym "HANDLER-CASE";
+                     csym "FLOATING-POINT-OVERFLOW"; csym "HASH-TABLE";
+                     csym "FLOATING-POINT-UNDERFLOW";
+                     csym "HASH-TABLE-COUNT"; csym "FLOATP";
+                     csym "HASH-TABLE-P"; csym "FLOOR";
+                     csym "HASH-TABLE-REHASH-SIZE"; csym "FMAKUNBOUND";
+                     csym "HASH-TABLE-REHASH-THRESHOLD";
+                     csym "FORCE-OUTPUT"; csym "HASH-TABLE-SIZE";
+                     csym "FORMAT"; csym "HASH-TABLE-TEST";
+                     csym "FORMATTER"; csym "HOST-NAMESTRING";
+                     csym "FOURTH"; csym "IDENTITY"; csym "FRESH-LINE";
+                     csym "IF"; csym "FROUND"; csym "IGNORABLE";
+                     csym "FTRUNCATE"; csym "IGNORE"; csym "FTYPE";
+                     csym "IGNORE-ERRORS"; csym "FUNCALL";
+                     csym "IMAGPART"; csym "FUNCTION"; csym "IMPORT";
+                     csym "FUNCTION-KEYWORDS"; csym "IN-PACKAGE";
+                     csym "FUNCTION-LAMBDA-EXPRESSION"; csym "INCF";
+                     csym "FUNCTIONP"; csym "INITIALIZE-INSTANCE";
+                     csym "GCD"; csym "INLINE"; csym "GENERIC-FUNCTION";
+                     csym "INPUT-STREAM-P"; csym "GENSYM";
+                     csym "INSPECT"; csym "GENTEMP"; csym "INTEGER";
+                     csym "GET"; csym "INTEGER-DECODE-FLOAT";
+                     csym "GET-DECODED-TIME"; csym "INTEGER-LENGTH";
+                     csym "GET-DISPATCH-MACRO-CHARACTER";
+                     csym "INTEGERP"; csym "GET-INTERNAL-REAL-TIME";
+                     csym "INTERACTIVE-STREAM-P"; csym "INTERN";
+                     csym "LISP-IMPLEMENTATION-TYPE";
+                     csym "INTERNAL-TIME-UNITS-PER-SECOND";
+                     csym "LISP-IMPLEMENTATION-VERSION";
+                     csym "INTERSECTION"; csym "LIST";
+                     csym "INVALID-METHOD-ERROR"; csym "LIST*";
+                     csym "INVOKE-DEBUGGER"; csym "LIST-ALL-PACKAGES";
+                     csym "INVOKE-RESTART"; csym "LIST-LENGTH";
+                     csym "INVOKE-RESTART-INTERACTIVELY"; csym "LISTEN";
+                     csym "ISQRT"; csym "LISTP"; csym KEYWORD;
+                     csym "LOAD"; csym "KEYWORDP";
+                     csym "LOAD-LOGICAL-PATHNAME-TRANSLATIONS";
+                     csym "LABELS"; csym "LOAD-TIME-VALUE";
+                     csym "LAMBDA"; csym "LOCALLY";
+                     csym "LAMBDA-LIST-KEYWORDS"; csym "LOG";
+                     csym "LAMBDA-PARAMETERS-LIMIT"; csym "LOGAND";
+                     csym "LAST"; csym "LOGANDC1"; csym "LCM";
+                     csym "LOGANDC2"; csym "LDB"; csym "LOGBITP";
+                     csym "LDB-TEST"; csym "LOGCOUNT"; csym "LDIFF";
+                     csym "LOGEQV"; csym "LEAST-NEGATIVE-DOUBLE-FLOAT";
+                     csym "LOGICAL-PATHNAME";
+                     csym "LEAST-NEGATIVE-LONG-FLOAT";
+                     csym "LOGICAL-PATHNAME-TRANSLATIONS";
+                     csym "LEAST-NEGATIVE-NORMALIZED-DOUBLE-FLOAT";
+                     csym "LOGIOR";
+                     csym "LEAST-NEGATIVE-NORMALIZED-LONG-FLOAT";
+                     csym "LOGNAND";
+                     csym "LEAST-NEGATIVE-NORMALIZED-SHORT-FLOAT";
+                     csym "LOGNOR";
+                     csym "LEAST-NEGATIVE-NORMALIZED-SINGLE-FLOAT";
+                     csym "LOGNOT"; csym "LEAST-NEGATIVE-SHORT-FLOAT";
+                     csym "LOGORC1"; csym "LEAST-NEGATIVE-SINGLE-FLOAT";
+                     csym "LOGORC2"; csym "LEAST-POSITIVE-DOUBLE-FLOAT";
+                     csym "LOGTEST"; csym "LEAST-POSITIVE-LONG-FLOAT";
+                     csym "LOGXOR";
+                     csym "LEAST-POSITIVE-NORMALIZED-DOUBLE-FLOAT";
+                     csym "LONG-FLOAT";
+                     csym "LEAST-POSITIVE-NORMALIZED-LONG-FLOAT";
+                     csym "LONG-FLOAT-EPSILON";
+                     csym "LEAST-POSITIVE-NORMALIZED-SHORT-FLOAT";
+                     csym "LONG-FLOAT-NEGATIVE-EPSILON";
+                     csym "LEAST-POSITIVE-NORMALIZED-SINGLE-FLOAT";
+                     csym "LONG-SITE-NAME";
+                     csym "LEAST-POSITIVE-SHORT-FLOAT"; csym "LOOP";
+                     csym "LEAST-POSITIVE-SINGLE-FLOAT";
+                     csym "LOOP-FINISH"; csym "LENGTH";
+                     csym "LOWER-CASE-P"; csym "LET";
+                     csym "MACHINE-INSTANCE"; csym "LET*";
+                     csym "MACHINE-TYPE"; csym "MACHINE-VERSION";
+                     csym "MASK-FIELD"; csym "MACRO-FUNCTION";
+                     csym "MAX"; csym "MACROEXPAND"; csym "MEMBER";
+                     csym "MACROEXPAND-1"; csym "MEMBER-IF";
+                     csym "MACROLET"; csym "MEMBER-IF-NOT";
+                     csym "MAKE-ARRAY"; csym "MERGE";
+                     csym "MAKE-BROADCAST-STREAM";
+                     csym "MERGE-PATHNAMES";
+                     csym "MAKE-CONCATENATED-STREAM"; csym "METHOD";
+                     csym "MAKE-CONDITION"; csym "METHOD-COMBINATION";
+                     csym "MAKE-DISPATCH-MACRO-CHARACTER";
+                     csym "METHOD-COMBINATION-ERROR";
+                     csym "MAKE-ECHO-STREAM"; csym "METHOD-QUALIFIERS";
+                     csym "MAKE-HASH-TABLE"; csym "MIN";
+                     csym "MAKE-INSTANCE"; csym "MINUSP";
+                     csym "MAKE-INSTANCES-OBSOLETE"; csym "MISMATCH";
+                     csym "MAKE-LIST"; csym "MOD";
+                     csym "MAKE-LOAD-FORM";
+                     csym "MOST-NEGATIVE-DOUBLE-FLOAT";
+                     csym "MAKE-LOAD-FORM-SAVING-SLOTS";
+                     csym "MOST-NEGATIVE-FIXNUM"; csym "MAKE-METHOD";
+                     csym "MOST-NEGATIVE-LONG-FLOAT";
+                     csym "MAKE-PACKAGE";
+                     csym "MOST-NEGATIVE-SHORT-FLOAT";
+                     csym "MAKE-PATHNAME";
+                     csym "MOST-NEGATIVE-SINGLE-FLOAT";
+                     csym "MAKE-RANDOM-STATE";
+                     csym "MOST-POSITIVE-DOUBLE-FLOAT";
+                     csym "MAKE-SEQUENCE"; csym "MOST-POSITIVE-FIXNUM";
+                     csym "MAKE-STRING";
+                     csym "MOST-POSITIVE-LONG-FLOAT";
+                     csym "MAKE-STRING-INPUT-STREAM";
+                     csym "MOST-POSITIVE-SHORT-FLOAT";
+                     csym "MAKE-STRING-OUTPUT-STREAM";
+                     csym "MOST-POSITIVE-SINGLE-FLOAT";
+                     csym "MAKE-SYMBOL"; csym "MUFFLE-WARNING";
+                     csym "MAKE-SYNONYM-STREAM";
+                     csym "MULTIPLE-VALUE-BIND";
+                     csym "MAKE-TWO-WAY-STREAM";
+                     csym "MULTIPLE-VALUE-CALL"; csym "MAKUNBOUND";
+                     csym "MULTIPLE-VALUE-LIST"; csym "MAP";
+                     csym "MULTIPLE-VALUE-PROG1"; csym "MAP-INTO";
+                     csym "MULTIPLE-VALUE-SETQ"; csym "MAPC";
+                     csym "MULTIPLE-VALUES-LIMIT"; csym "MAPCAN";
+                     csym "NAME-CHAR"; csym "MAPCAR"; csym "NAMESTRING";
+                     csym "MAPCON"; csym "NBUTLAST"; csym "MAPHASH";
+                     csym "NCONC"; csym "MAPL"; csym "NEXT-METHOD-P";
+                     csym "MAPLIST"; nil; csym "NINTERSECTION";
+                     csym "PACKAGE-ERROR"; csym "NINTH";
+                     csym "PACKAGE-ERROR-PACKAGE";
+                     csym "NO-APPLICABLE-METHOD"; csym "PACKAGE-NAME";
+                     csym "NO-NEXT-METHOD"; csym "PACKAGE-NICKNAMES";
+                     csym "NOT"; csym "PACKAGE-SHADOWING-SYMBOLS";
+                     csym "NOTANY"; csym "PACKAGE-USE-LIST";
+                     csym "NOTEVERY"; csym "PACKAGE-USED-BY-LIST";
+                     csym "NOTINLINE"; csym "PACKAGEP"; csym "NRECONC";
+                     csym "PAIRLIS"; csym "NREVERSE";
+                     csym "PARSE-ERROR"; csym "NSET-DIFFERENCE";
+                     csym "PARSE-INTEGER"; csym "NSET-EXCLUSIVE-OR";
+                     csym "PARSE-NAMESTRING"; csym "NSTRING-CAPITALIZE";
+                     csym "PATHNAME"; csym "NSTRING-DOWNCASE";
+                     csym "PATHNAME-DEVICE"; csym "NSTRING-UPCASE";
+                     csym "PATHNAME-DIRECTORY"; csym "NSUBLIS";
+                     csym "PATHNAME-HOST"; csym "NSUBST";
+                     csym "PATHNAME-MATCH-P"; csym "NSUBST-IF";
+                     csym "PATHNAME-NAME"; csym "NSUBST-IF-NOT";
+                     csym "PATHNAME-TYPE"; csym "NSUBSTITUTE";
+                     csym "PATHNAME-VERSION"; csym "NSUBSTITUTE-IF";
+                     csym "PATHNAMEP"; csym "NSUBSTITUTE-IF-NOT";
+                     csym "PEEK-CHAR"; csym "NTH"; csym "PHASE";
+                     csym "NTH-VALUE"; csym "PI"; csym "NTHCDR";
+                     csym "PLUSP"; csym "NULL"; csym "POP";
+                     csym "NUMBER"; csym "POSITION"; csym "NUMBERP";
+                     csym "POSITION-IF"; csym "NUMERATOR";
+                     csym "POSITION-IF-NOT"; csym "NUNION";
+                     csym "PPRINT"; csym "ODDP"; csym "PPRINT-DISPATCH";
+                     csym "OPEN"; csym "PPRINT-EXIT-IF-LIST-EXHAUSTED";
+                     csym "OPEN-STREAM-P"; csym "PPRINT-FILL";
+                     csym "OPTIMIZE"; csym "PPRINT-INDENT"; csym "OR";
+                     csym "PPRINT-LINEAR"; csym "OTHERWISE";
+                     csym "PPRINT-LOGICAL-BLOCK";
+                     csym "OUTPUT-STREAM-P"; csym "PPRINT-NEWLINE";
+                     csym "PACKAGE"; csym "PPRINT-POP";
+                     csym "PPRINT-TAB"; csym "READ-CHAR";
+                     csym "PPRINT-TABULAR"; csym "READ-CHAR-NO-HANG";
+                     csym "PRIN1"; csym "READ-DELIMITED-LIST";
+                     csym "PRIN1-TO-STRING"; csym "READ-FROM-STRING";
+                     csym "PRINC"; csym "READ-LINE";
+                     csym "PRINC-TO-STRING";
+                     csym "READ-PRESERVING-WHITESPACE"; csym "PRINT";
+                     csym "READ-SEQUENCE"; csym "PRINT-NOT-READABLE";
+                     csym "READER-ERROR";
+                     csym "PRINT-NOT-READABLE-OBJECT"; csym "READTABLE";
+                     csym "PRINT-OBJECT"; csym "READTABLE-CASE";
+                     csym "PRINT-UNREADABLE-OBJECT"; csym "READTABLEP";
+                     csym "PROBE-FILE"; csym "REAL"; csym "PROCLAIM";
+                     csym "REALP"; csym "PROG"; csym "REALPART";
+                     csym "PROG*"; csym "REDUCE"; csym "PROG1";
+                     csym "REINITIALIZE-INSTANCE"; csym "PROG2";
+                     csym "REM"; csym "PROGN"; csym "REMF";
+                     csym "PROGRAM-ERROR"; csym "REMHASH"; csym "PROGV";
+                     csym "REMOVE"; csym "PROVIDE";
+                     csym "REMOVE-DUPLICATES"; csym "PSETF";
+                     csym "REMOVE-IF"; csym "PSETQ";
+                     csym "REMOVE-IF-NOT"; csym "PUSH";
+                     csym "REMOVE-METHOD"; csym "PUSHNEW";
+                     csym "REMPROP"; csym "QUOTE"; csym "RENAME-FILE";
+                     csym "RANDOM"; csym "RENAME-PACKAGE";
+                     csym "RANDOM-STATE"; csym "REPLACE";
+                     csym "RANDOM-STATE-P"; csym "REQUIRE";
+                     csym "RASSOC"; csym "REST"; csym "RASSOC-IF";
+                     csym "RESTART"; csym "RASSOC-IF-NOT";
+                     csym "RESTART-BIND"; csym "RATIO";
+                     csym "RESTART-CASE"; csym "RATIONAL";
+                     csym "RESTART-NAME"; csym "RATIONALIZE";
+                     csym "RETURN"; csym "RATIONALP";
+                     csym "RETURN-FROM"; csym "READ"; csym "REVAPPEND";
+                     csym "READ-BYTE"; csym "REVERSE"; csym "ROOM";
+                     csym "SIMPLE-BIT-VECTOR"; csym "ROTATEF";
+                     csym "SIMPLE-BIT-VECTOR-P"; csym "ROUND";
+                     csym "SIMPLE-CONDITION"; csym "ROW-MAJOR-AREF";
+                     csym "SIMPLE-CONDITION-FORMAT-ARGUMENTS";
+                     csym "RPLACA";
+                     csym "SIMPLE-CONDITION-FORMAT-CONTROL";
+                     csym "RPLACD"; csym "SIMPLE-ERROR"; csym "SAFETY";
+                     csym "SIMPLE-STRING"; csym "SATISFIES";
+                     csym "SIMPLE-STRING-P"; csym "SBIT";
+                     csym "SIMPLE-TYPE-ERROR"; csym "SCALE-FLOAT";
+                     csym "SIMPLE-VECTOR"; csym "SCHAR";
+                     csym "SIMPLE-VECTOR-P"; csym "SEARCH";
+                     csym "SIMPLE-WARNING"; csym "SECOND"; csym "SIN";
+                     csym "SEQUENCE"; csym "SINGLE-FLOAT";
+                     csym "SERIOUS-CONDITION";
+                     csym "SINGLE-FLOAT-EPSILON"; csym "SET";
+                     csym "SINGLE-FLOAT-NEGATIVE-EPSILON";
+                     csym "SET-DIFFERENCE"; csym "SINH";
+                     csym "SET-DISPATCH-MACRO-CHARACTER"; csym "SIXTH";
+                     csym "SET-EXCLUSIVE-OR"; csym "SLEEP";
+                     csym "SET-MACRO-CHARACTER"; csym "SLOT-BOUNDP";
+                     csym "SET-PPRINT-DISPATCH"; csym "SLOT-EXISTS-P";
+                     csym "SET-SYNTAX-FROM-CHAR";
+                     csym "SLOT-MAKUNBOUND"; csym "SETF";
+                     csym "SLOT-MISSING"; csym "SETQ";
+                     csym "SLOT-UNBOUND"; csym "SEVENTH";
+                     csym "SLOT-VALUE"; csym "SHADOW";
+                     csym "SOFTWARE-TYPE"; csym "SHADOWING-IMPORT";
+                     csym "SOFTWARE-VERSION"; csym "SHARED-INITIALIZE";
+                     csym "SOME"; csym "SHIFTF"; csym "SORT";
+                     csym "SHORT-FLOAT"; csym "SPACE";
+                     csym "SHORT-FLOAT-EPSILON"; csym "SPECIAL";
+                     csym "SHORT-FLOAT-NEGATIVE-EPSILON";
+                     csym "SPECIAL-OPERATOR-P"; csym "SHORT-SITE-NAME";
+                     csym "SPEED"; csym "SIGNAL"; csym "SQRT";
+                     csym "SIGNED-BYTE"; csym "STABLE-SORT";
+                     csym "SIGNUM"; csym "STANDARD";
+                     csym "SIMPLE-ARRAY"; csym "STANDARD-CHAR";
+                     csym "SIMPLE-BASE-STRING"; csym "STANDARD-CHAR-P";
+                     csym "STANDARD-CLASS"; csym "SUBLIS";
+                     csym "STANDARD-GENERIC-FUNCTION"; csym "SUBSEQ";
+                     csym "STANDARD-METHOD"; csym "SUBSETP";
+                     csym "STANDARD-OBJECT"; csym "SUBST"; csym "STEP";
+                     csym "SUBST-IF"; csym "STORAGE-CONDITION";
+                     csym "SUBST-IF-NOT"; csym "STORE-VALUE";
+                     csym "SUBSTITUTE"; csym "STREAM";
+                     csym "SUBSTITUTE-IF"; csym "STREAM-ELEMENT-TYPE";
+                     csym "SUBSTITUTE-IF-NOT"; csym "STREAM-ERROR";
+                     csym "SUBTYPEP"; csym "STREAM-ERROR-STREAM";
+                     csym "SVREF"; csym "STREAM-EXTERNAL-FORMAT";
+                     csym "SXHASH"; csym "STREAMP"; csym "SYMBOL";
+                     csym "STRING"; csym "SYMBOL-FUNCTION";
+                     csym "STRING-CAPITALIZE"; csym "SYMBOL-MACROLET";
+                     csym "STRING-DOWNCASE"; csym "SYMBOL-NAME";
+                     csym "STRING-EQUAL"; csym "SYMBOL-PACKAGE";
+                     csym "STRING-GREATERP"; csym "SYMBOL-PLIST";
+                     csym "STRING-LEFT-TRIM"; csym "SYMBOL-VALUE";
+                     csym "STRING-LESSP"; csym "SYMBOLP";
+                     csym "STRING-NOT-EQUAL"; csym "SYNONYM-STREAM";
+                     csym "STRING-NOT-GREATERP";
+                     csym "SYNONYM-STREAM-SYMBOL";
+                     csym "STRING-NOT-LESSP"; t;
+                     csym "STRING-RIGHT-TRIM"; csym "TAGBODY";
+                     csym "STRING-STREAM"; csym "TAILP";
+                     csym "STRING-TRIM"; csym "TAN";
+                     csym "STRING-UPCASE"; csym "TANH"; csym "STRING/=";
+                     csym "TENTH"; csym "STRING<"; csym "TERPRI";
+                     csym "STRING<="; csym "THE"; csym "STRING=";
+                     csym "THIRD"; csym "STRING>"; csym "THROW";
+                     csym "STRING>="; csym "TIME"; csym "STRINGP";
+                     csym "TRACE"; csym "STRUCTURE";
+                     csym "TRANSLATE-LOGICAL-PATHNAME";
+                     csym "STRUCTURE-CLASS"; csym "TRANSLATE-PATHNAME";
+                     csym "STRUCTURE-OBJECT"; csym "TREE-EQUAL";
+                     csym "STYLE-WARNING"; csym "TRUENAME";
+                     csym "TRUNCATE"; csym "VALUES-LIST";
+                     csym "TWO-WAY-STREAM"; csym "VARIABLE";
+                     csym "TWO-WAY-STREAM-INPUT-STREAM"; csym "VECTOR";
+                     csym "TWO-WAY-STREAM-OUTPUT-STREAM";
+                     csym "VECTOR-POP"; csym "TYPE"; csym "VECTOR-PUSH";
+                     csym "TYPE-ERROR"; csym "VECTOR-PUSH-EXTEND";
+                     csym "TYPE-ERROR-DATUM"; csym "VECTORP";
+                     csym "TYPE-ERROR-EXPECTED-TYPE"; csym "WARN";
+                     csym "TYPE-OF"; csym "WARNING"; csym "TYPECASE";
+                     csym "WHEN"; csym "TYPEP"; csym "WILD-PATHNAME-P";
+                     csym "UNBOUND-SLOT"; csym "WITH-ACCESSORS";
+                     csym "UNBOUND-SLOT-INSTANCE";
+                     csym "WITH-COMPILATION-UNIT";
+                     csym "UNBOUND-VARIABLE";
+                     csym "WITH-CONDITION-RESTARTS";
+                     csym "UNDEFINED-FUNCTION";
+                     csym "WITH-HASH-TABLE-ITERATOR"; csym "UNEXPORT";
+                     csym "WITH-INPUT-FROM-STRING"; csym "UNINTERN";
+                     csym "WITH-OPEN-FILE"; csym "UNION";
+                     csym "WITH-OPEN-STREAM"; csym "UNLESS";
+                     csym "WITH-OUTPUT-TO-STRING"; csym "UNREAD-CHAR";
+                     csym "WITH-PACKAGE-ITERATOR"; csym "UNSIGNED-BYTE";
+                     csym "WITH-SIMPLE-RESTART"; csym "UNTRACE";
+                     csym "WITH-SLOTS"; csym "UNUSE-PACKAGE";
+                     csym "WITH-STANDARD-IO-SYNTAX";
+                     csym "UNWIND-PROTECT"; csym "WRITE";
+                     csym "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS";
+                     csym "WRITE-BYTE";
+                     csym "UPDATE-INSTANCE-FOR-REDEFINED-CLASS";
+                     csym "WRITE-CHAR";
+                     csym "UPGRADED-ARRAY-ELEMENT-TYPE";
+                     csym "WRITE-LINE";
+                     csym "UPGRADED-COMPLEX-PART-TYPE";
+                     csym "WRITE-SEQUENCE"; csym "UPPER-CASE-P";
+                     csym "WRITE-STRING"; csym "USE-PACKAGE";
+                     csym "WRITE-TO-STRING"; csym "USE-VALUE";
+                     csym "Y-OR-N-P"; csym "USER-HOMEDIR-PATHNAME";
+                     csym "YES-OR-NO-P"; csym "VALUES"; csym "ZEROP"]));
+            symbolp y; equal (symbol_package_name y) (str ACL2)])
+         (equal (symbol_package_name (intern_in_package_of_symbol x y)) (str ACL2))``,
+   Cases_on `x`
+    THEN ACL2_SIMP_TAC[asym_def,csym_def,ksym_def,osym_def]
+*)
+
 
 (*
      [oracles: DEFAXIOM ACL2::KEYWORD-PACKAGE, DISK_THM] [axioms: ] []

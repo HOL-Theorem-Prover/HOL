@@ -195,8 +195,8 @@ val IS_INT_def =
 (*****************************************************************************)
 
 (*****************************************************************************)
-(* Divide each component of a pair of integers by their GCD and return       *)
-(* the reduced pair: (x,y) |--> (x/GCD(x,y), y/GCD(x,y))                     *)
+(* Divide each component of a pair of integers by their gcd and return       *)
+(* the reduced pair: (x,y) |--> (x/(gcd x y), y/(gcd x y))                   *)
 (*****************************************************************************)
 val reduce_def =
  Define

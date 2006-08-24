@@ -1186,10 +1186,21 @@ val symbol_package_name_def =
 (* MJCG added catchall case after consulting Matt Kaufmann following failure *)
 (* to prove DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS                               *)
 (*****************************************************************************)
+(* Old version
 val pkg_witness_def =
  acl2Define "ACL2::PKG-WITNESS"
   `(pkg_witness (str x) =
      let s = BASIC_INTERN "ACL2-PKG-WITNESS" x in ite (symbolp s) s nil)
+   /\
+   (pkg_witness _ = BASIC_INTERN "ACL2-PKG-WITNESS" "ACL2")`;
+*)
+
+val pkg_witness_def =
+ acl2Define "ACL2::PKG-WITNESS"
+  `(pkg_witness (str x) =
+     ite (equal (str x) (str ""))
+         (BASIC_INTERN "ACL2-PKG-WITNESS" "ACL2")
+         (let s = BASIC_INTERN "ACL2-PKG-WITNESS" x in ite (symbolp s) s nil))
    /\
    (pkg_witness _ = BASIC_INTERN "ACL2-PKG-WITNESS" "ACL2")`;
 
