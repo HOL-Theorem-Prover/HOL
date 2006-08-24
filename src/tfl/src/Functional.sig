@@ -15,4 +15,9 @@ sig
 
    val mk_functional : thry -> term -> {functional:term, pats: pattern list}
 
+   (* Each element of the list argument is a (pattern, expression) pair.
+      A function is constructed which contains a case based on the list of patterns,
+      where matching a pattern yields the value of its corresponding expression. *)
+   val mk_pattern_fn : thry -> (term * term) list -> term
+
 end

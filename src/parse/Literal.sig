@@ -13,6 +13,7 @@ sig
                        BIT1    : 'a,
                        BIT2    : 'a} -> Arbnum.num -> 'a
 
+ val is_emptystring  : term -> bool
  val is_string_lit   : term -> bool
  val dest_string_lit : term -> String.string
  val mk_string_lit   : {mk_string   : 'a * 'a -> 'a,
@@ -21,6 +22,8 @@ sig
 
  val is_char_lit     : term -> bool
  val dest_char_lit   : term -> Char.char
+
+ val is_literal      : term -> bool
 
  val relaxed_dest_numeral : term -> Arbnum.num
  val relaxed_dest_string_lit : term -> String.string

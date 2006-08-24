@@ -764,6 +764,7 @@ fun is_case tybase M =
   end
   handle HOL_ERR _ => false;
 
+(*
 local fun dest tybase (pat,rhs) =
   let val patvars = free_vars pat
   in if is_case tybase rhs
@@ -783,6 +784,54 @@ fun strip_case tybase M =
   case total (dest_case tybase) M
    of NONE => (M,[])
     | SOME(case_tm,exp,cases) => (exp, flatten (map (dest tybase) cases))
+end;
+*)
+
+local open Literal
+in
+fun is_literal tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+end;
+
+fun is_lit_eq tm =
+    if is_eq tm then
+      let val (a,b) = dest_eq tm
+      in is_var a andalso is_literal b
+      end
+    else false;
+
+local fun dest tybase (pat,rhs) =
+  let val patvars = free_vars pat
+  in if is_case tybase rhs
+     then let val (case_tm,exp,clauses) = dest_case tybase rhs
+              val (pats,rhsides) = unzip clauses
+          in if is_lit_eq exp
+             then let val (v,lit) = dest_eq exp
+                  in if mem v patvars
+                     then flatten
+                             (map (dest tybase)
+                               (zip [subst [v |-> lit] pat, pat] rhsides))
+                     else [(pat,rhs)]
+                  end
+             else if mem exp patvars andalso
+                     null_intersection [exp] (free_varsl rhsides)
+             then flatten
+                     (map (dest tybase)
+                       (zip (map (fn p => subst [exp |-> p] pat) pats) rhsides))
+             else [(pat,rhs)]
+          end
+     else [(pat,rhs)]
+  end
+in
+fun strip_case tybase M =
+  case total (dest_case tybase) M
+   of NONE => (M,[])
+    | SOME(case_tm,exp,cases) =>
+         if is_lit_eq exp
+         then let val (v,lit) = dest_eq exp
+              in (v, flatten (map (dest tybase)
+                               (zip [lit, v] (map snd cases))))
+              end
+         else (exp, flatten (map (dest tybase) cases))
 end;
 
 

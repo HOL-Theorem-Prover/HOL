@@ -176,4 +176,6 @@ in
   recurse (emptystring, String.size s - 1)
 end
 
+fun is_literal tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
+
 end (* Literal *)
