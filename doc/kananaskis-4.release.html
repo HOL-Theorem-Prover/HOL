@@ -69,24 +69,38 @@ html1/DTD/xhtml1-strict.dtd">
 
 
   <li> <p> It is possible to include both <code>^</code> (caret) and
-      <code>`</code> back-tick characters inside quotations if they
-      are preceded by caret characters.  Usually these characters have
-      special meaning inside quotations: caret is used to introduce an
-      antiquotation, and the back-tick is used to end a quotation
-      (singly or doubly, depending on the sort of quotation).  In
-      effect, the caret is used as an &ldquo;escape&rdquo;-character.
-      For example, writing</p>
+      <code>`</code> back-tick characters inside quotations.  Usually
+      these characters have special meaning inside quotations: caret
+      is used to introduce an antiquotation, and the back-tick is used
+      to end a quotation (singly or doubly, depending on the sort of
+      quotation).  The caret character can be used <em>as is</em> if a
+      sequence of them is followed by white-space.  Otherwise, it
+      needs to be &ldquo;escaped&rdquo; by preceding it with another
+      caret character.  Similarly, the backquote character can be
+      written by escaping it with a caret. For example, writing</p>
 <pre>
-         ``s1 ^^ s2``
+         ``s1 ^ s2``
 </pre>
       <p> will result in the string <code>s1 ^ s2</code> being passed
       to the HOL parser.  This string will then be treated in the
       standard fashion.  E.g., if <code>^</code> is an infix, a
       function application with it as the head operator will be
-      created. </p>
+      created.  If one wrote <code>``s1 ^^ s2``</code> this would also
+      pass through unchanged.  However, if one wrote </p>
+<pre>
+         ``s1 ^s2``
+</pre>
+      <p> this would be taken as an anti-quotation of SML variable
+      <code>s2</code>.  One should write </p>
+<pre>
+         ``s1 ^^s2``
+</pre>
+      <p> to get the single caret passed to the underlying lexer.</p>
 
-      <p> Note that caret-escapes need to be applied even within
-      string literals and comments that occur inside quotations.</p></li>
+      <p> Note that the back-quote character always needs to be
+      escaped by a caret, and that caret-escapes need to be applied
+      even within string literals and comments that occur inside
+      quotations.</p></li>
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
