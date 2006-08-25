@@ -1,12 +1,13 @@
 OPTIONS = NO_OVERLAY
+RTAGD = $(dprot $(SIGOBJ)/RestrictedTag-sig.ui)
 RTAG = $(protect $(SIGOBJ)/RestrictedTag-sig.ui)
-HOLSET = $(protect $(SIGOBJ)/HOLset.ui)
+HOLSETD = $(dprot $(SIGOBJ)/HOLset.ui)
 
-Overlay.uo: Overlay.sml RestrictedTerm-sig.uo Definition.ui Net.ui $(RTAG)
+Overlay.uo: Overlay.sml RestrictedTerm-sig.uo Definition.ui Net.ui $(RTAGD)
 	HOLMOSMLC -c -toplevel $(RTAG) RestrictedTerm-sig.ui Definition.ui \
                                Net.ui Overlay.sml
 
-RestrictedTerm-sig.uo: Type.ui $(HOLSET) RestrictedTerm-sig.sml
+RestrictedTerm-sig.uo: Type.ui $(HOLSETD) RestrictedTerm-sig.sml
 	HOLMOSMLC -c -toplevel RestrictedTerm-sig.sml
 
 Term.ui: Term.sig RestrictedTerm-sig.uo
