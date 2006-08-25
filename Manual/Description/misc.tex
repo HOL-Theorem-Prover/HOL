@@ -419,14 +419,14 @@ preceded by an at-sign (\verb!@!), then that command-line will not be
 echoed to the screen when it is run.  These two options can be
 combined in either order at the start of a command-line.
 
-Command text is interpreted only minimally by \holmake.  Double
-back-slashes are turned into single back-slashes, and
-backslash-newline pairs do extend lines.  Otherwise, command text is
-passed as is to the underlying command interpreter (\texttt{/bin/sh}
-say, on Unix, or \texttt{COMMAND.COM} on Windows).  In particular,
-this means that hash-characters do \emph{not} start coments on
-command-lines, and such ``comments'' will be passed to the shell,
-which may or may not treat them as comments when it sees them.
+Command text is interpreted only minimally by \holmake.  On Unix,
+back-slashes are not interpreted at all.  On Windows, back-slashes
+followed by newlines are turned into spaces. Otherwise, command text
+is passed as is to the underlying command interpreter
+(\texttt{/bin/sh} say, on Unix, or \texttt{COMMAND.COM} on Windows).
+In particular, this means that hash-characters do \emph{not} start
+coments on command-lines, and such ``comments'' will be passed to the
+shell, which may or may not treat them as comments when it sees them.
 
 \paragraph{Functions}
 \holmake{} supports some simple functions for manipulating text.  All
@@ -459,12 +459,32 @@ whose value are commas instead), but can otherwise be arbitrary text.
 \item[\texttt{\$(protect arg)}] wraps \texttt{arg} in appropriate
   quote characters to ensure that it will pass through the operating
   system's command shell unscathed.  This is important in the presence
-  of file-names that include spaces.  Those make-file variables that
-  point directly at executables (\texttt{MOSMLC}, \texttt{MOSMLLEX}
-  etc) are automatically protected in this way.  Others, which might
-  be used in concatenation with other elements, are not so protected.
-  Thus, if \texttt{DIR} might include spaces, one should write
-  \texttt{\$(protect \$(DIR)/subdirectory/program)}.
+  of file-names that include spaces or other shell-significant
+  characters like less-than and greater-than.  Those make-file
+  variables that point directly at executables (\texttt{MOSMLC},
+  \texttt{MOSMLLEX} etc) are automatically protected in this way.
+  Others, which might be used in concatenation with other elements,
+  are not so protected.  Thus, if \texttt{DIR} might include spaces,
+  one should write
+\begin{verbatim}
+   $(protect $(DIR)/subdirectory/program)
+\end{verbatim}
+  so that the above will be read as one unit by the underlying shell.
+\item[\texttt{\$(dprot arg)}] quotes (or ``protects'') the space
+  characters that occur in a string so that the string will be treated
+  as a unit if it occurs in a rule's dependency list.  For example,
+  the file
+\begin{verbatim}
+   dep = foo bar
+   target: $(dep)
+      do_something
+\end{verbatim}
+  will see \texttt{target} as having two dependencies, not one,
+  because spaces are used to delimit dependencies.  If a dependency's
+  name includes spaces, then this function can be used to quote them
+  for \holmake's benefit.  Note that the \texttt{dprot} function
+  does \emph{not} do the same thing as \texttt{protect} on either Unix
+  or Windows systems.
 \end{description}
 
 \paragraph{Special and pre-defined variables}
@@ -549,7 +569,7 @@ its value.
 \texttt{SIGOBJ} & \varref{HOLDIR}\texttt{/sigobj}, where HOL object
 code is stored\\
 \texttt{MOSMLDIR} & the directory containing the Moscow~ML executables\\
-\texttt{MOSMLCOMP} & \varref{MOSMLDIR}\texttt{mosmlc}\\
+\texttt{MOSMLCOMP} & \varref{MOSMLDIR}\texttt{/mosmlc}\\
 \texttt{UNQUOTE} & the location of the quotation-filter executable\\
 \end{tabular}
 \caption{Pre-defined variables provided in \holmake}

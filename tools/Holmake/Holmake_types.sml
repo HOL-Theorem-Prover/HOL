@@ -61,40 +61,35 @@ in
   case Substring.getc rest of
     NONE => List.rev acc
   | SOME(c, rest) => let
+      fun chew_newline acc rest = let
+        val rest = dropl Char.isSpace rest
+      in
+        if size rest = 0 then List.rev acc
+        else extract (LIT " " :: acc) rest
+      end
     in
       case c of
         #"#" => if not cmd then
                   (* rest of line is comment; drop it *) List.rev acc
                 else extract (LIT "#" :: acc) rest
       | #"\\" =>
-        if cmd then extract (LIT "\\" :: acc) rest
+        if cmd then
+          if size rest > 0 andalso sub(rest,0) = #"\n" andalso
+             not Systeml.isUnix
+          then
+            chew_newline acc rest
+          else extract (LIT "\\" :: acc) rest
         else let
-            (* need to look at what comes next *)
+          (* need to look at what comes next *)
           in
             case Substring.getc rest of
               NONE => List.rev (LIT "\\" :: acc)
-            | SOME (c, rest) => let
+            | SOME (c, rest') => let
               in
                 case c of
-                  #"\n" => let
-                    (* replace with a space & consume following whitespace,
-                       unless consuming the following whitespace leaves
-                       nothing left, in which case just drop it all.  This is
-                       what GNU make does *)
-                    val rest = dropl Char.isSpace rest
-                  in
-                    if size rest = 0 then List.rev acc
-                    else extract (LIT " "::acc) rest
-                  end
-                  (* some characters can be quoted, others just
-                     cause the backslash to be passed through unchanged.
-                     GNU make's behaviour here is grossly inconsistent, so
-                     I don't feel there's any point in trying to mimic it.
-                     At this stage, we have to keep quoting in place
-                     anyway, because spaces are being used as separators
-                     in lists, and quoted spaces need to be kept in place,
-                  *)
-                | _ => extract (LIT ("\\"^str c) :: acc) rest
+                  #"\n" => chew_newline acc rest
+                | #"#" => extract (LIT "#" :: acc) rest'
+                | _ => extract (LIT ("\\" ^ str c) :: acc) rest'
               end
           end
       | #"$" => (* check for well-formed variable *) let

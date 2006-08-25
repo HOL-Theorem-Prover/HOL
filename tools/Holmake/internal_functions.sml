@@ -194,6 +194,9 @@ in
                    raise Fail "Bad number of arguments to `protect' function."
                  else
                    Systeml.protect (eval (hd args))
+  | "dprot" => if length args <> 1 then
+                 raise Fail "Bad number of arguments to 'dprot' function."
+               else subst(" ", "\\ ", eval (hd args))
   | _ => raise Fail ("Unknown function name: "^fnname)
 end
 
