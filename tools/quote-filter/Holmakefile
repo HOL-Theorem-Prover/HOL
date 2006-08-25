@@ -1,5 +1,5 @@
 OPTIONS = NO_OVERLAY
-EXTRA_CLEANS = filter.sml quote-filter
+EXTRA_CLEANS = filter.sml quote-filter selftest
 
 all: quote-filter selftest
 
