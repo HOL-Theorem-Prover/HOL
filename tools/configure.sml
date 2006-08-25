@@ -340,7 +340,7 @@ val _ =
 
 val _ =
  let open TextIO
-     val _ = echo "Making hol98-mode.el (for Emacs)"
+     val _ = echo "Making hol98-mode.el (for Emacs/XEmacs)"
      val src = fullPath [holdir, "tools/hol98-mode.src"]
     val target = fullPath [holdir, "tools/hol98-mode.el"]
  in

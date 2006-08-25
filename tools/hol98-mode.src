@@ -16,7 +16,7 @@
 (make-variable-buffer-local 'hol-buffer-name)
 (make-variable-buffer-local 'hol-buffer-ready)
 (set-default 'hol-buffer-ready nil)
-(set-default 'hol-buffer-name nil)
+(set-default 'hol-buffer-name "*HOL98*")
 
 (set-default 'hol-default-buffer nil)
 
@@ -37,6 +37,19 @@
 (defvar hol-emit-time-elapsed-p nil
   "*Whether or not to print time elapsed messages after causing HOL
 evaluations.")
+
+;;; For compatability between both Emacs and XEmacs, please use the following
+;;; two functions to determine if the mark is active, or to set it active.
+
+(defun is-region-active ()
+  (or
+    (and (fboundp 'region-active-p) (region-active-p) (region-exists-p))
+    (and transient-mark-mode (boundp 'mark-active) mark-active)))
+
+(defun set-region-active ()
+  (or
+    (and (fboundp 'zmacs-activate-region) (zmacs-activate-region))
+    (and (boundp 'mark-active) (setq mark-active t))))
 
 (put 'hol-term 'end-op
      (function (lambda () (skip-chars-forward "^`"))))
@@ -178,7 +191,7 @@ process in it."
         (progn
           (goto-char (cdr bounds))
           (push-mark (car bounds) t t)
-          (setq mark-active t))
+          (set-region-active))
       (error "No tactic at point"))))
 
 (defun mark-hol-tactic ()
@@ -216,7 +229,7 @@ process in it."
   "Convert Elisp position into HOL location pragma.  Not for interactive use."
   (let ((initial-point (point)))
     (goto-char pos)
-    (let* ((rowstart (line-beginning-position))
+    (let* ((rowstart (point-at-bol))  ;; (line-beginning-position)
            (row      (+ (count-lines 1 pos)
                       (if (= rowstart pos) 1 0)))
            (col      (+ (current-column) 1)))
@@ -268,7 +281,7 @@ the region contains no backquotes, then send region instead."
                  (with-hol-locpragma (region-beginning)
                     (buffer-substring (region-beginning) (region-end)))
                (error nil))))
-    (if (or (and mark-active transient-mark-mode (= (count ?\` txt) 0))
+    (if (or (and (is-region-active) (= (count ?\` txt) 0))
             arg)
       (send-string-as-hol-goal txt)
     (send-string-as-hol-goal (hol-term-at-point)))))
@@ -394,7 +407,7 @@ that the buffer has already had HOL terms, comments and strings removed."
   (let ((buf (ensure-hol-buffer-ok))
         (hol-ok hol-buffer-ready)
         (tmpbuf (generate-new-buffer "*HOL temporary*"))
-        (old-mark-active mark-active))
+        (old-mark-active (is-region-active)))
     (unwind-protect
         (save-excursion
           (set-buffer tmpbuf)
@@ -436,7 +449,11 @@ that the buffer has already had HOL terms, comments and strings removed."
     ;; deactivate-mark will have likely been set by all the editting actions
     ;; in the temporary buffer.  We fix this here, thereby keeping the mark
     ;; active, if it is active.
-    (if deactivate-mark (setq deactivate-mark nil))))
+    ;; if in XEmacs, use (zmacs-activate-region) instead.
+    (if (boundp 'deactivate-mark)
+        (if deactivate-mark (setq deactivate-mark nil))
+        (if (and old-mark-active (fboundp 'zmacs-activate-region))
+            (zmacs-activate-region)))))
 
 (defun interactive-send-string-to-hol (string &optional echoit)
    "Send a string to HOL process."
@@ -560,7 +577,7 @@ region instead. With prefix ARG prompt for a file-name to load."
                   (buffer-substring (region-beginning) (region-end))
                 (error nil))))
     (cond (arg (hol-load-string (read-string "Library to load: ")))
-          ((and mark-active transient-mark-mode
+          ((and (is-region-active)
                 (string-match (concat "^\\(\\s-*" sml-struct-id-regexp
                                       "\\)+\\s-*$") txt))
            (hol-load-modules-in-region (region-beginning) (region-end)))
