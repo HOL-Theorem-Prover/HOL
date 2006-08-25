@@ -1,16 +1,11 @@
-CALL_YACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $< ; \
-            $(MV) DiskFiles.grm.sig DiskFiles.grm-sig.sml
-
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = DiskFiles.grm-sig.sml DiskFiles.grm.sml
 
-DiskFiles.grm.sml: DiskFiles.grm
-	$(CALL_YACC)
-
-DiskFiles.grm-sig.sml: DiskFiles.grm
-	$(CALL_YACC)
+DiskFiles.grm.sml DiskFiles.grm-sig.sml: DiskFiles.grm
+	$(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $<
+	$(MV) DiskFiles.grm.sig DiskFiles.grm-sig.sml
 
 DiskFiles.grm-sig.uo: DiskFiles.grm-sig.sml
 	$(HOLMOSMLC) -toplevel -c -I $(MLYACCLIB) $(MLYACCLIB_UIS) $<
