@@ -1,6 +1,6 @@
 EXTRA_CLEANS = selftest.exe
-BOOLLIB = $(protect $(HOLDIR)/src/bool/boolLib.ui)
-NUMTHY = $(protect $(HOLDIR)/src/num/theories/numeralTheory.uo)
+BOOLLIB = $(dprot $(HOLDIR)/src/bool/boolLib.ui)
+NUMTHY = $(dprot $(HOLDIR)/src/num/theories/numeralTheory.uo)
 
 selftest.exe : selftest.uo numSimps.uo
 	HOLMOSMLC -o $@ $<
