@@ -211,6 +211,22 @@ fun echo s = (TextIO.output(TextIO.stdOut, s^"\n");
 val _ = echo "Beginning configuration.";
 
 (* ----------------------------------------------------------------------
+    remove the quotation filter from the bin directory, if it exists
+  ---------------------------------------------------------------------- *)
+
+val _ = let
+  val unquote = fullPath [holdir, "bin", xable_string "unquote"]
+in
+  if FileSys.access(unquote, [FileSys.A_READ]) then
+    (print "Removing old quotation filter from bin/\n";
+     FileSys.remove unquote
+     handle Interrupt => raise Interrupt
+          | _ => print "*** Tried to remove quotation filter from bin/ but \
+                       \couldn't!  Proceeding anyway.\n")
+  else ()
+end
+
+(* ----------------------------------------------------------------------
     Compile our local copy of mllex
    ---------------------------------------------------------------------- *)
 
