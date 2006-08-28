@@ -16,6 +16,9 @@ sig
  val build_tyinfos    : typeBase
                          -> {induction:thm, recursion:thm}
                            -> tyinfo list
+ val primHol_datatype_from_astl : typeBase
+                                  -> AST list
+                                   -> typeBase * (tyinfo * string) list
  val primHol_datatype : typeBase
                            -> hol_type quotation
                              -> (tyinfo * string) list

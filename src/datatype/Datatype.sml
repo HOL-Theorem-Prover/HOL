@@ -1046,10 +1046,12 @@ in
   (db, tyinfos)
 end
 
+
+fun primHol_datatype_from_astl db astl = define_type_from_astl [] db astl;
+
 fun primHol_datatype db q =
  let val astl = ParseDatatype.parse q handle (e as HOL_ERR _) => Raise e
- in
-   #2 (define_type_from_astl [] db astl)
+ in #2(primHol_datatype_from_astl db astl)
  end
 
 
