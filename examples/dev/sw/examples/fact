@@ -490,62 +490,74 @@ e (RW_TAC list_ss [read_thm]);
 r 1;
 e (POP_ASSUM MP_TAC THEN IMP_RES_THEN SUBST1_TAC (Q.SPEC `3` TERRUN_THM));
 (* slow
-e (ASM_SIMP_TAC run_ss [] THEN WORD_TAC); 
+  e (ASM_SIMP_TAC run_ss [] THEN WORD_TAC); 
 *)
 (* fast *)
 val tm = rand(rhs(fst(dest_imp(snd(top_goal())))));
 e (MP_TAC (RUN_CONV tm));
 e (ASM_REWRITE_TAC [] THEN WORD_TAC THEN SIMP_TAC bool_ss [] THEN STRIP_TAC);
 
-e (Induct_on `w2n (regs0 0)` THEN REPEAT STRIP_TAC);
+e (Induct_on `w2n (regs0 4)` THEN REPEAT STRIP_TAC);
 (* Base case *)
 e (POP_ASSUM MP_TAC);
 e (POP_ASSUM (fn runthm =>
    POP_ASSUM (fn terminatedthm => 
-      SUBST1_TAC (MATCH_MP (Q.SPEC `4` TERRUN_LEM_2) (CONJ terminatedthm runthm))
+      SUBST1_TAC (MATCH_MP (Q.SPEC `3` TERRUN_LEM_2) (CONJ terminatedthm runthm))
    THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm)))));
-
-e (`regs0 0 = n2w 0` by METIS_TAC [w2n_ELIM] THEN Q.PAT_ASSUM  `0 = i` (K ALL_TAC));
-e (ASM_REWRITE_TAC []);
-(*
-e (ASM_SIMP_TAC run_ss [] THEN WORD_TAC);
-e (ASM_SIMP_TAC run_ss [] THEN WORD_TAC);
-*)
+e (`regs0 4 = n2w 0` 
+  by METIS_TAC [w2n_ELIM] THEN Q.PAT_ASSUM  `0 = i` (K ALL_TAC));
 val tm1 = rand(rhs(fst(dest_imp(snd(top_goal())))));
 val th1 = SIMP_RULE std_ss []
              ((RUN_CONV THENC REWRITE_CONV (map ASSUME (fst(top_goal())))
                THENC RUN_CONV) tm1);
 expandf (ASSUME_TAC th1);
+e (ASM_REWRITE_TAC []);
 
 (* Last two steps *)
 e (POP_ASSUM (fn runthm =>
    POP_ASSUM (fn regthm => 
    POP_ASSUM (fn terminatedthm => 
       SUBST1_TAC (MATCH_MP (Q.SPEC `2` TERRUN_LEM_2) (CONJ terminatedthm runthm))
-   THEN ASSUME_TAC regthm
    THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm))))));
 val tm2 = rand(rhs(fst(dest_imp(snd(top_goal())))));
 e (PURE_REWRITE_TAC [RUN_CONV tm2]);
 e (RW_TAC list_ss [TERRUN_STOP,Once fact_def]);
- THEN STRIP_TAC);
+
 
 (*Step Case*)
 
-e (POP_ASSUM MP_TAC);
-e (POP_ASSUM (fn runthm =>
+e (Q.PAT_ASSUM `$!M` (MP_TAC o SPEC_ALL) THEN ASM_REWRITE_TAC []);
+e (DISCH_THEN (fn ih => POP_ASSUM (fn terrun => MP_TAC terrun THEN ASSUME_TAC ih)));
+e(POP_ASSUM (fn ih =>
+  POP_ASSUM (fn runthm =>
    POP_ASSUM (fn terminatedthm => 
-      SUBST1_TAC (MATCH_MP (Q.SPEC `10` TERRUN_LEM_2) (CONJ terminatedthm runthm))
-   THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm)))));
+      SUBST1_TAC (MATCH_MP (Q.SPEC `8` TERRUN_LEM_2) (CONJ terminatedthm runthm))
+   THEN ASSUME_TAC ih
+   THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm))))));
 
-e (`~(regs0 0 = 0w) /\ ~(regs0 0 <. 0w)` by METIS_TAC [SUC_LEM]);
-
+e (IMP_RES_TAC WORD_IND_LEM);
 val tm1a = rand(rhs(fst(dest_imp(snd(top_goal())))));
 val th1a = SIMP_RULE std_ss []
-             ((RUN_CONV THENC REWRITE_CONV (map ASSUME (fst(top_goal())))
-               THENC RUN_CONV) tm1a);
-e (NTAC 2 (POP_ASSUM (K ALL_TAC)));
-expandf (PURE_REWRITE_TAC [th1a]);
+             ((RUN_CONV THENC REWRITE_CONV (map ASSUME (fst(top_goal()))) THENC 
+               RUN_CONV) tm1a);
+expandf (ASSUME_TAC th1a);
+expandf (ASM_REWRITE_TAC []);
 
+e (POP_ASSUM (fn runthm =>
+   POP_ASSUM (fn regthm1 => 
+   POP_ASSUM (fn regthm2 => 
+   POP_ASSUM (fn regthm3 => 
+   POP_ASSUM (fn terminatedthm => 
+      SUBST1_TAC (MATCH_MP (Q.SPEC `2` TERRUN_LEM_2) (CONJ terminatedthm runthm))
+   THEN STRIP_ASSUME_TAC (LIST_CONJ [regthm1,regthm2,regthm3])
+   THEN ASSUME_TAC (MATCH_MP TERRUN_LEM_1 (CONJ terminatedthm runthm))))))));
+
+val tm2a = rand(rhs(fst(dest_imp(snd(top_goal())))));
+val th2a = SIMP_RULE std_ss []
+             ((RUN_CONV THENC REWRITE_CONV (map ASSUME (fst(top_goal())))
+               THENC RUN_CONV) tm2a);
+expandf (PURE_REWRITE_TAC [th2a]);
+e (RW_TAC list_ss [TERRUN_STOP,Once fact_def]);
 
 
 
