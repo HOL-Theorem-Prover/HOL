@@ -1088,9 +1088,17 @@ fun pp_term (G : grammar) TyG = let
       val (f, args) = strip_comb tm
       val comb_show_type = let
         val _ = (showtypes andalso not ratorp) orelse raise PP_ERR "" ""
-        val {Thy,Name,...} = dest_thy_const f
-        val base_const = prim_mk_const {Thy = Thy, Name = Name}
-        val base_ty = type_of base_const
+
+        (* find out how the printer will map this constant into a string,
+           and then see how this string maps back into constants.  The
+           base_type will encompass the simulated polymorphism of the
+           overloading system as well as any genuine polymorphism in
+           the underlying constant. *)
+        val print_name = valOf (Overload.overloading_of_term overload_info f)
+        val base_ty =
+            #base_type
+              (valOf (Overload.info_for_name overload_info print_name))
+
         val empty_tyset = HOLset.empty Type.compare
         fun arg_tyvars acc args ty =
             case args of
@@ -1106,6 +1114,7 @@ fun pp_term (G : grammar) TyG = let
       in
         not (HOLset.isEmpty (HOLset.difference(rng_types, consumed_types)))
       end handle HOL_ERR _ => false
+               | Option => false
 
 
       val prec = Prec(comb_prec, fnapp_special)
