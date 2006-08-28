@@ -533,6 +533,25 @@ in
     end
 end
 
+fun replace_case_eqvar cs u v =
+  if is_comb cs then
+    let val (f,x) = dest_comb cs
+    in if is_comb x andalso is_comb (rator x)
+       then let val (eqa,b) = dest_comb x
+                val (eq,a) = dest_comb eqa
+                val {Name,Thy,Ty} = dest_thy_const eq
+            in if a = u andalso Name = "=" andalso Thy = "min"
+               then let val x' = mk_comb(mk_comb(eq, v), b)
+                        val (bcase,cs1) = dest_comb f
+                        val cs1' = replace_case_eqvar cs1 u v
+                    in mk_comb(mk_comb(bcase,cs1'),x')
+                    end
+               else cs
+            end
+       else cs
+    end
+  else cs
+
 fun remove_case_magic tm0 =
     if GrammarSpecials.case_initialised() then let
         fun traverse acc actions =
@@ -597,19 +616,22 @@ fun remove_case_magic tm0 =
                                                patbody_pairs)
                           val functional =
                               GrammarSpecials.compile_pattern_match fake_eqns
+                          val fake_case = #2 (strip_abs functional)
                           val case_t =
-                              mk_comb(rator (#2 (strip_abs functional)),
-                                      split_on_t)
+                              if is_comb (rand fake_case)
+                              then replace_case_eqvar fake_case
+                                       (rand (rator (rand fake_case))) split_on_t
+                              else mk_comb(rator fake_case, split_on_t)
                         in
                           Ch (list_mk_comb(case_t, tl (tl args)))
                         end
                       else
                         recomb(out_f, out_args, orig)
-                    end handle HOL_ERR _ => recomb(out_f, out_args, orig)
+                    end (* newt *) handle HOL_ERR _ => recomb(out_f, out_args, orig)
                   in
                     traverse (newt::acc_base) rest
-                  end
-              end
+                  end (* Cmb *)
+              end (* act :: rest *) (* end traverse *)
       in
         traverse [] [Input tm0]
       end

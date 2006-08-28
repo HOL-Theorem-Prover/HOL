@@ -451,14 +451,14 @@ fun mk_functional thy eqs =
      ^".\n   This is because of overlapping patterns. Those rows have been ignored."
      ^ "\n   The definition is probably malformed, but we will continue anyway.")
      (* The next lines repair bound variable names in the nested case term. *)
-     val case_tm' =
+     val (a',case_tm') =
          let val (_,pat_exps) = TypeBase.strip_case case_tm
              val sub = pat_match3 pat_exps pats (* better pats than givens patts3 *)
              val sub' = (purge_wildcards ## I) sub
-         in rename_case sub' case_tm
-         end handle HOL_ERR _ => case_tm
+         in (subst_inst sub' a, rename_case sub' case_tm)
+         end handle HOL_ERR _ => (a,case_tm)
  in
-   {functional = list_mk_abs ([f,a], case_tm'),
+   {functional = list_mk_abs ([f,a'], case_tm'),
     pats = patts3}
  end;
 
