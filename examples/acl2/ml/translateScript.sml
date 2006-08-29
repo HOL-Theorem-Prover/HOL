@@ -15,6 +15,7 @@
 			added case & 'flat' theorems
 			created translateLib for CHOOSEP *)
 (* 	14/08/2006:	Changed NAT_CASE to use PRE (which uses ~(n = 0)) *) 
+(* 	28/08/2006:	Exported some additional theorems (MJCG) *)
 
 (*****************************************************************************)
 (* Load base theories                                                        *)
@@ -950,16 +951,25 @@ val rat_of_int_div_pos1 = prove(``0 < b /\ 0 <= a ==> (rat_of_int a / rat_of_int
 	TRY (PAT_ASSUM ``!a.P`` (K ARITH_TAC)) THEN
 	METIS_TAC [num_nz]);
 
-val rat_of_int_neg = prove(``rat_of_int ~x = ~rat_of_int x``,
+val rat_of_int_neg = 
+ store_thm
+  ("rat_of_int_neg",
+   ``rat_of_int ~x = ~rat_of_int x``,
 	RW_TAC std_ss [rat_of_int_def] THEN TRY (`x = 0` by ARITH_TAC) THEN RW_TAC int_ss [RAT_AINV_0,RAT_AINV_AINV,INT_ABS_NEG]);
 
-val rat_of_int_div_pos = prove(``0 < b ==> (rat_of_int a / rat_of_int b = abs_rat (abs_frac (a,b)))``,
+val rat_of_int_div_pos = 
+ store_thm
+  ("rat_of_int_div_pos",
+   ``0 < b ==> (rat_of_int a / rat_of_int b = abs_rat (abs_frac (a,b)))``,
 	Cases_on `0 <= a` THEN RW_TAC std_ss [rat_of_int_div_pos1] THEN
 	`?c. (a = ~c) /\ 0 <= c` by (Q.EXISTS_TAC `~a` THEN RW_TAC int_ss [] THEN ARITH_TAC) THEN
 	RW_TAC int_ss [rat_of_int_neg,GSYM FRAC_AINV_CALCULATE,GSYM RAT_AINV_CALCULATE,RAT_EQ_AINV,RAT_DIV_MULMINV,GSYM RAT_AINV_LMUL] THEN
 	RW_TAC int_ss [GSYM RAT_DIV_MULMINV,rat_of_int_div_pos1]);
 
-val rat_of_int_div_neg = prove(``b < 0 ==> (rat_of_int a / rat_of_int b = abs_rat (abs_frac (~a,~b)))``,
+val rat_of_int_div_neg = 
+ store_thm
+  ("rat_of_int_div_neg",
+   ``b < 0 ==> (rat_of_int a / rat_of_int b = abs_rat (abs_frac (~a,~b)))``,
 	DISCH_TAC THEN
 	`?c. (b = ~c) /\ 0 < c` by (Q.EXISTS_TAC `~b` THEN RW_TAC int_ss [] THEN ARITH_TAC) THEN
 	RW_TAC int_ss [rat_of_int_neg,RAT_DIV_MULMINV,GSYM RAT_AINV_RMUL,GSYM RAT_AINV_MINV,rat_of_int_nz,INT_LT_IMP_NE,
@@ -999,9 +1009,13 @@ end;
 
 
 
-val reduce_thm = prove(``0 < b /\ 0 < y /\ ((0 < a /\ 0 < x) \/ (x < 0 /\ a < 0)) /\ (x * b = a * y) ==> 
-				(x / & (gcd (Num (ABS x)) (Num (ABS y))) = a / & (gcd (Num (ABS a)) (Num (ABS b)))) /\
-				(y / & (gcd (Num (ABS x)) (Num (ABS y))) = b / & (gcd (Num (ABS a)) (Num (ABS b))))``,
+val reduce_thm = 
+ store_thm
+   ("reduce_thm",
+    ``0 < b /\ 0 < y /\ ((0 < a /\ 0 < x) \/ (x < 0 /\ a < 0)) /\ (x * b = a * y) ==> 
+       (x / & (gcd (Num (ABS x)) (Num (ABS y))) = a / & (gcd (Num (ABS a)) (Num (ABS b)))) 
+       /\
+       (y / & (gcd (Num (ABS x)) (Num (ABS y))) = b / & (gcd (Num (ABS a)) (Num (ABS b))))``,
 	REPEAT STRIP_TAC THEN
 	FULL_SIMP_TAC int_ss [num_abs_nz,GCD_EQ_0,INT_DIV_0] THEN
 	EVERY_ASSUM (fn th => (SUBST_ALL_TAC o MATCH_MP r1) th THEN ASSUME_TAC th handle _ => ALL_TAC) THEN
@@ -1018,7 +1032,10 @@ val reduce_thm = prove(``0 < b /\ 0 < y /\ ((0 < a /\ 0 < x) \/ (x < 0 /\ a < 0)
 	METIS_TAC [coprime_equal,GCD_SYM]);
 
 
-val neg_reduce_rat = prove(``b < 0 ==> (reduce (rep_frac (rep_rat (rat_of_int a / rat_of_int b))) = reduce (~a,~b))``,
+val neg_reduce_rat = 
+ store_thm
+  ("neg_reduce_rat",
+   ``b < 0 ==> (reduce (rep_frac (rep_rat (rat_of_int a / rat_of_int b))) = reduce (~a,~b))``,
 	RW_TAC int_ss [rat_of_int_div_neg,rat_of_int_div_pos] THEN
 	RAT_CONG_TAC THEN
 	POP_ASSUM MP_TAC THEN RW_TAC int_ss [NMR,DNM,snd(EQ_IMP_RULE(SPEC_ALL INT_NEG_GT0))] THEN
@@ -1032,7 +1049,10 @@ val neg_reduce_rat = prove(``b < 0 ==> (reduce (rep_frac (rep_rat (rat_of_int a 
 		MATCH_MP_TAC (DISCH_ALL (CONJUNCT2 (UNDISCH_ALL (SPEC_ALL reduce_thm)))),ALL_TAC] THEN
 	RW_TAC int_ss [FRAC_DNMPOS,INT_NEG_GT0,INT_ABS_CALCULATE_POS,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_LT_IMP_LE,INT_LT_IMP_NE,INT_DIV_ID]);
 
-val pos_reduce_rat = prove(``0 < b ==> (reduce (rep_frac (rep_rat (rat_of_int a / rat_of_int b))) = reduce (a,b))``,
+val pos_reduce_rat = 
+ store_thm
+  ("pos_reduce_rat",
+   ``0 < b ==> (reduce (rep_frac (rep_rat (rat_of_int a / rat_of_int b))) = reduce (a,b))``,
 	RW_TAC int_ss [rat_of_int_div_neg,rat_of_int_div_pos] THEN
 	RAT_CONG_TAC THEN
 	POP_ASSUM MP_TAC THEN RW_TAC int_ss [NMR,DNM,snd(EQ_IMP_RULE(SPEC_ALL INT_NEG_GT0))] THEN
@@ -1047,11 +1067,17 @@ val pos_reduce_rat = prove(``0 < b ==> (reduce (rep_frac (rep_rat (rat_of_int a 
 	RW_TAC int_ss [FRAC_DNMPOS,INT_NEG_GT0,INT_ABS_CALCULATE_POS,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_LT_IMP_LE,INT_LT_IMP_NE,INT_DIV_ID]);
 
 
-val mod_common = prove(``0 < b /\ 0 < c ==> ((a MOD b = 0) = ((a * c) MOD (b * c) = 0))``,
+val mod_common = 
+ store_thm
+  ("mod_common",
+   ``0 < b /\ 0 < c ==> ((a MOD b = 0) = ((a * c) MOD (b * c) = 0))``,
 	REPEAT STRIP_TAC THEN EQ_TAC THEN
 	RW_TAC arith_ss [CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV MULT_COMM)) (GSYM MOD_COMMON_FACTOR)]);
 
-val int_div_common = prove(``~(b = 0) /\ ~(c = 0i) ==> (a * & b / (c * & b) = a / c)``,
+val int_div_common = 
+ store_thm
+  ("int_div_common",
+   ``~(b = 0) /\ ~(c = 0i) ==> (a * & b / (c * & b) = a / c)``,
 	REPEAT STRIP_TAC THEN `(a < 0 \/ (a = 0) \/ 0 < a) /\ (c < 0 \/ 0 < c)` by ARITH_TAC THEN 
 	EVERY_ASSUM (fn th => (SUBST_ALL_TAC o MATCH_MP r1) th THEN ASSUME_TAC th handle _ => ALL_TAC) THEN
 	EVERY_ASSUM (fn th => (SUBST_ALL_TAC o MATCH_MP r2) th THEN ASSUME_TAC th handle _ => ALL_TAC) THEN
@@ -1062,14 +1088,20 @@ val int_div_common = prove(``~(b = 0) /\ ~(c = 0i) ==> (a * & b / (c * & b) = a 
 	METIS_TAC [ONCE_REWRITE_RULE [MULT_COMM] mod_common,DECIDE ``0 < a = ~(a = 0n)``]);
 
 
-val mod_zero_mult = prove(``0 < b ==> ((a MOD b = 0) = (b = 1) \/ (?c. a = b * c))``,
+val mod_zero_mult = 
+ store_thm
+  ("mod_zero_mult",
+   ``0 < b ==> ((a MOD b = 0) = (b = 1) \/ (?c. a = b * c))``,
 	REPEAT STRIP_TAC THEN EQ_TAC THENL [
 		Cases_on `b = 1n` THEN RW_TAC arith_ss [] THEN
 		ASSUM_LIST (fn list => SUBST_ALL_TAC (SIMP_RULE arith_ss list (DISCH_ALL (CONJUNCT1 (SPEC ``a:num`` (UNDISCH (SPEC ``b:num`` DIVISION))))))),
 		ALL_TAC] THEN
 	METIS_TAC [MOD_1,MOD_EQ_0,MULT_COMM]);
 
-val gcd_mod = prove(``~(p = q) /\ 1 < q /\ ~(p = 0) /\ ~(q = 0) /\ (gcd p q = 1) ==> ~(p MOD q = 0)``,
+val gcd_mod = 
+ store_thm
+  ("gcd_mod",
+   ``~(p = q) /\ 1 < q /\ ~(p = 0) /\ ~(q = 0) /\ (gcd p q = 1) ==> ~(p MOD q = 0)``,
 	RW_TAC arith_ss [mod_zero_mult] THEN
 	CCONTR_TAC THEN FULL_SIMP_TAC arith_ss [] THEN POP_ASSUM SUBST_ALL_TAC THEN
 	RULE_ASSUM_TAC (ONCE_REWRITE_RULE [ONCE_REWRITE_RULE [GCD_SYM] GCD_EFFICIENTLY]) THEN

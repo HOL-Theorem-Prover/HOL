@@ -1438,7 +1438,7 @@ val and_num_abs =
 val reduce0 =
  store_thm
   ("reduce0",
-   ``~(n = 0) ==> (reduce(0,n) = (0,SGN n))``,
+   ``!n. ~(n = 0) ==> (reduce(0,n) = (0,SGN n))``,
    RW_TAC intLib.int_ss [reduce_def]
     THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def,gcdTheory.GCD_0L]
     THEN `0 <= ABS n` by Cooper.COOPER_TAC
@@ -3323,7 +3323,7 @@ val completion_of_char_code_defaxiom =
   ("completion_of_char_code_defaxiom",
    ``|= equal (char_code x) (ite (characterp x) (char_code x) (nat 0))``,
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[nat_def])
+    THEN ACL2_SIMP_TAC[nat_def]);
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-CODE-CHAR, DISK_THM] [axioms: ]
@@ -3333,7 +3333,77 @@ val completion_of_char_code_defaxiom =
                 (code_char x) (code_char (nat 0))),
 *)
 
-(* Needs more work
+val abs_rat_reduce_pos =
+ store_thm
+  ("abs_rat_reduce_pos",
+   ``!a b.
+      0 < b
+      ==>
+      (reduce(rep_frac(rep_rat(abs_rat(abs_frac (a,b))))) = reduce(a,b))``,
+   METIS_TAC [rat_of_int_div_pos,pos_reduce_rat]);
+
+val SGN1 =
+ store_thm
+  ("SGN1",
+   ``SGN 1 = 1``,
+   METIS_TAC[EVAL ``(1:int) > 0``,intExtensionTheory.INT_SGN_CLAUSES]);
+
+val abs_rat_reduce0 =
+ store_thm
+  ("abs_rat_reduce0",
+   ``reduce(rep_frac(rep_rat 0)) = (0,1)``,
+   RW_TAC intLib.int_ss 
+    [GSYM ratTheory.RAT_0,ratTheory.rat_0_def,fracTheory.frac_0_def,
+     abs_rat_reduce_pos,reduce0,SGN1]);
+
+val RAT_LEQ_ANTISYM_EQ = (* Not used *)
+ store_thm
+  ("RAT_LEQ_ANTISYM_EQ",
+   ``!r1 r2:rat. (r1 = r2) = r1 <= r2 /\ r2 <= r1``,
+   REPEAT STRIP_TAC
+    THEN EQ_TAC
+    THEN RW_TAC std_ss [ratTheory.RAT_LEQ_REF,ratTheory.RAT_LEQ_ANTISYM]);
+
+val rat_0_nmr =
+ store_thm
+  ("rat_0_nmr",
+   ``rat_nmr 0 = 0``,
+   RW_TAC intLib.int_ss
+    [GSYM integerTheory.INT_LE_ANTISYM,ratTheory.RAT_LEQ_REF,
+     GSYM ratTheory.RAT_LEQ0_NMR,GSYM ratTheory.RAT_0LEQ_NMR]);
+
+val reduced_nmr_0 =
+ store_thm
+  ("reduced_nmr_0",
+   ``reduced_nmr 0 = 0``,
+   RW_TAC std_ss 
+    [reduced_nmr_def,abs_rat_reduce0]);
+
+val gcd1 =
+ store_thm
+  ("gcd1",
+   ``!n. (gcd n 1 = 1) /\ (gcd 1 n = 1)``,
+   Induct
+    THEN RW_TAC std_ss [gcd_def]
+    THEN ONCE_REWRITE_TAC [DECIDE ``1 = SUC 0``]
+    THEN RW_TAC std_ss [gcd_def]);
+   
+val reduce_int =
+ store_thm
+  ("reduce_int",
+   ``!c. reduce(c,1) = (c,1)``,
+   RW_TAC std_ss [reduce_def]
+    THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]
+    THEN `ABS 1 = 1` by Cooper.COOPER_TAC
+    THEN FULL_SIMP_TAC std_ss [integerTheory.NUM_OF_INT,gcd1,integerTheory.INT_DIV_1]);
+
+val abs_less =
+ store_thm
+  ("abs_less",
+   ``abs_rat (abs_frac (m,1)) < abs_rat (abs_frac (n,1)) = m < n``,
+   RW_TAC intLib.int_ss 
+    [ratTheory.RAT_LES_CALCULATE,fracTheory.NMR,fracTheory.DNM]);
+
 val completion_of_code_char_defaxiom =
  store_thm
   ("completion_of_code_char_defaxiom",
@@ -3344,7 +3414,43 @@ val completion_of_code_char_defaxiom =
               (code_char (nat 0)))``,
    Cases_on `x`
     THEN ACL2_SIMP_TAC[nat_def,int_def,cpx_def]
-*)
+    THEN FULL_SIMP_TAC intLib.int_ss 
+           [IS_INT_def,complex_rationalTheory.DIVIDES_def,
+            sexpTheory.rat_def,ratTheory.rat_0_def,fracTheory.frac_0_def]
+    THEN FULL_SIMP_TAC intLib.int_ss 
+           [GSYM ratTheory.rat_0_def,GSYM fracTheory.frac_0_def,ratTheory.RAT_0,rat_0_nmr,
+            reduced_nmr_0]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN Cases_on `c`
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def,
+           code_char_def]
+    THEN RW_TAC intLib.int_ss []
+    THEN FULL_SIMP_TAC intLib.int_ss 
+          [reduced_nmr_def,abs_rat_reduce_pos,reduce_int,abs_less,
+           GSYM ratTheory.RAT_0,ratTheory.rat_0_def,fracTheory.frac_0_def]
+    THEN `~(c < 0)` by Cooper.COOPER_TAC
+    THEN METIS_TAC[]);
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-COMPLEX, DISK_THM] [axioms: ] []
@@ -3352,6 +3458,57 @@ val completion_of_code_char_defaxiom =
              (complex (ite (rationalp x) x (nat 0))
                 (ite (rationalp y) y (nat 0))),
 *)
+
+val completion_of_complex_defaxiom =
+ store_thm
+  ("completion_of_complex_defaxiom",
+   ``|= equal 
+         (complex x y)
+         (complex (ite (rationalp x) x (nat 0))
+                  (ite (rationalp y) y (nat 0)))``,
+   Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[nat_def,int_def,cpx_def]
+    THEN FULL_SIMP_TAC intLib.int_ss 
+           [IS_INT_def,complex_rationalTheory.DIVIDES_def,
+            sexpTheory.rat_def,ratTheory.rat_0_def,fracTheory.frac_0_def]
+    THEN FULL_SIMP_TAC intLib.int_ss 
+           [GSYM ratTheory.rat_0_def,GSYM fracTheory.frac_0_def,ratTheory.RAT_0,rat_0_nmr,
+            reduced_nmr_0]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN TRY(Cases_on `c`)
+    THEN TRY(Cases_on `c'`)
+    THEN FULL_SIMP_TAC arith_ss 
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def,
+           code_char_def]
+    THEN RW_TAC intLib.int_ss []
+    THEN Cases_on `r0 = 0`
+    THEN RW_TAC intLib.int_ss []
+    THEN FULL_SIMP_TAC intLib.int_ss 
+          [complex_def,sexp_11,ratTheory.RAT_0]
+    THEN Cases_on `r0' = 0`
+    THEN RW_TAC intLib.int_ss []
+    THEN FULL_SIMP_TAC intLib.int_ss 
+          [complex_def,sexp_11,ratTheory.RAT_0]);
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-COERCE, DISK_THM] [axioms: ] []
@@ -3368,11 +3525,18 @@ val coerce_if =
   (``coerce(if b then x else y) = if b then coerce x else coerce y``,
    RW_TAC std_ss []);
 
+val abs_exists_0 =
+ prove
+  (``?c. 0 = abs_rat (abs_frac (c,1))``,
+   METIS_TAC
+    [ratTheory.RAT_0,ratTheory.rat_0_def,fracTheory.frac_0_def]);
+
 val completion_of_coerce_defaxiom =
- store_thm
+ time store_thm
   ("completion_of_coerce_defaxiom",
    ``|= equal (coerce x y)
-             (ite (equal y (csym "LIST"))
+              (ite
+                (equal y (csym "LIST"))
                 (andl [stringp x; coerce x (csym "LIST")])
                 (coerce (acl2_make_character_list x) (csym "STRING")))``,
    Cases_on `x` THEN Cases_on `y`
@@ -3384,6 +3548,73 @@ val completion_of_coerce_defaxiom =
     THEN RW_TAC std_ss []
     THEN FULL_SIMP_TAC std_ss [EVAL ``"STRING" = "LIST"``,coerce_if,coerce_def]
     THEN FULL_SIMP_TAC std_ss [if_eq_imp]
+    THEN TRY(Cases_on `s`)
+    THEN TRY(Cases_on `s0`)
+    THEN FULL_SIMP_TAC intLib.int_ss
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,characterp_def,reduced_nmr_0,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def,code_char_def,
+           make_character_list_def,coerce_list_to_string_def,
+           abs_exists_0,acl2_make_character_list,
+           acl2_make_character_list,coerce_def,sexp_11,
+           EVAL ``"STRING" = "LIST"``]
+    THEN RW_TAC intLib.int_ss []
+
+    THEN TRY(Cases_on `s`)
+    THEN TRY(Cases_on `s0''`)
+    THEN FULL_SIMP_TAC intLib.int_ss
+          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
+           complex_rational_11,characterp_def,reduced_nmr_0,
+           sexpTheory.rat_def,sexp_11,
+           GSYM fracTheory.frac_0_def,
+           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
+           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
+           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
+           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
+           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
+           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
+           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
+           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
+           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
+           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
+           rationalp_def,integerp_def,numerator_def,denominator_def,
+           int_def,cpx_def,realpart_def,imagpart_def,
+           t_def,nil_def,IS_INT_EXISTS,
+           complex_def,add_def,mult_def,complex_rationalp_def,
+           nat_def,int_def,cpx_def,code_char_def,
+           make_character_list_def,coerce_list_to_string_def,
+           abs_exists_0,acl2_make_character_list,
+           acl2_make_character_list,coerce_def,sexp_11,
+           EVAL ``"STRING" = "LIST"``]
+    THEN RW_TAC intLib.int_ss []
+
+
+
+    THEN FULL_SIMP_TAC std_ss
+          [acl2_make_character_list,coerce_def,sexp_11,EVAL ``"STRING" = "LIST"``,
+           make_character_list_def,coerce_list_to_string_def,
+           abs_exists_0,acl2_make_character_list,
+           nil_def]
+
+make_character_list_def,coerce_list_to_string_def]
 
 *)
 
