@@ -2,10 +2,10 @@ structure funCall =
 struct
 
 local
-open HolKernel Parse boolLib
+open HolKernel Parse boolLib IRSyntax annotatedIR
 structure T = IntMapTable(type key = int  fun getInt n = n);
 structure S = Binaryset
-structure IR = annotatedIL
+structure IR = IRSyntax
 in
 
 exception invalidArgs;
@@ -101,21 +101,21 @@ fun calculate_relative_address (args,ir,outs,numSavedRegs) =
      |  adjust_exp e =
 	    filter_mems e 
 
-    fun adjust_info {ins = ins', outs = outs', context = context', fspec = fspec', espec = espec'} =
-        {ins = adjust_exp ins', outs = adjust_exp outs', context = List.map adjust_exp context', fspec = fspec', espec = espec'}
+    fun adjust_info {ins = ins', outs = outs', context = context', fspec = fspec'} =
+        {ins = adjust_exp ins', outs = adjust_exp outs', context = List.map adjust_exp context', fspec = fspec'}
 
-    fun visit (IR.SC(ir1,ir2,info)) =
-         IR.SC (visit ir1, visit ir2, adjust_info info)
-    |  visit (IR.TR((e1,rop,e2),ir,info)) = 
-         IR.TR ((adjust_exp e1,rop,adjust_exp e2), visit ir, adjust_info info)
-    |  visit (IR.CJ((e1,rop,e2),ir1,ir2,info)) = 
-         IR.CJ ((adjust_exp e1,rop,adjust_exp e2), visit ir1, visit ir2, adjust_info info)
-    |  visit (IR.CALL(fname,pre,body,post,info)) = 
-         IR.CALL(fname, pre, body, post, adjust_info info)
-    |  visit (IR.STM l) =
-         IR.STM (List.map one_stm l) 
-    |  visit (IR.BLK (l,info)) = 
-         IR.BLK (List.map one_stm l, adjust_info info);
+    fun visit (SC(ir1,ir2,info)) =
+         SC (visit ir1, visit ir2, adjust_info info)
+    |  visit (TR((e1,rop,e2),ir,info)) = 
+         TR ((adjust_exp e1,rop,adjust_exp e2), visit ir, adjust_info info)
+    |  visit (CJ((e1,rop,e2),ir1,ir2,info)) = 
+         CJ ((adjust_exp e1,rop,adjust_exp e2), visit ir1, visit ir2, adjust_info info)
+    |  visit (CALL(fname,pre,body,post,info)) = 
+         CALL(fname, pre, body, post, adjust_info info)
+    |  visit (STM l) =
+         STM (List.map one_stm l) 
+    |  visit (BLK (l,info)) = 
+         BLK (List.map one_stm l, adjust_info info);
 
   in
         (adjust_exp args, visit ir, adjust_exp outs, T.numItems (!localT))
@@ -390,64 +390,64 @@ fun compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_i
             let val len = length expL
                 val i = ref 0;
             in
-                List.map (fn exp => ( i := !i + 1; IR.MEM(11, ~(3 + (len - !i))))) expL
+                List.map (fn exp => ( i := !i + 1; MEM(11, ~(3 + (len - !i))))) expL
             end 
 
-        val to_be_stored = S.difference (IR.list2set (List.map IR.REG (S.listItems rs)), IR.pair2set caller_dst);
-        val rs' = S.intersection(to_be_stored, S.union (IR.pair2set outer_outs, IR.list2set context));
-        val pre_ins = IR.trim_pair (IR.PAIR (caller_src, IR.set2pair rs'));
-        val stored = (IR.list2pair o to_stack o IR.set2list) rs';
-        val pre_outs = IR.trim_pair (IR.PAIR (callee_ins, stored));
+        val to_be_stored = S.difference (list2set (List.map REG (S.listItems rs)), pair2set caller_dst);
+        val rs' = S.intersection(to_be_stored, S.union (pair2set outer_outs, list2set context));
+        val pre_ins = trim_pair (PAIR (caller_src, set2pair rs'));
+        val stored = (list2pair o to_stack o set2list) rs';
+        val pre_outs = trim_pair (PAIR (callee_ins, stored));
         val body_ins = pre_outs;
-        val body_outs = IR.trim_pair(IR.PAIR (callee_outs, stored));
+        val body_outs = trim_pair(PAIR (callee_outs, stored));
         val post_ins = body_outs;
-        val post_outs = IR.trim_pair(IR.PAIR (caller_dst, IR.set2pair rs'));
-        val context' = IR.set2list (S.difference (IR.list2set context, rs'))
+        val post_outs = trim_pair(PAIR (caller_dst, set2pair rs'));
+        val context' = set2list (S.difference (list2set context, rs'))
     in
-       ((pre_ins,pre_outs),(body_ins,body_outs),(post_ins,post_outs),IR.set2list rs',context')
+       ((pre_ins,pre_outs),(body_ins,body_outs),(post_ins,post_outs),set2list rs',context')
     end
 
 
 val involved_defs = ref ([] : thm list);
 
-fun convert_fcall (IR.CALL(fname, pre, body, post, outer_info)) =
+fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
     let
         (* pass the arguments to the callee, and callee will save and restore anything	*)
 	(* create the BL statement							*)
 	(* then modify the sp to point to the real position of the returning arguments	*)
 
         val (outer_ins,outer_outs) = (#ins outer_info, #outs outer_info);
-        val (caller_dst,caller_src) = let val x = IR.get_annt body in (#outs x, #ins x) end;
+        val (caller_dst,caller_src) = let val x = get_annt body in (#outs x, #ins x) end;
         val {ir = (callee_ins, callee_ir, callee_outs), regs = rs, localNum = n, def = f_def, ...} = declFuncs.getFunc fname;
         val _ = involved_defs := (!involved_defs) @ [f_def];
         val ((pre_ins,pre_outs),(body_ins,body_outs),(post_ins,post_outs),rs',context) =
              compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_ins,callee_outs),rs,#context outer_info);
 
 	val reserve_space_for_outputs = 
-	        [dec_p (IR.fromAlias IR.sp) (length (IR.pair2list caller_dst))];
+	        [dec_p (fromAlias sp) (length (pair2list caller_dst))];
 
-        val pre' = IR.rm_dummy_inst (IR.BLK (
+        val pre' = rm_dummy_inst (BLK (
                         reserve_space_for_outputs @
-                        pass_args (IR.pair2list caller_src) @
+                        pass_args (pair2list caller_src) @
                         entry_blk rs' n @
-                        get_args (IR.pair2list callee_ins),
-                    {ins = pre_ins, outs = pre_outs, context = context, fspec = IR.thm_t, espec = IR.thm_t}));
+                        get_args (pair2list callee_ins),
+                    {ins = pre_ins, outs = pre_outs, context = context, fspec = thm_t}));
 
-        val body' = IR.apply_to_info callee_ir (fn info' => {ins = body_ins, outs = body_outs, context = context, fspec = IR.thm_t, espec = IR.thm_t});
+        val body' = apply_to_info callee_ir (fn info' => {ins = body_ins, outs = body_outs, context = context, fspec = thm_t});
 
-        val post' = IR.rm_dummy_inst (IR.BLK ( 
+        val post' = rm_dummy_inst (BLK ( 
                         send_results (IR.pair2list callee_outs) (length (IR.pair2list callee_ins)) @
                          get_results (IR.pair2list caller_dst) @
                         exit_blk rs',
-                    {ins = post_ins, outs = post_outs, context = context, fspec = IR.thm_t, espec = IR.thm_t}))
+                    {ins = post_ins, outs = post_outs, context = context, fspec = thm_t}))
 
     in
-        IR.CALL(fname, pre', body', post', outer_info)
+        CALL(fname, pre', body', post', outer_info)
     end
      	
- |  convert_fcall (IR.SC(s1,s2,info)) = IR.SC (convert_fcall s1, convert_fcall s2, info)
- |  convert_fcall (IR.CJ(cond,s1,s2,info)) = IR.CJ (cond, convert_fcall s1, convert_fcall s2, info)
- |  convert_fcall (IR.TR(cond,s,info)) = IR.TR (cond, convert_fcall s, info)
+ |  convert_fcall (SC(s1,s2,info)) = SC (convert_fcall s1, convert_fcall s2, info)
+ |  convert_fcall (CJ(cond,s1,s2,info)) = CJ (cond, convert_fcall s1, convert_fcall s2, info)
+ |  convert_fcall (TR(cond,s,info)) = TR (cond, convert_fcall s, info)
  |  convert_fcall ir = ir;
 
 
@@ -457,13 +457,13 @@ fun convert_fcall (IR.CALL(fname, pre, body, post, outer_info)) =
 
 fun link_ir prog = 
   let
-      val (fname, ftype, f_ir as (ins,ir0,outs), defs) = IR.sfl2ir prog;
-      val rs = S.addList (S.empty regAllocation.intOrder, IR.get_modified_regs ir0);
+      val (fname, ftype, f_ir as (ins,ir0,outs), defs) = sfl2ir prog;
+      val rs = S.addList (S.empty regAllocation.intOrder, get_modified_regs ir0);
       val (ins1,ir1,outs1, localNum) = calculate_relative_address (ins,ir0,outs,S.numItems rs);
       val _ = (involved_defs := [];
                declFuncs.putFunc (fname, ftype, (ins1,ir1,outs1), rs, localNum, (hd defs)));
       val ir2 = convert_fcall ir1
-      val ir3 = IR.match_ins_outs ir2
+      val ir3 = match_ins_outs ir2
   in
       (fname,ftype,(ins1,ir3,outs1), defs @ (!involved_defs))
   end;

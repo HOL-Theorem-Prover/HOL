@@ -631,7 +631,7 @@ fun updateProgram (old_cfg, spilled : int S.set) =
 					(List.filter (fn n => not (n = varNo orelse n = newVarNo)) us) else us,
 			  	  instr = substituteVars curInst (Assem.TEMP varNo) (Assem.TEMP newVarNo) for_lhs for_rhs
 				}
-			 else 
+			 else
                                 { def = if for_lhs then (List.filter (fn n => not (n = varNo)) df) else df,
                                   use = if for_rhs then (List.filter (fn n => not (n = varNo)) us) else us,
 				  instr = substituteVars curInst (Assem.TEMP varNo) (Assem.TMEM (!memIndex)) for_lhs for_rhs
@@ -758,9 +758,12 @@ fun AllocateReg () =
 
 fun RewrWithReg () =
   let 
-     fun replace ll = List.map (fn Assem.TEMP n => Assem.REG (T.look(!color, n)) 
-			       |  x => x
-		) ll;
+
+     fun subs (Assem.PAIR(a,b)) = Assem.PAIR(subs a, subs b)
+      |  subs ( Assem.TEMP n) = Assem.REG (T.look(!color, n))
+      |  subs x = x
+
+     fun replace ll = List.map subs ll;
      fun substituteVars (Assem.OPER {oper = p, dst = d1, src = s1, jump = j1}) =
             Assem.OPER {oper = p, dst = replace d1, src = replace s1, jump = j1}
       |  substituteVars (Assem.LABEL x) = Assem.LABEL x
@@ -798,7 +801,7 @@ fun RegisterAllocation (gr, tmpT, preC) =
 
     PrintProgram(!cfg, !tmpTable);
     printAllocation ();
-    (RewrWithReg (), !tmpTable)
+    (RewrWithReg (),!tmpTable)
   );
 
  fun regOrder (r1,r2) =

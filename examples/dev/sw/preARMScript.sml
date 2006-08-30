@@ -1,19 +1,5 @@
-(* interactive use:
-
-
-quietdec := true;
-loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
-
-map load ["pred_setSimps", "pred_setTheory",
-     "arithmeticTheory", "wordsLib", "pairTheory",
-     "listTheory", "whileTheory", "finite_mapTheory"];
-
-quietdec := false;
-*)
-
 open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
-     arithmeticTheory wordsLib pairTheory listTheory whileTheory finite_mapTheory;
-
+     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory;
 
 val _ = new_theory "preARM";
 
@@ -168,7 +154,7 @@ val read_def =
 	NCONST i -> n2w i     ||
         WCONST w -> w         ||
         REG r -> regs ' r
-  `;
+`;
 
 val read_thm = Q.store_thm (
   "read_thm",

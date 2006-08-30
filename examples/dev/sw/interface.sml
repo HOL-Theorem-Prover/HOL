@@ -1,14 +1,11 @@
 structure interface = struct
 
-  val compile_ir =  funCall.link_ir
-  val sfl2ir = annotatedIL.sfl2ir
-  val printIR = annotatedIL.printIR
-  val printIR2 = annotatedIL.printIR2
+  structure IR = annotatedIR
 
-(*
-  val pp_compile = pp_compile;
-  val get_spec = get_spec;
-  val f_correct = f_correct;
-*)
+  val compile_ir =  funCall.link_ir
+  val sfl2ir = IR.sfl2ir
+  val printIR = IR.printIR
+  val printIR2 = IR.printIR2
+  val pp_compile = mechReasoning.pp_compile;
 
 end

@@ -1,17 +1,9 @@
-(* interactive use:
-
-quietdec := true;
-loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
-
-app load ["pred_setSimps","pred_setTheory",
-  "wordsLib", "arithmeticTheory", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", "preARMTheory",
-  "rich_listTheory", "wordsTheory"];
-
-quietdec := false;
+(*
+app load ["pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory","prim_recTheory"];
 *)
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory 
-     arithmeticTheory wordsLib wordsTheory pairTheory listTheory whileTheory finite_mapTheory preARMTheory;
+open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory wordsLib
+     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory preARMTheory;
 
 val _ = new_theory "ARMComposition";
 
@@ -24,14 +16,14 @@ val _ = Globals.priming := NONE;
 (* Sort in ascending order                                                                              *)
 val FUPDATE_LT_COMMUTES = Q.store_thm (
   "FUPDATE_LT_COMMUTES",
-  ` !f a b c d. c < a ==> (f |+ (a:ADDR, b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+  ` !f a b c d. c < a ==> (f |+ (a:num, b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
     RW_TAC arith_ss [FUPDATE_COMMUTES]
     );
 
 (* Sort in descending order                                                                             *)
 val FUPDATE_GT_COMMUTES = Q.store_thm (
   "FUPDATE_GT_COMMUTES",
-  ` !f a b c d. c > a ==> (f |+ (a:ADDR,b:'b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+  ` !f a b c d. c > a ==> (f |+ (a:ADDR,b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
     RW_TAC arith_ss [FUPDATE_COMMUTES]
     );
 
@@ -672,6 +664,7 @@ val eval_cond = Define `
     (eval_cond (v1,AL,v2) s = T) /\
     (eval_cond (v1,NV,v2) s = F)`;
 
+
 val ENUMERATE_CJ = Q.store_thm (
    "ENUMERATE_CJ",
     `!cond pc cpsr st offset. 
@@ -683,19 +676,18 @@ val ENUMERATE_CJ = Q.store_thm (
               ?cpsr'. decode_cond (pc + 1, decode_op (pc,cpsr,st) (CMP,(NONE :EXP option),[FST cond; SND (SND cond)],(NONE:OFFSET option))) 
 		                 ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) = 
 		     (pc+2,cpsr',st))`,
-    RW_TAC std_ss [] THEN (
-      `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN 
-      RW_TAC list_ss [] THEN
-      Cases_on `rop` THEN (
-        FULL_SIMP_TAC list_ss [eval_cond] THEN
-        RW_TAC list_ss [decode_cond_thm, decode_op_thm, setS_def, getS_def, goto_thm] THEN
-        POP_ASSUM MP_TAC THEN
-        WORDS_TAC THEN
-        REPEAT STRIP_TAC THEN
-        PROVE_TAC [WORD_LOWER_ANTISYM, WORD_NOT_HIGHER, WORD_NOT_LOWER_EQ, WORD_LOWER_EQ_ANTISYM, 
+    RW_TAC std_ss [] THEN
+    `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN 
+    RW_TAC list_ss [] THEN
+    Cases_on `rop` THEN
+    FULL_SIMP_TAC list_ss [eval_cond] THEN
+    RW_TAC list_ss [decode_cond_thm, decode_op_thm, setS_def, getS_def, goto_thm] THEN
+    POP_ASSUM MP_TAC THEN
+    WORDS_TAC THEN
+    REPEAT STRIP_TAC THEN
+    PROVE_TAC [WORD_LOWER_ANTISYM, WORD_NOT_HIGHER, WORD_NOT_LOWER_EQ, WORD_LOWER_EQ_ANTISYM, 
 	       WORD_HIGHER_EQ, WORD_NOT_LOWER, WORD_LOWER_CASES_IMP, WORD_HI]
-      )
-    ));
+    );
 
 
 (*---------------------------------------------------------------------------------*)

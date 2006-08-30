@@ -14,7 +14,7 @@ in
 
   structure T = IntMapTable(type key = int  fun getInt n = n);
 
-  type func = {name : string, ftype : hol_type, ir : annotatedIL.exp * annotatedIL.anntIR * annotatedIL.exp, 
+  type func = {name : string, ftype : hol_type, ir : IRSyntax.exp * annotatedIR.anntIR * IRSyntax.exp, 
 	regs : int Binaryset.set, localNum : int, def : thm};
   val decls : (func T.table) ref = ref (T.empty);
 
