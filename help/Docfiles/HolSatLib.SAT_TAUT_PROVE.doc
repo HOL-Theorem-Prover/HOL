@@ -7,10 +7,10 @@
 Proves that the supplied term is a tautology.
 
 \DESCRIBE
-The supplied term should be a term of propositional logic. {SAT_TAUT_PROVE} uses the MiniSat SAT-solver's proof logging feature to construct a resolution refutation for the negation of the supplied term. 
+The supplied term should be a term of propositional logic. {SAT_TAUT_PROVE} uses the MiniSat SAT solver's proof logging feature to construct a resolution refutation for the negation of the supplied term. 
 
 \FAILURE
-Fails if the supplied term is not a tautology.
+Fails if the supplied term is not a tautology. In this case, a theorem providing a satisfying assignment for the negation of the input term is returned, wrapped in an exception.
 
 \EXAMPLE
 {
@@ -19,6 +19,9 @@ Fails if the supplied term is not a tautology.
 > val it = () : unit
 - SAT_TAUT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
 > val it = |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
+- SAT_TAUT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))`` 
+	handle minisatProve.Sat_counterexample th => th;
+> val it = |- a /\ ~b ==> ~~((a ==> b) /\ (b ==> a) ==> (a = b)) : thm
 }
  
 \COMMENTS
