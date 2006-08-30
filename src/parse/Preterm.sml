@@ -88,7 +88,7 @@ fun tyVars ptm =  (* the pretype variables in a preterm *)
   | Abs{Bvar,Body,...}      => Lib.union (tyVars Bvar) (tyVars Body)
   | Antiq{Tm,...}           => map Type.dest_vartype (Term.type_vars_in_term Tm)
   | Constrained{Ptm,Ty,...} => Lib.union (tyVars Ptm) (Pretype.tyvars Ty)
-  | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded"
+  | Overloaded _            => raise Fail "Preterm.tyVars: applied to Overloaded";
 
 
 (*---------------------------------------------------------------------------
@@ -533,25 +533,6 @@ in
     end
 end
 
-fun replace_case_eqvar cs u v =
-  if is_comb cs then
-    let val (f,x) = dest_comb cs
-    in if is_comb x andalso is_comb (rator x)
-       then let val (eqa,b) = dest_comb x
-                val (eq,a) = dest_comb eqa
-                val {Name,Thy,Ty} = dest_thy_const eq
-            in if a = u andalso Name = "=" andalso Thy = "min"
-               then let val x' = mk_comb(mk_comb(eq, v), b)
-                        val (bcase,cs1) = dest_comb f
-                        val cs1' = replace_case_eqvar cs1 u v
-                    in mk_comb(mk_comb(bcase,cs1'),x')
-                    end
-               else cs
-            end
-       else cs
-    end
-  else cs
-
 fun remove_case_magic tm0 =
     if GrammarSpecials.case_initialised() then let
         fun traverse acc actions =
@@ -616,12 +597,16 @@ fun remove_case_magic tm0 =
                                                patbody_pairs)
                           val functional =
                               GrammarSpecials.compile_pattern_match fake_eqns
-                          val fake_case = #2 (strip_abs functional)
+                          val case_t0 = #2 (strip_abs functional)
                           val case_t =
-                              if is_comb (rand fake_case)
-                              then replace_case_eqvar fake_case
-                                       (rand (rator (rand fake_case))) split_on_t
-                              else mk_comb(rator fake_case, split_on_t)
+                              if is_comb case_t0
+                              then if is_comb (rand case_t0)
+                                   then beta_conv
+                                         (mk_comb (#2 (dest_abs functional), split_on_t))
+                                   else mk_comb(rator case_t0, split_on_t)
+                              else (* degenerate case: e.g., ``case x of y -> y`` *)
+                                   beta_conv
+                                    (mk_comb (#2 (dest_abs functional), split_on_t))
                         in
                           Ch (list_mk_comb(case_t, tl (tl args)))
                         end
