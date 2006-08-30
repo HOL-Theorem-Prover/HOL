@@ -597,16 +597,11 @@ fun remove_case_magic tm0 =
                                                patbody_pairs)
                           val functional =
                               GrammarSpecials.compile_pattern_match fake_eqns
-                          val case_t0 = #2 (strip_abs functional)
+                          val (v,case_t0) = dest_abs (snd (dest_abs functional))
                           val case_t =
-                              if is_comb case_t0
-                              then if is_comb (rand case_t0)
-                                   then beta_conv
-                                         (mk_comb (#2 (dest_abs functional), split_on_t))
-                                   else mk_comb(rator case_t0, split_on_t)
-                              else (* degenerate case: e.g., ``case x of y -> y`` *)
-                                   beta_conv
-                                    (mk_comb (#2 (dest_abs functional), split_on_t))
+                              if is_comb case_t0 andalso not (is_comb (rand case_t0))
+                              then mk_comb(rator case_t0, split_on_t)
+                              else subst [v |-> split_on_t] case_t0
                         in
                           Ch (list_mk_comb(case_t, tl (tl args)))
                         end

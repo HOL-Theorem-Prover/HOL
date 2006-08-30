@@ -406,7 +406,7 @@ fun purge_wildcards term_sub = filter (fn {redex,residue} =>
 
 fun pat_match3 pat_exps given_pats =
      ((distinguish o reduce_mats o purge_wildcards o flatten) ## flatten)
-           (unzip (map (pat_match2 pat_exps) (rev given_pats)))
+           (unzip (map (pat_match2 pat_exps) given_pats))
 
 fun rename_case sub cs =
  if not (TypeBase.is_case cs) then subst_inst sub cs
