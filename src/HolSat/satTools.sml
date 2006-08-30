@@ -50,7 +50,7 @@ fun substringToInt ss =
 fun parseSat (s1,s2) ss =
  let val (ss1,ss2) = Substring.position s1 ss
      val ss3       = Substring.triml (String.size s1) ss2
-     val (ss4,ss5) = Substring.position s2 ss3
+     val (ss4,ss5) = Substring.position s2 ss3 
      val ssl       = Substring.tokens Char.isSpace ss4
  in
   List.map substringToInt ssl
@@ -81,7 +81,8 @@ fun isSuccess s = (s = Process.success);
  
 (* if fname is NONE, then use a temp file, otherwise assume fname.cnf alredy exists*)
 fun invokeSat sat_solver fname t vc =
- let val SatSolver {name,
+ let 
+ val SatSolver {name,
                     URL,
                     executable,
                     notime_run,
@@ -93,7 +94,8 @@ fun invokeSat sat_solver fname t vc =
      val var_count  = if isSome vc then valOf vc else length(all_vars t)
      val tmp        = if isSome fname 
 		      then let val _ = initSatVarMap var_count 
-			       val _ = termToDimacs t (*FIXME: this is to regenerate sat_var_map: better to save/load it*)
+			       val _ = termToDimacs t (*FIXME: this is to regenerate sat_var_map: 
+						       better to save/load it*)
 			  in valOf fname end
 		      else termToDimacsFile NONE t var_count
      val infile     = tmp ^ ".cnf"
@@ -106,7 +108,8 @@ fun invokeSat sat_solver fname t vc =
                        then ()
 		      else if (name="minisat" orelse name="minisatp") 
 		      then ()
-                      else print("Warning:\n Process.system reports failure signal returned by\n " ^ run_cmd ^ "\n")
+                      else print("Warning:\n Process.system reports failure signal returned by\n " 
+				 ^ run_cmd ^ "\n")
      val ins        = TextIO.openIn outfile
      val sat_res    = TextIO.inputAll ins
      val _          = TextIO.closeIn ins
@@ -125,7 +128,8 @@ fun invokeSat sat_solver fname t vc =
                              (subtract (map snd (snd(showSatVarMap()))) model1))
                       else model1
     in
-     SOME(map intToLiteral model2)
+     let val model3 = SOME(map intToLiteral model2)
+      in model3 end
     end
  end;
 

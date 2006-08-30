@@ -84,7 +84,7 @@ val minisat =
    only_true      = false,
    failure_string = "UNSAT",
    start_string   = "v",
-   end_string     = "0"};
+   end_string     = " 0"};
 
 val minisatp =
  SatSolver
@@ -100,6 +100,6 @@ val minisatp =
    only_true      = false,
    failure_string = "UNSAT",
    start_string   = "SAT",
-   end_string     = "0"};
+   end_string     = " 0"};
 
 end

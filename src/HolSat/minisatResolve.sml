@@ -30,7 +30,8 @@ end
 fun l2hh (h0::h1::t) = (h0,h1,t)
   | l2hh _ = raise Match
 
-fun mk_sat_var n = lookup_sat_num (n+1) (*+1 because minisat var numbers start at 0, HolSatLib at 1*)
+fun mk_sat_var n = lookup_sat_num (n+1) (*+1 because minisat var numbers start at 0, 
+					 HolSatLib at 1*)
 fun get_var_num v = lookup_sat_var v - 1
 
 fun isUsedRootClauseIdx cl ci = case Array.sub(cl,ci) of ROOT (RTHM _) => true | _ => false
@@ -41,38 +42,41 @@ local
 val A = mk_var("A",bool)
 val B = mk_var("B",bool)
 val AND_INV_IMP2 = SPEC_ALL AND_INV_IMP
-val cguid = ref 0
 
 in 
 
-fun dualise' th = 
-    let val c = rand (land (concl th))
-    in if is_disj c
-       then let val (d0,d1) = dest_disj c
-		val th1 = EQ_MP (INST [A|->d0,B|->d1] satTheory.OR_DUAL) th
-		val th2 = if is_neg d0 then CONV_RULE (LAND_CONV NOT_NOT_CONV) th1 else th1
-	    in dualise' (UNDISCH th2) end
-       else UNDISCH (if is_neg c then CONV_RULE (LAND_CONV NOT_NOT_CONV) th else th)
-    end
+(* mcth maps clause term t to thm of the form cnf |- t, *)
+(*  where t is a clause of the cnf term                 *)    
+fun dualise mcth t =
+    let 
+ 	fun dualise' th = 
+	    let val c = rand (land (concl th)) in 
+		if is_disj c
+		then 
+		    let val (d0,d1) = dest_disj c 
+			val th1 = 
+			    if is_neg d0 
+			    then EQ_MP (INST [A |-> dest_neg d0,B |-> d1] OR_DUAL3) th
+			    else EQ_MP (INST [A|->d0,B |-> d1] OR_DUAL2) th 
+		    in dualise' (UNDISCH th1) end
+		else 
+		    UNDISCH 
+			(if is_neg c 
+			 then CONV_RULE (LAND_CONV NOT_NOT_CONV) th 
+			 else MP (INST [A |-> c] AND_INV2) th) 
+	    end
+	val th1 = Redblackmap.find(mcth,t) 
+	val th2 = MP (INST [A |-> t] AND_INV_IMP2) th1 
+	val res =  dualise' th2  
+     in res end
 
-fun dualise t = 
-    let val cn = ("D"^(int_to_string (!cguid)))
-	val vl = all_vars t 
-	val ty = list_mk_fun(List.map type_of vl,bool)
-	val dc = mk_var(cn,ty)
-	val dl = list_mk_comb(dc,vl)
-	val cdef = SPEC_ALL (new_definition(cn^"def",mk_eq(dl,t)))
-	val _ = (cguid:=(!cguid)+1)
-	val th1 = UNDISCH (fst (EQ_IMP_RULE cdef)) 
-	val th2 = MP (INST [A|->t] AND_INV_IMP2) th1
-    in (dualise' th2,lhs(concl cdef),cdef) end
 end
 
 (* convert clause term to dualised thm form on first use *)
-fun prepareRootClause cl (t,lns) ci = 
+fun prepareRootClause mcth cl (t,lns) ci = 
     let 
- 	val (th,dl,cdef) = dualise t
- 	val _ = update(cl,ci,ROOT (RTHM (th,lns,dl,cdef)))
+ 	val th = dualise mcth t
+ 	val _ = update(cl,ci,ROOT (RTHM (th,lns,T,TRUTH)))
      in (th,lns) end
 
 (* will return clause info at index ci *)
@@ -87,29 +91,31 @@ fun getRootClause cl ci =
      in res end
 
 (* will return clause thm at index ci *)
-fun getClause cl clr ci =
+fun getClause mcth cl clr ci =
     let 
  	val res = case (if ci>=0 then sub(cl,ci) else sub(clr,~ci)) of 
-		      ROOT (LL ll) => prepareRootClause cl ll ci
+		      ROOT (LL ll) => prepareRootClause mcth cl ll ci
 		    | ROOT (RTHM x) => (#1 x,#2 x)
 		    | CHAIN _ => raise Domain
 		    | LEARNT x => x
 		    | BLANK => raise Domain
      in res end
 
-(* ground resolve clauses c0 and c1 on v, where v is the only var that occurs with opposite signs in c0 and c1 *)
+(* ground resolve clauses c0 and c1 on v, 
+   where v is the only var that occurs with opposite signs in c0 and c1 *)
 (* if n0 then v negated in c0 (but remember we are working with dualised clauses)*)
 fun resolve v n0 rth0 rth1 = 
     let 
- 	val th' = NOT_INTRO(if n0 then DISCH v rth0 else DISCH v rth1)
+ 	val th' = if n0 then DISCH v rth0 else DISCH v rth1
  	val th = PROVE_HYP th' (if n0 then rth1 else rth0)
      in th end
 
 
 (* resolve c0 against c1 wrt v *)
-fun resolveClause cl clr piv rci ((c0i,n0),(c1i,n1)) = 
+fun resolveClause mcth cl clr piv rci (c0i,c1i) = 
     let  
-         val ((rth0,lns0),(rth1,lns1)) = pair_map (getClause cl clr) (c0i,c1i)
+         val ((rth0,lns0),(rth1,lns1)) = pair_map (getClause mcth cl clr) (c0i,c1i)
+	val n0 = HOLset.member(lns0,(true,piv))
 	val v = mk_sat_var piv
  	val rth  = resolve v n0 rth0 rth1
 	val lns0' = HOLset.delete(lns0,(n0,piv))
@@ -120,33 +126,37 @@ fun resolveClause cl clr piv rci ((c0i,n0),(c1i,n1)) =
 		else update(clr,~rci,LEARNT (rth,rlns))
      in (rth,rlns) end
 
-fun clause_size cl clr ci = HOLset.numItems(hypset(fst(getClause cl clr ci)))
+fun clause_size mcth cl clr ci = HOLset.numItems(hypset(fst(getClause mcth cl clr ci)))
 
 val mxi =  (valOf Int.maxInt) 
 
 fun clear_chain_arrays vcc clr = 
     (modify (K (RBM.mkDict Int.compare,0,NONE)) vcc; modify (K BLANK) clr)
 
-fun update_vcc cl vcc clr pivs ci (isn,vi) = 
+fun update_vcc mcth cl vcc clr pivs ci (isn,vi) = 
     if Intset.member(pivs,vi) (* is vi a pivot? *)
 	then let val (cis,cs,_) = Array.sub(vcc,vi)
-	     in Array.update(vcc,vi,(RBM.insert(cis,ci,isn),cs+(clause_size cl clr ci),NONE)) end
+	     in Array.update(vcc,vi,(RBM.insert(cis,ci,isn),
+				     cs+(clause_size mcth cl clr ci),NONE)) 
+	     end
     else ()
 
-fun update_chain_arrays cl vcc clr pivs ci = 
+fun update_chain_arrays mcth cl vcc clr pivs ci = 
     let 
-         val (cth,lns) = getClause cl clr ci
-	val _ = HOLset.app (update_vcc cl vcc clr pivs ci) lns
+         val (_,lns) = getClause mcth cl clr ci
+	val _ = HOLset.app (update_vcc mcth cl vcc clr pivs ci) lns
      in () end
 
 (* vil is list of var indices (pivots), cil is list of clause indices, in the chain*)
-(* clear out vcc and then for each vil[i], vcc[i] is list of ci's in cil containing vil[i], and the sum of their sizes*)
-(* the later is called the pivot rank (abbrev to pr): we always choose the lowest ranked pivot for each resolve*)
-fun mkVarLists cl vcc clr vil cil  =  
+(* clear out vcc and then for each vil[i], vcc[i] is list of ci's in cil containing vil[i], 
+   and the sum of their sizes*)
+(* the latter is called the pivot rank (abbrev to pr): 
+ we always choose the lowest ranked pivot for each resolve*)
+fun mkVarLists mcth cl vcc clr vil cil  =  
     let 
  	val _ = clear_chain_arrays vcc clr 
  	val pivs = Intset.addList(Intset.empty, vil)
-	val _ = List.app (fn ci => update_chain_arrays cl vcc clr pivs ci) cil  
+	val _ = List.app (fn ci => update_chain_arrays mcth cl vcc clr pivs ci) cil  
 	val (piv,_) = List.foldl 
 	    (fn (vi,(piv,pr)) => let val (cis,pr',_) = Array.sub(vcc,vi)
 				 in if pr'<pr andalso RBM.numItems cis = 2
@@ -180,14 +190,14 @@ fun res_update_vcc_last vcc c0i c1i rci pivs =
 (* vi is res var, ~rci is idx of res clause in clr, and rsv is it's shadow vec *)
 (* this updates vcc i.e if vi' occured in the antecedent clauses of the current resolvent then 
    vi' now occurs in the resolvent as far as this chain is concerned, so update vcc[vi'] *)
-fun res_update cl vcc clr rth rlns c0i c1i rci pivs piv (cis_vi,pr_vi) =     
+fun res_update mcth cl vcc clr rth rlns c0i c1i rci pivs piv (cis_vi,pr_vi) =     
     if Intset.numItems pivs = 0 then NONE
     else if Intset.numItems pivs = 1 then res_update_vcc_last vcc c0i c1i rci pivs
     else
     let  
- 	val sz1 = clause_size cl clr c0i
-	val sz2 = clause_size cl clr c1i 
-	val rsz = clause_size cl clr rci 
+ 	val sz1 = clause_size mcth cl clr c0i
+	val sz2 = clause_size mcth cl clr c1i 
+	val rsz = clause_size mcth cl clr rci 
  	val _ = HOLset.app 
 		    (fn (isn,vi) => 
 			if Intset.member(pivs,vi) 
@@ -208,38 +218,52 @@ fun res_update cl vcc clr rth rlns c0i c1i rci pivs piv (cis_vi,pr_vi) =
 fun list2pair [f,s] = (f,s)
   | list2pair _ = raise Match
 
-fun resolveChain' cl vcc clr rci pivs piv = 
+fun resolveChain' mcth cl vcc clr rci pivs piv = 
     let 
          val res = if isSome piv 
 		  then let val piv = valOf piv
 			   val pivs' = Intset.delete(pivs,piv)
  			   val (cis_vi,pr_vi,_) =  Array.sub(vcc,piv)
 			   val ((c0i,n0),(c1i,n1)) = list2pair (RBM.listItems cis_vi)
-			   val (rth,rlns) = resolveClause cl clr piv rci ((c0i,n0),(c1i,n1))
-			   val piv' = res_update cl vcc clr rth rlns c0i c1i rci pivs' piv (cis_vi,pr_vi)
- 		       in resolveChain' cl vcc clr (rci-1) pivs' piv' end
+			   val (rth,rlns) = resolveClause mcth cl clr piv rci (c0i,c1i)
+			   val piv' = res_update mcth cl vcc clr rth rlns c0i c1i rci pivs' piv (cis_vi,pr_vi)
+ 		       in resolveChain' mcth cl vcc clr (rci-1) pivs' piv' end
 		  else Array.sub(clr,~(rci+1))
 
      in res end
 
-fun resolveChain cl clr vcc rci = 
+fun resolveChain mcth cl clr vcc rci = 
     let 
  	val (nl,lnl) = case sub(cl,rci) of CHAIN l => l | _ => failwith("resolveChain")
 	val (vil,cil) = ListPair.unzip nl
  	val vil = tl vil (* first "var" is actually dummy value ~1 *) 
-        val (piv,pivs)  = mkVarLists cl vcc clr vil cil (* build containment lists for each chain var and clause *)
-	val res = resolveChain' cl vcc clr ~1 pivs piv
+	(* build containment lists for each chain var and clause *)
+        val (piv,pivs)  = mkVarLists mcth cl vcc clr vil cil 
+	val res = resolveChain' mcth cl vcc clr ~1 pivs piv
 	val _ = update(cl,rci,res) 
-      in ()  end
+     in ()  end
+
+fun resolveChain0 mcth cl clr vcc rci =
+    let val (nl,lnl) = case sub(cl,rci) of CHAIN l => l | _ => failwith("resolveChain")
+	val (vil,cil) = ListPair.unzip nl
+	val vil = tl vil 
+	val (c0i,c1i,cilt) = l2hh cil
+	val r1 = resolveClause mcth cl clr (hd vil) rci (c0i,c1i)
+	val res = List.foldl (fn ((vi,ci),th) => 
+				 resolveClause mcth cl clr vi rci (ci,rci)) 
+			     r1 (ListPair.zip(tl vil,cilt))
+	val _ = update(cl,rci,LEARNT res)
+    in () end
 
 (*rth should be A |- F, where A contains all and only the root clauses used in the proof*)
-fun unsatProveResolve (cl,sk,scl,lsr,cc) vc rcv = 
+fun unsatProveResolve mcth (cl,sk,scl,lsr,cc) vc rcv reord = 
     let 
  	val vcc = Array.array(vc,(RBM.mkDict Int.compare,0,NONE))
 	val clr = Array.array(vc,BLANK) (* reused by resolveChain: holds temp res clauses *)
-	val _ = List.app (resolveChain cl clr vcc) (List.rev sk)
+	val doChain = if reord then resolveChain else resolveChain0 
+	val _ = List.app (doChain mcth cl clr vcc) (List.rev sk)
         val rth = case sub(cl,cc-1) of LEARNT th => fst th | _ => failwith("unsatProveTrace")
-     in (scl,cl,rth) end
+     in rth end
 
 
 

@@ -14,7 +14,7 @@ in
 datatype rootc = RTHM of thm * (bool * int) set * term * thm | LL of term * (bool * int) set
 
 datatype clause = BLANK 
-		| CHAIN of (int * int) list * int (* var, cl index list and the length of that list *) 
+		| CHAIN of (int * int) list * int (* var, cl index list,the length of that list *) 
 		| ROOT of rootc
 		| LEARNT of thm * (bool * int) set (* clause  thm, lits as nums set *)
 
@@ -73,6 +73,16 @@ end
 
 val lnscf = Int.compare o (snd##snd)
 
+fun bcomp (false,true) = LESS
+  | bcomp (true,false) = GREATER
+  | bcomp (_,_) = EQUAL
+
+fun lnscf ((b0,i0),(b1,i1)) = 
+    case Int.compare(i0,i1) of
+	EQUAL => bcomp(b0,b1)
+      | GREATER => GREATER
+      | LESS => LESS
+ 
 fun isRootClauseIdx cl ci = case Array.sub(cl,ci) of ROOT _ => true | _ => false 
 	    
 (* p is a literal *)
@@ -200,7 +210,8 @@ fun parseMinisatProof nr fname vc rcv =
     case parseTrace nr fname vc rcv of
 	SOME (cc,sr,scl) => 
 	    let val lsr = List.length sr
-		val cl = Array.array(lsr,BLANK) (*stores clauses as root clauses, learnt clauses or unresolved chains *)
+		val cl = Array.array(lsr,BLANK) (*stores clauses as root clauses, 
+						 learnt clauses or unresolved chains *)
  		val _ = List.foldl (fn (c,i) => (Array.update(cl,i-1,c);i-1)) cc sr 
 		val sk = mk_sk cl (Array.array(lsr,false)) (cc-1)
 	    in SOME (cl,sk,scl,lsr,cc) end  
