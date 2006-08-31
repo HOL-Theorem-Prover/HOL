@@ -35,6 +35,7 @@ val _ = Hol_datatype `
     REXP = RR of MREG          
          | RM of MMEM          
          | RC of DATA          
+         | PR of REXP # REXP
     `;
 
 
@@ -478,9 +479,10 @@ val _ = Hol_datatype `
          | VT of VEXP # VEXP         (* pairs     *)
     `;
 
-val readv_def = Define ` 
-    (readv st (PR (a,b)) = VT (readv st a, readv st b)) /\
-    (readv st x = SG (read st (toEXP x)))`;
+val readv_def = Define `
+     (readv st (PR (a,b)) = VT (readv st a, readv st b)) /\
+     (readv st x = SG (mread st x))`;
+
 
 (* Vector Stack, modelled as a list of expression vectors *)
 
