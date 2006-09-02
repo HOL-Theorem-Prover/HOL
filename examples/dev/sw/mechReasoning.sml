@@ -378,7 +378,7 @@ fun mk_sc_spec ir1_spec ir2_spec =
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, sc_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      MATCH_MP_TAC IR_SC_IS_WELL_FORMED THEN
+                      REWRITE_TAC [GSYM IR_SC_IS_WELL_FORMED] THEN
                       SIMP_TAC std_ss [spec1_thm, spec2_thm]
 	        );
 
@@ -621,7 +621,7 @@ fun mk_cj_spec cond ir1_spec ir2_spec =
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, cj_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      MATCH_MP_TAC IR_CJ_IS_WELL_FORMED THEN
+                      REWRITE_TAC [GSYM IR_CJ_IS_WELL_FORMED] THEN
                       SIMP_TAC std_ss [spec1_thm, spec2_thm]
 	        );
 
