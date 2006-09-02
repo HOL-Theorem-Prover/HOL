@@ -2,11 +2,10 @@
 (*      Simple Examples                                                            *) 
 (*      No precedure call is presented in these examples                           *)
 (*---------------------------------------------------------------------------------*)
-val hol_dir = "/home/tt291/hol98/";
-loadPath := (concat hol_dir "examples/dev/sw") :: 
+loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: 
             !loadPath;
 
-use (concat hol_dir "examples/dev/sw/compiler");
+use (concat Globals.HOLDIR "/examples/dev/sw/compiler");
 
 (*---------------------------------------------------------------------------------*)
 (*      Single Blocks                                                              *)
@@ -154,6 +153,23 @@ val fact_thm = Q.store_thm (
 
 
 *)
+
+(*---------------------------------------------------------------------------------*)
+(*      binary relations															              *)
+(*---------------------------------------------------------------------------------*)
+
+val def = Define `f (x1:word32) = if (x1 = 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 < 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 <= 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 <+ 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 <=+ 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 > 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 >= 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 >+ 0w) then x1 else (x1+1w)`
+val def = Define `f (x1:word32) = if (x1 >=+ 0w) then x1 else (x1+1w)`
+
+pp_compile def;
+
 
 (*---------------------------------------------------------------------------------*)
 (*      Constants are replaced by simpler ones that can be represented             *)
