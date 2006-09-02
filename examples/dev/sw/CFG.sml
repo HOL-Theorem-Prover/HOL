@@ -52,16 +52,18 @@ fun buildCFG tmpT (args,stmList,outs) =
     in  if x = Tree.EQ then Assem.EQ
 	else if x = Tree.NE then Assem.NE 
 	else if x = Tree.LT then Assem.LT
-        else if x = Tree.GT then Assem.GT
-        else if x = Tree.LE then Assem.LE
-        else if x = Tree.GE then Assem.GE
-        else if x = Tree.ULT then Assem.LT
-        else if x = Tree.ULE then Assem.LE
-        else if x = Tree.UGE then Assem.GE
-	else if x = Tree.UGT then Assem.GT
+	else if x = Tree.GT then Assem.GT
+	else if x = Tree.LE then Assem.LE
+	else if x = Tree.GE then Assem.GE
+	else if x = Tree.CC then Assem.CC
+	else if x = Tree.LS then Assem.LS
+	else if x = Tree.HI then Assem.HI
+	else if x = Tree.CS then Assem.CS
 	else Assem.NE					(* there may be no relational operation defined previously, so if e!=0 then jump *)
     end;
-   
+
+
+
   fun getTmp (Tree.TEMP x) = x
    |  getTmp _ = 0;
 

@@ -192,7 +192,7 @@ val WF_TR_LEM_1 = Q.store_thm (
            WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0)) ==>
            WF_TR (translate_condition cond,translate ir)`,
    
-   RW_TAC std_ss [WELL_FORMED_def, WF_TR_def, WF_Loop_def, run_ir_def, run_arm_def] THEN
+   RW_TAC std_ss [WELL_FORMED_SUB_thm, WF_TR_def, WF_Loop_def, run_ir_def, run_arm_def] THEN
    POP_ASSUM MP_TAC THEN Q.ABBREV_TAC `arm = translate ir` THEN STRIP_TAC THEN
    Q.EXISTS_TAC `\s1 s0. if eval_il_cond cond (get_st s0) then F else (get_st s1 = get_st (runTo (upload arm (\i. ARB) (FST (FST s0))) 
              (FST (FST s0) + LENGTH (translate ir)) s0))` THEN
@@ -365,7 +365,7 @@ val PRJ_TR_RULE = Q.store_thm (
         IMP_RES_TAC (SIMP_RULE std_ss [PSPEC_def] PSPEC_CHARACTERISTIC) THEN
             Q.PAT_ASSUM `!v x.p` (K ALL_TAC) THEN
             `WF_TR (translate_condition cond,translate ir)` by METIS_TAC [WF_TR_LEM_1] THEN
-	    FULL_SIMP_TAC std_ss [WELL_FORMED_def, HSPEC_def, run_ir_def, run_arm_def, translate_def, eval_il_cond_def] THEN
+	    FULL_SIMP_TAC std_ss [WELL_FORMED_SUB_thm, HSPEC_def, run_ir_def, run_arm_def, translate_def, eval_il_cond_def] THEN
 	    Q.ABBREV_TAC `arm = translate ir` THEN
 	    IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`] 
                               ARMCompositionTheory.UNROLL_TR_LEM)) THEN

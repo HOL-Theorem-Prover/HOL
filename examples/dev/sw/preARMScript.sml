@@ -1,3 +1,14 @@
+(* interactive use:
+
+quietdec := true;
+loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
+
+app load ["numLib", "pred_setSimps", "pred_setTheory",
+     "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory"];
+
+quietdec := false;
+*)
+
 open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
      arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory;
 
@@ -49,13 +60,29 @@ val setS_def = Define
         `;
 
 val setS_thm = Q.store_thm (
-	"setS_thm",
+   "setS_thm",
         `(setS (cpsr : CPSR) SN = (cpsr !! 0x80000000w)) /\
-	 (setS (cpsr : CPSR) SZ = (cpsr !! 0x40000000w)) /\
-	 (setS (cpsr : CPSR) SC = (cpsr !! 0x20000000w)) /\
-	 (setS (cpsr : CPSR) SV = (cpsr !! 0x10000000w))
+    (setS (cpsr : CPSR) SZ = (cpsr !! 0x40000000w)) /\
+    (setS (cpsr : CPSR) SC = (cpsr !! 0x20000000w)) /\
+    (setS (cpsr : CPSR) SV = (cpsr !! 0x10000000w))
         `,
-	RW_TAC std_ss [setS_def]);
+   RW_TAC std_ss [setS_def]);
+
+val setNZCV_def = Define
+         `setNZCV (cpsr : CPSR) (N, Z, C, V) =
+            word_modify
+              (\i b.
+                 (i = 31) /\ N \/ (i = 30) /\ Z \/ (i = 29) /\ C \/
+                 (i = 28) /\ V \/ i < 28 /\ b) cpsr`;
+
+val setNZCV_thm = Q.store_thm (
+   "setNZCV_thm",
+   `(getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SN = N) /\
+    (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SZ = Z) /\
+    (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SC = C) /\
+    (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SV = V)`,
+   
+   RW_TAC (std_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss) [getS_def, setNZCV_def, word_modify_def]);
 
 
 (*-------------------------------------------------------------------------------*)
@@ -75,7 +102,8 @@ val _ = Hol_datatype ` OPERATOR = MOV |
 (* Condition Codes                                                                      *)
 (*-------------------------------------------------------------------------------*)
 
-val _ = Hol_datatype ` COND = EQ | NE | GE | LE | GT | LT | AL | NV`;
+val _ = Hol_datatype ` COND = EQ | CS | MI | VS | HI | GE | GT | AL |
+                              NE | CC | PL | VC | LS | LT | LE | NV`;
 
 (*-------------------------------------------------------------------------------*)
 (* Expressions			                                                 *)
@@ -244,7 +272,7 @@ val decode_op_def =
                         WREG r ->
                                 (cpsr,
 				 write (FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
-				 	(REG r) (read s (REG r) - n2w (LENGTH src)))
+					(REG r) (read s (REG r) - n2w (LENGTH src)))
 		   )
 	      ||
           ADD -> (cpsr, (write s (THE dst) (read s (HD src) + read s (HD (TL (src))))))
@@ -278,17 +306,24 @@ val decode_op_def =
 				(read s (HD src) #>> w2n (read s (HD (TL (src)))))))
               ||
 
-          (*  Here we assume the previous cpsr to be 0w in order to avoid being involved in the burdenous word operations. 
-              However, replacing 0w with cpsr would harm the correctness due to the property of bitwise-or   *)
-          CMP -> if read s (HD src) = read s (HD (TL (src))) then
-                      (setS 0w SZ, s)
-                 else if read s (HD src) <+ read s (HD (TL (src))) then
-                      (setS 0w SN, s)
-                 else (setS 0w SC, s)
+          CMP -> (let a = read s (HD src) in
+                 let b = read s (HD (TL (src))) in
+                 (setNZCV cpsr (word_msb (a - b),
+                                a = b,
+                                b <=+ a,
+                                ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb (a - b))), s))
               ||
-          TST -> if read s (HD src) && read s (HD (TL (src))) = 0w then
-                      (setS cpsr SZ, s)
-                 else (cpsr, s)
+          
+          (*  The carry flag is always set to false. This does not correspond to
+              real ARM assembler. There you could set the carry flag by passing
+              an shift as second argument. *)
+          TST -> (let a = read s (HD src) in
+                 let b = read s (HD (TL (src))) in
+                 (setNZCV cpsr (word_msb (a && b),
+                                (a && b) = 0w,
+                                F,
+                                cpsr %% 28), s))
+
               ||
 
           LDR -> (cpsr, (write s (THE dst) (read s (HD src))))
@@ -321,13 +356,20 @@ val decode_op_thm = Q.store_thm
   (decode_op (pc,cpsr,s) (AND,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) && read s (HD (TL src))))) /\
   (decode_op (pc,cpsr,s) (ORR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) !! read s (HD (TL src))))) /\
   (decode_op (pc,cpsr,s) (EOR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) ?? read s (HD (TL src))))) /\
-  (decode_op (pc,cpsr,s) (CMP,NONE,src,jump) = (if read s (HD src) = read s (HD (TL src))
-                                             then (setS 0w SZ,s)
-                                             else (if read s (HD src) <+ read s (HD (TL src))
-                                                   then (setS 0w SN,s)
-                                                   else (setS 0w SC,s)))) /\
-  (decode_op (pc,cpsr,s) (TST,NONE,src,jump) = (if read s (HD src) && read s (HD (TL src)) = 0w
-                                             then (setS cpsr SZ,s) else (cpsr,s))) /\
+  (decode_op (pc,cpsr,s) (CMP,NONE,src,jump) = (
+      let a = read s (HD src) in
+      let b = read s (HD (TL (src))) in
+         (setNZCV cpsr (word_msb (a - b),
+                        a = b,
+                        b <=+ a,
+                        ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb (a - b))), s))) /\
+  (decode_op (pc,cpsr,s) (TST,NONE,src,jump) = 
+      (let a = read s (HD src) in
+                     let b = read s (HD (TL (src))) in
+                     (setNZCV cpsr (word_msb (a && b),
+                                    (a && b) = 0w,
+                                    F,
+                                    cpsr %% 28), s))) /\
   (decode_op (pc,cpsr,s) (LSL,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) << w2n (read s (HD (TL src)))))) /\
   (decode_op (pc,cpsr,s) (LSR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) >>> w2n (read s (HD (TL src)))))) /\
   (decode_op (pc,cpsr,s) (ASR,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) >> w2n (read s (HD (TL src)))))) /\
@@ -366,77 +408,45 @@ val decode_op_thm = Q.store_thm
  
    RW_TAC std_ss [decode_op_def]);
   
+val decode_cond_cpsr_def = 
+    Define `(decode_cond_cpsr cpsr EQ = getS cpsr SZ) /\
+            (decode_cond_cpsr cpsr CS = getS cpsr SC) /\
+            (decode_cond_cpsr cpsr MI = getS cpsr SN) /\
+            (decode_cond_cpsr cpsr VS = getS cpsr SV) /\
+            (decode_cond_cpsr cpsr HI = ((getS cpsr SC) /\ ~(getS cpsr SZ))) /\
+            (decode_cond_cpsr cpsr GE = ((getS cpsr SN) = (getS cpsr SV))) /\
+            (decode_cond_cpsr cpsr GT = (~(getS cpsr SZ) /\ ((getS cpsr SN) = (getS cpsr SV)))) /\
+            (decode_cond_cpsr cpsr AL = T) /\
+            (decode_cond_cpsr cpsr NE = ~(getS cpsr SZ)) /\
+            (decode_cond_cpsr cpsr CC = ~(getS cpsr SC)) /\
+            (decode_cond_cpsr cpsr PL = ~(getS cpsr SN)) /\
+            (decode_cond_cpsr cpsr VC = ~(getS cpsr SV)) /\
+            (decode_cond_cpsr cpsr LS = (~(getS cpsr SC) \/ (getS cpsr SZ))) /\
+            (decode_cond_cpsr cpsr LT = ~((getS cpsr SN) = (getS cpsr SV))) /\
+            (decode_cond_cpsr cpsr LE = ((getS cpsr SZ) \/ ~((getS cpsr SN) = (getS cpsr SV)))) /\
+            (decode_cond_cpsr cpsr NV = F)`
+
 
 val decode_cond_def = 
   Define `
-    decode_cond ((pc,cpsr,s):STATE) (((op,cond,sflag), dst, src, jump):INST) =
-        case cond of
+    (decode_cond ((pc,cpsr,s):STATE) (((op,cond,sflag), dst, src, jump):INST)) =
+        (case cond of
             NONE -> (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))
                 ||
             SOME c -> 
-		(case c of 
-		     EQ -> if getS cpsr SZ then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-			    else (pc+1, cpsr, s)
-		 ||  
-		     NE -> if getS cpsr SZ then (pc+1, cpsr, s)
-                            else (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-                 ||
-            	     GT -> if getS cpsr SC then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-			   else (pc+1, cpsr, s)
-                 ||
-            	     LE -> if getS cpsr SC then (pc+1, cpsr, s)
-			   else (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-                 ||
-            	     GE -> if getS cpsr SN then (pc+1, cpsr, s)
-                                     else (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-                 ||  
-	             LT -> if getS cpsr SN then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-                                     else (pc+1, cpsr, s)
-                 ||
-		     AL -> (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-                 ||
-                     NV -> (pc+1, cpsr, s)
-		)
+		          if (decode_cond_cpsr cpsr c) then (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
+			        else (pc+1, cpsr, s))
   `;
 
 val decode_cond_thm = Q.store_thm
 ( "decode_cond_thm",
   `!pc cpsr s op sflag dst src jump.
-  (decode_cond (pc,cpsr,s) ((op,NONE,sflag),dst,src,jump) = (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME EQ,sflag),dst,src,jump) =
-              if getS cpsr SZ then
-                   (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-               else
-                   (pc+1, cpsr, s)) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME NE,sflag),dst,src,jump) =
-              if getS cpsr SZ then
-                 (pc+1, cpsr, s)
-              else
-                 (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME GE,sflag),dst,src,jump) =
-              if getS cpsr SN then
-                 (pc+1, cpsr, s)
-              else
-                 (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME LE,sflag),dst,src,jump) =
-              if getS cpsr SC then
-                 (pc+1, cpsr, s)
-              else
-                 (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME GT,sflag),dst,src,jump) =
-              if getS cpsr SC then
-                 (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-              else
-                 (pc+1, cpsr, s)) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME LT,sflag),dst,src,jump) =
-              if getS cpsr SN then
-                 (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))
-              else
-                 (pc+1, cpsr, s)) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME AL,sflag),dst,src,jump) = (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
-  (decode_cond (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc+1, cpsr, s))`,
+	  (decode_cond (pc,cpsr,s) ((op,NONE,sflag),dst,src,jump) = (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
+     (decode_cond (pc,cpsr,s) ((op,SOME AL,sflag),dst,src,jump) = (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
+	  (decode_cond (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc+1, cpsr, s))`,
 
-  RW_TAC std_ss [decode_cond_def]);
+  RW_TAC std_ss [decode_cond_def, decode_cond_cpsr_def]);
+
 
 
 (*---------------------------------------------------------------------------------*)

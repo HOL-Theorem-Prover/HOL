@@ -28,7 +28,7 @@ structure IRSyntax = struct
                | SHIFT of operator * int
                | NA                             (* N/A, for undecided fields *)
 
-   datatype rop = eq | ne | ge | le | gt | lt | al | nv
+   datatype rop = eq | ne | ge | le | gt | lt | al | nv | cc | ls | hi | cs
 
    type instr = {oper: operator, dst: exp list, src: exp list}
 
@@ -80,6 +80,10 @@ structure IRSyntax = struct
    |  convert_rop (lt) = Term(`LT`)
    |  convert_rop (gt) = Term(`GT`)
    |  convert_rop (le) = Term(`LE`)
+   |  convert_rop (cc) = Term(`CC`)
+   |  convert_rop (ls) = Term(`LS`)
+   |  convert_rop (hi) = Term(`HI`)
+   |  convert_rop (cs) = Term(`CS`)
    |  convert_rop (al) = Term(`AL`)
    |  convert_rop (nv) = Term(`NV`)
 
@@ -268,8 +272,13 @@ end
     |  to_rop Assem.LE = le
     |  to_rop Assem.GT = ge
     |  to_rop Assem.LT = lt
+    |  to_rop Assem.CC = cc
+    |  to_rop Assem.LS = ls
+    |  to_rop Assem.HI = hi
+    |  to_rop Assem.CS = cs
     |  to_rop Assem.AL = al
     |  to_rop Assem.NV = nv
+
 
    fun to_op Assem.ADD = madd
     |  to_op Assem.SUB = msub
@@ -413,8 +422,13 @@ end
    |  print_rop (lt) = "<"
    |  print_rop (gt) = ">"
    |  print_rop (le) = "<="
+   |  print_rop (cc) = "<+"
+   |  print_rop (ls) = "<=+"
+   |  print_rop (hi) = ">+"
+   |  print_rop (cs) = ">=+"
    |  print_rop (al) = "al"
    |  print_rop (nv) = "nv"
+
 
   fun printReg r =
       let fun printAlias fp = "fp"

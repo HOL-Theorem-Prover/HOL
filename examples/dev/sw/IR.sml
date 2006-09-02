@@ -61,11 +61,16 @@ fun is_relop op1 =
                         oper_name = "word_gt" orelse
                         oper_name = "word_lt" orelse
                         oper_name = "word_ge" orelse
-                        oper_name = "word_le"
+                        oper_name = "word_le" orelse
+                        oper_name = "word_hs" orelse
+                        oper_name = "word_hi" orelse
+                        oper_name = "word_lo" orelse
+                        oper_name = "word_ls"
       	   		then true
       		else false
 	    end
        end;
+
 
 fun convert_binop bop =
   let val (uncur, oper) = dest_comb bop;
@@ -104,16 +109,16 @@ fun convert_relop rop =
   let val (uncur, oper) = dest_comb rop;
       val (oper_name, oper_type) = dest_const oper
   in
-      if oper_name = ">" then Tree.GT
-      else if oper_name = "<" then Tree.LT
-      else if oper_name = "=" then Tree.EQ
+      if oper_name = "=" then Tree.EQ
       else if oper_name = "!=" then Tree.NE
-      else if oper_name = ">=" then Tree.GE
-      else if oper_name = "<=" then Tree.LE
+      else if oper_name = "word_ge" then Tree.GE
       else if oper_name = "word_gt" then Tree.GT
       else if oper_name = "word_lt" then Tree.LT
-      else if oper_name = "word_ge" then Tree.GE
       else if oper_name = "word_le" then Tree.LE
+      else if oper_name = "word_hs" then Tree.CS
+      else if oper_name = "word_hi" then Tree.HI
+      else if oper_name = "word_lo" then Tree.CC
+      else if oper_name = "word_ls" then Tree.LS
       else raise ERR "IR" ("invalid relation operator" ^ oper_name)
   end;
 
@@ -310,7 +315,12 @@ fun print_stm ir =
    |  print_rop Tree.NE = "!="
    |  print_rop Tree.GE = ">="
    |  print_rop Tree.LE = "<="
+   |  print_rop Tree.CS = ">=+"
+   |  print_rop Tree.HI = ">+"
+   |  print_rop Tree.CC = "<+"
+   |  print_rop Tree.LS = "<=+"
    |  print_rop _ = raise ERR "IR" "invalid relational operator";
+
 
   fun one_exp (Tree.BINOP(bop,e1,e2)) =
         (print_bop bop) ^ " " ^ one_exp e1 ^ ", " ^ one_exp e2

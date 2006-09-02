@@ -30,7 +30,7 @@ structure Assem = struct
 	       | ALIAS of alias
 	       | SHIFT of operation * int
 
-  datatype cond = EQ | NE | GE | LE | GT | LT | AL | NV
+  datatype cond = EQ | NE | GE | LE | GT | LT | AL | NV | CC | LS | HI | CS
 
   datatype instr = OPER of {oper: operation * cond option * bool,
 			    dst: exp list,
@@ -91,9 +91,14 @@ structure Assem = struct
    |  print_cond (SOME LT) = "LT"
    |  print_cond (SOME GT) = "GT"
    |  print_cond (SOME LE) = "LE"
+   |  print_cond (SOME CC) = "CC"
+   |  print_cond (SOME LS) = "LS"
+   |  print_cond (SOME HI) = "HI"
+   |  print_cond (SOME CS) = "CS"
    |  print_cond (SOME AL) = "AL"
    |  print_cond (SOME NV) = "NV"
    |  print_cond NONE = ""
+
 
    fun print_flag flag =
       if flag then "S"
