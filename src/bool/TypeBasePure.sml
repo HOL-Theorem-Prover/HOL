@@ -787,6 +787,7 @@ fun strip_case tybase M =
 end;
 *)
 
+(*
 local open Literal
 in
 fun is_literal tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
@@ -798,7 +799,9 @@ fun is_lit_eq tm =
       in is_var a andalso is_literal b
       end
     else false;
+*)
 
+(*
 local fun dest tybase (pat,rhs) =
   let val patvars = free_vars pat
   in if is_case tybase rhs
@@ -832,6 +835,54 @@ fun strip_case tybase M =
                                (zip [lit, v] (map snd cases))))
               end
          else (exp, flatten (map (dest tybase) cases))
+end;
+*)
+
+local fun dest tybase (pat,rhs) =
+  let val patvars = free_vars pat
+  in if is_case tybase rhs
+     then let val (case_tm,exp,clauses) = dest_case tybase rhs
+              val (pats,rhsides) = unzip clauses
+          in if is_eq exp
+             then let val (v,e) = dest_eq exp
+                      val fvs = free_vars v
+                      val pat0 = if is_var v then subst [v |-> e] pat
+                                             else e (* fails if pat ~= v *)
+                      (* val theta = fst (match_term v e) handle HOL_ERR _ => [] *)
+                  in if null (subtract fvs patvars)
+                        (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
+                     then flatten
+                            (map (dest tybase)
+                               (zip [pat0, pat] rhsides))
+                     else [(pat,rhs)]
+                  end
+             else let val fvs = free_vars exp
+                  in if null (subtract fvs patvars) andalso
+                        null_intersection fvs (free_varsl rhsides)
+                     then flatten
+                            (map (dest tybase)
+                               (zip (map (fn p =>
+                                           subst (fst (match_term exp p)) pat) pats)
+                                    rhsides))
+                     else [(pat,rhs)]
+                  end
+                  handle HOL_ERR _ => [(pat,rhs)] (* catch from match_term *)
+          end
+     else [(pat,rhs)]
+  end
+  handle e => raise (Feedback.wrap_exn "TypeBasePure" "strip_case(dest)" e)
+in
+fun strip_case tybase M =
+ (case total (dest_case tybase) M
+   of NONE => (M,[])
+    | SOME(case_tm,exp,cases) =>
+         if is_eq exp
+         then let val (v,e) = dest_eq exp
+              in (v, flatten (map (dest tybase)
+                               (zip [e, v] (map snd cases))))
+              end
+         else (exp, flatten (map (dest tybase) cases)))
+ handle e => raise (Feedback.wrap_exn "TypeBasePure" "strip_case" e)
 end;
 
 

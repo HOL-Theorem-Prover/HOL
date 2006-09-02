@@ -176,7 +176,8 @@ fun mk_patl c =
               val c' = if is_var c then hd args else c
            in (prefix,tag, c'::plist') end
   in map build
-  end;
+  end
+  handle e => raise (Feedback.wrap_exn "Pmatch" "mk_pat" e);
 
 fun mk_pat c =
   let val L = length(#1(strip_fun(type_of c)))
@@ -184,7 +185,8 @@ fun mk_pat c =
           let val (args,plist') = gtake I (L, plist)
            in (prefix,tag,list_mk_comb(c,args)::plist') end
   in map build
-  end;
+  end
+  handle e => raise (Feedback.wrap_exn "Pmatch" "mk_pat" e);
 
 local val counter = ref 0
 in
@@ -206,17 +208,47 @@ fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
 fun v_to_pats (v::prefix,tag, pats) = (prefix, tag, v::pats)
   | v_to_pats _ = raise ERR"mk_case""v_to_pats";
 
+(*---------------------------------------------------------------------------*)
+(* Reconstructed code from TypeBasePure, to avoid circularity.               *)
+(*---------------------------------------------------------------------------*)
+
+fun case_const_of {case_const : term, constructors : term list} = case_const
+
+fun constructors_of {case_const : term, constructors : term list} = constructors
+
+fun type_names ty =
+  let val {Thy,Tyop,Args} = Type.dest_thy_type ty
+  in {Thy=Thy,Tyop=Tyop}
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Is a constant a constructor for some datatype.                            *)
+(*---------------------------------------------------------------------------*)
+
+fun is_constructor tybase c =
+  let val (_,ty) = strip_fun (type_of c)
+  in case tybase (type_names ty)
+     of NONE => false
+      | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
+  end handle HOL_ERR _ => false;
+
+fun is_constructor_pat tybase tm =
+    is_var tm orelse is_constructor tybase (fst (strip_comb tm));
+
 (* -------------------------------------------------------------- *)
 (* A literal is either a numeric, string, or character literal.   *)
 (* Boolean literals are handled as constructors of the bool type. *)
 (* -------------------------------------------------------------- *)
 
+(*
 val is_literal = Literal.is_literal
 
 fun is_lit_or_var tm = is_literal tm orelse is_var tm
 
 fun is_zero_emptystr_or_var tm =
     Literal.is_zero tm orelse Literal.is_emptystring tm orelse is_var tm
+*)
+
 
 fun mk_switch_tm1 _ [] = raise ERR "mk_switch_tm" "no literals"
   | mk_switch_tm1 gv (literals as (lit::lits)) =
@@ -284,14 +316,15 @@ fun mk_case ty_info ty_match FV range_ty =
        else [row]
  fun expand constructors ty ((_,[]), _) = mk_case_fail"expand_var_row"
    | expand constructors ty (row as ((prefix, p::rst), rhs)) =
-       if is_var p
+      (if is_var p
        then let val fresh = fresh_constr ty_match ty fresh_var
                 fun expnd (c,gvs) =
                   let val capp = list_mk_comb(c,gvs)
                   in ((prefix, capp::rst), psubst[p |-> capp] rhs)
                   end
             in map expnd (map fresh constructors)  end
-       else [row]
+       else [row])
+      handle e => raise (Feedback.wrap_exn "Pmatch" "mk_case(expand constructors)" e)
  fun mk{rows=[],...} = mk_case_fail"no rows"
    | mk{path=[], rows = ((prefix, []), rhs)::_} =  (* Done *)
         let val (tag,tm) = dest_pattern rhs
@@ -313,6 +346,7 @@ fun mk_case ty_info ty_match FV range_ty =
           in (map v_to_pats pref_patl, tm)
           end
      else
+(*
      if all is_lit_or_var col0 andalso
         not (all is_zero_emptystr_or_var col0)
      then let val pty = type_of p
@@ -339,10 +373,14 @@ fun mk_case ty_info ty_match FV range_ty =
               (pat_rect1,tree')
           end
      else
+*)
      let val pty = type_of p
          val {Tyop = ty_name, Thy,...} = dest_thy_type pty
+         val pty_info = (* match_info *) ty_info {Thy = Thy, Tyop = ty_name}
      in
-     case ty_info {Thy = Thy, Tyop = ty_name}
+     if not (pty_info = NONE) andalso all (is_constructor_pat ty_info) col0
+     then (* col0 contains only constructors or variables *)
+     case pty_info
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
         let val {Name = case_const_name, Thy,...} = dest_thy_const case_const
@@ -365,9 +403,34 @@ fun mk_case ty_info ty_match FV range_ty =
         in
             (pat_rect1,tree)
         end
+     else (* col0 contains literals or other non-constructors as well as vars *)
+          let val other_var = fresh_var pty
+              val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
+                                   @ [other_var]
+              val switch_tm = mk_switch_tm fresh_var constructors
+              val nrows = flatten (map (expandl constructors pty) rows)
+              val subproblems = dividel(constructors, pty, range_ty, nrows)
+              val groups        = map #group subproblems
+              and new_formals   = map #new_formals subproblems
+              and constructors' = map #constructor subproblems
+              val news = map (fn (nf,rows) => {path = nf@rstp, rows=rows})
+                             (zip new_formals groups)
+              val rec_calls = map mk news
+              val (pat_rect,dtrees) = unzip rec_calls
+              val case_functions = map list_mk_abs(zip new_formals dtrees)
+              val switch_tm' = inst [alpha |-> range_ty] switch_tm
+              val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
+                                    switch_tm' (case_functions@[u])
+              val tree' = depth_conv beta_conv tree
+              val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
+          in
+              (pat_rect1,tree')
+          end
      end end
+     handle e => raise (Feedback.wrap_exn "Pmatch" "mk_case(mk.5)" e)
  in mk
- end;
+ end
+ handle e => raise (Feedback.wrap_exn "Pmatch" "mk_case" e);
 
 
 (*---------------------------------------------------------------------------
@@ -432,27 +495,6 @@ fun pat_match3 pat_exps given_pats =
      ((distinguish o reduce_mats o purge_wildcards o flatten) ## flatten)
            (unzip (map (pat_match2 pat_exps) given_pats))
 
-(* Reconstructed code from TypeBasePure, to avoid circularity. *)
-
-fun case_const_of {case_const : term, constructors : term list} = case_const
-
-fun constructors_of {case_const : term, constructors : term list} = constructors
-
-fun type_names ty =
-  let val {Thy,Tyop,Args} = Type.dest_thy_type ty
-  in {Thy=Thy,Tyop=Tyop}
-  end;
-
-(*---------------------------------------------------------------------------*)
-(* Is a constant a constructor for some datatype.                            *)
-(*---------------------------------------------------------------------------*)
-
-fun is_constructor tybase c =
-  let val (_,ty) = strip_fun (type_of c)
-  in case match_info tybase (type_names ty)
-     of NONE => false
-      | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
-  end handle HOL_ERR _ => false;
 
 (*---------------------------------------------------------------------------*)
 (* Syntax operations on the (extensible) set of case expressions.            *)
@@ -516,7 +558,7 @@ fun is_case tybase M =
   end
   handle HOL_ERR _ => false;
 
-
+(*
 val is_literal =  Literal.is_literal
 
 fun is_lit_eq tm =
@@ -525,7 +567,9 @@ fun is_lit_eq tm =
       in is_var a andalso is_literal b
       end
     else false;
+*)
 
+(*
 local fun dest tybase (pat,rhs) =
   let val patvars = free_vars pat
   in if is_case tybase rhs
@@ -559,6 +603,54 @@ fun strip_case tybase M =
                                (zip [lit, v] (map snd cases))))
               end
          else (exp, flatten (map (dest tybase) cases))
+end;
+*)
+
+local fun dest tybase (pat,rhs) =
+  let val patvars = free_vars pat
+  in if is_case tybase rhs
+     then let val (case_tm,exp,clauses) = dest_case tybase rhs
+              val (pats,rhsides) = unzip clauses
+          in if is_eq exp
+             then let val (v,e) = dest_eq exp
+                      val fvs = free_vars v
+                      val pat0 = if is_var v then subst [v |-> e] pat
+                                             else e (* fails if pat ~= v *)
+                      (* val theta = fst (Term.match_term v e) handle HOL_ERR _ => [] *)
+                  in if null (subtract fvs patvars)
+                        (* andalso null_intersection fvs (free_vars (hd rhsides)) *)
+                     then flatten
+                            (map (dest tybase)
+                               (zip [pat0, pat] rhsides))
+                     else [(pat,rhs)]
+                  end
+             else let val fvs = free_vars exp
+                  in if null (subtract fvs patvars) andalso
+                        null_intersection fvs (free_varsl rhsides)
+                     then flatten
+                            (map (dest tybase)
+                               (zip (map (fn p =>
+                                           subst (fst (Term.match_term exp p)) pat) pats)
+                                    rhsides))
+                     else [(pat,rhs)]
+                  end
+                  handle HOL_ERR _ => [(pat,rhs)] (* catch from match_term *)
+          end
+     else [(pat,rhs)]
+  end
+  handle e => raise (Feedback.wrap_exn "Pmatch" "strip_case(dest)" e)
+in
+fun strip_case tybase M =
+ (case total (dest_case tybase) M
+   of NONE => (M,[])
+    | SOME(case_tm,exp,cases) =>
+         if is_eq exp
+         then let val (v,e) = dest_eq exp
+              in (v, flatten (map (dest tybase)
+                               (zip [e, v] (map snd cases))))
+              end
+         else (exp, flatten (map (dest tybase) cases)))
+ handle e => raise (Feedback.wrap_exn "Pmatch" "strip_case" e)
 end;
 
 
@@ -651,6 +743,7 @@ fun mk_functional thy eqs =
    {functional = list_mk_abs ([f,a'], case_tm'),
     pats = patts3}
  end
+ handle e => raise (Feedback.wrap_exn "Pmatch" "mk_functional" e)
 end;
 
 end;

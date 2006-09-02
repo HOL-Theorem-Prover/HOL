@@ -185,12 +185,41 @@ fun v_to_pats (v::prefix,tag, pats) = (prefix, tag, v::pats)
 (* Boolean literals are handled as constructors of the bool type. *)
 (* -------------------------------------------------------------- *)
 
+(*
 val is_literal = Literal.is_literal
 
 fun is_lit_or_var tm = is_literal tm orelse is_var tm
 
 fun is_zero_emptystr_or_var tm =
     Literal.is_zero tm orelse Literal.is_emptystring tm orelse is_var tm
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Reconstructed code from TypeBasePure, to avoid changing type of 'mk_case'.*)
+(*---------------------------------------------------------------------------*)
+
+fun case_const_of {case_const : term, constructors : term list} = case_const
+fun constructors_of {case_const : term, constructors : term list} = constructors
+
+fun type_names ty =
+  let val {Thy,Tyop,Args} = Type.dest_thy_type ty
+  in (Thy,Tyop)
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Is a constant a constructor for some datatype.                            *)
+(*---------------------------------------------------------------------------*)
+
+fun is_constructor ty_info c =
+  let val (_,ty) = strip_fun (type_of c)
+  in case ty_info (type_names ty)
+     of NONE => false
+      | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
+  end handle HOL_ERR _ => false;
+
+fun is_constructor_pat ty_info tm =
+    is_var tm orelse is_constructor ty_info (fst (strip_comb tm))
+
 
 fun mk_switch_tm1 _ [] = raise ERR "mk_switch_tm" "no literals"
   | mk_switch_tm1 gv (literals as (lit::lits)) =
@@ -287,36 +316,13 @@ fun mk_case ty_info ty_match FV range_ty =
           in (map v_to_pats pref_patl, tm)
           end
      else
-     if all is_lit_or_var col0 andalso
-        not (all is_zero_emptystr_or_var col0)
-     then let val pty = type_of p
-              val {Thy=ty_thy,Tyop=ty_name,...} = dest_thy_type pty
-              val other_var = fresh_var pty
-              val constructors = rev (mk_set (rev (filter is_literal col0))) @ [other_var]
-              val switch_tm = mk_switch_tm fresh_var constructors
-                 val nrows = flatten (map (expandl constructors pty) rows)
-                 val subproblems = dividel(constructors, pty, range_ty, nrows)
-                 val groups        = map #group subproblems
-                 and new_formals   = map #new_formals subproblems
-                 and constructors' = map #constructor subproblems
-                 val news = map (fn (nf,rows) => {path = nf@rstp, rows=rows})
-                                (zip new_formals groups)
-                 val rec_calls = map mk news
-                 val (pat_rect,dtrees) = unzip rec_calls
-                 val case_functions = map list_mk_abs(zip new_formals dtrees)
-                 val switch_tm' = inst [alpha |-> range_ty] switch_tm
-                 val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
-                                       switch_tm' (case_functions@[u])
-                 val tree' = depth_conv beta_conv tree
-                 val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
-          in
-              (pat_rect1,tree')
-          end
-     else
      let val pty = type_of p
          val {Thy=ty_thy,Tyop=ty_name,...} = dest_thy_type pty
+         val pty_info = ty_info (ty_thy,ty_name)
      in
-     case ty_info (ty_thy,ty_name)
+     if not (pty_info = NONE) andalso all (is_constructor_pat ty_info) col0
+     then (* col0 contains only constructors or variables *)
+     case pty_info
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
         let val {Name = case_const_name, Thy,...} = dest_thy_const case_const
@@ -341,6 +347,29 @@ fun mk_case ty_info ty_match FV range_ty =
         in
             (pat_rect1,tree)
         end
+     else (* col0 contains literals or other non-constructors as well as vars *)
+          let val other_var = fresh_var pty
+              val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
+                                   @ [other_var]
+              val switch_tm = mk_switch_tm fresh_var constructors
+              val nrows = flatten (map (expandl constructors pty) rows)
+              val subproblems = dividel(constructors, pty, range_ty, nrows)
+              val groups        = map #group subproblems
+              and new_formals   = map #new_formals subproblems
+              and constructors' = map #constructor subproblems
+              val news = map (fn (nf,rows) => {path = nf@rstp, rows=rows})
+                             (zip new_formals groups)
+              val rec_calls = map mk news
+              val (pat_rect,dtrees) = unzip rec_calls
+              val case_functions = map list_mk_abs(zip new_formals dtrees)
+              val switch_tm' = inst [alpha |-> range_ty] switch_tm
+              val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
+                                    switch_tm' (case_functions@[u])
+              val tree' = depth_conv beta_conv tree
+              val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
+          in
+              (pat_rect1,tree')
+          end
      end end
  in mk
  end;
