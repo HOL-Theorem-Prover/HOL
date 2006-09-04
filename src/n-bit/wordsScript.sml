@@ -1145,6 +1145,10 @@ val WORD_EQ_SUB_RADD = store_thm("WORD_EQ_SUB_RADD",
   `!v:'a word w x. (v - w = x) = (v = x + w)`,
   METIS_TAC [WORD_EQ_SUB_LADD]);
 
+val WORD_EQ_SUB_ZERO = save_thm("WORD_EQ_SUB_ZERO",
+  (GEN_ALL o REWRITE_RULE [WORD_ADD_0] o
+   SPECL [`v`,`w`,`0w`]) WORD_EQ_SUB_RADD);
+
 val WORD_LCANCEL_SUB = store_thm("WORD_LCANCEL_SUB",
   `!v:'a word w x. (v - w = x - w) = (v = x)`,
   REWRITE_TAC [word_sub_def,WORD_EQ_ADD_RCANCEL]);
@@ -1996,7 +2000,7 @@ val WORD_NOT_LESS_EQ = store_thm("WORD_NOT_LESS_EQ",
   `!a:'a word b. (a = b) ==> ~(a < b)`,
   PROVE_TAC [WORD_LESS_REFL]);
 
-val WORD_HIGHER = prove(
+val WORD_HIGHER = store_thm("WORD_HIGHER",
   `!a b. a >+ b = b <+ a`,
   RW_TAC arith_ss [WORD_HI,WORD_LO]);
 
