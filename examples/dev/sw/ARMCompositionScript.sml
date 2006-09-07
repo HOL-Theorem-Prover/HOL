@@ -677,29 +677,53 @@ val eval_cond_def = Define `
     (eval_cond (v1,LE,v2) s = (read s v1 <= read s v2)) /\
     (eval_cond (v1,NV,v2) s = F)`;
 
-val WORD_HI_EQ = prove (
-	``!a b. a >+ b = b <+ a``,
-	SIMP_TAC arith_ss [WORD_HI, WORD_LO])
 
-val WORD_GT_EQ = prove (
-	``!a b. word_gt a b = word_lt b a``,
-	SIMP_TAC arith_ss [WORD_GT, WORD_LT] THEN
-	REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN
-	ASM_SIMP_TAC arith_ss [])
+val eval_cond_thm = Q.store_thm (
+   "eval_cond_thm",
+	 `!v1 rop v2 st cpsr. 
+		  (eval_cond (v1,rop,v2) st = decode_cond_cpsr
+            (setNZCV cpsr
+               (word_msb (read st v1 - read st v2),read st v1 = read st v2,
+                read st v2 <=+ read st v1,
+                ~(word_msb (read st v1) = word_msb (read st v2)) /\
+                ~(word_msb (read st v1) =
+                  word_msb (read st v1 - read st v2)))) rop)` ,
 
-val WORD_GE_EQ = prove (
-	``!a b. word_ge a b = word_le b a``,
-	SIMP_TAC arith_ss [WORD_GE, WORD_LE] THEN
-	REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN
-	ASM_SIMP_TAC arith_ss [])
+	Cases_on `rop` THEN
+	FULL_SIMP_TAC std_ss [eval_cond_def, decode_cond_def , decode_op_thm,
+		decode_cond_cpsr_def, setNZCV_thm, LET_THM,
+		nzcv_def] THENL [
+		
 
-val WORD_LT_NOT_EQ = prove (
-	``!a b. word_lt a b ==> ~(a = b)``,
-	SIMP_TAC arith_ss [WORD_LT])
+		REWRITE_TAC [WORD_HIGHER_EQ],
+		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def],
+		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def] THEN METIS_TAC[],
+		SIMP_TAC arith_ss [WORD_HI, WORD_LO, WORD_LS, GSYM w2n_11],
 
-val WORD_SUB_EQ_ZERO = prove (
-	``!a b. (a - b = 0w) = (a = b)``,
-	METIS_TAC[WORD_SUB_ADD, WORD_ADD_0, WORD_SUB_REFL]);
+
+		SIMP_TAC std_ss [word_ge_def, nzcv_def, LET_THM, GSYM word_add_def,
+			GSYM word_sub_def] THEN METIS_TAC[],
+		
+		SIMP_TAC std_ss [word_gt_def, nzcv_def, LET_THM, GSYM word_add_def,
+				GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN 
+      METIS_TAC[],
+
+		PROVE_TAC[WORD_LOWER_EQ_ANTISYM, WORD_LOWER_CASES],
+		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def],
+
+		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def] THEN METIS_TAC[],
+		
+		SIMP_TAC std_ss [WORD_LOWER_OR_EQ] THEN
+		METIS_TAC[WORD_LOWER_LOWER_CASES, WORD_LOWER_ANTISYM],
+
+		SIMP_TAC std_ss [word_lt_def, nzcv_def, LET_THM, GSYM word_add_def,
+				GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN
+      METIS_TAC[],
+
+		SIMP_TAC std_ss [word_le_def, nzcv_def, LET_THM, GSYM word_add_def,
+			GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN METIS_TAC[]
+	]);
+
 
 
 val ENUMERATE_CJ = Q.store_thm (
@@ -716,49 +740,8 @@ val ENUMERATE_CJ = Q.store_thm (
 
 	 REPEAT GEN_TAC THEN
 	 `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
-	 ASM_SIMP_TAC list_ss [decode_op_def, OPERATOR_case_def, decode_cond_def, LET_THM] THEN
-	 `eval_cond (v1,rop,v2) st = decode_cond_cpsr
-            (setNZCV cpsr
-               (word_msb (read st v1 - read st v2),read st v1 = read st v2,
-                read st v2 <=+ read st v1,
-                ~(word_msb (read st v1) = word_msb (read st v2)) /\
-                ~(word_msb (read st v1) =
-                  word_msb (read st v1 - read st v2)))) rop` by ALL_TAC THENL [
-		ALL_TAC,
-		ASM_SIMP_TAC std_ss []	
-    ] THEN
-
-	Cases_on `rop` THEN
-	FULL_SIMP_TAC std_ss [eval_cond_def, decode_cond_def , decode_op_thm,
-		decode_cond_cpsr_def, setNZCV_thm, LET_THM,
-		nzcv_def] THENL [
-		
-
-		REWRITE_TAC [WORD_HIGHER_EQ],
-		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def],
-		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def] THEN METIS_TAC[],
-		SIMP_TAC std_ss [WORD_HI_EQ, WORD_LOWER_OR_EQ] THEN METIS_TAC[WORD_LOWER_NOT_EQ],
-		
-		SIMP_TAC std_ss [word_ge_def, nzcv_def, LET_THM, GSYM word_add_def,
-			GSYM word_sub_def] THEN METIS_TAC[],
-		
-		SIMP_TAC std_ss [word_gt_def, nzcv_def, LET_THM, GSYM word_add_def,
-				GSYM word_sub_def, WORD_SUB_EQ_ZERO] THEN METIS_TAC[],
-
-		PROVE_TAC[WORD_LOWER_EQ_ANTISYM, WORD_LOWER_CASES],
-		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def],
-
-		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def] THEN METIS_TAC[],
-		
-		SIMP_TAC std_ss [WORD_LOWER_OR_EQ] THEN
-		METIS_TAC[WORD_LOWER_LOWER_CASES, WORD_LOWER_ANTISYM],
-
-		SIMP_TAC std_ss [word_lt_def, nzcv_def, LET_THM, GSYM word_add_def,
-				GSYM word_sub_def, WORD_SUB_EQ_ZERO] THEN METIS_TAC[],
-
-		SIMP_TAC std_ss [word_le_def, nzcv_def, LET_THM, GSYM word_add_def,
-			GSYM word_sub_def, WORD_SUB_EQ_ZERO] THEN METIS_TAC[]
-	]
+	 ASM_SIMP_TAC list_ss [decode_op_def, OPERATOR_case_def, decode_cond_def, LET_THM,
+		GSYM eval_cond_thm]
 )
 
 (*---------------------------------------------------------------------------------*)
