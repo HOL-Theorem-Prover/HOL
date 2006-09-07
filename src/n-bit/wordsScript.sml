@@ -348,6 +348,12 @@ val dimword_IS_TWICE_INT_MIN = store_thm(
 val DIMINDEX_GT_0 = save_thm("DIMINDEX_GT_0",
   PROVE [DECIDE ``!s. 1 <= s ==> 0 < s``,DIMINDEX_GE_1] ``0 < dimindex(:'a)``);
 
+val ONE_LT_dimword = store_thm(
+  "ONE_LT_dimword",
+  `1 < dimword(:'a)`,
+  METIS_TAC [dimword_def,DIMINDEX_GT_0,EXP,EXP_BASE_LT_MONO,DECIDE ``1 < 2``]);
+val _ = export_rewrites ["ONE_LT_dimword"]
+
 val DIMINDEX_LT =
   (GEN_ALL o CONJUNCT2 o SPEC_ALL o SIMP_RULE std_ss [DIMINDEX_GT_0] o
    SPEC `^WL`) DIVISION;
@@ -470,6 +476,9 @@ val w2n_lt = store_thm("w2n_lt",
 
 val word_0_n2w = store_thm("word_0_n2w",
   `w2n 0w = 0`, SIMP_TAC arith_ss [w2n_n2w, ZERO_LT_dimword]);
+
+val word_1_n2w = store_thm("word_1_n2w",
+  `w2n 1w = 1`, SIMP_TAC arith_ss [w2n_n2w, ONE_LT_dimword]);
 
 val w2n_eq_0 = store_thm("w2n_eq_0",
   `(w2n w = 0) = (w = 0w)`,
