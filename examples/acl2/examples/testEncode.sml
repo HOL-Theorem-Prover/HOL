@@ -475,4 +475,13 @@ val acl2_log2_def = 		convert_definition_full NONE (SOME (prove(``!a. 0 < a ==> 
 
 val acl2_division = convert_theorem DIVISION;
 
+(*****************************************************************************)
+(* HO function encoding...                                                   *)                   
+(*****************************************************************************)
+
+val acl2_filter_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] FILTER);
+
+val filter_zero_def = Define `filter_zero x = FILTER (\x. ~(x = 0n)) x`;
+
+val acl2_filter_zero_def = convert_definition filter_zero_def;
 
