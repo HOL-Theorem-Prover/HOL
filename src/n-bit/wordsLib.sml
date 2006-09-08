@@ -98,17 +98,10 @@ val WORDS_TAC = CONV_TAC WORDS_CONV;
 
 (* ------------------------------------------------------------------------- *)
 
-fun Cases_on_word tm = Q.ISPEC_THEN tm FULL_STRUCT_CASES_TAC word_nchotomy;
-
-fun Cases_on_word_ranged tm =
+fun Cases_on_word tm =
    Q.ISPEC_THEN tm FULL_STRUCT_CASES_TAC ranged_word_nchotomy;
 
 fun Cases_word (g as (_,w)) =
-  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
-  in (STRIP_TAC THEN STRUCT_CASES_TAC (Drule.ISPEC Bvar word_nchotomy)) g
-  end;
-
-fun Cases_word_ranged (g as (_,w)) =
   let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
   in (STRIP_TAC THEN STRUCT_CASES_TAC (Drule.ISPEC Bvar ranged_word_nchotomy)) g
   end;

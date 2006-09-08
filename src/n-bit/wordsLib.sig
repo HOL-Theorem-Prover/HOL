@@ -16,9 +16,6 @@ sig
     val Cases_on_word : term frag list -> tactic
     val Cases_word    : tactic
 
-    val Cases_on_word_ranged : term frag list -> tactic
-    val Cases_word_ranged    : tactic
-
     val pp_word       : (hol_type -> StringCvt.radix) -> unit
 
     val pp_word_bin   : unit -> unit
