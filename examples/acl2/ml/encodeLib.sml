@@ -28,6 +28,18 @@
 			Modified convert_theorem so |= implies a b is output, instead of (|= a) ==> (|= b) *)
 (*	12/08/2006:	Recursion theorems and restriction terms now have the forms: `!v0...vn. P v0...vn` and `\v0....vn. P v0...vn` *)
 (*	14/08/2006:	Bug-fixes to allow type checking of |= natp (add a (unary_minus (nat 1))), formed by modified NAT_CASE thm in translateTheory *)
+(*	15/08/2006:	Bug-fix: definitions were being created with hypothesis left in due to not cleaning the hypothesis set after removing recursion theorems
+			Bug-fix: recursion theorems with > 1 hypothesis couldn't be removed from the theorem
+			Bug-fix: creation of the judgement theorem failed if it couldn't remove a recursive theorem
+			Bug-fix: improved the removal of restrictions and recursion theorems from the correctness theorem *)
+(* 	07/09/2006:	Changed convert_theorem to use |- x = |= bool x instead, code is now much cleaner.
+			Changed encode_all to remove type variables
+			Changed encode_decode_function to also encode HO arguments
+			stage3 is now modified to ensure the variable naming is consistent with stage4
+			Type constraints for functions now work for HO arguments
+			Encoder matching in IF_CONV, prevents some mismatch bugs
+			Modified DISCH_HYPS so it actually works! *)
+(*	08/09/2006:	Modified make_acl2_definition & make_judgement so that HO functions that preserve arguments may now be converted (eg. FILTER) *)
 
 (* Interactive stuff... *)
 (*
@@ -2455,10 +2467,10 @@ end;
 
 fun encode_all t = 
 let	val (types,extra_types,sub_types) = get_type_chain t
+	val types' = filter (not o is_vartype) types
 in
-	if exists (not o has_encoding) types then (encode_type (hd types) ; encode_all t)
-	else app encode_all (filter (not o has_encoding) 
-		(filter (not o C mem [``:char``,``:string``]) (mk_set (extra_types @ sub_types))))
+	if exists (not o has_encoding) types' then (encode_type (hd types') ; encode_all t)
+	else app encode_all (filter (not o has_encoding) (filter (not o is_vartype) (mk_set (extra_types @ sub_types))))
 end;
 
 
@@ -2482,12 +2494,23 @@ fun get_detect_nchotomy t       = (encode_all t ; #nchotomy_thm (get_proofs t));
 
 
 (* Create a variable of the same name, but with type sexp *)
-fun sexp_var var = mk_var (fst (dest_var var),``:sexp``);
+fun sexp_var var = 
+	mk_var(fst (dest_var var),foldl (fn (x,l) => ``:sexp`` --> l) ``:sexp`` ((fst o strip_fun o type_of) var))
+
+(* Make a decoded version of a variable *)
+fun make_acl2_var var =
+let	val encoded = mk_comb((get_decode_term o snd o strip_fun o type_of) var,
+			foldl (fn (x,t) => mk_comb(t,mk_comb(get_encode_term x,variant (free_vars t) (mk_var("x",x))))) 
+				(sexp_var var) ((fst o strip_fun o type_of) var))
+in	list_mk_abs((map rand o snd o strip_comb o last o snd o strip_comb) encoded,encoded)
+end;
 
 (* Final functions *)
 fun encode_decode_function thm = 
-	INST (map (fn v => v |-> mk_comb ((get_decode_term o type_of) v,sexp_var v)) (map hd (snd (argument_list thm))))
-		(AP_TERM (get_encode_term ((type_of o lhs o concl) thm)) thm);
+let	val args = map hd (snd (argument_list thm))
+in
+	INST (map2 (curry op|->) args (map make_acl2_var args)) (AP_TERM (get_encode_term ((type_of o lhs o concl) thm)) thm)
+end;
 
 (*****************************************************************************)
 (* Stage 4: Create a possible rewrite and prove it can be used as such       *)
@@ -2544,7 +2567,8 @@ end;
 fun acl2_define_function name stage3 = 
 let	val mp_thm = prove(``(X = ite P a b) ==> ((|= P) ==> (a = X))``,RW_TAC std_ss [ite_def,TRUTH_REWRITES])
 	val function_clause = (lhs o concl) stage3;
-	val args = (map (repeat rand) o snd o strip_comb o rand) function_clause
+	val args = (map (repeat rator o last o snd o strip_comb o snd o strip_abs) o 
+			snd o strip_comb o rand) function_clause
 	val body = 
 		mk_acl2_cond(
 			list_mk_comb(mk_var("P",list_mk_fun(map type_of args,``:sexp``)),args),
@@ -2659,6 +2683,14 @@ local
 		UNDISCH (DISJ_IMP (CONV_RULE (REWR_CONV (CONV_RULE bool_EQ_CONV (AC_CONV (DISJ_ASSOC,DISJ_COMM) 
 			(mk_eq(concl thm,list_mk_disj(dest_neg h::(filter (not o curry op= (dest_neg h)) ((strip_disj o concl) thm)))))))) thm));
 
+	(* Try to prove constraints of the form: ~(|= P x) ==> (f x = f y) *)
+	fun prove_ho_constraint term = 
+	let	val proof = DISCH ((fst o dest_imp) term) 
+				(CONV_RULE bool_EQ_CONV ((DEPTH_CONV BETA_CONV THENC REWRITE_CONV (COND_ID::ite_def::(ASSUME ((fst o dest_imp) term))::(CONJUNCTS TRUTH_REWRITES))) 
+				((snd o dest_imp) term)))
+	in
+		if null (hyp proof) then proof else raise Empty
+	end;
 
 	(* If a hypothesis is a negation of something in the conclusion, remove it *)
 	fun remove_disj thm = 
@@ -2718,6 +2750,8 @@ local
 	and try_prove_term thms term = 
 		if is_acl2_true term then SEXP_TYPE_TERM_AS' thms term else
 		(	tryfind (C (PART_MATCH (snd o rstrip_imp)) term) (filter (not o is_acl2_true o snd o rstrip_imp o concl o SPEC_ALL) thms)  handle e =>
+			tryfind (C (PART_MATCH I) term) (filter (not o is_acl2_true o snd o rstrip_imp o concl o SPEC_ALL) thms) handle e =>
+			prove_ho_constraint term handle e =>
 			let	val pos_num_thms = filter (fn x => exists (C free_in (concl x)) (free_vars term)) (mapfilter (CONV_RULE (REWRITE_CONV (map GSYM 
 							(flatten (map CONJUNCTS [BOOL_THMS,NAT_THMS,INT_THMS,RAT_THMS,COM_THMS]))) THENC 
 							REWR_CONV (last (CONJUNCTS TRUTH_REWRITES)))) thms)
@@ -2743,7 +2777,7 @@ local
 		val thm = PURE_REWRITE_RULE [ACL2_ANDL,ACL2_AND] (PART_MATCH (snd o strip_imp) TYPE_ITE term)
 		val ((posa,posb),(nega,negb)) = ((dest_imp ## dest_imp) o dest_conj o fst o dest_imp o concl) thm
 		val posa' = flatten (map all_eq_detectors
-				(map (CONV_RULE (TRY_CONV EQUAL_TO_NCHOTOMY_CONV)) (CONJUNCTS (ASSUME posa))))
+				(map (CONV_RULE (TRY_CONV EQUAL_TO_NCHOTOMY_CONV THENC TRY_CONV (REWR_CONV (last (CONJUNCTS TRUTH_REWRITES))))) (CONJUNCTS (ASSUME posa))))
 		val nega' = CONV_RULE (TRY_CONV (RAND_CONV EQUAL_TO_NCHOTOMY_CONV)) (ASSUME nega)
 		val posd = DISCH posa (fix_thm (SEXP_TYPE_TERM_AS' (complete_nchotomys (posa' @ thms)) posb) (complete_nchotomys (posa' @ thms)))
 		val negd = DISCH nega (fix_thm (SEXP_TYPE_TERM_AS' (complete_nchotomys (nega'::thms)) negb) (complete_nchotomys (nega'::thms)))
@@ -2755,7 +2789,7 @@ local
 		val thm = PURE_REWRITE_RULE [ACL2_ANDL,ACL2_AND] (PART_MATCH (snd o strip_imp) TYPE_IMP term)
 		val (hyps,conc) = (dest_imp o fst o dest_imp o concl) thm
 		val thms' = flatten (map all_eq_detectors
-				(map (CONV_RULE (TRY_CONV EQUAL_TO_NCHOTOMY_CONV)) (CONJUNCTS (ASSUME hyps))))
+				(map (CONV_RULE (TRY_CONV EQUAL_TO_NCHOTOMY_CONV THENC TRY_CONV (REWR_CONV (last (CONJUNCTS TRUTH_REWRITES))))) (CONJUNCTS (ASSUME hyps))))
 		val thm' = DISCH hyps (fix_thm (SEXP_TYPE_TERM_AS' (complete_nchotomys (thms' @ thms)) conc) 
 			(complete_nchotomys (thms' @ thms)))
 	in
@@ -2808,6 +2842,17 @@ end;
 (* |- nat (a + b) = add (nat a) (nat b) etc...                               *)
 (*                                                                           *)
 (*****************************************************************************)
+
+fun ANDL_FLATTEN_CONV term =
+let	val _ = fprint_trace 4 ("andl flatten: " ^ (term_to_string term) ^ "\n")
+	val (l,_) = dest_list (rand term);
+in
+	if same_const ``andl`` (repeat rator (hd l)) then
+		(REWRITE_CONV [andl_append,APPEND] THENC ANDL_FLATTEN_CONV) term
+	else
+		(if length l <= 1 then REFL term else 
+			(TRY_CONV (REWR_CONV (last (CONJUNCTS andl_def))) THENC RATOR_CONV (RAND_CONV ANDL_FLATTEN_CONV) THENC REWRITE_CONV [andl_fold]) term)
+end;
 
 (* Remove superfluous hypothesis *)
 fun clean_hyp_set thm = 
@@ -2944,7 +2989,8 @@ let	val (p,a,b) = dest_cond (rand term)
 	val P = MATCH_MP match_thm (conv (mk_comb(``bool``,p)))
 	val _ = fprint_trace 1 ".IF"
 in
-	RIGHT_CONV_RULE (ITE_CONV_P [] conv stage4) (REWR_CONV (MATCH_MP rewrite P) term)
+	RIGHT_CONV_RULE (ITE_CONV_P [] conv stage4)
+		(REWR_CONV (MATCH_MP (INST_TY_TERM (match_term ``encode:'a -> sexp`` (rator term)) rewrite) P) term)
 end
 end;
 
@@ -3067,6 +3113,7 @@ fun SUB_CONST_CONV conv term =
 	if acl2_constant term then REFL term else
 	if is_encoded_term term then conv term else
 	if is_comb term then COMB_CONV (SUB_CONST_CONV conv) term else
+	if is_abs term then ABS_CONV (SUB_CONST_CONV conv) term else
 	if is_var term andalso type_of term = ``:sexp`` then REFL term
 	else raise UNCHANGED;
 
@@ -3109,7 +3156,27 @@ in
 		if is_comb term andalso (TypeBase.is_case o rand) term then CASE_CONV' arg_types conv stage4 term else NO_CONV term
 end;
 
+(* Converts terms of the from bool (if |= P x /\ |= Q y... then ...) , ** but only if P, Q... are valid detectors ** *)
+local
+	val andl_thm = prove(``(|= P) /\ (|= Q) = |= andl [P; Q]``,RW_TAC std_ss [ACL2_ANDL]);
+	val ite_thm = prove(``((|= P) ==> (bool a = A)) /\ (~(|= P) ==> (bool b = B)) ==> (bool (if |= P then a else b) = ite P A B)``,RW_TAC std_ss [TRUTH_REWRITES,ite_def]);
+in
+fun CONSTRAINT_CONV conv term =
+let	val (dec,a,b) = (dest_cond o rand) term
+in
+	if all (C mem (map (fst o snd) (!detectors))) ((map (repeat rator o dest_acl2_true) o strip_conj) dec) then
+		 let 	val dec_rw = TRY_CONV (REWRITE_CONV [andl_thm] THENC RAND_CONV ANDL_FLATTEN_CONV) dec handle e => REFL dec
+			val A = CONV_RULE (LAND_CONV (REWR_CONV dec_rw)) (DISCH dec (foldl (uncurry PROVE_HYP) ((DEPTH_CONV BETA_CONV THENC conv) (mk_comb(rator term,a))) (CONJUNCTS (ASSUME dec))))
+			val B = CONV_RULE (LAND_CONV (RAND_CONV (REWR_CONV dec_rw))) (DISCH (mk_neg dec) ((DEPTH_CONV BETA_CONV THENC conv) (mk_comb(rator term,b))))
+		in
+			MATCH_MP ite_thm (CONJ A B)
+		end
+	else
+		NO_CONV term
+end
+end;
 
+	
 (* ACL2_DEPTH_CONV *)
 local
 	exception bad_term of term;
@@ -3121,6 +3188,7 @@ local
 	let 	val RECURSE = ACL2_DEPTH_CONVp arg_types thms stage4
 	in
 		tryfind_u (fn x => x term) [
+			CONSTRAINT_CONV RECURSE,
 			case stage4 of NONE => NO_CONV | SOME s4 => RECURSE_CONV RECURSE s4,
 			IF_CONV RECURSE stage4,
 			CASE_CONV arg_types RECURSE stage4,
@@ -3128,7 +3196,7 @@ local
 			DEC_ENC_CONV arg_types THENCU SUB_CONST_CONV RECURSE,
 			IMP_CONV arg_types RECURSE stage4,
 			(fn term => (tryfind (fn (x,thm) => print_if (".T" ^ (int_to_string x))
-					(CUNDISCH_ALL o C (DOUBLE_MATCH (lhs o snd o strip_imp) rator) thm) term) (enumerate 0 thms)))
+					(CUNDISCH_ALL o C (DOUBLE_MATCH (lhs o snd o strip_imp) rator) thm) term) (enumerate 1 thms)))
 				 THENCU SUB_CONST_CONV RECURSE,
 			(print_if ".CONS" CONSTRUCTOR_CONV) THENCU SUB_CONST_CONV RECURSE]
 		handle UNCHANGED => 
@@ -3159,17 +3227,6 @@ end;
 (* 5) Prove all of the hypothesis using the theorems from (1)                *)
 (*                                                                           *)
 (*****************************************************************************)
-
-fun ANDL_FLATTEN_CONV term =
-let	val _ = fprint_trace 4 ("andl flatten: " ^ (term_to_string term) ^ "\n")
-	val (l,_) = dest_list (rand term);
-in
-	if same_const ``andl`` (repeat rator (hd l)) then
-		(REWRITE_CONV [andl_append,APPEND] THENC ANDL_FLATTEN_CONV) term
-	else
-		(if length l <= 1 then REFL term else 
-			(TRY_CONV (REWR_CONV (last (CONJUNCTS andl_def))) THENC RATOR_CONV (RAND_CONV ANDL_FLATTEN_CONV) THENC REWRITE_CONV [andl_fold]) term)
-end;
 
 (* Given a type judgement and a case term converts the term to a HOL term                     *)
 (* eg: CONVERT_TO_HOL ``?a b. x = cons a b`` ``|= listp natp x``                              *)
@@ -3208,26 +3265,45 @@ end;
 fun do_all_hyp f thm = foldl (uncurry f) thm (hyp thm);
 
 (* Takes a thm [h0..hn] |- a0 ==> a1 ==> .. P and returns [a0 /\ a1 /\ ... ==> h0,...] |- a0 ==> a1 ==> P *)
+local
+	val imp_distrib = DECIDE ``(A ==> X ==> C) ==> (A ==> X) ==> (A ==> C)``
+in
 fun DISCH_HYPS thm = 
 let	val hs = hyp thm
 	val imps = fst (strip_imp (concl thm))
+	fun MUNDISCH_ALL thm = 
+		if is_imp (concl thm) andalso not (is_neg (concl thm)) then MUNDISCH_ALL (UNDISCH thm) else thm
 in
 	if null hs orelse null imps then thm else
-		foldr (uncurry DISCH) (PROVE_HYP (UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] (DISCH_ALL (ASSUME (list_mk_conj imps)))))
-			(UNDISCH (foldl (fn (h,thm) => UNDISCH (MATCH_MP (DECIDE ``(A ==> X ==> C) ==> (A ==> X) ==> (A ==> C)``) (DISCH (list_mk_conj imps) (DISCH h thm))))
-				(UNDISCH_ALL thm) hs))) imps
+	foldr (uncurry DISCH) 
+		(PROVE_HYP (MUNDISCH_ALL (PURE_REWRITE_RULE [GSYM AND_IMP_INTRO] (DISCH_ALL (ASSUME (list_mk_conj imps)))))
+			(MUNDISCH_ALL (foldl (fn (h,thm) => MUNDISCH_ALL (MATCH_MP imp_distrib (DISCH (list_mk_conj imps) (DISCH h thm))))
+				(MUNDISCH_ALL thm) hs))) imps
+end
 end;
 
 local
 	val jthms = CONJUNCTS JUDGEMENT_THMS
+	fun PTJ thms h = 
+		let	val h' = 
+				(	REWRITE_CONV (CONJUNCTS TRUTH_REWRITES) THENC
+					DEPTH_CONV RIGHT_IMP_FORALL_CONV) h
+				handle UNCHANGED => REFL h
+	in
+		EQ_MP (GSYM h') 
+			(GENL ((fst o strip_forall o rhs o concl) h')
+			(PROVE_TYPE_JUDGEMENT thms ((snd o strip_forall o rhs o concl) h')))
+	end
 in
 fun prove_type_judgement types h thm = 
-	if 	(is_acl2_true o snd o strip_imp) h andalso 
-		mem ((repeat rator o dest_acl2_true o snd o strip_imp) h) (map (fst o snd) (!detectors))
+	if 	(is_acl2_true o snd o strip_forall o snd o strip_imp) h andalso 
+		(mem 	((repeat rator o dest_acl2_true o snd o strip_forall o snd o strip_imp)  h) 
+			(map (fst o snd) (!detectors)) orelse
+		(curry op= ``bool`` o repeat rator o dest_acl2_true o snd o strip_forall o snd o strip_imp) h)
 	then 
 		(fprint_trace 1 ("Proving judgement: " ^ term_to_string h) ; 
 		(PROVE_HYP (DISCH_HYPS 
-			(PROVE_TYPE_JUDGEMENT (flatten[map ASSUME types,!function_judgements,jthms]) h)) thm)
+			(PTJ (flatten[map ASSUME types,!function_judgements,jthms]) h)) thm)
 		before (fprint_trace 1 "\n"))
 		handle e => raise_error 6 "PROVE_TYPE_JUDGEMENT" "... failed!"
 	else thm
@@ -3260,7 +3336,22 @@ fun remove_converted_rec NONE h thm = thm
   | remove_converted_rec (SOME cr) h thm = 
 let	val (imps,c) = strip_imp h
 in
-	PROVE_HYP (foldr (fn (a,b) => DISCH_BUT a b []) (UNDISCH (PART_MATCH (snd o strip_imp) (DISCH_ALL cr) c)) imps) thm handle e => thm
+	PROVE_HYP (foldr (fn (a,b) => DISCH_BUT a b []) (UNDISCH_ALL (PART_MATCH (snd o strip_imp) (DISCH_ALL cr) c)) imps) thm handle e => thm
+end;
+
+fun make_ho_encoder name hol_type =
+let	val term = foldl (fn (x,t) => 
+		let 	val var = variant (free_vars t) (mk_var("x",``:sexp``))
+		in      mk_comb(t,mk_comb(get_decode_term x,var))
+		end)
+			(mk_var(name,hol_type)) 
+			(fst (strip_fun hol_type))
+	val term' = if null ((snd o strip_comb) term) then term else 
+			mk_cond(	list_mk_conj(map (fn x => mk_acl2_true(mk_comb((get_detect_term o type_of) x,rand x))) ((snd o strip_comb) term)),
+					term,
+					list_mk_comb(repeat rator term,map (rand o add_default_value_hol o get_encode_term o type_of) ((snd o strip_comb) term)))
+in
+	list_mk_abs((map rand o snd o strip_comb) term,mk_comb((get_encode_term o snd o strip_fun) hol_type,term'))
 end;
 
 local
@@ -3270,7 +3361,10 @@ fun make_acl2_definition converted_arg converted_rec stage5 =
 let	val oldPterm = (mk_acl2_true o rand o rator o rator o rhs o snd o strip_forall) (first is_definition (hyp stage5));
 	val oldP = (repeat rator o dest_acl2_true) oldPterm;
 
-	val types = filter (not o curry op= oldPterm) (filter is_acl2_true (hyp stage5));
+	val types = filter (all (curry op= ``:sexp``) o flatten o 
+				map (uncurry (C (curry op::)) o strip_fun o type_of) o free_vars)
+			(filter (not o curry op= oldPterm) (filter (is_acl2_true o snd o strip_forall) (hyp stage5)));
+
 	val terms = mk_set (filter (is_eq o snd o strip_exists o fst o strip_neg) (flatten (map (fst o strip_imp) (hyp stage5))));
 
 	val thms = mapfilter (fn term => CONVERT_TO_HOL term (first 
@@ -3282,75 +3376,117 @@ let	val oldPterm = (mk_acl2_true o rand o rator o rator o rhs o snd o strip_fora
 
 	val newPterm = list_mk_abs(snd (strip_comb (dest_acl2_true oldPterm)),
 		mk_comb(``andl``,mk_list(
-			(map dest_acl2_true types) @ 
+			(map (fn x => dest_acl2_true x handle e => mk_comb(``bool``,x)) types) @ 
 			((fn (SOME c) => [(dest_acl2_true o lhs o concl) c] | NONE => []) converted_arg) @ 
 			((fn (SOME r) => [(dest_acl2_true o concl) r] | NONE => []) converted_rec),``:sexp``)))
 
 	val Pterm_true = (mk_acl2_true (repeat body newPterm));
 
 	val (type_proofs,arg_proofs) = partition (is_acl2_true o concl) 
-			(map (REWRITE_RULE (mapfilter valOf [converted_arg])) (CONJUNCTS (UNDISCH (fst (EQ_IMP_RULE (REWRITE_CONV [ACL2_ANDL] Pterm_true))))));
+			(map (REWRITE_RULE (mapfilter valOf [converted_arg])) (CONJUNCTS (UNDISCH (fst (EQ_IMP_RULE (REWRITE_CONV [ACL2_ANDL,last (CONJUNCTS TRUTH_REWRITES)] Pterm_true))))));
 
 	val stage6 = 	(C (foldr (uncurry PROVE_HYP)) type_proofs o
 			C (foldr (uncurry PROVE_HYP)) (map (C (foldr (uncurry PROVE_HYP)) type_proofs) arg_proofs) o
 			do_all_hyp prove_nchotomy_cond o
-			do_all_hyp attempt_decision o CONV_HYP (REWRITE_CONV (mapfilter valOf [converted_arg])) o clean_hyp_set o 
-			do_all_hyp (prove_type_judgement types) o 
+			do_all_hyp attempt_decision o 
+			CONV_HYP (REWRITE_CONV (mapfilter valOf [converted_arg])) o 
+			clean_hyp_set o 
+			do_all_hyp (prove_type_judgement types) o clean_hyp_set o 
 			do_all_hyp (remove_converted_rec converted_rec) o clean_hyp_set o
-			do_all_hyp split_hyp) (CONV_HYP (DEPTH_CONV BETA_CONV THENC REWRITE_CONV [ACL2_ANDL]) (INST [oldP |-> newPterm] stage5'));
+			do_all_hyp split_hyp) 
+		(CONV_HYP (DEPTH_CONV BETA_CONV THENC REWRITE_CONV [ACL2_ANDL]) (INST [oldP |-> newPterm] stage5'));
 
 	val definition =  (fn x => new_definition((fst o dest_var o repeat rator o lhs o snd o strip_forall) x,x)) (first is_definition (hyp stage6));
 
 	val recursive = GEN_ALL (MATCH_MP rewrite 
-		(CONJ (BETA_RULE (MATCH_MP (DISCH (first is_definition (hyp stage6)) (DISCH Pterm_true stage6)) definition)) (SPEC_ALL definition)));
+		(CONJ 
+		(BETA_RULE (MATCH_MP (DISCH (first is_definition (hyp stage6)) (DISCH Pterm_true stage6)) definition)) 
+		(INST_TY_TERM (match_term 
+			(((fn (a,b,c) => b) o dest_acl2_cond o rhs o snd o 
+				strip_forall o first is_definition o hyp) stage6) 
+			((lhs o concl o BETA_RULE) stage6)) (SPEC_ALL definition))));
 
-	val hol_types = filter has_encoding (map type_of (find_terms (fn x => can rand x andalso exists (curry op= (rand x) o rand o dest_acl2_true) types andalso 
-				not (type_of x = ``:sexp``)) (concl definition)));
+	val hol_types = (fst o strip_fun o type_of o repeat rator o rand o lhs o concl) stage6;
 
-	val encoders = 
-		zip types (map (fn x => (get_encoder o fst o first (curry op= ((rator o dest_acl2_true) x) o snd)) (map (fn x => (x,get_detector x)) hol_types)) types);
+	val enc_decs = map get_encode_decode_thm (flatten (map (uncurry (C (curry op::)) o strip_fun) hol_types));
+	val enc_dets = map get_detect_encode_thm (flatten (map (uncurry (C (curry op::)) o strip_fun) hol_types));
+	val encoders = map2 (fn n => fn t => n |-> make_ho_encoder ((fst o dest_var) n) t)
+					((snd o strip_comb o lhs o concl o SPEC_ALL) definition)
+					hol_types
+	
+	val correct = (SYM o CONV_RULE (DEPTH_CONV ETA_CONV) o SIMP_RULE std_ss (ite_def::ACL2_ANDL::TRUTH_REWRITES::(
+				enc_dets @ 
+				(mapfilter (DISCH_ALL o valOf) [Option.map (REWRITE_RULE (enc_decs @ enc_dets) o DISCH_ALL o INST encoders) converted_arg]) @ 
+				(mapfilter (DISCH_ALL o valOf) [Option.map (REWRITE_RULE (enc_decs @ enc_dets) o DISCH_ALL o INST encoders) converted_rec]))))
+		(REWRITE_RULE enc_decs 
+		(BETA_RULE (INST encoders (SPEC_ALL definition))));
 
 
+	(*
 	fun match_encoder (e,thm) = 
 	let	val x = rand (find_term (fn x => can (match_term (dest_acl2_true (fst e))) x andalso is_var (rand x)) (concl thm))
 	in	INST [x |-> mk_comb(snd e,mk_var(fst (dest_var x),fst (dom_rng (type_of (snd e)))))] thm end;
 
+	val converted_arg' = 
+		Option.map (REWRITE_RULE (enc_decs @ enc_dets) o C (foldl (fn (a,b) => match_encoder (a,b) handle e => b)) encoders o DISCH_ALL) converted_arg;
+
+	val converted_rec' = 
+		Option.map (REWRITE_RULE (enc_decs @ enc_dets) o C (foldl (fn (a,b) => match_encoder (a,b) handle e => b)) encoders o DISCH_ALL) converted_rec;
 
 	val correct = SYM (SIMP_RULE std_ss (ite_def::ACL2_ANDL::TRUTH_REWRITES::(
-				(map get_detect_encode_thm hol_types) @ 
-				(mapfilter (DISCH_ALL o valOf) [converted_arg]) @ 
-				(mapfilter (DISCH_ALL o valOf) [converted_rec])))
-		(REWRITE_RULE (map get_encode_decode_thm hol_types) (foldl match_encoder (SPEC_ALL definition) encoders)));
+				enc_dets @ 
+				(mapfilter (DISCH_ALL o valOf) [converted_arg']) @ 
+				(mapfilter (DISCH_ALL o valOf) [converted_rec'])))
+		(REWRITE_RULE enc_decs (foldl match_encoder (SPEC_ALL definition) encoders)));
+	*)
 
 	val correct' = 
-		GEN_ALL (SIMP_RULE std_ss (map get_encode_decode_thm hol_types) 
+		GEN_ALL (SIMP_RULE std_ss enc_decs
 			(DISCH ((mk_neg o (fn (a,b,c) => a) o dest_cond o lhs o concl) correct) correct) handle e => correct);
 in
 	(correct',REWRITE_RULE [el 2 (CONJUNCTS andl_def)] recursive)
 end
 end;
 
-local
-	fun make_acl2_var term = 
-		mk_comb(get_decoder (type_of term),mk_var((fst o dest_var) term,``:sexp``))
+fun make_decode_encode_ho_thm term = 
+let	val (quants,body) = strip_abs term
+	val cases = ((fn (a,b,c) => a) o dest_cond o rand) body
+	val terms = (snd o strip_comb o rand o (fn (a,b,c) => b) o dest_cond o rand) body
+	val dec_encs = map2 (fn x => UNDISCH o SPEC ((rand o rand) x)) terms (map (get_decode_encode_thm o type_of o rand) terms)
+	
+	val true_thm = REWRITE_CONV (ASSUME cases::dec_encs) body;
+
+	val fthm1 = CONV_HYP (REWRITE_CONV [DE_MORGAN_THM]) (REWRITE_CONV [ASSUME (mk_neg cases)] body);
+	val false_thm = RIGHT_CONV_RULE (REWRITE_CONV [GSYM (MATCH_MP (ASSUME (list_mk_forall(quants,mk_imp(hd (hyp fthm1),
+				mk_eq((rand o rand o rhs o concl) true_thm,(rand o rand o rhs o concl) fthm1))))) (ASSUME (hd (hyp fthm1))))]) fthm1;
 in
-fun make_judgement converted_arg recursive correct =
+	CONV_RULE (DEPTH_CONV ETA_CONV) (foldr (uncurry ABS) 
+		(TRANS 	(DISJ_CASES (SPEC (hd (hyp true_thm)) EXCLUDED_MIDDLE) true_thm false_thm)
+			(MATCH_MP ((get_decode_encode_thm o type_of o rand) body) 
+				(SPEC_ALL (ASSUME (list_mk_forall(quants,mk_acl2_true (mk_comb((get_detect_term o type_of o rand) body,((rand o rand o rhs o concl) true_thm))))))))) quants)
+end handle e => UNDISCH (PART_MATCH (lhs o snd o strip_imp) ((get_decode_encode_thm o type_of o rand) term) term);
+
+fun make_judgement converted_rec converted_arg recursive correct =
 let	val vars = (fst o strip_forall o concl) correct
-	val svars = (map make_acl2_var vars)
-	val thm1 = SPECL svars correct
+	val svars = map make_acl2_var vars
+	val thm1 = BETA_RULE (SPECL svars correct)
 	val term = (rand o lhs o snd o strip_imp o concl) thm1;
-	val thm2 = GENL (map rand svars) (DISCH_AND_CONJ
-		(CONV_HYP (REWRITE_CONV (mapfilter (GSYM o valOf) [converted_arg])) (REWRITE_RULE 
-			(map2 (fn a => fn b => UNDISCH (SPEC (rand a) ((get_decode_encode_thm o type_of) b))) svars vars)
-		(ONCE_REWRITE_RULE [UNDISCH_ALL thm1] (SPEC term ((get_detect_encode_thm o type_of) term))))))
+	val thm2 = DISCH_AND_CONJ (ONCE_REWRITE_RULE [UNDISCH_ALL thm1] (SPEC term ((get_detect_encode_thm o type_of) term)));
+	val thm3 = GENL (free_varsl svars) (DISCH_AND_CONJ ((clean_hyp_set o 
+				REWRITE_RULE (mapfilter (GSYM o valOf) [converted_arg,converted_rec]) o
+				REWRITE_RULE ((map make_decode_encode_ho_thm o snd o strip_comb o rand o dest_acl2_true o snd o strip_imp o concl) thm2)) thm2));
+	val ho_assumptions = filter (fn x => is_forall x andalso (is_imp o snd o strip_forall) x) 
+					((strip_conj o fst o dest_imp o concl) (PART_MATCH (rand o dest_acl2_true o snd o strip_imp) thm3 ((lhs o concl o SPEC_ALL) recursive))) handle e => []
 	val detector = (get_detector o type_of o rand o lhs o snd o strip_imp o snd o strip_forall o concl) correct
 	val _ = fprint_trace 1 "Typing function body: "
-	val res = GEN_ALL (REWRITE_RULE [GSYM recursive] 
-		(PROVE_TYPE_JUDGEMENT (thm2::(flatten [!function_judgements,CONJUNCTS JUDGEMENT_THMS]))
-			(mk_acl2_true (mk_comb (detector, (rhs o snd o strip_forall o concl) recursive)))))
+	val res = REWRITE_RULE [GSYM recursive] 
+		(PROVE_TYPE_JUDGEMENT (thm3::(flatten [map ASSUME ho_assumptions,!function_judgements,CONJUNCTS JUDGEMENT_THMS]))
+			(mk_acl2_true (mk_comb (detector, (rhs o snd o strip_forall o concl) recursive))))
 in
-	if not (null (hyp res)) then raise_error 6 "make_judgement" ("Hypothesis remain in judgement theorem: " ^ (thm_to_string (DISCH_AND_CONJ res))) else (fprint_trace 1 "\n" ; res)
-end
+	if not (null (set_diff (hyp res) ho_assumptions)) then 
+		raise_error 6 "make_judgement" ("Hypothesis remain in judgement theorem: " ^ (thm_to_string (DISCH_AND_CONJ res))) 
+	else 
+		(fprint_trace 1 "\n" ; GEN_ALL (DISCH_AND_CONJ res))
 end;
 
 local
@@ -3371,14 +3507,31 @@ val rewrite_thms = ref (flatten (map CONJUNCTS [NAT_THMS,INT_THMS,RAT_THMS,COM_T
 fun ilist_mk_comb [] term = term
   | ilist_mk_comb (x::xs) term = ilist_mk_comb xs (beta_conv (mk_comb(inst (match_type (fst (dom_rng (type_of term))) (type_of x)) term,x)))
 
+(* Returns type constraints for arguments *)
+fun get_arg_constraints stage3' = 
+let	val args = (snd o strip_comb o rand o lhs o concl) stage3'
+	val decodes = map (get_detect_term o type_of o repeat body) args;
+in
+	map2 (fn arg => fn decode => 
+		ASSUME(list_mk_forall(	(map sexp_var o fst o strip_abs) arg,
+					mk_acl2_true (mk_comb(decode,
+						list_mk_comb((repeat rator o rand o snd o strip_abs) arg,
+						(map sexp_var o fst o strip_abs) arg)))))) args decodes
+end;
+
 fun convert_definition_full arg_assumption recursion_thm thm = 
 let	val function = CONV_RULE (EVERY_CONJ_CONV (STRIP_QUANT_CONV 
-				(RAND_CONV (SIMP_CONV (std_ss ++ boolSimps.LET_ss) [] THENC DEPTH_CONV FULL_BETA_CONV)))) thm
-	val stage3 = encode_decode_function (curry_single_function (convert_tc function));
-	val arg_types = map (fn x => ASSUME (mk_acl2_true(mk_comb(get_detect_term (type_of x),(rand x))))) ((snd o strip_comb o rand o lhs o concl) stage3)
-	
-	val stage4 = acl2_define_function ("acl2_" ^ ((fst o dest_const o repeat rator o lhs o snd o strip_forall o hd o strip_conj o concl) function)) stage3;
-	val stage5 = convert_acl2 arg_types stage3 stage4 (!rewrite_thms);
+				(RAND_CONV (SIMP_CONV (std_ss ++ boolSimps.LET_ss) [] THENC 
+			DEPTH_CONV FULL_BETA_CONV)))) thm
+	val stage3 = RIGHT_CONV_RULE (DEPTH_CONV BETA_CONV) (encode_decode_function (curry_single_function (convert_tc function)))
+	val stage4 = acl2_define_function 
+		("acl2_" ^ ((fst o dest_const o repeat rator o lhs o 
+			snd o strip_forall o hd o strip_conj o concl) function)) stage3;
+
+	val stage3' =	INST_TY_TERM (match_term ((lhs o concl o BETA_RULE) stage3) ((lhs o concl) stage4)) stage3
+	val arg_types = get_arg_constraints stage3'
+	val stage5 = 
+		convert_acl2 arg_types stage3' stage4 (!rewrite_thms);
 
 	val arg = Option.map (ilist_mk_comb ((snd o strip_comb o rand o lhs o concl) stage4)) arg_assumption
 	val rtm = Option.map (ISPECL ((snd o strip_comb o rand o lhs o concl) stage4)) recursion_thm
@@ -3392,7 +3545,7 @@ let	val function = CONV_RULE (EVERY_CONJ_CONV (STRIP_QUANT_CONV
 	val (correct,recursive) = make_acl2_definition converted_arg converted_rec
 		((fn (SOME x) => UNDISCH (DISCH_BUT x stage5 (first is_definition (hyp stage4) :: (filter is_acl2_true (hyp stage5)))) | NONE => stage5) arg)
 
-	val judgement = make_judgement converted_arg recursive correct;
+	val judgement = make_judgement converted_rec converted_arg recursive correct;
 
 	val _ = fprint_trace 1 ("Adding judgement theorem: " ^ (thm_to_string judgement) ^ "\n")
 	val _ = fprint_trace 2 ("Adding rewrite theorem: " ^ (thm_to_string correct) ^ "\n")
@@ -3405,7 +3558,6 @@ end;
 
 fun convert_definition_restricted arg_assumption thm = convert_definition_full (SOME arg_assumption) NONE thm;
 fun convert_definition thm = convert_definition_full NONE NONE thm;
-	
 
 local
 	val flattened_detectors = ref ([]:(hol_type * (thm * thm)) list)
@@ -3441,9 +3593,8 @@ in
 end;
 
 local
-	val truth_rewrite = prove(``(a = t) ==> |= a``,RW_TAC std_ss [TRUTH_REWRITES])
-	val eq_rewrite = prove(``(a = b) ==> (|= equal a b)``,RW_TAC std_ss [equal_def,ite_def,TRUTH_REWRITES])
-	val imp_rewrite = prove(``((|= a) ==> (|= b)) ==> (|= implies a b)``,RW_TAC arith_ss [andl_def,implies_def,ite_def,TRUTH_REWRITES])
+	val imp_rewrite = prove(``((|= a) ==> (|= b)) ==> (|= implies a b)``,
+		RW_TAC arith_ss [andl_def,implies_def,ite_def,TRUTH_REWRITES])
 in
 fun finish_conversion types thm = 
 let	val terms = filter (is_eq o snd o strip_exists o fst o strip_neg) (flatten (map (fst o strip_imp) (hyp thm)));
@@ -3460,9 +3611,9 @@ in
 	(fn x => MATCH_MP imp_rewrite x handle e => x)
 	(CONV_RULE (if null (hyp thm') then 
 			ALL_CONV else 
-			LAND_CONV (REWR_CONV (DECIDE ``A = A /\ T``) THENC PURE_REWRITE_CONV [GSYM ACL2_ANDL,GSYM CONJ_ASSOC]))
-		(DISCH_AND_CONJ (do_all_hyp (prove_type_judgement types) 
-			(MATCH_MP truth_rewrite thm' handle e => MATCH_MP eq_rewrite thm' handle e => thm'))))
+			LAND_CONV (REWR_CONV (DECIDE ``A = A /\ T``) THENC 
+				PURE_REWRITE_CONV [GSYM ACL2_ANDL,GSYM CONJ_ASSOC]))
+		(DISCH_AND_CONJ (do_all_hyp (prove_type_judgement types) thm')))
 		
 end
 end;
@@ -3471,15 +3622,13 @@ end;
 
 fun convert_theorem thm = 
 let	val thm_a = CONV_RULE (DEPTH_CONV (AND_FORALL_CONV ORELSEC OR_FORALL_CONV ORELSEC RIGHT_IMP_FORALL_CONV)) thm
-	val thm_b = if (is_eq o snd o strip_forall o concl) thm_a
-			then (SPEC_ALL thm_a)
-			else REWRITE_CONV [thm_a] ((snd o strip_forall o concl) thm_a)
+	val thm_b = SPEC_ALL thm_a
 	val vars = free_vars (concl thm_b)
 	val arg_types = map (fn x => ASSUME (mk_acl2_true(mk_comb(get_detect_term (type_of x),sexp_var x)))) vars
 	val arg_decodes = map (fn x => mk_comb(get_decode_term (type_of x),sexp_var x)) vars	
 in
 	finish_conversion (map concl arg_types) 
-		(CONV_RULE (BINOP_CONV (ACL2_DEPTH_CONV arg_types (!rewrite_thms) NONE))
-			(AP_TERM ((get_encode_term o type_of o lhs o concl) thm_b) 
+		(CONV_RULE (RAND_CONV (ACL2_DEPTH_CONV arg_types (!rewrite_thms) NONE))
+			(CONV_RULE (ONCE_REWRITE_CONV [GSYM SEXP_TO_BOOL_OF_BOOL] THENC REWRITE_CONV [sexp_to_bool_def])
 				(INST (map2 (curry op|->) vars arg_decodes) thm_b)))
 end;

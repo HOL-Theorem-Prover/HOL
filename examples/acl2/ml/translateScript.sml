@@ -15,6 +15,7 @@
 			added case & 'flat' theorems
 			created translateLib for CHOOSEP *)
 (* 	14/08/2006:	Changed NAT_CASE to use PRE (which uses ~(n = 0)) *) 
+(*	15/08/2006:	Added NAT_SUC_PRE because (SUC (PRE a)) is a common, resolvable, term in many function definitions *)
 (* 	28/08/2006:	Exported some additional theorems (MJCG) *)
 
 (*****************************************************************************)
@@ -450,6 +451,9 @@ val NAT_SUC = prove(``!a. nat (SUC a) = add (nat a) (nat 1)``,
 
 val NAT_PRE = prove(``!a. ~(a = 0n) ==> (nat (PRE a) = add (nat a) (unary_minus (nat 1)))``,
 	Cases THEN RW_TAC arith_ss [nat_def,GSYM INT_UNARY_MINUS,GSYM INT_ADD] THEN AP_TERM_TAC THEN RW_TAC int_ss [ADD1,GSYM integerTheory.INT_ADD] THEN ARITH_TAC);
+
+val NAT_SUC_PRE = prove(``!a. ~(a = 0n) ==> (nat (SUC (PRE a)) = nat a)``,
+	REPEAT STRIP_TAC THEN AP_TERM_TAC THEN RW_TAC arith_ss [ADD1]);
 
 val NAT_MULT = prove(``!a b. nat (a * b) = mult (nat a) (nat b)``,
 	RW_TAC std_ss [nat_def,mult_def,int_def,cpx_def,sexpTheory.rat_def,COMPLEX_MULT_def,rat_0_def,GSYM rat_0,GSYM frac_0_def,
@@ -1225,7 +1229,7 @@ val MK_THMS = LIST_CONJ o (map GEN_ALL);
 
 val NAT_THMS = save_thm("NAT_THMS",
 	MK_THMS [	NAT_OF_SEXP_TO_NAT,NAT_EQUAL_0,NAT_EQUAL,NAT_0_LT,NAT_LT,NAT_LE,NAT_GE,NAT_GT,
-			NAT_ADD,NAT_PRE,NAT_SUC,NAT_MULT,NAT_SUB,NAT_EXP,NAT_DIV,NAT_MOD,NAT_EVEN,NAT_ODD]);
+			NAT_ADD,NAT_SUC_PRE,NAT_PRE,NAT_SUC,NAT_MULT,NAT_SUB,NAT_EXP,NAT_DIV,NAT_MOD,NAT_EVEN,NAT_ODD]);
 
 val INT_THMS = save_thm("INT_THMS",
 	MK_THMS [	INT_OF_SEXP_TO_INT,INT_EQUAL,INT_LT,INT_LE,INT_GE,INT_GT,
