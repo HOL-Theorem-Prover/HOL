@@ -44,11 +44,29 @@ fun simp_axiom (ax,tm) =
    in DISCH asm (GENL vs th2)
    end
 
+
+(* ----------------------------------- *)
+(* Version of prove_asm with monosets: *)
+(* Added by PVH on September 8, 2006.  *)
+(* ----------------------------------- *)
+
+fun simple_subst theta tm =
+  assoc tm theta handle HOL_ERR _ =>
+  if is_abs tm then
+     let val (v,bdy) = dest_abs tm
+     in mk_abs(v, simple_subst theta bdy)
+     end
+  else if is_comb tm then
+     let val (tm1,tm2) = dest_comb tm
+     in mk_comb(simple_subst theta tm1, simple_subst theta tm2)
+     end
+  else tm;
+
 (* prove that tm1 ==> tm2 : both are conjuncts of terms, but possibly with
    additional existential quantifiers guarding some of the conjuncts.
    tm2's conjuncts are a subset of tm1's and the existential variables all
    have the same choice of names *)
-fun prove_asm tm1 tm2 = let
+fun prove_asm monoset tm1 tm2 = let
   fun assums mp thm =
       if is_conj (concl thm) then let
           val (th1, th2) = CONJ_PAIR thm
@@ -60,7 +78,26 @@ fun prove_asm tm1 tm2 = let
         in
           assums (Binarymap.insert(mp, concl thm, thm)) (ASSUME body)
         end
-      else Binarymap.insert(mp, concl thm, thm)
+      else (let val cnst = (fst o strip_comb o concl) thm
+                val tac = assoc ((fst o dest_const) cnst) monoset
+                val tac1 = POP_ASSUM MP_TAC
+                           THEN tac
+                           THEN REPEAT GEN_TAC
+                           THEN REPEAT DISCH_TAC
+                val tm' = concl thm
+                val (sbgls,just) = tac1 (dest_thm (ASSUME tm'))
+                val gls = map (snd o strip_forall o snd) sbgls
+                fun foldit (gl,mp) =
+                    let val thm = ASSUME gl
+                    in assums (Binarymap.insert(mp, gl, thm)) thm
+                    end
+                val mp1 = List.foldl foldit mp gls
+                val ths = map (fn gl => valOf (Binarymap.peek(mp1,gl))) gls
+                val thm' = just ths
+            in Binarymap.insert(mp1, concl thm, thm)
+            end
+            handle _ => (* throw from `assoc' failing *)
+            Binarymap.insert(mp, concl thm, thm))
   val mp = assums (Binarymap.mkDict Term.compare) (ASSUME tm1)
   fun prove_it tm =
       if is_conj tm then uncurry CONJ ((prove_it ## prove_it) (dest_conj tm))
@@ -70,16 +107,36 @@ fun prove_asm tm1 tm2 = let
         in
           CHOOSE (v, Binarymap.find (mp, mk_exists(v, hd (hyp th)))) th
         end
-      else Binarymap.find(mp, tm)
+      else (let val cnst = (fst o strip_comb) tm
+                val tac = assoc ((fst o dest_const) cnst) monoset
+                val tac1 = POP_ASSUM MP_TAC
+                           THEN tac
+                           THEN REPEAT GEN_TAC
+                           THEN REPEAT DISCH_TAC
+                val (sbgls,just) = tac1 ([tm],tm)
+                val gls = map (snd o strip_forall o snd) sbgls
+                val ths = map prove_it gls
+                val hyps = map (hd o hyp) ths
+                val theta = (zip gls hyps)
+                val tm' = simple_subst theta tm
+                val (sbgls,just) = tac1 ([tm'],tm)
+                val thm' = just ths
+                val prvn_hyps = mapfilter (fn h => Lib.trye Binarymap.find (mp, h)) (hyp thm')
+                fun disch_hyps (h,thm) = MP (DISCH (concl h) thm) h handle HOL_ERR _ => thm
+            in List.foldl disch_hyps thm' prvn_hyps
+            end
+            handle _ => (* throw from `assoc' on monoset failing *)
+            Binarymap.find(mp, tm))
 in
   DISCH_ALL (prove_it tm2)
 end
 
-fun simp_concl rul tm =
+
+fun simp_concl monoset rul tm =
  let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
      val srul = SPECL vs rul
      val (cvs,(_,conj2)) = (I ## dest_conj) (strip_forall conseq)
-     val simpl = prove_asm ant (#1 (dest_imp (concl srul)))
+     val simpl = prove_asm monoset ant (#1 (dest_imp (concl srul)))
      val thm1 = SPECL cvs (UNDISCH (IMP_TRANS simpl srul))
      val newasm = list_mk_forall(vs,mk_imp(ant,list_mk_forall(cvs,conj2)))
      val thm2 = CONJ thm1 (SPECL cvs (UNDISCH (SPECL vs (ASSUME newasm))))
@@ -100,13 +157,13 @@ fun simp_concl rul tm =
    where newform is both beta-collapsed, and has unnecessary conclusion terms
    i.e., of form const args, removed.
 *)
-fun simp_rule (rul,tm) =
+fun simp_rule monoset (rul,tm) =
  let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
      val (cvs,red) = strip_forall conseq
      val bth = itlist FORALL_EQ cvs (LIST_BETA_CONV red)
      val basm = #1 (EQ_IMP_RULE
-                      ((DEPTH_CONV BETA_CONV THENC
-                        REWRITE_CONV [GSYM CONJ_ASSOC]) ant))
+                      (QCONV(DEPTH_CONV BETA_CONV THENC
+                             REWRITE_CONV [GSYM CONJ_ASSOC]) ant))
      val asm = list_mk_forall(vs,mk_imp(rand(concl basm),rand(concl bth)))
 
      val thm1 = UNDISCH (IMP_TRANS basm (SPECL vs (ASSUME asm)))
@@ -115,13 +172,13 @@ fun simp_rule (rul,tm) =
      val thm2 = DISCH asm (GENL vs (DISCH ant (EQ_MP (SYM bth) thm1)))
                 (* implication: beta-reduced(tm) ==> tm *)
 
-     val thm3 = simp_concl rul (rand(rator(concl thm2)))
+     val thm3 = simp_concl monoset rul (rand(rator(concl thm2)))
                 (* implication: newform ==> beta-reduced(tm) *)
 
  in IMP_TRANS thm3 thm2
  end;
 
-fun simp p = simp_rule p handle HOL_ERR _ => simp_axiom p;
+fun simp monoset p = simp_rule monoset p handle HOL_ERR _ => simp_axiom p;
 
 fun forall_andl_conv t = let
   fun ONE_VAR_MANY_ANDS t =
@@ -134,7 +191,7 @@ in
   else ALL_CONV t
 end
 
-fun derive_strong_induction (rule_th,ind) = let
+fun prim_derive_strong_induction monoset (rule_th,ind) = let
   val rules_th = CONV_RULE forall_andl_conv rule_th
   val (svs, _) = strip_forall (concl rule_th)
   val rules = CONJUNCTS rules_th
@@ -152,7 +209,7 @@ fun derive_strong_induction (rule_th,ind) = let
   val pna_list = map mapme conseqs
   val ith = INST (map #1 pna_list) (SPECL vs ind)
   val ants = strip_conj (#1 (dest_imp (concl ith)))
-  val ths = ListPair.map simp (srules,ants)
+  val ths = ListPair.map (simp monoset) (srules,ants)
   val iths = map DISCH_ALL (CONJUNCTS (UNDISCH ith))
 
   fun mapme2 (({residue = newp, redex}, args, rel), ith) = let
@@ -172,6 +229,9 @@ fun derive_strong_induction (rule_th,ind) = let
  end
  handle e => raise (wrap_exn "IndDefRules"
                              "derive_strong_induction" e);
+
+val derive_strong_induction =
+    prim_derive_strong_induction InductiveDefinition.bool_monoset;
 
 
 (* ===================================================================== *)

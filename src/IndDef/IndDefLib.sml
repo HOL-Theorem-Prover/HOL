@@ -62,8 +62,8 @@ fun names_from_casethm thm =
 
 fun prim_Hol_reln monoset tm = 
  let val (rules, indn, cases) =
-        InductiveDefinition.new_inductive_definition
-                  InductiveDefinition.bool_monoset tm
+        InductiveDefinition.new_inductive_definition monoset tm
+                  (* not! InductiveDefinition.bool_monoset tm *)
      val names = names_from_casethm cases
      val name = hd names
      val _ = save_thm(name^"_rules", rules)
@@ -78,5 +78,8 @@ handle e => raise (wrap_exn "IndDefLib" "prim_Hol_reln" e);
 fun Hol_reln q =
     prim_Hol_reln InductiveDefinition.bool_monoset (term_of q)
     handle e => Raise (wrap_exn "IndDefLib" "Hol_reln" e);
+
+val prim_derive_strong_induction = IndDefRules.prim_derive_strong_induction;
+val derive_strong_induction = IndDefRules.derive_strong_induction;
 
 end

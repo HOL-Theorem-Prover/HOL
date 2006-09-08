@@ -9,4 +9,7 @@ sig
   val Hol_reln      : term quotation -> thm * thm * thm
   val prim_Hol_reln : monoset -> term -> thm * thm * thm
 
+  val prim_derive_strong_induction : monoset -> thm * thm -> thm
+  val derive_strong_induction : thm * thm -> thm
+
 end
