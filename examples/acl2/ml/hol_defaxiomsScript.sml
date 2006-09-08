@@ -1,6 +1,8 @@
 
 (*****************************************************************************)
-(* HOL definition of the ACL2 functions defined in defaxioms.lisp.trans.     *)
+(* HOL definition of those ACL2 functions defined in defaxioms.lisp.trans    *)
+(* that are used in the axioms proved in hol_defaxioms_proofsTheory.         *)
+(* Unused functions are specified in comments, but not actually defined.     *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -505,6 +507,14 @@ val endp_def =
           (member_equal x (cdr lst)),
 *)
 
+val (member_equal_def,member_equal_ind) =
+ acl2_defn "ACL2::MEMBER-EQUAL"
+  (`member_equal x lst =
+     itel [(endp lst,nil); (equal x (car lst),lst)]
+          (member_equal x (cdr lst))`,
+   WF_REL_TAC `measure (sexp_size o SND)`
+    THEN ACL2_SIMP_TAC []);
+
 (*
      [oracles: DEFUN ACL2::UNION-EQUAL, DISK_THM] [axioms: ] []
      |- union_equal x y =
@@ -699,6 +709,9 @@ val fix =
 (*
      [oracles: DEFUN ACL2::FORCE] [axioms: ] [] |- force x = x,
 *)
+
+val force_def =
+ Define `force(s:sexp) = s`;
 
 (*
      [oracles: DEFUN ACL2::IMMEDIATE-FORCE-MODEP] [axioms: ] []
@@ -1489,6 +1502,14 @@ val sexp_to_num_less =
         itel [(endp l,nil); (equal acl2_str (symbol_name (car l)),l)]
           (member_symbol_name acl2_str (cdr l)),
 *)
+
+val (member_symbol_name_def,member_symbol_name_ind) =
+ acl2_defn "ACL2::MEMBER-SYMBOL-NAME"
+  (`member_symbol_name acl2_str l =
+     itel [(endp l,nil); (equal acl2_str (symbol_name (car l)),l)]
+          (member_symbol_name acl2_str (cdr l))`,
+   WF_REL_TAC `measure (sexp_size o SND)`
+    THEN ACL2_SIMP_TAC []);
 
 (*
      [oracles: DEFUN ACL2::BINARY-APPEND, DISK_THM] [axioms: ] []
