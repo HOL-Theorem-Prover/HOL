@@ -15,5 +15,3 @@ The files are as follows:
  * armLib: Some simple tactics and simpsets.
 
  * correctness/: contains a proof of correctness (be patient when running!).
-
- * evaluation/: some work on running the models.

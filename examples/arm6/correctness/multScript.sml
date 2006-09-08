@@ -401,7 +401,7 @@ val MULT_MOD_SUC_T = prove(
     \\ ASM_SIMP_TAC (arith_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,SPEC_SLICE_COMP,
          word_extract_def,w2w_w2w,w2w_id,GSYM word_add_n2w,GSYM WORD_SLICE_THM,
          WORD_BITS_COMP_THM,WORD_LEFT_ADD_DISTRIB,WORD_ADD_COMM]
-    \\ Cases_on_word `b`
+    \\ Cases_on_word `b` \\ POP_ASSUM (K ALL_TAC)
     \\ STRIP_ASSUME_TAC (Thm.INST_TYPE [alpha |-> ``:i32``] EXISTS_HB)
     \\ ASM_SIMP_TAC std_ss [dimword_def,GSYM BITS_ZERO3,SLICE_BITS_THM,SUC_SUB1,
          word_slice_n2w,w2n_n2w]);
@@ -413,7 +413,8 @@ val MULT_MOD_SUC_T = save_thm("MULT_MOD_SUC_T",
 
 val LSL_MULT_EXP = prove(
   `!w n. w << n = w * n2w (2 ** n)`,
-  Cases_word \\ RW_TAC bool_ss [word_lsl_n2w,word_mul_n2w]
+  Cases_word \\ POP_ASSUM (K ALL_TAC)
+    \\ RW_TAC bool_ss [word_lsl_n2w,word_mul_n2w]
     \\ IMP_RES_TAC LESS_ADD_1
     \\ POP_ASSUM (SUBST1_TAC o SIMP_RULE std_ss [DIMINDEX_GT_0,
          DECIDE ``0 < n ==> (n - 1 + (p + 1) = p + n)``])
