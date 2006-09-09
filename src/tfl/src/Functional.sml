@@ -53,8 +53,8 @@ val givens = mapfilter not_omitted;
  * Produce an instance of a constructor, plus genvars for its arguments.
  *---------------------------------------------------------------------------*)
 
-fun fresh_constr ty_match colty gv c =
-  let val (_,Ty) = dest_const c
+fun fresh_constr ty_match (colty:hol_type) gv c =
+  let val Ty = type_of c
       val (L,ty) = strip_fun_type Ty
       val ty_theta = ty_match ty colty
       val c' = inst ty_theta c
@@ -83,14 +83,16 @@ fun mk_groupl Literal rows =
 
 (*---------------------------------------------------------------------------*
  * Goes through a list of rows and picks out the ones beginning with a       *
- * pattern with constructor = Name.                                          *
+ * pattern with constructor = c.                                             *
  *---------------------------------------------------------------------------*)
 
-fun mk_group Name rows =
+fun mk_group c rows =
   let fun func (row as ((prefix, p::rst), rhs)) (in_group,not_in_group) =
             let val (pc,args) = strip_comb p
-            in if ((fst(dest_const pc) = Name) handle HOL_ERR _ => false)
+            in if same_const pc c
                then (((prefix,args@rst), rhs)::in_group, not_in_group)
+               else if p = c (* literal, considered as 0-ary constructor *)
+               then (((prefix,rst), rhs)::in_group, not_in_group)
                else (in_group, row::not_in_group)
             end
         | func _ _ = raise ERR "mk_group" ""
@@ -131,13 +133,12 @@ end;
 
 fun partition _ _ (_,_,_,[]) = raise ERR"partition" "no rows"
   | partition gv ty_match
-              (constructors, colty, res_ty, rows as (((prefix,_),_)::_)) =
+              (constructors, colty, res_ty, rows as (((prefix:term list,_),_)::_)) =
 let val fresh = fresh_constr ty_match colty gv
      fun part {constrs = [],      rows, A} = rev A
        | part {constrs = c::crst, rows, A} =
          let val (c',gvars) = fresh c
-             val (Name,Ty) = dest_const c'
-             val (in_group, not_in_group) = mk_group Name rows
+             val (in_group, not_in_group) = mk_group c' rows
              val in_group' =
                  if (null in_group)  (* Constructor not given *)
                  then [((prefix, #2(fresh c)), OMITTED (mk_arb res_ty, ~1))]
@@ -185,20 +186,21 @@ fun v_to_pats (v::prefix,tag, pats) = (prefix, tag, v::pats)
 (* Boolean literals are handled as constructors of the bool type. *)
 (* -------------------------------------------------------------- *)
 
-(*
 val is_literal = Literal.is_literal
 
 fun is_lit_or_var tm = is_literal tm orelse is_var tm
 
+fun is_closed_or_var tm = is_var tm orelse null (free_vars tm)
+
 fun is_zero_emptystr_or_var tm =
     Literal.is_zero tm orelse Literal.is_emptystring tm orelse is_var tm
-*)
+
 
 (*---------------------------------------------------------------------------*)
 (* Reconstructed code from TypeBasePure, to avoid changing type of 'mk_case'.*)
 (*---------------------------------------------------------------------------*)
 
-fun case_const_of {case_const : term, constructors : term list} = case_const
+fun case_const_of   {case_const : term, constructors : term list} = case_const
 fun constructors_of {case_const : term, constructors : term list} = constructors
 
 fun type_names ty =
@@ -218,7 +220,14 @@ fun is_constructor ty_info c =
   end handle HOL_ERR _ => false;
 
 fun is_constructor_pat ty_info tm =
-    is_var tm orelse is_constructor ty_info (fst (strip_comb tm))
+    is_constructor ty_info (fst (strip_comb tm))
+
+fun is_constructor_pat_not_lit ty_info tm =
+    is_constructor_pat ty_info tm andalso not (is_literal tm)
+        (* orelse null (free_vars tm)) *)
+
+fun is_constructor_var_pat ty_info tm =
+    is_var tm orelse is_constructor_pat ty_info tm
 
 
 fun mk_switch_tm1 _ [] = raise ERR "mk_switch_tm" "no literals"
@@ -235,14 +244,14 @@ fun mk_switch_tm1 _ [] = raise ERR "mk_switch_tm" "no literals"
     in list_mk_abs(args@[v], mk_switch (zip literals args))
     end
 
-fun mk_switch_tm _ [] = raise ERR "mk_switch_tm" "no literals"
-  | mk_switch_tm gv (literals as (lit::lits)) =
-    let val lty = type_of lit
-        val v = gv lty
-        fun mk_arg lit = if is_var lit then gv (lty --> alpha) else gv alpha
+fun mk_switch_tm gv v base literals =
+    let val rty = type_of base
+        val lty = type_of v
+        (*val v = gv lty*) 
+        fun mk_arg lit = if is_var lit then gv (lty --> rty) else gv rty
         val args = map mk_arg literals
         open boolSyntax
-        fun mk_switch [] = mk_const("ARB", lty)
+        fun mk_switch [] = base
           | mk_switch ((lit,arg)::litargs) =
                  if is_var lit then mk_comb(arg, v)
                  else boolSyntax.mk_bool_case(arg, mk_switch litargs, mk_eq(v, lit))
@@ -318,40 +327,51 @@ fun mk_case ty_info ty_match FV range_ty =
      else
      let val pty = type_of p
          val {Thy=ty_thy,Tyop=ty_name,...} = dest_thy_type pty
-         val pty_info = ty_info (ty_thy,ty_name)
+         val pty_info = (* match_info *) ty_info (ty_thy,ty_name)
      in
-     if not (pty_info = NONE) andalso all (is_constructor_pat ty_info) col0
-     then (* col0 contains only constructors or variables *)
+     if not (pty_info = NONE) andalso all (is_constructor_var_pat ty_info) col0
+     then (* col0 does contain constructors and variables, and may have literals *)
      case pty_info
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
-        let val {Name = case_const_name, Thy,...} = dest_thy_const case_const
-            val nrows = flatten (map (expand constructors pty) rows)
-            val subproblems = divide(constructors, pty, range_ty, nrows)
-            val groups      = map #group subproblems
-            and new_formals = map #new_formals subproblems
+        let val (col2,col1) = List.partition (is_constructor_var_pat ty_info) col0
+            val constructorsl = rev (mk_set (rev col1))
+            val constructorsa = constructorsl @ constructors
+            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
+            val nrows = flatten (map (expand constructorsa pty) rows)
+            val subproblems = divide(constructorsa, pty, range_ty, nrows)
+            val groups       = map #group subproblems
+            and new_formals  = map #new_formals subproblems
             and constructors' = map #constructor subproblems
             val news = map (fn (nf,rows) => {path = nf@rstp, rows=rows})
                            (zip new_formals groups)
             val rec_calls = map mk news
             val (pat_rect,dtrees) = unzip rec_calls
             val case_functions = map list_mk_abs(zip new_formals dtrees)
+            val case_functions1 = List.take(case_functions,length col1)
+            val case_functions2 = List.drop(case_functions,length col1)
             val types = map type_of (case_functions@[u])
+            val types2 = List.drop(types,length col1)
             val case_const' = mk_thy_const{Name = case_const_name,
                                            Thy = Thy,
-                                           Ty = list_mk_fun(types, range_ty)}
+                                           Ty = list_mk_fun(types2, range_ty)}
         (*  val types = map type_of (case_functions@[u]) @ [range_ty]
             val case_const' = mk_const(case_const_name,list_mk_fun_type types)  *)
-            val tree = list_mk_comb(case_const', case_functions@[u])
+            val tree2 = list_mk_comb(case_const', case_functions2@[u])
+            val switch_tm = mk_switch_tm fresh_var u tree2 constructorsl
+            val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
+                                  switch_tm (case_functions1@[u])
+            val tree' = depth_conv beta_conv tree
             val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
         in
-            (pat_rect1,tree)
+            (pat_rect1,tree')
         end
-     else (* col0 contains literals or other non-constructors as well as vars *)
+     else (* col0 contains literals and/or variables, perhaps constructors *)
           let val other_var = fresh_var pty
               val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
                                    @ [other_var]
-              val switch_tm = mk_switch_tm fresh_var constructors
+              val arb = mk_const("ARB", alpha)
+              val switch_tm = mk_switch_tm fresh_var u arb constructors
               val nrows = flatten (map (expandl constructors pty) rows)
               val subproblems = dividel(constructors, pty, range_ty, nrows)
               val groups        = map #group subproblems
@@ -416,7 +436,7 @@ fun pat_match2 pat_exps given_pat = tryfind (C pat_match1 given_pat) pat_exps
                                     handle HOL_ERR _ => ([],[])
 
 fun distinguish pat_tm_mats =
-    snd (List.foldr (fn ({redex,residue}, (vs,done)) =>
+    snd (List.foldr (fn ({redex:term,residue:term}, (vs,done)) =>
                          let val residue' = variant vs residue
                              val vs' = Lib.insert residue' vs
                          in (vs', {redex=redex, residue=residue'} :: done)
@@ -424,12 +444,12 @@ fun distinguish pat_tm_mats =
                     ([],[]) pat_tm_mats)
 
 fun reduce_mats pat_tm_mats =
-    snd (List.foldl (fn (mat as {redex,residue}, (vs,done)) =>
+    snd (List.foldl (fn (mat as {redex:term,residue:term}, (vs,done)) =>
                          if mem redex vs then (vs, done)
                          else (redex :: vs, mat :: done))
                     ([],[]) pat_tm_mats)
 
-fun purge_wildcards term_sub = filter (fn {redex,residue} =>
+fun purge_wildcards term_sub = filter (fn {redex:term,residue:term} =>
         not (String.sub (fst (dest_var residue), 0) = #"_")
         handle _ => false) term_sub
 
@@ -461,7 +481,7 @@ fun mk_functional thy eqs =
      val f0 = if length fs = 1 then hd fs else err "function name not unique"
      val f  = if is_var f0 then f0 else mk_var(dest_const f0)
      val  _ = map (no_repeat_vars thy) pats
-     val rows = zip (map (fn x => ([],[x])) pats) (map GIVEN (enumerate R))
+     val rows = zip (map (fn x => ([]:term list,[x])) pats) (map GIVEN (enumerate R))
      val fvs = free_varsl (L@R)
      val a = variant fvs (mk_var("a", type_of(Lib.trye hd pats)))
      val FV = a::fvs
