@@ -214,7 +214,7 @@ fun prim_derive_strong_induction monoset (rule_th,ind) = let
 
   fun mapme2 (({residue = newp, redex}, args, rel), ith) = let
     val (_,co) = dest_imp (concl ith)
-    val bth = LIST_BETA_CONV (list_mk_comb(newp,args))
+    val bth = QCONV LIST_BETA_CONV (list_mk_comb(newp,args))
     val sth = CONJUNCT2 (EQ_MP bth (UNDISCH (SPECL args (ASSUME co))))
     val thm1 = IMP_TRANS ith (DISCH co (GENL args (DISCH rel sth)))
   in

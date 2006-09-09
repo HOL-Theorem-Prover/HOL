@@ -31,7 +31,7 @@ val strongrtc' = derive_strong_induction (rtc'_rules, rtc'_ind)
 
 (* Add EVERY to the standard monoset for inductive relations *)
 
-open Conv boolSyntax Term Tactic Tactical Lib Rewrite bossLib;
+open Conv boolSyntax Term Tactic Tactical Lib Rewrite bossLib Feedback;
 open boolTheory listTheory;
 
 val PBETA_CONV = PairRules.PBETA_CONV;
@@ -45,14 +45,14 @@ fun REPEAT_GEN_CONV (conv:conv) :conv = fn tm =>
    if is_forall tm then GEN_CONV (REPEAT_GEN_CONV conv) tm
    else conv tm
 
-
 val TUPLE_GEN_TAC :tactic = fn (asl,gl) =>
-   let val Q = (rator o rand o rand o snd o dest_forall) gl
-       val (tpl,bdy) = pairLib.dest_pabs Q
+   let val (v,bdy) = (dest_forall) gl
+       val Q = (rator o rand o rand) bdy
+       val (tpl,bdy) = pairLib.dest_pabs Q handle HOL_ERR _ => (v,bdy)
    in pairLib.TUPLE_TAC tpl
       THEN CONV_TAC (REPEAT_GEN_CONV (RAND_CONV
-              (RAND_CONV PBETA_CONV THENC
-               RATOR_CONV(RAND_CONV PBETA_CONV))))
+              (RAND_CONV (TRY_CONV PBETA_CONV) THENC
+               RATOR_CONV(RAND_CONV (TRY_CONV PBETA_CONV)))))
    end (asl,gl);
 
 val MONO_EVERY = store_thm
