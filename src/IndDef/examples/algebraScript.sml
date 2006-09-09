@@ -65,19 +65,19 @@ val _ = Hol_datatype `agent
 (* Standard syntactic theory, derived by the recursive types package.	 *)
 (* ===================================================================== *)
 
-val SOME agentfacts = TypeBase.read "agent";
+val SOME agentfacts = TypeBase.read {Thy="algebra", Tyop="agent"};
 
 (* --------------------------------------------------------------------- *)
 (* structural induction theorem for agent.                               *)
 (* --------------------------------------------------------------------- *)
 
-val induct = TypeBase.induction_of agentfacts;
+val induct = TypeBase.induction_of ``:agent``;
 
 (* --------------------------------------------------------------------- *)
 (* cases theorem for agent.                                              *)
 (* --------------------------------------------------------------------- *)
 
-val cases = TypeBase.nchotomy_of agentfacts;
+val cases = TypeBase.nchotomy_of ``:agent``;
 
 (* --------------------------------------------------------------------- *)
 (* The constructors of the type :agent yield syntactically distinct      *)
@@ -86,7 +86,7 @@ val cases = TypeBase.nchotomy_of agentfacts;
 (* --------------------------------------------------------------------- *)
 
 val distinct =
-   let val SOME distinct = TypeBase.distinct_of agentfacts
+   let val distinct = TypeBase.distinct_of ``:agent``
        val ths = CONJUNCTS distinct
        val rths = map (GEN_ALL o NOT_EQ_SYM o SPEC_ALL) ths
    in 
@@ -98,7 +98,7 @@ val distinct =
 (* --------------------------------------------------------------------- *)
 
 val agent11 =
-   let val SOME one2 = TypeBase.one_one_of agentfacts
+   let val one2 = TypeBase.one_one_of ``:agent``
    in CONJUNCTS one2
    end;
 
@@ -127,7 +127,7 @@ val (trules, tind, tcases) = Hol_reln
  /\   (!P Q A. MTRACE P A /\ MTRACE Q A ==> MTRACE (Prod P Q) A)`;
 
 
-val trules = CONJUNCTS trules;
+val trulel = CONJUNCTS trules;
 
 (* --------------------------------------------------------------------- *)
 (* Stronger form of rule induction.					 *)
@@ -148,7 +148,7 @@ val MTRACE_INDUCT_TAC =
 (* Tactics for each of the rules defining MTRACE.			 *)
 (* --------------------------------------------------------------------- *)
 
-val [Nil_TAC,Pre_TAC,SumL_TAC,SumR_TAC,Prod_TAC] = map RULE_TAC trules;
+val [Nil_TAC,Pre_TAC,SumL_TAC,SumR_TAC,Prod_TAC] = map RULE_TAC trulel;
 
 (* --------------------------------------------------------------------- *)
 (* Given the tactics defined above for each rule, we now define a tactic *)
@@ -218,7 +218,7 @@ val (lrules, lind, lcases) = Hol_reln
  /\  (!P P' Q Q' a. TRANS P a P' /\ TRANS Q a Q' 
                 ==> TRANS (Prod P Q) a (Prod P' Q'))`;
 
-val lrules = CONJUNCTS lrules;
+val lrulel = CONJUNCTS lrules;
 
 (* --------------------------------------------------------------------- *)
 (* Strong form of rule induction for TRANS.	      			 *)
@@ -239,7 +239,7 @@ val TRANS_INDUCT_TAC =
 (* Tactics for the TRANS rules.						 *)
 (* --------------------------------------------------------------------- *)
 
-val [TPre_TAC,TSumL_TAC,TSumR_TAC,TProd_TAC] = map RULE_TAC lrules;
+val [TPre_TAC,TSumL_TAC,TSumR_TAC,TProd_TAC] = map RULE_TAC lrulel;
 
 (* --------------------------------------------------------------------- *)
 (* Given the tactics defined above for each rule, we construct a tactic  *)
@@ -273,7 +273,7 @@ val (Lrules, Lind, Lcases) = Hol_reln
  /\  (!P P' B a. 
          (?Q. TRANS P a Q /\ TRANSIT Q B P') ==> TRANSIT P (a::B) P')`;
 
-val Lrules = CONJUNCTS Lrules;
+val Lrulel = CONJUNCTS Lrules;
 
 (* --------------------------------------------------------------------- *)
 (* Strong form of rule induction for labelled (trace) transitions.       *)
@@ -293,7 +293,7 @@ val TRANSIT_INDUCT_TAC = RULE_INDUCT_THEN Lind ASSUME_TAC ASSUME_TAC;
 (* tactic is needed.							 *)
 (* --------------------------------------------------------------------- *)
 
-val TRANSIT_TAC = MAP_FIRST RULE_TAC Lrules;
+val TRANSIT_TAC = MAP_FIRST RULE_TAC Lrulel;
 
 (* ===================================================================== *)
 (* Theorem 1: Maximal trace semantics "agrees' with transition semantics *)

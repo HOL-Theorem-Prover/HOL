@@ -47,13 +47,13 @@ val _ = new_theory "cl";
 
 val _ = Hol_datatype `cl = S | K | # of cl => cl`;
 
-val _ = set_fixity("#", Infixl 801);
+val _ = set_fixity "#" (Infixl 801);
 val _ = set_MLname "#" "HASH_DEF";
 
 val (distinct,ap11) = 
-  let val (SOME facts) = TypeBase.read "cl"
-      val (SOME thm1) = TypeBase.distinct_of facts
-      val (SOME thm2) = TypeBase.one_one_of facts
+  let val (SOME facts) = TypeBase.read {Thy="cl", Tyop="cl"}
+      val thm1 = TypeBase.distinct_of ``:cl``
+      val thm2 = TypeBase.one_one_of  ``:cl``
   in 
     (CONJ thm1 (GSYM thm1),thm2)
   end;
@@ -75,7 +75,8 @@ val (distinct,ap11) =
 (* of redexes, the second two rules define the contraction of subterms.	*)
 (* ---------------------------------------------------------------------*)
 
-val _ = set_fixity("--->",Infixr 700);
+val _ = set_fixity "--->" (Infixr 700);
+val _ = set_MLname "--->" "WEAK_CONTRACTION_DEF";
 
 val (Crules, Cind, Ccases) = 
  Hol_reln
@@ -84,7 +85,11 @@ val (Crules, Cind, Ccases) =
  /\  (!x y z. x ---> y ==> x#z ---> y#z)
  /\  (!x y z. x ---> y ==> z#x ---> z#y)`;
 
-val Crules = CONJUNCTS Crules;
+val _ = set_MLname "--->_rules" "WEAK_CONTRACTION_rules";
+val _ = set_MLname "--->_ind"   "WEAK_CONTRACTION_ind";
+val _ = set_MLname "--->_cases" "WEAK_CONTRACTION_cases";
+
+val Crulel = CONJUNCTS Crules;
 
 
 (* ---------------------------------------------------------------------*)
@@ -106,7 +111,7 @@ val C_INDUCT_TAC =
 (* Tactics for each of the contraction rules.				*)
 (* ---------------------------------------------------------------------*)
 
-val [Ck_TAC,Cs_TAC,LCap_TAC,RCap_TAC] = map RULE_TAC Crules;
+val [Ck_TAC,Cs_TAC,LCap_TAC,RCap_TAC] = map RULE_TAC Crulel;
 
 
 (* ---------------------------------------------------------------------*)
@@ -121,7 +126,7 @@ val (RTCrules, RTCind, RTCcases) = Hol_reln
  /\  (!x.             RTC R x x)
  /\  (!x y. (?z. RTC R x z /\ RTC R z y) ==> RTC R x y)`;
 
-val RTCrules = map GEN_ALL (CONJUNCTS (SPEC_ALL RTCrules));
+val RTCrulel = map GEN_ALL (CONJUNCTS (SPEC_ALL RTCrules));
 
 (* ---------------------------------------------------------------------*)
 (* Standard rule induction tactic for RTC.				*)
@@ -134,14 +139,14 @@ val RTC_INDUCT_TAC =
 (* Tactics for the RTC rules.						*)
 (* ---------------------------------------------------------------------*)
 
-val [RTC_IN_TAC,RTC_REFL_TAC,RTC_TRANS_TAC] = map RULE_TAC RTCrules;
+val [RTC_IN_TAC,RTC_REFL_TAC,RTC_TRANS_TAC] = map RULE_TAC RTCrulel;
 
 (* ---------------------------------------------------------------------*)
 (* Definition of weak reduction.					*)
 (* ---------------------------------------------------------------------*)
 
 val reduce = Q.new_definition("reduce", `$--->* = RTC $--->`);
-val _ = set_fixity ("--->*", Infixr 700);
+val _ = set_fixity "--->*" (Infixr 700);
 
 
 (* =====================================================================*)
@@ -321,7 +326,8 @@ val NOT_C_CR =
 (* of a term to be contracted in a single step.				 *)
 (* --------------------------------------------------------------------- *)
 
-val _ = set_fixity("===>",Infixr 700);
+val _ = set_fixity "===>" (Infixr 700);
+val _ = set_MLname "===>" "ONE_STEP_CONTRACTION_DEF";
 
 val (PCrules, PCind, PCcases) = Hol_reln
      `(!x. x ===> x)
@@ -329,7 +335,11 @@ val (PCrules, PCind, PCcases) = Hol_reln
  /\   (!x y z. S#x#y#z ===> x#z#(y#z))
  /\   (!w x y z. w ===> x /\ y ===> z ==> (w#y ===> x#z))`;
 
-val PCrules = CONJUNCTS PCrules;
+val _ = set_MLname "===>_rules" "ONE_STEP_CONTRACTION_rules";
+val _ = set_MLname "===>_ind"   "ONE_STEP_CONTRACTION_ind";
+val _ = set_MLname "===>_cases" "ONE_STEP_CONTRACTION_cases";
+
+val PCrulel = CONJUNCTS PCrules;
 
 
 (* --------------------------------------------------------------------- *)
@@ -350,7 +360,7 @@ val PC_INDUCT_TAC =
 (* Tactics for each of the parallel contraction rules.			*)
 (* ---------------------------------------------------------------------*)
 
-val [PC_REFL_TAC,PCk_TAC,PCs_TAC,PCap_TAC] = map RULE_TAC PCrules;
+val [PC_REFL_TAC,PCk_TAC,PCs_TAC,PCap_TAC] = map RULE_TAC PCrulel;
 
 (* ---------------------------------------------------------------------*)
 (* Given the tactics defined above for each rule, it is straightforward *)
@@ -393,7 +403,7 @@ val (TCrules, TCind, TCcases) = Hol_reln
     `(!x y. R x y ==> TC R x y)
  /\  (!x y. (?z. TC R x z /\ R z y) ==> TC R x y)`;
 
-val TCrules = map GEN_ALL (CONJUNCTS (SPEC_ALL TCrules));
+val TCrulel = map GEN_ALL (CONJUNCTS (SPEC_ALL TCrules));
 
 (* ---------------------------------------------------------------------*)
 (* Strong form of rule induction for TC.				*)
@@ -413,7 +423,7 @@ val TC_INDUCT_TAC =
 (* Tactics for the TC rules.						*)
 (* ---------------------------------------------------------------------*)
 
-val [TC_IN_TAC,TC_TRANS_TAC] = map RULE_TAC TCrules;
+val [TC_IN_TAC,TC_TRANS_TAC] = map RULE_TAC TCrulel;
 
 
 (* ---------------------------------------------------------------------*)
@@ -422,7 +432,7 @@ val [TC_IN_TAC,TC_TRANS_TAC] = map RULE_TAC TCrules;
 
 val preduce = Q.new_definition("preduce", `$===>* = TC $===>`);
 
-val _ = set_fixity ("===>*", Infixr 700);
+val _ = set_fixity  "===>*" (Infixr 700);
 
 (* =====================================================================*)
 (* Theorem: ===>* and --->* are the same relation.			*)
@@ -475,19 +485,19 @@ val RRap_THM =
 val CONT_IN_RED =
     prove
     ((--`!U V. U ---> V ==> U --->* V`--),
-     REWRITE_TAC (reduce :: RTCrules));
+     REWRITE_TAC (reduce :: RTCrulel));
 
 
 val RED_REFL =
     prove
     ((--`!U. U --->* U`--),
-     REWRITE_TAC (reduce :: RTCrules));
+     REWRITE_TAC (reduce :: RTCrulel));
 
 
 val RED_TRANS =
     prove
     ((--`!U V. (?W. U --->* W /\ W --->* V) ==> (U --->* V)`--),
-     REWRITE_TAC (reduce :: RTCrules));
+     REWRITE_TAC (reduce :: RTCrulel));
 
 
 (* ---------------------------------------------------------------------  *)
@@ -697,7 +707,7 @@ val TC_PRESERVES_CR_THM =
      GEN_TAC THEN STRIP_TAC THEN TC_INDUCT_TAC THEN
      REPEAT STRIP_TAC THENL
      [IMP_RES_TAC CR_LEMMA THEN
-      IMP_RES_TAC (el 1 TCrules) THEN
+      IMP_RES_TAC (el 1 TCrulel) THEN
       EXISTS_TAC (--`d:'a`--) THEN 
       CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC,
       RES_THEN (fn th => STRIP_ASSUME_TAC th THEN ASSUME_TAC th) THEN

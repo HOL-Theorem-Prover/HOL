@@ -93,8 +93,8 @@ val _ = Hol_datatype
              | If    of ^bexp => comm => comm
              | While of ^bexp => comm`;
 
-val _ = (set_fixity ("::=", Infixr 400); set_MLname "::=" "assign_def");
-val _ = (set_fixity (";;",  Infixr 350); set_MLname ";;"  "seq_def");
+val _ = (set_fixity "::=" (Infixr 400); set_MLname "::=" "assign_def");
+val _ = (set_fixity ";;"  (Infixr 350); set_MLname ";;"  "seq_def");
 
 (* ===================================================================== *)
 (* Definition of the operational semantics.				 *)
@@ -126,7 +126,7 @@ val (rules,induction,ecases) = Hol_reln
         (?s2. EVAL C s1 s2 /\ 
               EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`;
 
-val rules = CONJUNCTS rules;
+val rulel = CONJUNCTS rules;
 
 (*---------------------------------------------------------------------------
       Note that the following input is also acceptable to the 
@@ -218,9 +218,9 @@ val RULE_INDUCT_TAC =
 (* ---------------------------------------------------------------------*)
 
 val (distinct,const11) = 
-  let val (SOME facts) = TypeBase.read "comm"
-      val (SOME thm1) = TypeBase.distinct_of facts
-      val (SOME thm2) = TypeBase.one_one_of facts
+  let val (SOME facts) = TypeBase.read {Thy="opsem", Tyop="comm"}
+      val thm1 = TypeBase.distinct_of ``:comm``
+      val thm2 = TypeBase.one_one_of ``:comm``
   in 
     (CONJ thm1 (GSYM thm1),thm2)
   end;
@@ -254,7 +254,7 @@ val SKIP_THM = store_thm("SKIP_THM",
      (--`!s1 s2. EVAL Skip s1 s2 = (s1 = s2)`--),
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [CASE_TAC THEN ASM_REWRITE_TAC [],
-      DISCH_THEN SUBST1_TAC THEN MAP_FIRST RULE_TAC rules]);
+      DISCH_THEN SUBST1_TAC THEN MAP_FIRST RULE_TAC rulel]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -268,7 +268,7 @@ val ASSIGN_THM = store_thm ("ASSIGN_THM",
                  ((\v. if v=V then E s1 else s1 v) = s2)`--),
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [CASE_TAC THEN ASM_REWRITE_TAC [],
-      DISCH_THEN (SUBST1_TAC o SYM) THEN MAP_FIRST RULE_TAC rules]);
+      DISCH_THEN (SUBST1_TAC o SYM) THEN MAP_FIRST RULE_TAC rulel]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -281,7 +281,7 @@ val SEQ_THM = store_thm("SEQ_THM",
 --`!s1 s2 C1 C2.EVAL (C1;;C2) s1 s2 = ?s3. EVAL C1 s1 s3 /\ EVAL C2 s3 s2`--,
   REPEAT GEN_TAC THEN EQ_TAC THENL
   [CASE_TAC THEN EXISTS_TAC (--`s2':^State`--) THEN ASM_REWRITE_TAC [],
-   DISCH_THEN (fn th => MAP_FIRST RULE_TAC rules THEN MATCH_ACCEPT_TAC th)]);
+   DISCH_THEN (fn th => MAP_FIRST RULE_TAC rulel THEN MATCH_ACCEPT_TAC th)]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -295,7 +295,7 @@ val IF_T_THM = store_thm ("IF_T_THM",
      REPEAT STRIP_TAC THEN EQ_TAC THENL
      [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
       [FIRST_ASSUM ACCEPT_TAC, RES_TAC],
-      DISCH_TAC THEN MAP_FIRST RULE_TAC rules THEN FIRST_ASSUM ACCEPT_TAC]);
+      DISCH_TAC THEN MAP_FIRST RULE_TAC rulel THEN FIRST_ASSUM ACCEPT_TAC]);
 
 
 (* --------------------------------------------------------------------- *)
@@ -309,7 +309,7 @@ val IF_F_THM = store_thm ("IF_F_THM",
    REPEAT STRIP_TAC THEN EQ_TAC THENL
    [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
     [RES_TAC, FIRST_ASSUM ACCEPT_TAC],
-     DISCH_TAC THEN MAP_FIRST RULE_TAC (rev rules) THEN
+     DISCH_TAC THEN MAP_FIRST RULE_TAC (rev rulel) THEN
      FIRST_ASSUM ACCEPT_TAC]);
 
 
@@ -328,7 +328,7 @@ val WHILE_T_THM = store_thm ("WHILE_T_THM",
    [CASE_TAC THEN EVERY_ASSUM (TRY o SUBST_ALL_TAC) THENL
     [RES_TAC,
      EXISTS_TAC (--`s2':^State`--) THEN CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC],
-    STRIP_TAC THEN MAP_FIRST RULE_TAC (rev rules) THEN
+    STRIP_TAC THEN MAP_FIRST RULE_TAC (rev rulel) THEN
     EXISTS_TAC (--`s3:^State`--) THEN
     REPEAT CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
 
@@ -345,7 +345,7 @@ val WHILE_F_THM = store_thm ("WHILE_F_THM",
      [CASE_TAC THENL
       [CONV_TAC SYM_CONV THEN FIRST_ASSUM ACCEPT_TAC,
        EVERY_ASSUM (TRY o SUBST_ALL_TAC) THEN RES_TAC],
-      DISCH_THEN (SUBST1_TAC o SYM) THEN MAP_FIRST RULE_TAC rules THEN
+      DISCH_THEN (SUBST1_TAC o SYM) THEN MAP_FIRST RULE_TAC rulel THEN
       FIRST_ASSUM ACCEPT_TAC]);
 
 

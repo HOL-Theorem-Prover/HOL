@@ -35,26 +35,26 @@ val _ = new_theory"mil";
 val _ = Hol_datatype `ty = G  of 'a  
                          | -> of ty => ty`;
 
-val _ = set_fixity ("->", Infixr 800);;
+val _ = set_fixity "->" (Infixr 800);
 val _ = set_MLname "->" "ARROW_DEF";
 
 (* ===================================================================== *)
 (* Standard syntactic theory, derived by the recursive types package.	 *)
 (* ===================================================================== *)
 
-val SOME tyfacts = TypeBase.read "ty";
+val SOME tyfacts = TypeBase.read {Thy="mil", Tyop="ty"};
 
 (* --------------------------------------------------------------------- *)
 (* structural induction theorem for ty.                                  *)
 (* --------------------------------------------------------------------- *)
 
-val ty_induct = TypeBase.induction_of tyfacts;
+val ty_induct = TypeBase.induction_of ``:'a ty``;
 
 (* --------------------------------------------------------------------- *)
 (* cases theorem for ty.                                                 *)
 (* --------------------------------------------------------------------- *)
 
-val ty_cases = TypeBase.nchotomy_of tyfacts;
+val ty_cases = TypeBase.nchotomy_of ``:'a ty``;
 
 (* --------------------------------------------------------------------- *)
 (* The constructors of the type :ty yield syntactically distinct         *)
@@ -63,7 +63,7 @@ val ty_cases = TypeBase.nchotomy_of tyfacts;
 (* --------------------------------------------------------------------- *)
 
 val ty_distinct =
-   let val SOME distinct = TypeBase.distinct_of tyfacts
+   let val distinct = TypeBase.distinct_of ``:'a ty``
        val ths = CONJUNCTS distinct
        val rths = map (GEN_ALL o NOT_EQ_SYM o SPEC_ALL) ths
    in 
@@ -75,7 +75,7 @@ val ty_distinct =
 (* --------------------------------------------------------------------- *)
 
 val Gfun11 =
-   let val SOME one2 = TypeBase.one_one_of tyfacts
+   let val one2 = TypeBase.one_one_of ``:'a ty``
    in CONJUNCTS one2
    end;
 
@@ -84,7 +84,7 @@ val Gfun11 =
 (* Definition of well-typed terms of combinatory logic.			 *)
 (* ===================================================================== *)
 
-val _ = set_fixity("IN", Infixr 700);
+val _ = set_fixity "IN" (Infixr 700);
 
 val (TYrules,TYind,TYcases) = Hol_reln
     `(!A B.   K IN (A -> B -> A))
