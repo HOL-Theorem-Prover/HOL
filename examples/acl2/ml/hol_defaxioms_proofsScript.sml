@@ -1887,7 +1887,10 @@ val stringp_symbol_package_name_defaxiom =
 (* val LOOKUP_NIL =                                                          *)
 (*  |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL" = "COMMON-LISP"         *)
 (*****************************************************************************)
-val LOOKUP_NIL = time EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``;
+val LOOKUP_NIL = 
+ save_thm
+  ("LOOKUP_NIL",
+   time EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``);
 
 val symbolp_intern_in_package_of_symbol_defaxiom =
  store_thm
@@ -2099,7 +2102,9 @@ val symbol_name_intern_in_package_of_symbol_defaxiom =
 *)
 
 val LOOKUP_INPUT = 
- time EVAL ``LOOKUP "ACL2-INPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``;
+ save_thm
+  ("LOOKUP_INPUT",
+   time EVAL ``LOOKUP "ACL2-INPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
 val acl2_input_channel_package_defaxiom =
  store_thm
@@ -2133,7 +2138,9 @@ val acl2_input_channel_package_defaxiom =
 *)
 
 val LOOKUP_OUTPUT = 
- time EVAL ``LOOKUP "ACL2-OUTPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``;
+ save_thm
+  ("LOOKUP_OUTPUT",
+   time EVAL ``LOOKUP "ACL2-OUTPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
 val acl2_output_channel_package_defaxiom =
  store_thm
@@ -2183,7 +2190,7 @@ val acl2_output_channel_package_defaxiom =
                           csym "*TERMINAL-IO*"; csym "*DEBUG-IO*";
                           csym "*TRACE-OUTPUT*"; csym "*DEBUGGER-HOOK*";
                           csym "+"; csym "*DEFAULT-PATHNAME-DEFAULTS*";
-                          csym "++"; csym "*ERROR-OUTPUT*"; csym "+++";
+                          csym "++"; 5~csym "*ERROR-OUTPUT*"; csym "+++";
                           csym "*FEATURES*"; csym "-";
                           csym "*GENSYM-COUNTER*"; csym "/";
                           csym "*LOAD-PATHNAME*"; csym "//";
@@ -2683,37 +2690,616 @@ val imported_symbol_names_def =
       then sym_name :: (imported_symbol_names pkg_name triples)
       else imported_symbol_names pkg_name triples)`;
 
-(*
 val pkg_thm_for_initial_pkg_system_lemma =
  prove
   (``!pkg_system pkg x.
       ~(MEM x (imported_symbol_names pkg pkg_system))
       ==>
-      (LOOKUP pkg pkg_system x = pkg)``
+      (LOOKUP pkg pkg_system x = pkg)``,
+   Induct
+    THEN RW_TAC std_ss [LOOKUP_def]
+    THEN Cases_on `h` THEN Cases_on `r`
+    THEN RW_TAC list_ss [LOOKUP_def]
+    THEN FULL_SIMP_TAC list_ss [imported_symbol_names_def]
+    THEN Cases_on `pkg = q'`
+    THEN RW_TAC list_ss []
+    THEN METIS_TAC[]);
 
 val STAR_COMMON_LISP_SYMBOLS_FROM_MAIN_LISP_PACKAGE_STAR = 
  time EVAL ``imported_symbol_names "ACL2" ACL2_PACKAGE_ALIST``;
-*)
 
+val COMMON_LISP_SYMBOLS =
+ save_thm
+  ("COMMON_LISP_SYMBOLS",
+   REWRITE_CONV
+    [STAR_COMMON_LISP_SYMBOLS_FROM_MAIN_LISP_PACKAGE_STAR,
+     rich_listTheory.MAP]
+    ``List(MAP csym (imported_symbol_names "ACL2" ACL2_PACKAGE_ALIST))``);
 
-(*
+val member_symbol_name_MEM =
+ store_thm
+  ("member_symbol_name_MEM",
+   ``!l s. (|= member_symbol_name s (List l)) = MEM s (MAP symbol_name l)``,
+   REWRITE_TAC[ACL2_TRUE]
+     THEN Induct
+     THEN RW_TAC list_ss [List_def]
+     THEN Cases_on `s`
+     THEN ACL2_SIMP_TAC[]
+     THEN FULL_SIMP_TAC std_ss [GSYM nil_def]
+     THEN ONCE_REWRITE_TAC[member_symbol_name_def]
+     THEN ACL2_FULL_SIMP_TAC[]
+     THEN FULL_SIMP_TAC std_ss 
+           [GSYM nil_def,GSYM t_def,if_t_nil,itel_def,ite_def,
+            EVAL ``"COMMON-LISP" = ""``,EVAL ``t = nil``]
+     THEN Cases_on `h`
+     THEN ACL2_FULL_SIMP_TAC[sexp_11,BASIC_INTERN_def]
+     THEN FULL_SIMP_TAC std_ss 
+           [sexp_11,sexp_distinct,GSYM nil_def,GSYM t_def,eq_imp_if,
+            EVAL``t=nil``,EVAL``"T" = "NIL"``]
+     THEN TRY(METIS_TAC[]));
+
+val not_member_symbol_name_MEM =
+ store_thm
+  ("not_member_symbol_name_MEM",
+   ``(member_symbol_name s (List l) = nil) = ~(MEM s (MAP symbol_name l))``,
+   METIS_TAC[ACL2_TRUE,member_symbol_name_MEM]);
+
+(*****************************************************************************)
+(* |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST s = "COMMON-LISP" : thm        *)
+(*****************************************************************************)
+val LOOKUP_COMMON_LISP =
+ save_thm
+  ("LOOKUP_COMMON_LISP",
+   EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST s``);
+
+val symbol_name_csym =
+ store_thm
+  ("symbol_name_csym",
+   ``symbol_name(csym s) = str s``,
+   ACL2_SIMP_TAC[csym_def,BASIC_INTERN_def,COMMON_LISP_def,LOOKUP_COMMON_LISP]);
+
+val MEM_MAP_MAP =
+ store_thm
+  ("MEM_MAP_MAP",
+   ``!l. MEM (str s) (MAP symbol_name (MAP csym l)) = MEM s l``,
+   Induct
+    THEN RW_TAC list_ss [symbol_name_csym]);
+
+val conspList =
+ store_thm
+  ("conspList",
+   ``|= consp(List(x :: l))``,
+   ACL2_SIMP_TAC[List_def]);
+
 val acl2_package_defaxiom =
  store_thm
   ("acl2_package_defaxiom",
    ``|= implies
-         (andl
-           [stringp x;
-            not
-             (member_symbol_name 
-               x 
-               (List STAR_COMMON_LISP_SYMBOLS_FROM_MAIN_LISP_PACKAGE_STAR));
-            symbolp y; 
-            equal (symbol_package_name y) (str ACL2)])
-         (equal (symbol_package_name (intern_in_package_of_symbol x y)) (str ACL2))``,
-   Cases_on `x`
-    THEN ACL2_SIMP_TAC[asym_def,csym_def,ksym_def,osym_def]
-*)
+             (andl
+                [stringp x;
+                 not
+                   (member_symbol_name x
+                      (List
+                         [csym "&ALLOW-OTHER-KEYS";
+                          csym "*PRINT-MISER-WIDTH*"; csym "&AUX";
+                          csym "*PRINT-PPRINT-DISPATCH*"; csym "&BODY";
+                          csym "*PRINT-PRETTY*"; csym "&ENVIRONMENT";
+                          csym "*PRINT-RADIX*"; csym "&KEY";
+                          csym "*PRINT-READABLY*"; csym "&OPTIONAL";
+                          csym "*PRINT-RIGHT-MARGIN*"; csym "&REST";
+                          csym "*QUERY-IO*"; csym "&WHOLE";
+                          csym "*RANDOM-STATE*"; csym "*";
+                          csym "*READ-BASE*"; csym "**";
+                          csym "*READ-DEFAULT-FLOAT-FORMAT*"; csym "***";
+                          csym "*READ-EVAL*"; csym "*BREAK-ON-SIGNALS*";
+                          csym "*READ-SUPPRESS*";
+                          csym "*COMPILE-FILE-PATHNAME*"; csym "*READTABLE*";
+                          csym "*COMPILE-FILE-TRUENAME*";
+                          csym "*STANDARD-INPUT*"; csym "*COMPILE-PRINT*";
+                          csym "*STANDARD-OUTPUT*"; csym "*COMPILE-VERBOSE*";
+                          csym "*TERMINAL-IO*"; csym "*DEBUG-IO*";
+                          csym "*TRACE-OUTPUT*"; csym "*DEBUGGER-HOOK*";
+                          csym "+"; csym "*DEFAULT-PATHNAME-DEFAULTS*";
+                          csym "++"; csym "*ERROR-OUTPUT*"; csym "+++";
+                          csym "*FEATURES*"; csym "-";
+                          csym "*GENSYM-COUNTER*"; csym "/";
+                          csym "*LOAD-PATHNAME*"; csym "//";
+                          csym "*LOAD-PRINT*"; csym "///";
+                          csym "*LOAD-TRUENAME*"; csym "/=";
+                          csym "*LOAD-VERBOSE*"; csym "1+";
+                          csym "*MACROEXPAND-HOOK*"; csym "1-";
+                          csym "*MODULES*"; csym "<"; csym "*PACKAGE*";
+                          csym "<="; csym "*PRINT-ARRAY*"; csym "=";
+                          csym "*PRINT-BASE*"; csym ">"; csym "*PRINT-CASE*";
+                          csym ">="; csym "*PRINT-CIRCLE*"; csym "ABORT";
+                          csym "*PRINT-ESCAPE*"; csym "ABS";
+                          csym "*PRINT-GENSYM*"; csym "ACONS";
+                          csym "*PRINT-LENGTH*"; csym "ACOS";
+                          csym "*PRINT-LEVEL*"; csym "ACOSH";
+                          csym "*PRINT-LINES*"; csym "ADD-METHOD";
+                          csym "ADJOIN"; csym "ATOM"; csym "BOUNDP";
+                          csym "ADJUST-ARRAY"; csym "BASE-CHAR";
+                          csym "BREAK"; csym "ADJUSTABLE-ARRAY-P";
+                          csym "BASE-STRING"; csym "BROADCAST-STREAM";
+                          csym "ALLOCATE-INSTANCE"; csym "BIGNUM";
+                          csym "BROADCAST-STREAM-STREAMS";
+                          csym "ALPHA-CHAR-P"; csym "BIT";
+                          csym "BUILT-IN-CLASS"; csym "ALPHANUMERICP";
+                          csym "BIT-AND"; csym "BUTLAST"; csym "AND";
+                          csym "BIT-ANDC1"; csym "BYTE"; csym "APPEND";
+                          csym "BIT-ANDC2"; csym "BYTE-POSITION";
+                          csym "APPLY"; csym "BIT-EQV"; csym "BYTE-SIZE";
+                          csym "APROPOS"; csym "BIT-IOR"; csym "CAAAAR";
+                          csym "APROPOS-LIST"; csym "BIT-NAND";
+                          csym "CAAADR"; csym "AREF"; csym "BIT-NOR";
+                          csym "CAAAR"; csym "ARITHMETIC-ERROR";
+                          csym "BIT-NOT"; csym "CAADAR";
+                          csym "ARITHMETIC-ERROR-OPERANDS"; csym "BIT-ORC1";
+                          csym "CAADDR"; csym "ARITHMETIC-ERROR-OPERATION";
+                          csym "BIT-ORC2"; csym "CAADR"; csym "ARRAY";
+                          csym "BIT-VECTOR"; csym "CAAR";
+                          csym "ARRAY-DIMENSION"; csym "BIT-VECTOR-P";
+                          csym "CADAAR"; csym "ARRAY-DIMENSION-LIMIT";
+                          csym "BIT-XOR"; csym "CADADR";
+                          csym "ARRAY-DIMENSIONS"; csym "BLOCK";
+                          csym "CADAR"; csym "ARRAY-DISPLACEMENT";
+                          csym "BOOLE"; csym "CADDAR";
+                          csym "ARRAY-ELEMENT-TYPE"; csym "BOOLE-1";
+                          csym "CADDDR"; csym "ARRAY-HAS-FILL-POINTER-P";
+                          csym "BOOLE-2"; csym "CADDR";
+                          csym "ARRAY-IN-BOUNDS-P"; csym "BOOLE-AND";
+                          csym "CADR"; csym "ARRAY-RANK"; csym "BOOLE-ANDC1";
+                          csym "CALL-ARGUMENTS-LIMIT";
+                          csym "ARRAY-RANK-LIMIT"; csym "BOOLE-ANDC2";
+                          csym "CALL-METHOD"; csym "ARRAY-ROW-MAJOR-INDEX";
+                          csym "BOOLE-C1"; csym "CALL-NEXT-METHOD";
+                          csym "ARRAY-TOTAL-SIZE"; csym "BOOLE-C2";
+                          csym "CAR"; csym "ARRAY-TOTAL-SIZE-LIMIT";
+                          csym "BOOLE-CLR"; csym "CASE"; csym "ARRAYP";
+                          csym "BOOLE-EQV"; csym "CATCH"; csym "ASH";
+                          csym "BOOLE-IOR"; csym "CCASE"; csym "ASIN";
+                          csym "BOOLE-NAND"; csym "CDAAAR"; csym "ASINH";
+                          csym "BOOLE-NOR"; csym "CDAADR"; csym "ASSERT";
+                          csym "BOOLE-ORC1"; csym "CDAAR"; csym "ASSOC";
+                          csym "BOOLE-ORC2"; csym "CDADAR"; csym "ASSOC-IF";
+                          csym "BOOLE-SET"; csym "CDADDR";
+                          csym "ASSOC-IF-NOT"; csym "BOOLE-XOR";
+                          csym "CDADR"; csym "ATAN"; csym "BOOLEAN";
+                          csym "CDAR"; csym "ATANH"; csym "BOTH-CASE-P";
+                          csym "CDDAAR"; csym "CDDADR"; csym "CLEAR-INPUT";
+                          csym "COPY-TREE"; csym "CDDAR";
+                          csym "CLEAR-OUTPUT"; csym "COS"; csym "CDDDAR";
+                          csym "CLOSE"; csym "COSH"; csym "CDDDDR";
+                          csym "CLRHASH"; csym "COUNT"; csym "CDDDR";
+                          csym "CODE-CHAR"; csym "COUNT-IF"; csym "CDDR";
+                          csym "COERCE"; csym "COUNT-IF-NOT"; csym "CDR";
+                          csym "COMPILATION-SPEED"; csym "CTYPECASE";
+                          csym "CEILING"; csym "COMPILE"; csym "DEBUG";
+                          csym "CELL-ERROR"; csym "COMPILE-FILE";
+                          csym "DECF"; csym "CELL-ERROR-NAME";
+                          csym "COMPILE-FILE-PATHNAME"; csym "DECLAIM";
+                          csym "CERROR"; csym "COMPILED-FUNCTION";
+                          csym "DECLARATION"; csym "CHANGE-CLASS";
+                          csym "COMPILED-FUNCTION-P"; csym "DECLARE";
+                          csym "CHAR"; csym "COMPILER-MACRO";
+                          csym "DECODE-FLOAT"; csym "CHAR-CODE";
+                          csym "COMPILER-MACRO-FUNCTION";
+                          csym "DECODE-UNIVERSAL-TIME";
+                          csym "CHAR-CODE-LIMIT"; csym "COMPLEMENT";
+                          csym "DEFCLASS"; csym "CHAR-DOWNCASE";
+                          csym "COMPLEX"; csym "DEFCONSTANT";
+                          csym "CHAR-EQUAL"; csym "COMPLEXP";
+                          csym "DEFGENERIC"; csym "CHAR-GREATERP";
+                          csym "COMPUTE-APPLICABLE-METHODS";
+                          csym "DEFINE-COMPILER-MACRO"; csym "CHAR-INT";
+                          csym "COMPUTE-RESTARTS"; csym "DEFINE-CONDITION";
+                          csym "CHAR-LESSP"; csym "CONCATENATE";
+                          csym "DEFINE-METHOD-COMBINATION"; csym "CHAR-NAME";
+                          csym "CONCATENATED-STREAM";
+                          csym "DEFINE-MODIFY-MACRO"; csym "CHAR-NOT-EQUAL";
+                          csym "CONCATENATED-STREAM-STREAMS";
+                          csym "DEFINE-SETF-EXPANDER";
+                          csym "CHAR-NOT-GREATERP"; csym "COND";
+                          csym "DEFINE-SYMBOL-MACRO"; csym "CHAR-NOT-LESSP";
+                          csym "CONDITION"; csym "DEFMACRO";
+                          csym "CHAR-UPCASE"; csym "CONJUGATE";
+                          csym "DEFMETHOD"; csym "CHAR/="; csym "CONS";
+                          csym "DEFPACKAGE"; csym "CHAR<"; csym "CONSP";
+                          csym "DEFPARAMETER"; csym "CHAR<=";
+                          csym "CONSTANTLY"; csym "DEFSETF"; csym "CHAR=";
+                          csym "CONSTANTP"; csym "DEFSTRUCT"; csym "CHAR>";
+                          csym "CONTINUE"; csym "DEFTYPE"; csym "CHAR>=";
+                          csym "CONTROL-ERROR"; csym "DEFUN";
+                          csym "CHARACTER"; csym "COPY-ALIST"; csym "DEFVAR";
+                          csym "CHARACTERP"; csym "COPY-LIST"; csym "DELETE";
+                          csym "CHECK-TYPE"; csym "COPY-PPRINT-DISPATCH";
+                          csym "DELETE-DUPLICATES"; csym "CIS";
+                          csym "COPY-READTABLE"; csym "DELETE-FILE";
+                          csym "CLASS"; csym "COPY-SEQ"; csym "DELETE-IF";
+                          csym "CLASS-NAME"; csym "COPY-STRUCTURE";
+                          csym "DELETE-IF-NOT"; csym "CLASS-OF";
+                          csym "COPY-SYMBOL"; csym "DELETE-PACKAGE";
+                          csym "DENOMINATOR"; csym "EQ";
+                          csym "DEPOSIT-FIELD"; csym "EQL"; csym "DESCRIBE";
+                          csym "EQUAL"; csym "DESCRIBE-OBJECT";
+                          csym "EQUALP"; csym "DESTRUCTURING-BIND";
+                          csym "ERROR"; csym "DIGIT-CHAR"; csym "ETYPECASE";
+                          csym "DIGIT-CHAR-P"; csym "EVAL"; csym "DIRECTORY";
+                          csym "EVAL-WHEN"; csym "DIRECTORY-NAMESTRING";
+                          csym "EVENP"; csym "DISASSEMBLE"; csym "EVERY";
+                          csym "DIVISION-BY-ZERO"; csym "EXP"; csym "DO";
+                          csym "EXPORT"; csym "DO*"; csym "EXPT";
+                          csym "DO-ALL-SYMBOLS"; csym "EXTENDED-CHAR";
+                          csym "DO-EXTERNAL-SYMBOLS"; csym "FBOUNDP";
+                          csym "DO-SYMBOLS"; csym "FCEILING";
+                          csym "DOCUMENTATION"; csym "FDEFINITION";
+                          csym "DOLIST"; csym "FFLOOR"; csym "DOTIMES";
+                          csym "FIFTH"; csym "DOUBLE-FLOAT";
+                          csym "FILE-AUTHOR"; csym "DOUBLE-FLOAT-EPSILON";
+                          csym "FILE-ERROR";
+                          csym "DOUBLE-FLOAT-NEGATIVE-EPSILON";
+                          csym "FILE-ERROR-PATHNAME"; csym "DPB";
+                          csym "FILE-LENGTH"; csym "DRIBBLE";
+                          csym "FILE-NAMESTRING"; csym "DYNAMIC-EXTENT";
+                          csym "FILE-POSITION"; csym "ECASE";
+                          csym "FILE-STREAM"; csym "ECHO-STREAM";
+                          csym "FILE-STRING-LENGTH";
+                          csym "ECHO-STREAM-INPUT-STREAM";
+                          csym "FILE-WRITE-DATE";
+                          csym "ECHO-STREAM-OUTPUT-STREAM"; csym "FILL";
+                          csym "ED"; csym "FILL-POINTER"; csym "EIGHTH";
+                          csym "FIND"; csym "ELT"; csym "FIND-ALL-SYMBOLS";
+                          csym "ENCODE-UNIVERSAL-TIME"; csym "FIND-CLASS";
+                          csym "END-OF-FILE"; csym "FIND-IF"; csym "ENDP";
+                          csym "FIND-IF-NOT"; csym "ENOUGH-NAMESTRING";
+                          csym "FIND-METHOD";
+                          csym "ENSURE-DIRECTORIES-EXIST";
+                          csym "FIND-PACKAGE";
+                          csym "ENSURE-GENERIC-FUNCTION";
+                          csym "FIND-RESTART"; csym "FIND-SYMBOL";
+                          csym "GET-INTERNAL-RUN-TIME"; csym "FINISH-OUTPUT";
+                          csym "GET-MACRO-CHARACTER"; csym "FIRST";
+                          csym "GET-OUTPUT-STREAM-STRING"; csym "FIXNUM";
+                          csym "GET-PROPERTIES"; csym "FLET";
+                          csym "GET-SETF-EXPANSION"; csym "FLOAT";
+                          csym "GET-UNIVERSAL-TIME"; csym "FLOAT-DIGITS";
+                          csym "GETF"; csym "FLOAT-PRECISION";
+                          csym "GETHASH"; csym "FLOAT-RADIX"; csym "GO";
+                          csym "FLOAT-SIGN"; csym "GRAPHIC-CHAR-P";
+                          csym "FLOATING-POINT-INEXACT"; csym "HANDLER-BIND";
+                          csym "FLOATING-POINT-INVALID-OPERATION";
+                          csym "HANDLER-CASE";
+                          csym "FLOATING-POINT-OVERFLOW"; csym "HASH-TABLE";
+                          csym "FLOATING-POINT-UNDERFLOW";
+                          csym "HASH-TABLE-COUNT"; csym "FLOATP";
+                          csym "HASH-TABLE-P"; csym "FLOOR";
+                          csym "HASH-TABLE-REHASH-SIZE"; csym "FMAKUNBOUND";
+                          csym "HASH-TABLE-REHASH-THRESHOLD";
+                          csym "FORCE-OUTPUT"; csym "HASH-TABLE-SIZE";
+                          csym "FORMAT"; csym "HASH-TABLE-TEST";
+                          csym "FORMATTER"; csym "HOST-NAMESTRING";
+                          csym "FOURTH"; csym "IDENTITY"; csym "FRESH-LINE";
+                          csym "IF"; csym "FROUND"; csym "IGNORABLE";
+                          csym "FTRUNCATE"; csym "IGNORE"; csym "FTYPE";
+                          csym "IGNORE-ERRORS"; csym "FUNCALL";
+                          csym "IMAGPART"; csym "FUNCTION"; csym "IMPORT";
+                          csym "FUNCTION-KEYWORDS"; csym "IN-PACKAGE";
+                          csym "FUNCTION-LAMBDA-EXPRESSION"; csym "INCF";
+                          csym "FUNCTIONP"; csym "INITIALIZE-INSTANCE";
+                          csym "GCD"; csym "INLINE"; csym "GENERIC-FUNCTION";
+                          csym "INPUT-STREAM-P"; csym "GENSYM";
+                          csym "INSPECT"; csym "GENTEMP"; csym "INTEGER";
+                          csym "GET"; csym "INTEGER-DECODE-FLOAT";
+                          csym "GET-DECODED-TIME"; csym "INTEGER-LENGTH";
+                          csym "GET-DISPATCH-MACRO-CHARACTER";
+                          csym "INTEGERP"; csym "GET-INTERNAL-REAL-TIME";
+                          csym "INTERACTIVE-STREAM-P"; csym "INTERN";
+                          csym "LISP-IMPLEMENTATION-TYPE";
+                          csym "INTERNAL-TIME-UNITS-PER-SECOND";
+                          csym "LISP-IMPLEMENTATION-VERSION";
+                          csym "INTERSECTION"; csym "LIST";
+                          csym "INVALID-METHOD-ERROR"; csym "LIST*";
+                          csym "INVOKE-DEBUGGER"; csym "LIST-ALL-PACKAGES";
+                          csym "INVOKE-RESTART"; csym "LIST-LENGTH";
+                          csym "INVOKE-RESTART-INTERACTIVELY"; csym "LISTEN";
+                          csym "ISQRT"; csym "LISTP"; csym KEYWORD;
+                          csym "LOAD"; csym "KEYWORDP";
+                          csym "LOAD-LOGICAL-PATHNAME-TRANSLATIONS";
+                          csym "LABELS"; csym "LOAD-TIME-VALUE";
+                          csym "LAMBDA"; csym "LOCALLY";
+                          csym "LAMBDA-LIST-KEYWORDS"; csym "LOG";
+                          csym "LAMBDA-PARAMETERS-LIMIT"; csym "LOGAND";
+                          csym "LAST"; csym "LOGANDC1"; csym "LCM";
+                          csym "LOGANDC2"; csym "LDB"; csym "LOGBITP";
+                          csym "LDB-TEST"; csym "LOGCOUNT"; csym "LDIFF";
+                          csym "LOGEQV"; csym "LEAST-NEGATIVE-DOUBLE-FLOAT";
+                          csym "LOGICAL-PATHNAME";
+                          csym "LEAST-NEGATIVE-LONG-FLOAT";
+                          csym "LOGICAL-PATHNAME-TRANSLATIONS";
+                          csym "LEAST-NEGATIVE-NORMALIZED-DOUBLE-FLOAT";
+                          csym "LOGIOR";
+                          csym "LEAST-NEGATIVE-NORMALIZED-LONG-FLOAT";
+                          csym "LOGNAND";
+                          csym "LEAST-NEGATIVE-NORMALIZED-SHORT-FLOAT";
+                          csym "LOGNOR";
+                          csym "LEAST-NEGATIVE-NORMALIZED-SINGLE-FLOAT";
+                          csym "LOGNOT"; csym "LEAST-NEGATIVE-SHORT-FLOAT";
+                          csym "LOGORC1"; csym "LEAST-NEGATIVE-SINGLE-FLOAT";
+                          csym "LOGORC2"; csym "LEAST-POSITIVE-DOUBLE-FLOAT";
+                          csym "LOGTEST"; csym "LEAST-POSITIVE-LONG-FLOAT";
+                          csym "LOGXOR";
+                          csym "LEAST-POSITIVE-NORMALIZED-DOUBLE-FLOAT";
+                          csym "LONG-FLOAT";
+                          csym "LEAST-POSITIVE-NORMALIZED-LONG-FLOAT";
+                          csym "LONG-FLOAT-EPSILON";
+                          csym "LEAST-POSITIVE-NORMALIZED-SHORT-FLOAT";
+                          csym "LONG-FLOAT-NEGATIVE-EPSILON";
+                          csym "LEAST-POSITIVE-NORMALIZED-SINGLE-FLOAT";
+                          csym "LONG-SITE-NAME";
+                          csym "LEAST-POSITIVE-SHORT-FLOAT"; csym "LOOP";
+                          csym "LEAST-POSITIVE-SINGLE-FLOAT";
+                          csym "LOOP-FINISH"; csym "LENGTH";
+                          csym "LOWER-CASE-P"; csym "LET";
+                          csym "MACHINE-INSTANCE"; csym "LET*";
+                          csym "MACHINE-TYPE"; csym "MACHINE-VERSION";
+                          csym "MASK-FIELD"; csym "MACRO-FUNCTION";
+                          csym "MAX"; csym "MACROEXPAND"; csym "MEMBER";
+                          csym "MACROEXPAND-1"; csym "MEMBER-IF";
+                          csym "MACROLET"; csym "MEMBER-IF-NOT";
+                          csym "MAKE-ARRAY"; csym "MERGE";
+                          csym "MAKE-BROADCAST-STREAM";
+                          csym "MERGE-PATHNAMES";
+                          csym "MAKE-CONCATENATED-STREAM"; csym "METHOD";
+                          csym "MAKE-CONDITION"; csym "METHOD-COMBINATION";
+                          csym "MAKE-DISPATCH-MACRO-CHARACTER";
+                          csym "METHOD-COMBINATION-ERROR";
+                          csym "MAKE-ECHO-STREAM"; csym "METHOD-QUALIFIERS";
+                          csym "MAKE-HASH-TABLE"; csym "MIN";
+                          csym "MAKE-INSTANCE"; csym "MINUSP";
+                          csym "MAKE-INSTANCES-OBSOLETE"; csym "MISMATCH";
+                          csym "MAKE-LIST"; csym "MOD";
+                          csym "MAKE-LOAD-FORM";
+                          csym "MOST-NEGATIVE-DOUBLE-FLOAT";
+                          csym "MAKE-LOAD-FORM-SAVING-SLOTS";
+                          csym "MOST-NEGATIVE-FIXNUM"; csym "MAKE-METHOD";
+                          csym "MOST-NEGATIVE-LONG-FLOAT";
+                          csym "MAKE-PACKAGE";
+                          csym "MOST-NEGATIVE-SHORT-FLOAT";
+                          csym "MAKE-PATHNAME";
+                          csym "MOST-NEGATIVE-SINGLE-FLOAT";
+                          csym "MAKE-RANDOM-STATE";
+                          csym "MOST-POSITIVE-DOUBLE-FLOAT";
+                          csym "MAKE-SEQUENCE"; csym "MOST-POSITIVE-FIXNUM";
+                          csym "MAKE-STRING";
+                          csym "MOST-POSITIVE-LONG-FLOAT";
+                          csym "MAKE-STRING-INPUT-STREAM";
+                          csym "MOST-POSITIVE-SHORT-FLOAT";
+                          csym "MAKE-STRING-OUTPUT-STREAM";
+                          csym "MOST-POSITIVE-SINGLE-FLOAT";
+                          csym "MAKE-SYMBOL"; csym "MUFFLE-WARNING";
+                          csym "MAKE-SYNONYM-STREAM";
+                          csym "MULTIPLE-VALUE-BIND";
+                          csym "MAKE-TWO-WAY-STREAM";
+                          csym "MULTIPLE-VALUE-CALL"; csym "MAKUNBOUND";
+                          csym "MULTIPLE-VALUE-LIST"; csym "MAP";
+                          csym "MULTIPLE-VALUE-PROG1"; csym "MAP-INTO";
+                          csym "MULTIPLE-VALUE-SETQ"; csym "MAPC";
+                          csym "MULTIPLE-VALUES-LIMIT"; csym "MAPCAN";
+                          csym "NAME-CHAR"; csym "MAPCAR"; csym "NAMESTRING";
+                          csym "MAPCON"; csym "NBUTLAST"; csym "MAPHASH";
+                          csym "NCONC"; csym "MAPL"; csym "NEXT-METHOD-P";
+                          csym "MAPLIST"; nil; csym "NINTERSECTION";
+                          csym "PACKAGE-ERROR"; csym "NINTH";
+                          csym "PACKAGE-ERROR-PACKAGE";
+                          csym "NO-APPLICABLE-METHOD"; csym "PACKAGE-NAME";
+                          csym "NO-NEXT-METHOD"; csym "PACKAGE-NICKNAMES";
+                          csym "NOT"; csym "PACKAGE-SHADOWING-SYMBOLS";
+                          csym "NOTANY"; csym "PACKAGE-USE-LIST";
+                          csym "NOTEVERY"; csym "PACKAGE-USED-BY-LIST";
+                          csym "NOTINLINE"; csym "PACKAGEP"; csym "NRECONC";
+                          csym "PAIRLIS"; csym "NREVERSE";
+                          csym "PARSE-ERROR"; csym "NSET-DIFFERENCE";
+                          csym "PARSE-INTEGER"; csym "NSET-EXCLUSIVE-OR";
+                          csym "PARSE-NAMESTRING"; csym "NSTRING-CAPITALIZE";
+                          csym "PATHNAME"; csym "NSTRING-DOWNCASE";
+                          csym "PATHNAME-DEVICE"; csym "NSTRING-UPCASE";
+                          csym "PATHNAME-DIRECTORY"; csym "NSUBLIS";
+                          csym "PATHNAME-HOST"; csym "NSUBST";
+                          csym "PATHNAME-MATCH-P"; csym "NSUBST-IF";
+                          csym "PATHNAME-NAME"; csym "NSUBST-IF-NOT";
+                          csym "PATHNAME-TYPE"; csym "NSUBSTITUTE";
+                          csym "PATHNAME-VERSION"; csym "NSUBSTITUTE-IF";
+                          csym "PATHNAMEP"; csym "NSUBSTITUTE-IF-NOT";
+                          csym "PEEK-CHAR"; csym "NTH"; csym "PHASE";
+                          csym "NTH-VALUE"; csym "PI"; csym "NTHCDR";
+                          csym "PLUSP"; csym "NULL"; csym "POP";
+                          csym "NUMBER"; csym "POSITION"; csym "NUMBERP";
+                          csym "POSITION-IF"; csym "NUMERATOR";
+                          csym "POSITION-IF-NOT"; csym "NUNION";
+                          csym "PPRINT"; csym "ODDP"; csym "PPRINT-DISPATCH";
+                          csym "OPEN"; csym "PPRINT-EXIT-IF-LIST-EXHAUSTED";
+                          csym "OPEN-STREAM-P"; csym "PPRINT-FILL";
+                          csym "OPTIMIZE"; csym "PPRINT-INDENT"; csym "OR";
+                          csym "PPRINT-LINEAR"; csym "OTHERWISE";
+                          csym "PPRINT-LOGICAL-BLOCK";
+                          csym "OUTPUT-STREAM-P"; csym "PPRINT-NEWLINE";
+                          csym "PACKAGE"; csym "PPRINT-POP";
+                          csym "PPRINT-TAB"; csym "READ-CHAR";
+                          csym "PPRINT-TABULAR"; csym "READ-CHAR-NO-HANG";
+                          csym "PRIN1"; csym "READ-DELIMITED-LIST";
+                          csym "PRIN1-TO-STRING"; csym "READ-FROM-STRING";
+                          csym "PRINC"; csym "READ-LINE";
+                          csym "PRINC-TO-STRING";
+                          csym "READ-PRESERVING-WHITESPACE"; csym "PRINT";
+                          csym "READ-SEQUENCE"; csym "PRINT-NOT-READABLE";
+                          csym "READER-ERROR";
+                          csym "PRINT-NOT-READABLE-OBJECT"; csym "READTABLE";
+                          csym "PRINT-OBJECT"; csym "READTABLE-CASE";
+                          csym "PRINT-UNREADABLE-OBJECT"; csym "READTABLEP";
+                          csym "PROBE-FILE"; csym "REAL"; csym "PROCLAIM";
+                          csym "REALP"; csym "PROG"; csym "REALPART";
+                          csym "PROG*"; csym "REDUCE"; csym "PROG1";
+                          csym "REINITIALIZE-INSTANCE"; csym "PROG2";
+                          csym "REM"; csym "PROGN"; csym "REMF";
+                          csym "PROGRAM-ERROR"; csym "REMHASH"; csym "PROGV";
+                          csym "REMOVE"; csym "PROVIDE";
+                          csym "REMOVE-DUPLICATES"; csym "PSETF";
+                          csym "REMOVE-IF"; csym "PSETQ";
+                          csym "REMOVE-IF-NOT"; csym "PUSH";
+                          csym "REMOVE-METHOD"; csym "PUSHNEW";
+                          csym "REMPROP"; csym "QUOTE"; csym "RENAME-FILE";
+                          csym "RANDOM"; csym "RENAME-PACKAGE";
+                          csym "RANDOM-STATE"; csym "REPLACE";
+                          csym "RANDOM-STATE-P"; csym "REQUIRE";
+                          csym "RASSOC"; csym "REST"; csym "RASSOC-IF";
+                          csym "RESTART"; csym "RASSOC-IF-NOT";
+                          csym "RESTART-BIND"; csym "RATIO";
+                          csym "RESTART-CASE"; csym "RATIONAL";
+                          csym "RESTART-NAME"; csym "RATIONALIZE";
+                          csym "RETURN"; csym "RATIONALP";
+                          csym "RETURN-FROM"; csym "READ"; csym "REVAPPEND";
+                          csym "READ-BYTE"; csym "REVERSE"; csym "ROOM";
+                          csym "SIMPLE-BIT-VECTOR"; csym "ROTATEF";
+                          csym "SIMPLE-BIT-VECTOR-P"; csym "ROUND";
+                          csym "SIMPLE-CONDITION"; csym "ROW-MAJOR-AREF";
+                          csym "SIMPLE-CONDITION-FORMAT-ARGUMENTS";
+                          csym "RPLACA";
+                          csym "SIMPLE-CONDITION-FORMAT-CONTROL";
+                          csym "RPLACD"; csym "SIMPLE-ERROR"; csym "SAFETY";
+                          csym "SIMPLE-STRING"; csym "SATISFIES";
+                          csym "SIMPLE-STRING-P"; csym "SBIT";
+                          csym "SIMPLE-TYPE-ERROR"; csym "SCALE-FLOAT";
+                          csym "SIMPLE-VECTOR"; csym "SCHAR";
+                          csym "SIMPLE-VECTOR-P"; csym "SEARCH";
+                          csym "SIMPLE-WARNING"; csym "SECOND"; csym "SIN";
+                          csym "SEQUENCE"; csym "SINGLE-FLOAT";
+                          csym "SERIOUS-CONDITION";
+                          csym "SINGLE-FLOAT-EPSILON"; csym "SET";
+                          csym "SINGLE-FLOAT-NEGATIVE-EPSILON";
+                          csym "SET-DIFFERENCE"; csym "SINH";
+                          csym "SET-DISPATCH-MACRO-CHARACTER"; csym "SIXTH";
+                          csym "SET-EXCLUSIVE-OR"; csym "SLEEP";
+                          csym "SET-MACRO-CHARACTER"; csym "SLOT-BOUNDP";
+                          csym "SET-PPRINT-DISPATCH"; csym "SLOT-EXISTS-P";
+                          csym "SET-SYNTAX-FROM-CHAR";
+                          csym "SLOT-MAKUNBOUND"; csym "SETF";
+                          csym "SLOT-MISSING"; csym "SETQ";
+                          csym "SLOT-UNBOUND"; csym "SEVENTH";
+                          csym "SLOT-VALUE"; csym "SHADOW";
+                          csym "SOFTWARE-TYPE"; csym "SHADOWING-IMPORT";
+                          csym "SOFTWARE-VERSION"; csym "SHARED-INITIALIZE";
+                          csym "SOME"; csym "SHIFTF"; csym "SORT";
+                          csym "SHORT-FLOAT"; csym "SPACE";
+                          csym "SHORT-FLOAT-EPSILON"; csym "SPECIAL";
+                          csym "SHORT-FLOAT-NEGATIVE-EPSILON";
+                          csym "SPECIAL-OPERATOR-P"; csym "SHORT-SITE-NAME";
+                          csym "SPEED"; csym "SIGNAL"; csym "SQRT";
+                          csym "SIGNED-BYTE"; csym "STABLE-SORT";
+                          csym "SIGNUM"; csym "STANDARD";
+                          csym "SIMPLE-ARRAY"; csym "STANDARD-CHAR";
+                          csym "SIMPLE-BASE-STRING"; csym "STANDARD-CHAR-P";
+                          csym "STANDARD-CLASS"; csym "SUBLIS";
+                          csym "STANDARD-GENERIC-FUNCTION"; csym "SUBSEQ";
+                          csym "STANDARD-METHOD"; csym "SUBSETP";
+                          csym "STANDARD-OBJECT"; csym "SUBST"; csym "STEP";
+                          csym "SUBST-IF"; csym "STORAGE-CONDITION";
+                          csym "SUBST-IF-NOT"; csym "STORE-VALUE";
+                          csym "SUBSTITUTE"; csym "STREAM";
+                          csym "SUBSTITUTE-IF"; csym "STREAM-ELEMENT-TYPE";
+                          csym "SUBSTITUTE-IF-NOT"; csym "STREAM-ERROR";
+                          csym "SUBTYPEP"; csym "STREAM-ERROR-STREAM";
+                          csym "SVREF"; csym "STREAM-EXTERNAL-FORMAT";
+                          csym "SXHASH"; csym "STREAMP"; csym "SYMBOL";
+                          csym "STRING"; csym "SYMBOL-FUNCTION";
+                          csym "STRING-CAPITALIZE"; csym "SYMBOL-MACROLET";
+                          csym "STRING-DOWNCASE"; csym "SYMBOL-NAME";
+                          csym "STRING-EQUAL"; csym "SYMBOL-PACKAGE";
+                          csym "STRING-GREATERP"; csym "SYMBOL-PLIST";
+                          csym "STRING-LEFT-TRIM"; csym "SYMBOL-VALUE";
+                          csym "STRING-LESSP"; csym "SYMBOLP";
+                          csym "STRING-NOT-EQUAL"; csym "SYNONYM-STREAM";
+                          csym "STRING-NOT-GREATERP";
+                          csym "SYNONYM-STREAM-SYMBOL";
+                          csym "STRING-NOT-LESSP"; t;
+                          csym "STRING-RIGHT-TRIM"; csym "TAGBODY";
+                          csym "STRING-STREAM"; csym "TAILP";
+                          csym "STRING-TRIM"; csym "TAN";
+                          csym "STRING-UPCASE"; csym "TANH"; csym "STRING/=";
+                          csym "TENTH"; csym "STRING<"; csym "TERPRI";
+                          csym "STRING<="; csym "THE"; csym "STRING=";
+                          csym "THIRD"; csym "STRING>"; csym "THROW";
+                          csym "STRING>="; csym "TIME"; csym "STRINGP";
+                          csym "TRACE"; csym "STRUCTURE";
+                          csym "TRANSLATE-LOGICAL-PATHNAME";
+                          csym "STRUCTURE-CLASS"; csym "TRANSLATE-PATHNAME";
+                          csym "STRUCTURE-OBJECT"; csym "TREE-EQUAL";
+                          csym "STYLE-WARNING"; csym "TRUENAME";
+                          csym "TRUNCATE"; csym "VALUES-LIST";
+                          csym "TWO-WAY-STREAM"; csym "VARIABLE";
+                          csym "TWO-WAY-STREAM-INPUT-STREAM"; csym "VECTOR";
+                          csym "TWO-WAY-STREAM-OUTPUT-STREAM";
+                          csym "VECTOR-POP"; csym "TYPE"; csym "VECTOR-PUSH";
+                          csym "TYPE-ERROR"; csym "VECTOR-PUSH-EXTEND";
+                          csym "TYPE-ERROR-DATUM"; csym "VECTORP";
+                          csym "TYPE-ERROR-EXPECTED-TYPE"; csym "WARN";
+                          csym "TYPE-OF"; csym "WARNING"; csym "TYPECASE";
+                          csym "WHEN"; csym "TYPEP"; csym "WILD-PATHNAME-P";
+                          csym "UNBOUND-SLOT"; csym "WITH-ACCESSORS";
+                          csym "UNBOUND-SLOT-INSTANCE";
+                          csym "WITH-COMPILATION-UNIT";
+                          csym "UNBOUND-VARIABLE";
+                          csym "WITH-CONDITION-RESTARTS";
+                          csym "UNDEFINED-FUNCTION";
+                          csym "WITH-HASH-TABLE-ITERATOR"; csym "UNEXPORT";
+                          csym "WITH-INPUT-FROM-STRING"; csym "UNINTERN";
+                          csym "WITH-OPEN-FILE"; csym "UNION";
+                          csym "WITH-OPEN-STREAM"; csym "UNLESS";
+                          csym "WITH-OUTPUT-TO-STRING"; csym "UNREAD-CHAR";
+                          csym "WITH-PACKAGE-ITERATOR"; csym "UNSIGNED-BYTE";
+                          csym "WITH-SIMPLE-RESTART"; csym "UNTRACE";
+                          csym "WITH-SLOTS"; csym "UNUSE-PACKAGE";
+                          csym "WITH-STANDARD-IO-SYNTAX";
+                          csym "UNWIND-PROTECT"; csym "WRITE";
+                          csym "UPDATE-INSTANCE-FOR-DIFFERENT-CLASS";
+                          csym "WRITE-BYTE";
+                          csym "UPDATE-INSTANCE-FOR-REDEFINED-CLASS";
+                          csym "WRITE-CHAR";
+                          csym "UPGRADED-ARRAY-ELEMENT-TYPE";
+                          csym "WRITE-LINE";
+                          csym "UPGRADED-COMPLEX-PART-TYPE";
+                          csym "WRITE-SEQUENCE"; csym "UPPER-CASE-P";
+                          csym "WRITE-STRING"; csym "USE-PACKAGE";
+                          csym "WRITE-TO-STRING"; csym "USE-VALUE";
+                          csym "Y-OR-N-P"; csym "USER-HOMEDIR-PATHNAME";
+                          csym "YES-OR-NO-P"; csym "VALUES"; csym "ZEROP"]));
+                 symbolp y; equal (symbol_package_name y) (str ACL2)])
+             (equal (symbol_package_name (intern_in_package_of_symbol x y))
+                (str ACL2))``,
+   RW_TAC std_ss 
+    [GSYM COMMON_LISP_SYMBOLS,t_def,nil_def,GSYM csym_def,GSYM COMMON_LISP_def,KEYWORD_def]
+    THEN Cases_on `x` THEN Cases_on `y`
+    THEN ACL2_SIMP_TAC[]
+    THEN FULL_SIMP_TAC arith_ss 
+          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
+    THEN ACL2_FULL_SIMP_TAC
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,
+           BASIC_INTERN_def,ACL2_def,EVAL ``"ACL2" = ""``]
+    THEN RW_TAC std_ss []
+    THEN ASSUM_LIST
+          (fn thl => POP_ASSUM(K ALL_TAC) THEN ASSUME_TAC(SIMP_RULE std_ss [el 2 thl] (el 1 thl)))
+    THEN ACL2_FULL_SIMP_TAC
+          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def]
+    THEN FULL_SIMP_TAC std_ss [GSYM nil_def,not_member_symbol_name_MEM,MEM_MAP_MAP]
+    THEN METIS_TAC
+          [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
+           LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
+           pkg_thm_for_initial_pkg_system_lemma]);
 
+(*****************************************************************************)
+(* val LOOKUP_EMPTY = |- LOOKUP "" ACL2_PACKAGE_ALIST s = "" : thm           *)
+(*****************************************************************************)
+val LOOKUP_EMPTY = 
+ save_thm("LOOKUP_EMPTY", EVAL ``LOOKUP "" ACL2_PACKAGE_ALIST s``);
 
 (*
      [oracles: DEFAXIOM ACL2::KEYWORD-PACKAGE, DISK_THM] [axioms: ] []
@@ -2725,7 +3311,10 @@ val acl2_package_defaxiom =
                 (str KEYWORD)),
 *)
 
-val LOOKUP_KEYWORD = time EVAL ``LOOKUP "KEYWORD" ACL2_PACKAGE_ALIST s``;
+val LOOKUP_KEYWORD = 
+ save_thm
+  ("LOOKUP_KEYWORD",
+   time EVAL ``LOOKUP "KEYWORD" ACL2_PACKAGE_ALIST s``);
 
 val keyword_package_defaxiom =
  store_thm
@@ -3630,13 +4219,6 @@ val bad_atom_less_equal_transitive_defaxiom =
              (ite (bad_atom_less_equal x y) (bad_atom_less_equal x y)
                 (bad_atom_less_equal y x)),
 *)
-
-(*****************************************************************************)
-(* |- LOOKUP "" ACL2_PACKAGE_ALIST s = ""                                    *)
-(* |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL" = "COMMON-LISP"          *)
-(*****************************************************************************)
-val LOOKUP_EMPTY = EVAL ``LOOKUP "" ACL2_PACKAGE_ALIST s``;
-val LOOKUP_NIL = EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``;
 
 val bad_atom_less_equal_total_defaxiom =
  time store_thm

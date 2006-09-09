@@ -1362,7 +1362,7 @@ val cddddr_def =
 
 val List_def =
  Define
-  `(List[s] = cons s nil)
+  `(List[] = nil)
     /\
    (List(s::sl) = cons s (List sl))`;
 

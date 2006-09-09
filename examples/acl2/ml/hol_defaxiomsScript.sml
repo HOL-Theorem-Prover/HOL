@@ -243,67 +243,6 @@ val length_def =
 *)
 
 (*
-val (acl2_count_def,acl2_count_ind) =
- acl2_defn "ACL2::ACL2-COUNT"
-  (`acl2_count x =
-     itel
-       [(consp x,
-         add (nat 1)
-           (add (acl2_count (car x)) (acl2_count (cdr x))));
-        (rationalp x,
-         ite (integerp x) (integer_abs x)
-           (add (integer_abs (numerator x)) (denominator x)));
-        (complex_rationalp x,
-         add (nat 1)
-           (add
-              (ite (integerp (realpart x)) (integer_abs (realpart x))
-                 (add (integer_abs (numerator (realpart x)))
-                    (denominator (realpart x))))
-              (ite (integerp (imagpart x)) (integer_abs (imagpart x))
-                 (add (integer_abs (numerator (imagpart x)))
-                    (denominator (imagpart x))))));
-        (stringp x,length x)]
-       (nat 0)`,
-   WF_REL_TAC `measure sexp_size`
-    THEN ACL2_SIMP_TAC []);
-
-val acl2_count_tac =
- ONCE_REWRITE_TAC[acl2_count_def]
-  THEN ACL2_SIMP_TAC[itel_def]
-  THEN FULL_SIMP_TAC std_ss
-        [GSYM nil_def,itel_def,GSYM t_def,rationalp_def,csym_def,COMMON_LISP_def];
-
-val acl2_count =
- store_thm
-  ("acl2_count",
-   ``acl2_count x =
-     itel
-       [(consp x,
-         add (nat 1) (add (acl2_count (car x)) (acl2_count (cdr x))));
-        (rationalp x,
-         ite (integerp x) (integer_abs x)
-           (add (integer_abs (numerator x)) (denominator x)));
-        (complex_rationalp x,
-         add (nat 1)
-           (add (acl2_count (realpart x)) (acl2_count (imagpart x))));
-        (stringp x,length x)] (nat 0)``,
-
-   Cases_on `x`
-    THEN ACL2_SIMP_TAC[itel_def,csym_def,COMMON_LISP_def]
-    THEN FULL_SIMP_TAC std_ss
-          [GSYM nil_def,itel_def,GSYM t_def,rationalp_def,csym_def,COMMON_LISP_def]
-    THENL
-     [acl2_count_tac;
-      acl2_count_tac;
-      acl2_count_tac
-      acl2_count_tac;
-
-
-   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[acl2_count_def]))
-    THEN
-*)
-
-(*
      [oracles: DEFUN ACL2::COND-CLAUSESP, DISK_THM] [axioms: ] []
      |- cond_clausesp clauses =
         ite (consp clauses)
