@@ -414,16 +414,16 @@ val resq_SS =
   {ac = [], congs = [],
    convs =
    [{conv = K (K RES_FORALL_CONV),
-     key = SOME ([], Term `RES_FORALL p m`),
+     key = SOME ([], Term `RES_FORALL (p:'a -> bool) m`),
      name = "RES_FORALL_CONV", trace = 2},
     {conv = K (K RES_EXISTS_CONV),
-     key = SOME ([], Term `RES_EXISTS p m`),
+     key = SOME ([], Term `RES_EXISTS (p:'a -> bool) m`),
      name = "RES_EXISTS_CONV", trace = 2},
     {conv = K (K RES_SELECT_CONV),
-     key = SOME ([], Term `RES_SELECT p m`),
+     key = SOME ([], Term `RES_SELECT (p:'a -> bool) m`),
      name = "RES_SELECT_CONV", trace = 2},
     {conv = K (K RES_EXISTS_UNIQUE_CONV),
-     key = SOME ([], Term `RES_EXISTS_UNIQUE p m`),
+     key = SOME ([], Term `RES_EXISTS_UNIQUE (p:'a -> bool) m`),
      name = "RES_EXISTS_UNIQUE_CONV", trace = 2}],
    dprocs = [], filter = NONE, rewrs = []};
 
