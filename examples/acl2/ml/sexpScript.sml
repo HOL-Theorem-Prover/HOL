@@ -1557,6 +1557,27 @@ val sexp_size_cdr =
           [cdr_def,nil_def,consp_def,arithmeticTheory.MAX_DEF,
            fetch "-" "sexp_size_def"]);
 
+(*****************************************************************************)
+(* HOL version of Matt's ACL2 function imported-symbol-names                 *)
+(* used to prove acl2_package_defaxiom:                                      *)
+(*                                                                           *)
+(*    (defun imported-symbol-names (pkg-name triples)                        *)
+(*      (cond ((endp triples) nil)                                           *)
+(* 	   ((equal (cadr (car triples)) pkg-name)                            *)
+(* 	    (cons (car (car triples))                                        *)
+(* 		  (imported-symbol-names pkg-name (cdr triples))))           *)
+(* 	   (t (imported-symbol-names pkg-name (cdr triples)))))              *)
+(*****************************************************************************)
+val imported_symbol_names_def =
+ Define
+  `(imported_symbol_names pkg_name [] = [])
+   /\
+   (imported_symbol_names pkg_name
+     ((sym_name,known_name,actual_name)::triples) =
+     if (known_name = pkg_name)
+      then sym_name :: (imported_symbol_names pkg_name triples)
+      else imported_symbol_names pkg_name triples)`;
+
 val _ = 
  add_acl2_simps 
   [fetch "-" "sexp_11",ACL2_TRUE,

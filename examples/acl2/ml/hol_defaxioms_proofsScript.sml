@@ -1,10 +1,10 @@
 
 (*****************************************************************************)
-(* HOL proofs of the ACL2 axioms and theorems in defaxioms.lisp.trans.       *)
+(* HOL proofs of the ACL2 defaxioms in defaxioms.lisp.trans.                 *)
 (*                                                                           *)
 (* Note that many of the proofs were starting by cutting-and-pasting         *)
 (* earlier proofs, so there are likely to use bloated tactics                *)
-(* (e.g. many rewrites that are irrelevant)                                  *)
+(* (e.g. many irrelevant rewrites). There may also be some unused lemmas.    *)
 (*                                                                           *)
 (*                                                                           *)
 (*****************************************************************************)
@@ -52,10 +52,22 @@ open stringLib complex_rationalTheory gcdTheory sexp sexpTheory
 val _ = new_theory "hol_defaxioms_proofs";
 
 (*****************************************************************************)
+(* Only save theorem in theory if save_thm_flag is true                      *)
+(* (flag initially false).                                                   *)
+(*****************************************************************************)
+val save_thm_flag = ref false;
+
+fun if_save_thm (name,thm) =
+ if !save_thm_flag then save_thm(name,thm) else thm;
+
+fun if_store_thm(name,term,tac) =
+ if !save_thm_flag then store_thm(name,term,tac) else prove(term,tac);
+
+(*****************************************************************************)
 (* Usefull lemmas for eliminating equations between conditionals             *)
 (*****************************************************************************)
 val if_t_nil =
- store_thm
+ if_store_thm
   ("if_t_nil",
    ``(((if p then t else q) = nil) = ~p /\ (q = nil))
      /\
@@ -75,7 +87,7 @@ val if_t_nil =
   PROVE_TAC [EVAL ``t = nil``]);
 
 val t_nil_if =
- store_thm
+ if_store_thm
   ("t_nil_if",
    ``((nil = (if p then t else q)) = ~p /\ (q = nil))
      /\
@@ -95,13 +107,13 @@ val t_nil_if =
   PROVE_TAC [EVAL ``t = nil``]);
 
 val if_eq_imp =
- store_thm
+ if_store_thm
   ("if_eq_imp",
    ``((if p then a else b) = c) = (p ==> (a = c)) /\ (~p ==> (b = c))``,
   PROVE_TAC []);
 
 val eq_imp_if =
- store_thm
+ if_store_thm
   ("eq_imp_if",
    ``(c = (if p then a else b)) = (p ==> (a = c)) /\ (~p ==> (b = c))``,
   PROVE_TAC []);
@@ -299,13 +311,13 @@ val unicity_of_1_defaxiom =
 *)
 
 val RAT_SQ_SGN =
- store_thm
+ if_store_thm
   ("RAT_SQ_SGN",
    ``!(r:rat). 0 <= rat_sgn(r*r)``,
    RW_TAC arith_ss [ratTheory.RAT_SGN_MUL,integerTheory.INT_LE_SQUARE]);
 
 val RAT_SQ_NONNEG =
- store_thm
+ if_store_thm
   ("RAT_SQ_NONNEG",
    ``!(r:rat). 0 <= r*r``,
    GEN_TAC
@@ -322,7 +334,7 @@ val RAT_SQ_NONNEG =
               integerTheory.INT_ENTIRE]]);
 
 val RAT_SQ_POS =
- store_thm
+ if_store_thm
   ("RAT_SQ_POS",
    ``!(r:rat). ~(r = 0) ==> 0 < r*r``,
    GEN_TAC
@@ -332,7 +344,7 @@ val RAT_SQ_POS =
     THEN FULL_SIMP_TAC arith_ss [GSYM ratTheory.RAT_NO_ZERODIV]);
 
 val RAT_SUM_SQ_POS =
- store_thm
+ if_store_thm
   ("RAT_SUM_SQ_POS",
    ``~(r1 = 0) /\ ~(r2 = 0) ==> 0 < r1*r1 + r2*r2``,
    RW_TAC std_ss []
@@ -611,7 +623,7 @@ val positive_defaxiom =
 (*****************************************************************************)
 
 val Num_EQ_0 =
- store_thm
+ if_store_thm
   ("Num_EQ_0",
    ``0 <= n ==> ((Num n = 0) = (n = 0))``,
    STRIP_TAC
@@ -625,7 +637,7 @@ val Num_EQ_0 =
     THEN intLib.ARITH_TAC);
 
 val Num_pos =
- store_thm
+ if_store_thm
   ("Num_pos",
    ``0 < n ==> 0 < Num n``,
    STRIP_TAC
@@ -636,13 +648,13 @@ val Num_pos =
     THEN Cooper.COOPER_TAC);
 
 val num_init_0_lemma =
- store_thm
+ if_store_thm
   ("num_init_0_lemma",
    ``!n:num. ~(n = 0) ==> ~((&n):int = 0)``,
    Cooper.COOPER_TAC);
 
 val div_pos =
- store_thm
+ if_store_thm
   ("div_pos",
    ``!m n:int. 0 < n /\ n <= m  ==> 0 < (m/n)``,
    RW_TAC arith_ss 
@@ -663,7 +675,7 @@ val div_pos =
 
 (* Also proved (differently) in translateScript.sml *)
 val gcd_less_eq =
- store_thm
+ if_store_thm
   ("gcd_less_eq",
    ``0 < n ==> gcd m n <= n``,
    Cases_on `m = 0` THEN Cases_on `n = 0`
@@ -678,7 +690,7 @@ val gcd_less_eq =
     THEN DECIDE_TAC);
 
 val gcd_mod1 =
- store_thm
+ if_store_thm
   ("gcd_mod1",
   ``!m n. ~(n = 0) /\ ~(m = 0) ==> (&m % &(gcd m n) = 0)``,
   RW_TAC std_ss []
@@ -691,7 +703,7 @@ val gcd_mod1 =
    THEN METIS_TAC[integerTheory.INT_MOD_EQ0]);
 
 val gcd_mod2 =
- store_thm
+ if_store_thm
   ("gcd_mod2",
   ``!m n. ~(n = 0) /\ ~(m = 0) ==> (&n % &(gcd m n) = 0)``,
   METIS_TAC[gcd_mod1,gcdTheory.GCD_SYM]);
@@ -700,7 +712,7 @@ val gcd_mod2 =
 local open integerTheory Cooper 
 in
 val num_abs_nz = 
- store_thm
+ if_store_thm
   ("num_abs_nz",
    ``0 < b \/ ~(b = 0) ==> ~(Num (ABS b) = 0)``,
    DISCH_TAC THEN ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] THEN
@@ -713,14 +725,14 @@ end;
 local open integerTheory Cooper 
 in
 val eq_num = 
- store_thm
+ if_store_thm
   ("eq_num",
    ``0 < a ==> (a = & (Num a))``,
    METIS_TAC [INT_NEG_GT0,INT_OF_NUM,INT_LT_IMP_LE]);
 end;
 
 val abs_rat_reduce =
- store_thm
+ if_store_thm
   ("abs_rat_reduce",
    ``0 < n 
      ==> 
@@ -799,7 +811,7 @@ val abs_rat_reduce =
        THEN METIS_TAC[integerTheory.INT_MUL_ASSOC]]);
 
 val frac_dnm_pos = 
- store_thm
+ if_store_thm
    ("frac_dnm_pos",
     ``0 < frac_dnm n``,
     METIS_TAC[fracTheory.frac_dnm_def,fracTheory.frac_bij]);
@@ -808,7 +820,7 @@ val frac_dnm_pos =
 (*   |- abs_rat (abs_frac (reduce (rep_frac (rep_rat r)))) = r               *)
 (*****************************************************************************)
 val abs_rat_reduce_cor =
- save_thm
+ if_save_thm
   ("abs_rat_reduce_cor",
    SIMP_RULE std_ss
     [GSYM fracTheory.frac_dnm_def,frac_dnm_pos,fracTheory.frac_bij,
@@ -835,7 +847,7 @@ open intLib integerTheory fracTheory
      intExtensionTheory arithmeticTheory
 in
 val reduced_dnm_pos = 
- store_thm
+ if_store_thm
    ("reduced_dnm_pos",
     ``0 < reduced_dnm x``,
     FULL_SIMP_TAC int_ss [reduced_dnm_def] 
@@ -909,7 +921,7 @@ val rational_implies1_defaxiom =
 local open ratTheory
 in
 val rat_divshiftthm = 
- store_thm
+ if_store_thm
   ("rat_divshiftthm",
    ``a * (b / c) = a * b / c:rat``,
    RW_TAC std_ss [RAT_DIV_MULMINV,RAT_MUL_ASSOC]);
@@ -920,7 +932,7 @@ local
 open ratTheory fracTheory translateTheory
 in
 val RAT_DIV = 
- store_thm
+ if_store_thm
   ("RAT_DIV",
    ``!a b. ~(b = 0) ==> (rat (a / b) = mult (rat a) (reciprocal (rat b)))``,
    RW_TAC std_ss 
@@ -934,7 +946,7 @@ val RAT_DIV =
 end;
 
 val rationalp_rat =
- store_thm
+ if_store_thm
   ("rationalp_rat",
    ``(|= rationalp x) = ?a. x = rat a``,
    Cases_on `x`
@@ -946,7 +958,7 @@ val rationalp_rat =
     THEN METIS_TAC[]);
 
 val mult_comm =
- store_thm
+ if_store_thm
   ("mult_comm",
    ``mult x y = mult y x``,
    Cases_on `x` THEN Cases_on `y`
@@ -955,7 +967,7 @@ val mult_comm =
 
 (* From translateScript.sml *)
 val nmr_dnm_rewrite = 
- store_thm
+ if_store_thm
   ("nmr_dnm_rewrite",
    ``(numerator (rat a) = int (reduced_nmr a))
      /\ 
@@ -964,7 +976,7 @@ val nmr_dnm_rewrite =
     [numerator_def,denominator_def,translateTheory.rat_def]);
 
 val nz_rat_1 =
- store_thm
+ if_store_thm
   ("nz_rat_1",
    ``0 < a ==> ~(abs_rat (abs_frac (a,1)) = 0)``,
    RW_TAC intLib.int_ss
@@ -1394,7 +1406,7 @@ val integer_step_defaxiom =
 *)
 
 val div_eq_mult =
- store_thm
+ if_store_thm
   ("div_eq_mult",
    ``!m n p:int. ~(n = 0) /\ (m % n = 0) ==> ((m / n = p) = (m = p * n))``,
    RW_TAC intLib.int_ss []
@@ -1405,7 +1417,7 @@ val div_eq_mult =
     THEN METIS_TAC[]);
 
 val num_abs_mod_0 =
- store_thm
+ if_store_thm
   ("num_abs_mod_0",
    ``~(n = 0) ==> ((& (Num (ABS m)) % n = 0) = (m % n = 0))``,
    RW_TAC intLib.int_ss [integerTheory.INT_MOD_EQ0]
@@ -1431,13 +1443,13 @@ val num_abs_mod_0 =
           THEN METIS_TAC[]]]);
 
 val and_num_abs =
- store_thm
+ if_store_thm
   ("and_num_abs",
    ``!n:int. &(Num(ABS n)) = ABS n``,
    METIS_TAC[integerTheory.INT_OF_NUM,integerTheory.INT_ABS_POS]);
 
 val reduce0 =
- store_thm
+ if_store_thm
   ("reduce0",
    ``!n. ~(n = 0) ==> (reduce(0,n) = (0,SGN n))``,
    RW_TAC intLib.int_ss [reduce_def]
@@ -1460,7 +1472,7 @@ val reduce0 =
        THEN RW_TAC intLib.int_ss [integerTheory.INT_DIV_RMUL]]);
 
 val reduce_lowest_terms =
- store_thm
+ if_store_thm
   ("reduce_lowest_terms",
    ``~(SND r = 0) /\ (reduce r = (m*n1,m*n2)) ==> (Num (ABS m) = 1)``,
    Cases_on `(FST r = 0)`
@@ -1698,7 +1710,7 @@ val characterp_rubout_defaxiom =
 *)
 
 val list_EXPLODE_coerce =
- store_thm
+ if_store_thm
   ("list_EXPLODE_coerce",
    ``!s. (|= character_listp s)
          ==>
@@ -1743,7 +1755,7 @@ val coerce_inverse_1_defaxiom =
 *)
 
 val true_listp_list_to_sexp = (* This is not used *)
- store_thm
+ if_store_thm
   ("true_listp_list_to_sexp",
    ``!l. |= true_listp(list_to_sexp f l)``,
    Induct
@@ -1752,7 +1764,7 @@ val true_listp_list_to_sexp = (* This is not used *)
     THEN ACL2_FULL_SIMP_TAC[ACL2_TRUE]);
 
 val coerce_list_EXPLODE =
- store_thm
+ if_store_thm
   ("coerce_list_EXPLODE",
    ``!s. coerce 
           (list_to_sexp chr (EXPLODE s))
@@ -1788,7 +1800,7 @@ val coerce_inverse_2_defaxiom =
 *)
 
 val character_listp_list_to_sexp = 
- store_thm
+ if_store_thm
   ("character_listp_list_to_sexp",
    ``!l. |= character_listp(list_to_sexp chr l)``,
    Induct
@@ -1815,14 +1827,14 @@ val character_listp_coerce_defaxiom =
 *)
 
 val assoc_nil =
- store_thm
+ if_store_thm
   ("assoc_nil",
    ``assoc x nil = nil``,
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
     THEN ACL2_SIMP_TAC[itel_def]);
 
 val assoc_cons =
- store_thm
+ if_store_thm
   ("assoc_cons",
    ``assoc x (cons (cons x' y) l) = 
       if |= equal x x' then cons x' y else assoc x l``,
@@ -1830,14 +1842,14 @@ val assoc_cons =
     THEN ACL2_SIMP_TAC[itel_def]);
 
 val member_nil =
- store_thm
+ if_store_thm
   ("member_nil",
    ``member x nil = nil``,
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[member_def]))
     THEN ACL2_SIMP_TAC[itel_def]);
 
 val member_cons =
- store_thm
+ if_store_thm
   ("member_cons",
    ``member x (cons x' y) = 
       if |= equal x x' then cons x' y else member x y``,
@@ -1888,7 +1900,7 @@ val stringp_symbol_package_name_defaxiom =
 (*  |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL" = "COMMON-LISP"         *)
 (*****************************************************************************)
 val LOOKUP_NIL = 
- save_thm
+ if_save_thm
   ("LOOKUP_NIL",
    time EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``);
 
@@ -1911,13 +1923,13 @@ val symbolp_intern_in_package_of_symbol_defaxiom =
 (* |- LOOKUP s ACL2_PACKAGE_ALIST "ACL2-PKG-WITNESS" = s                     *)
 (*****************************************************************************)
 val LOOKUP_PKG_WITNESS =
- store_thm
+ if_store_thm
   ("LOOKUP_PKG_WITNESS",
    ``LOOKUP s ACL2_PACKAGE_ALIST "ACL2-PKG-WITNESS" = s``,
    CONV_TAC EVAL);
 
 val symbolp_nil =
- store_thm
+ if_store_thm
   ("symbolp_nil",
    ``~(symbolp nil = nil)``,
    CONV_TAC EVAL);
@@ -2102,7 +2114,7 @@ val symbol_name_intern_in_package_of_symbol_defaxiom =
 *)
 
 val LOOKUP_INPUT = 
- save_thm
+ if_save_thm
   ("LOOKUP_INPUT",
    time EVAL ``LOOKUP "ACL2-INPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
@@ -2138,7 +2150,7 @@ val acl2_input_channel_package_defaxiom =
 *)
 
 val LOOKUP_OUTPUT = 
- save_thm
+ if_save_thm
   ("LOOKUP_OUTPUT",
    time EVAL ``LOOKUP "ACL2-OUTPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
@@ -2667,29 +2679,6 @@ val acl2_output_channel_package_defaxiom =
                 (str ACL2)),
 *)
 
-(* Used ACL2-HOL hybrid that follows
-val imported_symbol_names_def =
- acl2_defn "ACL2::IMPORTED-SYMBOL-NAMES"
-  (`imported_symbol_names pkg_name triples =
-     itel[(endp triples, nil);
-          ((equal (cadr (car triples)) pkg_name),
-           (cons (car (car triples))
-                 (imported_symbol_names pkg_name (cdr triples))))]
-         (imported_symbol_names pkg_name (cdr triples))`,
-   WF_REL_TAC `measure (sexp_size o SND)`
-    THEN ACL2_SIMP_TAC []);
-*)
-
-val imported_symbol_names_def =
- Define
-  `(imported_symbol_names pkg_name [] = [])
-   /\
-   (imported_symbol_names pkg_name
-     ((sym_name,known_name,actual_name)::triples) =
-     if (known_name = pkg_name)
-      then sym_name :: (imported_symbol_names pkg_name triples)
-      else imported_symbol_names pkg_name triples)`;
-
 val pkg_thm_for_initial_pkg_system_lemma =
  prove
   (``!pkg_system pkg x.
@@ -2709,7 +2698,7 @@ val STAR_COMMON_LISP_SYMBOLS_FROM_MAIN_LISP_PACKAGE_STAR =
  time EVAL ``imported_symbol_names "ACL2" ACL2_PACKAGE_ALIST``;
 
 val COMMON_LISP_SYMBOLS =
- save_thm
+ if_save_thm
   ("COMMON_LISP_SYMBOLS",
    REWRITE_CONV
     [STAR_COMMON_LISP_SYMBOLS_FROM_MAIN_LISP_PACKAGE_STAR,
@@ -2717,7 +2706,7 @@ val COMMON_LISP_SYMBOLS =
     ``List(MAP csym (imported_symbol_names "ACL2" ACL2_PACKAGE_ALIST))``);
 
 val member_symbol_name_MEM =
- store_thm
+ if_store_thm
   ("member_symbol_name_MEM",
    ``!l s. (|= member_symbol_name s (List l)) = MEM s (MAP symbol_name l)``,
    REWRITE_TAC[ACL2_TRUE]
@@ -2739,7 +2728,7 @@ val member_symbol_name_MEM =
      THEN TRY(METIS_TAC[]));
 
 val not_member_symbol_name_MEM =
- store_thm
+ if_store_thm
   ("not_member_symbol_name_MEM",
    ``(member_symbol_name s (List l) = nil) = ~(MEM s (MAP symbol_name l))``,
    METIS_TAC[ACL2_TRUE,member_symbol_name_MEM]);
@@ -2748,25 +2737,25 @@ val not_member_symbol_name_MEM =
 (* |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST s = "COMMON-LISP" : thm        *)
 (*****************************************************************************)
 val LOOKUP_COMMON_LISP =
- save_thm
+ if_save_thm
   ("LOOKUP_COMMON_LISP",
    EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST s``);
 
 val symbol_name_csym =
- store_thm
+ if_store_thm
   ("symbol_name_csym",
    ``symbol_name(csym s) = str s``,
    ACL2_SIMP_TAC[csym_def,BASIC_INTERN_def,COMMON_LISP_def,LOOKUP_COMMON_LISP]);
 
 val MEM_MAP_MAP =
- store_thm
+ if_store_thm
   ("MEM_MAP_MAP",
    ``!l. MEM (str s) (MAP symbol_name (MAP csym l)) = MEM s l``,
    Induct
     THEN RW_TAC list_ss [symbol_name_csym]);
 
 val conspList =
- store_thm
+ if_store_thm
   ("conspList",
    ``|= consp(List(x :: l))``,
    ACL2_SIMP_TAC[List_def]);
@@ -3299,7 +3288,7 @@ val acl2_package_defaxiom =
 (* val LOOKUP_EMPTY = |- LOOKUP "" ACL2_PACKAGE_ALIST s = "" : thm           *)
 (*****************************************************************************)
 val LOOKUP_EMPTY = 
- save_thm("LOOKUP_EMPTY", EVAL ``LOOKUP "" ACL2_PACKAGE_ALIST s``);
+ if_save_thm("LOOKUP_EMPTY", EVAL ``LOOKUP "" ACL2_PACKAGE_ALIST s``);
 
 (*
      [oracles: DEFAXIOM ACL2::KEYWORD-PACKAGE, DISK_THM] [axioms: ] []
@@ -3312,7 +3301,7 @@ val LOOKUP_EMPTY =
 *)
 
 val LOOKUP_KEYWORD = 
- save_thm
+ if_save_thm
   ("LOOKUP_KEYWORD",
    time EVAL ``LOOKUP "KEYWORD" ACL2_PACKAGE_ALIST s``);
 
@@ -3405,7 +3394,7 @@ val nil_is_not_circular_defaxiom =
 *)
 
 val abs_rat_reduce_pos =
- store_thm
+ if_store_thm
   ("abs_rat_reduce_pos",
    ``!a b.
       0 < b
@@ -3414,7 +3403,7 @@ val abs_rat_reduce_pos =
    METIS_TAC [rat_of_int_div_pos,pos_reduce_rat]);
 
 val rat_0_nmr =
- store_thm
+ if_store_thm
   ("rat_0_nmr",
    ``rat_nmr 0 = 0``,
    RW_TAC intLib.int_ss
@@ -3422,13 +3411,13 @@ val rat_0_nmr =
      GSYM ratTheory.RAT_LEQ0_NMR,GSYM ratTheory.RAT_0LEQ_NMR]);
 
 val SGN1 =
- store_thm
+ if_store_thm
   ("SGN1",
    ``SGN 1 = 1``,
    METIS_TAC[EVAL ``(1:int) > 0``,intExtensionTheory.INT_SGN_CLAUSES]);
 
 val abs_rat_reduce0 =
- store_thm
+ if_store_thm
   ("abs_rat_reduce0",
    ``reduce(rep_frac(rep_rat 0)) = (0,1)``,
    RW_TAC intLib.int_ss 
@@ -3436,14 +3425,14 @@ val abs_rat_reduce0 =
      abs_rat_reduce_pos,reduce0,SGN1]);
 
 val reduced_nmr_0 =
- store_thm
+ if_store_thm
   ("reduced_nmr_0",
    ``reduced_nmr 0 = 0``,
    RW_TAC std_ss 
     [reduced_nmr_def,abs_rat_reduce0]);
 
 val gcd1 =
- store_thm
+ if_store_thm
   ("gcd1",
    ``!n. (gcd n 1 = 1) /\ (gcd 1 n = 1)``,
    Induct
@@ -3452,14 +3441,14 @@ val gcd1 =
     THEN RW_TAC std_ss [gcd_def]);
 
 val abs_less =
- store_thm
+ if_store_thm
   ("abs_less",
    ``abs_rat (abs_frac (m,1)) < abs_rat (abs_frac (n,1)) = m < n``,
    RW_TAC intLib.int_ss 
     [ratTheory.RAT_LES_CALCULATE,fracTheory.NMR,fracTheory.DNM]);
    
 val reduce_int =
- store_thm
+ if_store_thm
   ("reduce_int",
    ``!c. reduce(c,1) = (c,1)``,
    RW_TAC std_ss [reduce_def]
@@ -3601,7 +3590,7 @@ val code_char_char_code_is_identity_defaxiom =
 *)
 
 val Num_less =
- store_thm
+ if_store_thm
   ("Num_less",
    ``!m n. 0 <= n /\ n < & m ==> Num n < m``,
    REPEAT STRIP_TAC
@@ -3804,7 +3793,7 @@ val completion_of_char_code_defaxiom =
 *)
 
 val RAT_LEQ_ANTISYM_EQ = (* Not used *)
- store_thm
+ if_store_thm
   ("RAT_LEQ_ANTISYM_EQ",
    ``!r1 r2:rat. (r1 = r2) = r1 <= r2 /\ r2 <= r1``,
    REPEAT STRIP_TAC
@@ -3926,7 +3915,7 @@ val completion_of_complex_defaxiom =
 *)
 
 val code_chr_int =
- store_thm
+ if_store_thm
   ("code_chr_int",
    ``0 <= n /\ n < 256 ==> (code_char(int n) = chr(CHR(Num n)))``,
    RW_TAC std_ss 
@@ -4243,5 +4232,6 @@ val bad_atom_less_equal_total_defaxiom =
           [LOOKUP_NIL,STRING_LESS_TRICHOTOMY,STRING_LESS_ANTISYM,
            EVAL ``"COMMON-LISP" = ""``]);
 
-val _ = export_acl2_theory();
+val _ = export_theory();
+
 

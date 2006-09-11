@@ -849,6 +849,8 @@ fun term_to_mlsexp tm =
   then string_to_mlsym(fst(dest_var tm)) else
  if is_const tm
   then string_to_mlsym(fst(dest_const tm)) else
+ if is_string tm
+  then string_to_mlsym(fromHOLstring tm) else
  if is_nat tm
   then mlnum(dest_nat tm, "1", "0", "1") else
  if is_int tm
@@ -1489,58 +1491,6 @@ fun create_hol_name acl2_name =
     )
    end;
 
-
-
-(* Obsolete -- to be deleted
-fun create_hol_name acl2_name =
-  let val long_hol_name = acl2_name_to_hol_name acl2_name
-  in
-   if long_hol_name = acl2_name
-    then long_hol_name
-    else
-    let val (pkg_name,sym_name) = split_acl2_name acl2_name
-        val hol_name = acl2_name_to_hol_name sym_name
-        val res = assoc1 hol_name (!acl2_names)
-    in
-     case res
-     of SOME(_,acl2_name')
-        => if acl2_name = acl2_name'
-            then hol_name
-            else 
-             let val res' = assoc1 long_hol_name (!acl2_names)
-             in
-              case res'
-              of SOME(_,acl2_name'')
-                 => if acl2_name = acl2_name''
-                     then long_hol_name
-                     else (print "\"";
-                           print hol_name;
-                           print "\" is the name of \"";
-                           print acl2_name';
-                           print "\"\nso can't use it to name \"";
-                           print acl2_name; print "\"\n";
-                           print "\"";
-                           print long_hol_name;
-                           print "\" is the name of \"";
-                           print acl2_name'';
-                           print "\"\nso can't use it to name \"";
-                           print acl2_name; print "\"\n";
-                           err "create_hol_name" "name already in use")
-              |  NONE
-                 => ((acl2_names := (long_hol_name, acl2_name)::(!acl2_names));
-                     long_hol_name)
-             end
-     |  NONE
-        => ((acl2_names := (hol_name, acl2_name)::(!acl2_names));
-            hol_name)
-    end
-  end;
-*)
-
-
-
-
-
 (*****************************************************************************)
 (* ML datatype to represent defs sent from ACL2                              *)
 (*****************************************************************************)
@@ -1611,11 +1561,16 @@ fun dest_acl2_thm th =
 end;
 
 (*****************************************************************************)
+(* Convert a hol theorem to a defthm                                         *)
+(*****************************************************************************)
+fun thm_to_defthm(name,th) =
+ defthm  (name, dest_ax_or_thm(concl(SPEC_ALL th)));
+
+(*****************************************************************************)
 (* Extraxt content from an option                                            *)
 (*****************************************************************************)
 fun dest_option (SOME x) = x
  |  dest_option NONE     = err "dest_option" "NONE";
-
 
 (*****************************************************************************)
 (* ``PKG::SYM`` |--> create_hol_name "PKG::SYM"                              *)
@@ -2004,6 +1959,14 @@ fun print_imported_acl2_theorems theory_name file_name =
       mapfilter 
        dest_option
        (map (dest_acl2_thm o snd) (theorems theory_name))
+ in
+  print_lisp_file 
+   file_name
+   (fn out => map (print_acl2def out) defs)
+ end;
+
+fun print_thms_to_defthms name_thm_list file_name =
+ let val defs = map thm_to_defthm name_thm_list
  in
   print_lisp_file 
    file_name
