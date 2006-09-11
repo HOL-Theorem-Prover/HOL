@@ -9,104 +9,105 @@
 (* =====================================================================*)
 
 (*
-  app load ["ind_defLib", "Datatype", "clTheory"] ;
+  app load ["IndDefLib", "Datatype", "clTheory"] ;
 *)
 
 structure milScript =
 struct
 
-open HolKernel Parse boolLib;
-open IndDefLib Datatype clTheory;
+open HolKernel Parse boolLib
+     IndDefLib IndDefRules Datatype clTheory;
+
+infix ## |-> THEN THENL THENC ORELSE; infixr 3 -->;
+
 
 
 (* --------------------------------------------------------------------- *)
 (* Open a new theory and load the inductive definitions library.	 *)
 (* --------------------------------------------------------------------- *)
+
 val _ = new_theory"mil";
 
 (* ===================================================================== *)
 (* Combinatory logic types and type judgements.				 *)
 (* ===================================================================== *)
 
-(* ----------------------------------------------------------------------
-    Overloading of implication symbol is perhaps a little dangerous
-    because of potential for confusion, but works well in this example.
-   ---------------------------------------------------------------------- *)
+val _ = Hol_datatype `ty = G  of 'a  
+                         | -> of ty => ty`;
 
-val _ = Hol_datatype `ty = G  of 'a
-                         | Arrow of ty => ty`;
+val _ = set_fixity "->" (Infixr 800);
+val _ = set_MLname "->" "ARROW_DEF";
 
-val _ = overload_on("==>",``Arrow``);
+(* ===================================================================== *)
+(* Standard syntactic theory, derived by the recursive types package.	 *)
+(* ===================================================================== *)
 
-(* --------------------------------------------------------------------- *)
-(* Structural induction theorem for types.				 *)
-(* --------------------------------------------------------------------- *)
-
-val tyinfo = valOf (TypeBase.read "ty");
-val ty_induct = TypeBase.induction_of "ty";
+val SOME tyfacts = TypeBase.read {Thy="mil", Tyop="ty"};
 
 (* --------------------------------------------------------------------- *)
-(* Exhaustive case analysis theorem for types.				 *)
+(* structural induction theorem for ty.                                  *)
 (* --------------------------------------------------------------------- *)
 
-val ty_cases = TypeBase.nchotomy_of "ty"
+val ty_induct = TypeBase.induction_of ``:'a ty``;
 
 (* --------------------------------------------------------------------- *)
-(* The arrow and ground type constructors are one-to-one.	         *)
+(* cases theorem for ty.                                                 *)
 (* --------------------------------------------------------------------- *)
 
-val Gfun11 = TypeBase.one_one_of "ty";
+val ty_cases = TypeBase.nchotomy_of ``:'a ty``;
 
 (* --------------------------------------------------------------------- *)
-(* Prove that the constructors yield syntactically distinct values. One	 *)
-(* typically needs all symmetric forms of the inequalities.		 *)
+(* The constructors of the type :ty yield syntactically distinct         *)
+(* values. One typically needs all symmetric forms of the inequalities,  *)
+(* so we package them all together here.                                 *)
 (* --------------------------------------------------------------------- *)
 
 val ty_distinct =
-    let val ths = CONJUNCTS (TypeBase.distinct_of "ty")
-        val rths = map (GEN_ALL o NOT_EQ_SYM o SPEC_ALL) ths
-    in LIST_CONJ (ths @ rths)
-    end;
+   let val distinct = TypeBase.distinct_of ``:'a ty``
+       val ths = CONJUNCTS distinct
+       val rths = map (GEN_ALL o NOT_EQ_SYM o SPEC_ALL) ths
+   in 
+     LIST_CONJ (ths @ rths)
+   end;
+
+(* --------------------------------------------------------------------- *)
+(* The constructors Pre, Sum and Prod are one-to-one.                    *)
+(* --------------------------------------------------------------------- *)
+
+val Gfun11 =
+   let val one2 = TypeBase.one_one_of ``:'a ty``
+   in CONJUNCTS one2
+   end;
+
 
 (* ===================================================================== *)
 (* Definition of well-typed terms of combinatory logic.			 *)
 (* ===================================================================== *)
 
-val _ = set_fixity "IN" (Infixr 450);
+val _ = set_fixity "IN" (Infixr 700);
 
-val (TYrules,TYind, TYcases) =
-  IndDefLib.Hol_reln
-    `(!A B. K IN (A ==> (B ==> A)))
+val (TYrules,TYind,TYcases) = Hol_reln
+    `(!A B.   K IN (A -> B -> A))
+ /\  (!A B C. S IN ((A -> B -> C) -> (A -> B) -> (A -> C)))
+ /\  (!M N t2.  (?t1. M IN (t1 -> t2) /\ N IN t1) ==> (M#N) IN t2)`;
 
-                /\
 
-     (!A B C. S IN ((A ==> (B ==> C)) ==> ((A ==> B) ==> (A ==> C))))
-
-                /\
-
-     (!U V t1 t2.
-           U IN (t1 ==> t2) /\ V IN t1 ==>
-           U # V IN t2)`;
+val TYrules = CONJUNCTS TYrules;
 
 (* ======================================================================== *)
-(* Mimimal intuitionistic logic.  We now reinterpret ==> as implication,     *)
+(* Mimimal intuitionistic logic.  We now reinterpret -> as implication,     *)
 (* types P:('a)ty as terms of the logic (i.e. propositions), and define a   *)
 (* provability predicate `THM` on these terms. The definition is done       *)
 (* inductively by the proof rules for the logic.			    *)
 (* ======================================================================== *)
 
-val (THMrules, THMind, THMcases) =
-    IndDefLib.Hol_reln
-      `(!A B.  THM (A ==> (B ==> A)))
+val (THMrules, THMind, THMcases) = 
+ Hol_reln
+    `(!A B.    THM (A -> B -> A))
+ /\  (!A B C.  THM ((A -> B -> C) -> (A -> B) -> (A -> C)))
+ /\  (!Q. (?P. THM (P -> Q) /\ THM P) ==> THM Q)`;
 
-               /\
-
-       (!A B C. THM ((A ==> (B ==> C)) ==> ((A ==> B) ==> (A ==> C))))
-
-               /\
-
-       (!P Q.   THM (P ==> Q) /\ THM P ==> THM Q)`;
-
+val THMrules = CONJUNCTS THMrules;
 
 (* ===================================================================== *)
 (* Derivation of the Curry-Howard isomorphism.				 *)
@@ -121,20 +122,26 @@ val (THMrules, THMind, THMcases) =
 (* (unnecessary) renaming that hol88 does.                               *)
 (* --------------------------------------------------------------------- *)
 
-open IndDefRules
-val ISO_THM1 = prove(
-   --`!P:'a ty. THM P ==> ?M:cl. M IN P`--,
-   HO_MATCH_MP_TAC THMind THEN bossLib.PROVE_TAC [TYrules]);
+val ISO_THM1 = Q.prove
+(`!P. THM P ==> ?M. M IN P`,
+ RULE_INDUCT_THEN THMind STRIP_ASSUME_TAC STRIP_ASSUME_TAC THEN
+ REPEAT GEN_TAC THENL map Q.EXISTS_TAC [`K`, `S`, `M # M'`] THEN
+ MAP_FIRST RULE_TAC TYrules THEN
+ Q.EXISTS_TAC `P` THEN CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
 (* --------------------------------------------------------------------- *)
 (* The proof for the other direction proceeds by induction over the 	 *)
 (* typing relation.  Again, simple.					 *)
 (* --------------------------------------------------------------------- *)
 
-val ISO_THM2 = prove(
-   --`!P:'a ty. !M:cl. M IN P ==> THM P`--,
-   RULE_INDUCT_THEN TYind STRIP_ASSUME_TAC STRIP_ASSUME_TAC THEN
-   bossLib.PROVE_TAC [THMrules]);
+val ISO_THM2 =
+    TAC_PROOF
+    (([], (--`!P:'a ty. !M:cl. M IN P ==> THM P`--)),
+     RULE_INDUCT_THEN TYind STRIP_ASSUME_TAC STRIP_ASSUME_TAC THEN
+     REPEAT GEN_TAC THEN
+     MAP_FIRST RULE_TAC THMrules THEN
+     EXISTS_TAC (--`t1:'a ty`--) THEN
+     CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
 
 (* --------------------------------------------------------------------- *)
 (* The final result.							 *)
@@ -146,6 +153,7 @@ val CURRY_HOWARD = store_thm
     REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN
     IMP_RES_TAC (CONJ ISO_THM1 ISO_THM2) THEN
     EXISTS_TAC (--`M:cl`--) THEN FIRST_ASSUM ACCEPT_TAC);
+
 
 (* --------------------------------------------------------------------- *)
 (* End of example.							 *)
