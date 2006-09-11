@@ -378,7 +378,7 @@ fun mk_sc_spec ir1_spec ir2_spec =
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, sc_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      REWRITE_TAC [GSYM IR_SC_IS_WELL_FORMED] THEN
+                      ONCE_REWRITE_TAC [GSYM IR_SC_IS_WELL_FORMED] THEN
                       SIMP_TAC std_ss [spec1_thm, spec2_thm]
 	        );
 
@@ -488,7 +488,6 @@ fun guessR2 tp =
     end
 
 fun cheat_tac (asl,g) = ACCEPT_TAC(ASSUME g) (asl,g);
-
 
 fun mk_tr_spec cond body_spec = 
   let 
@@ -825,6 +824,29 @@ fun f_correct spec =
       th6
   end;
      
+
+fun f_correct_ir spec =
+  let
+      val th0 = CONJUNCT1 (SIMP_RULE std_ss [LET_THM] spec);
+      val th1 = SIMP_RULE std_ss [PSPEC_def, HSPEC_def] th0;
+      val f = let val t0 = concl (SPEC_ALL th1)
+                  val (assm,f_spec) = 
+                       let val (assm, t1) = dest_imp t0 
+                       in (assm,#2 (dest_conj t1))
+                       end handle e => (Term`T`,t0)
+              in
+                    mk_imp (assm, f_spec)
+              end
+      val th2 = GEN_ALL (prove (f, SIMP_TAC std_ss [th1]));
+      val th3 = SIMP_RULE std_ss [toEXP_def, toREG_def, toMEM_def, index_of_reg_def] th2;
+      val th4 = SIMP_RULE list_ss [] th3
+      val th5 =  SIMP_RULE std_ss [GSYM proper_def] th4
+      val th6 =  WORDS_RULE th5
+  in
+      th6
+  end;
+
+
 (*---------------------------------------------------------------------------------*)
 (*      Print out                                                                  *) 
 (*---------------------------------------------------------------------------------*)
@@ -940,7 +962,7 @@ fun needs_split t = not (length(wordsplit t) = 1)
 
 fun WORD_EVAL_CONV t =
   if ((wordsSyntax.is_word_type(type_of t)) andalso (free_vars t = [])) then
-    (CHANGED_CONV WORDS_CONV t) else raise ERR "WORD_EVAL_CONV" ""
+    (CHANGED_CONV EVAL t) else raise ERR "WORD_EVAL_CONV" ""
 
 
 fun DATA_RESTRICT_CONV t =
@@ -961,6 +983,7 @@ val extra_defs = ref [DECIDE (Term `T`)];
 fun preprocess_def def =
   CONV_RULE ((DEPTH_CONV WORD_EVAL_CONV) THENC (DEPTH_CONV DATA_RESTRICT_CONV)) def
 
+
 fun pp_compile prog = 
   let  
       val def = preprocess_def prog;
@@ -968,9 +991,12 @@ fun pp_compile prog =
       val pre_p = mk_pre_p (!init_sp);
       val f_spec0 = fwd_reason f_ir pre_p;
       val f_spec1 = SIMP_RULE std_ss [restore_f f_spec0 (defs @ !extra_defs)] f_spec0;
+      val wf_thm = CONJUNCT2 (SIMP_RULE std_ss [LET_THM] f_spec1);
       val stat = f_correct f_spec1
+      val stat_ir = f_correct_ir f_spec1
+
   in
-      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat, f_spec1)
+      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat, stat_ir, wf_thm)
   end
 
 
