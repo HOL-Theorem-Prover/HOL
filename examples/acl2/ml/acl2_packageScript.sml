@@ -6,6 +6,10 @@
 (* abstracts key properties of the package structure and verifies:           *)
 (*                                                                           *)
 (*  |- VALID_PKG_TRIPLES  ACL2_PACKAGE_ALIST                                 *)
+(*                                                                           *)
+(* Modified to 'bucket' symbols according to the first couple of characters  *)
+(* to speed up compile time, but it will still take ~1hr to compile          *)
+(*                                                                           *)
 (*****************************************************************************)
 
 (*****************************************************************************)
@@ -35,7 +39,7 @@ open HolKernel Parse boolLib bossLib;
 (******************************************************************************
 * Open theories (including ratTheory from Jens Brandt).
 ******************************************************************************)
-open listSyntax pairSyntax stringLib;
+open listSyntax pairSyntax stringLib listTheory;
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -2895,10 +2899,110 @@ val VALID_PKG_TRIPLES_def =
   `VALID_PKG_TRIPLES triples = VALID_PKG_TRIPLES_AUX triples triples`;
 
 (*****************************************************************************)
-(* Warning:                                                                  *)
-(* runtime: 28050.921s,    gctime: 2159.505s,     systime: 46.139s.          *)
+(* Optimisation: Separate lookups into buckets using the first two chars     *)
+(*                                                                           *)
 (*****************************************************************************)
-val pkg_valid_thm = time EVAL ``VALID_PKG_TRIPLES ACL2_PACKAGE_ALIST``;
+
+val LOOKUP_AUX_def = 
+ Define
+  `(LOOKUP_AUX [] _ = T) 
+   /\
+   (LOOKUP_AUX ((x1,y1,z1)::a) (sym_name:string,q:string,pkg_name:string) = 
+     if (sym_name=x1) /\ (pkg_name=y1) 
+       then (z1 = pkg_name)
+       else LOOKUP_AUX a (sym_name,q,pkg_name))`;
+
+val ELOOKUP_def = 
+ Define `ELOOKUP l1 = EVERY (LOOKUP_AUX l1) l1`;
+
+val elookup_empty = prove(``ELOOKUP [] = T``,RW_TAC std_ss [ELOOKUP_def,EVERY_DEF]);
+
+val lookup_fast = prove(``!l. (LOOKUP pkg_name l sym_name = pkg_name) = LOOKUP_AUX l (sym_name,q,pkg_name)``,
+	Induct THEN TRY (Cases THEN Cases_on `r`) THEN RW_TAC std_ss [LOOKUP_def,LOOKUP_AUX_def]);
+
+val separate_lemma = prove(``!l1 l2. VALID_PKG_TRIPLES_AUX l1 l2 = 
+	(EVERY (\ (x,y,z). ~(z = "")) l1) /\
+	(EVERY (\ (x,y,z). ~(x = "ACL2-PKG-WITNESS")) l1) /\
+	(EVERY (LOOKUP_AUX l2) l1)``,
+	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
+	RW_TAC std_ss [VALID_PKG_TRIPLES_AUX_def,EVERY_DEF,GSYM lookup_fast] THEN
+	METIS_TAC []);
+
+val separate_proof = prove(``!l1. VALID_PKG_TRIPLES l1 = 
+	(EVERY (\ (x,y,z). ~(z = "")) l1) /\
+	(EVERY (\ (x,y,z). ~(x = "ACL2-PKG-WITNESS")) l1) /\
+	(ELOOKUP l1)``,
+	RW_TAC std_ss [VALID_PKG_TRIPLES_def,ELOOKUP_def,separate_lemma]);
+
+val every_split = prove(``!l. (!x. A x = B x /\ C x) ==> (EVERY A l = EVERY B l /\ EVERY C l)``,
+	Induct THEN RW_TAC std_ss [EVERY_DEF] THEN METIS_TAC []);
+
+val FC_def = 
+ Define 
+  `(FC "" ("",_:string,_:string) = T) /\ 
+   (FC (STRING c1 s1) (STRING c2 s2,_,_) = (c1 = c2)) /\ 
+   (FC _ _ = F)`;
+
+val fc_only = prove(``!s a b c d e. FC s (a,b,c) = FC s (a,d,e)``,
+	Cases THEN Cases THEN RW_TAC std_ss [FC_def]);
+
+val fc_t_imp = prove(``!l s x v0 v1 v2 v3. FC s (x,v0,v1) ==> LOOKUP_AUX (FILTER ($~ o FC s) l) (x,v2,v3)``,
+	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
+	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
+	METIS_TAC [fc_only]);
+
+val fc_f_imp = prove(``!l s x v0 v1 v2 v3. ~FC s (x,v0,v1) ==> LOOKUP_AUX (FILTER (FC s) l) (x,v2,v3)``,
+	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
+	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
+	METIS_TAC [fc_only]);
+
+val lookup_split_fc = 
+	prove(``!l1 x. LOOKUP_AUX l1 x = LOOKUP_AUX (FILTER (FC s) l1) x /\ LOOKUP_AUX (FILTER ($~ o FC s) l1) x``,
+	Induct THEN TRY (Cases THEN Cases_on `r` THEN Cases_on `x` THEN Cases_on `r`) THEN 
+	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
+	METIS_TAC [fc_t_imp,fc_f_imp]);
+
+val every_lookup_split_fc = 
+      prove(``!s l1 l2. 
+	EVERY (LOOKUP_AUX l1) l2 = 
+	EVERY (LOOKUP_AUX (FILTER (FC s) l1)) (FILTER (FC s) l2) /\
+	EVERY (LOOKUP_AUX (FILTER ($~ o FC s) l1)) (FILTER ($~ o FC s) l2)``,
+	CONV_TAC (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV (MATCH_MP every_split (Q.SPEC `l1` lookup_split_fc))))) THEN
+	GEN_TAC THEN GEN_TAC THEN Induct THEN TRY (Cases THEN Cases_on `r`) THEN
+	RW_TAC std_ss [EVERY_DEF,LOOKUP_AUX_def,FILTER] THEN
+	METIS_TAC [fc_t_imp,fc_f_imp]);
+
+val elookup_split_fc = 
+     prove(``!s l1. 
+	ELOOKUP l1 = ELOOKUP (FILTER (FC s) l1) /\ ELOOKUP (FILTER ($~ o FC s) l1)``,
+     RW_TAC std_ss [ELOOKUP_def,every_lookup_split_fc]);
+
+fun split_term_fc [] term = 
+	(EVAL THENC REWRITE_CONV [elookup_empty]) term
+  | split_term_fc (char::chars) term = 
+	(REWR_CONV (SPEC (fromMLstring (implode [char])) elookup_split_fc) THENC
+	 BINOP_CONV (RAND_CONV EVAL) THENC
+	 FORK_CONV (EVAL,split_term_fc chars) THENC
+	 REWRITE_CONV []) term;
+
+fun prove_valid_pkg_fc thm = 
+let	val char_list = (map (hd o explode o fromHOLstring o hd o strip_pair) o fst o dest_list o rhs o concl) thm;
+	val chars = 
+		sort (fn a => fn b => length (filter (curry op= a) char_list) > length (filter (curry op= b) char_list)) 
+		(mk_set char_list);
+	val no_null = EVAL ``EVERY (\ (x,y,z). ~(z = "")) ^((lhs o concl) thm)``
+	val no_witness = EVAL ``EVERY (\ (x,y,z). ~(x = "ACL2-PKG-WITNESS")) ^((lhs o concl) thm)``
+	
+	val lookup = (REWRITE_CONV [thm] THENC split_term_fc chars) ``ELOOKUP ^((lhs o concl) thm)``;
+in
+	REWRITE_CONV [separate_proof,no_null,no_witness,lookup] ``VALID_PKG_TRIPLES ^((lhs o concl) thm)``
+end;
+
+(*****************************************************************************)
+(* Warning:                                                                  *)
+(* runtime: 2838.727s,    gctime: 458.456s,     systime: 21.321s.            *)
+(*****************************************************************************)
+val pkg_valid_thm = time prove_valid_pkg_fc ACL2_PACKAGE_ALIST_def;
 
 val _ = save_thm("VALID_ACL2_PACKAGE_ALIST",pkg_valid_thm);
 
@@ -2916,4 +3020,3 @@ This causes an overflow:
 *)
 
 val _ = export_theory();
-
