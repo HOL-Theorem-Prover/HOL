@@ -51,7 +51,7 @@ val (rules,induction,ecases) = Hol_reln
         (?s2. EVAL C s1 s2 /\
               EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`;
 
-val _ = if null (hyp rules) then print "OK\n"
+val _ = if null (hyp rules) then ()
         else (print "FAILED!\n"; OS.Process.exit OS.Process.failure)
 
 
