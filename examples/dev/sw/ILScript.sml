@@ -29,7 +29,7 @@ val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 val _ = Hol_datatype ` 
     MREG = R0 | R1 | R2 | R3 | R4 | R5 | R6 | R7 | R8 | R9 | R10 | R11 | R12 | R13 | R14`;
 
-val _ = type_abbrev("MMEM", Type`:num # OFFSET`);      (* memory in ir *)
+val _ = type_abbrev("MMEM", Type`:MREG # OFFSET`);      (* memory in ir *)
 
 val _ = Hol_datatype `
     MEXP = MR of MREG          (* registers *)
@@ -97,7 +97,7 @@ val toREG_def = Define `
 
 val toMEM_def = Define `
     toMEM ((base,offset):MMEM) =
-       preARM$MEM (base,offset)`;        (* [base + offset] *)
+       preARM$MEM (index_of_reg base,offset)`;        (* [base + offset] *)
 
 val toEXP_def = Define `
     (toEXP (MR r) = toREG r) /\

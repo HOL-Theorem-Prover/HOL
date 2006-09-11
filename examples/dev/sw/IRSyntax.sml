@@ -74,18 +74,18 @@ structure IRSyntax = struct
    |  convert_op mmsr = Term(`MMSR`)
    |  convert_op mcall = raise ERR "annotatedIL" ("Cannot convert mcall to a term");
 
-  fun convert_rop (eq) = Term(`EQ`)
-   |  convert_rop (ne) = Term(`NE`)
-   |  convert_rop (ge) = Term(`GE`)
-   |  convert_rop (lt) = Term(`LT`)
-   |  convert_rop (gt) = Term(`GT`)
-   |  convert_rop (le) = Term(`LE`)
-   |  convert_rop (cc) = Term(`CC`)
-   |  convert_rop (ls) = Term(`LS`)
-   |  convert_rop (hi) = Term(`HI`)
-   |  convert_rop (cs) = Term(`CS`)
-   |  convert_rop (al) = Term(`AL`)
-   |  convert_rop (nv) = Term(`NV`)
+  fun convert_rop (eq) = Term(`EQ:COND`)
+   |  convert_rop (ne) = Term(`NE:COND`)
+   |  convert_rop (ge) = Term(`GE:COND`)
+   |  convert_rop (lt) = Term(`LT:COND`)
+   |  convert_rop (gt) = Term(`GT:COND`)
+   |  convert_rop (le) = Term(`LE:COND`)
+   |  convert_rop (cc) = Term(`CC:COND`)
+   |  convert_rop (ls) = Term(`LS:COND`)
+   |  convert_rop (hi) = Term(`HI:COND`)
+   |  convert_rop (cs) = Term(`CS:COND`)
+   |  convert_rop (al) = Term(`AL:COND`)
+   |  convert_rop (nv) = Term(`NV:COND`)
 
 
  (*---------------------------------------------------------------------------------*)
@@ -148,7 +148,7 @@ fun convert_reg (REG e) =
      raise ERR "IL" ("invalid expression");
 
 fun convert_mem (MEM (regNo, offset)) =
-     mk_pair(term_of_int regNo,
+     mk_pair(convert_reg (REG regNo),
              mk_comb(if offset >= 0 then Term`POS` else Term`NEG`,
                 term_of_int (abs offset)))
  |  convert_mem _ = 
@@ -211,7 +211,7 @@ fun read_exp st (NCONST e) =
     let
       val t = convert_mem (MEM (b, off))
     in
-      Term `read ^st (MEM ^t)`
+      Term `read ^st (toMEM ^t)`
     end
  |  read_exp _ _ =
       raise ERR "IL" ("invalid expression");
