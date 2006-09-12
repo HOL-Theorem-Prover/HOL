@@ -26,9 +26,6 @@ val i = ``\a':string.
              ^limf n a' ((s:(string # string) list -> 'a) (pi ++ [(a',a)]))``
 val limf_pm = ``fnpm (K I : num pm) (fnpm perm_of (fnpm apm (fnpm apm apm)))``
 
-
-
-
 val lamf_supp_t = ``supp (fnpm perm_of (fnpm apm apm)) ^lamf``
 val limf_supp_t = ``supp ^limf_pm ^limf``
 
@@ -63,11 +60,6 @@ val support_freshf = prove(
   `pm2 [(x,y)] (f a) = fnpm pm1 pm2 [(x,y)] f (pm1 [(x,y)] a)`
      by SRW_TAC [][GSYM perm_fnapp] THEN
   SRW_TAC [][]);
-
-val is_perm_sing_inv = store_thm(
-  "is_perm_sing_inv",
-  ``is_perm pm ==> (pm [h] (pm [h] x) = x)``,
-  METIS_TAC [listTheory.REVERSE_DEF, listTheory.APPEND, is_perm_inverse]);
 
 val lamf_support_t = ``support (fnpm perm_of (fnpm apm apm)) lamf A``
 val app_support_t = ``support (fnpm apm (fnpm apm apm)) ap A``
@@ -230,7 +222,6 @@ val full0 = Q.SPECL [`\t u r1 r2 p. ap (r1 p) (r2 p)`,
                     `\n a t1 t2 s s2 pi. fresh (fnpm apm apm) ^i (s2 pi)`] base
 
 val full = SIMP_RULE (srw_ss()) [FUN_EQ_THM] full0
-
 
 val fndefn = #2 (dest_exists (concl full))
 
@@ -768,7 +759,6 @@ val better_lami_clause =
                         listTheory.APPEND, lswapstr_def, pairTheory.FST,
                         pairTheory.SND, swapstr_def] o
      Q.INST [`t` |-> `ptpm [(z,v)] t`]) better_lami_clause0
-
 
 val recursion0 = prove(
   ``^cond16 /\ ^cond16i /\ ^ctxt00 /\ ^var_support_t /\ ^app_support_t ==>
