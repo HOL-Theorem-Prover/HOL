@@ -440,13 +440,27 @@ val MONO_FORALL = prove (
   DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_ALL) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
 
+val MONO_RESFORALL = prove(
+  ``(!x:'a. P' x ==> P x) /\ (!x. Q x ==> Q' x) ==>
+    (RES_FORALL P Q ==> RES_FORALL P' Q')``,
+  REWRITE_TAC [RES_FORALL_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
+  REPEAT (FIRST_X_ASSUM MATCH_MP_TAC) THEN ASM_REWRITE_TAC [])
+
+val MONO_RESEXISTS = prove(
+  ``(!x:'a. P x ==> P' x) /\ (!x. Q x ==> Q' x) ==>
+    (RES_EXISTS P Q ==> RES_EXISTS P' Q')``,
+  REWRITE_TAC [RES_EXISTS_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
+  EXISTS_TAC ``x:'a`` THEN RES_TAC THEN ASM_REWRITE_TAC [])
+
 val bool_monoset =
  [("/\\", MONO_AND),
   ("\\/", MONO_OR),
   ("?",   MONO_EXISTS),
   ("!",   MONO_FORALL),
   ("==>", MONO_IMP),
-  ("~",   MONO_NOT)]
+  ("~",   MONO_NOT),
+  ("RES_FORALL", MONO_RESFORALL),
+  ("RES_EXISTS", MONO_RESEXISTS)]
 
 
 val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
