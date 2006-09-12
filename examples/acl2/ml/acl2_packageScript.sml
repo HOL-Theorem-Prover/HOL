@@ -7,8 +7,7 @@
 (*                                                                           *)
 (*  |- VALID_PKG_TRIPLES  ACL2_PACKAGE_ALIST                                 *)
 (*                                                                           *)
-(* Modified to 'bucket' symbols according to the first couple of characters  *)
-(* to speed up compile time, but it will still take ~1hr to compile          *)
+(* Modified again to split into equal length lists, hence O(n. log n)        *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -61,6 +60,7 @@ val _ = new_theory "acl2_package";
 (* imported into package known-pkg-name.                                     *)
 (*****************************************************************************)
 
+
 (*****************************************************************************)
 (* Building a term directly out of a slurped in ACL2 package structure       *)
 (* (e.g. kpa-v2-9-3.ml) breaks the HOL compiler. We therefore fold in the    *)
@@ -102,6 +102,7 @@ fun make_package_structure_term l =
 (*****************************************************************************)
 (* The actual triples specifying the initial ACL2 package                    *)
 (*****************************************************************************)
+
 val ACL2_PACKAGE_ALIST_def =
  time
   Define
@@ -2899,7 +2900,7 @@ val VALID_PKG_TRIPLES_def =
   `VALID_PKG_TRIPLES triples = VALID_PKG_TRIPLES_AUX triples triples`;
 
 (*****************************************************************************)
-(* Optimisation: Separate lookups into buckets using the first two chars     *)
+(* Optimisation: Use a quicksort like algorithm to split the list            *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -2937,72 +2938,96 @@ val separate_proof = prove(``!l1. VALID_PKG_TRIPLES l1 =
 val every_split = prove(``!l. (!x. A x = B x /\ C x) ==> (EVERY A l = EVERY B l /\ EVERY C l)``,
 	Induct THEN RW_TAC std_ss [EVERY_DEF] THEN METIS_TAC []);
 
-val FC_def = 
+val leq_def = 
+ Define `
+  (leq [] [] = T) /\ 
+  (leq [] (a::b) = T) /\ 
+  (leq (a::b) [] = F) /\ 
+  (leq (a::b) (c::d) = ORD a < ORD c \/ (a = c) /\ leq b d)`;
+
+val LEQ_def = 
  Define 
-  `(FC "" ("",_:string,_:string) = T) /\ 
-   (FC (STRING c1 s1) (STRING c2 s2,_,_) = (c1 = c2)) /\ 
-   (FC _ _ = F)`;
+  `LEQ s1 (s2,_:string,_:string) = leq (EXPLODE s1) (EXPLODE s2)`;
 
-val fc_only = prove(``!s a b c d e. FC s (a,b,c) = FC s (a,d,e)``,
-	Cases THEN Cases THEN RW_TAC std_ss [FC_def]);
+val leq_only = prove(``!s a b c d e. LEQ s (a,b,c) = LEQ s (a,d,e)``,
+	Cases THEN Cases THEN RW_TAC std_ss [LEQ_def]);
 
-val fc_t_imp = prove(``!l s x v0 v1 v2 v3. FC s (x,v0,v1) ==> LOOKUP_AUX (FILTER ($~ o FC s) l) (x,v2,v3)``,
+val leq_t_imp = prove(``!l s x v0 v1 v2 v3. LEQ s (x,v0,v1) ==> LOOKUP_AUX (FILTER ($~ o LEQ s) l) (x,v2,v3)``,
 	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
 	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
-	METIS_TAC [fc_only]);
+	METIS_TAC [leq_only]);
 
-val fc_f_imp = prove(``!l s x v0 v1 v2 v3. ~FC s (x,v0,v1) ==> LOOKUP_AUX (FILTER (FC s) l) (x,v2,v3)``,
+val leq_f_imp = prove(``!l s x v0 v1 v2 v3. ~LEQ s (x,v0,v1) ==> LOOKUP_AUX (FILTER (LEQ s) l) (x,v2,v3)``,
 	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
 	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
-	METIS_TAC [fc_only]);
+	METIS_TAC [leq_only]);
 
-val lookup_split_fc = 
-	prove(``!l1 x. LOOKUP_AUX l1 x = LOOKUP_AUX (FILTER (FC s) l1) x /\ LOOKUP_AUX (FILTER ($~ o FC s) l1) x``,
+val lookup_split_leq = 
+	prove(``!l1 x. LOOKUP_AUX l1 x = LOOKUP_AUX (FILTER (LEQ s) l1) x /\ LOOKUP_AUX (FILTER ($~ o LEQ s) l1) x``,
 	Induct THEN TRY (Cases THEN Cases_on `r` THEN Cases_on `x` THEN Cases_on `r`) THEN 
 	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
-	METIS_TAC [fc_t_imp,fc_f_imp]);
+	METIS_TAC [leq_t_imp,leq_f_imp]);
 
-val every_lookup_split_fc = 
+val every_lookup_split_leq = 
       prove(``!s l1 l2. 
 	EVERY (LOOKUP_AUX l1) l2 = 
-	EVERY (LOOKUP_AUX (FILTER (FC s) l1)) (FILTER (FC s) l2) /\
-	EVERY (LOOKUP_AUX (FILTER ($~ o FC s) l1)) (FILTER ($~ o FC s) l2)``,
-	CONV_TAC (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV (MATCH_MP every_split (Q.SPEC `l1` lookup_split_fc))))) THEN
+	EVERY (LOOKUP_AUX (FILTER (LEQ s) l1)) (FILTER (LEQ s) l2) /\
+	EVERY (LOOKUP_AUX (FILTER ($~ o LEQ s) l1)) (FILTER ($~ o LEQ s) l2)``,
+	CONV_TAC (STRIP_QUANT_CONV (LAND_CONV (REWR_CONV (MATCH_MP every_split (Q.SPEC `l1` lookup_split_leq))))) THEN
 	GEN_TAC THEN GEN_TAC THEN Induct THEN TRY (Cases THEN Cases_on `r`) THEN
 	RW_TAC std_ss [EVERY_DEF,LOOKUP_AUX_def,FILTER] THEN
-	METIS_TAC [fc_t_imp,fc_f_imp]);
+	METIS_TAC [leq_t_imp,leq_f_imp]);
 
-val elookup_split_fc = 
+val PARTITION_def = 
+ Define `(PARTITION s [] = ([],[])) /\
+         (PARTITION s (a::bs) =
+		let (ts,fs) = PARTITION s bs in
+		if LEQ s a then (a::ts,fs) else (ts,a::fs))`;
+
+val partition_thm = prove(``!l. PARTITION s l = (FILTER (LEQ s) l,FILTER ($~ o LEQ s) l)``,
+		Induct THEN RW_TAC std_ss [PARTITION_def,FILTER]);
+
+val elookup_split_leq = 
      prove(``!s l1. 
-	ELOOKUP l1 = ELOOKUP (FILTER (FC s) l1) /\ ELOOKUP (FILTER ($~ o FC s) l1)``,
-     RW_TAC std_ss [ELOOKUP_def,every_lookup_split_fc]);
+	ELOOKUP l1 = (\(a,b). ELOOKUP a /\ ELOOKUP b) (PARTITION s l1)``,
+     RW_TAC std_ss [ELOOKUP_def,every_lookup_split_leq,partition_thm]);
 
-fun split_term_fc [] term = 
-	(EVAL THENC REWRITE_CONV [elookup_empty]) term
-  | split_term_fc (char::chars) term = 
-	(REWR_CONV (SPEC (fromMLstring (implode [char])) elookup_split_fc) THENC
-	 BINOP_CONV (RAND_CONV EVAL) THENC
-	 FORK_CONV (EVAL,split_term_fc chars) THENC
-	 REWRITE_CONV []) term;
+fun should_eval _ [] = true
+  | should_eval NONE (x::xs) = should_eval (SOME x) xs
+  | should_eval (SOME x) (y::ys) = (x = y) andalso should_eval (SOME x) ys;
+	
+fun split_term_leq list term = 
+let	val _ = if length list > 100 then (print "[" ; print (int_to_string (length list)) ; print "]#") else ()
+in
+	if length list <= 8 orelse should_eval NONE list then (EVAL THENC REWRITE_CONV [elookup_empty]) term
+	else 
+		case (split_after (length list div 2) list)
+		of (list1,[]) => (EVAL THENC REWRITE_CONV [elookup_empty]) term
+		|  (list1,median::list2) =>
+			(REWR_CONV (SPEC (fromMLstring median) elookup_split_leq) THENC
+	 		RAND_CONV EVAL THENC
+			PairedLambda.PAIRED_BETA_CONV THENC
+	 		FORK_CONV (split_term_leq (median::list2),split_term_leq list1) THENC
+	 		REWRITE_CONV []) term
+end;
 
-fun prove_valid_pkg_fc thm = 
-let	val char_list = (map (hd o explode o fromHOLstring o hd o strip_pair) o fst o dest_list o rhs o concl) thm;
-	val chars = 
-		sort (fn a => fn b => length (filter (curry op= a) char_list) > length (filter (curry op= b) char_list)) 
-		(mk_set char_list);
+fun prove_valid_pkg_leq thm = 
+let	val list = 
+		sort (fn a => fn b => a <= b) 
+			((map (fromHOLstring o hd o strip_pair) o fst o dest_list o rhs o concl) thm);
+	val lookup = (REWRITE_CONV [thm] THENC split_term_leq list) ``ELOOKUP ^((lhs o concl) thm)``;
 	val no_null = EVAL ``EVERY (\ (x,y,z). ~(z = "")) ^((lhs o concl) thm)``
 	val no_witness = EVAL ``EVERY (\ (x,y,z). ~(x = "ACL2-PKG-WITNESS")) ^((lhs o concl) thm)``
-	
-	val lookup = (REWRITE_CONV [thm] THENC split_term_fc chars) ``ELOOKUP ^((lhs o concl) thm)``;
+	val _ = print "\n"
 in
 	REWRITE_CONV [separate_proof,no_null,no_witness,lookup] ``VALID_PKG_TRIPLES ^((lhs o concl) thm)``
 end;
 
 (*****************************************************************************)
 (* Warning:                                                                  *)
-(* runtime: 2838.727s,    gctime: 458.456s,     systime: 21.321s.            *)
+(* runtime: 1021.616s,    gctime: 141.385s,     systime: 8.797s.             *)
 (*****************************************************************************)
-val pkg_valid_thm = time prove_valid_pkg_fc ACL2_PACKAGE_ALIST_def;
+val pkg_valid_thm = time prove_valid_pkg_leq ACL2_PACKAGE_ALIST_def;
 
 val _ = save_thm("VALID_ACL2_PACKAGE_ALIST",pkg_valid_thm);
 
