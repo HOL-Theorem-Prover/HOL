@@ -114,15 +114,15 @@ then
     do
         buildit $i
     done
-elif [ $# -ne 1 ]
-then
-    echo "Must have 0 or 1 argument" >&2
-    exit 1
 else
-    arg=`basename $1 .sml`   # use of basename strips trailing slashes from
-                             # inputs of the form   dirname/ and .sml
-                             # from ring.sml and others we may wish to use
-    buildit $arg
+    while [ $# -gt 0 ]
+    do
+      arg=`basename $1 .sml`   # use of basename strips trailing slashes from
+                               # inputs of the form   dirname/ and .sml
+                               # from ring.sml and others we may wish to use
+      buildit $arg
+      shift
+    done
 fi
 
 
