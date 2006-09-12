@@ -292,21 +292,23 @@ at present be built with \ml{Hol\_datatype}:
 \end{verbatim}
 \end{hol}
 %
-Co-inductive types may not currently be built with {Hol\_datatype}:
+Types may not recurse on either side of function arrows.  Recursion on
+the left is consistent (see the theory \theoryimp{inftree}), but
+\ml{Hol\_datatype} is not capable of defining algebraic types that
+require it.  In other words, examples such as the following will fail:
 %
 \begin{hol}
 \begin{verbatim}
   Hol_datatype
-    `lazylist = Nil
-              | Cons of 'a # (one -> lazylist)`
+    `flist = Nil
+           | Cons of 'a => ('b -> flist)`
 \end{verbatim}
 \end{hol}
 %
-A similar type can however be constructed in HOL: see \theoryimp{llistTheory}.
-%
-Finally, for cardinality reasons, HOL does not allow the following attempt
-to model the untyped lambda calculus as a set (note
-the \holtxt{->} in the clause for the \holtxt{Abs} constructor):
+On the right, recursion must fail for for cardinality reasons. For
+example, HOL does not allow the following attempt to model the untyped
+lambda calculus as a set (note the \holtxt{->} in the clause for the
+\holtxt{Abs} constructor):
 %
 \begin{hol}
 \begin{verbatim}
@@ -317,29 +319,26 @@ the \holtxt{->} in the clause for the \holtxt{Abs} constructor):
             | Abs of lambda -> lambda`
 \end{verbatim}
 \end{hol}
-%
-Instead, one would have to build a theory of complete partial orders
-(or something similar) with which to model the untyped lambda calculus.
 
 \subsection{Theorems arising from a datatype definition}
 
- The consequences of an invocation of \ml{Hol\_datatype} are stored in the
-current theory segment and in \ml{TypeBase}. The principal consequences
- of a datatype definition are the primitive recursion and induction theorems.
- These provide the ability to define simple functions over the type, and
- an induction principle for the type. Thus, for a type named \holtxt{ty},
- the primitive recursion theorem is stored under \ml{ty\_Axiom} and
- the induction theorem is put under \ml{ty\_induction}. Other
- consequences include the distinctness of constructors (\ml{ty\_distinct}),
- and the injectivity of constructors (\verb+ty_11+). A `degenerate' version of
- \ml{ty\_induction} is also stored under \ml{ty\_nchotomy}: it provides
- for reasoning by cases on the construction of elements of \ml{ty}.
- Finally, some special-purpose theorems are stored: for example,
- \ml{ty\_case\_cong} holds a congruence theorem for ``case'' statements
- on elements of \ml{ty}. These
- case statements are defined by \ml{ty\_case\_def}. Also, a definition of
- the ``size'' of the type is added to the current theory, under the name
- \ml{ty\_size\_def}.
+The consequences of an invocation of \ml{Hol\_datatype} are stored in
+the current theory segment and in \ml{TypeBase}. The principal
+consequences of a datatype definition are the primitive recursion and
+induction theorems.  These provide the ability to define simple
+functions over the type, and an induction principle for the type.
+Thus, for a type named \holtxt{ty}, the primitive recursion theorem is
+stored under \ml{ty\_Axiom} and the induction theorem is put under
+\ml{ty\_induction}. Other consequences include the distinctness of
+constructors (\ml{ty\_distinct}), and the injectivity of constructors
+(\verb+ty_11+). A `degenerate' version of \ml{ty\_induction} is also
+stored under \ml{ty\_nchotomy}: it provides for reasoning by cases on
+the construction of elements of \ml{ty}.  Finally, some
+special-purpose theorems are stored: for example, \ml{ty\_case\_cong}
+holds a congruence theorem for ``case'' statements on elements of
+\ml{ty}. These case statements are defined by \ml{ty\_case\_def}.
+Also, a definition of the ``size'' of the type is added to the current
+theory, under the name \ml{ty\_size\_def}.
 
 For example, invoking
 %
