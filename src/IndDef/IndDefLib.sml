@@ -49,10 +49,10 @@ end;
   form is
         (!x y z.  (C x y z = ...)) /\
         (!u v w.  (D u v w = ...))
-   in which case we return ["C", "D"] 
+   in which case we return ["C", "D"]
  ---------------------------------------------------------------------------*)
 
-fun names_from_casethm thm = 
+fun names_from_casethm thm =
  let open HolKernel boolSyntax
      val eqns = map (#2 o strip_forall) (strip_conj (concl thm))
      val cnsts = map (#1 o strip_comb o lhs) eqns
@@ -60,7 +60,7 @@ fun names_from_casethm thm =
     map (#1 o dest_const) cnsts
  end;
 
-fun prim_Hol_reln monoset tm = 
+fun prim_Hol_reln monoset tm =
  let val (rules, indn, cases) =
         InductiveDefinition.new_inductive_definition monoset tm
                   (* not! InductiveDefinition.bool_monoset tm *)
@@ -71,15 +71,49 @@ fun prim_Hol_reln monoset tm =
      val _ = save_thm(name^"_cases", cases)
 in
   (rules, indn, cases)
-end 
+end
 handle e => raise (wrap_exn "IndDefLib" "prim_Hol_reln" e);
 
+(* ----------------------------------------------------------------------
+    the built-in monoset, that users can update as they prove new
+    monotonicity results about their constants
+   ---------------------------------------------------------------------- *)
+
+val the_monoset = ref InductiveDefinition.bool_monoset
+
+fun add_mono_thm th = let
+  open boolLib InductiveDefinition
+  val (ant, con) = dest_imp (concl th)
+  val hdc_name = #1 (dest_const (#1 (strip_comb (#1 (dest_imp con)))))
+in
+  the_monoset := (hdc_name, th) :: (!the_monoset)
+end
+
+fun export_mono s = let
+  val th = DB.fetch "-" s
+  fun sps pps = (PP.add_string pps "val _ =";
+                 PP.add_break pps (1,0);
+                 PP.add_string pps "IndDefLib.add_mono_thm";
+                 PP.add_break pps (1,0);
+                 PP.add_string pps s;
+                 PP.add_string pps ";";
+                 PP.add_newline pps)
+in
+  add_mono_thm th; (* do this first so that if it fails, nothing gets added to
+                      the theory *)
+  adjoin_to_theory {sig_ps = NONE, struct_ps = SOME sps}
+end
+
+(* ----------------------------------------------------------------------
+    the standard entry-point
+   ---------------------------------------------------------------------- *)
 
 fun Hol_reln q =
-    prim_Hol_reln InductiveDefinition.bool_monoset (term_of q)
+    prim_Hol_reln (!the_monoset) (term_of q)
     handle e => Raise (wrap_exn "IndDefLib" "Hol_reln" e);
 
 val prim_derive_strong_induction = IndDefRules.prim_derive_strong_induction;
-val derive_strong_induction = IndDefRules.derive_strong_induction;
+fun derive_strong_induction (rules,ind) =
+    IndDefRules.prim_derive_strong_induction (!the_monoset) (rules, ind)
 
 end

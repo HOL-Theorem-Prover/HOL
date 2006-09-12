@@ -45,92 +45,15 @@ fun simp_axiom (ax,tm) =
    end
 
 
-(* ----------------------------------- *)
-(* Version of prove_asm with monosets: *)
-(* Added by PVH on September 8, 2006.  *)
-(* ----------------------------------- *)
-
-fun simple_subst theta tm =
-  assoc tm theta handle HOL_ERR _ =>
-  if is_abs tm then
-     let val (v,bdy) = dest_abs tm
-     in mk_abs(v, simple_subst theta bdy)
-     end
-  else if is_comb tm then
-     let val (tm1,tm2) = dest_comb tm
-     in mk_comb(simple_subst theta tm1, simple_subst theta tm2)
-     end
-  else tm;
-
-(* prove that tm1 ==> tm2 : both are conjuncts of terms, but possibly with
-   additional existential quantifiers guarding some of the conjuncts.
-   tm2's conjuncts are a subset of tm1's and the existential variables all
-   have the same choice of names *)
-fun prove_asm monoset tm1 tm2 = let
-  fun assums mp thm =
-      if is_conj (concl thm) then let
-          val (th1, th2) = CONJ_PAIR thm
-        in
-          assums (assums mp th1) th2
-        end
-      else if is_exists (concl thm) then let
-          val (_, body) = dest_exists (concl thm)
-        in
-          assums (Binarymap.insert(mp, concl thm, thm)) (ASSUME body)
-        end
-      else (let val cnst = (fst o strip_comb o concl) thm
-                val tac = assoc ((fst o dest_const) cnst) monoset
-                val tac1 = POP_ASSUM MP_TAC
-                           THEN tac
-                           THEN REPEAT GEN_TAC
-                           THEN REPEAT DISCH_TAC
-                val tm' = concl thm
-                val (sbgls,just) = tac1 (dest_thm (ASSUME tm'))
-                val gls = map (snd o strip_forall o snd) sbgls
-                fun foldit (gl,mp) =
-                    let val thm = ASSUME gl
-                    in assums (Binarymap.insert(mp, gl, thm)) thm
-                    end
-                val mp1 = List.foldl foldit mp gls
-                val ths = map (fn gl => valOf (Binarymap.peek(mp1,gl))) gls
-                val thm' = just ths
-            in Binarymap.insert(mp1, concl thm, thm)
-            end
-            handle _ => (* throw from `assoc' failing *)
-            Binarymap.insert(mp, concl thm, thm))
-  val mp = assums (Binarymap.mkDict Term.compare) (ASSUME tm1)
-  fun prove_it tm =
-      if is_conj tm then uncurry CONJ ((prove_it ## prove_it) (dest_conj tm))
-      else if is_exists tm then let
-          val (v, body) = dest_exists tm
-          val th = EXISTS (tm, v) (prove_it body)
-        in
-          CHOOSE (v, Binarymap.find (mp, mk_exists(v, hd (hyp th)))) th
-        end
-      else (let val cnst = (fst o strip_comb) tm
-                val tac = assoc ((fst o dest_const) cnst) monoset
-                val tac1 = POP_ASSUM MP_TAC
-                           THEN tac
-                           THEN REPEAT GEN_TAC
-                           THEN REPEAT DISCH_TAC
-                val (sbgls,just) = tac1 ([tm],tm)
-                val gls = map (snd o strip_forall o snd) sbgls
-                val ths = map prove_it gls
-                val hyps = map (hd o hyp) ths
-                val theta = (zip gls hyps)
-                val tm' = simple_subst theta tm
-                val (sbgls,just) = tac1 ([tm'],tm)
-                val thm' = just ths
-                val prvn_hyps = mapfilter (fn h => Lib.trye Binarymap.find (mp, h)) (hyp thm')
-                fun disch_hyps (h,thm) = MP (DISCH (concl h) thm) h handle HOL_ERR _ => thm
-            in List.foldl disch_hyps thm' prvn_hyps
-            end
-            handle _ => (* throw from `assoc' on monoset failing *)
-            Binarymap.find(mp, tm))
-in
-  DISCH_ALL (prove_it tm2)
-end
-
+(* prove that tm1 ==> tm2 : tm1 involves (P and P') applied to arguments
+   where tm2 has just P in the corresponding places.  (The structure of
+   tm1 and tm2 is otherwise identical.)  The (P and P') term may not be
+   directly applied to an argument, and hence will occur as an abstraction
+   if its the argument of a higher-order function like EVERY.  *)
+fun prove_asm monoset tm1 tm2 =
+    default_prover(mk_imp(tm1,tm2),
+                   InductiveDefinition.MONO_TAC monoset THEN
+                   REPEAT STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC)
 
 fun simp_concl monoset rul tm =
  let val (vs,(ant,conseq)) = (I ## dest_imp) (strip_forall tm)
@@ -162,8 +85,7 @@ fun simp_rule monoset (rul,tm) =
      val (cvs,red) = strip_forall conseq
      val bth = itlist FORALL_EQ cvs (LIST_BETA_CONV red)
      val basm = #1 (EQ_IMP_RULE
-                      (QCONV(DEPTH_CONV BETA_CONV THENC
-                             REWRITE_CONV [GSYM CONJ_ASSOC]) ant))
+                      (QCONV (DEPTH_CONV BETA_CONV) ant))
      val asm = list_mk_forall(vs,mk_imp(rand(concl basm),rand(concl bth)))
 
      val thm1 = UNDISCH (IMP_TRANS basm (SPECL vs (ASSUME asm)))
@@ -224,15 +146,17 @@ fun prim_derive_strong_induction monoset (rule_th,ind) = let
 
 
   val thm1 = DISCH_ALL (LIST_CONJ (map UNDISCH thm1s))
- in
-   GENL vs (IMP_TRANS (end_itlist IMP_CONJ ths) thm1)
- end
- handle e => raise (wrap_exn "IndDefRules"
-                             "derive_strong_induction" e);
-
-val derive_strong_induction =
-    prim_derive_strong_induction InductiveDefinition.bool_monoset;
-
+  val thm2 = GENL vs (IMP_TRANS (end_itlist IMP_CONJ ths) thm1)
+in
+  (* flatten conjunctions to be right-associated - this was done at a
+     slightly lower level in the old implementation.  I believe the only
+     difference should be that hypotheses that don't include a new constant
+     will now get flattened when they didn't before.  I refuse to correct for
+     this: proofs that dependent on conjunction structure are wacky, and
+     people rarely write conjunctions associated the wrong way in any case. *)
+  REWRITE_RULE [GSYM CONJ_ASSOC] thm2
+end handle e => raise (wrap_exn "IndDefRules"
+                                "derive_strong_induction" e);
 
 (* ===================================================================== *)
 (* RULE INDUCTION 							 *)

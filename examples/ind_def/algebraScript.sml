@@ -21,8 +21,7 @@ struct
 
 local open stringTheory in end;
 
-open HolKernel Parse boolLib bossLib
-     IndDefRules listTheory;
+open HolKernel Parse boolLib bossLib IndDefRules IndDefLib listTheory;
 
 infix ## |-> THEN THENL ORELSE;  infixr 3 -->;
 
@@ -54,8 +53,8 @@ val _ = new_theory "algebra";
 
 val label = Type`:string`;
 
-val _ = Hol_datatype `agent 
-                         = Nil 
+val _ = Hol_datatype `agent
+                         = Nil
                          | Pre of  ^label => agent
                          | Sum of   agent => agent
                          | Prod of  agent => agent`;
@@ -89,7 +88,7 @@ val distinct =
    let val distinct = TypeBase.distinct_of ``:agent``
        val ths = CONJUNCTS distinct
        val rths = map (GEN_ALL o NOT_EQ_SYM o SPEC_ALL) ths
-   in 
+   in
      LIST_CONJ (ths @ rths)
    end;
 
@@ -120,7 +119,7 @@ val trace = ty_antiq(Type`:^label list`);
 (* --------------------------------------------------------------------- *)
 
 val (trules, tind, tcases) = Hol_reln
-     `MTRACE Nil [] 
+     `MTRACE Nil []
  /\   (!P A a. MTRACE P A ==> MTRACE (Pre a P) (a::A))
  /\   (!P Q A. MTRACE P A ==> MTRACE (Sum P Q) A)
  /\   (!P Q A. MTRACE Q A ==> MTRACE (Sum P Q) A)
@@ -189,7 +188,7 @@ fun MTRACE_TAC g =
 
 val MTCASE =
    let val SIMPLIFY = REWRITE_RULE (distinct :: agent11)
-   in fn tm => let val th1 = SIMPLIFY (SPEC tm tcases) 
+   in fn tm => let val th1 = SIMPLIFY (SPEC tm tcases)
                in GEN_ALL (CONV_RULE (ONCE_DEPTH_CONV REDUCE) th1)
                end
    end;
@@ -215,7 +214,7 @@ val (lrules, lind, lcases) = Hol_reln
     `(!Q a. TRANS (Pre a Q) a Q)
  /\  (!P P' Q a. TRANS P a P' ==> TRANS (Sum P Q) a P')
  /\  (!P Q Q' a. TRANS Q a Q' ==> TRANS (Sum P Q) a Q')
- /\  (!P P' Q Q' a. TRANS P a P' /\ TRANS Q a Q' 
+ /\  (!P P' Q Q' a. TRANS P a P' /\ TRANS Q a Q'
                 ==> TRANS (Prod P Q) a (Prod P' Q'))`;
 
 val lrulel = CONJUNCTS lrules;
@@ -269,8 +268,8 @@ fun TRANS_TAC g =
 (* --------------------------------------------------------------------- *)
 
 val (Lrules, Lind, Lcases) = Hol_reln
-    `(!P. TRANSIT P [] P) 
- /\  (!P P' B a. 
+    `(!P. TRANSIT P [] P)
+ /\  (!P P' B a.
          (?Q. TRANS P a Q /\ TRANSIT Q B P') ==> TRANSIT P (a::B) P')`;
 
 val Lrulel = CONJUNCTS Lrules;
@@ -311,9 +310,9 @@ val TRANSIT_TAC = MAP_FIRST RULE_TAC Lrulel;
 (* --------------------------------------------------------------------- *)
 
 val Lemma1 = Q.prove
-(`!P a Q. TRANS P a Q ==> !A. MTRACE Q A ==> MTRACE P (a::A)`,  
+(`!P a Q. TRANS P a Q ==> !A. MTRACE Q A ==> MTRACE P (a::A)`,
  TRANS_INDUCT_TAC THEN REPEAT GEN_TAC THEN
- let val PCASES = PURE_ONCE_REWRITE_RULE [MTCASE (--`Prod P Q`--)] 
+ let val PCASES = PURE_ONCE_REWRITE_RULE [MTCASE (--`Prod P Q`--)]
  in DISCH_THEN (STRIP_ASSUME_TAC o PCASES) THEN MTRACE_TAC
  end);
 
@@ -331,7 +330,7 @@ val Theorem1 =
     store_thm
     ("Theorem1",
      (--`!P A Q. TRANSIT P A Q ==> TERMINAL Q ==> MTRACE P A`--),
-     PURE_ONCE_REWRITE_TAC [TERMINAL_DEF] THEN 
+     PURE_ONCE_REWRITE_TAC [TERMINAL_DEF] THEN
      TRANSIT_INDUCT_TAC THEN REPEAT STRIP_TAC THEN
      RES_TAC THEN IMP_RES_TAC Lemma1);
 
@@ -341,7 +340,7 @@ val Theorem1 =
 (* Note that the converse does not hold.				 *)
 (* --------------------------------------------------------------------- *)
 
-val Corollary1 = 
+val Corollary1 =
     store_thm
     ("Corollary1",
      (--`!P A. TRANSIT P A Nil ==> MTRACE P A`--),
@@ -376,13 +375,13 @@ fun EXISTS_SEARCH_TAC tm =
 (* by substitution.		                                         *)
 (* --------------------------------------------------------------------- *)
 
-val TRANSIT_CASES_TAC = 
+val TRANSIT_CASES_TAC =
   let fun SUBST_ASSUME th = SUBST_ALL_TAC th ORELSE STRIP_ASSUME_TAC th
       val TTAC = REPEAT_TCL STRIP_THM_THEN SUBST_ASSUME
   in fn tm =>
       let val th1 = UNDISCH(fst(EQ_IMP_RULE(REWR_CONV Lcases tm)))
-          val th2 = REWRITE_RULE [NOT_CONS_NIL,NOT_NIL_CONS,CONS_11] th1 
-      in 
+          val th2 = REWRITE_RULE [NOT_CONS_NIL,NOT_NIL_CONS,CONS_11] th1
+      in
         REPEAT_TCL STRIP_THM_THEN SUBST_ASSUME th2
       end
   end;
@@ -398,7 +397,7 @@ val Lemma2 = Q.prove
 (`!A P Q P' Q'.
     TRANSIT P A Q /\ TRANSIT P' A Q' ==> TRANSIT (Prod P P') A (Prod Q Q')`,
  Induct
-   THEN PURE_ONCE_REWRITE_TAC [Lcases] 
+   THEN PURE_ONCE_REWRITE_TAC [Lcases]
    THEN RW_TAC std_ss []
    THEN EXISTS_SEARCH_TAC (--`Prod Q'' Q'''`--));
 
@@ -417,7 +416,7 @@ val Lemma2 = Q.prove
 
 val Theorem2 = Q.store_thm ("Theorem2",
 `!P A. MTRACE P A ==> ?Q. TRANSIT P A Q /\ TERMINAL Q`,
- PURE_ONCE_REWRITE_TAC [TERMINAL_DEF] 
+ PURE_ONCE_REWRITE_TAC [TERMINAL_DEF]
    THEN MTRACE_INDUCT_TAC THEN REPEAT GEN_TAC THENL
    [EXISTS_SEARCH_TAC (--`Nil`--),
     MAP_EVERY EXISTS_SEARCH_TAC [(--`Q:agent`--),(--`P:agent`--)],
@@ -426,7 +425,7 @@ val Theorem2 = Q.store_thm ("Theorem2",
        MAP_EVERY EXISTS_SEARCH_TAC [(--`Q':agent`--), (--`Q'':agent`--)]],
     TRANSIT_CASES_TAC (--`TRANSIT Q A Q'`--) THENL
       [EXISTS_SEARCH_TAC (--`Sum P Q`--),
-       MAP_EVERY EXISTS_SEARCH_TAC [(--`Q':agent`--), (--`Q'':agent`--)]], 
+       MAP_EVERY EXISTS_SEARCH_TAC [(--`Q':agent`--), (--`Q'':agent`--)]],
     IMP_RES_TAC Lemma2 THEN EXISTS_SEARCH_TAC (--`Prod Q' Q''`--)]);
 
 (* ===================================================================== *)
@@ -452,8 +451,8 @@ val Theorem3 =
 (* --------------------------------------------------------------------- *)
 
 val MEQUIV_DEF =
- new_infixl_definition 
-    ("MEQUIV_DEF",    
+ new_infixl_definition
+    ("MEQUIV_DEF",
      (--`MEQUIV P Q = !A. MTRACE P A = MTRACE Q A`--),701);
 
 (* --------------------------------------------------------------------- *)
@@ -465,13 +464,13 @@ val MEQUIV_DEF =
 (* --------------------------------------------------------------------- *)
 
 val SIM_DEF =
- Q.new_definition 
+ Q.new_definition
   ("SIM_DEF",
-   `SIM s = 
+   `SIM s =
       !P Q. s P Q ==> !a P'. TRANS P a P' ==> ?Q'. TRANS Q a Q' /\ s P' Q'`);
 
 val BEQUIV_DEF =
-    new_infixl_definition 
+    new_infixl_definition
     ("BEQUIV_DEF",
      (--`BEQUIV P Q = ?s. SIM s /\ s P Q /\ SIM(\x y. s y x)`--),701);
 

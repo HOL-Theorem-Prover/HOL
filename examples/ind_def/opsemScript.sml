@@ -21,11 +21,7 @@
 structure opsemScript =
 struct
 
-open HolKernel Parse boolLib 
-     stringLib bossLib IndDefRules; 
-
-infix ## |-> THEN THENL;  infixr 3 -->;
-
+open HolKernel Parse boolLib stringLib bossLib IndDefLib IndDefRules;
 
 (* ---------------------------------------------------------------------*)
 (* Open a new theory and load the required libraries.			*)
@@ -55,7 +51,7 @@ val nexp = Type`:^state -> num`;
 val bexp = Type`:^state -> bool`;
 
 (*---------------------------------------------------------------------------
-     Lift type antiquotes so they can be used in term quotations. 
+     Lift type antiquotes so they can be used in term quotations.
  ---------------------------------------------------------------------------*)
 
 val State = ty_antiq state;
@@ -85,10 +81,10 @@ val Bexp  = ty_antiq bexp;
 (*									*)
 (* ---------------------------------------------------------------------*)
 
-val _ = Hol_datatype 
-          `comm 
-             = Skip 
-             | ::=    of string => ^nexp 
+val _ = Hol_datatype
+          `comm
+             = Skip
+             | ::=    of string => ^nexp
              | ;;    of  comm => comm
              | If    of ^bexp => comm => comm
              | While of ^bexp => comm`;
@@ -115,35 +111,35 @@ val _ = (set_fixity ";;"  (Infixr 350); set_MLname ";;"  "seq_def");
 (* ---------------------------------------------------------------------*)
 
 val (rules,induction,ecases) = Hol_reln
-     `(!s. EVAL Skip s s) 
+     `(!s. EVAL Skip s s)
  /\   (!s V E. EVAL (V ::= E) s (\v. if v=V then E s else s v))
- /\   (!C1 C2 s1 s3. 
+ /\   (!C1 C2 s1 s3.
         (?s2. EVAL C1 s1 s2 /\ EVAL C2 s2 s3) ==> EVAL (C1;;C2) s1 s3)
  /\   (!C1 C2 s1 s2 B. EVAL C1 s1 s2 /\  B s1 ==> EVAL (If B C1 C2) s1 s2)
  /\   (!C1 C2 s1 s2 B. EVAL C2 s1 s2 /\ ~B s1 ==> EVAL (If B C1 C2) s1 s2)
  /\   (!C s B.                           ~B s ==> EVAL (While B C) s s)
- /\   (!C s1 s3 B. 
-        (?s2. EVAL C s1 s2 /\ 
+ /\   (!C s1 s3 B.
+        (?s2. EVAL C s1 s2 /\
               EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`;
 
 val rulel = CONJUNCTS rules;
 
 (*---------------------------------------------------------------------------
-      Note that the following input is also acceptable to the 
+      Note that the following input is also acceptable to the
       definition package (existentials on the left of implications
       have been made into universals). This is in some way
-      cleaner, but some of the following proofs depend on the 
+      cleaner, but some of the following proofs depend on the
       specific structure of formulas and therefore fail with the
       different representation.
 
-       (!s. EVAL Skip s s) 
+       (!s. EVAL Skip s s)
    /\  (!s V E. EVAL (V ::= E) s (\v. if v=V then E s else s v))
-   /\  (!C1 C2 s1 s2 s3. 
+   /\  (!C1 C2 s1 s2 s3.
                 EVAL C1 s1 s2 /\ EVAL C2 s2 s3 ==> EVAL (C1;;C2) s1 s3)
    /\  (!C1 C2 s1 s2 B. EVAL C1 s1 s2 /\  B s1 ==> EVAL (If B C1 C2) s1 s2)
    /\  (!C1 C2 s1 s2 B. EVAL C2 s1 s2 /\ ~B s1 ==> EVAL (If B C1 C2) s1 s2)
    /\  (!C s B.                           ~B s ==> EVAL (While B C) s s)
-   /\  (!C s1 s2 s3 B. EVAL C s1 s2 /\ 
+   /\  (!C s1 s2 s3 B. EVAL C s1 s2 /\
                 EVAL (While B C) s2 s3 /\ B s1 ==> EVAL (While B C) s1 s3)
  ---------------------------------------------------------------------------*)
 
@@ -164,7 +160,7 @@ val sind = derive_strong_induction(rules,induction);
 (* constructed on the fly.						*)
 (* ---------------------------------------------------------------------*)
 
-val RULE_INDUCT_TAC = 
+val RULE_INDUCT_TAC =
     RULE_INDUCT_THEN induction STRIP_ASSUME_TAC STRIP_ASSUME_TAC;
 
 (* =====================================================================*)
@@ -217,11 +213,11 @@ val RULE_INDUCT_TAC =
 (* These can then generally be used for substitution.			*)
 (* ---------------------------------------------------------------------*)
 
-val (distinct,const11) = 
+val (distinct,const11) =
   let val (SOME facts) = TypeBase.read {Thy="opsem", Tyop="comm"}
       val thm1 = TypeBase.distinct_of ``:comm``
       val thm2 = TypeBase.one_one_of ``:comm``
-  in 
+  in
     (CONJ thm1 (GSYM thm1),thm2)
   end;
 
@@ -242,7 +238,7 @@ val SIMPLIFY = REWRITE_RULE [distinct, const11];
 (* sets of theorems of this type.					 *)
 (* --------------------------------------------------------------------- *)
 
-val CASE_TAC = DISCH_THEN 
+val CASE_TAC = DISCH_THEN
                (STRIP_ASSUME_TAC o SIMPLIFY o ONCE_REWRITE_RULE[ecases]);
 
 (* --------------------------------------------------------------------- *)
@@ -263,8 +259,8 @@ val SKIP_THM = store_thm("SKIP_THM",
 (* --------------------------------------------------------------------- *)
 
 val ASSIGN_THM = store_thm ("ASSIGN_THM",
- (--`!s1 s2 V E. EVAL (V ::= E) s1 s2 
-                   = 
+ (--`!s1 s2 V E. EVAL (V ::= E) s1 s2
+                   =
                  ((\v. if v=V then E s1 else s1 v) = s2)`--),
      REPEAT GEN_TAC THEN EQ_TAC THENL
      [CASE_TAC THEN ASM_REWRITE_TAC [],
@@ -481,12 +477,12 @@ val WHILE_LEMMA1 = TAC_PROOF(([],
 
 val WHILE_LEMMA2 =
     TAC_PROOF(([],
-  --`!C s1 s2. 
+  --`!C s1 s2.
      EVAL C s1 s2 ==>
      !B' C'. (C = While B' C') ==>
              (!s1 s2. P s1 /\ B' s1 /\ EVAL C' s1 s2 ==> P s2) ==>
              (P s1 ==> P s2)`--),
-     RULE_INDUCT_THEN sind (REFL_MP_THEN ASSUME_TAC) ASSUME_TAC THEN 
+     RULE_INDUCT_THEN sind (REFL_MP_THEN ASSUME_TAC) ASSUME_TAC THEN
      REWRITE_TAC [distinct, const11] THEN REPEAT GEN_TAC THEN
      DISCH_THEN (STRIP_THM_THEN SUBST_ALL_TAC) THEN
      REPEAT STRIP_TAC THEN RES_TAC);

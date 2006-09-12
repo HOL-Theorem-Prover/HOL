@@ -6,12 +6,18 @@ sig
 
   (* Make definitions *)
 
+  (* new types *)
   val Hol_datatype : hol_type quotation -> unit
+
+  (* new functions *)
   val Define       : term quotation -> thm
   val xDefine      : string -> term quotation -> thm
-  val Hol_defn     : string -> term quotation -> defn
-  val Hol_reln     : term quotation -> thm * thm * thm
   val WF_REL_TAC   : term quotation -> tactic
+  val Hol_defn     : string -> term quotation -> defn
+
+  (* new (inductive) relations *)
+  val Hol_reln     : term quotation -> thm * thm * thm
+  val export_mono  : string -> unit
 
   (* Case-splitting and induction operations *)
 
@@ -49,6 +55,7 @@ sig
   val type_rws       : hol_type -> thm list
   val rewrites       : thm list -> ssfrag
   val augment_srw_ss : ssfrag list -> unit
+  val export_rewrites: string list -> unit
 
   val Cong           : thm -> thm
   val AC             : thm -> thm -> thm
@@ -61,7 +68,8 @@ sig
   val RW_TAC         : simpset -> thm list -> tactic
   val SRW_TAC        : ssfrag list -> thm list -> tactic
 
-  val EVAL           : term -> thm   (* Call-by-value evaluation *)
+  (* Call-by-value evaluation *)
+  val EVAL           : term -> thm
   val EVAL_RULE      : thm -> thm
   val EVAL_TAC       : tactic
 

@@ -9,7 +9,7 @@ signature InductiveDefinition =
 sig
   include Abbrev
 
-  type monoset = (string * tactic) list
+  type monoset = (string * thm) list
   val bool_monoset : monoset
   val MONO_TAC     : monoset -> tactic
   val BACKCHAIN_TAC: thm -> tactic

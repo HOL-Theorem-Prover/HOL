@@ -1,6 +1,6 @@
 open HolKernel Parse boolLib IndDefLib IndDefRules arithmeticTheory
 
-val _ = print "Testing inductive definitions - mutual recursion\n"
+val _ = print "*** Testing inductive definitions - mutual recursion\n"
 
 val (oe_rules, oe_ind, oe_cases) = Hol_reln`
   even 0 /\
@@ -10,7 +10,7 @@ val (oe_rules, oe_ind, oe_cases) = Hol_reln`
 
 val strongoe = derive_strong_induction (oe_rules, oe_ind)
 
-val _ = print "Testing inductive definitions - scheme variables\n"
+val _ = print "*** Testing inductive definitions - scheme variables\n"
 
 val (rtc_rules, rtc_ind, rtc_cases) = Hol_reln`
   (!x. rtc r x x) /\
@@ -19,7 +19,7 @@ val (rtc_rules, rtc_ind, rtc_cases) = Hol_reln`
 
 val strongrtc = derive_strong_induction (rtc_rules, rtc_ind)
 
-val _ = print "Testing inductive definitions - existential vars\n"
+val _ = print "*** Testing inductive definitions - existential vars\n"
 
 val (rtc'_rules, rtc'_ind, rtc'_cases) = Hol_reln`
   (!x. rtc' r x x) /\
@@ -29,7 +29,7 @@ val (rtc'_rules, rtc'_ind, rtc'_cases) = Hol_reln`
 val strongrtc' = derive_strong_induction (rtc'_rules, rtc'_ind)
 
 (* emulate the example in examples/opsemScript.sml *)
-val _ = print "Testing opsem example\n"
+val _ = print "*** Testing opsem example\n"
 val _ = new_type ("comm", 0)
 val _ = new_constant("Skip", ``:comm``)
 val _ = new_constant("::=", ``:num -> ((num -> num) -> num) -> comm``)
@@ -54,6 +54,37 @@ val (rules,induction,ecases) = Hol_reln
 val _ = if null (hyp rules) then ()
         else (print "FAILED!\n"; OS.Process.exit OS.Process.failure)
 
+val strongeval = save_thm("strongeval",
+                          derive_strong_induction(rules, induction))
+
+(* emulate the example in examples/monosetScript.sml *)
+val _ = print "*** Testing monoset example\n"
+val _ = new_type ("t", 0)
+val _ = new_type ("list", 1)
+val _ = new_constant ("v", ``:num -> t``)
+val _ = new_constant ("app", ``:t list -> t``)
+val _ = new_constant ("EVERY", ``:('a -> bool) -> 'a list -> bool``)
+val _ = new_constant ("MEM", ``:'a -> 'a list -> bool``)
+val _ = new_constant ("ZIP", ``:('a list # 'b list) -> ('a # 'b) list``)
+
+val MONO_UNCURRY = mk_thm([],
+  ``(!p:'a q:'b. P p q ==> Q p q) ==> (UNCURRY P x ==> UNCURRY Q x)``)
+val MONO_EVERY = mk_thm([], ``(!x:'a. P x ==> Q x) ==>
+                              (EVERY P l ==> EVERY Q l)``)
+val _ = app add_mono_thm [MONO_UNCURRY, MONO_EVERY]
+
+val (red_rules, red_ind, red_cases) = Hol_reln `
+  (!n. red f (v n) (v (f n))) /\
+  (!t0s ts. EVERY (\ (t0,t). red f t0 t) (ZIP (t0s, ts)) ==>
+            red f (app t0s) (app ts))
+`;
+val _ = if null (hyp red_rules) then ()
+        else (print "Hyps in rules - FAILED!\n";
+              OS.Process.exit OS.Process.failure)
+
+val strongred = save_thm(
+  "red_strong_ind",
+  derive_strong_induction (red_rules, red_ind));
 
 val _ = OS.Process.exit OS.Process.success
 

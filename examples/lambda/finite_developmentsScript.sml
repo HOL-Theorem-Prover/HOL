@@ -84,8 +84,7 @@ val (labelled_redn_rules, labelled_redn_ind, labelled_redn_cases) =
 
 val strong_labelled_redn_ind = save_thm(
   "strong_labelled_redn_ind",
-  IndDefRules.derive_strong_induction
-    (labelled_redn_rules, labelled_redn_ind));
+  IndDefLib.derive_strong_induction (labelled_redn_rules, labelled_redn_ind));
 
 val labelled_redn_bvc_ind = store_thm(
   "labelled_redn_bvc_ind",
@@ -165,7 +164,7 @@ val (lrcc_rules, lrcc_ind, lrcc_cases) =
 
 val strong_lrcc_ind = save_thm(
   "strong_lrcc_ind",
-  IndDefRules.derive_strong_induction(lrcc_rules, lrcc_ind));
+  IndDefLib.derive_strong_induction(lrcc_rules, lrcc_ind));
 
 val lrcc_bvc_b01_ind = store_thm(
   "lrcc_bvc_b01_ind",
@@ -3614,7 +3613,7 @@ val lcc_cosubstitutive = store_thm(
   ]);
 
 val strong_lcc_ind =
-    IndDefRules.derive_strong_induction
+    IndDefLib.derive_strong_induction
       (lcompat_closure_rules, lcompat_closure_ind)
 
 val beta0_LAMi = store_thm(

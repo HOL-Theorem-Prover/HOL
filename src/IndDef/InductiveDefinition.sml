@@ -418,7 +418,7 @@ fun BACKCHAIN_TAC th =
         end
     end;;
 
-type monoset = (string * tactic) list;
+type monoset = (string * thm) list;
 
 (*---------------------------------------------------------------------------
  * MONO_AND = |- (A ==> B) /\ (C ==> D) ==> (A /\ C ==> B /\ D)
@@ -430,59 +430,51 @@ type monoset = (string * tactic) list;
  *---------------------------------------------------------------------------*)
 
 
-local val pth = prove
- (--`(!x:'a. P x ==> Q x) ==> ($? P ==> $? Q)`--,
+val MONO_EXISTS = prove (
+  ``(!x:'a. P x ==> Q x) ==> ($? P ==> $? Q)``,
   DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_EXISTS) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
-in
-val MONO_EXISTS_TAC =
-  HO_MATCH_MP_TAC pth THEN
-  CONV_TAC(RAND_CONV(ABS_CONV
-   (RAND_CONV(TRY_CONV BETA_CONV) THENC
-    RATOR_CONV(RAND_CONV(TRY_CONV BETA_CONV)))))
-end;
 
-local val pth = prove
- (--`(!x:'a. P x ==> Q x) ==> ($! P ==> $! Q)`--,
+val MONO_FORALL = prove (
+  ``(!x:'a. P x ==> Q x) ==> ($! P ==> $! Q)``,
   DISCH_THEN(MP_TAC o HO_MATCH_MP MONO_ALL) THEN
   CONV_TAC(ONCE_DEPTH_CONV ETA_CONV) THEN REWRITE_TAC[])
-in
-val MONO_FORALL_TAC =
-  HO_MATCH_MP_TAC pth THEN
-  CONV_TAC(RAND_CONV(ABS_CONV
-   (RAND_CONV(TRY_CONV BETA_CONV) THENC
-    RATOR_CONV(RAND_CONV(TRY_CONV BETA_CONV)))))
-end;
 
 val bool_monoset =
- [("/\\", BACKCHAIN_TAC MONO_AND THEN CONJ_TAC),
-  ("\\/", BACKCHAIN_TAC MONO_OR THEN CONJ_TAC),
-  ("?",   MONO_EXISTS_TAC),
-  ("!",   MONO_FORALL_TAC),
-  ("==>", BACKCHAIN_TAC MONO_IMP THEN CONJ_TAC),
-  ("~",   BACKCHAIN_TAC MONO_NOT),
-  ("",    MONO_ABS_TAC)];;
+ [("/\\", MONO_AND),
+  ("\\/", MONO_OR),
+  ("?",   MONO_EXISTS),
+  ("!",   MONO_FORALL),
+  ("==>", MONO_IMP),
+  ("~",   MONO_NOT)]
 
-val APPLY_MONOTAC =
- let val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
- in fn monoset => fn (asl,w) =>
-    let val (a,c) = dest_imp w
-    in if aconv a c
-       then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w)
-       else let val cn = fst(dest_const(repeat rator c)) handle HOL_ERR _ => ""
-            in tryfind (fn (k,t) => if k = cn then t (asl,w) else fail())
-                       monoset
-            end
+
+val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
+
+fun APPLY_MONOTAC monoset (asl, w) = let
+  val (a,c) = dest_imp w
+in
+  if aconv a c then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w)
+  else let
+      val cn = fst(dest_const(repeat rator c)) handle HOL_ERR _ => ""
+    in
+      if cn = "" then MONO_ABS_TAC (asl, w)
+      else
+        tryfind (fn (k,t) => if k = cn then BACKCHAIN_TAC t (asl,w)
+                             else fail())
+                monoset
     end
- end;
+end
 
 (* ------------------------------------------------------------------------- *)
 (* Tactics to prove monotonicity automatically.                              *)
 (* ------------------------------------------------------------------------- *)
 
-fun MONO_STEP_TAC monoset = REPEAT GEN_TAC THEN (APPLY_MONOTAC monoset);;
+fun MONO_STEP_TAC monoset =
+    REPEAT (GEN_TAC ORELSE CONJ_TAC) THEN
+    (APPLY_MONOTAC monoset ORELSE FIRST_ASSUM MATCH_ACCEPT_TAC)
 
-fun MONO_TAC monoset = REPEAT (MONO_STEP_TAC monoset) THEN ASM_REWRITE_TAC[];;
+fun MONO_TAC monoset = REPEAT (MONO_STEP_TAC monoset)
 
 (* =========================================================================*)
 (* Part 3: Utility functions to modify the basic theorems in various ways.  *)

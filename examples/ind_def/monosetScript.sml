@@ -48,7 +48,7 @@ val _ = new_theory"monoset";
 
 val MONO_EVERY = store_thm
   ("MONO_EVERY",
-    ``(!x:'a. MEM x l ==> (P x ==> Q x)) ==>
+    ``(!x:'a. P x ==> Q x) ==>
       (EVERY P l ==> EVERY Q l)``,
     Induct_on `l` THEN SRW_TAC [][]);
 
@@ -58,23 +58,7 @@ val MONO_UNCURRY = store_thm(
   ``(!p:'a q:'b. P p q ==> Q p q) ==> (UNCURRY P x ==> UNCURRY Q x)``,
   Cases_on `x` THEN SRW_TAC [][])
 
-(* --------------------------------------------------------------------- *)
-(* We will use this theorem in constructing a tactic to prove that	 *)
-(* EVERY expressions are monotonic.					 *)
-(* --------------------------------------------------------------------- *)
-
-val MONO_EVERY_TAC = InductiveDefinition.BACKCHAIN_TAC MONO_EVERY
-val MONO_UNCURRY_TAC = InductiveDefinition.BACKCHAIN_TAC MONO_UNCURRY
-
-(* --------------------------------------------------------------------- *)
-(* To create the new monoset, we add a pair to the front of the		 *)
-(* standard list.  The pair contains the name of the constant as a	 *)
-(* string, and also the tactic to prove monotonicity.			 *)
-(* --------------------------------------------------------------------- *)
-
-val every_monoset = ("EVERY", MONO_EVERY_TAC) ::
-                    ("UNCURRY", MONO_UNCURRY_TAC) ::
-                    InductiveDefinition.bool_monoset;
+val _ = app export_mono ["MONO_EVERY", "MONO_UNCURRY"]
 
 (* --------------------------------------------------------------------- *)
 (* Now we apply the new monoset to an example definition.		 *)
@@ -82,13 +66,18 @@ val every_monoset = ("EVERY", MONO_EVERY_TAC) ::
 
 val _ = print "Testing inductive definitions - extended monoset\n"
 
-val (EC_rules, EC_ind, EC_cases) = prim_Hol_reln every_monoset ``
-  (EC r []) /\
-  (!a ps. EC r ps ==> EC r ((a,a)::ps)) /\
-  (!ps. EVERY (\(a:'a,b). r a b) ps ==> EC r ps)
-``;
+val _ = Hol_datatype `t = v of num
+                        | app of t list`
 
-val strongEC = prim_derive_strong_induction every_monoset (EC_rules, EC_ind);
+val (red_rules, red_ind, red_cases) = Hol_reln `
+  (!n. red f (v n) (v (f n))) /\
+  (!t0s ts. EVERY (\ (t0,t). red f t0 t) (ZIP (t0s, ts)) ==>
+            red f (app t0s) (app ts))
+`;
+
+val strongEC = save_thm(
+  "EC_strong_ind",
+  derive_strong_induction (red_rules, red_ind));
 
 
 (* --------------------------------------------------------------------- *)

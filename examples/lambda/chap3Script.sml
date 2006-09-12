@@ -724,7 +724,7 @@ val grandbeta_subst = store_thm(
   ]);
 
 val strong_grandbeta_ind =
-    IndDefRules.derive_strong_induction (grandbeta_rules, grandbeta_ind)
+    IndDefLib.derive_strong_induction (grandbeta_rules, grandbeta_ind)
 
 val strong_grandbeta_bvc_gen_ind =
     (GEN_ALL o
@@ -1100,7 +1100,7 @@ val CR_eta_lemma = prove(
   ]);
 
 val cc_strong_ind =
-    IndDefRules.derive_strong_induction (compat_closure_rules, compat_closure_ind)
+    IndDefLib.derive_strong_induction (compat_closure_rules, compat_closure_ind)
 
 val eta_diamond = prove(
   ``!M M1. compat_closure eta M M1 ==>

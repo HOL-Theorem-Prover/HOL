@@ -101,6 +101,36 @@ html1/DTD/xhtml1-strict.dtd">
       escaped by a caret, and that caret-escapes need to be applied
       even within string literals and comments that occur inside
       quotations.</p></li>
+
+
+  <li> <p> Inductive definitions are now made with respect to a
+      varying &ldquo;<code>monoset</code>&rdquo;: a list of theorems
+      specifying that boolean operators are monotone in their
+      arguments.  These are used to justify recursions that may occur
+      underneath new operators that users introduce.  </p>
+
+      <p> Initially, this set includes results for the standard
+      boolean operators (such as existential quantification and
+      conjunction), and is augmented as later theories are loaded. For
+      example, the constant <code>EVERY</code> in the theory of lists,
+      has a monotonicity result</p>
+      <pre>
+         |- (!x:'a. P x ==> Q x) ==> (EVERY P l ==> EVERY Q l)
+      </pre>
+<p> and this is incorporated into the global <code>monoset</code> when
+the theory of lists is loaded.  This then allows the easy definition
+of relations that recurse under <code>EVERY</code>, as in this rule
+</p>
+      <pre>
+         !x. EVERY newrel (somelist_of x) ==> newrel x
+      </pre>
+
+
+      <p> Theorems can be declared as monotonicity results using the
+      <code>export_mono</code> function.  See the Description for the
+      exact form that monotonicity theorems must take. </p>
+
+      </li>
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
@@ -136,6 +166,14 @@ html1/DTD/xhtml1-strict.dtd">
       failed if one of the string arguments was the empty string.
       Thanks to Mike Gordon for the report of this bug. </p> </li>
 
+  <li> <p> The derivation of &ldquo;strong&rdquo; induction principles
+      in the inductive definitions library has been improved to cope
+      with multiple (mutually recursive) inductively-defined
+      relations.  Such relations could always be defined using
+      <code>Hol_reln</code>, but their strong induction principles
+      couldn&rsquo;t be derived.  (See below for a change in the type
+      and home of this function.) </p></li>
+
 </ul>
 
 
@@ -170,13 +208,26 @@ html1/DTD/xhtml1-strict.dtd">
 </pre>
 </li>
 
-  <li> The normalisation of arithmetic terms performed by
+  <li> <p> The normalisation of arithmetic terms performed by
       the <code>ARITH_ss</code> simpset fragment (and thus, the
       simpset <code>bossLib.arith_ss</code>) is more aggressive.  This
       can break proofs.  The <code>bossLib</code> library now exports
       <code>old_arith_ss</code> and <code>old_ARITH_ss</code>
       entry-points if users wish to avoid having to adjust their
-      proofs.</li>
+      proofs. </p> </li>
+
+  <li> <p> The <code>derive_strong_induction</code> function has
+  changed type, and location.  It is now an entry-point in
+  <code>IndDefLib</code>, and has type </p>
+<pre>
+         thm * thm -> thm
+</pre>
+      <p> rather than </p>
+<pre>
+         thm list * thm -> thm
+</pre>
+      <p> The first argument should now be the &ldquo;rules&rdquo;
+      theorem returned by a call to <code>Hol_reln</code>. </p> </li>
 </ul>
 
 

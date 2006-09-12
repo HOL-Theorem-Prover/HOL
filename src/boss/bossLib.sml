@@ -43,9 +43,10 @@ val Hol_datatype = Datatype.Hol_datatype;
 
 val xDefine    = TotalDefn.xDefine
 val Define     = TotalDefn.Define
-val Hol_defn   = Defn.Hol_defn;
-val Hol_reln   = IndDefLib.Hol_reln;
-val WF_REL_TAC = TotalDefn.WF_REL_TAC;
+val Hol_defn   = Defn.Hol_defn
+val Hol_reln   = IndDefLib.Hol_reln
+val export_mono = IndDefLib.export_mono
+val WF_REL_TAC = TotalDefn.WF_REL_TAC
 
 
 (*---------------------------------------------------------------------------
@@ -60,6 +61,7 @@ val RW_TAC         = BasicProvers.RW_TAC
 val SRW_TAC        = BasicProvers.SRW_TAC
 val srw_ss         = BasicProvers.srw_ss
 val augment_srw_ss = BasicProvers.augment_srw_ss
+val export_rewrites= BasicProvers.export_rewrites
 
 val EVAL           = computeLib.EVAL_CONV;
 val EVAL_RULE      = computeLib.EVAL_RULE

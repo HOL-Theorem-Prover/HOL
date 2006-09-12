@@ -1808,6 +1808,7 @@ by finding a suitable wellfounded relation for \holtxt{R} and then
 proving the other constraints.
 
 \section{Inductive Relations}
+\index{inductive relations|(}
 
 Inductive definitions are made with the function \ml{Hol\_reln}, found
 in the \ml{bossLib} structure.  The \ml{Hol\_reln} function takes a
@@ -1825,16 +1826,17 @@ conforms to the following grammar:
    \nonterm{hypothesis}   &::=& \mbox{any term}\\
    \nonterm{con}          &::=& \mbox{a new relation constant}
 \end{eqnarray*}
-The (optional) $\mathit{sv}_i$ terms that appear after a constant name are
-so-called ``schematic variables''.  The same variables must always
-follow the same constant name throughout the definition.  These
-variables and the names of the constants-to-be must not be quantified
-over in each {\nonterm{clause}}.  Otherwise, a {\nonterm{clause}} must
-not include any free variables.  (The universal quantifiers at the
-head of the clause can be used to bind free variables, but it is also
-permissible to use existential quantification in the hypotheses.  If a
-clause has no free variables, it is permissible to have no universal
-quantification.)
+The (optional) $\mathit{sv}_i$ terms that appear after a constant name
+are so-called ``schematic variables''.  The same variables must always
+follow all new constants throughout the definition.  These variables
+and the names of the constants-to-be must not be quantified over in
+each {\nonterm{clause}}.  A {\nonterm{clause}} should have no other
+free variables.  Any that occur will be universally quantified as part
+of the process of definition, and a warning message emitted.
+(Universal quantifiers at the head of the clause can be used to bind
+free variables, but it is also permissible to use existential
+quantification in the hypotheses.  If a clause has no free variables,
+it is permissible to have no universal quantification.)
 
 A successful invocation of \ml{Hol\_reln} returns three theorems
 $(\mathit{rules},\mathit{ind},\mathit{cases})$. Each is also stored in
@@ -1846,8 +1848,9 @@ saved under the name \ml{<stem>\_rules}, where \ml{<stem>} is the name of the
 first relation defined by the function.
 \item $\mathit{ind}$ is the induction principle for the relations,
 saved under the name \ml{<stem>\_ind}.
-\item $\mathit{cases}$ is the so-called `cases theorem' for the relations,
-saved under the name \ml{<stem>\_cases}. A cases theorem is of the form
+\item $\mathit{cases}$ is the so-called `cases' or `inversion' theorem
+  for the relations, saved under the name \ml{<stem>\_cases}. A cases
+  theorem is of the form
 %
 \begin{hol}
 \begin{verbatim}
@@ -1864,6 +1867,62 @@ saved under the name \ml{<stem>\_cases}. A cases theorem is of the form
 and is used to decompose an element in the relation into the
 possible ways of obtaining it by the rules.
 \end{itemize}
+
+\paragraph{Strong Induction Principles}
+So called ``strong'' versions of induction principles (where instances
+of the relation being defined appear as extra hypotheses), can be
+automatically proved with a call to the function
+\[
+\ml{IndDefRules.derive\_strong\_induction : thm * thm -> thm}
+\]
+The first argument is the rules theorem, and the second is the
+induction theorem.
+
+\paragraph{Adding Monotone Operators}
+\index{inductive relations!monotone operators for}
+New constants may occur recursively throughout rules' hypotheses, as
+long as it can be shown that the rules remain monotone with respect to
+the new constants.  \ml{Hol\_reln} automatically attempts to prove such
+monotonicity results, using a set of theorems held in a reference
+\ml{IndDefLib.the\_monoset}.  Monotonicity theorems must be of the form
+\[
+\mathit{cond}_1 \land \cdots \land \mathit{cond}_m \Rightarrow
+(\mathit{Op}\;\mathit{arg}_1 \dots \mathit{arg}_n \Rightarrow
+\mathit{Op}\;\mathit{arg}'_1 \dots \mathit{arg}'_n)
+\]
+where each $\mathit{arg}$ and $\mathit{arg}'$ term must be a variable,
+and where there must be as many $\mathit{cond}_i$ terms as there are
+arguments to $\mathit{Op}$ that vary.  Each $\mathit{cond}_i$ must be
+of the form \[ \forall \vec{v}. \;\mathit{arg}\;\vec{v} \Rightarrow
+\mathit{arg}'\;\vec{v}
+\]
+where the vector of variables $\vec{v}$ may be empty, and where the
+$\mathit{arg}$ and $\mathit{arg}'$ may actually be reversed (as in the
+rule for negation).
+
+For example, the monotonicity rule for conjunction is
+\[
+(P \Rightarrow P') \land (Q \Rightarrow Q') \Rightarrow (P \land Q
+\Rightarrow P' \land Q')
+\]
+The monotonicity rule for the \holtxt{EVERY} operator in the theory of
+lists (see Section~\ref{avra_list}), is
+\[
+(\forall x. \;P(x) \Rightarrow Q(x)) \Rightarrow
+(\holtxt{EVERY}\;P\;\ell \Rightarrow \holtxt{EVERY}\;Q\;\ell)
+\]
+With a monotonicity result available for an operator such as
+\holtxt{EVERY}, it is then possible to write inductive defintions
+where hypotheses include mention of the new relation as arguments to
+the given operators.
+
+\index{export_mono (ML function)@\ml{export\_mono} (\ML{} function)}
+Monotonicity results that the user derives may be stored in the global
+\ml{the\_monoset} variable by using the \ml{export\_mono} function.
+This function takes a string naming a theorem in the current theory
+segment, and adds that theorem to the monotonicity theorems
+immediately, and in such a way that this situation will obtain when
+the current theory is subsequently reloaded.
 
 \paragraph{Examples}
 
@@ -1941,16 +2000,7 @@ as in the definition of \holtxt{EVEN} and \holtxt{ODD}.  The relations
 may or may not be mutually recursive.  The clauses for each relation
 need not be contiguous.
 
-So called ``strong'' versions of induction principles (where instances
-of the relation being defined appear as extra hypotheses), can be
-automatically proved with a call to the function
-\[
-\ml{IndDefRules.derive\_strong\_induction : thm list * thm -> thm}
-\]
-The first argument is the list of rules (use the \ml{CONJUNCTS}
-function to turn the \ml{<stem>\_rules} theorem into such a list), and
-the second is the induction theorem.
-
+\index{inductive relations|)}
 
 
 %%% Local Variables:

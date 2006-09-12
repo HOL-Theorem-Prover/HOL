@@ -1047,12 +1047,13 @@ val listRel_LENGTH = store_thm(
 
 val listRel_strong_ind = save_thm(
   "listRel_strong_ind",
-  IndDefRules.derive_strong_induction(listRel_rules, listRel_ind))
+  IndDefLib.derive_strong_induction(listRel_rules, listRel_ind))
 
 val listRel_monotone = store_thm(
   "listRel_monotone",
-  ``(!x y. R x y ==> R' x y) ==> !x y. listRel R x y ==> listRel R' x y``,
-  STRIP_TAC THEN HO_MATCH_MP_TAC listRel_ind THEN SRW_TAC [][listRel_rules])
+  ``(!x y. R x y ==> R' x y) ==> (listRel R x y ==> listRel R' x y)``,
+  STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
+  HO_MATCH_MP_TAC listRel_ind THEN SRW_TAC [][listRel_rules])
 
 
 (*---------------------------------------------------------------------------*)

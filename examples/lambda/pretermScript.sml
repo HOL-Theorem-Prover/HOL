@@ -223,7 +223,7 @@ val aeq_ptm_11 = store_thm(
 
 
 
-val aeq_strong_ind = IndDefRules.derive_strong_induction (aeq_rules, aeq_ind)
+val aeq_strong_ind = IndDefLib.derive_strong_induction (aeq_rules, aeq_ind)
 
 (* proof follows that on p169 of Andy Pitts, Information and Computation 186
    article: Nominal logic, a first order theory of names and binding *)

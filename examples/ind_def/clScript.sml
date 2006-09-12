@@ -207,7 +207,7 @@ val Sxyz_predn = prove(
 val x_ap_y_predn = characterise ``x # y``;
 
 val predn_strong_ind =
-  IndDefRules.derive_strong_induction (predn_rules, predn_ind)
+  IndDefLib.derive_strong_induction (predn_rules, predn_ind)
 
 val predn_diamond_lemma = prove(
   ``!x y. x -||-> y ==>

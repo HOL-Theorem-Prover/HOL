@@ -157,7 +157,7 @@ val hastype_valid_ctxt = store_thm(
   HO_MATCH_MP_TAC hastype_ind THEN SRW_TAC [][]);
 
 val strong_hastype_ind =
-    IndDefRules.derive_strong_induction (hastype_rules, hastype_ind)
+    IndDefLib.derive_strong_induction (hastype_rules, hastype_ind)
 
 val hastype_bvc_ind = store_thm(
   "hastype_bvc_ind",
