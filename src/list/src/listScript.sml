@@ -190,6 +190,7 @@ val EVERY_DEF = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!P:'a->bool. EVERY P [] = T)  /\
                 (!P h t. EVERY P (h::t) = P h /\ EVERY P t)`--};
+val _ = BasicProvers.export_rewrites ["EVERY_DEF"]
 
 val EXISTS_DEF = new_recursive_definition
       {name = "EXISTS_DEF",
@@ -417,6 +418,13 @@ val EVERY_SIMP = store_thm(
   ASM_REWRITE_TAC [EVERY_DEF, NOT_CONS_NIL] THEN
   EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []);
 
+val MONO_EVERY = store_thm(
+  "MONO_EVERY",
+  ``(!x. P x ==> Q x) ==> (EVERY P l ==> EVERY Q l)``,
+  Q.ID_SPEC_TAC `l` THEN LIST_INDUCT_TAC THEN
+  ASM_SIMP_TAC (srw_ss()) []);
+val _ = IndDefLib.export_mono "MONO_EVERY"
+
 val EXISTS_MEM = store_thm(
   "EXISTS_MEM",
   ``!P l:'a list. EXISTS P l = ?e. MEM e l /\ P e``,
@@ -435,6 +443,14 @@ val EXISTS_SIMP = store_thm(
   GEN_TAC THEN LIST_INDUCT_TAC THEN
   ASM_REWRITE_TAC [EXISTS_DEF, NOT_CONS_NIL] THEN
   EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []);
+
+val MONO_EXISTS = store_thm(
+  "MONO_EXISTS",
+  ``(!x. P x ==> Q x) ==> (EXISTS P l ==> EXISTS Q l)``,
+  Q.ID_SPEC_TAC `l` THEN LIST_INDUCT_TAC THEN
+  ASM_SIMP_TAC (srw_ss()) [DISJ_IMP_THM]);
+val _ = IndDefLib.export_mono "MONO_EXISTS"
+
 
 val EVERY_NOT_EXISTS = store_thm(
   "EVERY_NOT_EXISTS",
@@ -1049,12 +1065,21 @@ val listRel_strong_ind = save_thm(
   "listRel_strong_ind",
   IndDefLib.derive_strong_induction(listRel_rules, listRel_ind))
 
-val listRel_monotone = store_thm(
-  "listRel_monotone",
+val MONO_listRel = store_thm(
+  "MONO_listRel",
   ``(!x y. R x y ==> R' x y) ==> (listRel R x y ==> listRel R' x y)``,
   STRIP_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`y`, `x`] THEN
   HO_MATCH_MP_TAC listRel_ind THEN SRW_TAC [][listRel_rules])
+val _ = IndDefLib.export_mono "MONO_listRel"
 
+(* example of listRel in action :
+val (rules,ind,cases) = IndDefLib.Hol_reln`
+  (!n m. n < m ==> R n m) /\
+  (!n m. R n m ==> R1 (INL n) (INL m)) /\
+  (!l1 l2. listRel R l1 l2 ==> R1 (INR l1) (INR l2))
+`
+val strong = IndDefLib.derive_strong_induction (rules,ind)
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Tail recursive versions for better memory usage when applied in ML        *)
@@ -1125,7 +1150,7 @@ val _ = adjoin_to_theory
  end)};
 
 val _ = BasicProvers.export_rewrites
-          ["APPEND", "APPEND_11", "EL", "EVERY_DEF", "FLAT", "HD",
+          ["APPEND", "APPEND_11", "EL", "FLAT", "HD",
            "LENGTH", "MAP", "MAP2", "NULL_DEF",
            "SUM", "TL", "APPEND_ASSOC", "CONS", "CONS_11",
            "LENGTH_APPEND", "LENGTH_MAP", "MAP_APPEND",

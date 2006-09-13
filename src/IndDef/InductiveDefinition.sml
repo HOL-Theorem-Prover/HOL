@@ -7,13 +7,17 @@
 structure InductiveDefinition :> InductiveDefinition =
 struct
 
-open HolKernel Parse boolLib
-     liteLib refuteLib AC Ho_Rewrite;
-
+open HolKernel boolLib liteLib refuteLib AC Ho_Rewrite;
 
 (* Fix the grammar used by this file *)
-val ambient_grammars = Parse.current_grammars();
-val _ = Parse.temp_set_grammars combinTheory.combin_grammars;
+structure Parse =
+struct
+  open Parse
+  val (Type,Term) = Parse.parse_from_grammars pairTheory.pair_grammars
+  fun -- q x = Term q
+  fun == q x = Type q
+end
+open Parse
 
 (*---------------------------------------------------------------------------
     Variants. We re-define the kernel "variant" function here because
@@ -452,6 +456,13 @@ val MONO_RESEXISTS = prove(
   REWRITE_TAC [RES_EXISTS_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
   EXISTS_TAC ``x:'a`` THEN RES_TAC THEN ASM_REWRITE_TAC [])
 
+val MONO_UNCURRY = prove(
+  ``(!p:'a q:'b. P p q ==> Q p q) ==> (UNCURRY P x ==> UNCURRY Q x)``,
+  Q.SPEC_THEN `x` STRUCT_CASES_TAC pairTheory.pair_CASES THEN
+  REWRITE_TAC [pairTheory.UNCURRY_DEF] THEN REPEAT STRIP_TAC THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC []);
+
+
 val bool_monoset =
  [("/\\", MONO_AND),
   ("\\/", MONO_OR),
@@ -460,7 +471,8 @@ val bool_monoset =
   ("==>", MONO_IMP),
   ("~",   MONO_NOT),
   ("RES_FORALL", MONO_RESFORALL),
-  ("RES_EXISTS", MONO_RESEXISTS)]
+  ("RES_EXISTS", MONO_RESEXISTS),
+  ("UNCURRY", MONO_UNCURRY)]
 
 
 val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
@@ -799,7 +811,5 @@ fun new_inductive_definition monoset tm =
  in (GENL avs r, GENL avs i, GENL avs c)
  end
  handle e => raise wrap_exn "InductiveDefinition" "new_inductive_definition" e;
-
-val _ = Parse.temp_set_grammars ambient_grammars
 
 end (* InductiveDefinition *)
