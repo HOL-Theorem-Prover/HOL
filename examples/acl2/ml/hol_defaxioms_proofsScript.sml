@@ -1820,65 +1820,6 @@ val character_listp_coerce_defaxiom =
     THEN PROVE_TAC[character_listp_list_to_sexp,nil_def,ACL2_TRUE]);
 
 (*
-     [oracles: DEFTHM ACL2::LOWER-CASE-P-CHAR-DOWNCASE, DISK_THM] [axioms: ]
-     []
-     |- |= implies (andl [upper_case_p x; characterp x])
-             (lower_case_p (char_downcase x))
-*)
-
-val assoc_nil =
- if_store_thm
-  ("assoc_nil",
-   ``assoc x nil = nil``,
-   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
-    THEN ACL2_SIMP_TAC[itel_def]);
-
-val assoc_cons =
- if_store_thm
-  ("assoc_cons",
-   ``assoc x (cons (cons x' y) l) = 
-      if |= equal x x' then cons x' y else assoc x l``,
-   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
-    THEN ACL2_SIMP_TAC[itel_def]);
-
-val member_nil =
- if_store_thm
-  ("member_nil",
-   ``member x nil = nil``,
-   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[member_def]))
-    THEN ACL2_SIMP_TAC[itel_def]);
-
-val member_cons =
- if_store_thm
-  ("member_cons",
-   ``member x (cons x' y) = 
-      if |= equal x x' then cons x' y else member x y``,
-   CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[member_def]))
-    THEN ACL2_SIMP_TAC[itel_def]);
-
-val lower_case_p_char_downcase_defaxiom =
- store_thm
-  ("lower_case_p_char_downcase_defaxiom",
-   ``|= implies (andl [upper_case_p x; characterp x])
-                (lower_case_p (char_downcase x))``,
-   RW_TAC std_ss
-    [implies,upper_case_p_def,List_def,member_nil,member_cons,
-     ACL2_TRUE,andl_def,ite_def,equal_def,
-     if_t_nil,if_eq_imp]
-    THEN SIMP_TAC std_ss 
-          [List_def,assoc_nil,assoc_cons,char_downcase_def,equal_def,EVAL ``t = nil``,
-           ACL2_TRUE,if_t_nil,sexp_11]
-    THEN CONV_TAC(DEPTH_CONV char_EQ_CONV)
-    THEN SIMP_TAC std_ss []
-    THEN CONV_TAC(DEPTH_CONV(pairLib.let_CONV))
-    THEN SIMP_TAC std_ss 
-          [itel_def,lower_case_p_def,andl_def,List_def,cdr_def,ite_def,
-           member_nil,member_cons,equal_def,ACL2_TRUE,EVAL ``t = nil``,
-           EVAL ``cons x y = nil``,sexp_11]
-    THEN CONV_TAC(DEPTH_CONV char_EQ_CONV)
-    THEN SIMP_TAC std_ss [EVAL ``cons x y = nil``,EVAL ``t = nil``]);
-
-(*
      [oracles: DEFAXIOM ACL2::STRINGP-SYMBOL-PACKAGE-NAME] [axioms: ] []
      |- |= stringp (symbol_package_name x),
 *)

@@ -842,13 +842,32 @@ fun get_hol_name_from_acl2_name sym =
 end;
 
 (*****************************************************************************)
+(* Test that a type is ``:sexp`` or ``:sexp -> ... -> sexp``                 *)
+(*****************************************************************************)
+fun is_sexp_ty ty =
+ let val (tyop,tyargs) = dest_type ty
+ in
+  (tyop = "sexp"
+  orelse (tyop = "fun"
+          andalso hd tyargs = ``:sexp``
+          andalso is_sexp_ty(hd(tl tyargs))))
+ end;
+
+(*****************************************************************************)
 (* Translate a term of type ``:sexp`` to an s-expression represented in ML   *)
 (*****************************************************************************)
 fun term_to_mlsexp tm =
  if is_var tm
   then string_to_mlsym(fst(dest_var tm)) else
  if is_const tm
-  then string_to_mlsym(fst(dest_const tm)) else
+  then 
+   (if is_sexp_ty(type_of tm)
+     then string_to_mlsym(fst(dest_const tm)) 
+     else (print_term tm;
+           print " has type ``";
+           print_type(type_of tm);
+           print "`` so is not a first-order function on S-expressions\n";
+           err "term_to_mlsexp" "constant has bad type")) else
  if is_string tm
   then string_to_mlsym(fromHOLstring tm) else
  if is_nat tm

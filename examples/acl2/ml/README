@@ -46,7 +46,7 @@ then print them into a file defaxioms.prove.lisp, run hol and do:
  val simp_defaxioms = 
   map
    (I ## SIMP_RULE std_ss
-          [itel_def,andl_def,
+          [itel_def,andl_def,List_def,
           asym_def,csym_def,ksym_def,osym_def,
           ACL2_def,COMMON_LISP_def,KEYWORD_def,ACL2_OUTPUT_CHANNEL_def])
    defaxioms;
