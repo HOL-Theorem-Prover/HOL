@@ -10,6 +10,8 @@ defaxioms.lisp.trans.ml ......... ACL2 generated version of axioms.lisp
 hol_defaxiomsScript.sml ......... HOL definitions of functions in defaxioms
 hol_defaxioms_proofsScript.sml .. HOL proofs of axioms in defaxioms
 hol_defaxioms_thmsScript.sml .... HOL proofs of theorems in defaxioms
+translateScript.sml ............. Proofs of HOL-ACL2 relationships
+encodeLib.sml ................... Automatically encodes HOL theorems to s-expressions
 load_sexp.ml .................... Loads sexp and sexpTheory
 make_defaxioms.ml ............... Makes defaxiomsTheory from lisp/defaxioms.lisp.trans.ml
 Holmakefile ..................... Specifies how to build defaxiomsTheory
@@ -17,7 +19,13 @@ Holmakefile ..................... Specifies how to build defaxiomsTheory
 Notes
 -----
 
-Warning: acl2_packageTheory takes 26461.149s to build because proving
+translateScript creates and runs a .lisp script containing proofs 
+that the functions defined are equivalent to those in ACL2. The 
+variables acl2_executable and acl2_test_file point to the locations
+of the acl2 executable and script file.
+
+
+Warning: acl2_packageTheory takes 1021s to build because proving
 VALID_ACL2_PACKAGE_ALIST involves a long check that the ACL2 package
 structure satisfies a characterisation (VALID_PKG_TRIPLES) that is
 subsequently used to prove axioms in hol_defaxioms_proofsTheory.
