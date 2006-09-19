@@ -39,7 +39,9 @@
 			Type constraints for functions now work for HO arguments
 			Encoder matching in IF_CONV, prevents some mismatch bugs
 			Modified DISCH_HYPS so it actually works! *)
-(*	08/09/2006:	Modified make_acl2_definition & make_judgement so that HO functions that preserve arguments may now be converted (eg. FILTER) *)
+(*	08/09/2006:	Modified make_acl2_definition & make_judgement so that HO functions that 
+			preserve arguments may now be converted (eg. FILTER) *)
+(*	19/09/2006:	Variables renamed to avoid restricted keywords *)
 
 (* Interactive stuff... *)
 (*
@@ -3519,6 +3521,46 @@ in
 						(map sexp_var o fst o strip_abs) arg)))))) args decodes
 end;
 
+(*****************************************************************************)
+(* ensure_correct_vars: Ensure variables are acl2 variables                  *)
+(*                                                                           *)
+(* var'...'    ---> VAR_n                                                    *)
+(* reserved    ---> RESERVED_TYPE                                            *)
+(* other       ---> VAR_n                                                    *)
+(*                                                                           *)
+(*****************************************************************************)
+
+local
+	val reserved = (map (stringLib.fromHOLstring o hd o strip_pair) o fst o dest_list o rhs o concl) acl2_packageTheory.ACL2_PACKAGE_ALIST_def
+	fun count_prim [] = ("",0)
+          | count_prim (x::xs) = 
+		let val (s,n) = count_prim xs in if x = #"'" then (s,n + 1) else (str x ^ s,n) end;
+	fun strip_ s = if size s > 0 andalso String.sub(s,0) = #"_" then strip_ (String.substring(s,1,size s - 1)) else s
+	fun new_name v = 
+	let	val (s,t) = dest_var v
+	in	
+		if mem (String.map Char.toUpper s) reserved then new_name(mk_var(String.map Char.toUpper (s ^ "_" ^ (fst (dest_type t))),t))
+		else if Char.contains s #"'" then new_name(mk_var(String.map Char.toUpper (((fn (a,b) => a ^ "_" ^ (int_to_string b)) (count_prim (explode s)))),t))
+		else if not (exists Char.isAlpha (explode s)) then new_name (mk_var("VAR_" ^ (strip_ s),t))
+		else mk_var(String.map Char.toUpper s,t)
+	end
+	fun acl2_variant vars_list v = 
+	let	val (s,t) = dest_var v
+		val fields = String.fields (curry op= #"_") s
+		val n = case (tryfind Int.fromString (rev fields)) of SOME n => n | NONE => 0
+		val s' = if all Char.isDigit (explode (last fields)) then substring(s,0,size s - size (last fields) - 1) else s
+	in
+		if mem v vars_list then acl2_variant vars_list (mk_var(s' ^ "_" ^ (int_to_string (n + 1)),t)) else v
+	end;
+in
+fun ensure_correct_variables thm = 
+let	val thm' = SPEC_ALL thm
+	val vars = free_vars (concl thm')
+in	
+	INST (map2 (curry op|->) vars (foldr (fn (v,vl) => (acl2_variant vl v)::vl) [] (map new_name vars))) thm'
+end
+end
+
 fun convert_definition_full arg_assumption recursion_thm thm = 
 let	val function = CONV_RULE (EVERY_CONJ_CONV (STRIP_QUANT_CONV 
 				(RAND_CONV (SIMP_CONV (std_ss ++ boolSimps.LET_ss) [] THENC 
@@ -3553,7 +3595,7 @@ let	val function = CONV_RULE (EVERY_CONJ_CONV (STRIP_QUANT_CONV
 	val _ = rewrite_thms := (correct::(!rewrite_thms))
 	val _ = function_judgements := (judgement::(!function_judgements))
 in	
-	(correct,recursive)
+	(correct,ensure_correct_variables recursive)
 end;
 
 fun convert_definition_restricted arg_assumption thm = convert_definition_full (SOME arg_assumption) NONE thm;
@@ -3592,6 +3634,35 @@ in
 		end
 end;
 
+
+(* Convert a HO term into a FO definition suitable for ACL2 *)
+fun flatten_HO_definition name thm term = 
+let	val (function,args) = strip_comb term
+	val named_args = (snd o strip_comb o lhs o concl o SPEC_ALL) thm;
+	
+	val thm1 = BETA_RULE (PART_MATCH lhs thm (list_mk_comb(function,
+		map2 (fn a => fn na => if (can dom_rng o type_of) a then a else na) args named_args)))
+
+	val fo_args = (free_vars o rhs o concl) thm1
+
+	val thm2 = GSYM (DEPTH_CONV BETA_CONV
+		(list_mk_comb(list_mk_abs(fo_args,(lhs o concl) thm1),fo_args)));
+
+	val thm3 = ONCE_REWRITE_RULE [thm2] thm1;
+
+	val function = (repeat rator o rhs o concl) thm2;
+	val fvar = mk_var(name,type_of function);
+	
+	val ho_types = find_terms is_forall (concl thm3);
+
+	val thm4 = GENL fo_args (REWRITE_RULE (bool_def::(map (uncurry GENL o (I ## PROVE_TYPE_JUDGEMENT (flatten [!function_judgements,CONJUNCTS JUDGEMENT_THMS])) o strip_forall) ho_types)) thm3);
+
+	val definition = new_definition(name ^ "_def",mk_eq(fvar,function));
+in
+	(GSYM (BETA_RULE (foldr (uncurry (C AP_THM)) definition fo_args)),
+		ensure_correct_variables (REWRITE_RULE [GSYM definition] thm4))
+end;
+
 local
 	val imp_rewrite = prove(``((|= a) ==> (|= b)) ==> (|= implies a b)``,
 		RW_TAC arith_ss [andl_def,implies_def,ite_def,TRUTH_REWRITES])
@@ -3608,7 +3679,7 @@ let	val terms = filter (is_eq o snd o strip_exists o fst o strip_neg) (flatten (
 			(do_all_hyp attempt_decision (CONV_HYP (DEPTH_CONV (FIRST_CONV (map REWR_CONV thms))) thm)))
 			types))
 in
-	(fn x => MATCH_MP imp_rewrite x handle e => x)
+	(fn x => ensure_correct_variables (MATCH_MP imp_rewrite x handle e => x))
 	(CONV_RULE (if null (hyp thm') then 
 			ALL_CONV else 
 			LAND_CONV (REWR_CONV (DECIDE ``A = A /\ T``) THENC 
