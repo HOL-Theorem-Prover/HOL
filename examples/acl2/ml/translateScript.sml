@@ -19,6 +19,7 @@
 			term in many function definitions *)
 (* 	28/08/2006:	Exported some additional theorems (MJCG) *)
 (*	17/09/2006:	Definitions renamed to match ACL2 and are now checked on compile *)
+(*	19/09/2006:	Many new list definitions added, plus max/min and odd/even *)
 
 (*****************************************************************************)
 (* Load files for interactive sessions                                       *)
@@ -46,7 +47,7 @@ val acl2_executable = "acl2";
 
 open sexp sexpTheory arithmeticTheory fracTheory ratTheory integerTheory intLib 
      complex_rationalTheory intExtensionTheory
-     hol_defaxiomsTheory listTheory translateLib;
+     hol_defaxiomsTheory rich_listTheory listTheory translateLib;
 
 (*****************************************************************************)
 (* Start new theory "translate"                                              *)
@@ -1251,17 +1252,30 @@ val NATP_MOD = prove(``!a b. (|= natp a) /\ (|= natp b) ==> |= natp (acl2_mod a 
 
 (* EVEN and ODD *)
 
-val NAT_EVEN = prove(``bool (EVEN a) = equal (acl2_mod (nat a) (nat 2)) (nat 0)``,
-	RW_TAC std_ss [GSYM NAT_MOD,GSYM NAT_EQUAL,TRUTH_REWRITES,mod_zero_mult] THEN AP_TERM_TAC THEN
-	METIS_TAC [EVEN_EXISTS,EVEN_DOUBLE]);
+val evenp_def = acl2Define "ACL2::EVENP" `evenp x = integerp (mult x (reciprocal (int 2)))`;
 
-val NAT_ODD = prove(``bool (ODD a) = equal (acl2_mod (nat a) (nat 2)) (nat 1)``,
-	RW_TAC std_ss [GSYM NAT_MOD,GSYM NAT_EQUAL,TRUTH_REWRITES,not_def,ite_def] THEN AP_TERM_TAC THEN
-	`?n. (a = n * 2) \/ (a = SUC (n * 2))` by (Q.EXISTS_TAC `a DIV 2` THEN RW_TAC arith_ss [] THEN
-		DISJ_CASES_TAC (SPEC ``a:num`` EVEN_OR_ODD) THEN IMP_RES_TAC EVEN_ODD_EXISTS THEN
-		RW_TAC arith_ss [ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV,ADD1,ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]) THEN
-	RW_TAC arith_ss [MOD_EQ_0,GSYM EVEN_ODD,ONCE_REWRITE_RULE [MULT_COMM] EVEN_DOUBLE,ONCE_REWRITE_RULE [MULT_COMM] ODD_DOUBLE] THEN
-	RW_TAC arith_ss [ADD1] THEN METIS_TAC [EVEN_DOUBLE,MOD_TIMES,MULT_COMM,LESS_MOD,DECIDE ``1 < 2n /\ 0 < 2n``]);
+val oddp_def = acl2Define "ACL2::ODDP" `oddp x = not (evenp x)`;
+
+val nat_rat = prove(``!a. nat a = rat (& a)``,
+	RW_TAC std_ss [nat_def,int_def,rat_def,cpx_def,sexpTheory.rat_def,rat_0_def,frac_0_def,rat_0,RAT_OF_NUM_CALCULATE]);
+
+val int_rat_n = prove(``!a. int (& a) = rat (& a)``,
+	RW_TAC std_ss [nat_def,int_def,rat_def,cpx_def,sexpTheory.rat_def,rat_0_def,frac_0_def,rat_0,RAT_OF_NUM_CALCULATE]);
+
+val rat_2_nz = prove(``~(0 = 2:rat)``,RW_TAC int_ss [RAT_EQ_CALCULATE,RAT_OF_NUM_CALCULATE,NMR,DNM]);
+
+val NAT_EVEN = prove(``bool (EVEN a) = evenp (nat a)``,
+	Cases_on `EVEN a` THEN
+	RW_TAC std_ss [bool_def,evenp_def,TRUTH_REWRITES,integerp_def,nat_rat,GSYM RAT_DIV,int_rat_n,rat_2_nz] THEN
+	RULE_ASSUM_TAC (REWRITE_RULE [GSYM ODD_EVEN]) THEN
+	IMP_RES_TAC EVEN_EXISTS THEN IMP_RES_TAC ODD_EXISTS THEN
+	RW_TAC std_ss [rat_def,integerp_def,TRUTH_REWRITES,IS_INT_EXISTS,rat_2_nz,RAT_LDIV_EQ,GSYM RAT_MUL_NUM_CALCULATE, GSYM RAT_ADD_NUM_CALCULATE,ADD1,RAT_EQ_LMUL] THENL [
+		METIS_TAC [RAT_OF_NUM_CALCULATE],
+		RW_TAC int_ss [RAT_EQ_CALCULATE,RAT_OF_NUM_CALCULATE,RAT_ADD_CALCULATE,RAT_MUL_CALCULATE,frac_mul_def,frac_add_def,NMR,DNM]] THEN
+	ARITH_TAC);
+
+val NAT_ODD = prove(``bool (ODD a) = oddp (nat a)``,RW_TAC std_ss [oddp_def,GSYM NAT_EVEN,bool_def,TRUTH_REWRITES,not_def,ite_def,EVEN_ODD]);
+	
 
 
 (* EXP 2 *)
@@ -1274,6 +1288,278 @@ val NAT_ASL = prove(``nat (i * 2 ** c) = acl2_ash (nat i) (nat c)``,
 val INT_ASL = prove(``int (i * 2 ** c) = acl2_ash (int i) (nat c)``,
 	RW_TAC int_ss [acl2_ash_def,nat_def,GSYM INT_EXP,GSYM INT_MULT,ifix_def,ite_def,TRUTH_REWRITES,INTEGERP_INT,GSYM INT_DIV]);
 
+(* MAX and MIN *)
+
+val acl2_max_def = acl2Define "ACL2::MAX" `acl2_max x y = ite (less y x) x y`;
+val acl2_min_def = acl2Define "ACL2::MIN" `acl2_min x y = ite (less x y) x y`;
+
+val NAT_MAX = prove(``nat (MAX x y) = acl2_max (nat x) (nat y)``,
+	RW_TAC arith_ss [acl2_max_def,MAX_DEF,GSYM NAT_LT,ite_def,TRUTH_REWRITES] THEN AP_TERM_TAC THEN DECIDE_TAC);
+
+val NAT_MIN = prove(``nat (MIN x y) = acl2_min (nat x) (nat y)``,
+	RW_TAC arith_ss [acl2_min_def,MIN_DEF,GSYM NAT_LT,ite_def,TRUTH_REWRITES] THEN AP_TERM_TAC THEN DECIDE_TAC);
+
+val INT_MAX = prove(``int (int_max x y) = acl2_max (int x) (int y)``,
+	RW_TAC int_ss [acl2_max_def,INT_MAX,GSYM INT_LT,ite_def,TRUTH_REWRITES] THEN AP_TERM_TAC THEN ARITH_TAC);
+
+val INT_MIN = prove(``int (int_min x y) = acl2_min (int x) (int y)``,
+	RW_TAC int_ss [acl2_min_def,INT_MIN,GSYM INT_LT,ite_def,TRUTH_REWRITES] THEN AP_TERM_TAC THEN ARITH_TAC);
+
+(* List theorems *)
+
+val zp_less = prove(``!n. (zp n = nil) ==> (sexp_to_nat (add n (unary_minus (nat 1))) < sexp_to_nat n)``,
+	GEN_TAC THEN Cases_on `|= natp n` THENL [
+			CHOOSEP_TAC THEN 
+			RW_TAC std_ss [TRUTH_REWRITES,GSYM NAT_EQUAL_0] THEN
+			RW_TAC int_ss [GSYM INT_ADD,GSYM INT_UNARY_MINUS,nat_def,sexp_to_nat_def,SEXP_TO_INT_OF_INT,
+					GSYM int_sub,integerTheory.INT_SUB],
+			Cases_on `n` THEN
+			TRY (Cases_on `c`) THEN 
+			RW_TAC std_ss [zp_def,ite_def,integerp_def,TRUTH_REWRITES,IS_INT_EXISTS,GSYM int_def] THEN 
+			FULL_SIMP_TAC int_ss [RAT_EQ_CALCULATE,NMR,DNM,GSYM sexpTheory.rat_def,
+				GSYM cpx_def,GSYM int_def,rat_0_def,frac_0_def,GSYM INT_LT,not_def,ite_def,
+				TRUTH_REWRITES,natp_def,INTEGERP_INT,nat_def]]);
+
+val zp_comm = prove(``add (unary_minus (nat 1)) n = add n (unary_minus (nat 1))``,
+	Cases_on `n` THEN TRY (Cases_on `c`) THEN 
+	RW_TAC std_ss [nat_def,GSYM INT_UNARY_MINUS] THEN 
+	RW_TAC std_ss [int_def,cpx_def,sexpTheory.rat_def,add_def,COMPLEX_ADD_def,RAT_ADD_COMM]);
+
+val (acl2_append_def,acl2_append_ind) = 
+	(PURE_REWRITE_RULE [GSYM ite_def] ## I)
+	(acl2_defn "ACL2::BINARY-APPEND" 
+		(`acl2_append x y = if (consp x = nil) then y else (cons (car x) (acl2_append (cdr x) y))`,
+		WF_REL_TAC `measure (sexp_size o FST)` THEN
+		Cases THEN RW_TAC arith_ss [cdr_def,nil_def,consp_def,sexp_size_def]));
+
+val LIST_APPEND = prove(``list f (x ++ y) = acl2_append (list f x) (list f y)``,
+	Induct_on `x` THEN ONCE_REWRITE_TAC [acl2_append_def] THEN RW_TAC std_ss [APPEND,list_def,consp_def,ite_def,TRUTH_REWRITES,car_def,cdr_def]);
+
+val LIST_LENGTH = prove(``nat (LENGTH l) = len (list f l)``,
+	Induct_on `l` THEN ONCE_REWRITE_TAC [len_def] THEN RW_TAC std_ss [LENGTH,list_def,consp_def,ite_def,TRUTH_REWRITES,NAT_SUC,cdr_def] THEN
+	POP_ASSUM (SUBST_ALL_TAC o GSYM) THEN
+	RW_TAC arith_ss [GSYM NAT_ADD]);
+
+val (acl2_revappend_def,acl2_revappend_ind) = 
+	(PURE_REWRITE_RULE [GSYM ite_def] ## I)
+	(acl2_defn "ACL2::REVAPPEND" 
+		(`acl2_revappend x y = if (consp x = nil) then y else acl2_revappend (cdr x) (cons (car x) y)`,
+		WF_REL_TAC `measure (sexp_size o FST)` THEN 
+		Cases THEN RW_TAC arith_ss [cdr_def,nil_def,consp_def,sexp_size_def]));
+
+val consp_revappend1 = prove(``!a b c. |= consp (acl2_revappend (cons a b) c)``,
+	Induct_on `b` THEN ONCE_REWRITE_TAC [acl2_revappend_def] THEN 
+	RW_TAC std_ss [consp_def,TRUTH_REWRITES,ite_def,car_def,cdr_def] THEN 
+	ONCE_REWRITE_TAC [acl2_revappend_def] THEN RW_TAC std_ss [consp_def,TRUTH_REWRITES,ite_def,car_def,cdr_def]);
+
+val cons_append = prove(``!a b c. cons a (acl2_append b c) = acl2_append (cons a b) c``,
+	Induct_on `b` THEN ONCE_REWRITE_TAC [acl2_append_def] THEN RW_TAC std_ss [car_def,cdr_def,consp_def,ite_def,TRUTH_REWRITES] THEN
+	TRY (ONCE_REWRITE_TAC [acl2_append_def] THEN RW_TAC std_ss [car_def,cdr_def,consp_def,ite_def,TRUTH_REWRITES] THEN NO_TAC));
+
+val nil_append = prove(``!a. acl2_append nil a = a``,ONCE_REWRITE_TAC [acl2_append_def] THEN RW_TAC std_ss [ite_def,consp_def,TRUTH_REWRITES,AP_TERM ``consp`` nil_def]);
+
+val consp_append = prove(``!a b. (|= consp (acl2_append a b)) = (|= consp a) \/ |= consp b``,
+	ONCE_REWRITE_TAC [acl2_append_def] THEN RW_TAC std_ss [consp_def,ite_def,TRUTH_REWRITES] THEN PROVE_TAC []);
+
+val nconsp_append = prove(``!a b. (~|= consp a) ==> (acl2_append a b = b)``,ONCE_REWRITE_TAC [acl2_append_def] THEN RW_TAC std_ss [ite_def,TRUTH_REWRITES]);
+
+val append_assoc = prove(``!a b c. acl2_append a (acl2_append b c) = acl2_append (acl2_append a b) c``,
+	Induct_on `a` THEN ONCE_REWRITE_TAC [acl2_append_def] THEN RW_TAC std_ss [consp_def,ite_def,TRUTH_REWRITES,consp_append,nconsp_append,car_def,cdr_def] THEN
+	RW_TAC std_ss [cons_append,prove(``!a. (|= consp a) ==> (cons (car a) (cdr a) = a)``,Cases THEN RW_TAC std_ss [car_def,cdr_def,consp_def,TRUTH_REWRITES])] THENL [
+		ONCE_REWRITE_TAC [acl2_append_def],
+		GEN_REWRITE_TAC (RAND_CONV o RATOR_CONV o ONCE_DEPTH_CONV) bool_rewrites [acl2_append_def]] THEN
+	RW_TAC std_ss [consp_def,ite_def,TRUTH_REWRITES,car_def,cdr_def]);
+
+val acl2_reverse_def = 
+	acl2Define "ACL2::REVERSE" 
+		`acl2_reverse x = 
+			ite (stringp x) 
+				(coerce (acl2_revappend 
+					(coerce x (sym "COMMON-LISP" "LIST")) nil) (sym "COMMON-LISP" "STRING"))
+				(acl2_revappend x nil)`;
+
+	
+val revappend_append = prove(``!x y. acl2_revappend (list f x) y = acl2_append (acl2_reverse (list f x)) y``,
+	Induct_on `x` THEN 
+	REWRITE_TAC [acl2_reverse_def] THEN 
+	ONCE_REWRITE_TAC [acl2_revappend_def,acl2_append_def] THEN 
+	RW_TAC std_ss [list_def,ite_def,TRUTH_REWRITES,consp_def,AP_TERM ``consp`` nil_def,stringp_def,AP_TERM ``stringp`` nil_def,car_def,cdr_def,consp_revappend1] THENL [
+		RULE_ASSUM_TAC (ONCE_REWRITE_RULE [acl2_revappend_def]) THEN FULL_SIMP_TAC std_ss [consp_def,AP_TERM ``consp`` nil_def,TRUTH_REWRITES],
+		ONCE_REWRITE_TAC [acl2_revappend_def] THEN RW_TAC std_ss [ite_def,consp_def,TRUTH_REWRITES,cdr_def,car_def,cons_append] THEN
+		SUBGOAL_THEN ``|= consp (acl2_append (acl2_reverse (list f x)) (cons (f h) nil))`` 
+			(fn th => ASM_REWRITE_TAC [GSYM append_assoc,MATCH_MP (prove(``!a. (|= consp a) ==> (cons (car a) (cdr a) = a)``,Cases THEN RW_TAC std_ss [car_def,cdr_def,consp_def,TRUTH_REWRITES])) th]) THEN1
+			(RW_TAC std_ss [consp_append,consp_def,TRUTH_REWRITES])] THEN
+	RW_TAC std_ss [GSYM cons_append,nil_append]);
+
+
+val LIST_REVERSE = prove(``list f (REVERSE l) = acl2_reverse (list f l)``,
+	Induct_on `l` THEN 
+	RW_TAC std_ss [acl2_reverse_def,stringp_def,list_def,REVERSE_DEF,ite_def,TRUTH_REWRITES] THEN 
+	ONCE_REWRITE_TAC [acl2_revappend_def] THEN 
+	RW_TAC std_ss [cdr_def,car_def,ite_def,TRUTH_REWRITES,stringp_def,AP_TERM ``stringp`` nil_def,consp_def,LIST_APPEND,list_def,revappend_append]);
+
+val (firstnac_def,firstnac_ind) = 
+	acl2_defn "ACL2::FIRST-N-AC" 
+		(`firstnac i l ac = 
+			ite (zp i) 
+				(acl2_reverse ac) 
+				(firstnac (add (unary_minus (nat 1)) i) (cdr l) (cons (car l) ac))`,
+		WF_REL_TAC `measure (sexp_to_nat o FST)` THEN
+		METIS_TAC [zp_less,zp_comm]);
+
+val acl2_take_def = acl2Define "ACL2::TAKE" `acl2_take n l = firstnac n l nil`;
+
+
+val reverse_nil = prove(``acl2_reverse nil = nil``,
+	REWRITE_TAC [acl2_reverse_def] THEN ONCE_REWRITE_TAC [acl2_revappend_def] THEN 
+	RW_TAC std_ss [ite_def,stringp_def,TRUTH_REWRITES,AP_TERM ``stringp`` nil_def]);
+
+val stringp_revappend1 = prove(``!a b. (~|= stringp a) ==> ~|= stringp (acl2_revappend b a)``,
+	Induct_on `b` THEN ONCE_REWRITE_TAC [acl2_revappend_def] THEN 
+	RW_TAC std_ss [car_def,cdr_def,consp_def,TRUTH_REWRITES,ite_def,stringp_def]);
+
+val stringp_revappend = prove(``!a b. ~|= stringp (acl2_revappend b (cons a nil))``,
+	REPEAT GEN_TAC THEN MATCH_MP_TAC stringp_revappend1 THEN 
+	RW_TAC std_ss [stringp_def,TRUTH_REWRITES]);
+
+val sym_nil = prove(``~(|= sym s s0) = (sym s s0 = nil)``,
+	RW_TAC std_ss [ite_def,equal_def,ACL2_TRUE_def,nil_def,t_def] THEN REPEAT (POP_ASSUM MP_TAC) THEN 
+	RW_TAC std_ss [] THEN METIS_TAC []);
+
+
+val firstnac_lemma = prove(``!n l a b. n <= LENGTH l ==> (cons (f a) (firstnac (nat n) (list f l) (list f b)) = 
+		firstnac (nat n) (list f l) (acl2_reverse (cons (f a) (acl2_reverse (list f b)))))``,
+	Induct_on `l` THEN ONCE_REWRITE_TAC [firstnac_def] THEN 
+	RW_TAC std_ss [LENGTH,list_def,car_def,cdr_def,AP_TERM ``car`` nil_def,AP_TERM ``cdr`` nil_def,
+			TRUTH_REWRITES,GSYM NAT_EQUAL_0,ite_def] THEN
+	FULL_SIMP_TAC int_ss [GSYM list_def,GSYM LIST_REVERSE,REVERSE_REVERSE,
+				GSYM INT_ADD,GSYM INT_UNARY_MINUS,nat_def,
+				GSYM (CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV INT_ADD_COMM)) int_sub),
+				integerTheory.INT_SUB,DECIDE ``~(n = 0n) ==> 1 <= n``] THEN
+	SUBGOAL_THEN ``h::REVERSE (a::REVERSE b) = REVERSE (a::REVERSE (h::b))`` SUBST_ALL_TAC THEN1
+		RW_TAC std_ss [REVERSE_DEF,APPEND,REVERSE_REVERSE,APPEND_ASSOC] THEN
+	REFL_TAC);
+
+val reversed_nil = prove(``acl2_reverse (cons (f h) (acl2_reverse nil)) = cons (f h) nil``,
+	REWRITE_TAC [prove(``nil = list f []``,RW_TAC std_ss [list_def])] THEN
+	RW_TAC std_ss [GSYM LIST_REVERSE,GSYM list_def,REVERSE_DEF,APPEND]);
+
+val LIST_FIRSTN = prove(``!n l. (n <= LENGTH l) ==> (list f (FIRSTN n l) = acl2_take (nat n) (list f l))``,
+	Induct_on `l` THEN REWRITE_TAC [acl2_take_def] THEN ONCE_REWRITE_TAC [firstnac_def] THEN 
+	RW_TAC std_ss [ite_def,list_def,FIRSTN,LENGTH,GSYM NAT_EQUAL_0,TRUTH_REWRITES,reverse_nil] THEN
+	RW_TAC std_ss [list_def,FIRSTN,TRUTH_REWRITES] THEN
+	Cases_on `n` THEN 
+	FULL_SIMP_TAC int_ss [FIRSTN,list_def,nat_def,GSYM INT_ADD,GSYM INT_UNARY_MINUS,
+			GSYM (CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV INT_ADD_COMM)) int_sub),integerTheory.INT_SUB,
+			ADD1,car_def,cdr_def,acl2_take_def] THEN
+	RW_TAC std_ss [REWRITE_RULE [list_def] (SPECL [``n:num``,``l:'a list``,``a:'a``,``[]:'a list``] firstnac_lemma),
+			GSYM nat_def,reversed_nil]);
+
+val (nthcdr_def,nthcdr_ind) =
+	acl2_defn "ACL2::NTHCDR" 
+		(`nthcdr n l = ite (zp n) l (nthcdr (add n (unary_minus (nat 1))) (cdr l))`,
+		WF_REL_TAC `measure (sexp_to_nat o FST)` THEN
+		METIS_TAC [zp_less,zp_comm]);
+
+val LIST_BUTFIRSTN = prove(``!n l. n <= LENGTH l ==> (list f (BUTFIRSTN n l) = nthcdr (nat n) (list f l))``,
+	Induct_on `l` THEN Cases_on `n` THEN 
+	ONCE_REWRITE_TAC [nthcdr_def] THEN 
+	RW_TAC arith_ss [BUTFIRSTN,list_def,LENGTH,TRUTH_REWRITES,GSYM NAT_EQUAL_0,ite_def,GSYM NAT_PRE,cdr_def]);
+
+val acl2_butlast_def = 
+	acl2Define "ACL2::BUTLAST" 
+		`acl2_butlast l n = 
+			let lng = len l in 
+			ite (less n lng) (acl2_take (add lng (unary_minus n)) l) nil`;
+		
+val LIST_BUTLASTN = prove(``!n l. n <= LENGTH l ==> (list f (BUTLASTN n l) = acl2_butlast (list f l) (nat n))``,
+	RW_TAC (int_ss ++ boolSimps.LET_ss) [BUTLASTN_FIRSTN,acl2_butlast_def,nat_def,GSYM INT_SUB,
+		GSYM LIST_LENGTH,ite_def,GSYM INT_LT,TRUTH_REWRITES,NOT_LESS] THENL [
+			SUBGOAL_THEN ``LENGTH l - n = 0`` SUBST_ALL_TAC THEN1 DECIDE_TAC THEN
+			RW_TAC int_ss [FIRSTN,list_def,TRUTH_REWRITES],
+			RW_TAC int_ss [integerTheory.INT_SUB,GSYM nat_def,LIST_FIRSTN]]);
+
+val LIST_LASTN = prove(``!n l. n <= LENGTH l ==> (list f (LASTN n l) = nthcdr (nat (LENGTH l - n)) (list f l))``,
+	RW_TAC arith_ss [LASTN_BUTFIRSTN,GSYM LIST_BUTFIRSTN]);
+
+
+val (nth_def,nth_ind) = 
+	acl2_defn "ACL2::NTH" 
+		(`nth n l = ite (consp l) (ite (zp n) (car l) (nth (add (unary_minus (nat 1)) n) (cdr l))) nil`,
+		WF_REL_TAC `measure (sexp_to_nat o FST)` THEN
+		METIS_TAC [zp_less,zp_comm]);
+
+val LIST_EL = prove(``!n l. n < LENGTH l ==> (encode (EL n l) = nth (nat n) (list encode l))``,
+	Induct_on `n` THEN Cases_on `l` THEN ONCE_REWRITE_TAC [nth_def] THEN 
+	FULL_SIMP_TAC arith_ss [EL,HD,TL,car_def,cdr_def,list_def,LENGTH,ite_def,TRUTH_REWRITES,
+		GSYM NAT_EQUAL_0,consp_def,zp_comm,GSYM NAT_PRE]);
+
+val acl2_subseq_def = acl2Define "ACL2::SUBSEQ-LIST" 
+	`acl2_subseq lst start end = acl2_take (add end (unary_minus start)) (nthcdr start lst)`;
+
+val LIST_SEG = prove(``n + s <= LENGTH l ==> (list f (SEG n s l) = acl2_subseq (list f l) (nat s) (nat (n + s)))``,
+	RW_TAC arith_ss [SEG_FIRSTN_BUTFISTN,acl2_subseq_def,LIST_BUTFIRSTN,LENGTH_BUTFIRSTN,LIST_FIRSTN] THEN
+	RW_TAC int_ss [nat_def,GSYM INT_SUB,integerTheory.INT_SUB]);
+
+val (acl2_last_def,acl2_last_ind) = 
+	acl2_defn "ACL2::LAST" 
+		(`acl2_last l = ite (consp (cdr l)) (acl2_last (cdr l)) l`,
+		WF_REL_TAC `measure sexp_size` THEN Cases THEN 
+		RW_TAC arith_ss [consp_def,car_def,cdr_def,sexp_size_def,nil_def]);
+
+val LIST_LAST = prove(``!l. ~(l = []) ==> (encode (LAST l) = car (acl2_last (list encode l)))``,
+	Induct THEN ONCE_REWRITE_TAC [acl2_last_def] THEN 
+	TRY (Cases_on `l`) THEN
+	RW_TAC std_ss [car_def,list_def,LAST_DEF,ite_def,consp_def,cdr_def,TRUTH_REWRITES] THEN
+	REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss []);
+
+val LIST_FRONT = prove(``!l. ~(l = []) ==> (list f (FRONT l) = acl2_butlast (list f l) (nat 1))``,
+	Induct THEN 
+	RW_TAC arith_ss [prove(``!l. ~(l = []) ==> 1 <= LENGTH l``,Cases THEN RW_TAC arith_ss [ADD1,LENGTH]),
+		GSYM LIST_BUTLASTN,BUTLASTN_1]);
+
+val LIST_LEN = prove(``nat (LEN l n) = add (nat n) (len (list f l))``,
+	RW_TAC std_ss [LEN_LENGTH_LEM,GSYM LIST_LENGTH,GSYM NAT_ADD,ADD_COMM]);
+
+
+val LIST_REV = prove(``list f (REV l1 l2) = acl2_revappend (list f l1) (list f l2)``,
+	RW_TAC std_ss [revappend_append,REV_REVERSE_LEM,LIST_APPEND,LIST_REVERSE]);
+
+
+val (strip_cars_def,strip_cars_ind) = 
+	acl2_defn "ACL2::STRIP-CARS" 
+		(`strip_cars x = ite (consp x) (cons (caar x) (strip_cars (cdr x))) nil`,
+		WF_REL_TAC `measure sexp_size` THEN
+		Cases THEN
+		RW_TAC arith_ss [consp_def,car_def,cdr_def,sexp_size_def]);
+
+val (strip_cdrs_def,strip_cdrs_ind) = 
+	acl2_defn "ACL2::STRIP-CDRS" 
+		(`strip_cdrs x = ite (consp x) (cons (cdar x) (strip_cdrs (cdr x))) nil`,
+		WF_REL_TAC `measure sexp_size` THEN
+		Cases THEN
+		RW_TAC arith_ss [consp_def,car_def,cdr_def,sexp_size_def]);
+
+val LIST_UNZIP = prove(``pair (list f) (list g) (UNZIP l) = 
+				cons (strip_cars (list (pair f g) l)) (strip_cdrs (list (pair f g) l))``,
+	Induct_on `l` THEN TRY Cases THEN 
+	ONCE_REWRITE_TAC [strip_cdrs_def,strip_cars_def] THEN 
+	RW_TAC std_ss [pair_def,list_def,UNZIP,consp_def,ite_def,TRUTH_REWRITES,AP_TERM ``consp`` nil_def,
+		caar_def,cdar_def,car_def,cdr_def] THEN
+	FULL_SIMP_TAC std_ss [pair_def,sexp_11]);
+
+val (pairlist_def,pairlist_ind) = 
+	acl2_defn "ACL2::PAIRLIS$" 
+		(`pairlist x y = ite (consp x) (cons (cons (car x) (car y)) (pairlist (cdr x) (cdr y))) nil`,
+		WF_REL_TAC `measure (sexp_size o FST)` THEN
+		Cases THEN
+		RW_TAC arith_ss [consp_def,car_def,cdr_def,sexp_size_def]);
+
+val LIST_ZIP = prove(``!l1 l2. (LENGTH l1 = LENGTH l2) ==> 
+			(list (pair f g) (ZIP (l1,l2)) = pairlist (list f l1) (list g l2))``,
+	Induct_on `l1` THEN Cases_on `l2` THEN 
+	ONCE_REWRITE_TAC [pairlist_def] THEN 
+	RW_TAC std_ss [ZIP,list_def,consp_def,car_def,cdr_def,ite_def,TRUTH_REWRITES,LENGTH,pair_def]);
 
 (*****************************************************************************)
 (* Check to ensure our definitions are the same as ACL2s:                    *)
@@ -1286,7 +1572,13 @@ val INT_ASL = prove(``int (i * 2 ** c) = acl2_ash (int i) (nat c)``,
 (*                                                                           *)
 (*****************************************************************************)
 
-val native_definitions = [natp_def,acl2_nniq_def,acl2_floor_def,acl2_mod_def,acl2_expt_def,acl2_ash_def];
+val native_definitions = 
+	[natp_def,acl2_nniq_def,acl2_floor_def,acl2_mod_def,acl2_expt_def,acl2_ash_def,evenp_def,oddp_def,
+	acl2_append_def,acl2_revappend_def,acl2_reverse_def,firstnac_def,acl2_take_def,
+	nthcdr_def,acl2_butlast_def,nth_def,acl2_subseq_def,acl2_last_def,strip_cars_def,
+	strip_cdrs_def,pairlist_def,acl2_max_def,acl2_min_def];
+
+
 
 val comment  = "; This book is automatically generated by translateTheory\n" ^
                "; and contains versions of native ACL2 functions which must\n" ^ 
@@ -1332,9 +1624,9 @@ let	val _ = print ("Opening output file: " ^ acl2_test_file ^ ".lisp\n\n")
 	fun pprint s = TextIO.output(outs,s);
 	val thms = map (concl o SPEC_ALL) native_definitions			
 	
-	fun wad tm = (	print "..." ; print_term ((repeat rator o lhs) tm) ; print "\n" ; 
+	fun wad tm = (	print "..." ; print ((fst o dest_const o repeat rator o lhs) tm) ; print "\n" ; 
 			print_mlsexp pprint (make_test_defun tm) ; TextIO.output(outs,"\n\n"))
-	fun wot tm = (print "..." ; print_term ((repeat rator o lhs) tm) ; print "\n" ; 
+	fun wot tm = (print "..." ; print ((fst o dest_const o repeat rator o lhs) tm) ; print "\n" ; 
 			print_mlsexp pprint (make_test_defthm tm) ; TextIO.output(outs,"\n\n"))
 in
 	(
@@ -1368,14 +1660,18 @@ end;
 fun run_theorem_test () = 
 let	val _ = write_native_definitions()
 	val _ = print "\nCertifying book:\n"
-	fun check_file s = check_substring (explode "Finished compiling") (explode s)
+	fun check_file s = check_substring (explode ("Finished compiling " ^ acl2_test_file)) (explode s)
+	fun output s = 
+	let 	val outs = TextIO.openOut (acl2_test_file ^ ".log") 
+	in	(TextIO.output(outs,s) ; TextIO.closeOut outs)
+	end;
 in
 	case (Mosml.run acl2_executable []
 			("(certify-book \"" ^ acl2_test_file ^ "\")\n" ^ 
 			"(good-bye)\n:q\n(good-bye)\n"))
-	of (Mosml.Success s) => if check_file s then (print "...Success!\n\n") else 
-				raise (mk_HOL_ERR "translateTheory" "run_theorem_test" ("...Failed: \n\n" ^ s))
-        |  (Mosml.Failure s) => raise (mk_HOL_ERR "translateTheory" "run_theorem_test" ("...Failed: \n\n" ^ s))
+	of (Mosml.Success s) => (output s ; if check_file s then (print "...Success!\n\n") else 
+				Raise (mk_HOL_ERR "translateTheory" "run_theorem_test" ("...Failed: \n\n" ^ s)))
+        |  (Mosml.Failure s) => Raise (mk_HOL_ERR "translateTheory" "run_theorem_test" ("...Failed: \n\n" ^ s))
 end;
 
 val _ = run_theorem_test();
@@ -1387,11 +1683,12 @@ val MK_THMS = LIST_CONJ o (map GEN_ALL);
 
 val NAT_THMS = save_thm("NAT_THMS",
 	MK_THMS [	NAT_OF_SEXP_TO_NAT,NAT_EQUAL_0,NAT_EQUAL,NAT_0_LT,NAT_LT,NAT_LE,NAT_GE,NAT_GT,
-			NAT_ADD,NAT_SUC_PRE,NAT_PRE,NAT_SUC,NAT_MULT,NAT_SUB,NAT_EXP,NAT_DIV,NAT_MOD,NAT_EVEN,NAT_ODD]);
+			NAT_ADD,NAT_SUC_PRE,NAT_PRE,NAT_SUC,NAT_MULT,NAT_SUB,NAT_EXP,NAT_DIV,NAT_MOD,
+			NAT_EVEN,NAT_ODD,NAT_MAX,NAT_MIN]);
 
 val INT_THMS = save_thm("INT_THMS",
 	MK_THMS [	INT_OF_SEXP_TO_INT,INT_EQUAL,INT_LT,INT_LE,INT_GE,INT_GT,
-			INT_ADD,INT_MULT,INT_UNARY_MINUS,INT_SUB,INT_EXP,INT_DIV,INT_MOD]);
+			INT_ADD,INT_MULT,INT_UNARY_MINUS,INT_SUB,INT_EXP,INT_DIV,INT_MOD,INT_MAX,INT_MIN]);
 
 val RAT_THMS = save_thm("RAT_THMS",
 	MK_THMS [	RAT_OF_SEXP_TO_RAT,RAT_EQUAL,RAT_LT,RAT_LE,RAT_GE,RAT_GT,
@@ -1405,7 +1702,9 @@ val BOOL_THMS = save_thm("BOOL_THMS",
 	MK_THMS [	BOOL_OF_SEXP_TO_BOOL,BOOL_AND,BOOL_OR,BOOL_IMPLIES,BOOL_NOT,BOOL_EQ,BOOL_T,BOOL_F]);
 
 val LIST_THMS = save_thm("LIST_THMS",
-	MK_THMS [	LIST_OF_SEXP_TO_LIST,LIST_CONS,LIST_NIL,LIST_HD,LIST_TL]);
+	MK_THMS [	LIST_OF_SEXP_TO_LIST,LIST_CONS,LIST_NIL,LIST_HD,LIST_TL,LIST_APPEND,
+			LIST_LENGTH,LIST_REVERSE,LIST_FIRSTN,LIST_BUTFIRSTN,LIST_LASTN,LIST_BUTLASTN,
+			LIST_EL,LIST_SEG,LIST_LAST,LIST_UNZIP,LIST_ZIP,LIST_REV,LIST_LEN,LIST_FRONT]);
 
 val PAIR_THMS = save_thm("PAIR_THMS",
 	MK_THMS [	PAIR_OF_SEXP_TO_PAIR,PAIR_COMMA,PAIR_FST,PAIR_SND]);

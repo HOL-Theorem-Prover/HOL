@@ -7,7 +7,7 @@
 (*                                                                           *)
 (*  |- VALID_PKG_TRIPLES  ACL2_PACKAGE_ALIST                                 *)
 (*                                                                           *)
-(* Modified again to split into equal length lists, hence O(n. log n)        *)
+(* Modified again to split into 4 equal length lists, hence O(n. log n)      *)
 (*                                                                           *)
 (*****************************************************************************)
 
@@ -2978,37 +2978,49 @@ val every_lookup_split_leq =
 	RW_TAC std_ss [EVERY_DEF,LOOKUP_AUX_def,FILTER] THEN
 	METIS_TAC [leq_t_imp,leq_f_imp]);
 
-val PARTITION_def = 
- Define `(PARTITION s [] = ([],[])) /\
-         (PARTITION s (a::bs) =
-		let (ts,fs) = PARTITION s bs in
-		if LEQ s a then (a::ts,fs) else (ts,a::fs))`;
+val PARTITION_def =
+ Define `(PARTITION s1 s2 s3 [] = ([],[],[],[])) /\
+	 (PARTITION s1 s2 s3 (a::bs) =
+		let (l1,l2,l3,l4) = PARTITION s1 s2 s3 bs in
+		if LEQ s2 a then 
+			if LEQ s1 a then (a::l1,l2,l3,l4) else (l1,a::l2,l3,l4)
+		else
+			if LEQ s3 a then (l1,l2,a::l3,l4) else (l1,l2,l3,a::l4))`;
 
-val partition_thm = prove(``!l. PARTITION s l = (FILTER (LEQ s) l,FILTER ($~ o LEQ s) l)``,
-		Induct THEN RW_TAC std_ss [PARTITION_def,FILTER]);
+
+val partition_thm = prove(``!l. PARTITION s1 s2 s3 l = 
+	(FILTER (LEQ s1) (FILTER (LEQ s2) l),
+         FILTER ($~ o LEQ s1) (FILTER (LEQ s2) l),
+	 FILTER (LEQ s3) (FILTER ($~ o LEQ s2) l),
+	 FILTER ($~ o LEQ s3) (FILTER ($~ o LEQ s2) l))``,
+	Induct THEN REPEAT (RW_TAC std_ss [PARTITION_def,FILTER]));
 
 val elookup_split_leq = 
-     prove(``!s l1. 
-	ELOOKUP l1 = (\(a,b). ELOOKUP a /\ ELOOKUP b) (PARTITION s l1)``,
-     RW_TAC std_ss [ELOOKUP_def,every_lookup_split_leq,partition_thm]);
+     prove(``!s1 s2 s3 l1. 
+	ELOOKUP l1 = (\(a,b,c,d). (ELOOKUP a /\ ELOOKUP b) /\ (ELOOKUP c /\ ELOOKUP d)) (PARTITION s1 s2 s3 l1)``,
+     RW_TAC std_ss [ELOOKUP_def,partition_thm] THEN METIS_TAC [every_lookup_split_leq]);
+
 
 fun should_eval _ [] = true
   | should_eval NONE (x::xs) = should_eval (SOME x) xs
   | should_eval (SOME x) (y::ys) = (x = y) andalso should_eval (SOME x) ys;
 	
 fun split_term_leq list term = 
-let	val _ = if length list > 100 then (print "[" ; print (int_to_string (length list)) ; print "]#") else ()
+let	val _ = if length list > 50 then (print "[" ; print (int_to_string (length list)) ; print "]#") else ()
+	val (listl,listr) = split_after (length list div 2) list   handle e => ([],[])
+	val (list1,list2) = split_after (length listl div 2) listl handle e => ([],[])
+	val (list3,list4) = split_after (length listr div 2) listr handle e => ([],[])
 in
-	if length list <= 8 orelse should_eval NONE list then (EVAL THENC REWRITE_CONV [elookup_empty]) term
+	if length list <= 16 orelse should_eval NONE list orelse exists null [list1,list2,list3,list4] then 
+		(EVAL THENC REWRITE_CONV [elookup_empty]) term
 	else 
-		case (split_after (length list div 2) list)
-		of (list1,[]) => (EVAL THENC REWRITE_CONV [elookup_empty]) term
-		|  (list1,median::list2) =>
-			(REWR_CONV (SPEC (fromMLstring median) elookup_split_leq) THENC
-	 		RAND_CONV EVAL THENC
-			PairedLambda.PAIRED_BETA_CONV THENC
-	 		FORK_CONV (split_term_leq (median::list2),split_term_leq list1) THENC
-	 		REWRITE_CONV []) term
+		(REWR_CONV (SPECL (map fromMLstring [hd list4,hd list3,hd list2]) elookup_split_leq) THENC
+	 	 RAND_CONV EVAL THENC
+		 PairedLambda.PAIRED_BETA_CONV THENC
+	 	 FORK_CONV (
+			FORK_CONV (split_term_leq list4,split_term_leq list3),
+			FORK_CONV (split_term_leq list2,split_term_leq list1)) THENC
+	 	REWRITE_CONV []) term
 end;
 
 fun prove_valid_pkg_leq thm = 
@@ -3025,7 +3037,7 @@ end;
 
 (*****************************************************************************)
 (* Warning:                                                                  *)
-(* runtime: 1021.616s,    gctime: 141.385s,     systime: 8.797s.             *)
+(* runtime: 824.160s,    gctime: 97.500s,     systime: 9.453s                *)
 (*****************************************************************************)
 val pkg_valid_thm = time prove_valid_pkg_leq ACL2_PACKAGE_ALIST_def;
 
