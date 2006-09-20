@@ -7,7 +7,11 @@
 Xor32.ml .................. Simple example showing use of AddBinop
 NotXor32.ml ............... Simple example showing use of AddUnop and AddBinop
 Fact32.ml ................. Factorial example using word32 
-
+Fact32Script.ml ........... Factorial example using word32, proving relation
+                            with general factorial.
+exor32.ml ................. Simple example showing low-level interfaces used
+                            in adding components. To be consulted when approach
+                            in Xor32.ml doesn't work.
 
 *******************************************************************************
 
