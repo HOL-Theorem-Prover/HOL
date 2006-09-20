@@ -12,7 +12,6 @@ vsynth.sml ................ convert a circuit made with MAKE_CIRCUIT to Verilog
 FactScript.sml ............ synthesise naive factorial and dump Verilog
 Fact.ml ................... synthesise and simulate factorial and run gtkwave
 Fact32 .................... directory with word32 examples (including factorial)
-Fact32Script.sml .......... Theorems relating Fact and Fact32
 dff ....................... Melham's temporal abstraction theory
 Holmakefile ............... instructions for Holmake
 

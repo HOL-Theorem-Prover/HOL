@@ -1,7 +1,7 @@
 This directory has 3 sub-directories
 
-   * tuple     - word8 as bool^8
-   * notuple   - word8 as (BYTE b1 ... b8)
+   * tupled    - word8 as bool^8
+   * curried   - word8 as (BYTE b1 ... b8)
    * word8     - word8 via <holdir>/bin/mkword.exe  8
 
 each of which bases the AES algorithm on a different representation of

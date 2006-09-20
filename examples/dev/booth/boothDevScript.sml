@@ -156,7 +156,13 @@ val (MOD_CNTWd_def,_,MOD_CNTWd_dev,MOD_CNTWd_comb,_) = hwDefine2
 
     `MOD_CNTWd n = n MOD (WL DIV 2)`;
 
+<<<<<<< boothDevScript.sml
+val MOD_CNTWd_cir =
+ MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) MOD_CNTWd_dev);
+ MY_NETLIST [] (REFINE (DEPTHR ATM_REFINE) MOD_CNTWd_dev);
+=======
 
+>>>>>>> 1.7
 
 (* ---------------------------------------------------------------
    MSHIFTd
@@ -183,6 +189,12 @@ val (ALUd_def,_,ALUd_dev,ALUd_comb,_) = hwDefine2
                   else
                      alua - alub`;
 
+<<<<<<< boothDevScript.sml
+val ALUd_cir =
+ MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) ALUd_dev);
+ MY_NETLIST [] (REFINE (DEPTHR ATM_REFINE) ALUd_dev);
+=======
+>>>>>>> 1.7
 
 (* ---------------------------------------------------------------
    INITd
@@ -201,6 +213,12 @@ val (INITd_def,_,INITd_dev,INITd_comb,_) = hwDefine2
                                rm,
                                if a then rn else 0w)`;
 
+<<<<<<< boothDevScript.sml
+val INITd_cir =
+ MAKE_NETLIST (REFINE (DEPTHR ATM_REFINE) INITd_dev);
+ MY_NETLIST [] (REFINE (DEPTHR ATM_REFINE) INITd_dev);
+=======
+>>>>>>> 1.7
 
 (* ---------------------------------------------------------------
    NEXTd computes the next state from the current one
@@ -265,8 +283,12 @@ val (DURd_def,_,DURd_dev,DURd_comb,_) = hwDefine2
    PROJ_RDd projects the result of the multiplication from
    the state
 --------------------------------------------------------------- *)
+<<<<<<< boothDevScript.sml
+val (PROJ_RDd_def,_,PROJ_RDd_dev) = hwDefine
+=======
 val (PROJ_RDd_def,_,PROJ_RDd_dev,PROJ_RDd_comb,_) = hwDefine2
 
+>>>>>>> 1.7
     `PROJ_RDd(mul:num, mul2:num, borrow2:bool,
               mshift:num, rm:word32, rd:word32) = rd`;
 
@@ -339,7 +361,6 @@ val ALU_EQ = store_thm("ALU_EQ",
    T2B converts a tuple into a state (type state_BOOTH)
 --------------------------------------------------------------- *)
 val T2B_def = Define `T2B(a,b,c,d,e,f) = BOOTH a b c d e f`;
-
 
 
 (* ---------------------------------------------------------------
@@ -533,6 +554,7 @@ val MULTd_dev = inlineCompile (fst(dest_eq(concl MULTd_comb)))
 
 (* runtime: 39.867s,    gctime: 14.104s,     systime: 0.155s.   
 val MULTd_net = time MAKE_NETLIST MULTd_dev;
+time (MY_NETLIST []) MULTd_dev;
 
  Takes rather a long time:
 val MULTd_cir = time MAKE_CIRCUIT MULTd_dev;
