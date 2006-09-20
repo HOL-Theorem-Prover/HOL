@@ -496,11 +496,24 @@ end
 (* Tactics to prove monotonicity automatically.                              *)
 (* ------------------------------------------------------------------------- *)
 
-fun MONO_STEP_TAC monoset =
+fun MONO_STEP_TAC finisher monoset =
     REPEAT (GEN_TAC ORELSE CONJ_TAC) THEN
-    (APPLY_MONOTAC monoset ORELSE FIRST_ASSUM MATCH_ACCEPT_TAC)
+    (APPLY_MONOTAC monoset ORELSE finisher)
 
-fun MONO_TAC monoset = REPEAT (MONO_STEP_TAC monoset)
+fun MONO_TAC monoset = let
+  (* first case is for monotonicity proving in making the definition, where
+     there will be an assumption of the form
+         !vs. P vs ==> P' vs
+     to hand.
+     The second case (after the ORELSE) is for proving strong induction, where
+     there won't be any assumptions, but the goal will have reduced to
+         con vs /\ con' vs ==> con vs
+  *)
+  val finisher = FIRST_ASSUM MATCH_ACCEPT_TAC ORELSE
+                 (REPEAT STRIP_TAC THEN FIRST_ASSUM ACCEPT_TAC)
+in
+  REPEAT (MONO_STEP_TAC finisher monoset)
+end
 
 (* =========================================================================*)
 (* Part 3: Utility functions to modify the basic theorems in various ways.  *)
