@@ -1,6 +1,13 @@
-open HolKernel Parse boolLib IndDefLib IndDefRules arithmeticTheory
+open HolKernel Parse boolLib IndDefLib arithmeticTheory
 
 fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
+fun checkhyps th = if null (hyp th) then ()
+                   else die "FAILED - Hyps in theorem!"
+
+fun derive_strong_induction p =
+    (IndDefLib.derive_strong_induction p
+     handle HOL_ERR _ => die "FAILED to prove strong induction!";
+     print "Proved strong induction\n")
 
 val _ = print "*** Testing inductive definitions - mutual recursion\n"
 
@@ -9,6 +16,7 @@ val (oe_rules, oe_ind, oe_cases) = Hol_reln`
   (!m. odd m /\ 1 <= m ==> even (m + 1)) /\
   (!m. even m ==> odd (m + 1))
 `;
+val _ = checkhyps oe_rules
 
 val strongoe = derive_strong_induction (oe_rules, oe_ind)
 
@@ -18,6 +26,7 @@ val (rtc_rules, rtc_ind, rtc_cases) = Hol_reln`
   (!x. rtc r x x) /\
   (!x y z. rtc r x y /\ r y z ==> rtc r x z)
 `;
+val _ = checkhyps rtc_rules
 
 val strongrtc = derive_strong_induction (rtc_rules, rtc_ind)
 
@@ -27,6 +36,7 @@ val (rtc'_rules, rtc'_ind, rtc'_cases) = Hol_reln`
   (!x. rtc' r x x) /\
   (!x y. r x y /\ (?z. rtc' r z y) ==> rtc' r x y)
 `;
+val _ = checkhyps rtc'_rules
 
 val strongrtc' = derive_strong_induction (rtc'_rules, rtc'_ind)
 
@@ -53,10 +63,9 @@ val (rules,induction,ecases) = Hol_reln
         (?s2. EVAL C s1 s2 /\
               EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`;
 
-val _ = if null (hyp rules) then () else die "FAILED!"
+val _ = checkhyps rules
 
-val strongeval = save_thm("strongeval",
-                          derive_strong_induction(rules, induction))
+val strongeval = derive_strong_induction(rules, induction)
 
 (* emulate the example in examples/monosetScript.sml *)
 val _ = print "*** Testing monoset example\n"
@@ -79,11 +88,9 @@ val (red_rules, red_ind, red_cases) = Hol_reln `
   (!t0s ts. EVERY (\ (t0,t). red f t0 t) (ZIP (t0s, ts)) ==>
             red f (app t0s) (app ts))
 `;
-val _ = if null (hyp red_rules) then () else die "Hyps in rules - FAILED!\n"
+val _ = checkhyps red_rules
 
-val strongred = save_thm(
-  "red_strong_ind",
-  derive_strong_induction (red_rules, red_ind));
+val strongred = derive_strong_induction (red_rules, red_ind);
 
 (* emulate Peter's example *)
 val _ = print "*** Testing Peter's example\n"
@@ -104,7 +111,6 @@ val _ = if null (hyp ph_rules) then ()
         else die "Hyps in rules - FAILED\n"
 
 val ph_strong = derive_strong_induction(ph_rules, ph_ind)
-    handle HOL_ERR _ => die "Failed to prove strong induction"
 
 val _ = OS.Process.exit OS.Process.success
 
