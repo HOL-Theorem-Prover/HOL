@@ -1083,6 +1083,13 @@ val exists_LNTH = store_thm(
     SRW_TAC [][] THEN METIS_TAC []
   ]);
 
+val MONO_exists = store_thm(
+  "MONO_exists",
+  ``(!x. P x ==> Q x) ==> (exists P l ==> exists Q l)``,
+  STRIP_TAC THEN Q.ID_SPEC_TAC `l` THEN HO_MATCH_MP_TAC exists_ind THEN
+  SRW_TAC [][]);
+val _ = IndDefLib.export_mono "MONO_exists"
+
 (* ----------------------------------------------------------------------
     companion LL_ALL/every (has a coinduction principle)
    ---------------------------------------------------------------------- *)
@@ -1110,6 +1117,13 @@ val every_thm = store_thm(
 
 val _ = export_rewrites ["every_thm"]
 val LL_ALL_THM = save_thm("LL_ALL_THM", every_thm)
+
+val MONO_every = store_thm(
+  "MONO_every",
+  ``(!x. P x ==> Q x) ==> (every P l ==> every Q l)``,
+  STRIP_TAC THEN Q.ID_SPEC_TAC `l` THEN HO_MATCH_MP_TAC every_coind THEN
+  SRW_TAC [][]);
+val _ = export_mono "MONO_every"
 
 (* ----------------------------------------------------------------------
     can now define LFILTER and LFLATTEN
