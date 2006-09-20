@@ -1,5 +1,7 @@
 open HolKernel Parse boolLib IndDefLib IndDefRules arithmeticTheory
 
+fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
+
 val _ = print "*** Testing inductive definitions - mutual recursion\n"
 
 val (oe_rules, oe_ind, oe_cases) = Hol_reln`
@@ -51,8 +53,7 @@ val (rules,induction,ecases) = Hol_reln
         (?s2. EVAL C s1 s2 /\
               EVAL (While B C) s2 s3 /\ B s1) ==> EVAL (While B C) s1 s3)`;
 
-val _ = if null (hyp rules) then ()
-        else (print "FAILED!\n"; OS.Process.exit OS.Process.failure)
+val _ = if null (hyp rules) then () else die "FAILED!"
 
 val strongeval = save_thm("strongeval",
                           derive_strong_induction(rules, induction))
@@ -78,13 +79,32 @@ val (red_rules, red_ind, red_cases) = Hol_reln `
   (!t0s ts. EVERY (\ (t0,t). red f t0 t) (ZIP (t0s, ts)) ==>
             red f (app t0s) (app ts))
 `;
-val _ = if null (hyp red_rules) then ()
-        else (print "Hyps in rules - FAILED!\n";
-              OS.Process.exit OS.Process.failure)
+val _ = if null (hyp red_rules) then () else die "Hyps in rules - FAILED!\n"
 
 val strongred = save_thm(
   "red_strong_ind",
   derive_strong_induction (red_rules, red_ind));
+
+(* emulate Peter's example *)
+val _ = print "*** Testing Peter's example\n"
+val _ = new_constant ("nil", ``:'a list``)
+val _ = new_constant ("cons", ``:'a -> 'a list -> 'a list``)
+val _ = new_constant ("HD", ``:'a list -> 'a``)
+val _ = new_constant ("TL", ``:'a list -> 'a list``)
+val (ph_rules, ph_ind, ph_cases) = Hol_reln`
+  (WF_CX nil) /\
+  (!s ty cx. WF_CX cx /\ WF_TYPE cx ty ==> WF_CX (cons (s,ty) cx)) /\
+
+  (!n cx. WF_CX cx ==> WF_TYPE cx (v n)) /\
+  (!ts cx s. WF_CX cx /\ MEM (s, HD ts) cx /\ EVERY (\t. WF_TYPE cx t) ts /\
+             red SUC (HD ts) (HD (TL ts)) ==>
+             WF_TYPE cx (app ts))
+`
+val _ = if null (hyp ph_rules) then ()
+        else die "Hyps in rules - FAILED\n"
+
+val ph_strong = derive_strong_induction(ph_rules, ph_ind)
+    handle HOL_ERR _ => die "Failed to prove strong induction"
 
 val _ = OS.Process.exit OS.Process.success
 
