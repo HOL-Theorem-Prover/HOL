@@ -103,8 +103,6 @@ fun mk_group c rows =
             let val (pc,args) = strip_comb p
             in if same_const pc c
                then (((prefix,args@rst), rhs)::in_group, not_in_group)
-               else if p = c (* literal, considered as 0-ary constructor *)
-               then (((prefix,rst), rhs)::in_group, not_in_group)
                else (in_group, row::not_in_group)
             end
         | func _ _ = raise ERR "mk_group" ""
@@ -207,19 +205,23 @@ fun v_to_prefix (prefix, v::pats) = (v::prefix,pats)
 fun v_to_pats (v::prefix,tag, pats) = (prefix, tag, v::pats)
   | v_to_pats _ = raise ERR"mk_case""v_to_pats";
 
-(* -------------------------------------------------------------- *)
-(* A literal is either a numeric, string, or character literal.   *)
-(* Boolean literals are handled as constructors of the bool type. *)
-(* -------------------------------------------------------------- *)
+(* --------------------------------------------------------------
+   Literals include numeric, string, and character literals.
+   Boolean literals are the constructors of the bool type.
+   Currently, literals may be any expression without free vars.
+   These functions are not used at the moment, but may be someday.
+   -------------------------------------------------------------- *)
 
+(*
 val is_literal = Literal.is_literal
 
 fun is_lit_or_var tm = is_literal tm orelse is_var tm
 
-fun is_closed_or_var tm = is_var tm orelse null (free_vars tm)
-
 fun is_zero_emptystr_or_var tm =
     Literal.is_zero tm orelse Literal.is_emptystring tm orelse is_var tm
+*)
+
+fun is_closed_or_var tm = is_var tm orelse null (free_vars tm)
 
 
 (*---------------------------------------------------------------------------*)
@@ -248,32 +250,12 @@ fun is_constructor tybase c =
 fun is_constructor_pat tybase tm =
     is_var tm orelse is_constructor tybase (fst (strip_comb tm));
 
-fun is_constructor_pat_not_lit ty_info tm =
-    is_constructor_pat ty_info tm andalso not (is_literal tm)
-        (* orelse null (free_vars tm)) *)
-
 fun is_constructor_var_pat ty_info tm =
     is_var tm orelse is_constructor_pat ty_info tm
-
-
-fun mk_switch_tm1 _ [] = raise ERR "mk_switch_tm" "no literals"
-  | mk_switch_tm1 gv (literals as (lit::lits)) =
-    let val lty = type_of lit
-        val v = gv lty
-        fun mk_arg lit = if is_var lit then gv (lty --> alpha) else gv alpha
-        val args = map mk_arg literals
-        open boolSyntax
-        fun mk_switch [] = mk_const("ARB", lty)
-          | mk_switch ((lit,arg)::litargs) =
-                 if is_var lit then mk_comb(arg, v)
-                 else boolSyntax.mk_cond(mk_eq(v, lit), arg, mk_switch litargs)
-    in list_mk_abs(args@[v], mk_switch (zip literals args))
-    end
 
 fun mk_switch_tm gv v base literals =
     let val rty = type_of base
         val lty = type_of v
-        (*val v = gv lty*) 
         fun mk_arg lit = if is_var lit then gv (lty --> rty) else gv rty
         val args = map mk_arg literals
         open boolSyntax
@@ -360,41 +342,36 @@ fun mk_case ty_info ty_match FV range_ty =
      case pty_info
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
-        let val (col2,col1) = List.partition (is_constructor_var_pat ty_info) col0
-            val constructorsl = rev (mk_set (rev col1))
-            val constructorsa = constructorsl @ constructors
-            val {Name = case_const_name, Thy,...} = dest_thy_const case_const
-            val nrows = flatten (map (expand constructorsa pty) rows)
-            val subproblems = divide(constructorsa, pty, range_ty, nrows)
-            val groups      = map #group subproblems
-            and new_formals = map #new_formals subproblems
+        let val {Name = case_const_name, Thy,...} = dest_thy_const case_const
+            val nrows = flatten (map (expand constructors pty) rows)
+            val subproblems = divide(constructors, pty, range_ty, nrows)
+            val groups       = map #group subproblems
+            and new_formals  = map #new_formals subproblems
             and constructors' = map #constructor subproblems
             val news = map (fn (nf,rows) => {path = nf@rstp, rows=rows})
                            (zip new_formals groups)
             val rec_calls = map mk news
             val (pat_rect,dtrees) = unzip rec_calls
             val case_functions = map list_mk_abs(zip new_formals dtrees)
-            val case_functions1 = List.take(case_functions,length col1)
-            val case_functions2 = List.drop(case_functions,length col1)
             val types = map type_of (case_functions@[u])
-            val types2 = List.drop(types,length col1)
-            val case_const' = mk_thy_const{Name = case_const_name,
-                                           Thy = Thy,
+            val case_const' = mk_thy_const{Name = case_const_name, Thy = Thy,
                                            Ty = list_mk_fun(types, range_ty)}
-            val tree2 = list_mk_comb(case_const', case_functions2@[u])
-            val switch_tm = mk_switch_tm fresh_var u tree2 constructorsl
-            val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
-                                  switch_tm (case_functions1@[u])
-            val tree' = depth_conv beta_conv tree
+            val tree = list_mk_comb(case_const', case_functions@[u])
             val pat_rect1 = flatten(map2 mk_pat constructors' pat_rect)
         in
-            (pat_rect1,tree')
+            (pat_rect1,tree)
         end
+     else if not (all is_closed_or_var col0)
+             (* not (null (subtract (free_varsl col0) col0)) *)
+     then case pty_info
+          of NONE   => mk_case_fail("Not a known datatype: "^ty_name)
+           | SOME _ => mk_case_fail(
+               "Some patterns are not constructors or variables but contain free variables")
      else (* col0 contains literals or other non-constructors as well as vars *)
           let val other_var = fresh_var pty
               val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
                                    @ [other_var]
-              val arb = mk_const("ARB", alpha)
+              val arb = mk_const("ARB", range_ty)
               val switch_tm = mk_switch_tm fresh_var u arb constructors
               val nrows = flatten (map (expandl constructors pty) rows)
               val subproblems = dividel(constructors, pty, range_ty, nrows)
@@ -602,37 +579,6 @@ fun rename_case thy sub cs =
        val cs' = mk_case' thy (arg', pat_exps')
    in cs'
    end
-
-(* Test:
-
-``(checkPrefix : 'a list # 'a list -> 'a list option)
-     ((subl :'a list),(supl :'a list)) =
-   case (subl,supl) of
-      (([] :'a list),(v3 :'a list)) -> SOME supl
-   || ((subhd :'a)::(subtl :'a list),([] :'a list)) ->
-        (NONE :'a list option)
-   || (subhd::subtl,(suphd :'a)::(suptl :'a list)) ->
-        (if subhd = suphd then
-           checkPrefix (subtl,suptl)
-         else
-           (NONE :'a list option))``;
-
-val thy = fn (ty as {Thy : string, Tyop : string}) =>
-          case TypeBase.read ty of
-            SOME tyi => SOME
-             {constructors = TypeBasePure.constructors_of tyi,
-              case_const   = TypeBasePure.case_const_of tyi}
-          | NONE     => NONE;
-
-val eqs = ``(checkPrefix (([]:'a list),(supl :'a list)) = SOME supl) /\
-            (checkPrefix (subhd::subtl, ([]:'a list)) = NONE) /\
-            (checkPrefix (subhd::subtl,suphd::suptl) =
-                if subhd = suphd then checkPrefix (subtl,suptl)
-                                 else NONE)``;
-
-Pmatch.mk_functional thy eqs;
-
-*)
 
 
 local fun paired1{lhs,rhs} = (lhs,rhs)
