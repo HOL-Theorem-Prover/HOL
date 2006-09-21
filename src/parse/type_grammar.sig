@@ -16,6 +16,9 @@ sig
   val rules            : grammar -> (int * grammar_rule) list
   val abbreviations    : grammar -> (string,type_structure) Binarymap.dict
 
+  val abb_dest_type : grammar -> Type.hol_type -> string * Type.hol_type list
+  val disable_abbrev_printing : string -> grammar -> grammar
+
   val new_binary_tyop  : grammar
                           -> {precedence : int,
                               infix_form : string option,

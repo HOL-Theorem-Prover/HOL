@@ -32,6 +32,7 @@ val arith_ss = bool_ss ++ numSimps.ARITH_ss
 val _ = new_theory "pred_set";
 
 val _ = type_abbrev ("set", ``:'a -> bool``);
+val _ = disable_tyabbrev_printing "set"
 
 
 (* =====================================================================*)

@@ -45,7 +45,7 @@ fun pp_type0 (G:grammar) = let
     else
       if is_vartype ty then add_string (dest_vartype ty)
       else let
-          val (Tyop, Args) = dest_type ty
+          val (Tyop, Args) = type_grammar.abb_dest_type G ty
           fun print_args grav0 args = let
             val parens_needed = case Args of [_] => false | _ => true
             val grav = if parens_needed then Top else grav0

@@ -11,11 +11,12 @@ datatype type_structure =
        | PARAM of int
 
 datatype grammar = TYG of (int * grammar_rule) list *
-                          (string, type_structure) Binarymap.dict;
+                          (string, type_structure) Binarymap.dict *
+                          (int * string) TypeNet.typenet
 
 open HOLgrammars
 
-fun default_typrinter (G:grammar) (pps:Portable.ppstream) 
+fun default_typrinter (G:grammar) (pps:Portable.ppstream)
                       (ty:Type.hol_type) = PP.add_string pps "<a type>"
 
 val type_printer = ref default_typrinter
@@ -89,8 +90,8 @@ end
 
 
 
-fun new_binary_tyop (TYG(G,abbrevs)) {precedence, infix_form, opname,
-                                      associativity} =
+fun new_binary_tyop (TYG(G,abbrevs,pmap))
+                    {precedence, infix_form, opname, associativity} =
     let
       val rule1 =
           if isSome infix_form then
@@ -101,16 +102,16 @@ fun new_binary_tyop (TYG(G,abbrevs)) {precedence, infix_form, opname,
                                   associativity))
       val rule2 = (std_suffix_precedence, SUFFIX[opname])
     in
-      TYG (insert_sorted rule1 (insert_sorted rule2 G), abbrevs)
+      TYG (insert_sorted rule1 (insert_sorted rule2 G), abbrevs, pmap)
     end
 
-fun new_tyop (TYG(G,abbrevs)) name =
-  TYG (insert_sorted (std_suffix_precedence, SUFFIX[name]) G, abbrevs)
+fun new_tyop (TYG(G,abbrevs,pmap)) name =
+  TYG (insert_sorted (std_suffix_precedence, SUFFIX[name]) G, abbrevs, pmap)
 
-val empty_grammar = TYG ([], Binarymap.mkDict String.compare)
+val empty_grammar = TYG ([], Binarymap.mkDict String.compare, TypeNet.empty)
 
-fun rules (TYG (G, dict)) = G
-fun abbreviations (TYG (G, dict)) = dict
+fun rules (TYG (G, dict, pmap)) = G
+fun abbreviations (TYG (G, dict, pmap)) = dict
 
 fun check_structure st = let
   fun param_numbers (PARAM i, pset) = Binaryset.add(pset, i)
@@ -128,15 +129,23 @@ in
   check_for_gaps 0 plist
 end
 
-fun new_abbreviation (TYG(G, dict0)) (s, st) = let
+val abb_tstamp = ref 0
+fun new_abbreviation (TYG(G, dict0,pmap)) (s, st) = let
   val _ = check_structure st
-  val G0 = TYG(G, Binarymap.insert(dict0,s,st))
+  val G0 = TYG(G, Binarymap.insert(dict0,s,st),
+               TypeNet.insert(pmap, structure_to_type st, (!abb_tstamp, s)))
+  val _ = abb_tstamp := !abb_tstamp + 1
 in
   new_tyop G0 s
 end
 
-fun remove_abbreviation(TYG(G, dict0)) s =
-    TYG(G, #1 (Binarymap.remove(dict0, s)) handle Binarymap.NotFound => dict0)
+fun remove_abbreviation(arg as TYG(G, dict0, pmap0)) s = let
+  val (dict,st) = Binarymap.remove(dict0,s)
+  val pmap = #1 (TypeNet.delete(pmap0, structure_to_type st))
+      handle Binarymap.NotFound => pmap0
+in
+  TYG(G, dict, pmap)
+end handle Binarymap.NotFound => arg
 
 fun rev_append [] acc = acc
   | rev_append (x::xs) acc = rev_append xs (x::acc)
@@ -160,10 +169,13 @@ in
     Binarymap.foldr merge_dictinsert d1 d2
 end
 
+fun merge_pmaps (p1, p2) =
+    TypeNet.fold (fn (ty,v,acc) => TypeNet.insert(acc,ty,v)) p1 p2
+
 fun merge_grammars (G1, G2) = let
   (* both grammars are sorted, with no adjacent suffixes *)
-  val TYG (grules1, abbrevs1) = G1
-  val TYG (grules2, abbrevs2) = G2
+  val TYG (grules1, abbrevs1, pmap1) = G1
+  val TYG (grules2, abbrevs2, pmap2) = G2
   fun merge_acc acc (gs as (g1, g2)) =
     case gs of
       ([], _) => rev_append acc g2
@@ -176,10 +188,12 @@ fun merge_grammars (G1, G2) = let
         | EQUAL => merge_acc ((g1k, merge g1v g2v)::acc) (g1rest, g2rest)
       end
 in
-  TYG (merge_acc [] (grules1, grules2), merge_abbrevs G2 (abbrevs1, abbrevs2))
+  TYG (merge_acc [] (grules1, grules2),
+       merge_abbrevs G2 (abbrevs1, abbrevs2),
+       merge_pmaps (pmap1, pmap2))
 end
 
-fun prettyprint_grammar pps (G as TYG (g,abbrevs)) = let
+fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
   open Portable Lib
   val {add_break,add_newline,add_string,begin_block,end_block,...} =
       with_ppstream pps
@@ -286,5 +300,48 @@ in
   print_abbrevs();
   end_block()
 end;
+
+val print_abbrevs = ref true
+val _ = Feedback.register_btrace ("print_tyabbrevs", print_abbrevs)
+
+fun abb_dest_type0 (TYG(_, _, pmap)) ty = let
+  open HolKernel
+  val net_matches = TypeNet.match(pmap, ty)
+  fun mymatch pat ty = let
+    val (i, sames) = Type.raw_match_type pat ty ([], [])
+  in
+    i @ (map (fn ty => ty |-> ty) sames)
+  end
+  fun check_match (pat, (tstamp, nm)) =
+      SOME(mymatch pat ty, nm, tstamp) handle HOL_ERR _ => NONE
+  val checked_matches = List.mapPartial check_match net_matches
+  fun instcmp ({redex = r1, ...}, {redex = r2, ...}) = Type.compare(r1, r2)
+in
+  case checked_matches of
+    [] => Type.dest_type ty
+  | (inst,nm,tstamp) :: t => let
+      val inst' = Listsort.sort instcmp inst
+      val args = map #residue inst'
+    in
+      (nm, args)
+    end
+end
+
+fun abb_dest_type G ty = if !print_abbrevs then abb_dest_type0 G ty
+                         else Type.dest_type ty
+
+fun disable_abbrev_printing s (arg as TYG(G,abbs,pmap)) =
+    case Binarymap.peek(abbs, s) of
+      NONE => arg
+    | SOME st => let
+        val ty = structure_to_type st
+        val (pmap', (_,s')) = TypeNet.delete(pmap, ty)
+      in
+        if s = s' then ()
+        else Feedback.HOL_WARNING "type_grammar" "disable_abbrev_printing"
+                                  "pmap and abbrevs not invserse";
+        TYG(G, abbs, pmap')
+      end handle Binarymap.NotFound => arg
+
 
 end

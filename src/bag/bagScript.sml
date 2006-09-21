@@ -11,7 +11,9 @@ infix >-
 val _ = new_theory "bag";
 
 val _ = type_abbrev("bag", Type`:'a -> num`)
+val _ = disable_tyabbrev_printing "bag"
 val _ = type_abbrev("multiset", Type`:'a -> num`)
+val _ = disable_tyabbrev_printing "multiset"
 
 val _ = print "Defining basic bag operations\n"
 

@@ -35,6 +35,8 @@ signature Parse = sig
 
   val temp_type_abbrev : string * hol_type -> unit
   val type_abbrev : string * hol_type -> unit
+  val temp_disable_tyabbrev_printing : string -> unit
+  val disable_tyabbrev_printing : string -> unit
 
   (* Parsing terms *)
 

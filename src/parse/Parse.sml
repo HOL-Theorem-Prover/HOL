@@ -690,8 +690,20 @@ in
                               ")"])
 end;
 
+fun temp_disable_tyabbrev_printing s = let
+  val tyg = the_type_grammar
+in
+  tyg := type_grammar.disable_abbrev_printing s (!tyg);
+  type_grammar_changed := true;
+  term_grammar_changed := true
+end
 
-
+fun disable_tyabbrev_printing s = let
+in
+  temp_disable_tyabbrev_printing s;
+  update_grms "disable_tyabbrev_printing"
+              ("temp_disable_tyabbrev_printing", mlquote s)
+end
 
 
 (* Not persistent? *)
