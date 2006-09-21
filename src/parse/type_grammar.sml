@@ -304,6 +304,14 @@ end;
 val print_abbrevs = ref true
 val _ = Feedback.register_btrace ("print_tyabbrevs", print_abbrevs)
 
+fun tysize ty =
+    if Type.is_vartype ty then 1
+    else let
+        val {Args,...} = Type.dest_thy_type ty
+      in
+        1 + List.foldl (fn (ty,acc) => tysize ty + acc) 0 Args
+      end
+
 fun abb_dest_type0 (TYG(_, _, pmap)) ty = let
   open HolKernel
   val net_matches = TypeNet.match(pmap, ty)
@@ -319,7 +327,15 @@ fun abb_dest_type0 (TYG(_, _, pmap)) ty = let
 in
   case checked_matches of
     [] => Type.dest_type ty
-  | (inst,nm,tstamp) :: t => let
+  | _ => let
+      fun instsize i =
+          List.foldl (fn ({redex,residue},acc) => tysize residue + acc) 0 i
+      fun match_info (i, _, tstamp) = (instsize i, tstamp)
+      val matchcmp = inv_img_cmp match_info
+                                 (pair_compare(Int.compare,
+                                               flip_order o Int.compare))
+      val allinsts = Listsort.sort matchcmp checked_matches
+      val (inst,nm,_) = hd allinsts
       val inst' = Listsort.sort instcmp inst
       val args = map #residue inst'
     in
