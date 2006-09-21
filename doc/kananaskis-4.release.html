@@ -103,6 +103,63 @@ html1/DTD/xhtml1-strict.dtd">
       quotations.</p></li>
 
 
+  <li> <p> The XEmacs editor is now supported, in addition to Emacs,
+      by the <code>tools/hol98-mode.el</code> file of Emacs extensions.
+      </li>
+
+
+  <li> <p> Case expressions may now include literals as patterns,
+      in addition to constructor expressions as in the past.  These
+      literals may be for example of types <code>num</code>,
+      <code>char</code>, or <code>string</code>;
+      or they may be of any other type as well, even function types.
+      Literals need not be constants, but they must not contain
+      any free variables.</p>
+      <pre>
+         case n of
+            0 -> "none"
+         || 1 -> "one"
+         || 2 -> "two"
+         || _ -> "many"
+      </pre>
+      <p>Patterns in case expressions are similar to the patterns used
+      in the definition of recursive functions by <code>Define</code>.
+      Thus they may be deeply nested within larger patterns.
+      As before, in case of overlapping patterns, the earliest
+      listed pattern is matched.</p> 
+
+      <p>If the set of patterns specified is sparse, there may be new
+      rows generated automatically to fill it out, and possibly some new
+      or renamed variables or the <code>ARB</code> constant to properly
+      represent the case expression. </p>
+      <pre>
+         - ``case a of
+                (1, y, z) -> y + z
+             || (x, 2, z) -> x - z
+             || (x, y, 3) -> x * y``;
+         > val it =
+             ``case a of
+                  (1,2,3) -> 2 + 3
+               || (1,2,z) -> 2 + z
+               || (1,y,3) -> y + 3
+               || (1,y,z) -> y + z
+               || (x,2,3) -> x - 3
+               || (x,2,z') -> x - z'
+               || (x,y',3) -> x * y'
+               || (x,y',z') -> ARB`` : term
+      </pre>
+      <p>A complex pattern with several components may include
+      both literals and constructor expressions as subpatterns.
+      However, a set of patterns specified in a case expression
+      may not have both literals and constructor expressions as
+      alternatives to each other, except insofar as a pattern
+      may be both a literal and a (0-ary) constructor, such as
+      the literal <code>0</code>.  See the Description for more
+      information and examples of case expressions. </p>
+
+      </li>
+
+
   <li> <p> Inductive definitions are now made with respect to a
       varying &ldquo;<code>monoset</code>&rdquo;: a list of theorems
       specifying that boolean operators are monotone in their
