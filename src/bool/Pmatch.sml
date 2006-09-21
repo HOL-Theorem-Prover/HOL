@@ -262,10 +262,13 @@ fun mk_switch_tm gv v base literals =
         fun mk_switch [] = base
           | mk_switch ((lit,arg)::litargs) =
                  if is_var lit then mk_comb(arg, v)
-                 else boolSyntax.mk_bool_case(arg, mk_switch litargs, mk_eq(v, lit))
+                 else mk_bool_case(arg, mk_switch litargs, mk_eq(v, lit))
     in list_mk_abs(args@[v], mk_switch (zip literals args))
     end
 
+(* under_bool_case repairs a final beta_conv for literal switches. *)
+
+(*
 fun depth_conv conv tm =
   conv tm
   handle HOL_ERR _ =>
@@ -279,6 +282,15 @@ fun depth_conv conv tm =
     in mk_comb(tm1', tm2')
     end
   else tm
+*)
+
+fun under_bool_case conv tm =
+  if is_bool_case tm then
+    let val (t,f,tst) = dest_bool_case tm
+        val f' = under_bool_case conv f
+    in mk_bool_case (t,f',tst)
+    end
+  else conv tm handle HOL_ERR _ => tm
 
 
 (*----------------------------------------------------------------------------
@@ -338,7 +350,7 @@ fun mk_case ty_info ty_match FV range_ty =
          val pty_info = (* match_info *) ty_info {Thy = Thy, Tyop = ty_name}
      in
      if not (pty_info = NONE) andalso all (is_constructor_var_pat ty_info) col0
-     then (* col0 contains only constructors or variables, and may have literals *)
+     then (* col0 contains only constructors or variables *)
      case pty_info
      of NONE => mk_case_fail("Not a known datatype: "^ty_name)
       | SOME{case_const,constructors} =>
@@ -367,7 +379,7 @@ fun mk_case ty_info ty_match FV range_ty =
           of NONE   => mk_case_fail("Not a known datatype: "^ty_name)
            | SOME _ => mk_case_fail(
                "Some patterns are not constructors or variables but contain free variables")
-     else (* col0 contains literals or other non-constructors as well as vars *)
+     else (* col0 contains literals and/or variables, perhaps constructors *)
           let val other_var = fresh_var pty
               val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
                                    @ [other_var]
@@ -383,10 +395,9 @@ fun mk_case ty_info ty_match FV range_ty =
               val rec_calls = map mk news
               val (pat_rect,dtrees) = unzip rec_calls
               val case_functions = map list_mk_abs(zip new_formals dtrees)
-              val switch_tm' = inst [alpha |-> range_ty] switch_tm
               val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
-                                    switch_tm' (case_functions@[u])
-              val tree' = depth_conv beta_conv tree
+                                    switch_tm (case_functions@[u])
+              val tree' = under_bool_case beta_conv tree
               val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
           in
               (pat_rect1,tree')
@@ -405,7 +416,8 @@ fun FV_multiset tm =
      of VAR v => [mk_var v]
       | CONST _ => []
       | COMB(Rator,Rand) => FV_multiset Rator @ FV_multiset Rand
-      | LAMB _ => raise ERR"FV_multiset" "lambda";
+      | LAMB(Bvar,Body) => Lib.subtract (FV_multiset Body) [Bvar]
+                           (* raise ERR"FV_multiset" "lambda"; *)
 
 fun no_repeat_vars pat =
  let fun check [] = true

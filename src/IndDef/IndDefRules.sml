@@ -113,7 +113,7 @@ in
   else ALL_CONV t
 end
 
-fun prim_derive_strong_induction monoset (rule_th,ind) = let
+fun derive_mono_strong_induction monoset (rule_th,ind) = let
   val rules_th = CONV_RULE forall_andl_conv rule_th
   val (svs, _) = strip_forall (concl rule_th)
   val rules = CONJUNCTS rules_th

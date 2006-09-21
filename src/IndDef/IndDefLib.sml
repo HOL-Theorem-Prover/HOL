@@ -60,7 +60,7 @@ fun names_from_casethm thm =
     map (#1 o dest_const) cnsts
  end;
 
-fun prim_Hol_reln monoset tm =
+fun Hol_mono_reln monoset tm =
  let val (rules, indn, cases) =
         InductiveDefinition.new_inductive_definition monoset tm
                   (* not! InductiveDefinition.bool_monoset tm *)
@@ -72,7 +72,7 @@ fun prim_Hol_reln monoset tm =
 in
   (rules, indn, cases)
 end
-handle e => raise (wrap_exn "IndDefLib" "prim_Hol_reln" e);
+handle e => raise (wrap_exn "IndDefLib" "Hol_mono_reln" e);
 
 (* ----------------------------------------------------------------------
     the built-in monoset, that users can update as they prove new
@@ -109,11 +109,11 @@ end
    ---------------------------------------------------------------------- *)
 
 fun Hol_reln q =
-    prim_Hol_reln (!the_monoset) (term_of q)
+    Hol_mono_reln (!the_monoset) (term_of q)
     handle e => Raise (wrap_exn "IndDefLib" "Hol_reln" e);
 
-val prim_derive_strong_induction = IndDefRules.prim_derive_strong_induction;
+val derive_mono_strong_induction = IndDefRules.derive_mono_strong_induction;
 fun derive_strong_induction (rules,ind) =
-    IndDefRules.prim_derive_strong_induction (!the_monoset) (rules, ind)
+    IndDefRules.derive_mono_strong_induction (!the_monoset) (rules, ind)
 
 end
