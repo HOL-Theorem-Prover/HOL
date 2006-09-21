@@ -1,9 +1,10 @@
 signature TypeNet =
 sig
 
-  include Abbrev
   (* signature names modelled on Binarymap's *)
   type 'a typenet
+  type hol_type = Type.hol_type
+
   val empty : 'a typenet
   val insert : ('a typenet * hol_type * 'a) -> 'a typenet
   val find : 'a typenet * hol_type -> 'a

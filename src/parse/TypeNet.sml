@@ -1,7 +1,7 @@
 structure TypeNet :> TypeNet =
 struct
 
-open HolKernel Abbrev
+open HolKernel
 
 datatype label = TV | TOP of {Thy : string, Tyop : string}
 
@@ -23,7 +23,7 @@ type 'a typenet = 'a N * int
 
 val empty = (EMPTY, 0)
 
-fun mkempty () = LF (Binarymap.mkDict Type.compare)
+fun mkempty () = ND (Binarymap.mkDict labcmp)
 
 fun ndest_type ty =
     if is_vartype ty then (TV, [])
@@ -36,8 +36,8 @@ fun ndest_type ty =
 fun insert ((net,sz), ty, item) = let
   fun newnode labs =
       case labs of
-        [] => mkempty()
-      | _ => ND (Binarymap.mkDict labcmp)
+        [] => LF (Binarymap.mkDict Type.compare)
+      | _ => mkempty()
   fun trav (net, tys) =
       case (net, tys) of
         (LF d, []) => LF (Binarymap.insert(d,ty,item))
@@ -98,7 +98,7 @@ fun find (n, ty) =
 fun match ((net,sz), ty) = let
   fun trav acc (net, tyl) =
       case (net, tyl) of
-        (EMPTY, []) => []
+        (EMPTY, _) => []
       | (LF d, []) => Binarymap.listItems d @ acc
       | (ND d, ty::tys) => let
           val varresult = case Binarymap.peek(d, TV) of
