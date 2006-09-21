@@ -375,10 +375,7 @@ fun mk_case ty_info ty_match FV range_ty =
         end
      else if not (all is_closed_or_var col0)
              (* not (null (subtract (free_varsl col0) col0)) *)
-     then case pty_info
-          of NONE   => mk_case_fail("Not a known datatype: "^ty_name)
-           | SOME _ => mk_case_fail(
-               "Some patterns are not constructors or variables but contain free variables")
+     then mk_case_fail "Some patterns are not constructors or variables but contain free variables"
      else (* col0 contains literals and/or variables, perhaps constructors *)
           let val other_var = fresh_var pty
               val constructors = rev (mk_set (rev (filter (not o is_var) col0)))
