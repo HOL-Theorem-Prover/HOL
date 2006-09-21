@@ -30,7 +30,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #define CHUNK_LIMIT 1048576
 
-static bool parse_BCNF(cchar* filename, Solver& S)
+static void parse_BCNF(cchar* filename, Solver& S)
 {
     FILE*   in = fopen(filename, "rb");
     if (in == NULL) fprintf(stderr, "ERROR! Could not open file: %s\n", filename), exit(1);
@@ -66,15 +66,12 @@ static bool parse_BCNF(cchar* filename, Solver& S)
             S.addClause(c);     // Add clause.
             if (!S.okay()){
                 xfree(buf); fclose(in);
-                return false; }
+                return; }
         }
     }
 
     xfree(buf);
     fclose(in);
-
-    S.simplifyDB();
-    return S.okay();
 }
 
 
@@ -193,7 +190,7 @@ static void SIGINT_handler(int signum) {
 
 #include "Sort.h"
 
-// HA: resolve main against other, pivoting on variable x. when finished, main contains the resolvent
+
 static void resolve(vec<Lit>& main, vec<Lit>& other, Var x)
 {
     Lit     p;
@@ -227,43 +224,30 @@ static void resolve(vec<Lit>& main, vec<Lit>& other, Var x)
 struct Checker : public ProofTraverser {
     vec<vec<Lit> >  clauses;
 
-  //HA: add root clause to top of "clauses"
     void root   (const vec<Lit>& c) {
-        //**/printf("%d: ROOT", clauses.size()); 
-            //for (int i = 0; i < c.size(); i++) printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); printf("\n");
+        //**/printf("%d: ROOT", clauses.size()); for (int i = 0; i < c.size(); i++) printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); printf("\n");
         clauses.push();
         c.copyTo(clauses.last()); }
 
-  //HA: cs contains antecedent clauses of all the vars in xs
-  //HA: this resolves cs[0] against all the other clauses in cs, (resolve checks that the lit for the given var is indeed
-  //HA:   a unit literal i.e. the only one that occurs with different val in both arg clauses to resolve)
     void chain  (const vec<ClauseId>& cs, const vec<Var>& xs) {
-        //**/printf("%d: CHAIN %d", clauses.size(), cs[0]); 
-            //for (int i = 0; i < xs.size(); i++) printf(" [%d] %d", xs[i]+1, cs[i+1]);
+        //**/printf("%d: CHAIN %d", clauses.size(), cs[0]); for (int i = 0; i < xs.size(); i++) printf(" [%d] %d", xs[i]+1, cs[i+1]);
         clauses.push();
         vec<Lit>& c = clauses.last();
-        clauses[cs[0]].copyTo(c); // HA:add zeroeth clause of cs to top of "clauses"
-        for (int i = 0; i < xs.size(); i++) //HA: resolve c against each clause cs[i+1]
-	                                    //HA: where cs[i] gives the antecedent clause for var xs[i]
-	  resolve(c, clauses[cs[i+1]], xs[i]); //HA: c becomes the resolvent clause after this
-	                                       //HA: if c becomes empty then we are done 
-	                                       //HA: this is checked below, in checkProof, since the final resolvent
-	                                       //HA:  is the one at the top of trav.clauses(="clauses" here)
-        //**/printf(" =>"); for (int i = 0; i < c.size(); i++) 
-	   //printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); printf("\n");
+        clauses[cs[0]].copyTo(c);
+        for (int i = 0; i < xs.size(); i++)
+            resolve(c, clauses[cs[i+1]], xs[i]);
+        //**/printf(" =>"); for (int i = 0; i < c.size(); i++) printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); printf("\n");
         }
 
-  //HA: clear out the clause with clause ID c
     void deleted(ClauseId c) {
         clauses[c].clear(); }
 };
 
 
-//HA: called with no second arg, so goal gets default value
-void checkProof(Proof* proof, char* fname, ClauseId goal = ClauseId_NULL)
+void checkProof(Proof* proof, ClauseId goal = ClauseId_NULL)
 {
     Checker trav;
-    proof->traverse(trav, fname, goal);
+    proof->traverse(trav, goal);
 
     vec<Lit>& c = trav.clauses.last();
     printf("Final clause:");
@@ -346,6 +330,8 @@ int main(int argc, char** argv)
 
     if (!S.okay()){
         if (res != NULL) fprintf(res, "UNSAT\n"), fclose(res);
+        if (S.proof != NULL && proof != NULL) S.proof->save(proof);
+        if (S.proof != NULL && check) printf("Checking proof...\n"), checkProof(S.proof);
         reportf("Trivial problem\n");
         reportf("UNSATISFIABLE\n");
         exit(20);
@@ -378,9 +364,8 @@ int main(int argc, char** argv)
             S.proof->save(proof);
         if (check)
             printf("Checking proof...\n"),
-            checkProof(S.proof,input);
+            checkProof(S.proof);
     }
 
     exit(S.okay() ? 10 : 20);     // (faster than "return", which will invoke the destructor for 'Solver')
-				
 }

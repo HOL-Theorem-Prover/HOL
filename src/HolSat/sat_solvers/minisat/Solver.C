@@ -21,6 +21,8 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "Sort.h"
 #include <cmath>
 
+#define CC_MINIMIZATION
+
 
 //=================================================================================================
 // Helper functions:
@@ -61,21 +63,18 @@ void removeWatch(vec<Clause*>& ws, Clause* elem)
 |________________________________________________________________________________________________@*/
 void Solver::newClause(const vec<Lit>& ps_, bool learnt, ClauseId id)
 {
-  assert(learnt || id == ClauseId_NULL);//HA: id=NULL means it has just been read in
+    assert(learnt || id == ClauseId_NULL);
     if (!ok) return;
 
     vec<Lit>    qs;
     if (!learnt){
         assert(decisionLevel() == 0);
         ps_.copyTo(qs);                     // Make a copy of the input vector.
-	
+
         // Remove duplicates:
         sortUnique(qs);
 
-	//HA2:moved here from commented out line below (so trivially satisfiable clauses are also written out)
-	//HA3:if (proof != NULL) proof->beginChain(proof->addRoot(qs));
-
-        // Check if clause is satisfied: HA: if input clause is trivially satisfied, do not add to problem set
+        // Check if clause is satisfied:
         for (int i = 0; i < qs.size()-1; i++){
             if (qs[i] == ~qs[i+1])
                 return; }
@@ -84,13 +83,8 @@ void Solver::newClause(const vec<Lit>& ps_, bool learnt, ClauseId id)
                 return; }
 
         // Remove false literals:
-        // HA: when adding a new non-l clause, nothing happens here since all literals are undefined
-        //   however, false lits' vars get added to resolve sequence in proof
         int     i, j;
-        
-	if (proof != NULL) proof->beginChain(proof->addRoot(qs));
-	//HA1:if (proof != NULL) proof->beginChain(proof->addRoot(ps_));//HA: to avoid sortUnique
-
+        if (proof != NULL) proof->beginChain(proof->addRoot(qs));
         for (i = j = 0; i < qs.size(); i++)
             if (value(qs[i]) != l_False)
                 qs[j++] = qs[i];
@@ -105,8 +99,7 @@ void Solver::newClause(const vec<Lit>& ps_, bool learnt, ClauseId id)
         ok = false;
 
     }else if (ps.size() == 1){
-        // NOTE: If enqueue takes place at root level, 
-        //   the assignment will be lost in incremental use (it doesn't seem to hurt much though).
+        // NOTE: If enqueue takes place at root level, the assignment will be lost in incremental use (it doesn't seem to hurt much though).
         if (id != ClauseId_NULL)
             unit_id[var(ps[0])] = id;
         if (!enqueue(ps[0]))
@@ -303,6 +296,7 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
 
     // Conflict clause minimization:
     //
+#ifdef CC_MINIMIZATION
     int     i, j;
     if (expensive_ccmin){
         // Simplify conflict clause (a lot):
@@ -335,6 +329,9 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
             }
         }
     }
+#else
+    int i = 0, j = 0;
+#endif
 
     // Finilize proof logging with conflict clause minimization steps:
     //
@@ -350,7 +347,6 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
         }
         proof->endChain();
     }
-
     // Clean up:
     //
     for (int j = 0; j < out_learnt.size()     ; j++) seen[var(out_learnt     [j])] = 0;
@@ -783,10 +779,10 @@ bool Solver::solve(const vec<Lit>& assumps)
                 analyzeFinal(reason[var(p)], true);
                 conflict.push(~p);
             }else{
-                assert(unit_id[var(p)] != ClauseId_NULL);   // (this is the pre-condition above)
+                assert(proof == NULL || unit_id[var(p)] != ClauseId_NULL);   // (this is the pre-condition above)
                 conflict.clear();
                 conflict.push(~p);
-                conflict_id = unit_id[var(p)];
+                if (proof != NULL) conflict_id = unit_id[var(p)];
             }
             cancelUntil(0);
             return false; }
@@ -817,19 +813,6 @@ bool Solver::solve(const vec<Lit>& assumps)
     }
     if (verbosity >= 1)
         reportf("==============================================================================\n");
-
-/*DEBUG*/
-    for (int i = 0; i < conflict.size(); i++){
-        if (var(conflict[i]) >= 100){
-            Lit p = conflict[i];
-            Var x = var(p);
-            printf("confl[%d] = "L_LIT"\n", i, L_lit(p));
-            printf("level     = %d\n", level[x]);
-            printf("reason    = %p\n", reason[x]);
-            printf("unit_id   = %d\n", unit_id[x]);
-        }
-    }
-/*END*/
 
     cancelUntil(0);
     return status == l_True;

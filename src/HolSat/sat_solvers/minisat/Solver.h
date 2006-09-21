@@ -24,6 +24,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include "VarOrder.h"
 #include "Proof.h"
 
+// Redfine if you want output to go somewhere else:
 #define reportf(format, args...) ( printf(format , ## args), fflush(stdout) )
 
 
@@ -80,6 +81,7 @@ protected:
     vec<Lit>            analyze_toclear;
     Clause*             propagate_tmpbin;
     Clause*             analyze_tmpbin;
+    vec<Lit>            addUnit_tmp;
     vec<Lit>            addBinary_tmp;
     vec<Lit>            addTernary_tmp;
 
@@ -140,13 +142,17 @@ public:
                 vec<Lit> dummy(2,lit_Undef);
                 propagate_tmpbin = Clause_new(false, dummy);
                 analyze_tmpbin   = Clause_new(false, dummy);
+                addUnit_tmp   .growTo(1);
                 addBinary_tmp .growTo(2);
                 addTernary_tmp.growTo(3);
              }
 
    ~Solver() {
        for (int i = 0; i < learnts.size(); i++) remove(learnts[i], true);
-       for (int i = 0; i < clauses.size(); i++) if (clauses[i] != NULL) remove(clauses[i], true); }
+       for (int i = 0; i < clauses.size(); i++) if (clauses[i] != NULL) remove(clauses[i], true);
+       remove(propagate_tmpbin, true);
+       remove(analyze_tmpbin, true);
+    }
 
     // Helpers: (semi-internal)
     //
@@ -172,7 +178,7 @@ public:
     //
     Var     newVar    ();
     int     nVars     ()                    { return assigns.size(); }
-    void    addUnit   (Lit p)               { if (ok) ok = enqueue(p); }
+    void    addUnit   (Lit p)               { addUnit_tmp   [0] = p; addClause(addUnit_tmp); }
     void    addBinary (Lit p, Lit q)        { addBinary_tmp [0] = p; addBinary_tmp [1] = q; addClause(addBinary_tmp); }
     void    addTernary(Lit p, Lit q, Lit r) { addTernary_tmp[0] = p; addTernary_tmp[1] = q; addTernary_tmp[2] = r; addClause(addTernary_tmp); }
     void    addClause (const vec<Lit>& ps)  { newClause(ps); }  // (used to be a difference between internal and external method...)

@@ -41,24 +41,35 @@ class Lit {
     int     x;
 public:
     Lit() : x(2*var_Undef) {}   // (lit_Undef)
-    explicit Lit(Var var, bool sign = false) : x((var+var) + (int)sign) { }//HA: +ve lit is 2v, -ve lit is 2v+1
-    friend Lit operator ~ (Lit p) { Lit q; q.x = p.x ^ 1; return q; }//HA: negate lit: flip the lsb
+    explicit Lit(Var var, bool sgn = false) : x((var+var) + (int)sgn) {}
+    friend Lit operator ~ (Lit p);
 
-    friend bool sign  (Lit p) { return p.x & 1; } //HA:is the lsb 1? true if lit is -ve i.e. is signed
-    friend int  var   (Lit p) { return p.x >> 1; } //HA:drop sign info and div by 2 i.e. get corresponding var 
-    friend int  index (Lit p) { return p.x; } // A "toInt" method that guarantees small, 
-                                              // positive integers suitable for array indexing.
-    friend Lit  toLit (int i) { Lit p; p.x = i; return p; }  // Inverse of 'index()'.
-    friend Lit  unsign(Lit p) { Lit q; q.x = p.x & ~1; return q; }
-    friend Lit  id    (Lit p, bool sgn) { Lit q; q.x = p.x ^ (int)sgn; return q; }
+    friend bool sign  (Lit p);
+    friend int  var   (Lit p);
+    friend int  index (Lit p);
+    friend Lit  toLit (int i);
+    friend Lit  unsign(Lit p);
+    friend Lit  id    (Lit p, bool sgn);
 
-    friend bool operator == (Lit p, Lit q) { return index(p) == index(q); }
-    friend bool operator <  (Lit p, Lit q) { return index(p)  < index(q); }  // '<' guarantees that p, 
-                                                                             // ~p are adjacent in the ordering.
+    friend bool operator == (Lit p, Lit q);
+    friend bool operator <  (Lit p, Lit q);
+
+    uint hash() const { return (uint)x; }
 };
+inline Lit operator ~ (Lit p) { Lit q; q.x = p.x ^ 1; return q; }
+inline bool sign  (Lit p) { return p.x & 1; }
+inline int  var   (Lit p) { return p.x >> 1; }
+inline int  index (Lit p) { return p.x; }                // A "toInt" method that guarantees small, positive integers suitable for array indexing.
+inline Lit  toLit (int i) { Lit p; p.x = i; return p; }  // Inverse of 'index()'.
+inline Lit  unsign(Lit p) { Lit q; q.x = p.x & ~1; return q; }
+inline Lit  id    (Lit p, bool sgn) { Lit q; q.x = p.x ^ (int)sgn; return q; }
+inline bool operator == (Lit p, Lit q) { return index(p) == index(q); }
+inline bool operator <  (Lit p, Lit q) { return index(p)  < index(q); }  // '<' guarantees that p, ~p are adjacent in the ordering.
 
 const Lit lit_Undef(var_Undef, false);  // }- Useful special constants.
 const Lit lit_Error(var_Undef, true );  // }
+
+inline int toDimacs(Lit p) { return sign(p) ? -var(p) - 1 : var(p) + 1; }
 
 
 //=================================================================================================
@@ -72,7 +83,7 @@ const   int ClauseId_NULL = INT_MIN;
 
 class Clause {
     uint    size_learnt;
-    Lit     data[0];
+    Lit     data[1];
 public:
     // NOTE: This constructor cannot be used directly (doesn't allocate enough memory).
     Clause(bool learnt, const vec<Lit>& ps, ClauseId id_ = ClauseId_NULL) {
@@ -82,12 +93,7 @@ public:
         if (id_ != ClauseId_NULL) id() = id_; }
 
     // -- use this function instead:
-    friend Clause* Clause_new(bool learnt, const vec<Lit>& ps, ClauseId id = ClauseId_NULL) {
-        assert(sizeof(Lit)      == sizeof(uint));
-        assert(sizeof(float)    == sizeof(uint));
-        assert(sizeof(ClauseId) == sizeof(uint));
-        void*   mem = xmalloc<char>(sizeof(Clause) + sizeof(uint)*(ps.size() + (int)learnt + (int)(id != ClauseId_NULL)));
-        return new (mem) Clause(learnt, ps, id); }
+    friend Clause* Clause_new(bool, const vec<Lit>&, ClauseId);
 
     int       size        ()      const { return size_learnt >> 1; }
     bool      learnt      ()      const { return size_learnt & 1; }
@@ -96,6 +102,37 @@ public:
     float&    activity    ()      const { return *((float*)&data[size()]); }
     ClauseId& id          ()      const { return *((ClauseId*)&data[size() + (int)learnt()]); }
 };
+
+inline Clause* Clause_new(bool learnt, const vec<Lit>& ps, ClauseId id = ClauseId_NULL) {
+    assert(sizeof(Lit)      == sizeof(uint));
+    assert(sizeof(float)    == sizeof(uint));
+    assert(sizeof(ClauseId) == sizeof(uint));
+    void*   mem = xmalloc<char>(sizeof(Clause) + sizeof(uint)*(ps.size() + (int)learnt + (int)(id != ClauseId_NULL)));
+    return new (mem) Clause(learnt, ps, id); }
+
+
+//=================================================================================================
+// GClause -- Generalize clause:
+
+
+// Either a pointer to a clause or a literal.
+class GClause {
+    void*   data;
+    GClause(void* d) : data(d) {}
+public:
+    friend GClause GClause_new(Lit p);
+    friend GClause GClause_new(Clause* c);
+
+    bool        isLit    () const { return ((uintp)data & 1) == 1; }
+    Lit         lit      () const { return toLit(((intp)data) >> 1); }
+    Clause*     clause   () const { return (Clause*)data; }
+    bool        operator == (GClause c) const { return data == c.data; }
+    bool        operator != (GClause c) const { return data != c.data; }
+};
+inline GClause GClause_new(Lit p)     { return GClause((void*)(((intp)index(p) << 1) + 1)); }
+inline GClause GClause_new(Clause* c) { assert(((uintp)c & 1) == 0); return GClause((void*)c); }
+
+#define GClause_NULL GClause_new((Clause*)NULL)
 
 
 //=================================================================================================

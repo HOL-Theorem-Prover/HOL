@@ -54,7 +54,7 @@ public:
     Proof();                        // Offline mode -- proof stored to a file, which can be saved, compressed, and/or traversed.
     Proof(ProofTraverser& t);       // Online mode -- proof will not be stored.
 
-    ClauseId addRoot   (const vec<Lit>& clause);
+    ClauseId addRoot   (vec<Lit>& clause);
     void     beginChain(ClauseId start);
     void     resolve   (ClauseId next, Var x);
     ClauseId endChain  ();
@@ -63,7 +63,7 @@ public:
 
     void     compress  (Proof& dst, ClauseId goal = ClauseId_NULL);     // 'dst' should be a newly constructed, empty proof.
     bool     save      (cchar* filename);
-    void     traverse  (ProofTraverser& trav, char* fname, ClauseId goal = ClauseId_NULL) ;
+    void     traverse  (ProofTraverser& trav, ClauseId goal = ClauseId_NULL) ;
 };
 
 

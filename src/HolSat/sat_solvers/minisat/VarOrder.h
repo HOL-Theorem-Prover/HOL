@@ -75,7 +75,7 @@ void VarOrder::undo(Var x)
 Var VarOrder::select(double random_var_freq)
 {
     // Random decision:
-    if (drand(random_seed) < random_var_freq){
+    if (drand(random_seed) < random_var_freq && !heap.empty()){
         Var next = irand(random_seed,assigns.size());
         if (toLbool(assigns[next]) == l_Undef)
             return next;
