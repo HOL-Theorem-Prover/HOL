@@ -180,13 +180,27 @@ of relations that recurse under <code>EVERY</code>, as in this rule
 <h2 id="new-theories">New theories:</h2>
 <ul>
   <li> <p> A theory of the rational numbers, thanks to Jens
-  Brandt.</p> </li>
+  Brandt. This is used in the <a href="#acl2">embedding of ACL2 in HOL</a>.</p> </li>
 
 </ul>
 
 <h2 id="new-tools">New tools:</h2>
 
 <h2 id="new-examples">New examples:</h2>
+
+<li> <span id="acl2"><code>acl2</code></span><br> A deep embedding of
+the entire ACL2 logic in HOL has been defined via a theory
+<code>sexp</code> of S-expressions. All 78 ACL2 axioms have be
+verified in HOL.  A suite of tools is available to translate HOL
+datatypes into S-expressions and HOL functions to functions on
+S-expressions. Scripts are provided to print S-expressions defined
+inside HOL to defuns and defthms for processing by the ACL2 system,
+and for slurping ACL2 defuns and defthms into HOL. This work is a
+collaboration between Mike Gordon and James Reynolds at the University
+of Cambridge and Warren Hunt and Matt Kaufmann at the University of
+Texas. The goal is to provide a robust and scalable link between the
+HOL4 and ACL2 systems suitable for use on substantial industrial-scale
+verification projects. </ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
