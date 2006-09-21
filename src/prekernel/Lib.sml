@@ -261,6 +261,9 @@ end
 
 
 type 'a cmp       = 'a * 'a -> order
+fun flip_order LESS = GREATER
+  | flip_order EQUAL = EQUAL
+  | flip_order GREATER = LESS
 fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
        | comp ([], _) = LESS

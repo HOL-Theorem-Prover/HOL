@@ -118,6 +118,7 @@ sig
   val list_compare  : 'a cmp -> 'a list cmp
   val measure_cmp   : ('a -> int) -> 'a cmp
   val inv_img_cmp   : ('b -> 'a) -> 'a cmp -> 'b cmp
+  val flip_order    : order -> order
 
   datatype 'a delta
        = SAME
