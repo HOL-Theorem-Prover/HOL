@@ -333,7 +333,7 @@ in
       fun match_info (i, _, tstamp) = (instsize i, tstamp)
       val matchcmp = inv_img_cmp match_info
                                  (pair_compare(Int.compare,
-                                               flip_order o Int.compare))
+                                               Lib.flip_order o Int.compare))
       val allinsts = Listsort.sort matchcmp checked_matches
       val (inst,nm,_) = hd allinsts
       val inst' = Listsort.sort instcmp inst
@@ -355,7 +355,7 @@ fun disable_abbrev_printing s (arg as TYG(G,abbs,pmap)) =
       in
         if s = s' then ()
         else Feedback.HOL_WARNING "type_grammar" "disable_abbrev_printing"
-                                  "pmap and abbrevs not invserse";
+                                  "pmap and abbrevs not inverse";
         TYG(G, abbs, pmap')
       end handle Binarymap.NotFound => arg
 
