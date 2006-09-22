@@ -702,11 +702,17 @@ fun is_constructor tybase c =
       | SOME tyinfo => op_mem same_const c (constructors_of tyinfo)
   end handle HOL_ERR _ => false;
 
+fun is_constructor_pat tybase tm =
+    is_constructor tybase (fst (strip_comb tm))
+
+fun is_constructor_var_pat tybase tm =
+    is_var tm orelse is_constructor_pat tybase tm
+
 (*---------------------------------------------------------------------------*)
 (* Syntax operations on the (extensible) set of case expressions.            *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_case tybase (exp, plist) =
+fun mk_case1 tybase (exp, plist) =
   case prim_get tybase (type_names (type_of exp))
    of NONE => raise ERR "mk_case" "unable to analyze type"
     | SOME tyinfo =>
@@ -717,6 +723,27 @@ fun mk_case tybase (exp, plist) =
            val theta = match_type (type_of c) ty'
        in list_mk_comb(inst theta c,fns@[exp])
        end;
+
+fun mk_case2 v (exp, plist) =
+       let fun mk_switch [] = raise ERR "mk_case" "null patterns"
+             | mk_switch [(p,R)] = R
+             | mk_switch ((p,R)::rst) =
+                  mk_bool_case(R, mk_switch rst, mk_eq(v,p))
+           val switch = mk_switch plist
+       in if v = exp then switch
+                     else mk_literal_case(mk_abs(v,switch),exp)
+       end;
+
+fun mk_case tybase (exp, plist) =
+  let val col0 = map fst plist
+  in if all (is_constructor_var_pat tybase) col0
+        andalso not (all is_var col0)
+     then (* constructor patterns *)
+          mk_case1 tybase (exp, plist)
+     else (* literal patterns *)
+          mk_case2 (last col0) (exp, plist)
+  end
+
 
 (*---------------------------------------------------------------------------*)
 (* dest_case destructs one level of pattern matching. To deal with nested    *)
@@ -738,7 +765,7 @@ local fun build_case_clause((ty,constr),rhs) =
    (list_mk_comb(constr',V), rhs')
   end
 in
-fun dest_case tybase M =
+fun dest_case1 tybase M =
   let val (c,args) = strip_comb M
       val (cases,arg) = front_last args
   in case prim_get tybase (type_names (type_of arg))
@@ -755,7 +782,16 @@ fun dest_case tybase M =
   end
 end
 
-fun is_case tybase M =
+fun dest_case tybase M =
+  if is_literal_case M then
+  let val (lcf, e)  = dest_comb M
+      val (lit_cs, f) = dest_comb lcf
+      val (x, M')  = dest_abs f
+  in (lit_cs, e, [(x,M')])
+  end
+  else dest_case1 tybase M
+
+fun is_case1 tybase M =
   let val (c,args) = strip_comb M
       val (tynames as (_,tyop)) = type_names (type_of (last args))
   in case prim_get tybase tynames
@@ -764,79 +800,7 @@ fun is_case tybase M =
   end
   handle HOL_ERR _ => false;
 
-(*
-local fun dest tybase (pat,rhs) =
-  let val patvars = free_vars pat
-  in if is_case tybase rhs
-       then let val (case_tm,exp,clauses) = dest_case tybase rhs
-                val (pats,rhsides) = unzip clauses
-            in if mem exp patvars andalso
-                  null_intersection [exp] (free_varsl rhsides)
-                then flatten
-                       (map (dest tybase)
-                         (zip (map (fn p => subst [exp |-> p] pat) pats) rhsides))
-                else [(pat,rhs)]
-             end
-       else [(pat,rhs)]
-  end
-in
-fun strip_case tybase M =
-  case total (dest_case tybase) M
-   of NONE => (M,[])
-    | SOME(case_tm,exp,cases) => (exp, flatten (map (dest tybase) cases))
-end;
-*)
-
-(*
-local open Literal
-in
-fun is_literal tm = is_numeral tm orelse is_string_lit tm orelse is_char_lit tm
-end;
-
-fun is_lit_eq tm =
-    if is_eq tm then
-      let val (a,b) = dest_eq tm
-      in is_var a andalso is_literal b
-      end
-    else false;
-*)
-
-(*
-local fun dest tybase (pat,rhs) =
-  let val patvars = free_vars pat
-  in if is_case tybase rhs
-     then let val (case_tm,exp,clauses) = dest_case tybase rhs
-              val (pats,rhsides) = unzip clauses
-          in if is_lit_eq exp
-             then let val (v,lit) = dest_eq exp
-                  in if mem v patvars
-                     then flatten
-                             (map (dest tybase)
-                               (zip [subst [v |-> lit] pat, pat] rhsides))
-                     else [(pat,rhs)]
-                  end
-             else if mem exp patvars andalso
-                     null_intersection [exp] (free_varsl rhsides)
-             then flatten
-                     (map (dest tybase)
-                       (zip (map (fn p => subst [exp |-> p] pat) pats) rhsides))
-             else [(pat,rhs)]
-          end
-     else [(pat,rhs)]
-  end
-in
-fun strip_case tybase M =
-  case total (dest_case tybase) M
-   of NONE => (M,[])
-    | SOME(case_tm,exp,cases) =>
-         if is_lit_eq exp
-         then let val (v,lit) = dest_eq exp
-              in (v, flatten (map (dest tybase)
-                               (zip [lit, v] (map snd cases))))
-              end
-         else (exp, flatten (map (dest tybase) cases))
-end;
-*)
+fun is_case tybase M = is_literal_case M orelse is_case1 tybase M
 
 local fun dest tybase (pat,rhs) =
   let val patvars = free_vars pat
@@ -872,8 +836,8 @@ local fun dest tybase (pat,rhs) =
   end
   handle e => raise (Feedback.wrap_exn "TypeBasePure" "strip_case(dest)" e)
 in
-fun strip_case tybase M =
- (case total (dest_case tybase) M
+fun strip_case1 tybase M =
+ (case total (dest_case1 tybase) M
    of NONE => (M,[])
     | SOME(case_tm,exp,cases) =>
          if is_eq exp
@@ -884,6 +848,18 @@ fun strip_case tybase M =
          else (exp, flatten (map (dest tybase) cases)))
  handle e => raise (Feedback.wrap_exn "TypeBasePure" "strip_case" e)
 end;
+
+fun strip_case tybase M =
+  if is_literal_case M then
+  let val (lcf, e) = dest_comb M
+      val (lit_cs, f) = dest_comb lcf
+      val (x, M') = dest_abs f
+      val (exp, cases) = if is_case1 tybase M'
+                         then strip_case1 tybase M'
+                         else (x, [(x, M')])
+  in (e, cases)
+  end
+  else strip_case1 tybase M
 
 
 (*---------------------------------------------------------------------------*)

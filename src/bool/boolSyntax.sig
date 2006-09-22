@@ -20,6 +20,7 @@ sig
   val negation       : term
   val conditional    : term
   val bool_case      : term
+  val literal_case   : term
   val let_tm         : term
   val arb            : term
   val the_value      : term
@@ -44,6 +45,7 @@ sig
   val mk_let                 : term * term -> term
   val mk_cond                : term * term * term -> term
   val mk_bool_case           : term * term * term -> term
+  val mk_literal_case        : term * term -> term
   val mk_arb                 : hol_type -> term
   val mk_res_forall          : term * term * term -> term
   val mk_res_exists          : term * term * term -> term
@@ -69,6 +71,7 @@ sig
   val dest_let               : term -> term * term
   val dest_cond              : term -> term * term * term
   val dest_bool_case         : term -> term * term * term
+  val dest_literal_case      : term -> term * term
   val dest_arb               : term -> hol_type
   val dest_res_forall        : term -> term * term * term
   val dest_res_exists        : term -> term * term * term
@@ -91,6 +94,7 @@ sig
   val is_neg                 : term -> bool
   val is_cond                : term -> bool
   val is_bool_case           : term -> bool
+  val is_literal_case        : term -> bool
   val is_let                 : term -> bool
   val is_arb                 : term -> bool
   val is_the_value           : term -> bool

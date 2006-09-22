@@ -256,33 +256,28 @@ fun is_constructor_var_pat ty_info tm =
 fun mk_switch_tm gv v base literals =
     let val rty = type_of base
         val lty = type_of v
+        val v' = last literals handle _ => gv lty
         fun mk_arg lit = if is_var lit then gv (lty --> rty) else gv rty
         val args = map mk_arg literals
         open boolSyntax
         fun mk_switch [] = base
           | mk_switch ((lit,arg)::litargs) =
-                 if is_var lit then mk_comb(arg, v)
-                 else mk_bool_case(arg, mk_switch litargs, mk_eq(v, lit))
-    in list_mk_abs(args@[v], mk_switch (zip literals args))
+                 if is_var lit then mk_comb(arg, v')
+                 else mk_bool_case(arg, mk_switch litargs, mk_eq(v', lit))
+        val switch = mk_switch (zip literals args)
+    in list_mk_abs(args@[v], mk_literal_case (mk_abs(v',switch), v))
     end
 
 (* under_bool_case repairs a final beta_conv for literal switches. *)
 
-(*
-fun depth_conv conv tm =
-  conv tm
-  handle HOL_ERR _ =>
-  if is_abs tm then let val (v,bdy) = dest_abs tm
-                    in mk_abs(v, depth_conv conv bdy)
-                    end
-  else if is_comb tm then
-    let val (tm1,tm2) = dest_comb tm
-        val tm1' = depth_conv conv tm1
-        val tm2' = depth_conv conv tm2
-    in mk_comb(tm1', tm2')
+fun under_literal_case conv tm =
+  if is_literal_case tm then
+    let val (f,e) = dest_literal_case tm
+        val (x,bdy) = dest_abs f
+        val bdy' = conv bdy handle HOL_ERR _ => bdy
+    in mk_literal_case (mk_abs(x, bdy'), e)
     end
-  else tm
-*)
+  else conv tm handle HOL_ERR _ => tm
 
 fun under_bool_case conv tm =
   if is_bool_case tm then
@@ -291,6 +286,9 @@ fun under_bool_case conv tm =
     in mk_bool_case (t,f',tst)
     end
   else conv tm handle HOL_ERR _ => tm
+
+fun under_literal_bool_case conv tm =
+    under_literal_case (under_bool_case conv) tm
 
 
 (*----------------------------------------------------------------------------
@@ -394,7 +392,7 @@ fun mk_case ty_info ty_match FV range_ty =
               val case_functions = map list_mk_abs(zip new_formals dtrees)
               val tree = List.foldl (fn (a,tm) => beta_conv (mk_comb(tm,a)))
                                     switch_tm (case_functions@[u])
-              val tree' = under_bool_case beta_conv tree
+              val tree' = under_literal_bool_case beta_conv tree
               val pat_rect1 = flatten(map2 mk_patl constructors' pat_rect)
           in
               (pat_rect1,tree')
@@ -472,7 +470,7 @@ fun pat_match3 pat_exps given_pats =
 (* Syntax operations on the (extensible) set of case expressions.            *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_case' tybase (exp, plist) =
+fun mk_case1 tybase (exp, plist) =
   case match_info tybase (type_names (type_of exp))
    of NONE => raise ERR "mk_case" "unable to analyze type"
     | SOME tyinfo =>
@@ -483,6 +481,26 @@ fun mk_case' tybase (exp, plist) =
            val theta = Type.match_type (type_of c) ty'
        in list_mk_comb(inst theta c,fns@[exp])
        end;
+
+fun mk_case2 v (exp, plist) =
+       let fun mk_switch [] = raise ERR "mk_case" "null patterns"
+             | mk_switch [(p,R)] = R
+             | mk_switch ((p,R)::rst) =
+                  mk_bool_case(R, mk_switch rst, mk_eq(v,p))
+           val switch = mk_switch plist
+       in if v = exp then switch
+                     else mk_literal_case(mk_abs(v,switch),exp)
+       end;
+
+fun mk_case' tybase (exp, plist) =
+  let val col0 = map fst plist
+  in if all (is_constructor_var_pat tybase) col0
+        andalso not (all is_var col0)
+     then (* constructor patterns *)
+          mk_case1 tybase (exp, plist)
+     else (* literal patterns *)
+          mk_case2 (last col0) (exp, plist)
+  end
 
 (*---------------------------------------------------------------------------*)
 (* dest_case destructs one level of pattern matching. To deal with nested    *)
@@ -504,7 +522,7 @@ local fun build_case_clause((ty,constr),rhs) =
    (list_mk_comb(constr',V), rhs')
   end
 in
-fun dest_case tybase M =
+fun dest_case1 tybase M =
   let val (c,args) = strip_comb M
       val (cases,arg) = front_last args
   in case match_info tybase (type_names (type_of arg))
@@ -521,7 +539,16 @@ fun dest_case tybase M =
   end
 end
 
-fun is_case tybase M =
+fun dest_case tybase M =
+  if is_literal_case M then
+  let val (lcf, e)  = dest_comb M
+      val (lit_cs, f) = dest_comb lcf
+      val (x, M')  = dest_abs f
+  in (lit_cs, e, [(x,M')])
+  end
+  else dest_case1 tybase M
+
+fun is_case1 tybase M =
   let val (c,args) = strip_comb M
       val (tynames as {Tyop=tyop,...}) = type_names (type_of (last args))
   in case match_info tybase tynames
@@ -529,6 +556,8 @@ fun is_case tybase M =
        | SOME tyinfo => same_const c (case_const_of tyinfo)
   end
   handle HOL_ERR _ => false;
+
+fun is_case tybase M = is_literal_case M orelse is_case1 tybase M
 
 local fun dest tybase (pat,rhs) =
   let val patvars = free_vars pat
@@ -563,7 +592,7 @@ local fun dest tybase (pat,rhs) =
      else [(pat,rhs)]
   end
 in
-fun strip_case tybase M =
+fun strip_case1 tybase M =
  (case total (dest_case tybase) M
    of NONE => (M,[])
     | SOME(case_tm,exp,cases) =>
@@ -574,6 +603,18 @@ fun strip_case tybase M =
               end
          else (exp, flatten (map (dest tybase) cases)))
 end;
+
+fun strip_case tybase M =
+  if is_literal_case M then
+  let val (lcf, e) = dest_comb M
+      val (lit_cs, f) = dest_comb lcf
+      val (x, M') = dest_abs f
+      val (exp, cases) = if is_case1 tybase M'
+                         then strip_case1 tybase M'
+                         else (x, [(x, M')])
+  in (e, cases)
+  end
+  else strip_case1 tybase M
 
 
 fun rename_case thy sub cs =
@@ -627,11 +668,17 @@ fun mk_functional thy eqs =
      (* The next lines repair bound variable names in the nested case term. *)
      val (a',case_tm') =
          let val (_,pat_exps) = strip_case thy case_tm
+             val pat_exps = if null pat_exps then [(a,a)] else pat_exps
              val sub = pat_match3 pat_exps pats (* better pats than givens patts3 *)
          in (subst_inst sub a, rename_case thy sub case_tm)
          end handle HOL_ERR _ => (a,case_tm)
+     (* Ensure that the case test variable is fresh for the rest of the case *)
+     val avs = subtract (all_vars case_tm') [a']
+     val a'' = variant avs a'
+     val case_tm'' = if a'' = a' then case_tm'
+                                 else rename_case thy ([a' |-> a''],[]) case_tm'
  in
-   {functional = list_mk_abs ([f,a'], case_tm'),
+   {functional = list_mk_abs ([f,a''], case_tm''),
     pats = patts3}
  end
 end;

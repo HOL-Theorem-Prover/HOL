@@ -20,24 +20,26 @@ val ERR = mk_HOL_ERR "boolSyntax";
        Basic constants
  ---------------------------------------------------------------------------*)
 
-val equality     = prim_mk_const {Name="=",         Thy="min"};
-val implication  = prim_mk_const {Name="==>",       Thy="min"};
-val select       = prim_mk_const {Name="@",         Thy="min"};
-val T            = prim_mk_const {Name="T",         Thy="bool"};
-val F            = prim_mk_const {Name="F",         Thy="bool"};
-val universal    = prim_mk_const {Name="!",         Thy="bool"};
-val existential  = prim_mk_const {Name="?",         Thy="bool"};
-val exists1      = prim_mk_const {Name="?!",        Thy="bool"};
-val conjunction  = prim_mk_const {Name="/\\",       Thy="bool"};
-val disjunction  = prim_mk_const {Name="\\/",       Thy="bool"};
-val negation     = prim_mk_const {Name="~",         Thy="bool"};
-val conditional  = prim_mk_const {Name="COND",      Thy="bool"};
-val let_tm       = prim_mk_const {Name="LET",       Thy="bool"};
-val arb          = prim_mk_const {Name="ARB",       Thy="bool"};
-val the_value    = prim_mk_const {Name="the_value", Thy="bool"};
-val bool_case    = prim_mk_const {Name="bool_case", Thy="bool"};
-val bounded_tm   = prim_mk_const {Name="BOUNDED",   Thy="bool"};
+val equality     = prim_mk_const {Name="=",            Thy="min"};
+val implication  = prim_mk_const {Name="==>",          Thy="min"};
+val select       = prim_mk_const {Name="@",            Thy="min"};
+val T            = prim_mk_const {Name="T",            Thy="bool"};
+val F            = prim_mk_const {Name="F",            Thy="bool"};
+val universal    = prim_mk_const {Name="!",            Thy="bool"};
+val existential  = prim_mk_const {Name="?",            Thy="bool"};
+val exists1      = prim_mk_const {Name="?!",           Thy="bool"};
+val conjunction  = prim_mk_const {Name="/\\",          Thy="bool"};
+val disjunction  = prim_mk_const {Name="\\/",          Thy="bool"};
+val negation     = prim_mk_const {Name="~",            Thy="bool"};
+val conditional  = prim_mk_const {Name="COND",         Thy="bool"};
+val let_tm       = prim_mk_const {Name="LET",          Thy="bool"};
+val arb          = prim_mk_const {Name="ARB",          Thy="bool"};
+val the_value    = prim_mk_const {Name="the_value",    Thy="bool"};
+val bool_case    = prim_mk_const {Name="bool_case",    Thy="bool"};
+val literal_case = prim_mk_const {Name="literal_case", Thy="bool"};
+val bounded_tm   = prim_mk_const {Name="BOUNDED",      Thy="bool"};
 
+val _ = Parse.overload_on("case", literal_case);
 
 
 
@@ -82,6 +84,11 @@ fun mk_bool_case(a0,a1,b) =
  list_mk_comb(inst[alpha |-> type_of a0] bool_case, [a0,a1,b])
  handle HOL_ERR _ => raise ERR "mk_bool_case" "";
 
+fun mk_literal_case (func,arg) =
+ let val (dom,rng) = dom_rng (type_of func)
+ in list_mk_comb(inst[alpha |-> dom, beta |-> rng] literal_case, [func,arg])
+ end handle HOL_ERR _ => raise ERR "mk_literal_case" "";
+
 fun mk_arb ty = inst [alpha |-> ty] arb;
 
 
@@ -89,12 +96,13 @@ fun mk_arb ty = inst [alpha |-> ty] arb;
  *                Destructors                                               *
  *--------------------------------------------------------------------------*)
 
-local val dest_eq_ty_err = ERR "dest_eq(_ty)"   "not an \"=\""
-      val lhs_err        = ERR "lhs"            "not an \"=\""
-      val rhs_err        = ERR "rhs"            "not an \"=\""
-      val dest_imp_err   = ERR "dest_imp"       "not an \"==>\""
-      val dest_cond_err  = ERR "dest_cond"      "not a conditional"
-      val bool_case_err  = ERR "dest_bool_case" "not a \"bool_case\""
+local val dest_eq_ty_err    = ERR "dest_eq(_ty)"      "not an \"=\""
+      val lhs_err           = ERR "lhs"               "not an \"=\""
+      val rhs_err           = ERR "rhs"               "not an \"=\""
+      val dest_imp_err      = ERR "dest_imp"          "not an \"==>\""
+      val dest_cond_err     = ERR "dest_cond"         "not a conditional"
+      val bool_case_err     = ERR "dest_bool_case"    "not a \"bool_case\""
+      val literal_case_err  = ERR "dest_literal_case" "not a \"literal_case\""
 in
 val dest_eq       = dest_binop equality dest_eq_ty_err
 fun dest_eq_ty M  = let val (l,r) = dest_eq M in (l, r, type_of l) end
@@ -125,6 +133,8 @@ fun dest_bool_case M =
  in (a0, a1, b)
  end
 
+val dest_literal_case = dest_binop literal_case literal_case_err
+
 fun dest_arb M =
   if same_const M arb then type_of M else raise ERR "dest_arb" ""
 
@@ -134,21 +144,22 @@ end (* local *);
              Selectors
  ---------------------------------------------------------------------------*)
 
-val is_eq        = can dest_eq
-val is_imp       = can dest_imp
-val is_imp_only  = can dest_imp_only
-val is_select    = can dest_select
-val is_forall    = can dest_forall
-val is_exists    = can dest_exists
-val is_exists1   = can dest_exists1
-val is_conj      = can dest_conj
-val is_disj      = can dest_disj
-val is_neg       = can dest_neg
-val is_cond      = can dest_cond
-val is_let       = can dest_let
-val is_bool_case = can dest_bool_case
-val is_arb       = same_const arb
-val is_the_value = same_const the_value
+val is_eq           = can dest_eq
+val is_imp          = can dest_imp
+val is_imp_only     = can dest_imp_only
+val is_select       = can dest_select
+val is_forall       = can dest_forall
+val is_exists       = can dest_exists
+val is_exists1      = can dest_exists1
+val is_conj         = can dest_conj
+val is_disj         = can dest_disj
+val is_neg          = can dest_neg
+val is_cond         = can dest_cond
+val is_let          = can dest_let
+val is_bool_case    = can dest_bool_case
+val is_literal_case = can dest_literal_case
+val is_arb          = same_const arb
+val is_the_value    = same_const the_value
 
 
 (*---------------------------------------------------------------------------*

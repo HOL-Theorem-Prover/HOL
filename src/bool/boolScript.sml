@@ -188,7 +188,11 @@ val bool_case_DEF =
  Definition.new_definition
    ("bool_case_DEF",  Term `bool_case = \(x:'a) y b. COND b x y`);
 
-val _ = List.app add_const ["ARB", "bool_case"];
+val literal_case_DEF =
+ Definition.new_definition
+   ("literal_case_DEF",  Term `literal_case = \(f:'a->'b) x. f x`);
+
+val _ = List.app add_const ["ARB", "bool_case", "literal_case"];
 
 val IN_DEF =
  Definition.new_definition
@@ -3906,6 +3910,88 @@ in
 end;
 
 val BOOL_FUN_INDUCT = save_thm("BOOL_FUN_INDUCT",BOOL_FUN_INDUCT);
+
+
+(*---------------------------------------------------------------------------
+     literal_case_THM = |- !f x. literal_case f x = f x
+ ---------------------------------------------------------------------------*)
+
+val literal_case_THM =
+ let val f = Term `f:'a->'b`
+     val x = Term `x:'a`
+ in
+  GEN f (GEN x
+    (RIGHT_BETA(AP_THM (RIGHT_BETA(AP_THM literal_case_DEF f)) x)))
+ end;
+
+val _ = save_thm("literal_case_THM", literal_case_THM);
+
+
+(*---------------------------------------------------------------------------
+    literal_case_RAND =  P (literal_case (\x. N x) M) = (literal_case (\x. P (N x)) M)
+ ---------------------------------------------------------------------------*)
+
+val literal_case_RAND = save_thm("literal_case_RAND",
+ let val tm1 = Term`\x:'a. P (N x:'b):bool`
+     val tm2 = Term`M:'a`
+     val tm3 = Term`\x:'a. N x:'b`
+     val P   = Term`P:'b -> bool`
+     val literal_case_THM1 = RIGHT_BETA (SPEC tm2 (SPEC tm1
+                    (Thm.INST_TYPE [beta |-> bool] literal_case_THM)))
+     val literal_case_THM2 = AP_TERM P (RIGHT_BETA (SPEC tm2 (SPEC tm3 literal_case_THM)))
+ in TRANS literal_case_THM2 (SYM literal_case_THM1)
+ end);
+
+
+(*---------------------------------------------------------------------------
+    literal_case_RATOR =  (literal_case (\x. N x) M) b = (literal_case (\x. N x b) M)
+ ---------------------------------------------------------------------------*)
+
+val literal_case_RATOR = save_thm("literal_case_RATOR",
+ let val M = Term`M:'a`
+     val b = Term`b:'b`
+     val tm1 = Term`\x:'a. N x:'b->'c`
+     val tm2 = Term`\x:'a. N x ^b:'c`
+     val literal_case_THM1 = AP_THM (RIGHT_BETA (SPEC M (SPEC tm1
+                   (Thm.INST_TYPE [beta |-> (beta --> gamma)] literal_case_THM)))) b
+     val literal_case_THM2 = RIGHT_BETA (SPEC M (SPEC tm2
+                      (Thm.INST_TYPE [beta |-> gamma] literal_case_THM)))
+ in TRANS literal_case_THM1 (SYM literal_case_THM2)
+ end);
+
+
+(*---------------------------------------------------------------------------
+  literal_case_CONG =
+    |- !f g M N.  (M = N) /\ (!x. (x = N) ==> (f x = g x))
+                            ==>
+                   (literal_case f M = literal_case g N)
+ ---------------------------------------------------------------------------*)
+
+val literal_case_CONG =
+  let val f = mk_var("f",alpha-->beta)
+      val g = mk_var("g",alpha-->beta)
+      val M = mk_var("M",alpha)
+      val N = mk_var("N",alpha)
+      val x = mk_var ("x",alpha)
+      val MeqN = mk_eq(M,N)
+      val x_eq_N = mk_eq(x,N)
+      val fx_eq_gx = mk_eq(mk_comb(f,x),mk_comb(g,x))
+      val ctm = mk_forall(x, mk_imp(x_eq_N,fx_eq_gx))
+      val th  = RIGHT_BETA(AP_THM(RIGHT_BETA(AP_THM literal_case_DEF f)) M)
+      val th1 = ASSUME MeqN
+      val th2 = MP (SPEC N (ASSUME ctm)) (REFL N)
+      val th3 = SUBS [SYM th1] th2
+      val th4 = TRANS (TRANS th th3) (MK_COMB (REFL g,th1))
+      val th5 = RIGHT_BETA(AP_THM(RIGHT_BETA(AP_THM literal_case_DEF g)) N)
+      val th6 = TRANS th4 (SYM th5)
+      val th7 = SUBS [SPECL [MeqN, ctm, concl th6] AND_IMP_INTRO]
+                     (DISCH MeqN (DISCH ctm th6))
+  in
+    GENL [f,g,M,N] th7
+  end;
+
+val _ = save_thm("literal_case_CONG", literal_case_CONG);
+
 
 (*---------------------------------------------------------------------------
          Support for parsing "case" expressions
