@@ -104,8 +104,9 @@ html1/DTD/xhtml1-strict.dtd">
 
 
   <li> <p> The XEmacs editor is now supported, in addition to Emacs,
-      by the <code>tools/hol98-mode.el</code> file of Emacs extensions.
-      </li>
+      by the <code>tools/hol98-mode.el</code> file of Emacs
+      extensions.</p>
+  </li>
 
 
   <li> <p> Case expressions may now include literals as patterns,
@@ -126,7 +127,7 @@ html1/DTD/xhtml1-strict.dtd">
       in the definition of recursive functions by <code>Define</code>.
       Thus they may be deeply nested within larger patterns.
       As before, in case of overlapping patterns, the earliest
-      listed pattern is matched.</p> 
+      listed pattern is matched.</p>
 
       <p>If the set of patterns specified is sparse, there may be new
       rows generated automatically to fill it out, and possibly some new
@@ -188,6 +189,50 @@ of relations that recurse under <code>EVERY</code>, as in this rule
       exact form that monotonicity theorems must take. </p>
 
       </li>
+
+
+  <li> <p>Types that are instances of abbreviation patterns (made with
+      <code>type_abbrev</code>) now print in abbreviated form by
+      default.  For example, if one writes</p>
+      <pre>
+         type_abbrev("set", ``:'a -> bool``);
+      </pre>
+
+      <p> Then, as before, one can write <code>``:num set``</code> and
+      have this understood by the type parser.  Now, in addition, when
+      types are printed, this is reversed, so that the following
+      works: </p>
+      <pre>
+         - type_of ``(UNION)``;
+         > val it = ``:'a set -> 'a set -> 'a set`` : hol_type
+      </pre>
+
+      <p> Unfortunately, with this particular example, one also
+      gets</p>
+      <pre>
+         - type_of ``(/\)``;
+         > val it = ``:bool -> bool set`` : hol_type
+      </pre>
+
+      <p> which is more confusing than it is illuminating.  For this
+      reason, it is possible to turn abbreviation printing off
+      globally (using a <code>trace</code> variable,
+      <code>print_tyabbrevs</code>), or on an
+      abbreviation-by-abbreviation basis.  The latter is done with the
+      function</p>
+
+      <pre>
+         disable_tyabbrev_printing : string -> unit
+      </pre>
+
+      <p> Calls to this function are made in the <code>pred_set</code>
+      and <code>bag</code> theories so that those theories&rsquo;
+      abbreviations (<code>set</code>, <code>bag</code> and
+      <code>multiset</code>) are not printed. </p>
+  </li>
+
+
+
 </ul>
 
 <h2 id="bugs-fixed">Bugs fixed:</h2>
@@ -245,19 +290,20 @@ of relations that recurse under <code>EVERY</code>, as in this rule
 
 <h2 id="new-examples">New examples:</h2>
 
-<li> <span id="acl2"><code>acl2</code></span><br> A deep embedding of
-the entire ACL2 logic in HOL has been defined via a theory
-<code>sexp</code> of S-expressions. All 78 ACL2 axioms have be
-verified in HOL.  A suite of tools is available to translate HOL
-datatypes into S-expressions and HOL functions to functions on
-S-expressions. Scripts are provided to print S-expressions defined
-inside HOL to defuns and defthms for processing by the ACL2 system,
-and for slurping ACL2 defuns and defthms into HOL. This work is a
-collaboration between Mike Gordon and James Reynolds at the University
-of Cambridge and Warren Hunt and Matt Kaufmann at the University of
-Texas. The goal is to provide a robust and scalable link between the
-HOL4 and ACL2 systems suitable for use on substantial industrial-scale
-verification projects. </ul>
+<ul>
+  <li id="acl2"> A deep embedding
+  of the entire ACL2 logic in HOL has been defined via a theory
+  <code>sexp</code> of S-expressions. All 78 ACL2 axioms have been
+  verified in HOL.  A suite of tools is available to translate HOL
+  datatypes into S-expressions and HOL functions to functions on
+  S-expressions. Scripts are provided to print S-expressions defined
+  inside HOL to defuns and defthms for processing by the ACL2 system,
+  and for slurping ACL2 defuns and defthms into HOL. This work is a
+  collaboration between Mike Gordon and James Reynolds at the
+  University of Cambridge and Warren Hunt and Matt Kaufmann at the
+  University of Texas. The goal is to provide a robust and scalable
+  link between the HOL4 and ACL2 systems suitable for use on
+  substantial industrial-scale verification projects. </li></ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
