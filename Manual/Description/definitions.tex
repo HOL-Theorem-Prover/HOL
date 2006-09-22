@@ -795,17 +795,18 @@ fun define_equivalence_type {name,equiv,defs,welldefs,old_thms} =
 
 
 \section{Case Expressions}\label{CaseExp}
+\index{case expressions|(}
 
 Within the HOL{} logic,
 case expressions provide a very compact and convenient notation
-for multi-way selection among the values of several expressions. 
+for multi-way selection among the values of several expressions.
 This is modeled on the case constructs in functional programming
 languages such as Standard ML.  Such case expressions can simplify
 the expression of complicated branches between different cases or
 combinations of cases.
 
 Based on the value of a test expression, a list of pattern expressions
-are considered in sequence to see if they match the test expression. 
+are considered in sequence to see if they match the test expression.
 The first pattern which successfully matches causes its associated result
 expression to be evaluated and its value yielded as the value of the
 entire case expression.  For example,
@@ -840,7 +841,7 @@ including \ml{num}, \ml{list}, and \ml{option}.
 
 HOL{} supports a rich structure of case expressions using a single
 notation.  The format is related to that of definitions of recursive
-functions, as described in Section \ref{TFL}.  In addition, case
+functions, as described in Section~\ref{TFL}.  In addition, case
 expressions may contain literals as patterns, either singly or as
 elements of deeply nested patterns.
 
@@ -854,7 +855,7 @@ can be used within the associated result expression for that pattern.
 
 In addition to the constructors of standard types in HOL{},
 constructor patterns may also be used for types created by use of the
-datatype definition facility described in Section \ref{sec:datatype},
+datatype definition facility described in Section~\ref{sec:datatype},
 including user-defined types.
 
 Whether or not the test expression is a type with constructors,
@@ -866,7 +867,7 @@ However, literals and constructors may not be mixed as alternatives of
 each other within the same case expression,
 except insofar as a particular pattern may be both a literal
 and also a (0-ary) constructor of its type, as for example \ml{0} (zero)
-is both a literal and a constructor of the type \ml{num}. 
+is both a literal and a constructor of the type \ml{num}.
 Here is an example of this kind of improper mixture.
 %
 \begin{hol}
@@ -924,10 +925,12 @@ automatically to fill it out, and possibly some new variables or the
 \end{verbatim}
 \end{hol}
 
-This is just a brief description of some of the 
+This is just a brief description of some of the
 expressive capabilities of the case expression with patterns.
-Many more examples of patterns are provided in Section \ref{TFL}
+Many more examples of patterns are provided in Section~\ref{TFL}
 on the definition of recursive functions.
+
+\index{case expressions|)}
 
 
 \section{Recursive Functions}\label{TFL}

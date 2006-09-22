@@ -63,6 +63,7 @@ which provides support for defining recursive functions.
 
 
 \section{Parsing and Prettyprinting}
+\label{sec:parsing-printing}
 
 Every type and term in \HOL{} is ultimately built by application of
 the primitive (abstract) constructors for types and terms. However, in
@@ -86,10 +87,69 @@ signified by a leading \ml{temp\_} in their names.
 
 \subsection{The type parser}
 
-There is little to say about the type parser. Infixes may be
-introduced with the function \ml{add\_infix\_type} (see \REFERENCE{}
-for more details).  The function \ml{type\_grammar} may be used to
-see the current grammar for types.
+The language of types is a simple one.  An abstract grammar for the
+language is presented in Figure~\ref{fig:abstract-type-grammar}.  The
+actual grammar (with concrete values for the infix symbols and type
+operators) can be inspected using the function \ml{type\_grammar}.
+\begin{figure}[tbhp]
+\newcommand{\nt}[1]{\mathit{#1}}
+\newcommand{\tok}[1]{\texttt{\bfseries #1}}
+\renewcommand{\bar}{\;\;|\;\;}
+\[
+\begin{array}{lcl}
+\tau &::=& \tau \odot \tau \bar \nt{vtype} \bar \nt{tyop} \bar
+           \tok{(} \;\nt{tylist}\;\tok{)} \;\nt{tyop}\bar \tau \;\nt{tyop}
+           \bar \tok{(}\;\tau\;\tok{)}\\
+\odot &::=& \tok{->} \bar \tok{\#} \bar \tok{+} \bar \cdots\\
+\nt{vtype} &::=& \tok{'a} \bar \tok{'b} \bar \tok{'c} \bar \cdots\\
+\nt{tylist} &::=& \tau \bar \tau \;\tok{,}\;\nt{tylist}\\
+\nt{tyop} &::=& \tok{bool} \bar \tok{list} \bar \tok{num} \bar
+           \tok{fun} \bar \cdots
+\end{array}
+\]
+\caption{An abstract grammar for \HOL{} types ($\tau$).  Infixes ($\odot$)
+  always bind more weakly than type operators ($\nt{tyop}$), so that
+  $\tau_1 \,\odot\, \tau_2 \,\nt{tyop}$ is always parsed as $\tau_1\, \odot\,
+  (\tau_2 \,\nt{tyop})$.  Different infixes can have different
+  priorities, and infixes at different priority levels can associate
+  differently (to the left, to the right, or not at all).  Users can
+  extend the categories $\odot$ and $\nt{tyop}$ by making new type
+  definitions, and by directly manipulating the grammar.}
+\label{fig:abstract-type-grammar}
+\end{figure}
+
+\paragraph{Type infixes}
+Infixes may be introduced with the function \ml{add\_infix\_type}.
+This sets up a mapping from an infix symbol (such as \texttt{->}) to
+the name of an existing type operator (such as \texttt{fun}).  The
+binary symbol needs to be given a precedence level and an
+associativity. See \REFERENCE{} for more details.
+
+\paragraph{Type abbreviations}
+\index{type abbreviations}
+
+Users can abbreviate common type patterns with \emph{abbreviations}.
+This is done with the \ML{} function \ml{type\_abbrev}:
+\begin{hol}
+\begin{verbatim}
+   type_abbrev : string * hol_type -> unit
+\end{verbatim}
+\end{hol}
+An abbreviation is a new type operator, of any number of arguments,
+that expands into an existing type.  For example, one might develop a
+light-weight theory of numbers extended with an infinity, where the
+represeting type was \holtxt{num option} (\holtxt{NONE} would
+represent the infinity value).  One might set up an abbreviation
+\holtxt{infnum} that expanded to this underlying type.
+
+Polymorphic patterns are supported as well.  For example, as described
+in Section~\ref{sec:theory-of-sets}, the abbreviation \holtxt{set}, of
+one argument, is such that \holtxt{:'a set} expands into the type
+\holtxt{:'a -> bool}, for any type \holtxt{:'a}.
+
+When types come to be printed, the expansion of abbreviations done by
+the parser is reversed.  For more information see the documentation of
+\ml{type\_abbrev} in the \REFERENCE.
 
 \subsection{The term parser}
 

@@ -483,8 +483,13 @@ the former have the form \holquote{\ml{:}~$\cdots$~} and the latter have
 the form \holquote{~$\cdots$~}.
 \index{quotation, in HOL logic@quotation, in \HOL{} logic|)}
 
+Section~\ref{sec:parsing-printing} has more detailed information about
+the capabilities of the term and type parsing and printing facilities
+in the system.  The remainder of this section provides a brief
+overview of what is possible.
 
-\paragraph {Type inference}
+
+\subsection{Type inference}
 \index{type inference!in HOL parser@in \HOL{} parser|(}
 %
 Notice that there is no explicit type information in
@@ -595,15 +600,16 @@ different binding strengths: \verb+#+ (with 70) binds stronger than
 \verb|+| (60), which  binds stronger than \verb+->+ (50). All postfix
 type operators (with 100) bind more strongly than the infixes.
 
-The next session shows the (abbreviated) output from invoking
-\verb+term_grammar+ in the startup \HOL{} environment. The deleted output
-includes a listing of  all constants known to the system,
-including prefix operators, along with all overloadings currrently in
-force. The portrayed grammar ranges from binding operators at very low (0) binding
-strength, through to function application (2000) and record selection
-(2500), which bind very tightly.
+The next session, in Figure~\ref{fig:term-grammar}, shows the
+(abbreviated) output from invoking the \ml{term\_grammar} function in
+the startup \HOL{} environment. The deleted output includes a listing
+of all constants known to the system, including prefix operators,
+along with all overloadings currrently in force. The portrayed grammar
+ranges from binding operators at very low (0) binding strength,
+through to function application (2000) and record selection (2500),
+which bind very tightly.
 
-
+\begin{figure}[htbp]
 \begin{session}
 \begin{verbatim}
 - term_grammar();
@@ -654,6 +660,9 @@ strength, through to function application (2000) and record selection
   : grammar
 \end{verbatim}
 \end{session}
+\caption{Result of a call to \ml{term\_grammar()}}
+\label{fig:term-grammar}
+\end{figure}
 
 \subsection{Namespace control}
 
