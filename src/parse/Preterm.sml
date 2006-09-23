@@ -599,7 +599,9 @@ fun remove_case_magic0 tm0 = let
                         GrammarSpecials.compile_pattern_match fake_eqns
                     val func = snd (dest_abs functional)
                     val (v,case_t0) = dest_abs func
-                    val case_t = mk_comb(rator case_t0, split_on_t)
+                    val case_t = if is_comb case_t0
+                                 then mk_comb(rator case_t0, split_on_t)
+                                 else subst [v |-> split_on_t] case_t0
                   in
                     Ch (list_mk_comb(case_t, tl (tl args)))
                   end
