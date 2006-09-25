@@ -334,7 +334,8 @@ local
    else ();
    tac g)
 in
-fun DEFINE_TERM_TAC g =
+fun 
+TERM_TAC g =
  (CONJ_TAC THENL
   [WF_TAC, CONV_TAC TC_SIMP_CONV THEN mesg ASM_ARITH_TAC]) g
 end;
@@ -354,7 +355,7 @@ fun proveTotal tac defn =
   end;
 
 local open Defn
-      val term_prover = proveTotal DEFINE_TERM_TAC
+      val term_prover = proveTotal TERM_TAC
       fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
       fun should_try_to_prove_termination defn rhs_frees =
          let val tcs = tcs_of defn
@@ -393,7 +394,6 @@ fun primDefine defn =
  end
 end;
 
-
 fun xDefine stem = Lib.try (#1 o primDefine o Defn.Hol_defn stem);
 
 
@@ -411,17 +411,72 @@ local fun msg alist invoc = String.concat
             handle HOL_ERR _ => (Lib.say (msg alist invoc); raise exn)
 in
 fun define q =
-   let val absyn0 = Parse.Absyn q
-       val locn = Absyn.locn_of_absyn absyn0
-       val (tm,names) = Defn.parse_defn absyn0
-       val bindstem = mk_bindstem (ERRloc "Define" locn "")
-            "xDefine <alphanumeric-stem> <eqns-quotation>" names
-   in
-       #1 (primDefine (Defn.mk_defn bindstem tm))
-       handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
-   end
+ let val absyn0 = Parse.Absyn q
+     val locn = Absyn.locn_of_absyn absyn0
+     val (tm,names) = Defn.parse_defn absyn0
+     val bindstem = mk_bindstem (ERRloc "Define" locn "")
+                   "Define <alphanumeric-stem> <eqns-quotation>" names
+ in
+    #1 (primDefine (Defn.mk_defn bindstem tm))
+    handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
+ end
 val Define = Lib.try define
 end;
+
+(*---------------------------------------------------------------------------*)
+(* API for Define                                                            *)
+(*---------------------------------------------------------------------------*)
+
+datatype phase 
+  = PARSE of term quotation
+  | BUILD of term
+  | TERMINATION of defn;
+
+type apidefn = (defn * thm option, phase * exn) Lib.verdict
+
+
+(*---------------------------------------------------------------------------*)
+(* Parse a quotation. Fail if parsing or type inference or overload          *)
+(* resolution (etc) fail. Also fail if a usable name for the definition      *)
+(* can't be found in the names of the function(s) under definition.          *)
+(*---------------------------------------------------------------------------*)
+
+local 
+ fun mesg slist = 
+   String.concat ("No alphanumeric identifiers in :" 
+                  :: Lib.commafy (map Lib.quote slist))
+in
+fun parse_defn_quote q =
+  let val (tm,names) = Defn.parse_defn (Parse.Absyn q)
+      val stem = Lib.first Lexis.ok_identifier names 
+                  handle HOL_ERR _ => 
+                  raise ERR "parse_quote" (mesg names)
+  in (stem,tm)
+  end
+end;
+
+fun tryR tac defn = proveTotal tac o Defn.set_reln defn;
+
+fun elimTCs guessR tac defn = 
+ case guessR defn 
+   of [] => (defn,NONE)   (* prim. rec. or non-rec. defn *)
+    | guesses => (I##SOME) (Lib.tryfind (tryR tac defn) guesses);
+ 
+fun apiDefine guessR tprover (stem,tm) = 
+  PASS tm ?> verdict (Defn.mk_defn stem) BUILD
+          ?> verdict (elimTCs guessR tprover) TERMINATION;
+
+fun silent f = 
+  Lib.with_flag(Lib.saying,false) 
+   (Lib.with_flag(Feedback.emit_WARNING,false)
+     (Lib.with_flag(Feedback.emit_MESG,false) f));
+
+fun apiDefineq guessR tprover q = 
+   PASS q ?> verdict (silent parse_defn_quote) PARSE
+          ?> apiDefine guessR tprover;
+
+val std_apiDefine = apiDefine guessR TERM_TAC;
+val std_apiDefineq = apiDefineq guessR TERM_TAC;
 
 (*---------------------------------------------------------------------------
     Special entrypoints for defining schemas

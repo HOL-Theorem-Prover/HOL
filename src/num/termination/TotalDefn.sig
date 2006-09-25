@@ -29,8 +29,21 @@ sig
    val primDefine    : defn -> thm * thm option * thm option
    val xDefine       : string -> term quotation -> thm
    val Define        : term quotation -> thm
-   val xDefineSchema : string -> term quotation -> thm
-   val DefineSchema  : term quotation -> thm
+
+   datatype phase 
+        = PARSE of term quotation
+        | BUILD of term
+        | TERMINATION of defn
+
+   type apidefn = (defn * thm option, phase * exn) Lib.verdict
+
+   val apiDefine    : (defn->term list) -> tactic -> string * term -> apidefn
+   val apiDefineq   : (defn->term list) -> tactic -> term quotation -> apidefn
+   val std_apiDefine  : string * term -> apidefn
+   val std_apiDefineq : term quotation -> apidefn
+
+   val xDefineSchema  : string -> term quotation -> thm
+   val DefineSchema   : term quotation -> thm
 
    val SUC_TO_NUMERAL_DEFN_CONV : conv
 
