@@ -4,9 +4,6 @@ struct
 open HolKernel Parse boolLib bossLib numLib
      arithmeticTheory factorialTheory;
 
-infix THEN THENC THENL;
-infix 8 by;
-
 val ARW = RW_TAC arith_ss;
 
 val _ = new_theory "divides";
@@ -38,7 +35,7 @@ val DIVIDES_SUB = store_thm("DIVIDES_SUB",
                         Term `!a b c. divides a b /\ divides a c ==> divides a (b-c)`,
                         PROVE_TAC[DIVIDES,RIGHT_SUB_DISTRIB]);
 
-(* Changed for Taupo 1 vs. Athabasca 2 
+(* Changed for Taupo 1 vs. Athabasca 2
    Original:
 val DIVIDES_LE = store_thm("DIVIDES_LE",
                         Term `!a b. 0<b /\ divides a b ==> a <= b`,
@@ -49,7 +46,7 @@ val DIVIDES_LE = store_thm("DIVIDES_LE",
 val DIVIDES_LE = store_thm("DIVIDES_LE",
                    Term `!a b. 0<b /\ divides a b ==> a <= b`,
                    Cases_on `a` THEN ARW[DIVIDES]
-                    THEN Cases_on `q` 
+                    THEN Cases_on `q`
                     THENL [PROVE_TAC [MULT_CLAUSES,prim_recTheory.LESS_REFL],
                            ARW[MULT_CLAUSES]]);
 
@@ -60,20 +57,21 @@ val NOT_LT_DIV = store_thm("NOT_LT_DIV",
 (* Changed for Taupo 1 *)
 val DIVIDES_ANTISYM = store_thm("DIVIDES_ANTISYM",
                         Term `!a b. divides a b /\ divides b a ==> (a = b)`,
-                        REPEAT Cases 
+                        REPEAT Cases
                           THEN TRY (ARW[DIVIDES] THEN NO_TAC)
                           THEN PROVE_TAC [LESS_EQUAL_ANTISYM,
                                     DIVIDES_LE,prim_recTheory.LESS_0]);
- 
+
 val DIVIDES_MULT = store_thm("DIVIDES_MULT",
                               Term `!a b c. divides a b ==> divides a (b*c)`,
                               PROVE_TAC[DIVIDES,MULT_SYM,MULT_ASSOC]);
 
 val DIVIDES_FACT = store_thm("DIVIDES_FACT",
                               Term `!b. 0<b ==> divides b (fact b)`,
-                              Cases_on `b` THEN ARW[fact_def] THEN PROVE_TAC [DIVIDES]);
+                              Cases_on `b` THEN ARW[fact_def] THEN
+                              PROVE_TAC [DIVIDES, MULT_COMM]);
 
-                        
+
 val _ = export_theory();
 
 end;
