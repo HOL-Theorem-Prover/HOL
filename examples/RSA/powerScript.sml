@@ -1,16 +1,13 @@
 structure powerScript =
 struct
 
-open HolKernel Parse boolLib 
+open HolKernel Parse boolLib
      Num_conv arithmeticTheory bossLib;
-
-infix THEN THENC THENL;
-infix 8 by;
 
 val _ = new_theory "power";
 
-val POWER = 
- Define 
+val POWER =
+ Define
     `(power x 0 = 1)
  /\  (power x (SUC n) = x * power x n)`;
 
@@ -29,7 +26,7 @@ val POWER_LT_0 = store_thm("POWER_LT_0",
 
 val LT_MULT_RIGHT = store_thm("LT_MULT_RIGHT",
                          Term `!x y. 0<y ==> x <= x*y`,
-                        Cases_on `y` THEN ARW[] 
+                        Cases_on `y` THEN ARW[]
                         THEN ONCE_REWRITE_TAC[MULT_SYM]
                         THEN ARW[MULT_CLAUSES]);
 
@@ -51,8 +48,9 @@ val POWER_LE_1 = store_thm("POWER_LE_1",
 
 val POWER_MULT = store_thm("POWER_MULT",
                         Term `!x n m. power x n * power x m = power x (n+m)`,
-                        Induct_on `n` 
-                         THEN ARW[POWER, ADD_CLAUSES, SYM (SPEC_ALL MULT_ASSOC)]);
+                        Induct_on `n`
+                         THEN RW_TAC std_ss [POWER, ADD_CLAUSES,
+                                             SYM (SPEC_ALL MULT_ASSOC)]);
 
 val POWER_POWER = store_thm("POWER_POWER",
                         Term `!x n m. power (power x n)  m = power x (n*m)`,
