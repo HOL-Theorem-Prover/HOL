@@ -53,6 +53,7 @@ fun can f x =
   (f x; true) handle Interrupt => raise Interrupt | _  => false;
 
 fun total f x = SOME (f x) handle Interrupt => raise Interrupt | _ => NONE;
+fun itotal f x = total f x handle _ => NONE;
 
 fun partial e f x =
    case f x
@@ -260,10 +261,12 @@ in
 end
 
 
-type 'a cmp       = 'a * 'a -> order
+type 'a cmp = 'a * 'a -> order
+
 fun flip_order LESS = GREATER
   | flip_order EQUAL = EQUAL
   | flip_order GREATER = LESS
+
 fun list_compare cfn =
  let fun comp ([],[]) = EQUAL
        | comp ([], _) = LESS
@@ -449,7 +452,9 @@ val string_to_int =
   partial (ERR "string_to_int" "not convertable")
           Int.fromString
 
-val say = TextIO.print;
+val saying = ref true;
+fun say s = if !saying then TextIO.print s else ();
+
 
 (*---------------------------------------------------------------------------
    quote puts double quotes around a string. mlquote does this as well,
@@ -632,5 +637,15 @@ fun deinitcomment0 ss n =
 fun deinitcommentss ss =                   deinitcomment0               ss  0
 fun deinitcomment   s  = Substring.string (deinitcomment0 (Substring.all s) 0)
 
+(*---------------------------------------------------------------------------*)
+(* Yet another variant of the sum type, used for the failure monad           *)
+(*---------------------------------------------------------------------------*)
+
+datatype ('a,'b) verdict = PASS of 'a | FAIL of 'b;
+
+fun verdict f c x = PASS (f x) handle e => FAIL (c x,e);
+
+fun ?>(PASS x,f) = f x
+  | ?>(FAIL y,f) = FAIL y;
 
 end (* Lib *)

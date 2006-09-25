@@ -172,6 +172,8 @@ val trace_list = ref ([]: trace_record list);
 
 fun find_record n = List.find (fn r => #name r = n) (!trace_list)
 
+val WARN = HOL_WARNING "Feedback";
+
 fun register_trace (nm, r, max) =
   if !r < 0 orelse max < 0 then
     raise ERR "register_trace" "Can't have trace values less than zero."
@@ -179,8 +181,8 @@ fun register_trace (nm, r, max) =
     case find_record nm of
       NONE   => trace_list := {name = nm, value = ref2trfp r,
                                default =  !r, maximum = max}::(!trace_list)
-    | SOME _ => raise ERR "register_trace"
-        ("Already a trace "^quote nm^" registered.");
+    | SOME _ => WARN "register_trace"
+        ("Already a trace "^quote nm^" registered. No action taken");
 
 fun register_ftrace (nm, (get,set), max) = let
   val default = get()
@@ -191,9 +193,8 @@ in
     case find_record nm of
       NONE => trace_list := {name = nm, value = TRFP{get = get, set = set},
                              default = default, maximum = max}::(!trace_list)
-    | SOME _ =>
-        raise ERR "register_ftrace"
-          ("Already a trace "^quote nm^" registered.")
+    | SOME _ => WARN "register_ftrace"
+                 ("Already a trace "^quote nm^" registered. No action taken")
 end
 
 fun register_btrace (nm, bref) =
@@ -203,8 +204,8 @@ fun register_btrace (nm, bref) =
                                         set= (fn i => bref := (i > 0))},
                            default = if !bref then 1 else 0,
                            maximum = 1}::(!trace_list)
-  | SOME _ =>
-      raise ERR "register_btrace" ("Already a trace "^quote nm^" registered.");
+  | SOME _ => WARN "register_btrace" 
+               ("Already a trace "^quote nm^" registered. No action taken");
 
 fun traces() =
   Listsort.sort (fn (r1, r2) => String.compare (#name r1, #name r2))

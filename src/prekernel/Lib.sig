@@ -21,6 +21,7 @@ sig
   val can           : ('a -> 'b) -> 'a -> bool
   val partial       : exn -> ('a -> 'b option) -> 'a -> 'b
   val total         : ('a -> 'b) -> 'a -> 'b option
+  val itotal        : ('a -> 'b) -> 'a -> 'b option
   val try           : ('a -> 'b) -> 'a -> 'b
   val trye          : ('a -> 'b) -> 'a -> 'b
   val assert        : ('a -> bool) -> 'a -> 'a
@@ -102,6 +103,7 @@ sig
   val words2        : string -> string -> string list
   val commafy       : string list -> string list
   val is_substring  : string -> string -> bool
+  val saying        : bool ref
   val say           : string -> unit
   val prime         : string -> string
   val unprime       : string -> string
@@ -132,4 +134,7 @@ sig
   val deinitcommentss : substring -> substring
   val deinitcomment : string -> string
 
+  datatype ('a,'b) verdict = PASS of 'a | FAIL of 'b
+  val verdict : ('a -> 'b) -> ('a -> 'c) -> 'a -> ('b, 'c*exn)verdict
+  val ?>      : ('a,'c)verdict * ('a -> ('b,'c)verdict) -> ('b,'c)verdict
 end
