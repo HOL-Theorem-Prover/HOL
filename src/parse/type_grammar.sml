@@ -353,10 +353,8 @@ fun disable_abbrev_printing s (arg as TYG(G,abbs,pmap)) =
         val ty = structure_to_type st
         val (pmap', (_,s')) = TypeNet.delete(pmap, ty)
       in
-        if s = s' then ()
-        else Feedback.HOL_WARNING "type_grammar" "disable_abbrev_printing"
-                                  "pmap and abbrevs not inverse";
-        TYG(G, abbs, pmap')
+        if s = s' then TYG(G, abbs, pmap')
+        else arg
       end handle Binarymap.NotFound => arg
 
 
