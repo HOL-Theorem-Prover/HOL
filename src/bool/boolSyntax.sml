@@ -39,10 +39,6 @@ val bool_case    = prim_mk_const {Name="bool_case",    Thy="bool"};
 val literal_case = prim_mk_const {Name="literal_case", Thy="bool"};
 val bounded_tm   = prim_mk_const {Name="BOUNDED",      Thy="bool"};
 
-val _ = Parse.overload_on("case", literal_case);
-
-
-
 (*---------------------------------------------------------------------------
           Derived syntax operations
  ---------------------------------------------------------------------------*)

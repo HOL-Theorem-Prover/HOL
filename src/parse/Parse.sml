@@ -1285,7 +1285,9 @@ in
   if not (null (!grm_updates)) andalso thyname <> oldname then
     HOL_WARNING "Parse" "setup_grammars"
                 ("\"new_theory\" is throwing away grammar changes for "^
-                 "theory "^oldname)
+                 "theory "^oldname^":\n"^
+                 String.concat (map (fn (s1, s2) => s1 ^ " - " ^ s2 ^ "\n")
+                                    (!grm_updates)))
   else ();
   grm_updates := [];
   adjoin_to_theory

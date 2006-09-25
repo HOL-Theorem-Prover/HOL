@@ -193,6 +193,7 @@ val literal_case_DEF =
    ("literal_case_DEF",  Term `literal_case = \(f:'a->'b) x. f x`);
 
 val _ = List.app add_const ["ARB", "bool_case", "literal_case"];
+val _ = overload_on ("case", ``bool$literal_case``);
 
 val IN_DEF =
  Definition.new_definition
