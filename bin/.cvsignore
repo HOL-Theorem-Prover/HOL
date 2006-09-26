@@ -2,6 +2,6 @@ Holmake
 build
 hol
 hol.bare
-hol.bare.unquote
-hol.unquote
+hol.bare.noquote
+hol.noquote
 unquote

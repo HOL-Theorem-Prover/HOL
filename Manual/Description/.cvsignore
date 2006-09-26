@@ -6,4 +6,6 @@ description.ps
 description.ind
 description.ilg
 description.pdf
+description.bbl
+description.blg
 .cvsignore
