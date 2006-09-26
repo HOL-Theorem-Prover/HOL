@@ -57,11 +57,31 @@ in
   (not (null expks), rest)
 end
 
-(* do self-tests? *)
+(* do self-tests? and to what level *)
 val (do_selftests, cmdline) = let
-  val (selftests, rest) = List.partition (fn e => e = "-selftest") cmdline
+  fun find_slftests (cmdline,counts,resulting_cmdline) =
+      case cmdline of
+        [] => (counts, List.rev resulting_cmdline)
+      | h::t => if h = "-selftest" then
+                  case t of
+                    [] => (1::counts, List.rev resulting_cmdline)
+                  | h'::t' => let
+                    in
+                      case Int.fromString h' of
+                        NONE => find_slftests (t, 1::counts,
+                                               resulting_cmdline)
+                      | SOME i => find_slftests (t', i::counts,
+                                                 resulting_cmdline)
+                    end
+                else find_slftests (t, counts, h::resulting_cmdline)
+  val (selftest_counts, new_cmdline) = find_slftests (cmdline, [], [])
 in
-  (not (null selftests), rest)
+  case selftest_counts of
+    [] => (0, new_cmdline)
+  | [h] => (h, new_cmdline)
+  | h::t => (warn ("** Ignoring all but last -selftest spec; result is \
+                   \selftest level "^Int.toString h^"\n");
+             (h, new_cmdline))
 end
 
 (* use a non-standard build sequence? *)
@@ -103,12 +123,21 @@ val SRCDIRS0 =
               in
                 if s = "" then read_file acc fstr
                 else let
-                    val dirname = fullPath [HOLDIR, s]
+                    fun extract_testcount (s,acc) =
+                        if String.sub(s,0) = #"!" then
+                          extract_testcount (String.extract(s,1,NONE), acc+1)
+                        else (s,acc)
+                    val (dirname0,testcount) = extract_testcount (s,0)
+                    val dirname = if Path.isAbsolute dirname0 then dirname0
+                                  else fullPath [HOLDIR, dirname0]
                     open FileSys
                   in if access (dirname, [A_READ, A_EXEC]) then
-                       if isDir dirname then read_file (s::acc) fstr
-                       else (warn ("** File "^s^" from build sequence is not "^
-                                   "a directory -- skipping it\n");
+                       if isDir dirname then
+                         read_file ((dirname,testcount)::acc) fstr
+                       else
+                         (warn ("** File "^dirname0^
+                                " from build sequence is not a directory \
+                                \-- skipping it\n");
                              read_file acc fstr)
                      else (warn ("** File "^s^" from build sequence does not "^
                                  "exist or is inacessible -- skipping it\n");
@@ -124,10 +153,10 @@ val SRCDIRS0 =
       end
 
 val SRCDIRS =
-    map (fn s => fullPath [HOLDIR, s])
-        ("src/portableML" :: "src/prekernel" ::
-         (if use_expk then "src/experimental-kernel"
-          else "src/0") :: SRCDIRS0)
+    map (fn s => (fullPath [HOLDIR, s], 0))
+        ["src/portableML", "src/prekernel",
+         if use_expk then "src/experimental-kernel"
+         else "src/0"] @ SRCDIRS0
 
 val SIGOBJ = fullPath [HOLDIR, "sigobj"];
 val HOLMAKE = fullPath [HOLDIR, "bin/Holmake"]
@@ -137,11 +166,11 @@ val SYSTEML = Systeml.systeml
 
 fun Holmake dir =
   if SYSTEML [HOLMAKE, "--qof"] = Process.success then
-    if do_selftests andalso
+    if do_selftests > 0 andalso
        FileSys.access("selftest.exe", [FileSys.A_EXEC])
     then
       (print "Performing self-test...\n";
-       if SYSTEML [dir ^ "/selftest.exe"] =
+       if SYSTEML [dir ^ "/selftest.exe", Int.toString do_selftests] =
           Process.success
        then
          print "Self-test was successful\n"
@@ -274,7 +303,10 @@ end;
            they come with external tools or C libraries.
  ---------------------------------------------------------------------------*)
 
-fun build_dir dir = let
+exception BuildExit
+fun build_dir (dir, regulardir) = let
+  val _ = if do_selftests >= regulardir then ()
+          else raise BuildExit
   val _ = FileSys.chDir dir
   val _ = print ("Working in directory "^dir^"\n")
 in
@@ -316,7 +348,8 @@ in
 end
 handle OS.SysErr(s, erropt) =>
        die ("OS error: "^s^" - "^
-            (case erropt of SOME s' => OS.errorMsg s' | _ => ""));
+            (case erropt of SOME s' => OS.errorMsg s' | _ => ""))
+     | BuildExit => ()
 
 
 (*---------------------------------------------------------------------------
@@ -326,13 +359,17 @@ handle OS.SysErr(s, erropt) =>
         files are transported.
  ---------------------------------------------------------------------------*)
 
-fun upload (src,target,symlink) =
-  (print ("Uploading files to "^target^"\n");
-   map_dir (transfer_file symlink target) src)
-        handle OS.SysErr(s, erropt) =>
-               die ("OS error: "^s^" - "^
-                    (case erropt of SOME s' => OS.errorMsg s'
-                                  | _ => ""));
+fun upload ((src, regulardir), target, symlink) =
+    if regulardir = 0 then
+      (print ("Uploading files to "^target^"\n");
+       map_dir (transfer_file symlink target) src)
+      handle OS.SysErr(s, erropt) =>
+             die ("OS error: "^s^" - "^
+                  (case erropt of SOME s' => OS.errorMsg s'
+                                | _ => ""))
+    else if do_selftests >= regulardir then
+      print ("Self-test directory "^src^" built successfully.\n")
+    else ()
 
 (*---------------------------------------------------------------------------
     For each element in SRCDIRS, build it, then upload it to SIGOBJ.
@@ -434,7 +471,10 @@ end
 fun build_help () =
  let val dir = Path.concat(Path.concat (HOLDIR,"help"),"src")
      val _ = FileSys.chDir dir
-     val _ = build_dir dir (* builds the documentation tools called below *)
+
+     (* builds the documentation tools called below *)
+     val _ = build_dir (dir, 0)
+
      val doc2html = fullPath [dir,"Doc2Html.exe"]
      val docpath  = fullPath [HOLDIR, "help", "Docfiles"]
      val htmlpath = fullPath [docpath, "HTML"]
@@ -558,11 +598,12 @@ fun cleanAlldir dir = ignore ([HOLMAKE, "cleanAll"] called_in dir)
 fun clean_dirs f =
     clean_sigobj() before
     (* clean both kernel directories, regardless of which was actually built,
-       and the help src directory too *)
+       the help src directory too, and all the src directories, including
+       those with ! annotations  *)
     List.app f (fullPath [HOLDIR, "help", "src"] ::
                 fullPath [HOLDIR, "src", "0"] ::
                 fullPath [HOLDIR, "src", "experimental-kernel"] ::
-                SRCDIRS);
+                map #1 SRCDIRS);
 
 fun errmsg s = TextIO.output(TextIO.stdErr, s ^ "\n");
 val help_mesg = "Usage: build\n\
@@ -579,6 +620,9 @@ val help_mesg = "Usage: build\n\
                 \   or: build help.\n\
                 \Add -expk to build an experimental kernel.\n\
                 \Add -selftest to do self-tests, where defined.\n\
+                \       Follow -selftest with a number to indicate level\n\
+                \       of testing, the higher the number the more testing\n\
+                \       will be done.\n\
                 \Add -seq <fname> to use fname as build-sequence\n";
 
 fun check_against s = let
@@ -610,9 +654,9 @@ val _ =
       []            => build_hol cp                (* no symbolic linking *)
     | ["-symlink"]  => build_hol (symlink_check()) (* w/ symbolic linking *)
     | ["-small"]    => build_hol mv                (* by renaming *)
-    | ["-dir",path] => buildDir cp path
+    | ["-dir",path] => buildDir cp (path, 0)
     | ["-dir",path,
-       "-symlink"]  => buildDir (symlink_check()) path
+       "-symlink"]  => buildDir (symlink_check()) (path, 0)
     | ["-clean"]    => clean_dirs cleandir
     | ["-cleanAll"] => clean_dirs cleanAlldir
     | ["clean"]     => clean_dirs cleandir

@@ -33,7 +33,11 @@ in
 end
 
 
-val progs = ["test_omega.exe", "test_coopers.exe"]
+val test_level = case CommandLine.arguments() of
+                   [] => 1
+                 | h::_ => valOf (Int.fromString h)
+val progs = if test_level > 1 then ["test_omega.exe", "test_coopers.exe"]
+            else ["test_omega.exe"]
 
 val _ = FileSys.chDir "testing"
         handle OS.SysErr _ => die "No testing directory"
