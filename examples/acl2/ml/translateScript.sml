@@ -22,6 +22,8 @@
 (*	19/09/2006:	Many new list definitions added, plus max/min and odd/even *)
 (*	21/09/2006:	Added quot/rem/sgn from integer using TRUNCATE and REM
 			Added typing judgements for the new acl2 functions *)
+(*	22/09/2006:	Definitions now checked one by one to avoid 'couldn't protect' error
+			String and character conversions implemented *)
 
 (*****************************************************************************)
 (* Load files for interactive sessions                                       *)
@@ -49,7 +51,7 @@ val acl2_executable = "acl2";
 
 open sexp sexpTheory arithmeticTheory fracTheory ratTheory integerTheory intLib 
      complex_rationalTheory intExtensionTheory
-     hol_defaxiomsTheory rich_listTheory listTheory translateLib logrootTheory;
+     hol_defaxiomsTheory rich_listTheory listTheory translateLib;
 
 (*****************************************************************************)
 (* Start new theory "translate"                                              *)
@@ -79,6 +81,8 @@ val bool_def = Define `(bool T = t) /\ (bool F = nil)`;
 (* Inverse to ``nat : num -> sexp``                                          *)
 (* Inverse to ``rat : rat -> sexp``                                          *)
 (* Inverse to ``bool : bool -> sexp``                                        *)
+(* Inverse to ``chr : char -> sexp``                                         *)
+(* Inverse to ``str : string -> sexp``                                       *)
 (*****************************************************************************)
 
 val sexp_to_com_def = 
@@ -98,6 +102,10 @@ val sexp_to_rat_def =
   `(sexp_to_rat (num (com a b)) = if |= rationalp (num (com a b)) then a else 0) /\ (sexp_to_rat _ = 0)`;
 
 val sexp_to_bool_def = Define `sexp_to_bool x = |= x`;
+
+val sexp_to_char_def = Define `(sexp_to_char (chr x) = x) /\ (sexp_to_char _ = #"a")`;
+
+val sexp_to_string_def = Define `(sexp_to_string (str x) = x) /\ (sexp_to_string _ = "a")`;
 
 (*****************************************************************************)
 (* Encoding and decoding pairs                                               *)
@@ -133,8 +141,6 @@ val listp_def = Define `(listp l (cons a b) = ite (l a) (listp l b) nil) /\ (lis
 
 val sexp_to_list_def = Define `(sexp_to_list f (cons x xs) = (f x)::(sexp_to_list f xs)) /\ (sexp_to_list f _ = [])`;
 
-
-
 (*****************************************************************************)
 (* RAT_CONG_TAC:                                                             *)
 (*                                                                           *)
@@ -149,7 +155,7 @@ val RAT_CONG_TAC =
 	REPEAT (POP_ASSUM MP_TAC) THEN
 	REPEAT (Q.PAT_ABBREV_TAC `x = rep_rat (abs_rat (abs_frac (a''''',b''''')))`) THEN
 	REPEAT (DISCH_TAC) THEN
-	EVERY_ASSUM (fn th => (ASSUME_TAC o REWRITE_RULE [RAT] o MATCH_MP (prove(``(a = b) ==> (abs_rat a = abs_rat b)``,RW_TAC std_ss []))) 
+	EVERY_ASSUM (fn th => (ASSUME_TAC o REWRITE_RULE [RAT] o AP_TERM ``abs_rat``)
 		(REWRITE_RULE [markerTheory.Abbrev_def] th) handle e => ALL_TAC) THEN
 	RULE_ASSUM_TAC (REWRITE_RULE [RAT_EQ]);
 
@@ -170,14 +176,12 @@ val int_mod_eq_thm = prove(``0 < b ==> ((Num (ABS a) MOD Num b = 0) = (a % b = 0
 	Q.EXISTS_TAC `~k` THEN
 	intLib.ARITH_TAC);
 
-val QUOTIENT_def = fst (snd (hd (DB.find("QUOTIENT_def"))));
-
-
-val  IS_INT_select = prove(``!a b. IS_INT (com a b) ==> (b = rat_0) /\ ?c. a = abs_rat (abs_frac(c,1))``,
-	RW_TAC std_ss [IS_INT_def,DIVIDES_def,rat_nmr_def,rat_dnm_def,FRAC_DNMPOS,INT_ABS_CALCULATE_POS,int_mod_eq_thm,INT_MOD_EQ0,INT_LT_IMP_NE] THEN
+val IS_INT_select = prove(``!a b. IS_INT (com a b) ==> (b = rat_0) /\ ?c. a = abs_rat (abs_frac(c,1))``,
+	RW_TAC std_ss [IS_INT_def,DIVIDES_def,rat_nmr_def,rat_dnm_def,FRAC_DNMPOS,
+		INT_ABS_CALCULATE_POS,int_mod_eq_thm,INT_MOD_EQ0,INT_LT_IMP_NE] THEN
 	Q.EXISTS_TAC `rat_nmr a / rat_dnm a` THEN
 	SUBGOAL_THEN ``?a'. a  = abs_rat a'`` (CHOOSE_THEN SUBST_ALL_TAC) THEN1
-		(Q.EXISTS_TAC `rep_rat a` THEN METIS_TAC [QUOTIENT_def,ratTheory.rat_def]) THEN
+		(Q.EXISTS_TAC `rep_rat a` THEN MATCH_ACCEPT_TAC (GSYM ratTheory.RAT)) THEN
 	RW_TAC int_ss [rat_nmr_def,rat_dnm_def,RAT_EQ,DNM,NMR,INT_LT_01,INT_DIV_RMUL,FRAC_DNMPOS,INT_LT_IMP_NE] THEN
 	SUBGOAL_THEN ``?c d. (a' = abs_frac (c,d)) /\ 0 < d`` STRIP_ASSUME_TAC THEN1
 		(Q.EXISTS_TAC `frac_nmr a'` THEN Q.EXISTS_TAC `frac_dnm a'` THEN REWRITE_TAC [FRAC,FRAC_DNMPOS]) THEN
@@ -185,8 +189,10 @@ val  IS_INT_select = prove(``!a b. IS_INT (com a b) ==> (b = rat_0) /\ ?c. a = a
 	RAT_CONG_TAC THEN
 	PAT_ASSUM ``0i < d`` (fn th => (RULE_ASSUM_TAC (SIMP_RULE std_ss [th,NMR,DNM]))) THEN
 	PAT_ASSUM ``frac_nmr a = b * c:int`` SUBST_ALL_TAC THEN
-	`k * frac_dnm x * d = (k * d) * frac_dnm x` by (CONV_TAC (AC_CONV (INT_MUL_ASSOC,INT_MUL_COMM))) THEN
-	METIS_TAC [INT_EQ_RMUL,FRAC_DNMPOS,INT_LT_IMP_NE]);
+	RULE_ASSUM_TAC (ONCE_REWRITE_RULE [
+		CONV_RULE bool_EQ_CONV (AC_CONV(INT_MUL_ASSOC,INT_MUL_COMM) ``a * b * c = (a * c) * b:int``)]) THEN
+	IMP_RES_TAC (fst (EQ_IMP_RULE (SPEC_ALL INT_EQ_RMUL))) THEN
+	MP_TAC (SPEC ``x:frac`` FRAC_DNMPOS) THEN ASM_REWRITE_TAC [INT_LT_REFL]);
 
 val IS_INT_eq = prove(``!a. IS_INT (com (abs_rat (abs_frac(a,1))) rat_0)``,
 	RW_TAC std_ss [IS_INT_def,DIVIDES_def,rat_nmr_def,rat_dnm_def,FRAC_DNMPOS,INT_ABS_CALCULATE_POS,int_mod_eq_thm,INT_LT_IMP_NE] THEN
@@ -206,16 +212,26 @@ val NAT_CONG = prove(``!a b. (nat a = nat b) = (a = b)``,
 val INT_CONG = prove(``!a b. (int a = int b) = (a = b)``,
 	RW_TAC intLib.int_ss [nat_def,int_def,cpx_def,sexpTheory.rat_def,ratTheory.RAT_EQ,fracTheory.NMR,fracTheory.DNM]);
 
-val BOOL_CONG = prove(``!a b. (bool a = bool b) = (a = b)``,Cases THEN Cases THEN RW_TAC std_ss [bool_def,nil_def,t_def]);
+val BOOL_CONG = prove(``!a b. (bool a = bool b) = (a = b)``,
+	REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN TRY AP_TERM_TAC THEN 
+	Cases_on `a` THEN Cases_on `b` THEN POP_ASSUM MP_TAC THEN RW_TAC std_ss [bool_def,nil_def,t_def]);
 
 (*****************************************************************************)
 (* Make sure all 'p' functions operate on |= instead of nil or t             *)
 (*****************************************************************************)
 
+val nil_t = CONV_RULE bool_EQ_CONV (EVAL ``~(nil = t)``);
+val true_t = CONV_RULE bool_EQ_CONV (EVAL ``|= t``);
+val false_f = CONV_RULE bool_EQ_CONV (EVAL ``~(|= nil)``);
+val nil_nil = prove(``(x = nil) = ~|= x``,EQ_TAC THEN RW_TAC std_ss [false_f] THEN 
+			REPEAT (POP_ASSUM MP_TAC THEN RW_TAC std_ss [ACL2_TRUE_def,ite_def,equal_def,nil_t]));
+
 val TRUTH_REWRITES = save_thm("TRUTH_REWRITES",LIST_CONJ 
-	(map (fn x => prove(x,RW_TAC std_ss [nil_def,t_def,ite_def,ACL2_TRUE_def,equal_def,consp_def,bool_def] THEN TRY (Cases_on `a`) THEN 
-				REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [nil_def,t_def,ite_def,ACL2_TRUE_def,equal_def,consp_def,bool_def]))
-		[``~(nil = t)``,``(|= (if a then b else c)) = a /\ (|= b) \/ ~a /\ |= c``,``(consp nil = nil)``,``ite nil a b = b``,``ite t a b = a``,
+	(map (fn x => prove(x,	TRY (Cases_on `a`) THEN 
+				RW_TAC std_ss [ite_def,nil_t,true_t,false_f,bool_def,consp_def,
+					AP_TERM ``consp`` nil_def,nil_nil]))
+		[``~(nil = t)``,``(|= (if a then b else c)) = a /\ (|= b) \/ ~a /\ |= c``,
+		``(consp nil = nil)``,``ite nil a b = b``,``ite t a b = a``,
 		``(x = nil) = ~(|= x)``,``~(x = nil) = (|= x)``,``|= t``,``~(|= nil)``,``(|= bool a) = a``]));
 
 val ANDL_JUDGEMENT = prove(``(|= andl []) /\ !a b. (|= a) /\ (|= andl b) ==> (|= andl (a::b))``,
@@ -248,6 +264,10 @@ val PAIRP_PAIR = store_thm("PAIRP_PAIR",``(!a. |= p1 (f1 a)) /\ (!a.|= p2 (f2 a)
 val LISTP_LIST = store_thm("LISTP_LIST",``(!a. |= p (f a)) ==> !a. |= listp p (list f a)``,
 	STRIP_TAC THEN Induct THEN FULL_SIMP_TAC std_ss [listp_def,list_def,TRUTH_REWRITES,nil_def,equal_def,ite_def] THEN
 	RW_TAC std_ss [ACL2_TRUE_def,t_def,equal_def,ite_def,nil_def]);
+
+val CHARACTERP_CHAR = store_thm("CHARACTERP_CHAR",``!a. |= characterp (chr a)``,RW_TAC std_ss [characterp_def,TRUTH_REWRITES]);
+
+val STRINGP_STRING = store_thm("STRINGP_STRING",``!a. |= stringp (str a)``,RW_TAC std_ss [stringp_def,TRUTH_REWRITES]);
 
 val TYPE_ITE = store_thm("TYPE_ITE",``((|= P) ==> (|= p a)) /\ (~(|= P) ==> (|= p b)) ==> |= p (ite P a b)``,
  	Cases_on `|= P` THEN RW_TAC std_ss [ite_def,TRUTH_REWRITES]);
@@ -285,6 +305,10 @@ val SEXP_TO_LIST_OF_LIST = store_thm("SEXP_TO_LIST_OF_LIST",``(!p. (f' (f p) = p
 
 val SEXP_TO_BOOL_OF_BOOL = store_thm("SEXP_TO_BOOL_OF_BOOL",``!a. sexp_to_bool (bool a) = a``,Cases THEN RW_TAC std_ss [bool_def,sexp_to_bool_def,TRUTH_REWRITES]);
 
+val SEXP_TO_CHAR_OF_CHAR = store_thm("SEXP_TO_CHAR_OF_CHAR",``!a. sexp_to_char (chr a) = a``,RW_TAC std_ss [sexp_to_char_def]);
+
+val SEXP_TO_STRING_OF_STRING = store_thm("SEXP_TO_STRING_OF_STRING",``!a. sexp_to_string (str a) = a``,RW_TAC std_ss [sexp_to_string_def]);
+
 (*****************************************************************************)
 (* Decode then encode proofs                                                 *)
 (*****************************************************************************)
@@ -312,6 +336,11 @@ val RAT_OF_SEXP_TO_RAT = store_thm("RAT_OF_SEXP_TO_RAT",``!a. (|= rationalp a) =
 val NUM_OF_SEXP_TO_COM = store_thm("NUM_OF_SEXP_TO_COM",``!a. (|= acl2_numberp a) ==> (num (sexp_to_com a) = a)``,
 	Cases_on `a` THEN RW_TAC std_ss [acl2_numberp_def,TRUTH_REWRITES,sexp_to_com_def]);
 
+val CHAR_OF_SEXP_TO_CHAR = store_thm("CHAR_OF_SEXP_TO_CHAR",``!a. (|= characterp a) ==> (chr (sexp_to_char a) = a)``,
+	Cases THEN RW_TAC std_ss [characterp_def,TRUTH_REWRITES,sexp_to_char_def]);
+
+val STRING_OF_SEXP_TO_STRING = store_thm("STRING_OF_SEXP_TO_STRING",``!a. (|= stringp a) ==> (str (sexp_to_string a) = a)``,
+	Cases THEN RW_TAC std_ss [stringp_def,TRUTH_REWRITES,sexp_to_string_def]);
 
 val CHOOSEP_TAC = translateLib.CHOOSEP_TAC [BOOL_OF_SEXP_TO_BOOL,INT_OF_SEXP_TO_INT,NAT_OF_SEXP_TO_NAT,RAT_OF_SEXP_TO_RAT,NUM_OF_SEXP_TO_COM];
 
@@ -336,7 +365,9 @@ val LABEL_EQ = store_thm("LABEL_EQ",``pairp (equal (nat x)) Y (cons (nat y) Z) =
 val BOOLEANP_EQUAL = prove(``!a b. |= booleanp (equal a b)``,RW_TAC std_ss [equal_def,booleanp_def,ite_def,TRUTH_REWRITES]);
 
 val BOOLEANP_LESS = prove(``!a b. |= booleanp (less a b)``,
-	Cases THEN Cases THEN TRY (Cases_on `c`) THEN TRY (Cases_on `c'`) THEN RW_TAC std_ss [less_def,booleanp_def,ite_def,TRUTH_REWRITES,equal_def]);
+	REWRITE_TAC [booleanp_def,ite_def,equal_def,TRUTH_REWRITES] THEN
+	Cases THEN Cases THEN TRY (Cases_on `c`) THEN TRY (Cases_on `c'`) THEN RW_TAC std_ss [less_def,TRUTH_REWRITES]);
+
 
 val BOOLEANP_NOT = prove(``!a. |= booleanp (not a)``,
 	RW_TAC std_ss [booleanp_def,equal_def,ite_def,TRUTH_REWRITES,not_def]);
@@ -512,7 +543,7 @@ val NATP_UMINUS_ADD = prove(``!a. (|= natp a) ==> (add (add a (unary_minus (nat 
 	REPEAT (POP_ASSUM MP_TAC) THEN
 	RW_TAC std_ss [natp_def,nat_def,GSYM INT_ADD,GSYM INT_UNARY_MINUS,ite_def,TRUTH_REWRITES,GSYM INT_LT,GSYM INT_EQUAL,GSYM int_sub,integerTheory.INT_SUB,
 		ARITH_PROVE ``~(& a = 0i) ==> 1n <= a``,NUM_OF_INT] THEN
-	MATCH_MP_TAC (prove(``(a = b) ==> (int a = int b)``,RW_TAC std_ss [])) THEN ARITH_TAC);
+	AP_TERM_TAC THEN ARITH_TAC);
 
 (*****************************************************************************)
 (* Rational theorems:                                                        *)
@@ -657,7 +688,7 @@ val LISTP_CONS_HT = prove(``!x. (|= listp l x) ==> (?a b. x = cons a b) ==> |= l
 	Induct THEN RW_TAC std_ss [listp_def,cdr_def,equal_def,ite_def,nil_def,car_def,TRUTH_REWRITES]);
 
 val LISTP_CONS = prove(``!a b. (|= l a) /\ (|= listp l b) ==> (|= listp l (cons a b))``,
-	GEN_TAC THEN Induct THEN RW_TAC std_ss [listp_def,cdr_def,equal_def,ite_def,nil_def,car_def]);
+	RW_TAC std_ss [listp_def,ite_def,TRUTH_REWRITES]);
 
 val LISTP_NIL = prove(``|= listp f nil``,RW_TAC std_ss [listp_def,TRUTH_REWRITES,equal_def,ite_def,nil_def]);
 
@@ -666,6 +697,34 @@ val LIST_HD = prove(``~(l = []) ==> (encode (HD l) = car (list encode l))``,
 
 val LIST_TL = prove(``~(l = []) ==> (list encode (TL l) = cdr (list encode l))``,
 	Induct_on `l` THEN RW_TAC std_ss [list_def,TL,cdr_def]);
+
+val LIST_LENGTH = prove(``nat (LENGTH l) = len (list f l)``,
+	Induct_on `l` THEN ONCE_REWRITE_TAC [len_def] THEN 
+	RW_TAC std_ss [LENGTH,list_def,consp_def,ite_def,TRUTH_REWRITES,NAT_SUC,cdr_def] THEN
+	POP_ASSUM (SUBST_ALL_TAC o GSYM) THEN
+	RW_TAC arith_ss [GSYM NAT_ADD]);
+
+(*****************************************************************************)
+(* String theorems:                                                          *)
+(*****************************************************************************)
+
+val list_rewrite = prove(``list_to_sexp = list``,REWRITE_TAC [FUN_EQ_THM] THEN GEN_TAC THEN Induct THEN METIS_TAC [list_def,list_to_sexp_def]);
+
+val STRING_JUDGEMENT = store_thm("STRING_JUDGEMENT",``!a. (|= stringp a) ==> (|= listp characterp (coerce a (sym "COMMON-LISP" "LIST")))``,
+	Cases THEN RW_TAC std_ss [stringp_def,coerce_def,LISTP_NIL,TRUTH_REWRITES,coerce_string_to_list_def,list_rewrite,LISTP_LIST,CHARACTERP_CHAR]);
+
+val STRING_EXPLODE = prove(``list chr (EXPLODE s) = coerce (str s) (sym "COMMON-LISP" "LIST")``,
+	RW_TAC std_ss [coerce_def,coerce_string_to_list_def,list_rewrite]);
+
+val STRING_IMPLODE = prove(``str (IMPLODE l) = coerce (list chr l) (sym "COMMON-LISP" "STRING")``,
+	Induct_on `l` THEN RW_TAC std_ss [coerce_def,coerce_list_to_string_def,list_rewrite,list_def,nil_def,stringTheory.IMPLODE_EQNS,make_character_list_def] THEN
+	Cases_on `list chr l` THEN REPEAT (POP_ASSUM MP_TAC) THEN Cases_on `l` THEN RW_TAC std_ss [coerce_def,list_def,nil_def,stringTheory.IMPLODE_EQNS,make_character_list_def,coerce_list_to_string_def]);
+
+val coerce_rewrite = CONJ (GSYM STRING_EXPLODE) (GSYM STRING_IMPLODE);
+
+val STRING_LENGTH = prove(``nat (STRLEN s) = length (str s)``,
+	RW_TAC std_ss [stringp_def,ite_def,TRUTH_REWRITES,length_def,coerce_def,coerce_string_to_list_def,
+			stringTheory.STRLEN_THM,LIST_LENGTH,list_rewrite,csym_def,COMMON_LISP_def]);
 
 (*****************************************************************************)
 (* Case theorems                                                             *)
@@ -689,15 +748,26 @@ val LIST_CASE = store_thm("LIST_CASE",``(!x. decode_'a (encode_'a x) = x) ==>
 val BOOL_CASE = store_thm("BOOL_CASE",``!a. encode (case a of T -> A || F -> B) = ite (bool a) (encode A) (encode B)``,
 		Cases THEN RW_TAC std_ss [bool_def,TRUTH_REWRITES]);
 
+val uncoerce = prove(``sexp_to_string (coerce (list chr (EXPLODE s)) (sym "COMMON-LISTP" "STRING")) = s``,
+	Induct_on `s` THEN RW_TAC std_ss [coerce_def,list_def,stringTheory.EXPLODE_EQNS,nil_def,SEXP_TO_STRING_OF_STRING,make_character_list_def,coerce_list_to_string_def] THEN
+	Cases_on `(list chr (EXPLODE s))` THEN REPEAT (POP_ASSUM MP_TAC) THEN 
+	RW_TAC std_ss [coerce_def,SEXP_TO_STRING_OF_STRING] THEN FULL_SIMP_TAC std_ss [stringTheory.EXPLODE_EQNS,list_def,nil_def,sexp_11,sexp_distinct,make_character_list_def,coerce_list_to_string_def]);
+
+val STRING_CASE = store_thm("STRING_CASE",``encode (case s of "" -> X || STRING c s -> Y c s) = 
+			ite (equal (str s) (str "")) (encode X) 
+				(encode (Y (sexp_to_char (car (coerce (str s) (sym "COMMON-LISP" "LIST")))) 
+					(sexp_to_string (coerce (cdr (coerce (str s) (sym "COMMON-LISP" "LIST"))) (sym "COMMON-LISTP" "STRING")))))``,
+	Cases_on `s` THEN RW_TAC std_ss [equal_def,ite_def,coerce_def,coerce_string_to_list_def,list_rewrite,stringTheory.EXPLODE_EQNS,list_def,car_def,cdr_def,TRUTH_REWRITES,SEXP_TO_CHAR_OF_CHAR,uncoerce]);
+
 (*****************************************************************************)
 (* Flat theorems                                                             *)
 (*****************************************************************************)
 
 val LISTP_FLAT = store_thm("LISTP_FLAT",``listp p x = ite (equal x nil) t (andl [consp x; p (car x); listp p (cdr x)])``,
-	completeInduct_on `sexp_size x` THEN
-	REPEAT STRIP_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
-	Cases_on `x` THEN RW_TAC std_ss [listp_def,equal_def,ite_def,consp_def,andl_def,cdr_def,TRUTH_REWRITES,car_def] THEN TRY (METIS_TAC []) THEN
-	PAT_ASSUM ``~|= cons a b`` MP_TAC THEN RW_TAC std_ss [ACL2_TRUE_def,equal_def,ite_def,t_def,nil_def]);
+	`!a b. |= cons a b` by RW_TAC std_ss [ACL2_TRUE_def,equal_def,ite_def,nil_def] THEN
+	Cases_on `x` THEN GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) bool_rewrites [listp_def] THEN
+	RW_TAC std_ss [equal_def,ite_def,TRUTH_REWRITES,car_def,consp_def,cdr_def,andl_def] THEN
+	FULL_SIMP_TAC std_ss []);
 
 val PAIRP_FLAT = store_thm("PAIRP_FLAT",``!x. pairp f g x = andl [consp x; f (car x); g (cdr x)]``,
 	Cases THEN RW_TAC std_ss [pairp_def,andl_def,consp_def,car_def,cdr_def,ite_def,TRUTH_REWRITES]);
@@ -744,16 +814,17 @@ val NAT_GE = prove(``bool (a >= b) = bool (b <= a:num)``,AP_TERM_TAC THEN DECIDE
 val INT_GE = prove(``bool (a >= b) = bool (b <= a:int)``,AP_TERM_TAC THEN ARITH_TAC);
 val RAT_GE = prove(``bool (a >= b) = bool (b <= a:rat)``,REWRITE_TAC [rat_geq_def]);
 val COM_GE = prove(``bool (a >= b) = bool (b <= a:complex_rational)``,
-	Cases_on `a` THEN Cases_on `b` THEN REWRITE_TAC [COMPLEX_LE_def,COMPLEX_GE_def,rat_geq_def,rat_gre_def] THEN AP_TERM_TAC THEN PROVE_TAC []);
-
+	AP_TERM_TAC THEN Cases_on `a` THEN Cases_on `b` THEN 
+	REWRITE_TAC [COMPLEX_LE_def,COMPLEX_GE_def,rat_gre_def,rat_geq_def] THEN 
+	EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []);
 
 val NAT_GT = prove(``bool (a > b) = bool (b < a:num)``,AP_TERM_TAC THEN DECIDE_TAC);
 val INT_GT = prove(``bool (a > b) = bool (b < a:int)``,AP_TERM_TAC THEN ARITH_TAC);
 val RAT_GT = prove(``bool (a > b) = bool (b < a:rat)``,REWRITE_TAC [rat_gre_def]);
 val COM_GT = prove(``bool (a > b) = bool (b < a:complex_rational)``,
-	Cases_on `a` THEN Cases_on `b` THEN REWRITE_TAC [COMPLEX_LT_def,COMPLEX_GT_def,rat_geq_def,rat_gre_def] THEN AP_TERM_TAC THEN PROVE_TAC []);
-
-
+	AP_TERM_TAC THEN Cases_on `a` THEN Cases_on `b` THEN 
+	REWRITE_TAC [COMPLEX_LT_def,COMPLEX_GT_def,rat_gre_def,rat_geq_def] THEN 
+	EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []);
 
 (*****************************************************************************)
 (* Subtraction theorems:                                                     *)
@@ -1018,15 +1089,15 @@ val reduced_dnm_pos = prove(``0 < reduced_dnm x``,
 	FULL_SIMP_TAC arith_ss [num_nz,gcdTheory.GCD_EQ_0,DECIDE ``~(0 < a) = (a = 0n)``,FRAC_DNMPOS,X_LT_DIV,gcd_less_eq,DECIDE ``~(a = 0n) ==> 0 < a``]);
 
 val rat_of_int_div_pos1 = prove(``0 < b /\ 0 <= a ==> (rat_of_int a / rat_of_int b = abs_rat (abs_frac (a,b)))``,
-	RW_TAC int_ss [rat_ainv_def,frac_ainv_def,rat_div_def,rat_of_int_def,frac_div_def,frac_mul_def,frac_minv_def,RAT_OF_NUM_CALCULATE,ratTheory.RAT_EQ,DNM,NMR] THEN
-	RAT_CONG_TAC THEN
-	`!a. 0 < ABS (& (Num (ABS b)) * frac_dnm a)` by 
-		RW_TAC int_ss [FRAC_DNMPOS,INT_ABS_CALCULATE_POS,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_LT_IMP_LE,INT_MUL_POS_SIGN] THEN
-	FULL_SIMP_TAC int_ss [NMR,DNM,INT_LT_01,INT_MUL_POS_SIGN,frac_sgn_def] THEN
-	RW_TAC std_ss [FRAC_DNMPOS,INT_MUL_POS_SIGN,NMR,DNM] THEN
-	RW_TAC int_ss [INT_ABS,SGN_def,FRAC_DNMPOS,INT_LT_IMP_NE,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM))] THEN 
-	TRY (PAT_ASSUM ``!a.P`` (K ARITH_TAC)) THEN
-	METIS_TAC [num_nz]);
+	REPEAT STRIP_TAC THEN
+	`~(& (Num (ABS b)) = 0i)` by 
+		(RW_TAC int_ss [INT_ABS] THEN FIRST [ARITH_TAC,METIS_TAC [INT_OF_NUM,INT_LT_IMP_LE,INT_LT_IMP_NE]]) THEN
+	`~(frac_nmr (abs_frac (& (Num (ABS b)),1)) = 0)` by RW_TAC int_ss [NMR] THEN
+	RW_TAC int_ss [rat_of_int_def,RAT_DIV_CALCULATE,RAT_EQ_CALCULATE,RAT_OF_NUM_CALCULATE,
+		FRAC_DIV_CALCULATE,NMR,DNM,SGN_def] THEN
+	`(& (Num (ABS a)) = a) /\ (& (Num (ABS b)) = b)` by 
+		(RW_TAC int_ss [INT_OF_NUM,INT_LT_IMP_LE,INT_ABS] THEN ARITH_TAC) THEN
+	ASM_REWRITE_TAC [] THEN RW_TAC int_ss [NMR,DNM,INT_ABS] THEN ARITH_TAC);
 
 val rat_of_int_neg = 
  store_thm
@@ -1055,12 +1126,13 @@ val rat_of_int_div_neg =
 
 open dividesTheory gcdTheory;
 
-val coprime_equal = prove(``(gcd a d = 1) /\ (gcd b c = 1) /\ (a * b = c * d) ==> (a = c) /\ (b = d)``,
-	REPEAT STRIP_TAC THEN
-	FIRST_ASSUM (STRIP_ASSUME_TAC o MATCH_MP (prove(``(a * b = c) ==> divides a c /\ divides b c``,METIS_TAC [divides_def,MULT_COMM]))) THEN
-	FIRST_ASSUM (STRIP_ASSUME_TAC o MATCH_MP (prove(``(a * b = c) ==> divides a c /\ divides b c``,METIS_TAC [divides_def,MULT_COMM])) o GSYM) THEN
-	METIS_TAC [L_EUCLIDES,GCD_SYM,MULT_COMM,DIVIDES_ANTISYM]);
+val both_divides = prove(``(a * b = c) ==> divides a c /\ divides b c``,METIS_TAC [divides_def,MULT_COMM]);
 
+val coprime_equal = prove(``(gcd a d = 1) /\ (gcd b c = 1) /\ (a * b = c * d) ==> (a = c) /\ (b = d)``,
+	DISCH_TAC THEN POP_ASSUM STRIP_ASSUME_TAC THEN
+	FIRST_ASSUM (STRIP_ASSUME_TAC o MATCH_MP both_divides) THEN
+	FIRST_ASSUM (STRIP_ASSUME_TAC o MATCH_MP both_divides o GSYM) THEN
+	METIS_TAC [L_EUCLIDES,GCD_SYM,MULT_COMM,DIVIDES_ANTISYM]);
 
 val num_abs_nz = prove(``0 < b \/ ~(b = 0) ==> ~(Num (ABS b) = 0)``,
 	DISCH_TAC THEN ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] THEN
@@ -1470,19 +1542,8 @@ val LISTP_APPEND = prove(``!x y. (|= listp f x) /\ (|= listp f y) ==> |= listp f
 	Induct_on `x` THEN ONCE_REWRITE_TAC [acl2_append_def] THEN 
 	RW_TAC std_ss [consp_def,ite_def,TRUTH_REWRITES,car_def,cdr_def,listp_def]);
 
-
-
-
-val LIST_LENGTH = prove(``nat (LENGTH l) = len (list f l)``,
-	Induct_on `l` THEN ONCE_REWRITE_TAC [len_def] THEN 
-	RW_TAC std_ss [LENGTH,list_def,consp_def,ite_def,TRUTH_REWRITES,NAT_SUC,cdr_def] THEN
-	POP_ASSUM (SUBST_ALL_TAC o GSYM) THEN
-	RW_TAC arith_ss [GSYM NAT_ADD]);
-
 val NATP_LEN = prove(``!x. |= natp (len x)``,
 	Induct THEN ONCE_REWRITE_TAC [len_def] THEN RW_TAC std_ss [ite_def,consp_def,NATP_NAT,car_def,cdr_def,NATP_ADD]);
-
-
 
 val (acl2_revappend_def,acl2_revappend_ind) = 
 	(PURE_REWRITE_RULE [GSYM ite_def] ## I)
@@ -1895,6 +1956,48 @@ val LISTP_PAIRLIST = prove(``!x y. (|= equal (len x) (len y)) /\ (|= listp f x) 
 	ASSUME_TAC (SPEC ``s0:sexp`` NATP_LEN) THEN CHOOSEP_TAC THEN 
 	RW_TAC arith_ss [NATP_NAT,GSYM NAT_ADD,NAT_CONG,GSYM nat_def,equal_def,TRUTH_REWRITES]);
 
+(*****************************************************************************)
+(* String theorems: string-append                                            *)
+(*****************************************************************************)
+
+val acl2_strcat_def = acl2Define "ACL2::STRING-APPEND" `acl2_strcat s1 s2 = coerce (acl2_append (coerce s1 (sym "COMMON-LISP" "LIST")) (coerce s2 (sym "COMMON-LISP" "LIST"))) (sym "COMMON-LISP" "STRING")`;
+
+val STRING_STRCAT = prove(``str (STRCAT s1 s2) = acl2_strcat (str s1) (str s2)``,
+	RW_TAC std_ss [acl2_strcat_def,coerce_rewrite,GSYM LIST_APPEND,stringTheory.STRCAT]);
+
+val list_chr_cong = prove(``(list chr a = list chr b) = (a = b)``,
+	measureInduct_on `LENGTH (a ++ b)` THEN Cases THEN Cases THEN
+	RW_TAC std_ss [list_def,APPEND,nil_def] THEN
+	POP_ASSUM (STRIP_ASSUME_TAC o SPEC (listSyntax.mk_append(mk_var("t",``:char list``),``t':char list``))) THEN
+	FULL_SIMP_TAC arith_ss [LENGTH,LENGTH_APPEND]);
+
+val length_lemma1 = prove(``!a b c. LENGTH a < LENGTH b ==> ~(a = b ++ c)``,
+	Induct_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [LENGTH,APPEND]);
+
+val length_lemma2 = prove(``!a b c. ~(a = FIRSTN (LENGTH a) b) ==> ~(b = a ++ c)``,
+	Induct_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [LENGTH,APPEND,rich_listTheory.FIRSTN] THEN METIS_TAC []);
+
+val STRING_PREFIX = prove(``bool (isPREFIX s1 s2) = ite (not (less (length (str s2)) (length (str s1))))
+							(equal (coerce (str s1) (sym "COMMON-LISP" "LIST")) (acl2_take (length (str s1)) (coerce (str s2) (sym "COMMON-LISP" "LIST")))) nil``,
+	RW_TAC std_ss [coerce_rewrite,GSYM STRING_LENGTH,GSYM NAT_LT,ite_def,TRUTH_REWRITES,equal_def,bool_def,
+		prove(``!a. (bool a = t) = a``,Cases THEN RW_TAC std_ss [bool_def,TRUTH_REWRITES]),stringTheory.STRLEN_THM,GSYM LIST_FIRSTN,NOT_LESS,
+		DECIDE ``~(a <= b) ==> b <= a:num``,list_chr_cong,stringTheory.isPREFIX_STRCAT,GSYM BOOL_NOT,stringTheory.STRCAT] THEN
+	GEN_REWRITE_TAC (STRIP_QUANT_CONV o ONCE_DEPTH_CONV) bool_rewrites [GSYM stringTheory.IMPLODE_EXPLODE] THEN
+	REWRITE_TAC [stringTheory.EXPLODE_IMPLODE,stringTheory.IMPLODE_11] THEN
+	TRY (Q.EXISTS_TAC `IMPLODE (BUTFIRSTN (LENGTH (EXPLODE s1)) (EXPLODE s2))`) THEN
+	METIS_TAC [length_lemma1,NOT_LESS_EQUAL,length_lemma2,rich_listTheory.APPEND_FIRSTN_BUTFIRSTN,stringTheory.EXPLODE_IMPLODE]);
+
+val LISTP_EXPLODE = prove(``!x. |= listp characterp (coerce x (sym "COMMON-LISP" "LIST"))``,
+	Cases THEN RW_TAC std_ss [coerce_def,coerce_string_to_list_def,LISTP_NIL,list_rewrite,LISTP_LIST,CHARACTERP_CHAR]);
+
+val STRINGP_IMPLODE = prove(``!x. |= stringp (coerce x (sym "COMMON-LISP" "STRING"))``,
+	Cases THEN RW_TAC std_ss [coerce_def,coerce_list_to_string_def,STRINGP_STRING]);
+
+val NATP_LENGTH = prove(``!x. |= natp (length x)``,
+	Cases_on `|= stringp x` THEN RW_TAC std_ss [ite_def,TRUTH_REWRITES,length_def,NATP_LEN]);
+
+val STRINGP_STRCAT = prove(``!s1 s2. |= stringp (acl2_strcat s1 s2)``,
+	RW_TAC std_ss [acl2_strcat_def,STRINGP_IMPLODE]);
 
 (*****************************************************************************)
 (* Check to ensure our definitions are the same as ACL2s:                    *)
@@ -1912,18 +2015,19 @@ val native_definitions =
 	acl2_expt_def,acl2_ash_def,evenp_def,oddp_def,
 	acl2_append_def,acl2_revappend_def,acl2_reverse_def,firstnac_def,acl2_take_def,
 	nthcdr_def,acl2_butlast_def,nth_def,acl2_subseq_def,acl2_last_def,strip_cars_def,
-	strip_cdrs_def,pairlist_def,acl2_max_def,acl2_min_def,acl2_abs_def,signum_def];
+	strip_cdrs_def,pairlist_def,acl2_max_def,acl2_min_def,acl2_abs_def,signum_def,
+	acl2_strcat_def];
 
 
 
 val comment  = "; This book is automatically generated by translateTheory\n" ^
-               "; and contains versions of native ACL2 functions which must\n" ^ 
+               "; and contains a HOL version of a native ACL2 function which must\n" ^ 
                "; be proven equivalent before use.";
 
 val preamble = "(in-package \"ACL2\")\n";
 
-val def_comment = "; Definitions from 'translateTheory'\n";
-val thm_comment = "; Theorems proving equivalence\n";
+val def_comment = "; Definition from 'translateTheory'\n";
+val thm_comment = "; Theorem proving equivalence\n";
 
 (* Output the definition, but rename it to HOL-function *)
 fun make_test_defun tm = 
@@ -1954,25 +2058,19 @@ in
 	|  _ => raise (mk_HOL_ERR "translateTheory" "make_equal_thm" "string_to_mlsym didn't return an mlsym!\n")
 end;
 
-fun write_native_definitions () =
-let	val _ = print ("Opening output file: " ^ acl2_test_file ^ ".lisp\n\n")
-	val outs = TextIO.openOut (acl2_test_file ^ ".lisp")
+val thms = map (concl o SPEC_ALL) native_definitions			
+
+fun write_native_definition tm =
+let	val outs = TextIO.openOut (acl2_test_file ^ ".lisp")
 	fun pprint s = TextIO.output(outs,s);
-	val thms = map (concl o SPEC_ALL) native_definitions			
-	
-	fun wad tm = (	print "..." ; print ((fst o dest_const o repeat rator o lhs) tm) ; print "\n" ; 
-			print_mlsexp pprint (make_test_defun tm) ; TextIO.output(outs,"\n\n"))
-	fun wot tm = (print "..." ; print ((fst o dest_const o repeat rator o lhs) tm) ; print "\n" ; 
-			print_mlsexp pprint (make_test_defthm tm) ; TextIO.output(outs,"\n\n"))
 in
 	(
-	TextIO.output(outs,comment)           ; TextIO.output(outs,"\n\n")            ; 
-	TextIO.output(outs,preamble)          ; TextIO.output(outs,"\n\n")            ; 
-	print "Writing definitions:\n"        ; TextIO.output(outs,def_comment)       ;
-	TextIO.output(outs,"\n")              ; app wad thms                          ;
-	print "\nWriting theorems:\n"         ; TextIO.output(outs,"\n")              ;
-	TextIO.output(outs,thm_comment)       ; TextIO.output(outs,"\n")              ; 
-	app wot thms                          ; TextIO.closeOut outs)
+	TextIO.output(outs,comment)               ; TextIO.output(outs,"\n\n")            ; 
+	TextIO.output(outs,preamble)              ; TextIO.output(outs,"\n\n")            ; 
+	TextIO.output(outs,def_comment)           ; TextIO.output(outs,"\n")              ; 
+	print_mlsexp pprint (make_test_defun tm)  ; TextIO.output(outs,"\n\n")            ;
+	TextIO.output(outs,thm_comment)           ; TextIO.output(outs,"\n")              ;
+	print_mlsexp pprint (make_test_defthm tm) ; TextIO.closeOut outs)
 end;
 
 fun check_substring (s1:char list) s2 = 
@@ -1993,9 +2091,12 @@ in
 end;
 	
 (* Runs the theorem test *)
-fun run_theorem_test () = 
-let	val _ = write_native_definitions()
-	val _ = print "\nCertifying book:\n"
+fun check_theorem thm =
+let	val _ = print "..."
+	val _ = print_term ((repeat rator o lhs o concl o SPEC_ALL) thm)
+	val _ = print "."
+	val _ = (write_native_definition o concl o SPEC_ALL) thm
+	val _ = print "."
 	fun check_file s = check_substring (explode ("Finished compiling " ^ acl2_test_file)) (explode s)
 	fun output s = 
 	let 	val outs = TextIO.openOut (acl2_test_file ^ ".log") 
@@ -2005,14 +2106,12 @@ in
 	case (Mosml.run acl2_executable []
 			("(certify-book \"" ^ acl2_test_file ^ "\")\n" ^ 
 			"(good-bye)\n:q\n(good-bye)\n"))
-	of (Mosml.Success s) => (output s ; if check_file s then (print "...Success!\n\n") else 
-				Raise (mk_HOL_ERR "translateTheory" "run_theorem_test" ("...Failed: \n\n" ^ s)))
-        |  (Mosml.Failure s) => Raise (mk_HOL_ERR "translateTheory" "run_theorem_test" ("...Failed: \n\n" ^ s))
+	of (Mosml.Success s) => (output s ; if check_file s then (print ".passed!\n") else 
+				Raise (mk_HOL_ERR "translateTheory" "run_theorem_test" (".Failed: \n\n" ^ s)))
+        |  (Mosml.Failure s) => Raise (mk_HOL_ERR "translateTheory" "run_theorem_test" (".Failed: \n\n" ^ s))
 end;
 
-(*
-val _ = run_theorem_test();
-*)
+val _ = (print "Checking definitions:\n" ; app check_theorem native_definitions);
 
 (* Export necessary theorems *)
 
@@ -2048,6 +2147,9 @@ val LIST_THMS = save_thm("LIST_THMS",
 val PAIR_THMS = save_thm("PAIR_THMS",
 	MK_THMS [	PAIR_OF_SEXP_TO_PAIR,PAIR_COMMA,PAIR_FST,PAIR_SND]);
 
+val STRING_THMS = save_thm("STRING_THMS",
+	MK_THMS [	STRING_EXPLODE,STRING_IMPLODE,STRING_LENGTH,STRING_STRCAT,STRING_PREFIX]);
+
 
 val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
 	MK_THMS [	CONJUNCT1 ANDL_JUDGEMENT,CONJUNCT2 ANDL_JUDGEMENT,
@@ -2063,6 +2165,7 @@ val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
 			BOOLEANP_EVEN,BOOLEANP_ODD,
 			NATP_MAX,NATP_MIN,NATP_LEN,NATP_ASH,INTEGERP_ASH,
 			LISTP_APPEND,LISTP_REVAPPEND,LISTP_REVERSE,LISTP_TAKE,LISTP_NTH,LISTP_NTHCDR,
-			LISTP_BUTLAST,LISTP_LAST,LISTP_SUBSEQ,LISTP_STRIP_CARS,LISTP_STRIP_CDRS,LISTP_PAIRLIST]);
+			LISTP_BUTLAST,LISTP_LAST,LISTP_SUBSEQ,LISTP_STRIP_CARS,LISTP_STRIP_CDRS,LISTP_PAIRLIST,
+			LISTP_EXPLODE,STRINGP_IMPLODE,NATP_LENGTH,STRINGP_STRCAT]);
 
 val _ = export_theory();

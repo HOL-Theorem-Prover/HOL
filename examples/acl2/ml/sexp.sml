@@ -886,10 +886,10 @@ fun term_to_mlsexp tm =
         err "term_to_mlsexp" "bad occurrence of an integer numeral") else
  if is_let tm
   then 
-   let val (pabs,arg_tuple) = dest_let tm
-       val (param_tuple,bdy) = dest_pabs pabs
-       val args = strip_pair arg_tuple
-       val params = strip_pair param_tuple
+   let val (param_arg_tuples,bdy) = dest_anylet tm
+       val (param_tuples,arg_tuples) = unzip param_arg_tuples
+       val args = (flatten o map strip_pair) arg_tuples
+       val params = (flatten o map strip_pair) param_tuples
    in 
     if not(length params = length args)
      then (print_term tm; print "\n";
