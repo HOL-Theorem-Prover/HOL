@@ -10,7 +10,7 @@ quietdec := true;
 val _ = loadPath := "../ml/" :: !loadPath;
 
 load "encodeLib";
-open encodeLib arithmeticTheory;
+open encodeLib arithmeticTheory listTheory;
 
 quietdec := false;
 
@@ -420,17 +420,29 @@ val basic_result = time EVAL ``run big_instr_list [] []``;
 set_trace "EncodeLib.FunctionEncoding" 1;
 
 (*****************************************************************************)
-(* Some simple arithmetic functions                                          *)
-(* encodeLib still doesn't cope with let expressions, hence the 'simp'       *)
+(* Some simple arithmetic functions:                                         *)
 (*****************************************************************************)
+
+val (divsub_def,divsub_ind) = 
+	(RIGHT_CONV_RULE (ONCE_DEPTH_CONV (HO_REWR_CONV 
+		(prove(``	(let c = a * b:num in let d = a + b in e c d) = 
+				(let c = a * b and d = a + b in e c d)``,
+			REWRITE_TAC [LET_THM] THEN BETA_TAC THEN REFL_TAC)))) ## I)
+	(Defn.tprove 
+		(Hol_defn "divsub" `divsub a b = 
+			if 0 < a \/ 0 < b then let c = a * b in let d = a + b in 1 + divsub (c DIV d) (c - d) else 0n`,
+	WF_REL_TAC `measure (\ (a,b). if 0 < a then a else b)` THEN
+	RW_TAC arith_ss [DIV_LT_X,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB,X_LT_DIV]));
 
 val acl2_exp_def = 		convert_definition EXP;
 val acl2_fact_def =             convert_definition FACT;
 val acl2_findq_def = 		convert_definition findq_thm;
 val acl2_divmod_def = 		convert_definition DIVMOD_THM;
+val acl2_divsub_def = 		convert_definition divsub_def;
+
 
 (*****************************************************************************)
-(* Encoding of Matt's example given earlier                                  *)
+(* Encoding of Matt's example given earlier:                                 *)
 (*****************************************************************************)
 
 val acl2_read_step_def = 	convert_definition read_step_def;
@@ -474,14 +486,18 @@ val acl2_log2_def = 		convert_definition_full NONE (SOME (prove(``!a. 0 < a ==> 
 (*****************************************************************************)
 
 val acl2_division = convert_theorem DIVISION;
+val acl2_divmod_calc = convert_theorem DIVMOD_CALC;
 
 (*****************************************************************************)
 (* HO function encoding...                                                   *)                   
 (*****************************************************************************)
 
-val acl2_filter_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] FILTER);
+val (acl2_filter_correct,acl2_filter_def) = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] FILTER);
 
 val filter_zero_def = Define `filter_zero x = FILTER (\x. ~(x = 0n)) x`;
 
-val acl2_filter_zero_def = convert_definition filter_zero_def;
+val (acl2_filter_zero_correct,acl2_filter_zero_def) = convert_definition filter_zero_def;
 
+val (filter0_rewrite,filter0_def) = flatten_HO_definition "filter0" acl2_filter_def ``(acl2_FILTER (\x. ite (natp x) (not (equal x (nat 0))) (not (equal (nat 0) (nat 0)))) X)``;
+
+val acl2_filter_zero_def' = REWRITE_RULE [filter0_rewrite] acl2_filter_zero_def;
