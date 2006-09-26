@@ -1,0 +1,34 @@
+(DEFTHM CAR-CONS-1 (EQUAL (CAR (CONS X Y)) X))
+
+(DEFTHM CAR-CONS-2 (EQUAL (CAR (CONS X Y)) X))
+
+(DEFUN F1 (X) X)
+
+(DEFTHM CAR-CONS-3 (EQUAL (CAR (CONS X Y)) X))
+
+(DEFUN F2 (X) X)
+
+(ENCAP ((G1 (X)))
+       (DEFTHM INTEGERP-G1 (INTEGERP (G1 X))))
+
+(ENCAP ((G2 (X)))
+       (DEFTHM INTEGERP-FIRST-G2
+               (INTEGERP (MV-NTH '0 (G2 X)))))
+
+(ENCAP ((H1 (X1)) (H2 (X1 X2)))
+       (DEFTHM H1-PROP
+               (IMPLIES (INTEGERP X)
+                        (INTEGERP (H1 X))))
+       (DEFTHM H2-PROP
+               (IMPLIES (INTEGERP Y)
+                        (INTEGERP (MV-NTH '0 (H2 X Y))))))
+
+(ENCAP ((H3 (X1)) (H4 (X1 X2)))
+       (DEFTHM H3-PROP
+               (IMPLIES (INTEGERP X)
+                        (INTEGERP (H3 X))))
+       (DEFUN H5 (X) X)
+       (DEFTHM H4-H5-PROP
+               (IMPLIES (INTEGERP Y)
+                        (INTEGERP (H5 (MV-NTH '0 (H4 X Y)))))))
+
