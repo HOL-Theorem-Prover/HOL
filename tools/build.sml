@@ -70,8 +70,14 @@ val (do_selftests, cmdline) = let
                       case Int.fromString h' of
                         NONE => find_slftests (t, 1::counts,
                                                resulting_cmdline)
-                      | SOME i => find_slftests (t', i::counts,
-                                                 resulting_cmdline)
+                      | SOME i => if i < 0 then
+                                    (warn("** Ignoring negative number spec\
+                                          \ification of test level\n");
+                                     find_slftests(t', counts,
+                                                   resulting_cmdline))
+                                  else
+                                    find_slftests (t', i::counts,
+                                                   resulting_cmdline)
                     end
                 else find_slftests (t, counts, h::resulting_cmdline)
   val (selftest_counts, new_cmdline) = find_slftests (cmdline, [], [])
