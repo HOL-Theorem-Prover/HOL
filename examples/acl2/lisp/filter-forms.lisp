@@ -45,7 +45,22 @@
                                  "Unexpected form type: ~x0"
                                  form))))))))
 
-(defun expand-forms (forms acc untrans-flg basic-only state)
+(defun my-unparse-signature (x)
+
+; Unlike built-in function unparse-signature, here we don't care about outputs,
+; but we do care about all formals names.
+
+  (let* ((fn (car x))
+         (formals (cadr x)))
+    `(,fn ,formals)))
+
+(defun my-unparse-signature-lst (lst)
+  (if (endp lst)
+      nil
+    (cons (my-unparse-signature (car lst))
+          (my-unparse-signature-lst (cdr lst)))))
+
+(defun expand-forms (forms acc untrans-flg basic-only ctx wrld state)
 
 ; Result is in reverse order.
 
@@ -61,7 +76,7 @@
                              (er-let* ((defs (expand-forms (cdr form) nil
                                                            untrans-flg
                                                            basic-only
-                                                           state)))
+                                                           ctx wrld state)))
                                       (value
                                        (if (null defs) ; expect basic-only
                                            acc
@@ -69,14 +84,26 @@
                                                      (reverse defs))
                                                acc)))))
                             (encapsulate
-                             (if (null (cadr form))
-                                 (expand-forms (cddr form) acc untrans-flg
-                                               basic-only state)
-                               (er soft 'expand-forms
-                                   "EXPAND-FORMS cannot yet handle an ~
-                                    ENCAPSULATE form with a non-nil ~
-                                    signature, such as ~x0"
-                                   form)))
+                             (cond
+                              ((null (cadr form))
+                               (expand-forms (cddr form) acc untrans-flg
+                                             basic-only ctx wrld state))
+                              (t
+                               (er-let*
+                                ((pair
+                                  (state-global-let*
+                                   ((ld-redefinition-action
+                                     '(:doit! . :overwrite)))
+                                   (chk-signatures (cadr form) ctx wrld
+                                                   state)))
+                                 (forms (expand-forms (cddr form) nil untrans-flg
+                                                      basic-only ctx wrld
+                                                      state)))
+                                (value (cons (list* 'encap
+                                                    (my-unparse-signature-lst
+                                                     (car pair))
+                                                    (reverse forms))
+                                             acc))))))
                             ((defaxiom defthm defthmd defun defund)
                              (if (and basic-only
                                       (member-eq (car form) '(defun defund))
@@ -89,7 +116,8 @@
                             (t (if basic-only
                                    (value acc)
                                  (value (cons form acc))))))))))
-             (expand-forms (cdr forms) new-acc untrans-flg basic-only state))))
+             (expand-forms (cdr forms) new-acc untrans-flg basic-only ctx wrld
+                           state))))
 
 (defun push-defuns-to-front (forms non-defuns defuns)
 
@@ -108,6 +136,7 @@
 (defun write-forms (infile outfile untrans-flg state)
   (let ((ctx 'write-forms))
     (er-let* ((forms (read-list infile ctx state))
-              (axioms (expand-forms forms nil untrans-flg t state)))
-             (write-list (push-defuns-to-front (reverse axioms) nil nil) outfile ctx
-                         state))))
+              (axioms (expand-forms forms nil untrans-flg t ctx (w state) state)))
+             (write-list (reverse axioms)
+                         ;; (push-defuns-to-front (reverse axioms) nil nil)
+                         outfile ctx state))))
