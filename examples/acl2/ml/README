@@ -24,12 +24,6 @@ that the functions defined are equivalent to those in ACL2. The
 variables acl2_executable and acl2_test_file point to the locations
 of the acl2 executable and script file.
 
-
-Warning: acl2_packageTheory takes 1021s to build because proving
-VALID_ACL2_PACKAGE_ALIST involves a long check that the ACL2 package
-structure satisfies a characterisation (VALID_PKG_TRIPLES) that is
-subsequently used to prove axioms in hol_defaxioms_proofsTheory.
-
 The role of defaxiomsTheory is to define goals that are proved in the
 theories hol_defaxiomsTheory and hol_defaxioms_proofsTheory.  It
 contains ACL2-tagged theorems cretated by slurping in the ACL2

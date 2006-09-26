@@ -2010,7 +2010,9 @@ in
         |  (Mosml.Failure s) => Raise (mk_HOL_ERR "translateTheory" "run_theorem_test" ("...Failed: \n\n" ^ s))
 end;
 
+(*
 val _ = run_theorem_test();
+*)
 
 (* Export necessary theorems *)
 

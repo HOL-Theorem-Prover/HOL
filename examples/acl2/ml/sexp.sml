@@ -1540,7 +1540,7 @@ fun dest_ax_or_thm conc =
  end;
 
 (*****************************************************************************)
-(* Convert a thoerem obtained by slurping in ACL2 to an acl2def option.      *)
+(* Convert a theorem obtained by slurping in ACL2 to an acl2def option.      *)
 (* Used for reproving ACL2 imports inside HOL and for round-trip printing.   *)
 (*****************************************************************************)
 local
