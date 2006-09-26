@@ -51,6 +51,8 @@ sig
   val uptodate_thm       : thm -> bool
   val scrub              : unit -> unit
 
+  val attempt_theory_extension : ('b -> bool) -> ('a -> 'b) -> 'a -> 'b option
+
 (* Changing internal bindings of ML-level names to theory objects *)
 
   val set_MLname         : string -> string -> unit
