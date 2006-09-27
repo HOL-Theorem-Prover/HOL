@@ -10,7 +10,7 @@
   should run with "hol -I .."
 
   app load ["my_listTheory", "io_onestepTheory", "armTheory", "coreTheory",
-            "lemmasTheory", "coprocessorTheory", "multTheory", "blockTheory", 
+            "lemmasTheory", "coprocessorTheory", "multTheory", "blockTheory",
             "wordsLib", "iclass_compLib", "armLib", "pred_setSimps"];
 *)
 
@@ -56,7 +56,7 @@ val fvs = set_trace "goalstack fvs";
 
 val IS_MEMOP2_def = Define `IS_MEMOP2 (nmrq2,nopc1,nrw,nbw,areg) = nopc1`;
 
-val arm6out_nchotomy = 
+val arm6out_nchotomy =
   armLib.tupleCases
   ``(dout:word32, mrq2:bool, nopc1:bool, nrw:bool, nbw:bool, areg:word32)``;
 
@@ -379,7 +379,7 @@ val PROJ_IF_COND4 = GEN_ALL(prove(
             else if c then SET_NZCV d (CPSR_READ psr)
                       else SET_NZCV e (CPSR_READ psr))
        else psr)) =
-     (if a /\ b then 
+     (if a /\ b then
         let (nzcv,i,f,m) = DECODE_PSR (SPSR_READ psr m) in (i,f)
       else
         let (nzcv,i,f,m) = DECODE_PSR (CPSR_READ psr) in (i,f))`,
@@ -444,7 +444,7 @@ val finish_rws3 =
    PROJ_DATA_def,CPSR_WRITE_READ,
    NOT_RESET,NOT_RESET2,NOT_RESET2b,LSL_ZERO,EXTRACT_UNDEFINED];
 
-fun mk_pat t1 t2 n = 
+fun mk_pat t1 t2 n =
   [QUOTE (t1 ^ " = " ^ t2 ^ " " ^
     String.concat (List.tabulate(n - 1, (fn i => "v"^(Int.toString i)^" "))) ^
     "v" ^ (Int.toString (n - 1)))];
@@ -998,7 +998,7 @@ val BASIC_MEMOPS = Count.apply prove(
          \\ DISCH_THEN SUBST_ALL_TAC
          \\ SIMP_TAC (bossLib.std_ss++STATE_INP_ss)
               [OUT_ARM6_def,IS_MEMOP2_def])
-    \\ (CONJ_TAC 
+    \\ (CONJ_TAC
     << [
       CONJ_TAC >> (ASM_SIMP_TAC bossLib.std_ss [LEM] \\ FINISH_OFF)
         \\ RULE_ASSUM_TAC (SIMP_RULE (stdi_ss++ALU_ss++ALU2_ss) [])
@@ -1316,7 +1316,7 @@ val ABBREV_RP_LAST_15 =
    SPEC_ALL) RP_LAST_15;
 
 val IF_COND = prove(
-  `~(~USER nbs /\ ireg %% 22) ==> 
+  `~(~USER nbs /\ ireg %% 22) ==>
       (CPSR_READ (if ireg %% 22 then
           CPSR_WRITE (psr:psrs -> word32) (SPSR_READ psr nbs)
         else
@@ -1948,7 +1948,7 @@ val ARM6_OUT_THM = GEN_ALL (SIMP_RULE (srw_ss()) [] ARM6_OUT_THM);
 (* ------------------------------------------------------------------------- *)
 
 val FST_DUR_X = prove(
-   `!x. FST (DUR_X x) ==> 
+   `!x. FST (DUR_X x) ==>
        (?t. IS_RESET x.inp t) /\
        (DUR_ARM6 x =
         (LEAST t.  IS_RESET x.inp t /\ ~IS_RESET x.inp (t + 1) /\
@@ -2102,7 +2102,9 @@ val ARM6_DATA_ABSTRACTION = store_thm("ARM6_DATA_ABSTRACTION",
     (state_out_state o ARM6_SPEC 0) (state_out_state o ARM_SPEC 0)`,
   RW_TAC bool_ss [MATCH_MP DATA_ABSTRACTION_I
            (CONJ STATE_ARM_THM3 STATE_ARM6_IMAP_INIT)]
-    \\ Cases_on `a` \\ Cases_on `s`
+    \\ Cases_on `a`
+    \\ Q.MATCH_ABBREV_TAC `?b. ABS_ARM6 (INIT_ARM6 b) = ARM_EX s c e`
+    \\ Q.RM_ALL_ABBREVS_TAC \\ Cases_on `s`
     \\ EXISTS_TAC `ARM6 (DP (ADD8_PC f) f0 areg din alua alub dout)
      (CTRL pipea pipeaval pipeb pipebval c iregval ointstart onewinst endinst
        obaselatch opipebll nxtic nxtis nopc1 oorst resetlatch onfq ooonfq
