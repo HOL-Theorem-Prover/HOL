@@ -757,7 +757,8 @@ val FINITE_UPPERBOUND_SETS = store_thm(
             SRW_TAC [][EQ_IMP_THM] THENL [
               Q.EXISTS_TAC `x` THEN SRW_TAC [][EXTENSION] THEN
               Cases_on `x' = e` THEN SRW_TAC [][],
-              `e INSERT s' DELETE e = s'`
+              Q.MATCH_ABBREV_TAC `e INSERT (s DELETE e) IN P` THEN
+              `e INSERT s DELETE e = s`
                  by (SRW_TAC [][EXTENSION] THEN
                      Cases_on `x = e` THEN SRW_TAC [][]) THEN
               SRW_TAC [][],

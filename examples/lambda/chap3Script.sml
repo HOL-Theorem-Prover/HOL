@@ -581,21 +581,25 @@ val grandbeta_bvc_gen_ind = store_thm(
        by (ONCE_REWRITE_TAC [tpm_CONS] THEN
            SRW_TAC [][Abbr`M'`, Abbr`N'`, tpm_ALPHA]) THEN
     SRW_TAC [][],
+    Q.MATCH_ABBREV_TAC `P (LAM (lswapstr p v0) (tpm p ML) @@ tpm p MR)
+                          (tpm p ([NR/v0] NL)) ctx`  THEN
+    Q.RM_ALL_ABBREVS_TAC THEN
     SRW_TAC [][tpm_subst] THEN
-    Q.ABBREV_TAC `v = lswapstr p x` THEN
-    Q.ABBREV_TAC `M1 = tpm p M` THEN
-    Q.ABBREV_TAC `N1 = tpm p M'` THEN
-    Q.ABBREV_TAC `M2 = tpm p N'` THEN
-    Q.ABBREV_TAC `N2 = tpm p N''` THEN
+    Q.ABBREV_TAC `v = lswapstr p v0` THEN
+    Q.ABBREV_TAC `M1 = tpm p ML` THEN
+    Q.ABBREV_TAC `N1 = tpm p MR` THEN
+    Q.ABBREV_TAC `M2 = tpm p NL` THEN
+    Q.ABBREV_TAC `N2 = tpm p NR` THEN
     Q_TAC (NEW_TAC "z")
-          `v INSERT fv x' UNION FV N1 UNION FV N2 UNION FV M1 UNION FV M2` THEN
+          `v INSERT fv ctx UNION FV N1 UNION FV N2 UNION FV M1 UNION
+           FV M2` THEN
     `LAM v M1 = LAM z (tpm [(z,v)] M1)` by SRW_TAC [][tpm_ALPHA] THEN
     `[N2/v]M2 = [N2/z](tpm [(z,v)] M2)`
        by SRW_TAC [][fresh_tpm_subst, lemma15a] THEN
     SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
     SRW_TAC [][Abbr`N1`,Abbr`N2`] THEN
-    `(tpm [(z,v)] M1 = tpm ((z,v)::p) M) /\
-     (tpm [(z,v)] M2 = tpm ((z,v)::p) N')`
+    `(tpm [(z,v)] M1 = tpm ((z,v)::p) ML) /\
+     (tpm [(z,v)] M2 = tpm ((z,v)::p) NL)`
         by SRW_TAC [][GSYM tpm_APPEND, Abbr`M1`,Abbr`M2`] THEN
     SRW_TAC [][]
   ]);

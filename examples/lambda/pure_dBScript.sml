@@ -406,8 +406,9 @@ val dFVs_sub = store_thm(
                DECIDE ``~(x = 0) ==> (PRE x + 1 = x)``] THEN
     SRW_TAC [][] THENL [
       DISJ1_TAC THEN CONJ_TAC THENL [
-        Q.EXISTS_TAC `s'` THEN SRW_TAC [][],
-        Q_TAC SUFF_TAC `~(s2n s' = 0)` THEN1
+        METIS_TAC [],
+        Q.MATCH_ABBREV_TAC `~(s2n s - 1 = PRE x)` THEN
+        Q_TAC SUFF_TAC `~(s2n s = 0)` THEN1
            (SRW_TAC [ARITH_ss][CANCEL_SUB, PRE_SUB1] THEN
             STRIP_TAC THEN SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []) THEN
         METIS_TAC [string_numTheory.n2s_s2n]
@@ -419,7 +420,7 @@ val dFVs_sub = store_thm(
       SRW_TAC [][dFVs_def],
 
       Q.UNDISCH_THEN `~(x = 0)` ASSUME_TAC THEN
-      Q.UNDISCH_THEN `~(s' = n2s 0)` ASSUME_TAC THEN
+      Q.PAT_ASSUM `~(s' = n2s 0)` ASSUME_TAC THEN
       FULL_SIMP_TAC (srw_ss()) [sn_iso_num, sub1_11, PRE_SUB1] THEN
       ASM_SIMP_TAC (srw_ss() ++ CONJ_ss) [sn_iso_num, sub1_11],
 
@@ -585,8 +586,9 @@ val db_cases' = store_thm(
   ``!t. (?i. t = dV i) \/ (?t0 t1. t = dAPP t0 t1) \/
         (?i t0. t = dLAM i t0)``,
   Cases_on `t` THEN SRW_TAC [][dLAM_def] THEN
-  `?i. !j. j IN dFV p' ==> j < i` by METIS_TAC [onto_lemma2] THEN
-  `~(i + 1 IN dFV p')`
+  Q.MATCH_ABBREV_TAC `?i t0. p = sub (dV 0) (i + 1) (lift t0 0)` THEN
+  `?i. !j. j IN dFV p ==> j < i` by METIS_TAC [onto_lemma2] THEN
+  `~(i + 1 IN dFV p)`
      by (STRIP_TAC THEN RES_TAC THEN DECIDE_TAC) THEN
   METIS_TAC [onto_lemma]);
 
