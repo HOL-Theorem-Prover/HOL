@@ -172,9 +172,10 @@ mcth: root clause vector. mcth[i] is i'th root clause from original problem
 fun replayMinisatProof svm sva rt2o nr fname solver vc mcth = 
     let val _ = (minisatResolve.counter:=0)
 	val cl = Dynarray.array((Array.length mcth) * 2,TRUTH)
-	val cc = parseTrace cl svm sva rt2o nr fname solver vc mcth 
-	val rth = Dynarray.sub(cl,(valOf cc)-1)
-    in rth end
+    in case parseTrace cl svm sva rt2o nr fname solver vc mcth of
+	   SOME cc => SOME (Dynarray.sub(cl,cc-1))
+	 | NONE => NONE
+    end
 
 end
 end

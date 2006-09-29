@@ -6,7 +6,7 @@ local
 
 open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
 open satTools dimacsTools SatSolvers minisatResolve satCommonTools 
-	      minisatParse satTheory satConfig
+	      minisatParse satTheory satConfig dpll
 
  
 in 
@@ -28,9 +28,7 @@ in () end
    trace is in the file fname.minisatp.proof *)
 (* if the file does not exist, we will assume that minisatp discovered UNSAT 
    during the read-in phase and did not bother with a proof log. 
-   In that case the problem is simple and can be delegated to TAUT_PROVE *)
-(* FIXME: I do not like the TAUT_PROVE solution; 
-   what is trivial for Minisat may not be so for TAUT_PROVE *)
+   In that case the problem is simple and can be delegated to DPLL_TAUT *)
 (* assumes t is in cnf, invokes minisatp, returns |- t = F or |- model ==> t *)
 fun invoke_solver mcth cnfv nt ntdcnf vc svm sva tmpname = 
     let 
@@ -50,8 +48,11 @@ fun invoke_solver mcth cnfv nt ntdcnf vc svm sva tmpname =
 		in satCheck model2 nt end 
 	      | NONE    => (* returns cnf(~t) = F *)
 		(let val rt2o = Dynarray.array(nr,~1)
-		 in replayMinisatProof (valOf svm) (valOf sva) rt2o nr 
-					   (valOf tmpname) minisatp vc mcth end))
+		 in (case replayMinisatProof (valOf svm) (valOf sva) rt2o nr 
+					   (valOf tmpname) minisatp vc mcth of
+			SOME th => th
+		      | NONE => UNDISCH (EQT_ELIM (dpll.DPLL_TAUT (mk_imp(dest_neg nt,F)))))
+		 end))
 	    end
      in res end
 
