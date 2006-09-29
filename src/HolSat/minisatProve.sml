@@ -5,23 +5,11 @@ struct
 local
 
 open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
-open satTools dimacsTools SatSolvers minisatResolve satCommonTools minisatParse satTheory
+open satTools dimacsTools SatSolvers minisatResolve satCommonTools 
+	      minisatParse satTheory satConfig
 
  
 in 
-
-exception fsatProveError 
-
-(* will return clause info at index ci *)
-fun getRootClause cl ci =
-    let 
- 	val res = case Array.sub(cl,ci) of 
-		      ROOT (LL ll) => raise Domain
-		    | ROOT (RTHM x) => x
-		    | CHAIN _ => raise Domain
-		    | LEARNT x => raise Domain
-		    | BLANK => raise Domain
-     in res end
 
 fun termFromFile fname = 
     let val ins        = TextIO.openIn (fname^".term")
@@ -36,115 +24,132 @@ let val fout = TextIO.openOut (fname^".term")
     val _ = TextIO.closeOut fout
 in () end
 
-(* assert: if t is NONE then fname.cnf and fname.term have already been created *)
-fun fsatOracle sat_solver fname t vc =
- let val SatSolver {name,
-                    URL,
-                    executable,
-                    notime_run,
-                    time_run,
-                    only_true,
-                    failure_string,
-                    start_string,
-                    end_string} = sat_solver
-     val t = if isSome t then (termToDimacsFile (SOME fname) (valOf t) 
-			        (if isSome vc then valOf vc else length(all_vars (valOf t)));
-			       termToFile fname (valOf t); 
-			       valOf t)
-	     else termFromFile fname
-     val res = invokeSat sat_solver (SOME fname) t vc
- in
-  case res of
-    SOME l => Thm.mk_oracle_thm (Tag.read name) ([], mk_imp(list_mk_conj l, t))
-  | NONE   => Thm.mk_oracle_thm (Tag.read name) ([], mk_neg t)
- end;
-
 (* assert: t is an unsatisfiable cnf term whose minisat-p proof 
    trace is in the file fname.minisatp.proof *)
 (* if the file does not exist, we will assume that minisatp discovered UNSAT 
-   during the read-in phase and 
-   did not bother with a proof log. In that case the problem is simple and 
-   can be delegated to TAUT_PROVE *)
+   during the read-in phase and did not bother with a proof log. 
+   In that case the problem is simple and can be delegated to TAUT_PROVE *)
 (* FIXME: I do not like the TAUT_PROVE solution; 
    what is trivial for Minisat may not be so for TAUT_PROVE *)
-(* returns |- t = F *)
-
-fun getRawRootClause (ROOT (LL l)) = l 
-  | getRawRootClause _ = raise Match
-
 (* assumes t is in cnf, invokes minisatp, returns |- t = F or |- model ==> t *)
-fun invoke_minisat mcth cnfv nt t rcv vc reord = 
+fun invoke_solver mcth cnfv nt ntdcnf vc svm sva tmpname = 
     let 
- 	val nr = Vector.length rcv 
- 	val res = 
-	    case invokeSat minisatp NONE t (SOME vc) of
-		SOME model => let val model2 = 
-				      List.filter (fn p => Term.compare(hd(free_vars p),
-									cnfv) <> EQUAL)
-						  model 
-			      in satCheck model2 nt end (* returns |- model ==> ~t *)
-	      | NONE       => (case parseMinisatProof nr ((!tmp_name)^".minisatp.proof") vc rcv of
-				   SOME (cl,sk,scl,lsr,cc) =>
-		                     unsatProveResolve mcth (cl,sk,scl,lsr,cc) vc rcv reord
-				 | NONE => tautLib.TAUT_PROVE (mk_eq(t,F)))
+ 	val nr = Array.length mcth 
+ 	val res =
+	    let 
+ 		val answer = invokeSat minisatp ntdcnf (SOME vc) (SOME nr) 
+				       (SOME mcth) svm sva tmpname
+ 	    in
+	    (case answer of
+		SOME model => (* returns |- model ==> ~t *)
+		let val model2 = if isSome cnfv then 
+				     List.filter (fn p => Term.compare(hd(free_vars p),
+								       valOf cnfv) <> EQUAL)
+						 model 
+				 else model
+		in satCheck model2 nt end 
+	      | NONE    => (* returns cnf(~t) = F *)
+		(let val rt2o = Dynarray.array(nr,~1)
+		 in replayMinisatProof (valOf svm) (valOf sva) rt2o nr 
+					   (valOf tmpname) minisatp vc mcth end))
+	    end
      in res end
 
-local
-    (* Taken from MN's DPLL chapter in the HOL4-K3 Tutorial *)
-    fun transform gv body_imp_F = 
-	let 
-	    val fa_body_imp_F = GEN gv body_imp_F
- 	    val ex_body_imp_F = CONV_RULE (LAST_FORALL_CONV FORALL_IMP_CONV) fa_body_imp_F
- 	in CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F end
-	
-in 
-
-val do_reorder = ref false
-
-val _ = register_btrace("HolSat_ms_reorder",do_reorder)
+(* Taken from MN's DPLL chapter in the HOL4-K3 Tutorial *)
+fun transform gv body_imp_F = 
+    let 
+	val fa_body_imp_F = GEN gv body_imp_F
+ 	val ex_body_imp_F = CONV_RULE (LAST_FORALL_CONV FORALL_IMP_CONV) fa_body_imp_F
+     in CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F end
 
 exception Sat_counterexample of thm
 
-fun SAT_TAUT_PROVE t = 
+fun mk_conjuncts nt_dcnf_th = 
     let 
-         val res = 
-	    if is_T t then TRUTH
-	    else let val nt = mk_neg t
- 		     val cnfv = mk_var("SP",numLib.num-->bool)
-		     val _ = (defCNF.dcnfgv := K cnfv)
-		     val nt_dcnf_th = defCNF.DEF_CNF_VECTOR_CONV nt
-                     val cths = 
-			 if is_exists (rhs(concl nt_dcnf_th))
-			 then CONJUNCTS (ASSUME (snd(dest_exists(rhs (concl nt_dcnf_th)))))
-			 else CONJUNCTS (ASSUME (rhs (concl nt_dcnf_th)))
-                     val mcth = itlist (fn c => fn m => Redblackmap.insert(m,(concl c),c)) cths 
-			 (Redblackmap.mkDict Term.compare)
-		     val ngv = numSyntax.int_of_term (!defCNF.ndefs)
- 		     val ovc = length (all_vars t)
-		     val vc = ngv + ovc  
- 		     val (gv,ntdcnf) = strip_exists (rhs(concl nt_dcnf_th))
-		     val res = 
-			 if is_F ntdcnf
-			 then CONV_RULE (REWR_CONV NOT_NOT) (EQF_ELIM nt_dcnf_th) 
-			 else let 
-				  val rcv = Vector.fromList (strip_conj ntdcnf)
- 				  val th = invoke_minisat mcth cnfv nt ntdcnf rcv vc (!do_reorder)
- 				  val res = 
-				      if is_imp (concl th) 
-				      then raise (Sat_counterexample th)
-       				      else let 
-                                                val th0 = DISCH (hd (hyp th)) th
-					       val th1 = if gv=[] 
-							 then CONV_RULE (REWR_CONV IMP_F_EQ_F) th0 
-							 else transform cnfv th0
- 					       val th2 = EQF_ELIM (TRANS nt_dcnf_th th1)
-	    				  in CONV_RULE (REWR_CONV NOT_NOT) th2 end
- 			      in res end
-		 in res end
-     in res end
+         val cths = 
+	    if is_exists (rhs(concl nt_dcnf_th))
+	    then CONJUNCTSR (ASSUME (snd(dest_exists(rhs (concl nt_dcnf_th)))))
+	    else CONJUNCTSR (ASSUME (rhs (concl nt_dcnf_th)))
+	val mcth = Array.fromList cths 
+     in mcth end
+
+fun to_cnf is_cnf t nt =
+    if is_cnf 
+    then (REWR_CONV NOT_NOT nt,dest_neg t,[],NONE,
+	  HOLset.numItems (FVL [t] (HOLset.empty Term.var_compare)))	
+    else 
+	let val cnfv = mk_var("SP",numLib.num-->bool)
+	    val _ = (defCNF.dcnfgv := K cnfv)
+ 	    val nt_dcnf_th = defCNF.DEF_CNF_VECTOR_CONV nt
+ 	    val ngv = numSyntax.int_of_term (!defCNF.ndefs)
+	    val ovc = HOLset.numItems (FVL [t] (HOLset.empty Term.var_compare))
+	    val vc = ngv + ovc  
+ 	    val (gv,ntdcnf) = strip_exists (rhs(concl nt_dcnf_th))
+	in (nt_dcnf_th,ntdcnf,gv,SOME cnfv,vc) end
+
+(* raise exception if countermodel was found, 
+   else deduce input term from solver's result *)
+fun finalise th gv cnfv is_cnf nt_dcnf_th = 
+    if is_imp (concl th) 
+    then raise (Sat_counterexample th)
+    else let 
+              val th0 = DISCH (hd (hyp th)) th
+	     val th1 = if gv=[] 
+		       then CONV_RULE (REWR_CONV IMP_F_EQ_F) th0 
+		       else transform (valOf cnfv) th0
+ 	     val th2 = 
+		 if is_cnf 
+		 then EQF_ELIM th1
+		 else CONV_RULE (REWR_CONV NOT_NOT)
+				(EQF_ELIM (TRANS nt_dcnf_th th1))
+	in th2 end
+
+(* convert input to term to CNF and write out DIMACS file *)
+(* if infile is SOME name, then assume name.cnf exists and is_cnf=true  *)
+(* if is_cnf, then assume t=~s and s is in CNF *)
+fun initialise infile is_cnf t = 
+    if isSome infile
+    then let val fname = valOf infile
+	     val (t,svm,sva) = genReadDimacs (fname^".cnf")
+	     val t = mk_neg t
+	     val nt = mk_neg t
+	     val (nt_dcnf_th,ntdcnf,gv,cnfv,vc) = to_cnf is_cnf t nt
+	     val mcth = mk_conjuncts nt_dcnf_th
+	 in (SOME (nt_dcnf_th,ntdcnf,gv,cnfv,vc,mcth,nt,svm,sva,fname),TRUTH) end
+    else 
+	if is_T t 
+	then (NONE,TRUTH)
+	else 
+	    let val nt = mk_neg t 
+		val (nt_dcnf_th,ntdcnf,gv,cnfv,vc) = to_cnf is_cnf t nt
+	    in 
+		if is_F ntdcnf
+		then (NONE, CONV_RULE (REWR_CONV NOT_NOT) (EQF_ELIM nt_dcnf_th))
+		else let 
+			val mcth = mk_conjuncts nt_dcnf_th
+			val (tmpname,sva,svm) = 
+			    generateDimacs (SOME vc) t (SOME mcth) 
+					   (SOME (Array.length mcth))
+		    in (SOME (nt_dcnf_th,ntdcnf,gv,cnfv,vc,mcth,nt,svm,sva,tmpname),TRUTH) end
+	    end
+
+fun GEN_SAT_TAUT_PROVE conf t = 
+    let 
+         val (init,th0) = initialise (get_infile conf) (get_flag_is_cnf conf) t
+    in if isSome init 
+       then 
+	   let 
+ 	       val (nt_dcnf_th,ntdcnf,gv,cnfv,vc,mcth,nt,svm,sva,tmpname) = valOf init
+               val th = invoke_solver mcth cnfv nt ntdcnf vc (SOME svm) (SOME sva) (SOME tmpname)
+ 	       val res = finalise th gv cnfv (get_flag_is_cnf conf) nt_dcnf_th
+ 	 in res end
+       else th0
+    end
+
+val SAT_TAUT_PROVE = GEN_SAT_TAUT_PROVE default_config 
+
 end
 
 end
-end
 
- 
+

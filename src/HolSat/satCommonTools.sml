@@ -1,4 +1,4 @@
- 
+  
 (* miscellaneous useful stuff that doesn't fit in anywhere else *)
 structure satCommonTools = 
 struct 
@@ -7,10 +7,11 @@ local
 
 open Globals HolKernel Parse 
 
-open boolSyntax Term
+open boolSyntax Term Drule
 
 in
 
+ 
 fun pair_map f (x,y) = (f x,f y)
 
 (*********** terms **************)
@@ -25,6 +26,24 @@ fun is_F tm = Term.compare(tm,F)=EQUAL
 
 (************ HOL **************)
 
+(* Like CONJUNCTS but assumes the conjunct is bracketed right-assoc. *)
+(* Not tail recursive. Here only as a reference implementation *)
+fun NTL_CONJUNCTSR th =
+    if is_conj (concl th)
+    then 
+	let val (th1,th2) = CONJ_PAIR th
+	in th1::(NTL_CONJUNCTSR th2) end
+    else [th]
+
+(* CPS version of NTL_CONJUNCTSL. Does not grow call stack. *)
+fun CONJUNCTSR th = 
+    let fun CPS_CONJUNCTSR th k = 
+	    if is_conj (concl th)
+	    then let val (th1,th2) = CONJ_PAIR th
+		 in CPS_CONJUNCTSR th2 (fn ret => k (th1::ret)) end
+	    else k [th]
+    in CPS_CONJUNCTSR th I end
+
 fun ERC lt tm =
     if is_comb lt 
 	then let val ((ltl,ltr),(tml,tmr)) = pair_map dest_comb (lt,tm)
@@ -34,7 +53,7 @@ fun ERC lt tm =
 	    then [lt |-> tm]
 	else []
 
-(* easier REWR_CONV which assumes that the supplied theorem is ground and quantifier free, 
+(* (E)asy REWR_CONV which assumes that the supplied theorem is ground and quantifier free, 
    so type instantiation and free/bound var checks are not needed *)
 (* no restrictions on the term argument *)
 fun EREWR_CONV th tm = 

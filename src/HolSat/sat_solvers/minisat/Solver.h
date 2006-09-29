@@ -50,7 +50,7 @@ class Solver {
 protected:
     // Solver state:
     //
-    bool                ok;               // If FALSE, the constraints are already unsatisfiable. No part of the solver state may be used!
+  bool                ok;                 // If FALSE, the constraints are already unsatisfiable. No part of the solver state may be used!
     vec<Clause*>        clauses;          // List of problem clauses.
     vec<Clause*>        learnts;          // List of learnt clauses.
     vec<ClauseId>       unit_id;          // 'unit_id[var]' is the clause ID for the unit literal 'var' or '~var' (if set at toplevel).
@@ -67,6 +67,7 @@ protected:
     vec<Lit>            trail;            // Assignment stack; stores all assigments made in the order they were made.
     vec<int>            trail_lim;        // Separator indices for different decision levels in 'trail[]'.
     vec<Clause*>        reason;           // 'reason[var]' is the clause that implied the variables current value, or 'NULL' if none.
+    vec<bool>           sreason;          // true if var is negated in reason[var]. used to write out pivot sign info to proof log 
     vec<int>            level;            // 'level[var]' is the decision level at which assignment was made.
     vec<int>            trail_pos;        // 'trail_pos[var]' is the variable's position in 'trail[]'. This supersedes 'level[]' in some sense, and 'level[]' will probably be removed in future releases.
     int                 root_level;       // Level of first proper decision.
@@ -142,7 +143,7 @@ public:
                 vec<Lit> dummy(2,lit_Undef);
                 propagate_tmpbin = Clause_new(false, dummy);
                 analyze_tmpbin   = Clause_new(false, dummy);
-                addUnit_tmp   .growTo(1);
+		addUnit_tmp   .growTo(1);
                 addBinary_tmp .growTo(2);
                 addTernary_tmp.growTo(3);
              }
@@ -151,8 +152,8 @@ public:
        for (int i = 0; i < learnts.size(); i++) remove(learnts[i], true);
        for (int i = 0; i < clauses.size(); i++) if (clauses[i] != NULL) remove(clauses[i], true);
        remove(propagate_tmpbin, true);
-       remove(analyze_tmpbin, true);
-    }
+       remove(analyze_tmpbin, true); 
+   }
 
     // Helpers: (semi-internal)
     //

@@ -7,7 +7,7 @@
 
 structure HolSatLib :> HolSatLib = struct
 
-open satTools dimacsTools minisatProve SatSolvers
+open satTools dimacsTools minisatProve SatSolvers satConfig
 
 end
 

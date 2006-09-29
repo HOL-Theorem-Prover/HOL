@@ -22,7 +22,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <unistd.h>
 #include <signal.h>
 #include <zlib.h>
-
+#ifdef DEBUG
+#include <fstream>
+#endif
 
 //=================================================================================================
 // BCNF Parser:
@@ -72,6 +74,7 @@ static void parse_BCNF(cchar* filename, Solver& S)
 
     xfree(buf);
     fclose(in);
+
 }
 
 
@@ -163,10 +166,10 @@ static void parse_DIMACS(gzFile input_stream, Solver& S) {
 //=================================================================================================
 
 
-void printStats(SolverStats& stats)
+void printStats(SolverStats& stats, double& cpu_time, int64& mem_used)
 {
-    double  cpu_time = cpuTime();
-    int64   mem_used = memUsed();
+    cpu_time = cpuTime();
+    mem_used = memUsed();
     reportf("restarts              : %"I64_fmt"\n", stats.starts);
     reportf("conflicts             : %-12"I64_fmt"   (%.0f /sec)\n", stats.conflicts   , stats.conflicts   /cpu_time);
     reportf("decisions             : %-12"I64_fmt"   (%.0f /sec)\n", stats.decisions   , stats.decisions   /cpu_time);
@@ -176,10 +179,20 @@ void printStats(SolverStats& stats)
     reportf("CPU time              : %g s\n", cpu_time);
 }
 
+void printProofStats(double cpu_time, int64 mem_used) {
+      double  cpu_time1 = cpuTime();
+      int64   mem_used1 = memUsed();
+      if (mem_used1!= 0) reportf("Extra memory used     : %.2f MB\n",
+				 (mem_used1-mem_used)/1048576.0);
+      reportf("Extra CPU time        : %g s\n", (cpu_time1-cpu_time));
+}
+
 Solver* solver;
 static void SIGINT_handler(int signum) {
     reportf("\n"); reportf("*** INTERRUPTED ***\n");
-    printStats(solver->stats);
+    double cpu_time = 0;
+    int64 mem_used = 0;
+    printStats(solver->stats,cpu_time,mem_used);
     reportf("\n"); reportf("*** INTERRUPTED ***\n");
     exit(1); }
 
@@ -189,7 +202,6 @@ static void SIGINT_handler(int signum) {
 
 
 #include "Sort.h"
-
 
 static void resolve(vec<Lit>& main, vec<Lit>& other, Var x)
 {
@@ -225,18 +237,26 @@ struct Checker : public ProofTraverser {
     vec<vec<Lit> >  clauses;
 
     void root   (const vec<Lit>& c) {
-        //**/printf("%d: ROOT", clauses.size()); for (int i = 0; i < c.size(); i++) printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); printf("\n");
+        //**/printf("%d: ROOT", clauses.size()); 
+        //for (int i = 0; i < c.size(); i++) 
+        //   printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); 
+        //printf("\n");
         clauses.push();
         c.copyTo(clauses.last()); }
 
     void chain  (const vec<ClauseId>& cs, const vec<Var>& xs) {
-        //**/printf("%d: CHAIN %d", clauses.size(), cs[0]); for (int i = 0; i < xs.size(); i++) printf(" [%d] %d", xs[i]+1, cs[i+1]);
+        //**/printf("%d: CHAIN %d", clauses.size(), cs[0]-1); 
+        //for (int i = 0; i < xs.size(); i++) printf(" [%d] %d", (xs[i]>>1)+1, cs[i+1]-1);
         clauses.push();
         vec<Lit>& c = clauses.last();
-        clauses[cs[0]].copyTo(c);
-        for (int i = 0; i < xs.size(); i++)
-            resolve(c, clauses[cs[i+1]], xs[i]);
-        //**/printf(" =>"); for (int i = 0; i < c.size(); i++) printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); printf("\n");
+
+	//HA: the -1 to compensate for id_counter base 1
+	//HA: the >> 1 to drop sign info from vars
+        clauses[cs[0]-1].copyTo(c); 
+        for (int i = 0; i < xs.size(); i++) 
+	  resolve(c, clauses[cs[i+1]-1], xs[i] >> 1); 
+        //**/printf(" =>"); for (int i = 0; i < c.size(); i++) 
+	//  printf(" %s%d", sign(c[i])?"-":"", var(c[i])+1); printf("\n");
         }
 
     void deleted(ClauseId c) {
@@ -244,11 +264,13 @@ struct Checker : public ProofTraverser {
 };
 
 
+//HA: called with no second arg, so goal gets default value
 void checkProof(Proof* proof, ClauseId goal = ClauseId_NULL)
 {
     Checker trav;
-    proof->traverse(trav, goal);
-
+    int res_count = 0;
+    proof->traverse(trav, res_count, goal);
+    printf("%d resolution steps.\n",res_count);
     vec<Lit>& c = trav.clauses.last();
     printf("Final clause:");
     if (c.size() == 0)
@@ -270,6 +292,7 @@ static const char* doc =
     "  -r <result file>   Write result (the word \"SAT\" plus model, or just \"UNSAT\") to file.\n"
     "  -p <proof trace>   Write the proof trace to this file.\n"
     "  -c                 Check the proof trace by simple (read \"slow\") proof checker.\n"
+    "  -z                 Compress proof.\n"
 ;
 
 int main(int argc, char** argv)
@@ -278,6 +301,7 @@ int main(int argc, char** argv)
     char*       result = NULL;
     char*       proof  = NULL;
     bool        check  = false;
+    bool        compress = false;
 
     // Parse options:
     //
@@ -298,6 +322,9 @@ int main(int argc, char** argv)
                 break;
             case 'c':
                 check = true;
+                break;
+            case 'z':
+	        compress = true; 
                 break;
             case 'h':
                 reportf("%s", doc);
@@ -343,7 +370,9 @@ int main(int argc, char** argv)
     signal(SIGHUP,SIGINT_handler);
 
     S.solve();
-    printStats(S.stats);
+
+    double cpu_time = 0; int64 mem_used = 0;
+    printStats(S.stats,cpu_time,mem_used);
     reportf("\n");
     reportf(S.okay() ? "SATISFIABLE\n" : "UNSATISFIABLE\n");
 
@@ -359,13 +388,26 @@ int main(int argc, char** argv)
         fclose(res);
     }
 
+    // Post-processing of proof in case of UNSAT
     if (S.proof != NULL && !S.okay()){
-        if (proof != NULL)
-            S.proof->save(proof);
-        if (check)
-            printf("Checking proof...\n"),
-            checkProof(S.proof);
+      if (compress) { // ...compress, and possibly check
+	reportf("Compressing proof...\n");
+	Proof compressed;
+	S.proof->compress(compressed,S.proof->last());
+	if (check)
+	  reportf("Checking compressed proof...\n"),
+	    checkProof(&compressed);
+	if (proof != NULL) compressed.save(proof);
+	printProofStats(cpu_time,mem_used);
+      } else if (check) { // ...check
+	reportf("Checking proof...\n"),
+	  checkProof(S.proof);
+	if (proof != NULL) S.proof->save(proof);
+	printProofStats(cpu_time,mem_used);	  
+      } else if (proof != NULL) S.proof->save(proof);
     }
-
-    exit(S.okay() ? 10 : 20);     // (faster than "return", which will invoke the destructor for 'Solver')
+    
+    // (faster than "return", which will invoke the destructor for 'Solver')
+    exit(S.okay() ? 10 : 20);
+				
 }

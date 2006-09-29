@@ -4,11 +4,9 @@ structure dimacsTools = struct
 local 
 
 open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
+open satCommonTools
 
  
-
-
-
 in 
 
 
@@ -18,7 +16,8 @@ in
 ** The type of sat_var_map is (int * (term * int) set) ref and
 ** the integer first component is the next available number
 ** (i.e. it is one plus the number of elements in the set)
-** in th second component (t,n), if n<0 then the literal represented is ~t (the stored t is never negated)
+** in th second component (t,n), if n<0 then the literal represented is ~t
+   (the stored t is never negated)
 *)
 
 (* 
@@ -27,8 +26,9 @@ in
 ** is the clause separator)
 *)
 
-val sat_var_map = ref(1, Redblackmap.mkDict Term.compare);
-val sat_var_arr = ref(Array.array(0,T)) (* varnum->+ve lit. *)
+structure SVM = Redblackmap
+
+val var_to_string = fst o dest_var
 
 (*
 ** Reinitialise sat_var_map.
@@ -37,30 +37,38 @@ val sat_var_arr = ref(Array.array(0,T)) (* varnum->+ve lit. *)
 ** (otherwise grasp, zchaff etc may crash)
 *)
 
-fun initSatVarMap var_count = (sat_var_map := (1, Redblackmap.mkDict Term.compare);
-			       sat_var_arr := Array.array(var_count+1,T)); (*+1 'cos var numbers start at 1*)
+val ttt0 = ref T
+val ttt1 = ref T
+
+fun rbmcomp (t0,t1) = 
+    Term.compare(t0,t1)
+    handle Out_of_memory => (ttt0:=t0;ttt1:=t1; print "rbmcomp\n"; raise Out_of_memory)
+
+
 
 (* 
 ** Lookup the var number corresponding to a +ve literal s, possibly extending sat_var_map 
 *)
 
-fun lookup_sat_var s =
- let val (c,svm) = !sat_var_map
+fun lookup_sat_var svm sva s =
+ let val (c,svm1) = svm
+     val respeek = SVM.peek(svm1,s) 
  in
- case Redblackmap.peek(svm,s) of
-   SOME(_,n) => n
- | NONE      => let val svm' = Redblackmap.insert(svm,s,(s,c))
-                    val _    = (sat_var_map := (c+1,svm'))
-		    val _    = Array.update(!sat_var_arr,c,s) 
+ (case respeek of
+   SOME(_,n) => (n,svm)
+ | NONE      => let val svm2 = SVM.insert(svm1,s,(s,c))
+                    val svm'    =  (c+1,svm2)
+		    val _    = Array.update(sva,c,s) 
 			handle Subscript => 
-			       failwith ("lookup_sat_varError: "^(term_to_string s)^"::"^(int_to_string c)^"\n")
-                in c end
+			       (failwith ("lookup_sat_varError: "^(term_to_string s)^"::"
+					  ^(int_to_string c)^"\n"))
+                in (c,svm') end)
  end;
 
 (* 
 ** Lookup the +ve lit corresponding to a var number 
 *)
-fun lookup_sat_num n = Array.sub(!sat_var_arr,n) 
+fun lookup_sat_num sva n = Array.sub(sva,n) 
     handle Subscript => failwith ("lookup_sat_numError: "^(int_to_string n)^"\n")
     
 
@@ -68,10 +76,10 @@ fun lookup_sat_num n = Array.sub(!sat_var_arr,n)
 ** Show sat_var_map as a list of its elements
 *)
 
-fun showSatVarMap() = 
- let val (c,st) = !sat_var_map
+fun showSatVarMap svm = 
+ let val (c,st) = svm
  in
-  (c, List.map snd (Redblackmap.listItems st))
+  (c, List.map snd (SVM.listItems st))
  end;
 
 (* 
@@ -87,7 +95,7 @@ val print_all_term = with_flag(show_types,true)print_term;
 *)
 
 exception literalToIntError;
-fun literalToInt t =
+fun literalToInt svm sva t =
  let val (sign,v) =
       if is_neg t 
        then 
@@ -100,9 +108,9 @@ fun literalToInt t =
        else if type_of t = bool then (false, t)        
        else (print "``"; print_all_term t; print "``\n";
              print " is not a clause or literal\n"; raise literalToIntError)
-     val v_num = lookup_sat_var v
+     val (v_num,svm') = lookup_sat_var svm sva v
  in
-  (sign, v_num)
+  ((sign, v_num),svm')
  end;
 
 (* 
@@ -110,8 +118,8 @@ fun literalToInt t =
 ** raising lookup_sat_numError if the absolute value of
 ** the integer isn't in sat_var_map
 *)
-fun intToLiteral n = 
-    let val t = lookup_sat_num (abs n)
+fun intToLiteral sva n = 
+    let val t = lookup_sat_num sva (abs n)
     in if n>=0 then t else mk_neg t end
 
 (*
@@ -129,12 +137,25 @@ fun intToLiteral n =
 **      so variables are not numbered in the left-to-right order.
 **      Not clear if this matters.
 *)
+(* FIXME: if is_cnf, then assume the .cnf file is already present, and use that *)
+fun termToDimacs0 svm sva t = 
+    foldr
+    (fn (c,(d,svm)) => 
+	let val (l,svm') = (foldr (fn (p,(d,svm)) => 
+				      let val (n,svm') = literalToInt svm sva p
+				      in (n::d,svm') end) ([],svm) (strip_disj c)) 
+	in (l :: d,svm') end) 
+	    ([],svm) 
+	    (strip_conj t)
 
-fun termToDimacs t = 
- foldr
-  (fn (c,d) =>  (map literalToInt (strip_disj c)) :: d) 
-  [] 
-  (strip_conj t);
+(* tail recursive version*)
+fun termToDimacs svm sva clauses numclauses = 
+    Array.foldli (fn (ci,c,svm) => 
+	let val (l,svm') = (List.foldl (fn (p,(d,svm)) => 
+				      let val (n,svm') = literalToInt svm sva p
+				      in (n::d,svm') end) ([],svm) (List.rev (strip_disj c))) 
+	in (Array.update(numclauses,ci,l);svm') end) 
+	    svm (clauses,0,NONE)
 
 (* Test data
 val t1 = ``x:bool``;
@@ -218,11 +239,12 @@ fun LiteralToString(b,n) = if b then ("-" ^ (Int.toString n)) else Int.toString 
 
 val tmp_name = ref "undefined";
 
-fun termToDimacsFile fname t var_count =
+fun termToDimacsFile fname clause_count var_count clauses =
  let open TextIO;
-      val clause_count = length(strip_conj t)
-     val _            = initSatVarMap var_count
-     val dlist        = termToDimacs t
+      val svm          = (1,  SVM.mkDict rbmcomp) (* sat_var_map *)
+     val sva          = Array.array(var_count+1,T) (* sat_var_arr *)
+     val numclauses = Array.array(clause_count,[(false,0)])
+     val svm'  = termToDimacs svm sva clauses numclauses
      val tmp          = FileSys.tmpName()
      val tmpname      = if isSome fname then (valOf fname)^".cnf" else tmp^".cnf";
      val outstr       = TextIO.openOut tmpname
@@ -232,13 +254,13 @@ fun termToDimacsFile fname t var_count =
 		out "p cnf ";
 		out (Int.toString var_count); out " ";
 		out (Int.toString clause_count); out "\n";
-		app 
-		(fn l => (app (fn p => (out(LiteralToString p); out " ")) l; out "\n0\n")) 
-		dlist;
+		Array.app 
+		(fn l => (List.app (fn p => (out(LiteralToString p); out " ")) l; out "\n0\n")) 
+		numclauses;
 		flushOut outstr;
 		closeOut outstr;
 		tmp_name := tmp;
-		if isSome fname then tmpname else tmp) 
+		if isSome fname then (tmpname,svm',sva) else (tmp,svm',sva)) 
   in res end
 
 (*
@@ -247,6 +269,7 @@ fun termToDimacsFile fname t var_count =
 ** a term in CNF in which each number n in the DIMACS file
 ** is a boolean variable (!prefix)n
 ** Code below by Ken Larsen (replaces earlier implementation by MJCG)
+** Changed by HA to not reverse order of clauses, and to return var count
 *)
 
 
@@ -256,54 +279,95 @@ fun isNewline #"\n" = true
 fun dropLine get src = 
     StringCvt.dropl isNewline get (StringCvt.dropl (not o isNewline) get src);
 
-fun stripPreamble get src =
-    case get src of
-        SOME(c, src') => if c = #"c" orelse c = #"p" 
-                         then stripPreamble get (dropLine get src')
-                         else SOME src
-      | _             => NONE;
+fun skip_p get src i = 
+    if i=5 then SOME src
+    else case get src of 
+	     SOME (c,src') => skip_p get src' (i+1)
+	   | NONE => NONE
 
 fun getInt get = Int.scan StringCvt.DEC get;
 
-fun getIntClause get src =
-    let fun loop src acc = 
+fun stripPreamble get src =
+    case get src of
+        SOME(c, src') => 
+	(case c of 
+	     #"c" => stripPreamble get (dropLine get src')
+	   | #"p" => 
+	     let val src'' = skip_p get src 0
+		 val res = getInt get (valOf src'')
+	     in case res of 
+		    SOME (vc,src') => SOME (dropLine get src',vc)
+		  | _ =>  NONE
+	     end
+	   | _ => NONE)
+      | _ => NONE
+
+fun update_maps svm sva s i =
+    if is_T (Array.sub(sva,i)) 
+    then let val (c,svm1) = svm
+	     val svm2 = SVM.insert(svm1,s,(s,i))
+	     val c' = if i>c then i else c
+             val svm'    =  (c'+1,svm2)
+	     val _    = Array.update(sva,i,s) 
+		 handle Subscript => 
+			(failwith ("lookup_sat_varError: "^(term_to_string s)^"::"
+				   ^(int_to_string i)^"\n"))
+         in svm' end
+    else svm
+
+
+fun getIntClause sva svm get src =
+    let fun loop src (acc,svm) = 
             case getInt get src of
-                SOME(i, src) => if i = 0 then SOME(acc, src)
-                                else loop src (i::acc)
+                SOME(i, src) => if i = 0 then SOME((acc,svm), src)
+                                else 
+				    let val ai = (if i<0 then ~i else i)
+					val v = intToPrefixedLiteral ai
+					val svm' = update_maps svm sva v ai
+				    in loop src ((i::acc),svm') end
               | NONE         => if List.null acc then NONE
-                                else SOME(acc, src)
-    in  loop src []
-    end;
+                                else SOME((acc,svm), src)
+    in  loop src ([],svm)
+    end
 
 (* This implementation is inspired by (and hopefully faithful to)
 ** dimacsToTerm.
 *)
 
-fun getTerms get src =
-    let fun loop src acc =
-            case getIntClause get src of
-                SOME(ns, src) => loop src (mk_conj(buildClause ns, acc))
-              | NONE          => SOME(acc, src)
-    in  case getIntClause get src of
-            SOME(ns, src) => loop src (buildClause ns)
-          | NONE          => NONE
+fun getTerms sva svm get src =
+    let fun loop src (acc,svm,sva) =
+            let val res =  getIntClause sva svm get src 
+	    in case res of
+                SOME((ns,svm'), src) => loop src (buildClause ns::acc,svm',sva)
+              | NONE          => SOME((acc,svm,sva), src)
+	    end
+    in case getIntClause sva svm get src of
+           SOME((ns,svm'), src) => loop src ([buildClause ns],svm',sva)
+         | NONE          => NONE
     end;
 
-fun readTerms get src = 
+fun readTerms get src =
     case stripPreamble get src of
-        SOME src => getTerms get src
-      | NONE     => NONE;
+        SOME (src,var_count) => 
+		  let val svm = (0,  SVM.mkDict rbmcomp) (* sat_var_map *)
+		      val sva = Array.array(var_count+1,T) (* sat_var_arr *)
+		  in getTerms sva svm get src end
+      | NONE     => NONE
+
 
 exception readDimacsError;
 
-fun readDimacs filename =
+fun genReadDimacs filename =
  let val fullfilename = Path.mkAbsolute(filename, FileSys.getDir())
      val ins          = TextIO.openIn fullfilename
-     val term         = TextIO.scanStream readTerms ins
+     val res = TextIO.scanStream readTerms ins
  in  (TextIO.closeIn ins; 
-      case term of SOME t => t | NONE => raise readDimacsError)
+      case res of 
+	  SOME (cs,svm,sva) => (list_mk_conj (List.rev cs),svm,sva)
+	| NONE => raise readDimacsError)
  end;
 
- 
+fun readDimacs filename = #1 (genReadDimacs filename)
+
 end
 end

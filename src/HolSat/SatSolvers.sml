@@ -29,6 +29,8 @@ datatype sat_solver =
    start_string   : string,  
    end_string     : string};
 
+fun getSolverName (SatSolver {name,...}) = name
+
 val grasp =
  SatSolver
   {name           = "grasp",
@@ -89,12 +91,13 @@ val minisat =
 val minisatp =
  SatSolver
   {name           = "minisatp", 
-   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat/cgi/MiniSat_v1.13_linux.cgi",
-   executable     = if isSome (Process.getEnv "OS") andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
-			then "sat_solvers/minisat/minisat.exe"
-			else "sat_solvers/minisat/minisat",
+   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat/cgi/MiniSat_v1.14_linux.cgi",
+   executable     = if isSome (Process.getEnv "OS") 
+		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
+		    then "sat_solvers/minisat/minisat.exe"
+		    else "sat_solvers/minisat/minisat",
    notime_run     = (fn ex => fn (infile,outfile) => 
-                      (ex ^ " -r " ^ outfile ^ " -p " ^ outfile ^ ".proof " ^ infile ^ " > " ^ outfile ^".stats")),
+                      (ex ^ " -r " ^ outfile ^ " -p " ^ outfile ^ ".proof " ^ infile ^ " -z > " ^ outfile ^".stats")),
    time_run       = (fn ex => fn ((infile,outfile),time) => 
                       (ex ^ " " ^ infile ^ " " ^ (Int.toString time) ^ " > " ^ outfile)),
    only_true      = false,

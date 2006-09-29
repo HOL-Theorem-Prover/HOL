@@ -50,14 +50,16 @@ public:
    ~File(void) {
         close(); }
 
-    void open(int fd, FileMode mode, bool own_fd = true);    // Low-level open. If 'own_fd' is FALSE, descriptor will not be closed by destructor.
+   // Low-level open. If 'own_fd' is FALSE, descriptor will not be closed by destructor.
+    void open(int fd, FileMode mode, bool own_fd = true);    
     void open(cchar* name, cchar* mode);                     // FILE* compatible interface.
     void close(void);
 
     bool null(void) {               // TRUE if no file is opened.
         return fd == -1; }
 
-    int releaseDescriptor(void) {   // Don't run UNIX function 'close()' on descriptor in 'File's 'close()'.
+    // Don't run UNIX function 'close()' on descriptor in 'File's 'close()'.
+    int releaseDescriptor(void) { 
         if (mode == READ)
             lseek64(fd, pos - size, SEEK_CUR);
         own_fd = false;
@@ -77,7 +79,7 @@ public:
         mode = m;
         pos = 0; }
 
-    int getCharQ(void) {            // Quick version with minimal overhead -- don't call this in the wrong mode!
+    int getCharQ(void) { // Quick version with minimal overhead : don't call this in wrong mode!
       #ifdef PARANOID
         assert(mode == READ);
       #endif
@@ -88,7 +90,7 @@ public:
         if (size == 0) return EOF;
         return (uchar)buf[pos++]; }
 
-    int putCharQ(int chr) {         // Quick version with minimal overhead -- don't call this in the wrong mode!
+    int putCharQ(int chr) { // Quick version with minimal overhead : don't call this in wrong mode!
       #ifdef PARANOID
         assert(mode == WRITE);
       #endif

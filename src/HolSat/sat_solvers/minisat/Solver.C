@@ -23,7 +23,6 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #define CC_MINIMIZATION
 
-
 //=================================================================================================
 // Helper functions:
 
@@ -36,7 +35,6 @@ void removeWatch(vec<Clause*>& ws, Clause* elem)
     for (; j < ws.size()-1; j++) ws[j] = ws[j+1];
     ws.pop();
 }
-
 
 //=================================================================================================
 // Operations on clauses:
@@ -63,28 +61,32 @@ void removeWatch(vec<Clause*>& ws, Clause* elem)
 |________________________________________________________________________________________________@*/
 void Solver::newClause(const vec<Lit>& ps_, bool learnt, ClauseId id)
 {
-    assert(learnt || id == ClauseId_NULL);
+  assert(learnt || id == ClauseId_NULL);
     if (!ok) return;
 
     vec<Lit>    qs;
     if (!learnt){
         assert(decisionLevel() == 0);
         ps_.copyTo(qs);                     // Make a copy of the input vector.
-
+	
         // Remove duplicates:
         sortUnique(qs);
 
-        // Check if clause is satisfied:
+        // Check if clause is satisfied: 
         for (int i = 0; i < qs.size()-1; i++){
-            if (qs[i] == ~qs[i+1])
-                return; }
+	  if (qs[i] == ~qs[i+1]) {
+	    if (proof != NULL) proof->incRootCount();
+	    return;} }
         for (int i = 0; i < qs.size(); i++){
-            if (value(qs[i]) == l_True)
-                return; }
+	  if (value(qs[i]) == l_True) {
+	    if (proof != NULL) proof->incRootCount();
+	    return;} }
 
-        // Remove false literals:
+        // Remove false literals:       
         int     i, j;
-        if (proof != NULL) proof->beginChain(proof->addRoot(qs));
+        
+	if (proof != NULL) proof->beginChain(proof->addRoot(qs));
+
         for (i = j = 0; i < qs.size(); i++)
             if (value(qs[i]) != l_False)
                 qs[j++] = qs[i];
@@ -99,9 +101,10 @@ void Solver::newClause(const vec<Lit>& ps_, bool learnt, ClauseId id)
         ok = false;
 
     }else if (ps.size() == 1){
-        // NOTE: If enqueue takes place at root level, the assignment will be lost in incremental use (it doesn't seem to hurt much though).
+        // NOTE: If enqueue takes place at root level, 
+        //   the assignment will be lost in incremental use (it doesn't seem to hurt much though).
         if (id != ClauseId_NULL)
-            unit_id[var(ps[0])] = id;
+	  unit_id[var(ps[0])] = (sign(ps[0])) ? -id : id; //HA: sign info
         if (!enqueue(ps[0]))
             ok = false;
 
@@ -189,6 +192,7 @@ Var Solver::newVar() {
     watches     .push();          // (list for positive literal)
     watches     .push();          // (list for negative literal)
     reason      .push(NULL);
+    sreason     .push(true);      // dummy value
     assigns     .push(toInt(l_Undef));
     level       .push(-1);
     trail_pos   .push(-1);
@@ -212,6 +216,7 @@ void Solver::cancelUntil(int level) {
             Var     x  = var(trail[c]);
             assigns[x] = toInt(l_Undef);
             reason [x] = NULL;
+	    sreason[x] = true; // dummy
             order.undo(x); }
         trail.shrink(trail.size() - trail_lim[level]);
         trail_lim.shrink(trail_lim.size() - level);
@@ -251,6 +256,7 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
     vec<char>&     seen  = analyze_seen;
     int            pathC = 0;
     Lit            p     = lit_Undef;
+    bool           sconfl;
 
     // Generate conflict clause:
     //
@@ -286,11 +292,13 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
         while (!seen[var(trail[index--])]);
         p     = trail[index+1];
         confl = reason[var(p)];
+	sconfl = sreason[var(p)];
         seen[var(p)] = 0;
         pathC--;
         if (pathC == 0) break;
 
-        if (proof != NULL) proof->resolve(confl->id(), var(p));
+        if (proof != NULL) //HA: pass -id if pivot literal is negated in the passed clause
+	  proof->resolve(sconfl ? (confl->id())*(-1) : confl->id(), var(p)); 
     }
     out_learnt[0] = ~p;
 
@@ -339,14 +347,15 @@ void Solver::analyze(Clause* confl, vec<Lit>& out_learnt, int& out_btlevel)
         sort(analyze_toclear, lastToFirst_lt(trail_pos));
         for (int k = 0; k < analyze_toclear.size(); k++){
             Var     v = var(analyze_toclear[k]); assert(level[v] > 0);
-            Clause& c = *reason[v];
-            proof->resolve(c.id(), v);
+            Clause& c = *reason[v];	    
+            proof->resolve(sreason[v] ? -1*(c.id()) : c.id(), v); //HA: -id if v&1 in c
             for (int k = 1; k < c.size(); k++)
                 if (level[var(c[k])] == 0)
                     proof->resolve(unit_id[var(c[k])], var(c[k]));
         }
         proof->endChain();
     }
+
     // Clean up:
     //
     for (int j = 0; j < out_learnt.size()     ; j++) seen[var(out_learnt     [j])] = 0;
@@ -429,7 +438,8 @@ void Solver::analyzeFinal(Clause* confl, bool skip_first)
                 conflict.push(~trail[i]);
             }else{
                 Clause& c = *r;
-                if (proof != NULL) proof->resolve(c.id(), x);
+                if (proof != NULL) //HA: pass -id if pivot is negated in c
+		  proof->resolve(sreason[x] ? -1*(c.id()) : c.id(), x);
                 for (int j = 1; j < c.size(); j++)
                     if (level[var(c[j])] > 0)
                         seen[var(c[j])] = 1;
@@ -469,6 +479,7 @@ bool Solver::enqueue(Lit p, Clause* from)
         level    [x] = decisionLevel();
         trail_pos[x] = trail.size();
         reason   [x] = from;
+	sreason  [x] = sign(p);
         trail.push(p);
         return true;
     }
@@ -497,6 +508,7 @@ Clause* Solver::propagate()
         Lit            p  = trail[qhead++];     // 'p' is enqueued fact to propagate.
         vec<Clause*>&  ws = watches[index(p)];
         Clause**       i,** j,** end;
+	bool sconfl;
 
         for (i = j = (Clause**)ws, end = i + ws.size();  i != end;){
             Clause& c = **i; i++;
@@ -509,6 +521,7 @@ Clause* Solver::propagate()
 
             // If 0th watch is true, then clause is already satisfied.
             Lit   first = c[0];
+	    sconfl = sign(first);
             lbool val   = value(first);
             if (val == l_True){
                 *j++ = &c;
@@ -529,11 +542,11 @@ Clause* Solver::propagate()
                     ClauseId id = proof->endChain();
                     assert(unit_id[var(first)] == ClauseId_NULL || value(first) == l_False);    // (if variable already has 'id', it must be with the other polarity and we should have derived the empty clause here)
                     if (value(first) != l_False)
-                        unit_id[var(first)] = id;
+		      unit_id[var(first)] = sconfl ? -id : id; //HA: sign info
                     else{
                         // Empty clause derived:
                         proof->beginChain(unit_id[var(first)]);
-                        proof->resolve(id, var(first));
+                        proof->resolve((unit_id[var(first)]>=0)? -id: id, var(first)); //HA: sign
                         proof->endChain();
                     }
                 }
@@ -779,10 +792,10 @@ bool Solver::solve(const vec<Lit>& assumps)
                 analyzeFinal(reason[var(p)], true);
                 conflict.push(~p);
             }else{
-                assert(proof == NULL || unit_id[var(p)] != ClauseId_NULL);   // (this is the pre-condition above)
+                assert(proof == NULL || unit_id[var(p)] != ClauseId_NULL); // (this is the pre-condition above)
                 conflict.clear();
                 conflict.push(~p);
-                if (proof != NULL) conflict_id = unit_id[var(p)];
+                 if (proof != NULL) conflict_id = abs(unit_id[var(p)]); //HA: abs
             }
             cancelUntil(0);
             return false; }
@@ -813,6 +826,19 @@ bool Solver::solve(const vec<Lit>& assumps)
     }
     if (verbosity >= 1)
         reportf("==============================================================================\n");
+
+/*DEBUG*/
+    for (int i = 0; i < conflict.size(); i++){
+        if (var(conflict[i]) >= 100){
+            Lit p = conflict[i];
+            Var x = var(p);
+            printf("confl[%d] = "L_LIT"\n", i, L_lit(p));
+            printf("level     = %d\n", level[x]);
+            printf("reason    = %p\n", reason[x]);
+            printf("unit_id   = %d\n", unit_id[x]);
+        }
+    }
+/*END*/
 
     cancelUntil(0);
     return status == l_True;

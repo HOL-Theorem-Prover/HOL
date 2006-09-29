@@ -64,12 +64,6 @@ fun parseSat (s1,s2) ss =
 *)
 
 (*
-** Reference containing last command used to invoke a SAT solver
-*)
-
-val sat_command = ref "undef";
-
-(*
 ** Test for success of the result of Process.system
 ** N.B. isSuccess expected to primitive in next release of
 ** Moscow ML, and Process.status will lose eqtype status
@@ -79,59 +73,55 @@ fun isSuccess s = (s = Process.success);
 
  val satdir = Globals.HOLDIR^"/src/HolSat/"
  
-(* if fname is NONE, then use a temp file, otherwise assume fname.cnf alredy exists*)
-fun invokeSat sat_solver fname t vc =
+(*
+Write out DIMACS file if required
+Build svm and sva
+*)
+fun generateDimacs vc t mcth nr = 
+    let 
+	val var_count  = if isSome vc then valOf vc else length(all_vars t)
+	val clauses = if isSome mcth 
+		      then Array.tabulate(Array.length (valOf mcth), 
+				       fn i => concl (Array.sub(valOf mcth,i)))
+		      else Array.fromList (strip_conj t)
+	val clause_count = if isSome nr then valOf nr else Array.length clauses
+	val (tmp,svm,sva) = termToDimacsFile NONE clause_count var_count clauses
+    in (tmp,sva,svm) end
+
+fun invokeSat sat_solver t vc nr mcth svm sva tmp =
  let 
- val SatSolver {name,
-                    URL,
-                    executable,
-                    notime_run,
-                    time_run,
-                    only_true,
-                    failure_string,
-                    start_string,
-                    end_string} = sat_solver
-     val var_count  = if isSome vc then valOf vc else length(all_vars t)
-     val tmp        = if isSome fname 
-		      then let val _ = initSatVarMap var_count 
-			       val _ = termToDimacs t (*FIXME: this is to regenerate sat_var_map: 
-						       better to save/load it*)
-			  in valOf fname end
-		      else termToDimacsFile NONE t var_count
+      val SatSolver {name,URL,executable,notime_run,time_run,only_true,
+                    failure_string,start_string,end_string} = sat_solver
+     val (tmp,sva,svm) = if isSome tmp 
+			 then (valOf tmp, valOf sva, valOf svm) 
+			 else generateDimacs NONE t NONE NONE
      val infile     = tmp ^ ".cnf"
      val outfile    = tmp ^ "." ^ name
-     val ex         = (*Globals.HOLDIR ^*) satdir ^ executable
+     val ex         = satdir ^ executable
      val run_cmd    = notime_run ex (infile,outfile)
-     val _          = (sat_command := run_cmd)
      val code       = Process.system run_cmd
-     val _          = if isSuccess code
-                       then ()
-		      else if (name="minisat" orelse name="minisatp") 
-		      then ()
+     val _          = if isSuccess code orelse (name="minisat" orelse name="minisatp") 
+		      then () (* minisat returns non-std exit code on success *)
                       else print("Warning:\n Process.system reports failure signal returned by\n " 
 				 ^ run_cmd ^ "\n")
      val ins        = TextIO.openIn outfile
-     val sat_res    = TextIO.inputAll ins
+     val sat_res_ss = Substring.all (TextIO.inputAll ins)
      val _          = TextIO.closeIn ins
-     val sat_res_ss = Substring.all sat_res
      val result     = substringContains failure_string sat_res_ss
  in
   if result 
    then NONE
    else 
-    let val model1 = parseSat(start_string,end_string)sat_res_ss
+    let val model1 = parseSat (start_string,end_string) sat_res_ss
         val model2 = if only_true 
-                      then model1
-                           @
-                           (map 
-                             (fn n => 0-n) 
-                             (subtract (map snd (snd(showSatVarMap()))) model1))
-                      else model1
-    in
-     let val model3 = SOME(map intToLiteral model2)
-      in model3 end
+                      then model1 @
+                           (map (fn n => 0-n) 
+				(subtract (map snd (snd(showSatVarMap svm))) model1))
+                     else model1
+    in let val model3 = SOME(map (intToLiteral sva) model2)
+        in model3 end
     end
- end;
+ end
 
 (*
 ** satOracle sat_solver t
@@ -154,7 +144,7 @@ fun satOracle sat_solver t =
                     failure_string,
                     start_string,
                     end_string} = sat_solver
-     val res = invokeSat sat_solver NONE t NONE
+     val res = invokeSat sat_solver t NONE NONE NONE NONE NONE NONE
  in
   case res of
     SOME l => Thm.mk_oracle_thm (Tag.read name) ([], mk_imp(list_mk_conj l, t))
@@ -185,7 +175,7 @@ and EQT_Imp2 = tautLib.TAUT_PROVE ``!b. (b=T) ==> b``;
 exception satCheckError;
 fun satCheck model t =
  (let 
-        val mtm  = list_mk_conj model
+       val mtm  = list_mk_conj model
       val th1  = ASSUME mtm
       val thl  = map 
                   (fn th => if is_neg(concl th) 
@@ -205,7 +195,7 @@ exception satProveError;
 
 (* assumes t is in cnf *)
 fun satProve sat_solver t  = 
- case invokeSat sat_solver NONE t NONE of
+ case invokeSat sat_solver t NONE NONE NONE NONE NONE NONE of
    SOME model => satCheck model t
  | NONE       => raise satProveError 		
 

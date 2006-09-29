@@ -22,29 +22,29 @@ COPTIMIZE = -O3
 
 .PHONY : s p d r build clean depend
 
+r:	WAY=release
 s:	WAY=standard
 p:	WAY=profile
 d:	WAY=debug
-r:	WAY=release
 rs:	WAY=release static
 
+r:	CFLAGS+=$(COPTIMIZE) -D NDEBUG
 s:	CFLAGS+=$(COPTIMIZE) -ggdb -D DEBUG
 p:	CFLAGS+=$(COPTIMIZE) -pg -ggdb -D DEBUG
 d:	CFLAGS+=-O0 -ggdb -D DEBUG
-r:	CFLAGS+=$(COPTIMIZE) -D NDEBUG
 rs:	CFLAGS+=$(COPTIMIZE) -D NDEBUG
 
-s:	build $(EXEC)
+r:	build $(EXEC)
+s:	build $(EXEC)_standard
 p:	build $(EXEC)_profile
 d:	build $(EXEC)_debug
-r:	build $(EXEC)_release
 rs:	build $(EXEC)_static
 
 build:
 	@echo Building $(EXEC) "("$(WAY)")"
 
 clean:
-	@rm -f $(EXEC) $(EXEC)_profile $(EXEC)_debug $(EXEC)_release $(EXEC)_static \
+	@rm -f $(EXEC)_standard $(EXEC)_profile $(EXEC)_debug $(EXEC) $(EXEC)_static \
 	  $(COBJS) $(PCOBJS) $(DCOBJS) $(RCOBJS) depend.mak
 
 ## Build rule

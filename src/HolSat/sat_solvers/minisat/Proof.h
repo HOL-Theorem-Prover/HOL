@@ -22,7 +22,9 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "SolverTypes.h"
 #include "File.h"
-
+#ifdef DEBUG
+#include <fstream>
+#endif
 
 //=================================================================================================
 
@@ -32,11 +34,11 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 // clause has ID 0, the next 1 and so on. These are the IDs passed to 'chain()'s 'cs' parameter.
 //
 struct ProofTraverser {
-    virtual void root   (const vec<Lit>& c) {}
-    virtual void chain  (const vec<ClauseId>& cs, const vec<Var>& xs) {}
-    virtual void deleted(ClauseId c) {}
-    virtual void done   () {}
-    virtual ~ProofTraverser() {}
+  virtual void root   (const vec<Lit>& c) {}
+  virtual void chain  (const vec<ClauseId>& cs, const vec<Var>& xs) {}
+  virtual void deleted(ClauseId c) {}
+  virtual void done   () {}
+  virtual ~ProofTraverser() {}
 };
 
 
@@ -44,26 +46,39 @@ class Proof {
     File            fp;
     cchar*          fp_name;
     ClauseId        id_counter;
+    ClauseId        root_counter;
     ProofTraverser* trav;
 
     vec<Lit>        clause;
     vec<ClauseId>   chain_id;
     vec<Var>        chain_var;
+    vec<int64>      c2fp; // c2fp[id] gives position in proof trace of clause with id 'id'
 
 public:
     Proof();                        // Offline mode -- proof stored to a file, which can be saved, compressed, and/or traversed.
+    Proof(ClauseId goal); // Offline mode -- for pre-initialising c2fp
     Proof(ProofTraverser& t);       // Online mode -- proof will not be stored.
 
-    ClauseId addRoot   (vec<Lit>& clause);
+    void     incRootCount () { root_counter++; }
+    ClauseId addRoot   (vec<Lit>& clause, ClauseId orig_root_id = 0);
     void     beginChain(ClauseId start);
     void     resolve   (ClauseId next, Var x);
     ClauseId endChain  ();
     void     deleted   (ClauseId gone);
     ClauseId last      () { assert(id_counter != ClauseId_NULL); return id_counter - 1; }
 
+#ifdef DEBUG
+    ClauseId parseRoot (vec<Lit>& clause, File& fp, uint64 tmp, std::ofstream* fout = NULL);
+    void     parseChain(vec<ClauseId>& chain_id, vec<Var>&  chain_var, File& fp, uint64 tmp, ClauseId id, std::ofstream* fout = NULL);
+#else 
+    ClauseId parseRoot (vec<Lit>& clause, File& fp, uint64 tmp);
+    void     parseChain(vec<ClauseId>& chain_id, vec<Var>&  chain_var, File& fp, uint64 tmp, ClauseId id);
+#endif
+
     void     compress  (Proof& dst, ClauseId goal = ClauseId_NULL);     // 'dst' should be a newly constructed, empty proof.
     bool     save      (cchar* filename);
-    void     traverse  (ProofTraverser& trav, ClauseId goal = ClauseId_NULL) ;
+    void   traverse  (ProofTraverser& trav, int& res_count, ClauseId goal = ClauseId_NULL) ;
+
 };
 
 
