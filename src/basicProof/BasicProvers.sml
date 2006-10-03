@@ -149,6 +149,7 @@ val let_movement_thms = let
   open combinTheory
 in
   ref [o_THM, o_ABS_R, C_ABS_L, C_THM,
+       GEN_literal_case_RAND, GEN_literal_case_RATOR,
        GEN_LET_RAND, GEN_LET_RATOR, S_ABS_R]
 end
 
@@ -180,6 +181,7 @@ in
     (QCHANGED_CONV
        (SIMP_CONV pure_ss (!let_movement_thms) THENC
         SIMP_CONV pure_ss (combinTheory.LET_FORALL_ELIM ::
+                           combinTheory.literal_case_FORALL_ELIM ::
                            !let_movement_thms) THENC
         SIMP_CONV (pure_ss ++ ABBREV_ss ++ UNWIND_ss) [Cong IMP_CONG'])) THEN
   REPEAT BOSS_STRIP_TAC
