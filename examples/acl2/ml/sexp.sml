@@ -404,6 +404,7 @@ and mlcons     = mksym "COMMON-LISP" "CONS"
 and mllambda   = mksym "COMMON-LISP" "LAMBDA"
 and mldefun    = mksym "COMMON-LISP" "DEFUN"
 and mlmutual   = mksym "ACL2"        "MUTUAL-RECURSION"
+and mlencap    = mksym "ACL2"        "ENCAPSULATE"
 and mldefaxiom = mksym "ACL2"        "DEFAXIOM"
 and mldefthm   = mksym "ACL2"        "DEFTHM";
 
@@ -613,6 +614,23 @@ fun is_mlmutual (mlpair(x, defs)) =
 (*****************************************************************************)
 fun dest_mlmutual (mlpair(_, defs)) = dest_mlsexp_list defs
  |  dest_mlmutual _ = err "dest_mlmutual" "bad argument";
+
+(*****************************************************************************)
+(* Test for a encap: (ENCAP acl2sig events)                                  *)
+(*****************************************************************************)
+fun is_mlencap (mlpair(x, mlpair(acl2sig,events))) =
+      (x = mlencap) andalso is_mlsexp_list acl2sig 
+                    andalso is_mlsexp_list events
+ |  is_mlencap _  = false;
+
+(*****************************************************************************)
+(* Mutual destructor: (ENCAP (s1 ... sm) (e1 ... en))                        *)
+(*                    |-->                                                   *)
+(*                    ([s1, ..., sm],[e1,...,en])                            *) 
+(*****************************************************************************)
+fun dest_mlencap (mlpair(_, mlpair(acl2sig,events))) = 
+     (dest_mlsexp_list acl2sig, dest_mlsexp_list events)
+ |  dest_mlencap _ = err "dest_mlencap" "bad argument";
 
 (*****************************************************************************)
 (* Test for ``nat n`` where n is a numeral                                   *)
@@ -993,6 +1011,16 @@ fun pr_mlsexp s = (print_mlsexp print s; print "\n");
 fun pr_sexp t = pr_mlsexp(term_to_mlsexp t);
 
 (*****************************************************************************)
+(* Extract the name of a constant or variable                                *)
+(*****************************************************************************)
+exception get_name_fail;
+fun get_name tm =
+ if is_const tm 
+  then fst(dest_const tm) else
+ if is_var tm then fst(dest_var tm)
+  else raise get_name_fail;
+
+(*****************************************************************************)
 (* ``f x1 ... xn = e`` --> (defun f (x1 ... xn) ^(term_to_mlsexp e))         *)
 (*****************************************************************************)
 fun deftm_to_mlsexp_defun tm =
@@ -1001,7 +1029,7 @@ fun deftm_to_mlsexp_defun tm =
  in
   mk_mlsexp_list
    [mksym "COMMON-LISP" "DEFUN",
-    string_to_mlsym(fst((if is_var opr then dest_var else dest_const) opr)),
+    string_to_mlsym(get_name opr),
     mk_mlsexp_list(map term_to_mlsexp args),
     term_to_mlsexp r]
  end;    
@@ -1268,27 +1296,10 @@ fun defun_to_string d =
         err "defun_to_string" "bad defun");
 
 (*****************************************************************************)
-(* (defun nam (x1 ... xm) bdy) |--> ("DEFUN",    "nam", ``\x1 ... xm. bdy``) *)
-(* (defthm nam bdy)            |--> ("DEFTHM",   "nam", ``bdy``)             *)
-(* (defaxiom nam bdy)          |--> ("DEFAXIOM", "nam", ``bdy``)             *)
+(* Test for a defun, defaxiom or defthm                                      *)
 (*****************************************************************************)
-fun def_to_term d =
- if is_mldefun d
-  then let val (nam,params,bdy) = dest_mldefun d
-       in
-        ("DEFUN", nam, list_mk_fun(map param_to_var params, mlsexp_to_term bdy))
-       end else
- if is_mldefaxiom d
-  then let val (nam,bdy) = dest_mldefaxiom d
-       in
-        ("DEFAXIOM", nam, mlsexp_to_term bdy)
-       end else
- if is_mldefthm d
-  then let val (nam,bdy) = dest_mldefthm d
-       in
-        ("DEFTHM", nam, mlsexp_to_term bdy)
-       end 
-  else err "def_to_term" "not a def";
+fun is_mldef d =
+ is_mldefun d orelse is_mldefaxiom d orelse is_mldefthm d;
 
 (*****************************************************************************)
 (* ``f = \x1 ... xn. bdy`` --> ``f x1 ... xn = bdy``                         *)
@@ -1511,19 +1522,29 @@ fun create_hol_name acl2_name =
    end;
 
 (*****************************************************************************)
-(* ML datatype to represent defs sent from ACL2                              *)
+(* ML datatype to represent HOL tems and other data (e.g. names) of          *)
+(* events imported from ACL2                                                 *)
+(*                                                                           *)
+(* A defun contains a defining equation: ``!x1 ... xn. f x1 ... xn = e``     *)
+(* (the universal quantification may be partial or absent)                   *)
+(*                                                                           *)
+(* A defaxiom or defthm consists of a name and a term.                       *)
+(*                                                                           *)
+(* A mutual represents MUTUAL-RECURSION and is a defining term (normally a   *)
+(* conjunction of universally quantified equations) suitable for processing  *)
+(* by Define.                                                                *)
+(*                                                                           *)
+(* An encap represents ENCAPSULATE and is a pair comprising the list of      *)
+(* names of the events specifying the functions being introduced and the     *)
+(* defining term (normally an existential quantification) suitable for       *)
+(* processing by new_specification.                                          *)
 (*****************************************************************************)
 datatype acl2def =
-   defun       of string * term
- | defaxiom    of string * term
- | defthm      of string * term;
-
-(*****************************************************************************)
-(* Get kind of acl2def                                                       *)
-(*****************************************************************************)
-fun dest_acl2def (defun(s,_))    = ("DEFUN",s)
- |  dest_acl2def (defaxiom(s,_)) = ("DEFAXIOM",s)
- |  dest_acl2def (defthm(s,_))   = ("DEFTHM",s);
+   defun    of term
+ | defaxiom of string * term
+ | defthm   of string * term
+ | mutual   of term
+ | encap    of (string list) * term;
 
 (*****************************************************************************)
 (* Strip ``|=`` from defthms and defaxioms                                   *)
@@ -1538,6 +1559,11 @@ fun dest_ax_or_thm conc =
  in
   tm
  end;
+
+(*****************************************************************************)
+(* "s1 s2 ... sn" |--> ["s1","s2",...,"sn"] (split at spaces)                *)
+(*****************************************************************************)
+val split_at_spaces = String.tokens (fn c => c = #" ");
 
 (*****************************************************************************)
 (* Convert a theorem obtained by slurping in ACL2 to an acl2def option.      *)
@@ -1559,7 +1585,8 @@ fun dest_acl2_thm th =
                  (fn s => 
                    let val (s1,s2) = split_tag s
                    in
-                    if mem s1 ["DEFUN","DEFAXIOM","DEFTHM"]
+                    if mem s1 ["DEFUN","DEFAXIOM","DEFTHM",
+                               "MUTUAL-RECURSION","ENCAPSULATE"]
                      then (s1,s2)
                      else raise fail_for_mapfilter
                    end)
@@ -1572,10 +1599,17 @@ fun dest_acl2_thm th =
   if null stgl 
    then NONE
    else case (fst(hd stgl))
-        of "DEFUN"     => SOME(defun   (snd(hd stgl), conc))
-        |  "DEFAXIOM"  => SOME(defaxiom(snd(hd stgl), dest_ax_or_thm conc))
-        |  "DEFTHM"    => SOME(defthm  (snd(hd stgl), dest_ax_or_thm conc))
-        |  _           => NONE
+        of "DEFUN"     
+             => SOME(defun conc)
+        |  "DEFAXIOM"
+             => SOME(defaxiom(snd(hd stgl), dest_ax_or_thm conc))
+        |  "DEFTHM"
+             => SOME(defthm(snd(hd stgl), dest_ax_or_thm conc))
+        |  "MUTUAL-RECURSION"
+             => SOME(mutual conc)
+        |  "ENCAPSULATE"
+             => SOME(encap(split_at_spaces(snd(hd stgl)), conc))
+        |  _ => NONE
  end
 end;
 
@@ -1640,44 +1674,140 @@ val CLEAN_ACL2_VARS =
  LET_INTRO o CLEAN_ACL2_FREES o CONV_RULE CLEAN_ACL2_BOUND_CONV;
 
 (*****************************************************************************)
-(* Apply def_to_term and then create an acl2def                              *)
-(*                                                                           *)
-(* ("DEFUN", "nam", ``\x1 ... xm. bdy``)                                     *)
-(* |-->                                                                      *)
-(* defun(nam_def_axiom, [axioms: nam_def_axiom] |- nam = \x1 ..., xm. bdy)   *)
-(*                                                                           *)
-(* ("DEFAXIOM", "nam", tm)                                                   *)
-(* |-->                                                                      *)
-(* defaxiom(nam, tm)                                                         *)
-(*                                                                           *)
-(* ("DEFTHM", "nam", tm)                                                     *)
-(* |-->                                                                      *)
-(* defthm(nam, tm)                                                           *)
-(*                                                                           *)
+(*  deftm(defun tm)        = tm                                              *)
+(*  deftm(defthm(_, tm))   = tm                                              *)
+(*  deftm(defaxiom(_, tm)) = tm                                              *)
 (*****************************************************************************)
-fun mk_def d =
- let val (def_kind,sym,tm) = def_to_term d
-     val ty = type_of tm
-     val sym_name = mlsym_to_string sym
- in
-  if def_kind = "DEFUN" 
-   then let val newvar = mk_var(sym_name,ty)
-            val defun_tm = mk_def_eq(mk_eq(newvar,tm))
-        in
-         defun(sym_name, defun_tm)
-        end else
-  if def_kind = "DEFAXIOM" 
-   then defaxiom(sym_name, ``|= ^tm``) else
-  if def_kind = "DEFTHM" 
-   then defthm(sym_name, ``|= ^tm``)
-   else err "mk_def" "bad argument"
- end;
+fun deftm(defun tm)        = tm
+ |  deftm(defthm(_, tm))   = tm
+ |  deftm(defaxiom(_, tm)) = tm
+ |  deftm _                = err "deftm" "bad arg";
 
 (*****************************************************************************)
-(* Expand a mutual recursion to a list of definitions                        *)
+(* ``!v1...vn. f v1 ... vn = tm`` |--> f                                     *)
 (*****************************************************************************)
-fun mk_defs d =
-     if is_mlmutual d then map mk_def (dest_mlmutual d) else [mk_def d];
+fun get_defined tm = fst(strip_comb(lhs(snd(strip_forall tm))));
+
+(*****************************************************************************)
+(* defun ``!v1...vn. f v1 ... vn = tm`` |--> f                               *)
+(* fails on non-defuns                                                       *)
+(*****************************************************************************)
+exception get_defun_fun_fail;
+fun get_defun_fun (defun tm) = get_defined tm
+ |  get_defun_fun _ = raise get_defun_fun_fail;
+
+(*****************************************************************************)
+(*  defname(defun ``!x1 ... xn. f x1 ... xn = t,``)  = f                     *)
+(*  defname(defthm(nam, _))   = nam                                          *)
+(*  defname(defaxiom(nam, _)) = nam                                          *)
+(*****************************************************************************)
+fun defname(defun tm)        = get_name(get_defined tm)
+ |  defname(defthm(nam,_))   = nam
+ |  defname(defaxiom(nam,_)) = nam
+ |  defname _                = err "defname" "bad arg";
+
+(*****************************************************************************)
+(* mk_sexp_fun_ty n |--> ``:sexp -> ... -> sexp -> sexp`` (n arguments)      *)
+(*****************************************************************************)
+fun mk_sexp_fun_ty n = 
+ if n = 0 then ``:sexp`` else ``:sexp -> ^(mk_sexp_fun_ty(n-1))``;
+
+(*****************************************************************************)
+(* mk_closed_event vl tm |--> ``!v1 ... vn. tm``                             *)
+(*                                                                           *)
+(* where v1,...,vn are the free variables in tm not in vl                    *)
+(*****************************************************************************)
+fun mk_closed_event vl tm = list_mk_forall(subtract(free_vars tm)vl, tm);
+
+(*****************************************************************************)
+(* mk_acl2def converts an ML representation of an ACL2 event into an         *)
+(* equivalent hol acl2def specification                                      *)
+(*                                                                           *)
+(* (defun nam (x1 ... xm) bdy)                                               *)
+(* |-->                                                                      *)
+(* defun("nam", ``!x1 ... xm. nam x1 ..., xm = bdy``)                        *)
+(*                                                                           *)
+(* (defthm nam bdy)                                                          *)
+(* |-->                                                                      *)
+(* defthm("nam", ``|= tm``)                                                  *)
+(*                                                                           *)
+(* (defaxiom nam bdy)                                                        *)
+(* |-->                                                                      *)
+(* defaxiom("nam", ``|= tm``)                                                *)
+(*                                                                           *)
+(* (mutual-recursion d1 ... dn)                                              *)
+(* |-->                                                                      *)
+(* mutual ``^(deftm(mk_acl2def d1)) /\ ... /\ ^(deftm(mk_acl2def dn))``      *)
+(*                                                                           *)
+(* (encapsulate ((v1 ... ) ... (vm ... )) e1 ... en)                         *)
+(* |-->                                                                      *)
+(* encap                                                                     *)
+(*  ([``n1``,...,``nm``],                                                    *)
+(*   ``?v1 ... vm.                                                           *)
+(*      ^(deftm(mk_acl2def e1)) /\ ... /\ ^(deftm(mk_acl2def en))``)         *)
+(*                                                                           *)
+(* where n1,...,nm are the names of the events introducing v1,...,vm,        *)
+(* respectively                                                              *)
+(*****************************************************************************)  
+fun mk_acl2def d =
+ if is_mldefun d
+  then
+   let val (nam,params,bdy) = dest_mldefun d
+       val param_vars = map param_to_var params
+       val tm = list_mk_fun(param_vars, mlsexp_to_term bdy)
+       val ty = type_of tm
+       val sym_name = mlsym_to_string nam
+       val newvar = mk_var(sym_name,ty)
+       val defun_tm = list_mk_forall(param_vars, mk_def_eq(mk_eq(newvar,tm)))
+   in
+    defun defun_tm
+   end else
+ if is_mldefthm d
+  then
+   let val (nam,bdy) = dest_mldefthm d
+       val tm = mlsexp_to_term bdy
+       val ty = type_of tm
+       val sym_name = mlsym_to_string nam
+   in
+    defthm(sym_name, ``|= ^tm``)
+   end else
+ if is_mldefaxiom d
+  then
+   let val (nam,bdy) = dest_mldefaxiom d
+       val tm = mlsexp_to_term bdy
+       val ty = type_of tm
+       val sym_name = mlsym_to_string nam
+   in
+    defaxiom(sym_name, ``|= ^tm``)
+   end else
+ if is_mlmutual d
+  then
+   let val dl = dest_mlmutual d
+       val names = map (mlsym_to_string o #1 o dest_mldefun) dl
+   in
+    mutual(list_mk_conj(map (deftm o mk_acl2def) dl))
+   end else
+ if is_mlencap d
+  then
+   let val (sigl,dl) = dest_mlencap d
+       val sigll = map dest_mlsexp_list sigl
+       val sig_vars = 
+            map 
+             (fn l => 
+               mk_var
+                (mlsym_to_string(hd l),
+                 mk_sexp_fun_ty(length(dest_mlsexp_list(hd(tl l))))))
+             sigll
+       val eventl = map mk_acl2def dl
+       val defunl = mapfilter get_defun_fun eventl
+       val extended_sig_vars = union sig_vars defunl
+       val names = map defname eventl
+       val event_tms = map (mk_closed_event extended_sig_vars o deftm) eventl
+       val spec_body = list_mk_exists(extended_sig_vars,list_mk_conj event_tms)
+   in
+    encap(names,spec_body)
+   end 
+  else err "mk_acl2def" "badly formed mldef";
 
 (*****************************************************************************)
 (* Convert a list of character code to a string.                             *)
@@ -1688,8 +1818,8 @@ val chars_to_string = implode o (map chr);
 (*****************************************************************************)
 (* Print an acl2def                                                          *)
 (*****************************************************************************)
-fun print_acl2def out (defun(nam,tm)) =
-     (out "; Defun:    "; out nam; out "\n";
+fun print_acl2def out (defun tm) =
+     (out "; Defun:    "; out(get_name(get_defined tm)); out "\n";
       print_mlsexp out (deftm_to_mlsexp_defun tm); 
       out "\n\n")
  |  print_acl2def out (defaxiom(nam,tm)) =
@@ -1707,7 +1837,17 @@ fun print_acl2def out (defun(nam,tm)) =
          [mldefthm, 
           string_to_mlsym nam, 
           term_to_mlsexp tm]); 
-      out "\n\n");
+      out "\n\n")
+ |  print_acl2def out (mutual tm) =
+     (out "; Mutual-Recursion\n";
+      map (print_acl2def out o defun) (strip_conj tm);
+      out "\n")
+ |  print_acl2def out (encap(sl,tm)) = err "print_acl2def" "encap not yet supported";
+(*
+     (out "; Encapsulate\n";
+      map (print_acl2def out o defthm) (strip_conj(snd(strip_exists tm)));
+      out "\n");
+*)
 
 (*****************************************************************************)
 (* Convert a preterm to a string (used for inputting ACL2)                   *)
@@ -1771,28 +1911,21 @@ fun mk_acl2_thm defty acl2_name deftm =
 (* 3. create theorems from defaxioms and defthms using mk_oracle_thm then    *)
 (*    save them using a HOL-friendly name with suffix "_def"                 *)
 (*****************************************************************************)
-fun install_def(defun(acl2_name, deftm)) =
-     let val (pkg_name,sym_name) = split_acl2_name acl2_name
-         val hol_name = create_hol_name acl2_name
+fun install_def(defun deftm) =
+     let val opr = get_defined deftm
+         val (opr_name,opr_ty) = dest_var opr
+         val (pkg_name,sym_name) = split_acl2_name opr_name
+         val hol_name = create_hol_name opr_name
          val new_hol_name = 
               (if null(Term.decls hol_name) then "" else "acl2_") ^ hol_name
-         val (l,r) = dest_eq deftm
-         val (opr,args) = strip_comb l
-         val (opr_name,opr_ty) = dest_var opr
-         val _ = if not(opr_name = acl2_name)
-                  then (print "Warning: ML defun name is \""; 
-                        print acl2_name;
-                        print "\" but name being defined is \"";
-                        print opr_name; print"\"\n\n")
-                  else ()
          val _ = new_constant(opr_name,opr_ty)
-         val _ = declare_names(acl2_name,new_hol_name)
+         val _ = declare_names(opr_name,new_hol_name)
          val con = mk_const(opr_name,opr_ty)
          val newdeftm = subst[opr |-> con]deftm
          val defun_thm =
               save_thm
                ((hol_name ^ "_def"),
-                CLEAN_ACL2_VARS(mk_acl2_thm "DEFUN" acl2_name newdeftm))
+                CLEAN_ACL2_VARS(mk_acl2_thm "DEFUN" opr_name newdeftm))
      in
       defun_thm
      end
@@ -1815,7 +1948,28 @@ fun install_def(defun(acl2_name, deftm)) =
                 CLEAN_ACL2_VARS(mk_acl2_thm "DEFTHM" acl2_name deftm))
      in
       defthm_thm
-     end;
+     end
+ |  install_def _ = err "install_def" "unsupported acl2def";
+
+(*****************************************************************************)
+(* ["s1","s2",...,"sn"] |--> "s1 s2 ... sn" (strings separated by spaces)    *)
+(*****************************************************************************)
+fun concat_with_spaces []      = ""
+ |  concat_with_spaces [s]     = s
+ |  concat_with_spaces (s::sl) = s ^ " " ^ concat_with_spaces sl;
+
+(*****************************************************************************)
+(* Get kind of acl2def                                                       *)
+(*****************************************************************************)
+fun dest_acl2def (defun tm)      = ("DEFUN",get_name(get_defined tm))
+ |  dest_acl2def (defaxiom(s,_)) = ("DEFAXIOM",s)
+ |  dest_acl2def (defthm(s,_))   = ("DEFTHM",s)
+ |  dest_acl2def (mutual tm)     = ("MUTUAL-RECURSION", 
+                                    concat_with_spaces
+                                     (map 
+                                       (get_name o get_defined) 
+                                       (strip_conj tm)))
+ |  dest_acl2def (encap(sg,tm))  = ("ENCAPSULATE", concat_with_spaces sg);
 
 (*****************************************************************************)
 (* install_def plus a printing wrapper.                                      *)
@@ -1957,14 +2111,14 @@ fun load_imported_acl2_theorems () =
          (!acl2_list_ref))
      val string_abbrev_count = length(!string_abbrevs)
  in
- (print "Making string abbreviations ...\n";
+  print "Making string abbreviations ...\n";
   make_string_abbrevs acl2_package_strings;
   print(Int.toString(length(!string_abbrevs)-string_abbrev_count));
   print " new string abbreviations made\n";
   show_tags := true;
   print "read "; print(Int.toString(length(!acl2_list_ref))); print " defs\n"; 
   imported_acl2_theorems := 
-   flatten(map (map install_def_and_print o mk_defs) (!acl2_list_ref)));
+   map (install_def_and_print o mk_acl2def) (!acl2_list_ref);
   print 
    "Imported ACL2 stored in assignable variable imported_acl2_theorems.\n\n"
  end;
@@ -2065,7 +2219,7 @@ use "load_sexp.ml";
 use "../lisp/defaxioms.lisp.trans.ml";
 
 val defaxioms_list =
-let fun wrap_mk_defs d = ([], [mk_defs d]) handle _ => ([d],[]);
+let fun wrap_mk_acl2def d = ([], [mk_acl2def d]) handle _ => ([d],[]);
     val _ = (printLength := 1000)
 in
  time
@@ -2073,7 +2227,7 @@ in
   (length (!acl2_list_ref), 
    fn i => (print(Int.toString(i+1));
             print "\n";
-            (i+1, time wrap_mk_defs (el (i+1) (!acl2_list_ref)))))
+            (i+1, time wrap_mk_acl2def (el (i+1) (!acl2_list_ref)))))
 end;
 
 print_lisp_file 
@@ -2086,6 +2240,6 @@ print_lisp_file
  "TestFn" 
  (fn out => (print_mlsexp out (def_to_mlsexp_defun th); out "\n\n"));
 
-val defaxioms_list = map mk_defs (!acl2_list_ref);
+val defaxioms_list = map mk_acl2def (!acl2_list_ref);
 
 *)
