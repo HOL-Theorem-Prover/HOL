@@ -1207,6 +1207,32 @@ val LET_RSP = store_thm
     THEN IMP_RES_TAC FUN_REL_MP
    );
 
+val literal_case_PRS = store_thm
+   ("literal_case_PRS",
+    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !f x. literal_case f x = abs2 (literal_case ((abs1-->rep2) f) (rep1 x))`--),
+    REPEAT STRIP_TAC
+    THEN PURE_ONCE_REWRITE_TAC[literal_case_DEF]
+    THEN BETA_TAC
+    THEN REWRITE_TAC[FUN_MAP]
+    THEN BETA_TAC
+    THEN IMP_RES_THEN REWRITE_THM QUOTIENT_ABS_REP
+   );
+
+val literal_case_RSP = store_thm
+   ("literal_case_RSP",
+    (--`!R1 (abs1:'a -> 'c) rep1. QUOTIENT R1 abs1 rep1 ==>
+        !R2 (abs2:'b -> 'd) rep2. QUOTIENT R2 abs2 rep2 ==>
+         !f g x y.
+          (R1 ===> R2) f g /\ R1 x y ==>
+          R2 (literal_case f x) (literal_case g y)`--),
+    REPEAT STRIP_TAC
+    THEN PURE_ONCE_REWRITE_TAC[literal_case_DEF]
+    THEN BETA_TAC
+    THEN IMP_RES_TAC FUN_REL_MP
+   );
+
 
 
 (* FUNCTION APPLICATION *)

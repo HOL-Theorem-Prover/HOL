@@ -393,6 +393,8 @@ fun augment_srw_ss ssdl =
     else
       pending_updates := !pending_updates @ ssdl;
 
+val _ = augment_srw_ss [boolSimps.literal_case_ss];
+
 fun update_fn tyi = 
   augment_srw_ss ([tyi_to_ssdata tyi] handle HOL_ERR _ => [])
 

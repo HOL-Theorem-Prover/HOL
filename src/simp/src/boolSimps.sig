@@ -25,6 +25,10 @@ sig
                                            congruence to evaluate the
                                            second argument first *)
 
+     val literal_case_ss : simpLib.ssfrag (* writes out literal case terms,
+                                           using a congruence to evaluate
+                                           the second argument first *)
+
      val DNF_ss : simpLib.ssfrag
         (* converts a term to DNF at the level of propositional logic, and
            also moves quantifiers around to give them maximum useful scope

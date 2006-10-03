@@ -158,7 +158,7 @@ fun mk_tree abs keymap =
   in mk_abs(mk_var("t",``:string``),if isSome abs then mk_pabs(valOf abs,tree) else tree) end
 
 val find_CONV = 
-    let val rws = new_compset [lazyfy_thm COND_CLAUSES,stringTheory.EXPLODE_EQNS,strictify_thm LET_DEF,combinTheory.o_DEF,
+    let val rws = new_compset [lazyfy_thm COND_CLAUSES,stringTheory.EXPLODE_EQNS,strictify_thm LET_DEF,strictify_thm literal_case_DEF,combinTheory.o_DEF,
 			       listTheory.HD,listTheory.TL,listTheory.APPEND,stringTheory.IMPLODE_EQNS,
 			       stringTheory.STRCAT]       
         val _ = add_conv (stringSyntax.ord_tm,1,stringLib.ORD_CHR_CONV) rws;

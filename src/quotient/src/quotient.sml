@@ -3432,7 +3432,7 @@ fun define_quotient_types_full_rule {types, defs, tyop_equivs, tyop_quotients,
                             OPTION_MAP_PRS,
                             FORALL_PRS, EXISTS_PRS,
                             EXISTS_UNIQUE_PRS, ABSTRACT_PRS,
-                            COND_PRS, LET_PRS,
+                            COND_PRS, LET_PRS, literal_case_PRS,
                             I_PRS, K_PRS, o_PRS, C_PRS, W_PRS]
       val poly_respects  = poly_respects @
                            [CONS_RSP, NIL_RSP, MAP_RSP, LENGTH_RSP, APPEND_RSP,
@@ -3445,7 +3445,7 @@ fun define_quotient_types_full_rule {types, defs, tyop_equivs, tyop_quotients,
                             OPTION_MAP_RSP,
                             RES_FORALL_RSP, RES_EXISTS_RSP,
                             RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP,
-                            COND_RSP, LET_RSP,
+                            COND_RSP, LET_RSP, literal_case_RSP,
                             I_RSP, K_RSP, o_RSP, C_RSP, W_RSP]
 (* ?? EQUALS, LAMBDA, RES_FORALL, RES_EXISTS, APPLY ?? *)
   in

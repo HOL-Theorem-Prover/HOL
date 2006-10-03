@@ -128,6 +128,22 @@ val LET_ss =
     simpLib.SSFRAG {ac = [], congs = [let_cong], convs = [], filter = NONE,
                      dprocs = [], rewrs = [let_I_thm]}
 
+
+(* ----------------------------------------------------------------------
+    literal_case_ss
+   ---------------------------------------------------------------------- *)
+
+ val let_cong = prove(
+   ``(v:'a = v') ==> (literal_case (f:'a -> 'b) v = literal_case f (I v'))``,
+   DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [literal_case_THM, combinTheory.I_THM])
+val let_I_thm = prove(
+  ``literal_case (f : 'a -> 'b) (I x) = f x``,
+  REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
+
+val literal_case_ss =
+    simpLib.SSFRAG {ac = [], congs = [let_cong], convs = [], filter = NONE,
+                     dprocs = [], rewrs = [let_I_thm]}
+
 (* ----------------------------------------------------------------------
     bool_ss
       This is essentially the same as the old REWRITE_TAC []
