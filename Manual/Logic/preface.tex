@@ -1,0 +1,100 @@
+\chapter*{Preface}\markboth{Preface}{Preface}
+\label{intro}
+
+This volume contains the description of the \HOL\ system's logic.  It
+is one of four volumes making up the documentation for \HOL:
+
+\begin{myenumerate}
+\item \LOGIC: a formal description of the higher order logic
+  implemented by the \HOL{} system.
+\item \TUTORIAL: a tutorial introduction to \HOL, with case studies.
+\item \DESCRIPTION: a detailed user's guide for the \HOL{} system;
+\item \REFERENCE: the reference manual for \HOL.
+\end{myenumerate}
+
+\noindent These four documents will be referred to by the short names (in
+small slanted capitals) given above.
+
+This document, \LOGIC, serves as a formal definition of higher order
+logic in terms of a set-theoretic semantics.  This material was
+written by Andrew Pitts in 1991, and was originally part of
+\DESCRIPTION.  Because this logic is shared with other theorem-proving
+systems (HOL~Light, ProofPower), and is similar to that implemented in
+Isabelle, where it is called Isabelle/HOL, it is now presented in its
+own manual.
+
+The \HOL\ system is designed to support interactive theorem proving in
+higher order logic (hence the acronym `\HOL').  To this end, the formal
+logic is interfaced to a general purpose programming language (\ML, for
+meta-language) in which terms and theorems of the logic can be denoted,
+proof strategies expressed and applied, and logical theories developed.
+The version of higher order logic used in \HOL\ is predicate calculus
+with terms from the typed lambda calculus (\ie\ simple type
+theory). This was originally developed as a foundation for mathematics
+\cite{Church}.  The primary application area of \HOL\ was initially
+intended to be the specification and verification of hardware designs.
+(The use of higher order logic for this purpose was first advocated by
+Keith Hanna \cite{Hanna-Daeche}.)  However, the logic does not restrict
+applications to hardware; \HOL\ has been applied to many other areas.
+
+Thus, this document describes the theoretical underpinnings of the
+\HOL{} system, and presents it abstractly.
+
+The approach to mechanizing formal proof used in \HOL\ is due to Robin
+Milner \cite{Edinburgh-LCF}, who also headed the team that designed
+and implemented the language \ML.  That work centred on a system
+called \LCF\ (logic for computable functions), which was intended for
+interactive automated reasoning about higher order recursively defined
+functions.  The interface of the logic to the meta-language was made
+explicit, using the type structure of \ML, with the intention that
+other logics eventually be tried in place of the original logic.  The
+\HOL\ system is a direct descendant of \LCF; this is reflected in
+everything from its structure and outlook to its incorporation of \ML,
+and even to parts of its implementation.  Thus \HOL\ satisfies the
+early plan to apply the \LCF\ methodology to other logics.
+
+The original \LCF\ was implemented at Edinburgh in the early 1970's, and is now
+referred to as `Edinburgh \LCF'. Its code was ported from Stanford Lisp to
+Franz Lisp by G\'erard Huet at {\small INRIA}, and was used in a French
+research project called `Formel'.  Huet's Franz Lisp version of \LCF\ was
+further developed at Cambridge by Larry Paulson, and became known as `Cambridge
+\LCF'. The \HOL\ system is implemented on top of an early version of Cambridge
+\LCF\ and consequently many features of both Edinburgh and Cambridge \LCF\ were
+inherited by \HOL. For example, the axiomatization of higher order logic used
+is not the classical one due to Church, but an equivalent formulation
+influenced by \LCF.
+
+An enhanced and rationalized version of \HOL, called \HOL 88, was
+released (in 1988), after the original \HOL\ system had been in use
+for several years.  \HOL 90 (released in 1990) was a port of \HOL 88
+to SML \cite{sml} by Konrad Slind at the University of Calgary. It has
+been further developed through the 1990's. \HOL{} 4 is the latest
+version of \HOL, and is also implemented in SML; it features a number
+of novelties compared to its predecessors.  \HOL{} 4 is also the
+supported version of the system for the international \HOL\ community.
+
+We have retroactively decided to number \HOL{} implementations in the
+following way
+\begin{enumerate}
+\item \HOL88 and earlier: implementations based on a Lisp substrate,
+  with Classic ML.
+\item \HOL90: implementations in Standard ML, principally using the
+  SML/NJ implementation.
+\item \HOL98 (Athabasca and Taupo releases): implementations using
+  Moscow ML, and with a new library and theory mechanism.
+\item \HOL{} (Kananaskis releases)
+\end{enumerate}
+Therefore, with \HOL{}~4, we do away with the habit of associating
+implementations with year numbers.  Individual releases within
+\HOL{}~4 will retain the \textit{lake-number} naming scheme.
+
+In this document, the acronym `\HOL' refers to both the interactive theorem
+proving system and to the version of higher order logic that the system
+supports; where there is serious ambiguity, the former is called `the \HOL\
+system' and the latter `the \HOL\ logic'.
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "logic"
+%%% End:

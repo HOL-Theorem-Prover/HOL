@@ -1,0 +1,55 @@
+% =====================================================================
+% HOL Manual LaTeX Source: logic
+% =====================================================================
+
+\documentclass[12pt]{book}
+\usepackage{charter}
+\usepackage{latexsym}
+\usepackage{fleqn}
+%\usepackage{amsmath}
+\usepackage{amssymb}
+%\usepackage{amsbsy}
+%\usepackage{amsthm}
+\usepackage{makeidx}
+\usepackage{alltt}
+\usepackage{../LaTeX/layout}
+\usepackage{graphicx}
+%\usepackage{pst-node}
+\usepackage{epsfig}
+\usepackage{url}
+
+% ---------------------------------------------------------------------
+% Input defined macros and commands
+% ---------------------------------------------------------------------
+
+\input{../LaTeX/commands}
+
+\begin{document}
+
+   \setlength{\unitlength}{1mm}           % unit of length = 1mm
+   \setlength{\baselineskip}{16pt}        % line spacing = 16pt
+
+   % ---------------------------------------------------------------------
+   % prelims
+   % ---------------------------------------------------------------------
+
+   \pagenumbering{roman}                  % roman page numbers for prelims
+   \setcounter{page}{1}                   % start at page 1
+
+   \include{title}                        % description title page
+   \include{preface}                      % preface to entire description
+   \input{../LaTeX/ack}                   % global acknowledgements
+   \tableofcontents                       % table of contents
+
+
+   \cleardoublepage
+   \pagenumbering{arabic}                % arabic page numbers
+   \setcounter{page}{1}                  % start at page 1
+
+   \include{syntax}                      % Syntax and informal semantics
+   \include{semantics}                   % formal semantics
+
+   \bibliographystyle{plain}
+   \bibliography{../Description/description}
+
+\end{document}
