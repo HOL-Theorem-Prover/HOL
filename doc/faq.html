@@ -502,7 +502,26 @@ directories by calling <code>Holmake</code> with the appropriate
 <code>INCLUDES=</code> directive in a <code>Holmakefile</code>.
 See the DESCRIPTION manual for more on this.</p>
 
-<p>
+<dt><strong>How do I specify a new theory&rsquo;s
+ancestors?</strong></dt>
+
+<dd><p> This is done implicitly in a script
+file, usually by implicitly referring to an ancestor theory&rsquo;s
+theorems in the course of proof.  If you want a theory to be an
+ancestor because you use an exported type (say <code>string</code>
+from <code>stringTheory</code>), but never refer to any of the
+theory&rsquo;s theorems, then you can explicitly refer to it.  The
+standard idiom we have adopted is to write</p>
+<pre>
+   local open stringTheory in end;
+</pre>
+
+<p>This makes the dependency on the ancestor theory explicit.  If you
+omit this, and have no other ML-level dependency in your script file,
+then <code>Holmake</code> will fail to build your script, probably
+failing with a parse exception when it encounters a type name such as
+<code>string</code> that it doesn&rsquo;t think is in scope.</p></dd>
+
 
 <dt><strong> How to rewrite with a theorem the other way round?</strong>
 <dd> Use <code>GSYM</code>.
