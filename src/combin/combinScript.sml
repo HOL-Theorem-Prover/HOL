@@ -136,6 +136,26 @@ val LET_FORALL_ELIM = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
   ]);
 
+val GEN_literal_case_RAND = store_thm(
+  "GEN_literal_case_RAND",
+  ``P (literal_case f v) = literal_case (P o f) v``,
+  REWRITE_TAC [literal_case_THM, o_THM]);
+
+val GEN_literal_case_RATOR = store_thm(
+  "GEN_literal_case_RATOR",
+  ``(literal_case f v) x = literal_case (C f x) v``,
+  REWRITE_TAC [literal_case_THM, C_THM]);
+
+val literal_case_FORALL_ELIM = store_thm(
+  "literal_case_FORALL_ELIM",
+  ``literal_case f v = (!) (S ((==>) o Abbrev o (C (=) v)) f)``,
+  REWRITE_TAC [S_DEF, literal_case_THM, C_DEF] THEN BETA_TAC THEN
+  REWRITE_TAC [o_THM, markerTheory.Abbrev_def] THEN BETA_TAC THEN
+  EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    ASM_REWRITE_TAC [],
+    FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
+  ]);
+
 
 (*---------------------------------------------------------------------------*)
 (*  Tag combinator equal to K. Used in generating ML from HOL                *)
