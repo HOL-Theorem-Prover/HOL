@@ -554,6 +554,7 @@ val term1_hom_def =
 (*
 Defn.tgoal term1_hom_def;
 e(WF_REL_TAC `measure (HEIGHT1 o SND o SND o SND o SND)`);
+e(REPEAT CONJ_TAC);
 
   e(REWRITE_TAC[HEIGHT1_def]);
   e(REPEAT GEN_TAC);
@@ -576,6 +577,7 @@ val (term1_hom_eqns, term1_hom_ind) =
    Defn.tprove
     (term1_hom_def,
      WF_REL_TAC `measure (HEIGHT1 o SND o SND o SND o SND)`
+     THEN REPEAT CONJ_TAC
      THEN REWRITE_TAC[HEIGHT1_var_subst]
      THEN REWRITE_TAC[HEIGHT1_def]
      THEN REPEAT GEN_TAC
