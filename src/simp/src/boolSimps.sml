@@ -35,6 +35,21 @@ val ETA_ss = SSFRAG {
   rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []}
 
 (* ----------------------------------------------------------------------
+    literal_case_ss
+   ---------------------------------------------------------------------- *)
+
+ val literal_cong = prove(
+   ``(v:'a = v') ==> (literal_case (f:'a -> 'b) v = literal_case f (I v'))``,
+   DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [literal_case_THM, combinTheory.I_THM])
+val literal_I_thm = prove(
+  ``literal_case (f : 'a -> 'b) (I x) = f x``,
+  REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
+
+val literal_case_ss =
+    simpLib.SSFRAG {ac = [], congs = [literal_cong], convs = [], filter = NONE,
+                     dprocs = [], rewrs = [literal_I_thm]}
+
+(* ----------------------------------------------------------------------
     BOOL_ss
       This simpset fragment contains "standard" rewrites, as per the
       default behaviour of REWRITE_TAC.  It also includes
@@ -55,11 +70,12 @@ val BOOL_ss = SSFRAG
           EXISTS_REFL, GSYM EXISTS_REFL,
           EXISTS_UNIQUE_REFL, GSYM EXISTS_UNIQUE_REFL,
           COND_BOOL_CLAUSES,
+          literal_I_thm,
           EXCLUDED_MIDDLE,
           ONCE_REWRITE_RULE [DISJ_COMM] EXCLUDED_MIDDLE,
           NOT_AND, ONCE_REWRITE_RULE [CONJ_COMM] EXCLUDED_MIDDLE,
           SELECT_REFL, SELECT_REFL_2, RES_FORALL_TRUE, RES_EXISTS_FALSE],
-   congs = [], filter = NONE, ac = [], dprocs = []};
+   congs = [literal_cong], filter = NONE, ac = [], dprocs = []};
 
 
 (*---------------------------------------------------------------------------
@@ -128,21 +144,6 @@ val LET_ss =
     simpLib.SSFRAG {ac = [], congs = [let_cong], convs = [], filter = NONE,
                      dprocs = [], rewrs = [let_I_thm]}
 
-
-(* ----------------------------------------------------------------------
-    literal_case_ss
-   ---------------------------------------------------------------------- *)
-
- val let_cong = prove(
-   ``(v:'a = v') ==> (literal_case (f:'a -> 'b) v = literal_case f (I v'))``,
-   DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC [literal_case_THM, combinTheory.I_THM])
-val let_I_thm = prove(
-  ``literal_case (f : 'a -> 'b) (I x) = f x``,
-  REWRITE_TAC [combinTheory.I_THM, literal_case_THM]);
-
-val literal_case_ss =
-    simpLib.SSFRAG {ac = [], congs = [let_cong], convs = [], filter = NONE,
-                     dprocs = [], rewrs = [let_I_thm]}
 
 (* ----------------------------------------------------------------------
     bool_ss
