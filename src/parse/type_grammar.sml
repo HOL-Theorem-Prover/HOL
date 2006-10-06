@@ -105,6 +105,22 @@ fun new_binary_tyop (TYG(G,abbrevs,pmap))
       TYG (insert_sorted rule1 (insert_sorted rule2 G), abbrevs, pmap)
     end
 
+fun remove_binary_tyop (TYG (G, abbrevs, pmap)) s = let
+  fun bad_irule {parse_string,...} = parse_string = s
+  fun edit_rule (prec, r) =
+      case r of
+        INFIX (irules, assoc) => let
+          val irules' = List.filter (not o bad_irule) irules
+        in
+          if null irules' then NONE
+          else SOME (prec, INFIX (irules', assoc))
+        end
+      | _ => SOME (prec, r)
+in
+  TYG(List.mapPartial edit_rule G, abbrevs, pmap)
+end
+
+
 fun new_tyop (TYG(G,abbrevs,pmap)) name =
   TYG (insert_sorted (std_suffix_precedence, SUFFIX[name]) G, abbrevs, pmap)
 
@@ -228,12 +244,17 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
                       (List.tabulate(n, I));
              add_string ") ";
              add_string s)
+    val ty = structure_to_type st
+    val printed = case TypeNet.peek (pmap, ty) of
+                    NONE => false
+                  | SOME (_, s') => s = s'
   in
     begin_block CONSISTENT 0;
     print_lhs ();
     add_string " =";
     add_break(1,2);
-    pp_type G pps (structure_to_type st);
+    pp_type G pps ty;
+    if not printed then (add_break(5,2); add_string "(not printed)") else ();
     end_block()
   end
 

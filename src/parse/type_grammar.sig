@@ -25,6 +25,10 @@ sig
                               opname : string,
                               associativity : HOLgrammars.associativity}
                           -> grammar
+
+  val remove_binary_tyop : grammar -> string -> grammar
+  (* removes by infix symbol, i.e. "+", not "sum" *)
+
   val new_tyop         : grammar -> string -> grammar
   val new_abbreviation : grammar -> string * type_structure -> grammar
   val remove_abbreviation : grammar -> string -> grammar

@@ -82,7 +82,7 @@ fun is_fn_app tm = is_comb tm andalso not(!is_pair_hook tm)
 
 fun is_infix_app tm = is_conj tm orelse is_disj tm orelse is_eq tm ;
 
-fun is_pair_type ty = 
+fun is_pair_type ty =
  case total dest_thy_type ty
   of SOME{Tyop="prod",Thy="pair",...} => true
    | otherwise => false;
@@ -140,8 +140,8 @@ fun pick_name slist n (s1,s2) = if mem n slist then s1 else s2;
  * the variables will start with "v" and end in a number.
  *---------------------------------------------------------------------------*)
 
-fun vars_of_types alist = 
-   map (fn (i,ty) => mk_var("v"^Int.toString i,ty)) 
+fun vars_of_types alist =
+   map (fn (i,ty) => mk_var("v"^Int.toString i,ty))
        (Lib.enumerate 0 alist);
 
 (*---------------------------------------------------------------------------*)
@@ -152,14 +152,14 @@ fun vars_of_types alist =
 val pseudo_constructors = ref [] : thm list ref;
 
 (*---------------------------------------------------------------------------*)
-(*  The following reference cell gets set in pred_setTheory                  *) 
+(*  The following reference cell gets set in pred_setTheory                  *)
 (*---------------------------------------------------------------------------*)
 
 val reshape_thm_hook = ref Lib.I : (thm -> thm) ref;
 
 local val emit_tag = Tag.read "EmitML"
    fun nstrip_fun 0 ty = ([],ty)
-     | nstrip_fun n ty = 
+     | nstrip_fun n ty =
          let val (d,r) = dom_rng ty
              val (f,b) = nstrip_fun (n-1) r
          in (d::f,b)
@@ -177,8 +177,8 @@ fun curried_const_equiv_tupled_var (c,a) =
  end
 end;
 
-fun generic_type_of tm = 
-  if is_const tm 
+fun generic_type_of tm =
+  if is_const tm
    then let val {Name,Thy,...} = dest_thy_const tm
         in type_of (prim_mk_const{Name=Name,Thy=Thy})
         end
@@ -237,31 +237,31 @@ fun term_to_ML openthys side ppstrm =
             rparen i 70;
             end_block()
          end
-  and pp_num_literal i tm = 
+  and pp_num_literal i tm =
       (*------------------------------------------------------------*)
       (* Numeric literals can be built from strings or constructors *)
       (*------------------------------------------------------------*)
       let val s = Arbnum.toString(!dest_num_literal_hook tm)
       in if side = RIGHT (* use fromString *)
-         then (if s="0" then add_string 
+         then (if s="0" then add_string
                    (pick_name openthys "num" ("ZERO","numML.ZERO")) else
-               if s="1" then add_string 
+               if s="1" then add_string
                    (pick_name openthys "num" ("ONE","numML.ONE")) else
-               if s="2" then add_string 
+               if s="2" then add_string
                    (pick_name openthys "num" ("TWO","numML.TWO")) else
                (begin_block CONSISTENT 0
                 ; add_string"("; add_break(0,0)
-                ; add_string (pick_name openthys "num" 
-                             ("fromString","numML.fromString")) 
+                ; add_string (pick_name openthys "num"
+                             ("fromString","numML.fromString"))
                 ; add_break(0,0)
                 ; add_string (mlquote s)
                 ; add_break(0,0)
                 ; add_string")"
                 ; end_block()))
          else (* side = LEFT, so use constructors *)
-          if s = "0" 
-           then add_string (pick_name openthys "num" ("ZERO","numML.ZERO")) 
-           else pp_comb i tm 
+          if s = "0"
+           then add_string (pick_name openthys "num" ("ZERO","numML.ZERO"))
+           else pp_comb i tm
       end
   and pp_int_literal tm =
          let val s = Arbint.toString(!dest_int_literal_hook tm)
@@ -387,7 +387,7 @@ fun term_to_ML openthys side ppstrm =
          ; pp 7 rhs
          ; end_block()
         )
-  and pp_record i (ty,flds) = 
+  and pp_record i (ty,flds) =
        pp_open_comb i (hd(TypeBase.constructors_of ty), map snd flds)
   and pp_fail i tm =
        let val (f,s,args) = !dest_fail_hook tm
@@ -449,7 +449,7 @@ fun term_to_ML openthys side ppstrm =
         ; rparen i maxprec
         ; end_block()
        end
-  and pp_comb i tm = 
+  and pp_comb i tm =
        let val (h,args) = strip_comb tm
            val (argtys,target) = strip_fun(generic_type_of h)
        in if length argtys < length args
@@ -482,7 +482,7 @@ fun term_to_ML openthys side ppstrm =
     (begin_block INCONSISTENT 0 ; pp i M ; end_block ())
  end;
 
-fun pp_term_as_ML openthys side ppstrm M = 
+fun pp_term_as_ML openthys side ppstrm M =
     term_to_ML openthys side ppstrm minprec M;
 
 fun same_fn eq1 eq2 = (fst(strip_comb eq1) = fst(strip_comb eq2));
@@ -542,35 +542,14 @@ fun pp_defn_as_ML openthys ppstrm =
 (*---------------------------------------------------------------------------*)
 
 local open type_grammar HOLgrammars
-      fun problem {opname="sum",  parse_string="+"} = true
-        | problem {opname="prod", parse_string="#"} = true
-        | problem {opname="fmap", parse_string="|->"} = true
-        | problem {opname="cart", parse_string="**"} = true
-        | problem otherwise = false
-      fun elim (r as (i,INFIX(list,a))) A =
-            let val list' = gather (not o problem) list
-            in if list' = list then (r::A)
-               else if null list' then A else (i,INFIX(list',a))::A
-            end
-        | elim (r as (i,SUFFIX list)) A = r::A
-      fun add_rule (i,SUFFIX strings) grm = itlist (C new_tyop) strings grm
-        | add_rule (i,INFIX (list,assoc)) grm =
-           itlist (fn {opname,parse_string} => fn grm' =>
-                      new_binary_tyop grm'
-                        {opname=opname,precedence=i,
-                         infix_form=SOME parse_string,associativity=assoc})
-              list grm
 in
 fun adjust_tygram tygram =
- let val rules' = itlist elim (rules tygram) []
-     val tygram' =
-          itlist add_rule rules'
-              (add_rule (70,INFIX([{opname="prod",parse_string = "*"}],NONASSOC))
-                         empty_grammar)
-     val abbrevs = Binarymap.listItems (abbreviations tygram)
-     val tygram'' = itlist (C new_abbreviation) abbrevs tygram'
+ let val g0 = List.foldl (fn (s,g) => remove_binary_tyop g s)
+                         tygram
+                         ["+", "#", "|->", "**"]
  in
-    tygram''
+    new_binary_tyop g0 {precedence = 70, infix_form = SOME "*",
+                        opname = "prod", associativity = NONASSOC}
  end
 end;
 
@@ -634,17 +613,17 @@ datatype elem_internal
 fun datatype_silent_defs tyAST =
  let val tyop = hd (map fst tyAST)
      val tyrecd = hd (Type.decls tyop)
- in 
-  if tyop = "num" then [] else 
+ in
+  if tyop = "num" then [] else
   case TypeBase.read tyrecd
    of NONE => (WARN "datatype_silent_defs"
                 ("No info in the TypeBase for "^Lib.quote tyop); [])
     | SOME tyinfo =>
         let open TypeBasePure
             val size_def = [snd (valOf(size_of tyinfo))] handle _ => []
-            val updates_def = updates_of tyinfo handle HOL_ERR _ => [] 
-            val access_def = accessors_of tyinfo handle HOL_ERR _ => [] 
-        in 
+            val updates_def = updates_of tyinfo handle HOL_ERR _ => []
+            val access_def = accessors_of tyinfo handle HOL_ERR _ => []
+        in
           map (iDEFN o !reshape_thm_hook)
               (size_def @ updates_def @ access_def)
         end
@@ -655,13 +634,13 @@ fun datatype_silent_defs tyAST =
 (*---------------------------------------------------------------------------*)
 
 fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
-  | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il) 
-  | elemi (DATATYPE q) (cs,il) = 
+  | elemi (DEFN_NOSIG th) (cs,il) = (cs,iDEFN_NOSIG (!reshape_thm_hook th)::il)
+  | elemi (DATATYPE q) (cs,il) =
        let val tyAST = ParseDatatype.parse q
            val defs = datatype_silent_defs tyAST
        in (cs, defs @ (iDATATYPE tyAST :: il))
        end
-  | elemi (EQDATATYPE(sl,q)) (cs,il) = 
+  | elemi (EQDATATYPE(sl,q)) (cs,il) =
        let val tyAST = ParseDatatype.parse q
            val defs = datatype_silent_defs tyAST
        in (cs,defs @ (iEQDATATYPE(sl,tyAST) :: il))
@@ -684,7 +663,7 @@ fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
   | elemi (MLSIG s) (cs,il) = (cs,iMLSIG s :: il)
   | elemi (MLSTRUCT s) (cs,il) = (cs,iMLSTRUCT s :: il);
 
-fun internalize elems = 
+fun internalize elems =
   let val (cs, ielems) = rev_itlist elemi elems ([],[])
   in (rev cs, rev ielems)
   end;
@@ -754,11 +733,11 @@ fun pp_datatype_as_ML ppstrm (tyvars,decls) =
      val {add_break,add_newline,
           add_string,begin_block,end_block,...} = with_ppstream ppstrm
      val ppty = pp_type_as_ML ppstrm
-     fun pp_comp_ty ty = 
+     fun pp_comp_ty ty =
           if Lib.can dom_rng ty orelse is_pair_type ty
           then (add_string "("; ppty ty; add_string")")
           else ppty ty
-     fun pp_tyl tyl = 
+     fun pp_tyl tyl =
         (begin_block INCONSISTENT 0
          ; pr_list pp_comp_ty (fn () => add_string" *")
                               (fn () => add_break(1,0)) tyl
@@ -1064,7 +1043,7 @@ fun emit_adjoin_call thy (consts,pcs) =
      fun listify slist = "["^String.concat (commafy slist)^"]"
      fun paren2 (a,b) = "("^a^","^b^")"
      fun paren3 (a,(b,c)) = "("^listify a^","^b^","^c^")"
-     fun extern_pc (c,a) = 
+     fun extern_pc (c,a) =
        let val (n,thy) = name_thy c
            val n' = mlquote n
            val thy' = mlquote thy
@@ -1096,7 +1075,7 @@ fun emit_adjoin_call thy (consts,pcs) =
      S ("     List.app ConstMapML.prim_insert (map (dconst "^Lib.quote thy^") clist)"); NL();
      S "   end"; NL(); NL();
      if null pcs then ()
-     else 
+     else
      (S "val _ = List.map EmitML.curried_const_equiv_tupled_var"; NL();
       S "                 [";
       begin_block ppstrm INCONSISTENT 0;
@@ -1104,7 +1083,7 @@ fun emit_adjoin_call thy (consts,pcs) =
                          (fn () => BR(1,0))
                          (map extern_pc pcs);
       end_block ppstrm;
-     S"]"; 
+     S"]";
      NL(); NL())
     end)}
    handle e => raise ERR "emit_adjoin_call" ""
@@ -1147,7 +1126,7 @@ fun emitML p (s,elems_0) =
              HOL_WARNING "EmitML" "emitML"
               ("I/O error prevented exporting files to "^Lib.quote path)
            | e => HOL_WARNING "EmitML" "emitML"
-                     (exn_to_string e 
+                     (exn_to_string e
                         ^" prevents writing ML files to "
                         ^Lib.quote path)
  end
