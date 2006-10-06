@@ -717,6 +717,7 @@ e(WF_REL_TAC `measure (
        +-+ HEIGHT_dict1 o FST
        +-+ HEIGHT_entry1 o FST
        +-+ HEIGHT_method1 o FST)`);
+e(REPEAT CONJ_TAC);
 (* 8 subgoals *)
 
   e(REWRITE_TAC[SUMVAL_def]);
@@ -789,6 +790,7 @@ val (object1_hom_eqns, object1_hom_ind) =
      THEN BETA_TAC
      THEN REWRITE_TAC[HEIGHT1_var_subst]
      THEN REWRITE_TAC[HEIGHT1_def]
+     THEN REPEAT CONJ_TAC
      THEN REPEAT GEN_TAC
      THEN MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC
      THEN REWRITE_TAC[LESS_EQ_MAX,LESS_EQ_REFL]
