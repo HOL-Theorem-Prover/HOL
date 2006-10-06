@@ -253,7 +253,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
     print_lhs ();
     add_string " =";
     add_break(1,2);
-    pp_type G pps ty;
+    Feedback.trace ("print_tyabbrevs", 0) (pp_type G pps) ty;
     if not printed then (add_break(5,2); add_string "(not printed)") else ();
     end_block()
   end
