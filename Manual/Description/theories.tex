@@ -106,8 +106,7 @@ At start-up, the initial theory for users of the \HOL{} system is
 called \ml{bool}\index{HOL@\HOL{}}, which is constructed when the
 \HOL{} system is built. The theory \theoryimp{bool} is an extension of
 the combination of the ``conceptual'' theories \theory{LOG} and
-\theory{INIT}, described in Chapter~\ref{semantics}.  Thus it contains
-the four axioms
+\theory{INIT}, described in \LOGIC.  Thus it contains the four axioms
 %
 \index{axioms!in bool theory@in \ml{bool} theory}
 %
@@ -2195,11 +2194,13 @@ a mechanism for the efficient evaluation of some word operations via the theory
 
 \subsubsection{Words Theory}
 
-The theory \theoryimp{words} introduces types for a selection of standard word
-sizes \eg{} \ty{word8} and \ty{word32}.  Any additional word types can be
-introduced, as needed, with the function \ml{wordsLib.mk\_word\_size}.  Each word
-type is an abbreviation for \fcp{bool}{iN}, where $N$ is the word length; for
-example, \ty{word32} will print as \fcp{bool}{i32}.
+The theory \theoryimp{words} introduces types for a selection of
+standard word sizes \eg{} \ty{word8} and \ty{word32}.  Any additional
+word types can be introduced, as needed, with the function
+\ml{wordsLib.mk\_word\_size}.  Each word type is an abbreviation for
+\fcp{bool}{iN}, where $N$ is the word length; for example, with type
+abbreviation printing turned off, \ty{word32} will print as
+\fcp{bool}{i32}.
 
 A selection of polymorphic constants and operations are defined -- these can
 then be type instantiated for any given word size.  For example, word addition
@@ -3176,8 +3177,11 @@ used.
 \subsection{Labelled paths (\theoryimp{path})}
 
 The theory \theoryimp{path}
+%
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|(}
 \index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|(}
+\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|(}
+%
 defines a binary type operator $(\alpha,\beta)\ml{path}$, which
 stands for possibly infinite paths of the following form
 \[
@@ -3296,6 +3300,7 @@ finite $R$-paths:
 \end{hol}
 \index{labelled paths, the HOL theory of@labelled paths, the \HOL{} theory of|)}
 \index{reduction sequences, the HOL theory of@reduction sequences, the \HOL{} theory of|)}
+\index{paths (reduction sequences), the HOL theory of@paths (reduction sequences), the \HOL{} theory of|)}
 
 
 \subsection{Character strings (\theoryimp{string})}
@@ -4393,10 +4398,10 @@ apart the closure from the left or right, as for the case analysis theorems.
 
 \medskip
 
-The reflexive ({\small\verb+RC+}) and symmetric closures
-({\small\verb+RC+}) are straightforward to define. The equivalence
-closure ({\small\verb+EQC+}) is the symmetric then transitive then
-reflexive closure of $R$.
+The reflexive~(\holtxt{RC}) and symmetric closures~(\holtxt{SC}) are
+straightforward to define. The equivalence closure
+({\small\verb+EQC+}) is the symmetric then transitive then reflexive
+closure of $R$.
 %
 \begin{hol}
 \begin{verbatim}

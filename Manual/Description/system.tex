@@ -16,16 +16,15 @@ with HOL\/} in \TUTORIAL\ should be read first.
 
 The \HOL{} system provides the \ML\ types \ml{hol\_type} and \ml{term}
 which implement the types and terms of the \HOL{} logic, as defined in
-Sections~\ref{types} and \ref{terms}, respectively. It also provides
-primitive \ML\ functions for creating and manipulating values of these
-types. Upon this basis the \HOL{} logic is implemented. The key idea
-of the \HOL{} system, due to Robin Milner\index{Milner, R.}, and
-discussed in this chapter, is that theorems are represented as an
-abstract \ML\ type whose only pre-defined values are axioms, and whose
-only operations are rules of inference. This means that the only way
-to construct theorems in \HOL{} is to apply rules of inference to
-axioms or existing theorems; hence the consistency of the logic is
-preserved.
+\LOGIC. It also provides primitive \ML\ functions for creating and
+manipulating values of these types. Upon this basis the \HOL{} logic
+is implemented. The key idea of the \HOL{} system, due to Robin
+Milner\index{Milner, R.}, and discussed in this chapter, is that
+theorems are represented as an abstract \ML\ type whose only
+pre-defined values are axioms, and whose only operations are rules of
+inference. This means that the only way to construct theorems in
+\HOL{} is to apply rules of inference to axioms or existing theorems;
+hence the consistency of the logic is preserved.
 
 The purpose of the meta-language \ML\ is to provide a programming
 environment in which to build theorem proving tools to assist in the
@@ -179,15 +178,14 @@ The function \ml{mk\_thy\_type} constructs a compound type
 %
 \index{compound types, in HOL logic@compound types, in \HOL{} logic!constructors for}
 %
-from a record \ml{\{Tyop,Thy,Args\}} where \ml{Tyop}
-is a string representing the name of the type operator,
-\ml{Thy} is a string representing the theory that
-\ml{Tyop} was declared in, and \ml{Args} is  a list of
-types representing the arguments to the operator.  Function types
-$\sigma_1\fun\sigma_2$ of the logic are represented in \ML{} as though
-they were compound types $(\sigma_1,\sigma_2)$\ml{fun} (in
-Section~\ref{types}, however, function types were not regarded as
-compound types).
+from a record \ml{\{Tyop,Thy,Args\}} where \ml{Tyop} is a string
+representing the name of the type operator, \ml{Thy} is a string
+representing the theory that \ml{Tyop} was declared in, and \ml{Args}
+is a list of types representing the arguments to the operator.
+Function types $\sigma_1\fun\sigma_2$ of the logic are represented in
+\ML{} as though they were compound types $(\sigma_1,\sigma_2)$\ml{fun}
+(in \LOGIC, however, function types were not regarded as compound
+types).
 
 The evaluation of
 $\ml{mk\_thy\_type}\{\ml{Tyop} = \mathit{name},\
@@ -260,9 +258,9 @@ The destructors fail on arguments of the wrong form.
 \section{Terms}\label{avra_terms}
 
 The four primitive kinds of terms of the logic are described in
-Section~\ref{terms}.  The \ML\ functions for manipulating these are
-described in this section. There are also \emph{derived} terms that
-are described in Section~\ref{derived-terms}.
+\LOGIC.  The \ML\ functions for manipulating these are described in
+this section. There are also \emph{derived} terms that are described
+in Section~\ref{derived-terms}.
 
 At any time, the terms that may be constructed depends on which
 constants have been declared in the current theory. See
@@ -826,8 +824,8 @@ $t\ t_1 \cdots t_n$ &
 \section{Theorems}
 \label{sec:theorems-in-ml}
 
-In Chapter~\ref{logic}, the notion of deduction was introduced in
-terms of \textit{sequents},
+In \LOGIC, the notion of deduction was introduced in terms of
+\textit{sequents},
 %
 \index{sequents!in natural deduction}
 %
@@ -877,10 +875,10 @@ is the last element of a \textit{proof}
 %
 \index{proof!in natural deduction}
 %
-(in the sense of Chapter~\ref{logic}) from the empty set
-of sequents. When a pair $(L,(\Gamma,t))$ belongs to a deductive
-system, and the list $L$ is empty, then the sequent $(\Gamma,t)$ is
-called an \textit{axiom}\index{axioms!in natural deduction}.  Any pair
+(in the sense of \LOGIC) from the empty set of sequents. When a pair
+$(L,(\Gamma,t))$ belongs to a deductive system, and the list $L$ is
+empty, then the sequent $(\Gamma,t)$ is called an
+\textit{axiom}\index{axioms!in natural deduction}.  Any pair
 $(L,(\Gamma,t))$ belonging to a deductive system is called a
 \textit{primitive inference}\index{inference, in natural
   deduction}\index{primitive inference, in natural deduction} of the
@@ -963,16 +961,16 @@ are discussed in Section~\ref{rules}.)
 %% resuscitate drules.tex)
 %, and further in Chapter\ref{derived-rules}.)
 
-It was mentioned in Chapter~\ref{logic} that the deductive system of
-\HOL{} includes four axioms.\footnote{This is a simplification: the
-  axioms are an extension of the basic logic. See
-  Sections~\ref{INIT}.}  In that Chapter, the axioms were presented in
-abstract form.  Concretely, axioms are just theorem values that are
-introduced through the use of the \ML{} function \ml{new\_axiom} (see
-Section~\ref{theoryprims} below).  For example, the axiom
-\ml{BOOL\_CASES\_AX} mentioned in Chapter~\ref{logic} is printed in
-\HOL{} as follows (where \ml{T} and \ml{F} are the \HOL{} logic's
-constants representing truth and falsity, respectively):
+It was mentioned in \LOGIC{} that the deductive system of \HOL{}
+includes four axioms.\footnote{This is a simplification: in fact the
+  various axioms are an extension of the basic logic.}  In that
+manual, the axioms were presented in abstract form.  Concretely,
+axioms are just theorem values that are introduced through the use of
+the \ML{} function \ml{new\_axiom} (see Section~\ref{theoryprims}
+below).  For example, the axiom \ml{BOOL\_CASES\_AX} mentioned in
+\LOGIC{} is printed in \HOL{} as follows (where \ml{T} and
+\ml{F} are the \HOL{} logic's constants representing truth and
+falsity, respectively):
 
 \begin{hol}
 \index{F@\holtxt{F}!axiom for}
@@ -1023,7 +1021,7 @@ as periods (\ie\ full stops or dots).  The flag \ml{show\_assums}
 \index{show_assums@\ml{show\_assums}} allows theorems
 to be printed with hypotheses shown in full. These points are illustrated with a
 theorem inferred, for example purposes, from another axiom mentioned
-in Chapter~\ref{logic}: \ml{SELECT\_AX}.
+in \LOGIC, \ml{SELECT\_AX}.
 
 \setcounter{sessioncount}{1}
 \begin{session}
@@ -1043,16 +1041,16 @@ in Chapter~\ref{logic}: \ml{SELECT\_AX}.
 \section{Primitive rules of inference of the HOL Logic}
 \label{rules}
 
-\index{inference rules, of HOL logic@inference rules, of \HOL{} logic!primitive|(}
-The primitive rules of inference of the logic were described abstractly
-in Section~\ref{HOLrules}. The descriptions relied on meta-variables
-$t$, $t_1$, $t_2$, and so on.
-In the \HOL{} logic, infinite families of primitive
-inferences are grouped together and thought of as single primitive inference
-schemes.\index{families of inferences, in HOL logic@families of inferences, in \HOL{} logic}  Each family contains all the concrete instances of one
-particular inference `pattern'. These can be produced, in
-abstract form, by instantiating the meta-variables in Section~\ref{HOLrules}
-to concrete terms.
+\index{inference rules, of HOL logic@inference rules, of \HOL{}
+  logic!primitive|(} The primitive rules of inference of the logic
+were described abstractly in \LOGIC. The descriptions relied on
+meta-variables $t$, $t_1$, $t_2$, and so on.  In the \HOL{} logic,
+infinite families of primitive inferences are grouped together and
+thought of as single primitive inference schemes.\index{families of
+  inferences, in HOL logic@families of inferences, in \HOL{} logic}
+Each family contains all the concrete instances of one particular
+inference `pattern'. These can be produced, in abstract form, by
+instantiating the meta-variables in \LOGIC{}'s rules to concrete terms.
 
 In \HOL, primitive inference schemes are represented by \ML{} functions
 that return theorems as values.  That is, for particular \HOL{} terms,
@@ -1075,8 +1073,8 @@ The \ML{} functions that implement the primitive inference schemes in the
 \index{notation!for specification of rules}
 \index{inferences, in HOL logic@inferences, in \HOL{} logic!notation for}
 %
-is used here as in Section~\ref{HOLrules}: hypotheses above a
-horizontal line and conclusion
+is used here as in \LOGIC: hypotheses above a horizontal line and
+conclusion
 %
 \index{conclusions!of inference rules} beneath. The machine-readable
 {\small ASCII} notation is used for the logical constants.
@@ -1421,7 +1419,7 @@ can be extracted by
 
 \index{theories, in HOL logic@theories, in \HOL{} logic!representation of|(}
 %
-In Chapter~\ref{logic} a theory is described as a $4$-tuple
+In \LOGIC{} a theory is described as a $4$-tuple
 
 \[ {\cal T}\ =\ \langle{\sf Struc}_{\cal T},\
                 {\sf Sig}_{\cal T},\
@@ -1443,22 +1441,28 @@ theorems of ${\cal T}$.
 In the implementation of \HOL, theories are structured hierarchically
 to represent sequences of extensions called
 \emph{segments}
+%
 \index{theory segments}
-of an initial theory (see Section~\ref{extensions}) called
-\ml{min}\index{min@\ml{min}}. A theory segment is not really a logical
-concept, but rather a means of representating theories in the
-\HOL{} system. Each segment records some types, constants, axioms and
-theorems, together with pointers to other segments called its
-\emph{parents}
-\index{parents, of HOL theories@parents, of \HOL{} theories}.
-The theory represented by a segment is obtained by taking the
-union of all the types, constants, axioms and theorems in the segment,
-together with the types, constants, axioms and theorems in all the
-segments reachable by following pointers to parents. This collection
-of reachable segments is called the \emph{ancestry}
+%
+of an initial theory called \ml{min}\index{min@\ml{min}}. A theory
+segment is not really a logical concept, but rather a means of
+representating theories in the \HOL{} system. Each segment records
+some types, constants, axioms and theorems, together with pointers to
+other segments called its \emph{parents}.
+%
+\index{parents, of HOL theories@parents, of \HOL{} theories}
+%
+The theory represented by a segment is obtained by taking the union of
+all the types, constants, axioms and theorems in the segment, together
+with the types, constants, axioms and theorems in all the segments
+reachable by following pointers to parents. This collection of
+reachable segments is called the \emph{ancestry}
+%
 \index{ancestry, of HOL system theories@ancestry, of \HOL{} system theories}
 \index{theories, in HOL logic@theories, in \HOL{} logic!hierarchies of}
+%
 of the segment.
+
 \index{theories, in HOL logic@theories, in \HOL{} logic!representation of|)}
 
 \subsection{ML functions for theory operations}
@@ -1804,7 +1808,7 @@ constant definitions, constant specifications and type definitions.
 \subsubsection{Constant definitions}
 \label{sec:constant-definitions}
 
-In Section~\ref{defs} a constant definition
+In \LOGIC{} a constant definition
 %
 \index{extension, of HOL logic@extension, of \HOL{} logic!by constant definition}
 \index{constant definition extension, of HOL logic@constant definition extension, of \HOL{} logic!ML function for@\ML\ function for}
@@ -1828,7 +1832,7 @@ logically equivalent to:
 
 \[ c\ =\ \lambda v_1\ \cdots\ v_n.\  t \]
 
-\noindent which is a definition in the sense of  Section~\ref{defs} if (i),
+\noindent which is a definition in the sense of \LOGIC{} if (i),
 (ii) and (iii) hold.
 
 The following  \ML\ function  creates\index{defining mechanisms, for HOL logic@defining mechanisms, for \HOL{} logic} a  new definition in
@@ -1865,7 +1869,7 @@ that does not occur in the type of $c$.
 %
 \index{extension, of HOL logic@extension, of \HOL{} logic!by constant specification}
 %
-In Section~\ref{specs} a constant specification\index{constant specification extension, of HOL logic@constant specification extension, of \HOL{} logic!ML function for@\ML\ function for} for a theory ${\cal T}$
+In \LOGIC{} a constant specification\index{constant specification extension, of HOL logic@constant specification extension, of \HOL{} logic!ML function for@\ML\ function for} for a theory ${\cal T}$
 is defined to be a pair:
 
 \[
@@ -1932,10 +1936,14 @@ variables which occur in the term
 %
 \index{type definitions, in HOL logic@type definitions, in \HOL{} logic|(}
 %
-In Section~\ref{tydefs} it is explained that
-defining\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!introduction of}\index{type definition extension, in HOL logic@type definition extension, in \HOL{} logic!ML function for@\ML\ function for|(}
-a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory ${\cal T}$ consists
-of introducing $\ty{op}$ as a new $n$-ary type operator and
+In \LOGIC{} it is explained that
+defining
+%
+\index{type definitions, in HOL logic@type definitions, in \HOL{} logic!introduction of}
+\index{type definition extension, in HOL logic@type definition extension, in \HOL{} logic!ML function for@\ML\ function for|(}
+%
+a new type $(\alpha_1,\ldots,\alpha_n)\ty{op}$ in a theory ${\cal T}$
+consists of introducing $\ty{op}$ as a new $n$-ary type operator and
 
 \[\turn \equant{f_{(\alpha_1,\ldots,\alpha_n)\ty{op}\fun\sigma}}\TyDef\ p\ f\]
 

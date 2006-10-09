@@ -2,21 +2,22 @@
 \label{intro}
 
 This volume contains the  description of  the \HOL\  system.
-It is one of three volumes making up the documentation for \HOL:
+It is one of four volumes making up the documentation for \HOL:
 
 \begin{myenumerate}
+\item \LOGIC: a formal description of the higher order logic
+  implemented by the \HOL{} system.
 \item \TUTORIAL: a tutorial introduction to \HOL, with case studies.
-\item \DESCRIPTION: a description of higher order logic,
-the \ML\ programming language, and theorem proving methods in the \HOL\ system;
+\item \DESCRIPTION: a detailed user's guide for the \HOL{} system;
 \item \REFERENCE: the reference manual for \HOL.
 \end{myenumerate}
 
-\noindent These three documents will be referred to by the short names (in
+\noindent These four documents will be referred to by the short names (in
 small slanted capitals) given above.
 
-This document, \DESCRIPTION, is intended to serve both as a definition of \HOL\
-and as an advanced guide for users with some prior experience of the system.
-Beginners should start with the companion document \TUTORIAL.
+This document, \DESCRIPTION, is an advanced guide for users with some
+prior experience of the system.  Beginners should start with the
+companion document \TUTORIAL.
 
 The \HOL\ system is designed to support interactive theorem proving in
 higher order logic (hence the acronym `\HOL').  To this end, the formal
@@ -32,14 +33,12 @@ intended to be the specification and verification of hardware designs.
 Keith Hanna \cite{Hanna-Daeche}.)  However, the logic does not restrict
 applications to hardware; \HOL\ has been applied to many other areas.
 
-This document presents the \HOL\ logic, and it explains the means by
-which meta-language functions can be used to generate proofs in the
-logic.  Part~I describes the theoretical underpinnings of the \HOL{}
-system, and presents it abstractly.  This part can be skipped by
-readers mainly interested in learning how to use the system.  Part~II
-describes how this abstract system is actually implemented in the
-\ML{} programming language, providing comprehensive descriptions of
-the system's major features.
+This document presents the \HOL\ logic in its \ML{} guise, and
+explains the means by which meta-language functions can be used to
+generate proofs in the logic.  Thus, it describes how the abstract
+system of \LOGIC{} is actually implemented in the \ML{} programming
+language, providing comprehensive descriptions of the system's major
+features.
 
 The approach to mechanizing formal proof used in \HOL\ is due to Robin Milner
 \cite{Edinburgh-LCF}, who also headed the team that designed and implemented
