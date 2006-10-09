@@ -221,11 +221,16 @@ fun declare_names (acl2_name,hol_name) =
  end;
 
 (*****************************************************************************)
+(* ``!x1 ... xn. tm`` |--> tm                                                *)
+(*****************************************************************************)
+val spec_all = snd o strip_forall;
+
+(*****************************************************************************)
 (* Three functions from KXS (modified by MJCG) to support non-standard names *)
 (*****************************************************************************)
 fun dest_hd_eqn eqs =
    let val hd_eqn = if is_conj eqs then fst(dest_conj eqs) else eqs
-       val (lhs,rhs) = dest_eq (snd(strip_forall hd_eqn))
+       val (lhs,rhs) = dest_eq (spec_all hd_eqn)
    in (strip_comb lhs, rhs)
    end;
 
@@ -404,7 +409,7 @@ and mlcons     = mksym "COMMON-LISP" "CONS"
 and mllambda   = mksym "COMMON-LISP" "LAMBDA"
 and mldefun    = mksym "COMMON-LISP" "DEFUN"
 and mlmutual   = mksym "ACL2"        "MUTUAL-RECURSION"
-and mlencap    = mksym "ACL2"        "ENCAPSULATE"
+and mlencap    = mksym "ACL2"        "ENCAP"
 and mldefaxiom = mksym "ACL2"        "DEFAXIOM"
 and mldefthm   = mksym "ACL2"        "DEFTHM";
 
@@ -1419,7 +1424,8 @@ val acl2_to_hol_char_map =
   (#"!"  , explode "exclaim"),
   (#"*"  , explode "star"),
   (#"+"  , explode "plus"),
-  (#":"  , explode "colon")];  
+  (#":"  , explode "colon"),
+  (#" "  , explode "space")];  
 
 (*****************************************************************************)
 (* Check is a character is in the domain of acl2_to_hol_char_map.            *)
@@ -1686,7 +1692,7 @@ fun deftm(defun tm)        = tm
 (*****************************************************************************)
 (* ``!v1...vn. f v1 ... vn = tm`` |--> f                                     *)
 (*****************************************************************************)
-fun get_defined tm = fst(strip_comb(lhs(snd(strip_forall tm))));
+fun get_defined tm = fst(strip_comb(lhs(spec_all tm)));
 
 (*****************************************************************************)
 (* defun ``!v1...vn. f v1 ... vn = tm`` |--> f                               *)
@@ -1760,7 +1766,7 @@ fun mk_acl2def d =
        val newvar = mk_var(sym_name,ty)
        val defun_tm = list_mk_forall(param_vars, mk_def_eq(mk_eq(newvar,tm)))
    in
-    defun defun_tm
+    defun(gen_all defun_tm)
    end else
  if is_mldefthm d
   then
@@ -1769,7 +1775,7 @@ fun mk_acl2def d =
        val ty = type_of tm
        val sym_name = mlsym_to_string nam
    in
-    defthm(sym_name, ``|= ^tm``)
+    defthm(sym_name, gen_all ``|= ^tm``)
    end else
  if is_mldefaxiom d
   then
@@ -1778,14 +1784,14 @@ fun mk_acl2def d =
        val ty = type_of tm
        val sym_name = mlsym_to_string nam
    in
-    defaxiom(sym_name, ``|= ^tm``)
+    defaxiom(sym_name, gen_all ``|= ^tm``)
    end else
  if is_mlmutual d
   then
    let val dl = dest_mlmutual d
        val names = map (mlsym_to_string o #1 o dest_mldefun) dl
    in
-    mutual(list_mk_conj(map (deftm o mk_acl2def) dl))
+    mutual(gen_all(list_mk_conj(map (deftm o mk_acl2def) dl)))
    end else
  if is_mlencap d
   then
@@ -1805,7 +1811,7 @@ fun mk_acl2def d =
        val event_tms = map (mk_closed_event extended_sig_vars o deftm) eventl
        val spec_body = list_mk_exists(extended_sig_vars,list_mk_conj event_tms)
    in
-    encap(names,spec_body)
+    encap(names,gen_all spec_body)
    end 
   else err "mk_acl2def" "badly formed mldef";
 
@@ -1816,11 +1822,28 @@ fun mk_acl2def d =
 val chars_to_string = implode o (map chr);
 
 (*****************************************************************************)
+(* ["s1","s2",...,"sn"] |--> "s1 s2 ... sn" (strings separated by spaces)    *)
+(*****************************************************************************)
+fun concat_with_spaces []      = ""
+ |  concat_with_spaces [s]     = s
+ |  concat_with_spaces (s::sl) = s ^ " " ^ concat_with_spaces sl;
+
+(*****************************************************************************)
+(* Get list of things being defined by a mutual recursion                    *)
+(*****************************************************************************)
+val get_defined_list = map get_defined o strip_conj;
+
+(*****************************************************************************)
+(* Space-separated concatenation of names of defuns in a mutual-recursion    *)
+(*****************************************************************************)
+val mk_mutual_name = concat_with_spaces o map get_name o get_defined_list;
+
+(*****************************************************************************)
 (* Print an acl2def                                                          *)
 (*****************************************************************************)
 fun print_acl2def out (defun tm) =
      (out "; Defun:    "; out(get_name(get_defined tm)); out "\n";
-      print_mlsexp out (deftm_to_mlsexp_defun tm); 
+      print_mlsexp out (deftm_to_mlsexp_defun(spec_all tm)); 
       out "\n\n")
  |  print_acl2def out (defaxiom(nam,tm)) =
      (out "; Defaxiom: "; out nam; out "\n";
@@ -1828,7 +1851,7 @@ fun print_acl2def out (defun tm) =
        (mk_mlsexp_list
          [mldefaxiom, 
           string_to_mlsym nam, 
-          term_to_mlsexp tm]); 
+          term_to_mlsexp(spec_all tm)]); 
       out "\n\n")
  |  print_acl2def out (defthm(nam,tm)) =
      (out "; Defthm:   "; out nam; out "\n";
@@ -1836,12 +1859,13 @@ fun print_acl2def out (defun tm) =
        (mk_mlsexp_list
          [mldefthm, 
           string_to_mlsym nam, 
-          term_to_mlsexp tm]); 
+          term_to_mlsexp(spec_all tm)]); 
       out "\n\n")
  |  print_acl2def out (mutual tm) =
-     (out "; Mutual-Recursion\n";
+     (out "; Mutual-Recursion "; out (mk_mutual_name tm); out "\n";
+      out "(MUTUAL-RECURSION\n\n";
       map (print_acl2def out o defun) (strip_conj tm);
-      out "\n")
+      out ")\n\n")
  |  print_acl2def out (encap(sl,tm)) = err "print_acl2def" "encap not yet supported";
 (*
      (out "; Encapsulate\n";
@@ -1949,14 +1973,62 @@ fun install_def(defun deftm) =
      in
       defthm_thm
      end
- |  install_def _ = err "install_def" "unsupported acl2def";
-
-(*****************************************************************************)
-(* ["s1","s2",...,"sn"] |--> "s1 s2 ... sn" (strings separated by spaces)    *)
-(*****************************************************************************)
-fun concat_with_spaces []      = ""
- |  concat_with_spaces [s]     = s
- |  concat_with_spaces (s::sl) = s ^ " " ^ concat_with_spaces sl;
+ | install_def(mutual deftm) =
+     let val deftms = get_defined_list deftm
+         val opr_name_ty_list = map dest_var deftms
+         val acl2_name = mk_mutual_name deftm
+         val hol_names = map (create_hol_name o fst) opr_name_ty_list
+         val new_hol_names =
+              map
+               (fn tm => (if null(Term.decls tm) then "" else "acl2_") ^ tm)
+               hol_names
+         val _ = map new_constant opr_name_ty_list
+         val _ = map2
+                  (fn (nam,ty) => fn new_nam => declare_names(nam,new_nam))
+                  opr_name_ty_list
+                  new_hol_names
+         val con_list = map mk_const opr_name_ty_list
+         val newdeftm =
+              subst 
+               (map2 (fn opr => fn con => (opr |-> con)) deftms con_list)
+               deftm
+         val hol_name = create_hol_name acl2_name
+         val defthm_thm =
+              save_thm
+               ((hol_name ^ "_def"),
+                CLEAN_ACL2_VARS
+                 (mk_acl2_thm "MUTUAL-RECURSION" acl2_name newdeftm))
+     in
+      defthm_thm
+     end
+ |  install_def(encap(sl,bdy)) =
+     let val (deftms,deftm) = strip_exists bdy
+         val opr_name_ty_list = map dest_var deftms
+         val acl2_name = concat_with_spaces(map get_name deftms)
+         val hol_names = map (create_hol_name o fst) opr_name_ty_list
+         val new_hol_names =
+              map
+               (fn tm => (if null(Term.decls tm) then "" else "acl2_") ^ tm)
+               hol_names
+         val _ = map new_constant opr_name_ty_list
+         val _ = map2
+                  (fn (nam,ty) => fn new_nam => declare_names(nam,new_nam))
+                  opr_name_ty_list
+                  new_hol_names
+         val con_list = map mk_const opr_name_ty_list
+         val newdeftm =
+              subst 
+               (map2 (fn opr => fn con => (opr |-> con)) deftms con_list)
+               deftm
+         val hol_name = create_hol_name acl2_name
+         val defthm_thm =
+              save_thm
+               ((hol_name ^ "_def"),
+                CLEAN_ACL2_VARS
+                 (mk_acl2_thm "ENCAPSULATE" acl2_name newdeftm))
+     in
+      defthm_thm
+     end;
 
 (*****************************************************************************)
 (* Get kind of acl2def                                                       *)
@@ -1964,11 +2036,7 @@ fun concat_with_spaces []      = ""
 fun dest_acl2def (defun tm)      = ("DEFUN",get_name(get_defined tm))
  |  dest_acl2def (defaxiom(s,_)) = ("DEFAXIOM",s)
  |  dest_acl2def (defthm(s,_))   = ("DEFTHM",s)
- |  dest_acl2def (mutual tm)     = ("MUTUAL-RECURSION", 
-                                    concat_with_spaces
-                                     (map 
-                                       (get_name o get_defined) 
-                                       (strip_conj tm)))
+ |  dest_acl2def (mutual tm)     = ("MUTUAL-RECURSION", mk_mutual_name tm)
  |  dest_acl2def (encap(sg,tm))  = ("ENCAPSULATE", concat_with_spaces sg);
 
 (*****************************************************************************)
