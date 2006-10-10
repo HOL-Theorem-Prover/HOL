@@ -10,10 +10,10 @@ rule, epsilon.
 
 \DESCRIBE
 {SELECT_ELIM} expects two arguments, a theorem {th1}, and a pair
-{(v,th2): term * thm}.  The conclusion of {th1} must have the form {P($@ P)},
-which asserts that the epsilon term {$@ P} denotes some value at which
-{P} holds.  The variable {v} appears only in the assumption {P v} of
-the theorem {th2}.  The conclusion of the resulting theorem matches
+{(v,th2): term * thm}.  The conclusion of {th1} must have the form
+{P($@ P)}, which asserts that the epsilon term {$@ P} denotes some
+value at which {P} holds.  In {th2}, the variable {v} appears only in
+the assumption {P v}.  The conclusion of the resulting theorem matches
 that of {th2}, and the hypotheses include the union of all hypotheses
 of the premises excepting {P v}.
 {
@@ -21,12 +21,13 @@ of the premises excepting {P v}.
    -----------------------------------  SELECT_ELIM th1 (v,th2)
               A1 u A2 |- t
 }
-where {v} is not free in {A2}. If {v} appears in the conclusion of
-{th2}, the epsilon term will NOT be eliminated, and the conclusion will be
-{t[$@ P/v]}.
+where {v} is not free in {A2}. The argument to {P} in the conclusion
+of {th1} may actually be any term {x}.  If {v} appears in the
+conclusion of {th2}, this argument {x} (usually the epsilon term) will
+NOT be eliminated, and the conclusion will be {t[x/v]}.
 
 \FAILURE
-Fails if the first theorem is not of the form {A1 |- P($@ P)}, or if
+Fails if the first theorem is not of the form {A1 |- P x}, or if
 the variable {v} occurs free in any other assumption of {th2}.
 
 \EXAMPLE
@@ -47,7 +48,7 @@ not surjective (onto).
 These two results may be combined using {SELECT_ELIM} to
 give a new theorem:
 {
-   - SELECT_ELIM th1 (Term`g:num->num`, th2);
+   - SELECT_ELIM th1 (``g:num->num``, th2);
    val it = |- ?h. ONE_ONE h /\ ~ONTO h : thm
 }
 
@@ -57,5 +58,6 @@ This rule is rarely used.  The equivalence of {P($@ P)} and {$? P}
 makes this rule fundamentally similar to the {?}-elimination rule {CHOOSE}.
 
 \SEEALSO
-Thm.CHOOSE, SELECT_AX, Conv.SELECT_CONV, Drule.SELECT_INTRO, Drule.SELECT_RULE.
+Thm.CHOOSE, SELECT_AX, Conv.SELECT_CONV, Tactic.SELECT_ELIM_TAC,
+Drule.SELECT_INTRO, Drule.SELECT_RULE.
 \ENDDOC

@@ -373,13 +373,18 @@ fun SELECT_INTRO th =
 
 
 
-(*---------------------------------------------------------------------------
- * SELECT elimination (cases)
- *
- *   A1 |- P($@ P)          A2, "P v" |- t
- *  ------------------------------------------ (v occurs nowhere)
- *              A1 u A2 |- t
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    SELECT elimination (cases)
+
+     A1 |- P($@ P)          A2, "P v" |- t
+    ------------------------------------------ (v occurs nowhere else in th2)
+                A1 u A2 |- t
+
+    In line with the documentation in REFERENCE, this function succeeds even
+    if v occurs in t (giving a rather useless result).  It also succeeds no
+    matter what the rand of the conclusion of th1 is.
+
+   ---------------------------------------------------------------------- *)
 
 fun SELECT_ELIM th1 (v,th2) =
   let val (Rator, Rand) = dest_comb(concl th1)
