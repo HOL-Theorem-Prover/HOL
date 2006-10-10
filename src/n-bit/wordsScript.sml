@@ -2253,6 +2253,15 @@ val _ = ConstMapML.insert ``dimindex``;
 val _ = ConstMapML.insert ``INT_MIN``;
 val _ = ConstMapML.insert ``n2w_itself``;
 
+fun mk_index i =
+  let val n = Int.toString i 
+      val s = " i" ^ n 
+      val w = "type word" ^ n ^ " =" ^ s ^ " word"
+  in
+    [EmitML.MLSTRUCT ("datatype" ^ s ^ " =" ^ s), EmitML.MLSIG ("eqtype" ^ s),
+     EmitML.MLSTRUCT w, EmitML.MLSIG w]
+  end;
+
 local
   open EmitML numeral_bitTheory
   val ALPHA_BETA_RULE = GEN_ALL o INST [`a` |-> `m`, `b` |-> `n`] o SPEC_ALL
@@ -2288,11 +2297,13 @@ local
 in
   val _ = emitML (!Globals.emitMLDir)
     ("words", OPEN ["sum", "num", "fcp", "bit"]
-     :: MLSIG "type ('a, 'b) cart = ('a, 'b) fcpML.cart"
      :: MLSIG "type ('a, 'b) sum = ('a, 'b) sumML.sum"
      :: MLSIG "type num = numML.num"
      :: MLSIG "type 'a itself = fcpML.holtype"
-     :: MLSTRUCT
+     :: MLSIG "datatype 'a word = n2w_itself of num * fcpML.holtype"
+     :: MLSTRUCT "datatype 'a word = n2w_itself of num * holtype"
+     :: List.concat (map mk_index [2,4,5,8,12,16,24,30,32])
+      @ MLSTRUCT
             "val lookup_INT_MIN = ref (fn (a: holtype) =>\
                  \ (raise IndexUndefined):num)\n\
           \  fun INT_MIN a = !lookup_INT_MIN a\n\

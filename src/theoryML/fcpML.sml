@@ -8,7 +8,7 @@ exception IndexUndefined
 datatype holtype = Tyvar of string
                  | Tyop of string * holtype list
 
-datatype ('a, 'b) cart = n2w_itself of num * holtype
+datatype ('a, 'b) cart = FCP of ('b -> 'a)
 
 type 'a itself = holtype
 
