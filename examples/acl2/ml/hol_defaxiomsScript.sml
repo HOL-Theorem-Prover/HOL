@@ -289,7 +289,7 @@ val (cond_clausesp_def,cond_clausesp_ind) =
 *)
 
 val eqlablep_def =
- acl2Define "ACL2::EQLABLE"
+ acl2Define "ACL2::EQLABLEP"
   `eqlablep x =
     itel [(acl2_numberp x,acl2_numberp x); (symbolp x,symbolp x)]
          (characterp x)`;
@@ -556,7 +556,7 @@ val eql_def =
 *)
 
 val common_lisp_equal_def =
- acl2Define "DEFUN COMMON-LISP::="
+ acl2Define "COMMON-LISP::="
   `common_lisp_equal x y = equal x y`;
 
 (*
@@ -2565,6 +2565,13 @@ val (member_symbol_name_def,member_symbol_name_ind) =
      |- mv_nth n l =
         itel [(endp l,nil); (zp n,car l)] (mv_nth (add (int ~1) n) (cdr l)),
 *)
+
+val (mv_nth_def,mv_nth_ind) =
+ acl2_defn "ACL2::MV-NTH"
+  (`mv_nth n l =
+     itel [(endp l,nil); (zp n,car l)] (mv_nth (add (int ~1) n) (cdr l))`,
+   WF_REL_TAC `measure (sexp_size o SND)`
+    THEN ACL2_SIMP_TAC []);
 
 (*
      [oracles: DEFUN ACL2::MAKE-MV-NTHS, DISK_THM] [axioms: ] []

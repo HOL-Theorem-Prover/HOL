@@ -1766,7 +1766,7 @@ fun mk_acl2def d =
        val newvar = mk_var(sym_name,ty)
        val defun_tm = list_mk_forall(param_vars, mk_def_eq(mk_eq(newvar,tm)))
    in
-    defun(gen_all defun_tm)
+    defun(mk_closed_event [newvar] defun_tm)
    end else
  if is_mldefthm d
   then
@@ -1808,7 +1808,8 @@ fun mk_acl2def d =
        val defunl = mapfilter get_defun_fun eventl
        val extended_sig_vars = union sig_vars defunl
        val names = map defname eventl
-       val event_tms = map (mk_closed_event extended_sig_vars o deftm) eventl
+       val event_tms = 
+            map (mk_closed_event extended_sig_vars o spec_all o deftm) eventl
        val spec_body = list_mk_exists(extended_sig_vars,list_mk_conj event_tms)
    in
     encap(names,gen_all spec_body)
@@ -1935,8 +1936,8 @@ fun mk_acl2_thm defty acl2_name deftm =
 (* 3. create theorems from defaxioms and defthms using mk_oracle_thm then    *)
 (*    save them using a HOL-friendly name with suffix "_def"                 *)
 (*****************************************************************************)
-fun install_def(defun deftm) =
-     let val opr = get_defined deftm
+fun install_def(defun tm) =
+     let val opr = get_defined tm
          val (opr_name,opr_ty) = dest_var opr
          val (pkg_name,sym_name) = split_acl2_name opr_name
          val hol_name = create_hol_name opr_name
@@ -1945,38 +1946,38 @@ fun install_def(defun deftm) =
          val _ = new_constant(opr_name,opr_ty)
          val _ = declare_names(opr_name,new_hol_name)
          val con = mk_const(opr_name,opr_ty)
-         val newdeftm = subst[opr |-> con]deftm
+         val newtm = subst[opr |-> con]tm
          val defun_thm =
               save_thm
                ((hol_name ^ "_def"),
-                CLEAN_ACL2_VARS(mk_acl2_thm "DEFUN" opr_name newdeftm))
+                CLEAN_ACL2_VARS(mk_acl2_thm "DEFUN" opr_name newtm))
      in
       defun_thm
      end
- |  install_def(defaxiom(acl2_name, deftm)) =
+ |  install_def(defaxiom(acl2_name, tm)) =
      let val (pkg_name,sym_name) = split_acl2_name acl2_name
          val hol_name = create_hol_name acl2_name
          val defaxiom_thm =
               save_thm
                ((hol_name ^ "_def"),
-                CLEAN_ACL2_VARS(mk_acl2_thm "DEFAXIOM" acl2_name deftm))
+                CLEAN_ACL2_VARS(mk_acl2_thm "DEFAXIOM" acl2_name tm))
      in
       defaxiom_thm
      end
- |  install_def(defthm(acl2_name, deftm)) =
+ |  install_def(defthm(acl2_name, tm)) =
      let val (pkg_name,sym_name) = split_acl2_name acl2_name
          val hol_name = create_hol_name acl2_name
          val defthm_thm =
               save_thm
                ((hol_name ^ "_def"),
-                CLEAN_ACL2_VARS(mk_acl2_thm "DEFTHM" acl2_name deftm))
+                CLEAN_ACL2_VARS(mk_acl2_thm "DEFTHM" acl2_name tm))
      in
       defthm_thm
      end
- | install_def(mutual deftm) =
-     let val deftms = get_defined_list deftm
-         val opr_name_ty_list = map dest_var deftms
-         val acl2_name = mk_mutual_name deftm
+ | install_def(mutual tm) =
+     let val tms = get_defined_list tm
+         val opr_name_ty_list = map dest_var tms
+         val acl2_name = mk_mutual_name tm
          val hol_names = map (create_hol_name o fst) opr_name_ty_list
          val new_hol_names =
               map
@@ -1988,23 +1989,23 @@ fun install_def(defun deftm) =
                   opr_name_ty_list
                   new_hol_names
          val con_list = map mk_const opr_name_ty_list
-         val newdeftm =
+         val newtm =
               subst 
-               (map2 (fn opr => fn con => (opr |-> con)) deftms con_list)
-               deftm
+               (map2 (fn opr => fn con => (opr |-> con)) tms con_list)
+               tm
          val hol_name = create_hol_name acl2_name
          val defthm_thm =
               save_thm
                ((hol_name ^ "_def"),
                 CLEAN_ACL2_VARS
-                 (mk_acl2_thm "MUTUAL-RECURSION" acl2_name newdeftm))
+                 (mk_acl2_thm "MUTUAL-RECURSION" acl2_name newtm))
      in
       defthm_thm
      end
  |  install_def(encap(sl,bdy)) =
-     let val (deftms,deftm) = strip_exists bdy
-         val opr_name_ty_list = map dest_var deftms
-         val acl2_name = concat_with_spaces(map get_name deftms)
+     let val (tms,tm) = strip_exists bdy
+         val opr_name_ty_list = map dest_var tms
+         val acl2_name = concat_with_spaces(map get_name tms)
          val hol_names = map (create_hol_name o fst) opr_name_ty_list
          val new_hol_names =
               map
@@ -2016,16 +2017,16 @@ fun install_def(defun deftm) =
                   opr_name_ty_list
                   new_hol_names
          val con_list = map mk_const opr_name_ty_list
-         val newdeftm =
+         val newtm =
               subst 
-               (map2 (fn opr => fn con => (opr |-> con)) deftms con_list)
-               deftm
+               (map2 (fn opr => fn con => (opr |-> con)) tms con_list)
+               tm
          val hol_name = create_hol_name acl2_name
          val defthm_thm =
               save_thm
                ((hol_name ^ "_def"),
                 CLEAN_ACL2_VARS
-                 (mk_acl2_thm "ENCAPSULATE" acl2_name newdeftm))
+                 (mk_acl2_thm "ENCAPSULATE" acl2_name newtm))
      in
       defthm_thm
      end;

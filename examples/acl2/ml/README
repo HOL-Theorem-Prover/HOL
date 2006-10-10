@@ -54,7 +54,15 @@ then print them into a file defaxioms.prove.lisp, run hol and do:
    defaxioms;
  sexp.print_thms_to_defthms simp_defaxioms "defaxioms.prove";
 
+To slurp in "examples/encap/example.ml" do:
+
+  load "hol_defaxiomsTheory";
+  load "sexp";
+  quietdec := true; open sexp; quietdec := false;
+  use "../examples/encap/example.ml";
+  map (install_def o mk_acl2def) (!acl2_list_ref);
+
 Mike Gordon
 16 Dec, 2005
-11 Sep, 2006
+09 Oct, 2006
 
