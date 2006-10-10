@@ -10,7 +10,7 @@ rule, epsilon.
 
 \DESCRIBE
 {SELECT_ELIM} expects two arguments, a theorem {th1}, and a pair
-{(v,th2): term * thm}.  The conclusion of {th1} must have the form
+{(v,th2): term * thm}.  The conclusion of {th1} should have the form
 {P($@ P)}, which asserts that the epsilon term {$@ P} denotes some
 value at which {P} holds.  In {th2}, the variable {v} appears only in
 the assumption {P v}.  The conclusion of the resulting theorem matches
