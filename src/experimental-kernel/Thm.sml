@@ -1121,11 +1121,11 @@ fun Specialize t th =
 
 fun mk_oracle_thm tg (asl,c) =
   (Assert (Lib.all is_bool (c::asl)) "mk_oracle_thm"  "not a proposition"
-   ; Assert ((not o Tag.isEmpty) tg) "mk_oracle_thm"  "invalid user tag"
-   ; make_thm Count.Oracle (tg,list_hyp asl,c));
+   ; Assert (tg <> "DISK_THM") "mk_oracle_thm"  "invalid user tag"
+   ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c));
 
 
-val mk_thm = mk_oracle_thm (Tag.read "MK_THM");
+val mk_thm = mk_oracle_thm "MK_THM";
 
 
 (*---------------------------------------------------------------------------*

@@ -21,11 +21,11 @@
 ******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
-map 
- load  
- ["intSyntax","pairSyntax","listSyntax","stringLib","stringSimps", 
+map
+ load
+ ["intSyntax","pairSyntax","listSyntax","stringLib","stringSimps",
   "rich_listTheory","pred_setLib"];
-open pairSyntax listSyntax stringLib numLib stringSimps 
+open pairSyntax listSyntax stringLib numLib stringSimps
      rich_listTheory pred_setLib;
 printDepth := 1000;
 printLength := 1000;
@@ -93,8 +93,8 @@ val print_err = ref false;
 (*****************************************************************************)
 (* Error reporting function (uses some HOL boilerplate I don't understand)   *)
 (*****************************************************************************)
-fun err fn_name msg = 
- if !print_err 
+fun err fn_name msg =
+ if !print_err
   then Raise(mk_HOL_ERR "sexp" fn_name msg)
   else raise(mk_HOL_ERR "sexp" fn_name msg);
 
@@ -136,7 +136,7 @@ and ACL2_FULL_SIMP_TAC thl = FULL_SIMP_TAC list_ss ((!acl2_simps) @ thl);
 (*****************************************************************************)
 (* Global association list of pairs (hol_name, acl2_name).                   *)
 (*****************************************************************************)
-val acl2_names = 
+val acl2_names =
  ref([("ACL2_PAIR", "COMMON-LISP::CONS")]:(string*string)list);
 
 (*****************************************************************************)
@@ -178,10 +178,10 @@ fun add_acl2_names []      = ()
 (*****************************************************************************)
 local
 fun string_pair_list_to_string_aux [] = ""
- |  string_pair_list_to_string_aux [(hol,acl2)] = 
+ |  string_pair_list_to_string_aux [(hol,acl2)] =
     ("(\"" ^ hol ^ "\",\"" ^ acl2 ^"\")")
- |  string_pair_list_to_string_aux ((hol,acl2)::pl) = 
-    ("(\"" ^ hol ^ "\",\"" ^ acl2 ^"\")," ^ 
+ |  string_pair_list_to_string_aux ((hol,acl2)::pl) =
+    ("(\"" ^ hol ^ "\",\"" ^ acl2 ^"\")," ^
     string_pair_list_to_string_aux pl)
 in
 fun string_pair_list_to_string pl =
@@ -215,7 +215,7 @@ fun declare_names (acl2_name,hol_name) =
   if not(length hol_tml = 0)
    then (print "Warning -- there is already a constant named: ";
          print hol_name;
-         print "\n") 
+         print "\n")
    else (add_acl2_names[(hol_name,acl2_name)];
          overload_on(hol_name,hd acl2_tml))
  end;
@@ -274,9 +274,9 @@ fun acl2Define acl2_name q =
  in
   acl2_simps := (!acl2_simps) @ [th];
   declare_names(acl2_name,hol_name);
-  (print"\""; 
-   print acl2_name; 
-   print "\" defined with HOL name \""; 
+  (print"\"";
+   print acl2_name;
+   print "\" defined with HOL name \"";
    print hol_name; print "\"\n");
   th
  end;
@@ -314,7 +314,7 @@ fun acl2_tgoal acl2_name q =
 (*****************************************************************************)
 fun acl2_defn acl2_name (q,tac) =
  let val (hol_name,def) = non_standard_name_defn acl2_name q
-     val (def_th,ind_th) = 
+     val (def_th,ind_th) =
           (Defn.tprove(def,tac)
            handle e => Raise(wrap_exn "ACL2 support" "Defn.tgoal" e))
  in
@@ -322,9 +322,9 @@ fun acl2_defn acl2_name (q,tac) =
   declare_names(acl2_name,hol_name);
   save_thm((hol_name ^ "_def"),def_th);
   save_thm((hol_name ^ "_ind"),ind_th);
-  (print"\""; 
-   print acl2_name; 
-   print "\" defined with HOL name \""; 
+  (print"\"";
+   print acl2_name;
+   print "\" defined with HOL name \"";
    print hol_name; print "\"\n";
    (def_th,ind_th))
  end;
@@ -342,7 +342,7 @@ fun print_lisp_file file_name printer =
  let val outstr = TextIO.openOut(file_name ^ ".lisp")
      fun out s = TextIO.output(outstr,s)
  in
- (out("; File created from HOL using print_lisp_file on " ^ date() ^ "\n\n");  
+ (out("; File created from HOL using print_lisp_file on " ^ date() ^ "\n\n");
    (* Add time stamp                                                         *)
    (* out("(IN-PACKAGE \"ACL2\")\n\n");                                      *)
    (* ACL2 initialisation (currently commented out at Matt's suggestion)     *)
@@ -378,15 +378,15 @@ datatype mlsexp =
 val mksym  = curry mlsym
 and mkstr  = mlstr
 and mkchr  = mlchr o chr
-and mknum  = fn numerator_x => 
-              fn denominator_x => 
-               fn numerator_y => 
-                fn denominator_y => 
+and mknum  = fn numerator_x =>
+              fn denominator_x =>
+               fn numerator_y =>
+                fn denominator_y =>
                  mlnum(numerator_x,denominator_x,numerator_y,denominator_y)
-and mkpair = fn x => 
-              fn y => 
+and mkpair = fn x =>
+              fn y =>
                mlpair(x,y);
- 
+
 (*****************************************************************************)
 (* Test and destructor for mlsym                                             *)
 (*****************************************************************************)
@@ -415,9 +415,9 @@ and mldefthm   = mksym "ACL2"        "DEFTHM";
 
 (*****************************************************************************)
 (* "tag_ty nam" |--> ("tag_ty","nam")                                        *)
-(*****************************************************************************) 
+(*****************************************************************************)
 val split_tag =
- let 
+ let
   fun split_tag_chars acc [] = ([],rev acc)
    |  split_tag_chars acc (#" " :: l) = (rev acc,l)
    |  split_tag_chars acc (c :: l) = split_tag_chars (c :: acc) l
@@ -427,9 +427,9 @@ end;
 
 (*****************************************************************************)
 (* "pkg::nam" |--> ("pkg","nam")                                             *)
-(*****************************************************************************) 
+(*****************************************************************************)
 val split_acl2_name =
- let 
+ let
   fun split_acl2_name_chars acc [] = ([],rev acc)
    |  split_acl2_name_chars acc (#":" :: #":" :: l) = (rev acc,l)
    |  split_acl2_name_chars acc (c :: l) = split_acl2_name_chars (c :: acc) l
@@ -448,7 +448,7 @@ end;
 (*****************************************************************************)
 fun string_to_mlsym s =
  case assoc1 s (!acl2_names)
- of SOME(_,acl2_name) 
+ of SOME(_,acl2_name)
     => let val (pkg,nam) = split_acl2_name acl2_name
        in
         mlsym(if pkg = "" then (!current_package) else pkg, nam)
@@ -480,7 +480,7 @@ fun is_mlsexp_list (p as mlpair(_,_)) = is_mlsexp_proper_list p
 (* Destruct an ML s-expression list:                                         *)
 (*  (x1 . (x2 . ... (xn . nil) ...))  |--> [x1,x2,...,xn]                    *)
 (*****************************************************************************)
-fun dest_mlsexp_list (sym as mlsym(_,_)) = 
+fun dest_mlsexp_list (sym as mlsym(_,_)) =
      if (sym = mlnil) then [] else [sym]
  |  dest_mlsexp_list (mlpair(p1,p2)) =
      p1 :: dest_mlsexp_list p2
@@ -512,10 +512,10 @@ fun mk_mlquote x = mk_mlsexp_list[mlquote,x];
 (*****************************************************************************)
 (* Test for a lambda: ((LAMBDA (x1 ... xm) bdy) (a1 ... an))                 *)
 (*****************************************************************************)
-fun is_mllambda (mlpair(mlpair(x,mlpair(params,mlpair(bdy,n))),args)) = 
-     (x = mllambda)        andalso 
-     is_mlsexp_list params andalso 
-     is_mlsexp_list args   andalso 
+fun is_mllambda (mlpair(mlpair(x,mlpair(params,mlpair(bdy,n))),args)) =
+     (x = mllambda)        andalso
+     is_mlsexp_list params andalso
+     is_mlsexp_list args   andalso
      is_mlsexp_list bdy    andalso
      (n = mlnil)
  |  is_mllambda _ = false;
@@ -527,16 +527,16 @@ fun is_mllambda (mlpair(mlpair(x,mlpair(params,mlpair(bdy,n))),args)) =
 (*   ([x1, ..., xm], bdy, [a1, ..., an])                                     *)
 (*                                                                           *)
 (*****************************************************************************)
-fun dest_mllambda (mlpair(mlpair(_,mlpair(params,mlpair(bdy,_))),args)) = 
+fun dest_mllambda (mlpair(mlpair(_,mlpair(params,mlpair(bdy,_))),args)) =
      (dest_mlsexp_list params, bdy, dest_mlsexp_list args)
- |  dest_mllambda _ = 
+ |  dest_mllambda _ =
      err "dest_mllambda" "bad argument";
 
 (*****************************************************************************)
 (* Test for a defun: (DEFUN nam (x1 ... xn) bdy)                             *)
 (*****************************************************************************)
-fun is_mldefun 
-     (mlpair(x,mlpair(mlsym(_,_),mlpair(params,mlpair(bdy,n))))) = 
+fun is_mldefun
+     (mlpair(x,mlpair(mlsym(_,_),mlpair(params,mlpair(bdy,n))))) =
       (x = mldefun)         andalso
       is_mlsexp_list params andalso
       is_mlsexp_list bdy    andalso
@@ -547,11 +547,11 @@ fun is_mldefun
 (* Defun destructor: (DEFUN nam (x1 ... xn) bdy) |-->(nam,[x1,...,xn],bdy)   *)
 (*****************************************************************************)
 fun dest_mldefun d =
-     if is_mldefun d 
+     if is_mldefun d
       then case dest_mlsexp_list d
-           of [_,nam,params,bdy] 
+           of [_,nam,params,bdy]
               => (nam, dest_mlsexp_list params, bdy)
-           |  _                  
+           |  _
               => err "dest_mldefun" "bad case match"
       else err "dest_mldefun" "not a defun";
 
@@ -564,15 +564,15 @@ fun mk_mldefun (nam, params, bdy) =
 (*****************************************************************************)
 (* Test for a defaxiom: (DEFAXIOM nam bdy)                                   *)
 (*****************************************************************************)
-fun is_mldefaxiom 
-     (mlpair(x,mlpair(mlsym(_,_),mlpair(bdy,n)))) = 
+fun is_mldefaxiom
+     (mlpair(x,mlpair(mlsym(_,_),mlpair(bdy,n)))) =
       (x = mldefaxiom)   andalso
       is_mlsexp_list bdy andalso
       (n = mlnil)
  |  is_mldefaxiom _  = false;
 
 (*****************************************************************************)
-(* Defaxiom destructor: (DEFAXIOM nam bdy) |--> (nam,bdy)                    *) 
+(* Defaxiom destructor: (DEFAXIOM nam bdy) |--> (nam,bdy)                    *)
 (*****************************************************************************)
 fun dest_mldefaxiom
      (mlpair(_,mlpair(nam,mlpair(bdy,_)))) = (nam, bdy)
@@ -581,21 +581,21 @@ fun dest_mldefaxiom
 (*****************************************************************************)
 (* Defaxiom constructor:  (nam,bdy) |--> (DEFAXIOM nam bdy)                  *)
 (*****************************************************************************)
-fun mk_mldefaxiom(nam,bdy) = 
+fun mk_mldefaxiom(nam,bdy) =
  mk_mlsexp_list [mldefaxiom, nam, bdy];
 
 (*****************************************************************************)
 (* Test for a defthm: (DEFTHM nam bdy)                                        *)
 (*****************************************************************************)
-fun is_mldefthm 
-     (mlpair(x,mlpair(mlsym(_,_),mlpair(bdy,n)))) = 
+fun is_mldefthm
+     (mlpair(x,mlpair(mlsym(_,_),mlpair(bdy,n)))) =
       (x = mldefthm)     andalso
       is_mlsexp_list bdy andalso
       (n = mlnil)
  |  is_mldefthm _  = false;
 
 (*****************************************************************************)
-(* Defthm destructor: (DEFTHM nam bdy) |--> (nam,bdy)                        *) 
+(* Defthm destructor: (DEFTHM nam bdy) |--> (nam,bdy)                        *)
 (*****************************************************************************)
 fun dest_mldefthm
      (mlpair(_,mlpair(nam,mlpair(bdy,_)))) = (nam, bdy)
@@ -604,7 +604,7 @@ fun dest_mldefthm
 (*****************************************************************************)
 (* Defthm constructor:  (nam,bdy) |--> (DEFTHM nam bdy)                      *)
 (*****************************************************************************)
-fun mk_mldefthm(nam,bdy) = 
+fun mk_mldefthm(nam,bdy) =
  mk_mlsexp_list [mldefthm, nam, bdy];
 
 (*****************************************************************************)
@@ -615,7 +615,7 @@ fun is_mlmutual (mlpair(x, defs)) =
  |  is_mlmutual _  = false;
 
 (*****************************************************************************)
-(* Mutual destructor: (MUTUAL-RECURSION d1 ... dn) |--> [d1, ..., dn]        *) 
+(* Mutual destructor: (MUTUAL-RECURSION d1 ... dn) |--> [d1, ..., dn]        *)
 (*****************************************************************************)
 fun dest_mlmutual (mlpair(_, defs)) = dest_mlsexp_list defs
  |  dest_mlmutual _ = err "dest_mlmutual" "bad argument";
@@ -624,16 +624,16 @@ fun dest_mlmutual (mlpair(_, defs)) = dest_mlsexp_list defs
 (* Test for a encap: (ENCAP acl2sig events)                                  *)
 (*****************************************************************************)
 fun is_mlencap (mlpair(x, mlpair(acl2sig,events))) =
-      (x = mlencap) andalso is_mlsexp_list acl2sig 
+      (x = mlencap) andalso is_mlsexp_list acl2sig
                     andalso is_mlsexp_list events
  |  is_mlencap _  = false;
 
 (*****************************************************************************)
 (* Mutual destructor: (ENCAP (s1 ... sm) (e1 ... en))                        *)
 (*                    |-->                                                   *)
-(*                    ([s1, ..., sm],[e1,...,en])                            *) 
+(*                    ([s1, ..., sm],[e1,...,en])                            *)
 (*****************************************************************************)
-fun dest_mlencap (mlpair(_, mlpair(acl2sig,events))) = 
+fun dest_mlencap (mlpair(_, mlpair(acl2sig,events))) =
      (dest_mlsexp_list acl2sig, dest_mlsexp_list events)
  |  dest_mlencap _ = err "dest_mlencap" "bad argument";
 
@@ -683,7 +683,7 @@ fun dest_integer tm =
           then Arbnum.toString(dest_numeral(hd args))
           else (print_term tm;
                 print " is not a non-negative integer numeral\n";
-                err "dest_integer" "not a non-negative integer numeral")) 
+                err "dest_integer" "not a non-negative integer numeral"))
    else (if opr = ``int_neg:int->int`` andalso (tl args = [])
           then ("-" ^ dest_integer(hd args))
           else (print_term tm;
@@ -703,8 +703,8 @@ fun dest_int tm = dest_integer(rand tm);
 fun acl2_int_to_hol_int s =
  let val chars = explode s
   in
-   if not(null chars) andalso hd chars = #"-" 
-    then implode(#"~" :: tl chars) 
+   if not(null chars) andalso hd chars = #"-"
+    then implode(#"~" :: tl chars)
     else s
   end;
 
@@ -717,10 +717,10 @@ fun is_num_string s = all Char.isDigit (explode s);
 (*****************************************************************************)
 (* Test whether a string is an integer numeral                               *)
 (*****************************************************************************)
-fun is_int_string s = 
- let val sl = explode s 
+fun is_int_string s =
+ let val sl = explode s
  in
-  null sl 
+  null sl
    orelse ((hd sl = #"-") andalso all Char.isDigit (tl sl))
    orelse all Char.isDigit sl
  end;
@@ -731,7 +731,7 @@ fun is_int_string s =
 fun is_cpx tm =
  let val (opr,args) = strip_comb tm
  in
-  (opr = ``cpx``) 
+  (opr = ``cpx``)
     andalso (length args = 4)
     andalso is_int_string(dest_integer(el 1 args))
     andalso is_num_string(dest_integer(el 2 args))
@@ -749,9 +749,9 @@ fun dest_cpx tm =
   then
   let val (_,args) = strip_comb tm
   in
-   (dest_integer(el 1 args), 
-    dest_integer(el 2 args), 
-    dest_integer(el 3 args), 
+   (dest_integer(el 1 args),
+    dest_integer(el 2 args),
+    dest_integer(el 3 args),
     dest_integer(el 4 args))
   end
  else (print_term tm;
@@ -794,13 +794,13 @@ val no_abbrev_list      = ref(["NIL","QUOTE"]);
 
 fun make_string_abbrevs [] = ()
  |  make_string_abbrevs (s::sl) =
-     if has_abbrev s 
+     if has_abbrev s
       then (print "Warning: \""; print s; print "\" already abbreviated by ";
             print_term(assoc s (!string_abbrevs)); print "\n";
             make_string_abbrevs sl) else
      if mem s (!no_abbrev_list)
       then (print "Warning: \""; print s; print "\" is in !no_abbrev_list\n";
-            make_string_abbrevs sl) 
+            make_string_abbrevs sl)
       else
        (add_string_abbrevs
          [(s, lhs
@@ -808,7 +808,7 @@ fun make_string_abbrevs [] = ()
                  (SPEC_ALL
                   (Define
                     `^(mk_var
-                       (("ACL2_STRING_ABBREV_" 
+                       (("ACL2_STRING_ABBREV_"
                          ^ Int.toString(!string_abbrev_count)),
                         ``:string``)) =
                      ^(fromMLstring s)`))))];
@@ -821,10 +821,10 @@ fun make_string_abbrevs [] = ()
 (*****************************************************************************)
 local
 fun string_abbrevs_to_string_aux [] = ""
- |  string_abbrevs_to_string_aux [(s,c)] = 
+ |  string_abbrevs_to_string_aux [(s,c)] =
     ("(\"" ^ s ^ "\",Parse.Term`" ^ fst(dest_const c) ^"`)")
- |  string_abbrevs_to_string_aux ((s,c)::pl) = 
-    ("(\"" ^ s ^ "\",Parse.Term`" ^ fst(dest_const c) ^"`)," ^ 
+ |  string_abbrevs_to_string_aux ((s,c)::pl) =
+    ("(\"" ^ s ^ "\",Parse.Term`" ^ fst(dest_const c) ^"`)," ^
     string_abbrevs_to_string_aux pl)
 in
 fun string_abbrevs_to_string pl =
@@ -853,14 +853,14 @@ fun abbrevHOLstring c =
 (* returned.                                                                 *)
 (*****************************************************************************)
 local
-fun get_hol_name_from_acl2_name_aux [] sym = 
+fun get_hol_name_from_acl2_name_aux [] sym =
      mlsym_to_string sym
- |  get_hol_name_from_acl2_name_aux ((hol,acl2) :: nl) sym = 
+ |  get_hol_name_from_acl2_name_aux ((hol,acl2) :: nl) sym =
      if acl2 = mlsym_to_string sym
       then hol
       else get_hol_name_from_acl2_name_aux nl sym
 in
-fun get_hol_name_from_acl2_name sym = 
+fun get_hol_name_from_acl2_name sym =
      get_hol_name_from_acl2_name_aux (!acl2_names) sym
 end;
 
@@ -883,9 +883,9 @@ fun term_to_mlsexp tm =
  if is_var tm
   then string_to_mlsym(fst(dest_var tm)) else
  if is_const tm
-  then 
+  then
    (if is_sexp_ty(type_of tm)
-     then string_to_mlsym(fst(dest_const tm)) 
+     then string_to_mlsym(fst(dest_const tm))
      else (print_term tm;
            print " has type ``";
            print_type(type_of tm);
@@ -908,42 +908,42 @@ fun term_to_mlsexp tm =
         print_term tm; print ". Use \"nat\", \"int\" or \"cpx\".\n";
         err "term_to_mlsexp" "bad occurrence of an integer numeral") else
  if is_let tm
-  then 
+  then
    let val (param_arg_tuples,bdy) = dest_anylet tm
        val (param_tuples,arg_tuples) = unzip param_arg_tuples
        val args = (flatten o map strip_pair) arg_tuples
        val params = (flatten o map strip_pair) param_tuples
-   in 
+   in
     if not(length params = length args)
      then (print_term tm; print "\n";
            print "different numbers of formal and actual parameters\n";
            err "term_to_mlsexp" "formal/actual mismatch")
      else mk_mlsexp_list
           (mk_mlsexp_list
-            [mllambda, 
-             mk_mlsexp_list(map term_to_mlsexp params), 
+            [mllambda,
+             mk_mlsexp_list(map term_to_mlsexp params),
              term_to_mlsexp bdy]
            :: map term_to_mlsexp args)
    end else
  if is_comb tm
-  then 
+  then
    let val (opr,args) = strip_comb tm
-   in 
+   in
     if is_const opr
      then (case fst(dest_const opr)
            of "ACL2_SYMBOL"    => mk_mlquote
-                                   (mlsym(abbrevHOLstring(hd args), 
+                                   (mlsym(abbrevHOLstring(hd args),
                                           abbrevHOLstring(hd(tl args))))
            |  "ACL2_STRING"    => mlstr(abbrevHOLstring(hd args))
            |  "ACL2_CHARACTER" => mlchr(fromHOLchar(hd args))
            |  "ACL2_NUMBER"    => (print_term tm; print "\n";
                                    print "term built with num not supported";
                                    print " -- use nat, int or cpx\n";
-                                   err "term_to_mlsexp" 
+                                   err "term_to_mlsexp"
                                        "ACL2_NUMBER case unsupported")
            |  "cpx"            => (print_term tm; print "\n";
                                    print "bad use of cpx\n";
-                                   err "term_to_mlsexp" 
+                                   err "term_to_mlsexp"
                                        "badly formed application of cpx")
            |  _                => mk_mlsexp_list
                                    (map term_to_mlsexp (opr::args))
@@ -952,21 +952,21 @@ fun term_to_mlsexp tm =
     if is_var opr
      then mk_mlsexp_list (map term_to_mlsexp (opr::args)) else
     if is_abs opr
-     then 
+     then
       let val (params,bdy) = strip_abs opr
-      in 
+      in
        if not(length params = length args)
         then (print_term tm; print "\n";
               print "different numbers of formal and actual parameters\n";
               err "term_to_mlsexp" "formal/actual mismatch")
         else mk_mlsexp_list
              (mk_mlsexp_list
-               [mllambda, 
-                mk_mlsexp_list(map term_to_mlsexp params), 
+               [mllambda,
+                mk_mlsexp_list(map term_to_mlsexp params),
                 term_to_mlsexp bdy]
               :: map term_to_mlsexp args)
       end else
-    (print_term opr; 
+    (print_term opr;
      print " is not allowed as a function\n";
      err "term_to_mlsexp" "bad function")
    end else
@@ -987,9 +987,9 @@ fun print_mlsexp (out:string->unit) (sym as mlsym(_,_))  =
     if (bn = "0") andalso (bd = "1")
      then (out an; out "/"; out ad)
      else (out "(COMMON-LISP::COMPLEX ";
-           out an; out "/"; out ad; 
+           out an; out "/"; out ad;
            out " ";
-           out bn; out "/"; out bd; 
+           out bn; out "/"; out bd;
            out ")")
  | print_mlsexp (out:string->unit) (mlpair(p1,p2)) =
      (out "(";
@@ -997,18 +997,18 @@ fun print_mlsexp (out:string->unit) (sym as mlsym(_,_))  =
         then let val sl = dest_mlsexp_list p2
              in
               if null sl
-               then print_mlsexp out p1 
+               then print_mlsexp out p1
                else (print_mlsexp out p1;
                      map (fn p => (out " "; print_mlsexp out p)) sl;
                      ())
              end
-        else (print_mlsexp out p1; out " . "; print_mlsexp out p2)); 
+        else (print_mlsexp out p1; out " . "; print_mlsexp out p2));
       out ")");
 
 (*****************************************************************************)
 (* Print an ML s-expression to the interactive session                       *)
 (*****************************************************************************)
-fun pr_mlsexp s = (print_mlsexp print s; print "\n");      
+fun pr_mlsexp s = (print_mlsexp print s; print "\n");
 
 (*****************************************************************************)
 (* Print an s-expression term to the interactive session                     *)
@@ -1020,7 +1020,7 @@ fun pr_sexp t = pr_mlsexp(term_to_mlsexp t);
 (*****************************************************************************)
 exception get_name_fail;
 fun get_name tm =
- if is_const tm 
+ if is_const tm
   then fst(dest_const tm) else
  if is_var tm then fst(dest_var tm)
   else raise get_name_fail;
@@ -1037,7 +1037,7 @@ fun deftm_to_mlsexp_defun tm =
     string_to_mlsym(get_name opr),
     mk_mlsexp_list(map term_to_mlsexp args),
     term_to_mlsexp r]
- end;    
+ end;
 
 (*****************************************************************************)
 (* Translate a hol-acl2 definition                                           *)
@@ -1050,14 +1050,14 @@ fun deftm_to_mlsexp_defun tm =
 (*****************************************************************************)
 fun def_to_mlsexp_defun th =
  let val (asl, concl) = dest_thm(SPEC_ALL th)
-     val _ = if not(asl = []) 
+     val _ = if not(asl = [])
                then(print_thm th;
                     print "\n"; print"should not have any assumptions\n";
                     err "mk_mlsexp_defthm" "assumptions not allowed")
                else ()
  in
   deftm_to_mlsexp_defun concl
- end;    
+ end;
 
 (*****************************************************************************)
 (* Print a hol-acl2 definition                                               *)
@@ -1108,17 +1108,17 @@ fun string_to_int_term s = intSyntax.term_of_int(Arbint.fromString s);
 (* Convert an ML s-expression (mlsexp) to a string that will parse to the    *)
 (* corresponding HOL s-expression (sexp).                                    *)
 (*****************************************************************************)
-fun mlquote_to_string (mlsym(pkg,nam)) = 
+fun mlquote_to_string (mlsym(pkg,nam)) =
      ("(sym \"" ^ pkg ^ "\" \"" ^ nam ^"\")")
- |  mlquote_to_string (mlstr s) = 
+ |  mlquote_to_string (mlstr s) =
      ("(str " ^ "\"" ^ s ^ "\")")
- |  mlquote_to_string (mlchr c) = 
+ |  mlquote_to_string (mlchr c) =
      ("(chr " ^ "(CHR " ^ int_to_string(ord c) ^ "))")
- |  mlquote_to_string (mlnum(an,ad,bn,bd)) = 
-     ("(cpx " ^ 
-         acl2_int_to_hol_int an ^ " " ^ 
-         acl2_int_to_hol_int ad ^ " " ^ 
-         acl2_int_to_hol_int bn ^ " " ^ 
+ |  mlquote_to_string (mlnum(an,ad,bn,bd)) =
+     ("(cpx " ^
+         acl2_int_to_hol_int an ^ " " ^
+         acl2_int_to_hol_int ad ^ " " ^
+         acl2_int_to_hol_int bn ^ " " ^
          acl2_int_to_hol_int bd ^")")
  |  mlquote_to_string (mlpair(x,y)) =
      ("(cons " ^ mlquote_to_string x ^ " " ^ mlquote_to_string y ^ ")");
@@ -1127,17 +1127,17 @@ fun mlquote_to_string (mlsym(pkg,nam)) =
 (* Convert an ML s-expression (mlsexp) to a string that will parse to the    *)
 (* corresponding HOL s-expression (sexp).                                    *)
 (*****************************************************************************)
-fun mlquote_to_string (mlsym(pkg,nam)) = 
+fun mlquote_to_string (mlsym(pkg,nam)) =
      ("(sym \"" ^ pkg ^ "\" \"" ^ nam ^"\")")
- |  mlquote_to_string (mlstr s) = 
+ |  mlquote_to_string (mlstr s) =
      ("(str " ^ "\"" ^ s ^ "\")")
- |  mlquote_to_string (mlchr c) = 
+ |  mlquote_to_string (mlchr c) =
      ("(chr " ^ "(CHR " ^ int_to_string(ord c) ^ "))")
- |  mlquote_to_string (mlnum(an,ad,bn,bd)) = 
-     ("(cpx " ^ 
-         acl2_int_to_hol_int an ^ " " ^ 
-         acl2_int_to_hol_int ad ^ " " ^ 
-         acl2_int_to_hol_int bn ^ " " ^ 
+ |  mlquote_to_string (mlnum(an,ad,bn,bd)) =
+     ("(cpx " ^
+         acl2_int_to_hol_int an ^ " " ^
+         acl2_int_to_hol_int ad ^ " " ^
+         acl2_int_to_hol_int bn ^ " " ^
          acl2_int_to_hol_int bd ^")")
  |  mlquote_to_string (mlpair(x,y)) =
      ("(cons " ^ mlquote_to_string x ^ " " ^ mlquote_to_string y ^ ")");
@@ -1146,18 +1146,18 @@ fun mlquote_to_string (mlsym(pkg,nam)) =
 (* Convert an ML s-expression (mlsexp) to the coresponding HOL               *)
 (* s-expression (i.e. term of type sexp).                                    *)
 (*****************************************************************************)
-fun mlquote_to_term (sym as mlsym(pkg,nam)) = 
+fun mlquote_to_term (sym as mlsym(pkg,nam)) =
      if sym = mlnil then ``nil`` else
      if sym = mlt   then ``t``   else
      ``sym ^(abbrevMLstring pkg) ^(abbrevMLstring nam)``
- |  mlquote_to_term (mlstr s) = 
+ |  mlquote_to_term (mlstr s) =
      ``str ^(abbrevMLstring s)``
- |  mlquote_to_term (mlchr c) = 
+ |  mlquote_to_term (mlchr c) =
      ``chr ^(fromMLchar c)``
- |  mlquote_to_term (mlnum(an,ad,bn,bd)) = 
-     ``cpx ^(string_to_int_term an) 
-           ^(string_to_int_term ad) 
-           ^(string_to_int_term bn) 
+ |  mlquote_to_term (mlnum(an,ad,bn,bd)) =
+     ``cpx ^(string_to_int_term an)
+           ^(string_to_int_term ad)
+           ^(string_to_int_term bn)
            ^(string_to_int_term bd)``
  |  mlquote_to_term (mlpair(x,y)) =
      ``cons ^(mlquote_to_term x) ^(mlquote_to_term y)``;
@@ -1174,22 +1174,22 @@ fun mlquote_to_term (sym as mlsym(pkg,nam)) =
 fun mlsexp_to_string (sym as mlsym(_,_)) =
      mlsym_to_string sym
  |  mlsexp_to_string (mlstr s) = ("(str " ^ "\"" ^ s ^ "\")")
- |  mlsexp_to_string (mlchr c) = 
+ |  mlsexp_to_string (mlchr c) =
       ("(chr " ^ "(CHR " ^ int_to_string(ord c) ^ "))")
- |  mlsexp_to_string (mlnum(an,ad,bn,bd)) = 
-     ("(cpx " ^ 
-         acl2_int_to_hol_int an ^ " " ^ 
-         acl2_int_to_hol_int ad ^ " " ^ 
-         acl2_int_to_hol_int bn ^ " " ^ 
+ |  mlsexp_to_string (mlnum(an,ad,bn,bd)) =
+     ("(cpx " ^
+         acl2_int_to_hol_int an ^ " " ^
+         acl2_int_to_hol_int ad ^ " " ^
+         acl2_int_to_hol_int bn ^ " " ^
          acl2_int_to_hol_int bd ^")")
  |  mlsexp_to_string (p as mlpair(x,y)) =
      if is_mlquote p
       then mlquote_to_string(dest_mlquote p)
       else ("(" ^
             (if is_mlsexp_list y
-              then foldl 
-                    (fn (z,zs) => zs ^ " " ^ mlsexp_to_string z) 
-                    (mlsexp_to_string x) 
+              then foldl
+                    (fn (z,zs) => zs ^ " " ^ mlsexp_to_string z)
+                    (mlsexp_to_string x)
                     (dest_mlsexp_list y)
               else (print "attempt to translate a non-list to a term\n";
                     err "mlsexp_to_string" "non-list")) ^
@@ -1198,9 +1198,9 @@ fun mlsexp_to_string (sym as mlsym(_,_)) =
 (*****************************************************************************)
 (* mlsym(pkg,nam) |--> mk_var("pkg::nam",``:sexp``)                          *)
 (*****************************************************************************)
-fun param_to_var (sym as mlsym(_,_)) = 
+fun param_to_var (sym as mlsym(_,_)) =
       mk_var(mlsym_to_string sym,``:sexp``)
- |  param_to_var _ = 
+ |  param_to_var _ =
       (print "Not a mlsym\n";
        err "param_to_var" "not an mlsym");
 
@@ -1213,7 +1213,7 @@ val acl2_name_to_term_print_flag = ref false;
 local
 fun if_print s = if (!acl2_name_to_term_print_flag) then print s else ()
 in
-fun acl2_name_to_term sym ty = 
+fun acl2_name_to_term sym ty =
  if sym = mlt
   then ``t`` else
  if sym = mlnil
@@ -1251,10 +1251,10 @@ fun mlsexp_to_term (sym as mlsym(_,_)) =
     acl2_name_to_term sym ``:sexp``
  |  mlsexp_to_term (mlstr s) = ``str ^(abbrevMLstring s)``
  |  mlsexp_to_term (mlchr c) = ``chr ^(fromMLchar c)``
- |  mlsexp_to_term (mlnum(an,ad,bn,bd)) = 
-     ``cpx ^(string_to_int_term an) 
-           ^(string_to_int_term ad) 
-           ^(string_to_int_term bn) 
+ |  mlsexp_to_term (mlnum(an,ad,bn,bd)) =
+     ``cpx ^(string_to_int_term an)
+           ^(string_to_int_term ad)
+           ^(string_to_int_term bn)
            ^(string_to_int_term bd)``
  |  mlsexp_to_term (p as mlpair(x,y)) =
      if is_mlquote p
@@ -1266,20 +1266,20 @@ fun mlsexp_to_term (sym as mlsym(_,_)) =
              (list_mk_fun(map param_to_var params, mlsexp_to_term bdy),
               map mlsexp_to_term args)
            end else
-     if is_mlsexp_list y 
+     if is_mlsexp_list y
       then let val args = map mlsexp_to_term (dest_mlsexp_list y)
                val opr = if is_mlsym x
-                          then acl2_name_to_term 
+                          then acl2_name_to_term
                                 x
                                 (mk_sexp_fun_ty(length args))
                           else mlsexp_to_term x
            in
             (list_mk_comb(opr,args)
-             handle HOL_ERR _ => 
+             handle HOL_ERR _ =>
               (print "Can't make term\n";
                print(mlsexp_to_string p);
                print "\n";
-               err "mlsexp_to_term" "bad mlsexp")) 
+               err "mlsexp_to_term" "bad mlsexp"))
             end else
      (print "attempt to translate a non-list to a term\n";
       err "mlsexp_to_term" "non-list");
@@ -1291,8 +1291,8 @@ fun defun_to_string d =
  if is_mldefun d
   then let val (sym, params, bdy) = dest_mldefun d
        in
-        foldl 
-         (fn (z,zs) => zs ^ " " ^ z) 
+        foldl
+         (fn (z,zs) => zs ^ " " ^ z)
          ("ACL2_" ^ mlsym_to_string sym)
          (map mlsym_to_string params)
         ^ " = " ^ mlsexp_to_string bdy
@@ -1311,9 +1311,9 @@ fun is_mldef d =
 (*****************************************************************************)
 fun mk_def_eq tm =
  if is_eq tm
-  then foldl 
+  then foldl
         (fn (v,t) => mk_eq(mk_comb(lhs t,v),beta_conv(mk_comb(rhs t,v))))
-        tm 
+        tm
         (fst(strip_abs(rhs tm)))
   else tm;
 
@@ -1324,9 +1324,9 @@ fun mk_def_eq tm =
 (*****************************************************************************)
 fun MK_DEF_EQ th =
  if is_eq(concl(SPEC_ALL th))
-  then foldl 
-        (fn (v,th) => RIGHT_CONV_RULE BETA_CONV (AP_THM th v)) 
-        th 
+  then foldl
+        (fn (v,th) => RIGHT_CONV_RULE BETA_CONV (AP_THM th v))
+        th
         (fst(strip_abs(rhs(concl(SPEC_ALL th)))))
   else th;
 
@@ -1341,10 +1341,10 @@ fun MK_DEF_EQ th =
 fun LET_INTRO_CONV tm =
  let val (opr, args) = strip_comb tm
      val (params,bdy) = strip_abs opr
-     val param_arg_list = filter 
-                           (fn (v1,v2) => not(aconv v1 v2)) 
+     val param_arg_list = filter
+                           (fn (v1,v2) => not(aconv v1 v2))
                            (zip params args)
-     val let_tm = ``LET 
+     val let_tm = ``LET
                      ^(mk_pabs(list_mk_pair params,bdy))
                      ^(list_mk_pair args)``
      val th1 = DEPTH_CONV (REWR_CONV LET_THM) let_tm
@@ -1362,8 +1362,8 @@ val let_flag = ref true;
 (*****************************************************************************)
 (* Rule to introduce let throughout a term                                   *)
 (*****************************************************************************)
-fun LET_INTRO th = 
- if !let_flag 
+fun LET_INTRO th =
+ if !let_flag
   then CONV_RULE (TRY_CONV(RHS_CONV(TOP_DEPTH_CONV LET_INTRO_CONV))) th
   else th;
 
@@ -1377,15 +1377,15 @@ name is as follows (see definition of create_hol_name below).
  2. Convert sym to a HOL name, say hol_sym, using the ML function
     acl2_name_to_hol_name (this function is described below).
 
- 3. If hol_sym starts with a digit, then use acl2_name_to_hol_name 
-    to convert pkg to hol_pkg, then lengthen the name to 
+ 3. If hol_sym starts with a digit, then use acl2_name_to_hol_name
+    to convert pkg to hol_pkg, then lengthen the name to
     (hol_pkg ^ "_" ^ hol_sym).
 
- 4. Check to see if sym_name (or the lengthened name) is already used. 
+ 4. Check to see if sym_name (or the lengthened name) is already used.
     If not it is the result.
 
- 5. If hol_sym is in use and doesn't start with a digit, then see if 
-    (hol_pkg ^ "_" ^ hol_sym) is used, and if not return it. If it is 
+ 5. If hol_sym is in use and doesn't start with a digit, then see if
+    (hol_pkg ^ "_" ^ hol_sym) is used, and if not return it. If it is
     in use an error report is printed and an exception raised.
 
  6. Record any names generated by steps above in acl2_names so
@@ -1394,13 +1394,13 @@ name is as follows (see definition of create_hol_name below).
 The function acl2_name_to_hol_name converts a string s to a
 HOL-friendly name as follows.
 
- 1. Convert s to a list of characters and convert all letters 
+ 1. Convert s to a list of characters and convert all letters
     to lower-case.
 
  2. Replace "-" by "_".
 
  3. Replace special characters by strings of letter characters
-    using acl2_to_hol_char_map (defined below). Add an underscore 
+    using acl2_to_hol_char_map (defined below). Add an underscore
     "_" to separate special characters from all other characters.
 
 We think these simple rules should be sufficient in practice, and if
@@ -1425,7 +1425,7 @@ val acl2_to_hol_char_map =
   (#"*"  , explode "star"),
   (#"+"  , explode "plus"),
   (#":"  , explode "colon"),
-  (#" "  , explode "space")];  
+  (#" "  , explode "space")];
 
 (*****************************************************************************)
 (* Check is a character is in the domain of acl2_to_hol_char_map.            *)
@@ -1446,10 +1446,10 @@ fun acl2_char_to_hol_chars c =
 
 fun acl2_chars_to_hol_chars [] = []
  |  acl2_chars_to_hol_chars [c] = acl2_char_to_hol_chars c
- |  acl2_chars_to_hol_chars (c1::(cl as (c2::_))) = 
-     if (isSpecial c1 orelse isSpecial c2) 
+ |  acl2_chars_to_hol_chars (c1::(cl as (c2::_))) =
+     if (isSpecial c1 orelse isSpecial c2)
         andalso not(c1 = #"-") andalso not(c2 = #"-")
-      then acl2_char_to_hol_chars c1@(#"_"::acl2_chars_to_hol_chars cl) 
+      then acl2_char_to_hol_chars c1@(#"_"::acl2_chars_to_hol_chars cl)
       else acl2_char_to_hol_chars c1@acl2_chars_to_hol_chars cl;
 
 (*****************************************************************************)
@@ -1499,7 +1499,7 @@ fun create_hol_name acl2_name =
      of SOME(_,acl2_name')
         => if acl2_name = acl2_name'
             then hol_sym_name
-            else 
+            else
             (case (assoc1 long_hol_name (!acl2_names))
                of SOME(_,acl2_name'')
                   => if acl2_name = acl2_name''
@@ -1580,15 +1580,15 @@ exception fail_for_mapfilter
 in
 fun dest_acl2_thm th =
  let val (asl, conc) = dest_thm(SPEC_ALL th)
-     val _ = if not(asl = []) 
+     val _ = if not(asl = [])
                then(print_thm th;
                     print "\n"; print"should not have any assumptions\n";
-                    err "dest_acl2_thm" "assumptions not allowed") 
+                    err "dest_acl2_thm" "assumptions not allowed")
                else ()
      val tg = tag th
      val (tgl1,tgl2) = Tag.dest_tag tg
      val stgl = mapfilter
-                 (fn s => 
+                 (fn s =>
                    let val (s1,s2) = split_tag s
                    in
                     if mem s1 ["DEFUN","DEFAXIOM","DEFTHM",
@@ -1602,10 +1602,10 @@ fun dest_acl2_thm th =
   then (print_thm th;
         print " has more than one ACL2 def tags!\n";
         err "dest_acl2_thm" "more than one ACL2 tag") else
-  if null stgl 
+  if null stgl
    then NONE
    else case (fst(hd stgl))
-        of "DEFUN"     
+        of "DEFUN"
              => SOME(defun conc)
         |  "DEFAXIOM"
              => SOME(defaxiom(snd(hd stgl), dest_ax_or_thm conc))
@@ -1676,7 +1676,7 @@ val CLEAN_ACL2_BOUND_CONV = DEPTH_CONV CLEAN_ACL2_ALPHA_CONV;
 (*****************************************************************************)
 (* Rule to clean all variables in a theorem                                  *)
 (*****************************************************************************)
-val CLEAN_ACL2_VARS = 
+val CLEAN_ACL2_VARS =
  LET_INTRO o CLEAN_ACL2_FREES o CONV_RULE CLEAN_ACL2_BOUND_CONV;
 
 (*****************************************************************************)
@@ -1715,7 +1715,7 @@ fun defname(defun tm)        = get_name(get_defined tm)
 (*****************************************************************************)
 (* mk_sexp_fun_ty n |--> ``:sexp -> ... -> sexp -> sexp`` (n arguments)      *)
 (*****************************************************************************)
-fun mk_sexp_fun_ty n = 
+fun mk_sexp_fun_ty n =
  if n = 0 then ``:sexp`` else ``:sexp -> ^(mk_sexp_fun_ty(n-1))``;
 
 (*****************************************************************************)
@@ -1754,7 +1754,7 @@ fun mk_closed_event vl tm = list_mk_forall(subtract(free_vars tm)vl, tm);
 (*                                                                           *)
 (* where n1,...,nm are the names of the events introducing v1,...,vm,        *)
 (* respectively                                                              *)
-(*****************************************************************************)  
+(*****************************************************************************)
 fun mk_acl2def d =
  if is_mldefun d
   then
@@ -1797,9 +1797,9 @@ fun mk_acl2def d =
   then
    let val (sigl,dl) = dest_mlencap d
        val sigll = map dest_mlsexp_list sigl
-       val sig_vars = 
-            map 
-             (fn l => 
+       val sig_vars =
+            map
+             (fn l =>
                mk_var
                 (mlsym_to_string(hd l),
                  mk_sexp_fun_ty(length(dest_mlsexp_list(hd(tl l))))))
@@ -1808,12 +1808,12 @@ fun mk_acl2def d =
        val defunl = mapfilter get_defun_fun eventl
        val extended_sig_vars = union sig_vars defunl
        val names = map defname eventl
-       val event_tms = 
+       val event_tms =
             map (mk_closed_event extended_sig_vars o spec_all o deftm) eventl
        val spec_body = list_mk_exists(extended_sig_vars,list_mk_conj event_tms)
    in
     encap(names,gen_all spec_body)
-   end 
+   end
   else err "mk_acl2def" "badly formed mldef";
 
 (*****************************************************************************)
@@ -1844,23 +1844,23 @@ val mk_mutual_name = concat_with_spaces o map get_name o get_defined_list;
 (*****************************************************************************)
 fun print_acl2def out (defun tm) =
      (out "; Defun:    "; out(get_name(get_defined tm)); out "\n";
-      print_mlsexp out (deftm_to_mlsexp_defun(spec_all tm)); 
+      print_mlsexp out (deftm_to_mlsexp_defun(spec_all tm));
       out "\n\n")
  |  print_acl2def out (defaxiom(nam,tm)) =
      (out "; Defaxiom: "; out nam; out "\n";
       print_mlsexp out
        (mk_mlsexp_list
-         [mldefaxiom, 
-          string_to_mlsym nam, 
-          term_to_mlsexp(spec_all tm)]); 
+         [mldefaxiom,
+          string_to_mlsym nam,
+          term_to_mlsexp(spec_all tm)]);
       out "\n\n")
  |  print_acl2def out (defthm(nam,tm)) =
      (out "; Defthm:   "; out nam; out "\n";
       print_mlsexp out
        (mk_mlsexp_list
-         [mldefthm, 
-          string_to_mlsym nam, 
-          term_to_mlsexp(spec_all tm)]); 
+         [mldefthm,
+          string_to_mlsym nam,
+          term_to_mlsexp(spec_all tm)]);
       out "\n\n")
  |  print_acl2def out (mutual tm) =
      (out "; Mutual-Recursion "; out (mk_mutual_name tm); out "\n";
@@ -1877,18 +1877,18 @@ fun print_acl2def out (defun tm) =
 (*****************************************************************************)
 (* Convert a preterm to a string (used for inputting ACL2)                   *)
 (*****************************************************************************)
-local 
+local
 fun drop_until_close [] = []              (* drop chars until comment closes *)
  |  drop_until_close (#"*" :: #")" :: l) = l
- |  drop_until_close (c :: l) =  drop_until_close l 
+ |  drop_until_close (c :: l) =  drop_until_close l
 fun strip_comments [] = []                                (* remove comments *)
  |  strip_comments (#"(" :: #"*" :: l) = strip_comments(drop_until_close l)
- |  strip_comments (c :: l) =  c :: strip_comments l 
+ |  strip_comments (c :: l) =  c :: strip_comments l
 fun strip_loc s = implode(strip_comments(explode s))
 fun unQUOTE(QUOTE s) = s                                   (* QUOTE s |--> s *)
  |  unQUOTE _ = err "unQUOTE" "not applied to a QUOTE"
 in
-val preterm_to_string = 
+val preterm_to_string =
  foldr (fn(q,sl) => strip_loc(unQUOTE (q:term frag)) ^ "\n" ^ sl) ""
 end;
 
@@ -1919,7 +1919,7 @@ val acl2_list_ref = ref([] : mlsexp list);
 val acl2_tags = ref([]: (tag*(string*string))list);
 
 fun mk_acl2_thm defty acl2_name deftm =
- let val tg = Tag.read(defty ^ " " ^ acl2_name)
+ let val tg = defty ^ " " ^ acl2_name
  in
  (acl2_tags := (tg,(defty,acl2_name)) :: (!acl2_tags);
   mk_oracle_thm tg ([], deftm))
@@ -1941,7 +1941,7 @@ fun install_def(defun tm) =
          val (opr_name,opr_ty) = dest_var opr
          val (pkg_name,sym_name) = split_acl2_name opr_name
          val hol_name = create_hol_name opr_name
-         val new_hol_name = 
+         val new_hol_name =
               (if null(Term.decls hol_name) then "" else "acl2_") ^ hol_name
          val _ = new_constant(opr_name,opr_ty)
          val _ = declare_names(opr_name,new_hol_name)
@@ -1990,7 +1990,7 @@ fun install_def(defun tm) =
                   new_hol_names
          val con_list = map mk_const opr_name_ty_list
          val newtm =
-              subst 
+              subst
                (map2 (fn opr => fn con => (opr |-> con)) tms con_list)
                tm
          val hol_name = create_hol_name acl2_name
@@ -2018,7 +2018,7 @@ fun install_def(defun tm) =
                   new_hol_names
          val con_list = map mk_const opr_name_ty_list
          val newtm =
-              subst 
+              subst
                (map2 (fn opr => fn con => (opr |-> con)) tms con_list)
                tm
          val hol_name = create_hol_name acl2_name
@@ -2073,7 +2073,7 @@ fun get_package_strings(mlsym(_,s)) = [s]
 fun match_defun full_acl2_name mlsexp =
  case mlsexp
  of (mlpair(mlsym("COMMON-LISP", "DEFUN"),
-            mlpair(mlsym(pkg, sym), _))) 
+            mlpair(mlsym(pkg, sym), _)))
     => if (pkg, sym) = split_acl2_name full_acl2_name
         then mlsexp
         else raise err "match_defun"
@@ -2087,7 +2087,7 @@ fun match_defun full_acl2_name mlsexp =
 fun match_defaxiom full_acl2_name mlsexp =
  case mlsexp
  of (mlpair(mlsym("ACL2", "DEFAXIOM"),
-            mlpair(mlsym(pkg, sym), _))) 
+            mlpair(mlsym(pkg, sym), _)))
     => if (pkg, sym) = split_acl2_name full_acl2_name
         then mlsexp
         else raise err "match_defaxiom"
@@ -2101,7 +2101,7 @@ fun match_defaxiom full_acl2_name mlsexp =
 fun match_defthm full_acl2_name mlsexp =
  case mlsexp
  of (mlpair(mlsym("ACL2", "DEFTHM"),
-            mlpair(mlsym(pkg, sym), _))) 
+            mlpair(mlsym(pkg, sym), _)))
     => if (pkg, sym) = split_acl2_name full_acl2_name
         then mlsexp
         else raise err "match_defthm"
@@ -2143,8 +2143,8 @@ fun print_acl2_defun_script thy ql name_alist=
  let val outstr = TextIO.openOut("header-tmp.ml")
      fun out s = TextIO.output(outstr,s)
  in
-  out("(* File created from HOL using print_acl2_defun_script on " 
-      ^ date() ^ " *)\n\n");    
+  out("(* File created from HOL using print_acl2_defun_script on "
+      ^ date() ^ " *)\n\n");
   out "open HolKernel Parse boolLib bossLib;\n";
   out "open stringLib complex_rationalTheory gcdTheory sexp sexpTheory;\n";
   out ("val _ = new_theory \"" ^ thy ^ "\";");
@@ -2156,7 +2156,7 @@ fun print_acl2_defun_script thy ql name_alist=
   TextIO.closeOut outstr;
   print_defuns_to_mlsexps ql;
   Process.system
-   ("cat header-tmp.ml defun-tmp.ml end-boilerplate.ml > " 
+   ("cat header-tmp.ml defun-tmp.ml end-boilerplate.ml > "
      ^ thy ^ "Script.sml")
  end;
 
@@ -2185,10 +2185,10 @@ fun load_imported_acl2_theorems () =
   print(Int.toString(length(!string_abbrevs)-string_abbrev_count));
   print " new string abbreviations made\n";
   show_tags := true;
-  print "read "; print(Int.toString(length(!acl2_list_ref))); print " defs\n"; 
-  imported_acl2_theorems := 
+  print "read "; print(Int.toString(length(!acl2_list_ref))); print " defs\n";
+  imported_acl2_theorems :=
    map (install_def_and_print o mk_acl2def) (!acl2_list_ref);
-  print 
+  print
    "Imported ACL2 stored in assignable variable imported_acl2_theorems.\n\n"
  end;
 
@@ -2198,11 +2198,11 @@ fun load_imported_acl2_theorems () =
 (*****************************************************************************)
 fun print_imported_acl2_theorems theory_name file_name =
  let val defs =
-      mapfilter 
+      mapfilter
        dest_option
        (map (dest_acl2_thm o snd) (theorems theory_name))
  in
-  print_lisp_file 
+  print_lisp_file
    file_name
    (fn out => map (print_acl2def out) defs)
  end;
@@ -2210,19 +2210,19 @@ fun print_imported_acl2_theorems theory_name file_name =
 fun print_thms_to_defthms name_thm_list file_name =
  let val defs = map thm_to_defthm name_thm_list
  in
-  print_lisp_file 
+  print_lisp_file
    file_name
    (fn out => map (print_acl2def out) defs)
  end;
-     
+
 (*****************************************************************************)
 (* Add theory load time code to restore binding of acl2_simps in theory      *)
 (*****************************************************************************)
-fun save_acl2_simps () =  
+fun save_acl2_simps () =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm => 
+    SOME(fn ppstrm =>
           PP.add_string ppstrm
            ("val _ = (sexp.acl2_simps :="
             ^"  (!sexp.acl2_simps)@(Drule.CONJUNCTS ACL2_SIMPS));"))
@@ -2231,13 +2231,13 @@ fun save_acl2_simps () =
 (*****************************************************************************)
 (* Add theory load time code to restore binding of current_package in theory *)
 (*****************************************************************************)
-fun save_current_package() = 
+fun save_current_package() =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm => 
+    SOME(fn ppstrm =>
           PP.add_string ppstrm
-           ("val _ = sexp.set_current_package \"" 
+           ("val _ = sexp.set_current_package \""
             ^ (!current_package) ^ "\";"))
  };
 
@@ -2248,9 +2248,9 @@ fun save_acl2_names () =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm => 
+    SOME(fn ppstrm =>
           PP.add_string ppstrm
-           ("val _ = sexp.add_acl2_names " ^ 
+           ("val _ = sexp.add_acl2_names " ^
             string_pair_list_to_string(!acl2_names) ^
             ";"))
  };
@@ -2263,9 +2263,9 @@ fun save_string_abbrevs () =
  adjoin_to_theory
  {sig_ps = NONE,
   struct_ps =
-    SOME(fn ppstrm => 
+    SOME(fn ppstrm =>
           PP.add_string ppstrm
-           ("val _ = sexp.add_string_abbrevs " ^ 
+           ("val _ = sexp.add_string_abbrevs " ^
             string_abbrevs_to_string(!string_abbrevs) ^
             ";\n\n"))
  };
@@ -2281,7 +2281,7 @@ fun export_acl2_theory () =
   save_acl2_names();
   save_string_abbrevs();
   export_theory());
-  
+
 (* Various snippets for testing
 
 use "load_sexp.ml";
@@ -2293,20 +2293,20 @@ let fun wrap_mk_acl2def d = ([], [mk_acl2def d]) handle _ => ([d],[]);
 in
  time
  List.tabulate
-  (length (!acl2_list_ref), 
+  (length (!acl2_list_ref),
    fn i => (print(Int.toString(i+1));
             print "\n";
             (i+1, time wrap_mk_acl2def (el (i+1) (!acl2_list_ref)))))
 end;
 
-print_lisp_file 
- "TestAll" 
- (fn out => mapfilter 
+print_lisp_file
+ "TestAll"
+ (fn out => mapfilter
              (print_acl2def out)
-             (rev(flatten (map (flatten o snd o snd) defaxioms_list))));  
+             (rev(flatten (map (flatten o snd o snd) defaxioms_list))));
 
-print_lisp_file 
- "TestFn" 
+print_lisp_file
+ "TestFn"
  (fn out => (print_mlsexp out (def_to_mlsexp_defun th); out "\n\n"));
 
 val defaxioms_list = map mk_acl2def (!acl2_list_ref);

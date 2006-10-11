@@ -157,7 +157,7 @@ val pseudo_constructors = ref [] : thm list ref;
 
 val reshape_thm_hook = ref Lib.I : (thm -> thm) ref;
 
-local val emit_tag = Tag.read "EmitML"
+local val emit_tag = "EmitML"
    fun nstrip_fun 0 ty = ([],ty)
      | nstrip_fun n ty =
          let val (d,r) = dom_rng ty

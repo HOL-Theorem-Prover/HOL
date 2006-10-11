@@ -828,7 +828,7 @@ in
 end;
 
 local
-  val without_proof = curry (mk_oracle_thm (Tag.read "Definitional_CNF")) [];
+  val without_proof = curry (mk_oracle_thm "Definitional_CNF") [];
 in
   fun ORACLE_PURE_DEF_CNF_CONV tm = without_proof (mk_eq (tm, def_cnf tm));
 end;

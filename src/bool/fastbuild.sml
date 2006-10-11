@@ -13,11 +13,11 @@ struct
 local open Feedback Thm
 in
 
-val fast_proof_tag = Tag.read "fast_proof"
+val fast_proof_tag = "fast_proof"
 
 fun fast_prover (t, tac:Abbrev.tactic) = mk_oracle_thm fast_proof_tag ([], t)
 
-fun first_fast_prover (t, tac:Abbrev.tactic) = 
+fun first_fast_prover (t, tac:Abbrev.tactic) =
  let in
     HOL_MESG "using fast prover - proofs unchecked";
     Tactical.set_prover fast_prover;

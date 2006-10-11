@@ -288,6 +288,8 @@ of relations that recurse under <code>EVERY</code>, as in this rule
 
 <h2 id="new-tools">New tools:</h2>
 
+<ul><li>None this time!</li></ul>
+
 <h2 id="new-examples">New examples:</h2>
 
 <ul>
@@ -345,7 +347,19 @@ of relations that recurse under <code>EVERY</code>, as in this rule
 </pre>
       <p> The first argument should now be the &ldquo;rules&rdquo;
       theorem returned by a call to <code>Hol_reln</code>. </p> </li>
+
+<li> <p> In order to avoid certain misleading scenarios, the type of
+    <code>mk_oracle_thm</code> has changed so that it takes a string
+    as its first argument rather than a <code>tag</code>.  The
+    implementation of <code>mk_oracle_thm</code> turns the given
+    string into a tag value using the function
+    <code>Tag.read</code>. Thanks to Mark Adams for discussion leading
+    to this change. </p> </li>
+
+
 </ul>
+
+
 
 
 <hr />

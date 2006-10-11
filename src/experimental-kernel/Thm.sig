@@ -105,7 +105,7 @@ sig
   (* Oracle invocation *)
 
   val mk_thm        : term list * term -> thm
-  val mk_oracle_thm : tag -> term list * term -> thm
+  val mk_oracle_thm : string -> term list * term -> thm
   val mk_axiom_thm  : (string ref * term) -> thm
 
   (* definitional rules of inference *)
