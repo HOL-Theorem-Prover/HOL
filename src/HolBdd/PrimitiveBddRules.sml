@@ -83,7 +83,8 @@ fun foldr f start ls = List.foldl f start (rev ls);
 (* To enable HolBdd to track tags. HolBddTag:TermBdd :: empty_tag:THM        *)
 (*****************************************************************************)
 
-val HolBddTag = Tag.read "HolBdd";
+val HolBddTag_string = "HolBdd"
+val HolBddTag = Tag.read HolBddTag_string
 
 (*****************************************************************************)
 (* Setup trace variable for controlling debug output                         *)
@@ -132,7 +133,7 @@ and getBdd(TermBdd(tg,ass,vm,tm,b))    = b;
 
 exception nameError;
 
-fun name v = 
+fun name v =
  if is_var v andalso type_of v = bool
   then fst(dest_var v)
   else (print_term v; print " is not a boolean variable\n"; raise nameError);
@@ -148,8 +149,8 @@ fun name v =
 exception BddThmOracleError;
 
 fun BddThmOracle(TermBdd(tg,ass,_,tm,bdd)) =
- if bdd.equal bdd bdd.TRUE 
-  then mk_oracle_thm tg (HOLset.listItems ass, tm) 
+ if bdd.equal bdd bdd.TRUE
+  then add_tag(tg, mk_oracle_thm HolBddTag_string (HOLset.listItems ass, tm))
   else raise BddThmOracleError;
 
 (*****************************************************************************)
@@ -161,8 +162,8 @@ fun BddThmOracle(TermBdd(tg,ass,_,tm,bdd)) =
 exception BddExtendVarmapError;
 
 fun BddExtendVarmap vm2 (TermBdd(tg,ass,vm1,tm,b)) =
- if Varmap.extends vm1 vm2 
-  then TermBdd(tg,ass,vm2,tm,b) 
+ if Varmap.extends vm1 vm2
+  then TermBdd(tg,ass,vm2,tm,b)
   else raise BddExtendVarmapError;
 
 (*****************************************************************************)
@@ -208,7 +209,7 @@ fun BddSupportContractVarmap v (tb as (TermBdd(tg,ass,vm,tm,b))) =
  let val s = name v
  in
    case Varmap.peek vm s of
-      SOME n => if inSupport n b 
+      SOME n => if inSupport n b
                  then raise BddSupportContractVarmapError
                  else TermBdd(tg,ass,Varmap.remove s vm, tm, b)
     | NONE   => tb
@@ -228,7 +229,7 @@ fun BddEqMp th (TermBdd(tg,ass,vm,t1,b)) =
  in
    if aconv l t1
     then TermBdd(Tag.merge tg (Thm.tag th),HOLset.addList(ass,asl),vm,r,b)
-   else if (!trace_level)>=1 then 
+   else if (!trace_level)>=1 then
        let val _ = print "BddEqMp Error\n"
 	   val _ = print "Theorem:\n"
 	   val _ = print_thm th
@@ -236,8 +237,8 @@ fun BddEqMp th (TermBdd(tg,ass,vm,t1,b)) =
 	   val _ = print "Term:\n"
 	   val _ = print_term t1
 	   val _ = print "\n"
-       in raise BddEqMpError end 
-	else raise BddEqMpError	    
+       in raise BddEqMpError end
+	else raise BddEqMpError
  end;
 
 (*****************************************************************************)
@@ -258,26 +259,26 @@ fun BddEqMp th (TermBdd(tg,ass,vm,t1,b)) =
 exception BddReplaceError;
 
 fun BddReplace tbl (TermBdd(tg,ass,vm,tm,b)) =
- let val (tg',ass_union,(l,l'),replacel) = 
+ let val (tg',ass_union,(l,l'),replacel) =
        foldr
-        (fn(((TermBdd(tg1,ass1,vm1,v,b)), (TermBdd(tg2,ass2,vm2,v',b'))), 
+        (fn(((TermBdd(tg1,ass1,vm1,v,b)), (TermBdd(tg2,ass2,vm2,v',b'))),
             (tg,ass, (l,l'), replacel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
             then (                print "unequal varmaps\n";
                                   raise BddReplaceError) else
            if not(is_var v)
-            then (print_term v  ; print " should be a variable\n"; 
+            then (print_term v  ; print " should be a variable\n";
                                   raise BddReplaceError) else
            if not(is_var v')
-            then (print_term v' ; print " should be a variable\n"; 
+            then (print_term v' ; print " should be a variable\n";
                                   raise BddReplaceError) else
            if mem v l
             then (print_term v  ; print" repeated\n";
                                   raise BddReplaceError) else
            if mem v' l'
             then (print_term v' ; print" repeated\n";
-                                  raise BddReplaceError) 
+                                  raise BddReplaceError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
 		  HOLset.union(ass,HOLset.union(ass1,ass2)),
                   (v :: l, v' :: l'),
@@ -287,8 +288,8 @@ fun BddReplace tbl (TermBdd(tg,ass,vm,tm,b)) =
  in
   TermBdd(tg',
 	  ass_union,
-          vm, 
-          subst (ListPair.map (fn(v,v')=>(v|->v')) (l,l')) tm, 
+          vm,
+          subst (ListPair.map (fn(v,v')=>(v|->v')) (l,l')) tm,
           bdd.replace b (bdd.makepairSet replacel))
  end;
 
@@ -332,14 +333,14 @@ val tb4 = BddReplace tbl tb;
 
 exception BddComposeError;
 
-fun BddCompose 
-     (TermBdd(tg,ass,vm,v,b), TermBdd(tg1,ass1,vm1,tm1,b1)) 
+fun BddCompose
+     (TermBdd(tg,ass,vm,v,b), TermBdd(tg1,ass1,vm1,tm1,b1))
      (TermBdd(tg2,ass2,vm2,tm2,b2)) =
  if is_var v andalso Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(Tag.merge tg (Tag.merge tg1 tg2),
 	       HOLset.union(ass,HOLset.union(ass1,ass2)),
-               vm, 
-               subst[v |-> tm1]tm2, 
+               vm,
+               subst[v |-> tm1]tm2,
                bdd.compose (bdd.var b, b1) b2)
   else (print "different varmaps\n"; raise BddComposeError);
 
@@ -361,9 +362,9 @@ fun BddCompose
 exception BddListComposeError;
 
 fun BddListCompose tbl (TermBdd(tg,ass,vm,tm,b)) =
- let val (tg_merge,ass_union, (l,l') ,composel) = 
+ let val (tg_merge,ass_union, (l,l') ,composel) =
        foldr
-        (fn(((TermBdd(tg1,ass1,vm1,v,b)),(TermBdd(tg2,ass2,vm2,tm,b'))), 
+        (fn(((TermBdd(tg1,ass1,vm1,v,b)),(TermBdd(tg2,ass2,vm2,tm,b'))),
             (tg,ass, (l,l'), composel))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
@@ -374,7 +375,7 @@ fun BddListCompose tbl (TermBdd(tg,ass,vm,tm,b)) =
                                   raise BddListComposeError) else
            if mem v l
             then (print_term v  ; print" repeated\n";
-                                  raise BddListComposeError) 
+                                  raise BddListComposeError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
 		  HOLset.union(ass,HOLset.union(ass1,ass2)),
                   (v :: l, tm :: l'),
@@ -384,8 +385,8 @@ fun BddListCompose tbl (TermBdd(tg,ass,vm,tm,b)) =
  in
   TermBdd(tg_merge,
 	  ass_union,
-          vm, 
-          subst (ListPair.map (fn(v,tm)=>(v|->tm)) (l,l')) tm, 
+          vm,
+          subst (ListPair.map (fn(v,tm)=>(v|->tm)) (l,l')) tm,
           bdd.veccompose (bdd.composeSet composel) b)
  end;
 
@@ -448,17 +449,17 @@ exception BddRestrictError;
 local
 
 fun mlval tm =
- if tm=T 
-  then true 
+ if tm=T
+  then true
   else if tm=F then false else raise BddRestrictError
 
 in
 
 fun BddRestrict tbl tb =
  let val TermBdd(tg,ass,vm,tm,b) = tb
-     val (tg_merge,ass_union, (l,l') ,restrictl) = 
+     val (tg_merge,ass_union, (l,l') ,restrictl) =
        foldr
-        (fn(((TermBdd(tg1,ass1,vm1,v,b)),(TermBdd(tg2,ass2,vm2,c,_))), 
+        (fn(((TermBdd(tg1,ass1,vm1,v,b)),(TermBdd(tg2,ass2,vm2,c,_))),
             (tg,ass, (l,l'), restrictl))
            =>
            if not(Varmap.eq(vm,vm1) andalso Varmap.eq(vm,vm2))
@@ -469,7 +470,7 @@ fun BddRestrict tbl tb =
                                   raise BddRestrictError) else
            if mem v l
             then (print_term v  ; print" repeated\n";
-                                  raise BddRestrictError) 
+                                  raise BddRestrictError)
             else (Tag.merge tg (Tag.merge tg1 tg2),
 		  HOLset.union(ass,HOLset.union(ass1,ass2)),
                   (v :: l, c :: l'),
@@ -478,9 +479,9 @@ fun BddRestrict tbl tb =
         tbl
  in
   TermBdd(tg_merge,
-	  ass_union, 
-          vm, 
-          subst (ListPair.map (fn(v,c)=>(v|->c)) (l,l')) tm, 
+	  ass_union,
+          vm,
+          subst (ListPair.map (fn(v,c)=>(v|->c)) (l,l')) tm,
           bdd.restrict b (bdd.assignment restrictl))
  end
 
@@ -491,12 +492,12 @@ end;
 (*   BddCon false vm =  ({} vm ``F`` |--> FALSE)                             *)
 (*****************************************************************************)
 
-fun BddCon tv vm = 
- if tv then TermBdd(HolBddTag,Term.empty_tmset,vm,T,bdd.TRUE) 
+fun BddCon tv vm =
+ if tv then TermBdd(HolBddTag,Term.empty_tmset,vm,T,bdd.TRUE)
        else TermBdd(HolBddTag,Term.empty_tmset,vm,F,bdd.FALSE);
 
 (*****************************************************************************)
-(*                                                                           *) 
+(*                                                                           *)
 (*     Varmap.peek vm (name v) = SOME n                                      *)
 (*    ---------------------------------   BddVar true                        *)
 (*         {} vm v |--> ithvar n                                             *)
@@ -511,7 +512,7 @@ exception BddVarError;
 
 fun BddVar tv vm v =
  case Varmap.peek vm (name v) of
-    SOME n => if tv 
+    SOME n => if tv
                then TermBdd(HolBddTag,Term.empty_tmset,vm, v,        bdd.ithvar n)
                else TermBdd(HolBddTag,Term.empty_tmset,vm, mk_neg v, bdd.nithvar n)
   | NONE   => (print_term v; print " not in varmap\n"; raise BddVarError);
@@ -531,16 +532,16 @@ fun BddNot(TermBdd(tg,ass,vm,t,b)) =  TermBdd(tg,ass,vm, mk_neg t, bdd.NOT b);
 
 fun termApply t1 t2 (bddop:bdd.bddop) =
  case bddop of
-    And    => mk_conj(t1,t2)         
-  | Biimp  => mk_eq(t1,t2)           
-  | Diff   => mk_conj(t1, mk_neg t2) 
-  | Imp    => mk_imp(t1,t2)          
-  | Invimp => mk_imp(t2,t1)          
-  | Lessth => mk_conj(mk_neg t1, t2) 
-  | Nand   => mk_neg(mk_conj(t1,t2)) 
-  | Nor    => mk_neg(mk_disj(t1,t2)) 
-  | Or     => mk_disj(t1,t2)         
-  | Xor    => mk_neg(mk_eq(t1,t2)); 
+    And    => mk_conj(t1,t2)
+  | Biimp  => mk_eq(t1,t2)
+  | Diff   => mk_conj(t1, mk_neg t2)
+  | Imp    => mk_imp(t1,t2)
+  | Invimp => mk_imp(t2,t1)
+  | Lessth => mk_conj(mk_neg t1, t2)
+  | Nand   => mk_neg(mk_conj(t1,t2))
+  | Nor    => mk_neg(mk_disj(t1,t2))
+  | Or     => mk_disj(t1,t2)
+  | Xor    => mk_neg(mk_eq(t1,t2));
 
 (*****************************************************************************)
 (*       as1 vm t1 |--> b1    ass2 vm t2 |--> b2                             *)
@@ -557,8 +558,8 @@ fun BddOp (bddop, TermBdd(tg1,ass1,vm1,t1,b1), TermBdd(tg2,ass2,vm2,t2,b2)) =
 if Varmap.eq(vm1,vm2)
  then TermBdd(Tag.merge tg1 tg2,
 	      HOLset.union(ass1,ass2),
-              vm1, 
-              termApply t1 t2 bddop, 
+              vm1,
+              termApply t1 t2 bddop,
               bdd.apply b1 b2 bddop)
  else (print "different varmaps\n"; raise BddOpError);
 
@@ -568,7 +569,7 @@ if Varmap.eq(vm1,vm2)
 
 exception BddDischError;
 
-fun BddDisch (TermBdd(tg1,ass1,vm1,tm1,b1))  (TermBdd(tg,ass,vm,tm,b)) = 
+fun BddDisch (TermBdd(tg1,ass1,vm1,tm1,b1))  (TermBdd(tg,ass,vm,tm,b)) =
     BddOp(Imp,
 	  TermBdd(tg1,ass1,vm1,tm1,b1),
 	  TermBdd(tg,HOLset.delete(ass,tm1) handle HOLset.NotFound => ass,vm,tm,b))
@@ -581,14 +582,14 @@ fun BddDisch (TermBdd(tg1,ass1,vm1,tm1,b1))  (TermBdd(tg,ass,vm,tm,b)) =
 
 exception BddIteError;
 
-fun BddIte(TermBdd(tg,ass,vm,t,b), 
-           TermBdd(tg1,ass1,vm1,t1,b1), 
-           TermBdd(tg2,ass2,vm2,t2,b2)) = 
+fun BddIte(TermBdd(tg,ass,vm,t,b),
+           TermBdd(tg1,ass1,vm1,t1,b1),
+           TermBdd(tg2,ass2,vm2,t2,b2)) =
  if Varmap.eq(vm,vm1) andalso Varmap.eq(vm1,vm2)
   then TermBdd(Tag.merge tg (Tag.merge tg1 tg2),
 	       HOLset.union(ass,HOLset.union(ass1,ass2)),
-               vm, 
-               mk_cond(t,t1,t2), 
+               vm,
+               mk_cond(t,t1,t2),
                bdd.ITE b b1 b2)
   else (print "different varmaps\n"; raise BddIteError);
 
@@ -609,7 +610,7 @@ exception BddForallError;
 fun BddForall vl (TermBdd(tg,ass,vm,t,b)) =
  let open HOLset bdd
      val tml = intersection
-                (addList(empty_tmset, vl), 
+                (addList(empty_tmset, vl),
                 foldl (fn (t,s) => FVL [t] s) empty_tmset ass)
 (* Possibly less efficient code:
      val tml = intersection
@@ -618,18 +619,18 @@ fun BddForall vl (TermBdd(tg,ass,vm,t,b)) =
  in
   if isEmpty tml
    then
-    let val bddvars = 
-          List.map 
+    let val bddvars =
+          List.map
            (fn v => case Varmap.peek vm (name v) of
                        SOME n => n
-                     | NONE   => raise BddForallError) 
+                     | NONE   => raise BddForallError)
            vl
-    in 
+    in
      TermBdd(tg,ass,vm, list_mk_forall(vl,t), forall (makeset bddvars) b)
     end
-   else 
+   else
     (print_term(hd(listItems tml));
-     print " free in assumptions"; 
+     print " free in assumptions";
      raise BddForallError)
  end;
 
@@ -653,18 +654,18 @@ fun BddExists vl (TermBdd(tg,ass,vm,t,b)) =
  in
   if isEmpty tml
    then
-    let val bddvars = 
-          List.map 
+    let val bddvars =
+          List.map
            (fn v => case Varmap.peek vm (name v) of
                        SOME n => n
-                     | NONE   => raise BddExistsError) 
+                     | NONE   => raise BddExistsError)
            vl
-    in 
+    in
      TermBdd(tg,ass,vm, list_mk_exists(vl,t), exist (makeset bddvars) b)
     end
-   else 
+   else
     (print_term(hd(listItems tml));
-     print " free in assumptions"; 
+     print " free in assumptions";
      raise BddExistsError)
  end;
 
@@ -699,21 +700,21 @@ fun BddAppall vl (bddop, TermBdd(tg1,ass1,vm1,t1,b1), TermBdd(tg2,ass2,vm2,t2,b2
        TermBdd
         (tg,
 	 ass,
-         vm1, 
-         list_mk_forall(vl, termApply t1 t2 bddop), 
-         appall 
-          b1 
-          b2 
-          bddop 
+         vm1,
+         list_mk_forall(vl, termApply t1 t2 bddop),
+         appall
+          b1
+          b2
+          bddop
           (makeset
             (List.map (fn v => case Varmap.peek vm1 (name v) of
                                   SOME n => n
-                                | NONE   => raise BddAppallError) 
+                                | NONE   => raise BddAppallError)
             vl)))
       else (print "different varmaps\n"; raise BddAppallError))
    else
     (print_term(hd(listItems tml));
-     print " free in assumptions"; 
+     print " free in assumptions";
      raise BddAppallError)
  end;
 
@@ -748,21 +749,21 @@ fun BddAppex vl (bddop, TermBdd(tg1,ass1,vm1,t1,b1), TermBdd(tg2,ass2,vm2,t2,b2)
        TermBdd
         (tg,
 	 ass,
-         vm1, 
-         list_mk_exists(vl, termApply t1 t2 bddop), 
+         vm1,
+         list_mk_exists(vl, termApply t1 t2 bddop),
          appex
-          b1 
-          b2 
-          bddop 
+          b1
+          b2
+          bddop
           (makeset
             (List.map (fn v => case Varmap.peek vm1 (name v) of
                                   SOME n => n
-                                | NONE   => raise BddAppexError) 
+                                | NONE   => raise BddAppexError)
             vl)))
       else (print "different varmaps\n"; raise BddAppexError))
    else
     (print_term(hd(listItems tml));
-     print " free in assumptions"; 
+     print " free in assumptions";
      raise BddAppexError)
  end;
 
@@ -813,13 +814,13 @@ fun test t =
 
 exception BddfindModelError;
 
-fun BddfindModel (TermBdd(tg,ass,vm,t,b)) = 
+fun BddfindModel (TermBdd(tg,ass,vm,t,b)) =
  let val assl        = bdd.getAssignment(bdd.satone b)
      val vml         = Varmap.dest vm
-     val setl        = List.map 
-                        (fn (n,tv) => 
+     val setl        = List.map
+                        (fn (n,tv) =>
                           mk_eq
-                           ((case assoc2 n vml of 
+                           ((case assoc2 n vml of
                                 SOME(s,_) => mk_var(s,bool)
                               | NONE      => (print "This should not happen!\n";
                                               raise BddfindModelError)),

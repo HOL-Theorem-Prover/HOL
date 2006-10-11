@@ -107,6 +107,7 @@ sig
   val mk_thm        : term list * term -> thm
   val mk_oracle_thm : string -> term list * term -> thm
   val mk_axiom_thm  : (string ref * term) -> thm
+  val add_tag       : tag * thm -> thm
 
   (* definitional rules of inference *)
   val prim_type_definition : {Thy : string, Tyop : string} * thm -> thm

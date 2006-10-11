@@ -196,6 +196,7 @@ sig
   val Specialize    : term -> thm -> thm
   val GEN_ABS       : term option -> term list -> thm -> thm
   val mk_oracle_thm : string -> term list * term -> thm
+  val add_tag       : tag * thm -> thm
   val mk_thm        : term list * term -> thm
   val mk_axiom_thm  : string ref * term -> thm
   val mk_defn_thm   : tag * term -> thm

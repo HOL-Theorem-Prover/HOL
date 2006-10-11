@@ -80,5 +80,6 @@ Tags accumulate in a manner similar to logical hypotheses.
 It is impossible to detach a tag from a theorem.
 
 \SEEALSO
-Thm.mk_thm, Tag.read, Thm.tag, Theory.mk_axiom.
+Thm.add_tag, Thm.mk_thm, Tag.read, Thm.tag, Theory.mk_axiom.
+
 \ENDDOC

@@ -1137,6 +1137,8 @@ fun mk_oracle_thm tg (asl,c) =
 
 val mk_thm = mk_oracle_thm "MK_THM"
 
+fun add_tag (tag1, THM(tag2, h,c)) = THM(Tag.merge tag1 tag2, h, c)
+
 
 (*---------------------------------------------------------------------------*
  *    The following two are only used in Theory, and are not                 *

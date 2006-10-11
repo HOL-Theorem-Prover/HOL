@@ -106,6 +106,7 @@ sig
 
   val mk_thm        : term list * term -> thm
   val mk_oracle_thm : string -> term list * term -> thm
+  val add_tag       : tag * thm -> thm
 
   (* Fetching theorems from disk *)
 
