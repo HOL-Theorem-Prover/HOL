@@ -1,0 +1,3 @@
+lynx -dump $1 | \
+           perl -e '$/ = "\n\n";
+                    while (<>) { s/\.\n( *)\*/\.\n\n\1*/g; print; }'
