@@ -1914,9 +1914,9 @@ val acl2_list_ref = ref([] : mlsexp list);
 
 (*****************************************************************************)
 (* Wrapper around mk_oracle_thm.                                             *)
-(* Saves strings used to create tags in acl2_tags.                           *)
+(* Saves strings used to create tags (now strings) in acl2_tags.             *)
 (*****************************************************************************)
-val acl2_tags = ref([]: (tag*(string*string))list);
+val acl2_tags = ref([]: (string*(string*string))list);
 
 fun mk_acl2_thm defty acl2_name deftm =
  let val tg = defty ^ " " ^ acl2_name

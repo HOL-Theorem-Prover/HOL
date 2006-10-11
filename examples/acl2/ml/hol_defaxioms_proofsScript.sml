@@ -749,14 +749,14 @@ val abs_rat_reduce =
     THEN `~(n' = 0)` 
           by PROVE_TAC[markerTheory.Abbrev_def]
     THEN `0 < Num(ABS n)` 
-          by PROVE_TAC[intExtensionTheory.ABS_NOT_0_POSITIVE,Num_pos]
+          by PROVE_TAC[intExtensionTheory.INT_ABS_NOT0POS,Num_pos]
     THEN `gcd (Num (ABS m)) (Num (ABS n)) <= Num (ABS n)`
           by METIS_TAC[gcd_less_eq]
     THEN IMP_RES_TAC
           (Cooper.COOPER_PROVE ``(m:num) <= n ==> (&m):int <= &n``)
     THEN `n' <= &(Num (ABS n))` by PROVE_TAC[markerTheory.Abbrev_def]
     THEN `0 < ABS n` 
-          by PROVE_TAC[intExtensionTheory.ABS_NOT_0_POSITIVE]
+          by PROVE_TAC[intExtensionTheory.INT_ABS_NOT0POS]
     THEN `0 <= ABS n` by Cooper.COOPER_TAC
     THEN `n' <= ABS n` by PROVE_TAC[integerTheory.INT_OF_NUM]
     THEN `n' <= n` by Cooper.COOPER_TAC
