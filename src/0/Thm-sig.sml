@@ -105,11 +105,11 @@ sig
   (* Oracle invocation *)
 
   val mk_thm        : term list * term -> thm
-  val mk_oracle_thm : tag -> term list * term -> thm
+  val mk_oracle_thm : string -> term list * term -> thm
 
   (* Fetching theorems from disk *)
 
   val disk_thm      : term vector
-                       -> string list * 'a Portable.frag list list 
+                       -> string list * 'a Portable.frag list list
                                       * 'a Portable.frag list -> thm
 end;

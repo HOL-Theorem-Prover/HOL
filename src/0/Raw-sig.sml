@@ -195,12 +195,12 @@ sig
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
   val GEN_ABS       : term option -> term list -> thm -> thm
-  val mk_oracle_thm : tag -> term list * term -> thm
+  val mk_oracle_thm : string -> term list * term -> thm
   val mk_thm        : term list * term -> thm
   val mk_axiom_thm  : string ref * term -> thm
   val mk_defn_thm   : tag * term -> thm
   val disk_thm      : term vector
-                       -> string list * 'a Portable.frag list list 
+                       -> string list * 'a Portable.frag list list
                                       * 'a Portable.frag list -> thm
 end;
 
