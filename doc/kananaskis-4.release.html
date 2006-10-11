@@ -116,13 +116,13 @@ html1/DTD/xhtml1-strict.dtd">
       or they may be of any other type as well, even function types.
       Literals need not be constants, but they must not contain
       any free variables.</p>
-      <pre>
+<pre>
          case n of
             0 -> "none"
          || 1 -> "one"
          || 2 -> "two"
          || _ -> "many"
-      </pre>
+</pre>
       <p>Patterns in case expressions are similar to the patterns used
       in the definition of recursive functions by <code>Define</code>.
       Thus they may be deeply nested within larger patterns.
@@ -133,7 +133,7 @@ html1/DTD/xhtml1-strict.dtd">
       rows generated automatically to fill it out, and possibly some new
       or renamed variables or the <code>ARB</code> constant to properly
       represent the case expression. </p>
-      <pre>
+<pre>
          - ``case a of
                 (1, y, z) -> y + z
              || (x, 2, z) -> x - z
@@ -148,7 +148,7 @@ html1/DTD/xhtml1-strict.dtd">
                || (x,2,z') -> x - z'
                || (x,y',3) -> x * y'
                || (x,y',z') -> ARB`` : term
-      </pre>
+</pre>
       <p>A complex pattern with several components may include
       both literals and constructor expressions as subpatterns.
       However, a set of patterns specified in a case expression
@@ -172,16 +172,16 @@ html1/DTD/xhtml1-strict.dtd">
       conjunction), and is augmented as later theories are loaded. For
       example, the constant <code>EVERY</code> in the theory of lists,
       has a monotonicity result</p>
-      <pre>
+<pre>
          |- (!x:'a. P x ==> Q x) ==> (EVERY P l ==> EVERY Q l)
-      </pre>
+</pre>
 <p> and this is incorporated into the global <code>monoset</code> when
 the theory of lists is loaded.  This then allows the easy definition
 of relations that recurse under <code>EVERY</code>, as in this rule
 </p>
-      <pre>
+<pre>
          !x. EVERY newrel (somelist_of x) ==> newrel x
-      </pre>
+</pre>
 
 
       <p> Theorems can be declared as monotonicity results using the
@@ -194,25 +194,25 @@ of relations that recurse under <code>EVERY</code>, as in this rule
   <li> <p>Types that are instances of abbreviation patterns (made with
       <code>type_abbrev</code>) now print in abbreviated form by
       default.  For example, if one writes</p>
-      <pre>
+<pre>
          type_abbrev("set", ``:'a -> bool``);
-      </pre>
+</pre>
 
       <p> Then, as before, one can write <code>``:num set``</code> and
       have this understood by the type parser.  Now, in addition, when
       types are printed, this is reversed, so that the following
       works: </p>
-      <pre>
+<pre>
          - type_of ``(UNION)``;
          > val it = ``:'a set -> 'a set -> 'a set`` : hol_type
-      </pre>
+</pre>
 
       <p> Unfortunately, with this particular example, one also
       gets</p>
-      <pre>
+<pre>
          - type_of ``(/\)``;
          > val it = ``:bool -> bool set`` : hol_type
-      </pre>
+</pre>
 
       <p> which is more confusing than it is illuminating.  For this
       reason, it is possible to turn abbreviation printing off
@@ -221,9 +221,9 @@ of relations that recurse under <code>EVERY</code>, as in this rule
       abbreviation-by-abbreviation basis.  The latter is done with the
       function</p>
 
-      <pre>
+<pre>
          disable_tyabbrev_printing : string -> unit
-      </pre>
+</pre>
 
       <p> Calls to this function are made in the <code>pred_set</code>
       and <code>bag</code> theories so that those theories&rsquo;
@@ -232,6 +232,33 @@ of relations that recurse under <code>EVERY</code>, as in this rule
   </li>
 
 
+
+  <li> <p> There is a new polymorphic type,
+      <code>``:'a&nbsp;itself``</code> containing just one value for
+      all possible instantiations of <code>``:'a``</code>.  This value
+      is supported by special syntax, and can be written</p>
+<pre>
+         (:tyname)
+</pre>
+
+      <p> This type provides a convenient method for defining values
+      that are dependent on just the type, and not on any values
+      within that type.  For example, within the <a
+      href="#wordsTheory">new theory of words</a>, the constant
+      <code>dimindex</code> has type
+      <code>:'a&nbsp;itself&nbsp;->&nbsp;num</code>, and returns the
+      cardinality of the universe of the type <code>'a</code> if the
+      universe is finite, or one otherwise.  The syntax support means
+      one can write terms such as </p>
+<pre>
+         dimindex(:bool)
+</pre>
+      <p> and </p>
+<pre>
+         dimindex(:'a -> bool)
+</pre>
+      <p> This type is inspired by a similar one in Isabelle/HOL.</p>
+  </li>
 
 </ul>
 
@@ -282,7 +309,26 @@ of relations that recurse under <code>EVERY</code>, as in this rule
 <h2 id="new-theories">New theories:</h2>
 <ul>
   <li> <p> A theory of the rational numbers, thanks to Jens
-  Brandt. This is used in the <a href="#acl2">embedding of ACL2 in HOL</a>.</p> </li>
+  Brandt. This is used in the <a href="#acl2">embedding of ACL2 in
+  HOL</a>.</p> </li>
+
+  <li id="wordsTheory"> <p> A new polymorphic theory of fixed-width
+  words, called <code>words</code>.  This is now our recommended way
+  of using types such as <code>word32</code>, <code>word16</code> etc.
+  This builds on John Harrison&rsquo;s &ldquo;Finite cartesian
+  products&rdquo; from <cite>A HOL theory of Euclidean space</cite> in
+  TPHOLs&nbsp;2005.  </p>
+
+      <p> There is now no need to use the word functor
+  approach introduced in Kananaskis-3 (though this code is still
+  available).  Instead, when <code>wordsTheory</code> is loaded, one
+  set of polymorphic constants is defined, and these can be used for
+  all the word types.  Words are polymorphic in one argument (thus
+  there is a type <code>``:'a&nbsp;word``</code>) and types such as
+  <code>word32</code> and <code>word16</code> instantiate the type
+  parameter to different concrete type arguments.  (The cardinality of
+  the parameter&rsquo;s universe indicates the number of bits in the
+  word.)  For more, see the Description.</p></li>
 
 </ul>
 
