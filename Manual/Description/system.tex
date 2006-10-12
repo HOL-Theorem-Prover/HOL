@@ -1335,47 +1335,49 @@ right form.
 
 \section{Oracles}
 
-\HOL{} extends the \LCF\ tradition by allowing the use of an \emph
-{oracle} mechanism, enabling arbitrary formulas to become elements of
-the \verb+thm+ type. By use of this mechanism, \HOL{} can utilize the
-results of arbitrary proof procedures. In spite of such liberalness, one
-can still make strong assertions about the security of ML objects of
-type \verb+thm+.
+\HOL{} extends the \LCF\ tradition by allowing the use of an
+\emph{oracle} mechanism, enabling arbitrary formulas to become
+elements of the \ml{thm} type. By use of this mechanism, \HOL{} can
+utilize the results of arbitrary proof procedures. In spite of such
+liberalness, one can still make strong assertions about the security
+of ML objects of type \ml{thm}.
 
-To avoid unsoundness, a \emph{tag} is attached to any theorem
-coming from an oracle. This tag is propagated through every
-inference that the theorem participates in (much as ordinary assumptions
-are propagated in the inference rule {\small\verb+MP+}). If it happens
-that falsity becomes derived, the offending oracle can be found by
-examining the tags component of the theorem. A theorem proved without
-use of any oracle will have an empty tag, and can thus be considered to
-have been proved solely by deductive steps in the HOL logic.
+To avoid unsoundness, a \emph{tag} is attached to any theorem coming
+from an oracle. This tag is propagated through every inference that
+the theorem participates in (much as ordinary assumptions are
+propagated in the inference rule \ml{MP}). If it happens that falsity
+becomes derived, the offending oracle can be found by examining the
+tags component of the theorem. A theorem proved without use of any
+oracle will have an empty tag, and can thus be considered to have been
+proved solely by deductive steps in the HOL logic.
 
 A tagged theorem can be created via
 
 \begin{boxed}
 \index{mk_oracle_thm@\ml{mk\_oracle\_thm}!type of}
 \begin{verbatim}
-   mk_oracle_thm : tag -> term list * term -> thm
+   mk_oracle_thm : string -> term list * term -> thm
 \end{verbatim}
 \end{boxed}
 
-which directly creates the requested theorem and attaches the given tag to
-it. Tags may be created with
+which directly creates the requested theorem and attaches the given
+tag to it. The tag is created with a call to
 
 \begin{boxed}
 \index{Tag.read@\ml{Tag.read}!making tags}
 \begin{verbatim}
-   Tag.read : string -> tag.
-\end{verbatim}\end{boxed}
+   Tag.read : string -> tag
+\end{verbatim}
+\end{boxed}
 
 As well as providing principled access to the results of external
-reasoners, tags are used to implement some useful `system' operations on
-theorems. For example, one can directly create a theorem via the function
-\verb+mk_thm+. The tag \verb+MK_THM+ gets attached to each theorem
-created with this call. This allows users to directly create useful
-theorems, \eg, to use as test data for derived rules of inference.
-Another tag is used to implement so-called `validity checking' for tactics.
+reasoners, tags are used to implement some useful `system' operations
+on theorems. For example, one can directly create a theorem via the
+function \ml{mk\_thm}. The tag \verb+MK_THM+ gets attached to each
+theorem created with this call. This allows users to directly create
+useful theorems, \eg, to use as test data for derived rules of
+inference.  Another tag is used to implement so-called `validity
+checking' for tactics.
 
 The tags in a theorem can be viewed by setting \verb+Globals.show_tags+ to
 true.
