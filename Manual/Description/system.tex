@@ -1248,7 +1248,7 @@ Failure if $x$ is not a variable, or $x$
 \begin{center}
 \begin{tabular}{c}
 $\Gamma${\small\verb+ |- +}$t$ \\ \hline
-$\Gamma${\small\verb+ |- +}$t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
+$\Gamma[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]${\small\verb+ |- +}$t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
 \end{tabular}
 \end{center}
 
@@ -1258,21 +1258,19 @@ $\Gamma${\small\verb+ |- +}$t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\
 \item $t[\sigma_1,\ \ldots\ ,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$
 denotes the result of substituting (in parallel) the types $\sigma_1$,
 $\ldots$\ , $\sigma_n$ for the type variables $\alpha_1$, $\ldots$\ ,
-$\alpha_n$ in $t$, with the restriction that none of $\alpha_1$, $\ldots$\
-, $\alpha_n$ occur in $\Gamma$.
+$\alpha_n$ in $t$.  Similarly, $\Gamma[\sigma_1,\ \ldots\
+,\sigma_n/\alpha_1,\ \ldots\ ,\alpha_n]$ denotes the result of
+performing the same substitution to all of the hypotheses in the set
+$\Gamma$.
 \end{itemize}
 
 \noindent
 \ml{INST\_TYPE[$\alpha_1$~|->~$\sigma_1$%
-,$\ldots$,$\alpha_n$~|->~$\sigma_n$]~$th$}
-returns the result of instantiating each occurrence of $\alpha_i$ in the
-theorem $th$ to $\sigma_i$ (for $1 \leq i \leq n$). Failure occurs if:
-\begin{myenumerate}
-\item arguments are of the wrong form (\eg\ an $\alpha_i$ is not a
-  type variable);
-\item $\alpha_i$ (for $1\leq i\leq n$) occurs in any assumption in
-  $\Gamma$.
-\end{myenumerate}
+  ,$\ldots$,$\alpha_n$~|->~$\sigma_n$]~$th$} returns the result of
+instantiating each occurrence of $\alpha_i$ in the theorem $th$ to
+$\sigma_i$ (for $1 \leq i \leq n$). Failure occurs if an $\alpha_i$ is
+not a type variable.
+
 The polymorphic \ML{} infix function {\small\verb+|->+} is used to
 construct values of the \ml{redex-residue} record type.  It is defined
 \begin{verbatim}
