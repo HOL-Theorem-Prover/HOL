@@ -380,6 +380,11 @@ val STRLEN_THM = Q.store_thm
                        ONCE_REWRITE_RULE [arithmeticTheory.ADD_SYM]
                          arithmeticTheory.ADD1]);
 
+val STRLEN_EQ_0 = Q.store_thm
+("STRLEN_EQ_0",
+ `!x. (STRLEN x = 0) = (x="")`,
+ Cases THEN RW_TAC std_ss [STRLEN_DEF]);
+
 (*---------------------------------------------------------------------------
                       String concatenation
  ---------------------------------------------------------------------------*)
@@ -421,6 +426,11 @@ val STRCAT_EXPLODE = Q.store_thm
 HO_MATCH_MP_TAC STRING_INDUCT_THM
   THEN RW_TAC std_ss [STRCAT_EQNS,EXPLODE_EQNS,listTheory.FOLDR]);
 
+val STRCAT_EQ_EMPTY = Q.store_thm
+("STRCAT_EQ_EMPTY",
+ `!x y. (STRCAT x y = "") = (x="") /\ (y="")`,
+ Cases THEN Cases THEN RW_TAC std_ss [STRCAT_EQNS]);
+
 (*---------------------------------------------------------------------------
      String length and concatenation
  ---------------------------------------------------------------------------*)
@@ -429,7 +439,6 @@ val STRLEN_CAT = Q.store_thm
 ("STRLEN_CAT",
  `!x y. STRLEN (STRCAT x y) = (STRLEN x + STRLEN y)`,
  REWRITE_TAC[STRCAT,STRLEN_THM,LENGTH_APPEND,EXPLODE_IMPLODE]);
-
 
 (*---------------------------------------------------------------------------
        Is one string a prefix of another?
