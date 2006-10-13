@@ -24,7 +24,7 @@ val iBITWISE = prove(
    (!x opr a b.
      iBITWISE (SUC x) opr a b =
        let w = iBITWISE x opr (DIV2 a) (DIV2 b) in
-       if opr (ODD a) (ODD b) then BIT1 w else iDUB w)`,
+       if opr (ODD a) (ODD b) then BIT1 w else numeral$iDUB w)`,
   RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_BIT1,SBIT_def,EXP,
                    LSB_ODD,GSYM DIV2_def,BITWISE_EVAL,LET_THM]
     THEN REWRITE_TAC [BITWISE_def,ALT_ZERO]
@@ -102,7 +102,7 @@ val numeral_ilog2 = store_thm("numeral_ilog2",
 );
 
 val numeral_log2 = store_thm("numeral_log2",
-  `(!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (iDUB n)) /\
+  `(!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (numeral$iDUB n)) /\
    (!n. LOG2 (NUMERAL (BIT2 n)) = iLOG2 (BIT1 n))`,
   RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def,numeralTheory.iDUB]
     THEN SIMP_TAC arith_ss []

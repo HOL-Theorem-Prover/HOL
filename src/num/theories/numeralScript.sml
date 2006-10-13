@@ -15,8 +15,8 @@
    commands before trying to evaluate the ML that follows.
 
    fun mload s = (print ("Loading "^s^"\n"); load s);
-   app mload ["simpLib", "boolSimps", "arithmeticTheory", "Q", 
-              "mesonLib", "metisLib", "whileTheory", 
+   app mload ["simpLib", "boolSimps", "arithmeticTheory", "Q",
+              "mesonLib", "metisLib", "whileTheory",
               "pairSyntax", "combinSyntax"];
 *)
 
@@ -777,6 +777,16 @@ val DIV_2EXP = Q.store_thm("DIV_2EXP",
     THEN POP_ASSUM (fn th => SIMP_TAC bool_ss [GSYM th, EXP_1, ADD1, EXP_ADD,
        DIV2_def, DIV_2EXP_def, DIV_DIV_DIV_MULT, ZERO_LT_TWO, ZERO_LT_TWOEXP]));
 
+(* ----------------------------------------------------------------------
+    hide the internal constants from this theory so that later name-
+    spaces are not contaminated.   Constants can still be found by using
+    numeral$cname syntax.
+   ---------------------------------------------------------------------- *)
+
+val _ = app
+          (fn s => remove_ovl_mapping s {Name = s, Thy = "numeral"})
+          ["iZ", "iiSUC", "iDUB", "iSUB", "iMOD_2EXP", "iSQR"]
+
 (*---------------------------------------------------------------------------*)
 (* Filter out the definitions and theorems needed to generate ML.            *)
 (*---------------------------------------------------------------------------*)
@@ -834,10 +844,10 @@ val _ = adjoin_to_theory
 (* prettyprinting nums.                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val _ = EmitML.reshape_thm_hook := 
- (fn thm => 
-   (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o 
-    pairLib.GEN_BETA_RULE o 
+val _ = EmitML.reshape_thm_hook :=
+ (fn thm =>
+   (Rewrite.PURE_REWRITE_RULE [arithmeticTheory.NUMERAL_DEF] o
+    pairLib.GEN_BETA_RULE o
     Rewrite.PURE_REWRITE_RULE (!EmitML.pseudo_constructors)) thm);
 
 val _ =
@@ -1079,9 +1089,9 @@ val _ =
 end;
 
 
-val _ = adjoin_to_theory 
+val _ = adjoin_to_theory
   {sig_ps = NONE,
-   struct_ps = SOME (fn ppstrm => 
+   struct_ps = SOME (fn ppstrm =>
      let val S = PP.add_string ppstrm
          fun NL() = PP.add_newline ppstrm
      in S "val _ = EmitML.reshape_thm_hook := (fn thm => "; NL();

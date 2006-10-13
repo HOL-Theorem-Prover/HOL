@@ -2926,12 +2926,14 @@ val INT_ADD_REDUCE = store_thm(
   "INT_ADD_REDUCE",
   Term`!p:int n m.
           (0 + p = p) /\ (p + 0 = p) /\ (~0 = 0) /\ (~~p = p) /\
-          (&(NUMERAL n) + &(NUMERAL m):int = &(NUMERAL (iZ (n + m)))) /\
+          (&(NUMERAL n) + &(NUMERAL m):int =
+             &(NUMERAL (numeral$iZ (n + m)))) /\
           (&(NUMERAL n) + ~&(NUMERAL m):int =
              if m <= n then &(NUMERAL (n - m)) else ~&(NUMERAL (m - n))) /\
           (~&(NUMERAL n) + &(NUMERAL m):int =
              if n <= m then &(NUMERAL (m - n)) else ~&(NUMERAL (n - m))) /\
-          (~&(NUMERAL n) + ~&(NUMERAL m):int = ~&(NUMERAL (iZ (n + m))))`,
+          (~&(NUMERAL n) + ~&(NUMERAL m):int =
+             ~&(NUMERAL (numeral$iZ (n + m))))`,
   SIMP_TAC (int_ss ++ boolSimps.COND_elim_ss) [
     INT_ADD_LID, INT_ADD_RID, INT_ADD, GSYM INT_NEG_ADD, INT_ADD_COMM,
     GSYM int_sub, INT_EQ_SUB_RADD, INT_INJ, INT_SUB, numeralTheory.iZ,

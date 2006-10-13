@@ -391,6 +391,13 @@ val ISO_USAGE = store_thm(
          (!a b. (a = g b) = (f a = b))`,
   SIMP_TAC bool_ss [ISO, FUN_EQ_THM] THEN MESON_TAC[]);
 
+(* ----------------------------------------------------------------------
+    Remove constants from top-level name-space
+   ---------------------------------------------------------------------- *)
+
+val _ = app (fn s => remove_ovl_mapping s {Name = s, Thy = "ind_type"})
+            ["NUMPAIR", "NUMSUM", "INJN", "INJA", "INJF", "INJP",
+             "ZCONSTR", "ZBOT", "BOTTOM", "CONSTR", "FNIL", "ISO"]
 
 val _ = export_theory();
 

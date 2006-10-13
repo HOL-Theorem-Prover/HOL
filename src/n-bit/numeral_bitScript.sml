@@ -113,7 +113,7 @@ val iBITWISE = prove(
    (!x opr a b.
      iBITWISE (SUC x) opr a b =
        let w = iBITWISE x opr (DIV2 a) (DIV2 b) in
-       if opr (ODD a) (ODD b) then BIT1 w else iDUB w)`,
+       if opr (ODD a) (ODD b) then BIT1 w else numeral$iDUB w)`,
   RW_TAC arith_ss [iBITWISE_def,iDUB,SIMP_BIT1,SBIT_def,EXP,
                    LSB_ODD,GSYM DIV2_def,BITWISE_EVAL,LET_THM]
     \\ REWRITE_TAC [BITWISE_def,ALT_ZERO]);
@@ -132,9 +132,10 @@ val NUMERAL_BITWISE = store_thm("NUMERAL_BITWISE",
 
 val NUMERAL_BIT_REV = prove(
   `(!x y. BIT_REV 0 x y = y) /\
-   (!n y. BIT_REV (SUC n) 0 y = BIT_REV n 0 (iDUB y)) /\
+   (!n y. BIT_REV (SUC n) 0 y = BIT_REV n 0 (numeral$iDUB y)) /\
    (!n x y. BIT_REV (SUC n) (NUMERAL x) y =
-      BIT_REV n (DIV2 (NUMERAL x)) (if ODD x then BIT1 y else iDUB y))`,
+      BIT_REV n (DIV2 (NUMERAL x)) (if ODD x then BIT1 y
+                                    else numeral$iDUB y))`,
   RW_TAC bool_ss [BIT_REV_def,SBIT_def,NUMERAL_DEF,DIV2_def,
            ADD,ADD_0,BIT2,BIT1,iDUB,ALT_ZERO]
     \\ FULL_SIMP_TAC arith_ss []);
@@ -150,10 +151,10 @@ val NUMERAL_BIT_REVERSE = store_thm("NUMERAL_BIT_REVERSE",
 val NUMERAL_BIT_MODF = prove(
   `(!f x b e y. BIT_MODF 0 f x b e y = y) /\
    (!n f b e y. BIT_MODF (SUC n) f 0 b (NUMERAL e) y =
-      BIT_MODF n f 0 (b + 1) (NUMERAL (iDUB e))
+      BIT_MODF n f 0 (b + 1) (NUMERAL (numeral$iDUB e))
               (if f b F then (NUMERAL e) + y else y)) /\
    (!n f x b e y. BIT_MODF (SUC n) f (NUMERAL x) b (NUMERAL e) y =
-      BIT_MODF n f (DIV2 (NUMERAL x)) (b + 1) (NUMERAL (iDUB e))
+      BIT_MODF n f (DIV2 (NUMERAL x)) (b + 1) (NUMERAL (numeral$iDUB e))
               (if f b (ODD x) then (NUMERAL e) + y else y))`,
   RW_TAC bool_ss [BIT_MODF_def,SBIT_def,NUMERAL_DEF,DIV2_def,
            ADD,ADD_0,BIT2,BIT1,iDUB,ALT_ZERO]
@@ -170,14 +171,14 @@ val NUMERAL_BIT_MODIFY = store_thm("NUMERAL_BIT_MODIFY",
 (* ------------------------------------------------------------------------- *)
 
 val TIMES_2EXP_lem = prove(
-  `!n. FUNPOW iDUB n 1 = 2 ** n`,
+  `!n. FUNPOW numeral$iDUB n 1 = 2 ** n`,
   Induct \\ ASM_SIMP_TAC arith_ss
     [EXP,CONJUNCT1 FUNPOW,FUNPOW_SUC,iDUB,GSYM TIMES2]);
 
 val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
   `(!n. TIMES_2EXP n 0 = 0) /\ (!x. TIMES_2EXP 0 x = x) /\
   !x n. TIMES_2EXP (NUMERAL x) (NUMERAL n) =
-     (NUMERAL n) * NUMERAL (FUNPOW iDUB (NUMERAL x) (BIT1 ZERO))`,
+     (NUMERAL n) * NUMERAL (FUNPOW numeral$iDUB (NUMERAL x) (BIT1 ZERO))`,
   `BIT1 ZERO = 1` by REWRITE_TAC [NUMERAL_DEF,BIT1,ALT_ZERO]
     \\ POP_ASSUM SUBST1_TAC
     \\ REWRITE_TAC [TIMES_2EXP_def,TIMES_2EXP_lem,NUMERAL_DEF]
@@ -190,7 +191,7 @@ val DIV_2EXP = prove(
             DIV_2EXP x (DIV2 (NUMERAL n)))`,
   RW_TAC arith_ss [DIV_2EXP_def,DIV2_def,EXP,ZERO_DIV,
     DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]);
-    
+
 val NUMERAL_DIV_2EXP = save_thm("NUMERAL_DIV_2EXP", SUC_RULE DIV_2EXP);
 
 (* ------------------------------------------------------------------------- *)
@@ -224,7 +225,7 @@ val numeral_ilog2 = store_thm("numeral_ilog2",
              (Once o GSYM) EXP,logrootTheory.LOG]]);
 
 val numeral_log2 = store_thm("numeral_log2",
-  `(!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (iDUB n)) /\
+  `(!n. LOG2 (NUMERAL (BIT1 n)) = iLOG2 (numeral$iDUB n)) /\
    (!n. LOG2 (NUMERAL (BIT2 n)) = iLOG2 (BIT1 n))`,
   RW_TAC bool_ss [ALT_ZERO,NUMERAL_DEF,BIT1,BIT2,iLOG2_def,numeralTheory.iDUB]
     \\ SIMP_TAC arith_ss []);
@@ -246,7 +247,7 @@ val NUMERAL_1b = prove(
     \\ SIMP_TAC bool_ss [BIT1, BIT2, NUMERAL_DEF]
     \\ DECIDE_TAC);
 
-val iDUB_SUC = prove(`!n. iDUB (SUC n) = BIT2 n`,
+val iDUB_SUC = prove(`!n. numeral$iDUB (SUC n) = BIT2 n`,
   SIMP_TAC bool_ss [iDUB, BIT2, ADD1] \\ DECIDE_TAC);
 
 val DIV2_BIT1_SUC = prove(
@@ -302,7 +303,7 @@ val BIT_REV_compute = prove(
   Cases \\ REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_REV_def, EXP, SBIT_def]);
 
 val TIMES_2EXP_compute = prove(
-  `!n x. TIMES_2EXP n x = if x = 0 then 0 else x * FUNPOW iDUB n 1`,
+  `!n x. TIMES_2EXP n x = if x = 0 then 0 else x * FUNPOW numeral$iDUB n 1`,
   RW_TAC bool_ss
          [MULT, REWRITE_RULE [NUMERAL_DEF] NUMERAL_TIMES_2EXP,CONJUNCT1 FUNPOW]
     \\ PROVE_TAC [NUMERAL_DEF]);
