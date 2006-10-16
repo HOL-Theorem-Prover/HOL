@@ -1029,7 +1029,7 @@ fun get_name tm =
 (* ``f x1 ... xn = e`` --> (defun f (x1 ... xn) ^(term_to_mlsexp e))         *)
 (*****************************************************************************)
 fun deftm_to_mlsexp_defun tm =
- let val (l,r) = dest_eq tm
+ let val (l,r) = dest_eq(spec_all tm)
      val (opr, args) = strip_comb l
  in
   mk_mlsexp_list
@@ -1832,7 +1832,7 @@ fun concat_with_spaces []      = ""
 (*****************************************************************************)
 (* Get list of things being defined by a mutual recursion                    *)
 (*****************************************************************************)
-val get_defined_list = map get_defined o strip_conj;
+val get_defined_list = map get_defined o strip_conj o spec_all;
 
 (*****************************************************************************)
 (* Space-separated concatenation of names of defuns in a mutual-recursion    *)
@@ -1992,7 +1992,7 @@ fun install_def(defun tm) =
          val newtm =
               subst
                (map2 (fn opr => fn con => (opr |-> con)) tms con_list)
-               tm
+               (spec_all tm)
          val hol_name = create_hol_name acl2_name
          val defthm_thm =
               save_thm
