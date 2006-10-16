@@ -1,6 +1,6 @@
 \DOC TRY_CONV
 
-\TYPE {TRY_CONV : (conv -> conv)}
+\TYPE {TRY_CONV : conv -> conv}
 
 \SYNOPSIS
 Attempts to apply a conversion; applies identity conversion in case of failure.
@@ -9,15 +9,19 @@ Attempts to apply a conversion; applies identity conversion in case of failure.
 conversion, failure.
 
 \DESCRIBE
-{TRY_CONV c "t"} attempts to apply the conversion {c} to the term {"t"}; if
-this fails, then the identity conversion applied instead.  That is, if {c} is a
-conversion that maps a term {"t"} to the theorem {|- t = t'}, then the
-conversion {TRY_CONV c} also maps {"t"} to {|- t = t'}. But if {c} fails when
-applied to {"t"}, then {TRY_CONV c "t"} returns {|- t = t}.
+
+{TRY_CONV c t} attempts to apply the conversion {c} to the term {t};
+if this fails, then the identity conversion is applied instead.  That
+is, if {c} is a conversion that maps a term {t} to the theorem {|- t = t'},
+then the conversion {TRY_CONV c} also maps {t} to {|- t = t'}. But if {c}
+fails when applied to {t}, then {TRY_CONV c t} raises the {UNCHANGED}
+exception (which is understood to mean the instance of reflexivity,
+{|- t = t}).  If {c} applied to {t} raises the {UNCHANGED} exception,
+then so too does {TRY_CONV c t}.
 
 \FAILURE
-Never fails.
+Never fails, though the {UNCHANGED} exception can be raised.
 
 \SEEALSO
-Conv.ALL_CONV.
+Conv.ALL_CONV, Conv.QCONV.
 \ENDDOC
