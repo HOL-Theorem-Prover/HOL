@@ -11,7 +11,7 @@ sig
      taking, for example with sum_eq_norm,
        x + (y + 7) = x + 10
      to
-       x = 3
+       y = 3
      They all assume that both expressions have already been canonicalised
      with ADDR_CANON_CONV
   *)
