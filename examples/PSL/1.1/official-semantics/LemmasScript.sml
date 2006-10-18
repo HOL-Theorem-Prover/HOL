@@ -235,7 +235,7 @@ val sere_induct = save_thm
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
          [`P`,`\(r1,r2). P r1 /\ P r2`,`\(r,b). P r`]
-         (TypeBase.induction_of "sere")))));
+         (TypeBase.induction_of ``:'a sere``)))));
 
 val LAST_APPEND_CONS =
  store_thm

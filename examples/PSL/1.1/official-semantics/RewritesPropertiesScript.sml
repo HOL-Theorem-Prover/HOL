@@ -169,7 +169,7 @@ val fl_induct =
         PROVE[]``(!x y. P y ==> Q(x,y)) = !y. P y ==> !x. Q(x,y)``]
        (Q.SPECL
          [`P`,`\(f1,f2). P f1 /\ P f2`,`\(r,f). P f`,`\(f,b). P f`]
-         (TypeBase.induction_of "fl")))));
+         (TypeBase.induction_of ``:'a fl``)))));
 
 val LS_LE_X =
  store_thm
