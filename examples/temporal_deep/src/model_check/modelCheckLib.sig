@@ -17,6 +17,8 @@ sig
   path showing a counterexample and return NONE.
 *)
 
+(*The file used to interact with smv*)
+val model_check_temp_file : string ref;
 
 val ctl_ks_fair2smv_string : Abbrev.term -> TextIO.outstream -> string
 val fair_empty_ks2smv_string : Abbrev.term -> TextIO.outstream -> string

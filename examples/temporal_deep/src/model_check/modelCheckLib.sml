@@ -41,7 +41,7 @@ quietdec := false;
 *)
 
 
-val model_check_temp_file = ref "/home/tt291/Desktop/smv_file2.smv";
+val model_check_temp_file = ref "smv_file.smv";
 
 
 val _ = init 10000000 1000000;
@@ -548,7 +548,7 @@ fun model_check___ks_fair_emptyness thm =
       val ks_term = rhs (rand (body (rand (concl thm))))
       val eq_term = lhs (rand (body (rand (concl thm))))
       val erg = modelCheckFairEmptyness ks_term thm;
-      val thm = if erg then (SOME (mk_oracle_thm (Tag.read "SMV") ([], eq_term))) else NONE
+      val thm = if erg then (SOME (mk_oracle_thm "SMV" ([], eq_term))) else NONE
     in
       thm
     end

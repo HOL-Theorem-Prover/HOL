@@ -698,7 +698,7 @@ fun make_total_thm A =
   let
     val t = liteLib.mk_icomb (``IS_TOTAL_SYMBOLIC_SEMI_AUTOMATON:'a symbolic_semi_automaton -> bool``, A);
   in
-    mk_oracle_thm (Tag.read "TotalityAssumed") ([], t)
+    mk_oracle_thm "TotalityAssumed" ([], t)
   end;
 
 
