@@ -51,10 +51,10 @@ val Sb_def = Define `Sb = $:-`;
 
 (* ------------------------------------------------------------------------- *)
 
-val STATE_ARMe_NEXT = store_thm("STATE_ARMe_NEXT",
-  `!t a b c. (STATE_ARMe t a = b) /\ (NEXT_ARMe b = c) ==>
-             (STATE_ARMe (t + 1) a = c)`,
-  RW_TAC bool_ss [STATE_ARMe_def,GSYM arithmeticTheory.ADD1]);
+val STATE_ARM_MEM_NEXT = store_thm("STATE_ARM_MEM_NEXT",
+  `!t a b c. (STATE_ARM_MEM t a = b) /\ (NEXT_ARM_MEM b = c) ==>
+             (STATE_ARM_MEM (t + 1) a = c)`,
+  RW_TAC bool_ss [STATE_ARM_MEM_def,GSYM arithmeticTheory.ADD1]);
 
 val SUBST_EQ2 = store_thm("SUBST_EQ2",
   `!m a v. (m a = v) ==> ((a :- v) m = m)`,
@@ -69,10 +69,6 @@ val Sab_EQ = store_thm("Sab_EQ",
    (Sb a e (Sb a d m) = Sb a e m) /\
    (Sa a e (Sa a d m) = Sa a e m)`,
   RW_TAC std_ss [Sa_def,Sb_def,SUBST_EQ]);
-
-val SUBST_EVAL = store_thm("SUBST_EVAL",
-  `!a w b. (a :- w) m b = if a = b then w else m b`,
-  RW_TAC std_ss [SUBST_def]);
 
 (* --- *)
 
@@ -119,16 +115,16 @@ val Sb_RULE4 = store_thm("Sb_RULE4",
 (* --- *)
 
 val SUBST_COMMUTES_PSR = store_thm("SUBST_COMMUTES_PSR",
-  `!m a b d e. psrs2num b < psrs2num a ==>
+  `!m a b d e. psr2num b < psr2num a ==>
      ((a :- e) ((b :- d) m) = (b :- d) ((a :- e) m))`,
   REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
     \\ IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
     \\ RW_TAC bool_ss [SUBST_def]
-    \\ FULL_SIMP_TAC bool_ss [psrs2num_11]);
+    \\ FULL_SIMP_TAC bool_ss [psr2num_11]);
 
 val Sa_RULE_PSR = store_thm("Sa_RULE_PSR",
   `!m a b d e. Sa a e (Sa b d m) =
-     if psrs2num a < psrs2num b then
+     if psr2num a < psr2num b then
        Sb b d (Sa a e m)
      else
        Sb a e (Sa b d m)`,
@@ -136,7 +132,7 @@ val Sa_RULE_PSR = store_thm("Sa_RULE_PSR",
 
 val Sb_RULE_PSR = store_thm("Sb_RULE_PSR",
   `!m a b d e. Sa a e (Sb b d m) =
-     if psrs2num a < psrs2num b then
+     if psr2num a < psr2num b then
        Sb b d (Sa a e m)
      else
        Sb a e (Sb b d m)`,
@@ -448,7 +444,7 @@ val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
    (!psr x. CPSR_READ (CPSR_WRITE psr x) = x)`,
   RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_WRITE_def,SUBST_def,
          USER_def,mode2psr_def]
-    \\ Cases_on `m` \\ FULL_SIMP_TAC bool_ss [mode_case_def,psrs_distinct]);
+    \\ Cases_on `m` \\ FULL_SIMP_TAC bool_ss [mode_case_def,psr_distinct]);
 
 val CPSR_READ_WRITE = store_thm("CPSR_READ_WRITE",
   `(!psr. CPSR_WRITE psr (CPSR_READ psr) = psr) /\
@@ -469,7 +465,7 @@ val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
                CPSR_WRITE (SPSR_WRITE psr m y) x`,
   RW_TAC bool_ss [SPSR_WRITE_def,CPSR_WRITE_def,USER_def,mode2psr_def]
     \\ Cases_on `m`
-    \\ FULL_SIMP_TAC bool_ss [mode_distinct,mode_case_def,psrs_distinct,
+    \\ FULL_SIMP_TAC bool_ss [mode_distinct,mode_case_def,psr_distinct,
          SUBST_NE_COMMUTES]);
 
 val SPSR_READ_WRITE = store_thm("SPSR_READ_WRITE",
@@ -500,6 +496,10 @@ val lem = prove(
   `!w:word32 i. i < 5 ==> (((4 >< 0) w) :word5 %% i = w %% i)`,
   RW_TAC word_ss [word_extract_def,word_bits_def,w2w]);
 
+val w2n_mod = prove(
+  `!a:'a word b. (a = n2w b) = (w2n a = b MOD dimword (:'a))`,
+  Cases_word \\ REWRITE_TAC [n2w_11,w2n_n2w]);
+
 val PSR_CONS = store_thm("PSR_CONS",
    `!w:word32. w =
        let m = DECODE_MODE ((4 >< 0) w) in
@@ -525,9 +525,15 @@ val PSR_CONS = store_thm("PSR_CONS",
           `~(mode_num m = 0w)`
             by (Cases_on `m` \\ RW_TAC std_ss [mode_num_def] \\ EVAL_TAC)
             \\ POP_ASSUM MP_TAC \\ UNABBREV_TAC `m`
-            \\ RW_TAC (word_ss++ARITH_ss)
-                 [DECODE_MODE_def,mode_num_def,n2w_def,lem]
-            \\ POP_ASSUM MP_TAC \\ ASM_SIMP_TAC word_ss []]]);
+            \\ `w %% i = ((4 >< 0) w):word5 %% i` by METIS_TAC [lem]
+            \\ ASM_REWRITE_TAC [] \\ ABBREV_TAC `x = ((4 >< 0) w):word5`
+            \\ Cases_on `(x = 16w) \/ (x = 17w) \/ (x = 18w) \/
+                         (x = 19w) \/ (x = 23w) \/ (x = 27w)`
+            \\ FULL_SIMP_TAC std_ss [] \\ SRW_TAC
+                 [fcpLib.FCP_ss,wordsLib.SIZES_ss,ARITH_ss,boolSimps.LET_ss]
+                 [DECODE_MODE_def,mode_num_def]
+            \\ POP_ASSUM MP_TAC
+            \\ FULL_SIMP_TAC (srw_ss()++wordsLib.SIZES_ss) [w2n_mod]]]);
 
 val word_modify_PSR = save_thm("word_modify_PSR",
   SIMP_CONV std_ss [SET_NZCV_def,SET_IFMODE_def]
@@ -572,28 +578,6 @@ val DECODE_PSRD_def = Define`
   (DECODE_PSRD CPSR_c = (F,F,T)) /\ (DECODE_PSRD CPSR_f = (F,T,F)) /\
   (DECODE_PSRD CPSR_a = (F,T,T)) /\ (DECODE_PSRD SPSR_c = (T,F,T)) /\
   (DECODE_PSRD SPSR_f = (T,T,F)) /\ (DECODE_PSRD SPSR_a = (T,T,T))`;
-
-val CONDITION_PASSED3_def = Define`
-  CONDITION_PASSED3 (N,Z,C,V) cond =
-    case cond of
-       EQ -> Z
-    || NE -> ~Z
-    || CS -> C
-    || CC -> ~C
-    || MI -> N
-    || PL -> ~N
-    || VS -> V
-    || VC -> ~V
-    || HI -> C /\ ~Z
-    || LS -> ~C \/ Z
-    || GE -> N = V
-    || LT -> ~(N = V)
-    || GT -> ~Z /\ (N = V)
-    || LE -> Z \/ ~(N = V)
-    || AL -> T
-    || NV -> F`;
-
-val _ = overload_on("enc", ``instruction_encode``);
 
 val IS_REG_SHIFT_def = Define`
   (IS_REG_SHIFT (Dp_immediate rot i) = F) /\
@@ -1185,7 +1169,7 @@ val word_frags = [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,
 
 val pass_frags =
  [ARITH_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,boolSimps.LET_ss,
-  rewrites [CONDITION_PASSED_def,CONDITION_PASSED2_def,CONDITION_PASSED3_def,
+  rewrites [CONDITION_PASSED_def,CONDITION_PASSED2_def,
     GSYM WORD_BITS_OVER_BITWISE,WORD_OR_CLAUSES,BITS_w2n_ZERO,WORD_BITS_LSL,
     word_bits_n2w,w2w_def,instruction_encode_def,condition_code_lem3]];
 
@@ -1238,15 +1222,15 @@ val PASS_TAC = REPEAT STRIP_TAC \\ Cases_on_nzcv `flgs`
 val cond_pass_enc_br = store_thm("cond_pass_enc_br",
   `(!cond flgs offset.
       CONDITION_PASSED flgs (enc (instruction$B cond offset)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond flgs offset.
       CONDITION_PASSED flgs (enc (instruction$BL cond offset)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
 
 val cond_pass_enc_swi = store_thm("cond_pass_enc_swi",
   `!cond flgs. CONDITION_PASSED flgs (enc (instruction$SWI cond)) =
-               CONDITION_PASSED3 flgs cond`,
+               CONDITION_PASSED2 flgs cond`,
   PASS_TAC);
 
 val cond_pass_enc_data_proc = prove(
@@ -1257,7 +1241,7 @@ val cond_pass_enc_data_proc = prove(
              instruction$ORR; instruction$BIC} ==>
    (!cond s rd rn op2.
       CONDITION_PASSED flgs (enc (f cond s rd rn op2)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   SRW_TAC [] [] \\ PASS_TAC);
 
 val cond_pass_enc_data_proc2 = prove(
@@ -1265,88 +1249,88 @@ val cond_pass_enc_data_proc2 = prove(
              instruction$CMP; instruction$CMN} ==>
    (!cond rn op2.
       CONDITION_PASSED flgs (enc (f cond rn op2)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   SRW_TAC [] [] \\ PASS_TAC);
 
 val cond_pass_enc_data_proc3 = prove(
   `!f. f IN {instruction$MOV; instruction$MVN} ==>
    (!cond s rd op2.
       CONDITION_PASSED flgs (enc (f cond s rd op2)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   SRW_TAC [] [] \\ PASS_TAC);
 
 val cond_pass_enc_mla_mul = store_thm("cond_pass_enc_mla_mul",
   `(!cond s rd rm rs.
       CONDITION_PASSED flgs (enc (instruction$MUL cond s rd rm rs)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond s rd rm rs rn.
       CONDITION_PASSED flgs (enc (instruction$MLA cond s rd rm rs rn)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
       CONDITION_PASSED flgs (enc (instruction$UMULL cond s rdhi rdlo rm rs)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
       CONDITION_PASSED flgs (enc (instruction$UMLAL cond s rdhi rdlo rm rs)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
       CONDITION_PASSED flgs (enc (instruction$SMULL cond s rdhi rdlo rm rs)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
       CONDITION_PASSED flgs (enc (instruction$SMLAL cond s rdhi rdlo rm rs)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
 
 val cond_pass_enc_ldr_str = store_thm("cond_pass_enc_ldr_str",
   `(!cond opt rd rn offset.
       CONDITION_PASSED flgs (enc (instruction$LDR cond opt rd rn offset)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond opt rd rn offset.
       CONDITION_PASSED flgs (enc (instruction$STR cond opt rd rn offset)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
 
 val cond_pass_enc_ldm_stm = store_thm("cond_pass_enc_ldm_stm",
   `(!cond opt rn list.
       CONDITION_PASSED flgs (enc (instruction$LDM cond opt rn list)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond opt rn list.
       CONDITION_PASSED flgs (enc (instruction$STM cond opt rn list)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
 
 val cond_pass_enc_swp = store_thm("cond_pass_enc_swp",
   `!cond b rd rm rn.
       CONDITION_PASSED flgs (enc (instruction$SWP cond b rd rm rn)) =
-      CONDITION_PASSED3 flgs cond`,
+      CONDITION_PASSED2 flgs cond`,
   PASS_TAC);
 
 val cond_pass_enc_mrs = store_thm("cond_pass_enc_mrs",
   `!cond r rd.
       CONDITION_PASSED flgs (enc (instruction$MRS cond r rd)) =
-      CONDITION_PASSED3 flgs cond`,
+      CONDITION_PASSED2 flgs cond`,
   PASS_TAC);
 
 val cond_pass_enc_msr = store_thm("cond_pass_enc_msr",
   `!cond psrd op.
       CONDITION_PASSED flgs (enc (instruction$MSR cond psrd op)) =
-      CONDITION_PASSED3 flgs cond`,
+      CONDITION_PASSED2 flgs cond`,
   PASS_TAC);
 
 val cond_pass_enc_coproc = store_thm("cond_pass_enc_coproc",
   `(!cond cpn cop1 crd crn crm cop2.
       CONDITION_PASSED flgs
         (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond. CONDITION_PASSED flgs (enc (instruction$UND cond)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond cpn cop1 rd crn crm cop2.
       CONDITION_PASSED flgs
         (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) =
-      CONDITION_PASSED3 flgs cond) /\
+      CONDITION_PASSED2 flgs cond) /\
    (!cond cpn cop1 rd crn crm cop2.
       CONDITION_PASSED flgs
         (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) =
-      CONDITION_PASSED3 flgs cond)`,
+      CONDITION_PASSED2 flgs cond)`,
   PASS_TAC);
 
 (* ......................................................................... *)
@@ -1395,86 +1379,3 @@ val decode_enc_data_proc3 = save_thm("decode_enc_data_proc3",
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();
-
-(* ------------------------------------------------------------------------- *)
-
-(*
-val ABS_ARMe_def = Define`
-  ABS_ARMe state  =
-     ARM_EX (ARM state.registers state.psrs)
-       (state.memory (ADDR30 (FETCH_PC state.registers)))
-       (if state.undefined then undefined else software)`;
-
-val ABS_STRMe_def = Define`
-  ABS_STRMe a t =
-    let s0 = STATE_ARMe t a and s1 = STATE_ARMe (SUC t) a in
-      (if s1.undefined then SOME Undef else NONE, T,
-       s1.memory (ADDR30 (FETCH_PC s1.registers)),
-       SND (TRANSFERS s0.memory [] (OUT_ARM (ABS_ARMe s0))))`;
-
-val trans = GEN_ALL o SIMP_CONV (srw_ss()) [SNOC,HD,TRANSFERS_def];
-val TRANSFER_LDR = trans ``TRANSFERS mem [] [MemRead a]``;
-val TRANSFER_STR = trans ``TRANSFERS mem [] [MemWrite b a d]``;
-val TRANSFER_SWP = trans ``TRANSFERS mem [] [MemRead a; MemWrite b a2 d]``;
-val alu_nchotomy = METIS_PROVE [pairTheory.ABS_PAIR_THM]
-  ``!a. ?n z c v r. (a:(bool # bool # bool # bool) # word32) = ((n,z,c,v),r)``;
-
-fun Cases_on_alu tm = SPEC_THEN tm FULL_STRUCT_CASES_TAC alu_nchotomy;
-
-val DECODE_INST_LDM = store_thm("DECODE_INST_LDM",
-  `!i. (DECODE_INST i = ldm) ==> i %% 20`,
-  RW_TAC arith_ss [DECODE_INST_def]);
-
-val DECODE_INST_STM = store_thm("DECODE_INST_STM",
-  `!i. (DECODE_INST i = stm) ==> ~(i %% 20)`,
-  RW_TAC arith_ss [DECODE_INST_def]);
-
-val ARMe_CORRECT = Count.apply store_thm("ARMe_CORRECT",
-  `!t a. ABS_ARMe (STATE_ARMe t a) =
-         STATE_ARM t <| state := ABS_ARMe a; inp := ABS_STRMe a |>`,
-  Induct \\ STRIP_TAC \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss)
-         [STATE_ARM_def,STATE_ARMe_def,ABS_STRMe_def]
-    \\ POP_ASSUM (SUBST1_TAC o SYM o SPEC `a`)
-    \\ ABBREV_TAC `s = STATE_ARMe t a`
-    \\ ABBREV_TAC `ns = NEXT_ARMe s` \\ POP_ASSUM MP_TAC
-    \\ ABBREV_TAC `ireg = s.memory (ADDR30 (FETCH_PC s.registers))`
-    \\ ABBREV_TAC `mode = DECODE_MODE ((4 >< 0) (CPSR_READ s.psrs))`
-    \\ SIMP_TAC (srw_ss()++armLib.PBETA_ss++boolSimps.LET_ss)
-         [IS_Reset_def,IS_Dabort_def,ABS_ARMe_def,OUT_ARM_def,DECODE_PSR_def,
-          NEXT_ARMe_def,NEXT_ARM_def]
-    \\ Cases_on `s.undefined`
-    \\ ASM_SIMP_TAC (srw_ss()) [CONJUNCT1 TRANSFERS_def]
-    << [
-      SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-             [EXEC_INST_def,EXCEPTION_def]
-        \\ STRIP_TAC \\ UNABBREV_TAC `ns`
-        \\ SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-             [PROJ_IF_FLAGS_def,interrupt2exceptions_def],
-       Tactical.REVERSE
-        (Cases_on `CONDITION_PASSED (NZCV (CPSR_READ s.psrs)) ireg`)
-        \\ ASM_SIMP_TAC (srw_ss()) [CONJUNCT1 TRANSFERS_def]
-        << [
-          ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-                 [EXEC_INST_def,DECODE_PSR_def]
-            \\ STRIP_TAC \\ UNABBREV_TAC `ns`
-            \\ SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-                 [PROJ_IF_FLAGS_def,interrupt2exceptions_def],
-          Cases_on `DECODE_INST ireg`
-            \\ MAP_EVERY IMP_RES_TAC [DECODE_INST_LDM,DECODE_INST_STM]
-            \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-              [EXEC_INST_def,NEXT_ARM_def,EXCEPTION_def,PROJ_IF_FLAGS_def,
-               IS_Reset_def,IS_Dabort_def,DECODE_PSR_def,
-               TRANSFER_LDR,TRANSFER_STR,TRANSFER_SWP,
-               LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def,
-               LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def,
-               SWP_def,DECODE_SWP_def,MLA_MUL_def,DECODE_MLA_MUL_def,
-               MRS_def,DECODE_MRS_def,MSR_def,DECODE_MSR_def,
-               DATA_PROCESSING_def,ADDR_MODE1_def,
-               BRANCH_def,DECODE_BRANCH_def]
-            \\ TRY (PAT_ABBREV_TAC `alu = ALU opc rn op2 c` \\
-                    Cases_on_alu `alu`)
-            \\ STRIP_TAC \\ UNABBREV_TAC `ns`
-            \\ RW_TAC (srw_ss()++boolSimps.LET_ss++armLib.PBETA_ss)
-                 [PROJ_IF_FLAGS_def,DECODE_PSR_def,interrupt2exceptions_def]
-            \\ FULL_SIMP_TAC (srw_ss()) []]]);
-*)

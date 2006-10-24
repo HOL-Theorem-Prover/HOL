@@ -1,6 +1,6 @@
 signature armML = 
 sig
-  type ('a, 'b) cart = ('a, 'b) wordsML.cart
+  type 'a word = 'a wordsML.word
   type num = numML.num
   datatype register
        = r0
@@ -35,9 +35,9 @@ sig
        | r13_und
        | r14_und
   val register_size : register -> num
-  datatype psrs
+  datatype psr
        = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und
-  val psrs_size : psrs -> num
+  val psr_size : psr -> num
   datatype mode = usr | fiq | irq | svc | abt | und | safe
   val mode_size : mode -> num
   datatype condition
@@ -64,352 +64,245 @@ sig
   val iclass_size : iclass -> num
   type ('a,'b) state_inp
   type ('a,'b) state_out
-  eqtype i2
-  eqtype i4
-  eqtype i5
-  eqtype i8
-  eqtype i12
-  eqtype i16
-  eqtype i24
-  eqtype i30
-  eqtype i32
-  datatype state_arm
-       = ARM of (register -> (bool, i32) cart) *
-                (psrs -> (bool, i32) cart)
-  val state_arm_size : state_arm -> num
-  datatype state_arm_ex
-       = ARM_EX of state_arm * (bool, i32) cart * exceptions
-  val state_arm_ex_size : state_arm_ex -> num
-  datatype memop
-       = MemRead of (bool, i32) cart
-       | MemWrite of bool * (bool, i32) cart * (bool, i32) cart
-       | CPMemRead of bool * (bool, i32) cart
-       | CPMemWrite of bool * (bool, i32) cart
-       | CPWrite of (bool, i32) cart
-  val memop_size : memop -> num
-  type interrupts
+  type word2 = wordsML.word2
+  type word4 = wordsML.word4
+  type word5 = wordsML.word5
+  type word8 = wordsML.word8
+  type word12 = wordsML.word12
+  type word16 = wordsML.word16
+  type word24 = wordsML.word24
+  type word30 = wordsML.word30
+  type word32 = wordsML.word32
+  type registers = register->word32
+  type psrs = psr->word32
+  type mem = (word30, word32) Redblackmap.dict
   datatype
-  state_arme = state_arme of
-    (register -> (bool, i32) cart) *
-    (psrs -> (bool, i32) cart) *
-    ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict *
-    bool
-  val state_arme_undefined : state_arme -> bool
-  val state_arme_memory
-     : state_arme -> ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
-  val state_arme_psrs : state_arme -> psrs -> (bool, i32) cart
-  val state_arme_registers : state_arme -> register -> (bool, i32) cart
-  val state_arme_undefined_fupd
-     : (bool -> bool) -> state_arme -> state_arme
-  val state_arme_memory_fupd
-     : (((bool, i30) cart, (bool, i32) cart) Redblackmap.dict ->
-        ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict) ->
-       state_arme -> state_arme
-  val state_arme_psrs_fupd
-     : ((psrs -> (bool, i32) cart) -> psrs -> (bool, i32) cart) ->
-       state_arme -> state_arme
-  val state_arme_registers_fupd
-     : ((register -> (bool, i32) cart) -> register -> (bool, i32) cart)
-       -> state_arme -> state_arme
-  val state_arme_size : state_arme -> num
+  arm_state = arm_state of (registers) * (psrs) * word32 * exceptions
+  val arm_state_exception : arm_state -> exceptions
+  val arm_state_ireg : arm_state -> word32
+  val arm_state_psrs : arm_state -> psrs
+  val arm_state_registers : arm_state -> registers
+  val arm_state_exception_fupd
+     : (exceptions -> exceptions) -> arm_state -> arm_state
+  val arm_state_ireg_fupd : (word32 -> word32) -> arm_state -> arm_state
+  val arm_state_psrs_fupd : (psrs -> psrs) -> arm_state -> arm_state
+  val arm_state_registers_fupd
+     : (registers -> registers) -> arm_state -> arm_state
+  val arm_state_size : arm_state -> num
+  datatype
+  arm_mem_state = arm_mem_state of (registers) * (psrs) * (mem) * bool
+  val arm_mem_state_undefined : arm_mem_state -> bool
+  val arm_mem_state_memory : arm_mem_state -> mem
+  val arm_mem_state_psrs : arm_mem_state -> psrs
+  val arm_mem_state_registers : arm_mem_state -> registers
+  val arm_mem_state_undefined_fupd
+     : (bool -> bool) -> arm_mem_state -> arm_mem_state
+  val arm_mem_state_memory_fupd
+     : (mem -> mem) -> arm_mem_state -> arm_mem_state
+  val arm_mem_state_psrs_fupd
+     : (psrs -> psrs) -> arm_mem_state -> arm_mem_state
+  val arm_mem_state_registers_fupd
+     : (registers -> registers) -> arm_mem_state -> arm_mem_state
+  val arm_mem_state_size : arm_mem_state -> num
+  datatype regs = regs of (registers) * (psrs)
+  val regs_psr : regs -> psrs
+  val regs_reg : regs -> registers
+  val regs_psr_fupd : (psrs -> psrs) -> regs -> regs
+  val regs_reg_fupd : (registers -> registers) -> regs -> regs
+  val regs_size : regs -> num
+  datatype interrupt
+       = Reset of regs | Undef | Prefetch | Dabort of num | Fiq | Irq
+  val interrupt_size : interrupt -> num
+  datatype
+  arm_input = arm_input of word32 * word32 list * interrupt option *
+                           bool
+  val arm_input_no_cp : arm_input -> bool
+  val arm_input_interrupt : arm_input -> interrupt option
+  val arm_input_data : arm_input -> word32 list
+  val arm_input_ireg : arm_input -> word32
+  val arm_input_no_cp_fupd : (bool -> bool) -> arm_input -> arm_input
+  val arm_input_interrupt_fupd
+     : (interrupt option -> interrupt option) -> arm_input -> arm_input
+  val arm_input_data_fupd
+     : (word32 list -> word32 list) -> arm_input -> arm_input
+  val arm_input_ireg_fupd : (word32 -> word32) -> arm_input -> arm_input
+  val arm_input_size : arm_input -> num
+  datatype memop
+       = MemRead of word32
+       | MemWrite of bool * word32 * word32
+       | CPMemRead of word32
+       | CPMemWrite of word32
+       | CPWrite of word32
+  val memop_size : memop -> num
   val DECODE_PSR
-     : (bool, i32) cart ->
-       (bool * (bool * (bool * bool))) *
-       (bool * (bool * (bool, i5) cart))
-  val DECODE_BRANCH : (bool, i32) cart -> bool * (bool, i24) cart
+     : word32 ->
+       (bool * (bool * (bool * bool))) * (bool * (bool * word5))
+  val DECODE_BRANCH : word32 -> bool * word24
   val DECODE_DATAP
-     : (bool, i32) cart ->
-       bool *
-       ((bool, i4) cart *
-        (bool *
-         ((bool, i4) cart * ((bool, i4) cart * (bool, i12) cart))))
-  val DECODE_MRS : (bool, i32) cart -> bool * (bool, i4) cart
+     : word32 -> bool * (word4 * (bool * (word4 * (word4 * word12))))
+  val DECODE_MRS : word32 -> bool * word4
   val DECODE_MSR
-     : (bool, i32) cart ->
-       bool *
-       (bool * (bool * (bool * ((bool, i4) cart * (bool, i12) cart))))
+     : word32 -> bool * (bool * (bool * (bool * (word4 * word12))))
   val DECODE_LDR_STR
-     : (bool, i32) cart ->
+     : word32 ->
        bool *
        (bool *
-        (bool *
-         (bool *
-          (bool *
-           (bool *
-            ((bool, i4) cart *
-             ((bool, i4) cart * (bool, i12) cart)))))))
+        (bool * (bool * (bool * (bool * (word4 * (word4 * word12)))))))
   val DECODE_MLA_MUL
-     : (bool, i32) cart ->
+     : word32 ->
        bool *
-       (bool *
-        (bool *
-         (bool *
-          ((bool, i4) cart *
-           ((bool, i4) cart * ((bool, i4) cart * (bool, i4) cart))))))
+       (bool * (bool * (bool * (word4 * (word4 * (word4 * word4))))))
   val DECODE_LDM_STM
-     : (bool, i32) cart ->
-       bool *
-       (bool *
-        (bool * (bool * (bool * ((bool, i4) cart * (bool, i16) cart)))))
-  val DECODE_SWP
-     : (bool, i32) cart ->
-       bool * ((bool, i4) cart * ((bool, i4) cart * (bool, i4) cart))
+     : word32 ->
+       bool * (bool * (bool * (bool * (bool * (word4 * word16)))))
+  val DECODE_SWP : word32 -> bool * (word4 * (word4 * word4))
   val DECODE_LDC_STC
-     : (bool, i32) cart ->
-       bool *
-       (bool * (bool * (bool * ((bool, i4) cart * (bool, i8) cart))))
-  val DECODE_INST : (bool, i32) cart -> iclass
+     : word32 -> bool * (bool * (bool * (bool * (word4 * word8))))
+  val DECODE_INST : word32 -> iclass
   val :- : ''a -> 'b -> (''a -> 'b) -> ''a -> 'b
-  val ::-
-     : (bool, 'a) cart ->
-       'b list -> ((bool, 'a) cart -> 'b) -> (bool, 'a) cart -> 'b
+  val ::- : 'a word -> 'b list -> ('a word -> 'b) -> 'a word -> 'b
   val USER : mode -> bool
-  val mode_reg2num : mode -> (bool, i4) cart -> num
+  val mode_reg2num : mode -> word4 -> num
   val state_out_state : ('a, 'b) state_out -> 'a
   val state_out_out : ('a, 'b) state_out -> 'b
-  val num2register : num -> register
-  val num2condition : num -> condition
   val exceptions2num : exceptions -> num
   val register2num : register -> num
-  val REG_READ
-     : (register -> (bool, i32) cart) ->
-       mode -> (bool, i4) cart -> (bool, i32) cart
-  val REG_WRITE
-     : (register -> (bool, i32) cart) ->
-       mode ->
-       (bool, i4) cart ->
-       (bool, i32) cart -> register -> (bool, i32) cart
-  val INC_PC
-     : (register -> (bool, i32) cart) -> register -> (bool, i32) cart
-  val FETCH_PC : (register -> (bool, i32) cart) -> (bool, i32) cart
-  val SET_NZCV
-     : bool * (bool * (bool * bool)) ->
-       (bool, i32) cart -> (bool, i32) cart
-  val SET_NZC
-     : bool * (bool * bool) -> (bool, i32) cart -> (bool, i32) cart
-  val SET_NZ : bool * bool -> (bool, i32) cart -> (bool, i32) cart
-  val mode_num : mode -> (bool, i5) cart
-  val SET_IFMODE
-     : bool -> bool -> mode -> (bool, i32) cart -> (bool, i32) cart
-  val DECODE_MODE : (bool, i5) cart -> mode
-  val NZCV : (bool, i32) cart -> bool * (bool * (bool * bool))
+  val num2register : num -> register
+  val num2condition : num -> condition
+  val REG_READ : registers -> mode -> word4 -> word32
+  val REG_WRITE : registers -> mode -> word4 -> word32 -> registers
+  val INC_PC : registers -> registers
+  val FETCH_PC : registers -> word32
+  val SET_NZCV : bool * (bool * (bool * bool)) -> word32 -> word32
+  val SET_NZC : bool * (bool * bool) -> word32 -> word32
+  val SET_NZ : bool * bool -> word32 -> word32
+  val mode_num : mode -> word5
+  val SET_IFMODE : bool -> bool -> mode -> word32 -> word32
+  val DECODE_MODE : word5 -> mode
+  val NZCV : word32 -> bool * (bool * (bool * bool))
   val CARRY : 'b * ('c * ('a * 'd)) -> 'a
-  val mode2psr : mode -> psrs
-  val SPSR_READ : (psrs -> (bool, i32) cart) -> mode -> (bool, i32) cart
-  val CPSR_READ : (psrs -> (bool, i32) cart) -> (bool, i32) cart
-  val CPSR_WRITE
-     : (psrs -> (bool, i32) cart) ->
-       (bool, i32) cart -> psrs -> (bool, i32) cart
-  val SPSR_WRITE
-     : (psrs -> (bool, i32) cart) ->
-       mode -> (bool, i32) cart -> psrs -> (bool, i32) cart
-  val exceptions2mode : exceptions -> mode
-  val EXCEPTION : state_arm -> exceptions -> state_arm
-  val BRANCH : state_arm -> mode -> (bool, i32) cart -> state_arm
-  val LSL
-     : (bool, i32) cart ->
-       (bool, i8) cart -> bool -> bool * (bool, i32) cart
-  val LSR
-     : (bool, i32) cart ->
-       (bool, i8) cart -> bool -> bool * (bool, i32) cart
-  val ASR
-     : (bool, i32) cart ->
-       (bool, i8) cart -> bool -> bool * (bool, i32) cart
-  val ROR
-     : (bool, i32) cart ->
-       (bool, i8) cart -> bool -> bool * (bool, i32) cart
-  val IMMEDIATE : bool -> (bool, i12) cart -> bool * (bool, i32) cart
+  val mode2psr : mode -> psr
+  val SPSR_READ : psrs -> mode -> word32
+  val CPSR_READ : psrs -> word32
+  val CPSR_WRITE : psrs -> word32 -> psrs
+  val SPSR_WRITE : psrs -> mode -> word32 -> psrs
+  val exception2mode : exceptions -> mode
+  val EXCEPTION : registers -> psrs -> exceptions -> regs
+  val BRANCH : registers -> psrs -> mode -> word32 -> regs
+  val LSL : word32 -> word8 -> bool -> bool * word32
+  val LSR : word32 -> word8 -> bool -> bool * word32
+  val ASR : word32 -> word8 -> bool -> bool * word32
+  val ROR : word32 -> word8 -> bool -> bool * word32
+  val IMMEDIATE : bool -> word12 -> bool * word32
   val SHIFT_IMMEDIATE2
-     : (bool, i8) cart ->
-       (bool, i2) cart ->
-       (bool, i32) cart -> bool -> bool * (bool, i32) cart
+     : word8 -> word2 -> word32 -> bool -> bool * word32
   val SHIFT_REGISTER2
-     : (bool, i8) cart ->
-       (bool, i2) cart ->
-       (bool, i32) cart -> bool -> bool * (bool, i32) cart
+     : word8 -> word2 -> word32 -> bool -> bool * word32
   val SHIFT_IMMEDIATE
-     : (register -> (bool, i32) cart) ->
-       mode -> bool -> (bool, i12) cart -> bool * (bool, i32) cart
+     : registers -> mode -> bool -> word12 -> bool * word32
   val SHIFT_REGISTER
-     : (register -> (bool, i32) cart) ->
-       mode -> bool -> (bool, i12) cart -> bool * (bool, i32) cart
+     : registers -> mode -> bool -> word12 -> bool * word32
   val ADDR_MODE1
-     : (register -> (bool, i32) cart) ->
-       mode ->
-       bool -> bool -> (bool, i12) cart -> bool * (bool, i32) cart
+     : registers -> mode -> bool -> bool -> word12 -> bool * word32
   val ALU_arith
      : (num -> num -> num) ->
-       (bool, i32) cart ->
-       (bool, i32) cart ->
-       (bool * (bool * (bool * bool))) * (bool, i32) cart
+       word32 -> word32 -> (bool * (bool * (bool * bool))) * word32
   val ALU_arith_neg
      : (num -> num -> num) ->
-       (bool, i32) cart ->
-       (bool, i32) cart ->
-       (bool * (bool * (bool * bool))) * (bool, i32) cart
-  val ALU_logic
-     : (bool, i32) cart ->
-       (bool * (bool * (bool * bool))) * (bool, i32) cart
+       word32 -> word32 -> (bool * (bool * (bool * bool))) * word32
+  val ALU_logic : word32 -> (bool * (bool * (bool * bool))) * word32
   val SUB
-     : (bool, i32) cart ->
-       (bool, i32) cart ->
-       bool -> (bool * (bool * (bool * bool))) * (bool, i32) cart
+     : word32 ->
+       word32 -> bool -> (bool * (bool * (bool * bool))) * word32
   val ADD
-     : (bool, i32) cart ->
-       (bool, i32) cart ->
-       bool -> (bool * (bool * (bool * bool))) * (bool, i32) cart
-  val AND
-     : (bool, i32) cart ->
-       (bool, i32) cart ->
-       (bool * (bool * (bool * bool))) * (bool, i32) cart
-  val EOR
-     : (bool, i32) cart ->
-       (bool, i32) cart ->
-       (bool * (bool * (bool * bool))) * (bool, i32) cart
-  val ORR
-     : (bool, i32) cart ->
-       (bool, i32) cart ->
-       (bool * (bool * (bool * bool))) * (bool, i32) cart
+     : word32 ->
+       word32 -> bool -> (bool * (bool * (bool * bool))) * word32
+  val AND : word32 -> word32 -> (bool * (bool * (bool * bool))) * word32
+  val EOR : word32 -> word32 -> (bool * (bool * (bool * bool))) * word32
+  val ORR : word32 -> word32 -> (bool * (bool * (bool * bool))) * word32
   val ALU
-     : (bool, i4) cart ->
-       (bool, i32) cart ->
-       (bool, i32) cart ->
-       bool -> (bool * (bool * (bool * bool))) * (bool, i32) cart
-  val ARITHMETIC : (bool, i4) cart -> bool
-  val TEST_OR_COMP : (bool, i4) cart -> bool
+     : word4 ->
+       word32 ->
+       word32 -> bool -> (bool * (bool * (bool * bool))) * word32
+  val ARITHMETIC : word4 -> bool
+  val TEST_OR_COMP : word4 -> bool
   val DATA_PROCESSING
-     : state_arm -> bool -> mode -> (bool, i32) cart -> state_arm
-  val MRS : state_arm -> mode -> (bool, i32) cart -> state_arm
-  val MSR : state_arm -> mode -> (bool, i32) cart -> state_arm
+     : registers -> psrs -> bool -> mode -> word32 -> regs
+  val MRS : registers -> psrs -> mode -> word32 -> regs
+  val MSR : registers -> psrs -> mode -> word32 -> regs
   val ALU_multiply
      : bool ->
        bool ->
        bool ->
-       (bool, i32) cart ->
-       (bool, 'a) cart ->
-       (bool, 'b) cart ->
-       (bool, 'c) cart ->
-       bool * (bool * ((bool, i32) cart * (bool, i32) cart))
-  val MLA_MUL : state_arm -> mode -> (bool, i32) cart -> state_arm
-  val BW_READ
-     : bool -> (bool, i2) cart -> (bool, i32) cart -> (bool, i32) cart
-  val UP_DOWN
-     : bool -> (bool, 'a) cart -> (bool, 'a) cart -> (bool, 'a) cart
+       word32 ->
+       'a word ->
+       'b word -> 'c word -> bool * (bool * (word32 * word32))
+  val MLA_MUL : registers -> psrs -> mode -> word32 -> regs
+  val BW_READ : bool -> word2 -> word32 -> word32
+  val UP_DOWN : bool -> 'a word -> 'a word -> 'a word
   val ADDR_MODE2
-     : (register -> (bool, i32) cart) ->
+     : registers ->
        mode ->
        bool ->
-       bool ->
-       bool ->
-       bool ->
-       (bool, i4) cart ->
-       (bool, i12) cart -> (bool, i32) cart * (bool, i32) cart
+       bool -> bool -> bool -> word4 -> word12 -> word32 * word32
   val ==> : bool -> bool -> bool
   val LDR_STR
-     : state_arm ->
+     : registers ->
+       psrs ->
        bool ->
        mode ->
-       bool ->
-       (bool, i32) cart list ->
-       (bool, i32) cart -> (state_arm, memop list) state_out
-  val REGISTER_LIST : (bool, i16) cart -> (bool, i4) cart list
-  val ADDRESS_LIST : (bool, i32) cart -> num -> (bool, i32) cart list
-  val WB_ADDRESS : bool -> (bool, i32) cart -> num -> (bool, i32) cart
-  val FIRST_ADDRESS
-     : bool ->
-       bool -> (bool, i32) cart -> (bool, i32) cart -> (bool, i32) cart
+       bool -> word32 list -> word32 -> (regs, memop list) state_out
+  val REGISTER_LIST : word16 -> word4 list
+  val ADDRESS_LIST : word32 -> num -> word32 list
+  val WB_ADDRESS : bool -> word32 -> num -> word32
+  val FIRST_ADDRESS : bool -> bool -> word32 -> word32 -> word32
   val ADDR_MODE4
      : bool ->
-       bool ->
-       (bool, i32) cart ->
-       (bool, i16) cart ->
-       (bool, i4) cart list * ((bool, i32) cart list * (bool, i32) cart)
+       bool -> word32 -> word16 -> word4 list * (word32 list * word32)
   val LDM_LIST
-     : (register -> (bool, i32) cart) ->
-       mode ->
-       (bool, i4) cart list ->
-       (bool, i32) cart list -> register -> (bool, i32) cart
+     : registers -> mode -> word4 list -> word32 list -> registers
   val STM_LIST
-     : (register -> (bool, i32) cart) ->
-       mode -> ((bool, i4) cart * (bool, i32) cart) list -> memop list
+     : registers -> mode -> (word4 * word32) list -> memop list
   val LDM_STM
-     : state_arm ->
+     : registers ->
+       psrs ->
        mode ->
        num option ->
-       (bool, i32) cart list ->
-       (bool, i32) cart -> (state_arm, memop list) state_out
+       word32 list -> word32 -> (regs, memop list) state_out
   val SWP
-     : state_arm ->
-       mode ->
-       bool ->
-       (bool, i32) cart ->
-       (bool, i32) cart -> (state_arm, memop list) state_out
-  val MRC
-     : state_arm ->
-       mode -> (bool, i32) cart -> (bool, i32) cart -> state_arm
-  val MCR_OUT : state_arm -> mode -> (bool, i32) cart -> memop list
+     : registers ->
+       psrs ->
+       mode -> bool -> word32 -> word32 -> (regs, memop list) state_out
+  val MRC : registers -> psrs -> mode -> word32 -> word32 -> regs
+  val MCR_OUT : registers -> mode -> word32 -> memop list
   val ADDR_MODE5
-     : (register -> (bool, i32) cart) ->
-       mode ->
-       bool ->
-       bool ->
-       (bool, i4) cart ->
-       (bool, i8) cart -> (bool, i32) cart * (bool, i32) cart
+     : registers ->
+       mode -> bool -> bool -> word4 -> word8 -> word32 * word32
   val LDC_STC
-     : state_arm ->
-       mode -> (bool, i32) cart -> (state_arm, memop list) state_out
+     : registers ->
+       psrs -> mode -> word32 -> (regs, memop list) state_out
   val CONDITION_PASSED2
      : bool * (bool * (bool * bool)) -> condition -> bool
-  val CONDITION_PASSED
-     : bool * (bool * (bool * bool)) -> (bool, i32) cart -> bool
-  val EXEC_INST
-     : state_arm_ex ->
-       num option -> (bool, i32) cart list -> bool -> state_arm
-  val IS_Dabort : interrupts option -> bool
-  val IS_Reset : interrupts option -> bool
-  val PROJ_Dabort : interrupts option -> num
-  val PROJ_Reset : interrupts option -> state_arm
-  val interrupt2exceptions
-     : state_arm_ex -> bool * bool -> interrupts option -> exceptions
-  val PROJ_IF_FLAGS : state_arm -> bool * bool
-  val NEXT_ARM
-     : state_arm_ex ->
-       interrupts option *
-       (bool * ((bool, i32) cart * (bool, i32) cart list)) ->
-       state_arm_ex
-  val OUT_ARM : state_arm_ex -> memop list
-  val ADDR30 : (bool, i32) cart -> (bool, i30) cart
-  val SET_BYTE
-     : (bool, i2) cart ->
-       (bool, i8) cart -> (bool, i32) cart -> (bool, i32) cart
-  val MEM_READ
-     : ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict *
-       (bool, i30) cart -> (bool, i32) cart
-  val MEM_WRITE_BYTE
-     : ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict ->
-       (bool, i32) cart ->
-       (bool, i32) cart -> ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
-  val MEM_WRITE_WORD
-     : ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict ->
-       (bool, i32) cart ->
-       (bool, i32) cart -> ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
-  val MEM_WRITE
-     : bool ->
-       ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict ->
-       (bool, i32) cart ->
-       (bool, i32) cart -> ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
-  val MEM_WRITE_BLOCK
-     : ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict ->
-       (bool, i30) cart ->
-       (bool, i32) cart list ->
-       ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
-  val TRANSFERS
-     : ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict ->
-       (bool, i32) cart list ->
-       memop list ->
-       ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict *
-        (bool, i32) cart list
-  val NEXT_ARMe : state_arme -> state_arme
-  val empty_memory : ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
-  val empty_registers : register -> (bool, i32) cart
+  val CONDITION_PASSED : bool * (bool * (bool * bool)) -> word32 -> bool
+  val RUN_ARM : arm_state -> num option -> word32 list -> bool -> regs
+  val IS_Reset : interrupt option -> bool
+  val PROJ_Dabort : interrupt option -> num option
+  val PROJ_Reset : interrupt option -> regs
+  val interrupt2exception
+     : arm_state -> bool * bool -> interrupt option -> exceptions
+  val PROJ_IF_FLAGS : psrs -> bool * bool
+  val NEXT_ARM : arm_state -> arm_input -> arm_state
+  val OUT_ARM : arm_state -> memop list
+  val ADDR30 : word32 -> word30
+  val SET_BYTE : word2 -> word8 -> word32 -> word32
+  val MEM_READ : mem * word30 -> word32
+  val MEM_WRITE_BYTE : mem -> word32 -> word32 -> mem
+  val MEM_WRITE_WORD : mem -> word32 -> word32 -> mem
+  val MEM_WRITE : bool -> mem -> word32 -> word32 -> mem
+  val MEM_WRITE_BLOCK : mem -> word30 -> word32 list -> mem
+  val empty_memory : mem
+  val LOAD_STORE : word32 list -> mem -> memop list -> mem * word32 list
+  val TRANSFERS : mem -> memop list -> mem * word32 list
+  val NEXT_ARM_MEM : arm_mem_state -> arm_mem_state
+  val empty_registers : registers
 end

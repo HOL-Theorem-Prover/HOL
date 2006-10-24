@@ -103,16 +103,10 @@ val ALU_MLA = prove(
     \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss) [GSYM word_add_n2w,n2w_w2n,
           GSYM word_mul_def,word_bits_n2w_i32,word_bits_def]);
 
-val i32_plus_i32 = (SIMP_RULE (std_ss++SIZES_ss) [] o
-  INST_TYPE [`:'a` |-> `:i32`, `:'b` |-> `:i32`]) fcpTheory.index_sum;
-
-val concat32 = store_thm("concat32",
-  `!a:word64. ((((63 >< 32) a):word32) @@ (((31 >< 0) a):word32)) = a`,
-  RW_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss)
-         [i32_plus_i32,word_extract_def,word_concat_def,word_join_def,w2w,
-          word_bits_def,word_or_def,word_lsl_def]
-    \\ Cases_on `32 <= i`
-    \\ ASM_SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss) [w2w]);
+val concat32 = (SIMP_RULE (std_ss++SIZES_ss)
+   [fcpTheory.index_sum,WORD_FULL_EXTRACT] o SPECL [`63`,`31`,`0`] o
+   INST_TYPE [`:'a` |-> `:i64`, `:'b` |-> `:i32`,
+              `:'c` |-> `:i32`, `:'d` |-> `:i64`]) CONCAT_EXTRACT;
 
 val mul32 = prove(
   `!a b:word32. (31 >< 0) (((w2w a):word64) * w2w b) = a * b`,
@@ -157,11 +151,11 @@ val WORD_SMULL = store_thm("WORD_SMULL",
 (* ------------------------------------------------------------------------- *)
 
 val basic_context =
-  [``Abbrev (Reg = REG_READ state.registers mode)``,
+  [``CONDITION_PASSED2 (NZCV cpsr) c``,
+   ``~state.undefined``,
+   ``Abbrev (Reg = REG_READ state.registers mode)``,
    ``Abbrev (mode = DECODE_MODE ((4 >< 0) (cpsr:word32)))``,
-   ``Abbrev (cpsr = CPSR_READ state.psrs)``,
-   ``CONDITION_PASSED3 (NZCV cpsr) c``,
-   ``~state.undefined``];
+   ``Abbrev (cpsr = CPSR_READ state.psrs)``];
 
 fun cntxt c i = list_mk_conj
   (mk_eq(``state.memory ((31 >< 2) (state.registers r15))``,i)::
@@ -181,9 +175,9 @@ val PC_ss = rewrites [TO_WRITE_READ6,REG_WRITE_WRITE];
 val SPEC_TO_PC = (SIMP_RULE (std_ss++PC_ss) [] o
    INST [`Rd` |-> `15w:word4`] o SPEC_ALL);
 
-val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARMe_def,
-  EXEC_INST_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,FETCH_PC_def,
-  ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
+val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MEM_def,
+  RUN_ARM_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,LOAD_STORE_def,
+  FETCH_PC_def,ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
   word_index,BITS_THM,BIT_ZERO,(GEN_ALL o SPECL [`b`,`NUMERAL n`]) BIT_def,
   cond_pass_enc_data_proc,
   cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,cond_pass_enc_coproc,
@@ -193,12 +187,12 @@ val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARMe_def,
 
 fun SYMBOLIC_EVAL_CONV frag context = GEN_ALL (Thm.DISCH context (SIMP_CONV
     (srw_ss()++boolSimps.LET_ss++SIZES_ss++armLib.PBETA_ss++ARM_ss++frag)
-    [Thm.ASSUME context] ``NEXT_ARMe state``));
+    [Thm.ASSUME context] ``NEXT_ARM_MEM state``));
 
 (* ......................................................................... *)
 
 val UNDEF_ss = rewrites [EXCEPTION_def,cond_pass_enc_swi,decode_enc_swi,
-    exceptions2mode_def,exceptions2num_thm];
+    exception2mode_def,exceptions2num_thm];
 
 val ARM_UNDEF = SYMBOLIC_EVAL_CONV UNDEF_ss ``state.undefined``;
 
@@ -206,7 +200,7 @@ val ARM_UNDEF = SYMBOLIC_EVAL_CONV UNDEF_ss ``state.undefined``;
 
 val nop_context =
   [``Abbrev (cpsr = CPSR_READ state.psrs)``,
-   ``~CONDITION_PASSED3 (NZCV cpsr) c``,
+   ``~CONDITION_PASSED2 (NZCV cpsr) c``,
    ``~state.undefined``];
 
 fun nop_cntxt i = list_mk_conj
@@ -317,7 +311,7 @@ val ARM_BL = UNABBREVL_RULE [`Reg`]
   (SYMBOLIC_EVAL_CONV BRANCH_ss (cntxt [] ``enc (instruction$BL c offset)``));
 
 val SWI_EX_ss =
-  rewrites [EXCEPTION_def,exceptions2mode_def,exceptions2num_thm,
+  rewrites [EXCEPTION_def,exception2mode_def,exceptions2num_thm,
     cond_pass_enc_swi,decode_enc_swi,cond_pass_enc_coproc,decode_enc_coproc];
 
 val ARM_SWI = UNABBREVL_RULE [`Reg`,`mode`]
@@ -443,10 +437,9 @@ val ARM_SMLAL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
 
 (* ......................................................................... *)
 
-
 val LDR_STR_ss =
   rewrites [LDR_STR_def,MEM_WRITE_def,BW_READ_def,
-    (SIMP_RULE bool_ss [] o ISPEC `\l. FST (TRANSFERS m [] l)`) COND_RAND,
+    (SIMP_RULE bool_ss [] o ISPEC `\l. FST (LOAD_STORE [] m l)`) COND_RAND,
     listTheory.HD,rich_listTheory.SNOC,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,
     cond_pass_enc_ldr_str,decode_enc_ldr_str,decode_ldr_str_enc];
@@ -480,35 +473,36 @@ val ARM_SWP = SYMBOLIC_EVAL_CONV SWP_ss (cntxt [``~(Rm = 15w:word4)``]
 (* ......................................................................... *)
 
 val TRANSFER_LDM = prove(
-  `!m d l. FST (TRANSFERS m d (MAP MemRead l)) = m`,
-  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [TRANSFERS_def]);
+  `!m d l. FST (LOAD_STORE d m (MAP MemRead l)) = m`,
+  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [LOAD_STORE_def]);
 
 val TRANSFER_LDM2_lem = prove(
-  `!m d l. LENGTH (SND (TRANSFERS m d (MAP MemRead l))) = LENGTH d + LENGTH l`,
+  `!m d l. LENGTH (SND (LOAD_STORE d m (MAP MemRead l))) = LENGTH d + LENGTH l`,
   Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss++ARITH_ss)
-    [TRANSFERS_def,rich_listTheory.LENGTH_SNOC]);
+    [LOAD_STORE_def,rich_listTheory.LENGTH_SNOC]);
 
 val TRANSFER_LDM2_lem2 = prove(
-  `!m rd l. LENGTH (SND (TRANSFERS m []
+  `!m rd l. LENGTH (SND (LOAD_STORE [] m
              (MAP MemRead (ADDRESS_LIST rd (LENGTH l))))) = LENGTH l`,
    SIMP_TAC list_ss [TRANSFER_LDM2_lem,ADDRESS_LIST_def,
      rich_listTheory.LENGTH_GENLIST]);
 
 val TRANSFER_LDM2_lem3 = prove(
-  `!m d l. SND (TRANSFERS m d (MAP MemRead l)) = d ++ MAP (\x. m (ADDR30 x)) l`,
+  `!m d l. SND (LOAD_STORE d m (MAP MemRead l)) =
+             d ++ MAP (\x. m (ADDR30 x)) l`,
  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss)
-   [TRANSFERS_def,my_listTheory.APPEND_SNOC1]);
+   [LOAD_STORE_def,my_listTheory.APPEND_SNOC1]);
 
 val TRANSFER_LDM2 = prove(
   `!m rd l. let addr_mode4 = ADDR_MODE4 P U rd l in
            FIRSTN (LENGTH (FST addr_mode4))
-             (SND (TRANSFERS m [] (MAP MemRead (FST (SND addr_mode4))))) =
+             (SND (LOAD_STORE [] m (MAP MemRead (FST (SND addr_mode4))))) =
            MAP (m o ADDR30) (FST (SND addr_mode4))`,
   REPEAT STRIP_TAC
     \\ `!rd. FIRSTN (LENGTH (REGISTER_LIST l))
-          (SND (TRANSFERS m [] (MAP MemRead (ADDRESS_LIST rd
+          (SND (LOAD_STORE [] m (MAP MemRead (ADDRESS_LIST rd
              (LENGTH (REGISTER_LIST l)))))) =
-           SND (TRANSFERS m [] (MAP MemRead (ADDRESS_LIST rd
+           SND (LOAD_STORE [] m (MAP MemRead (ADDRESS_LIST rd
              (LENGTH (REGISTER_LIST l)))))`
     by METIS_TAC [TRANSFER_LDM2_lem2,rich_listTheory.FIRSTN_LENGTH_ID]
     \\ SRW_TAC [boolSimps.LET_ss] [ADDR_MODE4_def]
@@ -520,15 +514,15 @@ val TRANSFER_LDM2 = prove(
 val TRANSFER_LDM2 = SIMP_RULE (bool_ss++boolSimps.LET_ss) [] TRANSFER_LDM2;
 
 val TRANSFER_STM = prove(
-  `!m d r mode rd l. FST (TRANSFERS m d (STM_LIST r mode l)) =
+  `!m d r mode rd l. FST (LOAD_STORE d m (STM_LIST r mode l)) =
       FOLDL (\mem (rp,rd). MEM_WRITE F mem rd (REG_READ r mode rp)) m l`,
   Induct_on `l` \\ TRY (Cases_on `h`)
-    \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [TRANSFERS_def,STM_LIST_def]
+    \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [LOAD_STORE_def,STM_LIST_def]
     \\ ASM_SIMP_TAC std_ss [GSYM STM_LIST_def]);
 
 val LDM_STM_ss =
   rewrites [LDM_STM_def,MEM_WRITE_def,BW_READ_def,
-    (SIMP_RULE bool_ss [] o ISPEC `\l. FST (TRANSFERS m [] l)`) COND_RAND,
+    (SIMP_RULE bool_ss [] o ISPEC `\l. FST (LOAD_STORE [] m l)`) COND_RAND,
     rich_listTheory.FIRSTN_LENGTH_ID,
     listTheory.HD,rich_listTheory.SNOC,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,

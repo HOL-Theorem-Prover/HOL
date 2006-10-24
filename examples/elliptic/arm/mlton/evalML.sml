@@ -13,13 +13,13 @@ exception Parse;
 
 val _ = sizesML.sizes();
 
-fun toWord4 i = fcpML.n2w_itself(numML.fromInt i, fcpML.Tyop ("i4", [])):
-  (bool, armML.i4)  fcpML.cart;
+fun toWord4 i =
+  wordsML.n2w_itself(numML.fromInt i, fcpML.Tyop ("i4", [])): wordsML.word4;
 
-fun toWord s i = fcpML.n2w_itself(i, fcpML.Tyop (s, []));
+fun toWord s i = wordsML.n2w_itself(i, fcpML.Tyop (s, []));
 
-val toWord30 = toWord "i30": numML.num -> (bool, armML.i30) fcpML.cart;
-val toWord32 = toWord "i32": numML.num -> (bool, armML.i32) fcpML.cart;
+val toWord30 = toWord "i30": numML.num -> wordsML.word30;
+val toWord32 = toWord "i32": numML.num -> wordsML.word32
 
 val num2Arbnum = Arbnum.fromHexString o numML.toHexString;
 
@@ -106,16 +106,10 @@ end;
 
 (* ------------------------------------------------------------------------- *)
 
-type word30 = (bool, armML.i30) fcpML.cart
-type word32 = (bool, armML.i32) fcpML.cart
-
-type mem = (word30, word32) Redblackmap.dict
-type reg = armML.register -> word32
-
 datatype env =
    ENV of {N:bool, Z:bool, C:bool, V:bool, M:armML.mode, Wpc:bool,
-           Wireg:bool, cycles:int, E:bool, mem:string, reg:reg,
-           psr:armML.psrs -> word32};
+           Wireg:bool, cycles:int, E:bool, mem:string, reg:armML.registers,
+           psr:armML.psrs};
 
 fun update_switch fld b (ENV e) =
   let val {N,Z,C,V,E,M,mem,reg,cycles,Wpc,Wireg,psr} = e in
@@ -360,9 +354,9 @@ local
 in
   fun print_state fname state count =
     let val ostrm = TextIO.openOut fname
-        val reg = armML.state_arme_registers state
-        val psr = armML.state_arme_psrs state
-        val mem = armML.state_arme_memory state
+        val reg = armML.arm_mem_state_registers state
+        val psr = armML.arm_mem_state_psrs state
+        val mem = armML.arm_mem_state_memory state
     in
       TextIO.output(ostrm,"Instuctions Run:" ^ Int.toString count ^ "\n");
       TextIO.output(ostrm,"\nRegisters\n---------\n");
@@ -431,13 +425,13 @@ val env = setOptions (CommandLine.arguments()) env;
 
 val count = ref 0;
 
-fun done (armML.state_arme (r,p,m,u)) = u;
+fun done (armML.arm_mem_state (r,p,m,u)) = u;
 
 val e = proj_ENV env;
 val wpc = #Wpc e;
 val wireg = #Wireg e;
 
-fun printer (armML.state_arme (r,p,m,u)) =
+fun printer (armML.arm_mem_state (r,p,m,u)) =
   if wireg then
     let val pc = armML.FETCH_PC r
         val ireg = armML.MEM_READ(m,armML.ADDR30 pc)
@@ -456,13 +450,13 @@ fun printer (armML.state_arme (r,p,m,u)) =
       end
     else ();
 
-fun STATE_ARMe n s =
+fun STATE_ARM_MEM n s =
   if n = 0 then s
   else
     let val _ = printer s
         val _ = count := !count + 1
-        val ns = armML.NEXT_ARMe s in
-      if done s then ns else STATE_ARMe (n - 1) ns
+        val ns = armML.NEXT_ARM_MEM s in
+      if done s then ns else STATE_ARM_MEM (n - 1) ns
     end;
 
 (* ------------------------------------------------------------------------- *)
@@ -493,9 +487,9 @@ val cpsr = armML.SET_NZCV (#N e,(#Z e,(#C e,#V e)))
 
 val psr = armML.CPSR_WRITE (#psr e) cpsr;
 
-val init_state = armML.state_arme (#reg e, psr, init_mem, false);
+val init_state = armML.arm_mem_state (#reg e, psr, init_mem, false);
 
-val final_state = time (STATE_ARMe (#cycles e)) init_state;
+val final_state = time (STATE_ARM_MEM (#cycles e)) init_state;
 
 val _ = print_state "run.in" init_state 0;
 val _ = print_state "run.out" final_state (!count);

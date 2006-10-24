@@ -45,9 +45,8 @@ val reg = set_registers empty_registers
 
 (* Initial program status register values *)
 
-val psr = set_status_registers
- ``(\x. SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w)):psr``
- ``[(CPSR,SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w))]: (psrs # word32) list``;
+val psr = set_status_registers empty_psrs
+ ``[(CPSR,SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w))]: (psr # word32) list``;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -86,8 +85,6 @@ fun random_word l =
 
 (* ------------------------------------------------------------------------- *)
 
-(* 544-bit Addition *)
-
 (*
 val _ = wordsLib.mk_word_size (17 * 32);
 
@@ -111,7 +108,7 @@ val prog = list_assemble
     (num2wordsn 17 a)) @
     (num2wordsn 17 b));
 
-val run_add17 = save_thm("run_add17", evaluate max prog reg psr);
+val run_add17 = save_thm("run_add17", evaluate(max,prog,reg,psr));
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -138,7 +135,7 @@ val prog = list_assemble
    (prefix_hd "0xA000: "
     (num2wordsn 34 a)));
 
-val run_srd521 = save_thm("run_srd521", evaluate max prog reg psr);
+val run_srd521 = save_thm("run_srd521", evaluate(max,prog,reg,psr));
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -166,7 +163,7 @@ val prog = list_assemble
     (num2wordsn 9 a)) @
     (num2wordsn 9 b));
 
-val run_mul9 = save_thm("run_mul9", evaluate max prog reg psr);
+val run_mul9 = save_thm("run_mul9", evaluate(max,prog,reg,psr));
 *)
 
 (* ------------------------------------------------------------------------- *)

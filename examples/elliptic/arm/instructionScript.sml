@@ -245,6 +245,8 @@ val instruction_encode_def = Define`
          w2w Cop2 << 5 !! w2w CRm
     || UND cond -> condition_encode cond !! 0x6000010w`;
 
+val _ = overload_on("enc", ``instruction_encode``);
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();

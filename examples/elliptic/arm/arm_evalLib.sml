@@ -22,8 +22,6 @@ open Q Parse computeLib pairTheory wordsTheory wordsSyntax
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
 
-val SUC2NUM = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
-
 fun add_rws f rws =
 let val cmp_set = f()
     val _ = add_thms rws cmp_set
@@ -54,12 +52,12 @@ fun arm_compset () = add_rws wordsLib.words_compset
    SUC_RULE rich_listTheory.FIRSTN,combinTheory.K_THM,
    register_EQ_register,num2register_thm,register2num_thm,
    mode_EQ_mode,mode2num_thm,mode_case_def,
-   psrs_EQ_psrs,psrs2num_thm,
+   psr_EQ_psr,psr2num_thm,
    iclass_EQ_iclass,iclass2num_thm,
    exceptions_EQ_exceptions,exceptions2num_thm,exceptions_case_def,
-   num2exceptions_thm,exceptions2mode_def,
+   num2exceptions_thm,exception2mode_def,
    num2condition_thm,condition2num_thm,condition_case_def,
-   interrupts_case_def,
+   interrupt_case_def, literal_case_THM,
    SUBST_EVAL,
 
    SET_NZC_def,NZCV_def,USER_def,mode_num_def,
@@ -78,6 +76,14 @@ fun arm_compset () = add_rws wordsLib.words_compset
    DECODE_INST_THM,
 
    ZIP,FOLDL,
+   regs_accessors, regs_updates_eq_literal,
+   regs_accfupds, regs_fupdfupds, regs_literal_11,
+   regs_fupdfupds_comp, regs_fupdcanon,
+   regs_fupdcanon_comp,
+   arm_state_accessors, arm_state_updates_eq_literal,
+   arm_state_accfupds, arm_state_fupdfupds, arm_state_literal_11,
+   arm_state_fupdfupds_comp, arm_state_fupdcanon,
+   arm_state_fupdcanon_comp,
    state_inp_accessors, state_inp_updates_eq_literal,
    state_inp_accfupds, state_inp_fupdfupds, state_inp_literal_11,
    state_inp_fupdfupds_comp, state_inp_fupdcanon,
@@ -90,12 +96,12 @@ fun arm_compset () = add_rws wordsLib.words_compset
    transfer_options_accfupds, transfer_options_fupdfupds,
    transfer_options_literal_11, transfer_options_fupdfupds_comp,
    transfer_options_fupdcanon, transfer_options_fupdcanon_comp,
-   state_arm_case_def,shift_case_def,
+   regs_case_def,shift_case_def,
 
    DECODE_BRANCH_THM,DECODE_DATAP_THM,DECODE_MRS_THM,
    DECODE_MSR_THM,DECODE_LDR_STR_THM,DECODE_SWP_THM,
    DECODE_LDM_STM_THM,DECODE_MLA_MUL_THM,DECODE_LDC_STC_THM,
-   DECODE_PSRD_def, CONDITION_PASSED3_def,
+   DECODE_PSRD_def,
    IS_REG_SHIFT_def, IS_DP_IMMEDIATE_def,
    IS_DT_SHIFT_IMMEDIATE_def, IS_MSR_IMMEDIATE_def,
 
@@ -132,22 +138,23 @@ fun arm_compset () = add_rws wordsLib.words_compset
    EXCEPTION_def,BRANCH_def,DATA_PROCESSING_def,MRS_def,LDR_STR_def,
    MLA_MUL_def,SWP_def,MRC_def,MCR_OUT_def,MSR_def,LDM_STM_def,LDC_STC_def,
 
-   SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) []
-      interrupt2exceptions_def,
-   IS_Dabort_def,IS_Reset_def,PROJ_Dabort_def,PROJ_Reset_def,
+   empty_memory_def,empty_registers_def,empty_psrs_def,
+   SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) [] interrupt2exception_def,
+   IS_Reset_def,PROJ_Dabort_def,PROJ_Reset_def,
    THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,
    option_case_ID,option_case_SOME_ID,
    option_case_def,SOME_11,NOT_SOME_NONE,PROJ_IF_FLAGS_def,
-   EXEC_INST_def,NEXT_ARM_def,OUT_ARM_def];
+   RUN_ARM_def,NEXT_ARM_def,OUT_ARM_def];
 
 fun arm_eval_compset () =
   add_rws arm_compset
-    [state_arme_accessors, state_arme_updates_eq_literal,memop_case_def,
-     state_arme_accfupds, state_arme_fupdfupds, state_arme_literal_11,
-     state_arme_fupdfupds_comp, state_arme_fupdcanon,state_arme_fupdcanon_comp,
-     ADDR30_def,SET_BYTE_def,BSUBST_EVAL,
+    [arm_mem_state_accessors, arm_mem_state_updates_eq_literal,memop_case_def,
+     arm_mem_state_accfupds, arm_mem_state_fupdfupds, arm_mem_state_literal_11,
+     arm_mem_state_fupdfupds_comp, arm_mem_state_fupdcanon,
+     arm_mem_state_fupdcanon_comp,
+     ADDR30_def,SET_BYTE_def,BSUBST_EVAL,LOAD_STORE_def,
      MEM_WRITE_BYTE_def,MEM_WRITE_WORD_def,MEM_WRITE_def,TRANSFERS_def,
-     SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARMe_def];
+     SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARM_MEM_def];
 
 val ARM_CONV = CBV_CONV (arm_eval_compset());
 val ARM_RULE = CONV_RULE ARM_CONV;
@@ -161,7 +168,7 @@ end;
 
 val SORT_SUBST_CONV = let open arm_evalTheory
   val compset = add_rws reduceLib.num_compset
-        [register_EQ_register,register2num_thm,psrs_EQ_psrs,psrs2num_thm,
+        [register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
          SYM Sa_def,Sab_EQ,Sa_RULE4,Sb_RULE4,Sa_RULE_PSR,Sb_RULE_PSR,
          combinTheory.o_THM]
 in
@@ -171,7 +178,7 @@ end;
 
 val SORT_BSUBST_CONV = let open arm_evalTheory
   val compset = add_rws wordsLib.words_compset
-        [LENGTH,SUC2NUM JOIN,SUC2NUM BUTFIRSTN,
+        [LENGTH,SUC_RULE JOIN,SUC_RULE BUTFIRSTN,
          APPEND,SUBST_BSUBST,BSa_RULE,BSb_RULE,
          GSYM BSa_def,combinTheory.o_THM]
 in
@@ -180,9 +187,9 @@ end;
 
 val FOLD_SUBST_CONV =
 let val compset = add_rws wordsLib.words_compset
-      [SET_IFMODE_def,SET_NZCV_def,FOLDL,arm_evalTheory.SUBST_EVAL,
+      [SET_IFMODE_def,SET_NZCV_def,FOLDL,SUBST_EVAL,psr_EQ_psr,psr2num_thm,
        mode_num_def,mode_case_def,register_EQ_register,register2num_thm,
-       psrs_EQ_psrs,psrs2num_thm]
+       empty_registers_def,empty_memory_def,empty_psrs_def]
 in
   computeLib.CBV_CONV compset THENC SORT_SUBST_CONV
 end;
@@ -551,6 +558,7 @@ end;
 
 val empty_memory = rhsc empty_memory_def
 val empty_registers = rhsc empty_registers_def
+val empty_psrs = rhsc empty_psrs_def
 
 (* ------------------------------------------------------------------------- *)
 (* Funtions for memory loading and saving *)
@@ -610,35 +618,38 @@ val foldl_tm =
 
 fun set_registers reg rvs  =
  (rhsc o FOLD_SUBST_CONV o
-  subst [``x:reg`` |-> reg, ``y:(register # word32) list`` |-> rvs] o
+  subst [``x:registers`` |-> reg, ``y:(register # word32) list`` |-> rvs] o
   inst [alpha |-> ``:register``, beta |-> ``:word32``]) foldl_tm;
 
 fun set_status_registers psr rvs  = (rhsc o
   (FOLD_SUBST_CONV
      THENC PURE_ONCE_REWRITE_CONV [SPEC `n2w n` arm_evalTheory.PSR_CONS]
      THENC ARM_CONV) o
-  subst [``x:psr`` |-> psr, ``y:(psrs # word32) list`` |-> rvs] o
-  inst [alpha |-> ``:psrs``, beta |-> ``:word32``]) foldl_tm;
+  subst [``x:psrs`` |-> psr, ``y:(psr # word32) list`` |-> rvs] o
+  inst [alpha |-> ``:psr``, beta |-> ``:word32``]) foldl_tm;
 
 (* ------------------------------------------------------------------------- *)
 (* Running the model *)
 
 fun init m r s =
-   (PURE_ONCE_REWRITE_CONV [CONJUNCT1 STATE_ARMe_def] o
-    subst [``mem:mem`` |-> m, ``reg:reg`` |-> r, ``psr:psr`` |-> s])
-   ``STATE_ARMe 0 <| registers := reg; psrs :=  psr;
-                     memory := mem; undefined := F |>``;
+   (PURE_ONCE_REWRITE_CONV [CONJUNCT1 STATE_ARM_MEM_def] o
+    subst [``mem:mem`` |-> m, ``registers:registers`` |-> r,
+           ``psrs:psrs`` |-> s])
+   ``STATE_ARM_MEM 0 <| registers := registers; psrs :=  psrs;
+                        memory := mem; undefined := F |>``;
+
+val NEXT_ARM_CONV =
+  ARM_CONV THENC
+  ONCE_DEPTH_CONV (RAND_CONV (RAND_CONV SORT_BSUBST_CONV)) THENC
+  ONCE_DEPTH_CONV (RATOR_CONV SORT_SUBST_CONV) THENC
+  ONCE_DEPTH_CONV (RAND_CONV (RATOR_CONV SORT_SUBST_CONV)) THENC
+  RATOR_CONV ARM_ASSEMBLE_CONV;
 
 fun next t =
-let val t1 = rhsc t
-    val t2 = ((ARM_CONV THENC
-                 ONCE_DEPTH_CONV (RAND_CONV (RAND_CONV SORT_BSUBST_CONV)) THENC
-                 ONCE_DEPTH_CONV (RATOR_CONV SORT_SUBST_CONV) THENC
-                 ONCE_DEPTH_CONV (RAND_CONV (RATOR_CONV SORT_SUBST_CONV)) THENC
-                 RATOR_CONV ARM_ASSEMBLE_CONV) o
-                 subst [``s:state_arme`` |-> t1]) ``NEXT_ARMe s``
+  let val t' = (NEXT_ARM_CONV o
+                subst [``s:arm_mem_state`` |-> rhsc t]) ``NEXT_ARM_MEM s``
   in
-     numLib.REDUCE_RULE (MATCH_MP STATE_ARMe_NEXT (CONJ t t2))
+     numLib.REDUCE_RULE (MATCH_MP STATE_ARM_MEM_NEXT (CONJ t t'))
   end;
 
 fun done t = term_eq T (#undef (dest_arm_eval (rhsc t)));
@@ -668,8 +679,8 @@ fun pc_ptr (x : arm_state) =
     print_mem_range (#mem x) (pc, 1)
   end;
 
-fun eval n m r s = state (time,pc_ptr) n [init m r s];
-fun evaluate n m r s = fstate (A,pc_ptr)  n (init m r s);
+fun eval (n, m, r, s) = state (time,pc_ptr) n [init m r s];
+fun evaluate (n, m, r, s) = fstate (A,pc_ptr)  n (init m r s);
 
 (* ------------------------------------------------------------------------- *)
 

@@ -1,40 +1,48 @@
 structure armML :> armML =
 struct
-  nonfix empty_registers empty_memory NEXT_ARMe TRANSFERS
+  nonfix empty_registers NEXT_ARM_MEM TRANSFERS LOAD_STORE empty_memory
          MEM_WRITE_BLOCK MEM_WRITE MEM_WRITE_WORD MEM_WRITE_BYTE
          MEM_READ SET_BYTE ADDR30 OUT_ARM NEXT_ARM PROJ_IF_FLAGS
-         interrupt2exceptions PROJ_Reset PROJ_Dabort IS_Reset IS_Dabort
-         EXEC_INST CONDITION_PASSED CONDITION_PASSED2 LDC_STC ADDR_MODE5
-         MCR_OUT MRC SWP LDM_STM STM_LIST LDM_LIST ADDR_MODE4
-         FIRST_ADDRESS WB_ADDRESS ADDRESS_LIST REGISTER_LIST LDR_STR ==>
-         ADDR_MODE2 UP_DOWN BW_READ MLA_MUL ALU_multiply MSR MRS
-         DATA_PROCESSING TEST_OR_COMP ARITHMETIC ALU ORR EOR AND ADD SUB
-         ALU_logic ALU_arith_neg ALU_arith ADDR_MODE1 SHIFT_REGISTER
+         interrupt2exception PROJ_Reset PROJ_Dabort IS_Reset RUN_ARM
+         CONDITION_PASSED CONDITION_PASSED2 LDC_STC ADDR_MODE5 MCR_OUT
+         MRC SWP LDM_STM STM_LIST LDM_LIST ADDR_MODE4 FIRST_ADDRESS
+         WB_ADDRESS ADDRESS_LIST REGISTER_LIST LDR_STR ==> ADDR_MODE2
+         UP_DOWN BW_READ MLA_MUL ALU_multiply MSR MRS DATA_PROCESSING
+         TEST_OR_COMP ARITHMETIC ALU ORR EOR AND ADD SUB ALU_logic
+         ALU_arith_neg ALU_arith ADDR_MODE1 SHIFT_REGISTER
          SHIFT_IMMEDIATE SHIFT_REGISTER2 SHIFT_IMMEDIATE2 IMMEDIATE ROR
-         ASR LSR LSL BRANCH EXCEPTION exceptions2mode SPSR_WRITE
+         ASR LSR LSL BRANCH EXCEPTION exception2mode SPSR_WRITE
          CPSR_WRITE CPSR_READ SPSR_READ mode2psr CARRY NZCV DECODE_MODE
          SET_IFMODE mode_num SET_NZ SET_NZC SET_NZCV FETCH_PC INC_PC
          REG_WRITE REG_READ num2condition num2register register2num
          exceptions2num state_out_out state_out_state mode_reg2num USER
          ::- :- DECODE_INST DECODE_LDC_STC DECODE_SWP DECODE_LDM_STM
          DECODE_MLA_MUL DECODE_LDR_STR DECODE_MSR DECODE_MRS
-         DECODE_DATAP DECODE_BRANCH DECODE_PSR state_arme_size
-         state_arme_registers_fupd state_arme_psrs_fupd
-         state_arme_memory_fupd state_arme_undefined_fupd
-         state_arme_registers state_arme_psrs state_arme_memory
-         state_arme_undefined state_arme Irq Fiq Dabort Prefetch Undef
-         Reset memop_size CPWrite CPMemWrite CPMemRead MemWrite MemRead
-         state_arm_ex_size ARM_EX state_arm_size ARM state_out state_inp
-         iclass_size unexec stc ldc mrc mcr cdp_und swi_ex br stm ldm
-         str ldr mla_mul reg_shift data_proc mrs_msr swp exceptions_size
-         fast interrupt address dabort pabort software undefined reset
-         condition_size NV LE LT LS VC PL CC NE AL GT GE HI VS MI CS EQ
-         mode_size safe und abt svc irq fiq usr psrs_size SPSR_und
-         SPSR_abt SPSR_svc SPSR_irq SPSR_fiq CPSR register_size r14_und
-         r13_und r14_abt r13_abt r14_svc r13_svc r14_irq r13_irq r14_fiq
-         r13_fiq r12_fiq r11_fiq r10_fiq r9_fiq r8_fiq r15 r14 r13 r12
-         r11 r10 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0 * / div mod + - ^ @ <> >
-         < >= <= := o before;
+         DECODE_DATAP DECODE_BRANCH DECODE_PSR memop_size CPWrite
+         CPMemWrite CPMemRead MemWrite MemRead arm_input_size
+         arm_input_ireg_fupd arm_input_data_fupd
+         arm_input_interrupt_fupd arm_input_no_cp_fupd arm_input_ireg
+         arm_input_data arm_input_interrupt arm_input_no_cp arm_input
+         interrupt_size Irq Fiq Dabort Prefetch Undef Reset regs_size
+         regs_reg_fupd regs_psr_fupd regs_reg regs_psr regs
+         arm_mem_state_size arm_mem_state_registers_fupd
+         arm_mem_state_psrs_fupd arm_mem_state_memory_fupd
+         arm_mem_state_undefined_fupd arm_mem_state_registers
+         arm_mem_state_psrs arm_mem_state_memory arm_mem_state_undefined
+         arm_mem_state arm_state_size arm_state_registers_fupd
+         arm_state_psrs_fupd arm_state_ireg_fupd
+         arm_state_exception_fupd arm_state_registers arm_state_psrs
+         arm_state_ireg arm_state_exception arm_state state_out
+         state_inp iclass_size unexec stc ldc mrc mcr cdp_und swi_ex br
+         stm ldm str ldr mla_mul reg_shift data_proc mrs_msr swp
+         exceptions_size fast interrupt address dabort pabort software
+         undefined reset condition_size NV LE LT LS VC PL CC NE AL GT GE
+         HI VS MI CS EQ mode_size safe und abt svc irq fiq usr psr_size
+         SPSR_und SPSR_abt SPSR_svc SPSR_irq SPSR_fiq CPSR register_size
+         r14_und r13_und r14_abt r13_abt r14_svc r13_svc r14_irq r13_irq
+         r14_fiq r13_fiq r12_fiq r11_fiq r10_fiq r9_fiq r8_fiq r15 r14
+         r13 r12 r11 r10 r9 r8 r7 r6 r5 r4 r3 r2 r1 r0 * / div mod + - ^
+         @ <> > < >= <= := o before;
   
   open numML setML fcpML listML rich_listML bitML wordsML;
   datatype register
@@ -71,9 +79,9 @@ struct
        | r14_und
   fun register_size x = ZERO
     
-  datatype psrs
+  datatype psr
        = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und
-  fun psrs_size x = ZERO
+  fun psr_size x = ZERO
     
   datatype mode = usr | fiq | irq | svc | abt | und | safe
   fun mode_size x = ZERO
@@ -130,70 +138,125 @@ struct
     
   datatype ('a,'b)state_inp = state_inp of 'a * (num -> 'b)
   datatype ('a,'b)state_out = state_out of 'a * 'b
-  datatype i2 = i2
-  datatype i4 = i4
-  datatype i5 = i5
-  datatype i8 = i8
-  datatype i12 = i12
-  datatype i16 = i16
-  datatype i24 = i24
-  datatype i30 = i30
-  datatype i32 = i32
-  datatype state_arm
-       = ARM of (register -> (bool, i32) cart) *
-                (psrs -> (bool, i32) cart)
-  fun state_arm_size (ARM(a0,a1)) = ONE
+  type word2 = wordsML.word2
+  type word4 = wordsML.word4
+  type word5 = wordsML.word5
+  type word8 = wordsML.word8
+  type word12 = wordsML.word12
+  type word16 = wordsML.word16
+  type word24 = wordsML.word24
+  type word30 = wordsML.word30
+  type word32 = wordsML.word32
+  type registers = register->word32
+  type psrs = psr->word32
+  type mem = (word30, word32) Redblackmap.dict
+  datatype
+  arm_state = arm_state of (registers) * (psrs) * word32 * exceptions
+  fun arm_state_exception (arm_state(f,f0,c,e)) = e
     
-  datatype state_arm_ex
-       = ARM_EX of state_arm * (bool, i32) cart * exceptions
-  fun state_arm_ex_size (ARM_EX(a0,a1,a2)) =
-        + ONE (+ (state_arm_size a0) (exceptions_size a2))
+  fun arm_state_ireg (arm_state(f,f0,c,e)) = c
+    
+  fun arm_state_psrs (arm_state(f,f0,c,e)) = f0
+    
+  fun arm_state_registers (arm_state(f,f0,c,e)) = f
+    
+  fun arm_state_exception_fupd f1 (arm_state(f,f0,c,e)) =
+        arm_state(f,f0,c,f1 e)
+    
+  fun arm_state_ireg_fupd f1 (arm_state(f,f0,c,e)) =
+        arm_state(f,f0,f1 c,e)
+    
+  fun arm_state_psrs_fupd f1 (arm_state(f,f0,c,e)) =
+        arm_state(f,f1 f0,c,e)
+    
+  fun arm_state_registers_fupd f1 (arm_state(f,f0,c,e)) =
+        arm_state(f1 f,f0,c,e)
+    
+  fun arm_state_size (arm_state(a0,a1,a2,a3)) =
+        + ONE (exceptions_size a3)
+    
+  datatype
+  arm_mem_state = arm_mem_state of (registers) * (psrs) * (mem) * bool
+  fun arm_mem_state_undefined (arm_mem_state(f,f0,f1,b)) = b
+    
+  fun arm_mem_state_memory (arm_mem_state(f,f0,f1,b)) = f1
+    
+  fun arm_mem_state_psrs (arm_mem_state(f,f0,f1,b)) = f0
+    
+  fun arm_mem_state_registers (arm_mem_state(f,f0,f1,b)) = f
+    
+  fun arm_mem_state_undefined_fupd f2 (arm_mem_state(f,f0,f1,b)) =
+        arm_mem_state(f,f0,f1,f2 b)
+    
+  fun arm_mem_state_memory_fupd f2 (arm_mem_state(f,f0,f1,b)) =
+        arm_mem_state(f,f0,f2 f1,b)
+    
+  fun arm_mem_state_psrs_fupd f2 (arm_mem_state(f,f0,f1,b)) =
+        arm_mem_state(f,f2 f0,f1,b)
+    
+  fun arm_mem_state_registers_fupd f2 (arm_mem_state(f,f0,f1,b)) =
+        arm_mem_state(f2 f,f0,f1,b)
+    
+  fun arm_mem_state_size (arm_mem_state(a0,a1,a2,a3)) = ONE
+    
+  datatype regs = regs of (registers) * (psrs)
+  fun regs_psr (regs(f,f0)) = f0
+    
+  fun regs_reg (regs(f,f0)) = f
+    
+  fun regs_psr_fupd f1 (regs(f,f0)) = regs(f,f1 f0)
+    
+  fun regs_reg_fupd f1 (regs(f,f0)) = regs(f1 f,f0)
+    
+  fun regs_size (regs(a0,a1)) = ONE
+    
+  datatype interrupt
+       = Reset of regs | Undef | Prefetch | Dabort of num | Fiq | Irq
+  fun interrupt_size (Reset(a)) = + ONE (regs_size a)
+    | interrupt_size Undef = ZERO
+    | interrupt_size Prefetch = ZERO
+    | interrupt_size (Dabort(a)) = + ONE a
+    | interrupt_size Fiq = ZERO
+    | interrupt_size Irq = ZERO
+    
+  datatype
+  arm_input = arm_input of word32 * word32 list * interrupt option *
+                           bool
+  fun arm_input_no_cp (arm_input(c,l,o,b)) = b
+    
+  fun arm_input_interrupt (arm_input(c,l,o,b)) = o
+    
+  fun arm_input_data (arm_input(c,l,o,b)) = l
+    
+  fun arm_input_ireg (arm_input(c,l,o,b)) = c
+    
+  fun arm_input_no_cp_fupd f (arm_input(c,l,o,b)) = arm_input(c,l,o,f b)
+    
+  fun arm_input_interrupt_fupd f (arm_input(c,l,o,b)) =
+        arm_input(c,l,f o,b)
+    
+  fun arm_input_data_fupd f (arm_input(c,l,o,b)) = arm_input(c,f l,o,b)
+    
+  fun arm_input_ireg_fupd f (arm_input(c,l,o,b)) = arm_input(f c,l,o,b)
+    
+  fun arm_input_size (arm_input(a0,a1,a2,a3)) =
+        + ONE
+          (+ (list_size (fn v => ZERO) a1)
+             (case a2
+              of optionML.NONE => ZERO
+               | optionML.SOME(x) => SUC(interrupt_size x)))
     
   datatype memop
-       = MemRead of (bool, i32) cart
-       | MemWrite of bool * (bool, i32) cart * (bool, i32) cart
-       | CPMemRead of bool * (bool, i32) cart
-       | CPMemWrite of bool * (bool, i32) cart
-       | CPWrite of (bool, i32) cart
+       = MemRead of word32
+       | MemWrite of bool * word32 * word32
+       | CPMemRead of word32
+       | CPMemWrite of word32
+       | CPWrite of word32
   fun memop_size (MemRead(a)) = ONE
     | memop_size (MemWrite(a0,a1,a2)) = ONE
-    | memop_size (CPMemRead(a0,a1)) = ONE
-    | memop_size (CPMemWrite(a0,a1)) = ONE
+    | memop_size (CPMemRead(a)) = ONE
+    | memop_size (CPMemWrite(a)) = ONE
     | memop_size (CPWrite(a)) = ONE
-    
-  datatype interrupts
-       = Reset of state_arm
-       | Undef
-       | Prefetch
-       | Dabort of num
-       | Fiq
-       | Irq
-  datatype
-  state_arme = state_arme of (register -> (bool, i32) cart) *
-                    (psrs -> (bool, i32) cart) *
-                    ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict *
-                    bool
-  fun state_arme_undefined (state_arme(f,f0,f1,b)) = b
-    
-  fun state_arme_memory (state_arme(f,f0,f1,b)) = f1
-    
-  fun state_arme_psrs (state_arme(f,f0,f1,b)) = f0
-    
-  fun state_arme_registers (state_arme(f,f0,f1,b)) = f
-    
-  fun state_arme_undefined_fupd f2 (state_arme(f,f0,f1,b)) =
-        state_arme(f,f0,f1,f2 b)
-    
-  fun state_arme_memory_fupd f2 (state_arme(f,f0,f1,b)) =
-        state_arme(f,f0,f2 f1,b)
-    
-  fun state_arme_psrs_fupd f2 (state_arme(f,f0,f1,b)) =
-        state_arme(f,f2 f0,f1,b)
-    
-  fun state_arme_registers_fupd f2 (state_arme(f,f0,f1,b)) =
-        state_arme(f2 f,f0,f1,b)
-    
-  fun state_arme_size (state_arme(a0,a1,a2,a3)) = ONE
     
   fun DECODE_PSR w =
         let val (q0,m) = DIVMOD_2EXP (fromString"5") (w2n w)
@@ -822,35 +885,47 @@ struct
             < i (fromString"5") andalso index (mode_num mode) i))) w
     
   fun DECODE_MODE m =
-        if word_eq m (n2w_itself ((fromString"16"),(Tyop ("i5", []))))
-          then usr
-          else if word_eq m
+        case word_eq m (n2w_itself ((fromString"16"),(Tyop ("i5", []))))
+         of true => usr
+          | false =>
+               (case
+                  word_eq m
                     (n2w_itself ((fromString"17"),(Tyop ("i5", []))))
-                 then fiq
-                 else if word_eq m
+                of true => fiq
+                 | false =>
+                      (case
+                         word_eq m
                            (n2w_itself
                               ((fromString"18"),(Tyop ("i5", []))))
-                        then irq
-                        else if word_eq m
+                       of true => irq
+                        | false =>
+                             (case
+                                word_eq m
                                   (n2w_itself
                                      ((
                                       fromString
                                       "19"
-                                      ),(Tyop ("i5", [])))) then svc
-                               else if word_eq m
+                                      ),(Tyop ("i5", []))))
+                              of true => svc
+                               | false =>
+                                    (case
+                                       word_eq m
                                          (n2w_itself
                                             ((
                                              fromString
                                              "23"
                                              ),(Tyop ("i5", []))))
-                                      then abt
-                                      else if word_eq m
+                                     of true => abt
+                                      | false =>
+                                           (case
+                                              word_eq m
                                                 (n2w_itself
                                                    ((
                                                     fromString
                                                     "27"
                                                     ),(Tyop ("i5", []))))
-                                             then und else safe
+                                            of true => und
+                                             | false => safe)))))
     
   fun NZCV w =
         (index w
@@ -884,7 +959,7 @@ struct
   fun SPSR_WRITE psr mode spsr =
         if USER mode then psr else :- (mode2psr mode) spsr psr
     
-  fun exceptions2mode e =
+  fun exception2mode e =
         case e
          of reset => svc
           | undefined => und
@@ -895,13 +970,13 @@ struct
           | interrupt => irq
           | fast => fiq
     
-  fun EXCEPTION (ARM(reg,psr)) e =
+  fun EXCEPTION reg psr e =
         let val cpsr = CPSR_READ psr
             val fiq' =
                 ((e = reset) orelse (e = fast))
                 orelse
                 index cpsr (fromString"6")
-            and mode' = exceptions2mode e
+            and mode' = exception2mode e
             and pc =
                 n2w_itself
                   ( *  (fromString"4")
@@ -912,13 +987,13 @@ struct
                   (word_add (FETCH_PC reg)
                      (n2w_itself ((fromString"4"),(Tyop ("i32", [])))))
         in
-           ARM(REG_WRITE reg' usr
-                 (n2w_itself ((fromString"15"),(Tyop ("i4", [])))) pc,
+           regs(REG_WRITE reg' usr
+                  (n2w_itself ((fromString"15"),(Tyop ("i4", [])))) pc,
            CPSR_WRITE (SPSR_WRITE psr mode' cpsr)
              (SET_IFMODE true fiq' mode' cpsr))
         end
     
-  fun BRANCH (ARM(reg,psr)) mode ireg =
+  fun BRANCH reg psr mode ireg =
         let val (L,offset) = DECODE_BRANCH ireg
             and pc =
                 REG_READ reg usr
@@ -932,14 +1007,14 @@ struct
                   (n2w_itself ((fromString"15"),(Tyop ("i4", []))))
                   br_addr
         in
-           ARM(if L
-                 then REG_WRITE pc_reg mode
-                        (n2w_itself
-                           ((fromString"14"),(Tyop ("i4", []))))
-                        (word_add (FETCH_PC reg)
-                           (n2w_itself
-                              ((fromString"4"),(Tyop ("i32", [])))))
-                 else pc_reg,
+           regs(if L
+                  then REG_WRITE pc_reg mode
+                         (n2w_itself
+                            ((fromString"14"),(Tyop ("i4", []))))
+                         (word_add (FETCH_PC reg)
+                            (n2w_itself
+                               ((fromString"4"),(Tyop ("i32", [])))))
+                  else pc_reg,
            psr)
         end
     
@@ -984,39 +1059,48 @@ struct
         end
     
   fun SHIFT_IMMEDIATE2 shift sh rm c =
-        if word_eq shift (n2w_itself (ZERO,(Tyop ("i8", []))))
-          then (if word_eq sh (n2w_itself (ZERO,(Tyop ("i2", []))))
-                  then LSL rm (n2w_itself (ZERO,(Tyop ("i8", [])))) c
-                  else if word_eq sh
-                            (n2w_itself (ONE,(Tyop ("i2", []))))
-                         then LSR rm
-                                (n2w_itself
-                                   ((fromString"32"),(Tyop ("i8", []))))
-                                c
-                         else if word_eq sh
-                                   (n2w_itself (TWO,(Tyop ("i2", []))))
-                                then ASR rm
-                                       (n2w_itself
-                                          ((
-                                           fromString
-                                           "32"
-                                           ),(Tyop ("i8", [])))) c
-                                else word_rrx (c,rm))
-          else if word_eq sh (n2w_itself (ZERO,(Tyop ("i2", []))))
-                 then LSL rm shift c
-                 else if word_eq sh (n2w_itself (ONE,(Tyop ("i2", []))))
-                        then LSR rm shift c
-                        else if word_eq sh
-                                  (n2w_itself (TWO,(Tyop ("i2", []))))
-                               then ASR rm shift c else ROR rm shift c
+        case word_eq sh (n2w_itself (ZERO,(Tyop ("i2", []))))
+         of true => LSL rm shift c
+          | false =>
+               (case word_eq sh (n2w_itself (ONE,(Tyop ("i2", []))))
+                of true =>
+                      LSR rm
+                        (if word_eq shift
+                              (n2w_itself (ZERO,(Tyop ("i8", []))))
+                           then n2w_itself
+                                  ((fromString"32"),(Tyop ("i8", [])))
+                           else shift) c
+                 | false =>
+                      (case
+                         word_eq sh (n2w_itself (TWO,(Tyop ("i2", []))))
+                       of true =>
+                             ASR rm
+                               (if word_eq shift
+                                     (n2w_itself
+                                        (ZERO,(Tyop ("i8", []))))
+                                  then n2w_itself
+                                         ((
+                                          fromString
+                                          "32"
+                                          ),(Tyop ("i8", [])))
+                                  else shift) c
+                        | false =>
+                             if word_eq shift
+                                  (n2w_itself (ZERO,(Tyop ("i8", []))))
+                               then word_rrx (c,rm)
+                               else ROR rm shift c))
     
   fun SHIFT_REGISTER2 shift sh rm c =
-        if word_eq sh (n2w_itself (ZERO,(Tyop ("i2", []))))
-          then LSL rm shift c
-          else if word_eq sh (n2w_itself (ONE,(Tyop ("i2", []))))
-                 then LSR rm shift c
-                 else if word_eq sh (n2w_itself (TWO,(Tyop ("i2", []))))
-                        then ASR rm shift c else ROR rm shift c
+        case word_eq sh (n2w_itself (ZERO,(Tyop ("i2", []))))
+         of true => LSL rm shift c
+          | false =>
+               (case word_eq sh (n2w_itself (ONE,(Tyop ("i2", []))))
+                of true => LSR rm shift c
+                 | false =>
+                      (case
+                         word_eq sh (n2w_itself (TWO,(Tyop ("i2", []))))
+                       of true => ASR rm shift c
+                        | false => ROR rm shift c))
     
   fun SHIFT_IMMEDIATE reg mode C w =
         let val (q0,Rm) = DIVMOD_2EXP (fromString"4") (w2n w)
@@ -1115,100 +1199,164 @@ struct
   fun ORR a b = ALU_logic (word_or a b)
     
   fun ALU opc rn op2 c =
-        if word_eq opc (n2w_itself (ZERO,(Tyop ("i4", []))))
-           orelse
-           word_eq opc (n2w_itself ((fromString"8"),(Tyop ("i4", []))))
-          then AND rn op2
-          else if word_eq opc (n2w_itself (ONE,(Tyop ("i4", []))))
-                  orelse
-                  word_eq opc
-                    (n2w_itself ((fromString"9"),(Tyop ("i4", []))))
-                 then EOR rn op2
-                 else if word_eq opc
-                           (n2w_itself (TWO,(Tyop ("i4", []))))
-                         orelse
+        case word_eq opc (n2w_itself (ZERO,(Tyop ("i4", []))))
+         of true => AND rn op2
+          | false =>
+               (case word_eq opc (n2w_itself (ONE,(Tyop ("i4", []))))
+                of true => EOR rn op2
+                 | false =>
+                      (case
                          word_eq opc
-                           (n2w_itself
-                              ((fromString"10"),(Tyop ("i4", []))))
-                        then SUB rn op2 true
-                        else if word_eq opc
+                           (n2w_itself (TWO,(Tyop ("i4", []))))
+                       of true => SUB rn op2 true
+                        | false =>
+                             (case
+                                word_eq opc
                                   (n2w_itself
                                      ((
                                       fromString
                                       "4"
                                       ),(Tyop ("i4", []))))
-                                orelse
-                                word_eq opc
-                                  (n2w_itself
-                                     ((
-                                      fromString
-                                      "11"
-                                      ),(Tyop ("i4", []))))
-                               then ADD rn op2 false
-                               else if word_eq opc
+                              of true => ADD rn op2 false
+                               | false =>
+                                    (case
+                                       word_eq opc
                                          (n2w_itself
                                             ((
                                              fromString
                                              "3"
                                              ),(Tyop ("i4", []))))
-                                      then ADD (word_1comp rn) op2 true
-                                      else if word_eq opc
+                                     of true =>
+                                           ADD (word_1comp rn) op2 true
+                                      | false =>
+                                           (case
+                                              word_eq opc
                                                 (n2w_itself
                                                    ((
                                                     fromString
                                                     "5"
                                                     ),(Tyop ("i4", []))))
-                                             then ADD rn op2 c
-                                             else if word_eq opc
+                                            of true => ADD rn op2 c
+                                             | false =>
+                                                  (case
+                                                     word_eq opc
                                                        (n2w_itself
                                                           ((
                                                            fromString
                                                            "6"
                                                            ),(Tyop ("i4", []))))
-                                                    then SUB rn op2 c
-                                                    else if word_eq opc
+                                                   of true =>
+                                                         SUB rn op2 c
+                                                    | false =>
+                                                         (case
+                                                            word_eq opc
                                                               (n2w_itself
                                                                  ((
                                                                   fromString
                                                                   "7"
                                                                   ),(Tyop ("i4", []))))
-                                                           then ADD
+                                                          of true =>
+                                                                ADD
                                                                   (word_1comp
                                                                      rn)
                                                                   op2 c
-                                                           else if word_eq
+                                                           | false =>
+                                                                (case
+                                                                   word_eq
                                                                      opc
                                                                      (n2w_itself
                                                                         ((
                                                                          fromString
-                                                                         "12"
+                                                                         "8"
                                                                          ),(Tyop ("i4", []))))
-                                                                  then ORR
+                                                                 of true =>
+                                                                       AND
                                                                          rn
                                                                          op2
-                                                                  else if word_eq
+                                                                  | false =>
+                                                                       (case
+                                                                          word_eq
                                                                             opc
                                                                             (n2w_itself
                                                                                ((
                                                                                 fromString
-                                                                                "13"
+                                                                                "9"
                                                                                 ),(Tyop ("i4", []))))
-                                                                         then ALU_logic
+                                                                        of true =>
+                                                                              EOR
+                                                                                rn
                                                                                 op2
-                                                                         else if word_eq
+                                                                         | false =>
+                                                                              (case
+                                                                                 word_eq
                                                                                    opc
                                                                                    (n2w_itself
                                                                                       ((
                                                                                        fromString
-                                                                                       "14"
+                                                                                       "10"
                                                                                        ),(Tyop ("i4", []))))
-                                                                                then AND
+                                                                               of true =>
+                                                                                     SUB
                                                                                        rn
-                                                                                       (word_1comp
-                                                                                          op2)
-                                                                                else ALU_logic
-                                                                                       (word_1comp
-                                                                                          op2)
+                                                                                       op2
+                                                                                       true
+                                                                                | false =>
+                                                                                     (case
+                                                                                        word_eq
+                                                                                          opc
+                                                                                          (n2w_itself
+                                                                                             ((
+                                                                                              fromString
+                                                                                              "11"
+                                                                                              ),(Tyop ("i4", []))))
+                                                                                      of true =>
+                                                                                            ADD
+                                                                                              rn
+                                                                                              op2
+                                                                                              false
+                                                                                       | false =>
+                                                                                            (case
+                                                                                               word_eq
+                                                                                                 opc
+                                                                                                 (n2w_itself
+                                                                                                    ((
+                                                                                                     fromString
+                                                                                                     "12"
+                                                                                                     ),(Tyop ("i4", []))))
+                                                                                             of true =>
+                                                                                                   ORR
+                                                                                                     rn
+                                                                                                     op2
+                                                                                              | false =>
+                                                                                                   (case
+                                                                                                      word_eq
+                                                                                                        opc
+                                                                                                        (n2w_itself
+                                                                                                           ((
+                                                                                                            fromString
+                                                                                                            "13"
+                                                                                                            ),(Tyop ("i4", []))))
+                                                                                                    of true =>
+                                                                                                          ALU_logic
+                                                                                                            op2
+                                                                                                     | false =>
+                                                                                                          (case
+                                                                                                             word_eq
+                                                                                                               opc
+                                                                                                               (n2w_itself
+                                                                                                                  ((
+                                                                                                                   fromString
+                                                                                                                   "14"
+                                                                                                                   ),(Tyop ("i4", []))))
+                                                                                                           of true =>
+                                                                                                                 AND
+                                                                                                                   rn
+                                                                                                                   (word_1comp
+                                                                                                                      op2)
+                                                                                                            | false =>
+                                                                                                                 ALU_logic
+                                                                                                                   (word_1comp
+                                                                                                                      op2)))))))))))))))
     
   fun ARITHMETIC opcode =
         (index opcode TWO orelse index opcode ONE)
@@ -1221,7 +1369,7 @@ struct
         word_eq (word_bits (fromString"3") TWO opcode)
           (n2w_itself (TWO,(Tyop ("i4", []))))
     
-  fun DATA_PROCESSING (ARM(reg,psr)) C mode ireg =
+  fun DATA_PROCESSING reg psr C mode ireg =
         let val (I,(opcode,(S,(Rn,(Rd,opnd2))))) = DECODE_DATAP ireg
             val (C_s,op2) = ADDR_MODE1 reg mode C I opnd2
             and pc_reg = INC_PC reg
@@ -1232,7 +1380,7 @@ struct
             val ((N,(Z,(C_alu,V))),res) = ALU opcode rn op2 C
             and tc = TEST_OR_COMP opcode
         in
-           ARM(if tc then pc_reg else REG_WRITE pc_reg mode Rd res,
+           regs(if tc then pc_reg else REG_WRITE pc_reg mode Rd res,
            if S
              then CPSR_WRITE psr
                     (if word_eq Rd
@@ -1246,19 +1394,19 @@ struct
                             (CPSR_READ psr)) else psr)
         end
     
-  fun MRS (ARM(reg,psr)) mode ireg =
+  fun MRS reg psr mode ireg =
         let val (R,Rd) = DECODE_MRS ireg
             val word = if R then SPSR_READ psr mode else CPSR_READ psr
         in
-           ARM(REG_WRITE (INC_PC reg) mode Rd word,psr)
+           regs(REG_WRITE (INC_PC reg) mode Rd word,psr)
         end
     
-  fun MSR (ARM(reg,psr)) mode ireg =
+  fun MSR reg psr mode ireg =
         let val (I,(R,(bit19,(bit16,(Rm,opnd))))) = DECODE_MSR ireg
         in
            if USER mode andalso (R orelse not bit19 andalso bit16)
               orelse
-              not bit19 andalso not bit16 then ARM(INC_PC reg,psr)
+              not bit19 andalso not bit16 then regs(INC_PC reg,psr)
              else let val psrd =
                           if R then SPSR_READ psr mode
                             else CPSR_READ psr
@@ -1280,7 +1428,7 @@ struct
                              (if bit16 andalso not (USER mode)
                                 then index src i else b))) psrd
                   in
-                     ARM(INC_PC reg,
+                     regs(INC_PC reg,
                      if R then SPSR_WRITE psr mode psrd'
                        else CPSR_WRITE psr psrd')
                   end
@@ -1318,7 +1466,7 @@ struct
                                  (ZERO,(Tyop ("i32", [])))),(rd,resLo)))
         end
     
-  fun MLA_MUL (ARM(reg,psr)) mode ireg =
+  fun MLA_MUL reg psr mode ireg =
         let val (L,(Sgn,(A,(S,(Rd,(Rn,(Rs,Rm))))))) =
                 DECODE_MLA_MUL ireg
             val pc_reg = INC_PC reg
@@ -1339,11 +1487,11 @@ struct
                   (n2w_itself ((fromString"15"),(Tyop ("i4", []))))
                 orelse
                 (word_eq Rn Rm orelse word_eq Rd Rn)))
-             then ARM(pc_reg,psr)
-             else ARM(if L
-                        then REG_WRITE (REG_WRITE pc_reg mode Rn resLo)
-                               mode Rd resHi
-                        else REG_WRITE pc_reg mode Rd resLo,
+             then regs(pc_reg,psr)
+             else regs(if L
+                         then REG_WRITE (REG_WRITE pc_reg mode Rn resLo)
+                                mode Rd resHi
+                         else REG_WRITE pc_reg mode Rd resLo,
                   if S
                     then CPSR_WRITE psr (SET_NZ (N,Z) (CPSR_READ psr))
                     else psr)
@@ -1371,7 +1519,7 @@ struct
     
   fun ==> A B = not A orelse B
     
-  fun LDR_STR (ARM(reg,psr)) C mode isdabort data ireg =
+  fun LDR_STR reg psr C mode isdabort data ireg =
         let val (I,(P,(U,(B,(W,(L,(Rn,(Rd,offset)))))))) =
                 DECODE_LDR_STR ireg
             val (addr,wb_addr) = ADDR_MODE2 reg mode C I P U Rn offset
@@ -1380,12 +1528,12 @@ struct
                 if ==> P W then REG_WRITE pc_reg mode Rn wb_addr
                   else pc_reg
         in
-           state_out(ARM(if ==> L isdabort then wb_reg
-                           else REG_WRITE wb_reg mode Rd
-                                  (BW_READ B
-                                     (word_extract_itself
-                                        (Tyop ("i2", [])) ONE ZERO addr)
-                                     (HD data)),
+           state_out(regs(if ==> L isdabort then wb_reg
+                            else REG_WRITE wb_reg mode Rd
+                                   (BW_READ B
+                                      (word_extract_itself
+                                         (Tyop ("i2", [])) ONE ZERO
+                                         addr) (HD data)),
                      psr),
            [if L then MemRead(addr)
               else MemWrite(B,addr,REG_READ pc_reg mode Rd)])
@@ -1493,7 +1641,7 @@ struct
         MAP (fn (rp,addr) => MemWrite(false,addr,REG_READ reg mode rp))
           bl_list
     
-  fun LDM_STM (ARM(reg,psr)) mode dabort_t data ireg =
+  fun LDM_STM reg psr mode dabort_t data ireg =
         let val (P,(U,(S,(W,(L,(Rn,list)))))) = DECODE_LDM_STM ireg
             val pc_in_list = index list (fromString"15")
             and rn = REG_READ reg mode Rn
@@ -1512,58 +1660,58 @@ struct
                          rn' else pc_reg
         in
            state_out(if L
-                       then ARM(let val t =
-                                        if optionML.IS_SOME dabort_t
-                                          then optionML.THE dabort_t
-                                          else LENGTH rp_list
-                                    val ldm_reg =
-                                        LDM_LIST wb_reg mode'
-                                          (FIRSTN t rp_list)
-                                          (FIRSTN t data)
-                                in
-                                   if optionML.IS_SOME dabort_t
-                                      andalso
-                                      not
-                                        (word_eq Rn
-                                           (n2w_itself
-                                              ((
-                                               fromString
-                                               "15"
-                                               ),(Tyop ("i4", [])))))
-                                     then REG_WRITE ldm_reg mode' Rn
-                                            (REG_READ wb_reg mode' Rn)
-                                     else ldm_reg
-                                end,
+                       then regs(let val t =
+                                         if optionML.IS_SOME dabort_t
+                                           then optionML.THE dabort_t
+                                           else LENGTH rp_list
+                                     val ldm_reg =
+                                         LDM_LIST wb_reg mode'
+                                           (FIRSTN t rp_list)
+                                           (FIRSTN t data)
+                                 in
+                                    if optionML.IS_SOME dabort_t
+                                       andalso
+                                       not
+                                         (word_eq Rn
+                                            (n2w_itself
+                                               ((
+                                                fromString
+                                                "15"
+                                                ),(Tyop ("i4", [])))))
+                                      then REG_WRITE ldm_reg mode' Rn
+                                             (REG_READ wb_reg mode' Rn)
+                                      else ldm_reg
+                                 end,
                             if S
                                andalso
                                (pc_in_list
                                 andalso
                                 not (optionML.IS_SOME dabort_t))
                               then CPSR_WRITE psr (SPSR_READ psr mode)
-                              else psr) else ARM(wb_reg,psr),
+                              else psr) else regs(wb_reg,psr),
            if L then MAP MemRead addr_list
              else STM_LIST
                     (if word_eq (HD rp_list) Rn then pc_reg else wb_reg)
                     mode' (ZIP (rp_list,addr_list)))
         end
     
-  fun SWP (ARM(reg,psr)) mode isdabort data ireg =
+  fun SWP reg psr mode isdabort data ireg =
         let val (B,(Rn,(Rd,Rm))) = DECODE_SWP ireg
             val rn = REG_READ reg mode Rn
             and pc_reg = INC_PC reg
             val rm = REG_READ pc_reg mode Rm
         in
-           state_out(ARM(if isdabort then pc_reg
-                           else REG_WRITE pc_reg mode Rd
-                                  (BW_READ B
-                                     (word_extract_itself
-                                        (Tyop ("i2", [])) ONE ZERO rn)
-                                     data),
+           state_out(regs(if isdabort then pc_reg
+                            else REG_WRITE pc_reg mode Rd
+                                   (BW_READ B
+                                      (word_extract_itself
+                                         (Tyop ("i2", [])) ONE ZERO rn)
+                                      data),
                      psr),
            [MemRead(rn),MemWrite(B,rn,rm)])
         end
     
-  fun MRC (ARM(reg,psr)) mode data ireg =
+  fun MRC reg psr mode data ireg =
         let val Rd =
                 word_extract_itself (Tyop ("i4", [])) (fromString"15")
                   (fromString"12") ireg
@@ -1571,12 +1719,12 @@ struct
         in
            if word_eq Rd
                 (n2w_itself ((fromString"15"),(Tyop ("i4", []))))
-             then ARM(pc_reg,
+             then regs(pc_reg,
                   CPSR_WRITE psr (SET_NZCV (NZCV data) (CPSR_READ psr)))
-             else ARM(REG_WRITE pc_reg mode Rd data,psr)
+             else regs(REG_WRITE pc_reg mode Rd data,psr)
         end
     
-  fun MCR_OUT (ARM(reg,psr)) mode ireg =
+  fun MCR_OUT reg mode ireg =
         let val Rn =
                 word_extract_itself (Tyop ("i4", [])) (fromString"15")
                   (fromString"12") ireg
@@ -1593,7 +1741,7 @@ struct
            (if P then wb_addr else addr,wb_addr)
         end
     
-  fun LDC_STC (ARM(reg,psr)) mode ireg =
+  fun LDC_STC reg psr mode ireg =
         let val (P,(U,(W,(L,(Rn,offset))))) = DECODE_LDC_STC ireg
             val (addr,wb_addr) = ADDR_MODE5 reg mode P U Rn offset
             val pc_reg = INC_PC reg
@@ -1606,8 +1754,8 @@ struct
                            ((fromString"15"),(Tyop ("i4", [])))))
                   then REG_WRITE pc_reg mode Rn wb_addr else pc_reg
         in
-           state_out(ARM(wb_reg,psr),
-           [if L then CPMemRead(U,addr) else CPMemWrite(U,addr)])
+           state_out(regs(wb_reg,psr),
+           [(if L then CPMemRead else CPMemWrite) addr])
         end
     
   fun CONDITION_PASSED2 (N,(Z,(C,V))) cond =
@@ -1620,14 +1768,14 @@ struct
           | GE => N = V
           | GT => not Z andalso (N = V)
           | AL => true
-          | NE => raise Fail ""
-          | CC => raise Fail ""
-          | PL => raise Fail ""
-          | VC => raise Fail ""
-          | LS => raise Fail ""
-          | LT => raise Fail ""
-          | LE => raise Fail ""
-          | NV => raise Fail ""
+          | NE => not Z
+          | CC => not C
+          | PL => not N
+          | VC => not V
+          | LS => not C orelse Z
+          | LT => not (N = V)
+          | LE => Z orelse not (N = V)
+          | NV => false
     
   fun CONDITION_PASSED flags ireg =
         let val pass =
@@ -1640,165 +1788,169 @@ struct
            if index ireg (fromString"28") then not pass else pass
         end
     
-  fun EXEC_INST (ARM_EX(ARM(reg,psr),ireg,exc)) dabort_t data
-        cp_interrupt =
-        if not (exc = software) then EXCEPTION (ARM(reg,psr)) exc
-          else let val ic = DECODE_INST ireg
-                   and (nzcv,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
-               in
-                  if not (CONDITION_PASSED nzcv ireg)
-                    then ARM(INC_PC reg,psr)
-                    else let val mode = DECODE_MODE m
-                         in
-                            if (ic = data_proc) orelse (ic = reg_shift)
-                              then DATA_PROCESSING (ARM(reg,psr))
-                                     (CARRY nzcv) mode ireg
-                              else if ic = mla_mul
-                                     then MLA_MUL (ARM(reg,psr)) mode
-                                            ireg
-                                     else if ic = br
-                                            then BRANCH (ARM(reg,psr))
-                                                   mode ireg
-                                            else if (ic = ldr)
-                                                    orelse
-                                                    (ic = str)
-                                                   then state_out_state
-                                                          (LDR_STR
-                                                             (ARM(reg,
-                                                             psr))
-                                                             (CARRY
-                                                                nzcv)
-                                                             mode
-                                                             (optionML.IS_SOME
-                                                                dabort_t)
-                                                             data ireg)
-                                                   else if (ic = ldm)
-                                                           orelse
-                                                           (ic = stm)
-                                                          then state_out_state
-                                                                 (LDM_STM
-                                                                    (ARM(reg,
-                                                                    psr))
-                                                                    mode
-                                                                    dabort_t
-                                                                    data
-                                                                    ireg)
-                                                          else if ic
-                                                                  =
-                                                                  swp
-                                                                 then state_out_state
-                                                                        (SWP
-                                                                           (ARM(reg,
-                                                                           psr))
-                                                                           mode
-                                                                           (optionML.IS_SOME
-                                                                              dabort_t)
-                                                                           (HD
-                                                                              data)
-                                                                           ireg)
-                                                                 else if ic
-                                                                         =
-                                                                         swi_ex
-                                                                        then EXCEPTION
-                                                                               (ARM(reg,
-                                                                               psr))
-                                                                               software
-                                                                        else if ic
-                                                                                =
-                                                                                mrs_msr
-                                                                               then (if index
-                                                                                          ireg
-                                                                                          (
-                                                                                          fromString
-                                                                                          "21"
-                                                                                          )
-                                                                                       then MSR
-                                                                                              (ARM(reg,
-                                                                                              psr))
-                                                                                              mode
-                                                                                              ireg
-                                                                                       else MRS
-                                                                                              (ARM(reg,
-                                                                                              psr))
-                                                                                              mode
-                                                                                              ireg)
-                                                                               else if cp_interrupt
-                                                                                      then ARM(reg,
-                                                                                           psr)
-                                                                                      else if ic
-                                                                                              =
-                                                                                              mrc
-                                                                                             then MRC
-                                                                                                    (ARM(reg,
-                                                                                                    psr))
-                                                                                                    mode
-                                                                                                    (ELL
-                                                                                                       ONE
-                                                                                                       data)
-                                                                                                    ireg
-                                                                                             else if (ic
-                                                                                                      =
-                                                                                                      ldc)
-                                                                                                     orelse
-                                                                                                     (ic
-                                                                                                      =
-                                                                                                      stc)
-                                                                                                    then state_out_state
-                                                                                                           (LDC_STC
-                                                                                                              (ARM(reg,
-                                                                                                              psr))
-                                                                                                              mode
-                                                                                                              ireg)
-                                                                                                    else if (ic
-                                                                                                             =
-                                                                                                             cdp_und)
-                                                                                                            orelse
-                                                                                                            (ic
-                                                                                                             =
-                                                                                                             mcr)
-                                                                                                           then ARM(INC_PC
-                                                                                                                      reg,
-                                                                                                                psr)
-                                                                                                           else ARM(reg,
-                                                                                                                psr)
-                         end
-               end
+  fun RUN_ARM state dabt data cp_abort =
+        let val ireg = arm_state_ireg state
+            and reg = arm_state_registers state
+            and psr = arm_state_psrs state
+        in
+           if not (arm_state_exception state = software)
+             then EXCEPTION reg psr (arm_state_exception state)
+             else let val (nzcv,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
+                  in
+                     if not (CONDITION_PASSED nzcv ireg)
+                       then regs(INC_PC reg,psr)
+                       else let val ic = DECODE_INST ireg
+                                and mode = DECODE_MODE m
+                            in
+                               if (ic = data_proc)
+                                  orelse
+                                  (ic = reg_shift)
+                                 then DATA_PROCESSING reg psr
+                                        (CARRY nzcv) mode ireg
+                                 else if ic = mla_mul
+                                        then MLA_MUL reg psr mode ireg
+                                        else if ic = br
+                                               then BRANCH reg psr mode
+                                                      ireg
+                                               else if (ic = ldr)
+                                                       orelse
+                                                       (ic = str)
+                                                      then state_out_state
+                                                             (LDR_STR
+                                                                reg psr
+                                                                (CARRY
+                                                                   nzcv)
+                                                                mode
+                                                                (optionML.IS_SOME
+                                                                   dabt)
+                                                                data
+                                                                ireg)
+                                                      else if (ic = ldm)
+                                                              orelse
+                                                              (ic = stm)
+                                                             then state_out_state
+                                                                    (LDM_STM
+                                                                       reg
+                                                                       psr
+                                                                       mode
+                                                                       dabt
+                                                                       data
+                                                                       ireg)
+                                                             else if ic
+                                                                     =
+                                                                     swp
+                                                                    then state_out_state
+                                                                           (SWP
+                                                                              reg
+                                                                              psr
+                                                                              mode
+                                                                              (optionML.IS_SOME
+                                                                                 dabt)
+                                                                              (HD
+                                                                                 data)
+                                                                              ireg)
+                                                                    else if ic
+                                                                            =
+                                                                            swi_ex
+                                                                           then EXCEPTION
+                                                                                  reg
+                                                                                  psr
+                                                                                  software
+                                                                           else if ic
+                                                                                   =
+                                                                                   mrs_msr
+                                                                                  then (if index
+                                                                                             ireg
+                                                                                             (
+                                                                                             fromString
+                                                                                             "21"
+                                                                                             )
+                                                                                          then MSR
+                                                                                                 reg
+                                                                                                 psr
+                                                                                                 mode
+                                                                                                 ireg
+                                                                                          else MRS
+                                                                                                 reg
+                                                                                                 psr
+                                                                                                 mode
+                                                                                                 ireg)
+                                                                                  else if cp_abort
+                                                                                         then regs(reg,
+                                                                                              psr)
+                                                                                         else if ic
+                                                                                                 =
+                                                                                                 mrc
+                                                                                                then MRC
+                                                                                                       reg
+                                                                                                       psr
+                                                                                                       mode
+                                                                                                       (ELL
+                                                                                                          ONE
+                                                                                                          data)
+                                                                                                       ireg
+                                                                                                else if (ic
+                                                                                                         =
+                                                                                                         ldc)
+                                                                                                        orelse
+                                                                                                        (ic
+                                                                                                         =
+                                                                                                         stc)
+                                                                                                       then state_out_state
+                                                                                                              (LDC_STC
+                                                                                                                 reg
+                                                                                                                 psr
+                                                                                                                 mode
+                                                                                                                 ireg)
+                                                                                                       else if (ic
+                                                                                                                =
+                                                                                                                cdp_und)
+                                                                                                               orelse
+                                                                                                               (ic
+                                                                                                                =
+                                                                                                                mcr)
+                                                                                                              then regs(INC_PC
+                                                                                                                          reg,
+                                                                                                                   psr)
+                                                                                                              else regs(reg,
+                                                                                                                   psr)
+                            end
+                  end
+        end
     
-  fun IS_Dabort irpt =
-        case irpt
-         of optionML.NONE => false
-          | optionML.SOME(Reset(v4)) => false
-          | optionML.SOME(Undef) => false
-          | optionML.SOME(Prefetch) => false
-          | optionML.SOME(Dabort(v5)) => true
-          | optionML.SOME(Fiq) => false
-          | optionML.SOME(Irq) => false
+  fun IS_Reset (optionML.SOME(Reset(x))) = true
+    | IS_Reset (optionML.SOME(Irq)) = false
+    | IS_Reset (optionML.SOME(Fiq)) = false
+    | IS_Reset (optionML.SOME(Dabort(v3))) = false
+    | IS_Reset (optionML.SOME(Prefetch)) = false
+    | IS_Reset (optionML.SOME(Undef)) = false
+    | IS_Reset optionML.NONE = false
     
-  fun IS_Reset irpt =
-        case irpt
-         of optionML.NONE => false
-          | optionML.SOME(Reset(v4)) => true
-          | optionML.SOME(Undef) => false
-          | optionML.SOME(Prefetch) => false
-          | optionML.SOME(Dabort(v5)) => false
-          | optionML.SOME(Fiq) => false
-          | optionML.SOME(Irq) => false
-    
-  fun PROJ_Dabort (optionML.SOME(Dabort(x))) = x
+  fun PROJ_Dabort (optionML.SOME(Dabort(x))) = optionML.SOME(x)
+    | PROJ_Dabort (optionML.SOME(Irq)) = optionML.NONE
+    | PROJ_Dabort (optionML.SOME(Fiq)) = optionML.NONE
+    | PROJ_Dabort (optionML.SOME(Prefetch)) = optionML.NONE
+    | PROJ_Dabort (optionML.SOME(Undef)) = optionML.NONE
+    | PROJ_Dabort (optionML.SOME(Reset(v2))) = optionML.NONE
+    | PROJ_Dabort optionML.NONE = optionML.NONE
     
   fun PROJ_Reset (optionML.SOME(Reset(x))) = x
     
-  fun interrupt2exceptions (ARM_EX(ARM(reg,psr),ireg,exc)) (i',f') irpt
-        =
-        let val (flags,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
+  fun interrupt2exception state (i',f') irpt =
+        let val ireg = arm_state_ireg state
+            and reg = arm_state_registers state
+            and psr = arm_state_psrs state
+            val (flags,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
             val pass =
-                (exc = software) andalso CONDITION_PASSED flags ireg
+                (arm_state_exception state = software)
+                andalso
+                CONDITION_PASSED flags ireg
             and ic = DECODE_INST ireg
             val old_flags = pass andalso (ic = mrs_msr)
         in
            case irpt
             of optionML.NONE => software
-             | optionML.SOME(Reset(v1)) => reset
+             | optionML.SOME(Reset(x)) => reset
              | optionML.SOME(Undef) =>
                   if pass
                      andalso
@@ -1811,7 +1963,7 @@ struct
                                                           (ldc,EMPTY))))))
                     then undefined else software
              | optionML.SOME(Prefetch) => pabort
-             | optionML.SOME(Dabort(v2)) => dabort
+             | optionML.SOME(Dabort(t)) => dabort
              | optionML.SOME(Fiq) =>
                   if (if old_flags then f else f') then software
                     else fast
@@ -1820,32 +1972,38 @@ struct
                     else interrupt
         end
     
-  fun PROJ_IF_FLAGS (ARM(reg,psr)) =
+  fun PROJ_IF_FLAGS psr =
         let val (flags,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
         in
            (i,f)
         end
     
-  fun NEXT_ARM state (irpt,(cp_interrupt,(ireg,data))) =
-        if IS_Reset irpt then ARM_EX(PROJ_Reset irpt,ireg,reset)
-          else let val state' =
-                       EXEC_INST state
-                         (if IS_Dabort irpt
-                            then optionML.SOME(PROJ_Dabort irpt)
-                            else optionML.NONE) data cp_interrupt
-               in
-                  ARM_EX(state',
-                  ireg,
-                  interrupt2exceptions state (PROJ_IF_FLAGS state')
-                    irpt)
-               end
-    
-  fun OUT_ARM (ARM_EX(ARM(reg,psr),ireg,exc)) =
-        let val ic = DECODE_INST ireg
-            and (nzcv,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
+  fun NEXT_ARM state inp =
+        let val r =
+                if IS_Reset (arm_input_interrupt inp)
+                  then PROJ_Reset (arm_input_interrupt inp)
+                  else RUN_ARM state
+                         (PROJ_Dabort (arm_input_interrupt inp))
+                         (arm_input_data inp) (arm_input_no_cp inp)
         in
-           if (exc = software) andalso CONDITION_PASSED nzcv ireg
-             then let val mode = DECODE_MODE m
+           arm_state(regs_reg r,
+           regs_psr r,
+           arm_input_ireg inp,
+           interrupt2exception state (PROJ_IF_FLAGS (regs_psr r))
+             (arm_input_interrupt inp))
+        end
+    
+  fun OUT_ARM state =
+        let val ireg = arm_state_ireg state
+            and reg = arm_state_registers state
+            and psr = arm_state_psrs state
+            val (nzcv,(i,(f,m))) = DECODE_PSR (CPSR_READ psr)
+        in
+           if (arm_state_exception state = software)
+              andalso
+              CONDITION_PASSED nzcv ireg
+             then let val ic = DECODE_INST ireg
+                      and mode = DECODE_MODE m
                   in
                      if (ic = ldr) orelse (ic = str)
                        then let val
@@ -1914,14 +2072,11 @@ struct
                                              orelse
                                              (ic = stc)
                                             then state_out_out
-                                                   (LDC_STC
-                                                      (ARM(reg,psr))
-                                                      mode ireg)
+                                                   (LDC_STC reg psr mode
+                                                      ireg)
                                             else if ic = mcr
-                                                   then MCR_OUT
-                                                          (ARM(reg,psr))
-                                                          mode ireg
-                                                   else []
+                                                   then MCR_OUT reg mode
+                                                          ireg else []
                   end else []
         end
     
@@ -1954,7 +2109,7 @@ struct
   fun fromHexNum s n =
         wordsML.fromNum(numML.fromHexString n, fcpML.Tyop (s, []));
 
-  val fromNum32 = (fromHexNum "i32"): string -> (bool, i32) fcpML.cart;
+  val fromNum32 = (fromHexNum "i32"): string -> word32;
 
   fun MEM_READ(m,a) = Redblackmap.find(m, a)
                        handle NotFound => fromNum32 "E6000010";
@@ -1962,67 +2117,22 @@ struct
   fun MEM_WRITE_BYTE mem addr word =
         let val addr30 = ADDR30 addr
         in
-           Redblackmap.insert(mem, (addr30: (bool, i30) cart),
+           Redblackmap.insert(mem, (addr30: word30),
              SET_BYTE
                 (word_extract_itself (Tyop ("i2", [])) ONE ZERO addr)
                 (word_extract_itself (Tyop ("i8", [])) (fromString"7")
                    ZERO word) (MEM_READ(mem,addr30)))
         end
 
-  fun MEM_WRITE_WORD (mem:((bool, i30) cart, (bool, i32) cart) Redblackmap.dict)
-        addr word = Redblackmap.insert(mem,ADDR30 addr,word)
+  fun MEM_WRITE_WORD (mem:mem) addr word =
+        Redblackmap.insert(mem,ADDR30 addr,word)
 
   fun MEM_WRITE b = if b then MEM_WRITE_BYTE else MEM_WRITE_WORD
 
-  fun MEM_WRITE_BLOCK m (a: (bool, i30) cart) [] = m
+  fun MEM_WRITE_BLOCK m (a: word30) [] = m
     | MEM_WRITE_BLOCK m a (d::l) =
-        MEM_WRITE_BLOCK (Redblackmap.insert(m, a, (d: (bool, i32) cart)))
+        MEM_WRITE_BLOCK (Redblackmap.insert(m, a, (d: word32)))
           (word_add a (n2w_itself (ONE,(Tyop ("i30", []))))) l
-    
-  fun TRANSFERS mem data [] = (mem,data)
-    | TRANSFERS mem data (r::rs) =
-        (case r
-         of MemRead(v9) =>
-               TRANSFERS mem (SNOC (MEM_READ (mem,ADDR30 v9)) data) rs
-          | MemWrite(v10,v11,v12) =>
-               TRANSFERS (MEM_WRITE v10 mem v11 v12) data rs
-          | CPMemRead(v13,v14) => TRANSFERS mem data rs
-          | CPMemWrite(v15,v16) => TRANSFERS mem data rs
-          | CPWrite(v17) => TRANSFERS mem data rs)
-    
-  fun NEXT_ARMe state =
-        let val pc = FETCH_PC (state_arme_registers state)
-            val ireg = MEM_READ (state_arme_memory state,ADDR30 pc)
-            val s =
-                ARM_EX(ARM(state_arme_registers state,
-                       state_arme_psrs state),
-                ireg,
-                if state_arme_undefined state then undefined
-                  else software)
-            val mrqs = OUT_ARM s
-            val (next_mem,data) =
-                TRANSFERS (state_arme_memory state) [] mrqs
-            and (flags,(i,(f,m))) =
-                DECODE_PSR (CPSR_READ (state_arme_psrs state))
-        in
-           case EXEC_INST s optionML.NONE data true
-            of ARM(v,v1) =>
-                  state_arme(v,
-                  v1,
-                  next_mem,
-                  not (state_arme_undefined state)
-                  andalso
-                  (CONDITION_PASSED flags ireg
-                   andalso
-                   IN (DECODE_INST ireg)
-                     (INSERT
-                        (cdp_und,INSERT
-                                   (mrc,INSERT
-                                          (mcr,INSERT
-                                                 (stc,INSERT
-                                                        (ldc,EMPTY))))))))
-             
-        end
     
   fun word_compare(v, w) =
     let val m = w2n v and n = w2n w in
@@ -2032,8 +2142,55 @@ struct
         if < m n then LESS else GREATER
     end
 
-  val empty_memory = (Redblackmap.mkDict word_compare):
-        ((bool, i30) cart, (bool, i32) cart) Redblackmap.dict
+  val empty_memory = (Redblackmap.mkDict word_compare):mem
+
+  fun LOAD_STORE data mem [] = (mem,data)
+    | LOAD_STORE data mem (r::rs) =
+        (case r
+         of MemRead(addr) =>
+               LOAD_STORE (SNOC (MEM_READ (mem,ADDR30 addr)) data) mem
+                 rs
+          | MemWrite(b,addr',word) =>
+               LOAD_STORE data (MEM_WRITE b mem addr' word) rs
+          | CPMemRead(v11) => LOAD_STORE data mem rs
+          | CPMemWrite(v12) => LOAD_STORE data mem rs
+          | CPWrite(v13) => LOAD_STORE data mem rs)
+    
+  val TRANSFERS = LOAD_STORE []
+    
+  fun NEXT_ARM_MEM state =
+        let val ireg =
+                MEM_READ
+                  (arm_mem_state_memory
+                     state,ADDR30
+                             (FETCH_PC (arm_mem_state_registers state)))
+            val s =
+                arm_state(arm_mem_state_registers state,
+                arm_mem_state_psrs state,
+                ireg,
+                if arm_mem_state_undefined state then undefined
+                  else software)
+            val (mem,data) =
+                TRANSFERS (arm_mem_state_memory state) (OUT_ARM s)
+            and flags =
+                pairML.FST
+                  (DECODE_PSR (CPSR_READ (arm_mem_state_psrs state)))
+            val r = RUN_ARM s optionML.NONE data true
+        in
+           arm_mem_state(regs_reg r,
+           regs_psr r,
+           mem,
+           not (arm_mem_state_undefined state)
+           andalso
+           (CONDITION_PASSED flags ireg
+            andalso
+            IN (DECODE_INST ireg)
+              (INSERT
+                 (cdp_und,INSERT
+                            (mrc,INSERT
+                                   (mcr,INSERT
+                                          (stc,INSERT (ldc,EMPTY))))))))
+        end
     
   val empty_registers = fn n => n2w_itself (ZERO,(Tyop ("i32", [])))
     
