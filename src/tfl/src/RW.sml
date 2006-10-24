@@ -18,7 +18,7 @@
 structure RW :> RW =
 struct
 
-open HolKernel Parse boolLib pairLib Rsyntax;
+open HolKernel Parse boolLib pairLib;
 
 val RW_ERR = mk_HOL_ERR "RW";
 val monitoring = ref false;
@@ -78,7 +78,7 @@ fun GSPEC_ALL th =
   * allow me to unroll recursive functions.
   *--------------------------------------------------------------------------*)
  fun might_loop th =
-    let val (ants,{lhs,rhs}) = (I##dest_eq)(strip_imp(concl th))
+    let val (ants,(lhs,rhs)) = (I##dest_eq)(strip_imp(concl th))
         val embedded_in = !embedded_ref
         val islooper = (aconv lhs rhs) orelse (exists (embedded_in lhs) ants)
     in if (islooper  andalso !monitoring)
@@ -94,7 +94,7 @@ fun GSPEC_ALL th =
 fun strip_imp tm =
   if (is_neg tm) then ([],tm)
   else if (is_imp tm)
-       then let val {ant,conseq} = dest_imp tm
+       then let val (ant,conseq) = dest_imp tm
 	        val (was,wb) = strip_imp conseq
             in (ant::was, wb)
             end
@@ -114,7 +114,7 @@ fun strip_imp tm =
  *
  *---------------------------------------------------------------------------*)
  fun mk_simpls SPECer =
-  let val istrue = mk_const{Name="T",Ty=bool}
+  let val istrue = boolSyntax.T
       fun mk_rewrs th =
       let val tm = Thm.concl th
       in  if (is_eq tm) then [th] else
@@ -232,7 +232,7 @@ fun add_congs (RW{cong_net, congs, thms, rw_net}) thl =
      cong_net = itlist Net.insert
          (map (fn th =>
                 let val c = concl th
-                    val eq = #conseq(dest_imp c) handle _ => c
+                    val eq = snd(dest_imp c) handle HOL_ERR _ => c
                 in
                    (lhs eq,  CONGR th)
                 end)
@@ -265,7 +265,7 @@ fun drop_opt [] = []
   | drop_opt (NONE::rst) = drop_opt rst;
 
 local fun sys_var tm = (is_var tm andalso
-                        not(Lexis.ok_identifier(#Name(dest_var tm))))
+                        not(Lexis.ok_identifier(fst(dest_var tm))))
       val failed = RW_ERR "RW_STEP" "all applications failed"
 in
 fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
@@ -273,7 +273,7 @@ fun RW_STEP {context=(cntxt,_),prover,simpls as RW{rw_net,...}} tm =
       (case f tm
         of UNCOND th => SOME th
          | COND th =>
-            let val condition = #ant(dest_imp(concl th))
+            let val condition = fst(dest_imp(concl th))
                 val cond_thm = prover simpls cntxt condition
                 val ant_vars_fixed = not(can(find_term sys_var) condition)
             in
@@ -404,8 +404,8 @@ local val CHANGED_QRW_ERR = RW_ERR "CHANGED_QRW" ""
 in
 fun CHANGED_QCONV cnv cp tm =
    let val th = cnv cp tm handle UNCHANGED => raise CHANGED_QRW_ERR
-       val {lhs,rhs} = dest_eq (concl th)
-   in if (aconv lhs rhs) then raise CHANGED_QRW_ERR else th
+       val (lhs,rhs) = dest_eq (concl th)
+   in if aconv lhs rhs then raise CHANGED_QRW_ERR else th
    end
 end;
 
@@ -457,11 +457,10 @@ fun thml_fvs thl =
 
 fun dest_combn tm 0 = (tm,[])
   | dest_combn tm n =
-     let val {Rator,Rand} = dest_comb tm
+     let val (Rator,Rand) = dest_comb tm
          val (f,rands) = dest_combn Rator (n-1)
      in (f,Rand::rands)
      end;
-
 
 fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 
@@ -471,7 +470,7 @@ fun add_cntxt ADD = add_rws | add_cntxt DONT_ADD = Lib.K;
 
 fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
  case total ((I##dest_eq) o strip_imp) ant
-  of SOME (L,{lhs,rhs}) =>
+  of SOME (L,(lhs,rhs)) =>
      let val outcome =
          if aconv lhs rhs then NO_CHANGE (L,lhs)
          else let val cps' =
@@ -496,14 +495,14 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let val ant_frees = free_vars ant
     val (vlist,ceqn) = strip_forall ant
-    val {lhs,rhs} = dest_eq(snd(strip_imp ceqn))
+    val (lhs,rhs) = dest_eq(snd(strip_imp ceqn))
     val (f,args) = (I##rev) (dest_combn lhs (length vlist))
     val _ = assert is_pabs f
     val (rhsv,_) = dest_combn rhs (length vlist)
     val vstrl = #1(strip_pabs f)
     val vstrl1 = vstrl_variants ant_frees vstrl
     val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
-    val (L,{lhs,rhs}) = (I##dest_eq) (strip_imp ceqn')
+    val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp ceqn')
     val outcome =
      if aconv lhs rhs then NO_CHANGE (L,lhs)
      else let val lhs_beta_maybe = 
@@ -567,7 +566,7 @@ fun do_cong cnv cps th =
                                     else complex cnv cps (ant,rst)
          in outcome'::loop rst'
          end
-     val ants = strip_conj (#ant(dest_imp (concl th)))
+     val ants = strip_conj (fst(dest_imp (concl th)))
      val ants' = loop ants
  in
     if Lib.all unchanged ants' then raise UNCHANGED
@@ -577,7 +576,7 @@ fun do_cong cnv cps th =
 
 fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
  case dest_term tm
-  of COMB{Rator,Rand} =>
+  of COMB(Rator,Rand) =>
      (do_cong cnv cps (CONG_STEP simpls tm)
       handle UNCHANGED => raise UNCHANGED
            | HOL_ERR _ =>
@@ -586,14 +585,14 @@ fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
                    handle UNCHANGED => AP_THM th Rand
                end
                handle UNCHANGED => AP_TERM Rator (cnv cps Rand))
-   | LAMB{Bvar,Body} =>
+   | LAMB(Bvar,Body) =>
       let val Bth = cnv cps Body
       in ABS Bvar Bth
          handle HOL_ERR _ =>
           let val v = genvar (type_of Bvar)
               val th1 = ALPHA_CONV v tm
               val eq_thm' = ABS v(cnv cps (body(boolSyntax.rhs(Thm.concl th1))))
-              val at = #rhs(dest_eq(concl eq_thm'))
+              val at = snd(dest_eq(concl eq_thm'))
               val v' = variant (free_vars at) Bvar
               val th2 = ALPHA_CONV v' at
           in TRANS (TRANS th1 eq_thm') th2
@@ -637,19 +636,19 @@ fun TOP_DEPTH x = QCONV (TOP_DEPTH_QCONV x);
 fun ONCE_DEPTH x = QCONV (ONCE_DEPTH_QCONV x);
 
 fun RAND f cntxt tm =
-   let val {Rator,Rand} = dest_comb tm
+   let val (Rator,Rand) = dest_comb tm
    in AP_TERM Rator (f cntxt Rand)
    end
    handle HOL_ERR _ => raise RW_ERR "RAND" ""
 
 fun RATOR f cntxt tm =
-   let val {Rator,Rand} = dest_comb tm
+   let val (Rator,Rand) = dest_comb tm
    in AP_THM (f cntxt Rator) Rand
    end
    handle HOL_ERR _  => raise RW_ERR "RATOR" ""
 
 fun ABST f cntxt tm =
-   let val {Bvar,Body} = dest_abs tm
+   let val (Bvar,Body) = dest_abs tm
    in ABS Bvar (f cntxt Body)
    end
    handle HOL_ERR _ => raise RW_ERR "ABST" "";
@@ -781,7 +780,7 @@ fun always_fails x y z = solver_err();
 (*---------------------------------------------------------------------------
  * Just checks the context to see if it can find an instance of "tm".
  *---------------------------------------------------------------------------*)
-local val untrue = Parse.Term`F`
+local val untrue = boolSyntax.F
 in
 fun std_solver _ context tm =
  let val _ = if !monitoring
@@ -810,19 +809,17 @@ end end;
  * also can loop. In which case, use the std_solver.                         *
  *---------------------------------------------------------------------------*)
 
-local val untrue = boolSyntax.F
-      val istrue = boolSyntax.T
-in
 fun rw_solver simpls context tm =
- let val _ = if !monitoring
+ let open boolSyntax
+     val _ = if !monitoring
              then Lib.say("Solver: attempting to prove (by rewriting)\n  "
                           ^term_to_string tm^"\n") else ()
      val th = TOP_DEPTH RW_STEP {context = (context,ADD),
                                   simpls = simpls,
                                   prover = rw_solver} tm
      val _ = if !monitoring
-             then let val {lhs,rhs} = dest_eq(concl th)
-                  in if (aconv rhs istrue)
+             then let val (lhs,rhs) = dest_eq(concl th)
+                  in if rhs = T
                      then Lib.say("Solver: proved\n"^thm_to_string th^"\n\n")
                      else Lib.say("Solver: unable to prove.\n\n")
                   end
@@ -831,14 +828,14 @@ fun rw_solver simpls context tm =
      fun loop [] = solver_err()
        | loop (x::rst) =
            let val c = concl x
-           in if (c = untrue) then CCONTR tm x
-              else if (aconv tm' c) then x
+           in if c = F then CCONTR tm x
+              else if aconv tm' c then x
                    else INST_TY_TERM (match_term c tm') x
                       handle HOL_ERR _ => loop rst
            end
  in EQ_MP (SYM th) (loop (boolTheory.TRUTH::context))
- end
-end;
+ end;
+
 
 (* The rest is commented out and should be thought of as documentation
 (*---------------------------------------------------------------------------*

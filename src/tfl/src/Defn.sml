@@ -1,9 +1,8 @@
-
 structure Defn :> Defn =
 struct
 
-open HolKernel Parse boolLib
-     pairLib Rules wfrecUtils Functional Induction DefnBase;
+open HolKernel Parse boolLib;
+open pairLib Rules wfrecUtils Functional Induction DefnBase;
 
 type thry   = TypeBasePure.typeBase
 type proofs = GoalstackPure.proofs
@@ -12,11 +11,13 @@ type absyn  = Absyn.absyn;
 val ERR = mk_HOL_ERR "Defn";
 val ERRloc = mk_HOL_ERRloc "Defn";
 
+val monitoring = ref false;
+
+val const_eq_ref = ref Conv.NO_CONV;
+
 (*---------------------------------------------------------------------------
       Miscellaneous support
  ---------------------------------------------------------------------------*)
-
-val monitoring = ref false;
 
 fun enumerate l = map (fn (x,y) => (y,x)) (Lib.enumerate 0 l);
 
@@ -101,8 +102,6 @@ val imp_elim =
          (IMP_ANTISYM_RULE th6 th7)
  end;
 
-local open Psyntax
-in
 fun inject ty [v] = [v]
   | inject ty (v::vs) =
      let val (_,[lty,rty]) = dest_type ty
@@ -119,7 +118,6 @@ fun project ty M =
             mk_comb(mk_const("OUTL", type_of M-->lty),M)
             :: project rty (mk_comb(mk_const("OUTR", type_of M-->rty),M))
         |  _  => [M];
-end;
 
 
 (*---------------------------------------------------------------------------*
@@ -375,12 +373,12 @@ end;
 val mesg = with_flag(MESG_to_string, Lib.I) HOL_MESG
 
 local
-  val chattiness = ref true
-  val _ = Feedback.register_btrace("Define.storage_message", chattiness)
+  val chatting = ref true
+  val _ = Feedback.register_btrace("Define.storage_message", chatting)
 in
 fun been_stored s thm =
   (add_persistent_funs [(s,thm)];
-   if !chattiness then
+   if !chatting then
      mesg ("Definition has been stored under "^Lib.quote s^".\n")
    else ()
    );
@@ -537,13 +535,14 @@ type wfrec_eqns_result = {WFR : term,
                           proto_def : term,
                           extracta  : (thm * term list * bool) list,
                           pats  : pattern list}
+
 fun protect_rhs eqn = mk_eq(lhs eqn,combinSyntax.mk_I(rhs eqn))
 fun protect eqns = list_mk_conj (map protect_rhs (strip_conj eqns));
 
 val unprotect_term = rhs o concl o PURE_REWRITE_CONV [combinTheory.I_THM];
 val unprotect_thm  = PURE_REWRITE_RULE [combinTheory.I_THM]
 
-fun wfrec_eqns thy eqns =
+fun gen_wfrec_eqns thy const_eq_conv eqns =
  let val {functional,pats} = mk_functional thy (protect eqns)
      val SV = free_vars functional    (* schematic variables *)
      val (f, Body) = dest_abs functional
@@ -560,22 +559,28 @@ fun wfrec_eqns thy eqns =
      val corollary' = funpow 2 UNDISCH WFREC_THM
      val given_pats = givens pats
      val corollaries = map (C SPEC corollary') given_pats
-     val eqns_consts = find_terms is_const functional (* could be a set *)
+     val eqns_consts = mk_set(find_terms is_const functional)
      val (case_rewrites,context_congs) = extraction_thms eqns_consts thy
-     val RW = REWRITES_CONV (add_rewrites empty_rewrites case_rewrites)
+     val RW = REWRITES_CONV (add_rewrites empty_rewrites 
+                             (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
                    (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
-     val corollaries' = map rule corollaries
+(* OLD *) val corollaries' = map rule corollaries
+(* NEW *) val CONST_EQ_RULE = CONV_RULE (DEPTH_CONV const_eq_conv)
+     fun TRIV_PAT_ELIM (x,y,z) = 
+         (PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x),y,z)
+(* NEW val corollaries' = map (CONST_EQ_RULE o rule) corollaries *)
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
  in
-    {proto_def = proto_def,
+    {proto_def=proto_def,
      SV=Listsort.sort Term.compare SV,
      WFR=WFR,
      pats=pats,
-     extracta = map Xtract (zip given_pats corollaries')}
+     extracta = map (TRIV_PAT_ELIM o Xtract) (zip given_pats corollaries')}
  end;
 
+fun wfrec_eqns thy eqns = gen_wfrec_eqns thy (!const_eq_ref) eqns;
 
 (*---------------------------------------------------------------------------*
  * Define the constant after extracting the termination conditions. The      *
@@ -585,7 +590,7 @@ fun wfrec_eqns thy eqns =
  *                                                                           *
  * There are three flavours of recursion: standard, nested, and mutual.      *
  *                                                                           *
- *  A "standard" recursion is one that is not mutual or nested.              *
+ * A "standard" recursion is one that is not mutual or nested.               *
  *---------------------------------------------------------------------------*)
 
 fun stdrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
@@ -1000,7 +1005,8 @@ fun pairf (stem,eqs0) =
       end
  in
     (tuple_args [(f,(stem',argtys))] eqs0, stem'name, untuple_args)
- end end;
+ end
+end;
 
 
 local fun is_constructor tm = not (is_var tm orelse is_pair tm)
@@ -1052,8 +1058,12 @@ fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple) =
 fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  let val {rules,R,SV,full_pats_TCs,...} = stdrec facts stem' wfrec_res
      val ((f,_),_) = dest_hd_eqnl rules
+     val full_pats_TCs' = 
+         let val culled = gather (is_var o fst) full_pats_TCs
+         in if null culled then full_pats_TCs else culled
+         end
      val ind = Induction.mk_induction facts
-                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
+                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs'}
  in
  case hyp (LIST_CONJ rules)
  of []     => raise ERR "stdrec_defn" "Empty hypotheses"
@@ -1093,15 +1103,15 @@ fun mk_defn stem eqns =
   non_wfrec_defn (facts, defSuffix stem, eqns)
   handle HOL_ERR _
   => if 1 < length(all_fns eqns)
-     then mutrec_defn (facts,stem,eqns)
-     else
-     let val ((f,args),rhs) = dest_hd_eqn eqns
-         val _ =
-           length args > 0 orelse
-           (free_in f rhs andalso
-            raise ERR "mk_defn" "Simple nullary definition recurses") orelse
-           (let val fvs = free_vars rhs
-            in
+    then mutrec_defn (facts,stem,eqns)
+   else let 
+    val ((f,args),rhs) = dest_hd_eqn eqns
+    val _ =
+       length args > 0 orelse
+       (free_in f rhs andalso
+        raise ERR "mk_defn" "Simple nullary definition recurses") orelse
+       (let val fvs = free_vars rhs
+        in
               not (null fvs) andalso
               raise ERR "mk_defn"
                     ("Free variables (" ^
@@ -1109,15 +1119,15 @@ fun mk_defn stem eqns =
                      ") on RHS of nullary definition")
             end) orelse
            raise ERR "mk_defn" "Nullary definition failed - giving up"
-         val (tup_eqs,stem',untuple) = pairf(stem,eqns)
+    val (tup_eqs,stem',untuple) = pairf(stem,eqns)
             handle HOL_ERR _ => raise ERR "mk_defn"
                "failure in internal translation to tupled format"
-         val wfrec_res = wfrec_eqns facts tup_eqs
-     in
+    val wfrec_res = wfrec_eqns facts tup_eqs
+   in
         if exists I (#3 (unzip3 (#extracta wfrec_res)))   (* nested *)
         then nestrec_defn (facts,(stem,stem'),wfrec_res,untuple)
         else stdrec_defn  (facts,(stem,stem'),wfrec_res,untuple)
-     end
+   end
  end
  handle e => raise wrap_exn "Defn" "mk_defn" e;
 

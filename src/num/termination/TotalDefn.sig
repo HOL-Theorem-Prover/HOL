@@ -14,21 +14,21 @@ sig
    val default_WF_thms : thm list ref
    val default_termination_simps : thm list ref
 
-   val PRIM_WF_TAC   : thm list -> tactic
+   val PRIM_WF_TAC        : thm list -> tactic
    val PRIM_TC_SIMP_CONV  : thm list -> conv
    val PRIM_TC_SIMP_TAC   : thm list -> tactic
    val PRIM_WF_REL_TAC    : term quotation -> thm list -> thm list -> tactic
 
-   val WF_TAC        : tactic
-   val TC_SIMP_CONV  : conv
-   val TC_SIMP_TAC   : tactic
-   val WF_REL_TAC    : term quotation -> tactic
+   val WF_TAC       : tactic
+   val TC_SIMP_CONV : conv
+   val TC_SIMP_TAC  : tactic
+   val WF_REL_TAC   : term quotation -> tactic
 
    (* Definitions with automated termination proof support *)
 
-   val primDefine    : defn -> thm * thm option * thm option
-   val xDefine       : string -> term quotation -> thm
-   val Define        : term quotation -> thm
+   val primDefine  : defn -> thm * thm option * thm option
+   val xDefine     : string -> term quotation -> thm
+   val Define      : term quotation -> thm
 
    datatype phase 
         = PARSE of term quotation
@@ -37,8 +37,8 @@ sig
 
    type apidefn = (defn * thm option, phase * exn) Lib.verdict
 
-   val apiDefine    : (defn->term list) -> tactic -> string * term -> apidefn
-   val apiDefineq   : (defn->term list) -> tactic -> term quotation -> apidefn
+   val apiDefine      : (defn->term list) -> tactic -> string * term -> apidefn
+   val apiDefineq     : (defn->term list) -> tactic -> term quotation -> apidefn
    val std_apiDefine  : string * term -> apidefn
    val std_apiDefineq : term quotation -> apidefn
 

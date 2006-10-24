@@ -260,7 +260,6 @@ in
   recurse 0 lst
 end
 
-
 type 'a cmp = 'a * 'a -> order
 
 fun flip_order LESS = GREATER

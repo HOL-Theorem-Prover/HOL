@@ -11,8 +11,8 @@
             "BasicProvers", "Q", "SingleStep", "metisLib"];
 *)
 
-open HolKernel boolLib
-     numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib;
+open HolKernel boolLib;
+open numLib numSyntax BasicProvers SingleStep listTheory bossLib metisLib;
 
 (* ---------------------------------------------------------------------*)
 (* Create the new theory						*)
@@ -484,7 +484,7 @@ val isPREFIX_STRCAT = Q.store_thm
 
 
 (*---------------------------------------------------------------------------*)
-(* Emit a vacuous theorem specifying that num is a datatype.                 *)
+(* Emit a vacuous theorem specifying that string is a datatype.              *)
 (*---------------------------------------------------------------------------*)
 
 val DATATYPE_STRING = Q.store_thm

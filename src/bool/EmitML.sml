@@ -656,6 +656,7 @@ fun elemi (DEFN th) (cs,il) = (cs,iDEFN (!reshape_thm_hook th) :: il)
          fun is_multi (_,n) = n >= 2
          val mconstrs = filter is_multi constrs'
          val _ = List.map curried_const_equiv_tupled_var mconstrs
+         (* val _ = schedule this call for exported theory *)
       in
         (mconstrs@cs, iABSDATATYPE(sl,tyAST) :: il)
       end

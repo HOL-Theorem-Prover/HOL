@@ -6,12 +6,12 @@ structure sortingScript =
 struct
 
 (* interactive use:
-app load ["bossLib"];
+
 *)
 
-open HolKernel Parse boolLib bossLib labelLib
-     combinTheory pairTheory relationTheory listTheory metisLib
-     BasicProvers
+open HolKernel Parse boolLib bossLib;
+open combinTheory pairTheory relationTheory listTheory 
+     labelLib metisLib BasicProvers;
 
 
 val _ = new_theory "sorting";
@@ -215,9 +215,11 @@ val perm_rules = prove(
   REPEAT
     (FIRST_X_ASSUM (MP_TAC o SPEC ``P : 'a list -> 'a list -> bool``)) THEN
   ASM_REWRITE_TAC [] THEN METIS_TAC [])
-val perm_rules = UNDISCH perm_rules
+
+val perm_rules = UNDISCH perm_rules;
 
 val _ = print "Proving perm symmetric, reflexive & transitive\n"
+
 val perm_sym = prove(
   ``^perm_t ==> (perm l1 l2 = perm l2 l1)``,
   STRIP_TAC THEN
@@ -236,6 +238,7 @@ val perm_refl = UNDISCH perm_refl
 val perm_trans = last (CONJUNCTS perm_rules)
 
 val _ = print "Proving perm ==> PERM\n"
+
 val perm_PERM = prove(
   ``^perm_t ==> !l1 l2. perm l1 l2 ==> PERM l1 l2``,
   STRIP_TAC THEN HO_MATCH_MP_TAC perm_ind THEN SRW_TAC [][] THENL [
@@ -247,6 +250,7 @@ val perm_PERM = prove(
 val perm_PERM = UNDISCH perm_PERM
 
 val _ = print "Proving perm has primitive recursive characterisation\n"
+
 val perm_cons_append = prove(
   ``^perm_t ==> !l1 l2. perm l1 l2 ==>
                         !M N. (l2 = M ++ N) ==>
@@ -273,6 +277,7 @@ val perm_cons_append =
     SIMP_RULE (bool_ss ++ boolSimps.DNF_ss) [] (UNDISCH perm_cons_append)
 
 val _ = print "Proving PERM ==> perm\n"
+
 val PERM_perm = prove(
   ``^perm_t ==> !l1 l2. PERM l1 l2 ==> perm l1 l2``,
   STRIP_TAC THEN Induct THEN SRW_TAC [][perm_rules, PERM_CONS_EQ_APPEND] THEN
@@ -303,12 +308,12 @@ val PERM_SWAP_AT_FRONT = store_thm(
 val PERM_LENGTH = Q.store_thm(
   "PERM_LENGTH",
   `!l1 l2. PERM l1 l2 ==> (LENGTH l1 = LENGTH l2)`,
-  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][])
+  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][]);
 
 val PERM_MEM_EQ = Q.store_thm(
   "PERM_MEM_EQ",
   `!l1 l2. PERM l1 l2 ==> !x. MEM x l1 = MEM x l2`,
-  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][AC DISJ_ASSOC DISJ_COMM])
+  HO_MATCH_MP_TAC PERM_IND THEN SRW_TAC [][AC DISJ_ASSOC DISJ_COMM]);
 
 (*---------------------------------------------------------------------------*
  * The idea of sortedness requires a "permutation" relation for lists, and   *
@@ -334,8 +339,8 @@ val SORTS_DEF =
 
 val SORTED_EQ = Q.store_thm
 ("SORTED_EQ",
- `!R L x. transitive R ==> 
-          (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
+ `!R L x. 
+    transitive R ==> (SORTED R (x::L) = SORTED R L /\ !y. MEM y L ==> R x y)`,
 Induct_on `L`
  THEN RW_TAC list_ss [SORTED_DEF,MEM]
  THEN PROVE_TAC [relationTheory.transitive_def]);

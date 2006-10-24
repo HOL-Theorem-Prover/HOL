@@ -113,5 +113,6 @@ val REDUCE_RULE = CONV_RULE REDUCE_CONV;
 
 val REDUCE_TAC = CONV_TAC REDUCE_CONV;
 
+val _ = Defn.const_eq_ref := NEQ_CONV;
 
 end;

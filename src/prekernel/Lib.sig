@@ -122,9 +122,7 @@ sig
   val inv_img_cmp   : ('b -> 'a) -> 'a cmp -> 'b cmp
   val flip_order    : order -> order
 
-  datatype 'a delta
-       = SAME
-       | DIFF of 'a
+  datatype 'a delta = SAME | DIFF of 'a
 
   val delta_apply   : ('a -> 'a delta) -> 'a -> 'a
   val delta_map     : ('a -> 'a delta) -> 'a list -> 'a list delta

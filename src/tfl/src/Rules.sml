@@ -1,7 +1,7 @@
 structure Rules :> Rules =
 struct
 
-open HolKernel boolLib pairLib wfrecUtils Rsyntax;
+open HolKernel boolLib pairLib wfrecUtils;
 
 
 val ERR = mk_HOL_ERR "Rules";
@@ -18,8 +18,8 @@ fun simpl_conv thl =
                     Solver always_fails)
       fun simpl tm =
        let val th = Conv.THENC(RWC,Conv.DEPTH_CONV GEN_BETA_CONV) tm
-           val {lhs,rhs} = dest_eq(concl th)
-       in if (aconv lhs rhs) then th else TRANS th (simpl rhs)
+           val (lhs,rhs) = dest_eq(concl th)
+       in if aconv lhs rhs then th else TRANS th (simpl rhs)
        end
   in simpl
   end;
@@ -53,7 +53,7 @@ fun FILTER_DISCH_ALL P th =
  *---------------------------------------------------------------------------*)
 
 fun EXISTL vlist thm =
-   itlist (fn v => fn thm => EXISTS(mk_exists{Bvar=v,Body=concl thm},v) thm)
+   itlist (fn v => fn thm => EXISTS(mk_exists(v,concl thm),v) thm)
           vlist thm;
 
 (*----------------------------------------------------------------------------
@@ -66,9 +66,8 @@ fun EXISTL vlist thm =
 
 fun IT_EXISTS theta thm =
  itlist (fn (b as {redex,residue}) => fn thm =>
-    EXISTS(mk_exists{Bvar=residue, Body=subst [b] (concl thm)},
-            redex) thm)
-    theta thm;
+           EXISTS(mk_exists(residue, subst [b] (concl thm)), redex) thm)
+        theta thm;
 
 
 
@@ -103,11 +102,11 @@ fun EVEN_ORS thms =
 
 fun LEFT_ABS_VSTRUCT thm =
   let fun CHOOSER v (tm,thm) =
-        let val ex_tm = mk_exists{Bvar=v,Body=tm}
+        let val ex_tm = mk_exists(v,tm)
         in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
         end
       val veq = Lib.trye hd (filter (can dest_eq) (#1 (Thm.dest_thm thm)))
-      val {lhs,rhs} = dest_eq veq
+      val (lhs,rhs) = dest_eq veq
       val L = free_vars_lr rhs
   in
     snd(itlist CHOOSER L (veq,thm))
@@ -119,7 +118,7 @@ fun LEFT_ABS_VSTRUCT thm =
  ----------------------------------------------------------------------------*)
 
 
-local fun !!v M = mk_forall{Bvar=v, Body=M}
+local fun !!v M = mk_forall(v, M)
       val mem = Lib.op_mem aconv
       fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
 in
