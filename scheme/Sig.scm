@@ -33,14 +33,14 @@
               del_segment
               anachronize
               all_entries)
-      (define ??? #f)
+      
       (define (id_of x)
         (key (vector-ref x 0)))
       (define (retire const)
         (KernelTypes.retire (key const)))
       
       (define theSig
-        (make-vector table_size ???))
+        (make-vector table_size ()))
       
       (define hash
         (Lib.hash table_size))
