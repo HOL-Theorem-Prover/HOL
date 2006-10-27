@@ -1642,6 +1642,52 @@ in
     end
 end
 
+
+(* A character is symbolic if it is listed on the first line of the      *)
+(* symbolic characters given in DESCRIPTION, section 1.1.1(ii) (page 2). *)
+(* The function "String.contains" is slow on the first argument, but     *)
+(* fast on its second argument.                                          *)
+
+val is_symbolic_char = Char.contains "#?+*/\\=<>&%@!,:;_|~-"
+
+val in_term = ref false
+
+fun wrap_consumer_sep consumer =
+  let val c = ref #" "
+  in fn s =>
+       if !in_term andalso String.size s > 0 then
+         let val cs = String.explode s
+             val c0 = hd cs
+         in if is_symbolic_char (!c) andalso is_symbolic_char c0
+            then (consumer " ";
+                  consumer s)
+            else  consumer s;
+            c := last cs
+         end
+       else consumer s
+  end
+
+(* --------------------------------------------------------------------- *)
+(* The term pretty-printer "pp_term_sep" is exactly like "pp_term",      *)
+(* except that it prevents the adjacent printing of two symbolic names,  *)
+(* such as two symbolic identifiers, like "|>" and "::".  This enables   *)
+(* easier parsing of the result as a term without confusing the lexer.   *)
+(* This only works if the ppstream argument "pps" was created with a     *)
+(* consumer function which was created by calling "wrap_consumer_sep"    *)
+(* to wrap the original consumer with the new functionality.             *)
+(* --------------------------------------------------------------------- *)
+
+fun pp_term_sep (G : grammar) TyG = let
+  val pp_term_1 = pp_term G TyG
+in fn pps => fn tm =>
+     let val in_term_1 = !in_term
+     in in_term := true;
+        pp_term_1 pps tm;
+        in_term := in_term_1
+     end
+end
+
+
 (* testing
 use "term_pp.sml";
 val G = let
