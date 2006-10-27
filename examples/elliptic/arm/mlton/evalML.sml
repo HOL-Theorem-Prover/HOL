@@ -4,7 +4,7 @@ val _ = loadPath := !loadPath @ ".." :: map (fn x => HOLDIR ^ x)
      ["tools/mlyacc/mlyacclib", "tools/mlton/pre",
       "src/portableML", "src/theoryML"];
 val _ = app load ["assemblerML", "armML", "sizesML"];
-val _ = app load ["Bool", "Time", "Timer", "CommandLine", "ListPair"];
+val _ = app load ["OS", "Bool", "Time", "Timer", "CommandLine", "ListPair"];
 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -32,6 +32,9 @@ fun string2num s =
 
 fun toHexString_w2n n = "0x" ^ numML.toHexString (wordsML.w2n n);
 
+fun for base top f =
+ let fun For i = if i>top then [] else f i::For(i+1) in For base end;
+
 fun for_se base top f =
  let fun For i = if i>top then () else (f i; For(i+1)) in For base end;
 
@@ -56,6 +59,23 @@ fun mode2string m =
   | armML.abt => "abt"
   | armML.und => "und"
   | _ => "";
+
+fun register2string r =
+  case r of
+    armML.r0 => "r0" | armML.r1 => "r1" | armML.r2 => "r2"
+  | armML.r3 => "r3" | armML.r4 => "r4" | armML.r5 => "r5"
+  | armML.r6 => "r6" | armML.r7 => "r7" | armML.r8 => "r8"
+  | armML.r9 => "r9" | armML.r10 => "r10" | armML.r11 => "r11"
+  | armML.r12 => "r12" | armML.r13 => "sp" | armML.r14 => "lr"
+  | armML.r15 => "pc"
+  | armML.r8_fiq => "r8_fiq" | armML.r9_fiq => "r9_fiq"
+  | armML.r10_fiq => "r10_fiq" | armML.r11_fiq => "r11_fiq"
+  | armML.r12_fiq => "r12_fiq" | armML.r13_fiq => "r13_fiq"
+  | armML.r14_fiq => "r14_fiq"
+  | armML.r13_irq => "r13_irq" | armML.r14_irq => "r14_fiq"
+  | armML.r13_svc => "r13_svc" | armML.r14_svc => "r14_svc"
+  | armML.r13_abt => "r13_abt" | armML.r14_abt => "r14_abt"
+  | armML.r13_und => "r13_und" | armML.r14_und => "r14_und";
 
 local
   fun namedReg s = toWord4
@@ -107,51 +127,61 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 datatype env =
-   ENV of {N:bool, Z:bool, C:bool, V:bool, M:armML.mode, Wpc:bool,
+   ENV of {N:bool, Z:bool, C:bool, V:bool, M:armML.mode,
+           Wreg:bool, Wmem:bool, Wmode:bool, Wflags:bool,
            Wireg:bool, cycles:int, E:bool, mem:string, reg:armML.registers,
            psr:armML.psrs};
 
-fun update_switch fld b (ENV e) =
-  let val {N,Z,C,V,E,M,mem,reg,cycles,Wpc,Wireg,psr} = e in
+fun update_switch fld (ENV e) =
+  let val {N,Z,C,V,E,M,mem,reg,cycles,Wreg,Wmem,Wmode,Wflags,Wireg,psr} = e
+  in
     ENV
-    {N = if fld = "N" then b else N,
-     Z = if fld = "Z" then b else Z,
-     C = if fld = "Z" then b else C,
-     V = if fld = "V" then b else V,
-     E = if fld = "E" then b else E,
-     Wpc = if fld = "Wpc" then b else Wpc,
-     Wireg = if fld = "Wireg" then b else Wireg,
+    {N = if fld = "N" then true else N,
+     Z = if fld = "Z" then true else Z,
+     C = if fld = "Z" then true else C,
+     V = if fld = "V" then true else V,
+     E = if fld = "E" then true else E,
+     Wreg   = if fld = "Wreg"   orelse fld = "Wall" then true else Wreg,
+     Wmem   = if fld = "Wmem"   orelse fld = "Wall" then true else Wmem,
+     Wmode  = if fld = "Wmode"  orelse fld = "Wall" then true else Wmode,
+     Wflags = if fld = "Wflags" orelse fld = "Wall" then true else Wflags,
+     Wireg  = if fld = "Wireg"  orelse fld = "Wall" then true else Wireg,
      M = M, mem = mem, reg = reg, cycles = cycles, psr = psr}
   end;
 
 fun update_cycles i (ENV e) =
-  let val {N,Z,C,V,E,M,mem,reg,cycles,Wpc,Wireg,psr} = e in
+  let val {N,Z,C,V,E,M,mem,reg,cycles,Wreg,Wmem,Wmode,Wflags,Wireg,psr} = e in
     ENV {N = N, Z = Z, C = C, V = V, E = E, M = M, mem = mem, reg = reg,
-         cycles = i, Wpc = Wpc, Wireg = Wireg, psr = psr}
+         cycles = i, Wreg = Wreg, Wmem = Wmem, Wmode = Wmode, Wflags = Wflags,
+         Wireg = Wireg, psr = psr}
   end;
 
 fun update_mode m (ENV e) =
-  let val {N,Z,C,V,E,M,mem,reg,cycles,Wpc,Wireg,psr} = e in
+  let val {N,Z,C,V,E,M,mem,reg,cycles,Wreg,Wmem,Wmode,Wflags,Wireg,psr} = e in
     ENV {N = N, Z = Z, C = C, V = V, E = E, M = m, mem = mem, reg = reg,
-         cycles = cycles, Wpc = Wpc, Wireg = Wireg, psr = psr}
+         cycles = cycles, Wreg = Wreg, Wmem = Wmem, Wmode = Wmode,
+         Wflags = Wflags, Wireg = Wireg, psr = psr}
   end;
 
 fun update_mem m (ENV e) =
-  let val {N,Z,C,V,E,M,mem,reg,cycles,Wpc,Wireg,psr} = e in
+  let val {N,Z,C,V,E,M,mem,reg,cycles,Wreg,Wmem,Wmode,Wflags,Wireg,psr} = e in
     ENV {N = N, Z = Z, C = C, V = V, E = E, M = M, mem = m, reg = reg,
-         cycles = cycles, Wpc = Wpc, Wireg = Wireg, psr = psr}
+         cycles = cycles, Wreg = Wreg, Wmem = Wmem, Wmode = Wmode,
+         Wflags = Wflags, Wireg = Wireg, psr = psr}
   end;
 
 fun update_reg r (ENV e) =
-  let val {N,Z,C,V,E,M,mem,reg,cycles,Wpc,Wireg,psr} = e in
+  let val {N,Z,C,V,E,M,mem,reg,cycles,Wreg,Wmem,Wmode,Wflags,Wireg,psr} = e in
     ENV {N = N, Z = Z, C = C, V = V, E = E, M = M, mem = mem, reg = r,
-         cycles = cycles, Wpc = Wpc, Wireg = Wireg, psr = psr}
+         cycles = cycles, Wreg = Wreg, Wmem = Wmem, Wmode = Wmode,
+         Wflags = Wflags, Wireg = Wireg, psr = psr}
   end;
 
 fun update_psr (p, n) (ENV e) =
-  let val {N,Z,C,V,E,M,mem,reg,cycles,Wpc,Wireg,psr} = e in
+  let val {N,Z,C,V,E,M,mem,reg,cycles,Wreg,Wmem,Wmode,Wflags,Wireg,psr} = e in
     ENV {N = N, Z = Z, C = C, V = V, E = E, M = M, mem = mem, reg = reg,
-         cycles = cycles, Wpc = Wpc, Wireg = Wireg, psr = armML.:- p n psr}
+         cycles = cycles, Wreg = Wreg, Wmem = Wmem, Wmode = Wmode,
+         Wflags = Wflags, Wireg = Wireg, psr = armML.:- p n psr}
   end;
 
 fun proj_ENV (ENV e) = e;
@@ -160,7 +190,7 @@ val toSpaces = String.map (fn _ => #" ");
 
 val usage_message = let val x = "Usage: " ^ CommandLine.name() in
   "An ARM emulator (generated from a HOL model of the ARM7's ISA).\n" ^
-  x ^ " [-N] [-Z] [-C] [-V] [-M m] [-E] [-Wpc] [-Wireg]\n" ^
+  x ^ " [-N] [-Z] [-C] [-V] [-M m] [-E] [-Wall] [-Wireg]\n" ^
   toSpaces x ^ " [-cycles n] [-SPSR_m n] [-rN_m n] file\n" ^
   "Options:\n\
   \-N        - set the Negative flag (will be clear by default)\n\
@@ -170,8 +200,12 @@ val usage_message = let val x = "Usage: " ^ CommandLine.name() in
   \-M {usr,fiq,irq,svc,abt,und}\n\
   \          - set the mode (will be \"usr\" by default)\n\
   \-E        - load the default \"rudimentary\" exception handler\n\
-  \-Wpc      - watch the program counter\n\
+  \-Wreg     - watch register updates\n\
+  \-Wmem     - watch memory updates\n\
+  \-Wmode    - watch mode changes\n\
+  \-Wflags   - watch changes to the status flags\n\
   \-Wireg    - watch the instruction register\n\
+  \-Wall     - watch everything\n\
   \-cycles n - upper limit on the run length (will be " ^
                Int.toString (valOf Int.maxInt) ^ " by default)\n\
   \-SPSR_m n - set a Saved Program Status Register e.g. -SPSR_svc 0x20\n\
@@ -179,7 +213,7 @@ val usage_message = let val x = "Usage: " ^ CommandLine.name() in
 end;
 
 fun setOptions l env =
-  let fun set_switch x rest = setOptions rest (update_switch x true env)
+  let fun set_switch x rest = setOptions rest (update_switch x env)
       fun set_psr x s rest =
             setOptions rest (update_psr(x,toWord32 (string2num s)) env)
               handle _ => setOptions (s::rest) env
@@ -192,8 +226,12 @@ fun setOptions l env =
     | ("-C"::ls) => set_switch "C" ls
     | ("-V"::ls) => set_switch "V" ls
     | ("-E"::ls) => set_switch "E" ls
-    | ("-Wpc"::ls) => set_switch "Wpc" ls
-    | ("-Wireg"::ls) => set_switch "Wireg" ls
+    | ("-Wreg"::ls)   => set_switch "Wreg" ls
+    | ("-Wmem"::ls)   => set_switch "Wmem" ls
+    | ("-Wmode"::ls)  => set_switch "Wmode" ls
+    | ("-Wflags"::ls) => set_switch "Wflags" ls
+    | ("-Wireg"::ls)  => set_switch "Wireg" ls
+    | ("-Wall"::ls)   => set_switch "Wall" ls
     | ("-M"::(s::ls)) =>
         (setOptions ls (update_mode (string2mode (toLowerString s)) env)
            handle Parse => setOptions (s::ls) env)
@@ -378,6 +416,68 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
+
+val int2register = armML.num2register o numML.fromInt;
+
+fun gen_tabulate f g n =
+  let fun do_tab i l =
+    if i = 0 then l
+    else let val x = i - 1 in
+      do_tab x (if f x then (g x)::l else l)
+    end
+  in
+    do_tab n []
+  end;
+
+fun reg_updates reg1 reg2 =
+  gen_tabulate
+    (fn i => let val r = int2register i in not (reg1 r = reg2 r) end)
+    int2register 31;
+
+fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
+  if Wireg orelse Wreg orelse Wmem orelse Wflags orelse Wmode then
+    let val reg1 = armML.arm_mem_state_registers s
+        val reg2 = armML.arm_mem_state_registers ns
+        val mem1 = armML.arm_mem_state_memory s
+        val mem2 = armML.arm_mem_state_memory ns
+        val cpsr1 = armML.CPSR_READ (armML.arm_mem_state_psrs s)
+        val cpsr2 = armML.CPSR_READ (armML.arm_mem_state_psrs ns)
+        val (nzcv1, (i1, (f1, m1))) = armML.DECODE_PSR cpsr1
+        val (nzcv2, (i2, (f2, m2))) = armML.DECODE_PSR cpsr2
+
+        fun print_ireg ireg = print ("> " ^
+              assemblerML.decode_arm NONE (num2Arbnum (wordsML.w2n ireg)) ^
+              "\n")
+
+        fun print_reg i = print
+              ("; " ^ register2string i ^ " := " ^ toHexString_w2n (reg2(i)))
+
+        fun print_mem a = print
+              ("; mem[" ^ toHexString_w2n a ^ "] := " ^
+               toHexString_w2n (armML.MEM_READ(mem2,a)))
+
+        fun print_bool b = print (if b then "1" else "0")
+        fun print_nzcv (n,(z,(c, v))) = (print "; NZCV := ";
+              print_bool n; print_bool z; print_bool c; print_bool v)
+
+        fun print_mode m = print
+              ("; mode := " ^ mode2string (armML.DECODE_MODE m))
+    in
+      ((if Wireg then
+          print_ireg (armML.MEM_READ(mem1,armML.ADDR30 (armML.FETCH_PC reg1)))
+        else
+          ());
+       print ("- t = " ^ Int.toString cycle);
+       (if Wreg then app print_reg (reg_updates reg1 reg2) else ());
+       (if Wmem then app print_mem (rev (!armML.mem_updates)) else ());
+       (if not Wflags orelse nzcv1 = nzcv2 then () else print_nzcv nzcv2);
+       (if not Wmode orelse m1 = m2 then () else print_mode m2);
+       print "\n")
+    end
+  else
+    ();
+
+(* ------------------------------------------------------------------------- *)
 (* Taken from Joe Hurd's $HOLDIR/tools/mlton/src/mlibPortable.sml *)
 
 fun time f x =
@@ -416,47 +516,27 @@ val env =
   in
     ENV {N = false, Z = false, C = false, V = false, E = false, M = armML.usr,
       mem = "", reg = armML.empty_registers, psr = fn x => initial_psr,
-      cycles = valOf Int.maxInt, Wpc = false, Wireg = false}
+      cycles = valOf Int.maxInt, Wreg = false, Wmem = false, Wmode = false,
+      Wflags = false, Wireg = false}
   end;
 
-val env = setOptions (CommandLine.arguments()) env;
-
-(* ------------------------------------------------------------------------- *)
+val e = proj_ENV (setOptions (CommandLine.arguments()) env);
+val watches = (#Wreg e, #Wmem e, #Wmode e, #Wflags e, #Wireg e);
 
 val count = ref 0;
-
-fun done (armML.arm_mem_state (r,p,m,u)) = u;
-
-val e = proj_ENV env;
-val wpc = #Wpc e;
-val wireg = #Wireg e;
-
-fun printer (armML.arm_mem_state (r,p,m,u)) =
-  if wireg then
-    let val pc = armML.FETCH_PC r
-        val ireg = armML.MEM_READ(m,armML.ADDR30 pc)
-    in
-       (if wpc then
-          print (toHexString_w2n pc ^ ": ")
-       else
-         ());
-       print (assemblerML.decode_arm NONE
-                (num2Arbnum (wordsML.w2n ireg)) ^ "\n")
-    end
-  else
-    if wpc then
-      let val pc = armML.FETCH_PC r in
-         print (toHexString_w2n pc ^ "\n")
-      end
-    else ();
 
 fun STATE_ARM_MEM n s =
   if n = 0 then s
   else
-    let val _ = printer s
-        val _ = count := !count + 1
-        val ns = armML.NEXT_ARM_MEM s in
-      if done s then ns else STATE_ARM_MEM (n - 1) ns
+    let val _ = count := !count + 1
+        val _ = armML.mem_updates := []
+        val ns = armML.NEXT_ARM_MEM s
+        val _ = printer watches (!count) s ns
+    in
+      if armML.arm_mem_state_undefined s then
+        ns
+      else
+        STATE_ARM_MEM (n - 1) ns
     end;
 
 (* ------------------------------------------------------------------------- *)
@@ -477,7 +557,7 @@ val init_mem =
   let val m = #mem e in
     if not (m = "") then
       assemble init_mem m handle _ =>
-        raise Fail ("Could not load file: " ^ m ^ "\n")
+        raise Fail ("Could not load file: " ^ m)
     else
       init_mem
   end;

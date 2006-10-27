@@ -134,6 +134,7 @@ sig
        | CPMemWrite of word32
        | CPWrite of word32
   val memop_size : memop -> num
+  val mem_updates : word30 list ref
   val DECODE_PSR
      : word32 ->
        (bool * (bool * (bool * bool))) * (bool * (bool * word5))

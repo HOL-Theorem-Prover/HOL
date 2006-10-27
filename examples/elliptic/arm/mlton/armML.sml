@@ -138,15 +138,6 @@ struct
     
   datatype ('a,'b)state_inp = state_inp of 'a * (num -> 'b)
   datatype ('a,'b)state_out = state_out of 'a * 'b
-  type word2 = wordsML.word2
-  type word4 = wordsML.word4
-  type word5 = wordsML.word5
-  type word8 = wordsML.word8
-  type word12 = wordsML.word12
-  type word16 = wordsML.word16
-  type word24 = wordsML.word24
-  type word30 = wordsML.word30
-  type word32 = wordsML.word32
   type registers = register->word32
   type psrs = psr->word32
   type mem = (word30, word32) Redblackmap.dict
@@ -258,6 +249,7 @@ struct
     | memop_size (CPMemWrite(a)) = ONE
     | memop_size (CPWrite(a)) = ONE
     
+  val mem_updates = ref ([]: wordsML.word30 list);
   fun DECODE_PSR w =
         let val (q0,m) = DIVMOD_2EXP (fromString"5") (w2n w)
             val (q1,i) = DIVMOD_2EXP ONE (DIV2 q0)
@@ -2127,12 +2119,15 @@ struct
   fun MEM_WRITE_WORD (mem:mem) addr word =
         Redblackmap.insert(mem,ADDR30 addr,word)
 
-  fun MEM_WRITE b = if b then MEM_WRITE_BYTE else MEM_WRITE_WORD
+  fun MEM_WRITE b m a =
+        (:= (mem_updates, ADDR30 a :: !mem_updates);
+          if b then MEM_WRITE_BYTE m a else MEM_WRITE_WORD m a)
 
   fun MEM_WRITE_BLOCK m (a: word30) [] = m
     | MEM_WRITE_BLOCK m a (d::l) =
+       (:= (mem_updates, ADDR30 a :: !mem_updates);
         MEM_WRITE_BLOCK (Redblackmap.insert(m, a, (d: word32)))
-          (word_add a (n2w_itself (ONE,(Tyop ("i30", []))))) l
+          (word_add a (n2w_itself (ONE,(Tyop ("i30", []))))) l)
     
   fun word_compare(v, w) =
     let val m = w2n v and n = w2n w in
