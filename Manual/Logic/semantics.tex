@@ -316,18 +316,17 @@ Q}_0$, and then to derive more complex rules from it.
 \noindent{\bf Proof\ }
 The verification of the soundness of the rules is straightforward.
 The properties of the semantics with respect to substitution given by
-Lemmas 3 and 4 in Section \ref{term-substitution} are needed for rules
-{\small\tt BETA\_CONV}, {\small\tt SUBST} and {\small\tt
-INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}}.\footnote{Note in
-particular that the second restriction on {\tt INST\_TYPE} enables the
-result on the semantics of substituting types for type variables in
-terms to be applied.} The fact that $=$ and $\imp$ are interpreted
-standardly (as in Section~\ref{standard-signatures}) is needed for
-rules {\small\tt REFL}\index{REFL@\ml{REFL}}, {\small\tt
-BETA\_CONV}\index{BETA_CONV@\ml{BETA\_CONV}}, {\small\tt
-SUBST}\index{SUBST@\ml{SUBST}}, {\small\tt ABS}\index{ABS@\ml{ABS}},
-{\small\tt DISCH}\index{DISCH@\ml{DISCH}} and {\small\tt
-MP}\index{MP@\ml{MP}}.
+Lemmas 3 and 4 in Section~\ref{term-substitution} are needed for rules
+\ml{BETA\_CONV}, \ml{SUBST} and
+\ml{INST\_TYPE}\index{INST_TYPE@\ml{INST\_TYPE}}.\footnote{Note in
+  particular that the second restriction on \ml{INST\_TYPE} enables
+  the result on the semantics of substituting types for type variables
+  in terms to be applied.}  The fact that $=$ and $\imp$ are
+interpreted standardly (as in Section~\ref{standard-signatures}) is
+needed for rules \ml{REFL}\index{REFL@\ml{REFL}},
+\ml{BETA\_CONV}\index{BETA_CONV@\ml{BETA\_CONV}},
+\ml{SUBST}\index{SUBST@\ml{SUBST}}, \ml{ABS}\index{ABS@\ml{ABS}},
+\ml{DISCH}\index{DISCH@\ml{DISCH}} and \ml{MP}\index{MP@\ml{MP}}.
 
 \section{HOL Theories}
 \label{theories}
