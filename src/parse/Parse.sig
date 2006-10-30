@@ -164,12 +164,6 @@ signature Parse = sig
   val type_pp_with_delimiters :
     (ppstream -> hol_type -> unit) ->
     ppstream -> hol_type -> unit
-  val get_grammar_term_printer :
-    unit -> (term_grammar.grammar -> type_grammar.grammar ->
-             ppstream -> term -> unit)
-  val set_grammar_term_printer :
-    (term_grammar.grammar -> type_grammar.grammar -> ppstream -> term -> unit) ->
-    (term_grammar.grammar -> type_grammar.grammar -> ppstream -> term -> unit)
   val get_term_printer : unit -> (ppstream -> term -> unit)
   val set_term_printer : (ppstream -> term -> unit) ->
                                ppstream -> term -> unit

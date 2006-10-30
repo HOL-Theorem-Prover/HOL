@@ -141,29 +141,11 @@ val type_parser2 =
 
 val type_printer = ref (type_pp.pp_type (type_grammar()))
 
-val grammar_pp_term = ref term_pp.pp_term
-
-(*
 val grammar_term_printer =
   ref (term_pp.pp_term (term_grammar()) (type_grammar()))
 fun pp_grammar_term pps t = (!grammar_term_printer) pps t
-*)
-
-val grammar_term_printer =
-  ref ((!grammar_pp_term) (term_grammar()) (type_grammar()))
-fun pp_grammar_term pps t = (!grammar_term_printer) pps t
 
 val term_printer = ref pp_grammar_term
-
-fun get_grammar_term_printer () = (!grammar_pp_term)
-
-fun set_grammar_term_printer new_pp_term = let
-  val old_pp_term = !grammar_pp_term
-in
-  grammar_pp_term := new_pp_term;
-  grammar_term_printer := new_pp_term (term_grammar()) (type_grammar());
-  old_pp_term
-end
 
 fun get_term_printer () = (!term_printer)
 
@@ -205,13 +187,8 @@ fun type_pp_with_delimiters ppfn pp ty =
 fun pp_with_bquotes ppfn pp x =
   let open Portable in add_string pp "`"; ppfn pp x; add_string pp "`" end
 
-(*
 fun print_from_grammars (tyG, tmG) =
   (type_pp.pp_type tyG, term_pp.pp_term tmG tyG)
-*)
-
-fun print_from_grammars (tyG, tmG) =
-  (type_pp.pp_type tyG, (!grammar_pp_term) tmG tyG)
 
 fun print_term_by_grammar Gs = let
   open TextIO PP
@@ -303,7 +280,6 @@ end;
 val the_absyn_parser: (term frag list -> Absyn.absyn) ref =
     ref (do_parse (!the_term_grammar) (!type_parser1))
 
-(*
 fun update_term_fns() = let
   val _ = update_type_fns()
 in
@@ -315,34 +291,12 @@ in
   end
   else ()
 end
-*)
 
-fun update_term_fns() = let
-  val _ = update_type_fns()
-in
-  if !term_grammar_changed then let
-  in
-    grammar_term_printer := (!grammar_pp_term) (term_grammar()) (type_grammar());
-    the_absyn_parser := do_parse (!the_term_grammar) (!type_parser1);
-    term_grammar_changed := false
-  end
-  else ()
-end
+(* ----------------------------------------------------------------------
+      Interlude: ppstream modifications to allow pretty-printers to
+                 respect dynamically changing line-widths
+   ---------------------------------------------------------------------- *)
 
-(*---------------------------------------------------------------------------
-      Interlude: prettyprinting terms and theorems
- ---------------------------------------------------------------------------*)
-
-local
-  fun char_occurs c s = let
-    fun loop ss =
-        case Substring.getc ss of
-          SOME (c', ss') => c = c' orelse loop ss'
-        | NONE => false
-  in
-    loop (Substring.all s)
-  end
-in
 fun respect_width_ref iref pprinter pps x = let
   val slist = ref ([] : string list)
   fun output_slist () =
@@ -370,9 +324,13 @@ in
   PP.flush_ppstream newpps;
   PP.end_block pps
 end
-end (* local *)
 
-fun pp_term pps t = let in update_term_fns(); !term_printer pps t end
+
+(* ----------------------------------------------------------------------
+    Top-level pretty-printing entry-points
+   ---------------------------------------------------------------------- *)
+
+fun pp_term pps t = (update_term_fns(); !term_printer pps t)
 fun term_to_string t = Portable.pp_to_string (!Globals.linewidth) pp_term t;
 fun print_term t = Portable.output(Portable.std_out, term_to_string t);
 

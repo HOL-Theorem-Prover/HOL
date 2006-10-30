@@ -6,17 +6,6 @@ sig
     term_grammar.grammar -> type_grammar.grammar -> Portable.ppstream ->
     term -> unit
 
-(* The term pretty-printer "pp_term_sep" is exactly like "pp_term",      *)
-(* except that it prevents the adjacent printing of two symbolic names,  *)
-(* such as two symbolic identifiers, like "|>" and "::".  This enables   *)
-(* easier parsing of the result as a term without confusing the lexer.   *)
-
-  val wrap_consumer_sep : (string -> unit) -> (string -> unit)
-
-  val pp_term_sep :
-    term_grammar.grammar -> type_grammar.grammar -> Portable.ppstream ->
-    term -> unit
-
   val ty_antiq      : Type.hol_type -> term
   val dest_ty_antiq : term -> Type.hol_type
   val is_ty_antiq   : term -> bool

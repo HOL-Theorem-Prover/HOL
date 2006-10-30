@@ -129,10 +129,59 @@ fun convert_case tm =
 
 val dollar_escape = ref true
 
-fun dollarise s = if !dollar_escape then "$" ^ s
-                  else "(" ^ s ^ ")"
+fun dollarise pfn s =
+  (* make consecutive calls to the supplied printing function (add_string) so
+     that the "tokens" turn into consecutive calls to the underlying consumer
+     function - this rather relies on the fact that the PP architecture
+     doesn't merge such calls, but in Moscow ML 2.01 we know this works *)
+  if !dollar_escape then pfn ("$" ^ s) else (pfn "("; pfn s; pfn ")")
 
 val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
+
+(* ----------------------------------------------------------------------
+    Control symbol merging
+   ---------------------------------------------------------------------- *)
+
+(* A character is symbolic if it is listed on the first line of the
+   symbolic characters given in DESCRIPTION, section 1.1.1(ii) (page 2).
+   The function "Char.contains" is slow on the first argument, but
+   fast on its second argument.
+*)
+
+val is_symbolic_char = Char.contains "#?+*/\\=<>&%@!,:;_|~-"
+
+val avoid_symbol_merges = ref true
+val _ = register_btrace("pp_avoids_symbol_merges", avoid_symbol_merges)
+
+(* true if a space should appear between the characters last and next *)
+fun mk_break (last, next) =
+    !avoid_symbol_merges andalso
+    (is_symbolic_char last andalso is_symbolic_char next orelse
+     last = #"(" andalso next = #"*" orelse
+     last = #"*" andalso next = #")")
+
+fun avoid_symbolmerge (add_string, add_break) = let
+  val last_char = ref #"a"
+  fun new_addstring s = let
+    val sz = size s
+  in
+    if sz = 0 then ()
+    else let
+        val nextc = String.sub(s,0)
+        val newlast = String.sub(s, sz - 1)
+      in
+        if mk_break(!last_char, nextc) then add_string " " else ();
+        add_string s;
+        last_char := newlast
+      end
+  end
+  fun new_add_break (p as (n,m)) = (if n > 0 then last_char := #" " else ();
+                                    add_break p)
+in
+  (new_addstring, new_add_break)
+end
+
+
 
 (* ----------------------------------------------------------------------
     A flag controlling printing of set comprehensions
@@ -480,13 +529,13 @@ fun pp_term (G : grammar) TyG = let
   val polyty_uprinter = Binarymap.peek(uprinters, {Name = "'a", Thy = ""})
 
 
-  fun pr_term binderp showtypes showtypes_v vars_seen pps ratorp tm
+  fun pr_term binderp showtypes showtypes_v vars_seen pps ppfns ratorp tm
               pgrav lgrav rgrav depth = let
     val _ =
         if printers_exist then let
             fun sysprint (pg,lg,rg) depth tm =
-                pr_term false showtypes showtypes_v vars_seen pps false tm
-                        pg lg rg depth
+                pr_term false showtypes showtypes_v vars_seen pps ppfns false
+                        tm pg lg rg depth
             val printfn_for_ty =
                 case Lib.total dest_thy_type (type_of tm) of
                   NONE => polyty_uprinter
@@ -505,9 +554,9 @@ fun pp_term (G : grammar) TyG = let
 
     val {fvars_seen, bvars_seen} = vars_seen
     val full_pr_term = pr_term
-    val pr_term = pr_term binderp showtypes showtypes_v vars_seen pps false
-    val {add_string, add_break, begin_block, end_block,...} =
-      with_ppstream pps
+    val pr_term =
+        pr_term binderp showtypes showtypes_v vars_seen pps ppfns false
+    val {add_string, add_break, begin_block, end_block,...} = ppfns
     fun block_by_style (addparens, rr, pgrav, fname, fprec) = let
       val needed =
         case #1 (#block_style (rr:rule_record)) of
@@ -561,8 +610,8 @@ fun pp_term (G : grammar) TyG = let
     fun pr_vstruct bv = let
       val pr_t =
         if showtypes then
-          full_pr_term true true showtypes_v vars_seen pps false
-        else full_pr_term true false showtypes_v vars_seen pps false
+          full_pr_term true true showtypes_v vars_seen pps ppfns false
+        else full_pr_term true false showtypes_v vars_seen pps ppfns false
     in
       case bv of
         Simple tm => let
@@ -1087,7 +1136,7 @@ fun pp_term (G : grammar) TyG = let
     in
       pbegin (addparens orelse comb_show_type);
       begin_block INCONSISTENT 2;
-      full_pr_term binderp showtypes showtypes_v vars_seen pps true t1
+      full_pr_term binderp showtypes showtypes_v vars_seen pps ppfns true t1
                    prec lprec prec (decdepth depth);
       add_break (1, 0);
       pr_term t2 prec prec rprec (decdepth depth);
@@ -1125,7 +1174,7 @@ fun pp_term (G : grammar) TyG = let
             [LISTRULE _] => add_string n
           | _ =>
               if isSome (Polyhash.peek spec_table n) then
-                add_string (dollarise n)
+                dollarise add_string n
               else add_string n
         end
     end
@@ -1408,7 +1457,7 @@ fun pp_term (G : grammar) TyG = let
           if isSome vrule then pr_sole_name vname (map #2 (valOf vrule))
           else
             if isSome (Polyhash.peek spec_table vname) then
-              add_string (dollarise vname)
+              dollarise add_string vname
             else
               add_string vname;
           if print_type then add_type() else ();
@@ -1631,92 +1680,21 @@ fun pp_term (G : grammar) TyG = let
   fun start_names() = {fvars_seen = ref [], bvars_seen = ref []}
 in
   fn pps => fn t =>
-    let in
+    let
+      val {add_string,add_break,begin_block,end_block,...} = with_ppstream pps
+      val (add_string, add_break) = avoid_symbolmerge (add_string, add_break)
+      val ppfns = {add_string = add_string, add_break = add_break,
+                   begin_block = begin_block, end_block = end_block}
+    in
        Portable.begin_block pps CONSISTENT 0;
        pr_term false
                (!Globals.show_types orelse !Globals.show_types_verbosely)
                (!Globals.show_types_verbosely)
                (start_names())
-               pps false t RealTop RealTop RealTop (!Globals.max_print_depth);
+               pps ppfns false t RealTop RealTop RealTop
+               (!Globals.max_print_depth);
        Portable.end_block pps
     end
 end
-
-
-(* A character is symbolic if it is listed on the first line of the      *)
-(* symbolic characters given in DESCRIPTION, section 1.1.1(ii) (page 2). *)
-(* The function "String.contains" is slow on the first argument, but     *)
-(* fast on its second argument.                                          *)
-
-val is_symbolic_char = Char.contains "#?+*/\\=<>&%@!,:;_|~-"
-
-val in_term = ref false
-
-fun wrap_consumer_sep consumer =
-  let val c = ref #" "
-  in fn s =>
-       if !in_term andalso String.size s > 0 then
-         let val cs = String.explode s
-             val c0 = hd cs
-         in if is_symbolic_char (!c) andalso is_symbolic_char c0
-            then (consumer " ";
-                  consumer s)
-            else  consumer s;
-            c := last cs
-         end
-       else consumer s
-  end
-
-(* --------------------------------------------------------------------- *)
-(* The term pretty-printer "pp_term_sep" is exactly like "pp_term",      *)
-(* except that it prevents the adjacent printing of two symbolic names,  *)
-(* such as two symbolic identifiers, like "|>" and "::".  This enables   *)
-(* easier parsing of the result as a term without confusing the lexer.   *)
-(* This only works if the ppstream argument "pps" was created with a     *)
-(* consumer function which was created by calling "wrap_consumer_sep"    *)
-(* to wrap the original consumer with the new functionality.             *)
-(* --------------------------------------------------------------------- *)
-
-fun pp_term_sep (G : grammar) TyG = let
-  val pp_term_1 = pp_term G TyG
-in fn pps => fn tm =>
-     let val in_term_1 = !in_term
-     in in_term := true;
-        pp_term_1 pps tm;
-        in_term := in_term_1
-     end
-end
-
-
-(* testing
-use "term_pp.sml";
-val G = let
-  open term_grammar
-  infix Gmerge
-in
-  stdhol Gmerge simple_arith Gmerge semantics_rules
-end
-fun p tm =
-  Portable.pp_to_string 75
-   (fn pp => fn tm => pp_term G parse_type.BaseHOLgrammar pp tm) tm;
-fun pr q = print (p (Term q) ^ "\n")
-
-new_type {Name = "fmap", Arity = 2};
-
-val G' = [(0, parse_type.INFIX("->", "fun", parse_type.RIGHT)),
-     (1, parse_type.INFIX("=>", "fmap", parse_type.NONASSOC)),
-     (2, parse_type.INFIX("+", "sum", parse_type.LEFT)),
-     (3, parse_type.INFIX("#", "prod", parse_type.RIGHT)),
-     (100, parse_type.SUFFIX("list", true)),
-     (101, parse_type.SUFFIX("fun", false)),
-     (102, parse_type.SUFFIX("prod", false)),
-     (103, parse_type.SUFFIX("sum", false))];
-fun p ty =
-  Portable.pp_to_string 75
-   (fn pp => fn ty => type_pp.pp_type G' pp ty type_pp.Top 100) ty;
-
-p (Type`:(bool,num)fmap`)
-
-*)
 
 end; (* term_pp *)
