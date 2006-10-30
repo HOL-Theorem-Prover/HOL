@@ -572,7 +572,7 @@ fun check_ace' atr I1 RTm(*T1*) state Ric astate h n =
 								  (bdd2cnf vm' (bdd.restrict hb (mk_ass vm ast (strip_pair astc)) )))
 					    (ListPair.zip(ace_states,cce_states)))
 	val _ = dbgTools.DTM (dpfx^"ca'_abs_f") abs_f(*DBG*)        
-	(*val satth = SOME (satProve zchaff (snd(strip_exists(rhs(concl cnf))))) handle ex => NONE*)
+
 	(*FIXME: ideally I should generate a DIMACS file directly from the bdd's and have SAT call the file *)
         (* accoding to Sofiene Tahar, this kind of file-based interface quickly becomes a performance bottleneck 
 	   if you make lots of calls.
@@ -590,8 +590,7 @@ fun check_ace' atr I1 RTm(*T1*) state Ric astate h n =
 			     (*val cnf = defCNF.DEF_CNF_CONV f*)
 			     val cnf = f 
 			     val _ = dbgTools.DST (dpfx^"ca'_h1") (*DBG*)
-		             (*val satth = SOME (satProve zchaff (snd(strip_exists(rhs(concl cnf))))) handle ex => NONE*)
-			 in SOME (satProve zchaff cnf) handle ex => NONE end
+			 in SOME (satProve minisatp cnf) handle ex => NONE end
 	val _ = dbgTools.DST (dpfx^"ca'_h2") (*DBG*)
         val ctr = if isSome satth (* return concrete trace if one was found else NONE *)
 		      then let val l = strip_conj(land(concl (valOf satth)))

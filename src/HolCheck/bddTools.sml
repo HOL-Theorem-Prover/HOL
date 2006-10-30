@@ -187,7 +187,7 @@ fun mk_sb sb t =
 
 (* return a satisfying assignment for t, as a HOL subst *)
 fun findAss t = 
-    let val th = satProve zchaff (snd(strip_exists(rhs(concl(normalForms.ORACLE_DEF_CNF_CONV t)))))
+    let val th = satProve minisatp (snd(strip_exists(rhs(concl(normalForms.ORACLE_DEF_CNF_CONV t)))))
 	val t = strip_conj (fst(dest_imp (concl th)))
         val t1 = List.filter (fn v =>  (if is_neg v then not (is_genvar(dest_neg v)) else not (is_genvar v))) t
 	fun ncompx v = not (String.compare(term_to_string v, "x")=EQUAL)
@@ -212,7 +212,7 @@ let val pt = undup Term.compare (find_terms (fn t => numSyntax.is_leq t orelse i
     val ecnf = rhs(concl cnfth)
     val (cv,cnf) = (strip_exists ecnf) (* remnants from def_cnf usage *)
     val _ = if Term.compare(cnf,F)=EQUAL then failwith "NO SAT" else ()
-    val th = satProve zchaff cnf handle ex => failwith "NO SAT"
+    val th = satProve minisatp cnf handle ex => failwith "NO SAT"
     val th1 = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [SYM cnfth])) th
     val (t3,t3') = List.partition (fn t => (is_neg t andalso is_genvar (rand t) andalso Binaryset.member(gvs,rand t))
 					   orelse (is_genvar t andalso Binaryset.member(gvs,t))) 
