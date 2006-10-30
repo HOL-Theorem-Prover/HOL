@@ -129,12 +129,16 @@ fun convert_case tm =
 
 val dollar_escape = ref true
 
+(* When printing with parentheses, make consecutive calls to the
+   supplied printing function (add_string) so that the "tokens"
+   aren't merged prematurely.  This is important to catch possible
+   unwanted comment tokens.
+
+   In the dollar-branch, we're happy to have the dollar smashed up
+   against what follows it. *)
 fun dollarise pfn s =
-  (* make consecutive calls to the supplied printing function (add_string) so
-     that the "tokens" turn into consecutive calls to the underlying consumer
-     function - this rather relies on the fact that the PP architecture
-     doesn't merge such calls, but in Moscow ML 2.01 we know this works *)
-  if !dollar_escape then pfn ("$" ^ s) else (pfn "("; pfn s; pfn ")")
+    if !dollar_escape then pfn ("$" ^ s) else (pfn "("; pfn s; pfn ")")
+
 
 val _ = Feedback.register_btrace ("pp_dollar_escapes", dollar_escape);
 
