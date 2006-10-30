@@ -29,6 +29,8 @@ src/bool
 src/goalstack
 
 src/taut
+src/HolSat/sat_solvers/minisat
+src/HolSat
 src/compute/src
 src/marker
 src/q
@@ -64,8 +66,6 @@ src/boss
 # (Maybe unwind could be omitted).
 
 !examples/RSA
-src/HolSat/sat_solvers/minisat
-src/HolSat
 src/sort
 src/string
 !examples/ind_def
