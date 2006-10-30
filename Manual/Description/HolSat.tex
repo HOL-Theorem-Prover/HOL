@@ -45,26 +45,22 @@
 \index{HolSatLib|(}
 \index{SAT solvers|see {HolSatLib}}
 
-{\tt{HolSatLib}} provides a very simple harness in \HOL{} for
-invoking SAT solvers on \HOL{} terms. Section~\ref{install} describes how to install the supported SAT solvers. Currently the following
+{\tt{HolSatLib}} provides a powerful propositional tautology prover {\tt SAT\_TAUT\_PROVE}, as well as a very simple harness for invoking SAT solvers on \HOL{} terms. Section~\ref{install} describes how to install the supported SAT solvers. Currently the following
 solvers are supported:
 
 \medskip
 
 \begin{tabular}{lp{3.75in}}
 {\bf Solver} & {\bf Home Page} \\ \hline
-SATO & {\small\url{http://www.cs.uiowa.edu/~hzhang/sato.html}}\\
-GRASP & {\small\url{http://sat.inesc.pt/~jpms/grasp}}\\
+%SATO & {\small\url{http://www.cs.uiowa.edu/~hzhang/sato.html}}\\
+%GRASP & {\small\url{http://sat.inesc.pt/~jpms/grasp}}\\
 ZCHAFF & {\small\url{http://www.ee.princeton.edu/~chaff/zchaff.html}}\\
 MINISAT & {\small\url{http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat/Main.html}}
 \end{tabular}
 
 \medskip
 
-These solvers all require input in the standard DIMACS 
-format\footnote{\small\tt ftp://dimacs.rutgers.edu/pub/challenge/satisfiability/}
-for conjunctive normal form (CNF). It should be straightforward to add other
-DIMACS compatible SAT solvers.
+These solvers require input in the standard DIMACS format\footnote{\small\tt ftp://dimacs.rutgers.edu/pub/challenge/satisfiability/} for conjunctive normal form (CNF). It should be straightforward to add other DIMACS compatible SAT solvers.
 
 The purpose of {\tt{HolSatLib}} is to provide a platform
 for experimenting with combinations of theorem proving and
@@ -72,7 +68,7 @@ SAT. \HOL{} can be used to deductively manipulate terms into CNF as
 required for SAT analysis, and then the results of the analysis
 can be reimported into \HOL{} and either checked or just trusted.
 
-{\tt HolSatLib} comes with MINISAT pre-installed. A special function {\tt SAT\_TAUT\_PROVE} 
+{\tt HolSatLib} comes with MINISAT pre-installed. The special function {\tt SAT\_TAUT\_PROVE} 
 is provided that attempts to prove propositional tautologies deductively, using
 the proof logging feature of MINISAT.
  
@@ -89,13 +85,13 @@ The following example illustrates {\tt{HolSatLib}} in action.
 - show_tags := true;
 > val it = () : unit
 
-- satOracle grasp ``(x \/ ~y \/ z) /\ (~z \/ y)``;
-> val it = [oracles: grasp] [axioms: ] [] 
-           |- z /\ y ==> (x \/ ~y \/ z) /\ (~z \/ y) : thm
+- satOracle minisatp ``(x \/ ~y \/ z) /\ (~z \/ y)``;
+> val it = [oracles: minisatp] [axioms: ] []
+           |- ~z /\ ~y /\ ~x ==> (x \/ ~y \/ z) /\ (~z \/ y) : thm
 
-- satProve grasp ``(x \/ ~y \/ z) /\ (~z \/ y)``;
+- satProve minisatp ``(x \/ ~y \/ z) /\ (~z \/ y)``;
 > val it = [oracles: DISK_THM ] [axioms: ] [] 
-           |- z /\ y ==> (x \/ ~y \/ z) /\ (~z \/ y) : thm
+           |- ~z /\ ~y /\ ~x ==> (x \/ ~y \/ z) /\ (~z \/ y) : thm
 
 - SAT_TAUT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
 > val it = [oracles: DISK_THM ] [axioms: ] [] 
@@ -106,7 +102,7 @@ The following example illustrates {\tt{HolSatLib}} in action.
 Setting \t{show\_tags} to \t{true} makes the \HOL{} top
 level print theorem tags. The \t{DISK\_THM} oracle tag has nothing to do with \t{HolSatLib}. It just indicates the use of theorems from \HOL{} libraries read in from permanent storage. Note that \t{SAT\_TAUT\_PROVE} does not require the user to specify the solver.
 
-The function \t{satOracle} \index{HolSatLib!satOracle@\ml{satOracle}} takes a supported SAT solver and a term
+The function \t{satOracle} \index{HolSatLib!satOracle@\ml{satOracle}} takes a supported SAT solver and a CNF term
 $t$ and
 
 \begin{enumerate}
@@ -131,62 +127,28 @@ The next example illustrates what happens on unsatisfiable terms.
 
 \begin{session}\begin{verbatim}
 
-- satOracle grasp ``(x \/ ~y \/ z) /\ ~z /\ y /\ ~x``;
-> val it = [oracles: grasp] [axioms: ] [] 
+- satOracle minisatp ``(x \/ ~y \/ z) /\ ~z /\ y /\ ~x``;
+> val it = [oracles: minisatp] [axioms: ] [] 
            |- ~((x \/ ~y \/ z) /\ ~z /\ y /\ ~x)
 
-- satProve grasp ``(x \/ ~y \/ z) /\ ~z /\ y /\ ~x``;
+- satProve minisatp ``(x \/ ~y \/ z) /\ ~z /\ y /\ ~x``;
 ! Uncaught exception: 
 ! satProveError
 
 \end{verbatim}\end{session}
 
 If a term $t$ is unsatisfiable then \t{satOracle} will return {\small\verb+|- ~+}$t$,
-tagged with the name of the SAT solver used. However, \t{satProve} will raise an exception,
-since there is no efficient way to check for unsatisfiability using pure \HOL{} theorem proving.
+tagged with the name of the SAT solver used. However, \t{satProve} will raise an exception. However, {\tt SAT\_TAUT\_PROVE} can deductively prove propositional tautologies. This can be used to prove unsatisfiability by passing it the negation of the unsatisfiable term.
 
-A tautology checker that uses SAT can be easily programmed using
-\t{CNF\_CONV}, which is supplied in the structure \t{normalForms}. To check the validity of a term $t$
+\subsection{Installing ZChaff for {\tt HolSatLib}}\label{install}\index{HolSatLib!installing}
 
-\begin{quote}
-\begin{description}
-\item[\t{[th1]}] use \t{CNF\_CONV} to prove {\small\verb+|- ~+}$t~=~t'$, where $t'$ is in CNF;
-\item[\t{[th2]}] use SAT to prove  {\small\verb+|- ~+}$t'$;
-\item[\t{[th3]}] by negating both sides of \t{th1}, prove {\small\verb+|- ~~+}$t~=~{\verb+~+}t'$;
-\item[\t{[th4]}] hence by combining \t{th2} and \t{th3} derive {\small\verb+|- ~~+}$t$.
-\item[\t{[th5]}] hence by the law of double negation conclude {\small\verb+|- +}$t$.
-\end{description}
-\end{quote}
+Download ZChaff into the directory {\tt hol98/src/HolSat/sat\_solvers/zchaff}. Create links of the same name as the directory name, to point to the executable, or rename the executable.
 
-Example \HOL{} code to mechanise these steps is as follows:
-
-\begin{session}\begin{verbatim}
-
-(* NOT_CLAUSES = |- (!t. ~~t = t) /\ (~T = F) /\ (~F = T)  *)
-val NOT_NOT = CONJUNCT1 NOT_CLAUSES;
-
-fun SAT_TAUT_CHECK sat_solver t =
- let val th1 = normalForms.CNF_CONV(mk_neg t)
-     val th2 = satOracle sat_solver (rhs(concl th1))
-     val th3 = AP_TERM ``$~`` th1
-     val th4 = EQ_MP (SYM th3) th2
-     val th5 = EQ_MP (SPEC t NOT_NOT) th4
- in
-  th5
- end;
-
-\end{verbatim}\end{session}
-%$
-\subsection{Installing SAT solvers for {\tt HolSatLib}}\label{install}\index{HolSatLib!installing}
-
-Download SATO, GRASP, or ZCHAFF into the directories {\tt sato}, {\tt grasp},
-{\tt zchaff}  respectively, in {\tt hol98/src/HolSat/sat\_solvers}. Create links of the same name as the directory name, to point to the executables, or rename the executables.
-
-You should now be able to step through the examples in Section~\ref{sec:HolSatLib}.
+You should now be able to step through the examples in Section~\ref{sec:HolSatLib}. See the description of the {\tt SatSolvers} module below to see how to add support for other SAT solvers.
 
 \subsection{{\tt HolSatLib} internals}
 
-{\tt HolSatLib} currently comes with three modules
+{\tt HolSatLib} currently comes with four modules
 
 \medskip
 
@@ -196,7 +158,6 @@ You should now be able to step through the examples in Section~\ref{sec:HolSatLi
 {\tt satTools} & functions for invoking SAT solvers\\
 {\tt dimacsTools} & functions for term conversion to/from DIMACS files\\
 {\tt SatSolvers} & specifications of the supported SAT solvers\\
-{\tt defCNF} & tool for converting \HOL{} terms to CNF (from Joe Hurd)
 \end{tabular}
 
 There are several other modules used internally by \t{SAT\_TAUT\_PROVE}. We shall not cover them here.
@@ -209,29 +170,21 @@ by a description of the components.
 
 {\small\begin{verbatim}
 signature HolSatLib = sig
-  datatype sat_solver = 
-   SatSolver of 
-   {name           : string,
-    URL            : string,
-    executable     : string,    
-    notime_run     : string -> string * string -> string,    
-    time_run       : string -> (string * string) * int -> string,      
-    only_true      : bool,
-    failure_string : string,
-    start_string   : string,  
-    end_string     : string}
-  val sato           : sat_solver
-  val grasp          : sat_solver
-  val zchaff         : sat_solver
-  val minisat        : sat_solver
-  val tmp_name       : string ref
-  val sat_command    : string ref
-  val prefix         : string ref
-  val showSatVarMap  : unit -> int * (string * int) list
-  val satOracle      : sat_solver -> Term.term -> Thm.th
-  val satProve       : sat_solver -> Term.term -> Thm.thm
+  type sat_solver = SatSolvers.sat_solver 
+  val tmp_name : string ref
+  val prefix : string ref
+  val zchaff  : sat_solver
+  val minisatp : sat_solver
+  val termToDimacsFile : string option -> int -> int -> Term.term array ->
+			 string 
+			 * (int * (Term.term, Term.term * int) Redblackmap.dict) 
+			 * Term.term array
+  val readDimacs :string -> Term.term 
+  val satProve : sat_solver -> Term.term -> Thm.thm
+  val satOracle : sat_solver -> Term.term -> Thm.thm
+  exception Sat_counterexample of Thm.thm
   val SAT_TAUT_PROVE : Term.term -> Thm.thm
-  val readDimacs     : string -> Term.term
+end
 \end{verbatim}}
 
 \paragraph{\tt sat\_solver}${}$\\
@@ -244,34 +197,22 @@ contain if one is adding another SAT prover. See the
 source code {\tt SatSolvers.sml} for some information
 in the comments. You may also find it useful to look at the SAT format file available from \url{www.satlib.org}\footnote{\url{http://www.satlib.org/Benchmarks/SAT/satformat.ps}}.
 
-\paragraph{{\tt sato}, {\tt grasp}, {\tt zchaff} and {\tt minisat}}${}$\\
+\paragraph{{\tt zchaff} and {\tt minisatp}}${}$\\
 
-The ML identifiers \t{sato}, \t{grasp}, \t{zchaff} and \t{minisat} are bound
+The ML identifiers \t{zchaff} and \t{minisatp} are bound
 by module {\tt SatSolvers} to descriptions of the corresponding SAT solvers.
 These descriptions are passed to \t{satOracle} and \t{satProve} to
 select which SAT solver to invoke.
 
-\paragraph{{\tt tmp\_name}, {\tt sat\_command}, {\tt prefix} and {\tt showSatVarMap}}${}$\\
+\paragraph{{\tt tmp\_name}, and {\tt prefix}}${}$\\
 
 The reference \t{tmp\_name} contains the temporary file name used in
 the last invocation of a SAT solver  by \t{satOracle} or \t{satProve}. This name
 was generated using \t{FileSys.tmpName}.
 
-The reference \t{sat\_command} contains the actual command executed
-(using \t{Process.system}) for
-the last invocation of a SAT solver. This command reads from
-an input file and writes to an output file. The file names are generated by extending \t{tmp\_name}
-(the input file name extension is \t{cnf} and the out extension is the name of the SAT solver used).
-
 The reference \t{prefix} contains the string that is concatenated to numbers
 to get the \HOL{} variables used when reading a separately generated DIMACS file
 with \t{readDimacs}. Default value is {\verb+"v"+}.
-
-The function {\small\verb+showSatVarMap+} returns a pair consisting of
-the one plus the number of variables used (i.e. the first number not
-currently used as a variable) and the mapping from variable names to
-numbers for encoding a term in DIMACS format by
-\t{satOracle} or \t{satProve}.
 
 \paragraph{\tt satOracle}${}$\\
 \index{HolSatLib!satOracle@\ml{satOracle}}
@@ -279,17 +220,9 @@ numbers for encoding a term in DIMACS format by
 
 
 \begin{enumerate}
-\item writes a DIMACS format file corresponding to {\it term}
-\begin{enumerate}
-\item the mapping from \HOL variable names to integers can be seen using
-\t{showSatVarMap}
-\item the input file name is {\it tmp}{\tt{.cnf}}, where
-the string {\it tmp} is in the reference \t{tmp\_name}
-\end{enumerate}
-
+\item writes a DIMACS format file corresponding to {\it term} (the input name is {\it tmp}{\tt{.cnf}}, where the string {\it tmp} is in the reference \t{tmp\_name})
 
 \item invokes {\it solver} on the file and writes results to an output file
-
 
 \begin{enumerate}
 \item the default settings (time, verbosity etc.) supplied by {\it solver}
@@ -297,10 +230,7 @@ are used
 \item the output file name is {\it tmp}{\tt{.}}{\it{name}}, where
 the string {\it tmp} is in the reference \t{tmp\_name}
 and {\it name} is the string given as the value of the field {\tt name} of {\it solver}
-\item the actual command executed can be seen in the reference \\
-\t{sat\_command}
 \end{enumerate}
-
 
 \item parses the output file to see if a model was found and if so extracts it
 
@@ -313,11 +243,9 @@ the model is assumed to be supplied as a list of integers in the output file
 {\it tmp}{\tt{.}}{\it{name}} between the strings
 given as the values of the fields {\tt start\_string} and {\tt end\_string}
 in {\it solver}
-\item the mapping available via \t{showSatVarMap} is used
-to turn the extracted model into a \HOL term
 \item if the value of the field {\tt only\_true} is
 \t{true} then it is assumed that only the positive literals
-of the model are given (this is the case with SATO) and so
+of the model are given and so
 the negative literals are taken to be the negations of those variables
 occurring in {\it term}, but not in the computed model
 \end{enumerate}
@@ -365,12 +293,12 @@ Attempts to prove that the supplied term is a tautology by
 \end{enumerate}
 
 If MINISAT was not properly installed or fails for some other reason, \t{SAT\_TAUT\_PROVE} 
-falls back to \t{tautLib.TAUT\_PROVE}, which is significantly slower by comparison. 
+falls back to a much slower propositional tautology prover implemented in SML.
 
 \paragraph{\tt readDimacs}${}$\\
 
 {\small{\tt readDimacs}~{\it file}} reads a DIMACS format file and returns
-a CNF \HOL{} term corresponding the the SAT problem in the file names {\it file}.
+a CNF \HOL{} term corresponding to the SAT problem in the file names {\it file}.
 The integers in the file are prefixed with the string in the reference 
 \t{prefix} (the default is {\small\verb+"v"+}).
 
@@ -422,15 +350,14 @@ be specified for use with {\tt HolSatLib}. If access to such solvers is needed, 
 it will be necessary to extend the datatype \t{sat\_solver} to contain
 additional parsing data (e.g.~regular expressions).
 
-\subsubsection{Contents of {\tt defCNF} module}
+\subsubsection{Conversion to CNF}
 
-The module {\tt defCNF} contains a simple conversion  {\tt DEF\_CNF\_CONV : term -> thm},\index{HolSatLib!DEF\_CNF\_CONV@\ml{DEF\_CNF\_CONV}} 
-from Joe Hurd, to convert \HOL{} terms to a form suitable for inputting to \t{satOracle} or \t{satProve}.
+\HOL{} provides several facilities for converting terms to CNF. The module {\tt defCNF} contains a  conversion  {\tt DEF\_CNF\_CONV : term -> thm},\index{HolSatLib!DEF\_CNF\_CONV@\ml{DEF\_CNF\_CONV}} from Joe Hurd, to convert \HOL{} terms to a form suitable for input to \t{satOracle} or \t{satProve} (note that {\tt SAT\_TAUT\_PROVE} does not require its argument to be in CNF). 
 
 {\small\verb+DEF_CNF_CONV+}~$t$ returns a theorem $\turn t = t'$,
-where $t'$ is in CNF. The conversion is {\it definitional} in that it may introduce extra variables not found in the original term. The advantage is that the conversion will take time linear in the size of the original term, unlike a normal CNF conversion.
+where $t'$ is in CNF. The conversion is {\it definitional} in that it may introduce extra variables not found in the original term. The advantage is that the conversion will take time linear in the size of the original term, unlike a normal CNF conversion. 
 
-Note that {\tt DEF\_CNF\_CONV} is not a ``drop-in'' replacement for {\tt CNF\_CONV}, since the right-hand side of the CNF conversion theorem is existentially quantified over the freshly generated variables.
+Note that {\tt DEF\_CNF\_CONV} is not a ``drop-in'' replacement for {\tt CNF\_CONV}, since the right-hand side of the CNF conversion theorem is existentially quantified over the freshly generated variables. A more efficient version of this is {\tt DEF\_CNF\_VECTOR\_CONV}, which replaces the definitional variables wit a single variable vector, thus requiring a single existential quantifier.
 
 There are other tools for converting to various canonical forms. See the source code
 {\small\verb+src/metis/normalForms.sml+} for details.
