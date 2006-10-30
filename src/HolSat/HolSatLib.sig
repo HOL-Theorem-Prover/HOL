@@ -3,10 +3,7 @@ signature HolSatLib = sig
   type sat_solver = SatSolvers.sat_solver 
   val tmp_name : string ref
   val prefix : string ref
-  val sato : sat_solver
-  val grasp  : sat_solver
   val zchaff  : sat_solver
-  val minisat : sat_solver
   val minisatp : sat_solver
   val termToDimacsFile : string option -> int -> int -> Term.term array ->
 			 string 

@@ -37,6 +37,7 @@ fun getSolverFail (SatSolver {failure_string,...}) = failure_string
 fun getSolverStart (SatSolver {start_string,...}) = start_string
 fun getSolverEnd (SatSolver {end_string,...}) = end_string
 
+(*
 val grasp =
  SatSolver
   {name           = "grasp",
@@ -50,6 +51,7 @@ val grasp =
    failure_string = "UNSATISFIABLE INSTANCE",
    start_string   = "Variable Assignments Satisfying CNF Formula:",
    end_string     =  "Done searching.... SATISFIABLE INSTANCE"};
+*)
 
 val zchaff =
  SatSolver
@@ -63,9 +65,10 @@ val zchaff =
                       (ex ^ " " ^ infile ^ " " ^ (Int.toString time) ^ " > " ^ outfile)),
    only_true      = false,
    failure_string = "UNSAT",
-   start_string   = "Instance satisfiable",
-   end_string     = "Max Decision Level"};
+   start_string   = "Instance Satisfiable",
+   end_string     = "Random Seed Used"};
 
+(*
 val sato =
  SatSolver
   {name           = "sato", 
@@ -79,7 +82,9 @@ val sato =
    failure_string = "The clause set is unsatisfiable",
    start_string   = "Model #1: (indices of true atoms)",
    end_string     = "The number of found models"};
+*)
 
+(*
 val minisat =
  SatSolver
   {name           = "minisat", 
@@ -93,6 +98,7 @@ val minisat =
    failure_string = "UNSAT",
    start_string   = "v",
    end_string     = " 0"};
+*)
 
 val minisatp =
  SatSolver
