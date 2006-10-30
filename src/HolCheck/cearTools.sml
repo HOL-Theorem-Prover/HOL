@@ -8,7 +8,7 @@ open Globals HolKernel Parse goalstackLib;
 
 open boolSyntax pairSyntax pairTools PairRules bossLib Tactical Tactic Drule Rewrite pred_setTheory boolTheory Conv pairTheory 
      pred_setTheory pred_setLib stringLib listTheory rich_listTheory simpLib pairLib PrimitiveBddRules DerivedBddRules Binarymap 
-     HolSatLib defCNF sumSyntax numSyntax
+     HolSatLib  sumSyntax numSyntax
 
 open cearTheory ksTheory setLemmasTheory muSyntaxTheory muSyntax muTheory muTools ksTheory muCheck bddTools envTheory ksTools 
      commonTools lazyTools lzPairRules lzConv

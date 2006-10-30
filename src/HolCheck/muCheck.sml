@@ -7,7 +7,8 @@ local
 
 open Globals HolKernel Parse goalstackLib
 
-open bossLib pairTheory pred_setTheory pred_setLib stringLib listTheory simpLib pairSyntax pairLib PrimitiveBddRules DerivedBddRules Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory listSyntax stringTheory boolSimps pureSimps listSimps numLib HolSatLib defCNF
+open bossLib pairTheory pred_setTheory pred_setLib stringLib listTheory simpLib pairSyntax pairLib PrimitiveBddRules DerivedBddRules Binarymap PairRules pairTools boolSyntax Drule Tactical Conv Rewrite Tactic boolTheory listSyntax stringTheory boolSimps pureSimps listSimps numLib HolSatLib 
+
 open setLemmasTheory muSyntax muSyntaxTheory muTheory stringBinTree muTools commonTools ksTheory cearTheory bddTools envTheory envTools cacheTools cacheTheory ksTools lazyTools lzPairRules lzConv
 
 val dpfx = "mc_"
