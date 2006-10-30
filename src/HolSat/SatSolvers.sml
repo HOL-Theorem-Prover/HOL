@@ -30,6 +30,12 @@ datatype sat_solver =
    end_string     : string};
 
 fun getSolverName (SatSolver {name,...}) = name
+fun getSolverExe (SatSolver {executable,...}) = executable
+fun getSolverRun (SatSolver {notime_run,...}) = notime_run
+fun getSolverTrue (SatSolver {only_true,...}) = only_true
+fun getSolverFail (SatSolver {failure_string,...}) = failure_string
+fun getSolverStart (SatSolver {start_string,...}) = start_string
+fun getSolverEnd (SatSolver {end_string,...}) = end_string
 
 val grasp =
  SatSolver

@@ -15,4 +15,16 @@ val OR_DUAL3 = save_thm("OR_DUAL3",TAUT_PROVE ``(~(~A \/ B) ==> F) = (A ==> ~B =
 val AND_INV2 = save_thm("AND_INV2",TAUT_PROVE ``(~A ==> F) ==> (A==>F) ==> F``)
 val NOT_ELIM2 = save_thm("NOT_ELIM2",TAUT_PROVE ``(~A ==> F) = A``)
 
+(* for def_cnf.sml *)
+val dc_eq = save_thm("dc_eq",tautLib.TAUT_PROVE ``(p = (q = r)) = 
+(p \/ q \/ r) /\ (p \/ ~r \/ ~q) /\ (q \/ ~r \/ ~p) /\ (r \/ ~q \/ ~p)``)
+
+val dc_conj = save_thm("dc_conj",tautLib.TAUT_PROVE ``(p = (q /\ r)) = (p \/ ~q \/ ~r) /\ (q \/ ~p) /\ (r \/ ~p)``)
+
+val dc_disj = save_thm("dc_disj",tautLib.TAUT_PROVE ``(p = (q \/ r)) = (p \/ ~q) /\ (p \/ ~r) /\ (q \/ r \/ ~p)``) 
+
+val dc_imp = save_thm("dc_imp",tautLib.TAUT_PROVE ``(p = (q ==> r)) = (p \/ q) /\ (p \/ ~r) /\ (~q \/ r \/ ~p)``) 
+
+val dc_neg = save_thm("dc_neg",tautLib.TAUT_PROVE ``(p = ~q) = (p \/ q) /\ (~q \/ ~p)``)
+
 val _ = export_theory();

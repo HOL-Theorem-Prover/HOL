@@ -9,7 +9,15 @@ open Globals HolKernel Parse
 
 open boolSyntax Term Drule
 
+open satTheory
+
 in
+
+structure RBM = Redblackmap
+
+fun rbapply m k = RBM.find(m,k)
+
+fun tryrbapplyd m k d = rbapply m k handle NotFound => d
 
  
 fun pair_map f (x,y) = (f x,f y)
@@ -24,7 +32,27 @@ fun is_T tm = Term.compare(tm,T)=EQUAL
 
 fun is_F tm = Term.compare(tm,F)=EQUAL
 
+fun termFromFile fname = 
+    let val ins        = TextIO.openIn (fname^".term")
+	val res        = TextIO.inputAll ins
+	val _          = TextIO.closeIn ins
+    in Term [QUOTE res] end
+
+fun termToFile fname t = 
+let val fout = TextIO.openOut (fname^".term")
+    val _ = TextIO.output (fout,with_flag (show_types,true) term_to_string t)
+    val _ = TextIO.flushOut fout
+    val _ = TextIO.closeOut fout
+in () end
+
 (************ HOL **************)
+
+local 
+    val t = mk_var("t",bool)
+    val NOT_NOT2 = SPEC_ALL NOT_NOT
+in
+fun NOT_NOT_CONV tm = INST [t|->rand(rand tm)] NOT_NOT2
+end
 
 (* Like CONJUNCTS but assumes the conjunct is bracketed right-assoc. *)
 (* Not tail recursive. Here only as a reference implementation *)

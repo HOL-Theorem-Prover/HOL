@@ -3,7 +3,11 @@
 (* Acts as a failsafe for SAT_TAUT_PROVE        *)
 (* on trivial problems.                         *)
 (* Ultimate entry-point is DPLL_TAUT            *)
-open HolKernel Parse boolLib
+
+structure dpll = 
+struct 
+
+open HolKernel Parse boolLib def_cnf satCommonTools satTools
 
 datatype result = Unsat of thm | Sat of term -> term
 
@@ -24,6 +28,7 @@ fun getBiggest acc =
                        (boolSyntax.T, 0)
                        acc)
 
+(* The first unit we see, or the var that occurs most often *)
 fun find_splitting_var phi = let
   fun recurse acc [] = getBiggest acc
     | recurse acc (c::cs) = let
@@ -37,11 +42,11 @@ in
   recurse (Binarymap.mkDict Term.compare) (strip_conj phi)
 end
 
-fun casesplit v th = let
-  val eqT = ASSUME (mk_eq(v, boolSyntax.T))
-  val eqF = ASSUME (mk_eq(v, boolSyntax.F))
+fun casesplit v th = let (*th is [assignments, cnf] |- current *)
+  val eqT = ASSUME (mk_eq(v, boolSyntax.T)) (* v = T |- v = T *)
+  val eqF = ASSUME (mk_eq(v, boolSyntax.F)) (* v = F |- v = F *)
 in
-  (REWRITE_RULE [eqT] th, REWRITE_RULE [eqF] th)
+  (REWRITE_RULE [eqT] th, REWRITE_RULE [eqF] th) (* [assignments,v=T,cnf] |- cnf[T/v] ... *)
 end
 
 fun mk_satmap th = let
@@ -57,11 +62,9 @@ in
           handle Binarymap.NotFound => boolSyntax.T)
 end
 
-
-fun CoreDPLL form = let
-  val initial_th = ASSUME form
-  fun recurse th = let
-    val c = concl th
+fun CoreDPLL initial_th = let (* [ci] |- cnf *) 
+   fun recurse th = let (* [assigns, ci] |- curr *)
+    val c = concl th (* current *)
   in
     if c = boolSyntax.T then
       mk_satmap th
@@ -69,99 +72,56 @@ fun CoreDPLL form = let
       Unsat th
     else let
         val v = find_splitting_var c
-        val (l,r) = casesplit v th
+        val (l,r) = casesplit v th (*[assigns,v=T,ci]|- curr[T/v],[assigns,v=F,ci]|- curr[F/v]*)
       in
         case recurse l of
-          Unsat l_false => let
-          in
-            case recurse r of
-              Unsat r_false =>
-                Unsat (DISJ_CASES (SPEC v BOOL_CASES_AX) l_false r_false)
-            | x => x
-          end
+          Unsat l_false => 
+          (case recurse r of
+               Unsat r_false =>
+               Unsat (DISJ_CASES (SPEC v BOOL_CASES_AX) l_false r_false)
+	       (* [assignsr\v,assignsl\v,ci] |- F *)
+            | x => x)          
         | x => x
       end
   end
 in
-  case (recurse initial_th) of
-    Unsat th => Unsat (CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH form th))
-  | x => x
-end
-   fun DPLL t = let
-     val (transform, body) = let
-       val (vector, body) = dest_exists t
-       fun transform body_eq_F = let
-         val body_imp_F = CONV_RULE (REWR_CONV (GSYM IMP_F_EQ_F)) body_eq_F
-         val fa_body_imp_F = GEN vector body_imp_F
-         val ex_body_imp_F = CONV_RULE FORALL_IMP_CONV fa_body_imp_F
-       in
-         CONV_RULE (REWR_CONV IMP_F_EQ_F) ex_body_imp_F
-       end
-     in
-       (transform, body)
-     end handle HOL_ERR _ => (I, t)
-   in
-     case CoreDPLL body of
-       Unsat body_eq_F => Unsat (transform body_eq_F)
-     | x => x
-   end
-val NEG_EQ_F = prove(``(~p = F) = p``, REWRITE_TAC []);
-val toCNF = defCNF.DEF_CNF_VECTOR_CONV
-fun DPLL_UNIV t = let
-  val (vs, phi) = strip_forall t
-  val cnf_eqn = toCNF (mk_neg phi)
-  val phi' = rhs (concl cnf_eqn)
-in
-  case DPLL phi' of
-    Unsat phi'_eq_F => let
-      val negphi_eq_F = TRANS cnf_eqn phi'_eq_F
-      val phi_thm = CONV_RULE (REWR_CONV NEG_EQ_F) negphi_eq_F
-    in
-      EQT_INTRO (GENL vs phi_thm)
-    end
-  | Sat f => let
-      val t_assumed = ASSUME t
-      fun spec th =
-          spec (SPEC (f (#1 (dest_forall (concl th)))) th)
-          handle HOL_ERR _ => REWRITE_RULE [] th
-    in
-      CONV_RULE (REWR_CONV IMP_F_EQ_F) (DISCH t (spec t_assumed))
-    end
+   recurse initial_th (* [ci] |-  F *)
 end
 
-fun dest_bool_eq t = let
-  val (l,r) = dest_eq t
-  val _ = type_of l = bool orelse
-          raise mk_HOL_ERR "dpll" "dest_bool_eq" "Eq not on bools"
+fun doCNF neg_tm =  (* clauses is (ci,[~t] |- ci') pairs, where ci' is expanded ci *)
+    let val (cnfv,vc,lfn,clauseth) = to_cnf false neg_tm
+	val clauses = Array.foldr (fn ((c,th),l) => (c,th)::l) [] clauseth
+	val cnf_thm = List.foldl (fn ((c,_),cnf) => CONJ (ASSUME c) cnf)(*[ci] |- cnf*)
+				  (ASSUME (fst (hd clauses))) (tl clauses)
+    in (cnfv,cnf_thm,lfn,clauses) end
+
+fun undoCNF lfn clauses th = (* th is [ci] |-  F *)
+    let val insts = RBM.foldl (fn (v,t,insts) => (v |-> t)::insts) [] lfn 
+	val inst_th = INST insts th
+	val th0 = List.foldl (fn ((_,cth),th) => PROVE_HYP cth th) inst_th clauses (* ~t |- F *)
+    in th0 end 
+
+fun mk_model_thm cnfv lfn t f = 
+    if isSome cnfv then let
+	    val fvs = List.map fst (RBM.listItems lfn)
+	    val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
+	    val model2 = mapfilter (fn l => let val x = hd(free_vars l) 
+						val y = rbapply lfn x 
+					    in if is_var y then subst [x|->y] l 
+					       else failwith"" end) model 
+	in satCheck model2 (mk_neg t) end else
+    let val fvs = free_vars t
+	val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
+    in satCheck model (mk_neg t) end
+
+fun DPLL_TAUT t = let 
+  val (cnfv,cnf_thm,lfn,clauses) = doCNF (mk_neg t) (* cnf_thm is [ci] |- dCNF(~t) *)
 in
-  (l,r)
+  case CoreDPLL cnf_thm of
+      Unsat cnf_entails_F =>  (* [ci] |- F *)
+        undoCNF lfn clauses cnf_entails_F (* [~t] |- F *)
+    | Sat f => mk_model_thm cnfv lfn t f (* |- model ==> ~t *)
 end
-fun var_leaves acc t = let
-  val (l,r) = dest_conj t handle HOL_ERR _ =>
-              dest_disj t handle HOL_ERR _ =>
-              dest_imp t handle HOL_ERR _ =>
-              dest_bool_eq t
-in
-  var_leaves (var_leaves acc l) r
-end handle HOL_ERR _ =>
-           if type_of t <> bool then
-             raise mk_HOL_ERR "dpll" "var_leaves" "Term not boolean"
-           else if t = boolSyntax.T then acc
-           else if t = boolSyntax.F then acc
-           else HOLset.add(acc, t)
-
-fun DPLL_TAUT tm =
-    let val (univs,tm') = strip_forall tm
-        val insts = HOLset.listItems (var_leaves empty_tmset tm')
-        val vars = map (fn t => genvar bool) insts
-        val theta = map2 (curry (op |->)) insts vars
-        val tm'' = list_mk_forall (vars,subst theta tm')
-    in
-      EQT_INTRO (GENL univs
-                      (SPECL insts (EQT_ELIM (DPLL_UNIV tm''))))
-    end
-
-
 
 (* implementation of DPLL ends *)
 
@@ -237,8 +197,5 @@ end
 
 val example = gen_all (mk_adder_test 3 2)
 
-(* test them here:
-time DPLL_UNIV example;
-time tautLib.TAUT_PROVE example;
-time HolSatLib.SAT_TAUT_PROVE (#2 (strip_forall example));
-*)
+
+end

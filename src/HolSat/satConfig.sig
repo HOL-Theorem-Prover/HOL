@@ -12,7 +12,6 @@ val get_flag_is_cnf : sat_config -> bool
 val set_infile : string -> sat_config -> sat_config
 val set_flag_is_cnf : bool -> sat_config -> sat_config
 
-val dest_config : 
-    sat_config -> string option * bool
+val dest_config : sat_config -> string option 
 
 end

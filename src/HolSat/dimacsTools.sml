@@ -3,7 +3,7 @@ structure dimacsTools = struct
 
 local 
 
-open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback
+open Lib boolLib Globals Parse Term Type Thm Drule Conv Feedback
 open satCommonTools
 
  
@@ -225,12 +225,6 @@ end;
 
 fun LiteralToString(b,n) = if b then ("-" ^ (Int.toString n)) else Int.toString n;
 
-(*
-** termToDimacsFile t
-** converts t to DIMACS  and then writes out a 
-** file into the temporary directory.
-** the name of the temporary file (without extension ".cnf") is returned.
-*)
 
 (*
 ** Refererence containing name of temporary file used
@@ -238,6 +232,14 @@ fun LiteralToString(b,n) = if b then ("-" ^ (Int.toString n)) else Int.toString 
 *)
 
 val tmp_name = ref "undefined";
+
+(*
+** termToDimacsFile t, where t is in CNF, 
+** converts t to DIMACS  and then writes out a 
+** file into the temporary directory.
+** the name of the temporary file (without extension ".cnf") is returned,
+** as well as a map from vars to DIMACS numbers, and an array inverting the map
+*)
 
 fun termToDimacsFile fname clause_count var_count clauses =
  let open TextIO;
@@ -310,7 +312,7 @@ fun update_maps svm sva s i =
              val svm'    =  (c'+1,svm2)
 	     val _    = Array.update(sva,i,s) 
 		 handle Subscript => 
-			(failwith ("lookup_sat_varError: "^(term_to_string s)^"::"
+			(failwith ("update_mapsError: "^(term_to_string s)^"::"
 				   ^(int_to_string i)^"\n"))
          in svm' end
     else svm

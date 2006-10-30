@@ -6,7 +6,7 @@ local
 
 open Globals Parse HolKernel boolSyntax boolTheory (* HOL4 term parsers etc *)  
 open Array (* ML *)
-open dimacsTools satCommonTools SatSolvers minisatResolve
+open satCommonTools minisatResolve SatSolvers
 
  
 in 
@@ -93,13 +93,13 @@ fun getIntBranch fin id h =
 
 (* parse a resolution chain and add to sr stack as a (clause,var) list *)
 (* the var component of the first pair is a dummy value ~1 *)
-fun addBranch cl sva mcth rt2o fin cc id tc =
+fun addBranch lfn cl sva fin cc id tc =
     let 
  	val (br,brl) = getIntBranch fin id (id-(rshift tc))
 	val res = if brl=1 (*(tl br = []) *)
 		  then (cc,false) (* delete *)
-		  else let val _ = resolveChain sva rt2o mcth cl (br,brl) cc
-		       in (cc+1,true) end (* resolve *) 
+		  else (resolveChain lfn sva cl (br,brl) cc;
+		       (cc+1,true)) (* resolve *) 
      in res
     end
 
@@ -120,17 +120,17 @@ fun getIntRoot fin idx =
      efficiently find the corresponding clause term in HOL
    So this is faster (time and space) than building the clause term from the proof log.
 *)
-fun addClause cl svm sva rt2o vc cc mcth fin lit1 = 
+fun addClause lfn cl svm sva vc cc clauseth fin lit1 = 
     let  
          val orc = (rshift lit1)-1 (*-1 because right now orc's in proof log start at 1*)
 	val l = getIntRoot fin (sat_getint fin) 	
 	val res = case l of
 	    []  => failwith ("addClause:Failed parsing clause "^(int_to_string (cc))^"\n")  
 	  | _ => let 
- 		     val ll = concl (Array.sub(mcth,orc)) 
-		     val _ = Dynarray.update(rt2o,cc,orc)
-			 handle Subscript => failwith("addClause"^(int_to_string (cc))^"\n")
-		     val _ = Dynarray.update(cl,cc,prepareRootClause rt2o mcth cl cc)
+ 		     (*val ll = concl (Array.sub(clauseth,orc)) *)
+		     (*val _ = Dynarray.update(rt2o,cc,orc)
+			 handle Subscript => failwith("addClause"^(int_to_string (cc))^"\n")*)
+		     val _ = prepareRootClause lfn orc clauseth cl cc
 		 in cc+1 end 
      in res end
 
@@ -138,41 +138,41 @@ fun addClause cl svm sva rt2o vc cc mcth fin lit1 =
 fun isRoot v = Word.compare(Word.andb(Word.fromInt v,Word.fromInt 1),(Word.fromInt 0))=EQUAL
 
 (*cc is clause count (inc learnt) *)
- fun readTrace cl svm sva rt2o vc cc mcth fin id =
+ fun readTrace lfn cl svm sva rt2o vc cc clauseth fin id =
     if BinIO.endOfStream fin 
     then cc
     else 
 	let val tmp = sat_getint fin
 	in if isRoot tmp 
-	   then let val cc = addClause cl svm sva rt2o vc cc mcth fin tmp
-		in readTrace cl svm sva rt2o vc cc mcth fin (id+1) end
-	   else (let val (cc,isch) = addBranch cl sva mcth rt2o fin cc id tmp 
+	   then let val cc = addClause lfn cl svm sva vc cc clauseth fin tmp
+		in readTrace lfn cl svm sva rt2o vc cc clauseth fin (id+1) end
+	   else (let val (cc,isch) = addBranch lfn cl sva fin cc id tmp 
 		 in if isch 
-		    then readTrace cl svm sva rt2o vc cc mcth fin (id+1) (* chain *)
-		    else readTrace cl svm sva rt2o vc cc mcth fin id end) (* deletion *)
+		    then readTrace lfn cl svm sva rt2o vc cc clauseth fin (id+1) (* chain *)
+		    else readTrace lfn cl svm sva rt2o vc cc clauseth fin id end) (* deletion *)
 	end 
  
 exception Trivial 
 
 (*build the clause/chain list *)
-fun parseTrace cl svm sva rt2o nr fname solver vc mcth = 
+fun parseTrace cl svm sva rt2o nr fname solver vc clauseth lfn = 
     let 
  	val fin = sat_fileopen (fname^"."^(getSolverName solver)^".proof")
-	val cc = readTrace cl svm sva rt2o vc 0 mcth fin 0 
+	val cc = readTrace lfn cl svm sva rt2o vc 0 clauseth fin 0 
 	val _ = sat_fileclose fin 
      in SOME cc end
 handle Io _ => NONE
 
 (*
-nr: number of root clause
+nr: number of root clauses
 fname: filename of proof log
 vc: number of variables (includes variables added by def CNF conversion)
-mcth: root clause vector. mcth[i] is i'th root clause from original problem
+clauseth: root clause vector. clauseth[i] is i'th root clause from original problem
 *)
-fun replayMinisatProof svm sva rt2o nr fname solver vc mcth = 
+fun replayMinisatProof svm sva rt2o nr fname solver vc clauseth lfn = 
     let val _ = (minisatResolve.counter:=0)
-	val cl = Dynarray.array((Array.length mcth) * 2,TRUTH)
-    in case parseTrace cl svm sva rt2o nr fname solver vc mcth of
+	val cl = Dynarray.array((Array.length clauseth) * 2,TRUTH)
+    in case parseTrace cl svm sva rt2o nr fname solver vc clauseth lfn of
 	   SOME cc => SOME (Dynarray.sub(cl,cc-1))
 	 | NONE => NONE
     end

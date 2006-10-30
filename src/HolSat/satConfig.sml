@@ -17,10 +17,11 @@ open Abbrev
 type sat_config = 
      {
       infile: string option,
-      flags: {is_cnf:bool}
+      flags: {is_cnf:bool,is_proved:bool}
      } 
 
-val default_config = {infile = NONE, flags = {is_cnf=false}}
+val default_config = {infile = NONE, flags = {is_cnf=false,is_proved=true}}
+val oracle_config = {infile = NONE, flags = {is_cnf=false,is_proved=false}}
 
 (* getters *)
 
@@ -31,19 +32,22 @@ fun get_infile (c:sat_config) = (#infile c)
    if infile is SOME, then this is set to true *)
 fun get_flag_is_cnf (c:sat_config) = #is_cnf (#flags c)
 
+fun get_flag_is_proved (c:sat_config) = #is_proved (#flags c)
+
 (* setters *)
 fun set_infile nm (c:sat_config) = (* also sets is_cnf to true *)    
-    {infile = SOME nm, flags = {is_cnf = true}}
+    {infile = SOME nm, flags = {is_cnf = true,is_proved = #is_proved (#flags c)}}
 
 fun set_flag_is_cnf is (c:sat_config) = 
     if isSome (#infile c) 
     then failwith "Error setting satconfig.is_cnf: sat_config.infile is set\n"
-    else {infile = #infile c, flags = {is_cnf = is}}
+    else {infile = #infile c, flags = {is_cnf = is,is_proved = #is_proved (#flags c)}}
 
+fun set_flag_is_proved ip (c:sat_config) = 
+    {infile = #infile c, flags = {is_cnf = #is_cnf (#flags c),is_proved = ip}}
 
 (* destruction (does not return flags) *)
-
-fun dest_config c = (get_infile c,get_flag_is_cnf c)
+fun dest_config c = get_infile c
 
 end
 end
