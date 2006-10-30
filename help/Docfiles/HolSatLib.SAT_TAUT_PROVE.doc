@@ -18,14 +18,14 @@ Fails if the supplied term is not a tautology. In this case, a theorem providing
 (* output omitted *)
 > val it = () : unit
 - SAT_TAUT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
-> val it = |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
+> val it = |- (a ==> b) /\ 2(b ==> a) ==> (a = b) : thm
 - SAT_TAUT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))`` 
 	handle minisatProve.Sat_counterexample th => th;
-> val it = |- a /\ ~b ==> ~~((a ==> b) /\ (b ==> a) ==> (a = b)) : thm
+> val it = |- ~b /\ a ==> ~~((a ==> b) /\ (b ==> a) ==> (a = b)) : thm
 }
  
 \COMMENTS
- If MiniSat fails abnormally for some reason, SAT_TAUT_PROVE falls back to TAUT_PROVE.
+ If MiniSat terminates abnormally, or if the MiniSat binary cannot be located or executed, SAT_TAUT_PROVE falls back to a slower propositional tautology prover implemented in ML.
 
 \SEEALSO 
 HolSatLib.satOracle,
