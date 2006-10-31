@@ -351,7 +351,19 @@ of relations that recurse under <code>EVERY</code>, as in this rule
   University of Cambridge and Warren Hunt and Matt Kaufmann at the
   University of Texas. The goal is to provide a robust and scalable
   link between the HOL4 and ACL2 systems suitable for use on
-  substantial industrial-scale verification projects. </li></ul>
+  substantial industrial-scale verification projects. </li>
+
+<li id="temporal_deep">The example <code>temporal_deep</code> contains deep embeddings of temporal logics and other formalisms related to model checking. Amongst others there are deep embeddings of
+<ul>
+	<li>LTL</li>
+	<li>CTL*</li>
+	<li>nondeterministic and universal omega-automata</li>
+	<li>alternating automata.</li>
+</ul>
+Additionally, there is an automated translation from LTL to omega-automata. Together with the interface to SMV from <code>temporalLib</code> this allows LTL model checking. Moreover, there is a translation of a subset of the FL of the PSL example into LTL. Thus, this example allows model checking for a subset of PSL.
+</li>
+
+</ul>
 
 <h2 id="incompatibilities">Incompatibilities:</h2>
 
