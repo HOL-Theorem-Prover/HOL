@@ -1,5 +1,5 @@
 (* ========================================================================= *)
-(* Create "ellipticTheory" setting up the basic theory of elliptic curves    *)
+(* Create "ellipticTheory" setting up the theory of elliptic curves          *)
 (* ========================================================================= *)
 
 (* ------------------------------------------------------------------------- *)
@@ -7,26 +7,26 @@
 (* (Comment out "load"s and "quietdec"s for compilation.)                    *)
 (* ------------------------------------------------------------------------- *)
 (*
-*)
-val () = loadPath := ["/home/jeh1004/dev/hol/metis/src/mlib",
-                      "/home/jeh1004/dev/hol/metis/src/normalize",
-                      "/home/jeh1004/dev/hol/metis/src/metis"] @ !loadPath;
+val () = loadPath := [] @ !loadPath;
 val () = app load
-  ["bossLib", "metisLib", "res_quanTools",
+  ["Algebra",
+   "bossLib", "metisLib", "res_quanTools",
    "optionTheory", "listTheory",
    "arithmeticTheory", "dividesTheory", "gcdTheory",
-   "pred_setTheory", "pred_setSyntax"];
+   "pred_setTheory", "pred_setSyntax",
+   "primalityTools"];
 val () = quietdec := true;
-
-structure M = Binarymap;
+*)
 
 open HolKernel Parse boolLib bossLib metisLib res_quanTools;
 open optionTheory listTheory arithmeticTheory dividesTheory gcdTheory;
 open pred_setTheory;
+open primalityTools;
 
 (*
-*)
 val () = quietdec := false;
+*)
+fun installPP _ = ();
 
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "elliptic".                                     *)
@@ -36,12 +36,21 @@ val _ = new_theory "elliptic";
 
 val ERR = mk_HOL_ERR "elliptic";
 val Bug = mlibUseful.Bug;
+val Error = ERR "";
+
+val Bug = fn s => (print ("\n\nBUG: " ^ s ^ "\n\n"); Bug s);
 
 (* ------------------------------------------------------------------------- *)
 (* Sort out the parser.                                                      *)
 (* ------------------------------------------------------------------------- *)
 
 val () = Parse.add_infix ("/", 600, HOLgrammars.LEFT);
+
+(* ------------------------------------------------------------------------- *)
+(* Show oracle tags.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+val () = show_tags := true;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper functions.                                                         *)
@@ -123,6 +132,24 @@ fun bool_compare (true,false) = LESS
   | bool_compare (false,true) = GREATER
   | bool_compare _ = EQUAL;
 
+fun trace_conv name conv tm =
+    let
+      val th = conv tm
+      val () = (print (name ^ ": "); print_thm th; print "\n")
+    in
+      th
+    end
+    handle e as HOL_ERR _ =>
+      (print (name ^ ": "); print_term tm; print " --> HOL_ERR\n"; raise e)
+
+fun trans_conv c th =
+    let
+      val (_,tm) = dest_eq (concl th)
+      val th' = c tm
+    in
+      TRANS th th'
+    end;
+
 val norm_rule =
     SIMP_RULE (simpLib.++ (pureSimps.pure_ss, resq_SS))
       [GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
@@ -136,25 +163,84 @@ fun match_tac th =
       (if is_imp tm then MATCH_MP_TAC else MATCH_ACCEPT_TAC) th
     end;
 
-fun cond_rewr_conv th =
+val clean_assumptions =
     let
-      val th = SPEC_ALL (norm_rule th)
-      val (l,_) = dest_eq (snd (dest_imp_only (concl th)))
+      fun eq x y = aconv (concl x) (concl y)
     in
-      fn pred => fn solver => fn tm =>
+      POP_ASSUM_LIST (STRIP_ASSUME_TAC o LIST_CONJ o rev o op_mk_set eq)
+    end;
+
+fun flexible_solver solver cond =
+    let
+      val cond_th = solver cond
+      val cond_tm = concl cond_th
+    in
+      if cond_tm = cond then cond_th
+      else if cond_tm = mk_eq (cond,T) then EQT_ELIM cond_th
+      else raise Bug "flexible_solver: solver didn't prove condition"
+    end;
+
+fun cond_rewr_conv rewr =
+    let
+      val rewr = SPEC_ALL (norm_rule rewr)
+      val rewr_tm = concl rewr
+      val (no_cond,eq) =
+          case total dest_imp_only rewr_tm of
+            NONE => (true,rewr_tm)
+          | SOME (_,eq) => (false,eq)
+      val pat = lhs eq
+    in
+      fn solver => fn tm =>
       let
-        val sub = match_term l tm
-        val th = INST_TY_TERM sub th
-        val (cond,eq) = dest_imp_only (concl th)
-        val _ = pred (dest_eq eq) orelse raise ERR "cond_rewr_conv" "blocked"
+        val sub = match_term pat tm
+        val th = INST_TY_TERM sub rewr
       in
-        MP th (solver cond)
+        if no_cond then th
+        else MP th (flexible_solver solver (rand (rator (concl th))))
       end
     end;
 
+fun cond_rewrs_conv ths =
+    let
+      val solver_convs = map cond_rewr_conv ths
+      fun mk_conv solver solver_conv = solver_conv solver
+    in
+      fn solver => FIRST_CONV (map (mk_conv solver) solver_convs)
+    end;
+
+fun repeat_rule (rule : rule) th =
+    repeat_rule rule (rule th) handle HOL_ERR _ => th;
+
+fun first_rule [] _ = raise ERR "first_rule" ""
+  | first_rule ((rule : rule) :: rules) th =
+    rule th handle HOL_ERR _ => first_rule rules th;
+    
+      
 val dest_in = dest_binop pred_setSyntax.in_tm (ERR "dest_in" "");
 
 val is_in = can dest_in;
+
+val abbrev_tm = ``Abbrev``;
+
+fun dest_abbrev tm =
+    let
+      val (c,t) = dest_comb tm
+      val () = if same_const c abbrev_tm then () else raise ERR "dest_abbrev" ""
+    in
+      dest_eq t
+    end;
+
+val is_abbrev = can dest_abbrev;
+
+fun solver_conv_to_simpset_conv solver_conv =
+    let
+      val {name : string, key : term, conv : conv -> conv} = solver_conv
+      val key = SOME ([] : term list, key)
+      and conv = fn c => fn tms : term list => conv (c tms)
+      and trace = 2
+    in
+      {name = name, key = key, conv = conv, trace = trace}
+    end;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper theorems.                                                          *)
@@ -329,7 +415,7 @@ val commuting_itset = store_thm
 
 val finite_num = store_thm
   ("finite_num",
-   ``!s. FINITE s = ?n. !m. m IN s ==> m < n``,
+   ``!s. FINITE s = ?n : num. !m. m IN s ==> m < n``,
    RW_TAC std_ss []
    ++ EQ_TAC
    >> (Q.SPEC_TAC (`s`,`s`)
@@ -366,18 +452,6 @@ val DIVIDES_ONE = store_thm
    ``!n. divides n 1 = (n = 1)``,
    RW_TAC std_ss [divides_def, MULT_EQ_1]);
 
-val divides_mod_zero = store_thm
-  ("divides_mod_zero",
-   ``!m n. 0 < n ==> (divides n m = (m MOD n = 0))``,
-   RW_TAC std_ss [divides_def]
-   ++ (EQ_TAC ++ STRIP_TAC)
-   ++ RW_TAC std_ss [MOD_EQ_0]
-   ++ MP_TAC (Q.SPEC `n` DIVISION)
-   ++ ASM_SIMP_TAC std_ss []
-   ++ DISCH_THEN (MP_TAC o Q.SPEC `m`)
-   ++ ASM_SIMP_TAC arith_ss []
-   ++ METIS_TAC []);
-
 val prime_one_lt = store_thm
   ("prime_one_lt",
    ``!p. prime p ==> 1 < p``,
@@ -394,24 +468,31 @@ val prime_one_lt = store_thm
 (* ------------------------------------------------------------------------- *)
 
 local
-  type cache = (term,thm) M.dict ref;
+  type cache = (term,thm) Binarymap.dict ref;
 
   fun in_cache cache (asl,g) =
-      case M.peek (cache,g) of
+      case Binarymap.peek (cache,g) of
         NONE => NONE
       | SOME th =>
         if List.all (fn h => mem h asl) (hyp th) then SOME th else NONE;
 in
+  fun cache_new () = ref (Binarymap.mkDict compare);
+
   fun cache_tac (cache : cache) (goal as (_,g)) =
       case in_cache (!cache) goal of
         SOME th => ([], fn [] => th | _ => raise Fail "cache_tac: hit")
       | NONE =>
         ([goal],
-         fn [th] => (cache := M.insert (!cache, g, th); th)
+         fn [th] => (cache := Binarymap.insert (!cache, g, th); th)
           | _ => raise Fail "cache_tac: miss");
 end;
 
 fun print_tac s goal = (print s; ALL_TAC goal);
+
+val ORACLE_algebra_dproc = ref false;
+
+fun ORACLE_algebra_dproc_solver goal =
+    EQT_INTRO (mk_oracle_thm "algebra_dproc" ([],goal));
 
 local
   type context_conv = {name : string, key : term, conv : conv -> conv};
@@ -419,128 +500,183 @@ local
   datatype context =
     Context of {rewrites : thm list,
                 conversions :  context_conv list,
-                judgements : thm list,
                 reductions : thm list,
-                dproc_cache : (term,thm) M.dict ref};
+                judgements : thm list,
+                dproc_cache : (term,thm) Binarymap.dict ref};
+
+  fun context_to_string context =
+      let
+        val Context {rewrites,conversions,reductions,judgements,...} = context
+        val rewrites = length rewrites
+        and conversions = length conversions
+        and reductions = length reductions
+        and judgements = length judgements
+      in
+        "<" ^
+        int_to_string rewrites ^ "r" ^ ", " ^
+        int_to_string conversions ^ "c" ^ ", " ^
+        int_to_string reductions ^ "r" ^ ", " ^
+        int_to_string judgements ^ "j" ^
+        ">"
+      end;
 
   val empty_context =
       Context {rewrites = [], conversions = [],
-               judgements = [], reductions = [],
-               dproc_cache = ref (M.mkDict compare)};
+               reductions = [], judgements = [],
+               dproc_cache = cache_new ()};
 
   fun add_rewrite x context =
       let
-        val Context {rewrites = r, conversions = c, judgements = j,
-                     reductions = d, dproc_cache = m} = context
+        val Context {rewrites = r, conversions = c, reductions = d,
+                      judgements = j, dproc_cache = m} = context
       in
-        Context {rewrites = r @ [x], conversions = c, judgements = j,
-                 reductions = d, dproc_cache = ref (!m)}
+        Context {rewrites = r @ [x], conversions = c, reductions = d,
+                  judgements = j, dproc_cache = ref (!m)}
       end;
 
   fun add_conversion x context =
       let
-        val Context {rewrites = r, conversions = c, judgements = j,
-                     reductions = d, dproc_cache = m} = context
+        val Context {rewrites = r, conversions = c, reductions = d,
+                     judgements = j, dproc_cache = m} = context
       in
-        Context {rewrites = r, conversions = c @ [x], judgements = j,
-                 reductions = d, dproc_cache = ref (!m)}
-      end;
-
-  fun add_judgement x context =
-      let
-        val Context {rewrites = r, conversions = c, judgements = j,
-                     reductions = d, dproc_cache = m} = context
-      in
-        Context {rewrites = r, conversions = c, judgements = j @ [x],
-                 reductions = d, dproc_cache = ref (!m)}
+        Context {rewrites = r, conversions = c @ [x], reductions = d,
+                 judgements = j, dproc_cache = ref (!m)}
       end;
 
   fun add_reduction x context =
       let
-        val Context {rewrites = r, conversions = c, judgements = j,
-                     reductions = d, dproc_cache = m} = context
+        val Context {rewrites = r, conversions = c, reductions = d,
+                     judgements = j, dproc_cache = m} = context
       in
-        Context {rewrites = r, conversions = c, judgements = j,
-                 reductions = d @ [x], dproc_cache = ref (!m)}
+        Context {rewrites = r, conversions = c, reductions = d @ [x],
+                 judgements = j, dproc_cache = ref (!m)}
       end;
 
-  exception State of thm list;
-
-  val initial_state = State [];
-
-  fun state_add (State s, l) =
+  fun add_judgement x context =
       let
-        val l = List.filter (is_in o concl) l
-        val () =
-            app (fn th => (print "state_add: "; print_thm th; print "\n")) l
+        val Context {rewrites = r, conversions = c,reductions = d,
+                     judgements = j, dproc_cache = m} = context
       in
-        State (s @ l)
-      end
-    | state_add (_,_) = raise Fail "algebra_dproc exception";
+        Context {rewrites = r, conversions = c, reductions = d,
+                 judgements = j @ [x], dproc_cache = ref (!m)}
+      end;
 
-  fun algebra_dproc judgements reductions dproc_cache =
-      let
-        fun reduce_tac th = match_tac th ++ REPEAT CONJ_TAC
+  exception State of
+    {assumptions : term list,
+     reductions : tactic list,
+     judgements : tactic list};
 
-        val reduction_tacs = map reduce_tac reductions
+  local
+    val abbrev_rule = lemma
+        (``!v t. Abbrev (v = t) ==> (!s. t IN s ==> v IN s)``,
+         RW_TAC std_ss [markerTheory.Abbrev_def]);
 
-        val judgement_tacs = map reduce_tac judgements
+    fun reduce_tac th = match_tac th ++ REPEAT CONJ_TAC;
 
-        fun dproc_tac goal =
-            (REPEAT (cache_tac dproc_cache
-                     ++ print_tac "-"
-                     ++ FIRST reduction_tacs)
-             ++ (FIRST_ASSUM ACCEPT_TAC
-                 || FIRST (map (fn tac => tac ++ dproc_tac) judgement_tacs)
-                 || reduceLib.REDUCE_TAC)
-             ++ NO_TAC) goal
-
-        fun apply_dproc {context = State ths, ...} goal =
-            if not (is_in goal) then
-              raise ERR "algebra_dproc" "not of form X IN Y"
-            else
-              let
+    fun assume_reduction th (State {assumptions,reductions,judgements}) =
+        let
 (***
-                val _ = (print "algebra_dproc: "; print_term goal; print "\n")
+          val () = (print "assume_reduction: "; print_thm th; print "\n")
 ***)
-                fun f (asm,th) =
-                    case List.find (equal asm o concl) ths of
-                      SOME asm_th => MP (DISCH asm th) asm_th
-                    | NONE => raise Fail "algebra_dproc: no asm th"
-                val th = TAC_PROOF ((map concl ths, goal), dproc_tac)
-                val th = foldl f th (hyp th)
-              in
-                EQT_INTRO th
-              end
-          | apply_dproc _ _ = raise Fail "algebra_dproc exception";
+        in
+          State {assumptions = concl th :: assumptions,
+                 reductions = reduce_tac th :: reductions,
+                 judgements = judgements}
+        end
+      | assume_reduction _ _ = raise Fail "assume_reduction";
+
+    fun assume_judgement th (State {assumptions,reductions,judgements}) =
+        let
+(***
+          val () = (print "assume_judgement: "; print_thm th; print "\n")
+***)
+        in
+          State {assumptions = concl th :: assumptions,
+                 reductions = reductions,
+                 judgements = reduce_tac th :: judgements}
+        end
+      | assume_judgement _ _ = raise Fail "assume_judgement";
+  in
+    fun initial_state reductions judgements =
+        State {assumptions = [],
+               reductions = map reduce_tac reductions,
+               judgements = map reduce_tac judgements};
+
+    fun state_add (s,[]) = s
+      | state_add (s, th :: ths) =
+        let
+          val tm = concl th
+        in
+          if is_in tm then state_add (assume_reduction th s, ths)
+          else if is_abbrev tm then
+            state_add (assume_judgement (MATCH_MP abbrev_rule th) s, ths)
+          else if is_conj tm then state_add (s, CONJUNCTS th @ ths)
+          else state_add (s,ths)
+        end;
+  end;
+
+  fun state_apply_dproc dproc_cache dproc_context goal =
+      if not (is_in goal) then
+        raise ERR "algebra_dproc" "not of form X IN Y"
+      else if !ORACLE_algebra_dproc then ORACLE_algebra_dproc_solver goal
+      else
+        let
+          val {context, solver = _, relation = _, stack = _} = dproc_context
+          val {assumptions,reductions,judgements} =
+              case context of
+                State state => state
+              | _ => raise Bug "state_apply_dproc: wrong exception type"
+
+          fun dproc_tac goal =
+              (REPEAT (cache_tac dproc_cache
+                       ++ print_tac "-"
+                       ++ FIRST reductions)
+               ++ (FIRST (map (fn tac => tac ++ dproc_tac) judgements)
+                   || reduceLib.REDUCE_TAC)
+               ++ NO_TAC) goal
+
+(***
+          val _ = (print "algebra_dproc: "; print_term goal; print "\n")
+***)
+          val th = TAC_PROOF ((assumptions,goal), dproc_tac)
+        in
+          EQT_INTRO th
+        end;
+
+  fun algebra_dproc reductions judgements dproc_cache =
+      Traverse.REDUCER {initial = initial_state reductions judgements,
+                        addcontext = state_add,
+                        apply = state_apply_dproc dproc_cache};
+
+  fun mk_simpset_frag context =
+      let
+        val Context {rewrites, conversions, reductions,
+                     judgements, dproc_cache} = context
+        val convs = map solver_conv_to_simpset_conv conversions
+        val dproc = algebra_dproc reductions judgements dproc_cache
       in
-        Traverse.REDUCER {initial = initial_state,
-                          addcontext = state_add,
-                          apply = apply_dproc}
+        simpLib.SSFRAG
+          {ac = [], congs = [], convs = convs, rewrs = rewrites,
+           dprocs = [dproc], filter = NONE}
       end;
 
-  fun mk_simpset context =
-      let
-        val Context {rewrites, conversions, judgements,
-                     reductions, dproc_cache} = context
-        fun mk_conv {name,key,conv} =
-            let
-              fun conv' c g = conv (c g)
-            in
-              {name = name, key = SOME ([],key), conv = conv', trace = 2}
-            end
-        val convs = map mk_conv conversions
-        val dproc = algebra_dproc judgements reductions dproc_cache
-        val data =
-            simpLib.SSFRAG
-              {ac = [], congs = [], convs = convs, rewrs = rewrites,
-               dprocs = [dproc], filter = NONE}
-      in
-        simpLib.++ (std_ss, data)
-      end;
+  fun mk_simpset context = simpLib.++ (std_ss, mk_simpset_frag context);
 
   datatype algebra_contexts =
            Algebra of {simplify : context, normalize : context};
+
+  fun algebra_contexts_pp pp alg =
+      let
+        val Algebra {simplify,normalize} = alg
+      in
+        PP.begin_block pp PP.INCONSISTENT 1;
+        PP.add_string pp ("{simplify = " ^ context_to_string simplify ^ ",");
+        PP.add_break pp (1,0);
+        PP.add_string pp ("normalize = " ^ context_to_string normalize ^ "}");
+        PP.end_block pp
+      end;
+
+  val () = installPP algebra_contexts_pp;
 
   val algebra_empty_context =
       Algebra {simplify = empty_context, normalize = empty_context};
@@ -563,15 +699,6 @@ local
   fun algebra_both_add_conversion c =
       algebra_normalize_add_conversion c o algebra_simplify_add_conversion c;
 
-  fun algebra_simplify_add_judgement r (Algebra {simplify,normalize}) =
-      Algebra {simplify = add_judgement r simplify, normalize = normalize};
-
-  fun algebra_normalize_add_judgement r (Algebra {simplify,normalize}) =
-      Algebra {simplify = simplify, normalize = add_judgement r normalize};
-
-  fun algebra_both_add_judgement j =
-      algebra_normalize_add_judgement j o algebra_simplify_add_judgement j;
-
   fun algebra_simplify_add_reduction d (Algebra {simplify,normalize}) =
       Algebra {simplify = add_reduction d simplify, normalize = normalize};
 
@@ -581,6 +708,19 @@ local
   fun algebra_both_add_reduction d =
       algebra_normalize_add_reduction d o algebra_simplify_add_reduction d;
 
+  fun algebra_simplify_add_judgement r (Algebra {simplify,normalize}) =
+      Algebra {simplify = add_judgement r simplify, normalize = normalize};
+
+  fun algebra_normalize_add_judgement r (Algebra {simplify,normalize}) =
+      Algebra {simplify = simplify, normalize = add_judgement r normalize};
+
+  fun algebra_both_add_judgement j =
+      algebra_normalize_add_judgement j o algebra_simplify_add_judgement j;
+
+  fun algebra_mk_simpset_frags (Algebra {simplify,normalize}) =
+      {simplify = mk_simpset_frag simplify,
+       normalize = mk_simpset_frag normalize};
+
   fun algebra_mk_simpsets (Algebra {simplify,normalize}) =
       {simplify = mk_simpset simplify, normalize = mk_simpset normalize};
 in
@@ -589,182 +729,140 @@ in
   and alg_add_rewrite' = algebra_simplify_add_rewrite
   and alg_add_rewrite'' = algebra_normalize_add_rewrite
   and alg_add_conversion'' = algebra_normalize_add_conversion
-  and alg_add_judgement = algebra_both_add_judgement
   and alg_add_reduction = algebra_both_add_reduction
+  and alg_add_judgement = algebra_both_add_judgement
+  and alg_simpset_frags = algebra_mk_simpset_frags
   and alg_simpsets = algebra_mk_simpsets;
 end;
 
-fun alg_binop_ac_conv {dest_neg,is_binop,comm_th,comm_th'} =
+fun alg_binop_ac_conv info =
     let
+      val {term_compare,
+           dest_binop,
+           dest_inv,
+           dest_exp,
+           assoc_th,
+           comm_th,
+           comm_th',
+           id_ths,
+           simplify_ths,
+           combine_ths,
+           combine_ths'} = info
+
+      val is_binop = can dest_binop
+      and is_inv = can dest_inv
+      and is_exp = can dest_exp
+
       fun dest tm =
-          case total dest_neg tm of
-            NONE => (true,tm)
-          | SOME (_ : term, tm) => (false,tm)
+          let
+            val (pos,tm) =
+                case total dest_inv tm of
+                  NONE => (true,tm)
+                | SOME (_ : term, tm) => (false,tm)
+            val (sing,tm) =
+                case total dest_exp tm of
+                  NONE => (true,tm)
+                | SOME (_ : term, tm, _ : term) => (false,tm)
+          in
+            (tm,pos,sing)
+          end
 
       fun cmp (x,y) =
           let
-            val (x1,x2) = dest x
-            and (y1,y2) = dest y
+            val (xt,xp,xs) = dest x
+            and (yt,yp,ys) = dest y
           in
-            case compare (x2,y2) of
-              EQUAL => bool_compare (x1,y1)
-            | x => x
+            case term_compare (xt,yt) of
+              LESS => (true,false)
+            | EQUAL =>
+              (case bool_compare (xp,yp) of
+                 LESS => (true,true)
+               | EQUAL =>
+                 (case bool_compare (xs,ys) of
+                    LESS => (true,true)
+                  | EQUAL => (true,true)
+                  | GREATER => (false,true))
+               | GREATER => (false,true))
+            | GREATER => (false,false)
           end
 
-      val comm_conv =
+      val assoc_conv = cond_rewr_conv assoc_th
+
+      val comm_conv = cond_rewr_conv comm_th
+
+      val comm_conv' = cond_rewr_conv comm_th'
+
+      val id_conv = cond_rewrs_conv id_ths
+
+      val term_simplify_conv = cond_rewrs_conv simplify_ths
+
+      val term_combine_conv =
           let
-            fun pred (l,_) = cmp (rand (rator l), rand l) = GREATER
+            val conv = cond_rewrs_conv combine_ths
           in
-            cond_rewr_conv comm_th pred
+            fn solver =>
+               conv solver THENC
+               reduceLib.REDUCE_CONV THENC
+               TRY_CONV (term_simplify_conv solver)
           end
 
-      val comm_conv' =
+      val term_combine_conv' =
           let
-            fun pred (l,_) =
-                cmp (rand (rator l), rand (rator (rand l))) = GREATER
+            val conv = cond_rewrs_conv combine_ths'
           in
-            cond_rewr_conv comm_th' pred
+            fn solver =>
+               conv solver THENC
+               LAND_CONV
+                 (reduceLib.REDUCE_CONV THENC
+                  TRY_CONV (term_simplify_conv solver)) THENC
+               TRY_CONV (id_conv solver)
           end
 
+      fun push_conv solver tm =
+          TRY_CONV
+          let
+            val (_,a,b) = dest_binop tm
+          in
+            case total dest_binop b of
+              NONE =>
+              let
+                val (ok,eq) = cmp (a,b)
+              in
+                (if ok then ALL_CONV else comm_conv solver) THENC
+                (if eq then TRY_CONV (term_combine_conv solver) else ALL_CONV)
+              end
+            | SOME (_,b,_) =>
+              let
+                val (ok,eq) = cmp (a,b)
+              in
+                (if ok then ALL_CONV else comm_conv' solver) THENC
+                ((if eq then term_combine_conv' solver else NO_CONV) ORELSEC
+                 (if ok then ALL_CONV else push_conv' solver))
+              end
+          end tm
+      and push_conv' solver =
+          RAND_CONV (push_conv solver) THENC TRY_CONV (id_conv solver)
+
+      (* Does not raise an exception *)
       fun ac_conv solver tm =
-          (if is_binop (rand (rator tm)) then raise ERR "binop_ac_conv" ""
-           else if is_binop (rand tm) then comm_conv'
-           else comm_conv) solver tm;
+          (case total dest_binop tm of
+             NONE => TRY_CONV (term_simplify_conv solver THENC ac_conv solver)
+           | SOME (_,a,b) =>
+             if is_binop a then
+               TRY_CONV (assoc_conv solver THENC ac_conv solver)
+             else
+               ((id_conv solver ORELSEC
+                 LAND_CONV (term_simplify_conv solver)) THENC
+                ac_conv solver) ORELSEC
+               (if is_binop b then
+                  RAND_CONV (ac_conv solver) THENC push_conv solver
+                else
+                  (RAND_CONV (term_simplify_conv solver) THENC
+                   ac_conv solver) ORELSEC
+                  push_conv solver)) tm
     in
-      ac_conv
+      (***trace_conv "alg_binop_ac_conv" o***) CHANGED_CONV o ac_conv
     end;
-
-(* ------------------------------------------------------------------------- *)
-(* Primality prover.                                                         *)
-(* ------------------------------------------------------------------------- *)
-
-val (nat_sqrt_def,nat_sqrt_ind) = Defn.tprove
-  (Defn.Hol_defn "nat_sqrt"
-   `nat_sqrt n k = if n < k * k then k - 1 else nat_sqrt n (k + 1)`,
-   WF_REL_TAC `measure (\(n,k). (n + 1) - k)`
-   ++ RW_TAC arith_ss [NOT_LESS]
-   ++ Suff `k <= n` >> DECIDE_TAC
-   ++ Cases_on `k = 0` >> RW_TAC arith_ss []
-   ++ Suff `k * k <= k * n` >> RW_TAC arith_ss [LE_MULT_LCANCEL]
-   ++ MATCH_MP_TAC LESS_EQ_TRANS
-   ++ Q.EXISTS_TAC `1 * n`
-   ++ CONJ_TAC >> RW_TAC arith_ss []
-   ++ RW_TAC bool_ss [LE_MULT_RCANCEL]
-   ++ DECIDE_TAC);
-
-val prime_checker_def = Define
-  `prime_checker n i =
-   if i <= 1 then T
-   else if n MOD i = 0 then F
-   else prime_checker n (i - 1)`;
-
-val prime_checker_ind = fetch "-" "prime_checker_ind";
-
-val nat_sqrt = prove
-  (``!n k. k * k <= n = k <= nat_sqrt n 0``,
-   RW_TAC std_ss []
-   ++ Suff `!n i k. k * k <= n \/ k < i = k <= nat_sqrt n i`
-   >> METIS_TAC [ZERO_LESS_EQ, prim_recTheory.NOT_LESS_0]
-   ++ recInduct nat_sqrt_ind
-   ++ RW_TAC std_ss []
-   ++ ONCE_REWRITE_TAC [nat_sqrt_def]
-   ++ Cases_on `n < k * k`
-   >> (RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `X ==> Y` (K ALL_TAC)
-       ++ Cases_on `k = 0`
-       >> (RW_TAC std_ss []
-           ++ FULL_SIMP_TAC arith_ss [])
-       ++ MATCH_MP_TAC (PROVE [] ``(~b ==> ~a) /\ (b = c) ==> (a \/ b = c)``)
-       ++ REVERSE CONJ_TAC >> DECIDE_TAC
-       ++ Suff `k <= k' ==> n < k' * k'` >> DECIDE_TAC
-       ++ RW_TAC std_ss []
-       ++ MATCH_MP_TAC LESS_LESS_EQ_TRANS
-       ++ Q.EXISTS_TAC `k * k`
-       ++ RW_TAC std_ss []
-       ++ MATCH_MP_TAC LESS_EQ_TRANS
-       ++ Q.EXISTS_TAC `k * k'`
-       ++ RW_TAC arith_ss [LE_MULT_LCANCEL, LE_MULT_RCANCEL])
-   ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
-   ++ RW_TAC std_ss []
-   ++ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ MATCH_MP_TAC
-        (PROVE [] ``(b ==> c) /\ (~a /\ c ==> b) ==> (a \/ b = a \/ c)``)
-   ++ CONJ_TAC >> DECIDE_TAC
-   ++ RW_TAC std_ss []
-   ++ Suff `~(k = k')` >> DECIDE_TAC
-   ++ STRIP_TAC
-   ++ RW_TAC arith_ss []);
-
-val prime_condition = store_thm
-  ("prime_condition",
-   ``!p. prime p = 1 < p /\ !n. 1 < n /\ n * n <= p ==> ~(p MOD n = 0)``,
-   STRIP_TAC
-   ++ Know `(p = 0) \/ 0 < p` >> DECIDE_TAC
-   ++ STRIP_TAC >> RW_TAC std_ss [NOT_PRIME_0]
-   ++ RW_TAC std_ss [prime_def]
-   ++ MATCH_MP_TAC
-        (PROVE [] ``(a = d) /\ (a /\ d ==> (b = c)) ==> (a /\ b = d /\ c)``)
-   ++ CONJ_TAC >> DECIDE_TAC
-   ++ STRIP_TAC
-   ++ Know `!n. 1 < n ==> 0 < n` >> DECIDE_TAC
-   ++ DISCH_THEN (fn th => RW_TAC std_ss [GSYM divides_mod_zero, th])
-   ++ EQ_TAC
-   >> (RW_TAC std_ss []
-       ++ STRIP_TAC
-       ++ Q.PAT_ASSUM `!b. P b` (MP_TAC o Q.SPEC `n`)
-       ++ REVERSE (RW_TAC std_ss []) >> DECIDE_TAC
-       ++ STRIP_TAC
-       ++ RW_TAC std_ss []
-       ++ Know `(n = 0) \/ n <= 1` >> METIS_TAC [LE_MULT_LCANCEL, MULT_CLAUSES]
-       ++ RW_TAC arith_ss [])
-   ++ RW_TAC std_ss []
-   ++ Cases_on `b = 1` >> RW_TAC std_ss []
-   ++ Cases_on `b = p` >> RW_TAC std_ss []
-   ++ RW_TAC std_ss []
-   ++ Q.PAT_ASSUM `divides b p` MP_TAC
-   ++ RW_TAC std_ss [divides_def]
-   ++ STRIP_TAC
-   ++ RW_TAC std_ss []
-   ++ Cases_on `q = 1` >> FULL_SIMP_TAC arith_ss []
-   ++ Cases_on `q = 0` >> FULL_SIMP_TAC arith_ss []
-   ++ Cases_on `b = 0` >> FULL_SIMP_TAC arith_ss []
-   ++ Q.PAT_ASSUM `!n. P n`
-        (fn th => MP_TAC (Q.SPEC `q` th) ++ MP_TAC (Q.SPEC `b` th))
-   ++ REVERSE (RW_TAC arith_ss [divides_def, LE_MULT_LCANCEL])
-   >> METIS_TAC [MULT_COMM]
-   ++ REVERSE (Cases_on `b <= q`) >> DECIDE_TAC
-   ++ METIS_TAC [MULT_COMM]);
-
-val prime_checker = prove
-  (``!p. prime p = 1 < p /\ prime_checker p (nat_sqrt p 0)``,
-   RW_TAC std_ss [prime_condition]
-   ++ Cases_on `p = 0` >> RW_TAC arith_ss []
-   ++ Cases_on `p = 1` >> RW_TAC arith_ss []
-   ++ RW_TAC arith_ss []
-   ++ Suff `!p k. prime_checker p k = !i. 1 < i /\ i <= k ==> ~(p MOD i = 0)`
-   >> (DISCH_THEN (fn th => RW_TAC arith_ss [th])
-       ++ RW_TAC arith_ss [GSYM nat_sqrt])
-   ++ recInduct prime_checker_ind
-   ++ RW_TAC arith_ss []
-   ++ ONCE_REWRITE_TAC [prime_checker_def]
-   ++ RW_TAC arith_ss []
-   ++ POP_ASSUM MP_TAC
-   ++ Cases_on `i = 0` >> RW_TAC arith_ss []
-   ++ Cases_on `i = 1` >> RW_TAC arith_ss []
-   ++ ASM_SIMP_TAC arith_ss []
-   ++ Cases_on `n MOD i = 0`
-   >> (RW_TAC arith_ss []
-       ++ Q.EXISTS_TAC `i`
-       ++ RW_TAC arith_ss [])
-   ++ RW_TAC arith_ss []
-   ++ POP_ASSUM (K ALL_TAC)
-   ++ REVERSE EQ_TAC
-   >> RW_TAC arith_ss []
-   ++ RW_TAC arith_ss []
-   ++ Suff `i' <= i - 1 \/ (i' = i)` >> METIS_TAC []
-   ++ DECIDE_TAC);
-
-val prime_checker_conv = REWR_CONV prime_checker THENC EVAL;
 
 (* ========================================================================= *)
 (* Number Theory                                                             *)
@@ -802,7 +900,7 @@ val mult_lcancel_gcd_imp = store_thm
    ++ MP_TAC (Q.SPEC `n` MOD_PLUS)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ RW_TAC std_ss [MOD_EQ_0]
+   ++ RW_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
    ++ RW_TAC arith_ss [MOD_MOD]);
 
 val mult_lcancel_gcd = store_thm
@@ -918,7 +1016,7 @@ val euler_totient = store_thm
          INJ (\i. (i * a) MOD n) s UNIV ==>
          ((ITSET (\y z. y * z) s 1 * a ** CARD s) MOD n =
           ITSET (\y z. y * z) (IMAGE (\i. (i * a) MOD n) s) 1 MOD n)`
-   >> METIS_TAC []
+   >> RW_TAC arith_ss []
    ++ HO_MATCH_MP_TAC FINITE_INDUCT
    ++ RW_TAC std_ss
         [CARD_EMPTY, ITSET_EMPTY, IMAGE_EMPTY, EXP, MULT_CLAUSES,
@@ -930,7 +1028,7 @@ val euler_totient = store_thm
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
    ++ CONJ_TAC >> METIS_TAC [IN_INSERT]
    ++ STRIP_TAC
-   ++ MP_TAC (Q.ISPEC `\y z. y * z` commuting_itset)
+   ++ MP_TAC (Q.ISPEC `\y z : num. y * z` commuting_itset)
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
    ++ SIMP_TAC std_ss []
    ++ CONJ_TAC >> METIS_TAC [MULT_ASSOC, MULT_COMM]
@@ -991,7 +1089,7 @@ val prime_totient = store_thm
    ++ RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_DELETE, count_def]
    ++ Suff `0 < x /\ x < p ==> ~divides p x`
    >> METIS_TAC [DECIDE ``0 < p = ~(p = 0)``]
-   ++ METIS_TAC [DIVIDES_LE, DECIDE ``~(a < b) = b <= a``]);
+   ++ METIS_TAC [DIVIDES_LE, DECIDE ``~(a : num < b) = b <= a``]);
 
 val fermat_little = store_thm
   ("fermat_little",
@@ -1073,6 +1171,20 @@ fun dest_group_mult tm =
     end;
 
 val is_group_mult = can dest_group_mult;
+
+val group_exp_tm = ``group_exp``;
+
+fun dest_group_exp tm =
+    let
+      val (tm,n) = dest_comb tm
+      val (tm,x) = dest_comb tm
+      val (tm,f) = dest_comb tm
+      val _ = same_const tm group_exp_tm orelse raise ERR "dest_group_exp" ""
+    in
+      (f,x,n)
+    end;
+
+val is_group_exp = can dest_group_exp;
 
 (* Theorems *)
 
@@ -1182,16 +1294,6 @@ val group_comm' = store_thm
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss [GSYM group_assoc]
    ++ METIS_TAC [group_comm]);
-
-val group_ac_conv =
-    {name = "group_ac_conv",
-     key = ``g.mult x y``,
-     conv = alg_binop_ac_conv
-              {dest_neg = dest_group_inv, is_binop = is_group_mult,
-               comm_th = group_comm, comm_th' = group_comm'}};
-
-val alg_context = alg_add_conversion'' group_ac_conv alg_context;
-val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val group_rinv = store_thm
   ("group_rinv",
@@ -1597,6 +1699,25 @@ val group_id_alt = store_thm
    ``!g :: Group. !x :: (g.carrier). (g.mult x x = x) = (x = g.id)``,
    RW_TAC alg_ss []);
 
+val group_ac_conv =
+    {name = "group_ac_conv",
+     key = ``g.mult x y``,
+     conv = alg_binop_ac_conv
+              {term_compare = compare,
+               dest_binop = dest_group_mult,
+               dest_inv = dest_group_inv,
+               dest_exp = dest_group_exp,
+               assoc_th = group_assoc,
+               comm_th = group_comm,
+               comm_th' = group_comm',
+               id_ths = [],
+               simplify_ths = [],
+               combine_ths = [],
+               combine_ths' = []}};
+
+val alg_context = alg_add_conversion'' group_ac_conv alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
 (* ------------------------------------------------------------------------- *)
 (* Homomorphisms, isomorphisms, endomorphisms, automorphisms and subgroups.  *)
 (* ------------------------------------------------------------------------- *)
@@ -1730,7 +1851,7 @@ val cyclic_group_alt = store_thm
            ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
            ++ RW_TAC std_ss []
            ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-           ++ ASM_SIMP_TAC std_ss []
+           ++ ASM_REWRITE_TAC []
            ++ DISCH_THEN (fn th =>
                 CONV_TAC
                   (LAND_CONV
@@ -1755,7 +1876,7 @@ val cyclic_group_alt = store_thm
        ++ DISCH_THEN
             (fn th =>
                CONV_TAC (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV [GSYM th]))))
-       ++ ASM_SIMP_TAC std_ss []
+       ++ ASM_REWRITE_TAC []
        ++ Q.UNDISCH_TAC `0 < k`
        ++ POP_ASSUM_LIST (K ALL_TAC)
        ++ STRIP_TAC
@@ -1768,8 +1889,19 @@ val cyclic_group_alt = store_thm
        ++ ASM_REWRITE_TAC []
        ++ DISCH_THEN (fn th =>
             CONV_TAC
-              (LAND_CONV
-                 (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))))
+              (RAND_CONV
+                 (LAND_CONV
+                    (LAND_CONV
+                      (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))))))
+       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
+       ++ ASM_REWRITE_TAC []
+       ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
+       ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
+       ++ ASM_REWRITE_TAC []
+       ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [GSYM th]))
+       ++ MP_TAC (Q.SPEC `k` MOD_MOD)
+       ++ ASM_REWRITE_TAC []
+       ++ DISCH_THEN (fn th => CONV_TAC (REWRITE_CONV [th]))
        ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
        ++ ASM_REWRITE_TAC []
        ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
@@ -1785,14 +1917,14 @@ val cyclic_group_alt = store_thm
        >> (Q.EXISTS_TAC `FUNPOW f (i + j) e`
            ++ RW_TAC std_ss []
            ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-           ++ ASM_SIMP_TAC std_ss []
+           ++ ASM_REWRITE_TAC []
            ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
            ++ RW_TAC std_ss [])
        ++ RW_TAC std_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPECL [`i`,`j`])
        ++ RW_TAC std_ss []
        ++ RW_TAC std_ss []
-       ++ METIS_TAC [MOD_MOD]]);
+       ++ METIS_TAC [DIVISION]]);
 
 val cyclic_group = store_thm
   ("cyclic_group",
@@ -1850,14 +1982,14 @@ val cyclic_group = store_thm
                         (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])
                          THENC ONCE_REWRITE_CONV [GSYM th])))
        ++ MP_TAC (Q.SPEC `k` MOD_MOD)
-       ++ ASM_SIMP_TAC std_ss []
+       ++ ASM_REWRITE_TAC []
        ++ DISCH_THEN (fn th =>
             CONV_TAC
               (LAND_CONV (LAND_CONV (RAND_CONV (ONCE_REWRITE_CONV [GSYM th])))
                THENC
                RAND_CONV (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))))
        ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-       ++ ASM_SIMP_TAC std_ss []
+       ++ ASM_REWRITE_TAC []
        ++ METIS_TAC [ADD_ASSOC],
        METIS_TAC [ADD_COMM],
        Know `{FUNPOW f k' e | k' < k} =
@@ -1888,16 +2020,20 @@ val group_add_mod = store_thm
    RW_TAC resq_ss
      [Group_def,GSPECIFICATION,add_mod_def,combinTheory.K_THM,Nonzero_def]
    ++ Know `0 < n /\ !m. m < n = (m MOD n = m)` >> RW_TAC arith_ss []
-   ++ RW_TAC std_ss [ZERO_MOD, MOD_MOD, ADD_CLAUSES]
+   ++ RW_TAC bool_ss [ZERO_MOD, MOD_MOD, ADD_CLAUSES]
    << [METIS_TAC [],
        Suff `((n - x) MOD n + x MOD n) MOD n = 0`
        >> METIS_TAC []
-       ++ RW_TAC std_ss [MOD_PLUS]
+       ++ MP_TAC (Q.SPEC `n` MOD_PLUS)
+       ++ ASM_REWRITE_TAC []
+       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
        ++ POP_ASSUM (K ALL_TAC)
        ++ RW_TAC arith_ss [],
        Suff `((x + y) MOD n + z MOD n) MOD n = (x MOD n + (y + z) MOD n) MOD n`
        >> METIS_TAC []
-       ++ RW_TAC std_ss [MOD_PLUS]
+       ++ MP_TAC (Q.SPEC `n` MOD_PLUS)
+       ++ ASM_REWRITE_TAC []
+       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
        ++ POP_ASSUM (K ALL_TAC)
        ++ RW_TAC arith_ss []]);
 
@@ -1944,7 +2080,7 @@ val group_mult_mod = store_thm
    ++ RW_TAC arith_ss [prime_one_lt]
    ++ Cases_on `p = 0` >> METIS_TAC [NOT_PRIME_0]
    ++ Know `0 < p` >> DECIDE_TAC ++ STRIP_TAC
-   ++ RW_TAC std_ss [DIVISION, GSYM divides_mod_zero]
+   ++ RW_TAC std_ss [DIVISION, GSYM primalityTheory.divides_mod_zero]
    << [STRIP_TAC
        ++ MP_TAC (Q.SPECL [`p`,`x`,`y`] P_EUCLIDES)
        ++ RW_TAC std_ss []
@@ -1968,9 +2104,8 @@ val group_mult_mod = store_thm
        MP_TAC (Q.SPEC `p` MOD_TIMES2)
        ++ ASM_REWRITE_TAC []
        ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-       ++ RW_TAC std_ss [MOD_MOD]
-       ++ RW_TAC std_ss [MOD_TIMES2]
-       ++ ONCE_REWRITE_TAC [MULT_COMM]
+       ++ RW_TAC bool_ss [MOD_MOD]
+       ++ RW_TAC bool_ss [MOD_TIMES2]
        ++ REWRITE_TAC [GSYM EXP]
        ++ Know `SUC (p - 2) = p - 1`
        >> (Suff `1 <= p` >> DECIDE_TAC
@@ -1979,12 +2114,16 @@ val group_mult_mod = store_thm
        ++ RW_TAC std_ss [EXP]
        ++ Suff `~divides p x` >> METIS_TAC [fermat_little]
        ++ METIS_TAC
-            [DIVIDES_LE, DECIDE ``~(x = 0) = 0 < x``,
-             DECIDE ``~(a < b) = b <= a``],
-       MP_TAC (Q.SPEC `p` MOD_TIMES2)
-       ++ MP_TAC (Q.SPEC `p` MOD_MOD)
+            [DIVIDES_LE, DECIDE ``~(x : num = 0) = 0 < x``,
+             DECIDE ``~(a : num < b) = b <= a``],
+       MP_TAC (Q.SPEC `p` MOD_MOD)
+       ++ MP_TAC (Q.SPEC `p` MOD_TIMES2)
        ++ ASM_REWRITE_TAC []
-       ++ METIS_TAC [MULT_ASSOC]]);
+       ++ POP_ASSUM_LIST (K ALL_TAC)
+       ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th] ++ ASSUME_TAC th)
+       ++ DISCH_THEN (fn th => REWRITE_TAC [th])
+       ++ ASM_REWRITE_TAC []
+       ++ METIS_TAC [MULT_ASSOC, MULT_COMM]]);
 
 val mult_mod = store_thm
   ("mult_mod",
@@ -2080,7 +2219,7 @@ val Field_def = Define
      f.sum IN AbelianGroup /\
      f.prod IN AbelianGroup /\
      (f.sum.carrier = f.carrier) /\
-     (f.prod.carrier = f.carrier DIFF {field_zero f}) /\
+     (f.prod.carrier = field_nonzero f) /\
      (!x :: (f.carrier). field_mult f (field_zero f) x = field_zero f) /\
      (!x y z :: (f.carrier).
         field_mult f x (field_add f y z) =
@@ -2090,12 +2229,93 @@ val FiniteField_def = Define
   `FiniteField = { (f : 'a field) | f IN Field /\ FINITE f.carrier }`;
 
 val alg_context = alg_add_rewrite'' field_sub_def alg_context;
-val alg_context = alg_add_rewrite'' field_div_def alg_context;
+(***val alg_context = alg_add_rewrite'' field_div_def alg_context;***)
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 (* Syntax operations *)
 
-val field_neg_tm = ``field_neg``;
+val field_ty_op = "field";
+
+fun mk_field_type ty = mk_type (field_ty_op,[ty]);
+
+fun dest_field_type ty =
+    case dest_type ty of
+      (ty_op,[a]) => if ty_op = field_ty_op then a
+                     else raise ERR "dest_field_type" ""
+    | _ => raise ERR "dest_field_type" "";
+
+val is_field_type = can dest_field_type;
+
+val field_zero_tm = ``field_zero : 'a field -> 'a``;
+
+fun mk_field_zero f =
+    let
+      val ty = dest_field_type (type_of f)
+      val zero_tm = inst [{redex = alpha, residue = ty}] field_zero_tm
+    in
+      mk_comb (zero_tm,f)
+    end;
+
+fun dest_field_zero tm =
+    let
+      val (tm,f) = dest_comb tm
+      val _ = same_const tm field_zero_tm orelse raise ERR "dest_field_zero" ""
+    in
+      f
+    end;
+
+val is_field_zero = can dest_field_zero;
+
+val field_one_tm = ``field_one : 'a field -> 'a``;
+
+fun mk_field_one f =
+    let
+      val ty = dest_field_type (type_of f)
+      val one_tm = inst [{redex = alpha, residue = ty}] field_one_tm
+    in
+      mk_comb (one_tm,f)
+    end;
+
+fun dest_field_one tm =
+    let
+      val (tm,f) = dest_comb tm
+      val _ = same_const tm field_one_tm orelse raise ERR "dest_field_one" ""
+    in
+      f
+    end;
+
+val is_field_one = can dest_field_one;
+
+val field_num_tm = ``field_num : 'a field -> num -> 'a``;
+
+fun mk_field_num (f,n) =
+    let
+      val ty = dest_field_type (type_of f)
+      val num_tm = inst [{redex = alpha, residue = ty}] field_num_tm
+    in
+      list_mk_comb (num_tm,[f,n])
+    end;
+
+fun dest_field_num tm =
+    let
+      val (tm,x) = dest_comb tm
+      val (tm,f) = dest_comb tm
+      val _ = same_const tm field_num_tm orelse raise ERR "dest_field_num" ""
+    in
+      (f,x)
+    end;
+
+val is_field_num = can dest_field_num;
+
+val field_neg_tm = ``field_neg : 'a field -> 'a -> 'a``;
+
+fun mk_field_neg (f,x) =
+    let
+      val ty = dest_field_type (type_of f)
+      val neg_tm = inst [{redex = alpha, residue = ty}] field_neg_tm
+    in
+      list_mk_comb (neg_tm,[f,x])
+    end;
 
 fun dest_field_neg tm =
     let
@@ -2108,7 +2328,15 @@ fun dest_field_neg tm =
 
 val is_field_neg = can dest_field_neg;
 
-val field_add_tm = ``field_add``;
+val field_add_tm = ``field_add : 'a field -> 'a -> 'a -> 'a``;
+
+fun mk_field_add (f,x,y) =
+    let
+      val ty = dest_field_type (type_of f)
+      val add_tm = inst [{redex = alpha, residue = ty}] field_add_tm
+    in
+      list_mk_comb (add_tm,[f,x,y])
+    end;
 
 fun dest_field_add tm =
     let
@@ -2122,7 +2350,37 @@ fun dest_field_add tm =
 
 val is_field_add = can dest_field_add;
 
-val field_inv_tm = ``field_inv``;
+val field_sub_tm = ``field_sub : 'a field -> 'a -> 'a -> 'a``;
+
+fun mk_field_sub (f,x,y) =
+    let
+      val ty = dest_field_type (type_of f)
+      val sub_tm = inst [{redex = alpha, residue = ty}] field_sub_tm
+    in
+      list_mk_comb (sub_tm,[f,x,y])
+    end;
+
+fun dest_field_sub tm =
+    let
+      val (tm,y) = dest_comb tm
+      val (tm,x) = dest_comb tm
+      val (tm,f) = dest_comb tm
+      val _ = same_const tm field_sub_tm orelse raise ERR "dest_field_sub" ""
+    in
+      (f,x,y)
+    end;
+
+val is_field_sub = can dest_field_sub;
+
+val field_inv_tm = ``field_inv : 'a field -> 'a -> 'a``;
+
+fun mk_field_inv (f,x) =
+    let
+      val ty = dest_field_type (type_of f)
+      val inv_tm = inst [{redex = alpha, residue = ty}] field_inv_tm
+    in
+      list_mk_comb (inv_tm,[f,x])
+    end;
 
 fun dest_field_inv tm =
     let
@@ -2135,7 +2393,15 @@ fun dest_field_inv tm =
 
 val is_field_inv = can dest_field_inv;
 
-val field_mult_tm = ``field_mult``;
+val field_mult_tm = ``field_mult : 'a field -> 'a -> 'a -> 'a``;
+
+fun mk_field_mult (f,x,y) =
+    let
+      val ty = dest_field_type (type_of f)
+      val mult_tm = inst [{redex = alpha, residue = ty}] field_mult_tm
+    in
+      list_mk_comb (mult_tm,[f,x,y])
+    end;
 
 fun dest_field_mult tm =
     let
@@ -2148,6 +2414,151 @@ fun dest_field_mult tm =
     end;
 
 val is_field_mult = can dest_field_mult;
+
+val field_exp_tm = ``field_exp : 'a field -> 'a -> num -> 'a``;
+
+fun mk_field_exp (f,x,n) =
+    let
+      val ty = dest_field_type (type_of f)
+      val exp_tm = inst [{redex = alpha, residue = ty}] field_exp_tm
+    in
+      list_mk_comb (exp_tm,[f,x,n])
+    end;
+
+fun dest_field_exp tm =
+    let
+      val (tm,n) = dest_comb tm
+      val (tm,x) = dest_comb tm
+      val (tm,f) = dest_comb tm
+      val _ = same_const tm field_exp_tm orelse raise ERR "dest_field_exp" ""
+    in
+      (f,x,n)
+    end;
+
+val is_field_exp = can dest_field_exp;
+
+val field_div_tm = ``field_div : 'a field -> 'a -> 'a -> 'a``;
+
+fun mk_field_div (f,x,y) =
+    let
+      val ty = dest_field_type (type_of f)
+      val div_tm = inst [{redex = alpha, residue = ty}] field_div_tm
+    in
+      list_mk_comb (div_tm,[f,x,y])
+    end;
+
+fun dest_field_div tm =
+    let
+      val (tm,y) = dest_comb tm
+      val (tm,x) = dest_comb tm
+      val (tm,f) = dest_comb tm
+      val _ = same_const tm field_div_tm orelse raise ERR "dest_field_div" ""
+    in
+      (f,x,y)
+    end;
+
+val is_field_div = can dest_field_div;
+
+fun mk_field_num_mult (f,x,n) = mk_field_mult (f, mk_field_num (f,n), x);
+
+fun dest_field_num_mult tm =
+    let
+      val (f,t,x) = dest_field_mult tm
+      val (_,n) = dest_field_num t
+    in
+      (f,x,n)
+    end;
+
+val is_field_num_mult = can dest_field_num_mult;
+
+fun field_compare (x,y) =
+    case (total dest_field_num x, total dest_field_num y) of
+      (NONE,NONE) => compare (x,y)
+    | (SOME _, NONE) => LESS
+    | (NONE, SOME _) => GREATER
+    | (SOME (_,x), SOME (_,y)) => compare (x,y);
+
+(* A pretty printer for field operations *)
+
+val field_pretty_print = ref true;
+val field_pretty_print_max_size = ref 1000;
+
+fun field_print sys gravs d pp =
+    let
+      open Portable term_pp_types
+
+      fun field_num tm =
+          let
+            val (_,x) = dest_field_num tm
+          in
+            sys gravs (d - 1) x
+          end
+
+      fun field_unop dest s prec tm =
+          let
+            val (_,x) = dest tm
+          in
+            begin_block pp INCONSISTENT 0;
+            add_string pp s;
+            add_break pp (1,0);
+            sys (Prec (prec,s), Top, Top) (d - 1) x;
+            end_block pp
+          end
+
+      fun field_binop_prec x s =
+          let
+            val (p,l,r) = gravs
+            val b =
+                (case p of Prec (y,_) => y > x | _ => false) orelse
+                (case l of Prec (y,_) => y >= x | _ => false) orelse
+                (case r of Prec (y,_) => y > x | _ => false)
+            val p = Prec (x,s)
+            and l = if b then Top else l
+            and r = if b then Top else r
+          in
+            (b,p,l,r)
+          end
+
+      fun field_binop dest s prec tm =
+          let
+            val (_,x,y) = dest tm
+            val (b,p,l,r) = field_binop_prec prec s
+            val n = term_size tm
+          in
+            if n > !field_pretty_print_max_size then
+              (begin_block pp INCONSISTENT 0;
+               add_string pp ("<<" ^ int_to_string n ^ ">>");
+               end_block pp)
+            else
+              (begin_block pp INCONSISTENT (if b then 1 else 0);
+               if b then add_string pp "(" else ();
+               sys (p,l,p) (d - 1) x;
+               add_string pp (" " ^ s);
+               add_break pp (1,0);
+               sys (p,p,r) (d - 1) y;
+               if b then add_string pp ")" else ();
+               end_block pp)
+          end
+
+      fun first_printer [] _ = raise term_pp_types.UserPP_Failed
+        | first_printer (p :: ps) tm =
+          (p tm handle HOL_ERR _ => first_printer ps tm)
+    in
+      fn tm =>
+      if not (!field_pretty_print) then raise term_pp_types.UserPP_Failed
+      else
+        first_printer
+          [field_num,
+           field_unop dest_field_neg "~" 900,
+           field_binop dest_field_add "+" 500,
+           field_binop dest_field_sub "-" 500,
+           field_binop dest_field_mult "*" 600,
+           field_binop dest_field_div "/" 600,
+           field_binop dest_field_exp "**" 700]
+          tm
+    end;
+
+val () = temp_add_user_printer ({Tyop = "", Thy = ""}, field_print);
 
 (* Theorems *)
 
@@ -2172,6 +2583,12 @@ val field_nonzero_alt = store_thm
    ``!f x. x IN f.carrier /\ ~(x = field_zero f) ==> x IN field_nonzero f``,
    RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]);
 
+val field_nonzero_eq = store_thm
+  ("field_nonzero_eq",
+   ``!f :: Field. !x :: (f.carrier).
+       ~(x = field_zero f) = x IN field_nonzero f``,
+   RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]);
+
 val field_zero_carrier = store_thm
   ("field_zero_carrier",
    ``!f :: Field. field_zero f IN f.carrier``,
@@ -2187,14 +2604,16 @@ val field_one_carrier = store_thm
    ``!f :: Field. field_one f IN f.carrier``,
    RW_TAC resq_ss [Field_def, field_one_def, GSPECIFICATION, field_zero_def]
    ++ Q.UNDISCH_TAC `f.prod IN AbelianGroup`
-   ++ RW_TAC std_ss [AbelianGroup_def, GSPECIFICATION, Group_def, IN_DIFF]);
+   ++ RW_TAC std_ss
+        [AbelianGroup_def, GSPECIFICATION, Group_def, IN_DIFF,
+         field_nonzero_def]);
 
 val field_one_zero = store_thm
   ("field_one_zero",
    ``!f :: Field. ~(field_one f = field_zero f)``,
    RW_TAC resq_ss
      [Field_def, field_one_def, field_zero_def, GSPECIFICATION,
-      AbelianGroup_def]
+      AbelianGroup_def, field_nonzero_def]
    ++ Know `f.prod.id IN f.prod.carrier`
    >> METIS_TAC [group_id_carrier]
    ++ RW_TAC std_ss [IN_DIFF, IN_SING]);
@@ -2259,14 +2678,12 @@ val field_add_comm' = store_thm
    ++ RW_TAC alg_ss [GSYM field_add_assoc]
    ++ METIS_TAC [field_add_comm]);
 
-val field_add_ac_conv =
-    {name = "field_add_ac_conv",
-     key = ``field_add f x y``,
-     conv = alg_binop_ac_conv
-              {dest_neg = dest_field_neg, is_binop = is_field_add,
-               comm_th = field_add_comm, comm_th' = field_add_comm'}};
-    
-val alg_context = alg_add_conversion'' field_add_ac_conv alg_context;
+val field_num_zero = store_thm
+  ("field_num_zero",
+   ``!f. field_num f 0 = field_zero f``,
+   RW_TAC std_ss [field_num_def]);
+
+val alg_context = alg_add_rewrite field_num_zero alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_add_lzero = store_thm
@@ -2281,12 +2698,37 @@ val field_add_lzero = store_thm
 val alg_context = alg_add_rewrite field_add_lzero alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
+val field_num_one = store_thm
+  ("field_num_one",
+   ``!f :: Field. field_num f 1 = field_one f``,
+   REWRITE_TAC [ONE, field_num_def]
+   ++ RW_TAC alg_ss []);
+
+val alg_context = alg_add_rewrite'' (GSYM field_num_one) alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_add_lzero' = store_thm
+  ("field_add_lzero'",
+   ``!f :: Field. !x :: (f.carrier). field_add f (field_num f 0) x = x``,
+   RW_TAC alg_ss [field_num_zero]);
+
+val alg_context = alg_add_rewrite field_add_lzero' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
 val field_add_rzero = store_thm
   ("field_add_rzero",
    ``!f :: Field. !x :: (f.carrier). field_add f x (field_zero f) = x``,
    METIS_TAC [field_add_lzero, field_add_comm, field_zero_carrier]);
 
 val alg_context = alg_add_rewrite field_add_rzero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_add_rzero' = store_thm
+  ("field_add_rzero'",
+   ``!f :: Field. !x :: (f.carrier). field_add f x (field_num f 0) = x``,
+   RW_TAC alg_ss [field_num_zero]);
+
+val alg_context = alg_add_rewrite field_add_rzero' alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_lneg = store_thm
@@ -2390,6 +2832,15 @@ val field_mult_lzero = store_thm
 val alg_context = alg_add_rewrite field_mult_lzero alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
+val field_mult_lzero' = store_thm
+  ("field_mult_lzero'",
+   ``!f :: Field. !x :: (f.carrier).
+       field_mult f (field_num f 0) x = field_zero f``,
+   RW_TAC alg_ss [field_num_zero]);
+
+val alg_context = alg_add_rewrite field_mult_lzero' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
 val field_distrib_ladd = store_thm
   ("field_distrib_ladd",
    ``!f :: Field. !x y z :: (f.carrier).
@@ -2397,8 +2848,10 @@ val field_distrib_ladd = store_thm
        field_add f (field_mult f x y) (field_mult f x z)``,
    RW_TAC resq_ss [Field_def, GSPECIFICATION]);
 
+(***
 val alg_context = alg_add_rewrite'' field_distrib_ladd alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+***)
 
 val field_mult_rzero = store_thm
   ("field_mult_rzero",
@@ -2412,12 +2865,12 @@ val field_mult_rzero = store_thm
          `field_mult f x (field_add f (field_one f) (field_neg f (field_one f)))
           IN f.carrier`
        >> RW_TAC alg_ss [field_rneg]
-       ++ RW_TAC alg_ss' []
+       ++ RW_TAC alg_ss [field_distrib_ladd]
        ++ match_tac field_add_carrier
        ++ Q.UNDISCH_TAC `f IN Field`
        ++ RW_TAC std_ss
             [GSPECIFICATION, Field_def, AbelianGroup_def, field_one_def,
-             field_mult_def, field_neg_def]
+             field_mult_def, field_neg_def, field_nonzero_def]
        >> (Suff `f.prod.mult x f.prod.id IN f.prod.carrier`
            >> RW_TAC std_ss [IN_DIFF]
            ++ match_tac group_mult_carrier
@@ -2466,6 +2919,15 @@ val field_mult_rzero = store_thm
 val alg_context = alg_add_rewrite field_mult_rzero alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
+val field_mult_rzero' = store_thm
+  ("field_mult_rzero'",
+   ``!f :: Field. !x :: (f.carrier).
+       field_mult f x (field_num f 0) = field_zero f``,
+   RW_TAC alg_ss [field_num_zero]);
+
+val alg_context = alg_add_rewrite field_mult_rzero' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
 val field_mult_nonzero = store_thm
   ("field_mult_nonzero",
    ``!f :: Field. !x y :: field_nonzero f.
@@ -2511,7 +2973,7 @@ val field_mult_assoc = store_thm
    ++ Q.UNDISCH_TAC `f IN Field`
    ++ RW_TAC std_ss
         [Field_def, GSPECIFICATION, field_add_def, AbelianGroup_def,
-         Group_def, field_mult_def]
+         Group_def, field_mult_def, field_nonzero_def]
    ++ FIRST_ASSUM match_tac
    ++ RW_TAC std_ss [IN_DIFF, IN_SING]);
 
@@ -2528,7 +2990,8 @@ val field_mult_comm = store_thm
    >> RW_TAC std_ss [field_mult_lzero, field_mult_rzero]
    ++ Q.UNDISCH_TAC `f IN Field`
    ++ RW_TAC std_ss
-        [Field_def, GSPECIFICATION, field_mult_def, AbelianGroup_def]
+        [Field_def, GSPECIFICATION, field_mult_def, AbelianGroup_def,
+         field_nonzero_def]
    ++ Q.PAT_ASSUM `!x y :: (f.prod.carrier). P x y` match_tac
    ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]);
 
@@ -2539,16 +3002,6 @@ val field_mult_comm' = store_thm
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss [GSYM field_mult_assoc]
    ++ METIS_TAC [field_mult_comm]);
-
-val field_mult_ac_conv =
-    {name = "field_mult_ac_conv",
-     key = ``field_mult f x y``,
-     conv = alg_binop_ac_conv
-              {dest_neg = dest_field_inv, is_binop = is_field_mult,
-               comm_th = field_mult_comm, comm_th' = field_mult_comm'}};
-    
-val alg_context = alg_add_conversion'' field_mult_ac_conv alg_context;
-val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_entire = store_thm
   ("field_entire",
@@ -2563,7 +3016,8 @@ val field_entire = store_thm
    >> METIS_TAC [field_mult_carrier]
    ++ RW_TAC std_ss []
    ++ Q.UNDISCH_TAC `f IN Field`
-   ++ RW_TAC std_ss [Field_def, GSPECIFICATION, AbelianGroup_def]
+   ++ RW_TAC std_ss
+        [Field_def, GSPECIFICATION, AbelianGroup_def, field_nonzero_def]
    ++ Suff `f.prod.mult x y IN f.prod.carrier`
    >> RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY, field_mult_def]
    ++ match_tac group_mult_carrier
@@ -2581,11 +3035,19 @@ val field_mult_lone = store_thm
    ++ Q.UNDISCH_TAC `f IN Field`
    ++ RW_TAC std_ss
         [Field_def, GSPECIFICATION, field_mult_def, field_one_def,
-         AbelianGroup_def]
+         AbelianGroup_def, field_nonzero_def]
    ++ match_tac group_lid
    ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]);
 
 val alg_context = alg_add_rewrite field_mult_lone alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_lone' = store_thm
+  ("field_mult_lone'",
+   ``!f :: Field. !x :: (f.carrier). field_mult f (field_num f 1) x = x``,
+   RW_TAC alg_ss [field_num_one]);
+
+val alg_context = alg_add_rewrite field_mult_lone' alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_mult_rone = store_thm
@@ -2594,6 +3056,14 @@ val field_mult_rone = store_thm
    METIS_TAC [field_mult_lone, field_mult_comm, field_one_carrier]);
 
 val alg_context = alg_add_rewrite field_mult_rone alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_rone' = store_thm
+  ("field_mult_rone'",
+   ``!f :: Field. !x :: (f.carrier). field_mult f x (field_num f 1) = x``,
+   RW_TAC alg_ss [field_num_one]);
+
+val alg_context = alg_add_rewrite field_mult_rone' alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_linv = store_thm
@@ -2651,7 +3121,8 @@ val field_mult_lcancel_imp = store_thm
    >> RW_TAC std_ss [field_mult_rzero, field_entire]
    ++ Q.UNDISCH_TAC `f IN Field`
    ++ RW_TAC std_ss
-        [field_mult_def, Field_def, GSPECIFICATION, AbelianGroup_def]
+        [field_mult_def, Field_def, GSPECIFICATION, AbelianGroup_def,
+         field_nonzero_def]
    ++ match_tac group_lcancel_imp
    ++ Q.EXISTS_TAC `f.prod`
    ++ Q.EXISTS_TAC `x`
@@ -2771,8 +3242,13 @@ val field_distrib_radd = store_thm
    RW_TAC resq_ss []
    ++ METIS_TAC [field_mult_comm, field_add_carrier, field_distrib_ladd]);
 
+(***
 val alg_context = alg_add_rewrite'' field_distrib_radd alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+***)
+
+val field_distrib = save_thm
+  ("field_distrib", CONJ field_distrib_ladd field_distrib_radd);
 
 val field_mult_lneg = store_thm
   ("field_mult_lneg",
@@ -2797,8 +3273,8 @@ val field_mult_rneg = store_thm
 val alg_context = alg_add_rewrite field_mult_rneg alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
-val field_inv_mult = store_thm
-  ("field_inv_mult",
+val field_inv_mult' = store_thm
+  ("field_inv_mult'",
    ``!f :: Field. !x y :: field_nonzero f.
        field_inv f (field_mult f x y) =
        field_mult f (field_inv f y) (field_inv f x)``,
@@ -2808,15 +3284,16 @@ val field_inv_mult = store_thm
    ++ match_tac group_inv_mult
    ++ RW_TAC std_ss []);
 
+val field_inv_mult = store_thm
+  ("field_inv_mult",
+   ``!f :: Field. !x y :: field_nonzero f.
+       field_inv f (field_mult f x y) =
+       field_mult f (field_inv f x) (field_inv f y)``,
+   METIS_TAC [field_inv_nonzero, field_nonzero_carrier, field_mult_comm,
+              field_inv_mult']);
+
 val alg_context = alg_add_rewrite'' field_inv_mult alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
-
-val field_div_cancel = store_thm
-  ("field_div_cancel",
-   ``!f :: Field. !x z :: field_nonzero f. !y :: (f.carrier).
-       (field_div f (field_mult f x y) (field_mult f x z) = field_div f y z)``,
-   RW_TAC resq_ss []
-   ++ RW_TAC alg_ss' []);
 
 val field_exp_carrier = store_thm
   ("field_exp_carrier",
@@ -2839,6 +3316,27 @@ val field_exp_nonzero = store_thm
 val alg_context = alg_add_reduction field_exp_nonzero alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
+val field_num_carrier = store_thm
+  ("field_num_carrier",
+   ``!f :: Field. !n. field_num f n IN f.carrier``,
+   RW_TAC resq_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC alg_ss [field_num_def]);
+
+val alg_context = alg_add_reduction field_num_carrier alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_small = store_thm
+  ("field_mult_small",
+   ``!f :: Field. !x :: (f.carrier).
+       (field_mult f (field_num f 0) x = field_zero f) /\
+       (field_mult f (field_num f 1) x = x) /\
+       (field_mult f (field_num f 2) x = field_add f x x) /\
+       (field_mult f (field_num f 3) x =
+        field_add f x (field_mult f (field_num f 2) x))``,
+   RW_TAC (simpLib.++ (std_ss, numSimps.SUC_FILTER_ss)) [field_num_def]
+   ++ RW_TAC alg_ss [field_distrib_radd, field_add_assoc]);
+
 val field_exp_small = store_thm
   ("field_exp_small",
    ``!f :: Field. !x :: (f.carrier).
@@ -2855,7 +3353,601 @@ val field_exp_small = store_thm
    RW_TAC (simpLib.++ (std_ss, numSimps.SUC_FILTER_ss))
      [field_exp_def, field_mult_rone]);
 
-val alg_context = alg_add_rewrite'' field_exp_small alg_context;
+val field_inv_one = store_thm
+  ("field_inv_one",
+   ``!f :: Field. field_inv f (field_one f) = field_one f``,
+   RW_TAC resq_ss [field_inv_def, field_one_def, Field_def, GSPECIFICATION]
+   ++ RW_TAC alg_ss []);
+
+val alg_context = alg_add_rewrite field_inv_one alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_zero = store_thm
+  ("field_exp_zero",
+   ``!f :: Field. !x :: (f.carrier). field_exp f x 0 = field_one f``,
+   RW_TAC alg_ss [field_exp_def]);
+
+val alg_context = alg_add_rewrite field_exp_zero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_one = store_thm
+  ("field_exp_one",
+   ``!f :: Field. !x :: (f.carrier). field_exp f x 1 = x``,
+   REWRITE_TAC [ONE, field_exp_def]
+   ++ RW_TAC alg_ss []);
+
+val alg_context = alg_add_rewrite field_exp_one alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_add' = store_thm
+  ("field_neg_add'",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_neg f (field_add f x y) =
+       field_add f (field_neg f y) (field_neg f x)``,
+   RW_TAC resq_ss
+     [field_add_def, Field_def, GSPECIFICATION, field_neg_def,
+      AbelianGroup_def]
+   ++ match_tac group_inv_mult
+   ++ RW_TAC std_ss []);
+
+val field_neg_add = store_thm
+  ("field_neg_add",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_neg f (field_add f x y) =
+       field_add f (field_neg f x) (field_neg f y)``,
+   METIS_TAC [field_neg_carrier, field_add_comm, field_neg_add']);
+
+val alg_context = alg_add_rewrite'' field_neg_add alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_suc = store_thm
+  ("field_exp_suc",
+   ``!f :: Field. !x :: (f.carrier). !n.
+       field_exp f x (SUC n) = field_mult f (field_exp f x n) x``,
+   RW_TAC alg_ss [field_exp_def]
+   ++ METIS_TAC [field_mult_comm, field_exp_carrier]);
+
+val field_num_suc = store_thm
+  ("field_num_suc",
+   ``!f :: Field. !n.
+       field_num f (SUC n) = field_add f (field_one f) (field_num f n)``,
+   RW_TAC alg_ss [field_num_def]
+   ++ METIS_TAC [field_add_comm, field_one_carrier, field_num_carrier]);
+
+val field_num_add = store_thm
+  ("field_num_add",
+   ``!f :: Field. !m n.
+       field_add f (field_num f m) (field_num f n) = field_num f (m + n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `m`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_num_suc, ADD, field_add_assoc]);
+
+val alg_context = alg_add_rewrite field_num_add alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_num_add' = store_thm
+  ("field_num_add'",
+   ``!f :: Field. !m n. !x :: (f.carrier).
+       field_add f (field_num f m) (field_add f (field_num f n) x) =
+       field_add f (field_num f (m + n)) x``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_num_add]);
+
+val alg_context = alg_add_rewrite'' field_num_add' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_num_mult = store_thm
+  ("field_num_mult",
+   ``!f :: Field. !m n.
+       field_mult f (field_num f m) (field_num f n) = field_num f (m * n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `m`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_num_def, MULT, field_distrib_radd]);
+
+val alg_context = alg_add_rewrite field_num_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_num_mult' = store_thm
+  ("field_num_mult'",
+   ``!f :: Field. !m n. !x :: (f.carrier).
+       field_mult f (field_num f m) (field_mult f (field_num f n) x) =
+       field_mult f (field_num f (m * n)) x``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_num_mult]);
+
+val alg_context = alg_add_rewrite'' field_num_mult' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_num_exp = store_thm
+  ("field_num_exp",
+   ``!f :: Field. !m n.
+       field_exp f (field_num f m) n = field_num f (m ** n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC alg_ss [EXP, field_num_one, field_exp_def]);
+
+val alg_context = alg_add_rewrite field_num_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_add_single = store_thm
+  ("field_single_add_single",
+   ``!f :: Field. !x :: (f.carrier).
+       field_add f x x = field_mult f (field_num f 2) x``,
+   RW_TAC alg_ss [field_mult_small]);
+
+val alg_context = alg_add_rewrite'' field_single_add_single alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_add_single' = store_thm
+  ("field_single_add_single'",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_add f x (field_add f x y) =
+       field_add f (field_mult f (field_num f 2) x) y``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_single]);
+
+val alg_context = alg_add_rewrite'' field_single_add_single' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_add_mult = store_thm
+  ("field_single_add_mult",
+   ``!f :: Field. !x :: (f.carrier). !n.
+       field_add f x (field_mult f (field_num f n) x) =
+       field_mult f (field_num f (n + 1)) x``,
+   RW_TAC bool_ss [field_num_suc, GSYM ADD1]
+   ++ RW_TAC alg_ss [field_distrib_radd]);
+
+val alg_context = alg_add_rewrite'' field_single_add_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_add_mult' = store_thm
+  ("field_single_add_mult'",
+   ``!f :: Field. !x y :: (f.carrier). !n.
+       field_add f x (field_add f (field_mult f (field_num f n) x) y) =
+       field_add f (field_mult f (field_num f (n + 1)) x) y``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_mult]);
+
+val alg_context = alg_add_rewrite'' field_single_add_mult' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_add_neg_mult = store_thm
+  ("field_single_add_neg_mult",
+   ``!f :: Field. !x :: (f.carrier). !n.
+       field_add f x (field_neg f (field_mult f (field_num f n) x)) =
+       (if n = 0 then x
+        else field_neg f (field_mult f (field_num f (n - 1)) x))``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss []
+   ++ Cases_on `n`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd]
+   ++ RW_TAC alg_ss [field_neg_add, GSYM field_add_assoc]);
+
+val alg_context = alg_add_rewrite'' field_single_add_neg_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_add_neg_mult' = store_thm
+  ("field_single_add_neg_mult'",
+   ``!f :: Field. !x y :: (f.carrier). !n.
+       field_add f x
+         (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
+       (if n = 0 then field_add f x y
+        else field_add f
+               (field_neg f (field_mult f (field_num f (n - 1)) x)) y)``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_neg_mult]
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC resq_ss []);
+
+val alg_context = alg_add_rewrite'' field_single_add_neg_mult' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_add_mult = store_thm
+  ("field_mult_add_mult",
+   ``!f :: Field. !x :: (f.carrier). !m n.
+       field_add f (field_mult f (field_num f m) x)
+         (field_mult f (field_num f n) x) =
+       field_mult f (field_num f (m + n)) x``,
+   RW_TAC resq_ss []
+   ++ Induct_on `m`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, ADD]
+   ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+   ++ RW_TAC alg_ss [field_add_assoc]);
+
+val alg_context = alg_add_rewrite'' field_mult_add_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_add_mult' = store_thm
+  ("field_mult_add_mult'",
+   ``!f :: Field. !x y :: (f.carrier). !m n.
+       field_add f (field_mult f (field_num f m) x)
+         (field_add f (field_mult f (field_num f n) x) y) =
+       field_add f (field_mult f (field_num f (m + n)) x) y``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_mult_add_mult]);
+
+val alg_context = alg_add_rewrite'' field_mult_add_mult' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_add_neg = store_thm
+  ("field_mult_add_neg",
+   ``!f :: Field. !x :: (f.carrier). !n.
+       field_add f (field_mult f (field_num f n) x) (field_neg f x) =
+       (if n = 0 then field_neg f x
+        else field_mult f (field_num f (n - 1)) x)``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss []
+   ++ Cases_on `n`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_num_def, field_distrib_radd, field_add_assoc]);
+
+val alg_context = alg_add_rewrite'' field_mult_add_neg alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_add_neg' = store_thm
+  ("field_mult_add_neg'",
+   ``!f :: Field. !x y :: (f.carrier). !n.
+       field_add f (field_mult f (field_num f n) x)
+         (field_add f (field_neg f x) y) =
+       (if n = 0 then field_add f (field_neg f x) y
+        else field_add f (field_mult f (field_num f (n - 1)) x) y)``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_mult_add_neg]
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC resq_ss []);
+
+val alg_context = alg_add_rewrite'' field_mult_add_neg' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_add_neg_mult = store_thm
+  ("field_mult_add_neg_mult",
+   ``!f :: Field. !x :: (f.carrier). !m n.
+       field_add f (field_mult f (field_num f m) x)
+         (field_neg f (field_mult f (field_num f n) x)) =
+       (if m < n then field_neg f (field_mult f (field_num f (n - m)) x)
+        else field_mult f (field_num f (m - n)) x)``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss []
+   << [Know `m <= n` >> DECIDE_TAC
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ Induct_on `m`
+       ++ RW_TAC alg_ss []
+       ++ Cases_on `n = SUC m` >> RW_TAC alg_ss' []
+       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+       ++ CONJ_TAC >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, field_add_assoc]
+       ++ Know `n - m = SUC (n - SUC m)` >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd,
+                         GSYM field_add_assoc, field_neg_add],
+       Know `n <= m` >> DECIDE_TAC
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ Induct_on `m`
+       ++ RW_TAC alg_ss []
+       ++ Cases_on `n = SUC m` >> RW_TAC alg_ss' []
+       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+       ++ CONJ_TAC >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, field_add_assoc]
+       ++ Know `SUC m - n = SUC (m - n)` >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd,
+                         GSYM field_add_assoc, field_neg_add]]);
+
+val alg_context = alg_add_rewrite'' field_mult_add_neg_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_add_neg_mult' = store_thm
+  ("field_mult_add_neg_mult'",
+   ``!f :: Field. !x y :: (f.carrier). !m n.
+       field_add f (field_mult f (field_num f m) x)
+         (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
+       (if m < n then
+          field_add f (field_neg f (field_mult f (field_num f (n - m)) x)) y
+        else field_add f (field_mult f (field_num f (m - n)) x) y)``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_mult_add_neg_mult]
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC resq_ss []);
+
+val alg_context = alg_add_rewrite'' field_mult_add_neg_mult' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_add_neg = store_thm
+  ("field_neg_add_neg",
+   ``!f :: Field. !x :: (f.carrier).
+       field_add f (field_neg f x) (field_neg f x) =
+       field_neg f (field_mult f (field_num f 2) x)``,
+   RW_TAC alg_ss [field_mult_small, field_neg_add]);
+
+val alg_context = alg_add_rewrite'' field_neg_add_neg alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_add_neg' = store_thm
+  ("field_neg_add_neg'",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_add f (field_neg f x) (field_add f (field_neg f x) y) =
+       field_add f (field_neg f (field_mult f (field_num f 2) x)) y``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_add_neg]);
+
+val alg_context = alg_add_rewrite'' field_neg_add_neg' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_add_neg_mult = store_thm
+  ("field_neg_add_neg_mult",
+   ``!f :: Field. !x :: (f.carrier). !n.
+       field_add f (field_neg f x)
+         (field_neg f (field_mult f (field_num f n) x)) =
+       field_neg f (field_mult f (field_num f (n + 1)) x)``,
+   RW_TAC alg_ss [GSYM field_single_add_mult]
+   ++ RW_TAC alg_ss' []);
+
+val alg_context = alg_add_rewrite'' field_neg_add_neg_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_add_neg_mult' = store_thm
+  ("field_neg_add_neg_mult'",
+   ``!f :: Field. !x y :: (f.carrier). !n.
+       field_add f (field_neg f x)
+         (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
+       field_add f (field_neg f (field_mult f (field_num f (n + 1)) x)) y``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_add_neg_mult]);
+
+val alg_context = alg_add_rewrite'' field_neg_add_neg_mult' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_mult_add_neg_mult = store_thm
+  ("field_neg_mult_add_neg_mult",
+   ``!f :: Field. !x :: (f.carrier). !m n.
+       field_add f (field_neg f (field_mult f (field_num f m) x))
+         (field_neg f (field_mult f (field_num f n) x)) =
+       field_neg f (field_mult f (field_num f (m + n)) x)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `m`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, ADD, field_neg_add]
+   ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+   ++ RW_TAC alg_ss [field_add_assoc]);
+
+val alg_context = alg_add_rewrite'' field_neg_mult_add_neg_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_mult_add_neg_mult' = store_thm
+  ("field_neg_mult_add_neg_mult'",
+   ``!f :: Field. !x y :: (f.carrier). !m n.
+       field_add f (field_neg f (field_mult f (field_num f m) x))
+         (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
+       field_add f (field_neg f (field_mult f (field_num f (m + n)) x)) y``,
+   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_mult_add_neg_mult]);
+
+val alg_context = alg_add_rewrite'' field_neg_mult_add_neg_mult' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_mult_single = store_thm
+  ("field_single_mult_single",
+   ``!f :: Field. !x :: (f.carrier). field_mult f x x = field_exp f x 2``,
+   RW_TAC alg_ss' [field_exp_small]);
+
+val alg_context = alg_add_rewrite'' field_single_mult_single alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_mult_single' = store_thm
+  ("field_single_mult_single'",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_mult f x (field_mult f x y) = field_mult f (field_exp f x 2) y``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_single]);
+
+val alg_context = alg_add_rewrite'' field_single_mult_single' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_mult_exp = store_thm
+  ("field_single_mult_exp",
+   ``!f :: Field. !x :: (f.carrier). !n.
+       field_mult f x (field_exp f x n) = field_exp f x (n + 1)``,
+   METIS_TAC [field_exp_def, ADD1]);
+
+val alg_context = alg_add_rewrite'' field_single_mult_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_mult_exp' = store_thm
+  ("field_single_mult_exp'",
+   ``!f :: Field. !x y :: (f.carrier). !n.
+       field_mult f x (field_mult f (field_exp f x n) y) =
+       field_mult f (field_exp f x (n + 1)) y``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_exp]);
+
+val alg_context = alg_add_rewrite'' field_single_mult_exp' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_mult_inv_exp = store_thm
+  ("field_single_mult_inv_exp",
+   ``!f :: Field. !x :: field_nonzero f. !n.
+       field_mult f x (field_inv f (field_exp f x n)) =
+       (if n = 0 then x else field_inv f (field_exp f x (n - 1)))``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss []
+   ++ Cases_on `n`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_exp_def, GSYM field_mult_assoc, field_inv_mult]);
+
+val alg_context = alg_add_rewrite'' field_single_mult_inv_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_single_mult_inv_exp' = store_thm
+  ("field_single_mult_inv_exp'",
+   ``!f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
+       field_mult f x (field_mult f (field_inv f (field_exp f x n)) y) =
+       (if n = 0 then field_mult f x y
+        else field_mult f (field_inv f (field_exp f x (n - 1))) y)``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_inv_exp]
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC resq_ss []);
+
+val alg_context = alg_add_rewrite'' field_single_mult_inv_exp' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_mult_exp = store_thm
+  ("field_exp_mult_exp",
+   ``!f :: Field. !x :: (f.carrier). !m n.
+       field_mult f (field_exp f x m) (field_exp f x n) =
+       field_exp f x (m + n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `m`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_exp_def, ADD_CLAUSES]
+   ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+   ++ RW_TAC alg_ss [field_mult_assoc]);
+
+val alg_context = alg_add_rewrite'' field_exp_mult_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_mult_exp' = store_thm
+  ("field_exp_mult_exp'",
+   ``!f :: Field. !x y :: (f.carrier). !m n.
+       field_mult f (field_exp f x m) (field_mult f (field_exp f x n) y) =
+       field_mult f (field_exp f x (m + n)) y``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_exp_mult_exp]);
+
+val alg_context = alg_add_rewrite'' field_exp_mult_exp' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_mult_inv = store_thm
+  ("field_exp_mult_inv",
+   ``!f :: Field. !x :: field_nonzero f. !n.
+       field_mult f (field_exp f x n) (field_inv f x) =
+       (if n = 0 then field_inv f x else field_exp f x (n - 1))``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss []
+   ++ Cases_on `n`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_exp_suc, field_mult_assoc]);
+
+val alg_context = alg_add_rewrite'' field_exp_mult_inv alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_mult_inv' = store_thm
+  ("field_exp_mult_inv'",
+   ``!f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
+       field_mult f (field_exp f x n) (field_mult f (field_inv f x) y) =
+       (if n = 0 then field_mult f (field_inv f x) y
+        else field_mult f (field_exp f x (n - 1)) y)``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_exp_mult_inv]
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC resq_ss []);
+
+val alg_context = alg_add_rewrite'' field_exp_mult_inv' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_mult_inv_exp = store_thm
+  ("field_exp_mult_inv_exp",
+   ``!f :: Field. !x :: field_nonzero f. !m n.
+       field_mult f (field_exp f x m) (field_inv f (field_exp f x n)) =
+       (if m < n then field_inv f (field_exp f x (n - m))
+        else field_exp f x (m - n))``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss []
+   << [Know `m <= n` >> DECIDE_TAC
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ Induct_on `m`
+       ++ RW_TAC alg_ss []
+       ++ Cases_on `n = SUC m` >> RW_TAC alg_ss []
+       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+       ++ CONJ_TAC >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_exp_def, field_mult_assoc]
+       ++ Know `n - m = SUC (n - SUC m)` >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_exp_def, GSYM field_mult_assoc, field_inv_mult],
+       Know `n <= m` >> DECIDE_TAC
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ Induct_on `m`
+       ++ RW_TAC alg_ss []
+       ++ Cases_on `n = SUC m` >> RW_TAC alg_ss []
+       ++ Q.PAT_ASSUM `X ==> Y` MP_TAC
+       ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+       ++ CONJ_TAC >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_exp_def, field_mult_assoc]
+       ++ Know `SUC m - n = SUC (m - n)` >> DECIDE_TAC
+       ++ RW_TAC alg_ss [field_exp_def, GSYM field_mult_assoc]]);
+
+val alg_context = alg_add_rewrite'' field_exp_mult_inv_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_mult_inv_exp' = store_thm
+  ("field_exp_mult_inv_exp'",
+   ``!f :: Field. !x :: field_nonzero f. !m n. !y :: (f.carrier).
+       field_mult f (field_exp f x m)
+         (field_mult f (field_inv f (field_exp f x n)) y) =
+       (if m < n then field_mult f (field_inv f (field_exp f x (n - m))) y
+        else field_mult f (field_exp f x (m - n)) y)``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_exp_mult_inv_exp]
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC resq_ss []);
+
+val alg_context = alg_add_rewrite'' field_exp_mult_inv_exp' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_inv_mult_inv = store_thm
+  ("field_inv_mult_inv",
+   ``!f :: Field. !x :: field_nonzero f.
+       field_mult f (field_inv f x) (field_inv f x) =
+       field_inv f (field_exp f x 2)``,
+   RW_TAC alg_ss [field_exp_small, field_inv_mult]);
+
+val alg_context = alg_add_rewrite'' field_inv_mult_inv alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_inv_mult_inv' = store_thm
+  ("field_inv_mult_inv'",
+   ``!f :: Field. !x :: field_nonzero f. !y :: (f.carrier).
+       field_mult f (field_inv f x) (field_mult f (field_inv f x) y) =
+       field_mult f (field_inv f (field_exp f x 2)) y``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_mult_inv]);
+
+val alg_context = alg_add_rewrite'' field_inv_mult_inv' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_inv_mult_inv_exp = store_thm
+  ("field_inv_mult_inv_exp",
+   ``!f :: Field. !x :: field_nonzero f. !n.
+       field_mult f (field_inv f x) (field_inv f (field_exp f x n)) =
+       field_inv f (field_exp f x (n + 1))``,
+   RW_TAC alg_ss [GSYM field_single_mult_exp]
+   ++ RW_TAC alg_ss' []);
+
+val alg_context = alg_add_rewrite'' field_inv_mult_inv_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_inv_mult_inv_exp' = store_thm
+  ("field_inv_mult_inv_exp'",
+   ``!f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
+       field_mult f (field_inv f x)
+         (field_mult f (field_inv f (field_exp f x n)) y) =
+       field_mult f (field_inv f (field_exp f x (n + 1))) y``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_mult_inv_exp]);
+
+val alg_context = alg_add_rewrite'' field_inv_mult_inv_exp' alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_inv_exp_mult_inv_exp = store_thm
+  ("field_inv_exp_mult_inv_exp",
+   ``!f :: Field. !x :: field_nonzero f. !m n.
+       field_mult f (field_inv f (field_exp f x m))
+         (field_inv f (field_exp f x n)) =
+       field_inv f (field_exp f x (m + n))``,
+   RW_TAC resq_ss []
+   ++ Induct_on `m`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_exp_def, ADD_CLAUSES, field_inv_mult]
+   ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
+   ++ RW_TAC alg_ss [field_mult_assoc]);
+
+val alg_context = alg_add_rewrite'' field_inv_exp_mult_inv_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_inv_exp_mult_inv_exp' = store_thm
+  ("field_inv_exp_mult_inv_exp'",
+   ``!f :: Field. !x :: field_nonzero f. !m n. !y :: (f.carrier).
+       field_mult f (field_inv f (field_exp f x m))
+         (field_mult f (field_inv f (field_exp f x n)) y) =
+       field_mult f (field_inv f (field_exp f x (m + n))) y``,
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_exp_mult_inv_exp]);
+
+val alg_context = alg_add_rewrite'' field_inv_exp_mult_inv_exp' alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_one_exp = store_thm
@@ -2866,6 +3958,20 @@ val field_one_exp = store_thm
    ++ RW_TAC std_ss [field_exp_def, field_mult_rone, field_one_carrier]);
 
 val alg_context = alg_add_rewrite field_one_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_zero_exp = store_thm
+  ("field_zero_exp",
+   ``!f :: Field. !n.
+       field_exp f (field_zero f) n =
+       (if n = 0 then field_one f else field_zero f)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC std_ss
+        [field_exp_def, field_mult_rone, field_one_carrier]
+   ++ RW_TAC alg_ss []);
+
+val alg_context = alg_add_rewrite field_zero_exp alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_exp_eq_zero = store_thm
@@ -2881,6 +3987,32 @@ val field_exp_eq_zero = store_thm
 val alg_context = alg_add_rewrite field_exp_eq_zero alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
+val field_exp_neg = store_thm
+  ("field_exp_neg",
+   ``!f :: Field. !x :: (f.carrier). !n.
+       field_exp f (field_neg f x) n =
+       if EVEN n then field_exp f x n else field_neg f (field_exp f x n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC alg_ss [EVEN, field_exp_def]);
+
+val alg_context = alg_add_rewrite'' field_exp_neg alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_exp = store_thm
+  ("field_exp_exp",
+   ``!f :: Field. !x :: (f.carrier). !m n.
+       field_exp f (field_exp f x m) n = field_exp f x (m * n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `n`
+   >> RW_TAC alg_ss [field_exp_def]
+   ++ RW_TAC alg_ss [field_exp_def, ONCE_REWRITE_RULE [MULT_COMM] MULT]
+   ++ ONCE_REWRITE_TAC [ADD_COMM]
+   ++ RW_TAC alg_ss [GSYM field_exp_mult_exp]);
+
+val alg_context = alg_add_rewrite'' field_exp_exp alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
 val field_sub_eq_zero = store_thm
   ("field_sub_eq_zero",
    ``!f :: Field. !x y :: (f.carrier).
@@ -2889,24 +4021,54 @@ val field_sub_eq_zero = store_thm
    ++ RW_TAC alg_ss' []
    ++ RW_TAC alg_ss [GSYM field_neg_eq]);
 
+local
+  val field_sub_eq_zero_conv =
+      let
+        val th = CONV_RULE RES_FORALL_CONV (GSYM field_sub_eq_zero)
+      in
+        fn f => cond_rewr_conv (ISPEC f th)
+      end;
+
+  fun left_conv solver tm =
+      let
+        val (x,y) = dest_eq tm
+        val _ = not (is_field_zero y) orelse
+                raise ERR "field_sub_eq_zero_conv (left)" "looping"
+        val (f,_,_) = dest_field_add x
+      in
+        field_sub_eq_zero_conv f solver
+      end tm;
+
+  fun right_conv solver tm =
+      let
+        val (_,y) = dest_eq tm
+        val (f,_,_) = dest_field_add y
+(***
+        val _ = print "right_conv\n";
+***)
+      in
+        field_sub_eq_zero_conv f solver
+      end tm;
+in
+  val field_sub_eq_zero_l_conv =
+      {name = "field_sub_eq_zero_conv (left)",
+       key = ``field_add (f : 'a field) x y = z``,
+       conv = left_conv}
+  and field_sub_eq_zero_r_conv =
+      {name = "field_sub_eq_zero_conv (right)",
+       key = ``x = field_add (f : 'a field) y z``,
+       conv = right_conv};
+end;
+
+val alg_context = alg_add_conversion'' field_sub_eq_zero_r_conv alg_context;
+val alg_context = alg_add_conversion'' field_sub_eq_zero_l_conv alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
 val field_sub_eq_zero_imp = store_thm
   ("field_sub_eq_zero_imp",
    ``!f :: Field. !x y :: (f.carrier).
        (field_sub f x y = field_zero f) ==> (x = y)``,
    RW_TAC std_ss [field_sub_eq_zero]);
-
-val field_neg_add = store_thm
-  ("field_neg_add",
-   ``!f :: Field. !x y :: (f.carrier).
-       field_neg f (field_add f x y) =
-       field_add f (field_neg f y) (field_neg f x)``,
-   RW_TAC resq_ss
-     [field_add_def, Field_def, GSPECIFICATION, field_neg_def, AbelianGroup_def]
-   ++ match_tac group_inv_mult
-   ++ RW_TAC std_ss []);
-
-val alg_context = alg_add_rewrite'' field_neg_add alg_context;
-val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
 val field_inv_inv = store_thm
   ("field_inv_inv",
@@ -2919,35 +4081,6 @@ val field_inv_inv = store_thm
 val alg_context = alg_add_rewrite field_inv_inv alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
-val field_num_carrier = store_thm
-  ("field_num_carrier",
-   ``!f :: Field. !n. field_num f n IN f.carrier``,
-   RW_TAC resq_ss []
-   ++ Induct_on `n`
-   ++ RW_TAC alg_ss [field_num_def]);
-
-val alg_context = alg_add_reduction field_num_carrier alg_context;
-val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
-
-val field_div_carrier = store_thm
-  ("field_div_carrier",
-   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
-       field_div f x y IN f.carrier``,
-   RW_TAC resq_ss []
-   ++ RW_TAC alg_ss' []);
-
-val alg_context = alg_add_reduction field_div_carrier alg_context;
-val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
-
-val field_div_nonzero = store_thm
-  ("field_div_nonzero",
-   ``!f :: Field. !x y :: field_nonzero f. field_div f x y IN field_nonzero f``,
-   RW_TAC resq_ss []
-   ++ RW_TAC alg_ss' []);
-
-val alg_context = alg_add_reduction field_div_nonzero alg_context;
-val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
-
 val field_sub_carrier = store_thm
   ("field_sub_carrier",
    ``!f :: Field. !x y :: (f.carrier). field_sub f x y IN f.carrier``,
@@ -2956,6 +4089,1138 @@ val field_sub_carrier = store_thm
 
 val alg_context = alg_add_reduction field_sub_carrier alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_neg_nonzero = store_thm
+  ("field_neg_nonzero",
+   ``!f :: Field. !x :: field_nonzero f. field_neg f x IN field_nonzero f``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss [GSYM field_nonzero_eq]
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC alg_ss [field_nonzero_def, GSPECIFICATION, IN_DIFF, IN_SING]
+   ++ STRIP_TAC
+   ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
+   ++ RW_TAC alg_ss []
+   ++ match_tac field_add_lcancel_imp
+   ++ Q.EXISTS_TAC `f`
+   ++ Q.EXISTS_TAC `field_neg f x`
+   ++ RW_TAC std_ss [field_lneg]
+   ++ RW_TAC alg_ss []);
+
+val alg_context = alg_add_reduction field_neg_nonzero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_inv_neg = store_thm
+  ("field_inv_neg",
+   ``!f :: Field. !x :: field_nonzero f.
+       field_inv f (field_neg f x) = field_neg f (field_inv f x)``,
+   RW_TAC resq_ss []
+   ++ match_tac field_mult_lcancel_imp
+   ++ Q.EXISTS_TAC `f`
+   ++ Q.EXISTS_TAC `field_neg f x`
+   ++ SIMP_TAC bool_ss [CONJ_ASSOC]
+   ++ CONJ_TAC >> RW_TAC alg_ss []
+   ++ Know
+      `field_mult f (field_neg f x) (field_inv f (field_neg f x)) = field_one f`
+   >> (match_tac field_rinv ++ RW_TAC alg_ss [])
+   ++ RW_TAC std_ss []
+   ++ RW_TAC alg_ss' []);
+  
+val alg_context = alg_add_rewrite'' field_inv_neg alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_mult = store_thm
+  ("field_exp_mult",
+   ``!f :: Field. !x y :: (f.carrier). !n.
+       field_exp f (field_mult f x y) n =
+       field_mult f (field_exp f x n) (field_exp f y n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC alg_ss [field_exp_def]
+   ++ RW_TAC alg_ss [field_mult_assoc]
+   ++ AP_TERM_TAC
+   ++ RW_TAC alg_ss [GSYM field_mult_assoc]
+   ++ AP_THM_TAC
+   ++ AP_TERM_TAC
+   ++ match_tac field_mult_comm
+   ++ RW_TAC alg_ss []);
+
+val alg_context = alg_add_rewrite'' field_exp_mult alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_exp_inv = store_thm
+  ("field_exp_inv",
+   ``!f :: Field. !x :: field_nonzero f. !n.
+       field_exp f (field_inv f x) n = field_inv f (field_exp f x n)``,
+   RW_TAC resq_ss []
+   ++ Induct_on `n`
+   ++ RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [field_exp_def]
+   ++ RW_TAC alg_ss' []);
+
+val alg_context = alg_add_rewrite'' field_exp_inv alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_add_ac_conv =
+    {name = "field_add_ac_conv",
+     key = ``field_add f x y``,
+     conv =
+       alg_binop_ac_conv
+         {term_compare = field_compare,
+          dest_binop = dest_field_add,
+          dest_inv = dest_field_neg,
+          dest_exp = dest_field_num_mult,
+          assoc_th = field_add_assoc,
+          comm_th = field_add_comm,
+          comm_th' = field_add_comm',
+          id_ths =
+            [field_add_lzero,
+             field_add_lzero',
+             field_add_rzero,
+             field_add_rzero'],             
+          simplify_ths =
+            [GSYM field_num_one,
+             field_neg_zero,
+             field_neg_neg,
+             field_neg_add,
+             field_mult_lzero,
+             field_mult_lzero',
+             field_mult_rzero,
+             field_mult_rzero',
+             field_mult_lone,
+             field_mult_lone',
+             field_mult_rone,
+             field_mult_rone'],
+          combine_ths =
+            [field_single_add_single,
+             field_single_add_mult,
+             field_rneg,
+             field_single_add_neg_mult,
+             field_mult_add_mult,
+             field_mult_add_neg,
+             field_mult_add_neg_mult,
+             field_neg_add_neg,
+             field_neg_add_neg_mult,
+             field_neg_mult_add_neg_mult],
+          combine_ths' =
+            [field_single_add_single',
+             field_single_add_mult',
+             field_rneg',
+             field_single_add_neg_mult',
+             field_mult_add_mult',
+             field_mult_add_neg',
+             field_mult_add_neg_mult',
+             field_neg_add_neg',
+             field_neg_add_neg_mult',
+             field_neg_mult_add_neg_mult']}};
+    
+val alg_context = alg_add_conversion'' field_add_ac_conv alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_mult_ac_conv =
+    {name = "field_mult_ac_conv",
+     key = ``field_mult f x y``,
+     conv =
+       alg_binop_ac_conv
+         {term_compare = field_compare,
+          dest_binop = dest_field_mult,
+          dest_inv = dest_field_inv,
+          dest_exp = dest_field_exp,
+          assoc_th = field_mult_assoc,
+          comm_th = field_mult_comm,
+          comm_th' = field_mult_comm',
+          id_ths =
+            [field_mult_lone,
+             field_mult_lone',
+             field_mult_rone,
+             field_mult_rone'],
+          simplify_ths =
+            [field_inv_one,
+             field_inv_inv,
+             field_inv_mult,
+             field_exp_zero,
+             field_exp_one,
+             field_exp_exp,
+             field_exp_mult,
+             field_exp_inv],
+          combine_ths =
+            [field_single_mult_single,
+             field_single_mult_exp,
+             field_rinv,
+             field_single_mult_inv_exp,
+             field_exp_mult_exp,
+             field_exp_mult_inv,
+             field_exp_mult_inv_exp,
+             field_inv_mult_inv,
+             field_inv_mult_inv_exp,
+             field_inv_exp_mult_inv_exp],
+          combine_ths' =
+            [field_single_mult_single',
+             field_single_mult_exp',
+             field_rinv',
+             field_single_mult_inv_exp',
+             field_exp_mult_exp',
+             field_exp_mult_inv',
+             field_exp_mult_inv_exp',
+             field_inv_mult_inv',
+             field_inv_mult_inv_exp',
+             field_inv_exp_mult_inv_exp']}};
+    
+val alg_context = alg_add_conversion'' field_mult_ac_conv alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_binomial_2 = store_thm
+  ("field_binomial_2",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_exp f (field_add f x y) 2 =
+       field_add f (field_exp f x 2)
+         (field_add f (field_mult f (field_num f 2) (field_mult f x y))
+            (field_exp f y 2))``,
+   RW_TAC alg_ss [field_exp_small]
+   ++ RW_TAC alg_ss' [field_distrib]);
+
+val field_binomial_3 = store_thm
+  ("field_binomial_3",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_exp f (field_add f x y) 3 =
+       field_add f
+         (field_exp f x 3)
+         (field_add f
+           (field_mult f (field_num f 3) (field_mult f (field_exp f x 2) y))
+           (field_add f
+             (field_mult f (field_num f 3) (field_mult f x (field_exp f y 2)))
+             (field_exp f y 3)))``,
+   RW_TAC alg_ss [field_exp_small]
+   ++ RW_TAC alg_ss' [field_distrib, field_binomial_2]);
+
+val field_binomial_4 = store_thm
+  ("field_binomial_4",
+   ``!f :: Field. !x y :: (f.carrier).
+       field_exp f (field_add f x y) 4 =
+       field_add f
+         (field_exp f x 4)
+         (field_add f
+           (field_mult f (field_num f 4) (field_mult f (field_exp f x 3) y))
+           (field_add f
+             (field_mult f
+               (field_num f 6)
+               (field_mult f (field_exp f x 2) (field_exp f y 2)))
+             (field_add f
+               (field_mult f (field_num f 4) (field_mult f x (field_exp f y 3)))
+               (field_exp f y 4))))``,
+   RW_TAC alg_ss [field_exp_small]
+   ++ RW_TAC alg_ss' [field_distrib, field_binomial_2, field_binomial_3]);
+
+val field_div_carrier = store_thm
+  ("field_div_carrier",
+   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       field_div f x y IN f.carrier``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss' [field_div_def]);
+
+val alg_context = alg_add_reduction field_div_carrier alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_div_nonzero = store_thm
+  ("field_div_nonzero",
+   ``!f :: Field. !x y :: field_nonzero f. field_div f x y IN field_nonzero f``,
+   RW_TAC resq_ss []
+   ++ RW_TAC alg_ss' [field_div_def]);
+
+val alg_context = alg_add_reduction field_div_nonzero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_div_lneg = store_thm
+  ("field_div_lneg",
+   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       field_div f (field_neg f x) y = field_neg f (field_div f x y)``,
+   RW_TAC alg_ss' [field_div_def]);
+
+val field_div_rneg = store_thm
+  ("field_div_rneg",
+   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       field_div f x (field_neg f y) = field_neg f (field_div f x y)``,
+   RW_TAC alg_ss' [field_inv_neg, field_div_def]);
+
+val field_div_addl = store_thm
+  ("field_div_addl",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_add f x (field_div f y z) =
+       field_div f (field_add f (field_mult f x z) y) z``,
+   RW_TAC alg_ss' [field_div_def, field_distrib]);
+
+val field_div_addr = store_thm
+  ("field_div_addr",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_add f (field_div f y z) x =
+       field_div f (field_add f y (field_mult f x z)) z``,
+   RW_TAC alg_ss' [field_div_def, field_distrib]);
+
+val field_div_subl = store_thm
+  ("field_div_subl",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_sub f x (field_div f y z) =
+       field_div f (field_sub f (field_mult f x z) y) z``,
+   RW_TAC alg_ss' [field_div_def, field_distrib]);
+
+val field_div_subr = store_thm
+  ("field_div_subr",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_sub f (field_div f y z) x =
+       field_div f (field_sub f y (field_mult f x z)) z``,
+   RW_TAC alg_ss' [field_div_def, field_distrib]);
+
+val field_div_multl = store_thm
+  ("field_div_multl",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_mult f x (field_div f y z) =
+       field_div f (field_mult f x y) z``,
+   RW_TAC alg_ss' [field_div_def]);
+
+val field_div_multr = store_thm
+  ("field_div_multr",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_mult f (field_div f y z) x =
+       field_div f (field_mult f y x) z``,
+   RW_TAC alg_ss' [field_div_def]);
+
+val field_div_exp = store_thm
+  ("field_div_exp",
+   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f. !n.
+       field_exp f (field_div f x y) n =
+       field_div f (field_exp f x n) (field_exp f y n)``,
+   RW_TAC alg_ss' [field_div_def, field_exp_mult, field_exp_inv]);
+
+val field_div_divl = store_thm
+  ("field_div_divl",
+   ``!f :: Field. !x :: (f.carrier). !y z :: field_nonzero f.
+       field_div f (field_div f x y) z =
+       field_div f x (field_mult f y z)``,
+   RW_TAC alg_ss' [field_div_def]);
+
+val field_div_divr = store_thm
+  ("field_div_divr",
+   ``!f :: Field. !x :: (f.carrier). !y z :: field_nonzero f.
+       field_div f x (field_div f y z) =
+       field_div f (field_mult f x z) y``,
+   RW_TAC alg_ss' [field_div_def]);
+
+val field_add_divl = store_thm
+  ("field_add_divl",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_add f (field_div f y z) x =
+       field_div f (field_add f y (field_mult f z x)) z``,
+   RW_TAC alg_ss [field_div_def]
+   ++ RW_TAC alg_ss' [field_distrib]);
+
+val field_add_divl' = store_thm
+  ("field_add_divl'",
+   ``!f :: Field. !x y t :: (f.carrier). !z :: field_nonzero f.
+       field_add f (field_div f y z) (field_add f x t) =
+       field_add f (field_div f (field_add f y (field_mult f z x)) z) t``,
+   RW_TAC alg_ss [GSYM field_add_assoc]
+   ++ RW_TAC resq_ss []
+   ++ match_tac field_add_divl
+   ++ RW_TAC alg_ss []);
+
+val field_add_divr = store_thm
+  ("field_add_divr",
+   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+       field_add f x (field_div f y z) =
+       field_div f (field_add f (field_mult f z x) y) z``,
+   RW_TAC alg_ss [field_div_def]
+   ++ RW_TAC alg_ss' [field_distrib]);
+
+val field_add_divr' = store_thm
+  ("field_add_divr'",
+   ``!f :: Field. !x y t :: (f.carrier). !z :: field_nonzero f.
+       field_add f x (field_add f (field_div f y z) t) =
+       field_add f (field_div f (field_add f (field_mult f z x) y) z) t``,
+   RW_TAC alg_ss [GSYM field_add_assoc]
+   ++ RW_TAC resq_ss []
+   ++ match_tac field_add_divr
+   ++ RW_TAC alg_ss []);
+
+val field_add_div = store_thm
+  ("field_add_div",
+   ``!f :: Field. !v w :: (f.carrier). !x y z :: field_nonzero f.
+       field_add f
+         (field_div f v (field_mult f x y))
+         (field_div f w (field_mult f x z)) =
+       field_div f
+         (field_add f (field_mult f z v) (field_mult f y w))
+         (field_mult f x (field_mult f y z))``,
+   RW_TAC alg_ss [field_div_def]
+   ++ RW_TAC alg_ss' [field_distrib]);
+
+val field_add_div' = store_thm
+  ("field_add_div'",
+   ``!f :: Field. !v w t :: (f.carrier). !x y z :: field_nonzero f.
+       field_add f
+         (field_div f v (field_mult f x y))
+         (field_add f (field_div f w (field_mult f x z)) t) =
+       field_add f
+         (field_div f
+           (field_add f (field_mult f z v) (field_mult f y w))
+           (field_mult f x (field_mult f y z))) t``,
+   RW_TAC alg_ss [GSYM field_add_assoc]
+   ++ RW_TAC resq_ss []
+   ++ match_tac field_add_div
+   ++ RW_TAC alg_ss []);
+
+val field_div_cancel = store_thm
+  ("field_div_cancel",
+   ``!f :: Field. !x z :: field_nonzero f. !y :: (f.carrier).
+       (field_div f (field_mult f x y) (field_mult f x z) = field_div f y z)``,
+   RW_TAC resq_ss [field_div_def]
+   ++ RW_TAC alg_ss' []);
+
+val field_inv_eq_zero = store_thm
+  ("field_inv_eq_zero",
+   ``!f :: Field. !x :: field_nonzero f. ~(field_inv f x = field_zero f)``,
+   RW_TAC resq_ss []
+   ++ STRIP_TAC
+   ++ Know `field_inv f x IN field_nonzero f` >> METIS_TAC [field_inv_nonzero]
+   ++ RW_TAC alg_ss [field_nonzero_def, IN_DIFF, IN_SING]);
+
+val alg_context = alg_add_rewrite field_inv_eq_zero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val field_div_eq_zero = store_thm
+  ("field_div_eq_zero",
+   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       (field_div f x y = field_zero f) = (x = field_zero f)``,
+   RW_TAC resq_ss [field_div_def]
+   ++ RW_TAC alg_ss [field_entire]);
+
+val alg_context = alg_add_rewrite field_div_eq_zero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+(* ------------------------------------------------------------------------- *)
+(* Proof tools for field expressions.                                        *)
+(* ------------------------------------------------------------------------- *)
+
+local
+  fun field_field tm =
+      case total dest_field_zero tm of
+        SOME f => f
+      | NONE =>
+        case total dest_field_one tm of
+          SOME f => f
+        | NONE =>
+          case total dest_field_num tm of
+            SOME (f,_) => f
+          | NONE =>
+            case total dest_field_neg tm of
+              SOME (f,_) => f
+            | NONE =>
+              case total dest_field_add tm of
+                SOME (f,_,_) => f
+              | NONE =>
+                case total dest_field_mult tm of
+                  SOME (f,_,_) => f
+                | NONE =>
+                  case total dest_field_exp tm of
+                    SOME (f,_,_) => f
+                  | NONE => raise ERR "field_field" "";
+
+  fun field_to_exp tm varmap =
+      case total dest_field_zero tm of
+        SOME _ => (Algebra.fromInt 0, varmap)
+      | NONE =>
+        case total dest_field_one tm of
+          SOME _ => (Algebra.fromInt 1, varmap)
+        | NONE =>
+          case total dest_field_num tm of
+            SOME (_,n) => (Algebra.fromInt (numLib.int_of_term n), varmap)
+          | NONE =>
+            case total dest_field_neg tm of
+              SOME (_,a) =>
+              let
+                val (a,varmap) = field_to_exp a varmap
+              in
+                (Algebra.negate a, varmap)
+              end
+            | NONE =>
+              case total dest_field_add tm of
+                SOME (_,a,b) =>
+                let
+                  val (a,varmap) = field_to_exp a varmap
+                  val (b,varmap) = field_to_exp b varmap
+                in
+                  (Algebra.add (a,b), varmap)
+                end
+              | NONE =>
+                case total dest_field_sub tm of
+                  SOME (_,a,b) =>
+                  let
+                    val (a,varmap) = field_to_exp a varmap
+                    val (b,varmap) = field_to_exp b varmap
+                  in
+                    (Algebra.subtract (a,b), varmap)
+                  end
+                | NONE =>
+                  case total dest_field_mult tm of
+                    SOME (_,a,b) =>
+                    let
+                      val (a,varmap) = field_to_exp a varmap
+                      val (b,varmap) = field_to_exp b varmap
+                    in
+                      (Algebra.multiply (a,b), varmap)
+                    end
+                  | NONE =>
+                    case total dest_field_exp tm of
+                      SOME (_,a,n) =>
+                      let
+                        val (a,varmap) = field_to_exp a varmap
+                      in
+                        (Algebra.power (a, numLib.int_of_term n), varmap)
+                      end
+                    | NONE =>
+                      let
+                        val s = term_to_string tm
+                        val v = Algebra.Var s
+                      in
+                        case List.find (equal s o fst) varmap of
+                          NONE => (v, (s,tm) :: varmap)
+                        | SOME (_,tm') =>
+                          let
+                            val _ = tm = tm' orelse raise Bug "field_to_exp"
+                          in
+                            (v,varmap)
+                          end
+                      end;
+
+  fun exp_to_field f varmap e =
+      case Algebra.toInt e of
+        SOME n =>
+        if 0 <= n then mk_field_num (f, numLib.term_of_int n)
+        else mk_field_neg (f, mk_field_num (f, numLib.term_of_int (~n)))
+      | NONE =>
+        case e of
+          Algebra.Var v =>
+          (case List.find (equal v o fst) varmap of
+             NONE => raise Bug "exp_to_field: variable not found"
+           | SOME (_,tm) => tm)
+        | Algebra.Sum m =>
+          (case map (exp_sum_to_field f varmap) (rev (Map.toList m)) of
+             [] => raise Bug "exp_to_field: empty sum"
+           | x :: xs => foldl (fn (y,z) => mk_field_add (f,y,z)) x xs)
+        | Algebra.Prod m =>
+          (case map (exp_prod_to_field f varmap) (rev (Map.toList m)) of
+             [] => raise Bug "exp_to_field: empty product"
+           | x :: xs => foldl (fn (y,z) => mk_field_mult (f,y,z)) x xs)
+  and exp_sum_to_field f varmap (e,n) =
+      let
+        val e = exp_to_field f varmap e
+      in
+        if n = 1 then e
+        else if n = ~1 then mk_field_neg (f,e)
+        else if 0 <= n then mk_field_num_mult (f, e, numLib.term_of_int n)
+        else mk_field_neg (f, mk_field_num_mult (f, e, numLib.term_of_int (~n)))
+      end
+  and exp_prod_to_field f varmap (e,n) =
+      let
+        val e = exp_to_field f varmap e
+      in
+        if n = 1 then e
+        else if n = ~1 then mk_field_inv (f,e)
+        else if 0 <= n then mk_field_exp (f, e, numLib.term_of_int n)
+        else mk_field_inv (f, mk_field_exp (f, e, numLib.term_of_int (~n)))
+      end;
+in
+  fun ORACLE_field_poly_conv term_normalize_ths _ tm =
+      let
+        val field = field_field tm
+
+        val _ = print ("ORACLE_field_poly_conv: input =\n"
+                       ^ term_to_string tm ^ "\n")
+
+        val _ = print ("ORACLE_field_poly_conv: reducing with "
+                       ^ int_to_string (length term_normalize_ths)
+                       ^ " equations.\n")
+
+        val _ = print ("ORACLE_field_poly_conv: field = "
+                       ^ term_to_string field ^ "\n")
+
+        val (exp,varmap) = field_to_exp tm []
+
+        fun mk_eqn th varmap =
+            let
+              val (l_tm,r_tm) = dest_eq (concl th)
+              val (l_exp,varmap) = field_to_exp l_tm varmap
+              val (r_exp,varmap) = field_to_exp r_tm varmap
+            in
+              ((l_exp,r_exp),varmap)
+            end
+
+        val (eqns,varmap) = Useful.maps mk_eqn term_normalize_ths varmap
+
+        val _ = print ("ORACLE_field_poly_conv: variables =\n\""
+                       ^ Useful.join "\" \"" (map fst varmap) ^ "\"\n")
+
+        val exp = Algebra.normalize {equations = eqns} exp
+
+        val tm' = exp_to_field field varmap exp
+
+        val _ = print ("ORACLE_field_poly_conv: result =\n"
+                       ^ term_to_string tm' ^ "\n")
+
+        val _ = tm <> tm' orelse raise ERR "ORACLE_field_poly_conv" "unchanged"
+      in
+        mk_oracle_thm "field_poly" ([], mk_eq (tm,tm'))
+      end;
+end;
+
+local
+  val field_single_mult_exp_alt = lemma
+    (``!f x n.
+         f IN Field /\ x IN f.carrier ==>
+         (field_exp f x (SUC n) = field_mult f x (field_exp f x n))``,
+     METIS_TAC [field_single_mult_exp, ADD1]);
+
+  val field_exp_mult_exp_alt = lemma
+    (``!f x m n.
+         f IN Field /\ x IN f.carrier ==>
+         (field_exp f x (m + n) =
+          field_mult f (field_exp f x m) (field_exp f x n))``,
+     METIS_TAC [field_exp_mult_exp]);
+
+  val field_mult_lone_conv =
+      let
+        val th = CONV_RULE RES_FORALL_CONV (GSYM field_mult_lone)
+      in
+        fn f => cond_rewr_conv (ISPEC f th)
+      end;
+
+  val field_mult_rone_conv =
+      let
+        val th = CONV_RULE RES_FORALL_CONV (GSYM field_mult_rone)
+      in
+        fn f => cond_rewr_conv (ISPEC f th)
+      end;
+
+  fun field_single_mult_exp_conv f x n =
+      let
+        val th = ISPECL [f, x, numLib.term_of_int n] field_single_mult_exp_alt
+        val conv = RAND_CONV (LAND_CONV (RAND_CONV reduceLib.SUC_CONV))
+        val th = CONV_RULE conv th
+      in
+        cond_rewr_conv th
+      end;
+
+  fun field_exp_mult_exp_conv f x m n =
+      let
+        val th = field_exp_mult_exp_alt
+        val th = ISPECL [f, x, numLib.term_of_int m, numLib.term_of_int n] th
+        val conv = RAND_CONV (LAND_CONV (RAND_CONV reduceLib.ADD_CONV))
+        val th = CONV_RULE conv th
+      in
+        cond_rewr_conv th
+      end;
+
+  fun field_mult_presimp_conv solver =
+(***
+      trace_conv "field_mult_presimp_conv"
+***)
+        (QCONV (TRY_CONV (#conv field_mult_ac_conv solver) THENC
+                reduceLib.REDUCE_CONV));
+
+  fun field_mult_postsimp_conv solver =
+      BINOP_CONV (field_mult_presimp_conv solver);
+
+  fun dest_field_power tm =
+      case total dest_field_exp tm of
+        NONE => (tm,NONE)
+      | SOME (_,t,n) => (t, SOME (numLib.int_of_term n))
+
+  fun hcf_power_conv2 f (a,b) =
+      if aconv a b then (field_mult_rone_conv f, field_mult_rone_conv f)
+      else
+        let
+          val _ = not (is_field_mult a) orelse raise Bug "a is a mult"
+          and _ = not (is_field_mult b) orelse raise Bug "b is a mult"
+
+          val (at,an) = dest_field_power a
+          and (bt,bn) = dest_field_power b
+
+          val _ = aconv at bt orelse raise Bug "at <> bt"
+
+          val _ = (case an of NONE => true | SOME n => n >= 2) orelse
+                  raise Bug "exponenent of a is less than 2 (nyi)"
+
+          val _ = (case bn of NONE => true | SOME n => n >= 2) orelse
+                  raise Bug "exponenent of b is less than 2 (nyi)"
+        in
+          case (an,bn) of
+            (NONE,NONE) => raise Bug "a = b"
+          | (SOME an, NONE) =>
+            (field_single_mult_exp_conv f at (an - 1), field_mult_rone_conv f)
+          | (NONE, SOME bn) =>
+            (field_mult_rone_conv f, field_single_mult_exp_conv f bt (bn - 1))
+          | (SOME an, SOME bn) =>
+            (case Int.compare (an,bn) of
+               LESS => (field_mult_rone_conv f,
+                        field_exp_mult_exp_conv f bt an (bn - an))
+             | EQUAL => raise Bug "a = b (power)"
+             | GREATER => (field_exp_mult_exp_conv f at bn (an - bn),
+                           field_mult_rone_conv f))
+        end;
+
+  local
+    val field_mult_comm_conv' = cond_rewr_conv field_mult_comm';
+
+    val field_mult_assoc_conv = cond_rewr_conv field_mult_assoc;
+
+    val field_mult_assoc_conv' = cond_rewr_conv (GSYM field_mult_assoc);
+  in
+    fun push_conv solver a_th =
+        RAND_CONV (K a_th) THENC field_mult_comm_conv' solver;
+
+    fun double_push_conv solver ac a_th =
+        LAND_CONV (ac solver) THENC
+        field_mult_assoc_conv solver THENC
+        RAND_CONV (push_conv solver a_th) THENC
+        field_mult_assoc_conv' solver;
+  end;
+
+  fun hcf_conv2 f solver (a,b) =
+      if is_field_one a orelse is_field_one b then
+        (field_mult_lone_conv f solver a,
+         field_mult_lone_conv f solver b)
+      else if not (is_field_mult a) then
+        let
+          val a_th = field_mult_rone_conv f solver a
+          val (a_th',b_th) = hcf_conv2 f solver (rhs (concl a_th), b)
+        in
+          (TRANS a_th a_th', b_th)
+        end
+      else if not (is_field_mult b) then
+        let
+          val b_th = field_mult_rone_conv f solver b
+          val (a_th,b_th') = hcf_conv2 f solver (a, rhs (concl b_th))
+        in
+          (a_th, TRANS b_th b_th')
+        end
+      else
+        let
+          val (a1,a2) =
+              case total dest_field_mult a of
+                NONE => raise Bug "a not a mult"
+              | SOME (_,a1,a2) => (a1,a2)
+
+          val (b1,b2) =
+              case total dest_field_mult b of
+                NONE => raise Bug "b not a mult"
+              | SOME (_,b1,b2) => (b1,b2)
+
+          val (at,an) = dest_field_power a1
+          and (bt,bn) = dest_field_power b1
+        in
+          case field_compare (at,bt) of
+            LESS =>
+            let
+              val (a_th,b_th) = hcf_conv2 f solver (a2,b)
+            in
+              (push_conv solver a_th a, b_th)
+            end
+          | EQUAL => 
+            let
+              val (ac,bc) = hcf_power_conv2 f (a1,b1)
+              val (a_th,b_th) = hcf_conv2 f solver (a2,b2)
+            in
+              (double_push_conv solver ac a_th a,
+               double_push_conv solver bc b_th b)
+            end
+          | GREATER =>
+            let
+              val (a_th,b_th) = hcf_conv2 f solver (a,b2)
+            in
+              (a_th, push_conv solver b_th b)
+            end
+        end;
+in
+  fun field_hcf_conv2 f solver (a,b) =
+      let
+(*
+        val () = (print "field_hcf_conv2: "; print_term a; print ", ";
+                  print_term b; print "\n")
+*)
+        val a_th = field_mult_presimp_conv solver a
+        and b_th = field_mult_presimp_conv solver b
+(*
+        val () = (print "field_hcf_conv2: "; print_thm a_th; print ", ";
+                  print_thm b_th; print "\n")
+*)
+        val (a',b') = (rhs (concl a_th), rhs (concl b_th))
+        val (a_th',b_th') = hcf_conv2 f solver (a',b')
+        val a_th'' = field_mult_postsimp_conv solver (rhs (concl a_th'))
+        and b_th'' = field_mult_postsimp_conv solver (rhs (concl b_th'))
+        val a_th = TRANS a_th (TRANS a_th' a_th'')
+        and b_th = TRANS b_th (TRANS b_th' b_th'')
+(***
+        val () = (print "field_hcf_conv2: "; print_thm a_th; print ", ";
+                  print_thm b_th; print "\n")
+***)
+      in
+        (a_th,b_th)
+      end;
+end;
+
+local
+  val has_nested_divs = can (find_term (same_const field_div_tm));
+
+  fun is_normal_numerator tm = not (has_nested_divs tm);
+
+  fun is_normal_denominator tm = not (has_nested_divs tm);
+
+  fun is_normal_fraction is_div tm =
+      if not is_div then is_normal_numerator tm
+      else
+        let
+          val (_,n,d) = dest_field_div tm
+        in
+          is_normal_numerator n andalso is_normal_denominator d
+        end;
+
+  fun check_normal_fraction is_div tm =
+      if is_normal_fraction is_div tm then ()
+      else raise ERR "check_normal_fraction" "";
+
+  val field_add_divl_conv = cond_rewr_conv field_add_divl
+  and field_add_divr_conv = cond_rewr_conv field_add_divr
+  and field_add_div2_conv = cond_rewr_conv field_add_div
+  and field_add_divl_conv' = cond_rewr_conv field_add_divl'
+  and field_add_divr_conv' = cond_rewr_conv field_add_divr'
+  and field_add_div2_conv' = cond_rewr_conv field_add_div';
+
+  fun field_add_div_hcf solver x1 x2 =
+      let
+        val (f,a1,b1) = dest_field_div x1
+        and (_,a2,b2) = dest_field_div x2
+      in
+        field_hcf_conv2 f solver (b1,b2)
+      end;
+
+  fun field_add_div_hcf_conv (th1,th2) solver =
+      LAND_CONV (RAND_CONV (K th1)) THENC
+      RAND_CONV (RAND_CONV (K th2)) THENC
+      field_add_div2_conv solver;
+
+  fun field_add_div_hcf_conv' (th1,th2) solver =
+      LAND_CONV (RAND_CONV (K th1)) THENC
+      RAND_CONV (LAND_CONV (RAND_CONV (K th2))) THENC
+      field_add_div2_conv' solver;
+
+  fun field_add_div_conv solver tm =
+(***
+      trace_conv "field_add_div_conv"
+***)
+      let
+        val (f,a,b) = dest_field_add tm
+        val ap = is_field_div a
+        and bp = is_field_div b
+        val () = check_normal_fraction ap a
+        and () = check_normal_fraction bp b
+      in
+        case (ap,bp) of
+          (false,false) => raise ERR "field_add_div_conv" "no div"
+        | (true,false) => field_add_divl_conv solver
+        | (false,true) => field_add_divr_conv solver
+        | (true,true) =>
+          field_add_div_hcf_conv (field_add_div_hcf solver a b) solver
+      end tm;
+
+  fun field_add_div_conv' solver tm =
+(***
+      trace_conv "field_add_div_conv'"
+***)
+      let
+        val (f,a,b) = dest_field_add tm
+        val (_,b,_) = dest_field_add b
+        val ap = is_field_div a
+        and bp = is_field_div b
+        val () = check_normal_fraction ap a
+        and () = check_normal_fraction bp b
+      in
+        case (ap,bp) of
+          (false,false) => raise ERR "field_add_div_conv'" "no div"
+        | (true,false) => field_add_divl_conv' solver
+        | (false,true) => field_add_divr_conv' solver
+        | (true,true) =>
+          field_add_div_hcf_conv' (field_add_div_hcf solver a b) solver
+      end tm;
+in
+  val field_add_div_conv_left =
+      {name = "field_add_div_conv (left)",
+       key = ``field_add (f : 'a field) (field_div f x y) z``,
+       conv = field_add_div_conv}
+  and field_add_div_conv_right =
+      {name = "field_add_div_conv (right)",
+       key = ``field_add (f : 'a field) x (field_div f y z)``,
+       conv = field_add_div_conv}
+  and field_add_div_conv_left' =
+      {name = "field_add_div_conv' (left)",
+       key = ``field_add (f : 'a field) (field_div f x y) (field_add f z p)``,
+       conv = field_add_div_conv'}
+  and field_add_div_conv_right' =
+      {name = "field_add_div_conv' (right)",
+       key = ``field_add (f : 'a field) x (field_add f (field_div f y z) p)``,
+       conv = field_add_div_conv'};
+end;
+
+fun alg_field_div_elim_ss alg_context =
+    let
+      val rewrs =
+          [field_sub_def,
+           field_neg_add,
+           GSYM field_div_lneg, field_div_rneg,
+           field_div_multl,field_div_multr,
+           field_div_divl,field_div_divr,
+           field_div_exp,
+           field_mult_assoc,
+           field_single_mult_single,
+           field_single_mult_single']
+
+      val convs =
+          map
+            solver_conv_to_simpset_conv
+            [field_add_div_conv_left,
+             field_add_div_conv_right]
+
+      val data =
+          simpLib.SSFRAG
+            {ac = [], congs = [], convs = convs, rewrs = rewrs,
+             dprocs = [], filter = NONE}
+
+      val {simplify = alg_ss, ...} = alg_simpsets alg_context
+    in
+      simpLib.++ (alg_ss,data)
+    end;
+
+local
+  val add_assoc_conv = cond_rewr_conv field_add_assoc
+  and neg_neg_conv = cond_rewr_conv field_neg_neg
+  and neg_add_conv = cond_rewr_conv field_neg_add
+  and mult_lneg_conv = cond_rewr_conv field_mult_lneg
+  and mult_rneg_conv = cond_rewr_conv field_mult_rneg
+  and distrib_ladd_conv = cond_rewr_conv field_distrib_ladd
+  and distrib_radd_conv = cond_rewr_conv field_distrib_radd
+  and mult_assoc_conv = cond_rewr_conv field_mult_assoc
+  and exp_zero_conv = cond_rewr_conv field_exp_zero
+  and exp_one_conv = cond_rewr_conv field_exp_one
+  and exp_num_conv = cond_rewr_conv field_num_exp
+  and exp_exp_conv = cond_rewr_conv field_exp_exp
+  and exp_mult_conv = cond_rewr_conv field_exp_mult
+  and exp_neg_conv = cond_rewr_conv field_exp_neg
+  and binomial_2_conv = cond_rewr_conv field_binomial_2
+  and binomial_3_conv = cond_rewr_conv field_binomial_3
+  and binomial_4_conv = cond_rewr_conv field_binomial_4;
+
+  val num_conv =
+      cond_rewrs_conv [field_num_exp,field_num_mult,field_num_mult'];
+in
+  val ORACLE_field_poly = ref false;
+
+  val field_poly_print_term = ref false;
+
+  fun field_poly_conv term_normalize_ths solver tm =
+      if !ORACLE_field_poly then
+        ORACLE_field_poly_conv term_normalize_ths solver tm
+      else
+(***
+        trace_conv "field_poly_conv" 
+***)
+        let
+          val term_normalize_conv = PURE_REWRITE_CONV term_normalize_ths
+
+          fun exp_conv tm =
+              let
+                val (_,a,n) = dest_field_exp tm
+              in
+                FIRST_CONV
+                  [exp_zero_conv solver,
+                   exp_one_conv solver,
+                   exp_num_conv solver THENC RAND_CONV reduceLib.EXP_CONV,
+                   exp_exp_conv solver THENC
+                     TRY_CONV (RAND_CONV reduceLib.MUL_CONV) THENC
+                     TRY_CONV exp_conv,
+                   exp_mult_conv solver,
+                   exp_neg_conv solver THENC
+                     RATOR_CONV (LAND_CONV reduceLib.EVEN_CONV) THENC
+                     COND_CONV,
+                   binomial_2_conv solver,
+                   binomial_3_conv solver,
+                   binomial_4_conv solver]
+              end tm
+
+          fun mult_conv tm =
+              (case total dest_field_mult tm of
+                 NONE => exp_conv THENC TRY_CONV mult_conv
+               | SOME (_,a,b) =>
+                 FIRST_CONV
+                   [mult_lneg_conv solver,
+                    mult_rneg_conv solver,
+                    distrib_radd_conv solver,
+                    distrib_ladd_conv solver,
+                    mult_assoc_conv solver THENC TRY_CONV mult_conv,
+                    LAND_CONV exp_conv THENC TRY_CONV mult_conv,
+                    RAND_CONV mult_conv THENC TRY_CONV mult_conv]) tm
+              
+          fun term_conv tm =
+              (mult_conv ORELSEC
+               CHANGED_CONV
+                 (TRY_CONV (#conv field_mult_ac_conv solver) THENC
+                  DEPTH_CONV (num_conv solver) THENC
+                  reduceLib.REDUCE_CONV THENC
+                  term_normalize_conv)) tm
+
+          fun neg_conv tm =
+              (case total dest_field_neg tm of
+                 NONE => term_conv THENC TRY_CONV neg_conv
+               | SOME (_,a) =>
+                 FIRST_CONV
+                   [neg_neg_conv solver,
+                    neg_add_conv solver,
+                    RAND_CONV term_conv THENC TRY_CONV neg_conv]) tm
+
+          fun add_conv n tm =
+              (case total dest_field_add tm of
+                 NONE => neg_conv THENC TRY_CONV (add_conv n)
+               | SOME (_,a,b) =>
+                 let
+                   fun print_term_conv conv tm =
+                       let
+                         val n = n + term_size a
+                         val () = print ("term<<" ^ int_to_string n ^ ">>: ")
+                         val () = print_term a
+                         val () = print "\n"
+                       in
+                         conv n tm
+                       end
+                 in
+                   FIRST_CONV
+                     [add_assoc_conv solver THENC TRY_CONV (add_conv n),
+                      LAND_CONV neg_conv THENC TRY_CONV (add_conv n),
+                      print_term_conv (RAND_CONV o add_conv)]
+                 end) tm
+
+          val cancel_conv = #conv field_add_ac_conv solver
+
+          val poly_conv =
+              (add_conv 0 THENC TRY_CONV cancel_conv) ORELSEC cancel_conv
+        in
+          poly_conv
+        end tm;
+end;
+
+val field_op_patterns =
+    [``field_add (f : 'a field) x y``,
+     ``field_neg (f : 'a field) x``,
+     ``field_mult (f : 'a field) x y``,
+     ``field_exp (f : 'a field) x n``,
+     ``field_num (f : 'a field) n``];
+
+val field_op_blocking_congs =
+    let
+      fun in_pattern pattern =
+          let
+            val (_,l) = strip_comb pattern
+            val ty = hd (snd (dest_type (type_of (hd l)))) --> bool
+          in
+            pred_setSyntax.mk_in (pattern, mk_var ("s",ty))
+          end
+
+      val patterns = field_op_patterns
+    in
+      map REFL patterns @ map (REFL o in_pattern) patterns
+    end;
+
+fun alg_field_poly_ss alg_context term_normalize_ths =
+    let
+      val patterns = field_op_patterns
+
+      val congs = field_op_blocking_congs
+
+      val convs =
+          map
+            (fn (n,key) =>
+             solver_conv_to_simpset_conv
+             {name = "field_poly_conv (" ^ int_to_string n ^ ")",
+              key = key,
+              conv = field_poly_conv term_normalize_ths})
+            (enumerate 0 patterns)
+
+      val data =
+          simpLib.SSFRAG
+            {ac = [], congs = congs, convs = convs, rewrs = [],
+             dprocs = [], filter = NONE}
+
+      val {simplify = alg_ss, ...} = alg_simpsets alg_context
+    in
+      simpLib.++ (alg_ss,data)
+    end;
+
+local
+  val push_disch =
+      let
+        val f = MATCH_MP (PROVE [] ``(a ==> (b = c)) ==> (a ==> b = a ==> c)``)
+      in
+        fn d => fn th => f (DISCH d th)
+      end;
+
+  val and_imp_intro = CONV_RULE (BINOP_CONV (REWR_CONV AND_IMP_INTRO));
+in
+  fun field_poly_basis_conv solver tm =
+      let
+        fun f [] _ = raise Bug "field_poly_basis_conv"
+          | f [eqn] th = push_disch eqn th
+          | f (eqn :: (eqns as _ :: _)) th =
+            and_imp_intro (push_disch eqn (f eqns th))
+
+        val (eqns,tm) = dest_imp_only tm
+        val eqns = strip_conj eqns
+        val reduce_ths = map ASSUME eqns
+
+(***
+        val _ = print ("field_poly_basis_conv: reducing with "
+                       ^ int_to_string (length eqns) ^ " equations.\n")
+***)
+
+        val th = f eqns (LAND_CONV (field_poly_conv reduce_ths solver) tm)
+
+        val _ = (print "field_poly_basis_conv: result thm =\n";
+                 print_thm th; print "\n")
+      in
+        th
+      end;
+end;
+ 
+fun alg_field_poly_basis_ss alg_context =
+    let
+      val patterns =
+          [``((x : 'a) = y) ==> (z = field_zero (f : 'a field))``,
+           ``((x : 'a) = y) /\ E ==> (z = field_zero (f : 'a field))``]
+
+      val congs = map REFL patterns @ field_op_blocking_congs
+
+      val convs =
+          map
+            (fn (n,key) =>
+             solver_conv_to_simpset_conv
+             {name = "field_poly_basis_conv (" ^ int_to_string n ^ ")",
+              key = key,
+              conv = field_poly_basis_conv})
+            (enumerate 0 patterns)
+
+      val data =
+          simpLib.SSFRAG
+            {ac = [], congs = [], convs = convs, rewrs = [],
+             dprocs = [], filter = NONE}
+
+      val {simplify = alg_ss, ...} = alg_simpsets alg_context
+    in
+      simpLib.++ (alg_ss,data)
+    end;
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphisms, isomorphisms, endomorphisms, automorphisms and subfields.  *)
@@ -3039,7 +5304,7 @@ val trivial_field = store_thm
      [trivial_field_def, FiniteField_def, Field_def, GSPECIFICATION,
       combinTheory.K_THM, field_add_def, field_mult_def, field_zero_def,
       AbelianGroup_def, Group_def, IN_INSERT, NOT_IN_EMPTY, EXTENSION,
-      FINITE_INSERT, FINITE_EMPTY, IN_DIFF]
+      FINITE_INSERT, FINITE_EMPTY, IN_DIFF, field_nonzero_def]
    ++ RW_TAC std_ss []
    ++ METIS_TAC []);  
 
@@ -3072,10 +5337,10 @@ val modexp = store_thm
   ("modexp",
    ``!a n m. 1 < m ==> (modexp a n m = (a ** n) MOD m)``,
    recInduct modexp_ind
-   ++ RW_TAC arith_ss []
+   ++ RW_TAC std_ss []
    ++ ONCE_REWRITE_TAC [modexp_def]
    ++ Cases_on `n = 0` >> RW_TAC arith_ss [EXP]
-   ++ ASM_SIMP_TAC std_ss []
+   ++ ASM_SIMP_TAC bool_ss []
    ++ REPEAT (Q.PAT_ASSUM `X ==> Y` (K ALL_TAC))
    ++ Know `0 < m` >> DECIDE_TAC
    ++ STRIP_TAC
@@ -3083,11 +5348,11 @@ val modexp = store_thm
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (MP_TAC o Q.SPECL [`a`,`a`])
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ ASM_SIMP_TAC std_ss [MOD_MOD, MOD_EXP]
+   ++ ASM_SIMP_TAC bool_ss [MOD_MOD, MOD_EXP]
    ++ Know `a MOD m * a MOD m = (a MOD m) ** 2`
    >> RW_TAC bool_ss [TWO, ONE, EXP, REWRITE_RULE [ONE] MULT_CLAUSES]
-   ++ DISCH_THEN (fn th => ASM_SIMP_TAC std_ss [th])
-   ++ ASM_SIMP_TAC std_ss [EXP_EXP]
+   ++ DISCH_THEN (fn th => ASM_SIMP_TAC bool_ss [th])
+   ++ ASM_SIMP_TAC bool_ss [EXP_EXP]
    ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
@@ -3098,12 +5363,12 @@ val modexp = store_thm
    ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ ASM_SIMP_TAC std_ss [MOD_MOD]
-   ++ ASM_SIMP_TAC std_ss [MOD_TIMES2, GSYM EXP]
+   ++ ASM_SIMP_TAC bool_ss [MOD_MOD]
+   ++ ASM_SIMP_TAC bool_ss [MOD_TIMES2, GSYM EXP]
    ++ Know `(n MOD 2 = 0) \/ (n MOD 2 = 1)`
    >> (Suff `n MOD 2 < 2` >> DECIDE_TAC
        ++ RW_TAC std_ss [DIVISION])
-   ++ ASM_SIMP_TAC std_ss [ADD1]
+   ++ ASM_SIMP_TAC bool_ss [ADD1]
    ++ Suff `n = 2 * (n DIV 2) + n MOD 2`
    >> METIS_TAC [ADD_CLAUSES]
    ++ METIS_TAC [DIVISION, DECIDE ``0 < 2``, MULT_COMM]);
@@ -3188,9 +5453,9 @@ val GF_exp = store_thm
    ++ STRIP_TAC
    ++ Know `0 < p` >> DECIDE_TAC
    ++ STRIP_TAC
-   ++ RW_TAC std_ss [modexp]
+   ++ RW_TAC bool_ss [modexp]
    ++ (Induct_on `n`
-       ++ RW_TAC std_ss [field_exp_def, GF_one, GF_mult, EXP])
+       ++ RW_TAC bool_ss [field_exp_def, GF_one, GF_mult, EXP])
    >> METIS_TAC [LESS_MOD]
    ++ METIS_TAC [MOD_MOD, MOD_TIMES2]);
 
@@ -3236,8 +5501,10 @@ val GF = store_thm
        RW_TAC alg_ss [GF_def, combinTheory.K_THM],
        RW_TAC alg_ss [GF_def, combinTheory.K_THM, add_mod_def],
        RW_TAC alg_ss [GF_alt]
-       ++ RW_TAC alg_ss [GF_def, combinTheory.K_THM, mult_mod_def,
-                         EXTENSION, IN_DIFF, GSPECIFICATION, IN_SING]
+       ++ RW_TAC alg_ss
+            [GF_def, combinTheory.K_THM, mult_mod_def,
+             EXTENSION, IN_DIFF, GSPECIFICATION, IN_SING, field_nonzero_def,
+             field_zero_def, add_mod_def]
        ++ METIS_TAC [],
        RW_TAC std_ss [GF_alt, MULT]
        ++ MATCH_MP_TAC ZERO_MOD
@@ -3459,126 +5726,6 @@ val affine_eq = store_thm
    ++ match_tac field_mult_rone
    ++ RW_TAC std_ss []);
 
-(* ------------------------------------------------------------------------- *)
-(* Principles of definition                                                  *)
-(* ------------------------------------------------------------------------- *)
-
-(***
-
-val projective2_def = Define
-  `projective2 f g p =
-   @t. ?x y z. (p = project f [x; y; z]) /\ (g x y z = t)`;
-
-val affine2_def = Define
-  `affine2 f a b c p =
-   projective2 f
-     (\x y z.
-        if ~(z = field_zero f) then a (field_div f x z) (field_div f y z)
-        else if ~(y = field_zero f) then b (field_div f x y)
-        else c) p`;
-
-val projective2 = store_thm
-  ("projective2",
-   ``!f :: Field. !g.
-       (!x1 y1 z1 x2 y2 z2.
-          project f [x1; y1; z1] [x2; y2; z2] ==>
-          (g x1 y1 z1 = g x2 y2 z2)) ==>
-       !x y z. projective2 f g (project f [x; y; z]) = g x y z``,
-   RW_TAC resq_ss
-     [nonorigin_def, coords_def, vector_space_def,
-      GSPECIFICATION, dimension_def, origin_eq,
-      coords_def, LENGTH, coord_def, projective2_def, project_eq]
-   ++ normalForms.SELECT_TAC
-   ++ RW_TAC std_ss []
-   ++ METIS_TAC [project_refl]);
-
-val affine2 = store_thm
-  ("affine2",
-   ``!f :: Field. !a b c.
-       !x y z.
-         affine2 f a b c (project f [x; y; z]) =
-         if ~(z = field_zero f) then a (field_div f x z) (field_div f y z)
-         else if ~(y = field_zero f) then b (field_div f x y)
-         else c``,
-   RW_TAC resq_ss [affine2_def]
-   ++ MATCH_MP_TAC EQ_TRANS
-   ++ Q.EXISTS_TAC
-        `(\x y z.
-            if ~(z = field_zero f) then a (field_div f x z) (field_div f y z)
-            else if ~(y = field_zero f) then b (field_div f x y)
-            else c) x y z`
-   ++ REVERSE CONJ_TAC
-   >> RW_TAC std_ss []
-   ++ match_tac projective2
-   ++ (RW_TAC resq_ss
-         [project_def, coords_def, GSPECIFICATION, dimension_def, EVERY_DEF,
-          nonorigin_def, origin_eq, vector_space_def, GSYM EVERY_EL, coord_def]
-       ++ FULL_SIMP_TAC arith_ss [LENGTH])
-   << [Q.PAT_ASSUM `!i. P i`
-       (fn th => MP_TAC (Q.SPEC `0` th)
-                 ++ MP_TAC (Q.SPEC `SUC 0` th)
-                 ++ MP_TAC (Q.SPEC `SUC (SUC 0)` th))
-       ++ RW_TAC std_ss [EL, HD, TL]
-       ++ MATCH_MP_TAC
-            (PROVE [] ``!f. (x1 = x2) /\ (y1 = y2) ==> (f x1 y1 = f x2 y2)``)
-       ++ Know `~(c = field_zero f)`
-       >> (STRIP_TAC
-           ++ Q.PAT_ASSUM `~(X = field_zero f)` MP_TAC
-           ++ RW_TAC std_ss [field_mult_lzero])
-       ++ STRIP_TAC
-       ++ CONJ_TAC
-       << [MATCH_MP_TAC EQ_SYM
-           ++ match_tac field_div_cancel
-           ++ RW_TAC std_ss [],
-           MATCH_MP_TAC EQ_SYM
-           ++ match_tac field_div_cancel
-           ++ RW_TAC std_ss []],
-       Know `c = field_zero f`
-       >> (Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
-           ++ RW_TAC std_ss [EL, HD, TL, field_entire])
-       ++ RW_TAC std_ss []
-       ++ Suff `F` >> METIS_TAC []
-       ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC 0`)
-       ++ RW_TAC std_ss [EL, HD, TL, field_mult_lzero],
-       Know `c' = field_zero f`
-       >> (Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
-           ++ RW_TAC std_ss [EL, HD, TL, field_entire])
-       ++ RW_TAC std_ss []
-       ++ Suff `F` >> METIS_TAC []
-       ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `0`)
-       ++ RW_TAC std_ss [EL, HD, TL, field_mult_lzero],
-       Suff `F` >> METIS_TAC []
-       ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
-       ++ RW_TAC std_ss [EL, HD, TL, field_mult_rzero],
-       Q.PAT_ASSUM `!i. P i`
-       (fn th => MP_TAC (Q.SPEC `0` th)
-                 ++ MP_TAC (Q.SPEC `SUC 0` th))
-       ++ RW_TAC std_ss [EL, HD, TL]
-       ++ AP_TERM_TAC
-       ++ Know `~(c = field_zero f)`
-       >> (STRIP_TAC
-           ++ Q.PAT_ASSUM `~(X = field_zero f)` MP_TAC
-           ++ RW_TAC std_ss [field_mult_lzero])
-       ++ STRIP_TAC
-       ++ MATCH_MP_TAC EQ_SYM
-       ++ match_tac field_div_cancel
-       ++ RW_TAC std_ss [],
-       Know `c' = field_zero f`
-       >> (Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC 0`)
-           ++ RW_TAC std_ss [EL, HD, TL, field_entire])
-       ++ RW_TAC std_ss []
-       ++ Suff `F` >> METIS_TAC []
-       ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `0`)
-       ++ RW_TAC std_ss [EL, HD, TL, field_mult_lzero],
-       Suff `F` >> METIS_TAC []
-       ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
-       ++ RW_TAC std_ss [EL, HD, TL, field_mult_rzero],
-       Suff `F` >> METIS_TAC []
-       ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC 0`)
-       ++ RW_TAC std_ss [EL, HD, TL, field_mult_rzero]]);
-
-***)
-
 (* ========================================================================= *)
 (* Elliptic curves                                                           *)
 (* ========================================================================= *)
@@ -3695,8 +5842,8 @@ val curve_zero_def = Define
    project e.field
      [field_zero e.field; field_one e.field; field_zero e.field]`;
 
-val curve_case_def = Define
-  `curve_case e z f p =
+val affine_case_def = Define
+  `affine_case e z f p =
    if p = curve_zero e then z
    else @t. ?x y. (p = affine e.field [x; y]) /\ (t = f x y)`;
 
@@ -3709,7 +5856,7 @@ val curve_neg_def = Define
    let $* = field_mult f in
    let a1 = e.a1 in
    let a3 = e.a3 in
-   curve_case e (curve_zero e)
+   affine_case e (curve_zero e)
      (\x1 y1.
         let x = x1 in
         let y = ~y1 - a1 * x1 - a3 in
@@ -3730,7 +5877,7 @@ val curve_double_def = Define
    let a3 = e.a3 in
    let a4 = e.a4 in
    let a6 = e.a6 in
-   curve_case e (curve_zero e)
+   affine_case e (curve_zero e)
      (\x1 y1.
         let d = & 2 * y1 + a1 * x1 + a3 in
         if d = field_zero f then curve_zero e
@@ -3758,9 +5905,9 @@ val curve_add_def = Define
      let a3 = e.a3 in
      let a4 = e.a4 in
      let a6 = e.a6 in
-     curve_case e p2
+     affine_case e p2
        (\x1 y1.
-          curve_case e p1
+          affine_case e p1
             (\x2 y2.
                if x1 = x2 then curve_zero e
                else
@@ -3847,7 +5994,6 @@ val curve_cases = store_thm
    << [RW_TAC std_ss []
        ++ DISJ1_TAC
        ++ Q.PAT_ASSUM `X = Y` MP_TAC
-       ++ ASM_SIMP_TAC alg_ss' []
        ++ RW_TAC alg_ss []
        ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
        ++ RW_TAC resq_ss
@@ -3916,7 +6062,7 @@ val curve_distinct = store_thm
    ``!e :: Curve. !x y.
        ~(curve_zero e = affine e.field [x; y])``,
    RW_TAC resq_ss
-     [curve_case_def, affine_def, Curve_def, GSPECIFICATION,
+     [affine_case_def, affine_def, Curve_def, GSPECIFICATION,
       curve_zero_def, APPEND, project_eq]
    ++ STRIP_TAC
    ++ FULL_SIMP_TAC resq_ss
@@ -3927,13 +6073,13 @@ val curve_distinct = store_thm
    ++ Q.PAT_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
    ++ RW_TAC arith_ss [EL, HD, TL, field_mult_rzero, field_zero_one]);
 
-val curve_case = store_thm
-  ("curve_case",
+val affine_case = store_thm
+  ("affine_case",
    ``!e :: Curve. !z f.
-       (curve_case e z f (curve_zero e) = z) /\
-       !x y. curve_case e z f (affine e.field [x; y]) = f x y``,
+       (affine_case e z f (curve_zero e) = z) /\
+       !x y. affine_case e z f (affine e.field [x; y]) = f x y``,
    RW_TAC resq_ss
-     [curve_case_def, affine_eq, Curve_def, GSPECIFICATION,
+     [affine_case_def, affine_eq, Curve_def, GSPECIFICATION,
       curve_distinct]);
 
 (*
@@ -4044,13 +6190,13 @@ val curve_neg_optimized = store_thm
    ++ RW_TAC std_ss [GSPECIFICATION]
    ++ ec_cases_on `e` `project e.field [x1; y1; z1]`
    ++ RW_TAC resq_ss []
-   >> (RW_TAC std_ss [curve_case]
+   >> (RW_TAC std_ss [affine_case]
        ++ POP_ASSUM MP_TAC
        ++ RW_TAC std_ss [curve_zero_eq]
        ++ RW_TAC std_ss [field_mult_rzero, field_add_rzero]
        ++ RW_TAC std_ss [curve_zero_eq', field_neg_carrier]
        ++ RW_TAC std_ss [field_neg_eq_swap, field_neg_zero])
-   ++ RW_TAC std_ss [curve_case]
+   ++ RW_TAC std_ss [affine_case]
    ++ POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ])
    ++ ASM_SIMP_TAC resq_ss [affine_def, APPEND, project_eq]
    ++ CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [project_def]))
@@ -4091,7 +6237,7 @@ val curve_neg_optimized = store_thm
    ++ Know `(i = 0) \/ (i = SUC 0) \/ (i = SUC (SUC 0))` >> DECIDE_TAC
    ++ STRIP_TAC
    ++ RW_TAC std_ss [EL, HD, TL, field_mult_rone]
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' [field_distrib]);
 
 val curve_affine = store_thm
   ("curve_affine",
@@ -4114,7 +6260,6 @@ val curve_affine = store_thm
    >> (RW_TAC alg_ss []
        ++ Q.EXISTS_TAC `(x, y, field_one e.field)`
        ++ POP_ASSUM MP_TAC
-       ++ RW_TAC alg_ss' []
        ++ RW_TAC alg_ss [nonorigin_alt, EVERY_DEF])
    ++ STRIP_TAC
    ++ POP_ASSUM MP_TAC
@@ -4159,14 +6304,99 @@ val curve_affine = store_thm
    ++ Q.EXISTS_TAC `e.field`
    ++ Q.EXISTS_TAC `field_exp e.field z1 3`
    ++ REPEAT (Q.PAT_ASSUM `X = Y` MP_TAC)
+   ++ RW_TAC alg_ss' [field_distrib]);
+
+val curve_affine_reduce_3 = store_thm
+  ("curve_affine_reduce_3",
+   ``!e :: Curve. !x y :: (e.field.carrier).
+       affine e.field [x; y] IN curve_points e =
+       (field_exp e.field x 3 =
+        field_add e.field
+          (field_neg e.field e.a6)
+          (field_add e.field
+            (field_mult e.field e.a3 y)
+            (field_add e.field
+              (field_exp e.field y 2)
+              (field_add e.field
+                (field_neg e.field (field_mult e.field e.a4 x))
+                (field_add e.field
+                  (field_mult e.field e.a1 (field_mult e.field x y))
+                  (field_neg e.field
+                    (field_mult e.field e.a2 (field_exp e.field x 2))))))))``,
+   RW_TAC resq_ss []
+   ++ CONV_TAC (RAND_CONV (REWR_CONV EQ_SYM_EQ))
+   ++ RW_TAC alg_ss [curve_affine, LET_DEF]
    ++ RW_TAC alg_ss' []);
+
+local
+  val exp_tm = ``field_exp e.field (x : 'a)``;
+
+  val context_tms = strip_conj
+      ``e IN Curve /\ (x : 'a) IN e.field.carrier /\ y IN e.field.carrier``;
+
+  val affine_tm = ``affine e.field [(x : 'a); y] IN curve_points e``;
+
+  val context = map ASSUME context_tms;
+
+  val affine = ASSUME affine_tm;
+
+  val reduce_3_eq =
+      (repeat UNDISCH o SPEC_ALL)
+        (CONV_RULE
+           (REDEPTH_CONV (RES_FORALL_CONV ORELSEC
+                          HO_REWR_CONV (GSYM RIGHT_FORALL_IMP_THM) ORELSEC
+                          REWR_CONV (GSYM AND_IMP_INTRO)))
+         curve_affine_reduce_3);
+
+  val reduce_3 = EQ_MP reduce_3_eq affine;
+
+  val field_poly_ss = alg_field_poly_ss alg_context
+
+  fun reduce_n 3 = [reduce_3]
+    | reduce_n n =
+      let
+        val reduce_ths = reduce_n (n - 1)
+        val n1_tm = numLib.term_of_int (n - 1)
+        val suc_th = reduceLib.SUC_CONV (numSyntax.mk_suc n1_tm)
+        val reduce_tm = mk_comb (exp_tm, numLib.term_of_int n)
+        val reduce_th =
+            (RAND_CONV (REWR_CONV (SYM suc_th)) THENC
+             REWR_CONV (CONJUNCT2 field_exp_def) THENC
+             RAND_CONV (REWR_CONV (hd reduce_ths)) THENC
+             with_flag (ORACLE_field_poly,true)
+             (Count.apply (SIMP_CONV (field_poly_ss reduce_ths) context)))
+            reduce_tm
+(***
+        val _ = (print ("reduce_n " ^ int_to_string n ^ ":\n");
+                        print_thm reduce_th; print "\n")
+***)
+      in
+        reduce_th :: reduce_ths
+      end;
+
+  val weakening_th = PROVE [] ``(a ==> b) ==> (a = a /\ b)``;
+in
+  fun curve_affine_reduce_n n =
+      let
+        val th = DISCH affine_tm (LIST_CONJ (tl (rev (reduce_n n))))
+        val th = MATCH_MP weakening_th th
+        val th = CONV_RULE (RAND_CONV (LAND_CONV (K reduce_3_eq))) th
+        val th = foldl (uncurry DISCH) th (rev context_tms)
+      in
+        th
+      end;
+end;
+
+val curve_affine_reduce = save_thm
+  ("curve_affine_reduce",
+   with_flag (ORACLE_algebra_dproc,true)
+   (Count.apply curve_affine_reduce_n) 12);
 
 val curve_zero_carrier = store_thm
   ("curve_zero_carrier",
    ``!e :: Curve. curve_zero e IN curve_points e``,
    RW_TAC resq_ss [curve_zero_def, curve_points_def, LET_DEF, GSPECIFICATION]
    ++ Q.EXISTS_TAC `(field_zero e.field, field_one e.field, field_zero e.field)`
-   ++ RW_TAC alg_ss' []
    ++ RW_TAC alg_ss [nonorigin_alt, EVERY_DEF]);
 
 val alg_context = alg_add_reduction curve_zero_carrier alg_context;
@@ -4178,15 +6408,17 @@ val curve_neg_carrier = Count.apply store_thm
    RW_TAC resq_ss []
    ++ ec_cases_on `e` `p`
    ++ RW_TAC resq_ss [curve_neg_def, LET_DEF]
-   ++ RW_TAC alg_ss [curve_case]
+   ++ RW_TAC alg_ss [affine_case]
    ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
    ++ ASM_SIMP_TAC alg_ss [curve_affine, LET_DEF]
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' [field_distrib, field_binomial_2]);
 
 val alg_context = alg_add_reduction curve_neg_carrier alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
-(***
+val field_div_elim_ss = alg_field_div_elim_ss alg_context
+and field_poly_basis_ss = alg_field_poly_basis_ss alg_context;
+
 val curve_double_carrier = Count.apply store_thm
   ("curve_double_carrier",
    ``!e :: Curve. !p :: curve_points e. curve_double e p IN curve_points e``,
@@ -4195,166 +6427,221 @@ val curve_double_carrier = Count.apply store_thm
    ++ RW_TAC resq_ss [curve_double_def]
    ++ normalForms.REMOVE_ABBR_TAC
    ++ RW_TAC std_ss []
-   ++ RW_TAC alg_ss [curve_case]
+   ++ RW_TAC alg_ss [affine_case]
    ++ RW_TAC alg_ss []
-   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
-   ++ Know `d IN field_nonzero e.field`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ RW_TAC alg_ss [field_nonzero_alt])
-   ++ STRIP_TAC
-   ++ Know `l IN e.field.carrier`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `d = X` (K ALL_TAC)
-       ++ RW_TAC alg_ss [])
-   ++ STRIP_TAC
-   ++ Know `m IN e.field.carrier`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `d = X` (K ALL_TAC)
-       ++ Q.PAT_ASSUM `l = X` (K ALL_TAC)
-       ++ RW_TAC alg_ss [])
-   ++ STRIP_TAC
-   ++ Know `x' IN e.field.carrier`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `d = X` (K ALL_TAC)
-       ++ Q.PAT_ASSUM `l = X` (K ALL_TAC)
-       ++ Q.PAT_ASSUM `m = X` (K ALL_TAC)
-       ++ RW_TAC alg_ss [])
-   ++ STRIP_TAC
-   ++ Know `y' IN e.field.carrier`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `d = X` (K ALL_TAC)
-       ++ Q.PAT_ASSUM `l = X` (K ALL_TAC)
-       ++ Q.PAT_ASSUM `m = X` (K ALL_TAC)
-       ++ Q.PAT_ASSUM `x' = X` (K ALL_TAC)
-       ++ RW_TAC alg_ss [])
-   ++ STRIP_TAC
-   ++ RW_TAC alg_ss [curve_affine, LET_DEF]
-   ++ match_tac field_mult_lcancel_imp
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC alg_ss [field_nonzero_eq, curve_affine, LET_DEF]
+   ++ match_tac field_sub_eq_zero_imp
    ++ Q.EXISTS_TAC `e.field`
-   ++ Q.EXISTS_TAC `field_exp e.field d 6`
-   ++ REPEAT (CONJ_TAC >> RW_TAC alg_ss [])
-   ++ Suff
-      `field_add e.field
-         (field_exp e.field (field_mult e.field (field_exp e.field d 3) y') 2)
-         (field_add e.field
-            (field_mult e.field e.a1
-               (field_mult e.field d
-                  (field_mult e.field
-                     (field_mult e.field (field_exp e.field d 2) x')
-                     (field_mult e.field (field_exp e.field d 3) y'))))
-            (field_mult e.field e.a3
-               (field_mult e.field (field_exp e.field d 3)
-                  (field_mult e.field (field_exp e.field d 3) y')))) =
-       field_add e.field
-         (field_exp e.field (field_mult e.field (field_exp e.field d 2) x') 3)
-         (field_add e.field
-            (field_mult e.field e.a2
-               (field_mult e.field (field_exp e.field d 2)
-                  (field_exp e.field
-                     (field_mult e.field (field_exp e.field d 2) x') 2)))
-            (field_add e.field
-               (field_mult e.field e.a4
-                 (field_mult e.field (field_exp e.field d 4)
-                    (field_mult e.field (field_exp e.field d 2) x')))
-               (field_mult e.field e.a6 (field_exp e.field d 6))))`
-   >> RW_TAC alg_ss' []
-   ++ Know
-      `field_mult e.field (field_exp e.field d 3) y' =
-       field_sub e.field
-         (field_neg e.field
-            (field_mult e.field
-               (field_add e.field
-                  (field_mult e.field d l)
-                  (field_mult e.field d e.a1))
-               (field_mult e.field (field_exp e.field d 2) x')))
-         (field_add e.field
-            (field_mult e.field
-               (field_exp e.field d 2) (field_mult e.field d m))
-            (field_mult e.field (field_exp e.field d 3) e.a3))`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `y' = X` (fn th => ONCE_REWRITE_TAC [th])
-       ++ REPEAT (Q.PAT_ASSUM `X = Y` (K ALL_TAC))
-       ++ RW_TAC alg_ss' [])
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   ++ Q.PAT_ASSUM `Abbrev (y' = X)` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `y' IN X` (K ALL_TAC)
-   ++ Know
-      `field_mult e.field (field_exp e.field d 2) x' =
-       field_add e.field
-         (field_exp e.field (field_mult e.field d l) 2)
-         (field_sub e.field
-            (field_mult e.field e.a1
-               (field_mult e.field d (field_mult e.field d l)))
-            (field_add e.field
-               (field_mult e.field (field_exp e.field d 2) e.a2)
-               (field_mult e.field (field_num e.field 2)
-                  (field_mult e.field d (field_mult e.field d x)))))`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `x' = X` (fn th => ONCE_REWRITE_TAC [th])
-       ++ REPEAT (Q.PAT_ASSUM `X = Y` (K ALL_TAC))
-       ++ RW_TAC alg_ss' [])
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   ++ Q.PAT_ASSUM `Abbrev (x' = X)` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `x' IN X` (K ALL_TAC)
-   ++ Know
-      `field_mult e.field d l =
-       field_sub e.field
-         (field_add e.field
-            (field_add e.field
-               (field_mult e.field (field_num e.field 3)
-                  (field_exp e.field x 2))
-               (field_mult e.field
-                  (field_mult e.field (field_num e.field 2) e.a2)
-                  x)) e.a4) (field_mult e.field e.a1 y)`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `l = X` (fn th => ONCE_REWRITE_TAC [th])
-       ++ REPEAT (Q.PAT_ASSUM `X = Y` (K ALL_TAC))
-       ++ RW_TAC alg_ss' [])
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   ++ Q.PAT_ASSUM `Abbrev (l = X)` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `l IN X` (K ALL_TAC)
-   ++ Know
-      `field_mult e.field d m =
-       field_sub e.field
-         (field_add e.field
-            (field_add e.field
-               (field_neg e.field
-                  (field_mult e.field (field_num e.field 3)
-                     (field_exp e.field x 3)))
-               (field_mult e.field e.a4 x))
-            (field_mult e.field (field_num e.field 2) e.a6))
-         (field_mult e.field e.a3 y)`
-   >> (normalForms.REMOVE_ABBR_TAC
-       ++ Q.PAT_ASSUM `m = X` (fn th => ONCE_REWRITE_TAC [th])
-       ++ REPEAT (Q.PAT_ASSUM `X = Y` (K ALL_TAC))
-       ++ RW_TAC alg_ss' [])
-   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   ++ Q.PAT_ASSUM `Abbrev (m = X)` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `m IN X` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `X = Y` MP_TAC
-   ++ RW_TAC alg_ss' []
-
-
-   ++ normalForms.REMOVE_ABBR_TAC
-   ++ Q.PAT_ASSUM `X = Y` (fn th => REWRITE_TAC [th])
-   ++ Q.PAT_ASSUM `~(d = X)` (K ALL_TAC)
-   ++ Q.PAT_ASSUM `d IN X` (K ALL_TAC)
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss []
+   ++ Q.UNABBREV_TAC `x'`
+   ++ Q.UNABBREV_TAC `y'`
+   ++ Q.UNABBREV_TAC `l`
+   ++ Q.UNABBREV_TAC `m`
+   ++ Count.apply (RW_TAC field_div_elim_ss [])
+   ++ Q.UNABBREV_TAC `d`
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
+   ++ ASM_SIMP_TAC alg_ss [curve_affine_reduce]
+   ++ with_flag (ORACLE_field_poly,true)
+      (with_flag (ORACLE_algebra_dproc,true)
+       (Count.apply (ASM_SIMP_TAC field_poly_basis_ss []))));
 
 val alg_context = alg_add_reduction curve_double_carrier alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val curve_add_carrier = Count.apply store_thm
+  ("curve_add_carrier",
+   ``!e :: Curve. !p q :: curve_points e. curve_add e p q IN curve_points e``,
+   RW_TAC resq_ss []
+   ++ ec_cases_on `e` `p`
+   ++ ec_cases_on `e` `q`
+   ++ RW_TAC resq_ss [curve_add_def]
+   ++ Q.UNABBREV_ALL_TAC
+   ++ RW_TAC alg_ss [affine_case]
+   ++ RW_TAC alg_ss []
+   ++ Know `~(d = field_zero e.field)`
+   >> (Q.UNABBREV_TAC `d`
+       ++ RW_TAC alg_ss [field_sub_eq_zero])
+   ++ RW_TAC alg_ss [field_nonzero_eq, curve_affine, LET_DEF]
+   ++ match_tac field_sub_eq_zero_imp
+   ++ Q.EXISTS_TAC `e.field`
+   ++ RW_TAC alg_ss []
+   ++ Q.UNABBREV_TAC `x''`
+   ++ Q.UNABBREV_TAC `y''`
+   ++ Q.UNABBREV_TAC `l`
+   ++ Q.UNABBREV_TAC `m`
+   ++ Count.apply (RW_TAC field_div_elim_ss [])
+   ++ Q.UNABBREV_TAC `d`
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
+   ++ Q.PAT_ASSUM `affine X Y IN Z` MP_TAC
+   ++ ASM_SIMP_TAC alg_ss [curve_affine_reduce]
+   ++ SIMP_TAC bool_ss [AND_IMP_INTRO, GSYM CONJ_ASSOC]
+   ++ with_flag (ORACLE_field_poly,true)
+      (with_flag (ORACLE_algebra_dproc,true)
+       (Count.apply (ASM_SIMP_TAC field_poly_basis_ss []))));
+
+val alg_context = alg_add_reduction curve_add_carrier alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val curve_double_zero = store_thm
+  ("curve_double_zero",
+   ``!e :: Curve. curve_double e (curve_zero e) = curve_zero e``,
+   RW_TAC resq_ss []
+   ++ RW_TAC resq_ss [curve_double_def]
+   ++ normalForms.REMOVE_ABBR_TAC
+   ++ RW_TAC std_ss []
+   ++ RW_TAC alg_ss [affine_case]);
+
+val alg_context = alg_add_rewrite curve_double_zero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val curve_add_lzero = store_thm
+  ("curve_add_lzero",
+   ``!e :: Curve. !p :: curve_points e. curve_add e (curve_zero e) p = p``,
+   RW_TAC resq_ss []
+   ++ ec_cases_on `e` `p`
+   ++ RW_TAC resq_ss [curve_add_def]
+   ++ Q.UNABBREV_ALL_TAC
+   ++ RW_TAC alg_ss [affine_case]);
+
+val alg_context = alg_add_rewrite curve_add_lzero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val curve_add_lneg = store_thm
+  ("curve_add_lneg",
+   ``!e :: Curve. !p :: curve_points e.
+       curve_add e (curve_neg e p) p = curve_zero e``,
+   RW_TAC resq_ss []
+   ++ ec_cases_on `e` `p`
+   ++ RW_TAC resq_ss [curve_add_def, curve_neg_def, LET_DEF]
+   ++ RW_TAC alg_ss []
+   ++ Q.UNABBREV_ALL_TAC
+   ++ RW_TAC alg_ss [affine_case]
+   ++ Q.PAT_ASSUM `X = Y` MP_TAC
+   ++ RW_TAC alg_ss [affine_case, affine_eq]
+   ++ RW_TAC alg_ss [curve_double_def, LET_DEF, affine_case, curve_distinct]
+   ++ Q.PAT_ASSUM `X = Y` MP_TAC
+   ++ PURE_ONCE_REWRITE_TAC [EQ_SYM_EQ]
+   ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
+   ++ RW_TAC alg_ss' []);
+
+val alg_context = alg_add_rewrite curve_add_lneg alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val curve_add_comm = Count.apply store_thm
+  ("curve_add_comm",
+   ``!e :: Curve. !p q :: curve_points e. curve_add e p q = curve_add e q p``,
+   RW_TAC resq_ss []
+   ++ Cases_on `p = q` >> RW_TAC alg_ss []
+   ++ RW_TAC alg_ss [curve_add_def]
+   ++ Q.UNABBREV_ALL_TAC
+   ++ ec_cases_on `e` `p`
+   ++ ec_cases_on `e` `q`
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC alg_ss [affine_case]
+   ++ RW_TAC alg_ss []
+   ++ ASM_SIMP_TAC alg_ss [affine_eq]
+   ++ Suff `(x''' = x'') /\ ((x''' = x'') ==> (y''' = y''))`
+   >> RW_TAC std_ss []
+   ++ Know `~(d = field_zero e.field)`
+   >> (Q.UNABBREV_TAC `d`
+       ++ RW_TAC alg_ss [field_sub_eq_zero])
+   ++ Know `~(d' = field_zero e.field)`
+   >> (Q.UNABBREV_TAC `d'`
+       ++ RW_TAC alg_ss [field_sub_eq_zero])
+   ++ RW_TAC alg_ss [field_nonzero_eq]
+   ++ match_tac field_sub_eq_zero_imp
+   ++ Q.EXISTS_TAC `e.field`
+   ++ RW_TAC alg_ss []
+   ++ Q.UNABBREV_TAC `x''`
+   ++ Q.UNABBREV_TAC `y''`
+   ++ Q.UNABBREV_TAC `l`
+   ++ Q.UNABBREV_TAC `m`
+   ++ TRY (Q.UNABBREV_TAC `x'''`)
+   ++ Q.UNABBREV_TAC `y'''`
+   ++ Q.UNABBREV_TAC `l'`
+   ++ Q.UNABBREV_TAC `m'`
+   ++ Count.apply (RW_TAC field_div_elim_ss [])
+   ++ Q.UNABBREV_TAC `d`
+   ++ Q.UNABBREV_TAC `d'`
+   ++ with_flag (ORACLE_field_poly,true)
+      (with_flag (ORACLE_algebra_dproc,true)
+       (Count.apply (ASM_SIMP_TAC (alg_field_poly_ss alg_context []) []))));
+
+val curve_add_rzero = store_thm
+  ("curve_add_rzero",
+   ``!e :: Curve. !p :: curve_points e. curve_add e p (curve_zero e) = p``,
+   METIS_TAC [curve_add_lzero,curve_add_comm,curve_zero_carrier]);
+
+val alg_context = alg_add_rewrite curve_add_rzero alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val curve_add_rneg = store_thm
+  ("curve_add_rneg",
+   ``!e :: Curve. !p :: curve_points e.
+       curve_add e p (curve_neg e p) = curve_zero e``,
+   METIS_TAC [curve_add_lneg,curve_add_comm,curve_neg_carrier]);
+
+val alg_context = alg_add_rewrite curve_add_rneg alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+(***
+val curve_add_assoc = store_thm
+  ("curve_add_assoc",
+   ``!e :: Curve. !p q r :: curve_points e.
+        curve_add e p (curve_add e q r) = curve_add e (curve_add e p q) r``,
+   RW_TAC resq_ss []
+   ++ ec_cases_on `e` `p`
+   ++ ASM_SIMP_TAC alg_ss []
+   ++ STRIP_TAC >> RW_TAC alg_ss [curve_add_lzero]
+   ++ ec_cases_on `e` `q`
+   ++ ASM_SIMP_TAC alg_ss []
+   ++ STRIP_TAC >> RW_TAC alg_ss [curve_add_lzero, curve_add_rzero]
+   ++ ec_cases_on `e` `r`
+   ++ ASM_SIMP_TAC alg_ss []
+   ++ STRIP_TAC >> RW_TAC alg_ss [curve_add_rzero]
+   ++ (Cases_on `p = q` ++ Cases_on `q = r`)
+   >> (METIS_TAC [curve_add_comm,curve_add_carrier])
+   ++ RW_TAC alg_ss []
+   ++ clean_assumptions
+
+
+
+
+   ++ REPEAT (POP_ASSUM MP_TAC)
+   ++ RW_TAC resq_ss []
+   ++ RW_TAC alg_ss
+        [curve_add_def, curve_double_def, affine_case, LET_DEF,
+         affine_eq, curve_distinct]
+   ++ REPEAT (POP_ASSUM MP_TAC)
+   ++ RW_TAC alg_ss
+        [curve_add_def, curve_double_def, affine_case, LET_DEF,
+         affine_eq, curve_distinct]
+
+   ++ Q.UNABBREV_ALL_TAC
+   ++ ec_cases_on `e` `p`
+   ++ ec_cases_on `e` `q`
+   ++ RW_TAC resq_ss []
 
 val curve_group = store_thm
   ("curve_group",
    ``!e :: Curve. curve_group e IN AbelianGroup``,
    RW_TAC resq_ss
      [curve_group_def, AbelianGroup_def, Group_def,
-      GSPECIFICATION, combinTheory.K_THM, curve_zero_carrier]
+      GSPECIFICATION, combinTheory.K_THM]
+   ++ RW_TAC alg_ss []
+, curve_zero_carrier,
+      curve_add_carrier, curve]
    << [
+
 
 val alg_context = alg_add_reduction curve_group alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+***)
 
+(***
 val curve_hom_field = store_thm
   ("curve_hom_field",
    ``!f1 f2 :: Field. !f :: FieldHom f1 f2. !e :: Curve.
@@ -4362,13 +6649,10 @@ val curve_hom_field = store_thm
        GroupHom (curve_group e) (curve_group (curve_map f e))``,
 ***)
 
+(***
 (* ------------------------------------------------------------------------- *)
 (* Examples                                                                  *)
 (* ------------------------------------------------------------------------- *)
-
-(* From exercise VI.2.3 of Koblitz (1987) *)
-
-val ec_def = Define `ec = curve (GF 751) 0 0 1 750 0`;
 
 (*** Testing the primality checker
 val prime_65537 = Count.apply prove
@@ -4377,57 +6661,133 @@ val prime_65537 = Count.apply prove
    ++ CONV_TAC prime_checker_conv);
 ***)
 
-val prime_751 = prove
-  (``751 IN Prime``,
-   RW_TAC std_ss [Prime_def, GSPECIFICATION]
+(* From exercise VI.2.3 of Koblitz (1987) *)
+
+val example_prime_def = Define `example_prime = 751`;
+
+val example_field_def = Define `example_field = GF example_prime`;
+
+val example_curve_def = Define
+  `example_curve = curve example_field 0 0 1 (example_prime - 1) 0`;
+
+val alg_context = alg_add_rewrite example_prime_def alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val alg_context = alg_add_rewrite example_field_def alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val example_prime = lemma
+  (``example_prime IN Prime``,
+   RW_TAC alg_ss [Prime_def, GSPECIFICATION]
    ++ CONV_TAC prime_checker_conv);
 
-val alg_context = alg_add_reduction prime_751 alg_context;
+val alg_context =
+    alg_add_reduction (SIMP_RULE alg_ss [] example_prime) alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
-val field_gf_751 = lemma (``GF 751 IN Field``, RW_TAC alg_ss []);
+val example_field = lemma
+  (``example_field IN Field``,
+   RW_TAC alg_ss []);
 
-val curve_ec = lemma
-  (``ec IN Curve``,
+val alg_context =
+    alg_add_reduction (SIMP_RULE alg_ss [] example_field) alg_context;
+val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
+
+val example_curve = lemma
+  (``example_curve IN Curve``,
    RW_TAC alg_ss
-     [ec_def, Curve_def, GSPECIFICATION, discriminant_def,
-      non_singular_def, LET_DEF, GF_alt, curve_b2_def, curve_b4_def,
-      curve_b6_def, curve_b8_def, field_exp_small]);
+     [example_curve_def, Curve_def, GSPECIFICATION, discriminant_def,
+      non_singular_def, LET_DEF] ++
+   RW_TAC alg_ss
+     [LET_DEF, GF_alt, curve_b2_def, curve_b4_def,
+      curve_b6_def, curve_b8_def, field_exp_small] ++
+   CONV_TAC EVAL);
 
-val alg_context = alg_add_reduction curve_ec alg_context;
+val alg_context = alg_add_reduction example_curve alg_context;
 val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 
-val ec_field = lemma
-  (``ec.field = (GF 751)``,
-   RW_TAC std_ss [curve_accessors, ec_def]);
+val example_curve_field = lemma
+  (``example_curve.field = example_field``,
+   RW_TAC std_ss [curve_accessors, example_curve_def]);
 
-fun pt_on_ec pt = lemma
-  (``^pt IN curve_points ec``,
-   RW_TAC std_ss [GSYM ec_field]
-   ++ MP_TAC (Q.ISPEC `ec` (CONV_RULE RES_FORALL_CONV curve_affine))
+fun example_curve_pt pt = lemma
+  (``^pt IN curve_points example_curve``,
+   RW_TAC std_ss [GSYM example_curve_field]
+   ++ MP_TAC (Q.ISPEC `example_curve` (CONV_RULE RES_FORALL_CONV curve_affine))
    ++ SIMP_TAC alg_ss []
-   ++ RW_TAC alg_ss [ec_def, LET_DEF]
+   ++ RW_TAC alg_ss [example_curve_def, LET_DEF]
    ++ POP_ASSUM (K ALL_TAC)
    ++ RW_TAC alg_ss [field_exp_small]
    ++ RW_TAC alg_ss [GF_alt]);
 
-val pt1 = ``affine (GF 751) [361; 383]``
-and pt2 = ``affine (GF 751) [241; 605]``;
+val execute_conv =
+    SIMP_CONV
+      alg_ss
+      [GSYM example_curve_field, curve_neg_def, curve_add_def,
+       curve_double_def, affine_case, LET_DEF] THENC
+    SIMP_CONV
+      alg_ss
+      [example_curve_def, curve_accessors, GF_alt, affine_eq, CONS_11] THENC
+    RAND_CONV EVAL;
 
-val pt1_on_ec = pt_on_ec pt1
-and pt2_on_ec = pt_on_ec pt2;
+val pt1 = ``affine example_field [361; 383]``
+and pt2 = ``affine example_field [241; 605]``;
 
-(SIMP_CONV alg_ss [GSYM ec_field, curve_neg_def, curve_case, LET_DEF]
- THENC SIMP_CONV alg_ss [ec_def, curve_accessors, GF_alt]
- THENC RAND_CONV EVAL)
-``curve_neg ec ^pt1``; pt_on_ec (rhs (concl it));
+val pt1_on_example_curve = example_curve_pt pt1
+and pt2_on_example_curve = example_curve_pt pt2;
 
-(SIMP_CONV alg_ss [GSYM ec_field, curve_add_def, curve_case, LET_DEF]
- THENC SIMP_CONV alg_ss [ec_def, curve_accessors, GF_alt, affine_eq, CONS_11]
- THENC RAND_CONV EVAL)
-``curve_add ec ^pt1 ^pt2``; pt_on_ec (rhs (concl it));
+Count.apply execute_conv ``curve_neg example_curve ^pt1``;
+Count.apply example_curve_pt (rhs (concl it));
 
-(SIMP_CONV alg_ss [GSYM ec_field, curve_double_def, curve_case, LET_DEF]
- THENC SIMP_CONV alg_ss [ec_def, curve_accessors, GF_alt]
- THENC RAND_CONV EVAL)
-``curve_double ec ^pt1``; pt_on_ec (rhs (concl it));
+Count.apply execute_conv ``curve_add example_curve ^pt1 ^pt2``;
+Count.apply example_curve_pt (rhs (concl it));
+
+Count.apply execute_conv ``curve_double example_curve ^pt1``;
+Count.apply example_curve_pt (rhs (concl it));
+
+(* ------------------------------------------------------------------------- *)
+(* A formalized version of random binary maps in HOL.                        *)
+(* ------------------------------------------------------------------------- *)
+
+val () = Hol_datatype
+  `randomMap =
+     Leaf
+   | Node of num => randomMap => 'a => 'b => randomMap`;
+
+val emptyMap_def = Define `emptyMap : ('a,'b) randomMap = Leaf`;
+
+val singletonMap_def = Define
+  `singletonMap p a b : ('a,'b) randomMap = Node p Leaf a b Leaf`;
+
+(* ------------------------------------------------------------------------- *)
+(* Compilable versions of multiword operations                               *)
+(* ------------------------------------------------------------------------- *)
+
+fun compilable_multiword_operations words bits =
+
+(* ------------------------------------------------------------------------- *)
+(* Compilable versions of elliptic curve operations                          *)
+(* ------------------------------------------------------------------------- *)
+
+fun compilable_curve_operations prime words bits =
+    let
+      val {inject,add,mod,...} = compilable_multiword_operations words bits
+    in
+    end;
+
+val curve_add_example_def = Define
+  `curve_add_example (x_1_1 : word5) x_1_2 y_1_1 y_1_2 x_2_1 x_2_2 y_2_1 y_2_2 =
+     let x_1 = FCP i. if i=0 then x_1_1 else x_1_2 in
+     let y_1 = FCP i. if i=0 then y_1_1 else y_1_2 in
+     let x_2 = FCP i. if i=0 then x_2_1 else x_1_2 in
+     let y_2 = FCP i. if i=0 then y_2_1 else y_2_2 in
+     curve_add
+       ec
+       (affine (GF 751) [mw2n x_1; mw2n y_1])
+       (affine (GF 751) [mw2n x_2; mw2n y_2])`;
+
+val curve_add_example_compilable = 
+    CONV_RULE (RAND_CONV execute_conv) curve_add_example_def;
+***)
+
+val () = export_theory ();
