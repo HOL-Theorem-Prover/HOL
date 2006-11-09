@@ -414,8 +414,6 @@ end;
 fun dest_var (Fv v) = v
   | dest_var _ = raise ERR "dest_var" "not a var"
 
-val is_var = can dest_var;
-
 
 (*---------------------------------------------------------------------------*
  *                  Alpha conversion                                         *
