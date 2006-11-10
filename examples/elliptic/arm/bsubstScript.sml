@@ -1,18 +1,18 @@
 (* ========================================================================= *)
 (* FILE          : bsubstScript.sml                                          *)
-(* DESCRIPTION   : Block substitution                                        *)
+(* DESCRIPTION   : Block substitution and Memory Operations                  *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2005-2006                                                 *)
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsTheory", "rich_listTheory", "my_listTheory", "armTheory"];
+  app load ["wordsTheory", "rich_listTheory", "my_listTheory"];
 *)
 
 open HolKernel boolLib bossLib;
 open Parse Q arithmeticTheory wordsTheory;
-open listTheory rich_listTheory my_listTheory armTheory;
+open listTheory rich_listTheory my_listTheory;
 
 val _ = new_theory "bsubst";
 
@@ -24,14 +24,26 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
+val _ = set_fixity ":-"   (Infixr 325);
+val _ = set_fixity "::-"  (Infixr 325);
 val _ = set_fixity "::->" (Infixr 325);
 val _ = set_fixity "::-<" (Infixr 325);
+
+val _ = computeLib.auto_import_definitions := false;
+
+val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
+
+val BSUBST_def = xDefine "BSUBST"
+  `$::- a l = \m b.
+      if a <=+ b /\ w2n b - w2n a < LENGTH l then
+        EL (w2n b - w2n a) l
+      else m b`;
 
 val BSa_def = xDefine "BSa" `$::-> = $::-`;
 val BSb_def = xDefine "BSb" `$::-< = $::-`;
 
-val JOIN_def = new_definition("new_definition",
-  `JOIN n x y =
+val JOIN_def = Define`
+  JOIN n x y =
     let lx = LENGTH x and ly = LENGTH y in
     let j = MIN n lx in
        GENLIST
@@ -39,7 +51,40 @@ val JOIN_def = new_definition("new_definition",
                 if i < lx then EL i x else EL (i - j) y
               else
                 if i - j < ly then EL (i - j) y else EL i x)
-         (MAX (j + ly) lx)`);
+         (MAX (j + ly) lx)`;
+
+val _ = computeLib.auto_import_definitions := true;
+
+(* ------------------------------------------------------------------------- *)
+
+val _ = type_abbrev("mem", ``:word30->word32``);
+
+val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr:word30`;
+
+val SET_BYTE_def = Define`
+  SET_BYTE (oareg:word2) (b:word8) (w:word32) =
+    word_modify (\i x.
+                  (i < 8) /\ (if oareg = 0w then b %% i else x) \/
+       (8 <= i /\ i < 16) /\ (if oareg = 1w then b %% (i - 8) else x) \/
+      (16 <= i /\ i < 24) /\ (if oareg = 2w then b %% (i - 16) else x) \/
+      (24 <= i /\ i < 32) /\ (if oareg = 3w then b %% (i - 24) else x)) w`;
+
+val MEM_WRITE_BYTE_def = Define`
+  MEM_WRITE_BYTE (mem:mem) addr (word:word32) =
+    let addr30 = ADDR30 addr in
+      (addr30 :- SET_BYTE ((1 >< 0) addr) ((7 >< 0) word) (mem addr30)) mem`;
+
+val MEM_WRITE_WORD_def = Define`
+  MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr :- word) mem`;
+
+val MEM_WRITE_def = Define`
+  MEM_WRITE b = if b then MEM_WRITE_BYTE else MEM_WRITE_WORD`;
+
+val MEM_READ_def        = Define`MEM_READ (m: mem, a) = m a`;
+val MEM_WRITE_BLOCK_def = Define`MEM_WRITE_BLOCK (m:mem) a c = (a ::- c) m`;
+val MEM_ITEMS_def       = Define`MEM_ITEMS (m:mem) = []:(word30 # word32) list`;
+
+val empty_memory_def    = Define`empty_memory = (\a. 0xE6000010w):mem`;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -130,6 +175,39 @@ val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
             \\ IMP_RES_TAC LENGTH_NIL
             \\ RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def]
             \\ FULL_SIMP_TAC arith_ss []]]);
+
+(* ------------------------------------------------------------------------- *)
+
+val RHS_REWRITE_RULE =
+  GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
+
+val mem_read_rule = ONCE_REWRITE_RULE [GSYM MEM_READ_def];
+
+val _ = ConstMapML.insert ``dimword``;
+val _ = ConstMapML.insert ``dimindex``;
+val _ = ConstMapML.insert ``INT_MIN``;
+val _ = ConstMapML.insert ``n2w_itself``;
+
+val _ = let open EmitML in emitML (!Globals.emitMLDir)
+    ("bsubst", OPEN ["num", "fcp", "words"]
+         :: MLSIG "type 'a word = 'a wordsML.word"
+         :: MLSIG "type num = numML.num"
+         :: MLSIG "type word2 = wordsML.word2"
+         :: MLSIG "type word8 = wordsML.word8"
+         :: MLSIG "type word30 = wordsML.word30"
+         :: MLSIG "type word32 = wordsML.word32"
+         :: MLSTRUCT "type mem = word30->word32"
+         :: MLSIG "type mem"
+         :: MLSTRUCT "val mem_updates = ref ([]: word30 list)"
+         :: MLSIG "val mem_updates : word30 list ref"
+         :: map (DEFN o BETA_RULE o PURE_REWRITE_RULE
+             [GSYM n2w_itself_def, GSYM w2w_itself_def,
+              GSYM word_extract_itself_def] o
+             RHS_REWRITE_RULE [GSYM word_eq_def])
+           [SUBST_def, BSUBST_def, ADDR30_def, SET_BYTE_def, MEM_READ_def,
+            mem_read_rule MEM_WRITE_BYTE_def, MEM_WRITE_WORD_def, MEM_WRITE_def,
+            MEM_WRITE_BLOCK_def, MEM_ITEMS_def, empty_memory_def])
+end;
 
 (* ------------------------------------------------------------------------- *)
 

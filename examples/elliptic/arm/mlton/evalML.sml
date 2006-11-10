@@ -13,11 +13,9 @@ exception Parse;
 
 val _ = sizesML.sizes();
 
-fun toWord4 i =
-  wordsML.n2w_itself(numML.fromInt i, fcpML.Tyop ("i4", [])): wordsML.word4;
-
 fun toWord s i = wordsML.n2w_itself(i, fcpML.Tyop (s, []));
 
+fun toWord4 i = toWord "i4" (numML.fromInt i): wordsML.word4
 val toWord30 = toWord "i30": numML.num -> wordsML.word30;
 val toWord32 = toWord "i32": numML.num -> wordsML.word32
 
@@ -181,7 +179,7 @@ fun update_psr (p, n) (ENV e) =
   let val {N,Z,C,V,E,M,mem,reg,cycles,Wreg,Wmem,Wmode,Wflags,Wireg,psr} = e in
     ENV {N = N, Z = Z, C = C, V = V, E = E, M = M, mem = mem, reg = reg,
          cycles = cycles, Wreg = Wreg, Wmem = Wmem, Wmode = Wmode,
-         Wflags = Wflags, Wireg = Wireg, psr = armML.:- p n psr}
+         Wflags = Wflags, Wireg = Wireg, psr = bsubstML.:- p n psr}
   end;
 
 fun proj_ENV (ENV e) = e;
@@ -190,9 +188,13 @@ val toSpaces = String.map (fn _ => #" ");
 
 val usage_message = let val x = "Usage: " ^ CommandLine.name() in
   "An ARM emulator (generated from a HOL model of the ARM7's ISA).\n" ^
-  x ^ " [-N] [-Z] [-C] [-V] [-M m] [-E] [-Wall] [-Wireg]\n" ^
-  toSpaces x ^ " [-cycles n] [-SPSR_m n] [-rN_m n] file\n" ^
+  x ^ " [-cycles n] [-rN_m n] [-SPSR_m n] [-N] [-Z] [-C] [-V] [-M m] [-E]\n" ^
+  toSpaces x ^ " [-Wreg] [-Wmem] [-Wmode] [-Wflags] [-Wireg] [-Wall] file\n" ^
   "Options:\n\
+  \-cycles n - upper limit on the run length (will be " ^
+               Int.toString (valOf Int.maxInt) ^ " by default)\n\
+  \-rN_m n   - set a Register e.g. -r8_fiq 0x20 -pc 0b101100\n\
+  \-SPSR_m n - set a Saved Program Status Register e.g. -SPSR_svc 0x20\n\
   \-N        - set the Negative flag (will be clear by default)\n\
   \-Z        - set the Zero flag\n\
   \-C        - set the Carry flag\n\
@@ -205,11 +207,7 @@ val usage_message = let val x = "Usage: " ^ CommandLine.name() in
   \-Wmode    - watch mode changes\n\
   \-Wflags   - watch changes to the status flags\n\
   \-Wireg    - watch the instruction register\n\
-  \-Wall     - watch everything\n\
-  \-cycles n - upper limit on the run length (will be " ^
-               Int.toString (valOf Int.maxInt) ^ " by default)\n\
-  \-SPSR_m n - set a Saved Program Status Register e.g. -SPSR_svc 0x20\n\
-  \-rN_m n   - set a Register e.g. -r8_fiq 0x20 -pc 0b101100\n"
+  \-Wall     - watch everything\n"
 end;
 
 fun setOptions l env =
@@ -324,18 +322,18 @@ local
           rev (map (fn (a,b) => (a,rev b)) l)
         end;
 
-  fun assemble_assambler m a = let
+  fun assemble_assembler m a = let
     val l = do_links a
     val b = map (fn (m,c) => (fromArbnum30 m, c)) l
   in
-    foldr (fn ((a,c),t) => armML.MEM_WRITE_BLOCK t a c) m b
+    foldr (fn ((a,c),t) => bsubstML.MEM_WRITE_BLOCK t a c) m b
   end
 in
-  fun assemble m file = assemble_assambler m (assemblerML.parse_arm file);
+  fun assemble m file = assemble_assembler m (assemblerML.parse_arm file);
   fun list_assemble m l =
     let val c = String.concat (map (fn s => s ^ "\n") l)
     in
-      assemble_assambler m (assemblerML.string_to_code c)
+      assemble_assembler m (assemblerML.string_to_code c)
     end;
   fun assemble1 m t = list_assemble m [t];
 end;
@@ -395,6 +393,7 @@ in
         val reg = armML.arm_mem_state_registers state
         val psr = armML.arm_mem_state_psrs state
         val mem = armML.arm_mem_state_memory state
+        val items = bsubstML.MEM_ITEMS mem
     in
       TextIO.output(ostrm,"Instuctions Run:" ^ Int.toString count ^ "\n");
       TextIO.output(ostrm,"\nRegisters\n---------\n");
@@ -408,8 +407,9 @@ in
       print_psr ostrm "SPSR_abt" (armML.SPSR_READ psr armML.abt);
       print_psr ostrm "SPSR_und" (armML.SPSR_READ psr armML.und);
 
-      TextIO.output(ostrm,"\nMemory\n------\n");
-      map (print_line ostrm) (Redblackmap.listItems mem);
+      if items = [] then () else
+        (TextIO.output(ostrm,"\nMemory\n------\n");
+         map (print_line ostrm) items;());
 
       TextIO.closeOut ostrm
   end
@@ -454,7 +454,7 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
 
         fun print_mem a = print
               ("; mem[" ^ toHexString_w2n a ^ "] := " ^
-               toHexString_w2n (armML.MEM_READ(mem2,a)))
+               toHexString_w2n (bsubstML.MEM_READ(mem2,a)))
 
         fun print_bool b = print (if b then "1" else "0")
         fun print_nzcv (n,(z,(c, v))) = (print "; NZCV := ";
@@ -464,12 +464,13 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
               ("; mode := " ^ mode2string (armML.DECODE_MODE m))
     in
       ((if Wireg then
-          print_ireg (armML.MEM_READ(mem1,armML.ADDR30 (armML.FETCH_PC reg1)))
+          print_ireg
+            (bsubstML.MEM_READ(mem1,bsubstML.ADDR30 (armML.FETCH_PC reg1)))
         else
           ());
        print ("- t = " ^ Int.toString cycle);
        (if Wreg then app print_reg (reg_updates reg1 reg2) else ());
-       (if Wmem then app print_mem (rev (!armML.mem_updates)) else ());
+       (if Wmem then app print_mem (rev (!bsubstML.mem_updates)) else ());
        (if not Wflags orelse nzcv1 = nzcv2 then () else print_nzcv nzcv2);
        (if not Wmode orelse m1 = m2 then () else print_mode m2);
        print "\n")
@@ -542,7 +543,7 @@ fun STATE_ARM_MEM n s =
 (* ------------------------------------------------------------------------- *)
 
 val init_mem = if #E e then
-  list_assemble armML.empty_memory
+  list_assemble bsubstML.empty_memory
     ["0x0: movs pc, #32",
      "label: b label",
      "movs pc, r14",
@@ -551,7 +552,7 @@ val init_mem = if #E e then
      "movs pc, r14",
      "subs pc, r14, #4",
      "subs pc, r14, #4"]
-  else armML.empty_memory;
+  else bsubstML.empty_memory;
 
 val init_mem =
   let val m = #mem e in

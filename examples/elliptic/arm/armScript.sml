@@ -7,11 +7,11 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsLib", "wordsSyntax", "rich_listTheory"];
+  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "bsubstTheory"];
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory;
+open Q wordsTheory rich_listTheory bsubstTheory;
 
 val _ = new_theory "arm";
 
@@ -79,21 +79,6 @@ val _ = map Hol_datatype [mode_decl, condition_decl, iclass_decl];
 (* ------------------------------------------------------------------------- *)
 (*  General Purpose Register operations                                      *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = set_fixity ":-" (Infixr 325);
-val _ = set_fixity "::-" (Infixr 325);
-
-val _ = computeLib.auto_import_definitions := false;
-
-val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
-
-val BSUBST_def = xDefine "BSUBST"
-  `$::- a l = \m b.
-      if a <=+ b /\ w2n b - w2n a < LENGTH l then
-        EL (w2n b - w2n a) l
-      else m b`;
-
-val _ = computeLib.auto_import_definitions := true;
 
 val Rg = inst [alpha |-> ``:i32``,beta |-> ``:i4``] wordsSyntax.word_extract_tm;
 
@@ -876,34 +861,11 @@ val ARM_SPEC_def = Define`
 
 (* The State Space --------------------------------------------------------- *)
 
-val _ = type_abbrev("mem", ``:word30->word32``);
-
 val _ = Hol_datatype
  `arm_mem_state = <| registers : registers; psrs : psrs;
                      memory : mem; undefined : bool |>`;
 
 (* ------------------------------------------------------------------------- *)
-
-val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr:word30`;
-
-val SET_BYTE_def = Define`
-  SET_BYTE (oareg:word2) (b:word8) (w:word32) =
-    word_modify (\i x.
-                  (i < 8) /\ (if oareg = 0w then b %% i else x) \/
-       (8 <= i /\ i < 16) /\ (if oareg = 1w then b %% (i - 8) else x) \/
-      (16 <= i /\ i < 24) /\ (if oareg = 2w then b %% (i - 16) else x) \/
-      (24 <= i /\ i < 32) /\ (if oareg = 3w then b %% (i - 24) else x)) w`;
-
-val MEM_WRITE_BYTE_def = Define`
-  MEM_WRITE_BYTE (mem:mem) addr (word:word32) =
-    let addr30 = ADDR30 addr in
-      (addr30 :- SET_BYTE ((1 >< 0) addr) ((7 >< 0) word) (mem addr30)) mem`;
-
-val MEM_WRITE_WORD_def = Define`
-  MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr :- word) mem`;
-
-val MEM_WRITE_def = Define`
-  MEM_WRITE b = if b then MEM_WRITE_BYTE else MEM_WRITE_WORD`;
 
 val LOAD_STORE_def = Define`
   (LOAD_STORE data mem [] = (mem,data)) /\
@@ -1350,9 +1312,6 @@ val OUT_ARM = REWRITE_RULE [LDR_STR_OUT,LDM_STM_OUT,SWP_OUT] OUT_ARM_def;
 
 (*---------------------------------------------------------------------------*)
 
-val MEM_READ_def        = Define`MEM_READ (m: mem, a) = m a`;
-val MEM_WRITE_BLOCK_def = Define`MEM_WRITE_BLOCK (m:mem) a c = (a ::- c) m`;
-val empty_memory_def    = Define`empty_memory = (\a. 0xE6000010w):mem`;
 val empty_registers_def = Define`empty_registers = (\n. 0w):registers`;
 val empty_psrs_def      = Define`empty_psrs = (\x. SET_IFMODE F F usr 0w):psrs`;
 
@@ -1378,7 +1337,7 @@ fun mk_word n =
   let val s = Int.toString n
       val w = "type word" ^ s ^ " = wordsML.word" ^ s
   in
-    [EmitML.MLSTRUCT w, EmitML.MLSIG w]
+    EmitML.MLSIG w
   end;
 
 val _ = let open EmitML in emitML (!Globals.emitMLDir)
@@ -1393,13 +1352,13 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
               `state_inp = <| state : 'a; inp : num -> 'b |>`)
          :: ABSDATATYPE (["'a","'b"],
               `state_out = <| state : 'a; out : 'b |>`)
-         :: List.concat (map mk_word [2,4,5,8,12,16,24,30,32])
+         :: map mk_word [2,4,5,8,12,16,24,30,32]
           @ MLSTRUCT "type registers = register->word32"
          :: MLSTRUCT "type psrs = psr->word32"
-         :: MLSTRUCT "type mem = word30->word32"
+         :: MLSTRUCT "type mem = bsubstML.mem"
          :: MLSIG "type registers = register->word32"
          :: MLSIG "type psrs = psr->word32"
-         :: MLSIG "type mem = word30->word32"
+         :: MLSIG "type mem = bsubstML.mem"
          :: DATATYPE (`arm_state = <| registers : registers; psrs : psrs;
                          ireg : word32; exception : exceptions |>`)
          :: DATATYPE (`arm_mem_state = <| registers : registers; psrs : psrs;
@@ -1413,6 +1372,8 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
               `memop = MemRead of word32 | MemWrite of bool=>word32=>word32 |
                        CPMemRead of word32 | CPMemWrite of word32 |
                        CPWrite of word32`)
+         :: MLSTRUCT "val mem_updates = ref ([]: word30 list)"
+         :: MLSIG "val mem_updates : word30 list ref"
          :: map (DEFN o BETA_RULE o PURE_REWRITE_RULE
              [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
               GSYM word_concat_itself_def, GSYM word_extract_itself_def,
@@ -1422,7 +1383,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
               DECODE_MRS_THM, DECODE_MSR_THM, DECODE_LDR_STR_THM,
               DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
               DECODE_LDC_STC_THM, DECODE_INST_THM]
-           @ [SUBST_def, BSUBST_def, USER_def, mode_reg2num_def,
+           @ [USER_def, mode_reg2num_def,
               definition "state_out_state", definition "state_out_out",
               theorem "exceptions2num_thm", theorem "register2num_thm",
               num2register, num2condition,
@@ -1449,10 +1410,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
               CONDITION_PASSED2_def, CONDITION_PASSED_def, RUN_ARM_def,
               IS_Reset_def, PROJ_Dabort_def, PROJ_Reset_def ,
               interrupt2exception_def, PROJ_IF_FLAGS_def, NEXT_ARM_def,
-              OUT_ARM, ADDR30_def, SET_BYTE_def, MEM_READ_def,
-              mem_read_rule MEM_WRITE_BYTE_def, MEM_WRITE_WORD_def,
-              MEM_WRITE_def, MEM_WRITE_BLOCK_def, empty_memory_def,
-              mem_read_rule LOAD_STORE_def, TRANSFERS_def,
+              OUT_ARM, mem_read_rule LOAD_STORE_def, TRANSFERS_def,
               mem_read_rule NEXT_ARM_MEM_def, empty_registers_def]))
  end;
 

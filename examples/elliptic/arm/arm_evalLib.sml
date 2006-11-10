@@ -251,8 +251,8 @@ fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:i32``);
 
 fun eval_word t = (numSyntax.dest_numeral o rhsc o FOLD_SUBST_CONV o mk_w2n) t;
 
-val subst_tm  = prim_mk_const{Name = ":-",  Thy = "arm"};
-val bsubst_tm = prim_mk_const{Name = "::-", Thy = "arm"};
+val subst_tm  = prim_mk_const{Name = ":-",  Thy = "bsubst"};
+val bsubst_tm = prim_mk_const{Name = "::-", Thy = "bsubst"};
 
 fun mk_subst (a,b,m) =
    list_mk_comb(inst[alpha |-> type_of a,beta |-> type_of b] subst_tm,[a,b,m])
