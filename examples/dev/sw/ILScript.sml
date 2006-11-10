@@ -122,8 +122,8 @@ val _ = Hol_datatype `
      MLSR of MREG => MREG => word5 |
      MASR of MREG => MREG => word5 |
      MROR of MREG => MREG => word5 |
-     MPUSH of REGISTER => REGISTER list |
-     MPOP of REGISTER => REGISTER list`;
+     MPUSH of num => num list |
+     MPOP of num => num list`;
 
 val _ = type_abbrev("CEXP", Type`:MREG # COND # MEXP`);
 
@@ -146,14 +146,14 @@ val _ = Hol_datatype `CTL_STRUCTURE =
 val pushL_def =
   Define `pushL st baseR regL = 
    write (FST (FOLDL (\(st1,i) reg. (write st1 (MEM(baseR,NEG i)) (read st reg), i+1)) (st,0) (REVERSE (MAP REG regL))))
-         (REG baseR) (read st (REG baseR) - n2w (LENGTH regL))`;
+         (REG baseR) (read st (REG baseR) - n2w (4*LENGTH regL))`;
 
 (* Pop into multiple registers from the stack with writing-back to the sp   *)
  
 val popL_def =
   Define `popL st baseR regL = 
    write (FST (FOLDL (\(st1,i) reg. (write st1 reg (read st (MEM(baseR, POS(i+1)))), i+1)) (st,0) (MAP REG regL)))
-         (REG baseR) (read st (REG baseR) + n2w (LENGTH regL))`;
+         (REG baseR) (read st (REG baseR) + n2w (4*LENGTH regL))`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Decode assignment statement                                                *)
@@ -291,6 +291,27 @@ val WELL_FORMED_SUB_thm = store_thm ("WELL_FORMED_SUB_thm",
     REWRITE_TAC [WELL_FORMED_def, WELL_FORMED_SUB_def] THEN
     PROVE_TAC[]);
 
+
+val CHANGED_def = Define `CHANGED s ir =
+	!st st'. (st' = run_ir ir st) ==> (
+		!r. ~(MEM r s) ==> (read st (toREG r) = read st' (toREG r))
+	)`
+
+val UNCHANGED_def = Define `UNCHANGED s ir =
+	!st st'. (st' = run_ir ir st) ==> (
+		!r. (MEM r s) ==> (read st (toREG r) = read st' (toREG r))
+	)`
+
+
+val UNCHANGED_THM = store_thm ("UNCHANGED_THM",
+
+	``!s ir.
+		UNCHANGED s ir =
+		EVERY (\r. !reg mem. (read (reg,mem) (toREG r) = read (run_ir ir (reg,mem)) (toREG r))) s``,
+
+	SIMP_TAC std_ss [EVERY_MEM, UNCHANGED_def, ELIM_PFORALL] THEN
+	METIS_TAC[pairTheory.PAIR])
+
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules for IR                                                         *) 
 (*---------------------------------------------------------------------------------*)
@@ -360,11 +381,11 @@ val STATEMENT_IS_WELL_FORMED = Q.store_thm (
         Cases_on `stm` THEN
             (fn g => 
                (SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos0,cpsr0,regs,mem):STATE` 
-			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)), 
+			  (INST_TYPE [alpha |-> Type `:word32 # (word4 |-> word32) # (word30 |-> word32)`] UPLOAD_LEM_2)), 
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE] THEN
                 SIMP_TAC list_ss [get_st_def, Once RUNTO_ADVANCE, SIMP_RULE std_ss [] (Q.SPEC `(pos1,cpsr1,regs,mem):STATE` 
-			  (INST_TYPE [alpha |-> Type `:word32 # (num |-> word32) # (num |-> word32)`] UPLOAD_LEM_2)), 
+			  (INST_TYPE [alpha |-> Type `:word32 # (word4 |-> word32) # (word30 |-> word32)`] UPLOAD_LEM_2)), 
                          TRANSLATE_ASSIGMENT_CORRECT_2, SUC_ONE_ADD] THEN
                 RW_TAC std_ss [Once RUNTO_ADVANCE]) g
             )
@@ -523,7 +544,7 @@ val IR_SEMANTICS_EMBEDDED_THM = Q.store_thm (
 val WF_ir_TR_def =  Define `
 	WF_ir_TR (cond, ir) =
 		WF_Loop ((eval_il_cond cond),
-              (run_ir ir))`
+              (run_ir ir))`;
 
 
 val WF_ir_TR_thm = Q.store_thm (
@@ -610,7 +631,7 @@ val IR_SEMANTICS_TR___FUNPOW = Q.store_thm (
 	SIMP_TAC std_ss [IR_SEMANTICS_TR] THEN
 	REPEAT STRIP_TAC THEN
 	`(\st'. ~eval_il_cond cond st') = $~ o (eval_il_cond cond)` by SIMP_TAC std_ss [combinTheory.o_DEF] THEN
-	ASM_REWRITE_TAC[] THEN
+	ASM_SIMP_TAC std_ss [] THEN
 	MATCH_MP_TAC ARMCompositionTheory.UNROLL_LOOP THEN
 	METIS_TAC[WF_ir_TR_thm, WF_ir_TR_def]);
 

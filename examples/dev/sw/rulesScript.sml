@@ -4,14 +4,14 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["numLib", "relationTheory", "arithmeticTheory", "preARMTheory", "pairTheory",
-     "pred_setSimps", "pred_setTheory", "listTheory", "rich_listTheory", "whileTheory", "ARMCompositionTheory", "ILTheory"];
+     "pred_setSimps", "pred_setTheory", "listTheory", "rich_listTheory", "whileTheory", "ARMCompositionTheory", "ILTheory", "wordsTheory"];
 
 quietdec := false;
 *)
 
 
 open HolKernel Parse boolLib bossLib numLib relationTheory arithmeticTheory preARMTheory pairTheory
-     pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory ARMCompositionTheory ILTheory;
+     pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory ARMCompositionTheory ILTheory wordsTheory;
 
 
 val _ = new_theory "rules";
@@ -55,7 +55,7 @@ val _ = add_rule {term_name = "mread", fixity = Suffix 60,
 (*---------------------------------------------------------------------------------*)
 
 val proper_def = Define `
-    proper = (\(regs,mem):DSTATE. (regs ' 11 = 100w) /\ (regs ' 13 = 100w))`;
+    proper = (\(regs,mem):DSTATE. (regs ' 11w = 100w) /\ (regs ' 13w = 100w))`;
 
 
 (*---------------------------------------------------------------------------------*)
@@ -615,5 +615,48 @@ val WELL_FORMED_TR_RULE = Q.store_thm (
     RW_TAC std_ss [] THEN 
     METIS_TAC [IR_TR_IS_WELL_FORMED, WF_TR_LEM_1]
    );
+
+
+
+val IR_CJ_UNCHANGED = store_thm ("IR_CJ_UNCHANGED",
+``!cond ir_t ir_f s.
+	(WELL_FORMED ir_t /\ WELL_FORMED ir_f /\	
+	UNCHANGED s ir_t /\ UNCHANGED s ir_f)  ==>
+	UNCHANGED s (CJ cond ir_t ir_f)``,
+
+
+REWRITE_TAC[UNCHANGED_def] THEN 
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
+PROVE_TAC[]);
+
+
+val IR_SC_UNCHANGED = store_thm ("IR_SC_UNCHANGED",
+``!ir1 ir2 s.
+	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\	
+	UNCHANGED s ir1 /\ UNCHANGED s ir2)  ==>
+	UNCHANGED s (SC ir1 ir2)``,
+
+
+REWRITE_TAC[UNCHANGED_def] THEN 
+REPEAT STRIP_TAC THEN
+ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
+PROVE_TAC[])
+
+val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
+``!c ir s.
+	(WELL_FORMED (TR c ir) /\ UNCHANGED s ir) ==>
+	UNCHANGED s (TR c ir)``,
+
+  REWRITE_TAC [UNCHANGED_def, WELL_FORMED_def] THEN
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC std_ss [IR_SEMANTICS_TR___FUNPOW] THEN
+  Q.ABBREV_TAC `n = (shortest (eval_il_cond c) (run_ir ir) st)` THEN
+  POP_ASSUM (fn x => ALL_TAC) THEN
+  Induct_on `n` THENL [
+	 REWRITE_TAC[FUNPOW],
+	 REWRITE_TAC[FUNPOW_SUC] THEN PROVE_TAC[]
+  ]);
+		
 
 val _ = export_theory();

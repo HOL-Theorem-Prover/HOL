@@ -499,6 +499,9 @@ fun VAR_LET_CONV t =
    else raise ERR "VAR_LET_CONV" ""
  end;
 
+(*val t = rhs (concl (SPEC_ALL thm16))
+     val thm17 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm16*)
+
 
 fun ELIM_PAIR_LET_CONV t =
 let
@@ -523,24 +526,23 @@ in
     end
 end;
 
-
+(*val (args,thm) = (args,const_eq_comb) *)
 fun ANFof (args,thm) =
  let val thm1 = Q.AP_TERM `CPS` thm
      val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,(* CPS_REC_INTRO, *)
                                    CPS_ITE_INTRO] thm1
-     val thm2a = REWRITE_RULE [CPS2_def] thm2
      val thm3 = CONV_RULE (DEPTH_CONV (REWR_CONV CPS_SEQ_def ORELSEC
                                        REWR_CONV CPS_PAR_def ORELSEC
-                                       REWR_CONV CPS_ITE_def 
-(* ORELSEC REWR_CONV CPS_REC_def *))) thm2a 
+                                       REWR_CONV CPS_ITE_def
+(* ORELSEC REWR_CONV CPS_REC_def *))) thm2
      val thm4 = CONV_RULE (DEPTH_CONV (REWR_CONV UNCPS)) thm3
      val thm5 = CONV_RULE (LAND_CONV (REWR_CONV CPS_def)) thm4
      val thm6 = CONV_RULE (REPEATC (STRIP_QUANT_CONV (HO_REWR_CONV FUN_EQ_THM)))
                           thm5
-     val thm7 = BETA_RULE thm6
+     val x = mk_var("x",fst (dom_rng (type_of (fst (dest_forall (concl thm6))))))
+     val thm7 = ISPEC (mk_abs(x,x)) thm6
      val thm8 = BETA_RULE thm7
-     val x = mk_var("x",fst (dom_rng (type_of (fst (dest_forall (concl thm8))))))
-     val thm9 = ISPEC (mk_abs(x,x)) thm8
+     val thm9 = BETA_RULE thm8
      val thm10 = SIMP_RULE bool_ss [LET_ID] thm9
      val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10
      val thm12 = PBETA_RULE thm11
@@ -558,6 +560,7 @@ fun ANFof (args,thm) =
 (* to combinator form, then to A-Normal form and add the result to the       *)
 (* environment.                                                              *)
 (*---------------------------------------------------------------------------*)
+
 fun toANF env def = 
  let val (is_recursive,func,args,const_eq_comb) = toComb def
      val anf = STD_BVARS "v" (ANFof (args,const_eq_comb))

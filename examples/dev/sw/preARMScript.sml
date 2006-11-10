@@ -4,21 +4,22 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["numLib", "pred_setSimps", "pred_setTheory",
-     "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory"];
+     "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", "fcpLib", "wordsLib"];
 
 quietdec := false;
 *)
 
 open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory
-     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory;
+     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory
+	  wordsLib;
 
 val _ = new_theory "preARM";
 
 (*----------------------------------------------------------------------------*)
-(* Registers	                                                              *)
+(* Registers	                                                               *)
 (*----------------------------------------------------------------------------*)
 
-val _ = type_abbrev("REGISTER", Type`:num`);
+val _ = type_abbrev("REGISTER", Type`:word4`);
 
 (*----------------------------------------------------------------------------*)
 (* CPSR, In user programs only the top 4 bits of the CPSR are relevant        *)
@@ -109,7 +110,7 @@ val _ = Hol_datatype ` COND = EQ | CS | MI | VS | HI | GE | GT | AL |
 (* Expressions			                                                 *)
 (*-------------------------------------------------------------------------------*)
 
-val _ = type_abbrev("ADDR", Type`:num`);
+val _ = type_abbrev("ADDR", Type`:word30`);
 val _ = type_abbrev("DATA", Type`:word32`);
 val _ = type_abbrev("DISTANCE", Type`:num`);
 
@@ -122,8 +123,8 @@ val _ = Hol_datatype `OFFSET = POS of DISTANCE
 val _ = Hol_datatype `EXP = MEM of num # OFFSET			(* (register, offset) *) 
                   | NCONST of num
 		  | WCONST of word32
-                  | REG of REGISTER
-		  | WREG of REGISTER
+        | REG of num
+		  | WREG of num
              `;
 
 val FP_def =
@@ -153,7 +154,7 @@ val _ = type_abbrev("INST", Type`:OPERATION # (EXP option) # (EXP list) # (OFFSE
 (* State                                                                           *)
 (*---------------------------------------------------------------------------------*)
   
-val _ = type_abbrev("STATE", Type`: ADDR # CPSR # (REGISTER |-> DATA) # (ADDR |-> DATA)`);
+val _ = type_abbrev("STATE", Type`: num # CPSR # (REGISTER |-> DATA) # (ADDR |-> DATA)`);
 
 val FORALL_DSTATE = Q.store_thm
   ("FORALL_DSTATE",
@@ -170,27 +171,29 @@ val FORALL_STATE = Q.store_thm
 (* Read and write registers and memory                                             *)
 (*---------------------------------------------------------------------------------*)
 
+val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr:word30`;
+
 val read_def =
   Define `
     read (regs,mem) (exp:EXP) =
       case exp of
         MEM (r,offset) -> 
 	    (case offset of 
-		  POS k -> mem ' (w2n (regs ' r) + k) ||
-		  NEG k -> mem ' (w2n (regs ' r) - k)
+		  POS k -> mem ' ((ADDR30 (regs ' (n2w r))) + (n2w k)) ||
+		  NEG k -> mem ' ((ADDR30 (regs ' (n2w r))) - (n2w k))
 	    )	||
 	NCONST i -> n2w i     ||
-        WCONST w -> w         ||
-        REG r -> regs ' r
+   WCONST w -> w         ||
+   REG r -> regs ' (n2w:num->word4 r)
 `;
 
 val read_thm = Q.store_thm (
   "read_thm",
-  ` (read (regs,mem) (MEM (r,POS k)) = mem ' (w2n (regs ' r) + k)) /\
-    (read (regs,mem) (MEM (r,NEG k)) = mem ' (w2n (regs ' r) - k)) /\
+  ` (read (regs,mem) (MEM (r,POS k)) = mem ' (ADDR30 (regs ' (n2w r)) + (n2w k))) /\
+    (read (regs,mem) (MEM (r,NEG k)) = mem ' (ADDR30 (regs ' (n2w r)) - (n2w k))) /\
     (read (regs,mem) (NCONST i) = n2w i) /\
     (read (regs,mem) (WCONST w) = w) /\
-    (read (regs,mem) (REG r) = regs ' r) /\
+    (read (regs,mem) (REG r) = regs ' (n2w r)) /\
     (read (regs,mem) (MEM (r,INR)) = ARB)`,
     RW_TAC std_ss [read_def]);
 
@@ -201,20 +204,20 @@ val write_def =
         MEM (r,offset) -> 
 	    (regs,
              (case offset of
-                   POS k -> mem |+ (w2n (regs ' r) + k, v) ||
-                   NEG k -> mem |+ (w2n (regs ' r) - k, v)
+                   POS k -> mem |+ (ADDR30 (regs ' (n2w r)) + (n2w k), v) ||
+                   NEG k -> mem |+ (ADDR30 (regs ' (n2w r)) - (n2w k), v)
              ))   	 ||
-        REG r -> ( regs |+ (r, v),
+        REG r -> ( regs |+ ((n2w:num->REGISTER r), v),
                    mem ) ||
         _ -> (regs, mem)
   `;
 
 val write_thm = Q.store_thm (
   "write_thm",
-  ` (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (w2n (regs ' r) + k, v))) /\
-    (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (w2n (regs ' r) - k, v))) /\
+  ` (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (ADDR30 (regs ' (n2w r)) + (n2w k), v))) /\
+    (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (ADDR30 (regs ' (n2w r)) - (n2w k), v))) /\
     (write (regs,mem) (MEM (r,INR)) v = (regs,ARB)) /\
-    (write (regs,mem) (REG r) v = (regs |+ (r, v), mem))`,
+    (write (regs,mem) (REG r) v = (regs |+ ((n2w r), v), mem))`,
     RW_TAC std_ss [write_def]);                      
 
 (*---------------------------------------------------------------------------------*)
@@ -257,7 +260,7 @@ val decode_op_def =
                     ||
                         WREG r ->
 			    (cpsr, write (FST (FOLDL (\(s1,i) reg. (write s1 reg (read s (MEM(r,POS(i+1)))), i+1)) (s,0) src))
-						 (REG r) (read s (REG r) + n2w (LENGTH src)))
+						 (REG r) (read s (REG r) + n2w (4*LENGTH src)))
 		   )
 	      ||
 
@@ -272,7 +275,7 @@ val decode_op_def =
                         WREG r ->
                                 (cpsr,
 				 write (FST (FOLDL (\(s1,i) reg. (write s1 (MEM(r,NEG i)) (read s reg), i+1)) (s,0) (REVERSE src)))
-					(REG r) (read s (REG r) - n2w (LENGTH src)))
+					(REG r) (read s (REG r) - n2w (4*LENGTH src)))
 		   )
 	      ||
           ADD -> (cpsr, (write s (THE dst) (read s (HD src) + read s (HD (TL (src))))))
@@ -388,7 +391,7 @@ val decode_op_thm = Q.store_thm
                                 (write s1 reg
                                    (read s (MEM (r,POS (i + 1)))),i + 1))
                                (s,0) src)) (REG r)
-                       	     (read s (REG r) + n2w (LENGTH src)))) /\
+                       	     (read s (REG r) + n2w (4*LENGTH src)))) /\
   (decode_op (pc,cpsr,s) (STMFD,SOME (REG r),src,jump) =
                   (cpsr, FST (FOLDL
                           (\(s1,i) reg.
@@ -400,7 +403,7 @@ val decode_op_thm = Q.store_thm
                              (\(s1,i) reg.
                                 (write s1 (MEM (r,NEG i)) (read s reg),
                                  i + 1)) (s,0) (REVERSE src))) (REG r)
-                       (read s (REG r) - n2w (LENGTH src)))) /\
+                       (read s (REG r) - n2w (4*LENGTH src)))) /\
   (decode_op (pc,cpsr,s) (MRS,SOME dst,src,jump) = (cpsr,write s dst cpsr)) /\
   (decode_op (pc,cpsr,s) (MSR,NONE,src,jump) = (read s (HD src),s)) /\
   (decode_op (pc,cpsr,s) (B,NONE,src,jump) = (cpsr,s)) /\
@@ -1196,15 +1199,228 @@ val FUPDATE_REFL = Q.store_thm
 (* Sort in ascending order                                                                              *)
 val FUPDATE_LT_COMMUTES = Q.store_thm (
   "FUPDATE_LT_COMMUTES",
-  ` !f a b c d. c < a ==> (f |+ (a:num, b:word32) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
-    RW_TAC arith_ss [FUPDATE_COMMUTES]
+  `!f a b c d. c <+ a ==> (f |+ (a, b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+    RW_TAC arith_ss [FUPDATE_COMMUTES, WORD_LOWER_NOT_EQ]
     );
 
 (* Sort in descending order                                                                             *)
 val FUPDATE_GT_COMMUTES = Q.store_thm (
   "FUPDATE_GT_COMMUTES",
-  ` !f a b c d. c > a ==> (f |+ (a:ADDR,b:'b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
-    RW_TAC arith_ss [FUPDATE_COMMUTES]
+  `!f a b c d. c >+ a ==> (f |+ (a,b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+    	SIMP_TAC std_ss [WORD_HI] THEN
+		REPEAT STRIP_TAC THEN
+		`~(w2n c = w2n a)` by DECIDE_TAC THEN
+		FULL_SIMP_TAC std_ss [w2n_11, FUPDATE_COMMUTES]
     );
+
+val word4_distinct = let		
+		fun mk_word_disj_term n m =
+			let
+				val n_term = mk_comb (Term `n2w:num->word4`, term_of_int n);
+				val m_term = mk_comb (Term `n2w:num->word4`, term_of_int m);			
+			in
+				mk_neg (mk_eq (n_term, m_term))
+			end;
+				
+		fun my_mk_conj (t1, t2) = if t1 = T then t2 else
+									     if t2 = T then t1 else
+									     mk_conj (t1, t2);
+
+		fun mk_all_disj_term t n m =
+			let
+				val current_term = if ((n = m) orelse (n = 0) orelse (m = 0)) then T else mk_word_disj_term (n-1) (m-1);
+				val t' = my_mk_conj (current_term, t);
+			in
+				if (n = 0) then t' else
+				if (m = 0) then mk_all_disj_term t' (n-1) (n-1) else
+				mk_all_disj_term t' n (m-1)
+			end;
+	
+		val term = mk_all_disj_term T 16 16;
+ 		val thm = prove (term, WORDS_TAC);
+	in
+		CONJ thm (GSYM thm)
+	end;
+val _ = save_thm ("word4_distinct", word4_distinct);
+
+val fupdate_lt_commutes_word4 = let		
+		val fupdate_thm = let
+			val thm = (INST_TYPE [alpha |-> Type `:word4`] FUPDATE_COMMUTES);
+			val (varl, _) = strip_forall (concl thm);
+			val thm = SPEC_ALL thm;
+			val thm = GEN (el 5 varl) thm;
+			val thm = GEN (el 3 varl) thm;
+			val thm = GEN (el 1 varl) thm;
+			val thm = GEN (el 4 varl) thm;
+			val thm = GEN (el 2 varl) thm;
+			in thm end;
+			
+		fun mk_fupdate_thm n m =
+			let
+				val n_term = mk_comb (Term `n2w:num->word4`, term_of_int n);
+				val m_term = mk_comb (Term `n2w:num->word4`, term_of_int m);
+			in
+				SPECL [n_term, m_term] fupdate_thm
+			end;
+		
+	   val (n, m) = (2, 1)
+		val t = TRUTH
+		fun mk_all t n m =
+			let
+				val current_thm = if ((n = m) orelse (n = 1) orelse (m = 0)) then TRUTH else mk_fupdate_thm (n-1) (m-1);
+				val t' = CONJ current_thm t;
+			in
+				if ((n = 0) orelse (n = 1)) then t' else
+				if (m = 0) then mk_all t' (n-1) (n-1) else
+				mk_all t' n (m-1)
+			end;
+	
+		val thm = mk_all TRUTH 16 16;
+		val thm' = REWRITE_RULE [word4_distinct] thm
+	in
+ 		thm'
+	end;
+
+val _ = save_thm ("fupdate_lt_commutes_word4", fupdate_lt_commutes_word4);
+
+
+
+
+val ADD_DIV = prove (
+``!x:num y:num n:num.
+(0 < n) ==>
+((x + y) DIV n =
+ (x + (y MOD n)) DIV n + y DIV n)``,
+
+REPEAT STRIP_TAC THEN
+`(x + y) DIV n = (((y DIV n) * n + (x + (y MOD n))) DIV n)` by METIS_TAC [DIVISION, ADD_COMM, ADD_ASSOC] THEN
+POP_ASSUM (fn thm => ONCE_REWRITE_TAC[thm]) THEN
+ASM_SIMP_TAC arith_ss [ADD_DIV_ADD_DIV])
+
+
+
+
+val SUM_FUN_RANGE = prove (
+``!n f. SUM n f = SUM n (\m. if (m < n) then f m else 0)``,
+
+REWRITE_TAC [sum_numTheory.SUM] THEN
+REPEAT GEN_TAC THEN
+MATCH_MP_TAC sum_numTheory.GSUM_FUN_EQUAL THEN
+SIMP_TAC std_ss [])
+
+
+val w2n_lsr = store_thm ("w2n_lsr",
+``(w2n (w >>> m)) = (w2n w DIV 2**m)``,
+
+Induct_on `m` THENL [
+	SIMP_TAC std_ss [SHIFT_ZERO, EXP],
+	
+	SIMP_TAC std_ss [EXP] THEN
+	ONCE_REWRITE_TAC[MULT_SYM] THEN
+	SIMP_TAC std_ss [GSYM DIV_DIV_DIV_MULT] THEN
+	POP_ASSUM (fn thm => REWRITE_TAC [GSYM thm]) THEN
+	`(w >>> SUC m) = ((w >>> m) >>> (SUC 0))` by ALL_TAC THEN1 (
+		REWRITE_TAC [LSR_ADD, ADD_CLAUSES] 
+	) THEN
+	POP_ASSUM (fn thm => REWRITE_TAC [thm]) THEN
+	Q.ABBREV_TAC `v = w >>> m` THEN
+	POP_ASSUM (fn thm => ALL_TAC) THEN
+
+	FULL_SIMP_TAC std_ss [word_lsr_def, w2n_def] THEN
+	`0 < dimindex (:'a)` by REWRITE_TAC [DIMINDEX_GT_0] THEN
+	Q.ABBREV_TAC `a = dimindex (:'a)` THEN
+	`a <= dimindex (:'a)` by ASM_SIMP_TAC arith_ss [] THEN
+	Q.PAT_ASSUM `Abbrev x` (fn thm => ALL_TAC) THEN
+	Induct_on `a` THENL [
+		SIMP_TAC std_ss [],
+
+		Cases_on `a` THENL [
+			FULL_SIMP_TAC arith_ss [sum_numTheory.SUM_def, fcpTheory.FCP_BETA, DIMINDEX_GT_0, bitTheory.SBIT_def, COND_RAND, COND_RATOR],
+
+			REPEAT STRIP_TAC THEN
+			FULL_SIMP_TAC arith_ss [] THEN			
+			ONCE_REWRITE_TAC [sum_numTheory.SUM_def] THEN
+			SIMP_TAC std_ss [] THEN
+			`!x. ((x + SBIT (v %% SUC n) (SUC n)) DIV 2) =
+				  (x DIV 2 + SBIT (v %% SUC n) n)` by ALL_TAC THEN1 (
+				ONCE_REWRITE_TAC [ADD_COMM] THEN
+				Tactical.REVERSE (`SBIT (v %% SUC n) (SUC n) = SBIT (v %% SUC n) n * 2` by ALL_TAC) THEN1 (
+					ASM_SIMP_TAC std_ss [ADD_DIV_ADD_DIV] 
+				) THEN
+				SIMP_TAC arith_ss [bitTheory.SBIT_def, COND_RATOR, COND_RAND, EXP]		
+			) THEN
+			POP_ASSUM (fn thm => REWRITE_TAC[thm]) THEN
+			Q.PAT_ASSUM `a = b` (fn thm => REWRITE_TAC[GSYM thm]) THEN
+			ONCE_REWRITE_TAC[SUM_FUN_RANGE] THEN
+			FULL_SIMP_TAC arith_ss [fcpTheory.FCP_BETA, ADD_CLAUSES] THEN
+			SIMP_TAC std_ss [sum_numTheory.SUM_def] THEN
+			ONCE_REWRITE_TAC[SUM_FUN_RANGE] THEN
+			SIMP_TAC arith_ss [bitTheory.SBIT_def, SUC_ONE_ADD]
+		]
+	]
+]);
+
+
+
+
+val ADDR30_ADD_CONST = store_thm ("ADDR30_ADD_CONST",
+``ADDR30(x + n2w y) = ADDR30 (x + (n2w (y MOD 4))) + (ADDR30 (n2w y))``,
+	ONCE_REWRITE_TAC[GSYM w2n_11] THEN
+	REWRITE_TAC [ADDR30_def] THEN		
+	WORDS_TAC THEN
+	SIMP_TAC std_ss [SIMP_RULE std_ss [dimindex_32] (INST_TYPE [alpha |-> Type `:i32`] (GSYM word_lsr_n2w))] THEN
+	SIMP_TAC arith_ss [w2n_lsr, bitTheory.BITS_def, MOD_2EXP_def, DIV_2EXP_def, 
+		word_add_def, w2n_n2w, dimword_32] THEN
+	`!x n m. ((0 < n) /\ (n <= m)) ==> ((x MOD n MOD m) = x MOD n)` by ALL_TAC THEN1 (
+		REPEAT STRIP_TAC THEN
+		MATCH_MP_TAC LESS_MOD THEN
+		`x MOD n < n` by ASM_SIMP_TAC arith_ss [DIVISION] THEN
+		ASM_SIMP_TAC arith_ss []
+	) THEN
+	`(w2n x + y MOD 4294967296) MOD 4294967296 =
+	(w2n x + y) MOD 4294967296` by ALL_TAC THEN1 (
+		`w2n x = w2n x MOD 4294967296` by ALL_TAC THEN1 (
+			MATCH_MP_TAC (GSYM LESS_MOD) THEN
+			SIMP_TAC std_ss [w2n_lt, GSYM dimword_32]
+		) THEN
+		`0 < 4294967296` by DECIDE_TAC THEN
+		PROVE_TAC[MOD_PLUS]
+	) THEN
+	ASM_SIMP_TAC std_ss [] THEN
+	`4294967296 = 4 * 1073741824` by SIMP_TAC arith_ss [] THEN
+	ASM_REWRITE_TAC[] THEN
+	SIMP_TAC std_ss [GSYM DIV_MOD_MOD_DIV] THEN
+	SIMP_TAC std_ss [MOD_PLUS] THEN
+	`0 < 4` by DECIDE_TAC THEN
+	METIS_TAC[ADD_DIV]);
+
+
+val ADDR30_CONST_EVAL = store_thm ("ADDR30_CONST_EVAL",
+``ADDR30(n2w y) = n2w (y DIV 4)``,
+	REWRITE_TAC [ADDR30_def] THEN		
+	WORDS_TAC THEN
+	SIMP_TAC std_ss [bitTheory.BITS_def, DIV_2EXP_def, MOD_2EXP_def] THEN
+	`!x n m. ((0 < n) /\ (n <= m)) ==> ((x MOD n MOD m) = x MOD n)` by ALL_TAC THEN1 (
+		REPEAT STRIP_TAC THEN
+		MATCH_MP_TAC LESS_MOD THEN
+		`x MOD n < n` by ASM_SIMP_TAC arith_ss [DIVISION] THEN
+		ASM_SIMP_TAC arith_ss []
+	) THEN
+	ASM_SIMP_TAC std_ss [])
+
+
+val ADDR30_ADD_CONST_MOD = store_thm ("ADDR30_ADD_CONST_MOD",
+``!x y. (y MOD 4 = 0) ==> (ADDR30(x + n2w y) = ADDR30 x + (n2w (y DIV 4)))``,
+	REPEAT STRIP_TAC THEN
+	ONCE_ASM_REWRITE_TAC[ADDR30_ADD_CONST] THEN
+	ASM_REWRITE_TAC[WORD_ADD_0, ADDR30_CONST_EVAL]);
+
+
+val ADDR30_ADD_CONST_MULT = store_thm ("ADDR30_ADD_CONST_MULT",
+``!x y. (ADDR30(x + n2w (y*4)) = ADDR30 x + (n2w y))``,
+	REPEAT STRIP_TAC THEN
+	ONCE_ASM_REWRITE_TAC[ADDR30_ADD_CONST] THEN
+	ASM_REWRITE_TAC[ADDR30_CONST_EVAL] THEN
+	SIMP_TAC arith_ss [MOD_EQ_0, MULT_DIV, WORD_ADD_0]);
 
 val _ = export_theory();
