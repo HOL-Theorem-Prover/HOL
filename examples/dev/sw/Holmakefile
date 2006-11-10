@@ -37,7 +37,7 @@ IR.uo: IR.sml Tree.uo
 CFG.uo: CFG.sml Assem.uo gr_t.uo Tree.uo IR.uo
 	HOLMOSMLC -c -toplevel Assem.ui gr_t.ui Tree.ui Table.ui Symbol.ui IR.ui CFG.sml
 
-regAllocation.uo: regAllocation.sml Stack.uo
+regAllocation.uo: regAllocation.sml Stack.uo Assem.uo CFG.uo gr_t.uo
 	HOLMOSMLC -c -toplevel gr_t.ui Temp.ui Stack.ui Assem.ui CFG.ui Table.ui regAllocation.sml
 
 preARMSyntax.uo: preARMSyntax.sml preARMTheory.uo
@@ -46,10 +46,10 @@ preARMSyntax.uo: preARMSyntax.sml preARMTheory.uo
 IRSyntax.uo: IRSyntax.sml ILTheory.uo regAllocation.uo
 	HOLMOSMLC -c -toplevel Table.ui gr_t.ui ANF.ui Assem.ui Symbol.ui regAllocation.ui CFG.ui IRSyntax.sml
 
-annotatedIR.uo: annotatedIR.sml ILTheory.uo regAllocation.uo
+annotatedIR.uo: annotatedIR.sml ILTheory.uo regAllocation.uo Assem.uo
 	HOLMOSMLC -c -toplevel Table.ui gr_t.ui ANF.ui Assem.ui Symbol.ui regAllocation.ui CFG.ui IRSyntax.ui annotatedIR.sml
 
-declFuncs.uo: declFuncs.sml
+declFuncs.uo: declFuncs.sml IRSyntax.uo annotatedIR.uo Table.uo
 	HOLMOSMLC -c -toplevel Table.ui IRSyntax.ui annotatedIR.ui declFuncs.sml
 
 funCall.uo: funCall.sml
