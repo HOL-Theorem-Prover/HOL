@@ -24,6 +24,7 @@
 			Added typing judgements for the new acl2 functions *)
 (*	22/09/2006:	Definitions now checked one by one to avoid 'couldn't protect' error
 			String and character conversions implemented *)
+(*	11/11/2006:	Added destructor/constructor theorems for NAT *)
 
 (*****************************************************************************)
 (* Load files for interactive sessions                                       *)
@@ -159,6 +160,27 @@ val RAT_CONG_TAC =
 		(REWRITE_RULE [markerTheory.Abbrev_def] th) handle e => ALL_TAC) THEN
 	RULE_ASSUM_TAC (REWRITE_RULE [RAT_EQ]);
 
+val proves = ref ([]:(int * term) list);
+val stores = ref ([]:(int * string) list);
+
+fun prove (term,tactic) = 
+let	val start = Time.now();
+	val proof = Tactical.prove(term,tactic);
+	val end_t = Time.now();
+	val diff = Time.toMilliseconds (Time.-(end_t,start))
+in
+	(proves := (diff,term) :: (!proves) ; proof)
+end;
+
+fun store_thm (string,term,tactic) = 
+let	val start = Time.now();
+	val proof = Tactical.store_thm(string,term,tactic);
+	val end_t = Time.now();
+	val diff = Time.toMilliseconds (Time.-(end_t,start))
+in
+	(stores := (diff,string) :: (!stores) ; proof)
+end;
+
 (*****************************************************************************)
 (* IS_INT_EXISTS :                                                           *)
 (*                                                                           *)
@@ -237,8 +259,10 @@ val TRUTH_REWRITES = save_thm("TRUTH_REWRITES",LIST_CONJ
 val ANDL_JUDGEMENT = prove(``(|= andl []) /\ !a b. (|= a) /\ (|= andl b) ==> (|= andl (a::b))``,
 	STRIP_TAC THENL [ALL_TAC,GEN_TAC THEN Induct] THEN RW_TAC std_ss [andl_def,TRUTH_REWRITES,ite_def]);
 
-val ANDL_REWRITE = prove(``!a b. (|= andl []) /\ ((|= andl (a::b)) = (|= a) /\ (|= andl b))``,
+val ANDL_REWRITE = store_thm("ANDL_REWRITE",``!a b. (|= andl []) /\ ((|= andl (a::b)) = (|= a) /\ (|= andl b))``,
 	GEN_TAC THEN Cases THEN RW_TAC std_ss [andl_def,TRUTH_REWRITES,ite_def]);
+
+val NOT_REWRITE = store_thm("NOT_REWRITE",``(|= not a) = ~|= a``,RW_TAC std_ss [not_def,TRUTH_REWRITES,ite_def]);
 
 (*****************************************************************************)
 (* Judgement theorems                                                        *)
@@ -514,7 +538,7 @@ val NATP_ADD = prove(``!a b. (|= natp a) /\ (|= natp b) ==> |= natp (add a b)``,
 val NATP_MULT = prove(``!a b. (|= natp a) /\ (|= natp b) ==> |= natp (mult a b)``,
 	REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN RW_TAC std_ss [GSYM NAT_MULT,NATP_NAT]);
 
-val NATP_PRE = prove(``!a. (|= natp a) /\ ~(a = nat 0) ==> |= natp (add a (unary_minus (nat 1)))``,
+val NATP_PRE = prove(``!a. (|= natp a) ==> ~(a = nat 0) ==> |= natp (add a (unary_minus (nat 1)))``,
 	REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN FULL_SIMP_TAC std_ss [GSYM NAT_PRE,NAT_CONG,NATP_NAT]);
 
 val NATP_NFIX = prove(``!a. |= natp (nfix a)``,
@@ -544,6 +568,26 @@ val NATP_UMINUS_ADD = prove(``!a. (|= natp a) ==> (add (add a (unary_minus (nat 
 	RW_TAC std_ss [natp_def,nat_def,GSYM INT_ADD,GSYM INT_UNARY_MINUS,ite_def,TRUTH_REWRITES,GSYM INT_LT,GSYM INT_EQUAL,GSYM int_sub,integerTheory.INT_SUB,
 		ARITH_PROVE ``~(& a = 0i) ==> 1n <= a``,NUM_OF_INT] THEN
 	AP_TERM_TAC THEN ARITH_TAC);
+
+val NAT_NCHOTOMY = store_thm("NAT_NCHOTOMY",
+	``(|= natp n) ==> ((?n'. sexp_to_nat n = SUC n') = ~(n = nat 0)) /\ ((sexp_to_nat n = 0) = (n = nat 0))``,
+	STRIP_TAC THEN CHOOSEP_TAC THEN Cases_on `n'` THEN 
+	RW_TAC arith_ss [SEXP_TO_NAT_OF_NAT,NAT_CONG]);
+
+val NAT_NCHOT_EQ = store_thm("NAT_NCHOT_EQ",
+	``~(n = nat 0) = |= not (equal n (nat 0))``,RW_TAC std_ss [equal_def,TRUTH_REWRITES,ite_def,not_def]);
+
+val NAT_DESTRUCT = store_thm("NAT_DESTRUCT",
+	``!a. (x = add (nat a) (nat b)) ==> 
+		(add x (unary_minus (nat a)) = nat b) /\ (add x (unary_minus (nat b)) = nat a)``,
+	REPEAT STRIP_TAC THEN 
+	`|= natp x` by METIS_TAC [NATP_ADD,NATP_NAT] THEN
+	CHOOSEP_TAC THEN
+	RW_TAC intLib.int_ss [GSYM INT_ADD,GSYM INT_UNARY_MINUS,GSYM int_sub,nat_def,integerTheory.INT_SUB,
+		integerTheory.INT_ADD]);
+	
+val NAT_CONSTRUCTORS = store_thm("NAT_CONSTRUCTORS",
+	``(nat 0 = nat 0) /\ (nat (SUC a) = add (nat a) (nat 1))``,RW_TAC std_ss [NAT_SUC]);
 
 (*****************************************************************************)
 (* Rational theorems:                                                        *)
@@ -717,8 +761,11 @@ val STRING_EXPLODE = prove(``list chr (EXPLODE s) = coerce (str s) (sym "COMMON-
 	RW_TAC std_ss [coerce_def,coerce_string_to_list_def,list_rewrite]);
 
 val STRING_IMPLODE = prove(``str (IMPLODE l) = coerce (list chr l) (sym "COMMON-LISP" "STRING")``,
-	Induct_on `l` THEN RW_TAC std_ss [coerce_def,coerce_list_to_string_def,list_rewrite,list_def,nil_def,stringTheory.IMPLODE_EQNS,make_character_list_def] THEN
-	Cases_on `list chr l` THEN REPEAT (POP_ASSUM MP_TAC) THEN Cases_on `l` THEN RW_TAC std_ss [coerce_def,list_def,nil_def,stringTheory.IMPLODE_EQNS,make_character_list_def,coerce_list_to_string_def]);
+	Induct_on `l` THEN RW_TAC std_ss [coerce_def,coerce_list_to_string_def,list_rewrite,list_def,
+		nil_def,stringTheory.IMPLODE_EQNS,make_character_list_def] THEN
+	Cases_on `list chr l` THEN POP_ASSUM MP_TAC THEN Cases_on `l` THEN 
+	REPEAT (RW_TAC std_ss [coerce_def,list_def,nil_def,stringTheory.IMPLODE_EQNS,
+		make_character_list_def,coerce_list_to_string_def] THEN REPEAT (POP_ASSUM MP_TAC)));
 
 val coerce_rewrite = CONJ (GSYM STRING_EXPLODE) (GSYM STRING_IMPLODE);
 
@@ -902,32 +949,38 @@ val acl2_expt_num = prove(``|= acl2_numberp (acl2_expt r i)``,
 	ONCE_REWRITE_TAC [acl2_expt_def] THEN 
 	RW_TAC std_ss [ite_def,TRUTH_REWRITES,ACL2_NUMBERP_MULT,ACL2_NUMBERP_NUM,ACL2_NUMBERP_INT]);
 
+val mult_l1 = prove(``mult (num com_1) (reciprocal (num a)) = reciprocal (num a)``,
+	Cases_on `a` THEN RW_TAC std_ss [mult_def,reciprocal_def,com_1_def,com_0_def,int_def,rat_1_def,
+			GSYM rat_1,rat_0_def,GSYM rat_0,cpx_def,sexpTheory.rat_def,GSYM frac_0_def,
+			GSYM frac_1_def,COMPLEX_RECIPROCAL_def,COMPLEX_MULT_def] THEN
+	FULL_SIMP_TAC std_ss [RAT_SUB_RID,RAT_MUL_RZERO,RAT_ADD_RID,RAT_MUL_LZERO,RAT_MUL_LID,RAT_ADD_LID]);
+
 val acl2_expt_correct = prove(``expt r i = sexp_to_com (acl2_expt (num r) (int i))``,
+	RW_TAC std_ss [prove(``(|= acl2_numberp y) ==> ((x = sexp_to_com y) = (num x = y))``,
+			Cases_on `y` THEN RW_TAC std_ss [acl2_numberp_def,TRUTH_REWRITES,sexp_to_com_def]),
+			acl2_expt_num] THEN
 	completeInduct_on `Num (ABS i)` THEN
 	RW_TAC std_ss [] THEN
 	ONCE_REWRITE_TAC [expt_def,acl2_expt_def] THEN
-	RW_TAC int_ss [zip_def,common_lisp_equal_def,GSYM int_def,INTEGERP_INT,FIX_NUM,
-			GSYM INT_EQUAL,INT_IFIX,GSYM INT_ADD,GSYM INT_SUB,ite_def,TRUTH_REWRITES,
-			SEXP_TO_COM_OF_COM,GSYM INT_LT,GSYM COM_EQUAL,
-			CONJUNCT2 (GSYM TO_INT_ZERO),CONJUNCT2 (GSYM TO_INT_ZERO)] THEN
-	FULL_SIMP_TAC int_ss [nat_def,TRUTH_REWRITES,equal_def,TO_INT_ZERO,SEXP_TO_COM_INT,INT_CONG] THENL [
-		PAT_ASSUM ``!a.P`` (STRIP_ASSUME_TAC o SPEC ``Num (ABS (i - 1))``) THEN
-		SUBGOAL_THEN ``Num (ABS (i - 1)) < Num (ABS i)`` (fn th => FULL_SIMP_TAC std_ss [th]),
-		PAT_ASSUM ``!a.P`` (STRIP_ASSUME_TAC o SPEC ``Num (ABS (i + 1))``) THEN
-		SUBGOAL_THEN ``Num (ABS (i + 1)) < Num (ABS i)`` (fn th => FULL_SIMP_TAC std_ss [th])] THEN
-	TRY (	ONCE_REWRITE_TAC [GSYM INT_LT_CALCULATE] THEN
-		RW_TAC std_ss [INT_ABS] THEN 
-		FULL_SIMP_TAC std_ss [snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_NOT_LT,GSYM INT_NEG_GT0,INT_LT_IMP_LE,INT_LT_NEG,GSYM INT_NEG_GE0,INT_NEGNEG] THEN 
-		ARITH_TAC) THENL [
-		SUBGOAL_THEN ``?x. acl2_expt (num r) (int (i - 1)) = num x`` (CHOOSE_THEN SUBST_ALL_TAC) THEN1
-			(Q.EXISTS_TAC `sexp_to_com (acl2_expt (num r) (int (i - 1)))` THEN RW_TAC std_ss [acl2_expt_num,NUM_OF_SEXP_TO_COM]),
-		SUBGOAL_THEN ``?x. acl2_expt (num r) (int (i + 1)) = num x`` (CHOOSE_THEN SUBST_ALL_TAC) THEN1
-			(Q.EXISTS_TAC `sexp_to_com (acl2_expt (num r) (int (i + 1)))` THEN RW_TAC std_ss [acl2_expt_num,NUM_OF_SEXP_TO_COM])] THEN
-	ONCE_REWRITE_TAC [prove(``mult a b = mult b a``,Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [mult_def] THEN METIS_TAC [COMPLEX_MULT_COMM])] THEN
-	RW_TAC std_ss [GSYM COM_MULT,SEXP_TO_COM_OF_COM,GSYM COM_DIV,COMPLEX_DIV_def] THEN
-	METIS_TAC [COMPLEX_MULT_RID,COMPLEX_MULT_COMM,COMPLEX_MULT_ASSOC]);
-
-
+	RW_TAC int_ss [zip_def,GSYM int_def,GSYM INT_EQUAL,INTEGERP_INT,ite_def,TRUTH_REWRITES,
+			GSYM INT_ADD,TO_INT_ZERO,TO_INT_ONE,GSYM INT_SUB,GSYM INT_LT,fix_def,
+			ACL2_NUMBERP_NUM,SEXP_TO_COM_INT,
+		prove(``(|= equal (num a) (int x)) = (num a = int x)``,RW_TAC std_ss [equal_def,TRUTH_REWRITES]),
+		prove(``(num r = int 0) = (r = com_0)``,
+			RW_TAC std_ss [int_def,cpx_def,sexpTheory.rat_def,com_0_def,rat_0_def,frac_0_def])] THENL [
+		PAT_ASSUM ``!m.P`` (STRIP_ASSUME_TAC o SPEC ``Num (ABS (i - 1))``) THEN
+		SUBGOAL_THEN ``Num (ABS (i - 1)) < Num (ABS i) = T`` SUBST_ALL_TAC,
+		PAT_ASSUM ``!m.P`` (STRIP_ASSUME_TAC o SPEC ``Num (ABS (i + 1))``) THEN
+		SUBGOAL_THEN ``Num (ABS (i + 1)) < Num (ABS i) = T`` SUBST_ALL_TAC] THEN
+	RW_TAC std_ss [mult_l1,COM_DIV,COM_MULT] THEN
+	POP_ASSUM (K ALL_TAC) THEN
+	FULL_SIMP_TAC int_ss [INT_NOT_LT,INT_ABS_CALCULATE_POS,
+		ARITH_PROVE ``i <= 0 /\ ~(i = 0) ==> (ABS (i + 1) = ~(i + 1)) /\ (ABS i = ~i)``,
+		ARITH_PROVE ``0 < i ==> (ABS (i - 1) = i - 1)``] THEN
+	ONCE_REWRITE_TAC [GSYM INT_LT_CALCULATE] THEN
+	RW_TAC std_ss [snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),ARITH_PROVE ``0 < i ==> 0 <= i /\ 0 <= i - 1i``,
+			ARITH_PROVE ``i <= 0 /\ ~(i = 0) ==> 0 <= ~i /\ 0 <= ~(i + 1i)``] THEN
+	ARITH_TAC);
 
 val INT_EXP = prove(``int (a ** b) = acl2_expt (int a) (nat b)``,
 	Induct_on `b` THEN ONCE_REWRITE_TAC [acl2_expt_def] THEN
@@ -984,27 +1037,34 @@ val (acl2_nniq_def,acl2_nniq_ind) = (REWRITE_RULE [GSYM ite_def] ## I)
 		INT_LT_IMP_LE,INT_LT_NEG,GSYM INT_NEG_GE0,INT_NEGNEG] THEN 
 	ARITH_TAC));
 
+val acl2_nniq_int_lem = prove(``!i j. (|= integerp i) /\ (|= integerp j) ==> |= integerp (acl2_nniq i j)``,
+	REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN 
+	FULL_SIMP_TAC int_ss [INTEGERP_INT] THEN completeInduct_on `Num (ABS i')` THEN
+	Cases_on `j' < 0` THEN ONCE_REWRITE_TAC [acl2_nniq_def] THEN 
+	RW_TAC std_ss [ite_def,TRUTH_REWRITES,INTEGERP_INT,GSYM INT_SUB,GSYM INT_LT,INT_IFIX,
+		GSYM INT_EQUAL,nfix_def,ANDL_REWRITE,nat_def,GSYM BOOL_NOT] THEN
+	PAT_ASSUM ``!m.P`` (STRIP_ASSUME_TAC o SPEC ``Num (ABS (i' - j':int))``) THEN
+	SUBGOAL_THEN ``Num (ABS (i' - j')) < Num (ABS i') = T`` SUBST_ALL_TAC THEN1
+		(FULL_SIMP_TAC int_ss [integerTheory.INT_ABS,INT_NOT_LT] THEN RW_TAC int_ss [] THEN
+		ONCE_REWRITE_TAC [GSYM integerTheory.INT_LT_CALCULATE] THEN 
+		FULL_SIMP_TAC std_ss [INT_NOT_LT,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM))] THEN ARITH_TAC) THEN
+	MATCH_MP_TAC INTEGERP_ADD THEN
+	RW_TAC std_ss [INTEGERP_INT]);
 
 val acl2_nniq_int = prove(``!i j. |= integerp (acl2_nniq i j)``,
-	REPEAT GEN_TAC THEN completeInduct_on `Num (ABS (sexp_to_int i))` THEN
-	ONCE_REWRITE_TAC [acl2_nniq_def] THEN 
-	RW_TAC std_ss [ite_def,TRUTH_REWRITES,INTEGERP_INT,ifix_def,nfix_def,nat_def,ANDL_REWRITE] THEN
-	REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC std_ss [TRUTH_REWRITES,GSYM INT_EQUAL,GSYM INT_LT,GSYM BOOL_NOT] THEN 
-	FULL_SIMP_TAC std_ss [] THEN CHOOSEP_TAC THEN 
-	FULL_SIMP_TAC int_ss [NATP_NAT,INTEGERP_INT,SEXP_TO_INT_OF_INT,TRUTH_REWRITES,nat_def,
-		GSYM INT_EQUAL,GSYM INT_LT,GSYM INT_SUB,GSYM BOOL_NOT] THEN
-	MATCH_MP_TAC INTEGERP_ADD THEN PAT_ASSUM ``!m.P`` (STRIP_ASSUME_TAC o SPEC ``Num (ABS (i' - j'))``) THEN
-	(SUBGOAL_THEN ``Num (ABS (i' - j')) < Num (ABS i')`` (fn th => FULL_SIMP_TAC std_ss [th]) THEN1
-		(ONCE_REWRITE_TAC [GSYM INT_LT_CALCULATE] THEN
-		RW_TAC std_ss [INT_ABS] THEN 
-		FULL_SIMP_TAC std_ss [snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_NOT_LT,GSYM INT_NEG_GT0,
-			INT_LT_IMP_LE,INT_LT_NEG,GSYM INT_NEG_GE0,INT_NEGNEG] THEN 
-		ARITH_TAC)) THEN
-	FULL_SIMP_TAC int_ss [INTEGERP_INT,INT_NOT_LT] THEN
-	METIS_TAC [INT_LE_ANTISYM,SEXP_TO_INT_OF_INT,INTEGERP_ADD,INTEGERP_INT]);
+	REPEAT STRIP_TAC THEN 
+	Cases_on `(|= integerp i)` THEN Cases_on `(|= integerp j)` THEN1
+		(MATCH_MP_TAC acl2_nniq_int_lem THEN CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC) THEN
+	CHOOSEP_TAC THEN ONCE_REWRITE_TAC [acl2_nniq_def] THEN
+	FULL_SIMP_TAC std_ss [] THEN 
+	RW_TAC std_ss [INTEGERP_INT,equal_def,ifix_def,ANDL_REWRITE,ite_def,TRUTH_REWRITES,nfix_def,nat_def,
+		GSYM INT_LT,GSYM BOOL_NOT,INT_NOT_LT] THEN
+	`(j' = 0) \/ ~(0 <= j')` by ARITH_TAC THEN FULL_SIMP_TAC int_ss []);
+
 
 val acl2_nniq_add = prove(``!i j. sexp_to_int (add (int a) (acl2_nniq i j)) = a + sexp_to_int (acl2_nniq i j)``,
-	REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (SPEC_ALL acl2_nniq_int) THEN CHOOSEP_TAC THEN RW_TAC std_ss [GSYM INT_ADD,SEXP_TO_INT_OF_INT]);
+	REPEAT STRIP_TAC THEN STRIP_ASSUME_TAC (SPEC_ALL acl2_nniq_int) THEN CHOOSEP_TAC THEN 
+	RW_TAC std_ss [GSYM INT_ADD,SEXP_TO_INT_OF_INT]);
 
 val acl2_nniq_correct = prove(``nniq a b = sexp_to_int (acl2_nniq (int a) (int b))``,
 	completeInduct_on `Num (ABS a)` THEN
@@ -1089,15 +1149,12 @@ val reduced_dnm_pos = prove(``0 < reduced_dnm x``,
 	FULL_SIMP_TAC arith_ss [num_nz,gcdTheory.GCD_EQ_0,DECIDE ``~(0 < a) = (a = 0n)``,FRAC_DNMPOS,X_LT_DIV,gcd_less_eq,DECIDE ``~(a = 0n) ==> 0 < a``]);
 
 val rat_of_int_div_pos1 = prove(``0 < b /\ 0 <= a ==> (rat_of_int a / rat_of_int b = abs_rat (abs_frac (a,b)))``,
-	REPEAT STRIP_TAC THEN
-	`~(& (Num (ABS b)) = 0i)` by 
-		(RW_TAC int_ss [INT_ABS] THEN FIRST [ARITH_TAC,METIS_TAC [INT_OF_NUM,INT_LT_IMP_LE,INT_LT_IMP_NE]]) THEN
-	`~(frac_nmr (abs_frac (& (Num (ABS b)),1)) = 0)` by RW_TAC int_ss [NMR] THEN
-	RW_TAC int_ss [rat_of_int_def,RAT_DIV_CALCULATE,RAT_EQ_CALCULATE,RAT_OF_NUM_CALCULATE,
-		FRAC_DIV_CALCULATE,NMR,DNM,SGN_def] THEN
-	`(& (Num (ABS a)) = a) /\ (& (Num (ABS b)) = b)` by 
-		(RW_TAC int_ss [INT_OF_NUM,INT_LT_IMP_LE,INT_ABS] THEN ARITH_TAC) THEN
-	ASM_REWRITE_TAC [] THEN RW_TAC int_ss [NMR,DNM,INT_ABS] THEN ARITH_TAC);
+	RW_TAC std_ss [rat_of_int_def,INT_LE_LT] THEN 
+	RW_TAC int_ss [INT_ABS_CALCULATE_POS,INT_ABS_CALCULATE_0,RAT_OF_NUM_CALCULATE,
+		snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM))] THEN
+	`~(frac_nmr (abs_frac (b,1)) = 0)` by RW_TAC int_ss [NMR,INT_LT_IMP_NE] THEN
+	RW_TAC int_ss [RAT_DIV_CALCULATE,FRAC_DIV_CALCULATE,INT_LT_IMP_NE,INT_ABS_CALCULATE_POS,SGN_def] THEN
+	CCONTR_TAC THEN POP_ASSUM (K ALL_TAC) THEN ARITH_TAC);
 
 val rat_of_int_neg = 
  store_thm
@@ -1176,10 +1233,26 @@ val reduce_thm =
 	RW_TAC std_ss [INT_DIV_RMUL,GSYM INT_MUL,INT_NEG_LMUL,INT_EQ_CALCULATE,ARITH_PROVE ``~(a = 0) ==> ~(& a = 0i)``] THEN
 	PAT_ASSUM ``a * b = c * d:num`` MP_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
 	ONCE_REWRITE_TAC [prove(``(a * b * (c * d) = e * d * (g * b)) = (b * (d * (a * c)) = b * (d * (e * g:num)))``,
-		HO_MATCH_MP_TAC (PROVE [] ``(a = c) /\ (b = d) ==> (f a b = f c d)``) THEN CONJ_TAC THEN CONV_TAC (AC_CONV (MULT_ASSOC,MULT_COMM)))] THEN
+		HO_MATCH_MP_TAC (PROVE [] ``(a = c) /\ (b = d) ==> (f a b = f c d)``) THEN CONJ_TAC THEN 
+		CONV_TAC (AC_CONV (MULT_ASSOC,MULT_COMM)))] THEN
 	RW_TAC std_ss [EQ_MULT_LCANCEL] THEN
-	METIS_TAC [coprime_equal,GCD_SYM]);
+	MAP_FIRST 
+		(fn x => x THEN 
+			REPEAT CONJ_TAC THEN 
+		MAP_FIRST FIRST_ASSUM [ACCEPT_TAC,ACCEPT_TAC o ONCE_REWRITE_RULE [GCD_SYM],ACCEPT_TAC o GSYM])
+	[
+		MATCH_MP_TAC (GEN_ALL (DISCH_ALL (CONJUNCT1 (UNDISCH coprime_equal)))) THEN
+		MAP_EVERY Q.EXISTS_TAC [`q`,`q'`],
+		MATCH_MP_TAC (GEN_ALL (DISCH_ALL (CONJUNCT2 (UNDISCH coprime_equal)))) THEN
+		MAP_EVERY Q.EXISTS_TAC [`p`,`p'`]]);
 
+val int_sign_clauses_pos = 
+	prove(``!b. 0i < b ==> !a. (0 < a * b = 0 < a) /\ (!a. a * b < 0 = a < 0)``,
+		REWRITE_TAC [INT_MUL_SIGN_CASES] THEN ARITH_TAC);
+
+val int_sign_clauses_neg = 
+	prove(``!b. b < 0i ==> !a. (0 < a * ~b = 0 < a) /\ (!a. a * ~b < 0 = a < 0)``,
+		REWRITE_TAC [INT_MUL_SIGN_CASES,ARITH_PROVE ``b < 0 = 0i < ~b``] THEN ARITH_TAC);
 
 val neg_reduce_rat = 
  store_thm
@@ -1188,33 +1261,46 @@ val neg_reduce_rat =
 	RW_TAC int_ss [rat_of_int_div_neg,rat_of_int_div_pos] THEN
 	RAT_CONG_TAC THEN
 	POP_ASSUM MP_TAC THEN RW_TAC int_ss [NMR,DNM,snd(EQ_IMP_RULE(SPEC_ALL INT_NEG_GT0))] THEN
-	(SUBGOAL_THEN ``rep_frac x = (frac_nmr x,frac_dnm x)`` SUBST_ALL_TAC THEN1 RW_TAC std_ss [frac_nmr_def,frac_dnm_def]) THEN
+	(SUBGOAL_THEN ``rep_frac x = (frac_nmr x,frac_dnm x)`` SUBST_ALL_TAC THEN1 
+		RW_TAC std_ss [frac_nmr_def,frac_dnm_def]) THEN
+	`(0 < frac_nmr x /\ a < 0) \/ (frac_nmr x < 0 /\ 0 < a) \/ ((frac_nmr x = 0) /\ (a = 0))` by 
+		(`	(0 < ~a * frac_dnm x /\ 0 < frac_nmr x * ~b) \/ 
+			((~a * frac_dnm x = 0) /\ (frac_nmr x * ~b = 0)) \/ 
+			(~a * frac_dnm x < 0 /\ frac_nmr x * ~b < 0)` by ARITH_TAC THEN
+			ASSUME_TAC (SPEC ``x:frac`` FRAC_DNMPOS) THEN
+			RULE_ASSUM_TAC (REWRITE_RULE (map UNDISCH 
+				[SPEC ``b:int`` int_sign_clauses_neg,SPEC ``frac_dnm x`` int_sign_clauses_pos])) THEN
+			FULL_SIMP_TAC int_ss [] THEN ARITH_TAC) THEN
 	RW_TAC (int_ss ++ boolSimps.LET_ss) [reduce_def] THEN
-	`(0 < frac_nmr x /\ a < 0) \/ (frac_nmr x < 0 /\ 0 < a) \/ ((frac_nmr x = 0) /\ (a = 0))` by (
-		`frac_nmr x < 0 \/ (frac_nmr x = 0) \/ 0 < frac_nmr x` by ARITH_TAC THEN `a < 0 \/ (a = 0) \/ 0 < a` by ARITH_TAC THEN 
-		FULL_SIMP_TAC int_ss [INT_NEG_0,FRAC_DNMPOS,INT_LT_IMP_NE] THEN METIS_TAC [INT_MUL_SIGN_CASES,INT_NEG_GT0,FRAC_DNMPOS,INT_LT_TRANS,INT_LT_IMP_NE]) THEN
 	RW_TAC int_ss [INT_DIV_0,num_abs_nz,INT_NEG_GT0,GCD_0L,GCD_0R,FRAC_DNMPOS] THEN
 	FIRST [	MATCH_MP_TAC (DISCH_ALL (CONJUNCT1 (UNDISCH_ALL (SPEC_ALL reduce_thm)))),
 		MATCH_MP_TAC (DISCH_ALL (CONJUNCT2 (UNDISCH_ALL (SPEC_ALL reduce_thm)))),ALL_TAC] THEN
-	RW_TAC int_ss [FRAC_DNMPOS,INT_NEG_GT0,INT_ABS_CALCULATE_POS,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_LT_IMP_LE,INT_LT_IMP_NE,INT_DIV_ID]);
+	RW_TAC int_ss [FRAC_DNMPOS,INT_NEG_GT0,INT_ABS_CALCULATE_POS,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),
+		INT_LT_IMP_LE,INT_LT_IMP_NE,INT_DIV_ID]);
 
 val pos_reduce_rat = 
  store_thm
   ("pos_reduce_rat",
    ``0 < b ==> (reduce (rep_frac (rep_rat (rat_of_int a / rat_of_int b))) = reduce (a,b))``,
-	RW_TAC int_ss [rat_of_int_div_neg,rat_of_int_div_pos] THEN
+	RW_TAC int_ss [rat_of_int_div_pos] THEN
 	RAT_CONG_TAC THEN
 	POP_ASSUM MP_TAC THEN RW_TAC int_ss [NMR,DNM,snd(EQ_IMP_RULE(SPEC_ALL INT_NEG_GT0))] THEN
-	(SUBGOAL_THEN ``rep_frac x = (frac_nmr x,frac_dnm x)`` SUBST_ALL_TAC THEN1 RW_TAC std_ss [frac_nmr_def,frac_dnm_def]) THEN
+	(SUBGOAL_THEN ``rep_frac x = (frac_nmr x,frac_dnm x)`` SUBST_ALL_TAC THEN1 
+		RW_TAC std_ss [frac_nmr_def,frac_dnm_def]) THEN
+	`(0 < frac_nmr x /\ 0 < a) \/ (frac_nmr x < 0 /\ a < 0) \/ ((frac_nmr x = 0) /\ (a = 0))` by 
+		(`	(0 < a * frac_dnm x /\ 0 < frac_nmr x * b) \/ 
+			((a * frac_dnm x = 0) /\ (frac_nmr x * b = 0)) \/ 
+			(a * frac_dnm x < 0 /\ frac_nmr x * b < 0)` by ARITH_TAC THEN
+			ASSUME_TAC (SPEC ``x:frac`` FRAC_DNMPOS) THEN
+			RULE_ASSUM_TAC (REWRITE_RULE (map UNDISCH 
+				[SPEC ``b:int`` int_sign_clauses_pos,SPEC ``frac_dnm x`` int_sign_clauses_pos])) THEN
+			FULL_SIMP_TAC int_ss [] THEN ARITH_TAC) THEN
 	RW_TAC (int_ss ++ boolSimps.LET_ss) [reduce_def] THEN
-	`(0 < frac_nmr x /\ 0 < a) \/ (frac_nmr x < 0 /\ a < 0) \/ ((frac_nmr x = 0) /\ (a = 0))` by (
-		`frac_nmr x < 0 \/ (frac_nmr x = 0) \/ 0 < frac_nmr x` by ARITH_TAC THEN `a < 0 \/ (a = 0) \/ 0 < a` by ARITH_TAC THEN 
-		FULL_SIMP_TAC int_ss [INT_NEG_0,FRAC_DNMPOS,INT_LT_IMP_NE] THEN METIS_TAC [INT_MUL_SIGN_CASES,INT_NEG_GT0,FRAC_DNMPOS,INT_LT_TRANS,INT_LT_IMP_NE]) THEN
 	RW_TAC int_ss [INT_DIV_0,num_abs_nz,INT_NEG_GT0,GCD_0L,GCD_0R,FRAC_DNMPOS] THEN
 	FIRST [	MATCH_MP_TAC (DISCH_ALL (CONJUNCT1 (UNDISCH_ALL (SPEC_ALL reduce_thm)))),
 		MATCH_MP_TAC (DISCH_ALL (CONJUNCT2 (UNDISCH_ALL (SPEC_ALL reduce_thm)))),ALL_TAC] THEN
-	RW_TAC int_ss [FRAC_DNMPOS,INT_NEG_GT0,INT_ABS_CALCULATE_POS,snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_LT_IMP_LE,INT_LT_IMP_NE,INT_DIV_ID]);
-
+	RW_TAC int_ss [FRAC_DNMPOS,INT_NEG_GT0,INT_ABS_CALCULATE_POS,
+		snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM)),INT_LT_IMP_LE,INT_LT_IMP_NE,INT_DIV_ID]);
 
 val mod_common = 
  store_thm
@@ -1231,21 +1317,26 @@ val int_div_common =
 	EVERY_ASSUM (fn th => (SUBST_ALL_TAC o MATCH_MP r1) th THEN ASSUME_TAC th handle _ => ALL_TAC) THEN
 	EVERY_ASSUM (fn th => (SUBST_ALL_TAC o MATCH_MP r2) th THEN ASSUME_TAC th handle _ => ALL_TAC) THEN
 	FULL_SIMP_TAC std_ss [INT_NEG_LT0,GSYM INT_NEG_GT0,INT_LT_CALCULATE,GSYM INT_NEG_LMUL,GSYM INT_NEG_RMUL,
-		DECIDE ``0 < a = ~(a = 0n)``,INT_ABS_NEG,NUM_OF_INT,INT_ABS_NUM,INT_NEG_MUL2,INT_MUL,INT_EQ_CALCULATE,INT_DIV_NEG,INT_NEGNEG,INT_DIV,ZERO_DIV] THEN
+		DECIDE ``0 < a = ~(a = 0n)``,INT_ABS_NEG,NUM_OF_INT,INT_ABS_NUM,INT_NEG_MUL2,INT_MUL,
+		INT_EQ_CALCULATE,INT_DIV_NEG,INT_NEGNEG,integerTheory.INT_DIV,ZERO_DIV,INT_DIV_0,INT_NEG_0] THEN
 	RW_TAC int_ss [int_div] THEN
-	FULL_SIMP_TAC arith_ss [GSYM DIV_DIV_DIV_MULT,DECIDE ``~(0 < a) = (a = 0n)``,ZERO_DIV,ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV] THEN
-	METIS_TAC [ONCE_REWRITE_RULE [MULT_COMM] mod_common,DECIDE ``0 < a = ~(a = 0n)``]);
+	FULL_SIMP_TAC arith_ss [GSYM DIV_DIV_DIV_MULT,DECIDE ``~(0 < a) = (a = 0n)``,ZERO_DIV,
+		ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV] THEN
+	CCONTR_TAC THEN POP_ASSUM (K ALL_TAC) THEN POP_ASSUM MP_TAC THEN REWRITE_TAC [] THEN POP_ASSUM MP_TAC THEN
+	MAP_FIRST MATCH_MP_TAC [DECIDE ``(a = b) ==> (~a ==> ~b)``,DECIDE ``(a = b) ==> (a ==> b)``] THEN
+	MATCH_MP_TAC (GSYM (ONCE_REWRITE_RULE [MULT_COMM] mod_common)) THEN DECIDE_TAC);
 
 
 val mod_zero_mult = 
  store_thm
   ("mod_zero_mult",
    ``0 < b ==> ((a MOD b = 0) = (b = 1) \/ (?c. a = b * c))``,
-	REPEAT STRIP_TAC THEN EQ_TAC THENL [
-		Cases_on `b = 1n` THEN RW_TAC arith_ss [] THEN
-		ASSUM_LIST (fn list => SUBST_ALL_TAC (SIMP_RULE arith_ss list (DISCH_ALL (CONJUNCT1 (SPEC ``a:num`` (UNDISCH (SPEC ``b:num`` DIVISION))))))),
-		ALL_TAC] THEN
-	METIS_TAC [MOD_1,MOD_EQ_0,MULT_COMM]);
+	REPEAT STRIP_TAC THEN EQ_TAC THEN 
+	Cases_on `b = 1n` THEN RW_TAC arith_ss [] THENL [
+		ASSUM_LIST (fn list => SUBST_ALL_TAC (SIMP_RULE arith_ss list 
+			(DISCH_ALL (CONJUNCT1 (SPEC ``a:num`` (UNDISCH (SPEC ``b:num`` DIVISION))))))) THEN
+			Q.EXISTS_TAC `a DIV b` THEN REFL_TAC,
+			ONCE_REWRITE_TAC [MULT_COMM] THEN MATCH_MP_TAC MOD_EQ_0 THEN FIRST_ASSUM ACCEPT_TAC]);
 
 val gcd_mod = 
  store_thm
@@ -1254,22 +1345,72 @@ val gcd_mod =
 	RW_TAC arith_ss [mod_zero_mult] THEN
 	CCONTR_TAC THEN FULL_SIMP_TAC arith_ss [] THEN POP_ASSUM SUBST_ALL_TAC THEN
 	RULE_ASSUM_TAC (ONCE_REWRITE_RULE [ONCE_REWRITE_RULE [GCD_SYM] GCD_EFFICIENTLY]) THEN
-	REPEAT (POP_ASSUM MP_TAC) THEN RW_TAC arith_ss [MOD_EQ_0,GCD_0R]);
+	POP_ASSUM MP_TAC THEN RW_TAC arith_ss [MOD_EQ_0,GCD_0R]);
 
+val apos1 = prove(``~(b = 0) ==> (0 <= a / & (gcd (Num (ABS a)) (Num (ABS b))) ==> (a = 0) \/ 0 < a)``,
+	REPEAT STRIP_TAC THEN
+	Cases_on `a = 0` THEN RW_TAC std_ss [] THEN
+	`~(& (gcd (Num (ABS a)) (Num (ABS b))) = 0i)` by (
+		REWRITE_TAC [ARITH_PROVE ``(&a = 0i) = (a = 0)``,GCD_EQ_0,DE_MORGAN_THM] THEN
+		DISJ2_TAC THEN `(0 <= b /\ (ABS b = b)) \/ (0 <= ~b /\ (ABS b = ~b))` by ARITH_TAC THEN
+		POP_ASSUM SUBST_ALL_TAC THEN IMP_RES_TAC (snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM))) THEN 
+		ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] THEN ASM_REWRITE_TAC [INT_NEG_EQ,INT_NEG_0]) THEN
+	FULL_SIMP_TAC int_ss [int_div] THEN REPEAT (POP_ASSUM MP_TAC) THEN 
+	RW_TAC int_ss [DECIDE ``~(a = 0n) = 0 < a``] THEN TRY ARITH_TAC THEN
+	FULL_SIMP_TAC bool_ss [DECIDE ``(a = 0) = a <= 0n``,DIV_LE_X] THEN
+	FULL_SIMP_TAC arith_ss [ARITH_PROVE ``~(0 <= a) = 0i < ~a /\ 0i <= ~a``] THEN
+	IMP_RES_TAC (snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM))) THEN
+	CCONTR_TAC THENL [
+		PAT_ASSUM ``Num ~a = 0`` MP_TAC,
+		PAT_ASSUM ``0 <= ~a + ~1i`` MP_TAC THEN POP_ASSUM_LIST (K ARITH_TAC)] THEN
+	PURE_ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] THEN
+	ASM_REWRITE_TAC [INT_NEG_EQ,INT_NEG_0] THEN FIRST_ASSUM ACCEPT_TAC);
+
+val apos2 = prove(``~(b = 0) ==> (0 <= ~a / & (gcd (Num (ABS a)) (Num (ABS b))) ==> (a = 0) \/ a < 0)``,
+	METIS_TAC [ARITH_PROVE ``a < 0i = 0 < ~a``,INT_NEG_0,INT_NEG_EQ,apos1,INT_ABS_NEG]);
+
+val apos3 = prove(``~(b = 0) ==> (a / & (gcd (Num (ABS a)) (Num (ABS b))) < 0 ==> a < 0i)``,
+	REPEAT STRIP_TAC THEN
+	`~(& (gcd (Num (ABS a)) (Num (ABS b))) = 0i)` by (
+		REWRITE_TAC [ARITH_PROVE ``(&a = 0i) = (a = 0)``,GCD_EQ_0,DE_MORGAN_THM] THEN
+		DISJ2_TAC THEN `(0 <= b /\ (ABS b = b)) \/ (0 <= ~b /\ (ABS b = ~b))` by ARITH_TAC THEN
+		POP_ASSUM SUBST_ALL_TAC THEN IMP_RES_TAC (snd (EQ_IMP_RULE (SPEC_ALL INT_OF_NUM))) THEN 
+		ONCE_REWRITE_TAC [GSYM INT_EQ_CALCULATE] THEN ASM_REWRITE_TAC [INT_NEG_EQ,INT_NEG_0]) THEN
+	Cases_on `a = 0` THEN1 FULL_SIMP_TAC int_ss [int_div,ZERO_DIV] THEN
+	MATCH_MP_TAC (UNDISCH (ARITH_PROVE ``~(a = 0i) ==> ((a = 0) \/ a < 0 ==> a < 0)``)) THEN
+	MATCH_MP_TAC (UNDISCH apos2) THEN
+	FULL_SIMP_TAC int_ss [int_div] THEN REPEAT (POP_ASSUM MP_TAC) THEN 
+	RW_TAC int_ss [DECIDE ``~(a = 0n) = 0 < a``] THEN 
+	CCONTR_TAC THEN MATCH_MP_TAC INT_LT_ANTISYM THEN
+	FULL_SIMP_TAC int_ss [INT_NOT_LE] THEN 
+	Q.EXISTS_TAC `a` THEN Q.EXISTS_TAC `0` THEN CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC);
+
+val apos4 = prove(``~(b = 0) ==> (~a / & (gcd (Num (ABS a)) (Num (ABS b))) < 0 ==> 0 < a)``,
+	METIS_TAC [ARITH_PROVE ``a < 0i = 0 < ~a``,INT_NEG_0,INT_NEG_EQ,apos3,INT_ABS_NEG]);
 
 local
 val match_div1 = prove(``~(q = 0) /\ ~(b = 0) ==> (p * b DIV (q * b) = p DIV q)``,
-		METIS_TAC [DECIDE ``0 < a = ~(a = 0n)``,GSYM DIV_DIV_DIV_MULT,MULT_DIV,MULT_COMM]);
+	REWRITE_TAC [DECIDE ``~(a = 0) = 0n < a``] THEN REPEAT STRIP_TAC THEN
+	GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o ONCE_DEPTH_CONV) bool_rewrites [MULT_COMM] THEN
+	REWRITE_TAC [
+		UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] 
+			(GSYM (SPECL [``b:num``,``q:num``] DIV_DIV_DIV_MULT)))] THEN
+	RW_TAC std_ss [MULT_DIV]);
+
 val match_div2 = prove(``
-		(a = p * c) /\ (b = q * c) /\ ~(p * c = 0) /\ ~(q * c = 0) /\ ~(q = 0n) /\ 
+		~(p * c = 0) /\ ~(q * c = 0) /\ ~(q = 0n) /\ 
 		~(c = 0n) /\ ((q * c) DIV c = 1) ==> 
 			((p * c) DIV (q * c) = p)``,
 	REPEAT STRIP_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN 
 	RW_TAC arith_ss [MULT_DIV,CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV MULT_COMM)) MULT_DIV,
 		DECIDE ``~(a = 0n) = 0n < a``]);
-val match_div3 = prove(``~(c = 0n) /\ ~(p = 0n) ==> ~(0i <= ~&(p * c) / &c)``,
-	RW_TAC int_ss [int_div,INT_NOT_LE,ARITH_PROVE ``~a + ~1 < 0 = 0i <= a``] THEN
-	METIS_TAC [MULT_DIV,DECIDE ``0 < a = ~(a = 0n)``,MULT_COMM]);
+val match_div3 = prove(``
+		~(p * c = 0) /\ ~(q * c = 0) /\ ~(q = 0n) /\ 
+		~(c = 0n) ==> (((q * c) DIV c = 1) ==> 
+			(p DIV q = p))``,
+	REPEAT STRIP_TAC THEN REPEAT (POP_ASSUM MP_TAC) THEN 
+	RW_TAC arith_ss [MULT_DIV,CONV_RULE (ONCE_DEPTH_CONV (REWR_CONV MULT_COMM)) MULT_DIV,
+		DECIDE ``~(a = 0n) = 0n < a``]);
 val match_div4 = prove(``~(q * c DIV c = 1) /\ (gcd p q = 1) /\ ~(p = 0) /\ ~(q = 0) /\ ~(c = 0n) ==> 
 			~((p * c) MOD (q * c) = 0)``,
 	REPEAT STRIP_TAC THEN
@@ -1287,16 +1428,18 @@ val div_tactic =
 	POP_ASSUM MP_TAC THEN RW_TAC std_ss [sexp_int_rat,rat_of_int_nz,nmr_dnm_rewrite,GSYM RAT_DIV] THEN
 	FULL_SIMP_TAC std_ss [GSYM sexp_int_rat,acl2_nniq_rewrite,GSYM INT_UNARY_MINUS,GSYM INT_ADD,
 		GSYM INT_EQUAL,GSYM INT_LT,TRUTH_REWRITES,INT_NOT_LT] THEN
+	AP_TERM_TAC THEN 
 	FULL_SIMP_TAC int_ss [INT_NOT_LE] THEN RW_TAC int_ss [GSYM nniq_correct,reduced_dnm_pos,
 		ARITH_PROVE ``0 < a ==> 0 <= a /\ ~(a = 0i)``,
 		REWRITE_RULE [INT_NEG_GE0] (GSYM (INST [``a:int`` |-> ``~a:int``] nniq_correct)),INT_LT_IMP_LE] THEN
 	FULL_SIMP_TAC std_ss [reduced_nmr_def,reduced_dnm_def] THEN
 	`0 < b \/ b < 0` by ARITH_TAC THEN
-	FULL_SIMP_TAC std_ss [pos_reduce_rat,neg_reduce_rat] THEN AP_TERM_TAC THEN 
+	FULL_SIMP_TAC std_ss [pos_reduce_rat,neg_reduce_rat] THEN 
 	FULL_SIMP_TAC (std_ss ++ boolSimps.LET_ss) [reduce_def,INT_ABS_NEG] THEN
-	`0 < a \/ (a = 0) \/ a < 0` by ARITH_TAC THEN
+	(	(MAP_FIRST (CHANGED_TAC o IMP_RES_TAC o UNDISCH) [apos1,apos2,apos3,apos4]) ORELSE
+		`a < 0 \/ (a = 0) \/ 0 < a` by ARITH_TAC) THEN
 	FULL_SIMP_TAC int_ss [num_abs_nz,GCD_EQ_0,INT_DIV_0,
-		ARITH_PROVE ``(0 < a ==> (ABS a = a)) /\ (a < 0 ==> (ABS a = ~a))``] THEN
+		INT_ABS_CALCULATE_POS,INT_ABS_CALCULATE_NEG] THEN
 	EVERY_ASSUM (fn th => (SUBST_ALL_TAC o MATCH_MP r1) th THEN ASSUME_TAC th handle _ => ALL_TAC) THEN
 	EVERY_ASSUM (fn th => (SUBST_ALL_TAC o MATCH_MP r2) th THEN ASSUME_TAC th handle _ => ALL_TAC) THEN
 	FULL_SIMP_TAC int_ss [DECIDE ``0 < a = ~(a = 0n)``,GCD_0L,GCD_0R,ZERO_DIV] THEN 
@@ -1307,7 +1450,17 @@ val div_tactic =
 	RW_TAC int_ss [MULT_DIV,int_div,int_quot,GCD_EQ_0,ZERO_DIV,MOD_EQ_0,
 		GSYM (ONCE_REWRITE_RULE [MULT_COMM] DIV_DIV_DIV_MULT)] THEN
 	FULL_SIMP_TAC int_ss [] THEN
-	METIS_TAC [match_div1,match_div2,match_div3,match_div4,match_div5]
+	PAT_ASSUM ``~(gcd a b = 0)`` MP_TAC THEN 
+	Q.MATCH_ABBREV_TAC `~(GCD = 0n) ==> Q` THEN
+	Q.UNABBREV_TAC `Q` THEN DISCH_TAC THEN
+	REPEAT (PAT_ASSUM ``a = b * c:num`` SUBST_ALL_TAC) THEN
+	FIRST [
+		MATCH_MP_TAC match_div1,
+		MATCH_MP_TAC match_div2,
+		PAT_ASSUM ``a DIV b = 1`` MP_TAC THEN REWRITE_TAC [] THEN MATCH_MP_TAC match_div3,
+		CCONTR_TAC THEN PAT_ASSUM ``a MOD b = 0`` MP_TAC THEN REWRITE_TAC [] THEN MATCH_MP_TAC match_div4,
+		CCONTR_TAC THEN PAT_ASSUM ``~(a MOD b = 0)`` MP_TAC THEN REWRITE_TAC [] THEN MATCH_MP_TAC match_div5] THEN
+	REPEAT CONJ_TAC THEN FIRST_ASSUM ACCEPT_TAC
 end;
 
 val INT_DIV = prove(``~(b = 0i) ==> (int (a / b) = acl2_floor (int a) (int b))``,div_tactic);
@@ -1609,8 +1762,7 @@ val LISTP_REVAPPEND = prove(``!x y. (|= listp f x) /\ (|= listp f y) ==> |= list
 	RW_TAC std_ss [listp_def,car_def,consp_def,ite_def,TRUTH_REWRITES,cdr_def]);
 
 val equal_nil_eq = prove(``(|= equal x nil) = (x = nil)``,
-	Cases_on `x` THEN RW_TAC std_ss [equal_def,ACL2_TRUE_def,nil_def,t_def,ite_def] THEN
-	REPEAT (POP_ASSUM MP_TAC THEN RW_TAC std_ss [DE_MORGAN_THM]));
+	RW_TAC std_ss [TRUTH_REWRITES,equal_def]);
 
 val LISTP_REVERSE = prove(``!l. (|= listp f l) ==> (|= listp f (acl2_reverse l))``,
 	Induct THEN RW_TAC std_ss [acl2_reverse_def,LISTP_REVAPPEND,ite_def,TRUTH_REWRITES,stringp_def,listp_def] THEN
@@ -1643,9 +1795,7 @@ val stringp_revappend = prove(``!a b. ~|= stringp (acl2_revappend b (cons a nil)
 	RW_TAC std_ss [stringp_def,TRUTH_REWRITES]);
 
 val sym_nil = prove(``~(|= sym s s0) = (sym s s0 = nil)``,
-	RW_TAC std_ss [ite_def,equal_def,ACL2_TRUE_def,nil_def,t_def] THEN REPEAT (POP_ASSUM MP_TAC) THEN 
-	RW_TAC std_ss [] THEN METIS_TAC []);
-
+	EQ_TAC THEN RW_TAC std_ss [TRUTH_REWRITES]);
 
 val firstnac_lemma = prove(``!n l a b. n <= LENGTH l ==> (cons (f a) (firstnac (nat n) (list f l) (list f b)) = 
 		firstnac (nat n) (list f l) (acl2_reverse (cons (f a) (acl2_reverse (list f b)))))``,
@@ -2168,4 +2318,22 @@ val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
 			LISTP_BUTLAST,LISTP_LAST,LISTP_SUBSEQ,LISTP_STRIP_CARS,LISTP_STRIP_CDRS,LISTP_PAIRLIST,
 			LISTP_EXPLODE,STRINGP_IMPLODE,NATP_LENGTH,STRINGP_STRCAT]);
 
+open TextIO;
+
+val outs = openOut "profile.log";
+
+val _ = app (fn (a,b) => (
+			output(outs,(int_to_string a)) ; 
+			output(outs," - ") ; 
+			output(outs,term_to_string b) ; 
+			output(outs,"\n")))
+		(sort (fn a => fn b => fst a < fst b) (!proves));
+val _ = app (fn (a,b) => (
+			output(outs,(int_to_string a)) ; 
+			output(outs," - ") ; 
+			output(outs,b) ; 
+			output(outs,"\n")))
+		(sort (fn a => fn b => fst a < fst b) (!stores));
+
+val _ = closeOut outs;
 val _ = export_theory();

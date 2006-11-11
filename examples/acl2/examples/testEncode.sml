@@ -438,7 +438,8 @@ val acl2_exp_def = 		convert_definition EXP;
 val acl2_fact_def =             convert_definition FACT;
 val acl2_findq_def = 		convert_definition findq_thm;
 val acl2_divmod_def = 		convert_definition DIVMOD_THM;
-val acl2_divsub_def = 		convert_definition divsub_def;
+val acl2_divsub_def = 		convert_definition_full NONE 
+					[DECIDE ``0 < a \/ 0 < b ==> ~(a + b = 0n)``] divsub_def;
 
 
 (*****************************************************************************)
@@ -472,21 +473,23 @@ val acl2_member_def = 		convert_definition member_def;
 (*****************************************************************************)
 
 val modpow_def = 		Define `(modpow a 0 n = 1) /\ (modpow a (SUC b) n = a * (modpow a b n) MOD n)`;
-val acl2_modpow_def = 		convert_definition_restricted ``\a b c. ~(c = 0n)`` modpow_def;
+val acl2_modpow_def = 		convert_definition_full (SOME ``\a b c. ~(c = 0n)``) [] modpow_def;
 
 (*****************************************************************************)
 (* Addition of a termination helper theorem:                                 *)
 (*****************************************************************************)
 
 val (log2_def,log2_ind) = 	Defn.tprove(Hol_defn "log2" `(log2 0 = 0) /\ (log2 a = SUC (log2 (a DIV 2)))`,WF_REL_TAC `measure (\a.a)` THEN RW_TAC arith_ss [DIV_LT_X]);
-val acl2_log2_def = 		convert_definition_full NONE (SOME (prove(``!a. 0 < a ==> a DIV 2 < a``,RW_TAC arith_ss [DIV_LT_X]))) log2_def;
+val acl2_log2_def = 		convert_definition_full (SOME ``\a. 0 < a ==> a DIV 2 < a``)
+				[prove(``!a. 0 < a ==> a DIV 2 < a``,RW_TAC arith_ss [DIV_LT_X]),
+				 DECIDE ``~(2 = 0n)``] log2_def;
 
 (*****************************************************************************)
 (* Theorem encoding...                                                       *)
 (*****************************************************************************)
 
-val acl2_division = convert_theorem DIVISION;
-val acl2_divmod_calc = convert_theorem DIVMOD_CALC;
+val acl2_division = 	convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVISION;
+val acl2_divmod_calc = 	convert_theorem [DECIDE ``0 < a ==> ~(a = 0n)``] DIVMOD_CALC;
 
 (*****************************************************************************)
 (* HO function encoding...                                                   *)                   
@@ -501,3 +504,82 @@ val (acl2_filter_zero_correct,acl2_filter_zero_def) = convert_definition filter_
 val (filter0_rewrite,filter0_def) = flatten_HO_definition "filter0" acl2_filter_def ``(acl2_FILTER (\x. ite (natp x) (not (equal x (nat 0))) (not (equal (nat 0) (nat 0)))) X)``;
 
 val acl2_filter_zero_def' = REWRITE_RULE [filter0_rewrite] acl2_filter_zero_def;
+
+(*****************************************************************************)
+(* Encoding functions with missing clauses:                                  *)                
+(*****************************************************************************)
+
+val acl2_firstn_def = convert_definition_full (SOME ``\n l. n <= LENGTH l``) 
+			[prove(``!n (l:num list). n <= LENGTH l ==> (n = 0) \/ ?t h. l = h :: t``,
+				Cases_on `l` THEN Cases_on `n` THEN RW_TAC std_ss [LENGTH]),
+			prove(``!n (l:num list) x. SUC n <= LENGTH (x::l) ==> n <= LENGTH l``,
+				RW_TAC std_ss [LENGTH])] (INST_TYPE [``:'a`` |-> ``:num``] rich_listTheory.FIRSTN);
+val acl2_tl_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] TL);
+val acl2_hd_def = convert_definition (INST_TYPE [``:'a`` |-> ``:num``] HD);
+
+(*****************************************************************************)
+(* A long example from red-black trees (most likely 4+ hours...)             *)    
+(*****************************************************************************)
+
+val make_black =
+    Define
+        `  (make_black (NODE R e l r) = NODE B e l r)
+        /\ (make_black x              = x)`; 
+
+val balance =
+    Mosml.time
+        Define
+        `  (balance B z (NODE R y (NODE R x a b) c) d
+                = NODE R y (NODE B x a b) (NODE B z c d)) /\
+           (balance B z (NODE R x a (NODE R y b c)) d
+                = NODE R y (NODE B x a b) (NODE B z c d)) /\
+           (balance B x a (NODE R z (NODE R y b c) d)
+                = NODE R y (NODE B x a b) (NODE B z c d)) /\
+           (balance B x a (NODE R y b (NODE R z c d))
+                = NODE R y (NODE B x a b) (NODE B z c d)) /\
+           (balance col x left right
+                = NODE col x left right)`; 
+
+val ins =
+    Define
+        `  (ins e LEAF = NODE R e LEAF LEAF)
+        /\ (ins e (NODE c n left right) =
+              if e < n then balance c n (ins e left) right else
+              if n < e then balance c n left (ins e right)
+                       else NODE c n left right)`;
+
+val insert =
+    Define
+         `insert e set = make_black(ins e set)`;
+
+val isRed = (* A leaf is considered black *)
+    Define
+        `  (isRed (NODE R k l r) = T)
+        /\ (isRed otherwise      = F)`;
+
+val redRed =
+    Define
+        `  (redRed LEAF = F)
+        /\ (redRed (NODE R k left right) =
+            isRed left \/ isRed right \/ redRed left \/ redRed right)
+        /\ (redRed (NODE c k left right) =
+            redRed left \/ redRed right)`;
+
+val BH =
+  Define
+  `(BH LEAF = SOME 0n) /\
+    (BH (NODE c _ l r) =
+         case (BH l,BH r) of
+            (NONE,o2) -> NONE
+         || (SOME m,NONE) -> NONE
+         || (SOME m,SOME n) ->
+              (if m = n then SOME (m + (if c = R then 0 else 1)) else NONE))`;
+
+
+val acl2_make_black_def = convert_definition make_black;
+val acl2_isRed_def = convert_definition isRed;
+val acl2_redRed_def = convert_definition redRed;
+val acl2_BH_def = convert_definition BH;
+val acl2_balance_def = try convert_definition balance;
+val acl2_ins_def = convert_definition ins;
+val acl2_insert_def = convert_definition insert;

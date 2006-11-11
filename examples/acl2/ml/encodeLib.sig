@@ -3,9 +3,10 @@ sig
 	include Abbrev
 
 	val convert_definition            : thm -> thm * thm
-	val convert_definition_restricted : term -> thm -> thm * thm
-	val convert_definition_full       : term option -> thm option -> thm -> thm * thm
-	val convert_theorem	          : thm -> thm
+	val convert_definition_full       : term option -> thm list -> thm -> thm * thm
+	val convert_theorem	          : thm list -> thm -> thm
+
+	val flatten_HO_definition         : string -> thm -> term -> (thm * thm)
 
 	val get_recogniser        : hol_type -> thm * thm
 
