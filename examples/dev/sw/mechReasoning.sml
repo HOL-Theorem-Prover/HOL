@@ -26,7 +26,6 @@ structure mechReasoning = struct
   in
 
 infix ++ THENC ORELSEC THEN THENL ORELSE |-> ##;
-structure IR = annotatedIR;
 
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *) 
@@ -319,9 +318,9 @@ fun mk_PSPEC ir (pre_st,post_st) (ins,outs) =
 (* and the context about unchanged variables is maintained                                                   *) 
 (* Finally well_formed information is given                                                                  *)
 (*
-fun extract (IR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) =
+fun extract (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) =
 (instL, ins, outs, context);
-val (instL, ins, outs, context) = extract ir2;
+val (instL, ins, outs, context) = extract f_ir;
 val (unchanged_list, _) = unchanged_lists_weak
 val unchanged_list = #2 unchanged_lists
 mk_blk_spec pre_ir unchanged_lists_weak
@@ -330,7 +329,7 @@ mk_blk_spec pre_ir unchanged_lists_weak
 
 
 
-fun mk_blk_spec (IR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) (unchanged_list, _) = 
+fun mk_blk_spec (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) (unchanged_list, _) = 
   let 	
       val th = sim_stms instL;
       val t1 = concl th;
@@ -363,6 +362,7 @@ fun mk_blk_spec (IR.BLK (instL,{ins = ins, outs = outs, context = context, ...})
              CONV_TAC SIM_MEM_CONV THEN
              SIMP_TAC std_ss [pair_induction]
             )
+				
    in
      (spec, th)
    end
@@ -837,42 +837,42 @@ fun mk_pop_spec spec =
 (*---------------------------------------------------------------------------------*)
 
 (*
-fun extract (IR.SC (ir1, ir2, info)) = (ir1, ir2, info);
+fun extract (annotatedIR.SC (ir1, ir2, info)) = (ir1, ir2, info);
 val (ir1, ir2, info) = extract f_ir;
 
-fun extract (IR.CALL (fname, pre_ir, body_ir, post_ir, info)) = (fname, pre_ir, body_ir, post_ir, info);
+fun extract (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir, info)) = (fname, pre_ir, body_ir, post_ir, info);
 val (fname, pre_ir, body_ir, post_ir, info) = extract ir1;
 
-fun extract (IR.SC (ir1, ir2, info)) = (ir1, ir2, info);
+fun extract (annotatedIR.SC (ir1, ir2, info)) = (ir1, ir2, info);
 
-fun extract (IR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, body)
+fun extract (annotatedIR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, body)
 val (cond, body) = extract ir2
 
-fun extract (IR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, ir1, ir2)
+fun extract (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, ir1, ir2)
 val (cond, ir1, ir2) = extract f_ir
 *)
 
 
-fun fwd_reason (IR.BLK blk_ir) unchanged_lists =
-      #1 (mk_blk_spec (IR.BLK blk_ir) unchanged_lists)
+fun fwd_reason (annotatedIR.BLK blk_ir) unchanged_lists =
+      #1 (mk_blk_spec (annotatedIR.BLK blk_ir) unchanged_lists)
 
- |  fwd_reason (IR.SC (ir1, ir2, info)) unchanged_lists =
+ |  fwd_reason (annotatedIR.SC (ir1, ir2, info)) unchanged_lists =
       let val spec1 = fwd_reason ir1 unchanged_lists;
           val spec2 = fwd_reason ir2 unchanged_lists;
       in
           mk_sc_spec spec1 spec2
       end
 
- |  fwd_reason (IR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_lists = 
+ |  fwd_reason (annotatedIR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_lists = 
       let val body_spec = fwd_reason body unchanged_lists
       in
           mk_tr_spec cond body_spec
       end
 
- |  fwd_reason (IR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_lists =
+ |  fwd_reason (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_lists =
       mk_cj_spec cond (fwd_reason ir1 unchanged_lists) (fwd_reason ir2 unchanged_lists)
 
- |  fwd_reason (IR.CALL (fname, pre_ir, body_ir, post_ir, info)) unchanged_lists =
+ |  fwd_reason (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir, info)) unchanged_lists =
       let 
 			 val unchanged_lists_weak = (#2 unchanged_lists, #2 unchanged_lists);
           val (pre_spec, pre_th) = mk_blk_spec pre_ir unchanged_lists_weak;
@@ -889,21 +889,32 @@ fun fwd_reason (IR.BLK blk_ir) unchanged_lists =
 (*---------------------------------------------------------------------------------*)
 (*      Equivalence between the original function and the spec function            *) 
 (*---------------------------------------------------------------------------------*)
-fun restore_f spec defs =
+fun restore_f_TAC defs =
+		SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
+		REPEAT GEN_TAC THEN
+
+		SIMP_TAC std_ss defs THEN
+		REPEAT (CHANGED_TAC (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, WORD_ADD_ASSOC] @ defs)), WORDS_TAC])) THEN
+		REPEAT (CHANGED_TAC (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, GSYM WORD_ADD_ASSOC] @ defs)), WORDS_TAC])) THEN
+		METIS_TAC[WORD_ADD_COMM, WORD_AND_COMM, WORD_OR_COMM, WORD_XOR_COMM];
+
+
+fun restore_f spec defs prove_equiv =
   let
       val th0 = CONJUNCT1 (SIMP_RULE std_ss [LET_THM] spec);
       val [in_f,spec_f,out_f] = strip_pair (List.nth (#2 (strip_comb (concl th0)),3));
       val sfl_f_const = #1 (strip_comb (lhs ((concl o SPEC_ALL) (hd defs))));
-      val eq_stat = mk_eq (spec_f, sfl_f_const);
-      val eq_th =  prove (eq_stat,   (* set_goal ([],eq_stat) *)
-                        SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
-                        REPEAT GEN_TAC THEN
-
-                        SIMP_TAC std_ss [List.last defs] THEN
-                        REPEAT (CHANGED_TAC (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, WORD_ADD_ASSOC] @ defs)), WORDS_TAC])) THEN
-                        REPEAT (CHANGED_TAC (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, GSYM WORD_ADD_ASSOC] @ defs)), WORDS_TAC])) THEN
-                        METIS_TAC[WORD_ADD_COMM, WORD_AND_COMM, WORD_OR_COMM, WORD_XOR_COMM]                        
-		        )
+      val eq_stat = mk_eq (spec_f, sfl_f_const);		
+      val eq_th = if (prove_equiv) then 
+			(print "Proving equivalence with input function\n";
+			 prove(eq_stat, restore_f_TAC defs) handle _ =>
+			  let
+				  val _ = print "! Equivalence proof between original function and\n";
+				  val _ = print "! derived program semantics failed!\n\n";
+			  in
+				  ASSUME eq_stat
+			  end)
+			else ASSUME eq_stat;
   in
       eq_th
   end;
@@ -971,7 +982,7 @@ fun extract_ir spec =
        print ("  Arguments         : " ^ (IRSyntax.format_exp f_args) ^ "\n");
        print ("  Returns           : " ^ (IRSyntax.format_exp f_outs) ^ "\n");
        print  "  Body: \n";
-       IR.printIR (IR.merge_ir f_ir)
+       annotatedIR.printIR (annotatedIR.merge_ir f_ir)
       )
     end
 
@@ -1111,7 +1122,8 @@ fun mk_unchanged_term f_name =
 		changed_list
 	end;
 
-fun pp_compile prog = 
+(*val prog = def2;*)
+fun pp_compile prog prove_equiv = 
   let  
       val def = preprocess_def prog;
       val (f_name, f_type, (f_args,f_ir,f_outs), defs) = funCall.link_ir def;
@@ -1120,7 +1132,7 @@ fun pp_compile prog =
 (*		val unchanged_lists = (unchanged_list_fp_sp, unchanged_list);*)
 		val unchanged_lists = (unchanged_list_fp_sp, unchanged_list);
       val f_spec0 = fwd_reason f_ir unchanged_lists;
-      val f_spec1 = (SIMP_RULE std_ss [restore_f f_spec0 (defs @ !extra_defs)] f_spec0) handle _ => f_spec0;
+      val f_spec1 = (SIMP_RULE std_ss [restore_f f_spec0 defs prove_equiv] f_spec0)
       val thm_list = CONJ_LIST 3 (SIMP_RULE std_ss [LET_THM] f_spec1);
       val stat = f_correct f_spec1
       val stat_ir = f_correct_ir f_spec1
