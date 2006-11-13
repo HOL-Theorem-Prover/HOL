@@ -7,6 +7,7 @@ loadPath := (concat Globals.HOLDIR "/examples/dev/sw") ::
 
 use (concat Globals.HOLDIR "/examples/dev/sw/compiler");
 
+show_assums := true
 (*---------------------------------------------------------------------------------*)
 (*      Single Blocks                                                              *)
 (*      The ShiftXor procedure appearing in TEA                                    *)
@@ -17,7 +18,7 @@ val ShiftXor_def =
    `ShiftXor (x:word32,s,k0,k1) = ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
 (*
-- val spec = pp_compile ShiftXor_def;
+- val spec = pp_compile ShiftXor_def true;
 |- !st.
           get_st
             (run_arm
@@ -61,7 +62,7 @@ val cj_f_1_def = Define `
             d`;
 
 (*
-- val spec = pp_compile cj_f_1_def;
+- val spec = pp_compile cj_f_1_def true;
 ...
 |- !st.
           get_st
@@ -122,37 +123,24 @@ Defn.tprove (fact_def,
     SIMP_TAC std_ss [WORD_LO, WORD_PRED_THM]
   ])
 
-val fact_thm = Q.store_thm (
-   "fact_thm",
-   `fact = (\(x,a).a) o (WHILE ($~ o (\(x,a).x = 0w)) (\(x,a).(x-1w,x*a)))`,
+(*equivalence proof does not terminate, therefore use false for equivalence check parameter*)  
+val fact_comp = pp_compile fact_def true 
+
+val fact_comp = pp_compile fact_def false  
+val fact_spec = #5 fact_comp
+val fact_spec_hyp = hd (hyp fact_spec)
+val fact_spec_hyp_thm = prove (fact_spec_hyp, (* set_goal ([], fact_spec_hyp) *)	
    SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
    HO_MATCH_MP_TAC fact_ind THEN
-   REPEAT STRIP_TAC THEN
+	REPEAT STRIP_TAC THEN
    ONCE_REWRITE_TAC [fact_def, WHILE] THEN
-   RW_TAC std_ss []
-  );
+   RW_TAC std_ss [] THEN
+	Q.PAT_ASSUM `~(x = 0w) ==> P x` MP_TAC THEN
+	WORDS_TAC THEN
+	ASM_SIMP_TAC std_ss [])
 
+val fact_spec_final = PROVE_HYP fact_spec_hyp_thm fact_spec
 
-(*
--   extra_defs := [fact_thm];
--   pp_compile fact_def;
-
-   |- !st.
-         get_st
-           (run_arm
-              [((CMP,NONE,F),NONE,[REG 0; WCONST 0w],NONE);
-               ((B,SOME EQ,F),NONE,[],SOME (POS 6));
-               ((SUB,NONE,F),SOME (REG 3),[REG 0; WCONST 1w],NONE);
-               ((MUL,NONE,F),SOME (REG 2),[REG 0; REG 1],NONE);
-               ((MOV,NONE,F),SOME (REG 0),[REG 3],NONE);
-               ((MOV,NONE,F),SOME (REG 1),[REG 2],NONE);
-               ((B,SOME AL,F),NONE,[],SOME (NEG 6));
-               ((MOV,NONE,F),SOME (REG 2),[REG 1],NONE)]
-              ((0,0w,st),{}))<MR R2> =
-         fact (st<MR R0>,st<MR R1>) 
-
-
-*)
 
 (*---------------------------------------------------------------------------------*)
 (*      binary relations															              *)
@@ -168,7 +156,7 @@ val def = Define `f (x1:word32) = if (x1 >= 0w) then x1 else (x1+1w)`
 val def = Define `f (x1:word32) = if (x1 >+ 0w) then x1 else (x1+1w)`
 val def = Define `f (x1:word32) = if (x1 >=+ 0w) then x1 else (x1+1w)`
 
-pp_compile def;
+pp_compile def true;
 
 
 (*---------------------------------------------------------------------------------*)
@@ -178,7 +166,7 @@ pp_compile def;
 val const_1_def = Define `
     const_1 (x:word32) = (x + 0xFF0012Fw) - 0x1003w`;
 
-pp_compile const_1_def;
+pp_compile const_1_def true;
 
 
 (*---------------------------------------------------------------------------------*)
@@ -188,7 +176,7 @@ pp_compile const_1_def;
 val const_2_def = Define `
     const_2 (x:word32) = (x + (0xFF0012Fw - 0x1003w))`;
 
-pp_compile const_2_def;
+pp_compile const_2_def true;
 
 
 (*---------------------------------------------------------------------------------*)
@@ -198,7 +186,7 @@ pp_compile const_2_def;
 val const_3_def = Define `
     const_3 (x:word32) = (1w + x)`;
 
-pp_compile const_3_def;
+pp_compile const_3_def true;
 
 
 (*---------------------------------------------------------------------------------*)
@@ -210,12 +198,12 @@ pp_compile const_3_def;
 val mul_1_def = Define `
     mul_1 (x:word32) = (x * 2w)`;
 
-pp_compile mul_1_def;
+pp_compile mul_1_def true;
 
 val mul_2_def = Define `
     mul_2 (x:word32) = (x * x)`;
 
-pp_compile mul_2_def;
+pp_compile mul_2_def true;
 
 (*---------------------------------------------------------------------------------*)
 (*      Composition of various structures                                          *)
@@ -229,7 +217,7 @@ val cj_f_2_def = Define `
                if a = 1w then c else c + b`;
 
 (*
-pp_compile cj_f_2_def;
+pp_compile cj_f_2_def true;
 
  |- !st.
           get_st
@@ -268,8 +256,19 @@ val f3_def = Define `
                e 
 `;
 
-pp_compile ((SIMP_RULE std_ss [LET_THM]) f3_def)
-toANF [] f3_def
+(* equivalence proof fails, thus an assumtion is created*)
+val f3_comp = pp_compile f3_def true 
+val f3_spec = #5 f3_comp
+val f3_spec_hyp = hd (hyp f3_spec)
+val f3_spec_hyp_thm = prove (f3_spec_hyp, (* set_goal ([], f3_spec_hyp) *)	
+   SIMP_TAC std_ss [FUN_EQ_THM, f3_def, FORALL_PROD, LET_THM] THEN
+	REPEAT GEN_TAC THEN
+	Cases_on `p_1 = 1w` THEN (
+		ASM_SIMP_TAC std_ss [] THEN
+		WORDS_TAC
+	))	
+val f3_spec_final = PROVE_HYP f3_spec_hyp_thm f3_spec
+
 (*
 *)
 
