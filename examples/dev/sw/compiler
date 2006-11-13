@@ -4,23 +4,23 @@
 
 app load ["ANF", "wordsLib", "pairTheory", "pairLib", "arithmeticTheory", "listTheory", "optionTheory", "wordsTheory", 
           "finite_mapTheory", "whileTheory",
-          "preARMSyntax", "preARMTheory", "ARMCompositionTheory", "ILTheory", "rulesTheory", "interface", "mechReasoning"];
+          "preARMSyntax", "preARMTheory", "ARMCompositionTheory", "ILTheory", "rulesTheory", "mechReasoning"];
 
 quietdec := true;
 open Portable Assem wordsTheory ANF pairTheory pairLib listTheory arithmeticTheory whileTheory
-     wordsLib PairedLambda interface mechReasoning;
+     wordsLib PairedLambda mechReasoning;
 quietdec := false;
 
 (*---------------------------------------------------------------------------*)
 (* Old-style conditional statements                                          *)
 (*---------------------------------------------------------------------------*)
-
+(*
 val _ = add_rule{term_name   = "COND",
 fixity      = Infix (HOLgrammars.RIGHT, 3),
 pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,0), TM, BreakSpace(1,0), TOK "|", HardSpace 1],
 paren_style = OnlyIfNecessary,
 block_style = (AroundEachPhrase, (INCONSISTENT, 0))};
-
+*)
 (*
 val _ = add_rule{term_name   = "COND",
 fixity      = TruePrefix 70,
