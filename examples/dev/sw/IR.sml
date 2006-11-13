@@ -154,20 +154,20 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
         Tree.SEQ(s1, mk_MOVE e1 (Tree.ESEQ(s2,e2)))
  |  mk_MOVE e1 (Tree.ESEQ(s1, e2)) =
 	Tree.SEQ(s1, Tree.MOVE (e1,e2))
- |  mk_MOVE e1 s = Tree.MOVE (e1,s)
+ |  mk_MOVE e1 s = Tree.MOVE (e1,s);
 
 
  fun mk_PAIR (Tree.ESEQ(s1,s2)) = mk_PAIR s2
   |  mk_PAIR (Tree.PAIR (e1,e2)) =
 	Tree.PAIR(mk_PAIR e1, mk_PAIR e2)
   |  mk_PAIR exp =
-	  Tree.TEMP (inspectVar(Temp.makestring(Temp.newtemp())))  
+	  Tree.TEMP (inspectVar(Temp.makestring(Temp.newtemp())));
 
  fun analyzeExp exp =
 
      if is_let exp then
-        let val (lt, rhs) = dest_let exp;
-            val (lhs, rest) = dest_pabs lt;
+        let val (var, rhs) = dest_let exp;
+            val (lhs, rest) = dest_pabs var;
 	    val rt = analyzeExp rhs
         in
 	    Tree.ESEQ(Tree.MOVE(analyzeExp lhs, analyzeExp rhs), analyzeExp rest)
@@ -235,11 +235,17 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	    raise ERR "buildIR" "the expression is invalid"
 
 
-
-fun convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) = 
-	convert_ESEQ (Tree.ESEQ (Tree.SEQ(s1, s2), e))
+(*
+fun 
+	convert_ESEQ (Tree.ESEQ(Tree.MOVE(e1, e2), Tree.ESEQ(s2,e))) =
+   convert_ESEQ (Tree.ESEQ (Tree.SEQ(
+		Tree.MOVE(e1, convert_ESEQ e2), s2), convert_ESEQ e))
+ |
+	convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) = 
+	convert_ESEQ (Tree.ESEQ (Tree.SEQ(s1, s2), convert_ESEQ e))
  |  convert_ESEQ s = s; 
 
+convert_ESEQ ir
 
 fun linearize (stm:Tree.stm) : Tree.stm list =
   let
@@ -247,22 +253,33 @@ fun linearize (stm:Tree.stm) : Tree.stm list =
      |  linear (s,l) = s::l
 
     fun discompose_move(Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) = 
-	discompose_move(Tree.MOVE(e1,e3)) @ discompose_move(Tree.MOVE(e2,e4))
+	      discompose_move(Tree.MOVE(e1,e3)) @ discompose_move(Tree.MOVE(e2,e4))
+     |   discompose_move exp = [exp]
      |   discompose_move exp = [exp]
 
   in
     List.foldl (fn (exp, L) => L @ discompose_move exp) [] (linear (stm, []))
   end
 
+*)
 
-fun linerize_IR ir = 
-  let
-    fun get_stm (Tree.ESEQ(s,e)) = s
-    fun get_exp (Tree.ESEQ(s,e)) = e
-    val ir = convert_ESEQ ir
-  in
-    (linearize (get_stm ir), get_exp ir)  
-  end
+fun 
+  linerize_IR_stm (Tree.MOVE (e1, Tree.ESEQ (s, e2))) =
+		(linerize_IR_stm s) @ linerize_IR_stm (Tree.MOVE (e1, e2)) |
+  linerize_IR_stm (Tree.SEQ (s1, s2)) = (linerize_IR_stm s1) @ (linerize_IR_stm s2) |
+  linerize_IR_stm (Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) =
+	  linerize_IR_stm (Tree.MOVE(e1,e3)) @ linerize_IR_stm (Tree.MOVE(e2,e4))
+  |
+  linerize_IR_stm stm = [stm]
+
+
+fun linerize_IR (Tree.ESEQ (s, e)) =
+		let
+			val (stmL, e') = linerize_IR e
+		in
+			(((linerize_IR_stm s) @ stmL), e')
+		end |
+	linerize_IR e = ([], e)
 
 
 fun convert_to_IR prog =

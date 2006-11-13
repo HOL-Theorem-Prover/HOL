@@ -499,6 +499,18 @@ fun VAR_LET_CONV t =
    else raise ERR "VAR_LET_CONV" ""
  end;
 
+fun LET_UNCURRY_CONV t =
+ let open pairSyntax 
+     val (_,tm) = dest_let t;
+	  val (f, _) = strip_comb tm
+     val {Name,Thy,Ty} = dest_thy_const f;
+	  val _ = if (((Name = "UNCURRY") andalso (Thy = "pair")) orelse
+                 ((Name = "COND") andalso (Thy = "bool")))
+						 then raise UNCHANGED else ()
+ in 
+   (RAND_CONV UNCURRY_CONV) t
+ end;
+
 (*val t = rhs (concl (SPEC_ALL thm16))
      val thm17 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm16*)
 
@@ -526,9 +538,44 @@ in
     end
 end;
 
-(*val (args,thm) = (args,const_eq_comb) *)
-fun ANFof (args,thm) =
- let val thm1 = Q.AP_TERM `CPS` thm
+
+val CPS_REWRITES = prove (``
+	(!f1 f2. Seq f1 f2 = \arg. let z1 = f1 arg in 
+										let z2 = f2 z1 in
+										z2) /\
+	(!f1 f2. Par f1 f2 = \arg. let z1 = f1 arg in 
+										let z2 = f2 arg in 
+										(z1, z2)) /\
+	(!f1 f2 f3. Ite f1 f2 f3 = \arg. 
+										let (z1 = f1 arg) in 
+										   (if z1 then 
+												let z2 = f2 arg in z2
+											else 
+												let z3 = f3 arg in z3))``,
+	SIMP_TAC std_ss [Seq_def, Par_def, Ite_def, LET_THM])
+
+val LET_PAIR = prove (``
+	!f y. (let (x = (y:('a # 'b))) in f x) =
+		   let x1 = FST y in
+			let x2 = SND y in
+			f (x1,x2)``,
+
+	Cases_on `y` THEN
+	SIMP_TAC std_ss [LET_THM]);
+
+val LET_LET = prove (``
+	!f1 f2 z. (let (x = let y = z in f1 y) in f2 x) =
+		   let y = z in
+			let x = f1 y in
+			f2 x``,
+
+	SIMP_TAC std_ss [LET_THM])
+
+
+(*
+fun old_ANFof (args,thm) =
+	let
+	  val thm1 = Q.AP_TERM `CPS` thm
      val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,(* CPS_REC_INTRO, *)
                                    CPS_ITE_INTRO] thm1
      val thm3 = CONV_RULE (DEPTH_CONV (REWR_CONV CPS_SEQ_def ORELSEC
@@ -551,7 +598,25 @@ fun ANFof (args,thm) =
      val thm15 = CONV_RULE (DEPTH_CONV ELIM_PAIR_LET_CONV) thm14
      val thm16 = STD_BVARS "v" thm15
      val thm17 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm16
- in thm17
+in 
+	thm17
+end
+
+*)
+
+(*val (args,thm) = (args,const_eq_comb) *)
+fun ANFof (args,thm) =
+ let val thm1 = CONV_RULE (REPEATC (STRIP_QUANT_CONV (HO_REWR_CONV FUN_EQ_THM)))
+                          thm
+     val thm2 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm1
+	  val thm3 = SIMP_RULE std_ss [CPS_REWRITES, LET_LET] thm2
+	  val thm4 = PBETA_RULE thm3
+	  val thm5 = SIMP_RULE std_ss [LET_PAIR] thm4
+     val thm6 = CONV_RULE (DEPTH_CONV LET_UNCURRY_CONV) thm5
+     val thm7 = STD_BVARS "v" thm6
+     val thm8 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm7
+     val thm9 = STD_BVARS "v" thm8
+ in thm8
  end;
 
 
@@ -560,10 +625,10 @@ fun ANFof (args,thm) =
 (* to combinator form, then to A-Normal form and add the result to the       *)
 (* environment.                                                              *)
 (*---------------------------------------------------------------------------*)
-
 fun toANF env def = 
  let val (is_recursive,func,args,const_eq_comb) = toComb def
      val anf = STD_BVARS "v" (ANFof (args,const_eq_comb))
+(*   val old_anf = STD_BVARS "v" (old_ANFof (args,const_eq_comb))*)
  in 
    (func,(is_recursive,def,anf,const_eq_comb))::env
  end;
