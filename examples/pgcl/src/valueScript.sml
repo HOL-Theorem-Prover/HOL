@@ -154,37 +154,44 @@ val Assign_Array_empty = Define
 
 val n_list_def = Define
    `(n_list 0 x = []) /\
-    (n_list (SUC n) x = x::(n_list (n-1) x))`;
+    (n_list (SUC n) x = x::(n_list (n) x))`;
+
+val length_of_n_list = store_thm
+  ("length_of_n_list",
+   ``!n x. LENGTH (n_list n x) = n``,
+   REPEAT STRIP_TAC
+   ++ Induct_on `n`
+   ++ RW_TAC arith_ss [LENGTH, n_list_def]);
 
 val New_Array = Define
    `New_Array a n = Assign a (\s. Array (n_list (num_of_value (s n)) Null))`;
 
-val Demonchoice_Array_num_i_def = Define
-   `Demonchoice_Array_num_i a i xs = 
-	Demons (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)`; 
+val NondetAssign_Array_num_i_def = Define
+   `NondetAssign_Array_num_i a i xs = 
+	Nondets (MAP (\x. Assign_Array_num_i a i (\s. x)) xs)`; 
 
-val Demonchoice_Array_i_def = Define
-   `Demonchoice_Array_i a i xs =
-	Demons (MAP (\x. Assign_Array_i a i (\s. x)) xs)`;
+val NondetAssign_Array_i_def = Define
+   `NondetAssign_Array_i a i xs =
+	Nondets (MAP (\x. Assign_Array_i a i (\s. x)) xs)`;
 
-val Probchoice_Array_num_i_def = Define
-   `Probchoice_Array_num_i a i xs =
+val ProbAssign_Array_num_i_def = Define
+   `ProbProbAssign_Array_num_i a i xs =
 	Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_num_i a i (\s. x))) xs)`;
 
-val Probchoice_Array_i_def = Define
-   `Probchoice_Array_i a i xs =
+val ProbAssign_Array_i_def = Define
+   `ProbAssign_Array_i a i xs =
 	Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_i a i (\s. x))) xs)`;
 
-val Demonchoice_Array_extend_def = Define
-   `Demonchoice_Array_extend a xs =
-	Demons (MAP (\x. Assign_Array_extend a (\s. x)) xs)`;
+val NondetAssign_Array_extend_def = Define
+   `NondetAssign_Array_extend a xs =
+	Nondets (MAP (\x. Assign_Array_extend a (\s. x)) xs)`;
 
-val Probchoice_Array_extend_def = Define
-   `Probchoice_Array_extend a xs =
+val ProbAssign_Array_extend_def = Define
+   `ProbAssign_Array_extend a xs =
 	Probs (MAP (\x. (1/ & (LENGTH xs), Assign_Array_extend a (\s. x))) xs)`;
 
 val For_0_to_n_def = Define
-   `For_0_to_n i n l = For i (\s. Int 0) (\s. (num_of_value(s i)) < (num_of_value(s n))) (\s. Int ((int_of_value(s i)) + 1)) l`;
+   `For_0_to_n i n l = For i (\s. Int 0) (\s. (int_of_value(s i)) < (int_of_value(s n))) (\s. Int ((int_of_value(s i)) + 1)) l`;
 
 
 (* ------------------------------------------------------------------------- *)
