@@ -53,67 +53,13 @@ val Suff = Q_TAC SUFF_TAC;
 val word_mod_def = Define
   `word_mod a b = a - (b * word_div a b)`;
 
-val SUM_FUN_RANGE = prove (
-``!n f. SUM n f = SUM n (\m. if (m < n) then f m else 0)``,
-
-REWRITE_TAC [sum_numTheory.SUM] THEN
-REPEAT GEN_TAC THEN
-MATCH_MP_TAC sum_numTheory.GSUM_FUN_EQUAL THEN
-SIMP_TAC std_ss []);
-
-
 val w2n_lsr = store_thm ("w2n_lsr",
-``(w2n (w >>> m)) = (w2n w DIV 2**m)``,
-
-Induct_on `m` THENL [
-       SIMP_TAC std_ss [SHIFT_ZERO, EXP],
-
-       SIMP_TAC std_ss [EXP] THEN
-       ONCE_REWRITE_TAC[MULT_SYM] THEN
-       SIMP_TAC std_ss [GSYM DIV_DIV_DIV_MULT] THEN
-       POP_ASSUM (fn thm => REWRITE_TAC [GSYM thm]) THEN
-       `(w >>> SUC m) = ((w >>> m) >>> (SUC 0))` by ALL_TAC THEN1 (
-               REWRITE_TAC [LSR_ADD, ADD_CLAUSES]
-       ) THEN
-       POP_ASSUM (fn thm => REWRITE_TAC [thm]) THEN
-       Q.ABBREV_TAC `v = w >>> m` THEN
-       POP_ASSUM (fn thm => ALL_TAC) THEN
-
-       FULL_SIMP_TAC std_ss [word_lsr_def, w2n_def] THEN
-       `0 < dimindex (:'a)` by REWRITE_TAC [DIMINDEX_GT_0] THEN
-       Q.ABBREV_TAC `a = dimindex (:'a)` THEN
-       `a <= dimindex (:'a)` by ASM_SIMP_TAC arith_ss [] THEN
-       Q.PAT_ASSUM `Abbrev x` (fn thm => ALL_TAC) THEN
-       Induct_on `a` THENL [
-               SIMP_TAC std_ss [],
-
-               Cases_on `a` THENL [
-                       FULL_SIMP_TAC arith_ss [sum_numTheory.SUM_def, fcpTheory.FCP_BETA,
-DIMINDEX_GT_0, bitTheory.SBIT_def, COND_RAND, COND_RATOR],
-
-                       REPEAT STRIP_TAC THEN
-                       FULL_SIMP_TAC arith_ss [] THEN
-                       ONCE_REWRITE_TAC [sum_numTheory.SUM_def] THEN
-                       SIMP_TAC std_ss [] THEN
-                       `!x. ((x + SBIT (v %% SUC n) (SUC n)) DIV 2) =
-                                 (x DIV 2 + SBIT (v %% SUC n) n)` by ALL_TAC THEN1 (
-                               ONCE_REWRITE_TAC [ADD_COMM] THEN
-                               Tactical.REVERSE (`SBIT (v %% SUC n) (SUC n) = SBIT (v %% SUC n) n * 2` by
-ALL_TAC) THEN1 (
-                                       ASM_SIMP_TAC std_ss [ADD_DIV_ADD_DIV]
-                               ) THEN
-                               SIMP_TAC arith_ss [bitTheory.SBIT_def, COND_RATOR, COND_RAND, EXP]
-                       ) THEN
-                       POP_ASSUM (fn thm => REWRITE_TAC[thm]) THEN
-                       Q.PAT_ASSUM `a = b` (fn thm => REWRITE_TAC[GSYM thm]) THEN
-                       ONCE_REWRITE_TAC[SUM_FUN_RANGE] THEN
-                       FULL_SIMP_TAC arith_ss [fcpTheory.FCP_BETA, ADD_CLAUSES] THEN
-                       SIMP_TAC std_ss [sum_numTheory.SUM_def] THEN
-                       ONCE_REWRITE_TAC[SUM_FUN_RANGE] THEN
-                       SIMP_TAC arith_ss [bitTheory.SBIT_def, SUC_ONE_ADD]
-               ]
-       ]
-]);
+  ``(w2n (w >>> m)) = (w2n w DIV 2**m)``,
+  wordsLib.Cases_on_word `w`
+  ++ SIMP_TAC std_ss [ONCE_REWRITE_RULE [GSYM w2n_11] word_lsr_n2w,
+       simpLib.SIMP_PROVE arith_ss [MIN_DEF] ``MIN a (a + b) = a``,
+       word_bits_n2w,w2n_n2w,MOD_DIMINDEX,bitTheory.BITS_COMP_THM2]
+  ++ SIMP_TAC std_ss [bitTheory.BITS_THM2]);
 
 (* ------------------------------------------------------------------------- *)
 (* Elliptic curve theory to support the compiled functions.                  *)
