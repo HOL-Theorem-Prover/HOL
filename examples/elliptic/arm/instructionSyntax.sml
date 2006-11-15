@@ -29,7 +29,8 @@ val mk_word16 = mk_word ``:i16``;
 val mk_word24 = mk_word ``:i24``;
 val mk_word32 = mk_word ``:i32``;
 
-val mk_register = mk_word4 o Arbnum.fromInt o register2int;
+fun mk_register (NReg n) = (mk_word4 o Arbnum.fromInt o register2int) n
+  | mk_register (VReg x) = mk_var (x, ``:word4``);
 
 fun mk_condition cond =
   case cond of
@@ -373,8 +374,13 @@ end;
 fun dest_word t = let val (n,typ) = dest_n2w t in
   Arbnum.mod(numLib.dest_numeral n,index_size typ) end;
 
-val dest_wordi    = Arbnum.toInt o dest_word;
-val dest_register = int2register o dest_wordi;
+val dest_wordi  = Arbnum.toInt o dest_word;
+
+fun dest_register t = NReg (int2register (dest_wordi t))
+  handle HOL_ERR e =>
+    let val (x, t) = dest_var t in
+      if t = ``:word4`` then VReg x else Raise (HOL_ERR e)
+    end;
 
 fun dest_bool t =
   if term_eq t T then true else
@@ -508,11 +514,11 @@ in
            op2 = dest_addr_mode1 op2},dest_condition c)
     | (opc, [c,rn,op2]) =>
          Instruction(Data_proc {opc = dest_opc2 opc, S = true,
-           Rd = R0, Rn = dest_register rn,
+           Rd = NReg R0, Rn = dest_register rn,
            op2 = dest_addr_mode1 op2},dest_condition c)
     | (opc, [c,s,rd,op2]) =>
          Instruction(Data_proc {opc = dest_opc3 opc, S = dest_bool s,
-           Rd = dest_register rd, Rn = R0,
+           Rd = dest_register rd, Rn = NReg R0,
            op2 = dest_addr_mode1 op2},dest_condition c)
     | _ => raise err)
     handle HOL_ERR _ => raise err
@@ -528,7 +534,7 @@ in
            Instruction(Mla_mul {L = false, Signed = false,
              A = false, S = dest_bool s,
              Rd = dest_register rd, Rm = dest_register rm,
-             Rs = dest_register rs, Rn = R0},dest_condition c)
+             Rs = dest_register rs, Rn = NReg R0},dest_condition c)
          else
            raise err
     | (i, [c,s,rd,rm,rs,rn]) =>

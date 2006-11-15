@@ -92,16 +92,19 @@ fun register2int r =
   | R8  => 8  | R9  => 9  | R10 => 10 | R11 => 11
   | R12 => 12 | R13 => 13 | R14 => 14 | R15 => 15;
 
-fun reg2string r =
-let val n = register2int r in
-  case n of
-    13 => "sp"
-  | 14 => "lr"
-  | 15 => "pc"
-  | _  => "r" ^ Int.toString n
-end;
+fun reg2string (NReg r) =
+      let val n = register2int r in
+        case n of
+          13 => "sp"
+        | 14 => "lr"
+        | 15 => "pc"
+        | _  => "r" ^ Int.toString n
+      end
+  | reg2string (VReg x) = x;
 
-fun cp_reg2string r = "c" ^ Int.toString (register2int r);
+fun cp_reg2string (NReg r) = "c" ^ Int.toString (register2int r)
+  | cp_reg2string (VReg x) = x;
+
 fun cp_num2string n = "p" ^ Int.toString n;
 
 fun opcode2string opc =
@@ -118,7 +121,7 @@ fun condition2string cond =
   | HI => "hi" | LS => "ls" | GE => "ge" | LT => "lt"
   | GT => "gt" | LE => "le" | AL => ""   | NV => "nv";
 
-val list2register = int2register o list2int;
+val list2register = NReg o int2register o list2int;
 
 fun list2opcode l =
   case list2int l of
@@ -226,15 +229,15 @@ end;
 
 fun dec_cdp l = Cdp
   {Cop1 = list2int (bits 23 20 l), CRn = Rn l, CRd = Rd l,
-   CP = register2int (Rs l), Cop2 = list2int (bits 7 5 l), CRm = Rm l};
+   CP = list2int (bits 11 8 l), Cop2 = list2int (bits 7 5 l), CRm = Rm l};
 
 fun dec_mcr_mrc l = Mcr_mrc
   {Cop1 = list2int (bits 23 21 l), L = bit 20 l, Rd = Rd l, CRn = Rn l,
-   CP = register2int (Rs l), CRm = Rm l, Cop2 = list2int (bits 7 5 l)};
+   CP = list2int (bits 11 8 l), CRm = Rm l, Cop2 = list2int (bits 7 5 l)};
 
 fun dec_ldc_stc l = Ldc_stc
   {P = bit 24 l, U = bit 23 l, N = bit 22 l, W = bit 21 l, L = bit 20 l,
-   CRd = Rd l, Rn = Rn l, CP = register2int (Rs l),
+   CRd = Rd l, Rn = Rn l, CP = list2int (bits 11 8 l),
    offset = list2int (bits 7 0 l)};
 
 (* ------------------------------------------------------------------------- *)
@@ -431,7 +434,9 @@ fun op << (x,y) = let open Arbnum in
   x * pow(two, fromInt y)
 end;
 
-val register_to_num = Arbnum.fromInt o register2int;
+fun register_to_num (NReg n) = Arbnum.fromInt (register2int n)
+  | register_to_num (VReg x) = raise Parse
+      "register_to_num: register is a variable";
 
 fun condition_to_num cond = Arbnum.fromInt
  (case cond of
@@ -587,7 +592,7 @@ fun shift2string x = toUpperString(
   | ASR => "asr"
   | ROR => "ror");
 
-fun shift_immediate2string (y:{Imm : int, Rm : register, Sh : shift}) =
+fun shift_immediate2string (y:{Imm : int, Rm : vregister, Sh : shift}) =
   reg2string (#Rm y) ^
     (if #Imm y = 0 then toUpperString(
        case #Sh y of
