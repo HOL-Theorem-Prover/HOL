@@ -81,20 +81,26 @@ in
 end;
 
 local
-  val state_expect = ``:state expect``;
+  val leq_tm = ``Leq : 'a state expect -> 'a state expect -> bool``;
 
-  val leq_tm = ``Leq : state expect -> state expect -> bool``;
   val dest_leq = dest_binop leq_tm (ERR "dest_leq" "");
-  fun mk_leq (a,b) = mk_comb (mk_comb (leq_tm, a), b);
+
+  fun mk_leq (a,b) =
+      let
+        val (_,ty) = dom_rng (hd (snd (dest_type (type_of a))))
+        val tm = inst [alpha |-> ty] leq_tm
+      in
+        mk_comb (mk_comb (tm,a), b)
+      end;
 
   val vc_solve = prolog
     [wlp_abort_vc, wlp_consume_vc, wlp_assign_vc, wlp_seq_vc, wlp_nondet_vc,
-     wlp_prob_vc, wlp_while_vc, wlp_if_vc, wlp_assert_vc];
+     wlp_prob_vc, wlp_while_vc, wlp_skip_vc, wlp_if_vc, wlp_assert_vc];
 in
   fun vc_tac (asl,goal) =
     let
       val (pre,wlp_post) = dest_leq goal
-      val var = genvar state_expect
+      val var = genvar (type_of wlp_post)
       val query = mk_leq (var, wlp_post)
       val result = hd (snd (vc_solve (([var],[]),[query])))
       val (mid,_) = dest_leq (concl result)
@@ -187,8 +193,8 @@ in
 end;
 
 local
-  fun simps ths = ths @
-    [wlp_min_def, Lin_def, Cond_def, o_THM, magic_alt, assign_def];
+  fun simps ths =
+      ths @ [min_alt, Lin_def, Cond_def, o_THM, magic_alt, assign_def];
 in
   val leq_tac =
     CONV_TAC (REWR_CONV Leq_def)
@@ -207,7 +213,7 @@ end;
 local
   val expand =
     [MAP, LENGTH,
-     Skip_def, Nondets_def, NondetAssign_def, Probs_def, ProbAssign_def,
+     Nondets_def, NondetAssign_def, Probs_def, ProbAssign_def,
      Program_def, Guards_def, guards_def];
 in
   val pure_wlp_tac =

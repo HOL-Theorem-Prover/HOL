@@ -126,6 +126,11 @@ val leq_compl_2 = store_thm
    ``!e f. expect1 e /\ expect1 f ==> (Leq (Compl e) (Compl f) = Leq f e)``,
    PROVE_TAC [compl_compl, leq_compl, expect1_compl]);
 
+val min_alt = store_thm
+  ("min_alt",
+   ``!e f s. Min e f s = min (e s) (f s)``,
+   RW_TAC std_ss [Min_def]);
+
 val refl_min = store_thm
   ("refl_min",
    ``!x. Min x x = x``,

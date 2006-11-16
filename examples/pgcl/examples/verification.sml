@@ -8,7 +8,7 @@
 loadPath := ["../src"] @ !loadPath;
 app load
   ["bossLib","realLib","rich_listTheory","intLib","stringTheory","metisLib",
-   "posrealLib","wpTheory","pgclLib"];
+   "posrealLib","wpTheory","valueTheory","looprulesTheory","pgclLib"];
 quietdec := true;
 
 open HolKernel Parse boolLib bossLib intLib realLib metisLib;
@@ -34,32 +34,32 @@ quietdec := false;
 (* ------------------------------------------------------------------------- *)
 
 val prob_then_demon = Count.apply prove
-  (``wp (Seq (Probchoice "i" [0; 1]) (Demonchoice "j" [0; 1]))
-     (\v. if v"i" = v"j" then 1 else 0) = \v. 0``,
+  (``wp (Seq (ProbAssign "i" [0; 1]) (NondetAssign "j" [0; 1]))
+     (\v : int state. if v"i" = v"j" then 1 else 0) = \v. 0``,
    RW_TAC arith_ss
-   [wp_def, Probchoice_def, Probs_def, Demonchoice_def, assign_eta, lin_eta,
-    Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
+   [wp_def, ProbAssign_def, Probs_def, NondetAssign_def, assign_eta, lin_eta,
+    Nondets_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
    ++ Q.UNABBREV_ALL_TAC
    ++ FULL_SIMP_TAC int_ss []
    ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
 
 val demon_then_prob = Count.apply prove
-  (``wp (Seq (Demonchoice "j" [0; 1]) (Probchoice "i" [0; 1]))
-     (\v. if v"i" = v"j" then 1 else 0) = \v. 1 / 2``,
+  (``wp (Seq (NondetAssign "j" [0; 1]) (ProbAssign "i" [0; 1]))
+     (\v : int state. if v"i" = v"j" then 1 else 0) = \v. 1 / 2``,
    RW_TAC arith_ss
-   [wp_def, Probchoice_def, Probs_def, Demonchoice_def, assign_eta, lin_eta,
-    Demons_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
+   [wp_def, ProbAssign_def, Probs_def, NondetAssign_def, assign_eta, lin_eta,
+    Nondets_def, MAP, LENGTH, CHR_11, FUN_EQ_THM, Zero_def, Min_def]
    ++ Q.UNABBREV_ALL_TAC
    ++ FULL_SIMP_TAC int_ss []
    ++ FULL_SIMP_TAC posreal_reduce_ss [bound1_def]);
 
 val partial_demon_then_prob = Count.apply prove
-  (``Leq (\v. 1 / 2)
-     (wlp (Seq (Demonchoice "j" [0; 1]) (Probchoice "i" [0; 1]))
+  (``Leq (\v : int state. 1 / 2)
+     (wlp (Seq (NondetAssign "j" [0; 1]) (ProbAssign "i" [0; 1]))
       (\v. if v"i" = v"j" then 1 else 0))``,
    RW_TAC arith_ss
-   [Probchoice_def, Probs_def, Demonchoice_def,
-    Demons_def, MAP, LENGTH, CHR_11, Program_def]
+   [ProbAssign_def, Probs_def, NondetAssign_def,
+    Nondets_def, MAP, LENGTH, CHR_11, Program_def]
    ++ RW_TAC posreal_reduce_ss []
    ++ pure_wlp_tac
    ++ leq_tac);
@@ -70,16 +70,16 @@ val partial_demon_then_prob = Count.apply prove
 
 val wp_loop = Count.apply prove
   (``!post. wp (While (\s. T) Skip) post = Zero``,
-   RW_TAC std_ss [wp_def, cond_eta]
-   ++ Know `monotonic (expect,Leq) (\e s : state. e s)`
+   RW_TAC std_ss [wp_def, cond_eta, wp_skip]
+   ++ Know `monotonic (expect,Leq) (\e s : 'a state. e s)`
    >> (RW_TAC std_ss [monotonic_def]
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
        ++ RW_TAC std_ss [])
    ++ RW_TAC std_ss []
-   ++ Know `lfp (expect,Leq) (\e s : state. e s) (expect_lfp (\e s. e s))`
+   ++ Know `lfp (expect,Leq) (\e s : 'a state. e s) (expect_lfp (\e s. e s))`
    >> METIS_TAC [expect_lfp_def]
    ++ RW_TAC std_ss []
-   ++ Suff `lfp (expect,Leq) (\e s : state. e s) Zero`
+   ++ Suff `lfp (expect,Leq) (\e s : 'a state. e s) Zero`
    >> METIS_TAC [lfp_def, expect_def, leq_antisym, leq_refl]
    ++ RW_TAC std_ss [lfp_def, expect_def, zero_leq]
    ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -87,16 +87,16 @@ val wp_loop = Count.apply prove
 
 val wlp_loop = Count.apply prove
   (``!post. wlp (While (\s. T) Skip) post = Magic``,
-   RW_TAC std_ss [wlp_def, cond_eta]
-   ++ Know `monotonic (expect,Leq) (\e s : state. e s)`
+   RW_TAC std_ss [wlp_def, cond_eta, wlp_skip]
+   ++ Know `monotonic (expect,Leq) (\e s : 'a state. e s)`
    >> (RW_TAC std_ss [monotonic_def]
        ++ CONV_TAC (DEPTH_CONV ETA_CONV)
        ++ RW_TAC std_ss [])
    ++ RW_TAC std_ss []
-   ++ Know `gfp (expect,Leq) (\e s : state. e s) (expect_gfp (\e s. e s))`
+   ++ Know `gfp (expect,Leq) (\e s : 'a state. e s) (expect_gfp (\e s. e s))`
    >> METIS_TAC [expect_gfp_def]
    ++ RW_TAC std_ss []
-   ++ Suff `gfp (expect,Leq) (\e s : state. e s) Magic`
+   ++ Suff `gfp (expect,Leq) (\e s : 'a state. e s) Magic`
    >> METIS_TAC [gfp_def, expect_def, leq_antisym, leq_refl]
    ++ RW_TAC std_ss [gfp_def, expect_def, leq_magic]
    ++ CONV_TAC (DEPTH_CONV ETA_CONV)
@@ -106,24 +106,26 @@ val wlp_loop = Count.apply prove
 (* Monty Hall                                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val monty_hide_def = Define `monty_hide = Demonchoice "pc" [1; 2; 3]`;
+val monty_hide_def = Define
+  `monty_hide : int command = NondetAssign "pc" [1; 2; 3]`;
 
-val monty_choose_def = Define `monty_choose = Probchoice "cc" [1; 2; 3]`;
+val monty_choose_def = Define
+  `monty_choose : int command = ProbAssign "cc" [1; 2; 3]`;
 
 val monty_reveal_def = Define
-  `monty_reveal =
+  `monty_reveal : int command =
    Guards [((\v. ~(v"pc" = 1) /\ ~(v"cc" = 1)), (Assign "ac" (\v. 1)));
            ((\v. ~(v"pc" = 2) /\ ~(v"cc" = 2)), (Assign "ac" (\v. 2)));
            ((\v. ~(v"pc" = 3) /\ ~(v"cc" = 3)), (Assign "ac" (\v. 3)))]`;
 
 val monty_switch_def = Define
-  `monty_switch switch =
+  `monty_switch switch : int command =
    if ~switch then Skip
    else Assign "cc" (\v. if ~(v"cc" = 1) /\ ~(v"ac" = 1) then 1
                          else if ~(v"cc" = 2) /\ ~(v"ac" = 2) then 2 else 3)`;
 
-val montyhall_def = Define
-  `montyhall switch =
+val monty_hall_def = Define
+  `monty_hall switch =
    Program [monty_hide;
             monty_choose;
             monty_reveal;
@@ -131,38 +133,34 @@ val montyhall_def = Define
 
 (* Partial correctness using the wlp verification condition generator *)
 
-val partial_montyhall = Count.apply prove
+val partial_monty_hall = Count.apply prove
   (``!switch.
        Leq (\v. if switch then 2 / 3 else 1 / 3)
-       (wlp (montyhall switch) (\v. if v"pc" = v"cc" then 1 else 0))``,
+       (wlp (monty_hall switch) (\v. if v"pc" = v"cc" then 1 else 0))``,
    RW_TAC std_ss
-   [montyhall_def, monty_switch_def, monty_reveal_def,
-    monty_choose_def, monty_hide_def]
+     [monty_hall_def, monty_switch_def, monty_reveal_def,
+      monty_choose_def, monty_hide_def]
    ++ wlp_tac);
 
 (* Total correctness by hand *)
 
-val montyhall = Count.apply prove
+val monty_hall = Count.apply prove
   (``!switch.
-       wp (montyhall switch) (\v. if v"pc" = v"cc" then 1 else 0) =
+       wp (monty_hall switch) (\v. if v"pc" = v"cc" then 1 else 0) =
        (\v. if switch then 2 / 3 else 1 / 3)``,
    CONV_TAC (ONCE_DEPTH_CONV FUN_EQ_CONV)
-   ++ RW_TAC std_ss [montyhall_def, seq_assoc, Program_def]
-   ++ RW_TAC std_ss [wp_incognito]
-   ++ RW_TAC std_ss [monty_switch_def, wp_def, CHR_11, assign_def]
-   ++ RW_TAC std_ss [wp_incognito_def] ++ RW_TAC std_ss [wp_incognito]
-   ++ RW_TAC int_ss [wp_def, Guards_def, guards_def, wp_if, Demons_def,
+   ++ RW_TAC std_ss [wp_def, monty_hall_def, seq_assoc, Program_def]
+   ++ RW_TAC std_ss [monty_switch_def, wp_def, wp_skip, CHR_11, assign_def]
+   ++ RW_TAC int_ss [wp_def, Guards_def, guards_def, wp_if, Nondets_def,
                      monty_reveal_def, Min_def, cond_eta, assign_def]
    ++ RW_TAC posreal_ss [CHR_11]
-   ++ RW_TAC std_ss [wp_incognito_def] ++ RW_TAC std_ss [wp_incognito]
-   ++ RW_TAC list_ss [monty_choose_def, wp_def, Probchoice_def, Probs_def,
+   ++ RW_TAC list_ss [monty_choose_def, wp_def, ProbAssign_def, Probs_def,
                       CHR_11, assign_def, lin_eta]
    ++ RW_TAC int_ss []
    ++ RW_TAC posreal_reduce_ss []
    ++ RW_TAC posreal_ss [Zero_def]
-   ++ RW_TAC std_ss [wp_incognito_def]
-   ++ RW_TAC int_ss [monty_hide_def, MAP, wp_def, Demonchoice_def,
-                     Demons_def, Min_def, assign_def]
+   ++ RW_TAC int_ss [monty_hide_def, MAP, wp_def, NondetAssign_def,
+                     Nondets_def, Min_def, assign_def]
    ++ Q.UNABBREV_ALL_TAC
    ++ RW_TAC posreal_reduce_ss []);
   
@@ -171,7 +169,7 @@ val montyhall = Count.apply prove
 (* ------------------------------------------------------------------------- *)
 
 val lurch_def = Define
-  `lurch =
+  `lurch : int command =
    Prob (\v. 1/2) (Assign "n" (\v. v"n" - 1)) (Assign "n" (\v. v"n" + 1))`;
 
 val walk_def = Define `walk = While (\v. v"n" = 0) lurch`;
@@ -183,8 +181,8 @@ val lurch_once = Count.apply prove
           (1 / 2) * r (\w. if w = "n" then v"n" - 1 else v w) +
           (1 / 2) * r (\w. if w = "n" then v"n" + 1 else v w))``,
    RW_TAC posreal_ss
-   [wp_def, lurch_def, bound1_basic, COND_RAND, assign_eta, lin_eta,
-    FUN_EQ_THM]
+     [wp_def, lurch_def, bound1_basic, COND_RAND, assign_eta, lin_eta,
+      FUN_EQ_THM]
    ++ Q.UNABBREV_ALL_TAC
    ++ RW_TAC posreal_reduce_ss []);
 
@@ -224,16 +222,16 @@ val rabin_invar2_def = Define
    else if i = n + 1 then 1 / & (2 ** (Num n)) else 0`;
 
 val rabin_def = Define
-  `rabin =
+  `rabin : int command =
    While (\v. 1 < v"i")
    (Program [Assign "n" (\v. v"i");
              While (\v. 0 < v"n")
-             (Program [Probchoice "d" [0; 1];
+             (Program [ProbAssign "d" [0; 1];
                        Assign "i" (\v. v"i" - v"d");
                        Assign "n" (\v. v"n" - 1)])])`;
 
 val annotated_rabin_def = Define
-  `annotated_rabin =
+  `annotated_rabin : int command =
    Assert (\v. if v"i" = 1 then 1 else if 1 < v"i" then 2 / 3 else 0)
    (While (\v. 1 < v"i")
     (Program [Assign "n" (\v. v"i");
@@ -242,7 +240,7 @@ val annotated_rabin_def = Define
                             + rabin_invar2 (v"i") (v"n")
                           else 0)
               (While (\v. 0 < v"n")
-               (Program [Probchoice "d" [0; 1];
+               (Program [ProbAssign "d" [0; 1];
                          Assign "i" (\v. v"i" - v"d");
                          Assign "n" (\v. v"n" - 1)]))]))`;
 

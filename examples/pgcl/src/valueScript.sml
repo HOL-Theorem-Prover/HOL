@@ -193,21 +193,17 @@ val ProbAssign_Array_extend_def = Define
 val For_0_to_n_def = Define
    `For_0_to_n i n l = For i (\s. Int 0) (\s. (int_of_value(s i)) < (int_of_value(s n))) (\s. Int ((int_of_value(s i)) + 1)) l`;
 
+(* ------------------------------------------------------------------------- *)
+(* Showing the need for SUB-linearity for value states.                      *)
+(* ------------------------------------------------------------------------- *)
 
-(* ------------------------------------------------------------------------- *)
-(* Showing the need for SUB-linearity for integers                           *)
-(* ------------------------------------------------------------------------- *)
-(*
-val sublinear_necessary = store_thm
-  ("sublinear_necessary",
-   ``?(p:value command) r1 r2 s. wp p r1 s + wp p r2 s < wp p (\s'. r1 s' + r2 s') s``,
-   Q.EXISTS_TAC `Demon (Assign "n" (\v. Int 1)) Skip`
-   ++ Q.EXISTS_TAC `\v. if v "n" = Int 0 then 1 else 0`
-   ++ Q.EXISTS_TAC `\v. if v "n" = Int 1 then 1 else 0`
-   ++ Q.EXISTS_TAC `(\v. Int 0)`
-   ++ REWRITE_TAC [wp_def, assign_eta]
-   ++ SIMP_TAC int_ss [Min_def]
-   ++ RW_TAC int_ss []
-   ++ SIMP_TAC posreal_ss [preal_min_def]);
-*)
+val sublinear_necessary_value = store_thm
+  ("sublinear_necessary_value",
+   ``?p : value command. ?r1 r2 s.
+       wp p r1 s + wp p r2 s < wp p (\s'. r1 s' + r2 s') s``,
+   MATCH_MP_TAC sublinear_necessary
+   ++ Q.EXISTS_TAC `Null`
+   ++ Q.EXISTS_TAC `Int 0`
+   ++ RW_TAC std_ss []);
+
 val _ = export_theory();

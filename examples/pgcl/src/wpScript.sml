@@ -1013,6 +1013,11 @@ val seq_assoc = store_thm
    ``!p q r. wp (Seq p (Seq q r)) = wp (Seq (Seq p q) r)``,
    RW_TAC std_ss [wp_def]);
 
+val wp_skip = store_thm
+  ("wp_skip",
+   ``!r. wp Skip r = r``,
+   RW_TAC std_ss [wp_def, Skip_def]);
+
 val wp_if = store_thm
   ("wp_if",
    ``!c a b r. wp (If c a b) r = Cond c (wp a r) (wp b r)``,
@@ -1108,10 +1113,26 @@ val wlp_while = store_thm
    ++ RW_TAC std_ss [gfp_def, expect_def]);
 
 (* ------------------------------------------------------------------------- *)
-(* Automatic tool for calculating wlps.                                      *)
+(* wlp of derived programs.                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val wlp_min_def = Define `wlp_min a b s = min (a s) (b s)`;
+val wlp_skip = store_thm
+  ("wlp_skip",
+   ``!r. wlp Skip r = r``,
+   RW_TAC std_ss [Skip_def,wlp_def]);
+
+val wlp_if = store_thm
+  ("wlp_if",
+   ``!c a b r. wlp (If c a b) r = Cond c (wlp a r) (wlp b r)``,
+   RW_TAC std_ss [wlp_def, If_def, cond_eta, lin_eta]
+   ++ CONV_TAC FUN_EQ_CONV
+   ++ RW_TAC posreal_ss [bound1_basic]
+   ++ Q.UNABBREV_TAC `x`
+   ++ RW_TAC posreal_ss [mul_lone, mul_lzero]);
+
+(* ------------------------------------------------------------------------- *)
+(* Automatic tool for calculating wlps.                                      *)
+(* ------------------------------------------------------------------------- *)
 
 val wlp_assert_vc = store_thm
   ("wlp_assert_vc",
@@ -1152,12 +1173,12 @@ val wlp_nondet_vc = store_thm
   ("wlp_nondet_vc",
    ``!pre1 pre2 post c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
-       Leq (wlp_min pre1 pre2) (wlp (Nondet c1 c2) post)``,
+       Leq (Min pre1 pre2) (wlp (Nondet c1 c2) post)``,
    RW_TAC std_ss [wlp_def, Leq_def]
    ++ MATCH_MP_TAC le_trans
-   ++ Q.EXISTS_TAC `wlp_min pre1 pre2 s`
+   ++ Q.EXISTS_TAC `Min pre1 pre2 s`
    ++ RW_TAC std_ss []
-   ++ RW_TAC std_ss [wlp_min_def, Min_def, le_refl]
+   ++ RW_TAC std_ss [Min_def, le_refl]
    ++ METIS_TAC [min_le2_imp]);
 
 val wlp_prob_vc = store_thm
@@ -1185,19 +1206,17 @@ val wlp_while_vc = store_thm
    ++ FULL_SIMP_TAC std_ss [Leq_def, Cond_def]
    ++ METIS_TAC [le_trans]);
 
+val wlp_skip_vc = store_thm
+  ("wlp_skip_vc",
+   ``!post. Leq post (wlp Skip post)``,
+   RW_TAC std_ss [wlp_skip, leq_refl]);
+
 val wlp_if_vc = store_thm
   ("wlp_if_vc",
    ``!pre1 pre2 post b c1 c2.
        Leq pre1 (wlp c1 post) /\ Leq pre2 (wlp c2 post) ==>
        Leq (Cond b pre1 pre2) (wlp (If b c1 c2) post)``,
-   RW_TAC std_ss [If_def]
-   ++ MATCH_MP_TAC leq_trans
-   ++ Q.EXISTS_TAC `Lin (\s. if b s then 1 else 0) pre1 pre2`
-   ++ REVERSE CONJ_TAC >> METIS_TAC [wlp_prob_vc]
-   ++ RW_TAC std_ss [Leq_def, bound1_def, Lin_def, Cond_def]
-   ++ RW_TAC posreal_ss []
-   ++ FULL_SIMP_TAC posreal_ss []
-   ++ Q.UNABBREV_TAC `x`
-   ++ RW_TAC posreal_ss [mul_lzero, mul_lone]);
+   RW_TAC std_ss [wlp_if, Leq_def, Cond_def]
+   ++ METIS_TAC [le_trans]);
 
 val _ = export_theory();
