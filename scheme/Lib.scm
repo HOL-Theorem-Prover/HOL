@@ -8,6 +8,7 @@
                  mergesort
                  filter)
            (lib "plt-match.ss")
+           (lib "compare.ss" "srfi" "67")
            (only (lib "list.ss" "srfi" "1")
                  list-index
                  fold
@@ -104,6 +105,15 @@
     (if (P x)
         x
         (raise e)))
+  
+  (define (assert P x)
+    (assert_exn P x (ERR "assert" "predicate not true")))
+  
+  (define (with_exn f x e)
+    (with-handlers ((exn:break? raise)
+                    ((lambda (x) #t)
+                     (lambda (x) (raise e))))
+      (f x)))      
   
   (define (tryfind f t)
     (if (null? t)
@@ -267,14 +277,14 @@
   (define list_compare
     (match-lambda*
       ((list cfn (vector (list) (list)))
-       'EQUAL)
+       0)
       ((list cfn (vector (list) _))
-       'LESS)
+       -1)
       ((list cfn (vector _ (list)))
-       'GREATER)
+       1)
       ((list cfn (vector (list-rest h1 t1) (list-rest h2 t2)))
        (let ((t (cfn (vector h1 h2))))
-         (if (eq? t 'EQUAL)
+         (if (= t 0)
              (list_compare cfn t1 t2)
              t)))))
   
@@ -284,21 +294,14 @@
              (vector (vector a1 b1)
                      (vector a2 b2)))
        (let ((t (acmp (vector a1 a2))))
-         (if (eq? t 'EQUAL)
+         (if (= t 0)
              (bcmp (vector b1 b2))
              (t))))))
   
   (define (measure_cmp f t)
     (let ((x (vector-ref t 0))
           (y (vector-ref t 1)))
-      (let ((a (f x))
-            (b (f y)))
-        (cond ((> a b)
-               'GREATER)
-              ((< a b)
-               'LESS)
-              (else ;(= a b)
-               'EQUAL)))))
+      (integer-compare (f x) (f y))))
   
   (define (inv_img_cmp f c t)
     (let ((x (vector-ref t 0))

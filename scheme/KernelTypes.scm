@@ -6,7 +6,8 @@
            (only "Globals.scm" old)
            (only "Lib.scm" stringquote))
   
-  (require (lib "plt-match.ss"))
+  (require (lib "plt-match.ss")
+           (lib "compare.ss" "srfi" "67"))
   
   (define (mk_id p)
     (box p))
@@ -24,19 +25,14 @@
       ((vector n t)
        (set-box! r (vector (old n) t)))))
   
-  ;(define same_id equal?)
+  (define same_id equal?)
   
   (define compare
     (match-lambda
       ((vector id1 id2)
        (let ((t1 (string-append (name_of id1) (seg_of id1)))
              (t2 (string-append (name_of id2) (seg_of id2))))
-         (cond ((string=? t1 t2)
-                'Equal)
-               ((string<? t1 t2)
-                'Less)
-               (else ;(string>? t1 t2)
-                'GREATER))))))
+         (string-compare t1 t2)))))
   
   (define fullname
     (match-lambda
