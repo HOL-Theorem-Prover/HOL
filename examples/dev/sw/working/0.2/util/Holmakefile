@@ -1,0 +1,20 @@
+errormsg.uo: errormsg.sml
+	HOLMOSMLC -c -toplevel errormsg.sml
+
+gr-sig.uo: gr-sig.sml 
+	HOLMOSMLC -c -toplevel gr-sig.sml
+
+gr.uo: gr.sml gr-sig.uo UTuple.uo
+	HOLMOSMLC -c -toplevel gr-sig.ui gr.sml
+
+ord-map-sig.uo: ord-map-sig.sml
+	HOLMOSMLC -c -toplevel ord-map-sig.sml
+
+int-binary-map.uo: int-binary-map.sml ord-map-sig.uo
+	HOLMOSMLC -c -toplevel ord-map-sig.ui int-binary-map.sml
+
+gr_t.uo: gr_t.sml int-binary-map.uo gr.uo UGeneral.uo
+	HOLMOSMLC -c -toplevel int-binary-map.ui gr.ui gr-sig.ui gr_t.sml
+
+Table.uo: Table.sml
+	HOLMOSMLC -c -toplevel Table.sml
