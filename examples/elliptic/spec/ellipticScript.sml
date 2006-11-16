@@ -2146,17 +2146,19 @@ val {simplify = alg_ss, normalize = alg_ss'} = alg_simpsets alg_context;
 (* ElGamal encryption                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val elgamal_def = Define
-  `elgamal G g h m k =
+val elgamal_encrypt_def = Define
+  `elgamal_encrypt G g h m k =
    (group_exp G g k, G.mult (group_exp G h k) m)`;
+
+val elgamal_decrypt_def = Define
+  `elgamal_decrypt G x (a,b) = G.mult (G.inv (group_exp G a x)) b`;
 
 val elgamal_correctness = store_thm
   ("elgamal_correctness",
    ``!G :: Group. !g h m :: (G.carrier). !k x.
        (h = group_exp G g x) ==>
-       let (a,b) = elgamal G g h m k in
-       G.mult (G.inv (group_exp G a x)) b = m``,
-   RW_TAC resq_ss [elgamal_def]
+       (elgamal_decrypt G x (elgamal_encrypt G g h m k) = m)``,
+   RW_TAC resq_ss [elgamal_encrypt_def, elgamal_decrypt_def]
    ++ MATCH_MP_TAC EQ_TRANS
    ++ Q.EXISTS_TAC
       `G.mult (G.mult (G.inv (group_exp G (group_exp G g k) x))
@@ -5917,6 +5919,10 @@ val curve_add_def = Define
                  let x = l ** 2 + a1 * l - a2 - x1 - x2 in
                  let y = ~(l + a1) * x - m - a3 in
                  affine e.field [x; y]) p2) p1`;
+
+val curve_mult_def = Define
+  `(curve_mult (e : 'a curve) p 0 = curve_zero e) /\
+   (curve_mult (e : 'a curve) p (SUC n) = curve_add e p (curve_mult e p n))`;
 
 val curve_group_def = Define
   `curve_group e =
