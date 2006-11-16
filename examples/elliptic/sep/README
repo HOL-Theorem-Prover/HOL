@@ -1,0 +1,36 @@
+
+ Quick overview
+----------------
+
+ set_sepTheory
+
+   Defines two separating conjunctions STAR and BIGSTAR over sets.
+
+ set_sepLib
+
+   Provides simpsets sep_ss and sep2_ss that simplifies expressions 
+   containing STAR. Also provides conversions, rules and tactics 
+   for rearranging terms containing STAR.
+
+ progTheory
+
+   Defines high-level Hoare-triples for reasoning about machine-code.
+   The main definitions are RUN, GPROG, PROG and PROC.
+
+ arm_progTheory
+
+   Specialises progTheory to Anthony Fox's model of the ARM processor. 
+   The specialisaation is done via a translation function arm2set. 
+   The theory defines ARM_RUN, ARM_GPROG, ARM_PROG and ARN_PROC. 
+   A handy theorem: ARM_PROG_INTRO1.
+
+ arm_instTheory
+
+   Provides ARM_PROG specifications for most ARM instructions.
+
+ examplesTheory
+
+   Proves a few example implementations. 
+   Currently: FAC, GCD and SUM_BTREE.
+
+
