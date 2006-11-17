@@ -291,6 +291,22 @@ val gfp_def = new_definition
    ``gfp ((s,r) : 'a poset) f x =
      s x /\ (f x = x) /\ !y. s y /\ r y (f y) ==> r y x``);
 
+val lfp_unique = store_thm
+  ("lfp_unique",
+   ``!p f x x'.
+	poset p /\ lfp p f x /\ lfp p f x' ==>
+	(x = x')``,
+   Cases
+   ++ RW_TAC std_ss [poset_def, lfp_def]);
+
+val gfp_unique = store_thm
+  ("gfp_unique",
+   ``!p f x x'.
+	poset p /\ gfp p f x /\ gfp p f x' ==>
+	(x = x')``,
+   Cases
+   ++ RW_TAC std_ss [poset_def, gfp_def]);
+
 (* ------------------------------------------------------------------------- *)
 (* The Knaster-Tarski theorem                                                *)
 (* ------------------------------------------------------------------------- *)
