@@ -592,6 +592,13 @@ val sublinear_lfp = store_thm
    ++ SIMP_TAC std_ss [expect_def]
    ++ PROVE_TAC [sublinear_mono]);
 
+val monotonic_and_lfp_imp_eq_expect_lfp = store_thm
+  ("monotonic_and_lfp_imp_eq_expect_lfp",
+   ``!t e. (monotonic (expect, Leq) t) /\ 
+	   (lfp (expect, Leq) t e) ==> 
+	   (e = expect_lfp t)``,
+   METIS_TAC [lfp_unique, expect_poset, expect_lfp_def]);
+
 val expect_gfp_exists = store_thm
   ("expect_gfp_exists",
    ``!phi. monotonic (expect,Leq) phi ==> ?g. gfp (expect,Leq) phi g``,
@@ -613,6 +620,13 @@ val sublinear_gfp = store_thm
    ++ SIMP_TAC std_ss [monotonic_def]
    ++ SIMP_TAC std_ss [expect_def]
    ++ PROVE_TAC [sublinear_mono]);
+
+val monotonic_and_gfp_imp_eq_expect_gfp = store_thm
+  ("monotonic_and_gfp_imp_eq_expect_gfp",
+   ``!t e. (monotonic (expect, Leq) t) /\ 
+	   (gfp (expect, Leq) t e) ==> 
+	   (e = expect_gfp t)``,
+   METIS_TAC [gfp_unique, expect_poset, expect_gfp_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* Refinement                                                                *)
