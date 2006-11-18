@@ -296,16 +296,20 @@ val lfp_unique = store_thm
    ``!p f x x'.
 	poset p /\ lfp p f x /\ lfp p f x' ==>
 	(x = x')``,
-   Cases
-   ++ RW_TAC std_ss [poset_def, lfp_def]);
+   GEN_TAC
+   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
+   ++ STRIP_TAC
+   ++ RW_TAC bool_ss [poset_def, lfp_def]);
 
 val gfp_unique = store_thm
   ("gfp_unique",
    ``!p f x x'.
 	poset p /\ gfp p f x /\ gfp p f x' ==>
 	(x = x')``,
-   Cases
-   ++ RW_TAC std_ss [poset_def, gfp_def]);
+   GEN_TAC
+   ++ Know `?s r. p = (s,r)` >> pair_cases_tac
+   ++ STRIP_TAC
+   ++ RW_TAC bool_ss [poset_def, gfp_def]);
 
 (* ------------------------------------------------------------------------- *)
 (* The Knaster-Tarski theorem                                                *)
