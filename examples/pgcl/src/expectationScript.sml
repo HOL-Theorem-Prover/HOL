@@ -896,4 +896,11 @@ val healthy_rel = prove
    DESIRABLE_TAC);
 *)
 
+(* ----- Creates a standard expectation from a condition ------------------- *)
+
+val bool_exp_def = Define
+   `bool_exp g = (\s. if g s then (1:posreal) else 0)`;
+
+(* ------------------------------------------------------------------------- *)
+
 val _ = export_theory();
