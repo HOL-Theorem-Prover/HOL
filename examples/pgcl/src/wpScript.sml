@@ -1219,4 +1219,83 @@ val wlp_if_vc = store_thm
    RW_TAC std_ss [wlp_if, Leq_def, Cond_def]
    ++ METIS_TAC [le_trans]);
 
+(* ------------------------------------------------------------------------- *)
+(* Counter-example:                                                          *)
+(* We would like it to be the case that                                      *)
+(* !prog. (wp prog One = One) ==> (!postE. wp prog postE = wlp prog postE)   *)
+(* 									     *)
+(* For the loop below, wp loop One = One				     *)
+(* but wp loop [x = 0] = One and                                             *)
+(*    wlp loop [x = 0] = (\s. if s x = 0 then 1 else infty)                  *)
+(* ------------------------------------------------------------------------- *)
+
+val Counterexample_to_wp_one_eq_one_imp_wlp_eq_wp = store_thm
+  ("Counterexample_to_wp_one_eq_one_imp_wlp_eq_wp",
+   ``(\s. if s x = 0 then 1 else infty) =
+     wlp (While (\s. ~((s x) = 0))
+      	        (ProbAssign x [(0:int);1]))
+         (bool_exp (\s. s x = 0))``,
+   RW_TAC std_ss [bool_exp_def, wp_def, wlp_def, cond_eta, ProbAssign_def, Probs_def, MAP, LENGTH, assign_eta]
+   ++ `(\v:int state.
+       (1 :posreal) / (2 :posreal) /
+       ((1 :posreal) - (1 :posreal) / (2 :posreal))) =
+       (\v:int state. (1 :posreal))`
+			by (RW_TAC posreal_ss [FUN_EQ_THM, sub_ratr, div_rat, preal_div_def]
+			    ++ MATCH_MP_TAC mul_linv
+			    ++ RW_TAC posreal_ss [])
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `!(a:posreal) x y z. (let x = a in x * y + (1 - x) * z) = a * y + (1 - a) * z` by RW_TAC std_ss []
+   ++ RW_TAC posreal_ss [lin_eta]
+   ++ `(1:posreal) - 1 / 2 = 1 / 2` by RW_TAC posreal_ss [sub_ratr]
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `monotonic (expect, Leq) 
+	         (\e s. (if ~(s x = 0) then
+              		   1 / 2 * e (\w. (if w = x then 0 else s w)) +
+              		   1 / 2 * e (\w. (if w = x then 1 else s w))
+           	         else 1))`
+	by (RW_TAC std_ss [monotonic_def, Leq_def]
+	    ++ Cases_on `s x = 0`
+	    >> METIS_TAC [le_refl]
+	    ++ Q.ABBREV_TAC `w0 = (\w. (if w = x then 0 else s w))`
+	    ++ Q.ABBREV_TAC `w1 = (\w. (if w = x then 1 else s w))`
+	    ++ ASM_REWRITE_TAC []
+	    ++ `1 / 2 * e w0 + 1 / 2 * e w1 =
+		1 / 2 * (e w0 + e w1)`
+		by METIS_TAC [add_ldistrib]
+	    ++ ASM_REWRITE_TAC []
+	    ++ POP_ASSUM (K ALL_TAC)
+	    ++ `1 / 2 * e' w0 + 1 / 2 * e' w1 =
+		1 / 2 * (e' w0 + e' w1)`
+		by METIS_TAC [add_ldistrib]
+	    ++ ASM_REWRITE_TAC []
+	    ++ POP_ASSUM (K ALL_TAC)
+	    ++ MATCH_MP_TAC le_lmul_imp
+	    ++ MATCH_MP_TAC le_add2
+	    ++ METIS_TAC [])
+   ++ `gfp (expect, Leq)
+	   (\e s. (if ~(s x = 0) then
+              	      1 / 2 * e (\w. (if w = x then 0 else s w)) +
+              	      1 / 2 * e (\w. (if w = x then 1 else s w))
+           	   else 1))
+	   (\s. if s x = 0 then 1 else infty)`
+	by (RW_TAC int_ss [gfp_def, expect_def]
+	    >> (`1 / 2 * infty = infty`
+				by RW_TAC posreal_ss [mul_rinfty_rat, posreal_of_num_def]
+		++ RW_TAC posreal_ss [mul_rinfty, FUN_EQ_THM]
+		++ Cases_on `s x = 0`
+		++ RW_TAC posreal_ss [])
+	    ++ FULL_SIMP_TAC std_ss [Leq_def]
+	    ++ GEN_TAC
+	    ++ Cases_on `s x = 0`
+	    >> METIS_TAC []
+	    ++ RW_TAC posreal_ss [le_infty])
+   ++ MATCH_MP_TAC monotonic_and_gfp_imp_eq_expect_gfp
+   ++ METIS_TAC []);
+
+(* ------------------------------------------------------------------------- *)
+(* Add proof that wp loop One = One and wp loop [x = 0] = One  ?????         *)
+(* ------------------------------------------------------------------------- *)
+
 val _ = export_theory();
