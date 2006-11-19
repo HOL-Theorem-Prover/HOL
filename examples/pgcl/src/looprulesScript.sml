@@ -40,13 +40,6 @@ val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
 val lemma = I prove;
 
-(* ----- Creates a standard expectation from a condition ------------------- *)
-
-val bool_exp_def = Define
-   `bool_exp g = (\s. if g s then (1:posreal) else 0)`;
-
-(* ------------------------------------------------------------------------- *)
-
 val let_imp_not_infty = store_thm
   ("let_imp_not_infty",
    ``!x:posreal. (?y. (y < infty) /\ (x <= y)) ==>
