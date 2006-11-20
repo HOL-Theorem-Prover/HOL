@@ -107,10 +107,19 @@ val (ph_rules, ph_ind, ph_cases) = Hol_reln`
              red SUC (HD ts) (HD (TL ts)) ==>
              WF_TYPE cx (app ts))
 `
-val _ = if null (hyp ph_rules) then ()
-        else die "Hyps in rules - FAILED\n"
+val _ = checkhyps ph_rules
 
 val ph_strong = derive_strong_induction(ph_rules, ph_ind)
+
+(* UNCURRY with more than two arguments *)
+val _ = print "*** Testing UNCURRY with more than two arguments\n"
+val (u3_rules, u3_ind, u3_cases) = Hol_reln`
+  u3 (0,1,2) /\
+  (!x y z. (\ ((x,y), z). u3 (x,y,z)) ((y,x),z) ==> u3 (x,y,z))
+`
+val _ = checkhyps u3_rules
+val u3_strong = derive_strong_induction(u3_rules, u3_ind)
+
 
 val _ = OS.Process.exit OS.Process.success
 
