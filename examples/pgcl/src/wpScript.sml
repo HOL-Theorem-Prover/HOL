@@ -1048,6 +1048,42 @@ val refines_nondet_prob = store_thm
    ++ RW_TAC posreal_ss [min_le_lin, Lin_def]);
 
 (* ------------------------------------------------------------------------- *)
+(* Probabilistic assignment always terminates.                               *)
+(* ------------------------------------------------------------------------- *)
+
+val prob_assign_terminates = store_thm
+  ("prob_assign_terminates",
+   ``!v l. ~(l = []) ==> (wp (ProbAssign v l) One = One)``,
+   GEN_TAC
+   ++ Induct
+   ++ RW_TAC std_ss [ProbAssign_def,MAP,LENGTH,Probs_def]
+   ++ Cases_on `l`
+   >> (RW_TAC std_ss [Probs_def,MAP,LENGTH,wp_def]
+       ++ RW_TAC std_ss [FUN_EQ_THM,Lin_def,One_def,Zero_def]
+       ++ Q.UNABBREV_ALL_TAC
+       ++ RW_TAC posreal_reduce_ss [])
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC std_ss [ProbAssign_def,wp_def]
+   ++ Know `!c a b d : 'a state expect. (a = d) /\ (b = d) ==> (Lin c a b = d)`
+   >> METIS_TAC [lin_refl]
+   ++ DISCH_THEN MATCH_MP_TAC
+   ++ CONJ_TAC
+   >> RW_TAC std_ss [FUN_EQ_THM,One_def]
+   ++ POP_ASSUM (fn th => CONV_TAC (RAND_CONV (REWR_CONV (SYM th))))
+   ++ AP_THM_TAC
+   ++ AP_TERM_TAC
+   ++ AP_TERM_TAC
+   ++ Q.SPEC_TAC (`LENGTH (h' :: t)`,`n`)
+   ++ GEN_TAC
+   ++ Q.SPEC_TAC (`h' :: t`,`l`)
+   ++ Induct
+   ++ RW_TAC std_ss [MAP]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ RW_TAC posreal_reduce_ss []
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC arith_ss []);
+
+(* ------------------------------------------------------------------------- *)
 (* wlp is the partial-correctness analogue of wp.                            *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1225,77 +1261,79 @@ val wlp_if_vc = store_thm
 (* !prog. (wp prog One = One) ==> (!postE. wp prog postE = wlp prog postE)   *)
 (* 									     *)
 (* For the loop below, wp loop One = One				     *)
-(* but wp loop [x = 0] = One and                                             *)
-(*    wlp loop [x = 0] = (\s. if s x = 0 then 1 else infty)                  *)
+(* but wlp loop One = (\s. if s n = x then 1 else infty)                     *)
 (* ------------------------------------------------------------------------- *)
 
-val Counterexample_to_wp_one_eq_one_imp_wlp_eq_wp = store_thm
-  ("Counterexample_to_wp_one_eq_one_imp_wlp_eq_wp",
-   ``(\s. if s x = 0 then 1 else infty) =
-     wlp (While (\s. ~((s x) = 0))
-      	        (ProbAssign x [(0:int);1]))
-         (bool_exp (\s. s x = 0))``,
-   RW_TAC std_ss [bool_exp_def, wp_def, wlp_def, cond_eta, ProbAssign_def, Probs_def, MAP, LENGTH, assign_eta]
-   ++ `(\v:int state.
-       (1 :posreal) / (2 :posreal) /
-       ((1 :posreal) - (1 :posreal) / (2 :posreal))) =
-       (\v:int state. (1 :posreal))`
-			by (RW_TAC posreal_ss [FUN_EQ_THM, sub_ratr, div_rat, preal_div_def]
-			    ++ MATCH_MP_TAC mul_linv
-			    ++ RW_TAC posreal_ss [])
-   ++ ASM_REWRITE_TAC []
-   ++ POP_ASSUM (K ALL_TAC)
-   ++ `!(a:posreal) x y z. (let x = a in x * y + (1 - x) * z) = a * y + (1 - a) * z` by RW_TAC std_ss []
-   ++ RW_TAC posreal_ss [lin_eta]
-   ++ `(1:posreal) - 1 / 2 = 1 / 2` by RW_TAC posreal_ss [sub_ratr]
-   ++ ASM_REWRITE_TAC []
-   ++ POP_ASSUM (K ALL_TAC)
-   ++ `monotonic (expect, Leq) 
-	         (\e s. (if ~(s x = 0) then
-              		   1 / 2 * e (\w. (if w = x then 0 else s w)) +
-              		   1 / 2 * e (\w. (if w = x then 1 else s w))
-           	         else 1))`
-	by (RW_TAC std_ss [monotonic_def, Leq_def]
-	    ++ Cases_on `s x = 0`
-	    >> METIS_TAC [le_refl]
-	    ++ Q.ABBREV_TAC `w0 = (\w. (if w = x then 0 else s w))`
-	    ++ Q.ABBREV_TAC `w1 = (\w. (if w = x then 1 else s w))`
-	    ++ ASM_REWRITE_TAC []
-	    ++ `1 / 2 * e w0 + 1 / 2 * e w1 =
-		1 / 2 * (e w0 + e w1)`
-		by METIS_TAC [add_ldistrib]
-	    ++ ASM_REWRITE_TAC []
-	    ++ POP_ASSUM (K ALL_TAC)
-	    ++ `1 / 2 * e' w0 + 1 / 2 * e' w1 =
-		1 / 2 * (e' w0 + e' w1)`
-		by METIS_TAC [add_ldistrib]
-	    ++ ASM_REWRITE_TAC []
-	    ++ POP_ASSUM (K ALL_TAC)
-	    ++ MATCH_MP_TAC le_lmul_imp
-	    ++ MATCH_MP_TAC le_add2
-	    ++ METIS_TAC [])
-   ++ `gfp (expect, Leq)
-	   (\e s. (if ~(s x = 0) then
-              	      1 / 2 * e (\w. (if w = x then 0 else s w)) +
-              	      1 / 2 * e (\w. (if w = x then 1 else s w))
-           	   else 1))
-	   (\s. if s x = 0 then 1 else infty)`
-	by (RW_TAC int_ss [gfp_def, expect_def]
-	    >> (`1 / 2 * infty = infty`
-				by RW_TAC posreal_ss [mul_rinfty_rat, posreal_of_num_def]
-		++ RW_TAC posreal_ss [mul_rinfty, FUN_EQ_THM]
-		++ Cases_on `s x = 0`
-		++ RW_TAC posreal_ss [])
-	    ++ FULL_SIMP_TAC std_ss [Leq_def]
-	    ++ GEN_TAC
-	    ++ Cases_on `s x = 0`
-	    >> METIS_TAC []
-	    ++ RW_TAC posreal_ss [le_infty])
-   ++ MATCH_MP_TAC monotonic_and_gfp_imp_eq_expect_gfp
-   ++ METIS_TAC []);
-
-(* ------------------------------------------------------------------------- *)
-(* Add proof that wp loop One = One and wp loop [x = 0] = One  ?????         *)
-(* ------------------------------------------------------------------------- *)
+val wp_eq_wlp_plus_termination_counterexample = store_thm
+  ("wp_eq_wlp_plus_termination_counterexample",
+   ``(?x y : 'a. ~(x = y)) ==>
+     ~!prog : 'a command. (wp prog One = One) ==> (wp prog = wlp prog)``,
+   RW_TAC std_ss []
+   ++ Q.EXISTS_TAC `While (\s. s n = x) (ProbAssign n [x; y])`
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (a ==> b) ==> a /\ b``)
+   ++ CONJ_TAC
+   << [ONCE_REWRITE_TAC [wp_def]
+       ++ RW_TAC std_ss []
+       ++ MATCH_MP_TAC expect_lfp_eq
+       ++ CONJ_TAC
+       >> (RW_TAC std_ss [monotonic_def]
+           ++ MATCH_MP_TAC leq_cond_imp
+           ++ METIS_TAC [wp_mono,leq_refl])
+       ++ RW_TAC std_ss [lfp_def,expect_def,prob_assign_terminates,cond_refl]
+       ++ POP_ASSUM MP_TAC
+       ++ RW_TAC std_ss [FUN_EQ_THM,Leq_def,Cond_def,One_def]
+       ++ Cases_on `e s = infty` >> RW_TAC posreal_reduce_ss []
+       ++ REVERSE (Cases_on `s n = x`) >> METIS_TAC []
+       ++ Suff `?c. 1 <= c /\ 1 / 2 * e s + 1 / 2 * c <= e s`
+       >> (STRIP_TAC
+           ++ Know `2 * (1 / 2 * e s + 1 / 2 * c) <= 2 * e s`
+           >> METIS_TAC [le_lmul_imp]
+           ++ SIMP_TAC posreal_reduce_ss [add_ldistrib, GSYM mul_assoc]
+           ++ RW_TAC posreal_ss []
+           ++ Know `c <= e s`
+           >> METIS_TAC [le_ladd,double]
+           ++ METIS_TAC [le_trans])
+       ++ Q.EXISTS_TAC `e (assign n (\s. y) s)`
+       ++ CONJ_TAC
+       >> (Q.PAT_ASSUM `!s. P s` (MP_TAC o Q.SPEC `assign n (\s. y) s`)
+           ++ RW_TAC std_ss [assign_def])
+       ++ Q.PAT_ASSUM `!s. P s` (MP_TAC o Q.SPEC `s`)
+       ++ RW_TAC std_ss
+            [wp_def,ProbAssign_def,Probs_def,MAP,LENGTH,Lin_def,
+             cond_eta,Zero_def,LET_DEF,assign_def]
+       ++ POP_ASSUM MP_TAC
+       ++ SIMP_TAC posreal_reduce_ss []
+       ++ SIMP_TAC posreal_ss []
+       ++ Suff `assign n (\s'. s n) s = s`
+       >> RW_TAC std_ss []
+       ++ RW_TAC std_ss [FUN_EQ_THM,assign_def],
+       RW_TAC std_ss []
+       ++ ONCE_REWRITE_TAC [FUN_EQ_THM]
+       ++ RW_TAC std_ss []
+       ++ Q.EXISTS_TAC `One`
+       ++ RW_TAC std_ss []
+       ++ ONCE_REWRITE_TAC [wlp_def]
+       ++ RW_TAC std_ss []
+       ++ Suff
+          `expect_gfp
+             (\e. Cond (\s. s n = x) (wlp (ProbAssign n [x; y]) e) One) =
+           (\s : 'a state. if s n = x then infty else 1)`
+       >> (RW_TAC std_ss []
+           ++ RW_TAC std_ss [One_def,FUN_EQ_THM]
+           ++ Q.EXISTS_TAC `\v. x`
+           ++ RW_TAC posreal_ss [])
+       ++ MATCH_MP_TAC expect_gfp_eq
+       ++ CONJ_TAC
+       >> (RW_TAC std_ss [monotonic_def]
+           ++ MATCH_MP_TAC leq_cond_imp
+           ++ METIS_TAC [wlp_mono,leq_refl])
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ REVERSE (RW_TAC std_ss [gfp_def,expect_def,Leq_def,Cond_def,One_def])
+       >> METIS_TAC [le_infty,le_refl]
+       ++ RW_TAC std_ss
+            [FUN_EQ_THM,wlp_def,ProbAssign_def,Probs_def,MAP,LENGTH,Magic_def,
+             Lin_def,assign_eta,Cond_def]
+       ++ Q.UNABBREV_ALL_TAC
+       ++ RW_TAC posreal_reduce_ss []]);
 
 val _ = export_theory();

@@ -248,10 +248,29 @@ val lin_eta = store_thm
        Lin p a b = \s. let x = bound1 (p s) in x * a s + (1 - x) * b s``,
    METIS_TAC [Lin_def]);
 
+val lin_refl = store_thm
+  ("lin_refl",
+   ``!c a. Lin c a a = a``,
+   RW_TAC std_ss [Lin_def,FUN_EQ_THM]
+   ++ MATCH_MP_TAC le_antisym
+   ++ METIS_TAC [bound1,min_refl,max_refl,lin_le_max,min_le_lin]);
+
 val cond_eta = store_thm
   ("cond_eta",
    ``!c a b. Cond c a b = \s. if c s then a s else b s``,
    METIS_TAC [Cond_def]);
+
+val cond_refl = store_thm
+  ("cond_refl",
+   ``!c a. Cond c a a = a``,
+   RW_TAC std_ss [Cond_def,FUN_EQ_THM]);
+
+val leq_cond_imp = store_thm
+  ("leq_cond_imp",
+   ``!c a b a' b'.
+       Leq a a' /\ Leq b b' ==> Leq (Cond c a b) (Cond c a' b')``,
+   RW_TAC std_ss [Leq_def,Cond_def]
+   ++ RW_TAC std_ss []);
 
 (* ------------------------------------------------------------------------- *)
 (* Fundamental properties of expectation transformers                        *)
@@ -592,11 +611,11 @@ val sublinear_lfp = store_thm
    ++ SIMP_TAC std_ss [expect_def]
    ++ PROVE_TAC [sublinear_mono]);
 
-val monotonic_and_lfp_imp_eq_expect_lfp = store_thm
-  ("monotonic_and_lfp_imp_eq_expect_lfp",
+val expect_lfp_eq = store_thm
+  ("expect_lfp_eq",
    ``!t e. (monotonic (expect, Leq) t) /\ 
 	   (lfp (expect, Leq) t e) ==> 
-	   (e = expect_lfp t)``,
+	   (expect_lfp t = e)``,
    METIS_TAC [lfp_unique, expect_poset, expect_lfp_def]);
 
 val expect_gfp_exists = store_thm
@@ -621,11 +640,11 @@ val sublinear_gfp = store_thm
    ++ SIMP_TAC std_ss [expect_def]
    ++ PROVE_TAC [sublinear_mono]);
 
-val monotonic_and_gfp_imp_eq_expect_gfp = store_thm
-  ("monotonic_and_gfp_imp_eq_expect_gfp",
+val expect_gfp_eq = store_thm
+  ("expect_gfp_eq",
    ``!t e. (monotonic (expect, Leq) t) /\ 
 	   (gfp (expect, Leq) t e) ==> 
-	   (e = expect_gfp t)``,
+	   (expect_gfp t = e)``,
    METIS_TAC [gfp_unique, expect_poset, expect_gfp_def]);
 
 (* ------------------------------------------------------------------------- *)
