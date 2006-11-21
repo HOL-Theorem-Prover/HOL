@@ -87,7 +87,8 @@ struct
 
     val equal : bdd -> bdd -> bool = app2 (symb "mlbdd_equal")
 
-    val simplify : bdd -> bdd -> bdd = Lib.C (app2 (symb "mlbdd_bdd_simplify"))
+    local fun C f x y = f y x in
+    val simplify : bdd -> bdd -> bdd = C (app2 (symb "mlbdd_bdd_simplify")) end
 
     val printdot : bdd -> unit             = app1 (symb "mlbdd_bdd_printdot")
     val fnprintdot : string -> bdd -> unit = app2 (symb "mlbdd_bdd_fnprintdot")
