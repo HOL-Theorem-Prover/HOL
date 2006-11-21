@@ -446,7 +446,8 @@ val PUSH_LIST_SP_FP = Q.store_thm (
     `!l st x. locate_ge (read st SP) (LENGTH l)
              ==> let st' = run_cfl (BLK (push_list l)) st in 
               (w2n (read st' SP) = w2n (read st SP) - LENGTH l) /\
-                 (w2n (read st' FP) = w2n (read st FP))`,
+              (w2n (read st' FP) = w2n (read st FP)) /\
+              (w2n (read st' IP) = w2n (read st IP))`,
 
     Induct_on `l` THENL [
         RW_TAC list_ss [CFL_SEMANTICS_BLK, push_list_def],
@@ -456,17 +457,17 @@ val PUSH_LIST_SP_FP = Q.store_thm (
           IMP_RES_TAC locate_ge_thm THEN
           RES_TAC THEN
           `?regs mem. run_cfl (BLK (push_list l)) st = (regs,mem)` by METIS_TAC [ABS_PAIR_THM] THEN  
-          FULL_SIMP_TAC std_ss [read_thm, SP_def, FP_def, LET_THM] THEN
+          FULL_SIMP_TAC std_ss [read_thm, SP_def, FP_def, IP_def, LET_THM] THEN
           `locate_ge ((regs ' 13):word32) 1` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
           `(w2n (1w:word32) <= 1) /\ (w2n (1w:word32) = 1)` by WORDS_TAC THEN
           IMP_RES_TAC locate_ge_lem_1 THEN
           NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN
           Cases_on `h` THEN
           SIMP_TAC std_ss [push_one_def, CFL_SEMANTICS_BLK, read_thm] THENL [
-            NTAC 4 tac1 THEN RW_TAC arith_ss [],
             NTAC 6 tac1 THEN RW_TAC arith_ss [],
-            NTAC 6 tac1 THEN RW_TAC arith_ss [],
-            NTAC 2 tac1 THEN RW_TAC arith_ss []
+            NTAC 9 tac1 THEN RW_TAC arith_ss [],
+            NTAC 9 tac1 THEN RW_TAC arith_ss [],
+            NTAC 4 tac1 THEN RW_TAC arith_ss []
           ]
         ]
   );
@@ -726,10 +727,11 @@ val POP_LIST_SP_FP = Q.store_thm (
     `!l st x. grow_lt (read st SP) (LENGTH l) /\ EVERY valid_exp l
              ==> let st' = run_cfl (BLK (pop_list l)) st in 
               (w2n (read st' SP) = w2n (read st SP) + LENGTH l) /\
-                 (w2n (read st' FP) = w2n (read st FP))`,
+              (w2n (read st' FP) = w2n (read st FP)) /\
+              (w2n (read st' IP) = w2n (read st IP)) `,
 
-    let val tac2 = FULL_SIMP_TAC finmap_ss [LET_THM,read_thm, SP_def, FP_def, valid_regs_lem, grow_lt_lem_1] 
-                             THEN FULL_SIMP_TAC arith_ss [grow_lt_def]
+    let val tac2 = FULL_SIMP_TAC finmap_ss [LET_THM,read_thm, SP_def, FP_def, IP_def, valid_regs_lem, grow_lt_lem_1] 
+                             THEN FULL_SIMP_TAC arith_ss [grow_lt_def, valid_regs_def]
     in
     Induct_on `l` THENL [
         RW_TAC list_ss [CFL_SEMANTICS_BLK, pop_list_def],
@@ -739,7 +741,8 @@ val POP_LIST_SP_FP = Q.store_thm (
           IMP_RES_TAC grow_lt_thm THEN
           `let st1 = run_cfl (BLK (pop_one h)) st in
                grow_lt (read st1 SP) (LENGTH l) /\ (w2n (read st1 SP) = SUC (w2n (read st SP))) /\ 
-               (w2n (read st1 FP) = w2n (read st FP))` by SIMP_TAC std_ss [grow_lt_def] THENL [
+               (w2n (read st1 FP) = w2n (read st FP)) /\ (w2n (read st1 IP) = w2n (read st IP))` 
+                   by SIMP_TAC std_ss [grow_lt_def] THENL [
             `?regs mem. st = (regs,mem)` by METIS_TAC [ABS_PAIR_THM] THEN
             Cases_on `h` THEN
             FULL_SIMP_TAC list_ss [valid_exp_def, pop_one_def, CFL_SEMANTICS_BLK, read_thm] THENL [
