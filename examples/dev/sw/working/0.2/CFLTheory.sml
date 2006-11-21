@@ -12,10 +12,10 @@ struct
   local open ARMCompositionTheory
   in end;
   val _ = Theory.link_parents
-          ("CFL",Arbnum.fromString "1163238460",Arbnum.fromString "586624")
+          ("CFL",Arbnum.fromString "1164098693",Arbnum.fromString "990672")
           [("ARMComposition",
-           Arbnum.fromString "1162366193",
-           Arbnum.fromString "485425")];
+           Arbnum.fromString "1164098393",
+           Arbnum.fromString "683416")];
   val _ = Theory.incorporate_types "CFL"
        [("MEXP",0), ("DOPER",0), ("MREG",0), ("CTL_STRUCTURE",0)];
   val _ = Theory.incorporate_consts "CFL"
