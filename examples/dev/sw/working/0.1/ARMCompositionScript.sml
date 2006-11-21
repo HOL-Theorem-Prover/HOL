@@ -1,9 +1,15 @@
-(*
-app load ["pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory","prim_recTheory"];
+(* interactive use:
+
+quietdec := true;
+loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
+
+app load ["pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory","prim_recTheory", "wordsTheory", "wordsLib", "preARMTheory"];
+
+quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory word32Lib
-     arithmeticTheory word32Theory pairTheory listTheory whileTheory finite_mapTheory preARMTheory;
+open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory wordsLib
+     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory preARMTheory;
 
 val _ = new_theory "ARMComposition";
 
@@ -12,20 +18,6 @@ val _ = Globals.priming := NONE;
 (*------------------------------------------------------------------------------------------------------*)
 (* Additional theorems for finite maps                                                                  *)
 (*------------------------------------------------------------------------------------------------------*)
-
-(* Sort in ascending order                                                                              *)
-val FUPDATE_LT_COMMUTES = Q.store_thm (
-  "FUPDATE_LT_COMMUTES",
-  ` !f a b c d. c < a ==> (f |+ (a:num, b:word32) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
-    RW_TAC arith_ss [FUPDATE_COMMUTES]
-    );
-
-(* Sort in descending order                                                                             *)
-val FUPDATE_GT_COMMUTES = Q.store_thm (
-  "FUPDATE_GT_COMMUTES",
-  ` !f a b c d. c > a ==> (f |+ (a:ADDR,b:'b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
-    RW_TAC arith_ss [FUPDATE_COMMUTES]
-    );
 
 
 val fupdate_normalizer =
@@ -588,7 +580,6 @@ val SC_IS_WELL_FORMED = Q.store_thm (
        ]
   );
    
-
 val UNCOND_JUMP_OVER_THM = Q.store_thm (
    "UNCOND_JUMP_OVER_THM",
    `!arm. well_formed ([((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))] ++ arm) /\ 
@@ -604,7 +595,7 @@ val UNCOND_JUMP_OVER_THM = Q.store_thm (
            `0 < LENGTH (((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))::arm)` by RW_TAC list_ss [] THEN
            IMP_RES_TAC UPLOAD_LEM THEN
            FULL_SIMP_TAC arith_ss [EL, HD] THEN
-           RW_TAC list_ss [decode_cond_thm, decode_op_thm, setS_def, getS_def, goto_thm],
+           RW_TAC list_ss [decode_cond_def, decode_cond_cpsr_def, decode_op_thm, setS_def, getS_def, goto_thm],
 
        RW_TAC std_ss [well_formed, terminated, status_independent] THENL [
            SIMP_TAC std_ss [closed] THEN
@@ -653,16 +644,72 @@ val HOARE_SC_FLAT = Q.store_thm (
 (*---------------------------------------------------------------------------------*)
 (* Enumerate all possibilities of conditions                                       *) 
 (*---------------------------------------------------------------------------------*)
-
-val eval_cond = Define `
+val eval_cond_def = Define `
     (eval_cond (v1,EQ,v2) s = (read s v1 = read s v2)) /\
-    (eval_cond (v1,NE,v2) s = ~(read s v1 = read s v2)) /\
-    (eval_cond (v1,GE,v2) s = (read s v1 >=. read s v2)) /\
-    (eval_cond (v1,LE,v2) s = (read s v1 <=. read s v2)) /\
-    (eval_cond (v1,GT,v2) s = (read s v1 >. read s v2)) /\
-    (eval_cond (v1,LT,v2) s = (read s v1 <. read s v2)) /\
+    (eval_cond (v1,CS,v2) s = (read s v1 >=+ read s v2)) /\
+    (eval_cond (v1,MI,v2) s = (let (n,z,c,v) = nzcv (read s v1) (read s v2) in n)) /\
+    (eval_cond (v1,VS,v2) s = (let (n,z,c,v) = nzcv (read s v1) (read s v2) in v)) /\
+    (eval_cond (v1,HI,v2) s = (read s v1 >+ read s v2)) /\
+    (eval_cond (v1,GE,v2) s = (read s v1 >= read s v2)) /\
+    (eval_cond (v1,GT,v2) s = (read s v1 > read s v2)) /\
     (eval_cond (v1,AL,v2) s = T) /\
+
+    (eval_cond (v1,NE,v2) s = ~(read s v1 = read s v2)) /\
+    (eval_cond (v1,CC,v2) s = (read s v1 <+ read s v2)) /\
+    (eval_cond (v1,PL,v2) s = (let (n,z,c,v) = nzcv (read s v1) (read s v2) in ~n)) /\
+    (eval_cond (v1,VC,v2) s = (let (n,z,c,v) = nzcv (read s v1) (read s v2) in ~v)) /\
+    (eval_cond (v1,LS,v2) s = (read s v1 <=+ read s v2)) /\
+    (eval_cond (v1,LT,v2) s = (read s v1 < read s v2)) /\
+    (eval_cond (v1,LE,v2) s = (read s v1 <= read s v2)) /\
     (eval_cond (v1,NV,v2) s = F)`;
+
+
+val eval_cond_thm = Q.store_thm (
+   "eval_cond_thm",
+	 `!v1 rop v2 st cpsr. 
+		  (eval_cond (v1,rop,v2) st = decode_cond_cpsr
+            (setNZCV cpsr
+               (word_msb (read st v1 - read st v2),read st v1 = read st v2,
+                read st v2 <=+ read st v1,
+                ~(word_msb (read st v1) = word_msb (read st v2)) /\
+                ~(word_msb (read st v1) =
+                  word_msb (read st v1 - read st v2)))) rop)` ,
+
+	Cases_on `rop` THEN
+	FULL_SIMP_TAC std_ss [eval_cond_def, decode_cond_def , decode_op_thm,
+		decode_cond_cpsr_def, setNZCV_thm, LET_THM,
+		nzcv_def] THENL [
+		
+
+		REWRITE_TAC [WORD_HIGHER_EQ],
+		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def],
+		SIMP_TAC std_ss [GSYM word_add_def, word_sub_def] THEN METIS_TAC[],
+		SIMP_TAC arith_ss [WORD_HI, WORD_LO, WORD_LS, GSYM w2n_11],
+
+
+		SIMP_TAC std_ss [word_ge_def, nzcv_def, LET_THM, GSYM word_add_def,
+			GSYM word_sub_def] THEN METIS_TAC[],
+		
+		SIMP_TAC std_ss [word_gt_def, nzcv_def, LET_THM, GSYM word_add_def,
+				GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN 
+      METIS_TAC[],
+
+		PROVE_TAC[WORD_LOWER_EQ_ANTISYM, WORD_LOWER_CASES],
+		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def],
+
+		SIMP_TAC std_ss [GSYM word_add_def, GSYM word_sub_def] THEN METIS_TAC[],
+		
+		SIMP_TAC std_ss [WORD_LOWER_OR_EQ] THEN
+		METIS_TAC[WORD_LOWER_LOWER_CASES, WORD_LOWER_ANTISYM],
+
+		SIMP_TAC std_ss [word_lt_def, nzcv_def, LET_THM, GSYM word_add_def,
+				GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN
+      METIS_TAC[],
+
+		SIMP_TAC std_ss [word_le_def, nzcv_def, LET_THM, GSYM word_add_def,
+			GSYM word_sub_def, WORD_EQ_SUB_RADD, WORD_ADD_0] THEN METIS_TAC[]
+	]);
+
 
 
 val ENUMERATE_CJ = Q.store_thm (
@@ -676,19 +723,12 @@ val ENUMERATE_CJ = Q.store_thm (
               ?cpsr'. decode_cond (pc + 1, decode_op (pc,cpsr,st) (CMP,(NONE :EXP option),[FST cond; SND (SND cond)],(NONE:OFFSET option))) 
 		                 ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) = 
 		     (pc+2,cpsr',st))`,
-    RW_TAC std_ss [] THEN
-    `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN 
-    RW_TAC list_ss [] THEN
-    Cases_on `rop` THEN
-    FULL_SIMP_TAC list_ss [eval_cond] THEN
-    RW_TAC list_ss [decode_cond_thm, decode_op_thm, setS_def, getS_def, goto_thm] THEN
-    POP_ASSUM MP_TAC THEN
-    WORD_TAC THEN
-    REPEAT STRIP_TAC THEN
-    PROVE_TAC [WORD_LOWER_ANTISYM, WORD_NOT_HIGHER, WORD_NOT_LOWER_EQ, WORD_LOWER_EQ_ANTISYM, 
-	       WORD_HIGHER_EQ, WORD_NOT_LOWER, WORD_LOWER_CASES_IMP, WORD_HI]
-    );
 
+	 REPEAT GEN_TAC THEN
+	 `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
+	 ASM_SIMP_TAC list_ss [decode_op_def, OPERATOR_case_def, decode_cond_def, LET_THM,
+		GSYM eval_cond_thm]
+)
 
 (*---------------------------------------------------------------------------------*)
 (* Cnditional-jump compositions of flat codes                                      *) 

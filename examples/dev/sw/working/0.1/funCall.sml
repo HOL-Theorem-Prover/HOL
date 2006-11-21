@@ -122,12 +122,15 @@ fun calculate_relative_address (args,ir,outs,numSavedRegs) =
   end
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
-(*  Decrease and increase the value of a register by n                                                                  *)
+(*  Decrease and increase the value of a register by 4*n                                                                *)
+(*  These functions are used for modification of base registers for load ans stores. Since                              *)
+(*  loads and stores always consider 32bit words, the address had to be deviable by 4                                   *)
+(*  Therefore n is the number of words the register should change.                                                      *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
 
-fun dec_p pt n = {oper = IR.msub, dst = [IR.REG pt], src = [IR.REG pt, IR.WCONST (Arbint.fromInt n)]}
+fun dec_p pt n = {oper = IR.msub, dst = [IR.REG pt], src = [IR.REG pt, IR.WCONST (Arbint.fromInt (4*n))]}
 
-fun inc_p pt n = {oper = IR.madd, dst = [IR.REG pt], src = [IR.REG pt, IR.WCONST (Arbint.fromInt n)]};
+fun inc_p pt n = {oper = IR.madd, dst = [IR.REG pt], src = [IR.REG pt, IR.WCONST (Arbint.fromInt (4*n))]};
 
 
 (* ---------------------------------------------------------------------------------------------------------------------*)
@@ -146,7 +149,7 @@ fun entry_blk rs n =
        src = rs @ [IR.REG (IR.fromAlias IR.fp), IR.REG (IR.fromAlias IR.ip), 
 		   IR.REG (IR.fromAlias IR.lr), IR.REG (IR.fromAlias IR.pc)]
       },
-      {oper = IR.msub, dst = [IR.REG (IR.fromAlias IR.fp)], src = [IR.REG (IR.fromAlias IR.ip), IR.WCONST Arbint.one]},
+      {oper = IR.msub, dst = [IR.REG (IR.fromAlias IR.fp)], src = [IR.REG (IR.fromAlias IR.ip), IR.WCONST (Arbint.fromInt 4)]},
       dec_p (IR.fromAlias IR.sp) n (* skip local variables *)
     ]
 
@@ -157,7 +160,7 @@ fun entry_blk rs n =
 
 fun exit_blk rs = 
     [ 
-      {oper = IR.msub, dst = [IR.REG (IR.fromAlias IR.sp)], src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt (3 + length rs))]},
+      {oper = IR.msub, dst = [IR.REG (IR.fromAlias IR.sp)], src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt (4* (3 + length rs)))]},
       {oper = IR.mpop, dst = rs @ [IR.REG (IR.fromAlias IR.fp), IR.REG (IR.fromAlias IR.sp), IR.REG (IR.fromAlias IR.pc)],
        src = [IR.REG (IR.fromAlias IR.sp)]}
     ];
@@ -361,7 +364,7 @@ fun send_results outL numArgs =
    in
        { oper = IR.madd,
          dst = [IR.REG (IR.fromAlias IR.sp)],
-	 src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt sOffset)]
+	      src = [IR.REG (IR.fromAlias IR.fp), IR.WCONST (Arbint.fromInt (4* sOffset))]
        }
        :: stms
    end

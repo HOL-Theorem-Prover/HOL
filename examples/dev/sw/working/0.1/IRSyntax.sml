@@ -28,7 +28,7 @@ structure IRSyntax = struct
                | SHIFT of operator * int
                | NA                             (* N/A, for undecided fields *)
 
-   datatype rop = eq | ne | ge | le | gt | lt | al | nv
+   datatype rop = eq | ne | ge | le | gt | lt | al | nv | cc | ls | hi | cs
 
    type instr = {oper: operator, dst: exp list, src: exp list}
 
@@ -74,14 +74,18 @@ structure IRSyntax = struct
    |  convert_op mmsr = Term(`MMSR`)
    |  convert_op mcall = raise ERR "annotatedIL" ("Cannot convert mcall to a term");
 
-  fun convert_rop (eq) = Term(`EQ`)
-   |  convert_rop (ne) = Term(`NE`)
-   |  convert_rop (ge) = Term(`GE`)
-   |  convert_rop (lt) = Term(`LT`)
-   |  convert_rop (gt) = Term(`GT`)
-   |  convert_rop (le) = Term(`LE`)
-   |  convert_rop (al) = Term(`AL`)
-   |  convert_rop (nv) = Term(`NV`)
+  fun convert_rop (eq) = Term(`EQ:COND`)
+   |  convert_rop (ne) = Term(`NE:COND`)
+   |  convert_rop (ge) = Term(`GE:COND`)
+   |  convert_rop (lt) = Term(`LT:COND`)
+   |  convert_rop (gt) = Term(`GT:COND`)
+   |  convert_rop (le) = Term(`LE:COND`)
+   |  convert_rop (cc) = Term(`CC:COND`)
+   |  convert_rop (ls) = Term(`LS:COND`)
+   |  convert_rop (hi) = Term(`HI:COND`)
+   |  convert_rop (cs) = Term(`CS:COND`)
+   |  convert_rop (al) = Term(`AL:COND`)
+   |  convert_rop (nv) = Term(`NV:COND`)
 
 
  (*---------------------------------------------------------------------------------*)
@@ -137,24 +141,52 @@ structure IRSyntax = struct
  (*      Definition of Operations for Term-conversion                               *)
  (*---------------------------------------------------------------------------------*)
 
+
 fun convert_reg (REG e) =
      rhs (concl (SIMP_CONV std_ss [from_reg_index_def] (mk_comb(Term`from_reg_index:num->MREG`, term_of_int e))))
  |  convert_reg _ = 
      raise ERR "IL" ("invalid expression");
 
 fun convert_mem (MEM (regNo, offset)) =
-     mk_pair(term_of_int regNo,
+     mk_pair(convert_reg (REG regNo),
              mk_comb(if offset >= 0 then Term`POS` else Term`NEG`,
                 term_of_int (abs offset)))
  |  convert_mem _ = 
      raise ERR "IL" ("invalid expression");
 
-fun convert_exp (MEM (regNo, offset)) =
-      mk_comb(Term`MM`, convert_mem (MEM (regNo, offset)))
- |  convert_exp (NCONST e) =
-      mk_comb(Term`MC`, mk_comb (Term`word32$n2w`, mk_numeral (Arbint.toNat e)))
+fun convert_shift_const e =
+  let 
+    fun smsb b = if b then Arbnum.pow(Arbnum.two,Arbnum.fromInt 31) else Arbnum.zero
+    fun mror32 x n =
+      if n = 0 then x
+              else mror32 (Arbnum.+ ((Arbnum.div2 x), smsb (Arbnum.mod2 x = Arbnum.one))) (Int.-(n, 1));
+    fun ror32 x n = mror32 x (Int.mod(n, 32));
+    fun rol32 x n = ror32 x (Int.-(32,Int.mod(n, 32)));
+
+    fun num2imm(x,n) =
+    let val x8 = Arbnum.mod(x,Arbnum.fromInt 256) in
+      if x8 = x then
+        (Arbnum.fromInt n, x8)
+      else
+        if n < 15 then
+          num2imm(rol32 x 2, n + 1)
+        else
+          raise ERR ""
+            "num2immediate: number cannot be represented as an immediate"
+    end
+
+    val (s, c) = num2imm (Arbint.toNat e, 0)
+    val shift = mk_comb (Term`n2w:num->word4`, mk_numeral s)
+    val const = mk_comb (Term`n2w:num->word8`, mk_numeral c)
+  in
+    mk_comb (mk_comb(Term`MC`, shift), const)
+  end;
+
+
+fun convert_exp (NCONST e) =
+      convert_shift_const e
  |  convert_exp (WCONST e) =
-      mk_comb(Term`MC`, mk_comb (Term`word32$n2w`, mk_numeral (Arbint.toNat e)))
+      convert_shift_const e
  |  convert_exp (REG e) =
       mk_comb (Term`MR`, convert_reg (REG e))
  |  convert_exp (PAIR(e1,e2)) =
@@ -162,6 +194,42 @@ fun convert_exp (MEM (regNo, offset)) =
  |  convert_exp _ =
       raise ERR "IL" ("invalid expression");
 
+
+fun read_exp st (NCONST e) =
+    mk_comb (Term `n2w:num->word32`, mk_numeral (Arbint.toNat e))
+  | read_exp st (WCONST e) =
+    mk_comb (Term `n2w:num->word32`, mk_numeral (Arbint.toNat e))
+  | read_exp st (REG e) =
+    let
+      val r = convert_reg (REG e);
+    in
+      Term `read ^st (toREG ^r)`
+    end
+  | read_exp st (PAIR(e1,e2)) =
+    mk_pair(read_exp st e1, read_exp st e2)
+  | read_exp st (MEM (b, off)) =
+    let
+      val t = convert_mem (MEM (b, off))
+    in
+      Term `read ^st (toMEM ^t)`
+    end
+ |  read_exp _ _ =
+      raise ERR "IL" ("invalid expression");
+
+local
+  fun convert_shift_internal e =
+    let
+      val _ = if (Arbint.>= (e, Arbint.fromInt 32)) then raise ERR "IL" ("invalid expression") else ();
+    in
+      mk_comb (Term`n2w:num->word5`, mk_numeral (Arbint.toNat e))
+    end;
+in
+
+fun convert_shift (NCONST e) = convert_shift_internal e
+ |  convert_shift (WCONST e) = convert_shift_internal e
+ |  convert_shift _ =
+      raise ERR "IL" ("invalid expression");
+end
 
  fun convert_stm ({oper = op1, dst = dlist, src = slist}) =
     let
@@ -173,14 +241,25 @@ fun convert_exp (MEM (regNo, offset)) =
         else if op1 = mpop then 
             list_mk_comb (ops, [(term_of_int o index_of_exp) (hd slist), 
                           mk_list (List.map (term_of_int o index_of_exp) dlist, Type `:num`)])
+        else if ((op1 = mlsl) orelse
+                 (op1 = mlsr) orelse
+                 (op1 = masr) orelse
+                 (op1 = mror)) then            
+            list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist), convert_shift (el 2 slist)])
+        else if (op1 = mmul) then            
+            list_mk_comb (ops, (convert_reg (hd dlist)) :: map convert_reg slist)
         else if op1 = mstr then
             list_mk_comb (ops, (convert_mem (hd dlist)) :: [convert_reg (hd slist)])
         else if op1 = mldr then
             list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_mem (hd slist)])
+        else if op1 = mmov then
+            list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_exp (hd slist)])
         else
-            list_mk_comb (ops, List.map convert_reg dlist @ List.map convert_exp slist)
+            list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist),
+            convert_exp (el 2 slist)])
     end
     handle e =>  raise ERR "IL" ("invalid statement!")
+
 
 
  (*---------------------------------------------------------------------------------*)
@@ -193,8 +272,13 @@ fun convert_exp (MEM (regNo, offset)) =
     |  to_rop Assem.LE = le
     |  to_rop Assem.GT = ge
     |  to_rop Assem.LT = lt
+    |  to_rop Assem.CC = cc
+    |  to_rop Assem.LS = ls
+    |  to_rop Assem.HI = hi
+    |  to_rop Assem.CS = cs
     |  to_rop Assem.AL = al
     |  to_rop Assem.NV = nv
+
 
    fun to_op Assem.ADD = madd
     |  to_op Assem.SUB = msub
@@ -338,8 +422,13 @@ fun convert_exp (MEM (regNo, offset)) =
    |  print_rop (lt) = "<"
    |  print_rop (gt) = ">"
    |  print_rop (le) = "<="
+   |  print_rop (cc) = "<+"
+   |  print_rop (ls) = "<=+"
+   |  print_rop (hi) = ">+"
+   |  print_rop (cs) = ">=+"
    |  print_rop (al) = "al"
    |  print_rop (nv) = "nv"
+
 
   fun printReg r =
       let fun printAlias fp = "fp"

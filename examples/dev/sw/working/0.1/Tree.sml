@@ -23,8 +23,7 @@ datatype stm = SEQ of stm * stm
       and binop = PLUS | MINUS | MUL | DIV 
                 | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR | ROR
 
-      and relop = EQ | NE | LT | GT | LE | GE 
-	        | ULT | ULE | UGT | UGE
+      and relop = EQ | NE | LT | GT | LE | GE | CC | LS | HI | CS
 
       val pair2list : exp -> exp list	
  (*
@@ -60,7 +59,7 @@ datatype stm = SEQ of stm * stm
                 | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR | ROR
 
       and relop = EQ | NE | LT | GT | LE | GE 
-	        | ULT | ULE | UGT | UGE
+	        | CC | LS | HI | CS
 
   fun pair2list (PAIR(v1, v2)) =
         (pair2list v1) @ (pair2list v2)

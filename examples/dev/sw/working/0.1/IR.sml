@@ -1,14 +1,11 @@
 structure IR =
 struct
 
-open HolKernel Parse boolLib word32Theory pairLib
+open HolKernel Parse boolLib wordsTheory pairLib
      numSyntax
 
-val w32 = mk_type("word32",[]);
-
-infix -->
-
-val n2w_tm = mk_const("n2w",num --> w32)
+val w32 = Type `:word32`;
+val n2w_tm = Term `n2w:num -> word32`;
 
 fun is_binop op1 =
   if not (is_comb op1) then false
@@ -22,14 +19,17 @@ fun is_binop op1 =
                         oper_name = "-" orelse
                         oper_name = "*" orelse
                         oper_name = "/" orelse
-                        oper_name = "&" orelse
-                        oper_name = "|" orelse
+                        oper_name = "&&" orelse
+                        oper_name = "!!" orelse
                         oper_name = "<<" orelse
                         oper_name = ">>" orelse
                         oper_name = ">>#" orelse
 			oper_name = ">>>" orelse
-			oper_name = "#" orelse
-     			oper_name = "word_add" orelse
+			oper_name = "??" orelse
+            oper_name = "word_or" orelse
+            oper_name = "word_and" orelse
+            oper_name = "word_xor" orelse
+            oper_name = "word_add" orelse
       			oper_name = "word_sub" orelse
       			oper_name = "word_mul" orelse
       			oper_name = "bitwise_and" orelse
@@ -61,11 +61,16 @@ fun is_relop op1 =
                         oper_name = "word_gt" orelse
                         oper_name = "word_lt" orelse
                         oper_name = "word_ge" orelse
-                        oper_name = "word_le"
+                        oper_name = "word_le" orelse
+                        oper_name = "word_hs" orelse
+                        oper_name = "word_hi" orelse
+                        oper_name = "word_lo" orelse
+                        oper_name = "word_ls"
       	   		then true
       		else false
 	    end
        end;
+
 
 fun convert_binop bop =
   let val (uncur, oper) = dest_comb bop;
@@ -75,14 +80,17 @@ fun convert_binop bop =
       else if oper_name = "-" then Tree.MINUS
       else if oper_name = "*" then Tree.MUL
       else if oper_name = "/" then Tree.DIV
-      else if oper_name = "&" then Tree.AND
-      else if oper_name = "|" then Tree.OR
+      else if oper_name = "&&" then Tree.AND
+      else if oper_name = "!!" then Tree.OR
       else if oper_name = "<<" then Tree.LSHIFT
       else if oper_name = ">>" then Tree.RSHIFT
       else if oper_name = ">>#" then Tree.ARSHIFT
       else if oper_name = ">>>" then Tree.ROR
-      else if oper_name = "#" then Tree.XOR
+      else if oper_name = "??" then Tree.XOR
 
+      else if oper_name = "word_and" then Tree.AND
+      else if oper_name = "word_or" then Tree.OR
+      else if oper_name = "word_xor" then Tree.XOR
       else if oper_name = "word_add" then Tree.PLUS
       else if oper_name = "word_sub" then Tree.MINUS
       else if oper_name = "word_mul" then Tree.MUL
@@ -101,16 +109,16 @@ fun convert_relop rop =
   let val (uncur, oper) = dest_comb rop;
       val (oper_name, oper_type) = dest_const oper
   in
-      if oper_name = ">" then Tree.GT
-      else if oper_name = "<" then Tree.LT
-      else if oper_name = "=" then Tree.EQ
+      if oper_name = "=" then Tree.EQ
       else if oper_name = "!=" then Tree.NE
-      else if oper_name = ">=" then Tree.GE
-      else if oper_name = "<=" then Tree.LE
+      else if oper_name = "word_ge" then Tree.GE
       else if oper_name = "word_gt" then Tree.GT
       else if oper_name = "word_lt" then Tree.LT
-      else if oper_name = "word_ge" then Tree.GE
       else if oper_name = "word_le" then Tree.LE
+      else if oper_name = "word_hs" then Tree.CS
+      else if oper_name = "word_hi" then Tree.HI
+      else if oper_name = "word_lo" then Tree.CC
+      else if oper_name = "word_ls" then Tree.LS
       else raise ERR "IR" ("invalid relation operator" ^ oper_name)
   end;
 
@@ -146,20 +154,20 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
         Tree.SEQ(s1, mk_MOVE e1 (Tree.ESEQ(s2,e2)))
  |  mk_MOVE e1 (Tree.ESEQ(s1, e2)) =
 	Tree.SEQ(s1, Tree.MOVE (e1,e2))
- |  mk_MOVE e1 s = Tree.MOVE (e1,s)
+ |  mk_MOVE e1 s = Tree.MOVE (e1,s);
 
 
  fun mk_PAIR (Tree.ESEQ(s1,s2)) = mk_PAIR s2
   |  mk_PAIR (Tree.PAIR (e1,e2)) =
 	Tree.PAIR(mk_PAIR e1, mk_PAIR e2)
   |  mk_PAIR exp =
-	  Tree.TEMP (inspectVar(Temp.makestring(Temp.newtemp())))  
+	  Tree.TEMP (inspectVar(Temp.makestring(Temp.newtemp())));
 
  fun analyzeExp exp =
 
      if is_let exp then
-        let val (lt, rhs) = dest_let exp;
-            val (lhs, rest) = dest_pabs lt;
+        let val (var, rhs) = dest_let exp;
+            val (lhs, rest) = dest_pabs var;
 	    val rt = analyzeExp rhs
         in
 	    Tree.ESEQ(Tree.MOVE(analyzeExp lhs, analyzeExp rhs), analyzeExp rest)
@@ -227,11 +235,17 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	    raise ERR "buildIR" "the expression is invalid"
 
 
-
-fun convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) = 
-	convert_ESEQ (Tree.ESEQ (Tree.SEQ(s1, s2), e))
+(*
+fun 
+	convert_ESEQ (Tree.ESEQ(Tree.MOVE(e1, e2), Tree.ESEQ(s2,e))) =
+   convert_ESEQ (Tree.ESEQ (Tree.SEQ(
+		Tree.MOVE(e1, convert_ESEQ e2), s2), convert_ESEQ e))
+ |
+	convert_ESEQ (Tree.ESEQ(s1, Tree.ESEQ(s2,e))) = 
+	convert_ESEQ (Tree.ESEQ (Tree.SEQ(s1, s2), convert_ESEQ e))
  |  convert_ESEQ s = s; 
 
+convert_ESEQ ir
 
 fun linearize (stm:Tree.stm) : Tree.stm list =
   let
@@ -239,22 +253,33 @@ fun linearize (stm:Tree.stm) : Tree.stm list =
      |  linear (s,l) = s::l
 
     fun discompose_move(Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) = 
-	discompose_move(Tree.MOVE(e1,e3)) @ discompose_move(Tree.MOVE(e2,e4))
+	      discompose_move(Tree.MOVE(e1,e3)) @ discompose_move(Tree.MOVE(e2,e4))
+     |   discompose_move exp = [exp]
      |   discompose_move exp = [exp]
 
   in
     List.foldl (fn (exp, L) => L @ discompose_move exp) [] (linear (stm, []))
   end
 
+*)
 
-fun linerize_IR ir = 
-  let
-    fun get_stm (Tree.ESEQ(s,e)) = s
-    fun get_exp (Tree.ESEQ(s,e)) = e
-    val ir = convert_ESEQ ir
-  in
-    (linearize (get_stm ir), get_exp ir)  
-  end
+fun 
+  linerize_IR_stm (Tree.MOVE (e1, Tree.ESEQ (s, e2))) =
+		(linerize_IR_stm s) @ linerize_IR_stm (Tree.MOVE (e1, e2)) |
+  linerize_IR_stm (Tree.SEQ (s1, s2)) = (linerize_IR_stm s1) @ (linerize_IR_stm s2) |
+  linerize_IR_stm (Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) =
+	  linerize_IR_stm (Tree.MOVE(e1,e3)) @ linerize_IR_stm (Tree.MOVE(e2,e4))
+  |
+  linerize_IR_stm stm = [stm]
+
+
+fun linerize_IR (Tree.ESEQ (s, e)) =
+		let
+			val (stmL, e') = linerize_IR e
+		in
+			(((linerize_IR_stm s) @ stmL), e')
+		end |
+	linerize_IR e = ([], e)
 
 
 fun convert_to_IR prog =
@@ -307,7 +332,12 @@ fun print_stm ir =
    |  print_rop Tree.NE = "!="
    |  print_rop Tree.GE = ">="
    |  print_rop Tree.LE = "<="
+   |  print_rop Tree.CS = ">=+"
+   |  print_rop Tree.HI = ">+"
+   |  print_rop Tree.CC = "<+"
+   |  print_rop Tree.LS = "<=+"
    |  print_rop _ = raise ERR "IR" "invalid relational operator";
+
 
   fun one_exp (Tree.BINOP(bop,e1,e2)) =
         (print_bop bop) ^ " " ^ one_exp e1 ^ ", " ^ one_exp e2

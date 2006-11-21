@@ -52,16 +52,18 @@ fun buildCFG tmpT (args,stmList,outs) =
     in  if x = Tree.EQ then Assem.EQ
 	else if x = Tree.NE then Assem.NE 
 	else if x = Tree.LT then Assem.LT
-        else if x = Tree.GT then Assem.GT
-        else if x = Tree.LE then Assem.LE
-        else if x = Tree.GE then Assem.GE
-        else if x = Tree.ULT then Assem.LT
-        else if x = Tree.ULE then Assem.LE
-        else if x = Tree.UGE then Assem.GE
-	else if x = Tree.UGT then Assem.GT
+	else if x = Tree.GT then Assem.GT
+	else if x = Tree.LE then Assem.LE
+	else if x = Tree.GE then Assem.GE
+	else if x = Tree.CC then Assem.CC
+	else if x = Tree.LS then Assem.LS
+	else if x = Tree.HI then Assem.HI
+	else if x = Tree.CS then Assem.CS
 	else Assem.NE					(* there may be no relational operation defined previously, so if e!=0 then jump *)
     end;
-   
+
+
+
   fun getTmp (Tree.TEMP x) = x
    |  getTmp _ = 0;
 
@@ -77,49 +79,56 @@ fun buildCFG tmpT (args,stmList,outs) =
   (* Translate a Tree expression to the Assem expression including use and def information					*)
 
   fun one_stm (Tree.MOVE(d, Tree.BINOP(bop, e1, e2))) =
-	{ instr = Assem.OPER {oper = (bi_operator bop,NONE,false), dst = [one_exp d], src = [one_exp e1, one_exp e2], jump = NONE},
-	  def = tmpIndexL [d],
-	  use = tmpIndexL [e1,e2]
-	}
+    let
+      val not_change = if (bop = Tree.MUL) then
+        [{instr = Assem.OPER {oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE}, 
+      def = [], use = tmpIndexL [e1]}]
+        else [];        
+    in
+	 ({ instr = Assem.OPER {oper = (bi_operator bop,NONE,false), dst = [one_exp d], src = [one_exp e1, one_exp e2], jump = NONE},
+	   def = tmpIndexL [d],
+	   use = tmpIndexL [e1,e2]
+	 }::not_change)
+  end
    |  one_stm (Tree.MOVE(d, Tree.RELOP(rop, e1, e2))) =
 	let 
 	    val _= relopT := T.enter(!relopT, getTmp d, rop) in
-	    { instr = Assem.OPER {oper = (Assem.CMP,NONE,false), dst = [one_exp d], src = [one_exp e1, one_exp e2], jump = NONE},
+	    [{ instr = Assem.OPER {oper = (Assem.CMP,NONE,false), dst = [one_exp d], src = [one_exp e1, one_exp e2], jump = NONE},
 	      def = tmpIndexL [d],
 	      use = tmpIndexL [e1, e2]
-	    }
+	    }]
 	end
    |  one_stm (Tree.MOVE(d, Tree.CALL(name, args))) = 
 	let val (Tree.NAME fun_name) = name;
 	    val outL = Tree.pair2list d in 
-	    { instr = Assem.OPER {oper = (Assem.BL,NONE,false), 
+	    [{ instr = Assem.OPER {oper = (Assem.BL,NONE,false), 
 				 dst = [one_exp d],
 				 src = [one_exp args], 
 				 jump = SOME [fun_name]},
 	      def = tmpIndexL outL,
 	      use = tmpIndexL (Tree.pair2list args)
-	    }
+	    }]
         end
    |  one_stm (Tree.MOVE(d, s)) =
-            { instr = Assem.MOVE {dst = one_exp d, src = one_exp s},
+            [{ instr = Assem.MOVE {dst = one_exp d, src = one_exp s},
 	      def = tmpIndexL [d],
 	      use = tmpIndexL [s]
-	    }
+	    }]
    |  one_stm (Tree.JUMP lab) =
-	    { instr = Assem.OPER {oper = (Assem.B,SOME Assem.AL,false), dst = [], src = [], jump = SOME [lab]},
+	    [{ instr = Assem.OPER {oper = (Assem.B,SOME Assem.AL,false), dst = [], src = [], jump = SOME [lab]},
 	      def = [],
 	      use = []
-	    }
+	    }]
    |  one_stm (Tree.CJUMP(e,lab)) =
-	    { instr = Assem.OPER {oper = (Assem.B, SOME (cjump (getTmp e)), false), dst = [], src = [one_exp e], jump = SOME [lab]},
+	    [{ instr = Assem.OPER {oper = (Assem.B, SOME (cjump (getTmp e)), false), dst = [], src = [one_exp e], jump = SOME [lab]},
 	      def = [],
 	      use = tmpIndexL [e]
-	    }
+	    }]
    |  one_stm (Tree.LABEL lab) =
-	    { instr = Assem.LABEL {lab = lab},
+	    [{ instr = Assem.LABEL {lab = lab},
 	      def = [],
 	      use = []
-	    }
+	    }]
    |  one_stm _ = raise CFG
 
    (* Calcuate the number of the node holding a label, this number serves as the tail of an edge corresponding to an jump	*)
@@ -161,7 +170,7 @@ fun buildCFG tmpT (args,stmList,outs) =
           )
 	end;
 
-    val insts = List.map (fn inst => one_stm inst) stmList;
+    val insts = Lib.flatten (List.map (fn inst => one_stm inst) stmList);
     val augmentedInsts = ({instr = Assem.OPER{oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE}, 
 			  def = tmpIndexL2 (Assem.pair2list args),use = []}) ::
 	insts @ [{instr = Assem.OPER {oper = (Assem.NOP,NONE,false), dst = [], src = [], jump = NONE}, 

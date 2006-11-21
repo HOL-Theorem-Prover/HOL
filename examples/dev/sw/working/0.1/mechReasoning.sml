@@ -1,30 +1,39 @@
 (*
+
+loadPath := 
+            (concat Globals.HOLDIR "/examples/dev/sw") :: 
+            (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
+            (concat Globals.HOLDIR "/examples/temporal_deep/src/tools") :: 
+            (concat Globals.HOLDIR "/examples/sep") ::
+            !loadPath;
+
 app load ["relationTheory", "pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory", "listSyntax", 
-          "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIR", "funCall"];
+          "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIR", "funCall", "preARMTheory", "wordsLib"];
 
 quietdec := true;
 open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
      preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory 
-     annotatedIR ILTheory rulesTheory word32Lib word32Theory
+     annotatedIR ILTheory rulesTheory wordsLib wordsTheory
+     preARMTheory;
 quietdec := false;
 *)
 
 structure mechReasoning = struct
   local
   open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory 
-     annotatedIR ILTheory rulesTheory word32Lib word32Theory
+     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory declFuncs
+     annotatedIR ILTheory rulesTheory wordsLib wordsTheory IRSyntax
   in
 
 infix ++ THENC ORELSEC THEN THENL ORELSE |-> ##;
-structure IR = annotatedIR;
 
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *) 
 (*---------------------------------------------------------------------------------*)
 
+
 val fupdate_normalizer =
- let val thm = SPEC_ALL ARMCompositionTheory.FUPDATE_LT_COMMUTES
+ let val thm = SPEC_ALL FUPDATE_LT_COMMUTES
      val pat = lhs(snd(dest_imp(concl thm)))
  in
    {name = "Finite map normalization",
@@ -72,10 +81,64 @@ fun mk_vars exp =
 
 fun mk_mreads st (IRSyntax.PAIR (e1,e2)) =
         mk_pair(mk_mreads st e1, mk_mreads st e2)
- |  mk_mreads st exp =
-        mk_comb ( mk_comb (Term`mread`, st), IRSyntax.convert_exp exp)
-  handle e => (print "mk_mreads: invalid incoming expression"; Raise e);
+ |  mk_mreads st (IRSyntax.REG e) =
+      list_mk_comb (Term`mread`, [st, mk_comb (Term`RR`, IRSyntax.convert_reg (IRSyntax.REG e))])
+ |  mk_mreads st (IRSyntax.MEM m) =
+      list_mk_comb (Term`mread`, [st, mk_comb (Term`RM`, IRSyntax.convert_mem (IRSyntax.MEM m))])
+ |  mk_mreads st _ =
+      (print "mk_mreads: invalid incoming expression"; 
+       raise ERR "" ("mk_mreads: invalid incoming expression"));
 
+
+fun ADDR30_CONV t =
+	let
+		val (f, args) = dest_comb t;
+		val _ = if same_const (Term `ADDR30`) f then () else Raise (ERR "" "Syntax");
+      val num_term = rand (rand args);
+		val num = dest_numeral num_term;
+		val (c, r) = Arbnum.divmod(num, Arbnum.fromInt 4);
+		val _ = if (r = Arbnum.zero) then () else  Raise (ERR "" "Syntax");
+		val mult_term = mk_mult(mk_numeral c, term_of_int 4);
+		val mult_thm = GSYM (EVAL mult_term);
+		val thm = RAND_CONV (RAND_CONV (REWRITE_CONV [mult_thm])) t
+	in
+		thm
+	end;
+
+val word_extract_thm = GSYM ((SIMP_RULE std_ss [w2w_def, combinTheory.o_DEF, FUN_EQ_THM]) word_extract_def);
+
+
+val SIM_REWRITE_CONV = 
+	REWRITE_CONV ([mdecode_def, write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, index_of_reg_def, WORD_ADD_0, FAPPLY_FUPDATE_THM, word4_distinct,
+	GSYM WORD_ADD_ASSOC, FUPDATE_EQ, fupdate_lt_commutes_word4, word_sub_def]);
+
+
+val SIM_CONV = 
+		SIM_REWRITE_CONV THENC
+		WORDS_CONV THENC
+		REWRITE_CONV [word_extract_thm, WORD_ADD_0]
+	
+val SIM_MEM_CONV = 
+		SIM_REWRITE_CONV THENC
+		SIMP_CONV arith_ss [word4_distinct, ADDR30_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
+			WORD_EQ_ADD_LCANCEL] THENC
+		WORDS_CONV THENC
+		REWRITE_CONV [word_extract_thm, WORD_ADD_0]
+
+val SIM_PUSH_CONV =
+		REWRITE_CONV [mdecode_def, pushL_def, GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH, FOLDL] THENC
+		DEPTH_CONV GEN_BETA_CONV THENC
+		SIM_REWRITE_CONV THENC
+		SIMP_CONV arith_ss [ADDR30_ADD_CONST_MOD] THENC
+		SIM_CONV;
+	
+val SIM_POP_CONV =
+		REWRITE_CONV [mdecode_def, popL_def, GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH, FOLDL] THENC
+		DEPTH_CONV GEN_BETA_CONV THENC
+		SIM_REWRITE_CONV THENC
+		SIMP_CONV arith_ss [word4_distinct, ADDR30_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
+			WORD_EQ_ADD_LCANCEL] THENC
+		SIM_CONV;
 
 (* make a list of rules [exp0 <- v0, exp1 <- v1, ...] *)
 
@@ -86,14 +149,16 @@ fun mk_subst_rules expL =
     List.map (fn exp => (i := !i + 1; {redex = exp, residue = mk_var ("v" ^ (Int.toString (!i)), Type `:DATA`)})) expL
   end
 
-
 fun read_one_var s exp =
   let
-     val v0 = list_mk_comb (Term`mread`, [s, IRSyntax.convert_exp exp]);
-     val v1 = rhs (concl ((WORD_RULE o SIMP_CONV finmap_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm]) v0))
+     val v0 = IRSyntax.read_exp s exp;
+	  fun conv (IRSyntax.MEM (b, off)) = SIM_MEM_CONV |
+			conv _ = SIM_CONV
+     val v1 = rhs (concl ((conv exp) v0))
   in
      v1
   end
+
 
 (*---------------------------------------------------------------------------------*)
 (*      Symbolic Simulation of Instructions                                        *) 
@@ -104,71 +169,6 @@ val ACCESS_RULE = SIMP_RULE finmap_ss [mread_def, write_thm, read_thm, toMEM_def
 
 (*  Basic RULE for instructions execpt for PUSH and POP                            *) 
 
-val SIM_RULE = 
-    fn thm =>
-    (WORD_RULE o
-     REWRITE_RULE [GSYM WORD_ADD_ASSOC] o
-     CONV_RULE (DEPTH_CONV (
-	REWRITE_CONV [Once mdecode_def] THENC 
-	SIMP_CONV finmap_ss [write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, index_of_reg_def]))) thm;
-
-
-(*      Symbolically simulate PUSH and POP instructions                            *) 
-
-val [FOLDL_NIL, FOLDL_CONS] = CONJUNCTS FOLDL;
-
-(*
-val POP_TAC =
-    CONV_TAC (DEPTH_CONV (REWRITE_CONV [Once mdecode_def, popL_def])) THEN
-    REWRITE_TAC [MAP, LENGTH] THEN
-    SIMP_TAC finmap_ss [read_thm] THEN
-    CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
-        THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
-                THENC reduceLib.REDUCE_CONV)))) THEN
-    SIMP_TAC finmap_ss [write_thm];
-*)
-
-val POP_RULE =
-    fn th =>
-     (WORD_RULE o
-      REWRITE_RULE [GSYM WORD_ADD_ASSOC] o
-      SIMP_RULE finmap_ss [write_thm] o
-      CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
-          THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
-                THENC reduceLib.REDUCE_CONV)))) o
-      SIMP_RULE finmap_ss [read_thm] o
-      REWRITE_RULE [MAP, LENGTH] o
-      CONV_RULE (DEPTH_CONV (REWRITE_CONV [Once mdecode_def, popL_def]))
-     ) th;
-
-(*
-val PUSH_TAC =
-    CONV_TAC (DEPTH_CONV (REWRITE_CONV [Once mdecode_def, pushL_def])) THEN
-    REWRITE_TAC [GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH] THEN
-    SIMP_TAC finmap_ss [read_thm] THEN
-    CONV_TAC (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
-        THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
-                THENC reduceLib.REDUCE_CONV)))) THEN
-    SIMP_TAC finmap_ss [write_thm] THEN
-    WORD_TAC
-*)
-
-val PUSH_RULE =
-    fn th =>
-     (WORD_RULE o
-      REWRITE_RULE [GSYM WORD_ADD_ASSOC] o
-      SIMP_RULE finmap_ss [write_thm] o
-      CONV_RULE (DEPTH_CONV ((REWR_CONV FOLDL_CONS ORELSEC REWR_CONV FOLDL_NIL)
-          THENC RATOR_CONV (RAND_CONV (DEPTH_CONV GEN_BETA_CONV
-                THENC REWRITE_CONV [read_thm, write_thm, pair_case_def]
-                THENC reduceLib.REDUCE_CONV)))) o
-      SIMP_RULE finmap_ss [read_thm] o
-      REWRITE_RULE [GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH] o
-      CONV_RULE (DEPTH_CONV (REWRITE_CONV [Once mdecode_def, pushL_def]))
-     ) th;
 
 
 (* Find the first instruction to be simulated next   *)
@@ -177,8 +177,46 @@ fun locate_first_inst t =
     if type_of t = Type `:DOPER` then true
     else false;
 
-(* eliminate all "decode"s and get the new state *) 
 
+fun is_mdecode_exp t =
+	(let
+	  val const = #1 (strip_comb t)
+	in
+	  (same_const const (Term `mdecode`))
+   end) handle _ => false;
+
+
+fun find_innermost_mdecode t = 	
+	(let
+		val state = (rand (rator t));
+	in
+		if is_mdecode_exp state then find_innermost_mdecode state else t
+	end)
+  handle e => (print "find_innermost_mdecode:syntax error"; Raise e);
+
+(* eliminate all "decode"s and get the new state *) 
+(*
+fun step th =
+	let
+		val t1 = concl th
+      val st = if is_imp t1 then rhs (#2 (dest_imp t1)) else rhs t1
+		val t1 = find_term locate_first_inst st;
+      val operator = #1 (strip_comb t1);
+		val t2 = find_innermost_mdecode st;
+		val conv = if same_const operator (Term `MPUSH`) then SIM_PUSH_CONV
+						else if same_const operator (Term `MPOP`) then SIM_POP_CONV
+						else if same_const operator (Term `MLDR`) then SIM_MEM_CONV
+						else if same_const operator (Term `MSTR`) then SIM_MEM_CONV
+						else SIM_CONV 
+		val t2_thm = conv t2;
+	in
+		REWRITE_RULE [t2_thm] th
+	end;
+
+val th = th1
+
+val th = step th
+*)
 fun elim_decode th = 
   let val t1 = concl th
       val st = if is_imp t1 then rhs (#2 (dest_imp t1)) else rhs t1
@@ -188,29 +226,32 @@ fun elim_decode th =
           let val t1 = find_term locate_first_inst st;
               val operator = #1 (strip_comb t1);
               val _ = print ("Simulating a " ^ (#1 (dest_const operator)) ^ " instruction\n");
-              val rule1 = if same_const operator (Term `MPUSH`) then PUSH_RULE
-                          else if same_const operator (Term `MPOP`) then POP_RULE
-                          else SIM_RULE 
-              val th' =  rule1 th
+				  val t2 = find_innermost_mdecode st;
+				  val conv = if same_const operator (Term `MPUSH`) then SIM_PUSH_CONV
+									else if same_const operator (Term `MPOP`) then SIM_POP_CONV
+									else if same_const operator (Term `MLDR`) then SIM_MEM_CONV
+									else if same_const operator (Term `MSTR`) then SIM_MEM_CONV
+									else SIM_CONV 
+				  val t2_thm = conv t2;
+              val th' =  REWRITE_RULE [t2_thm] th
           in  elim_decode th'
           end
   end
-  handle e => (print "get_blk_spec: errors occur while symbolically simulating a block"; Raise e);
+  handle e => (print "get_blk_spec: errors occur while symbolically simulating a block! "; Raise e);
+
 
 (* Given a list of IR statements, return a theorem indicating the state after symolic simulation *)
 (* pre_spec specifies the pre-conditions before the simulation                                   *)
-
-fun sim_stms stms pre_p = 
+fun sim_stms stms = 
   let
      val blk = mk_comb (Term`BLK`, mk_list (List.map IRSyntax.convert_stm stms, Type`:DOPER`));
-     val st = mk_pair (mk_var ("regs", Type `:num |-> DATA`), mk_var ("mem", Type `:num |-> DATA`));
+     val st = mk_pair (mk_var ("regs", Type `:REGISTER |-> DATA`), mk_var ("mem", Type `:ADDR |-> DATA`));
      val instance = list_mk_comb (Term`run_ir:CTL_STRUCTURE -> DSTATE -> DSTATE`, [blk, st]);
      val th0 =  REWRITE_CONV [IR_SEMANTICS_BLK] instance;
-     val th1 = prove (mk_imp (mk_comb(pre_p,st), concl th0), SIMP_TAC std_ss [th0]);
-     val th2 = SIMP_RULE std_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] th1;
-     val th3 = elim_decode th2              (* symbolically simulate the block *)
+     val th1 = SIMP_RULE std_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] th0;
+     val th2 = elim_decode th1              (* symbolically simulate the block *)
   in
-     th3
+     th2
   end;
 
 (*---------------------------------------------------------------------------------*)
@@ -221,7 +262,23 @@ fun sim_stms stms pre_p =
 
 val basic_outL = [IRSyntax.REG 11, IRSyntax.REG 13];               (* fp and sp *)
 
-fun mk_PSPEC ir (pre_st,post_st) (ins,outs) pre_p = 
+
+val PSPEC_term =
+	Term `PSPEC:CTL_STRUCTURE ->
+       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) ->
+        bool) #
+       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) ->
+        bool) ->
+       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) -> 'a)
+       ->
+       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) -> 'b)
+       #
+       ('b -> 'c) #
+       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) -> 'c)
+       -> bool`;
+
+
+fun mk_PSPEC ir (pre_st,post_st) (ins,outs) = 
   let 
 
       fun calculate_outs st (IRSyntax.PAIR (a,b)) =
@@ -229,35 +286,11 @@ fun mk_PSPEC ir (pre_st,post_st) (ins,outs) pre_p =
        |  calculate_outs st exp =
               read_one_var st exp
 
-      fun simplify_pre_p q0 = 
-        let
-            val q1 = (rhs o concl o ACCESS_CONV) q0 handle e => q0;
-            val eqs = strip_conj q1;
-            val (qt_eqs, other_eqs) = (List.take(eqs,2), tl (tl eqs));
-            val qt_rules = List.map (fn t => {redex = lhs t, residue = rhs t}) qt_eqs;
-            val other_eq' = List.map (rhs o concl o WORD_CONV o (subst qt_rules)) other_eqs
-        in
-            list_mk_conj (qt_eqs @ other_eq')
-        end
-
-      val (sim1,post_p1) = 
-        let
-          val rules' = List.map (fn t => {redex = lhs t, residue = rhs t}) (strip_conj (simplify_pre_p (#2 (dest_pabs pre_p))));
-          val sim1 = rhs o concl o WORD_CONV o (subst rules');
-
-          val post_p0 = list_mk_conj (List.map 
-             (fn exp => mk_eq(read_one_var pre_st exp, ((subst rules') o rhs o concl o WORD_CONV) 
-                             (subst rules' (read_one_var post_st exp)))) basic_outL);  
-          val post_p1 = mk_pabs (pre_st, simplify_pre_p post_p0)
-        in 
-          (sim1,post_p1)
-        end
-          handle e => ((fn t => t), pre_p);
 
       (* the characteristic function *)
-      val rules = mk_subst_rules (List.map (sim1 o (read_one_var pre_st)) (IRSyntax.pair2list ins));
+      val rules = mk_subst_rules (List.map (read_one_var pre_st) (IRSyntax.pair2list ins));
       val (initV,out_vars) = (mk_vars ins, mk_vars outs);
-      val f_c = mk_pabs (initV, subst rules (sim1 (calculate_outs post_st outs)));  (* the charateristic function *)
+      val f_c = mk_pabs (initV, subst rules (calculate_outs post_st outs));  (* the charateristic function *)
 
       (* the pre-condition and the post-condition *)
 
@@ -271,11 +304,11 @@ fun mk_PSPEC ir (pre_st,post_st) (ins,outs) pre_p =
       val (in_f,out_f) = (mk_pabs (st', mk_mreads st' ins), mk_pabs (st', mk_mreads st' outs));
       val pspec = list_mk_comb (inst [{redex = alpha, residue = stk_tp}, 
 				       {redex = beta, residue = type_of initV}, 
-                                       {redex = gamma, residue = type_of out_vars}] (Term`PSPEC`),
-                         [ir, mk_pair(pre_p, post_p1), stk_f, list_mk_pair[in_f,f_c,out_f]])
+                                       {redex = gamma, residue = type_of out_vars}] (PSPEC_term),
+                         [ir, mk_pair(stk_f, stk_f), stk_f, list_mk_pair[in_f,f_c,out_f]]);
   in
      pspec
-  end
+  end;
 
 (*---------------------------------------------------------------------------------*)
 (*      Symbolic Simulation of Basic Blocks                                        *) 
@@ -284,38 +317,59 @@ fun mk_PSPEC ir (pre_st,post_st) (ins,outs) pre_p =
 (* Given an basic block, the charateristic function on inputs and outputs are derived by symbolic simulation *)
 (* and the context about unchanged variables is maintained                                                   *) 
 (* Finally well_formed information is given                                                                  *)
+(*
+fun extract (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) =
+(instL, ins, outs, context);
+val (instL, ins, outs, context) = extract f_ir;
+val (unchanged_list, _) = unchanged_lists_weak
+val unchanged_list = #2 unchanged_lists
+mk_blk_spec pre_ir unchanged_lists_weak
 
-fun mk_blk_spec (IR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) pre_p = 
-  let 
-      val th = sim_stms instL pre_p;
-      val (assm,t1) = let val t0 = concl th in if is_imp t0 then dest_imp t0 else (Term`T`, t0) end;
-      val ([blk_ir,pre_st], post_st) = (#2 (strip_comb (lhs t1)), rhs t1);
+*)
+
+
+
+fun mk_blk_spec (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) (unchanged_list, _) = 
+  let 	
+      val th = sim_stms instL;
+      val t1 = concl th;
+      val spec_terms = (#2 (strip_comb (lhs t1)), rhs t1);
+		val blk_ir = el 1 (#1 spec_terms);
+		val pre_st = el 2 (#1 spec_terms);
+		val post_st = #2 spec_terms;
       val ir_abbr = mk_var ("ir", Type `:CTL_STRUCTURE`);
 
-      (* the characteristic function *)
-      val f_spec = mk_PSPEC blk_ir (pre_st,post_st) (ins,outs) pre_p;
+      val f_spec = mk_PSPEC blk_ir (pre_st,post_st) (ins,outs);
       val f_spec' = subst [{redex = blk_ir, residue = ir_abbr}] f_spec;
+
+      val unchanged_spec = list_mk_comb (Term`UNCHANGED`, [unchanged_list, ir_abbr]);
+      val unchanged_term = list_mk_comb (Term`UNCHANGED`, [unchanged_list, blk_ir]);
+
+		val unchanged_thm = prove (unchanged_term, (* set_goal ([],unchanged_term) *)
+			REWRITE_TAC[UNCHANGED_THM, th, EVERY_DEF] THEN
+			BETA_TAC THEN
+			REWRITE_TAC[read_thm, toREG_def, index_of_reg_def, FAPPLY_FUPDATE_THM, word4_distinct]);
 
       (* well_formedness *)
       val wf_spec = mk_comb (Term`WELL_FORMED`, ir_abbr);
 
       (* specifiction of functional correctness *)
-      val fspec = mk_let (mk_abs (ir_abbr, list_mk_conj [f_spec', wf_spec]), blk_ir); 
+      val fspec = mk_let (mk_abs (ir_abbr, list_mk_conj [f_spec', wf_spec, unchanged_spec]), blk_ir); 
 
       val spec = prove (fspec,   (* set_goal ([],fspec) *)
-             SIMP_TAC std_ss [LET_THM, PSPEC_def, HSPEC_def, FORALL_DSTATE, BLOCK_IS_WELL_FORMED, read_thm] THEN
-                 SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] THEN
-                 SIMP_TAC std_ss [th] THEN
-                 SIMP_TAC finmap_ss [read_thm] THEN
-                 WORD_TAC THEN
-                 SIMP_TAC std_ss [pair_induction]
+             SIMP_TAC std_ss [LET_THM, PSPEC_def, HSPEC_def, FORALL_DSTATE, BLOCK_IS_WELL_FORMED, read_thm, unchanged_thm] THEN
+ 				 SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm, th] THEN
+             CONV_TAC SIM_MEM_CONV THEN
+             SIMP_TAC std_ss [pair_induction]
             )
+				
    in
-     spec
+     (spec, th)
    end
-
  | mk_blk_spec _ _ = 
      raise Fail "mk_blk_spec: BLK is expected!";
+
+
 
 (* Obtain the specification associated with pointers                               *)
 fun get_p_spec spec =
@@ -325,6 +379,7 @@ fun get_p_spec spec =
   in
       List.nth (t1,1) 
   end
+
 
 (*---------------------------------------------------------------------------------*)
 (*      Specification for Sequential Composition                                   *) 
@@ -343,6 +398,7 @@ fun get_spec_info spec =
      handle e => (print "get_spec_info: the input is not valid PSPEC and UNCHANGED"; Raise e);
 
 
+
 fun mk_sc_spec ir1_spec ir2_spec = 
   let 
       val (specL1,specL2) = (strip_conj (concl (SIMP_RULE std_ss [LET_THM] ir1_spec)),strip_conj (concl (SIMP_RULE std_ss [LET_THM] ir2_spec)));
@@ -351,19 +407,19 @@ fun mk_sc_spec ir1_spec ir2_spec =
       val (spec1_thm, spec2_thm) = (SIMP_RULE std_ss [LET_THM] ir1_spec, SIMP_RULE std_ss [LET_THM] ir2_spec);
 
       (* SC (ir1, ir2) *)
-      val sc_ir = list_mk_comb (Term`SC`, [ir1, ir2]);
+      val sc_ir = list_mk_comb (Term`IL$SC`, [ir1, ir2]);
       val ir_abbr = mk_var ("ir", Type `:CTL_STRUCTURE`);
       val st = mk_var ("st", Type `:DSTATE`);
       val instance = list_mk_comb (Term`run_ir:CTL_STRUCTURE -> DSTATE -> DSTATE`, [sc_ir, st]);
       
       (* the characteristic function of SC *)
-      val sc_f = list_mk_comb (inst [alpha |-> type_of ins2, beta |-> type_of outs2, gamma |-> type_of ins1] (Term`$o`), [f2,f1]);
+      val sc_f = combinSyntax.mk_o (f2,f1);	
       val (in_f,out_f) = (mk_pabs (st,ins1), mk_abs (st,outs2));
       val out_f1 = mk_pabs (st, outs1);       
       val stk_tp = hd (tl (#2 (dest_type (type_of stk_f))));
 
       (* the SC specification *)
-      val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of ins1, gamma |-> type_of outs2] (Term`PSPEC`), 
+      val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of ins1, gamma |-> type_of outs2] (PSPEC_term), 
                                 [sc_ir, mk_pair(pre_p1, post_p2), stk_f, list_mk_pair[in_f,sc_f,out_f]]);
 
       val f_th =  prove (f_spec,   (* set_goal ([],f_spec) *)
@@ -374,15 +430,22 @@ fun mk_sc_spec ir1_spec ir2_spec =
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, sc_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      MATCH_MP_TAC IR_SC_IS_WELL_FORMED THEN
+                      ONCE_REWRITE_TAC [GSYM IR_SC_IS_WELL_FORMED] THEN
                       SIMP_TAC std_ss [spec1_thm, spec2_thm]
 	        );
 
-      val spec = subst [sc_ir |-> ir_abbr] (list_mk_conj [f_spec, well_formed_spec]);
+
+      val unchanged_spec = mk_comb(rator (el 3 specL1), sc_ir);
+      val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)
+                      MATCH_MP_TAC IR_SC_UNCHANGED THEN
+                      REWRITE_TAC [well_formed_th, spec1_thm, spec2_thm]
+	        );
+
+      val spec = subst [sc_ir |-> ir_abbr] (list_mk_conj [f_spec, well_formed_spec, unchanged_spec]);
       val spec' = mk_let (mk_abs (ir_abbr, spec), sc_ir);
 
       val th =  prove (spec',   (* set_goal ([],spec') *)
-			SIMP_TAC std_ss [LET_THM, f_th, well_formed_th]
+			SIMP_TAC std_ss [LET_THM, f_th, well_formed_th, unchanged_th]
 		      )
    in
         th
@@ -398,9 +461,28 @@ fun compute_outL modifiedRegL =
         List.map (fn e => (i := !i - 1; IRSyntax.MEM (11, !i))) ([12, 11] @ (List.rev modifiedRegL))  (* neglect pc and lr *)
     end
 
-fun mk_fc_spec (pre_spec, body_spec, post_spec) = 
-    mk_sc_spec (mk_sc_spec pre_spec body_spec) post_spec;
+fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, body_th, post_th, unchanged_list) = 
+	let
+		val sc1_spec = (mk_sc_spec pre_spec body_spec);
+		val sc2_spec = (mk_sc_spec sc1_spec post_spec);
 
+(*
+      val specL = CONJ_LIST 3 (SIMP_RULE std_ss [LET_THM] sc2_spec);
+
+		val fc_ir = rand (concl sc2_spec);
+      val unchanged_spec = mk_comb(mk_comb (Term`UNCHANGED`, unchanged_list), fc_ir);
+      val unchanged_th = prove (unchanged_spec,   set_goal ([],unchanged_spec) 
+							 SIMP_TAC std_ss [UNCHANGED_def] THEN
+							 Cases_on `st` THEN
+							 SIMP_TAC std_ss [Once IR_SEMANTICS_SC, Once IR_SEMANTICS_SC, el 2 specL, WELL_FORMED_thm, pre_th, body_th, post_th] THEN
+							 CONV_TAC SIM_REWRITE_CONV THEN
+							 SIMP_TAC arith_ss [word4_distinct, ADDR30_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC, WORD_EQ_ADD_LCANCEL] THEN
+							 WORDS_TAC THEN
+							 SIMP_TAC std_ss [word_extract_thm, WORD_ADD_0, IN_INSERT, NOT_IN_EMPTY, DISJ_IMP_THM, index_of_reg_def]
+	        );*)
+	in
+     sc2_spec
+	end;
 
 (*---------------------------------------------------------------------------------*)
 (*      Specification for input/output matching                                    *) 
@@ -435,12 +517,11 @@ fun mk_match_spec spec in_f2 =
 
 fun convert_cond (exp1, rop, exp2) =
   let
-    val cond_t0 = list_mk_pair [mk_comb (Term`toEXP`, IRSyntax.convert_exp exp1), 
+    val cond_t0 = list_mk_pair [IRSyntax.convert_reg exp1, 
 				IRSyntax.convert_rop rop, 
-				mk_comb (Term`toEXP`, IRSyntax.convert_exp exp2)];
-    val cond_t1 = rhs (concl (SIMP_CONV std_ss [toEXP_def, toMEM_def, toREG_def, index_of_reg_def] cond_t0))
+				IRSyntax.convert_exp exp2];
   in
-    cond_t1
+    cond_t0
   end
   handle e => (print "mk_cond: errors occur while converting the condition"; Raise e);
 
@@ -451,12 +532,18 @@ fun strip_pair2 t =
 fun mk_cj_cond cond_t ins =
   let 
     val st = mk_var ("st", Type `:DSTATE`);
-    val instance = list_mk_comb (Term`eval_cond`, [cond_t, st]);
+    val instance = list_mk_comb (Term`eval_il_cond`, [cond_t, st]);
 
     val read_const_th = prove (Term`!st v. read st (WCONST v) = v`, SIMP_TAC std_ss [FORALL_DSTATE, read_thm]); 
 
-    val th0 = REWRITE_CONV [ARMCompositionTheory.eval_cond_def] instance;
+    val th0 = REWRITE_CONV [ARMCompositionTheory.eval_cond_def,
+                            ILTheory.eval_il_cond_def,
+                            ILTheory.translate_condition_def,
+                            ILTheory.toREG_def,
+                            ILTheory.toEXP_def,
+                            ILTheory.index_of_reg_def] instance;
     val th1 = REWRITE_RULE [read_const_th] th0;
+    val th1 = WORDS_RULE th1;
     val instance1 = rhs (concl th1);
 
     val rules = mk_subst_rules (List.map (fn t0 => rhs (concl (REWRITE_CONV [mread_def, toMEM_def, toREG_def, index_of_reg_def] t0))) (strip_pair2 ins));
@@ -475,11 +562,10 @@ fun mk_cond_f cond_t ins =                  (* the condition function *)
 fun guessR2 tp = 
     let val tp1 = List.nth(#2 (dest_type tp),1)
     in
-        inst [alpha |-> tp1] (Term`measure (w2n o FST )`)
+        (Term`(measure (w2n o FST)):(word32#word32)->(word32#word32)->bool`)
     end
 
 fun cheat_tac (asl,g) = ACCEPT_TAC(ASSUME g) (asl,g);
-
 
 fun mk_tr_spec cond body_spec = 
   let 
@@ -495,36 +581,40 @@ fun mk_tr_spec cond body_spec =
       val initV = #1 (dest_pabs f);
 
       val cond_f_0 = mk_cond_f t_cond ins;
-      val cond_f = list_mk_comb (inst [alpha |-> bool, beta |-> bool, gamma |-> type_of initV] (Term`$o`), [Term`$~:bool->bool`,cond_f_0]);
+      val cond_f = combinSyntax.mk_o (Term `$~:bool->bool`, cond_f_0);
 
-      val tr_f = list_mk_comb (inst [alpha |-> type_of initV] (Term`WHILE`), [cond_f, f]);
+      val tr_f = list_mk_comb (inst [alpha |-> type_of initV] (Term`WHILE:('a -> bool) -> ('a -> 'a) -> 'a -> 'a`), [cond_f, f]);
       val prj_f = mk_pabs (st,ins);
       val stk_tp = hd (tl (#2 (dest_type (type_of stk_f))));
        
       (* well_founded relation: WF (\st1 st0. ~eval_cond cond st0 /\ (st1 = run_ir ir st0)) *)
       
       val (st0,st1) = (mk_var ("st0", Type `:DSTATE`), mk_var ("st1", Type `:DSTATE`));
-      val wf_t0 = mk_neg (list_mk_comb (Term`eval_cond`, [t_cond, st0]));
+      val wf_t0 = mk_neg (list_mk_comb (Term`eval_il_cond`, [t_cond, st0]));
       val wf_t1 = mk_eq (st1, list_mk_comb (Term`run_ir`, [body_ir, st0]));
       val wf_t2 = list_mk_abs ([st1,st0],mk_conj(wf_t0,wf_t1));
-      val wf_t3 = mk_comb (inst [alpha |-> Type `:DSTATE`] (Term`WF`), wf_t2);
+      val wf_t3 = mk_comb (Term`WF:(DSTATE->DSTATE->bool)->bool`, wf_t2);
       val wf_th = prove (wf_t3, (* set_goal ([],wf_t3) *)
                          MATCH_MP_TAC (INST_TYPE [alpha |-> type_of initV] WF_TR_LEM_2) THEN
                          EXISTS_TAC prj_f THEN EXISTS_TAC f THEN EXISTS_TAC cond_f_0 THEN
                          SIMP_TAC std_ss [SIMP_RULE std_ss [PSPEC_def, HSPEC_def, LET_THM] body_spec] THEN
-                         SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def, 
+                         SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def,
+                                         eval_il_cond_def, translate_condition_def,  toEXP_def,
                                          index_of_reg_def,toREG_def, toMEM_def, read_thm] THEN
+                         WORDS_TAC THEN 
+                         SIMP_TAC std_ss [] THEN
                          MATCH_MP_TAC (INST_TYPE [alpha |-> type_of initV] WF_TR_LEM_3) THEN
-                         (let val r = guessR2 (type_of initV) in 
+                         (let val r = guessR2 (type_of initV) in     
                               WF_REL_TAC `^r` THEN
-                              RW_TAC std_ss [WORD_RULE WORD_PRED_THM]
+                              WORDS_TAC THEN
+                              RW_TAC std_ss [WORDS_RULE 
+                                (INST_TYPE [alpha |-> Type `:i32`] WORD_PRED_THM)]
                           end
                           handle e => (print "fail to prove totalness, add statement into assumption list"; cheat_tac)
                          )
                          );
-
       (* the characteristic function *)
-      val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of initV, gamma |-> type_of initV] (Term`PSPEC`), 
+      val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of initV, gamma |-> type_of initV] (PSPEC_term), 
                                 [tr_ir, mk_pair(pre_p, post_p), stk_f, list_mk_pair[prj_f,tr_f, prj_f]]);
 
       val f_th =  prove (f_spec,   (* set_goal ([],f_spec) *)
@@ -533,8 +623,10 @@ fun mk_tr_spec cond body_spec =
                         SIMP_TAC std_ss [SIMP_RULE std_ss [LET_THM] body_spec] THEN
                         STRIP_TAC THENL [
                             RW_TAC std_ss [],
-                            SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def, 
-                                         index_of_reg_def, toREG_def, toMEM_def, read_thm]
+                            SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def, eval_il_cond_def, translate_condition_def,
+                                         index_of_reg_def, toREG_def, toEXP_def, toMEM_def, read_thm] THEN
+                            WORDS_TAC THEN
+                            SIMP_TAC std_ss []
                             ]
 		        )
 
@@ -548,11 +640,19 @@ fun mk_tr_spec cond body_spec =
                       RW_TAC std_ss []
 	        );
 
-      val spec = subst [tr_ir |-> ir_abbr] (list_mk_conj [f_spec, well_formed_spec]);
+      (* unchanged *)
+      val unchanged_spec = mk_comb (rator (el 3 specL), tr_ir);
+      val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)
+                      MATCH_MP_TAC UNCHANGED_TR_RULE THEN
+                      SIMP_TAC std_ss [well_formed_th, SIMP_RULE std_ss [LET_THM] body_spec]
+	        );
+
+
+      val spec = subst [tr_ir |-> ir_abbr] (list_mk_conj [f_spec, well_formed_spec, unchanged_spec]);
       val spec' = mk_let (mk_abs (ir_abbr, spec), tr_ir);
 
       val th =  prove (spec',   (* set_goal ([],spec') *)
-			SIMP_TAC std_ss [f_th, well_formed_th, LET_THM]
+			SIMP_TAC std_ss [f_th, well_formed_th, unchanged_th, LET_THM]
 		      )
    in
         th
@@ -562,7 +662,6 @@ fun mk_tr_spec cond body_spec =
 (*---------------------------------------------------------------------------------*)
 (*      Specification for Conditional Jumps                                        *) 
 (*---------------------------------------------------------------------------------*)
- 
 fun mk_cj_spec cond ir1_spec ir2_spec = 
   let 
       val (specL1,specL2) = (strip_conj (concl (SIMP_RULE std_ss [LET_THM] ir1_spec)),strip_conj (concl (SIMP_RULE std_ss [LET_THM] ir2_spec)));
@@ -578,36 +677,50 @@ fun mk_cj_spec cond ir1_spec ir2_spec =
       
       val initV = #1 (dest_pabs f1);
       val cj_cond = mk_pabs(initV, mk_cj_cond t_cond ins1);
-      val cj_f = mk_pabs(initV, list_mk_comb (inst [alpha |-> type_of outs1] (Term`COND`), 
+      val cj_f = mk_pabs(initV, list_mk_comb (inst [alpha |-> type_of outs1] (Term`COND:bool->'a->'a->'a`), 
                        [mk_comb(cj_cond,initV), mk_comb(f1,initV), mk_comb(f2,initV)]));
 
       val (in_f,out_f) = (mk_pabs (st,ins1), mk_abs (st,outs2));
       val stk_tp = hd (tl (#2 (dest_type (type_of stk_f))));
 
       (* the characteristic function *)
-      val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of ins1, gamma |-> type_of outs2] (Term`PSPEC`), 
+      val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of ins1, gamma |-> type_of outs2] (PSPEC_term), 
                                 [cj_ir, mk_pair(pre_p1,post_p1), stk_f, list_mk_pair[in_f,cj_f,out_f]]);
 
       val f_th =  prove (f_spec,   (* set_goal ([],f_spec) *)
                         MATCH_MP_TAC (GEN_ALL (SIMP_RULE std_ss [LAMBDA_PROD] (INST_TYPE [beta |-> type_of initV] 
                                   (SPEC_ALL PRJ_CJ_RULE)))) THEN
                         SIMP_TAC std_ss [spec1_thm, spec2_thm] THEN
-                        SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def, 
-                                         index_of_reg_def, toREG_def, toMEM_def, read_thm, GSYM PFORALL_THM]
+                        SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def,
+                         ILTheory.eval_il_cond_def, 
+                         ILTheory.translate_condition_def,
+                         FORALL_DSTATE, mread_def, 
+                                         index_of_reg_def, toREG_def,
+                                         toEXP_def, read_thm, GSYM PFORALL_THM] THEN
+                        WORDS_TAC THEN
+                        SIMP_TAC std_ss []
 		        )
 
       (* well-formedness *)
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, cj_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      MATCH_MP_TAC IR_CJ_IS_WELL_FORMED THEN
+                      REWRITE_TAC [GSYM IR_CJ_IS_WELL_FORMED] THEN
                       SIMP_TAC std_ss [spec1_thm, spec2_thm]
 	        );
 
-      val spec = list_mk_conj [f_spec, well_formed_spec];
+      (* unchanged *)
+      val unchanged_spec = mk_comb (rator (el 3 specL1), cj_ir);
+      val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)
+                      MATCH_MP_TAC IR_CJ_UNCHANGED THEN
+                      SIMP_TAC std_ss [spec1_thm, spec2_thm]
+	        );
+
+
+      val spec = list_mk_conj [f_spec, well_formed_spec, unchanged_spec];
 
       val th =  prove (spec,   (* set_goal ([],spec) *)
-			SIMP_TAC std_ss [f_th, well_formed_th, LET_THM]
+			SIMP_TAC std_ss [f_th, well_formed_th, unchanged_th, LET_THM]
 		      )
    in
         th
@@ -632,7 +745,7 @@ fun mk_shuffle_spec spec (in_f', g) =
       val shuffle_th = prove (mk_eq(g_com,f_com),   (* set_goal ([],(mk_eq(g_com,f_com))) *)
                          SIMP_TAC std_ss [FUN_EQ_THM, FORALL_DSTATE, LET_THM, read_thm] THEN
 			 SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] THEN
-                         WORD_TAC THEN
+                         WORDS_TAC THEN
                          SIMP_TAC std_ss [pair_induction]
           );
 
@@ -667,7 +780,7 @@ fun mk_push_spec spec =
       val push_th = prove (mk_eq(g_com,f_com),   (* set_goal ([],(mk_eq(g_com,f_com))) *)
                          SIMP_TAC std_ss [FUN_EQ_THM, FORALL_DSTATE, LET_THM, read_thm] THEN
 			 SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] THEN
-                         WORD_TAC THEN
+                         WORDS_TAC THEN
                          SIMP_TAC std_ss [pair_induction]
           );
 
@@ -702,7 +815,7 @@ fun mk_pop_spec spec =
       val pop_th = prove (mk_eq(g_com,f_com),   (* set_goal ([],(mk_eq(g_com,f_com))) *)
                          SIMP_TAC std_ss [FUN_EQ_THM, FORALL_DSTATE, LET_THM, read_thm] THEN
 			 SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] THEN
-                         WORD_TAC THEN
+                         WORDS_TAC THEN
                          SIMP_TAC std_ss [pair_induction]
           );
 
@@ -723,35 +836,50 @@ fun mk_pop_spec spec =
 (*      Forward Reasoning                                                          *) 
 (*---------------------------------------------------------------------------------*)
 
-fun fwd_reason (IR.BLK blk_ir) pre_p =
-      mk_blk_spec (IR.BLK blk_ir) pre_p
+(*
+fun extract (annotatedIR.SC (ir1, ir2, info)) = (ir1, ir2, info);
+val (ir1, ir2, info) = extract f_ir;
 
- |  fwd_reason (IR.SC (ir1, ir2, info)) pre_p =
-      let val spec1 = fwd_reason ir1 pre_p;
-          val pre_p' = #2 (dest_pair (get_p_spec spec1))
-          val spec2 = fwd_reason ir2 pre_p'
+fun extract (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir, info)) = (fname, pre_ir, body_ir, post_ir, info);
+val (fname, pre_ir, body_ir, post_ir, info) = extract ir1;
+
+fun extract (annotatedIR.SC (ir1, ir2, info)) = (ir1, ir2, info);
+
+fun extract (annotatedIR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, body)
+val (cond, body) = extract ir2
+
+fun extract (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, ir1, ir2)
+val (cond, ir1, ir2) = extract f_ir
+*)
+
+
+fun fwd_reason (annotatedIR.BLK blk_ir) unchanged_lists =
+      #1 (mk_blk_spec (annotatedIR.BLK blk_ir) unchanged_lists)
+
+ |  fwd_reason (annotatedIR.SC (ir1, ir2, info)) unchanged_lists =
+      let val spec1 = fwd_reason ir1 unchanged_lists;
+          val spec2 = fwd_reason ir2 unchanged_lists;
       in
           mk_sc_spec spec1 spec2
       end
 
- |  fwd_reason (IR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) pre_p = 
-      let val body_spec = fwd_reason body pre_p
+ |  fwd_reason (annotatedIR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_lists = 
+      let val body_spec = fwd_reason body unchanged_lists
       in
           mk_tr_spec cond body_spec
       end
 
- |  fwd_reason (IR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) pre_p =
-      mk_cj_spec cond (fwd_reason ir1 pre_p) (fwd_reason ir2 pre_p)
+ |  fwd_reason (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_lists =
+      mk_cj_spec cond (fwd_reason ir1 unchanged_lists) (fwd_reason ir2 unchanged_lists)
 
- |  fwd_reason (IR.CALL (fname, pre_ir, body_ir, post_ir, info)) pre_p =
+ |  fwd_reason (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir, info)) unchanged_lists =
       let 
-          val pre_spec = mk_blk_spec pre_ir pre_p;
-          val pre_p' = #2 (dest_pair (get_p_spec pre_spec));
-          val body_spec = mk_blk_spec body_ir pre_p';
-          val pre_p'' = #2 (dest_pair (get_p_spec body_spec));
-          val post_spec = mk_blk_spec post_ir pre_p''
+			 val unchanged_lists_weak = (#2 unchanged_lists, #2 unchanged_lists);
+          val (pre_spec, pre_th) = mk_blk_spec pre_ir unchanged_lists_weak;
+          val (body_spec, body_th) = mk_blk_spec body_ir unchanged_lists_weak;
+          val (post_spec, post_th) = mk_blk_spec post_ir unchanged_lists_weak;
       in
-          mk_fc_spec (pre_spec, body_spec, post_spec)
+          mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, body_th, post_th, (#1 unchanged_lists))
       end
 
  |  fwd_reason _ _ = 
@@ -761,19 +889,32 @@ fun fwd_reason (IR.BLK blk_ir) pre_p =
 (*---------------------------------------------------------------------------------*)
 (*      Equivalence between the original function and the spec function            *) 
 (*---------------------------------------------------------------------------------*)
+fun restore_f_TAC defs =
+		SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
+		REPEAT GEN_TAC THEN
 
-fun restore_f spec defs =
+		SIMP_TAC std_ss defs THEN
+		REPEAT (CHANGED_TAC (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, WORD_ADD_ASSOC] @ defs)), WORDS_TAC])) THEN
+		REPEAT (CHANGED_TAC (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, GSYM WORD_ADD_ASSOC] @ defs)), WORDS_TAC])) THEN
+		METIS_TAC[WORD_ADD_COMM, WORD_AND_COMM, WORD_OR_COMM, WORD_XOR_COMM];
+
+
+fun restore_f spec defs prove_equiv =
   let
       val th0 = CONJUNCT1 (SIMP_RULE std_ss [LET_THM] spec);
       val [in_f,spec_f,out_f] = strip_pair (List.nth (#2 (strip_comb (concl th0)),3));
       val sfl_f_const = #1 (strip_comb (lhs ((concl o SPEC_ALL) (hd defs))));
-      val eq_stat = mk_eq (spec_f, sfl_f_const);
-      val eq_th =  prove (eq_stat,   (* set_goal ([],eq_stat) *)
-                        SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
-                        REPEAT GEN_TAC THEN
-                        SIMP_TAC std_ss [List.last defs] THEN
-                        REPEAT (FIRST [CHANGED_TAC (SIMP_TAC std_ss ([LET_THM, WORD_ADD_ASSOC] @ defs)), WORD_TAC])
-		        )
+      val eq_stat = mk_eq (spec_f, sfl_f_const);		
+      val eq_th = if (prove_equiv) then 
+			(print "Proving equivalence with input function\n";
+			 prove(eq_stat, restore_f_TAC defs) handle _ =>
+			  let
+				  val _ = print "! Equivalence proof between original function and\n";
+				  val _ = print "! derived program semantics failed!\n\n";
+			  in
+				  ASSUME eq_stat
+			  end)
+			else ASSUME eq_stat;
   in
       eq_th
   end;
@@ -796,13 +937,37 @@ fun f_correct spec =
                     mk_imp (assm, f_spec)
               end
       val th2 = GEN_ALL (prove (f, SIMP_TAC std_ss [th1]));
-      val th3 = SIMP_RULE std_ss [translate_def, translate_assignment_def, toEXP_def, toREG_def, toMEM_def, index_of_reg_def] th2;
+      val th3 = SIMP_RULE std_ss [translate_def, translate_assignment_def, toEXP_def, toREG_def, toMEM_def, index_of_reg_def, translate_condition_def] th2;
       val th4 = SIMP_RULE list_ss [ARMCompositionTheory.mk_SC_def, ARMCompositionTheory.mk_CJ_def, ARMCompositionTheory.mk_TR_def] th3
       val th5 =  SIMP_RULE std_ss [GSYM proper_def] th4
+      val th6 =  WORDS_RULE th5
   in
-      th5
+      th6
   end;
      
+
+fun f_correct_ir spec =
+  let
+      val th0 = CONJUNCT1 (SIMP_RULE std_ss [LET_THM] spec);
+      val th1 = SIMP_RULE std_ss [PSPEC_def, HSPEC_def] th0;
+      val f = let val t0 = concl (SPEC_ALL th1)
+                  val (assm,f_spec) = 
+                       let val (assm, t1) = dest_imp t0 
+                       in (assm,#2 (dest_conj t1))
+                       end handle e => (Term`T`,t0)
+              in
+                    mk_imp (assm, f_spec)
+              end
+      val th2 = GEN_ALL (prove (f, SIMP_TAC std_ss [th1]));
+      val th3 = SIMP_RULE std_ss [toEXP_def, toREG_def, toMEM_def, index_of_reg_def] th2;
+      val th4 = SIMP_RULE list_ss [] th3
+      val th5 =  SIMP_RULE std_ss [GSYM proper_def] th4
+      val th6 =  WORDS_RULE th5
+  in
+      th6
+  end;
+
+
 (*---------------------------------------------------------------------------------*)
 (*      Print out                                                                  *) 
 (*---------------------------------------------------------------------------------*)
@@ -811,13 +976,13 @@ fun f_correct spec =
 
 fun extract_ir spec =
     let
-       val (f_name, _, (f_args,f_ir,f_outs), _, _) = spec;
+       val (f_name, _, (f_args,f_ir,f_outs), _, _, _) = spec;
     in
       (print ("  Name              : " ^ f_name ^ "\n");
        print ("  Arguments         : " ^ (IRSyntax.format_exp f_args) ^ "\n");
        print ("  Returns           : " ^ (IRSyntax.format_exp f_outs) ^ "\n");
        print  "  Body: \n";
-       IR.printIR (IR.merge_ir f_ir)
+       annotatedIR.printIR (annotatedIR.merge_ir f_ir)
       )
     end
 
@@ -825,7 +990,7 @@ fun extract_ir spec =
 
 fun extract_arm spec =
     let 
-       val (f_name, _, (f_args,_,f_outs), _, stat0) = spec;
+       val (f_name, _, (f_args,_,f_outs), _, stat0, _) = spec;
        val stat1 = let val t0 = concl (SPEC_ALL stat0)
                    in if is_imp t0 then #2 (dest_imp t0) else t0
 		   end
@@ -855,23 +1020,126 @@ fun mk_pre_p sp_v =
     else
       let val st = mk_pair (mk_var ("regs", Type `:num |-> DATA`), mk_var ("mem", Type `:num |-> DATA`));
           val (fp',sp') = (read_one_var st (IRSyntax.REG 11), read_one_var st (IRSyntax.REG 13));
-          fun convert_pt v = if v < 0 then inst [alpha |-> Type `:DATA`] (Term `ARB`) else mk_comb (Term `n2w`, term_of_int v)
+          fun convert_pt v = if v < 0 then inst [alpha |-> Type `:DATA`] (Term `ARB`) else mk_comb (Term `n2w:num->word32`, term_of_int v)
       in  mk_pabs (st, mk_conj ( mk_eq(fp', convert_pt (!init_sp)), mk_eq(sp', convert_pt (!init_sp)))) (* Initially fp = sp *)
       end;
+
+(*---------------------------------------------------------------------------------*)
+(*Preprocess definition to eliminate ugly constants                                *)
+(*---------------------------------------------------------------------------------*)
+      
+fun wordsplit t =
+  let
+    fun term2Arbnum t =
+      let
+        val t = mk_comb (Term `w2n:word32->num`, t)
+        val t = rhs (concl (EVAL t));
+        val n = numLib.dest_numeral t;
+      in
+        n
+      end;
+
+    fun arbnum2term n =
+      let
+        val t = numLib.mk_numeral n;
+        val t = mk_comb (Term `n2w:num->word32`, t)
+        val t = rhs (concl (EVAL t));
+      in
+        t
+      end;
+
+
+    fun remove_zero n c =
+      let
+        val (n1, n2) = (Arbnum.divmod (n, Arbnum.fromInt 4))
+      in
+        if (n2 = Arbnum.zero) then
+          remove_zero n1 (Arbnum.plus1 c)
+        else
+          (n, c)
+      end;
+    
+
+    fun wordsplit_internal (n:num) l =
+      if (n = Arbnum.zero) then 
+        if (l = []) then [n] else l
+      else  
+      let
+        val (n_div, n_mod) = remove_zero n Arbnum.zero;
+        val n' = Arbnum.mod (n_div, Arbnum.fromInt 256);
+        val n' = Arbnum.* (n', Arbnum.pow (Arbnum.fromInt 4, n_mod));
+        val m = Arbnum.- (n, n');
+      in
+        wordsplit_internal m (n'::l)
+      end;
+
+    val l = wordsplit_internal (term2Arbnum t) [];
+    val l = map arbnum2term l;
+  in
+    l
+  end;
+
+fun needs_split t = not (length(wordsplit t) = 1)
+
+fun WORD_EVAL_CONV t =
+  if ((wordsSyntax.is_word_type(type_of t)) andalso (free_vars t = [])) then
+    (CHANGED_CONV EVAL t) else raise ERR "WORD_EVAL_CONV" ""
+
+
+fun DATA_RESTRICT_CONV t =
+  if (wordsSyntax.is_n2w t andalso needs_split t) then
+    let
+      val l = wordsplit t;
+      val (h, l) = (hd l, tl l);
+      val new_t = foldl (fn (x, y) => mk_comb (mk_comb (Term `($!!):word32->word32->word32`, x), y)) h l;
+    in
+      GSYM (WORDS_CONV new_t)
+    end
+  else raise ERR "DATA_RESTRICT_CONV" ""
+
 
 
 val extra_defs = ref [DECIDE (Term `T`)];
 
-fun pp_compile prog = 
+fun preprocess_def def =
+  CONV_RULE ((DEPTH_CONV WORD_EVAL_CONV) THENC (DEPTH_CONV DATA_RESTRICT_CONV)) def
+
+
+fun mk_unchanged_term f_name =
+	let
+		val {regs=regs,...} = declFuncs.getFunc f_name;
+		val univ_set = Binaryset.addList (Binaryset.empty Int.compare, [0,1,2,3,4,5,6,7,8,9,10,14])
+		val neg_regs = Binaryset.difference(univ_set,regs)
+		val int_list = Binaryset.listItems neg_regs;
+		val mreg_list = map (fn n => 
+			let 
+				val n_term = term_of_int n 
+			in  
+				rhs (concl (EVAL (mk_comb (Term `from_reg_index`, n_term))))
+			end) int_list;
+		val changed_list = mk_list (mreg_list, Type `:MREG`);
+	in
+		changed_list
+	end;
+
+(*val prog = def2;*)
+fun pp_compile prog prove_equiv = 
   let  
-      val (f_name, f_type, (f_args,f_ir,f_outs), defs) = funCall.link_ir prog;
-      val pre_p = mk_pre_p (!init_sp);
-      val f_spec0 = fwd_reason f_ir pre_p;
-      val f_spec1 = SIMP_RULE std_ss [restore_f f_spec0 (defs @ !extra_defs)] f_spec0;
+      val def = preprocess_def prog;
+      val (f_name, f_type, (f_args,f_ir,f_outs), defs) = funCall.link_ir def;
+		val unchanged_list = mk_unchanged_term f_name;
+		val unchanged_list_fp_sp = Term `R11 :: R12 :: R13 :: ^unchanged_list`;
+(*		val unchanged_lists = (unchanged_list_fp_sp, unchanged_list);*)
+		val unchanged_lists = (unchanged_list_fp_sp, unchanged_list);
+      val f_spec0 = fwd_reason f_ir unchanged_lists;
+      val f_spec1 = (SIMP_RULE std_ss [restore_f f_spec0 defs prove_equiv] f_spec0)
+      val thm_list = CONJ_LIST 3 (SIMP_RULE std_ss [LET_THM] f_spec1);
       val stat = f_correct f_spec1
+      val stat_ir = f_correct_ir f_spec1
   in
-      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat)
+      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat, stat_ir, el 1 thm_list, el 2 thm_list, el 3 thm_list)
   end
+
 
 
 end

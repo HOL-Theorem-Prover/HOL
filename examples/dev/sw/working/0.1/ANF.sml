@@ -2,7 +2,12 @@ structure ANF :> ANF =
 struct
 
 (* For interactive use:
- app load ["pairLib", "cpsSyntax"]; 
+
+ loadPath := 
+            (concat Globals.HOLDIR "/examples/dev/sw") :: 
+            !loadPath;
+
+app load ["pairLib", "cpsSyntax", "wordsLib"]; 
   quietdec := true;
   open pairLib pairTheory PairRules pairSyntax cpsTheory cpsSyntax; 
   quietdec := false;
@@ -13,6 +18,7 @@ open HolKernel Parse boolLib bossLib
 type env = (term * (bool * thm * thm * thm)) list;
 
 val _ = (Globals.priming := SOME "");
+
 
 
 (*---------------------------------------------------------------------------*)
@@ -103,7 +109,17 @@ val LET_SEQ_PAR_THM = Q.prove
 val SEQ_PAR_I_THM = Q.prove
 (`!f2 f3. Seq (Par (\x.x) f2) f3 = \x. let v = f2 x in f3 (x,v)`,
  RW_TAC std_ss [LET_SEQ_PAR_THM,combinTheory.I_THM]);
-  
+
+
+fun is_word_literal tm = 
+  ((is_comb tm) andalso
+  let val (c,args) = strip_comb tm
+      val {Name,Thy,Ty} = dest_thy_const c
+  in Name = "n2w" andalso numSyntax.is_numeral (hd args)
+  end)
+  handle HOL_ERR _ => raise ERR "is_word_literal" "";
+
+
 fun Convert_CONV f =
  let val (args,t) = 
          dest_pabs f
@@ -117,7 +133,7 @@ fun Convert_CONV f =
         print "has free variables: "; 
         map (fn t => (print_term t; print " "))(rev(free_vars f)); print "\n";
         raise ERR "Convert_CONV" "disallowed free variables")
-  else if null(free_vars t) orelse is_var t
+  else if is_var t orelse is_word_literal t orelse numSyntax.is_numeral t orelse is_const t 
    then REFL f
   else if is_pair t
    then let val (t1,t2) = dest_pair t
@@ -235,7 +251,6 @@ fun occurs_in t1 t2 = can (find_term (aconv t1)) t2;
 (* where p is a combinatory expression built from the combinators Seq, Par   *)
 (* and Ite.                                                                  *)
 (*****************************************************************************)
-
 fun Convert defth =
  let val (lt,rt) = 
          dest_eq(concl(SPEC_ALL defth))
@@ -408,48 +423,200 @@ fun toComb def =
 
 val LET_ID = METIS_PROVE [] ``!f M. (LET M (\x. x)) = M (\x. x)``
 
-fun is_word_literal tm = 
-  let val (c,args) = strip_comb tm
-      val {Name,Thy,Ty} = dest_thy_const c
-  in Name = "n2w" andalso numSyntax.is_numeral (hd args)
-  end 
-  handle HOL_ERR _ => raise ERR "is_word_literal" "";
+fun REPAIR_SYNTAX_RESTRICTIONS_CONV t =
+  if (is_comb t) then
+    let      
+      val (f, args) = strip_comb t;      
+      val {Name,Thy,Ty} = dest_thy_const f;
+    in
+      if ((Name = "UNCURRY") andalso (Thy = "pair") andalso
+          (length args = 2)) then
+        let
+          val pair = (el 2 args);
+          val (l, r) = dest_pair pair;
+          val is_word_l = is_word_literal l;
+          val is_word_r = is_word_literal r;
 
-fun VAR_LET_CONV M =
+          val _ = if (is_word_l andalso is_word_r) then
+                     (raise (ERR "" "Can't repair syntax"))
+                  else ()
+        in
+          if (is_word_l orelse is_word_r) then
+            let
+              val oper = el 1 args;
+              val {Name,Thy,Ty} = dest_thy_const oper;
+
+              val _ = if (not ((Thy="words") orelse (Name = "=" andalso (Thy="min")))) then
+                        raise (ERR "" "Can't repair syntax")
+                      else ()
+
+              val _ = if ((Name = "word_mul")) then
+                        raise (ERR "" "Can't repair syntax")
+                      else ()
+
+
+              fun COMM_OPER_CONV t =
+                (CURRY_CONV THENC 
+                 ONCE_REWRITE_CONV [wordsTheory.WORD_ADD_COMM,
+                                    wordsTheory.WORD_OR_COMM,
+                                    wordsTheory.WORD_AND_COMM,
+                                    wordsTheory.WORD_XOR_COMM,
+                                    EQ_SYM_EQ
+                                   ] THENC 
+                 UNCURRY_CONV) t
+            in
+              if (is_word_l) then
+                if ((Name = "word_add") orelse
+                    (Name = "word_or") orelse
+                    (Name = "word_and") orelse
+                    (Name = "word_xor") orelse
+                    (Name = "=")) then
+                  COMM_OPER_CONV t
+                else
+                  raise (ERR "" "Can't repair syntax")
+              else REFL t
+            end
+          else
+            REFL t
+        end
+      else
+        (COMB_CONV REPAIR_SYNTAX_RESTRICTIONS_CONV) t
+    end
+  else if (is_abs t) then
+      (ABS_CONV REPAIR_SYNTAX_RESTRICTIONS_CONV) t
+  else
+    REFL t;
+
+fun VAR_LET_CONV t =
  let open pairSyntax 
-     val (_,tm) = dest_let M
+     val (_,tm) = dest_let t;
  in 
-   if is_vstruct tm orelse is_word_literal tm
-                    orelse numSyntax.is_numeral tm
-   then (REWR_CONV LET_THM THENC GEN_BETA_CONV) M
+   if is_vstruct tm orelse 
+      ((is_word_literal tm orelse numSyntax.is_numeral tm))
+       
+   then 
+      (REWR_CONV LET_THM THENC GEN_BETA_CONV THENC REPAIR_SYNTAX_RESTRICTIONS_CONV) t
    else raise ERR "VAR_LET_CONV" ""
  end;
 
+fun LET_UNCURRY_CONV t =
+ let open pairSyntax 
+     val (_,tm) = dest_let t;
+	  val (f, _) = strip_comb tm
+     val {Name,Thy,Ty} = dest_thy_const f;
+	  val _ = if (((Name = "UNCURRY") andalso (Thy = "pair")) orelse
+                 ((Name = "COND") andalso (Thy = "bool")))
+						 then raise UNCHANGED else ()
+ in 
+   (RAND_CONV UNCURRY_CONV) t
+ end;
 
-fun ANFof (args,thm) =
- let val thm1 = Q.AP_TERM `CPS` thm
+(*val t = rhs (concl (SPEC_ALL thm16))
+     val thm17 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm16*)
+
+
+fun ELIM_PAIR_LET_CONV t =
+let
+  val (body, value) = dest_let t;
+in
+   if (is_vstruct value) then
+      (REWR_CONV LET_THM THENC GEN_BETA_CONV) t
+   else
+     let
+      val thm = CURRY_CONV (liteLib.mk_icomb (body, value))
+      val rhs_thm = rhs (concl thm);
+      val (body, v1) = dest_comb rhs_thm
+      val (body, v2) = dest_comb body
+      val (varlist, body) = strip_pabs body;
+        
+      val body = mk_let (mk_pabs(el 2 varlist, body), v1);
+      val body = mk_let (mk_pabs(el 1 varlist, body), v2);
+      val thm = prove (mk_eq (t, body), 
+        CONV_TAC (DEPTH_CONV let_CONV) THEN REWRITE_TAC[])    
+    in
+      thm
+    end
+end;
+
+
+val CPS_REWRITES = prove (``
+	(!f1 f2. Seq f1 f2 = \arg. let z1 = f1 arg in 
+										let z2 = f2 z1 in
+										z2) /\
+	(!f1 f2. Par f1 f2 = \arg. let z1 = f1 arg in 
+										let z2 = f2 arg in 
+										(z1, z2)) /\
+	(!f1 f2 f3. Ite f1 f2 f3 = \arg. 
+										let (z1 = f1 arg) in 
+										   (if z1 then 
+												let z2 = f2 arg in z2
+											else 
+												let z3 = f3 arg in z3))``,
+	SIMP_TAC std_ss [Seq_def, Par_def, Ite_def, LET_THM])
+
+val LET_PAIR = prove (``
+	!f y. (let (x = (y:('a # 'b))) in f x) =
+		   let x1 = FST y in
+			let x2 = SND y in
+			f (x1,x2)``,
+
+	Cases_on `y` THEN
+	SIMP_TAC std_ss [LET_THM]);
+
+val LET_LET = prove (``
+	!f1 f2 z. (let (x = let y = z in f1 y) in f2 x) =
+		   let y = z in
+			let x = f1 y in
+			f2 x``,
+
+	SIMP_TAC std_ss [LET_THM])
+
+
+(*
+fun old_ANFof (args,thm) =
+	let
+	  val thm1 = Q.AP_TERM `CPS` thm
      val thm2 = REWRITE_RULE [CPS_SEQ_INTRO, CPS_PAR_INTRO,(* CPS_REC_INTRO, *)
                                    CPS_ITE_INTRO] thm1
-     val thm2a = REWRITE_RULE [CPS2_def] thm2
      val thm3 = CONV_RULE (DEPTH_CONV (REWR_CONV CPS_SEQ_def ORELSEC
                                        REWR_CONV CPS_PAR_def ORELSEC
-                                       REWR_CONV CPS_ITE_def 
-(* ORELSEC REWR_CONV CPS_REC_def *))) thm2a 
+                                       REWR_CONV CPS_ITE_def
+(* ORELSEC REWR_CONV CPS_REC_def *))) thm2
      val thm4 = CONV_RULE (DEPTH_CONV (REWR_CONV UNCPS)) thm3
      val thm5 = CONV_RULE (LAND_CONV (REWR_CONV CPS_def)) thm4
      val thm6 = CONV_RULE (REPEATC (STRIP_QUANT_CONV (HO_REWR_CONV FUN_EQ_THM)))
                           thm5
-     val thm7 = BETA_RULE thm6
+     val x = mk_var("x",fst (dom_rng (type_of (fst (dest_forall (concl thm6))))))
+     val thm7 = ISPEC (mk_abs(x,x)) thm6
      val thm8 = BETA_RULE thm7
-     val x = mk_var("x",fst (dom_rng (type_of (fst (dest_forall (concl thm8))))))
-     val thm9 = ISPEC (mk_abs(x,x)) thm8
+     val thm9 = BETA_RULE thm8
      val thm10 = SIMP_RULE bool_ss [LET_ID] thm9
      val thm11 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm10
      val thm12 = PBETA_RULE thm11
      val thm13 = SIMP_RULE bool_ss [pairTheory.LAMBDA_PROD] thm12
      val thm14 = PURE_REWRITE_RULE [FST,SND] thm13
-     val thm15 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm14
- in thm15
+     val thm15 = CONV_RULE (DEPTH_CONV ELIM_PAIR_LET_CONV) thm14
+     val thm16 = STD_BVARS "v" thm15
+     val thm17 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm16
+in 
+	thm17
+end
+
+*)
+
+(*val (args,thm) = (args,const_eq_comb) *)
+fun ANFof (args,thm) =
+ let val thm1 = CONV_RULE (REPEATC (STRIP_QUANT_CONV (HO_REWR_CONV FUN_EQ_THM)))
+                          thm
+     val thm2 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm1
+	  val thm3 = SIMP_RULE std_ss [CPS_REWRITES, LET_LET] thm2
+	  val thm4 = PBETA_RULE thm3
+	  val thm5 = SIMP_RULE std_ss [LET_PAIR] thm4
+     val thm6 = CONV_RULE (DEPTH_CONV LET_UNCURRY_CONV) thm5
+     val thm7 = STD_BVARS "v" thm6
+     val thm8 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm7
+     val thm9 = STD_BVARS "v" thm8
+ in thm8
  end;
 
 
@@ -458,13 +625,14 @@ fun ANFof (args,thm) =
 (* to combinator form, then to A-Normal form and add the result to the       *)
 (* environment.                                                              *)
 (*---------------------------------------------------------------------------*)
-
 fun toANF env def = 
  let val (is_recursive,func,args,const_eq_comb) = toComb def
      val anf = STD_BVARS "v" (ANFof (args,const_eq_comb))
+(*   val old_anf = STD_BVARS "v" (old_ANFof (args,const_eq_comb))*)
  in 
    (func,(is_recursive,def,anf,const_eq_comb))::env
  end;
+
 
 end
  
