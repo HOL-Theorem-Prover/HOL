@@ -233,34 +233,42 @@ end
 
  fun convert_stm ({oper = op1, dst = dlist, src = slist}) =
     let
-        val ops = convert_op op1
+        val ops = convert_op op1 
     in 
         if op1 = mpush then
-            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd dlist), 
-                          mk_list (List.map (term_of_int o index_of_exp) slist, Type `:num`)])
+            (list_mk_comb (ops, [(term_of_int o index_of_exp) (hd dlist), 
+                          mk_list (List.map (term_of_int o index_of_exp) slist, Type `:num`)]), 
+				length slist)
         else if op1 = mpop then 
-            list_mk_comb (ops, [(term_of_int o index_of_exp) (hd slist), 
-                          mk_list (List.map (term_of_int o index_of_exp) dlist, Type `:num`)])
+            (list_mk_comb (ops, [(term_of_int o index_of_exp) (hd slist), 
+                          mk_list (List.map (term_of_int o index_of_exp) dlist, Type `:num`)]), 0)
         else if ((op1 = mlsl) orelse
                  (op1 = mlsr) orelse
                  (op1 = masr) orelse
                  (op1 = mror)) then            
-            list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist), convert_shift (el 2 slist)])
+            (list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist), convert_shift (el 2 slist)]), 0)
         else if (op1 = mmul) then            
-            list_mk_comb (ops, (convert_reg (hd dlist)) :: map convert_reg slist)
+            (list_mk_comb (ops, (convert_reg (hd dlist)) :: map convert_reg slist), 0)
         else if op1 = mstr then
-            list_mk_comb (ops, (convert_mem (hd dlist)) :: [convert_reg (hd slist)])
+            (list_mk_comb (ops, (convert_mem (hd dlist)) :: [convert_reg (hd slist)]), 0)
         else if op1 = mldr then
-            list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_mem (hd slist)])
+            (list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_mem (hd slist)]), 0)
         else if op1 = mmov then
-            list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_exp (hd slist)])
+            (list_mk_comb (ops, (convert_reg (hd dlist)) :: [convert_exp (hd slist)]), 0)
         else
-            list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist),
-            convert_exp (el 2 slist)])
+            (list_mk_comb (ops, [convert_reg (hd dlist), convert_reg (hd slist),
+            convert_exp (el 2 slist)]), 0)
     end
     handle e =>  raise ERR "IL" ("invalid statement!")
 
-
+fun convert_instL stms =
+	let
+		val (l1, l2) = unzip (List.map convert_stm stms)
+		val blk = mk_comb (Term`BLK`, mk_list (l1, Type`:DOPER`));
+		val stack_size = foldr (fn (n, m) => n + m) 0 l2;
+	in
+		(blk, stack_size)
+	end
 
  (*---------------------------------------------------------------------------------*)
  (*     Interface between ARM and IR                                                *)

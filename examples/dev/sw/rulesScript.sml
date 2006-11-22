@@ -15,7 +15,7 @@ open HolKernel Parse boolLib bossLib numLib relationTheory arithmeticTheory preA
 
 
 val _ = new_theory "rules";
-
+val _ = hide "cond"
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *) 
 (*---------------------------------------------------------------------------------*)
@@ -658,5 +658,209 @@ val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
 	 REWRITE_TAC[FUNPOW_SUC] THEN PROVE_TAC[]
   ]);
 		
+
+
+
+val IR_CJ_USED_STACK = store_thm ("IR_CJ_USED_STACK",
+``!cond ir_t ir_f s s'.
+	(WELL_FORMED ir_t /\ WELL_FORMED ir_f /\	
+	USED_STACK s' ir_f /\ USED_STACK s ir_t)  ==>
+	USED_STACK (MAX s s') (CJ cond ir_t ir_f)``,
+
+
+REPEAT STRIP_TAC THEN
+`(s <= MAX s s') /\ (s' <= MAX s s')` by SIMP_TAC arith_ss [] THEN
+`(USED_STACK (MAX s s') ir_f) /\
+ (USED_STACK (MAX s s') ir_t)` by PROVE_TAC [USED_STACK_ENLARGE] THEN
+
+FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN 
+METIS_TAC[])
+
+
+val IR_CJ_UNCHANGED_STACK = store_thm ("IR_CJ_UNCHANGED_STACK",
+``!cond ir_t ir_f l s s'.
+	(WELL_FORMED ir_t /\ WELL_FORMED ir_f /\	
+	UNCHANGED_STACK l s' ir_f /\ UNCHANGED_STACK l s ir_t)  ==>
+	UNCHANGED_STACK l (MAX s s') (CJ cond ir_t ir_f)``,
+
+SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_CJ_USED_STACK, IR_CJ_UNCHANGED])
+
+
+
+val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
+``!x ir1 ir2 s s'.
+	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\	
+	 USED_STACK s ir1 /\ USED_STACK s' ir2 /\
+	 (s' + x < 2**30) /\ (s < 2**30) /\ 
+	 (!r m. read (run_ir ir1 (r,m)) (REG 13) = 
+			 read (r,m) (REG 13) - n2w (4*x)))  ==>
+	 USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
+
+	
+	REPEAT STRIP_TAC THEN
+	FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
+	REPEAT STRIP_TAC THEN
+	
+	`read (run_ir ir1 (r,m)) (REG 13) = (read (r,m) (REG 13) - (n2w (4*x)))` by METIS_TAC[] THEN
+	`?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+	FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def, MEM_MAP, MEM_LIST_COUNT] THEN
+	`m ' l = m'' ' l` by METIS_TAC[] THEN
+	ASM_SIMP_TAC std_ss [] THEN
+	RES_TAC THEN
+	POP_ASSUM MATCH_MP_TAC THEN
+	FULL_SIMP_TAC arith_ss [word_sub_def, word_2comp_n2w, dimword_32,
+		dimword_30] THEN
+	GEN_TAC THEN
+	Q.PAT_ASSUM `!off:num. P off` (fn thm => MP_TAC
+		(SPEC ``(off:num) + (x:num)`` thm)) THEN
+	Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
+	ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * x) = (1073741824 - x)*4``, DECIDE_TAC)] THEN
+	ASM_SIMP_TAC arith_ss [ADDR30_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
+	ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
+	SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
+	`((2147483648 - (off + x)) =
+	 (1073741824 + (1073741824 - (off + x))))` by DECIDE_TAC THEN
+	ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
+
+
+
+
+
+val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
+``!x y ir1 ir2 s s'.
+	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\	
+	 USED_STACK s ir1 /\ USED_STACK s' ir2 /\
+	 (s' + x < 2**30) /\ (s < 2**30) /\  (y <= x) /\
+	 (!r m. read (run_ir ir1 (r,m)) (REG 13) = 
+			 read (r,m) (REG 13) - n2w (4*y)))  ==>
+	 USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
+
+	REPEAT STRIP_TAC THEN
+	FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
+	REPEAT STRIP_TAC THEN
+	
+	`read (run_ir ir1 (r,m)) (REG 13) = (read (r,m) (REG 13) - (n2w (4*y)))` by METIS_TAC[] THEN
+	`?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+	FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def, MEM_MAP, MEM_LIST_COUNT] THEN
+	`m ' l = m'' ' l` by METIS_TAC[] THEN
+	ASM_SIMP_TAC std_ss [] THEN
+	RES_TAC THEN
+	POP_ASSUM MATCH_MP_TAC THEN
+	FULL_SIMP_TAC arith_ss [word_sub_def, word_2comp_n2w, dimword_32,
+		dimword_30] THEN
+	GEN_TAC THEN
+	Q.PAT_ASSUM `!off:num. P off` (fn thm => MP_TAC
+		(SPEC ``(off:num) + (y:num)`` thm)) THEN
+	Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
+	ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * y) = (1073741824 - y)*4``, DECIDE_TAC)] THEN
+	ASM_SIMP_TAC arith_ss [ADDR30_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
+	ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
+	SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
+	`((2147483648 - (off + y)) =
+	 (1073741824 + (1073741824 - (off + y))))` by DECIDE_TAC THEN
+	ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
+
+
+
+val IR_SC_USED_STACK___FC_CASE1 = store_thm ("IR_SC_USED_STACK___FC_CASE1",
+``!ir1 ir2 s s' s''.
+	(USED_STACK (s+s') ir1 /\ (USED_STACK s'' ir2 /\
+	 WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
+	 (s + s' + s'' < 2**30) /\ 
+	 (!r m. read (run_ir ir1 (r,m)) (REG 13) = 
+			 read (r,m) (REG 13) - n2w (4*s))))  ==>
+	 USED_STACK (s+s'+s'') (SC ir1 ir2)``,
+
+	REPEAT STRIP_TAC THEN
+	`(s:num) + s' + s'' = MAX (s+s') (s'' + (s+s'))` by ALL_TAC THEN1 (
+		SIMP_TAC arith_ss [MAX_DEF]
+	) THEN
+	ASM_REWRITE_TAC[] THEN
+	MATCH_MP_TAC IR_SC_USED_STACK THEN
+	Q_TAC EXISTS_TAC `s` THEN
+	FULL_SIMP_TAC std_ss [])
+
+
+val IR_SC_USED_STACK___FC_CASE2 = store_thm ("IR_SC_USED_STACK___FC_CASE2",
+``!ir1 ir2 s s'.
+	(USED_STACK s ir1 /\ (USED_STACK s' ir2 /\
+	 WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
+	 (s + s' < 2**30) /\ 
+	 (!r m. read (run_ir ir1 (r,m)) (REG 13) = 
+			 read (r,m) (REG 13) - n2w (4*s))))  ==>
+	 USED_STACK (s+s') (SC ir1 ir2)``,
+
+	REPEAT STRIP_TAC THEN
+	`(s:num) + s' = MAX s (s' + s)` by ALL_TAC THEN1 (
+		SIMP_TAC std_ss [MAX_DEF] THEN
+		Cases_on `0 < s'` THEN ASM_SIMP_TAC arith_ss []
+	) THEN
+	ASM_REWRITE_TAC[] THEN
+	MATCH_MP_TAC IR_SC_USED_STACK THEN
+	Q_TAC EXISTS_TAC `s` THEN
+	FULL_SIMP_TAC std_ss [])
+
+
+val IR_SC_UNCHANGED_STACK = store_thm ("IR_SC_UNCHANGED_STACK",
+``!ir1 ir2 l s s'.
+	(WELL_FORMED ir1 /\ WELL_FORMED ir2 /\	
+	 UNCHANGED_STACK l s ir1 /\ UNCHANGED_STACK l s' ir2 /\
+	 MEM R13 l)  ==>
+	 UNCHANGED_STACK l (MAX s s') (SC ir1 ir2)``,
+
+	
+	SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_SC_UNCHANGED] THEN
+	REPEAT STRIP_TAC THEN
+	`(s <= MAX s s') /\ (s' <= MAX s s')` by SIMP_TAC arith_ss [] THEN
+	`(USED_STACK (MAX s s') ir1) /\
+	 (USED_STACK (MAX s s') ir2)` by PROVE_TAC [USED_STACK_ENLARGE] THEN
+	FULL_SIMP_TAC std_ss [USED_STACK_THM, UNCHANGED_THM, EVERY_MEM,
+		SEMANTICS_OF_IR] THEN
+	REPEAT STRIP_TAC THEN
+	
+	FULL_SIMP_TAC std_ss [read_thm] THEN
+	`(read (r,m) (toREG R13) =
+    read (run_ir ir1 (r,m)) (toREG R13))` by METIS_TAC[] THEN
+	`?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+	FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def] THEN
+	METIS_TAC[])
+
+val UNCHANGED_STACK_TR_RULE = store_thm ("UNCHANGED_STACK_TR_RULE",
+``!c ir l s.
+	(WELL_FORMED (TR c ir) /\ UNCHANGED_STACK l s ir /\ MEM R13 l) ==>
+	UNCHANGED_STACK l s (TR c ir)``,
+
+    
+  SIMP_TAC std_ss [UNCHANGED_STACK_def] THEN
+  REPEAT GEN_TAC THEN
+  MATCH_MP_TAC (prove (``((X ==> A) /\ (X /\ A ==> b)) ==> (X ==> (A /\ b))``, METIS_TAC[])) THEN
+  STRIP_TAC THEN1 SIMP_TAC std_ss [UNCHANGED_TR_RULE] THEN
+  SIMP_TAC std_ss [UNCHANGED_THM, EVERY_MEM, WELL_FORMED_def] THEN
+  REPEAT STRIP_TAC THEN
+  SIMP_TAC std_ss [USED_STACK_THM] THEN
+  NTAC 2 GEN_TAC THEN
+
+  `read (r,m) (toREG R13) = read (run_ir (TR c ir) (r,m)) (toREG R13)` by PROVE_TAC[] THEN
+  POP_ASSUM MP_TAC THEN
+  POP_ASSUM (fn thm => ALL_TAC) THEN
+  `!st. read (run_ir ir st) (toREG R13) = read st (toREG R13)` by PROVE_TAC[pairTheory.PAIR] THEN  
+  POP_ASSUM MP_TAC THEN  
+  Q.PAT_ASSUM `!r. MEM r l ==> P r` (fn thm => ALL_TAC) THEN
+  ASM_SIMP_TAC std_ss [IR_SEMANTICS_TR___FUNPOW, toREG_def, index_of_reg_def] THEN
+  Q.ABBREV_TAC `n = (shortest (eval_il_cond c) (run_ir ir) (r, m))` THEN
+  POP_ASSUM (fn x => ALL_TAC) THEN
+  FULL_SIMP_TAC std_ss [USED_STACK_THM] THEN
+  REPEAT DISCH_TAC THEN
+  Induct_on `n` THENL [
+	 SIMP_TAC std_ss [FUNPOW],
+
+	 ASM_SIMP_TAC std_ss [FUNPOW_SUC] THEN 
+	 REPEAT STRIP_TAC THEN
+	 `?r'' m''. (FUNPOW (run_ir ir) n (r,m)) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
+	 FULL_SIMP_TAC std_ss [read_thm] THEN
+	 METIS_TAC[]
+  ]);
+	
+
 
 val _ = export_theory();

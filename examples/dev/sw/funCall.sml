@@ -413,6 +413,16 @@ fun compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_i
 
 val involved_defs = ref ([] : thm list);
 
+(*
+fun extract (SC(s1,s2,info)) = (s1,s2,info)
+val (s1,s2,info) = extract ir1
+
+fun extract (CALL(fname, pre, body, post, outer_info)) =
+(fname, pre, body, post, outer_info)
+val (fname, pre, body, post, outer_info) = extract s1
+
+*)
+
 fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
     let
         (* pass the arguments to the callee, and callee will save and restore anything	*)
@@ -423,29 +433,52 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
         val (caller_dst,caller_src) = let val x = get_annt body in (#outs x, #ins x) end;
         val {ir = (callee_ins, callee_ir, callee_outs), regs = rs, localNum = n, def = f_def, ...} = declFuncs.getFunc fname;
         val _ = involved_defs := (!involved_defs) @ [f_def];
+
+
+
         val ((pre_ins,pre_outs),(body_ins,body_outs),(post_ins,post_outs),rs',context) =
              compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_ins,callee_outs),rs,#context outer_info);
 
-	val reserve_space_for_outputs = 
-	        [dec_p (fromAlias sp) (length (pair2list caller_dst))];
+        fun to_stack expL =
+            let val len = length expL
+                val i = ref 1;
+            in
+                List.map (fn exp => ( i := !i + 1; MEM(13, ~(len - !i)))) expL
+            end 
 
-        val pre' = rm_dummy_inst (BLK (
-                        reserve_space_for_outputs @
-                        pass_args (pair2list caller_src) @
-                        entry_blk rs' n @
-                        get_args (pair2list callee_ins),
-                    {ins = pre_ins, outs = pre_outs, context = context, fspec = thm_t}));
+		 val preserve_list = (map REG (List.tabulate (13, I))@[REG 14])
+		 val preserve_list = pair2list outer_outs;
+		 val preserve_list = filter (fn r => not (mem r (pair2list caller_dst))) (pair2list outer_outs);
 
-        val body' = apply_to_info callee_ir (fn info' => {ins = body_ins, outs = body_outs, context = context, fspec = thm_t});
+		 val in_mov_pairs = zip (pair2list caller_src) (pair2list callee_ins);
+		 val in_mov_pairs = filter (fn (x, y) => not (x = y)) in_mov_pairs;
+		 val out_mov_pairs = zip (pair2list callee_outs) (pair2list caller_dst)
+		 val out_mov_pairs = filter (fn (x, y) => not (x = y)) out_mov_pairs;
 
-        val post' = rm_dummy_inst (BLK ( 
-                        send_results (IR.pair2list callee_outs) (length (IR.pair2list callee_ins)) @
-                         get_results (IR.pair2list caller_dst) @
-                        exit_blk rs',
-                    {ins = post_ins, outs = post_outs, context = context, fspec = thm_t}))
+		 fun mov_ir (src, dst) = {oper = IR.mmov, dst = [dst], src = [src]}
+		 
+		 val mpop_ir = if (preserve_list = []) then	[] else
+				 			 [{dst = preserve_list, oper = mpop, src = [REG 13]}]
+		 val mpush_ir = if (preserve_list = []) then	[] else
+				 			 [{dst = [REG 13], oper = mpush, src = preserve_list}]
 
+		 val stack_ir = trim_pair(list2pair(to_stack preserve_list))
+
+       val pre' = BLK (
+                        mpush_ir @
+								(map mov_ir in_mov_pairs),
+                    {ins = outer_ins, 
+							outs = trim_pair(PAIR(stack_ir,callee_ins)), context = context, fspec = thm_t});
+
+		  val callee_ir' = convert_fcall callee_ir;
+        val body' = apply_to_info callee_ir' (fn info' => {ins = trim_pair(PAIR(stack_ir,callee_ins)), outs = trim_pair(PAIR(stack_ir,callee_outs)), context = context, fspec = thm_t});
+
+        val post' = BLK (
+					mpop_ir @
+					(map mov_ir out_mov_pairs),
+               {ins = trim_pair(PAIR(stack_ir,callee_outs)), outs = outer_outs, context = context, fspec = thm_t})
     in
-        CALL(fname, pre', body', post', outer_info)
+        CALL(fname, pre' , body', post', outer_info)
     end
      	
  |  convert_fcall (SC(s1,s2,info)) = SC (convert_fcall s1, convert_fcall s2, info)
@@ -462,11 +495,14 @@ fun link_ir prog =
   let
       val (fname, ftype, f_ir as (ins,ir0,outs), defs) = sfl2ir prog;
       val rs = S.addList (S.empty regAllocation.intOrder, get_modified_regs ir0);
+
       val (ins1,ir1,outs1, localNum) = calculate_relative_address (ins,ir0,outs,S.numItems rs);
-      val _ = (involved_defs := [];
-               declFuncs.putFunc (fname, ftype, (ins1,ir1,outs1), rs, localNum, (hd defs)));
       val ir2 = convert_fcall ir1
       val ir3 = match_ins_outs ir2
+
+      val rs' = S.addList (S.empty regAllocation.intOrder, get_modified_regs ir3);
+      val _ = (involved_defs := [];
+               declFuncs.putFunc (fname, ftype, (ins1,ir1,outs1), rs', localNum, (hd defs)));
   in
       (fname,ftype,(ins1,ir3,outs1), defs @ (!involved_defs))
   end;

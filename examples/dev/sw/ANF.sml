@@ -554,13 +554,13 @@ val CPS_REWRITES = prove (``
 												let z3 = f3 arg in z3))``,
 	SIMP_TAC std_ss [Seq_def, Par_def, Ite_def, LET_THM])
 
+
 val LET_PAIR = prove (``
-	!f y. (let (x = (y:('a # 'b))) in f x) =
-		   let x1 = FST y in
-			let x2 = SND y in
+	!f y. (let (x = (a, b)) in f x) =
+		   let x1 = a in
+			let x2 = b in
 			f (x1,x2)``,
 
-	Cases_on `y` THEN
 	SIMP_TAC std_ss [LET_THM]);
 
 val LET_LET = prove (``
@@ -611,7 +611,7 @@ fun ANFof (args,thm) =
      val thm2 = SIMP_RULE bool_ss [pairTheory.FORALL_PROD] thm1
 	  val thm3 = SIMP_RULE std_ss [CPS_REWRITES, LET_LET] thm2
 	  val thm4 = PBETA_RULE thm3
-	  val thm5 = SIMP_RULE std_ss [LET_PAIR] thm4
+	  val thm5 = SIMP_RULE std_ss [pairTheory.LAMBDA_PROD, LET_PAIR] thm4
      val thm6 = CONV_RULE (DEPTH_CONV LET_UNCURRY_CONV) thm5
      val thm7 = STD_BVARS "v" thm6
      val thm8 = CONV_RULE (DEPTH_CONV VAR_LET_CONV) thm7

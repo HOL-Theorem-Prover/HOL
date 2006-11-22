@@ -9,6 +9,7 @@ type dataSeg = Assem.instr list;
 
 exception CFG
 
+
 (* Translate Tree expressions to Assem expressions							*)
 
  fun one_exp (Tree.TEMP e) =
@@ -26,7 +27,6 @@ exception CFG
         Assem.PAIR(one_exp e1, one_exp e2)
   |  one_exp _ = raise CFG
   ;
-
 
 fun buildCFG tmpT (args,stmList,outs) =
  let
@@ -77,7 +77,6 @@ fun buildCFG tmpT (args,stmList,outs) =
 
 
   (* Translate a Tree expression to the Assem expression including use and def information					*)
-
   fun one_stm (Tree.MOVE(d, Tree.BINOP(bop, e1, e2))) =
     let
       val not_change = if (bop = Tree.MUL) then
@@ -183,7 +182,7 @@ fun buildCFG tmpT (args,stmList,outs) =
 
 
 fun convert_to_CFG prog = 
-  let 
+  let
      val (fun_name, fun_type, args, stms, outs) = IR.convert_to_IR prog
      val (args, outs) = (one_exp args, one_exp outs)
   in

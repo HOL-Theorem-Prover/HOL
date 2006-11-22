@@ -7,6 +7,14 @@ open HolKernel Parse boolLib wordsTheory pairLib
 val w32 = Type `:word32`;
 val n2w_tm = Term `n2w:num -> word32`;
 
+exception undeclFuncIR;
+
+val sizeHint = 128;
+val hashtable : ((string, (Tree.stm list * Tree.exp * Tree.exp)) Polyhash.hash_table) ref =
+			ref (Polyhash.mkTable(Polyhash.hash, op = ) (sizeHint, undeclFuncIR))
+
+val inline_funcs = (ref []) : string list ref
+
 fun is_binop op1 =
   if not (is_comb op1) then false
   else let val (uncur, oper) = dest_comb op1 in
@@ -125,6 +133,7 @@ fun convert_relop rop =
 structure H = Polyhash
 structure T = IntMapTable(type key = int  fun getInt n = n);
 
+
 val tmpT : (string T.table) ref  = ref (T.empty);
 fun getTmp i = T.look(!tmpT,i);
 
@@ -168,7 +177,7 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
      if is_let exp then
         let val (var, rhs) = dest_let exp;
             val (lhs, rest) = dest_pabs var;
-	    val rt = analyzeExp rhs
+	    		val rt = analyzeExp rhs
         in
 	    Tree.ESEQ(Tree.MOVE(analyzeExp lhs, analyzeExp rhs), analyzeExp rest)
         end
@@ -199,7 +208,6 @@ fun mk_MOVE e1 (Tree.ESEQ(s1, Tree.ESEQ(s2,e2))) =
 	in
 	  insts
 	end
-
      else if is_pair exp then
 	let val (t1,t2) = dest_pair exp
         in  Tree.PAIR(analyzeExp t1, analyzeExp t2) 
@@ -263,12 +271,118 @@ fun linearize (stm:Tree.stm) : Tree.stm list =
 
 *)
 
+val nextFreeTemp = ref 0 
+
+
+fun rename_temp_stm (Tree.SEQ (s1, s2)) offset = 
+		let
+			val (s1', m1) = rename_temp_stm s1 offset;
+			val (s2', m2) = rename_temp_stm s2 offset;
+		in
+			(Tree.SEQ (s1', s2'), Int.max (m1, m2))
+		end
+  | rename_temp_stm (Tree.CJUMP (e, l)) offset = 
+		let
+			val (e', m) = rename_temp_exp e offset;
+		in
+			(Tree.CJUMP(e', l), m)
+		end
+  | rename_temp_stm (Tree.MOVE (e1, e2)) offset = 
+		let
+			val (e1', m1) = rename_temp_exp e1 offset;
+			val (e2', m2) = rename_temp_exp e2 offset;
+		in
+			(Tree.MOVE (e1', e2'), Int.max (m1, m2))
+		end
+  | rename_temp_stm (Tree.EXP e) offset = 
+		let
+			val (e', m) = rename_temp_exp e offset;
+		in
+			(Tree.EXP e', m)
+		end
+  | rename_temp_stm X offset = 
+		(X, 0)
+and
+	 rename_temp_exp (Tree.BINOP (binop, e1, e2)) offset = 
+		let
+			val (e1', m1) = rename_temp_exp e1 offset;
+			val (e2', m2) = rename_temp_exp e2 offset;
+		in
+			(Tree.BINOP (binop, e1', e2'), Int.max (m1, m2))
+		end
+ | rename_temp_exp (Tree.MEM e) offset = 
+		let
+			val (e', m) = rename_temp_exp e offset;
+		in
+			(Tree.MEM e', m)
+		end
+ | rename_temp_exp (Tree.TEMP t) offset = 
+		let
+			val new_t = t + offset;
+			val var_name = "v"^(Int.toString (new_t +1))
+			val _ = tmpT := T.enter(!tmpT, new_t, var_name);
+		in
+			(Tree.TEMP new_t, t)
+		end
+
+
+ | rename_temp_exp (Tree.RELOP (relop, e1, e2)) offset = 
+		let
+			val (e1', m1) = rename_temp_exp e1 offset;
+			val (e2', m2) = rename_temp_exp e2 offset;
+		in
+			(Tree.RELOP (relop, e1', e2'), Int.max (m1, m2))
+		end
+ | rename_temp_exp (Tree.ESEQ (s, e)) offset = 
+		let
+			val (s', m1) = rename_temp_stm s offset;
+			val (e', m2) = rename_temp_exp e offset;
+		in
+			(Tree.ESEQ (s', e'), Int.max (m1, m2))
+		end
+ | rename_temp_exp (Tree.CALL (e1, e2)) offset = 
+		let
+			val (e1', m1) = rename_temp_exp e1 offset;
+			val (e2', m2) = rename_temp_exp e2 offset;
+		in
+			(Tree.CALL (e1', e2'), Int.max (m1, m2))
+		end
+ | rename_temp_exp (Tree.PAIR (e1, e2)) offset = 
+		let
+			val (e1', m1) = rename_temp_exp e1 offset;
+			val (e2', m2) = rename_temp_exp e2 offset;
+		in
+			(Tree.PAIR (e1', e2'), Int.max (m1, m2))
+		end
+ | rename_temp_exp X offset = (X, 0);
+
+
+
 fun 
   linerize_IR_stm (Tree.MOVE (e1, Tree.ESEQ (s, e2))) =
 		(linerize_IR_stm s) @ linerize_IR_stm (Tree.MOVE (e1, e2)) |
   linerize_IR_stm (Tree.SEQ (s1, s2)) = (linerize_IR_stm s1) @ (linerize_IR_stm s2) |
   linerize_IR_stm (Tree.MOVE(Tree.PAIR(e1,e2), Tree.PAIR(e3,e4))) =
 	  linerize_IR_stm (Tree.MOVE(e1,e3)) @ linerize_IR_stm (Tree.MOVE(e2,e4))
+  |
+  linerize_IR_stm (Tree.MOVE (e1, Tree.CALL (Tree.NAME s, e2))) =
+	if (mem (Symbol.name s) (!inline_funcs)) then
+		let
+			val fun_name = (Symbol.name s);
+			val (fun_ir, fun_in, fun_out) = Polyhash.find (!hashtable) fun_name
+			val offset = !nextFreeTemp;
+			val fun_ir' = map (fn stm => rename_temp_stm stm offset) fun_ir;
+			val max = foldl (fn ((x, n1), n2) => Int.max (n1,n2)) 0 fun_ir';
+			val fun_ir'' = map fst fun_ir'
+			val (fun_in'', max_in) = rename_temp_exp fun_in offset;
+			val max = Int.max (max, max_in);
+			val (fun_out'', max_out) = rename_temp_exp fun_out offset;
+			val max = Int.max (max, max_out);
+			val _ = nextFreeTemp := !nextFreeTemp + max
+		in
+			(linerize_IR_stm (Tree.MOVE (fun_in'', e2)))@fun_ir''@(linerize_IR_stm (Tree.MOVE (e1, fun_out'')))
+		end 
+	else [Tree.MOVE (e1, Tree.CALL (Tree.NAME s, e2))]
   |
   linerize_IR_stm stm = [stm]
 
@@ -278,9 +392,16 @@ fun linerize_IR (Tree.ESEQ (s, e)) =
 			val (stmL, e') = linerize_IR e
 		in
 			(((linerize_IR_stm s) @ stmL), e')
-		end |
-	linerize_IR e = ([], e)
-
+		end 
+	| linerize_IR (Tree.CALL (Tree.NAME s, e)) =
+		let
+			val exp = (Tree.CALL (Tree.NAME s, e));			
+		   val temp_exp = mk_PAIR exp;
+			val new_exp = Tree.ESEQ (Tree.MOVE (temp_exp, exp), temp_exp);
+		in
+			linerize_IR (new_exp)
+		end	   
+   | linerize_IR e = ([], e)
 
 fun convert_to_IR prog =
    let
@@ -301,9 +422,16 @@ fun convert_to_IR prog =
        val _ = (tmpT := T.empty; Polyhash.filter (fn _ => false) (!symbolT));
 
        val start_lab = Temp.namedlabel (f_name);
-       val ir = linerize_IR (Tree.ESEQ(Tree.LABEL (start_lab), analyzeExp body))
+       val end_lab = Temp.namedlabel ("end___"^f_name);
+		 val body_exp = analyzeExp body; (*updates tempT*)
+
+       val ir = linerize_IR (Tree.ESEQ(Tree.LABEL (start_lab), body_exp));
+		 val ir_stmL = (#1 ir)@[Tree.LABEL (end_lab)];
+		 val ir_exp = #2 ir
+		 val args_exp = buildArgs args;
+		 val _ = Polyhash.insert (!hashtable) (f_name, (ir_stmL, args_exp, ir_exp))
    in
-       (f_name, f_type, buildArgs args, #1 ir, #2 ir)
+       (f_name, f_type, args_exp, ir_stmL, ir_exp)
 	handle HOL_ERR _
            => (print "the program body includes invalid expression\n";
              raise ERR "IR" "invalid expression in program body")

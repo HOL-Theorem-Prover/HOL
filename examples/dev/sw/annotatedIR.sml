@@ -143,16 +143,16 @@ structure annotatedIR = struct
    (* Given a TR cfg and the node including the function name label, break this cfg into three parts: the pre-condition part, 
       the basic case part and the recursive case part. The condition is also derived.                                          *)    
 
+
    fun break_rec gr lab_node = 
      let 
         fun get_sucL n = #4 (G.context(n,gr));
         fun get_preL n = #1 (G.context(n,gr));
 
         val last_node = valOf (locate gr 0 (fn n => null (get_sucL n)));
-
         fun find_join_node n = 
             if length (get_preL n) > 1 then n
-            else find_join_node (#2 (hd (get_preL last_node))); 
+            else find_join_node (#2 (hd (get_preL n))); 
         val join_node = find_join_node last_node;  (* the node that the basic and recursive parts join *)
 
         (* the nodes jumping to the join node *)
@@ -253,7 +253,6 @@ structure annotatedIR = struct
 (*---------------------------------------------------------------------------------*)
 (*  Convert a cfg corresonding to a function to ir                                 *)
 (*---------------------------------------------------------------------------------*)
-
    fun convert_module (ins,cfg,outs) = 
       let 
          val (flag, lab_node) = is_rec cfg 0
@@ -421,13 +420,13 @@ structure annotatedIR = struct
     |  get_modified_regs (CJ(cond,ir1,ir2,info)) = 
          (get_modified_regs ir1) @ (get_modified_regs ir2)
     |  get_modified_regs (CALL(fname,pre,body,post,info)) = 
-         List.map (fn (REG r) => r | _ => ~1) (List.filter (fn (REG r) => true | _ => false) (pair2list (#outs info)))
+         List.map (fn (REG r) => r | _ => ~1) (List.filter (fn (REG r) => true | _ => false) (pair2list (#outs info))) @
+			(get_modified_regs body)
     |  get_modified_regs (STM l) =
          itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l [] 
     |  get_modified_regs (BLK (l,info)) = 
          itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l [];
   
-
  (*---------------------------------------------------------------------------------*)
  (*      Set input, output and context information                                  *)
  (*      Alignment functions                                                        *)
@@ -528,8 +527,8 @@ structure annotatedIR = struct
        let 
           fun extract_outputs ir0 = 
               let val info0 = get_annt ir0;
-                  val (inner_outS, outer_outS) = (pair2set (#outs info0), pair2set outs)
-                  val ir1 = if S.equal(inner_outS, outer_outS) then ir0
+                  val (inner_outS, outer_outS) = (IRSyntax.pair2set (#outs info0), IRSyntax.pair2set outs)
+                  val ir1 = if Binaryset.equal(inner_outS, outer_outS) then ir0
                             else SC (ir0, BLK ([], {context = #context info0, ins = #outs info0, outs = outs, fspec = thm_t}),
 				     replace_outs info0 outs)
                   val info1 = get_annt ir1
@@ -588,7 +587,7 @@ structure annotatedIR = struct
 
    fun build_ir (f_name, f_type, f_args, f_gr, f_outs, f_rs) = 
       let
-         val (ins, outs) = (to_exp f_args, to_exp f_outs)
+         val (ins, outs) = (IRSyntax.to_exp f_args, IRSyntax.to_exp f_outs)
          val ir0 = convert_module (ins, f_gr, outs)
          val ir1 = (merge_ir o rm_dummy_inst) ir0
          val ir2 = set_info (ins,ir1,outs)

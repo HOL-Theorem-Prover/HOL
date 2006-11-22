@@ -302,12 +302,57 @@ val UNCHANGED_def = Define `UNCHANGED s ir =
 		!r. (MEM r s) ==> (read st (toREG r) = read st' (toREG r))
 	)`
 
+val LIST_COUNT_def = Define `
+	(LIST_COUNT 0 = []) /\
+	(LIST_COUNT (SUC n) = n::(LIST_COUNT n))`
+
+val MEM_LIST_COUNT = store_thm ("MEM_LIST_COUNT",
+	``!n m. MEM n (LIST_COUNT m) = (n < m)``,
+	
+	Induct_on `m` THENL [
+		SIMP_TAC list_ss [LIST_COUNT_def],
+		ASM_SIMP_TAC list_ss [LIST_COUNT_def]
+	])
+
+
+val USED_STACK_def = Define `USED_STACK size ir =
+	!r m r' m' base. (((r', m') = run_ir ir (r, m)) /\
+				      (base = preARM$ADDR30 (read (r,m) (REG 13)))
+						) ==> (
+		(!l. (MEM l (MAP (\off. base - n2w off) (LIST_COUNT size))) \/ (m ' l = m' ' l))
+	)`;
+
+val USED_STACK_THM = 
+	store_thm ("USED_STACK_THM",
+	``USED_STACK size ir =
+	!r m r' m'. ((r', m') = run_ir ir (r, m)) ==> (
+		(!l. ~(MEM l (MAP (\off. preARM$ADDR30 (r ' 13w) - n2w off) (LIST_COUNT size))) ==> (m ' l = m' ' l))
+	)``,
+
+	SIMP_TAC std_ss [USED_STACK_def, read_thm, IMP_DISJ_THM])
+
+
+val USED_STACK_ENLARGE = 
+	store_thm ("USED_STACK_ENLARGE",
+	``!ir size1 size2.
+	((size1 <= size2) /\ USED_STACK size1 ir) ==>
+	USED_STACK size2 ir``,
+
+	SIMP_TAC std_ss [USED_STACK_def, MEM_MAP, MEM_LIST_COUNT] THEN
+	REPEAT STRIP_TAC THEN
+	`!off. (off < size1) ==> (off < size2)` by DECIDE_TAC THEN
+	METIS_TAC[])
+
+
+val UNCHANGED_STACK_def = Define `UNCHANGED_STACK reglist stack_size ir = UNCHANGED reglist ir /\ USED_STACK stack_size ir`;
+
 
 val UNCHANGED_THM = store_thm ("UNCHANGED_THM",
 
 	``!s ir.
 		UNCHANGED s ir =
-		EVERY (\r. !reg mem. (read (reg,mem) (toREG r) = read (run_ir ir (reg,mem)) (toREG r))) s``,
+		EVERY (\r. !reg mem. (read (run_ir ir (reg,mem)) (toREG r) =
+			read (reg,mem) (toREG r))) s``,
 
 	SIMP_TAC std_ss [EVERY_MEM, UNCHANGED_def, ELIM_PFORALL] THEN
 	METIS_TAC[pairTheory.PAIR])
