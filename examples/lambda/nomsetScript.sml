@@ -196,6 +196,14 @@ val is_perm_flip_args = store_thm(
   ``is_perm pm ==> (pm ((x,y)::t) a = pm ((y,x)::t) a)``,
   METIS_TAC [is_perm_def, permeq_flip_args]);
 
+val is_perm_sing_to_back = store_thm(
+  "is_perm_sing_to_back",
+  ``is_perm pm ==>
+    (pm [(lswapstr pi a, lswapstr pi b)] (pm pi v) = pm pi (pm [(a,b)] v))``,
+  SRW_TAC [][GSYM is_perm_decompose] THEN
+  Q_TAC SUFF_TAC `(lswapstr pi a,lswapstr pi b)::pi == pi ++ [(a,b)]`
+        THEN1 METIS_TAC [is_perm_def] THEN
+  METIS_TAC [permeq_swap_ends, permeq_sym]);
 
 (* ----------------------------------------------------------------------
    define (possibly parameterised) permutation actions on standard
@@ -312,7 +320,7 @@ val _ = export_rewrites ["sumpm_def"]
 val sumpm_is_perm = Store_Thm(
   "sumpm_is_perm",
   ``is_perm pm1 /\ is_perm pm2 ==> is_perm (sumpm pm1 pm2)``,
-  SRW_TAC [][is_perm_def, FUN_EQ_THM, permeq_def] THEN Cases_on `x` THEN 
+  SRW_TAC [][is_perm_def, FUN_EQ_THM, permeq_def] THEN Cases_on `x` THEN
   SRW_TAC [][sumpm_def]);
 
 (* lists *)
