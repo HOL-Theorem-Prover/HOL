@@ -142,13 +142,13 @@ fun post_process_sep thm =
 	end;
 
 
-
 fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm list * thm * thm * thm * thm * thm)) = 
 	let
 		val (spec, wf, ir) = extract_ir comp;
 		val input_regs = listSyntax.mk_list (map IRSyntax.convert_reg (IRSyntax.pair2list (#1 (#3 comp))), Type `:MREG`);
 
-		val unchanged_thm = #9 comp
+		val unchanged_thm = CONJUNCT1 (REWRITE_RULE [ILTheory.UNCHANGED_STACK_def] (#9 comp))
+		
 		val uregs_all = rand (rator (concl unchanged_thm));
 		val uregs_term = ``FILTER (\r. ~MEM r ^input_regs) ^uregs_all``
 		val uregs_thm = (FILTER_CONV (SIMP_CONV std_ss [MEM, ILTheory.MREG_distinct]))
