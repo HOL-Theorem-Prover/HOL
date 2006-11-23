@@ -487,6 +487,27 @@ val MONO_RESEXISTS = prove(
   REWRITE_TAC [RES_EXISTS_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
   EXISTS_TAC ``x:'a`` THEN RES_TAC THEN ASM_REWRITE_TAC [])
 
+val MONO_RTC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (RTC R x y ==> RTC R' x y)``,
+  STRIP_TAC THEN MATCH_MP_TAC relationTheory.RTC_MONOTONE THEN
+  ASM_REWRITE_TAC []);
+
+val MONO_TC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (TC R x y ==> TC R' x y)``,
+  STRIP_TAC THEN MATCH_MP_TAC relationTheory.TC_MONOTONE THEN
+  ASM_REWRITE_TAC []);
+
+val MONO_EQC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (EQC R x y ==> EQC R' x y)``,
+  STRIP_TAC THEN MATCH_MP_TAC relationTheory.EQC_MONOTONE THEN
+  ASM_REWRITE_TAC []);
+
+val MONO_SC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (SC R x y ==> SC R' x y)``,
+  STRIP_TAC THEN REWRITE_TAC [relationTheory.SC_DEF] THEN STRIP_TAC THEN
+  RES_TAC THEN ASM_REWRITE_TAC []);
+
+
 val bool_monoset =
  [("/\\", MONO_AND),
   ("\\/", MONO_OR),
@@ -495,7 +516,11 @@ val bool_monoset =
   ("==>", MONO_IMP),
   ("~",   MONO_NOT),
   ("RES_FORALL", MONO_RESFORALL),
-  ("RES_EXISTS", MONO_RESEXISTS)]
+  ("RES_EXISTS", MONO_RESEXISTS),
+  ("RTC", MONO_RTC),
+  ("TC", MONO_TC),
+  ("EQC", MONO_EQC),
+  ("SC", MONO_SC)]
 
 
 val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
