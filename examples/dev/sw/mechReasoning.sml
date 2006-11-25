@@ -11,10 +11,9 @@ app load ["relationTheory", "pred_setSimps","pred_setTheory","whileTheory","fini
           "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIR", "funCall", "preARMTheory", "wordsLib"];
 
 quietdec := true;
-open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory 
-     annotatedIR ILTheory rulesTheory wordsLib wordsTheory
-     preARMTheory;
+  open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
+     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory declFuncs
+     annotatedIR ILTheory rulesTheory wordsLib wordsTheory IRSyntax;
 quietdec := false;
 *)
 
@@ -302,6 +301,7 @@ val PSPEC_term =
        ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) -> 'c)
        -> bool`;
 
+
 fun mk_PSPEC ir (pre_st,post_st) (ins,outs) = 
   let 
 
@@ -352,7 +352,7 @@ fun mk_PSPEC ir (pre_st,post_st) (ins,outs) =
 (*
 fun extract (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) =
 (instL, ins, outs, context);
-val (instL, ins, outs, context) = extract ir1;
+val (instL, ins, outs, context) = extract pre_ir;
 val (unchanged_list, _) = unchanged_lists_weak
 val unchanged_list = emptyset
 mk_blk_spec pre_ir unchanged_lists_weak
@@ -387,14 +387,13 @@ fun mk_blk_spec (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = conte
 
 		val stack_size_thm =
 			let
-				val nterm = (term_of_int stack_size);
+				val nterm = mk_comb (Term `LIST_COUNT`, (term_of_int stack_size));
 			in
 				(REDEPTH_CONV num_CONV) nterm handle UNCHANGED => REFL nterm
 			end
 
 		val used_stack_thm = prove (used_stack_term, (* set_goal ([],used_stack_term) *)
-			REWRITE_TAC [USED_STACK_THM, th, Once stack_size_thm,
-				LIST_COUNT_def, MAP, read_thm] THEN
+			REWRITE_TAC [USED_STACK_THM, th, MAP, read_thm, Once stack_size_thm, LIST_COUNT_def] THEN
 			SIMP_TAC list_ss [] THEN
 			CONV_TAC WORDS_CONV THEN
 			ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM])
@@ -489,7 +488,9 @@ fun mk_sc_spec___pre ir1_spec ir1_wf ir2_spec ir2_wf =
       val f_th =  prove (f_spec,   (* set_goal ([],f_spec) *)
                         MATCH_MP_TAC PRJ_SC_RULE THEN
                         EXISTS_TAC post_p1 THEN EXISTS_TAC out_f1 THEN
-                        SIMP_TAC std_ss [ir1_spec, ir2_spec, ir1_wf, ir2_wf]
+                        SIMP_TAC std_ss [ir1_spec, ir2_spec, ir1_wf, ir2_wf] THEN
+								MP_TAC ir2_spec THEN
+								SIMP_TAC std_ss [PSPEC_def, HSPEC_def]
 		        )
 		val f_th = REWRITE_RULE [sc_f_thm] f_th
 
@@ -564,6 +565,63 @@ fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
       val bodyL = CONJUNCTS body_spec;
       val postL = CONJUNCTS post_spec;
 
+		fun fix_body_spec pre_spec body_spec post_spec =
+		let
+			val (_,_,_,(_,_,outs_pre)) = get_spec_info (concl pre_spec);
+			val (_,_,_,(ins_post,_,_)) = get_spec_info (concl post_spec);
+			val (ir,(pre_p,post_p),stk_f,(ins,f,outs)) = get_spec_info (concl body_spec);
+
+			fun extend_f f 0  = f |
+				extend_f f n =
+					let
+						val (vars, body) = dest_pabs f;
+						val newvar = genvar (Type `:DATA`);
+						val body' = mk_pair (newvar,body);
+						val vars' = mk_pair (newvar,vars);
+						val f' = mk_pabs (vars', body')					
+					in
+						extend_f f' (n-1)
+					end;
+	
+				
+			val ins_l = length (strip_pair ins)
+			val new_ins_l = length (strip_pair outs_pre)
+			val f' = extend_f f (new_ins_l - ins_l)
+	
+			val st = mk_var ("st", Type `:DSTATE`);
+			val arg' = list_mk_pair [mk_abs(st, outs_pre), f', mk_abs(st, ins_post)]
+	      val stk_tp = hd (tl (#2 (dest_type (type_of stk_f))));
+
+			val spec_term = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of outs_pre, gamma |-> type_of ins_post] (PSPEC_term), 
+											[ir, mk_pair(pre_p, post_p), stk_f, 
+											 arg']);
+		in
+			(spec_term, ir)
+		end
+
+		val (body_spec_term, body_ir) = fix_body_spec pre_spec body_spec post_spec;
+
+		val new_stack = rand (rator (concl (el 3 preL)))
+		val body_stack = rand (rator (concl (el 3 bodyL)))
+		val new_stack_size_thm =
+			let
+				val nterm = mk_comb (Term `LIST_COUNT`, new_stack);
+			in
+				(REDEPTH_CONV num_CONV) nterm handle UNCHANGED => REFL nterm
+			end
+
+		val body_PSPEC = prove (body_spec_term, (*set_goal ([], body_spec_term)*)
+			MP_TAC (el 1 bodyL) THEN
+			SIMP_TAC std_ss [PSPEC_def, HSPEC_def, mread_def] THEN
+			DISCH_TAC THEN POP_ASSUM (fn t => ALL_TAC) THEN
+			GEN_TAC THEN
+
+			MP_TAC (el 3 bodyL) THEN
+			MATCH_MP_TAC UNCHANGED_STACK___READ_STACK_IMP THEN
+			SIMP_TAC list_ss []);
+
+		val bodyL = body_PSPEC :: (tl bodyL);
+
 
 		val (ir_spec1, ir_wf1, _) =
 			mk_sc_spec___pre (el 1 preL) (el 2 preL) (el 1 bodyL) (el 2 bodyL);
@@ -580,16 +638,14 @@ fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
 									pre_spec, body_spec, post_spec, ir_wf1] THENC
 			SIM_MEM_CONV) sc_th_term;*)
 		
-		val new_stack = rand (rator (concl (el 3 preL)))
-		val body_stack = rand (rator (concl (el 3 bodyL)))
 		val sum_stack = numSyntax.mk_plus (numSyntax.mk_plus (new_stack, body_stack), numSyntax.zero_tm)
       val unchanged_spec = list_mk_comb (Term`UNCHANGED_STACK`, [mk_unchanged_term unchanged_list, sum_stack, sc_ir]);
 
 
 		val common_rewrites = LIST_CONJ [pre_spec, body_spec, post_spec,
-			pre_th, post_th]
+			pre_th, post_th];
 		val common_rewrites = SIMP_RULE std_ss [UNCHANGED_STACK_def,
-			WELL_FORMED_thm] common_rewrites
+			WELL_FORMED_thm] common_rewrites;
       val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)							
 							 
 							 REWRITE_TAC [UNCHANGED_STACK_def] THEN
@@ -628,7 +684,8 @@ fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
 								ASM_REWRITE_TAC[] THEN
 									
 								SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM, toREG_def, index_of_reg_def, read_thm] THEN
-								CONV_TAC SIM_MEM_CONV,
+								CONV_TAC SIM_MEM_CONV THEN
+								METIS_TAC[],
 
 								MATCH_MP_TAC IR_SC_USED_STACK___FC_CASE1 THEN
 								CONJ_TAC THENL [
@@ -1040,8 +1097,9 @@ fun mk_pop_spec spec =
 (*
 fun extract (annotatedIR.SC (ir1, ir2, info)) = (ir1, ir2, info);
 val (ir1, ir2, info) = extract f_ir;
+val (ir1, ir2, info) = extract ir2;
 
-fun extract (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir, info)) = (fname, pre_ir, body_ir, post_ir, info);
+fun extract (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir,info)) = (fname, pre_ir, body_ir, post_ir, info);
 val (fname, pre_ir, body_ir, post_ir, info) = extract ir1
 
 fun extract (annotatedIR.SC (ir1, ir2, info)) = (ir1, ir2, info);
@@ -1079,7 +1137,7 @@ fun fwd_reason (annotatedIR.BLK blk_ir) unchanged_list =
 			mk_cj_spec cond spec1 spec2 unchanged_list
 		end
 
- |  fwd_reason (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir, info)) unchanged_list =
+ |  fwd_reason (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir,info)) unchanged_list =
       let 
 			 val emptyset = Binaryset.empty Int.compare;
 			 val f_unchanged_list = mk_unchanged_set fname;
@@ -1315,7 +1373,7 @@ fun preprocess_def def =
 
 
 (*val prog = fact_def;
-  val prog = def4
+  val prog = def5
   val prove_equiv = false*)
 
 fun pp_compile prog prove_equiv = 

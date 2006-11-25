@@ -41,42 +41,30 @@ val FORALL_TEA_STATE = Q.store_thm
 
 val env0 = [];
 
-val DELTA_def = Define `DELTA = 0x9e3779b9w`;
-
-(* Fails ... what to do about constants? *)
-(*toANF [] DELTA_def;*)   
+val DELTA_def = Define `DELTA = 0x9e3779b9w:word32`;
 
 val ShiftXor_def = 
  Define 
-   `ShiftXor (x,s,k0,k1) = ((x << 4) + k0) # (x + s) # ((x >> 5) + k1)`;
+   `ShiftXor (x:word32,s,k0,k1) = ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
-val env1 = toANF [] ShiftXor_def;
-val arm1 = compileEnv env1;
+val ShiftXor_comp = pp_compile ShiftXor_def true
+val ShiftXor_spec = #5 ShiftXor_comp
 
-val ShiftXor_CORRECT = prove (
-   simT (mk_ARM arm1),
-   SEQ_TAC []
-  ); 
 
 (******************************************************************
-  printarm arm1;
+  extract_arm ShiftXor_comp
+
   Name              : ShiftXor
-  Arguments         : r0 r1 r2 r3
-  Modified Registers: r0 r1 r2 r4
+  Arguments         : (r0,(r1,(r2,r3)))
   Returns           : r0
-  Body:
-    0:          mov     ip, sp
-    1:          stmfd   sp!, {fp,ip,lr,pc}
-    2:          sub     fp, ip, #1i
-    3:          lsl     r4, r0, #4i
-    4:          add     r2, r4, r2
-    5:          add     r1, r0, r1
-    6:          eor     r1, r2, r1
-    7:          asr     r0, r0, #5i
-    8:          add     r0, r0, r3
-    9:          eor     r0, r1, r0
-   10:          sub     sp, fp, #3i
-   11:          ldmfd   sp, {fp,sp,pc}
+  Body: 
+    0:          lsl     r4, r0, #4iw
+    1:          add     r2, r4, r2
+    2:          add     r1, r0, r1
+    3:          asr     r0, r0, #5iw
+    4:          add     r0, r0, r3
+    5:          eor     r0, r1, r0
+    6:          eor     r0, r2, r0
 *)
 
 (* --------------------------------------------------------------------------*)
@@ -92,8 +80,8 @@ val Round_def =
 	((y', z + ShiftXor(y', s', k2, k3)),
 	 (k0,k1,k2,k3), s')`;
 
-val env2 = toANF env1 (REWRITE_RULE [DELTA_def] Round_def);	
-val arm2 = compileEnv env2;
+val Round_eval = REWRITE_RULE [DELTA_def, ShiftXor_def] Round_def
+val x = pp_compile Round_eval true
 
 val Round_CORRECT = prove (
    simT (mk_ARM arm2),

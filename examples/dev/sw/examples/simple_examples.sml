@@ -123,8 +123,11 @@ Defn.tprove (fact_def,
     SIMP_TAC std_ss [WORD_LO, WORD_PRED_THM]
   ])
 
-(*equivalence proof does not terminate, therefore use false for equivalence check parameter*)  
+(*equivalence proof does not terminate, therefore use false for equivalence check parameter
+
 val fact_comp = pp_compile fact_def true 
+
+*)
 
 val fact_comp = pp_compile fact_def false  
 val fact_spec = #5 fact_comp

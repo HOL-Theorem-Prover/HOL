@@ -862,5 +862,37 @@ val UNCHANGED_STACK_TR_RULE = store_thm ("UNCHANGED_STACK_TR_RULE",
   ]);
 	
 
+val UNCHANGED_STACK___READ_STACK_IMP =
+	store_thm ("UNCHANGED_STACK___READ_STACK_IMP",
+``!s st l ir n. ((0 < n) /\ (n + l < 2**30) /\ MEM R13 s) ==>
+(UNCHANGED_STACK s l ir ==>
+(read (run_ir ir st) (toMEM (R13, POS n)) = read st (toMEM (R13, POS n))))``,
+
+REPEAT STRIP_TAC THEN
+`read (run_ir ir st) (REG 13) = read st (REG 13)` by ALL_TAC THEN1 (
+	FULL_SIMP_TAC std_ss [UNCHANGED_STACK_def, UNCHANGED_THM, EVERY_MEM] THEN
+	RES_TAC THEN
+	Cases_on `st` THEN
+	FULL_SIMP_TAC std_ss [toREG_def, index_of_reg_def]
+) THEN
+
+`?r m. run_ir ir st = (r, m)` by METIS_TAC[pairTheory.PAIR] THEN
+Cases_on `st` THEN
+FULL_SIMP_TAC std_ss [toMEM_def, index_of_reg_def, read_thm, 
+	UNCHANGED_STACK_def, USED_STACK_def, MEM_MAP, MEM_LIST_COUNT] THEN
+Q.PAT_ASSUM `!r''. P r''` (fn thm => MP_TAC (SPECL [
+	``q:REGISTER |-> DATA``,
+	``r':ADDR |-> DATA``,
+	``r:REGISTER |-> DATA``,
+	``m:ADDR |-> DATA``] thm)) THEN
+ASM_SIMP_TAC std_ss [prove (``(a \/ b) = (~a ==> b)``, PROVE_TAC[])] THEN
+STRIP_TAC THEN
+POP_ASSUM (fn thm => MATCH_MP_TAC (GSYM thm)) THEN
+GEN_TAC THEN
+SIMP_TAC std_ss [WORD_EQ_ADD_LCANCEL, word_sub_def, word_2comp_n2w,
+	n2w_11, dimword_30] THEN
+Cases_on `off < l` THEN ASM_SIMP_TAC std_ss [] THEN
+Cases_on `off = 0` THEN
+ASM_SIMP_TAC arith_ss [])
 
 val _ = export_theory();

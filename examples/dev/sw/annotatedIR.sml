@@ -20,7 +20,8 @@ structure annotatedIR = struct
                    |  BLK of instr list * annt
                    |  STM of instr list
                    |  CALL of string * anntIR * anntIR * anntIR * annt
-  
+
+
  (*---------------------------------------------------------------------------------*)
  (*      Print an annotated IR tree                                                 *)
  (*---------------------------------------------------------------------------------*)
@@ -228,7 +229,7 @@ structure annotatedIR = struct
 
            |   Assem.OPER {oper = (Assem.BL,_,_), dst = dList, src = sList, jump = jp} =>
                      let val stm = CALL(Symbol.name(hd (valOf jp)), STM [], STM [], STM [], 
-                                       {fspec = thm_t, ins = list2pair (List.map to_exp sList), 
+                                      {fspec = thm_t, ins = list2pair (List.map to_exp sList), 
                                         outs = list2pair (List.map to_exp dList), context = []})
                      in  if null sucL then stm   
                          else SC (stm, convert cfg (#2 (hd sucL)), init_info)
@@ -314,7 +315,7 @@ structure annotatedIR = struct
     |  rm_dummy_inst (STM stmL) =
          STM (List.filter (not o is_dummy_inst) stmL)
     | rm_dummy_inst (CALL (fname,pre,body,post,info)) =
-         CALL (fname, rm_dummy_inst pre, rm_dummy_inst body, rm_dummy_inst post, info)
+         CALL (fname, rm_dummy_inst pre, rm_dummy_inst body, rm_dummy_inst post,info)
     | rm_dummy_inst (BLK (instL, info)) =
          BLK (List.filter (not o is_dummy_inst) instL,info)
 
@@ -413,6 +414,7 @@ structure annotatedIR = struct
    fun one_stm_modified_regs ({oper = op1, dst = dlist, src = slist}) =
        List.map (fn (REG r) => r | _ => ~1) (List.filter (fn (REG r) => true | _ => false) dlist);
 
+
    fun get_modified_regs (SC(ir1,ir2,info)) =
          (get_modified_regs ir1) @ (get_modified_regs ir2)
     |  get_modified_regs (TR(cond,ir,info)) = 
@@ -420,8 +422,15 @@ structure annotatedIR = struct
     |  get_modified_regs (CJ(cond,ir1,ir2,info)) = 
          (get_modified_regs ir1) @ (get_modified_regs ir2)
     |  get_modified_regs (CALL(fname,pre,body,post,info)) = 
-         List.map (fn (REG r) => r | _ => ~1) (List.filter (fn (REG r) => true | _ => false) (pair2list (#outs info))) @
-			(get_modified_regs body)
+			let
+				val preL = get_modified_regs pre
+				val bodyL = get_modified_regs body
+				val outsL = (List.map (fn (REG r) => r | _ => ~1) (pair2list (#outs info)))
+				val restoredL = [13, ~1]
+				val modL = filter (fn e => not (mem e restoredL)) (preL @ bodyL @ outsL)
+			in
+				modL
+			end
     |  get_modified_regs (STM l) =
          itlist (curry (fn (a,b) => one_stm_modified_regs a @ b)) l [] 
     |  get_modified_regs (BLK (l,info)) = 
@@ -498,7 +507,7 @@ structure annotatedIR = struct
               val s1' = back_trace s1 outer_info
               val s2' = back_trace s2 outer_info
               val ({ins = ins1, outs = outs1, ...}, {ins = ins2, outs = outs2, ...}) = (get_annt s1', get_annt s2');
-              val inS_0 = list2pair (set2list (list2set (cond_expL @ (pair2list ins1) @ (pair2list ins2)))); 
+              val inS_0 = list2pair (cond_expL @ (pair2list ins1) @ (pair2list ins2)); 
                       (* union of the variables in the condition and the inputs of the s1' and s2' *)
               val info_0 = replace_ins outer_info inS_0
           in

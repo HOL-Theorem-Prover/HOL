@@ -7,7 +7,7 @@ structure T = IntMapTable(type key = int  fun getInt n = n);
 structure S = Binaryset
 structure IR = IRSyntax
 in
-
+(*open funCall*)
 exception invalidArgs;
 val numAvaiRegs = ref 10;
 
@@ -415,7 +415,7 @@ val involved_defs = ref ([] : thm list);
 
 (*
 fun extract (SC(s1,s2,info)) = (s1,s2,info)
-val (s1,s2,info) = extract ir1
+val (s1,s2,info) = extract s2
 
 fun extract (CALL(fname, pre, body, post, outer_info)) =
 (fname, pre, body, post, outer_info)
@@ -439,15 +439,10 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
         val ((pre_ins,pre_outs),(body_ins,body_outs),(post_ins,post_outs),rs',context) =
              compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_ins,callee_outs),rs,#context outer_info);
 
-        fun to_stack expL =
-            let val len = length expL
-                val i = ref 1;
-            in
-                List.map (fn exp => ( i := !i + 1; MEM(13, ~(len - !i)))) expL
-            end 
+		  
+        fun to_stack 0 = [] |
+				to_stack n = (MEM(13, n))::(to_stack(n-1))
 
-		 val preserve_list = (map REG (List.tabulate (13, I))@[REG 14])
-		 val preserve_list = pair2list outer_outs;
 		 val preserve_list = filter (fn r => not (mem r (pair2list caller_dst))) (pair2list outer_outs);
 
 		 val in_mov_pairs = zip (pair2list caller_src) (pair2list callee_ins);
@@ -462,7 +457,7 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
 		 val mpush_ir = if (preserve_list = []) then	[] else
 				 			 [{dst = [REG 13], oper = mpush, src = preserve_list}]
 
-		 val stack_ir = trim_pair(list2pair(to_stack preserve_list))
+		 val stack_ir = trim_pair(list2pair(to_stack (length preserve_list)))
 
        val pre' = BLK (
                         mpush_ir @
@@ -474,8 +469,7 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
         val body' = apply_to_info callee_ir' (fn info' => {ins = trim_pair(PAIR(stack_ir,callee_ins)), outs = trim_pair(PAIR(stack_ir,callee_outs)), context = context, fspec = thm_t});
 
         val post' = BLK (
-					mpop_ir @
-					(map mov_ir out_mov_pairs),
+					(map mov_ir out_mov_pairs) @	mpop_ir,
                {ins = trim_pair(PAIR(stack_ir,callee_outs)), outs = outer_outs, context = context, fspec = thm_t})
     in
         CALL(fname, pre' , body', post', outer_info)
@@ -498,7 +492,7 @@ fun link_ir prog =
 
       val (ins1,ir1,outs1, localNum) = calculate_relative_address (ins,ir0,outs,S.numItems rs);
       val ir2 = convert_fcall ir1
-      val ir3 = match_ins_outs ir2
+      val ir3 = match_ins_outs ir1
 
       val rs' = S.addList (S.empty regAllocation.intOrder, get_modified_regs ir3);
       val _ = (involved_defs := [];
