@@ -250,7 +250,6 @@ pp_compile cj_f_2_def true;
 (*---------------------------------------------------------------------------------*)
 
 (* A more complicated SC example.  Form: SC (BLK, SC (CJ, BLK))         *)
-(* The ANF conversion seems wrong ???                                   *)
 
 val f3_def = Define `
     f3 (a:word32,b:word32) = let c = a + 1w in

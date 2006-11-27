@@ -22,5 +22,34 @@ val spec3 = pp_compile def3 false;
 val def4 = Define `f4(x:word32,y,z) = x + y + y + z`;
 val spec4 = pp_compile def4 false;
 
-val def5 = Define `f5(x:word32,y) = y + (f4 (x, f3 y, y)) + x`;
+val def5 = Define `f5(x:word32,y) = y + (f4 (x, f2 y, y)) + x`;
 val spec5 = pp_compile def5 false;
+
+
+val def6 = Define `f6(x:word32,y) = 
+	let a = if (x >= y) then f2 y else x in
+	(y + (f4 (x, a, y)) + x)`;
+val spec6 = pp_compile def6 false;
+
+val spec6_pre = #6 spec6
+val spec6 = PROVE_HYP ( (* set_goal ([], hd (hyp spec6_pre)) *)
+	prove (hd (hyp spec6_pre),
+
+
+REWRITE_TAC[FUN_EQ_THM] THEN
+Cases_on `x` THEN 
+SIMP_TAC std_ss [def6, def4, def2, def1, FUN_EQ_THM, LET_THM] THEN
+Cases_on `q >= r` THEN (
+	ASM_SIMP_TAC std_ss [WORD_ADD_ASSOC]
+))) spec6_pre
+
+
+val def7 = Define `f7(x:word32,y) = 
+	let a = y + (2w * x) in
+	let b = 5w in
+	let c = if (a <= b) then (f2 a) + b else b in
+	let d = f4 (c, c, a) in
+	(x + d + b)`;
+
+val spec7 = pp_compile def7 false;
+
