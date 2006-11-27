@@ -554,7 +554,6 @@ fun compute_outL modifiedRegL =
     end
 
 
-
 fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list) = 
 	let
 		val pre_spec = (SIMP_RULE std_ss [LET_THM] pre_spec)
@@ -614,11 +613,12 @@ fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
 			MP_TAC (el 1 bodyL) THEN
 			SIMP_TAC std_ss [PSPEC_def, HSPEC_def, mread_def] THEN
 			DISCH_TAC THEN POP_ASSUM (fn t => ALL_TAC) THEN
-			GEN_TAC THEN
+			REPEAT STRIP_TAC THEN (
 
-			MP_TAC (el 3 bodyL) THEN
-			MATCH_MP_TAC UNCHANGED_STACK___READ_STACK_IMP THEN
-			SIMP_TAC list_ss []);
+				MP_TAC (el 3 bodyL) THEN
+				MATCH_MP_TAC UNCHANGED_STACK___READ_STACK_IMP THEN
+				SIMP_TAC list_ss []
+			));
 
 		val bodyL = body_PSPEC :: (tl bodyL);
 
@@ -765,6 +765,7 @@ fun convert_cond (exp1, rop, exp2) =
 fun strip_pair2 t =
   if is_pair t then List.foldl (fn (t0,L0) => L0 @ (strip_pair2 t0)) [] (strip_pair t)
   else [t];
+
 
 fun mk_cj_cond cond_t ins =
   let 
@@ -926,7 +927,7 @@ fun mk_cj_spec cond ir1_spec ir2_spec unchanged_list =
       val instance = list_mk_comb (Term`run_ir:CTL_STRUCTURE -> DSTATE -> DSTATE`, [cj_ir, st]);
       
       val initV = #1 (dest_pabs f1);
-      val cj_cond = mk_pabs(initV, mk_cj_cond t_cond ins1);
+      val cj_cond = mk_cond_f t_cond ins1;
       val cj_f = mk_pabs(initV, list_mk_comb (inst [alpha |-> type_of outs1] (Term`COND:bool->'a->'a->'a`), 
                        [mk_comb(cj_cond,initV), mk_comb(f1,initV), mk_comb(f2,initV)]));
 
@@ -1110,7 +1111,7 @@ fun extract (annotatedIR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = out
 val (cond, body) = extract ir1
 
 fun extract (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, ir1, ir2)
-val (cond, ir1, ir2) = extract f_ir
+val (cond, ir1, ir2) = extract ir1
 *)
 
 
@@ -1118,7 +1119,8 @@ fun fwd_reason (annotatedIR.BLK blk_ir) unchanged_list =
       #1 (mk_blk_spec (annotatedIR.BLK blk_ir) unchanged_list)
 
  |  fwd_reason (annotatedIR.SC (ir1, ir2, info)) unchanged_list =
-      let val spec1 = fwd_reason ir1 unchanged_list;
+      let 
+			 val spec1 = fwd_reason ir1 unchanged_list;
           val spec2 = fwd_reason ir2 unchanged_list;
       in
           mk_sc_spec spec1 spec2 unchanged_list
@@ -1373,7 +1375,7 @@ fun preprocess_def def =
 
 
 (*val prog = fact_def;
-  val prog = def5
+  val prog = def6
   val prove_equiv = false*)
 
 fun pp_compile prog prove_equiv = 

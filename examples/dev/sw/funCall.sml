@@ -9,6 +9,8 @@ structure IR = IRSyntax
 in
 (*open funCall*)
 exception invalidArgs;
+exception argPassing;
+
 val numAvaiRegs = ref 10;
 
 fun strOrder (s1:string,s2:string) =
@@ -411,10 +413,98 @@ fun compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_i
     end
 
 
+
+	(*This function gets to lists of registers. The values of the 
+	registers in scrL are moved to the registers in destL. Thereby,
+	the dummy registers are used for intermediate storage, if necessary.
+	The result is a list of move statements that have to be executed.
+	For example 
+		destL = [REG 0, REG 2, REG 1]
+		srcL = [REG 0, REG 1, REG 2]
+		dummyL = [REG 3, ...]
+	should result in something like
+		(REG 3 <- REG 2), (REG 2 <- REG 1), (REG 1 <- REG 3)
+	*) 
+	
+local
+	fun remove_reg (REG r) = r
+
+	val sortdata = 
+		sort (fn (dest:int, src:int, beforeL:int list) => fn (dest':int, src':int, beforeL':int list) => (length beforeL < length beforeL'))
+	
+	fun extract_next dummyL (data):(int * int * int list) list =
+		if ((#3 (hd data)) = []) then data else
+		let
+			val data' = sortdata data
+		in
+			if ((#3 (hd data')) = []) then data' else
+			let
+				val (dest, src, beforeL) = hd data';
+				val dummy_reg = remove_reg (hd dummyL)
+				val new_elem = (dummy_reg, dest, []:int list);
+				(*security check*)
+				val _ = if (exists (fn e:(int*int*int list) => (#1 e = dummy_reg) orelse (#2 e = dummy_reg)) data) then
+						raise argPassing else ()
+			in
+				new_elem :: data'
+			end
+		end
+
+	fun process_next (data:(int*int*int list) list) =
+	let
+		val (dest, src, beforeL) = hd data;
+		val _ = if (beforeL = []) then () else raise argPassing;	
+		val data' = map (fn (e_dest, e_src, e_beforeL) =>
+							let
+								val e_src' = if (e_src = src) then dest else e_src;
+								val e_beforeL' = if (e_dest = src) then [] else filter (fn e => not (e = dest)) e_beforeL;
+							in
+								(e_dest, e_src', e_beforeL')
+							end) (tl data)
+	in
+		((dest, src), data')
+	end					
+in
+	fun mk_mov_ir destL srcL dummyL =
+	let
+		val copyL = zip (map remove_reg destL) (map remove_reg srcL);
+		val copyL = filter (fn (x, y) => not (x = y)) copyL;
+
+		(*calculates, which registers have to be updated before,
+			because they directly depend on the value, that should be
+			overwritten*)
+		fun direct_before r = 
+			let
+				val copyL_filter = filter (fn (dest, src) => (src = r)) copyL;
+			in
+				map (fn (dest, src) => dest) copyL_filter
+			end
+
+		val data = map (fn (dest, src) => (dest, src, direct_before dest)) copyL
+		
+		fun process_data dummyL resultL [] = resultL |
+			 process_data dummyL resultL data =
+			 let
+				val data' = extract_next dummyL data;
+				val (res, data'') = (process_next data');				
+			 in
+				process_data dummyL (resultL@[res]) data''
+			 end;
+
+		val aL = process_data dummyL [] data;
+   	fun mov_ir (dst, src) = {oper = IR.mmov, dst = [REG dst], src = [REG src]}
+	in
+		map mov_ir aL		
+	end;
+
+end;
+
+
 val involved_defs = ref ([] : thm list);
 
 (*
 fun extract (SC(s1,s2,info)) = (s1,s2,info)
+val (s1,s2,info) = extract ir1
 val (s1,s2,info) = extract s2
 
 fun extract (CALL(fname, pre, body, post, outer_info)) =
@@ -439,38 +529,52 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
         val ((pre_ins,pre_outs),(body_ins,body_outs),(post_ins,post_outs),rs',context) =
              compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_ins,callee_outs),rs,#context outer_info);
 
-		  
         fun to_stack 0 = [] |
 				to_stack n = (MEM(13, n))::(to_stack(n-1))
 
 		 val preserve_list = filter (fn r => not (mem r (pair2list caller_dst))) (pair2list outer_outs);
 
-		 val in_mov_pairs = zip (pair2list caller_src) (pair2list callee_ins);
-		 val in_mov_pairs = filter (fn (x, y) => not (x = y)) in_mov_pairs;
-		 val out_mov_pairs = zip (pair2list callee_outs) (pair2list caller_dst)
-		 val out_mov_pairs = filter (fn (x, y) => not (x = y)) out_mov_pairs;
 
-		 fun mov_ir (src, dst) = {oper = IR.mmov, dst = [dst], src = [src]}
-		 
+		 val dummy_reg_list = 
+			let
+				val dummy_list = [REG 0, REG 1, REG 2, REG 3, REG 4,
+										REG 5, REG 6, REG 7, REG 8, REG 9, REG 10];
+				val dummy_list = filter (fn r => not (mem r (pair2list outer_outs))) dummy_list 
+				val dummy_list = preserve_list@dummy_list;
+		
+				val not_use_list = (pair2list caller_src) @
+										 (pair2list caller_dst) @
+										 (pair2list callee_ins) @
+										 (pair2list callee_outs)
+				val dummy_list = filter (fn r => not (mem r not_use_list))
+										dummy_list 
+			in
+				dummy_list
+			end;
+
+		 val in_mov_ir = mk_mov_ir (pair2list callee_ins) (pair2list caller_src) dummy_reg_list
+		 val out_mov_ir = mk_mov_ir (pair2list caller_dst) (pair2list callee_outs) dummy_reg_list
+	 
 		 val mpop_ir = if (preserve_list = []) then	[] else
 				 			 [{dst = preserve_list, oper = mpop, src = [REG 13]}]
 		 val mpush_ir = if (preserve_list = []) then	[] else
 				 			 [{dst = [REG 13], oper = mpush, src = preserve_list}]
 
-		 val stack_ir = trim_pair(list2pair(to_stack (length preserve_list)))
+		 val stack_ir_list = to_stack (length preserve_list)
+		 val ins_stack = trim_pair(list2pair(stack_ir_list @ (pair2list callee_ins)));
+		 val outs_stack = trim_pair(list2pair(stack_ir_list @ (pair2list callee_outs)));
 
        val pre' = BLK (
-                        mpush_ir @
-								(map mov_ir in_mov_pairs),
+                        mpush_ir @ in_mov_ir,
                     {ins = outer_ins, 
-							outs = trim_pair(PAIR(stack_ir,callee_ins)), context = context, fspec = thm_t});
+							outs = ins_stack, context = context, fspec = thm_t});
 
 		  val callee_ir' = convert_fcall callee_ir;
-        val body' = apply_to_info callee_ir' (fn info' => {ins = trim_pair(PAIR(stack_ir,callee_ins)), outs = trim_pair(PAIR(stack_ir,callee_outs)), context = context, fspec = thm_t});
+        val body' = apply_to_info callee_ir' (fn info' => {ins = ins_stack, outs = outs_stack, context = context, fspec = thm_t});
 
         val post' = BLK (
-					(map mov_ir out_mov_pairs) @	mpop_ir,
-               {ins = trim_pair(PAIR(stack_ir,callee_outs)), outs = outer_outs, context = context, fspec = thm_t})
+					out_mov_ir @	mpop_ir,
+               {ins = outs_stack, outs = outer_outs, context = context, fspec = thm_t})
     in
         CALL(fname, pre' , body', post', outer_info)
     end
@@ -492,8 +596,9 @@ fun link_ir prog =
 
       val (ins1,ir1,outs1, localNum) = calculate_relative_address (ins,ir0,outs,S.numItems rs);
       val ir2 = convert_fcall ir1
-      val ir3 = match_ins_outs ir1
-
+      (*val ir3 = match_ins_outs ir1*)
+		val ir3 = ir2
+	
       val rs' = S.addList (S.empty regAllocation.intOrder, get_modified_regs ir3);
       val _ = (involved_defs := [];
                declFuncs.putFunc (fname, ftype, (ins1,ir1,outs1), rs', localNum, (hd defs)));

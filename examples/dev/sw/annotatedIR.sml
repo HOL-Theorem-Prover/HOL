@@ -451,15 +451,15 @@ structure annotatedIR = struct
             else
                case ir of
                    (BLK (stmL, info)) => 
-                       BLK (stmL, replace_ins inner_info outer_ins)
+                       BLK (stmL, replace_ins info outer_ins)
                 |  (SC (s1,s2,info)) =>
-                       SC (adjust_ins s1 outer_info, s2, outer_info)
+                       SC (adjust_ins s1 outer_info, s2, replace_ins info outer_ins)
                 |  (CJ (cond,s1,s2,info)) =>
-                       CJ (cond, adjust_ins s1 outer_info, adjust_ins s2 outer_info, outer_info)
+                       CJ (cond, adjust_ins s1 outer_info, adjust_ins s2 outer_info, replace_ins info outer_ins)
                 |  (TR (cond,s,info)) =>
-                       TR(cond, adjust_ins s info, info)
+                       TR(cond, adjust_ins s info, replace_ins info outer_ins)
                 |  (CALL (fname,pre,body,post,info)) =>
-                       CALL(fname, pre, body, post, info)
+                       CALL(fname, pre, body, post, replace_ins info outer_ins)
                 |  _ => 
                        raise Fail "adjust_ins: invalid IR tree"
         end
@@ -469,6 +469,31 @@ structure annotatedIR = struct
         set2pair (S.difference (pair2set ins1, pair2set outs0));
 
    (* Given the outputs and the context of an ir, calculate its inputs *)
+
+
+(*
+val ir0 = (back_trace ir1 info)
+
+fun extract (SC(s1,s2,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) =
+	(s1, s2, inner_info, outer_outs, contextL, outer_info) 
+
+val (s1, s2, inner_info, outer_outs, contextL, outer_info)  = extract ir1 info
+
+              val s1' = back_trace 
+
+val s2' = back_trace s2 outer_info
+
+fun extract (CJ(cond, s1, s2, inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) =
+(cond, s1, s2, inner_info, outer_info, outer_outs, contextL)
+
+val (cond, s1, s2, inner_info, outer_info, outer_outs, contextL) = extract s1 outer_info
+
+fun extract (CALL (fname, pre, body, post, info)) (outer_info as {outs = outer_outs, context = contextL, fspec = fout_spec, ...}:annt) =
+(fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec);
+
+val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) = extract s1 {ins = #ins outer_info, outs = #ins s2_info, context = #context s2_info, fspec = #fspec s1_info};
+
+*)
 
    fun back_trace (BLK (stmL,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) = 
           let 
@@ -491,7 +516,7 @@ structure annotatedIR = struct
                          then adjust_ins s2' (replace_ins s2_info (#outs s1_info))
 			 else s2';
               val s2_info = get_annt s2'';
-              val s1' = back_trace s1 {ins = #ins s1_info, outs = #ins s2_info, context = #context s2_info, fspec = #fspec s1_info};
+              val s1' = back_trace s1 {ins = #ins outer_info, outs = #ins s2_info, context = #context s2_info, fspec = #fspec s1_info};
               val s1_info = get_annt s1'
            in
               SC(s1',s2'', {ins = #ins s1_info, outs = #outs s2_info, fspec = thm_t, context = contextL})
@@ -507,7 +532,8 @@ structure annotatedIR = struct
               val s1' = back_trace s1 outer_info
               val s2' = back_trace s2 outer_info
               val ({ins = ins1, outs = outs1, ...}, {ins = ins2, outs = outs2, ...}) = (get_annt s1', get_annt s2');
-              val inS_0 = list2pair (cond_expL @ (pair2list ins1) @ (pair2list ins2)); 
+              val inS_0 = set2pair (list2set
+					(cond_expL @ (pair2list ins1) @ (pair2list ins2))); 
                       (* union of the variables in the condition and the inputs of the s1' and s2' *)
               val info_0 = replace_ins outer_info inS_0
           in
@@ -526,9 +552,17 @@ structure annotatedIR = struct
           (* the adjustment will be performed later in the funCall.sml *)
     |  back_trace (CALL (fname, pre, body, post, info)) (outer_info as {outs = outer_outs, context = contextL, fspec = fout_spec, ...}) =
           let 
-              val extra_outs = args_diff (PAIR (outer_outs, list2pair contextL), #outs info)
+				  val outer_outs_set = pair2set outer_outs
+				  val inner_outs_set = pair2set (#outs info);
+				  val extra_outs_set = S.difference (outer_outs_set, inner_outs_set);
+
+				  val inner_ins_set = pair2set (#ins info)
+				  val new_ins_set = S.union(extra_outs_set, inner_ins_set);
+
+				  val new_ins = set2pair new_ins_set;
+				  val info' = replace_ins outer_info new_ins
           in
-              CALL (fname, pre, BLK ([], info), post, replace_ins outer_info (#ins info))
+              CALL (fname, pre, BLK ([], info), post, info')
           end;
 
 
@@ -550,7 +584,6 @@ structure annotatedIR = struct
        in
           extract_outputs (back_trace ir info)
        end;
-
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Adjust the IR tree to make inputs and outputs consistent                                                             *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
