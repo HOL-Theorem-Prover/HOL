@@ -458,7 +458,7 @@ val perms_move = prove(
                 METIS_TAC []
               ]
             ]) THEN
-    `(fresh apm f = f b) /\ (fresh apm g = g b)` by METIS_TAC [fresh_def] THEN
+    `(fresh apm f = f b) /\ (fresh apm g = g b)` by METIS_TAC [fresh_thm] THEN
     SRW_TAC [][Abbr`f`, Abbr`g`] THEN
     Q_TAC SUFF_TAC `p1 ++ [(b,perm_of p2 s)] ++ p2 == p1 ++ p2 ++ [(b,s)]`
           THEN1 (STRIP_TAC THEN
@@ -527,7 +527,7 @@ val perms_move = prove(
               ]
             ]) THEN
     `(fresh (fnpm apm apm) f = f b) /\ (fresh (fnpm apm apm) g = g b)`
-       by METIS_TAC [fresh_def] THEN
+       by METIS_TAC [fresh_thm] THEN
     SRW_TAC [][Abbr`f`, Abbr`g`] THEN
     Q_TAC SUFF_TAC `p1 ++ [(b,perm_of p2 s)] ++ p2 == p1 ++ p2 ++ [(b,s)]`
           THEN1 (STRIP_TAC THEN
@@ -597,7 +597,7 @@ val fn_respectful = prove(
     `~(z IN supp (fnpm perm_of apm) f) /\ ~(z IN supp (fnpm perm_of apm) g)`
         by METIS_TAC [supp_smallest, SUBSET_DEF, fnpm_is_perm,
                       perm_of_is_perm] THEN
-    `(fresh apm f = f z) /\ (fresh apm g = g z)` by METIS_TAC [fresh_def] THEN
+    `(fresh apm f = f z) /\ (fresh apm g = g z)` by METIS_TAC [fresh_thm] THEN
     SRW_TAC [][Abbr`f`, Abbr`g`, is_perm_flip_args, Abbr`bigS`] THEN
     FULL_SIMP_TAC (srw_ss()) [],
 
@@ -638,7 +638,7 @@ val fn_respectful = prove(
         by PROVE_TAC [supp_smallest, SUBSET_DEF, fnpm_is_perm,
                       perm_of_is_perm] THEN
     `(fresh somepm f = f z) /\ (fresh somepm g = g z)`
-       by METIS_TAC [fresh_def] THEN
+       by METIS_TAC [fresh_thm] THEN
     SRW_TAC [][Abbr`f`, Abbr`g`, is_perm_flip_args, Abbr`bigS`] THEN
     FULL_SIMP_TAC (srw_ss()) []
   ]);
@@ -674,7 +674,7 @@ val better_lam_clause0 = prove(
                     perm_of_is_perm] THEN
   Q_TAC SUFF_TAC `fcond apm f`
         THEN1 (STRIP_TAC THEN
-               `fresh apm f = f z` by METIS_TAC [fresh_def] THEN
+               `fresh apm f = f z` by METIS_TAC [fresh_thm] THEN
                SRW_TAC [][Abbr`f`]) THEN
   SRW_TAC [][fcond_def] THEN
   Q.UNABBREV_TAC `f` THEN
@@ -737,7 +737,7 @@ val better_lami_clause0 = prove(
                     perm_of_is_perm] THEN
   Q_TAC SUFF_TAC `fcond spm f`
         THEN1 (STRIP_TAC THEN
-               `fresh spm f = f z` by METIS_TAC [fresh_def] THEN
+               `fresh spm f = f z` by METIS_TAC [fresh_thm] THEN
                SRW_TAC [][Abbr`f`]) THEN
   SRW_TAC [][fcond_def, Abbr`spm`] THEN
   Q.UNABBREV_TAC `f` THEN

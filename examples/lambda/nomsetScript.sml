@@ -381,6 +381,18 @@ val cpmpm_APPEND = store_thm(
   ``cpmpm (p1 ++ p2) p = cpmpm p1 (cpmpm p2 p)``,
   SRW_TAC [][cpmpm_def, listpm_APPEND]);
 
+val cpmpm_sing_inv = Store_Thm(
+  "cpmpm_sing_inv",
+  ``cpmpm [h] (cpmpm (h::t) p) = cpmpm t p``,
+  `!p1 p2 v. cpmpm p1 (cpmpm p2 v) = cpmpm (p1 ++ p2) v`
+      by METIS_TAC [cpmpm_is_perm, is_perm_def] THEN
+  SRW_TAC [][is_perm_dups])
+
+val cpmpm_nil = Store_Thm(
+  "cpmpm_nil",
+  ``cpmpm [] v = v``,
+  METIS_TAC [cpmpm_is_perm, is_perm_def]);
+
 (* ----------------------------------------------------------------------
     Notion of support, and calculating the smallest set of support
    ---------------------------------------------------------------------- *)
@@ -472,6 +484,13 @@ val supp_supports = store_thm(
   ONCE_REWRITE_TAC [GSYM swapstr_swapstr] THEN
   `(swapstr a c b = b) /\ (swapstr a c c = a)` by SRW_TAC [][swapstr_def] THEN
   ASM_REWRITE_TAC [] THEN SRW_TAC [][]);
+
+val supp_fresh = store_thm(
+  "supp_fresh",
+  ``is_perm apm /\ ~(x IN supp apm v) /\ ~(y IN supp apm v) ==>
+    (apm [(x,y)] v = v)``,
+  METIS_TAC [support_def, supp_supports]);
+
 
 val setpm_postcompose = store_thm(
   "setpm_postcompose",
@@ -722,48 +741,34 @@ val fcond_equivariant = Store_Thm(
   METIS_TAC [is_perm_inverse, perm_of_is_perm]);
 
 
-val freshness_lemma0 = prove(
-  ``?z.
-      fcond pm f ==> !a. ~(a IN supp (fnpm perm_of pm) f) ==> (f a = z)``,
-  CONV_TAC EXISTS_IMP_CONV THEN SRW_TAC [][fcond_def] THEN
-  Q.EXISTS_TAC `f a` THEN
-  SRW_TAC [][] THEN Cases_on `a' = a` THEN1 SRW_TAC [][] THEN
-  `!c. FINITE (supp pm (f c))`
-     by (GEN_TAC THEN
-         Q_TAC SUFF_TAC `support pm (f c) (c INSERT supp (fnpm perm_of pm) f)`
-           THEN1 (METIS_TAC [supp_smallest, SUBSET_FINITE, FINITE_INSERT]) THEN
-         `c INSERT supp (fnpm perm_of pm) f =
-            supp (fnpm perm_of pm) f UNION {c}`
-           by (SRW_TAC [][EXTENSION] THEN METIS_TAC []) THEN
-         SRW_TAC [][] THEN MATCH_MP_TAC (GEN_ALL support_fnapp) THEN
-         Q.EXISTS_TAC `perm_of` THEN SRW_TAC [][supp_supports] THEN
-         SRW_TAC [][support_def, swapstr_def]) THEN
-  `~(a' IN supp perm_of a)` by SRW_TAC [][] THEN
-  `~(a' IN supp pm (f a))`
-      by (Q_TAC SUFF_TAC `?s. supp pm (f a) SUBSET s /\ ~(a' IN s)`
-                THEN1 METIS_TAC [SUBSET_DEF] THEN
-          Q.EXISTS_TAC
-            `supp (fnpm perm_of pm) f UNION supp perm_of a` THEN
-          ASM_SIMP_TAC bool_ss [IN_UNION] THEN
-          MATCH_MP_TAC supp_fnapp THEN
-          SRW_TAC [][] THEN METIS_TAC []) THEN
-  `pm [(a,a')] (f a) = f a` by METIS_TAC [supp_supports, support_def] THEN
-  `f = fnpm perm_of pm [(a,a')] f`
-     by METIS_TAC [supp_supports, support_def, fnpm_is_perm,
-                   perm_of_is_perm] THEN
-  `fnpm perm_of pm [(a,a')] f a' = f a`
-      by SRW_TAC [][fnpm_def, swapstr_def] THEN
-  METIS_TAC []);
+val fresh_def = Define`fresh apm f = let z = NEW (supp (fnpm lswapstr apm) f)
+                                     in
+                                       f z`
 
-val fresh_def = new_specification(
-  "fresh_def", ["fresh"],
-  CONV_RULE
-    (RENAME_VARS_CONV ["fresh"] THENC
-     BINDER_CONV
-       (RENAME_VARS_CONV ["pm", "f"]))
-    (SIMP_RULE bool_ss [SKOLEM_THM]
-               (List.foldr (uncurry Q.GEN) freshness_lemma0
-                           [`pm`, `f`])))
+val fresh_thm = store_thm(
+  "fresh_thm",
+  ``fcond apm f ==>
+    !a. ~(a IN supp (fnpm perm_of apm) f) ==> (f a = fresh apm f)``,
+  SIMP_TAC (srw_ss()) [fcond_def, fresh_def] THEN STRIP_TAC THEN
+  Q.X_GEN_TAC `b` THEN
+  SRW_TAC [][fcond_def, fresh_def] THEN
+  Q.UNABBREV_TAC `z` THEN
+  NEW_ELIM_TAC THEN SRW_TAC [][] THEN
+  Q_TAC SUFF_TAC `!c. ~(c IN supp (fnpm lswapstr apm) f) ==> (f c = f a)`
+        THEN1 SRW_TAC [][] THEN
+  REPEAT STRIP_TAC THEN
+  Cases_on `c = a` THEN1 SRW_TAC [][] THEN
+  `~(c IN supp lswapstr a)` by SRW_TAC [][] THEN
+  `~(c IN supp apm (f a))`
+      by (`supp apm (f a) SUBSET
+             supp (fnpm lswapstr apm) f UNION supp lswapstr a`
+            by SRW_TAC [][supp_fnapp] THEN
+          FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN METIS_TAC []) THEN
+  `apm [(a,c)] (f a) = f a` by METIS_TAC [supp_supports, support_def] THEN
+  POP_ASSUM (SUBST1_TAC o SYM) THEN
+  `apm [(a,c)] (f a) = fnpm lswapstr apm [(a,c)] f (lswapstr [(a,c)] a)`
+     by SRW_TAC [][fnpm_def] THEN
+  SRW_TAC [][supp_fresh])
 
 val fresh_equivariant = store_thm(
   "fresh_equivariant",
@@ -778,7 +783,7 @@ val fresh_equivariant = store_thm(
   `~(perm_of (REVERSE pi) b IN supp (fnpm perm_of pm) f)`
      by (POP_ASSUM MP_TAC THEN SRW_TAC [][perm_supp, perm_IN]) THEN
   `fresh pm (fnpm perm_of pm pi f) = fnpm perm_of pm pi f b`
-     by METIS_TAC [fresh_def] THEN
-  SRW_TAC [][fnpm_def, is_perm_injective, GSYM fresh_def]);
+     by METIS_TAC [fresh_thm] THEN
+  SRW_TAC [][fnpm_def, is_perm_injective, GSYM fresh_thm]);
 
 val _ = export_theory();
