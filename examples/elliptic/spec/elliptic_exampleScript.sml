@@ -50,9 +50,6 @@ val Suff = Q_TAC SUFF_TAC;
 (* Extensions to HOL theories to define the ex_ constants.                   *)
 (* ------------------------------------------------------------------------- *)
 
-val word_mod_def = Define
-  `word_mod a b = a - (b * word_div a b)`;
-
 val w2n_lsr = store_thm ("w2n_lsr",
   ``(w2n (w >>> m)) = (w2n w DIV 2**m)``,
   wordsLib.Cases_on_word `w`
@@ -136,9 +133,27 @@ val ex1_field_sub_def = Define
   `ex1_field_sub (x : word32, y : word32) =
    ex1_field_add (x, ex1_field_neg y)`;
 
+val (ex1_field_mult_aux_def,ex1_field_mult_aux_ind) = Defn.tprove
+  (Hol_defn "ex1_field_mult_aux"
+   `ex1_field_mult_aux (x : word32, y : word32, acc : word32) =
+    if y = 0w then acc
+    else
+      let x' = ex1_field_add (x,x) in
+      let y' = y >>> 1 in
+      let acc' = if y && 1w = 0w then acc else ex1_field_add (acc,x) in
+      ex1_field_mult_aux (x',y',acc')`,
+   WF_REL_TAC `measure (\(x,y,a). w2n y)`
+   ++ RW_TAC arith_ss [w2n_lsr]
+   ++ Know `~(w2n y = 0)` >> METIS_TAC [n2w_w2n]
+   ++ Q.SPEC_TAC (`w2n y`,`n`)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ RW_TAC arith_ss []
+   ++ Know `2 * (n DIV 2) <= n`
+   >> PROVE_TAC [TWO, ellipticTheory.DIV_THEN_MULT]
+   ++ DECIDE_TAC);
+
 val ex1_field_mult_def = Define
-  `ex1_field_mult (x : word32, y : word32) =
-   word_mod (x * y) (ex1_prime)`;
+  `ex1_field_mult (x : word32, y : word32) = ex1_field_mult_aux (x,y,0w)`;
 
 val (ex1_field_exp_aux_def,ex1_field_exp_aux_ind) = Defn.tprove
   (Hol_defn "ex1_field_exp_aux"
