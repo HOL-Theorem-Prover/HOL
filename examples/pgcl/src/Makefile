@@ -5,8 +5,13 @@
 
 HOLMAKE = Holmake
 
+.PHONY: all
 all:
 	$(HOLMAKE) --qof
 
+.PHONY: clean
 clean:
 	$(HOLMAKE) cleanAll
+
+.PHONY: world
+world: clean all
