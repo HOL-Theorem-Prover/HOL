@@ -686,29 +686,28 @@ val supp_perm_of = store_thm(
     SRW_TAC [][swapstr_def]
   ]);
 
+val support_FINITE_supp = store_thm(
+  "support_FINITE_supp",
+  ``is_perm pm /\ support pm v A /\ FINITE A ==> FINITE (supp pm v)``,
+  METIS_TAC [supp_smallest, SUBSET_FINITE]);
+
+val support_fnapp = store_thm(
+  "support_fnapp",
+  ``is_perm dpm /\ is_perm rpm /\
+    support (fnpm dpm rpm) f A /\ support dpm d B ==>
+    support rpm (f d) (A UNION B)``,
+  SRW_TAC [][support_def] THEN
+  `rpm [(x,y)] (f d) = fnpm dpm rpm [(x,y)] f (dpm [(x,y)] d)`
+     by SRW_TAC [][fnpm_def] THEN
+  SRW_TAC [][]);
+
 val supp_fnapp = store_thm(
   "supp_fnapp",
   ``is_perm dpm /\ is_perm rpm /\ FINITE (supp (fnpm dpm rpm) f) /\
-    FINITE (supp rpm (f x)) /\ FINITE (supp dpm x) ==>
+    FINITE (supp dpm x) ==>
     supp rpm (f x) SUBSET supp (fnpm dpm rpm) f UNION supp dpm x``,
-  REPEAT STRIP_TAC THEN ASM_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
-  Q.X_GEN_TAC `a` THEN
-  SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-  `?b. ~(b IN supp (fnpm dpm rpm) f) /\ ~(b IN supp dpm x) /\
-       ~(b IN supp rpm (f x))`
-     by (Q.SPEC_THEN `supp (fnpm dpm rpm) f UNION
-                      supp dpm x UNION supp rpm (f x)`
-                     MP_TAC NEW_def THEN
-         SRW_TAC [][] THEN METIS_TAC []) THEN
-  `~(rpm [(a,b)] (f x) = f x)` by METIS_TAC [supp_apart] THEN
-  `fnpm dpm rpm [(a,b)] f = f`
-     by METIS_TAC [supp_supports, support_def, fnpm_is_perm] THEN
-  `f x = rpm [(a,b)] (f (dpm [(a,b)] x))`
-     by (`REVERSE [(a,b)] = [(a,b)]` by SRW_TAC [][] THEN
-         METIS_TAC [fnpm_def]) THEN
-  `dpm [(a,b)] x = x` by METIS_TAC [supp_supports, support_def] THEN
-  METIS_TAC []);
-
+  METIS_TAC [supp_smallest, FINITE_UNION, supp_supports, fnpm_is_perm,
+             support_fnapp]);
 
 val fcond_def = Define`
   fcond pm f = is_perm pm /\ FINITE (supp (fnpm perm_of pm) f) /\
@@ -722,15 +721,6 @@ val fcond_equivariant = Store_Thm(
                                   perm_IN, perm_FINITE] THEN
   METIS_TAC [is_perm_inverse, perm_of_is_perm]);
 
-val support_fnapp = store_thm(
-  "support_fnapp",
-  ``is_perm dpm /\ is_perm rpm /\
-    support (fnpm dpm rpm) f A /\ support dpm d B ==>
-    support rpm (f d) (A UNION B)``,
-  SRW_TAC [][support_def] THEN
-  `rpm [(x,y)] (f d) = fnpm dpm rpm [(x,y)] f (dpm [(x,y)] d)`
-     by SRW_TAC [][fnpm_def] THEN
-  SRW_TAC [][]);
 
 val freshness_lemma0 = prove(
   ``?z.
