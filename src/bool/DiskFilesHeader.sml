@@ -67,17 +67,14 @@ in
 end
 
 fun convert_prethms (ids, types, atoms, named_ths) = let
-  val _ = print "Building tables ... "
   val types = Binarymap.foldl (convert_pretype ids)
                               (Binarymap.mkDict Int.compare)
                               types
   val atoms = Binarymap.foldl (convert_atom (ids, types))
                               (Binarymap.mkDict Int.compare)
                               atoms
-  val _ = print "done\nNow making theorems ... "
 in
-  map (fn (s, pth) => (s, convert_thm(atoms, pth))) named_ths before
-  print "done\n"
+  map (fn (s, pth) => (s, convert_thm(atoms, pth))) named_ths 
 end
 
 
