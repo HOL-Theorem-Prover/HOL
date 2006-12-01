@@ -1,19 +1,17 @@
 signature DiskFilesHeader =
 sig
 
-  type dftables
-  val initial_tables : unit -> dftables
+type id = {Thy:string,Name:string}
 
-  val type_init : dftables -> int -> unit
-  val lookup_type : dftables -> int -> Type.hol_type
-  val newtype : Type.hol_type -> dftables -> unit
+datatype pretype = ptv of string | ptop of int * int list
+datatype pre_vc = ptm_v of string * int | ptm_c of int * int
+datatype preterm = app of preterm * preterm | abs of int * preterm
+                 | atom of int
+type prethm = preterm list * preterm
+type 'a array = (int,'a)Binarymap.dict
+type parse_result =
+     id array * pretype array * pre_vc array * (string * prethm) list
 
-  val term_init : dftables -> int -> unit
-  val lookup_term : dftables -> int -> Term.term
-  val newterm : dftables -> Term.term -> unit
-
-  val id_init : dftables -> int -> unit
-  val lookup_id : dftables -> int -> {Thy:string,Other:string}
-  val newid : dftables -> {Thy:string,Other:string} -> unit
+val convert_prethms : parse_result -> (string * HolKernel.thm) list
 
 end

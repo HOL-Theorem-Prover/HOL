@@ -1,32 +1,38 @@
 open DiskFilesHeader HolKernel
+
+fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+
+type result = (id array *
+               pretype array *
+               pre_vc array *
+               (string * prethm) list)
+
 %%
 %name DiskFiles
-%arg (dftables) : dftables
 %keyword IDS TYPES TERMS THEOREMS
 
-%nonterm begin of (string * thm) list
-       | theoryfile of (string * thm) list
-       | ids_section of unit
-       | idpair_list
-       | idpair
-       | types_section
+%nonterm theoryfile of result
+       | ids_section of (int,id)Binarymap.dict
+       | idpair_list of (int,id)Binarymap.dict
+       | idpair of id
+       | types_section of (int,pretype)Binarymap.dict
        | tysize_spec
        | tmsize_spec
        | idsize_spec
-       | typedecl_list
-       | typedecl
+       | typedecl_list of (int,pretype)Binarymap.dict
+       | typedecl of pretype
        | intlist_ne of int list
-       | terms_section
-       | termdecl_list
-       | termdecl
-       | theorems of (string * thm) list
-       | namethm_list of (string * thm) list
-       | namethm of (string * thm)
-       | term of term
-       | term_a of term
-       | term_c of term
-       | base_term of term
-       | termlist of term list
+       | terms_section of (int,pre_vc)Binarymap.dict
+       | termdecl_list of (int,pre_vc)Binarymap.dict
+       | termdecl of pre_vc
+       | theorems of (string * prethm) list
+       | namethm_list of (string * prethm) list
+       | namethm of (string * prethm)
+       | term of preterm
+       | term_a of preterm
+       | term_c of preterm
+       | base_term of preterm
+       | termlist of preterm list
        | tmid of int
 
 
@@ -40,66 +46,61 @@ open DiskFilesHeader HolKernel
 %pos int
 %noshift EOF
 %verbose
+%pure
 
-%start begin
+%start theoryfile
 
 %%
-begin : theoryfile (theoryfile)
+theoryfile : ids_section types_section terms_section theorems
+                (ids_section, types_section, terms_section, theorems)
 
-theoryfile : ids_section types_section terms_section theorems (theorems)
+ids_section : IDS idsize_spec idpair_list (idpair_list)
 
-ids_section : IDS idsize_spec idpair_list ()
+idsize_spec : NUMBER ()
 
-idsize_spec : NUMBER (id_init dftables NUMBER)
+idpair_list : (Binarymap.mkDict Int.compare)
+            | idpair_list idpair
+                 (Binarymap.insert(idpair_list, Binarymap.numItems idpair_list,
+                                   idpair))
 
-idpair_list : ()
-            | idpair idpair_list ()
+idpair : ID DOLLAR ID ( {Thy = ID1, Name = ID2 }  )
 
-idpair : ID DOLLAR ID ( newid dftables {Thy = ID1, Other = ID2 }  )
+types_section : TYPES tysize_spec typedecl_list (typedecl_list)
 
-types_section : TYPES tysize_spec typedecl_list ()
+tysize_spec : NUMBER ()
 
-tysize_spec : NUMBER (type_init dftables NUMBER)
+typedecl_list : (Binarymap.mkDict Int.compare)
+              | typedecl_list typedecl
+                  (Binarymap.insert(typedecl_list,
+                                    Binarymap.numItems typedecl_list,
+                                    typedecl))
 
-typedecl_list : ()
-              | typedecl typedecl_list ()
-
-typedecl : TYV ID (newtype (mk_vartype ID) dftables)
+typedecl : TYV ID (ptv ID)
          | TYOP LBRACKET intlist_ne RBRACKET
-              (let val {Thy,Other} = lookup_id dftables (hd intlist_ne)
-                   val args = map (lookup_type dftables) (tl intlist_ne)
-               in
-                 newtype (mk_thy_type{Thy = Thy, Tyop = Other, Args = args})
-                         dftables
-               end)
+              (ptop (hd intlist_ne, tl intlist_ne))
 
 intlist_ne : NUMBER ([NUMBER])
            | NUMBER intlist_ne (NUMBER::intlist_ne)
 
-terms_section : TERMS tmsize_spec termdecl_list ()
+terms_section : TERMS tmsize_spec termdecl_list (termdecl_list)
 
-tmsize_spec : NUMBER (term_init dftables NUMBER)
+tmsize_spec : NUMBER ()
 
-termdecl_list : () | termdecl termdecl_list ()
+termdecl_list : (Binarymap.mkDict Int.compare)
+              | termdecl_list termdecl
+                   (Binarymap.insert(termdecl_list,
+                                     Binarymap.numItems termdecl_list,
+                                     termdecl))
 
-termdecl : TMV LBRACKET ID NUMBER RBRACKET
-             (let val ty = lookup_type dftables NUMBER
-              in
-                  newterm dftables (mk_var(ID, ty))
-              end)
+termdecl : TMV LBRACKET ID NUMBER RBRACKET (ptm_v(ID, NUMBER))
          | TMC LBRACKET NUMBER NUMBER RBRACKET
-             (let val {Thy,Other} = lookup_id dftables NUMBER1
-                  val ty = lookup_type dftables NUMBER2
-              in
-                  newterm dftables (mk_thy_const{Thy = Thy, Name = Other,
-                                                 Ty = ty})
-              end)
+             (ptm_c(NUMBER1, NUMBER2))
 
 theorems : THEOREMS namethm_list (namethm_list)
 
 namethm_list : ([]) | namethm namethm_list (namethm :: namethm_list)
 
-namethm : ID termlist ((ID, mk_thm(tl termlist, hd termlist)))
+namethm : ID termlist ((ID, (tl termlist, hd termlist)))
 
 termlist : term ([term])
          | term termlist (term :: termlist)
@@ -107,14 +108,14 @@ termlist : term ([term])
 term : LPAREN term_a RPAREN (term_a)
 
 term_a :
-   BACKSLASH tmid FULLSTOP term_a (mk_abs(lookup_term dftables tmid, term_a))
+   BACKSLASH tmid FULLSTOP term_a (abs(tmid, term_a))
  | term_c (term_c)
 
-term_c : term_c base_term (mk_comb(term_c, base_term))
+term_c : term_c base_term (app(term_c, base_term))
        | base_term (base_term)
 
 base_term : LPAREN term_a RPAREN (term_a)
-          | tmid (lookup_term dftables tmid)
+          | tmid (atom tmid)
 
 tmid :  NUMBER (NUMBER)
 

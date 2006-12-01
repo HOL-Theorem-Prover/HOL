@@ -13,25 +13,24 @@ struct
           structure Lex = DiskFilesLex
           structure LrParser = LrParser)
 
-  fun invoke tabs lexstream = let
+  fun invoke lexstream = let
     fun print_error (s,i:int,_) =
         TextIO.output(TextIO.stdErr, Int.toString i ^ ": " ^ s ^ "\n")
   in
-    #1 (DiskFileParser.parse(15,lexstream,print_error,tabs))
+    #1 (DiskFileParser.parse(15,lexstream,print_error,()))
   end
 
-  fun read_stream strm = let
-    val tables = DiskFilesHeader.initial_tables()
+  fun raw_read_stream strm = let
     val lexer = DiskFileParser.makeLexer (fn _ => TextIO.inputLine strm)
     val _ = DiskFilesLex.UserDeclarations.pos := 1
   in
-    invoke tables lexer
+    invoke lexer
   end
 
-  fun read_file fname = let
+  fun raw_read_file fname = let
     val strm = TextIO.openIn fname
   in
-    read_stream strm before TextIO.closeIn strm
+    raw_read_stream strm before TextIO.closeIn strm
   end
 
 

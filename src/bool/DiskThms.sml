@@ -206,7 +206,9 @@ struct
     write_stream outstream named_thms before TextIO.closeOut outstream
   end
 
-  val read_file = AssembleDiskFiles.read_file
-  val read_stream = AssembleDiskFiles.read_stream
+  val read_file = DiskFilesHeader.convert_prethms o
+                  AssembleDiskFiles.raw_read_file
+  val read_stream =
+      DiskFilesHeader.convert_prethms o AssembleDiskFiles.raw_read_stream
 
 end (* struct *)

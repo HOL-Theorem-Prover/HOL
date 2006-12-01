@@ -1,30 +1,86 @@
 structure DiskFilesHeader :> DiskFilesHeader =
 struct
+
 open HolKernel
-type 'a updtable = { size : int ref, table : 'a array ref }
-fun init {size,table} (dflt, n) = (size := 0; table := Array.array(n,dflt))
-fun update {size,table} value = (Array.update(!table,!size,value);
-                                 size := !size + 1)
-fun lookup {size,table} i = Array.sub(!table,i)
-fun new() = {size = ref 0, table = ref (Array.fromList [])}
+
+type id = {Thy:string,Name:string}
+
+datatype pretype = ptv of string | ptop of int * int list
+datatype pre_vc = ptm_v of string * int | ptm_c of int * int
+datatype preterm = app of preterm * preterm | abs of int * preterm
+                 | atom of int
+type prethm = preterm list * preterm
+type 'a array = (int,'a)Binarymap.dict
+type parse_result =
+     id array * pretype array * pre_vc array * (string * prethm) list
+
+infix !
+fun (a ! n) = Binarymap.find (a, n)
+
+fun push (a, item) = Binarymap.insert(a, Binarymap.numItems a, item)
+
+fun convert_pretype (ids : id array) (k, prety, acc : hol_type array) = let
+  val result =
+      case prety of
+        ptv s => mk_vartype s
+      | ptop (opnum, arglist) => let
+          val {Thy,Name} = ids ! opnum
+          val args = map (fn n => acc ! n) arglist
+        in
+          mk_thy_type { Args = args, Thy = Thy, Tyop = Name }
+        end
+in
+  push(acc, result)
+end
+
+fun convert_atom
+      (ids : id array, types : hol_type array)
+      (k, pre_atom, acc : term array)
+  = let
+    val result =
+        case pre_atom of
+          ptm_v (s, tyn) => mk_var(s, types ! tyn)
+        | ptm_c (idn, tyn) => let
+            val {Thy,Name} = ids ! idn
+            val ty = types ! tyn
+          in
+            mk_thy_const {Thy = Thy, Name = Name, Ty = ty}
+          end
+  in
+    push(acc, result)
+  end
+
+fun convert_term (atoms : term array, pre_term) = let
+  fun c t = convert_term(atoms, t)
+in
+  case pre_term of
+    app(t1, t2) => mk_comb(c t1, c t2)
+  | abs(an, t) => mk_abs(atoms ! an, c t)
+  | atom i => atoms ! i
+end
+
+fun convert_thm (atoms : term array, (h,c)) = let
+  val hyps = map (fn pt => convert_term (atoms, pt)) h
+  val c_t = convert_term (atoms, c)
+in
+  mk_thm(hyps, c_t)
+end
+
+fun convert_prethms (ids, types, atoms, named_ths) = let
+  val _ = print "Building tables ... "
+  val types = Binarymap.foldl (convert_pretype ids)
+                              (Binarymap.mkDict Int.compare)
+                              types
+  val atoms = Binarymap.foldl (convert_atom (ids, types))
+                              (Binarymap.mkDict Int.compare)
+                              atoms
+  val _ = print "done\nNow making theorems ... "
+in
+  map (fn (s, pth) => (s, convert_thm(atoms, pth))) named_ths before
+  print "done\n"
+end
 
 
-datatype dftables = DF of { idtable : {Thy:string,Other:string} updtable,
-                            tytable : hol_type updtable,
-                            tmtable : term updtable }
 
-fun type_init (DF t) n = init (#tytable t) (Type.alpha, n)
-fun lookup_type (DF t) i = lookup (#tytable t) i
-fun newtype ty (DF t) = update (#tytable t) ty
-
-fun term_init (DF t) n = init (#tmtable t) (mk_var("ERR", alpha), n)
-fun lookup_term (DF t) i = lookup (#tmtable t) i
-fun newterm (DF t) tm = update (#tmtable t) tm
-
-fun id_init (DF t) n = init (#idtable t) ({Thy="",Other=""}, n)
-fun lookup_id (DF t) i = lookup (#idtable t) i
-fun newid (DF t) id = update (#idtable t) id
-
-fun initial_tables() = DF {idtable = new(), tytable = new(), tmtable = new()}
 
 end;
