@@ -24,20 +24,27 @@ that the functions defined are equivalent to those in ACL2. The
 variables acl2_executable and acl2_test_file point to the locations
 of the acl2 executable and script file.
 
-The role of defaxiomsTheory is to define goals that are proved in the
-theories hol_defaxiomsTheory and hol_defaxioms_proofsTheory.  It
-contains ACL2-tagged theorems cretated by slurping in the ACL2
-generated file lisp/defaxioms.lisp.trans.ml, so its soundness relies
-on that of ACL2 and the linking infrastructure. In contrast,
-hol_defaxiomsTheory is a pure HOL theory. It defines a subset of the
-constants in defaxiomsTheory (namely those constants occurring in
-axioms), and hol_defaxioms_proofsTheory has pure HOL proofs of the
-axioms (currently incomplete).
+The role of defaxiomsTheory, which is built by Holmake (see
+Holmakefile), is for round-trip testing (see below) and to generate
+goals that are then properly proved in the theories
+hol_defaxiomsTheory and hol_defaxioms_proofsTheory.  It contains
+ACL2-tagged theorems created by slurping in the ACL2 generated file
+lisp/defaxioms.lisp.trans.ml, so its soundness relies on that of ACL2
+and the linking infrastructure. In contrast, hol_defaxiomsTheory is a
+pure HOL theory. It defines a subset of the constants in
+defaxiomsTheory (namely those constants occurring in axioms), and
+hol_defaxioms_proofsTheory has pure HOL proofs of the axioms.
 
-To print out defaxioms as ACL2 (for round-trip testing), run hol and do:
+For round-trip testing (i.e. check infrastructure for transferring
+S-expressions between HOL and ACL2 on concrete examples), run hol and
+do:
 
  load "defaxiomsTheory"; 
  sexp.print_imported_acl2_theorems "defaxioms" "defaxioms.roundtrip";
+
+Not that defaxiomsTheory contains values of type thm that are not
+proved in HOL, but created using mk_oracle_thm from data imported
+from ACL2.
 
 To simplify the proved defaxioms (using the rewrites shown below) and
 then print them into a file defaxioms.prove.lisp, run hol and do:
@@ -64,5 +71,5 @@ To slurp in "examples/encap/example.ml" do:
 
 Mike Gordon
 16 Dec, 2005
-09 Oct, 2006
+01 Dec, 2006
 
