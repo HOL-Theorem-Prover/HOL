@@ -331,9 +331,8 @@ fun term_to_ML openthys side ppstrm =
   and pp_lets i tm = (* a sequence of lets *)
       let val (blists,body) = !strip_let_hook tm
           fun keyword1 (l,r) = ((if is_fn_app l then "fun" else "val"),(l,r))
-          fun keyword2 (l,r) = ("and",(l,r))
           fun keyword [] = raise ERR "term_to_ML" "pp_lets"
-            | keyword(h::t) = keyword1(h)::map keyword2 t
+            | keyword l = map keyword1 l
           val blist' = flatten (map keyword blists)
           fun pp_binding (k,(l,r)) =
                (begin_block INCONSISTENT 4;
