@@ -87,6 +87,13 @@ fun mk_literal_case (func,arg) =
 
 fun mk_arb ty = inst [alpha |-> ty] arb;
 
+fun mk_icomb(t1, t2) = let
+  val (dom,rng) = dom_rng (type_of t1)
+  val i = match_type dom (type_of t2)
+in
+  mk_comb(inst i t1, t2)
+end
+
 
 (*--------------------------------------------------------------------------*
  *                Destructors                                               *
@@ -95,6 +102,7 @@ fun mk_arb ty = inst [alpha |-> ty] arb;
 local val dest_eq_ty_err    = ERR "dest_eq(_ty)"      "not an \"=\""
       val lhs_err           = ERR "lhs"               "not an \"=\""
       val rhs_err           = ERR "rhs"               "not an \"=\""
+      val lhand_err         = ERR "lhand"             "not a binary comb"
       val dest_imp_err      = ERR "dest_imp"          "not an \"==>\""
       val dest_cond_err     = ERR "dest_cond"         "not a conditional"
       val bool_case_err     = ERR "dest_bool_case"    "not a \"bool_case\""
@@ -104,6 +112,8 @@ val dest_eq       = dest_binop equality dest_eq_ty_err
 fun dest_eq_ty M  = let val (l,r) = dest_eq M in (l, r, type_of l) end
 fun lhs M         = with_exn (fst o dest_eq) M lhs_err
 fun rhs M         = with_exn (snd o dest_eq) M rhs_err
+fun lhand M       = with_exn (rand o rator) M lhand_err
+
 val dest_neg      = dest_monop negation (ERR "dest_neg" "not a negation")
 val dest_imp_only = dest_binop implication dest_imp_err;
 fun dest_imp M    = dest_imp_only M
@@ -164,11 +174,14 @@ val is_the_value    = same_const the_value
 
 val list_mk_comb     = HolKernel.list_mk_comb
 val list_mk_abs      = HolKernel.list_mk_abs
+
 val list_mk_forall   = list_mk_binder (SOME universal)
 val list_mk_exists   = list_mk_binder (SOME existential)
 val list_mk_conj     = list_mk_rbinop (curry mk_conj)
 val list_mk_disj     = list_mk_rbinop (curry mk_disj)
 fun list_mk_imp(A,c) = list_mk_rbinop (curry mk_imp) (A@[c]);
+
+fun list_mk_icomb(f,args) = List.foldl (fn (a,t) => mk_icomb (t,a)) f args
 
 val strip_comb       = HolKernel.strip_comb
 val strip_abs        = HolKernel.strip_abs
