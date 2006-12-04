@@ -57,6 +57,11 @@ open compile;
 (* The results of hwDefine2 are stored in an reference hwDefineLib2.         *)
 (*---------------------------------------------------------------------------*)
 val hwDefineLib2 = ref([] : (thm * thm * thm * thm * thm) list);
+val terminationTheorems = ref([]: thm list);
+
+fun addTerminationTheorems th = (terminationTheorems := th::(!terminationTheorems));
+
+val _ = addTerminationTheorems wordsTheory.WORD_PRED_THM;
 
 fun hwDefine2 defq =
  let val absyn0 = Parse.Absyn defq
@@ -77,7 +82,7 @@ fun hwDefine2 defq =
             THEN CONJ_TAC
                        THENL [TotalDefn.WF_TAC, 
                               TotalDefn.TC_SIMP_TAC 
-                              THEN (PROVE_TAC[wordsTheory.WORD_PRED_THM])]
+                              THEN (PROVE_TAC (!terminationTheorems))]
             val (defth,ind) = Defn.tprove(defn, tac)
             val (lt,rt) = boolSyntax.dest_eq(concl defth)
             val (func,args) = dest_comb lt
@@ -90,7 +95,7 @@ fun hwDefine2 defq =
                      RW_TAC std_ss [TOTAL_def,pairTheory.FORALL_PROD]
                       THEN EXISTS_TAC typedf
                       THEN TotalDefn.TC_SIMP_TAC
-                      THEN (PROVE_TAC[wordsTheory.WORD_PRED_THM])) 
+                      THEN (PROVE_TAC (!terminationTheorems))) 
             val devth = PURE_REWRITE_RULE [GSYM DEV_IMP_def]
                                  (RecCompileConvert defth totalth)
         in

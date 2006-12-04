@@ -1254,7 +1254,7 @@ fun EXISTS_OUT_CONV t =
      val t3        = (*time*) list_mk_exists (vl2, t2)
      val th        = (*time*) 
                       mk_oracle_thm (* YIKES! -- what's this!!! *)
-                      (Tag.read "EXISTS_OUT_CONV")([],mk_eq(t,t3))
+                      "EXISTS_OUT_CONV" ([],mk_eq(t,t3))
  in
   th
  end;
