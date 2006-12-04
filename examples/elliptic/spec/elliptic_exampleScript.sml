@@ -294,10 +294,108 @@ val ex1_elgamal_encrypt_def = Define
    let (b_x,b_y) = ex1_curve_add (t_x,t_y,m_x,m_y) in
    (a_x,a_y,b_x,b_y)`;
 
-val elgamal_decrypt_def = Define
-  `elgamal_decrypt (a_x,a_y,b_x,b_y) =
+val ex1_elgamal_decrypt_def = Define
+  `ex1_elgamal_decrypt (a_x,a_y,b_x,b_y) =
    let (t_x,t_y) = ex1_curve_neg (ex1_curve_mult (a_x,b_x,ex1_elgamal_x)) in
    ex1_curve_add (t_x,t_y,b_x,b_y)`;
+
+(* ------------------------------------------------------------------------- *)
+(* The first stage of compiling is to propagate all constants, especially to *)
+(* eliminate HOL types that are not just tuples of word32s.                  *)
+(* ------------------------------------------------------------------------- *)
+
+val ex1_constant_propagation =
+    SIMP_RULE
+      (simpLib.++ (boolSimps.bool_ss,
+                   numSimps.REDUCE_ss))
+      [curve_a1,
+       curve_a2,
+       curve_a3,
+       curve_a4,
+       curve_a6,
+       affine_case,
+       curve_mult_def,
+       example1_prime_def,
+       example1_field_def,
+       example1_curve_def,
+       example1_elgamal_g_def,
+       example1_elgamal_x_def,
+       example1_elgamal_h_def,
+       ex1_prime_def,
+       ex1_field_elt_def,
+       ex1_field_num_def,
+       ex1_curve_point_def,
+       ex1_elgamal_g_x,
+       ex1_elgamal_g_y,
+       ex1_elgamal_h_x,
+       ex1_elgamal_h_y,
+       ex1_elgamal_x,
+       ex1_field_zero_def,
+       ex1_curve_zero_def];
+
+val ex1_field_neg_alt = save_thm
+  ("ex1_field_neg_alt",
+   ex1_constant_propagation ex1_field_neg_def);
+
+val ex1_field_add_alt = save_thm
+  ("ex1_field_add_alt",
+   ex1_constant_propagation ex1_field_add_def);
+
+val ex1_field_sub_alt = save_thm
+  ("ex1_field_sub_alt",
+   ex1_constant_propagation ex1_field_sub_def);
+
+val ex1_field_mult_aux_alt = save_thm
+  ("ex1_field_mult_aux_alt",
+   ex1_constant_propagation ex1_field_mult_aux_def);
+
+val ex1_field_mult_alt = save_thm
+  ("ex1_field_mult_alt",
+   ex1_constant_propagation ex1_field_mult_def);
+
+val ex1_field_exp_aux_alt = save_thm
+  ("ex1_field_exp_aux_alt",
+   ex1_constant_propagation ex1_field_exp_aux_def);
+
+val ex1_field_exp_alt = save_thm
+  ("ex1_field_exp_alt",
+   ex1_constant_propagation ex1_field_exp_def);
+
+val ex1_field_inv_alt = save_thm
+  ("ex1_field_inv_alt",
+   ex1_constant_propagation ex1_field_inv_def);
+
+val ex1_field_div_alt = save_thm
+  ("ex1_field_div_alt",
+   ex1_constant_propagation ex1_field_div_def);
+
+val ex1_curve_neg_alt = save_thm
+  ("ex1_curve_neg_alt",
+   ex1_constant_propagation ex1_curve_neg_def);
+
+val ex1_curve_double_alt = save_thm
+  ("ex1_curve_double_alt",
+   ex1_constant_propagation ex1_curve_double_def);
+
+val ex1_curve_add_alt = save_thm
+  ("ex1_curve_add_alt",
+   ex1_constant_propagation ex1_curve_add_def);
+
+val ex1_curve_mult_aux_alt = save_thm
+  ("ex1_curve_mult_aux_alt",
+   ex1_constant_propagation ex1_curve_mult_aux_def);
+
+val ex1_curve_mult_alt = save_thm
+  ("ex1_curve_mult_alt",
+   ex1_constant_propagation ex1_curve_mult_def);
+
+val ex1_elgamal_encrypt_alt = save_thm
+  ("ex1_elgamal_encrypt_alt",
+   ex1_constant_propagation ex1_elgamal_encrypt_def);
+
+val ex1_elgamal_decrypt_alt = save_thm
+  ("ex1_elgamal_decrypt_alt",
+   ex1_constant_propagation ex1_elgamal_decrypt_def);
 
 (* ========================================================================= *)
 (* A multiword elliptic curve example to be compiled.                        *)
