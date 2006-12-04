@@ -1349,28 +1349,96 @@ val sexp_to_num_less =
      |- natp x = andl [integerp x; not (less x (nat 0))],
 *)
 
+val natp_def =
+ acl2Define "ACL2::NATP"
+  `natp x = andl [integerp x; not (less x (nat 0))]`;
+
 (*
      [oracles: DEFUN ACL2::POSP, DISK_THM] [axioms: ] []
      |- posp x = andl [integerp x; less (nat 0) x],
 *)
 
+val posp_def =
+ acl2Define "ACL2::POSP"
+  `posp x = andl [integerp x; less (nat 0) x]`;
+
 (*
      [oracles: DEFUN ACL2::O-FINP] [axioms: ] [] |- o_finp x = atom x,
 *)
+
+val o_finp_def =
+ acl2Define "ACL2::O-FINP"
+  `o_finp x = atom x`;
 
 (*
      [oracles: DEFUN ACL2::O-FIRST-EXPT, DISK_THM] [axioms: ] []
      |- o_first_expt x = ite (o_finp x) (nat 0) (caar x),
 *)
 
+val o_first_expt_def =
+ acl2Define "ACL2::O-FIRST-EXPT"
+  `o_first_expt x = ite (o_finp x) (nat 0) (caar x)`;
+
+
+(*****************************************************************************)
+(* Tell system that o_first_expt decreases size                              *)
+(*****************************************************************************)
+val sexp_size_o_first_expt =
+ store_thm
+  ("sexp_size_o_first_expt",
+   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil) 
+         ==> 
+         (sexp_size (o_first_expt x) < sexp_size x)``,
+   Cases
+    THEN ACL2_SIMP_TAC[sexp_size_def]
+    THEN FULL_SIMP_TAC arith_ss [GSYM nil_def]
+    THEN METIS_TAC[sexp_size_car,DECIDE``m:num < n ==> !p. m < n+p``]);
+
+val _ = add_acl2_simps [sexp_size_o_first_expt];
+
 (*
      [oracles: DEFUN ACL2::O-FIRST-COEFF, DISK_THM] [axioms: ] []
      |- o_first_coeff x = ite (o_finp x) x (cdar x),
 *)
 
+val o_first_coeff_def =
+ acl2Define "ACL2::O-FIRST-COEFF"
+  `o_first_coeff x = ite (o_finp x) x (cdar x)`;
+
+(*****************************************************************************)
+(* Tell system that o_first_coeff decreases size                             *)
+(*****************************************************************************)
+val sexp_size_o_first_coeff =
+ store_thm
+  ("sexp_size_o_first_coeff",
+   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil) 
+         ==> 
+         (sexp_size (o_first_coeff x) < sexp_size x)``,
+   Cases
+    THEN ACL2_SIMP_TAC[sexp_size_def]
+    THEN FULL_SIMP_TAC arith_ss [GSYM nil_def]
+    THEN METIS_TAC[sexp_size_cdr,DECIDE``m:num < n ==> !p. m < n+p``]);
+
+val _ = add_acl2_simps [sexp_size_o_first_coeff];
+
 (*
      [oracles: DEFUN ACL2::O-RST] [axioms: ] [] |- o_rst x = cdr x,
 *)
+
+val o_rst_def =
+ acl2Define "ACL2::O-RST"
+  `o_rst x = cdr x`;
+
+(*****************************************************************************)
+(* Tell system that o_rest decreases size                                    *)
+(*****************************************************************************)
+val sexp_size_o_rst =
+ store_thm
+  ("sexp_size_o_rst",
+   ``!x. ~(consp x = nil) ==> (sexp_size (o_rst x) < sexp_size x)``,
+   ACL2_SIMP_TAC[]);
+
+val _ = add_acl2_simps [sexp_size_o_rst];
 
 (*
      [oracles: DEFUN ACL2::O<G, DISK_THM] [axioms: ] []
@@ -1403,6 +1471,63 @@ val sexp_to_num_less =
               not (eql (nat 0) (o_first_expt x)); posp (o_first_coeff x);
               o_p (o_rst x);
               o_less (o_first_expt (o_rst x)) (o_first_expt x)]),
+*)
+
+(* 
+Need help from a TFL expert for this. I suspect need to add
+something with more oomph than andl_CONG for Defn Base to exploit
+sexp_size_o_first_expt and sexp_size_o_rst
+
+acl2_tgoal  "ACL2::O-P"
+   `o_p x =
+     ite (o_finp x) (natp x)
+         (andl
+            [consp (car x); o_p (o_first_expt x);
+             not (eql (nat 0) (o_first_expt x)); posp (o_first_coeff x);
+             o_p (o_rst x);
+             o_less (o_first_expt (o_rst x)) (o_first_expt x)])`;
+
+> val it =
+    Initial goal:
+
+    ?R.
+      WF R /\ (!x. (o_finp x = nil) ==> R (o_first_expt x) x) /\
+      !x. (o_finp x = nil) ==> R (o_rst x) x
+
+     : goalstack
+
+- e(WF_REL_TAC `measure sexp_size`);
+OK..
+1 subgoal:
+> val it =
+    (!x. (o_finp x = nil) ==> sexp_size (o_first_expt x) < sexp_size x) /\
+    !x. (o_finp x = nil) ==> sexp_size (o_rst x) < sexp_size x
+
+     : goalstack
+
+- sexp_size_o_first_expt;
+> val it =
+    |- !x.
+         ~(consp x = nil) /\ ~(consp (car x) = nil) ==>
+         sexp_size (o_first_expt x) < sexp_size x : thm
+
+- sexp_size_o_rst;
+> val it = |- !x. ~(consp x = nil) ==> sexp_size (o_rst x) < sexp_size x : thm
+
+e(WF_REL_TAC `measure sexp_size`);
+
+val (o_p_def,o_p_ind) =
+ acl2_defn "ACL2::O-P"
+  (`o_p x =
+     ite (o_finp x) (natp x)
+         (andl
+            [consp (car x); o_p (o_first_expt x);
+             not (eql (nat 0) (o_first_expt x)); posp (o_first_coeff x);
+             o_p (o_rst x);
+             o_less (o_first_expt (o_rst x)) (o_first_expt x)])`,
+   WF_REL_TAC `measure sexp_size`
+    THEN ACL2_SIMP_TAC [o_finp_def]
+    THEN FULL_SIMP_TAC std_ss [GSYM nil_def]
 *)
 
 (*

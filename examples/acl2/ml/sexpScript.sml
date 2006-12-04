@@ -1498,37 +1498,6 @@ val itel_CONG2 =
 
 val _ = DefnBase.write_congs (itel_CONG1::itel_CONG2::DefnBase.read_congs());
 
-(*
-val ANDL_CONSP_CONG =
- store_thm
-  ("ANDL_CONSP_CONG",
-   ``!p q x x'.
-      (p = q) /\ (~(consp p = nil) ==> (x = x'))
-      ==>
-      (andl[consp p;x] = andl[consp q;x'])``,
-   Cases
-    THEN RW_TAC std_ss [andl_def,ite_def]
-    THEN FULL_SIMP_TAC std_ss
-          [andl_def,ite_def,ACL2_TRUE_def,consp_def,EVAL ``t=nil``]);
-
-val _ = DefnBase.write_congs (ANDL_CONSP_CONG::DefnBase.read_congs());
-
-val ANDL_ATOM_CONG =
- store_thm
-  ("ANDL_ATOM_CONG",
-   ``!p q x x'.
-      (p = q) /\ (~(atom p = nil) ==> (x = x'))
-      ==>
-      (andl[atom p;x] = andl[atom q;x'])``,
-   Cases
-    THEN RW_TAC std_ss [andl_def,ite_def]
-    THEN FULL_SIMP_TAC std_ss
-          [not_def,andl_def,ite_def,ACL2_TRUE_def,atom_def,consp_def,
-           EVAL ``t=nil``]);
-
-val _ = DefnBase.write_congs (ANDL_ATOM_CONG::DefnBase.read_congs());
-*)
-
 val andl_CONG =
  store_thm
   ("andl_CONG",
