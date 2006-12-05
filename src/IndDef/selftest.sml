@@ -120,6 +120,15 @@ val (u3_rules, u3_ind, u3_cases) = Hol_reln`
 val _ = checkhyps u3_rules
 val u3_strong = derive_strong_induction(u3_rules, u3_ind)
 
+(* single rule *)
+local open arithmeticTheory in end;
+val _ = print "*** Testing strong principle for singleton rule\n"
+val (single_rules, single_ind, single_cases) = Hol_reln`
+  (!x y. RTC single x y \/ (x = y + 3) ==> single x y)
+`;
+val _ = checkhyps single_rules
+
+val _ = derive_strong_induction(single_rules, single_ind)
 
 val _ = OS.Process.exit OS.Process.success
 
