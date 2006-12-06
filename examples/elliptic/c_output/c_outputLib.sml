@@ -74,6 +74,21 @@ fun add_consts t set =
 		in
 			set
 		end
+	else if (is_eq t) then
+		let
+			val (t1, t2) = dest_eq t;
+			val set = add_consts t1 set;
+			val set = add_consts t2 set;
+		in
+			set
+		end
+	else if (pairLib.is_pabs t) then
+		let
+			val (_, t) = pairLib.dest_pabs t;
+			val set = add_consts t set;
+		in
+			set
+		end
 	else if (is_comb t) then
 		let
 			val (t1, t2) = dest_comb t;
@@ -94,6 +109,10 @@ val known_consts_list = [
 	Term `($??):word32->word32->word32`,
 	Term `($=):word32->word32->bool`,
 	Term `($<):word32->word32->bool`,
+	Term `($<+):word32->word32->bool`,
+	Term `($/\):bool->bool->bool`,
+	Term `($\/):bool->bool->bool`,
+	Term `($~):bool->bool`,
 	Term `n2w:num->word32`
 ];
 
@@ -131,6 +150,7 @@ fun get_word_type n =
 		if (n = 1) then "word32" else
 		("word32_"^Int.toString n)
 	end
+fun get_signed_word_type () = "s_"^(get_word_type 1);
 
 fun c_get_word_type n =
 	if (n = 1) then ["typedef unsigned int "^(get_word_type n)^";"] else
@@ -144,6 +164,8 @@ fun c_get_word_type n =
 		[decl]@(indent_block acc_list)@[end_line]
 	end
 
+fun c_get_signed_word_type () =
+	["typedef signed int "^(get_signed_word_type ())^";"]
 
 val temp_var_count = ref 0;
 fun get_new_temp_var () =
@@ -183,7 +205,7 @@ fun translate_fun f argL =
 
 
 (*
-	val (exp, n) = (body, 1);
+	val (exp, n) = (true_exp, 1);
 *)
 
 fun translate_exp exp n =
@@ -218,18 +240,23 @@ fun translate_exp exp n =
 					val _ = syntax_error ((not (length args = 2)) orelse
 												((not (all (fn arg => (type_of arg = word_type)) args))))
 								("Unknown boolean function '"^(term_to_string exp)^"'!");
-					val operator = 
+					val (signed, operator) = 
 						if (same_const f boolSyntax.equality) then
-							"=="
+							(false, "==")
+						else if (f = ``($<+):word32->word32->bool``) then
+							(false, "<")
 						else if (f = ``($<):word32->word32->bool``) then
-							"<"
+							(true, "<")
 						else
-							(syntax_error true ("Unknown boolean function '"^(term_to_string exp)^"'!"); "");
+							(syntax_error true ("Unknown boolean function '"^(term_to_string exp)^"'!"); (false, ""));
 
 					val (inst1, arg1) = translate_exp (el 1 args) 1;
 					val (inst2, arg2) = translate_exp (el 2 args) 1;
+
+					val signed' = if signed then ("("^(get_signed_word_type ())^") ") else "";
+
 				in
-					(inst1@inst2, "("^(hd arg1)^" "^operator^" "^(hd arg2)^")")
+					(inst1@inst2, "("^signed'^(hd arg1)^" "^operator^" "^signed'^(hd arg2)^")")
 				end
 			else (syntax_error true "Unknown boolean expression!"; ([], ""));
 
@@ -257,6 +284,12 @@ fun translate_exp exp n =
 					translate_exp arg res_n
 				end
 
+		fun data_assingment var_name argL =
+			if ((length argL) = 1) then
+				([var_name^" = "^(hd argL)^";"])
+			else
+				map (fn (n,e) => var_name^".e"^(Int.toString n)^" = "^e^";") (enumerate 1 argL)
+
 	in
 		if ((wordsSyntax.is_n2w exp) orelse
 			 (numLib.is_numeral exp)) then
@@ -280,20 +313,20 @@ fun translate_exp exp n =
 				val decl = temp_type^" "^temp_var^";";
 
 				val (cond_inst, cond_exp') = translate_bool_exp cond_exp;
-				val (true_inst, true_exp') = translate_exp true_exp 1;
-				val (false_inst, false_exp') = translate_exp false_exp 1;
+				val (true_inst, true_exp') = translate_exp true_exp a;
+				val (false_inst, false_exp') = translate_exp false_exp a;
 
 				val if_1 = "if ("^cond_exp'^") {"
-				val if_1e = temp_var ^ " = "^(hd true_exp')^";"
+				val if_1e = data_assingment temp_var true_exp';
 				val if_2 = "} else {"
-				val if_2e = temp_var ^ " = "^(hd false_exp')^";"
+				val if_2e = data_assingment temp_var false_exp';
 				val if_3 = "}";
 
 				val expL = if (n=1) then [temp_var] else
 							(List.tabulate (n, fn n => temp_var^".e"^(Int.toString (n+1))))
 			in
-				(cond_inst@[decl]@([if_1]@(indent_block (true_inst@[if_1e]))@[if_2]@
-				 (indent_block (false_inst@[if_2e]))@[if_3]),
+				(cond_inst@[decl]@([if_1]@(indent_block (true_inst@if_1e))@[if_2]@
+				 (indent_block (false_inst@if_2e))@[if_3]),
 				 expL)
 			end
 		else if (pairLib.is_pair exp) then
@@ -303,7 +336,8 @@ fun translate_exp exp n =
 				val (args_insts, args_exp) = unzip expL';
 				val args_insts = List.concat args_insts;
 				val args_exp = List.concat args_exp;
-				val _ = syntax_error (not (length (args_exp) = n))
+				val _ = syntax_error ((not (length (args_exp) = n)) andalso
+											(not (n = 1)))
 								"Invalid arity!";
 			in
 				(args_insts, args_exp)
@@ -505,8 +539,14 @@ fun create_tests testL =
 								" == "^(el (n+1) ress_string) ^")")))
 					val condition = foldl (fn (s1, s2) => s1 ^ " & "^s2) "1" conditionL;
 
-					val error_message = "Test of '"^f_name^"("^args_s^")' failed!\\n";
-					val error_inst = "if (! ("^condition^")) printf(\""^(String.toCString error_message)^"\");"
+
+					val error_message = "Test of '"^f_name^"("^args_s^")' failed!\n";
+					val res_words = if (res_n) = 1 then [res_var] else
+											(List.tabulate (res_n, (fn n =>
+												res_var^".e"^(Int.toString (n+1)))));
+					val print_results = map (fn s=>"printf(\"- %ud\\n\", "^s^"); ") res_words; 
+
+					val error_inst = "if (! ("^condition^")) { printf(\""^(String.toCString error_message)^"\"); "^(String.concat print_results)^"};"
 				in
 					[fun_call,error_inst]
 				end
@@ -585,13 +625,13 @@ fun translate_to_c dirname filename defs rewrites main_fun tests =
 		val _ = max_used_word_type := 1;		
 	 	val (fun_decl, fun_defs) = unzip (map (fn (_, def) => translate_fun_to_c def) defs'');
 
-(*		val def = #2 (el 3 defs'');
+(*		val def = #2 (el 1 defs'');
 		translate_fun_to_c def;
 *)
 
 		val fun_defs = List.concat (map (fn l => l@["","",""]) fun_defs);
 
-		val word_type_defs = List.tabulate ((!max_used_word_type), fn n => c_get_word_type (n+1))
+		val word_type_defs = (c_get_signed_word_type()):: (List.tabulate ((!max_used_word_type), fn n => c_get_word_type (n+1)));
 		val word_type_defs = List.concat (map (fn l => l@[""]) word_type_defs);
 		
 		val auto_test = create_tests tests;
