@@ -86,20 +86,6 @@ fun cond_rewrs_conv ths =
       fn solver => FIRST_CONV (map (mk_conv solver) solver_convs)
     end;
 
-fun solver_conv_to_simpset_conv solver_conv =
-    let
-      val {name : string, key : term, conv : conv -> conv} = solver_conv
-      val key = SOME ([] : term list, key)
-      and conv = fn c => fn tms : term list => conv (c tms)
-      and trace = 2
-    in
-      {name = name, key = key, conv = conv, trace = trace}
-    end;
-
-(* ------------------------------------------------------------------------- *)
-(* Predicate subtype prover.                                                 *)
-(* ------------------------------------------------------------------------- *)
-
 local
   type cache = (term,thm) Binarymap.dict ref;
 
@@ -122,256 +108,13 @@ end;
 
 fun print_tac s goal = (print s; ALL_TAC goal);
 
-val ORACLE_algebra_dproc = ref false;
+(* ------------------------------------------------------------------------- *)
+(* Solver conversions.                                                       *)
+(* ------------------------------------------------------------------------- *)
 
-fun ORACLE_algebra_dproc_solver goal =
-    EQT_INTRO (mk_oracle_thm "algebra_dproc" ([],goal));
+type solver_conv = Conv.conv -> Conv.conv;
 
-type context_conv = {name : string, key : term, conv : conv -> conv};
-
-datatype context =
-    Context of {rewrites : thm list,
-                conversions :  context_conv list,
-                reductions : thm list,
-                judgements : thm list,
-                dproc_cache : (term,thm) Binarymap.dict ref};
-
-fun context_to_string context =
-    let
-      val Context {rewrites,conversions,reductions,judgements,...} = context
-      val rewrites = length rewrites
-      and conversions = length conversions
-      and reductions = length reductions
-      and judgements = length judgements
-    in
-      "<" ^
-      int_to_string rewrites ^ "r" ^ ", " ^
-      int_to_string conversions ^ "c" ^ ", " ^
-      int_to_string reductions ^ "r" ^ ", " ^
-      int_to_string judgements ^ "j" ^
-      ">"
-    end;
-
-val empty_context =
-    Context {rewrites = [], conversions = [],
-             reductions = [], judgements = [],
-             dproc_cache = cache_new ()};
-
-fun add_rewrite x context =
-    let
-      val Context {rewrites = r, conversions = c, reductions = d,
-                   judgements = j, dproc_cache = m} = context
-    in
-      Context {rewrites = r @ [x], conversions = c, reductions = d,
-               judgements = j, dproc_cache = ref (!m)}
-    end;
-
-fun add_conversion x context =
-    let
-      val Context {rewrites = r, conversions = c, reductions = d,
-                   judgements = j, dproc_cache = m} = context
-    in
-      Context {rewrites = r, conversions = c @ [x], reductions = d,
-               judgements = j, dproc_cache = ref (!m)}
-    end;
-
-fun add_reduction x context =
-    let
-      val Context {rewrites = r, conversions = c, reductions = d,
-                   judgements = j, dproc_cache = m} = context
-    in
-      Context {rewrites = r, conversions = c, reductions = d @ [x],
-               judgements = j, dproc_cache = ref (!m)}
-    end;
-
-fun add_judgement x context =
-    let
-      val Context {rewrites = r, conversions = c,reductions = d,
-                   judgements = j, dproc_cache = m} = context
-    in
-      Context {rewrites = r, conversions = c, reductions = d,
-               judgements = j @ [x], dproc_cache = ref (!m)}
-    end;
-
-local
-  exception State of
-    {assumptions : term list,
-     reductions : tactic list,
-     judgements : tactic list};
-
-  local
-    val abbrev_rule = prove
-        (``!v t. Abbrev (v = t) ==> (!s. t IN s ==> v IN s)``,
-         RW_TAC std_ss [markerTheory.Abbrev_def]);
-
-    fun reduce_tac th = match_tac th THEN REPEAT CONJ_TAC;
-
-    fun assume_reduction th (State {assumptions,reductions,judgements}) =
-        let
-(***
-          val () = (print "assume_reduction: "; print_thm th; print "\n")
-***)
-        in
-          State {assumptions = concl th :: assumptions,
-                 reductions = reduce_tac th :: reductions,
-                 judgements = judgements}
-        end
-      | assume_reduction _ _ = raise Fail "assume_reduction";
-
-    fun assume_judgement th (State {assumptions,reductions,judgements}) =
-        let
-(***
-          val () = (print "assume_judgement: "; print_thm th; print "\n")
-***)
-        in
-          State {assumptions = concl th :: assumptions,
-                 reductions = reductions,
-                 judgements = reduce_tac th :: judgements}
-        end
-      | assume_judgement _ _ = raise Fail "assume_judgement";
-  in
-    fun initial_state reductions judgements =
-        State {assumptions = [],
-               reductions = map reduce_tac reductions,
-               judgements = map reduce_tac judgements};
-
-    fun state_add (s,[]) = s
-      | state_add (s, th :: ths) =
-        let
-          val tm = concl th
-        in
-          if is_in tm then state_add (assume_reduction th s, ths)
-          else if is_abbrev tm then
-            state_add (assume_judgement (MATCH_MP abbrev_rule th) s, ths)
-          else if is_conj tm then state_add (s, CONJUNCTS th @ ths)
-          else state_add (s,ths)
-        end;
-  end;
-
-  fun state_apply_dproc dproc_cache dproc_context goal =
-      if not (is_in goal) then
-        raise ERR "algebra_dproc" "not of form X IN Y"
-      else if !ORACLE_algebra_dproc then ORACLE_algebra_dproc_solver goal
-      else
-        let
-          val {context, solver = _, relation = _, stack = _} = dproc_context
-          val {assumptions,reductions,judgements} =
-              case context of
-                State state => state
-              | _ => raise Bug "state_apply_dproc: wrong exception type"
-
-          fun dproc_tac goal =
-              (REPEAT (cache_tac dproc_cache
-                       THEN print_tac "-"
-                       THEN FIRST reductions)
-               THEN (FIRST (map (fn tac => tac THEN dproc_tac) judgements)
-                     ORELSE reduceLib.REDUCE_TAC)
-               THEN NO_TAC) goal
-
-(***
-          val _ = (print "algebra_dproc: "; print_term goal; print "\n")
-***)
-          val th = TAC_PROOF ((assumptions,goal), dproc_tac)
-        in
-          EQT_INTRO th
-        end;
-
-  fun algebra_dproc reductions judgements dproc_cache =
-      Traverse.REDUCER {initial = initial_state reductions judgements,
-                        addcontext = state_add,
-                        apply = state_apply_dproc dproc_cache};
-in
-  fun mk_simpset_frag context =
-      let
-        val Context {rewrites, conversions, reductions,
-                     judgements, dproc_cache} = context
-        val convs = map solver_conv_to_simpset_conv conversions
-        val dproc = algebra_dproc reductions judgements dproc_cache
-      in
-        simpLib.SSFRAG
-          {ac = [], congs = [], convs = convs, rewrs = rewrites,
-           dprocs = [dproc], filter = NONE}
-      end;
-
-  fun mk_simpset context = simpLib.++ (std_ss, mk_simpset_frag context);
-end;
-
-datatype algebraContext =
-         Algebra of {simplify : context, normalize : context};
-
-fun algebra_contexts_pp pp alg =
-    let
-      val Algebra {simplify,normalize} = alg
-    in
-      PP.begin_block pp PP.INCONSISTENT 1;
-      PP.add_string pp ("{simplify = " ^ context_to_string simplify ^ ",");
-      PP.add_break pp (1,0);
-      PP.add_string pp ("normalize = " ^ context_to_string normalize ^ "}");
-      PP.end_block pp
-    end;
-
-val algebra_empty_context =
-    Algebra {simplify = empty_context, normalize = empty_context};
-
-fun algebra_simplify_add_rewrite r (Algebra {simplify,normalize}) =
-    Algebra {simplify = add_rewrite r simplify, normalize = normalize};
-
-fun algebra_normalize_add_rewrite r (Algebra {simplify,normalize}) =
-    Algebra {simplify = simplify, normalize = add_rewrite r normalize};
-
-fun algebra_both_add_rewrite r =
-    algebra_normalize_add_rewrite r o algebra_simplify_add_rewrite r;
-
-fun algebra_simplify_add_conversion r (Algebra {simplify,normalize}) =
-    Algebra {simplify = add_conversion r simplify, normalize = normalize};
-
-fun algebra_normalize_add_conversion r (Algebra {simplify,normalize}) =
-    Algebra {simplify = simplify, normalize = add_conversion r normalize};
-
-fun algebra_both_add_conversion c =
-    algebra_normalize_add_conversion c o algebra_simplify_add_conversion c;
-
-fun algebra_simplify_add_reduction d (Algebra {simplify,normalize}) =
-    Algebra {simplify = add_reduction d simplify, normalize = normalize};
-
-fun algebra_normalize_add_reduction d (Algebra {simplify,normalize}) =
-    Algebra {simplify = simplify, normalize = add_reduction d normalize};
-
-fun algebra_both_add_reduction d =
-    algebra_normalize_add_reduction d o algebra_simplify_add_reduction d;
-
-fun algebra_simplify_add_judgement r (Algebra {simplify,normalize}) =
-    Algebra {simplify = add_judgement r simplify, normalize = normalize};
-
-fun algebra_normalize_add_judgement r (Algebra {simplify,normalize}) =
-    Algebra {simplify = simplify, normalize = add_judgement r normalize};
-
-fun algebra_both_add_judgement j =
-    algebra_normalize_add_judgement j o algebra_simplify_add_judgement j;
-
-fun algebra_mk_simpset_frags (Algebra {simplify,normalize}) =
-    {simplify = mk_simpset_frag simplify,
-     normalize = mk_simpset_frag normalize};
-
-fun algebra_mk_simpsets (Algebra {simplify,normalize}) =
-    {simplify = mk_simpset simplify, normalize = mk_simpset normalize};
-
-val alg_context = algebra_empty_context
-and alg_add_rewrite = algebra_both_add_rewrite
-and alg_add_rewrite' = algebra_simplify_add_rewrite
-and alg_add_rewrite'' = algebra_normalize_add_rewrite
-and alg_add_conversion'' = algebra_normalize_add_conversion
-and alg_add_reduction = algebra_both_add_reduction
-and alg_add_judgement = algebra_both_add_judgement
-and alg_simpset_frags = algebra_mk_simpset_frags
-and alg_simpsets = algebra_mk_simpsets
-and alg_pp = algebra_contexts_pp;
-
-(***
-  val () = installPP alg_pp;
-***)
-
-fun alg_binop_ac_conv info =
+fun binop_ac_conv info =
     let
       val {term_compare,
            dest_binop,
@@ -499,5 +242,271 @@ fun alg_binop_ac_conv info =
     in
       (***trace_conv "alg_binop_ac_conv" o***) CHANGED_CONV o ac_conv
     end;
+
+(* ------------------------------------------------------------------------- *)
+(* Named conversions.                                                        *)
+(* ------------------------------------------------------------------------- *)
+
+type named_conv = {name : string, key : Term.term, conv : solver_conv};
+
+fun named_conv_to_simpset_conv solver_conv =
+    let
+      val {name : string, key : term, conv : conv -> conv} = solver_conv
+      val key = SOME ([] : term list, key)
+      and conv = fn c => fn tms : term list => conv (c tms)
+      and trace = 2
+    in
+      {name = name, key = key, conv = conv, trace = trace}
+    end;
+
+(* ------------------------------------------------------------------------- *)
+(* Subtype contexts.                                                         *)
+(* ------------------------------------------------------------------------- *)
+
+val ORACLE = ref false;
+
+fun ORACLE_solver goal =
+    EQT_INTRO (mk_oracle_thm "algebra_dproc" ([],goal));
+
+type named_conv = {name : string, key : term, conv : conv -> conv};
+
+datatype context =
+    Context of {rewrites : thm list,
+                conversions :  named_conv list,
+                reductions : thm list,
+                judgements : thm list,
+                dproc_cache : (term,thm) Binarymap.dict ref};
+
+fun pp p context =
+    let
+      val Context {rewrites,conversions,reductions,judgements,...} = context
+      val rewrites = length rewrites
+      and conversions = length conversions
+      and reductions = length reductions
+      and judgements = length judgements
+    in
+      PP.begin_block p PP.INCONSISTENT 1;
+      PP.add_string p ("<" ^ int_to_string rewrites ^ "r" ^ ",");
+      PP.add_break p (1,0);
+      PP.add_string p (int_to_string conversions ^ "c" ^ ",");
+      PP.add_break p (1,0);
+      PP.add_string p (int_to_string reductions ^ "r" ^ ",");
+      PP.add_break p (1,0);
+      PP.add_string p (int_to_string judgements ^ "j>");
+      PP.end_block p
+    end;
+
+fun to_string context = PP.pp_to_string (!Globals.linewidth) pp context;
+
+val empty =
+    Context {rewrites = [], conversions = [],
+             reductions = [], judgements = [],
+             dproc_cache = cache_new ()};
+
+fun add_rewrite x context =
+    let
+      val Context {rewrites = r, conversions = c, reductions = d,
+                   judgements = j, dproc_cache = m} = context
+    in
+      Context {rewrites = r @ [x], conversions = c, reductions = d,
+               judgements = j, dproc_cache = ref (!m)}
+    end;
+
+fun add_conversion x context =
+    let
+      val Context {rewrites = r, conversions = c, reductions = d,
+                   judgements = j, dproc_cache = m} = context
+    in
+      Context {rewrites = r, conversions = c @ [x], reductions = d,
+               judgements = j, dproc_cache = ref (!m)}
+    end;
+
+fun add_reduction x context =
+    let
+      val Context {rewrites = r, conversions = c, reductions = d,
+                   judgements = j, dproc_cache = m} = context
+    in
+      Context {rewrites = r, conversions = c, reductions = d @ [x],
+               judgements = j, dproc_cache = ref (!m)}
+    end;
+
+fun add_judgement x context =
+    let
+      val Context {rewrites = r, conversions = c,reductions = d,
+                   judgements = j, dproc_cache = m} = context
+    in
+      Context {rewrites = r, conversions = c, reductions = d,
+               judgements = j @ [x], dproc_cache = ref (!m)}
+    end;
+
+local
+  exception State of
+    {assumptions : term list,
+     reductions : tactic list,
+     judgements : tactic list};
+
+  local
+    val abbrev_rule = prove
+        (``!v t. Abbrev (v = t) ==> (!s. t IN s ==> v IN s)``,
+         RW_TAC std_ss [markerTheory.Abbrev_def]);
+
+    fun reduce_tac th = match_tac th THEN REPEAT CONJ_TAC;
+
+    fun assume_reduction th (State {assumptions,reductions,judgements}) =
+        let
+(***
+          val () = (print "assume_reduction: "; print_thm th; print "\n")
+***)
+        in
+          State {assumptions = concl th :: assumptions,
+                 reductions = reduce_tac th :: reductions,
+                 judgements = judgements}
+        end
+      | assume_reduction _ _ = raise Fail "assume_reduction";
+
+    fun assume_judgement th (State {assumptions,reductions,judgements}) =
+        let
+(***
+          val () = (print "assume_judgement: "; print_thm th; print "\n")
+***)
+        in
+          State {assumptions = concl th :: assumptions,
+                 reductions = reductions,
+                 judgements = reduce_tac th :: judgements}
+        end
+      | assume_judgement _ _ = raise Fail "assume_judgement";
+  in
+    fun initial_state reductions judgements =
+        State {assumptions = [],
+               reductions = map reduce_tac reductions,
+               judgements = map reduce_tac judgements};
+
+    fun state_add (s,[]) = s
+      | state_add (s, th :: ths) =
+        let
+          val tm = concl th
+        in
+          if is_in tm then state_add (assume_reduction th s, ths)
+          else if is_abbrev tm then
+            state_add (assume_judgement (MATCH_MP abbrev_rule th) s, ths)
+          else if is_conj tm then state_add (s, CONJUNCTS th @ ths)
+          else state_add (s,ths)
+        end;
+  end;
+
+  fun state_apply_dproc dproc_cache dproc_context goal =
+      if not (is_in goal) then
+        raise ERR "algebra_dproc" "not of form X IN Y"
+      else if !ORACLE then ORACLE_solver goal
+      else
+        let
+          val {context, solver = _, relation = _, stack = _} = dproc_context
+          val {assumptions,reductions,judgements} =
+              case context of
+                State state => state
+              | _ => raise Bug "state_apply_dproc: wrong exception type"
+
+          fun dproc_tac goal =
+              (REPEAT (cache_tac dproc_cache
+                       THEN print_tac "-"
+                       THEN FIRST reductions)
+               THEN (FIRST (map (fn tac => tac THEN dproc_tac) judgements)
+                     ORELSE reduceLib.REDUCE_TAC)
+               THEN NO_TAC) goal
+
+(***
+          val _ = (print "algebra_dproc: "; print_term goal; print "\n")
+***)
+          val th = TAC_PROOF ((assumptions,goal), dproc_tac)
+        in
+          EQT_INTRO th
+        end;
+
+  fun algebra_dproc reductions judgements dproc_cache =
+      Traverse.REDUCER {initial = initial_state reductions judgements,
+                        addcontext = state_add,
+                        apply = state_apply_dproc dproc_cache};
+in
+  fun simpset_frag context =
+      let
+        val Context {rewrites, conversions, reductions,
+                     judgements, dproc_cache} = context
+        val convs = map named_conv_to_simpset_conv conversions
+        val dproc = algebra_dproc reductions judgements dproc_cache
+      in
+        simpLib.SSFRAG
+          {ac = [], congs = [], convs = convs, rewrs = rewrites,
+           dprocs = [dproc], filter = NONE}
+      end;
+
+  fun simpset context = simpLib.++ (std_ss, simpset_frag context);
+end;
+
+(* ------------------------------------------------------------------------- *)
+(* Subtype context pairs: one for simplification, the other for              *)
+(* normalization.                                                            *)
+(*                                                                           *)
+(* By convention add_X2 adds to both contexts, add_X2' adds to just the      *)
+(* simplify context, and add_X2'' adds to just the normalize context.        *)
+(* ------------------------------------------------------------------------- *)
+
+datatype context2 = Context2 of {simplify : context, normalize : context};
+
+fun pp2 pp alg =
+    let
+      val Context2 {simplify,normalize} = alg
+    in
+      PP.begin_block pp PP.INCONSISTENT 1;
+      PP.add_string pp ("{simplify = " ^ to_string simplify ^ ",");
+      PP.add_break pp (1,0);
+      PP.add_string pp ("normalize = " ^ to_string normalize ^ "}");
+      PP.end_block pp
+    end;
+
+fun to_string2 context2 = PP.pp_to_string (!Globals.linewidth) pp2 context2;
+
+fun dest2 (Context2 info) = info;
+
+val empty2 =
+    Context2 {simplify = empty, normalize = empty};
+
+fun add_rewrite2' r (Context2 {simplify,normalize}) =
+    Context2 {simplify = add_rewrite r simplify, normalize = normalize};
+
+fun add_rewrite2'' r (Context2 {simplify,normalize}) =
+    Context2 {simplify = simplify, normalize = add_rewrite r normalize};
+
+fun add_rewrite2 r = add_rewrite2' r o add_rewrite2'' r;
+
+fun add_conversion2' r (Context2 {simplify,normalize}) =
+    Context2 {simplify = add_conversion r simplify, normalize = normalize};
+
+fun add_conversion2'' r (Context2 {simplify,normalize}) =
+    Context2 {simplify = simplify, normalize = add_conversion r normalize};
+
+fun add_conversion2 c = add_conversion2' c o add_conversion2'' c;
+
+fun add_reduction2' d (Context2 {simplify,normalize}) =
+    Context2 {simplify = add_reduction d simplify, normalize = normalize};
+
+fun add_reduction2'' d (Context2 {simplify,normalize}) =
+    Context2 {simplify = simplify, normalize = add_reduction d normalize};
+
+fun add_reduction2 d = add_reduction2' d o add_reduction2'' d;
+
+fun add_judgement2' r (Context2 {simplify,normalize}) =
+    Context2 {simplify = add_judgement r simplify, normalize = normalize};
+
+fun add_judgement2'' r (Context2 {simplify,normalize}) =
+    Context2 {simplify = simplify, normalize = add_judgement r normalize};
+
+fun add_judgement2 j = add_judgement2' j o add_judgement2'' j;
+
+fun simpset_frag2 (Context2 {simplify,normalize}) =
+    {simplify = simpset_frag simplify,
+     normalize = simpset_frag normalize};
+
+fun simpset2 (Context2 {simplify,normalize}) =
+    {simplify = simpset simplify, normalize = simpset normalize};
 
 end

@@ -8,12 +8,17 @@
 (* ------------------------------------------------------------------------- *)
 (*
 val () = loadPath := [] @ !loadPath;
-val () = app load ["bossLib", "metisLib", "wordsLib", "ellipticTheory"];
+val () = app load ["bossLib", "metisLib", "wordsLib",
+                   "primalityTools", "ellipticTools"];
 val () = quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib metisLib
-     arithmeticTheory wordsTheory ellipticTheory;
+     arithmeticTheory pred_setTheory wordsTheory
+     primalityTools
+     groupTheory groupTools
+     fieldTheory fieldTools
+     ellipticTheory ellipticTools;
 
 (*
 val () = quietdec := false;
@@ -30,6 +35,13 @@ val _ = new_theory "elliptic_example";
 (* ------------------------------------------------------------------------- *)
 
 val () = Parse.add_infix ("/", 600, HOLgrammars.LEFT);
+
+(* ------------------------------------------------------------------------- *)
+(* The subtype context.                                                      *)
+(* ------------------------------------------------------------------------- *)
+
+val context = elliptic_context;
+val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
 (* ------------------------------------------------------------------------- *)
 (* Helper proof tools.                                                       *)
@@ -81,6 +93,49 @@ val example1_elgamal_x_def = Define `example1_elgamal_x = 91`;
 val example1_elgamal_h_def = Define
   `example1_elgamal_h =
    curve_mult example1_curve example1_elgamal_g example1_elgamal_x`;
+
+val example1_prime = Count.apply prove
+  (``example1_prime IN Prime``,
+   RW_TAC alg_ss [example1_prime_def, Prime_def, GSPECIFICATION]
+   ++ CONV_TAC prime_checker_conv);
+
+val context = subtypeTools.add_reduction2 example1_prime context;
+val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
+
+val example1_field = prove
+  (``example1_field IN Field``,
+   RW_TAC alg_ss [example1_field_def]);
+
+val context = subtypeTools.add_reduction2 example1_field context;
+val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
+
+val example1_curve = prove
+  (``example1_curve IN Curve``,
+   RW_TAC alg_ss [example1_curve_def, Curve_def, GSPECIFICATION]
+   ++ RW_TAC alg_ss [example1_field_def, example1_prime_def]
+   ++ RW_TAC alg_ss [non_singular_def, LET_DEF, discriminant_def]
+   ++ RW_TAC alg_ss
+        [LET_DEF, GF_alt, curve_b2_def, curve_b4_def,
+         curve_b6_def, curve_b8_def, field_exp_small]
+   ++ CONV_TAC EVAL);
+
+val context = subtypeTools.add_reduction2 example1_curve context;
+val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
+
+val example1_curve_field = prove
+  (``example1_curve.field = example1_field``,
+   RW_TAC alg_ss [example1_curve_def]);
+
+(*** Need to reduce elgamal_h before anything happens
+val example1_elgamal_h_alt =
+    SIMP_CONV
+      (simpLib.++ (alg_ss,numSimps.SUC_FILTER_ss))
+      [curve_mult_def,
+       example1_elgamal_g_def,
+       example1_elgamal_x_def,
+       example1_elgamal_h_def]
+    ``example1_elgamal_h``;
+***)
 
 (* ------------------------------------------------------------------------- *)
 (* Converting HOL types to words.                                            *)
@@ -149,7 +204,7 @@ val (ex1_field_mult_aux_def,ex1_field_mult_aux_ind) = Defn.tprove
    ++ POP_ASSUM (K ALL_TAC)
    ++ RW_TAC arith_ss []
    ++ Know `2 * (n DIV 2) <= n`
-   >> PROVE_TAC [TWO, ellipticTheory.DIV_THEN_MULT]
+   >> PROVE_TAC [TWO,DIV_THEN_MULT]
    ++ DECIDE_TAC);
 
 val ex1_field_mult_def = Define
@@ -171,7 +226,7 @@ val (ex1_field_exp_aux_def,ex1_field_exp_aux_ind) = Defn.tprove
    ++ POP_ASSUM (K ALL_TAC)
    ++ RW_TAC arith_ss []
    ++ Know `2 * (n DIV 2) <= n`
-   >> PROVE_TAC [TWO, ellipticTheory.DIV_THEN_MULT]
+   >> PROVE_TAC [TWO,DIV_THEN_MULT]
    ++ DECIDE_TAC);
 
 val ex1_field_exp_def = Define
@@ -275,7 +330,7 @@ val (ex1_curve_mult_aux_def,ex1_curve_mult_aux_ind) = Defn.tprove
    ++ POP_ASSUM_LIST (K ALL_TAC)
    ++ RW_TAC arith_ss []
    ++ Know `2 * (n DIV 2) <= n`
-   >> PROVE_TAC [TWO, ellipticTheory.DIV_THEN_MULT]
+   >> PROVE_TAC [TWO,DIV_THEN_MULT]
    ++ DECIDE_TAC);
 
 val ex1_curve_mult_def = Define
@@ -304,34 +359,75 @@ val ex1_elgamal_decrypt_def = Define
 (* eliminate HOL types that are not just tuples of word32s.                  *)
 (* ------------------------------------------------------------------------- *)
 
+local
+  val is_word_tuple =
+      let
+        fun f ty =
+            if wordsSyntax.is_word_type ty then ()
+            else let val (x,y) = pairLib.dest_prod ty in f x; f y end
+      in
+        can f
+      end;
+
+  fun blocked (f,x) =
+      is_word_tuple (type_of x) andalso
+      not (is_var x) andalso
+      not (wordsSyntax.is_n2w x);
+in
+  fun constant_propagation_let_conv tm =
+      if blocked (dest_let tm) then
+        raise ERR "constant_propagation_let_conv" "blocked"
+      else
+        REWR_CONV LET_THM tm;
+end;
+
+val constant_propagation_SS =
+    simpLib.SSFRAG
+      {convs = [{name = "constant_propagation_let_conv",
+                 key = SOME ([], ``LET f x``),
+                 trace = 2,
+                 conv = K (K constant_propagation_let_conv)}],
+       rewrs = [curve_a1,
+                curve_a2,
+                curve_a3,
+                curve_a4,
+                curve_a6,
+                affine_case,
+                curve_mult_def],
+       ac = [],
+       filter = NONE,
+       dprocs = [],
+       congs = []};
+
+val constant_propagation_ss =
+    simpLib.++
+      (simpLib.++ (alg_ss,numSimps.REDUCE_ss), constant_propagation_SS);
+
 val ex1_constant_propagation =
-    SIMP_RULE
-      (simpLib.++ (boolSimps.bool_ss,
-                   numSimps.REDUCE_ss))
-      [curve_a1,
-       curve_a2,
-       curve_a3,
-       curve_a4,
-       curve_a6,
-       affine_case,
-       curve_mult_def,
-       example1_prime_def,
-       example1_field_def,
-       example1_curve_def,
-       example1_elgamal_g_def,
-       example1_elgamal_x_def,
-       example1_elgamal_h_def,
-       ex1_prime_def,
-       ex1_field_elt_def,
-       ex1_field_num_def,
-       ex1_curve_point_def,
-       ex1_elgamal_g_x,
-       ex1_elgamal_g_y,
-       ex1_elgamal_h_x,
-       ex1_elgamal_h_y,
-       ex1_elgamal_x,
-       ex1_field_zero_def,
-       ex1_curve_zero_def];
+    CONV_RULE
+      (SIMP_CONV
+         constant_propagation_ss
+         [GSYM example1_curve_field,
+          example1_elgamal_g_def,
+          example1_elgamal_h_def,
+          example1_elgamal_x_def,
+          ex1_curve_zero_def,
+          ex1_curve_point_def,
+          ex1_elgamal_g_x,
+          ex1_elgamal_g_y,
+          ex1_elgamal_h_x,
+          ex1_elgamal_h_y,
+          ex1_elgamal_x] THENC
+       SIMP_CONV
+         constant_propagation_ss
+         [example1_curve_field,
+          example1_prime_def,
+          example1_field_def,
+          example1_curve_def,
+          ex1_prime_def,
+          ex1_field_elt_def,
+          ex1_field_num_def,
+          ex1_field_zero_def]);
 
 val ex1_field_neg_alt = save_thm
   ("ex1_field_neg_alt",
