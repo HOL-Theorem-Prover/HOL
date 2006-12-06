@@ -3,17 +3,19 @@
 quietdec := true;
 
 app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory",
-          "pred_setSimps", "pred_setTheory", "preARMTheory", "bigInstTheory", "CFLTheory", "HSLTheory", "simplifier"];
+          "pred_setSimps", "pred_setTheory", "preARMTheory", "ARMCompositionTheory", "bigInstTheory", "funCallTheory", 
+          "CFLTheory", "HSLTheory", "simplifier"];
 
 open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory
-       pred_setSimps pred_setTheory finite_mapTheory preARMTheory bigInstTheory CFLTheory HSLTheory simplifier;
+       pred_setSimps pred_setTheory finite_mapTheory preARMTheory bigInstTheory funCallTheory 
+       CFLTheory HSLTheory simplifier;
 
 quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib simplifier
-     pairTheory listTheory whileTheory pred_setSimps pred_setTheory finite_mapTheory preARMTheory 
-     bigInstTheory CFLTheory HSLTheory;
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory
+       pred_setSimps pred_setTheory finite_mapTheory preARMTheory bigInstTheory funCallTheory 
+       CFLTheory HSLTheory simplifier;
 
 (*---------------------------------------------------------------------------------*)
 
@@ -79,7 +81,12 @@ val translate_hsl_def = Define `
     (translate_hsl (Cj cond Strue Sfalse) =
          CJ (translate_TCND cond) (translate_hsl Strue) (translate_hsl Sfalse)) /\
     (translate_hsl (Tr cond Sbody) =
-         TR (translate_TCND cond) (translate_hsl Sbody))`;
+         TR (translate_TCND cond) (translate_hsl Sbody)) /\ 
+    (translate_hsl (Fc (caller_i, callee_i) S_body (caller_o, callee_o) (m1,m2)) =
+         SC (SC (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) 
+                    (MAX (LENGTH caller_i) (LENGTH caller_o) - (LENGTH caller_i)) m2)) 
+                (translate_hsl S_body)) 
+            (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1)))`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Data registers are separate from pointer registers                         *)
@@ -108,11 +115,10 @@ val data_reg_lem_3 = Q.store_thm (
     RW_TAC arith_ss [data_reg_index_def]
   );
 
-
 val locate_ge_lem_3 = Q.store_thm (
     "locate_ge_lem_3",
     `!x k. locate_ge x (12 + k) ==>
-      !i j. ~(i = j) /\ i < k /\ j < k ==>
+      !i j. ~(i = j) /\ (i < k) /\ (j < k) ==>
             ~(w2n x - (12 + i) = w2n x - (12 + j))`,
     RW_TAC arith_ss [locate_ge_def]
    );
@@ -123,9 +129,18 @@ val locate_ge_lem_3 = Q.store_thm (
 
 val correspond_def = Define `
     correspond (rg,sk) st m =
-      (!r. rg ' r = read st (REG (data_reg_index r))) /\
-      (!i. i < m ==> (sk ' i = read st (MEM (toLocn i))))
+      (!r. rg ' (data_reg_index r) = read st (REG (data_reg_index r))) /\
+      (!i. (i < m) ==> (sk ' i = read st (MEM (toLocn i))))
     `;
+
+val CORRESPOND_SAME_CONTENT = Q.store_thm (
+   "CORRESPOND_SAME_CONTENT",
+   `correspond = same_content`,
+   SIMP_TAC std_ss [FUN_EQ_THM, FORALL_TSTATE] THEN
+   REPEAT STRIP_TAC THEN EQ_TAC THEN
+   RW_TAC std_ss [correspond_def, same_content_def] THEN
+   FULL_SIMP_TAC std_ss [read_thm, data_reg_index_def, conv_exp_def, reade_def, toLocn_def]
+  );
 
 (*---------------------------------------------------------------------------------*)
 (*      Validation on the translation of single instructions                       *)
@@ -142,7 +157,7 @@ val LDR_CORRESPOND_LEM = Q.store_thm (
       RW_TAC finmap_ss [correspond_def, fp_def, tdecode_def, twrite_def, tread_def, mdecode_def, toREG_def, 
             toMEM_def, write_thm, toEXP_def, toEXP_def, read_thm, toLocn_def, data_reg_lem_1, data_reg_lem_2] THEN
       METIS_TAC [data_reg_lem_3]
-);
+  );
 
 val STR_CORRESPOND_LEM = Q.store_thm (
   "STR_CORRESPOND_LEM",
@@ -157,7 +172,7 @@ val STR_CORRESPOND_LEM = Q.store_thm (
         toREG_def, toMEM_def, write_thm, toEXP_def, toEXP_def, read_thm, toLocn_def, data_reg_lem_1] THEN
       RW_TAC std_ss [] THEN
       METIS_TAC [locate_ge_lem_3]
-);
+  );
 
 val ASSGN_CORRESPOND = Q.store_thm (
   "ASSGN_CORRESPOND",
@@ -202,18 +217,17 @@ val ASSGN_CORRESPOND = Q.store_thm (
 (*      Data registers include only r0-r8                                          *)
 (*---------------------------------------------------------------------------------*)
 
-val ASSGN_SAME_BASE_REGS = Q.store_thm (
-  "ASSGN_SAME_BASE_REGS",
+val ASSGN_STATUS_INTACT = Q.store_thm (
+  "ASSGN_STATUS_INTACT",
   `!stm st. let st' = mdecode st (translate_assgn stm) in
-        (read st FP = read st' FP) /\
-        (read st IP = read st' IP) /\
-        (read st SP = read st' SP) /\
-        (read st LR = read st' LR) `,
+        status_intact st' st`,
 
    let val tac1 = SIMP_TAC std_ss [FORALL_DSTATE, translate_assgn_def, mdecode_def, LET_THM] THEN 
                   RW_TAC finmap_ss [valid_assgn_def, valid_TEXP_def, toREG_def, index_of_reg_def, read_thm, write_thm, 
-                                    toLocn_def, toMEM_def, IP_def, FP_def, SP_def, LR_def, data_reg_lem_1,data_reg_lem_3]
+                    reade_def, toLocn_def, toMEM_def, IP_def, FP_def, SP_def, LR_def, data_reg_lem_1, data_reg_lem_3]
+                  THEN FULL_SIMP_TAC arith_ss [fp_def]
    in
+   SIMP_TAC std_ss [status_intact_def, same_fp_ip_sp_def] THEN
    Cases_on `stm` THENL [
       Cases_on `T'` THEN tac1,                                         (* LDR *)
       Cases_on `T'` THEN tac1,                                         (* STR *)
@@ -233,7 +247,6 @@ val ASSGN_SAME_BASE_REGS = Q.store_thm (
   end
  );
 
-
 (*---------------------------------------------------------------------------------*)
 (*      Correspondence for basic blocks                                            *)
 (*---------------------------------------------------------------------------------*)
@@ -251,28 +264,27 @@ val  BLK_CORRESPONDENCE = Q.store_thm (
        `?rg' sk'. (rg',sk') = tdecode (rg,sk) h` by  METIS_TAC [ABS_PAIR_THM] THEN
        Q.PAT_ASSUM `!rg sk st m.x` (ASSUME_TAC o SIMP_RULE std_ss [valid_struct_def, translate_hsl_def] o
            Q.SPECL [`rg'`,`sk'`,`mdecode st (translate_assgn h)`, `m`]) THEN
-       METIS_TAC [ASSGN_CORRESPOND, ASSGN_SAME_BASE_REGS, ADD_SYM]
+       `read (mdecode st (translate_assgn h)) FP = read st FP` by 
+          METIS_TAC [SIMP_RULE std_ss [LET_THM, status_intact_def, same_fp_ip_sp_def] ASSGN_STATUS_INTACT, w2n_11] THEN
+       METIS_TAC [ASSGN_CORRESPOND, ADD_SYM]
      ]
   );
 
-val same_base_regs_def = Define `
-    same_base_regs S_hsl = 
-       !st. let st' = run_cfl (translate_hsl S_hsl) st in
-        (read st FP = read st' FP) /\
-        (read st IP = read st' IP) /\
-        (read st SP = read st' SP) /\
-        (read st LR = read st' LR)`; 
+val STATUS_INTACT_TRANS = Q.store_thm (
+  "STATUS_INTACT_TRANS",
+  `!a b c. status_intact a b /\ status_intact b c ==> status_intact a c`,
+  RW_TAC list_ss [status_intact_def, same_fp_ip_sp_def]
+  );
 
-
-val BLK_SAME_BASE_REGS = Q.store_thm (
-  "BLK_SAME_BASE_REGS",
-  `!stm. same_base_regs (Blk stmL)`,
+val BLK_STATUS_INTACT = Q.store_thm (
+  "BLK_STATUS_INTACT",
+  `!stmL st. let st' = run_cfl (translate_hsl (Blk stmL)) st in
+        status_intact st' st`,
 
   Induct_on `stmL` THENL [
-    RW_TAC list_ss [same_base_regs_def, valid_struct_def, translate_hsl_def, CFL_SEMANTICS_BLK],
-    FULL_SIMP_TAC list_ss [same_base_regs_def, valid_struct_def, translate_hsl_def, CFL_SEMANTICS_BLK] THEN
-      RW_TAC std_ss [LET_THM] THEN
-      METIS_TAC [ASSGN_SAME_BASE_REGS]
+    RW_TAC list_ss [status_intact_def, same_fp_ip_sp_def, valid_struct_def, translate_hsl_def, CFL_SEMANTICS_BLK],
+    FULL_SIMP_TAC list_ss [LET_THM, valid_struct_def, translate_hsl_def, CFL_SEMANTICS_BLK] THEN
+      METIS_TAC [ASSGN_STATUS_INTACT, STATUS_INTACT_TRANS]
   ]
   );
 
@@ -281,49 +293,63 @@ val BLK_SAME_BASE_REGS = Q.store_thm (
 (*---------------------------------------------------------------------------------*)
 
 val Well_Formed_def = Define `
-    Well_Formed S_hsl = WELL_FORMED (translate_hsl S_hsl)`;
+    Well_Formed S_hsl = 
+     WELL_FORMED (translate_hsl S_hsl)
+  `;
 
-val WELL_FORMED_SC = Q.store_thm (
-  "WELL_FORMED_SC",
+val Well_Formed_Blk = Q.store_thm (
+  "Well_Formed_Blk",
+  `!stmL. Well_Formed (Blk stmL)`,
+  RW_TAC std_ss [Well_Formed_def, translate_hsl_def, WELL_FORMED_thm]
+  );
+
+val Well_Formed_Sc = Q.store_thm (
+  "Well_Formed_Sc",
   `!S1 S2. Well_Formed (Sc S1 S2) = Well_Formed S1 /\ Well_Formed S2`,
   RW_TAC std_ss [Well_Formed_def, translate_hsl_def, CFL_SC_IS_WELL_FORMED]
   );
-
 
 (*---------------------------------------------------------------------------------*)
 (*      Semantics of a HSL program is preserved when it is translated to CFL       *)
 (*---------------------------------------------------------------------------------*)
 
-(* HSL_STRUCTURE_induction *)
-
-val sem_preserve_def = Define `
-    sem_preserve S_hsl = 
-     !s st m. correspond s st m ==> 
-     correspond (run_hsl S_hsl s) (run_cfl (translate_hsl S_hsl) st) m`;
+val sem_spec_def = Define `
+    sem_spec P S_hsl Q = 
+     !s st m. P st /\ correspond s st m ==> 
+       let st' = run_cfl (translate_hsl S_hsl) st in
+         correspond (run_hsl S_hsl s) st' m /\ Q st'`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Correspondence of Sc structures                                            *)
 (*---------------------------------------------------------------------------------*)
 
-val  SC_SEM_PRESERVE = Q.store_thm (
-  "SC_SEM_PRESERVE",
-  `!S1 S2 m. 
-     Well_Formed (Sc S1 S2) ==>
-       sem_preserve S1 /\ sem_preserve S2 ==>
-         sem_preserve (Sc S1 S2)`,
+val SC_SEM_SPEC = Q.store_thm (
+  "SC_SEM_SPEC",
+  `!S1 S2 m P Q R. 
+     Well_Formed (Sc S1 S2) ==> 
+       sem_spec P S1 Q /\ sem_spec Q S2 R ==>
+         sem_spec P (Sc S1 S2) R`,
 
-    RW_TAC std_ss [Well_Formed_def, WELL_FORMED_def, sem_preserve_def, translate_hsl_def, 
-          run_hsl_def, SEMANTICS_OF_CFL]
+    RW_TAC std_ss [Well_Formed_def, WELL_FORMED_def, sem_spec_def, translate_hsl_def, LET_THM, 
+          run_hsl_def, SEMANTICS_OF_CFL] THEN
+    METIS_TAC []
   );
 
-val SC_SAME_BASE_REGS = Q.store_thm (
-  "SC_SAME_BASE_REGS",
-  `!S1 S2. same_base_regs S1 /\ same_base_regs S2 /\ 
-           Well_Formed S1 /\ Well_Formed S2 ==> 
-           same_base_regs (Sc S1 S2)`,
+(*
+val SC_STATUS_INTACT = Q.store_thm (
+  "SC_STATUS_INTACT",
+  `!S1 S2 P Q. 
+    Well_Formed (Sc S1 S2) ==>
+     (!st. P st ==> let st' = run_cfl (translate_hsl S1) st in
+        status_intact st' st /\ Q st') /\
+     (!st. Q st ==> let st' = run_cfl (translate_hsl S2) st in
+        status_intact st' st) ==> 
+     (!st. P st ==> let st' = run_cfl (translate_hsl (Sc S1 S2)) st in
+        status_intact st' st)`,
   RW_TAC std_ss [Well_Formed_def, same_base_regs_def, run_hsl_def, translate_hsl_def, SEMANTICS_OF_CFL] THEN
   METIS_TAC []
   );
+*)
 
 (*---------------------------------------------------------------------------------*)
 (*      Correspondence of Cj structures                                            *)
@@ -349,104 +375,185 @@ val  EVAL_TCND_THM = Q.store_thm (
             ARMCompositionTheory.eval_cond_def, roc_2_exp_def, conv_roc_def, toEXP_def, conv_reg_lem_1, read_thm]
   );
 
-val  CJ_SEM_PRESERVE = Q.store_thm (
-  "CJ_SEM_PRESERVE",
+val  CJ_SEM_SPEC = Q.store_thm (
+  "CJ_SEM_SPEC",
   `!cond S1 S2. 
      Well_Formed (Cj cond S1 S2) ==>
-       sem_preserve S1 /\ sem_preserve S2 ==>
-         sem_preserve (Cj cond S1 S2)`,
+       sem_spec P S1 Q /\ sem_spec P S2 Q ==>
+         sem_spec P (Cj cond S1 S2) Q`,
 
-    RW_TAC std_ss [Well_Formed_def, WELL_FORMED_def, sem_preserve_def, translate_hsl_def, 
+    RW_TAC std_ss [Well_Formed_def, WELL_FORMED_def, sem_spec_def, translate_hsl_def, LET_THM, 
           run_hsl_def, SEMANTICS_OF_CFL] THEN
     METIS_TAC [EVAL_TCND_THM]
   );
-
-(*
-val CJ_SAME_BASE_REGS = Q.store_thm (
-  "CJ_SAME_BASE_REGS",
-  `!cond S1 S2. same_base_regs S1 /\ same_base_regs S2 /\ 
-           Well_Formed S1 /\ Well_Formed S2 ==> 
-           same_base_regs (CJ cond S1 S2)`,
-  RW_TAC std_ss [Well_Formed_def, same_base_regs_def, run_hsl_def, translate_hsl_def, SEMANTICS_OF_CFL] THEN
-  METIS_TAC []
-  );
-*)
 
 (*---------------------------------------------------------------------------------*)
 (*      Correspondence of Tr structures                                            *)
 (*---------------------------------------------------------------------------------*)
 
 (*
-val  TR_SEM_PRESERVE = Q.store_thm (
-  "TR_SEM_PRESERVE",
-  `!cond S_hsl. 
-     Well_Formed (Tr cond S_hsl) /\ sem_preserve S_hsl ==>
-         sem_preserve (Tr cond S_hsl)`,
+val WF_TR_HSL_CFL = Q.store_thm (
+   "WF_TR_HSL_CFL",
+    `!cond S_hsl. WF (\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0)) /\ 
+           WELL_FORMED (translate_hsl S_hsl) ==>
+         WF_TR (translate_condition (translate_TCND cond), translate (translate_hsl S_hsl))`,
+    RW_TAC std_ss [] THEN
+    MATCH_MP_TAC CFL_RulesTheory.WF_TR_LEM_1 THEN
+    MATCH_MP_TAC relationTheory.WF_SUBSET THEN
+    Q.EXISTS_TAC `\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0)` THEN
+    RW_TAC std_ss [EVAL_TCND_THM] THEN
 
-    RW_TAC std_ss [Well_Formed_def, WELL_FORMED_def, sem_preserve_def, translate_hsl_def, 
-          run_hsl_def, SEMANTICS_OF_CFL] THEN
-    METIS_TAC [EVAL_TCND_THM]
+  );
+*)
+
+val WF_LOOP_LEM_1 = Q.store_thm (
+   "WF_LOOP_LEM_1",
+   `!cond S_cfl. WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_cfl S_cfl st0)) ==>
+      WF_Loop (eval_il_cond cond, run_cfl S_cfl)`,
+    RW_TAC std_ss [ARMCompositionTheory.WF_Loop_def] THEN
+    Q.EXISTS_TAC `\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_cfl S_cfl st0)` THEN 
+    RW_TAC std_ss []
+    );
+
+val UNROLL_WHILE_CFL = Q.store_thm (
+   "UNROLL_WHILE_CFL",
+   `!cond S_cfl st. WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_cfl S_cfl st0)) ==>
+       (WHILE (\st'. ~eval_il_cond cond st') (run_cfl S_cfl) st = 
+        FUNPOW (run_cfl S_cfl) (shortest (\st'. eval_il_cond cond st') (run_cfl S_cfl) st) st)`,
+   RW_TAC std_ss [] THEN
+   IMP_RES_TAC WF_LOOP_LEM_1 THEN
+   METIS_TAC [ARMCompositionTheory.UNROLL_LOOP]
   );
 
-*)
+val TR_SEM_SPEC = Q.store_thm (
+  "TR_SEM_SPEC",
+  `!S_hsl cond. Well_Formed S_hsl /\ 
+     WF (\st1 st0. ~eval_il_cond (translate_TCND cond) st0 /\ (st1 = run_cfl (translate_hsl S_hsl) st0)) /\
+     sem_spec P S_hsl P ==>
+       sem_spec P (Tr cond S_hsl) P`,
+
+    SIMP_TAC std_ss [Well_Formed_def, sem_spec_def, translate_hsl_def, LET_THM, run_hsl_def] THEN
+    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    Q.ABBREV_TAC `cnd1 = translate_TCND cond` THEN
+    Q.ABBREV_TAC `S1 = translate_hsl S_hsl` THEN
+    `WF_TR (translate_condition cnd1, translate S1)` by METIS_TAC [CFL_RulesTheory.WF_TR_LEM_1] THEN
+    FULL_SIMP_TAC std_ss [CFL_SEMANTICS_TR, UNROLL_WHILE_CFL] THEN
+    IMP_RES_TAC WF_LOOP_LEM_1 THEN
+    IMP_RES_TAC ARMCompositionTheory.WF_LOOP_IMP_STOPAT THEN
+    Induct_on `shortest (\st'. eval_il_cond cnd1 st') (run_cfl S1) st` THENL [
+      REWRITE_TAC [Once EQ_SYM_EQ] THEN
+        REPEAT GEN_TAC THEN NTAC 12 STRIP_TAC THEN
+        `eval_il_cond cnd1 st /\ eval_TCND cond s` by METIS_TAC [SHORTEST_LEM, EVAL_TCND_THM] THEN
+        FULL_SIMP_TAC arith_ss [Once WHILE, FUNPOW],
+
+      REWRITE_TAC [Once EQ_SYM_EQ] THEN
+        REPEAT GEN_TAC THEN NTAC 12 STRIP_TAC THEN
+        Q.PAT_ASSUM `!cnd1 S1 st. a ==> b ==> c ==> d` (ASSUME_TAC o Q.SPECL [`cnd1`,`S1`,`run_cfl S1 st`]) THEN
+        `(\st'. eval_il_cond cnd1 st') = eval_il_cond cnd1` by METIS_TAC [] THEN
+        FULL_SIMP_TAC std_ss [] THEN 
+        POP_ASSUM (K ALL_TAC) THEN 
+        `stopAt (eval_il_cond cnd1) (run_cfl S1) st` by METIS_TAC [] THEN
+        IMP_RES_TAC SHORTEST_INDUCTIVE THEN
+        Q.ABBREV_TAC `k = shortest (eval_il_cond cnd1) (run_cfl S1) (run_cfl S1 st)` THEN
+        RES_TAC THEN RES_TAC THEN
+        `~eval_TCND cond s` by METIS_TAC [EVAL_TCND_THM] THEN 
+        RW_TAC std_ss [Once WHILE, FUNPOW]
+     ]
+  );
+
 (*---------------------------------------------------------------------------------*)
-(*      Operations on different stacks                                             *)
+(*      Correspondence of Fc structures                                            *)
 (*---------------------------------------------------------------------------------*)
+
+val proper_frames_def = Define `
+    proper_frames st (m1,m2) (n1,n2) = 
+       (w2n (read st SP) = w2n (read st FP) - (12 + m1)) /\
+       locate_ge (read st SP) (MAX n1 n2 + 13 + m2)`;
+
+val MAP_LEM_4 = Q.store_thm (
+    "MAP_LEM_4",
+    `!l1 l2 f g. (MAP f l1 = MAP g l2) ==>
+        (!i. (i < LENGTH l1) ==> (f (EL i l1) = g (EL i l2)))`,
+    Induct_on `l1` THEN Induct_on `l2` THEN
+    RW_TAC list_ss [] THEN
+    Induct_on `i` THEN
+    RW_TAC list_ss []
+  );
 
 (*
+val PRE_CALL_SAME_CONTENT = Q.store_thm (
+   "PRE_CALL_SAME_CONTENT",
+   `!st m1 m2 caller_i callee_i caller_o callee_o.
+     VALID_FC_1 (caller_i,callee_i,callee_o,caller_o) (m1,m2) /\
+     locate_ge (read st SP) (MAX (LENGTH caller_i) (LENGTH caller_o) + 13 + m2) /\
+     (w2n (read st SP) = w2n (read st FP) - (12 + m1)) /\
+     (MAX (LENGTH caller_i) (LENGTH caller_o) - (LENGTH caller_i) = k) /\
+     same_content s st m1 ==>
+       same_content (transfer (empty_s,s) (callee_i,caller_i)) 
+             (run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st) m2`,
 
-val transfer_def = Define `
-    (transfer s1 s0 [] [] = s1) /\
-    (transfer s1 s0 (dst::dstL) (src::srcL) = 
-       transfer (twrite s1 dst (tread s0 src)) s0 dstL srcL)`;
+    REPEAT STRIP_TAC THEN
+    `standard_frame st m1 /\ locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2)` by 
+       FULL_SIMP_TAC arith_ss [standard_frame_def, locate_ge_def, MAX_DEF] THEN
+    FULL_SIMP_TAC std_ss [same_content_thm] THEN
+    REPEAT STRIP_TAC THEN
+    FULL_SIMP_TAC std_ss [VALID_FC_1_def] THEN
+    Cases_on `MEM x callee_i` THENL [
+      IMP_RES_TAC MEM_EL THEN
+        `run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i,MAP conv_exp callee_i) (MAX (LENGTH caller_i) 
+           (LENGTH caller_o) - LENGTH caller_i) m2)) st '' conv_exp (EL n callee_i) = st '' conv_exp (EL n caller_i)` 
+             by METIS_TAC [SIMP_RULE std_ss [rich_listTheory.EL_MAP] PRE_CALL_PASS_ARGUMENTS_THM_2] THEN
+        `MAP (tread (transfer (empty_s,s) (callee_i,caller_i))) callee_i = MAP (tread s) caller_i` 
+           by METIS_TAC [TRANSFER_THM] THEN
+        FULL_SIMP_TAC std_ss [EVERY_EL] THEN 
+        IMP_RES_TAC MAP_LEM_4 THEN 
+        RW_TAC std_ss [] THEN METIS_TAC [],
 
-val empty_s_def = Define `
-    empty_s = (FEMPTY,FEMPTY,FEMPTY)`;
+       FULL_SIMP_TAC std_ss [valid_arg_list_def, run_hsl_def, LET_THM] THEN
+         METIS_TAC [TRANSFER_INTACT]
+    ]
 
+*)
 
-val run_fc_def = Define `
-    run_fc (caller_i,callee_i) ir (caller_o,callee_o) s = 
-        let s1 = transfer empty_s s callee_i caller_i in
-        let s2 = run_ir1 ir s1 in
-        transfer s s2 caller_o callee_o`;
+(*
+val  FC_SEM_SPEC = Q.store_thm (
+  "FC_SEM_SPEC",
+  `!S_hsl cond. Well_Formed S_hsl /\
+     VALID_FC_1 (caller_i,callee_i,callee_o,caller_o) (m1,m2) 
+       ==>
+     sem_spec P S_hsl Q ==>
+       sem_spec (\st. P st /\ proper_frames st (m1,m2) (n1,n2) /\ 
+          status_intact (run_cfl S_body st') st') 
+          (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) Q`,
 
+    SIMP_TAC std_ss [Well_Formed_def, sem_spec_def, translate_hsl_def, LET_THM, run_hsl_def] THEN
+    REPEAT GEN_TAC THEN STRIP_TAC THEN
+    Q.ABBREV_TAC `cnd1 = translate_TCND cond` THEN
+    Q.ABBREV_TAC `S1 = translate_hsl S_hsl` THEN
+    `WF_TR (translate_condition cnd1, translate S1)` by METIS_TAC [CFL_RulesTheory.WF_TR_LEM_1] THEN
+    FULL_SIMP_TAC std_ss [CFL_SEMANTICS_TR, UNROLL_WHILE_CFL] THEN
+    IMP_RES_TAC WF_LOOP_LEM_1 THEN
+    IMP_RES_TAC WF_LOOP_IMP_STOPAT THEN
+    Induct_on `shortest (\st'. eval_il_cond cnd1 st') (run_cfl S1) st` THENL [
+      REWRITE_TAC [Once EQ_SYM_EQ] THEN
+        REPEAT GEN_TAC THEN NTAC 12 STRIP_TAC THEN
+        `eval_il_cond cnd1 st /\ eval_TCND cond s` by METIS_TAC [SHORTEST_LEM, EVAL_TCND_THM] THEN
+        FULL_SIMP_TAC arith_ss [Once WHILE, FUNPOW],
 
-val translate_fc_def = Define `
-    translate_fc (caller_i,callee_i) ir (caller_o,callee_o) (transfer_ins,translate_f,transfer_outs) = 
-        SC (SC (transfer_ins (caller_i,callee_i)) 
-                (translate_f ir))
-           (transfer_outs (caller_o,callee_o))
-           `;
-
-val FC_2_SC = Q.store_thm (
-    "FC_2_SC",
-     `!ir1 ir2 ir3 st. WELL_FORMED ir1 /\ WELL_FORMED ir2 /\WELL_FORMED ir3 ==>
-             (run_ir (SC (SC ir1 ir2) ir3) st = run_ir ir3 (run_ir ir2 (run_ir ir1 st)))`,
-     RW_TAC std_ss [] THEN
-     `WELL_FORMED (SC ir1 ir2)` by METIS_TAC [IR_SC_IS_WELL_FORMED] THEN
-      RW_TAC std_ss [SEMANTICS_OF_IR]
-   );
-
-val FC_BASIC_LEM = Q.store_thm (
-    "FC_BASIC_LEM",
-    `!hp_f sk_f hp_f' sk_f' s st. 
-        WELL_FORMED (transfer_outs (caller_o,callee_o)) /\
-        WELL_FORMED (translate_f ir) /\ 
-        WELL_FORMED (transfer_ins (caller_i,callee_i)) /\
-        data_correspond s st (hp_f,sk_f) /\
-        (!s st s'. data_correspond s st (hp_f,sk_f) ==>
-                   data_correspond (transfer s' s callee_i caller_i) (run_ir (transfer_ins (caller_i,callee_i)) st) (hp_f',sk_f')) /\
-        (!s st. data_correspond s st (hp_f',sk_f') ==>
-                   data_correspond (run_ir1 ir s) (run_ir (translate_f ir) st) (hp_f',sk_f')) /\
-        (!s st s'. data_correspond s st (hp_f',sk_f') ==>
-                   data_correspond (transfer s' s caller_o callee_o)  (run_ir (transfer_outs (caller_o,callee_o)) st) (hp_f,sk_f))
-        ==> 
-         data_correspond (run_fc (caller_i,callee_i) ir (caller_o,callee_o) s)
-            (run_ir (translate_fc (caller_i,callee_i) ir (caller_o,callee_o) (transfer_ins,translate_f,transfer_outs)) st) (hp_f,sk_f)`,
-
-     RW_TAC std_ss [run_fc_def, translate_fc_def, FC_2_SC, LET_THM]
-    );     
-
+      REWRITE_TAC [Once EQ_SYM_EQ] THEN
+        REPEAT GEN_TAC THEN NTAC 12 STRIP_TAC THEN
+        Q.PAT_ASSUM `!cnd1 S1 st. a ==> b ==> c ==> d` (ASSUME_TAC o Q.SPECL [`cnd1`,`S1`,`run_cfl S1 st`]) THEN
+        `(\st'. eval_il_cond cnd1 st') = eval_il_cond cnd1` by METIS_TAC [] THEN
+        FULL_SIMP_TAC std_ss [] THEN 
+        POP_ASSUM (K ALL_TAC) THEN 
+        `stopAt (eval_il_cond cnd1) (run_cfl S1) st` by METIS_TAC [] THEN
+        IMP_RES_TAC SHORTEST_INDUCTIVE THEN
+        Q.ABBREV_TAC `k = shortest (eval_il_cond cnd1) (run_cfl S1) (run_cfl S1 st)` THEN
+        RES_TAC THEN RES_TAC THEN
+        `~eval_TCND cond s` by METIS_TAC [EVAL_TCND_THM] THEN 
+        RW_TAC std_ss [Once WHILE, FUNPOW]
+     ]
+  );
 *)
 
 (*---------------------------------------------------------------------------------*)

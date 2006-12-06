@@ -364,7 +364,7 @@ val HOARE_CJ_CFL = Q.store_thm (
 
 val HOARE_TR_CFL = Q.store_thm (
    "HOARE_TR_CFL",
-   `!cond S P.
+   `!cond S_cfl P.
        WELL_FORMED S_cfl /\  WF_TR (translate_condition cond, translate S_cfl) /\
          (!st. P st ==> P (run_cfl S_cfl st)) ==>
             !st. P st ==> P (run_cfl (TR cond S_cfl) st) /\ 

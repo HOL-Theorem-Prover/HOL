@@ -7,10 +7,13 @@ Symbol.uo: Symbol.sml
 Temp.uo: Temp.sml Symbol.uo
 	HOLMOSMLC -c -toplevel Table.ui Symbol.ui Temp.sml
 
+Tree.uo: Temp.uo Tree.sml
+	HOLMOSMLC -c -toplevel Temp.ui Tree.sml
+
 Assem.uo: Assem.sml Temp.uo 
 	HOLMOSMLC -c -toplevel Symbol.ui Temp.ui Assem.sml
 
-IR.uo: IR.sml
+IR.uo: IR.sml Tree.uo
 	HOLMOSMLC -c -toplevel Table.ui Temp.ui Tree.ui Symbol.ui IR.sml
 
 CFG.uo: CFG.sml Assem.uo IR.uo
@@ -37,5 +40,5 @@ funCall.uo: funCall.sml
 backwardReasoning.uo: backwardReasoning.sml IRSyntax.uo preARMSyntax.uo CFLTheory.uo CFL_RulesTheory.uo
 	HOLMOSMLC -c -toplevel IRSyntax.ui annotatedIR.ui CFLTheory.ui funCall.ui preARMSyntax.ui Assem.ui backwardReasoning.sml
 
-interface.uo: interface.sml mechReasoning.uo
-	HOLMOSMLC -c -toplevel annotatedIR.ui funCall.ui mechReasoning.ui interface.sml
+interface.uo: interface.sml backwardReasoning.uo
+	HOLMOSMLC -c -toplevel annotatedIR.ui funCall.ui backwardReasoning.ui interface.sml

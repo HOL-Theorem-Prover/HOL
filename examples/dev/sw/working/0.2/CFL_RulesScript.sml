@@ -189,7 +189,7 @@ val WF_DEF_2 = Q.store_thm (
 
 val WF_TR_LEM_1 = Q.store_thm (
    "WF_TR_LEM_1",
-   `!cond ir st. WELL_FORMED ir /\
+   `!cond ir. WELL_FORMED ir /\
            WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_cfl ir st0)) ==>
            WF_TR (translate_condition cond,translate ir)`,
    

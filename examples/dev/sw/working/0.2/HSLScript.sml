@@ -135,7 +135,7 @@ val CONV_REG_LEM = Q.store_thm (
 (*      Data in memory, Expressions                                                *)
 (*---------------------------------------------------------------------------------*)
 
-val _ = type_abbrev("TSTATE", Type`:(TREG |-> bool ** i32) # (num |-> bool ** i32)`);
+val _ = type_abbrev("TSTATE", Type`:(num |-> bool ** i32) # (num |-> bool ** i32)`);
 
 val FORALL_TSTATE = Q.store_thm (
     "FORALL_TSTATE",
@@ -166,12 +166,12 @@ val roc_2_exp_def = Define `
 val tread_def = Define `
   (tread (rg,sk) (inE i) =  sk ' i) /\
   (tread (rg,sk) (inC v) =  v) /\
-  (tread (rg,sk) (inR r) = rg ' r)
+  (tread (rg,sk) (inR r) = rg ' (data_reg_index r))
   `;
 
 val twrite_def = Define `
   (twrite (rg,sk) (inE i) v =  (rg, sk |+ (i,v))) /\
-  (twrite (rg,sk) (inR r) v = (rg |+ (r,v), sk)) /\
+  (twrite (rg,sk) (inR r) v = (rg |+ (data_reg_index r, v), sk)) /\
   (twrite (rg,sk) (inC _) v = (rg, sk))
   `;
 
@@ -211,7 +211,7 @@ val _ = Hol_datatype `HSL_STRUCTURE =
     Sc of HSL_STRUCTURE => HSL_STRUCTURE |
     Cj of TCND => HSL_STRUCTURE => HSL_STRUCTURE |
     Tr of TCND => HSL_STRUCTURE |
-    Fc of (TEXP list # TEXP list) => HSL_STRUCTURE => (TEXP list # TEXP list)
+    Fc of (TEXP list # TEXP list) => HSL_STRUCTURE => (TEXP list # TEXP list) => (num # num)
   `;
 
 (*---------------------------------------------------------------------------------*)
@@ -302,7 +302,7 @@ val run_hsl_def = Define `
        (if eval_TCND cond s then run_hsl S1 s else run_hsl S2 s)) /\
     (run_hsl (Tr cond S1) s =
        WHILE (\s'. ~eval_TCND cond s') (run_hsl S1) s) /\
-    (run_hsl (Fc (caller_i,callee_i) S_hsl (caller_o,callee_o)) s =
+    (run_hsl (Fc (caller_i,callee_i) S_hsl (caller_o,callee_o) (m1,m2)) s =
        let s1 = transfer (empty_s, s) (callee_i, caller_i) in
        let s2 = run_hsl S_hsl s1 in
          transfer (s, s2) (caller_o, callee_o))
@@ -331,13 +331,33 @@ val valid_assgn_def = Define `
   (valid_assgn (TSTR m r) bound = within_bound m bound) /\
   (valid_assgn _ bound = T)`;
 
+val unique_list_def = Define `
+    (unique_list (h::l) = EVERY (\x.~ (x = h)) l /\ unique_list l) /\
+    (unique_list [] = T)`;
+
+val notC_def = Define `
+    (notC (inC c) = F) /\
+    (notC _ = T)`;
+
+val VALID_FC_1_def = Define `
+    VALID_FC_1 (caller_i,callee_i,callee_o,caller_o) (m1,m2) =
+         EVERY (\x. valid_TEXP x m1) caller_i /\ EVERY notC callee_i /\
+         unique_list callee_i /\ EVERY (\x. valid_TEXP x m2) callee_i /\
+         (LENGTH callee_i = LENGTH caller_i) /\
+         EVERY (\x. valid_TEXP x m2) callee_o /\ EVERY notC caller_o /\
+         unique_list caller_o /\ EVERY (\x. valid_TEXP x m1) caller_o /\
+         (LENGTH callee_o = LENGTH caller_o)`;
+
 val valid_struct_def = Define `
   (valid_struct (Blk stmL) bound = EVERY (\stm. valid_assgn stm bound) stmL) /\
   (valid_struct (Sc S1 S2) bound = valid_struct S1 bound /\ valid_struct S2 bound) /\
   (valid_struct (Cj cond S_t S_f) bound =
        valid_struct S_t bound /\ valid_struct S_f bound) /\
   (valid_struct (Tr cond S_body) bound =
-       valid_struct S_body bound)`;
+       valid_struct S_body bound) /\
+  (valid_struct (Fc (caller_i, callee_i) S_body (caller_o, callee_o) (m1,m2)) bound =
+       VALID_FC_1 (caller_i,callee_i,callee_o,caller_o) (m1,m2) /\
+       valid_struct S_body m2)`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Logic Style Specification                                            *)
@@ -346,7 +366,7 @@ val valid_struct_def = Define `
 
 val CSPEC_def = Define `
     CSPEC S_hsl (in_f, acf, out_f) =
-        !v s. (in_f s = v) ==> (out_f (run_hsl S_hsl s) = acf v)`;
+        !s. out_f (run_hsl S_hsl s) = acf (in_f s)`;
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for reductions on basic structures                                   *)
@@ -419,7 +439,7 @@ val WF_HSL_TR_THM = Q.store_thm (
 
     RW_TAC std_ss [] THEN
     METIS_TAC [WF_HSL_TR_LEM_2, WF_HSL_TR_LEM_3]
-  );   
+  );
 
 
 val Tr_RULE = Q.store_thm (
@@ -451,14 +471,6 @@ val Tr_RULE = Q.store_thm (
 (*      Properites of the "transfer" operation                                     *)
 (*---------------------------------------------------------------------------------*)
 
-val unique_list_def = Define `
-    (unique_list (h::l) = EVERY (\x.~ (x = h)) l /\ unique_list l) /\
-    (unique_list [] = T)`;
-
-val notC_def = Define `
-    (notC (inC c) = F) /\
-    (notC _ = T)`;
-
 val TRANSFER_LEM_1 = Q.store_thm (
    "TRANSFER_LEM_1",
     `!h dstL srcL s1 s0. unique_list (h::dstL) /\ (LENGTH dstL = LENGTH srcL) ==>
@@ -469,7 +481,7 @@ val TRANSFER_LEM_1 = Q.store_thm (
      `?rg sk. s1 = (rg,sk)` by METIS_TAC [ABS_PAIR_THM] THEN
      Cases_on `h` THEN  Cases_on `h''` THEN
      RW_TAC std_ss [tread_def, twrite_def] THEN
-     METIS_TAC [FAPPLY_FUPDATE_THM]
+     METIS_TAC [FAPPLY_FUPDATE_THM, CONV_REG_LEM]
    );
 
 val TRANSFER_THM = Q.store_thm (
@@ -498,7 +510,7 @@ val TRANSFER_INTACT = Q.store_thm (
    `?rg sk. s1 = (rg,sk)` by METIS_TAC [ABS_PAIR_THM] THEN
    Cases_on `x` THEN  Cases_on `h` THEN
    FULL_SIMP_TAC std_ss [tread_def, twrite_def] THEN
-   METIS_TAC [FAPPLY_FUPDATE_THM]
+   METIS_TAC [FAPPLY_FUPDATE_THM, CONV_REG_LEM]
   );
 
 (*---------------------------------------------------------------------------------*)
@@ -517,13 +529,13 @@ val valid_arg_list_def = Define `
 
 val Fc_RULE = Q.store_thm (
    "Fc_RULE",
-   `!S_hsl f caller_i caller_o callee_i callee_o caller_i_f caller_o_f callee_i_f callee_o_f g1 g2.
+   `!S_hsl f caller_i caller_o callee_i callee_o m1 m2 caller_i_f caller_o_f callee_i_f callee_o_f g1 g2.
       valid_arg_list (caller_i, caller_o, callee_i, callee_o) /\
       (match caller_i_f caller_i g1 /\ match callee_i_f callee_i g1) /\
       (match caller_o_f caller_o g2 /\ match callee_o_f callee_o g2)
        ==>
         CSPEC S_hsl (callee_i_f,f,callee_o_f) ==>
-          CSPEC (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o)) (caller_i_f, f, caller_o_f)`,
+          CSPEC (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) (caller_i_f, f, caller_o_f)`,
 
    RW_TAC std_ss [valid_arg_list_def, match_def, CSPEC_def, run_hsl_def] THEN
    `(MAP (tread (transfer (s,s2) (caller_o,callee_o))) caller_o = MAP (tread s2) callee_o) /\
