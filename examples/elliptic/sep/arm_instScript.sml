@@ -10,7 +10,8 @@ open HolKernel boolLib bossLib;
 
 open pred_setTheory res_quanTheory wordsTheory arithmeticTheory;
 open arm_rulesTheory arm_rulesLib arm_evalTheory armTheory instructionTheory; 
-open bsubstTheory listTheory rich_listTheory;
+open bsubstTheory listTheory rich_listTheory pairTheory sortingTheory;
+open relationTheory;
 
 open set_sepTheory set_sepLib progTheory arm_progTheory;
 
@@ -640,142 +641,28 @@ val c52TTF = GEN_CONDs (5,2,true,true,false);
 (* Produce theorems to satisfy "cond 2" of IMP_ARM_RUN1                           *)
 (* ----------------------------------------------------------------------------- *)
 
-val arm2set''_THM = prove(
-  ``arm2set'' (rs,ns,st,ud,rt) s =
-    {Reg a (reg a s) |a| ~(a IN rs)} UNION 
-    {Mem a (mem a s) |a| ~(a IN ns)} UNION
-    (if ~ st then {Status (status s)} else {}) UNION
-    (if ~ ud then {Undef s.undefined} else {}) UNION
-    (if ~ rt then {Rest (owrt_visible s)} else {})``,
-  REWRITE_TAC [arm2set''_def,arm2set'_def,EXTENSION,arm2set_def]
-  \\ FULL_SIMP_TAC bool_ss 
-        [IN_UNION,IN_DIFF,IN_INSERT,NOT_IN_EMPTY,GSPECIFICATION,PAIR_EQ]
-  \\ STRIP_TAC \\ EQ_TAC \\ STRIP_TAC << [
-    METIS_TAC [],
-    METIS_TAC [],
-    Cases_on `st` \\ FULL_SIMP_TAC bool_ss [IN_INSERT,NOT_IN_EMPTY],
-    Cases_on `ud` \\ FULL_SIMP_TAC bool_ss [IN_INSERT,NOT_IN_EMPTY],
-    Cases_on `rt` \\ FULL_SIMP_TAC bool_ss [IN_INSERT,NOT_IN_EMPTY],
-    `!k. ?a. x = Reg a (reg a s)` by METIS_TAC []
-    \\ SRW_TAC [] [] \\ METIS_TAC [],    
-    `!k. ?a. x = Mem a (mem a s)` by METIS_TAC []
-    \\ SRW_TAC [] [] \\ METIS_TAC [],
-    Cases_on `st` \\ FULL_SIMP_TAC bool_ss [IN_INSERT,NOT_IN_EMPTY]
-    \\ SRW_TAC [] [],
-    Cases_on `ud` \\ FULL_SIMP_TAC bool_ss [IN_INSERT,NOT_IN_EMPTY]
-    \\ SRW_TAC [] [],    
-    Cases_on `rt` \\ FULL_SIMP_TAC bool_ss [IN_INSERT,NOT_IN_EMPTY]
-    \\ SRW_TAC [] []]);
-
-val arm2set''_EQ = store_thm ("arm2set''_EQ", 
-``!rs ns st ud rt s s'.
-(arm2set'' (rs,ns,st,ud,rt) s = arm2set'' (rs,ns,st,ud,rt) s') = 
-(
-	(!r. (~(r IN rs)) ==> (arm_prog$reg r s = arm_prog$reg r s')) /\
-	(!p. (~(p IN ns)) ==> (arm_prog$mem p s = arm_prog$mem p s')) /\
-	((~st) ==> (status s = status s')) /\
-	((~ud) ==> (s.undefined = s'.undefined)) /\
-	((~rt) ==> (owrt_visible s = owrt_visible s'))
-)``,
-
-SIMP_TAC std_ss [arm2set''_THM, EXTENSION, IN_UNION, IN_DIFF, IN_INSERT, NOT_IN_EMPTY, GSPECIFICATION, prove (``x IN (if c then S1 else S2) =
-												   if c then x IN S1 else x IN S2``, PROVE_TAC[])] THEN
-REPEAT GEN_TAC THEN EQ_TAC THENL [
-	REPEAT STRIP_TAC THEN (
-		CCONTR_TAC THEN
-		Q.PAT_ASSUM `!x. P x` MP_TAC THEN
-		SIMP_TAC std_ss []) THENL [
-
-		Q_TAC EXISTS_TAC `Reg r (arm_prog$reg r s)` THEN
-		FULL_SIMP_TAC std_ss [ARMel_11, ARMel_distinct],
-
-		Q_TAC EXISTS_TAC `Mem p (arm_prog$mem p s)` THEN
-		FULL_SIMP_TAC std_ss [ARMel_11, ARMel_distinct],
-
-		Q_TAC EXISTS_TAC `Status (status s)` THEN
-		FULL_SIMP_TAC std_ss [ARMel_11, ARMel_distinct],
-
-		Q_TAC EXISTS_TAC `Undef s.undefined` THEN
-		FULL_SIMP_TAC std_ss [ARMel_11, ARMel_distinct],
-
-		Q_TAC EXISTS_TAC `Rest (owrt_visible s)` THEN
-		FULL_SIMP_TAC std_ss [ARMel_11, ARMel_distinct]
-	],
-	
-	SIMP_TAC std_ss [] THEN
-	REPEAT STRIP_TAC THEN
-	EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_SIMP_TAC std_ss [ARMel_11, ARMel_distinct]
-])
+val REG_WRITE_r15 = prove(
+  ``!r m n d. ~(15w = n) ==> ((REG_WRITE r m n d) r15 = r r15)``,
+  METIS_TAC [(RW [REG_READ6_def,FETCH_PC_def] o Q.INST [`n2`|->`15w`] o SPEC_ALL) 
+             arm_evalTheory.REG_READ_WRITE_NEQ]);
 
 val REG_READ_WRITE_NEQ2 = prove(
-  ``!n1 n2 r m1 m2 d. ~(n1 = n2) /\ ~(n2 = 15w) ==> 
+  ``!n1 n2 r m1 m2 d. 
+      ~(n1 = n2) ==> 
       (REG_READ (REG_WRITE r m1 n1 d) m2 n2 = REG_READ r m2 n2)``,
-  METIS_TAC [REG_READ6_def,REG_READ_WRITE_NEQ]);
+  REPEAT STRIP_TAC \\ Cases_on `15w = n2`
+  THEN1 ASM_SIMP_TAC std_ss [REG_READ_def,REG_READ_WRITE_NEQ,REG_WRITE_r15]
+  \\ METIS_TAC [REG_READ6_def,REG_READ_WRITE_NEQ]);
 
-val SHAPE_LEMMA_TAC = 
-  EQ_TAC \\ STRIP_TAC \\ ASM_REWRITE_TAC []
-  \\ SRW_TAC [] [reg_def,state_mode_def,set_status_def]
-  \\ CONV_TAC PSR_CONV
-  \\ REWRITE_TAC [GSYM state_mode_def]
-  \\ ASM_SIMP_TAC bool_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2];
-
-val SHAPE_LEMMA_TERM_FORMAT =
-  ``(x = Reg a (reg a <|registers := rx; psrs := px; 
-                        memory := v; undefined := v'|>)) /\ bx =
-    (x = Reg a (reg a s)) /\ bx``;
-
-fun MK_SHAPE_LEMMA_TERM (rx,bx) px =
-  subst [``rx:registers``|-> rx,
-         ``px:psrs``    |-> px,
-         ``bx:bool``              |-> bx] SHAPE_LEMMA_TERM_FORMAT;
-
-fun MK_SHAPE_LEMMA (rx,bx) px = prove(MK_SHAPE_LEMMA_TERM (rx,bx) px, SHAPE_LEMMA_TAC);
-
-val n = ``s.psrs``;
-val s = ``set_status (sN,sZ,sC,sV) s``;
-
-val b = (``REG_WRITE s.registers usr 15w z``,``~(a = 15w:word4)``);
-val br = (``REG_WRITE (REG_WRITE s.registers (state_mode s) R1 z') usr 15w z``,``~(a = 15w:word4) /\ ~(a = R1)``);
-val rb = (``REG_WRITE (REG_WRITE s.registers usr 15w z') (state_mode s) R1 z``,``~(a = 15w:word4) /\ ~(a = R1)``);
-
-val i = (``INC_PC s.registers``,``~(a = 15w:word4)``);
-val ir = (``INC_PC (REG_WRITE s.registers (state_mode s) R1 z)``,``~(a = 15w:word4) /\ ~(a = R1)``);
-val ri = (``REG_WRITE (INC_PC s.registers) (state_mode s) R1 z``,``~(a = 15w:word4) /\ ~(a = R1)``);
-val irr = (``INC_PC (REG_WRITE (REG_WRITE s.registers (state_mode s) R1 z') (state_mode s) R2 z)``,``~(a = 15w:word4) /\ ~(a = R1) /\ ~(a = R2)``);
-val rir = (``REG_WRITE (INC_PC (REG_WRITE s.registers (state_mode s) R1 z')) (state_mode s) R2 z``,``~(a = 15w:word4) /\ ~(a = R1) /\ ~(a = R2)``);
-val rri = (``REG_WRITE (REG_WRITE (INC_PC s.registers) (state_mode s) R1 z') (state_mode s) R2 z``,``~(a = 15w:word4) /\ ~(a = R1) /\ ~(a = R2)``);
-
-fun cross f [] ys = []
-  | cross f (x::xs) ys = map (f x) ys @ cross f xs ys;
-
-val SHAPE_REGISTER_LEMMAS = cross MK_SHAPE_LEMMA [b,rb,br,i,ir,ri,irr,rir,rri] [n,s]
-
-val SHAPE_MEM_LEMMA = prove( 
-  ``(x = Mem a (MEM_WRITE_WORD s.memory M2 q a)) /\ 
-    ~(a = M1) /\ ~(a = addr30 M2) =
-    (x = Mem a (mem a s)) /\ ~(a = M1) /\ ~(a = addr30 M2)``,
-  REWRITE_TAC [MEM_WRITE_WORD_def,ADDR30_def,mem_def,GSYM addr30_def]
-  \\ EQ_TAC \\ STRIP_TAC \\ ASM_REWRITE_TAC []    
-  \\ ASM_SIMP_TAC bool_ss [SUBST_def]);
-
-val SHAPE_LEMMAS = map (RW [CONJ_ASSOC]) (SHAPE_MEM_LEMMA::SHAPE_REGISTER_LEMMAS);
-
-val DEFS = [owrt_visible_def,set_status_def,owrt_visible_regs_def,state_mode_def,
-            status_def,statusN_def,statusZ_def,statusC_def,statusV_def,mem_def];
-
-val EXPAND_DEFS_ss = rewrites DEFS
-val CONTRACT_DEFS_ss = rewrites (map GSYM DEFS)
+val SHAPE_ss = rewrites
+  [owrt_visible_def,set_status_def,owrt_visible_regs_def,state_mode_def,
+   status_def,statusN_def,statusZ_def,statusC_def,statusV_def,mem_def,reg_def,
+   REG_READ_WRITE_NEQ2,REG_OWRT_ALL,REG_READ_INC_PC,MEM_WRITE_WORD_def,SUBST_def,
+   ADDR30_def,GSYM addr30_def];
 
 val SHAPE_TAC = 
-  STRIP_TAC
-  \\ REWRITE_TAC [arm2set''_THM]
-  \\ SRW_TAC [] [EXTENSION]
-  \\ SIMP_TAC (bool_ss++EXPAND_DEFS_ss) []
-  \\ SRW_TAC [] []
-  \\ CONV_TAC PSR_CONV
-  \\ SIMP_TAC (bool_ss++CONTRACT_DEFS_ss) [REG_OWRT_ALL]
-  \\ REWRITE_TAC [CONJ_ASSOC]
-  \\ REWRITE_TAC SHAPE_LEMMAS;
+  SIMP_TAC (srw_ss()++SHAPE_ss) [arm2set''_EQ,IN_INSERT,NOT_IN_EMPTY] \\ CONV_TAC PSR_CONV 
+  \\ SIMP_TAC (srw_ss()++SHAPE_ss) [arm2set''_EQ,IN_INSERT,NOT_IN_EMPTY];
 
 val SHAPE_TERM_FORMAT = 
   ``(NEXT_ARM_MEM s = 
@@ -1126,11 +1013,6 @@ val REG_READ_WRITE_NEQ = prove(
 val INC_PC_r15 = prove(
   ``!r. INC_PC r r15 = r r15 + 4w``,
   SRW_TAC [] [INC_PC_def,SUBST_def]);
-
-val REG_WRITE_r15 = prove(
-  ``!r m n d. ~(15w = n) ==> ((REG_WRITE r m n d) r15 = r r15)``,
-  METIS_TAC [(RW [REG_READ6_def,FETCH_PC_def] o Q.INST [`n2`|->`15w`] o SPEC_ALL) 
-             arm_evalTheory.REG_READ_WRITE_NEQ]);
 
 val regs_15w_EQ_reg15 = prove(
   ``!s. s.registers r15 = reg 15w s``,  
@@ -1815,7 +1697,7 @@ val ARM_UNCONDITIONAL_JUMP =
     MATCH_MP th b
   end; 
 
-val _ = save_thm("ARM_B_AL",ARM_UNCONDITIONAL_JUMP);
+val _ = save_thm("arm_B_AL",ARM_UNCONDITIONAL_JUMP);
 
 val ARM_RUN_PUSH_COND = prove(
   ``!P Q g. ARM_RUN (P * cond g) Q ==> ARM_RUN (P * cond g) (Q * cond g)``,
@@ -1843,7 +1725,7 @@ val ARM_CONDITIONAL_JUMP =
     val th = MATCH_MP ARM_RUN_IMP_PROG2 th
   in th end;
 
-val _ = save_thm("ARM_B",ARM_CONDITIONAL_JUMP);
+val _ = save_thm("arm_B",ARM_CONDITIONAL_JUMP);
 
 
 (* procedure calls: ARM_BL *)
@@ -1886,7 +1768,7 @@ val ARM_UNCONDITIONAL_CALL =
     val b = MATCH_MP ARM_RUN_IMP_CALL (RW [lemma] b)
   in b end;
 
-val _ = save_thm("ARM_CALL",ARM_UNCONDITIONAL_CALL);
+val _ = save_thm("arm_BL",ARM_UNCONDITIONAL_CALL);
 
 
 (* procedure returns: MOV_PC *)
@@ -1923,7 +1805,7 @@ val MOV_PC =
     val th = MATCH_MP PROG2_LEMMA (MK_NOP ARM_MOV_NOP)
     val th = MATCH_MP th b 
     val th = RW [GSYM PASS_def] th
-  in save_thm("aMOV_PC",th) end;
+  in save_thm("arm_MOV_PC",th) end;
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -1957,8 +1839,8 @@ val cmps = [(ARM_CMN,ARM_CMN_NOP,"CMN"),
             (ARM_TST,ARM_TST_NOP,"TST"),
             (ARM_TEQ,ARM_TEQ_NOP,"TEQ")];
 
-val _ = store_thms "a" "1" MK_COMPARE1 cmps
-val _ = store_thms "a" "2" MK_COMPARE2 cmps
+val _ = store_thms "arm_" "1" MK_COMPARE1 cmps
+val _ = store_thms "arm_" "2" MK_COMPARE2 cmps
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -1990,8 +1872,8 @@ fun MK_MONOP1 (th,nop) =
 val monops = [(ARM_MOV,ARM_MOV_NOP,"MOV"),
               (ARM_MVN,ARM_MVN_NOP,"MVN")];
 
-val _ = store_thms "a" "1" MK_MONOP1 monops
-val _ = store_thms "a" "2" MK_MONOP2 monops
+val _ = store_thms "arm_" "1" MK_MONOP1 monops
+val _ = store_thms "arm_" "2" MK_MONOP2 monops
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -2072,11 +1954,11 @@ val binops = [(ARM_ADC,ARM_ADC_NOP,"ADC"),
               (ARM_RSC,ARM_RSC_NOP,"SBC"),
               (ARM_SUB,ARM_SUB_NOP,"SUB")];
 
-val _ = store_thms "a" "1" MK_BINOP1 binops
-val _ = store_thms "a" "2" MK_BINOP2 binops
-val _ = store_thms "a" "2'" MK_BINOP2' binops
-val _ = store_thms "a" "2''" MK_BINOP2'' binops
-val _ = store_thms "a" "3" MK_BINOP3 binops
+val _ = store_thms "arm_" "1" MK_BINOP1 binops
+val _ = store_thms "arm_" "2" MK_BINOP2 binops
+val _ = store_thms "arm_" "2'" MK_BINOP2' binops
+val _ = store_thms "arm_" "2''" MK_BINOP2'' binops
+val _ = store_thms "arm_" "3" MK_BINOP3 binops
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -2106,9 +1988,9 @@ val MUL2'' =
     MK_PROG2 (c31TTF,Sris31TTF,[],P31sc') rs (th,ARM_MUL_NOP) BINOP2_INST
   end;
 
-val _ = save_thm("aMUL3",MUL3);
-val _ = save_thm("aMUL2",MUL2);
-val _ = save_thm("aMUL2''",MUL2'');
+val _ = save_thm("arm_MUL3",MUL3);
+val _ = save_thm("arm_MUL2",MUL2);
+val _ = save_thm("arm_MUL2''",MUL2'');
 
 val MLA4 = 
   let
@@ -2145,10 +2027,10 @@ val MLA3'' =
     MK_PROG2 (c41TTF,Sris41TTF,[],P41sc') rs (th,ARM_MLA_NOP) BINOP3_INST
   end;
 
-val _ = save_thm("aMLA4",MLA4);
-val _ = save_thm("aMLA3",MLA3);
-val _ = save_thm("aMLA3'",MLA3');
-val _ = save_thm("aMLA3''",MLA3'');
+val _ = save_thm("arm_MLA4",MLA4);
+val _ = save_thm("arm_MLA3",MLA3);
+val _ = save_thm("arm_MLA3'",MLA3');
+val _ = save_thm("arm_MLA3''",MLA3'');
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -2197,10 +2079,10 @@ val mulls = [(ARM_UMULL,ARM_UMULL_NOP,"UMULL"),
              (ARM_SMULL,ARM_SMULL_NOP,"UMLAL"),
              (ARM_SMULL,ARM_SMULL_NOP,"SMLAL")];
 
-val _ = store_thms "a" "4" MK_MULL4 mulls
-val _ = store_thms "a" "3" MK_MULL3 mulls
-val _ = store_thms "a" "3'" MK_MULL3' mulls
-val _ = store_thms "a" "3''" MK_MULL3'' mulls
+val _ = store_thms "arm_" "4" MK_MULL4 mulls
+val _ = store_thms "arm_" "3" MK_MULL3 mulls
+val _ = store_thms "arm_" "3'" MK_MULL3' mulls
+val _ = store_thms "arm_" "3''" MK_MULL3'' mulls
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -2229,13 +2111,13 @@ val SWP3_NONALIGNED =
     val th = CLEAN_ARM_RULE_C rs th
     val c = ``CONDITION_PASSED2 (sN,sZ,sC,sV) c``
     val th = MK_PROG2 (conds,shape,insts,prog) rs (th,nop) i
-  in save_thm("aSWP3_NONALIGNED",th) end;
+  in save_thm("arm_SWP3_NONALIGNED",th) end;
 
 val SWP3 = 
   let
     val th = Q.INST [`z`|->`addr32 z`] SWP3_NONALIGNED
     val th = RW [ADDRESS_ROTATE,addr30_addr32,GSYM R30_def] th    
-  in save_thm("aSWP3",th) end;
+  in save_thm("arm_SWP3",th) end;
 
 val SWP2_NONALIGNED = 
   let
@@ -2247,13 +2129,13 @@ val SWP2_NONALIGNED =
     val insts = [``M2:word32``|->``x2:word32``]
     val i = SWP2_INST
     val th = MK_PROG2 (conds,shape,insts,prog) rs (th,nop) i
-  in save_thm("aSWP2_NONALIGNED",th) end;
+  in save_thm("arm_SWP2_NONALIGNED",th) end;
 
 val SWP2 = 
   let
     val th = Q.INST [`y`|->`addr32 y`] SWP2_NONALIGNED
     val th = RW [ADDRESS_ROTATE,addr30_addr32,GSYM R30_def] th    
-  in save_thm("aSWP2",th) end;
+  in save_thm("arm_SWP2",th) end;
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -2305,9 +2187,9 @@ val STR_NONALIGNED =
     val th = MOVE_STAR_RULE `a*b*s*c*y` `a*b*y*s*c` th
     val imp = MATCH_MP PROG2_LEMMA (MK_NOP nop)
     val th = MATCH_MP imp th 
-  in save_thm("aSTR_NONALIGNED",th) end;
+  in save_thm("arm_STR_NONALIGNED",th) end;
 
-val STR = save_thm("aSTR",AM2_ALIGN_ADDRESSES `y` STR_NONALIGNED);
+val STR = save_thm("arm_STR",AM2_ALIGN_ADDRESSES `y` STR_NONALIGNED);
 
 val LDR_NONALIGNED =
   let
@@ -2317,9 +2199,9 @@ val LDR_NONALIGNED =
     val insts = [``M2:word32``|->``(ADDR_MODE2_ADDR' a_mode x1):word32``]
     val i = STR_INST
     val th = MK_PROG2 (conds,shape,insts,prog) rs (th,nop) i
-  in save_thm("aLDR_NONALIGNED",th) end;
+  in save_thm("arm_LDR_NONALIGNED",th) end;
 
-val LDR = save_thm("aLDR",AM2_ALIGN_ADDRESSES `y` LDR_NONALIGNED);
+val LDR = save_thm("arm_LDR",AM2_ALIGN_ADDRESSES `y` LDR_NONALIGNED);
 
 val LDR1_NONALIGNED =
   let
@@ -2342,9 +2224,9 @@ val LDR1_NONALIGNED =
     val th = MOVE_STAR_RULE `b*y*s*p*c` `b*y*c*s*p` th
     val th' = MATCH_MP PROG2_LEMMA (MK_NOP nop)
     val th = MATCH_MP th' th
-  in save_thm("aLDR1_NONALIGNED",th) end;
+  in save_thm("arm_LDR1_NONALIGNED",th) end;
 
-val LDR1 = save_thm("aLDR1",AM2_ALIGN_ADDRESSES `y` LDR1_NONALIGNED);
+val LDR1 = save_thm("arm_LDR1",AM2_ALIGN_ADDRESSES `y` LDR1_NONALIGNED);
 
 val LDR_PC_LEMMA = prove(
   ``!regs m x. REG_WRITE (INC_PC regs) m 15w x = REG_WRITE regs usr 15w x``,
@@ -2379,454 +2261,1568 @@ val LDR_PC =
     val imp = MATCH_MP PROG2_LEMMA (MK_NOP nop)
     val imp = AM2_ALIGN_ADDRESSES `x:word32` imp   
     val th = MATCH_MP imp th
-  in save_thm("aLDR_PC",th) end;
+  in save_thm("arm_LDR_PC",th) end;
+
+
+(* ----------------------------------------------------------------------------- *)
+(* General tools                                                                 *)
+(* ----------------------------------------------------------------------------- *)
+
+val ARM_PROG2_EQ = let
+  val th = Q.SPECL [`P`,`[cmd]`,`Q`,`Q'`,`f`] ARM_PROG_INTRO
+  val th = SIMP_RULE (std_ss++sep_ss) [LENGTH,ms_def,pcINC_def,wLENGTH_def] th
+  val th = SIMP_RULE std_ss [ARM_RUN_SEMANTICS,ARMpc_def,STAR_ASSOC,R30_def,SEP_DISJ_def,LET_DEF] th
+  in GSYM th end;
+
+val ARM_PROG1_EQ = let
+  val th = Q.INST [`Q'`|->`SEP_F`] ARM_PROG2_EQ
+  val th = SIMP_RULE (bool_ss++sep_ss) [ARM_PROG_FALSE_POST,SEP_F_def,LET_DEF] th
+  in th end;
+
+val STATE_ARM_MEM_1 = 
+  REWRITE_CONV [GSYM (EVAL ``SUC 0``),STATE_ARM_MEM_def]``STATE_ARM_MEM 1 s``;
+
+val ARM_PROG_INIT_TAC = 
+  REWRITE_TAC [ARM_PROG1_EQ,ARM_PROG2_EQ,PASS_def] \\ REPEAT STRIP_TAC
+  \\ Q.EXISTS_TAC `1` \\ REWRITE_TAC [STATE_ARM_MEM_1];
+
+
+(* ----------------------------------------------------------------------------- *)
+(* Semantics of ``R a1 x1  * ... * R an xn * ms b1 y1 * ... * ms bm ym * ...``   *)
+(* ----------------------------------------------------------------------------- *)
+
+val xR_list_def = Define `
+  (xR_list [] = emp) /\
+  (xR_list ((r,NONE)::xs) = ~R r * xR_list xs) /\
+  (xR_list ((r,SOME x)::xs) = R r x * xR_list xs)`;
+
+val xR_list_sem_def = Define `
+  (xR_list_sem [] s = T) /\
+  (xR_list_sem ((r,NONE)::xs) s = xR_list_sem xs s) /\
+  (xR_list_sem ((r,SOME x)::xs) s = (reg r s = x) /\ xR_list_sem xs s)`;
+
+val xR_list_lemma = prove(
+  ``((R r x * P) (arm2set' (rs,ns,st,ud,rt) s) = 
+     (reg r s = x) /\ r IN rs /\ P (arm2set' (rs DELETE r,ns,st,ud,rt) s)) /\ 
+    ((~R r * P) (arm2set' (rs,ns,st,ud,rt) s) = 
+     r IN rs /\ P (arm2set' (rs DELETE r,ns,st,ud,rt) s))``,
+  SIMP_TAC (std_ss++sep2_ss) [R_def,SEP_HIDE_THM] 
+  \\ SIMP_TAC std_ss [SEP_EXISTS,one_STAR,IN_arm2set']
+  \\ METIS_TAC [DELETE_arm2set']);
+
+val xR_list_thm = prove(
+  ``!xs P rs ns st ud rt. 
+      (xR_list xs * P) (arm2set' (rs,ns,st,ud,rt) s) = 
+      xR_list_sem xs s /\ ALL_DISTINCT (MAP FST xs) /\ 
+      P (arm2set' (rs DIFF (LIST_TO_SET (MAP FST xs)),ns,st,ud,rt) s) /\
+      (LIST_TO_SET (MAP FST xs)) SUBSET rs``,
+  Induct
+  THEN1 SRW_TAC [sep_ss] [xR_list_def,xR_list_sem_def,MAP,ALL_DISTINCT]
+  \\ REPEAT STRIP_TAC \\ Cases_on `h` \\ Cases_on `r`
+  \\ SIMP_TAC bool_ss [MAP,ALL_DISTINCT,pairTheory.FST,xR_list_sem_def,xR_list_def]
+  \\ ASM_REWRITE_TAC [GSYM STAR_ASSOC,xR_list_lemma]
+  \\ `LIST_TO_SET (q::MAP FST xs) SUBSET rs =
+      q IN rs /\ LIST_TO_SET (MAP FST xs) SUBSET rs` by SRW_TAC [] []
+  \\ `rs DIFF LIST_TO_SET (q::MAP FST xs) =
+      rs DELETE q DIFF LIST_TO_SET (MAP FST xs)` by 
+         SRW_TAC [] [EXTENSION,IN_DIFF,IN_DELETE,CONJ_ASSOC]
+  \\ `LIST_TO_SET (MAP FST xs) SUBSET rs DELETE q =
+      ~MEM q (MAP FST xs) /\ LIST_TO_SET (MAP FST xs) SUBSET rs` by 
+         (SRW_TAC [] [SUBSET_DEF,IN_DELETE] \\ METIS_TAC [])
+  \\ ASM_REWRITE_TAC [] \\ METIS_TAC []);
+
+val _ = Hol_datatype `
+  xM_option = xM_seq of word32 list | xM_blank of num`;
+
+val xM_list_def = Define `
+  (xM_list [] = emp) /\
+  (xM_list ((a,xM_blank n)::xs) = blank_ms a n * xM_list xs) /\
+  (xM_list ((a,xM_seq x)::xs) = ms a x * xM_list xs)`;
+
+val ms_sem_def = Define `
+  (ms_sem a [] s = T) /\ 
+  (ms_sem a (x::xs) s = (mem a s = x) /\ ms_sem (a+1w) xs s)`;
+
+val xM_list_sem_def = Define `
+  (xM_list_sem [] s = T) /\
+  (xM_list_sem ((a,xM_blank n)::xs) s = n <= 2**30 /\ xM_list_sem xs s) /\
+  (xM_list_sem ((a,xM_seq x)::xs) s = 
+     ms_sem a x s /\ LENGTH x <= 2**30 /\ xM_list_sem xs s)`;
+
+val ms_address_set_def = Define `
+  (ms_address_set a 0 = ({}:word30 set)) /\ 
+  (ms_address_set a (SUC n) = a INSERT ms_address_set (a+1w) n)`;
+
+val xM_list_addresses_def = Define `
+  (xM_list_addresses [] = []) /\
+  (xM_list_addresses ((a,xM_blank n)::xs) = 
+    ms_address_set a n :: xM_list_addresses xs) /\
+  (xM_list_addresses ((a,xM_seq x)::xs) = 
+    ms_address_set a (LENGTH x) :: xM_list_addresses xs)`;
+
+val xM_list_address_set_def = Define `
+  xM_list_address_set xs = FOLDR $UNION EMPTY (xM_list_addresses xs)`;
+
+val ALL_DISJOINT_def = Define `
+  (ALL_DISJOINT [] = T) /\
+  (ALL_DISJOINT (x::xs) = EVERY (\y. DISJOINT x y) xs /\ ALL_DISJOINT xs)`;
+
+val IN_ms_address_set_ADD1 = prove(
+  ``!xs a b. a IN (ms_address_set b xs) = (a+1w) IN (ms_address_set (b+1w) xs)``,
+  Induct \\ SIMP_TAC std_ss [ms_address_set_def,NOT_IN_EMPTY,IN_INSERT,WORD_EQ_ADD_RCANCEL]
+  \\ METIS_TAC []);
+
+val ms_address_set_no_overlap_lemma = prove(
+  ``!k n. k <= n /\ n < 2**30 ==> ~((a + n2w n) IN (ms_address_set a k))``,
+  Induct \\ FULL_SIMP_TAC std_ss [ms_address_set_def,NOT_IN_EMPTY,IN_INSERT]
+  \\ REPEAT STRIP_TAC 
+  THEN1 (FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [WORD_ADD_RID_UNIQ,n2w_11]
+         \\ `~(0 = n)` by DECIDE_TAC \\ METIS_TAC [LESS_MOD])
+  \\ `k <= n - 1 /\ n - 1 < 1073741824` by DECIDE_TAC
+  \\ `~((a + n2w (n-1)) IN (ms_address_set a k))` by METIS_TAC []
+  \\ `!k a b. (b + 1w) IN (ms_address_set (a + 1w) k) = b IN (ms_address_set a k)` by
+         (Induct \\ SRW_TAC [] [ms_address_set_def,WORD_EQ_ADD_RCANCEL])
+  \\ `n = (n-1)+1` by DECIDE_TAC 
+  \\ `a + n2w ((n-1)+1) IN ms_address_set (a + 1w) k` by METIS_TAC []
+  \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC]
+  \\ METIS_TAC []);
+
+val ms_address_set_no_overlap = prove(
+  ``!k h a. SUC k <= 2**30 ==> ~(a IN (ms_address_set (a+1w:word30) k))``,
+  SIMP_TAC bool_ss [LENGTH,GSYM LESS_EQ] \\ REPEAT STRIP_TAC
+  \\ `k <= 2 ** 30 - 1 /\ 2 ** 30 - 1 < 2 ** 30` by DECIDE_TAC
+  \\ `~((a + n2w (2 ** 30 - 1) + 1w) IN (ms_address_set (a + 1w) k))` 
+           by METIS_TAC [ms_address_set_no_overlap_lemma,IN_ms_address_set_ADD1] 
+  \\ `2 ** 30 - 1 + 1 = 2 ** 30` by DECIDE_TAC
+  \\ `n2w (2 ** 30) = 0w:word30` by SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_11]
+  \\ FULL_SIMP_TAC bool_ss [GSYM WORD_ADD_ASSOC,word_add_n2w,WORD_ADD_0]);
+
+val IN_ms_address_set = prove(
+  ``!n a b. b IN ms_address_set a n = ?k. k < n /\ (b = n2w k + a)``,
+  Induct \\ REWRITE_TAC [ms_address_set_def,NOT_IN_EMPTY,DECIDE ``~(k<0)``,IN_INSERT]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC []
+  THEN1 (Q.EXISTS_TAC `0` \\ ASM_REWRITE_TAC [WORD_ADD_0] \\ DECIDE_TAC) << [
+    Q.PAT_ASSUM `!a:'a. b:bool` IMP_RES_TAC
+    \\ `SUC k < SUC n` by DECIDE_TAC \\ Q.EXISTS_TAC `SUC k`
+    \\ ASM_REWRITE_TAC [ADD1,GSYM word_add_n2w] \\ METIS_TAC [WORD_ADD_ASSOC,WORD_ADD_COMM],
+    Cases_on `k` \\ REWRITE_TAC [WORD_ADD_0] 
+    \\ DISJ2_TAC \\ Q.EXISTS_TAC `n'` \\ `n' < n` by DECIDE_TAC 
+    \\ ASM_REWRITE_TAC [ADD1,GSYM word_add_n2w] \\ METIS_TAC [WORD_ADD_ASSOC,WORD_ADD_COMM]]);
+      
+val xM_list_lemma_LEMMA1 = prove(
+  ``!a n ns. ms_address_set (a + 1w) n SUBSET ns DELETE a ==> SUC n <= 2 ** 30``,
+  REWRITE_TAC [SUBSET_DEF,IN_DELETE] \\ REPEAT STRIP_TAC \\ CCONTR_TAC
+  \\ `2 ** 30 <= n` by DECIDE_TAC  
+  \\ `a IN ms_address_set (a + 1w) n` by ALL_TAC << [    
+    REWRITE_TAC [IN_ms_address_set] \\ Q.EXISTS_TAC `2**30-1`
+    \\ `1 <= 2**30` by EVAL_TAC
+    \\ ASM_SIMP_TAC bool_ss [LESS_EQ,ADD1,SUB_ADD,WORD_ADD_ASSOC]
+    \\ `!b. b + a + 1w = b + 1w + a` by METIS_TAC [WORD_ADD_COMM,WORD_ADD_ASSOC]
+    \\ ASM_SIMP_TAC bool_ss [word_add_n2w,SUB_ADD]
+    \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
+    \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [WORD_ADD_0],
+    METIS_TAC []]);
+
+val xM_list_lemma_LEMMA2 = prove(
+  ``!a n ns. SUC n <= 2 ** 30 ==> ~(a IN ms_address_set (a + 1w) n)``,
+  SIMP_TAC bool_ss [IN_ms_address_set] \\ REPEAT STRIP_TAC
+  \\ Cases_on `k < n` \\ ASM_REWRITE_TAC [WORD_ADD_ASSOC]
+  \\ `!b. b + a + 1w = a + (b + 1w)` by METIS_TAC [WORD_ADD_COMM,WORD_ADD_ASSOC]
+  \\ ASM_REWRITE_TAC [word_add_n2w] \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
+  \\ `k + 1 < 2**30` by DECIDE_TAC
+  \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [WORD_ADD_RID_UNIQ,n2w_11]);
+
+val xM_list_lemma1 = prove(
+  ``!xs a rs ns st ud rt P.
+      ((ms a xs * P) (arm2set' (rs,ns,st,ud,rt) s) = 
+       (ms_sem a xs s) /\ LENGTH xs <= 2**30 /\
+       ms_address_set a (LENGTH xs) SUBSET ns /\ 
+       P (arm2set' (rs,ns DIFF ms_address_set a (LENGTH xs),st,ud,rt) s))``,
+  Induct THEN1 SRW_TAC [sep_ss] [ms_def,ms_sem_def,ms_address_set_def]
+  \\ REWRITE_TAC [ms_def,ms_sem_def,GSYM STAR_ASSOC,M_def,one_STAR]
+  \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [IN_arm2set']
+  \\ Cases_on `~(h = mem a s)` THEN1 METIS_TAC []
+  \\ FULL_SIMP_TAC bool_ss [LENGTH]
+  \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set',ms_address_set_def,LENGTH]
+  \\ `!k. ns DELETE a DIFF ms_address_set (a + 1w) k =
+          ns DIFF (a INSERT ms_address_set (a + 1w) k)` by 
+        SRW_TAC [] [EXTENSION,IN_DELETE,IN_DIFF,CONJ_ASSOC]
+  \\ EQ_TAC \\ ASM_SIMP_TAC bool_ss [] \\ STRIP_TAC
+  \\ IMP_RES_TAC xM_list_lemma_LEMMA1 \\ ASM_REWRITE_TAC []
+  \\ FULL_SIMP_TAC bool_ss [IN_INSERT,SUBSET_DEF,IN_DELETE] THEN1 METIS_TAC []  
+  \\ STRIP_TAC THEN1 DECIDE_TAC
+  \\ IMP_RES_TAC xM_list_lemma_LEMMA2 \\ ASM_REWRITE_TAC []);
+
+val xM_list_lemma2 = prove(
+  ``!n a rs ns st ud rt P.
+      ((blank_ms a n * P) (arm2set' (rs,ns,st,ud,rt) s) = 
+       n <= 2**30 /\ ms_address_set a n SUBSET ns /\ 
+       P (arm2set' (rs,ns DIFF ms_address_set a n,st,ud,rt) s))``,
+  Induct THEN1 SRW_TAC [sep_ss] [blank_ms_def,ms_address_set_def]
+  \\ REWRITE_TAC [blank_ms_def,GSYM STAR_ASSOC,M_def,one_STAR]
+  \\ SIMP_TAC (bool_ss++sep2_ss) [SEP_HIDE_THM] 
+  \\ SIMP_TAC bool_ss [SEP_EXISTS_THM,M_def,one_STAR,GSYM STAR_ASSOC]
+  \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [IN_arm2set']
+  \\ FULL_SIMP_TAC bool_ss []
+  \\ ASM_SIMP_TAC bool_ss [DELETE_arm2set',ms_address_set_def]
+  \\ `!k. ns DELETE a DIFF ms_address_set (a + 1w) k =
+          ns DIFF (a INSERT ms_address_set (a + 1w) k)` by 
+        SRW_TAC [] [EXTENSION,IN_DELETE,IN_DIFF,CONJ_ASSOC]
+  \\ EQ_TAC \\ ASM_SIMP_TAC bool_ss [] \\ STRIP_TAC
+  \\ IMP_RES_TAC xM_list_lemma_LEMMA1 \\ ASM_REWRITE_TAC []
+  \\ FULL_SIMP_TAC bool_ss [IN_INSERT,SUBSET_DEF,IN_DELETE] THEN1 METIS_TAC []  
+  \\ STRIP_TAC THEN1 DECIDE_TAC
+  \\ IMP_RES_TAC xM_list_lemma_LEMMA2 \\ ASM_REWRITE_TAC []);
+
+val EVERY_DISJOINT = prove(
+  ``!xs x. EVERY (\y. DISJOINT x y) xs = DISJOINT x (FOLDR $UNION {} xs)``,
+  Induct \\ ASM_SIMP_TAC std_ss [EVERY_DEF,FOLDR,DISJOINT_EMPTY]
+  \\ SRW_TAC [] [DISJOINT_DEF,EXTENSION] \\ METIS_TAC []);
+
+val xM_list_thm = prove(
+  ``!xs P rs ns st ud rt.
+      ((xM_list xs * P) (arm2set' (rs,ns,st,ud,rt) s) = 
+       xM_list_sem xs s /\ ALL_DISJOINT (xM_list_addresses xs) /\ 
+       P (arm2set' (rs,ns DIFF (xM_list_address_set xs),st,ud,rt) s) /\
+       xM_list_address_set xs SUBSET ns)``,
+  Induct
+  THEN1 SRW_TAC [sep_ss] [xM_list_def,xM_list_sem_def,MAP,ALL_DISJOINT_def,
+                          xM_list_address_set_def,xM_list_addresses_def]
+  \\ REPEAT STRIP_TAC \\ Cases_on `h` \\ Cases_on `r`
+  \\ SIMP_TAC bool_ss [MAP,ALL_DISJOINT_def,pairTheory.FST,xM_list_sem_def,xM_list_def,
+                       xM_list_addresses_def,xM_list_address_set_def,FOLDR]
+  \\ FULL_SIMP_TAC bool_ss [GSYM xM_list_address_set_def]
+  \\ ASM_SIMP_TAC std_ss [xM_list_lemma1,xM_list_lemma2,GSYM STAR_ASSOC]
+  \\ SIMP_TAC bool_ss [EVERY_DISJOINT,GSYM xM_list_address_set_def] 
+  \\ REWRITE_TAC [prove(``!x:'a set y z. x DIFF y DIFF z = x DIFF (y UNION z)``, 
+                  SRW_TAC [] [EXTENSION,IN_UNION,IN_DIFF,CONJ_ASSOC])]
+  \\ `!x y z:word30 set. 
+      DISJOINT x y /\ x UNION y SUBSET z = y SUBSET z DIFF x /\ x SUBSET z` by
+        (SRW_TAC [] [SUBSET_DEF,DISJOINT_DEF,EXTENSION] \\ METIS_TAC [])
+  \\ EQ_TAC \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC []);
+
+val rest_list_def = Define `
+  rest_list (st,ud,rt,cd) (x,y,z,b) = 
+    (if st then S x else emp) * 
+    (if ud then one (Undef y) else emp) * 
+    (if rt then one (Rest z) else emp) * 
+    (if cd then cond b else emp)`;
+
+val rest_list_sem_def = Define `
+  rest_list_sem (st,ud,rt,cd) (x,y,z,b) s = 
+    (if st then (status s = x) else T) /\ 
+    (if ud then (s.undefined = y) else T) /\
+    (if rt then (owrt_visible s = z) else T) /\ 
+    (if cd then b else T)`;
+
+val rest_list_thm = prove(
+  ``!st ud rt cd x y z b P rs ns st' ud' rt'. 
+      (rest_list (st,ud,rt,cd) (x,y,z,b) * P) (arm2set' (rs,ns,st',ud',rt') s) = 
+      rest_list_sem (st,ud,rt,cd) (x,y,z,b) s /\ 
+      (st ==> st') /\ (ud ==> ud') /\ (rt ==> rt') /\
+      P (arm2set' (rs,ns,~st /\ st',~ud /\ ud',~rt /\ rt') s)``,
+  REPEAT STRIP_TAC
+  \\ REWRITE_TAC [rest_list_def,rest_list_sem_def,
+       prove(``!cd b. (if cd then cond b else emp) = cond (cd ==> b)``,SRW_TAC [sep_ss][])] 
+  \\ Cases_on `st` \\ SIMP_TAC (bool_ss++sep_ss) [] \\ Cases_on `x = status s` 
+  \\ Cases_on `ud` \\ SIMP_TAC (bool_ss++sep_ss) [] \\ Cases_on `y = s.undefined` 
+  \\ Cases_on `rt` \\ SIMP_TAC (bool_ss++sep_ss) [] \\ Cases_on `z = owrt_visible s` 
+  \\ ASM_SIMP_TAC bool_ss [GSYM STAR_ASSOC,S_def,one_STAR,IN_arm2set',DELETE_arm2set',cond_STAR]
+  \\ EQ_TAC \\ ASM_SIMP_TAC bool_ss []);
+
+val emp_list_thm = prove(
+  ``!s rs ns st ud rt.
+       emp (arm2set' (rs,ns,st,ud,rt) s) = (rs = {}) /\ (ns = {}) /\ ~st /\ ~ud /\ ~rt``,
+  SIMP_TAC std_ss [emp_def,arm2set'_def]
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `st` THEN1 SRW_TAC [] [EXTENSION]
+  \\ Cases_on `ud` THEN1 SRW_TAC [] [EXTENSION]
+  \\ Cases_on `rt` THEN1 SRW_TAC [] [EXTENSION]
+  \\ SRW_TAC [] [EXTENSION,GSPECIFICATION]);
+
+val rest_emp_list_thm = prove(
+  ``!st ud rt xs x y z b P rs ns st' ud' rt'. 
+      (rest_list (st,ud,rt,cd) (x,y,z,b)) (arm2set' (rs,ns,st',ud',rt') s) = 
+      rest_list_sem (st,ud,rt,cd) (x,y,z,b) s /\ 
+      (rs = {}) /\ (ns = {}) /\ (st = st') /\ (ud = ud') /\ (rt = rt')``,
+  REPEAT STRIP_TAC  
+  \\ CONV_TAC ((RATOR_CONV o RAND_CONV o RATOR_CONV) 
+               (ONCE_REWRITE_CONV [(GSYM o CONJUNCT2 o SPEC_ALL) emp_STAR]))
+  \\ REWRITE_TAC [rest_list_thm,emp_list_thm]
+  \\ Cases_on `st` \\ Cases_on `st'` \\ Cases_on `ud` \\ Cases_on `ud'`
+  \\ Cases_on `rt` \\ Cases_on `rt'` \\ SIMP_TAC bool_ss []);
+
+val spec_list_def = Define `
+  spec_list xs ys (st,x) (ud,y) (rt,z) (cd,b) = 
+    xR_list xs * xM_list ys * rest_list (st,ud,rt,cd) (x,y,z,b)`;
+
+val spec_list_select_def = Define `
+  spec_list_select (xs,ys,st,ud,rt) =
+    (LIST_TO_SET (MAP FST xs),xM_list_address_set ys,st,ud,rt)`;
+  
+val spec_list_sem_def = Define `
+  spec_list_sem xs ys (st,x) (ud,y) (rt,z) (cd,b) q s =
+    xR_list_sem xs s /\ xM_list_sem ys s /\ rest_list_sem (st,ud,rt,cd) (x,y,z,b) s /\ 
+    ALL_DISTINCT (MAP FST xs) /\ ALL_DISJOINT (xM_list_addresses ys) /\
+    (q = spec_list_select (xs,ys,st,ud,rt))`;
+  
+val spec_list_thm = prove(
+  ``!xs ys st ud rt cd q s.
+      (spec_list xs ys st ud rt cd) (arm2set' q s) = 
+      spec_list_sem xs ys st ud rt cd q s``,
+  REPEAT STRIP_TAC
+  \\ `?rs ns st' ud' rt'. q = (rs,ns,st',ud',rt')` by METIS_TAC [pairTheory.PAIR]
+  \\ `?st' x. st = (st',x)` by METIS_TAC [pairTheory.PAIR]
+  \\ `?ud' y. ud = (ud',y)` by METIS_TAC [pairTheory.PAIR]
+  \\ `?rt' z. rt = (rt',z)` by METIS_TAC [pairTheory.PAIR]
+  \\ `?cd' b. cd = (cd',b)` by METIS_TAC [pairTheory.PAIR]
+  \\ ASM_SIMP_TAC bool_ss [spec_list_def,GSYM STAR_ASSOC,xR_list_thm,xM_list_thm]
+  \\ ASM_SIMP_TAC bool_ss [rest_emp_list_thm,
+       prove(``(x DIFF y = {}) = x SUBSET y``,
+       SRW_TAC [] [EXTENSION,SUBSET_DEF] \\ METIS_TAC [])]
+  \\ REWRITE_TAC [spec_list_sem_def,pairTheory.PAIR_EQ,spec_list_select_def]
+  \\ REWRITE_TAC [SET_EQ_SUBSET,GSYM CONJ_ASSOC]
+  \\ EQ_TAC \\ SIMP_TAC std_ss []);
+
+(* function for instantiation *)
+
+val LIST_TO_SET_CLAUSES = prove(
+  ``!x xs. (LIST_TO_SET [] = {}) /\ (LIST_TO_SET (x::xs) = x INSERT LIST_TO_SET xs)``,
+  SRW_TAC [] [EXTENSION]);
+
+val UNION_APPEND = prove(
+  ``!x y z. (x INSERT y) UNION z = x INSERT (y UNION z)``,
+  SRW_TAC [] [EXTENSION,DISJ_ASSOC]);
+
+val spec_list_expand_ss = rewrites 
+  [spec_list_def,xR_list_def,xM_list_def,rest_list_def,spec_list_sem_def,
+   xR_list_sem_def,xM_list_sem_def,rest_list_sem_def,ms_sem_def,
+   xM_list_addresses_def,ms_address_set_def,LIST_TO_SET_CLAUSES,spec_list_select_def,
+   xM_list_address_set_def,FOLDR,UNION_EMPTY,UNION_APPEND,GSYM CONJ_ASSOC,ms_def,
+   MAP,FST,STAR_ASSOC,EVAL ``SUC 0 <= 2**30``,LENGTH];
+
+fun sep_pred_semantics (xs,ys,st,ud,rt,cd) = let
+  val th = Q.SPECL [xs,ys,st,ud,rt,cd] spec_list_thm
+  val th = SIMP_RULE (bool_ss++sep_ss++spec_list_expand_ss) [] th
+  in th end;
+
+(* example *)
+
+val xs = `[(a1,SOME x1);(a2,SOME x2);(a3,SOME x3);(a4,NONE);(a5,NONE);(a6,NONE)]`;
+val ys = `[(b1,xM_seq [y1]);(b2,xM_seq [y2]);(b3,xM_seq y3);(b4,xM_blank k4)]`;
+val st = `(T,st)`;
+val ud = `(T,ud)`;
+val rt = `(F,rt)`;
+val cd = `(T,g)`;
+val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+
+
+(* ----------------------------------------------------------------------------- *)
+(* CLEANING INSTRUCTION RULES                                                    *)
+(* ----------------------------------------------------------------------------- *)
+
+val reg_rw = prove(
+  ``(!s. s.registers r15 = reg 15w s) /\ 
+    !x s. ~(x = 15w) ==> (REG_READ s.registers (state_mode s) x = reg x s)``,
+  SRW_TAC [] [reg_def]);
+
+val contract_ss = rewrites ([NZCV_def,reg_rw] @ map GSYM
+  [mem_def,status_def,statusN_def,statusZ_def,statusC_def,statusV_def,addr30_def,
+   state_mode_def]);
+
+fun PAT_DISCH tm th = DISCH (hd (filter (can_match tm) (hyp th))) th;
+fun PAT_DISCH_LIST tms th = foldr (uncurry PAT_DISCH) th tms;
+
+fun simple_clean th tms = let
+  val th = SPEC_ALL th
+  val th = INST [``state:arm_mem_state``|->``s:arm_mem_state``] th 
+  val th = INST [``s:bool``|->``s_flag:bool``] th
+  val th = ASM_UNABBREV_ALL_RULE (UD_ALL th)
+  val th = foldr (uncurry DISCH) th tms
+  val th = (UNDISCH_ALL o SIMP_RULE (bool_ss++contract_ss) [] o DISCH_ALL) th
+  val tm1 = ``~s.undefined``
+  val tm2 = ``CONDITION_PASSED2 (status s) c``
+  val tm3 = ``mem (addr30 p) s = enc cmd``
+  val th = PAT_DISCH_LIST ([tm1,tm2,tm3] @ tms) th
+  in th end;
 
 
 (* ----------------------------------------------------------------------------- *)
 (* LDM and STM INSTRUCTIONS                                                      *)
 (* ----------------------------------------------------------------------------- *)
 
-(*
+val _ = Hol_datatype `
+  abbrev_addr4 = am4_DA of bool | am4_IA of bool | am4_DB of bool | am4_IB of bool |
+                 am4_FA of bool | am4_FD of bool | am4_EA of bool | am4_ED of bool`;
 
-(* quick sort *)
+val ADDR_MODE4_CMD_def = Define `
+  (ADDR_MODE4_CMD (am4_DA wb) = <| Pre:=F; Up:=F; BSN:=F; Wb:=wb |>) /\ 
+  (ADDR_MODE4_CMD (am4_FA wb) = <| Pre:=F; Up:=F; BSN:=F; Wb:=wb |>) /\ 
+  (ADDR_MODE4_CMD (am4_IA wb) = <| Pre:=F; Up:=T; BSN:=F; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_FD wb) = <| Pre:=F; Up:=T; BSN:=F; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_DB wb) = <| Pre:=T; Up:=F; BSN:=F; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_EA wb) = <| Pre:=T; Up:=F; BSN:=F; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_IB wb) = <| Pre:=T; Up:=T; BSN:=F; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_ED wb) = <| Pre:=T; Up:=T; BSN:=F; Wb:=wb |>)`;
 
-val total_def = Define `total f = !x y. f x y \/ f y x`;
-val transitive_def = Define `transitive f = !x y z. f x y /\ f y z ==> f x z`;
+val NOT_ADDR_MODE4_BSN = prove(
+  ``!x. (ADDR_MODE4_CMD x).BSN = F``,
+  Cases_on `x` \\ SRW_TAC [] [ADDR_MODE4_CMD_def]);
 
-val SORTED_def = Define `
-  (SORTED f  [] = T) /\  
-  (SORTED f [x] = T) /\  
-  (SORTED f (x::y::xs) = f x y /\ SORTED f (y::xs))`;
+val reg_bitmap_def = Define `
+  reg_bitmap (xs:word4 list) = (FCP i. MEM (n2w i) xs):word16`;
 
-val PERM_def = Define `PERM xs ys = !x. FILTER ($= x) xs = FILTER ($= x) ys`;
+val MEM_EQ_EXISTS = prove(
+  ``!xs. MEM x xs = ?ys zs. xs = ys ++ [x] ++ zs``,
+  Induct THEN1 SRW_TAC [] [] 
+  \\ ASM_REWRITE_TAC [MEM] 
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+  THEN1 (Q.EXISTS_TAC `[]` \\ Q.EXISTS_TAC `xs` \\ SRW_TAC [] [])
+  THEN1 (Q.EXISTS_TAC `h::ys` \\ Q.EXISTS_TAC `zs` \\ ASM_REWRITE_TAC [APPEND])
+  \\ Cases_on `ys` \\ FULL_SIMP_TAC bool_ss [APPEND,CONS_11] \\ METIS_TAC []);
 
-val PERM_refl = prove(``!xs. PERM xs xs``,METIS_TAC[PERM_def]);
-
-val LENGTH_FILTER_LESS = prove( 
-  ``!xs. LENGTH (FILTER g xs) < SUC (LENGTH xs)``,
-  Induct_on `xs`  
-  \\ SRW_TAC [] [LENGTH,FILTER]
-  \\ METIS_TAC [DECIDE ``!x. x < SUC x``,LESS_TRANS]);
-
-val QSORT_defn = Hol_defn "QSORT" `
-  (QSORT f [] = []) /\
-  (QSORT f (x::xs) = QSORT f (FILTER ($~ o f x) xs) ++ [x] ++
-                     QSORT f (FILTER (f x) xs))`;
-
-val (QSORT_def,QSORT_ind) = Defn.tprove(QSORT_defn,
-  WF_REL_TAC `measure (LENGTH o SND)`
-  \\ METIS_TAC [LENGTH_FILTER_LESS,LENGTH]);
-
-val QSORT_MEM_stable = prove(
-  ``!f xs x. MEM x (QSORT f xs) = MEM x xs``,
-  recInduct QSORT_ind 
-  \\ SIMP_TAC list_ss [QSORT_def,MEM_APPEND,MEM,MEM_FILTER]
-  \\ METIS_TAC []);
-
-val SORTED_eq = prove(
-  ``!f xs x. transitive f
-         ==> (SORTED f (x::xs) = SORTED f xs /\ !y. MEM y xs ==> f x y)``,
-  Induct_on `xs`
-  \\ SRW_TAC [] [SORTED_def,MEM]
-  \\ METIS_TAC [transitive_def]);
-
-val QSORT_perm = prove(
-  ``!f xs. PERM xs (QSORT f xs)``,
-  recInduct QSORT_ind
-  \\ SIMP_TAC list_ss [QSORT_def,PERM_refl,APPEND] 
-  \\ REPEAT STRIP_TAC
-  THEN MATCH_MP_TAC CONS_PERM
-  THEN MATCH_MP_TAC PERM_trans1
-  THEN Q.EXISTS_TAC`APPEND (FILTER(\x. r x h) t) (FILTER(\x. ~r x h) t)`
-  THEN RW_TAC std_ss [BETA_RULE(REWRITE_RULE[o_DEF] PERM_split),PERM_cong]);
-
-val SORTED_APPEND = prove(
-  ``!f xs ys.
-     transitive f /\ SORTED f xs /\ SORTED f ys /\ 
-     (!x y. MEM x xs /\ MEM y ys ==> f x y) ==>
-     SORTED f (APPEND xs ys)``,
-  Induct_on `xs`
-  \\ SIMP_TAC list_ss [MEM] \\ REPEAT STRIP_TAC
-  \\ `SORTED f xs /\ !y. MEM y xs ==> f h y` by PROVE_TAC [SORTED_eq]
-  \\ ASM_SIMP_TAC bool_ss [SORTED_eq] \\ REPEAT STRIP_TAC
-  \\ `MEM y xs \/ MEM y ys` by METIS_TAC [MEM_APPEND]
-  \\ METIS_TAC []);
-
-val QSORT_sorts = prove(
-  ``!f xs. transitive f /\ total f ==> SORTED f (QSORT f xs)``,
-  recInduct QSORT_ind
-  \\ SIMP_TAC list_ss [QSORT_def,SORTED_def]
-  \\ REPEAT STRIP_TAC
-  \\ ONCE_REWRITE_TAC [GSYM APPEND_ASSOC]
-  \\ REWRITE_TAC [APPEND]
-  \\ MATCH_MP_TAC SORTED_APPEND
-  \\ IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) SORTED_eq
-  \\ SIMP_TAC list_ss [MEM_FILTER,MEM,QSORT_MEM_stable]
-  \\ METIS_TAC [transitive_def,total_def]);
-
-(* do something better... use Slind's stuff literally *)
-
-val SORTED_LESS = prove(
-  ``!xs:('a word) list. SORTED $<= xs /\ ALL_DISTINCT xs ==> SORTED $< xs``,
-  Induct
-  \\ SRW_TAC [] [ALL_DISTINCT,SORTED_def]
-  \\ Cases_on `xs`
-  \\ SRW_TAC [] [ALL_DISTINCT,SORTED_def]
-  \\ `~(h = h') /\ (h <= h')` by METIS_TAC [SORTED_def,MEM]
-  \\ METIS_TAC [WORD_LESS_OR_EQ,SORTED_def]);
-
-  ``!xs:('a word) list. ALL_DISTINCT xs ==> SORTED $< (QSORT $<= xs)``
-  REPEAT STRIP_TAC
-  MATCH_MP_TAC SORTED_LESS
-
-ALL_DISTINCT
-word_le_def
-
-(* still to come, honestly *)
-
-val ALL_DISTINCT_def = Define `
-  (ALL_DISTINCT [] = T) /\ 
-  (ALL_DISTINCT (x::xs) = ~(MEM x xs) /\ ALL_DISTINCT xs)`;
-
-val GEN_REGLIST_def = Define `
-  GEN_REGLIST (xs:word4 list) = (FCP i. MEM (n2w i) xs):word16`;
-
-val w2n_lt_16 = 
-  SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] (Q.INST_TYPE [`:'a`|->`:i4`] w2n_lt);
-
-val w2n_FCP_BETA = 
-  let
-    val th' = Q.INST_TYPE [`:'a`|->`:i4`] w2n_lt
-    val th' = SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] th'
-    val th = Q.SPEC `w2n (x:word4)` fcpTheory.FCP_BETA
-    val th = Q.INST_TYPE [`:'b`|->`:i16`] th
-    val th = SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] th
-  in
-    MP th (Q.SPEC `x` th')
-  end;
-
-val GEN_REGLIST_MEM = prove(
-  ``!x xs. MEM x xs = GEN_REGLIST xs %% w2n x``,
-  SIMP_TAC std_ss [GEN_REGLIST_def,w2n_FCP_BETA,n2w_w2n]);
-
-val MEM_EQ_LEMMA = prove(
+val MEM_MAP_FILTER = prove(
   ``!x xs. MEM x ((MAP SND o FILTER FST) xs) = MEM (T,x) xs``,        
-  Induct_on `xs`
-  THEN1 SRW_TAC [] [] 
-  \\ Cases_on `h`
-  \\ Cases_on `q`
-  \\ FULL_SIMP_TAC std_ss [FILTER,MAP,MEM]);
+  Induct_on `xs` THEN1 SRW_TAC [] [] 
+  \\ Cases_on `h` \\ Cases_on `q` \\ FULL_SIMP_TAC std_ss [FILTER,MAP,MEM]);
 
-val MEM_EQ_LEMMA2 = prove(
+val MEM_SNOC = prove(
   ``!xs x y. MEM x (SNOC y xs) = MEM x (CONS y xs)``,
   Induct_on `xs` \\ SRW_TAC [] [MEM,SNOC] \\ METIS_TAC []);
 
-val MEM_EQ_LEMMA3 = prove(
-  ``!n x f g. 
-       MEM (T,x) (GENLIST (\i. (f i, g i)) n) = ?i. i < n /\ f i /\ (x = g i)``,
-  Induct
-  THEN1 SIMP_TAC std_ss [MEM,GENLIST]
-  \\ SRW_TAC [] [MEM,GENLIST,MEM_EQ_LEMMA2]
-  \\ Cases_on `f n /\ (x = g n)`
-  \\ ASM_REWRITE_TAC []
+val MEM_GENLIST = prove(
+  ``!n x f. MEM x (GENLIST f n) = ?i. i < n /\ (x = f i)``,
+  Induct THEN1 SIMP_TAC std_ss [MEM,GENLIST]
+  \\ SRW_TAC [] [MEM,GENLIST,MEM_SNOC]
+  \\ Cases_on `x = f n` \\ ASM_REWRITE_TAC []
   THEN1 (Q.EXISTS_TAC `n` \\ SRW_TAC [] [])
   \\ EQ_TAC \\ REPEAT STRIP_TAC << [
-    Q.EXISTS_TAC `i` 
-    \\ METIS_TAC [LESS_TRANS,LESS_EQ_IMP_LESS_SUC,LESS_EQ_REFL],
-    Cases_on `i = n` THEN1 METIS_TAC []
-    \\ `i < n` by DECIDE_TAC \\ METIS_TAC []]);
+    Q.EXISTS_TAC `i` \\ METIS_TAC [LESS_TRANS,LESS_EQ_IMP_LESS_SUC,LESS_EQ_REFL],
+    Cases_on `i = n` THEN1 METIS_TAC [] \\ `i < n` by DECIDE_TAC \\ METIS_TAC []]);
 
-val MEM_EQ_REGISTER_LIST_GEN_REGLIST = prove(
-  ``!x xs. MEM x xs = MEM x (REGISTER_LIST (GEN_REGLIST xs))``,  
+val MEM_PAIR_GENLIST = prove(
+  ``!n x f g. 
+       MEM (T,x) (GENLIST (\i. (f i, g i)) n) = ?i. i < n /\ f i /\ (x = g i)``,
+  SRW_TAC [] [MEM_GENLIST]);
+
+val w2n_FCP_BETA = let
+  val th' = Q.INST_TYPE [`:'a`|->`:i4`] w2n_lt
+  val th' = SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] th'
+  val th = Q.SPEC `w2n (x:word4)` fcpTheory.FCP_BETA
+  val th = Q.INST_TYPE [`:'b`|->`:i16`] th
+  val th = SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] th
+  in MP th (Q.SPEC `x` th') end;
+
+val MEM_reg_bitmap = prove(
+  ``!x xs. MEM x xs = reg_bitmap xs %% w2n x``,
+  SIMP_TAC std_ss [reg_bitmap_def,w2n_FCP_BETA,n2w_w2n]);
+
+val MEM_REGISTER_LIST_reg_bitmap = store_thm("MEM_REGISTER_LIST_reg_bitmap",
+  ``!xs x. MEM x (REGISTER_LIST (reg_bitmap xs)) = MEM x xs``,  
   REPEAT STRIP_TAC
-  \\ REWRITE_TAC [REGISTER_LIST_def,MEM_EQ_LEMMA]
-  \\ REWRITE_TAC [GEN_REGLIST_MEM]
-  \\ REWRITE_TAC [MEM_EQ_LEMMA3]
-  \\ EQ_TAC \\ STRIP_TAC
-  THEN1 (Q.EXISTS_TAC `w2n (x:word4)` \\ SRW_TAC [] [n2w_w2n,w2n_lt_16])
-  \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2n_n2w]);
+  \\ REWRITE_TAC [REGISTER_LIST_def,MEM_MAP_FILTER]
+  \\ REWRITE_TAC [MEM_reg_bitmap]
+  \\ REWRITE_TAC [MEM_PAIR_GENLIST]
+  \\ ASSUME_TAC (Q.INST_TYPE [`:'a`|->`:i4`] w2n_lt)
+  \\ EQ_TAC \\ STRIP_TAC \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2n_n2w]
+  \\ Q.EXISTS_TAC `w2n (x:word4)` \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_w2n]);
 
-val MEM_IMP_SPLIT = prove(   
-  ``!ys y. MEM y ys ==> ?zs zs'. ys = zs ++ [y] ++ zs'``,
+val SNOC_CONS = prove(
+  ``!xs x y. SNOC x (y::xs) = y::(SNOC x xs)``,Induct \\ ASM_REWRITE_TAC [SNOC]);
+  
+val FILTER_SNOC = prove(
+  ``!xs x P. FILTER P (SNOC x xs) = if P x then SNOC x (FILTER P xs) else FILTER P xs``,  
+  Induct \\ ASM_REWRITE_TAC [SNOC,FILTER] \\ SRW_TAC [] [SNOC_CONS]);
+
+val MAP_SNOC = prove(
+  ``!xs x f. MAP f (SNOC x xs) = SNOC (f x) (MAP f xs)``,
+  Induct \\ ASM_REWRITE_TAC [SNOC,MAP] \\ SRW_TAC [] [SNOC_CONS]);
+    
+val SORTED_SNOC_SNOC = prove(
+  ``!xs f x y. SORTED f (SNOC x (SNOC y xs)) = f y x /\ SORTED f (SNOC y xs)``,
+  Induct \\ FULL_SIMP_TAC std_ss [SNOC,SORTED_DEF]
+  \\ REPEAT STRIP_TAC \\ Cases_on `xs`
+  \\ FULL_SIMP_TAC std_ss [SNOC,SORTED_DEF] \\ METIS_TAC []);
+
+val SORTED_REGISTER_LIST_LEMMA = prove(
+  ``!k g:word16. 
+      k <= 16 ==> 
+      SORTED $<+ ((MAP SND o FILTER FST) (GENLIST (\i. (g %% i,(n2w i):word4)) k))``,
   Induct 
-  THEN1 SRW_TAC [] []
-  \\ REPEAT STRIP_TAC
-  \\ Cases_on `y = h` << [
-    Q.EXISTS_TAC `[]` 
-    \\ Q.EXISTS_TAC `ys` 
-    \\ ASM_SIMP_TAC std_ss [APPEND],
-    FULL_SIMP_TAC std_ss [MEM]
-    \\ `?zs zs'. ys = zs ++ [y] ++ zs'` by METIS_TAC []
-    \\ Q.EXISTS_TAC `h::zs`
-    \\ Q.EXISTS_TAC `zs'`
-    \\ ASM_SIMP_TAC std_ss [APPEND]]);
+  \\ SIMP_TAC std_ss [GENLIST,FILTER,MAP,SORTED_DEF,FILTER_SNOC]
+  \\ REPEAT STRIP_TAC \\ Cases_on `g %% k` 
+  \\ `k <= 16` by DECIDE_TAC
+  \\ PAT_ASSUM ``!g'. b`` (ASSUME_TAC o UNDISCH o Q.SPEC `g`)
+  \\ FULL_SIMP_TAC std_ss [MAP_SNOC]
+  \\ STRIP_ASSUME_TAC (Q.ISPEC `MAP SND (FILTER FST 
+       (GENLIST (\i. ((g:word16) %% i,((n2w i):word4))) k))` SNOC_CASES)
+  \\ FULL_SIMP_TAC std_ss [SNOC,SORTED_DEF,SORTED_SNOC_SNOC]
+  \\ `!xs. MEM x (SNOC x xs)` by (Induct \\ SRW_TAC [] [MEM,SNOC])
+  \\ `MEM x (MAP SND (FILTER FST (GENLIST (\i. (g %% i,n2w i)) k)))` by METIS_TAC [] 
+  \\ FULL_SIMP_TAC std_ss [MEM_MAP,MEM_FILTER,MEM_GENLIST]
+  \\ `k < 16 /\ i < 16` by DECIDE_TAC
+  \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_lo_n2w]);
 
-val rs_def = Define `
-  (rs [] = emp) /\ 
-  (rs ((r,x)::xs) = R r x * rs xs)`;
+val SORTED_REGISTER_LIST = store_thm("SORTED_REGSITER_LIST",
+  ``!g. SORTED $<+ (REGISTER_LIST g)``,
+  REWRITE_TAC [REGISTER_LIST_def]
+  \\ MATCH_MP_TAC (SPEC_ALL SORTED_REGISTER_LIST_LEMMA) \\ DECIDE_TAC);
 
-val rs'_def = Define `
-  (rs' [] = emp) /\ 
-  (rs' ((r,x)::xs) = ~ (R r) * rs' xs)`;
-
-val ms_def = Define `
-  (ms a [] = emp) /\
-  (ms a (x::xs) = M (addr30 a) x * ms (a+4w:word32) xs)`;
-
-val ms'_def = Define `
-  (ms' a [] = emp) /\
-  (ms' a (x::xs) = ~ (M (addr30 a)) * ms' (a+4w:word32) xs)`;
-
-val LENGTH_FILTER_LESS = prove( 
-  ``!xs. LENGTH (FILTER g xs) < SUC (LENGTH xs)``,
-  Induct_on `xs`  
-  \\ SRW_TAC [] [LENGTH,FILTER]
-  \\ METIS_TAC [DECIDE ``!x. x < SUC x``,LESS_TRANS]);
-
-val QSORT_defn = Hol_defn "QSORT" `
-  (QSORT f [] = []) /\
-  (QSORT f (x::xs) = QSORT f (FILTER ($~ o f x) xs) ++ [x] ++
-                     QSORT f (FILTER (f x) xs))`;
-
-val (QSORT_def,QSORT_ind) = Defn.tprove(QSORT_defn,
-  WF_REL_TAC `measure (LENGTH o SND)`
-  \\ METIS_TAC [LENGTH_FILTER_LESS,LENGTH]);
-
-val SORTED_def = Define `
-  SORTED f xs = !ys y z zs. (xs = ys ++ [y;z] ++ zs) ==> f y z`;
-
-val SORTED_QSORT_LEMMA = prove(
- ``!xs g. ALL_DISTINCT xs ==> ALL_DISTINCT (FILTER g xs)``,
-  Induct \\ SRW_TAC [] [ALL_DISTINCT_def]
-  \\ `~MEM h xs ==> ~MEM h (FILTER g xs)` by ALL_TAC << [
-    POP_ASSUM_LIST (fn thms => ALL_TAC)
-    \\ Induct_on `xs` \\ SRW_TAC [] [MEM,FILTER],
-    METIS_TAC []]);
-
-val MEM_FILTER_IMP = prove(
-  ``!xs x g. MEM x (FILTER g xs) ==> MEM x xs``,
-  Induct \\ SRW_TAC [] [] \\ METIS_TAC []);
-
-val SAME_PREFIX = prove(
-  ``!xs ys zs zs'. (LENGTH xs = LENGTH ys) /\ (xs ++ zs = ys ++ zs') ==> (xs = ys)``,
-  Induct THEN1 METIS_TAC [LENGTH_NIL,LENGTH]
-  \\ SRW_TAC [] [LENGTH]
-  \\ `?h' ys'. (LENGTH xs = LENGTH ys') /\ (ys = h'::ys')` by METIS_TAC [LENGTH_CONS]
-  \\ FULL_SIMP_TAC std_ss [APPEND,CONS_11]
+val SORTED_CONS_IMP = prove(
+  ``!xs h. SORTED $<+ (h::xs) ==> SORTED $<+ xs /\ ~(MEM h xs) /\ EVERY (\x. h <+ x) xs``,
+  Induct \\ SRW_TAC [] [MEM,SORTED_DEF] THEN1 METIS_TAC [WORD_NOT_LOWER_EQ]
+  \\ `SORTED $<+ (h'::xs)` by (Cases_on `xs` \\ METIS_TAC [SORTED_DEF,WORD_LOWER_TRANS])
   \\ METIS_TAC []);
 
-  ``!xs:'a word list h ys. 
-      SORTED $< xs /\ SORTED $< ys /\ 
-      (!x. MEM x xs ==> x < h) /\ (!y. MEM y ys ==> h < y) ==> 
-      SORTED $< (xs ++ [h] ++ ys)``,
-  REWRITE_TAC [SORTED_def]
-  REPEAT STRIP_TAC
-  Cases_on `LENGTH xs = LENGTH ys'`
-
-    `xs = ys'` by METIS_TAC [SAME_PREFIX,APPEND_ASSOC]
-    \\ FULL_SIMP_TAC std_ss [APPEND_11,GSYM APPEND_ASSOC]
-    \\ Cases_on `ys`
-    \\ FULL_SIMP_TAC bool_ss [APPEND]    
-
-      open listTheory;
-    
-
-val SORTED_QSORT = prove(
-  ``!xs:'a word list. 
-       ALL_DISTINCT xs ==> 
-       SORTED $< (QSORT $< xs) /\ (!x. MEM x xs = MEM x (QSORT $< xs))``,
-  STRIP_TAC \\ completeInduct_on `LENGTH xs` \\ Cases_on `v`
-
-    REPEAT STRIP_TAC
-    \\ `xs = []` by METIS_TAC [LENGTH_NIL]
-    \\ SRW_TAC [] [QSORT_def,SORTED_def]
-
-    NTAC 3 STRIP_TAC
-    \\ `?h xs'. (LENGTH xs' = n) /\ (xs = h::xs')` by METIS_TAC [LENGTH_CONS]
-    \\ ASM_REWRITE_TAC [QSORT_def]
-    \\ `LENGTH (FILTER ($~ o $< h) xs') < SUC n` by METIS_TAC [LENGTH_FILTER_LESS] 
-    \\ `LENGTH (FILTER ($< h) xs') < SUC n` by METIS_TAC [LENGTH_FILTER_LESS]    
-    \\ `ALL_DISTINCT xs'` by METIS_TAC [ALL_DISTINCT_def]
-    \\ `ALL_DISTINCT (FILTER ($~ o $< h) xs')` by METIS_TAC [SORTED_QSORT_LEMMA]
-    \\ `ALL_DISTINCT (FILTER ($< h) xs')` by METIS_TAC [SORTED_QSORT_LEMMA]
-    \\ STRIP_TAC
-      
-      `SORTED $< (QSORT $< (FILTER ($~ o $< h) xs'))` by METIS_TAC []
-      \\ `SORTED $< (QSORT $< (FILTER ($< h) xs'))` by METIS_TAC []
-      
-      REWRITE_TAC [MEM_APPEND,MEM] 
-      \\ REPEAT STRIP_TAC 
-      \\ EQ_TAC << [
-        STRIP_TAC \\ Cases_on `x = h` \\ ASM_REWRITE_TAC []      
-        THEN1 METIS_TAC []      
-        \\ `(($< h) x) \/ (($~ o $< h) x)` by SRW_TAC [] []      
-        \\ METIS_TAC [MEM_FILTER],
-        METIS_TAC [MEM_FILTER_IMP]]
-        
-        
-
-val REGSORT_def = Define `
-  (REGSORT:(word4#word32) list->(word4#word32) list) = QSORT (\x y. FST x < FST y)`;
-
-val MBLOCK_WB_def = Define `
-  MBLOCK_WB wb U base xs = 
-    if wb then WB_ADDRESS U base (LENGTH xs) else base`;
-
-val MBLOCK_ADDR_def = Define `
-  MBLOCK_ADDR P U base xs = 
-    FIRST_ADDRESS P U base (MBLOCK_WB T U base xs)`;
-
-val MBLOCK_def = Define `
-  MBLOCK P U base xs = ms (MBLOCK_ADDR P U base xs) (MAP SND (REGSORT xs))`;
-
-
-val MAP_FST_REGSORT_LEMMA = prove(
-  ``!xs f h. FILTER f (MAP FST xs) = MAP FST (FILTER (\y. f (FST y)) xs)``,
-  Induct 
-  \\ SRW_TAC [] []
-  \\ FULL_SIMP_TAC std_ss []);
-
-val MAP_FST_REGSORT = prove(
-  ``!xs. MAP FST (REGSORT xs) = QSORT ($<) (MAP FST xs)``,
-  STRIP_TAC
-  \\ completeInduct_on `LENGTH xs`
-  \\ Cases_on `v`
-  \\ REPEAT STRIP_TAC << [    
-    `xs = []` by METIS_TAC [LENGTH_NIL]
-    \\ ASM_SIMP_TAC std_ss [REGSORT_def,MAP,QSORT_def],
-    `?h xs'. (LENGTH xs' = n) /\ (xs = h::xs')` by METIS_TAC [LENGTH_CONS]
-    \\ ASM_REWRITE_TAC [QSORT_def,REGSORT_def]
-    \\ Cases_on `h`
-    \\ FULL_SIMP_TAC bool_ss [REGSORT_def,MAP_APPEND,MAP,QSORT_def]
-    \\ REWRITE_TAC [MAP_FST_REGSORT_LEMMA]
-    \\ FULL_SIMP_TAC std_ss []
-    \\ `LENGTH (FILTER (\y. ~(q < FST y)) xs') < SUC n` by METIS_TAC [LENGTH_FILTER_LESS] 
-    \\ `LENGTH (FILTER (\y. q < FST y) xs') < SUC n` by METIS_TAC [LENGTH_FILTER_LESS]    
-    \\ METIS_TAC []]);
-
-
-(*
-
-  ``!ys xs h. 
-      ALL_DISTINCT xs /\ ALL_DISTINCT ys /\ 
-      SORTED f xs /\ SORTED f ys /\ (!x. MEM x xs ==> f x h) ==> 
-      SORTED f (ISORT_INSERT f h xs ys)``
-  Induct
-
-    REWRITE_TAC [ISORT_INSERT_def]
-    \\ REWRITE_TAC [SORTED_def]
-    \\ REPEAT STRIP_TAC        
-    \\ Cases_on `zs`    
-
-
-val SORTED_ISORT' = prove(
-  ``!f xs ys. ALL_DISTINCT xs /\ SORTED f ys ==> SORTED f (ISORT' f xs ys)``,
-  Induct_on `xs`
-  THEN1 SRW_TAC [] [ISORT'_def]
-
-  ``!f xs. ALL_DISTINCT xs ==> SORTED f (ISORT f xs)``
-  STRIP_TAC
-  \\ REWRITE_TAC [ISORT_def]
-  \\ `!xs ys. ALL_DISTINCT xs /\ SORTED f ys ==> SORTED f (ISORT' f xs ys)` by ALL_TAC
-
-    Induct THEN1 SRW_TAC [] [ISORT'_def]
-    `!ys xs h. 
-       SORTED f xs /\ SORTED f ys /\ (!x. MEM x xs ==> f x h) ==> 
-       SORTED f (ISORT_INSERT f h xs ys)` by ALL_TAC
-
-      Induct 
-
-        REWRITE_TAC [ISORT_INSERT_def]
-        REPEAT STRIP_TAC        
-        REWRITE_TAC [SORTED_def]
-
-*)
-
-
-val SORTED_TRANS = prove(
-  ``!xs f h h' ys.
-      (!x y z. f x y /\ f y z ==> f x z) /\ 
-      SORTED f (h::xs ++ [h'] ++ ys) ==> f h h'``,
-  Induct THEN1 METIS_TAC [SORTED_def,APPEND]
-  \\ REPEAT STRIP_TAC
-  \\ `h'::h::xs ++ [h''] ++ ys = [] ++ [h';h]++ (xs ++ [h''] ++ ys)` by METIS_TAC [APPEND]
-  \\ `f h' h` by METIS_TAC [SORTED_def]
-  \\ `!x xs. SORTED f (x::xs) ==> SORTED f xs` by METIS_TAC [SORTED_def,APPEND]
-  \\ METIS_TAC [APPEND]);
-
-val SORTED_IMP_EQ = prove(
-  ``!f xs ys.
-      (!x y z. f x y /\ f y z ==> f x z) /\ (!x y. ~(f x y /\ f y x)) /\ 
-      SORTED f xs /\ SORTED f ys /\
-      (!x. MEM x xs = MEM x ys) ==> (xs = ys)``,
-  STRIP_TAC
-  \\ Induct 
-  THEN1 METIS_TAC [MEM]
-  \\ REPEAT STRIP_TAC  
+val SORTED_LO_IMP_EQ = store_thm("SORTED_LOWER_IMP_EQ",
+  ``!xs ys. SORTED $<+ xs /\ SORTED $<+ ys /\ (!x. MEM x xs = MEM x ys) ==> (xs = ys)``,
+  Induct THEN1 (Cases_on `ys` \\ SRW_TAC [] [MEM] \\ METIS_TAC [])
+  \\ REWRITE_TAC [MEM] \\ REPEAT STRIP_TAC 
   \\ `MEM h ys` by METIS_TAC []
-  \\ `?zs zs'. ys = zs ++ [h] ++ zs'` by METIS_TAC [MEM_IMP_SPLIT]
-  \\ Cases_on `zs` << [
-    ASM_REWRITE_TAC [APPEND]
-    \\ `!x xs. SORTED f (x::xs) ==> SORTED f xs` by METIS_TAC [SORTED_def,APPEND]
-    \\ METIS_TAC [],
-    `MEM h' (h::xs)` by METIS_TAC [MEM]
-    \\ Cases_on `h = h'` THEN1 METIS_TAC [ALL_DISTINCT_def,MEM]
-    \\ `MEM h' xs` by METIS_TAC [MEM]
-    \\ `?zs1 zs1'. xs = zs1 ++ [h'] ++ zs1'` by METIS_TAC [MEM_IMP_SPLIT]
-    \\ `f h h'` by METIS_TAC [SORTED_TRANS]
-    \\ `f h' h` by METIS_TAC [SORTED_TRANS]
-    \\ METIS_TAC []]);
+  \\ `?hs zs. ys = hs ++ [h] ++ zs` by METIS_TAC [MEM_EQ_EXISTS]
+  \\ Q.PAT_ASSUM `!ys. b ==> (c:bool)` (ASSUME_TAC o Q.SPEC `zs`)
+  \\ Cases_on `hs` \\ FULL_SIMP_TAC std_ss [CONS_11,APPEND,MEM]
+  THEN1 METIS_TAC [SORTED_CONS_IMP]
+  \\ IMP_RES_TAC SORTED_CONS_IMP
+  \\ FULL_SIMP_TAC std_ss [MEM_APPEND,MEM,EVERY_APPEND,EVERY_DEF]
+  \\ `MEM h' xs` by METIS_TAC []
+  \\ `?hs' zs'. xs = hs' ++ [h'] ++ zs'` by METIS_TAC [MEM_EQ_EXISTS]
+  \\ FULL_SIMP_TAC std_ss [EVERY_APPEND,EVERY_DEF] \\ METIS_TAC [WORD_LOWER_ANTISYM]);
 
 
-  ``ALL_DISTINCT (MAP FST ys) ==>
-    (FST (ADDR_MODE4 P U x (GEN_REGLIST (MAP FST ys))) = MAP FST (REGSORT ys))``
-  SIMP_TAC std_ss [ADDR_MODE4_def,LET_DEF]
-  \\ REWRITE_TAC [MAP_FST_REGSORT]
-  \\ Q.ABBREV_TAC `x = MAP FST ys`  
-
-  WORD_LESS_TRANS
-  WORD_LESS_ANTISYM
-
-  Q.SPEC `$<:word4->word4->bool` (Q.INST_TYPE [`:'a`|->`:word4`] SORTED_IMP_EQ)
-
-  MEM_EQ_REGISTER_LIST_GEN_REGLIST
-  Q.ISPEC `$<:word4->word4->bool` SORTED_QSORT
-
-show_types := false
-show_types_verbosely := false
-
-(*
-
-  target specs, sketches only:
-
-  STM pre:    R a x * rs ys * MBLOCK' P U x ys * cond ~(ys = [])
-  STM post:   R a (MBLOCK_WB wb U x ys) * rs ys * MBLOCK P U x ys
-
-  LDM pre:    R a x * rs' ys * MBLOCK P U x ys * cond ~(ys = [])
-  LDM post:   R a (MBLOCK_WB wb U x ys) * rs ys * MBLOCK P U x ys
-
-*)
 
 
-ADDR_MODE4_def
-REGISTER_LIST_def
-WB_ADDRESS_def
-FIRST_ADDRESS_def
-ADDRESS_LIST_def
-GENLIST
+val LEAST_MEM_def = Define `
+  (LEAST_MEM [x] = x) /\ 
+  (LEAST_MEM (x::y::ys) = 
+     let m = LEAST_MEM (y::ys) in if x <=+ m then x else m)`;
 
-    val th = ARM_LDM
-    val th = SPEC_ALL th
-    val th = DISCH_ALL (ASM_UNABBREV_ALL_RULE (UD_ALL th))
-    val th = RW [GSYM state_mode_def] th
-    val th = Q.INST [`opt`|->`<| Pre:=P; Up:=U; BSN:=F; Wb:=wb |>`] th
-    val th = DISCH ``~(Rd:word4 = 15w)`` th
-    val th = SIMP_RULE (srw_ss()) [] th
-    val th = Q.INST [`list`|->`GEN_REGLIST (MAP FST ys)`] th
+val LENGTH_FILTER = prove(
+  ``!xs P. LENGTH (FILTER P xs) <= LENGTH xs ``,
+  Induct \\ SIMP_TAC std_ss [FILTER,LENGTH] \\ REPEAT STRIP_TAC
+  \\ Cases_on `P h` \\ ASM_REWRITE_TAC [LENGTH] 
+  \\ PAT_ASSUM ``!P:'a. b:bool`` (ASSUME_TAC o SPEC_ALL) \\ DECIDE_TAC );
 
-    val th = Q.INST [`list`|->`3w:word16`] th
+val LEAST_SORT_LEMMA = prove(
+  ``!xs m. MEM m xs ==> LENGTH (FILTER (\x. ~(x = m)) xs) < LENGTH xs``,
+  Induct THEN1 SRW_TAC [] []
+  \\ SIMP_TAC std_ss [MEM,FILTER,LENGTH] \\ NTAC 2 STRIP_TAC
+  \\ Cases_on `h = m` \\ ASM_REWRITE_TAC [LESS_EQ,DECIDE ``n < SUC m = n <= m``]
+  THEN1 METIS_TAC [LENGTH_FILTER,LESS_LESS_EQ_TRANS]
+  \\ `~(m = h)` by METIS_TAC [] \\ ASM_REWRITE_TAC [LENGTH,GSYM LESS_EQ]);
 
-*)
+val MEM_LEAST_MEM = prove(
+  ``!xs x. MEM (LEAST_MEM (x::xs)) (x::xs)``,
+  Induct \\ ONCE_REWRITE_TAC [LEAST_MEM_def] \\ SIMP_TAC std_ss [LET_DEF]
+  THEN1 REWRITE_TAC [MEM]
+  \\ Cases_on `x <=+ LEAST_MEM (h::xs)` \\ ASM_REWRITE_TAC []
+  THEN1 REWRITE_TAC [MEM] \\ ONCE_REWRITE_TAC [MEM] \\ ASM_REWRITE_TAC []);
+
+val (LEAST_SORT_def,LEAST_SORT_ind) = let
+  val d = Defn.Hol_defn "LEAST_SORT" `
+    (LEAST_SORT [] = []) /\
+    (LEAST_SORT (x::xs) = 
+       let m = LEAST_MEM (x::xs) in 
+         m :: LEAST_SORT (FILTER (\x. ~(x = m)) (x::xs)))`
+  val tac = WF_REL_TAC `measure LENGTH` \\ METIS_TAC [LEAST_SORT_LEMMA,MEM_LEAST_MEM,MEM]
+  in Defn.tprove (d,tac) end;
+
+val MEM_LEAST_SORT = prove(
+  ``!xs x. MEM x (LEAST_SORT xs) = MEM x xs``,
+  recInduct LEAST_SORT_ind \\ REWRITE_TAC [LEAST_SORT_def] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [LET_DEF]
+  \\ Cases_on `x' = LEAST_MEM (x::xs)`
+  THEN1 (ASM_REWRITE_TAC [MEM_LEAST_MEM] \\ REWRITE_TAC [MEM])
+  \\ CONV_TAC (RATOR_CONV (REWRITE_CONV [MEM])) \\ ASM_REWRITE_TAC []
+  \\ Q.PAT_ASSUM `!m. b:bool` 
+       (ASSUME_TAC o Q.SPEC `x'` o REWRITE_RULE [] o Q.SPEC `LEAST_MEM (x::xs)`)
+  \\ ASM_SIMP_TAC std_ss [MEM_FILTER]);
+
+val SORTED_EQ_LOWER = 
+  (REWRITE_RULE [relationTheory.transitive_def,WORD_LOWER_TRANS] o Q.ISPEC `$<+`) SORTED_EQ;
+
+val LEAST_MEM_IMP = prove(
+  ``!xs x y. (y = LEAST_MEM (x::xs)) ==> !z. MEM z (x::xs) ==> (y = z) \/ (y <+ z)``,
+  Induct \\ REWRITE_TAC [LEAST_MEM_def,MEM] THEN1 METIS_TAC []
+  \\ SIMP_TAC std_ss [LET_DEF] \\ NTAC 3 STRIP_TAC
+  \\ POP_ASSUM (ASSUME_TAC o REWRITE_RULE [] o Q.SPECL [`h`,`LEAST_MEM (h::xs)`])    
+  \\ Cases_on `z = x` \\ ASM_SIMP_TAC bool_ss []
+  \\ Cases_on `x <=+ LEAST_MEM (h::xs)` \\ ASM_REWRITE_TAC []
+  THEN1 METIS_TAC [WORD_LOWER_CASES]
+  \\ FULL_SIMP_TAC std_ss [MEM,WORD_LOWER_OR_EQ]
+  \\ METIS_TAC [WORD_LOWER_TRANS]);
+
+val LEAST_MEM_LOWER_EQ = prove(
+  ``!xs x. MEM x xs ==> LEAST_MEM xs <=+ x``,
+  Induct \\ SIMP_TAC std_ss [MEM,LEAST_MEM_def]
+  \\ Cases_on `xs` \\ SIMP_TAC std_ss [LEAST_MEM_def,LET_DEF]
+  THEN1 SRW_TAC [] [MEM,WORD_LOWER_EQ_REFL] \\ NTAC 2 STRIP_TAC
+  \\ Cases_on `x = h'` \\ ASM_REWRITE_TAC []
+  THEN1 METIS_TAC [WORD_LOWER_EQ_CASES]
+  \\ Cases_on `h' <=+ LEAST_MEM (h::t)` \\ ASM_REWRITE_TAC []
+  \\ METIS_TAC [WORD_LOWER_EQ_TRANS]);
+
+val SORTED_LEAST_SORT = prove(
+  ``!xs. SORTED $<+ (LEAST_SORT xs)``,
+  recInduct LEAST_SORT_ind \\ SIMP_TAC std_ss 
+    [LEAST_SORT_def,LET_DEF,SORTED_DEF,SORTED_EQ_LOWER,MEM_LEAST_SORT,MEM_FILTER]
+  \\ REPEAT STRIP_TAC \\ IMP_RES_TAC LEAST_MEM_LOWER_EQ
+  \\ FULL_SIMP_TAC std_ss [WORD_LOWER_OR_EQ] \\ METIS_TAC [WORD_LOWER_REFL]);
+
+val REGISTER_LIST_EQ_LEAST_SORT = prove(
+  ``!xs. REGISTER_LIST (reg_bitmap xs) = LEAST_SORT xs``,
+  STRIP_TAC \\ MATCH_MP_TAC SORTED_LO_IMP_EQ
+  \\ REWRITE_TAC [MEM_REGISTER_LIST_reg_bitmap,MEM_LEAST_SORT,
+                  SORTED_LEAST_SORT,SORTED_REGISTER_LIST]);
+
+val ALL_DISTINCT_FILTER = prove(
+  ``!xs. ALL_DISTINCT xs ==> !g. ALL_DISTINCT (FILTER g xs)``,
+  Induct \\ REWRITE_TAC [ALL_DISTINCT,FILTER] \\ REPEAT STRIP_TAC
+  \\ Cases_on `g h` \\ ASM_REWRITE_TAC [ALL_DISTINCT,MEM_FILTER] \\ METIS_TAC []);
+
+val LENGTH_FILTER_NEQ = prove(
+  ``!xs y. ALL_DISTINCT xs /\ MEM y xs ==> 
+           (LENGTH (FILTER (\x. ~(x = y)) xs) = LENGTH xs - 1)``,
+  Induct \\ SIMP_TAC bool_ss [MEM,FILTER,ALL_DISTINCT]
+  \\ NTAC 2 STRIP_TAC \\ Cases_on `y = h` \\ ASM_REWRITE_TAC [LENGTH]
+  \\ `!xs. ~MEM h xs ==> (FILTER (\x. ~(x = h)) xs = xs)` by (Induct \\ SRW_TAC [] [FILTER])
+  \\ ASM_SIMP_TAC std_ss [ADD1,ADD_SUB,LENGTH]
+  \\ Cases_on `xs` \\ REWRITE_TAC [MEM,LENGTH,ADD1,ADD_SUB]);
+
+val LENGTH_LEAST_SORT = prove(
+  ``!xs. ALL_DISTINCT xs ==> (LENGTH (LEAST_SORT xs) = LENGTH xs)``,
+  recInduct LEAST_SORT_ind \\ SIMP_TAC std_ss [LENGTH,LEAST_SORT_def,LET_DEF]
+  \\ REPEAT STRIP_TAC \\ IMP_RES_TAC ALL_DISTINCT_FILTER
+  \\ Q.PAT_ASSUM `!g.b:bool` (ASSUME_TAC o Q.SPEC `\x'. ~(x' = LEAST_MEM (x::xs))`)
+  \\ FULL_SIMP_TAC bool_ss [] 
+  \\ ASSUME_TAC (Q.SPECL [`xs`,`x`] MEM_LEAST_MEM)
+  \\ IMP_RES_TAC LENGTH_FILTER_NEQ \\ ASM_REWRITE_TAC [LENGTH,ADD1,ADD_SUB]);
+
+
+val PERM_IMP_MEM_EQUALITY = prove(
+  ``!xs ys. PERM xs ys ==> !x. MEM x xs = MEM x ys``,
+  REPEAT STRIP_TAC
+  \\ `!xs. MEM x xs = ~(FILTER ($= x) xs = [])` by (Induct \\ SRW_TAC [] [MEM,FILTER])
+  \\ FULL_SIMP_TAC bool_ss [PERM_DEF]);
+
+val ALL_DISTINCT_MOVE_CONS = prove(
+  ``!xs ys. ALL_DISTINCT (xs ++ h::ys) = ALL_DISTINCT (h::xs ++ ys)``,
+  Induct \\ ASM_SIMP_TAC bool_ss [APPEND,APPEND_NIL] \\ REPEAT STRIP_TAC
+  \\ ASM_REWRITE_TAC [ALL_DISTINCT,APPEND,MEM_APPEND,MEM]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []);
+
+val PERM_ALL_DISTINCT = prove(
+  ``!xs ys. ALL_DISTINCT xs /\ PERM xs ys ==> ALL_DISTINCT ys``,
+  Induct \\ SIMP_TAC bool_ss [PERM_NIL,ALL_DISTINCT,PERM_CONS_EQ_APPEND]
+  \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [] \\ IMP_RES_TAC PERM_IMP_MEM_EQUALITY
+  \\ REWRITE_TAC [ALL_DISTINCT_MOVE_CONS,ALL_DISTINCT,APPEND] \\ METIS_TAC []);
+
+val QSORT_SORTS_LS = prove(
+  ``SORTS QSORT ($<=+ :'a word->'a word->bool)``,
+  MATCH_MP_TAC QSORT_SORTS
+  \\ REWRITE_TAC [transitive_def,total_def,WORD_LOWER_EQ_TRANS,WORD_LOWER_EQ_CASES]);
+
+val SORTED_LO = prove(
+  ``!xs. SORTED $<=+ xs /\ ALL_DISTINCT xs ==> SORTED $<+ (xs:'a word list)``,
+  Induct \\ REWRITE_TAC [SORTED_DEF]
+  \\ Cases_on `xs` \\ REWRITE_TAC [SORTED_DEF]
+  \\ ONCE_REWRITE_TAC [ALL_DISTINCT]
+  \\ REWRITE_TAC [MEM] \\ METIS_TAC [WORD_LOWER_OR_EQ]);
+
+val ADDR_MODE4_UP_def = Define `
+  (ADDR_MODE4_UP (am4_DA wb) = F) /\ 
+  (ADDR_MODE4_UP (am4_FA wb) = F) /\ 
+  (ADDR_MODE4_UP (am4_IA wb) = T) /\
+  (ADDR_MODE4_UP (am4_FD wb) = T) /\
+  (ADDR_MODE4_UP (am4_DB wb) = F) /\
+  (ADDR_MODE4_UP (am4_EA wb) = F) /\
+  (ADDR_MODE4_UP (am4_IB wb) = T) /\
+  (ADDR_MODE4_UP (am4_ED wb) = T)`;
+
+val ADDR_MODE4_wb_def = Define `
+  (ADDR_MODE4_wb (am4_DA wb) = wb) /\ 
+  (ADDR_MODE4_wb (am4_FA wb) = wb) /\ 
+  (ADDR_MODE4_wb (am4_IA wb) = wb) /\
+  (ADDR_MODE4_wb (am4_FD wb) = wb) /\
+  (ADDR_MODE4_wb (am4_DB wb) = wb) /\
+  (ADDR_MODE4_wb (am4_EA wb) = wb) /\
+  (ADDR_MODE4_wb (am4_IB wb) = wb) /\
+  (ADDR_MODE4_wb (am4_ED wb) = wb)`;
+
+val ADDR_MODE4_WB'_def = Define `
+  ADDR_MODE4_WB' am4 x n = 
+    (if ADDR_MODE4_UP am4 then $+ else $-) x (n2w n)`;
+
+val ADDR_MODE4_WB_def = Define `
+  ADDR_MODE4_WB am4 x xs = 
+    if ADDR_MODE4_wb am4 then ADDR_MODE4_WB' am4 x (LENGTH xs) else x`;
+
+val ALL_DISTINCT_IMP_LENGTH_EQ = prove(
+  ``!xs ys. ALL_DISTINCT xs /\ ALL_DISTINCT ys /\ (!x. MEM x xs = MEM x ys) ==>
+            (LENGTH xs = LENGTH ys)``,
+  Induct THEN1 (Cases_on `ys` \\ SRW_TAC [] [] \\ METIS_TAC [])
+  \\ REWRITE_TAC [MEM] \\ REPEAT STRIP_TAC
+  \\ `MEM h ys` by METIS_TAC []
+  \\ `?hs zs. ys = hs ++ [h] ++ zs` by METIS_TAC [MEM_EQ_EXISTS]
+  \\ FULL_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND,ALL_DISTINCT_MOVE_CONS,MEM,MEM_APPEND]
+  \\ FULL_SIMP_TAC bool_ss [ALL_DISTINCT,MEM_APPEND,LENGTH,LENGTH_APPEND]
+  \\ `!x. MEM x xs = MEM x (hs ++ zs)` by METIS_TAC [MEM_APPEND]
+  \\ Q.PAT_ASSUM `!ys'. b ==> (c:bool)` IMP_RES_TAC  
+  \\ ASM_REWRITE_TAC [ADD1,LENGTH_APPEND] \\ DECIDE_TAC);
+
+val SORTED_LO_IMP_ALL_DISTINCT = prove(
+  ``!xs. SORTED $<+ xs ==> ALL_DISTINCT xs``,
+  Induct \\ REWRITE_TAC [SORTED_DEF,ALL_DISTINCT]
+  \\ REPEAT STRIP_TAC \\ IMP_RES_TAC SORTED_CONS_IMP \\ METIS_TAC []);
+
+val REGISTER_LIST_LENGTH = prove(
+  ``!xs. ALL_DISTINCT xs ==> (LENGTH (REGISTER_LIST (reg_bitmap xs)) = LENGTH xs)``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC ALL_DISTINCT_IMP_LENGTH_EQ
+  \\ ASM_SIMP_TAC std_ss [MEM_REGISTER_LIST_reg_bitmap]
+  \\ MATCH_MP_TAC SORTED_LO_IMP_ALL_DISTINCT \\ REWRITE_TAC [SORTED_REGISTER_LIST]);
+
+val ADDR_MODE4_UP_THM = prove(
+  ``!am4. (ADDR_MODE4_CMD am4).Up = ADDR_MODE4_UP am4``,
+  Cases_on `am4` \\ SRW_TAC [] [ADDR_MODE4_CMD_def,ADDR_MODE4_UP_def]);
+
+val WB_ADDRESS_EQ_ADDR_MODE4_WB' = prove(
+  ``!am4 x xs. ALL_DISTINCT xs ==> 
+         (WB_ADDRESS (ADDR_MODE4_CMD am4).Up (addr32 x) 
+             (LENGTH (REGISTER_LIST (reg_bitmap xs))) = 
+          addr32 (ADDR_MODE4_WB' am4 x (LENGTH xs)))``,
+  REWRITE_TAC [ADDR_MODE4_def,ADDR_MODE4_WB'_def,WB_ADDRESS_def,UP_DOWN_def]
+  \\ SIMP_TAC bool_ss [REGISTER_LIST_LENGTH,ADDR_MODE4_UP_THM] 
+  \\ REPEAT STRIP_TAC \\ Cases_on `ADDR_MODE4_UP am4` 
+  \\ ASM_REWRITE_TAC [addr32_ADD,addr32_SUB,addr32_n2w]);
+
+val ADDR_MODE4_ADDR'_def = Define `
+  (ADDR_MODE4_ADDR' (am4_DA wb) x y = y + 1w) /\ 
+  (ADDR_MODE4_ADDR' (am4_FA wb) x y = y + 1w) /\ 
+  (ADDR_MODE4_ADDR' (am4_IA wb) x y = x:word30) /\
+  (ADDR_MODE4_ADDR' (am4_FD wb) x y = x) /\
+  (ADDR_MODE4_ADDR' (am4_DB wb) x y = y) /\
+  (ADDR_MODE4_ADDR' (am4_EA wb) x y = y) /\
+  (ADDR_MODE4_ADDR' (am4_IB wb) x y = x + 1w) /\
+  (ADDR_MODE4_ADDR' (am4_ED wb) x y = x + 1w)`;
+
+val ADDR_MODE4_ADDR'_THM = prove(
+  ``!am4 x xs.
+      ALL_DISTINCT xs ==>
+      (FIRST_ADDRESS (ADDR_MODE4_CMD am4).Pre (ADDR_MODE4_CMD am4).Up
+        (addr32 x) (addr32 (ADDR_MODE4_WB' am4 x (LENGTH xs))) =
+       addr32 (ADDR_MODE4_ADDR' am4 x (ADDR_MODE4_WB' am4 x (LENGTH xs))))``,
+  Cases \\ SRW_TAC [] [ADDR_MODE4_ADDR'_def,FIRST_ADDRESS_def,ADDR_MODE4_CMD_def,addr32_SUC]);
+
+val ADDR_MODE4_ADDR_def = Define `
+  ADDR_MODE4_ADDR am4 x xs = ADDR_MODE4_ADDR' am4 x (ADDR_MODE4_WB' am4 x (LENGTH xs))`;
+
+val ADDRESS_LIST'_def = Define `
+  (ADDRESS_LIST' start 0 = []) /\
+  (ADDRESS_LIST' start (SUC n) = start :: ADDRESS_LIST' (start + 4w) n)`;
+
+val GENLIST_EQ = prove(
+  ``!xs f n. (!k. k < n ==> (f k = EL k xs)) /\ (n = LENGTH xs) ==> (GENLIST f n = xs)``,
+  recInduct SNOC_INDUCT \\ REPEAT STRIP_TAC 
+  \\ FULL_SIMP_TAC std_ss [LENGTH,GENLIST,LENGTH_SNOC,SNOC_11]
+  \\ `!k n. k < n ==> k < SUC n` by DECIDE_TAC
+  \\ `!k. k < LENGTH l ==> (f k = EL k l)` by METIS_TAC [EL_SNOC]
+  \\ `LENGTH l < SUC (LENGTH l)` by DECIDE_TAC
+  \\ `f (LENGTH l) = EL (LENGTH l) (SNOC x l)` by METIS_TAC []     
+  \\ ASM_REWRITE_TAC [EL_LENGTH_SNOC] 
+  \\ Q.PAT_ASSUM `!f. b ==> (GENLIST f g = l)` MATCH_MP_TAC
+  \\ ASM_REWRITE_TAC []);
+
+val ADDRESS_LIST'_INTRO = prove(
+  ``!n y. ADDRESS_LIST y n = ADDRESS_LIST' y n``,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [ADDRESS_LIST_def] 
+  \\ MATCH_MP_TAC GENLIST_EQ \\ SIMP_TAC std_ss []
+  \\ Q.SPEC_TAC (`y`,`y`)
+  \\ Induct_on `n` THEN1 SRW_TAC [] [LENGTH,ADDRESS_LIST'_def]
+  \\ REPEAT STRIP_TAC << [
+    Cases_on `k` \\ REWRITE_TAC [EL,WORD_MULT_CLAUSES,
+       WORD_ADD_0,TL,HD,ADDRESS_LIST'_def,ADD1,GSYM word_add_n2w,WORD_ADD_ASSOC]
+    \\ FULL_SIMP_TAC std_ss [],
+    REWRITE_TAC [ADDRESS_LIST'_def,LENGTH] \\ METIS_TAC []]);
+
+val ADDR_MODE4_ADDRESSES_def = Define `
+  ADDR_MODE4_ADDRESSES am4 x xs = 
+    ADDRESS_LIST' (addr32 (ADDR_MODE4_ADDR am4 x xs)) (LENGTH xs)`;
+
+val ADDR_MODE4_FORMAT = prove(
+  ``!am4 x xs.
+      ALL_DISTINCT xs ==> 
+      (ADDR_MODE4 (ADDR_MODE4_CMD am4).Pre 
+          (ADDR_MODE4_CMD am4).Up (addr32 x) 
+          (reg_bitmap xs) =
+       (LEAST_SORT xs,
+        ADDR_MODE4_ADDRESSES am4 x xs,
+        addr32 (ADDR_MODE4_WB' am4 x (LENGTH xs))))``,
+  SIMP_TAC std_ss [LET_DEF,ADDR_MODE4_def,WB_ADDRESS_EQ_ADDR_MODE4_WB',REGISTER_LIST_LENGTH]
+  \\ SIMP_TAC std_ss [REGISTER_LIST_EQ_LEAST_SORT,ADDR_MODE4_ADDRESSES_def,
+                      ADDR_MODE4_ADDR'_THM,ADDR_MODE4_ADDR_def,ADDRESS_LIST'_INTRO]);
+
+val ADDR_MODE4_WB_THM = prove(
+  ``!am4 p xs. 
+      (reg Rd s = addr32 p) ==>
+      ((if (ADDR_MODE4_CMD am4).Wb then
+         INC_PC (REG_WRITE s.registers (state_mode s) Rd
+           (addr32 (ADDR_MODE4_WB' am4 p (LENGTH (MAP FST xs)))))
+        else INC_PC s.registers) =
+       INC_PC (REG_WRITE s.registers (state_mode s) Rd
+         (addr32 (ADDR_MODE4_WB am4 p (MAP FST xs)))))``,
+  REPEAT STRIP_TAC 
+  \\ `!am4. (ADDR_MODE4_CMD am4).Wb = ADDR_MODE4_wb am4` by 
+        (Cases \\ SRW_TAC [] [ADDR_MODE4_CMD_def,ADDR_MODE4_wb_def])
+  \\ ASM_REWRITE_TAC [ADDR_MODE4_WB_def] 
+  \\ Cases_on `ADDR_MODE4_wb am4` \\ ASM_REWRITE_TAC []
+  \\ Q.PAT_ASSUM `reg Rd s = addr32 p` (ASSUME_TAC o SYM)
+  \\ ASM_REWRITE_TAC [reg_def]
+  \\ Cases_on `Rd = 15w` \\ ASM_SIMP_TAC std_ss [REG_WRITE_READ]
+  \\ ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) 
+       [REG_WRITE_def,mode_reg2num_def,num2register_thm,LET_DEF,
+        EVAL ``w2n (15w:word4)``,INC_PC_def,SUBST_def]);
+
+(* LDM instruction ------------------------------------------------------------- *)
+
+val LDM_VALUES_def = Define `
+  LDM_VALUES am4 x xs s = 
+    ZIP (LEAST_SORT xs, MAP (s.memory o ADDR30) (ADDR_MODE4_ADDRESSES am4 x xs))`;
+
+val MEM_MAP_FST_ZIP = prove(
+  ``!xs ys x. (LENGTH xs = LENGTH ys) ==> (MEM x (MAP FST (ZIP (xs,ys))) = MEM x xs)``,
+  Induct \\ Cases_on `ys` \\ SIMP_TAC std_ss [LENGTH,ZIP,MAP,MEM]
+  THEN1 REWRITE_TAC [SUC_NOT] THEN1 METIS_TAC [SUC_NOT] \\ ASM_SIMP_TAC std_ss [MEM]);
+
+val ALL_DISTINCT_MAP_FST_ZIP = prove(
+  ``!xs ys. (LENGTH xs = LENGTH ys) ==> 
+            (ALL_DISTINCT (MAP FST (ZIP (xs,ys))) = ALL_DISTINCT xs)``,
+  Induct \\ Cases_on `ys` \\ SIMP_TAC std_ss [LENGTH]
+  THEN1 SRW_TAC [] [ZIP,MAP,FST,ALL_DISTINCT]
+  THEN1 REWRITE_TAC [SUC_NOT] THEN1 METIS_TAC [SUC_NOT]
+  \\ ASM_SIMP_TAC bool_ss [ZIP,MAP,FST,ALL_DISTINCT,MEM_MAP_FST_ZIP]);  
+
+val SORTED_LOWER_IMP_ALL_DISTINCT = prove(
+  ``!xs. SORTED $<+ xs ==> ALL_DISTINCT xs``,
+  Induct \\ SIMP_TAC std_ss [ALL_DISTINCT] \\ REPEAT STRIP_TAC
+  \\ IMP_RES_TAC SORTED_EQ_LOWER \\ METIS_TAC [WORD_LOWER_REFL]);
+
+val ALL_DISTINCT_LEAST_SORT = prove(
+  ``!xs. ALL_DISTINCT (LEAST_SORT xs)``,
+  STRIP_TAC \\ MATCH_MP_TAC SORTED_LOWER_IMP_ALL_DISTINCT
+  \\ REWRITE_TAC [SORTED_LEAST_SORT]);
+
+val REG_WRITEL_INTRO = prove(
+  ``!l r m. 
+      ALL_DISTINCT (MAP FST l) ==>
+      (FOLDL (\reg' (rp,rd). REG_WRITE reg' m rp rd) r l = REG_WRITEL r m l)``,
+  Induct \\ SIMP_TAC std_ss [FOLDL,REG_WRITEL_def] \\ REPEAT STRIP_TAC
+  \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [REG_WRITEL_def,ALL_DISTINCT,MAP,FST]
+  \\ `!l. ~MEM q (MAP FST l) ==> 
+    (REG_WRITEL (REG_WRITE r m q r') m l = REG_WRITE (REG_WRITEL r m l) m q r')` 
+          by ALL_TAC << [
+    Induct \\ SIMP_TAC bool_ss [REG_WRITEL_def,MEM,MAP,FST] \\ REPEAT STRIP_TAC
+    \\ Cases_on `h` \\ FULL_SIMP_TAC std_ss [REG_WRITEL_def] 
+    \\ MATCH_MP_TAC REG_WRITE_WRITE_COMM \\ ASM_REWRITE_TAC [],
+  METIS_TAC []]);
+
+val LENGTH_ADDRESS_LIST' = prove(
+  ``!n x. LENGTH (ADDRESS_LIST' x n) = n``,
+  Induct \\ SRW_TAC [] [LENGTH,ADDRESS_LIST'_def]);
+
+val LDM_WRITEL_INTRO_LEMMA = prove(
+  ``!xs. 
+      ALL_DISTINCT xs ==> 
+      (LENGTH (LEAST_SORT xs) = 
+       LENGTH (MAP g (ADDR_MODE4_ADDRESSES am4 x xs)))``,
+  SIMP_TAC std_ss 
+    [LENGTH_LEAST_SORT,ADDR_MODE4_ADDRESSES_def,LENGTH_ADDRESS_LIST',LENGTH_MAP]);
+  
+val LDM_WRITEL_INTRO = prove(
+  ``!xs r m. 
+      ALL_DISTINCT xs ==>
+      (FOLDL (\reg' (rp,rd). REG_WRITE reg' m rp rd) r (LDM_VALUES am4 x xs s) = 
+       REG_WRITEL r m (LDM_VALUES am4 x xs s))``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC REG_WRITEL_INTRO
+  \\ `LENGTH (LEAST_SORT xs) = 
+      LENGTH (MAP (s.memory o ADDR30) (ADDR_MODE4_ADDRESSES am4 x xs))`
+             by ASM_SIMP_TAC std_ss [LENGTH_LEAST_SORT,LENGTH_ADDRESS_LIST',
+                                     ADDR_MODE4_ADDRESSES_def,LENGTH_MAP]
+  \\ IMP_RES_TAC ALL_DISTINCT_MAP_FST_ZIP
+  \\ ASM_SIMP_TAC std_ss [LDM_VALUES_def,ALL_DISTINCT_LEAST_SORT]);
+
+val LDM_STATE_def = Define `
+  LDM_STATE am4 p xs Rd s =
+  <|registers :=
+            REG_WRITEL
+              (INC_PC
+                 (REG_WRITE s.registers (state_mode s) Rd
+                    (addr32 (ADDR_MODE4_WB am4 p (MAP FST xs)))))
+              (state_mode s)
+              (ZIP
+                 (LEAST_SORT (MAP FST xs),
+                  MAP (s.memory o ADDR30)
+                    (ADDRESS_LIST'
+                       (addr32 (ADDR_MODE4_ADDR am4 p (MAP FST xs)))
+                       (LENGTH (MAP FST xs))))); psrs := s.psrs;
+          memory := s.memory; undefined := F|>`;
+
+val ldm = simple_clean ARM_LDM [``~(Rd = 15w:word4)``]
+val ldm = Q.INST [`opt`|->`ADDR_MODE4_CMD am4`] ldm
+val ldm = Q.INST [`list`|->`reg_bitmap (MAP FST (xs:(word4 # word32) list))`] ldm
+val ldm = REWRITE_RULE [NOT_ADDR_MODE4_BSN] ldm
+val ldm = DISCH ``reg Rd s = addr32 p`` ldm
+val ldm = DISCH ``ALL_DISTINCT (MAP FST (xs:(word4 # word32) list))`` ldm
+val ldm = SIMP_RULE bool_ss [ADDR_MODE4_FORMAT,FST,SND,ADDR_MODE4_WB_THM,
+                             GSYM LDM_VALUES_def,LDM_WRITEL_INTRO] ldm
+val ldm = REWRITE_RULE [LDM_VALUES_def,GSYM LDM_STATE_def,ADDR_MODE4_ADDRESSES_def] ldm
+
+
+val reg_values_def = Define ` 
+  reg_values = MAP SND o QSORT (\x y. FST x <=+ FST y)`;
+  
+val LDM_PRE_EXPANSION = let
+  val xs = `(15w,SOME x1)::(a,SOME x2)::xs`;
+  val ys = `[(b1,xM_seq [y1]);(b3,xM_seq y3)]`;
+  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(T,g)`);
+  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+  in th end;
+
+val LDM_POST_EXPANSION = let
+  val xs = `(15w,SOME x1)::(a,SOME x2)::xs`;
+  val ys = `[(b1,xM_seq [y1]);(b3,xM_seq y3)]`;
+  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(F,g)`);
+  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+  in th end;
+
+val LDM_SIMP_LEMMA = prove(
+  ``!xs. (MAP FST (MAP (\x. (FST x,NONE)) xs) = MAP FST xs) /\ 
+         (MAP FST (MAP (\x. (FST x,SOME (SND x))) xs) = MAP FST xs)``,
+  Induct \\ SRW_TAC [] []);
+
+val MEM_LOWEST = prove(
+  ``!xs. 0 < LENGTH xs ==> ?h. MEM h xs /\ !x. MEM x xs ==> h <=+ x``,
+  Induct \\ FULL_SIMP_TAC std_ss [LENGTH,MEM] \\ REPEAT STRIP_TAC  
+  \\ Cases_on `?y. MEM y xs /\ y <=+ h` << [  
+    `?y. MEM y xs /\ y <=+ h` by METIS_TAC []
+    \\ Cases_on `xs` THEN1 FULL_SIMP_TAC std_ss [MEM]
+    \\ FULL_SIMP_TAC bool_ss [LENGTH,DECIDE ``0 < SUC n = T``]
+    \\ Q.EXISTS_TAC `h''` \\ ASM_REWRITE_TAC []
+    \\ METIS_TAC [WORD_LOWER_EQ_TRANS],
+    Q.EXISTS_TAC `h` \\ FULL_SIMP_TAC bool_ss []
+    \\ METIS_TAC [WORD_LOWER_EQ_CASES,WORD_LOWER_EQ_REFL]]);
+
+val PERM_IMPs = prove(
+  ``!xs ys. PERM xs ys ==> (LENGTH xs = LENGTH ys) /\ !x. MEM x xs = MEM x ys``,
+  Induct \\ SIMP_TAC bool_ss [PERM_NIL,PERM_CONS_EQ_APPEND,LENGTH]
+  \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC []
+  \\ Q.PAT_ASSUM `!ys. b:bool` IMP_RES_TAC 
+  \\ FULL_SIMP_TAC std_ss [LENGTH_APPEND,LENGTH,MEM,MEM_APPEND] THEN1 DECIDE_TAC
+  \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC bool_ss []);
+
+val LDM_mem_SIMP = prove(
+  ``!ys y s g. 
+      ms_sem y ys <|registers := g; psrs := s.psrs; memory := s.memory; undefined := F|> =
+      ms_sem y ys s``,
+  Induct \\ SRW_TAC [] [ms_sem_def,mem_def]);
+
+val LDM_VALUES_0 = prove(
+  ``!xs.
+      (0 = LENGTH xs) ==> 
+      (ZIP (LEAST_SORT xs,
+            MAP (s.memory o ADDR30) (ADDRESS_LIST' (addr32 y) (LENGTH xs))) = [])``,
+  Cases \\ SRW_TAC [] [LENGTH,LEAST_SORT_def,ADDR_MODE4_ADDRESSES_def,ADDRESS_LIST'_def]);
+
+val LDM_VALUES_SUC = prove(
+  ``!xs:word4 list n. 
+      ALL_DISTINCT xs ==> (SUC n = LENGTH xs) ==> 
+      ?ys. 
+        !y. (ZIP
+              (LEAST_SORT xs,
+                MAP (s.memory o ADDR30) (ADDRESS_LIST' (addr32 y) (LENGTH xs))) = 
+              (LEAST_MEM xs,s.memory y)::
+                ZIP
+                  (LEAST_SORT ys,
+                 MAP (s.memory o ADDR30) (ADDRESS_LIST' (addr32 (y+1w)) (LENGTH ys)))) /\
+           (n = LENGTH ys) /\ ALL_DISTINCT ys /\ !x. MEM x (LEAST_MEM xs::ys) = MEM x xs``,
+  REPEAT STRIP_TAC \\ Cases_on `xs` 
+  \\ FULL_SIMP_TAC std_ss [LENGTH] THEN1 METIS_TAC [SUC_NOT]
+  \\ FULL_SIMP_TAC std_ss [LEAST_SORT_def,LET_DEF,ADDRESS_LIST'_def,MAP,ADDR30_def,
+     GSYM addr30_def,addr30_addr32,ZIP,CONS_11]  
+  \\ Q.EXISTS_TAC `FILTER (\x. ~(x = LEAST_MEM (h::t))) (h::t)`  
+  \\ `MEM (LEAST_MEM (h::t)) (h::t)` by METIS_TAC [MEM_LEAST_MEM]
+  \\ IMP_RES_TAC LENGTH_FILTER_NEQ  
+  \\ FULL_SIMP_TAC bool_ss [LENGTH,ADD1,ADD_SUB,addr32_SUC]
+  \\ REPEAT STRIP_TAC THEN1 METIS_TAC [ALL_DISTINCT_FILTER]  
+  \\ SIMP_TAC std_ss [MEM,MEM_FILTER]
+  \\ Cases_on `x = LEAST_MEM (h::t)` \\ ASM_REWRITE_TAC []
+  \\ METIS_TAC [MEM_LEAST_MEM,MEM]);
+  
+val MEM_NOT_MEM_IMP_NEQ = prove(
+  ``!xs x y. MEM x xs /\ ~MEM y xs ==> ~(x = y)``,
+  REPEAT STRIP_TAC
+  \\ `?ys zs. xs = ys ++ [x] ++ zs` by METIS_TAC [MEM_EQ_EXISTS]
+  \\ FULL_SIMP_TAC std_ss [MEM_APPEND,MEM]);
+
+val reg_15_LDM_STATE = prove(
+  ``ALL_DISTINCT (MAP FST xs) /\ (reg 15w s = addr32 p) /\ 
+    ~MEM 15w (MAP FST xs) /\ ~(a = 15w) ==>
+    (reg 15w (LDM_STATE am4 x xs a s) = addr32 (pcADD 1w p))``,
+  SIMP_TAC (srw_ss()) [LDM_STATE_def,reg_def] 
+  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB am4 x (MAP FST xs))`,`y`)
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
+  \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Q.SPEC_TAC (`MAP FST xs`,`xs`) \\ STRIP_TAC
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x xs`,`w`)
+  \\ Induct_on `LENGTH xs` << [
+    SIMP_TAC std_ss [LDM_VALUES_0,REG_WRITEL_def,INC_PC_r15,REG_WRITE_r15,pcADD_def] 
+    \\ ONCE_REWRITE_TAC [WORD_ADD_COMM] \\ REWRITE_TAC [addr32_SUC] 
+    \\ METIS_TAC [WORD_ADD_COMM],  
+    REPEAT STRIP_TAC
+    \\ (STRIP_ASSUME_TAC o UNDISCH_ALL o Q.SPECL [`xs`,`v`]) LDM_VALUES_SUC
+    \\ FULL_SIMP_TAC bool_ss [REG_WRITEL_def]    
+    \\ Cases_on `xs` THEN1 METIS_TAC [LENGTH,SUC_NOT]
+    \\ `MEM (LEAST_MEM (h::t)) (h::t)` by METIS_TAC [MEM_LEAST_MEM]    
+    \\ IMP_RES_TAC MEM_NOT_MEM_IMP_NEQ
+    \\ ASM_SIMP_TAC std_ss [REG_WRITE_r15]
+    \\ `~MEM 15w ys` by METIS_TAC [MEM]
+    \\ `ALL_DISTINCT ys` by METIS_TAC []
+    \\ `LENGTH ys = LENGTH ys` by REWRITE_TAC []
+    \\ Q.PAT_ASSUM `!xs'. b ==> c:bool` 
+           (STRIP_ASSUME_TAC o UD_ALL o Q.SPECL [`w+1w`,`y`] o UD_ALL o Q.SPEC `ys`)]);
+
+val state_mode_simp = prove(
+  ``state_mode <|registers := r; psrs := s.psrs; memory := m; undefined := b|> =
+    state_mode s``,SRW_TAC [] [state_mode_def]);
+
+val reg_wb_LDM_STATE = prove(
+  ``ALL_DISTINCT (MAP FST xs) /\ ~MEM a (MAP FST xs) /\ ~(a = 15w) ==>
+    (reg a (LDM_STATE am4 x xs a s) = addr32 (ADDR_MODE4_WB am4 x xs))``,
+  SIMP_TAC (srw_ss()) [LDM_STATE_def,reg_def,ADDR_MODE4_WB_def] 
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
+  \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_WB_def] 
+  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB am4 x (MAP FST xs))`,`y`)
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST xs)`,`w`)
+  \\ Q.SPEC_TAC (`MAP FST xs`,`xs`) \\ STRIP_TAC
+  \\ REWRITE_TAC [state_mode_simp]
+  \\ Induct_on `LENGTH xs`
+  THEN1 SIMP_TAC std_ss [LDM_VALUES_0,REG_WRITEL_def,REG_READ_INC_PC,
+    REG_READ_WRITE_NEQ,pcADD_def,REG_READ_WRITE] 
+  \\ REPEAT STRIP_TAC
+  \\ (STRIP_ASSUME_TAC o UNDISCH_ALL o Q.SPECL [`xs`,`v`]) LDM_VALUES_SUC
+  \\ FULL_SIMP_TAC bool_ss [REG_WRITEL_def]    
+  \\ Cases_on `xs` THEN1 METIS_TAC [LENGTH,SUC_NOT]
+  \\ `MEM (LEAST_MEM (h::t)) (h::t)` by METIS_TAC [MEM_LEAST_MEM]    
+  \\ IMP_RES_TAC MEM_NOT_MEM_IMP_NEQ
+  \\ ASM_SIMP_TAC std_ss [REG_READ_WRITE_NEQ2]
+  \\ `~MEM a ys` by METIS_TAC [MEM]
+  \\ `ALL_DISTINCT ys` by METIS_TAC []
+  \\ `LENGTH ys = LENGTH ys` by REWRITE_TAC []
+  \\ Q.PAT_ASSUM `!xs'. b ==> c:bool` 
+           (STRIP_ASSUME_TAC o UD_ALL o Q.SPECL [`w+1w`,`y`] o UD_ALL o Q.SPEC `ys`));
+
+val xR_list_sem_PERM_LEMMA = prove(
+  ``!xs ys h. xR_list_sem (xs++h::ys) = xR_list_sem (h::(xs++ys))``,
+  Induct \\ SIMP_TAC std_ss [xR_list_def,FUN_EQ_THM,APPEND]
+  \\ Cases_on `h` \\ Cases_on `r` \\ ASM_REWRITE_TAC [xR_list_sem_def]
+  \\ Cases_on `h'` \\ Cases_on `r` \\ ASM_REWRITE_TAC [xR_list_sem_def]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ SIMP_TAC std_ss []);
+
+val xR_list_sem_PERM = prove(
+  ``!xs ys. PERM xs ys ==> (xR_list_sem xs = xR_list_sem ys)``,
+  REWRITE_TAC [FUN_EQ_THM] 
+  \\ Induct \\ SIMP_TAC bool_ss [PERM_NIL,PERM_CONS_EQ_APPEND] \\ REPEAT STRIP_TAC
+  \\ ASM_REWRITE_TAC [xR_list_sem_PERM_LEMMA]
+  \\ Cases_on `h` \\ Cases_on `r` \\ ASM_REWRITE_TAC [xR_list_sem_def]
+  \\ METIS_TAC []);
+
+val PERM_MAP = prove(
+  ``!xs ys. PERM xs ys ==> PERM (MAP f xs) (MAP f ys)``,
+  Induct \\ SIMP_TAC bool_ss [PERM_NIL,PERM_CONS_EQ_APPEND,PERM_REFL] \\ REPEAT STRIP_TAC
+  \\ ASM_REWRITE_TAC [MAP,MAP_APPEND] \\ ONCE_REWRITE_TAC [PERM_SYM]
+  \\ MATCH_MP_TAC APPEND_PERM_SYM \\ REWRITE_TAC [APPEND,PERM_CONS_IFF]
+  \\ MATCH_MP_TAC APPEND_PERM_SYM \\ ONCE_REWRITE_TAC [PERM_SYM]
+  \\ ASM_SIMP_TAC bool_ss [GSYM MAP_APPEND]);
+
+val SORTS_QSORT_FST_LOWER_EQ = prove(
+  ``SORTS QSORT (\x y. FST x <=+ FST y)``,
+  MATCH_MP_TAC QSORT_SORTS \\ REWRITE_TAC [transitive_def,total_def] 
+  \\ REPEAT STRIP_TAC \\ Cases_on `x` \\ Cases_on `y`
+  \\ FULL_SIMP_TAC std_ss [WORD_LOWER_EQ_CASES]
+  \\ Cases_on `z` \\ FULL_SIMP_TAC std_ss [] \\ MATCH_MP_TAC WORD_LOWER_EQ_TRANS 
+  \\ Q.EXISTS_TAC `q'` \\ ASM_REWRITE_TAC []);
+
+val LENGTH_reg_values = prove(
+  ``!xs. LENGTH (reg_values xs) = LENGTH xs``,
+  SIMP_TAC std_ss [reg_values_def,LENGTH_MAP] \\ REPEAT STRIP_TAC 
+  \\ MATCH_MP_TAC PERM_LENGTH \\ METIS_TAC [SORTS_QSORT_FST_LOWER_EQ,SORTS_DEF,PERM_SYM]);
+
+val xR_list_sem_QSORT_INTRO = prove(
+  ``!f xs. 
+       xR_list_sem (MAP f xs) = xR_list_sem ((MAP f o QSORT (\x y. FST x <=+ FST y)) xs)``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC xR_list_sem_PERM \\ SIMP_TAC std_ss []
+  \\ MATCH_MP_TAC PERM_MAP \\ METIS_TAC [SORTS_QSORT_FST_LOWER_EQ,SORTS_DEF]);
+
+val MEM_ALL_MEM_ALL_MAP = prove(
+  ``!xs ys. (!a. MEM a xs = MEM a ys) ==> (!a. MEM a (MAP f xs) = MEM a (MAP f ys))``,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [MEM_MAP] \\ EQ_TAC \\ REPEAT STRIP_TAC
+  \\ Q.EXISTS_TAC `y` \\ ASM_REWRITE_TAC [] \\ METIS_TAC []);
+
+val MEM_MAP_QSORT_INTRO = prove(
+  ``!xs a. MEM a (MAP FST xs) = MEM a ((MAP FST o QSORT (\x y. FST x <=+ FST y)) xs)``,
+  SIMP_TAC std_ss [] \\ STRIP_TAC \\ MATCH_MP_TAC MEM_ALL_MEM_ALL_MAP
+  \\ MATCH_MP_TAC PERM_IMP_MEM_EQUALITY \\ METIS_TAC [SORTS_QSORT_FST_LOWER_EQ,SORTS_DEF]);
+
+val PERM_IMP_ALL_DISTINCT_EQ = prove(
+  ``!xs ys. PERM xs ys ==> (ALL_DISTINCT xs = ALL_DISTINCT ys)``,
+  Induct \\ SIMP_TAC bool_ss [PERM_NIL,PERM_CONS_EQ_APPEND] \\ REPEAT STRIP_TAC
+  \\ ASM_REWRITE_TAC [ALL_DISTINCT] \\ IMP_RES_TAC PERM_IMP_MEM_EQUALITY
+  \\ `!M'. ALL_DISTINCT (M' ++ h::N) = ALL_DISTINCT (h::(M' ++ N))` by     
+        (Induct \\ ASM_SIMP_TAC bool_ss [APPEND,ALL_DISTINCT,MEM,MEM_APPEND]
+         \\ REPEAT STRIP_TAC \\ EQ_TAC \\ SIMP_TAC std_ss [])
+  \\ ASM_SIMP_TAC bool_ss [ALL_DISTINCT] \\ METIS_TAC []);
+
+val ALL_DISTINCT_QSORT_INTRO = prove(
+  ``!xs. ALL_DISTINCT (MAP FST xs) =
+         ALL_DISTINCT ((MAP FST o QSORT (\x y. FST x <=+ FST y)) xs)``,
+  STRIP_TAC \\ MATCH_MP_TAC PERM_IMP_ALL_DISTINCT_EQ \\ SIMP_TAC std_ss []
+  \\ MATCH_MP_TAC PERM_MAP \\ METIS_TAC [SORTS_QSORT_FST_LOWER_EQ,SORTS_DEF]);
+
+val LENGTH_QSORT_INTRO = prove(
+  ``!xs. LENGTH (MAP FST xs) = LENGTH (QSORT (\x y. FST x <=+ FST y) xs)``,
+  STRIP_TAC \\ REWRITE_TAC [LENGTH_MAP] \\ MATCH_MP_TAC PERM_LENGTH 
+  \\ METIS_TAC [SORTS_QSORT_FST_LOWER_EQ,SORTS_DEF]);
+
+val SORTED_MAP = prove(
+  ``!xs f g. SORTED g (MAP f xs) = SORTED (\x y. g (f x) (f y)) xs``,
+  Induct \\ REWRITE_TAC [SORTED_DEF,MAP]
+  \\ Cases_on `xs` \\ FULL_SIMP_TAC std_ss [SORTED_DEF,MAP]);
+
+val LEAST_SORT_EQ_QSORT = prove(
+  ``!xs. ALL_DISTINCT (MAP FST xs) ==>
+         (LEAST_SORT (MAP FST xs) = MAP FST (QSORT (\x y. FST x <=+ FST y) xs))``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC SORTED_LO_IMP_EQ  
+  \\ REWRITE_TAC [SORTED_LEAST_SORT,MEM_LEAST_SORT] \\ REPEAT STRIP_TAC << [
+    MATCH_MP_TAC SORTED_LO
+    \\ ASM_REWRITE_TAC [SIMP_RULE std_ss [] (GSYM ALL_DISTINCT_QSORT_INTRO)]
+    \\ REWRITE_TAC [SORTED_MAP] \\ METIS_TAC [SORTS_QSORT_FST_LOWER_EQ,SORTS_DEF],
+    SIMP_TAC std_ss [SIMP_RULE std_ss [] (GSYM MEM_MAP_QSORT_INTRO)]]);
+
+val xR_list_sem_IGNORE_REG_WRITE = prove(
+  ``!xs r q ax regs.
+      ~MEM q (MAP FST xs) ==>
+      (xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs)
+         <| registers := REG_WRITE regs (state_mode s) q r; 
+            psrs := s.psrs; memory := mt; undefined := bt |> =
+       xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs)
+         <| registers := regs; psrs := s.psrs; memory := mt; undefined := bt |>)``,
+  Induct THEN1 REWRITE_TAC [xR_list_sem_def,MAP] \\ Cases
+  \\ SIMP_TAC std_ss [MAP,xR_list_sem_def,MEM] \\ Cases_on `q = 15w`
+  \\ REPEAT STRIP_TAC \\ Q.PAT_ASSUM `!s.b` IMP_RES_TAC
+  \\ ASM_SIMP_TAC (srw_ss()) [reg_def,state_mode_simp,REG_READ_WRITE_NEQ2]
+  \\ `~(15w = q')` by METIS_TAC [] \\ ASM_SIMP_TAC std_ss [REG_WRITE_r15]);
+
+val xR_list_sem_LDM_STATE = prove(
+  ``ALL_DISTINCT (MAP FST xs) /\ 
+    ms_sem (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) s ==>
+    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) (LDM_STATE am4 x xs a s)``,
+  REWRITE_TAC [LDM_STATE_def,ADDR_MODE4_ADDR_def,reg_values_def]     
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
+  \\ ASM_REWRITE_TAC [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_ADDR_def] 
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST xs)`,`ax`)
+  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB am4 x (MAP FST xs))`,`y`)
+  \\ SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT]
+  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
+                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
+  \\ Induct \\ REWRITE_TAC [MAP,xR_list_sem_def]
+  \\ Cases \\ SIMP_TAC (srw_ss()) [xR_list_sem_def,reg_def,MEM,state_mode_simp,ms_sem_def]
+  \\ SIMP_TAC std_ss [ADDRESS_LIST'_def,MAP,ADDR30_def,GSYM addr30_def,addr30_addr32,ZIP]
+  \\ SIMP_TAC bool_ss [REG_WRITEL_def,REG_READ_WRITE,mem_def,REG_WRITE_15]
+  \\ ASM_SIMP_TAC bool_ss [xR_list_sem_IGNORE_REG_WRITE,GSYM addr32_SUC] \\ METIS_TAC []);
+
+val status_LDM_STATE = prove(
+  ``status (LDM_STATE am4 x xs a s) = status s``,
+  SRW_TAC [] [LDM_STATE_def,status_def,statusN_def,statusZ_def,statusC_def,statusV_def]);
+
+val mem_LDM_STATE = prove(
+  ``mem p (LDM_STATE am4 x xs a s) = mem p s``,
+  SRW_TAC [] [LDM_STATE_def,mem_def]);
+
+val ms_sem_LDM_STATE = prove(
+  ``ms_sem x xs (LDM_STATE am4 y ys a s) = ms_sem x xs s``,
+  Q.SPEC_TAC (`x`,`x`) \\ Induct_on `xs` \\ ASM_REWRITE_TAC [ms_sem_def,mem_LDM_STATE]);
+
+val undef_LDM_STATE = prove(
+  ``(LDM_STATE am4 x xs a s).undefined = F``, SRW_TAC [] [LDM_STATE_def]);
+
+val owrt_visible_LDM_STATE = prove(
+  ``owrt_visible (LDM_STATE am4 x xs a s) = owrt_visible s``,
+  SRW_TAC [] [owrt_visible_def,LDM_STATE_def,set_status_def,owrt_visible_regs_def,
+              state_mode_simp,REG_OWRT_ALL]);
+
+val xs = `[(a1,SOME x1)]`;
+val ys = `[(b1,xM_seq [y1])]`;
+val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(F,g)`);
+val NOP_sem = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+
+val IMP_ARM_NOP = prove(
+  ``(!state cpsr.
+       (state.memory ((31 >< 2) (state.registers r15)) = cmd) /\
+       Abbrev (cpsr = CPSR_READ state.psrs) /\
+       ~CONDITION_PASSED2 (NZCV cpsr) c /\ ~state.undefined ==>
+       (NEXT_ARM_MEM state =
+        <|registers := INC_PC state.registers; psrs := state.psrs;
+          memory := state.memory; undefined := F|>)) ==>
+    ARM_NOP c [cmd]``,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [ARM_NOP_def,ARM_PROG1_EQ,nPASS_def]  
+  \\ MOVE_STAR_TAC `st*cc*mp*pc*ud` `cc*(st*mp*pc*ud)`
+  \\ REWRITE_TAC [cond_STAR]
+  \\ MOVE_STAR_TAC `st*mp*pc*ud` `pc*mp*st*ud`
+  \\ SIMP_TAC bool_ss [NOP_sem,ALL_DISTINCT,MEM,ALL_DISJOINT_def,EVERY_DEF,mem_def,reg_def]
+  \\ FULL_SIMP_TAC bool_ss [markerTheory.Abbrev_def,GSYM addr30_def,GSYM status_THM]
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `1` \\ REWRITE_TAC [STATE_ARM_MEM_1]
+  \\ `s.memory (addr30 (s.registers r15)) = cmd` by METIS_TAC [addr30_addr32]
+  \\ Q.PAT_ASSUM `!state. b:bool` (STRIP_ASSUME_TAC o Q.SPEC `s`)
+  \\ FULL_SIMP_TAC (srw_ss()) [status_THM,INC_PC_r15,pcADD_def,GSYM addr32_SUC]
+  \\ STRIP_TAC THEN1 METIS_TAC [WORD_ADD_COMM] 
+  \\ REWRITE_TAC [arm2set''_EQ,IN_INSERT,NOT_IN_EMPTY]
+  \\ ASM_SIMP_TAC (srw_ss()) [reg_def,mem_def,REG_READ_INC_PC,state_mode_def,
+      owrt_visible_def,set_status_def,owrt_visible_regs_def,REG_OWRT_ALL]);  
+
+fun MAKE_ARM_NOP nop_rule = 
+  MATCH_MP IMP_ARM_NOP ((Q.GEN `state` o Q.GEN `cpsr` o SPEC_ALL) nop_rule);
+
+val IMP_ARM_PROG2 = prove(
+  ``ARM_NOP c cs ==> (ARM_PROG P cs {} Q Z ==> ARM_PROG2 c P cs Q Z)``,
+  SIMP_TAC std_ss [ARM_PROG2_def]);
+
+fun MAKE_PROG2 th nop_rule = 
+  MATCH_MP (MATCH_MP IMP_ARM_PROG2 (MAKE_ARM_NOP nop_rule)) th;
+
+val raw_LDM = prove(
+  ``ARM_PROG 
+     (R30 a x * 
+      xR_list (MAP (\x.(FST x,NONE)) xs) * 
+      ms (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) * S st * PASS c st) 
+     [enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))] {}
+     (R30 a (ADDR_MODE4_WB am4 x xs) *
+      xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
+      ms (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) * S st) {}``,
+  ARM_PROG_INIT_TAC 
+  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
+  \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud`
+  \\ FULL_SIMP_TAC bool_ss [R30_def,LDM_PRE_EXPANSION,LDM_POST_EXPANSION,
+         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM]
+  \\ `CONDITION_PASSED2 (status s) c` by METIS_TAC []
+  \\ `mem (addr30 (reg 15w s)) s =
+      enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))` 
+         by METIS_TAC [addr30_addr32]
+  \\ `~(a = 15w)` by METIS_TAC []
+  \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
+                  Q.INST [`p`|->`x`,`Rd`|->`a`]) ldm)
+  \\ ASM_REWRITE_TAC [] \\ PAT_ASSUM `` NEXT_ARM_MEM s = s'`` (fn th => ALL_TAC)
+  \\ STRIP_TAC 
+  THEN1 ASM_SIMP_TAC bool_ss [reg_15_LDM_STATE,reg_wb_LDM_STATE,xR_list_sem_LDM_STATE,
+     status_LDM_STATE,mem_LDM_STATE,ms_sem_LDM_STATE,undef_LDM_STATE]
+  \\ REWRITE_TAC [arm2set''_EQ,mem_LDM_STATE,owrt_visible_LDM_STATE]
+  \\ SIMP_TAC (srw_ss()) [IN_INSERT,IN_LIST_TO_SET,LDM_STATE_def,reg_def,state_mode_simp]
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
+  \\ ASM_SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT]
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST xs)`,`ax`)
+  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB am4 x (MAP FST xs))`,`y`)
+  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
+                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
+  \\ Induct \\ REWRITE_TAC [REG_WRITEL_def,MAP,LENGTH,ADDRESS_LIST'_def,ZIP]
+  \\ ASM_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2,MEM,GSYM addr32_SUC]);
+
+val arm_LDM = MAKE_PROG2 raw_LDM ARM_LDM_NOP;
+val arm_LDM = Q.INST [`c`|->`c_flag`,`st`|->`(sN,sZ,sC,Sv)`,`am4`|->`a_mode`] arm_LDM;
+
+val raw_LDM_PC = prove(
+  ``ARM_PROG 
+     (R30 a x * 
+      xR_list (MAP (\x.(FST x,NONE)) xs) * 
+      ms (ADDR_MODE4_ADDR am4 x ((15w,addr32 p)::xs)) 
+         (reg_values ((15w,addr32 p)::xs)) * S st * PASS c st) 
+     [enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (15w :: MAP FST xs)))] {} SEP_F
+     {(R30 a (ADDR_MODE4_WB am4 x ((15w,addr32 p)::xs)) *
+       xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
+       ms (ADDR_MODE4_ADDR am4 x ((15w,addr32 p)::xs)) (reg_values ((15w,addr32 p)::xs)) * S st,pcSET p)}``,
+  ARM_PROG_INIT_TAC \\ SIMP_TAC (bool_ss++sep_ss) [pcSET_def] \\ REWRITE_TAC [SEP_F_def]
+  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
+  \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud`
+  \\ FULL_SIMP_TAC bool_ss [R30_def,LDM_PRE_EXPANSION,LDM_POST_EXPANSION,
+         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM]
+  \\ `CONDITION_PASSED2 (status s) c` by METIS_TAC []
+  \\ `mem (addr30 (reg 15w s)) s =
+      enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (15w::MAP FST xs)))` 
+         by METIS_TAC [addr30_addr32]
+  \\ `~(a = 15w)` by METIS_TAC []
+  \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
+                  SIMP_RULE std_ss [MAP,ALL_DISTINCT,GSYM AND_IMP_INTRO] o
+                  Q.INST [`p`|->`x`,`Rd`|->`a`,`xs`|->`(15w,addr32 p)::xs`]) ldm)
+  \\ ASM_REWRITE_TAC [] \\ PAT_ASSUM `` NEXT_ARM_MEM s = s'`` (fn th => ALL_TAC)
+  \\ `ALL_DISTINCT (MAP FST ((15w,addr32 p)::xs))` by ASM_SIMP_TAC std_ss [ALL_DISTINCT,MAP]
+  \\ `~MEM a (MAP FST ((15w,addr32 p)::xs))` by ASM_SIMP_TAC std_ss [MEM,MAP]
+  \\ ASM_SIMP_TAC bool_ss [reg_15_LDM_STATE,reg_wb_LDM_STATE,xR_list_sem_LDM_STATE,
+       status_LDM_STATE,mem_LDM_STATE,ms_sem_LDM_STATE,undef_LDM_STATE]
+  \\ STRIP_TAC THEN1 
+    (ONCE_REWRITE_TAC [GSYM xR_list_sem_def]
+     \\ `(15w,SOME (addr32 p))::MAP (\x. (FST x,SOME (SND x))) xs = 
+         MAP (\x. (FST x,SOME (SND x))) ((15w,addr32 p)::xs)` by SIMP_TAC std_ss [MAP]  
+     \\ ASM_SIMP_TAC bool_ss [xR_list_sem_LDM_STATE])
+  \\ REWRITE_TAC [arm2set''_EQ,mem_LDM_STATE,owrt_visible_LDM_STATE]
+  \\ SIMP_TAC (srw_ss()) [IN_INSERT,IN_LIST_TO_SET,LDM_STATE_def,reg_def,state_mode_simp]
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP]
+  \\ `15w::(MAP FST xs) = MAP FST ((15w,addr32 p)::xs)` by SIMP_TAC std_ss [MAP]
+  \\ ASM_SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT]
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST ((15w,addr32 p)::xs))`,`ax`)
+  \\ Q.SPEC_TAC (`addr32 (ADDR_MODE4_WB am4 x (MAP FST ((15w,addr32 p)::xs)))`,`y`)
+  \\ `!r a. ~(r = 15w) /\ ~(r = a) /\ ~MEM r (MAP FST xs) =
+         ~(r = 15w) /\ ~(r = a) /\ ~MEM r (MAP FST ((15w,addr32 p)::xs))` by 
+            (SIMP_TAC std_ss [MEM,MAP] \\ METIS_TAC [])
+  \\ `!p. SUC (LENGTH (MAP FST xs)) = LENGTH (MAP FST ((15w,addr32 p)::xs))` by 
+                         (SIMP_TAC std_ss [MEM,MAP,LENGTH] \\ METIS_TAC [])
+  \\ ASM_REWRITE_TAC [] \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,
+       MEM_MAP_QSORT_INTRO,ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ SIMP_TAC std_ss [] 
+  \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) ((15w,addr32 p)::xs)`,`xs`)
+  \\ Induct \\ REWRITE_TAC [REG_WRITEL_def,MAP,LENGTH,ADDRESS_LIST'_def,ZIP]
+  \\ ASM_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2,MEM,GSYM addr32_SUC]);
+
+val arm_LDM_PC = MAKE_PROG2 raw_LDM_PC ARM_LDM_NOP;
+val arm_LDM_PC = Q.INST [`c`|->`c_flag`,`st`|->`(sN,sZ,sC,Sv)`,`am4`|->`a_mode`] arm_LDM_PC;
+
+val _ = save_thm("arm_LDM",arm_LDM);
+val _ = save_thm("arm_LDM_PC",arm_LDM_PC);
+
+
+(* STM instruction ------------------------------------------------------------- *)
+
+val STM_STATE_def = Define `
+  STM_STATE am4 x xs a s =
+           <|registers :=
+               INC_PC
+                 (REG_WRITE s.registers (state_mode s) a
+                    (addr32 (ADDR_MODE4_WB am4 x (MAP FST xs))));
+             psrs := s.psrs;
+             memory :=
+               FOLDL
+                 (\mem (rp,rd).
+                    MEM_WRITE_WORD mem rd
+                      (REG_READ
+                         (if HD (LEAST_SORT (MAP FST xs)) = a then
+                            INC_PC s.registers
+                          else
+                            INC_PC
+                              (REG_WRITE s.registers (state_mode s) a
+                                 (addr32
+                                    (ADDR_MODE4_WB am4 x (MAP FST xs)))))
+                         (state_mode s) rp)) s.memory
+                 (ZIP
+                    (LEAST_SORT (MAP FST xs),
+                     ADDR_MODE4_ADDRESSES am4 x (MAP FST xs)));
+             undefined := F|>`;
+
+val stm = simple_clean ARM_STM [``~(Rd = 15w:word4)``]
+val stm = Q.INST [`opt`|->`ADDR_MODE4_CMD am4`] stm
+val stm = Q.INST [`list`|->`reg_bitmap (MAP FST (xs:(word4 # word32) list))`] stm
+val stm = REWRITE_RULE [NOT_ADDR_MODE4_BSN] stm
+val stm = DISCH ``reg Rd s = addr32 p`` stm
+val stm = DISCH ``ALL_DISTINCT (MAP FST (xs:(word4 # word32) list))`` stm
+val stm = SIMP_RULE bool_ss [ADDR_MODE4_FORMAT,FST,SND,ADDR_MODE4_WB_THM] stm
+val stm = REWRITE_RULE [GSYM STM_STATE_def] stm
+
+val status_STM_STATE = prove(
+  ``status (STM_STATE am4 x xs a s) = status s``,
+  SRW_TAC [] [STM_STATE_def,status_def,statusN_def,statusZ_def,statusC_def,statusV_def]);
+
+val undef_STM_STATE = prove(
+  ``(STM_STATE am4 x xs a s).undefined = F``, SRW_TAC [] [STM_STATE_def]);
+
+val owrt_visible_STM_STATE = prove(
+  ``owrt_visible (STM_STATE am4 x xs a s) = owrt_visible s``,
+  SRW_TAC [] [owrt_visible_def,STM_STATE_def,set_status_def,owrt_visible_regs_def,
+              state_mode_simp,REG_OWRT_ALL]);
+
+val reg_15_STM_STATE = prove(
+  ``~(a = 15w) /\ (reg 15w s = addr32 p) ==> 
+    (reg 15w (STM_STATE am4 x xs a s) = addr32 (pcADD 1w p))``,
+  SIMP_TAC (srw_ss()) [STM_STATE_def,reg_def,INC_PC_r15,pcADD_def,
+                       REG_WRITE_r15,GSYM addr32_SUC] \\ METIS_TAC [WORD_ADD_COMM]);
+
+val reg_wb_STM_STATE = prove(
+  ``~(a = 15w) ==> 
+    (reg a (STM_STATE am4 x xs a s) = addr32 (ADDR_MODE4_WB am4 x xs))``,
+  SIMP_TAC (srw_ss()) [STM_STATE_def,reg_def,state_mode_simp,REG_READ_INC_PC,
+                       REG_READ_WRITE,ADDR_MODE4_WB_def,LENGTH_MAP]);
+
+val reg_STM_STATE = prove(
+  ``~(r = 15w) /\ ~(r = a) ==> (reg r (STM_STATE am4 x xs a s) = reg r s)``,
+  SIMP_TAC (srw_ss()) [STM_STATE_def,reg_def,state_mode_simp,REG_READ_INC_PC,
+                       REG_READ_WRITE_NEQ2,LENGTH_MAP]);
+
+val xR_list_sem_STM_STATE = prove(
+  ``xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) s /\
+    ~MEM 15w (MAP FST xs) /\ ~MEM a (MAP FST xs) ==>
+    (xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) (STM_STATE am4 x xs a s) = 
+     xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) s)``,
+  REWRITE_TAC [STM_STATE_def]
+  \\ Q.SPEC_TAC (`FOLDL
+      (\mem (rp,rd). MEM_WRITE_WORD mem rd (REG_READ
+      (if HD (LEAST_SORT (MAP FST xs)) = a then INC_PC s.registers else
+      INC_PC (REG_WRITE s.registers (state_mode s) a
+      (addr32 (ADDR_MODE4_WB am4 x (MAP FST xs))))) (state_mode s) rp)) s.memory
+      (ZIP (LEAST_SORT (MAP FST xs), ADDR_MODE4_ADDRESSES am4 x (MAP FST xs)))`,`fff`)
+  \\ Q.SPEC_TAC (`ADDR_MODE4_WB am4 x (MAP FST xs)`,`wbwb`)
+  \\ Induct_on `xs` \\ SIMP_TAC std_ss [xR_list_sem_def,MAP]
+  \\ Cases \\ Cases_on `q = 15w` \\ ASM_SIMP_TAC std_ss [MEM] 
+  \\ ASM_SIMP_TAC (srw_ss()) [MEM,reg_def,state_mode_simp,
+       REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
+
+val DISJOINT_SING = prove(
+  ``!p s. DISJOINT {p} s = ~(p IN s)``,
+  SRW_TAC [] [DISJOINT_DEF,EXTENSION,IN_INTER,IN_INSERT,NOT_IN_EMPTY]);
+
+val mem_STM_STATE = prove(
+  ``ALL_DISTINCT (MAP FST xs) /\
+    ~(p IN ms_address_set (ADDR_MODE4_ADDR am4 x xs) (LENGTH xs)) ==>
+    (mem p (STM_STATE am4 x xs a s) = mem p s)``,
+  REWRITE_TAC [STM_STATE_def,ADDR_MODE4_WB_def,LENGTH_MAP]
+  \\ Q.SPEC_TAC (`HD (LEAST_SORT (MAP FST xs)) = a`,`rt`)
+  \\ Q.SPEC_TAC (`(if ADDR_MODE4_wb am4 then ADDR_MODE4_WB' am4 x (LENGTH xs) else x)`,`rt'`)
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_WB_def,ADDR_MODE4_ADDRESSES_def]  
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP] 
+  \\ ASM_REWRITE_TAC [ADDR_MODE4_ADDR_def]
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_ADDR_def]
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST xs)`,`ax`)
+  \\ SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT,mem_def]
+  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
+                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ Q.SPEC_TAC (`s.memory`,`mmm`)
+  \\ SIMP_TAC std_ss [] \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
+  \\ SIMP_TAC (srw_ss()) [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Induct \\ ASM_SIMP_TAC std_ss [LENGTH,ADDRESS_LIST'_def,MAP,ZIP,
+       FOLDL,GSYM addr32_SUC,ALL_DISTINCT,ms_address_set_def,IN_INSERT]
+  \\ SIMP_TAC std_ss [MEM_WRITE_WORD_def,SUBST_def,ADDR30_def,GSYM addr30_def,addr30_addr32]);
+
+val ms_sem_STM_STATE_LEMMA = prove(
+  ``!mmm bx f. 
+      ~MEM (addr32 ax) (ADDRESS_LIST' (addr32 bx) (LENGTH xs)) ==> 
+      (FOLDL
+         (\mem (rp,rd). MEM_WRITE_WORD mem rd (f rp))
+         (MEM_WRITE_WORD mmm (addr32 ax) r)
+         (ZIP (MAP FST xs,ADDRESS_LIST' (addr32 bx) (LENGTH xs))) =
+      MEM_WRITE_WORD
+       (FOLDL
+         (\mem (rp,rd). MEM_WRITE_WORD mem rd (f rp)) mmm
+         (ZIP (MAP FST xs,ADDRESS_LIST' (addr32 bx) (LENGTH xs))))
+     (addr32 ax) r)``,
+  Induct_on `xs` 
+  \\ SIMP_TAC std_ss [MAP,LENGTH,ADDRESS_LIST'_def,ZIP,FOLDL,MEM,GSYM addr32_SUC]
+  \\ Cases \\ REPEAT STRIP_TAC
+  \\ `!x. MEM_WRITE_WORD (MEM_WRITE_WORD mmm (addr32 ax) r) (addr32 bx) x = 
+          MEM_WRITE_WORD (MEM_WRITE_WORD mmm (addr32 bx) x) (addr32 ax) r` by
+        (SRW_TAC [] [MEM_WRITE_WORD_def,SUBST_def,FUN_EQ_THM,ADDR30_def,
+           GSYM addr30_def,addr30_addr32] \\ METIS_TAC [])
+  \\ ASM_REWRITE_TAC [] \\ ASM_SIMP_TAC std_ss []);
+
+val MEM_ADDRESS_LIST' = prove(
+  ``!n a b. MEM (addr32 a) (ADDRESS_LIST' (addr32 b) n) = a IN ms_address_set b n``,
+  Induct \\ ASM_REWRITE_TAC [ADDRESS_LIST'_def,MEM,ms_address_set_def,
+     NOT_IN_EMPTY,IN_INSERT,GSYM addr32_SUC,addr32_11]);
+
+val no_overlap_ADDRESS_LIST' = prove(
+  ``!xs ax. LENGTH xs < 2**30 ==> 
+            ~MEM (addr32 ax) (ADDRESS_LIST' (addr32 (ax+1w)) (LENGTH xs))``,
+  SIMP_TAC bool_ss [MEM_ADDRESS_LIST',IN_ms_address_set]
+  \\ REPEAT STRIP_TAC \\ Cases_on `k < LENGTH xs` \\ ASM_REWRITE_TAC []
+  \\ `n2w k + (ax + 1w) = ax + n2w (k + 1)` by 
+       METIS_TAC [word_add_n2w,WORD_ADD_COMM,WORD_ADD_ASSOC]
+  \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
+  \\ ASM_REWRITE_TAC [WORD_ADD_RID_UNIQ]  
+  \\ `k + 1 < 2**30` by DECIDE_TAC
+  \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [n2w_11]);
+  
+val ms_sem_STM_STATE = prove(
+  ``LENGTH xs <= 2**30 /\
+    ~MEM a (MAP FST xs) /\ ~MEM 15w (MAP FST xs) /\ ALL_DISTINCT (MAP FST xs) /\ 
+    xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs) s ==>
+    ms_sem (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) (STM_STATE am4 x xs a s)``,
+  REWRITE_TAC [STM_STATE_def,ADDR_MODE4_WB_def,LENGTH_MAP]
+  \\ Q.SPEC_TAC (`HD (LEAST_SORT (MAP FST xs)) = a`,`rt`)
+  \\ Q.SPEC_TAC (`(if ADDR_MODE4_wb am4 then ADDR_MODE4_WB' am4 x (LENGTH xs) else x)`,`rt'`)
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_WB_def,ADDR_MODE4_ADDRESSES_def]  
+  \\ `LENGTH xs = LENGTH (MAP FST xs)` by METIS_TAC [LENGTH_MAP] 
+  \\ ASM_REWRITE_TAC [ADDR_MODE4_ADDR_def]
+  \\ REWRITE_TAC [GSYM ADDR_MODE4_ADDR_def]
+  \\ Q.SPEC_TAC (`ADDR_MODE4_ADDR am4 x (MAP FST xs)`,`ax`)
+  \\ SIMP_TAC bool_ss [LEAST_SORT_EQ_QSORT,mem_def]
+  \\ REWRITE_TAC [xR_list_sem_QSORT_INTRO,MEM_MAP_QSORT_INTRO,
+                  ALL_DISTINCT_QSORT_INTRO,LENGTH_QSORT_INTRO]
+  \\ Q.SPEC_TAC (`s.memory`,`mmm`)
+  \\ SIMP_TAC std_ss [reg_values_def] 
+  \\ Q.SPEC_TAC (`QSORT (\x y. FST x <=+ FST y) xs`,`xs`)
+  \\ SIMP_TAC (srw_ss()) [] \\ POP_ASSUM (fn th => ALL_TAC)
+  \\ Induct THEN1 REWRITE_TAC [ms_sem_def,MAP]
+  \\ Cases \\ SIMP_TAC std_ss [MAP,HD,MEM,LENGTH,ADDRESS_LIST'_def,ZIP,FOLDL,
+       ALL_DISTINCT,xR_list_sem_def,ms_sem_def,GSYM addr32_SUC] 
+  \\ Cases_on `q = 15w` \\ ASM_REWRITE_TAC []
+  \\ NTAC 5 STRIP_TAC \\ `LENGTH xs <= 1073741824` by DECIDE_TAC
+  \\ `LENGTH xs < 1073741824` by DECIDE_TAC 
+  \\ FULL_SIMP_TAC bool_ss [GSYM (EVAL ``2**30``)] 
+  \\ `~MEM (addr32 ax) (ADDRESS_LIST' (addr32 (ax + 1w)) (LENGTH xs))` 
+        by METIS_TAC [no_overlap_ADDRESS_LIST']
+  \\ ASM_SIMP_TAC bool_ss [ms_sem_STM_STATE_LEMMA]
+  \\ SIMP_TAC (srw_ss()) [mem_def,MEM_WRITE_WORD_def,ADDR30_def,
+         GSYM addr30_def,addr30_addr32,SUBST_def]
+  \\ `REG_READ s.registers (state_mode s) q = r` by METIS_TAC [reg_def]
+  \\ Cases_on `rt` \\ FULL_SIMP_TAC std_ss [REG_READ_INC_PC,REG_READ_WRITE_NEQ2]);
+
+val STM_PRE_EXPANSION = let
+  val xs = `(15w,SOME x1)::(a,SOME x2)::xs`;
+  val ys = `[(b1,xM_seq [y1]);(b3,xM_blank y3)]`;
+  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(T,g)`);
+  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+  in th end;
+
+val STM_POST_EXPANSION = LDM_POST_EXPANSION;
+
+val raw_STM = prove(
+  ``ARM_PROG 
+     (R30 a x * 
+      xR_list (MAP (\x.(FST x,SOME (SND x))) xs) * 
+      blank_ms (ADDR_MODE4_ADDR am4 x xs) (LENGTH xs) * S st * PASS c st) 
+     [enc (STM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))] {}
+     (R30 a (ADDR_MODE4_WB am4 x xs) *
+      xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
+      ms (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) * S st) {}``,
+  ARM_PROG_INIT_TAC 
+  \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
+  \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud`
+  \\ FULL_SIMP_TAC bool_ss [R30_def,STM_PRE_EXPANSION,STM_POST_EXPANSION,DISJOINT_SING,
+         LDM_SIMP_LEMMA,ALL_DISTINCT,MEM,LENGTH_reg_values,ALL_DISJOINT_def,EVERY_DEF]
+  \\ `CONDITION_PASSED2 (status s) c` by METIS_TAC []
+  \\ `mem (addr30 (reg 15w s)) s =
+      enc (STM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))` 
+         by METIS_TAC [addr30_addr32]
+  \\ `~(a = 15w)` by METIS_TAC []
+  \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
+                  Q.INST [`p`|->`x`,`Rd`|->`a`]) stm)
+  \\ ASM_REWRITE_TAC [] \\ PAT_ASSUM `` NEXT_ARM_MEM s = s'`` (fn th => ALL_TAC)
+  \\ ASM_SIMP_TAC bool_ss [status_STM_STATE,undef_STM_STATE,reg_15_STM_STATE,
+       reg_wb_STM_STATE,xR_list_sem_STM_STATE,mem_STM_STATE,ms_sem_STM_STATE]
+  \\ ASM_SIMP_TAC bool_ss [arm2set''_EQ,owrt_visible_STM_STATE,IN_INSERT,
+       reg_STM_STATE,mem_STM_STATE]);
+
+val arm_STM = MAKE_PROG2 raw_STM ARM_STM_NOP;
+val arm_STM = Q.INST [`c`|->`c_flag`,`st`|->`(sN,sZ,sC,Sv)`,`am4`|->`a_mode`] arm_STM;
+
+val _ = save_thm("arm_STM",arm_STM);
+
 
 val _ = export_theory();
 

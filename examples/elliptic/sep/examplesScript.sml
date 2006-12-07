@@ -396,10 +396,10 @@ val COUNT_DOWN_POST = prove(
   \\ SIMP_TAC std_ss [WORD_SUB_REFL,SEP_IMP_REFL]);
 
 val ARM_DOWN_LOOP = let
-  val sub = SET_AM `Imm 1w` (SET_SC `T` `AL` aSUB1)
+  val sub = SET_AM `Imm 1w` (SET_SC `T` `AL` arm_SUB1)
   val sub = RW [EVAL ``(w2w (1w:word8)):word32``,SUB_LEMMA] sub
   val sub = HIDE_STATUS (FST_PROG2 sub)
-  val b = SET_SC `F` `NE` ARM_B
+  val b = SET_SC `F` `NE` arm_B
   val b = RW1 [STAR_SYM] b
   val b = MATCH_MP ARM_PROG_HIDE_POST b
   val b = MATCH_MP ARM_PROG_HIDE_POST1 b
@@ -522,7 +522,7 @@ fun POST1_MOVE_STAR t1 t2 = CONV_RULE (ARM_PROG_POST1_CONV (MOVE_STAR_CONV t1 t2
 (* ------------ *)
 
 val ARM_BASIC_FAC = let
-  val mul = FST_PROG2 (SET_SC `F` `AL` aMUL2)
+  val mul = FST_PROG2 (SET_SC `F` `AL` arm_MUL2)
   val mul = MATCH_MP ARM_PROG_HIDE_POST1 mul
   val mul = HIDE_STATUS mul
   val mul = APP_FRAME `cond (w2n (x:word32) <= n) * cond ~(x = 0w)` mul
@@ -548,7 +548,7 @@ val ARM_BASIC_FAC = let
 in fac end;
 
 val ARM_FAC1_PROGRAM = let
-  val mov = FST_PROG2 (SET_AM `Imm 1w` (SET_SC `F` `AL` aMOV1))
+  val mov = FST_PROG2 (SET_AM `Imm 1w` (SET_SC `F` `AL` arm_MOV1))
   val mov = SIMP_RULE (srw_ss()) [EVAL ``(w2w (1w:word8)):word32``] mov
   val mov = MATCH_MP ARM_PROG_HIDE_POST1 mov
   val mov = HIDE_STATUS mov
@@ -560,16 +560,16 @@ val ARM_FAC1_PROGRAM = let
 in fac1 end;
 
 val ARM_FAC_PROGRAM = let
-  val mov = FST_PROG2 (SET_AM `Imm 1w` (SET_SC `F` `AL` aMOV1))
+  val mov = FST_PROG2 (SET_AM `Imm 1w` (SET_SC `F` `AL` arm_MOV1))
   val mov = SIMP_RULE (srw_ss()) [EVAL ``(w2w (1w:word8)):word32``] mov
   val mov = MATCH_MP ARM_PROG_HIDE_POST1 mov
   val mov = HIDE_STATUS mov
   val mov = (RW [ARM_PROG_HIDE_PRE] o Q.GEN `x` o RW1 [STAR_SYM]) mov
   val mov = Q.INST [`a`|->`b`,`b`|->`a`] mov
-  val cmp = FST_PROG2 (SET_AM `Imm 0w` (SET_SC `T` `AL` aCMP1))
+  val cmp = FST_PROG2 (SET_AM `Imm 0w` (SET_SC `T` `AL` arm_CMP1))
   val cmp = HIDE_STATUS cmp
   val cmp = RW [EVAL ``(w2w (0w:word8)):word32``] cmp
-  val b = SET_SC `T` `EQ` ARM_B
+  val b = SET_SC `T` `EQ` arm_B
   val b = RW1 [STAR_SYM] b 
   val b = MATCH_MP ARM_PROG_HIDE_POST1 b
   val b = MATCH_MP ARM_PROG_HIDE_POST b
@@ -782,7 +782,7 @@ val ARM_GCD_PROGRAM = let
 
   (* instantiation of the commands *)
 
-  val cmp = FST_PROG2 (SET_AM `OneReg` (SET_SC `T` `AL` aCMP2))
+  val cmp = FST_PROG2 (SET_AM `OneReg` (SET_SC `T` `AL` arm_CMP2))
   val cmp = GENL [``sN:bool``,``sZ:bool``,``sC:bool``,``sV:bool``] cmp
   val cmp = RW [EVAL ``(w2w (0w:word8)):word32``,ARM_PROG_HIDE_STATUS] cmp
 
@@ -793,17 +793,17 @@ val ARM_GCD_PROGRAM = let
                                    ~(word_msb x = word_msb (x - y:word32))`]
   val instS = PURE_REWRITE_RULE [WORD_GT,WORD_LT] o instS
 
-  val subGT = SET_AM `OneReg` (SET_SC `F` `GT` aSUB2')
+  val subGT = SET_AM `OneReg` (SET_SC `F` `GT` arm_SUB2')
   val (subGT,subGT_nop) = SPLIT_PROG2 subGT
   val (subGT,subGT_nop) = (instS subGT,instS subGT_nop)
 
-  val subLT = SET_AM `OneReg` (SET_SC `F` `LT` aSUB2')
+  val subLT = SET_AM `OneReg` (SET_SC `F` `LT` arm_SUB2')
   val subLT = Q.INST [`a`|->`b`,`b`|->`a`,`x`|->`y`,`y`|->`x`] subLT
   val subLT = MOVE_STAR_RULE `b*a*s (x,y,z,q)` `a*b*s (x,y,z,q)` subLT
   val (subLT,subLT_nop) = SPLIT_PROG2 subLT
   val (subLT,subLT_nop) = (instS subLT,instS subLT_nop)
 
-  val bne = SET_SC `F` `NE` ARM_B
+  val bne = SET_SC `F` `NE` arm_B
   val bne = RW1 [STAR_SYM] bne  
   val bne = MATCH_MP ARM_PROG_HIDE_POST1 bne
   val bne = MATCH_MP ARM_PROG_HIDE_POST bne
@@ -1148,7 +1148,7 @@ val STACK_EXTRACT = prove(
 
 val STACK_PUSH = 
   let 
-    val th = SET_AM `RegOff (T,F,T,1w)` (PROG_INST aSTR)  
+    val th = SET_AM `RegOff (T,F,T,1w)` (PROG_INST arm_STR)  
     val th = RW [EVAL ``(w2w (1w:word8)):word30``] th  
     val th = Q.INST [`b`|->`13w`,`y`|->`sp`] th 
     val th = APP_FRAME `ms sp xs * blank (sp - 1w - 1w) n` th
@@ -1246,7 +1246,7 @@ val MULTI_POP_LEMMA = prove(
   \\ REWRITE_TAC [Once ADD_COMM,SEP_IMP_REFL]);
 
 val MULTI_POP_STACK = let
-  val ldr = PROG_INST (SET_AM `RegOff (F,T,T,n2w n)` aLDR)
+  val ldr = PROG_INST (SET_AM `RegOff (F,T,T,n2w n)` arm_LDR)
   val ldr = MOVE_STAR_RULE `a*b*y*s` `b*y*s*a` ldr
   val ldr = RW [ARM_PROG_HIDE_PRE] (Q.GEN `x` ldr)
   val ldr = MOVE_STAR_RULE `b*y*s*a` `a*b*y*s` ldr
@@ -1367,14 +1367,14 @@ fun APP_MERGE th1 th2 =
 
 val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
-  val cmp = FST_PROG2 (SET_AM `Imm 0w` (SET_SC `T` `AL` aCMP1))
+  val cmp = FST_PROG2 (SET_AM `Imm 0w` (SET_SC `T` `AL` arm_CMP1))
   val cmp = RW [GSYM R30_def] (Q.INST [`x`|->`addr32 x`] cmp)
   val cmp = RW [EVAL ``(w2w (0w:word8)):word32``] cmp
   val cmp = HIDE_STATUS cmp  
   val cmp1 = APP_FRAME `cond (addr32 x = 0w)` cmp
   val cmp2 = APP_FRAME `cond ~(addr32 x = 0w)` cmp
 
-  val mov_pc = SET_SC `T` `EQ` aMOV_PC
+  val mov_pc = SET_SC `T` `EQ` arm_MOV_PC
   val mov_pc = Q.INST [`a`|->`14w`,`x`|->`lr`] mov_pc
   val mov_pc1 = HIDE_POST (FST_PROG2 mov_pc)
   val mov_pc2 = HIDE_POST1 (SND_PROG2 mov_pc)
@@ -1445,14 +1445,14 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   (* add *)
 
-  val ldr = SET_AM `RegOff (T,T,F,0w)` (PROG_INST aLDR)  
+  val ldr = SET_AM `RegOff (T,T,F,0w)` (PROG_INST arm_LDR)  
   val ldr = RW [EVAL ``(w2w (0w:word8)):word30``,WORD_ADD_0] ldr
   val ldr = Q.INST [`a`|->`b`,`b`|->`a`,`y`|->`x`,`x`|->`y`] ldr
   val ldr = MOVE_STAR_RULE `x*y*z*q` `y*z*q*x` ldr
   val ldr = RW [ARM_PROG_HIDE_PRE] (Q.GEN `y` ldr)
   val ldr = APP_FRAME `R sum s` ldr
   val ldr = MOVE_STAR_RULE `a*x*s*b*sum` `b*sum*s*a*x` ldr
-  val add = PROG_INST (SET_AM `OneReg` aADD2)  
+  val add = PROG_INST (SET_AM `OneReg` arm_ADD2)  
   val add = Q.INST [`a`|->`b`,`b`|->`sum`] add
   val add = APP_FRAME `R30 a z * M z q` add
   val add = MATCH_COMPOSE ldr (RW [STAR_ASSOC] add)
@@ -1462,7 +1462,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   (* call 1 *)
   
-  val ldr = PROG_INST (SET_AM `RegOff (T,T,F,1w)` aLDR1)  
+  val ldr = PROG_INST (SET_AM `RegOff (T,T,F,1w)` arm_LDR1)  
   val ldr = RW [EVAL ``(w2w (1w:word8)):word30``] ldr
   val ldr = RW [GSYM R30_def] (Q.INST [`b`|->`a`,`y`|->`x`,`z`|->`addr32 a1`] ldr)
   val th = ASSUME ``ARM_PROCS n (R30 a x * ~R b * bt (x,t1) * R sum s)
@@ -1472,7 +1472,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th = MATCH_MP ARM_PROC_EXPAND_STACK th
   val th = Q.SPEC `m` th
   val th = MOVE_STAR_RULE `a*b*t*sum*s*sp` `a*b*t*sum*sp*s` th
-  val th' = MATCH_MP (RW [GSYM AND_IMP_INTRO] ARM_PROC_CALL) ARM_CALL
+  val th' = MATCH_MP (RW [GSYM AND_IMP_INTRO] ARM_PROC_CALL) arm_BL
   val th' = Q.INST [`offset`|->`offset1`] th'
   val th = MATCH_MP th' th
   val th = Q.INST [`x`|->`a1`] th
@@ -1482,12 +1482,12 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   (* load for call 2 *)
 
-  val ldr1 = PROG_INST (SET_AM `RegOff (T,T,F,1w)` aLDR)  
+  val ldr1 = PROG_INST (SET_AM `RegOff (T,T,F,1w)` arm_LDR)  
   val ldr1 = RW [EVAL ``(w2w (1w:word8)):word30``] ldr1
   val ldr1 = MOVE_STAR_RULE `a*sp*y*s` `sp*y*s*a` ldr1
   val ldr1 = HIDE_PRE ldr1
   val ldr1 = RW [GSYM R30_def] (Q.INST [`b`|->`13w`,`y`|->`sp`,`z`|->`addr32 x`] ldr1)
-  val ldr2 = PROG_INST (SET_AM `RegOff (T,T,F,2w)` aLDR1)  
+  val ldr2 = PROG_INST (SET_AM `RegOff (T,T,F,2w)` arm_LDR1)  
   val ldr2 = RW [EVAL ``(w2w (2w:word8)):word30``] ldr2
   val ldr2 = RW [GSYM R30_def] (Q.INST [`b`|->`a`,`y`|->`x`,`z`|->`addr32 a2`] ldr2)
   val ldr1 = APP_FRAME `M (x + 2w) (addr32 a2)` ldr1  
@@ -1515,13 +1515,13 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th = Q.SPEC `2 * depth t1` th
   val th = RW [GSYM MULT_MAX] (RW1 [MAX_COMM] th)
   val th = MOVE_STAR_RULE `a*b*t*sum*s*sp` `a*b*t*sum*sp*s` th
-  val th' = MATCH_MP (RW [GSYM AND_IMP_INTRO] ARM_PROC_CALL) ARM_CALL
+  val th' = MATCH_MP (RW [GSYM AND_IMP_INTRO] ARM_PROC_CALL) arm_BL
   val th' = Q.INST [`offset`|->`offset2`] th'
   val th = MATCH_MP th' th
   val th = Q.INST [`x`|->`a2`,`sp`|->`sp -1w-1w`] th
   val call2 = APP_FRAME `M (x + 2w) (addr32 a2)` th
 
-  val ldr = (SET_SC `F` `AL` o SET_AM `RegOff (F,T,T,2w)`) aLDR_PC
+  val ldr = (SET_SC `F` `AL` o SET_AM `RegOff (F,T,T,2w)`) arm_LDR_PC
   val ldr = (HIDE_STATUS o HIDE_POST o FST_PROG2) ldr
   val ldr = Q.INST [`a`|->`13w`,`y`|->`lr`,`x`|->`sp-1w-1w`] ldr
   val lemma = prove(``x-1w-1w+2w=x:word30``,
@@ -1671,7 +1671,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
      \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `a1` \\ Q.EXISTS_TAC `a2`
      \\ FULL_SIMP_TAC (std_ss++star_ss) [AC WORD_ADD_COMM WORD_ADD_ASSOC])
   val c2 = POST_MOVE_STAR `t*(a*b*sum*sp*s*lr)` `a*b*t*sum*sp*s*lr` c2
-  val b = (HIDE_STATUS o HIDE_POST o SET_SC `F` `AL`) ARM_B
+  val b = (HIDE_STATUS o HIDE_POST o SET_SC `F` `AL`) arm_B
   val b = MATCH_MP ARM_PROG_COMPOSE_0 b 
   val c2 = PRE_MOVE_STAR `a*b*t2*sum*sp*s*lr*x*a1*a2*t1*c` 
                          `a*b*t2*sum*sp*lr*x*a1*a2*t1*c*s` (RW [STAR_ASSOC] c2)
@@ -1819,20 +1819,20 @@ val cut_add_def = Define `cut_add x y = n2w (MIN (w2n x + w2n y) (2 ** 32 - 1))`
 
 val CUT_ADD_PROGRAM = let
 
-  val adds = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `T` `AL`) aADD2
+  val adds = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `T` `AL`) arm_ADD2
   val adds = FST_PROG2 (SET_AM `OneReg` adds)
   val adds = Q.INST [`a`|->`0w`,`b`|->`1w`] adds
   val adds1 = APP_FRAME `cond ~(BIT 32 (w2n (x:word32) + w2n (y:word32)))` adds
   val adds2 = APP_FRAME `cond (BIT 32 (w2n (x:word32) + w2n (y:word32)))` adds
 
-  val movcc = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `CC`) aMOV2
+  val movcc = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `CC`) arm_MOV2
   val movcc = Q.INST [`a`|->`1w`,`b`|->`0w`] (SET_AM `OneReg` movcc)
   val movcc1 = PUSH_COND (FST_PROG2 movcc)
   val movcc1 = MOVE_STAR_RULE `b*a*s*c` `a*b*s*c` movcc1
   val movcc2 = RW [] (PUSH_COND (SND_PROG2 movcc))
   val movcc2 = RW [STAR_ASSOC] (RW1 [STAR_COMM] (APP_FRAME `R 0w x * R 1w y` movcc2))
     
-  val mvncs = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `CS`) aMVN1
+  val mvncs = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `CS`) arm_MVN1
   val mvncs = (Q.INST [`a`|->`0w`] o SET_AM `Imm 0w`) mvncs
   val mvncs = SIMP_RULE std_ss [EVAL ``(w2w (0w:word8)):word32``] mvncs
   val mvncs1 = HIDE_POST1 (SND_PROG2 mvncs)
@@ -1861,7 +1861,7 @@ val CUT_ADD_PROGRAM = let
   val th = HIDE_STATUS (RW [POST_LEMMA] th)
   val th = RW [GSYM cut_add_def] th
 
-  val ret = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `T` `AL`) aMOV_PC
+  val ret = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `T` `AL`) arm_MOV_PC
   val ret = (HIDE_STATUS o HIDE_POST o FST_PROG2) ret
   val ret = Q.INST [`a`|->`14w`,`x`|->`lr`] ret
   val ret = RW1 [STAR_COMM] ret
@@ -1876,6 +1876,18 @@ val CUT_ADD_PROGRAM = let
 in th end;
 
 
+(* ----------------------------------------------------------------------------- *)
+(* Instantiation of STM and LDM instructions                                     *)
+(* ----------------------------------------------------------------------------- *)
+
+val th = SET_AM `am4_FA F` arm_STM
+val th = Q.INST [`xs`|->`[(b1,y1);(b2,y2);(b3,y3);(b4,y4)]`] th
+val th = REWRITE_RULE  [blank_ms_def,LENGTH,ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,
+              ADDR_MODE4_WB'_def,ADDR_MODE4_UP_def,MAP,ADDR_MODE4_WB_def,
+              ADDR_MODE4_wb_def,xR_list_def,STAR_ASSOC] th
+val th = REWRITE_RULE [ADD1,GSYM word_add_n2w,WORD_SUB_PLUS,WORD_SUB_ADD] th
+val th = SIMP_RULE arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w,WORD_SUB_RZERO] th
+val th = SIMP_RULE (std_ss++sep_ss) [MAP,xR_list_def,STAR_ASSOC,ADDR_MODE4_CMD_def,GSYM WORD_ADD_ASSOC,word_add_n2w] th
 
 
 val _ = export_theory();
