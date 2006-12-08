@@ -86,6 +86,7 @@ val GCD_IS_GCD = store_thm("GCD_IS_GCD",
 val GCD_REF = store_thm("GCD_REF",
                         Term `!a. gcd a a = a`,
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_REF]);
+val _ = export_rewrites ["GCD_REF"]
 
 val GCD_SYM = store_thm("GCD_SYM",
                         Term `!a b. gcd a b = gcd b a`,
@@ -94,10 +95,12 @@ val GCD_SYM = store_thm("GCD_SYM",
 val GCD_0R = store_thm("GCD_0R",
                         Term `!a. gcd a 0 = a`,
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0R]);
+val _ = export_rewrites ["GCD_0R"]
 
 val GCD_0L = store_thm("GCD_0L",
                         Term `!a. gcd 0 a = a`,
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0L]);
+val _ = export_rewrites ["GCD_0L"]
 
 val GCD_ADD_R = store_thm("GCD_ADD_R",
                         Term `!a b. gcd a (a+b) = gcd a b`,
@@ -113,8 +116,16 @@ val GCD_ADD_L = store_thm("GCD_ADD_L",
 val GCD_EQ_0 = store_thm(
   "GCD_EQ_0",
   ``!n m. (gcd n m = 0) = (n = 0) /\ (m = 0)``,
-  SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM, GCD] THEN
-  HO_MATCH_MP_TAC gcd_ind THEN SIMP_TAC arith_ss [GCD]);
+  HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][GCD]);
+val _ = export_rewrites ["GCD_EQ_0"]
+
+val GCD_1 = store_thm(
+  "GCD_1",
+  ``(gcd 1 x = 1) /\ (gcd x 1 = 1)``,
+  Q_TAC SUFF_TAC `!m n. (m = 1) ==> (gcd m n = 1)`
+        THEN1 PROVE_TAC [GCD_SYM] THEN
+  HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][GCD]);
+val _ = export_rewrites ["GCD_1"]
 
 val PRIME_GCD = store_thm("PRIME_GCD",
                         Term `!p b. prime p ==> divides p b \/ (gcd p b = 1)`,
@@ -124,13 +135,13 @@ val EUCLIDES_AUX = prove(Term
 `!a b c d. divides c (d*a) /\ divides c (d*b)
                ==>
              divides c (d*gcd a b)`,
-recInduct gcd_ind THEN ARW [GCD]
-  THEN Q.PAT_ASSUM `$! M` MATCH_MP_TAC
+recInduct gcd_ind THEN SRW_TAC [][GCD]
+  THEN FIRST_X_ASSUM MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
   THEN RW_TAC bool_ss [DECIDE (Term`(x + y) - x = y`)]
-  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC,MULT_CLAUSES,
-                  ADD_CLAUSES,LEFT_ADD_DISTRIB]);
+  THEN FULL_SIMP_TAC (srw_ss()) [MULT_CLAUSES, LEFT_ADD_DISTRIB]
+  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC]);
 
 
 val L_EUCLIDES = store_thm("L_EUCLIDES",
@@ -176,41 +187,56 @@ val FACTOR_OUT_GCD = store_thm(
   `gcd n m = 0` by PROVE_TAC [DIVIDES_MULT_LEFT] THEN
   FULL_SIMP_TAC bool_ss [GCD_EQ_0]);
 
-open labelLib
+val lexnum_induct =
+    (SIMP_RULE (srw_ss()) [pairTheory.FORALL_PROD, pairTheory.LEX_DEF] o
+     Q.SPEC `UNCURRY P` o
+     SIMP_RULE bool_ss [pairTheory.WF_LEX, prim_recTheory.WF_LESS] o
+     ISPEC ``(<) LEX (<)``) relationTheory.WF_INDUCTION_THM
 
-val simple_facts = map DECIDE [``~(x = y) /\ x < y = ~(y - x = 0)``,
-                               ``x < y = ~(y <= x)``,
-                               ``x <= y = (x = y) \/ (x < y)``]
+(* an induction principle for GCD like situations without any SUCs and without
+   any subtractions *)
+val GCD_SUCfree_ind = store_thm(
+  "GCD_SUCfree_ind",
+  ``!P. (!y. P 0 y) /\ (!x y. P x y ==> P y x) /\ (!x. P x x) /\
+        (!x y. 0 < x /\ 0 < y /\ P x y ==> P x (x + y)) ==>
+        !m n. P m n``,
+  GEN_TAC THEN STRIP_TAC THEN
+  HO_MATCH_MP_TAC lexnum_induct THEN
+  REPEAT STRIP_TAC THEN Cases_on `m = 0` THEN1 SRW_TAC [][] THEN
+  Cases_on `m = n` THEN1 SRW_TAC [][] THEN
+  `0 < m` by DECIDE_TAC THEN
+  Cases_on `m < n` THENL [
+    Q_TAC SUFF_TAC `?z. (n = m + z) /\ 0 < z /\ z < n`
+          THEN1 metisLib.METIS_TAC [] THEN
+    Q.EXISTS_TAC `n - m` THEN DECIDE_TAC,
+    `n < m` by DECIDE_TAC THEN SRW_TAC [][]
+  ])
 
 (* proof of LINEAR_GCD{_AUX} due to Laurent Thery *)
 val LINEAR_GCD_AUX = prove(
- ``!m n. ~(n = 0)/\ ~(m = 0) ==>
-      (?p q. p * n = q * m + gcd m n) /\ ?p q. p * m = q * n + gcd m n``,
- recInduct gcd_ind THEN SIMP_TAC bool_ss [DECIDE ``~(SUC x = 0)``] THEN
- REPEAT (GEN_TAC ORELSE DISCH_THEN STRIP_ASSUME_TAC) THEN
- Q.PAT_ASSUM `y <= x ==> P x y` (ASSUME_NAMED_TAC "ind_le") THEN
- Q.PAT_ASSUM `~(y <= x) ==> P x y` (ASSUME_NAMED_TAC "ind_nle") THEN
- Cases_on `x=y` THEN1 (CONJ_TAC THEN MAP_EVERY Q.EXISTS_TAC [`1`,`0`] THEN
-                       ASM_SIMP_TAC arith_ss [GCD_REF]) THEN
- Cases_on `x < y` THEN ASM_SIMP_TAC arith_ss [GCD] THENL [
-   `SUC y = (y - x) + SUC x` by ARW [],
-   `SUC x = (x - y) + SUC y` by ARW []
- ] THEN REPEAT CONJ_TAC THENL [
-   `?p q. p * (y - x) = q * SUC x + gcd (SUC x) (y - x)` by
-       PROVE_TAC (LB "ind_nle"::simple_facts) THEN
-   MAP_EVERY Q.EXISTS_TAC [`p`, `p + q`],
-   `?p q. p * SUC x = q * (y - x) + gcd (SUC x) (y - x)` by
-       PROVE_TAC (LB "ind_nle"::simple_facts) THEN
-   MAP_EVERY Q.EXISTS_TAC [`p + q`, `q`],
-   `?p q. p * SUC y = q * (x - y) + gcd (x - y) (SUC y)` by
-       PROVE_TAC (LB "ind_le"::simple_facts) THEN
-   MAP_EVERY Q.EXISTS_TAC [`p + q`, `q`],
-   `?p q. p * (x - y) = q * SUC y + gcd (x - y) (SUC y)` by
-       PROVE_TAC (LB "ind_le"::simple_facts) THEN
-   MAP_EVERY Q.EXISTS_TAC [`p`, `p + q`]
- ] THEN
- ASM_SIMP_TAC bool_ss [RIGHT_ADD_DISTRIB, LEFT_ADD_DISTRIB] THEN
- SIMP_TAC arith_ss []);
+  ``!m n. ~(n = 0) /\ ~(m = 0) ==>
+          (?p q. p * n = q * m + gcd m n) /\ ?p q. p * m = q * n + gcd m n``,
+  HO_MATCH_MP_TAC GCD_SUCfree_ind THEN
+  SRW_TAC [][GCD_ADD_R, LEFT_ADD_DISTRIB] THEN
+  RULE_ASSUM_TAC (REWRITE_RULE [DECIDE ``0 < x = ~(x = 0)``]) THENL [
+    PROVE_TAC [GCD_SYM],
+    PROVE_TAC [GCD_SYM],
+    MAP_EVERY Q.EXISTS_TAC [`1`,`0`] THEN SRW_TAC [][],
+    `?a b. a * n = b * m + gcd m n` by PROVE_TAC [] THEN
+    MAP_EVERY Q.EXISTS_TAC [`a`, `a + b`],
+
+    `?a b. a * m = b * n + gcd m n` by PROVE_TAC [] THEN
+    MAP_EVERY Q.EXISTS_TAC [`a + b`, `b`],
+
+    `?a b. a * n = b * m + gcd m n` by PROVE_TAC [] THEN
+    MAP_EVERY Q.EXISTS_TAC [`a`, `a + b`],
+
+    `?a b. a * m = b * n + gcd m n` by PROVE_TAC [] THEN
+    MAP_EVERY Q.EXISTS_TAC [`a + b`, `b`]
+  ] THEN
+  ASM_SIMP_TAC bool_ss [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB] THEN
+  SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [])
+
 
 val LINEAR_GCD= store_thm(
   "LINEAR_GCD",
@@ -263,6 +289,67 @@ val GCD_EFFICIENTLY = store_thm(
   SIMP_TAC bool_ss [GCD_SYM]);
 
 val _ = computeLib.add_persistent_funs [("GCD_EFFICIENTLY",GCD_EFFICIENTLY)];
+
+val lcm_def = Define`
+  lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
+`
+
+val DIVIDES_0L = store_thm(
+  "DIVIDES_0L",
+  ``divides 0 p = (p = 0)``,
+  SRW_TAC [][divides_def]);
+val _ = export_rewrites ["DIVIDES_0L"]
+
+open numSimps metisLib
+val LCM_IS_LEAST_COMMON_MULTIPLE = store_thm(
+  "LCM_IS_LEAST_COMMON_MULTIPLE",
+  ``divides m (lcm m n) /\ divides n (lcm m n) /\
+    !p. divides m p /\ divides n p ==> divides (lcm m n) p``,
+  SIMP_TAC (srw_ss()) [lcm_def] THEN
+  Cases_on `m = 0` THEN1 SRW_TAC [][ALL_DIVIDES_0] THEN
+  Cases_on `n = 0` THEN1 SRW_TAC [][ALL_DIVIDES_0] THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN
+  Q.ABBREV_TAC `g = gcd m n` THEN
+  `?c d. (m = c * g) /\ (n = d * g) /\ (gcd c d = 1)`
+      by METIS_TAC [FACTOR_OUT_GCD] THEN
+  ASM_SIMP_TAC (srw_ss()) [] THEN STRIP_TAC THEN
+  `c * g * (d * g) DIV g = c * g * d`
+     by (MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
+         FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ZERO_LESS_MULT]) THEN
+  REPEAT CONJ_TAC THENL [
+    SRW_TAC [][divides_def] THEN Q.EXISTS_TAC `d` THEN
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
+    SRW_TAC [][divides_def] THEN Q.EXISTS_TAC `c` THEN
+    ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
+    REPEAT STRIP_TAC THEN
+    `?a b. (p = a * (c * g)) /\ (p = b * (d * g))`
+       by PROVE_TAC [divides_def] THEN
+    SRW_TAC [][] THEN
+    `0 < g` by FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [MULT_EQ_0] THEN
+    `b * d = a * c`
+       by (`b * (d * g) = g * (b * d)` by DECIDE_TAC THEN
+           `a * (c * g) = g * (a * c)` by DECIDE_TAC THEN
+           `g * (b * d) = g * (a * c)` by DECIDE_TAC THEN
+           POP_ASSUM MP_TAC THEN SIMP_TAC (srw_ss()) [EQ_MULT_LCANCEL] THEN
+           SRW_TAC [ARITH_ss][]) THEN
+    Q_TAC SUFF_TAC `divides d a`
+          THEN1 (SRW_TAC [][divides_def] THEN
+                 Q.EXISTS_TAC `q` THEN DECIDE_TAC) THEN
+    `divides d (a * c)` by PROVE_TAC [divides_def] THEN
+    PROVE_TAC [L_EUCLIDES, MULT_COMM]
+  ]);
+
+val LCM_0 = store_thm(
+  "LCM_0",
+  ``(lcm 0 x = 0) /\ (lcm x 0 = 0)``,
+  SRW_TAC [][lcm_def]);
+val _ = export_rewrites ["LCM_0"]
+
+val LCM_1 = store_thm(
+  "LCM_1",
+  ``(lcm 1 x = x) /\ (lcm x 1 = x)``,
+  SRW_TAC [][lcm_def])
+val _ = export_rewrites ["LCM_1"]
 
 val _ = export_theory();
 
