@@ -20,14 +20,23 @@ val divides_def = Q.new_definition
 val ALL_DIVIDES_0 = store_thm("ALL_DIVIDES_0",
                         Term `!a. divides a 0`,
                         PROVE_TAC[divides_def,MULT_CLAUSES]);
+val _ = export_rewrites ["ALL_DIVIDES_0"]
+
+val ZERO_DIVIDES = store_thm(
+  "ZERO_DIVIDES",
+  ``divides 0 m = (m = 0)``,
+  SRW_TAC [][divides_def]);
+val _ = export_rewrites ["ZERO_DIVIDES"]
 
 val DIVIDES_REFL = store_thm("DIVIDES_REFL",
 			Term `!a. divides a a`,
                         PROVE_TAC[divides_def,MULT_CLAUSES]);
+val _ = export_rewrites ["DIVIDES_REFL"]
 
 val ONE_DIVIDES_ALL = store_thm("ONE_DIVIDES_ALL",
                         Term `!a. divides 1 a`,
                         PROVE_TAC[divides_def,MULT_CLAUSES]);
+val _ = export_rewrites ["ONE_DIVIDES_ALL"]
 
 val DIVIDES_ADD_1 = store_thm("DIVIDES_ADD_1",
                         Term `!a b c. divides a b /\ divides a c ==> divides a (b+c)`,
@@ -88,7 +97,6 @@ val DIVIDES_MULT_LEFT = store_thm(
   ASM_SIMP_TAC bool_ss [] THEN
   PROVE_TAC [MULT_EQ_1]);
 
-
 (*---------------------------------------------------------------------------*)
 (* Definition and trivial facts about primality.                             *)
 (*---------------------------------------------------------------------------*)
@@ -102,11 +110,13 @@ val NOT_PRIME_0 = Q.store_thm
  ("NOT_PRIME_0",
   `~prime 0`,
   ARW[prime_def, ALL_DIVIDES_0]);
+val _ = export_rewrites ["NOT_PRIME_0"]
 
 val NOT_PRIME_1 = Q.store_thm
  ("NOT_PRIME_1",
   `~prime 1`,
   ARW[prime_def, DIVIDES_LE]);
+val _ = export_rewrites ["NOT_PRIME_1"]
 
 val _ = export_theory();
 

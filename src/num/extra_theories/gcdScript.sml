@@ -108,10 +108,20 @@ val GCD_ADD_R = store_thm("GCD_ADD_R",
                         THEN ARW[GCD_IS_GCD,SPECL [Term `a:num`, Term `a+b`] IS_GCD_MINUS_R]
                 );
 
+val GCD_ADD_R_THM = save_thm(
+  "GCD_ADD_R_THM",
+  CONJ GCD_ADD_R (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_R))
+val _ = export_rewrites ["GCD_ADD_R_THM"]
+
 val GCD_ADD_L = store_thm("GCD_ADD_L",
                         Term `!a b. gcd (a+b) a = gcd a b`,
                         PROVE_TAC[GCD_SYM,GCD_ADD_R]
                 );
+
+val GCD_ADD_L_THM = save_thm(
+ "GCD_ADD_L_THM",
+ CONJ GCD_ADD_L (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_L))
+val _ = export_rewrites ["GCD_ADD_L_THM"]
 
 val GCD_EQ_0 = store_thm(
   "GCD_EQ_0",
@@ -217,7 +227,7 @@ val LINEAR_GCD_AUX = prove(
   ``!m n. ~(n = 0) /\ ~(m = 0) ==>
           (?p q. p * n = q * m + gcd m n) /\ ?p q. p * m = q * n + gcd m n``,
   HO_MATCH_MP_TAC GCD_SUCfree_ind THEN
-  SRW_TAC [][GCD_ADD_R, LEFT_ADD_DISTRIB] THEN
+  SRW_TAC [][LEFT_ADD_DISTRIB] THEN
   RULE_ASSUM_TAC (REWRITE_RULE [DECIDE ``0 < x = ~(x = 0)``]) THENL [
     PROVE_TAC [GCD_SYM],
     PROVE_TAC [GCD_SYM],
@@ -264,27 +274,22 @@ val gcd_lemma = prove(
     ASM_SIMP_TAC arith_ss []
   ]);
 
+open numSimps metisLib
 val GCD_EFFICIENTLY = store_thm(
   "GCD_EFFICIENTLY",
   ``!a b.
        gcd a b = if a = 0 then b
                  else gcd (b MOD a) a``,
-  REPEAT STRIP_TAC THEN
-  Cases_on `a = 0` THENL [
-    ASM_SIMP_TAC arith_ss [GCD_0L],
-    ALL_TAC
-  ] THEN Cases_on `b = 0` THENL [
-    ASM_SIMP_TAC arith_ss [GCD_0L, GCD_0R, ZERO_MOD],
-    ALL_TAC
-  ] THEN
+  REPEAT STRIP_TAC THEN Cases_on `a = 0` THEN1 SRW_TAC [][] THEN
+  Cases_on `b = 0` THEN1 SRW_TAC [ARITH_ss][] THEN
   `(b = (b DIV a) * a + b MOD a) /\ b MOD a < a`
-    by (MATCH_MP_TAC DIVISION THEN ASM_SIMP_TAC arith_ss []) THEN
+    by (MATCH_MP_TAC DIVISION THEN DECIDE_TAC) THEN
   Q.ABBREV_TAC `q = b DIV a` THEN Q.ABBREV_TAC `r = b MOD a` THEN
-  NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
+  Q.RM_ALL_ABBREVS_TAC THEN
   FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  `q * a <= q * a + r` by SIMP_TAC arith_ss [] THEN
-  POP_ASSUM (SUBST_ALL_TAC o ONCE_REWRITE_RULE [GCD_SYM] o
-             MATCH_MP gcd_lemma) THEN
+  `q * a <= q * a + r` by DECIDE_TAC THEN
+  `gcd a (q * a + r) = gcd a (q * a + r - q * a)`
+     by METIS_TAC [GCD_SYM, gcd_lemma] THEN
   ASM_SIMP_TAC bool_ss [DECIDE (Term`(x:num) + y - x = y`)] THEN
   SIMP_TAC bool_ss [GCD_SYM]);
 
@@ -294,13 +299,6 @@ val lcm_def = Define`
   lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
 `
 
-val DIVIDES_0L = store_thm(
-  "DIVIDES_0L",
-  ``divides 0 p = (p = 0)``,
-  SRW_TAC [][divides_def]);
-val _ = export_rewrites ["DIVIDES_0L"]
-
-open numSimps metisLib
 val LCM_IS_LEAST_COMMON_MULTIPLE = store_thm(
   "LCM_IS_LEAST_COMMON_MULTIPLE",
   ``divides m (lcm m n) /\ divides n (lcm m n) /\
@@ -350,6 +348,34 @@ val LCM_1 = store_thm(
   ``(lcm 1 x = x) /\ (lcm x 1 = x)``,
   SRW_TAC [][lcm_def])
 val _ = export_rewrites ["LCM_1"]
+
+val LCM_COMM = store_thm(
+  "LCM_COMM",
+  ``lcm a b = lcm b a``,
+  SRW_TAC [][lcm_def, GCD_SYM, MULT_COMM]);
+
+val LCM_LE = store_thm(
+  "LCM_LE",
+  ``0 < m /\ 0 < n ==> (m <= lcm m n) /\ (m <= lcm n m)``,
+  SIMP_TAC (srw_ss() ++ ARITH_ss) [lcm_def, GCD_SYM] THEN
+  `divides (gcd m n) n` by METIS_TAC [GCD_IS_GCD, IS_GCD] THEN
+  Q.ABBREV_TAC `g = gcd m n` THEN
+  `?a. n = a * g` by METIS_TAC [divides_def] THEN
+  STRIP_TAC THEN SRW_TAC [][] THEN
+  `0 < g` by FULL_SIMP_TAC (srw_ss()) [ZERO_LESS_MULT] THEN
+  `m * (a * g) DIV g = m * a` by METIS_TAC [MULT_DIV, MULT_ASSOC] THEN
+  Q_TAC SUFF_TAC `1 <= a` THEN1 METIS_TAC [LE_MULT_LCANCEL, MULT_CLAUSES] THEN
+  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ZERO_LESS_MULT]);
+val _ = export_rewrites ["LCM_LE"]
+
+val LCM_LEAST = store_thm(
+  "LCM_LEAST",
+  ``0 < m /\ 0 < n ==>
+       !p. 0 < p /\ p < lcm m n ==> ~(divides m p) \/ ~(divides n p)``,
+  REPEAT STRIP_TAC THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
+  `divides (lcm m n) p` by METIS_TAC [LCM_IS_LEAST_COMMON_MULTIPLE] THEN
+  `lcm m n <= p` by METIS_TAC [DIVIDES_LE] THEN
+  DECIDE_TAC);
 
 val _ = export_theory();
 
