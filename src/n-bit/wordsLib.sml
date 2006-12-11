@@ -36,7 +36,7 @@ val thms = machine_sizes @
    NUMERAL_BIT_REVERSE, NUMERAL_BIT_REV,
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` BITS_def,
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
-   NUM_RULE [BITS_ZERO2] `n`  BIT_def,
+   NUM_RULE [BITS_ZERO2] `n`  BIT_def, INT_MIN_SUM,
    numeral_log2,numeral_ilog2,
    n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,

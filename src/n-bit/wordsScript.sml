@@ -373,6 +373,15 @@ val MOD_2EXP_DIMINDEX = save_thm("MOD_2EXP_DIMINDEX",
   SIMP_RULE std_ss [SUB1_SUC,BITS_ZERO3,DIMINDEX_GT_0,GSYM MOD_2EXP_def]
      MOD_DIMINDEX);
 
+val INT_MIN_SUM = store_thm("INT_MIN_SUM",
+  `INT_MIN (:('a+'b)) =
+     if FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool) then
+       dimword (:'a) * INT_MIN (:'b)
+     else
+       INT_MIN (:('a+'b))`,
+  SRW_TAC [ARITH_ss] [LESS_EQ_ADD_SUB,DIMINDEX_GE_1,EXP_ADD,INT_MIN_def,
+    dimword_def,index_sum]);
+
 (* ------------------------------------------------------------------------- *)
 (*  Domain transforming maps : theorems                                      *)
 (* ------------------------------------------------------------------------- *)
