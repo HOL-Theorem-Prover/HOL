@@ -197,6 +197,18 @@ fun dec_mla_mul l = Mla_mul
    Rd = Rn l, Rn = Rd l, Rs = Rs l, Rm = Rm l};
 
 local
+  fun dec_addr_mode3 l =
+    if bit 22 l then
+      DthImmediate (list2int ((bits 11 8 l) @ (bits 3 0 l)))
+    else
+      DthRegister (Rm l)
+in
+  fun dec_ldrh_strh l = Ldrh_strh
+    {P = bit 24 l, U = bit 23 l, W = bit 21 l, L = bit 20 l,
+     S = bit 6 l, H = bit 5 l, Rn = Rn l, Rd = Rd l, offset = dec_addr_mode3 l}
+end;
+
+local
   fun dec_addr_mode2 l =
     if bit 25 l then
       DtShiftImmediate (dec_shift_immediate l)
@@ -249,6 +261,8 @@ fun decode_inst l =
   | [0,0,0,1,0,_,0,0,1,1,1,1,_,_,_,_,_,0,0,0,0,0,0,0,0,0,0,0] => dec_mrs l
   | [0,0,0,0,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,1,0,0,1,_,_,_,_] => dec_mla_mul l
   | [0,0,0,1,0,_,0,0,_,_,_,_,_,_,_,_,0,0,0,0,1,0,0,1,_,_,_,_] => dec_swp l
+  | [0,0,0,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,1,0,1,1,_,_,_,_] => dec_ldrh_strh l
+  | [0,0,0,_,_,_,_,1,_,_,_,_,_,_,_,_,_,_,_,_,1,1,_,1,_,_,_,_] => dec_ldrh_strh l
   | [0,1,0,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_] => dec_ldr_str l
   | [0,1,1,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,0,_,_,_,_] => dec_ldr_str l
   | [1,0,0,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_] => dec_ldm_stm l
@@ -303,9 +317,10 @@ in
   fun num2immediate n = num2imm(n, 0)
 end;
 
+fun ipow2 x = Word.toInt (Word.<<(Word.fromInt 1,Word.fromInt x))
+
 local
-  fun ipow2 x = Word.toInt (Word.<<(Word.fromInt 1,Word.fromInt x))
-  val (n12,n16,n24) = (ipow2 12,ipow2 16,ipow2 24)
+  val n24 = ipow2 24
 in
   fun validate_instruction (Data n) = Data n
     | validate_instruction (ic as Instruction(i,c)) =
@@ -340,13 +355,18 @@ in
         | DpShiftImmediate y => if #Imm y < 32 then ic else
             raise BadInstruction "Immediate shift value too large"
         | DpShiftRegister y => ic)
+    | Ldrh_strh x =>
+       (case #offset x of
+          DthImmediate n => if n < ipow2 8 then ic else
+            raise BadInstruction "Offset too large"
+        | _ => ic)
     | Ldr_str x =>
        (case #offset x of
-          DtImmediate n => if n < n12 then ic else
+          DtImmediate n => if n < ipow2 12 then ic else
             raise BadInstruction "Offset too large"
         | DtShiftImmediate y => if #Imm y < 32 then ic else
             raise BadInstruction "Immediate shift value too large")
-    | Ldm_stm x => if #list x < n16 then ic else
+    | Ldm_stm x => if #list x < ipow2 16 then ic else
                      raise BadInstruction "Block transfer list too long"
     | Msr x =>
        (case #Op x of
@@ -434,6 +454,13 @@ fun op << (x,y) = let open Arbnum in
   x * pow(two, fromInt y)
 end;
 
+fun ibits h l n =
+  let val x = ipow2 l
+      val y = ipow2 (h + 1 - l) 
+  in
+    Arbnum.fromInt ((n div x) mod y)
+  end;
+
 fun register_to_num (NReg n) = Arbnum.fromInt (register2int n)
   | register_to_num (VReg x) = raise Parse
       "register_to_num: register is a variable";
@@ -475,6 +502,13 @@ in
                             shift_to_num (#Sh i, #Rm i)
 end;
 
+fun addr_mode3_to_num x = let open Arbnum
+in
+  case x of
+    DthImmediate n => ((ibits 7 4 n) << 8) + (ibits 3 0 n)
+  | DthRegister r => register_to_num r
+end;
+
 fun msr_mode_to_num x = let open Arbnum
 in
   case x of
@@ -499,6 +533,16 @@ fun options_to_num (p,u,b,w) =
 let open Arbnum
 in
   sbit p 24 + sbit u 23 + sbit b 22 + sbit w 21
+end;
+
+fun options2_to_num (l,p,u,w,s,h) =
+let open Arbnum
+in
+  sbit p 24 + sbit u 23 + sbit w 21 +
+  (if l then
+     sbit true 20 + sbit s 6 + sbit h 5
+   else
+     sbit true 5)
 end;
 
 fun opcode2int opc =
@@ -538,6 +582,11 @@ in
        (sbit (#A y) 21) + (sbit (#S y) 20) + fromHexString "90" +
        (register_to_num (#Rd y) << 16) + (register_to_num (#Rn y) << 12) +
        (register_to_num (#Rs y) << 8) + register_to_num (#Rm y)
+   | Ldrh_strh y =>
+       fromHexString "90" +
+       options2_to_num (#L y, #P y, #U y, #W y, #S y, #H y) +
+       (register_to_num (#Rn y) << 16) + (register_to_num (#Rd y) << 12) +
+       addr_mode3_to_num (#offset y)
    | Ldr_str y =>
        fromHexString "4000000" + (sbit (#L y) 20) +
        options_to_num (#P y, #U y, #B y, #W y) +
@@ -723,6 +772,38 @@ in
 end;
 
 local
+  fun addr_mode3string U x =
+    case x of
+      DthImmediate n =>
+        if n = 0 then "" else
+          ", #" ^ (if U then "" else "-") ^ Int.toString n
+    | DthRegister r => ", " ^ (if U then "" else "-") ^ reg2string r
+  fun format_suffix (l,s,h) =
+        case (l,s,h) of
+          (true,false,_)    => "h"
+        | (true,true,false) => "sb"
+        | (true,true,true)  => "sh"
+        | (false,_,_)       => "h"
+  val err = Parse "ldrh_strh_to_string: not a load/store (half) instruction"
+in
+  fun ldrh_strh_to_string a (Instruction(x,c)) =
+   (case x of
+      Ldrh_strh y =>
+        let val h = mnemonic a ((if #L y then "ldr" else "str") ^
+                      condition2string c ^ (format_suffix (#L y, #S y, #H y)))
+            val offset = addr_mode3string (#U y) (#offset y)
+        in
+          h ^ reg2string (#Rd y) ^ ", [" ^ reg2string (#Rn y) ^
+          (if #P y then
+             offset ^ "]" ^ (if #W y then "!" else "")
+           else
+             "]" ^ offset)
+        end
+    | _ => raise err)
+   | ldrh_strh_to_string _ _ = raise err
+end;
+
+local
   fun finish i ys = if ys = [] then [(i,i)] else ((fst (hd ys), i)::(tl ys))
 
   fun blocks [] i ys = ys
@@ -876,6 +957,7 @@ fun arm_to_string l a (i as Instruction (x,c)) =
   | Swi_ex      => swi_ex_to_string c
   | Data_proc y => data_proc_to_string a i
   | Mla_mul y   => mla_mul_to_string a i
+  | Ldrh_strh y => ldrh_strh_to_string a i
   | Ldr_str y   => ldr_str_to_string a i
   | Ldm_stm y   => ldm_stm_to_string a i
   | Swp y       => swp_to_string a i

@@ -22,6 +22,10 @@ datatype addr_mode2 =
    DtImmediate of int
  | DtShiftImmediate of {Imm : int, Rm : vregister, Sh : shift};
 
+datatype addr_mode3 =
+   DthImmediate of int
+ | DthRegister of vregister;
+
 datatype msr_mode = MsrImmediate of Arbnum.num | MsrRegister of vregister;
 
 datatype ARM_instruction =
@@ -31,6 +35,8 @@ datatype ARM_instruction =
                   op2 : addr_mode1}
   | Mla_mul of {L : bool, Signed : bool, A : bool, S : bool, Rd : vregister,
                 Rn : vregister, Rs : vregister, Rm : vregister}
+  | Ldrh_strh of {P : bool, U : bool, W : bool, L : bool, S : bool, H : bool,
+                  Rn : vregister, Rd : vregister, offset : addr_mode3}
   | Ldr_str of {P : bool, U : bool, B : bool, W : bool, L : bool,
                 Rn : vregister, Rd : vregister, offset : addr_mode2}
   | Ldm_stm of {P : bool, U : bool, S : bool, W : bool, L : bool,

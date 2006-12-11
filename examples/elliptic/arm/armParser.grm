@@ -55,6 +55,7 @@ end
     | MCR_MRC of Data.condition * bool
     | MULT4 of Data.condition * bool * bool * bool * bool
     | STRANS of bool * Data.condition * bool
+    | STRANSH of bool * Data.condition * bool * bool
     | LDC_STC of bool * Data.condition * bool
     | BTRANS of bool * Data.condition * bool * bool
 
@@ -70,6 +71,7 @@ end
        | ShiftImmediate of Data.addr_mode1
        | AddrMode1 of Data.addr_mode1
        | AddrMode2 of bool * bool * bool * Data.addr_mode2
+       | AddrMode3 of bool * bool * bool * Data.addr_mode3
        | AddrMode5 of bool * bool * bool * int
        | RegListEntry of Intset.intset
        | RegList of Intset.intset
@@ -128,6 +130,12 @@ Inst:
           else
             Data.Instruction(Data.Mla_mul {L = false, Signed = false, A = true,
               S = s, Rd = Reg1, Rm = Reg2, Rs = Reg3, Rn = Reg4},c)
+        end )
+  | STRANSH Reg COMMA LSQUARE Reg AddrMode3
+      ( let val (l,cond,s,h) = STRANSH
+            val (p,u,w,offset) = AddrMode3 in
+          Data.Instruction(Data.Ldrh_strh {P = p, U = u, W = w, L = l,
+             S = s, H = h, Rd = Reg1, Rn = Reg2, offset = offset},cond)
         end )
   | STRANS Reg COMMA LSQUARE Reg AddrMode2
       ( let val (l,cond,b) = STRANS
@@ -270,6 +278,34 @@ AddrMode2:
        ( (false,true,true,sh_imm1_to_imm2 ShiftImmediate) )
   | RSQUARE COMMA MINUS ShiftImmediate
        ( (false,false,true,sh_imm1_to_imm2 ShiftImmediate) )
+
+AddrMode3:
+    RSQUARE
+       ( (true,true,false,Data.DthImmediate 0) )
+  | COMMA HASH Number RSQUARE
+       ( (true,not (fst Number),false,Data.DthImmediate (toi Number)) )
+  | COMMA HASH Number RSQUARE EXCLAIM
+       ( (true,not (fst Number),true,Data.DthImmediate (toi Number)) )
+  | COMMA Reg RSQUARE
+       ( (true,true,false,Data.DthRegister Reg) )
+  | COMMA Reg RSQUARE EXCLAIM
+       ( (true,true,true,Data.DthRegister Reg) )
+  | COMMA PLUS Reg RSQUARE
+       ( (true,true,false,Data.DthRegister Reg) )
+  | COMMA PLUS Reg RSQUARE EXCLAIM
+       ( (true,true,true,Data.DthRegister Reg) )
+  | COMMA MINUS Reg RSQUARE
+       ( (true,false,false,Data.DthRegister Reg) )
+  | COMMA MINUS Reg RSQUARE EXCLAIM
+       ( (true,false,true,Data.DthRegister Reg) )
+  | RSQUARE COMMA HASH Number
+       ( (false,not (fst Number),true,Data.DthImmediate (toi Number)) )
+  | RSQUARE COMMA Reg
+       ( (false,true,true,Data.DthRegister Reg) )
+  | RSQUARE COMMA PLUS Reg
+       ( (false,true,true,Data.DthRegister Reg) )
+  | RSQUARE COMMA MINUS Reg
+       ( (false,false,true,Data.DthRegister Reg) )
 
 AddrMode5:
     RSQUARE                      ( (true,true,false,0) )

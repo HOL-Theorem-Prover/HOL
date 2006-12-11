@@ -17,9 +17,10 @@ local
                     key = SOME([t],mk_eq(t,``x:iclass``))};
 in
   val ICLASS_ss = simpLib.SSFRAG
-    {convs = map conv_rec [``swp``,``mrs_msr``,``data_proc``,``reg_shift``,
-             ``mla_mul``, ``ldr``,``str``,``ldm``,``stm``,``br``,``swi_ex``,
-             ``cdp_und``, ``mcr``,``mrc``,``ldc``,``stc``,``unexec``],
+    {convs = map conv_rec [``swp``,``mrs``,``msr``,``data_proc``,
+             ``mla_mul``, ``ldr_str``,``ldrh_strh``, ``ldm_stm``,
+             ``br``,``swi_ex``, ``cdp_und``, ``mcr``,``mrc``,``ldc_stc``,
+             ``unexec``],
    rewrs = [], congs = [], filter = NONE, ac = [], dprocs = []};
 end;
 

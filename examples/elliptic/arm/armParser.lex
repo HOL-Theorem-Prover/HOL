@@ -110,35 +110,62 @@ opcode3 = {M}{O}{V} | {M}{V}{N};
 {B}{cond}          => ( Tokens.BRANCH ((cond1 yytext,false), !pos, !pos) );
 {B}{L}{cond}       => ( Tokens.BRANCH ((cond2 yytext,true), !pos, !pos) );
 {S}{W}{I}{cond}    => ( Tokens.SWI_EX (cond3 yytext, !pos, !pos) );
-{opcode1}{cond}    => ( Tokens.DPROC1 ((opc1 yytext, cond3 yytext, true), !pos, !pos) );
-{opcode2}{cond}    => ( Tokens.DPROC2 ((opc1 yytext, cond3 yytext, false), !pos, !pos) );
-{opcode2}{cond}{S} => ( Tokens.DPROC2 ((opc1 yytext, cond3 yytext, true), !pos, !pos) );
-{opcode3}{cond}    => ( Tokens.DPROC1 ((opc1 yytext, cond3 yytext, false), !pos, !pos) );
-{opcode3}{cond}{S} => ( Tokens.DPROC1 ((opc1 yytext, cond3 yytext, true), !pos, !pos) );
+{opcode1}{cond} =>
+   ( Tokens.DPROC1 ((opc1 yytext, cond3 yytext, true), !pos, !pos) );
+{opcode2}{cond} =>
+   ( Tokens.DPROC2 ((opc1 yytext, cond3 yytext, false), !pos, !pos) );
+{opcode2}{cond}{S} =>
+   ( Tokens.DPROC2 ((opc1 yytext, cond3 yytext, true), !pos, !pos) );
+{opcode3}{cond} =>
+   ( Tokens.DPROC1 ((opc1 yytext, cond3 yytext, false), !pos, !pos) );
+{opcode3}{cond}{S} =>
+   ( Tokens.DPROC1 ((opc1 yytext, cond3 yytext, true), !pos, !pos) );
 {M}{U}{L}{cond}    => ( Tokens.MULT3 ((cond3 yytext, false), !pos, !pos) );
 {M}{U}{L}{cond}{S} => ( Tokens.MULT3 ((cond3 yytext, true), !pos, !pos) );
-{M}{L}{A}{cond}    => ( Tokens.MULT4 ((cond3 yytext, false, false, true, false), !pos, !pos) );
-{M}{L}{A}{cond}{S} => ( Tokens.MULT4 ((cond3 yytext, false, false, true, true), !pos, !pos) );
-{U}{M}{U}{L}{L}{cond}  => ( Tokens.MULT4 ((cond3 yytext, true, false, false, false), !pos, !pos) );
-{U}{M}{U}{L}{L}{cond}{S} => ( Tokens.MULT4 ((cond3 yytext, true, false, false, true), !pos, !pos) );
-{U}{M}{L}{A}{L}{cond}  => ( Tokens.MULT4 ((cond3 yytext, true, false, true, false), !pos, !pos) );
-{U}{M}{L}{A}{L}{cond}{S} => ( Tokens.MULT4 ((cond3 yytext, true, false, true, true), !pos, !pos) );
-{S}{M}{U}{L}{L}{cond}  => ( Tokens.MULT4 ((cond3 yytext, true, true, false, false), !pos, !pos) );
-{S}{M}{U}{L}{L}{cond}{S} => ( Tokens.MULT4 ((cond3 yytext, true, true, false, true), !pos, !pos) );
-{S}{M}{L}{A}{L}{cond}  => ( Tokens.MULT4 ((cond3 yytext, true, true, true, false), !pos, !pos) );
-{S}{M}{L}{A}{L}{cond}{S} => ( Tokens.MULT4 ((cond3 yytext, true, true, true, true), !pos, !pos) );
-{L}{D}{R}{cond}        => ( Tokens.STRANS ((true, cond3 yytext, false), !pos, !pos) );
-{L}{D}{R}{cond}{B}     => ( Tokens.STRANS ((true, cond3 yytext, true), !pos, !pos) );
-{S}{T}{R}{cond}        => ( Tokens.STRANS ((false,cond3 yytext, false), !pos, !pos) );
-{S}{T}{R}{cond}{B}     => ( Tokens.STRANS ((false,cond3 yytext, true), !pos, !pos) );
-{L}{D}{M}{cond}({E}{D} | {I}{B})  => ( Tokens.BTRANS ((true, cond3 yytext, true, true), !pos, !pos) );
-{L}{D}{M}{cond}({F}{D} | {I}{A})  => ( Tokens.BTRANS ((true, cond3 yytext, false,true), !pos, !pos) );
-{L}{D}{M}{cond}({E}{A} | {D}{B})  => ( Tokens.BTRANS ((true, cond3 yytext, true, false), !pos, !pos) );
-{L}{D}{M}{cond}({F}{A} | {D}{A})  => ( Tokens.BTRANS ((true, cond3 yytext, false,false), !pos, !pos) );
-{S}{T}{M}{cond}({F}{A} | {I}{B})  => ( Tokens.BTRANS ((false,cond3 yytext, true, true), !pos, !pos) );
-{S}{T}{M}{cond}({E}{A} | {I}{A})  => ( Tokens.BTRANS ((false,cond3 yytext, false,true), !pos, !pos) );
-{S}{T}{M}{cond}({F}{D} | {D}{B})  => ( Tokens.BTRANS ((false,cond3 yytext, true, false), !pos, !pos) );
-{S}{T}{M}{cond}({E}{D} | {D}{A})  => ( Tokens.BTRANS ((false,cond3 yytext, false,false), !pos, !pos) );
+{M}{L}{A}{cond} =>
+   ( Tokens.MULT4 ((cond3 yytext, false, false, true, false), !pos, !pos) );
+{M}{L}{A}{cond}{S} =>
+   ( Tokens.MULT4 ((cond3 yytext, false, false, true, true), !pos, !pos) );
+{U}{M}{U}{L}{L}{cond} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, false, false, false), !pos, !pos) );
+{U}{M}{U}{L}{L}{cond}{S} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, false, false, true), !pos, !pos) );
+{U}{M}{L}{A}{L}{cond} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, false, true, false), !pos, !pos) );
+{U}{M}{L}{A}{L}{cond}{S} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, false, true, true), !pos, !pos) );
+{S}{M}{U}{L}{L}{cond} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, true, false, false), !pos, !pos) );
+{S}{M}{U}{L}{L}{cond}{S} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, true, false, true), !pos, !pos) );
+{S}{M}{L}{A}{L}{cond} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, true, true, false), !pos, !pos) );
+{S}{M}{L}{A}{L}{cond}{S} =>
+   ( Tokens.MULT4 ((cond3 yytext, true, true, true, true), !pos, !pos) );
+{L}{D}{R}{cond}{S}{B} =>
+   ( Tokens.STRANSH ((true, cond3 yytext, true, false), !pos, !pos) );
+{L}{D}{R}{cond}{S}{H} =>
+   ( Tokens.STRANSH ((true, cond3 yytext, true, true), !pos, !pos) );
+{L}{D}{R}{cond}{H} =>
+   ( Tokens.STRANSH ((true, cond3 yytext, false, true), !pos, !pos) );
+{S}{T}{R}{cond}{S}?{H} =>
+   ( Tokens.STRANSH ((false, cond3 yytext, false, true), !pos, !pos) );
+{L}{D}{R}{cond} =>
+   ( Tokens.STRANS ((true, cond3 yytext, false), !pos, !pos) );
+{L}{D}{R}{cond}{B} =>
+   ( Tokens.STRANS ((true, cond3 yytext, true), !pos, !pos) );
+{S}{T}{R}{cond} =>
+   ( Tokens.STRANS ((false,cond3 yytext, false), !pos, !pos) );
+{S}{T}{R}{cond}{S}?{B} =>
+   ( Tokens.STRANS ((false,cond3 yytext, true), !pos, !pos) );
+{L}{D}{M}{cond}({E}{D} | {I}{B}) => ( Tokens.BTRANS ((true, cond3 yytext, true, true), !pos, !pos) );
+{L}{D}{M}{cond}({F}{D} | {I}{A}) => ( Tokens.BTRANS ((true, cond3 yytext, false,true), !pos, !pos) );
+{L}{D}{M}{cond}({E}{A} | {D}{B}) => ( Tokens.BTRANS ((true, cond3 yytext, true, false), !pos, !pos) );
+{L}{D}{M}{cond}({F}{A} | {D}{A}) => ( Tokens.BTRANS ((true, cond3 yytext, false,false), !pos, !pos) );
+{S}{T}{M}{cond}({F}{A} | {I}{B}) => ( Tokens.BTRANS ((false,cond3 yytext, true, true), !pos, !pos) );
+{S}{T}{M}{cond}({E}{A} | {I}{A}) => ( Tokens.BTRANS ((false,cond3 yytext, false,true), !pos, !pos) );
+{S}{T}{M}{cond}({F}{D} | {D}{B}) => ( Tokens.BTRANS ((false,cond3 yytext, true, false), !pos, !pos) );
+{S}{T}{M}{cond}({E}{D} | {D}{A}) => ( Tokens.BTRANS ((false,cond3 yytext, false,false), !pos, !pos) );
 {S}{W}{P}{cond}    => ( Tokens.SWAP ((cond3 yytext, false), !pos, !pos) );
 {S}{W}{P}{cond}{B} => ( Tokens.SWAP ((cond3 yytext, true), !pos, !pos) );
 {M}{R}{S}{cond}    => ( Tokens.MRS  (cond3 yytext, !pos, !pos) );

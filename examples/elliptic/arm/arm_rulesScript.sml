@@ -176,7 +176,7 @@ val SPEC_TO_PC = (SIMP_RULE (std_ss++PC_ss) [] o
    INST [`Rd` |-> `15w:word4`] o SPEC_ALL);
 
 val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MEM_def,
-  RUN_ARM_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,LOAD_STORE_def,
+  RUN_ARM_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,TRANSFER_def,
   FETCH_PC_def,ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
   word_index,BITS_THM,BIT_ZERO,(GEN_ALL o SPECL [`b`,`NUMERAL n`]) BIT_def,
   cond_pass_enc_data_proc,
@@ -278,19 +278,19 @@ val ARM_UND_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   ``enc (instruction$UND c)``);
 
 val ARM_LDR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$LDR c opt Rd Rn Op2)``);
+  ``enc (instruction$LDR c b opt Rd Rn Op2)``);
 
 val ARM_STR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$STR c opt Rd Rn Op2)``);
+  ``enc (instruction$STR c b opt Rd Rn Op2)``);
 
 val ARM_SWP_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   ``enc (instruction$SWP c b Rd Rm Rn)``);
 
 val ARM_LDM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$LDM c opt Rd list)``);
+  ``enc (instruction$LDM c s opt Rd list)``);
 
 val ARM_STM_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
-  ``enc (instruction$STM c opt Rd list)``);
+  ``enc (instruction$STM c s opt Rd list)``);
 
 val ARM_MRS_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   ``enc (instruction$MRS c r Rd)``);
@@ -340,17 +340,11 @@ val SND_ROR = prove(
   `!a n c. SND (ROR a n c) = a #>> w2n n`,
   RW_TAC std_ss [ROR_def,LSL_def,SHIFT_ZERO,word_0_n2w]);
 
-val NOT_REG_SHIFT = prove(
-  `!Op2. ~IS_REG_SHIFT Op2 ==> (~IS_DP_IMMEDIATE Op2 /\
-      ((11 >< 0) (addr_mode1_encode Op2)):word12 %% 4 = F)`,
-  Cases \\ SRW_TAC []
-    [IS_REG_SHIFT_def, IS_DP_IMMEDIATE_def, shift_immediate_shift_register]);
-
 val DP_ss =
   rewrites [DATA_PROCESSING_def,ARITHMETIC_def,TEST_OR_COMP_def,ALU_def,
    ALU_ADD,ALU_SUB,LSL_def,LSR_def,AND_def,ORR_def,EOR_def,ALU_logic_def,
    SET_NZC_def,WORD_ADD_0,WORD_SUB_RZERO,WORD_EQ_SUB_RADD,WORD_HIGHER_EQ,
-   REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO, NOT_REG_SHIFT,
+   REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO,
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ r m n`) COND_RAND,
    cond_pass_enc_data_proc, decode_enc_data_proc, decode_data_proc_enc,
@@ -437,10 +431,17 @@ val ARM_SMLAL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
 
 (* ......................................................................... *)
 
+val BW = prove(
+  `!c f d g0 g1 g2.
+    (case (if c then Byte (f d) else Word d) of
+       Byte b  -> g0 b
+    || Half hw -> g1 hw
+    || Word w  -> g2 w) =
+   (if c then g0 (f d) else g2 d)`, SRW_TAC [] []);
+
 val LDR_STR_ss =
-  rewrites [LDR_STR_def,MEM_WRITE_def,BW_READ_def,
-    (SIMP_RULE bool_ss [] o ISPEC `\l. FST (LOAD_STORE [] m l)`) COND_RAND,
-    listTheory.HD,rich_listTheory.SNOC,word_bits_n2w,w2w_n2w,BITS_THM,
+  rewrites [LDR_STR_def,MEM_WRITE_def,BW,
+    listTheory.HD,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,
     cond_pass_enc_ldr_str,decode_enc_ldr_str,decode_ldr_str_enc];
 
@@ -453,17 +454,17 @@ val abbrev_mode2 =
 
 val ARM_LDR = SYMBOLIC_EVAL_CONV LDR_STR_ss
  (cntxt [abbrev_mode2,``~(Rn = 15w:word4)``]
-  ``enc (instruction$LDR c opt Rd Rn offset)``);
+  ``enc (instruction$LDR c b opt Rd Rn offset)``);
 
 val ARM_STR = SYMBOLIC_EVAL_CONV LDR_STR_ss
  (cntxt [abbrev_mode2,``~(Rd = 15w:word4)``,``~(Rn = 15w:word4)``]
-  ``enc (instruction$STR c opt Rd Rn offset)``);
+  ``enc (instruction$STR c b opt Rd Rn offset)``);
 
 (* ......................................................................... *)
 
 val SWP_ss =
-  rewrites [SWP_def,MEM_WRITE_def,BW_READ_def,
-    listTheory.HD,rich_listTheory.SNOC,word_bits_n2w,w2w_n2w,BITS_THM,
+  rewrites [SWP_def,MEM_WRITE_def,BW,
+    listTheory.HD,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,
     cond_pass_enc_swp,decode_enc_swp,decode_swp_enc];
 
@@ -472,61 +473,84 @@ val ARM_SWP = SYMBOLIC_EVAL_CONV SWP_ss (cntxt [``~(Rm = 15w:word4)``]
 
 (* ......................................................................... *)
 
-val TRANSFER_LDM = prove(
-  `!m d l. FST (LOAD_STORE d m (MAP MemRead l)) = m`,
-  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [LOAD_STORE_def]);
+val FOLDL_INDUCT = prove(
+  `!f e P l. (!x y. P x ==> P (f x y)) /\ P e ==> P (FOLDL f e l)`,
+  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) []);
 
-val TRANSFER_LDM2_lem = prove(
-  `!m d l. LENGTH (SND (LOAD_STORE d m (MAP MemRead l))) = LENGTH d + LENGTH l`,
-  Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss++ARITH_ss)
-    [LOAD_STORE_def,rich_listTheory.LENGTH_SNOC]);
+val TRANSFER_LDM_ = prove(
+  `!x y. (SND (SND x) = mem) ==>
+         (SND (SND (TRANSFER cpi x (MemRead y))) = mem)`,
+  Cases_on `x` \\ Cases_on `r` \\ SRW_TAC [] [TRANSFER_def]
+    \\ ASM_REWRITE_TAC []);
 
-val TRANSFER_LDM2_lem2 = prove(
-  `!m rd l. LENGTH (SND (LOAD_STORE [] m
-             (MAP MemRead (ADDRESS_LIST rd (LENGTH l))))) = LENGTH l`,
-   SIMP_TAC list_ss [TRANSFER_LDM2_lem,ADDRESS_LIST_def,
-     rich_listTheory.LENGTH_GENLIST]);
+val TRANSFER_LDM = SIMP_RULE std_ss [TRANSFER_LDM_]
+   (ISPECL [`\x y. TRANSFER cpi x (MemRead y)`,
+     `(cpin:word32 option list,data:word32 list,mem:mem)`,
+     `\q:word32 option list # word32 list # mem. SND (SND q) = mem`]
+    FOLDL_INDUCT);
 
-val TRANSFER_LDM2_lem3 = prove(
-  `!m d l. SND (LOAD_STORE d m (MAP MemRead l)) =
+val TRANSFER_LDM2___ = prove(
+  `!data cpin m l.
+     LENGTH (FST (SND
+       (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,data,m) l))) =
+     LENGTH data + LENGTH l`,
+   Induct_on `l`
+     \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss++ARITH_ss) [TRANSFER_def]);
+
+val TRANSFER_LDM2__ = prove(
+  `!rd cpin m l.
+     LENGTH (FST (SND
+       (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)
+          (ADDRESS_LIST rd (LENGTH l))))) = LENGTH l`,
+  SIMP_TAC list_ss [TRANSFER_LDM2___,ADDRESS_LIST_def,
+   rich_listTheory.LENGTH_GENLIST]);
+
+val TRANSFER_LDM2_ = prove(
+  `!m d l. FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,d,m) l)) =
              d ++ MAP (\x. m (ADDR30 x)) l`,
- Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss)
-   [LOAD_STORE_def,my_listTheory.APPEND_SNOC1]);
+ Induct_on `l` \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [TRANSFER_def,
+    GSYM rich_listTheory.SNOC_APPEND,my_listTheory.APPEND_SNOC1]);
 
 val TRANSFER_LDM2 = prove(
-  `!m rd l. let addr_mode4 = ADDR_MODE4 P U rd l in
-           FIRSTN (LENGTH (FST addr_mode4))
-             (SND (LOAD_STORE [] m (MAP MemRead (FST (SND addr_mode4))))) =
-           MAP (m o ADDR30) (FST (SND addr_mode4))`,
+  `!cpin m P U rd l.
+     let addr_mode4 = ADDR_MODE4 P U rd l in
+       FIRSTN (LENGTH (FST addr_mode4))
+         (FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)
+            (FST (SND addr_mode4))))) =
+       MAP (m o ADDR30) (FST (SND addr_mode4))`,
   REPEAT STRIP_TAC
     \\ `!rd. FIRSTN (LENGTH (REGISTER_LIST l))
-          (SND (LOAD_STORE [] m (MAP MemRead (ADDRESS_LIST rd
-             (LENGTH (REGISTER_LIST l)))))) =
-           SND (LOAD_STORE [] m (MAP MemRead (ADDRESS_LIST rd
-             (LENGTH (REGISTER_LIST l)))))`
-    by METIS_TAC [TRANSFER_LDM2_lem2,rich_listTheory.FIRSTN_LENGTH_ID]
+          (FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)
+             (ADDRESS_LIST (FIRST_ADDRESS P U rd
+               (WB_ADDRESS U rd (LENGTH (REGISTER_LIST l))))
+                 (LENGTH (REGISTER_LIST l)))))) =
+          (FST (SND (FOLDL (\x y. TRANSFER F x (MemRead y)) (cpin,[],m)
+             (ADDRESS_LIST (FIRST_ADDRESS P U rd
+               (WB_ADDRESS U rd (LENGTH (REGISTER_LIST l))))
+                 (LENGTH (REGISTER_LIST l))))))`
+    by METIS_TAC [TRANSFER_LDM2__,rich_listTheory.FIRSTN_LENGTH_ID]
     \\ SRW_TAC [boolSimps.LET_ss] [ADDR_MODE4_def]
     \\ SRW_TAC []
-         [ADDRESS_LIST_def,TRANSFER_LDM2_lem3,my_listTheory.MAP_GENLIST]
+         [ADDRESS_LIST_def,TRANSFER_LDM2_,my_listTheory.MAP_GENLIST]
     \\ MATCH_MP_TAC my_listTheory.GENLIST_FUN_EQ
     \\ SIMP_TAC std_ss []);
 
 val TRANSFER_LDM2 = SIMP_RULE (bool_ss++boolSimps.LET_ss) [] TRANSFER_LDM2;
 
 val TRANSFER_STM = prove(
-  `!m d r mode rd l. FST (LOAD_STORE d m (STM_LIST r mode l)) =
-      FOLDL (\mem (rp,rd). MEM_WRITE F mem rd (REG_READ r mode rp)) m l`,
+  `!cpin data m r mode l. 
+      SND (SND (FOLDL (TRANSFER F) (cpin,data,m) (STM_LIST r mode l))) =
+      FOLDL (\mem (rp,rd). MEM_WRITE mem rd (Word (REG_READ r mode rp))) m l`,
   Induct_on `l` \\ TRY (Cases_on `h`)
-    \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [LOAD_STORE_def,STM_LIST_def]
+    \\ ASM_SIMP_TAC (srw_ss()++listSimps.LIST_ss) [TRANSFER_def,STM_LIST_def]
     \\ ASM_SIMP_TAC std_ss [GSYM STM_LIST_def]);
-
+     
 val LDM_STM_ss =
-  rewrites [LDM_STM_def,MEM_WRITE_def,BW_READ_def,
-    (SIMP_RULE bool_ss [] o ISPEC `\l. FST (LOAD_STORE [] m l)`) COND_RAND,
-    rich_listTheory.FIRSTN_LENGTH_ID,
-    listTheory.HD,rich_listTheory.SNOC,word_bits_n2w,w2w_n2w,BITS_THM,
+  rewrites [LDM_STM_def,MEM_WRITE_def,
+    rich_listTheory.FIRSTN_LENGTH_ID,my_listTheory.FOLDL_MAP2,
+    listTheory.HD,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,
-    TRANSFER_LDM,TRANSFER_LDM2,TRANSFER_STM,LDM_LIST_def,
+    TRANSFER_LDM, TRANSFER_LDM2, TRANSFER_STM, LDM_LIST_def,
     cond_pass_enc_ldm_stm,decode_enc_ldm_stm,decode_ldm_stm_enc];
 
 val abbrev_mode4 =
@@ -538,12 +562,12 @@ val abbrev_mode4 =
 val ARM_LDM = (GEN_ALL o Thm.DISCH abbrev_mode4 o
    SIMP_RULE std_ss [Thm.ASSUME abbrev_mode4] o SPEC_ALL)
   (SYMBOLIC_EVAL_CONV LDM_STM_ss (cntxt [``Abbrev (l = REGISTER_LIST list)``]
-  ``enc (instruction$LDM c opt Rd list)``));
+  ``enc (instruction$LDM c s opt Rd list)``));
 
 val ARM_STM = (GEN_ALL o Thm.DISCH abbrev_mode4 o
    SIMP_RULE std_ss [Thm.ASSUME abbrev_mode4] o SPEC_ALL)
   (SYMBOLIC_EVAL_CONV LDM_STM_ss (cntxt [``Abbrev (l = REGISTER_LIST list)``]
-  ``enc (instruction$STM c opt Rd list)``));
+  ``enc (instruction$STM c s opt Rd list)``));
 
 (* ......................................................................... *)
 

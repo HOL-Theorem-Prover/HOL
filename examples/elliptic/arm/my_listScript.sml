@@ -136,6 +136,14 @@ val APPEND_SNOC1 = store_thm("APPEND_SNOC1",
   `!l1 x l2. SNOC x l1 ++ l2 = l1 ++ x::l2`,
   METIS_TAC [SNOC_APPEND,CONS_APPEND, APPEND_ASSOC]);
 
+val SNOC_INDUCT_TAC = INDUCT_THEN SNOC_INDUCT ASSUME_TAC;
+
+val FOLDL_MAP2 = store_thm("FOLDL_MAP2",
+  `!f e g l. FOLDL f e (MAP g l) = FOLDL (\x y. f x (g y)) e l`,
+   GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
+    THEN ASM_REWRITE_TAC[MAP,FOLDL,FOLDL_SNOC,MAP_SNOC,FOLDR]
+    THEN BETA_TAC THEN REWRITE_TAC[]);
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();

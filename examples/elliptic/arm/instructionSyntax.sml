@@ -171,9 +171,8 @@ local
   fun mk_options (Ldr_str y) =
         subst [``p:bool`` |-> mk_bool (#P y),
                ``u:bool`` |-> mk_bool (#U y),
-               ``b:bool`` |-> mk_bool (#B y),
                ``w:bool`` |-> mk_bool (#W y)]
-        ``<| Pre := p; Up := u; BSN := b; Wb := w |>``
+        ``<| Pre := p; Up := u; Wb := w |>``
     | mk_options _ = raise ERR "mk_ldr_str" "not a load/store instruction"
   val err = ERR "mk_ldr_str" "not a load/store instruction"
 in
@@ -181,25 +180,61 @@ in
    (case x of
       Ldr_str y =>
         subst [``c:condition`` |-> mk_condition c,
+               ``b:bool`` |-> mk_bool (#B y),
                ``opt:transfer_options`` |-> mk_options x,
                ``rd:word4`` |-> mk_register (#Rd y),
                ``rn:word4`` |-> mk_register (#Rn y),
                ``offset:addr_mode2`` |-> mk_addr_mode2 (#offset y)]
         (if #L y then
-           ``instruction$LDR c opt rd rn offset``
+           ``instruction$LDR c b opt rd rn offset``
          else
-           ``instruction$STR c opt rd rn offset``)
+           ``instruction$STR c b opt rd rn offset``)
     | _ => raise err)
    | mk_ldr_str _ = raise err
+end;
+
+local
+  fun mk_addr_mode3 x =
+    case x of
+      DthImmediate n =>
+        subst [``i:word8`` |-> mk_word8 (Arbnum.fromInt n)] ``Dth_immediate i``
+    | DthRegister r =>
+        subst [``rm:word4`` |-> mk_register r] ``Dth_register rm``
+
+  fun mk_options (Ldrh_strh y) =
+        subst [``p:bool`` |-> mk_bool (#P y),
+               ``u:bool`` |-> mk_bool (#U y),
+               ``w:bool`` |-> mk_bool (#W y)]
+        ``<| Pre := p; Up := u; Wb := w |>``
+    | mk_options _ = raise ERR "mk_ldrh_strh"
+                               "not a load/store (half) instruction"
+  val err = ERR "mk_ldrh_strh" "not a load/store (half) instruction"
+in
+  fun mk_ldrh_strh (Instruction(x,c)) =
+   (case x of
+      Ldrh_strh y =>
+        subst [``c:condition`` |-> mk_condition c,
+               ``s:bool`` |-> mk_bool (#S y),
+               ``h:bool`` |-> mk_bool (#H y),
+               ``opt:transfer_options`` |-> mk_options x,
+               ``rd:word4`` |-> mk_register (#Rd y),
+               ``rn:word4`` |-> mk_register (#Rn y),
+               ``offset:addr_mode3`` |-> mk_addr_mode3 (#offset y)]
+        (if #L y then
+           subst [``s:bool`` |-> mk_bool (#S y)]
+              ``instruction$LDRH c s h opt rd rn offset``
+         else
+           ``instruction$STRH c opt rd rn offset``)
+    | _ => raise err)
+   | mk_ldrh_strh _ = raise err
 end;
 
 local
   fun mk_options (Ldm_stm y) =
         subst [``p:bool`` |-> mk_bool (#P y),
                ``u:bool`` |-> mk_bool (#U y),
-               ``s:bool`` |-> mk_bool (#S y),
                ``w:bool`` |-> mk_bool (#W y)]
-        ``<| Pre := p; Up := u; BSN := s; Wb := w |>``
+        ``<| Pre := p; Up := u; Wb := w |>``
     | mk_options _ = raise ERR "mk_ldm_stm" "not a block transfer instruction"
   val err = ERR "mk_ldm_stm" "not a block transfer instruction"
 in
@@ -207,13 +242,14 @@ in
    (case x of
       Ldm_stm y =>
         subst [``c:condition`` |-> mk_condition c,
+               ``s:bool``      |-> mk_bool (#S y),
                ``opt:transfer_options`` |-> mk_options x,
                ``rn:word4``    |-> mk_register (#Rn y),
                ``list:word16`` |-> mk_word16 (Arbnum.fromInt (#list y))]
         (if #L y then
-           ``instruction$LDM c opt rn list``
+           ``instruction$LDM c s opt rn list``
          else
-           ``instruction$STM c opt rn list``)
+           ``instruction$STM c s opt rn list``)
     | _ => raise err)
    | mk_ldm_stm _ = raise err
 end;
@@ -313,9 +349,8 @@ local
   fun mk_options (Ldc_stc y) =
         subst [``p:bool`` |-> mk_bool (#P y),
                ``u:bool`` |-> mk_bool (#U y),
-               ``n:bool`` |-> mk_bool (#N y),
                ``w:bool`` |-> mk_bool (#W y)]
-        ``<| Pre := p; Up := u; BSN := n; Wb := w |>``
+        ``<| Pre := p; Up := u; Wb := w |>``
     | mk_options _ = raise ERR "mk_ldc_stc" "not an ldc or stc instruction"
   val err = ERR "mk_ldc_stc" "not an ldc or stc instruction"
 in
@@ -323,15 +358,16 @@ in
    (case x of
       Ldc_stc y =>
         subst [``c:condition`` |-> mk_condition c,
+               ``n:bool`` |-> mk_bool (#N y),
                ``opt:transfer_options`` |-> mk_options x,
                ``cpn:word4``   |-> mk_word4 (Arbnum.fromInt (#CP y)),
                ``crd:word4``   |-> mk_register (#CRd y),
                ``rn:word4``    |-> mk_register (#Rn y),
                ``offset:word8`` |-> mk_word8 (Arbnum.fromInt (#offset y))]
         (if #L y then
-           ``instruction$LDC c opt cpn crd rn offset``
+           ``instruction$LDC c n opt cpn crd rn offset``
          else
-           ``instruction$STC c opt cpn crd rn offset``)
+           ``instruction$STC c n opt cpn crd rn offset``)
     | _ => raise err)
   | mk_ldc_stc _ = raise err
 end;
@@ -347,6 +383,7 @@ fun arm_to_term (i as Instruction (x,c)) =
   | Data_proc y => mk_data_proc i
   | Mla_mul y   => mk_mla_mul i
   | Ldr_str y   => mk_ldr_str i
+  | Ldrh_strh y => mk_ldrh_strh i
   | Ldm_stm y   => mk_ldm_stm i
   | Swp y       => mk_swp i
   | Mrs y       => mk_mrs i
@@ -571,12 +608,12 @@ end;
 
 fun dest_options t =
   case snd (TypeBase.dest_record t) of
-    [("Pre", p), ("Up", u), ("BSN", b), ("Wb", w)] =>
-       (dest_bool p, dest_bool u, dest_bool b, dest_bool w)
+    [("Pre", p), ("Up", u), ("Wb", w)] =>
+       (dest_bool p, dest_bool u, dest_bool w)
   | _ => raise ERR "dest_options" "not an instance of type :transfer_options";
 
 local
-  val err = ERR "dest_addr_mode1" "not a valid instance of :addr_mode1"
+  val err = ERR "dest_addr_mode2" "not a valid instance of :addr_mode2"
 in
   fun dest_addr_mode2 t =
    (case strip_comb t of
@@ -601,14 +638,57 @@ local
 in
   fun dest_ldr_str t =
    (case strip_comb t of
-      (i, [c,opt,rd,rn,offset]) =>
+      (i, [c,b,opt,rd,rn,offset]) =>
         let val l = term_eq i ``instruction$LDR``
-            val (p,u,b,w) = dest_options opt
+            val (p,u,w) = dest_options opt
         in
           if l orelse term_eq i ``instruction$STR`` then
             Instruction(Ldr_str {L = l,offset = dest_addr_mode2 offset,
               Rd = dest_register rd, Rn = dest_register rn,
-              P = p, U = u, B = b, W = w},dest_condition c)
+              P = p, U = u, B = dest_bool b, W = w},dest_condition c)
+          else
+            raise err
+        end
+    | _ => raise err)
+    handle HOL_ERR _ => raise err
+end;
+
+local
+  val err = ERR "dest_addr_mode3" "not a valid instance of :addr_mode3"
+in
+  fun dest_addr_mode3 t =
+   (case strip_comb t of
+      (m, [n]) =>
+        if term_eq m ``Dth_immediate`` then
+          DthImmediate (dest_wordi n)
+        else if term_eq m ``Dth_register`` then
+          DthRegister (dest_register n)
+        else
+          raise err
+    | _ => raise err)
+    handle HOL_ERR _ => raise err
+end;
+
+local
+  val err = ERR "dest_ldr_str" "not a variable-free load/store instruction"
+in
+  fun dest_ldrh_strh t =
+   (case strip_comb t of
+      (i, [c,s,h,opt,rd,rn,offset]) =>
+        let val (p,u,w) = dest_options opt in
+          if term_eq i ``instruction$LDRH`` then
+            Instruction(Ldrh_strh {L = true,offset = dest_addr_mode3 offset,
+              Rd = dest_register rd, Rn = dest_register rn, P = p, U = u,
+              W = w, S = dest_bool s, H = dest_bool h},dest_condition c)
+          else
+            raise err
+        end
+    | (i, [c,opt,rd,rn,offset]) =>
+        let val (p,u,w) = dest_options opt in
+          if term_eq i ``instruction$STRH`` then
+            Instruction(Ldrh_strh {L = false,offset = dest_addr_mode3 offset,
+              Rd = dest_register rd, Rn = dest_register rn,
+              P = p, U = u, W = w, S = false, H = true},dest_condition c)
           else
             raise err
         end
@@ -621,13 +701,13 @@ local
 in
   fun dest_ldm_stm t =
    (case strip_comb t of
-      (i, [c,opt,rn,list]) =>
+      (i, [c,s,opt,rn,list]) =>
         let val l = term_eq i ``instruction$LDM``
-            val (p,u,b,w) = dest_options opt
+            val (p,u,w) = dest_options opt
         in
           if l orelse term_eq i ``instruction$STM`` then
             Instruction(Ldm_stm {L = l,list = dest_wordi list,
-              Rn = dest_register rn, P = p, U = u, S = b, W = w},
+              Rn = dest_register rn, P = p, U = u, S = dest_bool s, W = w},
               dest_condition c)
           else
             raise err
@@ -733,14 +813,15 @@ local
 in
   fun dest_ldc_stc t =
    (case strip_comb t of
-      (i, [c,opt,cpn,crd,rn,offset]) =>
+      (i, [c,n,opt,cpn,crd,rn,offset]) =>
         let val l = term_eq i ``instruction$LDC``
-            val (p,u,b,w) = dest_options opt
+            val (p,u,w) = dest_options opt
         in
           if l orelse term_eq i ``instruction$STC`` then
             Instruction(Ldc_stc {CP = dest_wordi cpn, CRd = dest_register crd,
-              L = l, P = p, U = u, N = b, W = w, Rn = dest_register rn,
-              offset = dest_wordi offset},dest_condition c)
+              L = l, P = p, U = u, N = dest_bool n, W = w,
+              Rn = dest_register rn, offset = dest_wordi offset},
+             dest_condition c)
           else
             raise err
         end
@@ -783,6 +864,8 @@ fun term_to_arm t =
             eqt ``instruction$UMULL`` orelse eqt ``instruction$UMLAL`` orelse
             eqt ``instruction$SMULL`` orelse eqt ``instruction$SMLAL`` then
       dest_mla_mul t
+    else if eqt ``instruction$LDRH`` orelse eqt ``instruction$STRH`` then
+      dest_ldrh_strh t
     else if eqt ``instruction$LDR`` orelse eqt ``instruction$STR`` then
       dest_ldr_str t
     else if eqt ``instruction$LDM`` orelse eqt ``instruction$STM`` then
