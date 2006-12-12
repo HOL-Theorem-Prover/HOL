@@ -7,7 +7,7 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsTheory", "rich_listTheory", "my_listTheory"];
+  app load ["wordsLib", "rich_listTheory", "my_listTheory"];
 *)
 
 open HolKernel boolLib bossLib;
@@ -127,10 +127,10 @@ val MEM_WRITE_def = Define`
     || Half hw -> MEM_WRITE_HALF mem addr hw
     || Word w  -> MEM_WRITE_WORD mem addr w`;
 
-val MEM_READ_def        = Define`MEM_READ (m: mem, a) = m a`;
-val MEM_WRITE_BLOCK_def = Define`MEM_WRITE_BLOCK (m:mem) a c = (a ::- c) m`;
-val MEM_ITEMS_def       = Define`MEM_ITEMS (m:mem) = []:(word30 # word32) list`;
-
+val mem_read_def        = Define`mem_read (m: mem, a) = m a`;
+val mem_write_def       = Define`mem_write (m:mem) a d = (a :- d) m`;
+val mem_write_block_def = Define`mem_write_block (m:mem) a c = (a ::- c) m`;
+val mem_items_def       = Define`mem_items (m:mem) = []:(word30 # word32) list`;
 val empty_memory_def    = Define`empty_memory = (\a. 0xE6000010w):mem`;
 
 (* ------------------------------------------------------------------------- *)
@@ -228,7 +228,12 @@ val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
 val RHS_REWRITE_RULE =
   GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
 
-val mem_read_rule = ONCE_REWRITE_RULE [GSYM MEM_READ_def];
+val defs_rule =
+  BETA_RULE o PURE_REWRITE_RULE
+    [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
+     GSYM word_extract_itself_def,GSYM mem_write_def] o
+  RHS_REWRITE_RULE [GSYM word_eq_def] o
+  ONCE_REWRITE_RULE [GSYM mem_read_def];
 
 val _ = ConstMapML.insert ``dimword``;
 val _ = ConstMapML.insert ``dimindex``;
@@ -252,16 +257,15 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
                                | SignedHalfWord | UnsignedHalfWord
                                | UnsignedWord`)
          :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
-         :: map (DEFN o BETA_RULE o PURE_REWRITE_RULE
-             [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
-              GSYM word_extract_itself_def] o
-             RHS_REWRITE_RULE [GSYM word_eq_def])
-           [SUBST_def, BSUBST_def, GET_HALF_def,
-            SIMP_RULE std_ss [literal_case_DEF] GET_BYTE_def,
-            FORMAT_def, ADDR30_def, SET_BYTE_def, SET_HALF_def,
-            MEM_READ_def, MEM_ITEMS_def, empty_memory_def,
-            mem_read_rule MEM_WRITE_BYTE_def, mem_read_rule MEM_WRITE_HALF_def,
-            MEM_WRITE_WORD_def, MEM_WRITE_def, MEM_WRITE_BLOCK_def])
+         :: map DEFN
+              [SUBST_def, BSUBST_def, mem_read_def,
+               mem_write_def,  mem_write_block_def]
+          @ map (DEFN o defs_rule)
+              [empty_memory_def, mem_items_def, ADDR30_def, GET_HALF_def,
+               SIMP_RULE std_ss [literal_case_DEF] GET_BYTE_def,
+               FORMAT_def, SET_BYTE_def, SET_HALF_def,
+               MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def,
+               MEM_WRITE_WORD_def, MEM_WRITE_def])
 end;
 
 (* ------------------------------------------------------------------------- *)

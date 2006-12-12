@@ -326,7 +326,7 @@ local
     val l = do_links a
     val b = map (fn (m,c) => (fromArbnum30 m, c)) l
   in
-    foldr (fn ((a,c),t) => bsubstML.MEM_WRITE_BLOCK t a c) m b
+    foldr (fn ((a,c),t) => bsubstML.mem_write_block t a c) m b
   end
 in
   fun assemble m file = assemble_assembler m (assemblerML.parse_arm file);
@@ -393,7 +393,7 @@ in
         val reg = armML.arm_mem_state_registers state
         val psr = armML.arm_mem_state_psrs state
         val mem = armML.arm_mem_state_memory state
-        val items = bsubstML.MEM_ITEMS mem
+        val items = bsubstML.mem_items mem
     in
       TextIO.output(ostrm,"Instuctions Run:" ^ Int.toString count ^ "\n");
       TextIO.output(ostrm,"\nRegisters\n---------\n");
@@ -454,7 +454,7 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
 
         fun print_mem a = print
               ("; mem[" ^ toHexString_w2n a ^ "] := " ^
-               toHexString_w2n (bsubstML.MEM_READ(mem2,a)))
+               toHexString_w2n (bsubstML.mem_read(mem2,a)))
 
         fun print_bool b = print (if b then "1" else "0")
         fun print_nzcv (n,(z,(c, v))) = (print "; NZCV := ";
@@ -465,7 +465,7 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
     in
       ((if Wireg then
           print_ireg
-            (bsubstML.MEM_READ(mem1,bsubstML.ADDR30 (armML.FETCH_PC reg1)))
+            (bsubstML.mem_read(mem1,bsubstML.ADDR30 (armML.FETCH_PC reg1)))
         else
           ());
        print ("- t = " ^ Int.toString cycle);
@@ -530,7 +530,7 @@ fun STATE_ARM_MEM n s =
   if n = 0 then s
   else
     let val _ = count := !count + 1
-        val _ = armML.mem_updates := []
+        val _ = bsubstML.mem_updates := []
         val ns = armML.NEXT_ARM_MEM s
         val _ = printer watches (!count) s ns
     in

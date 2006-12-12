@@ -501,7 +501,7 @@ val LDR_STR_def = Define`
               wb_reg
             else
               let fmt = if B then UnsignedByte else UnsignedWord in
-                REG_WRITE wb_reg mode Rd (FORMAT fmt ((1 >< 0) addr) data);
+                REG_WRITE wb_reg mode Rd (FORMAT fmt ((1 >< 0) addr) (HD data));
             psr := r.psr |>;
          out :=
            [if L then
@@ -548,7 +548,7 @@ val LDRH_STRH_def = Define`
                         || (T,T) -> SignedHalfWord
                         || _ -> ARB
               in
-                REG_WRITE wb_reg mode Rd (FORMAT fmt ((1 >< 0) addr) data);
+                REG_WRITE wb_reg mode Rd (FORMAT fmt ((1 >< 0) addr) (HD data));
             psr := r.psr |>;
          out :=
            [if L then
@@ -645,12 +645,13 @@ val SWP_def = Define`
     and pc_reg = INC_PC r.reg in
     let rm = REG_READ pc_reg mode Rm in
       <| state :=
-           <| reg :=
+          <| reg :=
                 if isdabort then
                   pc_reg
                 else
                   let fmt = if B then UnsignedByte else UnsignedWord in
-                    REG_WRITE pc_reg mode Rd (FORMAT fmt ((1 ><  0) rn) data);
+                    REG_WRITE pc_reg mode Rd
+                      (FORMAT fmt ((1 ><  0) rn) (HD data));
               psr := r.psr |>;
          out := [MemRead rn;
                  MemWrite rn (if B then Byte ((7 >< 0) rm) else Word rm)] |>`;
@@ -779,12 +780,12 @@ val RUN_ARM_def = Define`
           || br        -> BRANCH r mode ireg
           || msr       -> MSR r mode ireg
           || mrs       -> MRS r mode ireg
-          || swp       -> (SWP r mode (IS_SOME dabt) (HD data) ireg).state
+          || swp       -> (SWP r mode (IS_SOME dabt) data ireg).state
           || ldm_stm   -> (LDM_STM r mode dabt data ireg).state
           || ldr_str   ->
-               (LDR_STR r (CARRY nzcv) mode (IS_SOME dabt) (HD data) ireg).state
+               (LDR_STR r (CARRY nzcv) mode (IS_SOME dabt) data ireg).state
           || ldrh_strh   ->
-               (LDRH_STRH r mode (IS_SOME dabt) (HD data) ireg).state
+               (LDRH_STRH r mode (IS_SOME dabt) data ireg).state
           || ldc_stc   -> coproc (\x. (LDC_STC x mode ireg).state)
           || mrc       -> coproc (\x. MRC x mode (ELL 1 data) ireg)
           || mcr       -> coproc inc_pc
@@ -1327,49 +1328,64 @@ val LDR_STR_OUT = prove(
   `!r C mode ireg.
     (LDR_STR r C mode ARB ARB ireg).out =
       (let (I,P,U,B,W,L,Rn,Rd,offset) = DECODE_LDR_STR ireg in
-          let (addr,wb_addr) = ADDR_MODE2 r.reg mode C I P U Rn offset in
-          let pc_reg = INC_PC r.reg
-          in
-            [(if L then
-                MemRead addr
-              else
-                let w = REG_READ pc_reg mode Rd in
-                  MemWrite addr (if B then Byte ((7 >< 0) w) else Word w))])`,
+       let (addr,wb_addr) = ADDR_MODE2 r.reg mode C I P U Rn offset in
+       let pc_reg = INC_PC r.reg
+       in
+         [(if L then
+             MemRead addr
+           else
+             let w = REG_READ pc_reg mode Rd in
+               MemWrite addr (if B then Byte ((7 >< 0) w) else Word w))])`,
   SRW_TAC [boolSimps.LET_ss] [LDR_STR_def,DECODE_LDR_STR_def,ADDR_MODE2_def]);
+
+val LDRH_STRH_OUT = prove(
+  `!r C mode ireg.
+    (LDRH_STRH r mode ARB ARB ireg).out =
+      (let (P,U,I,W,L,Rn,Rd,offsetH,S,H,offsetL) = DECODE_LDRH_STRH ireg in
+       let (addr,wb_addr) = ADDR_MODE3 r.reg mode I P U Rn offsetH offsetL in
+       let pc_reg = INC_PC r.reg
+       in
+         [(if L then
+             MemRead addr
+           else
+             MemWrite addr (Half ((15 >< 0) (REG_READ pc_reg mode Rd))))])`,
+  SRW_TAC [boolSimps.LET_ss]
+    [LDRH_STRH_def,DECODE_LDRH_STRH_def,ADDR_MODE3_def]);
 
 val LDM_STM_OUT = prove(
    `!r mode ireg.
      (LDM_STM r mode ARB ARB ireg).out =
-         (let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
-          let pc_in_list = list %% 15 and rn = REG_READ r.reg mode Rn in
-          let (rp_list,addr_list,rn') = ADDR_MODE4 P U rn list and
-              mode' = (if S /\ (L ==> ~pc_in_list) then usr else mode) and
-              pc_reg = INC_PC r.reg
-          in
-          let wb_reg =
-                (if W /\ ~(Rn = 15w) then
-                   REG_WRITE pc_reg (if L then mode else mode') Rn rn'
-                 else
-                   pc_reg)
-          in
-            (if L then
-               MAP MemRead addr_list
-             else
-               STM_LIST (if HD rp_list = Rn then pc_reg else wb_reg)
-                 mode' (ZIP (rp_list,addr_list))))`,
+       (let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
+        let pc_in_list = list %% 15 and rn = REG_READ r.reg mode Rn in
+        let (rp_list,addr_list,rn') = ADDR_MODE4 P U rn list and
+            mode' = (if S /\ (L ==> ~pc_in_list) then usr else mode) and
+            pc_reg = INC_PC r.reg
+        in
+        let wb_reg =
+              (if W /\ ~(Rn = 15w) then
+                 REG_WRITE pc_reg (if L then mode else mode') Rn rn'
+               else
+                 pc_reg)
+        in
+          (if L then
+             MAP MemRead addr_list
+           else
+             STM_LIST (if HD rp_list = Rn then pc_reg else wb_reg)
+               mode' (ZIP (rp_list,addr_list))))`,
   SRW_TAC [boolSimps.LET_ss] [LDM_STM_def,DECODE_LDM_STM_def,ADDR_MODE4_def]);
 
 val SWP_OUT = prove(
   `!r mode ireg.
     (SWP r mode ARB ARB ireg).out =
-         (let (B,Rn,Rd,Rm) = DECODE_SWP ireg in
-          let rn = REG_READ r.reg mode Rn and pc_reg = INC_PC r.reg in
-          let rm = REG_READ pc_reg mode Rm in
-            [MemRead rn;
-             MemWrite rn (if B then Byte ((7 >< 0) rm) else Word rm)])`,
+       (let (B,Rn,Rd,Rm) = DECODE_SWP ireg in
+        let rn = REG_READ r.reg mode Rn and pc_reg = INC_PC r.reg in
+        let rm = REG_READ pc_reg mode Rm in
+          [MemRead rn;
+           MemWrite rn (if B then Byte ((7 >< 0) rm) else Word rm)])`,
   SRW_TAC [boolSimps.LET_ss] [SWP_def,DECODE_SWP_def]);
 
-val OUT_ARM = REWRITE_RULE [LDR_STR_OUT,LDM_STM_OUT,SWP_OUT] OUT_ARM_def;
+val OUT_ARM =
+   REWRITE_RULE [LDR_STR_OUT,LDRH_STRH_OUT,LDM_STM_OUT,SWP_OUT] OUT_ARM_def;
 
 (*---------------------------------------------------------------------------*)
 
@@ -1387,7 +1403,7 @@ val spec_word_rule32 = n2w_w2n_rule o Q.SPEC `w2n (w:word32)`;
 val spec_word_rule12 =
   n2w_w2n_rule o INST [`opnd2` |-> `w2n (w:word12)`] o SPEC_ALL;
 
-val mem_read_rule = ONCE_REWRITE_RULE [GSYM MEM_READ_def];
+val mem_read_rule = ONCE_REWRITE_RULE [GSYM mem_read_def];
 
 val _ = ConstMapML.insert ``dimword``;
 val _ = ConstMapML.insert ``dimindex``;

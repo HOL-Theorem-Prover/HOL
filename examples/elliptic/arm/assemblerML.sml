@@ -505,7 +505,8 @@ end;
 fun addr_mode3_to_num x = let open Arbnum
 in
   case x of
-    DthImmediate n => ((ibits 7 4 n) << 8) + (ibits 3 0 n)
+    DthImmediate n => fromHexString "400000" +
+                      ((ibits 7 4 n) << 8) + (ibits 3 0 n)
   | DthRegister r => register_to_num r
 end;
 
