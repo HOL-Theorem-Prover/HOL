@@ -715,7 +715,7 @@ val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
 		(SPEC ``(off:num) + (x:num)`` thm)) THEN
 	Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
 	ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * x) = (1073741824 - x)*4``, DECIDE_TAC)] THEN
-	ASM_SIMP_TAC arith_ss [ADDR30_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
+	ASM_SIMP_TAC arith_ss [MEM_ADDR_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
 	ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
 	SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
 	`((2147483648 - (off + x)) =
@@ -753,7 +753,7 @@ val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
 		(SPEC ``(off:num) + (y:num)`` thm)) THEN
 	Cases_on `off < s'` THEN ASM_REWRITE_TAC[] THEN
 	ONCE_REWRITE_TAC [prove(``(4294967296:num - 4 * y) = (1073741824 - y)*4``, DECIDE_TAC)] THEN
-	ASM_SIMP_TAC arith_ss [ADDR30_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
+	ASM_SIMP_TAC arith_ss [MEM_ADDR_ADD_CONST_MULT, GSYM WORD_ADD_ASSOC, word_add_n2w] THEN
 	ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
 	SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
 	`((2147483648 - (off + y)) =

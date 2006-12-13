@@ -113,10 +113,10 @@ fun mk_mreads st (IRSyntax.PAIR (e1,e2)) =
        raise ERR "" ("mk_mreads: invalid incoming expression"));
 
 
-fun ADDR30_CONV t =
+fun MEM_ADDR_CONV t =
 	let
 		val (f, args) = dest_comb t;
-		val _ = if same_const (Term `ADDR30`) f then () else Raise (ERR "" "Syntax");
+		val _ = if same_const (Term `MEM_ADDR`) f then () else Raise (ERR "" "Syntax");
       val num_term = rand (rand args);
 		val num = dest_numeral num_term;
 		val (c, r) = Arbnum.divmod(num, Arbnum.fromInt 4);
@@ -143,7 +143,7 @@ val SIM_CONV =
 	
 val SIM_MEM_CONV = 
 		SIM_REWRITE_CONV THENC
-		SIMP_CONV arith_ss [word4_distinct, ADDR30_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
+		SIMP_CONV arith_ss [word4_distinct, MEM_ADDR_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
 			WORD_EQ_ADD_LCANCEL] THENC
 		WORDS_CONV THENC
 		REWRITE_CONV [word_extract_thm, WORD_ADD_0]
@@ -152,14 +152,14 @@ val SIM_PUSH_CONV =
 		REWRITE_CONV [mdecode_def, pushL_def, GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH, FOLDL] THENC
 		DEPTH_CONV GEN_BETA_CONV THENC
 		SIM_REWRITE_CONV THENC
-		SIMP_CONV arith_ss [ADDR30_ADD_CONST_MOD] THENC
+		SIMP_CONV arith_ss [MEM_ADDR_ADD_CONST_MOD] THENC
 		SIM_CONV;
 	
 val SIM_POP_CONV =
 		REWRITE_CONV [mdecode_def, popL_def, GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH, FOLDL] THENC
 		DEPTH_CONV GEN_BETA_CONV THENC
 		SIM_REWRITE_CONV THENC
-		SIMP_CONV arith_ss [word4_distinct, ADDR30_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
+		SIMP_CONV arith_ss [word4_distinct, MEM_ADDR_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
 			WORD_EQ_ADD_LCANCEL] THENC
 		SIM_CONV;
 
@@ -1375,7 +1375,8 @@ fun preprocess_def def =
 
 
 (*val prog = fact_def;
-  val prog = def6
+  val prog = ex1_field_mult_aux_alt
+  val prog = def
   val prove_equiv = false*)
 
 fun pp_compile prog prove_equiv = 
@@ -1391,6 +1392,55 @@ fun pp_compile prog prove_equiv =
   in
       (f_name, f_type, (f_args,f_ir,f_outs), defs, stat, stat_ir, el 1 thm_list, el 2 thm_list, el 3 thm_list)
   end
+
+type spec_type = 
+  string * hol_type * (exp * anntIR * exp) * thm list * thm * thm * thm * thm *
+  thm;
+
+
+fun get_spec_assums ((_, _, _, thmL, thm1, thm2, thm3, thm4, thm5):spec_type) =
+	let
+		val thmL' = thm2::thm3::thm4::thm5::thmL;
+		val s1 = hypset thm1;
+		val s = foldl (fn (thm, set) => HOLset.union (set, hypset thm)) s1 thmL';		
+		val l = HOLset.listItems s
+		val t = list_mk_conj l
+	in
+		(t, l)
+	end
+
+fun set_goal___spec_assums spec =
+	goalstackLib.set_goal ([], #1 (get_spec_assums spec))
+
+fun prove___spec_assums (spec as (x1, x2, x3, thmL, thm1, thm2, thm3, thm4, thm5)) tac = 
+let
+	val (t, l) = (get_spec_assums spec);
+	val thm = prove (t, tac);
+
+	fun prove_hyp hyp_thm =
+		let 
+			val hyps = hyp hyp_thm;
+			fun elim_hyp_list hyp_thm [] = hyp_thm |
+				 elim_hyp_list hyp_thm (t::l) =
+					let
+						val t_thm = prove (t, REWRITE_TAC [thm])
+						val hyp_thm' = PROVE_HYP t_thm hyp_thm
+					in
+						elim_hyp_list hyp_thm' l
+					end
+		in
+			elim_hyp_list hyp_thm hyps
+		end	
+
+	val thmL' = map prove_hyp thmL;
+	val thm1' = prove_hyp thm1;
+	val thm2' = prove_hyp thm2;
+	val thm3' = prove_hyp thm3;
+	val thm4' = prove_hyp thm4;
+	val thm5' = prove_hyp thm5;
+in
+	(x1, x2, x3, thmL', thm1', thm2', thm3', thm4', thm5')
+end
 
 end
 end  

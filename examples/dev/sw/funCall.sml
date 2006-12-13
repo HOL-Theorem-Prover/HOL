@@ -2,12 +2,22 @@ structure funCall =
 struct
 
 local
+(*
+quietdec := true;
+*)
+
+
 open HolKernel Parse boolLib IRSyntax annotatedIR
 structure T = IntMapTable(type key = int  fun getInt n = n);
 structure S = Binaryset
 structure IR = IRSyntax
+
+(*
+	open funCall;
+	quietdec := false;
+*)
 in
-(*open funCall*)
+
 exception invalidArgs;
 exception argPassing;
 
@@ -428,6 +438,8 @@ fun compute_fcall_info ((outer_ins,outer_outs),(caller_src,caller_dst),(callee_i
 	
 local
 	fun remove_reg (REG r) = r
+	fun is_reg (REG r) = true |
+		 is_reg _ = false;
 
 	val sortdata = 
 		sort (fn (dest:int, src:int, beforeL:int list) => fn (dest':int, src':int, beforeL':int list) => (length beforeL < length beforeL'))
@@ -467,20 +479,23 @@ local
 in
 	fun mk_mov_ir destL srcL dummyL =
 	let
-		val copyL = zip (map remove_reg destL) (map remove_reg srcL);
-		val copyL = filter (fn (x, y) => not (x = y)) copyL;
+		val copyL = zip destL srcL;
+		val (regL, nonRegL) = partition (fn (x, y) => is_reg y) copyL;
+		val regL = map (fn (x, y) => (remove_reg x, remove_reg y)) regL;
+		val regL = filter (fn (x, y) => not (x = y)) regL;
+
 
 		(*calculates, which registers have to be updated before,
 			because they directly depend on the value, that should be
 			overwritten*)
 		fun direct_before r = 
 			let
-				val copyL_filter = filter (fn (dest, src) => (src = r)) copyL;
+				val regL_filter = filter (fn (dest, src) => (src = r)) regL;
 			in
-				map (fn (dest, src) => dest) copyL_filter
+				map (fn (dest, src) => dest) regL_filter
 			end
 
-		val data = map (fn (dest, src) => (dest, src, direct_before dest)) copyL
+		val data = map (fn (dest, src) => (dest, src, direct_before dest)) regL
 		
 		fun process_data dummyL resultL [] = resultL |
 			 process_data dummyL resultL data =
@@ -492,9 +507,10 @@ in
 			 end;
 
 		val aL = process_data dummyL [] data;
-   	fun mov_ir (dst, src) = {oper = IR.mmov, dst = [REG dst], src = [REG src]}
+		val aL = map (fn (x, y) => (REG x, REG y)) aL
+   	fun mov_ir (dst, src) = {oper = IR.mmov, dst = [dst], src = [src]}
 	in
-		map mov_ir aL		
+		map mov_ir (aL@nonRegL)
 	end;
 
 end;
@@ -507,9 +523,12 @@ fun extract (SC(s1,s2,info)) = (s1,s2,info)
 val (s1,s2,info) = extract ir1
 val (s1,s2,info) = extract s2
 
+fun extract (CJ(cond,s1,s2,info)) = (cond,s1,s2,info);
+val (cond,s1,s2,info) = extract ir1
+
 fun extract (CALL(fname, pre, body, post, outer_info)) =
 (fname, pre, body, post, outer_info)
-val (fname, pre, body, post, outer_info) = extract s1
+val (fname, pre, body, post, outer_info) = extract s2
 
 *)
 
@@ -588,7 +607,7 @@ fun convert_fcall (CALL(fname, pre, body, post, outer_info)) =
 (* ---------------------------------------------------------------------------------------------------------------------*)
 (* Link caller and callees together                                                                                     *)
 (* ---------------------------------------------------------------------------------------------------------------------*)
-
+(*val prog = def*)
 fun link_ir prog = 
   let
       val (fname, ftype, f_ir as (ins,ir0,outs), defs) = sfl2ir prog;

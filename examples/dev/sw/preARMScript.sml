@@ -171,7 +171,7 @@ val FORALL_STATE = Q.store_thm
 (* Read and write registers and memory                                             *)
 (*---------------------------------------------------------------------------------*)
 
-val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr:word30`;
+val MEM_ADDR_def = Define `MEM_ADDR (addr:word32) = (31 >< 2) addr:word30`;
 
 val read_def =
   Define `
@@ -179,8 +179,8 @@ val read_def =
       case exp of
         MEM (r,offset) -> 
 	    (case offset of 
-		  POS k -> mem ' ((ADDR30 (regs ' (n2w r))) + (n2w k)) ||
-		  NEG k -> mem ' ((ADDR30 (regs ' (n2w r))) - (n2w k))
+		  POS k -> mem ' ((MEM_ADDR (regs ' (n2w r))) + (n2w k)) ||
+		  NEG k -> mem ' ((MEM_ADDR (regs ' (n2w r))) - (n2w k))
 	    )	||
 	NCONST i -> n2w i     ||
    WCONST w -> w         ||
@@ -189,8 +189,8 @@ val read_def =
 
 val read_thm = Q.store_thm (
   "read_thm",
-  ` (read (regs,mem) (MEM (r,POS k)) = mem ' (ADDR30 (regs ' (n2w r)) + (n2w k))) /\
-    (read (regs,mem) (MEM (r,NEG k)) = mem ' (ADDR30 (regs ' (n2w r)) - (n2w k))) /\
+  ` (read (regs,mem) (MEM (r,POS k)) = mem ' (MEM_ADDR (regs ' (n2w r)) + (n2w k))) /\
+    (read (regs,mem) (MEM (r,NEG k)) = mem ' (MEM_ADDR (regs ' (n2w r)) - (n2w k))) /\
     (read (regs,mem) (NCONST i) = n2w i) /\
     (read (regs,mem) (WCONST w) = w) /\
     (read (regs,mem) (REG r) = regs ' (n2w r)) /\
@@ -204,8 +204,8 @@ val write_def =
         MEM (r,offset) -> 
 	    (regs,
              (case offset of
-                   POS k -> mem |+ (ADDR30 (regs ' (n2w r)) + (n2w k), v) ||
-                   NEG k -> mem |+ (ADDR30 (regs ' (n2w r)) - (n2w k), v)
+                   POS k -> mem |+ (MEM_ADDR (regs ' (n2w r)) + (n2w k), v) ||
+                   NEG k -> mem |+ (MEM_ADDR (regs ' (n2w r)) - (n2w k), v)
              ))   	 ||
         REG r -> ( regs |+ ((n2w:num->REGISTER r), v),
                    mem ) ||
@@ -214,8 +214,8 @@ val write_def =
 
 val write_thm = Q.store_thm (
   "write_thm",
-  ` (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (ADDR30 (regs ' (n2w r)) + (n2w k), v))) /\
-    (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (ADDR30 (regs ' (n2w r)) - (n2w k), v))) /\
+  ` (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (MEM_ADDR (regs ' (n2w r)) + (n2w k), v))) /\
+    (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (MEM_ADDR (regs ' (n2w r)) - (n2w k), v))) /\
     (write (regs,mem) (MEM (r,INR)) v = (regs,ARB)) /\
     (write (regs,mem) (REG r) v = (regs |+ ((n2w r), v), mem))`,
     RW_TAC std_ss [write_def]);                      
@@ -1363,10 +1363,10 @@ Induct_on `m` THENL [
 
 
 
-val ADDR30_ADD_CONST = store_thm ("ADDR30_ADD_CONST",
-``ADDR30(x + n2w y) = ADDR30 (x + (n2w (y MOD 4))) + (ADDR30 (n2w y))``,
+val MEM_ADDR_ADD_CONST = store_thm ("MEM_ADDR_ADD_CONST",
+``MEM_ADDR(x + n2w y) = MEM_ADDR (x + (n2w (y MOD 4))) + (MEM_ADDR (n2w y))``,
 	ONCE_REWRITE_TAC[GSYM w2n_11] THEN
-	REWRITE_TAC [ADDR30_def] THEN		
+	REWRITE_TAC [MEM_ADDR_def] THEN		
 	WORDS_TAC THEN
 	SIMP_TAC std_ss [SIMP_RULE std_ss [dimindex_32] (INST_TYPE [alpha |-> Type `:i32`] (GSYM word_lsr_n2w))] THEN
 	SIMP_TAC arith_ss [w2n_lsr, bitTheory.BITS_def, MOD_2EXP_def, DIV_2EXP_def, 
@@ -1395,9 +1395,9 @@ val ADDR30_ADD_CONST = store_thm ("ADDR30_ADD_CONST",
 	METIS_TAC[ADD_DIV]);
 
 
-val ADDR30_CONST_EVAL = store_thm ("ADDR30_CONST_EVAL",
-``ADDR30(n2w y) = n2w (y DIV 4)``,
-	REWRITE_TAC [ADDR30_def] THEN		
+val MEM_ADDR_CONST_EVAL = store_thm ("MEM_ADDR_CONST_EVAL",
+``MEM_ADDR(n2w y) = n2w (y DIV 4)``,
+	REWRITE_TAC [MEM_ADDR_def] THEN		
 	WORDS_TAC THEN
 	SIMP_TAC std_ss [bitTheory.BITS_def, DIV_2EXP_def, MOD_2EXP_def] THEN
 	`!x n m. ((0 < n) /\ (n <= m)) ==> ((x MOD n MOD m) = x MOD n)` by ALL_TAC THEN1 (
@@ -1409,18 +1409,18 @@ val ADDR30_CONST_EVAL = store_thm ("ADDR30_CONST_EVAL",
 	ASM_SIMP_TAC std_ss [])
 
 
-val ADDR30_ADD_CONST_MOD = store_thm ("ADDR30_ADD_CONST_MOD",
-``!x y. (y MOD 4 = 0) ==> (ADDR30(x + n2w y) = ADDR30 x + (n2w (y DIV 4)))``,
+val MEM_ADDR_ADD_CONST_MOD = store_thm ("MEM_ADDR_ADD_CONST_MOD",
+``!x y. (y MOD 4 = 0) ==> (MEM_ADDR(x + n2w y) = MEM_ADDR x + (n2w (y DIV 4)))``,
 	REPEAT STRIP_TAC THEN
-	ONCE_ASM_REWRITE_TAC[ADDR30_ADD_CONST] THEN
-	ASM_REWRITE_TAC[WORD_ADD_0, ADDR30_CONST_EVAL]);
+	ONCE_ASM_REWRITE_TAC[MEM_ADDR_ADD_CONST] THEN
+	ASM_REWRITE_TAC[WORD_ADD_0, MEM_ADDR_CONST_EVAL]);
 
 
-val ADDR30_ADD_CONST_MULT = store_thm ("ADDR30_ADD_CONST_MULT",
-``!x y. (ADDR30(x + n2w (y*4)) = ADDR30 x + (n2w y))``,
+val MEM_ADDR_ADD_CONST_MULT = store_thm ("MEM_ADDR_ADD_CONST_MULT",
+``!x y. (MEM_ADDR(x + n2w (y*4)) = MEM_ADDR x + (n2w y))``,
 	REPEAT STRIP_TAC THEN
-	ONCE_ASM_REWRITE_TAC[ADDR30_ADD_CONST] THEN
-	ASM_REWRITE_TAC[ADDR30_CONST_EVAL] THEN
+	ONCE_ASM_REWRITE_TAC[MEM_ADDR_ADD_CONST] THEN
+	ASM_REWRITE_TAC[MEM_ADDR_CONST_EVAL] THEN
 	SIMP_TAC arith_ss [MOD_EQ_0, MULT_DIV, WORD_ADD_0]);
 
 val _ = export_theory();

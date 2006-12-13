@@ -1,7 +1,16 @@
 structure annotatedIR = struct
   local
+
+(*
+quietdec := true;
+*)
+
   open HolKernel Parse boolLib preARMTheory pairLib simpLib bossLib
        numSyntax optionSyntax listSyntax ILTheory IRSyntax
+(*
+	quietdec := false;
+	open annotatedIR
+*)
   in
 
  (*---------------------------------------------------------------------------------*)
@@ -218,6 +227,13 @@ structure annotatedIR = struct
 
    val thm_t = DECIDE (Term `T`);
    val init_info = {fspec = thm_t, ins = NA, outs = NA, context = []};
+(*
+	val (cfg, n) = (r_cfg, r_start_node)
+	val n = (#2 (hd sucL))
+fun extract (Assem.OPER {oper = (Assem.BL,_,_), dst = dList, src = sList, jump = jp}) = (dList, sList, jp);
+val (dList, sList, jp) = extract inst'
+val x = inst'
+*)
 
    fun convert cfg n =
         let 
@@ -254,6 +270,7 @@ structure annotatedIR = struct
 (*---------------------------------------------------------------------------------*)
 (*  Convert a cfg corresonding to a function to ir                                 *)
 (*---------------------------------------------------------------------------------*)
+
    fun convert_module (ins,cfg,outs) = 
       let 
          val (flag, lab_node) = is_rec cfg 0
@@ -261,7 +278,7 @@ structure annotatedIR = struct
       in 
          if not flag then convert cfg lab_node
          else 
-            let val (cond, ((p_cfg,p_start_node), (b_cfg,b_start_node), (r_cfg,r_start_node)), join_node) = break_rec cfg lab_node
+            let val (cond, ((p_cfg,p_start_node), (b_cfg,b_start_node), (r_cfg,r_start_node)), join_node) = break_rec cfg lab_node 
                 val (b_ir,r_ir) = (convert b_cfg b_start_node, convert r_cfg r_start_node);
 
                 val bal_node = #2 (valOf (List.find (fn (flag,n) => flag = 1) (#1 (G.context(lab_node,cfg)))));
@@ -472,7 +489,7 @@ structure annotatedIR = struct
 
 
 (*
-val ir0 = (back_trace ir1 info)
+val irX = (back_trace ir1 info)
 
 fun extract (SC(s1,s2,inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) =
 	(s1, s2, inner_info, outer_outs, contextL, outer_info) 
@@ -486,7 +503,7 @@ val s2' = back_trace s2 outer_info
 fun extract (CJ(cond, s1, s2, inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}:annt) =
 (cond, s1, s2, inner_info, outer_info, outer_outs, contextL)
 
-val (cond, s1, s2, inner_info, outer_info, outer_outs, contextL) = extract s1 outer_info
+val (cond, s1, s2, inner_info, outer_info, outer_outs, contextL) = extract ir1 info
 
 fun extract (CALL (fname, pre, body, post, info)) (outer_info as {outs = outer_outs, context = contextL, fspec = fout_spec, ...}:annt) =
 (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec);
@@ -524,16 +541,16 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
 
     |  back_trace (CJ(cond, s1, s2, inner_info)) (outer_info as {outs = outer_outs, context = contextL, ...}) =
           let 
-              fun filter_exp (REG e) = [REG e]
-               |  filter_exp (MEM e) = [MEM e]
-               |  filter_exp _ = []
+              fun filter_exp (REG e) = true
+               |  filter_exp (MEM e) = true
+               |  filter_exp _ = false
 
-              val cond_expL = filter_exp (#1 cond) @ filter_exp (#3 cond);
+              val cond_expL = [(#1 cond), (#3 cond)];
               val s1' = back_trace s1 outer_info
               val s2' = back_trace s2 outer_info
               val ({ins = ins1, outs = outs1, ...}, {ins = ins2, outs = outs2, ...}) = (get_annt s1', get_annt s2');
-              val inS_0 = set2pair (list2set
-					(cond_expL @ (pair2list ins1) @ (pair2list ins2))); 
+              val inS_0 = set2pair (list2set (filter filter_exp 
+					(cond_expL @ (pair2list ins1) @ (pair2list ins2)))); 
                       (* union of the variables in the condition and the inputs of the s1' and s2' *)
               val info_0 = replace_ins outer_info inS_0
           in
@@ -564,7 +581,6 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
           in
               CALL (fname, pre, BLK ([], info), post, info')
           end;
-
 
    fun set_info (ins,ir,outs) = 
        let 
@@ -647,6 +663,5 @@ val (fname, pre, body, post, info, outer_info, outer_outs, contextL, fout_spec) 
      in
         (f_name, f_type, f_ir, defs)
      end
-
 end
 end

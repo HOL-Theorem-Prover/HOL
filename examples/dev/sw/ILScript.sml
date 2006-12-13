@@ -317,7 +317,7 @@ val MEM_LIST_COUNT = store_thm ("MEM_LIST_COUNT",
 
 val USED_STACK_def = Define `USED_STACK size ir =
 	!r m r' m' base. (((r', m') = run_ir ir (r, m)) /\
-				      (base = preARM$ADDR30 (read (r,m) (REG 13)))
+				      (base = preARM$MEM_ADDR (read (r,m) (REG 13)))
 						) ==> (
 		(!l. (MEM l (MAP (\off. base - n2w off) (LIST_COUNT size))) \/ (m ' l = m' ' l))
 	)`;
@@ -326,7 +326,7 @@ val USED_STACK_THM =
 	store_thm ("USED_STACK_THM",
 	``USED_STACK size ir =
 	!r m r' m'. ((r', m') = run_ir ir (r, m)) ==> (
-		(!l. ~(MEM l (MAP (\off. preARM$ADDR30 (r ' 13w) - n2w off) (LIST_COUNT size))) ==> (m ' l = m' ' l))
+		(!l. ~(MEM l (MAP (\off. preARM$MEM_ADDR (r ' 13w) - n2w off) (LIST_COUNT size))) ==> (m ' l = m' ' l))
 	)``,
 
 	SIMP_TAC std_ss [USED_STACK_def, read_thm, IMP_DISJ_THM])
