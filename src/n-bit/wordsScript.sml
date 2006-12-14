@@ -581,6 +581,7 @@ val word_xor_n2w = store_thm("word_xor_n2w",
      n2w (BITWISE ^WL (\x y. ~(x = y)) n m)`,
   SIMP_TAC fcp_ss [word_xor_def,n2w_11,n2w_def,BITWISE_THM]);
 
+
 (* ------------------------------------------------------------------------- *)
 (*  The Boolean operations : theorems                                        *)
 (* ------------------------------------------------------------------------- *)
@@ -2211,12 +2212,104 @@ val word_hs_n2w = store_thm("word_hs_n2w",
 (* Support for termination proofs                                            *)
 (* ------------------------------------------------------------------------- *)
 
+fun Cases_word' (g as (_,w)) =
+  let val (Bvar,_) = with_exn dest_forall w (ERR "Cases_word" "not a forall")
+  in (STRIP_TAC THEN STRUCT_CASES_TAC (Drule.ISPEC Bvar ranged_word_nchotomy)) g
+  end;
+
+val SUC_WORD_PRED = store_thm("SUC_WORD_PRED", 
+  `!x:'a word. ~(x = 0w) ==> (SUC (w2n (x - 1w)) = w2n x)`,
+  Cases_word' \\ Cases_on `n`
+  \\ FULL_SIMP_TAC std_ss [ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
+  \\ REPEAT STRIP_TAC
+  \\ CONV_TAC (RAND_CONV (REWRITE_CONV [word_add_n2w]))
+  \\ `n' < dimword (:'a)` by DECIDE_TAC  
+  \\ ASM_SIMP_TAC std_ss [w2n_n2w]);
+
 val WORD_PRED_THM = store_thm("WORD_PRED_THM",
   `!m:'a word. ~(m = 0w) ==> w2n (m - 1w) < w2n m`,
-  Cases_word \\ Cases_on `n` \\  RW_TAC arith_ss [w2n_n2w]
-    \\ POP_ASSUM MP_TAC \\ SIMP_TAC arith_ss [ZERO_MOD,ZERO_LT_TWOEXP,
-         ADD1,WORD_ADD_SUB,GSYM word_add_n2w,w2n_n2w,n2w_11,dimword_def,
-         (SIMP_RULE arith_ss [ZERO_LT_TWOEXP] o SPEC `^dimword_ML`) MOD_ADD_1]);
+  REPEAT STRIP_TAC \\ IMP_RES_TAC SUC_WORD_PRED \\ DECIDE_TAC);
+
+val word_sub_w2n = store_thm("word_sub_w2n", 
+  `!x:'a word y:'a word. y <=+ x ==> (w2n (x - y) = w2n x - w2n y)`,
+  Cases_word' \\ Cases_word'
+  \\ FULL_SIMP_TAC std_ss [WORD_LS,w2n_n2w]
+  \\ REPEAT STRIP_TAC
+  \\ `?k. n = k + n'` by METIS_TAC [LESS_EQ_EXISTS,ADD_COMM]
+  \\ `k < dimword (:'a)` by DECIDE_TAC
+  \\ ASM_SIMP_TAC std_ss [GSYM word_add_n2w,ADD_SUB,WORD_ADD_SUB,w2n_n2w]);
+
+val ZERO_LE_TOP_FALSE = prove(
+  `!n. 0w <= ((n2w n):'a word) = (BIT (dimindex (:'a) - 1) n = F)`,
+  SRW_TAC [] [word_le_n2w,LET_DEF]
+  \\ FULL_SIMP_TAC std_ss [BIT_def,BITS_def,MOD_2EXP_def,DIV_2EXP_def,ZERO_DIV,ZERO_MOD,
+                           ZERO_LT_EXP,EVAL ``0 < 2``]);
+
+val WORD_LE_EQ_LS = store_thm("WORD_LE_EQ_LS",
+  `!x y. 0w <= x /\ 0w <= y ==> (x <= y = x <=+ y)`,
+  Cases_word' \\ Cases_word'
+  \\ FULL_SIMP_TAC std_ss [WORD_LS,w2n_n2w,word_le_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
+
+val WORD_LT_EQ_LO = store_thm("WORD_LT_EQ_LO",
+  `!x y. 0w <= x /\ 0w <= y ==> (x < y = x <+ y)`,
+  Cases_word' \\ Cases_word'
+  \\ FULL_SIMP_TAC std_ss [WORD_LO,w2n_n2w,word_lt_n2w,LET_DEF,ZERO_LE_TOP_FALSE]);
+
+val WORD_ZERO_LE = store_thm("WORD_ZERO_LE",
+  `!w:'a word. 0w <= w = w2n w < INT_MIN (:'a)`,
+  Cases_word' \\ REWRITE_TAC [ZERO_LE_TOP_FALSE,GSYM word_msb_n2w,
+                              word_msb_n2w_numeric,w2n_n2w,NOT_LESS_EQUAL]);
+
+val WORD_ZERO_LE_SUB_LEMMA = prove(
+  `!x:'a word y. 0w <= x /\ y <=+ x ==> 0w <= x - y`,
+  `!m n k. m < n ==> m - k < n:num` by DECIDE_TAC 
+  \\ ASM_SIMP_TAC bool_ss [WORD_ZERO_LE,WORD_LS,REWRITE_RULE [WORD_LS] word_sub_w2n]);  
+
+val WORD_ZERO_LE_SUB = prove(
+  `!x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y`,
+  REPEAT STRIP_TAC
+  \\ IMP_RES_TAC WORD_LESS_EQ_TRANS
+  \\ MATCH_MP_TAC WORD_ZERO_LE_SUB_LEMMA
+  \\ ASM_SIMP_TAC std_ss [GSYM WORD_LE_EQ_LS]);
+
+val WORD_ZERO_LT_SUB = prove(
+  `!x:'a word y. 0w < y /\ y < x ==> 0w < x - y`,
+  REPEAT STRIP_TAC
+  \\ IMP_RES_TAC WORD_LESS_IMP_LESS_OR_EQ
+  \\ IMP_RES_TAC WORD_ZERO_LE_SUB
+  \\ `(0w < x - y) \/ (0w = x - y)` by ASM_REWRITE_TAC [GSYM WORD_LESS_OR_EQ]
+  \\ METIS_TAC [WORD_EQ_SUB_ZERO,WORD_LESS_NOT_EQ]);
+
+val WORD_LT_SUB_UPPER = prove(
+  `!x:'a word y. 0w < y /\ y < x ==> x - y < x`,
+  REPEAT STRIP_TAC
+  \\ IMP_RES_TAC WORD_LESS_TRANS
+  \\ IMP_RES_TAC WORD_LESS_IMP_LESS_OR_EQ
+  \\ IMP_RES_TAC WORD_ZERO_LE_SUB
+  \\ ASM_SIMP_TAC bool_ss [WORD_LT_EQ_LO,WORD_LO]  
+  \\ IMP_RES_TAC WORD_LE_EQ_LS
+  \\ ASM_SIMP_TAC bool_ss [word_sub_w2n]
+  \\ MATCH_MP_TAC (DECIDE ``!m k. ~(k = 0) /\ ~(m = 0) ==> m - k < m:num``) 
+  \\ IMP_RES_TAC WORD_LESS_NOT_EQ
+  \\ ASM_SIMP_TAC bool_ss [w2n_eq_0]);
+
+val WORD_LE_SUB_UPPER = prove(
+  `!x:'a word y. 0w <= y /\ y <= x ==> x - y <= x`,
+  REPEAT STRIP_TAC
+  \\ REWRITE_TAC [WORD_LESS_OR_EQ]
+  \\ `(0w < y) \/ (0w = y)` by ASM_REWRITE_TAC [GSYM WORD_LESS_OR_EQ]
+  \\ `(y < x) \/ (y = x)` by ASM_REWRITE_TAC [GSYM WORD_LESS_OR_EQ]
+  \\ ASM_SIMP_TAC bool_ss [WORD_LT_SUB_UPPER,WORD_SUB_REFL]
+  \\ METIS_TAC [WORD_SUB_RZERO]);
+
+val WORD_SUB_LT = store_thm("WORD_SUB_LT",
+  `!x:'a word y. 0w < y /\ y < x ==> 0w < x - y /\ x - y < x`,
+  SIMP_TAC bool_ss [WORD_LT_SUB_UPPER,WORD_ZERO_LT_SUB]);
+
+val WORD_SUB_LE = store_thm("WORD_SUB_LE",
+  `!x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y /\ x - y <= x`,
+  SIMP_TAC bool_ss [WORD_LE_SUB_UPPER,WORD_ZERO_LE_SUB]);
+
 
 (* ------------------------------------------------------------------------- *)
 (* Create a few word sizes                                                   *)
