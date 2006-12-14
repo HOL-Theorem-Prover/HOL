@@ -117,6 +117,11 @@ fun list_mk_rbinop _ [] = raise ERR "list_mk_rbinop" "empty list"
        in rev_itlist mk_binop t h
        end;
 
+(* For left-associative binary operators. Tail recursive. *)
+
+fun list_mk_lbinop _ [] = raise ERR "list_mk_lbinop" "empty list"
+  | list_mk_lbinop mk_binop (h::t) = rev_itlist (C mk_binop) t h;
+
 fun mk_binder c f (p as (Bvar,_)) =
    mk_comb(inst[alpha |-> type_of Bvar] c, mk_abs p)
    handle HOL_ERR {message,...} => raise ERR f message;
