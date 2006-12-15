@@ -1359,33 +1359,6 @@ fun store_thms prefix suffix f list =
 
 (* address mode 1 *)
 
-val NOT_REG_SHIFT = prove(
-  ``!Op2. ~IS_REG_SHIFT Op2 ==> (~IS_DP_IMMEDIATE Op2 /\
-      ((11 >< 0) (addr_mode1_encode Op2)):word12 %% 4 = F)``,
-  Cases \\ SRW_TAC []
-    [IS_REG_SHIFT_def, IS_DP_IMMEDIATE_def, shift_immediate_shift_register]);
-
-val shift_imm_SELECT4 = prove(
-  ``!m. ((11 >< 0) (addr_mode1_encode (Dp_shift_immediate m 0w))):word12 %% 4 = F``,
-  METIS_TAC [IS_DP_IMMEDIATE_def,shift_immediate_shift_register,NOT_REG_SHIFT]);
-
-val ADDR_MODE1_ONE_REG_LEMMA =
-  (REWRITE_CONV [IS_DP_IMMEDIATE_def] THENC 
-   REWRITE_CONV [ADDR_MODE1_def,shift_immediate_enc] THENC
-   SIMP_CONV (srw_ss()) [LSL_def,shift_imm_SELECT4])
-    ``ADDR_MODE1 state.registers mode (cpsr %% 29)
-       (IS_DP_IMMEDIATE (Dp_shift_immediate (LSL m) 0w))
-         ((11 >< 0) (addr_mode1_encode (Dp_shift_immediate (LSL m) 0w)))``;
-
-val ADDR_MODE1_ONE_IMM_LEMMA =
-  (REWRITE_CONV [IS_DP_IMMEDIATE_def] THENC
-   REWRITE_CONV [ADDR_MODE1_def,immediate_enc] THENC 
-   SIMP_CONV (srw_ss()) [ROR_def,LSL_def] THENC
-   RATOR_CONV EVAL THENC SIMP_CONV bool_ss [GSYM w2w_def])
-     ``ADDR_MODE1 state.registers mode (cpsr %% 29)
-         (IS_DP_IMMEDIATE (Dp_immediate 0w k))
-            ((11 >< 0) (addr_mode1_encode (Dp_immediate 0w k)))``
-
 val _ = Hol_datatype `
   abbrev_addr1 = OneReg | Imm of word8`;
 
@@ -1404,7 +1377,9 @@ val ADDR_MODE1_VAL_THM = prove(
         ADDR_MODE1_VAL c (REG_READ state.registers mode Rd) (cpsr %% 29)``,
   Cases_on `c`
   \\ REWRITE_TAC [ADDR_MODE1_CMD_def,ADDR_MODE1_VAL_def]
-  \\ REWRITE_TAC [ADDR_MODE1_ONE_REG_LEMMA,ADDR_MODE1_ONE_IMM_LEMMA]);
+  \\ REWRITE_TAC [IS_DP_IMMEDIATE_def,shift_immediate_shift_register,ADDR_MODE1_def]
+  \\ REWRITE_TAC [immediate_enc,shift_immediate_enc]
+  \\ SRW_TAC [] [ROR_def,w2w_def,LSL_def,word_mul_n2w]);
 
 val FIX_ADDR_MODE1 = 
   RW [ADDR_MODE1_VAL_THM] o
@@ -1421,7 +1396,7 @@ val _ = Hol_datatype `
   abbrev_addr2' = RegOff' of bool # bool # bool # word12`;
 
 val ADDR_MODE2_CMD1'_def = Define `
-  (ADDR_MODE2_CMD1' (RegOff' (pre,up,wb,imm)) = <| Pre:=pre; Up:=up; BSN:=F; Wb:=wb |>)`;
+  (ADDR_MODE2_CMD1' (RegOff' (pre,up,wb,imm)) = <| Pre:=pre; Up:=up; Wb:=wb |>)`;
 
 val ADDR_MODE2_CMD2'_def = Define `
   (ADDR_MODE2_CMD2' (RegOff' (pre,up,wb,imm)) = Dt_immediate imm)`;
@@ -1445,8 +1420,7 @@ val ADDR_MODE2_WB'_def = Define `
 val REG_WRITE_READ = prove(
   ``!rs m r. ~(r = 15w) ==> (REG_WRITE rs m r (REG_READ rs m r) = rs)``,
   REWRITE_TAC [FUN_EQ_THM]
-  \\ SIMP_TAC bool_ss [REG_WRITE_def,REG_READ_def]
-  \\ SRW_TAC [] [SUBST_def]);
+  \\ SIMP_TAC bool_ss [REG_WRITE_def,REG_READ_def] \\ SRW_TAC [] [SUBST_def]);
 
 val AM2'_Cases = 
   Cases_on `c` \\ Cases_on `p` \\ Cases_on `r` \\ Cases_on `r'`
@@ -1491,10 +1465,6 @@ val ADDR_MODE2_ADDR'_THM = prove(
   \\ SIMP_TAC bool_ss [LET_DEF,pairTheory.FST,UP_DOWN_def]
   \\ REWRITE_TAC [immediate_enc2]);
 
-val ADDR_MODE2_WORD_ONLY = prove(
-  ``!c. (ADDR_MODE2_CMD1' c).BSN = F``,
-  AM2'_Cases \\ SRW_TAC [] [ADDR_MODE2_CMD1'_def]);
-
 (* address mode 2 aligned *)
 
 val _ = Hol_datatype `
@@ -1504,7 +1474,7 @@ val MAKE_NONALIGNED_def = Define `
   (MAKE_NONALIGNED (RegOff (pre,up,wb,imm)) = RegOff' (pre,up,wb,w2w imm << 2))`;
 
 val ADDR_MODE2_CMD1_def = Define `
-  (ADDR_MODE2_CMD1 (RegOff (pre,up,wb,imm)) = <| Pre:=pre; Up:=up; BSN:=F; Wb:=wb |>)`;
+  (ADDR_MODE2_CMD1 (RegOff (pre,up,wb,imm)) = <| Pre:=pre; Up:=up; Wb:=wb |>)`;
 
 val ADDR_MODE2_CMD2_def = Define `
   (ADDR_MODE2_CMD2 (RegOff (pre,up,wb,imm)) = Dt_immediate ((w2w imm) << 2))`;
@@ -2142,16 +2112,18 @@ val SWP2 =
 (* LDR and STR INSTRUCTIONS                                                      *)
 (* ----------------------------------------------------------------------------- *)
 
+val FORMAT_UnsignedWord = SIMP_CONV (srw_ss()) [FORMAT_def] ``FORMAT UnsignedWord x y``;
+
 fun FIX_ADDR_MODE2 th = 
   let
     val th = SPEC_ALL th
     val th = DISCH_ALL (ASM_UNABBREV_ALL_RULE (UD_ALL th))
     val th = RW [GSYM state_mode_def] th
     val th = Q.GEN `opt` (Q.GEN `offset` th)
+    val th = Q.INST [`b`|->`F`] th
     val th = Q.ISPEC `ADDR_MODE2_CMD1' a_mode` th
     val th = Q.ISPEC `ADDR_MODE2_CMD2' a_mode` th
-    val th = RW [ADDR_MODE2_WORD_ONLY] th
-    val th = SIMP_RULE bool_ss [ADDR_MODE2_WB'_THM,ADDR_MODE2_ADDR'_THM] th
+    val th = SIMP_RULE bool_ss [ADDR_MODE2_WB'_THM,ADDR_MODE2_ADDR'_THM,FORMAT_UnsignedWord] th
   in UD_ALL th end;
 
 fun AM2_ALIGN_ADDRESSES var th =
@@ -2566,7 +2538,7 @@ val spec_list_sem_def = Define `
     ALL_DISTINCT (MAP FST xs) /\ ALL_DISJOINT (xM_list_addresses ys) /\
     (q = spec_list_select (xs,ys,st,ud,rt))`;
   
-val spec_list_thm = prove(
+val spec_list_thm = store_thm("spec_list_thm",
   ``!xs ys st ud rt cd q s.
       (spec_list xs ys st ud rt cd) (arm2set' q s) = 
       spec_list_sem xs ys st ud rt cd q s``,
@@ -2656,18 +2628,14 @@ val _ = Hol_datatype `
                  am4_FA of bool | am4_FD of bool | am4_EA of bool | am4_ED of bool`;
 
 val ADDR_MODE4_CMD_def = Define `
-  (ADDR_MODE4_CMD (am4_DA wb) = <| Pre:=F; Up:=F; BSN:=F; Wb:=wb |>) /\ 
-  (ADDR_MODE4_CMD (am4_FA wb) = <| Pre:=F; Up:=F; BSN:=F; Wb:=wb |>) /\ 
-  (ADDR_MODE4_CMD (am4_IA wb) = <| Pre:=F; Up:=T; BSN:=F; Wb:=wb |>) /\
-  (ADDR_MODE4_CMD (am4_FD wb) = <| Pre:=F; Up:=T; BSN:=F; Wb:=wb |>) /\
-  (ADDR_MODE4_CMD (am4_DB wb) = <| Pre:=T; Up:=F; BSN:=F; Wb:=wb |>) /\
-  (ADDR_MODE4_CMD (am4_EA wb) = <| Pre:=T; Up:=F; BSN:=F; Wb:=wb |>) /\
-  (ADDR_MODE4_CMD (am4_IB wb) = <| Pre:=T; Up:=T; BSN:=F; Wb:=wb |>) /\
-  (ADDR_MODE4_CMD (am4_ED wb) = <| Pre:=T; Up:=T; BSN:=F; Wb:=wb |>)`;
-
-val NOT_ADDR_MODE4_BSN = prove(
-  ``!x. (ADDR_MODE4_CMD x).BSN = F``,
-  Cases_on `x` \\ SRW_TAC [] [ADDR_MODE4_CMD_def]);
+  (ADDR_MODE4_CMD (am4_DA wb) = <| Pre:=F; Up:=F; Wb:=wb |>) /\ 
+  (ADDR_MODE4_CMD (am4_FA wb) = <| Pre:=F; Up:=F; Wb:=wb |>) /\ 
+  (ADDR_MODE4_CMD (am4_IA wb) = <| Pre:=F; Up:=T; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_FD wb) = <| Pre:=F; Up:=T; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_DB wb) = <| Pre:=T; Up:=F; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_EA wb) = <| Pre:=T; Up:=F; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_IB wb) = <| Pre:=T; Up:=T; Wb:=wb |>) /\
+  (ADDR_MODE4_CMD (am4_ED wb) = <| Pre:=T; Up:=T; Wb:=wb |>)`;
 
 val reg_bitmap_def = Define `
   reg_bitmap (xs:word4 list) = (FCP i. MEM (n2w i) xs):word16`;
@@ -2788,8 +2756,6 @@ val SORTED_LO_IMP_EQ = store_thm("SORTED_LOWER_IMP_EQ",
   \\ `MEM h' xs` by METIS_TAC []
   \\ `?hs' zs'. xs = hs' ++ [h'] ++ zs'` by METIS_TAC [MEM_EQ_EXISTS]
   \\ FULL_SIMP_TAC std_ss [EVERY_APPEND,EVERY_DEF] \\ METIS_TAC [WORD_LOWER_ANTISYM]);
-
-
 
 
 val LEAST_MEM_def = Define `
@@ -3169,7 +3135,7 @@ val LDM_STATE_def = Define `
 val ldm = simple_clean ARM_LDM [``~(Rd = 15w:word4)``]
 val ldm = Q.INST [`opt`|->`ADDR_MODE4_CMD am4`] ldm
 val ldm = Q.INST [`list`|->`reg_bitmap (MAP FST (xs:(word4 # word32) list))`] ldm
-val ldm = REWRITE_RULE [NOT_ADDR_MODE4_BSN] ldm
+val ldm = Q.INST [`s_flag`|->`F`] ldm
 val ldm = DISCH ``reg Rd s = addr32 p`` ldm
 val ldm = DISCH ``ALL_DISTINCT (MAP FST (xs:(word4 # word32) list))`` ldm
 val ldm = SIMP_RULE bool_ss [ADDR_MODE4_FORMAT,FST,SND,ADDR_MODE4_WB_THM,
@@ -3506,7 +3472,7 @@ val raw_LDM = prove(
      (R30 a x * 
       xR_list (MAP (\x.(FST x,NONE)) xs) * 
       ms (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) * S st * PASS c st) 
-     [enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))] {}
+     [enc (LDM c F (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))] {}
      (R30 a (ADDR_MODE4_WB am4 x xs) *
       xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
       ms (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) * S st) {}``,
@@ -3517,7 +3483,7 @@ val raw_LDM = prove(
          LDM_SIMP_LEMMA,ALL_DISTINCT,MEM]
   \\ `CONDITION_PASSED2 (status s) c` by METIS_TAC []
   \\ `mem (addr30 (reg 15w s)) s =
-      enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))` 
+      enc (LDM c F (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))` 
          by METIS_TAC [addr30_addr32]
   \\ `~(a = 15w)` by METIS_TAC []
   \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
@@ -3547,7 +3513,7 @@ val raw_LDM_PC = prove(
       xR_list (MAP (\x.(FST x,NONE)) xs) * 
       ms (ADDR_MODE4_ADDR am4 x ((15w,addr32 p)::xs)) 
          (reg_values ((15w,addr32 p)::xs)) * S st * PASS c st) 
-     [enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (15w :: MAP FST xs)))] {} SEP_F
+     [enc (LDM c F (ADDR_MODE4_CMD am4) a (reg_bitmap (15w :: MAP FST xs)))] {} SEP_F
      {(R30 a (ADDR_MODE4_WB am4 x ((15w,addr32 p)::xs)) *
        xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
        ms (ADDR_MODE4_ADDR am4 x ((15w,addr32 p)::xs)) (reg_values ((15w,addr32 p)::xs)) * S st,pcSET p)}``,
@@ -3558,7 +3524,7 @@ val raw_LDM_PC = prove(
          LDM_SIMP_LEMMA,ALL_DISTINCT,MEM]
   \\ `CONDITION_PASSED2 (status s) c` by METIS_TAC []
   \\ `mem (addr30 (reg 15w s)) s =
-      enc (LDM c (ADDR_MODE4_CMD am4) a (reg_bitmap (15w::MAP FST xs)))` 
+      enc (LDM c F (ADDR_MODE4_CMD am4) a (reg_bitmap (15w::MAP FST xs)))` 
          by METIS_TAC [addr30_addr32]
   \\ `~(a = 15w)` by METIS_TAC []
   \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
@@ -3630,7 +3596,7 @@ val STM_STATE_def = Define `
 val stm = simple_clean ARM_STM [``~(Rd = 15w:word4)``]
 val stm = Q.INST [`opt`|->`ADDR_MODE4_CMD am4`] stm
 val stm = Q.INST [`list`|->`reg_bitmap (MAP FST (xs:(word4 # word32) list))`] stm
-val stm = REWRITE_RULE [NOT_ADDR_MODE4_BSN] stm
+val stm = Q.INST [`s_flag`|->`F`] stm
 val stm = DISCH ``reg Rd s = addr32 p`` stm
 val stm = DISCH ``ALL_DISTINCT (MAP FST (xs:(word4 # word32) list))`` stm
 val stm = SIMP_RULE bool_ss [ADDR_MODE4_FORMAT,FST,SND,ADDR_MODE4_WB_THM] stm
@@ -3796,7 +3762,7 @@ val raw_STM = prove(
      (R30 a x * 
       xR_list (MAP (\x.(FST x,SOME (SND x))) xs) * 
       blank_ms (ADDR_MODE4_ADDR am4 x xs) (LENGTH xs) * S st * PASS c st) 
-     [enc (STM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))] {}
+     [enc (STM c F (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))] {}
      (R30 a (ADDR_MODE4_WB am4 x xs) *
       xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
       ms (ADDR_MODE4_ADDR am4 x xs) (reg_values xs) * S st) {}``,
@@ -3807,7 +3773,7 @@ val raw_STM = prove(
          LDM_SIMP_LEMMA,ALL_DISTINCT,MEM,LENGTH_reg_values,ALL_DISJOINT_def,EVERY_DEF]
   \\ `CONDITION_PASSED2 (status s) c` by METIS_TAC []
   \\ `mem (addr30 (reg 15w s)) s =
-      enc (STM c (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))` 
+      enc (STM c F (ADDR_MODE4_CMD am4) a (reg_bitmap (MAP FST xs)))` 
          by METIS_TAC [addr30_addr32]
   \\ `~(a = 15w)` by METIS_TAC []
   \\ ASSUME_TAC ((UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o UNDISCH o 
