@@ -89,7 +89,7 @@ val FORMAT_def = Define`
     || UnsignedByte     -> w2w (GET_BYTE oareg data)
     || SignedHalfWord   -> sw2sw (GET_HALF oareg data)
     || UnsignedHalfWord -> w2w (GET_HALF oareg data)
-    || UnsignedWord     -> data`;
+    || UnsignedWord     -> data #>> (8 * w2n oareg)`;
 
 val SET_BYTE_def = Define`
   SET_BYTE (oareg:word2) (b:word8) (w:word32) =
