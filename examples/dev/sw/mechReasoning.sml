@@ -26,6 +26,15 @@ structure mechReasoning = struct
 
 infix ++ THENC ORELSEC THEN THENL ORELSE |-> ##;
 
+val used_thm_num = ref 1;
+
+fun get_new_thm_name () =
+	let
+		val n = !used_thm_num;
+		val _ = used_thm_num := (n+1);
+	in
+		"lemma_"^(Int.toString n)
+	end
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *) 
 (*---------------------------------------------------------------------------------*)
@@ -267,16 +276,89 @@ fun elim_decode th =
 
 (*
 	val stms = instL*)
+fun printProof [] = () |
+    printProof (e::l) = (print e;print "\n";printProof l)
+
+fun printProofToFile file_name p =
+	let
+	   val file_st = TextIO.openOut(file_name);
+		val _ = map (fn s => TextIO.output(file_st, s^"\n")) p;
+   	val _ = TextIO.output(file_st, "\n\n");
+      val _ = TextIO.flushOut file_st;
+	   val _ = TextIO.closeOut file_st;
+	in
+		()
+	end;
+
+fun append_proofs [] = [] |
+	 append_proofs [e] = e |
+	 append_proofs (h::l) = h@[""]@(append_proofs l);
+
+val LET_ELIM_RULE = SIMP_RULE std_ss [LET_THM];
+fun SPLIT_SPEC_RULE spec =
+	let
+		val thmL = CONJUNCTS (LET_ELIM_RULE spec)
+	in
+		(el 1 thmL, el 2 thmL, el 3 thmL)
+	end;
+
+
+fun make_proof_string term tac =
+	let
+ 	   val name = get_new_thm_name ();
+		val line1 = "val "^name^" = prove (";
+		val line2 = "``"^(term_to_string term)^"``,";
+		val tac' = map (fn s => ("   "^s)) tac;
+	in
+		(name, (line1::line2::tac')@[");"])
+	end
+
+fun cheat_tac (asl,g) = ACCEPT_TAC(ASSUME g) (asl,g);
+
+fun make_assume_string term =
+	let
+ 	   val name = get_new_thm_name ();
+		val line1 = "val "^name^" = mk_oracle_thm \"ARM-Compiler\"";
+		val line2 = "([], ``"^(term_to_string term)^"``);";
+	in
+				(name, [line1,line2])
+	end
+
+fun make_proof_split_spec thm_name =
+	let
+ 	   val name1 = get_new_thm_name ();
+ 	   val name2 = get_new_thm_name ();
+ 	   val name3 = get_new_thm_name ();
+
+
+		val line = "val ("^name1^","^name2^","^name3^") = SPLIT_SPEC_RULE "^thm_name^";";
+	in
+		([name1, name2, name3], [line])
+	end
+
+fun sim_stms_CONV instance =
+	let
+     val th0 =  REWRITE_CONV [IR_SEMANTICS_BLK] instance;
+     val th1 = SIMP_RULE std_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] th0;
+     val th2 = elim_decode th1              (* symbolically simulate the block *)
+	in
+		th2
+	end;
+
 fun sim_stms blk = 
   let
      val st = mk_pair (mk_var ("regs", Type `:REGISTER |-> DATA`), mk_var ("mem", Type `:ADDR |-> DATA`));
      val instance = list_mk_comb (Term`run_ir:CTL_STRUCTURE -> DSTATE -> DSTATE`, [blk, st]);
-     val th0 =  REWRITE_CONV [IR_SEMANTICS_BLK] instance;
-     val th1 = SIMP_RULE std_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] th0;
-     val th2 = elim_decode th1              (* symbolically simulate the block *)
+
+	  val thm = sim_stms_CONV instance;
+	
+	  val (name, proof) = make_proof_string (concl thm)
+			["CONV_TAC (LHS_CONV sim_stms_CONV) THEN", "REWRITE_TAC[]"]
+
   in
-     th2
+     (thm, name, proof)
   end;
+
 
 (*---------------------------------------------------------------------------------*)
 (*      PSPEC specification and Mechanized Reasoning                               *) 
@@ -352,20 +434,46 @@ fun mk_PSPEC ir (pre_st,post_st) (ins,outs) =
 (*
 fun extract (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) =
 (instL, ins, outs, context);
-val (instL, ins, outs, context) = extract pre_ir;
+val (instL, ins, outs, context) = extract f_ir;
 val (unchanged_list, _) = unchanged_lists_weak
 val unchanged_list = emptyset
 mk_blk_spec pre_ir unchanged_lists_weak
 val stack_size = 1
 *)
 
+fun blk_UNCHANGED_TAC spec =
+	REWRITE_TAC[UNCHANGED_THM, spec, EVERY_DEF] THEN
+	BETA_TAC THEN
+	REWRITE_TAC[read_thm, toREG_def, index_of_reg_def, FAPPLY_FUPDATE_THM, word4_distinct];
 
+fun blk_USED_STACK_TAC stack_size spec =
+	let
+		val stack_size_thm =
+			let
+				val nterm = mk_comb (Term `LIST_COUNT`, (term_of_int stack_size));
+			in
+				(REDEPTH_CONV num_CONV) nterm handle UNCHANGED => REFL nterm
+			end
+	in
+		(REWRITE_TAC [USED_STACK_THM, spec, MAP, read_thm, Once stack_size_thm, LIST_COUNT_def] THEN
+		SIMP_TAC list_ss [] THEN
+		CONV_TAC WORDS_CONV THEN
+		ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM])
+	end;	
+
+fun blk_SPEC_TAC unchanged_thm used_stack_thm spec =
+	(
+		SIMP_TAC std_ss [LET_THM, PSPEC_def, HSPEC_def, FORALL_DSTATE, BLOCK_IS_WELL_FORMED, read_thm, unchanged_thm, UNCHANGED_STACK_def, used_stack_thm] THEN
+		SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm, spec] THEN
+		CONV_TAC SIM_MEM_CONV THEN
+		SIMP_TAC std_ss [pair_induction]
+	);
 
 
 fun mk_blk_spec (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) unchanged_list = 
   let 	
 		val (blk, stack_size) = IRSyntax.convert_instL instL;
-      val th = sim_stms blk;
+      val (th, th_name, th_proof) = sim_stms blk;
       val t1 = concl th;
       val spec_terms = (#2 (strip_comb (lhs t1)), rhs t1);
 		val blk_ir = el 1 (#1 spec_terms);
@@ -379,25 +487,17 @@ fun mk_blk_spec (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = conte
       val unchanged_term = list_mk_comb (Term`UNCHANGED`, [mk_unchanged_term unchanged_list, blk_ir]);
 
 		val unchanged_thm = prove (unchanged_term, (* set_goal ([],unchanged_term) *)
-			REWRITE_TAC[UNCHANGED_THM, th, EVERY_DEF] THEN
-			BETA_TAC THEN
-			REWRITE_TAC[read_thm, toREG_def, index_of_reg_def, FAPPLY_FUPDATE_THM, word4_distinct]);
+			blk_UNCHANGED_TAC th);
+	  val (unchanged_thm_name, unchanged_thm_proof) = make_proof_string unchanged_term
+			["blk_UNCHANGED_TAC "^th_name]
 
       val used_stack_term = list_mk_comb (Term`USED_STACK`, [ term_of_int stack_size, blk_ir]);
 
-		val stack_size_thm =
-			let
-				val nterm = mk_comb (Term `LIST_COUNT`, (term_of_int stack_size));
-			in
-				(REDEPTH_CONV num_CONV) nterm handle UNCHANGED => REFL nterm
-			end
-
 		val used_stack_thm = prove (used_stack_term, (* set_goal ([],used_stack_term) *)
-			REWRITE_TAC [USED_STACK_THM, th, MAP, read_thm, Once stack_size_thm, LIST_COUNT_def] THEN
-			SIMP_TAC list_ss [] THEN
-			CONV_TAC WORDS_CONV THEN
-			ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM])
+			blk_USED_STACK_TAC stack_size th)
 
+	  val (used_stack_thm_name, used_stack_thm_proof) = make_proof_string used_stack_term
+			["blk_USED_STACK_TAC "^(Int.toString stack_size)^" "^th_name]
 			
       val unchanged_spec = list_mk_comb (Term`UNCHANGED_STACK`, [mk_unchanged_term unchanged_list, term_of_int stack_size, ir_abbr]);
 
@@ -409,14 +509,14 @@ fun mk_blk_spec (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = conte
       val fspec = mk_let (mk_abs (ir_abbr, list_mk_conj [f_spec', wf_spec, unchanged_spec]), blk_ir); 
 
       val spec = prove (fspec,   (* set_goal ([],fspec) *)
-             SIMP_TAC std_ss [LET_THM, PSPEC_def, HSPEC_def, FORALL_DSTATE, BLOCK_IS_WELL_FORMED, read_thm, unchanged_thm, UNCHANGED_STACK_def, used_stack_thm] THEN
- 				 SIMP_TAC list_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm, th] THEN
-             CONV_TAC SIM_MEM_CONV THEN
-             SIMP_TAC std_ss [pair_induction]
-            )
+             blk_SPEC_TAC unchanged_thm used_stack_thm th)
 				
+		val (spec_thm_name, spec_thm_proof) = make_proof_string fspec
+				["blk_SPEC_TAC "^unchanged_thm_name^" "^used_stack_thm_name^" "^th_name]
+
+		val proofs = append_proofs [th_proof, unchanged_thm_proof, used_stack_thm_proof, spec_thm_proof]		
    in
-     (spec, th)
+     (spec, spec_thm_name, th, th_name, proofs)
    end
  | mk_blk_spec _ _ = 
      raise Fail "mk_blk_spec: BLK is expected!";
@@ -460,10 +560,24 @@ fun get_spec_info spec =
      handle e => (print "get_spec_info: the input is not valid PSPEC and UNCHANGED"; Raise e);
 
 (*
-val (ir1_spec, ir1_wf, ir2_spec, ir2_wf) = 
-((el 1 preL), (el 2 preL), (el 1 bodyL), (el 2 bodyL));*)
+val (ir1_spec, ir1_spec_name, ir1_wf, ir1_wf_name, ir2_spec, ir2_spec_name, ir2_wf, ir2_wf_name, proofs) = 
+(
+(el 1 specL1), (el 1 specL1_name), (el 2 specL1), (el 2 specL1_name), (el 1 specL2), (el 1 specL2_name), (el 2 specL2), (el 2 specL2_name), [])
+*)
 
-fun mk_sc_spec___pre ir1_spec ir1_wf ir2_spec ir2_wf = 
+fun sc_SPEC_TAC ir1_spec ir2_spec ir1_wf ir2_wf post_p1 out_f1 =
+	MATCH_MP_TAC PRJ_SC_RULE THEN
+	EXISTS_TAC post_p1 THEN EXISTS_TAC out_f1 THEN
+	SIMP_TAC std_ss [ir1_spec, ir2_spec, ir1_wf, ir2_wf] THEN
+	MP_TAC ir2_spec THEN
+	SIMP_TAC std_ss [PSPEC_def, HSPEC_def]
+
+fun sc_WELL_FORMED_TAC ir1_wf ir2_wf =
+	ONCE_REWRITE_TAC [GSYM IR_SC_IS_WELL_FORMED] THEN
+   SIMP_TAC std_ss [ir1_wf, ir2_wf];
+
+
+fun mk_sc_spec___pre ir1_spec ir1_spec_name ir1_wf ir1_wf_name ir2_spec ir2_spec_name ir2_wf ir2_wf_name proofs = 
   let 
       val (ir1,(pre_p1,post_p1),stk_f,(ins1,f1,outs1)) = get_spec_info (concl ir1_spec);
       val (ir2,(pre_p2,post_p2),stk_f,(ins2,f2,outs2)) = get_spec_info (concl ir2_spec);
@@ -476,7 +590,6 @@ fun mk_sc_spec___pre ir1_spec ir1_wf ir2_spec ir2_wf =
       
       (* the characteristic function of SC *)
       val sc_f = combinSyntax.mk_o (f2,f1); 
-		val sc_f_thm = (SIMP_CONV std_ss [combinTheory.o_DEF, pairTheory.LAMBDA_PROD] sc_f);
       val (in_f,out_f) = (mk_pabs (st,ins1), mk_abs (st,outs2));
       val out_f1 = mk_pabs (st, outs1);       
       val stk_tp = hd (tl (#2 (dest_type (type_of stk_f))));
@@ -486,42 +599,69 @@ fun mk_sc_spec___pre ir1_spec ir1_wf ir2_spec ir2_wf =
                                 [sc_ir, mk_pair(pre_p1, post_p2), stk_f, list_mk_pair[in_f,sc_f,out_f]]);
 
       val f_th =  prove (f_spec,   (* set_goal ([],f_spec) *)
-                        MATCH_MP_TAC PRJ_SC_RULE THEN
-                        EXISTS_TAC post_p1 THEN EXISTS_TAC out_f1 THEN
-                        SIMP_TAC std_ss [ir1_spec, ir2_spec, ir1_wf, ir2_wf] THEN
-								MP_TAC ir2_spec THEN
-								SIMP_TAC std_ss [PSPEC_def, HSPEC_def]
+      	sc_SPEC_TAC ir1_spec ir2_spec ir1_wf ir2_wf post_p1 out_f1
 		        )
+
+		val _ = show_types := true;
+		val post_p1_string = term_to_string post_p1;
+		val out_f1_string = term_to_string out_f1;
+		val _ = show_types := false;
+		val (f_th_name, f_th_proof) = make_proof_string f_spec
+				["sc_SPEC_TAC "^ir1_spec_name^" "^ir2_spec_name^" "
+				 ^ir1_wf_name^" "^ir2_wf_name^" (Term `"^post_p1_string^"`) (Term `"^out_f1_string^"`)"]
+
+		val sc_f_thm = (SIMP_CONV std_ss [combinTheory.o_DEF, pairTheory.LAMBDA_PROD] sc_f);
+		val (sc_f_thm_name, sc_f_thm_proof) = make_proof_string (concl sc_f_thm)
+				["CONV_TAC (LHS_CONV (SIMP_CONV std_ss [combinTheory.o_DEF, pairTheory.LAMBDA_PROD])) THEN", "REWRITE_TAC[]"]
+
 		val f_th = REWRITE_RULE [sc_f_thm] f_th
+		val (f_th_name', f_th_proof') = make_proof_string (concl f_th)
+				["REWRITE_TAC [Once (GSYM "^sc_f_thm_name^"), "^f_th_name^"]"]
+
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, sc_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      ONCE_REWRITE_TAC [GSYM IR_SC_IS_WELL_FORMED] THEN
-                      SIMP_TAC std_ss [ir1_wf, ir2_wf]
+                      sc_WELL_FORMED_TAC ir1_wf ir2_wf
 	        );
+		val (well_formed_th_name, well_formed_th_proof) = make_proof_string well_formed_spec
+				["sc_WELL_FORMED_TAC "^ir1_wf_name^" "^ir2_wf_name]
+
+		val proofs' = append_proofs [proofs,  f_th_proof, sc_f_thm_proof, f_th_proof', well_formed_th_proof];
+
 	in
-		(f_th, well_formed_th, sc_ir)
+		(f_th, f_th_name', well_formed_th, well_formed_th_name, sc_ir, proofs')
 	end;
 	  
 (*
-val (ir1_spec, ir2_spec) = (spec1, spec2)
-*)
-fun mk_sc_spec ir1_spec ir2_spec unchanged_list = 
-  let 
-		val ir1_spec = (SIMP_RULE std_ss [LET_THM] ir1_spec)
-		val ir2_spec = (SIMP_RULE std_ss [LET_THM] ir2_spec)
-      val specL1 = CONJUNCTS ir1_spec
-      val specL2 = CONJUNCTS ir2_spec
+val (ir1_spec, ir1_name, ir2_spec, ir2_name, proofs) = (spec1, spec1_name, spec2, spec2_name, [])
 
-		val (ir_spec, ir_wf, sc_ir) =
-			mk_sc_spec___pre (el 1 specL1) (el 2 specL1) (el 1 specL2) (el 2 specL2);
+          mk_sc_spec spec1 spec1_name spec2 spec2_name unchanged_list proofs2
+
+*)
+
+fun sc_UNCHANGED_TAC ir1_wf ir1_unchanged ir2_wf ir2_unchanged =
+	MATCH_MP_TAC IR_SC_UNCHANGED_STACK THEN
+	SIMP_TAC list_ss [ir1_unchanged, ir2_unchanged, ir1_wf, ir2_wf]
+
+
+fun mk_sc_spec ir1_spec ir1_name ir2_spec ir2_name proofs = 
+  let 
+      val specL1 = CONJUNCTS (LET_ELIM_RULE ir1_spec)
+		val (specL1_name, specL1_proof) = make_proof_split_spec ir1_name;
+      val specL2 = CONJUNCTS (LET_ELIM_RULE ir2_spec)
+		val (specL2_name, specL2_proof) = make_proof_split_spec ir2_name;
+		
+		val proofs' = append_proofs [proofs, specL1_proof, specL2_proof];
+		val (ir_spec, ir_spec_name, ir_wf, ir_wf_name, sc_ir, proofs'') =
+			mk_sc_spec___pre (el 1 specL1) (el 1 specL1_name) (el 2 specL1) (el 2 specL1_name) (el 1 specL2) (el 1 specL2_name) (el 2 specL2) (el 2 specL2_name) proofs';
 
 		val unchanged_spec = make_unchanged_stack_term (concl (el 3 specL1)) (concl (el 3 specL2)) sc_ir
 
       val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)
-                      MATCH_MP_TAC IR_SC_UNCHANGED_STACK THEN
-                      SIMP_TAC list_ss [ir1_spec, ir2_spec]
+				sc_UNCHANGED_TAC (el 2 specL1) (el 3 specL1) (el 2 specL2) (el 3 specL2) 
 	        );
+		val (unchanged_th_name, unchanged_th_proof) = make_proof_string unchanged_spec
+				["sc_UNCHANGED_TAC "^(el 2 specL1_name)^" "^(el 3 specL1_name)^" "^(el 2 specL2_name)^" "^(el 3 specL2_name)]
 
       val ir_abbr = mk_var ("ir", Type `:CTL_STRUCTURE`);
       val spec = subst [sc_ir |-> ir_abbr] (list_mk_conj [concl ir_spec, concl ir_wf, unchanged_spec]);
@@ -531,6 +671,11 @@ fun mk_sc_spec ir1_spec ir2_spec unchanged_list =
 			SIMP_TAC std_ss [LET_THM, ir_spec, ir_wf, unchanged_th]
 		      )
 
+		val (th_name, th_proof) = make_proof_string spec'
+				["SIMP_TAC std_ss [LET_THM,"^ir_spec_name^","^
+				 ir_wf_name^","^unchanged_th_name^"]"]
+
+		val proofs''' = append_proofs[proofs'', unchanged_th_proof, th_proof]
 (*
       val sc_th_term = mk_comb(mk_comb (Term`run_ir`,sc_ir), Term `(r, m):DSTATE`);
 	   val sc_th =
@@ -540,7 +685,7 @@ fun mk_sc_spec ir1_spec ir2_spec unchanged_list =
 
 
    in
-      th
+      (th, th_name, proofs''')
    end;
 
 (*---------------------------------------------------------------------------------*)
@@ -554,27 +699,120 @@ fun compute_outL modifiedRegL =
     end
 
 
-fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list) = 
-	let
-		val pre_spec = (SIMP_RULE std_ss [LET_THM] pre_spec)
-		val body_spec = (SIMP_RULE std_ss [LET_THM] body_spec)
-		val post_spec = (SIMP_RULE std_ss [LET_THM] post_spec)
 
-      val preL = CONJUNCTS pre_spec;
-      val bodyL = CONJUNCTS body_spec;
-      val postL = CONJUNCTS post_spec;
+fun fc_body_PSPEC body_pspec body_unchanged new_stack_size =
+		let
+			val new_stack_size_thm =
+				let
+					val nterm = mk_comb (Term `LIST_COUNT`, (term_of_int new_stack_size));
+				in
+					(REDEPTH_CONV num_CONV) nterm handle UNCHANGED => REFL nterm
+				end
+		in
+			MP_TAC (body_pspec) THEN
+			SIMP_TAC std_ss [PSPEC_def, HSPEC_def, mread_def] THEN
+			DISCH_TAC THEN POP_ASSUM (fn t => ALL_TAC) THEN
+			REPEAT STRIP_TAC THEN (
+
+				MP_TAC (body_unchanged) THEN
+				MATCH_MP_TAC UNCHANGED_STACK___READ_STACK_IMP THEN
+				SIMP_TAC list_ss []
+			)
+		end
+
+
+fun fc_UNCHANGED_TAC rewrites bodyUnchanged=
+	let
+		val common_rewrites = SIMP_RULE std_ss [UNCHANGED_STACK_def,
+			WELL_FORMED_thm] (LET_ELIM_RULE (LIST_CONJ rewrites));
+	in
+		(REWRITE_TAC [UNCHANGED_STACK_def] THEN
+		CONJ_TAC THENL [
+			SIMP_TAC std_ss [UNCHANGED_THM, common_rewrites,
+				Once IR_SEMANTICS_SC, Once IR_SEMANTICS_SC,
+				WELL_FORMED_thm, GSYM RIGHT_FORALL_IMP_THM,	EVERY_MEM] THEN
+			REPEAT GEN_TAC THEN
+			(fn (a, g) =>
+				let
+					val (_, t1) = dest_imp g;
+					val t2 = (lhs t1);
+					val t3 = rand (rand (rator t2));
+					val t4 = Term `?r'' m''. ^t3 = (r'', m'')`
+					val thm = METIS_PROVE [pairTheory.PAIR] t4
+				in
+					ASSUME_TAC thm (a,g)
+				end) THEN
+			FULL_SIMP_TAC std_ss [common_rewrites] THEN
+			SPEC_TAC (Term `r:MREG`, Term `r:MREG`) THEN
+			SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM, toREG_def, index_of_reg_def, read_thm] THEN
+			CONV_TAC SIM_MEM_CONV THEN
+			
+			(fn (a, g) =>
+			let
+				val thm =CONJUNCT1 (
+				REWRITE_RULE [UNCHANGED_STACK_def] bodyUnchanged);
+				val thm2 = SIMP_RULE std_ss [UNCHANGED_THM,
+				EVERY_MEM, GSYM RIGHT_FORALL_IMP_THM] thm
+				val (r,m) = dest_pair (rand (lhs (hd a)))
+				val thm3 = SPECL [Term `r:MREG`, r, m] thm2;
+				val thm4 = GEN (Term `r:MREG`) thm3;
+			in 
+				MP_TAC thm4 (a,g)
+			end) THEN
+			ASM_REWRITE_TAC[] THEN
+				
+			SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM, toREG_def, index_of_reg_def, read_thm] THEN
+			CONV_TAC SIM_MEM_CONV THEN
+			METIS_TAC[],
+
+			MATCH_MP_TAC IR_SC_USED_STACK___FC_CASE1 THEN
+			CONJ_TAC THENL [
+				MATCH_MP_TAC IR_SC_USED_STACK___FC_CASE2 THEN
+				SIMP_TAC std_ss [common_rewrites, WELL_FORMED_thm, read_thm] THEN
+				CONV_TAC SIM_MEM_CONV THEN
+				ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
+				SIMP_TAC std_ss [WORD_ADD_0, dimword_32, dimword_4],
+				
+
+				SIMP_TAC std_ss [common_rewrites, WELL_FORMED_thm, read_thm,
+				Once IR_SEMANTICS_SC] THEN
+
+				ASSUME_TAC (
+					CONJUNCT1 (
+					REWRITE_RULE [UNCHANGED_STACK_def] bodyUnchanged)) (*body UNCHANGED*) THEN
+				FULL_SIMP_TAC list_ss [UNCHANGED_THM, EVERY_MEM, DISJ_IMP_THM, FORALL_AND_THM, toREG_def, index_of_reg_def] THEN
+				CONV_TAC SIM_MEM_CONV THEN
+				ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
+				SIMP_TAC std_ss [WORD_ADD_0, dimword_32, dimword_4]
+			]
+		])
+	end;
+
+
+fun mk_fc_spec (pre_spec, pre_spec_name, body_spec, body_spec_name, post_spec, post_spec_name, pre_th, pre_th_name, post_th, post_th_name, proofs, unchanged_list) = 
+	let
+      val preL = CONJUNCTS (LET_ELIM_RULE pre_spec)
+		val (preL_name, preL_proof) = make_proof_split_spec pre_spec_name;
+
+      val bodyL = CONJUNCTS (LET_ELIM_RULE body_spec)
+		val (bodyL_name, bodyL_proof) = make_proof_split_spec body_spec_name;
+
+		val postL = CONJUNCTS (LET_ELIM_RULE post_spec)
+		val (postL_name, postL_proof) = make_proof_split_spec post_spec_name;
+
+		val proofs' = append_proofs [proofs, preL_proof, bodyL_proof, postL_proof];
 
 		fun fix_body_spec pre_spec body_spec post_spec =
 		let
-			val (_,_,_,(_,_,outs_pre)) = get_spec_info (concl pre_spec);
-			val (_,_,_,(ins_post,_,_)) = get_spec_info (concl post_spec);
-			val (ir,(pre_p,post_p),stk_f,(ins,f,outs)) = get_spec_info (concl body_spec);
+			val (_,_,_,(_,_,outs_pre)) = get_spec_info (concl (LET_ELIM_RULE pre_spec));
+			val (_,_,_,(ins_post,_,_)) = get_spec_info (concl (LET_ELIM_RULE post_spec));
+			val (ir,(pre_p,post_p),stk_f,(ins,f,outs)) = get_spec_info (concl (LET_ELIM_RULE body_spec));
 
 			fun extend_f f 0  = f |
 				extend_f f n =
 					let
 						val (vars, body) = dest_pabs f;
-						val newvar = genvar (Type `:DATA`);
+						val newvar = variant ((free_vars vars)@(free_vars body)) (Term `v_gen:DATA`);
 						val body' = mk_pair (newvar,body);
 						val vars' = mk_pair (newvar,vars);
 						val f' = mk_pabs (vars', body')					
@@ -610,24 +848,22 @@ fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
 			end
 
 		val body_PSPEC = prove (body_spec_term, (*set_goal ([], body_spec_term)*)
-			MP_TAC (el 1 bodyL) THEN
-			SIMP_TAC std_ss [PSPEC_def, HSPEC_def, mread_def] THEN
-			DISCH_TAC THEN POP_ASSUM (fn t => ALL_TAC) THEN
-			REPEAT STRIP_TAC THEN (
 
-				MP_TAC (el 3 bodyL) THEN
-				MATCH_MP_TAC UNCHANGED_STACK___READ_STACK_IMP THEN
-				SIMP_TAC list_ss []
-			));
+			fc_body_PSPEC (el 1 bodyL) (el 3 bodyL) (int_of_term new_stack));
+		val (body_PSPEC_name, body_PSPEC_proof) = make_proof_string 
+				body_spec_term
+				["fc_body_PSPEC "^(el 1 bodyL_name)^" "^(el 3 bodyL_name)^" "^(term_to_string new_stack)]
+
 
 		val bodyL = body_PSPEC :: (tl bodyL);
+		val bodyL_name = body_PSPEC_name :: (tl bodyL_name);
+		val proofs'' = append_proofs [proofs', body_PSPEC_proof];
 
+		val (ir_spec1, ir_spec1_name, ir_wf1, ir_wf1_name, _, proofs''') =
+			mk_sc_spec___pre (el 1 preL) (el 1 preL_name) (el 2 preL) (el 2 preL_name) (el 1 bodyL) (el 1 bodyL_name) (el 2 bodyL) (el 2 bodyL_name) proofs'';
 
-		val (ir_spec1, ir_wf1, _) =
-			mk_sc_spec___pre (el 1 preL) (el 2 preL) (el 1 bodyL) (el 2 bodyL);
-
-		val (ir_spec, ir_wf, sc_ir) =
-			mk_sc_spec___pre ir_spec1 ir_wf1 (el 1 postL) (el 2 postL);
+		val (ir_spec, ir_spec_name, ir_wf, ir_wf_name, sc_ir, proofs'''') =
+			mk_sc_spec___pre ir_spec1 ir_spec1_name ir_wf1 ir_wf1_name (el 1 postL) (el 1 postL_name) (el 2 postL) (el 2 postL_name) proofs''';
 	
 (*
       val sc_th_term = mk_comb(mk_comb (Term`run_ir`,sc_ir), Term `(r, m):DSTATE`);
@@ -641,75 +877,19 @@ fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
 		val sum_stack = numSyntax.mk_plus (numSyntax.mk_plus (new_stack, body_stack), numSyntax.zero_tm)
       val unchanged_spec = list_mk_comb (Term`UNCHANGED_STACK`, [mk_unchanged_term unchanged_list, sum_stack, sc_ir]);
 
-
-		val common_rewrites = LIST_CONJ [pre_spec, body_spec, post_spec,
-			pre_th, post_th];
-		val common_rewrites = SIMP_RULE std_ss [UNCHANGED_STACK_def,
-			WELL_FORMED_thm] common_rewrites;
-      val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)							
-							 
-							 REWRITE_TAC [UNCHANGED_STACK_def] THEN
-							 CONJ_TAC THENL [
-								SIMP_TAC std_ss [UNCHANGED_THM, common_rewrites,
-									Once IR_SEMANTICS_SC, Once IR_SEMANTICS_SC,
-									WELL_FORMED_thm, GSYM RIGHT_FORALL_IMP_THM,	EVERY_MEM] THEN
-								REPEAT GEN_TAC THEN
-								(fn (a, g) =>
-									let
-										val (_, t1) = dest_imp g;
-										val t2 = (lhs t1);
-										val t3 = rand (rand (rator t2));
-										val t4 = Term `?r'' m''. ^t3 = (r'', m'')`
-										val thm = METIS_PROVE [pairTheory.PAIR] t4
-									in
-										ASSUME_TAC thm (a,g)
-									end) THEN
-								FULL_SIMP_TAC std_ss [common_rewrites] THEN
-								SPEC_TAC (Term `r:MREG`, Term `r:MREG`) THEN
-								SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM, toREG_def, index_of_reg_def, read_thm] THEN
-								CONV_TAC SIM_MEM_CONV THEN
-								
-								(fn (a, g) =>
-								let
-									val thm =CONJUNCT1 (
-									REWRITE_RULE [UNCHANGED_STACK_def] (el 3 bodyL));
-									val thm2 = SIMP_RULE std_ss [UNCHANGED_THM,
-									EVERY_MEM, GSYM RIGHT_FORALL_IMP_THM] thm
-									val (r,m) = dest_pair (rand (lhs (hd a)))
-									val thm3 = SPECL [Term `r:MREG`, r, m] thm2;
-									val thm4 = GEN (Term `r:MREG`) thm3;
-								in 
-									MP_TAC thm4 (a,g)
-								end) THEN
-								ASM_REWRITE_TAC[] THEN
-									
-								SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM, toREG_def, index_of_reg_def, read_thm] THEN
-								CONV_TAC SIM_MEM_CONV THEN
-								METIS_TAC[],
-
-								MATCH_MP_TAC IR_SC_USED_STACK___FC_CASE1 THEN
-								CONJ_TAC THENL [
-									MATCH_MP_TAC IR_SC_USED_STACK___FC_CASE2 THEN
-									SIMP_TAC std_ss [common_rewrites, WELL_FORMED_thm, read_thm] THEN
-									CONV_TAC SIM_MEM_CONV THEN
-									ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
-									SIMP_TAC std_ss [WORD_ADD_0, dimword_32, dimword_4],
-									
-
-									SIMP_TAC std_ss [common_rewrites, WELL_FORMED_thm, read_thm,
-									Once IR_SEMANTICS_SC] THEN
-
-									ASSUME_TAC (
-										CONJUNCT1 (
-										REWRITE_RULE [UNCHANGED_STACK_def] (el 3 bodyL))) (*body UNCHANGED*) THEN
-									FULL_SIMP_TAC list_ss [UNCHANGED_THM, EVERY_MEM, DISJ_IMP_THM, FORALL_AND_THM, toREG_def, index_of_reg_def] THEN
-									CONV_TAC SIM_MEM_CONV THEN
-									ONCE_REWRITE_TAC[GSYM n2w_mod] THEN
-									SIMP_TAC std_ss [WORD_ADD_0, dimword_32, dimword_4]
-								]
-							]
+      val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)								fc_UNCHANGED_TAC [pre_spec, body_spec, post_spec,
+			pre_th, post_th] (el 3 bodyL)
 	        );
-
+		val (unchanged_th_name, unchanged_th_proof) = make_proof_string 
+				unchanged_spec
+				["fc_UNCHANGED_TAC ["^
+              pre_spec_name^","^
+              body_spec_name^","^
+              post_spec_name^","^
+              pre_th_name^","^
+				  post_th_name^"] "^
+				  (el 3 bodyL_name)];
+ 
       val ir_abbr = mk_var ("ir", Type `:CTL_STRUCTURE`);
       val spec = subst [sc_ir |-> ir_abbr] (list_mk_conj [concl ir_spec, concl ir_wf, unchanged_spec]);
       val spec' = mk_let (mk_abs (ir_abbr, spec), sc_ir);
@@ -717,8 +897,15 @@ fun mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
       val th =  prove (spec',   (* set_goal ([],spec') *)
 			SIMP_TAC std_ss [LET_THM, unchanged_th, ir_spec, ir_wf]
 		      )
+		val (th_name, th_proof) = make_proof_string 
+				spec'
+				["SIMP_TAC std_ss [LET_THM,"^
+              unchanged_th_name^","^
+              ir_spec_name^","^
+              ir_wf_name^"]"];
+		val proofs''''' = append_proofs [proofs'''', unchanged_th_proof, th_proof];
 	in
-     th
+     (th, th_name, proofs''''')
 	end;
 
 (*---------------------------------------------------------------------------------*)
@@ -803,11 +990,56 @@ fun guessR2 tp =
         (Term`(measure (w2n o FST)):(word32#word32)->(word32#word32)->bool`)
     end
 
-fun cheat_tac (asl,g) = ACCEPT_TAC(ASSUME g) (asl,g);
 
-fun mk_tr_spec cond body_spec = 
+fun tr_WF_TAC body_spec initVType prj_f f cond_f_0 (asm, g) =
+	let	
+		val my_WF_TR_LEM_2 = INST_TYPE [alpha |-> initVType] WF_TR_LEM_2
+	in 
+		(MATCH_MP_TAC my_WF_TR_LEM_2 THEN
+		EXISTS_TAC prj_f THEN EXISTS_TAC f THEN EXISTS_TAC cond_f_0 THEN
+		SIMP_TAC std_ss [SIMP_RULE std_ss [PSPEC_def, HSPEC_def, LET_THM] body_spec] THEN
+		SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def,
+							eval_il_cond_def, translate_condition_def,  toEXP_def,
+							index_of_reg_def,toREG_def, toMEM_def, read_thm] THEN
+		WORDS_TAC THEN 
+		SIMP_TAC std_ss [] THEN
+		MATCH_MP_TAC (INST_TYPE [alpha |-> initVType] WF_TR_LEM_3) THEN
+		(let val r = guessR2 (initVType) in     
+			WF_REL_TAC `^r` THEN
+			WORDS_TAC THEN
+			RW_TAC std_ss [WORDS_RULE 
+				(INST_TYPE [alpha |-> Type `:i32`] WORD_PRED_THM)]
+		end
+		handle e => (print "fail to prove totalness, add statement into assumption list"; cheat_tac)
+		)) (asm, g)
+	end
+
+fun tr_PSPEC_TAC wf_th body_spec =
+	ASSUME_TAC wf_th THEN
+	MATCH_MP_TAC PRJ_TR_RULE THEN
+	SIMP_TAC std_ss [SIMP_RULE std_ss [LET_THM] body_spec] THEN
+	STRIP_TAC THENL [
+		RW_TAC std_ss [],
+		SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def, eval_il_cond_def, translate_condition_def,
+						index_of_reg_def, toREG_def, toEXP_def, toMEM_def, read_thm] THEN
+		WORDS_TAC THEN
+		SIMP_TAC std_ss []
+	]
+
+fun tr_WELL_FORMED_TAC wf_th body_spec =
+	ASSUME_TAC wf_th THEN
+	MATCH_MP_TAC WELL_FORMED_TR_RULE THEN
+	SIMP_TAC std_ss [SIMP_RULE std_ss [LET_THM] body_spec] THEN
+	RW_TAC std_ss []
+
+fun tr_UNCHANGED_TAC well_formed_th body_spec =
+	MATCH_MP_TAC UNCHANGED_STACK_TR_RULE THEN
+	SIMP_TAC list_ss [well_formed_th, SIMP_RULE std_ss [LET_THM] body_spec]
+
+
+fun mk_tr_spec cond body_spec body_name proofs = 
   let 
-      val specL = strip_conj (concl (SIMP_RULE std_ss [LET_THM] body_spec));
+      val specL = strip_conj (concl (LET_ELIM_RULE body_spec));
       val (body_ir,(pre_p,post_p),stk_f,(ins,f,outs)) = get_spec_info (hd specL);
 
       val t_cond = convert_cond cond;
@@ -833,57 +1065,47 @@ fun mk_tr_spec cond body_spec =
       val wf_t2 = list_mk_abs ([st1,st0],mk_conj(wf_t0,wf_t1));
       val wf_t3 = mk_comb (Term`WF:(DSTATE->DSTATE->bool)->bool`, wf_t2);
       val wf_th = prove (wf_t3, (* set_goal ([],wf_t3) *)
-                         MATCH_MP_TAC (INST_TYPE [alpha |-> type_of initV] WF_TR_LEM_2) THEN
-                         EXISTS_TAC prj_f THEN EXISTS_TAC f THEN EXISTS_TAC cond_f_0 THEN
-                         SIMP_TAC std_ss [SIMP_RULE std_ss [PSPEC_def, HSPEC_def, LET_THM] body_spec] THEN
-                         SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def,
-                                         eval_il_cond_def, translate_condition_def,  toEXP_def,
-                                         index_of_reg_def,toREG_def, toMEM_def, read_thm] THEN
-                         WORDS_TAC THEN 
-                         SIMP_TAC std_ss [] THEN
-                         MATCH_MP_TAC (INST_TYPE [alpha |-> type_of initV] WF_TR_LEM_3) THEN
-                         (let val r = guessR2 (type_of initV) in     
-                              WF_REL_TAC `^r` THEN
-                              WORDS_TAC THEN
-                              RW_TAC std_ss [WORDS_RULE 
-                                (INST_TYPE [alpha |-> Type `:i32`] WORD_PRED_THM)]
-                          end
-                          handle e => (print "fail to prove totalness, add statement into assumption list"; cheat_tac)
-                         )
+								 tr_WF_TAC body_spec (type_of initV) prj_f f cond_f_0
                          );
+
+
+		val _ = show_types := true
+		val (wf_th_name, wf_th_proof) = make_proof_string wf_t3
+				["tr_WF_TAC "^body_name^" (Type `"^
+				  (type_to_string (type_of initV))^"`) (Term `"^
+				  (term_to_string prj_f)^"`) (Term `"^
+				  (term_to_string f)^"`) (Term `"^
+				  (term_to_string cond_f_0)^"`)"]
+		val _ = show_types := false;
+		
+
       (* the characteristic function *)
       val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of initV, gamma |-> type_of initV] (PSPEC_term), 
                                 [tr_ir, mk_pair(pre_p, post_p), stk_f, list_mk_pair[prj_f,tr_f, prj_f]]);
 
       val f_th =  prove (f_spec,   (* set_goal ([],f_spec) *)
-                        ASSUME_TAC wf_th THEN
-                        MATCH_MP_TAC PRJ_TR_RULE THEN
-                        SIMP_TAC std_ss [SIMP_RULE std_ss [LET_THM] body_spec] THEN
-                        STRIP_TAC THENL [
-                            RW_TAC std_ss [],
-                            SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def, FORALL_DSTATE, mread_def, eval_il_cond_def, translate_condition_def,
-                                         index_of_reg_def, toREG_def, toEXP_def, toMEM_def, read_thm] THEN
-                            WORDS_TAC THEN
-                            SIMP_TAC std_ss []
-                            ]
+									tr_PSPEC_TAC wf_th body_spec
 		        )
+		val (f_th_name, f_th_proof) = make_proof_string f_spec
+				["tr_PSPEC_TAC "^wf_th_name^" "^body_name]
 
       (* Well-formedness *)
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, tr_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      ASSUME_TAC wf_th THEN
-                      MATCH_MP_TAC WELL_FORMED_TR_RULE THEN
-                      SIMP_TAC std_ss [SIMP_RULE std_ss [LET_THM] body_spec] THEN
-                      RW_TAC std_ss []
+				tr_WELL_FORMED_TAC wf_th body_spec
 	        );
+		val (well_formed_th_name, well_formed_th_proof) = make_proof_string well_formed_spec
+				["tr_WELL_FORMED_TAC "^wf_th_name^" "^body_name]
 
       (* unchanged *)
       val unchanged_spec = mk_comb (rator (el 3 specL), tr_ir);
       val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)
-                      MATCH_MP_TAC UNCHANGED_STACK_TR_RULE THEN
-                      SIMP_TAC list_ss [well_formed_th, SIMP_RULE std_ss [LET_THM] body_spec]
+				tr_UNCHANGED_TAC well_formed_th body_spec
+	
 	        );
+		val (unchanged_th_name, unchanged_th_proof) = make_proof_string unchanged_spec
+				["tr_UNCHANGED_TAC "^well_formed_th_name^" "^body_name]
 
 
       val spec = subst [tr_ir |-> ir_abbr] (list_mk_conj [f_spec, well_formed_spec, unchanged_spec]);
@@ -892,6 +1114,12 @@ fun mk_tr_spec cond body_spec =
       val th =  prove (spec',   (* set_goal ([],spec') *)
 			SIMP_TAC std_ss [f_th, well_formed_th, unchanged_th, LET_THM]
 		      )
+
+		val (th_name, th_proof) = make_proof_string spec'
+				["SIMP_TAC std_ss [LET_THM,"^f_th_name^","^
+				 well_formed_th_name^","^unchanged_th_name^"]"]
+
+		val proofs' = append_proofs[proofs, wf_th_proof, f_th_proof, well_formed_th_proof, unchanged_th_proof, th_proof]
 
 (*
       val tr_th_term = mk_comb(mk_comb (Term`run_ir`,tr_ir), Term `(r, m):DSTATE`);
@@ -902,23 +1130,54 @@ fun mk_tr_spec cond body_spec =
 			SIM_MEM_CONV) tr_th_term;*)
 
    in
-      th
+      (th, th_name, proofs')
    end;
 
 
 (*---------------------------------------------------------------------------------*)
 (*      Specification for Conditional Jumps                                        *) 
 (*---------------------------------------------------------------------------------*)
+
+
+fun cj_PSPEC_TAC thm1 thm2 (asm, g) =
+	let
+		val type_inst = type_of (body (#1 (dest_pair (rand g))));
+		val my_prj_cj_rule = (GEN_ALL (SIMP_RULE std_ss [LAMBDA_PROD] (INST_TYPE [beta |-> type_inst] 
+						(SPEC_ALL PRJ_CJ_RULE))))
+	in
+		(MATCH_MP_TAC my_prj_cj_rule THEN
+		SIMP_TAC std_ss [LET_ELIM_RULE thm1, LET_ELIM_RULE thm2] THEN
+		SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def,
+			ILTheory.eval_il_cond_def, 
+			ILTheory.translate_condition_def,
+			FORALL_DSTATE, mread_def, 
+								index_of_reg_def, toREG_def,
+								toEXP_def, read_thm, GSYM PFORALL_THM] THEN
+		WORDS_TAC THEN
+		SIMP_TAC std_ss []) (asm, g)
+	end
+
+fun cj_WELL_FORMED_TAC thm1 thm2 = (
+	REWRITE_TAC [GSYM IR_CJ_IS_WELL_FORMED] THEN
+	SIMP_TAC std_ss [LET_ELIM_RULE thm1, LET_ELIM_RULE thm2])
+
+
+fun cj_UNCHANGED_TAC thm1 thm2 = (
+	MATCH_MP_TAC IR_CJ_UNCHANGED_STACK THEN
+	SIMP_TAC std_ss [LET_ELIM_RULE thm1, LET_ELIM_RULE thm2])
+
 (*
-val (ir1_spec, ir2_spec) = (spec1, spec2);
+val (ir1_spec, ir1_name, ir2_spec, ir2_name, proofs) = (spec1, spec1_name, spec2, spec2_name, proofs2);
+
 *)
 
-fun mk_cj_spec cond ir1_spec ir2_spec unchanged_list = 
+fun mk_cj_spec cond ir1_spec ir1_name ir2_spec ir2_name unchanged_list proofs = 
   let 
-      val (specL1,specL2) = (strip_conj (concl (SIMP_RULE std_ss [LET_THM] ir1_spec)),strip_conj (concl (SIMP_RULE std_ss [LET_THM] ir2_spec)));
+      val (specL1,specL2) = (strip_conj (concl (LET_ELIM_RULE ir1_spec)),strip_conj (concl (LET_ELIM_RULE ir2_spec)));
       val (ir1,(pre_p1,post_p1),stk_f,(ins1,f1,outs1)) = get_spec_info (hd specL1);
       val (ir2,(pre_p2,post_p2),stk_f,(ins2,f2,outs2)) = get_spec_info (hd specL2);
-      val (spec1_thm, spec2_thm) = (SIMP_RULE std_ss [LET_THM] ir1_spec, SIMP_RULE std_ss [LET_THM] ir2_spec);
+(*      val (spec1_thm, spec2_thm) = (SIMP_RULE std_ss [LET_THM] ir1_spec, SIMP_RULE std_ss [LET_THM] ir2_spec);*)
+
 
       val t_cond = convert_cond cond;
       val cj_ir = list_mk_comb (Term`CJ`, [t_cond, ir1, ir2]);
@@ -938,35 +1197,30 @@ fun mk_cj_spec cond ir1_spec ir2_spec unchanged_list =
       val f_spec = list_mk_comb (inst [alpha |-> stk_tp, beta |-> type_of ins1, gamma |-> type_of outs2] (PSPEC_term), 
                                 [cj_ir, mk_pair(pre_p1,post_p1), stk_f, list_mk_pair[in_f,cj_f,out_f]]);
 
+
+
       val f_th =  prove (f_spec,   (* set_goal ([],f_spec) *)
-                        MATCH_MP_TAC (GEN_ALL (SIMP_RULE std_ss [LAMBDA_PROD] (INST_TYPE [beta |-> type_of initV] 
-                                  (SPEC_ALL PRJ_CJ_RULE)))) THEN
-                        SIMP_TAC std_ss [spec1_thm, spec2_thm] THEN
-                        SIMP_TAC std_ss [ARMCompositionTheory.eval_cond_def,
-                         ILTheory.eval_il_cond_def, 
-                         ILTheory.translate_condition_def,
-                         FORALL_DSTATE, mread_def, 
-                                         index_of_reg_def, toREG_def,
-                                         toEXP_def, read_thm, GSYM PFORALL_THM] THEN
-                        WORDS_TAC THEN
-                        SIMP_TAC std_ss []
-		        )
+		        cj_PSPEC_TAC ir1_spec ir2_spec)
+		val (f_th_name, f_th_proof) = make_proof_string f_spec
+				["cj_PSPEC_TAC "^ir1_name^" "^ir2_name]
 
       (* well-formedness *)
 
       val well_formed_spec = mk_comb (Term`WELL_FORMED`, cj_ir);
       val well_formed_th = prove (well_formed_spec,   (* set_goal ([],well_formed_spec) *)
-                      REWRITE_TAC [GSYM IR_CJ_IS_WELL_FORMED] THEN
-                      SIMP_TAC std_ss [spec1_thm, spec2_thm]
+                      cj_WELL_FORMED_TAC ir1_spec ir2_spec
 	        );
+		val (well_formed_th_name, well_formed_th_proof) = make_proof_string well_formed_spec
+				["cj_WELL_FORMED_TAC "^ir1_name^" "^ir2_name]
 
       (* unchanged *)
 
       val unchanged_spec = make_unchanged_stack_term (el 3 specL1) (el 3 specL2) cj_ir;
       val unchanged_th = prove (unchanged_spec,   (* set_goal ([],unchanged_spec) *)
-      	MATCH_MP_TAC IR_CJ_UNCHANGED_STACK THEN
-         SIMP_TAC std_ss [spec1_thm, spec2_thm]
+      	cj_UNCHANGED_TAC ir1_spec ir2_spec
 	   );
+		val (unchanged_th_name, unchanged_th_proof) = make_proof_string unchanged_spec
+				["cj_UNCHANGED_TAC "^ir1_name^" "^ir2_name]
 
 
       val spec = list_mk_conj [f_spec, well_formed_spec, unchanged_spec];
@@ -974,6 +1228,12 @@ fun mk_cj_spec cond ir1_spec ir2_spec unchanged_list =
       val th =  prove (spec,   (* set_goal ([],spec) *)
 			SIMP_TAC std_ss [f_th, well_formed_th, unchanged_th, LET_THM]
 		      )
+
+		val (th_name, th_proof) = make_proof_string spec
+				["SIMP_TAC std_ss ["^f_th_name^","^unchanged_th_name^","^well_formed_th_name^", LET_THM]"]
+
+		val proofs = append_proofs [proofs, f_th_proof, unchanged_th_proof, well_formed_th_proof, th_proof]
+
 (*
       val cj_th_term = mk_comb(mk_comb (Term`run_ir`,cj_ir), Term `(r, m):DSTATE`);
 	   val cj_th =
@@ -982,7 +1242,7 @@ fun mk_cj_spec cond ir1_spec ir2_spec unchanged_list =
 									ir1_th, ir2_th] THENC
 			SIM_MEM_CONV) cj_th_term;*)
    in
-      th
+      (th, th_name, proofs)
    end;
 
 
@@ -1112,45 +1372,58 @@ val (cond, body) = extract ir1
 
 fun extract (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) = (cond, ir1, ir2)
 val (cond, ir1, ir2) = extract ir1
+
+fwd_reason f_ir unchanged_list []
+
+val proof = #3 it
+
+printInstL proof
+ val proofs = [];
+used_thm_num := 1
 *)
 
 
-fun fwd_reason (annotatedIR.BLK blk_ir) unchanged_list =
-      #1 (mk_blk_spec (annotatedIR.BLK blk_ir) unchanged_list)
-
- |  fwd_reason (annotatedIR.SC (ir1, ir2, info)) unchanged_list =
-      let 
-			 val spec1 = fwd_reason ir1 unchanged_list;
-          val spec2 = fwd_reason ir2 unchanged_list;
-      in
-          mk_sc_spec spec1 spec2 unchanged_list
-      end
-
- |  fwd_reason (annotatedIR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_list = 
-      let val body_spec = fwd_reason body unchanged_list
-      in
-          mk_tr_spec cond body_spec
-      end
- |  fwd_reason (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_list =
+fun fwd_reason (annotatedIR.BLK blk_ir) unchanged_list proofs =
 		let
-			val spec1 = fwd_reason ir1 unchanged_list;
-         val spec2 = fwd_reason ir2 unchanged_list;
+		   val (spec, spec_thm_name, th, th_name, proofs_blk) =
+           (mk_blk_spec (annotatedIR.BLK blk_ir) unchanged_list)		
 		in
-			mk_cj_spec cond spec1 spec2 unchanged_list
+			(spec, spec_thm_name, append_proofs [proofs, proofs_blk])
 		end
 
- |  fwd_reason (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir,info)) unchanged_list =
+ |  fwd_reason (annotatedIR.SC (ir1, ir2, info)) unchanged_list proofs =
+      let 
+			 val (spec1, spec1_name, proofs1) = fwd_reason ir1 unchanged_list proofs;
+			 val (spec2, spec2_name, proofs2) = fwd_reason ir2 unchanged_list proofs1;
+      in
+          mk_sc_spec spec1 spec1_name spec2 spec2_name proofs2
+      end
+
+ |  fwd_reason (annotatedIR.TR (cond, body, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_list proofs = 
+      let val (body_spec, body_name, proofs') = fwd_reason body unchanged_list proofs
+      in
+          mk_tr_spec cond body_spec body_name proofs'
+      end
+ |  fwd_reason (annotatedIR.CJ (cond, ir1, ir2, {fspec = fspec1, ins = ins1, outs = outs1, context = contextL, ...})) unchanged_list proofs =
+		let
+			 val (spec1, spec1_name, proofs1) = fwd_reason ir1 unchanged_list proofs;
+			 val (spec2, spec2_name, proofs2) = fwd_reason ir2 unchanged_list proofs1;
+		in
+			mk_cj_spec cond spec1 spec1_name spec2 spec2_name unchanged_list proofs2
+		end
+ |  fwd_reason (annotatedIR.CALL (fname, pre_ir, body_ir, post_ir,info)) unchanged_list proofs =
       let 
 			 val emptyset = Binaryset.empty Int.compare;
 			 val f_unchanged_list = mk_unchanged_set fname;
-          val (pre_spec, pre_th) = mk_blk_spec pre_ir emptyset;
-          val body_spec = fwd_reason body_ir f_unchanged_list;
-          val (post_spec, post_th) = mk_blk_spec post_ir emptyset;
-      in
-          mk_fc_spec (pre_spec, body_spec, post_spec, pre_th, post_th, unchanged_list)
-      end
+          val (body_spec, body_spec_name, proofs') = fwd_reason body_ir f_unchanged_list proofs;
+          val (pre_spec, pre_spec_name, pre_th, pre_th_name, pre_proofs) = mk_blk_spec pre_ir emptyset;
+          val (post_spec, post_spec_name, post_th, post_th_name, post_proofs) = mk_blk_spec post_ir emptyset;
 
- |  fwd_reason _ _ = 
+			val proofs'' = append_proofs [proofs', pre_proofs, post_proofs];
+      in
+          mk_fc_spec (pre_spec, pre_spec_name, body_spec, body_spec_name, post_spec, post_spec_name, pre_th, pre_th_name, post_th, post_th_name, proofs'', unchanged_list)
+      end
+ |  fwd_reason _ _ _ = 
       raise Fail "fwd_reason: unsupported IR strcuture"
  ;
 
@@ -1168,15 +1441,15 @@ fun restore_f_TAC defs =
 
 
 
-fun restore_f spec defs prove_equiv =
+fun restore_f spec def prove_equiv =
   let
       val th0 = CONJUNCT1 (SIMP_RULE std_ss [LET_THM] spec);
       val [in_f,spec_f,out_f] = strip_pair (List.nth (#2 (strip_comb (concl th0)),3));
-      val sfl_f_const = #1 (strip_comb (lhs ((concl o SPEC_ALL) (hd defs))));
+      val sfl_f_const = #1 (strip_comb (lhs ((concl o SPEC_ALL) def)));
       val eq_stat = mk_eq (spec_f, sfl_f_const);		
       val eq_th = if (prove_equiv) then 
 			(print "Proving equivalence with input function\n";
-			 prove(eq_stat, restore_f_TAC defs) handle _ =>
+			 prove(eq_stat, restore_f_TAC [def]) handle _ =>
 			  let
 				  val _ = print "! Equivalence proof between original function and\n";
 				  val _ = print "! derived program semantics failed!\n\n";
@@ -1188,6 +1461,34 @@ fun restore_f spec defs prove_equiv =
       eq_th
   end;
 
+fun restore_f_proof f_spec0 thm_name thm_proofs prove_equiv def def_option =
+	let
+		val f_th = restore_f f_spec0 def prove_equiv;
+		val f_th_spec = concl f_th;
+		val def_given = isSome def_option;
+		val (f_th_name, proofs) =
+			if (def_given andalso prove_equiv) then
+				let
+					val (def_name, def_proofs) =
+						valOf def_option
+					val (spec_name, p) = make_proof_string f_th_spec ["restore_f_TAC ["^def_name^"]"];
+				in
+					(spec_name, append_proofs [thm_proofs, def_proofs,p])
+				end				
+			else
+				let
+					val (spec_name, p) =
+						make_assume_string f_th_spec;
+				in
+					(spec_name, append_proofs [thm_proofs, p])
+				end
+		val thm = SIMP_RULE std_ss [f_th] f_spec0
+		val (thm_name, thm_proof) = make_proof_string 
+			(concl thm) ["ASSUME_TAC (SIMP_RULE std_ss ["^ f_th_name^"] "^thm_name^") THEN", "ASM_SIMP_TAC std_ss []"];
+		val proofs' = append_proofs [proofs, thm_proof];
+	in 
+		(thm, thm_name, proofs')
+	end
 
 (*---------------------------------------------------------------------------------*)
 (*      Display the theorem at the level of ARM flat code                          *) 
@@ -1370,35 +1671,59 @@ fun DATA_RESTRICT_CONV t =
 
 val extra_defs = ref [DECIDE (Term `T`)];
 
-fun preprocess_def def =
-  CONV_RULE ((DEPTH_CONV WORD_EVAL_CONV) THENC (DEPTH_CONV DATA_RESTRICT_CONV)) def
+fun preprocess_def prog =
+  CONV_RULE ((DEPTH_CONV WORD_EVAL_CONV) THENC (DEPTH_CONV DATA_RESTRICT_CONV)) prog
 
+fun preprocess_def_proof def prog_name =
+	if (isSome prog_name) then
+		SOME (
+		make_proof_string (concl def)
+						["PROVE_TAC[preprocess_def "^(valOf prog_name)^"]"])
+	else NONE
+
+
+fun pp_prepare_compile prog  = 
+  let  
+      val def = preprocess_def prog;
+      val _ = funCall.link_ir def;
+  in
+	 ()
+  end;
 
 (*val prog = fact_def;
   val prog = ex1_field_mult_aux_alt
-  val prog = def
+  val prog = def1
+  val def = 
+  val prog_name = SOME "def1"
   val prove_equiv = false*)
-
-fun pp_compile prog prove_equiv = 
+fun pp_compile_proof_opt prog prog_name prove_equiv = 
   let  
       val def = preprocess_def prog;
       val (f_name, f_type, (f_args,f_ir,f_outs), defs) = funCall.link_ir def;
 		val unchanged_list = mk_unchanged_set f_name;
-      val f_spec0 = fwd_reason f_ir unchanged_list;
-      val f_spec1 = (SIMP_RULE std_ss [restore_f f_spec0 defs prove_equiv] f_spec0)
+      val (f_spec0, thm_name, thm_proof) = fwd_reason f_ir unchanged_list [];
+		val def_option = preprocess_def_proof def prog_name;
+		val (f_spec1, thm_name, thm_proof) =
+			restore_f_proof f_spec0 thm_name thm_proof prove_equiv def def_option
       val thm_list = CONJ_LIST 3 (SIMP_RULE std_ss [LET_THM] f_spec1);
       val stat = f_correct f_spec1
       val stat_ir = f_correct_ir f_spec1
   in
-      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat, stat_ir, el 1 thm_list, el 2 thm_list, el 3 thm_list)
+      (f_name, f_type, (f_args,f_ir,f_outs), defs, stat, stat_ir, el 1 thm_list, el 2 thm_list, el 3 thm_list, thm_name, thm_proof)
   end
+
+fun pp_compile_proof prog prog_name prove_equiv = 
+	pp_compile_proof_opt prog (SOME prog_name) prove_equiv;
+
+fun pp_compile prog prove_equiv = 
+	pp_compile_proof_opt prog NONE prove_equiv;
 
 type spec_type = 
   string * hol_type * (exp * anntIR * exp) * thm list * thm * thm * thm * thm *
-  thm;
+  thm * string * string list;
 
 
-fun get_spec_assums ((_, _, _, thmL, thm1, thm2, thm3, thm4, thm5):spec_type) =
+fun get_spec_assums ((_, _, _, thmL, thm1, thm2, thm3, thm4, thm5, _, _):spec_type) =
 	let
 		val thmL' = thm2::thm3::thm4::thm5::thmL;
 		val s1 = hypset thm1;
@@ -1412,7 +1737,7 @@ fun get_spec_assums ((_, _, _, thmL, thm1, thm2, thm3, thm4, thm5):spec_type) =
 fun set_goal___spec_assums spec =
 	goalstackLib.set_goal ([], #1 (get_spec_assums spec))
 
-fun prove___spec_assums (spec as (x1, x2, x3, thmL, thm1, thm2, thm3, thm4, thm5)) tac = 
+fun prove___spec_assums (spec as (x1, x2, x3, thmL, thm1, thm2, thm3, thm4, thm5, thm_name, thm_proof)) tac = 
 let
 	val (t, l) = (get_spec_assums spec);
 	val thm = prove (t, tac);
@@ -1439,7 +1764,7 @@ let
 	val thm4' = prove_hyp thm4;
 	val thm5' = prove_hyp thm5;
 in
-	(x1, x2, x3, thmL', thm1', thm2', thm3', thm4', thm5')
+	(x1, x2, x3, thmL', thm1', thm2', thm3', thm4', thm5', thm_name, thm_proof)
 end
 
 end
