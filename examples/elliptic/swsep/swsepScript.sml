@@ -531,13 +531,13 @@ match [] ``LDM``
 
 ARM_LDM*)
 
-val PRE_TRANS_OPT_def = Define `PRE_TRANS_OPT = transfer_options T F F F`
+val PRE_TRANS_OPT_def = Define `PRE_TRANS_OPT = transfer_options F F F`
 
 val DOPER2INSTRUCTION_def = Define `
   (DOPER2INSTRUCTION (MPOP base regL) =
-      LDM AL PRE_TRANS_OPT (n2w base) (reg_bitmap (MAP n2w regL))) /\
+      LDM AL T PRE_TRANS_OPT (n2w base) (reg_bitmap (MAP n2w regL))) /\
   (DOPER2INSTRUCTION (MPUSH base regL) =
-      STM AL PRE_TRANS_OPT (n2w base) (reg_bitmap (MAP n2w regL))) /\
+      STM AL T PRE_TRANS_OPT (n2w base) (reg_bitmap (MAP n2w regL))) /\
   (DOPER2INSTRUCTION (MMOV dst src) =
       MOV AL F (MREG2REG dst) (MEXP2addr_model src)) /\
   (DOPER2INSTRUCTION (MADD dst src1 src2) =

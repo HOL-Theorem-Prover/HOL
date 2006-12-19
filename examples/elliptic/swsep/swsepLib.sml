@@ -20,7 +20,7 @@ open HolKernel boolLib bossLib Parse;
 open Portable Assem wordsTheory ANF pairTheory pairLib listTheory arithmeticTheory whileTheory  wordsLib PairedLambda mechReasoning IRSyntax;
 open swsepTheory arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instTheory 
 
-fun extract_ir (_, _, _, _, _, spec, _, wf, _) = 
+fun extract_ir (_, _, _, _, _, spec, _, wf, _, _, _) = 
 	let
 		val ir = rand (concl wf);
 		val (st_var, _) = dest_forall (concl spec);
@@ -142,7 +142,7 @@ fun post_process_sep thm =
 	end;
 
 
-fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm list * thm * thm * thm * thm * thm)) = 
+fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm list * thm * thm * thm * thm * thm * string * string list)) = 
 	let
 		val (spec, wf, ir) = extract_ir comp;
 		val input_regs = listSyntax.mk_list (map IRSyntax.convert_reg (IRSyntax.pair2list (#1 (#3 comp))), Type `:MREG`);
