@@ -493,7 +493,7 @@ fun mk_functional thy eqs =
      val originals = map (row_of_pat o #2) rows
      val new_rows = length finals - length originals
      val _ = if new_rows > 0 
-             then (msg ("pattern completion has added "^
+             then (msg ("\n  pattern completion has added "^
                             Int.toString new_rows^
                             " clauses to the original specification.");
                    if !allow_new_clauses then () else 
@@ -533,7 +533,7 @@ fun mk_functional thy eqs =
    as an abstraction containing a case expression on the function's argument.
  ---------------------------------------------------------------------------*)
 
- fun mk_pattern_fn thy (pes: (term * term) list) =
+fun mk_pattern_fn thy (pes: (term * term) list) =
   let fun err s = raise ERR "mk_pattern_fn" s
       val (p0,e0) = Lib.trye hd pes
           handle HOL_ERR _ => err "empty list of (pattern,expression) pairs"

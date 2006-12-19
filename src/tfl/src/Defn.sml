@@ -570,6 +570,8 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
 (* NEW *) val CONST_EQ_RULE = CONV_RULE (DEPTH_CONV const_eq_conv)
      fun TRIV_PAT_ELIM (x,y,z) = 
          (PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x),y,z)
+     fun TPAT_ELIM x = PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x)
+     val corollaries'' = map TPAT_ELIM corollaries'
 (* NEW val corollaries' = map (CONST_EQ_RULE o rule) corollaries *)
      val Xtract = extract [R1] context_congs f (proto_def,WFR)
  in
@@ -577,7 +579,7 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
      SV=Listsort.sort Term.compare SV,
      WFR=WFR,
      pats=pats,
-     extracta = map (TRIV_PAT_ELIM o Xtract) (zip given_pats corollaries')}
+     extracta = map Xtract (zip given_pats corollaries'')}
  end;
 
 fun wfrec_eqns thy eqns = gen_wfrec_eqns thy (!const_eq_ref) eqns;
@@ -1058,12 +1060,13 @@ fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple) =
 fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
  let val {rules,R,SV,full_pats_TCs,...} = stdrec facts stem' wfrec_res
      val ((f,_),_) = dest_hd_eqnl rules
-     val full_pats_TCs' = 
+(*     val full_pats_TCs' = 
          let val culled = gather (is_var o fst) full_pats_TCs
          in if null culled then full_pats_TCs else culled
          end
+*)
      val ind = Induction.mk_induction facts
-                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs'}
+                  {fconst=f, R=R, SV=SV, pat_TCs_list=full_pats_TCs}
  in
  case hyp (LIST_CONJ rules)
  of []     => raise ERR "stdrec_defn" "Empty hypotheses"
@@ -1377,6 +1380,5 @@ fun tstore_defn (d,t) =
   in store (name_of d,def,ind)
    ; (def,ind)
   end;
-
 
 end (* Defn *)

@@ -100,7 +100,7 @@ fun EVEN_ORS thms =
  *                                                                           *
  *---------------------------------------------------------------------------*)
 
-fun LEFT_ABS_VSTRUCT thm =
+ fun LEFT_ABS_VSTRUCT thm =
   let fun CHOOSER v (tm,thm) =
         let val ex_tm = mk_exists(v,tm)
         in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
@@ -108,6 +108,27 @@ fun LEFT_ABS_VSTRUCT thm =
       val veq = Lib.trye hd (filter (can dest_eq) (#1 (Thm.dest_thm thm)))
       val (lhs,rhs) = dest_eq veq
       val L = free_vars_lr rhs
+  in
+    snd(itlist CHOOSER L (veq,thm))
+  end;
+
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*        Gamma, (x = (v1,...,vn)) /\ constraints |- M[x]                    *)
+(*    -------------------------------------------------------                *)
+(*      ?v1 ... vn. (x = (v1,...,vn)) /\ constraints |- M[x]                 *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun LEFT_EXISTS thm =
+ let val possibles = filter (can (dest_eq o hd o strip_conj)) (Thm.hyp thm)
+     val veq = Lib.trye hd possibles
+     val (lhs,rhs) = dest_eq (hd (strip_conj veq))
+     val L = free_vars_lr rhs
+     fun CHOOSER v (tm,thm) =
+       let val ex_tm = mk_exists(v,tm)
+       in (ex_tm, CHOOSE(v, ASSUME ex_tm) thm)
+       end
   in
     snd(itlist CHOOSER L (veq,thm))
   end;
