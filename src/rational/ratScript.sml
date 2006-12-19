@@ -414,7 +414,7 @@ in
 		GEN_TAC THEN
 		FRAC_POS_TAC ``frac_dnm f1`` THEN
 		FRAC_POS_TAC ``frac_dnm (rep_rat (abs_rat f1))`` THEN
-		SUBST_TAC[subst1,subst2] THEN
+`		SUBST_TAC[subst1,subst2] THEN
 		REWRITE_TAC[INT_MUL_LZERO] THEN
 		PROVE_TAC[REP_ABS_DFN_EQUIV] )
 end;

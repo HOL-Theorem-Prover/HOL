@@ -90,6 +90,8 @@ fun with_exn f x e   = f x handle Interrupt => raise Interrupt | _ => raise e
  *        Common list operations                                             *
  *---------------------------------------------------------------------------*)
 
+fun single x = [x];
+
 fun tryfind f =
  let fun F [] = raise ERR "tryfind" "all applications failed"
        | F (h::t) = f h handle Interrupt => raise Interrupt | _ => F t
@@ -97,12 +99,14 @@ fun tryfind f =
  end;
 
 (* Counting starts from 1 *)
-local fun elem (_, [])     = raise ERR "el" "index too large"
-        | elem (1, h::_)   = h
-        | elem (n, _::rst) = elem (n-1, rst)
-in
-fun el n l = if n<1 then raise ERR "el" "index too small" else elem(n,l)
-end;
+fun el n l = 
+ if n<1 then raise ERR "el" "index too small" else 
+ let fun elem (_, [])     = raise ERR "el" "index too large"
+       | elem (1, h::_)   = h
+       | elem (n, _::rst) = elem (n-1, rst)
+ in
+    elem(n,l)
+ end;
 
 fun index P l =
   let fun idx (i, [])   = raise ERR "index" "no such element"
@@ -199,8 +203,10 @@ fun combine(l1,l2) = zip l1 l2
 val split = unzip
 
 fun mapfilter f list =
-  itlist(fn i => fn L =>
-          (f i::L) handle Interrupt => raise Interrupt | _ => L) list [];
+  itlist(fn i => fn L => (f i::L) 
+                handle Interrupt => raise Interrupt 
+                     | otherwise => L) 
+     list [];
 
 fun flatten [] = []
   | flatten ([]::t) = flatten t

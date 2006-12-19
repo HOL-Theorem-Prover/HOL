@@ -29,6 +29,7 @@ sig
   val with_exn      : ('a -> 'b) -> 'a -> exn -> 'b
   val tryfind       : ('a -> 'b) -> 'a list -> 'b
   val el            : int -> 'a list -> 'a
+  val single        : 'a -> 'a list
   val index         : ('a -> bool) -> 'a list -> int
   val map2          : ('a -> 'b -> 'c) -> 'a list -> 'b list -> 'c list
   val all           : ('a -> bool) -> 'a list -> bool

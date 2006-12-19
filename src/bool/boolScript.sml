@@ -18,7 +18,6 @@ infixr -->
 
 val _ = new_theory "bool";
 
-
 (*---------------------------------------------------------------------------*
  *             BASIC DEFINITIONS                                             *
  *---------------------------------------------------------------------------*)
@@ -3006,8 +3005,8 @@ val COND_CONG =
 
 val _ = save_thm("COND_CONG", COND_CONG);
 
-
 (* ----------------------------------------------------------------------
+
     RES_FORALL_CONG
        |- (P = Q) ==> (!x. x IN Q ==> (f x = g x)) ==>
           (RES_FORALL P f = RES_FORALL Q g)
@@ -3532,6 +3531,38 @@ val bool_INDUCT = save_thm("bool_INDUCT",
      val th9 = GEN b (DISJ_CASES th1 th7 th8)
  in
      GEN P (DISCH tm1 th9)
+ end);
+
+val bool_case_EQ_COND = save_thm("bool_case_EQ_COND",
+ let val b = mk_var("b",bool)
+     val x = mk_var("x",alpha)
+     val y = mk_var("y",alpha)
+     val bool_case_tm = mk_thy_const{Name="bool_case",Thy="bool",
+                             Ty = alpha --> alpha --> bool --> alpha}
+     val bool_case_app = list_mk_comb(bool_case_tm,[x,y,b])
+     val th1 = RIGHT_BETA (AP_THM bool_case_DEF x)
+     val th2 = RIGHT_BETA (AP_THM th1 y)
+     val th3 = RIGHT_BETA (AP_THM th2 b)
+ in 
+   GEN b (GEN x (GEN y th3))
+ end);
+
+
+(* ---------------------------------------------------------------------------
+   |- !P Q x x' y y'.
+         (P = Q) /\ (Q ==> (x = x')) /\ (~Q ==> (y = y')) ==>
+         ((case P of T -> x || F -> y) = (case Q of T -> x' || F -> y'))
+  --------------------------------------------------------------------------- *)
+
+val bool_case_CONG = save_thm("bool_case_CONG",
+ let val P = mk_var("P",bool)
+     val Q = mk_var("Q",bool)
+     val th = SUBS [SYM(SPEC_ALL (SPEC P bool_case_EQ_COND)),
+                    SYM(SPEC_ALL (SPEC Q bool_case_EQ_COND))]
+               (SPEC_ALL COND_CONG)
+     val fvs = free_vars (concl th)
+ in
+   GENL (rev fvs) th
  end);
 
 val FORALL_BOOL = save_thm
