@@ -2319,17 +2319,17 @@ val sizes = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64];
 
 fun mk_word_size n =
   let val (_, _, dimindex_thm) = fcpLib.mk_index_type n
-      val sn = Int.toString n
-      val ityp = mk_type("i"^sn, [])
+      val ityp = fcpLib.index_type n
+      val N = Int.toString n
       val TYPE = mk_type("cart", [bool, ityp])
-      val INT_MIN = save_thm("INT_MIN_" ^ sn,
+      val INT_MIN = save_thm("INT_MIN_" ^ N,
                   (SIMP_RULE std_ss [dimindex_thm] o
                    Thm.INST_TYPE [``:'a`` |-> ityp]) INT_MIN_def)
-      val dimword = save_thm("dimword_" ^ sn,
+      val dimword = save_thm("dimword_" ^ N,
                   (SIMP_RULE std_ss [INT_MIN] o
                    Thm.INST_TYPE [``:'a`` |-> ityp]) dimword_IS_TWICE_INT_MIN)
   in
-    type_abbrev("word"^sn, TYPE)
+    type_abbrev("word" ^ N, TYPE)
   end;
 
 val _ = List.app mk_word_size sizes;

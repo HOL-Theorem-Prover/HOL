@@ -255,6 +255,7 @@ val FCP_ETA = store_thm("FCP_ETA",
 (* ------------------------------------------------------------------------- *)
 
 (* Given an abstraction map f ... *)
+(*
 val index_size = prove(
   `!f n. BIJ f (count n) (IMAGE f (count n)) ==>
     (CARD (IMAGE f (count n)) = CARD (count n))`,
@@ -263,6 +264,7 @@ val index_size = prove(
 
 val index_size = save_thm("index_size",
   SIMP_RULE std_ss [CARD_COUNT] index_size);
+*)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -312,6 +314,104 @@ val isl_isr_union = prove(
   METIS_TAC [CARD_UNION,arithmeticTheory.ADD_0,CARD_EMPTY,
     isl_isr_inter,isl_isr_finite]);
 
+(* ------------------------------------------------------------------------- *)
+
+val pair_cross = prove(
+  `UNIV:('a#'b)->bool = (UNIV:'a->bool) CROSS (UNIV:'b->bool)`,
+  REWRITE_TAC [FUN_EQ_THM,UNIV_DEF,CROSS_DEF]
+    THEN STRIP_TAC THEN ONCE_REWRITE_TAC [GSYM SPECIFICATION]
+    THEN SIMP_TAC std_ss [GSPECIFICATION,IN_DEF]);
+
+(* ------------------------------------------------------------------------ *)
+
+val IS_SOME_OR_IS_NONE = prove(
+  `!x. IS_SOME x \/ IS_NONE x`,
+  Cases THEN METIS_TAC [optionTheory.IS_NONE_DEF,optionTheory.IS_SOME_DEF]);
+
+val option_union = prove(
+  `UNIV:('a option)->bool = IS_SOME UNION IS_NONE`,
+  REWRITE_TAC [FUN_EQ_THM,UNIV_DEF,UNION_DEF]
+    THEN STRIP_TAC THEN ONCE_REWRITE_TAC [GSYM SPECIFICATION]
+    THEN SIMP_TAC std_ss [GSPECIFICATION,IN_DEF]
+    THEN METIS_TAC [IS_SOME_OR_IS_NONE,optionTheory.IS_NONE_EQ_NONE]);
+
+val is_none_sing = prove(
+  `SING IS_NONE`,
+  REWRITE_TAC [SING_DEF] THEN EXISTS_TAC `NONE`
+    THEN SIMP_TAC std_ss [FUN_EQ_THM]
+    THEN METIS_TAC [IN_SING,SPECIFICATION]);
+
+val is_none_finite_card = REWRITE_RULE [SING_IFF_CARD1] is_none_sing;
+
+val is_some_bij = prove(
+  `BIJ SOME (UNIV:'a->bool) (IS_SOME:'a option->bool)`,
+  RW_TAC std_ss [UNIV_DEF,BIJ_DEF,INJ_DEF,SURJ_DEF,IN_DEF]
+    THEN Cases_on `x` THEN FULL_SIMP_TAC std_ss []);
+
+val is_some_image = prove(
+  `IS_SOME = IMAGE SOME (UNIV:'a->bool)`,
+  RW_TAC std_ss [EXTENSION,IMAGE_DEF,IN_UNIV,GSPECIFICATION]
+    THEN SIMP_TAC std_ss [IN_DEF] THEN Cases_on `x`
+    THEN SIMP_TAC std_ss []);
+
+val is_some_finite = prove(
+  `FINITE (IS_SOME:'a option->bool) = FINITE (UNIV:'a->bool)`,
+  REWRITE_TAC [is_some_image]
+    THEN MATCH_MP_TAC INJECTIVE_IMAGE_FINITE
+    THEN SIMP_TAC std_ss []);
+
+val is_some_card = prove(
+  `FINITE (UNIV:'a->bool) ==>
+     (CARD (IS_SOME:'a option->bool) = CARD (UNIV:'a->bool))`,
+  METIS_TAC [FINITE_BIJ_CARD_EQ,is_some_finite,is_some_bij]);
+
+val is_some_is_none_inter = prove(
+  `IS_SOME INTER IS_NONE = {}`,
+  RW_TAC std_ss [INTER_DEF,EXTENSION,NOT_IN_EMPTY,GSPECIFICATION]
+    THEN SIMP_TAC std_ss [IN_DEF]);
+
+val is_some_is_none_union = prove(
+  `FINITE (UNIV:'a -> bool) ==>
+     (CARD ((IS_SOME:'a option -> bool) UNION (IS_NONE:'a option -> bool)) =
+      CARD (IS_SOME:'a option -> bool) + 1)`,
+  REWRITE_TAC [GSYM is_some_finite]
+    THEN STRIP_TAC THEN STRIP_ASSUME_TAC is_none_finite_card
+    THEN IMP_RES_TAC CARD_UNION
+    THEN FULL_SIMP_TAC std_ss [is_some_is_none_inter,is_none_finite_card,
+           CARD_EMPTY]);
+
+(* ------------------------------------------------------------------------ *)
+
+val one_sing = prove(
+  `SING (UNIV:one->bool)`,
+  REWRITE_TAC [SING_DEF] THEN EXISTS_TAC `()`
+    THEN SIMP_TAC std_ss [FUN_EQ_THM] THEN Cases
+    THEN METIS_TAC [IN_SING,IN_UNIV,SPECIFICATION]);
+
+val one_finite_card = REWRITE_RULE [SING_IFF_CARD1] one_sing;
+
+(* ------------------------------------------------------------------------ *)
+
+val univ_conv = GEN_ALL o ONCE_REWRITE_CONV [GSYM SPECIFICATION];
+
+val bool_univ = prove(
+  `(UNIV:bool->bool) = {T; F}`,
+  REWRITE_TAC [FUN_EQ_THM] THEN Cases
+    THEN SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss)
+           [univ_conv ``(UNIV:bool->bool) x``,univ_conv ``{T; F} x``]);
+
+val bool_finite_card = prove(
+  `(CARD (UNIV:bool->bool) = 2) /\ FINITE (UNIV:bool->bool)`,
+  SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [bool_univ]);
+
+(* ------------------------------------------------------------------------ *)
+
+val index_one = store_thm("index_one",
+  `dimindex(:one) = 1`, METIS_TAC [dimindex_def,one_finite_card]);
+
+val index_bool = store_thm("index_bool",
+  `dimindex(:bool) = 2`, METIS_TAC [dimindex_def,bool_finite_card]);
+
 val index_sum = store_thm("index_sum",
   `dimindex(:('a+'b)) =
    if FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool) then
@@ -321,6 +421,45 @@ val index_sum = store_thm("index_sum",
   RW_TAC std_ss [dimindex,sum_union,isl_isr_union,isl_isr_univ,FINITE_UNION]
     THEN METIS_TAC [isl_isr_finite]);
 
-(* ------------------------------------------------------------------------- *)
+val index_prod = store_thm("index_prod",
+  `dimindex(:('a#'b)) =
+   if FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool) then
+     dimindex(:'a) * dimindex(:'b)
+   else
+     1`,
+  RW_TAC std_ss [FINITE_CROSS,CARD_CROSS,dimindex_def,pair_cross]
+    THEN METIS_TAC [FINITE_CROSS_EQ,UNIV_NOT_EMPTY]);
+
+val index_option = store_thm("index_option",
+  `dimindex(:('a option)) =
+     if FINITE (UNIV:'a->bool) then dimindex(:'a) + 1 else 1`,
+  RW_TAC std_ss [dimindex,option_union,is_some_is_none_union,FINITE_UNION]
+    THEN METIS_TAC [is_some_finite,is_none_finite_card,is_some_card]);
+
+(* ------------------------------------------------------------------------ *)
+
+val finite_one = save_thm("finite_one", CONJUNCT2 one_finite_card);
+val finite_bool = save_thm("finite_bool", CONJUNCT2 bool_finite_card);
+
+val finite_sum = store_thm("finite_sum",
+  `FINITE (UNIV:('a+'b)->bool) =
+   FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool)`,
+  SIMP_TAC std_ss [FINITE_UNION,sum_union,isl_isr_finite]);
+
+val finite_prod = store_thm("finite_prod",
+  `FINITE (UNIV:'a#'b->bool) =
+   FINITE (UNIV:'a->bool) /\ FINITE (UNIV:'b->bool)`,
+  SIMP_TAC std_ss [FINITE_CROSS_EQ,UNIV_NOT_EMPTY,pair_cross]);
+
+val finite_option = store_thm("finite_option",
+  `FINITE (UNIV:'a option->bool) = FINITE (UNIV:'a->bool)`,
+  SIMP_TAC std_ss [FINITE_UNION,is_some_finite,
+    is_none_finite_card,option_union]);
+
+(* ------------------------------------------------------------------------ *)
+
+val card_dimindex = save_thm("card_dimindex",
+  METIS_PROVE [dimindex_def]
+   ``FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))``);
 
 val _ = export_theory();
