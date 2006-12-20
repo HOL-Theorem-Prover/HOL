@@ -197,6 +197,8 @@ val rat_gre_def = Define `rat_gre r1 r2 = rat_les r2 r1`;
 val rat_leq_def = Define `rat_leq r1 r2 = rat_les r1 r2 \/ (r1=r2)`;
 val rat_geq_def = Define `rat_geq r1 r2 = rat_leq r2 r1`;
 
+
+
 (* construction of rational numbers, support of numerals *)
 val rat_cons_def = Define `rat_cons (nmr:int) (dnm:int) = abs_rat (abs_frac(SGN nmr * SGN dnm * ABS nmr, ABS dnm))`;
 
@@ -346,7 +348,9 @@ val RAT_IMP_EQUIV = prove(``!r1 r2. (r1 = r2) ==> rat_equiv r1 r2``,
  *	= (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)
  *--------------------------------------------------------------------------*)
 
-val RAT_EQ = store_thm("RAT_EQ", ``!f1 f2. (abs_rat f1 = abs_rat f2) = (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)``,
+val RAT_EQ = store_thm("RAT_EQ", 
+``!f1 f2. (abs_rat f1 = abs_rat f2) = 
+          (frac_nmr f1 * frac_dnm f2 = frac_nmr f2 * frac_dnm f1)``,
 	REPEAT GEN_TAC THEN
 	RW_TAC bool_ss [RAT_ABS_EQUIV, rat_equiv_def] );
 
@@ -391,6 +395,7 @@ in
 		PROVE_TAC[REP_ABS_DFN_EQUIV] )
 end;
 
+
 val RAT_NMRLT0_CONG =
 let
 	val subst1 = UNDISCH_ALL (SPEC ``frac_dnm f1`` (SPEC ``0i`` (SPEC ``frac_nmr (rep_rat (abs_rat f1))`` INT_LT_RMUL_EXP)));
@@ -407,17 +412,23 @@ end;
 
 val RAT_NMRGT0_CONG =
 let
-	val subst1 = UNDISCH_ALL (SPEC ``frac_dnm f1`` (SPEC ``0i`` (SPEC ``frac_nmr (rep_rat (abs_rat f1))`` INT_GT_RMUL_EXP)));
-	val subst2 = UNDISCH_ALL (SPEC ``frac_dnm (rep_rat (abs_rat f1))`` (SPEC ``0i`` (SPEC ``frac_nmr f1`` INT_GT_RMUL_EXP)));
+ val subst1 = UNDISCH_ALL (SPEC ``frac_dnm f1`` 
+                          (SPEC ``0i`` 
+                          (SPEC ``frac_nmr (rep_rat (abs_rat f1))`` INT_GT_RMUL_EXP)))
+ val subst2 = UNDISCH_ALL (SPEC ``frac_dnm (rep_rat (abs_rat f1))`` 
+                          (SPEC ``0i`` 
+                          (SPEC ``frac_nmr f1`` INT_GT_RMUL_EXP)))
 in
-	store_thm("RAT_NMRGT0_CONG", ``!f1. (frac_nmr (rep_rat (abs_rat f1)) > 0) = (frac_nmr f1 > 0)``,
-		GEN_TAC THEN
-		FRAC_POS_TAC ``frac_dnm f1`` THEN
-		FRAC_POS_TAC ``frac_dnm (rep_rat (abs_rat f1))`` THEN
-`		SUBST_TAC[subst1,subst2] THEN
-		REWRITE_TAC[INT_MUL_LZERO] THEN
-		PROVE_TAC[REP_ABS_DFN_EQUIV] )
+ store_thm("RAT_NMRGT0_CONG", 
+ ``!f1. (frac_nmr (rep_rat (abs_rat f1)) > 0) = (frac_nmr f1 > 0)``,
+ GEN_TAC THEN
+ FRAC_POS_TAC ``frac_dnm f1`` THEN
+ FRAC_POS_TAC ``frac_dnm (rep_rat (abs_rat f1))`` THEN
+ SUBST_TAC[subst1,subst2] THEN
+ REWRITE_TAC[INT_MUL_LZERO] THEN
+ PROVE_TAC[REP_ABS_DFN_EQUIV] )
 end;
+
 
 (*--------------------------------------------------------------------------
  *  RAT_SGN_CONG: thm
@@ -2505,7 +2516,7 @@ val RAT_MUL_NUM1 = prove(``!n m. &n *  &m =  &(n*m)``,
 	Induct_on `m` THEN
 	Induct_on `n` THEN
 	RW_TAC int_ss [RAT_MUL_LZERO, RAT_MUL_RZERO] THEN
-	`!x. SUC x = x + 1` by ARITH_TAC THEN
+        `!x. SUC x = x + 1` by ARITH_TAC THEN
 	`(n+1) * (m+1) = n * m + n + m + 1:num` by ARITH_TAC THEN
 	ASM_REWRITE_TAC[GSYM RAT_ADD_NUM1, RAT_LDISTRIB, RAT_RDISTRIB, RAT_ADD_ASSOC, RAT_MUL_ASSOC, RAT_MUL_LID, RAT_MUL_RID, MULT_CLAUSES] THEN
 	METIS_TAC[RAT_ADD_ASSOC, RAT_ADD_COMM, MULT_COMM] );
@@ -2589,6 +2600,7 @@ val RAT_EQ_NUM4 = prove(``!n m. (~&n = ~&m) = (n=m)``,
 	PROVE_TAC[RAT_AINV_EQ, RAT_EQ_NUM1] );
 
 val RAT_EQ_NUM_CALCULATE = save_thm("RAT_EQ_NUM_CALCULATE", LIST_CONJ [RAT_EQ_NUM1, RAT_EQ_NUM2, RAT_EQ_NUM3, RAT_EQ_NUM4] );
+
 
 (*==========================================================================
  * end of theory
