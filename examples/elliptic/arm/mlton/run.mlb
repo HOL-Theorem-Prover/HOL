@@ -40,11 +40,10 @@ $(THEORY)/rich_listML.sig
 $(THEORY)/rich_listML.sml
 $(THEORY)/bitML.sig
 $(THEORY)/bitML.sml
+$(THEORY)/fcpML.sig
 $(THEORY)/fcpML.sml
 $(THEORY)/wordsML.sig
 $(THEORY)/wordsML.sml
-sizesML.sig
-sizesML.sml
 $(THEORY)/bsubstML.sig
 bsubstML.sml
 $(THEORY)/armML.sig

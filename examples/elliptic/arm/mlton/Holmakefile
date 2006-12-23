@@ -10,16 +10,13 @@ paths:
 	@echo "PORTABLE" $(HOLDIR)/src/portableML >> paths
 	@echo "THEORY" $(THEORY) >> paths
 
-run: run.mlb paths bsubstML.sml sizesML.sig sizesML.sml evalML.sml
+run: run.mlb paths bsubstML.sml evalML.sml
 	mlton -verbose 1 -mlb-path-map paths run.mlb
 
-mosrun.exe: bsubstML.uo sizesML.uo evalML.uo
+mosrun.exe: bsubstML.uo evalML.uo
 	HOLMOSMLC -I $(THEORY) -I .. -o $@ evalML.uo
 
-sizesML.uo: sizesML.sig sizesML.sml
-	HOLMOSMLC -c -I $(THEORY) sizesML.sig sizesML.sml
-
-evalML.uo: sizesML.uo evalML.sml
+evalML.uo: evalML.sml
 	HOLMOSMLC -c -I $(THEORY) -I .. evalML.sml
 
 bsubstML.uo:

@@ -2405,18 +2405,7 @@ in
      :: MLSIG "datatype 'a word = n2w_itself of num * fcpML.holtype"
      :: MLSTRUCT "datatype 'a word = n2w_itself of num * holtype"
      :: List.concat (map mk_index [2,4,5,8,12,16,24,30,32])
-      @ MLSTRUCT
-            "val lookup_INT_MIN = ref (fn (a: holtype) =>\
-                 \ (raise IndexUndefined):num)\n\
-          \  fun INT_MIN a = !lookup_INT_MIN a\n\
-          \  val lookup_dimword = ref (fn (a: holtype) =>\
-                 \ (raise IndexUndefined):num)\n\
-          \  fun dimword a = !lookup_dimword a\n\n"
-     :: MLSIG "val lookup_INT_MIN : (fcpML.holtype -> num) ref\n\
-            \  val INT_MIN        : fcpML.holtype -> num\n\
-            \  val lookup_dimword : (fcpML.holtype -> num) ref\n\
-            \  val dimword        : fcpML.holtype -> num"
-     :: map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
+      @ map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
            GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
            GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
            TIMES_2EXP1] o ALPHA_BETA_RULE)

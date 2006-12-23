@@ -30,22 +30,20 @@ struct
         if word_ls a b andalso < (- (w2n b) (w2n a)) (listML.LENGTH l)
           then listML.EL (- (w2n b) (w2n a)) l else m b
     
-  fun fromHexNum s n =
-        wordsML.fromNum(numML.fromHexString n, fcpML.Tyop (s, []));
-
-  val fromNum32 = (fromHexNum "i32"): string -> word32;
+  fun fromNum32 n =
+        wordsML.fromNum(numML.fromHexString n, fcpML.index_type 32)
 
   fun mem_read (m,a) = Redblackmap.find(m:mem, a)
-                       handle NotFound => fromNum32 "E6000010";
+                       handle NotFound => fromNum32 "E6000010"
     
   fun mem_write m a d = (:= (mem_updates, a :: !mem_updates);
-                         Redblackmap.insert(m:mem, a, d));
+                         Redblackmap.insert(m:mem, a, d))
     
   fun mem_write_block m a [] = m
     | mem_write_block m a (d::l) =
         mem_write_block (mem_write m a d)
-          (word_add a (n2w_itself (ONE,(Tyop ("i30", []))))) l
-    
+          (word_add a (n2w_itself (ONE,fcpML.index_type 30))) l
+
   fun word_compare(v, w) =
     let val m = w2n v and n = w2n w in
       if m = n then
@@ -53,75 +51,126 @@ struct
       else
         if < m n then LESS else GREATER
     end
-
+    
   val empty_memory = (Redblackmap.mkDict word_compare):mem
-
+    
   fun mem_items m = Redblackmap.listItems m
     
   fun ADDR30 addr =
-        word_extract_itself (Tyop ("i30", [])) (fromString"31") TWO addr
+        word_extract_itself
+          (Tyop ("prod", [(Tyop ("bool", [])),
+                          (Tyop ("option", [(Tyop ("prod", [(Tyop ("bool", [])),
+                                                            (Tyop ("option", [(Tyop ("prod", [(Tyop ("bool", [])),
+                                                                                              (Tyop ("option", [(Tyop ("bool", []))]))]))]))]))]))]))
+          (fromString"31") TWO addr
     
   fun GET_HALF oareg data =
         if index oareg ONE
-          then word_extract_itself (Tyop ("i16", [])) (fromString"31")
-                 (fromString"16") data
-          else word_extract_itself (Tyop ("i16", [])) (fromString"15")
-                 ZERO data
+          then word_extract_itself
+                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                 (Tyop ("bool", []))]))]))]))
+                 (fromString"31") (fromString"16") data
+          else word_extract_itself
+                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                 (Tyop ("bool", []))]))]))]))
+                 (fromString"15") ZERO data
     
   fun GET_BYTE oareg data =
-        case word_eq oareg (n2w_itself (ZERO,(Tyop ("i2", []))))
+        case word_eq oareg (n2w_itself (ZERO,(Tyop ("bool", []))))
          of true =>
-               word_extract_itself (Tyop ("i8", [])) (fromString"7")
-                 ZERO data
+               word_extract_itself
+                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                 (Tyop ("bool", []))]))]))
+                 (fromString"7") ZERO data
           | false =>
-               (case word_eq oareg (n2w_itself (ONE,(Tyop ("i2", []))))
+               (case
+                  word_eq oareg (n2w_itself (ONE,(Tyop ("bool", []))))
                 of true =>
-                      word_extract_itself (Tyop ("i8", []))
+                      word_extract_itself
+                        (Tyop ("prod", [(Tyop ("bool", [])),
+                                        (Tyop ("prod", [(Tyop ("bool", [])),
+                                                        (Tyop ("bool", []))]))]))
                         (fromString"15") (fromString"8") data
                  | false =>
                       (case
                          word_eq oareg
-                           (n2w_itself (TWO,(Tyop ("i2", []))))
+                           (n2w_itself (TWO,(Tyop ("bool", []))))
                        of true =>
-                             word_extract_itself (Tyop ("i8", []))
+                             word_extract_itself
+                               (Tyop ("prod", [(Tyop ("bool", [])),
+                                               (Tyop ("prod", [(Tyop ("bool", [])),
+                                                               (Tyop ("bool", []))]))]))
                                (fromString"23") (fromString"16") data
                         | false =>
-                             word_extract_itself (Tyop ("i8", []))
+                             word_extract_itself
+                               (Tyop ("prod", [(Tyop ("bool", [])),
+                                               (Tyop ("prod", [(Tyop ("bool", [])),
+                                                               (Tyop ("bool", []))]))]))
                                (fromString"31") (fromString"24") data))
     
   fun FORMAT fmt oareg data =
         case fmt
          of SignedByte =>
-               sw2sw_itself (Tyop ("i32", [])) (GET_BYTE oareg data)
+               sw2sw_itself
+                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                                 (Tyop ("bool", []))]))]))]))]))
+                 (GET_BYTE oareg data)
           | UnsignedByte =>
-               w2w_itself (Tyop ("i32", [])) (GET_BYTE oareg data)
+               w2w_itself
+                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                                 (Tyop ("bool", []))]))]))]))]))
+                 (GET_BYTE oareg data)
           | SignedHalfWord =>
-               sw2sw_itself (Tyop ("i32", [])) (GET_HALF oareg data)
+               sw2sw_itself
+                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                                 (Tyop ("bool", []))]))]))]))]))
+                 (GET_HALF oareg data)
           | UnsignedHalfWord =>
-               w2w_itself (Tyop ("i32", [])) (GET_HALF oareg data)
-          | UnsignedWord => data
+               w2w_itself
+                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                 (Tyop ("prod", [(Tyop ("bool", [])),
+                                                                                 (Tyop ("bool", []))]))]))]))]))
+                 (GET_HALF oareg data)
+          | UnsignedWord =>
+               word_ror data ( *  (fromString"8") (w2n oareg))
     
   fun SET_BYTE oareg b w =
         word_modify (fn i => fn x =>
           < i (fromString"8")
           andalso
-          (if word_eq oareg (n2w_itself (ZERO,(Tyop ("i2", []))))
+          (if word_eq oareg (n2w_itself (ZERO,(Tyop ("bool", []))))
              then index b i else x)
           orelse
           ((<= (fromString"8") i andalso < i (fromString"16"))
            andalso
-           (if word_eq oareg (n2w_itself (ONE,(Tyop ("i2", []))))
+           (if word_eq oareg (n2w_itself (ONE,(Tyop ("bool", []))))
               then index b (- i (fromString"8")) else x)
            orelse
            ((<= (fromString"16") i andalso < i (fromString"24"))
             andalso
-            (if word_eq oareg (n2w_itself (TWO,(Tyop ("i2", []))))
+            (if word_eq oareg (n2w_itself (TWO,(Tyop ("bool", []))))
                then index b (- i (fromString"16")) else x)
             orelse
             (<= (fromString"24") i andalso < i (fromString"32"))
             andalso
             (if word_eq oareg
-                  (n2w_itself ((fromString"3"),(Tyop ("i2", []))))
+                  (n2w_itself ((fromString"3"),(Tyop ("bool", []))))
                then index b (- i (fromString"24")) else x)))) w
     
   fun SET_HALF oareg hw w =
@@ -139,7 +188,7 @@ struct
         in
            mem_write mem addr30
              (SET_BYTE
-                (word_extract_itself (Tyop ("i2", [])) ONE ZERO addr)
+                (word_extract_itself (Tyop ("bool", [])) ONE ZERO addr)
                 word (mem_read (mem,addr30)))
         end
     

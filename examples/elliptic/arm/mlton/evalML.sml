@@ -3,7 +3,7 @@ val HOLDIR = "/local/scratch/acjf3/hol98/";
 val _ = loadPath := !loadPath @ ".." :: map (fn x => HOLDIR ^ x)
      ["tools/mlyacc/mlyacclib", "tools/mlton/pre",
       "src/portableML", "src/theoryML"];
-val _ = app load ["assemblerML", "armML", "sizesML"];
+val _ = app load ["assemblerML", "armML"];
 val _ = app load ["OS", "Bool", "Time", "Timer", "CommandLine", "ListPair"];
 *)
 
@@ -11,13 +11,11 @@ val _ = app load ["OS", "Bool", "Time", "Timer", "CommandLine", "ListPair"];
 
 exception Parse;
 
-val _ = sizesML.sizes();
+fun toWord s i = wordsML.n2w_itself(i, fcpML.index_type s);
 
-fun toWord s i = wordsML.n2w_itself(i, fcpML.Tyop (s, []));
-
-fun toWord4 i = toWord "i4" (numML.fromInt i): wordsML.word4
-val toWord30 = toWord "i30": numML.num -> wordsML.word30;
-val toWord32 = toWord "i32": numML.num -> wordsML.word32
+fun toWord4 i = toWord 4 (numML.fromInt i): wordsML.word4
+val toWord30 = toWord 30: numML.num -> wordsML.word30;
+val toWord32 = toWord 32: numML.num -> wordsML.word32
 
 val num2Arbnum = Arbnum.fromHexString o numML.toHexString;
 
