@@ -1,6 +1,8 @@
 open HolKernel Parse boolLib IndDefLib arithmeticTheory
 
-fun die s = (print (s^"\n"); OS.Process.exit OS.Process.failure)
+fun die s = (if !Globals.interactive then
+               raise Fail s
+             else print (s^"\n"); OS.Process.exit OS.Process.failure)
 fun checkhyps th = if null (hyp th) then ()
                    else die "FAILED - Hyps in theorem!"
 
@@ -77,11 +79,9 @@ val _ = new_constant ("EVERY", ``:('a -> bool) -> 'a list -> bool``)
 val _ = new_constant ("MEM", ``:'a -> 'a list -> bool``)
 val _ = new_constant ("ZIP", ``:('a list # 'b list) -> ('a # 'b) list``)
 
-val MONO_UNCURRY = mk_thm([],
-  ``(!p:'a q:'b. P p q ==> Q p q) ==> (UNCURRY P x ==> UNCURRY Q x)``)
 val MONO_EVERY = mk_thm([], ``(!x:'a. P x ==> Q x) ==>
                               (EVERY P l ==> EVERY Q l)``)
-val _ = app add_mono_thm [MONO_UNCURRY, MONO_EVERY]
+val _ = add_mono_thm MONO_EVERY
 
 val (red_rules, red_ind, red_cases) = Hol_reln `
   (!n. red f (v n) (v (f n))) /\
@@ -107,10 +107,27 @@ val (ph_rules, ph_ind, ph_cases) = Hol_reln`
              red SUC (HD ts) (HD (TL ts)) ==>
              WF_TYPE cx (app ts))
 `
-val _ = if null (hyp ph_rules) then ()
-        else die "Hyps in rules - FAILED\n"
+val _ = checkhyps ph_rules
 
 val ph_strong = derive_strong_induction(ph_rules, ph_ind)
+
+(* UNCURRY with more than two arguments *)
+val _ = print "*** Testing UNCURRY with more than two arguments\n"
+val (u3_rules, u3_ind, u3_cases) = Hol_reln`
+  u3 (0,1,2) /\
+  (!x y z. (\ ((x,y), z). u3 (x,y,z)) ((y,x),z) ==> u3 (x,y,z))
+`
+val _ = checkhyps u3_rules
+val u3_strong = derive_strong_induction(u3_rules, u3_ind)
+
+(* single rule *)
+val _ = print "*** Testing strong principle for singleton rule\n"
+val (single_rules, single_ind, single_cases) = Hol_reln`
+  (!x y. RTC single x y \/ (x = y + 3) ==> single x y)
+`;
+val _ = checkhyps single_rules
+
+val _ = derive_strong_induction(single_rules, single_ind)
 
 val _ = OS.Process.exit OS.Process.success
 

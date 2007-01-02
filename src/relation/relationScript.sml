@@ -45,7 +45,7 @@ val equivalence_def = new_definition(
   ``equivalence (R:'a->'a->bool) = reflexive R /\ symmetric R /\ transitive R``);
 
 val total_def = new_definition(
-  "total_def", 
+  "total_def",
   ``total (R:'a->'a->bool) = !x y. R x y \/ R y x``);
 
 val trichotomous = new_definition(
@@ -631,6 +631,12 @@ val ALT_equivalence = store_thm(
   REWRITE_TAC [equivalence_def, reflexive_def, symmetric_def,
                transitive_def, FUN_EQ_THM, EQ_IMP_THM] THEN
   MESON_TAC []);
+
+val EQC_MONOTONE = store_thm(
+  "EQC_MONOTONE",
+  ``(!x y. R x y ==> R' x y) ==> !x y. EQC R x y ==> EQC R' x y``,
+  STRIP_TAC THEN HO_MATCH_MP_TAC STRONG_EQC_INDUCTION THEN
+  METIS_TAC [EQC_R, EQC_TRANS, EQC_SYM, EQC_REFL]);
 
 
 (*---------------------------------------------------------------------------*

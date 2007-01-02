@@ -102,21 +102,30 @@ fun simp_rule monoset (rul,tm) =
 
 fun simp monoset p = simp_rule monoset p handle HOL_ERR _ => simp_axiom p;
 
-fun forall_andl_conv t = let
-  fun ONE_VAR_MANY_ANDS t =
-      TRY_CONV (FORALL_AND_CONV THENC
-                BINOP_CONV ONE_VAR_MANY_ANDS) t
+(* We can figure out number of schematic variables by comparing the
+   number of top level quantifications in the induction theorem to the
+   number of conclusions there.  There will be one quantification per
+   induction predicate, and additionally one for every schematic
+   variable.  But there will only be one conclusion per induction
+   predicate. (There will be multiple induction predicates when you
+   have multiple (possibly mutually recursive) constants defined.)
+*)
+
+fun schematic_var_count indth = let
+  val c = concl indth
+  val (vs, body) = strip_forall c
+  val (_, ind_concls) = dest_imp body
 in
-  if is_forall t then
-    (BINDER_CONV forall_andl_conv THENC
-     ONE_VAR_MANY_ANDS) t
-  else ALL_CONV t
+  length vs - length (strip_conj ind_concls)
 end
 
 fun derive_mono_strong_induction monoset (rule_th,ind) = let
-  val rules_th = CONV_RULE forall_andl_conv rule_th
-  val (svs, _) = strip_forall (concl rule_th)
-  val rules = CONJUNCTS rules_th
+  (* Use sv_count to generate a fully quantified version of each rule.
+     Works even when there is just one rule *)
+  val sv_count = schematic_var_count ind
+  val svs = List.take (#1 (strip_forall (concl ind)), sv_count)
+  val specced_rules_th = SPECL svs rule_th
+  val rules = map (GENL svs) (CONJUNCTS specced_rules_th)
   val (vs,(_,conseq)) = (I ## dest_imp) (strip_forall (concl ind))
   val conseqs = strip_conj conseq
   val srules = map (SPECL svs) rules

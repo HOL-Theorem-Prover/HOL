@@ -17,6 +17,7 @@ sig
   val DISJ_CASESL      : thm -> thm list -> thm
 
   val LEFT_ABS_VSTRUCT : thm -> thm
+  val LEFT_EXISTS      : thm -> thm
 
   val SUBS             : thm list -> thm -> thm
   val simpl_conv       : thm list -> term -> thm
@@ -27,4 +28,4 @@ sig
         -> {thms:thm list,congs: thm list, th:thm} 
         -> thm
 
-end;
+end

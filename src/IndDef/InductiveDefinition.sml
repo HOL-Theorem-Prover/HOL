@@ -385,11 +385,14 @@ fun derive_nonschematic_inductive_relations tm =
 (* ========================================================================= *)
 
 
-(* ------------------------------------------------------------------------- *)
-(*   ?- (\x. P[x]) x1 .. xn ==> (\y. Q[y]) x1 .. xn                          *)
-(* ==================================================                        *)
-(*     ?- !x1. P[x1] x2 .. xn ==> Q[x1] x2 .. xn                             *)
-(* ------------------------------------------------------------------------- *)
+(* ----------------------------------------------------------------------
+    MONO_ABS_TAC
+
+        ?- (\x. P[x]) x1 .. xn ==> (\y. Q[y]) x1 .. xn
+      ==================================================
+          ?- P[x1] x2 .. xn ==> Q[x1] x2 .. xn
+
+   ---------------------------------------------------------------------- *)
 
 fun MONO_ABS_TAC (asl,w) =
     let val (ant,con) = dest_imp w
@@ -402,6 +405,34 @@ fun MONO_ABS_TAC (asl,w) =
         val th3 = MK_COMB(AP_TERM boolSyntax.implication th1,th2)
     in CONV_TAC(REWR_CONV th3) (asl,w)
     end;;
+
+(* ----------------------------------------------------------------------
+    MONO_UNCURRY_TAC
+
+         ?- UNCURRY f x1 .. xn ==> UNCURRY f' x1 .. xn
+      ==================================================
+        ?- f y1 y2 .. xn ==> f' y1 y2 .. xn
+
+   ---------------------------------------------------------------------- *)
+
+local
+  val U = pairTheory.UNCURRY
+in
+
+fun MONO_UNCURRY_TAC (asl, w) = let
+  val (ant, con) = dest_imp w
+  val vars = snd (strip_comb con)
+  val rnum = length vars - 2
+  val (hd1, args1) = strip_ncomb rnum ant
+  val (hd2, args2) = strip_ncomb rnum con
+  val th1 = rev_itlist (C AP_THM) args1 (ISPECL (#2 (strip_comb hd1)) U)
+  val th2 = rev_itlist (C AP_THM) args2 (ISPECL (#2 (strip_comb hd2)) U)
+  val th3 = MK_COMB(AP_TERM boolSyntax.implication th1, th2)
+in
+  CONV_TAC (REWR_CONV th3) (asl, w)
+end
+end (* local *)
+
 
 (* ------------------------------------------------------------------------- *)
 (* Collection, so users can add their own rules.                             *)
@@ -456,11 +487,25 @@ val MONO_RESEXISTS = prove(
   REWRITE_TAC [RES_EXISTS_THM, IN_DEF] THEN BETA_TAC THEN REPEAT STRIP_TAC THEN
   EXISTS_TAC ``x:'a`` THEN RES_TAC THEN ASM_REWRITE_TAC [])
 
-val MONO_UNCURRY = prove(
-  ``(!p:'a q:'b. P p q ==> Q p q) ==> (UNCURRY P x ==> UNCURRY Q x)``,
-  Q.SPEC_THEN `x` STRUCT_CASES_TAC pairTheory.pair_CASES THEN
-  REWRITE_TAC [pairTheory.UNCURRY_DEF] THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC []);
+val MONO_RTC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (RTC R x y ==> RTC R' x y)``,
+  STRIP_TAC THEN MATCH_MP_TAC relationTheory.RTC_MONOTONE THEN
+  ASM_REWRITE_TAC []);
+
+val MONO_TC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (TC R x y ==> TC R' x y)``,
+  STRIP_TAC THEN MATCH_MP_TAC relationTheory.TC_MONOTONE THEN
+  ASM_REWRITE_TAC []);
+
+val MONO_EQC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (EQC R x y ==> EQC R' x y)``,
+  STRIP_TAC THEN MATCH_MP_TAC relationTheory.EQC_MONOTONE THEN
+  ASM_REWRITE_TAC []);
+
+val MONO_SC = prove(
+  ``(!x:'a y. R x y ==> R' x y) ==> (SC R x y ==> SC R' x y)``,
+  STRIP_TAC THEN REWRITE_TAC [relationTheory.SC_DEF] THEN STRIP_TAC THEN
+  RES_TAC THEN ASM_REWRITE_TAC []);
 
 
 val bool_monoset =
@@ -472,7 +517,10 @@ val bool_monoset =
   ("~",   MONO_NOT),
   ("RES_FORALL", MONO_RESFORALL),
   ("RES_EXISTS", MONO_RESEXISTS),
-  ("UNCURRY", MONO_UNCURRY)]
+  ("RTC", MONO_RTC),
+  ("TC", MONO_TC),
+  ("EQC", MONO_EQC),
+  ("SC", MONO_SC)]
 
 
 val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
@@ -482,13 +530,16 @@ fun APPLY_MONOTAC monoset (asl, w) = let
 in
   if aconv a c then ACCEPT_TAC (SPEC a IMP_REFL) (asl,w)
   else let
-      val cn = fst(dest_const(repeat rator c)) handle HOL_ERR _ => ""
+      val {Thy,Name,...} = dest_thy_const(repeat rator c)
+                           handle HOL_ERR _ => {Thy = "", Name = "",
+                                                Ty = Type.alpha}
     in
-      if cn = "" then MONO_ABS_TAC (asl, w)
-      else
-        tryfind (fn (k,t) => if k = cn then BACKCHAIN_TAC t (asl,w)
-                             else fail())
-                monoset
+      case (Thy,Name) of
+        ("","") => MONO_ABS_TAC (asl, w)
+      | ("pair", "UNCURRY") => MONO_UNCURRY_TAC (asl, w)
+      | _ => tryfind (fn (k,t) => if k = Name then BACKCHAIN_TAC t (asl,w)
+                                  else fail())
+                     monoset
     end
 end
 

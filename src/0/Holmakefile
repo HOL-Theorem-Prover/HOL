@@ -17,7 +17,7 @@ Type.uo: Type.sml Raw-sig.uo
 Term.uo: Term.sml Type.uo
 	HOLMOSMLC -c -toplevel Type.ui Raw-sig.ui Sig.ui Term.sml
 
-Thm.uo: Thm.sml Term.uo $(TAG_UI)
+Thm.uo: Thm.sml Term.uo $(TAG_UID)
 	HOLMOSMLC -c -toplevel Raw-sig.ui Term.ui Type.ui Thm.sml
 
 TheoryPP.uo: TheoryPP.sml Thm.uo

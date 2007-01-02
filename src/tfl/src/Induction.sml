@@ -7,31 +7,31 @@ type thry = TypeBasePure.typeBase
 
 val ERR = mk_HOL_ERR "Induction";
 
-val monitoring = ref false
-
 fun induct_info db s =
  Option.map (fn facts => {nchotomy = TypeBasePure.nchotomy_of facts,
                           constructors = TypeBasePure.constructors_of facts})
            (TypeBasePure.prim_get db s);
 
-(* -----------------------  Miscellaneous function  --------------------------
- *
- *           [x_1,...,x_n]     ?v_1...v_n. M[v_1,...,v_n]
- *     -----------------------------------------------------------
- *     ( M[x_1,...,x_n], [(x_i,?v_1...v_n. M[v_1,...,v_n]),
- *                        ...
- *                        (x_j,?v_n. M[x_1,...,x_(n-1),v_n])] )
- *
- * This function is totally ad hoc. It's used in the production of the
- * induction theorem. The nchotomy theorem can have clauses that look like
- *
- *     ?v1..vn. z = C vn..v1
- *
- * in which the order of quantification is not the order of occurrence of the
- * quantified variables as arguments to C. Since we have no control over this
- * aspect of the nchotomy theorem, we make the correspondence explicit by
- * pairing the incoming new variable with the term it gets beta-reduced into.
- * ------------------------------------------------------------------------- *)
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*           [x_1,...,x_n]     ?v_1...v_n. M[v_1,...,v_n]                    *)
+(*     -----------------------------------------------------------           *)
+(*     ( M[x_1,...,x_n], [(x_i,?v_1...v_n. M[v_1,...,v_n]),                  *)
+(*                        ...                                                *)
+(*                        (x_j,?v_n. M[x_1,...,x_(n-1),v_n])] )              *)
+(*                                                                           *)
+(* This function is totally ad hoc. It's used in the production of the       *)
+(* induction theorem. The nchotomy theorem can have clauses that look like   *)
+(*                                                                           *)
+(*     ?v1..vn. z = C vn..v1                                                 *)
+(*                                                                           *)
+(* in which the order of quantification is not the order of occurrence of the*)
+(* quantified variables as arguments to C. Since we have no control over this*)
+(* aspect of the nchotomy theorem, we make the correspondence explicit by    *)
+(* pairing the incoming new variable with the term it gets beta-reduced into.*)
+(* ------------------------------------------------------------------------- *)
+
+(* fun assoc1 x = Lib.total(snd o Lib.first (aconv x o fst));  *)
 
 local fun assoc1 eq item =
         let val eek = eq item
@@ -62,43 +62,78 @@ fun alpha_ex_unroll xlist tm =
 end;
 
 
-
-(*---------------------------------------------------------------------------*
- *                                                                           *
- *             PROVING COMPLETENESS OF PATTERNS                              *
- *                                                                           *
- *---------------------------------------------------------------------------*)
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*             PROVING COMPLETENESS OF PATTERNS                              *)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
 
 fun ipartition gv (constructors,rows) =
-  let fun pfail s = raise ERR"ipartition.part" s
-      fun part {constrs = [],   rows = [],   A} = rev A
-        | part {constrs = [],   rows = _::_, A} = pfail"extra cases in defn"
-        | part {constrs = _::_, rows = [],   A} = pfail"cases missing in defn"
-        | part {constrs = c::crst, rows,     A} =
-          let val {Name,Thy,Ty} = dest_thy_const c
-              val (L,_) = strip_fun_type Ty
-              fun func (row as (p::rst, rhs)) (in_group,not_in_group) =
-                        let val (pc,args) = strip_comb p
-                            val {Name=nm,Thy=thyn,...} = dest_thy_const pc
-                        in if (nm,thyn) = (Name,Thy)
-                             then ((args@rst, rhs)::in_group, not_in_group)
-                             else (in_group, row::not_in_group)
-                        end
-                | func _ _ = pfail "func" ""
-              val (in_group, not_in_group) = itlist func rows ([],[])
-              val col_types = #1(wfrecUtils.gtake type_of
-                                   (length L, #1(Lib.trye hd in_group)))
-          in
-          part{constrs = crst,
-               rows = not_in_group,
-               A = {constructor = c,
-                    new_formals = map gv col_types,
-                    group = in_group}::A}
-          end
-  in
-     part {constrs=constructors, rows=rows, A=[]}
-  end;
+let fun pfail s = raise ERR"ipartition.part" s
+    fun part {constrs = [],   rows = [],   A} = rev A
+      | part {constrs = [],   rows = _::_, A} = pfail"extra cases in defn"
+      | part {constrs = _::_, rows = [],   A} = pfail"cases missing in defn"
+      | part {constrs = c::crst, rows,     A} =
+         let val {Name,Thy,Ty} = dest_thy_const c
+             val (L,_) = strip_fun_type Ty
+             fun func (row as (p::rst, rhs)) (in_group,not_in_group) =
+                       let val (pc,args) = strip_comb p
+                           val {Name=nm,Thy=thyn,...} = dest_thy_const pc
+                       in if (nm,thyn) = (Name,Thy)
+                            then ((args@rst, rhs)::in_group, not_in_group)
+                            else (in_group, row::not_in_group)
+                       end
+               | func _ _ = pfail "func" ""
+             val (in_group, not_in_group) = itlist func rows ([],[])
+             val col_types = #1(wfrecUtils.gtake type_of
+                                  (length L, #1(Lib.trye hd in_group)))
+         in
+         part{constrs = crst,
+              rows = not_in_group,
+              A = {constructor = c,
+                   new_formals = map gv col_types,
+                   group = in_group}::A}
+         end
+in
+    part {constrs=constructors, rows=rows, A=[]}
+end;
 
+(*---------------------------------------------------------------------------*)
+(* Partition rows where the first pattern is a literal (possibly a variable) *)
+(* We'll just use regular term equality to make the partition.               *)
+(*---------------------------------------------------------------------------*)
+
+fun lpartition (lits,rows) =
+let fun lfail s = raise ERR"lpartition.part" s
+    fun lit_eq l1 l2 = if Literal.is_literal l1 then l1=l2 else
+                       (is_var l1 andalso is_var l2)
+    fun pfun lit (row as (p::rst, rhs)) (in_group,not_in_group) =
+        if lit_eq lit p then ((rst,rhs)::in_group, not_in_group)
+                       else (in_group, row::not_in_group)
+      | pfun _ _ _ = lfail "pfun" ""
+    fun part [] [] A = rev A
+      | part [] (_::_) A = lfail"extra cases in defn"
+      | part (_::_) [] A = lfail"cases missing in defn"
+      | part (lit::rst) rows A =
+          let val (in_group, not_in_group) = itlist (pfun lit) rows ([],[])
+          in  part rst not_in_group ((lit,in_group)::A)
+          end
+ in
+     part lits rows []
+ end;
+
+fun rm x [] = [] | rm x (h::t) = if x=h then rm x t else h::rm x t;
+
+fun distinct [] = []
+  | distinct (h::t) = h::distinct(rm h t);
+   
+(*---------------------------------------------------------------------------*)
+(* 0 is both a literal and a constructor                                     *)
+(*---------------------------------------------------------------------------*)
+
+fun is_pure_literal x =
+ Literal.is_literal x andalso 
+ not (TypeBase.is_constructor x);
 
 type divide_ty
  = term list
@@ -107,6 +142,7 @@ type divide_ty
        group       : (term list * (thm * (term, term) subst)) list,
        new_formals : term list} list;
 
+(* Original 
 fun mk_case ty_info FV thy =
  let
  val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
@@ -123,7 +159,11 @@ fun mk_case ty_info FV thy =
                                 (zip rights col0)
           in mk{path=rstp, rows=zip pat_rectangle' rights'}
           end
-     else               (* column 0 is all constructors *)
+(*     else    
+     if exists is_pure_literal col0  (* column 0 matches against literals *)
+     then 
+*)
+     else (* column 0 matches against constructors *)
      let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
      in
      case ty_info (Thy,ty_name)
@@ -154,7 +194,102 @@ fun mk_case ty_info FV thy =
    | mk _ = fail"blunder"
  in mk
  end;
+*)
 
+
+fun mk_case ty_info FV thy =
+ let
+ val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (* do not eta-expand!! *)
+ fun fail s = raise ERR "mk_case" s
+ fun mk{rows=[],...} = fail"no rows"
+   | mk{path=[], rows = [([], (thm, bindings))]} = IT_EXISTS bindings thm
+   | mk{path=u::rstp, rows as (p::_, _)::_} =
+     let val (pat_rectangle,rights) = unzip rows
+         val col0 = map (Lib.trye hd) pat_rectangle
+         val pat_rectangle' = map (Lib.trye tl) pat_rectangle
+     in
+     if all is_var col0 (* column 0 is all variables *)
+     then let val rights' = map (fn ((thm,theta),v) => (thm,theta@[u|->v]))
+                                (zip rights col0)
+          in mk{path=rstp, rows=zip pat_rectangle' rights'}
+          end
+     else    
+     if exists is_pure_literal col0  (* column 0 matches against literals *)
+     then let val lits = distinct col0
+           val (litpats, varpats) = Lib.partition (not o is_var) lits
+           val liteqs = map (curry mk_eq u) litpats
+           fun neglits v = map (fn lit => mk_neg(mk_eq(v,lit))) litpats
+           val altliteqs = map neglits varpats
+           val vareqs = map (curry mk_eq u) varpats
+           val var_constraints = map2 
+              (fn veq => fn nlits => list_mk_conj(veq::nlits)) vareqs altliteqs
+           val eqs = liteqs @ var_constraints
+           fun exquant tm = 
+             if is_conj tm 
+               then let val x = rhs(fst(dest_conj tm))
+                    in mk_exists(x,tm)
+                    end
+               else tm
+           val disjuncts = map exquant eqs
+           val thm' = metisLib.METIS_PROVE [] (list_mk_disj disjuncts)
+           val subproblems = lpartition(lits,rows)
+           val groups = map snd subproblems
+           val geqs = zip groups eqs
+           fun expnd c (pats,(th,b)) = 
+              if is_eq c then (pats, (SUBS[ASSUME c]th, b))
+                 else let val lem = ASSUME c
+                          val veq = CONJUNCT1 lem
+                          val v = rhs(concl veq)
+                          val constraints = CONJUNCT2 lem
+                          val b' = b@[v|->v]
+                      in (pats, (CONJ (SUBS [veq]th) constraints, b'))
+                      end
+           val news = map(fn(grp,c) => {path=rstp,rows=map (expnd c) grp}) geqs
+           val recursive_thms = map mk news
+           fun left_exists tm thm = 
+             if is_exists tm 
+               then let val (v,_) = dest_exists tm
+                    in CHOOSE (v,ASSUME tm) thm
+                    end
+               else thm
+           val vexl = liteqs @ map2 (curry mk_exists) varpats var_constraints
+           val thms' = map2 left_exists vexl recursive_thms
+           val same_concls = EVEN_ORS thms'
+         in
+           DISJ_CASESL thm' same_concls 
+         end
+     else (* column 0 matches against constructors *)
+     let val {Thy, Tyop = ty_name,...} = dest_thy_type (type_of p)
+     in
+     case ty_info (Thy,ty_name)
+      of NONE => fail("Not a known datatype: "^ty_name)
+         (* tyinfo rqt: `constructors' must line up exactly with constrs
+            in disjuncts of `nchotomy'. *)
+       | SOME{constructors,nchotomy} =>
+         let val thm'         = ISPEC u nchotomy
+             val disjuncts    = strip_disj (concl thm')
+             val subproblems  = divide(constructors, rows)
+             val groups       = map #group subproblems
+             and new_formals  = map #new_formals subproblems
+             val existentials = map2 alpha_ex_unroll new_formals disjuncts
+             val constraints  = map #1 existentials
+             val vexl         = map #2 existentials
+             fun expnd tm (pats,(th,b)) = (pats,(SUBS[ASSUME tm]th, b))
+             val news = map (fn (nf,rows,c) => {path = nf@rstp,
+                                                rows = map (expnd c) rows})
+                            (zip3 new_formals groups constraints)
+             val recursive_thms = map mk news
+             val build_exists = itlist(CHOOSE o (I##ASSUME))
+             val thms' = map2 build_exists vexl recursive_thms
+             val same_concls = EVEN_ORS thms'
+         in
+           DISJ_CASESL thm' same_concls
+         end
+     end end
+   | mk _ = fail"blunder"
+in 
+ mk
+end;
 
 type row = term list * (thm * (term, term) subst)
 
@@ -163,16 +298,15 @@ fun complete_cases thy =
  in fn pats =>
      let val FV0 = free_varsl pats
          val a = variant FV0 (mk_var("a",type_of(Lib.trye hd pats)))
-         val v = variant (a::FV0) (mk_var("v",type_of a))
-         val FV = a::v::FV0
-         val a_eq_v = mk_eq(a,v)
-         val ex_th0 = EXISTS (mk_exists(v,a_eq_v),a) (REFL a)
-         val th0    = ASSUME a_eq_v
+         val z = variant (a::FV0) (mk_var("z",type_of a))
+         val FV = a::z::FV0
+         val a_eq_z = mk_eq(a,z)
+         val ex_th0 = EXISTS (mk_exists(z,a_eq_z),a) (REFL a)
+         val th0    = ASSUME a_eq_z
          val rows:row list = map (fn x => ([x], (th0,[]))) pats
+         val cases_thm = mk_case ty_info FV thy {path=[z], rows=rows}
      in
-       GEN a (RIGHT_ASSOC
-               (CHOOSE(v, ex_th0)
-                 (mk_case ty_info FV thy {path=[v], rows=rows})))
+       GEN a (RIGHT_ASSOC (CHOOSE(z, ex_th0) cases_thm))
      end
  end;
 
@@ -271,7 +405,7 @@ fun detuple newvar =
 val monitoring = ref 0;
 
 val _ = Feedback.register_trace("tfl_ind",monitoring,1);
-
+	
 (*---------------------------------------------------------------------------*
  * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
  *                                                                           *
@@ -280,6 +414,7 @@ val _ = Feedback.register_trace("tfl_ind",monitoring,1);
  * the antecedent of Rinduct.                                                *
  *---------------------------------------------------------------------------*)
 
+(*
 fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
 let fun f() =
 let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
@@ -310,64 +445,51 @@ handle e => raise wrap_exn "Induction" "mk_induction" e
 in
   if !monitoring > 0 then Count.apply f () else f()
 end
-
-
-
-(*---------------------------------------------------------------------------
-     The case completeness algorithm, but running over types rather
-     than lists of patterns.
- ---------------------------------------------------------------------------*)
-(*
-fun tycase ty_info FV thy =
- let
- val divide:divide_ty = ipartition (wfrecUtils.vary FV)  (*don't eta-expand!!*)
- fun fail s = raise ERR "tycase" s
- fun mk{types=[],...} = fail"no types"
-   | mk{path=[], types = [([], (thm, bindings))]} = IT_EXISTS bindings thm
-   | mk{path=u::rstp, types as (ty::_, _)::_} =
-     case ty_info (fst(dest_type ty))
-      of NONE => fail("Not a known datatype: "^fst(dest_type ty))
-       | SOME{constructors,nchotomy} =>
-         let val thm'         = ISPEC u nchotomy
-             val disjuncts    = strip_disj (concl thm')
-             val subproblems  = divide(constructors, types)
-             val groups       = map #group subproblems
-             and new_formals  = map #new_formals subproblems
-             val existentials = map2 alpha_ex_unroll new_formals disjuncts
-             val constraints  = map #1 existentials
-             val vexl         = map #2 existentials
-             fun expnd tm (pats,(th,b)) = (pats,(SUBS[ASSUME tm]th, b))
-             val news = map (fn (nf,types,c) => {path = nf@rstp,
-                                                types = map (expnd c) types})
-                            (zip3 new_formals groups constraints)
-             val recursive_thms = map mk news
-             val build_exists = itlist(CHOOSE o (I##ASSUME))
-             val thms' = map2 build_exists vexl recursive_thms
-             val same_concls = EVEN_ORS thms'
-         in
-           DISJ_CASESL thm' same_concls
-         end
-     end end
-   | mk _ = fail"blunder"
- in mk
- end;
-
-fun type_cases thy =
- let val ty_info = induct_info thy
- in fn ty =>
-   let val a = mk_var("a",ty)
-       val v = mk_var("v",ty)
-       val FV = [a,v]
-       val a_eq_v = mk_eq(a,v)
-       val ex_th0 = EXISTS (mk_exists(v,a_eq_v),a) (REFL a)
-       val th0    = ASSUME a_eq_v
-   in
-    GEN a (RIGHT_ASSOC
-            (CHOOSE(v, ex_th0)
-              (tycase ty_info FV thy {path=[v], types=[([ty], (th0,[]))]})))
-   end
- end;
-
 *)
+
+
+(*---------------------------------------------------------------------------*
+ * Input : f, R, SV, and  [(pat1,TCs1),..., (patn,TCsn)]                     *
+ *                                                                           *
+ * Instantiates WF_INDUCTION_THM, getting Sinduct and then tries to prove    *
+ * recursion induction (Rinduct) by proving the antecedent of Sinduct from   *
+ * the antecedent of Rinduct.                                                *
+ *---------------------------------------------------------------------------*)
+
+fun mk_induction thy {fconst, R, SV, pat_TCs_list} =
+let fun f() =
+let val Sinduction = UNDISCH (ISPEC R relationTheory.WF_INDUCTION_THM)
+    val (pats,TCsl) = unzip pat_TCs_list
+    val case_thm = complete_cases thy pats
+    val domn = (type_of o (Lib.trye hd)) pats
+    val P = variant (all_varsl (pats@flatten TCsl)) (mk_var("P",domn-->bool))
+    val Sinduct = SPEC P Sinduction
+    val Sinduct_assumf = rand ((fst o dest_imp o concl) Sinduct)
+    val Rassums_TCl' = map (build_ih fconst (P,R,SV)) pat_TCs_list
+    val (Rassums,TCl') = unzip Rassums_TCl'
+    val Rinduct_assum = ASSUME (list_mk_conj Rassums)
+    val cases = map (beta_conv o curry mk_comb Sinduct_assumf) pats
+    val tasks = zip3 cases TCl' (CONJUNCTS Rinduct_assum)
+    val proved_cases = map (prove_case fconst thy) tasks
+    val v = variant (free_varsl (map concl proved_cases)) (mk_var("v",domn))
+    val case_thm' = ISPEC v case_thm
+    fun mk_subst tm = 
+        if is_eq tm then SYM (ASSUME tm)
+        else SYM (hd (CONJUNCTS (ASSUME (snd(strip_exists tm)))))
+    val substs = map mk_subst (strip_disj (concl case_thm'))
+    (* Now elim pats in favour of variables *)
+    val proved_cases1 = map (PURE_REWRITE_RULE substs) proved_cases
+    val abs_cases = map LEFT_EXISTS proved_cases1
+    val dant = GEN v (DISJ_CASESL case_thm' abs_cases)
+    val dc = MP Sinduct dant
+    val (vstruct,vars) = detuple (wfrecUtils.vary[P]) (hd pats)
+    val dc' = itlist GEN vars (SPEC vstruct dc)
+in
+   GEN P (DISCH (concl Rinduct_assum) dc')
+end
+handle e => raise wrap_exn "Induction" "mk_induction" e
+in
+  if !monitoring > 0 then Count.apply f () else f()
+end
 
 end
