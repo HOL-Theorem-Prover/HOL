@@ -1,3 +1,4 @@
+(* this is an -*- sml -*- file *)
 (* ------------------------------------------------------------------------- *
  *     Automatic generation of clickable image maps of the                   *
  *     HOL theory hierarchy.                                                 *
@@ -93,7 +94,7 @@ fun gen_dotfile file node_info =
      val ostrm = openOut file
  in  PP.with_pp {consumer=fn s => output(ostrm,s),linewidth=75,
                  flush=fn () => flushOut ostrm}
-        (pp_dot_file {size="10,16.5",ranksep="1.0",nodesep="0.30"} node_info);
+        (pp_dot_file {size="14,18",ranksep="1.0",nodesep="0.30"} node_info);
      closeOut ostrm
  end;
 
@@ -188,17 +189,21 @@ fun dir_theories dir =
 fun load_theories thyl = app (load o C concat "Theory") thyl;
 
 
-(*
-  val sys_theories = dir_theories SIGOBJ_DIR;
-  load_theories sys_theories;
-  val ancs = ancestor_nodes "-";
+(* ----------------------------------------------------------------------
+    Up to this point, no work is done - the above just sets up
+    functions to do the work.  What follows actually figures out what
+    the graph is and causes lots of stuff to be written to disk
+   ---------------------------------------------------------------------- *)
 
-  val all_theories = "min"::sys_theories;
-  val paths = map(fn s => Path.concat (HTML_DIR,s^"Theory.html")) all_theories;
-  map2 print_theory_as_html all_theories paths;
+val sys_theories = dir_theories SIGOBJ_DIR;
+load_theories sys_theories;
+val ancs = ancestor_nodes "-";
 
-  (* The following works on W2K with dot version 1.84 *)
+val all_theories = "min"::sys_theories;
+val paths = map(fn s => Path.concat (HTML_DIR,s^"Theory.html")) all_theories;
+map2 print_theory_as_html all_theories paths;
 
-  gen_map_file "/usr/bin/dot" ancs "theories";
+(* The following works on Unix with dot version 1.10.2003xxxxxxx *)
 
-*)
+gen_map_file "/usr/bin/dot" ancs (Path.concat(HTML_DIR, "theories"));
+
