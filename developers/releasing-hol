@@ -173,6 +173,9 @@ mv bin/README ../bin-README
 /bin/rm tools/Holmake/{Parser,Lexer}.sml tools/Holmake/Parser.sig
 /bin/rm tools/Holmake/Holmake_tokens.sml
 (cd tools/quote-filter ; ../../bin/Holmake cleanAll)
+(cd tools/mlyacc/mlyacclib ; ../../../bin/Holmake cleanAll)
+(cd tools/mlyacc/src ; ../../../bin/Holmake cleanAll)
+(cd sigobj ; /bin/rm Systeml.{uo,ui})
 (cd tools/mllex ; ../../bin/Holmake cleanAll)
 (cd help/src ; ../../bin/Holmake cleanAll)
 /bin/rm bin/*
