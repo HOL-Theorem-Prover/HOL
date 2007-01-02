@@ -10,6 +10,7 @@ name=$1
 userid=$2
 mosmldir=$3
 mosmldir=$(cd $mosmldir; pwd)
+repos=hol.cvs.sourceforge.net:/cvsroot/hol
 
 localholdir="`dirname $0`/.."
 localholdir=$(cd $localholdir ; pwd)
@@ -67,12 +68,12 @@ then
       /bin/rm -r hol98
       cp -R $name-cvs-cache hol98
   else
-      cvs -d:ext:${userid}@cvs.sf.net:/cvsroot/hol export -D tomorrow hol98 |
+      cvs -d:ext:${userid}@${repos} export -D tomorrow hol98 |
         tee /tmp/$name-cvs-export
       cp -R hol98 $name-cvs-cache
   fi
 else
-  cvs -d:ext:${userid}@cvs.sf.net:/cvsroot/hol export -r $name hol98
+  cvs -d:ext:${userid}@${repos} export -r $name hol98
 fi) 2>&1 | tee /tmp/cvs-export.log |
   while read foo
   do  linecount=$[ $linecount + 1 ]
@@ -101,6 +102,8 @@ done
 echo
 
 echo "Copying theory graph from local installation"
+# see the file help/src/DOT for instructions on how to generate the
+# theorygraph files
 /bin/cp $localholdir/help/theorygraph/*.html $localholdir/help/theorygraph/theories.* /tmp/hol98/help/theorygraph
 
 echo Removing all .cvsignore files
@@ -120,7 +123,7 @@ cd help/src
 ../../bin/Holmake Doc2Tex.exe
 
 echo Now building documentation
-for man_name in Reference Description Tutorial Quick
+for man_name in Reference Description Tutorial Quick Logic
 do
     lcname=$(echo $man_name | tr A-Z a-z)
     echo Making $man_name
@@ -135,32 +138,6 @@ done
 echo Also removing Buddy documentation from distribution
 cd /tmp/
 mv hol98/src/muddy/muddyC/buddy/doc/*.ps .
-
-echo Building HolBddLib documentation
-cd /tmp/hol98/src/HolBdd/Manual
-if (latex HolBdd ; bibtex HolBdd ; latex HolBdd ; latex HolBdd ;
-    dvips -G0 -Ppdf HolBdd ;
-    ps2pdf HolBdd.ps) > $texlogs/holbdd.log 2>&1
-then
-   :
-else
-   echo "Build failed, see /tmp/$texlogs/holsat.log"
-   exit 1
-fi
-mv HolBdd.pdf /tmp/$name-HolBdd.pdf
-
-echo Building HolSatLib documentation
-cd /tmp/hol98/src/HolSat/doc
-if (latex HolSatLib ; latex HolSatLib ; dvips -G0 -Ppdf HolSatLib ;
-    ps2pdf HolSatLib.ps) > $texlogs/holsat.log 2>&1
-then
-   :
-else
-   echo "Build failed, see $texlogs/holsat.log" ; exit 1
-fi
-mv HolSatLib.pdf /tmp/$name-HolSatLib.pdf
-
-
 
 while read helpname dir
 do
