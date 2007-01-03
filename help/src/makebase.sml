@@ -43,7 +43,7 @@ fun isSigId {comp=Database.Term(_,SOME"HOL"),file,line} = false
 
 (* The version number inserted in generated files: *)
 val version =
- "<A HREF=\"http://hol.sourceforge.net\">HOL 4, &nbsp; Kananaskis-3";
+ "<A HREF=\"http://hol.sourceforge.net\">HOL 4, &nbsp; Kananaskis-5";
 
 (* HOL distribution directory: *)
 val HOLpath = normPath [Systeml.HOLDIR];
