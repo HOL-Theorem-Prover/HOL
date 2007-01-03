@@ -28,4 +28,8 @@ sig
   val build_log_file : string
   val make_log_file : string
 
+  (* canonical source of version information *)
+  val release : string
+  val version : int
+
 end;

@@ -23,8 +23,8 @@ val HOLDIR = Systeml.HOLDIR
  * Version information                                                       *
  *---------------------------------------------------------------------------*)
 
-val release = "Kananaskis";
-val version = 5;
+val release = Systeml.release
+val version = Systeml.version
 
 (*---------------------------------------------------------------------------*
  * For showing assumptions in theorems                                       *

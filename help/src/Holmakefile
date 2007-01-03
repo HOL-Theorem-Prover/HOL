@@ -8,7 +8,7 @@ makebase.exe : Database.uo Htmlsigs.uo Lexer.uo Parser.uo Parsspec.uo Printbase.
 	HOLMOSMLC -o makebase.exe makebase.uo
 
 Doc2Html.exe : Doc2Html.uo ParseDoc.uo Symbolic.uo
-	MOSMLC -o Doc2Html.exe Doc2Html.uo
+	HOLMOSMLC -o Doc2Html.exe Doc2Html.uo
 
 Doc2Tex.exe : Doc2Tex.uo ParseDoc.uo Symbolic.uo
 	MOSMLC -o Doc2Tex.exe Doc2Tex.uo

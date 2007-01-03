@@ -49,6 +49,9 @@ val DEPDIR:string   = ".HOLMK";   (* where Holmake dependencies kept  *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
+val version_number = 5
+val release_string = "Kananaskis"
+
 val _ = Meta.quietdec := true;
 app load ["FileSys", "Process", "Path",
           "Substring", "BinIO", "Lexing", "Nonstdio"];
@@ -166,7 +169,9 @@ in
    "val OS ="       --> ("val OS = "^quote OS^"\n"),
    "val DEPDIR ="   --> ("val DEPDIR = "^quote DEPDIR^"\n"),
    "val GNUMAKE ="  --> ("val GNUMAKE = "^quote GNUMAKE^"\n"),
-   "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available)];
+   "val DYNLIB ="   --> ("val DYNLIB = "^Bool.toString dynlib_available^"\n"),
+   "val version ="  --> ("val version = "^Int.toString version_number^"\n"),
+   "val release ="  --> ("val release = "^quote release_string^"\n")];
   use destfile
 end;
 

@@ -59,6 +59,8 @@ val OS =
 val DEPDIR =
 val GNUMAKE =
 val DYNLIB =
+val version =
+val release =
 
 val isUnix = true
 

@@ -159,7 +159,8 @@ fun html (name,sectionl) ostrm =
      out "<DL>\n";
      List.app markout_section (tl sectionl);
      out "</DL>\n\n";
-     back_matter ("http://hol.sourceforge.net", "Kananaskis-5")
+     back_matter ("http://hol.sourceforge.net",
+                  Systeml.release ^ "-" ^ Int.toString Systeml.version)
   end;
 
 fun trans htmldir docdir docname = let
