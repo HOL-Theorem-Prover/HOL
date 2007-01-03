@@ -5,7 +5,6 @@ type thm = Thm.thm
 type tactic = Abbrev.tactic
 
   val HALF_MK_ABS : thm -> thm
-  val LAND_CONV : (term -> thm) -> (term -> thm)
   val TAUT_CONV : term -> thm
   val AC : thm * thm -> term -> thm
   val GEN_PAIR_TAC : tactic
