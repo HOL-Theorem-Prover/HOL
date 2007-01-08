@@ -17,14 +17,14 @@
 app load
   ["bossLib","realLib","rich_listTheory","stringTheory",
    "metisLib","posrealLib","expectationTheory","intLib", "wpTheory", "valueTheory", "arithmeticTheory",
-   "stringLib", "looprulesTheory"];
+   "stringLib", "looprulesTheory", "pgclLib"];
 quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib intLib realLib metisLib stringLib;
 open combinTheory listTheory rich_listTheory stringTheory integerTheory
      realTheory;
-open posetTheory posrealTheory posrealLib expectationTheory wpTheory valueTheory arithmeticTheory looprulesTheory;
+open posetTheory posrealTheory posrealLib expectationTheory wpTheory valueTheory arithmeticTheory looprulesTheory pgclLib;
 
 (*
 quietdec := false;
@@ -1700,5 +1700,2004 @@ val dcprog_result = store_thm
    ??????);
 
 ??????????????????????????????????????????????? *)
+
+(* -------------------------- wlp dc_prog proofs --------------------------- *)
+
+val wlp_assign = store_thm
+  ("wlp_assign",
+   ``!v s postE.
+         wlp (Assign v s) postE =
+         (\s'. postE (assign v s s'))``,
+   RW_TAC std_ss [wlp_def]);
+
+val wlp_seq = store_thm
+  ("wlp_seq",
+   ``!prog prog' postE.
+         wlp (Seq prog prog') postE = wlp prog (wlp prog' postE)``,
+   RW_TAC std_ss [wlp_def]);
+
+val flip_coins_g = Define
+   `flip_coins_g = (\s. int_of_value (s "i") < int_of_value (s "N"))`;
+
+val flip_coins_invariant_constant = Define
+   `flip_coins_invariant_constant n nsapays pay = 
+    (\s. (s "N" = Int (&n)) /\
+    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+    (0 <= int_of_value (s "i")) /\
+    (int_of_value (s "i") <= int_of_value (s "N")) /\
+    (?l. s "Coins" = Array l) /\
+    (Array_length (s "Coins") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "i")) ==>
+         (((get_Array_i (s "Coins") k) = Heads) \/
+          ((get_Array_i (s "Coins") k) = Tails))) /\
+    (s "payer" = Int (& pay)) /\
+    (0 <= int_of_value (s "payer")) /\
+    (int_of_value (s "payer") <= int_of_value (s "N")))`;
+
+val flip_coins_invariant_j_lt_i = Define
+   `flip_coins_invariant_j_lt_i j =
+    (\s. (j < num_of_value (s "i")))`;
+
+val flip_coins_invariant_coins_j_eq_heads = Define
+   `flip_coins_invariant_coins_j_eq_heads j =
+    (\s. (get_Array_i (s "Coins") j) = Heads)`;
+
+val flip_coins_invariant_heads = Define
+   `flip_coins_invariant_heads n nsapays pay j =
+	(\s. if flip_coins_invariant_constant n nsapays pay s then
+		 	if flip_coins_invariant_j_lt_i j s then
+				if flip_coins_invariant_coins_j_eq_heads j s then 1 else 0
+			else 1/2
+		 else 0:posreal)`;
+
+val flip_coins_loopbody = Define
+   `flip_coins_loopbody =
+	 Seq (Program [ProbAssign "coinflip" [Heads; Tails];
+                       Assign_Array_i "Coins" "i" (\s. s "coinflip")])
+             (Assign "i" (\s. Int (int_of_value (s "i") + 1)))`;
+
+val flip_coins_loop = Define
+   `flip_coins_loop = While flip_coins_g flip_coins_loopbody`;
+
+val flip_coins_postE_heads = Define
+   `flip_coins_postE_heads n nsapays pay j=
+	bool_exp (\s. (flip_coins_invariant_constant n nsapays pay s) /\
+		      (flip_coins_invariant_coins_j_eq_heads j s) /\
+		      (~(flip_coins_g s)))`;
+
+val flip_coins_loop_result_heads = store_thm
+  ("flip_coins_loop_result_heads",
+   ``!n nsapays pay j. (j < n) ==>
+     Leq (flip_coins_invariant_heads n nsapays pay j)
+         (wlp flip_coins_loop (flip_coins_postE_heads n nsapays pay j))``,
+   REPEAT STRIP_TAC
+   ++ Suff `Leq (flip_coins_invariant_heads n nsapays pay j)
+	        (Cond flip_coins_g 
+		      (wlp flip_coins_loopbody (flip_coins_invariant_heads n nsapays pay j))
+		      (flip_coins_postE_heads n nsapays pay j))`	     		 
+   >> METIS_TAC [flip_coins_loop, wlp_while]
+   ++ RW_TAC std_ss [Leq_def, cond_eta, flip_coins_invariant_heads]
+   ++ Cases_on `~(flip_coins_invariant_constant n nsapays pay s)`
+   >> RW_TAC posreal_ss [zero_le]
+   ++ FULL_SIMP_TAC std_ss []
+   ++ Cases_on `~ (flip_coins_g s)`
+   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_heads, flip_coins_g, flip_coins_invariant_j_lt_i, 
+			     flip_coins_invariant_constant, flip_coins_invariant_coins_j_eq_heads, 
+			     bool_exp_def, num_of_value_def]
+       ++ RW_TAC posreal_reduce_ss []
+       ++ METIS_TAC [INT_LE_ANTISYM, INT_NOT_LT, int_of_value_def, NUM_OF_INT])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ Cases_on `~(flip_coins_invariant_j_lt_i j s)`
+   >> (FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
+			     flip_coins_g, flip_coins_invariant_constant, 
+			     flip_coins_invariant_coins_j_eq_heads]
+       ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+		      Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
+       ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
+       ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
+       ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
+       ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
+       ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+       ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+       ++ `!k.
+           k < i + 1 ==>
+           (get_Array_i (update_Array_i (Array l) i Heads) k = Heads) \/
+           (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+		if k = i then Heads else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+       ++ `!k.
+           k < i + 1 ==>
+           (get_Array_i (update_Array_i (Array l) i Tails) k = Heads) \/
+           (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+		if k = i then Tails else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+       ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
+       ++ `foo` by (Q.UNABBREV_TAC `foo` ++ METIS_TAC [update_Array_i_def])
+       ++ Q.ABBREV_TAC `foo' = (?l'. update_Array_i (Array l) i Tails = Array l')`
+       ++ `foo'` by (Q.UNABBREV_TAC `foo'` ++ METIS_TAC [update_Array_i_def])
+       ++ FULL_SIMP_TAC std_ss []
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ `(if nsapays then Int (& pay) = Int (& n) else s "NSApays" = No)` by METIS_TAC [int_of_value_def]
+       ++ FULL_SIMP_TAC std_ss []
+       ++ Cases_on `~(j < i + 1)`
+       >> RW_TAC posreal_reduce_ss []
+       ++ `j = i` by METIS_TAC [LE_LT1, NOT_LESS, LESS_EQUAL_ANTISYM]
+       ++ FULL_SIMP_TAC std_ss []
+       ++ `get_Array_i (update_Array_i (Array l) i Heads) i = Heads`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT]
+       ++ `get_Array_i (update_Array_i (Array l) i Tails) i = Tails`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT]
+       ++ RW_TAC posreal_reduce_ss [])
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
+			    flip_coins_g, flip_coins_invariant_constant, 
+			    flip_coins_invariant_coins_j_eq_heads]
+   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+		  Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
+   ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
+   ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
+   ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
+   ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
+   ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+   ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+   ++ `!k.
+        k < i + 1 ==>
+         (get_Array_i (update_Array_i (Array l) i Heads) k = Heads) \/
+         (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+		if k = i then Heads else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+   ++ `!k.
+         k < i + 1 ==>
+         (get_Array_i (update_Array_i (Array l) i Tails) k = Heads) \/
+         (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+		if k = i then Tails else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+   ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
+   ++ `foo` by (Q.UNABBREV_TAC `foo` ++ METIS_TAC [update_Array_i_def])
+   ++ Q.ABBREV_TAC `foo' = (?l'. update_Array_i (Array l) i Tails = Array l')`
+   ++ `foo'` by (Q.UNABBREV_TAC `foo'` ++ METIS_TAC [update_Array_i_def])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `(if nsapays then Int (& pay) = Int (& n) else s "NSApays" = No)` by METIS_TAC [int_of_value_def]
+   ++ FULL_SIMP_TAC std_ss []
+   ++ `~ (j = i)` by RW_TAC arith_ss []
+   ++ `get_Array_i (update_Array_i (Array l) i Heads) j = get_Array_i (Array l) j`
+	by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+   ++ `get_Array_i (update_Array_i (Array l) i Tails) j = get_Array_i (Array l) j`
+	by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+   ++ RW_TAC posreal_reduce_ss []);
+
+val flip_coins_invariant_coins_j_eq_tails = Define
+   `flip_coins_invariant_coins_j_eq_tails j =
+    (\s. (get_Array_i (s "Coins") j) = Tails)`;
+
+val flip_coins_invariant_tails = Define
+   `flip_coins_invariant_tails n nsapays pay j =
+	(\s. if flip_coins_invariant_constant n nsapays pay s then
+		 	if flip_coins_invariant_j_lt_i j s then
+				if flip_coins_invariant_coins_j_eq_tails j s then 1 else 0
+			else 1/2
+		 else 0:posreal)`;
+
+val flip_coins_postE_tails = Define
+   `flip_coins_postE_tails n nsapays pay j=
+	bool_exp (\s. (flip_coins_invariant_constant n nsapays pay s) /\
+		      (flip_coins_invariant_coins_j_eq_tails j s) /\
+		      (~(flip_coins_g s)))`;
+
+val flip_coins_loop_result_tails = store_thm
+  ("flip_coins_loop_result_tails",
+   ``!n nsapays pay j. (j < n) ==>
+     Leq (flip_coins_invariant_tails n nsapays pay j)
+         (wlp flip_coins_loop (flip_coins_postE_tails n nsapays pay j))``,
+   REPEAT STRIP_TAC
+   ++ Suff `Leq (flip_coins_invariant_tails n nsapays pay j)
+	        (Cond flip_coins_g 
+		      (wlp flip_coins_loopbody (flip_coins_invariant_tails n nsapays pay j))
+		      (flip_coins_postE_tails n nsapays pay j))`	     		 
+   >> METIS_TAC [flip_coins_loop, wlp_while]
+   ++ RW_TAC std_ss [Leq_def, cond_eta, flip_coins_invariant_tails]
+   ++ Cases_on `~(flip_coins_invariant_constant n nsapays pay s)`
+   >> RW_TAC posreal_ss [zero_le]
+   ++ FULL_SIMP_TAC std_ss []
+   ++ Cases_on `~ (flip_coins_g s)`
+   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_tails, flip_coins_g, flip_coins_invariant_j_lt_i, 
+			     flip_coins_invariant_constant, flip_coins_invariant_coins_j_eq_tails, 
+			     bool_exp_def, num_of_value_def]
+       ++ RW_TAC posreal_reduce_ss []
+       ++ METIS_TAC [INT_LE_ANTISYM, INT_NOT_LT, int_of_value_def, NUM_OF_INT])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ Cases_on `~(flip_coins_invariant_j_lt_i j s)`
+   >> (FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
+			     flip_coins_g, flip_coins_invariant_constant, 
+			     flip_coins_invariant_coins_j_eq_tails]
+       ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+		      Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
+       ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
+       ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
+       ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
+       ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
+       ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+       ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+       ++ `!k.
+           k < i + 1 ==>
+           (get_Array_i (update_Array_i (Array l) i Heads) k = Heads) \/
+           (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+		if k = i then Heads else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+       ++ `!k.
+           k < i + 1 ==>
+           (get_Array_i (update_Array_i (Array l) i Tails) k = Heads) \/
+           (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+		if k = i then Tails else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+       ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
+       ++ `foo` by (Q.UNABBREV_TAC `foo` ++ METIS_TAC [update_Array_i_def])
+       ++ Q.ABBREV_TAC `foo' = (?l'. update_Array_i (Array l) i Tails = Array l')`
+       ++ `foo'` by (Q.UNABBREV_TAC `foo'` ++ METIS_TAC [update_Array_i_def])
+       ++ FULL_SIMP_TAC std_ss []
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ `(if nsapays then Int (& pay) = Int (& n) else s "NSApays" = No)` by METIS_TAC [int_of_value_def]
+       ++ FULL_SIMP_TAC std_ss []
+       ++ Cases_on `~(j < i + 1)`
+       >> RW_TAC posreal_reduce_ss []
+       ++ `j = i` by METIS_TAC [LE_LT1, NOT_LESS, LESS_EQUAL_ANTISYM]
+       ++ FULL_SIMP_TAC std_ss []
+       ++ `get_Array_i (update_Array_i (Array l) i Heads) i = Heads`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT]
+       ++ `get_Array_i (update_Array_i (Array l) i Tails) i = Tails`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT]
+       ++ RW_TAC posreal_reduce_ss [])
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, flip_coins_invariant_j_lt_i, 
+			    flip_coins_g, flip_coins_invariant_constant, 
+			    flip_coins_invariant_coins_j_eq_tails]
+   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+		  Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
+   ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
+   ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
+   ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
+   ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
+   ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+   ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+	by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+   ++ `!k.
+        k < i + 1 ==>
+         (get_Array_i (update_Array_i (Array l) i Heads) k = Heads) \/
+         (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+		if k = i then Heads else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+   ++ `!k.
+         k < i + 1 ==>
+         (get_Array_i (update_Array_i (Array l) i Tails) k = Heads) \/
+         (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+		if k = i then Tails else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+   ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
+   ++ `foo` by (Q.UNABBREV_TAC `foo` ++ METIS_TAC [update_Array_i_def])
+   ++ Q.ABBREV_TAC `foo' = (?l'. update_Array_i (Array l) i Tails = Array l')`
+   ++ `foo'` by (Q.UNABBREV_TAC `foo'` ++ METIS_TAC [update_Array_i_def])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `(if nsapays then Int (& pay) = Int (& n) else s "NSApays" = No)` by METIS_TAC [int_of_value_def]
+   ++ FULL_SIMP_TAC std_ss []
+   ++ `~ (j = i)` by RW_TAC arith_ss []
+   ++ `get_Array_i (update_Array_i (Array l) i Heads) j = get_Array_i (Array l) j`
+	by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+   ++ `get_Array_i (update_Array_i (Array l) i Tails) j = get_Array_i (Array l) j`
+	by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+   ++ RW_TAC posreal_reduce_ss []);
+
+val flip_coins_wlp_lem8 = store_thm
+  ("flip_coins_wlp_lem8",
+   ``!n nsapays pay j. (j < n) ==>
+	 Leq (\s. if (s "N" = Int (&n)) /\
+		     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+		     (s "payer" = Int (& pay)) /\
+		     (0 <= int_of_value (s "payer")) /\
+		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		  then 1/2 else 0:posreal)
+	 (wlp flip_coins (flip_coins_postE_heads n nsapays pay j))``,
+   RW_TAC std_ss [flip_coins_def, Program_def, wlp_seq, For_0_to_n_def, For_def]
+   ++ `Leq (flip_coins_invariant_heads n nsapays pay j)
+         (wlp flip_coins_loop (flip_coins_postE_heads n nsapays pay j))`
+	by METIS_TAC [flip_coins_loop_result_heads]
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loop, flip_coins_loopbody, Program_def, flip_coins_g]
+   ++ Suff `Leq (\s. if (s "N" = Int (&n)) /\
+		     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+		     (s "payer" = Int (& pay)) /\
+		     (0 <= int_of_value (s "payer")) /\
+		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		  then 1/2 else 0:posreal)
+      		(wlp (New_Array "Coins" "N")
+         	     (wlp (Assign "i" (\s. Int 0))
+			  (flip_coins_invariant_heads n nsapays pay j)))`
+   >> PROVE_TAC [wlp_mono, leq_trans]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ SRW_TAC [] [New_Array_def, wlp_def, assign_eta, flip_coins_invariant_heads,
+		     flip_coins_invariant_constant, flip_coins_invariant_j_lt_i, 
+		     int_of_value_def, num_of_value_def, NUM_OF_INT, Leq_def]
+   ++ RW_TAC posreal_reduce_ss []
+   ++ FULL_SIMP_TAC bool_ss [DE_MORGAN_THM]
+   << [METIS_TAC [int_of_value_def],
+       `~(0 <= n)` by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LE]
+       ++ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL],
+       METIS_TAC [length_of_n_list, Array_length_def]]);
+
+val flip_coins_wlp_lem9 = store_thm
+  ("flip_coins_wlp_lem9",
+   ``!n nsapays pay j. (j < n) ==>
+	 Leq (\s. if (s "N" = Int (&n)) /\
+		     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+		     (s "payer" = Int (& pay)) /\
+		     (0 <= int_of_value (s "payer")) /\
+		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		  then 1/2 else 0:posreal)
+	 (wlp flip_coins (flip_coins_postE_tails n nsapays pay j))``,
+   RW_TAC std_ss [flip_coins_def, Program_def, wlp_seq, For_0_to_n_def, For_def]
+   ++ `Leq (flip_coins_invariant_tails n nsapays pay j)
+         (wlp flip_coins_loop (flip_coins_postE_tails n nsapays pay j))`
+	by METIS_TAC [flip_coins_loop_result_tails]
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loop, flip_coins_loopbody, Program_def, flip_coins_g]
+   ++ Suff `Leq (\s. if (s "N" = Int (&n)) /\
+		     (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+		     ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+		     (s "payer" = Int (& pay)) /\
+		     (0 <= int_of_value (s "payer")) /\
+		     (int_of_value (s "payer") <= int_of_value (s "N")) 
+		  then 1/2 else 0:posreal)
+      		(wlp (New_Array "Coins" "N")
+         	     (wlp (Assign "i" (\s. Int 0))
+			  (flip_coins_invariant_tails n nsapays pay j)))`
+   >> PROVE_TAC [wlp_mono, leq_trans]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ SRW_TAC [] [New_Array_def, wlp_def, assign_eta, flip_coins_invariant_tails,
+		     flip_coins_invariant_constant, flip_coins_invariant_j_lt_i, 
+		     int_of_value_def, num_of_value_def, NUM_OF_INT, Leq_def]
+   ++ RW_TAC posreal_reduce_ss []
+   ++ FULL_SIMP_TAC bool_ss [DE_MORGAN_THM]
+   << [METIS_TAC [int_of_value_def],
+       `~(0 <= n)` by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LE]
+       ++ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL],
+       METIS_TAC [length_of_n_list, Array_length_def]]);
+
+val flip_coins_postE_heads_or_tails = Define
+   `flip_coins_postE_heads_or_tails n nsapays pay =
+    bool_exp (\s. flip_coins_invariant_constant n nsapays pay s /\
+		  (~(flip_coins_g s)))`;
+
+val flip_coins_invariant_heads_or_tails = Define
+   `flip_coins_invariant_heads_or_tails n nsapays pay =
+    bool_exp (flip_coins_invariant_constant n nsapays pay)`;
+
+val flip_coins_loop_result_heads_or_tails = store_thm
+  ("flip_coins_loop_result_heads_or_tails",
+   ``!n nsapays pay.
+     Leq (flip_coins_invariant_heads_or_tails n nsapays pay)
+         (wlp flip_coins_loop (flip_coins_postE_heads_or_tails n nsapays pay))``,
+   REPEAT STRIP_TAC
+   ++ Suff `Leq (flip_coins_invariant_heads_or_tails n nsapays pay)
+	        (Cond flip_coins_g 
+		      (wlp flip_coins_loopbody (flip_coins_invariant_heads_or_tails n nsapays pay))
+		      (flip_coins_postE_heads_or_tails n nsapays pay))`	     		 
+   >> METIS_TAC [flip_coins_loop, wlp_while]
+   ++ RW_TAC std_ss [Leq_def, cond_eta, flip_coins_invariant_heads_or_tails, bool_exp_def]
+   ++ Cases_on `~(flip_coins_invariant_constant n nsapays pay s)`
+   >> RW_TAC posreal_ss [zero_le]
+   ++ FULL_SIMP_TAC std_ss []
+   ++ Cases_on `~ (flip_coins_g s)`
+   >> (FULL_SIMP_TAC std_ss [flip_coins_postE_heads_or_tails, flip_coins_g, 
+			     flip_coins_invariant_constant, 
+			     bool_exp_def, num_of_value_def]
+       ++ METIS_TAC [le_refl])
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loopbody, 
+			     flip_coins_g, flip_coins_invariant_constant]
+   ++ SRW_TAC [] [zero_le, Program_def, wlp_def, assign_eta, num_of_value_def, int_of_value_def, 
+		      Assign_Array_i_def, ProbAssign_def, Probs_def, MAP, LENGTH]
+   ++ SIMP_TAC posreal_reduce_ss [lin_eta, let_lin_lemma, mul_lzero, add_rzero, mul_lone, int_of_value_def]
+   ++ `?i. int_of_value (s "i") = & i` by METIS_TAC [NUM_POSINT_EXISTS]
+   ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT]
+   ++ `i + 1 <= n` by METIS_TAC [int_of_value_def, INT_LT, LESS_EQ, ADD1]
+   ++ `Array_length (update_Array_i (Array l) i Heads) = n` 
+		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+   ++ `Array_length (update_Array_i (Array l) i Tails) = n` 
+		by METIS_TAC [NUM_OF_INT, int_of_value_def, update_Array_i_length, INT_LT]
+   ++ `!k.
+        k < i + 1 ==>
+         (get_Array_i (update_Array_i (Array l) i Heads) k = Heads) \/
+         (get_Array_i (update_Array_i (Array l) i Heads) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Heads) k = 
+		if k = i then Heads else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+   ++ `!k.
+         k < i + 1 ==>
+         (get_Array_i (update_Array_i (Array l) i Tails) k = Heads) \/
+         (get_Array_i (update_Array_i (Array l) i Tails) k = Tails)`
+	by (REPEAT STRIP_TAC
+	    ++ `k <= i` by METIS_TAC [LE_LT1]
+	    ++ `get_Array_i (update_Array_i (Array l) i Tails) k = 
+		if k = i then Tails else get_Array_i (Array l) k`
+		by METIS_TAC [update_Array_i_el , LESS_EQ_LESS_TRANS, NUM_OF_INT, 
+			      int_of_value_def, INT_LT]
+	    ++ METIS_TAC [LESS_CASES_IMP, NOT_LESS])
+   ++ Q.ABBREV_TAC `foo = (?l'. update_Array_i (Array l) i Heads = Array l')`
+   ++ `foo` by (Q.UNABBREV_TAC `foo` ++ METIS_TAC [update_Array_i_def])
+   ++ Q.ABBREV_TAC `foo' = (?l'. update_Array_i (Array l) i Tails = Array l')`
+   ++ `foo'` by (Q.UNABBREV_TAC `foo'` ++ METIS_TAC [update_Array_i_def])
+   ++ `(if nsapays then Int (& pay) = Int (& n) else s "NSApays" = No)` by METIS_TAC [int_of_value_def]
+   ++ RW_TAC posreal_reduce_ss []);
+
+val flip_coins_wlp_lem10 = store_thm
+  ("flip_coins_wlp_lem10",
+   ``!n nsapays pay. Leq (bool_exp (\s. (s "N" = Int (&n)) /\
+			    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    (s "payer" = Int (& pay)) /\
+			    (0 <= int_of_value (s "payer")) /\
+			    (int_of_value (s "payer") <= int_of_value (s "N"))))
+	 (wlp flip_coins (flip_coins_postE_heads_or_tails n nsapays pay))``,
+   RW_TAC std_ss [flip_coins_def, Program_def, wlp_seq, For_0_to_n_def, For_def]
+   ++ `Leq (flip_coins_invariant_heads_or_tails n nsapays pay)
+         (wlp flip_coins_loop (flip_coins_postE_heads_or_tails n nsapays pay))`
+	by METIS_TAC [flip_coins_loop_result_heads_or_tails]
+   ++ FULL_SIMP_TAC std_ss [flip_coins_loop, flip_coins_loopbody, Program_def, flip_coins_g]
+   ++ Suff `Leq (bool_exp (\s. (s "N" = Int (&n)) /\
+			       (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			       ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			       (s "payer" = Int (& pay)) /\
+			       (0 <= int_of_value (s "payer")) /\
+			       (int_of_value (s "payer") <= int_of_value (s "N"))))
+      		(wlp (New_Array "Coins" "N")
+         	     (wlp (Assign "i" (\s. Int 0))
+			  (flip_coins_invariant_heads_or_tails n nsapays pay)))`
+   >> PROVE_TAC [wlp_mono, leq_trans]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ SRW_TAC [] [New_Array_def, wlp_def, assign_eta, flip_coins_invariant_heads_or_tails,
+		     flip_coins_invariant_constant, bool_exp_def, 
+		     int_of_value_def, num_of_value_def, NUM_OF_INT, Leq_def]
+   ++ RW_TAC posreal_reduce_ss []
+   ++ FULL_SIMP_TAC bool_ss [DE_MORGAN_THM]
+   << [METIS_TAC [int_of_value_def],
+       `~(0 <= n)` by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LE]
+       ++ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL],
+       METIS_TAC [length_of_n_list, Array_length_def]]);
+
+val set_announcements_g = Define
+   `set_announcements_g = (\s. int_of_value (s "i") < int_of_value (s "N"))`;
+
+val set_announcements_j_eq_xor = Define
+   `set_announcements_j_eq_xor j =
+    (\s. if j = (num_of_value (s "payer"))
+	 then
+	    if j = 0
+	    then
+	       ((get_Array_i (s "Announces") j) = 
+		(xor [Yes;
+		      get_Array_i (s "Coins") 0;
+		      get_Array_i (s "Coins") ((num_of_value (s "N")) - 1)]))
+	    else
+	       ((get_Array_i (s "Announces") j) = 
+		(xor [Yes;
+		      get_Array_i (s "Coins") j;
+		      get_Array_i (s "Coins") (j - 1)]))
+	 else
+	    if j = 0
+	    then
+	       ((get_Array_i (s "Announces") j) = 
+		(xor [No;
+		      get_Array_i (s "Coins") 0;
+		      get_Array_i (s "Coins") ((num_of_value (s "N")) - 1)]))
+	    else
+	       ((get_Array_i (s "Announces") j) = 
+		(xor [No;
+		      get_Array_i (s "Coins") j;
+		      get_Array_i (s "Coins") (j - 1)])))`;
+
+val set_announcements_invariant_constant = Define
+   `set_announcements_invariant_constant n nsapays a pay = 
+    (\s. (s "N" = Int (&n)) /\
+    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+    (0 <= int_of_value (s "i")) /\
+    (?i. s "i" = Int (&i)) /\
+    (int_of_value (s "i") <= int_of_value (s "N")) /\
+    (s "Coins" = Array a) /\
+    (s "payer" = Int (&pay)) /\
+    (0 <= int_of_value(s "payer")) /\
+    (int_of_value (s "payer") <= int_of_value (s "N")) /\
+    (Array_length (s "Coins") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "N")) ==>
+         (((get_Array_i (s "Coins") k) = Heads) \/
+          ((get_Array_i (s "Coins") k) = Tails))) /\
+    (?l. s "Announces" = Array l) /\
+    (Array_length (s "Announces") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "i")) ==>
+	 (((get_Array_i (s "Announces") k) = Yes) \/
+          ((get_Array_i (s "Announces") k) = No))) /\
+    (!j. (j < num_of_value (s "i")) ==>
+	 (set_announcements_j_eq_xor j s)))`;
+
+val set_announcements_invariant = Define
+   `set_announcements_invariant n nsapays a pay =
+	bool_exp (set_announcements_invariant_constant n nsapays a pay)`;
+
+val set_announcements_postE = Define
+   `set_announcements_postE n nsapays a pay =
+	bool_exp (\s. (set_announcements_invariant_constant n nsapays a pay s) /\
+		      (~(set_announcements_g s)))`;
+
+val set_announcements_loopbody = Define
+   `set_announcements_loopbody =
+               (Seq
+                  (Seq
+                     (Assign "currentcoin"
+                        (\s.
+                           get_Array_i (s "Coins") (num_of_value (s "i"))))
+                     (Seq
+                        (If (\s. num_of_value (s "i") = 0)
+                           (Assign "previouscoin"
+                              (\s.
+                                 get_Array_i (s "Coins")
+                                   (num_of_value (s "N") - 1)))
+                           (Assign "previouscoin"
+                              (\s.
+                                 get_Array_i (s "Coins")
+                                   (num_of_value (s "i") - 1))))
+                        (Seq
+                           (If (\s. s "i" = s "payer")
+                              (Assign "pays" (\s. Yes))
+                              (Assign "pays" (\s. No)))
+                           (Assign_Array_i "Announces" "i"
+                              (\s.
+                                 xor
+                                   [s "previouscoin"; s "currentcoin";
+                                    s "pays"])))))
+                  (Assign "i" (\s. Int (int_of_value (s "i") + 1))))`;
+
+val set_announcements_loop = Define
+   `set_announcements_loop = While set_announcements_g set_announcements_loopbody`;
+
+val dc_prog_string_inequalities = store_thm
+  ("dc_prog_string_inequalities",
+   ``(~("Announces" = "i")) /\ (~("Announces" = "Coins")) /\ (~("Announces" = "N")) /\
+     (~("Announces" = "payer")) /\ (~("Announces" = "currentcoin")) /\ (~("Annoucnes" = "previouscoin")) /\
+     (~("Announces" = "NSApays")) /\ (~("Announces" = "coinflip")) /\ (~("Announces" = "result")) /\
+     (~("Announces" = "pays")) /\
+     (~("i" = "Announces")) /\ (~("i" = "Coins")) /\ (~("i" = "N")) /\
+     (~("i" = "payer")) /\ (~("i" = "currentcoin")) /\ (~("i" = "previouscoin")) /\
+     (~("i" = "NSApays")) /\ (~("i" = "coinflip")) /\ (~("i" = "result")) /\
+     (~("i" = "pays")) /\
+     (~("Coins" = "i")) /\ (~("Coins" = "Announces")) /\ (~("Coins" = "N")) /\
+     (~("Coins" = "payer")) /\ (~("Coins" = "currentcoin")) /\ (~("Coins" = "previouscoin")) /\
+     (~("Coins" = "NSApays")) /\ (~("Coins" = "coinflip")) /\ (~("Coins" = "result")) /\
+     (~("Coins" = "pays")) /\
+     (~("N" = "i")) /\ (~("N" = "Coins")) /\ (~("N" = "Announces")) /\
+     (~("N" = "payer")) /\ (~("N" = "currentcoin")) /\ (~("N" = "previouscoin")) /\
+     (~("N" = "NSApays")) /\ (~("N" = "coinflip")) /\ (~("N" = "result")) /\
+     (~("N" = "pays")) /\
+     (~("payer" = "i")) /\ (~("payer" = "Coins")) /\ (~("payer" = "N")) /\
+     (~("payer" = "Announces")) /\ (~("payer" = "currentcoin")) /\ (~("payer" = "previouscoin")) /\
+     (~("payer" = "NSApays")) /\ (~("payer" = "coinflip")) /\ (~("payer" = "result")) /\
+     (~("payer" = "pays")) /\
+     (~("currentcoin" = "i")) /\ (~("currentcoin" = "Coins")) /\ (~("currentcoin" = "N")) /\
+     (~("currentcoin" = "payer")) /\ (~("currentcoin" = "Announces")) /\ (~("currentcoin" = "previouscoin")) /\
+     (~("currentcoin" = "NSApays")) /\ (~("currentcoin" = "coinflip")) /\ (~("currentcoin" = "result")) /\
+     (~("currentcoin" = "pays")) /\
+     (~("previouscoin" = "i")) /\ (~("previouscoin" = "Coins")) /\ (~("previouscoin" = "N")) /\ 
+     (~("previouscoin" = "payer")) /\ (~("previouscoin" = "currentcoin")) /\ (~("previouscoin" = "Announces")) /\
+     (~("previouscoin" = "NSApays")) /\ (~("previouscoin" = "coinflip")) /\ (~("previouscoin" = "result")) /\
+     (~("previouscoin" = "pays")) /\
+     (~("NSApays" = "i")) /\ (~("NSApays" = "Coins")) /\ (~("NSApays" = "N")) /\
+     (~("NSApays" = "payer")) /\ (~("NSApays" = "currentcoin")) /\ (~("NSApays" = "previouscoin")) /\
+     (~("NSApays" = "Announces")) /\ (~("NSApays" = "coinflip")) /\ (~("NSApays" = "result")) /\
+     (~("NSApays" = "pays")) /\
+     (~("coinflip" = "i")) /\ (~("coinflip" = "Coins")) /\ (~("coinflip" = "N")) /\
+     (~("coinflip" = "payer")) /\ (~("coinflip" = "currentcoin")) /\ (~("coinflip" = "previouscoin")) /\
+     (~("coinflip" = "NSApays")) /\ (~("coinflip" = "Announces")) /\ (~("coinflip" = "result")) /\
+     (~("coinflip" = "pays")) /\
+     (~("result" = "i")) /\ (~("result" = "Coins")) /\ (~("result" = "N")) /\
+     (~("result" = "payer")) /\ (~("result" = "currentcoin")) /\ (~("result" = "previouscoin")) /\
+     (~("result" = "NSApays")) /\ (~("result" = "coinflip")) /\ (~("result" = "Announces")) /\
+     (~("result" = "pays"))``,
+   SRW_TAC [] []);
+
+val set_announcements_loop_result = store_thm
+  ("set_announcements_loop_result",
+   ``!n nsapays a pay.
+     Leq (set_announcements_invariant n nsapays a pay)
+         (wlp set_announcements_loop (set_announcements_postE n nsapays a pay))``,
+   REPEAT STRIP_TAC
+   ++ Suff `Leq (set_announcements_invariant n nsapays a pay)
+	        (Cond set_announcements_g 
+		      (wlp set_announcements_loopbody (set_announcements_invariant n nsapays a pay))
+		      (set_announcements_postE n nsapays a pay))`	     		 
+   >> METIS_TAC [set_announcements_loop, wlp_while]
+   ++ RW_TAC std_ss [Leq_def, cond_eta, set_announcements_invariant, bool_exp_def]
+   ++ Cases_on `~(set_announcements_invariant_constant n nsapays a pay s)`
+   >> RW_TAC posreal_ss [zero_le]
+   ++ Cases_on `~ (set_announcements_g s)`
+   >> (FULL_SIMP_TAC std_ss [set_announcements_postE, set_announcements_g,
+			     set_announcements_invariant_constant, 
+			     bool_exp_def, num_of_value_def]
+       ++ METIS_TAC [le_refl])
+   ++ FULL_SIMP_TAC std_ss [set_announcements_loopbody, wlp_seq, set_announcements_invariant_constant, 
+			    wlp_assign, assign_eta, num_of_value_def, int_of_value_def, NUM_OF_INT,
+			    Assign_Array_i_def, set_announcements_g, dc_prog_string_inequalities,
+			    set_announcements_j_eq_xor]
+   ++ FULL_SIMP_TAC std_ss [wlp_def, If_def, assign_eta, lin_eta, bound1_def, let_lin_lemma, 
+				int_of_value_def, NUM_OF_INT, dc_prog_string_inequalities]
+   ++ FULL_SIMP_TAC arith_ss [num_of_value_def, int_of_value_def, NUM_OF_INT, INT_ADD, INT_LE, INT_LT, NOT_LESS]
+   ++ `pay <= n` by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LE]
+   ++ `i + 1 <= n` 
+	by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LT, LESS_LESS_SUC, ADD1, NOT_LESS]	   
+   ++ `Array_length (Array a) = n` by METIS_TAC [NUM_OF_INT, int_of_value_def]
+   ++ `(!k.
+           k < n ==>
+           (get_Array_i (Array a) k = Heads) \/
+           (get_Array_i (Array a) k = Tails))`
+	by METIS_TAC []
+   ++ `(Array_length
+           (update_Array_i (Array l) i
+              (xor
+                 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                  Yes])) =
+         n)`
+	by METIS_TAC [update_Array_i_length, INT_LT, NUM_OF_INT, int_of_value_def]
+   ++ `(Array_length
+           (update_Array_i (Array l) i
+              (xor
+                 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                  No])) =
+         n)`
+	by METIS_TAC [update_Array_i_length, INT_LT, NUM_OF_INT, int_of_value_def]
+   ++ `(Array_length
+           (update_Array_i (Array l) i
+              (xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  Yes])) =
+         n)`
+	by METIS_TAC [update_Array_i_length, INT_LT, NUM_OF_INT, int_of_value_def]
+   ++ `(Array_length
+           (update_Array_i (Array l) i
+              (xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  No])) =
+         n)`
+	by METIS_TAC [update_Array_i_length, INT_LT, NUM_OF_INT, int_of_value_def]
+   ++ FULL_SIMP_TAC std_ss []
+   ++ `(if nsapays then Int (& pay) = Int (& n) else s "NSApays" = No)` by METIS_TAC [int_of_value_def]
+   ++ FULL_SIMP_TAC std_ss []
+   ++ Q.ABBREV_TAC `foo = (?i'. Int (& i) = Int (& i'))`
+   ++ `foo` by METIS_TAC []
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.ABBREV_TAC `foo = (?i'. Int (& (i + 1)) = Int (& i'))`
+   ++ `foo` by METIS_TAC []
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.ABBREV_TAC `foo = (?l'. Array l = Array l')`
+   ++ `foo` by METIS_TAC []
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.ABBREV_TAC `foo = (?l'.
+          update_Array_i (Array l) i
+            (xor
+               [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                Yes]) =
+          Array l')`
+   ++ `foo` by (Q.UNABBREV_TAC `foo` ++ RW_TAC std_ss [update_Array_i_def])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.ABBREV_TAC `foo = (?l'.
+          update_Array_i (Array l) i
+            (xor
+               [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                No]) =
+          Array l')`
+   ++ `foo` by (Q.UNABBREV_TAC `foo` ++ RW_TAC std_ss [update_Array_i_def])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.ABBREV_TAC `foo = (?l'.
+          update_Array_i (Array l) i
+            (xor
+               [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                Yes]) =
+          Array l')`
+   ++ `foo` by (Q.UNABBREV_TAC `foo` ++ RW_TAC std_ss [update_Array_i_def])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Q.ABBREV_TAC `foo = (?l'.
+          update_Array_i (Array l) i
+            (xor
+               [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                No]) =
+          Array l')`
+   ++ `foo` by (Q.UNABBREV_TAC `foo` ++ RW_TAC std_ss [update_Array_i_def])
+   ++ FULL_SIMP_TAC std_ss []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `!k.
+          k < i + 1 ==>
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                    Yes])) k =
+           Yes) \/
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                    Yes])) k =
+           No)`
+	by (REPEAT STRIP_TAC
+	    ++ Cases_on `k = i`
+	    >> (FULL_SIMP_TAC std_ss []
+		++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i; Yes]))
+       		      i) = (xor
+             		 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i; Yes])`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_EQ_LESS_TRANS]
+		++ ASM_REWRITE_TAC []
+		++ POP_ASSUM (K ALL_TAC)
+		++ FULL_SIMP_TAC std_ss [Yes_def, No_def, Heads_def, Tails_def]
+		++ `(get_Array_i (Array a) (n - 1) = Int(1)) \/
+		    (get_Array_i (Array a) (n - 1) = Int(0))`
+			by (`n-1 < n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+		++ `(get_Array_i (Array a) i = Int(1)) \/
+		    (get_Array_i (Array a) i = Int(0))`
+			by METIS_TAC [INT_LT, int_of_value_def, NUM_OF_INT]
+		++ RW_TAC int_ss [xor_def, int_of_value_def])
+	    ++ `k < i` by RW_TAC arith_ss []
+	    ++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i; Yes]))
+       		 k) = get_Array_i (Array l) k`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_TRANS]
+	    ++ METIS_TAC [NUM_OF_INT, int_of_value_def])
+   ++ `!k.
+          k < i + 1 ==>
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                    No])) k =
+           Yes) \/
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i;
+                    No])) k =
+           No)`
+	by (REPEAT STRIP_TAC
+	    ++ Cases_on `k = i`
+	    >> (FULL_SIMP_TAC std_ss []
+		++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i; No]))
+       		      i) = (xor
+             		 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i; No])`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_EQ_LESS_TRANS]
+		++ ASM_REWRITE_TAC []
+		++ POP_ASSUM (K ALL_TAC)
+		++ FULL_SIMP_TAC std_ss [Yes_def, No_def, Heads_def, Tails_def]
+		++ `(get_Array_i (Array a) (n - 1) = Int(1)) \/
+		    (get_Array_i (Array a) (n - 1) = Int(0))`
+			by (`n-1 < n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+		++ `(get_Array_i (Array a) i = Int(1)) \/
+		    (get_Array_i (Array a) i = Int(0))`
+			by METIS_TAC [INT_LT, int_of_value_def, NUM_OF_INT]
+		++ RW_TAC int_ss [xor_def, int_of_value_def])
+	    ++ `k < i` by RW_TAC arith_ss []
+	    ++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) i; No]))
+       		 k) = get_Array_i (Array l) k`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_TRANS]
+	    ++ METIS_TAC [NUM_OF_INT, int_of_value_def])
+   ++ `!k.
+          k < i + 1 ==>
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                    Yes])) k =
+           Yes) \/
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                    Yes])) k =
+           No)`
+	by (REPEAT STRIP_TAC
+	    ++ Cases_on `k = i`
+	    >> (FULL_SIMP_TAC std_ss []
+		++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i; Yes]))
+       		     i) =
+		     (xor
+             		 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i; Yes])`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_EQ_LESS_TRANS]
+		++ ASM_REWRITE_TAC []
+		++ POP_ASSUM (K ALL_TAC)
+		++ FULL_SIMP_TAC std_ss [Yes_def, No_def, Heads_def, Tails_def]
+		++ `(get_Array_i (Array a) (i - 1) = Int(1)) \/
+		    (get_Array_i (Array a) (i - 1) = Int(0))`
+			by (`i-1 < n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+		++ `(get_Array_i (Array a) i = Int(1)) \/
+		    (get_Array_i (Array a) i = Int(0))`
+			by METIS_TAC [INT_LT, int_of_value_def, NUM_OF_INT]
+		++ RW_TAC int_ss [xor_def, int_of_value_def])
+	    ++ `k < i` by RW_TAC arith_ss []
+	    ++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i; Yes]))
+       		 k) = get_Array_i (Array l) k`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_TRANS]
+	    ++ METIS_TAC [NUM_OF_INT, int_of_value_def])
+   ++ `!k.
+          k < i + 1 ==>
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                    No])) k =
+           Yes) \/
+          (get_Array_i
+             (update_Array_i (Array l) i
+                (xor
+                   [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                    No])) k =
+           No)`
+	by (REPEAT STRIP_TAC
+	    ++ Cases_on `k = i`
+	    >> (FULL_SIMP_TAC std_ss []
+		++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i; No]))
+       		     i) =
+		     (xor
+             		 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i; No])`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_EQ_LESS_TRANS]
+		++ ASM_REWRITE_TAC []
+		++ POP_ASSUM (K ALL_TAC)
+		++ FULL_SIMP_TAC std_ss [Yes_def, No_def, Heads_def, Tails_def]
+		++ `(get_Array_i (Array a) (i - 1) = Int(1)) \/
+		    (get_Array_i (Array a) (i - 1) = Int(0))`
+			by (`i-1 < n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+		++ `(get_Array_i (Array a) i = Int(1)) \/
+		    (get_Array_i (Array a) i = Int(0))`
+			by METIS_TAC [INT_LT, int_of_value_def, NUM_OF_INT]
+		++ RW_TAC int_ss [xor_def, int_of_value_def])
+	    ++ `k < i` by RW_TAC arith_ss []
+	    ++ `(get_Array_i
+       			(update_Array_i (Array l) i
+          		(xor
+             		 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i; No]))
+       		 k) = get_Array_i (Array l) k`
+			by METIS_TAC [update_Array_i_el, NUM_OF_INT, int_of_value_def, INT_LT, LESS_TRANS]
+	    ++ METIS_TAC [NUM_OF_INT, int_of_value_def])
+   ++ Cases_on `i = 0`
+   >> (Cases_on `pay = 0`
+       >> (FULL_SIMP_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_rzero]
+	   ++ Suff `!j.
+         		j < 1 ==>
+         		(if j = 0 then
+		            get_Array_i
+		              (update_Array_i (Array l) 0
+		                 (xor
+		                    [get_Array_i (Array a) (n - 1); get_Array_i (Array a) 0;
+		                     Yes])) 0 =
+		            xor
+		              [Yes; get_Array_i (Array a) 0; get_Array_i (Array a) (n - 1)]
+ 		         else
+		            get_Array_i
+		              (update_Array_i (Array l) 0
+		                 (xor
+		                    [get_Array_i (Array a) (n - 1); get_Array_i (Array a) 0;
+		                     Yes])) j =
+		            xor
+		              [No; get_Array_i (Array a) j; get_Array_i (Array a) (j - 1)])`
+	   >> RW_TAC posreal_reduce_ss []
+	   ++ REPEAT STRIP_TAC
+	   ++ `j = 0` by RW_TAC arith_ss []
+	   ++ FULL_SIMP_TAC std_ss []
+	   ++ `get_Array_i
+         	(update_Array_i (Array l) 0
+            	(xor
+                 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) 0;
+                  Yes])) 0 =
+		xor
+                 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) 0;
+                  Yes]`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+	   ++ ASM_REWRITE_TAC []
+	   ++ POP_ASSUM (K ALL_TAC)
+	   ++ FULL_SIMP_TAC std_ss [Heads_def, Tails_def, Yes_def, No_def]
+	   ++ `(get_Array_i (Array a) (n - 1) = Int(1)) \/
+	       (get_Array_i (Array a) (n - 1) = Int(0))`
+		by (`n-1<n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+	   ++ `(get_Array_i (Array a) 0 = Int(1)) \/
+	       (get_Array_i (Array a) 0 = Int(0))`
+		by (`0<n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+	       ++ RW_TAC int_ss [xor_def, le_refl])
+       ++ `~(Int 0 = Int (& pay))` by RW_TAC int_ss []
+       ++ FULL_SIMP_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_rzero, add_lzero]
+       ++ Suff `!j.
+         		j < 1 ==>
+		         (if j = pay then
+		            get_Array_i
+		              (update_Array_i (Array l) 0
+		                 (xor
+		                    [get_Array_i (Array a) (n - 1); get_Array_i (Array a) 0;
+		                     No])) pay =
+		            xor
+		              [Yes; get_Array_i (Array a) pay;
+		               get_Array_i (Array a) (pay - 1)]
+		          else
+		            (if j = 0 then
+		               get_Array_i
+		                 (update_Array_i (Array l) 0
+		                    (xor
+		                       [get_Array_i (Array a) (n - 1);
+		                        get_Array_i (Array a) 0; No])) 0 =
+		               xor
+		                 [No; get_Array_i (Array a) 0;
+		                  get_Array_i (Array a) (n - 1)]
+		             else
+		               get_Array_i
+		                 (update_Array_i (Array l) 0
+		                    (xor
+		                       [get_Array_i (Array a) (n - 1);
+		                        get_Array_i (Array a) 0; No])) j =
+		               xor
+		                 [No; get_Array_i (Array a) j;
+		                  get_Array_i (Array a) (j - 1)]))`
+       >> RW_TAC posreal_reduce_ss []
+       ++ REPEAT STRIP_TAC
+       ++ `j = 0` by RW_TAC arith_ss []
+       ++ FULL_SIMP_TAC std_ss []
+       ++ `get_Array_i
+         	(update_Array_i (Array l) 0
+            	(xor
+                 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) 0;
+                  No])) 0 =
+		xor
+                 [get_Array_i (Array a) (n - 1); get_Array_i (Array a) 0;
+                  No]`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+       ++ ASM_REWRITE_TAC []
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ FULL_SIMP_TAC std_ss [Heads_def, Tails_def, Yes_def, No_def]
+       ++ `(get_Array_i (Array a) (n - 1) = Int(1)) \/
+	       (get_Array_i (Array a) (n - 1) = Int(0))`
+		by (`n-1<n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+       ++ `(get_Array_i (Array a) 0 = Int(1)) \/
+	       (get_Array_i (Array a) 0 = Int(0))`
+		by (`0<n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+       ++ RW_TAC int_ss [xor_def, le_refl])
+   ++ FULL_SIMP_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_lzero]
+   ++ Cases_on `pay = i`
+   >> (`Int (& i) = Int (& pay)` by RW_TAC int_ss []
+       ++ Q.ABBREV_TAC `foo = (Int (& i) = Int (& pay))`
+       ++ FULL_SIMP_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_rzero]
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ Suff `!j.
+	         j < i + 1 ==>
+	         (if j = i then
+	            get_Array_i
+	              (update_Array_i (Array l) i
+	                 (xor
+	                    [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+	                     Yes])) i =
+	            xor
+ 	             [Yes; get_Array_i (Array a) i; get_Array_i (Array a) (i - 1)]
+ 	         else
+	            (if j = 0 then
+	               get_Array_i
+	                 (update_Array_i (Array l) i
+	                    (xor
+	                       [get_Array_i (Array a) (i - 1);
+	                        get_Array_i (Array a) i; Yes])) 0 =
+	               xor
+	                 [No; get_Array_i (Array a) 0;
+	                  get_Array_i (Array a) (n - 1)]
+	             else
+	               get_Array_i
+	                 (update_Array_i (Array l) i
+	                    (xor
+	                       [get_Array_i (Array a) (i - 1);
+	                        get_Array_i (Array a) i; Yes])) j =
+	               xor
+	                 [No; get_Array_i (Array a) j;
+	                  get_Array_i (Array a) (j - 1)]))`
+       >> RW_TAC posreal_reduce_ss []
+       ++ REPEAT STRIP_TAC
+       ++ Cases_on `j = i`
+       >> (FULL_SIMP_TAC std_ss []
+           ++ `get_Array_i
+         	(update_Array_i (Array l) i
+            	(xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  Yes])) i =
+		xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  Yes]`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+           ++ ASM_REWRITE_TAC []
+           ++ POP_ASSUM (K ALL_TAC)
+           ++ FULL_SIMP_TAC std_ss [Heads_def, Tails_def, Yes_def, No_def]
+           ++ `(get_Array_i (Array a) (i - 1) = Int(1)) \/
+	       (get_Array_i (Array a) (i - 1) = Int(0))`
+		by (`i-1<n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+           ++ `(get_Array_i (Array a) i = Int(1)) \/
+	       (get_Array_i (Array a) i = Int(0))`
+		by (METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LT])
+           ++ RW_TAC int_ss [xor_def, le_refl])
+       ++ `j < i` by RW_TAC arith_ss []
+       ++ `get_Array_i
+         	(update_Array_i (Array l) i
+            	(xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  Yes])) j =
+		get_Array_i (Array l) j`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT, LESS_TRANS]
+       ++ `get_Array_i
+         	(update_Array_i (Array l) i
+            	(xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  Yes])) 0 =
+		get_Array_i (Array l) 0`
+	        by (`0<n` by RW_TAC arith_ss [] ++ METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT])
+       ++ ASM_REWRITE_TAC []
+       ++ METIS_TAC [int_of_value_def, NUM_OF_INT])
+   ++ `~(Int (& i) = Int (& pay))` by RW_TAC int_ss []
+   ++ Q.ABBREV_TAC `foo = (Int (& i) = Int (& pay))`
+   ++ FULL_SIMP_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_lzero]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Suff `!j.
+	         j < i + 1 ==>
+	         (if j = pay then
+	            (if pay = 0 then
+ 	              get_Array_i
+ 	                (update_Array_i (Array l) i
+ 	                   (xor
+	                       [get_Array_i (Array a) (i - 1);
+ 	                       get_Array_i (Array a) i; No])) 0 =
+	               xor
+	                 [Yes; get_Array_i (Array a) 0;
+	                  get_Array_i (Array a) (n - 1)]
+ 	            else
+ 	              get_Array_i
+	                 (update_Array_i (Array l) i
+	                    (xor
+        	               [get_Array_i (Array a) (i - 1);
+                	        get_Array_i (Array a) i; No])) pay =
+	               xor
+        	         [Yes; get_Array_i (Array a) pay;
+                	  get_Array_i (Array a) (pay - 1)])
+	          else
+        	    (if j = 0 then
+	               get_Array_i
+        	         (update_Array_i (Array l) i
+                	    (xor
+	                       [get_Array_i (Array a) (i - 1);
+	                        get_Array_i (Array a) i; No])) 0 =
+	               xor
+	                 [No; get_Array_i (Array a) 0;
+	                  get_Array_i (Array a) (n - 1)]
+	             else
+	               get_Array_i
+	                 (update_Array_i (Array l) i
+	                    (xor
+	                       [get_Array_i (Array a) (i - 1);
+	                        get_Array_i (Array a) i; No])) j =
+	               xor
+	                 [No; get_Array_i (Array a) j;
+	                  get_Array_i (Array a) (j - 1)]))`
+   >> RW_TAC posreal_reduce_ss []
+   ++ REPEAT STRIP_TAC
+   ++ Cases_on `j = i`
+   >> (FULL_SIMP_TAC std_ss []
+       ++ `get_Array_i
+         	(update_Array_i (Array l) i
+            	(xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  No])) i =
+		xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  No]`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT]
+       ++ ASM_REWRITE_TAC []
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ FULL_SIMP_TAC std_ss [Heads_def, Tails_def, Yes_def, No_def]
+       ++ `(get_Array_i (Array a) (i - 1) = Int(1)) \/
+	       (get_Array_i (Array a) (i - 1) = Int(0))`
+		by (`i-1<n` by RW_TAC arith_ss [] ++ METIS_TAC [])
+       ++ `(get_Array_i (Array a) i = Int(1)) \/
+	       (get_Array_i (Array a) i = Int(0))`
+		by (METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LT])
+       ++ RW_TAC int_ss [xor_def, le_refl])
+   ++ `j < i` by RW_TAC arith_ss []
+   ++ `get_Array_i
+         	(update_Array_i (Array l) i
+            	(xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  No])) j =
+		get_Array_i (Array l) j`
+		by METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT, LESS_TRANS]
+   ++ `get_Array_i
+         	(update_Array_i (Array l) i
+            	(xor
+                 [get_Array_i (Array a) (i - 1); get_Array_i (Array a) i;
+                  No])) 0 =
+		get_Array_i (Array l) 0`
+	        by (`0<n` by RW_TAC arith_ss [] ++ METIS_TAC [update_Array_i_el, int_of_value_def, NUM_OF_INT, INT_LT])
+   ++ ASM_REWRITE_TAC []
+   ++ METIS_TAC [int_of_value_def, NUM_OF_INT, LESS_0_CASES]);
+
+val set_announcements_preE = Define
+   `set_announcements_preE n nsapays a pay =
+    (\s. (s "N" = Int (&n)) /\
+    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+    (s "payer" = Int (&pay)) /\
+    (0 <= int_of_value(s "payer")) /\
+    (int_of_value (s "payer") <= int_of_value (s "N")) /\
+    (s "Coins" = Array a) /\
+    (Array_length (s "Coins") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "N")) ==>
+         (((get_Array_i (s "Coins") k) = Heads) \/
+          ((get_Array_i (s "Coins") k) = Tails))))`;
+
+val wlp_set_announcements_result = store_thm
+  ("wlp_set_announcements_result",
+   ``!n nsapays a pay. Leq (bool_exp (set_announcements_preE n nsapays a pay))
+		   (wlp set_announcements (set_announcements_postE n nsapays a pay))``,
+   RW_TAC std_ss [set_announcements_def, Program_def, wlp_seq, For_0_to_n_def, For_def]
+   ++ `Leq (set_announcements_invariant n nsapays a pay)
+         (wlp set_announcements_loop (set_announcements_postE n nsapays a pay))`
+	by METIS_TAC [set_announcements_loop_result]
+   ++ FULL_SIMP_TAC std_ss [set_announcements_loop, set_announcements_loopbody, Program_def, set_announcements_g]
+   ++ Suff `Leq (bool_exp (set_announcements_preE n nsapays a pay))
+      		(wlp (New_Array "Announces" "N")
+         	     (wlp (Assign "i" (\s. Int 0))
+			  (set_announcements_invariant n nsapays a pay)))`
+   >> PROVE_TAC [wlp_mono, leq_trans]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ SRW_TAC [] [New_Array_def, wlp_def, assign_eta, set_announcements_invariant,
+		     set_announcements_invariant_constant, bool_exp_def, set_announcements_preE,
+		     int_of_value_def, num_of_value_def, NUM_OF_INT, Leq_def]
+   ++ RW_TAC posreal_reduce_ss []
+   ++ FULL_SIMP_TAC bool_ss [DE_MORGAN_THM]
+   << [METIS_TAC [int_of_value_def],
+       `~(0 <= n)` by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LE]
+       ++ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL],
+       METIS_TAC [int_of_value_def, NUM_OF_INT],
+       METIS_TAC [length_of_n_list, Array_length_def]]);
+
+val compute_result_postE = Define
+   `compute_result_postE n nsapays pay =
+    bool_exp (\s. 
+    (s "N" = Int (&n)) /\
+    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+    (?a. s "Coins" = Array a) /\
+    (s "payer" = Int (&pay)) /\
+    (0 <= int_of_value(s "payer")) /\
+    (int_of_value (s "payer") <= int_of_value (s "N")) /\
+    (Array_length (s "Coins") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "N")) ==>
+         (((get_Array_i (s "Coins") k) = Heads) \/
+          ((get_Array_i (s "Coins") k) = Tails))) /\
+    (?l. s "Announces" = Array l) /\
+    (Array_length (s "Announces") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "N")) ==>
+	 (((get_Array_i (s "Announces") k) = Yes) \/
+          ((get_Array_i (s "Announces") k) = No))) /\
+    (!j. (j < num_of_value (s "N")) ==>
+	 (set_announcements_j_eq_xor j s)) /\
+    (if nsapays then s "result" = No else s "result" = Yes))`;
+
+val FIRSTN_LENGTH = store_thm
+  ("FIRSTN_LENGTH",
+   ``!l. FIRSTN (LENGTH l) l = l``,
+   Induct
+   >> RW_TAC std_ss [FIRSTN, LENGTH]
+   ++ RW_TAC std_ss [FIRSTN, LENGTH]);
+
+val EL_LENGTH_SNOC = store_thm
+  ("EL_LENGTH_SNOC",
+   ``!l x. EL (LENGTH l) (SNOC x l) = x``,
+   RW_TAC arith_ss [SNOC_APPEND, EL_APPEND2, EL, HD]);
+
+val FIRSTN_SUC = store_thm
+  ("FIRSTN_SUC",
+   ``!l n.
+	((SUC n) <= LENGTH l) ==>
+	(FIRSTN (SUC n) l =
+	 SNOC (EL n l) (FIRSTN n l))``,
+   recInduct SNOC_INDUCT
+   ++ REPEAT STRIP_TAC
+   >> FULL_SIMP_TAC std_ss [LENGTH]
+   ++ Cases_on `(SUC n) <= LENGTH l`
+   >> RW_TAC arith_ss [FIRSTN_SNOC, EL_SNOC]
+   ++ `SUC n = LENGTH (SNOC x l)` by FULL_SIMP_TAC arith_ss [LENGTH_SNOC]
+   ++ `FIRSTN (SUC n) (SNOC x l) = (SNOC x l)` by METIS_TAC [FIRSTN_LENGTH]
+   ++ `n = LENGTH l` by FULL_SIMP_TAC arith_ss [LENGTH_SNOC]
+   ++ `FIRSTN n (SNOC x l) = FIRSTN n l` 
+	by (`n <= LENGTH l` by RW_TAC arith_ss [] 
+	    ++ METIS_TAC [FIRSTN_SNOC])
+   ++ `FIRSTN n l = l` by METIS_TAC [FIRSTN_LENGTH]
+   ++ RW_TAC std_ss [EL_LENGTH_SNOC]);
+
+val Xor_is_Int1_or_Int0 = store_thm
+  ("Xor_is_Int1_or_Int0",
+   ``!l. (!x. MEM x l ==> ((x = Int 1) \/ (x = Int 0))) ==>
+         ((Xor (Array l) = Int 1) \/ (Xor (Array l) = Int 0))``,
+   Induct
+   >> RW_TAC std_ss [Xor_def, xor_def]
+   ++ RW_TAC std_ss [MEM]
+   ++ `(h = Int 1) \/ (h = Int 0)` by RW_TAC std_ss []
+   ++ FULL_SIMP_TAC int_ss [Xor_def, xor_def, int_of_value_def]);
+
+val Xor_APPEND = store_thm
+  ("Xor_APPEND",
+   ``!l1 l2. (!x. MEM x l1 ==> ((x = Int 1) \/ (x = Int 0))) /\
+	     (!x. MEM x l2 ==> ((x = Int 1) \/ (x = Int 0))) ==>
+	     (Xor (Array (l1 ++ l2)) = xor [Xor (Array l1); Xor (Array l2)])``,
+   REPEAT STRIP_TAC
+   ++ Induct_on `l1`
+   >> (RW_TAC std_ss [APPEND]
+       ++ `(Xor (Array l2) = Int 1) \/ (Xor (Array l2) = Int 0)` 
+		by METIS_TAC [Xor_is_Int1_or_Int0]
+       ++ RW_TAC int_ss [Xor_def, xor_def, int_of_value_def])
+   ++ REPEAT STRIP_TAC
+   ++ FULL_SIMP_TAC std_ss [MEM]
+   ++ `(Xor (Array l2) = Int 1) \/ (Xor (Array l2) = Int 0)` 
+		by METIS_TAC [Xor_is_Int1_or_Int0]
+   ++ `(Xor (Array l1) = Int 1) \/ (Xor (Array l1) = Int 0)` 
+		by METIS_TAC [Xor_is_Int1_or_Int0]
+   ++ `(h = Int 1) \/ (h = Int 0)` by RW_TAC std_ss []
+   ++ FULL_SIMP_TAC int_ss [Xor_def, xor_def, int_of_value_def, APPEND]);
+
+val wlp_seq_set_announcements_compute_result = store_thm
+  ("wlp_seq_set_announcements_compute_result",
+   ``!n nsapays a pay. Leq (bool_exp (set_announcements_preE n nsapays a pay))
+  		  	   (wlp (Seq set_announcements compute_result) (compute_result_postE n nsapays pay))``,
+   RW_TAC std_ss [compute_result_def, wlp_seq, wlp_assign, assign_eta]
+   ++ `Leq (set_announcements_postE n nsapays a pay)
+	   (\s'.
+            compute_result_postE n nsapays pay
+              (\w. (if w = "result" then Xor (s' "Announces") else s' w)))`
+	by (Cases_on `a`
+   >> (RW_TAC std_ss [compute_result_postE, set_announcements_postE, Leq_def, bool_exp_def,
+				set_announcements_invariant_constant, set_announcements_g]
+       ++ RW_TAC posreal_reduce_ss []
+       ++ FULL_SIMP_TAC std_ss [DE_MORGAN_THM]
+       << [METIS_TAC [],
+           METIS_TAC [],
+	   METIS_TAC [],
+	   METIS_TAC [],
+	   `i = n` by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
+			    	++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
+			    	++ FULL_SIMP_TAC arith_ss [])
+	   ++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
+           ++ METIS_TAC [],
+	   `i = n` by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
+			    	++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
+			    	++ FULL_SIMP_TAC arith_ss [])
+	   ++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
+           ++ FULL_SIMP_TAC std_ss [set_announcements_j_eq_xor, dc_prog_string_inequalities]
+           ++ METIS_TAC [],
+           `l = []` 
+		by (`i = n` by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
+			    	++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
+			    	++ FULL_SIMP_TAC arith_ss [])
+		    ++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
+		    ++ `LENGTH l = n` by METIS_TAC [Array_length_def]
+		    ++ `n = 0` by METIS_TAC [Array_length_def, LENGTH]
+		    ++ FULL_SIMP_TAC std_ss []
+		    ++ METIS_TAC [LENGTH_NIL])
+           ++ FULL_SIMP_TAC int_ss [Xor_def, xor_def, Yes_def, No_def]
+           ++ `n = 0` by METIS_TAC [num_of_value_def, int_of_value_def, NUM_OF_INT, Array_length_def, LENGTH_NIL]
+           ++ `pay = 0`
+		by (`int_of_value (Int (&pay)) <= int_of_value (Int 0)` by METIS_TAC []
+		    ++ FULL_SIMP_TAC arith_ss [int_of_value_def, NUM_OF_INT, INT_LE])
+           ++ METIS_TAC []])
+   ++ `LENGTH (h::t) > 0` by RW_TAC arith_ss [LENGTH]
+   ++ Q.ABBREV_TAC `a = h::t`
+   ++ RW_TAC std_ss [compute_result_postE, set_announcements_postE, Leq_def, bool_exp_def,
+				set_announcements_invariant_constant, set_announcements_g]
+   ++ RW_TAC posreal_reduce_ss []
+   ++ FULL_SIMP_TAC std_ss [DE_MORGAN_THM]
+   << [METIS_TAC [],
+       METIS_TAC [],
+       METIS_TAC [],
+       METIS_TAC [],
+       `i = n` by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
+			    	++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
+			    	++ FULL_SIMP_TAC arith_ss [])
+       ++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
+       ++ METIS_TAC [],
+       `i = n` by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
+			    	++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
+			    	++ FULL_SIMP_TAC arith_ss [])
+       ++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
+       ++ FULL_SIMP_TAC std_ss [set_announcements_j_eq_xor, dc_prog_string_inequalities]
+       ++ METIS_TAC [],
+       `i = n` 
+		by (`i <= n` by METIS_TAC [NUM_OF_INT, INT_LE, int_of_value_def]
+		    ++ `~(i < n)` by METIS_TAC [NUM_OF_INT, INT_LT, int_of_value_def]
+		    ++ FULL_SIMP_TAC arith_ss [])
+	++ `num_of_value (s' "i") = n` by METIS_TAC [NUM_OF_INT, int_of_value_def, num_of_value_def]
+	++ FULL_SIMP_TAC std_ss []
+        ++ `!j. (j < LENGTH l) ==>
+    		((EL j l = Int (1)) \/
+     		 (EL j l = Int (0)))`
+		by METIS_TAC [Array_length_def, Yes_def, No_def, get_Array_i_def]
+	++ `!j. (j < LENGTH a) ==>
+    		((EL j a = Int (1)) \/
+     		 (EL j a = Int (0)))`
+		by METIS_TAC [Array_length_def, Heads_def, Tails_def, get_Array_i_def]
+        ++ `!x. (MEM x l) ==> ((x = Int 1) \/ (x = Int 0))`
+		by METIS_TAC [MEM_EL]		
+	++ `!x. (MEM x a) ==> ((x = Int 1) \/ (x = Int 0))`
+		by METIS_TAC [MEM_EL]
+	++ `LENGTH l = n` by METIS_TAC [Array_length_def]
+	++ `LENGTH a = n` by METIS_TAC [Array_length_def]
+	++ FULL_SIMP_TAC std_ss []
+	++ `!x. ((x> 0) /\ (x <= n))  ==> 
+    		(Xor (Array (FIRSTN x l)) =
+     		 xor [EL (n-1) a; EL (x -1) a; (if pay < x then Yes else No)])`
+		by (REPEAT STRIP_TAC
+		    ++ Induct_on `x`
+		    >> RW_TAC arith_ss []
+		    ++ REPEAT STRIP_TAC
+		    ++ `x <= n` by RW_TAC arith_ss []
+		    ++ Cases_on `~ (x > 0)`
+		    >> (`x = 0` by RW_TAC arith_ss []
+			++ Cases_on `l`
+			>> FULL_SIMP_TAC arith_ss [LENGTH]
+			++ FULL_SIMP_TAC arith_ss [FIRSTN, set_announcements_j_eq_xor, 
+						   Xor_def, Yes_def, No_def, Heads_def, Tails_def]
+			++ Cases_on `pay = 0`
+			>> (`h' = xor [Int 1; EL 0 a; EL (n-1) a]` 
+				by (`h' = xor [Int 1; 
+						  get_Array_i (s' "Coins") 0; 
+						  get_Array_i (s' "Coins") (num_of_value (s' "N") - 1)]`
+					by (`h' = get_Array_i (s' "Announces") 0` 
+						by METIS_TAC [EL, get_Array_i_def, HD]
+				            ++ `0 < n` by RW_TAC arith_ss []
+					    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT])
+				    ++ `get_Array_i (s' "Coins") 0 = EL 0 a` by METIS_TAC [get_Array_i_def]
+				    ++ `get_Array_i (s' "Coins") (num_of_value (s' "N") - 1) = EL (n - 1) a`
+					by METIS_TAC [num_of_value_def, NUM_OF_INT, 
+						      int_of_value_def, get_Array_i_def]
+				    ++ FULL_SIMP_TAC std_ss [])
+			    ++ FULL_SIMP_TAC arith_ss []
+			    ++ `(EL 0 a = Int (1)) \/ (EL 0 a = Int (0))` by RW_TAC arith_ss []
+			    ++ `(EL (n - 1) a = Int (1)) \/ (EL (n - 1) a = Int (0))` by RW_TAC arith_ss []
+			    ++ RW_TAC int_ss [xor_def, int_of_value_def])
+			++ `~(pay < 1)` by RW_TAC arith_ss []
+			++ `h' = xor [Int 0; EL 0 a; EL (n-1) a]` 
+				by (`h' = xor [Int 0; 
+						  get_Array_i (s' "Coins") 0; 
+						  get_Array_i (s' "Coins") (num_of_value (s' "N") - 1)]`
+					by (`h' = get_Array_i (s' "Announces") 0` 
+						by METIS_TAC [EL, get_Array_i_def, HD]
+				            ++ `0 < n` by RW_TAC arith_ss []
+					    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT])
+				    ++ `get_Array_i (s' "Coins") 0 = EL 0 a` by METIS_TAC [get_Array_i_def]
+				    ++ `get_Array_i (s' "Coins") (num_of_value (s' "N") - 1) = EL (n - 1) a`
+					by METIS_TAC [num_of_value_def, NUM_OF_INT, 
+						      int_of_value_def, get_Array_i_def]
+				    ++ FULL_SIMP_TAC std_ss [])
+			++ FULL_SIMP_TAC arith_ss []
+			++ `(EL 0 a = Int (1)) \/ (EL 0 a = Int (0))` by RW_TAC arith_ss []
+			++ `(EL (n - 1) a = Int (1)) \/ (EL (n - 1) a = Int (0))` by RW_TAC arith_ss []
+			++ RW_TAC int_ss [xor_def, int_of_value_def])
+		    ++ FULL_SIMP_TAC std_ss []
+		    ++ `FIRSTN (SUC x) l = SNOC (EL x l) (FIRSTN x l)` by RW_TAC std_ss [FIRSTN_SUC]
+		    ++ FULL_SIMP_TAC std_ss [SNOC_APPEND]
+		    ++ `x<n` by RW_TAC arith_ss []
+		    ++ `Xor (Array (FIRSTN x l ++ [EL x l])) =
+ 			xor [Xor (Array (FIRSTN x l)); Xor (Array [EL x l])]`
+			by (`!y. MEM y [EL x l] ==> MEM y l` 
+				by METIS_TAC [EL_IS_EL, MEM]
+	    		    ++ `!y. MEM y (FIRSTN x l) ==> MEM y l`
+				by METIS_TAC [IS_EL_FIRSTN]
+	    		    ++ METIS_TAC [Xor_APPEND])
+		    ++ FULL_SIMP_TAC arith_ss [set_announcements_j_eq_xor, 
+					       Xor_def, Yes_def, No_def, Heads_def, Tails_def]
+		    ++ Cases_on `pay < x`
+		    >> (`EL x l = xor [Int 0; EL x a; EL (x - 1) a]` 
+				by (`~(pay = x)` by RW_TAC arith_ss []
+				    ++ `~(x = 0)` by RW_TAC arith_ss []
+				    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT, get_Array_i_def])
+			++ `pay < SUC x` by RW_TAC arith_ss []
+			++ `(EL (n - 1) a = Int 1) \/ (EL (n - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
+			++ `(EL (x - 1) a = Int 1) \/ (EL (x - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
+			++ `(EL x a = Int 1) \/ (EL x a = Int 0)` by FULL_SIMP_TAC arith_ss []
+			++ RW_TAC int_ss [xor_def, int_of_value_def])
+		    ++ Cases_on `pay = x`
+		    >> (`EL x l = xor [Int 1; EL x a; EL (x - 1) a]` 
+				by (`~(x = 0)` by RW_TAC arith_ss []
+				    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT, get_Array_i_def])
+			++ `pay < SUC x` by RW_TAC arith_ss []
+			++ `(EL (n - 1) a = Int 1) \/ (EL (n - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
+			++ `(EL (x - 1) a = Int 1) \/ (EL (x - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
+			++ `(EL x a = Int 1) \/ (EL x a = Int 0)` by FULL_SIMP_TAC arith_ss []
+			++ RW_TAC int_ss [xor_def, int_of_value_def])
+		    ++ `EL x l = xor [Int 0; EL x a; EL (x - 1) a]` 
+				by (`~(pay = x)` by RW_TAC arith_ss []
+				    ++ `~(x = 0)` by RW_TAC arith_ss []
+				    ++ METIS_TAC [int_of_value_def, num_of_value_def, NUM_OF_INT, get_Array_i_def])
+		    ++ `~(pay < SUC x)` by RW_TAC arith_ss []
+		    ++ `(EL (n - 1) a = Int 1) \/ (EL (n - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
+		    ++ `(EL (x - 1) a = Int 1) \/ (EL (x - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
+		    ++ `(EL x a = Int 1) \/ (EL x a = Int 0)` by FULL_SIMP_TAC arith_ss []
+		    ++ RW_TAC int_ss [xor_def, int_of_value_def])
+	++ `Xor (Array l) = (if pay < n then Yes else No)`
+		by (`n <= n` by RW_TAC arith_ss []
+		    ++ `(Xor (Array (FIRSTN n l)) =
+              		xor [EL (n - 1) a; EL (n - 1) a; (if pay < n then Yes else No)])`
+			by RW_TAC arith_ss []
+		    ++ `Xor (Array l) = xor [EL (n - 1) a; EL (n - 1) a; if pay < n then Yes else No]`
+			by METIS_TAC [FIRSTN_LENGTH]
+		    ++ Cases_on `pay < n`
+		    ++ `(EL (n - 1) a = Int 1) \/ (EL (n - 1) a = Int 0)` by FULL_SIMP_TAC arith_ss []
+		    ++ FULL_SIMP_TAC int_ss [xor_def, int_of_value_def, Yes_def, No_def])
+	++ Cases_on `pay < n`
+	>> (FULL_SIMP_TAC int_ss [Yes_def, No_def]
+	    ++ `pay = n` by METIS_TAC [int_of_value_def, NUM_OF_INT]
+	    ++ FULL_SIMP_TAC arith_ss [])
+	++ FULL_SIMP_TAC int_ss [Yes_def, No_def]
+	++ `pay = n` by (`pay <= n` by METIS_TAC [int_of_value_def, NUM_OF_INT, INT_LE]
+			 ++ RW_TAC arith_ss [])
+	++ METIS_TAC [int_of_value_def, NUM_OF_INT]])
+   ++ Suff `Leq (bool_exp (set_announcements_preE n nsapays a pay))
+		(wlp set_announcements (set_announcements_postE n nsapays a pay))`
+   >> PROVE_TAC [wlp_mono, leq_trans]
+   ++ METIS_TAC [wlp_set_announcements_result]);
+
+val wlp_Program_flip_coins_set_announcements_compute_result_result = store_thm
+  ("wlp_Program_flip_coins_set_announcements_compute_result_result",
+   ``!n nsapays pay. Leq (bool_exp (\s. (s "N" = Int (&n)) /\
+			    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    (s "payer" = Int (& pay)) /\
+			    (0 <= int_of_value (s "payer")) /\
+			    (int_of_value (s "payer") <= int_of_value (s "N"))))
+		     (wlp (Program [flip_coins; set_announcements; compute_result])
+			  (compute_result_postE n nsapays pay))``,
+   RW_TAC std_ss [Program_def, wlp_seq]
+   ++ `Leq (bool_exp (\s. (s "N" = Int (&n)) /\
+			    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    (s "payer" = Int (& pay)) /\
+			    (0 <= int_of_value (s "payer")) /\
+			    (int_of_value (s "payer") <= int_of_value (s "N"))))
+	 (wlp flip_coins (flip_coins_postE_heads_or_tails n nsapays pay))`
+	by METIS_TAC [flip_coins_wlp_lem10]
+   ++ Suff `Leq (wlp flip_coins (flip_coins_postE_heads_or_tails n nsapays pay))
+	     (wlp flip_coins (wlp set_announcements
+			     (wlp compute_result (compute_result_postE n nsapays pay))))`
+   >> PROVE_TAC [leq_trans]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ Suff `Leq (flip_coins_postE_heads_or_tails n nsapays pay)
+	     (wlp set_announcements
+			     (wlp compute_result (compute_result_postE n nsapays pay)))`
+   >> PROVE_TAC [wlp_mono]
+   ++ RW_TAC std_ss [Leq_def]
+   ++ `!a. (bool_exp (set_announcements_preE n nsapays a pay)) s <=
+	(wlp set_announcements (wlp compute_result (compute_result_postE n nsapays pay))) s`
+	by METIS_TAC [Leq_def, wlp_seq_set_announcements_compute_result, wlp_seq]
+   ++ Suff `?a. flip_coins_postE_heads_or_tails n nsapays pay s <=
+	     bool_exp (set_announcements_preE n nsapays a pay) s`
+   >> PROVE_TAC [le_trans]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ RW_TAC std_ss [flip_coins_postE_heads_or_tails, bool_exp_def, zero_le]
+   ++ FULL_SIMP_TAC std_ss [set_announcements_preE, flip_coins_invariant_constant, 
+			    flip_coins_g, num_of_value_def, int_of_value_def, NUM_OF_INT]
+   ++ Q.EXISTS_TAC `l`
+   ++ METIS_TAC [int_of_value_def, NUM_OF_INT, INT_NOT_LT, INT_LE_ANTISYM, le_refl]);
+
+val lfp_expect_Leq_leq_gfp = store_thm
+  ("lfp_expect_Leq_leq_gfp",
+   ``!x y f. (lfp (expect, Leq) f x) /\
+	     (gfp (expect, Leq) f y) ==>
+	     (Leq x y)``,
+   RW_TAC std_ss [lfp_def, gfp_def, expect_def, Leq_def]
+   ++ METIS_TAC [le_refl]);
+
+val wp_leq_wlp = store_thm
+  ("wp_leq_wlp",
+   ``!prog postE. Leq (wp prog postE) (wlp prog postE)``,
+   Induct
+   << [RW_TAC std_ss [Leq_def, zero_le, Zero_def, wp_def],
+       RW_TAC std_ss [wp_def, wlp_def, leq_refl],
+       RW_TAC std_ss [wp_def, wlp_def, leq_refl],
+       RW_TAC std_ss [wlp_def, wp_def]
+       ++ PROVE_TAC [wlp_mono, leq_trans],
+       RW_TAC std_ss [leq_min, wlp_def, wp_def]
+       ++ PROVE_TAC [leq_min1, leq_min2, leq_min, leq_trans],
+       RW_TAC std_ss [wlp_def, wp_def, let_lin_lemma, bound1_def, lin_eta, Leq_def]
+       ++ RW_TAC posreal_reduce_ss [mul_lzero, mul_lone, add_rzero]
+       >> (Cases_on `f s = 1`
+	   >> (RW_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_rzero, zero_le]
+	       ++ METIS_TAC [Leq_def])
+	   ++ `f s < 1` by METIS_TAC [le_antisym, preal_lt_def]
+	   ++ `~ (f s = infty)` by RW_TAC posreal_reduce_ss [le1_imp_not_infty]
+	   ++ `~((1 - f s) = 0)` 
+		by (`~(1 = infty)` by RW_TAC posreal_ss []
+		     ++ `~ (1 <= f s)` by FULL_SIMP_TAC std_ss [preal_lt_def]
+		     ++ METIS_TAC [sub_zero_imp_le])
+	   ++ Cases_on `wp prog' postE s = infty`
+	   >> METIS_TAC [add_rinfty, mul_rinfty, Leq_def, infty_le]
+	   ++ Cases_on `f s = 0`
+	   >> (RW_TAC posreal_reduce_ss [mul_lone, mul_lzero, add_lzero]
+	       ++ METIS_TAC [Leq_def])
+	   ++ METIS_TAC [add_linfty, mul_rinfty, Leq_def, infty_le, 
+			 add_rinfty, le_infty, le_lmul_imp, le_add2])
+       ++ METIS_TAC [Leq_def],
+       RW_TAC std_ss [wp_def, wlp_def]
+       ++ `monotonic (expect, Leq) (\e. Cond f (wlp prog e) postE)`
+		by (RW_TAC std_ss [monotonic_def, expect_def, cond_eta, Leq_def]
+		    ++ METIS_TAC [Leq_def, le_refl, wlp_mono])
+       ++ `lfp (expect, Leq) (\e. Cond f (wlp prog e) postE)
+			    (expect_lfp (\e. Cond f (wlp prog e) postE))`
+		by RW_TAC std_ss [expect_lfp_def]
+       ++ `gfp (expect, Leq) (\e. Cond f (wlp prog e) postE)
+			    (expect_gfp (\e. Cond f (wlp prog e) postE))`
+		by RW_TAC std_ss [expect_gfp_def]
+       ++ `Leq (expect_lfp (\e. Cond f (wlp prog e) postE))
+	       (expect_gfp (\e. Cond f (wlp prog e) postE))`
+		by METIS_TAC [lfp_expect_Leq_leq_gfp]
+       ++ Suff `Leq (expect_lfp (\e. Cond f (wp prog e) postE))
+		    (expect_lfp (\e. Cond f (wlp prog e) postE))`
+       >> PROVE_TAC [leq_trans]
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ `monotonic (expect, Leq) (\e. Cond f (wp prog e) postE)`
+		by (RW_TAC std_ss [monotonic_def, expect_def, cond_eta, Leq_def]
+		    ++ METIS_TAC [Leq_def, le_refl, wp_mono])
+       ++ `lfp (expect, Leq) (\e. Cond f (wp prog e) postE)
+			    (expect_lfp (\e. Cond f (wp prog e) postE))`
+		by RW_TAC std_ss [expect_lfp_def]
+       ++ FULL_SIMP_TAC std_ss [lfp_def, expect_def]
+       ++ Suff `Leq (Cond f (wp prog (expect_lfp (\e. Cond f (wlp prog e) postE))) postE)
+		    (Cond f (wlp prog (expect_lfp (\e. Cond f (wlp prog e) postE))) postE)`
+       >> METIS_TAC []
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ POP_ASSUM (K ALL_TAC)
+       ++ RW_TAC std_ss [Leq_def, cond_eta]
+       ++ METIS_TAC [leq_refl, Leq_def]]);
+
+val conj_of_bool_exp = store_thm
+  ("conj_of_bool_exp",
+   ``!g g'. Conj (bool_exp g) (bool_exp g') = bool_exp (\s. g s /\ g' s)``,
+   RW_TAC std_ss [bool_exp_def, Conj_def, FUN_EQ_THM]
+   ++ RW_TAC posreal_reduce_ss []
+   ++ FULL_SIMP_TAC std_ss []);
+
+val Leq_bool_exp_One = store_thm
+  ("Leq_bool_exp_One",
+   ``!g. Leq (bool_exp g) One``,
+   RW_TAC std_ss [Leq_def, One_def, bool_exp_def]
+   ++ METIS_TAC [zero_le, le_refl]);
+
+val expect1_eq_Leq_One = store_thm
+  ("expect1_eq_Leq_One",
+   ``!e. (expect1 e) = (Leq e One)``,
+   RW_TAC std_ss [expect1_def, Leq_def, One_def]);
+
+val Leq_wp_bool_exp_One = store_thm
+  ("Leq_wp_bool_exp_One",
+   ``!prog g. Leq (wp prog (bool_exp g)) One``,
+   METIS_TAC [Leq_bool_exp_One, expect1_eq_Leq_One, expect1_postE_imp_expect1_wp_postE]);
+
+val wp_and_bool_exp = store_thm
+  ("wp_and_bool_exp",
+   ``!g g' prog.
+	(wp prog (bool_exp g) = One) /\
+	(wp prog (bool_exp g') = One) ==>
+	(wp prog (bool_exp (\s. g s /\ g' s)) = One)``,
+   REPEAT STRIP_TAC
+   ++ `Conj (wp prog (bool_exp g)) (wp prog (bool_exp g')) = One`
+	by RW_TAC posreal_reduce_ss [Conj_def, One_def]
+   ++ METIS_TAC [wp_conj, conj_of_bool_exp, leq_antisym, Leq_wp_bool_exp_One]);
+
+val wp_set_payer_lemma_for_wlp = store_thm
+  ("wp_initialize_lemma_for_wlp",
+   ``!n nsapays. (n > 0) ==> Leq (bool_exp (\s. (s "N" = Int (& n)) /\
+				(if nsapays then
+                        	   s "NSApays" = Yes
+                      		 else
+                        	   s "NSApays" = No)))
+		(wp (set_payer n nsapays)
+            (bool_exp
+               (\s.
+                  (s "N" = Int (& n)) /\
+                  (if nsapays then
+                     s "NSApays" = Yes
+                   else
+                     s "NSApays" = No) /\
+                  ((s "NSApays" = Yes) = (s "payer" = s "N")) /\
+                  (?pay. s "payer" = Int (& pay)) /\
+                  0 <= int_of_value (s "payer") /\
+                  int_of_value (s "payer") <= int_of_value (s "N"))))``,
+   Cases_on `nsapays`
+   >> (RW_TAC arith_ss [set_payer_def, wp_def, assign_eta, bool_exp_def, Leq_def, int_of_value_def, INT_LE]
+       ++ `(s "N" = Int (& n)) /\ (s "NSApays" = Yes) ==>
+	((s "N" = Int (& n)) /\ (s "NSApays" = Yes) /\
+       ((s "NSApays" = Yes) = (Int (& n) = s "N")) /\ (?pay. & n = & pay) /\
+       & n <= int_of_value (s "N"))`
+	by (RW_TAC arith_ss [INT_LE, int_of_value_def] ++ METIS_TAC [])
+       ++ METIS_TAC [le_refl, zero_le])
+   ++ RW_TAC std_ss [set_payer_def]
+   ++ `(\s.
+               (s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+               ((s "NSApays" = Yes) = (s "payer" = s "N")) /\
+               (?pay. s "payer" = Int (& pay)) /\
+               0 <= int_of_value (s "payer") /\
+               int_of_value (s "payer") <= int_of_value (s "N")) =
+   (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+	(~(s "payer" = Int (&n))) /\
+	(?pay. s "payer" = Int (& pay)) /\
+	int_of_value (s "payer") <= &n)`
+	by (`~(Yes = No)` by RW_TAC int_ss [Yes_def, No_def]
+	    ++ RW_TAC int_ss [FUN_EQ_THM, EQ_IMP_THM, int_of_value_def]
+	    << [METIS_TAC [],
+		METIS_TAC [int_of_value_def],
+		FULL_SIMP_TAC int_ss [INT_LE, int_of_value_def]])
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `(\s. (s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+	(~(s "payer" = Int (&n))) /\
+	(?pay. s "payer" = Int (& pay)) /\
+	int_of_value (s "payer") <= &n) =
+    (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+	 (?pay. (s "payer" = Int (& pay)) /\ (pay < n)))`
+	by (RW_TAC int_ss [FUN_EQ_THM, EQ_IMP_THM, int_of_value_def]
+	    << [`pay <= n` by METIS_TAC [int_of_value_def, INT_LE]
+		++ `~ (pay = n)` by METIS_TAC []
+		++ `pay < n` by FULL_SIMP_TAC arith_ss []
+		++ METIS_TAC [],
+		`~ (pay = n)` by RW_TAC arith_ss []
+		++ RW_TAC int_ss [],
+		METIS_TAC [],
+		RW_TAC arith_ss [int_of_value_def, INT_LE]])
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `(\s.
+               (s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+               ?pay. (s "payer" = Int (& pay)) /\ pay < n) =
+    (\s.
+		(s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+		?pay. (s "payer" = Int (& pay)) /\ (MEM (s "payer") (zero_to_n_Int_list n)))`
+	by (RW_TAC int_ss [FUN_EQ_THM, EQ_IMP_THM]
+	    ++ METIS_TAC [zero_to_n_Int_list_contains])
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `(\s.
+		(s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+		?pay. (s "payer" = Int (& pay)) /\ (MEM (s "payer") (zero_to_n_Int_list n))) =
+    (\s. 	(s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+		(MEM (s "payer") (zero_to_n_Int_list n)))`
+	by (RW_TAC std_ss [FUN_EQ_THM, EQ_IMP_THM]
+	    ++ Q.ABBREV_TAC `x = s "payer"`
+	    ++ `(?i. x = (Int i))` by METIS_TAC [MEM_zero_to_n_Int_list_implies_Int]
+	    ++ `0 <= i` by METIS_TAC [MEM_zero_to_n_Int_list_implies_ge_zero]
+	    ++ METIS_TAC [NUM_POSINT_EXISTS])
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `LENGTH (zero_to_n_Int_list n) > 0`
+	by (Cases_on `n`
+	    ++ RW_TAC arith_ss [zero_to_n_Int_list, LENGTH_SNOC])
+   ++ `wp (NondetAssign "payer" (zero_to_n_Int_list n))
+	  (bool_exp (\s. MEM (s "payer") (zero_to_n_Int_list n))) = One`
+	by (RW_TAC std_ss [bool_exp_def] ++ METIS_TAC [NondetAssign_partial_result])
+   ++ Suff `Leq (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)))
+		(wp (NondetAssign "payer" (zero_to_n_Int_list n))
+		    (Conj (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)))
+			  (bool_exp (\s. MEM (s "payer") (zero_to_n_Int_list n)))))`
+   >> (`(\s.
+               (s "N" = Int (& n)) /\ (s "NSApays" = No) /\
+               MEM (s "payer") (zero_to_n_Int_list n)) =
+       (\s. (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)) s /\
+	    (\s. MEM (s "payer") (zero_to_n_Int_list n)) s)`
+	by RW_TAC bool_ss [CONJ_ASSOC]
+	++ RW_TAC std_ss [conj_of_bool_exp])
+   ++ Suff `Leq (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)))
+		(Conj (wp (NondetAssign "payer" (zero_to_n_Int_list n))
+			  (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No))))
+		      (wp (NondetAssign "payer" (zero_to_n_Int_list n))
+			  (bool_exp (\s. MEM (s "payer") (zero_to_n_Int_list n)))))`
+   >> PROVE_TAC [wp_conj, leq_trans]
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `(wp (NondetAssign "payer" (zero_to_n_Int_list n))
+            (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)))) =
+       (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No)))`
+	by (`(!a s. (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No))) s = 
+		    (bool_exp (\s. (s "N" = Int (& n)) /\ (s "NSApays" = No))) (assign "payer" a s))`
+		by SRW_TAC [] [assign_eta, bool_exp_def]
+	    ++ METIS_TAC [NondetAssign_do_nothing])
+   ++ ASM_REWRITE_TAC []
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ RW_TAC posreal_reduce_ss [One_def, Leq_def, Conj_def, add_sub, le_refl]);
+
+val wlp_set_payer_result = store_thm
+  ("wlp_set_payer_result",
+   ``!n nsapays. (n > 0) ==>
+	Leq (bool_exp (\s. (s "N" = Int (& n)) /\
+				(if nsapays then
+                        	   s "NSApays" = Yes
+                      		 else
+                        	   s "NSApays" = No)))
+		(wlp (set_payer n nsapays)
+            (bool_exp
+               (\s.
+                  (s "N" = Int (& n)) /\
+                  (if nsapays then
+                     s "NSApays" = Yes
+                   else
+                     s "NSApays" = No) /\
+                  ((s "NSApays" = Yes) = (s "payer" = s "N")) /\
+                  (?pay. s "payer" = Int (& pay)) /\
+                  0 <= int_of_value (s "payer") /\
+                  int_of_value (s "payer") <= int_of_value (s "N"))))``,
+   REPEAT STRIP_TAC
+   ++ `Leq (bool_exp (\s. (s "N" = Int (& n)) /\
+				(if nsapays then
+                        	   s "NSApays" = Yes
+                      		 else
+                        	   s "NSApays" = No)))
+		(wp (set_payer n nsapays)
+            (bool_exp
+               (\s.
+                  (s "N" = Int (& n)) /\
+                  (if nsapays then
+                     s "NSApays" = Yes
+                   else
+                     s "NSApays" = No) /\
+                  ((s "NSApays" = Yes) = (s "payer" = s "N")) /\
+                  (?pay. s "payer" = Int (& pay)) /\
+                  0 <= int_of_value (s "payer") /\
+                  int_of_value (s "payer") <= int_of_value (s "N"))))`
+	by RW_TAC std_ss [wp_set_payer_lemma_for_wlp]
+   ++ PROVE_TAC [wp_leq_wlp, leq_trans]);
+
+val wlp_initialize_result = store_thm
+  ("wlp_initialize_result",
+   ``!n nsapays. (n > 0) ==>
+		 Leq One
+		     (wlp (initialize n nsapays) 
+			  (bool_exp (\s. (s "N" = Int (&n)) /\
+			    	    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    	    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    	    (?pay. s "payer" = Int (& pay)) /\
+			    	    (0 <= int_of_value (s "payer")) /\
+			    	    (int_of_value (s "payer") <= int_of_value (s "N")))))``,
+   RW_TAC std_ss [initialize_def, wlp_seq, Program_def]
+   ++ `Leq One (wlp (initialize_var_N n) (bool_exp (\s. s "N" = Int (& n))))`
+	by RW_TAC posreal_reduce_ss [Leq_def, One_def, bool_exp_def, wlp_def, initialize_var_N_def, assign_eta]
+   ++ Suff `Leq (bool_exp (\s. s "N" = Int (& n)))
+		(wlp (initialize_var_NSApays nsapays)
+            (wlp (set_payer n nsapays)
+               (bool_exp
+                  (\s.
+                     (s "N" = Int (& n)) /\
+                     (if nsapays then
+                        s "NSApays" = Yes
+                      else
+                        s "NSApays" = No) /\
+                     ((s "NSApays" = Yes) = (s "payer" = s "N")) /\
+                     (?pay. s "payer" = Int (& pay)) /\
+                     0 <= int_of_value (s "payer") /\
+                     int_of_value (s "payer") <= int_of_value (s "N")))))`
+   >> PROVE_TAC [leq_trans, wlp_mono]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ `Leq (bool_exp (\s. s "N" = Int (& n)))
+	   (wlp (initialize_var_NSApays nsapays)
+		(bool_exp (\s. (s "N" = Int (& n)) /\
+				(if nsapays then
+                        	   s "NSApays" = Yes
+                      		 else
+                        	   s "NSApays" = No))))`
+	by (RW_TAC posreal_reduce_ss [Leq_def, One_def, bool_exp_def, wlp_def, 
+				      initialize_var_NSApays_def, assign_eta]
+	    ++ RW_TAC posreal_reduce_ss [zero_le])
+   ++ Suff `Leq (bool_exp (\s. (s "N" = Int (& n)) /\
+				(if nsapays then
+                        	   s "NSApays" = Yes
+                      		 else
+                        	   s "NSApays" = No)))
+		(wlp (set_payer n nsapays)
+            (bool_exp
+               (\s.
+                  (s "N" = Int (& n)) /\
+                  (if nsapays then
+                     s "NSApays" = Yes
+                   else
+                     s "NSApays" = No) /\
+                  ((s "NSApays" = Yes) = (s "payer" = s "N")) /\
+                  (?pay. s "payer" = Int (& pay)) /\
+                  0 <= int_of_value (s "payer") /\
+                  int_of_value (s "payer") <= int_of_value (s "N"))))`
+   >> PROVE_TAC [leq_trans, wlp_mono]
+   ++ RW_TAC std_ss [wlp_set_payer_result]);
+
+val dc_prog_result_postE = Define
+   `dc_prog_result_postE n nsapays =
+    bool_exp (\s. 
+    (s "N" = Int (&n)) /\
+    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+    (?a. s "Coins" = Array a) /\
+    (?pay. s "payer" = Int (&pay)) /\
+    (0 <= int_of_value(s "payer")) /\
+    (int_of_value (s "payer") <= int_of_value (s "N")) /\
+    (Array_length (s "Coins") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "N")) ==>
+         (((get_Array_i (s "Coins") k) = Heads) \/
+          ((get_Array_i (s "Coins") k) = Tails))) /\
+    (?l. s "Announces" = Array l) /\
+    (Array_length (s "Announces") = num_of_value (s "N")) /\
+    (!k. (k < num_of_value (s "N")) ==>
+	 (((get_Array_i (s "Announces") k) = Yes) \/
+          ((get_Array_i (s "Announces") k) = No))) /\
+    (!j. (j < num_of_value (s "N")) ==>
+	 (set_announcements_j_eq_xor j s)) /\
+    (if nsapays then s "result" = No else s "result" = Yes))`;
+
+val wlp_Program_flip_coins_set_announcements_compute_result_result2 = store_thm
+  ("wlp_Program_flip_coins_set_announcements_compute_result_result2",
+   ``!n nsapays. Leq (bool_exp (\s. (s "N" = Int (&n)) /\
+			    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    (? pay. s "payer" = Int (& pay)) /\
+			    (0 <= int_of_value (s "payer")) /\
+			    (int_of_value (s "payer") <= int_of_value (s "N"))))
+		     (wlp (Program [flip_coins; set_announcements; compute_result])
+			  (dc_prog_result_postE n nsapays))``,
+   REPEAT STRIP_TAC
+   ++ `!pay. Leq (compute_result_postE n nsapays pay) (dc_prog_result_postE n nsapays)`
+	by (RW_TAC std_ss [Leq_def, compute_result_postE, dc_prog_result_postE, bool_exp_def]
+	    ++ RW_TAC posreal_reduce_ss [zero_le, le_refl]
+            ++ FULL_SIMP_TAC std_ss [DE_MORGAN_THM]
+            ++ METIS_TAC [])
+   ++ `!pay. Leq (wlp (Program [flip_coins; set_announcements; compute_result])
+		      (compute_result_postE n nsapays pay))
+		 (wlp (Program [flip_coins; set_announcements; compute_result])
+		      (dc_prog_result_postE n nsapays))`
+	by PROVE_TAC [wlp_mono]
+   ++ `!pay. Leq (bool_exp (\s. (s "N" = Int (&n)) /\
+			    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    (s "payer" = Int (& pay)) /\
+			    (0 <= int_of_value (s "payer")) /\
+			    (int_of_value (s "payer") <= int_of_value (s "N"))))
+		     (wlp (Program [flip_coins; set_announcements; compute_result])
+		      (dc_prog_result_postE n nsapays))`
+	by METIS_TAC [wlp_Program_flip_coins_set_announcements_compute_result_result, leq_trans]
+   ++ FULL_SIMP_TAC std_ss [Leq_def, bool_exp_def]
+   ++ GEN_TAC
+   ++ RW_TAC posreal_reduce_ss [zero_le, le_refl]
+   ++ METIS_TAC [le_refl]);
+
+val wlp_dc_prog_result = store_thm
+  ("wlp_dc_prog_result",
+   ``!n nsapays. (n > 0) ==>
+		 Leq One
+		    (wlp (dcprog n nsapays) (dc_prog_result_postE n nsapays))``,
+   RW_TAC std_ss [dcprog_def, Program_def, wlp_seq]
+   ++ `Leq (bool_exp (\s. (s "N" = Int (&n)) /\
+			    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    (? pay. s "payer" = Int (& pay)) /\
+			    (0 <= int_of_value (s "payer")) /\
+			    (int_of_value (s "payer") <= int_of_value (s "N"))))
+	   (wlp flip_coins
+            (wlp set_announcements
+               (wlp compute_result (dc_prog_result_postE n nsapays))))`
+	by METIS_TAC [wlp_Program_flip_coins_set_announcements_compute_result_result2, Program_def, wlp_seq]
+   ++ Suff `Leq One
+		(wlp (initialize n nsapays)
+		     (bool_exp (\s. (s "N" = Int (&n)) /\
+			    (if nsapays then s "NSApays" = Yes else s "NSApays" = No) /\
+			    ((s"NSApays" = Yes) = (s "payer" = s "N")) /\
+			    (? pay. s "payer" = Int (& pay)) /\
+			    (0 <= int_of_value (s "payer")) /\
+			    (int_of_value (s "payer") <= int_of_value (s "N")))))`
+   >> PROVE_TAC [wlp_mono, leq_trans]
+   ++ METIS_TAC [wlp_initialize_result]);
 
 val _ = export_theory();
