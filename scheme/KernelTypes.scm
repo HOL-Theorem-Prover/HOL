@@ -13,7 +13,7 @@
     (box p))
   
   (define (dest_id p)
-    (unbox (car dest_id)))
+    (unbox p))
   
   (define (name_of id)
     (vector-ref (dest_id id) 0))

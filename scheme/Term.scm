@@ -59,22 +59,22 @@
   (define-values (eqc hil imp)
     (let ((eq_const
            (make-Const
-            (vector (KernelTypes:mk_id "=" "min")
+            (vector (KernelTypes:mk_id (vector "=" "min"))
                     (make-POLY (Type:--> Type:alpha
                                          (Type:--> Type:alpha Type:bool))))))
           (hil_const
            (make-Const
-            (vector (KernelTypes:mk_id "@" "min")
+            (vector (KernelTypes:mk_id (vector "@" "min"))
                     (make-POLY (Type:--> (Type:--> Type:alpha Type:bool)
                                          Type:alpha)))))
           (imp_const
            (make-Const
-            (vector (KernelTypes:mk_id "==>" "min")
+            (vector (KernelTypes:mk_id (vector "==>" "min"))
                     (make-GRND (Type:--> Type:bool
                                          (Type:--> Type:bool Type:bool)))))))
-      (values (vector-ref (TermSig:insert eq_const) 0)
-              (vector-ref (TermSig:insert hil_const) 0)
-              (vector-ref (TermSig:insert imp_const) 0))))
+      (values (vector-ref (INITIAL-entry (TermSig:insert eq_const)) 0)
+              (vector-ref (INITIAL-entry (TermSig:insert hil_const)) 0)
+              (vector-ref (INITIAL-entry (TermSig:insert imp_const)) 0))))
   
   (define mk_clos
     (match-lambda
@@ -247,7 +247,7 @@
        (raise (ERR "var_compare" "variables required")))))
   
   (define empty_varset
-    (HOLset:empty var_compare)) ;???
+    (HOLset:make-ordered (lambda (a b) (var_compare (vector a b)))))
   
   (define (compare p)
     (if (eq? (vector-ref p 0)
@@ -306,7 +306,7 @@
            'GREATER))))
   
   (define empty_tmset
-    (HOLset:empty compare))
+    (HOLset:make-ordered (lambda (a b) (compare (vector a b)))))
   (define (term_eq t1 t2)
     (eq? (compare (vector t1 t2)) 'EQUAL))
   

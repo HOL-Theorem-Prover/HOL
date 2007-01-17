@@ -9,6 +9,7 @@
            (prefix Lexis: "Lexis.scm"))
   
   (require (lib "unit.ss")
+           (lib "compare.ss" "srfi" "67")
            (lib "plt-match.ss")
            (only (lib "13.ss" "srfi")
                  string-prefix?))
@@ -54,11 +55,11 @@
    table_size)
   
   (define fun_tyc
-    (vector-ref (Lib:insert (KernelTypes:mk_id "fun" "min") 2) 0))
+    (vector-ref (INITIAL-entry (TypeSig:insert (vector (KernelTypes:mk_id (vector "fun" "min")) 2))) 0))
   (define bool_tyc
-    (vector-ref (Lib:insert (KernelTypes:mk_id "bool" "min") 0) 0))
+    (vector-ref (INITIAL-entry (TypeSig:insert (vector (KernelTypes:mk_id (vector "bool" "min")) 0))) 0))
   (define ind_tyc
-    (vector-ref (Lib:insert (KernelTypes:mk_id "ind" "min") 0) 0))
+    (vector-ref (INITIAL-entry (TypeSig:insert (vector (KernelTypes:mk_id (vector "ind" "min")) 0))) 0))
   
   (define bool
     (make-Tyapp bool_tyc '()))
@@ -105,12 +106,12 @@
                                       " has not been declared in theory "
                                       (Lib:stringquote Thy)))))))))
   
-  (define decls
+  (define (decls a1)
     (map (lambda (e)
            (let* ((temp (vector-ref e 0))
                   (c (vector-ref temp 0)))
              (vector (KernelTypes:name_of c) (KernelTypes:seg_of c))))
-         TypeSig:resolve))
+         (TypeSig:resolve a1)))
   
   (define (first_decl fname Tyop)
     (match (TypeSig:resolve Tyop)
@@ -312,21 +313,16 @@
     (match-lambda*
       ((list (struct Tyv (s1))
              (struct Tyv (s2)))
-       (cond ((string=? s1 s2)
-              'EQUAL)
-             ((string>? s1 s2)
-              'GREATER)
-             ((string<? s1 s2)
-              'LESS)))
+       (string-compare s1 s2))
       ((list (struct Tyv (s1)) _)
-       'LESS)
+       -1)
       ((list (struct Tyapp (_ _))
              (struct Tyv (_)))
-       'GREATER)
+       1)
       ((list (struct Tyapp ((vector c1 _) A1))
              (struct Tyapp ((vector c2 _) A2)))
        (match (KernelTypes:compare (vector c1 c2))
-         ('EQUAL (Lib:list_compare compare (vector A1 A2)))
+         (0 (Lib:list_compare compare (vector A1 A2)))
          (x x)))))
   
   

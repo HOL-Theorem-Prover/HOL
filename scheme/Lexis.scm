@@ -1,6 +1,12 @@
 (module Lexis mzscheme
   
-  (provide allowed_user_type_var)
+  (provide allowed_user_type_var
+           nameStrm)
+  
+  (require (prefix Globals: "Globals.scm")
+           (prefix Lib: "Lib.scm")
+           "records.scm")
+  (require (lib "plt-match.ss"))
   
   (define (ordof string place)
     (char->integer
@@ -31,5 +37,23 @@
                    bone))
          (with-handlers
              (((lambda (x) #t) #t))
-           (loop 2)))))
+           (loop 2))))
+  
+  (define (nameStrm s)
+    (match (unbox Globals:priming)
+      ('NONE
+        (let ((current s))
+          (lambda ()
+            (set! current (Lib:prime current))
+            current)))
+      ((struct SOME (x))
+       (let ((project
+              (lambda (i)
+                (string-append s x (number->string i))))
+             (cnt 0))
+         (lambda ()
+           (set! cnt (add1 cnt))
+           (project cnt))))))
+  
+  )
 
