@@ -3,8 +3,7 @@ sig
 
   exception IndexUndefined
 
-  datatype holtype = Tyvar of string
-                   | Tyop of string * holtype list
+  datatype holtype = Tyop of string * holtype list
 
   type ('a, 'b) cart
   type 'a itself = holtype

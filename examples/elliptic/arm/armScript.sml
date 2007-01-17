@@ -1412,7 +1412,6 @@ val _ = ConstMapML.insert ``n2w_itself``;
 
 fun mk_word n =
   let val s = Int.toString n
-      val _ = (n = 16) andalso temp_disable_tyabbrev_printing ("i" ^ s) = ()
       val w = "type word" ^ s ^ " = wordsML.word" ^ s
   in
     EmitML.MLSIG w

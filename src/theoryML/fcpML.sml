@@ -1,12 +1,9 @@
 structure fcpML :> fcpML =
 struct
 
-open numML
-
 exception IndexUndefined
 
-datatype holtype = Tyvar of string
-                 | Tyop of string * holtype list
+datatype holtype = Tyop of string * holtype list
 
 datatype ('a, 'b) cart = FCP of ('b -> 'a)
 
@@ -14,61 +11,37 @@ type 'a itself = holtype
 
 fun dimindex t =
   case t of
-    Tyvar _ => raise IndexUndefined
-  | Tyop ("one", [])  => numML.ONE
-  | Tyop ("bool", []) => numML.TWO
-  | Tyop ("option", [a])  => numML.SUC (dimindex a)
+    Tyop ("one", [])      => numML.ONE
+  | Tyop ("bit0", [a])    => numML.iDUB (dimindex a)
+  | Tyop ("bit1", [a])    => numML.BIT1 (dimindex a)
   | Tyop ("sum", [a, b])  => numML.+ (dimindex a) (dimindex b)
   | Tyop ("prod", [a, b]) => numML.* (dimindex a) (dimindex b)
-  | _ => raise IndexUndefined;
+  | Tyop (x, [])          => (if String.sub(x,0) = #"i" then
+                                numML.fromString(String.extract(x,1,NONE))
+                              else
+                                raise IndexUndefined)
+  | _ => raise IndexUndefined
 
-fun index_type n =
-  let val bool = Tyop ("bool", []) open Int in
-    if n mod 2 = 0 then
-      if n = 0 then
-        raise raise IndexUndefined
-      else if n = 2 then
-        bool
-      else
-        Tyop("prod", [bool, index_type (n div 2)])
-    else
-      if n = 1 then
-        Tyop("one", [])
-      else if n = 3 then
-        Tyop("option", [bool])
-      else
-        Tyop("option", [Tyop("prod", [bool, index_type ((n - 1) div 2)])])
-  end;
+fun index_type n = Tyop("i" ^ Int.toString n, []);
 
 local
-  fun compare (a, b) =
-    case (a, b) of
-      (Tyvar x, Tyvar y) => String.compare(x,y)
-    | (Tyvar _, Tyop _)  => LESS
-    | (Tyop _, Tyvar _)  => GREATER
-    | (Tyop (x, []), Tyop (y, [])) => String.compare(x,y)
-    | (Tyop (x, [a, b]), Tyop (y, [c, d])) =>
-        (case String.compare(x,y) of
-           EQUAL => (case compare(a, c) of
-                       EQUAL => compare (b, d)
-                     | z => z)
-         | w => w)
-    | _ => raise IndexUndefined
+  open numML Redblackmap
+  val index_list = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64]
+  
+  fun index_dict f =
+         List.foldl (fn (n, d) => insert(d,"i" ^ Int.toString n, f n))
+                    (mkDict String.compare) index_list
 
-  val dict_INT_MIN:(holtype, num) Redblackmap.dict = Redblackmap.mkDict compare
-  val dict_dimword:(holtype, num) Redblackmap.dict = Redblackmap.mkDict compare
+  val dict_INT_MIN = index_dict (fn n => EXP TWO (fromInt (Int.-(n, 1))))
+  val dict_dimword = index_dict (fn n => EXP TWO (fromInt n))
 in
-  fun INT_MIN t = Redblackmap.find(dict_INT_MIN,t)
-    handle NotFound =>
-      let val n = EXP TWO (PRE (dimindex t))
-          val _ = Redblackmap.insert(dict_INT_MIN,t,n)
-      in n end
+  fun INT_MIN (t as Tyop(s, [])) =
+        (find(dict_INT_MIN,s) handle NotFound => EXP TWO (PRE (dimindex t)))
+    | INT_MIN t = EXP TWO (PRE (dimindex t))
 
-  fun dimword t = Redblackmap.find(dict_dimword,t)
-    handle NotFound =>
-      let val n = EXP TWO (dimindex t)
-          val _ = Redblackmap.insert(dict_dimword,t,n)
-      in n end
+  fun dimword (t as Tyop(s, [])) =
+        (find(dict_dimword,s) handle NotFound => EXP TWO (dimindex t))
+    | dimword t = EXP TWO (dimindex t)
 end
 
 end

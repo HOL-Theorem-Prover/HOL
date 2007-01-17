@@ -404,11 +404,16 @@ fun term_to_ML openthys side ppstrm =
        ; end_block()
        ; rparen i maxprec)
   and pp_itself tm =
-    let fun pp_itself_type typ =
+    let fun abbrev_to_string t = String.extract(Hol_pp.type_to_string t,1,NONE)
+        fun pp_itself_type typ =
       if is_vartype typ then
         add_string (String.extract(dest_vartype typ, 1, NONE))
       else case (dest_type typ) of
-        (tyop, els) =>
+        ("bit0", els) =>
+           add_string ("(Tyop (\"" ^ abbrev_to_string typ ^ "\", []))")
+      | ("bit1", els) =>
+           add_string ("(Tyop (\"" ^ abbrev_to_string typ ^ "\", []))")
+      | (tyop, els) =>
            (begin_block Portable.CONSISTENT 0
           ; add_string ("(Tyop (\"" ^ tyop ^ "\", [")
           ; begin_block Portable.CONSISTENT 0
