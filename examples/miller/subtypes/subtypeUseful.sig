@@ -280,6 +280,7 @@ sig
   val PINST : substitution -> thm -> thm
 
   (* Conversions *)
+  val CHANGED_CONV : conv -> conv
   val FIRSTC : conv list -> conv
   val TRYC : conv -> conv
   val REPEATPLUSC : conv -> conv

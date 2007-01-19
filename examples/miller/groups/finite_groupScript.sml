@@ -5,7 +5,7 @@ open bossLib listTheory formalizeUseful subtypeTools res_quanTools
      res_quanTheory pred_setTheory extra_pred_setTheory arithContext
      relationTheory ho_proverTools extra_listTheory listContext
      arithmeticTheory groupTheory pred_setContext groupContext
-     subtypeTheory extra_numTheory gcdTheory dividesTheory primeTheory
+     subtypeTheory extra_numTheory gcdTheory dividesTheory
      extra_arithTheory;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;

@@ -15,7 +15,7 @@ if !show_assums then () else
 *)
 
 open bossLib pairTheory pred_setTheory extra_pred_setTheory gcdTheory
-     primeTheory dividesTheory
+     dividesTheory
      res_quanTheory arithmeticTheory extra_arithTheory
      formalizeUseful ho_basicTools ho_proverTools res_quanTools
      subtypeTools numContext;

@@ -36,7 +36,7 @@ val elt_rewrs
 fun rewr_ss ths =
   simpLib.++
   (std_ss,
-   simpLib.SIMPSET
+   simpLib.SSFRAG
    {ac = [],
     convs = [],
     dprocs = [],

@@ -1,31 +1,34 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
-val _ = new_theory "mult_group";
-
 (* interactive mode
 show_assums := true;
-loadPath := union ["..", "../finished", "../RSA"] (!loadPath);
+loadPath := ["../ho_prover","../subtypes","../RSA","../formalize"] @ !loadPath;
 app load
-["bossLib", "listTheory", "millerTools", "subtypeTools",
-"res_quanTools", "res_quan2Theory", "pred_setTheory",
-"extra_pred_setTheory", "arithContext", "ho_proverTools",
-"extra_listTheory", "subtypeTheory", "listContext",
-"arithmeticTheory", "groupTheory", "groupContext", "extra_numTheory",
-"gcdTheory", "dividesTheory", "primeTheory", "extra_arithTheory",
-"finite_groupTheory", "finite_groupContext", "abelian_groupTheory",
-"num_polyTheory", "extra_binomialTheory", "binomialTheory", "summationTheory",
-"prob_extraTheory", "pred_setContext"];
+  ["bossLib", "listTheory", "subtypeTools", "res_quanTools",
+   "pred_setTheory", "extra_pred_setTheory", "arithContext",
+   "ho_proverTools", "extra_listTheory", "subtypeTheory",
+   "listContext", "arithmeticTheory", "groupTheory", "groupContext",
+   "extra_numTheory", "gcdTheory", "dividesTheory",
+   "extra_arithTheory", "finite_groupTheory", "finite_groupContext",
+   "abelian_groupTheory", "num_polyTheory", "extra_binomialTheory",
+   "binomialTheory", "summationTheory", "prob_extraTheory",
+   "pred_setContext"];
+quietdec := true;
 *)
 
+open HolKernel Parse boolLib;
 open bossLib listTheory subtypeTools res_quanTools res_quanTheory
      pred_setTheory extra_pred_setTheory arithContext
      ho_proverTools extra_listTheory subtypeTheory
      listContext arithmeticTheory groupTheory formalizeUseful
      groupContext extra_numTheory gcdTheory dividesTheory
-     primeTheory extra_arithTheory finite_groupTheory finite_groupContext
+     extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
      binomialTheory summationTheory pred_setContext;
+
+(* interactive mode
+quietdec := false;
+*)
+
+val _ = new_theory "mult_group";
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 
@@ -284,7 +287,7 @@ val MULT_GROUP_SET_PRIME_POWER = store_thm
        ++ R_TAC []
        ++ Cases_on `a` >> AR_TAC []
        ++ R_TAC [EXP]
-       ++ Suff `p * 1 <= p * p EXP n` >> RW_TAC arith_ss []
+       ++ Suff `p * 1 <= p * p EXP n` >> DECIDE_TAC
        ++ R_TAC []
        ++ Suff `0 < p EXP n` >> DECIDE_TAC
        ++ R_TAC [])
@@ -418,10 +421,10 @@ val CHINESE_REMAINDER_WITNESS = store_thm
      ++ Cases_on `p = 0` >> AR_TAC []
      ++ Cases_on `q = 0` >> AR_TAC []
      ++ R_TAC []
-     ++ PROVE_TAC [GCD_SYM],
+     ++ METIS_TAC [GCD_SYM],
      R_TAC [MULT_GROUP_OP]
      ++ Suff `(x * y) MOD p = (x * y) MOD (q * p) MOD p`
-     >> PROVE_TAC [MULT_COMM]
+     >> METIS_TAC [MULT_COMM]
      ++ R_TAC [MOD_MULT_MOD],
      R_TAC [MULT_GROUP_OP]
      ++ Suff `(x * y) MOD q = (x * y) MOD (p * q) MOD q` >> R_TAC []
@@ -438,7 +441,7 @@ val CHINESE_REMAINDER_WITNESS = store_thm
     [MP_TAC (Q.SPECL [`p`, `q`] LINEAR_GCD)
      ++ MP_TAC (Q.SPECL [`q`, `p`] LINEAR_GCD)
      ++ Know `~(p = 0) /\ ~(q = 0)` >> DECIDE_TAC
-     ++ Know `gcd q p = 1` >> PROVE_TAC [GCD_SYM]
+     ++ Know `gcd q p = 1` >> METIS_TAC [GCD_SYM]
      ++ R_TAC []
      ++ DISCH_THEN K_TAC
      ++ S_TAC
@@ -447,36 +450,36 @@ val CHINESE_REMAINDER_WITNESS = store_thm
      [R_TAC [MULT_GROUP_SET, ADD_GROUP_SET]
       ++ Suff `gcd n (p * (p'' * r) + q * (p' * q')) = 1`
       >> (Know `~(n = 0)` >> DECIDE_TAC
-          ++ PROVE_TAC [GCD_EFFICIENTLY, GCD_SYM])
+          ++ METIS_TAC [GCD_EFFICIENTLY, GCD_SYM])
       ++ Suff
       `(?a. prime a /\ divides a (gcd n (p * (p'' * r) + q * (p' * q')))) ==> F`
       >> (KILL_TAC
           ++ Q.SPEC_TAC (`gcd n (p * (p'' * r) + q * (p' * q'))`, `m`)
-          ++ PROVE_TAC [EXISTS_PRIME_DIVISOR])
+          ++ METIS_TAC [EXISTS_PRIME_DIVISOR])
       ++ S_TAC
       ++ AR_TAC [DIVIDES_GCD]
-      ++ Know `divides a (q * p)` >> PROVE_TAC [MULT_COMM]
+      ++ Know `divides a (q * p)` >> METIS_TAC [MULT_COMM]
       ++ R_TAC [EUCLID]
       ++ S_TAC <<
       [Suff `~divides a (p * (p'' * r))`
-       >> PROVE_TAC [ADD_COMM, DIVIDES_ADD_2, DIVIDES_MULT]
+       >> METIS_TAC [ADD_COMM, DIVIDES_ADD_2, DIVIDES_MULT]
        ++ Suff `~divides a ((p'' * p) * r)`
-       >> PROVE_TAC [MULT_COMM, MULT_ASSOC]
+       >> METIS_TAC [MULT_COMM, MULT_ASSOC]
        ++ ASM_REWRITE_TAC []
        ++ R_TAC [RIGHT_ADD_DISTRIB]
        ++ Suff `~divides a r`
-       >> PROVE_TAC [MULT_COMM, MULT_ASSOC, DIVIDES_ADD_2, DIVIDES_MULT]
+       >> METIS_TAC [MULT_COMM, MULT_ASSOC, DIVIDES_ADD_2, DIVIDES_MULT]
        ++ S_TAC
        ++ Know `divides a (gcd q r)` >> R_TAC [DIVIDES_GCD]
        ++ R_TAC [],
        Suff `~divides a (q * (p' * q'))`
-       >> PROVE_TAC [ADD_COMM, DIVIDES_ADD_2, DIVIDES_MULT]
+       >> METIS_TAC [ADD_COMM, DIVIDES_ADD_2, DIVIDES_MULT]
        ++ Suff `~divides a ((p' * q) * q')`
-       >> PROVE_TAC [MULT_COMM, MULT_ASSOC]
+       >> METIS_TAC [MULT_COMM, MULT_ASSOC]
        ++ ASM_REWRITE_TAC []
        ++ R_TAC [RIGHT_ADD_DISTRIB]
        ++ Suff `~divides a q'`
-       >> PROVE_TAC [MULT_COMM, MULT_ASSOC, DIVIDES_ADD_2, DIVIDES_MULT]
+       >> METIS_TAC [MULT_COMM, MULT_ASSOC, DIVIDES_ADD_2, DIVIDES_MULT]
        ++ S_TAC
        ++ Know `divides a (gcd p q')` >> R_TAC [DIVIDES_GCD]
        ++ R_TAC []],
@@ -484,13 +487,13 @@ val CHINESE_REMAINDER_WITNESS = store_thm
         (fn th => ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [MULT_COMM] (SYM th)])
       ++ R_TAC [MOD_MULT_MOD]
       ++ Suff `q' = ((p' * q) * q') MOD p`
-      >> PROVE_TAC [MULT_COMM, MULT_ASSOC]
+      >> METIS_TAC [MULT_COMM, MULT_ASSOC]
       ++ R_TAC [RIGHT_ADD_DISTRIB]
       ++ AR_TAC [ADD_GROUP_SET],
       Q.PAT_ASSUM `p * q = n` (fn th => ONCE_REWRITE_TAC [SYM th])
       ++ R_TAC [MOD_MULT_MOD]
       ++ Suff `r = ((p'' * p) * r) MOD q`
-      >> PROVE_TAC [MULT_COMM, MULT_ASSOC]
+      >> METIS_TAC [MULT_COMM, MULT_ASSOC]
       ++ R_TAC [RIGHT_ADD_DISTRIB]
       ++ AR_TAC [ADD_GROUP_SET]],
      Suff `x MOD (p * q) = y MOD (p * q)`
@@ -551,7 +554,7 @@ val MULT_GROUP_PRIME_CYCLIC = store_thm
    ++ R_TAC [SUBSET_DEF]
    ++ S_TAC
    ++ R_TAC [SPECIFICATION]
-   ++ Q.PAT_ASSUM `!h :: P. Q h` (MP_TAC o Q_RESQ_SPEC `x`)
+   ++ Q.PAT_ASSUM `!h :: P. Q h` (MP_TAC o Q_RESQ_SPEC `x'`)
    ++ S_TAC
    >> (Q.PAT_ASSUM `x IN s` MP_TAC
        ++ R_TAC [mult_group_def, add_group_def, gset_def]
@@ -979,6 +982,4 @@ val SQUARE_1_MOD_PRIME = store_thm
        ++ Simplify [])
    ++ Simplify [GSYM TWO]);
 
-(* non-interactive mode
-*)
 val _ = export_theory ();

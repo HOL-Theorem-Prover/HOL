@@ -1,3 +1,11 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
+app load
+  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
+   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
      probabilityTheory formalizeUseful extra_numTheory combinTheory
@@ -5,6 +13,10 @@ open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      extra_pred_setTheory prob_algebraTheory probTheory sumTheory
      extra_realTheory extra_pred_setTools measureTheory numTheory
      simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "prob_bernoulli";
 
@@ -102,9 +114,9 @@ val PROB_TERMINATES_BERNOULLI = store_thm
         ++ Know
            `{s |
              ~ISL (FST (prob_while_cut
-                        ISL (prob_bernoulli_iter o OUTL) x' a s))} =
+                        ISL (prob_bernoulli_iter o OUTL) n a s))} =
             {x | ~ISL x} o FST o
-            prob_while_cut ISL (prob_bernoulli_iter o OUTL) x' a`
+            prob_while_cut ISL (prob_bernoulli_iter o OUTL) n a`
         >> (SET_EQ_TAC
             ++ RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM])
         ++ Rewr
@@ -121,8 +133,9 @@ val PROB_TERMINATES_BERNOULLI = store_thm
        >> RW_TAC std_ss [PROB_BERN_UNIV, REAL_LT_IMP_LE, HALF_LT_1]
        ++ SET_EQ_TAC
        ++ RW_TAC std_ss [IN_UNIV, GSPECIFICATION, IN_o, o_THM])
-   ++ RW_TAC std_ss [prob_while_cut_def, ONE, PROB_WHILE_CUT_0, BIND_RIGHT_UNIT,
-                     o_THM]
+   ++ RW_TAC bool_ss [ONE]
+   ++ RW_TAC std_ss [prob_while_cut_def, PROB_WHILE_CUT_0,
+                      BIND_RIGHT_UNIT, o_THM]
    ++ MP_TAC (Q.SPEC `{x | ~ISL x} o FST o prob_bernoulli_iter x`
               (GSYM PROB_BERN_INTER_HALVES))
    ++ Cond >> RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_BERNOULLI_ITER]
@@ -139,8 +152,9 @@ val PROB_TERMINATES_BERNOULLI = store_thm
        ++ Cases_on `b`
        ++ RW_TAC std_ss [])
    ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
-   ++ RW_TAC std_ss [PROB_BERN_STL_HALFSPACE, INDEP_FN_FST_EVENTS,
-                     INDEP_FN_UNIT]
+   ++ RW_TAC bool_ss [REWRITE_RULE [o_ASSOC] INDEP_FN_FST_EVENTS,
+                      PROB_BERN_STL_HALFSPACE, INDEP_FN_UNIT, o_ASSOC]
+   ++ RW_TAC bool_ss [GSYM o_ASSOC]
    ++ Know
       `!x:real+bool.
          {x | ~ISL x} o FST o UNIT x =
@@ -202,20 +216,20 @@ val PROB_BERNOULLI = store_thm
    >> RW_TAC std_ss [PROB_LE_1, PROB_SPACE_BERN, INDEP_FN_FST_EVENTS,
                      INDEP_FN_PROB_BERNOULLI]
    ++ STRIP_TAC
-   ++ RW_TAC std_ss []
+   ++ RW_TAC bool_ss []
    ++ MATCH_MP_TAC ABS_EQ
-   ++ RW_TAC std_ss []
+   ++ RW_TAC bool_ss []
    ++ MP_TAC (Q.SPEC `e` POW_HALF_SMALL)
-   ++ RW_TAC std_ss []
+   ++ RW_TAC bool_ss []
    ++ MATCH_MP_TAC REAL_LET_TRANS
    ++ Q.EXISTS_TAC `(1 / 2) pow n`
-   ++ RW_TAC std_ss []
+   ++ RW_TAC bool_ss []
    ++ NTAC 2 (POP_ASSUM K_TAC)
    ++ NTAC 2 (POP_ASSUM MP_TAC)
    ++ REWRITE_TAC [AND_IMP_INTRO]
    ++ Q.SPEC_TAC (`p`, `p`)
    ++ Induct_on `n`
-   >> (RW_TAC std_ss [pow, abs]
+   >> (RW_TAC bool_ss [pow, abs]
        ++ Q.PAT_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
        ++ Q.PAT_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
        ++ REPEAT (POP_ASSUM MP_TAC)
@@ -229,8 +243,8 @@ val PROB_BERNOULLI = store_thm
    >> (SIMP_TAC arith_ss [abs, REAL_LE]
        ++ REAL_ARITH_TAC)
    ++ DISCH_THEN MATCH_MP_TAC
-   ++ RW_TAC std_ss [GSYM ABS_MUL, pow, REAL_MUL_ASSOC, HALF_CANCEL,
-                     REAL_MUL_LID, REAL_SUB_LDISTRIB]
+   ++ RW_TAC bool_ss [GSYM ABS_MUL, pow, REAL_MUL_ASSOC, HALF_CANCEL,
+                      REAL_MUL_LID, REAL_SUB_LDISTRIB]
    ++ ONCE_REWRITE_TAC [PROB_BERNOULLI_ALT]
    ++ Know
       `!f b.
@@ -244,15 +258,15 @@ val PROB_BERNOULLI = store_thm
        ++ RW_TAC std_ss [])
    ++ DISCH_THEN
       (fn th =>
-       RW_TAC std_ss [th, PROB_BERN_STL_HALFSPACE, INDEP_FN_PROB_BERNOULLI,
-                      INDEP_FN_FST_EVENTS, INDEP_FN_UNIT]
-       ++ RW_TAC std_ss [GSYM REAL_ADD_LDISTRIB, REAL_MUL_ASSOC,
-                         REAL_MUL_LID, HALF_CANCEL]) <<
+       RW_TAC bool_ss [th, PROB_BERN_STL_HALFSPACE, INDEP_FN_PROB_BERNOULLI,
+                       INDEP_FN_FST_EVENTS, INDEP_FN_UNIT]
+       ++ RW_TAC bool_ss [GSYM REAL_ADD_LDISTRIB, REAL_MUL_ASSOC,
+                          REAL_MUL_LID, HALF_CANCEL]) <<
    [Know `(I o FST o UNIT F) = ({}:(num->bool)->bool)`
     >> (SET_EQ_TAC
         ++ RW_TAC std_ss [NOT_IN_EMPTY, IN_o, o_THM, IN_I, UNIT_DEF])
     ++ Rewr
-    ++ RW_TAC real_ss [PROB_BERN_EMPTY]
+    ++ RW_TAC bool_ss [PROB_BERN_EMPTY, REAL_ADD_LID]
     ++ Q.PAT_ASSUM `!p. P p` MATCH_MP_TAC
     ++ CONJ_TAC >> (Q.PAT_ASSUM `0 <= p` MP_TAC ++ REAL_ARITH_TAC)
     ++ Suff `2 * p <= 2 * (1 / 2)` >> RW_TAC std_ss [HALF_CANCEL]
@@ -261,8 +275,8 @@ val PROB_BERNOULLI = store_thm
     >> (SET_EQ_TAC
         ++ RW_TAC std_ss [IN_UNIV, IN_o, o_THM, IN_I, UNIT_DEF])
     ++ Rewr
-    ++ RW_TAC real_ss [PROB_BERN_UNIV]
-    ++ Know `!x y : real. (1 + x) - y = x - (y - 1)` >> REAL_ARITH_TAC
+    ++ RW_TAC bool_ss [PROB_BERN_UNIV]
+    ++ Know `!x y : real. (x + 1) - y = x - (y - 1)` >> REAL_ARITH_TAC
     ++ Rewr'
     ++ Q.PAT_ASSUM `!p. P p` MATCH_MP_TAC
     ++ REVERSE CONJ_TAC >> (Q.PAT_ASSUM `p <= 1` MP_TAC ++ REAL_ARITH_TAC)

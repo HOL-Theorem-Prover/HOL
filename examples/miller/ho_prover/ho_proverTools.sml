@@ -363,7 +363,7 @@ fun sub_conv (rw, RW) =
    let
      val (a, b) = dest_comb tm
    in
-     case Df (total RW) (a, b) of (SOME a', SOME b') => MK_COMB (a', b')
+     case Df (total (QCONV RW)) (a, b) of (SOME a', SOME b') => MK_COMB (a', b')
      | (SOME a', NONE) => MK_COMB (a', REFL b)
      | (NONE, SOME b') => MK_COMB (REFL a, b')
      | (NONE, NONE) => raise ERR "sub_conv" "unchanged"
@@ -371,7 +371,7 @@ fun sub_conv (rw, RW) =
 
 fun once_depth_conv (rw, RW) =
   (fn tm => (rw orelsef (fst (sub_conv (once_depth_conv (rw, RW))))) tm,
-   fn tm => (RW ORELSEC (snd (sub_conv (once_depth_conv (rw, RW))))) tm);
+   fn tm => QCONV (RW ORELSEC (snd (sub_conv (once_depth_conv (rw, RW))))) tm);
 
 fun redepth_conv (rw, RW) =
   (fn tm =>
@@ -379,6 +379,7 @@ fun redepth_conv (rw, RW) =
     thenf repeatf rw
     thenf tryf (fst (redepth_conv (rw, RW)))) tm,
    fn tm =>
+   QCONV
    ((snd (sub_conv (redepth_conv (rw, RW))) ORELSEC RW)
     THENC REPEATC RW
     THENC TRYC (snd (redepth_conv (rw, RW)))) tm);
@@ -390,6 +391,7 @@ fun top_depth_conv (rw, RW) =
      (fst (sub_conv (top_depth_conv (rw, RW))))) thenf
     tryf (fst (top_depth_conv (rw, RW)))) tm,
    fn tm =>
+   QCONV
    (((REPEATPLUSC RW THENC
       TRYC (snd (sub_conv (top_depth_conv (rw, RW))))) ORELSEC
      (snd (sub_conv (top_depth_conv (rw, RW))))) THENC
@@ -416,7 +418,7 @@ fun rewr_conv vths =
     fun RW' tm =
       let
         val _ = trace "rewr_conv: RW: tm" (fn () => printVal tm)
-        val res = RW tm
+        val res = QCONV RW tm
         val _ = trace "rewr_conv: RW: res" (fn () => printVal res)
       in
         res

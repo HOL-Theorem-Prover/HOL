@@ -1,8 +1,14 @@
-structure powerScript =
-struct
+(* interactive mode
+app load ["bossLib"];
+quietdec := true;
+*)
 
 open HolKernel Parse boolLib 
      Num_conv arithmeticTheory bossLib;
+
+(*
+quietdec := false;
+*)
 
 infix THEN THENC THENL;
 infix 8 by;
@@ -50,7 +56,7 @@ val POWER_LE_1 = store_thm("POWER_LE_1",
 val POWER_MULT = store_thm("POWER_MULT",
                         Term `!x n m. $EXP x n * $EXP x m = $EXP x (n+m)`,
                         Induct_on `n` 
-                         THEN ARW[POWER, ADD_CLAUSES, SYM (SPEC_ALL MULT_ASSOC)]);
+                         THEN RW_TAC std_ss [POWER, ADD_CLAUSES, GSYM MULT_ASSOC]);
 
 val POWER_POWER = store_thm("POWER_POWER",
                         Term `!x n m. $EXP ($EXP x n)  m = $EXP x (n*m)`,
@@ -58,5 +64,3 @@ val POWER_POWER = store_thm("POWER_POWER",
 
 
 val _ = export_theory();
-
-end;

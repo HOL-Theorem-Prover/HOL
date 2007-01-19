@@ -1,3 +1,11 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
+app load
+  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
+   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
      probabilityTheory formalizeUseful extra_numTheory combinTheory
@@ -5,6 +13,10 @@ open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      extra_pred_setTheory prob_algebraTheory probTheory
      extra_realTheory extra_pred_setTools measureTheory numTheory
      simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "prob_walk";
 
@@ -113,8 +125,8 @@ val EVENTS_BERN_RANDOM_LURCHES = store_thm
    ++ RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_NUM, COUNTABLE_IMAGE,
                      SUBSET_DEF, IN_IMAGE, IN_UNIV]
    ++ Suff
-      `{s | FST (prob_while_cut ($< 0) random_lurch x' a s) = 0} =
-       ($= 0) o FST o prob_while_cut ($< 0) random_lurch x' a`
+      `{s | FST (prob_while_cut ($< 0) random_lurch n a s) = 0} =
+       ($= 0) o FST o prob_while_cut ($< 0) random_lurch n a`
    >> RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_RANDOM_LURCHES]
    ++ SET_EQ_TAC
    ++ RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM]
@@ -272,8 +284,8 @@ val RANDOM_LURCHES_MULTIPLICATIVE = store_thm
        [MATCH_MP_TAC EVENTS_INTER
         ++ STRONG_CONJ_TAC >> RW_TAC std_ss [PROB_SPACE_BERN]
         ++ POP_ASSUM K_TAC
-        ++ PROVE_TAC [INDEP_FN_FST_EVENTS, INDEP_FN_RANDOM_LURCHES,
-                      INDEP_FN_SND_EVENTS],
+        ++ METIS_TAC [INDEP_FN_FST_EVENTS, INDEP_FN_RANDOM_LURCHES,
+                      INDEP_FN_SND_EVENTS, o_ASSOC],
         POP_ASSUM MP_TAC
         ++ SIMP_TAC std_ss [IN_INTER, IN_o, o_THM]
         ++ RW_TAC arith_ss [SPECIFICATION, PROB_WHILE_CUT_REV, BIND_DEF, o_THM,
@@ -335,7 +347,7 @@ val PROB_TERMINATES_RANDOM_WALK = store_thm
        ++ Suff `(p - 1) = 0` >> REAL_ARITH_TAC
        ++ MATCH_MP_TAC POW_ZERO
        ++ Q.EXISTS_TAC `2`
-       ++ RW_TAC real_ss [TWO, pow, POW_1, REAL_SUB_LDISTRIB]
+       ++ RW_TAC bool_ss [TWO, pow, POW_1, REAL_SUB_LDISTRIB]
        ++ Suff `2 * p = p * p + 1` >> REAL_ARITH_TAC
        ++ Suff `2 * p = 2 * ((1 / 2) * ((p * p) + 1))`
        >> RW_TAC std_ss [REAL_MUL_ASSOC, HALF_CANCEL, REAL_MUL_LID]
@@ -385,7 +397,8 @@ val PROB_TERMINATES_RANDOM_WALK = store_thm
    ++ Rewr
    ++ SIMP_TAC std_ss [PROB_BERN_STL_HALFSPACE, EVENTS_BERN_RANDOM_LURCHES]
    ++ ONCE_REWRITE_TAC [RANDOM_LURCHES_MULTIPLICATIVE]
-   ++ ASM_SIMP_TAC real_ss [pow, TWO, POW_1]);
+   ++ ASM_SIMP_TAC bool_ss [pow, TWO, POW_1]
+   ++ RW_TAC real_ss []);
 
 val RANDOM_LURCHES_PARITY = store_thm
   ("RANDOM_LURCHES_PARITY",

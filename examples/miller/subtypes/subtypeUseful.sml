@@ -766,41 +766,49 @@ end;
 
 (* Conversionals *)
 
+fun CHANGED_CONV c tm =
+    let
+      val th = QCONV c tm
+    in
+      if rhs (concl th) = tm then raise ERR "CHANGED_CONV" "" else th
+    end;
+
 fun FIRSTC [] tm = raise ERR "FIRSTC" "ran out of convs"
   | FIRSTC (c::cs) tm = (c ORELSEC FIRSTC cs) tm;
 
-fun TRYC c = c ORELSEC ALL_CONV;
+fun TRYC c = QCONV (c ORELSEC ALL_CONV);
 
 fun REPEATPLUSC c = c THENC REPEATC c;
 
 fun REPEATC_CUTOFF 0 _ _ = raise ERR "REPEATC_CUTOFF" "cut-off reached"
   | REPEATC_CUTOFF n c tm =
-  (case (SOME (c tm) handle HOL_ERR _ => NONE) of NONE
-     => ALL_CONV tm
+  (case (SOME (QCONV c tm) handle HOL_ERR _ => NONE) of NONE
+     => QCONV ALL_CONV tm
    | SOME eq_th => TRANS eq_th (REPEATC_CUTOFF (n - 1) c (RHS eq_th)));
 
 (* A conversional like DEPTH_CONV, but applies the argument conversion   *)
 (* at most once to each subterm                                          *)
 
-fun DEPTH_ONCE_CONV c tm = (SUB_CONV (DEPTH_ONCE_CONV c) THENC TRYC c) tm;
+fun DEPTH_ONCE_CONV c tm = QCONV (SUB_CONV (DEPTH_ONCE_CONV c) THENC TRYC c) tm;
 
 fun FORALLS_CONV c tm =
-  (if is_forall tm then RAND_CONV (ABS_CONV (FORALLS_CONV c)) else c) tm;
+  QCONV (if is_forall tm then RAND_CONV (ABS_CONV (FORALLS_CONV c)) else c) tm;
 
 fun CONJUNCT_CONV c tm =
+  QCONV
   (if is_conj tm then RATOR_CONV (RAND_CONV c) THENC RAND_CONV (CONJUNCT_CONV c)
    else c) tm;
 
 (* Conversions *)
 
-fun EXACT_CONV exact tm = (if tm = exact then ALL_CONV else NO_CONV) tm;
+fun EXACT_CONV exact tm = QCONV (if tm = exact then ALL_CONV else NO_CONV) tm;
 
 val NEGNEG_CONV = REWR_CONV (CONJUNCT1 NOT_CLAUSES);
 
 val FUN_EQ_CONV = REWR_CONV FUN_EQ;
 val SET_EQ_CONV = REWR_CONV SET_EQ;
 
-fun N_BETA_CONV 0 = ALL_CONV
+fun N_BETA_CONV 0 = QCONV ALL_CONV
   | N_BETA_CONV n = RATOR_CONV (N_BETA_CONV (n - 1)) THENC TRYC BETA_CONV;
 
 local
@@ -809,7 +817,7 @@ local
   val EQ_NEG_T_CONV = REWR_CONV EQ_NEG_T
   val EQ_NEG_F_CONV = REWR_CONV EQ_NEG_F
 in
-  val EQ_NEG_BOOL_CONV = EQ_NEG_T_CONV ORELSEC EQ_NEG_F_CONV
+  val EQ_NEG_BOOL_CONV = QCONV (EQ_NEG_T_CONV ORELSEC EQ_NEG_F_CONV);
 end;
 
 val GENVAR_ALPHA_CONV = W (ALPHA_CONV o genvar o type_of o bvar);
@@ -981,7 +989,7 @@ val DISCH_CONJUNCTS_TAC = REPEAT DISCH_CONJ_TAC ++ DISCH_TAC
 
 fun PURE_CONV_TAC conv :tactic = fn (asms,g) =>
    let
-     val eq_th = conv g
+     val eq_th = QCONV conv g
    in
      ([(asms, RHS eq_th)], EQ_MP (SYM eq_th) o hd)
    end;
@@ -1143,7 +1151,7 @@ local
   infix ++
 in
   val EXPAND_COND_CONV =
-    SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) []
+    QCONV (SIMP_CONV (pureSimps.pure_ss ++ boolSimps.COND_elim_ss) [])
 end
 
 local
@@ -1151,7 +1159,7 @@ local
     (``!a b. ((a:bool) = b) = ((a ==> b) /\ (b ==> a))``,
      BasicProvers.PROVE_TAC [])
 in
-  val EQ_IFF_CONV = PURE_REWRITE_CONV [EQ_IFF]
+  val EQ_IFF_CONV = QCONV (PURE_REWRITE_CONV [EQ_IFF])
 end;
 
 local
@@ -1159,7 +1167,7 @@ local
     (``!a b. ((a:bool) ==> b) = ~a \/ b``,
      BasicProvers.PROVE_TAC [])
 in
-  val IMP_DISJ_CONV = PURE_REWRITE_CONV [IMP_DISJ]
+  val IMP_DISJ_CONV = QCONV (PURE_REWRITE_CONV [IMP_DISJ])
 end;
 
 local
@@ -1169,29 +1177,30 @@ local
   val DE_MORGAN2
     = CONJUNCT2 (CONV_RULE (DEPTH_CONV FORALL_AND_CONV) DE_MORGAN_THM)
 in
-  val NNF_CONV = (REPEATC o CHANGED_CONV)
+  val NNF_CONV = (QCONV o REPEATC o CHANGED_CONV)
     (REWRITE_CONV [NEG_NEG, DE_MORGAN1, DE_MORGAN2]
      THENC DEPTH_CONV (NOT_EXISTS_CONV ORELSEC NOT_FORALL_CONV))
 end;
 
-val EXISTS_OUT_CONV = (REPEATC o CHANGED_CONV o DEPTH_CONV)
+val EXISTS_OUT_CONV = (QCONV o REPEATC o CHANGED_CONV o DEPTH_CONV)
   (LEFT_AND_EXISTS_CONV
    ORELSEC RIGHT_AND_EXISTS_CONV
    ORELSEC LEFT_OR_EXISTS_CONV
    ORELSEC RIGHT_OR_EXISTS_CONV
    ORELSEC CHANGED_CONV SKOLEM_CONV);
 
-val ANDS_OUT_CONV = (REPEATC o CHANGED_CONV o DEPTH_CONV)
+val ANDS_OUT_CONV = (QCONV o REPEATC o CHANGED_CONV o DEPTH_CONV)
   (FORALL_AND_CONV
    ORELSEC REWR_CONV LEFT_OR_OVER_AND
    ORELSEC REWR_CONV RIGHT_OR_OVER_AND)
 
-val FORALLS_OUT_CONV = (REPEATC o CHANGED_CONV o DEPTH_CONV)
+val FORALLS_OUT_CONV = (QCONV o REPEATC o CHANGED_CONV o DEPTH_CONV)
   (LEFT_OR_FORALL_CONV
    ORELSEC RIGHT_OR_FORALL_CONV);
 
 val CNF_CONV =
-  DEPTH_CONV BETA_CONV
+ QCONV
+ (DEPTH_CONV BETA_CONV
   THENC EXPAND_COND_CONV
   THENC EQ_IFF_CONV
   THENC IMP_DISJ_CONV
@@ -1199,7 +1208,7 @@ val CNF_CONV =
   THENC EXISTS_OUT_CONV
   THENC ANDS_OUT_CONV
   THENC FORALLS_OUT_CONV
-  THENC REWRITE_CONV [GSYM DISJ_ASSOC, GSYM CONJ_ASSOC];
+  THENC REWRITE_CONV [GSYM DISJ_ASSOC, GSYM CONJ_ASSOC]);
 
 val CNF_RULE = CONV_RULE CNF_CONV;
 

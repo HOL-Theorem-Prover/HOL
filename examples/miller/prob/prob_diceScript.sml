@@ -1,6 +1,12 @@
-open HolKernel Parse boolLib;
-val _ = new_theory "prob_dice";
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
+app load
+  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
+   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
+quietdec := true;
+*)
 
+open HolKernel Parse boolLib;
 open bossLib arithmeticTheory pred_setTheory listTheory
      sequenceTheory state_transformerTheory probabilityTheory
      formalizeUseful extra_numTheory combinTheory pairTheory
@@ -8,6 +14,12 @@ open bossLib arithmeticTheory pred_setTheory listTheory
      prob_algebraTheory probTheory extra_realTheory extra_pred_setTools
      measureTheory numTheory simpLib seqTheory sequenceTools
      subtypeTheory res_quanTheory;
+
+(* interactive mode
+quietdec := false;
+*)
+
+val _ = new_theory "prob_dice";
 
 infixr 0 ++ << || ORELSEC ## --> THENC;
 infix 1 >> |->;
@@ -65,7 +77,7 @@ fun DDG_INDEP_FN_CONV tm =
      MATCH_MP_TAC INDEP_FN_MMAP)
     ++ MATCH_ACCEPT_TAC INDEP_FN_UNIT));
    
-val ddg_ss = simpLib.++(std_ss, simpLib.SIMPSET {
+val ddg_ss = simpLib.++(std_ss, simpLib.SSFRAG {
   ac = [],
   convs = [{conv = K (K DDG_INDEP_FN_CONV), key = SOME ([], ``x IN indep_fn``),
             name = "DDG_INDEP_FN_CONV", trace = 10}],
@@ -259,33 +271,14 @@ val PROB_BERN_DICE = store_thm
                        PROB_BERN_UNIV, IN_INTER, IN_o]
    ++ SIMP_TAC real_ss [REAL_DIV_ADD]
    ++ SIMP_TAC real_ss [GSYM REAL_ADD_LDISTRIB]
-   ++ Know `1 / 2 + 1 / 2 * (1 / 2) = 1 / 2 * (1 / 2 * 3)`
-   >> (Know `!x. 1 / 2 + x = 1 / 2 * 1 + x` >> RW_TAC real_ss []
-       ++ Rewr'
-       ++ RW_TAC std_ss [GSYM REAL_ADD_LDISTRIB, REAL_EQ_LMUL]
-       ++ Know `!x. 1 + 1 / 2 = (1 / 2) * 2 + 1 / 2 * 1`
-       >> PROVE_TAC [HALF_CANCEL, REAL_MUL_SYM, REAL_MUL_RID]
-       ++ Rewr'
-       ++ RW_TAC arith_ss [GSYM REAL_ADD_LDISTRIB, REAL_ADD])
-   ++ Rewr
-   ++ SIMP_TAC arith_ss [REAL_POS_NZ, REAL_LT_MUL, REAL_DIV_MUL, HALF_POS,
-                         REAL_NZ_IMP_LT]
    ++ MATCH_MP_TAC REAL_LDIV_EQ
-   ++ CONJ_TAC >> RW_TAC arith_ss [REAL_INJ]
-   ++ SIMP_TAC arith_ss [REAL_MUL_ASSOC, REAL_MUL]
-   ++ Know
-      `6 * (if 1 <= n /\ n <= 6 then 1 / 6 else 0) =
-       if 1 <= n /\ n <= 6 then 1 else 0`
-   >> RW_TAC arith_ss [real_div, REAL_MUL_RINV, REAL_MUL_LID, REAL_MUL_RZERO,
-                       REAL_INJ]
-   ++ Rewr
-   ++ Know `(6 = SUC 5) /\ (5 = SUC 4) /\ (4 = SUC 3) /\ (3 = SUC 2)`
-   >> DECIDE_TAC
-   ++ Rewr
-   ++ RW_TAC arith_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV, TWO, ONE, REAL_ADD_RID,
-                       REAL_ADD_LID]
-   ++ Suff `F` >> PROVE_TAC []
-   ++ DECIDE_TAC);
+   ++ CONJ_TAC >> RW_TAC real_ss []
+   ++ NTAC 3
+      (Cases_on `n` >> RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV]
+       ++ Cases_on `n'` >> RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV])
+   ++ Cases_on `n` >> RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV]
+   ++ RW_TAC arith_ss []
+   ++ RW_TAC real_ss [PROB_BERN_EMPTY, PROB_BERN_UNIV]);
 
 val INDEP_FN_TWO_DICE = store_thm
   ("INDEP_FN_TWO_DICE",
@@ -330,16 +323,17 @@ val PROB_BERN_TWO_DICE = store_thm
        ++ RW_TAC std_ss [DISJOINT_ALT, PROB_SPACE_BERN, IN_o, IN_SING,
                          IN_INTER, IN_FUNSET]
        >> (MATCH_MP_TAC EVENTS_INTER
-           ++ RW_TAC std_ss [INDEP_FN_SND_EVENTS, INDEP_FN_FST_EVENTS,
-                             INDEP_FN_DICE, PROB_SPACE_BERN])
+           ++ RW_TAC bool_ss
+                (o_ASSOC :: map (REWRITE_RULE [o_ASSOC])
+                                [INDEP_FN_SND_EVENTS, INDEP_FN_FST_EVENTS,
+                                 INDEP_FN_DICE, PROB_SPACE_BERN]))
        ++ Suff `{m | m <= n} = count (SUC n)` >> RW_TAC std_ss []
        ++ Know `!m. m <= n = m < SUC n` >> DECIDE_TAC
        ++ SET_EQ_TAC
        ++ PSET_TAC [])
    ++ Rewr
    ++ ONCE_REWRITE_TAC [o_DEF]
-   ++ SIMP_TAC std_ss []
-   ++ SIMP_TAC std_ss [INDEP_FN_DICE, INDEP_FN_PROB, INDEP_FN_FST_EVENTS]
+   ++ SIMP_TAC bool_ss [INDEP_FN_DICE, INDEP_FN_PROB, INDEP_FN_FST_EVENTS]
    ++ Know `!x. {x} o FST o dice = {s | FST (dice s) = x}`
    >> (SET_EQ_TAC
        ++ PSET_TAC [o_THM])
@@ -377,7 +371,7 @@ val PROB_BERN_TWO_DICE = store_thm
       `!n'.
          36 *
          ((if 1 <= n' /\ n' <= 6 then 1 / 6 else 0) *
-          (if 1 <= n - n' /\ n - n' <= 6 then 1 / 6 else 0)) =
+          (if 1 <= n - n' /\ n <= n' + 6 then 1 / 6 else 0)) =
          (6 * (if 1 <= n' /\ n' <= 6 then 1 / 6 else 0)) *
          (6 * (if 1 <= n - n' /\ n - n' <= 6 then 1 / 6 else 0))`
    >> (Know `(36 : real) = 6 * 6` >> RW_TAC arith_ss [REAL_INJ, REAL_MUL]
@@ -780,17 +774,17 @@ val PROB_BERN_OPTIMAL_TWO_DICE = store_thm
    ++ Rewr
    ++ NTAC 7
       (Cases_on `n`
-       >> (SIMP_TAC std_ss [REAL_INJ, NOT_SUC, PROB_BERN_EMPTY, REAL_MUL_RZERO,
-                            REAL_ADD_LID, PROB_BERN_UNIV, REAL_ADD_RID,
-                            REAL_MUL_RID, REAL_ADD, REAL_MUL]
+       >> (SIMP_TAC bool_ss [REAL_INJ, NOT_SUC, PROB_BERN_EMPTY, REAL_MUL_RZERO,
+                             REAL_ADD_LID, PROB_BERN_UNIV, REAL_ADD_RID,
+                             REAL_MUL_RID, REAL_ADD, REAL_MUL]
            ++ RW_TAC arith_ss [])
-       ++ SIMP_TAC std_ss [prim_recTheory.INV_SUC_EQ]
+       ++ SIMP_TAC bool_ss [prim_recTheory.INV_SUC_EQ]
        ++ Cases_on `n'`
-       >> (SIMP_TAC std_ss [REAL_INJ, NOT_SUC, PROB_BERN_EMPTY, REAL_MUL_RZERO,
-                            REAL_ADD_LID, PROB_BERN_UNIV, REAL_ADD_RID,
-                            REAL_MUL_RID, REAL_ADD, REAL_MUL]
+       >> (SIMP_TAC bool_ss [REAL_INJ, NOT_SUC, PROB_BERN_EMPTY, REAL_MUL_RZERO,
+                             REAL_ADD_LID, PROB_BERN_UNIV, REAL_ADD_RID,
+                             REAL_MUL_RID, REAL_ADD, REAL_MUL]
            ++ RW_TAC arith_ss [])
-       ++ SIMP_TAC std_ss [prim_recTheory.INV_SUC_EQ])
+       ++ SIMP_TAC bool_ss [prim_recTheory.INV_SUC_EQ])
    ++ SIMP_TAC std_ss [NOT_SUC, REAL_INJ, PROB_BERN_EMPTY, REAL_MUL_RZERO,
                        REAL_ADD_LID]);
 

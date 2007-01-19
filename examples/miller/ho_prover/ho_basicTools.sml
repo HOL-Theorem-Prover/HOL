@@ -45,7 +45,7 @@ val _ = Feedback.register_trace ("ho_basicTools", trace_level, 10);
 fun trace l s = if l > !trace_level then () else say (s ^ "\n");
 fun trace_x l s f x =
   if l > !trace_level then () else say (s ^ ":\n" ^ f x ^ "\n");
-fun trace_CONV l s tm = (trace_x l s term_to_string tm; ALL_CONV tm);
+fun trace_CONV l s tm = (trace_x l s term_to_string tm; QCONV ALL_CONV tm);
 
 (* ------------------------------------------------------------------------- *)
 (* Type/term substitutions                                                   *)
@@ -94,7 +94,7 @@ local
     in
       (match_tm,
        fn () =>
-       TRANS (MK_COMB (th1 (), REFL v)) (BETA_CONV (mk_comb (tm_abs, v))))
+       TRANS (MK_COMB (th1 (), REFL v)) (QCONV BETA_CONV (mk_comb (tm_abs, v))))
     end
 
   fun eta_beta [] tm = (tm, fn () => REFL tm)
@@ -241,7 +241,7 @@ fun ho_REWR_CONV th =
     ho_subst_REWR th' o var_ho_match vars pat
   end;
 
-fun ho_REWRITE_CONV ths = TOP_DEPTH_CONV (FIRSTC (map ho_REWR_CONV ths));
+fun ho_REWRITE_CONV ths = QCONV (TOP_DEPTH_CONV (FIRSTC (map ho_REWR_CONV ths)));
 
 fun ho_REWRITE_TAC ths = CONV_TAC (ho_REWRITE_CONV ths);
 

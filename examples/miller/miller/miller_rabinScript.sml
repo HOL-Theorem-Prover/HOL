@@ -1,13 +1,35 @@
+(* interactive mode
+show_assums := true;
+loadPath := ["../ho_prover","../subtypes","../RSA","../formalize",
+             "../prob","../groups"] @ !loadPath;
+app load
+  ["bossLib", "listTheory", "subtypeTools", "res_quanTools",
+   "pred_setTheory", "extra_pred_setTheory", "arithContext",
+   "ho_proverTools", "extra_listTheory", "subtypeTheory",
+   "listContext", "arithmeticTheory", "groupTheory", "groupContext",
+   "extra_numTheory", "gcdTheory", "dividesTheory",
+   "extra_arithTheory", "finite_groupTheory", "finite_groupContext",
+   "abelian_groupTheory", "num_polyTheory", "extra_binomialTheory",
+   "binomialTheory", "summationTheory",
+   "pred_setContext","mult_groupTheory","probTheory","prob_uniformTheory",
+   "extra_realTheory","realLib","probabilityTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib listTheory subtypeTools
      res_quanTools res_quanTheory pred_setTheory extra_pred_setTheory
      arithContext ho_proverTools extra_listTheory subtypeTheory
      listContext arithmeticTheory groupTheory formalizeUseful
-     groupContext extra_numTheory gcdTheory dividesTheory primeTheory
+     groupContext extra_numTheory gcdTheory dividesTheory
      extra_arithTheory finite_groupTheory finite_groupContext
      abelian_groupTheory num_polyTheory extra_binomialTheory
      binomialTheory summationTheory pred_setContext mult_groupTheory
      probTheory prob_uniformTheory extra_realTheory realTheory realLib
      state_transformerTheory combinTheory probabilityTheory;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "miller_rabin";
 
@@ -165,7 +187,7 @@ val MODEXP_CORRECT = store_thm
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN
       (fn th =>
-       RW_TAC std_ss []
+       RW_TAC std_ss [LET_DEF]
        ++ CONV_TAC
           (DEPTH_CONV
            (REWR_CONV (CONJUNCT1 th) ORELSEC REWR_CONV (CONJUNCT2 th)))
@@ -200,7 +222,7 @@ val WITNESS_TAIL_CORRECT = store_thm
     ++ Simplify []
     ++ Suff `0 < a /\ ~(n <= a)` >> PROVE_TAC [DIVIDES_LE]
     ++ DECIDE_TAC,
-    RW_TAC arith_ss [witness_tail_def] <<
+    RW_TAC bool_ss [LET_DEF, witness_tail_def] <<
     [Strip
      ++ Q.PAT_ASSUM `(x * y) MOD n = 1` MP_TAC
      ++ Know `0 < n` >> DECIDE_TAC
@@ -231,7 +253,7 @@ val WITNESS_CORRECT = store_thm
    ``!n a. 0 < a /\ a < n /\ witness n a ==> ~prime n``,
    S_TAC
    ++ Q.PAT_ASSUM `witness n a` MP_TAC
-   ++ RW_TAC std_ss [witness_def]
+   ++ RW_TAC std_ss [witness_def, LET_DEF]
    ++ Cases_on `factor_twos (n - 1)`
    ++ Know `0 < n - 1` >> DECIDE_TAC
    ++ STRIP_TAC
@@ -298,12 +320,11 @@ val NONWITNESS_TAIL_2 = store_thm
        (a EXP (2 EXP j * s) MOD n = n - 1)``,
    NTAC 4 GEN_TAC
    ++ Induct
-   >> (RW_TAC arith_ss [witness_tail_def]
+   >> (RW_TAC arith_ss [witness_tail_def, LET_DEF]
        ++ DISJ1_TAC
-       ++ Know `j = (j - r) + r` >> DECIDE_TAC
+       ++ Know `j = r + (j - r)` >> DECIDE_TAC
        ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
-       ++ REWRITE_TAC [EXP_ADD, GSYM MULT_ASSOC]
-       ++ ONCE_REWRITE_TAC [MULT_COMM]
+       ++ REWRITE_TAC [EXP_ADD, MULT_ASSOC]
        ++ MATCH_MP_TAC MOD_POWER_EQ_1
        ++ PROVE_TAC [])
    ++ Strip
@@ -315,7 +336,7 @@ val NONWITNESS_TAIL_2 = store_thm
        ++ PROVE_TAC [NONWITNESS_TAIL_LEMMA])
    ++ Q.PAT_ASSUM `!j. P j` K_TAC
    ++ Q.PAT_ASSUM `~x` MP_TAC
-   ++ RW_TAC std_ss [witness_tail_def]
+   ++ RW_TAC std_ss [witness_tail_def, LET_DEF]
    ++ POP_ASSUM K_TAC
    ++ Suff `F` >> Simplify []
    ++ POP_ASSUM MP_TAC
@@ -326,7 +347,7 @@ val NONWITNESS_TAIL_2 = store_thm
 val WITNESS_1 = store_thm
   ("WITNESS_1",
    ``!n. 1 < n ==> ~witness n 1``,
-   RW_TAC std_ss [witness_def]
+   RW_TAC std_ss [witness_def, LET_DEF]
    ++ Cases_on `factor_twos (n - 1)`
    ++ Know `0 < n - 1` >> DECIDE_TAC
    ++ Strip
@@ -355,7 +376,7 @@ val NONWITNESS_2 = store_thm
        (2 EXP r * s = n - 1) /\ (a EXP (2 EXP SUC j * s) MOD n = 1) ==>
        (a EXP (2 EXP j * s) MOD n = 1) \/
        (a EXP (2 EXP j * s) MOD n = n - 1)``,
-   RW_TAC std_ss [witness_def]
+   RW_TAC std_ss [witness_def, LET_DEF]
    ++ Know `0 < n - 1` >> DECIDE_TAC
    ++ Strip
    ++ Q.PAT_ASSUM `~x` MP_TAC
@@ -376,8 +397,7 @@ val NONWITNESS_MULT_GROUP = store_thm
    Strip
    ++ MATCH_MP_TAC POWER_ID_IN_MULT_GROUP
    ++ Q.EXISTS_TAC `n - 1`
-   ++ Simplify [NONWITNESS_1]
-   ++ DECIDE_TAC);
+   ++ RW_TAC arith_ss [NONWITNESS_1]);
 
 val CARD_WITNESS = store_thm
   ("CARD_WITNESS",
@@ -393,7 +413,7 @@ val CARD_WITNESS = store_thm
        ++ Simplify [GSYM INTER_DEF_ALT]
        ++ Know `(\a. ~witness n a) = COMPL (witness n)`
        >> (SET_EQ_TAC
-           ++ Simplify [IN_COMPL]
+           ++ RW_TAC bool_ss [IN_COMPL]
            ++ Simplify [SPECIFICATION])
        ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
        ++ ONCE_REWRITE_TAC [INTER_COMM]
@@ -543,9 +563,9 @@ val CARD_WITNESS = store_thm
    ++ Simplify [FACTOR_TWOS_CORRECT]
    ++ Strip
    ++ Know
-      `?j v.
+      `?m v.
          v IN gset (mult_group n) /\
-         (gpow (mult_group n) v (2 EXP (t - j) * u) = n - 1)`
+         (gpow (mult_group n) v (2 EXP (t - m) * u) = n - 1)`
    >> (Q.EXISTS_TAC `t`
        ++ Q.EXISTS_TAC `n - 1`
        ++ STRONG_CONJ_TAC
@@ -609,7 +629,7 @@ val CARD_WITNESS = store_thm
            ++ Q.PAT_ASSUM `!x :: P. M x`
               (ASM_REWRITE_TAC o wrap o Q_RESQ_SPEC `x'`)
            ++ Simplify [MULT_GROUP_ID])
-       ++ Induct >> RW_TAC arith_ss []
+       ++ Induct >> (RW_TAC std_ss [] ++ METIS_TAC [])
        ++ REVERSE Strip
        >> (Q.PAT_ASSUM `!j. P j` (MP_TAC o Q.SPECL [`m + SUC i`, `x'`])
            ++ RW_TAC std_ss []
@@ -649,8 +669,9 @@ val CARD_WITNESS = store_thm
        ++ G_TAC [ABELIAN_GPOW_GOP]
        ++ NTAC 2 (POP_ASSUM MP_TAC)
        ++ REWRITE_TAC [IN_UNION]
-       ++ RW_TAC std_ss [SPECIFICATION]
-       ++ RW_TAC arith_ss [MULT_GROUP_OP, LESS_MOD, MINUS_1_SQUARED_MOD])
+       ++ RW_TAC bool_ss [SPECIFICATION]
+       ++ RW_TAC bool_ss [MULT_GROUP_OP, LESS_MOD, MINUS_1_SQUARED_MOD]
+       ++ RW_TAC arith_ss [])
    ++ Strip
    ++ RW_TAC std_ss [PSUBSET_DEF, gset_def, INTER_SUBSET]
    ++ POP_ASSUM K_TAC
@@ -741,7 +762,7 @@ val CARD_WITNESS = store_thm
 val MILLER_RABIN_1_PRIME = store_thm
   ("MILLER_RABIN_1_PRIME",
    ``!n s. prime n ==> (FST (miller_rabin_1 n s) = T)``,
-   (RW_TAC std_ss [miller_rabin_1_def]
+   (RW_TAC std_ss [miller_rabin_1_def, LET_DEF]
     ++ RW_TAC std_ss []) <<
    [PROVE_TAC [NOT_PRIME_1],
     PROVE_TAC [NOT_PRIME_EVEN],
@@ -759,7 +780,8 @@ val MILLER_RABIN_1_PRIME = store_thm
 val MILLER_RABIN_1_COMPOSITE = store_thm
   ("MILLER_RABIN_1_COMPOSITE",
    ``!n. ~prime n ==> 1 / 2 <= prob bern {s | FST (miller_rabin_1 n s) = F}``,
-   RW_TAC std_ss [miller_rabin_1_def]
+   RW_TAC bool_ss []
+   ++ PURE_REWRITE_TAC [miller_rabin_1_def]
    ++ Cases_on `n = 2` >> PROVE_TAC [PRIME_2]
    ++ Cases_on `n = 1`
    >> (RW_TAC std_ss [GUNIV, PROB_BERN_BASIC]
@@ -767,7 +789,7 @@ val MILLER_RABIN_1_COMPOSITE = store_thm
    ++ Cases_on `EVEN n`
    >> (RW_TAC std_ss [GUNIV, PROB_BERN_BASIC]
        ++ PROVE_TAC [HALF_LT_1, REAL_LT_IMP_LE])
-   ++ RW_TAC std_ss []
+   ++ ASM_SIMP_TAC bool_ss []
    ++ Know `2 * log2 (0 + (n - 1)) <= 2 * log2 (n - 1)`
    >> RW_TAC arith_ss []
    ++ Q.SPEC_TAC (`2 * log2 (n - 1)`, `t`)
@@ -784,7 +806,7 @@ val MILLER_RABIN_1_COMPOSITE = store_thm
         FST (prob_uniform_cut t (n - 2) s) IN
         count (n - 2) INTER {a | witness n (a + 2)}}`
    >> (SET_EQ_TAC
-       ++ RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_COUNT]
+       ++ RW_TAC std_ss [IN_INTER, GSPECIFICATION, IN_COUNT, LET_DEF]
        ++ Cases_on `prob_uniform_cut t (n - 2) x`
        ++ RW_TAC std_ss [LET_DEF]
        ++ Suff `q < n - 2` >> PROVE_TAC []

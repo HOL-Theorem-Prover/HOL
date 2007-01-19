@@ -1,5 +1,15 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
+app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory formalizeUseful
      pred_setTheory subtypeTheory extra_boolTheory combinTheory;
+
+(*
+quietdec := false;
+*)
 
 val _ = new_theory "extra_num";
 
@@ -58,7 +68,7 @@ val (log2_def, log2_ind) = Defn.tprove
       WF_REL_TAC g
       ++ STRIP_TAC
       ++ Know `2 * (SUC v DIV 2) <= SUC v`
-      >> RW_TAC std_ss [TWO, DIV_THEN_MULT]
+      >> PROVE_TAC [TWO, DIV_THEN_MULT]
       ++ DECIDE_TAC)
   end;
 
@@ -332,47 +342,47 @@ val DIV_TWO_EXP = store_thm
 
 val MIN_0L = store_thm
   ("MIN_0L",
-   ``!n. min 0 n = 0``,
+   ``!n : num. min 0 n = 0``,
    RW_TAC arith_ss [min_def]);
 
 val MIN_0R = store_thm
   ("MIN_0R",
-   ``!n. min n 0 = 0``,
+   ``!n : num. min n 0 = 0``,
    RW_TAC arith_ss [min_def]);
 
 val MIN_REFL = store_thm
   ("MIN_REFL",
-   ``!a. min a a = a``,
+   ``!a : num. min a a = a``,
    RW_TAC arith_ss [min_def]);
 
 val MIN_SYM = store_thm
   ("MIN_SYM",
-   ``!a b. min a b = min b a``,
+   ``!a b : num. min a b = min b a``,
    RW_TAC arith_ss [min_def]);
 
 val LEQ_MINL = store_thm
   ("LEQ_MINL",
-   ``!a b. a <= b ==> (min a b = a)``,
+   ``!a b : num. a <= b ==> (min a b = a)``,
    RW_TAC arith_ss [min_def]);
 
 val LEQ_MINR = store_thm
   ("LEQ_MINR",
-   ``!a b. a <= b ==> (min b a = a)``,
+   ``!a b : num. a <= b ==> (min b a = a)``,
    RW_TAC arith_ss [min_def]);
 
 val LESS_MINL = store_thm
   ("LESS_MINL",
-   ``!a b. a < b ==> (min a b = a)``,
+   ``!a b : num. a < b ==> (min a b = a)``,
    RW_TAC arith_ss [min_def]);
 
 val LESS_MINR = store_thm
   ("LESS_MINR",
-   ``!a b. a < b ==> (min b a = a)``,
+   ``!a b : num. a < b ==> (min b a = a)``,
    RW_TAC arith_ss [min_def]);
 
 val IN_GTNUM = store_thm
   ("IN_GTNUM",
-   ``!x n. x IN gtnum n = n < x``,
+   ``!x n : num. x IN gtnum n = n < x``,
    RW_TAC std_ss [gtnum_def, SPECIFICATION]);
 
 val GTNUM0_SUBTYPE_JUDGEMENT = store_thm
@@ -432,17 +442,15 @@ val EXP_SUBTYPE = store_thm
   ("EXP_SUBTYPE",
    ``$EXP IN ((gtnum 0 -> UNIV -> gtnum 0) INTER
               (gtnum 1 -> gtnum 0 -> gtnum 1))``,
-   RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_UNIV, IN_GTNUM] <<
-   [Cases_on `x` >> DECIDE_TAC
-    ++ RW_TAC std_ss [ZERO_LESS_EXP],
-    Cases_on `x` >> DECIDE_TAC
+   RW_TAC std_ss [IN_FUNSET, IN_INTER, IN_UNIV, IN_GTNUM]
+   ++ Cases_on `x` >> DECIDE_TAC
     ++ Cases_on `n` >> DECIDE_TAC
     ++ Cases_on `x'` >> DECIDE_TAC
     ++ KILL_TAC
     ++ Induct_on `n` >> RW_TAC arith_ss [EXP]
     ++ ONCE_REWRITE_TAC [EXP]
     ++ MATCH_MP_TAC LESS_1_MULT2
-    ++ RW_TAC arith_ss []]);
+    ++ RW_TAC arith_ss []);
 
 val FUNPOW_SUBTYPE = store_thm
   ("FUNPOW_SUBTYPE",
@@ -455,16 +463,16 @@ val FUNPOW_SUBTYPE = store_thm
 
 val NUMERAL_BIT1_SUBTYPE = store_thm
   ("NUMERAL_BIT1_SUBTYPE",
-   ``NUMERAL_BIT1 IN ((UNIV -> gtnum 0) INTER (gtnum 0 -> gtnum 1))``,
-   RW_TAC bool_ss [IN_FUNSET, IN_GTNUM, NUMERAL_BIT1, IN_INTER, IN_UNIV,
-                   NUMERAL_DEF, ALT_ZERO, NUMERAL_BIT2]
+   ``BIT1 IN ((UNIV -> gtnum 0) INTER (gtnum 0 -> gtnum 1))``,
+   RW_TAC bool_ss [IN_FUNSET, IN_GTNUM, BIT1, IN_INTER, IN_UNIV,
+                   NUMERAL_DEF, ALT_ZERO, BIT2]
    ++ DECIDE_TAC);
 
 val NUMERAL_BIT2_SUBTYPE = store_thm
   ("NUMERAL_BIT2_SUBTYPE",
-   ``NUMERAL_BIT2 IN (UNIV -> gtnum 1)``,
-   RW_TAC bool_ss [IN_FUNSET, IN_GTNUM, NUMERAL_BIT1, IN_INTER, IN_UNIV,
-                   NUMERAL_DEF, ALT_ZERO, NUMERAL_BIT2]
+   ``BIT2 IN (UNIV -> gtnum 1)``,
+   RW_TAC bool_ss [IN_FUNSET, IN_GTNUM, BIT1, IN_INTER, IN_UNIV,
+                   NUMERAL_DEF, ALT_ZERO, BIT2]
    ++ DECIDE_TAC);
 
 val NUMERAL_SUBTYPE = store_thm
@@ -549,7 +557,7 @@ val MINUS_1_SQUARED_MOD = store_thm
    ++ RW_TAC std_ss [LEFT_SUB_DISTRIB]
    ++ Suff `(n + ((n - 1) * n - (n - 1) * 1)) MOD n = 1`
    >> (Suff `!a. (n + a) MOD n = a MOD n`
-       >> DISCH_THEN (fn th => REWRITE_TAC [th])
+       >> DISCH_THEN (fn th => REWRITE_TAC [th] ++ RW_TAC std_ss [])
        ++ Suff `!a. (n MOD n + a) MOD n = a MOD n`
        >> RW_TAC std_ss [MOD_PLUS1]
        ++ RW_TAC arith_ss [X_MOD_X])

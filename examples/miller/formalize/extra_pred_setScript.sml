@@ -1,8 +1,20 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
+app load ["bossLib","subtypeTheory","formalizeUseful","extra_boolTheory",
+          "boolContext","extra_listTheory","listContext",
+          "state_transformerTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory combinTheory
      pred_setTheory formalizeUseful boolContext listTheory
      res_quanTools res_quanTheory subtypeTheory subtypeTools
      extra_listTheory ho_proverTools listContext extra_numTheory
      pairTheory state_transformerTheory simpLib;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "extra_pred_set";
 
@@ -205,15 +217,14 @@ val CARD_IMAGE = store_thm
    ++ HO_MATCH_MP_TAC FINITE_INDUCT
    ++ RW_TAC std_ss [IMAGE_EMPTY, CARD_DEF, IMAGE_INSERT]
    ++ Know `~(f e IN IMAGE f s)`
-   >> (AR_TAC [INJ_DEF]
-       ++ !! (POP_ASSUM MP_TAC)
-       ++ RW_TAC std_ss [IN_INSERT, IN_IMAGE]
+   >> (!! (POP_ASSUM MP_TAC)
+       ++ RW_TAC std_ss [IN_INSERT, IN_IMAGE, INJ_DEF]
        ++ PROVE_TAC [])
    ++ MP_TAC (Q.SPEC `s` IMAGE_FINITE)
-   ++ R_TAC [CARD_INSERT]
+   ++ RW_TAC std_ss [CARD_INSERT]
    ++ Suff `INJ f s t` >> PROVE_TAC []
    ++ MATCH_MP_TAC INJ_SUBSET
-   ++ R_TAC [SUBSET_DEF]
+   ++ RW_TAC std_ss [SUBSET_DEF]
    ++ PROVE_TAC [IN_INSERT]);
 
 val CARD_SUBSET_PROPER = store_thm
@@ -379,15 +390,8 @@ val BIJ_INSERT = store_thm
               DISJ_IMP_THM]
    ++ RESQ_TAC
    ++ AR_TAC [IN_DELETE, IN_INSERT]
-   ++ REPEAT STRIP_TAC <<
-   [Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `f x`)
-    ++ Cond >> PROVE_TAC []
-    ++ RW_TAC std_ss []
-    ++ PROVE_TAC [],
-    Q.PAT_ASSUM `!x. P x` (MP_TAC o Q.SPEC `x`)
-    ++ Cond >> PROVE_TAC []
-    ++ RW_TAC std_ss []
-    ++ PROVE_TAC []]);
+   ++ REPEAT STRIP_TAC
+   ++ METIS_TAC []);
 
 val FINITE_BIJ = store_thm
   ("FINITE_BIJ",
@@ -876,13 +880,13 @@ val INFINITE_EXPLICIT_ENUMERATE = store_thm
   ("INFINITE_EXPLICIT_ENUMERATE",
    ``!s. INFINITE s ==> INJ (\n : num. CHOICE (FUNPOW REST n s)) UNIV s``,
    RW_TAC std_ss [INJ_DEF, IN_UNIV]
-   >> (Suff `CHOICE (FUNPOW REST x s) IN FUNPOW REST x s`
+   >> (Suff `CHOICE (FUNPOW REST n s) IN FUNPOW REST n s`
        >> PROVE_TAC [SUBSET_DEF, EXPLICIT_ENUMERATE_MONO]
        ++ RW_TAC std_ss [GSYM CHOICE_DEF, EXPLICIT_ENUMERATE_NOT_EMPTY])
    ++ !! (POP_ASSUM MP_TAC)
    ++ Q.SPEC_TAC (`s`, `s`)
-   ++ Q.SPEC_TAC (`y`, `y`)
-   ++ Q.SPEC_TAC (`x`, `x`)
+   ++ Q.SPEC_TAC (`n'`, `y`)
+   ++ Q.SPEC_TAC (`n`, `x`)
    ++ (Induct ++ Cases) <<
    [PROVE_TAC [],
     !! STRIP_TAC
@@ -978,7 +982,7 @@ val NUM_2D_BIJ = store_thm
        ++ RW_TAC std_ss [SURJ_DEF, IN_UNIV, IN_CROSS]
        ++ Q.EXISTS_TAC `(x, 0)`
        ++ RW_TAC std_ss [FST])
-   ++ Q.EXISTS_TAC `UNCURRY NUMPAIR`
+   ++ Q.EXISTS_TAC `UNCURRY ind_type$NUMPAIR`
    ++ RW_TAC std_ss [INJ_DEF, IN_UNIV, IN_CROSS]
    ++ Cases_on `x`
    ++ Cases_on `y`

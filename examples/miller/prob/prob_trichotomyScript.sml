@@ -1,3 +1,11 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
+app load
+  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
+   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
      probabilityTheory formalizeUseful extra_numTheory combinTheory
@@ -5,6 +13,10 @@ open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      extra_pred_setTheory prob_algebraTheory probTheory sumTheory
      extra_realTheory extra_pred_setTools measureTheory numTheory
      simpLib seqTheory sequenceTools subtypeTheory res_quanTheory;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "prob_trichotomy";
 
@@ -128,9 +140,9 @@ val PROB_BERN_TRICHOTOMY_ITER = store_thm
           (if (a,b) IN s then {(a,b)} else {}) o FST o prob_trichotomy_iter =
           (if (a,b) IN s then prefix_set [a; b] else {})`
        >> (Rewr
-           ++ RW_TAC std_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY,
-                             NOT_IN_EMPTY, PROB_BERN_EMPTY, REAL_MUL_RZERO,
-                             PROB_BERN_PREFIX_SET, LENGTH, pow, REAL_MUL_RID]
+           ++ RW_TAC bool_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY,
+                              NOT_IN_EMPTY, PROB_BERN_EMPTY, REAL_MUL_RZERO,
+                              PROB_BERN_PREFIX_SET, LENGTH, pow, REAL_MUL_RID]
            ++ RW_TAC arith_ss [GSYM REAL_INV_1OVER, GSYM REAL_INV_MUL, REAL_INJ,
                                REAL_MUL, REAL_MUL_RINV])
        ++ SET_EQ_TAC
@@ -182,9 +194,9 @@ val PROB_BERN_TRICHOTOMY_ITER = store_thm
           (if (a,b) IN s then {(a,b)} else {}) o FST o prob_trichotomy_iter =
           (if (a,b) IN s then prefix_set [a; b] else {})`
        >> (Rewr
-           ++ RW_TAC std_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY,
-                             NOT_IN_EMPTY, PROB_BERN_EMPTY, REAL_MUL_RZERO,
-                             PROB_BERN_PREFIX_SET, LENGTH, pow, REAL_MUL_RID]
+           ++ RW_TAC bool_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY,
+                              NOT_IN_EMPTY, PROB_BERN_EMPTY, REAL_MUL_RZERO,
+                              PROB_BERN_PREFIX_SET, LENGTH, pow, REAL_MUL_RID]
            ++ RW_TAC arith_ss [GSYM REAL_INV_1OVER, GSYM REAL_INV_MUL, REAL_INJ,
                                REAL_MUL, REAL_MUL_RINV])
        ++ SET_EQ_TAC
@@ -232,9 +244,9 @@ val PROB_BERN_TRICHOTOMY_ITER = store_thm
          (if (a,b) IN s then {(a,b)} else {}) o FST o prob_trichotomy_iter =
          (if (a,b) IN s then prefix_set [a; b] else {})`
    >> (Rewr
-       ++ RW_TAC std_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY,
-                         NOT_IN_EMPTY, PROB_BERN_EMPTY, REAL_MUL_RZERO,
-                         PROB_BERN_PREFIX_SET, LENGTH, pow, REAL_MUL_RID]
+       ++ RW_TAC bool_ss [CARD_EMPTY, CARD_INSERT, FINITE_EMPTY,
+                          NOT_IN_EMPTY, PROB_BERN_EMPTY, REAL_MUL_RZERO,
+                          PROB_BERN_PREFIX_SET, LENGTH, pow, REAL_MUL_RID]
        ++ RW_TAC arith_ss [GSYM REAL_INV_1OVER, GSYM REAL_INV_MUL, REAL_INJ,
                            REAL_MUL, REAL_MUL_RINV])
    ++ SET_EQ_TAC
@@ -288,11 +300,6 @@ val PROB_TRICHOTOMY = store_thm
    ++ Cases_on `r`
    ++ RW_TAC arith_ss [CARD_INSERT, FINITE_PAIR_BOOL, CARD_EMPTY, NOT_IN_EMPTY,
                        IN_INSERT, ADD1, REAL_DIV_LZERO]
-   ++ RW_TAC std_ss [real_div, REAL_MUL_LID]
-   ++ MATCH_MP_TAC REAL_EQ_LMUL_IMP
-   ++ Q.EXISTS_TAC `4`
-   ++ RW_TAC arith_ss [REAL_INJ, REAL_MUL_ASSOC, REAL_MUL_RINV, REAL_MUL_LID]
-   ++ RW_TAC arith_ss [REAL_INJ, REAL_INV_MUL, REAL_INV_EQ_0, REAL_INVINV]
    ++ RW_TAC real_ss []);
 
 val PROB_TRICHOTOMY_COMPUTE = store_thm

@@ -27,7 +27,7 @@ installPP subtypeTools.pp_precontext;
 installPP subtypeTools.pp_context;
 *)
 
-open bossLib arithmeticTheory dividesTheory gcdTheory primeTheory
+open bossLib arithmeticTheory dividesTheory gcdTheory
      res_quanTheory pred_setTheory subtypeTheory
      res_quanTools subtypeTools ho_proverTools numContext formalizeUseful
      extra_numTheory ho_basicTools arithContext extra_arithTheory

@@ -5,7 +5,7 @@ struct
 open HolKernel Parse boolLib;
 
 (* interactive mode
-val () = loadPath := union ["..", "../finished"] (!loadPath);
+val () = loadPath := "../ho_prover" :: !loadPath;
 val () = app load
   ["Susp",
    "combinTheory",
@@ -15,7 +15,8 @@ val () = app load
    "subtypeUseful",
    "ho_basicTools",
    "ho_discrimTools",
-   "ho_proverTools"];
+   "ho_proverTools",
+   "subtypeTheory"];
 val () = show_assums := true;
 *)
 
@@ -331,7 +332,7 @@ fun subtype_check ccache congs stricttypechecking depth =
           val (bvars, body) = genvar_dest_foralls cond
           val (asm, elt_set) = dest_imp body
           val (elt, set) = dest_in elt_set
-          val elt_th = N_BETA_CONV (length bvars) elt
+          val elt_th = QCONV (N_BETA_CONV (length bvars)) elt
           val elt' = RHS elt_th
           val facts' = factdb_add_vthm (empty_vars, ASSUME asm) facts
           val basics = cached_basic_subtypes facts' elt'
@@ -691,7 +692,7 @@ local
       val l_body = N n rator l
       val tm_pretty_abs = alpha_align l_body tm_abs
       val tm' = fold (C (curry mk_comb)) tm_pretty_abs bvars
-      val tm_th = N n (fn c => RATOR_CONV c THENC BETA_CONV) ALL_CONV tm'
+      val tm_th = QCONV (N n (fn c => RATOR_CONV c THENC BETA_CONV) ALL_CONV) tm'
       val (r_var, r_bvs) = list_dest_comb r
       val _ = assert (bvars = rev r_bvs) (BUG "match_align" "bvar panic")
       val res = (([r_var |-> tm_pretty_abs], []), SYM tm_th)
@@ -707,7 +708,7 @@ local
       val ctext' =
         if asm = T then ctext
         else context_add_fact (empty_vars, ASSUME asm) ctext
-      val raw_eq = (N_BETA_CONV (length bvars) THENC rewr ctext') l
+      val raw_eq = QCONV (N_BETA_CONV (length bvars) THENC rewr ctext') l
       val (sub, match_eq) = match_align bvars l r (RHS raw_eq)
       val res_eq = (DISCH asm THENR GENL (rev bvars)) (TRANS raw_eq match_eq)
     in
@@ -736,8 +737,8 @@ local
 in
   fun SIMPLIFY_CONG_CONV rewr ctext tm =
     let
-      val res =
-        execute_cong rewr ctext (find_matching_cong (context_congs ctext) tm)
+      val cong = find_matching_cong (context_congs ctext) tm
+      val res = execute_cong rewr ctext cong
     in
       res
     end
@@ -745,18 +746,19 @@ end;
 
 fun SIMPLIFY_REWR_CONV simper prover rewrs tm =
   let
+    val _ = trace_x 4 "SIMPLIFY_REWR_CONV: input" term_to_string tm     
     val matches = ovdiscrim_ho_match rewrs tm
     val _ =
       trace_x 4 "SIMPLIFY_REWR_CONV: #matches" (int_to_string o length) matches
     val conv = FIRSTC (map (fn (ho_sub, f) => f ho_sub simper prover) matches)
   in
-    (trace_CONV 4 "SIMPLIFY_REWR_CONV input" THENC
-     conv THENC
+    (QCONV conv THENC
      trace_CONV 4 "SIMPLIFY_REWR_CONV result") tm
   end;
 
 (* Warning: do not eta-reduce this function! *)
 fun GEN_SIMPLIFY_CONV s p ctext tm =
+  QCONV
   ((TRYC o REPEATC_CUTOFF (!simplify_max_traversals) o CHANGED_CONV)
    (trace_CONV 2 "GEN_SIMPLIFY_CONV input" THENC
     TRYC (REPEATC_CUTOFF (!simplify_max_rewrites)
@@ -770,22 +772,24 @@ fun GEN_SIMPLIFY_CONV s p ctext tm =
 val no_prover_conv : context -> conv = K NO_CONV;
   
 fun subtype_prover_conv ctext = 
-  SUBTYPE_CONV_DEPTH (!simplify_subtype_depth) (context_subtypes ctext);
+  QCONV (SUBTYPE_CONV_DEPTH (!simplify_subtype_depth) (context_subtypes ctext));
 
 (* Warning: do not eta-reduce this function! *)
 fun SIMPLIFY_CONV_DEPTH 0 _ _ = raise ERR "SIMPLIFY_CONV" "too deep!"
   | SIMPLIFY_CONV_DEPTH n ctext tm =
-  GEN_SIMPLIFY_CONV (EQT_ELIM oo SIMPLIFY_CONV_DEPTH (n - 1))
-  subtype_prover_conv ctext tm;
+  QCONV
+  (GEN_SIMPLIFY_CONV (EQT_ELIM oo SIMPLIFY_CONV_DEPTH (n - 1))
+   subtype_prover_conv ctext) tm;
 
 fun SIMPLIFY_CONV' ctext tm =
-  SIMPLIFY_CONV_DEPTH (!simplify_max_depth) ctext tm;
+  QCONV (SIMPLIFY_CONV_DEPTH (!simplify_max_depth) ctext) tm;
 
 fun SIMPLIFY_CONV ctext =
-  trace_CONV 1 "SIMPLIFY_CONV input" THENC
-  GEN_SIMPLIFY_CONV (EQT_ELIM oo SIMPLIFY_CONV') no_prover_conv ctext THENC
-  TRYC (subtype_prover_conv ctext) THENC
-  trace_CONV 1 "SIMPLIFY_CONV result";
+  QCONV
+  (trace_CONV 1 "SIMPLIFY_CONV input" THENC
+   GEN_SIMPLIFY_CONV (EQT_ELIM oo SIMPLIFY_CONV') no_prover_conv ctext THENC
+   TRYC (subtype_prover_conv ctext) THENC
+   trace_CONV 1 "SIMPLIFY_CONV result");
 
 fun SIMPLIFY_TAC_X conv ctext ths =
   let
@@ -845,9 +849,7 @@ fun precontext_mergel [] = empty_precontext
 (* ------------------------------------------------------------------------- *)
 
 (*
-allow_trace "basic_subtypes";
-allow_trace "cond_prover";
-reset_traces ();
+set_trace "subtypeTools" 3;
 
 val stc = tt4 SUBTYPE_CHECK true 3 (context_subtypes hol_c);
 

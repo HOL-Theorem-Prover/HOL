@@ -1,18 +1,20 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
-val _ = new_theory "prob_canon";
-
 (* interactive mode
-show_assums := true;
-loadPath := union ["../../formalize", "../../subtypes", "../../ho_prover"] (!loadPath);
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
 app load
   ["bossLib", "pred_setTheory", "listTheory", "rich_listTheory",
    "pairTheory", "realLib", "formalizeUseful", "extra_listTheory"];
+quietdec := true;
 *)
 
+open HolKernel Parse boolLib;
 open bossLib pred_setTheory listTheory rich_listTheory pairTheory realLib
      formalizeUseful extra_listTheory;
+
+(* interactive mode
+quietdec := false;
+*)
+
+val _ = new_theory "prob_canon";
 
 infixr 0 ++ << || ORELSEC ##;
 infix 1 >>;
@@ -95,7 +97,7 @@ val PROB_TWIN_SING = store_thm
     [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
      ++ STRIP_TAC
      ++ NTAC 2 (POP_ASSUM MP_TAC)
-     ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
+     ++ REVERSE (Cases_on `l'`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      ++ RW_TAC std_ss [SNOC],
      RW_TAC std_ss []
      ++ Q.EXISTS_TAC `[]`
@@ -104,7 +106,7 @@ val PROB_TWIN_SING = store_thm
     [Cases_on `l` >> PROVE_TAC [NOT_NIL_SNOC]
      ++ STRIP_TAC
      ++ NTAC 2 (POP_ASSUM MP_TAC)
-     ++ REVERSE (Cases_on `l`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
+     ++ REVERSE (Cases_on `l'`) >> RW_TAC std_ss [SNOC, NOT_NIL_SNOC]
      ++ RW_TAC std_ss [SNOC],
      RW_TAC std_ss []
      ++ Q.EXISTS_TAC `[]`

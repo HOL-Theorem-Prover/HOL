@@ -20,7 +20,7 @@ open bossLib listTheory formalizeUseful subtypeTools
      pred_setTheory extra_pred_setTheory arithContext listContext relationTheory
      ho_proverTools extra_listTheory
      orderTheory arithmeticTheory extra_arithTheory subtypeTheory
-     primeTheory dividesTheory gcdTheory;
+     dividesTheory gcdTheory;
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;

@@ -1,5 +1,5 @@
-export MPATH="$MPATH -> formalize"
-export Holmake=../../../bin/Holmake
+export MPATH="miller"
+export Holmake="../../../bin/Holmake --qof"
 
 for dir in ho_prover subtypes RSA formalize prob groups miller
 do

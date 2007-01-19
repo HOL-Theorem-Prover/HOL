@@ -1,8 +1,20 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../rsa"] @ !loadPath;
+app load ["bossLib","realLib","transcTheory","subtypeTheory",
+          "formalizeUseful","extra_boolTheory",
+          "boolContext","extra_pred_setTools","extra_realTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory realTheory
      seqTheory pred_setTheory res_quanTheory listTheory
      rich_listTheory pairTheory combinTheory realLib formalizeUseful
      subtypeTheory extra_pred_setTheory extra_boolTheory optionTheory
      extra_realTheory ho_proverTools extra_numTheory extra_pred_setTools;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "measure";
 
@@ -43,7 +55,7 @@ val Cond =
 (*                                                                           *)
 (* Limitations:                                                              *)
 (* 1. The underlying set for our sigma algebras is an entire HOL type.       *)
-(* 2. Measures must be finite, that it, lie in the range [0, +infinity).     *)
+(* 2. Measures must be finite, that is, lie in the range [0, +infinity).     *)
 (*                                                                           *)
 (* Limitation 2 is not relevant for probability measures, which must lie in  *)
 (* the range [0,1] anyway.                                                   *)
@@ -358,7 +370,8 @@ val COUNTABLY_SUBADDITIVE_SUBADDITIVE = store_thm
        `measure m s + measure m t =
         sum (0,2)
         (measure m o (\n. (if n = 0 then s else (if n = 1 then t else {}))))`
-       >> (RW_TAC arith_ss [TWO, sum, ONE, o_DEF]
+       >> (ASM_SIMP_TAC bool_ss [TWO, sum, ONE, o_DEF]
+           ++ RW_TAC arith_ss []
            ++ RW_TAC real_ss [])
        ++ DISCH_THEN (REWRITE_TAC o wrap)
        ++ MATCH_MP_TAC SER_0
@@ -401,7 +414,7 @@ val SIGMA_ALGEBRA_ALT = store_thm
    ++ DISCH_THEN (REWRITE_TAC o wrap)
    ++ POP_ASSUM MATCH_MP_TAC
    ++ Strip
-   ++ Suff `enumerate c x IN c` >> PROVE_TAC [SUBSET_DEF]
+   ++ Suff `enumerate c n IN c` >> PROVE_TAC [SUBSET_DEF]
    ++ Q.PAT_ASSUM `BIJ i j k` MP_TAC
    ++ RW_TAC std_ss [BIJ_DEF, SURJ_DEF, IN_UNIV]);
 
@@ -808,7 +821,7 @@ val INF_MEASURE_NONEMPTY = store_thm
        IN_IMAGE, IN_UNIV, o_DEF, IN_FUNSET, ALGEBRA_EMPTY]
    >> PROVE_TAC []
    ++ Know `measure m s = sum (0,1) (\x. measure m (if x = 0 then s else {}))`
-   >> RW_TAC arith_ss [sum, ONE, REAL_ADD_LID]
+   >> (ASM_SIMP_TAC bool_ss [sum, ONE, REAL_ADD_LID] ++ RW_TAC arith_ss [])
    ++ DISCH_THEN (REWRITE_TAC o wrap)
    ++ MATCH_MP_TAC SER_0
    ++ RW_TAC arith_ss []);
@@ -904,7 +917,8 @@ val COUNTABLY_ADDITIVE_ADDITIVE = store_thm
        `measure m s + measure m t =
         sum (0, 2)
         (measure m o (\n. (if n = 0 then s else (if n = 1 then t else {}))))`
-       >> (RW_TAC std_ss [TWO, ONE, sum]
+       >> (ASM_SIMP_TAC bool_ss [TWO, ONE, sum]
+           ++ RW_TAC std_ss []
            ++ RW_TAC arith_ss [REAL_ADD_LID, o_THM])
        ++ DISCH_THEN (REWRITE_TAC o wrap)
        ++ MATCH_MP_TAC SER_0
@@ -1029,8 +1043,8 @@ val INF_MEASURE_EMPTY = store_thm
    ++ Q.EXISTS_TAC `0`
    ++ RW_TAC std_ss [GSPECIFICATION, REAL_LE_REFL]
    ++ Q.EXISTS_TAC `K {}`
-   ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, ALGEBRA_EMPTY, DISJOINT_EMPTY, K_THM,
-                     SUBSET_DEF, NOT_IN_EMPTY, IN_BIGUNION, IN_IMAGE]
+   ++ RW_TAC bool_ss [IN_FUNSET, IN_UNIV, ALGEBRA_EMPTY, DISJOINT_EMPTY, K_THM,
+                      SUBSET_DEF, NOT_IN_EMPTY, IN_BIGUNION, IN_IMAGE]
    ++ Know `0 = sum (0, 0) (measure m o K {})` >> RW_TAC std_ss [sum]
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    ++ MATCH_MP_TAC SER_0
@@ -1603,8 +1617,8 @@ val CLOSED_CDI_DUNION = store_thm
    >> (MATCH_MP_TAC BIGUNION_IMAGE_UNIV
        ++ RW_TAC arith_ss [])
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
-   ++ RW_TAC std_ss [COUNT_SUC, IMAGE_INSERT, TWO, ONE, BIGUNION_INSERT,
-                     COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY, UNION_EMPTY]
+   ++ RW_TAC bool_ss [COUNT_SUC, IMAGE_INSERT, TWO, ONE, BIGUNION_INSERT,
+                      COUNT_ZERO, IMAGE_EMPTY, BIGUNION_EMPTY, UNION_EMPTY]
    ++ ONCE_REWRITE_TAC [UNION_COMM]
    ++ POP_ASSUM MATCH_MP_TAC
    ++ RW_TAC std_ss [IN_FUNSET, IN_UNIV, DISJOINT_EMPTY]
@@ -1716,7 +1730,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA1 = store_thm
          ++ RW_TAC arith_ss [],
          POP_ASSUM (MP_TAC o Q.SPEC `x`)
          ++ RW_TAC arith_ss []
-         ++ Q.EXISTS_TAC `f x'`
+         ++ Q.EXISTS_TAC `f n`
          ++ RW_TAC std_ss []
          ++ PROVE_TAC []])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -1814,7 +1828,7 @@ val SIGMA_PROPERTY_DISJOINT_LEMMA2 = store_thm
          ++ RW_TAC arith_ss [],
          POP_ASSUM (MP_TAC o Q.SPEC `x`)
          ++ RW_TAC arith_ss []
-         ++ Q.EXISTS_TAC `f x'`
+         ++ Q.EXISTS_TAC `f n`
          ++ RW_TAC std_ss []
          ++ PROVE_TAC []])
     ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
@@ -2133,7 +2147,7 @@ val MEASURABLE_COMP_STRONG = store_thm
        f IN measurable a b /\
        (!x. x IN c ==> PREIMAGE g x INTER (range f) IN b) ==>
        (g o f) IN measurable a c``,
-   RW_TAC std_ss [IN_MEASURABLE, PREIMAGE_ALT, o_ASSOC]
+   RW_TAC bool_ss [IN_MEASURABLE, PREIMAGE_ALT, o_ASSOC]
    ++ ONCE_REWRITE_TAC [GSYM PREIMAGE_ALT]
    ++ ONCE_REWRITE_TAC [GSYM PREIMAGE_INTER_RANGE]
    ++ RW_TAC std_ss [PREIMAGE_ALT]);
@@ -2145,7 +2159,7 @@ val MEASURABLE_COMP_STRONGER = store_thm
        range f SUBSET t /\
        (!s. s IN c ==> PREIMAGE g s INTER t IN b) ==>
        (g o f) IN measurable a c``,
-   RW_TAC std_ss [IN_MEASURABLE, PREIMAGE_ALT, o_ASSOC]
+   RW_TAC bool_ss [IN_MEASURABLE, PREIMAGE_ALT, o_ASSOC]
    ++ ONCE_REWRITE_TAC [GSYM PREIMAGE_ALT]
    ++ MP_TAC
       (Q.SPECL [`f`, `(s : 'c -> bool) o g`, `t`] PREIMAGE_INTER_SUPER_RANGE)

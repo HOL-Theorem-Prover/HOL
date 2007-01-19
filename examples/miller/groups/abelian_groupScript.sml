@@ -22,7 +22,7 @@ open bossLib listTheory formalizeUseful subtypeTools res_quanTools
      ho_proverTools extra_listTheory
      subtypeTheory res_quanTheory listContext arithmeticTheory groupTheory
      groupContext extra_numTheory gcdTheory dividesTheory
-     primeTheory extra_arithTheory finite_groupTheory finite_groupContext;
+     extra_arithTheory finite_groupTheory finite_groupContext;
 
 val EXISTS_DEF = boolTheory.EXISTS_DEF;
 

@@ -1,3 +1,11 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
+app load
+  ["bossLib","realLib","ho_proverTools","extra_pred_setTools",
+   "sequenceTools","prob_canonTools","prob_algebraTheory","probTheory"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory sequenceTheory state_transformerTheory
      probabilityTheory formalizeUseful extra_numTheory combinTheory
@@ -6,6 +14,10 @@ open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      extra_realTheory extra_pred_setTools measureTheory numTheory
      simpLib seqTheory sequenceTools subtypeTheory res_quanTheory
      measureTheory;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "prob_geometric";
 
@@ -235,9 +247,10 @@ val PROB_BERN_GEOMETRIC_LOOP = store_thm
           `prob bern
            (\x.
               SND (FST (prob_while FST prob_geometric_iter (F,SUC n) x)) =
-              SUC n) =
+              n + 1) =
            prob bern UNIV`
-       >> (MATCH_MP_TAC PROB_BERN_UNIVERSAL
+       >> (REWRITE_TAC [GSYM ADD1]
+           ++ MATCH_MP_TAC PROB_BERN_UNIVERSAL
            ++ Q.EXISTS_TAC
               `\s. (SND (FST (prob_geometric_loop (F, SUC n) s)) = SUC n) = ~F`
            ++ RW_TAC std_ss [PROB_GEOMETRIC_LOOP_STOPS, EVENTS_BERN_UNIV,
@@ -257,9 +270,10 @@ val PROB_BERN_GEOMETRIC_LOOP = store_thm
           `prob bern
            (\x.
               SND (FST (prob_while FST prob_geometric_iter (T,SUC n) x)) =
-              SUC n) =
+              n + 1) =
            prob bern {}`
-       >> (MATCH_MP_TAC PROB_BERN_UNIVERSAL
+       >> (REWRITE_TAC [GSYM ADD1]
+           ++ MATCH_MP_TAC PROB_BERN_UNIVERSAL
            ++ Q.EXISTS_TAC
               `\s. (SND (FST (prob_geometric_loop (T, SUC n) s)) = SUC n) = ~T`
            ++ RW_TAC std_ss [PROB_GEOMETRIC_LOOP_STOPS, EVENTS_BERN_EMPTY,
@@ -284,8 +298,8 @@ val PROB_BERN_GEOMETRIC_LOOP = store_thm
                      GSYM BIND_ASSOC, UNIT_DEF]
    ++ Know `!n d. (SUC n = n + SUC (SUC d)) = F` >> DECIDE_TAC
    ++ Rewr
-   ++ RW_TAC real_ss [GSYM EMPTY_DEF, PROB_BERN_EMPTY,
-                      GSYM prob_geometric_loop_def]
+   ++ RW_TAC bool_ss [GSYM EMPTY_DEF, PROB_BERN_EMPTY, REAL_MUL_RZERO,
+                      GSYM prob_geometric_loop_def, REAL_ADD_RID]
    ++ ONCE_REWRITE_TAC [pow]
    ++ RW_TAC std_ss [REAL_EQ_MUL_LCANCEL]
    ++ DISJ2_TAC
@@ -311,7 +325,7 @@ val PROB_BERN_GEOMETRIC = store_thm
       `prob bern {s | SND (FST (prob_geometric_loop (T,0) s)) - 1 = n} =
        prob bern {s | SND (FST (prob_geometric_loop (T,0) s)) = 0 + (n + 1)}`
    >> (Rewr
-       ++ RW_TAC std_ss [GSYM ADD1, PROB_BERN_GEOMETRIC_LOOP])
+       ++ RW_TAC bool_ss [GSYM ADD1, PROB_BERN_GEOMETRIC_LOOP])
    ++ MATCH_MP_TAC PROB_BERN_UNIVERSAL
    ++ Q.EXISTS_TAC `\s. 0 < SND (FST (prob_geometric_loop (T,0) s))`
    ++ RW_TAC std_ss [PROB_GEOMETRIC_LOOP_T_RANGE] <<
@@ -324,8 +338,8 @@ val PROB_BERN_GEOMETRIC = store_thm
     ++ PSET_TAC []
     ++ RW_TAC std_ss [SPECIFICATION, o_DEF],
     Suff
-    `{s | SND (FST (prob_geometric_loop (T,0) s)) = 0 + (n + 1)} =
-     (\x. SND x = 0 + (n + 1)) o FST o prob_geometric_loop (T, 0)`
+    `{s | SND (FST (prob_geometric_loop (T,0) s)) = n + 1} =
+     (\x. SND x = n + 1) o FST o prob_geometric_loop (T, 0)`
     >> (Rewr
         ++ PROVE_TAC [INDEP_FN_FST_EVENTS, INDEP_FN_PROB_GEOMETRIC_LOOP])
     ++ SET_EQ_TAC

@@ -1,19 +1,17 @@
-(*
+(* interactive mode
+app load ["bossLib","gcdTheory","powerTheory","summationTheory",
+          "binomialTheory","congruentTheory"];
+quietdec := true;
 *)
-structure fermatScript =
-struct
+
 open HolKernel Parse boolLib
-
-(* For interactive use:
-app load
-["bossLib", "numLib",
- "gcdTheory", "primeTheory", "dividesTheory", 
- "binomialTheory", "congruentTheory", "summationTheory", "powerTheory"] ;
-*)
-
 open bossLib numLib arithmeticTheory prim_recTheory 
-     gcdTheory primeTheory dividesTheory
+     gcdTheory dividesTheory
      binomialTheory congruentTheory summationTheory powerTheory ;
+
+(*
+quietdec := false;
+*)
 
 infix THEN THENC THENL;
 infix 8 by;
@@ -98,14 +96,13 @@ val FERMAT_1 = store_thm
      (BETA_RULE
       (Q.SPECL 
        [`n`, `1`,  
-        `\k'. binomial (n + 1) k' 
-        * k EXP (n + 1 - k')`,
+        `\k'. k EXP (n + 1 - k') * binomial (n + 1) k'`,
         `\a. congruent a 0 (n + 1)`] INV_SUMMATION))
      THEN ARW[ADD_CLAUSES, CONGRUENT_REF] THENL
      [PROVE_TAC[CONGRUENT_ADD,ADD_CLAUSES],
       `divides (SUC n) (binomial (n + 1) (k' + 1))` 
       by ARW[GSYM ADD1, P_DIV_BINOMIAL]
-      THEN PROVE_TAC[CONGRUENT_MULT_0,DIVIDES_CONGRUENT,ADD1]
+      THEN PROVE_TAC[CONGRUENT_MULT_0,DIVIDES_CONGRUENT,ADD1,MULT_COMM]
       ]
      );
   
@@ -140,5 +137,3 @@ val FERMAT = store_thm("FERMAT",
                         );
 
 val _ = export_theory();
-
-end;

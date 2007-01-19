@@ -127,8 +127,8 @@ val SCONS_EQ = store_thm
 val STL_o_SDROP = store_thm
   ("STL_o_SDROP",
    ``!n. stl o sdrop n = sdrop (SUC n)``,
-   Induct >> RW_TAC std_ss [sdrop_def, I_o_ID]
-   ++ RW_TAC std_ss [sdrop_def, o_ASSOC]);
+   Induct >> RW_TAC bool_ss [sdrop_def, I_o_ID]
+   ++ RW_TAC bool_ss [sdrop_def, o_ASSOC]);
 
 val SDROP_ADD = store_thm
   ("SDROP_ADD",
@@ -181,11 +181,7 @@ local
      MP_TAC SEQUENCE_DEFINE_ALT
      ++ RW_TAC std_ss [SKOLEM_THM])
 in
-  val siter_def =
-    new_specification
-    {name = "siter_def",
-     sat_thm = th,
-     consts =  [{const_name = "siter", fixity = Prefix}]};
+  val siter_def = new_specification ("siter_def", ["siter"], th);
 end;
 
 val SHD_SITER = store_thm

@@ -7,7 +7,7 @@ struct
 
 open Drule bossLib rich_listTheory prob_canonTheory;
 
-val prob_canon_ss = simpLib.++(list_ss, simpLib.SIMPSET {
+val prob_canon_ss = simpLib.++(list_ss, simpLib.SSFRAG {
   ac = [],
   convs = [],
   dprocs = [],

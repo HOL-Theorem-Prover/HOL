@@ -1,3 +1,13 @@
+(* interactive mode
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
+app load
+  ["bossLib", "pred_setTheory", "listTheory", "rich_listTheory",
+   "pairTheory", "realLib", "formalizeUseful", "extra_listTheory",
+   "measureTheory","probabilityTheory",
+   "sequenceTools","extra_pred_setTools","prob_canonTools"];
+quietdec := true;
+*)
+
 open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      listTheory rich_listTheory pairTheory combinTheory sequenceTheory
      sequenceTools extra_pred_setTheory prob_canonTheory
@@ -5,6 +15,10 @@ open HolKernel Parse boolLib bossLib arithmeticTheory pred_setTheory
      formalizeUseful measureTheory realTheory extra_realTheory realLib
      subtypeTheory extra_numTheory seqTheory probabilityTheory
      simpLib;
+
+(* interactive mode
+quietdec := false;
+*)
 
 val _ = new_theory "prob_algebra";
 
@@ -298,14 +312,14 @@ val PROB_CANONICAL_UNIV = store_thm
    ++ PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
    ++ Suff `F` >> PROVE_TAC []
    ++ Q.PAT_ASSUM `prob_canonical x` MP_TAC
-   ++ Suff `(l1 = [[]]) /\ (l2 = [[]])`
+   ++ Suff `(l = [[]]) /\ (l' = [[]])`
    >> RW_TAC prob_canon_ss [prob_canonical_def]
    ++ CONJ_TAC <<
-   [Q.PAT_ASSUM `x ==> (l1 = y)` MATCH_MP_TAC
+   [Q.PAT_ASSUM `x ==> (l = y)` MATCH_MP_TAC
     ++ PSET_TAC [EXTENSION]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons T x`)
     ++ PSET_TAC [PROB_EMBED_TLS, PROB_EMBED_APPEND, EXTENSION],
-    Q.PAT_ASSUM `x ==> (l2 = y)` MATCH_MP_TAC
+    Q.PAT_ASSUM `x ==> (l' = y)` MATCH_MP_TAC
     ++ PSET_TAC [EXTENSION]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
     ++ PSET_TAC [PROB_EMBED_TLS, PROB_EMBED_APPEND, EXTENSION]]);
@@ -334,26 +348,26 @@ val PROB_CANON_REP = store_thm
    ++ HO_MATCH_MP_TAC PROB_CANONICAL_CASES
    ++ CONJ_TAC
    >> (PSET_TAC [PROB_EMBED_NIL, PROB_EMBED_CONS, FOLDR, EXTENSION]
-       ++ REVERSE (Cases_on `l1`)
+       ++ REVERSE (Cases_on `b`)
        >> (PSET_TAC [PROB_EMBED_NIL, FOLDR, APPEND, MAP, PROB_EMBED_CONS,
                      EXTENSION]
            ++ PROVE_TAC [PREFIX_SET_POPULATED])
-       ++ REVERSE (Cases_on `l2`)
+       ++ REVERSE (Cases_on `b'`)
        >> (PSET_TAC [PROB_EMBED_NIL, FOLDR, APPEND, MAP, PROB_EMBED_CONS,
                      EXTENSION]
            ++ PROVE_TAC [PREFIX_SET_POPULATED])
        ++ RW_TAC list_ss [MAP])
    ++ CONJ_TAC >> PROVE_TAC [PROB_EMBED_BASIC, PROB_CANONICAL_UNIV]
    ++ RW_TAC std_ss []
-   ++ Suff `(l1 = l1') /\ (l2 = l2')` >> RW_TAC std_ss []
+   ++ Suff `(b = l1) /\ (b' = l2)` >> RW_TAC std_ss []
    ++ CONJ_TAC <<
-   [Suff `prob_embed l1 = prob_embed l1'` >> PROVE_TAC []
+   [Suff `prob_embed b = prob_embed l1` >> PROVE_TAC []
     ++ POP_ASSUM MP_TAC
     ++ KILL_TAC
     ++ PSET_TAC [PROB_EMBED_APPEND, EXTENSION]
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons T x`)
     ++ RW_TAC std_ss [PROB_EMBED_TLS],
-    Suff `prob_embed l2 = prob_embed l2'` >> PROVE_TAC []
+    Suff `prob_embed b' = prob_embed l2` >> PROVE_TAC []
     ++ POP_ASSUM MP_TAC
     ++ KILL_TAC
     ++ PSET_TAC [PROB_EMBED_APPEND, EXTENSION]
@@ -421,7 +435,7 @@ val PROB_ALGEBRA_COMPL = store_thm
    >> (Q.EXISTS_TAC `[]`
        ++ PSET_TAC [PROB_EMBED_BASIC, EXTENSION])
    ++ PSET_TAC [EXTENSION]
-   ++ Q.EXISTS_TAC `APPEND (MAP (CONS T) l') (MAP (CONS F) l'')`
+   ++ Q.EXISTS_TAC `APPEND (MAP (CONS T) l'') (MAP (CONS F) l''')`
    ++ STRIP_TAC
    ++ SEQ_CASES_TAC `x`
    ++ PSET_TAC [PROB_EMBED_APPEND, PROB_EMBED_TLS, EXTENSION]
@@ -502,7 +516,7 @@ val PROB_ALGEBRA_SDROP = store_thm
   ("PROB_ALGEBRA_SDROP",
    ``!n p. (p o sdrop n) IN prob_algebra = p IN prob_algebra``,
    Induct >> RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
-   ++ RW_TAC std_ss [sdrop_def, o_ASSOC, PROB_ALGEBRA_STL]);
+   ++ RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_ALGEBRA_STL]);
 
 val PROB_ALGEBRA_INTER_HALVES = store_thm
   ("PROB_ALGEBRA_INTER_HALVES",
@@ -664,8 +678,7 @@ val PROB_CANON_MERGE_MONO = store_thm
   ("PROB_CANON_MERGE_MONO",
    ``!l b. prob_premeasure (prob_canon_merge l b) <= prob_premeasure (l::b)``,
    Induct_on `b` >> RW_TAC real_ss [prob_canon_merge_def, REAL_LE_REFL]
-   ++ REVERSE (RW_TAC real_ss [prob_canon_merge_def, prob_twin_def])
-   >> RW_TAC real_ss [REAL_LE_REFL, prob_premeasure_def]
+   ++ RW_TAC real_ss [prob_canon_merge_def, prob_twin_def]
    ++ RW_TAC std_ss [BUTLAST]
    ++ Suff `prob_premeasure (l'::b) <= prob_premeasure (SNOC T l'::SNOC F l'::b)`
    >> PROVE_TAC [REAL_LE_TRANS]
@@ -715,8 +728,8 @@ val PROB_CANONICAL_MEASURE_MAX = store_thm
    ++ CONJ_TAC >> (RW_TAC list_ss [prob_premeasure_def] ++ REAL_ARITH_TAC)
    ++ CONJ_TAC >> (RW_TAC list_ss [prob_premeasure_def, pow] ++ REAL_ARITH_TAC)
    ++ RW_TAC list_ss [PROB_PREMEASURE_APPEND]
-   ++ Suff `(2 * prob_premeasure (MAP (CONS T) l1) = prob_premeasure l1)
-                   /\ (2 * prob_premeasure (MAP (CONS F) l2) = prob_premeasure l2)`
+   ++ Suff `(2 * prob_premeasure (MAP (CONS T) l) = prob_premeasure l) /\
+            (2 * prob_premeasure (MAP (CONS F) l') = prob_premeasure l')`
    >> PROVE_TAC [REAL_ARITH ``(2 * a = b) /\ (2 * c = d) /\ b <= 1 /\ d <= 1
                               ==> a + c <= (1:real)``]
    ++ PROVE_TAC [PROB_PREMEASURE_TLS]);
@@ -756,12 +769,12 @@ val PROB_PREMEASURE_COMPL = store_thm
    ++ HO_MATCH_MP_TAC PROB_CANONICAL_CASES
    ++ CONJ_TAC
    >> (PSET_TAC [PROB_EMBED_BASIC, PROB_PREMEASURE_BASIC, EXTENSION]
-       ++ Suff `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = [[]]`
+       ++ Suff `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = [[]]`
        >> PROVE_TAC [MEM_NIL_STEP, MEM]
        ++ PSET_TAC [GSYM PROB_CANONICAL_EMBED_UNIV, EXTENSION])
    ++ CONJ_TAC
    >> (PSET_TAC [PROB_EMBED_BASIC, PROB_PREMEASURE_BASIC, EXTENSION]
-       ++ Know `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = []`
+       ++ Know `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = []`
        >> PSET_TAC [GSYM PROB_CANONICAL_EMBED_EMPTY, EXTENSION]
        ++ RW_TAC std_ss [PROB_PREMEASURE_BASIC, REAL_ADD_LID])
    ++ RW_TAC std_ss []
@@ -771,16 +784,16 @@ val PROB_PREMEASURE_COMPL = store_thm
    ++ PSET_TAC [PROB_EMBED_APPEND, PROB_PREMEASURE_APPEND, PROB_PREMEASURE_TLS,
                 REAL_ADD_LDISTRIB, EXTENSION]
    ++ Suff
-      `(prob_premeasure l1 + prob_premeasure l1' = 1) /\
-       (prob_premeasure l2 + prob_premeasure l2' = 1)`
+      `(prob_premeasure b + prob_premeasure l1 = 1) /\
+       (prob_premeasure b' + prob_premeasure l2 = 1)`
    >> REAL_ARITH_TAC
    ++ CONJ_TAC <<
-   [Suff `!v. ~(v IN prob_embed l1) = v IN prob_embed l1'`
+   [Suff `!v. ~(v IN prob_embed b) = v IN prob_embed l1`
     >> PROVE_TAC []
     ++ STRIP_TAC
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons T v`)
     ++ RW_TAC std_ss [PROB_EMBED_TLS, SHD_SCONS, STL_SCONS],
-    Suff `!v. ~(v IN prob_embed l2) = v IN prob_embed l2'`
+    Suff `!v. ~(v IN prob_embed b') = v IN prob_embed l2`
     >> PROVE_TAC []
     ++ STRIP_TAC
     ++ POP_ASSUM (MP_TAC o Q.SPEC `scons F v`)
@@ -816,15 +829,15 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
    ++ HO_MATCH_MP_TAC PROB_CANONICAL_CASES
    ++ CONJ_TAC
    >> (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
-       ++ Suff `d = APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)`
+       ++ Suff `d = APPEND (MAP (CONS T) b) (MAP (CONS F) b')`
        >> RW_TAC real_ss []
        ++ Suff
-          `prob_canon d = prob_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))`
+          `prob_canon d = prob_canon (APPEND (MAP (CONS T) b) (MAP (CONS F) b'))`
        >> PROVE_TAC [prob_canonical_def]
        ++ PSET_TAC [PROB_CANON_REP, EXTENSION])
    ++ CONJ_TAC
    >> (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
-       ++ Suff `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = [[]]`
+       ++ Suff `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = [[]]`
        >> PROVE_TAC [MEM_NIL_STEP, MEM]
        ++ PSET_TAC [GSYM PROB_CANONICAL_EMBED_UNIV, EXTENSION])
    ++ RW_TAC std_ss []
@@ -834,17 +847,17 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
    ++ CONJ_TAC
    >> (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
        ++ Suff
-          `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) =
-           APPEND (MAP (CONS T) l1') (MAP (CONS F) l2')`
+          `APPEND (MAP (CONS T) b) (MAP (CONS F) b') =
+           APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)`
        >> RW_TAC real_ss []
        ++ Suff
-          `prob_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)) =
-           prob_canon (APPEND (MAP (CONS T) l1') (MAP (CONS F) l2'))`
+          `prob_canon (APPEND (MAP (CONS T) b) (MAP (CONS F) b')) =
+           prob_canon (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2))`
        >> PSET_TAC [prob_canonical_def, EXTENSION]
        ++ PSET_TAC [PROB_CANON_REP, EXTENSION])
    ++ CONJ_TAC
    >> (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
-       ++ Suff `APPEND (MAP (CONS T) l1) (MAP (CONS F) l2) = [[]]`
+       ++ Suff `APPEND (MAP (CONS T) b) (MAP (CONS F) b') = [[]]`
        >> PROVE_TAC [MEM_NIL_STEP, MEM]
        ++ PSET_TAC [GSYM PROB_CANONICAL_EMBED_UNIV, EXTENSION])
    ++ RW_TAC std_ss []
@@ -854,22 +867,22 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
    ++ RW_TAC std_ss [REAL_ADD_LDISTRIB, PROB_PREMEASURE_APPEND, PROB_PREMEASURE_TLS,
                      PROB_EMBED_APPEND]
    ++ Suff
-      `(prob_premeasure l1 = prob_premeasure l1' + prob_premeasure l1'') /\
-       (prob_premeasure l2 = prob_premeasure l2' + prob_premeasure l2'')`
-   >> RW_TAC real_ss []
+      `(prob_premeasure b = prob_premeasure l1 + prob_premeasure l1') /\
+       (prob_premeasure b' = prob_premeasure l2 + prob_premeasure l2')`
+   >> (RW_TAC real_ss [] ++ METIS_TAC [REAL_ADD_COMM, REAL_ADD_ASSOC])
    ++ CONJ_TAC <<
    [Suff
-    `(prob_embed l1' INTER prob_embed l1'' = {}) /\
-     (prob_embed l1 = prob_embed l1' UNION prob_embed l1'')`
+    `(prob_embed l1 INTER prob_embed l1' = {}) /\
+     (prob_embed b = prob_embed l1 UNION prob_embed l1')`
     >> (Q.PAT_ASSUM
         `!c.
            prob_canonical c ==>
            !d.
              prob_canonical d ==>
              (prob_embed c INTER prob_embed d = {}) /\
-             (prob_embed l1 = prob_embed c UNION prob_embed d) ==>
-             (prob_premeasure l1 = prob_premeasure c + prob_premeasure d)`
-        (MP_TAC o Q.SPEC `l1'`)
+             (prob_embed b = prob_embed c UNION prob_embed d) ==>
+             (prob_premeasure b = prob_premeasure c + prob_premeasure d)`
+        (MP_TAC o Q.SPEC `l1`)
         ++ RW_TAC std_ss [])
     ++ CONJ_TAC <<
     [POP_ASSUM K_TAC
@@ -885,17 +898,17 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
      ++ RW_TAC std_ss [PROB_EMBED_TLS, STL_SCONS, SHD_SCONS,
                        PROB_EMBED_APPEND, IN_UNION]],
     Suff
-    `(prob_embed l2' INTER prob_embed l2'' = {}) /\
-     (prob_embed l2 = prob_embed l2' UNION prob_embed l2'')`
+    `(prob_embed l2 INTER prob_embed l2' = {}) /\
+     (prob_embed b' = prob_embed l2 UNION prob_embed l2')`
     >> (Q.PAT_ASSUM
         `!c.
            prob_canonical c ==>
            !d.
              prob_canonical d ==>
              (prob_embed c INTER prob_embed d = {}) /\
-             (prob_embed l2 = prob_embed c UNION prob_embed d) ==>
-             (prob_premeasure l2 = prob_premeasure c + prob_premeasure d)`
-        (MP_TAC o Q.SPEC `l2'`)
+             (prob_embed b' = prob_embed c UNION prob_embed d) ==>
+             (prob_premeasure b' = prob_premeasure c + prob_premeasure d)`
+        (MP_TAC o Q.SPEC `l2`)
         ++ RW_TAC std_ss [])
     ++ CONJ_TAC <<
     [POP_ASSUM K_TAC
@@ -1142,17 +1155,17 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
       (MP_TAC o CONV_RULE (SKOLEM_CONV THENC DEPTH_CONV FORALL_AND_CONV))
    ++ RW_TAC std_ss []
    ++ Know
-      `?b1 b2. !x. b x = APPEND (MAP (CONS T) (b1 x)) (MAP (CONS F) (b2 x))`
+      `?b1 b2. !x. b'' x = APPEND (MAP (CONS T) (b1 x)) (MAP (CONS F) (b2 x))`
    >> (Suff
-       `!x. ?b1 b2. b x = APPEND (MAP (CONS T) b1) (MAP (CONS F) b2)`
+       `!x. ?b1 b2. b'' x = APPEND (MAP (CONS T) b1) (MAP (CONS F) b2)`
        >> DISCH_THEN
           (ACCEPT_TAC o CONV_RULE (REDEPTH_CONV (CHANGED_CONV SKOLEM_CONV)))
        ++ RW_TAC std_ss []
-       ++ Q.PAT_ASSUM `!x. f x = prob_embed (b x)` (MP_TAC o Q.SPEC `x`)
+       ++ Q.PAT_ASSUM `!x. f x = prob_embed (b'' x)` (MP_TAC o Q.SPEC `x`)
        ++ Q.PAT_ASSUM `BIGUNION p = q` MP_TAC
        ++ Q.PAT_ASSUM `prob_canonical p` MP_TAC
-       ++ Q.PAT_ASSUM `!x. prob_canonical (b x)` (MP_TAC o Q.SPEC `x`)
-       ++ Q.SPEC_TAC (`b x`, `b`)
+       ++ Q.PAT_ASSUM `!x. prob_canonical (b'' x)` (MP_TAC o Q.SPEC `x`)
+       ++ Q.SPEC_TAC (`b'' x`, `b''`)
        ++ KILL_TAC
        ++ HO_MATCH_MP_TAC PROB_CANONICAL_CASES
        ++ CONJ_TAC
@@ -1164,8 +1177,8 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
        >> (RW_TAC std_ss []
            ++ PROVE_TAC [])
        ++ RW_TAC std_ss [PROB_EMBED_BASIC]
-       ++ Q.EXISTS_TAC `l1`
-       ++ Q.EXISTS_TAC `l2`
+       ++ Q.EXISTS_TAC `b`
+       ++ Q.EXISTS_TAC `b'`
        ++ MATCH_MP_TAC EQ_SYM
        ++ MATCH_MP_TAC PROB_CANONICAL_UNIV
        ++ Q.PAT_ASSUM `BIGUNION p = q` (ASM_REWRITE_TAC o wrap o GSYM)
@@ -1373,7 +1386,7 @@ val PROB_MEASURE_SDROP = store_thm
    ``!n a.
        a IN prob_algebra ==> (prob_measure (a o sdrop n) = prob_measure a)``,
    Induct >> RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
-   ++ RW_TAC std_ss [sdrop_def, o_ASSOC, PROB_MEASURE_STL, PROB_ALGEBRA_SDROP]);
+   ++ RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_MEASURE_STL, PROB_ALGEBRA_SDROP]);
 
 val PROB_PRESERVING_PROB_ALGEBRA_STL = store_thm
   ("PROB_PRESERVING_PROB_ALGEBRA_STL",
@@ -1583,13 +1596,13 @@ val PREFIX_SET_UNFIXED_SDROP = store_thm
    ++ POP_ASSUM MP_TAC
    ++ REPEAT STRIP_TAC
    ++ Q.EXISTS_TAC `scons h s`
-   ++ RW_TAC std_ss [prefix_set_def, IN_INTER, IN_HALFSPACE, IN_o, SHD_SCONS,
+   ++ RW_TAC bool_ss [prefix_set_def, IN_INTER, IN_HALFSPACE, IN_o, SHD_SCONS,
                      STL_SCONS]
    ++ STRIP_TAC
    ++ Q.PAT_ASSUM `~(X = Y)` MP_TAC
    ++ Know `(stl o sdrop (SUC n)) (scons h s) = stl (scons h s)`
    >> RW_TAC std_ss [o_THM]
-   ++ RW_TAC std_ss [STL_o_SDROP]
+   ++ RW_TAC bool_ss [STL_o_SDROP]
    ++ POP_ASSUM MP_TAC
    ++ RW_TAC std_ss [sdrop_def, STL_SCONS, o_THM]);
 
@@ -1598,7 +1611,7 @@ val PREFIX_SET_UNFIXED_STL = store_thm
    ``!l. ?s. s IN prefix_set l /\ ~(stl s = s)``,
    GEN_TAC
    ++ MP_TAC (Q.SPECL [`l`, `0`] PREFIX_SET_UNFIXED_SDROP)
-   ++ RW_TAC std_ss [sdrop_def, I_o_ID]);
+   ++ RW_TAC bool_ss [sdrop_def, I_o_ID]);
 
 val SDROP_APPEND = store_thm
   ("SDROP_APPEND",

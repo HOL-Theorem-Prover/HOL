@@ -1,16 +1,15 @@
-structure congruentScript =
-struct
-
-(* Header for interactive use 
-
-  app load ["numLib", "bossLib", 
-            "gcdTheory", "primeTheory", 
-            "powerTheory", "summationTheory", "dividesTheory"];
- *)
+(* interactive mode
+app load ["bossLib","gcdTheory","powerTheory","summationTheory"];
+quietdec := true;
+*)
 
 open HolKernel Parse boolLib bossLib 
      numLib arithmeticTheory prim_recTheory 
-     gcdTheory primeTheory powerTheory summationTheory dividesTheory;
+     gcdTheory powerTheory summationTheory dividesTheory;
+
+(*
+quietdec := false;
+*)
 
 infix THEN THENC THENL;
 infix 8 by;
@@ -66,8 +65,8 @@ val CONGRUENT_TIMES = store_thm("CONGRUENT_TIMES",
                         THEN  ARW[RIGHT_ADD_DISTRIB] 
                         THEN `a*c + (c' * c) * n = (a+c'*n)*c` 
                           by PROVE_TAC[MULT_ASSOC,MULT_SYM,RIGHT_ADD_DISTRIB]
-                        THEN ARW[] THEN ARW[RIGHT_ADD_DISTRIB]
-                        THEN PROVE_TAC[MULT_SYM,MULT_ASSOC]);
+                        THEN POP_ASSUM MP_TAC
+                        THEN ARW[]);
 
 val CONGRUENT_MULT = store_thm("CONGRUENT_MULT",
 			Term `!a b c d n. congruent a b n /\ congruent c d n
@@ -135,5 +134,3 @@ val CONGRUENT_DIVIDES = store_thm("CONGRUENT_DIVIDES",
                                         DIVIDES_REFL,MULT_SYM]);
 
 val _ = export_theory();
-
-end;

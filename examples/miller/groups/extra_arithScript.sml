@@ -1,25 +1,28 @@
-(* non-interactive mode
-*)
-open HolKernel Parse boolLib;
-val _ = new_theory "extra_arith";
-
 (* interactive mode
 show_assums := true;
-loadPath := union ["../finished"] (!loadPath);
+loadPath := ["../ho_prover","../subtypes","../formalize"] @ !loadPath;
 app load
   ["bossLib", "arithmeticTheory", "dividesTheory", "gcdTheory",
-   "primeTheory", "res_quan2Theory", "pred_setTheory", "subtypeTheory",
+   "pred_setTheory", "subtypeTheory",
    "res_quanTools", "subtypeTools", "ho_proverTools", "numContext",
-   "millerTools", "extra_numTheory", "ho_basicTools",
+   "extra_numTheory", "ho_basicTools",
    "prob_extraTheory"];
 installPP subtypeTools.pp_precontext;
 installPP subtypeTools.pp_context;
+quietdec := true;
 *)
 
-open bossLib arithmeticTheory dividesTheory gcdTheory primeTheory
+open HolKernel Parse boolLib;
+open bossLib arithmeticTheory dividesTheory gcdTheory
      res_quanTheory pred_setTheory subtypeTheory
      res_quanTools subtypeTools ho_proverTools numContext formalizeUseful
      extra_numTheory ho_basicTools;
+
+(* interactive mode
+quietdec := false;
+*)
+
+val _ = new_theory "extra_arith";
 
 infixr 0 ++ << || THENC ORELSEC ORELSER ##;
 infix 1 >>;
@@ -1420,6 +1423,4 @@ val NOT_PRIME_EVEN = store_thm
    ++ Simplify [PRIME_DIVIDES_PRIME]
    ++ PROVE_TAC []);
 
-(* non-interactive mode
-*)
 val _ = export_theory ();
