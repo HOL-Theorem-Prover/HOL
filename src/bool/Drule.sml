@@ -1041,23 +1041,21 @@ fun DISJ_CASES_UNION dth ath bth =
  * to sorting lines them up with the disjuncts in the theorem.
  *---------------------------------------------------------------------------*)
 
-local fun organize eq =    (* a bit slow - analogous to insertion sort *)
-        let fun extract a alist =
-              let fun ex (_,[]) = raise ERR
-                         "DISJ_CASESL.organize" "not a permutation.1"
-                    | ex(left,h::t) =
-                         if eq h a then (h,rev left@t) else ex(h::left,t)
-              in ex ([],alist)
-              end
-            fun place [] [] = []
-               | place (a::rst) alist =
-                  let val (item,next) = extract a alist
-                  in item::place rst next
-                  end
-               | place _ _ = raise ERR
-                    "DISJ_CASESL.organize" "not a permutation.2"
-        in place
-        end
+local 
+ fun organize eq =    (* a bit slow - analogous to insertion sort *)
+  let fun extract a alist =
+       let fun ex(_,[]) = raise ERR "DISJ_CASESL.organize" "not a permutation.1"
+             | ex(left,h::t) = if eq h a then (h,rev left@t) else ex(h::left,t)
+       in ex ([],alist)
+       end
+       fun place [] [] = []
+         | place (a::rst) alist =
+             let val (item,next) = extract a alist
+             in item::place rst next
+             end
+         | place _ _ = raise ERR "DISJ_CASESL.organize" "not a permutation.2"
+  in place
+  end
 in
 fun DISJ_CASESL disjth thl =
  let val (_,c) = dest_thm disjth

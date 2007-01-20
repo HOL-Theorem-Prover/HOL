@@ -545,17 +545,15 @@ fun pp_defn_as_ML openthys ppstrm =
 (* prettyprinter so it generates syntactically correct ML types              *)
 (*---------------------------------------------------------------------------*)
 
-local open type_grammar HOLgrammars
-in
 fun adjust_tygram tygram =
- let val g0 = List.foldl (fn (s,g) => remove_binary_tyop g s)
+ let open type_grammar HOLgrammars
+     val g0 = List.foldl (fn (s,g) => remove_binary_tyop g s)
                          tygram
                          ["+", "#", "|->", "**"]
  in
-    new_binary_tyop g0 {precedence = 70, infix_form = SOME "*",
-                        opname = "prod", associativity = NONASSOC}
- end
-end;
+   new_binary_tyop g0 {precedence = 70, infix_form = SOME "*",
+                       opname = "prod", associativity = NONASSOC}
+ end;
 
 fun prim_pp_type_as_ML tygram tmgram ppstrm ty =
  let val (pp_type,_) = Parse.print_from_grammars
@@ -566,6 +564,20 @@ fun prim_pp_type_as_ML tygram tmgram ppstrm ty =
 fun pp_type_as_ML ppstrm ty =
    prim_pp_type_as_ML (Parse.type_grammar()) (Parse.term_grammar())
                       ppstrm ty ;
+
+(*---------------------------------------------------------------------------*)
+(* Elements of a theory presentation.                                        *)
+(*---------------------------------------------------------------------------*)
+
+datatype elem
+    = DEFN of thm
+    | DEFN_NOSIG of thm
+    | DATATYPE of hol_type quotation
+    | EQDATATYPE of string list * hol_type quotation
+    | ABSDATATYPE of string list * hol_type quotation
+    | OPEN of string list
+    | MLSIG of string
+    | MLSTRUCT of string;
 
 (*---------------------------------------------------------------------------*)
 (* Fetch the constructors out of a datatype declaration                      *)
@@ -583,24 +595,10 @@ fun constrl [] = []
 end;
 
 (*---------------------------------------------------------------------------*)
-(* Elements of a theory presentation.                                        *)
-(*---------------------------------------------------------------------------*)
-
-datatype elem
-    = DEFN of thm
-    | DEFN_NOSIG of thm
-    | DATATYPE of hol_type quotation
-    | EQDATATYPE of string list * hol_type quotation
-    | ABSDATATYPE of string list * hol_type quotation
-    | OPEN of string list
-    | MLSIG of string
-    | MLSTRUCT of string;
-
-(*---------------------------------------------------------------------------*)
-(* Internal version (nearly identical, except that datatype declarations     *)
-(* have been parsed) and some standard definitions from datatypes (e.g. size *)
-(* functions) and record types (accessor and field update functions) are     *)
-(* automatically added.                                                      *)
+(* Internal version of elem (nearly identical, except that datatype          *)
+(* declarations have been parsed) and some standard definitions from         *)
+(* datatypes (e.g. size functions) and record types (accessor and field      *)
+(* update functions) are automatically added.                                *)
 (*---------------------------------------------------------------------------*)
 
 datatype elem_internal
