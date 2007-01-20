@@ -126,6 +126,7 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
  ---------------------------------------------------------------------------*)
 
 val _ = overload_on ("()", ``one``);
+val _ = type_abbrev("unit",``:one``);
 
 
 val one_induction = Q.store_thm
