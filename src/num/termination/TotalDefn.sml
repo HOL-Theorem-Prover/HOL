@@ -5,7 +5,7 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse boolLib pairLib NonRecSize DefnBase;
+open HolKernel Parse boolLib pairLib basicSize DefnBase;
 
 val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
@@ -436,6 +436,16 @@ type apidefn = (defn * thm option, phase * exn) Lib.verdict
 
 
 (*---------------------------------------------------------------------------*)
+(* Turn off printing of messages by the HOL system for the duration of the   *)
+(* invocation of f.                                                          *)
+(*---------------------------------------------------------------------------*)
+
+fun silent f = 
+  Lib.with_flag(Lib.saying,false) 
+   (Lib.with_flag(Feedback.emit_WARNING,false)
+     (Lib.with_flag(Feedback.emit_MESG,false) f));
+
+(*---------------------------------------------------------------------------*)
 (* Parse a quotation. Fail if parsing or type inference or overload          *)
 (* resolution (etc) fail. Also fail if a usable name for the definition      *)
 (* can't be found in the names of the function(s) under definition.          *)
@@ -455,25 +465,44 @@ fun parse_defn_quote q =
   end
 end;
 
+(*---------------------------------------------------------------------------*)
+(* Instantiate the termination conditions of a defn with a relation and      *)
+(* attempt to prove termination. Note that this includes having to prove     *)
+(* that the supplied relation is well-founded.                               *)
+(*---------------------------------------------------------------------------*)
+
 fun tryR tac defn = proveTotal tac o Defn.set_reln defn;
+
+(*---------------------------------------------------------------------------*)
+(* Given a guesser of termination relations and a prover for termination     *)
+(* conditons, try the guesses until the prover succeeds. Return the proved   *)
+(* termination conditions as a theorem, along with the tc-free defn.         *)
+(*---------------------------------------------------------------------------*)
 
 fun elimTCs guessR tac defn = 
  case guessR defn 
    of [] => (defn,NONE)   (* prim. rec. or non-rec. defn *)
     | guesses => (I##SOME) (Lib.tryfind (tryR tac defn) guesses);
  
+(*---------------------------------------------------------------------------*)
+(* Sequence the phases of definition, starting from a stem and a term        *)
+(*---------------------------------------------------------------------------*)
+
 fun apiDefine guessR tprover (stem,tm) = 
   PASS tm ?> verdict (Defn.mk_defn stem) BUILD
           ?> verdict (elimTCs guessR tprover) TERMINATION;
 
-fun silent f = 
-  Lib.with_flag(Lib.saying,false) 
-   (Lib.with_flag(Feedback.emit_WARNING,false)
-     (Lib.with_flag(Feedback.emit_MESG,false) f));
+(*---------------------------------------------------------------------------*)
+(* Sequence the phases of definition, starting from a quotation              *)
+(*---------------------------------------------------------------------------*)
 
 fun apiDefineq guessR tprover q = 
    PASS q ?> verdict (silent parse_defn_quote) PARSE
           ?> apiDefine guessR tprover;
+
+(*---------------------------------------------------------------------------*)
+(* Instantiate to the current guesser and terminator                         *)
+(*---------------------------------------------------------------------------*)
 
 val std_apiDefine = apiDefine guessR TERM_TAC;
 val std_apiDefineq = apiDefineq guessR TERM_TAC;
