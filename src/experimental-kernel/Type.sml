@@ -123,7 +123,7 @@ fun is_type (Tyapp _) = true | is_type _ = false
 
 fun mk_thy_type {Thy, Tyop, Args} =
     case Map.peek(!operator_table, {Thy = Thy, Tyop = Tyop}) of
-      NONE => raise ERR "mk_thy_type" "No such type"
+      NONE => raise ERR "mk_thy_type" ("No such type: "^Thy ^ "$" ^ Tyop)
     | SOME (i as ref {arity,...}) =>
       if arity = length Args then Tyapp(i, Args)
       else raise ERR "mk_thy_type" ("Expecting "^Int.toString arity^
