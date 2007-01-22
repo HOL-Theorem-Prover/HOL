@@ -248,7 +248,7 @@ val LINEAR_GCD_AUX = prove(
   SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) [])
 
 
-val LINEAR_GCD= store_thm(
+val LINEAR_GCD = store_thm(
   "LINEAR_GCD",
   ``!n m. ~(n = 0) ==> ?p q. p * n = q * m + gcd m n``,
   REPEAT STRIP_TAC THEN Cases_on `m=0` THENL [
@@ -297,7 +297,7 @@ val _ = computeLib.add_persistent_funs [("GCD_EFFICIENTLY",GCD_EFFICIENTLY)];
 
 val lcm_def = Define`
   lcm m n = if (m = 0) \/ (n = 0) then 0 else (m * n) DIV gcd m n
-`
+`;
 
 val LCM_IS_LEAST_COMMON_MULTIPLE = store_thm(
   "LCM_IS_LEAST_COMMON_MULTIPLE",
@@ -376,6 +376,20 @@ val LCM_LEAST = store_thm(
   `divides (lcm m n) p` by METIS_TAC [LCM_IS_LEAST_COMMON_MULTIPLE] THEN
   `lcm m n <= p` by METIS_TAC [DIVIDES_LE] THEN
   DECIDE_TAC);
+
+
+val _ = 
+ let open EmitML dividesTheory 
+ in
+  emitML (!Globals.emitMLDir)
+   ("gcd",
+    MLSIG "type num = numML.num"
+    ::
+    OPEN ["num"]
+    ::
+    map DEFN
+        [compute_divides, GCD_EFFICIENTLY, lcm_def])
+ end;
 
 val _ = export_theory();
 

@@ -429,6 +429,8 @@ val numeral_root2 = store_thm("numeral_root2",
 
 Testing:
 
+open reduceLib computeLib;
+
 val compset1 = num_compset();
 
 val _ = add_thms [numeral_root2,numeral_sqrt2,FST,SND,iSQRT0_def,iSQRT1_def,
