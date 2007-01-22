@@ -7,7 +7,7 @@
 # ---------------------------------------------------------------------
 MAKEINDEX=makeindex
 BIBTEX=bibtex
-CHAPTERS = conv.tex drules.tex libraries.tex logic.tex misc.tex \
+CHAPTERS = conv.tex drules.tex libraries.tex misc.tex \
            preface.tex semantics.tex syntax.tex \
            tactics.tex theories.tex title.tex system.tex definitions.tex
 
@@ -20,7 +20,7 @@ description.dvi: description.tex $(CHAPTERS) ../LaTeX/commands.tex
 #	(cd ../Logo ; make)  # makes the lantern logo
 	latex description.tex
 	${MAKEINDEX} description.idx
-	${BIBTEX} description	
+	${BIBTEX} description
 	latex description.tex
 	latex description.tex
 
