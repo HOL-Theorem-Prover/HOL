@@ -25,9 +25,13 @@ fun split_and_check fb s locn = let
   val s0 = String.sub(s, 0)
   fun nadvance n tt =
       if size s = n then ((fn () => advance fb),(tt,locn))
-      else let val (locn',locn'') = locn.split_at n locn in
-        ((fn () => replace_current (BT_Ident (String.extract(s, n, NONE)),locn'') fb),
-         (tt,locn')) end
+      else let
+          val (locn',locn'') = locn.split_at n locn
+        in
+          ((fn () => replace_current (BT_Ident (String.extract(s, n, NONE)),
+                                      locn'') fb),
+           (tt,locn'))
+        end
 in
   if Char.isAlpha s0 then ((fn () => advance fb), (TypeIdent s,locn))
   else if s0 = #"'" then ((fn () => advance fb), (TypeVar s,locn))
@@ -45,11 +49,16 @@ in
     end
 end
 
+fun handle_num numinfo =
+    case numinfo of
+      (num, NONE) => TypeIdent (Arbnum.toString num)
+    | (num, SOME _) => Error (BT_Numeral numinfo)
+
 fun typetok_of fb = let
   val (bt,locn) = current fb
 in
   case bt of
-    BT_Numeral _ => ((fn () => advance fb), (Error bt,locn))
+    BT_Numeral numinfo => ((fn () => advance fb), (handle_num numinfo, locn))
   | BT_QIdent p => ((fn () => advance fb), (QTypeIdent p,locn))
   | BT_AQ x => ((fn () => advance fb), (AQ x,locn))
   | BT_EOI => ((fn () => ()), (Error bt,locn))

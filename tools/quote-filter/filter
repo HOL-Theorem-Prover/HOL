@@ -71,7 +71,7 @@ locpragma = "(*#loc" {ws}+ {digit}* {ws}+ {digit}* {ws}* "*)";
 <INITIAL>")" => (ECHO yytext; dec pardepth;
                  if !antiquote andalso !pardepth < 1 then (yytext,yypos)
                  else lex());
-<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [(']) => (
+<INITIAL>"``" {ws}* ":" ({letter} | {ws} | {newline} | [('] | {digit}) => (
                  print ("(Parse.Type [QUOTE \""^locpragma (yytext,yypos) 2);
                  print (drop_upto #":" yytext);
                  YYBEGIN tyquote;

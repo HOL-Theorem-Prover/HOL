@@ -101,7 +101,9 @@ Alphanumerics are letters or digits or underscores (\ml{\_}) or primes
 A \emph{number} is a string of one or more digits. In order to
 distinguish different kinds of numbers a single character suffix may
 be used: for example \verb+3n+ is a natural number while \verb+3i+ is
-an integer.
+an integer.  Numbers are treated specially by both the term and type
+parsers, and are not simple identifiers.  Rather, they encode
+composite objects.
 \index{variables, in HOL logic@variables, in \HOL{} logic!names of|)}
 
 

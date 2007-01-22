@@ -15,6 +15,27 @@ datatype single_rule
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
+fun dest_numtype ty = let
+  open Arbnum
+  val _ = (* exception: don't print :one as one *)
+      let val {Thy,Tyop,Args} = dest_thy_type ty
+      in
+        if Thy = "one" andalso Tyop = "one" then raise mk_HOL_ERR "" "" ""
+        else ()
+      end
+  fun recurse (base, acc) ty = let
+    val {Thy,Tyop,Args} = dest_thy_type ty
+  in
+    case (Thy,Tyop) of
+      ("one", "one") => acc + base
+    | ("fcp", "bit1") => recurse (two * base, acc + base) (hd Args)
+    | ("fcp", "bit0") => recurse (two * base, acc) (hd Args)
+    | _ => raise mk_HOL_ERR "" "" ""
+  end
+in
+  toString (recurse (one, zero) ty)
+end
+
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
     fun recurse [] = NONE
@@ -45,6 +66,11 @@ fun pp_type0 (G:grammar) = let
     else
       if is_vartype ty then add_string (dest_vartype ty)
       else let
+          val s = dest_numtype ty
+        in
+          add_string s
+        end handle HOL_ERR _ =>
+        let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty
           fun print_args grav0 args = let
             val parens_needed = case Args of [_] => false | _ => true

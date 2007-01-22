@@ -58,13 +58,47 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     recurse [i1]
   end
 
+  fun is_numeric s = let
+    val lim = size s
+    fun recurse n =
+        n >= lim orelse (Char.isDigit (String.sub(s,n)) andalso
+                         recurse (n + 1))
+  in
+    recurse 0
+  end
+
+  fun generate_fcpbit ((s,locn), args) = let
+    val _ = null args orelse raise ERRloc locn "Number types take no arguments"
+    val n = Arbnum.fromString s
+    val _ = n <> Arbnum.zero orelse
+            raise ERRloc locn "Zero is not a valid number type"
+    fun recurse acc m =
+        if m = Arbnum.one then acc
+        else let
+            val (q,r) = Arbnum.divmod(m,Arbnum.two)
+          in
+            recurse ((r = Arbnum.one) :: acc) q
+          end
+    fun bit b arg = qtyop {Thy = "fcp", Tyop = if b then "bit1" else "bit0",
+                           Locn = locn, Args = [arg]}
+    fun build acc bits =
+        case bits of
+          [] => acc
+        | b :: rest => build (bit b acc) rest
+    val one = qtyop {Thy = "one", Tyop = "one", Locn = locn, Args = []}
+  in
+    build one (recurse [] n)
+  end
+
   fun apply_tyop (t,locn) args =
     case t of
       TypeIdent s => let
       in
-        case Binarymap.peek(abbrevs, s) of
-          NONE => pType((s,locn),args)
-        | SOME st => structure_to_value (s,locn) args st
+        if is_numeric s then generate_fcpbit((s,locn), args)
+        else
+          case Binarymap.peek(abbrevs, s) of
+            NONE => pType((s,locn),args)
+          | SOME st => structure_to_value (s,locn) args st
       end
     | QTypeIdent(thy,ty) => qtyop{Thy=thy,Tyop=ty,Locn=locn,Args=args}
     | _ => raise Fail "parse_type.apply_tyop: can't happen"
