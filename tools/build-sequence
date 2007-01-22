@@ -98,3 +98,10 @@ src/word/src
 src/Boolify/src
 src/float
 src/fxp
+!!examples/miller/ho_prover
+!!examples/miller/subtypes
+!!examples/miller/RSA
+!!examples/miller/formalize
+!!examples/miller/prob
+!!examples/miller/groups
+!!examples/miller/miller
