@@ -2089,7 +2089,7 @@ approach comes from an idea of John Harrison, which was presented at TPHOLs
 2005.\footnote{The current theory subsumes a previous $n$-bit word theory,
 which employed an equivalence class construction.  The principle advantage of
 the new theory is that there is just one theory for all word sizes. Thus, it is
-no longer necessary to build a entirely new theory (with new constants and
+no longer necessary to build an entirely new theory (with new constants and
 operations) for each word size that is required.}
 
 Wai Wong's theory \theoryimp{word} should be used when working with different
@@ -2153,25 +2153,14 @@ are identical to that of \holtxt{x}.
 These two theorems, together with \ml{CART\_EQ}, can be found in the
 \emph{simpset} fragment \ml{fcpLib.FCP\_ss}.
 
-The library \theoryimp{fcpLib} also provides a function \ml{mk\_index\_type},
-which is used to introduce types of a given size into the logic.\footnote{Note
-that  \ml{mk\_index\_type} can only be used to create \emph{one} type for a given
-size \ie{} it cannot be called twice to create two distinct types of size 128.}
- For example, \ml{mk\_index\_type 128} introduces the type \ty{i128} and the
-theorems:
-\begin{hol}
-\begin{verbatim}
-finite_128:   |- FINITE (UNIV :i128 set)
-dimindex_128: |- dimindex (:i128) = 128 .
-\end{verbatim}
-\end{hol}
-
 Finite Cartesian products provide a good means to model $n$-bit words.  That is
 to say, the type \fcp{bool}{'a} can represent a binary word whose length
 corresponds with the size of the type \ty{'a}.  The binder \holtxt{FCP}
 provides a flexible means for defining words -- one can supply a function
 \holtxt{f:\num\rarr\bool} which gives the word's value at each bit position and
 then each bit can be accessed using the indexing map \holtxt{\%\%}.
+
+Numeral type names are supported, so one can freely work with indexing sets of any size \eg{} the type \ty{32} has thirty-two elements.
 
 \subsubsection{Bit Theory}
 
@@ -2197,10 +2186,10 @@ a mechanism for the efficient evaluation of some word operations via the theory
 The theory \theoryimp{words} introduces types for a selection of
 standard word sizes \eg{} \ty{word8} and \ty{word32}.  Any additional
 word types can be introduced, as needed, with the function
-\ml{wordsLib.mk\_word\_size}.  Each word type is an abbreviation for
-\fcp{bool}{iN}, where $N$ is the word length; for example, with type
+\ml{wordsLib.mk\_word\_size}.  Each word type is simply an abbreviation for
+\fcp{bool}{N}, where $N$ is the word length; for example, with type
 abbreviation printing turned off, \ty{word32} will print as
-\fcp{bool}{i32}.
+\fcp{bool}{32}.  One can also use the notation \ty{N word} e.g. \ty{128 word}.
 
 A selection of polymorphic constants and operations are defined -- these can
 then be type instantiated for any given word size.  For example, word addition
@@ -2209,7 +2198,7 @@ has type:
 +:\worda\rarr\worda\rarr\worda
 \end{hol}
 where the notation \worda is used to denote \fcp{bool}{'a}. If \ty{'a} is
-instantiated to \ty{i32} then this operation corresponds with 32-bit addition.
+instantiated to \ty{32} then this operation corresponds with 32-bit addition.
 All theorems about word operations apply for any word length.\footnote{Note
 that it is not possible to introduce words of length zero because all types
 must be inhabited, and hence their size will always be greater than or equal to
@@ -2262,7 +2251,7 @@ to the result of
 illustrated in Figure~\ref{fig:concat}.  The word-to-word conversion is needed
 because although the type $\alpha+\beta$ is of exactly the right size, it is
 often not the intended type \eg{} the type \ty{word32} will be preferred to
-\mbox{\ty{bool}\,\holtxt{**}\,(\ty{i16}+\ty{i16})}.
+\mbox{\ty{bool}\,\holtxt{**}\,(\ty{16}+\ty{16})}.
 
 \begin{figure}
 \begin{center}
@@ -2456,7 +2445,7 @@ pretty-printing.
 > val it = |- 0b1011w @@ 0b10w = 0b101110w : thm
 - base_tokens.allow_octal_input:=true;
 > val it = () : unit
-- wordsLib.pp_word (fn x => if Type.compare(x,``:i32``) = EQUAL then
+- wordsLib.pp_word (fn x => if Type.compare(x,``:32``) = EQUAL then
                            StringCvt.HEX else StringCvt.DEC);
 > val it = () : unit
 - EVAL ``(word_log2 ## I) (66w:word32,044w:word8)``;
