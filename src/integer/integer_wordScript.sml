@@ -29,19 +29,19 @@ val INT_MIN_def = Define`
 
 val INT_MAX_32 = store_thm(
   "INT_MAX_32",
-  ``INT_MAX (:i32) = 2147483647``,
+  ``INT_MAX (:32) = 2147483647``,
   SRW_TAC [][INT_MAX_def, dimindex_32, wordsTheory.INT_MIN_def]);
 val _ = export_rewrites ["INT_MAX_32"]
 
 val INT_MIN_32 = store_thm(
   "INT_MIN_32",
-  ``INT_MIN (:i32) = ~2147483648``,
+  ``INT_MIN (:32) = ~2147483648``,
   SRW_TAC [][INT_MIN_def]);
 val _ = export_rewrites ["INT_MIN_32"]
 
 val UINT_MAX_32 = store_thm(
   "UINT_MAX_32",
-  ``UINT_MAX (: i32) = 4294967295``,
+  ``UINT_MAX (: 32) = 4294967295``,
   SRW_TAC [][UINT_MAX_def, dimindex_32, dimword_def]);
 val _ = export_rewrites ["UINT_MAX_32"]
 

@@ -16,20 +16,17 @@ fun dimindex t =
   | Tyop ("bit1", [a])    => numML.BIT1 (dimindex a)
   | Tyop ("sum", [a, b])  => numML.+ (dimindex a) (dimindex b)
   | Tyop ("prod", [a, b]) => numML.* (dimindex a) (dimindex b)
-  | Tyop (x, [])          => (if String.sub(x,0) = #"i" then
-                                numML.fromString(String.extract(x,1,NONE))
-                              else
-                                raise IndexUndefined)
+  | Tyop (x, [])          => numML.fromString x
   | _ => raise IndexUndefined
 
-fun index_type n = Tyop("i" ^ Int.toString n, []);
+fun index_type n = Tyop(Int.toString n, []);
 
 local
   open numML Redblackmap
   val index_list = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64]
   
   fun index_dict f =
-         List.foldl (fn (n, d) => insert(d,"i" ^ Int.toString n, f n))
+         List.foldl (fn (n, d) => insert(d,Int.toString n, f n))
                     (mkDict String.compare) index_list
 
   val dict_INT_MIN = index_dict (fn n => EXP TWO (fromInt (Int.-(n, 1))))
