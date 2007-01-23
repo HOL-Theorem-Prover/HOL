@@ -70,7 +70,7 @@ val _ = set_fixity ":-" (Infixr 325);
 
 val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
 
-val Rg = inst [alpha |-> ``:i32``, beta |-> ``:i4``] word_extract_tm;
+val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] word_extract_tm;
 
 val USER_def = Define `USER mode = (mode = usr) \/ (mode = safe)`;
 

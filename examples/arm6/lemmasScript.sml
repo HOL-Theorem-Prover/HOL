@@ -183,7 +183,7 @@ val ONE_COMP_THREE_ADD = store_thm("ONE_COMP_THREE_ADD",
     \\ EVAL_TAC);
 
 val REGISTER_RANGES =
-  (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:i4``]) w2n_lt;
+  (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt;
 
 val SUBST_EQ2 = store_thm("SUBST_EQ2",
   `!m a. (a :- m a) m = m`,
@@ -338,7 +338,7 @@ val DECODE_INST_STM = store_thm("DECODE_INST_STM",
 (* ------------------------------------------------------------------------- *)
 
 val n2w_mod32 = (REWRITE_RULE [dimword_def,dimindex_32] o
-  Thm.INST_TYPE [alpha |-> ``:i32``]) n2w_mod;
+  Thm.INST_TYPE [alpha |-> ``:32``]) n2w_mod;
 
 val ALUOUT_ALU_logic = store_thm("ALUOUT_ALU_logic",
   `!a. SND (ALU_logic a) = a`,

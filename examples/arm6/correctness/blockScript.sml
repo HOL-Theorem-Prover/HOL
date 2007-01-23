@@ -296,7 +296,7 @@ val IN_LDM_STM =
   SIMP_CONV (std_ss++pred_setSimps.PRED_SET_ss) [] ``ic IN {ldm; stm}``;
 
 val INST_16 =
-  SIMP_RULE (bool_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:i16``];
+  SIMP_RULE (bool_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:16``];
 
 val REGISTER_LIST_LEM = prove(
   `!ic x list:word16.
@@ -414,7 +414,7 @@ val REGISTER_LIST_THM = store_thm("REGISTER_LIST_THM",
 val RP_LT_16 = store_thm("RP_LT_16",
   `!x ic list mask. w2n (RP ic list mask) < 16`,
   PROVE_TAC [(SIMP_RULE (std_ss++SIZES_ss) [] o
-    Thm.INST_TYPE [alpha |-> ``:i4``]) w2n_lt]);
+    Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt]);
 
 val LENGTH_TL_GENLIST = prove(
   `!n f. LENGTH (TL (GENLIST f (n + 1))) = n`,

@@ -285,7 +285,7 @@ val AREGN1_BIJ = store_thm("AREGN1_BIJ",
         w2n (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2)`,
   SIMP_TAC std_ss [GSYM exception2num_num2exception,
     (SIMP_RULE (std_ss++SIZES_ss) [] o
-     Thm.INST_TYPE [alpha |-> ``:i3``]) w2n_lt]);
+     Thm.INST_TYPE [alpha |-> ``:3``]) w2n_lt]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -302,7 +302,7 @@ val num2exception_word3 = store_thm("num2exception_word3",
    (!aregn:word3. (num2exception (w2n aregn) = interrupt) = (aregn = 6w)) /\
     !aregn:word3. (num2exception (w2n aregn) = fast)      = (aregn = 7w)`,
   REPEAT STRIP_TAC \\ `w2n aregn < 8`
-    by PROVE_TAC [w2n_lt,EVAL ``dimword (:i3)``]
+    by PROVE_TAC [w2n_lt,EVAL ``dimword (:3)``]
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss)
          [num2exception_thm,exception_EQ_exception,exception2num_thm,
           GSYM w2n_11,w2n_n2w,LESS_THM]);
@@ -310,7 +310,7 @@ val num2exception_word3 = store_thm("num2exception_word3",
 val INTERRUPT_ADDRESS = store_thm("INTERRUPT_ADDRESS",
   `!aregn2:word3. n2w (4 * exception2num (num2exception (w2n aregn2))) =
        4w:word32 * w2w aregn2`,
-  STRIP_TAC \\ `w2n aregn2 < 8` by PROVE_TAC [w2n_lt,EVAL ``dimword (:i3)``]
+  STRIP_TAC \\ `w2n aregn2 < 8` by PROVE_TAC [w2n_lt,EVAL ``dimword (:3)``]
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss)
          [word_mul_def,w2n_w2w,w2n_n2w,exception2num_num2exception]);
 
