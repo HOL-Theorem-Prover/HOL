@@ -2,7 +2,10 @@ signature fcpLib =
 sig
     include Abbrev
 
-    val index_type    : int -> hol_type
-    val mk_index_type : int -> thm * thm * thm
+    val index_type    : Arbnum.num -> hol_type
+    val INDEX_CONV    : conv
+    val DIMINDEX      : Arbnum.num -> thm
+    val FINITE        : Arbnum.num -> thm
+    val SIZE          : Arbnum.num -> thm
     val FCP_ss        : simpLib.ssfrag
 end

@@ -18,6 +18,17 @@ val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
 val SIZES_ss = rewrites machine_sizes;
 
+val sizes_comp = new_compset machine_sizes;
+
+fun SIZES_CONV t = CHANGED_CONV (CBV_CONV sizes_comp) t
+  handle HOL_ERR _ =>
+    let val x = (PURE_REWRITE_CONV [INT_MIN_def, dimword_IS_TWICE_INT_MIN]
+                   THENC fcpLib.INDEX_CONV) t
+        val _ = add_thms [x] sizes_comp
+    in
+      x
+    end;
+
 fun NUM_RULE l n x =
   let val y = SPEC_ALL x
   in CONJ
@@ -28,7 +39,7 @@ fun NUM_RULE l n x =
 val MOD_WL = 
   (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (ONCE_REWRITE_CONV [GSYM n2w_mod]))));
 
-val thms = machine_sizes @
+val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SIGN_EXTEND_def, SBIT_def,
    DIVMOD_2EXP, NUMERAL_DIV_2EXP, NUMERAL_TIMES_2EXP,
@@ -68,28 +79,35 @@ end;
 fun words_compset () =
   let val compset = reduceLib.num_compset()
       val _ = add_thms thms compset
+      val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) compset
+      val _ = add_conv(``dimword:'a itself -> num``, 1, SIZES_CONV) compset
+      val _ = add_conv(``INT_MIN:'a itself -> num``, 1, SIZES_CONV) compset
 in
   compset
 end;
 
-val _ = add_thms thms computeLib.the_compset;
-
-fun mk_index_size n = (fcpLib.mk_index_type n;());
+val _ = add_thms thms the_compset;
+val _ = add_conv(``dimindex:'a itself -> num``, 1, SIZES_CONV) the_compset;
+val _ = add_conv(``dimword:'a itself -> num``, 1, SIZES_CONV) the_compset;
+val _ = add_conv(``INT_MIN:'a itself -> num``, 1, SIZES_CONV) the_compset;
 
 fun mk_word_size n =
-  let val (_, _, dimindex_thm) = fcpLib.mk_index_type n
-      val sn = Int.toString n
-      val ityp = mk_type("i"^sn, [])
-      val TYPE = mk_type("cart", [bool, ityp])
-      val INT_MIN = save_thm("INT_MIN_" ^ sn,
-                  (SIMP_RULE std_ss [dimindex_thm] o
-                   Thm.INST_TYPE [``:'a`` |-> ityp]) INT_MIN_def)
-      val dimword = save_thm("dimword_" ^ sn,
-                  (SIMP_RULE std_ss [INT_MIN] o
-                   Thm.INST_TYPE [``:'a`` |-> ityp]) dimword_IS_TWICE_INT_MIN)
-      val _ = add_thms [INT_MIN,dimword] computeLib.the_compset
+  let val N = Arbnum.fromInt n
+      val SN = Int.toString n
+      val typ = fcpLib.index_type N
+      val TYPE = mk_type("cart", [bool, typ])
+      val dimindex = fcpLib.DIMINDEX N
+      val finite = fcpLib.FINITE N
+      val _ = save_thm("dimindex_" ^ SN, dimindex)
+      val _ = save_thm("finite_" ^ SN, finite)
+      val INT_MIN = save_thm("INT_MIN_" ^ SN,
+                     (SIMP_RULE std_ss [dimindex] o
+                      Thm.INST_TYPE [``:'a`` |-> typ]) INT_MIN_def)
+      val dimword = save_thm("dimword_" ^ SN,
+                     (SIMP_RULE std_ss [INT_MIN] o
+                      Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
   in
-    type_abbrev("word"^sn, TYPE)
+    type_abbrev("word" ^ SN, TYPE)
   end;
 
 val WORDS_CONV = CBV_CONV (words_compset());

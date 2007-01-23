@@ -2318,18 +2318,22 @@ val WORD_SUB_LE = store_thm("WORD_SUB_LE",
 val sizes = [2, 3, 4, 5, 6, 7, 8, 12, 16, 20, 24, 28, 30, 32, 64];
 
 fun mk_word_size n =
-  let val (_, _, dimindex_thm) = fcpLib.mk_index_type n
-      val ityp = fcpLib.index_type n
-      val N = Int.toString n
-      val TYPE = mk_type("cart", [bool, ityp])
-      val INT_MIN = save_thm("INT_MIN_" ^ N,
-                  (SIMP_RULE std_ss [dimindex_thm] o
-                   Thm.INST_TYPE [``:'a`` |-> ityp]) INT_MIN_def)
-      val dimword = save_thm("dimword_" ^ N,
-                  (SIMP_RULE std_ss [INT_MIN] o
-                   Thm.INST_TYPE [``:'a`` |-> ityp]) dimword_IS_TWICE_INT_MIN)
+  let val N = Arbnum.fromInt n
+      val SN = Int.toString n
+      val typ = fcpLib.index_type N
+      val TYPE = mk_type("cart", [bool, typ])
+      val dimindex = fcpLib.DIMINDEX N
+      val finite = fcpLib.FINITE N
+      val _ = save_thm("dimindex_" ^ SN, dimindex)
+      val _ = save_thm("finite_" ^ SN, finite)
+      val INT_MIN = save_thm("INT_MIN_" ^ SN,
+                     (SIMP_RULE std_ss [dimindex] o
+                      Thm.INST_TYPE [``:'a`` |-> typ]) INT_MIN_def)
+      val dimword = save_thm("dimword_" ^ SN,
+                     (SIMP_RULE std_ss [INT_MIN] o
+                      Thm.INST_TYPE [``:'a`` |-> typ]) dimword_IS_TWICE_INT_MIN)
   in
-    type_abbrev("word" ^ N, TYPE)
+    type_abbrev("word" ^ SN, TYPE)
   end;
 
 val _ = List.app mk_word_size sizes;

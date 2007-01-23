@@ -6,7 +6,6 @@ sig
 
     val SIZES_ss      : simpLib.ssfrag
 
-    val mk_index_size : int -> unit
     val mk_word_size  : int -> unit
 
     val WORDS_CONV    : conv
