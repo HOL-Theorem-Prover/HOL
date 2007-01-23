@@ -33,7 +33,7 @@ val PSR_CONV =
 
 val DIMINDEX4 =
   SIMP_RULE std_ss [dimindex_4,dimword_4] o
-  INST_TYPE [`:'a` |-> `:i4`];
+  INST_TYPE [`:'a` |-> `:4`];
 
 val wrd_ss = std_ss ++ rewrites [DIMINDEX4 word_ls_n2w,DIMINDEX4 n2w_11];
 

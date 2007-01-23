@@ -20,14 +20,14 @@ fun mk_bool b = if b then T else F;
 
 fun mk_word t n = mk_n2w(numLib.mk_numeral n, t);
 
-val mk_word3 = mk_word ``:i3``;
-val mk_word4 = mk_word ``:i4``;
-val mk_word5 = mk_word ``:i5``;
-val mk_word8 = mk_word ``:i8``;
-val mk_word12 = mk_word ``:i12``;
-val mk_word16 = mk_word ``:i16``;
-val mk_word24 = mk_word ``:i24``;
-val mk_word32 = mk_word ``:i32``;
+val mk_word3 = mk_word ``:3``;
+val mk_word4 = mk_word ``:4``;
+val mk_word5 = mk_word ``:5``;
+val mk_word8 = mk_word ``:8``;
+val mk_word12 = mk_word ``:12``;
+val mk_word16 = mk_word ``:16``;
+val mk_word24 = mk_word ``:24``;
+val mk_word32 = mk_word ``:32``;
 
 fun mk_register (NReg n) = (mk_word4 o Arbnum.fromInt o register2int) n
   | mk_register (VReg x) = mk_var (x, ``:word4``);
@@ -397,14 +397,14 @@ fun arm_to_term (i as Instruction (x,c)) =
 (* ------------------------------------------------------------------------- *)
 
 fun index_size t = let open Arbnum in
-   if t = ``:i3`` then fromInt 8 else
-   if t = ``:i4`` then fromInt 16 else
-   if t = ``:i5`` then fromInt 32 else
-   if t = ``:i8`` then fromInt 256 else
-   if t = ``:i12`` then fromInt 4096 else
-   if t = ``:i16`` then fromInt 65536 else
-   if t = ``:i24`` then fromInt 16777216 else
-   if t = ``:i32`` then fromString "4294967296" else
+   if t = ``:3`` then fromInt 8 else
+   if t = ``:4`` then fromInt 16 else
+   if t = ``:5`` then fromInt 32 else
+   if t = ``:8`` then fromInt 256 else
+   if t = ``:12`` then fromInt 4096 else
+   if t = ``:16`` then fromInt 65536 else
+   if t = ``:24`` then fromInt 16777216 else
+   if t = ``:32`` then fromString "4294967296" else
     raise ERR "index_mod_size" "unknown word size"
 end;
 

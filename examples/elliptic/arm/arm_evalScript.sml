@@ -13,7 +13,7 @@
 
 open HolKernel boolLib Parse bossLib;
 open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open bsubstTheory armTheory instructionTheory;
+open bsubstTheory armTheory systemTheory instructionTheory;
 
 val _ = new_theory "arm_eval";
 
@@ -181,7 +181,7 @@ val BSb_RULE = store_thm("BSb_RULE", tm2,
 (* ------------------------------------------------------------------------- *)
 
 val REGISTER_RANGES =
-  (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:i4``]) w2n_lt;
+  (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt;
 
 val mode_reg2num_15 = (GEN_ALL o
   SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o

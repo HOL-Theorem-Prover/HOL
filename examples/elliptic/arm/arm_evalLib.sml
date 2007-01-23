@@ -11,13 +11,14 @@ struct
 
 (* interactive use:
   app load ["wordsLib", "computeLib", "pred_setSimps", "arm_evalTheory",
-            "assemblerML", "instructionTheory", "instructionSyntax"];
+            "systemTheory", "assemblerML", "instructionTheory",
+            "instructionSyntax"];
 *)
 
 open HolKernel boolLib bossLib;
 open Q Parse computeLib pairTheory wordsTheory wordsSyntax
      optionTheory rich_listTheory armTheory arm_evalTheory
-     bsubstTheory instructionTheory instructionSyntax assemblerML;
+     bsubstTheory systemTheory instructionTheory instructionSyntax assemblerML;
 
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
@@ -47,7 +48,7 @@ val EXTRACT_RULE1 = SIMP_RULE std_ss [w2w_def,word_extract_def];
 val EXTRACT_RULE2 = CONV_RULE (CBV_CONV (wordsLib.words_compset()));
 
 fun arm_compset () = add_rws wordsLib.words_compset
-  [FST,SND,SUC_RULE EL,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,
+  [FST,SND,SUC_RULE EL,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,APPEND,APPEND_NIL,
    SUC_RULE rich_listTheory.GENLIST,rich_listTheory.SNOC,
    SUC_RULE rich_listTheory.FIRSTN,combinTheory.K_THM,
    register_EQ_register,num2register_thm,register2num_thm,
@@ -96,6 +97,14 @@ fun arm_compset () = add_rws wordsLib.words_compset
    transfer_options_accfupds, transfer_options_fupdfupds,
    transfer_options_literal_11, transfer_options_fupdfupds_comp,
    transfer_options_fupdcanon, transfer_options_fupdcanon_comp,
+   arm_output_accessors, arm_output_updates_eq_literal,
+   arm_output_accfupds, arm_output_fupdfupds, arm_output_literal_11,
+   arm_output_fupdfupds_comp, arm_output_fupdcanon,
+   arm_output_fupdcanon_comp,
+   bus_accessors, bus_updates_eq_literal,
+   bus_accfupds, bus_fupdfupds, bus_literal_11,
+   bus_fupdfupds_comp, bus_fupdcanon,
+   bus_fupdcanon_comp,
    regs_case_def,shift_case_def,
 
    DECODE_BRANCH_THM,DECODE_DATAP_THM,DECODE_MRS_THM,
@@ -147,18 +156,19 @@ fun arm_compset () = add_rws wordsLib.words_compset
    THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,
    option_case_ID,option_case_SOME_ID,
    option_case_def,SOME_11,NOT_SOME_NONE,PROJ_IF_FLAGS_def,
-   RUN_ARM_def,NEXT_ARM_def,OUT_ARM_def];
+   RUN_ARM_def,NEXT_ARM_def,
+   SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] OUT_ARM_def];
 
 fun arm_eval_compset () =
   add_rws arm_compset
-    [arm_mem_state_accessors, arm_mem_state_updates_eq_literal,memop_case_def,
-     arm_mem_state_accfupds, arm_mem_state_fupdfupds, arm_mem_state_literal_11,
-     arm_mem_state_fupdfupds_comp, arm_mem_state_fupdcanon,
-     arm_mem_state_fupdcanon_comp,
+    [arm_sys_state_accessors, arm_sys_state_updates_eq_literal,memop_case_def,
+     arm_sys_state_accfupds, arm_sys_state_fupdfupds, arm_sys_state_literal_11,
+     arm_sys_state_fupdfupds_comp, arm_sys_state_fupdcanon,
+     arm_sys_state_fupdcanon_comp,
      ADDR30_def,SET_BYTE_def,SET_HALF_def,BSUBST_EVAL,TRANSFER_def,
      MEM_WRITE_BYTE_def,MEM_WRITE_HALF_def,MEM_WRITE_WORD_def,
      MEM_WRITE_def,TRANSFERS_def,
-     SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARM_MEM_def];
+     SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARM_MEM];
 
 val ARM_CONV = CBV_CONV (arm_eval_compset());
 val ARM_RULE = CONV_RULE ARM_CONV;
@@ -253,8 +263,8 @@ end;
 (* ------------------------------------------------------------------------- *)
 (* Syntax *)
 
-fun mk_word30 n = mk_n2w(numSyntax.mk_numeral n,``:i30``);
-fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:i32``);
+fun mk_word30 n = mk_n2w(numSyntax.mk_numeral n,``:30``);
+fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:32``);
 
 fun eval_word t = (numSyntax.dest_numeral o rhsc o FOLD_SUBST_CONV o mk_w2n) t;
 
@@ -462,7 +472,7 @@ type arm_state = {mem : term, psrs : term, reg : term, undef : term};
 fun dest_arm_eval t =
   case snd (TypeBase.dest_record t) of
      [("registers", reg), ("psrs", psrs),
-      ("memory", mem), ("undefined", undef)] =>
+      ("memory", mem), ("undefined", undef),("cp_registers", cp_reg)] =>
          {mem = mem, reg = reg, psrs = psrs, undef = undef}
   | _ => raise ERR "dest_arm_eval" "";
 
@@ -643,7 +653,8 @@ fun init m r s =
     subst [``mem:mem`` |-> m, ``registers:registers`` |-> r,
            ``psrs:psrs`` |-> s])
    ``STATE_ARM_MEM 0 <| registers := registers; psrs :=  psrs;
-                        memory := mem; undefined := F |>``;
+                        memory := mem; undefined := F;
+                        cp_registers := empty_all_cp_registers |>``;
 
 val NEXT_ARM_CONV =
   ARM_CONV THENC
@@ -654,7 +665,11 @@ val NEXT_ARM_CONV =
 
 fun next t =
   let val t' = (NEXT_ARM_CONV o
-                subst [``s:arm_mem_state`` |-> rhsc t]) ``NEXT_ARM_MEM s``
+                subst [``s:(one, one, one, one, one, one, one, one,
+                            one, one, one, one, one, one, one) arm_sys_state``
+                         |-> rhsc t])
+                 ``NEXT_ARM_MEM (s:(one, one, one, one, one, one, one, one,
+                            one, one, one, one, one, one, one) arm_sys_state)``
   in
      numLib.REDUCE_RULE (MATCH_MP STATE_ARM_MEM_NEXT (CONJ t t'))
   end;

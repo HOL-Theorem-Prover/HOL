@@ -388,9 +388,9 @@ local
 in
   fun print_state fname state count =
     let val ostrm = TextIO.openOut fname
-        val reg = armML.arm_mem_state_registers state
-        val psr = armML.arm_mem_state_psrs state
-        val mem = armML.arm_mem_state_memory state
+        val reg = armML.arm_sys_state_registers state
+        val psr = armML.arm_sys_state_psrs state
+        val mem = armML.arm_sys_state_memory state
         val items = bsubstML.mem_items mem
     in
       TextIO.output(ostrm,"Instuctions Run:" ^ Int.toString count ^ "\n");
@@ -434,12 +434,12 @@ fun reg_updates reg1 reg2 =
 
 fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
   if Wireg orelse Wreg orelse Wmem orelse Wflags orelse Wmode then
-    let val reg1 = armML.arm_mem_state_registers s
-        val reg2 = armML.arm_mem_state_registers ns
-        val mem1 = armML.arm_mem_state_memory s
-        val mem2 = armML.arm_mem_state_memory ns
-        val cpsr1 = armML.CPSR_READ (armML.arm_mem_state_psrs s)
-        val cpsr2 = armML.CPSR_READ (armML.arm_mem_state_psrs ns)
+    let val reg1 = armML.arm_sys_state_registers s
+        val reg2 = armML.arm_sys_state_registers ns
+        val mem1 = armML.arm_sys_state_memory s
+        val mem2 = armML.arm_sys_state_memory ns
+        val cpsr1 = armML.CPSR_READ (armML.arm_sys_state_psrs s)
+        val cpsr2 = armML.CPSR_READ (armML.arm_sys_state_psrs ns)
         val (nzcv1, (i1, (f1, m1))) = armML.DECODE_PSR cpsr1
         val (nzcv2, (i2, (f2, m2))) = armML.DECODE_PSR cpsr2
 
@@ -532,7 +532,7 @@ fun STATE_ARM_MEM n s =
         val ns = armML.NEXT_ARM_MEM s
         val _ = printer watches (!count) s ns
     in
-      if armML.arm_mem_state_undefined s then
+      if armML.arm_sys_state_undefined s then
         ns
       else
         STATE_ARM_MEM (n - 1) ns
@@ -566,7 +566,8 @@ val cpsr = armML.SET_NZCV (#N e,(#Z e,(#C e,#V e)))
 
 val psr = armML.CPSR_WRITE (#psr e) cpsr;
 
-val init_state = armML.arm_mem_state (#reg e, psr, init_mem, false);
+val init_state = armML.arm_sys_state
+   (#reg e, psr, init_mem, false, armML.empty_all_cp_registers);
 
 val final_state = time (STATE_ARM_MEM (#cycles e)) init_state;
 

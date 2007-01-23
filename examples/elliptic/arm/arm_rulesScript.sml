@@ -7,12 +7,12 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsLib", "armLib", "arm_evalTheory"];
+  app load ["systemTheory", "wordsLib", "armLib", "arm_evalTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
 open Q arithmeticTheory bitTheory wordsTheory wordsLib;
-open bsubstTheory armTheory arm_evalTheory;
+open bsubstTheory armTheory systemTheory arm_evalTheory;
 
 val _ = new_theory "arm_rules";
 
@@ -36,11 +36,11 @@ fun UNABBREVL_RULE l t =
 (* ------------------------------------------------------------------------- *)
 
 val MOD_0 =
-  (GSYM o REWRITE_RULE [ZERO_LT_dimword] o SPEC `dimword (:i32)`) ZERO_MOD;
+  (GSYM o REWRITE_RULE [ZERO_LT_dimword] o SPEC `dimword (:32)`) ZERO_MOD;
 
 val MOD_2EXP_32 =
   simpLib.SIMP_PROVE (std_ss++wordsLib.SIZES_ss) [MOD_2EXP_def,dimword_def]
-  ``MOD_2EXP 32 n = n MOD dimword (:i32)``;
+  ``MOD_2EXP 32 n = n MOD dimword (:32)``;
 
 val MSB_lem = (GSYM o GEN_ALL o SIMP_CONV std_ss
   [BIT_def,BITS_def,MOD_2EXP_def,SUC_SUB,EXP_1,GSYM ODD_MOD2_LEM]) ``BIT x n``;
@@ -60,9 +60,9 @@ val ALU_ADD = prove(
 
 (* ......................................................................... *)
 
-val n2w_2EXP_32 = (EQT_ELIM o EVAL) ``n2w (dimword (:i32)) = 0w:word32``;
+val n2w_2EXP_32 = (EQT_ELIM o EVAL) ``n2w (dimword (:32)) = 0w:word32``;
 
-val n2w_sub1 = EVAL ``n2w (dimword (:i32) - 1 MOD dimword (:i32))``;
+val n2w_sub1 = EVAL ``n2w (dimword (:32) - 1 MOD dimword (:32))``;
 
 val ALU_SUB = prove(
   `!c a b. SUB a b c =
@@ -79,41 +79,41 @@ val ALU_SUB = prove(
          SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,SBIT_def,GSYM MOD_0,MOD_2EXP_32,
          nzcv_def,n2w_2EXP_32,MSB_lem,n2w_sub1,
          (GEN_ALL o SYM o REWRITE_RULE [GSYM MOD_0] o
-          INST [`n` |-> `0`] o SPEC_ALL o INST_TYPE [`:'a` |-> `:i32`]) n2w_11]
+          INST [`n` |-> `0`] o SPEC_ALL o INST_TYPE [`:'a` |-> `:32`]) n2w_11]
     \\ METIS_TAC [GSYM dimindex_32,WORD_ADD_ASSOC]);
 
 (* ......................................................................... *)
 
 val w2n_n2w_bits = REWRITE_RULE [MOD_DIMINDEX] w2n_n2w;
 
-val word_bits_n2w_i32 = (GSYM o SIMP_RULE (std_ss++SIZES_ss) [] o
-  INST_TYPE [`:'a` |-> `:i32`] o SPECL [`31`,`0`]) word_bits_n2w;
+val word_bits_n2w_32 = (GSYM o SIMP_RULE (std_ss++SIZES_ss) [] o
+  INST_TYPE [`:'a` |-> `:32`] o SPECL [`31`,`0`]) word_bits_n2w;
 
 val ALU_MUL = prove(
   `!a b:word32. (31 >< 0) ((w2w a):word64 * w2w b) = a * b`,
   SIMP_TAC (arith_ss++SIZES_ss) [w2w_def,word_mul_n2w,word_extract_def,
          word_bits_n2w,w2n_n2w_bits,BITS_COMP_THM2]
     \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss)
-         [word_mul_def,word_bits_n2w_i32,word_bits_def]);
+         [word_mul_def,word_bits_n2w_32,word_bits_def]);
 
 val ALU_MLA = prove(
   `!a b c:word32. (31 >< 0) (((w2w a):word64) + w2w b * w2w c) = a + b * c`,
   SIMP_TAC (arith_ss++SIZES_ss) [w2w_def,word_mul_n2w,word_add_n2w,
          word_extract_def,word_bits_n2w,w2n_n2w_bits,BITS_COMP_THM2]
     \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss) [GSYM word_add_n2w,n2w_w2n,
-          GSYM word_mul_def,word_bits_n2w_i32,word_bits_def]);
+          GSYM word_mul_def,word_bits_n2w_32,word_bits_def]);
 
 val concat32 = (SIMP_RULE (std_ss++SIZES_ss)
    [fcpTheory.index_sum,WORD_FULL_EXTRACT] o SPECL [`63`,`31`,`0`] o
-   INST_TYPE [`:'a` |-> `:i64`, `:'b` |-> `:i32`,
-              `:'c` |-> `:i32`, `:'d` |-> `:i64`]) CONCAT_EXTRACT;
+   INST_TYPE [`:'a` |-> `:64`, `:'b` |-> `:32`,
+              `:'c` |-> `:32`, `:'d` |-> `:64`]) CONCAT_EXTRACT;
 
 val mul32 = prove(
   `!a b:word32. (31 >< 0) (((w2w a):word64) * w2w b) = a * b`,
   SIMP_TAC (arith_ss++SIZES_ss) [BITS_COMP_THM2,w2w_def,word_mul_n2w,
          word_extract_def,word_bits_n2w,w2n_n2w_bits]
     \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss)
-         [word_bits_def,word_bits_n2w_i32,GSYM word_mul_def]);
+         [word_bits_def,word_bits_n2w_32,GSYM word_mul_def]);
 
 val smul32_lem = prove(
   `!n. BITS 31 0 (a * b) = BITS 31 0 (BITS 31 0 a * BITS 31 0 b)`,
@@ -134,7 +134,7 @@ val smul32 = prove(
          Once smul32_lem,smul32_lem2]
     \\ REWRITE_TAC [GSYM smul32_lem]
     \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss)
-         [word_bits_def,word_bits_n2w_i32,GSYM word_mul_def]);
+         [word_bits_def,word_bits_n2w_32,GSYM word_mul_def]);
 
 val WORD_UMULL = store_thm("WORD_UMULL",
   `!a:word32 b:word32.
@@ -175,7 +175,7 @@ val PC_ss = rewrites [TO_WRITE_READ6,REG_WRITE_WRITE];
 val SPEC_TO_PC = (SIMP_RULE (std_ss++PC_ss) [] o
    INST [`Rd` |-> `15w:word4`] o SPEC_ALL);
 
-val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MEM_def,
+val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MEM,
   RUN_ARM_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,TRANSFER_def,
   FETCH_PC_def,ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
   word_index,BITS_THM,BIT_ZERO,(GEN_ALL o SPECL [`b`,`NUMERAL n`]) BIT_def,
