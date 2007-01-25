@@ -121,7 +121,7 @@ local
 in
     fun perms xs = accuperms xs [] []
     fun permsn n = perms (List.tabulate(n, fn x => x+1))
-end
+end;
 
 val inv_image_tm = prim_mk_const{Thy="relation",Name="inv_image"};
 
@@ -172,6 +172,27 @@ fun mk_sized_subsets argvars sizedlist =
 
 fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
 
+fun simplifyR tm = 
+ let open prim_recTheory basicSizeTheory reduceLib
+     val expand = QCONV (REWRITE_CONV 
+                    [measure_def,pair_size_def,bool_size_def,one_size_def])
+     val zero_elim = 
+        QCONV (REWRITE_CONV 
+          [EQT_ELIM (Arith.ARITH_CONV 
+                 ``!x:num. (x + 0 = x) /\ (0 + x = x)``)])
+ in
+  rhs (concl 
+   ((expand THENC DEPTH_CONV BETA_CONV THENC zero_elim) tm))
+ end;
+
+(* Remove duplicates, while maintaining left-to-right order *)
+
+fun rm x [] = []
+  | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
+
+fun mk_set [] = []
+  | mk_set (h::t) = h::mk_set (rm h t);
+
 (*---------------------------------------------------------------------------*
  * The general idea behind this is to try 2 termination measures. The first  *
  * measure takes the size of all subterms meeting the following criteria:    *
@@ -210,8 +231,8 @@ fun guessR defn =
                         let val v = imk_var(i,ty)
                         in (v::alist, if b then size_app v::slist else slist)
                         end) indices_1 domtyl_1 ([],[])
-           val it_prim_rec = SOME (mk_lex_reln argvars_1 subset_1 subset_1)
-                              handle HOL_ERR _ => NONE
+           val it_prim_rec = [mk_lex_reln argvars_1 subset_1 subset_1]
+                              handle HOL_ERR _ => []
            (* deal with other lex. combos *)
            val check2  = map (map (not o uncurry aconv)) matrix
            val chf2    = projects check2
@@ -223,12 +244,11 @@ fun guessR defn =
                         in (v::alist, if b then size_app v::slist else slist)
                         end) indices domtyl_2 ([],[])
            val lex_combs = mk_sized_subsets argvars subset
-        
+           val allrels = [mk_cmeasure domty0,mk_cmeasure (tysize domty)]
+                         @ it_prim_rec @ lex_combs
+           val allrels' = mk_set (map simplifyR allrels)
        in
-          [mk_cmeasure domty0,mk_cmeasure (tysize domty)]
-          @ (if Option.isSome it_prim_rec 
-             then [Option.valOf it_prim_rec] else [])
-          @ lex_combs
+         allrels'
        end
 end;
 
@@ -275,6 +295,13 @@ val term_ss =
                       ++ numSimps.ARITH_RWTS_ss
  end; 
 
+val ASM_ARITH_TAC =
+ REPEAT STRIP_TAC
+    THEN REPEAT (POP_ASSUM
+         (fn th => if numSimps.is_arith (concl th)
+                   then MP_TAC th else ALL_TAC))
+    THEN CONV_TAC Arith.ARITH_CONV;
+
 fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
@@ -294,19 +321,28 @@ fun PRIM_TC_SIMP_CONV simps tm =
   THENC simpLib.SIMP_CONV term_ss (ADD_CLAUSES::simps)
  end tm;
 
-fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!default_termination_simps) tm;
-
-val ASM_ARITH_TAC =
- REPEAT STRIP_TAC
-    THEN REPEAT (POP_ASSUM
-         (fn th => if numSimps.is_arith (concl th)
-                   then MP_TAC th else ALL_TAC))
-    THEN CONV_TAC Arith.ARITH_CONV;
-
 fun PRIM_TC_SIMP_TAC thl = 
   CONV_TAC (PRIM_TC_SIMP_CONV thl) THEN TRY ASM_ARITH_TAC;
 
+fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!default_termination_simps) tm;
 fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC (!default_termination_simps) g;
+
+local 
+ fun mesg tac (g as (_,tm)) =
+  let in 
+    if !Defn.monitoring then 
+      print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
+      else ()
+   ; tac g
+ end
+in
+fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
+val STD_TERM_TAC = PRIM_TERM_TAC WF_TAC TC_SIMP_TAC;
+val PROVE_TERM_TAC = 
+   PRIM_TERM_TAC WF_TAC 
+       (CONV_TAC TC_SIMP_CONV THEN mesg ASM_ARITH_TAC)
+end;
+
 
 (*---------------------------------------------------------------------------*)
 (* Instantiate the termination relation with q and then try to prove         *)
@@ -318,8 +354,8 @@ fun PRIM_WF_REL_TAC q WFthms simps g =
    [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps]) g;
 
 
-fun WF_REL_TAC q = PRIM_WF_REL_TAC q (!default_WF_thms) 
-                                     (!default_termination_simps);
+fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
+
 
 (*---------------------------------------------------------------------------
        Definition principles that automatically attempt
@@ -327,72 +363,67 @@ fun WF_REL_TAC q = PRIM_WF_REL_TAC q (!default_WF_thms)
        fails, the definition attempt fails.
  ---------------------------------------------------------------------------*)
  
-local 
- fun mesg tac (g as (_,tm)) =
-  (if !Defn.monitoring
-   then print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
-   else ();
-   tac g)
-in
-fun 
-TERM_TAC g =
- (CONJ_TAC THENL
-  [WF_TAC, CONV_TAC TC_SIMP_CONV THEN mesg ASM_ARITH_TAC]) g
-end;
-
 val WF_tm = prim_mk_const{Name="WF",Thy="relation"};
 
 fun get_WF tmlist = 
  pluck (same_const WF_tm o rator) tmlist
  handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
 
+fun reln_is_not_set defn = 
+ case Defn.reln_of defn
+  of NONE => false
+   | SOME R => is_var R;
+
 fun proveTotal tac defn =
   let val (WFR,rest) = get_WF (Defn.tcs_of defn)
       val form = list_mk_conj(WFR::rest)
       val thm = Tactical.default_prover(form,tac)
   in
-    (Defn.elim_tcs defn (CONJUNCTS thm), thm)
+    (Defn.elim_tcs defn (CONJUNCTS thm), SOME thm)
   end;
 
 local open Defn
-      val term_prover = proveTotal TERM_TAC
-      fun try_proof defn Rcand = term_prover (set_reln defn Rcand)
-      fun should_try_to_prove_termination defn rhs_frees =
-         let val tcs = tcs_of defn
-         in not(null tcs) andalso
-            null(intersect (free_varsl tcs) rhs_frees)
-         end
-      fun fvs_on_rhs V = 
-        let val Vstr = String.concat (Lib.commafy
-                          (map (Lib.quote o #1 o dest_var) V))
-        in if !allow_schema_definition 
-           then HOL_MESG (String.concat
-               ["Definition is schematic in the following variables:\n    ",
-                Vstr])
-           else raise ERR "primDefine"
-            ("  The following variables are free in the \n right hand side of\
-             \ the proposed definition: " ^ Vstr)
-        end
-      fun termination_proof_failed () = 
-        raise ERR "primDefine" (String.concat
-            ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
-             "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
-             "termination proof.\n"])
+  fun should_try_to_prove_termination defn rhs_frees =
+     let val tcs = tcs_of defn
+     in not(null tcs) andalso
+        null(intersect (free_varsl tcs) rhs_frees)
+     end
+  fun fvs_on_rhs V = 
+     let val Vstr = String.concat (Lib.commafy
+                       (map (Lib.quote o #1 o dest_var) V))
+     in if !allow_schema_definition 
+        then HOL_MESG (String.concat
+            ["Definition is schematic in the following variables:\n    ",
+             Vstr])
+        else raise ERR "primDefine"
+         ("  The following variables are free in the \n right hand side of\
+          \ the proposed definition: " ^ Vstr)
+     end
+  fun termination_proof_failed () = 
+     raise ERR "primDefine" (String.concat
+         ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
+          "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
+          "termination proof.\n"])
 in
-fun primDefine defn =
+fun defnDefine term_tac defn =
  let val V = params_of defn
      val _ = if not(null V) then fvs_on_rhs V else ()  (* can fail *)
-     val (defn',th) =
+     val tprover = proveTotal term_tac
+     fun try_proof defn Rcand = tprover (set_reln defn Rcand)
+     val (defn',opt) =
        if should_try_to_prove_termination defn V
-         then Lib.tryfind (try_proof defn) (guessR defn)
-               handle HOL_ERR _ => termination_proof_failed()
-         else (defn,TRUTH)
+         then ((if reln_is_not_set defn
+                 then Lib.tryfind (try_proof defn) (guessR defn)
+                 else tprover defn)
+              handle HOL_ERR _ => termination_proof_failed())
+         else (defn,NONE)
  in
     save_defn defn'
-  ; (LIST_CONJ (eqns_of defn'), ind_of defn', 
-     if (concl th) = T then NONE else SOME th)
+  ; (LIST_CONJ (eqns_of defn'), ind_of defn', opt)
  end
 end;
+
+val primDefine = defnDefine PROVE_TERM_TAC
 
 fun xDefine stem = Lib.try (#1 o primDefine o Defn.Hol_defn stem);
 
@@ -475,14 +506,14 @@ fun tryR tac defn = proveTotal tac o Defn.set_reln defn;
 
 (*---------------------------------------------------------------------------*)
 (* Given a guesser of termination relations and a prover for termination     *)
-(* conditons, try the guesses until the prover succeeds. Return the proved   *)
+(* conditions, try the guesses until the prover succeeds. Return the proved  *)
 (* termination conditions as a theorem, along with the tc-free defn.         *)
 (*---------------------------------------------------------------------------*)
 
 fun elimTCs guessR tac defn = 
  case guessR defn 
    of [] => (defn,NONE)   (* prim. rec. or non-rec. defn *)
-    | guesses => (I##SOME) (Lib.tryfind (tryR tac defn) guesses);
+    | guesses => Lib.tryfind (tryR tac defn) guesses;
  
 (*---------------------------------------------------------------------------*)
 (* Sequence the phases of definition, starting from a stem and a term        *)
@@ -504,8 +535,8 @@ fun apiDefineq guessR tprover q =
 (* Instantiate to the current guesser and terminator                         *)
 (*---------------------------------------------------------------------------*)
 
-val std_apiDefine = apiDefine guessR TERM_TAC;
-val std_apiDefineq = apiDefineq guessR TERM_TAC;
+val std_apiDefine = apiDefine guessR PROVE_TERM_TAC;
+val std_apiDefineq = apiDefineq guessR PROVE_TERM_TAC;
 
 (*---------------------------------------------------------------------------
     Special entrypoints for defining schemas

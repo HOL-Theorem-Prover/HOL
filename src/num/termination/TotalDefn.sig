@@ -6,7 +6,7 @@ sig
    (* Support for automated termination proofs *)
 
    val guessR        : defn -> term list
-   val proveTotal    : tactic -> defn -> defn * thm 
+   val proveTotal    : tactic -> defn -> defn * thm option
 
 
    (* Support for interactive termination proofs *)
@@ -22,10 +22,12 @@ sig
    val WF_TAC       : tactic
    val TC_SIMP_CONV : conv
    val TC_SIMP_TAC  : tactic
+   val STD_TERM_TAC : tactic
    val WF_REL_TAC   : term quotation -> tactic
 
    (* Definitions with automated termination proof support *)
 
+   val defnDefine  : tactic -> defn -> thm * thm option * thm option
    val primDefine  : defn -> thm * thm option * thm option
    val xDefine     : string -> term quotation -> thm
    val Define      : term quotation -> thm
