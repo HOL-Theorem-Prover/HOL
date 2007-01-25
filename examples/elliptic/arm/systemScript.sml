@@ -26,10 +26,10 @@ val _ = new_theory "system";
 (* The register word size can be different for each coprocessor               *)
 (* -------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `cp_register = c0   | c1   | c2   | c3
-                                  | c4   | c5   | c6   | c7
-                                  | c8   | c9   | c10  | c11
-                                  | c12  | c13  | c14  | c15`;
+val _ = Hol_datatype `cp_register = cr0   | cr1   | cr2   | cr3
+                                  | cr4   | cr5   | cr6   | cr7
+                                  | cr8   | cr9   | cr10  | cr11
+                                  | cr12  | cr13  | cr14  | cr15`;
 
 val _ = type_abbrev("cp_registers",``:cp_register->'a word``);
 
@@ -563,7 +563,7 @@ val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
 
 val mem_read_def        = Define`mem_read (m: mem, a) = m a`;
 val mem_write_def       = Define`mem_write (m:mem) a d = (a :- d) m`;
-val mem_write_block_def = Define`mem_write_block (m:mem) a c = (a ::- c) m`;
+val mem_write_block_def = Define`mem_write_block (m:mem) a cr = (a ::- cr) m`;
 val mem_items_def       = Define`mem_items (m:mem) = []:(word30 # word32) list`;
 val empty_memory_def    = Define`empty_memory = (\a. 0xE6000010w):mem`;
 val empty_registers_def = Define`empty_registers = (\n. 0w):registers`;
@@ -1003,8 +1003,8 @@ val register_decl = `register =
                                                  r13_und | r14_und`;
 
 val cp_register_decl = `cp_register =
-   c0 | c1 | c2  | c3  | c4  | c5  | c6  | c7 |
-   c8 | c9 | c10 | c11 | c12 | c13 | c14 | c15`;
+   cr0 | cr1 | cr2  | cr3  | cr4  | cr5  | cr6  | cr7 |
+   cr8 | cr9 | cr10 | cr11 | cr12 | cr13 | cr14 | cr15`;
 
 val psr_decl =
   `psr = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
