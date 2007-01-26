@@ -288,13 +288,6 @@ val default_termination_simps =
           relationTheory.inv_image_def,
           pairTheory.LEX_DEF];
 
-val term_ss = 
- let open simpLib infix ++
- in boolSimps.bool_ss ++ pairSimps.PAIR_ss 
-                      ++ numSimps.REDUCE_ss 
-                      ++ numSimps.ARITH_RWTS_ss
- end; 
-
 val ASM_ARITH_TAC =
  REPEAT STRIP_TAC
     THEN REPEAT (POP_ASSUM
@@ -305,20 +298,21 @@ val ASM_ARITH_TAC =
 fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
+val term_ss = 
+ let open simpLib infix ++
+ in boolSimps.bool_ss 
+    ++ pairSimps.PAIR_ss 
+    ++ numSimps.REDUCE_ss 
+    ++ numSimps.ARITH_RWTS_ss
+ end; 
+
 fun PRIM_TC_SIMP_CONV simps tm =
  let open arithmeticTheory 
      val els = TypeBasePure.listItems (TypeBase.theTypeBase())
+     val size_defs = 
+        mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els
  in
-  simpLib.SIMP_CONV boolSimps.bool_ss [] THENC 
-  REPEATC
-   (CHANGED_CONV
-     (Rewrite.REWRITE_CONV(simps @ mapfilter TypeBasePure.case_def_of els)
-       THENC REDEPTH_CONV GEN_BETA_CONV))
-  THENC Rewrite.REWRITE_CONV
-          (pairTheory.pair_rws @
-           mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els)
-  THENC REDEPTH_CONV BETA_CONV
-  THENC simpLib.SIMP_CONV term_ss (ADD_CLAUSES::simps)
+  simpLib.SIMP_CONV term_ss (simps@size_defs)
  end tm;
 
 fun PRIM_TC_SIMP_TAC thl = 
@@ -395,12 +389,12 @@ local open Defn
         then HOL_MESG (String.concat
             ["Definition is schematic in the following variables:\n    ",
              Vstr])
-        else raise ERR "primDefine"
+        else raise ERR "defnDefine"
          ("  The following variables are free in the \n right hand side of\
           \ the proposed definition: " ^ Vstr)
      end
   fun termination_proof_failed () = 
-     raise ERR "primDefine" (String.concat
+     raise ERR "defnDefine" (String.concat
          ["Unable to prove totality!\nUse \"Defn.Hol_defn\" to make ",
           "the definition,\nand \"Defn.tgoal <defn>\" to set up the ",
           "termination proof.\n"])

@@ -29,6 +29,7 @@ sig
 
    val defnDefine  : tactic -> defn -> thm * thm option * thm option
    val primDefine  : defn -> thm * thm option * thm option
+(*   val genDefine   : string -> term quotation -> tactic -> thm *)
    val xDefine     : string -> term quotation -> thm
    val Define      : term quotation -> thm
 
