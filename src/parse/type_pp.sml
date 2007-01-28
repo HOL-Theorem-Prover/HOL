@@ -15,8 +15,13 @@ datatype single_rule
 
 val ERR = mk_HOL_ERR "type_pp" "pp_type";
 
+val pp_num_types = ref true
+val _ = register_btrace("pp_num_types", pp_num_types)
+
 fun dest_numtype ty = let
   open Arbnum
+  val _ = (* respect pp_num_types flag *)
+      !pp_num_types orelse raise mk_HOL_ERR "" "" ""
   val _ = (* exception: don't print :one as one *)
       let val {Thy,Tyop,Args} = dest_thy_type ty
       in
