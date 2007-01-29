@@ -404,25 +404,39 @@ fun term_to_ML openthys side ppstrm =
        ; end_block()
        ; rparen i maxprec)
   and pp_itself tm =
-    let fun abbrev_to_string t = String.extract(Hol_pp.type_to_string t,1,NONE)
+    let fun skip1 s = String.extract(s, 1, NONE)
         fun pp_itself_type typ =
-      if is_vartype typ then
-        add_string (String.extract(dest_vartype typ, 1, NONE))
-      else case (dest_type typ) of
-        ("bit0", els) =>
-           add_string ("(Tyop (\"" ^ abbrev_to_string typ ^ "\", []))")
-      | ("bit1", els) =>
-           add_string ("(Tyop (\"" ^ abbrev_to_string typ ^ "\", []))")
-      | (tyop, els) =>
-           (begin_block Portable.CONSISTENT 0
-          ; add_string ("(Tyop (\"" ^ tyop ^ "\", [")
-          ; begin_block Portable.CONSISTENT 0
-          ; Portable.pr_list pp_itself_type
-                  (fn () => add_string",")
-                  (fn () => add_break(0,0)) els
-          ; end_block()
-          ; add_string "]))"
-          ; end_block())
+         if is_vartype typ then
+           add_string (skip1 (dest_vartype typ))
+         else
+           case (dest_type typ) of
+             ("one", [])   => add_string ("(fcpML.ITSELF (numML.fromInt 1))")
+           | ("num", [])   => add_string ("(fcpML.ITSELF (numML.fromInt 1))")
+           | ("int", [])   => add_string ("(fcpML.ITSELF (numML.fromInt 1))")
+           | ("list", [a]) => add_string ("(fcpML.ITSELF (numML.fromInt 1))")
+           | ("bool", [])  => add_string ("(fcpML.ITSELF (numML.fromInt 2))")
+           | ("bit0", [a]) => add_string ("(fcpML.ITSELF (numML.fromDecString\""
+                                 ^ skip1 (Hol_pp.type_to_string typ) ^ "\"))")
+           | ("bit1", [a]) => add_string ("(fcpML.ITSELF (numML.fromDecString\""
+                                 ^ skip1 (Hol_pp.type_to_string typ) ^ "\"))")
+           | ("string", []) => add_string ("(fcpML.ITSELF (numML.fromInt 1))")
+           | (tyop, [a, b]) =>
+              (begin_block Portable.CONSISTENT 0
+               ; add_string ("(" ^
+                  (case tyop of
+                     "sum"  => "fcpML.SUMi"
+                   | "prod" => "fcpML.MULi"
+                   | "cart" => "fcpML.EXPi"
+                   | _ => raise ERR "term_to_ML" "pp_itself") ^ "(")
+               ; begin_block Portable.CONSISTENT 0
+               ; pp_itself_type a
+               ; add_string ", "
+               ; add_break (0,0)
+               ; pp_itself_type b
+               ; end_block()
+               ; add_string "))"
+               ; end_block())
+           | _ => raise ERR "term_to_ML" "pp_itself"
     in
       (pp_itself_type o hd o snd o dest_type o type_of) tm
     end

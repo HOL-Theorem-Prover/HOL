@@ -572,4 +572,38 @@ val card_dimindex = save_thm("card_dimindex",
   METIS_PROVE [dimindex_def]
    ``FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))``);
 
+(* ------------------------------------------------------------------------ *)
+(* ------------------------------------------------------------------------ *)
+
+(* load "stringTheory"; *)
+
+open stringTheory;
+
+val _ = new_constant("ITSELF", ``:num -> 'a itself``);
+
+val _ = new_constant("SUMi", ``:'a itself # 'b itself -> 'c itself``);
+val _ = new_constant("MULi", ``:'a itself # 'b itself -> 'c itself``);
+val _ = new_constant("EXPi", ``:'a itself # 'b itself -> 'c itself``);
+
+val SUMi  = new_axiom("SUMi", ``SUMi (ITSELF a, ITSELF b) = ITSELF (a + b)``);
+val MULi  = new_axiom("MULi", ``MULi (ITSELF a, ITSELF b) = ITSELF (a * b)``);
+val EXPi  = new_axiom("EXPi", ``EXPi (ITSELF a, ITSELF b) = ITSELF (a ** b)``);
+
+val dimindexi = new_axiom("dimindexi", ``dimindex (ITSELF a) = a``);
+
+val FCP_i_def = Define `FCP_i (f, (:'b)) = ($FCP f):'a ** 'b`;
+
+val _ =
+ let open EmitML
+  in try emitML (!Globals.emitMLDir)
+   ("fcp",
+    [OPEN ["num"],
+     MLSIG "type num = numML.num",
+     DATATYPE(`itself = ITSELF of num`),
+     ABSDATATYPE (["'a","'b"], `cart = FCP_i of (num -> 'a) # 'b itself`),
+     ABSDATATYPE (["'a"],`bit0 = BIT0A of 'a | BIT0B of 'a`),
+     ABSDATATYPE (["'a"],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)]
+  @ map DEFN [SUMi, MULi, EXPi, dimindexi])
+end;
+
 val _ = export_theory();

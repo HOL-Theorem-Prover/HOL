@@ -11,7 +11,7 @@ val _ = app load ["OS", "Bool", "Time", "Timer", "CommandLine", "ListPair"];
 
 exception Parse;
 
-fun toWord s i = wordsML.n2w_itself(i, fcpML.index_type s);
+fun toWord s i = wordsML.n2w_itself(i, fcpML.ITSELF(numML.fromInt s));
 
 fun toWord4 i = toWord 4 (numML.fromInt i): wordsML.word4
 val toWord30 = toWord 30: numML.num -> wordsML.word30;

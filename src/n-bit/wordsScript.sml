@@ -2354,11 +2354,6 @@ val word_concat_itself_def = Define`
 val fromNum_def = Define`
   fromNum (n, (:'a)) = n2w_itself (n MOD dimword (:'a),(:'a))`;
 
-val _ = ConstMapML.insert ``dimword``;
-val _ = ConstMapML.insert ``dimindex``;
-val _ = ConstMapML.insert ``INT_MIN``;
-val _ = ConstMapML.insert ``n2w_itself``;
-
 fun mk_index i =
   let val n = Int.toString i 
       val s = " i" ^ n 
@@ -2367,6 +2362,8 @@ fun mk_index i =
     [EmitML.MLSTRUCT ("datatype" ^ s ^ " =" ^ s), EmitML.MLSIG ("eqtype" ^ s),
      EmitML.MLSTRUCT w, EmitML.MLSIG w]
   end;
+
+val _ = ConstMapML.insert ``n2w_itself``;
 
 local
   open EmitML numeral_bitTheory
@@ -2404,17 +2401,17 @@ in
   val _ = emitML (!Globals.emitMLDir)
     ("words", OPEN ["sum", "num", "fcp", "bit"]
      :: MLSIG "type ('a, 'b) sum = ('a, 'b) sumML.sum"
+     :: MLSIG "type 'a itself = 'a fcpML.itself"
      :: MLSIG "type num = numML.num"
-     :: MLSIG "type 'a itself = fcpML.holtype"
-     :: MLSIG "datatype 'a word = n2w_itself of num * fcpML.holtype"
-     :: MLSTRUCT "datatype 'a word = n2w_itself of num * holtype"
+     :: MLSIG "datatype 'a word = n2w_itself of num * 'a itself"
+     :: MLSTRUCT "datatype 'a word = n2w_itself of num * 'a itself"
      :: List.concat (map mk_index [2,4,5,8,12,16,24,30,32])
       @ map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
            GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
            GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
            TIMES_2EXP1] o ALPHA_BETA_RULE)
-          [UINT_MAX_def, INT_MAX_def, w2n_n2w, word_eq_n2w,
-           w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
+          [dimword_def,INT_MIN_def,UINT_MAX_def, INT_MAX_def, w2n_n2w,
+           word_eq_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
            SPEC `c` word_bit_n2w, word_join_n2w, sw2sw_n2w, word_extract_n2w,
            word_slice_n2w, word_concat_def, word_log2_n2w, word_reverse_n2w,
            word_modify_n2w, word_lsb_n2w, word_msb_n2w,
