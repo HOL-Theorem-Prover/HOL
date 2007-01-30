@@ -41,12 +41,18 @@ sig
   val elim_tcs   : defn -> thm list -> defn
   val simp_tcs   : defn -> conv -> defn
   val prove_tcs  : defn -> tactic -> defn
+  
+  val triv_defn  : defn -> bool
+  val fetch_eqns : defn -> thm
 
+  val been_stored: string * thm -> unit
+  val store      : string * thm * thm -> unit
   val save_defn  : defn -> unit
 
   val parse_defn : absyn -> term * string list
 
   val tgoal      : defn -> proofs
+  val tprove0    : defn * tactic -> thm * thm
   val tprove     : defn * tactic -> thm * thm
   val tstore_defn : defn * tactic -> thm * thm
 

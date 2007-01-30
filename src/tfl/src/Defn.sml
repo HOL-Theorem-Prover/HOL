@@ -332,6 +332,18 @@ fun prove_tcs (STDREC {eqs, ind, R, SV, stem}) tac =
   | prove_tcs x _ = x;
 
 
+(*---------------------------------------------------------------------------*)
+(* Deal with basic definitions.                                              *)
+(*---------------------------------------------------------------------------*)
+
+fun triv_defn (ABBREV _) = true
+  | triv_defn (PRIMREC _) = true
+  | triv_defn otherwise = false
+
+fun fetch_eqns (ABBREV{eqn,...})  = eqn
+  | fetch_eqns (PRIMREC{eqs,...}) = eqs
+  | fetch_eqns otherwise = raise ERR "fetch_eqns" "shouldn't happen"
+
 (*---------------------------------------------------------------------------
    Store definition information to disk. Currently, just writes out the
    eqns and induction theorem. A more advanced implementation would
@@ -376,7 +388,7 @@ local
   val chatting = ref true
   val _ = Feedback.register_btrace("Define.storage_message", chatting)
 in
-fun been_stored s thm =
+fun been_stored (s,thm) =
   (add_persistent_funs [(s,thm)];
    if !chatting then
      mesg ("Definition has been stored under "^Lib.quote s^".\n")
@@ -397,8 +409,8 @@ fun store(stem,eqs,ind) =
         ".\nInduction stored under ", Lib.quote ind_bind, ".\n"])
   end;
 
-fun save_defn (ABBREV {bind,eqn, ...})       = been_stored bind eqn
-  | save_defn (PRIMREC{bind,eqs, ...})       = been_stored bind eqs
+fun save_defn (ABBREV {bind,eqn, ...})       = been_stored (bind,eqn)
+  | save_defn (PRIMREC{bind,eqs, ...})       = been_stored (bind,eqs)
   | save_defn (NONREC {eqs, ind, stem, ...}) = store(stem,eqs,ind)
   | save_defn (STDREC {eqs, ind, stem, ...}) = store(stem,LIST_CONJ eqs,ind)
   | save_defn (MUTREC {eqs,ind,stem,...})    = store(stem,LIST_CONJ eqs,ind)

@@ -311,8 +311,9 @@ fun PRIM_TC_SIMP_CONV simps tm =
      val els = TypeBasePure.listItems (TypeBase.theTypeBase())
      val size_defs = 
         mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els
+     val case_defs = mapfilter TypeBasePure.case_def_of els
  in
-  simpLib.SIMP_CONV term_ss (simps@size_defs)
+  simpLib.SIMP_CONV term_ss (simps@size_defs@case_defs)
  end tm;
 
 fun PRIM_TC_SIMP_TAC thl = 
@@ -421,6 +422,23 @@ val primDefine = defnDefine PROVE_TERM_TAC
 
 fun xDefine stem = Lib.try (#1 o primDefine o Defn.Hol_defn stem);
 
+fun tDefine stem q tac =
+ let open Defn
+     val defn = Hol_defn stem q
+ in 
+   if triv_defn defn
+    then let val def = fetch_eqns defn
+             val bind = stem ^ !Defn.def_suffix
+         in been_stored (bind,def);
+            def
+         end
+    else let val (def,ind) = Lib.with_flag (goalstackLib.chatting,false)
+                                Defn.tprove0(defn,tac)
+         in 
+           Defn.store(stem,def,ind) ;
+           def
+         end
+end;
 
 (*---------------------------------------------------------------------------
      Define
