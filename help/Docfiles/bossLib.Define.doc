@@ -143,7 +143,7 @@ following multi-step process in order to get the same effect as if
 termination conditions with {Hol_defn}; (2) set up a goal to prove the
 termination conditions with {tgoal}; (3) interactively prove the
 termination conditions, starting with an invocation of {WF_REL_TAC};
-and (4) package everything up with an invocation of {tprove}.
+and (4) package everything up with an invocation of {tDefine}.
 
 
 
@@ -320,7 +320,7 @@ less baggage---it depends only on {numLib} and {pairLib}.
 
 
 \SEEALSO
-bossLib.xDefine, TotalDefn.DefineSchema, bossLib.Hol_defn, 
+bossLib.tDefine, bossLib.xDefine, TotalDefn.DefineSchema, bossLib.Hol_defn, 
 Defn.tgoal, Defn.tprove, bossLib.WF_REL_TAC, bossLib.recInduct, 
 bossLib.EVAL, bossLib.EVAL_TAC.
 
