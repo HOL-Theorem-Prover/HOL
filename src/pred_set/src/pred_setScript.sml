@@ -1471,7 +1471,6 @@ val LINV_DEF =
       new_specification("LINV_DEF",["LINV"],th2)
    end;
 
-
 val BIJ_LINV_INV = Q.store_thm (
 "BIJ_LINV_INV",
 `!f s t. BIJ f s t ==> !x. x IN t ==> (f (LINV f s x) = x)`,
@@ -3222,21 +3221,20 @@ val CARD_COUNT = store_thm
     A "fold"-like operation for sets.
  ---------------------------------------------------------------------------*)
 
-val ITSET_defn = Defn.Hol_defn "ITSET"
-  `ITSET (s:'a->bool) (b:'b) =
-     if FINITE s then
-        if s={} then b
-        else ITSET (REST s) (f (CHOICE s) b)
-     else ARB`;
+val ITSET_def = 
+ let open TotalDefn
+ in 
+   tDefine "ITSET"
+    `ITSET (s:'a->bool) (b:'b) =
+       if FINITE s then
+          if s={} then b
+          else ITSET (REST s) (f (CHOICE s) b)
+       else ARB`
+  (WF_REL_TAC `measure (CARD o FST)` THEN
+   METIS_TAC [CARD_PSUBSET, REST_PSUBSET])
+ end;
 
-(*---------------------------------------------------------------------------
-       Termination of ITSET.
- ---------------------------------------------------------------------------*)
-
-val (ITSET_eqn0, ITSET_IND) =
- Defn.tprove (ITSET_defn,
-   TotalDefn.WF_REL_TAC `measure (CARD o FST)` THEN
-   BasicProvers.PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+val ITSET_IND = fetch "-" "ITSET_ind";
 
 (*---------------------------------------------------------------------------
       Desired recursion equation.
@@ -3247,7 +3245,7 @@ val (ITSET_eqn0, ITSET_IND) =
 
 val ITSET_THM =
 W (GENL o rev o free_vars o concl)
-  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] ITSET_eqn0));
+  (DISCH_ALL(ASM_REWRITE_RULE [ASSUME (Term`FINITE s`)] ITSET_def));
 
 val _ = save_thm("ITSET_IND",ITSET_IND);
 val _ = save_thm("ITSET_THM",ITSET_THM);
