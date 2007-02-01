@@ -230,7 +230,7 @@ val ARM_ASSEMBLE_CONV = let open instructionTheory
         addr_mode2_encode_def,addr_mode3_encode_def,
         msr_mode_encode_def,msr_psr_encode_def,
         options_encode_def,options_encode2_def,
-        instruction_encode_def,combinTheory.K_THM,
+        data_proc_encode_def,instruction_encode_def,combinTheory.K_THM,
         SET_NZCV_def,SET_IFMODE_def,mode_num_def,mode_case_def]
 in
   computeLib.CBV_CONV compset

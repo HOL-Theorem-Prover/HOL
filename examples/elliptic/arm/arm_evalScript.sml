@@ -601,28 +601,41 @@ val decode_enc_swi = store_thm("decode_enc_swi",
   `!cond. DECODE_ARM (enc (instruction$SWI cond)) = swi_ex`,
   SRW_TAC word_frags []);
 
-val decode_enc_data_proc = Count.apply prove(
+val decode_enc_data_proc_ = prove(
+  `!cond op s rd rn Op2. ~(op %% 3) \/ (op %% 2) ==>
+      (DECODE_ARM (data_proc_encode cond op s rn rd Op2) = data_proc)`,
+  Cases_on `Op2`
+    \\ SRW_TAC word_frags [data_proc_encode_def,addr_mode1_encode_def]);
+
+val decode_enc_data_proc__ = prove(
+  `!cond op s rd rn Op2.
+      (DECODE_ARM (data_proc_encode cond op T rd 0w Op2) = data_proc)`,
+  Cases_on `Op2`
+    \\ SRW_TAC word_frags [data_proc_encode_def,addr_mode1_encode_def]);
+
+val decode_enc_data_proc = prove(
   `!f. f IN {instruction$AND; instruction$EOR;
              instruction$SUB; instruction$RSB;
              instruction$ADD; instruction$ADC;
              instruction$SBC; instruction$RSC;
              instruction$ORR; instruction$BIC} ==>
    (!cond s rd rn Op2. DECODE_ARM (enc (f cond s rd rn Op2)) = data_proc)`,
-  SRW_TAC [] [] \\ Cases_on `Op2`
-    \\ SRW_TAC word_frags [addr_mode1_encode_def]);
+  SRW_TAC [] [instruction_encode_def]
+    \\ SRW_TAC [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss]
+               [BIT_def,word_index,decode_enc_data_proc_]);
 
 val decode_enc_data_proc2 = prove(
   `!f. f IN {instruction$TST; instruction$TEQ;
              instruction$CMP; instruction$CMN} ==>
    (!cond rn Op2. DECODE_ARM (enc (f cond rn Op2)) = data_proc)`,
-  SRW_TAC [] [] \\ Cases_on `Op2`
-    \\ SRW_TAC word_frags [addr_mode1_encode_def]);
+   SRW_TAC [] [instruction_encode_def] \\ SRW_TAC [] [decode_enc_data_proc__]);
 
 val decode_enc_data_proc3 = prove(
   `!f. f IN {instruction$MOV; instruction$MVN} ==>
    (!cond s rd Op2. DECODE_ARM (enc (f cond s rd Op2)) = data_proc)`,
-  SRW_TAC [] [] \\ Cases_on `Op2`
-    \\ SRW_TAC word_frags [addr_mode1_encode_def]);
+  SRW_TAC [] [instruction_encode_def]
+    \\ SRW_TAC [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss]
+               [BIT_def,word_index,decode_enc_data_proc_]);
 
 val decode_enc_mla_mul = store_thm("decode_enc_mla_mul",
   `(!cond s rd rm rs.
@@ -897,7 +910,17 @@ val shift_immediate_shift_register = store_thm("shift_immediate_shift_register",
   NTAC 6 STRIP_TAC \\ Cases_on `sh`
     \\ SRW_TAC word_frags [addr_mode1_encode_def]);
 
-val decode_data_proc_enc = Count.apply prove(
+val decode_data_proc_enc_ = prove(
+  `!cond op s rd rn Op2.
+      DECODE_DATAP (data_proc_encode cond op s rn rd Op2) =
+        (IS_DP_IMMEDIATE Op2,op,s,rn,rd,(11 >< 0) (addr_mode1_encode Op2))`,
+  Cases_on `Op2`
+    \\ SRW_TAC word_frags [IS_DP_IMMEDIATE_def,DECODE_DATAP_def,
+         addr_mode1_encode_def,data_proc_encode_def]
+    \\ ASM_SIMP_TAC bool_ss [BIT_SHIFT_THM3,(SYM o EVAL) ``256 * 2 ** 12``]
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+
+val decode_data_proc_enc = prove(
   `!f. f IN {instruction$AND; instruction$EOR;
              instruction$SUB; instruction$RSB;
              instruction$ADD; instruction$ADC;
@@ -907,36 +930,27 @@ val decode_data_proc_enc = Count.apply prove(
       DECODE_DATAP (enc (f cond s rd rn Op2)) =
       (IS_DP_IMMEDIATE Op2,decode_opcode (f cond s rd rn Op2),
        s,rn,rd,(11 >< 0) (addr_mode1_encode Op2)))`,
-  SRW_TAC [] [decode_opcode_def] \\ SIMP_TAC (srw_ss()) [] \\ Cases_on `Op2`
-    \\ SRW_TAC word_frags [IS_DP_IMMEDIATE_def,DECODE_DATAP_def,
-         addr_mode1_encode_def]
-    \\ ASM_SIMP_TAC bool_ss [BIT_SHIFT_THM3,(SYM o EVAL) ``256 * 2 ** 12``]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [] [instruction_encode_def,decode_opcode_def]
+    \\ SRW_TAC [] [decode_data_proc_enc_]);
 
-val decode_data_proc_enc2 = Count.apply prove(
+val decode_data_proc_enc2 = prove(
   `!f. f IN {instruction$TST; instruction$TEQ;
              instruction$CMP; instruction$CMN} ==>
    (!cond rn Op2.
       DECODE_DATAP (enc (f cond rn Op2)) =
       (IS_DP_IMMEDIATE Op2,decode_opcode (f cond rn Op2),
        T,rn,0w,(11 >< 0) (addr_mode1_encode Op2)))`,
-  SRW_TAC [] [decode_opcode_def] \\ SRW_TAC [] [] \\ Cases_on `Op2`
-    \\ SRW_TAC word_frags [IS_DP_IMMEDIATE_def,DECODE_DATAP_def,
-         addr_mode1_encode_def]
-    \\ ASM_SIMP_TAC bool_ss [BIT_SHIFT_THM3,(SYM o EVAL) ``256 * 2 ** 12``]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [] [instruction_encode_def,decode_opcode_def]
+    \\ SRW_TAC [] [decode_data_proc_enc_]);
 
-val decode_data_proc_enc3 = Count.apply prove(
+val decode_data_proc_enc3 = prove(
   `!f. f IN {instruction$MOV; instruction$MVN} ==>
    (!cond s rd Op2.
       DECODE_DATAP (enc (f cond s rd Op2)) =
       (IS_DP_IMMEDIATE Op2,decode_opcode (f cond s rd Op2),
        s,0w,rd,(11 >< 0) (addr_mode1_encode Op2)))`,
-  SRW_TAC [] [decode_opcode_def] \\ SRW_TAC [] [] \\ Cases_on `Op2`
-    \\ SRW_TAC word_frags [IS_DP_IMMEDIATE_def,DECODE_DATAP_def,
-         addr_mode1_encode_def]
-    \\ ASM_SIMP_TAC bool_ss [BIT_SHIFT_THM3,(SYM o EVAL) ``256 * 2 ** 12``]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+  SRW_TAC [] [instruction_encode_def,decode_opcode_def]
+    \\ SRW_TAC [] [decode_data_proc_enc_]);
 
 val decode_mla_mul_enc = store_thm("decode_mla_mul_enc",
   `(!cond s rd rm rs.
@@ -1159,7 +1173,7 @@ val condition_options2 = prove(
 val PASS_TAC = REPEAT STRIP_TAC \\ Cases_on_nzcv `flgs`
   \\ SRW_TAC pass_frags [condition_addr_mode1,condition_addr_mode2,
        condition_addr_mode3,condition_msr_mode,condition_msr_psr,
-       condition_options,condition_options2]
+       condition_options,condition_options2,data_proc_encode_def]
   \\ FULL_SIMP_TAC word_ss [BITS_w2n_ZERO,condition_addr_mode1,
        condition_addr_mode2,condition_addr_mode3,condition_msr_mode,
        condition_msr_psr,condition_options,condition_options2]
@@ -1182,6 +1196,12 @@ val cond_pass_enc_swi = store_thm("cond_pass_enc_swi",
                CONDITION_PASSED2 flgs cond`,
   PASS_TAC);
 
+val cond_pass_enc_data_proc_ = prove(
+  `!cond op s rd rn op2.
+      CONDITION_PASSED flgs (data_proc_encode cond op s rd rn op2) =
+      CONDITION_PASSED2 flgs cond`,
+  PASS_TAC);
+
 val cond_pass_enc_data_proc = prove(
   `!f. f IN {instruction$AND; instruction$EOR;
              instruction$SUB; instruction$RSB;
@@ -1191,7 +1211,7 @@ val cond_pass_enc_data_proc = prove(
    (!cond s rd rn op2.
       CONDITION_PASSED flgs (enc (f cond s rd rn op2)) =
       CONDITION_PASSED2 flgs cond)`,
-  SRW_TAC [] [] \\ PASS_TAC);
+  SRW_TAC [] [instruction_encode_def] \\ SRW_TAC [] [cond_pass_enc_data_proc_]);
 
 val cond_pass_enc_data_proc2 = prove(
   `!f. f IN {instruction$TST; instruction$TEQ;
@@ -1199,14 +1219,14 @@ val cond_pass_enc_data_proc2 = prove(
    (!cond rn op2.
       CONDITION_PASSED flgs (enc (f cond rn op2)) =
       CONDITION_PASSED2 flgs cond)`,
-  SRW_TAC [] [] \\ PASS_TAC);
+  SRW_TAC [] [instruction_encode_def] \\ SRW_TAC [] [cond_pass_enc_data_proc_]);
 
 val cond_pass_enc_data_proc3 = prove(
   `!f. f IN {instruction$MOV; instruction$MVN} ==>
    (!cond s rd op2.
       CONDITION_PASSED flgs (enc (f cond s rd op2)) =
       CONDITION_PASSED2 flgs cond)`,
-  SRW_TAC [] [] \\ PASS_TAC);
+  SRW_TAC [] [instruction_encode_def] \\ SRW_TAC [] [cond_pass_enc_data_proc_]);
 
 val cond_pass_enc_mla_mul = store_thm("cond_pass_enc_mla_mul",
   `(!cond s rd rm rs.
