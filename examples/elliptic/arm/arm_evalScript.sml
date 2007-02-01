@@ -8,7 +8,7 @@
 
 (* interactive use:
   app load ["pred_setSimps", "rich_listTheory", "wordsLib", "armLib",
-            "bsubstTheory", "instructionTheory"];
+            "bsubstTheory", "instructionTheory", "systemTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
@@ -46,9 +46,6 @@ val REG_WRITEL_def = Define`
   (REG_WRITEL r m [] = r) /\
   (REG_WRITEL r m ((n,d)::l) = REG_WRITE (REG_WRITEL r m l) m n d)`;
 
-val Sa_def = Define `Sa = $:-`;
-val Sb_def = Define `Sb = $:-`;
-
 (* ------------------------------------------------------------------------- *)
 
 val STATE_ARM_MEM_NEXT = store_thm("STATE_ARM_MEM_NEXT",
@@ -56,89 +53,39 @@ val STATE_ARM_MEM_NEXT = store_thm("STATE_ARM_MEM_NEXT",
              (STATE_ARM_MEM (t + 1) a = c)`,
   RW_TAC bool_ss [STATE_ARM_MEM_def,GSYM arithmeticTheory.ADD1]);
 
-val SUBST_EQ2 = store_thm("SUBST_EQ2",
-  `!m a v. (m a = v) ==> ((a :- v) m = m)`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
-
-val SUBST_EQ3 = prove(
-  `!m a. (a :- m a) m = m`,
-  STRIP_TAC \\ SIMP_TAC bool_ss [FUN_EQ_THM,SUBST_def]);
-
-val Sab_EQ = store_thm("Sab_EQ",
-  `(Sb a e (Sa a d m) = Sa a e m) /\
-   (Sb a e (Sb a d m) = Sb a e m) /\
-   (Sa a e (Sa a d m) = Sa a e m)`,
-  RW_TAC std_ss [Sa_def,Sb_def,SUBST_EQ]);
-
-(* --- *)
-
-val Sa_RULE_WORD = store_thm("Sa_RULE_WORD",
-  `!m a b d e. Sa a e (Sa b d m) =
-     if a <+ b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sa b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES]);
-
-val Sb_RULE_WORD = store_thm("Sb_RULE_WORD",
-  `!m a b d e. Sa a e (Sb b d m) =
-     if a <+ b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sb b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES]);
-
-val SUBST_COMMUTES4 = store_thm("SUBST_COMMUTES4",
-  `!m a b d e. register2num a < register2num b ==>
-     ((a :- e) ((b :- d) m) = (b :- d) ((a :- e) m))`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
-    \\ IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
-    \\ RW_TAC bool_ss [SUBST_def]
-    \\ FULL_SIMP_TAC bool_ss [register2num_11]);
-
-val Sa_RULE4 = store_thm("Sa_RULE4",
-  `!m a b d e. Sa a e (Sa b d m) =
-     if register2num a < register2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sa b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES4]);
-
-val Sb_RULE4 = store_thm("Sb_RULE4",
-  `!m a b d e. Sa a e (Sb b d m) =
-     if register2num a < register2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sb b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES4]);
-
-(* --- *)
-
-val SUBST_COMMUTES_PSR = store_thm("SUBST_COMMUTES_PSR",
-  `!m a b d e. psr2num b < psr2num a ==>
-     ((a :- e) ((b :- d) m) = (b :- d) ((a :- e) m))`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
-    \\ IMP_RES_TAC prim_recTheory.LESS_NOT_EQ
-    \\ RW_TAC bool_ss [SUBST_def]
-    \\ FULL_SIMP_TAC bool_ss [psr2num_11]);
-
-val Sa_RULE_PSR = store_thm("Sa_RULE_PSR",
-  `!m a b d e. Sa a e (Sa b d m) =
-     if psr2num a < psr2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sa b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES_PSR]);
-
-val Sb_RULE_PSR = store_thm("Sb_RULE_PSR",
-  `!m a b d e. Sa a e (Sb b d m) =
-     if psr2num a < psr2num b then
-       Sb b d (Sa a e m)
-     else
-       Sb a e (Sb b d m)`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_COMMUTES_PSR]);
-
 (* ------------------------------------------------------------------------- *)
+
+val register2num_lt = prove(
+  `!x y. register2num x < register2num y ==> ~(x = y)`,
+  METIS_TAC [prim_recTheory.LESS_NOT_EQ, register2num_11]);
+
+val psr2num_lt = prove(
+  `!x y. psr2num x < psr2num y ==> ~(x = y)`,
+  METIS_TAC [prim_recTheory.LESS_NOT_EQ, psr2num_11]);
+
+val Sa_RULE4 = save_thm("Sa_RULE4",
+  (SIMP_RULE std_ss [register2num_lt] o
+   ISPEC `\x y. register2num x < register2num y`) SUBST_SORT_RULE1);
+
+val Sb_RULE4 = save_thm("Sb_RULE4",
+  (SIMP_RULE std_ss [register2num_lt] o
+   ISPEC `\x y. register2num x < register2num y`) SUBST_SORT_RULE2);
+
+val Sa_RULE_PSR = save_thm("Sa_RULE_PSR",
+  (SIMP_RULE std_ss [psr2num_lt] o
+   ISPEC `\x y. psr2num x < psr2num y`) SUBST_SORT_RULE1);
+
+val Sb_RULE_PSR = save_thm("Sb_RULE_PSR",
+  (SIMP_RULE std_ss [psr2num_lt] o
+   ISPEC `\x y. psr2num x < psr2num y`) SUBST_SORT_RULE2);
+
+val FSa_RULE = save_thm("FSa_RULE",
+  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
+   SPEC `\x y. x < y`) FSUBST_SORT_RULE1);
+
+val FSb_RULE = save_thm("FSb_RULE",
+  (SIMP_RULE std_ss [prim_recTheory.LESS_NOT_EQ] o
+   SPEC `\x y. x < y`) FSUBST_SORT_RULE2);
 
 val tm1 = `!a b x y m. (a ::-> y) ((b ::-> x) m) =
      let lx = LENGTH x and ly = LENGTH y in

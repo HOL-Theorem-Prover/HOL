@@ -183,11 +183,20 @@ end;
 val SORT_SUBST_CONV = let open arm_evalTheory
   val compset = add_rws reduceLib.num_compset
         [register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
-         SYM Sa_def,Sab_EQ,Sa_RULE4,Sb_RULE4,Sa_RULE_PSR,Sb_RULE_PSR,
+         SYM Sa_def,SUBST_EQ_RULE,Sa_RULE4,Sb_RULE4,Sa_RULE_PSR,Sb_RULE_PSR,
          combinTheory.o_THM]
 in
   computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [Sa_def,Sb_def]
     THENC SIMP_CONV (srw_ss()) [SUBST_EQ2,SUBST_EVAL]
+end;
+
+val SORT_FSUBST_CONV = let open arm_evalTheory fcpTheory
+  val compset = add_rws reduceLib.num_compset
+        [SYM FSa_def,FSUBST_EQ_RULE,FSa_RULE,FSb_RULE,combinTheory.o_THM]
+in
+  computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [FSa_def,FSb_def]
+    THENC SIMP_CONV (srw_ss()++wordsLib.SIZES_ss)
+            [FSUBST_EQ2,FSUBST_EVAL,FCP_BETA]
 end;
 
 val SORT_BSUBST_CONV = let open arm_evalTheory

@@ -22,7 +22,7 @@ val _ = new_theory "arm";
 val _ = Hol_datatype `state_inp = <| state : 'a; inp : num -> 'b |>`;
 val _ = Hol_datatype `state_out = <| state : 'a; out : 'b |>`;
 
-val register_decl = Hol_datatype `register =
+val _ = Hol_datatype `register =
  r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
  r8     | r9     | r10     | r11     | r12     | r13     | r14     | r15 |
  r8_fiq | r9_fiq | r10_fiq | r11_fiq | r12_fiq | r13_fiq | r14_fiq |
@@ -31,10 +31,10 @@ val register_decl = Hol_datatype `register =
                                                  r13_abt | r14_abt |
                                                  r13_und | r14_und`;
 
-val psr_decl = Hol_datatype
+val _ = Hol_datatype
   `psr = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
 
-val exceptions_decl = Hol_datatype
+val _ = Hol_datatype
   `exceptions = reset | undefined | software | pabort |
                 dabort | address |interrupt | fast`;
 
@@ -64,14 +64,13 @@ val _ = Hol_datatype`
   arm_input = <| ireg : word32; data : word32 list;
                  interrupt : interrupt option; no_cp : bool |>`;
 
-val mode_decl = Hol_datatype
-  `mode = usr | fiq | irq | svc | abt | und | sys | safe`;
+val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | sys | safe`;
 
-val condition_decl = Hol_datatype
+val _ = Hol_datatype
   `condition = EQ | CS | MI | VS | HI | GE | GT | AL |
                NE | CC | PL | VC | LS | LT | LE | NV`;
 
-val iclass_decl = Hol_datatype
+val _ = Hol_datatype
   `iclass = swp | mrs | msr | data_proc | mla_mul |
             ldr_str | ldrh_strh | ldm_stm | br | swi_ex | cdp_und |
             mcr | mrc | ldc_stc | unexec`;
@@ -914,35 +913,6 @@ val ARM_SPEC_def = Define`
   ARM_SPEC t x = let s = STATE_ARM t x in <| state := s; out := OUT_ARM s |>`;
 
 (* ------------------------------------------------------------------------- *)
-(* Some useful theorems                                                      *)
-(* ------------------------------------------------------------------------- *)
-
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
-val SUBST_NE_COMMUTES = store_thm ("SUBST_NE_COMMUTES",
-  `!m a b c d. ~(a = b) ==>
-     ((a :- c) ((b :- d) m) = (b :- d) ((a :- c) m))`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
-
-val SUBST_COMMUTES = store_thm("SUBST_COMMUTES",
-  `!m a b c d. a <+ b ==>
-     ((b :- d) ((a :- c) m) = (a :- c) ((b :- d) m))`,
-  REPEAT STRIP_TAC \\ IMP_RES_TAC WORD_LOWER_NOT_EQ
-    \\ ASM_SIMP_TAC std_ss [SUBST_NE_COMMUTES]);
-
-val SUBST_EQ = store_thm("SUBST_EQ",
-  `!m a b c. (a :- c) ((a :- b) m) = (a :- c) m`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
-
-val SUBST_EVAL = store_thm("SUBST_EVAL",
-  `!a w b. (a :- w) m b = if a = b then w else m b`,
-  RW_TAC std_ss [SUBST_def]);
-
-(* ------------------------------------------------------------------------- *)
 (* Add some definitions to the_compset                                       *)
 (*---------------------------------------------------------------------------*)
 
@@ -957,7 +927,7 @@ in
     ("rich_listTheory.SNOC", SNOC),
     ("pred_setTheory.IN_INSERT", IN_INSERT),
     ("pred_setTheory.NOT_IN_EMPTY", NOT_IN_EMPTY),
-    ("SUBST_EVAL",  SUBST_EVAL)] @
+    ("bsubstTheory.SUBST_EVAL", bsubstTheory.SUBST_EVAL)] @
   map (fn s => (s, theorem s))
   ["register_EQ_register","num2register_thm","register2num_thm", "mode_EQ_mode",
    "mode2num_thm", "psr_EQ_psr", "psr2num_thm", "iclass_EQ_iclass",

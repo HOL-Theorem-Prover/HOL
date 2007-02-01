@@ -26,12 +26,7 @@ val _ = new_theory "system";
 (* The register word size can be different for each coprocessor               *)
 (* -------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `cp_register = cr0   | cr1   | cr2   | cr3
-                                  | cr4   | cr5   | cr6   | cr7
-                                  | cr8   | cr9   | cr10  | cr11
-                                  | cr12  | cr13  | cr14  | cr15`;
-
-val _ = type_abbrev("cp_registers",``:cp_register->'a word``);
+val _ = type_abbrev("cp_registers",``:'a word ** 16``);
 
 val _ = Hol_datatype`
   all_cp_registers =
@@ -133,16 +128,13 @@ val _ = Hol_datatype `all_coproc_ops =
 (* REG_READ_CP and REG_WRITE_CP                                               *)
 (* -------------------------------------------------------------------------- *)
 
-val word2cp_register = Define`
-  word2cp_register (n:word4) = num2cp_register (w2n n)`;
-
 val CP_REG_READ_def = Define`
-  CP_REG_READ (cp_registers:'a cp_registers) n =
-    cp_registers (word2cp_register n)`;
+  CP_REG_READ (cp_registers:'a cp_registers) (n:word4) =
+    cp_registers %% (w2n n)`;
 
 val CP_REG_WRITE_def = Define`
-  CP_REG_WRITE (cp_registers:'a cp_registers) n data =
-    ((word2cp_register n :- data) cp_registers)`;
+  CP_REG_WRITE (cp_registers:'a cp_registers) (n:word4) data =
+    ((w2n n :+ data) cp_registers)`;
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_CDP                                                                 *)
@@ -153,7 +145,7 @@ val DECODE_CDP_def = Define`
     (^Rg 23 20 ireg,          (* Cop1 *)
      ^Rg 19 16 ireg,          (* CRn *)
      ^Rg 15 12 ireg,          (* CRd *)
-     ((7 >< 5) ireg):word3, (* Cop2 *)
+     ((7 >< 5) ireg):word3,   (* Cop2 *)
      ^Rg 03 00 ireg)`;        (* CRm *)
 
 (* -------------------------------------------------------------------------- *)
@@ -570,7 +562,7 @@ val empty_registers_def = Define`empty_registers = (\n. 0w):registers`;
 val empty_psrs_def      = Define`empty_psrs = (\x. SET_IFMODE F F usr 0w):psrs`;
 
 val empty_cp_registers_def = Define`
-  empty_cp_registers = (\n. 0w):one cp_registers`;
+  empty_cp_registers = (FCP n. 0w):one cp_registers`;
 
 val empty_all_cp_registers_def = Define`
   empty_all_cp_registers =
@@ -589,7 +581,7 @@ val empty_all_cp_registers_def = Define`
        p12_registers := empty_cp_registers;
        p13_registers := empty_cp_registers;
        p14_registers := empty_cp_registers;
-       p15_registers := (\n. 0w)
+       p15_registers := (FCP n. 0w)
     |>`;
 
 (* ------------------------------------------------------------------------- *)
@@ -1050,7 +1042,8 @@ val defs_rule =
   BETA_RULE o PURE_REWRITE_RULE
     [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
      GSYM word_concat_itself_def, GSYM word_extract_itself_def,
-     GSYM mem_write_def, literal_case_THM] o
+     GSYM mem_write_def, literal_case_THM,
+     GSYM fcpTheory.FCPi_def, GSYM fcpTheory.mk_fcp_def] o
   RHS_REWRITE_RULE [GSYM word_eq_def];
 
 val _ = let open EmitML in emitML (!Globals.emitMLDir)
@@ -1081,27 +1074,27 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
                MEM_WRITE_WORD_def, MEM_WRITE_def])
 end;
 
-val _ = temp_type_abbrev("cp_registers32",``:32 cp_registers``);
+val _ = temp_disable_tyabbrev_printing "cp_registers";
+val _ = type_pp.pp_num_types := false;
 
 val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
   OPEN ["num", "option", "set", "fcp", "list", "rich_list", "bit", "words"]
     :: MLSIG "type 'a word = 'a wordsML.word"
+    :: MLSIG "type ('a,'b) cart = ('a,'b) fcpML.cart"
+    :: MLSIG "type 'a bit0 = 'a fcpML.bit0"
+    :: MLSIG "type 'a bit1 = 'a fcpML.bit1"
     :: MLSIG "type num = numML.num"
-    :: map (fn decl => DATATYPE decl) [register_decl, cp_register_decl,
-                                       psr_decl, mode_decl, condition_decl]
+    :: map (fn decl => DATATYPE decl)
+           [register_decl, psr_decl, mode_decl, condition_decl]
      @ map (fn decl => EQDATATYPE ([], decl)) [exceptions_decl,iclass_decl]
-     @ ABSDATATYPE (["'a","'b"],`state_inp = <| state : 'a; inp : num -> 'b |>`)
-    :: ABSDATATYPE (["'a","'b"],`state_out = <| state : 'a; out : 'b |>`)
+     @ DATATYPE (`state_inp = <| state : 'a; inp : num -> 'b |>`)
+    :: DATATYPE (`state_out = <| state : 'a; out : 'b |>`)
     :: map mk_word [2,4,5,8,12,16,24,30,32]
      @ MLSTRUCT "type registers = register->word32"
-    :: MLSTRUCT "type 'a cp_registers = cp_register->'a word"
-    :: MLSTRUCT "type cp_registers32 = cp_register-> word32"
     :: MLSTRUCT "type psrs = psr->word32"
     :: MLSTRUCT "type mem = bsubstML.mem"
     :: MLSTRUCT "type data = bsubstML.data"
     :: MLSIG "type registers = register->word32"
-    :: MLSIG "type 'a cp_registers = cp_register->'a word"
-    :: MLSIG "type cp_registers32 = cp_register-> word32"
     :: MLSIG "type psrs = psr->word32"
     :: MLSIG "type mem = bsubstML.mem"
     :: MLSIG "type data = bsubstML.data"
@@ -1141,7 +1134,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
            DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
            DECODE_LDC_STC_THM, DECODE_LDRH_STRH_THM]
        @ [USER_def, mode_reg2num_def, DECODE_ARM_def, mode_num_def,
-          state_out_state, state_out_out, exceptions2num_thm, register2num_thm,
+          exceptions2num_thm, register2num_thm,
           num2register, num2condition, SET_IFMODE_def,
           REG_READ_def, REG_WRITE_def, INC_PC_def, FETCH_PC_def,
           SET_NZCV_def, SET_NZC_def, SET_NZ_def,

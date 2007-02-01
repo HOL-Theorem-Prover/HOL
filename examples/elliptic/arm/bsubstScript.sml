@@ -24,10 +24,14 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
-val _ = set_fixity ":-"   (Infixr 325);
-val _ = set_fixity "::-"  (Infixr 325);
-val _ = set_fixity "::->" (Infixr 325);
-val _ = set_fixity "::-<" (Infixr 325);
+val _ = set_fixity ":-"   (Infixr 330);
+val _ = set_fixity ":->"  (Infixr 330);
+val _ = set_fixity ":-<"  (Infixr 330);
+val _ = set_fixity ":+>"  (Infixr 330);
+val _ = set_fixity ":+<"  (Infixr 330);
+val _ = set_fixity "::-"  (Infixr 330);
+val _ = set_fixity "::->" (Infixr 330);
+val _ = set_fixity "::-<" (Infixr 330);
 
 val _ = computeLib.auto_import_definitions := false;
 
@@ -39,8 +43,14 @@ val BSUBST_def = xDefine "BSUBST"
         EL (w2n b - w2n a) l
       else m b`;
 
+val Sa_def = xDefine "Sa" `$:-> = $:-`;
+val Sb_def = xDefine "Sb" `$:-< = $:-`;
+
 val BSa_def = xDefine "BSa" `$::-> = $::-`;
 val BSb_def = xDefine "BSb" `$::-< = $::-`;
+
+val FSa_def = xDefine "FSa" `$:+> = $:+`;
+val FSb_def = xDefine "FSb" `$:+< = $:+`;
 
 val JOIN_def = Define`
   JOIN n x y =
@@ -108,7 +118,7 @@ val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
         if a <=+ b then
           if w2n b - w2n a <= ly then
             if ly - (w2n b - w2n a) < lx then
-              (a ::- y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x) m
+              (a ::- (y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x)) m
             else
               (a ::- y) m
           else
@@ -144,6 +154,77 @@ val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
             \\ IMP_RES_TAC LENGTH_NIL
             \\ RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def]
             \\ FULL_SIMP_TAC arith_ss []]]);
+
+(* ------------------------------------------------------------------------- *)
+
+val SUBST_NE_COMMUTES = store_thm ("SUBST_NE_COMMUTES",
+  `!m a b c d. ~(a = b) ==>
+     ((a :- c) ((b :- d) m) = (b :- d) ((a :- c) m))`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
+
+val SUBST_EQ = store_thm("SUBST_EQ",
+  `!m a b c. (a :- c) ((a :- b) m) = (a :- c) m`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
+
+val SUBST_EQ2 = store_thm("SUBST_EQ2",
+  `!m a v. (m a = v) ==> ((a :- v) m = m)`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
+
+val SUBST_EQ3 = store_thm("SUBST_EQ3",
+  `!m a. (a :- m a) m = m`,
+  STRIP_TAC \\ SIMP_TAC bool_ss [FUN_EQ_THM,SUBST_def]);
+
+val SUBST_EVAL = store_thm("SUBST_EVAL",
+  `!a w b. (a :- w) m b = if a = b then w else m b`,
+  RW_TAC std_ss [SUBST_def]);
+
+val SUBST_SORT_RULE1 = store_thm("SUBST_SORT_RULE1",
+  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+     ((a :-> e) ((b :-> d) m) =
+         if R a b then
+           (b :-< d) ((a :-> e) m)
+         else
+           (a :-< e) ((b :-> d) m))`,
+  METIS_TAC [Sa_def,Sb_def,SUBST_NE_COMMUTES]);
+
+val SUBST_SORT_RULE2 = store_thm("SUBST_SORT_RULE2",
+  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+     ((a :-> e) ((b :-< d) m) =
+         if R a b then
+           (b :-< d) ((a :-> e) m)
+         else
+           (a :-< e) ((b :-< d) m))`,
+  METIS_TAC [Sa_def,Sb_def,SUBST_NE_COMMUTES]);
+
+val SUBST_EQ_RULE = store_thm("SUBST_EQ_RULE",
+  `((a :-< e) ((a :-> d) m) = (a :-> e) m) /\
+   ((a :-< e) ((a :-< d) m) = (a :-< e) m) /\
+   ((a :-> e) ((a :-> d) m) = (a :-> e) m)`,
+  REWRITE_TAC [Sa_def,Sb_def,SUBST_EQ]);
+
+val FSUBST_SORT_RULE1 = store_thm("FSUBST_SORT_RULE1",
+  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+     ((a :+> e) ((b :+> d) m) =
+         if R a b then
+           (b :+< d) ((a :+> e) m)
+         else
+           (a :+< e) ((b :+> d) m))`,
+  METIS_TAC [FSa_def,FSb_def,fcpTheory.FSUBST_NE_COMMUTES]);
+
+val FSUBST_SORT_RULE2 = store_thm("FSUBST_SORT_RULE2",
+  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+     ((a :+> e) ((b :+< d) m) =
+         if R a b then
+           (b :+< d) ((a :+> e) m)
+         else
+           (a :+< e) ((b :+< d) m))`,
+  METIS_TAC [FSa_def,FSb_def,fcpTheory.FSUBST_NE_COMMUTES]);
+
+val FSUBST_EQ_RULE = store_thm("FSUBST_EQ_RULE",
+  `((a :+< e) ((a :+> d) m) = (a :+> e) m) /\
+   ((a :+< e) ((a :+< d) m) = (a :+< e) m) /\
+   ((a :+> e) ((a :+> d) m) = (a :+> e) m)`,
+  REWRITE_TAC [FSa_def,FSb_def,fcpTheory.FSUBST_EQ]);
 
 (* ------------------------------------------------------------------------- *)
 
