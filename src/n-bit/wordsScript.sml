@@ -2355,15 +2355,16 @@ val fromNum_def = Define`
   fromNum (n, (:'a)) = n2w_itself (n MOD dimword (:'a),(:'a))`;
 
 fun mk_index i =
-  let val n = Int.toString i 
-      val s = " i" ^ n 
-      val w = "type word" ^ n ^ " =" ^ s ^ " word"
+  let val n = Arbnum.fromInt i
+      val typ = fcpLib.index_type n
+      val s = String.extract(type_to_string typ, 1, NONE)
+      val w = "type word" ^ Int.toString i ^ " = " ^ s ^ " word"
   in
-    [EmitML.MLSTRUCT ("datatype" ^ s ^ " =" ^ s), EmitML.MLSIG ("eqtype" ^ s),
-     EmitML.MLSTRUCT w, EmitML.MLSIG w]
+    [EmitML.MLSTRUCT w, EmitML.MLSIG w]
   end;
 
 val _ = ConstMapML.insert ``n2w_itself``;
+val _ = type_pp.pp_num_types := false;
 
 local
   open EmitML numeral_bitTheory
@@ -2402,6 +2403,8 @@ in
     ("words", OPEN ["sum", "num", "fcp", "bit"]
      :: MLSIG "type ('a, 'b) sum = ('a, 'b) sumML.sum"
      :: MLSIG "type 'a itself = 'a fcpML.itself"
+     :: MLSIG "type 'a bit0 = 'a fcpML.bit0"
+     :: MLSIG "type 'a bit1 = 'a fcpML.bit1"
      :: MLSIG "type num = numML.num"
      :: MLSIG "datatype 'a word = n2w_itself of num * 'a itself"
      :: MLSTRUCT "datatype 'a word = n2w_itself of num * 'a itself"
@@ -2410,11 +2413,11 @@ in
            GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
            GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
            TIMES_2EXP1] o ALPHA_BETA_RULE)
-          [dimword_def,INT_MIN_def,UINT_MAX_def, INT_MAX_def, w2n_n2w,
-           word_eq_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w, word_bits_n2w,
-           SPEC `c` word_bit_n2w, word_join_n2w, sw2sw_n2w, word_extract_n2w,
-           word_slice_n2w, word_concat_def, word_log2_n2w, word_reverse_n2w,
-           word_modify_n2w, word_lsb_n2w, word_msb_n2w,
+          [dimword_def, INT_MIN_def, UINT_MAX_def, INT_MAX_def,
+           w2n_n2w, word_eq_n2w, w2w_n2w, word_or_n2w, word_lsl_n2w,
+           word_bits_n2w, SPEC `c` word_bit_n2w, word_join_n2w, sw2sw_n2w,
+           word_extract_n2w, word_slice_n2w, word_concat_def, word_log2_n2w,
+           word_reverse_n2w, word_modify_n2w, word_lsb_n2w, word_msb_n2w,
            word_1comp_n2w, word_and_n2w, word_xor_n2w,
            word_2comp_n2w, word_div_n2w, word_sdiv_def,
            MOD_WL word_add_n2w, word_sub_def, MOD_WL word_mul_n2w,

@@ -573,11 +573,70 @@ val card_dimindex = save_thm("card_dimindex",
    ``FINITE (UNIV:'a->bool) ==> (CARD (UNIV:'a->bool) = dimindex(:'a))``);
 
 (* ------------------------------------------------------------------------ *)
+
+infix \\ << >>
+
+val op \\ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
+
+val FCP_ss = rewrites [FCP_BETA,FCP_ETA,CART_EQ];
+
+val _ = set_fixity ":+"  (Infixl 325);
+
+val _ = computeLib.auto_import_definitions := false;
+
+val FSUBST_def = xDefine "FSUBST"
+  `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m %% c):'a ** 'b`;
+
+val FSUBST_NE_COMMUTES = store_thm ("FSUBST_NE_COMMUTES",
+  `!m a b c d.  ~(a = b) ==>
+     ((a :+ c) ((b :+ d) m) = (b :+ d) ((a :+ c) m))`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
+    \\ SRW_TAC [FCP_ss] [FSUBST_def] \\ RW_TAC std_ss []);
+
+val FSUBST_EQ = store_thm("FSUBST_EQ",
+  `!m a b c. (a :+ c) ((a :+ b) m) = (a :+ c) m`,
+  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
+    \\ SRW_TAC [FCP_ss] [FSUBST_def]);
+
+val FSUBST_EQ2 = store_thm("FSUBST_EQ2",
+  `!m a v. (m %% a = v) ==> ((a :+ v) m = m)`,
+  SRW_TAC [FCP_ss] [FSUBST_def] \\ RW_TAC std_ss []);
+
+val SUBST_EQ3 = store_thm("SUBST_EQ3",
+  `!m a. (a :+ (m %% a)) m = m`, SRW_TAC [FCP_ss] [FSUBST_def]);
+
+val FSUBST_EVAL = store_thm("FSUBST_EVAL",
+  `!(m:'a ** 'b) a w b. ((a :+ w) m) %% b =
+       if b < dimindex(:'b) then
+         if a = b then w else m %% b
+       else
+         ((a :+ w) m) %% b`,
+  SRW_TAC [FCP_ss] [FSUBST_def]);
+
 (* ------------------------------------------------------------------------ *)
 
-(* load "stringTheory"; *)
+val FCPi_def = Define `FCPi (f, (:'b)) = ($FCP f):'a ** 'b`;
 
-open stringTheory;
+val mk_fcp_def = Define `mk_fcp = FCPi`;
+
+val index_comp = store_thm("index_comp",
+  `!f n. ($FCP f):'a ** 'b %% n =
+      if n < dimindex (:'b) then
+        f n
+      else
+        FAIL $%% ^(mk_var("FCP out of bounds",bool))
+             (($FCP f):'a ** 'b) n`,
+  SRW_TAC [FCP_ss] [combinTheory.FAIL_THM]);
+
+val fcp_subst_comp = store_thm("fcp_subst_comp",
+  `!a b f. (x :+ y) ($FCP f):'a ** 'b =
+         ($FCP (\c. if x = c then y else f c)):'a ** 'b`,
+  SRW_TAC [FCP_ss] [FSUBST_def]);
+
+val index_comp = REWRITE_RULE [GSYM FCPi_def] index_comp;
+val fcp_subst_comp = REWRITE_RULE [GSYM FCPi_def] fcp_subst_comp;
 
 val _ = new_constant("ITSELF", ``:num -> 'a itself``);
 
@@ -591,8 +650,6 @@ val EXPi  = new_axiom("EXPi", ``EXPi (ITSELF a, ITSELF b) = ITSELF (a ** b)``);
 
 val dimindexi = new_axiom("dimindexi", ``dimindex (ITSELF a) = a``);
 
-val FCP_i_def = Define `FCP_i (f, (:'b)) = ($FCP f):'a ** 'b`;
-
 val _ =
  let open EmitML
   in try emitML (!Globals.emitMLDir)
@@ -600,10 +657,11 @@ val _ =
     [OPEN ["num"],
      MLSIG "type num = numML.num",
      DATATYPE(`itself = ITSELF of num`),
-     ABSDATATYPE (["'a","'b"], `cart = FCP_i of (num -> 'a) # 'b itself`),
-     ABSDATATYPE (["'a"],`bit0 = BIT0A of 'a | BIT0B of 'a`),
-     ABSDATATYPE (["'a"],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)]
-  @ map DEFN [SUMi, MULi, EXPi, dimindexi])
+     ABSDATATYPE (["'a","'b"], `cart = FCPi of (num -> 'a) # 'b itself`),
+     EQDATATYPE (["'a"],`bit0 = BIT0A of 'a | BIT0B of 'a`),
+     EQDATATYPE (["'a"],`bit1 = BIT1A of 'a | BIT1B of 'a | BIT1C`)]
+  @ map DEFN [SUMi, MULi, EXPi, dimindexi,
+      mk_fcp_def, index_comp, fcp_subst_comp])
 end;
 
 val _ = export_theory();

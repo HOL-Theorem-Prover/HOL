@@ -405,6 +405,13 @@ fun term_to_ML openthys side ppstrm =
        ; rparen i maxprec)
   and pp_itself tm =
     let fun skip1 s = String.extract(s, 1, NONE)
+        fun num_type typ =
+              let val pp_n = !type_pp.pp_num_types
+                  val _ = type_pp.pp_num_types := true
+              in
+                skip1 (Hol_pp.type_to_string typ) before
+                type_pp.pp_num_types := pp_n
+              end
         fun pp_itself_type typ =
          if is_vartype typ then
            add_string (skip1 (dest_vartype typ))
@@ -416,9 +423,9 @@ fun term_to_ML openthys side ppstrm =
            | ("list", [a]) => add_string ("(fcpML.ITSELF (numML.fromInt 1))")
            | ("bool", [])  => add_string ("(fcpML.ITSELF (numML.fromInt 2))")
            | ("bit0", [a]) => add_string ("(fcpML.ITSELF (numML.fromDecString\""
-                                 ^ skip1 (Hol_pp.type_to_string typ) ^ "\"))")
+                                          ^ num_type typ ^ "\"))")
            | ("bit1", [a]) => add_string ("(fcpML.ITSELF (numML.fromDecString\""
-                                 ^ skip1 (Hol_pp.type_to_string typ) ^ "\"))")
+                                          ^ num_type typ ^ "\"))")
            | ("string", []) => add_string ("(fcpML.ITSELF (numML.fromInt 1))")
            | (tyop, [a, b]) =>
               (begin_block Portable.CONSISTENT 0
