@@ -1,5 +1,5 @@
 defaxiomsTheory.uo defaxiomsTheory.ui: complex_rationalTheory.uo sexp.uo sexpTheory.uo make_defaxioms.ml
-	$(HOLDIR)/bin/hol.unquote $(HOLDIR)/../preface.ml < make_defaxioms.ml
+	$(HOLDIR)/bin/hol < make_defaxioms.ml
 
 #sexpTheory.uo sexpTheory.ui: sexp.uo make_sexp.ml
 #	$(HOLDIR)/bin/hol.unquote $(HOLDIR)/../preface.ml < make_sexp.ml
