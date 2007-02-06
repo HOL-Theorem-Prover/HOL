@@ -66,7 +66,7 @@ val _ = Hol_datatype`
 (*  General Purpose Register operations                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = set_fixity ":-" (Infixr 325);
+val _ = set_fixity ":-" (Infix(NONASSOC, 320));
 
 val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
 
