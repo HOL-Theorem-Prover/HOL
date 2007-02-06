@@ -16,7 +16,7 @@ struct
 *)
 
 open HolKernel boolLib bossLib;
-open Q Parse computeLib pairTheory wordsTheory wordsSyntax
+open Q Parse computeLib substTheory pairTheory wordsTheory wordsSyntax
      optionTheory rich_listTheory armTheory arm_evalTheory
      bsubstTheory systemTheory instructionTheory instructionSyntax assemblerML;
 
@@ -110,6 +110,7 @@ fun arm_compset () = add_rws wordsLib.words_compset
    DECODE_BRANCH_THM,DECODE_DATAP_THM,DECODE_MRS_THM,
    DECODE_MSR_THM,DECODE_LDR_STR_THM,DECODE_SWP_THM,
    DECODE_LDM_STM_THM,DECODE_MLA_MUL_THM,DECODE_LDC_STC_THM,
+   DECODE_CDP_THM,DECODE_MRC_MCR_THM,DECODE_LDC_STC'_THM,
    DECODE_PSRD_def,
    IS_DP_IMMEDIATE_def, IS_DT_SHIFT_IMMEDIATE_def, IS_MSR_IMMEDIATE_def,
    IS_DTH_IMMEDIATE_def,
@@ -161,14 +162,39 @@ fun arm_compset () = add_rws wordsLib.words_compset
 
 fun arm_eval_compset () =
   add_rws arm_compset
-    [arm_sys_state_accessors, arm_sys_state_updates_eq_literal,memop_case_def,
+    [arm_sys_state_accessors, arm_sys_state_updates_eq_literal,
      arm_sys_state_accfupds, arm_sys_state_fupdfupds, arm_sys_state_literal_11,
      arm_sys_state_fupdfupds_comp, arm_sys_state_fupdcanon,
      arm_sys_state_fupdcanon_comp,
-     ADDR30_def,SET_BYTE_def,SET_HALF_def,BSUBST_EVAL,TRANSFER_def,
-     MEM_WRITE_BYTE_def,MEM_WRITE_HALF_def,MEM_WRITE_WORD_def,
-     MEM_WRITE_def,TRANSFERS_def,
-     SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] NEXT_ARM_MEM];
+     all_cp_registers_accessors, all_cp_registers_updates_eq_literal,
+     all_cp_registers_accfupds, all_cp_registers_fupdfupds,
+     all_cp_registers_literal_11, all_cp_registers_fupdfupds_comp,
+     all_cp_registers_fupdcanon, all_cp_registers_fupdcanon_comp,
+     cp_output_accessors, cp_output_updates_eq_literal,
+     cp_output_accfupds, cp_output_fupdfupds, cp_output_literal_11,
+     cp_output_fupdfupds_comp, cp_output_fupdcanon,
+     cp_output_fupdcanon_comp,
+     bus_accessors, bus_updates_eq_literal,
+     bus_accfupds, bus_fupdfupds, bus_literal_11,
+     bus_fupdfupds_comp, bus_fupdcanon,
+     bus_fupdcanon_comp,
+     coproc_ops_accessors, coproc_ops_updates_eq_literal,
+     coproc_ops_accfupds, coproc_ops_fupdfupds, coproc_ops_literal_11,
+     coproc_ops_fupdfupds_comp, coproc_ops_fupdcanon,
+     coproc_ops_fupdcanon_comp,
+     all_coproc_ops_accessors, all_coproc_ops_updates_eq_literal,
+     all_coproc_ops_accfupds, all_coproc_ops_fupdfupds,
+     all_coproc_ops_literal_11, all_coproc_ops_fupdfupds_comp,
+     all_coproc_ops_fupdcanon, all_coproc_ops_fupdcanon_comp,
+
+     memop_case_def, fcpTheory.index_comp, decode_cp_enc_coproc,
+     decode_cdp_enc, decode_mrc_mcr_enc, decode_ldc_stc'_enc,
+
+     CP_REG_READ_def, CP_REG_WRITE_def, ADDR30_def, SET_BYTE_def, SET_HALF_def,
+     BSUBST_EVAL, fcpTheory.FSUBST_EVAL, TRANSFERS_def, TRANSFER_def,
+     MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def, MEM_WRITE_WORD_def,
+     MEM_WRITE_def, MRC_OUT_def, STC_OUT_def, OUT_CPN_def, OUT_CP_def,
+     MCR_def, LDC_def, CDP_def, RUN_CPN_def, RUN_CP_def, NEXT_ARM_MEM];
 
 val ARM_CONV = CBV_CONV (arm_eval_compset());
 val ARM_RULE = CONV_RULE ARM_CONV;
@@ -187,7 +213,7 @@ val SORT_SUBST_CONV = let open arm_evalTheory
          combinTheory.o_THM]
 in
   computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [Sa_def,Sb_def]
-    THENC SIMP_CONV (srw_ss()) [SUBST_EQ2,SUBST_EVAL]
+    THENC SIMP_CONV (srw_ss()) [SUBST_IMP_ID,SUBST_EVAL]
 end;
 
 val SORT_FSUBST_CONV = let open arm_evalTheory fcpTheory
@@ -196,7 +222,7 @@ val SORT_FSUBST_CONV = let open arm_evalTheory fcpTheory
 in
   computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [FSa_def,FSb_def]
     THENC SIMP_CONV (srw_ss()++wordsLib.SIZES_ss)
-            [FSUBST_EQ2,FSUBST_EVAL,FCP_BETA]
+            [FSUBST_IMP_ID,FSUBST_EVAL,FCP_BETA]
 end;
 
 val SORT_BSUBST_CONV = let open arm_evalTheory
@@ -277,7 +303,7 @@ fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:32``);
 
 fun eval_word t = (numSyntax.dest_numeral o rhsc o FOLD_SUBST_CONV o mk_w2n) t;
 
-val subst_tm  = prim_mk_const{Name = ":-",  Thy = "bsubst"};
+val subst_tm  = prim_mk_const{Name = ":-",  Thy = "subst"};
 val bsubst_tm = prim_mk_const{Name = "::-", Thy = "bsubst"};
 
 fun mk_subst (a,b,m) =

@@ -913,21 +913,20 @@ val ARM_SPEC_def = Define`
   ARM_SPEC t x = let s = STATE_ARM t x in <| state := s; out := OUT_ARM s |>`;
 
 (* ------------------------------------------------------------------------- *)
-(* Add some definitions to the_compset                                       *)
-(*---------------------------------------------------------------------------*)
 
-val _ =
-let open pred_setTheory
-    val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
-in
+val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+
+val GENLIST_EVAL = save_thm("GENLIST_EVAL", SUC_RULE GENLIST);
+val FIRSTN_EVAL = save_thm("FIRSTN_EVAL", SUC_RULE FIRSTN);
+
+val _ = let open pred_setTheory in
   computeLib.add_persistent_funs
-  ([("rich_listTheory.GENLIST", SUC_RULE GENLIST),
-    ("rich_listTheory.FIRSTN", SUC_RULE FIRSTN),
+  ([("GENLIST_EVAL", GENLIST_EVAL),
+    ("FIRSTN_EVAL", FIRSTN_EVAL),
     ("rich_listTheory.SPLITP", SPLITP),
     ("rich_listTheory.SNOC", SNOC),
     ("pred_setTheory.IN_INSERT", IN_INSERT),
-    ("pred_setTheory.NOT_IN_EMPTY", NOT_IN_EMPTY),
-    ("bsubstTheory.SUBST_EVAL", bsubstTheory.SUBST_EVAL)] @
+    ("pred_setTheory.NOT_IN_EMPTY", NOT_IN_EMPTY)] @
   map (fn s => (s, theorem s))
   ["register_EQ_register","num2register_thm","register2num_thm", "mode_EQ_mode",
    "mode2num_thm", "psr_EQ_psr", "psr2num_thm", "iclass_EQ_iclass",

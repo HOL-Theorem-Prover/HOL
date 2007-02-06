@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib bossLib;
-open Parse Q arithmeticTheory wordsTheory;
+open Parse Q substTheory arithmeticTheory wordsTheory;
 open listTheory rich_listTheory my_listTheory;
 
 val _ = new_theory "bsubst";
@@ -24,18 +24,18 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
-val _ = set_fixity ":-"   (Infixr 330);
-val _ = set_fixity ":->"  (Infixr 330);
-val _ = set_fixity ":-<"  (Infixr 330);
-val _ = set_fixity ":+>"  (Infixr 330);
-val _ = set_fixity ":+<"  (Infixr 330);
-val _ = set_fixity "::-"  (Infixr 330);
-val _ = set_fixity "::->" (Infixr 330);
-val _ = set_fixity "::-<" (Infixr 330);
+val _ = set_fixity "::-"  (Infix(NONASSOC, 320));
+
+val _ = set_fixity ":->" (Infix(NONASSOC, 320));
+val _ = set_fixity ":-<" (Infix(NONASSOC, 320));
+
+val _ = set_fixity ":+>" (Infix(NONASSOC, 320));
+val _ = set_fixity ":+<" (Infix(NONASSOC, 320));
+
+val _ = set_fixity "::->" (Infix(NONASSOC, 320));
+val _ = set_fixity "::-<" (Infix(NONASSOC, 320));
 
 val _ = computeLib.auto_import_definitions := false;
-
-val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
 
 val BSUBST_def = xDefine "BSUBST"
   `$::- a l = \m b.
@@ -156,27 +156,6 @@ val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
             \\ FULL_SIMP_TAC arith_ss []]]);
 
 (* ------------------------------------------------------------------------- *)
-
-val SUBST_NE_COMMUTES = store_thm ("SUBST_NE_COMMUTES",
-  `!m a b c d. ~(a = b) ==>
-     ((a :- c) ((b :- d) m) = (b :- d) ((a :- c) m))`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
-
-val SUBST_EQ = store_thm("SUBST_EQ",
-  `!m a b c. (a :- c) ((a :- b) m) = (a :- c) m`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
-
-val SUBST_EQ2 = store_thm("SUBST_EQ2",
-  `!m a v. (m a = v) ==> ((a :- v) m = m)`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
-
-val SUBST_EQ3 = store_thm("SUBST_EQ3",
-  `!m a. (a :- m a) m = m`,
-  STRIP_TAC \\ SIMP_TAC bool_ss [FUN_EQ_THM,SUBST_def]);
-
-val SUBST_EVAL = store_thm("SUBST_EVAL",
-  `!a w b. (a :- w) m b = if a = b then w else m b`,
-  RW_TAC std_ss [SUBST_def]);
 
 val SUBST_SORT_RULE1 = store_thm("SUBST_SORT_RULE1",
   `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>

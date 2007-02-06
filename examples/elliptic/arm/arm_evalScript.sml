@@ -13,7 +13,7 @@
 
 open HolKernel boolLib Parse bossLib;
 open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open bsubstTheory armTheory systemTheory instructionTheory;
+open substTheory bsubstTheory armTheory systemTheory instructionTheory;
 
 val _ = new_theory "arm_eval";
 
@@ -202,7 +202,7 @@ val REG_READ_WRITE_THM = prove(
       if n1 = n2 then d else REG_READ6 r m n2) /\
     !r m n d. (REG_WRITE r m n (REG_READ6 r m n) = r)`,
   RW_TAC std_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,FETCH_PC_def,
-    SUBST_EQ3,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
+    SUBST_ID,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
     \\ PROVE_TAC [not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
          DECIDE ``15 < 31``]);
 
@@ -217,7 +217,7 @@ val REG_READ_WRITE_NEQ = store_thm("REG_READ_WRITE_NEQ",
   `!r m1 m2 n1 n2 d. ~(n1 = n2) ==>
       (REG_READ6 (REG_WRITE r m1 n1 d) m2 n2 = REG_READ6 r m2 n2)`,
   RW_TAC std_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,FETCH_PC_def,
-    SUBST_EQ3,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
+    SUBST_ID,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
     \\ PROVE_TAC [not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
          DECIDE ``15 < 31``]);
 
@@ -396,9 +396,9 @@ val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
 val CPSR_READ_WRITE = store_thm("CPSR_READ_WRITE",
   `(!psr. CPSR_WRITE psr (CPSR_READ psr) = psr) /\
    (!psr mode. USER mode ==> (CPSR_WRITE psr (SPSR_READ psr mode) = psr))`,
-  RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_READ_def,SUBST_EQ3,
+  RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_READ_def,SUBST_ID,
          USER_def,mode2psr_def]
-    \\ REWRITE_TAC [mode_case_def,SUBST_EQ3]);
+    \\ REWRITE_TAC [mode_case_def,SUBST_ID]);
 
 val CPSR_WRITE_WRITE = store_thm("CPSR_WRITE_WRITE",
   `!psr a b. CPSR_WRITE (CPSR_WRITE psr a) b = CPSR_WRITE psr b`,
@@ -418,8 +418,7 @@ val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
 val SPSR_READ_WRITE = store_thm("SPSR_READ_WRITE",
   `!psr m. SPSR_WRITE psr m (SPSR_READ psr m) = psr`,
   RW_TAC std_ss [SPSR_READ_def,SPSR_WRITE_def,mode2psr_def]
-    \\ Cases_on `m`
-    \\ SIMP_TAC (srw_ss()) [SUBST_EQ3]);
+    \\ Cases_on `m` \\ SIMP_TAC (srw_ss()) [SUBST_ID]);
 
 val SPSR_WRITE_THM = store_thm("SPSR_WRITE_THM",
   `!psr m x. USER m ==> (SPSR_WRITE psr m x = psr)`,
@@ -709,6 +708,23 @@ val decode_enc_coproc = store_thm("decode_enc_coproc",
       DECODE_ARM (enc (instruction$LDC cond n opt cpn crd rn offset)) =
       ldc_stc)`,
   SRW_TAC word_frags [options_encode_def,word_modify_def]);
+
+val decode_cp_enc_coproc = store_thm("decode_cp_enc_coproc",
+  `(!cond cpn cop1 crd crn crm cop2.
+      DECODE_CP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
+      cdp_und) /\
+   (!cond. DECODE_CP (enc (instruction$UND cond)) = cdp_und) /\
+   (!cond cpn cop1 rd crn crm cop2.
+      DECODE_CP (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = mrc) /\
+   (!cond cpn cop1 rd crn crm cop2.
+      DECODE_CP (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = mcr) /\
+   (!cond n opt cpn crd rn offset.
+      DECODE_CP (enc (instruction$STC cond n opt cpn crd rn offset)) =
+      ldc_stc) /\
+   (!cond n opt cpn crd rn offset.
+      DECODE_CP (enc (instruction$LDC cond n opt cpn crd rn offset)) =
+      ldc_stc)`,
+  SRW_TAC word_frags [DECODE_CP_def,options_encode_def,word_modify_def]);
 
 (* ......................................................................... *)
 
@@ -1055,6 +1071,44 @@ val decode_ldc_stc_enc = store_thm("decode_ldc_stc_enc",
       DECODE_LDC_STC (enc (instruction$STC cond n opt cpn crd rn offset)) =
       (opt.Pre, opt.Up, opt.Wb, F, rn, offset))`,
   SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+
+val decode_cdp_enc = store_thm("decode_cdp_enc",
+  `(!cond cpn cop1 crd crn crm cop2.
+      DECODE_CDP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
+        (cop1,crn,crd,cop2,crm)) /\
+    !cond cpn cop1 crd crn crm cop2.
+      CP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) = cpn`,
+  SRW_TAC word_frags [DECODE_CDP_def,CP_def] \\ FULL_SIMP_TAC std_ss [LESS_THM]
+    \\ SRW_TAC word_frags []);
+
+val decode_mrc_mcr_enc = store_thm("decode_mrc_mcr_enc",
+  `(!cond cpn cop1 rd crn crm cop2.
+      DECODE_MRC_MCR (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) =
+        (cop1,crn,rd,cop2,crm)) /\
+   (!cond cpn cop1 rd crn crm cop2.
+      CP (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = cpn) /\
+   (!cond cpn cop1 rd crn crm cop2.
+      DECODE_MRC_MCR (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) =
+        (cop1,crn,rd,cop2,crm)) /\
+   (!cond cpn cop1 rd crn crm cop2.
+      CP (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = cpn)`,
+  SRW_TAC word_frags [DECODE_MRC_MCR_def,CP_def]
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+
+val decode_ldc_stc'_enc = store_thm("decode_ldc_stc'_enc",
+  `(!cond n opt cpn crd rn offset.
+      DECODE_LDC_STC' (enc (instruction$LDC cond n opt cpn crd rn offset)) =
+        (n,crd)) /\
+   (!cond n opt cpn crd rn offset.
+      CP (enc (instruction$LDC cond n opt cpn crd rn offset)) = cpn) /\
+   (!cond n opt cpn crd rn offset.
+      DECODE_LDC_STC' (enc (instruction$STC cond n opt cpn crd rn offset)) =
+        (n,crd)) /\
+   (!cond n opt cpn crd rn offset.
+      CP (enc (instruction$STC cond n opt cpn crd rn offset)) = cpn)`,
+  SRW_TAC word_frags
+          [DECODE_LDC_STC'_def,CP_def,options_encode_def,word_modify_def]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
 
 (* ......................................................................... *)

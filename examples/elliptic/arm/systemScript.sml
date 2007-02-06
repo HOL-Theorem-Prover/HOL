@@ -12,7 +12,7 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory bsubstTheory;
+open Q wordsTheory rich_listTheory substTheory bsubstTheory;
 open armTheory;
 
 val _ = new_theory "system";
@@ -83,7 +83,7 @@ val Rg = inst [alpha |-> ``:32``,beta |-> ``:4``] wordsSyntax.word_extract_tm;
 (*                                                                            *)
 (* absent : user_mode ireg => bool                                            *)
 (*                                - controls which instructions are accepted  *)
-(* f_mrc : user_mode regs Cop1 Cop2 CRn CRm => word32                         *)
+(* f_mrc : user_mode rd15 regs Cop1 Cop2 CRn CRm => word32                    *)
 (*                                - output for MRC instruction                *)
 (* f_mcr : user_mode regs Cop1 Cop2 data CRm => regs                          *)
 (*                                - operation for MCR instruction             *)
@@ -97,10 +97,10 @@ val Rg = inst [alpha |-> ``:32``,beta |-> ``:4``] wordsSyntax.word_extract_tm;
 
 val _ = Hol_datatype `coproc_ops =
   <| absent:bool->word32->bool;
-     f_mrc:bool->'a cp_registers->word3->word3->word4->word4->word32;
+     f_mrc:bool->bool->'a cp_registers->word3->word3->word4->word4->word32;
      f_mcr:bool->'a cp_registers->word3->word3-> word32->word4->'a cp_registers;
      f_stc:bool->'a cp_registers->bool->word4->word32 option list;
-     f_ldc:bool->'a cp_registers->word4->bool->word32 list->'a cp_registers;
+     f_ldc:bool->'a cp_registers->bool->word4->word32 list->'a cp_registers;
      f_cdp:bool->'a cp_registers->word4->word3->
            word4->word4->word4->'a cp_registers
   |>`;
@@ -143,10 +143,10 @@ val CP_REG_WRITE_def = Define`
 val DECODE_CDP_def = Define`
   DECODE_CDP (ireg:word32) =
     (^Rg 23 20 ireg,          (* Cop1 *)
-     ^Rg 19 16 ireg,          (* CRn *)
-     ^Rg 15 12 ireg,          (* CRd *)
+     ^Rg 19 16 ireg,          (* CRn  *)
+     ^Rg 15 12 ireg,          (* CRd  *)
      ((7 >< 5) ireg):word3,   (* Cop2 *)
-     ^Rg 03 00 ireg)`;        (* CRm *)
+     ^Rg 03 00 ireg)`;        (* CRm  *)
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_MRC_MCR                                                             *)
@@ -155,9 +155,10 @@ val DECODE_CDP_def = Define`
 val DECODE_MRC_MCR_def = Define`
   DECODE_MRC_MCR (ireg:word32) =
     (((23 >< 21) ireg):word3, (* Cop1 *)
-     ^Rg 19 16 ireg,          (* CRn *)
+     ^Rg 19 16 ireg,          (* CRn  *)
+     ^Rg 15 12 ireg,          (* Rd   *)
      ((07 >< 05) ireg):word3, (* Cop2 *)
-     ^Rg 03 00 ireg)`;        (* CRm *)
+     ^Rg 03 00 ireg)`;        (* CRm  *)
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_LDC_STC'                                                            *)
@@ -165,7 +166,7 @@ val DECODE_MRC_MCR_def = Define`
 
 val DECODE_LDC_STC'_def = Define`
   DECODE_LDC_STC' w =
-    (w %% 22,               (* N *)
+    (w %% 22,               (* N   *)
      ^Rg 15 12 w)`;         (* CRd *)
 
 (* -------------------------------------------------------------------------- *)
@@ -182,13 +183,16 @@ val CP_def = Define `CP (w:word32) = ((11 >< 8) w):word4`;
 
 val DECODE_CP_def = Define`
   DECODE_CP (w:word32) =
-    case ((26 >< 25) w):word3 of
-       6w -> ldc_stc
-    || 7w -> if ~(w %% 24) /\ w %% 4 then
-               if w %% 20 then mrc else mcr
-             else
-               cdp_und
-    || _ -> cdp_und`;
+    if w %% 25 then
+      if w %% 4 /\ w %% 27 then
+        if w %% 20 then
+          mrc
+        else
+          mcr
+      else
+        cdp_und
+    else
+      ldc_stc`;
 
 (* -------------------------------------------------------------------------- *)
 (* MRC_OUT                                                                    *)
@@ -196,9 +200,9 @@ val DECODE_CP_def = Define`
 
 val MRC_OUT_def = Define`
   MRC_OUT f_mrc (cp_registers:'a cp_registers) ireg user_mode =
-    let (Cop1,CRn,Cop2,CRm) = DECODE_MRC_MCR ireg
+    let (Cop1,CRn,Rd,Cop2,CRm) = DECODE_MRC_MCR ireg
     in
-      [SOME (f_mrc user_mode cp_registers Cop1 Cop2 CRn CRm) ;
+      [SOME (f_mrc user_mode (Rd = 15w) cp_registers Cop1 Cop2 CRn CRm) ;
        NONE: word32 option]`;
 
 (* -------------------------------------------------------------------------- *)
@@ -218,7 +222,7 @@ val STC_OUT_def = Define`
 
 val OUT_CPN_def = Define`
   OUT_CPN cp_ops cp_registers ireg user_mode =
-    if cp_ops.absent user_mode ireg then
+    if ~(ireg %% 27) \/ cp_ops.absent user_mode ireg then
       <| data := []; absent := T |>
     else
       <| data :=
@@ -266,7 +270,7 @@ val OUT_CP_def = Define`
 
 val MCR_def = Define`
   MCR f_mcr (cp_registers:'a cp_registers) (data:word32 list) ireg user_mode =
-    let (Cop1,CRn,Cop2,CRm) = DECODE_MRC_MCR ireg
+    let (Cop1,CRn,Rd,Cop2,CRm) = DECODE_MRC_MCR ireg
     in
       f_mcr user_mode cp_registers Cop1 Cop2 (HD data) CRm`;
 
@@ -278,7 +282,7 @@ val LDC_def = Define`
   LDC f_ldc (cp_registers:'a cp_registers) (data:word32 list) ireg user_mode =
     let (N,CRd) = DECODE_LDC_STC' ireg
     in
-      f_ldc user_mode cp_registers CRd N data`;
+      f_ldc user_mode cp_registers N CRd data`;
 
 (* -------------------------------------------------------------------------- *)
 (* CDP                                                                        *)
@@ -463,6 +467,51 @@ val TRANSFERS_def = Define`
          abort := NONE; p15_registers := p15_regs |>`;
 
 (* -------------------------------------------------------------------------- *)
+(* NEXT_ARM_MMU                                                               *)
+(* -------------------------------------------------------------------------- *)
+
+val NEXT_ARM_MMU_def = Define `NEXT_ARM_MMU = NEXT_ARM_SYS TRANSFERS`;
+
+infix \\ << >>
+
+val op \\ = op THEN;
+val op << = op THENL;
+val op >> = op THEN1;
+
+val TRANSFERS = prove(
+  `(!arm_out p15_reg data mem.
+        (TRANSFERS arm_out p15_reg data mem).abort = NONE) /\
+   (!arm_out p15_reg data mem.
+        (TRANSFERS arm_out p15_reg data mem).p15_registers = p15_reg)`,
+  SRW_TAC [] [TRANSFERS_def] \\ FULL_SIMP_TAC (srw_ss()) []);
+
+val NEXT_ARM_MMU = store_thm("NEXT_ARM_MMU",
+ `NEXT_ARM_MMU (cp_ops: ('a0,'a1,'a2,'a3,'a4,'a5,'a6,'a7,
+                         'a8,'a9,'a10,'a11,'a12,'a13,'a14) all_coproc_ops)
+          state =
+    let ireg = state.memory (ADDR30 (FETCH_PC state.registers)) in
+    let s = <| regs := <| reg := state.registers; psr := state.psrs |>;
+               ireg := ireg;
+               exception := if state.undefined then undefined else software |>
+    in
+    let arm_out = OUT_ARM s
+    in
+    let cp_out  = OUT_CP cp_ops state.cp_registers ireg arm_out
+    in
+    let bus = TRANSFERS arm_out state.cp_registers.p15_registers
+                        cp_out.data state.memory
+    in
+    let r = RUN_ARM s NONE bus.data cp_out.absent
+    and p = RUN_CP cp_ops state.cp_registers cp_out.absent bus.data ireg arm_out
+    in
+      <| registers := r.reg; psrs := r.psr; memory := bus.memory;
+         undefined := (~state.undefined /\ arm_out.cpi /\ cp_out.absent);
+         cp_registers := p |>`,
+  SRW_TAC [boolSimps.LET_ss] [NEXT_ARM_SYS_def,NEXT_ARM_MMU_def,TRANSFERS]
+    \\ Cases_on `state.cp_registers`
+    \\ SIMP_TAC (srw_ss()) [definition "all_cp_registers_p15_registers_fupd"]);
+
+(* -------------------------------------------------------------------------- *)
 (* NEXT_ARM_MEM and STATE_ARM_MEM                                             *)
 (* -------------------------------------------------------------------------- *)
 
@@ -509,24 +558,11 @@ val OUT_CP_NO_CPS =
 val RUN_CP_NO_CPS = SIMP_CONV (srw_ss()) [RUN_CP_def,NO_CP_OPS_def]
   ``RUN_CP NO_CP_OPS cp_state T data ireg arm_out``;
 
-val NEXT_ARM_MEM_def = Define `NEXT_ARM_MEM = NEXT_ARM_SYS TRANSFERS NO_CP_OPS`;
+val NEXT_ARM_MEM_def = Define `NEXT_ARM_MEM = NEXT_ARM_MMU NO_CP_OPS`;
 
 val STATE_ARM_MEM_def = Define`
   (STATE_ARM_MEM 0 s = s) /\
   (STATE_ARM_MEM (SUC t) s = NEXT_ARM_MEM (STATE_ARM_MEM t s))`;
-
-infix \\ << >>
-
-val op \\ = op THEN;
-val op << = op THENL;
-val op >> = op THEN1;
-
-val TRANSFERS = prove(
-  `(!arm_out p15_reg data mem.
-        (TRANSFERS arm_out p15_reg data mem).abort = NONE) /\
-   (!arm_out p15_reg data mem.
-        (TRANSFERS arm_out p15_reg data mem).p15_registers = p15_reg)`,
-  SRW_TAC [] [TRANSFERS_def] \\ FULL_SIMP_TAC (srw_ss()) []);
 
 val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
   `NEXT_ARM_MEM state =
@@ -545,9 +581,7 @@ val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
           undefined := (~state.undefined /\ arm_out.cpi);
           cp_registers := state.cp_registers |>`,
   SRW_TAC [boolSimps.LET_ss]
-    [NEXT_ARM_SYS_def,NEXT_ARM_MEM_def,RUN_CP_NO_CPS,OUT_CP_NO_CPS,TRANSFERS]
-    \\ Cases_on `state.cp_registers`
-    \\ SIMP_TAC (srw_ss()) [definition "all_cp_registers_p15_registers_fupd"]);
+          [NEXT_ARM_MEM_def,NEXT_ARM_MMU,RUN_CP_NO_CPS,OUT_CP_NO_CPS]);
 
 (* ------------------------------------------------------------------------- *)
 (* Export ML versions of functions                                           *)
@@ -602,7 +636,8 @@ val MOD_DIMINDEX_32 = (SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] o
 val DECODE_TAC = SIMP_TAC std_ss [DECODE_PSR_def,DECODE_BRANCH_def,
       DECODE_DATAP_def,DECODE_MRS_def,DECODE_MSR_def,DECODE_LDR_STR_def,
       DECODE_LDRH_STRH_def,DECODE_MLA_MUL_def,DECODE_LDM_STM_def,
-      DECODE_SWP_def,DECODE_LDC_STC_def,SHIFT_IMMEDIATE_def,SHIFT_REGISTER_def,
+      DECODE_SWP_def,DECODE_LDC_STC_def,DECODE_CDP_def,DECODE_MRC_MCR_def,
+      DECODE_LDC_STC'_def,SHIFT_IMMEDIATE_def,SHIFT_REGISTER_def,
       CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV rich_listTheory.GENLIST,
       NZCV_def,REGISTER_LIST_def,rich_listTheory.SNOC,word_extract_def]
  \\ SIMP_TAC word_ss [];
@@ -711,6 +746,28 @@ val DECODE_LDC_STC_THM = store_thm("DECODE_LDC_STC_THM",
     let (q3,W) = DIVMOD_2EXP 1 q2 in
     let (q4,U) = DIVMOD_2EXP 1 (DIV2 q3) in
       (ODD q4,U = 1,W = 1,L = 1,n2w Rn,n2w offset)`, DECODE_TAC);
+
+val DECODE_CDP_THM = store_thm("DECODE_CDP_THM",
+  `!n. DECODE_CDP (n2w n) =
+    let (q0,CRm) = DIVMOD_2EXP 4 n in
+    let (q1,Cop2) = DIVMOD_2EXP 3 (DIV2 q0) in
+    let (q2,CRd) = DIVMOD_2EXP 4 (DIV_2EXP 4 q1) in
+    let (q3,CRn) = DIVMOD_2EXP 4 q2 in
+      (n2w (MOD_2EXP 4 q3),n2w CRn,n2w CRd,n2w Cop2,n2w CRm)`, DECODE_TAC);
+
+val DECODE_MRC_MCR_THM = store_thm("DECODE_MRC_MCR_THM",
+  `!n. DECODE_MRC_MCR (n2w n) =
+    let (q0,CRm) = DIVMOD_2EXP 4 n in
+    let (q1,Cop2) = DIVMOD_2EXP 3 (DIV2 q0) in
+    let (q2,CRd) = DIVMOD_2EXP 4 (DIV_2EXP 4 q1) in
+    let (q3,CRn) = DIVMOD_2EXP 4 q2 in
+      (n2w (MOD_2EXP 3 (DIV2 q3)),n2w CRn,n2w CRd,n2w Cop2,n2w CRm)`,
+  DECODE_TAC);
+
+val DECODE_LDC_STC'_THM = store_thm("DECODE_LDC_STC'_THM",
+  `!n. DECODE_LDC_STC' (n2w n) =
+    let (q0,CRd) = DIVMOD_2EXP 4 (DIV_2EXP 12 n) in
+      (ODD (DIV_2EXP 6 q0),n2w CRd)`, DECODE_TAC);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -994,10 +1051,6 @@ val register_decl = `register =
                                                  r13_abt | r14_abt |
                                                  r13_und | r14_und`;
 
-val cp_register_decl = `cp_register =
-   cr0 | cr1 | cr2  | cr3  | cr4  | cr5  | cr6  | cr7 |
-   cr8 | cr9 | cr10 | cr11 | cr12 | cr13 | cr14 | cr15`;
-
 val psr_decl =
   `psr = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
 
@@ -1026,9 +1079,6 @@ val spec_word_rule12 =
 
 val mem_read_rule = ONCE_REWRITE_RULE [GSYM mem_read_def];
 
-val _ = ConstMapML.insert ``dimword``;
-val _ = ConstMapML.insert ``dimindex``;
-val _ = ConstMapML.insert ``INT_MIN``;
 val _ = ConstMapML.insert ``n2w_itself``;
 
 fun mk_word n =
@@ -1089,7 +1139,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
      @ map (fn decl => EQDATATYPE ([], decl)) [exceptions_decl,iclass_decl]
      @ DATATYPE (`state_inp = <| state : 'a; inp : num -> 'b |>`)
     :: DATATYPE (`state_out = <| state : 'a; out : 'b |>`)
-    :: map mk_word [2,4,5,8,12,16,24,30,32]
+    :: map mk_word [2,3,4,5,8,12,16,24,30,32]
      @ MLSTRUCT "type registers = register->word32"
     :: MLSTRUCT "type psrs = psr->word32"
     :: MLSTRUCT "type mem = bsubstML.mem"
@@ -1132,7 +1182,8 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
          [DECODE_PSR_THM, DECODE_BRANCH_THM, DECODE_DATAP_THM,
           DECODE_MRS_THM, DECODE_MSR_THM, DECODE_LDR_STR_THM,
            DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
-           DECODE_LDC_STC_THM, DECODE_LDRH_STRH_THM]
+           DECODE_LDC_STC_THM, DECODE_LDRH_STRH_THM, DECODE_CDP_THM,
+           DECODE_MRC_MCR_THM, DECODE_LDC_STC'_THM]
        @ [USER_def, mode_reg2num_def, DECODE_ARM_def, mode_num_def,
           exceptions2num_thm, register2num_thm,
           num2register, num2condition, SET_IFMODE_def,
