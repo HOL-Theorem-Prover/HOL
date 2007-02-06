@@ -600,11 +600,11 @@ val FSUBST_EQ = store_thm("FSUBST_EQ",
   REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
     \\ SRW_TAC [FCP_ss] [FSUBST_def]);
 
-val FSUBST_EQ2 = store_thm("FSUBST_EQ2",
+val FSUBST_IMP_ID = store_thm("FSUBST_IMP_ID",
   `!m a v. (m %% a = v) ==> ((a :+ v) m = m)`,
   SRW_TAC [FCP_ss] [FSUBST_def] \\ RW_TAC std_ss []);
 
-val SUBST_EQ3 = store_thm("SUBST_EQ3",
+val SUBST_ID = store_thm("SUBST_ID",
   `!m a. (a :+ (m %% a)) m = m`, SRW_TAC [FCP_ss] [FSUBST_def]);
 
 val FSUBST_EVAL = store_thm("FSUBST_EVAL",

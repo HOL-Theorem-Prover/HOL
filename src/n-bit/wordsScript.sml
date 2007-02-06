@@ -2408,7 +2408,7 @@ in
      :: MLSIG "type num = numML.num"
      :: MLSIG "datatype 'a word = n2w_itself of num * 'a itself"
      :: MLSTRUCT "datatype 'a word = n2w_itself of num * 'a itself"
-     :: List.concat (map mk_index [2,4,5,8,12,16,24,30,32])
+     :: List.concat (map mk_index sizes)
       @ map (DEFN o REWRITE_RULE [GSYM n2w_itself_def, GSYM w2w_itself_def,
            GSYM sw2sw_itself_def, GSYM word_concat_itself_def,
            GSYM word_extract_itself_def, word_T_def, word_L_def, word_H_def,
