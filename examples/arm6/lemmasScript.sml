@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib bossLib;
-open Q numLib arithmeticTheory;
+open Q numLib substTheory arithmeticTheory;
 open bitTheory wordsLib wordsTheory armTheory coreTheory;
 
 val _ = new_theory "lemmas";
@@ -185,10 +185,6 @@ val ONE_COMP_THREE_ADD = store_thm("ONE_COMP_THREE_ADD",
 val REGISTER_RANGES =
   (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt;
 
-val SUBST_EQ2 = store_thm("SUBST_EQ2",
-  `!m a. (a :- m a) m = m`,
-  STRIP_TAC \\ SIMP_TAC bool_ss [FUN_EQ_THM,SUBST_def]);
-
 val mode_reg2num_15 = (GEN_ALL o
   SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o
   SPECL [`m`,`15w`]) mode_reg2num_def;
@@ -262,7 +258,7 @@ val REG_READ_WRITE = store_thm("REG_READ_WRITE",
       if n1 = n2 then d else REG_READ6 r m n2) /\
     !r m n d. (REG_WRITE r m n (REG_READ6 r m n) = r)`,
   RW_TAC std_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,FETCH_PC_def,
-    SUBST_EQ2,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
+    SUBST_ID,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
     \\ PROVE_TAC [not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
          DECIDE ``15 < 31``]);
 
@@ -277,7 +273,7 @@ val REG_READ_WRITE_NEQ = store_thm("REG_READ_WRITE_NEQ",
   `!r m1 m2 n1 n2 d. ~(n1 = n2) ==>
       (REG_READ6 (REG_WRITE r m1 n1 d) m2 n2 = REG_READ6 r m2 n2)`,
   RW_TAC std_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,FETCH_PC_def,
-    SUBST_EQ2,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
+    SUBST_ID,mode_reg2num_15,r15] \\ SIMP_TAC std_ss [SUBST_def]
     \\ PROVE_TAC [not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
          DECIDE ``15 < 31``]);
 
@@ -509,9 +505,9 @@ val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
 val CPSR_READ_WRITE = store_thm("CPSR_READ_WRITE",
   `(!psr. CPSR_WRITE psr (CPSR_READ psr) = psr) /\
    (!psr mode. USER mode ==> (CPSR_WRITE psr (SPSR_READ psr mode) = psr))`,
-  RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_READ_def,SUBST_EQ2,
+  RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_READ_def,SUBST_ID,
          USER_def,mode2psr_def]
-    \\ REWRITE_TAC [mode_case_def,SUBST_EQ2]);
+    \\ REWRITE_TAC [mode_case_def,SUBST_ID]);
 
 val CPSR_WRITE_WRITE = store_thm("CPSR_WRITE_WRITE",
   `!psr a b. CPSR_WRITE (CPSR_WRITE psr a) b = CPSR_WRITE psr b`,
@@ -532,7 +528,7 @@ val SPSR_READ_WRITE = store_thm("SPSR_READ_WRITE",
   `!psr m. SPSR_WRITE psr m (SPSR_READ psr m) = psr`,
   RW_TAC std_ss [SPSR_READ_def,SPSR_WRITE_def,mode2psr_def]
     \\ Cases_on `m`
-    \\ SIMP_TAC (srw_ss()) [SUBST_EQ2]);
+    \\ SIMP_TAC (srw_ss()) [SUBST_ID]);
 
 (* ------------------------------------------------------------------------- *)
 

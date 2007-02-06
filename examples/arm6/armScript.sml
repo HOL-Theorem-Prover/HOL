@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib Parse bossLib;
-open Q wordsLib wordsSyntax rich_listTheory io_onestepTheory;
+open Q substTheory wordsLib wordsSyntax rich_listTheory io_onestepTheory;
 
 val _ = new_theory "arm";
 
@@ -65,10 +65,6 @@ val _ = Hol_datatype`
 (* ------------------------------------------------------------------------- *)
 (*  General Purpose Register operations                                      *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = set_fixity ":-" (Infix(NONASSOC, 320));
-
-val SUBST_def = xDefine "SUBST" `$:- a b = \m c. if a = c then b else m c`;
 
 val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] word_extract_tm;
 
@@ -857,20 +853,11 @@ val ARM_SPEC_STATE = save_thm("ARM_SPEC_STATE",
 infix \\
 val op \\ = op THEN;
 
-val SUBST_NE_COMMUTES = store_thm ("SUBST_NE_COMMUTES",
-  `!m a b c d. ~(a = b) ==>
-     ((a :- c) ((b :- d) m) = (b :- d) ((a :- c) m))`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
-
 val SUBST_COMMUTES = store_thm("SUBST_COMMUTES",
   `!m a b c d. a <+ b ==>
      ((b :- d) ((a :- c) m) = (a :- c) ((b :- d) m))`,
   REPEAT STRIP_TAC \\ IMP_RES_TAC wordsTheory.WORD_LOWER_NOT_EQ
     \\ ASM_SIMP_TAC std_ss [SUBST_NE_COMMUTES]);
-
-val SUBST_EQ = store_thm("SUBST_EQ",
-  `!m a b c. (a :- c) ((a :- b) m) = (a :- c) m`,
-  REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC std_ss [SUBST_def]);
 
 (* ------------------------------------------------------------------------- *)
 
