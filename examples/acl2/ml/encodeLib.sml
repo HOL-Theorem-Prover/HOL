@@ -51,6 +51,7 @@ the recogniser *)
 			Can now process functions with incomplete specification
 			The convert_definition interface has been simplified and allows extra theorems for resolution
 			Added some simple caching to the typing procedures *)
+(*	07/02/2006:	Modified to work with natp from def axioms *)
 
 (* Interactive stuff... *)
 (*
@@ -687,7 +688,7 @@ end;
 local
 	val nat_proof = prove(``(!n. sexp_to_nat (num n) = if |= natp (num n) then Num (sexp_to_int (num n)) else 0) /\ 
 				(!a. sexp_to_nat (chr a) = 0) /\ (!a. sexp_to_nat (str a) = 0) /\ (!a b. sexp_to_nat (sym a b) = 0) /\ (!a b. sexp_to_nat (cons a b) = 0)``,
-			RW_TAC std_ss [sexp_to_nat_def,natp_def,integerp_def,TRUTH_REWRITES])
+			RW_TAC std_ss [sexp_to_nat_def,natp_def,integerp_def,TRUTH_REWRITES,ANDL_REWRITE])
 	val bool_proof = prove(``(!n. sexp_to_bool (num n) = T) /\ (!a. sexp_to_bool (chr a) = T) /\ (!a. sexp_to_bool (str a) = T) /\ (!a b. sexp_to_bool (cons a b) = T) /\
 				(!a b. sexp_to_bool (sym a b) = ~(a = "COMMON-LISP") \/ ~(b = "NIL"))``,
 			RW_TAC std_ss [sexp_to_bool_def,ACL2_TRUE_def,equal_def,ite_def,EVAL ``nil = t``] THEN
@@ -741,9 +742,10 @@ end;
 (* Return a detector for the type given *)
 
 local 
-	val nat_proof = prove(``(!a. natp (num a) = ite (integerp (num a)) (ite (less (nat 0) (num a)) t (ite (equal (nat 0) (num a)) t nil)) nil) /\ 
+	val nat_proof = prove(``(!a. natp (num a) = ite (integerp (num a)) (ite (not (less (num a) (nat 0))) t nil) nil) /\
 				(!a. natp (chr a) = nil) /\ (!a. natp (str a) = nil) /\ (!a b. natp (sym a b) = nil) /\ (!a b. natp (cons a b) = nil)``,
-			RW_TAC std_ss [natp_def,integerp_def,ite_def])
+			RW_TAC std_ss [natp_def,integerp_def,ite_def,ANDL_REWRITE,TRUTH_REWRITES,andl_def,not_def] THEN
+			FULL_SIMP_TAC std_ss [])			
 	val bool_proof = prove(``(!a. booleanp (num a) = nil) /\ (!a. booleanp (chr a) = nil) /\ (!a. booleanp (str a) = nil) /\ (!a b. booleanp (cons a b) = nil) /\
 				(!a b. booleanp (sym a b) = ite (equal (sym a b) t) t (equal (sym a b) nil))``,
 			RW_TAC std_ss [booleanp_def,equal_def,ite_def,nil_def,t_def])
