@@ -12,7 +12,7 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory substTheory bsubstTheory;
+open Q wordsTheory rich_listTheory bsubstTheory;
 open armTheory;
 
 val _ = new_theory "system";
@@ -417,15 +417,15 @@ val SET_HALF_def = Define`
 val MEM_WRITE_BYTE_def = Define`
   MEM_WRITE_BYTE (mem:mem) addr (word:word8) =
     let addr30 = ADDR30 addr in
-      (addr30 :- SET_BYTE ((1 >< 0) addr) word (mem addr30)) mem`;
+      (addr30 =+ SET_BYTE ((1 >< 0) addr) word (mem addr30)) mem`;
 
 val MEM_WRITE_HALF_def = Define`
   MEM_WRITE_HALF (mem:mem) addr (word:word16) =
     let addr30 = ADDR30 addr in
-      (addr30 :- SET_HALF (addr %% 1) word (mem addr30)) mem`;
+      (addr30 =+ SET_HALF (addr %% 1) word (mem addr30)) mem`;
 
 val MEM_WRITE_WORD_def = Define`
-  MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr :- word) mem`;
+  MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr =+ word) mem`;
 
 val MEM_WRITE_def = Define`
   MEM_WRITE mem addr d =
@@ -588,33 +588,30 @@ val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
 (*---------------------------------------------------------------------------*)
 
 val mem_read_def        = Define`mem_read (m: mem, a) = m a`;
-val mem_write_def       = Define`mem_write (m:mem) a d = (a :- d) m`;
-val mem_write_block_def = Define`mem_write_block (m:mem) a cr = (a ::- cr) m`;
+val mem_write_def       = Define`mem_write (m:mem) a d = (a =+ d) m`;
+val mem_write_block_def = Define`mem_write_block (m:mem) a cr = (a |: cr) m`;
 val mem_items_def       = Define`mem_items (m:mem) = []:(word30 # word32) list`;
 val empty_memory_def    = Define`empty_memory = (\a. 0xE6000010w):mem`;
 val empty_registers_def = Define`empty_registers = (\n. 0w):registers`;
 val empty_psrs_def      = Define`empty_psrs = (\x. SET_IFMODE F F usr 0w):psrs`;
 
-val empty_cp_registers_def = Define`
-  empty_cp_registers = (FCP n. 0w):one cp_registers`;
-
 val empty_all_cp_registers_def = Define`
   empty_all_cp_registers =
-    <| p0_registers := empty_cp_registers;
-       p1_registers := empty_cp_registers;
-       p2_registers := empty_cp_registers;
-       p3_registers := empty_cp_registers;
-       p4_registers := empty_cp_registers;
-       p5_registers := empty_cp_registers;
-       p6_registers := empty_cp_registers;
-       p7_registers := empty_cp_registers;
-       p8_registers := empty_cp_registers;
-       p9_registers := empty_cp_registers;
-       p10_registers := empty_cp_registers;
-       p11_registers := empty_cp_registers;
-       p12_registers := empty_cp_registers;
-       p13_registers := empty_cp_registers;
-       p14_registers := empty_cp_registers;
+    <| p0_registers  := (FCP n. 0w);
+       p1_registers  := (FCP n. 0w);
+       p2_registers  := (FCP n. 0w);
+       p3_registers  := (FCP n. 0w);
+       p4_registers  := (FCP n. 0w);
+       p5_registers  := (FCP n. 0w);
+       p6_registers  := (FCP n. 0w);
+       p7_registers  := (FCP n. 0w);
+       p8_registers  := (FCP n. 0w);
+       p9_registers  := (FCP n. 0w);
+       p10_registers := (FCP n. 0w);
+       p11_registers := (FCP n. 0w);
+       p12_registers := (FCP n. 0w);
+       p13_registers := (FCP n. 0w);
+       p14_registers := (FCP n. 0w);
        p15_registers := (FCP n. 0w)
     |>`;
 
@@ -1114,7 +1111,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir)
                                | UnsignedWord`)
          :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
          :: map DEFN
-              [SUBST_def, BSUBST_def, mem_read_def,
+              [LUPDATE_def, mem_read_def,
                mem_write_def, mem_write_block_def]
           @ map (DEFN o defs_rule o ONCE_REWRITE_RULE [GSYM mem_read_def])
               [empty_memory_def, mem_items_def, ADDR30_def, GET_HALF_def,
@@ -1209,8 +1206,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           RUN_ARM_def, IS_Reset_def, PROJ_Dabort_def, PROJ_Reset_def ,
           interrupt2exception_def, PROJ_IF_FLAGS_def, NEXT_ARM_def,
           OUT_ARM, mem_read_rule TRANSFER_def, TRANSFERS_def,
-          mem_read_rule NEXT_ARM_MEM, empty_registers_def,
-          empty_cp_registers_def, empty_all_cp_registers_def]))
+          mem_read_rule NEXT_ARM_MEM, empty_registers_def]))
  end;
 
 (* -------------------------------------------------------------------------- *)

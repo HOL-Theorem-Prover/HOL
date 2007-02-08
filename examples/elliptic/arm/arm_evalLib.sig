@@ -8,9 +8,9 @@ sig
    val ARM_CONV             : conv
    val ARM_RULE             : rule
    val ARM_ASSEMBLE_CONV    : conv
-   val SORT_SUBST_CONV      : conv
-   val SORT_FSUBST_CONV     : conv
-   val SORT_BSUBST_CONV     : conv
+   val SORT_UPDATE_CONV     : conv
+   val SORT_FCP_UPDATE_CONV : conv
+   val SORT_LUPDATE_CONV    : conv
 
    val hol_assemble1        : term -> Arbnum.num -> term frag list -> term
    val hol_assemble         : term -> Arbnum.num -> term frag list list -> term
@@ -37,7 +37,7 @@ sig
    val load_mem  : string -> int -> Arbnum.num -> term -> term
    val save_mem  : string -> Arbnum.num -> Arbnum.num -> bool -> term -> unit
 
-   val init      : term -> term -> term -> thm
+   val init      : term -> term -> term -> term -> thm
    val next      : thm -> thm
    val eval      : int * term * term * term -> thm list
    val evaluate  : int * term * term * term -> thm

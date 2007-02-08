@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib bossLib;
-open Parse Q substTheory arithmeticTheory wordsTheory;
+open Parse Q combinTheory arithmeticTheory wordsTheory;
 open listTheory rich_listTheory my_listTheory;
 
 val _ = new_theory "bsubst";
@@ -24,33 +24,33 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
-val _ = set_fixity "::-"  (Infix(NONASSOC, 320));
+val _ = set_fixity "|:"  (Infix(NONASSOC, 320));
 
-val _ = set_fixity ":->" (Infix(NONASSOC, 320));
-val _ = set_fixity ":-<" (Infix(NONASSOC, 320));
+val _ = set_fixity "=+>" (Infix(NONASSOC, 320));
+val _ = set_fixity "=+<" (Infix(NONASSOC, 320));
 
 val _ = set_fixity ":+>" (Infix(NONASSOC, 320));
 val _ = set_fixity ":+<" (Infix(NONASSOC, 320));
 
-val _ = set_fixity "::->" (Infix(NONASSOC, 320));
-val _ = set_fixity "::-<" (Infix(NONASSOC, 320));
+val _ = set_fixity "|:>" (Infix(NONASSOC, 320));
+val _ = set_fixity "|:<" (Infix(NONASSOC, 320));
 
 val _ = computeLib.auto_import_definitions := false;
 
-val BSUBST_def = xDefine "BSUBST"
-  `$::- a l = \m b.
+val LUPDATE_def = xDefine "LUPDATE"
+  `$|: a l = \m b.
       if a <=+ b /\ w2n b - w2n a < LENGTH l then
         EL (w2n b - w2n a) l
       else m b`;
 
-val Sa_def = xDefine "Sa" `$:-> = $:-`;
-val Sb_def = xDefine "Sb" `$:-< = $:-`;
+val Ua_def = xDefine "Ua" `$=+> = $=+`;
+val Ub_def = xDefine "Ub" `$=+< = $=+`;
 
-val BSa_def = xDefine "BSa" `$::-> = $::-`;
-val BSb_def = xDefine "BSb" `$::-< = $::-`;
+val LUa_def = xDefine "LUa" `$|:> = $|:`;
+val LUb_def = xDefine "LUb" `$|:< = $|:`;
 
-val FSa_def = xDefine "FSa" `$:+> = $:+`;
-val FSb_def = xDefine "FSb" `$:+< = $:+`;
+val FUa_def = xDefine "FUa" `$:+> = $:+`;
+val FUb_def = xDefine "FUb" `$:+< = $:+`;
 
 val JOIN_def = Define`
   JOIN n x y =
@@ -96,38 +96,38 @@ val JOIN = store_thm("JOIN",
 
 (* ------------------------------------------------------------------------- *)
 
-val BSUBST_EVAL = store_thm("BSUBST_EVAL",
-  `!a b l m. (a ::- l) m b =
+val APPLY_LUPDATE_THM = store_thm("APPLY_LUPDATE_THM",
+  `!a b l m. (a |: l) m b =
       let na = w2n a and nb = w2n b in
       let d = nb - na in
         if na <= nb /\ d < LENGTH l then EL d l else m b`,
   NTAC 2 wordsLib.Cases_word
-    \\ RW_TAC (std_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def]
+    \\ RW_TAC (std_ss++boolSimps.LET_ss) [WORD_LS,LUPDATE_def]
     \\ FULL_SIMP_TAC arith_ss []);
 
-val SUBST_BSUBST = store_thm("SUBST_BSUBST",
-   `!a b m. (a :- b) m = (a ::- [b]) m`,
-  RW_TAC (std_ss++boolSimps.LET_ss) [FUN_EQ_THM,BSUBST_def,SUBST_def]
+val UPDATE_LUPDATE = store_thm("UPDATE_LUPDATE",
+   `!a b m. (a =+ b) m = (a |: [b]) m`,
+  RW_TAC (std_ss++boolSimps.LET_ss) [FUN_EQ_THM,LUPDATE_def,UPDATE_def]
     \\ Cases_on `a = x`
     \\ ASM_SIMP_TAC list_ss [WORD_LOWER_EQ_REFL]
     \\ ASM_SIMP_TAC arith_ss [WORD_LOWER_OR_EQ,WORD_LO]);
 
-val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
-  `!a b x y m. (a ::- y) ((b ::- x) m) =
+val LUPDATE_LUPDATE = store_thm("LUPDATE_LUPDATE",
+  `!a b x y m. (a |: y) ((b |: x) m) =
      let lx = LENGTH x and ly = LENGTH y in
         if a <=+ b then
           if w2n b - w2n a <= ly then
             if ly - (w2n b - w2n a) < lx then
-              (a ::- (y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x)) m
+              (a |: (y ++ BUTFIRSTN (ly - (w2n b - w2n a)) x)) m
             else
-              (a ::- y) m
+              (a |: y) m
           else
-            (a ::- y) ((b ::- x) m)
+            (a |: y) ((b |: x) m)
         else (* b <+ a *)
           if w2n a - w2n b < lx then
-            (b ::- JOIN (w2n a - w2n b) x y) m
+            (b |: JOIN (w2n a - w2n b) x y) m
           else
-            (b ::- x) ((a ::- y) m)`,
+            (b |: x) ((a |: y) m)`,
   REPEAT STRIP_TAC \\ SIMP_TAC (bool_ss++boolSimps.LET_ss) []
     \\ Cases_on `a <=+ b`
     \\ FULL_SIMP_TAC std_ss [WORD_NOT_LOWER_EQUAL,WORD_LS,WORD_LO]
@@ -137,7 +137,7 @@ val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
         \\ Cases_on `LENGTH x = 0`
         \\ Cases_on `LENGTH y = 0`
         \\ IMP_RES_TAC LENGTH_NIL
-        \\ FULL_SIMP_TAC list_ss [FUN_EQ_THM,WORD_LS,BSUBST_def,BUTFIRSTN]
+        \\ FULL_SIMP_TAC list_ss [FUN_EQ_THM,WORD_LS,LUPDATE_def,BUTFIRSTN]
         >> (`w2n a = w2n b` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss [])
         \\ NTAC 2 (RW_TAC std_ss [])
         \\ FULL_SIMP_TAC arith_ss
@@ -147,63 +147,63 @@ val BSUBST_BSUBST = store_thm("BSUBST_BSUBST",
         \\ FULL_SIMP_TAC arith_ss [LENGTH_BUTFIRSTN],
       REWRITE_TAC [FUN_EQ_THM] \\ RW_TAC arith_ss []
         << [
-          RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def,JOIN_def,
+          RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,LUPDATE_def,JOIN_def,
                  EL_GENLIST,LENGTH_GENLIST,MIN_DEF,MAX_DEF]
             \\ FULL_SIMP_TAC arith_ss [],
           FULL_SIMP_TAC arith_ss [NOT_LESS]
             \\ IMP_RES_TAC LENGTH_NIL
-            \\ RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,BSUBST_def]
+            \\ RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,LUPDATE_def]
             \\ FULL_SIMP_TAC arith_ss []]]);
 
 (* ------------------------------------------------------------------------- *)
 
-val SUBST_SORT_RULE1 = store_thm("SUBST_SORT_RULE1",
+val UPDATE_SORT_RULE1 = store_thm("UPDATE_SORT_RULE1",
   `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
-     ((a :-> e) ((b :-> d) m) =
+     ((a =+> e) ((b =+> d) m) =
          if R a b then
-           (b :-< d) ((a :-> e) m)
+           (b =+< d) ((a =+> e) m)
          else
-           (a :-< e) ((b :-> d) m))`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_NE_COMMUTES]);
+           (a =+< e) ((b =+> d) m))`,
+  METIS_TAC [Ua_def,Ub_def,UPDATE_COMMUTES]);
 
-val SUBST_SORT_RULE2 = store_thm("SUBST_SORT_RULE2",
+val UPDATE_SORT_RULE2 = store_thm("UPDATE_SORT_RULE2",
   `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
-     ((a :-> e) ((b :-< d) m) =
+     ((a =+> e) ((b =+< d) m) =
          if R a b then
-           (b :-< d) ((a :-> e) m)
+           (b =+< d) ((a =+> e) m)
          else
-           (a :-< e) ((b :-< d) m))`,
-  METIS_TAC [Sa_def,Sb_def,SUBST_NE_COMMUTES]);
+           (a =+< e) ((b =+< d) m))`,
+  METIS_TAC [Ua_def,Ub_def,UPDATE_COMMUTES]);
 
-val SUBST_EQ_RULE = store_thm("SUBST_EQ_RULE",
-  `((a :-< e) ((a :-> d) m) = (a :-> e) m) /\
-   ((a :-< e) ((a :-< d) m) = (a :-< e) m) /\
-   ((a :-> e) ((a :-> d) m) = (a :-> e) m)`,
-  REWRITE_TAC [Sa_def,Sb_def,SUBST_EQ]);
+val UPDATE_EQ_RULE = store_thm("UPDATE_EQ_RULE",
+  `((a =+< e) ((a =+> d) m) = (a =+> e) m) /\
+   ((a =+< e) ((a =+< d) m) = (a =+< e) m) /\
+   ((a =+> e) ((a =+> d) m) = (a =+> e) m)`,
+  REWRITE_TAC [Ua_def,Ub_def,UPDATE_EQ]);
 
-val FSUBST_SORT_RULE1 = store_thm("FSUBST_SORT_RULE1",
+val FCP_UPDATE_SORT_RULE1 = store_thm("FCP_UPDATE_SORT_RULE1",
   `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
      ((a :+> e) ((b :+> d) m) =
          if R a b then
            (b :+< d) ((a :+> e) m)
          else
            (a :+< e) ((b :+> d) m))`,
-  METIS_TAC [FSa_def,FSb_def,fcpTheory.FSUBST_NE_COMMUTES]);
+  METIS_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_COMMUTES]);
 
-val FSUBST_SORT_RULE2 = store_thm("FSUBST_SORT_RULE2",
+val FCP_UPDATE_SORT_RULE2 = store_thm("FCP_UPDATE_SORT_RULE2",
   `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
      ((a :+> e) ((b :+< d) m) =
          if R a b then
            (b :+< d) ((a :+> e) m)
          else
            (a :+< e) ((b :+< d) m))`,
-  METIS_TAC [FSa_def,FSb_def,fcpTheory.FSUBST_NE_COMMUTES]);
+  METIS_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_COMMUTES]);
 
-val FSUBST_EQ_RULE = store_thm("FSUBST_EQ_RULE",
+val FCP_UPDATE_EQ_RULE = store_thm("FCP_UPDATE_EQ_RULE",
   `((a :+< e) ((a :+> d) m) = (a :+> e) m) /\
    ((a :+< e) ((a :+< d) m) = (a :+< e) m) /\
    ((a :+> e) ((a :+> d) m) = (a :+> e) m)`,
-  REWRITE_TAC [FSa_def,FSb_def,fcpTheory.FSUBST_EQ]);
+  REWRITE_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_EQ]);
 
 (* ------------------------------------------------------------------------- *)
 

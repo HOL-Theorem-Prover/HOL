@@ -135,9 +135,9 @@ val REG_READ_def = Define`
 
 val REG_WRITE_def = Define`
   REG_WRITE (reg:registers) m n d =
-    (num2register (mode_reg2num m n) :- d) reg`;
+    (num2register (mode_reg2num m n) =+ d) reg`;
 
-val INC_PC_def   = Define `INC_PC (reg:registers) = (r15 :- reg r15 + 4w) reg`;
+val INC_PC_def   = Define `INC_PC (reg:registers) = (r15 =+ reg r15 + 4w) reg`;
 val FETCH_PC_def = Define `FETCH_PC (reg:registers) = reg r15`;
 
 (*  FETCH_PC is needed because (REG_READ reg usr 15w) gives PC + 8.          *)
@@ -208,11 +208,11 @@ val SPSR_READ_def = Define `SPSR_READ (psr:psrs) mode = psr (mode2psr mode)`;
 val CPSR_READ_def = Define `CPSR_READ (psr:psrs) = psr CPSR`;
 
 val CPSR_WRITE_def = Define`
-  CPSR_WRITE (psr:psrs) cpsr = (CPSR :- cpsr) psr`;
+  CPSR_WRITE (psr:psrs) cpsr = (CPSR =+ cpsr) psr`;
 
 val SPSR_WRITE_def = Define`
   SPSR_WRITE (psr:psrs) mode spsr =
-    if USER mode then psr else (mode2psr mode :- spsr) psr`;
+    if USER mode then psr else (mode2psr mode =+ spsr) psr`;
 
 (* ------------------------------------------------------------------------- *)
 (* The Sofware Interrupt/Exception instruction class (swi_ex)                *)
