@@ -28,6 +28,12 @@ val C_DEF = Q.new_definition("C_DEF",        `C = \f x y. f y x`);
 val W_DEF = Q.new_definition("W_DEF",        `W = \f x. f x x`);
 val o_DEF = Q.new_infixr_definition("o_DEF", `$o f g = \x. f(g x)`, 800);
 
+val UPDATE_def = Q.new_definition("UPDATE_def",
+   `UPDATE a b = \f c. if a = c then b else f c`);
+
+val _ = set_fixity "=+" (Infix(NONASSOC, 320));
+val _ = overload_on("=+", ``UPDATE``);
+
 (*---------------------------------------------------------------------------*
  * In I_DEF, the type constraint is necessary in order to meet one of        *
  * the criteria for a definition : the tyvars of the lhs must be a           *
@@ -112,6 +118,109 @@ val K_o_THM = store_thm("K_o_THM",
   --`(!f v. K v o f = K v) /\ (!f v. f o K v = K (f v))`--,
   REWRITE_TAC [o_THM, K_THM, FUN_EQ_THM]);
 
+val APPLY_UPDATE_THM = Q.store_thm("APPLY_UPDATE_THM",
+  `!f a b c. (a =+ b) f c = (if a = c then b else f c)`,
+  PURE_REWRITE_TAC [UPDATE_def]
+  THEN BETA_TAC THEN REWRITE_TAC []);
+
+val UPDATE_COMMUTES = Q.store_thm("UPDATE_COMMUTES",
+  `!f a b c d. ~(a = b) ==> ((a =+ c) ((b =+ d) f) = (b =+ d) ((a =+ c) f))`,
+  REPEAT STRIP_TAC
+  THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
+  THEN BETA_TAC THEN GEN_TAC
+  THEN NTAC 2 COND_CASES_TAC
+  THEN BETA_TAC
+  THEN PURE_ASM_REWRITE_TAC []
+  THEN NTAC 2 (POP_ASSUM (fn th => RULE_ASSUM_TAC (PURE_REWRITE_RULE [th])))
+  THEN POP_ASSUM MP_TAC THEN REWRITE_TAC []);
+
+val UPDATE_EQ = Q.store_thm("UPDATE_EQ",
+  `!f a b c. (a =+ c) ((a =+ b) f) = (a =+ c) f`,
+  REPEAT STRIP_TAC
+  THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
+  THEN TRY GEN_TAC THEN BETA_TAC
+  THEN NTAC 2 (TRY COND_CASES_TAC)
+  THEN BETA_TAC THEN ASM_REWRITE_TAC []);
+
+val UPDATE_APPLY_ID = Q.store_thm("UPDATE_APPLY_ID",
+  `!f a b. (f a = b) = ((a =+ b) f = f)`,
+  REPEAT GEN_TAC
+  THEN EQ_TAC 
+  THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
+  THENL [
+    REPEAT STRIP_TAC
+    THEN BETA_TAC
+    THEN COND_CASES_TAC
+    THEN1 POP_ASSUM (fn th => ASM_REWRITE_TAC [SYM th])
+    THEN REWRITE_TAC [],
+    BETA_TAC THEN STRIP_TAC
+    THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [])
+    THEN ASM_REWRITE_TAC []]);
+
+val UPDATE_APPLY_IMP_ID = save_thm("UPDATE_APPLY_IMP_ID",
+  GEN_ALL (fst (EQ_IMP_RULE (SPEC_ALL UPDATE_APPLY_ID))));
+
+val APPLY_UPDATE_ID = Q.store_thm("APPLY_UPDATE_ID",
+  `!f a. (a =+ f a) f = f`, 
+  REWRITE_TAC [GSYM UPDATE_APPLY_ID]);
+
+val UPD11_SAME_BASE = Q.store_thm("UPD11_SAME_BASE",
+  `!f a b c d.
+      ((a =+ c) f = (b =+ d) f) =
+      (a = b) /\ (c = d) \/
+      ~(a = b) /\ ((a =+ c) f = f) /\ ((b =+ d) f = f)`,
+  REPEAT GEN_TAC 
+  THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
+  THEN BETA_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC []
+  THEN ASM_CASES_TAC ``a = b`` THEN ASM_REWRITE_TAC []
+  THENL [
+    POP_ASSUM (fn th => RULE_ASSUM_TAC (PURE_REWRITE_RULE [th]))
+    THEN POP_ASSUM (Q.SPEC_THEN `b` ASSUME_TAC)
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [])
+    THEN ASM_REWRITE_TAC [],
+    GEN_TAC THEN COND_CASES_TAC THEN REWRITE_TAC []
+    THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (PURE_REWRITE_RULE [th]))
+    THEN FIRST_ASSUM (Q.SPEC_THEN `x` ASSUME_TAC)
+    THEN Q.PAT_ASSUM `~(a = x)` (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
+    THEN ASM_REWRITE_TAC []]);
+
+val SAME_KEY_UPDATE_DIFFER = Q.store_thm("SAME_KEY_UPDATE_DIFFER",
+  `!f1 f2 a b c. ~(b = c) ==> ~((a =+ b) f = (a =+ c) f)`,
+  REPEAT GEN_TAC THEN STRIP_TAC
+  THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
+  THEN BETA_TAC
+  THEN STRIP_TAC
+  THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
+  THEN RULE_ASSUM_TAC (REWRITE_RULE [])
+  THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
+  THEN POP_ASSUM CONTR_TAC);
+
+val UPD11_SAME_KEY_AND_BASE = Q.store_thm("UPD11_SAME_KEY_AND_BASE",
+  `!f a b c. ((a =+ b) f = (a =+ c) f) = (b = c)`,
+  REPEAT GEN_TAC THEN EQ_TAC
+  THEN PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
+  THEN BETA_TAC THEN STRIP_TAC
+  THEN ASM_REWRITE_TAC []
+  THEN POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
+  THEN RULE_ASSUM_TAC (REWRITE_RULE [])
+  THEN ASM_REWRITE_TAC []);
+
+val UPD_SAME_KEY_UNWIND = Q.store_thm("UPD_SAME_KEY_UNWIND",
+  `!f1 f2 a b c.
+      ((a =+ b) f1 = (a =+ c) f2) ==>
+      (b = c) /\ !v. (a =+ v) f1 = (a =+ v) f2`,
+  PURE_REWRITE_TAC [UPDATE_def,FUN_EQ_THM]
+  THEN BETA_TAC THEN REPEAT STRIP_TAC
+  THENL [
+    POP_ASSUM (Q.SPEC_THEN `a` ASSUME_TAC)
+    THEN RULE_ASSUM_TAC (REWRITE_RULE [])
+    THEN ASM_REWRITE_TAC [],
+    COND_CASES_TAC THEN REWRITE_TAC []
+    THEN FIRST_ASSUM (Q.SPEC_THEN `x` ASSUME_TAC)
+    THEN Q.PAT_ASSUM `~(a = x)` (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
+    THEN ASM_REWRITE_TAC []]);
+
 (*---------------------------------------------------------------------------*)
 (* Theorems using combinators to specify let-movements                       *)
 (*---------------------------------------------------------------------------*)
@@ -156,7 +265,6 @@ val literal_case_FORALL_ELIM = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN REFL_TAC
   ]);
 
-
 (*---------------------------------------------------------------------------*)
 (*  Tag combinator equal to K. Used in generating ML from HOL                *)
 (*---------------------------------------------------------------------------*)
@@ -178,7 +286,8 @@ val _ = adjoin_to_theory
     S "val _ ="; NL();
     S "   let open computeLib" ; NL();
     S "       val K_tm = Term.prim_mk_const{Name=\"K\",Thy=\"combin\"}"; NL();
-    S "   in add_funs [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_DEF];"; NL();
+    S "   in add_funs [K_THM,S_DEF,I_THM,C_DEF,W_DEF,o_DEF,APPLY_UPDATE_THM];";
+    NL();
     S "      set_skip the_compset K_tm (SOME 1)"; NL();
     S "   end;";
     NL()
@@ -189,8 +298,9 @@ val _ =
  let open EmitML
  in
    emitML (!Globals.emitMLDir)
-     ("combin",
-       map DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM, FAIL_THM])
+    ("combin",
+      map DEFN [S_THM, K_THM, I_THM, W_THM, C_THM, o_THM,
+                APPLY_UPDATE_THM, FAIL_THM])
  end;
 
 val _ = export_theory();
