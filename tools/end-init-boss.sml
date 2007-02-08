@@ -11,7 +11,7 @@ let
 in
   print prelude;
   print "[loading theories and proof tools ";
-  app dotload ["substTheory", "optionTheory", "pairLib", "sumTheory",
+  app dotload ["optionTheory", "pairLib", "sumTheory",
                "numTheory", "arithmeticTheory", "Arith",
                "numLib", "mesonLib", "BasicProvers",
                "SingleStep", "Datatype",

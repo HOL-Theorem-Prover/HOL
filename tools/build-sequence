@@ -54,7 +54,6 @@ src/num/arith/src
 src/num/termination
 src/num/extra_theories
 src/num
-src/subst
 src/IndDef
 src/datatype/equiv
 src/datatype/record
