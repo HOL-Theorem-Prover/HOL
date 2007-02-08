@@ -586,34 +586,34 @@ val _ = set_fixity ":+"  (Infixl 325);
 
 val _ = computeLib.auto_import_definitions := false;
 
-val FSUBST_def = xDefine "FSUBST"
+val FCP_UPDATE_def = xDefine "FCP_UPDATE"
   `$:+ a b = \m:'a ** 'b. (FCP c. if a = c then b else m %% c):'a ** 'b`;
 
-val FSUBST_NE_COMMUTES = store_thm ("FSUBST_NE_COMMUTES",
+val FCP_UPDATE_COMMUTES = store_thm ("FCP_UPDATE_COMMUTES",
   `!m a b c d.  ~(a = b) ==>
      ((a :+ c) ((b :+ d) m) = (b :+ d) ((a :+ c) m))`,
   REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
-    \\ SRW_TAC [FCP_ss] [FSUBST_def] \\ RW_TAC std_ss []);
+    \\ SRW_TAC [FCP_ss] [FCP_UPDATE_def] \\ RW_TAC std_ss []);
 
-val FSUBST_EQ = store_thm("FSUBST_EQ",
+val FCP_UPDATE_EQ = store_thm("FCP_UPDATE_EQ",
   `!m a b c. (a :+ c) ((a :+ b) m) = (a :+ c) m`,
   REPEAT STRIP_TAC \\ REWRITE_TAC [FUN_EQ_THM]
-    \\ SRW_TAC [FCP_ss] [FSUBST_def]);
+    \\ SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
 
-val FSUBST_IMP_ID = store_thm("FSUBST_IMP_ID",
+val FCP_UPDATE_IMP_ID = store_thm("FCP_UPDATE_IMP_ID",
   `!m a v. (m %% a = v) ==> ((a :+ v) m = m)`,
-  SRW_TAC [FCP_ss] [FSUBST_def] \\ RW_TAC std_ss []);
+  SRW_TAC [FCP_ss] [FCP_UPDATE_def] \\ RW_TAC std_ss []);
 
-val SUBST_ID = store_thm("SUBST_ID",
-  `!m a. (a :+ (m %% a)) m = m`, SRW_TAC [FCP_ss] [FSUBST_def]);
+val APPLY_FCP_UPDATE_ID = store_thm("APPLY_FCP_UPDATE_ID",
+  `!m a. (a :+ (m %% a)) m = m`, SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
 
-val FSUBST_EVAL = store_thm("FSUBST_EVAL",
+val FCP_APPLY_UPDATE_THM = store_thm("FCP_APPLY_UPDATE_THM",
   `!(m:'a ** 'b) a w b. ((a :+ w) m) %% b =
        if b < dimindex(:'b) then
          if a = b then w else m %% b
        else
          ((a :+ w) m) %% b`,
-  SRW_TAC [FCP_ss] [FSUBST_def]);
+  SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
 
 (* ------------------------------------------------------------------------ *)
 
@@ -633,7 +633,7 @@ val index_comp = store_thm("index_comp",
 val fcp_subst_comp = store_thm("fcp_subst_comp",
   `!a b f. (x :+ y) ($FCP f):'a ** 'b =
          ($FCP (\c. if x = c then y else f c)):'a ** 'b`,
-  SRW_TAC [FCP_ss] [FSUBST_def]);
+  SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
 
 val index_comp = REWRITE_RULE [GSYM FCPi_def] index_comp;
 val fcp_subst_comp = REWRITE_RULE [GSYM FCPi_def] fcp_subst_comp;
