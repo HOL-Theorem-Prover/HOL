@@ -11,7 +11,7 @@
 *)
 
 open HolKernel boolLib Parse bossLib;
-open Q substTheory wordsLib wordsSyntax rich_listTheory io_onestepTheory;
+open Q wordsLib wordsSyntax rich_listTheory io_onestepTheory;
 
 val _ = new_theory "arm";
 
@@ -91,9 +91,9 @@ val REG_READ_def = Define`
 
 val REG_WRITE_def = Define`
   REG_WRITE (reg:reg) m n d =
-    (num2register (mode_reg2num m n) :- d) reg`;
+    (num2register (mode_reg2num m n) =+ d) reg`;
 
-val INC_PC_def   = Define `INC_PC (reg:reg) = (r15 :- reg r15 + 4w) reg`;
+val INC_PC_def   = Define `INC_PC (reg:reg) = (r15 =+ reg r15 + 4w) reg`;
 val FETCH_PC_def = Define `FETCH_PC (reg:reg) = reg r15`;
 
 (*  FETCH_PC is needed because (REG_READ reg usr 15w) gives PC + 8.          *)
@@ -159,11 +159,11 @@ val SPSR_READ_def = Define `SPSR_READ (psr:psr) mode = psr (mode2psr mode)`;
 val CPSR_READ_def = Define `CPSR_READ (psr:psr) = psr CPSR`;
 
 val CPSR_WRITE_def = Define`
-  CPSR_WRITE (psr:psr) cpsr = (CPSR :- cpsr) psr`;
+  CPSR_WRITE (psr:psr) cpsr = (CPSR =+ cpsr) psr`;
 
 val SPSR_WRITE_def = Define`
   SPSR_WRITE (psr:psr) mode spsr =
-    if USER mode then psr else (mode2psr mode :- spsr) psr`;
+    if USER mode then psr else (mode2psr mode =+ spsr) psr`;
 
 (* ------------------------------------------------------------------------- *)
 (* The Sofware Interrupt/Exception instruction class (swi_ex)                *)
@@ -853,11 +853,11 @@ val ARM_SPEC_STATE = save_thm("ARM_SPEC_STATE",
 infix \\
 val op \\ = op THEN;
 
-val SUBST_COMMUTES = store_thm("SUBST_COMMUTES",
+val UPDATE_LT_COMMUTES = store_thm("UPDATE_LT_COMMUTES",
   `!m a b c d. a <+ b ==>
-     ((b :- d) ((a :- c) m) = (a :- c) ((b :- d) m))`,
+     ((b =+ d) ((a =+ c) m) = (a =+ c) ((b =+ d) m))`,
   REPEAT STRIP_TAC \\ IMP_RES_TAC wordsTheory.WORD_LOWER_NOT_EQ
-    \\ ASM_SIMP_TAC std_ss [SUBST_NE_COMMUTES]);
+    \\ ASM_SIMP_TAC std_ss [combinTheory.UPDATE_COMMUTES]);
 
 (* ------------------------------------------------------------------------- *)
 

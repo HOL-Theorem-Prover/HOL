@@ -1,31 +1,3 @@
-Evaluating the ARM models.
+Evaluation for the ARM6 models has been dropped.
 
-When using HOL interactively in this directory use:
-
-$ hol -I ..
-
-The files are as follows:  
-
- * Data.sml, Lexer.sml, Parser.sml: A parser for ARM instructions.
-
- * arm_evalScript.sml: An ARM ISA model that is more suited to symbolic
-     simulation.  (There are no hardware interrupts and a "perfect" memory
-     model is implemented.)
-
- * instructionScript.sml: Defines a HOL datatype for ARM instructions.
-
- * instructionSyntax.sml: Syntactic support the ARM datatype.  The parser
-     is used to build terms.  (Also provides pretty-printing and instruction
-     encoding.)
-
- * modelsLib.sml: compsets for evaluation of the models (ISA and ARM6)
-     with CBV_CONV.
-
- * bsubstScript.sml: introduces a block substitution operation ``::-``, which
-    provides an efficient way to represent the state of the main memory.
-
- * simScript.sml, arm_evalLib.sml: Theorems and ML hooks for evaluation.
-
- * run_arm_evalLib.sml: Some examples of running the ISA model.
-
- * gui/: A sml_tk front-end - not currently being maintained.
+Try examples/elliptic/arm instead.

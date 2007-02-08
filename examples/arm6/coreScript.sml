@@ -1054,8 +1054,8 @@ val IMM_ARM6_def = Define`
 (* The Data Abstraction ---------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val SUB8_PC_def = Define `SUB8_PC (reg:reg) = (r15 :- reg r15 - 8w) reg`;
-val ADD8_PC_def = Define `ADD8_PC (reg:reg) = (r15 :- reg r15 + 8w) reg`;
+val SUB8_PC_def = Define `SUB8_PC (reg:reg) = (r15 =+ reg r15 - 8w) reg`;
+val ADD8_PC_def = Define `ADD8_PC (reg:reg) = (r15 =+ reg r15 + 8w) reg`;
 
 val ABS_ARM6_def = Define`
   ABS_ARM6 (^arm6state) =
