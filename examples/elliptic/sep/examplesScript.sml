@@ -1,16 +1,19 @@
-
 (*
+  quietdec := true;
   val armDir = concat Globals.HOLDIR "/examples/elliptic/arm";
   val yaccDir = concat Globals.HOLDIR "/tools/mlyacc/mlyacclib";
   loadPath := !loadPath @ [armDir,yaccDir];
 *)
 
-open HolKernel boolLib bossLib;
+open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory arithmeticTheory wordsLib wordsTheory bitTheory pairTheory;
 open listTheory rich_listTheory relationTheory pairTheory;
 
-open set_sepTheory set_sepLib progTheory arm_progTheory arm_instTheory;
+open set_sepTheory set_sepLib progTheory arm_progTheory arm_instTheory arm_progLib;
 
+(*
+  quietdec := false;
+*)
 
 val _ = new_theory "examples";
 
@@ -22,50 +25,7 @@ val op >> = op THEN1;
 
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
-
-
-(* ----------------------------------------------------------------------------- *)
-(* Syntax related ML functions                                                   *)
-(* ----------------------------------------------------------------------------- *)
-
-val STAR = prim_mk_const {Name="STAR",Thy="set_sep"};
-val dest_STAR = dest_binop STAR (ERR"dest_STAR" "not a *");
-val is_STAR = can dest_STAR;
-
-fun list_dest_STAR tm =
-  let val (v1,v2) = dest_STAR tm in list_dest_STAR v1 @ list_dest_STAR v2 end
-  handle e => [tm];
-
-fun mk_STAR(t1,t2) = (fst o dest_eq o concl o ISPECL [t1,t2]) STAR_def;
-
-fun list_mk_STAR [] = raise ERR "list_mk_STAR" "Invalid argument"
-  | list_mk_STAR [x] = x
-  | list_mk_STAR (x::y::xs) = list_mk_STAR (mk_STAR(x,y)::xs);
-
-fun dest_ARM_PROG tm =
-  let
-    val (p,Z) = dest_comb tm
-    val (p,Q) = dest_comb p
-    val (p,C) = dest_comb p
-    val (p,cs) = dest_comb p
-    val (p,P) = dest_comb p
-    val _ = if dest_term(p) = dest_term(``ARM_PROG``) then p else fst (dest_comb ``\x.x``)
-  in (P,cs,C,Q,Z) end;
-
-
-(* ----------------------------------------------------------------------------- *)
-(* Various proof tools                                                           *)
-(* ----------------------------------------------------------------------------- *)
-
-fun PAT_DISCH pat th =
-  let val tm = hd (filter (can (match_term pat)) (hyp th))
-  in DISCH tm th end;
-
-fun PGEN name vs th =
-  let 
-    val ctxt = free_varsl(concl th::hyp th)
-    val x = Parse.parse_in_context ctxt vs
-  in pairTools.PGEN (mk_var(name,type_of x)) x th end;
+val EQ_IMP_IMP = METIS_PROVE [] ``(x=y) ==> x ==> y``;
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -73,7 +33,7 @@ fun PGEN name vs th =
 (* ----------------------------------------------------------------------------- *)
 
 val AM1_AM2_PASS_ss = rewrites 
-  [ADDR_MODE2_ADDR_def,ADDR_MODE2_WB_def,ADDR_MODE2_CMD1_def,ADDR_MODE2_CMD2_def,
+  [ADDR_MODE2_ADDR_def,ADDR_MODE2_WB_def,ADDR_MODE2_ADDR'_def,ADDR_MODE2_WB'_def,
    ADDR_MODE1_VAL_def,ADDR_MODE1_CMD_def,PASS_CASES];
 
 val ARM_PROG_ss = bool_ss ++ sep_ss ++ AM1_AM2_PASS_ss;
@@ -96,7 +56,7 @@ fun SPEC_ARM_RULE_GENERAL th c s vs xs am = let
   fun map_zip ys zs = map (fn (y,z) => y |-> z) (proper_zip ys zs)
   val th = Q.INST (map_zip default_varnames vs) th
   val th = Q.INST (map_zip default_expnames xs) th
-  val th = REWRITE_RULE [ARM_PROG2_def,ARM_NOP_def] th  
+  val th = REWRITE_RULE [ARM_PROG2_def] th  
   val (th,th') = (CONJUNCT1 th,CONJUNCT2 th) handle e => (th,th)
   val th' = attempt (SIMP_RULE ARM_PROG_ss [] o SPEC ``(sN:bool,sZ:bool,sC:bool,sV:bool)``) th'
   in (th,th') end;
@@ -111,255 +71,6 @@ fun SPEC_ARM_RULE th vs xs am = fst (SPEC_ARM_RULE_GENERAL th `AL` `F` vs xs am)
 *)
 
 
-(* ----------------------------------------------------------------------------- *)
-(* Lemmas about set operations                                                   *)
-(* ----------------------------------------------------------------------------- *)
-
-val EXPAND_STAR_RIGHT = prove(
-  ``!x Q' f'.
-      ({ (x * Q,f) |(Q,f)| (Q,f) IN {} } = {}) /\ 
-      ({ (x * Q,f) |(Q,f)| (Q,f) IN ((Q',f') INSERT Z) } = 
-         (x * Q',f') INSERT { (x * Q,f) |(Q,f)| (Q,f) IN Z })``,
-  REPEAT STRIP_TAC
-  THEN1 SRW_TAC [] [EXTENSION]
-  \\ ONCE_REWRITE_TAC [EXTENSION]  
-  \\ SRW_TAC [] []
-  \\ EQ_TAC \\ SRW_TAC [] [] \\ METIS_TAC []);
-
-val EXPAND_FRAME = prove(
-  ``!R Q' f'.
-      ({ (Q * R,f) |(Q,f)| (Q,f) IN {} } = {}) /\ 
-      ({ (Q * R,f) |(Q,f)| (Q,f) IN ((Q',f') INSERT Z) } = 
-         (Q' * R,f') INSERT { (Q * R,f) |(Q,f)| (Q,f) IN Z })``,
-  ONCE_REWRITE_TAC [STAR_SYM] \\ REWRITE_TAC [EXPAND_STAR_RIGHT]);
-
-val setINC_STEP = prove(
-  ``!xs Q f.
-      (setINC xs {} = {}) /\ 
-      (setINC xs ((Q,f) INSERT Z) = (Q,f o pcINC xs) INSERT (setINC xs Z))``,
-  REWRITE_TAC [setAPP_def,setADD_def,setINC_def,GSYM pcINC_def]
-  \\ REPEAT STRIP_TAC
-  THEN1 SRW_TAC [] [EXTENSION]
-  \\ ONCE_REWRITE_TAC [EXTENSION]  
-  \\ SRW_TAC [] []
-  \\ EQ_TAC \\ SRW_TAC [] []
-  \\ METIS_TAC []);
-
-val pcADD_pcADD = prove(
-  ``!k k'. pcADD k o pcADD k' = pcADD (k + k')``,
-  SIMP_TAC std_ss [FUN_EQ_THM,pcADD_def,wLENGTH_def,WORD_ADD_ASSOC]);
-
-val pcADD_pcINC = prove(
-  ``!k xs:word32 list. pcADD k o pcINC xs = pcADD (k + wLENGTH xs)``,
-  REWRITE_TAC [GSYM pcADD_pcADD,pcINC_def]);
-
-val pcINC_pcADD = prove(
-  ``!k xs:word32 list. pcINC xs o pcADD k = pcADD (k + wLENGTH xs)``,
-  ONCE_REWRITE_TAC [WORD_ADD_COMM] \\ REWRITE_TAC [GSYM pcADD_pcADD,pcINC_def]);
-
-val pcINC_pcINC = prove(
-  ``!xs:word32 list ys. pcINC ys o pcINC xs = pcINC (xs++ys)``,
-  REWRITE_TAC [pcINC_def,pcADD_pcADD] \\ ONCE_REWRITE_TAC [WORD_ADD_COMM]
-  \\ REWRITE_TAC [wLENGTH_def,word_add_n2w,LENGTH_APPEND]);
-  
-val pcSET_ABSORB = prove(
-  ``!x f. pcSET x o f = pcSET x``,
-  SIMP_TAC std_ss [pcSET_def,FUN_EQ_THM]);
-
-val pcADD_0 = prove(``pcADD 0w = I``,SRW_TAC [] [WORD_ADD_0,pcADD_def,FUN_EQ_THM]);
-val pcINC_0 = prove(``pcINC [] = I``,SRW_TAC [] [pcINC_def,wLENGTH_def,LENGTH,pcADD_0]);
-
-val pcINC_ss = rewrites 
-  [pcADD_pcADD,pcADD_pcINC,pcINC_pcADD,pcINC_pcINC,pcADD_0,pcINC_0,pcSET_ABSORB];
-
-val setAPP_setAPP = prove(
-  ``!f g x. setAPP f (setAPP g x) = setAPP (g o f) x``,
-  SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,setAPP_def]
-  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
-  \\ Cases_on `x''` \\ FULL_SIMP_TAC std_ss [] << [
-    Cases_on `x''` \\ FULL_SIMP_TAC std_ss []
-    \\ Q.EXISTS_TAC `(q',r')` \\ FULL_SIMP_TAC std_ss [],
-    Q.EXISTS_TAC `(q,r o g)` \\ FULL_SIMP_TAC std_ss []
-    \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []]);
-
-val setAPP_UNION = prove(
-  ``!f x y. setAPP f (x UNION y) = setAPP f x UNION setAPP f y``,
-  SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,setAPP_def,IN_UNION]
-  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
-  \\ Cases_on `x''` \\ FULL_SIMP_TAC std_ss []   
-  THEN1 (DISJ1_TAC \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss [])
-  THEN1 (DISJ2_TAC \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss [])
-  \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []);
-
-val setADD_setADD = prove(
-  ``!k k' x. setADD k (setADD k' x) = setADD (k + k') x``,
-  SIMP_TAC std_ss [setADD_def,setAPP_setAPP,pcADD_pcADD]
-  \\ REWRITE_TAC [Once WORD_ADD_COMM]);
-
-val setADD_UNION = prove(
-  ``!k x y. setADD k (x UNION y) = setADD k x UNION setADD k y``,
-  REWRITE_TAC [setADD_def,setAPP_UNION]);
-
-val setAPP_I = prove(
-  ``setAPP I = I``,
-  ONCE_REWRITE_TAC [FUN_EQ_THM]
-  \\ SIMP_TAC std_ss [setAPP_def,EXTENSION,GSPECIFICATION] 
-  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
-  THEN1 (Cases_on `x''` \\ FULL_SIMP_TAC std_ss [])
-  \\ Cases_on `x'` \\ FULL_SIMP_TAC std_ss []
-  \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []);
-
-val setADD_0 = prove(``setADD 0w x = x``,SRW_TAC [] [setADD_def,FUN_EQ_THM,pcADD_0,setAPP_I]);
-
-val setINC_ss = rewrites [setAPP_setAPP,setAPP_UNION,setADD_setADD,setADD_UNION,
-                  setAPP_I,setADD_0,setINC_def,wLENGTH_def,LENGTH,word_add_n2w];
-  
-
-(* ----------------------------------------------------------------------------- *)
-(* Functions for modifying ARM_PROGs                                             *)
-(* ----------------------------------------------------------------------------- *)
-
-val EQ_IMP_IMP = METIS_PROVE [] ``(x=y) ==> x ==> y``;
-
-val APP_BASIC_FRAME = RW [setSTAR_CLAUSES,F_STAR] o MATCH_MP ARM_PROG_FRAME;
-fun APP_FRAME x = RW [F_STAR] o Q.SPEC x o APP_BASIC_FRAME;
-
-val HIDE_STATUS_LEMMA = MATCH_MP EQ_IMP_IMP (SPEC_ALL ARM_PROG_HIDE_STATUS)
-val HIDE_STATUS_LEMMA_ALT = RW [emp_STAR] (Q.INST [`P`|->`emp`] HIDE_STATUS_LEMMA)
-fun HIDE_STATUS th = 
-  let val th = GENL [``sN:bool``,``sZ:bool``,``sC:bool``,``sV:bool``] th in
-    MATCH_MP HIDE_STATUS_LEMMA th handle e => MATCH_MP HIDE_STATUS_LEMMA_ALT th end;
-
-(* composition *)
-
-val COMPOSE_ss = simpLib.merge_ss [setINC_ss,pcINC_ss,rewrites 
-  [UNION_EMPTY,setINC_CLAUSES,setSTAR_CLAUSES,APPEND,wLENGTH_def,LENGTH,F_STAR]];
-val RW_COMPOSE = SIMP_RULE (std_ss ++ COMPOSE_ss) [];
-
-val MATCH_COMPOSE_LEMMA = (RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_SYM]) ARM_PROG_COMPOSE;
-fun MATCH_COMPOSE th1 th2 = RW_COMPOSE (MATCH_MP (MATCH_MP MATCH_COMPOSE_LEMMA th2) th1);
-
-val ARRANGE_COMPOSE_LEMMA = prove(
-  ``!P M M' Q cs cs' C C' Z Z'.
-      ARM_PROG P cs C M Z /\ ARM_PROG M' cs' C' Q Z' ==> (M = M') ==> 
-      ARM_PROG P (cs ++ cs') (C UNION setINC cs C') Q (Z UNION setINC cs Z')``,
-  REPEAT STRIP_TAC \\ MATCH_MP_TAC ARM_PROG_COMPOSE 
-  \\ Q.EXISTS_TAC `M'` \\ FULL_SIMP_TAC std_ss []);
-
-fun ARRANGE_COMPOSE th1 th2 = 
-  let
-    val th = MATCH_MP ARRANGE_COMPOSE_LEMMA (CONJ th1 th2)
-    val th = CONV_RULE (RATOR_CONV (RAND_CONV (SIMP_CONV (bool_ss++star_ss) []))) th
-    val th = RW_COMPOSE (MP th TRUTH)
-  in th end;
-
-fun FRAME_COMPOSE th1 th2 =
-  let
-    val (_,_,_,Q,_) = dest_ARM_PROG (concl th1)
-    val (P,_,_,_,_) = dest_ARM_PROG (concl th2)
-    val QL = list_dest_STAR Q
-    val PL = list_dest_STAR P
-    val Qfill = filter (fn x => not (mem x QL)) PL
-    val Pfill = filter (fn x => not (mem x PL)) QL
-    fun frame [] th = th
-      | frame xs th = (RW [STAR_ASSOC] o SPEC (list_mk_STAR xs) o APP_BASIC_FRAME) th
-    val th1 = frame Qfill th1
-    val th2 = frame Pfill th2
-  in ARRANGE_COMPOSE th1 th2 end;
-
-
-(* ----------------------------------------------------------------------------- *)
-(* Generating composition proofs (for at least basic instruction specs)          *)
-(* ----------------------------------------------------------------------------- *)
-
-fun comb_match_right tm1 tm2 = let
-  val (x1,t1) = dest_comb tm1
-  val (x2,t2) = dest_comb tm2      
-  in if aconv x1 x2 then match_term t1 t2 else raise ERR "comb_match_right" "No match." end; 
-
-fun std_matcher tm1 tm2 =
-  if can (match_term ``R a x``) tm2 orelse can (match_term ``M a x``) tm2 
-    then comb_match_right tm1 tm2 else match_term tm1 tm2;
-
-fun list_to_string f [] sep = ""
-  | list_to_string f [x] sep = f x
-  | list_to_string f (x::y::xs) sep = f x ^ sep ^ list_to_string f (y::xs) sep;
-
-fun term_to_string_show_types tm = let
-  val b = !show_types
-  val _ = show_types := true
-  val st = term_to_string tm 
-  val _ = show_types := b
-  in st end; 
-
-fun subst_to_string xs st =
-  let fun f {redex = x, residue = y} = 
-      "`" ^ term_to_string_show_types x ^ "` |-> `" ^ term_to_string_show_types y ^ "`"
-  in st^"[" ^ list_to_string f xs (",\n "^st) ^ " ]" end;
-
-fun find_substs th1 th2 indent = let
-  val (_,_,_,post1,_) = dest_ARM_PROG (concl th1)
-  val (pre2,_,_,_,_) = dest_ARM_PROG (concl th2)
-  val xs = list_dest_STAR post1
-  val ys = list_dest_STAR pre2
-  fun try_match tm (x,y) = std_matcher x tm handle e => y
-  fun find_match tm xs = foldr (try_match tm) ([],[]) xs
-  fun find_matches [] ys = [([],[])]
-    | find_matches (x::xs) ys = 
-        let val m = find_match x ys in
-        m :: find_matches xs ys end;
-  fun compact_step ((s,t),(s',t')) = (s @ s',t @ t')
-  fun compact ms = foldr compact_step ([],[]) ms
-  val i = fst (compact (find_matches xs ys))
-  val i_as_string = subst_to_string i indent
-  in (i,i_as_string) end;
-
-fun find_composition (th1,name1) (th2,name2) name indent = let
-  val (i,i_string) = find_substs th1 th2 (indent ^ "  ")
-  val str = indent ^ "val "^name^"' = Q.INST\n" ^ i_string ^ " " ^ name2
-  val str = str ^ "\n" ^ indent ^ "val "^name^" = FRAME_COMPOSE "^name1^" "^name^"'\n"
-  val th = INST i th2
-  val th = FRAME_COMPOSE th1 th
-  in (th,str) end;  
-
-fun find_compositions [] name indent = (TRUTH,"")
-  | find_compositions [(th1,name1)] name indent = 
-      if name1 = name then (th1,"") else (th1,indent ^ "val " ^name^ " = " ^name1)
-  | find_compositions ((th1,name1)::(th2,name2)::thms) name indent = let 
-      val (th,s) = find_composition (th1,name1) (th2,name2) name indent 
-      val (th',str) = find_compositions ((th,name)::thms) name indent
-      in (th',s ^ str) end;     
-
-fun print_compositions thms name indent = 
-  print ("\n\n"^snd (find_compositions thms name indent)^"\n\n")
-
-(* for debugging:
-
-val th1 = SPEC_ARM_RULE arm_ADD2 [`a`,`b`] [`ax`,`bx`] (SOME `OneReg`)
-val th2 = SPEC_ARM_RULE arm_ADD2 [`b`,`c`] [`bx`,`cx`] (SOME `OneReg`)
-val th3 = SPEC_ARM_RULE arm_SUB2 [`c`,`d`] [`cx`,`dx`] (SOME `OneReg`)
-val th4 = SPEC_ARM_RULE arm_SUB2 [`c`,`d`] [`cx`,`dx`] (SOME `OneReg`)
-val th5 = SPEC_ARM_RULE arm_SUB2 [`c`,`d`] [`cx`,`dx`] (SOME `OneReg`)
-
-print_compositions [(th1,"th1"),(th2,"th2"),(th3,"th3"),(th4,"th4"),(th5,"th5")] "th" "  "
-
-  val th' = Q.INST
-    [`(bx :word32)` |-> `(ax :word32) + (bx :word32)` ] th2
-  val th = FRAME_COMPOSE th1 th'
-  val th' = Q.INST
-    [`(cx :word32)` |-> `(ax :word32) + (bx :word32) + (cx :word32)` ] th3
-  val th = FRAME_COMPOSE th th'
-  val th' = Q.INST
-    [`(cx :word32)` |-> `(ax :word32) + (bx :word32) + (cx :word32)`,
-     `(dx :word32)` |-> `(ax :word32) + (bx :word32) + (cx :word32) - (dx :word32)` ] th4
-  val th = FRAME_COMPOSE th th'
-  val th' = Q.INST
-    [`(cx :word32)` |-> `(ax :word32) + (bx :word32) + (cx :word32)`,
-     `(dx :word32)` |-> `(ax :word32) + (bx :word32) + (cx :word32) -
-(ax + bx + cx - (dx :word32))` ] th5
-  val th = FRAME_COMPOSE th th'
-
-*)
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -367,20 +78,35 @@ print_compositions [(th1,"th1"),(th2,"th2"),(th3,"th3"),(th4,"th4"),(th5,"th5")]
 (* ----------------------------------------------------------------------------- *)
 
 val AM1_ss = rewrites [ADDR_MODE1_VAL_def,ADDR_MODE1_CMD_def];
-val AM2_ss = rewrites [ADDR_MODE2_ADDR_def,ADDR_MODE2_WB_def,ADDR_MODE2_CMD1_def,ADDR_MODE2_CMD2_def];
+val AM2_ss = rewrites [ADDR_MODE2_ADDR_def,ADDR_MODE2_WB_def];
 val PASS_ss = rewrites [PASS_CASES];
 val ARM_PROG_ss = bool_ss++AM1_ss++AM2_ss++sep_ss++PASS_ss;
 
 fun SET_SC s c = SIMP_RULE ARM_PROG_ss [] o Q.INST [`s_flag:bool`|->s,`c_flag:condition`|->c];
 fun SET_AM x = SIMP_RULE ARM_PROG_ss [] o Q.INST [`a_mode`|->x];
 
-fun SPLIT_PROG2 th = 
-  let
-    val (x,y) = (CONJ_PAIR o RW [ARM_PROG2_def,ARM_NOP_def]) th
-    val f = SIMP_RULE (pure_ss++PASS_ss) []
+val SET_AM2_12 = PROVE [] ``!x:word8. (w2w x) << 2 = ((w2w x) << 2):word12``;
+val SET_AM2_30 = PROVE [] ``!x:word8. w2w x = (w2w x):word30``;
+val SET_AM2_32 = PROVE [] ``!x:word8. w2w x = (w2w x):word32``;
+
+fun SET_AM2 pre up wb imm = let 
+  val rws = [instructionTheory.transfer_options_accessors,
+    instructionTheory.transfer_options_accfupds,combinTheory.K_DEF] 
+(*    val th1 = (EVAL o fst o dest_eq o concl o Q.SPEC imm) SET_AM2_12 
+      val th2 = (EVAL o fst o dest_eq o concl o Q.SPEC imm) SET_AM2_30
+      val th3 = (EVAL o fst o dest_eq o concl o Q.SPEC imm) SET_AM2_32  *)
   in
-    (f x,f (Q.ISPEC `(sN:bool,sZ:bool,sC:bool,sV:bool)` y))
-  end;
+  SIMP_RULE ARM_PROG_ss [(*th1,th2,th3*)] o 
+  CONV_RULE (ARM_PROG_PRE_CONV (SIMP_CONV bool_ss rws)) o
+  CONV_RULE (ARM_PROG_POST_CONV (SIMP_CONV bool_ss rws)) o
+  CONV_RULE (ARM_PROG_POST1_CONV (SIMP_CONV bool_ss rws)) o 
+  Q.INST [`pre_default`|->pre,`up_default`|->up,`wb_default`|->wb,`imm`|->imm] o
+  Q.INST [`opt`|->`<| Pre:= pre_default; Up:=up_default; Wb:=wb_default |>`] end;
+
+fun SPLIT_PROG2 th = let
+  val (x,y) = (CONJ_PAIR o RW [ARM_PROG2_def]) th
+  val f = SIMP_RULE (pure_ss++PASS_ss) []
+  in (f x,f (Q.ISPEC `(sN:bool,sZ:bool,sC:bool,sV:bool)` y)) end;
 
 val FST_PROG2 = fst o SPLIT_PROG2;
 val SND_PROG2 = snd o SPLIT_PROG2;
@@ -390,32 +116,17 @@ val SND_PROG2 = snd o SPLIT_PROG2;
 (* Derived loop rules                                                            *)
 (* ----------------------------------------------------------------------------- *)
 
-val ARM_PROG_LOOP_MEASURE = prove(
-  ``!m:'a->num P cs C Z. 
-      (!v0. ARM_PROG (P v0) cs C Q (((SEP_EXISTS v. P v * cond (m v < m v0)),I) INSERT Z)) ==>
-      (!v0. ARM_PROG (P v0) cs C Q Z)``,
-  REWRITE_TAC [GSYM (SIMP_CONV std_ss [prim_recTheory.measure_def,relationTheory.inv_image_def]
-                               ``measure m (v:'a) v0``)]
-  \\ REPEAT STRIP_TAC 
-  \\ MATCH_MP_TAC ARM_PROG_LOOP
-  \\ Q.EXISTS_TAC `measure m` 
-  \\ ASM_REWRITE_TAC [prim_recTheory.WF_measure]);
-  
-val ARM_PROG_LOOP_LO =
-  (RW [GSYM WORD_LO] o Q.ISPEC `w2n`) ARM_PROG_LOOP_MEASURE;
-
 val ARM_PROG_LOOP_DEC = prove(
   ``!P cs C Z. 
-      (!v:'a word. ARM_PROG (P v * cond ~(v = 0w)) cs C Q 
+      (!v:'var word. ARM_PROG (P v * cond ~(v = 0w)) cs C Q 
                      ((P (v - 1w) * cond ~(v - 1w = 0w),I) INSERT Z)) ==>
       (!v. ARM_PROG (P v * cond ~(v = 0w)) cs C Q Z)``,
   ONCE_REWRITE_TAC [(GSYM o BETA_CONV) ``(\x. P x * cond ~(x:'a word = 0w)) v``]
   \\ REPEAT STRIP_TAC
-  \\ MATCH_MP_TAC ARM_PROG_LOOP_LO
-  \\ FULL_SIMP_TAC std_ss []
-  \\ SRW_TAC [] [ARM_PROG_MOVE_COND]  
-  \\ PAT_ASSUM ``!v. b`` 
-         (ASSUME_TAC o UNDISCH o RW [ARM_PROG_MOVE_COND] o Q.SPEC `v0`)
+  \\ MATCH_MP_TAC ARM_PROG_LOOP_MEASURE
+  \\ Q.EXISTS_TAC `w2n` \\ REWRITE_TAC [GSYM WORD_LO]
+  \\ FULL_SIMP_TAC std_ss [ARM_PROG_MOVE_COND] \\ REPEAT STRIP_TAC
+  \\ Q.PAT_ASSUM `!v. b` (ASSUME_TAC o UNDISCH o RW [ARM_PROG_MOVE_COND] o Q.SPEC `v0`)
   \\ MATCH_MP_TAC ARM_PROG_WEAKEN_POST
   \\ Q.EXISTS_TAC `(P (v0 - 1w) * cond ~(v0 - 1w = 0w))`
   \\ ASM_REWRITE_TAC []
@@ -551,17 +262,6 @@ val POST_MERGE = prove(
   ``(w = wLENGTH xs) ==> ({(x,pcADD w)} UNION {(x,pcINC xs)} = {(x,pcINC xs)})``,
   SRW_TAC [] [pcINC_def]);
 
-val ARM_PROG_PRE_CONV = RATOR_CONV o RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV;
-val ARM_PROG_POST1_CONV = RATOR_CONV o RAND_CONV;
-val ARM_PROG_POST_CONV = RAND_CONV; (* needs to be smarter *)
-
-fun PRE_CONV_RULE c = CONV_RULE (ARM_PROG_PRE_CONV c);
-fun POST1_CONV_RULE c = CONV_RULE (ARM_PROG_POST1_CONV c);
-fun POST_CONV_RULE c = CONV_RULE (ARM_PROG_POST_CONV c);
-
-fun PRE_MOVE_STAR t1 t2 = CONV_RULE (ARM_PROG_PRE_CONV (MOVE_STAR_CONV t1 t2));
-fun POST_MOVE_STAR t1 t2 = CONV_RULE (ARM_PROG_POST_CONV (MOVE_STAR_CONV t1 t2));
-fun POST1_MOVE_STAR t1 t2 = CONV_RULE (ARM_PROG_POST1_CONV (MOVE_STAR_CONV t1 t2));
 
 (* ------------ *)
 
@@ -572,7 +272,7 @@ val ARM_BASIC_FAC = let
   val mul = APP_FRAME `cond (w2n (x:word32) <= n) * cond ~(x = 0w)` mul
   val mul = RW1 [WORD_MULT_COMM] mul
   val mul = Q.INST [`y`|->`n2w (RFAC n (w2n x))`] mul
-  val mul = MOVE_STAR_RULE `a*b*s*(c1*c2)` `(b*c1*c2)*a*s` mul
+  val mul = MOVE_STAR_RULE `a*b*s*(x*y)` `(b*x*y)*a*s` mul
   val mul = RW [STAR_ASSOC,GSYM FAC_INV_thm] mul
   val imp = Q.SPEC `R b x * ~S` (MATCH_MP SEP_IMP_FRAME FAC_INV_INTRO)
   val imp = RW [STAR_ASSOC] imp
@@ -665,96 +365,6 @@ fac2:
 (* GCD program                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-
-(* cond gathering conversion and rule *)
-
-val cond_ELIM = prove(
-  ``!c c' P . (cond c * cond c' = cond (c /\ c')) /\ 
-              (P * cond c * cond c' = P * cond (c /\ c'))``,
-  REWRITE_TAC [GSYM STAR_ASSOC,SEP_cond_CLAUSES]);
-
-val cond_MOVE = prove(
-  ``!c P Q. (cond c * P = P * cond c) /\
-            (P * cond c * Q = P * Q * cond c)``,
-  SIMP_TAC (bool_ss++star_ss) []);
-
-val cond_CONV =
-  REWRITE_CONV [STAR_ASSOC] THENC
-  REPEATC (REWRITE_CONV [cond_ELIM] THENC ONCE_REWRITE_CONV [cond_MOVE]) THENC
-  REWRITE_CONV [GSYM CONJ_ASSOC];
-
-fun SIMP_cond ss ths = CONV_RULE (cond_CONV THENC SIMP_CONV ss ths);
-
-
-(* composition rules *)
-
-val ALT_PROG_COMPOSE = RW [GSYM AND_IMP_INTRO] ARM_PROG_COMPOSE;
-fun COMPOSE th1 th2 = RW_COMPOSE (MATCH_MP (MATCH_MP ALT_PROG_COMPOSE th1) th2);
-
-
-(* merge rules *)
-
-val INSERT_APPEND = prove(
-  ``!x t s. ({} UNION s = s) /\ ((x INSERT t) UNION s = x INSERT (t UNION s))``,
-  SRW_TAC [] [EXTENSION] \\ METIS_TAC []);
-
-fun APP_MERGE th th' =
-  SIMP_RULE (bool_ss++sep_ss) 
-  [INSERT_APPEND,ARM_PROG_MERGE_POST,STAR_OVER_DISJ] 
-  (MATCH_MP ARM_PROG_MERGE (CONJ th th'))
-
-
-(* pre-strengthen rule *)
-
-val STRENGTHEN_LEMMA = 
-  (DISCH_ALL o Q.GEN `P'` o UNDISCH o SPEC_ALL o 
-   RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_SYM]) ARM_PROG_STRENGTHEN_PRE;
-
-fun APP_STRENGTHEN_TERM th t = 
-  (fst o dest_imp o concl o Q.SPEC t o MATCH_MP STRENGTHEN_LEMMA) th;
-
-fun APP_STRENGTHEN th t tac = 
-  let
-    val th' = prove(APP_STRENGTHEN_TERM th t, tac)
-  in
-    MATCH_MP ((Q.SPEC t o MATCH_MP STRENGTHEN_LEMMA) th) th'
-  end;
-
-
-(* post1-weakening rule *)
-
-val WEAKEN1_LEMMA = 
-  (DISCH_ALL o Q.GEN `Q'` o UNDISCH o SPEC_ALL o 
-   RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_SYM]) ARM_PROG_WEAKEN_POST1;
-
-fun APP_WEAKEN1_TERM th t = 
-  (fst o dest_imp o concl o Q.SPEC t o MATCH_MP WEAKEN1_LEMMA) th;
-
-fun APP_WEAKEN1 th t tac = 
-  let
-    val th' = prove(APP_WEAKEN1_TERM th t, tac)
-  in
-    MATCH_MP ((Q.SPEC t o MATCH_MP WEAKEN1_LEMMA) th) th'
-  end;
-
-
-(* post-weakening rule *)
-
-val WEAKEN_LEMMA = 
-  (DISCH_ALL o Q.GEN `Q''` o UNDISCH o SPEC_ALL o 
-   RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_SYM]) ARM_PROG_WEAKEN_POST;
-
-fun APP_WEAKEN_TERM th t = 
-  (fst o dest_imp o concl o Q.SPEC t o MATCH_MP WEAKEN_LEMMA) th;
-
-fun APP_WEAKEN th t tac = 
-  let
-    val th' = prove(APP_WEAKEN_TERM th t, tac)
-  in
-    MATCH_MP ((Q.SPEC t o MATCH_MP WEAKEN_LEMMA) th) th'
-  end;
-
-
 (* GCD over num *)
 
 val GCD_defn = Hol_defn "GCD"
@@ -805,22 +415,17 @@ val wGCD_SUB_LEFT = prove(
 
 (* the GCD program *)
 
-val WORD_GT = 
-  let 
-    val th = SIMP_RULE std_ss 
-               [nzcv_def,LET_DEF,GSYM word_add_def,GSYM word_sub_def] word_gt_def
+val WORD_GT = let 
+    val th = SIMP_RULE std_ss [nzcv_def,LET_DEF,GSYM word_add_def,GSYM word_sub_def] word_gt_def
     val th = SPEC_ALL th
     val th = CONV_RULE (funpow 5 RAND_CONV SYM_CONV) th
   in RW [WORD_EQ_SUB_ZERO] (GSYM th) end;
 
-val WORD_LT = 
-  let 
-    val th = SIMP_RULE std_ss 
-               [nzcv_def,LET_DEF,GSYM word_add_def,GSYM word_sub_def] word_lt_def
+val WORD_LT = let 
+    val th = SIMP_RULE std_ss [nzcv_def,LET_DEF,GSYM word_add_def,GSYM word_sub_def] word_lt_def
     val th = SPEC_ALL th
     val th = CONV_RULE (funpow 5 RAND_CONV SYM_CONV) th
   in RW [WORD_EQ_SUB_ZERO] (GSYM th) end;
-
 
 val ARM_GCD_PROGRAM = let
 
@@ -880,16 +485,16 @@ val ARM_GCD_PROGRAM = let
   val subGT1 = Q.SPEC `R a x * R b y * cond (x = y:word32)` subGT_nop_f
   val subLT1 = Q.SPEC `R a x * R b y * cond (x = y:word32)` subLT_nop_f
   val bne1 = Q.SPEC `R a x * R b y * cond (x = y:word32)` bne_f
-  val subGT1 = SIMP_cond std_ss [subGT_SIMP] subGT1
-  val subLT1 = SIMP_cond std_ss [subLT_SIMP] subLT1
-  val bne1 = SIMP_cond std_ss [bne1_SIMP,SEP_cond_CLAUSES,F_STAR] bne1
+  val subGT1 = SIMP_RULE (std_ss++SEP_cond_ss) [subGT_SIMP] subGT1
+  val subLT1 = SIMP_RULE (std_ss++SEP_cond_ss) [subLT_SIMP] subLT1
+  val bne1 = SIMP_RULE (std_ss++SEP_cond_ss) [bne1_SIMP,SEP_cond_CLAUSES,F_STAR] bne1
   val bne1 = RW [ARM_PROG_FALSE_POST] (RW1 [INSERT_COMM] bne1)
   val reorder = MOVE_STAR_RULE `s*a*b*c` `a*b*s*c`
 
   val th1 = cmp1
-  val th1 = COMPOSE th1 (reorder subGT1)
-  val th1 = COMPOSE th1 (reorder subLT1)
-  val th1 = COMPOSE th1 (reorder bne1)
+  val th1 = MATCH_COMPOSE th1 (reorder subGT1)
+  val th1 = MATCH_COMPOSE th1 (reorder subLT1)
+  val th1 = MATCH_COMPOSE th1 (reorder bne1)
 
   (* case x > y *)  
   
@@ -905,15 +510,15 @@ val ARM_GCD_PROGRAM = let
   val subGT2 = Q.SPEC `cond (x > y:word32)` subGT_f
   val subLT2 = Q.SPEC `R a (x - y) * R b y * cond (x > y:word32)` subLT_nop_f
   val bne2 = Q.SPEC `R a (x - y) * R b y * cond (x > y:word32)` bne_f
-  val subGT2 = SIMP_cond std_ss [] subGT2
-  val subLT2 = SIMP_cond std_ss [subLT2_SIMP] subLT2
-  val bne2 = SIMP_cond std_ss [bne2_SIMP,SEP_cond_CLAUSES,F_STAR,ARM_PROG_FALSE_POST] bne2
+  val subGT2 = SIMP_RULE (std_ss++SEP_cond_ss) [] subGT2
+  val subLT2 = SIMP_RULE (std_ss++SEP_cond_ss) [subLT2_SIMP] subLT2
+  val bne2 = SIMP_RULE (std_ss++SEP_cond_ss) [bne2_SIMP,SEP_cond_CLAUSES,F_STAR,ARM_PROG_FALSE_POST] bne2
   val reorder = MOVE_STAR_RULE `s*a*b*c` `a*b*s*c`
   
   val th2 = cmp2
-  val th2 = COMPOSE th2 subGT2
-  val th2 = COMPOSE th2 (reorder subLT2)
-  val th2 = COMPOSE th2 (reorder bne2)
+  val th2 = MATCH_COMPOSE th2 subGT2
+  val th2 = MATCH_COMPOSE th2 (reorder subLT2)
+  val th2 = MATCH_COMPOSE th2 (reorder bne2)
 
   (* case x < y *)  
   
@@ -929,15 +534,15 @@ val ARM_GCD_PROGRAM = let
   val subGT3 = Q.SPEC `R a x * R b y * cond (x < y:word32)` subGT_nop_f
   val subLT3 = Q.SPEC `cond (x < y:word32)` subLT_f
   val bne3 = Q.SPEC `R a x * R b (y - x) * cond (x < y:word32)` bne_f
-  val subGT3 = SIMP_cond std_ss [subGT3_SIMP] subGT3
-  val subLT3 = SIMP_cond std_ss [] subLT3
-  val bne3 = SIMP_cond std_ss [bne3_SIMP,SEP_cond_CLAUSES,F_STAR,ARM_PROG_FALSE_POST] bne3
+  val subGT3 = SIMP_RULE (std_ss++SEP_cond_ss) [subGT3_SIMP] subGT3
+  val subLT3 = SIMP_RULE (std_ss++SEP_cond_ss) [] subLT3
+  val bne3 = SIMP_RULE (std_ss++SEP_cond_ss) [bne3_SIMP,SEP_cond_CLAUSES,F_STAR,ARM_PROG_FALSE_POST] bne3
   val reorder = MOVE_STAR_RULE `s*a*b*c` `a*b*s*c`
   
   val th3 = cmp3
-  val th3 = COMPOSE th3 (reorder subGT3)
-  val th3 = COMPOSE th3 subLT3
-  val th3 = COMPOSE th3 (reorder bne3)
+  val th3 = MATCH_COMPOSE th3 (reorder subGT3)
+  val th3 = MATCH_COMPOSE th3 subLT3
+  val th3 = MATCH_COMPOSE th3 (reorder bne3)
 
   (* introducing the invariant *)
 
@@ -1012,8 +617,8 @@ val ARM_GCD_PROGRAM = let
 
   val th123 = APP_MERGE th1 (APP_MERGE th2 th3)
   val lemma = METIS_PROVE [WORD_LESS_LESS_CASES,WORD_GREATER] ``(x=y) \/ x>y \/ x<y:word32 = T``
-  val th123 = SIMP_RULE (bool_ss++sep_ss) [lemma] th123
-  val th123 = PGEN "x" `(x,y)` th123
+  val th123 = SIMP_RULE (bool_ss++sep_ss) [lemma,STAR_OVER_DISJ] th123
+  val th123 = PAIR_GEN "x" `(x,y)` th123
   val th123 = Q.INST [`offset`|->`0w-5w`] th123
   val th123 = RW [EVAL ``sw2sw (0w-5w:word24) + 2w + 3w:word30``,pcADD_0] th123
   val th123 = MATCH_MP ARM_PROG_LOOP_MEASURE th123
@@ -1021,24 +626,6 @@ val ARM_GCD_PROGRAM = let
   val th123 = RW [GCD_INV_def] (Q.INST [`x0`|->`x`,`y0`|->`y`] th123)
 
 in th123 end;
-
-
-val HIDE_PRE_LEMMA = MATCH_MP EQ_IMP_IMP (SPEC_ALL ARM_PROG_HIDE_PRE);
-fun HIDE_PRE th = 
-  let 
-    val (P,_,_,_,_) = dest_ARM_PROG (concl th)
-    val v = (snd o dest_comb o snd o dest_comb) P
-  in MATCH_MP HIDE_PRE_LEMMA (GEN v th) end;
-
-val HIDE_POST1_LEMMA = 
-  (GEN_ALL o RW [emp_STAR] o Q.INST [`Q`|->`emp`] o SPEC_ALL) ARM_PROG_HIDE_POST1
-fun HIDE_POST1 th = 
-  MATCH_MP ARM_PROG_HIDE_POST1 th handle e => MATCH_MP HIDE_POST1_LEMMA th;
- 
-val HIDE_POST_LEMMA = 
-  (GEN_ALL o RW [emp_STAR] o Q.INST [`Q'`|->`emp`] o SPEC_ALL) ARM_PROG_HIDE_POST
-fun HIDE_POST th = 
-  MATCH_MP ARM_PROG_HIDE_POST th handle e => MATCH_MP HIDE_POST_LEMMA th;
 
 
 
@@ -1054,7 +641,6 @@ fun EXISTS_PRE var th =
     val th = PRE_CONV_RULE (RAND_CONV (ALPHA_CONV v)) th
     val th = BETA_RULE th
   in th end;
-
 
 
 (*
@@ -1192,7 +778,9 @@ val STACK_EXTRACT = prove(
 
 val STACK_PUSH = 
   let 
-    val th = SET_AM `RegOff (T,F,T,1w)` (PROG_INST arm_STR)  
+    val th = SET_AM2 `T` `F` `T` `1w` (PROG_INST arm_STR)  
+    val th = PRE_MOVE_STAR `a*b*m*s` `(a*b*s)*m` th
+    val th = HIDE_PRE th
     val th = RW [EVAL ``(w2w (1w:word8)):word30``] th  
     val th = Q.INST [`b`|->`13w`,`y`|->`sp`] th 
     val th = APP_FRAME `ms sp xs * blank (sp - 1w - 1w) n` th
@@ -1290,7 +878,7 @@ val MULTI_POP_LEMMA = prove(
   \\ REWRITE_TAC [Once ADD_COMM,SEP_IMP_REFL]);
 
 val MULTI_POP_STACK = let
-  val ldr = PROG_INST (SET_AM `RegOff (F,T,T,n2w n)` arm_LDR)
+  val ldr = PROG_INST (SET_AM2 `F` `T` `T` `n2w n` arm_LDR)
   val ldr = MOVE_STAR_RULE `a*b*y*s` `b*y*s*a` ldr
   val ldr = RW [ARM_PROG_HIDE_PRE] (Q.GEN `x` ldr)
   val ldr = MOVE_STAR_RULE `b*y*s*a` `a*b*y*s` ldr
@@ -1327,16 +915,24 @@ in (Q.GEN `x` o Q.GEN `xs` o Q.GEN `a` o Q.GEN `n` o Q.GEN `m` o DISCH_ALL) ldr 
 
 
 val SUM_BTREE_SPEC'_def = Define 
-  `SUM_BTREE_SPEC' a b sum d C' tree =
+  `SUM_BTREE_SPEC' e a b sum d C' tree =
       !x s. ARM_PROCS d
-        (R30 a x * ~ R b * bt (x,tree) * R sum s) 
+        (R30 a x * ~ R b * bt (x,tree) * R sum s * e) 
         (~ R a * ~ R b * bt (x,tree) * R sum (s + sumBTree tree)) C'`;
 
 val SUM_BTREE_SPEC_def = Define 
-  `SUM_BTREE_SPEC a b sum C' tree = SUM_BTREE_SPEC' a b sum (2 * depth tree) C' tree`;
+  `SUM_BTREE_SPEC e a b sum C' tree = SUM_BTREE_SPEC' e a b sum (2 * depth tree) C' tree`;
 
 val SUM_BTREE_SPEC_TR_def = Define 
-  `SUM_BTREE_SPEC_TR a b sum C' tree = SUM_BTREE_SPEC' a b sum (2 * ldepth tree) C' tree`;
+  `SUM_BTREE_SPEC_TR e a b sum C' tree = SUM_BTREE_SPEC' e a b sum (2 * ldepth tree) C' tree`;
+
+val SUM_BTREE_SPEC_THM =
+  SIMP_CONV (bool_ss++sep_ss) [SUM_BTREE_SPEC_def,SUM_BTREE_SPEC'_def] 
+    ``SUM_BTREE_SPEC emp a b sum C' tree``;
+
+val SUM_BTREE_SPEC_TR_THM =
+  SIMP_CONV (bool_ss++sep_ss) [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC'_def] 
+    ``SUM_BTREE_SPEC_TR emp a b sum C' tree``;
 
 val A1_TAC = 
   STRIP_TAC
@@ -1358,21 +954,21 @@ val A2_TAC =
   \\ `depth t2 < SUC (depth t1)` by DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss [depth_def,MAX_DEF];
     
-val ASSUMPTION1 = (UNDISCH o UNDISCH o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC a b sum C' t1``,A1_TAC);
+val ASSUMPTION1 = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC e a b sum C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC e a b sum C' t1``,A1_TAC);
 
-val ASSUMPTION1_TR = (UNDISCH o UNDISCH o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR a b sum C' t1``,A1_TAC);
+val ASSUMPTION1_TR = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR e a b sum C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR e a b sum C' t1``,A1_TAC);
 
-val ASSUMPTION2 = (UNDISCH o UNDISCH o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC a b sum C' t2``,A2_TAC);
+val ASSUMPTION2 = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC e a b sum C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC e a b sum C' t2``,A2_TAC);
 
-val ASSUMPTION2_TR = (UNDISCH o UNDISCH o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR a b sum C' t2``,A2_TAC);
+val ASSUMPTION2_TR = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR e a b sum C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR e a b sum C' t2``,A2_TAC);
 
 val MULT_MAX = prove(
   ``k * MAX m n = MAX (k * m) (k * n)``,
@@ -1380,34 +976,10 @@ val MULT_MAX = prove(
   \\ SIMP_TAC std_ss [MAX_DEF]
   \\ Cases_on `m < n` \\ ASM_REWRITE_TAC []);
 
-
-
-fun mk_var_list 0 ty = listSyntax.mk_nil ty
-  | mk_var_list n ty = listSyntax.mk_cons(genvar ty,mk_var_list (n-1) ty);
-
-fun APP_APPEND th list = 
-  let 
-    val th = MATCH_MP ARM_PROG_APPEND_CODE th
-  in RW [APPEND] (SPEC list th) end;
-
-fun APP_MERGE th1 th2 =
-  let
-    val (_,cs1,_,_,_) = dest_ARM_PROG (concl th1) 
-    val (_,cs2,_,_,_) = dest_ARM_PROG (concl th2) 
-    val len1 = (length o fst o listSyntax.dest_list) cs1
-    val len2 = (length o fst o listSyntax.dest_list) cs2
-    val diff = abs (len1 - len2)    
-    val list = mk_var_list diff ``:word32``
-    val (th1,th2) = if len1 < len2 then (APP_APPEND th1 list,th2) else (th1,APP_APPEND th2 list)
-    val (_,cs1,_,_,_) = dest_ARM_PROG (concl th1) 
-    val (_,cs2,_,_,_) = dest_ARM_PROG (concl th2) 
-    val (i,m) = if len1 < len2 then (match_term cs1 cs2) else (match_term cs2 cs1)
-    val (th1,th2) = if len1 < len2 then (INST i (INST_TYPE m th1),th2) else 
-                                        (th1,INST i (INST_TYPE m th2))
-    val th = MATCH_MP ARM_PROG_MERGE (CONJ th1 th2)
-    val th = SIMP_RULE (pure_ss++sep_ss) [UNION_IDEMPOT,UNION_EMPTY] th
-  in th end;
-
+(*
+instructionSyntax.dest_instruction NONE 
+  ``(LDR AL F <|Pre := T; Up := T; Wb := F|> b a (Dt_immediate 0w))``
+*)
 
 val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
@@ -1431,13 +1003,13 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th = MATCH_COMPOSE cmp1 th
   val th = RW [addr32_0] th
   val th = APP_FRAME `bt (x,tree) * R sum (s + sumBTree tree)` th
-  val th = SIMP_cond bool_ss [AND_CLAUSES] th
+  val th = SIMP_RULE (bool_ss++SEP_cond_ss) [AND_CLAUSES] th
   val th = DISCH ``tree = Leaf`` th
   val th = RW [GSYM ARM_PROG_MOVE_COND] th
   val th = APP_STRENGTHEN th 
            `R30 a x * ~S * R30 14w lr * bt (x,tree) * R sum s * cond (tree = Leaf)`
     (SIMP_TAC (std_ss++sep_ss) [SEP_IMP_MOVE_COND,bt_def,sumBTree_def]
-     \\ CONV_TAC cond_CONV
+     \\ SIMP_TAC (bool_ss++SEP_cond_ss) []
      \\ SIMP_TAC (std_ss++star_ss) [WORD_ADD_0,SEP_IMP_REFL])
   val c1 = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
   val c1 = APP_FRAME `STACK sp [] n * ~R b` c1
@@ -1458,7 +1030,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th = APP_STRENGTHEN th 
            `R30 a x * ~S * R30 14w lr * bt (x,tree) * R sum s * cond (tree = Node(t1,y,t2))`
     (SIMP_TAC (std_ss++sep_ss) [SEP_IMP_MOVE_COND,bt_def,sumBTree_def]
-     \\ CONV_TAC cond_CONV
+     \\ SIMP_TAC (bool_ss++SEP_cond_ss) []
      \\ SIMP_TAC (std_ss++star_ss) [WORD_ADD_0,SEP_IMP_REFL])
   val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
 
@@ -1489,7 +1061,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   (* add *)
 
-  val ldr = SET_AM `RegOff (T,T,F,0w)` (PROG_INST arm_LDR)  
+  val ldr = SET_AM2 `T` `T` `F` `0w` (PROG_INST arm_LDR)  
   val ldr = RW [EVAL ``(w2w (0w:word8)):word30``,WORD_ADD_0] ldr
   val ldr = Q.INST [`a`|->`b`,`b`|->`a`,`y`|->`x`,`x`|->`y`] ldr
   val ldr = MOVE_STAR_RULE `x*y*z*q` `y*z*q*x` ldr
@@ -1506,7 +1078,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   (* call 1 *)
   
-  val ldr = PROG_INST (SET_AM `RegOff (T,T,F,1w)` arm_LDR1)  
+  val ldr = PROG_INST (SET_AM2 `T` `T` `F` `1w` arm_LDR1)  
   val ldr = RW [EVAL ``(w2w (1w:word8)):word30``] ldr
   val ldr = RW [GSYM R30_def] (Q.INST [`b`|->`a`,`y`|->`x`,`z`|->`addr32 a1`] ldr)
   val th = ASSUME ``ARM_PROCS n (R30 a x * ~R b * bt (x,t1) * R sum s)
@@ -1516,8 +1088,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th = MATCH_MP ARM_PROC_EXPAND_STACK th
   val th = Q.SPEC `m` th
   val th = MOVE_STAR_RULE `a*b*t*sum*s*sp` `a*b*t*sum*sp*s` th
-  val th' = MATCH_MP (RW [GSYM AND_IMP_INTRO] ARM_PROC_CALL) arm_BL
-  val th' = Q.INST [`offset`|->`offset1`] th'
+  val th' = Q.INST [`offset`|->`offset1`] arm_BL
   val th = MATCH_MP th' th
   val th = Q.INST [`x`|->`a1`] th
   val th = APP_FRAME `M (x + 1w) (addr32 a1)` th
@@ -1526,12 +1097,12 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   (* load for call 2 *)
 
-  val ldr1 = PROG_INST (SET_AM `RegOff (T,T,F,1w)` arm_LDR)  
+  val ldr1 = PROG_INST (SET_AM2 `T` `T` `F` `1w` arm_LDR)  
   val ldr1 = RW [EVAL ``(w2w (1w:word8)):word30``] ldr1
   val ldr1 = MOVE_STAR_RULE `a*sp*y*s` `sp*y*s*a` ldr1
   val ldr1 = HIDE_PRE ldr1
   val ldr1 = RW [GSYM R30_def] (Q.INST [`b`|->`13w`,`y`|->`sp`,`z`|->`addr32 x`] ldr1)
-  val ldr2 = PROG_INST (SET_AM `RegOff (T,T,F,2w)` arm_LDR1)  
+  val ldr2 = PROG_INST (SET_AM2 `T` `T` `F` `2w` arm_LDR1)  
   val ldr2 = RW [EVAL ``(w2w (2w:word8)):word30``] ldr2
   val ldr2 = RW [GSYM R30_def] (Q.INST [`b`|->`a`,`y`|->`x`,`z`|->`addr32 a2`] ldr2)
   val ldr1 = APP_FRAME `M (x + 2w) (addr32 a2)` ldr1  
@@ -1559,13 +1130,13 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th = Q.SPEC `2 * depth t1` th
   val th = RW [GSYM MULT_MAX] (RW1 [MAX_COMM] th)
   val th = MOVE_STAR_RULE `a*b*t*sum*s*sp` `a*b*t*sum*sp*s` th
-  val th' = MATCH_MP (RW [GSYM AND_IMP_INTRO] ARM_PROC_CALL) arm_BL
-  val th' = Q.INST [`offset`|->`offset2`] th'
+  val th' = Q.INST [`offset`|->`offset2`] arm_BL
   val th = MATCH_MP th' th
   val th = Q.INST [`x`|->`a2`,`sp`|->`sp -1w-1w`] th
   val call2 = APP_FRAME `M (x + 2w) (addr32 a2)` th
 
-  val ldr = (SET_SC `F` `AL` o SET_AM `RegOff (F,T,T,2w)`) arm_LDR_PC
+  val ldr = (SET_SC `F` `AL` o SET_AM2 `F` `T` `T` `2w`) arm_LDR_PC
+  val ldr = SIMP_RULE (srw_ss()) [] ldr
   val ldr = (HIDE_STATUS o HIDE_POST o FST_PROG2) ldr
   val ldr = Q.INST [`a`|->`13w`,`y`|->`lr`,`x`|->`sp-1w-1w`] ldr
   val lemma = prove(``x-1w-1w+2w=x:word30``,
@@ -1601,7 +1172,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   val th1 = Q.INST [`sp`|->`sp-1w-1w`,`n`|->`2 * (depth t1)`,`m`|->`2 * (depth t2)`] add_call1_ldr
   val th1 = SIMP_RULE (bool_ss++sep_ss) [WORD_SUB_ADD,GSYM MULT_MAX] th1
-  val asm = Q.SPECL [`a1`,`s+y`] (RW [SUM_BTREE_SPEC_def,SUM_BTREE_SPEC'_def] ASSUMPTION1)
+  val asm = Q.SPECL [`a1`,`s+y`] (RW [SUM_BTREE_SPEC_THM] ASSUMPTION1)
   val th1 = Q.SPEC `t2` (MATCH_MP (DISCH_ALL (Q.GEN `t2` th1)) asm)
   val th2 = Q.INST [`s`|->`s + y + sumBTree t1`] ret1  
   val th2 = SIMP_RULE (bool_ss++sep_ss) [ms_def,WORD_SUB_ADD] th2
@@ -1644,9 +1215,10 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th' = RW1 [ARM_PROG_EXTRACT_CODE] th'
   val th' = RW [GSYM ARM_PROC_THM] (Q.GEN `lr` th')
   val th' = RW [GSYM ARM_PROCS_def] (Q.GEN `sp` th')
-  val th' = RW [GSYM SUM_BTREE_SPEC_def,GSYM SUM_BTREE_SPEC'_def] (Q.GEN `x` (Q.GEN `s` th'))
+  val th' = RW [GSYM SUM_BTREE_SPEC_THM] (Q.GEN `x` (Q.GEN `s` th'))
   val th' = RW1 [INSERT_SING_UNION] th'
   val th' = Q.GEN `tree` (Q.GEN `C'` (DISCH_ALL th'))
+
   val th' = MATCH_MP ARM_PROC_RECURSION th'
   val th' = Q.SPEC `tree` th'  
   val rws = [EVAL ``(w2w (0w:word8)):word12 << 2``,
@@ -1670,7 +1242,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
     \\ PAT_ASSUM ``!Z:'a. b`` (MATCH_MP_TAC)
     \\ Q.EXISTS_TAC `setADD k {(P'' * P',I)}` 
     \\ STRIP_TAC
-    THEN1 ASM_SIMP_TAC (bool_ss++COMPOSE_ss) 
+    THEN1 ASM_SIMP_TAC (bool_ss++compose_ss) 
             [prove(``I o f = f``,SRW_TAC [] [FUN_EQ_THM]),setADD_CLAUSES]
     \\ REWRITE_TAC [setADD_def]
     \\ METIS_TAC [ARM_GPROG_SHIFT])
@@ -1678,7 +1250,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th1 = RW [MAX_IDEM] (Q.INST [`m`|->`n`] add_call1_ldr)
   val th1 = Q.INST [`sp`|->`sp-1w-1w`,`n`|->`2 * (ldepth t1)`] th1
   val th1 = SIMP_RULE (bool_ss++sep_ss) [WORD_SUB_ADD,GSYM MULT_MAX] th1
-  val asm = Q.SPECL [`a1`,`s+y`] (RW [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC'_def] ASSUMPTION1_TR)
+  val asm = Q.SPECL [`a1`,`s+y`] (RW [SUM_BTREE_SPEC_TR_THM] ASSUMPTION1_TR)
   val th1 = MATCH_MP (DISCH_ALL th1) asm
   val th1 = PRE_MOVE_STAR `sum*s*a*x*b*x1*t1*sp*lr*sp1*x2` 
                           `sum*s*a*x*b*x1*t1*lr*sp1*x2*sp` th1
@@ -1728,7 +1300,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
 
   val c2 = RW [GSYM WORD_SUB_PLUS,EVAL ``1w+1w:word30``] case2
   val c2 = Q.INST [`n`|->`MAX (2 * ldepth t1) (2 * ldepth t2 - 2)`] c2
-  val c2_call2 = ARRANGE_COMPOSE c2 call2
+  val c2_call2 = ARRANGE_COMPOSE c2 (RW [emp_STAR] call2)
   val lemma = prove(
     ``SUC (SUC (MAX (2 * m) (2 * n - 2))) = 2 * (MAX (SUC m) n)``,
     SRW_TAC [] [MAX_DEF] \\ DECIDE_TAC)
@@ -1761,7 +1333,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
   val th' = RW1 [ARM_PROG_EXTRACT_CODE] th'
   val th' = RW [GSYM ARM_PROC_THM] (Q.GEN `lr` th')
   val th' = RW [GSYM ARM_PROCS_def] (Q.GEN `sp` th')
-  val th' = RW [GSYM SUM_BTREE_SPEC_TR_def,GSYM SUM_BTREE_SPEC'_def] (Q.GEN `x` (Q.GEN `s` th'))
+  val th' = RW [GSYM SUM_BTREE_SPEC_TR_THM] (Q.GEN `x` (Q.GEN `s` th'))
   val th' = RW1 [INSERT_SING_UNION] th'
   val th' = Q.GEN `tree` (Q.GEN `C'` (DISCH_ALL th'))
   val th' = MATCH_MP ARM_PROC_RECURSION th'
@@ -1772,7 +1344,7 @@ val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
              EVAL ``(2w:word12) << 2``]
   val result_TR = RW rws th'
  
-  val rw = RW [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC_def,SUM_BTREE_SPEC'_def]
+  val rw = RW [SUM_BTREE_SPEC_TR_THM,SUM_BTREE_SPEC_THM]
 
 in (rw result,rw result_TR) end;
   
@@ -1824,7 +1396,6 @@ val ARM_PROG_PUSH_COND = prove(
   SIMP_TAC (std_ss++sep_ss) [ARM_PROG_MOVE_COND]);
 
 val PUSH_COND = MATCH_MP ARM_PROG_PUSH_COND;
-
 
 val DIV_BOUNDS = prove(
   ``!k. 0 < k ==> !m n. (m DIV k = n) = (n*k <= m /\ m < n*k+k)``,
@@ -1934,4 +1505,7 @@ val th = SIMP_RULE arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w,WORD_SUB_RZERO] th
 val th = SIMP_RULE (std_ss++sep_ss) [MAP,xR_list_def,STAR_ASSOC,ADDR_MODE4_CMD_def,GSYM WORD_ADD_ASSOC,word_add_n2w] th
 
 
+
+
 val _ = export_theory();
+

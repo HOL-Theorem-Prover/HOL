@@ -2,6 +2,11 @@ signature set_sepLib =
 sig
     include Abbrev
 
+    val mk_STAR             : term * term -> term
+    val dest_STAR           : term -> term * term
+    val list_mk_STAR        : term list -> term
+    val list_dest_STAR      : term -> term list    
+
     val sep_ss              : simpLib.ssfrag 
     val sep2_ss             : simpLib.ssfrag 
 

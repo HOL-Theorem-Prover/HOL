@@ -161,4 +161,25 @@ val sep2_ss =
   simpLib.merge_ss [SEP_EXISTS_ss,SEP_cond_ss,sep_ss,rewrites [STAR_ASSOC]];
 
 
+(* ----------------------------------------------------------------------------- *)
+(* Syntax related construstors and destructors                                   *)
+(* ----------------------------------------------------------------------------- *)
+
+open set_sepTheory
+
+val STAR = prim_mk_const {Name="STAR",Thy="set_sep"};
+val dest_STAR = dest_binop STAR (ERR"dest_STAR" "not a *");
+val is_STAR = can dest_STAR;
+
+fun list_dest_STAR tm =
+  let val (v1,v2) = dest_STAR tm in list_dest_STAR v1 @ list_dest_STAR v2 end
+  handle e => [tm];
+
+fun mk_STAR(t1,t2) = (fst o dest_eq o concl o ISPECL [t1,t2]) STAR_def;
+
+fun list_mk_STAR [] = raise ERR "list_mk_STAR" "Invalid argument"
+  | list_mk_STAR [x] = x
+  | list_mk_STAR (x::y::xs) = list_mk_STAR (mk_STAR(x,y)::xs);
+
+
 end

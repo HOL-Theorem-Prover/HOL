@@ -54,6 +54,21 @@
 
    Provides ARM_PROG specifications for most ARM instructions.
 
+ arm_progLib
+
+   Contains ML functions that ease proof efforts. It consists of two parts:
+
+   i)  The first part consists of ML functions for doing basic operations 
+       on ARM_PROG and ARM_PROG2 Hoare triples (e.g. compose, weaken and merge). 
+
+   ii) The second half of the file is a collection of ML functions for 
+       producing (i.e. printing) ML scripts that perform more complex tasks, 
+       such as instantiating basic instruction specifications and composing 
+       multiple instruction specifications at once.
+    
+   Part (i) is meant to be stable. Part (ii) is meant to be more experimental, 
+   but will produce scripts that only rely on functions in part (i).
+
  examplesTheory
 
    Proves a few example implementations. Currently: FAC, GCD and SUM_BTREE.

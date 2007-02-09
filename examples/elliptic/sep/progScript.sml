@@ -119,8 +119,35 @@ val RES_SPEC' = RES_SPEC `(set,n,pc,i)`;
 
 
 (* ----------------------------------------------------------------------------- *)
-(* Properties of set operations                                                  *)
+(* Properties of pc and set operations                                           *)
 (* ----------------------------------------------------------------------------- *)
+
+val pcADD_pcADD = store_thm("pcADD_pcADD",
+  ``!k k'. pcADD k o pcADD k' = pcADD (k + k')``,
+  SIMP_TAC std_ss [FUN_EQ_THM,pcADD_def,wLENGTH_def,WORD_ADD_ASSOC]);
+
+val pcADD_pcINC = store_thm("pcADD_pcINC",
+  ``!k xs:word32 list. pcADD k o pcINC xs = pcADD (k + wLENGTH xs)``,
+  REWRITE_TAC [GSYM pcADD_pcADD,pcINC_def]);
+
+val pcINC_pcADD = store_thm("pcINC_pcADD",
+  ``!k xs:word32 list. pcINC xs o pcADD k = pcADD (k + wLENGTH xs)``,
+  ONCE_REWRITE_TAC [WORD_ADD_COMM] \\ REWRITE_TAC [GSYM pcADD_pcADD,pcINC_def]);
+
+val pcINC_pcINC = store_thm("pcINC_pcINC",
+  ``!xs:word32 list ys. pcINC ys o pcINC xs = pcINC (xs++ys)``,
+  REWRITE_TAC [pcINC_def,pcADD_pcADD] \\ ONCE_REWRITE_TAC [WORD_ADD_COMM]
+  \\ REWRITE_TAC [wLENGTH_def,word_add_n2w,LENGTH_APPEND]);
+  
+val pcSET_ABSORB = store_thm("pcSET_ABSORB",
+  ``!x f. pcSET x o f = pcSET x``,
+  SIMP_TAC std_ss [pcSET_def,FUN_EQ_THM]);
+
+val pcADD_0 = store_thm("pcADD_0",
+  ``pcADD 0w = I``,SRW_TAC [] [WORD_ADD_0,pcADD_def,FUN_EQ_THM]);
+
+val pcINC_0 = store_thm("pcINC_0",
+  ``pcINC [] = I``,SRW_TAC [] [pcINC_def,wLENGTH_def,LENGTH,pcADD_0]);
 
 val setAPP_CLAUSES = store_thm("setAPP_CLAUSES",
   ``!g Q f Z. (setAPP g {} = {}) /\ 
@@ -136,10 +163,49 @@ val setAPP_CLAUSES = store_thm("setAPP_CLAUSES",
     Cases_on `x'` \\ FULL_SIMP_TAC std_ss [] 
     \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []]);
         
+val setAPP_setAPP = store_thm("setAPP_setAPP",
+  ``!f g x. setAPP f (setAPP g x) = setAPP (g o f) x``,
+  SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,setAPP_def]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
+  \\ Cases_on `x''` \\ FULL_SIMP_TAC std_ss [] << [
+    Cases_on `x''` \\ FULL_SIMP_TAC std_ss []
+    \\ Q.EXISTS_TAC `(q',r')` \\ FULL_SIMP_TAC std_ss [],
+    Q.EXISTS_TAC `(q,r o g)` \\ FULL_SIMP_TAC std_ss []
+    \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []]);
+
+val setADD_setADD = store_thm("setADD_setADD",
+  ``!k k' x. setADD k (setADD k' x) = setADD (k + k') x``,
+  SIMP_TAC std_ss [setADD_def,setAPP_setAPP,pcADD_pcADD]
+  \\ REWRITE_TAC [Once WORD_ADD_COMM]);
+
+val setAPP_UNION = store_thm("setAPP_UNION",
+  ``!f x y. setAPP f (x UNION y) = setAPP f x UNION setAPP f y``,
+  SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,setAPP_def,IN_UNION]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
+  \\ Cases_on `x''` \\ FULL_SIMP_TAC std_ss []   
+  THEN1 (DISJ1_TAC \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss [])
+  THEN1 (DISJ2_TAC \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss [])
+  \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []);
+
+val setAPP_I = store_thm("setAPP_I",
+  ``!x. setAPP I x = x``,
+  SIMP_TAC std_ss [setAPP_def,EXTENSION,GSPECIFICATION] 
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
+  THEN1 (Cases_on `x''` \\ FULL_SIMP_TAC std_ss [])
+  \\ Cases_on `x'` \\ FULL_SIMP_TAC std_ss []
+  \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []);
+
 val setADD_CLAUSES = store_thm("setADD_CLAUSES",
   ``!k Q f Z. (setADD k {} = {}) /\ 
               (setADD k ((Q,f) INSERT Z) = (Q,f o (pcADD k)) INSERT setADD k Z)``,
   REWRITE_TAC [setADD_def,setAPP_CLAUSES]);
+
+val setADD_UNION = store_thm("setADD_UNION",
+  ``!k x y. setADD k (x UNION y) = setADD k x UNION setADD k y``,
+  REWRITE_TAC [setADD_def,setAPP_UNION]);
+
+val setADD_0 = store_thm("setADD_0",
+  ``setADD 0w x = x``,SRW_TAC [] [setADD_def,FUN_EQ_THM,pcADD_0,setAPP_I]);
 
 val setINC_CLAUSES = store_thm("setINC_CLAUSES",
   ``!cs Q f Z. (setINC cs {} = {}) /\ 
@@ -160,7 +226,7 @@ val setSTAR_CLAUSES = store_thm("setSTAR_CLAUSES",
     Cases_on `x'` \\ FULL_SIMP_TAC std_ss [] 
     \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []]);
 
-val IN_setSTAR = prove(
+val IN_setSTAR = store_thm("IN_setSTAR",
   ``!P Q f Z. (Q,f) IN setSTAR P Z = ?Q'. (Q',f) IN Z /\ (Q = Q' * P)``,
   REWRITE_TAC [setSTAR_def] \\ REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [GSPECIFICATION] << [  
@@ -438,7 +504,7 @@ val RUN_COMPOSE = store_thm("RUN_COMPOSE",
 
 val RUN_HIDE_PRE = store_thm("RUN_HIDE_PRE",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P P' Q. (!y. RUN x (P * P' y) Q) = RUN x (P * ~ P') Q``,
+      !P P' Q. (!y:'var. RUN x (P * P' y) Q) = RUN x (P * ~ P') Q``,
   INIT_TAC \\ REPEAT STRIP_TAC   
   \\ SIMP_TAC bool_ss [RUN_def,RES_FORALL,SEP_HIDE_def]
   \\ EQ_TAC \\ REPEAT STRIP_TAC << [  
@@ -463,15 +529,15 @@ val RUN_HIDE_PRE = store_thm("RUN_HIDE_PRE",
 
 val RUN_HIDE_POST = store_thm("RUN_HIDE_POST",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P Q Q' y. RUN x P (Q * Q' y) ==> RUN x P (Q * ~ Q')``,
+      !P Q Q' y:'var. RUN x P (Q * Q' y) ==> RUN x P (Q * ~ Q')``,
   METIS_TAC [RUN_WEAKEN_POST,SEP_HIDE_INTRO]);
 
 val RUN_LOOP = store_thm("RUN_LOOP",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !Inv P Q.
         (?R. WF R /\ 
-           !v:'d. RUN x (Inv v \/ P) (Q \/ SEP_EXISTS v'. Inv v' * cond (R v' v))) ==>
-        (!v:'d. RUN x (Inv v \/ P) Q)``,
+           !v:'var. RUN x (Inv v \/ P) (Q \/ SEP_EXISTS v'. Inv v' * cond (R v' v))) ==>
+        (!v:'var. RUN x (Inv v \/ P) Q)``,
   INIT_TAC 
   \\ NTAC 4 STRIP_TAC
   \\ recInduct (UNDISCH (SPEC_ALL relationTheory.WF_INDUCTION_THM))
@@ -775,8 +841,8 @@ val GPROG_LOOP = store_thm("GPROG_LOOP",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !Inv Y C Z.
         (?R. WF R /\ 
-           !v:'d. GPROG x (Inv v UNION Y) C (Z UNION {i|(i,v')|i IN Inv v' /\ R v' v })) ==>
-        (!v:'d. GPROG x (Inv v UNION Y) C Z)``,
+           !v:'var. GPROG x (Inv v UNION Y) C (Z UNION {i|(i,v')|i IN Inv v' /\ R v' v })) ==>
+        (!v:'var. GPROG x (Inv v UNION Y) C Z)``,
   INIT_TAC \\ REWRITE_TAC [GPROG_def,BIGD_UNION]
   \\ ONCE_REWRITE_TAC 
       [(GSYM o BETA_CONV) 
@@ -803,14 +869,14 @@ val GPROG_LOOP1 = store_thm("GPROG_LOOP1",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !f Inv Y C Z.
         (?R. WF R /\ 
-           !v:'d. GPROG x ((Inv v,f) INSERT Y) C
+           !v:'var. GPROG x ((Inv v,f) INSERT Y) C
                            (((SEP_EXISTS v'. Inv v' * cond(R v' v)),f) INSERT Z)) ==>
-        (!v:'d. GPROG x ((Inv v,f) INSERT Y) C Z)``,
+        (!v:'var. GPROG x ((Inv v,f) INSERT Y) C Z)``,
   INIT_TAC \\ NTAC 5 STRIP_TAC
   \\ ONCE_REWRITE_TAC [(GSYM o BETA_CONV) ``(\v. cond (R v' v)) v``]
   \\ ASM_SIMP_TAC bool_ss [UNDISCH (RES_SPEC' GPROG_POST_EXISTS)]
   \\ ONCE_REWRITE_TAC [UNION_COMM]
-  \\ `!R:'d->'d->bool v:'d. 
+  \\ `!R:'var->'var->bool v:'var. 
         {(Inv v',f) | v' | R v' v} = {i|(i,v')| i IN {(Inv v',f)} /\ R v' v}` by   
     (SRW_TAC [] [EXTENSION,GSPECIFICATION] \\ EQ_TAC \\ STRIP_TAC    
      THEN1 (Q.EXISTS_TAC `(x,v')` \\ FULL_SIMP_TAC std_ss [])
@@ -929,7 +995,7 @@ val PROG_WEAKEN_POST = store_thm("PROG_WEAKEN_POST",
 val PROG_HIDE_PRE = store_thm("PROG_HIDE_PRE",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !P P' cs C Q Z. 
-        (!y. PROG x (P * P' y) cs C Q Z) = PROG x (P * ~ P') cs C Q Z``,
+        (!y:'var. PROG x (P * P' y) cs C Q Z) = PROG x (P * ~ P') cs C Q Z``,
   INIT_TAC
   \\ SIMP_TAC (bool_ss++sep_ss) [PROG_def,GPROG_def,BIGD_INSERT,BIGD_EMPTY] 
   \\ MOVE_STAR_TAC `p*p'*m*pp` `p*m*pp*p'`
@@ -938,13 +1004,13 @@ val PROG_HIDE_PRE = store_thm("PROG_HIDE_PRE",
 
 val PROG_HIDE_POST1 = store_thm("PROG_HIDE_POST1",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P cs C Q Q' y Z. 
+      !P cs C Q Q' y:'var Z. 
         PROG x P cs C (Q * Q' y) Z ==> PROG x P cs C (Q * ~ Q') Z``,
   METIS_TAC [PROG_WEAKEN_POST1,SEP_HIDE_INTRO]);
 
 val PROG_HIDE_POST = store_thm("PROG_HIDE_POST",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P cs C Q Q' Q'' y Z. 
+      !P cs C Q Q' Q'' y:'var Z. 
         PROG x P cs C Q ((Q' * Q'' y,f) INSERT Z) ==> 
         PROG x P cs C Q ((Q' * ~ Q'',f) INSERT Z)``,
   METIS_TAC [PROG_WEAKEN_POST,SEP_HIDE_INTRO]);
@@ -952,7 +1018,7 @@ val PROG_HIDE_POST = store_thm("PROG_HIDE_POST",
 val PROG_EXISTS_PRE = store_thm("PROG_EXISTS_PRE",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !P cs C Q Z. 
-        (!y. PROG x (P y) cs C Q Z) = PROG x (SEP_EXISTS y. P y) cs C Q Z``,
+        (!y:'var. PROG x (P y) cs C Q Z) = PROG x (SEP_EXISTS y. P y) cs C Q Z``,
   INIT_TAC \\ REWRITE_TAC [GSYM SEP_HIDE_THM] \\ REPEAT STRIP_TAC
   \\ ASSUME_TAC ((Q.INST [`P`|->`emp`,`P'`|->`P`] o SPEC_ALL o UNDISCH o RES_SPEC') PROG_HIDE_PRE)
   \\ FULL_SIMP_TAC std_ss [emp_STAR]);
@@ -1029,10 +1095,10 @@ val PROG_COMPOSE = store_thm("PROG_COMPOSE",
 
 val PROG_LOOP = store_thm("PROG_LOOP",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P Y Q cs C Z.
+      !P Q cs C Z.
         (?R.
            WF R /\
-           !v0.
+           !v0:'var.
              PROG x (P v0) cs C Q
                (((SEP_EXISTS v. P v * cond (R v v0)),I) INSERT Z)) ==>
         !v0. PROG x (P v0) cs C Q Z``,
@@ -1040,6 +1106,19 @@ val PROG_LOOP = store_thm("PROG_LOOP",
   \\ MATCH_MP_TAC (UNDISCH GPROG_LOOP1')
   \\ ONCE_REWRITE_TAC [INSERT_COMM]
   \\ Q.EXISTS_TAC `R` \\ ASM_SIMP_TAC std_ss []);
+
+val PROG_LOOP_MEASURE = store_thm("PROG_LOOP_MEASURE",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      !m:'var->num P Q cs C Z.
+        (!v0:'var.
+           PROG x (P v0) cs C Q
+             (((SEP_EXISTS v. P v * cond (m v < m v0)),I) INSERT Z)) ==>
+        !v0. PROG x (P v0) cs C Q Z``,
+  INIT_TAC \\ REPEAT STRIP_TAC
+  \\ MATCH_MP_TAC (UNDISCH (RES_SPEC' PROG_LOOP))
+  \\ Q.EXISTS_TAC `measure m` 
+  \\ FULL_SIMP_TAC bool_ss [prim_recTheory.WF_measure,
+       prim_recTheory.measure_def,relationTheory.inv_image_def]);
 
 val PROG_EXTRACT_POST = store_thm("PROG_EXTRACT_POST",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
