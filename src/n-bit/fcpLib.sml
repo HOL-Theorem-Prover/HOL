@@ -34,8 +34,8 @@ fun index_type n =
 
 fun index_compset () =
   let val compset = reduceLib.num_compset()
-      val _ = add_thms [index_one,index_bit0,index_bit1,
-                        finite_one,finite_bit0,finite_bit1] compset
+      val _ = add_thms [index_sum,index_one,index_bit0,index_bit1,
+                        finite_sum,finite_one,finite_bit0,finite_bit1] compset
 in
   compset
 end;

@@ -50,7 +50,7 @@ val thms =
    NUM_RULE [BITS_ZERO2] `n`  BIT_def, INT_MIN_SUM,
    numeral_log2,numeral_ilog2,
    n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
-   word_L_def, word_H_def, word_T_def, fcpTheory.index_sum,
+   word_L_def, word_H_def, word_T_def,
    word_join_def, word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,
    word_1comp_n2w, word_or_n2w, word_xor_n2w, word_and_n2w,
