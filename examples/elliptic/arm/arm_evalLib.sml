@@ -612,7 +612,6 @@ end;
 val empty_memory = rhsc empty_memory_def
 val empty_registers = rhsc empty_registers_def
 val empty_psrs = rhsc empty_psrs_def
-val empty_all_cp_registers = lhsc empty_all_cp_registers_def;
 
 (* ------------------------------------------------------------------------- *)
 (* Funtions for memory loading and saving *)
@@ -665,22 +664,50 @@ in
 end;
 
 (* ------------------------------------------------------------------------- *)
-(* Set the general purpose and program status registers *)
+(* Set the general purpose, program status and coprocessor registers *)
 
-val foldl_tm =
-  ``FOLDL (\m (r:'a,v:'b). if v = m r then m else (r =+ v) m) x y``;
+val foldl_tm = ``FOLDL (\m (r:'a,v:word32). (r =+ v) m) x y``;
+
+fun assign_type_reg_list (t:term frag list) =
+  let val s = case hd t of QUOTE s => s | ANTIQUOTE x => "" in
+    Term [QUOTE (s ^ ": (register # word32) list")]
+  end;
+
+fun assign_type_psr_list (t:term frag list) =
+  let val s = case hd t of QUOTE s => s | ANTIQUOTE x => "" in
+    Term [QUOTE (s ^ ": (psr # word32) list")]
+  end;
+
+fun assign_type_cp_list a (t:term frag list) =
+  let val sa = String.extract(type_to_string a, 1, NONE)
+      val st = case hd t of QUOTE s => s | ANTIQUOTE x => "" in
+    Term [QUOTE (st ^ ": (num # " ^ sa ^ " word) list")]
+  end;
 
 fun set_registers reg rvs  =
  (rhsc o FOLD_UPDATE_CONV o
-  subst [``x:registers`` |-> reg, ``y:(register # word32) list`` |-> rvs] o
-  inst [alpha |-> ``:register``, beta |-> ``:word32``]) foldl_tm;
+  subst [``x:registers`` |-> reg,
+         ``y:(register # word32) list`` |-> assign_type_reg_list rvs] o
+  inst [alpha |-> ``:register``]) foldl_tm;
 
 fun set_status_registers psr rvs  = (rhsc o
   (FOLD_UPDATE_CONV
-     THENC PURE_ONCE_REWRITE_CONV [SPEC `n2w n` arm_evalTheory.PSR_CONS]
-     THENC ARM_CONV) o
-  subst [``x:psrs`` |-> psr, ``y:(psr # word32) list`` |-> rvs] o
-  inst [alpha |-> ``:psr``, beta |-> ``:word32``]) foldl_tm;
+   THENC PURE_ONCE_REWRITE_CONV [SPEC `n2w n` arm_evalTheory.PSR_CONS]
+   THENC ARM_CONV) o
+  subst [``x:psrs`` |-> psr,
+         ``y:(psr # word32) list`` |-> assign_type_psr_list rvs] o
+  inst [alpha |-> ``:psr``]) foldl_tm;
+
+val foldl_tm = ``FOLDL (\m:'a word ** 16 (r,v). (r :+ v) m) x y``;
+
+fun set_cp_registers reg rvs  =
+ let val typ = type_of reg
+     val a = (last o snd o dest_type o hd o snd o dest_type) typ in
+   (rhsc o FOLD_UPDATE_CONV o subst
+     [``x:^(ty_antiq typ)`` |-> reg,
+      ``y:(num # ^(ty_antiq a) word) list`` |-> assign_type_cp_list a rvs] o
+    inst [alpha |-> ``:^a``]) foldl_tm
+ end;
 
 (* ------------------------------------------------------------------------- *)
 (* Running the model *)
@@ -738,10 +765,12 @@ fun pc_ptr (x : arm_state) =
     print_mem_range (#mem x) (pc, 1)
   end;
 
+val typ = ``:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) all_cp_registers``;
+
 fun eval (n, m, r, s) =
-   state (time,pc_ptr) n [init m r s empty_all_cp_registers];
+   state (time,pc_ptr) n [init m r s ``ARB:^(ty_antiq typ)``];
 fun evaluate (n, m, r, s) =
-   fstate (A,pc_ptr)  n (init m r s empty_all_cp_registers);
+   fstate (A,pc_ptr)  n (init m r s ``ARB:^(ty_antiq typ)``);
 
 (* ------------------------------------------------------------------------- *)
 

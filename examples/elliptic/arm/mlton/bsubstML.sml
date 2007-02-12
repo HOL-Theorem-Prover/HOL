@@ -2,7 +2,7 @@ structure bsubstML :> bsubstML =
 struct
   nonfix MEM_WRITE MEM_WRITE_WORD MEM_WRITE_HALF MEM_WRITE_BYTE SET_HALF
          SET_BYTE FORMAT GET_BYTE GET_HALF ADDR30 mem_items empty_memory
-         mem_write_block mem_write mem_read ::- :- data_size Word Half
+         mem_write_block mem_write mem_read |: data_size Word Half
          Byte formats_size UnsignedWord UnsignedHalfWord SignedHalfWord
          UnsignedByte SignedByte * / div mod + - ^ @ <> > < >= <= := o
          before;
@@ -23,9 +23,7 @@ struct
     | data_size (Half(a)) = ONE
     | data_size (Word(a)) = ONE
     
-  fun :- a b = fn m => fn c => if a = c then b else m c
-    
-  fun ::- a l =
+  fun |: a l =
         fn m => fn b =>
         if word_ls a b andalso < (- (w2n b) (w2n a)) (listML.LENGTH l)
           then listML.EL (- (w2n b) (w2n a)) l else m b

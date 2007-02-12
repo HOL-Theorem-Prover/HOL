@@ -40,13 +40,12 @@ val exc_mem = list_assemble empty_memory
 
 (* Initial general purpose register values *)
 
-val reg = set_registers empty_registers
- ``[(pc,0x20w)]: (register # word32) list``;
+val reg = set_registers empty_registers `[(pc,0x20w)]`;
 
 (* Initial program status register values *)
 
 val psr = set_status_registers empty_psrs
- ``[(CPSR,SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w))]: (psr # word32) list``;
+ `[(CPSR,SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w))]`;
 
 (* ------------------------------------------------------------------------- *)
 

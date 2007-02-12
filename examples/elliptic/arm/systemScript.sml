@@ -595,25 +595,8 @@ val empty_memory_def    = Define`empty_memory = (\a. 0xE6000010w):mem`;
 val empty_registers_def = Define`empty_registers = (\n. 0w):registers`;
 val empty_psrs_def      = Define`empty_psrs = (\x. SET_IFMODE F F usr 0w):psrs`;
 
-val empty_all_cp_registers_def = Define`
-  empty_all_cp_registers =
-    <| p0_registers  := (FCP n. 0w);
-       p1_registers  := (FCP n. 0w);
-       p2_registers  := (FCP n. 0w);
-       p3_registers  := (FCP n. 0w);
-       p4_registers  := (FCP n. 0w);
-       p5_registers  := (FCP n. 0w);
-       p6_registers  := (FCP n. 0w);
-       p7_registers  := (FCP n. 0w);
-       p8_registers  := (FCP n. 0w);
-       p9_registers  := (FCP n. 0w);
-       p10_registers := (FCP n. 0w);
-       p11_registers := (FCP n. 0w);
-       p12_registers := (FCP n. 0w);
-       p13_registers := (FCP n. 0w);
-       p14_registers := (FCP n. 0w);
-       p15_registers := (FCP n. 0w)
-    |>`;
+val empty_cp_registers_def = Define`
+  empty_cp_registers (:'a) = (FCP n. 0w):'a word ** 16`;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1126,6 +1109,7 @@ val _ = type_pp.pp_num_types := false;
 
 val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
   OPEN ["num", "option", "set", "fcp", "list", "rich_list", "bit", "words"]
+    :: MLSIG "type 'a itself = 'a fcpML.itself"
     :: MLSIG "type 'a word = 'a wordsML.word"
     :: MLSIG "type ('a,'b) cart = ('a,'b) fcpML.cart"
     :: MLSIG "type 'a bit0 = 'a fcpML.bit0"
@@ -1206,7 +1190,8 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           RUN_ARM_def, IS_Reset_def, PROJ_Dabort_def, PROJ_Reset_def ,
           interrupt2exception_def, PROJ_IF_FLAGS_def, NEXT_ARM_def,
           OUT_ARM, mem_read_rule TRANSFER_def, TRANSFERS_def,
-          mem_read_rule NEXT_ARM_MEM, empty_registers_def]))
+          mem_read_rule NEXT_ARM_MEM, empty_registers_def,
+          empty_cp_registers_def]))
  end;
 
 (* -------------------------------------------------------------------------- *)

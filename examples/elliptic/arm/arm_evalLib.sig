@@ -22,8 +22,9 @@ sig
    val empty_registers      : term
    val empty_psrs           : term
 
-   val set_registers        : term -> term -> term
-   val set_status_registers : term -> term -> term
+   val set_registers        : term -> term frag list -> term
+   val set_status_registers : term -> term frag list -> term
+   val set_cp_registers     : term -> term frag list -> term
 
    val dest_arm_eval    : term -> arm_state
 
