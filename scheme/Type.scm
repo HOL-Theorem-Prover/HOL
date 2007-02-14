@@ -119,9 +119,9 @@
        (raise (ERR fname
                    (string-append (Lib:stringquote Tyop)
                                   " has not been declared"))))
-      ((list (vector const ...))
+      ((list (vector const c ...))
        const)
-      ((list (vector const ...) ...)
+      ((list (vector const c ...) ...)
        (WARN fname "more than one possibility")
        const)))
   
