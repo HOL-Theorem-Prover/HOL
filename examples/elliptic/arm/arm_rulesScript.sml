@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Derived rules for the ARM Instruction Set Model           *)
 (*                                                                           *)
 (* AUTHORS       : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2006                                                      *)
+(* DATE          : 2006 - 2007                                               *)
 (* ========================================================================= *)
 
 (* interactive use:

@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Examples using arm_evalLib                                *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2005-2006                                                 *)
+(* DATE          : 2005-2007                                                 *)
 (* ========================================================================= *)
 
 (* interactive use:
@@ -85,12 +85,10 @@ fun random_word l =
 (* ------------------------------------------------------------------------- *)
 
 (*
-val _ = wordsLib.mk_word_size (17 * 32);
-
-fun mk_word544 n = wordsSyntax.mk_n2w (numLib.mk_numeral n, ``:i544``);
-
 val a = random_word 17;
 val b = random_word 17;
+
+fun mk_word544 n = wordsSyntax.mk_n2w (numLib.mk_numeral n, ``:544``);
 
 val eval_add17 = save_thm("eval_add17",
   EVAL (wordsSyntax.mk_word_add(mk_word544 a, mk_word544 b)));
@@ -140,12 +138,10 @@ val run_srd521 = save_thm("run_srd521", evaluate(max,prog,reg,psr));
 (* ------------------------------------------------------------------------- *)
 
 (*
-val _ = wordsLib.mk_word_size (18 * 32);
-
-fun mk_word576 n = wordsSyntax.mk_n2w (numLib.mk_numeral n, ``:i576``);
-
 val a = random_word 9;
 val b = random_word 9;
+
+fun mk_word576 n = wordsSyntax.mk_n2w (numLib.mk_numeral n, ``:576``);
 
 val eval_mul9 = save_thm("eval_mul9",
   EVAL (wordsSyntax.mk_word_mul(mk_word576 a, mk_word576 b)));

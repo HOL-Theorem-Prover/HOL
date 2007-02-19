@@ -5,6 +5,7 @@ sig
    type mode
    type arm_state
 
+   val arm_compset          : computeLib.compset
    val ARM_CONV             : conv
    val ARM_RULE             : rule
    val ARM_ASSEMBLE_CONV    : conv
@@ -24,7 +25,6 @@ sig
 
    val set_registers        : term -> term frag list -> term
    val set_status_registers : term -> term frag list -> term
-   val set_cp_registers     : term -> term frag list -> term
 
    val dest_arm_eval    : term -> arm_state
 
@@ -38,8 +38,12 @@ sig
    val load_mem  : string -> int -> Arbnum.num -> term -> term
    val save_mem  : string -> Arbnum.num -> Arbnum.num -> bool -> term -> unit
 
-   val init      : term -> term -> term -> term -> thm
-   val next      : thm -> thm
-   val eval      : int * term * term * term -> thm list
-   val evaluate  : int * term * term * term -> thm
+   val init        : term -> term -> term -> term -> term -> thm
+   val next        : term * thm -> thm
+
+   val eval_cp     : int * term * term * term * term * term -> thm list
+   val evaluate_cp : int * term * term * term * term * term -> thm
+
+   val eval        : int * term * term * term -> thm list
+   val evaluate    : int * term * term * term -> thm
 end

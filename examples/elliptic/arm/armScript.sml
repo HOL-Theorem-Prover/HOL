@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Model of the ARM instruction set architecture             *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2001 - 2006                                               *)
+(* DATE          : 2001 - 2007                                               *)
 (* ========================================================================= *)
 
 (* interactive use:
@@ -519,29 +519,30 @@ val DECODE_LDR_STR_def = Define`
       ^Rg 19 16 w,^Rg 15 12 w,((11 >< 0) w):word12)`;
 
 val LDR_STR_def = Define`
-  LDR_STR r C mode isdabort data ireg =
+  LDR_STR r C mode ireg input =
     let (I,P,U,B,W,L,Rn,Rd,offset) = DECODE_LDR_STR ireg in
     let (addr,wb_addr) = ADDR_MODE2 r.reg mode C I P U Rn offset in
     let pc_reg = INC_PC r.reg in
-    let wb_reg = if P ==> W then
-                   REG_WRITE pc_reg mode Rn wb_addr
-                 else
-                   pc_reg
-    in
-      <| state :=
-         <| reg :=
-            if L ==> isdabort then
-              wb_reg
-            else
-              let fmt = if B then UnsignedByte else UnsignedWord in
-                REG_WRITE wb_reg mode Rd (FORMAT fmt ((1 >< 0) addr) (HD data));
-            psr := r.psr |>;
-         out :=
+      case input of
+         NONE -> INL
            [if L then
               MemRead addr
             else
               let w = REG_READ pc_reg mode Rd in
-                MemWrite addr (if B then Byte ((7 >< 0) w) else Word w)] |>`;
+                MemWrite addr (if B then Byte ((7 >< 0) w) else Word w)]
+      || SOME (isdabort, data) ->
+           let wb_reg = if P ==> W then
+                          REG_WRITE pc_reg mode Rn wb_addr
+                        else
+                          pc_reg
+           in INR
+             <| reg :=
+                  if L ==> isdabort then
+                    wb_reg
+                  else let fmt = if B then UnsignedByte else UnsignedWord in
+                    REG_WRITE wb_reg mode Rd
+                      (FORMAT fmt ((1 >< 0) addr) (HD data));
+                psr := r.psr |>`;
 
 (* ------------------------------------------------------------------------- *)
 (* Half Word Single Data Transfer instruction class (ldrh_strh)              *)
@@ -561,33 +562,35 @@ val DECODE_LDRH_STRH_def = Define`
       ^Rg 19 16 w,^Rg 15 12 w,^Rg 11 8 w,w %% 6,w %% 5,^Rg 3 0 w)`;
 
 val LDRH_STRH_def = Define`
-  LDRH_STRH r mode isdabort data ireg =
+  LDRH_STRH r mode ireg input =
     let (P,U,I,W,L,Rn,Rd,offsetH,S,H,offsetL) = DECODE_LDRH_STRH ireg in
     let (addr,wb_addr) = ADDR_MODE3 r.reg mode I P U Rn offsetH offsetL in
     let pc_reg = INC_PC r.reg in
-    let wb_reg = if P ==> W then
-                   REG_WRITE pc_reg mode Rn wb_addr
-                 else
-                   pc_reg
-    in
-      <| state :=
-         <| reg :=
-            if L ==> isdabort then
-              wb_reg
-            else
-              let fmt = case (S, H) of
-                           (F,T) -> UnsignedHalfWord
-                        || (T,F) -> SignedByte
-                        || (T,T) -> SignedHalfWord
-                        || _ -> ARB
-              in
-                REG_WRITE wb_reg mode Rd (FORMAT fmt ((1 >< 0) addr) (HD data));
-            psr := r.psr |>;
-         out :=
+      case input of
+         NONE -> INL
            [if L then
               MemRead addr
             else
-              MemWrite addr (Half ((15 >< 0) (REG_READ pc_reg mode Rd))) ] |>`;
+              MemWrite addr (Half ((15 >< 0) (REG_READ pc_reg mode Rd)))]
+      || SOME (isdabort, data) ->
+           let wb_reg = if P ==> W then
+                          REG_WRITE pc_reg mode Rn wb_addr
+                        else
+                          pc_reg
+           in INR
+             <| reg :=
+                 if L ==> isdabort then
+                   wb_reg
+                 else
+                   let fmt = case (S, H) of
+                                (F,T) -> UnsignedHalfWord
+                             || (T,F) -> SignedByte
+                             || (T,T) -> SignedHalfWord
+                             || _ -> ARB
+                   in
+                     REG_WRITE wb_reg mode Rd
+                       (FORMAT fmt ((1 >< 0) addr) (HD data));
+                psr := r.psr |>`;
 
 (* ------------------------------------------------------------------------- *)
 (*  The Block Data Transfer instruction class (ldm_stm)                      *)
@@ -629,7 +632,7 @@ val DECODE_LDM_STM_def = Define`
     (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,^Rg 19 16 w,((15 >< 0) w):word16)`;
 
 val LDM_STM_def = Define`
-  LDM_STM r mode dabort_t data ireg =
+  LDM_STM r mode ireg input =
     let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
     let pc_in_list = list %% 15
     and rn = REG_READ r.reg mode Rn in
@@ -641,8 +644,15 @@ val LDM_STM_def = Define`
                  else
                    pc_reg
     in
-      <| state :=
-           if L then
+      case input of
+         NONE -> INL
+          (if L then
+             MAP MemRead addr_list
+           else
+             STM_LIST (if HD rp_list = Rn then pc_reg else wb_reg) mode'
+               (ZIP (rp_list,addr_list)))
+      || SOME (dabort_t, data) -> INR
+          (if L then
              <| reg :=
                   let t = if IS_SOME dabort_t then
                             THE dabort_t
@@ -656,13 +666,7 @@ val LDM_STM_def = Define`
                  psr := if S /\ pc_in_list /\ ~IS_SOME dabort_t then
                           CPSR_WRITE r.psr (SPSR_READ r.psr mode)
                         else r.psr |>
-           else <| reg := wb_reg; psr := r.psr |>;
-         out :=
-           if L then
-             MAP MemRead addr_list
-           else
-             STM_LIST (if HD rp_list = Rn then pc_reg else wb_reg) mode'
-               (ZIP (rp_list,addr_list)) |>`;
+           else <| reg := wb_reg; psr := r.psr |>)`;
 
 (* ------------------------------------------------------------------------- *)
 (* The Single Data Swap instruction class (swp)                              *)
@@ -672,26 +676,32 @@ val DECODE_SWP_def = Define`
   DECODE_SWP w = (w %% 22,^Rg 19 16 w,^Rg 15 12 w,^Rg 3 0 w)`;
 
 val SWP_def = Define`
-  SWP r mode isdabort data ireg =
+  SWP r mode ireg input =
     let (B,Rn,Rd,Rm) = DECODE_SWP ireg in
     let rn = REG_READ r.reg mode Rn
     and pc_reg = INC_PC r.reg in
     let rm = REG_READ pc_reg mode Rm in
-      <| state :=
+      case input of
+         NONE -> INL
+           [MemRead rn;
+            MemWrite rn (if B then Byte ((7 >< 0) rm) else Word rm)]
+      || SOME (isdabort, data) -> INR
           <| reg :=
                 if isdabort then
                   pc_reg
-                else
-                  let fmt = if B then UnsignedByte else UnsignedWord in
-                    REG_WRITE pc_reg mode Rd
-                      (FORMAT fmt ((1 ><  0) rn) (HD data));
-              psr := r.psr |>;
-         out := [MemRead rn;
-                 MemWrite rn (if B then Byte ((7 >< 0) rm) else Word rm)] |>`;
+                else let fmt = if B then UnsignedByte else UnsignedWord in
+                  REG_WRITE pc_reg mode Rd
+                    (FORMAT fmt ((1 ><  0) rn) (HD data));
+              psr := r.psr |>`;
 
 (* ------------------------------------------------------------------------- *)
 (* Coprocessor Register Transfer (mrc, mcr)                                  *)
 (* ------------------------------------------------------------------------- *)
+
+val DECODE_MRC_MCR_def = Define`
+  DECODE_MRC_MCR ireg =
+    (((23 >< 21) ireg):word3,^Rg 19 16 ireg,^Rg 15 12 ireg,^Rg 11 8 ireg,
+     ((7 >< 5) ireg):word3,^Rg 3 0 ireg)`;
 
 val MRC_def = Define`
   MRC r mode data ireg =
@@ -705,8 +715,8 @@ val MRC_def = Define`
 
 val MCR_OUT_def = Define`
   MCR_OUT reg mode ireg =
-    let Rn = ^Rg 15 12 ireg in
-      [CPWrite (REG_READ (INC_PC reg) mode Rn)]`;
+    let Rd = ^Rg 15 12 ireg in
+      [CPWrite (REG_READ (INC_PC reg) mode Rd)]`;
 
 (* ------------------------------------------------------------------------- *)
 (* Coprocessor Data Transfers (ldc_stc)                                      *)
@@ -714,7 +724,8 @@ val MCR_OUT_def = Define`
 
 val DECODE_LDC_STC_def = Define`
   DECODE_LDC_STC w =
-    (w %% 24,w %% 23,w %% 21,w %% 20,^Rg 19 16 w,((7 >< 0) w):word8)`;
+    (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,
+     ^Rg 19 16 w,^Rg 15 12 w,^Rg 11 8 w,((7 >< 0) w):word8)`;
 
 val ADDR_MODE5_def = Define`
   ADDR_MODE5 reg mode P U Rn (offset:word8) =
@@ -723,16 +734,19 @@ val ADDR_MODE5_def = Define`
       (if P then wb_addr else addr,wb_addr)`;
 
 val LDC_STC_def = Define`
-  LDC_STC r mode ireg =
-    let (P,U,W,L,Rn,offset) = DECODE_LDC_STC ireg in
+  LDC_STC r mode ireg input =
+    let (P,U,N,W,L,Rn,CRd,CPN,offset) = DECODE_LDC_STC ireg in
     let (addr,wb_addr) = ADDR_MODE5 r.reg mode P U Rn offset in
-    let pc_reg = INC_PC r.reg in
-    let wb_reg = if W /\ ~(Rn = 15w) then
-                   REG_WRITE pc_reg mode Rn wb_addr
-                 else
-                   pc_reg in
-      <| state := <| reg := wb_reg; psr := r.psr |>;
-         out := [if L then MemRead addr else MemWrite addr ARB] |>`;
+      if input then
+        let pc_reg = INC_PC r.reg in
+        let wb_reg = if W /\ ~(Rn = 15w) then
+                       REG_WRITE pc_reg mode Rn wb_addr
+                     else
+                       pc_reg
+        in
+          INR <| reg := wb_reg; psr := r.psr |>
+      else
+          INL [if L then MemRead addr else MemWrite addr ARB]`;
 
 (* ------------------------------------------------------------------------- *)
 (* Predicate for conditional execution                                       *)
@@ -813,13 +827,13 @@ val RUN_ARM_def = Define`
           || br        -> BRANCH r mode ireg
           || msr       -> MSR r mode ireg
           || mrs       -> MRS r mode ireg
-          || swp       -> (SWP r mode (IS_SOME dabt) data ireg).state
-          || ldm_stm   -> (LDM_STM r mode dabt data ireg).state
-          || ldr_str   ->
-               (LDR_STR r (CARRY nzcv) mode (IS_SOME dabt) data ireg).state
-          || ldrh_strh   ->
-               (LDRH_STRH r mode (IS_SOME dabt) data ireg).state
-          || ldc_stc   -> coproc (\x. (LDC_STC x mode ireg).state)
+          || swp       -> OUTR (SWP r mode ireg (SOME (IS_SOME dabt, data)))
+          || ldm_stm   -> OUTR (LDM_STM r mode ireg (SOME (dabt, data)))
+          || ldr_str   -> OUTR
+               (LDR_STR r (CARRY nzcv) mode ireg (SOME (IS_SOME dabt, data)))
+          || ldrh_strh -> OUTR
+               (LDRH_STRH r mode ireg (SOME (IS_SOME dabt, data)))
+          || ldc_stc   -> coproc (\x. (OUTR (LDC_STC x mode ireg T)))
           || mrc       -> coproc (\x. MRC x mode (ELL 1 data) ireg)
           || mcr       -> coproc inc_pc
           || cdp_und   -> coproc inc_pc
@@ -892,11 +906,11 @@ val OUT_ARM_def = Define`
         let ic = DECODE_ARM ireg in
            <| transfers := 
                (case ic of
-                   ldr_str   -> (LDR_STR r (CARRY nzcv) mode ARB ARB ireg).out
-                || ldrh_strh -> (LDRH_STRH r mode ARB ARB ireg).out
-                || ldm_stm   -> (LDM_STM r mode ARB ARB ireg).out
-                || swp       -> (SWP r mode ARB ARB ireg).out
-                || ldc_stc   -> (LDC_STC r mode ireg).out
+                   ldr_str   -> OUTL (LDR_STR r (CARRY nzcv) mode ireg NONE)
+                || ldrh_strh -> OUTL (LDRH_STRH r mode ireg NONE)
+                || ldm_stm   -> OUTL (LDM_STM r mode ireg NONE)
+                || swp       -> OUTL (SWP r mode ireg NONE)
+                || ldc_stc   -> OUTL (LDC_STC r mode ireg F)
                 || mcr       -> MCR_OUT r.reg mode ireg
                 || _         -> []);
               cpi := (ic IN {cdp_und; mcr; mrc; ldc_stc});

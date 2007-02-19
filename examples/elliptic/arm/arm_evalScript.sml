@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Various theorems about the ISA and instruction encoding   *)
 (*                                                                           *)
 (* AUTHORS       : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2005-2006                                                 *)
+(* DATE          : 2005-2007                                                 *)
 (* ========================================================================= *)
 
 (* interactive use:
@@ -48,10 +48,10 @@ val REG_WRITEL_def = Define`
 
 (* ------------------------------------------------------------------------- *)
 
-val STATE_ARM_MEM_NEXT = store_thm("STATE_ARM_MEM_NEXT",
-  `!t a b c. (STATE_ARM_MEM t a = b) /\ (NEXT_ARM_MEM b = c) ==>
-             (STATE_ARM_MEM (t + 1) a = c)`,
-  RW_TAC bool_ss [STATE_ARM_MEM_def,GSYM arithmeticTheory.ADD1]);
+val STATE_ARM_MMU_NEXT = store_thm("STATE_ARM_MMU_NEXT",
+  `!t a b c. (STATE_ARM_MMU ops t a = b) /\ (NEXT_ARM_MMU ops b = c) ==>
+             (STATE_ARM_MMU ops (t + 1) a = c)`,
+  RW_TAC bool_ss [STATE_ARM_MMU_def,GSYM arithmeticTheory.ADD1]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -726,6 +726,20 @@ val decode_cp_enc_coproc = store_thm("decode_cp_enc_coproc",
       ldc_stc)`,
   SRW_TAC word_frags [DECODE_CP_def,options_encode_def,word_modify_def]);
 
+val decode_27_enc_coproc = store_thm("decode_27_enc_coproc",
+  `(!cond cpn cop1 crd crn crm cop2.
+      enc (instruction$CDP cond cpn cop1 crd crn crm cop2) %% 27) /\
+   (!cond. enc (instruction$UND cond) %% 27 = F) /\
+   (!cond cpn cop1 rd crn crm cop2.
+      enc (instruction$MRC cond cpn cop1 rd crn crm cop2) %% 27) /\
+   (!cond cpn cop1 rd crn crm cop2.
+      enc (instruction$MCR cond cpn cop1 rd crn crm cop2) %% 27) /\
+   (!cond n opt cpn crd rn offset.
+      enc (instruction$STC cond n opt cpn crd rn offset) %% 27) /\
+   (!cond n opt cpn crd rn offset.
+      enc (instruction$LDC cond n opt cpn crd rn offset) %% 27)`,
+  SRW_TAC word_frags [options_encode_def,word_modify_def]);
+
 (* ......................................................................... *)
 
 val word_frags =
@@ -1057,58 +1071,45 @@ val decode_msr_enc = store_thm("decode_msr_enc",
          (SYM o EVAL) ``144 * 2 ** 12``, (SYM o EVAL) ``128 * 2 ** 12``,
          (SYM o EVAL) ``16 * 2 ** 12``]);
 
-val decode_mrc_enc = store_thm("decode_mrc_enc",
-  `!cond cpn cop1 rd crn crm cop2.
-      (15 >< 12) (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = rd`,
+val decode_mrc_mcr_rd_enc = store_thm("decode_mrc_mcr_rd_enc",
+  `(!cond cpn cop1 rd crn crm cop2.
+      (15 >< 12) (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = rd) /\
+   !cond cpn cop1 rd crn crm cop2.
+      (15 >< 12) (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = rd`,
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
 
 val decode_ldc_stc_enc = store_thm("decode_ldc_stc_enc",
   `(!cond n opt cpn crd rn offset.
       DECODE_LDC_STC (enc (instruction$LDC cond n opt cpn crd rn offset)) =
-      (opt.Pre, opt.Up, opt.Wb, T, rn, offset)) /\
+      (opt.Pre, opt.Up, n, opt.Wb, T, rn, crd, cpn, offset)) /\
    (!cond n opt cpn crd rn offset.
       DECODE_LDC_STC (enc (instruction$STC cond n opt cpn crd rn offset)) =
-      (opt.Pre, opt.Up, opt.Wb, F, rn, offset))`,
+      (opt.Pre, opt.Up, n, opt.Wb, F, rn, crd, cpn, offset))`,
   SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
 
 val decode_cdp_enc = store_thm("decode_cdp_enc",
   `(!cond cpn cop1 crd crn crm cop2.
       DECODE_CDP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
-        (cop1,crn,crd,cop2,crm)) /\
+        (cop1,crn,crd,cpn,cop2,crm)) /\
     !cond cpn cop1 crd crn crm cop2.
-      CP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) = cpn`,
-  SRW_TAC word_frags [DECODE_CDP_def,CP_def] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+      DECODE_CPN (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) = cpn`,
+  SRW_TAC word_frags [DECODE_CDP_def,DECODE_CPN_def]
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
 
 val decode_mrc_mcr_enc = store_thm("decode_mrc_mcr_enc",
   `(!cond cpn cop1 rd crn crm cop2.
       DECODE_MRC_MCR (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) =
-        (cop1,crn,rd,cop2,crm)) /\
+        (cop1,crn,rd,cpn,cop2,crm)) /\
    (!cond cpn cop1 rd crn crm cop2.
-      CP (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = cpn) /\
+      DECODE_CPN (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = cpn) /\
    (!cond cpn cop1 rd crn crm cop2.
       DECODE_MRC_MCR (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) =
-        (cop1,crn,rd,cop2,crm)) /\
+        (cop1,crn,rd,cpn,cop2,crm)) /\
    (!cond cpn cop1 rd crn crm cop2.
-      CP (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = cpn)`,
-  SRW_TAC word_frags [DECODE_MRC_MCR_def,CP_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
-
-val decode_ldc_stc'_enc = store_thm("decode_ldc_stc'_enc",
-  `(!cond n opt cpn crd rn offset.
-      DECODE_LDC_STC' (enc (instruction$LDC cond n opt cpn crd rn offset)) =
-        (n,crd)) /\
-   (!cond n opt cpn crd rn offset.
-      CP (enc (instruction$LDC cond n opt cpn crd rn offset)) = cpn) /\
-   (!cond n opt cpn crd rn offset.
-      DECODE_LDC_STC' (enc (instruction$STC cond n opt cpn crd rn offset)) =
-        (n,crd)) /\
-   (!cond n opt cpn crd rn offset.
-      CP (enc (instruction$STC cond n opt cpn crd rn offset)) = cpn)`,
-  SRW_TAC word_frags
-          [DECODE_LDC_STC'_def,CP_def,options_encode_def,word_modify_def]
+      DECODE_CPN (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = cpn)`,
+  SRW_TAC word_frags [DECODE_MRC_MCR_def,DECODE_CPN_def]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
 
 (* ......................................................................... *)

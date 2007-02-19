@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Block substitution and Memory Operations                  *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2005-2006                                                 *)
+(* DATE          : 2005-2007                                                 *)
 (* ========================================================================= *)
 
 (* interactive use:

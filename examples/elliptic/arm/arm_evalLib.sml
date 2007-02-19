@@ -3,7 +3,7 @@
 (* DESCRIPTION   : Code for evaluating the I/O free ARM specification        *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
-(* DATE          : 2006                                                      *)
+(* DATE          : 2006 - 2007                                               *)
 (* ========================================================================= *)
 
 structure arm_evalLib :> arm_evalLib =
@@ -22,11 +22,6 @@ open Q Parse computeLib combinTheory pairTheory wordsTheory wordsSyntax
 
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
-
-fun add_rws f rws =
-let val cmp_set = f()
-    val _ = add_thms rws cmp_set
-in cmp_set end;
 
 val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
@@ -47,10 +42,12 @@ fun WORD_ONLY_RULE n x =
 val EXTRACT_RULE1 = SIMP_RULE std_ss [w2w_def,word_extract_def];
 val EXTRACT_RULE2 = CONV_RULE (CBV_CONV (wordsLib.words_compset()));
 
-fun arm_compset () = add_rws wordsLib.words_compset
+val arm_compset = wordsLib.words_compset();
+
+val _ = Lib.C add_thms arm_compset
   [FST,SND,SUC_RULE EL,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,APPEND,APPEND_NIL,
-   SUC_RULE rich_listTheory.GENLIST,rich_listTheory.SNOC,
-   SUC_RULE rich_listTheory.FIRSTN,K_THM,
+   SUC_RULE ELL,LAST_CONS,listTheory.FRONT_CONS,
+   SUC_RULE GENLIST,SNOC,SUC_RULE FIRSTN,K_THM,listTheory.NULL_DEF,
    register_EQ_register,num2register_thm,register2num_thm,
    mode_EQ_mode,mode2num_thm,mode_case_def,pairTheory.pair_case_thm,
    formats_case_def, psr_EQ_psr,psr2num_thm,
@@ -110,7 +107,7 @@ fun arm_compset () = add_rws wordsLib.words_compset
    DECODE_BRANCH_THM,DECODE_DATAP_THM,DECODE_MRS_THM,
    DECODE_MSR_THM,DECODE_LDR_STR_THM,DECODE_SWP_THM,
    DECODE_LDM_STM_THM,DECODE_MLA_MUL_THM,DECODE_LDC_STC_THM,
-   DECODE_CDP_THM,DECODE_MRC_MCR_THM,DECODE_LDC_STC'_THM,
+   DECODE_CDP_THM,DECODE_MRC_MCR_THM,
    DECODE_PSRD_def,
    IS_DP_IMMEDIATE_def, IS_DT_SHIFT_IMMEDIATE_def, IS_MSR_IMMEDIATE_def,
    IS_DTH_IMMEDIATE_def,
@@ -126,7 +123,7 @@ fun arm_compset () = add_rws wordsLib.words_compset
    decode_enc_ldm_stm, decode_enc_ldr_str, decode_enc_ldrh_strh,
    decode_enc_mla_mul, decode_enc_mrs, decode_enc_msr, decode_enc_swi,
 
-   decode_br_enc, decode_ldc_stc_enc, decode_mrc_enc,
+   decode_br_enc, decode_ldc_stc_enc, EXTRACT_RULE2 decode_mrc_mcr_rd_enc,
    decode_data_proc_enc, decode_data_proc_enc2, decode_data_proc_enc3,
    decode_ldm_stm_enc, decode_ldr_str_enc, decode_ldrh_strh_enc,
    decode_mla_mul_enc, decode_mrs_enc, decode_msr_enc, decode_swp_enc,
@@ -157,19 +154,18 @@ fun arm_compset () = add_rws wordsLib.words_compset
    THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,
    option_case_ID,option_case_SOME_ID,
    option_case_def,SOME_11,NOT_SOME_NONE,PROJ_IF_FLAGS_def,
-   RUN_ARM_def,NEXT_ARM_def,
+   sumTheory.OUTL, sumTheory.OUTR, RUN_ARM_def,NEXT_ARM_def,
    SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] OUT_ARM_def];
 
-fun arm_eval_compset () =
-  add_rws arm_compset
+val _ = Lib.C add_thms arm_compset
     [arm_sys_state_accessors, arm_sys_state_updates_eq_literal,
      arm_sys_state_accfupds, arm_sys_state_fupdfupds, arm_sys_state_literal_11,
      arm_sys_state_fupdfupds_comp, arm_sys_state_fupdcanon,
      arm_sys_state_fupdcanon_comp,
-     all_cp_registers_accessors, all_cp_registers_updates_eq_literal,
-     all_cp_registers_accfupds, all_cp_registers_fupdfupds,
-     all_cp_registers_literal_11, all_cp_registers_fupdfupds_comp,
-     all_cp_registers_fupdcanon, all_cp_registers_fupdcanon_comp,
+     coproc_accessors, coproc_updates_eq_literal,
+     coproc_accfupds, coproc_fupdfupds,
+     coproc_literal_11, coproc_fupdfupds_comp,
+     coproc_fupdcanon, coproc_fupdcanon_comp,
      cp_output_accessors, cp_output_updates_eq_literal,
      cp_output_accfupds, cp_output_fupdfupds, cp_output_literal_11,
      cp_output_fupdfupds_comp, cp_output_fupdcanon,
@@ -178,26 +174,23 @@ fun arm_eval_compset () =
      bus_accfupds, bus_fupdfupds, bus_literal_11,
      bus_fupdfupds_comp, bus_fupdcanon,
      bus_fupdcanon_comp,
-     coproc_ops_accessors, coproc_ops_updates_eq_literal,
-     coproc_ops_accfupds, coproc_ops_fupdfupds, coproc_ops_literal_11,
-     coproc_ops_fupdfupds_comp, coproc_ops_fupdcanon,
-     coproc_ops_fupdcanon_comp,
-     all_coproc_ops_accessors, all_coproc_ops_updates_eq_literal,
-     all_coproc_ops_accfupds, all_coproc_ops_fupdfupds,
-     all_coproc_ops_literal_11, all_coproc_ops_fupdfupds_comp,
-     all_coproc_ops_fupdcanon, all_coproc_ops_fupdcanon_comp,
 
      memop_case_def, fcpTheory.index_comp, decode_cp_enc_coproc,
-     decode_cdp_enc, decode_mrc_mcr_enc, decode_ldc_stc'_enc,
+     decode_27_enc_coproc, decode_cdp_enc, decode_mrc_mcr_enc,
 
-     CP_REG_READ_def, CP_REG_WRITE_def, ADDR30_def, SET_BYTE_def, SET_HALF_def,
-     APPLY_LUPDATE_THM, fcpTheory.FCP_APPLY_UPDATE_THM, TRANSFERS_def, TRANSFER_def,
+     APPLY_LUPDATE_THM, fcpTheory.FCP_APPLY_UPDATE_THM,
+     ADDR30_def, SET_BYTE_def, SET_HALF_def, TRANSFERS_def, TRANSFER_def,
+
      MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def, MEM_WRITE_WORD_def,
-     MEM_WRITE_def, MRC_OUT_def, STC_OUT_def, OUT_CPN_def, OUT_CP_def,
-     MCR_def, LDC_def, CDP_def, RUN_CPN_def, RUN_CP_def, NEXT_ARM_MEM];
+     MEM_WRITE_def, OUT_CP_def, RUN_CP_def, NO_CP_def, NEXT_ARM_MMU];
 
-val ARM_CONV = CBV_CONV (arm_eval_compset());
+val ARM_CONV = CBV_CONV arm_compset;
 val ARM_RULE = CONV_RULE ARM_CONV;
+
+fun add_rws f rws =
+let val cmp_set = f()
+    val _ = add_thms rws cmp_set
+in cmp_set end;
 
 val EVAL_UPDATE_CONV =
 let val compset = add_rws reduceLib.num_compset
@@ -208,9 +201,8 @@ end;
 
 val SORT_UPDATE_CONV = let open arm_evalTheory
   val compset = add_rws reduceLib.num_compset
-        [register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
-         SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR,
-         o_THM]
+        [o_THM,register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
+         SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR]
 in
   computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [Ua_def,Ub_def]
     THENC SIMP_CONV (srw_ss()) [UPDATE_APPLY_IMP_ID,APPLY_UPDATE_THM]
@@ -227,9 +219,8 @@ end;
 
 val SORT_LUPDATE_CONV = let open arm_evalTheory
   val compset = add_rws wordsLib.words_compset
-        [LENGTH,SUC_RULE JOIN,SUC_RULE BUTFIRSTN,
-         APPEND,UPDATE_LUPDATE,LUa_RULE,LUb_RULE,
-         GSYM LUa_def,o_THM]
+        [LENGTH,SUC_RULE JOIN,SUC_RULE BUTFIRSTN,APPEND,UPDATE_LUPDATE,
+         LUa_RULE,LUb_RULE,GSYM LUa_def,o_THM]
 in
   computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [LUa_def,LUb_def]
 end;
@@ -239,7 +230,7 @@ let val compset = add_rws wordsLib.words_compset
       [SET_IFMODE_def,SET_NZCV_def,FOLDL,APPLY_UPDATE_THM,
        psr_EQ_psr,psr2num_thm,mode_num_def,mode_case_def,
        register_EQ_register,register2num_thm,
-       empty_registers_def,empty_memory_def,empty_psrs_def]
+       empty_registers_def,empty_memory_def, empty_psrs_def]
 in
   computeLib.CBV_CONV compset THENC SORT_UPDATE_CONV
 end;
@@ -314,7 +305,7 @@ fun mk_subst (a,b,m) =
 fun mk_bsubst (a,b,m) =
    list_mk_comb(inst[alpha |-> dim_of a,beta |-> listSyntax.eltype b]
      bsubst_tm,[a,b,m])
-   handle HOL_ERR _ => raise ERR "mk_subst" "";
+   handle HOL_ERR _ => raise ERR "mk_bsubst" "";
 
 val dest_subst  = dest_triop subst_tm  (ERR "dest_word_slice" "");
 val dest_bsubst = dest_triop bsubst_tm (ERR "dest_word_slice" "");
@@ -508,7 +499,7 @@ type arm_state = {mem : term, psrs : term, reg : term, undef : term};
 fun dest_arm_eval t =
   case snd (TypeBase.dest_record t) of
      [("registers", reg), ("psrs", psrs),
-      ("memory", mem), ("undefined", undef),("cp_registers", cp_reg)] =>
+      ("memory", mem), ("undefined", undef),("cp_state", cp_reg)] =>
          {mem = mem, reg = reg, psrs = psrs, undef = undef}
   | _ => raise ERR "dest_arm_eval" "";
 
@@ -678,12 +669,6 @@ fun assign_type_psr_list (t:term frag list) =
     Term [QUOTE (s ^ ": (psr # word32) list")]
   end;
 
-fun assign_type_cp_list a (t:term frag list) =
-  let val sa = String.extract(type_to_string a, 1, NONE)
-      val st = case hd t of QUOTE s => s | ANTIQUOTE x => "" in
-    Term [QUOTE (st ^ ": (num # " ^ sa ^ " word) list")]
-  end;
-
 fun set_registers reg rvs  =
  (rhsc o FOLD_UPDATE_CONV o
   subst [``x:registers`` |-> reg,
@@ -698,28 +683,22 @@ fun set_status_registers psr rvs  = (rhsc o
          ``y:(psr # word32) list`` |-> assign_type_psr_list rvs] o
   inst [alpha |-> ``:psr``]) foldl_tm;
 
-val foldl_tm = ``FOLDL (\m:'a word ** 16 (r,v). (r :+ v) m) x y``;
-
-fun set_cp_registers reg rvs  =
- let val typ = type_of reg
-     val a = (last o snd o dest_type o hd o snd o dest_type) typ in
-   (rhsc o FOLD_UPDATE_CONV o subst
-     [``x:^(ty_antiq typ)`` |-> reg,
-      ``y:(num # ^(ty_antiq a) word) list`` |-> assign_type_cp_list a rvs] o
-    inst [alpha |-> ``:^a``]) foldl_tm
- end;
-
 (* ------------------------------------------------------------------------- *)
 (* Running the model *)
 
-fun init m r s c =
- let val typ = type_of c in
-   (PURE_ONCE_REWRITE_CONV [CONJUNCT1 STATE_ARM_MEM_def] o
-    subst [``mem:mem`` |-> m, ``registers:registers`` |-> r,
-           ``psrs:psrs`` |-> s, ``cp_registers:^(ty_antiq typ)`` |-> c])
-   ``STATE_ARM_MEM 0 <| registers := registers; psrs :=  psrs;
-                        memory := mem; undefined := F;
-                        cp_registers := cp_registers:^(ty_antiq typ) |>``
+fun init f m r s c =
+ let
+   val ftyp = type_of f
+   val ttyp = type_of c
+ in
+   (PURE_ONCE_REWRITE_CONV [CONJUNCT1 STATE_ARM_MMU_def] o
+    subst [``f:^(ty_antiq ftyp)`` |-> f, ``mem:mem`` |-> m,
+           ``registers:registers`` |-> r, ``psrs:psrs`` |-> s,
+           ``cp_state:^(ty_antiq ttyp)`` |-> c])
+   ``STATE_ARM_MMU (f:^(ty_antiq ftyp))  0
+        <| registers := registers; psrs :=  psrs;
+           memory := mem; undefined := F;
+           cp_state := cp_state:^(ty_antiq ttyp) |>``
  end;
 
 val NEXT_ARM_CONV =
@@ -729,34 +708,37 @@ val NEXT_ARM_CONV =
   ONCE_DEPTH_CONV (RAND_CONV (RATOR_CONV SORT_UPDATE_CONV)) THENC
   RATOR_CONV ARM_ASSEMBLE_CONV;
 
-fun next t =
+fun next(f, t) =
   let val t0 = rhsc t
-      val typ = type_of t0
-      val t1 = (NEXT_ARM_CONV o subst [``s:^(ty_antiq typ)`` |-> t0])
-              ``NEXT_ARM_MEM (s:^(ty_antiq typ))``
+      val ttyp = type_of t0
+      val ftyp = type_of f
+      val t1 = (NEXT_ARM_CONV o
+                subst [``f:^(ty_antiq ftyp)`` |-> f,
+                       ``s:^(ty_antiq ttyp)`` |-> t0])
+              ``NEXT_ARM_MMU (f:^(ty_antiq ftyp)) (s:^(ty_antiq ttyp))``
   in
-     numLib.REDUCE_RULE (MATCH_MP STATE_ARM_MEM_NEXT (CONJ t t1))
+     numLib.REDUCE_RULE (MATCH_MP STATE_ARM_MMU_NEXT (CONJ t t1))
   end;
 
 fun done t = term_eq T (#undef (dest_arm_eval (rhsc t)));
 
-fun state _ _ [] = []
-  | state (tmr,prtr) n (l as (t::ts)) =
+fun lstate _ _ _ [] = []
+  | lstate (tmr,prtr) n f (l as (t::ts)) =
       if n = 0 then l
       else
         let val _ = prtr (dest_arm_eval (rhsc t))
-            val nl = (tmr next t) :: l
+            val nl = (tmr next (f, t)) :: l
         in
-          if done t then nl else state (tmr,prtr) (n - 1) nl
+          if done t then nl else lstate (tmr,prtr) (n - 1) f nl
         end;
 
-fun fstate (tmr,prtr) n s =
+fun state (tmr,prtr) n f s =
   if n = 0 then s
    else
      let val _ = prtr (dest_arm_eval (rhsc s))
-         val ns = tmr next s
+         val ns = tmr next (f, s)
      in
-       if done s then ns else fstate (tmr,prtr) (n - 1) ns
+       if done s then ns else state (tmr,prtr) (n - 1) f ns
      end;
 
 fun pc_ptr (x : arm_state) =
@@ -765,12 +747,14 @@ fun pc_ptr (x : arm_state) =
     print_mem_range (#mem x) (pc, 1)
   end;
 
-val typ = ``:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) all_cp_registers``;
+fun evaluate_cp (n, f, m, r, s, p) = state (A,pc_ptr) n f (init f m r s p)
+fun eval_cp (n, f, m, r, s, p) = lstate (time,pc_ptr) n f [init f m r s p]
+
+fun evaluate (n, m, r, s) =
+  evaluate_cp (n, ``NO_CP:'a coproc``, m, r, s, ``ARB:'a``);
 
 fun eval (n, m, r, s) =
-   state (time,pc_ptr) n [init m r s ``ARB:^(ty_antiq typ)``];
-fun evaluate (n, m, r, s) =
-   fstate (A,pc_ptr)  n (init m r s ``ARB:^(ty_antiq typ)``);
+  eval_cp (n, ``NO_CP:'a coproc``, m, r, s, ``ARB:'a``);
 
 (* ------------------------------------------------------------------------- *)
 
