@@ -170,29 +170,129 @@ val NUMERAL_BIT_MODIFY = store_thm("NUMERAL_BIT_MODIFY",
 
 (* ------------------------------------------------------------------------- *)
 
-val TIMES_2EXP_lem = prove(
-  `!n. FUNPOW numeral$iDUB n 1 = 2 ** n`,
-  Induct \\ ASM_SIMP_TAC arith_ss
-    [EXP,CONJUNCT1 FUNPOW,FUNPOW_SUC,iDUB,GSYM TIMES2]);
+val iSUC_def = 
+  Definition.new_definition
+    ("iSUC",``iSUC = SUC``);
+
+val iDIV2_def = 
+  Definition.new_definition
+    ("iDIV2",``iDIV2 = DIV2``);
+
+val SFUNPOW_def = 
+  Prim_rec.new_recursive_definition
+  {name = "SFUNPOW_def",
+   def = ``(SFUNPOW f 0 x = x)
+        /\ (SFUNPOW f (SUC n) x = if x = 0n then 0n else SFUNPOW f n (f x))``,
+   rec_axiom = prim_recTheory.num_Axiom};
+
+val FDUB_def = 
+   Prim_rec.new_recursive_definition
+   {name = "FDUB_def",
+    def = ``(FDUB f 0 = 0n)
+         /\ (FDUB f (SUC n) = f (f (SUC n)))``,
+   rec_axiom = prim_recTheory.num_Axiom};
+
+val FDUB_lem = prove(
+  `!f. (f 0 = 0n) ==> (FDUB f = (\x.f (f x)))`,
+  REWRITE_TAC [FUN_EQ_THM] \\ GEN_TAC \\ 
+  DISCH_TAC \\ BETA_TAC \\ Cases \\ 
+  ASM_REWRITE_TAC [FDUB_def]);
+
+val SFUNPOW_strict = prove(
+   `!n f x. SFUNPOW f n 0 = 0`,
+   Cases THEN REWRITE_TAC [SFUNPOW_def]);
+
+val SFUNPOW_BIT1_lem = prove(
+   `!n f x. (f 0 = 0) ==>
+      (SFUNPOW f (NUMERAL (BIT1 n)) x = SFUNPOW (FDUB f) n (f x))`,
+   REWRITE_TAC [NUMERAL_DEF,BIT1,ADD_CLAUSES] \\
+   Induct \\ REPEAT STRIP_TAC \\ REWRITE_TAC [NUMERAL_DEF,BIT1,ADD_CLAUSES] >>
+	(IMP_RES_TAC FDUB_lem \\ ASM_REWRITE_TAC [SFUNPOW_def] \\ PROVE_TAC []) \\
+   ONCE_REWRITE_TAC [SFUNPOW_def] \\ ONCE_REWRITE_TAC [SFUNPOW_def] \\
+   RES_TAC \\ RW_TAC std_ss [] \\
+   IMP_RES_TAC FDUB_lem \\ PROVE_TAC []);
+
+val SFUNPOW_BIT2_lem = prove(
+  `!n f x. (f 0 = 0) ==> 
+     (SFUNPOW f (NUMERAL (BIT2 n)) x = SFUNPOW (FDUB f) n (f (f x)))`,
+  `!n. NUMERAL (BIT2 n) = SUC (NUMERAL (BIT1 n))` by 
+             REWRITE_TAC [NUMERAL_DEF,BIT1,BIT2,ADD_CLAUSES] \\
+  REPEAT STRIP_TAC \\ IMP_RES_TAC SFUNPOW_BIT1_lem \\
+  ASM_REWRITE_TAC [SFUNPOW_def] \\ RW_TAC std_ss [SFUNPOW_strict]);
+
+val NUMERAL_SFUNPOW = prove(
+  `!f. (f 0 = 0) ==> 
+      (!x. SFUNPOW f 0 x = x)
+   /\ (!y. SFUNPOW f y 0 = 0)
+   /\ (!n x. SFUNPOW f (NUMERAL (BIT1 n)) x = SFUNPOW (FDUB f) (NUMERAL n) (f x))
+   /\ (!n x. SFUNPOW f (NUMERAL (BIT2 n)) x = SFUNPOW (FDUB f) (NUMERAL n) (f (f x)))`,
+  REPEAT STRIP_TAC \\ 
+  MAP_EVERY IMP_RES_TAC [SFUNPOW_BIT1_lem,SFUNPOW_BIT2_lem] \\ 
+  ASM_REWRITE_TAC [SFUNPOW_strict,SFUNPOW_def,NUMERAL_DEF]);
 
 val NUMERAL_TIMES_2EXP = store_thm("NUMERAL_TIMES_2EXP",
-  `(!n. TIMES_2EXP n 0 = 0) /\ (!x. TIMES_2EXP 0 x = x) /\
-  !x n. TIMES_2EXP (NUMERAL x) (NUMERAL n) =
-     (NUMERAL n) * NUMERAL (FUNPOW numeral$iDUB (NUMERAL x) (BIT1 ZERO))`,
-  `BIT1 ZERO = 1` by REWRITE_TAC [NUMERAL_DEF,BIT1,ALT_ZERO]
-    \\ POP_ASSUM SUBST1_TAC
-    \\ REWRITE_TAC [TIMES_2EXP_def,TIMES_2EXP_lem,NUMERAL_DEF]
-    \\ SIMP_TAC std_ss [EXP]);
+  `(!n. TIMES_2EXP n 0 = 0) /\ 
+   (!n x. TIMES_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW numeral$iDUB n x))`,
+  CONJ_TAC \\ REWRITE_TAC [TIMES_2EXP_def,MULT_CLAUSES] \\ Induct \\
+  REWRITE_TAC [EXP,SFUNPOW_def,MULT_CLAUSES,MULT_ASSOC] \\
+  POP_ASSUM (ASSUME_TAC o GSYM) \\ RW_TAC std_ss [] \\ 
+  ASM_REWRITE_TAC [NUMERAL_DEF,BIT1,BIT2,iDUB,ALT_ZERO,ADD_CLAUSES] \\
+  RW_TAC arith_ss []);
 
-val DIV_2EXP = prove(
-  `(!n. DIV_2EXP 0 n = n) /\
-   (!x. DIV_2EXP x 0 = 0) /\
-   (!x n. DIV_2EXP (SUC x) (NUMERAL n) =
-            DIV_2EXP x (DIV2 (NUMERAL n)))`,
-  RW_TAC arith_ss [DIV_2EXP_def,DIV2_def,EXP,ZERO_DIV,
-    DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP]);
+val NUMERAL_iDIV2 = store_thm("NUMERAL_iDIV2",
+  `(iDIV2 ZERO = ZERO) /\ (iDIV2 (iSUC ZERO) = ZERO) /\
+   (iDIV2 (BIT1 n) = n) /\ (iDIV2 (iSUC (BIT1 n)) = iSUC n) /\
+   (iDIV2 (BIT2 n) = iSUC n) /\ (iDIV2 (iSUC (BIT2 n)) = iSUC n) /\
+   (NUMERAL (iSUC n) = NUMERAL (SUC n))`,
+   REWRITE_TAC [ALT_ZERO,BIT1,BIT2,iDIV2_def,iSUC_def,ADD_CLAUSES] \\
+   REWRITE_TAC [DIV2_def,GSYM TIMES2] \\
+   `0 < 2 /\ 1 < 2` by DECIDE_TAC \\
+   MAP_EVERY IMP_RES_TAC [ZERO_DIV,ADD_DIV_RWT,DIV_LESS,
+        LESS_DIV_EQ_ZERO,ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV] \\
+   RULE_ASSUM_TAC (REWRITE_RULE [GSYM EVEN_MOD2]) \\
+   RW_TAC arith_ss [ADD1,EVEN_DOUBLE]);
 
-val NUMERAL_DIV_2EXP = save_thm("NUMERAL_DIV_2EXP", SUC_RULE DIV_2EXP);
+val NUMERAL_DIV_2EXP = store_thm("NUMERAL_DIV_2EXP",
+  `(!n. DIV_2EXP n 0 = 0) /\
+   (!n x. DIV_2EXP n (NUMERAL x) = NUMERAL (SFUNPOW iDIV2 n x))`,
+  CONJ_TAC \\ REWRITE_TAC [DIV_2EXP_def] >>
+	(STRIP_TAC \\ MATCH_MP_TAC ZERO_DIV \\ RW_TAC std_ss [ZERO_LT_TWOEXP]) \\
+  Induct \\ REWRITE_TAC [EXP,SFUNPOW_def,DIV_1] \\
+  `!x. NUMERAL x DIV 2 = NUMERAL (x DIV 2)` by REWRITE_TAC [NUMERAL_DEF] \\
+  RW_TAC arith_ss [ZERO_LT_TWOEXP,GSYM DIV_DIV_DIV_MULT,SFUNPOW_strict,iDIV2_def,DIV2_def]);
+
+val NUMERAL_SFUNPOW_iDIV2 = 
+  save_thm("NUMERAL_SFUNPOW_iDIV2",
+    MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
+    (prove(
+       `iDIV2 0 = 0`,RW_TAC arith_ss [iDIV2_def,DIV2_def])));
+
+val NUMERAL_SFUNPOW_iDUB = 
+  save_thm("NUMERAL_SFUNPOW_iDUB",
+    MATCH_MP (SPEC_ALL NUMERAL_SFUNPOW)
+    (prove(
+       `numeral$iDUB 0 = 0`,RW_TAC arith_ss [iDUB])));
+
+val NUMERAL_SFUNPOW_FDUB =
+  save_thm("NUMERAL_SFUNPOW_FDUB",
+    GEN_ALL (MATCH_MP 
+      (SPEC_ALL NUMERAL_SFUNPOW) 
+      (SPEC_ALL (CONJUNCT1 FDUB_def))));
+
+val FDUB_iDIV2 = store_thm("FDUB_iDIV2",
+  `!x. FDUB iDIV2 x = iDIV2 (iDIV2 x)`,
+  Cases \\ RW_TAC arith_ss [FDUB_def,iDIV2_def,DIV2_def]);
+
+val FDUB_iDUB = store_thm("FDUB_iDUB",
+  `!x. FDUB numeral$iDUB x = numeral$iDUB (numeral$iDUB x)`,
+  Cases \\ RW_TAC arith_ss [FDUB_def,iDUB]);
+
+val FDUB_FDUB = store_thm("FDUB_FDUB",
+  `   (FDUB (FDUB f) ZERO = ZERO)
+   /\ (!x. FDUB (FDUB f) (iSUC x) = FDUB f (FDUB f (iSUC x)))
+   /\ (!x. FDUB (FDUB f) (BIT1 x) = FDUB f (FDUB f (BIT1 x)))
+   /\ (!x. FDUB (FDUB f) (BIT2 x) = FDUB f (FDUB f (BIT2 x)))`,
+  REWRITE_TAC [BIT1,BIT2,iSUC_def,FDUB_def,ALT_ZERO,ADD_CLAUSES]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -303,23 +403,22 @@ val BIT_REV_compute = prove(
   Cases \\ REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_REV_def, EXP, SBIT_def]);
 
 val TIMES_2EXP_compute = prove(
-  `!n x. TIMES_2EXP n x = if x = 0 then 0 else x * FUNPOW numeral$iDUB n 1`,
-  RW_TAC bool_ss
-         [MULT, REWRITE_RULE [NUMERAL_DEF] NUMERAL_TIMES_2EXP,CONJUNCT1 FUNPOW]
-    \\ PROVE_TAC [NUMERAL_DEF]);
+  `!n x. TIMES_2EXP n x = if x = 0 then 0 else SFUNPOW numeral$iDUB n x`,
+  RW_TAC bool_ss [REWRITE_RULE [NUMERAL_DEF] NUMERAL_TIMES_2EXP,SFUNPOW_strict]);
 
-val TIMES_2EXP1 =
- (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
-  Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
-
+val TIMES_2EXP1 = 
+  (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
+   Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
+   
 val _ =
  let open EmitML
  in emitML (!Globals.emitMLDir)
    ("bit",
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
-     map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1, arithmeticTheory.NUMERAL_DEF])
-         [TIMES_2EXP_compute, BITWISE_compute,
+     map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1,arithmeticTheory.NUMERAL_DEF])
+         [SFUNPOW_def,iDIV2_def,
+          TIMES_2EXP_compute,BITWISE_compute,
           BIT_MODF_compute, BIT_MODIFY_EVAL,
           BIT_REV_compute, BIT_REVERSE_EVAL,
           LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,
