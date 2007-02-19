@@ -200,7 +200,7 @@ val FDUB_lem = prove(
 
 val SFUNPOW_strict = prove(
    `!n f x. SFUNPOW f n 0 = 0`,
-   Cases THEN REWRITE_TAC [SFUNPOW_def]);
+   Cases \\ REWRITE_TAC [SFUNPOW_def]);
 
 val SFUNPOW_BIT1_lem = prove(
    `!n f x. (f 0 = 0) ==>
@@ -293,6 +293,74 @@ val FDUB_FDUB = store_thm("FDUB_FDUB",
    /\ (!x. FDUB (FDUB f) (BIT1 x) = FDUB f (FDUB f (BIT1 x)))
    /\ (!x. FDUB (FDUB f) (BIT2 x) = FDUB f (FDUB f (BIT2 x)))`,
   REWRITE_TAC [BIT1,BIT2,iSUC_def,FDUB_def,ALT_ZERO,ADD_CLAUSES]);
+
+val SFUNPOW_DIV2_def = 
+    Definition.new_definition
+        ("SFUNPOW_DIV2_def",``SFUNPOW_DIV2 = SFUNPOW DIV2``);
+
+val SFUNPOW_MUL2_def =
+    Definition.new_definition
+        ("SFUNPOW_MUL2_def",``SFUNPOW_MUL2 = SFUNPOW numeral$iDUB``);
+
+val SFUNPOW_FDUB_def = 
+    Definition.new_definition
+        ("SFUNPOW_DIV2_def",``SFUNPOW_FDUB f = SFUNPOW (FDUB f)``);
+
+val bit_cases = prove(`!y. (y = ZERO) \/ (?n. y = BIT1 n) \/ (?n. y = BIT2 n)`,
+	GEN_TAC \\ Cases_on `y = 0` \\ STRIP_ASSUME_TAC (SPEC `y` EVEN_OR_ODD) \\ 
+	IMP_RES_TAC EVEN_ODD_EXISTS \\ REWRITE_TAC [BIT1,BIT2,ALT_ZERO] \\ 
+	RW_TAC arith_ss [ADD1] << [
+		DISJ2_TAC \\ Q.EXISTS_TAC `m - 1` \\ Cases_on `m = 1`,
+		DISJ1_TAC \\ Q.EXISTS_TAC `m`] \\
+	RW_TAC arith_ss [LEFT_SUB_DISTRIB])
+
+val FDUB_compute = prove(
+    `!x f. FDUB f x = if x = 0 then 0 else f (f x)`,
+    Cases \\ RW_TAC arith_ss [FDUB_def]);
+
+val SFUNPOW_FDUB_compute = prove(
+    `!f y x. SFUNPOW_FDUB f y x = 
+               if (y = 0) then x else 
+                 if (x = 0) then 0 else 
+                   if ODD y then SFUNPOW_FDUB (FDUB f) (DIV2 y) (FDUB f x) 
+                            else SFUNPOW_FDUB (FDUB f) (PRE (DIV2 y)) (FDUB f (FDUB f x))`,
+  REPEAT STRIP_TAC \\ STRIP_ASSUME_TAC (SPEC `y` bit_cases) \\ 
+  POP_ASSUM SUBST_ALL_TAC \\ REWRITE_TAC [ALT_ZERO] \\
+  RW_TAC std_ss [SFUNPOW_FDUB_def,SFUNPOW_strict,numeral_evenodd] \\
+  REWRITE_TAC (map (REWRITE_RULE [NUMERAL_DEF]) [NUMERAL_SFUNPOW_FDUB,numeral_div2,prim_recTheory.PRE]));
+
+val SFUNPOW_DIV2_compute = prove(
+    `!f y x. SFUNPOW_DIV2 y x = 
+               if (y = 0) then x else 
+                 if (x = 0) then 0 else 
+                   if ODD y then SFUNPOW_FDUB DIV2 (DIV2 y) (DIV2 x) 
+                            else SFUNPOW_FDUB DIV2 (PRE (DIV2 y)) (DIV2 (DIV2 x))`,
+  REPEAT STRIP_TAC \\ STRIP_ASSUME_TAC (SPEC `y` bit_cases) \\ 
+  POP_ASSUM SUBST_ALL_TAC \\ REWRITE_TAC [ALT_ZERO] \\
+  RW_TAC std_ss [SFUNPOW_DIV2_def,SFUNPOW_FDUB_def,SFUNPOW_strict,numeral_evenodd] \\
+  REWRITE_TAC (map (REWRITE_RULE [NUMERAL_DEF,iDIV2_def]) [NUMERAL_SFUNPOW_iDIV2,numeral_div2,prim_recTheory.PRE]));
+
+val SFUNPOW_MUL2_compute = prove(
+    `!f y x. SFUNPOW_MUL2 y x = 
+               if (y = 0) then x else 
+                 if (x = 0) then 0 else 
+                   if ODD y then SFUNPOW_FDUB numeral$iDUB (DIV2 y) (numeral$iDUB x) 
+                            else SFUNPOW_FDUB numeral$iDUB (PRE (DIV2 y)) (numeral$iDUB (numeral$iDUB x))`,
+  REPEAT STRIP_TAC \\ STRIP_ASSUME_TAC (SPEC `y` bit_cases) \\ 
+  POP_ASSUM SUBST_ALL_TAC \\ REWRITE_TAC [ALT_ZERO] \\
+  RW_TAC std_ss [SFUNPOW_DIV2_def,SFUNPOW_MUL2_def,SFUNPOW_FDUB_def,SFUNPOW_strict,numeral_evenodd] \\
+  REWRITE_TAC (map (REWRITE_RULE [NUMERAL_DEF,iDIV2_def]) [NUMERAL_SFUNPOW_iDUB,numeral_div2,prim_recTheory.PRE]));
+
+
+val DIV_2EXP_compute = prove(
+    `!x y. DIV_2EXP x y = if x = 0 then y else SFUNPOW_DIV2 x y`,
+    REWRITE_TAC [SFUNPOW_DIV2_def,REWRITE_RULE [NUMERAL_DEF] NUMERAL_DIV_2EXP,iDIV2_def] \\
+    RW_TAC std_ss [SFUNPOW_strict,SFUNPOW_def]);
+	
+val TIMES_2EXP_compute = prove(
+    `!x y. TIMES_2EXP x y = if x = 0 then y else SFUNPOW_MUL2 x y`,
+    REWRITE_TAC [SFUNPOW_MUL2_def,REWRITE_RULE [NUMERAL_DEF] NUMERAL_TIMES_2EXP,iDUB] \\
+    RW_TAC std_ss [SFUNPOW_strict,SFUNPOW_def]);
 
 (* ------------------------------------------------------------------------- *)
 
@@ -402,14 +470,10 @@ val BIT_REV_compute = prove(
           BIT_REV (PRE n) (DIV2 x) (2 * y + (if ODD x then 1 else 0))`,
   Cases \\ REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_REV_def, EXP, SBIT_def]);
 
-val TIMES_2EXP_compute = prove(
-  `!n x. TIMES_2EXP n x = if x = 0 then 0 else SFUNPOW numeral$iDUB n x`,
-  RW_TAC bool_ss [REWRITE_RULE [NUMERAL_DEF] NUMERAL_TIMES_2EXP,SFUNPOW_strict]);
-
 val TIMES_2EXP1 = 
   (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
    Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
-   
+
 val _ =
  let open EmitML
  in emitML (!Globals.emitMLDir)
@@ -417,8 +481,8 @@ val _ =
      MLSIG  "type num = numML.num" :: OPEN ["num"]
      ::
      map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1,arithmeticTheory.NUMERAL_DEF])
-         [SFUNPOW_def,iDIV2_def,
-          TIMES_2EXP_compute,BITWISE_compute,
+         [FDUB_compute,SFUNPOW_FDUB_compute,SFUNPOW_DIV2_compute,SFUNPOW_MUL2_compute,
+          DIV_2EXP_compute,TIMES_2EXP_compute,BITWISE_compute,
           BIT_MODF_compute, BIT_MODIFY_EVAL,
           BIT_REV_compute, BIT_REVERSE_EVAL,
           LOG2_compute, DIVMOD_2EXP, SBIT_def, BITS_def,
