@@ -566,25 +566,7 @@ val cpsr = armML.SET_NZCV (#N e,(#Z e,(#C e,#V e)))
 
 val psr = armML.CPSR_WRITE (#psr e) cpsr;
 
-val unit_cp = let open fcpML in
-  (armML.empty_cp_registers (ITSELF (numML.ONE))):
-  (unit wordsML.word, unit bit0 bit0 bit0 bit0) cart
-end;
-
-local
-  open fcpML
-  val unit_cp = (armML.empty_cp_registers (ITSELF (numML.ONE))):
-                (unit wordsML.word, unit bit0 bit0 bit0 bit0) cart
-  val unit_15 = (armML.empty_cp_registers (ITSELF (numML.fromInt 32))):
-                (wordsML.word32, unit bit0 bit0 bit0 bit0) cart
-in
-  val unit_all_cp_registers = armML.all_cp_registers
-      (unit_cp, unit_cp, unit_cp, unit_cp, unit_cp, unit_cp, unit_cp, unit_cp,
-       unit_cp, unit_cp, unit_cp, unit_cp, unit_cp, unit_cp, unit_cp, unit_15)
-end;
-
-val init_state = armML.arm_sys_state
-   (#reg e, psr, init_mem, false, unit_all_cp_registers);
+val init_state = armML.arm_sys_state (#reg e, psr, init_mem, false, ());
 
 val final_state = time (STATE_ARM_MEM (#cycles e)) init_state;
 
