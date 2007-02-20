@@ -932,11 +932,13 @@ val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
 
 val GENLIST_EVAL = save_thm("GENLIST_EVAL", SUC_RULE GENLIST);
 val FIRSTN_EVAL = save_thm("FIRSTN_EVAL", SUC_RULE FIRSTN);
+val ELL_EVAL = save_thm("ELL_EVAL", SUC_RULE ELL);
 
 val _ = let open pred_setTheory in
   computeLib.add_persistent_funs
   ([("GENLIST_EVAL", GENLIST_EVAL),
     ("FIRSTN_EVAL", FIRSTN_EVAL),
+    ("ELL_EVAL", ELL_EVAL),
     ("rich_listTheory.SPLITP", SPLITP),
     ("rich_listTheory.SNOC", SNOC),
     ("pred_setTheory.IN_INSERT", IN_INSERT),

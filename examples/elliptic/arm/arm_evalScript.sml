@@ -579,10 +579,12 @@ val BIT_NUMERAL = CONJ (SPECL [`0`,`NUMERAL n`] BIT_def)
 
 val BITS_NUMERAL = (GEN_ALL o SPECL [`h`,`l`,`NUMERAL n`]) BITS_def;
 
-val BITS_NUMERAL_ss = rewrites
-  [BITS_NUMERAL,BITS_ZERO2,numeralTheory.numeral_suc,numeralTheory.iDUB_removal,
-   numeral_bitTheory.NUMERAL_DIV_2EXP, numeralTheory.numeral_div2,
-   numeralTheory.numeral_imod_2exp, numeralTheory.MOD_2EXP, NORM_0];
+val BITS_NUMERAL_ss = let open numeral_bitTheory numeralTheory in rewrites
+  [BITS_NUMERAL, BITS_ZERO2, NUMERAL_DIV_2EXP, NUMERAL_iDIV2,
+   NUMERAL_SFUNPOW_iDIV2, NUMERAL_SFUNPOW_iDUB, NUMERAL_SFUNPOW_FDUB,
+   FDUB_iDIV2, FDUB_iDUB, FDUB_FDUB, iDUB_removal,
+   numeral_suc, numeral_imod_2exp, MOD_2EXP, NORM_0]
+end;
 
 val word_frags = [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,
   rewrites [SIMP_RULE std_ss [] DECODE_ARM_THM, INDEX_RAND,BIT_def,
