@@ -15,7 +15,7 @@ open Feedback Lib Portable;
 
 val ERR = mk_HOL_ERR "TheoryPP";
 
-val pp_sig_hook = ref (fn () => ()); 
+val pp_sig_hook = ref (fn () => ());
 
 val concat = String.concat;
 val sort = Lib.sort (fn s1:string => fn s2 => s1<=s2);
@@ -138,7 +138,7 @@ fun pp_sig pp_thm info_record ppstrm = let
      add_string (String.concat ["[", s, "]"]);
      add_string ("  "^class);
      add_newline(); add_newline();
-     if null (Thm.hyp th) andalso 
+     if null (Thm.hyp th) andalso
          (Tag.isEmpty (Thm.tag th) orelse Tag.isDisk (Thm.tag th))
        then pp_thm th
        else with_flag(Globals.show_tags,true)
@@ -305,7 +305,11 @@ fun pp_struct info_record ppstrm =
      fun pparent (s,i,j) = Thry s
 
      fun pp_tm tm =
-         Term.pp_raw_term (fn t => Map.find(#termmap tmtable, t)) ppstrm tm
+         (add_string "read\"";
+          add_string (RawParse.pp_raw_term
+                        (fn t => Map.find(#termmap tmtable, t))
+                        tm);
+          add_string "\"")
      fun pr_bind(s, th) = let
        val (tg, asl, w) = (Thm.tag th, Thm.hyp th, Thm.concl th)
      in
@@ -328,10 +332,7 @@ fun pp_struct info_record ppstrm =
             stringbrk "local";
             begin_block CONSISTENT 0;
             stringbrk"val DT = Thm.disk_thm";
-            stringbrk"val op & = Term.mk_comb";
-            stringbrk"infix &";
-            stringbrk"val \\\\ = Term.mk_abs";
-            stringbrk"fun % n = Vector.sub(tmvector, n)";
+            stringbrk"fun read s = RawParse.readTerm tmvector s";
             end_block();
             add_newline();
             add_string"in"; add_newline();
