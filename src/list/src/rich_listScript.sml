@@ -3208,6 +3208,57 @@ val IS_PREFIX_APPENDS = store_thm
    THEN ASM_SIMP_TAC boolSimps.bool_ss [APPEND, IS_PREFIX]);
 
 (*---------------------------------------------------------------------------*)
+(* Add evaluation theorems to computeLib.the_compset                         *)
+(*---------------------------------------------------------------------------*)
+
+val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+
+val ELL_compute = save_thm("ELL_compute", SUC_RULE ELL);
+val SEG_compute = save_thm("SEG_compute", SUC_RULE SEG);
+val FIRSTN_compute = save_thm("FIRSTN_compute", SUC_RULE FIRSTN);
+val GENLIST_compute = save_thm("GENLIST_compute", SUC_RULE GENLIST);
+val BUTFIRSTN_compute = save_thm("BUTFIRSTN_compute", SUC_RULE BUTFIRSTN);
+val IS_SUFFIX_compute = save_thm("IS_SUFFIX_compute", GSYM IS_PREFIX_REVERSE);
+val REPLICATE_compute = save_thm("REPLICATE_compute", SUC_RULE REPLICATE);
+
+val BUTLASTN_compute = Q.store_thm("BUTLASTN_compute",
+  `!n l. BUTLASTN n l =
+     let m = LENGTH l in
+       if n <= m then FIRSTN (m - n) l
+       else FAIL BUTLASTN ^(mk_var("longer than list",bool)) n l`,
+  SRW_TAC [boolSimps.LET_ss] [combinTheory.FAIL_THM,BUTLASTN_FIRSTN]);
+
+val LASTN_compute = Q.store_thm("LASTN_compute",
+  `!n l. LASTN n l =
+     let m = LENGTH l in
+       if n <= m then BUTFIRSTN (m - n) l
+       else FAIL LASTN ^(mk_var("longer than list",bool)) n l`,
+  SRW_TAC [boolSimps.LET_ss] [combinTheory.FAIL_THM,LASTN_BUTFIRSTN]);
+
+val _ = computeLib.add_persistent_funs
+ [("AND_EL_DEF", AND_EL_DEF),
+  ("BUTFIRSTN_compute", BUTFIRSTN_compute),
+  ("BUTLASTN_compute", BUTLASTN_compute),
+  ("ELL_compute", ELL_compute),
+  ("FIRSTN_compute", FIRSTN_compute),
+  ("GENLIST_compute", GENLIST_compute),
+  ("IS_PREFIX", IS_PREFIX),
+  ("IS_SUBLIST", IS_SUBLIST),
+  ("IS_SUFFIX_compute", IS_SUFFIX_compute),
+  ("LASTN_compute", LASTN_compute),
+  ("OR_EL_DEF", OR_EL_DEF),
+  ("PREFIX_DEF", PREFIX_DEF),
+  ("REPLICATE_compute", REPLICATE_compute),
+  ("SCANL", SCANL),
+  ("SCANR", SCANR),
+  ("SEG_compute", SEG_compute),
+  ("SNOC", SNOC),
+  ("SPLITP", SPLITP),
+  ("SUFFIX_DEF", SUFFIX_DEF),
+  ("UNZIP_FST_DEF", UNZIP_FST_DEF),
+  ("UNZIP_SND_DEF", UNZIP_SND_DEF)];
+
+(*---------------------------------------------------------------------------*)
 (* Export ML versions of rich_list functions                                 *)
 (*---------------------------------------------------------------------------*)
 
