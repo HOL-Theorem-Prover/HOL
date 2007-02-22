@@ -3,7 +3,6 @@
 (* This proof has been excerpted and adapted from John Harrison's proof of   *)
 (* a special case (n=4) of Fermat's Last Theorem.                            *)
 (*                                                                           *)
-(* Note: this file needs to be processed with hol.unquote.                   *)
 (*===========================================================================*)
 
 (*---------------------------------------------------------------------------*
@@ -37,11 +36,11 @@ val prime = Define `prime p = ~(p=1) /\ !x. x divides p ==> (x=1) \/ (x=p)`;
 
 val DIVIDES_0 = store_thm
  ("DIVIDES_0",
-  ``!x. x divides 0``, 
+  ``!x. x divides 0``,
   PROVE_TAC [divides,MULT_CLAUSES]);
 
 val DIVIDES_ZERO = store_thm
- ("DIVIDES_ZERO", 
+ ("DIVIDES_ZERO",
   ``!x. 0 divides x = (x = 0)``,
   PROVE_TAC [divides,MULT_CLAUSES]);
 
@@ -51,12 +50,12 @@ val DIVIDES_ONE = store_thm
   PROVE_TAC [divides,MULT_CLAUSES,MULT_EQ_1]);
 
 val DIVIDES_REFL = store_thm
- ("DIVIDES_REFL", 
+ ("DIVIDES_REFL",
   ``!x. x divides x``,
   PROVE_TAC [divides,MULT_CLAUSES]);
 
-val DIVIDES_TRANS = store_thm 
- ("DIVIDES_TRANS", 
+val DIVIDES_TRANS = store_thm
+ ("DIVIDES_TRANS",
   ``!a b c. a divides b /\ b divides c ==> a divides c``,
   PROVE_TAC [divides,MULT_ASSOC]);
 
@@ -66,12 +65,12 @@ val DIVIDES_ADD = store_thm
  PROVE_TAC[divides,LEFT_ADD_DISTRIB]);
 
 val DIVIDES_SUB = store_thm
- ("DIVIDES_SUB", 
+ ("DIVIDES_SUB",
   ``!d a b. d divides a /\ d divides b ==> d divides (a - b)``,
   PROVE_TAC [divides,LEFT_SUB_DISTRIB]);
 
 val DIVIDES_ADDL = store_thm
- ("DIVIDES_ADDL", 
+ ("DIVIDES_ADDL",
   ``!d a b. d divides a /\ d divides (a + b) ==> d divides b``,
   PROVE_TAC [ADD_SUB,ADD_SYM,DIVIDES_SUB]);
 
@@ -81,7 +80,7 @@ val DIVIDES_LMUL = store_thm
   PROVE_TAC [divides,MULT_ASSOC,MULT_SYM]);
 
 val DIVIDES_RMUL = store_thm
- ("DIVIDES_RMUL", 
+ ("DIVIDES_RMUL",
   ``!d a x. d divides a ==> d divides (a * x)``,
   PROVE_TAC [MULT_SYM,DIVIDES_LMUL]);
 
@@ -109,12 +108,12 @@ Induct_on `n - m`
  THEN ARW_TAC [] THENL
  [`m = n`         by DECIDE_TAC THEN
   `?k. m = SUC k` by PROVE_TAC[arithmeticTheory.num_CASES,
-                               prim_recTheory.LESS_REFL] 
+                               prim_recTheory.LESS_REFL]
      THEN PROVE_TAC[FACT,DIVIDES_RMUL,DIVIDES_REFL],
   `0 < n`         by DECIDE_TAC THEN
   `?k. n = SUC k` by PROVE_TAC [arithmeticTheory.num_CASES,
                                 prim_recTheory.LESS_REFL]
-   THEN ARW_TAC [FACT, DIVIDES_LMUL]]);
+   THEN ARW_TAC [FACT, DIVIDES_RMUL]]);
 
 
 (*---------------------------------------------------------------------------*)
@@ -122,24 +121,24 @@ Induct_on `n - m`
 (*---------------------------------------------------------------------------*)
 
 val NOT_PRIME_0 = store_thm
- ("NOT_PRIME_0", 
-  ``~prime 0``, 
+ ("NOT_PRIME_0",
+  ``~prime 0``,
   ARW_TAC [prime,DIVIDES_0]);
 
 val NOT_PRIME_1 = store_thm
- ("NOT_PRIME_1", 
-  ``~prime 1``, 
+ ("NOT_PRIME_1",
+  ``~prime 1``,
   ARW_TAC [prime]);
 
 val PRIME_2 = store_thm
- ("PRIME_2", 
+ ("PRIME_2",
   ``prime 2``,
-  ARW_TAC [prime] THEN 
+  ARW_TAC [prime] THEN
   PROVE_TAC [DIVIDES_LE, DIVIDES_ZERO,
              DECIDE``~(2=1) /\ ~(2=0) /\ (x <= 2 = (x=0) \/ (x=1) \/ (x=2))``]);
 
 val PRIME_POS = store_thm
- ("PRIME_POS", 
+ ("PRIME_POS",
   ``!p. prime p ==> 0<p``,
   Cases THEN ARW_TAC[NOT_PRIME_0]);
 
@@ -176,7 +175,7 @@ val PRIME_FACTOR = store_thm
  * then p is not prime, which is a contradiction.                            *
  *---------------------------------------------------------------------------*)
 
-val EUCLID = store_thm 
+val EUCLID = store_thm
  ("EUCLID",
   ``!n. ?p. n < p /\ prime p``,
   SPOSE_NOT_THEN STRIP_ASSUME_TAC

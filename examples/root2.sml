@@ -2,7 +2,7 @@
 (* Challenge from Freek Wiedijk: the square root of two is not rational.     *)
 (* I've adapted a proof in HOL Light by John Harrison.                       *)
 (*---------------------------------------------------------------------------*)
- 
+
 load "transcTheory";   open arithmeticTheory BasicProvers;
 
 (*---------------------------------------------------------------------------*)
@@ -29,14 +29,14 @@ val EXP2_LEM = Q.prove(`!x y:num. ((2*x)**2 = 2*(y**2)) = (2*(x**2) = y**2)`,
 val lemma = Q.prove
 (`!m n. (m**2 = 2 * n**2) ==> (m=0) /\ (n=0)`,
  completeInduct_on `m` THEN NTAC 2 STRIP_TAC THEN
-  `?k. m = 2*k`      by PROVE_TAC[EVEN_DOUBLE,EXP_2,EVEN_MULT,EVEN_EXISTS] 
+  `?k. m = 2*k`      by PROVE_TAC[EVEN_DOUBLE,EXP_2,EVEN_MULT,EVEN_EXISTS]
                      THEN VAR_EQ_TAC THEN
   `?p. n = 2*p`      by PROVE_TAC[EVEN_DOUBLE,EXP_2,EVEN_MULT,
-                                  EVEN_EXISTS,EXP2_LEM] 
+                                  EVEN_EXISTS,EXP2_LEM]
                      THEN VAR_EQ_TAC THEN
   `k**2 = 2*(p**2)`  by PROVE_TAC [EXP2_LEM] THEN
   `(k=0) \/ k < 2*k` by numLib.ARITH_TAC
- THENL [FULL_SIMP_TAC arith_ss [EXP_2],
+ THENL [FULL_SIMP_TAC arith_ss [],
         PROVE_TAC [MULT_EQ_0, DECIDE (Term `~(2 = 0n)`)]]);
 
 (*---------------------------------------------------------------------------*)
@@ -60,21 +60,20 @@ end;
 (* The following is a bit more declarative                                   *)
 (*---------------------------------------------------------------------------*)
 
-infix THEN1;
 fun ie q tac = Q_TAC SUFF_TAC q THEN1 tac;
 
 local open realTheory transcTheory
 in
 val SQRT_2_IRRATIONAL = Q.prove
 (`~Rational (sqrt 2r)`,
- ie `!p q. ~(q=0) ==> ~(sqrt 2 = & p / & q)` 
-             (RW_TAC std_ss [Rational_def,abs,SQRT_POS_LE,REAL_POS] 
+ ie `!p q. ~(q=0) ==> ~(sqrt 2 = & p / & q)`
+             (RW_TAC std_ss [Rational_def,abs,SQRT_POS_LE,REAL_POS]
                THEN PROVE_TAC[]) THEN RW_TAC std_ss [] THEN
- ie `~(sqrt 2 = & p / & q)` (PROVE_TAC []) THEN 
- ie `~(2 * q**2 = p**2)` 
-             (DISCH_TAC THEN SPOSE_NOT_THEN (MP_TAC o Q.AP_TERM `\x. x pow 2`) 
+ ie `~(sqrt 2 = & p / & q)` (PROVE_TAC []) THEN
+ ie `~(2 * q**2 = p**2)`
+             (DISCH_TAC THEN SPOSE_NOT_THEN (MP_TAC o Q.AP_TERM `\x. x pow 2`)
               THEN RW_TAC arith_ss [SQRT_POW_2,REAL_POS,
-                          REAL_POW_DIV,REAL_EQ_RDIV_EQ,REAL_LT, REAL_POW_LT] 
+                          REAL_POW_DIV,REAL_EQ_RDIV_EQ,REAL_LT, REAL_POW_LT]
               THEN ASM_REWRITE_TAC [REAL_OF_NUM_POW, REAL_MUL,REAL_INJ])
   THEN PROVE_TAC [lemma])
 end;
