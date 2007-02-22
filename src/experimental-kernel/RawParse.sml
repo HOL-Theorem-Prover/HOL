@@ -84,7 +84,7 @@ fun pp_raw_term map t = let
         in
           if is_var t orelse is_const t then
              doit (Int.toString (map t)::acc) rest
-          else let
+          else if is_comb t then let
               val (Rator,Rand) = dest_comb t
             in
               if g = CombR then
@@ -94,16 +94,16 @@ fun pp_raw_term map t = let
               else
                 doit acc (Tm(Rator,CombL) :: Brk :: Tm(Rand,CombR) :: rest)
             end
+          else let
+              val (bv, body) = dest_abs t
+              val core = [Stg "|", Tm(bv, Top), Brk, Tm(body, Top)]
+            in
+              if g <> Top then
+                doit acc ((Stg "(" :: core) @ (Stg ")" :: rest))
+              else
+                doit acc (core @ rest)
+            end
         end
-          handle HOL_ERR _ => let
-                   val (bv, body) = dest_abs t
-                   val core = [Stg "|", Tm(bv, Top), Brk, Tm(body, Top)]
-                 in
-                   if g <> Top then
-                     doit acc ((Stg "(" :: core) @ (Stg ")" :: rest))
-                   else
-                     doit acc (core @ rest)
-                 end
 in
   doit [] [Tm(t,Top)]
 end
