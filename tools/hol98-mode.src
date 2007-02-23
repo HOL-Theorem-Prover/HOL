@@ -43,7 +43,8 @@ evaluations.")
 
 (defun is-region-active ()
   (or
-    (and (fboundp 'region-active-p) (region-active-p) (region-exists-p))
+    (and (fboundp 'region-active-p) (region-active-p)
+         (fboundp 'region-exists-p) (region-exists-p))
     (and transient-mark-mode (boundp 'mark-active) mark-active)))
 
 (defun set-region-active ()
