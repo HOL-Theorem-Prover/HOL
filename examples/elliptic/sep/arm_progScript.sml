@@ -10,6 +10,7 @@ open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
 open arm_evalTheory armTheory listTheory bsubstTheory pairTheory systemTheory fcpTheory bitTheory; 
 open combinTheory
+open set_sepLib
 
 open set_sepTheory progTheory;
 
@@ -505,16 +506,14 @@ val _ = Hol_datatype `
          | Mem of word32 => word8  
          | Status of bool # bool # bool # bool
          | Undef of bool
-         | Rest of ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state`;
+         | Rest of 'a arm_sys_state`;
 
 val ARMel_11 = DB.fetch "-" "ARMel_11";
 val ARMel_distinct = DB.fetch "-" "ARMel_distinct";
 
-val _ = Parse.type_abbrev("ARMset",
-  ``:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel set``);
+val _ = Parse.type_abbrev("ARMset",``:'a ARMel set``);
 
-val ARMel_type = 
-  ``:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel``;
+val ARMel_type = ``:'a ARMel``;
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -591,7 +590,7 @@ val owrt_visible_def = Define `
                       psrs := set_status (F,F,F,F) s;
                       memory := (\a. 0w); 
                       undefined := F;
-                      cp_registers := s.cp_registers |>`;
+                      cp_state := s.cp_state |>`;
 
 
 (* Main definition *)
@@ -607,8 +606,7 @@ val arm2set_def = Define `
 (* Converting from ARMset to ARM                                                 *)
 (* ----------------------------------------------------------------------------- *)
 
-val ARMsets_def = Define `ARMsets = { arm2set s |s| T }
-  :('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel set set`;
+val ARMsets_def = Define `ARMsets = { arm2set s |s| T } :'a ARMel set set`;
 
 val set2undef_def = Define `
   set2undef set = @u. Undef u IN set`;
@@ -638,15 +636,15 @@ val set2regs_def = Define `
       (MAP (\x. (x,set2reg x set)) 
         [15w;14w;13w;12w;11w;10w;9w;8w;7w;6w;5w;4w;3w;2w;1w;0w])`;
 
-val set2cp_regs_def = Define `
-  set2cp_regs set = (@r. Rest r IN set).cp_registers`;
+val set2cp_state_def = Define `
+  set2cp_state set = (@r. Rest r IN set).cp_state`;
 
 val set2arm_def = Define `
   set2arm set = <| registers := set2regs set;
                    psrs := set2psrs set;
                    memory := set2mem set; 
                    undefined := set2undef set; 
-                   cp_registers := set2cp_regs set |>`;
+                   cp_state := set2cp_state set |>`;
 
 val set2undef_arm2set = prove(
   ``!s. set2undef (arm2set s) = s.undefined``,
@@ -676,8 +674,8 @@ val set2mode_arm2set = prove(
   \\ REWRITE_TAC []);
   
 val set2cp_regs_arm2set = prove(
-  ``!s. set2cp_regs (arm2set s) = s.cp_registers``,
-  SRW_TAC [] [set2cp_regs_def,arm2set_def,owrt_visible_def]);
+  ``!s. set2cp_state (arm2set s) = s.cp_state``,
+  SRW_TAC [] [set2cp_state_def,arm2set_def,owrt_visible_def]);
   
 val REG_WRITE_ELIM = prove(
   ``!s x. REG_WRITE s.registers (state_mode s) x (reg x s) = s.registers``,
@@ -1003,23 +1001,22 @@ val arm2set''_EQ_arm2set'' = prove(
     \\ METIS_TAC []]);
 
 val arm2set'_11 = prove(
-  ``!x y (s: ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state). 
-      (arm2set' x s = arm2set' y s) ==> (x = y)``,
+  ``!x y (s: 'a arm_sys_state). (arm2set' x s = arm2set' y s) ==> (x = y)``,
   REPEAT STRIP_TAC
   \\ `?r m st ud rt. x = (r,m,st,ud,rt)` by METIS_TAC [PAIR]
   \\ `?r' m' st' ud' rt'. y = (r',m',st',ud',rt')` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [arm2set'_def,PAIR_EQ,EXTENSION]  
   \\ CCONTR_TAC \\ FULL_SIMP_TAC bool_ss [] << [
     Q.PAT_ASSUM `!x:'a. b:bool` (ASSUME_TAC o Q.SPEC 
-     `Reg x' (reg x' (s: ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state))`),
+     `Reg x' (reg x' (s: 'a arm_sys_state))`),
     Q.PAT_ASSUM `!x:'a. b:bool` (ASSUME_TAC o Q.SPEC 
-     `Mem x' (mem_byte x' (s: ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state))`),
+     `Mem x' (mem_byte x' (s: 'a arm_sys_state))`),
     Q.PAT_ASSUM `!x:'a. b:bool` (ASSUME_TAC o Q.SPEC 
-     `Status (status (s: ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state))`),
+     `Status (status (s: 'a arm_sys_state))`),
     Q.PAT_ASSUM `!x:'a. b:bool` (ASSUME_TAC o Q.SPEC 
-     `Undef ((s: ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state).undefined)`),
+     `Undef ((s: 'a arm_sys_state).undefined)`),
     Q.PAT_ASSUM `!x:'a. b:bool` (ASSUME_TAC o Q.SPEC 
-     `Rest (owrt_visible (s: ('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state))`)]
+     `Rest (owrt_visible (s: 'a arm_sys_state))`)]
   \\ FULL_SIMP_TAC (srw_ss()) [IN_UNION,GSPECIFICATION,NOT_IN_EMPTY,
        IN_INSERT,PUSH_IN_INTO_IF]);
 
@@ -1118,16 +1115,16 @@ val blank_ms_def = Define `
   (blank_ms a (SUC n) = ~M a * blank_ms (a + 1w) n)`;
 
 val PASS_def = Define `PASS c x = (cond (CONDITION_PASSED2 x c))
-  :('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel set->bool`;
+  :'a ARMel set->bool`;
 
 val nPASS_def = Define `nPASS c x = (cond ~(CONDITION_PASSED2 x c))
-  :('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel set->bool`;
+  :'a ARMel set->bool`;
 
 val ARMnext_def = Define `ARMnext s = arm2set (NEXT_ARM_MEM (set2arm s))`;
 val ARMi_def    = Define `ARMi (a,x) = M a x`;
 val ARMpc_def   = Define `ARMpc p = R30 15w p * one (Undef F)`;
 val ARMproc_def = Define `ARMproc = (ARMsets,ARMnext,ARMpc,ARMi)
-  :(('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel,30,word32) processor`;
+  :('a ARMel,30,word32) processor`;
 
 val ARM_RUN_def   = Define `ARM_RUN   = RUN ARMproc`; 
 val ARM_GPROG_def = Define `ARM_GPROG = GPROG ARMproc`;
@@ -1135,9 +1132,9 @@ val ARM_PROG_def  = Define `ARM_PROG  = PROG ARMproc`;
 val ARM_PROC_def  = Define `ARM_PROC P Q C = PROC ARMproc (R30 14w) P (Q * ~R 14w) C`;
 
 val ARM_PROG2_def = Define `
-  ARM_PROG2 c P cs (Q:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) Z = 
+  ARM_PROG2 c P cs (Q:'a ARMset -> bool) Z = 
     ARM_PROG P cs {} Q Z /\ 
-    !x. ARM_PROG (S x * nPASS c x) cs {} ((S x):('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) {}`;
+    !x. ARM_PROG (S x * nPASS c x) cs {} ((S x):'a ARMset -> bool) {}`;
 
 
 (* lemmas about mpool and msequence -------------------------------------------- *)
@@ -1205,8 +1202,7 @@ val ARMi_11 = prove(
 
 val ARM_mpool_eq_msequence = 
   let
-    val th = Q.INST_TYPE [`:'a`|->`:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel`,
-               `:'b`|->`:30`,`:'c`|->`:word32`] mpool_eq_msequence
+    val th = Q.INST_TYPE [`:'a`|->`:'a ARMel`,`:'b`|->`:30`,`:'c`|->`:word32`] mpool_eq_msequence
     val th = Q.SPECL [`xs`,`f`,`a`,`ARMi`] th
     val th = SIMP_RULE (bool_ss++SIZES_ss) [GSYM AND_IMP_INTRO] (REWRITE_RULE [dimword_def] th)
     val th = MATCH_MP th ARMi_11 
@@ -1291,10 +1287,10 @@ val ARM_PROC_THM = GENL_save_thm("ARM_PROC_THM",[`P`,`Q`,`C`],
 
 val run_arm2set = prove(
   ``!k s. run ARMnext (k,arm2set s) = arm2set (STATE_ARM_MEM k s)``,
-  Induct_on `k` \\ FULL_SIMP_TAC std_ss [run_def,STATE_ARM_MEM_def]
-  \\ `!k s. run ARMnext (k,ARMnext s) = ARMnext (run ARMnext (k,s))` by
+  Induct_on `k` \\ FULL_SIMP_TAC std_ss [run_def,STATE_ARM_MEM_def,STATE_ARM_MMU_def]
+  \\ `!k s. run ARMnext (k,ARMnext s) = ARMnext (run ARMnext (k,s))` by 
         (Induct \\ FULL_SIMP_TAC std_ss [run_def])
-  \\ ASM_REWRITE_TAC [ARMnext_def,set2arm_arm2set]);
+  \\ ASM_REWRITE_TAC [ARMnext_def,set2arm_arm2set,NEXT_ARM_MEM_def]);
 
 
 (* theorems for ARM_RUN -------------------------------------------------------- *)
@@ -1353,6 +1349,51 @@ val IMP_ARM_RUN = store_thm ("IMP_ARM_RUN",
    \\ Q.PAT_ASSUM `!s. ?k. b:bool` (STRIP_ASSUME_TAC o Q.SPEC `s`)  
    \\ Q.EXISTS_TAC `k` \\ FULL_SIMP_TAC std_ss [LET_DEF]);
 
+val ARM_RUN_R_11 = store_thm("ARM_RUN_R_11",
+  ``!P Q. ARM_RUN P Q = ARM_RUN (P /\ SEP_FORALL a x y. SEP_NOT (R a x * R a y * SEP_T)) Q``,
+  SIMP_TAC std_ss [ARM_RUN_SEMANTICS,SEP_CONJ_def,SEP_FORALL]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ Q.PAT_ASSUM `!y.b` MATCH_MP_TAC \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [SEP_NOT_def] \\ CCONTR_TAC
+  \\ FULL_SIMP_TAC bool_ss [GSYM STAR_ASSOC,R_def,one_STAR,SEP_T_def]
+  \\ `?rs ns st ud rt. y = (rs,ns,st,ud,rt)` by 
+       (Cases_on `y` \\ Cases_on `r` \\ Cases_on `r'` \\ Cases_on `r` \\ METIS_TAC [])
+  \\ FULL_SIMP_TAC bool_ss [IN_arm2set']
+  \\ `Reg y' y''' IN arm2set' (rs,ns,st,ud,rt) s DELETE Reg y' (reg y' s)` by METIS_TAC []
+  \\ FULL_SIMP_TAC bool_ss [DELETE_arm2set',IN_arm2set'] 
+  \\ FULL_SIMP_TAC bool_ss [IN_DELETE]);
+
+val ARM_RUN_byte_11 = store_thm("ARM_RUN_byte_11",
+  ``!P Q. ARM_RUN P Q = ARM_RUN (P /\ SEP_FORALL a x y. SEP_NOT (byte a x * byte a y * SEP_T)) Q``,
+  SIMP_TAC std_ss [ARM_RUN_SEMANTICS,SEP_CONJ_def,SEP_FORALL]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ Q.PAT_ASSUM `!y.b` MATCH_MP_TAC \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [SEP_NOT_def] \\ CCONTR_TAC
+  \\ FULL_SIMP_TAC bool_ss [GSYM STAR_ASSOC,byte_def,SEP_T_def,one_STAR]
+  \\ `?rs ns st ud rt. y = (rs,ns,st,ud,rt)` by 
+       (Cases_on `y` \\ Cases_on `r` \\ Cases_on `r'` \\ Cases_on `r` \\ METIS_TAC [])
+  \\ FULL_SIMP_TAC bool_ss [IN_arm2set']
+  \\ `Mem y' y''' IN arm2set' (rs,ns,st,ud,rt) s DELETE Mem y' (mem_byte y' s)` by METIS_TAC []
+  \\ FULL_SIMP_TAC bool_ss [DELETE_arm2set',IN_arm2set'] 
+  \\ FULL_SIMP_TAC bool_ss [IN_DELETE]);
+
+val ARM_RUN_M_11 = store_thm("ARM_RUN_M_11",
+  ``!P Q. ARM_RUN P Q = ARM_RUN (P /\ SEP_FORALL a x y. SEP_NOT (M a x * M a y * SEP_T)) Q``,
+  SIMP_TAC std_ss [ARM_RUN_SEMANTICS,SEP_CONJ_def,SEP_FORALL]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []
+  \\ Q.PAT_ASSUM `!y.b` MATCH_MP_TAC \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC
+  \\ SIMP_TAC std_ss [SEP_NOT_def] \\ CCONTR_TAC
+  \\ FULL_SIMP_TAC bool_ss [M_def]
+  \\ ASM_MOVE_STAR_TAC `b1*b2*b3*b4*(b5*b6*b7*b8)*t` `b4*(b8*(b2*b3*b1*b6*b7*b5*t))`
+  \\ FULL_SIMP_TAC bool_ss [byte_def,one_STAR,WORD_ADD_0]
+  \\ `?rs ns st ud rt. y = (rs,ns,st,ud,rt)` by 
+       (Cases_on `y` \\ Cases_on `r` \\ Cases_on `r'` \\ Cases_on `r` \\ METIS_TAC [])
+  \\ FULL_SIMP_TAC bool_ss [IN_arm2set']
+  \\ `Mem (addr32 y') ((7 >< 0) (y''':word32)) IN
+      arm2set' (rs,ns,st,ud,rt) s DELETE Mem (addr32 y') (mem_byte (addr32 y') s)` by METIS_TAC []
+  \\ FULL_SIMP_TAC bool_ss [DELETE_arm2set',IN_arm2set'] 
+  \\ FULL_SIMP_TAC bool_ss [IN_DELETE]);
+
 
 (* theorems for ARM_GPROG ------------------------------------------------------ *)
 
@@ -1381,6 +1422,75 @@ val _ = save_ARM_GPROG "ARM_GPROG_MERGE_PRE" GPROG_MERGE_PRE;
 val _ = save_ARM_GPROG "ARM_GPROG_MERGE_POST" GPROG_MERGE_POST;
 val _ = save_ARM_GPROG "ARM_GPROG_COMPOSE" GPROG_COMPOSE;
 val _ = save_ARM_GPROG "ARM_GPROG_LOOP" GPROG_LOOP;
+
+val INSERT_BIGDISJ_PAIR = prove(
+  ``SEP_BIGDISJ { g P' f' |(P',f')| (P',f') IN (P,f) INSERT Y} =
+    g P f \/ SEP_BIGDISJ { g P' f' |(P',f')| (P',f') IN Y}``,
+  `{ g P' f' |(P',f')| (P',f') IN (P,f) INSERT Y} = 
+   g P f INSERT { g P' f' |(P',f')| (P',f') IN Y}` by 
+    (ONCE_REWRITE_TAC [EXTENSION] \\ SIMP_TAC std_ss [IN_INSERT,GSPECIFICATION]    
+     \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC << [     
+       Cases_on `x'` \\ FULL_SIMP_TAC std_ss [PAIR_EQ]
+       \\ DISJ2_TAC \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss [],
+       Q.EXISTS_TAC `P,f` \\ FULL_SIMP_TAC std_ss [PAIR_EQ],
+       Cases_on `x'` \\ FULL_SIMP_TAC std_ss [PAIR_EQ]
+       \\ Q.EXISTS_TAC `(q,r)` \\ FULL_SIMP_TAC std_ss []])
+  \\ ASM_REWRITE_TAC [SEP_BIGDISJ_CLAUSES]);
+
+val SEP_CONJ_OVER_DISJ = prove(
+  ``!P Q Z. (P \/ Q) /\ Z = P /\ Z \/ Q /\ Z:'a set -> bool``,
+  SIMP_TAC bool_ss [FUN_EQ_THM,SEP_CONJ_def,SEP_DISJ_def] \\ METIS_TAC []);
+
+val SPLIT_SPLIT = prove(
+  ``SPLIT x (u,v) ==> SPLIT u (u',v') ==> SPLIT x (u',v' UNION v)``,
+  REWRITE_TAC [SPLIT_def,DISJOINT_DEF,EXTENSION,IN_UNION,IN_INTER,NOT_IN_EMPTY]
+  \\ METIS_TAC []);
+
+val ARM_GPROG_11_LEMMA = 
+  (SIMP_RULE std_ss [STAR_ASSOC] o 
+   Q.INST [`P1`|->`P1*P2`,`Q`|->`\a x y. Q1 a x * Q2 a y`] o prove) (
+  ``(P /\ SEP_FORALL a x y. SEP_NOT (Q a x y * SEP_T)) * P1 /\ 
+         (SEP_FORALL a x y. SEP_NOT (Q a x y * SEP_T)) =
+    P * P1 /\ SEP_FORALL a x y. SEP_NOT (Q a x y * SEP_T)``,
+  SIMP_TAC std_ss [STAR_def,SEP_NOT_def,SEP_T_def,FUN_EQ_THM,SEP_CONJ_def,SEP_FORALL] 
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
+  THEN1 METIS_TAC [] THEN1 METIS_TAC [] << [  
+    Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `v` \\ ASM_REWRITE_TAC []
+    \\ REPEAT STRIP_TAC \\ Cases_on `Q y y' y'' u'` \\ ASM_REWRITE_TAC []
+    \\ Q.PAT_ASSUM `!x.b` (ASSUME_TAC o Q.SPECL [`y`,`y'`,`y''`,`u'`])
+    \\ CCONTR_TAC \\ FULL_SIMP_TAC bool_ss []
+    \\ `~SPLIT x (u',v' UNION v)` by METIS_TAC []
+    \\ IMP_RES_TAC SPLIT_SPLIT,METIS_TAC []]);
+
+val ARM_GPROG_R_11 = store_thm("ARM_GPROG_R_11",
+  ``!P f Y C Z.
+      ARM_GPROG ((P,f) INSERT Y) C Z = 
+      ARM_GPROG ((P /\ (SEP_FORALL a x y. SEP_NOT (R a x * R a y * SEP_T)),f) INSERT Y) C Z``,
+  REWRITE_TAC [ARM_GPROG_THM] \\ ONCE_REWRITE_TAC [ARM_RUN_R_11]
+  \\ ONCE_REWRITE_TAC [GSYM 
+      (SIMP_CONV std_ss [] ``(\P' f'. P' * mpool ARMi p C * ARMpc (f' p)) P' f'``)]
+  \\ REWRITE_TAC [INSERT_BIGDISJ_PAIR]
+  \\ SIMP_TAC std_ss [SEP_CONJ_OVER_DISJ,ARM_GPROG_11_LEMMA]);
+
+val ARM_GPROG_byte_11 = store_thm("ARM_GPROG_byte_11",
+  ``!P f Y C Z.
+      ARM_GPROG ((P,f) INSERT Y) C Z = 
+      ARM_GPROG ((P /\ (SEP_FORALL a x y. SEP_NOT (byte a x * byte a y * SEP_T)),f) INSERT Y) C Z``,
+  REWRITE_TAC [ARM_GPROG_THM] \\ ONCE_REWRITE_TAC [ARM_RUN_byte_11]
+  \\ ONCE_REWRITE_TAC [GSYM 
+      (SIMP_CONV std_ss [] ``(\P' f'. P' * mpool ARMi p C * ARMpc (f' p)) P' f'``)]
+  \\ REWRITE_TAC [INSERT_BIGDISJ_PAIR]
+  \\ SIMP_TAC std_ss [SEP_CONJ_OVER_DISJ,ARM_GPROG_11_LEMMA]);
+
+val ARM_GPROG_M_11 = store_thm("ARM_GPROG_M_11",
+  ``!P f Y C Z.
+      ARM_GPROG ((P,f) INSERT Y) C Z = 
+      ARM_GPROG ((P /\ (SEP_FORALL a x y. SEP_NOT (M a x * M a y * SEP_T)),f) INSERT Y) C Z``,
+  REWRITE_TAC [ARM_GPROG_THM] \\ ONCE_REWRITE_TAC [ARM_RUN_M_11]
+  \\ ONCE_REWRITE_TAC [GSYM 
+      (SIMP_CONV std_ss [] ``(\P' f'. P' * mpool ARMi p C * ARMpc (f' p)) P' f'``)]
+  \\ REWRITE_TAC [INSERT_BIGDISJ_PAIR]
+  \\ SIMP_TAC std_ss [SEP_CONJ_OVER_DISJ,ARM_GPROG_11_LEMMA]);
 
 
 (* theorems for ARM_PROG ------------------------------------------------------- *)
@@ -1437,6 +1547,25 @@ val ARM_PROG_HIDE_STATUS = store_thm("ARM_PROG_HIDE_STATUS",
   \\ REWRITE_TAC [GSYM (ARM_PROG_INST PROG_HIDE_PRE)]
   \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC []
   \\ Cases_on `y` \\ Cases_on `r` \\ Cases_on `r'` \\ ASM_REWRITE_TAC []);
+
+val ARM_PROG_R_11 = store_thm("ARM_PROG_R_11",
+  ``!P f Y C Z.
+      ARM_PROG P cs C Q Z = 
+      ARM_PROG (P /\ SEP_FORALL a x y. SEP_NOT (R a x * R a y * SEP_T)) cs C Q Z``,
+  REWRITE_TAC [ARM_PROG_THM,GSYM ARM_GPROG_R_11]);
+
+val ARM_PROG_byte_11 = store_thm("ARM_PROG_byte_11",
+  ``!P f Y C Z.
+      ARM_PROG P cs C Q Z = 
+      ARM_PROG (P /\ SEP_FORALL a x y. SEP_NOT (byte a x * byte a y * SEP_T)) cs C Q Z``,
+  REWRITE_TAC [ARM_PROG_THM,GSYM ARM_GPROG_byte_11]);
+
+val ARM_PROG_M_11 = store_thm("ARM_PROG_M_11",
+  ``!P f Y C Z.
+      ARM_PROG P cs C Q Z = 
+      ARM_PROG (P /\ SEP_FORALL a x y. SEP_NOT (M a x * M a y * SEP_T)) cs C Q Z``,
+  REWRITE_TAC [ARM_PROG_THM,GSYM ARM_GPROG_M_11]);
+
 
 (* theorems for ARM_PROC ------------------------------------------------------- *)
 

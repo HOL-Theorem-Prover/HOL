@@ -103,13 +103,36 @@ val HIDE_POST_LEMMA =
 fun HIDE_POST th = 
   MATCH_MP ARM_PROG_HIDE_POST th handle e => MATCH_MP HIDE_POST_LEMMA th;
 
-(* -- hide status (from pre) -- *)
+(* -- hide status from anywhere *)
+
+fun ALIGN_VAR tm = let 
+  val x32 = mk_var (tm,``:word32``) 
+  val x30 = mk_var (tm,``:word30``) in
+  RW [addr30_addr32,GSYM R30_def,addr32_and_3w,addr32_ABSORB_CONST,
+      ADDRESS_ROTATE,GSYM addr32_ADD] o INST [x32|->subst [``x:word30``|->x30] ``addr32 x``] end;
+
+fun ALIGN_VARS tms th = foldr (uncurry ALIGN_VAR) th tms;
+
+(* -- hide status -- *)
 
 val HIDE_STATUS_LEMMA = MATCH_MP EQ_IMP_IMP (SPEC_ALL ARM_PROG_HIDE_STATUS)
 val HIDE_STATUS_LEMMA_ALT = RW [emp_STAR] (Q.INST [`P`|->`emp`] HIDE_STATUS_LEMMA)
 fun HIDE_STATUS th = 
   let val th = GENL [``sN:bool``,``sZ:bool``,``sC:bool``,``sV:bool``] th in
     MATCH_MP HIDE_STATUS_LEMMA th handle e => MATCH_MP HIDE_STATUS_LEMMA_ALT th end;
+
+val STATUS_MOVE = prove(
+  ``!P Q x. (S x * P = P * S x) /\ (P * S x * Q = P * Q * S x)``,
+  SIMP_TAC (bool_ss++star_ss) []);
+
+val AUTO_PRE_HIDE_STATUS = 
+  HIDE_STATUS o PRE_CONV_RULE (REWRITE_CONV [STATUS_MOVE]);
+
+val AUTO_POST1_HIDE_STATUS = 
+  HIDE_POST1 o POST1_CONV_RULE (REWRITE_CONV [STATUS_MOVE])
+
+val AUTO_POST_HIDE_STATUS = 
+  HIDE_POST o POST_CONV_RULE (REWRITE_CONV [STATUS_MOVE])
 
 (* -- compose -- *)
 
@@ -235,6 +258,37 @@ fun PAIR_GEN name vs th = let
   val ctxt = free_varsl(concl th::hyp th)
   val x = Parse.parse_in_context ctxt vs
   in pairTools.PGEN (mk_var(name,type_of x)) x th end;
+
+
+(* ============================================================================= *)
+(* PRETTY-PRINTER FOR ``enc (instruction)``                                      *)
+(* ============================================================================= *)
+
+val show_enc = ref false;
+val show_code = ref true;
+val show_code_verbosely = ref false;
+
+fun blanks 0 = [] | blanks n = #" "::blanks (n-1);
+fun blank_str n = implode (blanks (if n < 0 then 0 else n));
+
+fun print_enc_inst sys (gl,gc,gr) d pps t = 
+  if !show_enc andalso !show_code then raise term_pp_types.UserPP_Failed else
+  let open Portable term_pp_types in 
+    if not (fst (dest_comb t) = ``enc:arm_instruction -> word32``) then
+      raise term_pp_types.UserPP_Failed
+    else 
+      if not (!show_code) andalso not (!show_code_verbosely) then () else let 
+        val s = instructionSyntax.dest_instruction NONE (snd (dest_comb t))
+        val s = hd (String.fields (fn s => if s = #";" then true else false) s) 
+        val (s1,s2) = if !show_code_verbosely then 
+                      ("    ",blank_str (40-size s)) else ("<<",">>")
+        in 
+          begin_block pps INCONSISTENT 0; add_string pps (s1^s^s2); end_block pps
+        end 
+  end handle e => raise term_pp_types.UserPP_Failed;
+
+fun pp_enc() = Parse.temp_add_user_printer ({Tyop = "cart", Thy = "fcp"}, print_enc_inst);
+val _ = pp_enc();
 
 
 (* ============================================================================= *)

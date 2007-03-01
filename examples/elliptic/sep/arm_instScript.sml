@@ -31,25 +31,23 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
-val arm_state_type = 
-  ``:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) arm_sys_state``;
+val arm_state_type = ``:'a arm_sys_state``;
 
-val ARMel_type = 
-  ``:('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMel``;
+val ARMel_type = ``:'a ARMel``;
 
 val ARM_PROG_type =
-  ``:(('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) ->
+  ``:('a ARMset -> bool) ->
      word32 list -> (word32 list # (word30 -> word30) -> bool) ->
-     (('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) ->
-    ((('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) # 
+     ('a ARMset -> bool) ->
+    (('a ARMset -> bool) # 
       (word30 -> word30) -> bool) -> bool``;
 
 val ARM_PROG2_type =
   ``:condition ->
-     (('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) ->
+     ('a ARMset -> bool) ->
      word32 list ->
-     (('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) ->
-    ((('a,'b,'c,'d,'e,'f,'g,'h,'i,'j,'k,'l,'m,'n,'o) ARMset -> bool) # 
+     ('a ARMset -> bool) ->
+    (('a ARMset -> bool) # 
       (word30 -> word30) -> bool) -> bool``;
 
 val ERROR = mk_HOL_ERR "";
@@ -375,7 +373,7 @@ val ARM_PROG1_EQ = let
   in th end;
 
 val STATE_ARM_MEM_1 = 
-  REWRITE_CONV [GSYM (EVAL ``SUC 0``),STATE_ARM_MEM_def] ``STATE_ARM_MEM 1 s``;
+  REWRITE_CONV [GSYM (EVAL ``SUC 0``),STATE_ARM_MEM_def,STATE_ARM_MMU_def,GSYM NEXT_ARM_MEM_def] ``STATE_ARM_MEM 1 s``;
 
 val ARM_PROG_INIT_TAC = 
   REWRITE_TAC [ARM_PROG1_EQ,ARM_PROG2_EQ,PASS_def] \\ REPEAT STRIP_TAC
@@ -1297,7 +1295,7 @@ val LDM_STATE_def = Define `
                     (ADDRESS_LIST'
                        (addr32 (ADDR_MODE4_ADDR am4 p (MAP FST xs)))
                        (LENGTH (MAP FST xs))))); psrs := s.psrs;
-          memory := s.memory; undefined := F; cp_registers := s.cp_registers |>`;
+          memory := s.memory; undefined := F; cp_state := s.cp_state |>`;
 
 val ldm = simple_clean ARM_LDM [``~(Rd = 15w:word4)``]
 val ldm = Q.INST [`opt`|->`ADDR_MODE4_CMD am4`] ldm
@@ -1424,7 +1422,7 @@ val reg_15_LDM_STATE = prove(
            (STRIP_ASSUME_TAC o UD_ALL o Q.SPECL [`w+1w`,`y`] o UD_ALL o Q.SPEC `ys`)]);
 
 val state_mode_simp = prove(
-  ``state_mode <|registers := r; psrs := s.psrs; memory := m; undefined := b; cp_registers := p |> =
+  ``state_mode <|registers := r; psrs := s.psrs; memory := m; undefined := b; cp_state := p |> =
     state_mode s``,SRW_TAC [] [state_mode_def]);
 
 val reg_wb_LDM_STATE = prove(
@@ -1547,11 +1545,11 @@ val xR_list_sem_IGNORE_REG_WRITE = prove(
       ~MEM q (MAP FST xs) ==>
       (xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs)
          (<| registers := REG_WRITE regs (state_mode s) q r; 
-            psrs := s.psrs; memory := mt; undefined := bt; cp_registers := xx |> 
+            psrs := s.psrs; memory := mt; undefined := bt; cp_state := xx |> 
           :^(ty_antiq arm_state_type)) =
        xR_list_sem (MAP (\x. (FST x,SOME (SND x))) xs)
          (<| registers := regs; psrs := s.psrs; memory := mt; 
-            undefined := bt; cp_registers := xx |> 
+            undefined := bt; cp_state := xx |> 
           :^(ty_antiq arm_state_type)))``,
   Induct THEN1 REWRITE_TAC [xR_list_sem_def,MAP] \\ Cases
   \\ SIMP_TAC std_ss [MAP,xR_list_sem_def,MEM] \\ Cases_on `q = 15w`
@@ -1611,7 +1609,7 @@ val IMP_ARM_NOP = prove(
        ~CONDITION_PASSED2 (NZCV cpsr) c /\ ~state.undefined ==>
        (NEXT_ARM_MEM state =
         (<|registers := INC_PC state.registers; psrs := state.psrs;
-          memory := state.memory; undefined := F; cp_registers := state.cp_registers |>
+          memory := state.memory; undefined := F; cp_state := state.cp_state |>
          :^(ty_antiq arm_state_type)))) ==>
     !x. ARM_PROG (S x * nPASS c x) [cmd] {} ((S x):^(ty_antiq ARMel_type) set -> bool) {}``,
   REPEAT STRIP_TAC \\ REWRITE_TAC [ARM_PROG1_EQ,nPASS_def]  
@@ -1752,7 +1750,7 @@ val STM_STATE_def = Define `
                  (ZIP
                     (LEAST_SORT (MAP FST xs),
                      ADDR_MODE4_ADDRESSES am4 x (MAP FST xs)));
-             undefined := F; cp_registers := s.cp_registers |>`;
+             undefined := F; cp_state := s.cp_state |>`;
 
 val stm = simple_clean ARM_STM [``~(Rd = 15w:word4)``]
 val stm = Q.INST [`opt`|->`ADDR_MODE4_CMD am4`] stm
@@ -1972,21 +1970,21 @@ val mem_EQ_mem_pc = prove(
   METIS_TAC [addr30_addr32])
 
 val mem_SIMP = prove(
-  ``(mem_byte a <| registers := r; psrs := p; memory := s.memory; undefined := u; cp_registers := cp |> = 
+  ``(mem_byte a <| registers := r; psrs := p; memory := s.memory; undefined := u; cp_state := cp |> = 
      mem_byte a s) /\ 
-    (mem b <| registers := r; psrs := p; memory := s.memory; undefined := u; cp_registers := cp |> = 
+    (mem b <| registers := r; psrs := p; memory := s.memory; undefined := u; cp_state := cp |> = 
      mem b s)``,
   SRW_TAC [] [mem_byte_def,mem_def]);
 
 val status_SIMP = prove(
-  ``(status <| registers := r; psrs := s.psrs; memory := m; undefined := u; cp_registers := cp |> = 
+  ``(status <| registers := r; psrs := s.psrs; memory := m; undefined := u; cp_state := cp |> = 
      status s)``,
   SRW_TAC [] [status_def,statusN_def,statusZ_def,statusC_def,statusV_def]);
 
 val status_SIMP2 = prove(
   ``status <|registers := r;
              psrs := CPSR_WRITE s.psrs (SET_NZCV (n,z,c,v) (CPSR_READ s.psrs)); 
-             memory := s.memory; undefined := u; cp_registers := cp|> = 
+             memory := s.memory; undefined := u; cp_state := cp|> = 
     (n,z,c,v)``,
   SRW_TAC [] [status_def,statusN_def,statusZ_def,statusC_def,statusV_def] 
   \\ CONV_TAC PSR_CONV \\ REWRITE_TAC []);
@@ -1994,17 +1992,17 @@ val status_SIMP2 = prove(
 val status_SIMP3 = prove(
   ``status <|registers := r;
              psrs := CPSR_WRITE s.psrs (SET_NZ (n,z) (CPSR_READ s.psrs)); 
-             memory := s.memory; undefined := u; cp_registers := cp|> = 
+             memory := s.memory; undefined := u; cp_state := cp|> = 
     (n,z,statusC s,statusV s)``,
   SRW_TAC [] [status_def,statusN_def,statusZ_def,statusC_def,
     statusV_def,SET_NZ_def,SET_NZC_def] \\ CONV_TAC PSR_CONV \\ REWRITE_TAC []);
 
 val undefined_SIMP = prove(
-  ``<|registers := r; psrs := p; memory := m; undefined := b; cp_registers := cp|>.undefined = b``,
+  ``<|registers := r; psrs := p; memory := m; undefined := b; cp_state := cp|>.undefined = b``,
   SRW_TAC [] []);
 
 val state_mode_SIMP = prove(
-  ``state_mode <| registers := r; psrs := s.psrs; memory := m; undefined := u; cp_registers := cp |> = 
+  ``state_mode <| registers := r; psrs := s.psrs; memory := m; undefined := u; cp_state := cp |> = 
     state_mode s``,
   SRW_TAC [] [state_mode_def]);
 
@@ -2012,7 +2010,7 @@ val state_mode_SIMP2 = prove(
   ``state_mode
            <|registers := r;
              psrs := CPSR_WRITE s.psrs (SET_NZCV (n,z,c,v) (CPSR_READ s.psrs)); 
-             memory := s.memory; undefined := u; cp_registers := cp|> =
+             memory := s.memory; undefined := u; cp_state := cp|> =
     state_mode s``,
   SIMP_TAC (srw_ss()) [state_mode_def] \\ CONV_TAC PSR_CONV \\ REWRITE_TAC []);
 
@@ -2020,7 +2018,7 @@ val state_mode_SIMP3 = prove(
   ``state_mode
            <|registers := r;
              psrs := CPSR_WRITE s.psrs (SET_NZ (n,z) (CPSR_READ s.psrs)); 
-             memory := s.memory; undefined := u; cp_registers := cp|> =
+             memory := s.memory; undefined := u; cp_state := cp|> =
     state_mode s``,
   SIMP_TAC (srw_ss()) [state_mode_def,SET_NZ_def,SET_NZC_def] 
   \\ CONV_TAC PSR_CONV \\ REWRITE_TAC []);
@@ -2030,7 +2028,7 @@ val pc_SIMP = prove(
   SIMP_TAC bool_ss [pcADD_def,addr32_ADD,addr32_n2w,EVAL ``4*1``] \\ METIS_TAC [WORD_ADD_COMM]);
 
 val set_status_SIMP = prove(
-  ``set_status (sN,sZ,sC,sV) <| registers := r; psrs := s.psrs; memory := m; undefined := u; cp_registers := cp |> =
+  ``set_status (sN,sZ,sC,sV) <| registers := r; psrs := s.psrs; memory := m; undefined := u; cp_state := cp |> =
     set_status (sN,sZ,sC,sV) s``,
   SRW_TAC [] [set_status_def]);
 
@@ -2038,7 +2036,7 @@ val set_status_SIMP2 = prove(
   ``set_status (sN,sZ,sC,sV)            
            <|registers := r;
              psrs := CPSR_WRITE s.psrs (SET_NZCV (n,z,c,v) (CPSR_READ s.psrs)); 
-             memory := s.memory; undefined := u; cp_registers := cp|> =
+             memory := s.memory; undefined := u; cp_state := cp|> =
     set_status (sN,sZ,sC,sV) s``,
   SRW_TAC [] [set_status_def] \\ CONV_TAC PSR_CONV \\ REWRITE_TAC []);
 
@@ -2046,7 +2044,7 @@ val set_status_SIMP3 = prove(
   ``set_status (sN,sZ,sC,sV)            
            <|registers := r;
              psrs := CPSR_WRITE s.psrs (SET_NZ (n,z) (CPSR_READ s.psrs)); 
-             memory := s.memory; undefined := u; cp_registers := cp|> =
+             memory := s.memory; undefined := u; cp_state := cp|> =
     set_status (sN,sZ,sC,sV) s``,
   SRW_TAC [] [set_status_def,SET_NZ_def,SET_NZC_def] 
   \\ CONV_TAC PSR_CONV \\ REWRITE_TAC []);
@@ -2232,7 +2230,7 @@ val mem_byte_SIMP2 = prove(
   ``~(q = y) ==>
     (mem_byte q
          <|registers := r; psrs := p;
-           memory := MEM_WRITE_BYTE s.memory y x; undefined := u; cp_registers := cp|> =
+           memory := MEM_WRITE_BYTE s.memory y x; undefined := u; cp_state := cp|> =
      mem_byte q s)``,
   STRIP_TAC 
   \\ STRIP_ASSUME_TAC (Q.SPEC `q` EXISTS_addr32)
@@ -2249,7 +2247,7 @@ val mem_byte_SIMP2 = prove(
 val mem_byte_SIMP3 = prove(
   ``(mem_byte q
          <|registers := r; psrs := p;
-           memory := MEM_WRITE_BYTE s.memory q x; undefined := u; cp_registers := cp|> =
+           memory := MEM_WRITE_BYTE s.memory q x; undefined := u; cp_state := cp|> =
      x)``,
   SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,UPDATE_def,ADDR30_def,
     GSYM addr30_def,LET_DEF,GET_BYTE_SET_BYTE]);
@@ -2258,7 +2256,7 @@ val mem_byte_SIMP4 = prove(
   ``~(p' = addr30 q) ==>
     (mem p'
          <|registers := r; psrs := p;
-           memory := MEM_WRITE_BYTE s.memory q x; undefined := u; cp_registers := cp|> =
+           memory := MEM_WRITE_BYTE s.memory q x; undefined := u; cp_state := cp|> =
      mem p' s)``,
   SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_BYTE_def,UPDATE_def,ADDR30_def,
     GSYM addr30_def,LET_DEF,GET_BYTE_SET_BYTE]);
@@ -2288,7 +2286,7 @@ val str = (UNDISCH_ALL o Q.INST [`Rd`|->`a`,`Rn`|->`b`,`c`|->`c_flag`] o DISCH_A
 
 val mem_SIMP_EQ = prove(
   ``mem (addr30 z) <|registers := r; psrs := p;
-          memory := MEM_WRITE_WORD s.memory z x; undefined := u; cp_registers := cp|> = x``,
+          memory := MEM_WRITE_WORD s.memory z x; undefined := u; cp_state := cp|> = x``,
   SRW_TAC [] [mem_def,MEM_WRITE_WORD_def,UPDATE_def,ADDR30_def,addr30_def]);
 
 val mem_SIMP_avoid_LEMMA = prove(
@@ -2304,14 +2302,14 @@ val mem_byte_SIMP_avoid = prove(
   ``~(addr30 p' = addr30 q) ==>
     (mem_byte p'
        <|registers := r; psrs := p;
-         memory := MEM_WRITE_WORD s.memory q x; undefined := F; cp_registers := cp|> =
+         memory := MEM_WRITE_WORD s.memory q x; undefined := F; cp_state := cp|> =
      mem_byte p' s)``,
   SIMP_TAC (srw_ss()) [mem_byte_def,mem_def,MEM_WRITE_WORD_def,ADDR30_def,GSYM addr30_def,UPDATE_def]);
 
 val mem_SIMP_avoid = prove(
   ``~(q = addr30 y) ==> (mem q
        <|registers := r; psrs := p;
-         memory := MEM_WRITE_WORD s.memory y x; undefined := u; cp_registers := cp|> = mem q s)``,
+         memory := MEM_WRITE_WORD s.memory y x; undefined := u; cp_state := cp|> = mem q s)``,
   SRW_TAC [] [mem_def,MEM_WRITE_WORD_def,UPDATE_def,ADDR30_def,addr30_def]);
 
 val arm_STR_NONALIGNED = store_thm("arm_STR_NONALIGNED",

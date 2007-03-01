@@ -38,6 +38,7 @@ val SEP_F_def = Define `SEP_F s = F`;
 
 val SEP_CONJ_def = Define `SEP_CONJ P Q = (\s. P s /\ Q s)`;
 val SEP_DISJ_def = Define `SEP_DISJ P Q = (\s. P s \/ Q s)`;
+val SEP_NOT_def  = Define `SEP_NOT P = (\s. ~((P s):bool))`;
 
 val SEP_IMP_def  = Define `SEP_IMP P Q = !s. P s ==> Q s`;
 
