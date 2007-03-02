@@ -70,6 +70,8 @@ val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] wordsSyntax.word_extract_tm;
 (* f_ldc : state is_usr ireg data => state                                    *)
 (*                                        ... operation for LDC instruction   *)
 (*                                                                            *)
+(* n_ldc : state is_usr ireg => num       ... number of words to load         *)
+(*                                                                            *)
 (* -------------------------------------------------------------------------- *)
 
 val _ = Hol_datatype `coproc =
@@ -78,7 +80,8 @@ val _ = Hol_datatype `coproc =
      f_mrc  : 'a -> bool -> word32 -> word32;
      f_mcr  : 'a -> bool -> word32 -> word32 -> 'a;
      f_stc  : 'a -> bool -> word32 -> word32 option list;
-     f_ldc  : 'a -> bool -> word32 -> word32 list -> 'a
+     f_ldc  : 'a -> bool -> word32 -> word32 list -> 'a;
+     n_ldc  : 'a -> bool -> word32 -> num
   |>`;
 
 (* -------------------------------------------------------------------------- *)
@@ -125,7 +128,12 @@ val ADD_COPROC = Define`
                    if cp2.absent is_usr ireg then
                      SND state
                    else
-                     cp2.f_ldc (SND state) is_usr ireg data)
+                     cp2.f_ldc (SND state) is_usr ireg data);
+       n_ldc := \state is_usr ireg.
+                   if cp1.absent is_usr ireg then
+                     cp2.n_ldc (SND state) is_usr ireg
+                   else
+                     cp1.n_ldc (FST state) is_usr ireg
     |>`;
 
 (* -------------------------------------------------------------------------- *)
@@ -196,7 +204,7 @@ val OUT_CP_def = Define`
                else if (ic = ldc_stc) /\ ~(ireg %% 20) then
                  cp.f_stc state is_usr ireg 
                else
-                 [];
+                 GENLIST (K NONE) (cp.n_ldc state is_usr ireg);
            absent := F |>
       else
         <| data := []; absent := T |>`;
@@ -240,16 +248,16 @@ val NEXT_ARM_SYS_def = Define`
     in
     let cp_out  = OUT_CP cp state.cp_state ireg arm_out
     in
-    let bus = bus_op arm_out state.cp_state cp_out.data state.memory
+    let b = bus_op arm_out state.cp_state cp_out.data state.memory
     in
-    let r = RUN_ARM s (if IS_SOME bus.abort then
-                          SOME (THE bus.abort)
+    let r = RUN_ARM s (if IS_SOME b.abort then
+                          SOME (THE b.abort)
                        else
                           NONE)
-                       bus.data cp_out.absent
-    and p = RUN_CP cp bus.cp_state cp_out.absent arm_out.user ireg bus.data
+                       b.data cp_out.absent
+    and p = RUN_CP cp b.cp_state cp_out.absent arm_out.user ireg b.data
     in
-      <| registers := r.reg; psrs := r.psr; memory := bus.memory;
+      <| registers := r.reg; psrs := r.psr; memory := b.memory;
          undefined := (~state.undefined /\ arm_out.cpi /\ cp_out.absent);
          cp_state := p |>`;
 
@@ -358,12 +366,12 @@ val NEXT_ARM_MMU = store_thm("NEXT_ARM_MMU",
     in
     let cp_out  = OUT_CP cp state.cp_state ireg arm_out
     in
-    let bus = TRANSFERS arm_out state.cp_state cp_out.data state.memory
+    let b = TRANSFERS arm_out state.cp_state cp_out.data state.memory
     in
-    let r = RUN_ARM s NONE bus.data cp_out.absent
-    and p = RUN_CP cp state.cp_state cp_out.absent arm_out.user ireg bus.data
+    let r = RUN_ARM s NONE b.data cp_out.absent
+    and p = RUN_CP cp state.cp_state cp_out.absent arm_out.user ireg b.data
     in
-      <| registers := r.reg; psrs := r.psr; memory := bus.memory;
+      <| registers := r.reg; psrs := r.psr; memory := b.memory;
          undefined := (~state.undefined /\ arm_out.cpi /\ cp_out.absent);
          cp_state := p |>`,
   SRW_TAC [boolSimps.LET_ss] [NEXT_ARM_SYS_def,NEXT_ARM_MMU_def,TRANSFERS]);
@@ -804,9 +812,6 @@ val iclass_decl = `iclass = swp | mrs | msr | data_proc | mla_mul |
                             ldr_str | ldrh_strh | ldm_stm | br | swi_ex |
                             cdp_und | mcr | mrc | ldc_stc | unexec`;
 
-val RHS_REWRITE_RULE =
-  GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
-
 val n2w_w2n_rule = GEN_ALL o SIMP_RULE bool_ss [wordsTheory.n2w_w2n];
 
 val spec_word_rule16 = n2w_w2n_rule o Q.SPEC `w2n (w:word16)`;
@@ -815,7 +820,7 @@ val spec_word_rule32 = n2w_w2n_rule o Q.SPEC `w2n (w:word32)`;
 val spec_word_rule12 =
   n2w_w2n_rule o INST [`opnd2` |-> `w2n (w:word12)`] o SPEC_ALL;
 
-val mem_read_rule = ONCE_REWRITE_RULE [GSYM mem_read_def];
+val mem_rule = REWRITE_RULE [GSYM mem_read_def, GSYM mem_write_def];
 
 val _ = ConstMapML.insert ``n2w_itself``;
 
@@ -826,35 +831,25 @@ fun mk_word n =
     EmitML.MLSIG w
   end;
 
-val defs_rule =
-  BETA_RULE o PURE_REWRITE_RULE
-    [GSYM n2w_itself_def, GSYM w2w_itself_def, GSYM sw2sw_itself_def,
-     GSYM word_concat_itself_def, GSYM word_extract_itself_def,
-     GSYM mem_write_def, literal_case_THM,
-     GSYM fcpTheory.FCPi_def, GSYM fcpTheory.mk_fcp_def] o
-  RHS_REWRITE_RULE [GSYM word_eq_def];
-
-val _ = let open EmitML in emitML (!Globals.emitMLDir)
-    ("bsubst", OPEN ["num", "fcp", "words"]
-         :: MLSIG "type 'a word = 'a wordsML.word"
-         :: MLSIG "type num = numML.num"
-         :: MLSIG "type word2 = wordsML.word2"
-         :: MLSIG "type word8 = wordsML.word8"
-         :: MLSIG "type word16 = wordsML.word16"
-         :: MLSIG "type word30 = wordsML.word30"
-         :: MLSIG "type word32 = wordsML.word32"
-         :: MLSTRUCT "type mem = word30->word32"
-         :: MLSIG "type mem"
-         :: MLSTRUCT "val mem_updates = ref ([]: word30 list)"
-         :: MLSIG "val mem_updates : word30 list ref"
-         :: DATATYPE (`formats = SignedByte | UnsignedByte
-                               | SignedHalfWord | UnsignedHalfWord
-                               | UnsignedWord`)
-         :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
-         :: map DEFN
-              [LUPDATE_def, mem_read_def,
-               mem_write_def, mem_write_block_def]
-          @ map (DEFN o defs_rule o ONCE_REWRITE_RULE [GSYM mem_read_def])
+val _ = let open EmitML in emitML (!Globals.emitMLDir) ("bsubst",
+  OPEN ["num", "fcp", "words"]
+    :: MLSIG "type 'a word = 'a wordsML.word"
+    :: MLSIG "type num = numML.num"
+    :: MLSIG "type word2 = wordsML.word2"
+    :: MLSIG "type word8 = wordsML.word8"
+    :: MLSIG "type word16 = wordsML.word16"
+    :: MLSIG "type word30 = wordsML.word30"
+    :: MLSIG "type word32 = wordsML.word32"
+    :: MLSTRUCT "type mem = word30->word32"
+    :: MLSIG "type mem"
+    :: MLSTRUCT "val mem_updates = ref ([]: word30 list)"
+    :: MLSIG "val mem_updates : word30 list ref"
+    :: DATATYPE (`formats = SignedByte | UnsignedByte
+                          | SignedHalfWord | UnsignedHalfWord
+                          | UnsignedWord`)
+    :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
+    :: map DEFN [LUPDATE_def, mem_read_def, mem_write_def, mem_write_block_def]
+     @ map (DEFN o wordsLib.WORDS_EMIT_RULE o mem_rule)
               [empty_memory_def, mem_items_def, ADDR30_def, GET_HALF_def,
                SIMP_RULE std_ss [literal_case_DEF] GET_BYTE_def,
                FORMAT_def, SET_BYTE_def, SET_HALF_def,
@@ -903,16 +898,24 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
                               Dabort of num | Fiq | Irq`)
     :: DATATYPE (`arm_input = <| ireg : word32; data : word32 list;
                                  interrupt : interrupt option; no_cp : bool |>`)
+    :: DATATYPE (`coproc =
+           <| absent : bool -> word32 -> bool;
+              f_cdp  : 'a -> bool -> word32 -> 'a;
+              f_mrc  : 'a -> bool -> word32 -> word32;
+              f_mcr  : 'a -> bool -> word32 -> word32 -> 'a;
+              f_stc  : 'a -> bool -> word32 -> word32 option list;
+              f_ldc  : 'a -> bool -> word32 -> word32 list -> 'a;
+              n_ldc  : 'a -> bool -> word32 -> num |>`)
     :: MLSTRUCT "val mem_updates = ref ([]: word30 list)"
     :: MLSIG "val mem_updates : word30 list ref"
-    :: map (DEFN o defs_rule) (map spec_word_rule32
+    :: map (DEFN o wordsLib.WORDS_EMIT_RULE) (map spec_word_rule32
          [DECODE_PSR_THM, DECODE_BRANCH_THM, DECODE_DATAP_THM,
           DECODE_MRS_THM, DECODE_MSR_THM, DECODE_LDR_STR_THM,
            DECODE_MLA_MUL_THM, DECODE_LDM_STM_THM, DECODE_SWP_THM,
            DECODE_LDC_STC_THM, DECODE_LDRH_STRH_THM, DECODE_CDP_THM,
            DECODE_MRC_MCR_THM]
-       @ [USER_def, mode_reg2num_def, DECODE_ARM_def, mode_num_def,
-          exceptions2num_thm, register2num_thm,
+       @ [DECODE_CPN_def, DECODE_CP_def, USER_def, mode_reg2num_def,
+          DECODE_ARM_def, mode_num_def, exceptions2num_thm, register2num_thm,
           num2register, num2condition, SET_IFMODE_def,
           REG_READ_def, REG_WRITE_def, INC_PC_def, FETCH_PC_def,
           SET_NZCV_def, SET_NZC_def, SET_NZ_def,
@@ -935,8 +938,9 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           CONDITION_PASSED2_def, CONDITION_PASSED_def,
           RUN_ARM_def, IS_Reset_def, PROJ_Dabort_def, PROJ_Reset_def ,
           interrupt2exception_def, PROJ_IF_FLAGS_def, NEXT_ARM_def,
-          OUT_ARM_def, mem_read_rule TRANSFER_def, TRANSFERS_def,
-          mem_read_rule NEXT_ARM_MEM, empty_registers_def]))
+          OUT_ARM_def, mem_rule TRANSFER_def, TRANSFERS_def,
+          OUT_CP_def, RUN_CP_def, mem_rule NEXT_ARM_MMU,
+          mem_rule NEXT_ARM_MEM, empty_registers_def]))
  end;
 
 (* -------------------------------------------------------------------------- *)

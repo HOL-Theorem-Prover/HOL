@@ -10,8 +10,6 @@ sig
    val ARM_RULE             : rule
    val ARM_ASSEMBLE_CONV    : conv
    val SORT_UPDATE_CONV     : conv
-   val SORT_FCP_UPDATE_CONV : conv
-   val SORT_LUPDATE_CONV    : conv
 
    val hol_assemble1        : term -> Arbnum.num -> term frag list -> term
    val hol_assemble         : term -> Arbnum.num -> term frag list list -> term

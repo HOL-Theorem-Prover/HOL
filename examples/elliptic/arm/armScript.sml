@@ -817,10 +817,10 @@ val RUN_ARM_def = Define`
       else let (nzcv,i,f,m) = DECODE_PSR (CPSR_READ r.psr) in
         if ~CONDITION_PASSED nzcv ireg then
           inc_pc r
-        else let ic = DECODE_ARM ireg and mode = DECODE_MODE m
+        else let mode = DECODE_MODE m
              and coproc f = if no_cp then r else f r
         in
-          case ic of
+          case DECODE_ARM ireg of
              data_proc -> DATA_PROCESSING r (CARRY nzcv) mode ireg
           || mla_mul   -> MLA_MUL r mode ireg
           || swi_ex    -> EXCEPTION r software
@@ -927,21 +927,100 @@ val ARM_SPEC_def = Define`
   ARM_SPEC t x = let s = STATE_ARM t x in <| state := s; out := OUT_ARM s |>`;
 
 (* ------------------------------------------------------------------------- *)
+(* UNPREDICTABLE                                                             *)
+(* Test for unpredictable behaviour                                          *)
+(*---------------------------------------------------------------------------*)
 
-val SUC_RULE = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV;
+val DATA_PROC_UNPREDICTABLE_def = Define`
+  DATA_PROC_UNPREDICTABLE mode ireg =
+    let (I,opcode,S,Rn,Rd,opnd2) = DECODE_DATAP ireg in
+      (Rd = 15w) /\ S /\ ~TEST_OR_COMP opcode /\ USER mode \/
+      ~S /\ TEST_OR_COMP opcode`;
 
-val GENLIST_EVAL = save_thm("GENLIST_EVAL", SUC_RULE GENLIST);
-val FIRSTN_EVAL = save_thm("FIRSTN_EVAL", SUC_RULE FIRSTN);
-val ELL_EVAL = save_thm("ELL_EVAL", SUC_RULE ELL);
+val MUL_MLA_UNPREDICTABLE_def = Define`
+  MUL_MLA_UNPREDICTABLE ireg =
+    let (L,Sgn,A,S,Rd,Rn,Rs,Rm) = DECODE_MLA_MUL ireg in
+      (Rd = 15w) \/ (Rm = 15w) \/ (Rs = 15w) \/ (A \/ L) /\ (Rn = 15w) \/
+      (Rd = Rm) \/ L /\ ((Rd = Rn) \/ (Rn = Rm))`;
+
+val BRANCH_UNPREDICTABLE_def = Define`
+  BRANCH_UNPREDICTABLE reg ireg =
+    let (L,offset) = DECODE_BRANCH ireg
+    and pc = REG_READ reg usr 15w in
+    let x = sw2sw offset << 2 in
+      if 0w <= x then
+        pc + x <+ pc
+      else
+        pc - x <+ pc`;
+
+val MSR_UNPREDICTABLE_def = Define`
+  MSR_UNPREDICTABLE r mode ireg =
+    let (I,R,bit19,bit16,Rm,opnd) = DECODE_MSR ireg in
+    let psrd = if R then SPSR_READ r.psr mode else CPSR_READ r.psr
+    and src = if I then SND (IMMEDIATE F opnd) else REG_READ r.reg mode Rm in
+      R /\ USER mode \/ bit16 /\ ~USER mode /\ ~(src %% 5 = psrd %% 5)`;
+
+val MRS_UNPREDICTABLE_def = Define`
+  MRS_UNPREDICTABLE mode ireg =
+    let (R,Rd) = DECODE_MRS ireg in
+      (Rd = 15w) \/ ~((11 -- 0) ireg = 0w) \/ ~((19 -- 6) ireg = 0w) \/
+      R /\ USER mode`;
+
+val SWP_UNPREDICTABLE_def = Define`
+  SWP_UNPREDICTABLE ireg =
+    let (B,Rn,Rd,Rm) = DECODE_SWP ireg in
+      (Rd = 15w) \/ (Rn = 15w) \/ (Rm = 15w) \/ (Rn = Rm) \/ (Rn = Rd)`;
+
+val LDM_STM_UNPREDICTABLE_def = Define`
+  LDM_STM_UNPREDICTABLE mode ireg =
+    let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
+    let pc_in_list = list %% 15
+    and l = REGISTER_LIST list in
+      (Rn = 15w) \/ (list = 0w) \/
+      W /\ (if L then MEM Rn l else ~(Rn = HD l)) \/
+      S /\ W /\ ~(pc_in_list /\ L) \/
+      S /\ USER mode`;
+
+val LDR_STR_UNPREDICTABLE_def = Define`
+  LDR_STR_UNPREDICTABLE reg C mode ireg =
+    let (I,P,U,B,W,L,Rn,Rd,offset) = DECODE_LDR_STR ireg in
+    let addr = FST (ADDR_MODE2 reg mode C I P U Rn offset) in
+      (Rd = 15w) /\ (B \/ ~((1 -- 0) addr = 0w)) \/
+      W /\ (Rd = Rn)`;
+
+val LDRH_STRH_UNPREDICTABLE_def = Define`
+  LDRH_STRH_UNPREDICTABLE reg mode ireg =
+    let (P,U,I,W,L,Rn,Rd,offsetH,S,H,offsetL) = DECODE_LDRH_STRH ireg in
+    let addr = FST (ADDR_MODE3 reg mode I P U Rn offsetH offsetL) in
+      (Rd = 15w) \/ W /\ (Rd = Rn) \/ addr %% 0`;
+
+val UNPREDICTABLE_def = Define`
+  UNPREDICTABLE state =
+    let ireg = state.ireg
+    and reg  = state.regs.reg
+    and cpsr = CPSR_READ state.regs.psr in
+    let (nzcv,i,f,m) = DECODE_PSR cpsr in
+    let mode = DECODE_MODE m in
+    (^Rg 31 28 ireg = 4w) \/
+    ~(state.exception = software) /\ CONDITION_PASSED nzcv ireg /\
+    (case DECODE_ARM ireg of
+        data_proc -> DATA_PROC_UNPREDICTABLE mode ireg
+     || mla_mul   -> MUL_MLA_UNPREDICTABLE ireg
+     || br        -> BRANCH_UNPREDICTABLE reg ireg
+     || msr       -> MSR_UNPREDICTABLE state.regs mode ireg
+     || mrs       -> MRS_UNPREDICTABLE mode ireg
+     || swp       -> SWP_UNPREDICTABLE ireg
+     || ldm_stm   -> LDM_STM_UNPREDICTABLE mode ireg
+     || ldr_str   -> LDR_STR_UNPREDICTABLE reg (CARRY nzcv) mode ireg
+     || ldrh_strh -> LDRH_STRH_UNPREDICTABLE reg mode ireg
+     || mcr       -> (^Rg 15 12 ireg = 15w)
+     || _ -> F)`;
+
+(* ------------------------------------------------------------------------- *)
 
 val _ = let open pred_setTheory in
   computeLib.add_persistent_funs
-  ([("GENLIST_EVAL", GENLIST_EVAL),
-    ("FIRSTN_EVAL", FIRSTN_EVAL),
-    ("ELL_EVAL", ELL_EVAL),
-    ("rich_listTheory.SPLITP", SPLITP),
-    ("rich_listTheory.SNOC", SNOC),
-    ("pred_setTheory.IN_INSERT", IN_INSERT),
+  ([("pred_setTheory.IN_INSERT", IN_INSERT),
     ("pred_setTheory.NOT_IN_EMPTY", NOT_IN_EMPTY)] @
   map (fn s => (s, theorem s))
   ["register_EQ_register","num2register_thm","register2num_thm", "mode_EQ_mode",

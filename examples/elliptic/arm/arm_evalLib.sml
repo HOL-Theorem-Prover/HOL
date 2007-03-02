@@ -45,9 +45,9 @@ val EXTRACT_RULE2 = CONV_RULE (CBV_CONV (wordsLib.words_compset()));
 val arm_compset = wordsLib.words_compset();
 
 val _ = Lib.C add_thms arm_compset
-  [FST,SND,SUC_RULE EL,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,APPEND,APPEND_NIL,
-   SUC_RULE ELL,LAST_CONS,listTheory.FRONT_CONS,
-   SUC_RULE GENLIST,SNOC,SUC_RULE FIRSTN,K_THM,listTheory.NULL_DEF,
+  [FST,SND,listTheory.EL_compute,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,
+   APPEND,APPEND_NIL,ELL_compute,LAST_CONS,listTheory.FRONT_CONS,
+   GENLIST_compute,SNOC,FIRSTN_compute,K_THM,listTheory.NULL_DEF,
    register_EQ_register,num2register_thm,register2num_thm,
    mode_EQ_mode,mode2num_thm,mode_case_def,pairTheory.pair_case_thm,
    formats_case_def, psr_EQ_psr,psr2num_thm,
@@ -155,34 +155,33 @@ val _ = Lib.C add_thms arm_compset
    option_case_ID,option_case_SOME_ID,
    option_case_def,SOME_11,NOT_SOME_NONE,PROJ_IF_FLAGS_def,
    sumTheory.OUTL, sumTheory.OUTR, RUN_ARM_def,NEXT_ARM_def,
-   SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] OUT_ARM_def];
+   SIMP_RULE (bool_ss++pred_setSimps.PRED_SET_ss) [] OUT_ARM_def,
 
-val _ = Lib.C add_thms arm_compset
-    [arm_sys_state_accessors, arm_sys_state_updates_eq_literal,
-     arm_sys_state_accfupds, arm_sys_state_fupdfupds, arm_sys_state_literal_11,
-     arm_sys_state_fupdfupds_comp, arm_sys_state_fupdcanon,
-     arm_sys_state_fupdcanon_comp,
-     coproc_accessors, coproc_updates_eq_literal,
-     coproc_accfupds, coproc_fupdfupds,
-     coproc_literal_11, coproc_fupdfupds_comp,
-     coproc_fupdcanon, coproc_fupdcanon_comp,
-     cp_output_accessors, cp_output_updates_eq_literal,
-     cp_output_accfupds, cp_output_fupdfupds, cp_output_literal_11,
-     cp_output_fupdfupds_comp, cp_output_fupdcanon,
-     cp_output_fupdcanon_comp,
-     bus_accessors, bus_updates_eq_literal,
-     bus_accfupds, bus_fupdfupds, bus_literal_11,
-     bus_fupdfupds_comp, bus_fupdcanon,
-     bus_fupdcanon_comp,
+   arm_sys_state_accessors, arm_sys_state_updates_eq_literal,
+   arm_sys_state_accfupds, arm_sys_state_fupdfupds, arm_sys_state_literal_11,
+   arm_sys_state_fupdfupds_comp, arm_sys_state_fupdcanon,
+   arm_sys_state_fupdcanon_comp,
+   coproc_accessors, coproc_updates_eq_literal,
+   coproc_accfupds, coproc_fupdfupds,
+   coproc_literal_11, coproc_fupdfupds_comp,
+   coproc_fupdcanon, coproc_fupdcanon_comp,
+   cp_output_accessors, cp_output_updates_eq_literal,
+   cp_output_accfupds, cp_output_fupdfupds, cp_output_literal_11,
+   cp_output_fupdfupds_comp, cp_output_fupdcanon,
+   cp_output_fupdcanon_comp,
+   bus_accessors, bus_updates_eq_literal,
+   bus_accfupds, bus_fupdfupds, bus_literal_11,
+   bus_fupdfupds_comp, bus_fupdcanon,
+   bus_fupdcanon_comp,
 
-     memop_case_def, fcpTheory.index_comp, decode_cp_enc_coproc,
-     decode_27_enc_coproc, decode_cdp_enc, decode_mrc_mcr_enc,
+   memop_case_def, fcpTheory.index_comp, decode_cp_enc_coproc,
+   decode_27_enc_coproc, decode_cdp_enc, decode_mrc_mcr_enc,
 
-     APPLY_LUPDATE_THM, fcpTheory.FCP_APPLY_UPDATE_THM,
-     ADDR30_def, SET_BYTE_def, SET_HALF_def, TRANSFERS_def, TRANSFER_def,
+   APPLY_LUPDATE_THM, fcpTheory.FCP_APPLY_UPDATE_THM,
+   ADDR30_def, SET_BYTE_def, SET_HALF_def, TRANSFERS_def, TRANSFER_def,
 
-     MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def, MEM_WRITE_WORD_def,
-     MEM_WRITE_def, OUT_CP_def, RUN_CP_def, NO_CP_def, NEXT_ARM_MMU];
+   MEM_WRITE_BYTE_def, MEM_WRITE_HALF_def, MEM_WRITE_WORD_def,
+   MEM_WRITE_def, OUT_CP_def, RUN_CP_def, NO_CP_def, NEXT_ARM_MMU];
 
 val ARM_CONV = CBV_CONV arm_compset;
 val ARM_RULE = CONV_RULE ARM_CONV;
@@ -199,30 +198,20 @@ in
   computeLib.CBV_CONV compset
 end;
 
-val SORT_UPDATE_CONV = let open arm_evalTheory
-  val compset = add_rws reduceLib.num_compset
+val SORT_UPDATE_CONV =
+let open arm_evalTheory fcpTheory
+    val compset = add_rws wordsLib.words_compset
         [o_THM,register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
-         SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR]
+         SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR,
+         SYM FUa_def,FCP_UPDATE_EQ_RULE,FUa_RULE,FUb_RULE,
+         LENGTH,SUC_RULE JOIN,BUTFIRSTN_compute,APPEND,
+         PURE_REWRITE_RULE [SYM Ua_def] UPDATE_LUPDATE,
+         LUa_RULE,LUb_RULE,GSYM LUa_def]
 in
-  computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [Ua_def,Ub_def]
-    THENC SIMP_CONV (srw_ss()) [UPDATE_APPLY_IMP_ID,APPLY_UPDATE_THM]
-end;
-
-val SORT_FCP_UPDATE_CONV = let open arm_evalTheory fcpTheory
-  val compset = add_rws reduceLib.num_compset
-        [SYM FUa_def,FCP_UPDATE_EQ_RULE,FUa_RULE,FUb_RULE,o_THM]
-in
-  computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [FUa_def,FUb_def]
-    THENC SIMP_CONV (srw_ss()++wordsLib.SIZES_ss)
-            [FCP_UPDATE_IMP_ID,FCP_APPLY_UPDATE_THM,FCP_BETA]
-end;
-
-val SORT_LUPDATE_CONV = let open arm_evalTheory
-  val compset = add_rws wordsLib.words_compset
-        [LENGTH,SUC_RULE JOIN,SUC_RULE BUTFIRSTN,APPEND,UPDATE_LUPDATE,
-         LUa_RULE,LUb_RULE,GSYM LUa_def,o_THM]
-in
-  computeLib.CBV_CONV compset THENC PURE_REWRITE_CONV [LUa_def,LUb_def]
+  computeLib.CBV_CONV compset
+    THENC PURE_REWRITE_CONV [Ua_def,Ub_def,FUa_def,FUb_def,LUa_def,LUb_def]
+    THENC SIMP_CONV (srw_ss()) [UPDATE_APPLY_IMP_ID,APPLY_UPDATE_THM,
+            FCP_UPDATE_IMP_ID,FCP_APPLY_UPDATE_THM,FCP_BETA]
 end;
 
 val FOLD_UPDATE_CONV =
@@ -230,7 +219,7 @@ let val compset = add_rws wordsLib.words_compset
       [SET_IFMODE_def,SET_NZCV_def,FOLDL,APPLY_UPDATE_THM,
        psr_EQ_psr,psr2num_thm,mode_num_def,mode_case_def,
        register_EQ_register,register2num_thm,
-       empty_registers_def,empty_memory_def, empty_psrs_def]
+       empty_registers_def,empty_memory_def,empty_psrs_def]
 in
   computeLib.CBV_CONV compset THENC SORT_UPDATE_CONV
 end;
@@ -510,7 +499,7 @@ fun hol_assemble m a l = let
                   (curry mk_comb ``instruction_encode``) o Term) l
   val block = listSyntax.mk_list(code,``:word32``)
 in
-  rhsc (SORT_LUPDATE_CONV (mk_bsubst(mk_word30 a,block,m)))
+  rhsc (SORT_UPDATE_CONV (mk_bsubst(mk_word30 a,block,m)))
 end;
 
 fun hol_assemble1 m a t = hol_assemble m a [t];
@@ -587,7 +576,7 @@ local
     val b = map (fn (m,c) => (mk_word30 m,listSyntax.mk_list(c,``:word32``))) l
     val t = foldr (fn ((a,c),t) => mk_bsubst(a,c,t)) m b
   in
-    rhsc (SORT_LUPDATE_CONV t)
+    rhsc (SORT_UPDATE_CONV t)
   end
 in
   fun assemble m file = assemble_assambler m (parse_arm file);
@@ -633,7 +622,7 @@ in
         val l = List.tabulate(lines, fn i => read_word (data,4 * i + skip))
         val lterm = listSyntax.mk_list(l,``:word32``)
     in
-      rhsc (SORT_LUPDATE_CONV (mk_bsubst(mk_word30 top_addr,lterm,m)))
+      rhsc (SORT_UPDATE_CONV (mk_bsubst(mk_word30 top_addr,lterm,m)))
     end
 end;
 
@@ -701,12 +690,23 @@ fun init f m r s c =
            cp_state := cp_state:^(ty_antiq ttyp) |>``
  end;
 
+(*
+ reg - rator
+ psr - rand rator
+ mem - rand rand rator
+ und - rand rand rand rator
+ cps - rand rand rand rand
+*)
+
 val NEXT_ARM_CONV =
   ARM_CONV THENC
-  ONCE_DEPTH_CONV (RAND_CONV (RAND_CONV SORT_LUPDATE_CONV)) THENC
   ONCE_DEPTH_CONV (RATOR_CONV SORT_UPDATE_CONV) THENC
   ONCE_DEPTH_CONV (RAND_CONV (RATOR_CONV SORT_UPDATE_CONV)) THENC
-  RATOR_CONV ARM_ASSEMBLE_CONV;
+  ONCE_DEPTH_CONV (RAND_CONV (RAND_CONV (RATOR_CONV SORT_UPDATE_CONV))) THENC
+  ONCE_DEPTH_CONV
+    (RAND_CONV (RAND_CONV (RAND_CONV (RAND_CONV SORT_UPDATE_CONV)))) THENC
+  RATOR_CONV ARM_ASSEMBLE_CONV THENC
+  RAND_CONV (RAND_CONV (RAND_CONV (RAND_CONV ARM_ASSEMBLE_CONV)));
 
 fun next(f, t) =
   let val t0 = rhsc t
@@ -751,10 +751,10 @@ fun evaluate_cp (n, f, m, r, s, p) = state (A,pc_ptr) n f (init f m r s p)
 fun eval_cp (n, f, m, r, s, p) = lstate (time,pc_ptr) n f [init f m r s p]
 
 fun evaluate (n, m, r, s) =
-  evaluate_cp (n, ``NO_CP:'a coproc``, m, r, s, ``ARB:'a``);
+  evaluate_cp (n, ``NO_CP:unit coproc``, m, r, s, ``()``);
 
 fun eval (n, m, r, s) =
-  eval_cp (n, ``NO_CP:'a coproc``, m, r, s, ``ARB:'a``);
+  eval_cp (n, ``NO_CP:unit coproc``, m, r, s, ``()``);
 
 (* ------------------------------------------------------------------------- *)
 

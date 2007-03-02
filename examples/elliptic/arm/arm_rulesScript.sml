@@ -175,10 +175,11 @@ val PC_ss = rewrites [TO_WRITE_READ6,REG_WRITE_WRITE];
 val SPEC_TO_PC = (SIMP_RULE (std_ss++PC_ss) [] o
    INST [`Rd` |-> `15w:word4`] o SPEC_ALL);
 
-val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MEM,
+val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MMU,
   RUN_ARM_def,OUT_ARM_def,DECODE_PSR_def,TRANSFERS_def,TRANSFER_def,
   FETCH_PC_def,ADDR30_def,CARRY_NZCV,n2w_11,word_bits_n2w,w2n_w2w,
   word_index,BITS_THM,BIT_ZERO,(GEN_ALL o SPECL [`b`,`NUMERAL n`]) BIT_def,
+  OUT_CP_def, RUN_CP_def,
   cond_pass_enc_data_proc,
   cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,cond_pass_enc_coproc,
   cond_pass_enc_mla_mul,cond_pass_enc_br,cond_pass_enc_swi,
@@ -187,12 +188,12 @@ val ARM_ss = rewrites [FST_COND_RAND,SND_COND_RAND,NEXT_ARM_MEM,
 
 fun SYMBOLIC_EVAL_CONV frag context = GEN_ALL (Thm.DISCH context (SIMP_CONV
     (srw_ss()++boolSimps.LET_ss++SIZES_ss++armLib.PBETA_ss++ARM_ss++frag)
-    [Thm.ASSUME context] ``NEXT_ARM_MEM state``));
+    [Thm.ASSUME context] ``NEXT_ARM_MMU cp state``));
 
 (* ......................................................................... *)
 
-val UNDEF_ss = rewrites [EXCEPTION_def,cond_pass_enc_swi,decode_enc_swi,
-    exception2mode_def,exceptions2num_thm];
+val UNDEF_ss =
+  rewrites [EXCEPTION_def,decode_enc_swi,exception2mode_def,exceptions2num_thm];
 
 val ARM_UNDEF = SYMBOLIC_EVAL_CONV UNDEF_ss ``state.undefined``;
 
@@ -206,11 +207,7 @@ val nop_context =
 fun nop_cntxt i = list_mk_conj
   (mk_eq(``state.memory ((31 >< 2) (state.registers r15))``,i):: nop_context);
 
-val NOP_ss = rewrites [cond_pass_enc_data_proc,
-  cond_pass_enc_data_proc2, cond_pass_enc_data_proc3,cond_pass_enc_coproc,
-  cond_pass_enc_mla_mul,cond_pass_enc_br,cond_pass_enc_swi,
-  cond_pass_enc_ldr_str,cond_pass_enc_ldm_stm,cond_pass_enc_swp,
-  cond_pass_enc_mrs,cond_pass_enc_msr];
+val NOP_ss = rewrites [];
 
 fun eval_nop t = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   (subst [``f:condition -> bool -> word4 ->
@@ -298,11 +295,24 @@ val ARM_MRS_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
 val ARM_MSR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
   ``enc (instruction$MSR c psrd op2)``);
 
+val ARM_CDP_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$CDP c CPn Cop1 CRd CRn CRm Cop2)``);
+
+val ARM_LDC_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$LDC c n options CPn CRd Rn offset)``);
+
+val ARM_STC_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$STC c n options CPn CRd Rn offset)``);
+
+val ARM_MRC_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MRC c CPn Cop1 Rd CRn CRm Cop2)``);
+
+val ARM_MCR_NOP = SYMBOLIC_EVAL_CONV NOP_ss (nop_cntxt
+  ``enc (instruction$MCR c CPn Cop1 Rd CRn CRm Cop2)``);
+
 (* ......................................................................... *)
 
-val BRANCH_ss =
-  rewrites [BRANCH_def,REG_READ_def,
-    cond_pass_enc_br,decode_enc_br,decode_br_enc];
+val BRANCH_ss = rewrites [BRANCH_def,REG_READ_def,decode_enc_br,decode_br_enc];
 
 val ARM_B = UNABBREVL_RULE [`cpsr`,`Reg`,`mode`]
   (SYMBOLIC_EVAL_CONV BRANCH_ss (cntxt [] ``enc (instruction$B c offset)``));
@@ -312,7 +322,7 @@ val ARM_BL = UNABBREVL_RULE [`Reg`]
 
 val SWI_EX_ss =
   rewrites [EXCEPTION_def,exception2mode_def,exceptions2num_thm,
-    cond_pass_enc_swi,decode_enc_swi,cond_pass_enc_coproc,decode_enc_coproc];
+    decode_cp_enc_coproc,decode_enc_swi,decode_enc_coproc,decode_27_enc_coproc];
 
 val ARM_SWI = UNABBREVL_RULE [`Reg`,`mode`]
   (SYMBOLIC_EVAL_CONV SWI_EX_ss (cntxt [] ``enc (instruction$SWI c)``));
@@ -347,9 +357,9 @@ val DP_ss =
    REG_READ_INC_PC,WORD_NEG_cor,WORD_1COMP_ZERO,
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ r m n`) COND_RAND,
-   cond_pass_enc_data_proc, decode_enc_data_proc, decode_data_proc_enc,
-   cond_pass_enc_data_proc2,decode_enc_data_proc2,decode_data_proc_enc2,
-   cond_pass_enc_data_proc3,decode_enc_data_proc3,decode_data_proc_enc3];
+   decode_enc_data_proc, decode_data_proc_enc,
+   decode_enc_data_proc2,decode_data_proc_enc2,
+   decode_enc_data_proc3,decode_data_proc_enc3];
 
 val abbrev_mode1 =
   ``Abbrev (op2 = ADDR_MODE1 state.registers mode (cpsr:word32 %% 29)
@@ -399,7 +409,7 @@ val ARM_MVN =
 
 val MLA_MUL_ss = rewrites [MLA_MUL_def,ALU_multiply_def,SET_NZC_def,
     REG_READ_INC_PC,ALU_MUL,ALU_MLA,WORD_ADD_0,REG_READ_WRITE,
-    cond_pass_enc_mla_mul,decode_enc_mla_mul,decode_mla_mul_enc];
+    decode_enc_mla_mul,decode_mla_mul_enc];
 
 val ARM_MUL = SYMBOLIC_EVAL_CONV MLA_MUL_ss (cntxt
   [``~(Rd = 15w:word4)``,``~(Rd = Rm:word4)``]
@@ -443,7 +453,7 @@ val LDR_STR_ss =
   rewrites [LDR_STR_def,MEM_WRITE_def,BW,
     listTheory.HD,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,
-    cond_pass_enc_ldr_str,decode_enc_ldr_str,decode_ldr_str_enc];
+    decode_enc_ldr_str,decode_ldr_str_enc];
 
 val abbrev_mode2 =
   ``Abbrev (addr_mode2 = ADDR_MODE2 state.registers mode (cpsr:word32 %% 29)
@@ -466,7 +476,7 @@ val SWP_ss =
   rewrites [SWP_def,MEM_WRITE_def,BW,
     listTheory.HD,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,
-    cond_pass_enc_swp,decode_enc_swp,decode_swp_enc];
+    decode_enc_swp,decode_swp_enc];
 
 val ARM_SWP = SYMBOLIC_EVAL_CONV SWP_ss (cntxt [``~(Rm = 15w:word4)``]
   ``enc (instruction$SWP c b Rd Rm Rn)``);
@@ -551,7 +561,7 @@ val LDM_STM_ss =
     listTheory.HD,word_bits_n2w,w2w_n2w,BITS_THM,
     WORD_ADD_0,REG_WRITE_INC_PC,REG_READ_WRITE,REG_READ_INC_PC,
     TRANSFER_LDM, TRANSFER_LDM2, TRANSFER_STM, LDM_LIST_def,
-    cond_pass_enc_ldm_stm,decode_enc_ldm_stm,decode_ldm_stm_enc];
+    decode_enc_ldm_stm,decode_ldm_stm_enc];
 
 val abbrev_mode4 =
   ``Abbrev (addr_mode4 = ADDR_MODE4 opt.Pre opt.Up (Reg (Rd:word4)) list) /\
@@ -589,10 +599,8 @@ val lem3 = SIMP_RULE (std_ss++armLib.PBETA_ss) [] (prove(
   Cases \\ SIMP_TAC std_ss [DECODE_PSRD_def,decode_msr_enc]));
 *)
 
-val MRS_MSR_ss =
-  rewrites [MSR_def,MRS_def,DECODE_PSRD_def,
-    immediate_enc,cond_pass_enc_msr,decode_enc_msr,decode_msr_enc,
-    cond_pass_enc_mrs,decode_enc_mrs,decode_mrs_enc];
+val MRS_MSR_ss = rewrites [MSR_def,MRS_def,DECODE_PSRD_def,
+  immediate_enc,decode_enc_msr,decode_msr_enc,decode_enc_mrs,decode_mrs_enc];
 
 val ARM_MSR = UNABBREVL_RULE [`Reg`]
   (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt []
@@ -600,6 +608,54 @@ val ARM_MSR = UNABBREVL_RULE [`Reg`]
 
 val ARM_MRS = UNABBREVL_RULE [`Reg`]
   (SYMBOLIC_EVAL_CONV MRS_MSR_ss (cntxt [] ``enc (instruction$MRS c r Rd)``));
+
+(* ------------------------------------------------------------------------- *)
+
+val EVERY_N_LDC = prove(
+  `!n. EVERY (\x. ~IS_SOME x) (GENLIST (K NONE) n)`,
+  STRIP_TAC \\ MATCH_MP_TAC my_listTheory.EVERY_GENLIST \\ SRW_TAC [] []);
+
+val SYM_WORD_RULE = ONCE_REWRITE_RULE
+  [Thm.INST_TYPE [alpha |-> ``:word4``] EQ_SYM_EQ];
+
+val ADDRESS_LIST_0 = SIMP_CONV (srw_ss())
+  [ADDRESS_LIST_def,rich_listTheory.GENLIST] ``ADDRESS_LIST x 0``;
+
+val ZIP_COND = SIMP_CONV (bool_ss++boolSimps.LIFT_COND_ss) []
+   ``ZIP (if a then b else c, if a then d else e)``;
+
+val COPROC_ss = rewrites [SYM_WORD_RULE MRC_def,LDC_STC_def,MCR_OUT_def,
+  PROVE [] ``!b x y. (if ~b then x else y) = (if b then y else x)``,
+  ISPEC `cp_output_absent` COND_RAND, ISPEC `cp_output_data` COND_RAND,
+  ISPEC `regs_reg` COND_RAND, ISPEC `regs_psr` COND_RAND,
+  ISPEC `SPLITP IS_NONE` COND_RAND, ISPEC `SPLITP IS_NONE` COND_RAND,
+  ISPEC `LENGTH` COND_RAND, ISPEC `ADDRESS_LIST x` COND_RAND,
+  ISPEC `FOLDL f e` COND_RAND,
+  FST_COND_RAND, ZIP_COND, EVAL ``ELL 1 [a; b]``, ADDRESS_LIST_0,
+  rich_listTheory.LENGTH_GENLIST, CONJUNCT1 rich_listTheory.SPLITP,
+  MATCH_MP (SPEC_ALL my_listTheory.SPLITP_EVERY) (SPEC_ALL EVERY_N_LDC),
+  decode_enc_coproc,decode_cp_enc_coproc,decode_ldc_stc_enc,
+  decode_ldc_stc_20_enc,decode_27_enc_coproc,decode_mrc_mcr_rd_enc];
+
+val ARM_CDP = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV COPROC_ss (cntxt []
+   ``enc (instruction$CDP c CPn Cop1 CRd CRn CRm Cop2)``));
+
+val ARM_LDC = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV COPROC_ss (cntxt []
+   ``enc (instruction$LDC c n options CPn CRd Rn offset)``));
+
+val ARM_STC = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV COPROC_ss (cntxt []
+   ``enc (instruction$STC c n options CPn CRd Rn offset)``));
+
+val ARM_MRC = (UNABBREVL_RULE [`Reg`] o SYM_WORD_RULE)
+  (SYMBOLIC_EVAL_CONV COPROC_ss (cntxt []
+   ``enc (instruction$MRC c CPn Cop1 Rd CRn CRm Cop2)``));
+
+val ARM_MCR = UNABBREVL_RULE [`Reg`]
+  (SYMBOLIC_EVAL_CONV COPROC_ss (cntxt []
+   ``enc (instruction$MCR c CPn Cop1 Rd CRn CRm Cop2)``));
 
 (* ------------------------------------------------------------------------- *)
 
@@ -638,6 +694,11 @@ val _ = save_thm("ARM_SWP_NOP", ARM_SWP_NOP);
 val _ = save_thm("ARM_MRS_NOP", ARM_MRS_NOP);
 val _ = save_thm("ARM_MSR_NOP", ARM_MSR_NOP);
 val _ = save_thm("ARM_UND_NOP", ARM_UND_NOP);
+val _ = save_thm("ARM_CDP_NOP", ARM_CDP_NOP);
+val _ = save_thm("ARM_LDC_NOP", ARM_LDC_NOP);
+val _ = save_thm("ARM_STC_NOP", ARM_STC_NOP);
+val _ = save_thm("ARM_MRC_NOP", ARM_MRC_NOP);
+val _ = save_thm("ARM_MCR_NOP", ARM_MCR_NOP);
 
 val _ = save_thm("ARM_B",   ARM_B);
 val _ = save_thm("ARM_BL",  ARM_BL);
@@ -690,6 +751,12 @@ val _ = save_thm("ARM_SWP", ARM_SWP);
 
 val _ = save_thm("ARM_MRS",ARM_MRS);
 val _ = save_thm("ARM_MSR",ARM_MSR);
+
+val _ = save_thm("ARM_CDP", ARM_CDP);
+val _ = save_thm("ARM_LDC", ARM_LDC);
+val _ = save_thm("ARM_STC", ARM_STC);
+val _ = save_thm("ARM_MRC", ARM_MRC);
+val _ = save_thm("ARM_MCR", ARM_MCR);
 
 (* ------------------------------------------------------------------------- *)
 

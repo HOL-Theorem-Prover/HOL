@@ -144,6 +144,16 @@ val FOLDL_MAP2 = store_thm("FOLDL_MAP2",
     THEN ASM_REWRITE_TAC[MAP,FOLDL,FOLDL_SNOC,MAP_SNOC,FOLDR]
     THEN BETA_TAC THEN REWRITE_TAC[]);
 
+val SPLITP_EVERY = store_thm("SPLITP_EVERY",
+  `!P l. EVERY (\x. ~P x) l ==> (SPLITP P l = (l, []))`,
+  Induct_on `l` THEN SRW_TAC [] [SPLITP]);
+
+val EVERY_GENLIST = store_thm("EVERY_GENLIST",
+  `!n. (!i. i < n ==> P (f i)) ==> EVERY P (GENLIST f n)`,
+  Induct THEN SRW_TAC [] [ALL_EL_SNOC,GENLIST]
+    THEN `!i. i < n ==> P (f i)` by ASM_SIMP_TAC arith_ss []
+    THEN METIS_TAC []);
+
 (* ------------------------------------------------------------------------- *)
 
 val _ = export_theory();

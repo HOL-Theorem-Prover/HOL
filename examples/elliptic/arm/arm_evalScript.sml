@@ -1091,6 +1091,14 @@ val decode_ldc_stc_enc = store_thm("decode_ldc_stc_enc",
   SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
 
+val decode_ldc_stc_20_enc = store_thm("decode_ldc_stc_20_enc",
+  `(!cond n opt cpn crd rn offset.
+      enc (instruction$LDC cond n opt cpn crd rn offset) %% 20) /\
+    !cond n opt cpn crd rn offset.
+      ~(enc (instruction$STC cond n opt cpn crd rn offset) %% 20)`,
+  SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+
 val decode_cdp_enc = store_thm("decode_cdp_enc",
   `(!cond cpn cop1 crd crn crm cop2.
       DECODE_CDP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
