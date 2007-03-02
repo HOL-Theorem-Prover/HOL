@@ -12,6 +12,8 @@ sig
     val WORDS_RULE    : rule
     val WORDS_TAC     : tactic
 
+    val WORDS_EMIT_RULE : rule
+
     val Cases_on_word : term frag list -> tactic
     val Cases_word    : tactic
 

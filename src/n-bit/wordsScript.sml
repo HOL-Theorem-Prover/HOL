@@ -2340,6 +2340,7 @@ val _ = List.app mk_word_size sizes;
 
 (* ------------------------------------------------------------------------- *)
 
+val word_index_def = Define `word_index (w:'a word) n = w %% n`;
 val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n):bool ** 'a`;
 val w2w_itself_def = Define `w2w_itself (:'a) w = (w2w w): bool ** 'a`;
 val sw2sw_itself_def = Define `sw2sw_itself (:'a) w = (sw2sw w): bool ** 'a`;
@@ -2422,7 +2423,7 @@ in
            word_2comp_n2w, word_div_n2w, word_sdiv_def,
            MOD_WL word_add_n2w, word_sub_def, MOD_WL word_mul_n2w,
            word_lsr_n2w, word_asr_n2w, word_ror_n2w, word_rol_n2w,
-           word_rrx_n2w, word_index_n2w,
+           word_rrx_n2w, REWRITE_RULE [GSYM word_index_def] word_index_n2w,
            word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
            word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w,
            fromNum_def])
