@@ -28,10 +28,11 @@ Currently here are the following:
 
   * arm6
 
-       This directory contains a formal model of the ARM
-       (Acorn Risc Machine), version 6, along with a proof of
-       correctness. The specifications and proofs are due to Anthony Fox,
-       and arise from a collaboration between Cambridge, Leeds, and ARM.
+       This directory contains a formal model of the ARM6
+       processor core (which implements v3 of the ARM architecture),
+       along with a proof of correctness.  The specifications and
+       proofs are due to Anthony Fox, and arise from a collaboration
+       between Cambridge, Leeds and ARM.
 
   * autopilot.sml
 
@@ -90,14 +91,6 @@ Currently here are the following:
 
        A proof that the square root of two is not rational. Adapted
        from a proof by John Harrison.
-
-  * sunrise
-
-       This directory provides a very thorough implementation of
-       Hoare logic for a simple imperative language with mutually
-       recursive procedures. Verification condition generators are
-       supplied (and proved correct in HOL). The development includes
-       illustrative examples and documentation. Author: Peter Homeier.
 
   * taut.sml
 
