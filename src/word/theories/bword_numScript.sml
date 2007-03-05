@@ -42,7 +42,7 @@ val RESQ_WORDLEN_TAC =
 (*---------------------------------------------------------------*)
 
 val BV_DEF = new_definition("BV_DEF",
-    (--`BV b = (b => SUC 0 | 0)`--));
+    (--`BV b = (if b then SUC 0 else 0)`--));
 
 (* BNVAL w converts the boolean word w to a num *)
 

@@ -1053,7 +1053,7 @@ REPEAT GEN_TAC THEN STRIP_TAC
     (ASSUME_TAC o Q.GEN`y` o Q.DISCH`R (y:'a) (x:'a)`
                 o (fn th => REWRITE_RULE[GSYM the_fun_def] th)
                 o SELECT_RULE o UNDISCH o Q.ID_SPEC)
-  THEN Q.EXISTS_TAC`\p. R p x => M (the_fun R M p) p | ARB` (* witness *)
+  THEN Q.EXISTS_TAC`\p. if R p x then M (the_fun R M p) p else ARB` (* witness *)
   THEN REWRITE_TAC[approx_ext] THEN BETA_TAC THEN GEN_TAC
   THEN COND_CASES_TAC
   THEN ASM_REWRITE_TAC[]

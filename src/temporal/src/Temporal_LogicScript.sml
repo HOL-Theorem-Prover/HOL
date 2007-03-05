@@ -1009,9 +1009,9 @@ val SBEFORE_AS_BEFORE = TAC_PROOF(
 
 
 val WHEN_SWHEN_LEMMA = TAC_PROOF(
-	([],--`(!t1.?t2.b(t2+t1))
-			=> (!t0. (a WHEN b) t0 = (a SWHEN b) t0)
-			 | ?t1.!t2. (a WHEN b)(t2+t1) /\ ~(a SWHEN b)(t2+t1)`--),
+	([],--`if (!t1.?t2.b(t2+t1))
+	       then (!t0. (a WHEN b) t0 = (a SWHEN b) t0)
+    	       else ?t1.!t2. (a WHEN b)(t2+t1) /\ ~(a SWHEN b)(t2+t1)`--),
 	REWRITE_TAC[SWHEN_SIGNAL,WHEN_SIGNAL]
 	THEN ASM_CASES_TAC(--`!t1.?t2.b(t2+t1)`--) THEN ASM_TAC 0 REWRITE1_TAC
 	THENL[
@@ -1519,8 +1519,8 @@ val EVENTUAL_REC = TAC_PROOF(
 
 val WATCH_REC = TAC_PROOF(
 	([],--`(q WATCH b) t0 =
-		 ~q t0 /\ (b t0 => (NEXT (ALWAYS q) t0)
-				|  (NEXT (q WATCH b) t0))`--),
+		 ~q t0 /\ (if b t0 then (NEXT (ALWAYS q) t0)
+				else (NEXT (q WATCH b) t0))`--),
 	PURE_REWRITE_TAC[WATCH,NEXT,ALWAYS]
 	THEN BETA_TAC THEN EQ_TAC THEN STRIP_TAC
 	THENL[
@@ -1601,7 +1601,7 @@ val BEFORE_REC = TAC_PROOF(
 
 
 val SWHEN_REC = TAC_PROOF(
-	([],--`(a SWHEN b) t0 = ((b t0) => (a t0) | (NEXT (a SWHEN b) t0))`--),
+	([],--`(a SWHEN b) t0 = (if (b t0) then (a t0) else (NEXT (a SWHEN b) t0))`--),
 	REWRITE_TAC[SWHEN_AS_WHEN,AND_NEXT]
 	THEN CONV_TAC(RATOR_CONV(REWRITE_CONV[WHEN_REC,EVENTUAL_REC]))
 	THEN BETA_TAC THEN PROP_TAC)
@@ -1893,7 +1893,7 @@ val MORE_EVENT = TAC_PROOF(
  ---------------------------------------------------------------------------*)
 
 val WHEN_FIX = TAC_PROOF(
-	([],--`(y = \t:num.b t => a t | y(t+1)) = ((y = a WHEN b) \/ (y = a SWHEN b))`--),
+	([],--`(y = \t:num. if b t then a t else y(t+1)) = ((y = a WHEN b) \/ (y = a SWHEN b))`--),
 	EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	    ALL_TAC,
@@ -1904,7 +1904,7 @@ val WHEN_FIX = TAC_PROOF(
 	    THEN CONV_TAC(RATOR_CONV(REWRITE_CONV[SWHEN_REC]))
 	    THEN REWRITE_TAC[NEXT] THEN BETA_TAC THEN REWRITE_TAC[ADD1]]
 	(* ----------------------------------------------------------------------------	*)
-	THEN MY_MP_TAC (--`!y. (y = (\t.b t => a t | y(t+1)))
+	THEN MY_MP_TAC (--`!y. (y = (\t. if b t then a t else y(t+1)))
 			==> !t0. (!t.~b(t+t0)) ==> (!t. y(t+t0):bool = y t0)`--)
 	(* ----------------------------------------------------------------------------	*)
 	THENL[
@@ -1915,7 +1915,7 @@ val WHEN_FIX = TAC_PROOF(
 	    THEN BETA_TAC THEN ASM_REWRITE_TAC[ADD1],
 	    DISCH_TAC]
 	(* ----------------------------------------------------------------------------	*)
-	THEN MY_MP_TAC (--`!y. (y = (\t.b t => a t | y(t+1)))
+	THEN MY_MP_TAC (--`!y. (y = (\t. if b t then a t else y(t+1)))
 			 ==> ( !delta t0. (!t. t<delta ==> ~b(t+t0))
 			       ==> (!t. t<delta ==> (y(t+t0):bool = y t0)))`--)
 	(* ----------------------------------------------------------------------------	*)
@@ -1929,7 +1929,7 @@ val WHEN_FIX = TAC_PROOF(
 	    THEN BETA_TAC THEN ASM_REWRITE_TAC[ADD1],
 	    DISCH_TAC]
 	(* ----------------------------------------------------------------------------	*)
-	THEN MY_MP_TAC (--`!y. (y = (\t.b t => a t | y(t+1)))
+	THEN MY_MP_TAC (--`!y. (y = (\t. if b t then a t else y(t+1)))
 			 ==> !delta t0. b(delta+t0) ==> (y(delta+t0):bool = a(delta+t0))`--)
 	(* ----------------------------------------------------------------------------	*)
 	THENL[
@@ -1938,7 +1938,7 @@ val WHEN_FIX = TAC_PROOF(
 	    THEN BETA_TAC THEN ASM_REWRITE_TAC[],
 	    DISCH_TAC]
 	(* ----------------------------------------------------------------------------	*)
-	THEN MY_MP_TAC (--`!y. (y = (\t.b t => a t | y(t+1)))
+	THEN MY_MP_TAC (--`!y. (y = (\t. if b t then a t else y(t+1)))
 			 ==> !t0. (?d.b(d+t0)) ==> (y t0 = (a WHEN b) t0)`--)
 	(* ----------------------------------------------------------------------------	*)
 	THENL[
@@ -2038,14 +2038,14 @@ val WHEN_FIX = TAC_PROOF(
 	THEN CONV_TAC(DEPTH_CONV NOT_FORALL_CONV)
 	THEN REWRITE_TAC[] THEN DISCH_TAC
 	(* ----------------------------------------------------------------------------	*)
-	THEN MY_MP_TAC(--`!y. (y = (\t.b t => a t | y(t+1)))
+	THEN MY_MP_TAC(--`!y. (y = (\t. if b t then a t else y(t+1)))
 			 ==> !m. m<n ==> (y m = (a WHEN b) m)`--)
 	(* ----------------------------------------------------------------------------	*)
 	THENL[
 	    REPEAT STRIP_TAC THEN POP_NO_TAC 9 THEN RES_TAC,
 	    DISCH_TAC]
 	(* ----------------------------------------------------------------------------	*)
-	THEN MY_MP_TAC(--`!y:num->bool. (y = (\t.b t => a t | y(t+1)))
+	THEN MY_MP_TAC(--`!y:num->bool. (y = (\t. if b t then a t else y(t+1)))
 			 ==> !m. y(m+n) = y n`--)
 	(* ----------------------------------------------------------------------------	*)
 	THENL[
@@ -2095,7 +2095,7 @@ val UNTIL_FIX =
 	val th4 = REWRITE_RULE[SYM UNTIL_AS_WHEN,SYM SUNTIL_AS_SWHEN] th3
 	val th5 = BETA_RULE th4
 	val th6 = REWRITE_RULE[
-		TAC_PROOF(([],--`((a==>b)=>b|y) = (~b ==> a /\ y)`--),PROP_TAC)] th5
+		TAC_PROOF(([],--`(if (a==>b) then b else y) = (~b ==> a /\ y)`--),PROP_TAC)] th5
      in
 	th6
     end
@@ -2106,7 +2106,7 @@ val ALWAYS_FIX =
     let val th1 = BETA_RULE(SPEC(--`\t:num.F`--)(GEN(--`a:num->bool`--)WHEN_FIX))
 	val th2 = BETA_RULE(SPEC(--`\t:num.~a t`--)(GEN(--`b:num->bool`--)th1))
 	val th3 = REWRITE_RULE[SYM ALWAYS_AS_WHEN] th2
-	val th4 = REWRITE_RULE[TAC_PROOF(([],--`(~a=>F|y) = a/\y`--),PROP_TAC)] th3
+	val th4 = REWRITE_RULE[TAC_PROOF(([],--`(if ~a then F else y) = a/\y`--),PROP_TAC)] th3
 	val th5 = TAC_PROOF(
 			([],--`(\t.F) SWHEN (\t.~a t) = \t.F`--),
 			CONV_TAC FUN_EQ_CONV THEN BETA_TAC
@@ -2146,7 +2146,7 @@ val BEFORE_FIX = TAC_PROOF(
                                     (`b` |-> `\t:num. a t \/ b t`)] WHEN_FIX))
 	THEN GEN_TAC THEN UNDISCH_HD_TAC THEN BETA_TAC
 	THEN DISCH_TAC THEN POP_ASSUM (REWRITE1_TAC o SYM o SPEC_ALL)
-	THEN REWRITE_TAC[ TAC_PROOF(([],--`((a\/b) => ~b | y) = ~b/\(a\/y)`--),PROP_TAC)])
+	THEN REWRITE_TAC[ TAC_PROOF(([],--`(if (a\/b) then ~b else y) = ~b/\(a\/y)`--),PROP_TAC)])
 
 
 (* ************************************************************	*)

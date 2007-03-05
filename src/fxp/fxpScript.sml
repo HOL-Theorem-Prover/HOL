@@ -58,8 +58,8 @@ val is_signed = Define `is_signed(X) = (signtype((X : (num # num # num))) = 1)`;
 val is_unsigned = Define `is_unsigned(X) = (signtype(X : (num # num # num)) = 0) `;
 
 val fracbits = Define `fracbits(X : (num # num # num)) =
-  (is_unsigned (X) => streamlength (X) - intbits (X) |
-  streamlength (X) - intbits (X) - 1 )`;
+  (if is_unsigned (X) then streamlength (X) - intbits (X)
+   else streamlength (X) - intbits (X) - 1 )`;
 
 (*-----------------------------------------------------------------------
 
@@ -123,7 +123,7 @@ val Null = Define `Null = @(a: fxp). ~(Isvalid a)`;
  Fixed-point real number valuations.
 -------------------------------------------------------------------------*)
 
-val value = Define `(value (a:fxp)) = (Isunsigned a  =>  &(BNVAL(Stream a)) / (&2 pow Fracbits a) |
+val value = Define `(value (a:fxp)) = (if Isunsigned a then &(BNVAL(Stream a)) / (&2 pow Fracbits a) else
   (&(BNVAL (Stream a)) - &(((BV(MSB (Stream a)))) * (2 EXP (Streamlength a))))/(&2 pow Fracbits a))`;
 
 (*-----------------------------------------------------------------------
@@ -132,22 +132,22 @@ val value = Define `(value (a:fxp)) = (Isunsigned a  =>  &(BNVAL(Stream a)) / (&
 
  -------------------------------------------------------------------------*)
 
-val MAX = Define `MAX (X: (num # num # num)) = ((is_unsigned (X)) =>
-  ((&2 pow streamlength (X)) - &1) / (&2 pow fracbits (X))|
+val MAX = Define `MAX (X: (num # num # num)) = (if (is_unsigned (X)) then
+  ((&2 pow streamlength (X)) - &1) / (&2 pow fracbits (X)) else
   ((&2 pow (streamlength (X) - 1)) - &1) / (&2 pow fracbits (X)))`;
 
 
-val MIN = Define `MIN (X: (num # num # num)) = ((is_unsigned (X)) => &0 |
-  ((~(&2 pow (streamlength (X) - 1))) / &2 pow fracbits (X)))`;
+val MIN = Define `MIN (X: (num # num # num)) = (if (is_unsigned (X)) then &0
+  else ((~(&2 pow (streamlength (X) - 1))) / &2 pow fracbits (X)))`;
 
 
 val topfxp = Define `topfxp (X:(num # num # num)) =
-  (is_unsigned (X) => fxp (WORD (REPLICATE (streamlength (X)) T),X)|
-  fxp (WCAT ((WORD [F]), (WORD (REPLICATE ((streamlength (X)) - 1) T))),X))`;
+  (if is_unsigned (X) then fxp (WORD (REPLICATE (streamlength (X)) T),X)
+   else fxp (WCAT ((WORD [F]), (WORD (REPLICATE ((streamlength (X)) - 1) T))),X))`;
 
 val bottomfxp = Define `bottomfxp (X:(num # num # num)) =
-  (is_unsigned (X) => fxp (WORD (REPLICATE (streamlength (X)) F),X) |
-  fxp (WCAT ((WORD [T]), (WORD (REPLICATE ((streamlength (X)) - 1) F))),X))`;
+  (if is_unsigned (X) then fxp (WORD (REPLICATE (streamlength (X)) F),X)
+   else fxp (WCAT ((WORD [T]), (WORD (REPLICATE ((streamlength (X)) - 1) F))),X))`;
 
 (*-----------------------------------------------------------------------
  Characterization of best approximation from a set of abstract values
@@ -185,8 +185,8 @@ val TWOEXPONENT = Define `TWOEXPONENT (x: real) =
 val POSITIVE = Define `POSITIVE (x: real) = (&2 pow (TWOEXPONENT x)) + x`;
 
 val Wrapp = Define `Wrapp (X: num # num # num) (x: real) =
-  (x >= &0 => fxp (WCAT ((BWORD (floor x) (intbits X)) ,
-  (BWORD (floor ((&2 pow fracbits X) * (fraction x))) (fracbits X))),X) |
+  (if x >= &0 then fxp (WCAT ((BWORD (floor x) (intbits X)) ,
+  (BWORD (floor ((&2 pow fracbits X) * (fraction x))) (fracbits X))),X) else
   fxp (WCAT (((BWORD (floor (POSITIVE x)) (intbits X)) WOR (BWORD ((2 EXP (TWOEXPONENT x))) (intbits X))),
   (BWORD (floor ((&2 pow fracbits X) * (fraction (POSITIVE x)))) (fracbits X))),X))`;
 
@@ -219,38 +219,47 @@ val Exception = Hol_datatype
  -------------------------------------------------------------------------*)
 
 val fxp_round = TotalDefn.Define `(fxp_round (X: num # num # num ) (Convergent) (x:real) (mode:overflowmode)  =
-  ((x > (MAX(X)) /\ (mode = Clip) ) => (topfxp (X),overflow) |
-  (x < (MIN(X)) /\ (mode = Clip)) => (bottomfxp (X),overflow) |
-  (x > (MAX(X)) /\ (mode = Wrap) ) => (Wrapp(X) x,overflow) |
-  (x < (MIN(X)) /\ (mode = Wrap)) => (Wrapp(X) x,overflow) |
+  (if (x > (MAX(X)) /\ (mode = Clip) ) then (topfxp (X),overflow)
+   else if (x < (MIN(X)) /\ (mode = Clip)) then (bottomfxp (X),overflow)
+   else if (x > (MAX(X)) /\ (mode = Wrap) ) then (Wrapp(X) x,overflow)
+   else if (x < (MIN(X)) /\ (mode = Wrap)) then (Wrapp(X) x,overflow)
+   else
   (fxp_closest (value) (\a. LSB (Stream a) = F)
   {(a : fxp) | Isvalid a /\ ((Attrib a) = X) } x , no_except))) /\
 
-  (fxp_round (X) (To_zero) x mode = ((x > (MAX(X)) /\ (mode = Clip) ) => (topfxp (X),overflow) |
-  (x < (MIN(X)) /\ (mode = Clip) ) => (bottomfxp (X),overflow) |
-  (x >= (MAX(X)) /\ (mode = Wrap) ) => (Wrapp(X) x,overflow) |
-  (x < (MIN(X)) /\ (mode = Wrap)) => (Wrapp(X) x,overflow) |
+  (fxp_round (X) (To_zero) x mode =
+   (if (x > (MAX(X)) /\ (mode = Clip) ) then (topfxp (X),overflow)
+   else if (x < (MIN(X)) /\ (mode = Clip) ) then (bottomfxp (X),overflow)
+   else if (x >= (MAX(X)) /\ (mode = Wrap) ) then (Wrapp(X) x,overflow)
+   else if (x < (MIN(X)) /\ (mode = Wrap)) then (Wrapp(X) x,overflow)
+   else
   (fxp_closest (value) (\a.T)
   {a | Isvalid a /\ ((Attrib a) = X) /\ abs(value a) <= abs(x)} x, no_except))) /\
 
-  (fxp_round (X) (To_plus_infinity) x mode = ((x > (MAX(X)) /\ (mode = Clip) ) => (topfxp (X),overflow) |
-  (x < (MIN(X)) /\ (mode = Clip) ) => (bottomfxp (X),overflow) |
-  (x > (MAX(X)) /\ (mode = Wrap) ) => (Wrapp(X) x,overflow) |
-  (x < (MIN(X)) /\ (mode = Wrap)) => (Wrapp(X) x,overflow) |
+  (fxp_round (X) (To_plus_infinity) x mode =
+   (if (x > (MAX(X)) /\ (mode = Clip) ) then (topfxp (X),overflow)
+   else if (x < (MIN(X)) /\ (mode = Clip) ) then (bottomfxp (X),overflow)
+   else if (x > (MAX(X)) /\ (mode = Wrap) ) then (Wrapp(X) x,overflow)
+   else if (x < (MIN(X)) /\ (mode = Wrap)) then (Wrapp(X) x,overflow)
+   else
   (fxp_closest (value) (\a.T)
   {a | Isvalid a /\ ((Attrib a) = X) /\ ((value a) >= x) } x, no_except))) /\
 
-  (fxp_round (X) (Truncate) x mode = ((x > (MAX(X)) /\ (mode = Clip) ) => (topfxp (X),overflow) |
-  (x < (MIN(X)) /\ (mode = Clip) ) => (bottomfxp (X),overflow) |
-  (x > (MAX(X)) /\ (mode = Wrap) ) => (Wrapp(X) x,overflow) |
-  (x < (MIN(X)) /\ (mode = Wrap)) => (Wrapp(X) x,overflow) |
+  (fxp_round (X) (Truncate) x mode =
+   (if (x > (MAX(X)) /\ (mode = Clip) ) then (topfxp (X),overflow)
+   else if (x < (MIN(X)) /\ (mode = Clip) ) then (bottomfxp (X),overflow)
+   else if (x > (MAX(X)) /\ (mode = Wrap) ) then (Wrapp(X) x,overflow)
+   else if (x < (MIN(X)) /\ (mode = Wrap)) then (Wrapp(X) x,overflow)
+   else
   (fxp_closest (value) (\a.T)
   {a | Isvalid a /\ ((Attrib a) = X) /\ ((value a) <= x) } x , no_except))) /\
 
-  (fxp_round (X) (Round) x mode = ((x > (MAX(X)) /\ (mode = Clip) ) => (topfxp (X),overflow) |
-  (x < (MIN(X)) /\ (mode = Clip) ) => (bottomfxp (X),overflow) |
-  (x > (MAX(X)) /\ (mode = Wrap) ) => (Wrapp(X) x,overflow) |
-  (x < (MIN(X)) /\ (mode = Wrap)) => (Wrapp(X) x,overflow) |
+  (fxp_round (X) (Round) x mode =
+   (if (x > (MAX(X)) /\ (mode = Clip) ) then (topfxp (X),overflow)
+   else if (x < (MIN(X)) /\ (mode = Clip) ) then (bottomfxp (X),overflow)
+   else if (x > (MAX(X)) /\ (mode = Wrap) ) then (Wrapp(X) x,overflow)
+   else if (x < (MIN(X)) /\ (mode = Wrap)) then (Wrapp(X) x,overflow)
+   else
   (fxp_closest (value) (\a.value (fxp (Stream a, X)) >= x )
   {a | Isvalid a /\ ((Attrib a) = X) } x, no_except)))`;
 
@@ -260,50 +269,53 @@ val fxp_round = TotalDefn.Define `(fxp_round (X: num # num # num ) (Convergent) 
   ------------------------------------------------------------------------*)
 
 val fxpAdd = Define `fxpAdd (X:(num#num#num)) (rnd: fxp_roundmode) (over:overflowmode) (a:fxp) (b:fxp) =
-  (~((Isvalid a) /\ (Isvalid b)) => (Null,invalid) |
-  (value a + value b < &0) /\ is_unsigned (X)  =>
-  (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)|
-  (fxp_round (X) (rnd) (value a + value b) over))`;
+  (if ~((Isvalid a) /\ (Isvalid b)) then (Null,invalid)
+   else if (value a + value b < &0) /\ is_unsigned (X) then (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)
+   else (fxp_round (X) (rnd) (value a + value b) over))`;
 
 val fxpAbs = Define `fxpAbs (X:(num#num#num)) (rnd: fxp_roundmode) (over:overflowmode) (a:fxp) =
-  (~(Isvalid a) => (Null,invalid) |
-  (fxp_round (X) (rnd) (abs(value a)) over))`;
+  (if ~(Isvalid a) then (Null,invalid)
+   else (fxp_round (X) (rnd) (abs(value a)) over))`;
 
 val fxpAShift = Define `fxpAShift (X:(num#num#num)) (rnd: fxp_roundmode) (over:overflowmode) (a:fxp) (b:int) =
-  (~(Isvalid a) => (Null,invalid) | (b < &0) =>
+  (if ~(Isvalid a) then (Null,invalid)
+   else if (b < &0) then
   (fxp_round (X) (rnd)
   (value (fxp (WCAT(WORD(REPLICATE (Num(ABS(b))) (MSB (Stream a))), WSEG (streamlength (Attrib a) - 1)
-  (streamlength (Attrib a) - Num(ABS(b)) ) (Stream a) ) , Attrib a))) over) |
+  (streamlength (Attrib a) - Num(ABS(b)) ) (Stream a) ) , Attrib a))) over)
+   else
   (fxp_round (X) (rnd)
   (value (fxp (WCAT(WORD(REPLICATE (Num(ABS(b))) F),
   WSEG (streamlength (Attrib a) - (SUC(Num(ABS(b))))) 0 (Stream a) ), Attrib a))) over))`;
 
 val fxpAnd = Define `fxpAnd (X:(num#num#num)) (a:fxp) (b:fxp) =
-  (~((Isvalid a) /\ (Isvalid b)) \/ ~((Attrib a) = X) \/ ~((Attrib b) = X)  => (Null,invalid)|
+  (if ~((Isvalid a) /\ (Isvalid b)) \/ ~((Attrib a) = X) \/ ~((Attrib b) = X) then (Null,invalid)
+   else
   (fxp (((Stream a) WAND  (Stream b)), X), no_except))`;
 
 val fxpOr = Define `fxpOr (X:(num#num#num)) (a:fxp) (b:fxp) =
-  (~((Isvalid a) /\ (Isvalid b)) \/  ~((Attrib a) = X) \/ ~((Attrib b) = X)  => (Null,invalid)|
+  (if ~((Isvalid a) /\ (Isvalid b)) \/  ~((Attrib a) = X) \/ ~((Attrib b) = X)  then (Null,invalid)
+   else
   (fxp (((Stream a) WOR  (Stream b)), X), no_except))`;
 
 val fxpSub = Define `fxpSub(X:(num#num#num)) (rnd: fxp_roundmode) (over:overflowmode) (a:fxp) (b:fxp) =
-  (~((Isvalid a) /\ (Isvalid b)) => (Null,invalid) |
-  (value a - value b < &0) /\ is_unsigned (X) =>
-  (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)|
+  (if ~((Isvalid a) /\ (Isvalid b)) then (Null,invalid)
+   else if (value a - value b < &0) /\ is_unsigned (X) then (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)
+   else
   (fxp_round (X) (rnd) (value a - value b) over))`;
 
 val fxpMul = Define `fxpMul(X:(num#num#num)) (rnd: fxp_roundmode) (over:overflowmode) (a:fxp) (b:fxp)=
-  (~((Isvalid a) /\ (Isvalid b)) => (Null,invalid) |
-  (value a * value b < &0) /\ is_unsigned (X) =>
-  (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)|
+  (if ~((Isvalid a) /\ (Isvalid b)) then (Null,invalid)
+   else if (value a * value b < &0) /\ is_unsigned (X) then (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)
+   else
   (fxp_round (X) (rnd) (value a * value b) over))`;
 
 val fxpDiv = Define `fxpDiv(X:(num#num#num)) (rnd: fxp_roundmode) (over:overflowmode) (a:fxp) (b:fxp)=
-  (~((Isvalid a) /\ (Isvalid b)) => (Null,invalid) |
-  (value b = &0) =>
-  (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , invalid) |
-  (value a / value b < &0) /\ is_unsigned (X) =>
-  (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)|
+  (if ~((Isvalid a) /\ (Isvalid b)) then (Null,invalid)
+   else if (value b = &0) then
+  (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , invalid)
+   else if (value a / value b < &0) /\ is_unsigned (X) then (fxp (WORD(REPLICATE (streamlength (X)) F),(X)) , loss_sign)
+   else
   (fxp_round (X) (rnd) (value a / value b) over))`;
 
 (* ------------------------------------------------------------------------- *)

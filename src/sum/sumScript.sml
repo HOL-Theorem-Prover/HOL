@@ -178,9 +178,9 @@ val sum_axiom = store_thm("sum_axiom",
 PURE_REWRITE_TAC [boolTheory.EXISTS_UNIQUE_DEF,o_DEF] THEN
 CONV_TAC (REDEPTH_CONV (BETA_CONV ORELSEC FUN_EQ_CONV)) THEN
 REPEAT (FILTER_STRIP_TAC (--`x:('a,'b)sum->'c`--)) THENL
-[EXISTS_TAC (--`\(x:('a,'b)sum).((?v1. x = INL v1) =>
-                                f(@v1.x = INL v1) |
-				g(@v2.x = INR v2)):'c`--) THEN
+[EXISTS_TAC (--`\(x:('a,'b)sum). if (?v1. x = INL v1)
+                                 then f(@v1.x = INL v1)
+                                 else g(@v2.x = INR v2):'c`--) THEN
  simpLib.SIMP_TAC boolSimps.bool_ss [
    INL_11,INR_11,INR_neq_INL,SELECT_REFL_2
  ],

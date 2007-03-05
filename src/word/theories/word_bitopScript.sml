@@ -385,18 +385,18 @@ val EXISTSABIT_WCAT = store_thm("EXISTSABIT_WCAT",
 
 val SHR_DEF = new_definition("SHR_DEF",
     (--`SHR f b (w:('a)word) =
-      (WCAT((f => (WSEG 1 (PRE(WORDLEN w)) w) | WORD[b]),
+      (WCAT((if f then (WSEG 1 (PRE(WORDLEN w)) w) else WORD[b]),
             (WSEG (PRE(WORDLEN w)) 1 w)), (BIT 0 w))`--));
 
 val SHL_DEF = new_definition("SHL_DEF",
     (--`SHL f (w:('a)word) b =
      (BIT (PRE(WORDLEN w)) w,
-     WCAT((WSEG (PRE(WORDLEN w)) 0 w),(f => (WSEG 1 0 w) | WORD[b])))`--));
+     WCAT((WSEG (PRE(WORDLEN w)) 0 w),(if f then (WSEG 1 0 w) else WORD[b])))`--));
 
 val SHR_WSEG = store_thm("SHR_WSEG",
     (--`!n. !w:('a)word::PWORDLEN n. ! m k. ((m + k) <= n) ==> (0 < m) ==>
      (!f b. SHR f b (WSEG m k w) =
-      ((f => (WCAT((WSEG 1 (k+(m-1)) w),(WSEG (m-1)(k+1)w))) |
+      ((if f then (WCAT((WSEG 1 (k+(m-1)) w),(WSEG (m-1)(k+1)w))) else
             (WCAT( (WORD[b]),       (WSEG (m-1)(k+1)w)))), (BIT k w)))`--),
 
  let val lem1 = ARITH_PROVE (--`0 < m ==> (((m-1)+1) <= m)`--)
@@ -463,7 +463,7 @@ val SHR_WSEG_NF = store_thm("SHR_WSEG_NF",
 val SHL_WSEG = store_thm("SHL_WSEG",
     (--`!n. !w:('a)word::PWORDLEN n. ! m k. ((m + k) <= n) ==> (0 < m) ==>
      (!f b. SHL f (WSEG m k w) b = ((BIT (k+(m-1)) w),
-      (f => (WCAT((WSEG (m-1) k w),(WSEG 1 k w))) |
+      (if f then (WCAT((WSEG (m-1) k w),(WSEG 1 k w))) else
             (WCAT((WSEG (m-1) k w),(WORD[b]))))))`--),
     let fun f t1 tms =
         ((IMP_RES_THEN SUBST1_TAC) o (fn th => MATCH_MP th t1)
@@ -564,7 +564,7 @@ val WSEG_SHL_0 = store_thm("WSEG_SHL_0",
     (--`!n. !w:'a word :: PWORDLEN (SUC n). !m b.
      0 < m /\ m <= (SUC n) ==>
      (WSEG m 0 (SND (SHL f w b)) =
-     WCAT((WSEG (m - 1) 0 w), (f => WSEG 1 0 w |WORD[b])))`--),
+     WCAT((WSEG (m - 1) 0 w), (if f then WSEG 1 0 w else WORD[b])))`--),
 
 REPEAT GGEN_TAC THEN STRIP_TAC THEN REWRITE_TAC[SHL_DEF]
     THEN FIRST_ASSUM (SUBST1_TAC o (MATCH_EQ_MP PWORDLEN))

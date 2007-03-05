@@ -545,7 +545,7 @@ val IS_PREFIX =
         let val th = prove_rec_fn_exists list_Axiom
             (--`(fn l [] = T) /\
              (fn (l:'a list) (CONS x t) =
-                ((NULL l) => F | (((HD l) = x) /\ (fn (TL l) t))))`--)
+                (if (NULL l) then F else (((HD l) = x) /\ (fn (TL l) t))))`--)
         in
         STRIP_ASSUME_TAC th THEN EXISTS_TAC (--`fn:'a list -> 'a list -> bool`--)
         THEN ASM_REWRITE_TAC[HD,TL,NULL_DEF]
@@ -653,7 +653,7 @@ val IS_SUFFIX = let
     let val th = prove_rec_fn_exists SNOC_Axiom
           (--`(fn l [] = T) /\
               (fn l (SNOC (x:'a) t) =
-                ((NULL l) => F | ((LAST l) = x) /\ (fn (BUTLAST l) t)))`--)
+                (if (NULL l) then F else ((LAST l) = x) /\ (fn (BUTLAST l) t)))`--)
     in
         STRIP_ASSUME_TAC th THEN
         EXISTS_TAC (--`fn:'a list -> 'a list -> bool`--)
@@ -674,9 +674,9 @@ val IS_SUBLIST =
           (!x1 l1 x2 l2. fn (CONS x1 l1) (CONS x2 l2) =
            ((x1 = x2) /\ (IS_PREFIX l1 l2)) \/ (fn l1 (CONS x2 l2)))`--),
         let val th = prove_rec_fn_exists list_Axiom
-            (--`(fn [] (l:'a list) = (NULL l => T | F)) /\
+            (--`(fn [] (l:'a list) = (if NULL l then T else F)) /\
              (fn (CONS x t) l =
-                ((NULL l) => T |
+                (if (NULL l) then T else
                  (((x = (HD l)) /\ (IS_PREFIX t (TL l))) \/ (fn t l))))`--)
         in
         STRIP_ASSUME_TAC th THEN EXISTS_TAC (--`fn:'a list -> 'a list -> bool`--)
@@ -696,14 +696,14 @@ val SPLITP = new_recursive_definition
        rec_axiom = list_Axiom,
        def = --`(!P. SPLITP P [] = ([],[])) /\
                 (!P x l. SPLITP P (CONS (x:'a) l) =
-                  (P x => ([], CONS x l) |
+                  (if P x then ([], CONS x l) else
                     ((CONS x (FST(SPLITP P l))), (SND (SPLITP P l)))))`--};
 
 val PREFIX_DEF = new_definition("PREFIX_DEF",
     (--`PREFIX P (l:'a list) = FST (SPLITP ($~ o P) l)`--));
 
 val SUFFIX_DEF = new_definition("SUFFIX_DEF",
-    (--`!P (l:'a list). SUFFIX P l = FOLDL (\l' x. P x => SNOC x l' | []) [] l`--));
+    (--`!P (l:'a list). SUFFIX P l = FOLDL (\l' x. if P x then SNOC x l' else []) [] l`--));
 
 (*--------------------------------------------------------------*)
 (* List of pairs                                                *)
@@ -1000,20 +1000,20 @@ val MAP_MAP_o = store_thm("MAP_MAP_o",
     THEN BETA_TAC THEN REFL_TAC);
 
 val FILTER_FOLDR = store_thm("FILTER_FOLDR",
-    (--`!P (l:'a list). FILTER P l = FOLDR (\x l'. P x => CONS x l' | l') [] l`--),
+    (--`!P (l:'a list). FILTER P l = FOLDR (\x l'. if P x then CONS x l' else l') [] l`--),
     GEN_TAC THEN LIST_INDUCT_TAC THEN REWRITE_TAC[FILTER,FOLDR]
     THEN CONV_TAC (DEPTH_CONV BETA_CONV) THEN ASM_REWRITE_TAC[]);
 
 val FILTER_SNOC = store_thm("FILTER_SNOC",
     (--`!P (x:'a) l. FILTER P (SNOC x l) =
-        (P x => SNOC x (FILTER P l) | FILTER P l)`--),
+        (if P x then SNOC x (FILTER P l) else FILTER P l)`--),
     GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN REWRITE_TAC[FILTER,SNOC]
     THEN GEN_TAC THEN REPEAT COND_CASES_TAC
     THEN ASM_REWRITE_TAC[SNOC]);
 
 val FILTER_FOLDL = store_thm("FILTER_FOLDL",
-    (--`!P (l:'a list). FILTER P l = FOLDL (\l' x. P x => SNOC x l' | l') [] l`--),
+    (--`!P (l:'a list). FILTER P l = FOLDL (\l' x. if P x then SNOC x l' else l') [] l`--),
     GEN_TAC THEN SNOC_INDUCT_TAC THENL[
       REWRITE_TAC[FILTER,FOLDL],
       REWRITE_TAC[FILTER_SNOC,FOLDL_SNOC]
@@ -1391,7 +1391,7 @@ val IS_SUBLIST_REVERSE = store_thm("IS_SUBLIST_REVERSE",
       THEN REFL_TAC]);
 
 val PREFIX_FOLDR = store_thm("PREFIX_FOLDR",
---`!P (l:'a list). PREFIX P l = FOLDR (\x l'. P x => CONS x l' | []) [] l`--,
+--`!P (l:'a list). PREFIX P l = FOLDR (\x l'. if P x then CONS x l' else []) [] l`--,
     GEN_TAC THEN  REWRITE_TAC[PREFIX_DEF]
     THEN LIST_INDUCT_TAC THEN REWRITE_TAC[FOLDR,SPLITP]
     THEN GEN_TAC THEN REWRITE_TAC[o_THM] THEN BETA_TAC
@@ -1401,7 +1401,7 @@ val PREFIX_FOLDR = store_thm("PREFIX_FOLDR",
 
 val PREFIX = store_thm("PREFIX",
    (--`(!P:'a->bool. PREFIX P [] = []) /\
-    (!P (x:'a) l. PREFIX P (CONS x l) = (P x => CONS x (PREFIX P l) |[]))`--),
+    (!P (x:'a) l. PREFIX P (CONS x l) = (if P x then CONS x (PREFIX P l) else []))`--),
     REWRITE_TAC[PREFIX_FOLDR,FOLDR]
     THEN REPEAT GEN_TAC THEN BETA_TAC THEN REFL_TAC);
 
@@ -1595,14 +1595,14 @@ val SOME_EL_FOLDL_MAP = store_thm("SOME_EL_FOLDL_MAP",
 
 val FOLDR_FILTER = store_thm("FOLDR_FILTER",
     (--`!(f:'a->'a->'a) e (P:'a -> bool) l.
-       FOLDR f e (FILTER P l) = FOLDR (\x y. P x => f x y  | y) e l`--),
+       FOLDR f e (FILTER P l) = FOLDR (\x y. if P x then f x y else y) e l`--),
     GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN LIST_INDUCT_TAC
     THEN ASM_REWRITE_TAC[FOLDL, FILTER, FOLDR] THEN BETA_TAC
     THEN GEN_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[FOLDR]);
 
 val FOLDL_FILTER = store_thm("FOLDL_FILTER",
     (--`!(f:'a->'a->'a) e (P:'a -> bool) l.
-       FOLDL f e (FILTER P l) = FOLDL (\x y. P y => f x y | x) e l`--),
+       FOLDL f e (FILTER P l) = FOLDL (\x y. if P y then f x y else x) e l`--),
      GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN SNOC_INDUCT_TAC
      THEN ASM_REWRITE_TAC[FOLDL,FOLDR_SNOC,FOLDL_SNOC,FILTER,FOLDR,FILTER_SNOC]
      THEN BETA_TAC THEN GEN_TAC THEN COND_CASES_TAC
@@ -2446,7 +2446,7 @@ val ELL_LENGTH_CONS = store_thm("ELL_LENGTH_CONS",
     end);
 
 val ELL_LENGTH_SNOC = store_thm("ELL_LENGTH_SNOC",
-    (--`!l:'a list. !x. (ELL (LENGTH l) (SNOC x l) = (NULL l => x | HD l))`--),
+    (--`!l:'a list. !x. (ELL (LENGTH l) (SNOC x l) = (if NULL l then x else HD l))`--),
     LIST_INDUCT_TAC THENL[
       REWRITE_TAC[ELL_0_SNOC,LENGTH,NULL],
       REWRITE_TAC[ELL_SUC_SNOC,LENGTH,HD,NULL,ELL_LENGTH_CONS]]);
@@ -2581,7 +2581,7 @@ val REVERSE_FLAT = store_thm("REVERSE_FLAT",
 
 val MAP_COND = prove(
    (--`!(f:'a-> 'b) c l1 l2.
-        (MAP f (c => l1 | l2)) = (c => (MAP f l1) | (MAP f l2))`--),
+        (MAP f (if c then l1 else l2)) = (if c then (MAP f l1) else (MAP f l2))`--),
    REPEAT GEN_TAC THEN BOOL_CASES_TAC (--`c:bool`--) THEN ASM_REWRITE_TAC[]);
 
 val MAP_FILTER = store_thm("MAP_FILTER",
@@ -2829,7 +2829,7 @@ val EL_IS_EL = store_thm("EL_IS_EL",
     THEN REPEAT STRIP_TAC THEN DISJ2_TAC THEN RES_TAC);
 
 val TL_SNOC = store_thm("TL_SNOC",
-    (--`!(x:'a) l. TL(SNOC x l) = ((NULL l) => [] | SNOC x (TL l))`--),
+    (--`!(x:'a) l. TL(SNOC x l) = (if (NULL l) then [] else SNOC x (TL l))`--),
     GEN_TAC THEN LIST_INDUCT_TAC THEN ASM_REWRITE_TAC[SNOC,TL,NULL]);
 
 val SUB_SUC_LESS = prove(

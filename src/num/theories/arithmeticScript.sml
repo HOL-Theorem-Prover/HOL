@@ -1584,7 +1584,7 @@ val LT_MULT_RCANCEL = store_thm(
   ONCE_REWRITE_TAC [MULT_COMM] THEN REWRITE_TAC [LT_MULT_LCANCEL]);
 
 val SUB_LEFT_ADD = store_thm ("SUB_LEFT_ADD",
-   --`!m n p. m + (n - p) = ((n <= p) => m | (m + n) - p)`--,
+   --`!m n p. m + (n - p) = (if (n <= p) then m else (m + n) - p)`--,
    REPEAT GEN_TAC THEN
    ASM_CASES_TAC (--`n <= p`--) THENL
    [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th,ADD_CLAUSES])
@@ -1597,7 +1597,7 @@ val SUB_LEFT_ADD = store_thm ("SUB_LEFT_ADD",
     IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) LESS_EQ_ADD_SUB]);
 
 val SUB_RIGHT_ADD = store_thm ("SUB_RIGHT_ADD",
-   --`!m n p. (m - n) + p = ((m <= n) => p | (m + p) - n)`--,
+   --`!m n p. (m - n) + p = (if (m <= n) then p else (m + p) - n)`--,
    REPEAT GEN_TAC THEN
    ASM_CASES_TAC (--`m <= n`--) THENL
    [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th,ADD_CLAUSES])
@@ -1611,7 +1611,7 @@ val SUB_RIGHT_ADD = store_thm ("SUB_RIGHT_ADD",
     IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) LESS_EQ_ADD_SUB]);
 
 val SUB_LEFT_SUB = store_thm ("SUB_LEFT_SUB",
-   --`!m n p. m - (n - p) = ((n <= p) => m | (m + p) - n)`--,
+   --`!m n p. m - (n - p) = (if (n <= p) then m else (m + p) - n)`--,
    REPEAT GEN_TAC THEN
    ASM_CASES_TAC (--`n <= p`--) THENL
    [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th,SUB_0])
@@ -1631,7 +1631,7 @@ val SUB_RIGHT_SUB = store_thm ("SUB_RIGHT_SUB",
    PURE_ONCE_ASM_REWRITE_TAC [] THEN REFL_TAC);
 
 val SUB_LEFT_SUC = store_thm ("SUB_LEFT_SUC",
-   --`!m n. SUC (m - n) = ((m <= n) => (SUC 0) | (SUC m) - n)`--,
+   --`!m n. SUC (m - n) = (if (m <= n) then (SUC 0) else (SUC m) - n)`--,
    REPEAT GEN_TAC THEN
    ASM_CASES_TAC (--`m <= n`--) THENL
    [IMP_RES_THEN (fn th => ASM_REWRITE_TAC [th]) (SYM (SPEC_ALL SUB_EQ_0)),

@@ -227,28 +227,28 @@ val closest = new_definition (
 (* ------------------------------------------------------------------------- *)
 
 val round = TotalDefn.Define `(round(X:num#num) (To_nearest) (x:real) =
-  ((x <= ~(threshold(X))) => (minus_infinity(X))
-  | (x >= threshold(X)) => (plus_infinity(X))
-  | (closest (valof(X)) (\a. EVEN(fraction(a)))
+  (if (x <= ~(threshold(X))) then (minus_infinity(X))
+   else if (x >= threshold(X)) then (plus_infinity(X))
+   else (closest (valof(X)) (\a. EVEN(fraction(a)))
   { a | is_finite(X) a } x))) /\
 
   (round(X) (float_To_zero) x =
-  ((x < ~(largest(X))) => (bottomfloat(X))
-  | (x > largest(X)) => (topfloat(X))
-  | (closest (valof(X)) (\x. T)
+  (if (x < ~(largest(X))) then (bottomfloat(X))
+   else if (x > largest(X)) then (topfloat(X))
+   else (closest (valof(X)) (\x. T)
   { a | is_finite(X) a /\ abs(valof(X) a) <= abs(x) } x))) /\
 
   (round(X) (To_pinfinity) x =
-  ( x < ~(largest(X)) => bottomfloat(X)
-  | (x > largest(X)) => plus_infinity(X)
-  | closest (valof(X)) (\x. T)
-  { a | is_finite(X) a /\ valof(X) a >= x } x)) /\
+   if x < ~(largest(X)) then bottomfloat(X)
+   else if (x > largest(X)) then plus_infinity(X)
+   else closest (valof(X)) (\x. T)
+  { a | is_finite(X) a /\ valof(X) a >= x } x) /\
 
   (round(X) (To_ninfinity) x =
-  (x < ~(largest(X)) => minus_infinity(X)
-  | (x > largest(X)) => topfloat(X)
-  | closest (valof(X)) (\x. T)
-  { a | is_finite(X) a /\ valof(X) a <= x } x))`;
+   if x < ~(largest(X)) then minus_infinity(X)
+   else if (x > largest(X)) then topfloat(X)
+   else closest (valof(X)) (\x. T)
+  { a | is_finite(X) a /\ valof(X) a <= x } x)`;
 
 (* ------------------------------------------------------------------------- *)
 (* Rounding to integer values in floating point format.                      *)
@@ -258,28 +258,28 @@ val is_integral = new_definition ("is_integral",
   --`is_integral(X:num#num) (a:(num#num#num)) = is_finite(X) a /\ ?n. abs(valof(X) a) = &n`--);
 
 val intround = TotalDefn.Define `(intround(X:num#num) (To_nearest) (x:real) =
-  ((x <= ~(threshold(X))) => (minus_infinity(X))
-  | (x >= threshold(X)) => (plus_infinity(X))
-  | (closest (valof(X)) (\a. (?n. (EVEN n) /\ (abs(valof(X) a) = &n)))
+  (if (x <= ~(threshold(X))) then (minus_infinity(X))
+   else if (x >= threshold(X)) then (plus_infinity(X))
+   else (closest (valof(X)) (\a. (?n. (EVEN n) /\ (abs(valof(X) a) = &n)))
   { a | is_integral(X) a} x))) /\
 
   (intround(X) float_To_zero x =
-  ((x < ~(largest(X))) => (bottomfloat(X))
-  | (x > largest(X)) => (topfloat(X))
-  | (closest (valof(X)) (\x. T)
+  (if (x < ~(largest(X))) then (bottomfloat(X))
+   else if (x > largest(X)) then (topfloat(X))
+   else (closest (valof(X)) (\x. T)
   { a | is_integral(X) a /\ abs(valof(X) a) <= abs(x) } x))) /\
 
   (intround(X) To_pinfinity x =
-  ((x < ~(largest(X))) => (bottomfloat(X))
-  | (x > largest(X)) => (plus_infinity(X))
-  | (closest (valof(X)) (\x. T)
+  (if (x < ~(largest(X))) then (bottomfloat(X))
+   else if (x > largest(X)) then (plus_infinity(X))
+   else (closest (valof(X)) (\x. T)
   { a | is_integral(X) a /\ valof(X) a >= x } x))) /\
 
   (intround(X) To_ninfinity x =
-  ((x < ~(largest(X))) => (minus_infinity(X))
-  | (x > largest(X)) => (topfloat(X))
-  | (closest (valof(X)) (\x. T)
-  { a | is_integral(X) a /\ valof(X) a <= x } x)))`;
+   if (x < ~(largest(X))) then (minus_infinity(X))
+   else if (x > largest(X)) then (topfloat(X))
+   else (closest (valof(X)) (\x. T)
+  { a | is_integral(X) a /\ valof(X) a <= x } x))`;
 
 (* ------------------------------------------------------------------------- *)
 (* A hack for our (non-standard) treatment of NaNs.                          *)
@@ -295,8 +295,8 @@ val some_nan = new_definition (
 
 val zerosign = new_definition (
   "zerosign",
-  --`zerosign (X:num#num) (s:num) (a:num#num#num) = ( (is_zero(X) a) =>
-  ((s = 0) => plus_zero(X) | minus_zero(X)) | a)`--);
+  --`zerosign (X:num#num) (s:num) (a:num#num#num) = (if (is_zero(X) a) then
+  (if (s = 0) then plus_zero(X) else minus_zero(X)) else a)`--);
 
 (* ------------------------------------------------------------------------- *)
 (* Useful mathematical operations not already in the HOL Light core.         *)
@@ -320,55 +320,47 @@ val fintrnd = new_definition (
 val fadd = new_definition (
   "fadd",
   --`fadd(X:num#num) (m:roundmode) (a:num#num#num) (b:num#num#num) =
-  ((is_nan(X) a) \/ (is_nan(X) b) \/ ((is_infinity(X) a) /\ (is_infinity(X) b) /\ (~(sign(a) = sign(b))))
-  => (some_nan(X))
-    | is_infinity(X) a => a
-      | is_infinity(X) b => b
-        | zerosign(X) ( is_zero(X) a /\ is_zero(X) b /\ (sign(a) = sign(b)) =>  sign(a)
-          | m = To_ninfinity => 1 | 0) (round(X) m (valof(X) a + valof(X) b)))`--);
+  if (is_nan(X) a) \/ (is_nan(X) b) \/ ((is_infinity(X) a) /\ (is_infinity(X) b) /\ (~(sign(a) = sign(b)))) then (some_nan(X))
+  else if is_infinity(X) a then a
+  else if is_infinity(X) b then b
+  else zerosign(X) (if is_zero(X) a /\ is_zero(X) b /\ (sign(a) = sign(b)) then sign(a) else if (m = To_ninfinity) then 1 else 0) (round(X) m (valof(X) a + valof(X) b))`--);
 
 val fsub = new_definition (
   "fsub",
   --`fsub(X:num#num) (m:roundmode) (a:num#num#num) (b:num#num#num) =
-  (is_nan(X) a \/ is_nan(X) b \/ (is_infinity(X) a /\ is_infinity(X) b /\ (sign(a) = sign(b)))
-  => some_nan(X)
-    | is_infinity(X) a => a
-      | is_infinity(X) b => minus(X) b
-        | zerosign(X) ( is_zero(X) a /\ is_zero(X) b /\ ~(sign(a) = sign(b)) => sign(a)
-          | m = To_ninfinity => 1 | 0) (round(X) m (valof(X) a - valof(X) b)))`--);
+  (if is_nan(X) a \/ is_nan(X) b \/ (is_infinity(X) a /\ is_infinity(X) b /\ (sign(a) = sign(b))) then some_nan(X)
+   else if is_infinity(X) a then a
+   else if is_infinity(X) b then minus(X) b
+   else zerosign(X) (if is_zero(X) a /\ is_zero(X) b /\ ~(sign(a) = sign(b)) then sign(a) else if m = To_ninfinity then 1 else 0) (round(X) m (valof(X) a - valof(X) b)))`--);
 
 val fmul =  new_definition (
   "fmul",
   --`fmul(X:num#num) (m:roundmode) (a:num#num#num) (b:num#num#num) =
-  (is_nan(X) a \/ is_nan(X) b \/ is_zero(X) a /\ is_infinity(X) b \/ is_infinity(X) a /\ is_zero(X) b
-  => some_nan(X)
-    | is_infinity(X) a \/ is_infinity(X) b => (sign(a) = sign(b) => plus_infinity(X) | minus_infinity(X))
-      | zerosign(X) ( sign(a) = sign(b) => 0 | 1) (round(X) m (valof(X) a * valof(X) b)))`--);
+  (if is_nan(X) a \/ is_nan(X) b \/ is_zero(X) a /\ is_infinity(X) b \/ is_infinity(X) a /\ is_zero(X) b then some_nan(X)
+   else if is_infinity(X) a \/ is_infinity(X) b then (if sign(a) = sign(b) then plus_infinity(X) else minus_infinity(X))
+   else zerosign(X) (if sign(a) = sign(b) then 0 else 1) (round(X) m (valof(X) a * valof(X) b)))`--);
 
 val fdiv = new_definition (
   "fdiv",
   --`fdiv(X:num#num) (m:roundmode) (a:num#num#num) (b:num#num#num) =
-  (is_nan(X) a \/ is_nan(X) b \/ is_zero(X) a /\ is_zero(X) b \/ is_infinity(X) a /\ is_infinity(X) b
-  => some_nan(X)
-    | is_infinity(X) a \/ is_zero(X) b =>
-        (sign(a) = sign(b) => plus_infinity(X) |  minus_infinity(X))
-      | is_infinity(X) b => (sign(a) = sign(b) => plus_zero(X) | minus_zero(X))
-          | zerosign(X) ( sign(a) = sign(b) => 0 | 1) (round(X) m (valof(X) a / valof(X) b)))`--);
+  (if is_nan(X) a \/ is_nan(X) b \/ is_zero(X) a /\ is_zero(X) b \/ is_infinity(X) a /\ is_infinity(X) b then some_nan(X)
+   else if is_infinity(X) a \/ is_zero(X) b then (if sign(a) = sign(b) then plus_infinity(X) else minus_infinity(X))
+   else if is_infinity(X) b then (if sign(a) = sign(b) then plus_zero(X) else minus_zero(X))
+   else zerosign(X) (if sign(a) = sign(b) then 0 else 1) (round(X) m (valof(X) a / valof(X) b)))`--);
 
 val fsqrt = new_definition ("fsqrt",
   --`fsqrt (X:num#num) (m:roundmode) (a:num#num#num) =
-  ( is_nan(X) a => some_nan(X)
-    | is_zero(X) a \/ is_infinity(X) a /\ (sign(a) = 0) => a
-      | (sign(a) = 1) => some_nan(X)
-        | zerosign(X) (sign(a)) (round(X) m (sqrt(valof(X) a))))`--);
+  (if is_nan(X) a then some_nan(X)
+   else if is_zero(X) a \/ is_infinity(X) a /\ (sign(a) = 0) then a
+   else if (sign(a) = 1) then some_nan(X)
+   else zerosign(X) (sign(a)) (round(X) m (sqrt(valof(X) a))))`--);
 
 
 val frem = new_definition ("frem",
   --`frem(X:num#num) (m:roundmode) (a:num#num#num) (b:num#num#num) =
-  (is_nan(X) a \/ is_nan(X) b \/ is_infinity(X) a \/ is_zero(X) b
-  => some_nan(X)
-    | is_infinity(X) b => a
-      | zerosign(X) (sign(a)) (round(X) m (valof(X) a rem valof(X) b)))`--);
+  (if is_nan(X) a \/ is_nan(X) b \/ is_infinity(X) a \/ is_zero(X) b then some_nan(X)
+   else if is_infinity(X) b then a
+   else zerosign(X) (sign(a)) (round(X) m (valof(X) a rem valof(X) b)))`--);
 
 (* ------------------------------------------------------------------------- *)
 (* Negation is specially simple.                                             *)
@@ -395,16 +387,14 @@ val ccode =  Hol_datatype `
 val fcompare = new_definition (
   "fcompare",
   --`fcompare(X) a b =
-  ( is_nan(X) a \/ is_nan(X) b => Un
-    | is_infinity(X) a /\ (sign(a) = 1) =>
-        (is_infinity(X) b /\ (sign(b) = 1) => Eq | Lt)
-      | is_infinity(X) a /\ (sign(a) = 0) =>
-          (is_infinity(X) b /\ (sign(b) = 0) => Eq | Gt)
-        | is_infinity(X) b /\ (sign(b) = 1) => Gt
-          | is_infinity(X) b /\ (sign(b) = 0) => Lt
-            | valof(X) a < valof(X) b => Lt
-              | valof(X) a = valof(X) b => Eq
-                | Gt)`--);
+  (if is_nan(X) a \/ is_nan(X) b then Un
+   else if is_infinity(X) a /\ (sign(a) = 1) then (if is_infinity(X) b /\ (sign(b) = 1) then Eq else Lt)
+   else if is_infinity(X) a /\ (sign(a) = 0) then (if is_infinity(X) b /\ (sign(b) = 0) then Eq else Gt)
+   else if is_infinity(X) b /\ (sign(b) = 1) then Gt
+   else if is_infinity(X) b /\ (sign(b) = 0) then Lt
+   else if valof(X) a < valof(X) b then Lt
+   else if valof(X) a = valof(X) b then Eq
+   else Gt)`--);
 
 val flt = new_definition (
   "flt",
@@ -597,7 +587,7 @@ val _ = overload_on ("~", Term`$float_neg`);
 
 val float_abs = new_definition (
   "float_abs",
-  --`float_abs a = (a >= Plus_zero => a | (float_neg a))`--);
+  --`float_abs a = (if a >= Plus_zero then a else (float_neg a))`--);
 
 (*---------------------------------------------------------------------------*
  * Write the theory to disk.                                                 *

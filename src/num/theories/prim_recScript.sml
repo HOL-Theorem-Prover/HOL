@@ -395,7 +395,7 @@ val SIMP_REC_THM = store_thm (
  *   (PRE 0 = 0) /\ (!m. PRE(SUC m) = m)
  *---------------------------------------------------------------------------*)
 val PRE_DEF = new_definition("PRE_DEF",
-    --`PRE m = ((m=0) => 0 | @n. m = SUC n)`--);
+    --`PRE m = (if (m=0) then 0 else @n. m = SUC n)`--);
 
 
 val PRE =

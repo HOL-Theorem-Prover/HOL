@@ -2302,7 +2302,7 @@ val Dint = new_definition("Dint",
 (* ------------------------------------------------------------------------ *)
 
 val DIVISION_0 = prove_thm("DIVISION_0",
- Term `!a b. (a = b) ==> (dsize(\n:num. (n = 0) => a | b) = 0)`,
+ Term `!a b. (a = b) ==> (dsize(\n:num. if (n = 0) then a else b) = 0)`,
   REPEAT GEN_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN REWRITE_TAC[COND_ID] THEN
   REWRITE_TAC[dsize] THEN MATCH_MP_TAC SELECT_UNIQUE THEN
   X_GEN_TAC (Term `n:num`) THEN BETA_TAC THEN
@@ -2312,7 +2312,7 @@ val DIVISION_0 = prove_thm("DIVISION_0",
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[ZERO_LESS_EQ]]);;
 
 val DIVISION_1 = prove_thm("DIVISION_1",
-  Term `!a b. a < b ==> (dsize(\n. (n = 0) => a | b) = 1)`,
+  Term `!a b. a < b ==> (dsize(\n. if (n = 0) then a else b) = 1)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[dsize] THEN
   MATCH_MP_TAC SELECT_UNIQUE THEN X_GEN_TAC (Term `n:num`) THEN BETA_TAC THEN
   REWRITE_TAC[NOT_SUC] THEN EQ_TAC THENL
@@ -2339,7 +2339,7 @@ val LESS_1 = prove (Term`!x:num. x < 1 = (x = 0)`,
   REWRITE_TAC [ONE,LESS_0,LESS_MONO_EQ,NOT_LESS_0,GSYM SUC_NOT]);
 
 val DIVISION_SINGLE = prove_thm("DIVISION_SINGLE",
-  Term `!a b. a <= b ==> division(a,b)(\n. (n = 0) => a | b)`,
+  Term `!a b. a <= b ==> division(a,b)(\n. if (n = 0) then a else b)`,
   REPEAT GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[division] THEN
   BETA_TAC THEN REWRITE_TAC[] THEN
   POP_ASSUM(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
@@ -2551,8 +2551,8 @@ val DIVISION_UBOUND_LT = prove_thm("DIVISION_UBOUND_LT",
 (* Divisions of adjacent intervals can be combined into one                 *)
 (* ------------------------------------------------------------------------ *)
 
-val D_tm = Term`\n. n < dsize D1 =>  D1(n) | D2(n - dsize D1)`
-and p_tm = Term`\n. n < dsize D1 => (p1:num->real)(n) | p2(n - dsize D1)`;
+val D_tm = Term`\n. if n < dsize D1 then D1(n) else D2(n - dsize D1)`
+and p_tm = Term`\n. if n < dsize D1 then (p1:num->real)(n) else p2(n - dsize D1)`;
 
 val DIVISION_APPEND_LEMMA1 = prove(
  Term `!a b c D1 D2.
@@ -2560,14 +2560,14 @@ val DIVISION_APPEND_LEMMA1 = prove(
     ==>
     (!n. n < dsize D1 + dsize D2
          ==>
-         (\n. n < dsize D1 => D1(n) | D2(n - dsize D1)) (n)
+         (\n. if n < dsize D1 then D1(n) else D2(n - dsize D1)) (n)
             <
-         (\n. n < dsize D1 => D1(n) | D2(n - dsize D1)) (SUC n)) /\
+         (\n. if n < dsize D1 then D1(n) else D2(n - dsize D1)) (SUC n)) /\
     (!n. n >= dsize D1 + dsize D2
          ==>
-         ((\n. n<dsize D1 => D1(n) | D2(n - dsize D1)) (n)
+         ((\n. if n<dsize D1 then D1(n) else D2(n - dsize D1)) (n)
            =
-          (\n. n<dsize D1 => D1(n) | D2(n - dsize D1)) (dsize D1 + dsize D2)))`,
+          (\n. if n<dsize D1 then D1(n) else D2(n - dsize D1)) (dsize D1 + dsize D2)))`,
   REPEAT GEN_TAC THEN STRIP_TAC THEN CONJ_TAC THEN
   X_GEN_TAC (Term`n:num`) THEN DISCH_TAC THEN BETA_TAC THENL
    [ASM_CASES_TAC (Term`SUC n < dsize D1`) THEN ASM_REWRITE_TAC[] THENL
@@ -2617,7 +2617,7 @@ val DIVISION_APPEND_LEMMA2 = prove(
  Term`!a b c D1 D2.
     division(a,b) D1 /\ division(b,c) D2
       ==>
-      (dsize(\n. n < dsize D1 => D1(n) | D2(n - dsize D1))
+      (dsize(\n. if n < dsize D1 then D1(n) else D2(n - dsize D1))
          =
        dsize D1 + dsize D2)`,
   REPEAT STRIP_TAC THEN GEN_REWRITE_TAC LAND_CONV [] [dsize] THEN
@@ -2769,7 +2769,7 @@ val DIVISION_APPEND = prove_thm("DIVISION_APPEND",
      [BETA_TAC THEN ASM_REWRITE_TAC[] THEN
       MATCH_MP_TAC DIVISION_LHS THEN EXISTS_TAC (Term`b:real`) THEN
       ASM_REWRITE_TAC[], ALL_TAC] THEN
-    SUBGOAL_THEN (Term`c = (\n. n < dsize D1 =>  D1(n) | D2(n - dsize D1))
+    SUBGOAL_THEN (Term`c = (\n. if n < dsize D1 then D1(n) else D2(n - dsize D1))
                            (dsize D1 + dsize D2)`) SUBST1_TAC THENL
      [BETA_TAC THEN REWRITE_TAC[GSYM NOT_LESS_EQUAL, LESS_EQ_ADD] THEN
       ONCE_REWRITE_TAC[ADD_SYM] THEN REWRITE_TAC[ADD_SUB] THEN
@@ -2842,8 +2842,8 @@ val DIVISION_EXISTS = prove_thm("DIVISION_EXISTS",
   DISCH_THEN(fn th => FIRST_ASSUM(ASSUME_TAC o MATCH_MP th)) THEN
   EXISTS_TAC (Term`(g:real->real) x`) THEN ASM_REWRITE_TAC[] THEN
   MAP_EVERY X_GEN_TAC [Term`w:real`, Term`y:real`] THEN REPEAT STRIP_TAC THEN
-  EXISTS_TAC (Term`\n:num. (n = 0) => (w:real) | y`) THEN
-  EXISTS_TAC (Term`\n:num. (n = 0) => (x:real) | y`) THEN
+  EXISTS_TAC (Term`\n:num. if (n = 0) then (w:real) else y`) THEN
+  EXISTS_TAC (Term`\n:num. if (n = 0) then (x:real) else y`) THEN
   SUBGOAL_THEN (Term`w <= y`) ASSUME_TAC THENL
    [MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC (Term`x:real`) THEN
     ASM_REWRITE_TAC[], ALL_TAC] THEN
@@ -2868,7 +2868,7 @@ val DIVISION_EXISTS = prove_thm("DIVISION_EXISTS",
 
 val GAUGE_MIN = prove_thm("GAUGE_MIN",
   Term`!E g1 g2. gauge(E) g1 /\ gauge(E) g2 ==>
-        gauge(E) (\x. g1(x) < g2(x) => g1(x) | g2(x))`,
+        gauge(E) (\x. if g1(x) < g2(x) then g1(x) else g2(x))`,
   REPEAT GEN_TAC THEN REWRITE_TAC[gauge] THEN STRIP_TAC THEN
   X_GEN_TAC (Term`x:real`) THEN BETA_TAC THEN DISCH_TAC THEN
   COND_CASES_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
@@ -2876,7 +2876,7 @@ val GAUGE_MIN = prove_thm("GAUGE_MIN",
 
 val FINE_MIN = prove_thm("FINE_MIN",
   Term`!g1 g2 D p.
-        fine (\x. g1(x) < g2(x) => g1(x) | g2(x)) (D,p) ==>
+        fine (\x. if g1(x) < g2(x) then g1(x) else g2(x)) (D,p) ==>
         fine(g1) (D,p) /\ fine(g2) (D,p)`,
   REPEAT GEN_TAC THEN REWRITE_TAC[fine] THEN
   BETA_TAC THEN DISCH_TAC THEN CONJ_TAC THEN
@@ -2907,7 +2907,7 @@ val DINT_UNIQ = prove_thm("DINT_UNIQ",
                 Term`g1:real->real`, Term`g2:real->real`] GAUGE_MIN) THEN
   ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
   MP_TAC(SPECL [Term`a:real`, Term`b:real`,
-                Term`\x:real. g1(x) < g2(x) => g1(x) | g2(x)`]
+                Term`\x:real. if g1(x) < g2(x) then g1(x) else g2(x)`]
          DIVISION_EXISTS) THEN ASM_REWRITE_TAC[] THEN
   DISCH_THEN(X_CHOOSE_THEN (Term`D:num->real`)
      (X_CHOOSE_THEN(Term`p:num->real`) STRIP_ASSUME_TAC)) THEN

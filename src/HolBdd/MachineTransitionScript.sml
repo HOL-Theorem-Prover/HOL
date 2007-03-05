@@ -395,21 +395,21 @@ val LENGTH_EQ_NIL_EXISTS =
 val EQ_COND =
  store_thm
   ("EQ_COND",
-   ``((x = (b => y | z)) = (b => (x = y) | (x = z)))
+   ``((x = (if b then y else z)) = (if b then (x = y) else (x = z)))
      /\
-     (((b => y | z) = x) = (b => (y = x) | (z = x)))``,
+     (((if b then y else z) = x) = (if b then (y = x) else (z = x)))``,
    ZAP_TAC std_ss []);
 
 val COND_SIMP =
  store_thm
   ("COND_SIMP",
-   ``((b =>  F  |  F)  =  F)        /\
-     ((b =>  F  |  T)  = ~b)        /\
-     ((b =>  T  |  F)  =  b)        /\
-     ((b =>  T  |  T)  =  T)        /\
-     ((b =>  x  |  x)  =  x)        /\
-     ((b =>  b' | ~b') =  (b = b')) /\
-     ((b => ~b' |  b') =  (b = ~b'))``,
+   ``((if b then  F  else  F)  =  F)        /\
+     ((if b then  F  else  T)  = ~b)        /\
+     ((if b then  T  else  F)  =  b)        /\
+     ((if b then  T  else  T)  =  T)        /\
+     ((if b then  x  else  x)  =  x)        /\
+     ((if b then  b' else ~b') =  (b = b')) /\
+     ((if b then ~b' else  b') =  (b = ~b'))``,
    ZAP_TAC std_ss []);
 
 (*****************************************************************************)

@@ -136,13 +136,6 @@ val _ = add_rule {term_name = GrammarSpecials.and_special,
                   block_style = (AroundEachPhrase, (INCONSISTENT, 0))}
 
 val _ = add_rule{term_name   = "COND",
-                 fixity      = Infix (HOLgrammars.RIGHT, 3),
-                 pp_elements = [HardSpace 1, TOK "=>", BreakSpace(1,0), TM,
-                                BreakSpace(1,0), TOK "|", HardSpace 1],
-                 paren_style = OnlyIfNecessary,
-                 block_style = (AroundEachPhrase, (INCONSISTENT, 0))};
-
-val _ = add_rule{term_name   = "COND",
                  fixity      = TruePrefix 70,
                  pp_elements = [PPBlock([TOK "if", BreakSpace(1,2), TM,
                                          BreakSpace(1,0),
@@ -2497,7 +2490,7 @@ let val f = --`f: 'a -> 'b`--
     and thFr = SPECL [fx,gx] (INST_TYPE theta2 COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = (--`(b => (f:'a->'b ) | g) x = (b => f x | g x)`--)
+    val tm = (--`(if b then (f:'a->'b ) else g) x = (if b then f x else g x)`--)
     val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
     and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -2533,7 +2526,7 @@ let val f = --`f: 'a -> 'b`--
     and thFr = SPECL [fx,fy] (INST_TYPE theta COND_F)
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = (--`(f:'a->'b ) (b => x | y) = (b => f x | f y)`--)
+    val tm = (--`(f:'a->'b ) (if b then x else y) = (if b then f x else f y)`--)
     val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
     and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1
@@ -2560,7 +2553,7 @@ let val b = --`b:bool`--
  in
    GENL [b,f,g]
       (TRANS (ABS x (SYM (SPECL [b,f,g,x] COND_RATOR)))
-             (ETA_CONV (--`\ ^x. (^b => ^f | ^g) ^x`--)))
+             (ETA_CONV (--`\ ^x. (if ^b then ^f else ^g) ^x`--)))
  end;
 
 val _ = save_thm("COND_ABS", COND_ABS);
@@ -2603,7 +2596,7 @@ let val b    = --`b:bool`--
       end
     val thT1 = TRANS thTl (SYM thTr)
     and thF1 = TRANS thFl (SYM thFr)
-    val tm = (--`(b => t1 | t2) = ((~b \/ t1) /\ (b \/ t2))`--)
+    val tm = (--`(if b then t1 else t2) = ((~b \/ t1) /\ (b \/ t2))`--)
     val thT2 = SUBST_CONV [b |-> ASSUME (--`b = T`--)] tm tm
     and thF2 = SUBST_CONV [b |-> ASSUME (--`b = F`--)] tm tm
     val thT3 = EQ_MP (SYM thT2) thT1

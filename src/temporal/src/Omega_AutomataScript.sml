@@ -428,19 +428,18 @@ val BOOLEAN_CLOSURE_F = TAC_PROOF(
 (* some facts about the boolean closure of NDET_GF-automata		*)
 (* ********************************************************************	*)
 
-
 val NEG_GF = TAC_PROOF(
 	([],--`~(!t1.?t2. a(t1+(t2+t0))) = (?t1.!t2. ~a(t1+(t2+t0)))`--),
 	CONV_TAC (DEPTH_CONV NOT_FORALL_CONV)
 	THEN CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV)
-	THEN REWRITE_TAC[])
+	THEN REWRITE_TAC[]);
 
 
 val NEG_FG = TAC_PROOF(
 	([],--`~(?t1.!t2. a(t1+(t2+t0))) = (!t1.?t2. ~a(t1+(t2+t0)))`--),
 	CONV_TAC (DEPTH_CONV NOT_EXISTS_CONV)
 	THEN CONV_TAC (DEPTH_CONV NOT_FORALL_CONV)
-	THEN REWRITE_TAC[])
+	THEN REWRITE_TAC[]);
 
 
 val CONJ_GF = TAC_PROOF(
@@ -448,13 +447,13 @@ val CONJ_GF = TAC_PROOF(
 		    (!t1.?t2. a(t1+(t2+t0))) /\ (!t1.?t2. b(t1+(t2+t0)))
 		=
 		    (?q. ~q t0 /\
-			 (!t. q(t+(t0+1)) = (q(t+t0) =>~b(t+t0)|a(t+t0))) /\
+			 (!t. q(t+(t0+1)) = (if q(t+t0) then ~b(t+t0) else a(t+t0))) /\
 			 !t1.?t2. q(t1+(t2+t0)) /\ b(t1+(t2+t0)))`--),
 	REPEAT GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
 	THENL[
 	(* ----------------------------------------------------------------------------	*)
 	    ASSUME_TAC(EXISTENCE(BETA_RULE
-		(ISPECL[(--`F`--),(--`\x (t:num). x=>~b(t+t0)|a(t+t0)`--)]num_Axiom_old)))
+		(ISPECL[(--`F`--),(--`\x (t:num). if x then ~b(t+t0) else a(t+t0)`--)]num_Axiom_old)))
 	    THEN LEFT_EXISTS_TAC THEN EXISTS_TAC (--`\t.fn1(t-t0):bool`--)
 	    THEN BETA_TAC
 	    THEN ASM_REWRITE_TAC[
@@ -569,7 +568,7 @@ val DISJ_FG = TAC_PROOF(
 		    (?t1.!t2. a(t1+(t2+t0))) \/ (?t1.!t2. b(t1+(t2+t0)))
 		=
 		    (?q. ~q t0 /\
-			 (!t. q(t+(t0+1)) = (q(t+t0) => b(t+t0) | ~a(t+t0))) /\
+			 (!t. q(t+(t0+1)) = (if q(t+t0) then b(t+t0) else ~a(t+t0))) /\
 			 ?t1.!t2. ~q(t1+(t2+t0)) \/ b(t1+(t2+t0)))`--),
 	REPEAT GEN_TAC
 	THEN PURE_ONCE_REWRITE_TAC[TAC_PROOF(([],--`(a=b)=(~a=~b)`--),PROP_TAC)]
@@ -594,7 +593,7 @@ val DISJ_FG = TAC_PROOF(
 	    THEN ASM_REWRITE_TAC[SYM(SPEC_ALL ADD_ASSOC)],
 	    (* ----------------------------------------------------------------	*)
 	    ASSUME_TAC(EXISTENCE(BETA_RULE
-		(ISPECL[(--`F`--),(--`\x t:num. x => b(t+t0) | ~a(t+t0)`--)] num_Axiom_old)))
+		(ISPECL[(--`F`--),(--`\x t:num. if x then b(t+t0) else ~a(t+t0)`--)] num_Axiom_old)))
 	    THEN LEFT_EXISTS_TAC THEN EXISTS_TAC (--`\t.(fn1(t-t0)):bool`--)
 	    THEN LEFT_NO_FORALL_TAC 1 (--`\t.(fn1(t-t0)):bool`--) THEN UNDISCH_HD_TAC
 	    THEN BETA_TAC
@@ -670,7 +669,7 @@ val BOOLEAN_CLOSURE_FG = TAC_PROOF(
 	( (?t1.!t2. a(t1+(t2+t0))) \/ (?t1.!t2. b(t1+(t2+t0)))
 	  =
 	    (?q. ~q t0 /\
-		 (!t. q(t+(t0+1)) = (q(t+t0) => b(t+t0) | ~a(t+t0))) /\
+		 (!t. q(t+(t0+1)) = (if q(t+t0) then b(t+t0) else ~a(t+t0))) /\
 		 ?t1.!t2. ~q(t1+(t2+t0)) \/ b(t1+(t2+t0)))
 	)
 	`--),
@@ -686,7 +685,7 @@ val BOOLEAN_CLOSURE_GF = TAC_PROOF(
 	( (!t1.?t2. a(t1+(t2+t0))) /\ (!t1.?t2. b(t1+(t2+t0)))
   	  =
 	    (?q. ~q t0 /\
-		 (!t. q(t+(t0+1)) = (q(t+t0) =>~b(t+t0)|a(t+t0))) /\
+		 (!t. q(t+(t0+1)) = (if q(t+t0) then ~b(t+t0) else a(t+t0))) /\
 		 !t1.?t2. q(t1+(t2+t0)) /\ b(t1+(t2+t0)))
 	)
 	`--),
@@ -1031,7 +1030,7 @@ val BOREL_HIERARCHY_FG = TAC_PROOF(
 
 val WHEN2BUECHI_THM = TAC_PROOF(
 	 ([],--`(l = (a WHEN b)) =
-	        (!t. l t = (b t => a t | l(t+1))) /\
+	        (!t. l t = (if b t then a t else l(t+1))) /\
 		(!t1.?t2. l(t1+t2) \/ b(t1+t2))`--),
 	REWRITE_TAC[BETA_RULE(CONV_RULE (DEPTH_CONV FUN_EQ_CONV) WHEN_FIX)]
 	THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV)
@@ -1078,7 +1077,7 @@ val WHEN2BUECHI_THM = TAC_PROOF(
 
 val SWHEN2BUECHI_THM = TAC_PROOF(
 	 ([],--`(l = (a SWHEN b)) =
-	        (!t. l t = (b t => a t | l(t+1))) /\
+	        (!t. l t = (if b t then a t else l(t+1))) /\
 		(!t1.?t2. l(t1+t2) ==> b(t1+t2))`--),
 	REWRITE_TAC[BETA_RULE(CONV_RULE (DEPTH_CONV FUN_EQ_CONV) WHEN_FIX)]
 	THEN CONV_TAC(DEPTH_CONV FUN_EQ_CONV)
@@ -1128,7 +1127,7 @@ val UNTIL2BUECHI_THM = TAC_PROOF(
 		(!t1.?t2. ~l(t1+t2) ==> ~a(t1+t2) \/ b(t1+t2))`--),
 	REWRITE_TAC[UNTIL_AS_WHEN,WHEN2BUECHI_THM] THEN BETA_TAC
 	THEN REWRITE_TAC[TAC_PROOF
-		(([],--`((a ==> b) => b | l) = (~b ==> a /\ l)`--),PROP_TAC)]
+		(([],--`(if (a ==> b) then b else l) = (~b ==> a /\ l)`--),PROP_TAC)]
 	THEN REWRITE_TAC[TAC_PROOF
 		(([],--`(l \/(a==>b)) = (~l ==> (~a\/b))`--),PROP_TAC)]);
 
@@ -1139,7 +1138,7 @@ val SUNTIL2BUECHI_THM = TAC_PROOF(
 		(!t1.?t2. l(t1+t2) ==> ~a(t1+t2) \/ b(t1+t2))`--),
 	REWRITE_TAC[SUNTIL_AS_SWHEN,SWHEN2BUECHI_THM] THEN BETA_TAC
 	THEN REWRITE_TAC[TAC_PROOF
-		(([],--`((a ==> b) => b | l) = (~b ==> a /\ l)`--),PROP_TAC)]
+		(([],--`(if (a ==> b) then b else l) = (~b ==> a /\ l)`--),PROP_TAC)]
 	THEN REWRITE_TAC[TAC_PROOF
 		(([],--`(l ==> a==>b) = (l ==> ~a \/ b)`--),PROP_TAC)]);
 
@@ -1445,7 +1444,7 @@ val TEMP_OPS_DEFS_TO_OMEGA = TAC_PROOF(
 	) /\
 	((l = (a SWHEN b)) =
 		T /\
-	        (!t. l t = (b t => a t | l(SUC t))) /\
+	        (!t. l t = (if b t then a t else l(SUC t))) /\
 		(!t1.?t2. l(t1+t2) ==> b(t1+t2))
 	) /\
 	((l = (a SBEFORE b)) =
@@ -1460,7 +1459,7 @@ val TEMP_OPS_DEFS_TO_OMEGA = TAC_PROOF(
 	) /\
 	((l = (a WHEN b)) =
 		T /\
-	        (!t. l t = (b t => a t | l(SUC t))) /\
+	        (!t. l t = (if b t then a t else l(SUC t))) /\
 		(!t1.?t2. l(t1+t2) \/ b(t1+t2))
 	) /\
 	((l = (a BEFORE b)) =
@@ -1928,13 +1927,13 @@ val BUECHI_TRANSLATION = TAC_PROOF(
 	(Phi(a SWHEN b) =
 	    ?q.
 		T /\
-		(!t. q t = (b t => a t | q(t+1))) /\
+		(!t. q t = (if b t then a t else q(t+1))) /\
 		( (!t1.?t2. q(t1+t2) ==> b(t1+t2)) /\ Phi(q) )
 	) /\
 	(Phi(a WHEN b) =
 	    ?q.
 		T /\
-		(!t. q t = (b t => a t | q(t+1))) /\
+		(!t. q t = (if b t then a t else q(t+1))) /\
 		( (!t1.?t2. q(t1+t2) \/ b(t1+t2)) /\ Phi(q) )
 	) /\
 	(Phi(a SBEFORE b) =
@@ -2190,7 +2189,7 @@ val CO_BUECHI_NEXT_CLOSURE = TAC_PROOF(
 	(* first implication: from left to right    					*)
 	(* ----------------------------------------------------------------------------	*)
 	EXISTS_TAC(--`\t:num.t0<t`--)
-	THEN EXISTS_TAC (--`\t:num. (t=t0) =>(c:'b) | q t`--)
+	THEN EXISTS_TAC (--`\t:num. if (t=t0) then (c:'b) else q t`--)
 	THEN BETA_TAC THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(x<x)`--))]
 	THEN REPEAT STRIP_TAC
 	THENL[
@@ -2320,7 +2319,7 @@ val CO_BUECHI_SUNTIL_CLOSURE = TAC_PROOF(
      in
 	([],--`(phi SUNTIL (\t0:num. ^cb)) t0
 	  = ?p q.
-		(p t0 => Phi_I(q t0) | (q t0 = c)) /\
+		(if p t0 then Phi_I(q t0) else (q t0 = c)) /\
 		(!t.
 		      ~p(t+t0) /\ (q(t+t0) = c) /\ phi(t+t0) /\ ~p(t+(t0+1)) /\  (q(t+(t0+1)) = c)
 		  \/  ~p(t+t0) /\ (q(t+t0) = c) /\ phi(t+t0) /\  p(t+(t0+1)) /\  Phi_I(q(t+(t0+1)))
@@ -2346,7 +2345,7 @@ val CO_BUECHI_SUNTIL_CLOSURE = TAC_PROOF(
 		THEN EXISTS_TAC (--`t1:num`--) THEN ASM_REWRITE_TAC[],
 		(* ------ 2nd subgoal: delta > 0 --------------- *)
 	    	LEFT_EXISTS_TAC THEN POP_ASSUM (fn x=> RULE_ASSUM_TAC(REWRITE_RULE[x]))
-		THEN EXISTS_TAC(--`\t.t>n+t0`--) THEN EXISTS_TAC(--`\t.t<=n+t0 => (c:'b) | q t`--)
+		THEN EXISTS_TAC(--`\t.t>n+t0`--) THEN EXISTS_TAC(--`\t. if t<=n+t0 then (c:'b) else q t`--)
 	    	THEN BETA_TAC THEN REPEAT STRIP_TAC
 		THENL[
 		    (* ------------ correct initialization ------------	*)
@@ -2616,7 +2615,7 @@ val CO_BUECHI_BEFORE_CLOSURE = TAC_PROOF(
 	    THEN STRIP_TAC THEN RES_TAC
 	    THEN EXISTS_TAC (--`\x:num. (x>=t+t0)`--)
 	    THEN EXISTS_TAC (--`\x:num. (x> t+t0)`--)
-	    THEN EXISTS_TAC (--`\x:num. (x<t+t0) => c:'b | q(x)`--)
+	    THEN EXISTS_TAC (--`\x:num. if (x<t+t0) then (c:'b) else q(x)`--)
 	    THEN BETA_TAC THEN REWRITE_TAC[]
 	    THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`t0>=t+t0 = ~(0<t)`--))]
 	    THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(t0>t+t0)`--))]
@@ -2893,7 +2892,7 @@ val CO_BUECHI_UNTIL_CLOSURE = TAC_PROOF(
      in
 	([],--`(phi UNTIL (\t0:num. ^cb)) t0
 	  = ?p q.
-		(p t0 => Phi_I(q t0) | (q t0 = c)) /\
+		(if p t0 then Phi_I(q t0) else (q t0 = c)) /\
 		(!t.
 		      ~p(t+t0) /\ (q(t+t0) = c) /\ phi(t+t0) /\ ~p(t+(t0+1)) /\  (q(t+(t0+1)) = c)
 		  \/  ~p(t+t0) /\ (q(t+t0) = c) /\ phi(t+t0) /\  p(t+(t0+1)) /\  Phi_I(q(t+(t0+1)))
@@ -3053,7 +3052,7 @@ val CO_BUECHI_SBEFORE_CLOSURE = TAC_PROOF(
 	    REPEAT STRIP_TAC
 	    THEN EXISTS_TAC(--`\x. delta+t0<=x`--)
 	    THEN EXISTS_TAC(--`\x. delta+t0<x`--)
-	    THEN EXISTS_TAC(--`\x. (delta+t0<=x) => q x | (c:'b)`--)
+	    THEN EXISTS_TAC(--`\x. if (delta+t0<=x) then q x else (c:'b)`--)
 	    THEN BETA_TAC
 	    THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(delta+t0<t0)`--))]
 	    THEN REWRITE_TAC[LESS_MONO_ADD_EQ,LESS_EQ_MONO_ADD_EQ]
@@ -3378,7 +3377,7 @@ val CO_BUECHI_SWHEN_CLOSURE = TAC_PROOF(
 	    REPEAT STRIP_TAC
 	    THEN EXISTS_TAC(--`\x. delta+t0<=x`--)
 	    THEN EXISTS_TAC(--`\x. delta+t0<x`--)
-	    THEN EXISTS_TAC(--`\x. (delta+t0<=x) => q x | (c:'b)`--)
+	    THEN EXISTS_TAC(--`\x. if (delta+t0<=x) then q x else (c:'b)`--)
 	    THEN BETA_TAC
 	    THEN REWRITE_TAC[EQT_ELIM(ARITH_CONV(--`~(delta+t0<t0)`--))]
 	    THEN REWRITE_TAC[LESS_MONO_ADD_EQ,LESS_EQ_MONO_ADD_EQ]
@@ -4311,7 +4310,7 @@ val REPETITION_BOOL_LEMMA = TAC_PROOF(
 
 
 val SUC_MOD_LEMMA = TAC_PROOF(
-	([],--`0<y ==> ((x+1) MOD y = (((x MOD y)+1=y)=> 0 | (x MOD y)+1))`--),
+	([],--`0<y ==> ((x+1) MOD y = (if ((x MOD y)+1=y) then 0 else (x MOD y)+1))`--),
 	DISCH_TAC THEN MATCH_MP_TAC MOD_UNIQUE THEN IMP_RES_TAC DIVISION
 	THEN POP_NO_ASSUM 1 (fn x=> ASSUME_TAC(GEN_ALL(SYM(SPEC_ALL x))))
 	THEN LEFT_NO_FORALL_TAC 1 (--`x:num`--) THEN IMP_RES_TAC LESS_OR
@@ -4353,8 +4352,8 @@ val BUECHI_PERIODIC_MODEL = TAC_PROOF(
 	THEN IMP_RES_TAC REPETITION_LEMMA
 	THEN MAP_EVERY POP_NO_TAC [9,6,2,1,0]
 	THEN EXISTS_TAC(--`x0:num`--) THEN EXISTS_TAC(--`l:num`--)
-	THEN EXISTS_TAC(--`\t.(t<=x0) => i t | i(x0+((t-x0)MOD l)):'a`--)
-	THEN EXISTS_TAC(--`\t.(t<=x0) => q t | q(x0+((t-x0)MOD l)):'state`--)
+	THEN EXISTS_TAC(--`\t. if (t<=x0) then i t else i(x0+((t-x0)MOD l)):'a`--)
+	THEN EXISTS_TAC(--`\t. if (t<=x0) then q t else q(x0+((t-x0)MOD l)):'state`--)
 	THEN BETA_TAC
 	THEN IMP_RES_TAC(EQT_ELIM(ARITH_CONV(--`0<l ==> ~(x0+l<=x0)`--)))
 	THEN IMP_RES_TAC MOD_MOD THEN IMP_RES_TAC ZERO_MOD
@@ -4362,7 +4361,7 @@ val BUECHI_PERIODIC_MODEL = TAC_PROOF(
 		[(EQT_ELIM(ARITH_CONV(--`(x0+l)-x0=l`--))),
 		 (EQT_ELIM(ARITH_CONV(--`(x0+t2<=x0) = (t2=0)`--))),
 		 SUB,ZERO_LESS_EQ,
-		 TAC_PROOF(([],--`(a=>(b:'a)|b) = b`--),
+		 TAC_PROOF(([],--`(if a then (b:'a) else b) = b`--),
 			   BOOL_CASES_TAC (--`a:bool`--) THEN REWRITE_TAC[])]
 	THEN REPEAT STRIP_TAC
 	THENL[
@@ -4552,13 +4551,13 @@ val BUECHI_PROP_REDUCTION = TAC_PROOF(
 		THEN ONCE_ASM_REWRITE_TAC[] THEN  POP_ASSUM SUBST1_TAC
 		THEN REWRITE_TAC[ADD_CLAUSES]],
 	    ALL_TAC]
-	THEN MY_MP_TAC (--`?j1.!t. j1 t = ((t<=x0) => j t | j(x0+((t-x0)MOD l)):'a)`--)
+	THEN MY_MP_TAC (--`?j1.!t. j1 t = (if (t<=x0) then j t else j(x0+((t-x0)MOD l)):'a)`--)
 	THENL[
-	    EXISTS_TAC (--`\t.(t<=x0) => j t | j(x0+((t-x0)MOD l)):'a`--)
+	    EXISTS_TAC (--`\t. if (t<=x0) then j t else j(x0+((t-x0)MOD l)):'a`--)
 	    THEN BETA_TAC THEN REWRITE_TAC[],STRIP_TAC]
-	THEN MY_MP_TAC (--`?p1.!t. p1 t = ((t<=x0) => p t | p(x0+((t-x0)MOD l)):'state)`--)
+	THEN MY_MP_TAC (--`?p1.!t. p1 t = (if (t<=x0) then p t else p(x0+((t-x0)MOD l)):'state)`--)
 	THENL[
-	    EXISTS_TAC (--`\t.(t<=x0) => p t | p(x0+((t-x0)MOD l)):'state`--)
+	    EXISTS_TAC (--`\t. if (t<=x0) then p t else p(x0+((t-x0)MOD l)):'state`--)
 	    THEN BETA_TAC THEN REWRITE_TAC[],STRIP_TAC]
 	THEN MAP_EVERY EXISTS_TAC [(--`x0:num`--),(--`l:num`--),
 				  (--`j1:num->'a`--),(--`p1:num->'state`--)]

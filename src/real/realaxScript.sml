@@ -228,9 +228,10 @@ val treal_lt = new_infixr_definition("treal_lt",
 
 val treal_inv = new_definition("treal_inv",
   (--`treal_inv (x,y) =
-      ((x = y)    => treal_0
-    | y hreal_lt x => ((hreal_inv (x hreal_sub y)) hreal_add hreal_1,hreal_1)
-    | (hreal_1,(hreal_inv(y hreal_sub x)) hreal_add hreal_1))`--));
+      if (x = y) then treal_0
+      else if y hreal_lt x then
+        ((hreal_inv (x hreal_sub y)) hreal_add hreal_1,hreal_1)
+      else (hreal_1,(hreal_inv(y hreal_sub x)) hreal_add hreal_1)`--));
 
 (*---------------------------------------------------------------------------*)
 (* Define the equivalence relation and prove it *is* one                     *)

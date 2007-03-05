@@ -554,10 +554,10 @@ val RECURSION = TAC_PROOF(
 	( ALWAYS a       = \t. (a t /\ NEXT (ALWAYS a) t) ) /\
 	( EVENTUAL a     = \t. (a t \/ NEXT (EVENTUAL a) t) ) /\
 	( (a SUNTIL b)   = \t. ~(b t) ==> a t /\ NEXT (a SUNTIL b) t ) /\
-	( (a SWHEN b)    = \t. ((b t) => (a t) | (NEXT (a SWHEN b) t)) ) /\
+	( (a SWHEN b)    = \t. (if (b t) then (a t) else (NEXT (a SWHEN b) t)) ) /\
 	( (a SBEFORE b)  = \t. ~b t /\ (a t \/ NEXT (a SBEFORE b) t) ) /\
 	( (a UNTIL b)    = \t. (~b t ==> a t /\ NEXT (a UNTIL b) t) ) /\
-	( (a WHEN b)     = \t. ((b t) => (a t) | (NEXT (a WHEN b) t)) ) /\
+	( (a WHEN b)     = \t. (if (b t) then (a t) else (NEXT (a WHEN b) t)) ) /\
 	( (a BEFORE b)   = \t. ~b t /\ (a t \/ NEXT (a BEFORE b) t) ) /\
 	( (PALWAYS a)    = \t. a t /\ PNEXT (PALWAYS a) t ) /\
 	( (PEVENTUAL a)  = \t. a t \/ PSNEXT (PEVENTUAL a) t ) /\
@@ -649,7 +649,7 @@ val FIXPOINTS = TAC_PROOF(
 	    ( (y = \t. a t /\ NEXT y t) = (y = ALWAYS a)   \/ (y = \t. F) ) /\
 	    ( (y = \t. a t \/ NEXT y t) = (y = EVENTUAL a) \/ (y = \t. T) ) /\
 	    ( (y = \t. ~b t ==> a t /\ NEXT y t) = (y = a UNTIL b) \/ (y = a SUNTIL b) ) /\
-	    ( (y = \t. b t => a t | NEXT y t) = ((y = a WHEN b) \/ (y = a SWHEN b)) ) /\
+	    ( (y = \t. if b t then a t else NEXT y t) = ((y = a WHEN b) \/ (y = a SWHEN b)) ) /\
 	    ( (y = \t. ~b t /\ (a t \/ NEXT y t)) = (y = a BEFORE b) \/ (y = a SBEFORE b) ) /\
 	    ( (y = \t. a t /\ PNEXT y t) = (y = PALWAYS a) ) /\
 	    ( (y = \t. a t \/ PSNEXT y t) = (y = PEVENTUAL a) ) /\
@@ -3436,10 +3436,10 @@ val NEXT_INWARDS_NORMAL_FORM = TAC_PROOF(
 	( NEXT (PALWAYS a)      = \t. (PALWAYS a) t /\ NEXT a t			) /\
 	( NEXT (PEVENTUAL a)	= \t. (PEVENTUAL a) t \/ NEXT a t 		) /\
 	( NEXT (a PSUNTIL b)	= \t. (NEXT b) t \/ (NEXT a) t /\ (a PSUNTIL b) t      ) /\
-	( NEXT (a PSWHEN b)	= \t. (NEXT b) t => (NEXT a) t | (a PSWHEN b) t        ) /\
+	( NEXT (a PSWHEN b)	= \t. if (NEXT b) t then (NEXT a) t else (a PSWHEN b) t        ) /\
 	( NEXT (a PSBEFORE b)	= \t. ~(NEXT b) t /\ ( (NEXT a) t \/ (a PSBEFORE b) t) ) /\
 	( NEXT (a PUNTIL b)	= \t. (NEXT b) t \/ (NEXT a) t /\ (a PUNTIL b) t       ) /\
-	( NEXT (a PWHEN b)	= \t. (NEXT b) t => (NEXT a) t | (a PWHEN b) t         ) /\
+	( NEXT (a PWHEN b)	= \t. if (NEXT b) t then (NEXT a) t else (a PWHEN b) t         ) /\
 	( NEXT (a PBEFORE b)	= \t. ~(NEXT b) t /\ ( (NEXT a) t \/ (a PBEFORE b) t) )
 	`--),
 	REWRITE_TAC[AND_NEXT,OR_NEXT,NOT_NEXT,ALWAYS_NEXT,EVENTUAL_NEXT,
