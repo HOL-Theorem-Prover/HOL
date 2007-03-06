@@ -152,7 +152,7 @@ val options_encode2_def = Define`
 
 val data_proc_encode_def = Define`
   data_proc_encode cond (op:word4) s (Rn:word4) (Rd:word4) Op2 =
-    condition_encode cond !! w2w op << 21 !! (s => 0x100000w | 0w) !!
+    condition_encode cond !! w2w op << 21 !! (if s then 0x100000w else 0w) !!
        w2w Rn << 16 !! w2w Rd << 12 !! addr_mode1_encode Op2`;
 
 val instruction_encode_def = Define`
@@ -178,25 +178,25 @@ val instruction_encode_def = Define`
     || BIC cond s Rd Rn Op2 -> data_proc_encode cond 14w s Rn Rd Op2
     || MVN cond s Rd Op2    -> data_proc_encode cond 15w s 0w Rd Op2
     || MUL cond s Rd Rm Rs ->
-         condition_encode cond !! (s => 0x100090w | 0x90w) !!
+         condition_encode cond !! (if s then 0x100090w else 0x90w) !!
          w2w Rd << 16 !! w2w Rs << 8 !! w2w Rm
     || MLA cond s Rd Rm Rs Rn ->
-         condition_encode cond !! (s => 0x300090w | 0x200090w) !!
+         condition_encode cond !! (if s then 0x300090w else 0x200090w) !!
          w2w Rd << 16 !! w2w Rn << 12 !! w2w Rs << 8 !! w2w Rm
     || UMULL cond s RdHi RdLo Rm Rs ->
-         condition_encode cond !! (s => 0x900090w | 0x800090w) !!
+         condition_encode cond !! (if s then 0x900090w else 0x800090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
     || UMLAL cond s RdHi RdLo Rm Rs ->
-         condition_encode cond !! (s => 0xB00090w | 0xA00090w) !!
+         condition_encode cond !! (if s then 0xB00090w else 0xA00090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
     || SMULL cond s RdHi RdLo Rm Rs ->
-         condition_encode cond !! (s => 0xD00090w | 0xC00090w) !!
+         condition_encode cond !! (if s then 0xD00090w else 0xC00090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
     || SMLAL cond s RdHi RdLo Rm Rs ->
-         condition_encode cond !! (s => 0xF00090w | 0xE00090w) !!
+         condition_encode cond !! (if s then 0xF00090w else 0xE00090w) !!
          w2w RdHi << 16 !! w2w RdLo << 12 !! w2w Rs << 8 !! w2w Rm
     || LDRH cond s h options Rd Rn mode3 ->
-         condition_encode cond !! (s => 0x1000D0w | 0x100090w) !!
+         condition_encode cond !! (if s then 0x1000D0w else 0x100090w) !!
          options_encode2 (h \/ (~h /\ ~s)) options !!
          w2w Rn << 16 !! w2w Rd << 12 !! addr_mode3_encode mode3
     || STRH cond options Rd Rn mode3 ->
@@ -215,10 +215,10 @@ val instruction_encode_def = Define`
          condition_encode cond !! 0x8000000w !! options_encode s options !!
          w2w Rn << 16 !! w2w list
     || SWP cond b Rd Rm Rn ->
-         condition_encode cond !! (b => 0x1400090w | 0x1000090w) !!
+         condition_encode cond !! (if b then 0x1400090w else 0x1000090w) !!
          w2w Rn << 16 !! w2w Rd << 12 !! w2w Rm
     || MRS cond R Rd ->
-         condition_encode cond !! (R => 0x14F0000w | 0x10F0000w) !!
+         condition_encode cond !! (if R then 0x14F0000w else 0x10F0000w) !!
          w2w Rd << 12
     || MSR cond psrd Op ->
          condition_encode cond !! 0x120F000w !! msr_psr_encode psrd !!
