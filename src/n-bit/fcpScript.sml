@@ -6,7 +6,7 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["pred_setTheory","pred_setSimps"];
+  app load ["pred_setTheory","pred_setSimps","quotient"];
 *)
 
 open HolKernel Parse boolLib bossLib;
@@ -321,6 +321,154 @@ val finite_sum = store_thm("finite_sum",
   SIMP_TAC std_ss [FINITE_UNION,sum_union,isl_isr_finite]);
 
 (* ------------------------------------------------------------------------- *)
+(* 'a sub1, for recursive functions                                          *)
+(* ------------------------------------------------------------------------- *)
+
+val EQUAL_def = Define `
+  EQUAL = {CHOICE (UNIV:'a -> bool) ; CHOICE (REST (UNIV : 'a -> bool))}`;
+
+val sub_equiv_def = Define `
+  sub_equiv a b = a IN EQUAL /\ b IN EQUAL \/ (a = b)`;
+
+val sub_equiv = prove(
+  `!a b. sub_equiv a b = (sub_equiv a = sub_equiv b)`,
+  RW_TAC arith_ss [sub_equiv_def,FUN_EQ_THM] THEN EQ_TAC THEN 
+  RW_TAC std_ss [] THEN EQ_TAC THEN RW_TAC arith_ss [] THEN
+  DISJ1_TAC THEN FIRST_ASSUM ACCEPT_TAC);
+
+val sub_equiv_ref = prove(
+  `!x y a. sub_equiv a a`,
+  REWRITE_TAC [sub_equiv]);
+
+val _ = quotient.define_quotient_type "sub1" "abs_sub1" "rep_sub1" sub_equiv
+
+val QUOTIENT_def = DB.fetch "quotient" "QUOTIENT_def";
+
+val sub1_def = 
+  REWRITE_RULE [sub_equiv_ref,QUOTIENT_def] (DB.fetch "-" "sub1_QUOTIENT");
+
+val sub1_eq = GSYM (CONJUNCT2 sub1_def);
+val abs_rep_sub1 = CONJUNCT1 sub1_def;
+
+(* ......... *)
+
+val parith_ss = arith_ss ++ pred_setSimps.PRED_SET_ss;
+
+val equal_els_diff = prove(
+  `~(REST (UNIV :'a -> bool) = {}) 
+   ==> ~(CHOICE (REST (UNIV:'a -> bool)) = CHOICE (UNIV:'a -> bool))`,
+  METIS_TAC [EXTENSION,CHOICE_DEF,CHOICE_NOT_IN_REST,UNIV_NOT_EMPTY]);
+
+val eq_not_choice = prove(
+  `~(REST (UNIV : 'a -> bool) = {})
+   ==> ?x. (abs_sub1 y = abs_sub1 x) /\ ~(x = CHOICE (UNIV:'a -> bool))`,
+  REPEAT STRIP_TAC THEN IMP_RES_TAC equal_els_diff THEN
+  Cases_on `y = CHOICE UNIV` THEN
+  ASM_REWRITE_TAC [
+      sub1_eq,sub_equiv_def,EQUAL_def,IN_INSERT,NOT_IN_EMPTY] THENL [
+    EXISTS_TAC `CHOICE (REST UNIV)`,EXISTS_TAC `y`] THEN
+  RW_TAC std_ss []);
+
+val univ_sub1 = prove(
+  `~(REST (UNIV : 'a -> bool) = {}) 
+   ==> (UNIV : 'a sub1 -> bool = IMAGE abs_sub1 (REST UNIV:'a -> bool))`,
+  STRIP_TAC THEN 
+  RW_TAC parith_ss 
+   [EXTENSION,IMAGE_DEF,IN_UNIV,REST_DEF,DELETE_DEF,DIFF_DEF] THEN
+  RW_TAC parith_ss [IN_DEF] THEN
+  `?y. x = abs_sub1 y` by Q.EXISTS_TAC `rep_sub1 x` THEN
+  RW_TAC arith_ss [eq_not_choice,abs_rep_sub1]);
+
+val bijection_lem1 = prove(
+  `~(CHOICE (UNIV:'a -> bool) IN R) ==> BIJ abs_sub1 R (IMAGE abs_sub1 R)`,
+  REPEAT STRIP_TAC THEN 
+  RW_TAC parith_ss 
+    [BIJ_DEF,SURJ_DEF,INJ_DEF,IMAGE_DEF,EXTENSION,
+     sub1_eq,sub_equiv_def,EQUAL_def] THEN
+  FULL_SIMP_TAC arith_ss 
+    [sub1_eq,sub_equiv_def,EQUAL_def,IN_INSERT,NOT_IN_EMPTY] THEN
+  METIS_TAC []);
+
+val rest_bijection = 
+  MATCH_MP bijection_lem1 (SPEC `UNIV` CHOICE_NOT_IN_REST);
+
+val finite_rest = prove(
+  `FINITE (REST a) = FINITE a`,
+  REWRITE_TAC [REST_DEF,DELETE_DEF] THEN
+  METIS_TAC [FINITE_DIFF_down,FINITE_SING,FINITE_DIFF]);
+
+val card_rest = prove(
+   `!S. FINITE S ==> ~(S = {}) ==> (CARD (REST S) = PRE (CARD S))`,
+   HO_MATCH_MP_TAC FINITE_INDUCT THEN 
+   RW_TAC arith_ss [REST_DEF,CARD_DEF,CARD_DELETE,FINITE_INSERT,CHOICE_DEF]);
+
+val rest_empty = prove(
+  `REST {} = {}`,
+  REWRITE_TAC [REST_DEF,EMPTY_DELETE]);
+
+val rest_empty_iff = prove(
+  `(REST x = {}) = (x = {}) \/ (?y. x = {y})`,
+  METIS_TAC [SING_IFF_EMPTY_REST,SING_DEF,rest_empty]);
+
+val sing_univ = prove(
+  `(UNIV = {y}) ==> (!x. x = abs_sub1 y)`,
+  REPEAT STRIP_TAC THEN
+  METIS_TAC [IN_UNIV,IN_SING,abs_rep_sub1]);
+
+val finite_lem1 = prove(
+  `~(REST (UNIV : 'a -> bool) = {}) 
+   ==> (FINITE (UNIV : 'a sub1 -> bool) = FINITE (UNIV : 'a -> bool))`,
+  RW_TAC std_ss [univ_sub1] THEN
+  CONV_TAC (RAND_CONV (REWR_CONV (GSYM finite_rest))) THEN
+  METIS_TAC [FINITE_INJ,IMAGE_FINITE,BIJ_DEF,rest_bijection]);
+
+val finite_lem2 = prove(
+  `(REST (UNIV : 'a -> bool) = {})
+   ==> (FINITE (UNIV : 'a sub1 -> bool) = FINITE (UNIV : 'a -> bool))`,
+  RW_TAC std_ss [rest_empty_iff,UNIV_NOT_EMPTY] THEN
+  RW_TAC std_ss [FINITE_SING] THEN
+  SUBGOAL_THEN `UNIV = {abs_sub1 y}` ASSUME_TAC THEN 
+  RW_TAC std_ss [FINITE_SING,EXTENSION,IN_SING,IN_UNIV] THEN
+  METIS_TAC [sing_univ]);
+
+val index_lem1 = prove(
+  `~(REST (UNIV : 'a -> bool) = {}) /\ FINITE (UNIV : 'a -> bool) 
+   ==> (dimindex (:'a sub1) = PRE (dimindex (:'a)))`,
+  RW_TAC arith_ss [dimindex_def,finite_lem1,univ_sub1,
+    GSYM card_rest,UNIV_NOT_EMPTY] THEN
+  MATCH_MP_TAC (CONV_RULE (REDEPTH_CONV RIGHT_IMP_FORALL_CONV THENC 
+    REWRITE_CONV [AND_IMP_INTRO]) (GSYM FINITE_BIJ_CARD_EQ)) THEN
+  EXISTS_TAC `abs_sub1` THEN
+  RW_TAC std_ss [rest_bijection,finite_rest,GSYM univ_sub1,finite_lem1]);
+
+val index_lem2 = prove(
+  `(REST (UNIV :'a -> bool) = {}) ==> (dimindex (:'a sub1) = 1)`,
+  RW_TAC std_ss [rest_empty_iff,dimindex_def,FINITE_SING,
+    UNIV_NOT_EMPTY] THEN
+  SUBGOAL_THEN `UNIV = {abs_sub1 y}` ASSUME_TAC THEN
+  RW_TAC std_ss [FINITE_SING,EXTENSION,IN_SING,IN_UNIV,CARD_SING] THEN
+  METIS_TAC [sing_univ]);
+
+(* ......... *)
+
+val finite_sub1 = 
+  save_thm("finite_sub1",
+    DISJ_CASES (SPEC `REST UNIV = {}` EXCLUDED_MIDDLE) 
+        (UNDISCH finite_lem2) (UNDISCH finite_lem1));
+
+val INDEX_SUB1 = store_thm(
+  "INDEX_SUB1",
+  `dimindex (:'a sub1) = if 1 < dimindex (:'a) then PRE (dimindex (:'a)) else 1`,
+  Cases_on `FINITE (UNIV : 'a -> bool)` THENL [
+    Cases_on `REST (UNIV : 'a -> bool) = {}` THEN 
+    RW_TAC arith_ss [index_lem1,index_lem2],
+    ALL_TAC] THEN
+  FULL_SIMP_TAC std_ss [rest_empty_iff,UNIV_NOT_EMPTY,dimindex_def,finite_sub1] THEN
+  REPEAT (POP_ASSUM MP_TAC) THEN 
+  RW_TAC std_ss [CARD_SING,DECIDE ``~(1 < a) = (a = 0n) \/ (a = 1n)``] THEN
+  METIS_TAC [UNIV_NOT_EMPTY,CARD_EQ_0,CARD_EMPTY,SING_IFF_CARD1,SING_DEF]);
+
+(* ------------------------------------------------------------------------- *)
 (* bit0                                                                      *)
 (* ------------------------------------------------------------------------- *)
 
@@ -614,6 +762,173 @@ val FCP_APPLY_UPDATE_THM = store_thm("FCP_APPLY_UPDATE_THM",
        else
          ((a :+ w) m) %% b`,
   SRW_TAC [FCP_ss] [FCP_UPDATE_def]);
+
+(* ------------------------------------------------------------------------ *)
+
+open listTheory;
+
+val FCP_TL_def = Define `
+  FCP_TL v = (FCP i. v %% (SUC i))`;
+val FCP_HD_def = Define `
+  FCP_HD v = v %% 0`;
+val FCP_CONS_def = Define `
+  FCP_CONS h (v:'a ** 'b) = (0 :+ h) (FCP i. v %% (PRE i))`;
+
+val FCP_MAP_def = Define `
+  FCP_MAP f (v:'a ** 'c) = (FCP i. f (v %% i)):'b ** 'c`;
+val FCP_EXISTS_def = Define `
+  FCP_EXISTS P (v:'b ** 'a) = ?i. i < dimindex (:'a) /\ P (v %% i)`;
+val FCP_EVERY_def = Define `
+  FCP_EVERY P (v:'b ** 'a) = !i. dimindex (:'a) <= i \/ P (v %% i)`;
+
+val V2L_def = Define `
+  V2L (v:'a ** 'b) = 
+    @L. (LENGTH L = dimindex (:'b)) /\ 
+        !i. i < dimindex (:'b) ==> (EL i L = (v:'a ** 'b) %% i)`;
+val L2V_def = Define `
+  L2V L = FCP i. EL i L`;
+
+(* ......... *)
+
+val exists_v2l_lem = prove(
+  `!n. n <= dimindex (:'b)
+   ==> ?x. (LENGTH x = n) /\ !i. i < n ==> (EL i x = (v:'a ** 'b) %% i)`,
+  Induct THEN RW_TAC arith_ss [] THEN FULL_SIMP_TAC arith_ss [] THENL [
+    Q.EXISTS_TAC `[]`,
+    Q.EXISTS_TAC `x ++ [v %% n]`] THEN 
+  REWRITE_TAC [LENGTH,LENGTH_APPEND] THEN
+  CONJ_TAC THEN REPEAT STRIP_TAC THEN1 DECIDE_TAC THEN
+  `i < n \/ (i = n)` by DECIDE_TAC THEN
+  RW_TAC arith_ss [
+    rich_listTheory.EL_APPEND1,rich_listTheory.EL_APPEND2,EL,HD]);
+
+val exists_v2l_thm = 
+  SIMP_RULE arith_ss [] (SPEC `dimindex (:'b)` exists_v2l_lem);
+
+val ELIM_V2L_TAC = 
+  REWRITE_TAC [V2L_def] THEN SELECT_ELIM_TAC THEN 
+  CONJ_TAC THEN1 MATCH_ACCEPT_TAC exists_v2l_thm;
+
+(* ......... *)
+
+val el_tl = prove(
+  `!x. 0 < LENGTH x ==> (EL i (TL x) = EL (SUC i) x)`,
+  Induct THEN RW_TAC arith_ss [LENGTH,EL,TL]);
+
+val exists_el_thm = prove(
+  `!x. EXISTS P x = ?i. i < LENGTH x /\ P (EL i x)`,
+  Induct THEN RW_TAC arith_ss [EXISTS_DEF,LENGTH] THEN
+  EQ_TAC THEN RW_TAC arith_ss [] THENL [
+    Q.EXISTS_TAC `0`,
+    Q.EXISTS_TAC `SUC i`,
+    Cases_on `i`] THEN 
+  FULL_SIMP_TAC arith_ss [EL,HD,TL] THEN
+  DISJ2_TAC THEN Q.EXISTS_TAC `n` THEN ASM_REWRITE_TAC []);
+
+val every_el_thm = prove(
+  `!x. EVERY P x = !i. LENGTH x <= i \/ P (EL i x)`,
+  Induct THEN RW_TAC arith_ss [EVERY_DEF,EXISTS_DEF,LENGTH] THEN
+  EQ_TAC THEN RW_TAC arith_ss [] THENL [
+    Cases_on `i`,
+    POP_ASSUM (STRIP_ASSUME_TAC o SPEC `0`),
+    POP_ASSUM (STRIP_ASSUME_TAC o SPEC `SUC i`)] THEN
+  FULL_SIMP_TAC arith_ss [EL,HD,TL]);
+
+val lists_eq = prove(
+  `(LENGTH x = LENGTH y) /\ (!i. i < LENGTH x ==> (EL i x = EL i y)) 
+   ==> (x = y)`,
+  measureInduct_on `LENGTH (x ++ y)` THEN
+  Cases THEN Cases THEN RW_TAC arith_ss [LENGTH] THENL [
+    POP_ASSUM (STRIP_ASSUME_TAC o SPEC `0`),
+    POP_ASSUM (STRIP_ASSUME_TAC o GEN_ALL o SPEC `SUC i`)] THEN
+  FULL_SIMP_TAC arith_ss [EL,HD,TL] THEN
+  PAT_ASSUM `!y:'a list.P` (STRIP_ASSUME_TAC o SPEC `t ++ t'`) THEN 
+  FULL_SIMP_TAC arith_ss [LENGTH_APPEND,LENGTH]);
+
+val length_tl_thm = prove(
+  `LENGTH (TL (V2L (v :'a ** 'b)) :'a list) = PRE (dimindex (:'b))`,
+  ELIM_V2L_TAC THEN RW_TAC arith_ss [] THEN
+  Cases_on `x` THEN FULL_SIMP_TAC arith_ss [LENGTH,DIMINDEX_NONZERO,TL]);
+
+(* ......... *)
+
+val LENGTH_V2L = store_thm(
+  "LENGTH_V2L",
+  `LENGTH (V2L (v:'a ** 'b)) = dimindex (:'b)`,
+  ELIM_V2L_TAC THEN RW_TAC arith_ss []);
+
+val EL_V2L = store_thm(
+  "EL_V2L",
+  `i < dimindex (:'b) ==> (EL i (V2L v) = (v:'a ** 'b)  %% i)`,
+  ELIM_V2L_TAC THEN RW_TAC arith_ss []);
+
+val FCP_MAP = store_thm(
+  "FCP_MAP",
+  `FCP_MAP f v = L2V (MAP f (V2L v))`,
+  ELIM_V2L_TAC THEN RW_TAC arith_ss [FCP_MAP_def,L2V_def,FCP_BETA,CART_EQ,
+    rich_listTheory.EL_MAP]);
+
+val FCP_TL = store_thm(
+  "FCP_TL",
+  `1 < dimindex (:'b) ==> (FCP_TL (v:'a ** 'b) = L2V (TL (V2L v)):'a ** 'b sub1)`,
+  ELIM_V2L_TAC THEN 
+  RW_TAC arith_ss [FCP_TL_def,L2V_def,el_tl,FCP_BETA,CART_EQ,INDEX_SUB1,GSYM LENGTH_V2L]);
+
+val FCP_EXISTS = store_thm(
+  "FCP_EXISTS",
+  `FCP_EXISTS P v = EXISTS P (V2L v)`,
+  ELIM_V2L_TAC THEN RW_TAC arith_ss [exists_el_thm,FCP_EXISTS_def] THEN PROVE_TAC []);
+
+val FCP_EVERY = store_thm(
+  "FCP_EVERY",
+  `FCP_EVERY P v = EVERY P (V2L v)`,
+  ELIM_V2L_TAC THEN RW_TAC arith_ss [every_el_thm,FCP_EVERY_def] THEN 
+  PROVE_TAC [arithmeticTheory.NOT_LESS_EQUAL]);
+
+val FCP_HD = store_thm(
+  "FCP_HD",
+  `FCP_HD v = HD (V2L v)`,
+  ELIM_V2L_TAC THEN Cases_on `x` THEN 
+  RW_TAC arith_ss [LENGTH,DIMINDEX_NONZERO,HD,EL,FCP_HD_def] THEN
+  POP_ASSUM (STRIP_ASSUME_TAC o SPEC `0`) THEN FULL_SIMP_TAC arith_ss [EL,HD]);
+
+val FCP_CONS = store_thm(
+  "FCP_CONS",
+  `FCP_CONS a (v:'a ** 'b) = L2V (a::V2L v):'a ** 'b + 1`,
+  ELIM_V2L_TAC THEN
+  RW_TAC arith_ss [FCP_CONS_def,CART_EQ,FCP_UPDATE_def,FCP_BETA,L2V_def] THEN
+  POP_ASSUM MP_TAC THEN Cases_on `i` THEN 
+  RW_TAC arith_ss [EL,HD,TL,index_sum,index_one]);
+
+val V2L_L2V = store_thm("V2L_L2V",
+  `!x. (dimindex (:'b) = LENGTH x) ==> (V2L (L2V x:'a ** 'b) = x)`,
+  RW_TAC arith_ss [L2V_def] THEN ELIM_V2L_TAC THEN
+  RW_TAC arith_ss [FCP_BETA,lists_eq]);
+
+val NULL_V2L = store_thm("NULL_V2L",`~NULL (V2L v)`,
+  ELIM_V2L_TAC THEN Cases THEN
+  RW_TAC arith_ss [NULL,LENGTH,DIMINDEX_NONZERO]);
+
+val V2L_RECURSIVE = store_thm(
+  "V2L_RECURSIVE",
+  `V2L (v:'a ** 'b) = (FCP_HD v) :: 
+       (if dimindex (:'b) = 1 then [] else V2L (FCP_TL v:'a ** 'b sub1))`,
+  RW_TAC arith_ss [FCP_HD] THENL [
+    ELIM_V2L_TAC THEN Cases THEN RW_TAC arith_ss [LENGTH,EL,HD] THEN
+    Cases_on `t` THEN FULL_SIMP_TAC arith_ss [LENGTH],
+    `1 < dimindex (:'b)` by RW_TAC arith_ss [DIMINDEX_NONZERO,
+        DECIDE ``1 < a = ~(a = 0n) /\ ~(a = 1n)``]] THEN
+  RW_TAC arith_ss [FCP_TL,V2L_L2V,CONS,NULL_V2L,length_tl_thm,INDEX_SUB1]);
+
+val READ_TL = store_thm(
+  "READ_TL",
+  `i < dimindex (:'b) ==> (((FCP_TL a):'a ** 'b) %% i = (a:'a ** 'c) %% SUC i)`,
+  RW_TAC arith_ss [FCP_TL_def,FCP_BETA]);
+
+val READ_L2V = store_thm(
+  "READ_L2V",
+  `i < dimindex (:'b) ==> ((L2V a:'a ** 'b) %% i = EL i a)`,
+  RW_TAC arith_ss [L2V_def,FCP_BETA]);
 
 (* ------------------------------------------------------------------------ *)
 
