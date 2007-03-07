@@ -1,0 +1,1109 @@
+app load ["hol_defaxioms_proofsTheory","intLib"]; 
+(* recursively load what's needed *)
+
+intLib.deprecate_int();
+
+quietdec := true;
+open sexp sexpTheory hol_defaxiomsTheory arithmeticTheory
+     BasicProvers TotalDefn;
+quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* Functionality discussed with Matt                                         *)
+(*---------------------------------------------------------------------------*)
+
+fun DISPOSE_TAC q = Q.PAT_ASSUM q (K ALL_TAC);
+
+fun KILL_TAC n (asl,c) = UNDISCH_THEN (el (n+1) (rev asl)) (K ALL_TAC) (asl,c);
+
+fun DROP_ASSUMS_TAC [] (asl,c) = REPEAT (WEAKEN_TAC (K true)) (asl,c)
+  | DROP_ASSUMS_TAC nlist (asl,c) = 
+      let val tmlist = map (fn n => el (n+1) (rev asl)) nlist
+      in MAP_EVERY (fn tm => UNDISCH_THEN tm (K ALL_TAC)) tmlist
+      end (asl,c);
+
+val KMATCH_MP_TAC = MATCH_MP_TAC o REWRITE_RULE [AND_IMP_INTRO]; 
+val FULL_BETA_TAC = BETA_TAC THEN RULE_ASSUM_TAC BETA_RULE;
+
+
+val CONTRAPOS_THM = Q.prove (`!x y. x ==> y = ~y ==> ~x`, METIS_TAC[]);
+
+(*---------------------------------------------------------------------------*)
+(* Get rid of duplicate assumptions in a goal.                               *)
+(*---------------------------------------------------------------------------*)
+
+fun unique eq [] = ([],[])
+  | unique eq (h::t) =
+     let val (list,copies) = unique eq t
+     in if op_mem eq h list
+        then (list, h::copies)
+        else (h::list,copies)
+     end;
+
+fun SINGLE_ASSUMS_TAC (asl,c) =
+  let val (asl',copies) = unique aconv asl
+  in MAP_EVERY (WEAKEN_TAC o aconv) copies (asl,c)
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Basic collection of sexp simplifications! Will be incrementally added to  *)
+(* in the rest of the file.                                                  *)
+(*---------------------------------------------------------------------------*)
+
+val t_not_nil = Q.prove 
+(`~(t = nil) /\ ~(nil = t)`,
+ RW_TAC arith_ss [ite_def, t_def, nil_def]);
+
+val car_nil = Q.prove
+(`car nil = nil`, RW_TAC std_ss [car_def, nil_def]);
+
+val cdr_nil = Q.prove
+(`cdr nil = nil`, RW_TAC std_ss [cdr_def, nil_def]);
+
+val consp_nil = Q.prove
+(`consp nil = nil`, RW_TAC std_ss [consp_def, nil_def]);
+
+val not_consp_eq_nil = Q.prove
+(`~(consp x = nil) = (consp x = t)`,
+ Cases_on `x` THEN RW_TAC arith_ss [consp_def,nil_def,t_def]);
+
+val if_eq_nil = Q.prove
+(`((if b then t else nil) = nil) = ~b`,
+ METIS_TAC [t_not_nil]);
+
+val sexp_ss = arith_ss ++ 
+    rewrites [atom_def,not_def,ite_def,consp_def,t_not_nil, 
+              if_eq_nil, equal_def, ACL2_TRUE,car_def, cdr_def,car_nil,
+              cdr_nil,consp_nil, not_consp_eq_nil,o_rst_def,
+              common_lisp_equal_def, andl_def];
+
+(*---------------------------------------------------------------------------*)
+(* natp is defined twice: first in hol_defaxioms, then in translate. The     *)
+(* definitions are presumably equal, but here I choose the original defn and *)
+(* re-prove some theorems. This should remove ambiguity about natp that      *)
+(* confused me later on (natp rewrites from different theories wouldn't      *)
+(* always apply when they should have).                                      *)
+(*---------------------------------------------------------------------------*)
+
+val nat_11 = translateTheory.LABEL_CONG;
+
+val natp_def = 
+  let val natp = mk_thy_const{Name = "ACL2::NATP", Thy = "hol_defaxioms", 
+                              Ty = ``:sexp -> sexp``}
+      val cdef = Define `natp = ^natp`
+  in
+    REWRITE_RULE [hol_defaxiomsTheory.natp_def,FUN_EQ_THM] cdef
+  end;
+
+val IS_INT_EXISTS = translateTheory.IS_INT_EXISTS;
+
+val INTEGERP_INT = Q.prove
+(`!a. |= integerp (int a)`,
+ RW_TAC sexp_ss [integerp_def,int_def,cpx_def,IS_INT_EXISTS, 
+                sexpTheory.rat_def,ratTheory.rat_0_def,fracTheory.frac_0_def] 
+  THEN METIS_TAC []);
+
+val natp_nat = Q.prove
+(`!a. |= natp (nat a)`,
+ RW_TAC sexp_ss [natp_def,nat_def] THENL
+ [METIS_TAC [INTEGERP_INT,ACL2_TRUE],
+  FULL_SIMP_TAC intLib.int_ss 
+        [not_def,ite_def,less_def,equal_def,int_def,cpx_def,
+         sexpTheory.rat_def,ratTheory.RAT_EQ,sexp_11,
+         complex_rationalTheory.complex_rational_11,ratTheory.RAT_LES_CALCULATE,
+         fracTheory.NMR,fracTheory.DNM]
+  THEN RW_TAC std_ss [t_def,nil_def]]);
+
+val less_nat = Q.prove
+(`!m n. (|= less (nat m) (nat n)) = m<n`,
+ NORM_TAC sexp_ss [nat_def,int_def,cpx_def,less_def] THEN 
+ `0i int_lt 1i` by intLib.COOPER_TAC THEN 
+ FULL_SIMP_TAC sexp_ss 
+  [sexpTheory.rat_def,ratTheory.RAT_LES_CALCULATE, 
+   ratTheory.RAT_EQ_CALCULATE, fracTheory.NMR,fracTheory.DNM] THEN 
+   FULL_SIMP_TAC intLib.int_ss [] THEN RW_TAC std_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* Gruesome proof for something pretty obvious                               *)
+(*---------------------------------------------------------------------------*)
+
+val integerp_not_less_0_is_nat = Q.prove
+(`(|= integerp y) /\ (less y (nat 0) = nil) ==> ?m. y = nat m`,
+ Cases_on `y` THEN SIMP_TAC sexp_ss [] 
+    THEN NORM_TAC sexp_ss [integerp_def] 
+    THEN Cases_on `c`
+    THEN `(r0 = 0) /\ ?i:int. ?c. r = abs_rat (abs_frac (i,1i))`
+         by METIS_TAC [IS_INT_EXISTS,ratTheory.RAT_0] 
+    THEN DISPOSE_TAC `IS_INT p`
+    THEN RW_TAC sexp_ss []
+    THEN FULL_SIMP_TAC sexp_ss [nat_def,int_def,cpx_def,less_def]
+    THEN NORM_TAC sexp_ss [] 
+    THEN RW_TAC sexp_ss [sexpTheory.rat_def,
+               GSYM ratTheory.RAT_0,ratTheory.rat_0_def,fracTheory.frac_0_def]
+    THENL
+    [METIS_TAC[],
+     `0i int_lt 1i` by intLib.COOPER_TAC 
+       THEN FULL_SIMP_TAC sexp_ss 
+              [sexpTheory.rat_def,ratTheory.RAT_LES_CALCULATE,
+               fracTheory.NMR,fracTheory.DNM]
+       THEN FULL_SIMP_TAC intLib.int_ss []
+       THEN RW_TAC std_ss [] 
+       THEN `integer$int_le 0i i` by intLib.COOPER_TAC
+       THEN `?m. i = integer$int_of_num m` 
+            by METIS_TAC[integerTheory.NUM_POSINT_EXISTS]
+       THEN METIS_TAC []]);
+
+val natp_imp_exists_nat = Q.prove
+(`(|= natp x) ==> ?n. x = nat n`,
+ RW_TAC sexp_ss [natp_def] THEN 
+ METIS_TAC [integerp_not_less_0_is_nat,ACL2_TRUE]);
+
+val natp_iff_exists_nat = Q.prove
+(`(|= natp x) = ?n. x = nat n`,
+ METIS_TAC [natp_imp_exists_nat,natp_nat,ACL2_TRUE]);
+
+(*---------------------------------------------------------------------------*)
+(* Induction theorems for nat. The second is originally from James Reynolds. *)
+(*---------------------------------------------------------------------------*)
+
+val nat_wop = 
+  GEN_ALL (BETA_RULE (SPEC ``\a. P (nat a):bool`` 
+                          (INST_TYPE [alpha |-> ``:sexp``] WOP)));
+
+val natp_wop = Q.prove
+(`!P. (?x. (|= natp x) /\ P x) ==>
+      ?a. (|= natp a) /\ P a /\ !b. (|= natp b) /\ (|= less b a) ==> ~P b`,
+ RW_TAC std_ss [natp_iff_exists_nat] THEN IMP_RES_TAC nat_wop THEN 
+ METIS_TAC [natp_nat, ACL2_TRUE,  less_nat]);
+
+
+(*---------------------------------------------------------------------------*)
+(* Basic operations on ordinal notation.                                     *)
+(* Taken from defaxiomsTheory, which is directly constructed from sexps      *)
+(* brought over from ACL2.  There is no corresponding script file.           *)
+(*---------------------------------------------------------------------------*)
+
+val o_finp_def = 
+ Define 
+   `o_finp x = atom x`;
+
+val posp_def = 
+ Define 
+   `posp x = ite (integerp x) (less (nat 0) x) nil`;
+
+val o_first_expt_def = 
+ Define 
+   `o_first_expt x = ite (o_finp x) (nat 0) (car (car x))`;
+
+val o_first_coeff_def = 
+ Define 
+   `o_first_coeff x = ite (o_finp x) x (cdr (car x))`;
+
+val o_rst_def = 
+ Define 
+   `o_rst x = cdr x`;
+
+val sexp_ss = sexp_ss ++ rewrites [o_rst_def];
+
+(*---------------------------------------------------------------------------*)
+(* Size of sexps.  Similar to acl2-count, not to the auto-generated          *)
+(* sexp_size.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+val sexp_count_def = 
+ Define `
+   (sexp_count (sym a0 a1) = 0) /\
+   (sexp_count (str _)     = 0) /\
+   (sexp_count (chr _)     = 0) /\
+   (sexp_count (num a)     = 1 + complex_rational_size a) /\
+   (sexp_count (cons b0 b1) = 1 + (sexp_count b0 + sexp_count b1))`;
+
+(*---------------------------------------------------------------------------*)
+(* Lemmas about sexp_count                                                   *)
+(*---------------------------------------------------------------------------*)
+
+val sexp_count_nil =
+ store_thm
+  ("sexp_count_nil",
+   ``sexp_count nil = 0``,
+    RW_TAC sexp_ss [sexp_count_def,nil_def]);
+
+val sexp_ss = sexp_ss ++ rewrites [sexp_count_nil];
+
+val sexp_count_car =
+ store_thm
+  ("sexp_count_car",
+   ``!x. (|= consp x) ==> (sexp_count (car x) < sexp_count x)``,
+   Cases THEN RW_TAC sexp_ss [sexp_count_def]);
+
+val sexp_count_cdr =
+ store_thm
+  ("sexp_count_cdr",
+   ``!x. (|= consp x) ==> (sexp_count (cdr x) < sexp_count x)``,
+   Cases THEN RW_TAC sexp_ss [sexp_count_def]);
+
+val sexp_count_car_weak =
+ store_thm
+  ("sexp_count_car_weak",
+   ``!x. sexp_count (car x) <= sexp_count x``,
+   Cases THEN RW_TAC sexp_ss [sexp_count_def]);
+
+(*---------------------------------------------------------------------------*)
+(* Definitions for o_less and o_p                                            *)
+(*---------------------------------------------------------------------------*)
+
+val o_less_def = tDefine 
+  "o_less"
+  `o_less x y =
+       ite (o_finp x) 
+           (ite (not (o_finp y)) (not (o_finp y)) (less x y))
+      (ite (o_finp y) nil
+      (ite (not (equal (o_first_expt x) (o_first_expt y)))
+           (o_less (o_first_expt x) (o_first_expt y))
+      (ite (not (common_lisp_equal (o_first_coeff x) (o_first_coeff y)))
+           (less (o_first_coeff x) (o_first_coeff y))
+           (o_less (o_rst x) (o_rst y)))))`
+ (WF_REL_TAC `measure (sexp_count o FST)`  (* termination proof *)
+  THEN NORM_TAC sexp_ss [o_first_expt_def,o_finp_def]
+  THENL
+   [`sexp_count (car x) < sexp_count x /\
+     sexp_count (car (car x)) <= sexp_count (car x)`
+       by METIS_TAC[sexp_count_car_weak,sexp_count_car,not_consp_eq_nil,ACL2_TRUE] 
+      THEN DECIDE_TAC,
+    METIS_TAC [sexp_count_cdr,not_consp_eq_nil,ACL2_TRUE]]);
+
+val o_p_def = tDefine
+   "o_p"
+   `o_p x =
+      ite (o_finp x) (natp x)
+          (ite (consp (car x))
+             (ite (o_p (o_first_expt x))
+                (ite (not (eql (nat 0) (o_first_expt x)))
+                   (ite (posp (o_first_coeff x))
+                      (ite (o_p (o_rst x))
+                           (o_less (o_first_expt (o_rst x)) (o_first_expt x))
+                            nil) nil) nil) nil) nil)`
+  (WF_REL_TAC `measure sexp_count`   (* termination proof *)
+    THEN CONJ_TAC
+    THEN Cases 
+    THEN RW_TAC sexp_ss [o_first_expt_def,sexp_count_def] 
+    THEN METIS_TAC [sexp_count_car,DECIDE ``x:num < y ==> x<y+z``,
+                    not_consp_eq_nil, ACL2_TRUE]);
+
+val o_less_ind = fetch "-" "o_less_ind";
+val o_p_ind    = fetch "-" "o_p_ind";
+
+val o_infp_def      = Define `o_infp x = not(o_finp x)`;
+val o_less_bool_def = Define `o_less_bool x y = |= (o_less x y)`;
+val o_p_bool_def    = Define `o_p_bool x = |= (o_p x)`;
+
+val sexp_ss = sexp_ss ++ rewrites [o_less_bool_def, o_p_bool_def];
+
+
+(*---------------------------------------------------------------------------*)
+(* Rank of an ordinal in Cantor Normal Form                                  *)
+(*---------------------------------------------------------------------------*)
+
+val rank_def = tDefine 
+   "rank" 
+   `rank x = if |= o_finp x then 0n else 1 + rank (o_first_expt x)`
+ (WF_REL_TAC `measure sexp_count` 
+   THEN RW_TAC sexp_ss [o_finp_def, o_first_expt_def]
+   THEN `sexp_count (car x) < sexp_count x /\
+         sexp_count (car(car x)) <= sexp_count (car x)` 
+      by METIS_TAC [sexp_count_car_weak,sexp_count_car,not_consp_eq_nil,ACL2_TRUE]
+   THEN DECIDE_TAC);
+
+(*---------------------------------------------------------------------------*)
+(* Ordinals of rank <= n                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val o_p_n_def = Define `o_p_n n x = o_p_bool x /\ rank x <= n`;
+
+(*---------------------------------------------------------------------------*)
+(* Simple properties of basic predicates                                     *)
+(*---------------------------------------------------------------------------*)
+
+g `consp (nat x) = nil`;
+e (RW_TAC sexp_ss [nat_def, int_def, cpx_def]);
+val not_consp_nat = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [not_consp_nat];
+
+g `(o_finp (sym x1 x2) = t) /\
+   (o_finp (num x3) = t) /\
+   (o_finp (chr x4) = t) /\
+   (o_finp (str x5) = t) /\
+   (o_finp (cons x6 x7) = nil)`;
+e (RW_TAC sexp_ss [o_finp_def]);
+val o_finp_sexp = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [o_finp_sexp];
+
+g `!x. (consp x = nil) ==> (o_p x = natp x)`;
+e (ONCE_REWRITE_TAC [o_p_def]);
+e (NORM_TAC sexp_ss [o_finp_def]);
+val o_p_is_natp = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [o_p_is_natp];
+
+g `!x y. (consp x = t) /\ (consp y = nil) ==> (o_less x y = nil)`;
+e (NORM_TAC sexp_ss [Once o_less_def, o_finp_def]);
+val o_less_false_when_consp_atom = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [o_p_bool_def, o_less_bool_def];
+
+g `(integerp (cons x y) = nil) /\
+   (integerp (chr v3) = nil) /\ 
+   (integerp (str v2) = nil) /\
+   (integerp (sym v v1) = nil)`;
+e (METIS_TAC [integerp_def]);
+val integerp_nil = top_thm();
+
+g `(natp (cons x y) = nil) /\
+   (natp (chr v3) = nil) /\ 
+   (natp (str v2) = nil) /\
+   (natp (sym v v1) = nil)`;
+e (NORM_TAC sexp_ss [natp_def, hol_defaxiomsTheory.natp_def,nat_def, int_def, cpx_def]
+   THEN METIS_TAC [integerp_nil]);
+val natp_nil = top_thm();
+
+val integerp_eq_t = Q.prove
+(`~(integerp x = nil) = (integerp x = t)`,
+ Cases_on `x` THEN RW_TAC sexp_ss [integerp_def]);
+
+val sexp_ss = sexp_ss ++ rewrites [natp_nil,integerp_nil,integerp_eq_t];
+
+g `rank (nat n) = 0`; 
+e (NORM_TAC sexp_ss [Once rank_def,o_finp_def]); 
+val rank_nat = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [rank_nat];
+
+g `rank (num x) = 0`;
+e (NORM_TAC sexp_ss [Once rank_def,o_finp_def]);
+val rank_num_is_0 = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [rank_num_is_0];
+
+g `0 < rank (cons x y)`;
+e (NORM_TAC sexp_ss [Once rank_def,o_finp_def]);
+val rank_cons_is_positive = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [rank_cons_is_positive];
+
+g `o_less (num c) (cons s s0) = t`;
+e (NORM_TAC sexp_ss [Once o_less_def, o_finp_def]);
+val o_less_num_cons = top_thm();
+
+val sexp_ss = sexp_ss ++ rewrites [o_less_num_cons];
+
+g `(car s = car s') ==> (rank (cons s s0) = rank (cons s' s0'))`;
+e (ONCE_REWRITE_TAC [rank_def]);
+e (NORM_TAC sexp_ss [o_first_expt_def,o_finp_def]);
+val rank_cons_equal = top_thm();
+
+val rank_less_implies_o_less = prove
+(``!x y. o_p_bool x /\ o_p_bool y /\ rank x < rank y ==> o_less_bool x y``,
+ measureInduct_on `rank x`
+   THEN Cases_on `x` THEN Cases_on `y` 
+   THEN RW_TAC sexp_ss []
+   THEN ONCE_REWRITE_TAC [o_less_def]
+   THEN NORM_TAC sexp_ss [o_first_expt_def] THENL
+   [METIS_TAC [rank_cons_equal,DECIDE ``~(x:num < x)``],
+    METIS_TAC [rank_cons_equal,DECIDE ``~(x:num < x)``],
+    `(rank (car s) < rank (cons s s0) 
+     /\ o_p_bool (car s) 
+     /\ o_p_bool (car s') 
+     /\ rank (car s) < rank (car s') 
+     ==> o_less_bool (car s) (car s'))` by METIS_TAC[]  (* use IH *)
+      THEN FULL_SIMP_TAC std_ss [o_less_bool_def, ACL2_TRUE]
+      THEN POP_ASSUM MATCH_MP_TAC
+      THEN DROP_ASSUMS_TAC [0,4]  (* the IH  and ~(car s = car s') *)
+      THEN REPEAT CONJ_TAC THENL
+      [GEN_REWRITE_TAC RAND_CONV bool_rewrites [rank_def] 
+         THEN NORM_TAC sexp_ss [o_first_expt_def, o_finp_def],
+       Q.PAT_ASSUM `~(o_p (cons s s0) = nil)` MP_TAC 
+         THEN ONCE_REWRITE_TAC [o_p_def] 
+         THEN NORM_TAC sexp_ss [o_first_expt_def],
+       Q.PAT_ASSUM `~(o_p (cons s' s0') = nil)` MP_TAC 
+         THEN ONCE_REWRITE_TAC [o_p_def] 
+         THEN NORM_TAC sexp_ss [o_first_expt_def],
+       POP_ASSUM (MP_TAC o ONCE_REWRITE_RULE [rank_def])
+         THEN NORM_TAC sexp_ss [o_first_expt_def]]]);
+
+val o_p_of_rank_0_is_nat = Q.prove
+(`o_p_bool x /\ (rank x = 0) ==> ?m. x = nat m`,
+ REWRITE_TAC [o_p_bool_def]
+   THEN ONCE_REWRITE_TAC [rank_def, o_p_def]
+   THEN NORM_TAC sexp_ss [o_finp_def]
+   THEN FULL_SIMP_TAC sexp_ss [natp_def]
+   THEN NORM_TAC sexp_ss []
+   THEN METIS_TAC [integerp_not_less_0_is_nat,ACL2_TRUE]);
+
+val o_finp_natp = Q.prove
+(`(|= o_p x) /\ (|= o_finp x) ==> (|= natp x)`,
+ RW_TAC sexp_ss [Once o_p_def]);
+
+val finp_less = Q.prove
+(`!x y. (|= o_finp x) /\ (|= o_finp y) ==> (|= less x y) ==> ~|= less y x`,
+ SIMP_TAC sexp_ss [o_finp_def] THEN 
+ REPEAT Cases THEN RW_TAC sexp_ss [less_def] THENL
+   [Cases_on `c`,  Cases_on `c`,
+    Cases_on `c'`, Cases_on `c`, 
+    Cases_on `c`,  Cases_on `c`,
+    Cases_on `c` THEN Cases_on `c'`] THEN 
+ FULL_SIMP_TAC sexp_ss [less_def] THEN 
+ METIS_TAC [ratTheory.RAT_LES_ANTISYM,
+            ratTheory.RAT_LES_TRANS]);
+
+val finp_less_alt = Q.prove
+(`!x y. ~(o_finp x = nil) /\ ~(o_finp y = nil) 
+    ==> ~(less x y = nil) 
+    ==> (less y x = nil)`,
+ METIS_TAC [finp_less, ACL2_TRUE]);
+
+val finp_inf_o_less = Q.prove
+(`!x y. (|= o_finp x) /\ ~(|= o_finp y) ==> o_less_bool x y /\ ~o_less_bool y x`,
+ SIMP_TAC sexp_ss [] THEN 
+ ONCE_REWRITE_TAC [o_less_def]
+ THEN RW_TAC sexp_ss []);
+
+val o_p_cdr_closed = Q.prove
+(`!x. (o_finp x = nil) /\ (|= o_p x) ==> |= o_p (cdr x)`,
+ RW_TAC sexp_ss [ACL2_TRUE] THEN 
+ RULE_ASSUM_TAC (ONCE_REWRITE_RULE [o_p_def]) THEN 
+ FULL_SIMP_TAC sexp_ss [] THEN METIS_TAC []);
+
+val o_p_first_expt_closed = Q.prove
+(`!x. (|= o_p x) ==> |= o_p (o_first_expt x)`,
+ RW_TAC sexp_ss [] THEN 
+ RULE_ASSUM_TAC (ONCE_REWRITE_RULE [o_p_def]) THEN 
+ FULL_SIMP_TAC sexp_ss [] THEN NORM_TAC sexp_ss [] THEN 
+ RW_TAC sexp_ss [o_first_expt_def] THEN DROP_ASSUMS_TAC [] THEN 
+ RW_TAC sexp_ss [Once o_p_def,o_finp_def,GSYM int_def, GSYM nat_def] THEN 
+ METIS_TAC [natp_nat,ACL2_TRUE]);
+
+val o_p_first_coeff_posp = Q.prove
+(`!x. (o_finp x = nil) /\ (|= o_p x) ==> |= posp (o_first_coeff x)`,
+ RW_TAC sexp_ss [ACL2_TRUE,Once o_p_def]);
+
+val o_p_first_coeff_posp_alt = 
+  SIMP_RULE sexp_ss [o_first_coeff_def,ite_def] o_p_first_coeff_posp;
+
+val posp_less_antisym = Q.prove
+(`!x y. (|= posp x) /\ (|= posp y) /\ (|= less x y) ==> ~|= less y x`,
+ RW_TAC sexp_ss [posp_def] THEN 
+ Cases_on `x` THEN Cases_on `y` THEN 
+ FULL_SIMP_TAC sexp_ss [integerp_def] THEN 
+ NORM_TAC sexp_ss [] THEN 
+ Cases_on `c` THEN Cases_on `c'` THEN 
+ FULL_SIMP_TAC sexp_ss [less_def] THEN 
+ NORM_TAC sexp_ss [] THEN 
+ METIS_TAC [ratTheory.RAT_LES_ANTISYM,
+            ratTheory.RAT_LES_TRANS]);
+
+(* This one is better than prev. theorem. *)
+val integerp_less_antisym = Q.prove
+(`!x y. (|= integerp x) /\ (|= integerp y) /\ (|= less x y) ==> ~|= less y x`,
+ Cases_on `x` THEN Cases_on `y` THEN 
+ FULL_SIMP_TAC sexp_ss [integerp_def] THEN 
+ NORM_TAC sexp_ss [] THEN 
+ Cases_on `c` THEN Cases_on `c'` THEN 
+ FULL_SIMP_TAC sexp_ss [less_def] THEN 
+ NORM_TAC sexp_ss [] THEN 
+ METIS_TAC [ratTheory.RAT_LES_ANTISYM,
+            ratTheory.RAT_LES_TRANS]);
+
+val less_not_refl = Q.prove
+(`!x. ~|= less x x`,
+ Cases THEN RW_TAC sexp_ss [less_def] THEN Cases_on `c` THEN 
+ FULL_SIMP_TAC sexp_ss [less_def] THEN NORM_TAC sexp_ss [] THEN 
+ METIS_TAC [ratTheory.RAT_LES_ANTISYM, ratTheory.RAT_LES_TRANS]);
+
+val integerp_nat = Q.prove
+(`|= integerp (nat x)`,
+ METIS_TAC [nat_def, translateTheory.INTEGERP_INT,ACL2_TRUE]);
+
+val posp_imp_natp = Q.prove
+(`(|= posp x) ==> |= natp x`,
+ RW_TAC sexp_ss [posp_def, natp_def,GSYM int_def, GSYM nat_def] THEN 
+ METIS_TAC [integerp_less_antisym,ACL2_TRUE,integerp_nat]);
+
+val o_less_antisym = Q.prove
+(`!x y. (|= o_p x)  /\ (|= o_p y) /\ (|= o_less x y) ==> ~(|= o_less y x)`,
+ recInduct o_less_ind THEN 
+ REPEAT GEN_TAC THEN STRIP_TAC THEN 
+ REWRITE_TAC [o_less_bool_def,ACL2_TRUE] THEN 
+ ONCE_REWRITE_TAC [o_less_def] THEN 
+ SIMP_TAC sexp_ss [] THEN 
+ NTAC 2 COND_CASES_TAC THEN ASM_REWRITE_TAC [] THEN 
+ SIMP_TAC sexp_ss [] THEN 
+ RULE_ASSUM_TAC (SIMP_RULE std_ss [if_eq_nil]) THENL
+ [FULL_SIMP_TAC sexp_ss [] THEN 
+    NTAC 2 COND_CASES_TAC THEN ASM_REWRITE_TAC[] THENL
+    [STRIP_TAC THEN FIRST_ASSUM KMATCH_MP_TAC THEN 
+       ASM_REWRITE_TAC [] THEN METIS_TAC [o_p_cdr_closed,ACL2_TRUE],
+     `~(o_first_coeff y = o_first_coeff x)` by METIS_TAC[] THEN 
+        ASM_REWRITE_TAC [] THEN KILL_TAC 6 THEN 
+        RW_TAC sexp_ss [o_first_coeff_def] THEN DROP_ASSUMS_TAC [0,1,4] THEN
+        `~(posp (cdr (car x)) = nil) /\ ~(posp (cdr(car y)) = nil)`
+           by METIS_TAC [o_p_first_coeff_posp_alt] THEN 
+        METIS_TAC [posp_less_antisym,ACL2_TRUE],
+     METIS_TAC[],
+     STRIP_TAC THEN FIRST_ASSUM KMATCH_MP_TAC THEN 
+       ASM_REWRITE_TAC [] THEN METIS_TAC [o_p_first_expt_closed,ACL2_TRUE]],
+  ASM_REWRITE_TAC [] THEN METIS_TAC [finp_less_alt],
+  ASM_REWRITE_TAC []]);
+
+val o_p_first_coeff_natp = Q.prove
+(`(|= o_p x) ==> |= natp (o_first_coeff x)`,
+ RW_TAC sexp_ss 
+     [Once o_p_def,o_first_coeff_def,posp_def,GSYM int_def, GSYM nat_def]
+   THEN NORM_TAC sexp_ss [natp_def] THENL
+   [METIS_TAC [],
+    `|= integerp (nat 0)` by METIS_TAC [nat_def, INTEGERP_INT]
+       THEN METIS_TAC [ACL2_TRUE,integerp_less_antisym]]);
+
+val o_finp_nat = Q.prove
+(`|= o_finp (nat n)`,
+RW_TAC sexp_ss [o_finp_def]);
+
+val rank_first_expt = Q.prove
+(`!x. (|= o_p x) /\ ~(|= o_finp x) ==> (rank (o_first_expt x) + 1 = rank x)`,
+ ONCE_REWRITE_TAC [o_p_def] THEN NORM_TAC sexp_ss [o_finp_def] THEN
+ GEN_REWRITE_TAC RAND_CONV bool_rewrites [rank_def] THEN 
+ NORM_TAC sexp_ss [o_finp_def]);
+
+val o_finp_first_expt = Q.prove
+(`(|= o_finp x) ==> (|= o_finp (o_first_expt x))`,
+ RW_TAC sexp_ss [o_first_expt_def,GSYM int_def, GSYM nat_def] THEN 
+ METIS_TAC [o_finp_nat,ACL2_TRUE]);
+
+val o_p_n_first_expt = Q.prove
+(`(|= o_p x) /\ (rank x = SUC n) ==> 
+  (|= o_p (o_first_expt x)) /\ (rank (o_first_expt x) = n)`,
+ RW_TAC sexp_ss [] THENL
+ [METIS_TAC [o_p_first_expt_closed,ACL2_TRUE],
+  RULE_ASSUM_TAC (SIMP_RULE sexp_ss [Once rank_def]) THEN 
+  NORM_TAC sexp_ss []]);
+
+val natp_imp_o_finp = Q.prove
+(`(|= natp x) ==> |= o_finp x`,
+ RW_TAC sexp_ss [o_finp_def,natp_def] 
+   THEN Cases_on `x` 
+   THEN FULL_SIMP_TAC sexp_ss []);
+
+val natp_imp_o_p = Q.prove
+(`(|= natp x) ==> |= o_p x`,
+ RW_TAC sexp_ss [Once o_p_def] THEN METIS_TAC [ACL2_TRUE,natp_imp_o_finp]);
+
+val natp_imp_rank_0 = Q.prove
+(`(|= natp x) ==> (rank x = 0)`,
+ RW_TAC sexp_ss [Once rank_def] THEN 
+ METIS_TAC [ACL2_TRUE,natp_imp_o_finp]);
+
+val o_less_natp = Q.prove
+(`(|= o_p y) /\ (|= natp c) /\ (|= o_less y c) ==> |= natp y`,
+ ONCE_REWRITE_TAC [o_less_def, o_p_def] THEN 
+ RW_TAC sexp_ss [GSYM int_def, GSYM nat_def,o_finp_def] THEN 
+ `~(o_finp c = nil)` by METIS_TAC [natp_imp_o_finp, ACL2_TRUE] THEN 
+ FULL_SIMP_TAC sexp_ss [o_finp_def,atom_def]);
+
+val o_less_imp_rank_less_eq = Q.prove
+(`!x y. (|= o_p x) /\ (|= o_p y) /\ (|= o_less x y) ==> rank x <= rank y`,
+ recInduct o_less_ind THEN 
+ RW_TAC sexp_ss [] THEN POP_ASSUM MP_TAC THEN 
+ ONCE_REWRITE_TAC [o_less_def,rank_def] THEN RW_TAC sexp_ss [] THEN 
+ METIS_TAC [o_p_first_expt_closed,ACL2_TRUE]);
+
+val o_p_rst = Q.prove
+(`(|= o_p x) /\ (rank x = SUC n) ==> |= o_p (o_rst x)`,
+ RW_TAC sexp_ss [Once rank_def] THEN 
+ RULE_ASSUM_TAC (ONCE_REWRITE_RULE[o_p_def]) THEN
+FULL_SIMP_TAC sexp_ss [GSYM ADD1] THEN NORM_TAC sexp_ss []);
+
+val o_p_cases = Q.prove
+(`!x. (|= o_p x) 
+      ==> 
+        (?n. x = nat n) \/ 
+        (?a k b. (x = (cons (cons a k) b)) /\
+                 (|= o_p a) /\ (|= o_p b) /\ (|= natp k) /\
+                 (|= o_less (o_first_expt b) a))`,
+ RW_TAC sexp_ss [Once o_p_def] THENL
+ [DISJ2_TAC THEN 
+    MAP_EVERY Q.EXISTS_TAC [`o_first_expt x`, `o_first_coeff x`, `o_rst x`] THEN
+    RW_TAC sexp_ss [] THENL
+    [RW_TAC sexp_ss [o_first_expt_def, o_first_coeff_def] THEN 
+       Cases_on `x` THEN FULL_SIMP_TAC sexp_ss [] THEN 
+       Cases_on `s` THEN FULL_SIMP_TAC sexp_ss [],
+     METIS_TAC [posp_imp_natp,ACL2_TRUE]],
+  DISJ1_TAC THEN METIS_TAC [natp_imp_exists_nat,ACL2_TRUE]]);
+
+val o_p_inf_case = Q.prove
+(`(|= o_p x) /\ ~(|= o_finp x)
+    ==> 
+    ?a k b. (x = (cons (cons a k) b)) /\
+            (|= o_p a) /\ (|= o_p b) /\ (|= natp k) /\
+            (|= o_less (o_first_expt b) a)`,
+ STRIP_TAC THEN IMP_RES_TAC o_p_cases 
+ THEN METIS_TAC [o_finp_nat,ACL2_TRUE]);
+
+val o_less_refl_lem = Q.prove
+(`!x y. (y=x) ==> ~(|= o_less x y)`,
+ recInduct o_less_ind THEN RW_TAC sexp_ss [] THEN 
+ ONCE_REWRITE_TAC [o_less_def] THEN RW_TAC sexp_ss [] THEN
+ Cases_on `x` THEN FULL_SIMP_TAC sexp_ss [o_finp_def, less_def] THEN 
+ Cases_on `c` THEN RW_TAC sexp_ss [less_def,ratTheory.RAT_LES_REF]);
+
+val o_less_anti_refl = Q.prove
+(`!x.  ~|= o_less x x`,
+ METIS_TAC [o_less_refl_lem]);
+
+val o_less_o_rst = Q.prove
+(`!x. (|= o_p x) /\ ~(|= o_finp x) ==> |= o_less (o_rst x) x`,
+ GEN_TAC THEN STRIP_TAC THEN 
+ `?a k b. (x = (cons (cons a k) b)) /\
+          (|= o_p a) /\ (|= o_p b) /\ (|= natp k) /\
+          (|= o_less (o_first_expt b) a)` by METIS_TAC [o_p_inf_case] THEN 
+ DROP_ASSUMS_TAC [0,1] THEN 
+ ONCE_REWRITE_TAC [o_less_def] THEN 
+ RW_TAC sexp_ss [o_first_expt_def, o_first_coeff_def] THEN 
+ FULL_SIMP_TAC sexp_ss [o_first_expt_def] THEN
+ `|= o_p (car (car b))` by METIS_TAC [o_p_inf_case,ACL2_TRUE,car_def,cdr_def]
+ THEN METIS_TAC [o_less_anti_refl, ACL2_TRUE]);
+
+val o_less_first_expt = Q.prove
+(`!x. (|= o_p x) /\ ~(|= o_finp x) ==> 
+      |= o_less (o_first_expt (o_rst x)) (o_first_expt x)`,
+ GEN_TAC THEN STRIP_TAC THEN 
+ `?a k b. (x = (cons (cons a k) b)) /\
+          (|= o_p a) /\ (|= o_p b) /\ (|= natp k) /\
+          (|= o_less (o_first_expt b) a)` by METIS_TAC [o_p_inf_case] THEN 
+ RW_TAC sexp_ss [o_first_expt_def] THEN
+ FULL_SIMP_TAC sexp_ss [o_first_expt_def]);
+
+val nonzero_rank_not_finp = Q.prove
+(`!x. 0 < rank(x) ==> ~|= o_finp x`,
+ RW_TAC sexp_ss [Once rank_def, o_finp_def]);
+
+val not_valid_eq_nil = Q.prove
+(`!x. (~|= x) = (x=nil)`,RW_TAC sexp_ss []);
+
+(*---------------------------------------------------------------------------
+  Main lemma to be proved
+
+Outline of inductive step:
+
+Prove: Every non-empty set P of ordinals of rank n has a minimal element.
+
+Induction hyp.: This holds if n is replaced by any m < n, in particular, n-1.
+Here, n > 0.
+
+Proof: Informally, we can start as follows.  Let P be an arbitrary
+counterexample.  Consider the set Q of all (o_first_expt x) for x in P.  By
+definition of rank (trivially), each such has rank m where m = n-1.  By the
+inductive hypothesis, there is a minimal alpha in Q.  Call this alpha(P).
+
+More formally:
+
+[
+  alpha(P) = if (~?x. P x /\ o_p x) then
+		arb (* or favorite default ordinal *) else
+		o_min (\y. ?x. P x /\ o_p x /\ (y = (o_first_expt x)))
+
+  Here, o_min returns a minimal ordinal satisfying a given characteristic
+  function if there is one, else arb.  By the inductive hypothesis, the former is
+  the case above.
+]
+
+Consider the set of all alpha(P) as P ranges over counterexamples (i.e.,
+non-empty sets of ordinals of rank n).  This is a set of ordinals of rank n-1,
+hence by the inductive hypothesis it has a minimal element, say alpha_0.  Now
+fix P to be a particular counterexample for which alpha(P) = alpha_0.
+
+Now consider the set P' of elements x of P for which (o_first_expt x) =
+alpha_0.  Clearly P' is non-empty, and it should be easy by the definition of
+o_less to show that every element of P' is o_less every element of P \ P'.  So
+it suffices to find a minimal element of P'.  (Might need transitivity of
+o_less for this.)
+
+Now consider the set S of all (o_first_coeff x) for x in P'.  S is clearly a
+non-empty set of natural numbers (well, after stripping off the nat....).  
+Apply WOP to pick a minimum coefficient, k.
+
+Now let P'' be the set of elements of P' for which (o_first_coeff x) =
+k.  P'' is clearly non-empty. Let R be the set of all tails of
+elements of P''.  Note that the tail of an ordinal is o_less than that
+ordinal.  Also note that alpha(R) < alpha_0 by definition of o_p
+(since exponents are strictly decreasing).  So by minimality of
+alpha_0, R has a least element, say, beta.  But then it's easy to show
+that k*omega^alpha_0 + beta is a minimal element of P'', hence of P',
+hence of P, contradiction.
+
+ ---------------------------------------------------------------------------*)
+
+g `!n. !P. (?x. P x /\ o_p_n n x) ==> 
+            ?x. P x /\ o_p_n n x /\ !y. o_p_n n y /\ o_less_bool y x ==> ~P y`;
+e Induct;
+(*1 Base case *)
+e (RW_TAC sexp_ss [o_p_n_def, o_less_bool_def] THEN 
+   `?n. P (nat n)` by METIS_TAC [o_p_of_rank_0_is_nat,o_p_bool_def,ACL2_TRUE] THEN
+   `?m. P (nat m) /\ !k. k < m ==> ~P (nat k)` by METIS_TAC [nat_wop] THEN 
+   Q.EXISTS_TAC `nat m` THEN ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
+   [ONCE_REWRITE_TAC [o_p_def] THEN RW_TAC sexp_ss [o_finp_def] 
+      THEN METIS_TAC [natp_nat, ACL2_TRUE],
+    RW_TAC sexp_ss [o_finp_def,Once rank_def],
+    RW_TAC sexp_ss [] THEN 
+    `?j. y = nat j` by METIS_TAC [o_p_of_rank_0_is_nat,o_p_bool_def,ACL2_TRUE]
+       THEN RW_TAC sexp_ss [] THEN Q.PAT_ASSUM `~(o_less a b = nil)` MP_TAC THEN
+       `~(o_finp(nat j) = nil) /\ ~(o_finp(nat m) = nil)` 
+          by RW_TAC sexp_ss [o_finp_def] 
+       THEN RW_TAC sexp_ss [Once o_less_def,less_def] 
+       THEN METIS_TAC [less_nat,ACL2_TRUE]]);
+
+(*2 Step case*)
+
+e (RW_TAC sexp_ss [o_p_n_def] THEN
+   `rank x <= n \/ (rank x = SUC n)` by DECIDE_TAC THEN DROP_ASSUMS_TAC [3]);
+(*2.1 x has rank <= n ... just use IH. This takes care of degenerate cases *)
+e (`?a. P a /\ o_p_n n a /\ !y. o_p_n n y /\ o_less_bool y a ==> ~P y` 
+   by (`o_p_n n x` by METIS_TAC[o_p_n_def,o_p_bool_def,ACL2_TRUE] THEN 
+       RES_TAC THEN METIS_TAC[]) THEN 
+  Q.EXISTS_TAC `a` THEN FULL_SIMP_TAC sexp_ss [o_p_n_def,o_p_bool_def]
+   THEN RW_TAC sexp_ss [] THEN FIRST_ASSUM MATCH_MP_TAC 
+   THEN RW_TAC sexp_ss [] 
+   THEN METIS_TAC [o_less_imp_rank_less_eq,ACL2_TRUE,LESS_EQ_TRANS]);
+(*2.2*)
+e (`(?x.
+      P x /\ (~(o_p x = nil) /\ (rank x = SUC n)) /\
+      !y.
+        (~(o_p y = nil) /\ (rank y = SUC n)) /\ ~(o_less y x = nil) ==> ~P y)
+   ==>
+  (?x.
+      P x /\ (~(o_p x = nil) /\ rank x <= SUC n) /\
+      !y.
+        (~(o_p y = nil) /\ rank y <= SUC n) /\ ~(o_less y x = nil) ==> ~P y)`
+  by (Cases_on `?a. P a /\ ~(o_p a = nil) /\ rank a <= n` 
+       THEN RW_TAC std_ss [] THENL
+      [(* use IH *)   
+       `?m. P m /\ o_p_n n m /\ !y. o_p_n n y /\ o_less_bool y m ==> ~P y` 
+           by (FIRST_ASSUM MATCH_MP_TAC THEN 
+               RW_TAC sexp_ss [o_p_n_def,o_p_bool_def] THEN METIS_TAC[]) THEN
+       Q.EXISTS_TAC `m` THEN NTAC 2 (POP_ASSUM MP_TAC) THEN 
+       SIMP_TAC sexp_ss [o_p_n_def,o_p_bool_def] THEN RW_TAC sexp_ss [] THEN
+       FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC [] THEN
+       `rank y <= rank m` by METIS_TAC [o_less_imp_rank_less_eq,ACL2_TRUE] THEN
+       METIS_TAC [LESS_EQ_TRANS],
+       (* use assumption *)
+       Q.EXISTS_TAC `x'` THEN RW_TAC sexp_ss [] THEN 
+       FULL_SIMP_TAC sexp_ss [DECIDE ``x <= SUC y = (x <= y) \/ (x = SUC y)``]
+       THEN METIS_TAC[]]));
+e (POP_ASSUM MATCH_MP_TAC THEN 
+   SPOSE_NOT_THEN 
+    (ASSUME_TAC o SIMP_RULE sexp_ss [DECIDE ``A \/ B = ~A ==> B``,
+                          DECIDE ``a ==> b ==> c = a /\ b ==> c``]));
+
+(*---------------------------------------------------------------------------*)
+(*  S is non-empty                                                           *)
+(*---------------------------------------------------------------------------*)
+
+hide "S";
+val S = ``\si. (?a. si a) /\ 
+               (!b. si b ==> (|= o_p b) /\ (rank b = SUC n)) /\
+               (!c. si c ==> ?d. si d /\ |= o_less d c)``;
+
+e (`?S. (?si. S(si)) /\
+        (!si. S si = (?x. si x) /\
+                     (!x. si(x) ==> (|= o_p x) /\ (rank x = SUC n) /\
+                                    ?y. si y /\ |= o_less y x))`  
+   by (EXISTS_TAC S THEN BETA_TAC THEN RW_TAC sexp_ss [] THENL
+       [Q.EXISTS_TAC `\x. P x /\ (|= o_p x) /\ (rank x = SUC n)` THEN
+        RW_TAC sexp_ss [] THENL [METIS_TAC [], RES_TAC THEN METIS_TAC[]],
+        EQ_TAC THEN RW_TAC sexp_ss []]));
+
+e (DROP_ASSUMS_TAC [1,2,3]);  (* Used to show S is n.e. *)
+
+(*---------------------------------------------------------------------------*)
+(* The set of all first exponents of ordinals anywhere in S is n.e. and      *)
+(* everything in it has rank at most n.                                      *)
+(*---------------------------------------------------------------------------*)
+
+val E = ``\x. ?si y. S' si /\ si y /\ (x = o_first_expt y)``;
+
+e (`?E. (?e. E e) /\
+        (!e. E e = ?si x. S' si /\ si x /\ (e = o_first_expt x))`
+      by (EXISTS_TAC E THEN BETA_TAC THEN CONJ_TAC THENL
+          [METIS_TAC[],  RW_TAC sexp_ss []]) THEN 
+    `!e. E e ==> o_p_n n e` by 
+       (DROP_ASSUMS_TAC [0,1,2] THEN 
+        SIMP_TAC sexp_ss [o_p_n_def, o_p_bool_def] THEN 
+        GEN_TAC THEN DISCH_TAC THEN 
+        `?sj x. S' sj /\ sj(x) /\ (e' = o_first_expt x)` by METIS_TAC[] THEN
+        `(|= o_p x) /\ (rank x = SUC n)` by METIS_TAC[] THEN 
+        METIS_TAC [o_p_n_first_expt,ACL2_TRUE,LESS_OR_EQ]));
+
+
+(*---------------------------------------------------------------------------*)
+(* Hence, by IH,  existence of alpha_0, minimal among all first exponents of *)
+(* ordinals in elements of S.                                                *)
+(*---------------------------------------------------------------------------*)
+
+e (`?alpha_0. E alpha_0 /\ o_p_n n alpha_0 /\
+    !y. o_p_n n y /\ ~(o_less y alpha_0 = nil) ==> ~E y`
+   by (Q.PAT_ASSUM `!P:sexp->bool. A(P) ==> B(P)` 
+          (MATCH_MP_TAC o SIMP_RULE sexp_ss [] o Q.SPEC `E`)
+       THEN METIS_TAC[]));
+
+(*---------------------------------------------------------------------------*)
+(* Now we are going to work inside a particular set that alpha_0 is the      *)
+(* minimal first exponent for. There may be more than one, of course, but we *)
+(* already have a witness from showing the existence of alpha_0.             *)
+(*---------------------------------------------------------------------------*)
+
+e (`?sj x. S' sj /\ sj x /\ (alpha_0 = o_first_expt x)` by METIS_TAC[]);
+
+(*---------------------------------------------------------------------------*)
+(* Now consider the subset of sj where all the ordinals have first exponent  *)
+(* equal to alpha_0. Call it s_alpha_0.                                      *)
+(*---------------------------------------------------------------------------*)
+
+e (`?s_alpha_0. 
+       (?a. s_alpha_0 a) /\
+       (!b. s_alpha_0(b) = sj(b) /\ (o_first_expt b = alpha_0))`
+    by (Q.EXISTS_TAC `\x. sj(x) /\ (o_first_expt x = alpha_0)` THEN 
+        METIS_TAC [ACL2_TRUE]));
+
+(*---------------------------------------------------------------------------*)
+(* Now we want to consider the set of all first coeff. for any ordinal in    *)
+(* s_alpha_0.                                                                *)
+(*---------------------------------------------------------------------------*)
+
+val N = ``\n. ?x. s_alpha_0(x) /\ (n = o_first_coeff x)``;
+
+val natp_wop_thm = 
+ Q.SPEC `a`
+   (Q.SPEC `o_first_coeff a`
+      (Ho_Rewrite.REWRITE_RULE
+            [GSYM LEFT_FORALL_IMP_THM, 
+             GSYM LEFT_EXISTS_AND_THM,
+             GSYM RIGHT_EXISTS_AND_THM]
+      (BETA_RULE (SPEC N natp_wop))));
+
+e (`|= natp (o_first_coeff a)` by METIS_TAC [o_p_first_coeff_natp] THEN
+   `sj a /\ (o_first_expt a = o_first_expt x)` by METIS_TAC[] THEN 
+   MP_TAC natp_wop_thm THEN ASM_REWRITE_TAC[] THEN 
+   DISCH_THEN (Q.X_CHOOSE_THEN `k` (Q.X_CHOOSE_THEN `x1` STRIP_ASSUME_TAC)));
+
+e (DROP_ASSUMS_TAC [15,16,17]);  
+(* drop the three fact just introduced to use nat_wop_thm *)
+
+(*---------------------------------------------------------------------------*)
+(* Consider the subset of ordinals in s_alpha_0 that have k as fst expt.     *)
+(* This is n.e.                                                              *)
+(*---------------------------------------------------------------------------*)
+
+e (`?s_alpha_0_k. 
+        (?a. s_alpha_0_k(a)) /\
+        (!b. s_alpha_0_k(b) = s_alpha_0 b /\ (o_first_coeff(b) = k))`
+    by (Q.EXISTS_TAC `\x. s_alpha_0(x) /\ (o_first_coeff(x) = k)` THEN 
+        BETA_TAC THEN METIS_TAC [ACL2_TRUE]));
+
+(*---------------------------------------------------------------------------*)
+(* Consider the set of all tails of elements of s_alpha_0_k                  *)
+(*---------------------------------------------------------------------------*)
+
+e (`?Tails. (?b. Tails b) /\
+            (!c. Tails(c) = ?b. s_alpha_0_k(b) /\ (c = o_rst b))`
+     by (Q.EXISTS_TAC `\x. ?b. s_alpha_0_k(b) /\ (x = o_rst b)` THEN 
+         BETA_TAC THEN CONJ_TAC THENL
+         [METIS_TAC[], METIS_TAC[]]));
+
+e (Cases_on `?x. Tails(x) /\ rank x <= n`);
+(*1*)
+e (`?tmin. Tails tmin /\ o_p_n n tmin /\
+        !y. o_p_n n y /\ ~(o_less y tmin = nil) ==> ~Tails y`
+   by (Q.PAT_ASSUM `!P:sexp->bool. A(P) ==> B(P)` 
+          (MATCH_MP_TAC o SIMP_RULE sexp_ss [] o Q.SPEC `Tails`)
+       THEN METIS_TAC[o_p_n_def, o_p_bool_def, ACL2_TRUE,o_p_rst]));
+e (`?min. s_alpha_0_k min /\ (tmin = o_rst min)` by METIS_TAC[]);
+e (`sj min /\ s_alpha_0 min` by METIS_TAC[]);
+e (`(o_first_expt min = alpha_0) /\ (o_first_coeff min = k)` by METIS_TAC[]);
+e (`?y. sj(y) /\ |= o_less y min` by METIS_TAC[]);
+e (POP_ASSUM MP_TAC THEN RW_TAC sexp_ss [Once o_less_def]);
+(*1.1*)
+e (SPOSE_NOT_THEN ASSUME_TAC);
+e (`s_alpha_0_k y` by METIS_TAC[]);
+e (`~Tails (cdr y)` by 
+    (FIRST_ASSUM MATCH_MP_TAC THEN 
+     RW_TAC sexp_ss [o_p_n_def, o_p_bool_def] THENL
+     [METIS_TAC [o_p_rst, ACL2_TRUE,o_rst_def],
+      MATCH_MP_TAC LESS_EQ_TRANS THEN Q.EXISTS_TAC `rank(cdr min)` 
+      THEN CONJ_TAC THENL
+      [MATCH_MP_TAC o_less_imp_rank_less_eq THEN ASM_SIMP_TAC sexp_ss []
+          THEN METIS_TAC [o_p_rst,ACL2_TRUE,o_rst_def],
+       MATCH_MP_TAC LESS_EQ_TRANS THEN Q.EXISTS_TAC `rank(x')` THEN
+       ASM_REWRITE_TAC[] THEN 
+       SPOSE_NOT_THEN (ASSUME_TAC o REWRITE_RULE [DECIDE``~(a:num <= b) = b<a``])
+        THEN `|= o_less x' (cdr min)` by 
+             (MATCH_MP_TAC (REWRITE_RULE [o_less_bool_def] 
+                                 rank_less_implies_o_less) THEN 
+               ASM_SIMP_TAC sexp_ss [o_p_bool_def] THEN CONJ_TAC THENL
+               [`?w. s_alpha_0_k w /\ (x' = o_rst w)` by METIS_TAC[] THEN 
+                `(|= o_p w) /\ (rank w = SUC n)` by METIS_TAC [ACL2_TRUE] THEN 
+                METIS_TAC [o_p_rst,ACL2_TRUE],
+                METIS_TAC [o_p_n_def, o_p_bool_def, ACL2_TRUE,o_rst_def]])
+        THEN `o_p_n n x'` by 
+              (SIMP_TAC sexp_ss [o_p_n_def, o_p_bool_def] THEN
+               `?w. s_alpha_0_k w /\ (x' = o_rst w)` by METIS_TAC[] THEN 
+                `(|= o_p w) /\ (rank w = SUC n)` by METIS_TAC [ACL2_TRUE] THEN 
+                METIS_TAC [o_p_rst,ACL2_TRUE])
+        THEN METIS_TAC [ACL2_TRUE,o_rst_def]]]));
+e (METIS_TAC [o_rst_def]);
+
+(*1.2*)
+e (SPOSE_NOT_THEN ASSUME_TAC);
+e (`|= natp(o_first_coeff y)` by METIS_TAC [o_p_first_coeff_natp]);
+e (`~ ?x'. (sj x' /\ (o_first_expt x' = o_first_expt x)) /\
+           (o_first_coeff y = o_first_coeff x')` by METIS_TAC[ACL2_TRUE]);
+e (POP_ASSUM (ASSUME_TAC o SIMP_RULE std_ss []));
+e (METIS_TAC []);
+(*1.3*)
+e (SPOSE_NOT_THEN ASSUME_TAC);
+e (`o_p_n n (o_first_expt y)` by 
+   (SIMP_TAC sexp_ss [o_p_n_def, o_p_bool_def] THEN 
+    MATCH_MP_TAC 
+      (EQT_ELIM (SIMP_CONV arith_ss [] ``a/\(b:num=c) ==> a/\b<=c``)) THEN
+    MATCH_MP_TAC (REWRITE_RULE [ACL2_TRUE] o_p_n_first_expt) THEN 
+    METIS_TAC[ACL2_TRUE]));
+e (`~E (o_first_expt y)` by METIS_TAC [] THEN 
+   POP_ASSUM MP_TAC THEN METIS_TAC[]);
+(*1.4*)
+e (`rank(y) = 0` by RW_TAC sexp_ss [Once rank_def]);
+e (METIS_TAC [DECIDE ``!n. ~(0 = SUC n)``]);
+(*1.5*)
+e (`rank(y) = 0` by RW_TAC sexp_ss [Once rank_def]);
+e (METIS_TAC [DECIDE ``!n. ~(0 = SUC n)``]);
+
+(*2*)
+(*---------------------------------------------------------------------------*)
+(* Everything in Tails has rank equal to n+1. First prove that everything    *)
+(* in Tails has rank <= n+1.                                                 *)
+(*---------------------------------------------------------------------------*)
+
+e (`!x. Tails(x) ==> rank(x) <= n+1` by 
+    (RW_TAC sexp_ss [] THEN 
+     `n+1 = rank (b')` by METIS_TAC[ADD1] THEN 
+     RW_TAC sexp_ss [] THEN MATCH_MP_TAC o_less_imp_rank_less_eq THEN 
+     REPEAT CONJ_TAC THENL
+     [METIS_TAC [o_p_rst, o_rst_def], METIS_TAC[],
+      MATCH_MP_TAC (REWRITE_RULE [o_rst_def] o_less_o_rst) THEN CONJ_TAC THENL
+      [METIS_TAC [],
+       MATCH_MP_TAC nonzero_rank_not_finp THEN RW_TAC arith_ss []]]));
+e (`!x. Tails (x) ==> (rank x = SUC n)` by
+   (NTAC 2 (POP_ASSUM MP_TAC) THEN DROP_ASSUMS_TAC [] THEN
+    RW_TAC arith_ss [] THEN RES_TAC THEN 
+    `~(rank x <= n)` by METIS_TAC[] THEN DECIDE_TAC));
+e (DROP_ASSUMS_TAC [24,25]);
+
+(*---------------------------------------------------------------------------*)
+(* Now do cases on whether Tails has no min. element                         *)
+(*---------------------------------------------------------------------------*)
+
+e (Cases_on `!c. Tails(c) ==> ?d. Tails d /\ |= o_less d c`);
+
+(*2.1*)
+e (`S' Tails` by 
+     (RW_TAC sexp_ss [] THENL
+      [METIS_TAC[], METIS_TAC [o_p_rst, o_rst_def,ACL2_TRUE]]));
+e (`|= o_less (o_first_expt b) alpha_0` by 
+     (`?x2. s_alpha_0_k x2 /\ (b = o_rst x2)` by METIS_TAC[] THEN
+      RW_TAC sexp_ss [] THEN 
+      `o_first_expt x = o_first_expt x2` by METIS_TAC[] THEN 
+      POP_ASSUM SUBST_ALL_TAC THEN 
+      MATCH_MP_TAC (REWRITE_RULE [ACL2_TRUE,o_rst_def] o_less_first_expt) THEN
+      CONJ_TAC THENL 
+      [METIS_TAC [ACL2_TRUE],
+       `0 < rank(x2)` by METIS_TAC [DECIDE ``0 < SUC n``] THEN
+        METIS_TAC [nonzero_rank_not_finp,ACL2_TRUE]]));
+(* So the first exponent of b should be in the set of all first exponents *)
+e (`E (o_first_expt b)` by METIS_TAC[]);
+e (`rank (o_first_expt b) = n` by METIS_TAC [o_p_n_first_expt,ACL2_TRUE]);
+e (`rank (o_first_expt b) <= n` by DECIDE_TAC);
+e (`o_p_n n (o_first_expt b)` by 
+       METIS_TAC [o_p_n_def, o_p_bool_def, ACL2_TRUE]);
+e (`~E(o_first_expt b)` by METIS_TAC [ACL2_TRUE]);
+
+(*2.2*)
+e (POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE std_ss [GSYM IMP_DISJ_THM]));
+e (`?p3. sj p3 /\ (alpha_0 = o_first_expt p3) /\
+                  (k = o_first_coeff p3) /\
+                  (c = o_rst p3)` by 
+   (`?p1. s_alpha_0_k p1 /\ (c = o_rst p1)` by METIS_TAC [] THEN 
+    `?p2. s_alpha_0 p2 /\ (k = o_first_coeff p2) /\ (c = o_rst p2)`
+         by METIS_TAC [] THEN 
+     Q.EXISTS_TAC `p2` THEN METIS_TAC []));
+e (`?p4. sj(p4) /\ |= o_less p4 p3` by METIS_TAC[]);
+e (POP_ASSUM MP_TAC THEN RW_TAC sexp_ss [Once o_less_def]);
+(*2.2.1*)
+e (RULE_ASSUM_TAC (REWRITE_RULE [not_valid_eq_nil,o_rst_def]));
+e (FIRST_ASSUM MATCH_MP_TAC);
+e (DROP_ASSUMS_TAC [0,1,2]);
+e (ASM_REWRITE_TAC[]);
+e (METIS_TAC[]);
+(*2.2.2*)
+e (SPOSE_NOT_THEN ASSUME_TAC);
+e (DROP_ASSUMS_TAC [0,1,2]);
+e (`|= natp (o_first_coeff p4)` by METIS_TAC [o_p_first_coeff_natp] THEN 
+   `~ ?x'. (sj x' /\ (o_first_expt x' = o_first_expt x)) /\
+           (o_first_coeff p4 = o_first_coeff x')` by METIS_TAC[ACL2_TRUE] THEN
+   POP_ASSUM MP_TAC THEN SIMP_TAC sexp_ss [] THEN METIS_TAC[]);
+(*2.2.3*)
+e (SPOSE_NOT_THEN ASSUME_TAC THEN
+   `~E (o_first_expt p4)` by 
+    (FIRST_ASSUM MATCH_MP_TAC THEN 
+     ASM_SIMP_TAC sexp_ss [o_p_n_def, o_p_bool_def] THEN 
+     MATCH_MP_TAC (EQT_ELIM 
+         (SIMP_CONV arith_ss [] ``a/\(b:num=c) ==> a/\b<=c``)) THEN
+     MATCH_MP_TAC (REWRITE_RULE [ACL2_TRUE] o_p_n_first_expt) THEN 
+     METIS_TAC[ACL2_TRUE]));
+e (POP_ASSUM MP_TAC THEN RW_TAC sexp_ss []);
+e (Q.EXISTS_TAC `sj` THEN Q.EXISTS_TAC `p4` THEN METIS_TAC [ACL2_TRUE]);
+(*2.2.4*)
+e (`rank(p4) = 0` by RW_TAC sexp_ss [Once rank_def] THEN 
+   METIS_TAC [DECIDE ``!n. ~(0 = SUC n)``]);
+(*2.2.5*)
+e (`rank(p4) = 0` by RW_TAC sexp_ss [Once rank_def] THEN 
+   METIS_TAC [DECIDE ``!n. ~(0 = SUC n)``]);
+
+val main_lemma = top_thm();
+
+
+(* ************************************************************ *)
+
+g `!P. (?x. P x /\ o_p_bool x) ==> 
+        ?x. P x /\ o_p_bool x /\ !y. o_p_bool y /\ o_less_bool y x ==> ~P y`;
+e GEN_TAC;
+e (RW_TAC std_ss []);
+e (`o_p_n (rank x) x` by ALL_TAC); (* assume this and prove as a separate subgoal *)
+e (RW_TAC sexp_ss [o_p_n_def, DECIDE ``x:num <= x``]);
+val th = SPEC_ALL (Q.SPEC `rank x` main_lemma);
+val th1 = SIMP_RULE std_ss [GSYM LEFT_FORALL_IMP_THM] th;
+val th2 = Q.SPEC `x` th1;
+e (MP_TAC th2);
+e (ASM_REWRITE_TAC []);
+e (REPEAT (WEAKEN_TAC (K true)));
+e (RW_TAC std_ss []);
+e (Q.EXISTS_TAC `x'`);
+e (FULL_SIMP_TAC std_ss [o_p_n_def]); (* FULL_SIMP_TAC simplifies in the assn's too. *)
+e GEN_TAC;
+e (`(o_p_bool y /\ rank y <= rank x) /\ o_less_bool y x' ==> ~P y` by METIS_TAC []);
+e (WEAKEN_TAC is_forall);
+e (Cases_on `rank y <= rank x`);
+e (METIS_TAC []);
+e (WEAKEN_TAC is_imp_only);
+e (`rank x' < rank y` by DECIDE_TAC);
+e (METIS_TAC [rank_less_implies_o_less, o_less_antisym,o_p_bool_def,o_less_bool_def,ACL2_TRUE]);
+val main_theorem = top_thm();
+
+
