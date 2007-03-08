@@ -6,19 +6,22 @@ struct
             (concat Globals.HOLDIR "/examples/dev/sw") :: 
             (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
             (concat Globals.HOLDIR "/examples/elliptic/sep") :: 
+            (concat Globals.HOLDIR "/examples/elliptic/swsep") :: 
             !loadPath;
 
 	use (concat Globals.HOLDIR "/examples/dev/sw/compiler");
 	quietdec := true;
 
-	map load ["swsepTheory", "arm_progTheory", "set_sepLib", "arm_instTheory", "pred_setSyntax"];
+	map load ["arm_progTheory", "arm_instTheory", "pred_setSyntax", "swsepTheory", "set_sepLib"];
 
 	quietdec := false;
 *)
 
+
 open HolKernel boolLib bossLib Parse;
 open Portable Assem wordsTheory ANF pairTheory pairLib listTheory arithmeticTheory whileTheory  wordsLib PairedLambda mechReasoning IRSyntax;
-open swsepTheory arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instTheory 
+open swsepTheory arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instTheory listTheory
+   wordsTheory pairTheory wordsLib markerTheory
 
 fun extract_ir (_, _, _, _, _, spec, _, wf, _, _, _) = 
 	let
@@ -44,6 +47,7 @@ fun translate_ir ir =
 	in
 		(rhs (concl thm1), thm1, thm2, thm3)
 	end;
+
 
 fun spec_ir comp =
 	let
@@ -125,7 +129,7 @@ fun post_process_sep thm =
 
 		val new_preparts = map remove_unused pre_parts	
 
-		val new_pre = mk_comb (arm_prog, foldr (fn (t1, t2) => liteLib.list_mk_icomb opr [t1, t2]) (``emp:(ARMel -> bool) -> bool``) new_preparts)
+		val new_pre = mk_icomb (arm_prog, foldr (fn (t1, t2) => liteLib.list_mk_icomb opr [t1, t2]) (``emp:('a ARMel -> bool) -> bool``) new_preparts)
 		val new_pre = rhs (concl (SIMP_CONV std_ss [emp_STAR, STAR_ASSOC] new_pre))
 		val new_pre_thm = SIMP_CONV (std_ss++SEP_EXISTS_ss) [SEP_HIDE_THM] new_pre;
 
@@ -134,7 +138,7 @@ fun post_process_sep thm =
 		
 		val thm = prove (new_term, 					
 			SIMP_TAC std_ss [GSYM SEP_HIDE_THM, new_pre_thm] THEN
-			ONCE_REWRITE_TAC[prove(``ARM_PROG p = ARM_PROG (emp * p)``, REWRITE_TAC[emp_STAR])] THEN
+			ONCE_REWRITE_TAC[prove(``ARM_PROG (p:'a ARMset set) = ARM_PROG (emp * p)``, REWRITE_TAC[emp_STAR])] THEN
 			SIMP_TAC std_ss [GSYM ARM_PROG_HIDE_PRE] THEN
 			SIMP_TAC std_ss [emp_STAR, thm]);
 	in
@@ -194,11 +198,11 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
 			 extract_oregs_f (t::l) = 
 				let
 					val (oregs, f) = extract_oregs_f l;
-					val (ls, rs) = dest_eq t;
-					val oreg = rand (rand ls);
+					val (ls', rs') = dest_eq t;
+					val oreg = rand (rand ls');
 
 					val oregs = listSyntax.mk_cons(oreg, oregs);
-					val f = mk_cond (mk_eq (x, ``MREG2REG ^oreg``), rs, f)
+					val f = mk_cond (mk_eq (x, ``MREG2REG ^oreg``), rs', f)
 				in
 					(oregs, f)
 				end;
@@ -271,10 +275,14 @@ fun spec_sep (comp:(string * hol_type * (IRSyntax.exp * 'a * IRSyntax.exp) * thm
 			uregs_words_thm, oregs_words_thm, oregs_uregs_distinct] thm2
 		val thm4 = SIMP_RULE std_ss [input_regs_list_thm, f_thm, output_regs_thm,
 			unknown_changed_regs_list_thm, f_spec_thm] thm3
-		val thm5 = REWRITE_RULE [f_depend_thm] thm4
-		val thm6 = SIMP_RULE std_ss [LENGTH, dimindex_24, reg_spec_def, FOLDR,
-			ereg_spec_def, emp_STAR] thm5		
-		val thm7 = post_process_sep thm6
+		val thm5 = REWRITE_RULE [f_depend_thm, Once (prove (``!X. (MAP enc X) = (unint (MAP enc X))``, SIMP_TAC std_ss [unint_def]))] thm4
+		val thm6 = SIMP_RULE list_ss [LENGTH, dimindex_24, reg_spec_def, FOLDR,
+			spec_list_def, emp_STAR, xM_list_def, rest_list_def, xR_list_def,
+         GSYM (SIMP_RULE std_ss [STAR_SYM] SEP_EXISTS_ABSORB_STAR),
+         Cong (REFL ``unint X``)
+         ] thm5
+      val thm7 = REWRITE_RULE [unint_def] thm6 
+		val thm8 = post_process_sep thm7
 	in
-		thm7
+		thm8
 	end
