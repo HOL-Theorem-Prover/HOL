@@ -368,20 +368,7 @@ fun sim_stms blk =
 
 val basic_outL = [IRSyntax.REG 11, IRSyntax.REG 13];               (* fp and sp *)
 
-
-val PSPEC_term =
-	Term `PSPEC:CTL_STRUCTURE ->
-       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) ->
-        bool) #
-       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) ->
-        bool) ->
-       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) -> 'a)
-       ->
-       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) -> 'b)
-       #
-       ('b -> 'c) #
-       ((bool ** i4 |-> bool ** i32) # (bool ** i30 |-> bool ** i32) -> 'c)
-       -> bool`;
+val PSPEC_term = Term `PSPEC:('a, 'b, 'c) PSPEC_TYPE`;
 
 
 fun mk_PSPEC ir (pre_st,post_st) (ins,outs) = 

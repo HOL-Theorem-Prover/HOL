@@ -1368,7 +1368,7 @@ val MEM_ADDR_ADD_CONST = store_thm ("MEM_ADDR_ADD_CONST",
 	ONCE_REWRITE_TAC[GSYM w2n_11] THEN
 	REWRITE_TAC [MEM_ADDR_def] THEN		
 	WORDS_TAC THEN
-	SIMP_TAC std_ss [SIMP_RULE std_ss [dimindex_32] (INST_TYPE [alpha |-> Type `:i32`] (GSYM word_lsr_n2w))] THEN
+	SIMP_TAC std_ss [SIMP_RULE std_ss [dimindex_32] (INST_TYPE [alpha |-> Type `:32`] (GSYM word_lsr_n2w))] THEN
 	SIMP_TAC arith_ss [w2n_lsr, bitTheory.BITS_def, MOD_2EXP_def, DIV_2EXP_def, 
 		word_add_def, w2n_n2w, dimword_32] THEN
 	`!x n m. ((0 < n) /\ (n <= m)) ==> ((x MOD n MOD m) = x MOD n)` by ALL_TAC THEN1 (
