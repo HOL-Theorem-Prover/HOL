@@ -47,6 +47,8 @@ val reg = set_registers empty_registers `[(pc,0x20w)]`;
 val psr = set_status_registers empty_psrs
  `[(CPSR,SET_NZCV (F,F,F,F) (SET_IFMODE F F usr 0w))]`;
 
+(* val _ = time evaluate(max,assemble empty_memory "mlton/gcd.s",reg,psr); *)
+
 (* ------------------------------------------------------------------------- *)
 
 fun hs n = "0x" ^ Arbnum.toHexString n;

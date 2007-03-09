@@ -742,9 +742,11 @@ fun state (tmr,prtr) n f s =
      end;
 
 fun pc_ptr (x : arm_state) =
-  let val pc = eval_word (get_pc (#reg x))
-  in
-    print_mem_range (#mem x) (pc, 1)
+  let val pc = eval_word (get_pc (#reg x)) in
+    if term_eq T (#undef x) then
+      print ("0x" ^ Arbnum.toHexString pc ^ ": undefined exception\n")
+    else
+      print_mem_range (#mem x) (pc, 1)
   end;
 
 fun evaluate_cp (n, f, m, r, s, p) = state (A,pc_ptr) n f (init f m r s p)

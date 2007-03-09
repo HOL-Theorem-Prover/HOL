@@ -462,8 +462,11 @@ fun printer (Wreg, Wmem, Wmode, Wflags, Wireg) cycle s ns =
               ("; mode := " ^ mode2string (armML.DECODE_MODE m))
     in
       ((if Wireg then
-          print_ireg
-            (bsubstML.mem_read(mem1,bsubstML.ADDR30 (armML.FETCH_PC reg1)))
+          if armML.arm_sys_state_undefined s then
+            print "> undefined exception\n"
+          else
+            print_ireg
+              (bsubstML.mem_read(mem1,bsubstML.ADDR30 (armML.FETCH_PC reg1)))
         else
           ());
        print ("- t = " ^ Int.toString cycle);
