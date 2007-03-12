@@ -8,6 +8,8 @@ open sexp sexpTheory hol_defaxiomsTheory arithmeticTheory
      BasicProvers TotalDefn;
 quietdec := false;
 
+val meter = Count.mk_meter();
+
 (*---------------------------------------------------------------------------*)
 (* Functionality discussed with Matt                                         *)
 (*---------------------------------------------------------------------------*)
@@ -1079,31 +1081,58 @@ e (`rank(p4) = 0` by RW_TAC sexp_ss [Once rank_def] THEN
 val main_lemma = top_thm();
 
 
-(* ************************************************************ *)
+(*---------------------------------------------------------------------------*)
+(* Basic statement of wellfoundedness                                        *)
+(*---------------------------------------------------------------------------*)
 
-g `!P. (?x. P x /\ o_p_bool x) ==> 
-        ?x. P x /\ o_p_bool x /\ !y. o_p_bool y /\ o_less_bool y x ==> ~P y`;
-e GEN_TAC;
-e (RW_TAC std_ss []);
-e (`o_p_n (rank x) x` by ALL_TAC); (* assume this and prove as a separate subgoal *)
-e (RW_TAC sexp_ss [o_p_n_def, DECIDE ``x:num <= x``]);
-val th = SPEC_ALL (Q.SPEC `rank x` main_lemma);
-val th1 = SIMP_RULE std_ss [GSYM LEFT_FORALL_IMP_THM] th;
-val th2 = Q.SPEC `x` th1;
-e (MP_TAC th2);
-e (ASM_REWRITE_TAC []);
-e (REPEAT (WEAKEN_TAC (K true)));
-e (RW_TAC std_ss []);
-e (Q.EXISTS_TAC `x'`);
-e (FULL_SIMP_TAC std_ss [o_p_n_def]); (* FULL_SIMP_TAC simplifies in the assn's too. *)
-e GEN_TAC;
-e (`(o_p_bool y /\ rank y <= rank x) /\ o_less_bool y x' ==> ~P y` by METIS_TAC []);
-e (WEAKEN_TAC is_forall);
-e (Cases_on `rank y <= rank x`);
-e (METIS_TAC []);
-e (WEAKEN_TAC is_imp_only);
-e (`rank x' < rank y` by DECIDE_TAC);
-e (METIS_TAC [rank_less_implies_o_less, o_less_antisym,o_p_bool_def,o_less_bool_def,ACL2_TRUE]);
-val main_theorem = top_thm();
+val main_theorem = Q.prove
+(`!P. (?x. P x /\ o_p_bool x) ==> 
+      ?x. P x /\ o_p_bool x /\ !y. o_p_bool y /\ o_less_bool y x ==> ~P y`,
+ RW_TAC std_ss [] THEN 
+ `o_p_n (rank x) x` by RW_TAC sexp_ss [o_p_n_def, DECIDE ``x:num <= x``] THEN
+ MP_TAC (Q.SPEC `x`
+           (SIMP_RULE std_ss [GSYM LEFT_FORALL_IMP_THM] 
+              (SPEC_ALL (Q.SPEC `rank x` main_lemma)))) THEN 
+ ASM_REWRITE_TAC [] THEN REPEAT (WEAKEN_TAC (K true)) THEN 
+ RW_TAC std_ss [] THEN Q.EXISTS_TAC `x'` THEN 
+ FULL_SIMP_TAC std_ss [o_p_n_def] THEN  GEN_TAC THEN 
+ `(o_p_bool y /\ rank y <= rank x) /\ o_less_bool y x' ==> ~P y` 
+    by METIS_TAC [] THEN WEAKEN_TAC is_forall THEN 
+ Cases_on `rank y <= rank x` THENL
+  [METIS_TAC [],
+   WEAKEN_TAC is_imp_only THEN 
+   `rank x' < rank y` by DECIDE_TAC THEN 
+   METIS_TAC [rank_less_implies_o_less, o_less_antisym,
+              o_p_bool_def,o_less_bool_def,ACL2_TRUE]]);
 
+(*---------------------------------------------------------------------------*)
+(* Rephrased for use with other theorems about wellfoundedness               *)
+(*---------------------------------------------------------------------------*)
+
+val WF_o_less = Q.prove
+(`WF (\x y. (|= o_p x) /\ (|= o_p y) /\ |= o_less x y)`,
+ RW_TAC sexp_ss [relationTheory.WF_DEF] THEN 
+ Cases_on `?a. B a /\ o_p_bool a` THENL
+ [`?x. B x /\ o_p_bool x /\ !y. o_p_bool y /\ o_less_bool y x ==> ~B y`
+       by METIS_TAC [main_theorem] 
+    THEN Q.EXISTS_TAC `x` THEN ASM_REWRITE_TAC[] 
+    THEN RW_TAC sexp_ss [],
+  FULL_SIMP_TAC sexp_ss [Once CONTRAPOS_THM] THEN METIS_TAC []]);
+
+(*---------------------------------------------------------------------------*)
+(* Hence ACL2 induction                                                      *)
+(*---------------------------------------------------------------------------*)
+
+val WF_measure = SPEC_ALL (MATCH_MP relationTheory.WF_inv_image WF_o_less);
+
+val ACL2_INDUCTION_THM = save_thm
+("ACL2_INDUCTION",
+ GEN ``P:'a->bool``
+  (GEN ``f:'a->sexp``
+    (SPEC_ALL 
+       (SIMP_RULE std_ss [relationTheory.inv_image_def]
+          (MATCH_MP relationTheory.WF_INDUCTION_THM WF_measure)))));
+
+
+val _ = Count.report (Count.read meter);
 
