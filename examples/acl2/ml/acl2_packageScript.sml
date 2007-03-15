@@ -2940,26 +2940,26 @@ val every_split = prove(``!l. (!x. A x = B x /\ C x) ==> (EVERY A l = EVERY B l 
 
 val leq_def = 
  Define `
-  (leq [] [] = T) /\ 
-  (leq [] (a::b) = T) /\ 
-  (leq (a::b) [] = F) /\ 
-  (leq (a::b) (c::d) = ORD a < ORD c \/ (a = c) /\ leq b d)`;
+  (leq "" "" = T) /\ 
+  (leq "" (STRING a b) = T) /\ 
+  (leq (STRING a b) "" = F) /\ 
+  (leq (STRING a b) (STRING c d) = if ORD a < ORD c then T else (ORD a = ORD c) /\ leq b d)`;
 
 val LEQ_def = 
  Define 
-  `LEQ s1 (s2,_:string,_:string) = leq (EXPLODE s1) (EXPLODE s2)`;
+  `LEQ s1 (s2,x:string # string) = leq s1 s2`;
 
-val leq_only = prove(``!s a b c d e. LEQ s (a,b,c) = LEQ s (a,d,e)``,
+val leq_only = prove(``!s a x y. LEQ s (a,x) = LEQ s (a,y)``,
 	Cases THEN Cases THEN RW_TAC std_ss [LEQ_def]);
 
-val leq_t_imp = prove(``!l s x v0 v1 v2 v3. LEQ s (x,v0,v1) ==> LOOKUP_AUX (FILTER ($~ o LEQ s) l) (x,v2,v3)``,
+val leq_t_imp = prove(``!l s x v0 v1. LEQ s (x,v0) ==> LOOKUP_AUX (FILTER ($~ o LEQ s) l) (x,v1)``,
 	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
-	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
+	RW_TAC std_ss [FILTER] THEN Cases_on `v1` THEN RW_TAC std_ss [LOOKUP_AUX_def] THEN
 	METIS_TAC [leq_only]);
 
-val leq_f_imp = prove(``!l s x v0 v1 v2 v3. ~LEQ s (x,v0,v1) ==> LOOKUP_AUX (FILTER (LEQ s) l) (x,v2,v3)``,
+val leq_f_imp = prove(``!l s x v0 v1. ~LEQ s (x,v0) ==> LOOKUP_AUX (FILTER (LEQ s) l) (x,v1)``,
 	Induct THEN TRY (Cases THEN Cases_on `r`) THEN 
-	RW_TAC std_ss [LOOKUP_AUX_def,FILTER] THEN
+	RW_TAC std_ss [FILTER] THEN Cases_on `v1` THEN RW_TAC std_ss [LOOKUP_AUX_def] THEN
 	METIS_TAC [leq_only]);
 
 val lookup_split_leq = 
@@ -2978,72 +2978,275 @@ val every_lookup_split_leq =
 	RW_TAC std_ss [EVERY_DEF,LOOKUP_AUX_def,FILTER] THEN
 	METIS_TAC [leq_t_imp,leq_f_imp]);
 
-val PARTITION_def =
- Define `(PARTITION s1 s2 s3 [] = ([],[],[],[])) /\
-	 (PARTITION s1 s2 s3 (a::bs) =
-		let (l1,l2,l3,l4) = PARTITION s1 s2 s3 bs in
-		if LEQ s2 a then 
-			if LEQ s1 a then (a::l1,l2,l3,l4) else (l1,a::l2,l3,l4)
-		else
-			if LEQ s3 a then (l1,l2,a::l3,l4) else (l1,l2,l3,a::l4))`;
+val EVERY_FILTER = 
+     prove(``!l. EVERY P l = EVERY P (FILTER Q l) /\ EVERY P (FILTER ($~ o Q) l)``,
+	Induct THEN RW_TAC arith_ss [EVERY_DEF,FILTER] THEN
+	PROVE_TAC []);
 
+val PLACE_def = Define `PLACE s1 s2 s3 a (A,B,C,D) = 
+		if LEQ s2 a
+                    then if LEQ s1 a then (a::A,B,C,D) else (A,a::B,C,D)
+                    else if LEQ s3 a then (A,B,a::C,D) else (A,B,C,a::D)`;
 
-val partition_thm = prove(``!l. PARTITION s1 s2 s3 l = 
-	(FILTER (LEQ s1) (FILTER (LEQ s2) l),
-         FILTER ($~ o LEQ s1) (FILTER (LEQ s2) l),
-	 FILTER (LEQ s3) (FILTER ($~ o LEQ s2) l),
-	 FILTER ($~ o LEQ s3) (FILTER ($~ o LEQ s2) l))``,
-	Induct THEN REPEAT (RW_TAC std_ss [PARTITION_def,FILTER]));
+val PARTITION_def = 
+ Define `(PARTITION s1 s2 s3 (A,B,C,D) [] = (A,B,C,D)) /\
+         (PARTITION s1 s2 s3 (A,B,C,D) (a::bs) =
+               PARTITION s1 s2 s3 (PLACE s1 s2 s3 a (A,B,C,D)) bs)`;  
 
-val elookup_split_leq = 
-     prove(``!s1 s2 s3 l1. 
-	ELOOKUP l1 = (\(a,b,c,d). (ELOOKUP a /\ ELOOKUP b) /\ (ELOOKUP c /\ ELOOKUP d)) (PARTITION s1 s2 s3 l1)``,
-     RW_TAC std_ss [ELOOKUP_def,partition_thm] THEN METIS_TAC [every_lookup_split_leq]);
+val RFILTER_def =
+ Define `(RFILTER P [] A = A) /\ (RFILTER P (a::b) A = RFILTER P b (if P a then a::A else A))`;
 
+val partition_lem = prove(``!l A B C D. PARTITION s1 s2 s3 (A,B,C,D) l = 
+	(RFILTER (\x. LEQ s1 x /\ LEQ s2 x) l A,
+	 RFILTER (\x. ~LEQ s1 x /\ LEQ s2 x) l B,
+	 RFILTER (\x. LEQ s3 x /\ ~LEQ s2 x) l C,
+	 RFILTER (\x. ~LEQ s3 x /\ ~LEQ s2 x) l D)``,
+	Induct THEN RW_TAC arith_ss [PLACE_def,PARTITION_def,RFILTER_def] THEN FULL_SIMP_TAC std_ss []);
 
-fun should_eval _ [] = true
-  | should_eval NONE (x::xs) = should_eval (SOME x) xs
-  | should_eval (SOME x) (y::ys) = (x = y) andalso should_eval (SOME x) ys;
+val EPARTITION_def = 
+ Define `EPARTITION s1 s2 s3 (A,B,C,D) L = 
+		(\ (A,B,C,D). 	VALID_PKG_TRIPLES (REVERSE A) /\ VALID_PKG_TRIPLES (REVERSE B) /\ 
+				VALID_PKG_TRIPLES (REVERSE C) /\ VALID_PKG_TRIPLES (REVERSE D))
+		(PARTITION s1 s2 s3 (A,B,C,D) L)`;
+
+val RPARTITION_def = 
+ Define `RPARTITION s1 s2 s3 (A,B,C,D) L = 
+		(\ (A,B,C,D). VALID_PKG_TRIPLES A /\ VALID_PKG_TRIPLES B /\ VALID_PKG_TRIPLES C /\ VALID_PKG_TRIPLES D)
+		(PARTITION s1 s2 s3 (A,B,C,D) L)`;
+
+val RFILTER_thm = prove(``!A B P. RFILTER P A B = REVERSE (FILTER P A) ++ B``,
+	Induct THEN RW_TAC arith_ss [RFILTER_def,FILTER,REVERSE_DEF,APPEND,GSYM APPEND_ASSOC]);
+
+val FILTER_SPLIT = prove(``!l P Q. FILTER (\x. P x /\ Q x) l = FILTER P (FILTER Q l)``,
+	Induct THEN RW_TAC arith_ss [FILTER] THEN FULL_SIMP_TAC arith_ss []);
+
+val FILTER_REVERSE = prove(``!l. REVERSE (FILTER P l) = FILTER P (REVERSE l)``,
+	Induct THEN RW_TAC arith_ss [FILTER,REVERSE_DEF,FILTER_APPEND_DISTRIB,APPEND_NIL]);
+
+val elookup_split = prove(``!s1 s2 s3 l. VALID_PKG_TRIPLES l = EPARTITION s1 s2 s3 ([],[],[],[]) l``,
+	RW_TAC arith_ss [EPARTITION_def,separate_proof,ELOOKUP_def,partition_lem,RFILTER_thm,
+		REVERSE_REVERSE,APPEND_NIL,FILTER_SPLIT] THEN
+	METIS_TAC [every_lookup_split_leq,EVERY_FILTER]);
+
+val rlookup_split = prove(``!s1 s2 s3 l. VALID_PKG_TRIPLES (REVERSE l) = RPARTITION s1 s2 s3 ([],[],[],[]) l``,
+	RW_TAC arith_ss [RPARTITION_def,separate_proof,ELOOKUP_def,partition_lem,RFILTER_thm,
+		APPEND_NIL,FILTER_SPLIT,FILTER_REVERSE] THEN
+	METIS_TAC [every_lookup_split_leq,EVERY_FILTER]);
+
+val RPARTITION = prove(``
+	(RPARTITION s1 s2 s3 (A,B,C,D) [] = 
+		((VALID_PKG_TRIPLES A /\ VALID_PKG_TRIPLES B) /\ (VALID_PKG_TRIPLES C /\ VALID_PKG_TRIPLES D))) /\
+	(RPARTITION s1 s2 s3 X [a] = RPARTITION s1 s2 s3 (PLACE s1 s2 s3 a X) []) /\
+	(RPARTITION s1 s2 s3 X (a::b::c) = 
+		RPARTITION s1 s2 s3 (PLACE s1 s2 s3 b (PLACE s1 s2 s3 a X)) c)``,
+	Cases_on `X` THEN Cases_on `r` THEN Cases_on `r'` THEN
+	RW_TAC arith_ss [PLACE_def,PARTITION_def,RPARTITION_def] THEN 
+	RW_TAC arith_ss [RPARTITION_def] THEN METIS_TAC []);
+
+val EPARTITION = prove(``
+	(EPARTITION s1 s2 s3 (A,B,C,D) [] = 
+		((VALID_PKG_TRIPLES (REVERSE A) /\ VALID_PKG_TRIPLES (REVERSE B)) /\ 
+		 (VALID_PKG_TRIPLES (REVERSE C) /\ VALID_PKG_TRIPLES (REVERSE D)))) /\
+	(EPARTITION s1 s2 s3 X [a] = EPARTITION s1 s2 s3 (PLACE s1 s2 s3 a X) []) /\
+	(EPARTITION s1 s2 s3 X (a::b::c) = 
+		EPARTITION s1 s2 s3 (PLACE s1 s2 s3 b (PLACE s1 s2 s3 a X)) c)``,
+	Cases_on `X` THEN Cases_on `r` THEN Cases_on `r'` THEN
+	RW_TAC arith_ss [PLACE_def,PARTITION_def,EPARTITION_def] THEN 
+	RW_TAC arith_ss [EPARTITION_def] THEN METIS_TAC []);
+
+val LLEQ_def = Define `
+	(LLEQ [] "" = T) /\ 
+	(LLEQ [] (STRING a b) = T) /\
+	(LLEQ (x::y) "" = F) /\
+	(LLEQ (x::y) (STRING a b) = if x < ORD a then T else (if (x = ORD a) then LLEQ y b else F))`;
+
+val LPLACE_def = Define `
+	LPLACE l1 l2 l3 a (A,B,C,D) = 
+		if LLEQ l2 (FST a) then
+			if LLEQ l1 (FST a) then (a::A,B,C,D) else (A,a::B,C,D)
+		else 
+			if LLEQ l3 (FST a) then (A,B,a::C,D) else (A,B,C,a::D)`;
+
+val LLEQ_THM = prove(``!s1 s2 x. LLEQ (MAP ORD (EXPLODE s1)) s2 = LEQ s1 (s2,x)``,
+	completeInduct_on `STRLEN s1 + STRLEN s2` THEN
+	Cases THEN Cases THEN RW_TAC arith_ss [LLEQ_def,LEQ_def,stringTheory.EXPLODE_EQNS,MAP,leq_def] THEN
+	POP_ASSUM (MP_TAC o SPEC ``STRLEN str + STRLEN str'``) THEN RW_TAC arith_ss [stringTheory.STRLEN_DEF] THEN
+	METIS_TAC [LEQ_def]);
+
+val LPLACE_THM = prove(``!s1 s2 s3. PLACE s1 s2 s3 = 
+		LPLACE (MAP ORD (EXPLODE s1)) (MAP ORD (EXPLODE s2)) (MAP ORD (EXPLODE s3))``,
+	REPEAT GEN_TAC THEN REWRITE_TAC [FUN_EQ_THM] THEN
+	GEN_TAC THEN Cases THEN Cases_on `r` THEN Cases_on `r'` THEN
+	RW_TAC arith_ss [PLACE_def,LPLACE_def,LLEQ_THM] THEN
+	Cases_on `x` THEN FULL_SIMP_TAC arith_ss [GSYM LLEQ_THM]);
+
+val AL_def = Define `AL (a:string # string # string) (A,B,C,D) = (a::A,B,C,D)`;
+val BL_def = Define `BL (a:string # string # string) (A,B,C,D) = (A,a::B,C,D)`;
+val CL_def = Define `CL (a:string # string # string) (A,B,C,D) = (A,B,a::C,D)`;
+val DL_def = Define `DL (a:string # string # string) (A,B,C,D) = (A,B,C,a::D)`;
+
+val L_defs = LIST_CONJ [AL_def,BL_def,CL_def,DL_def];
+
+val LPLACE_RWR = prove(``LPLACE l1 l2 l3 a = 
+		if LLEQ l2 (FST a) then
+			if LLEQ l1 (FST a) then AL a else BL a
+		else 
+			if LLEQ l3 (FST a) then CL a else DL a``,
+	REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN Cases_on `r` THEN Cases_on `r'` THEN 
+	RW_TAC arith_ss [LPLACE_def,L_defs]);
+
+val LOOKUP_AUX_RWR = prove(``
+	(LOOKUP_AUX [] v = T) /\
+	(LOOKUP_AUX ((name1,ACL2_CL)::a) (name2,ACL2_CL) = LOOKUP_AUX a (name2,ACL2_CL)) /\
+	(LOOKUP_AUX ((name1,ACL2_CL)::a) (name2,ACL2_USER_CL) = LOOKUP_AUX a (name2,ACL2_USER_CL)) /\
+	(LOOKUP_AUX ((name1,ACL2_CL)::a) (name2,ACL2_USER) = ~(name1 = name2) /\ LOOKUP_AUX a (name2,ACL2_USER)) /\
+	(LOOKUP_AUX ((name1,ACL2_USER_CL)::a) (name2,ACL2_CL) = LOOKUP_AUX a (name2,ACL2_CL)) /\
+	(LOOKUP_AUX ((name1,ACL2_USER_CL)::a) (name2,ACL2_USER_CL) = LOOKUP_AUX a (name2,ACL2_USER_CL)) /\
+	(LOOKUP_AUX ((name1,ACL2_USER_CL)::a) (name2,ACL2_USER) = LOOKUP_AUX a (name2,ACL2_USER)) /\
+	(LOOKUP_AUX ((name1,ACL2_USER)::a) (name2,ACL2_CL) = LOOKUP_AUX a (name2,ACL2_CL)) /\
+	(LOOKUP_AUX ((name1,ACL2_USER)::a) (name2,ACL2_USER_CL) = LOOKUP_AUX a (name2,ACL2_USER_CL)) /\
+	(LOOKUP_AUX ((name1,ACL2_USER)::a) (name2,ACL2_USER) = LOOKUP_AUX a (name2,ACL2_USER))``,
+	RW_TAC arith_ss [LOOKUP_AUX_def,ACL2_CL_def,ACL2_USER_def,ACL_USER_CL_def] THEN
+	METIS_TAC []);	
 	
-fun split_term_leq list term = 
-let	val _ = if length list > 50 then (print "[" ; print (int_to_string (length list)) ; print "]#") else ()
-	val (listl,listr) = split_after (length list div 2) list   handle e => ([],[])
-	val (list1,list2) = split_after (length listl div 2) listl handle e => ([],[])
-	val (list3,list4) = split_after (length listr div 2) listr handle e => ([],[])
+val CHECK_def = Define `CHECK (x,y,z) = ~(z = "") /\ ~(x = "ACL2-PKG-WITNESS")`;
+
+val VALID_PKG_TRIPLES_RWR = prove(``!l1.
+		VALID_PKG_TRIPLES l1 = EVERY CHECK l1 /\ ELOOKUP l1``,
+	STRIP_TAC THEN REWRITE_TAC [separate_proof] THEN 
+	MATCH_MP_TAC (DECIDE ``(A = B /\ C) /\ (D = E) ==> (B /\ C /\ E = A /\ D)``) THEN
+	Induct_on `l1` THEN RW_TAC arith_ss [EVERY_DEF] THEN
+	Cases_on `h` THEN Cases_on `r` THEN RW_TAC arith_ss [CHECK_def] THEN
+	PROVE_TAC []);
+
+val PRE_EVAL_RWR = prove(``
+		(CHECK (x,ACL2_CL) = ~(x = "ACL2-PKG-WITNESS")) /\ 
+		(CHECK (x,ACL2_USER_CL) = ~(x = "ACL2-PKG-WITNESS")) /\ 
+		(CHECK (x,ACL2_USER) = ~(x = "ACL2-PKG-WITNESS"))``,
+	RW_TAC arith_ss [CHECK_def,ACL2_CL_def,ACL2_USER_def,ACL_USER_CL_def]);
+
+fun ABBREV_CONV conv term = 
+let	val (a,right) = dest_comb term
+	val (left,lterm) = dest_comb a
+	val var = genvar (type_of lterm)
+in	INST [var |-> lterm] (conv (mk_comb(mk_comb(left,var),right)))
+end;
+
+local
+	val (thm1,p1) = CONJ_PAIR RPARTITION
+	val (thm2,thm3) = CONJ_PAIR p1
 in
-	if length list <= 16 orelse should_eval NONE list orelse exists null [list1,list2,list3,list4] then 
-		(EVAL THENC REWRITE_CONV [elookup_empty]) term
-	else 
-		(REWR_CONV (SPECL (map fromMLstring [hd list4,hd list3,hd list2]) elookup_split_leq) THENC
-	 	 RAND_CONV EVAL THENC
-		 PairedLambda.PAIRED_BETA_CONV THENC
-	 	 FORK_CONV (
-			FORK_CONV (split_term_leq list4,split_term_leq list3),
-			FORK_CONV (split_term_leq list2,split_term_leq list1)) THENC
-	 	REWRITE_CONV []) term
+fun RPART_CONV n compset term = 
+let	val x = (rator o rator) term
+	val (k,s3) = dest_comb x
+	val (l,s2) = dest_comb k
+	val s1 = rand l
+	val place_thm = RIGHT_CONV_RULE EVAL (SPECL [s1,s2,s3] LPLACE_THM);
+	val inst = INST [``s1:string`` |-> s1,``s2:string`` |-> s2,``s3:string`` |-> s3];
+	val thm3' = REWRITE_RULE [place_thm] (inst thm3)
+	val thm2' = REWRITE_RULE [place_thm] (inst thm2);
+	fun RPART_CONV_x n term = 
+		(if n mod 50 = 0 then (print "R[" ; print (int_to_string n) ; print "]") else ()
+		; ABBREV_CONV (FIRST_CONV 
+			[REWR_CONV thm3' THENC
+			 RATOR_CONV (RAND_CONV (computeLib.CBV_CONV compset)) THENC
+			 RPART_CONV_x (n - 2)
+                	,REWR_CONV thm2' THENC
+			 RATOR_CONV (RAND_CONV (computeLib.CBV_CONV compset)) THENC
+			 RPART_CONV_x (n - 1)
+			,ALL_CONV]) term)
+in
+	(RPART_CONV_x n THENC
+	DEPTH_CONV (FIRST_CONV (map REWR_CONV (CONJUNCTS L_defs))) THENC
+	REWR_CONV thm1) term
+end
+end;
+
+local
+	val (thm1,p1) = CONJ_PAIR EPARTITION
+	val (thm2,thm3) = CONJ_PAIR p1
+in
+fun EPART_CONV n compset term = 
+let	val x = (rator o rator) term
+	val (k,s3) = dest_comb x
+	val (l,s2) = dest_comb k
+	val s1 = rand l
+	val place_thm = RIGHT_CONV_RULE EVAL (SPECL [s1,s2,s3] LPLACE_THM);
+	val inst = INST [``s1:string`` |-> s1,``s2:string`` |-> s2,``s3:string`` |-> s3];
+	val thm3' = REWRITE_RULE [place_thm] (inst thm3)
+	val thm2' = REWRITE_RULE [place_thm] (inst thm2);
+	fun EPART_CONV_x n term = 
+		(if n mod 50 = 0 then (print "E[" ; print (int_to_string n) ; print "]") else ()
+		; ABBREV_CONV (FIRST_CONV 
+			[REWR_CONV thm3' THENC
+			 RATOR_CONV (RAND_CONV (computeLib.CBV_CONV compset)) THENC
+			 EPART_CONV_x (n - 2)
+                	,REWR_CONV thm2' THENC
+			 RATOR_CONV (RAND_CONV (computeLib.CBV_CONV compset)) THENC
+			 EPART_CONV_x (n - 1)
+			,ALL_CONV]) term)
+in
+	(EPART_CONV_x n THENC
+	DEPTH_CONV (FIRST_CONV (map REWR_CONV (CONJUNCTS L_defs))) THENC
+	REWR_CONV thm1) term
+end
+end;
+
+local
+	open computeLib
+	val compset_part = reduceLib.num_compset();
+	val _ = set_skip compset_part ``COND`` (SOME 1);
+	val _ = add_thms [LLEQ_def,LPLACE_RWR,pairTheory.FST] compset_part;
+	val _ = add_conv (``$ORD``,1,stringLib.ORD_CHR_CONV) compset_part
+
+	val full_compset = new_compset [VALID_PKG_TRIPLES_RWR,PRE_EVAL_RWR,
+		REVERSE_REV,REV_DEF,ELOOKUP_def,EVERY_DEF,LOOKUP_AUX_RWR,NOT_CLAUSES,AND_CLAUSES];
+	val _ = add_conv (``($=):string -> string -> bool``,2,stringLib.string_EQ_CONV) full_compset;
+in
+fun split_term_leq list term = 
+let	val x = length list
+	val _ = (print "\n" ; print (int_to_string (length list)) ; print ":")
+	val (listl,listr) = (split_after (length list div 2) list   handle e => ([],[]))
+	val (list1,list2) = (split_after (length listl div 2) listl handle e => ([],[]))
+	val (list3,list4) = (split_after (length listr div 2) listr handle e => ([],[]))
+in
+	if x <= 12 orelse all (curry op= (hd list)) list then 
+		(CBV_CONV full_compset THENC EVAL) term
+	else 	split4 x (list1,list2,list3,list4) term
+end
+and split4 n (list1,list2,list3,list4) term = 
+let 	val spec = map fromMLstring [hd list4,hd list3,hd list2]
+in
+	(FIRST_CONV 
+		[REWR_CONV (SPECL spec rlookup_split) THENC RPART_CONV n compset_part
+		,REWR_CONV (SPECL spec elookup_split) THENC EPART_CONV n compset_part] THENC
+ 	FORK_CONV (
+		FORK_CONV (split_term_leq list4,split_term_leq list3),
+		FORK_CONV (split_term_leq list2,split_term_leq list1)) THENC
+ 	REWRITE_CONV []) term
+end
 end;
 
 fun prove_valid_pkg_leq thm = 
 let	val list = 
 		sort (fn a => fn b => a <= b) 
 			((map (fromHOLstring o hd o strip_pair) o fst o dest_list o rhs o concl) thm);
-	val lookup = (REWRITE_CONV [thm] THENC split_term_leq list) ``ELOOKUP ^((lhs o concl) thm)``;
-	val no_null = EVAL ``EVERY (\ (x,y,z). ~(z = "")) ^((lhs o concl) thm)``
-	val no_witness = EVAL ``EVERY (\ (x,y,z). ~(x = "ACL2-PKG-WITNESS")) ^((lhs o concl) thm)``
-	val _ = print "\n"
 in
-	REWRITE_CONV [separate_proof,no_null,no_witness,lookup] ``VALID_PKG_TRIPLES ^((lhs o concl) thm)``
+	(RIGHT_CONV_RULE (split_term_leq list) (AP_TERM ``VALID_PKG_TRIPLES`` thm))
+	before (print "\n")
 end;
 
 (*****************************************************************************)
 (* Warning:                                                                  *)
-(* runtime: 824.160s,    gctime: 97.500s,     systime: 9.453s                *)
+(* runtime: 1356.715s,    gctime: 156.740s,     systime: 1.650s              *)
 (*****************************************************************************)
+
 val pkg_valid_thm = time prove_valid_pkg_leq ACL2_PACKAGE_ALIST_def;
 
 val _ = save_thm("VALID_ACL2_PACKAGE_ALIST",pkg_valid_thm);
 
 (*
+
 val VALID_ACL2_PACKAGE_ALIST = 
  save_thm
   ("VALID_ACL2_PACKAGE_ALIST",
