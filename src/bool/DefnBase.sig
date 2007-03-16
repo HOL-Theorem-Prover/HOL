@@ -17,10 +17,13 @@ sig
   val pp_defn : ppstream -> defn -> unit
 
 
-  (* Used to control context tracking during termination 
+  (* Used to control context tracking during termination
      condition extraction *)
 
   val read_congs  : unit -> thm list
   val write_congs : thm list -> unit
+  val add_cong : thm -> unit
+
+  val export_cong : string -> unit
 
 end

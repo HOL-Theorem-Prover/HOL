@@ -102,7 +102,7 @@ val option_induction = store_thm (
   HO_MATCH_MP_TAC sumTheory.sum_INDUCT THEN
   ONCE_REWRITE_TAC [oneTheory.one] THEN ASM_REWRITE_TAC []);
 
-val FORALL_OPTION = Q.store_thm 
+val FORALL_OPTION = Q.store_thm
  ("FORALL_OPTION",
   `(!opt. P opt) = P NONE /\ !x. P (SOME x)`,
   METIS_TAC [option_induction]);
@@ -254,7 +254,7 @@ val option_CLAUSES = save_thm("option_CLAUSES",
 
 val option_case_compute = Q.store_thm
 ("option_case_compute",
- `option_case (e:'b) f (x:'a option) = 
+ `option_case (e:'b) f (x:'a option) =
   if IS_SOME x then f (THE x) else e`,
     OPTION_CASES_TAC (--`(x :'a option)`--)
     THEN ASM_REWRITE_TAC option_rws);
@@ -281,6 +281,19 @@ val OPTION_MAP_EQ_NONE_both_ways = Q.store_thm(
   REWRITE_TAC [OPTION_MAP_EQ_NONE] THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
   REWRITE_TAC [OPTION_MAP_EQ_NONE]);
+
+val OPTION_MAP_CONG = store_thm(
+  "OPTION_MAP_CONG",
+  ``!opt1 opt2 f1 f2.
+      (opt1 = opt2) /\ (!x. (opt2 = SOME x) ==> (f1 x = f2 x)) ==>
+      (OPTION_MAP f1 opt1 = OPTION_MAP f2 opt2)``,
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
+  Q.SPEC_THEN `opt2` FULL_STRUCT_CASES_TAC option_nchotomy THEN
+  REWRITE_TAC [OPTION_MAP_DEF, SOME_11] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC [SOME_11])
+val _ = DefnBase.export_cong "OPTION_MAP_CONG"
+
+
 
 val OPTION_JOIN_EQ_SOME = Q.store_thm(
   "OPTION_JOIN_EQ_SOME",
@@ -378,7 +391,7 @@ val _ = adjoin_to_theory
   let val S = PP.add_string ppstrm
       fun NL() = PP.add_newline ppstrm
   in S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"SOME\",Thy=\"option\"});";
-     NL(); 
+     NL();
      S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"NONE\",Thy=\"option\"});";
      NL(); NL()
   end)};
@@ -391,7 +404,7 @@ val THE_NONE = Q.prove
 (`THE NONE = FAIL THE ^(mk_var("applied to NONE",bool)) NONE`,
   REWRITE_TAC [combinTheory.FAIL_THM]);
 
-val _ = 
+val _ =
  let open EmitML combinSyntax
  in emitML (!Globals.emitMLDir)
       ("option",
@@ -399,7 +412,7 @@ val _ =
         MLSTRUCT "datatype option = datatype Option.option"
         ::
         map DEFN
-         [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF, 
+         [OPTION_MAP_DEF, IS_SOME_DEF, IS_NONE_DEF,
           CONJ THE_NONE THE_DEF, OPTION_JOIN_DEF])
  end;
 

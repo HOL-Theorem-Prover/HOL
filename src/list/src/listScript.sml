@@ -1119,6 +1119,9 @@ val REVERSE_REV = Q.store_thm
 
 (* --------------------------------------------------------------------- *)
 
+val _ = app DefnBase.export_cong ["EXISTS_CONG", "EVERY_CONG", "MAP_CONG",
+                                  "FOLDL_CONG", "FOLDR_CONG", "list_size_cong"]
+
 val _ = adjoin_to_theory
 {sig_ps = NONE,
  struct_ps = SOME
@@ -1126,12 +1129,6 @@ val _ = adjoin_to_theory
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
    fun NL() = PP.add_newline ppstrm
  in
-   S "local val hocongs = [EXISTS_CONG,EVERY_CONG,MAP_CONG,";
-   S "                     FOLDL_CONG, FOLDR_CONG,list_size_cong]";
-   S "in";
-   S "val _ = DefnBase.write_congs (hocongs@DefnBase.read_congs())";
-   S "end;";
-   NL(); NL();
    S "val _ = let open computeLib";
    S "        in add_funs [APPEND,APPEND_NIL, FLAT, HD, TL,";
    S "              LENGTH, MAP, MAP2, NULL_DEF, MEM, EXISTS_DEF,";
