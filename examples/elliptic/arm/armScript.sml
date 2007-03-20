@@ -82,7 +82,7 @@ val _ = Hol_datatype`
 (*  Memory operations                                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+val _ = wordsLib.guess_lengths();
 
 val GET_BYTE_def = Define`
   GET_BYTE (oareg:word2) (data:word32) =

@@ -139,7 +139,7 @@ val ADD_COPROC = Define`
 (* Returns the coprocessor number from the instruction                        *)
 (* -------------------------------------------------------------------------- *)
 
-val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+val _ = wordsLib.guess_lengths();
 
 val DECODE_CPN_def = Define `DECODE_CPN (w:word32) = (11 >< 8) w`;
 

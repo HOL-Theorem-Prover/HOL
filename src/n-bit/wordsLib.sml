@@ -302,4 +302,7 @@ in
   inst assigns t
 end
 
+fun guess_lengths () =
+  Parse.post_process_term := (guess_word_lengths o !Parse.post_process_term);
+
 end
