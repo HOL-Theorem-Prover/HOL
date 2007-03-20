@@ -211,18 +211,16 @@ fun get_word_ops t =
        | COMB (a,b) => get_word_ops a @ get_word_ops b
        | LAMB (a,b) => get_word_ops b)
   | SOME ([a,b],_) =>
-      let val ty = type_of t in
-        case dest_type ty of
-           ("fun", [x, y]) =>
-              (let val fv = hd (type_vars y)
-                   val na = numSyntax.dest_numeral (#residue a)
-                   val nb = numSyntax.dest_numeral (#residue b)
-                   val n = Arbnum.-(Arbnum.plus1 na, nb)
-               in
-                 if n = Arbnum.zero then [] else [word_extract (n, fv)]
-               end handle _ => [])
-        | _ => []
-      end
+      (case dest_type (type_of t) of
+         ("fun", [x, y]) =>
+            (let val fv = hd (type_vars y)
+                 val na = numSyntax.dest_numeral (#residue a)
+                 val nb = numSyntax.dest_numeral (#residue b)
+                 val n = Arbnum.-(Arbnum.plus1 na, nb)
+             in
+               if n = Arbnum.zero then [] else [word_extract (n, fv)]
+             end handle _ => [])
+      | _ => [])
   | _ => [];
 
 fun word_op_compare(a, b) =
@@ -302,7 +300,7 @@ in
   inst assigns t
 end
 
-fun guess_lengths () =
-  Parse.post_process_term := (guess_word_lengths o !Parse.post_process_term);
+fun guess_lengths () = Parse.post_process_term :=
+  (guess_word_lengths o fcpLib.guess_fcp_lengths o !Parse.post_process_term);
 
 end
