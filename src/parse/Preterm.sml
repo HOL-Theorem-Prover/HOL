@@ -618,12 +618,13 @@ fun remove_case_magic tm =
     if GrammarSpecials.case_initialised() then remove_case_magic0 tm
     else tm
 
+val post_process_term = ref (I : term -> term);
 
 fun typecheck pfns ptm0 = let
   val () = TC pfns ptm0
   val ptm = overloading_resolution0 ptm0
 in
-  remove_case_magic (to_term ptm)
+  !post_process_term (remove_case_magic (to_term ptm))
 end handle phase1_exn(l,s,ty) =>
            case pfns of
              NONE => (Lib.say s; raise ERRloc "typecheck" l s)

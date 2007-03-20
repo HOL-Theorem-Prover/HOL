@@ -51,6 +51,7 @@ sig
      constants *)
   val remove_case_magic : term -> term
 
+  val post_process_term : (term -> term) ref
 
   (* essentially the composition of all four of the above *)
   val typecheck:

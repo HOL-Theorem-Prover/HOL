@@ -31,7 +31,7 @@ fun ptm_with_ctxtty ctxt ty q =
 end
 
 fun ptm_with_ty q ty = ptm_with_ctxtty [] ty q;
-fun btm q = ptm_with_ty q Type.bool;
+fun btm q = !Parse.post_process_term (ptm_with_ty q Type.bool);
 
 fun mk_term_rsubst ctxt =
   map (fn {redex,residue} =>

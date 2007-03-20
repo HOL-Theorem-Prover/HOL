@@ -14,6 +14,7 @@ val ERROR = mk_HOL_ERR "Parse";
 val ERRORloc = mk_HOL_ERRloc "Parse";
 val WARN  = HOL_WARNING "Parse"
 
+val post_process_term = Preterm.post_process_term
 val quote = Lib.mlquote
 
 datatype fixity = RF of term_grammar.rule_fixity | Prefix | Binder
