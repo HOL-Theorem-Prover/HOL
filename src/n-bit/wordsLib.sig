@@ -23,4 +23,7 @@ sig
     val pp_word_oct   : unit -> unit
     val pp_word_hex   : unit -> unit
     val pp_word_dec   : unit -> term_pp_types.userprinter option
+
+    val notify_word_length_guesses : bool ref
+    val guess_word_lengths         : term -> term
 end
