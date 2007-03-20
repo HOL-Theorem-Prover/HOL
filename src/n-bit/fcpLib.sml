@@ -54,4 +54,41 @@ fun SIZE n = PURE_REWRITE_RULE [DIMINDEX n]
 
 val FCP_ss = rewrites [FCP_BETA,FCP_ETA,CART_EQ];
 
+local
+  val L2V_tm = ``L2V``;
+
+  fun dest_L2V tm =
+      let
+        val (c,a) = dest_comb tm
+        val _ = same_const c L2V_tm orelse raise ERR "dest_L2V" ""
+        val ty = type_of tm
+        val b = hd (tl (snd (dest_type ty)))
+      in
+        (a,b)
+      end;
+
+  fun list_length tm =
+      if listSyntax.is_nil tm then 0
+      else if listSyntax.is_cons tm then 1 + list_length (rand tm)
+      else raise ERR "list_length" "";
+
+  fun infer_fcp_type tm =
+      let
+        val (l,ty) = dest_L2V tm
+        val n = list_length l
+        val ty' = index_type (Arbnum.fromInt n)
+        val _ = ty <> ty' orelse raise ERR "infer_fcp_type" ""
+      in
+        inst [ty |-> ty']
+      end;
+in
+  fun guess_fcp_lengths tm =
+      case total (find_term (can infer_fcp_type)) tm of
+        NONE => tm
+      | SOME subtm => guess_fcp_lengths (infer_fcp_type subtm tm);
+end;
+
+fun guess_lengths () =
+    Parse.post_process_term := (guess_fcp_lengths o !Parse.post_process_term);
+
 end

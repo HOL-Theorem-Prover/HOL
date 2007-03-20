@@ -8,4 +8,7 @@ sig
     val FINITE        : Arbnum.num -> thm
     val SIZE          : Arbnum.num -> thm
     val FCP_ss        : simpLib.ssfrag
+
+    val guess_fcp_lengths : term -> term
+    val guess_lengths : unit -> unit
 end
