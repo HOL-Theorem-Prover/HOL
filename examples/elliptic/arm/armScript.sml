@@ -7,7 +7,7 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsSyntax", "rich_listTheory", "bsubstTheory"];
+  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "bsubstTheory"];
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -82,20 +82,22 @@ val _ = Hol_datatype`
 (*  Memory operations                                                        *)
 (* ------------------------------------------------------------------------- *)
 
+val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+
 val GET_BYTE_def = Define`
   GET_BYTE (oareg:word2) (data:word32) =
-    (case oareg of
-        0w -> (7 >< 0) data
-     || 1w -> (15 >< 8) data
-     || 2w -> (23 >< 16) data
-     || _  -> (31 >< 24) data):word8`;
+    case oareg of
+       0w -> (7 >< 0) data
+    || 1w -> (15 >< 8) data
+    || 2w -> (23 >< 16) data
+    || _  -> (31 >< 24) data`;
 
 val GET_HALF_def = Define`
   GET_HALF (oareg:word2) (data:word32) =
-    (if oareg %% 1 then
-       (31 >< 16) data
-     else
-       (15 >< 0) data):word16`;
+    if oareg %% 1 then
+      (31 >< 16) data
+    else
+      (15 >< 0) data`;
 
 val FORMAT_def = Define`
   FORMAT fmt oareg data =
@@ -109,8 +111,6 @@ val FORMAT_def = Define`
 (* ------------------------------------------------------------------------- *)
 (*  General Purpose Register operations                                      *)
 (* ------------------------------------------------------------------------- *)
-
-val Rg = inst [alpha |-> ``:32``,beta |-> ``:4``] wordsSyntax.word_extract_tm;
 
 val USER_def = Define `USER m = (m = usr) \/ (m = sys) \/ (m = safe)`;
 
@@ -188,8 +188,7 @@ val DECODE_MODE_def = Define`
 val NZCV_def = Define `NZCV (w:word32) = (w %% 31, w %% 30, w %% 29, w %% 28)`;
 
 val DECODE_PSR_def = Define`
-  DECODE_PSR (cpsr:word32) =
-    (NZCV cpsr, cpsr %% 7, cpsr %% 6, ((4 >< 0) cpsr):word5)`;
+  DECODE_PSR (cpsr:word32) = (NZCV cpsr, cpsr %% 7, cpsr %% 6, (4 >< 0) cpsr)`;
 
 val CARRY_def = Define `CARRY (n,z,c,v) = c`;
 
@@ -246,7 +245,7 @@ val EXCEPTION_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val DECODE_BRANCH_def = Define`
-  DECODE_BRANCH (w:word32) = (w %% 24, ((23 >< 0) w):word24)`;
+  DECODE_BRANCH (w:word32) = (w %% 24, (23 >< 0) w)`;
 
 val BRANCH_def = Define`
   BRANCH r mode ireg =
@@ -393,9 +392,8 @@ val TEST_OR_COMP_def = Define`
   TEST_OR_COMP (opcode:word4) = ((3 -- 2 ) opcode = 2w)`;
 
 val DECODE_DATAP_def = Define`
-  DECODE_DATAP w =
-    (w %% 25,^Rg 24 21 w,w %% 20,^Rg 19 16 w,^Rg 15 12 w,
-     ((11 >< 0) w):word12)`;
+  DECODE_DATAP (w:word32) =
+    (w %% 25,(24 >< 21) w,w %% 20,(19 >< 16) w,(15 >< 12) w,(11 >< 0) w)`;
 
 val DATA_PROCESSING_def = Define`
   DATA_PROCESSING r C mode ireg =
@@ -418,7 +416,7 @@ val DATA_PROCESSING_def = Define`
 (* The PSR Transfer instruction class (mrs and msr)                          *)
 (* ------------------------------------------------------------------------- *)
 
-val DECODE_MRS_def = Define `DECODE_MRS w = (w %% 22,^Rg 15 12 w)`;
+val DECODE_MRS_def = Define `DECODE_MRS (w:word32) = (w %% 22,(15 >< 12) w)`;
 
 val MRS_def = Define`
   MRS r mode ireg =
@@ -429,8 +427,8 @@ val MRS_def = Define`
 (* ......................................................................... *)
 
 val DECODE_MSR_def = Define`
-  DECODE_MSR w =
-    (w %% 25,w %% 22,w %% 19,w %% 16,^Rg 3 0 w,((11 >< 0) w):word12)`;
+  DECODE_MSR (w:word32) =
+    (w %% 25,w %% 22,w %% 19,w %% 16,(3 >< 0) w,(11 >< 0) w)`;
 
 val MSR_def = Define`
   MSR r mode ireg =
@@ -466,16 +464,16 @@ val ALU_multiply_def = Define`
                  sw2sw rm * sw2sw rs
                else
                  w2w rm * w2w rs) in
-    let resHi = ((63 >< 32) res):word32
-    and resLo = ((31 >< 0) res):word32 in
+    let resHi = (63 >< 32) res
+    and resLo = (31 >< 0) res in
       if L then
         (word_msb res,res = 0w,resHi,resLo)
       else
         (word_msb resLo,resLo = 0w,rd,resLo)`;
 
 val DECODE_MLA_MUL_def = Define`
-  DECODE_MLA_MUL w = (w %% 23,w %% 22,w %% 21,w %% 20,
-    ^Rg 19 16 w,^Rg 15 12 w,^Rg 11 8 w,^Rg 3 0 w)`;
+  DECODE_MLA_MUL (w:word32) = (w %% 23,w %% 22,w %% 21,w %% 20,
+    (19 >< 16) w,(15 >< 12) w,(11 >< 8) w,(3 >< 0) w)`;
 
 val MLA_MUL_def = Define`
   MLA_MUL r mode ireg =
@@ -514,9 +512,9 @@ val ADDR_MODE2_def = Define`
       (if P then wb_addr else addr,wb_addr)`;
 
 val DECODE_LDR_STR_def = Define`
-  DECODE_LDR_STR w =
+  DECODE_LDR_STR (w:word32) =
      (w %% 25,w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,
-      ^Rg 19 16 w,^Rg 15 12 w,((11 >< 0) w):word12)`;
+      (19 >< 16) w,(15 >< 12) w,(11 >< 0) w)`;
 
 val LDR_STR_def = Define`
   LDR_STR r C mode ireg input =
@@ -557,9 +555,9 @@ val ADDR_MODE3_def = Define`
       (if P then wb_addr else addr,wb_addr)`;
 
 val DECODE_LDRH_STRH_def = Define`
-  DECODE_LDRH_STRH w =
+  DECODE_LDRH_STRH (w:word32) =
      (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,
-      ^Rg 19 16 w,^Rg 15 12 w,^Rg 11 8 w,w %% 6,w %% 5,^Rg 3 0 w)`;
+      (19 >< 16) w,(15 >< 12) w,(11 >< 8) w,w %% 6,w %% 5,(3 >< 0) w)`;
 
 val LDRH_STRH_def = Define`
   LDRH_STRH r mode ireg input =
@@ -628,8 +626,8 @@ val STM_LIST_def = Define`
     MAP (\(rp,addr). MemWrite addr (Word (REG_READ reg mode rp))) bl_list`;
 
 val DECODE_LDM_STM_def = Define`
-  DECODE_LDM_STM w =
-    (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,^Rg 19 16 w,((15 >< 0) w):word16)`;
+  DECODE_LDM_STM (w:word32) =
+    (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,(19 >< 16) w,(15 >< 0) w)`;
 
 val LDM_STM_def = Define`
   LDM_STM r mode ireg input =
@@ -673,7 +671,7 @@ val LDM_STM_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val DECODE_SWP_def = Define`
-  DECODE_SWP w = (w %% 22,^Rg 19 16 w,^Rg 15 12 w,^Rg 3 0 w)`;
+  DECODE_SWP (w:word32) = (w %% 22,(19 >< 16) w,(15 >< 12) w,(3 >< 0) w)`;
 
 val SWP_def = Define`
   SWP r mode ireg input =
@@ -699,13 +697,13 @@ val SWP_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val DECODE_MRC_MCR_def = Define`
-  DECODE_MRC_MCR ireg =
-    (((23 >< 21) ireg):word3,^Rg 19 16 ireg,^Rg 15 12 ireg,^Rg 11 8 ireg,
-     ((7 >< 5) ireg):word3,^Rg 3 0 ireg)`;
+  DECODE_MRC_MCR (w:word32) =
+    ((23 >< 21) w,(19 >< 16) w,(15 >< 12) w,
+     (11 >< 8) w, (7 >< 5) w,(3 >< 0) w)`;
 
 val MRC_def = Define`
   MRC r mode data ireg =
-    let Rd = ^Rg 15 12 ireg
+    let Rd = (15 >< 12) ireg
     and pc_reg = INC_PC r.reg in
       if Rd = 15w then
         <| reg := pc_reg;
@@ -715,7 +713,7 @@ val MRC_def = Define`
 
 val MCR_OUT_def = Define`
   MCR_OUT reg mode ireg =
-    let Rd = ^Rg 15 12 ireg in
+    let Rd = (15 >< 12) ireg in
       [CPWrite (REG_READ (INC_PC reg) mode Rd)]`;
 
 (* ------------------------------------------------------------------------- *)
@@ -723,9 +721,9 @@ val MCR_OUT_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val DECODE_LDC_STC_def = Define`
-  DECODE_LDC_STC w =
+  DECODE_LDC_STC (w:word32) =
     (w %% 24,w %% 23,w %% 22,w %% 21,w %% 20,
-     ^Rg 19 16 w,^Rg 15 12 w,^Rg 11 8 w,((7 >< 0) w):word8)`;
+     (19 >< 16) w,(15 >< 12) w,(11 >< 8) w,(7 >< 0) w)`;
 
 val ADDR_MODE5_def = Define`
   ADDR_MODE5 reg mode P U Rn (offset:word8) =
@@ -1001,7 +999,7 @@ val UNPREDICTABLE_def = Define`
     and cpsr = CPSR_READ state.regs.psr in
     let (nzcv,i,f,m) = DECODE_PSR cpsr in
     let mode = DECODE_MODE m in
-    (^Rg 31 28 ireg = 4w) \/
+    ((31 >< 28) ireg = 4w) \/
     ~(state.exception = software) /\ CONDITION_PASSED nzcv ireg /\
     (case DECODE_ARM ireg of
         data_proc -> DATA_PROC_UNPREDICTABLE mode ireg
@@ -1013,7 +1011,7 @@ val UNPREDICTABLE_def = Define`
      || ldm_stm   -> LDM_STM_UNPREDICTABLE mode ireg
      || ldr_str   -> LDR_STR_UNPREDICTABLE reg (CARRY nzcv) mode ireg
      || ldrh_strh -> LDRH_STRH_UNPREDICTABLE reg mode ireg
-     || mcr       -> (^Rg 15 12 ireg = 15w)
+     || mcr       -> (15 >< 12) ireg = 15w
      || _ -> F)`;
 
 (* ------------------------------------------------------------------------- *)

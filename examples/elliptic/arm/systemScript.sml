@@ -49,8 +49,6 @@ val _ = Hol_datatype `arm_sys_state =
       cp_state  : 'a
    |>`;
 
-val Rg = inst [alpha |-> ``:32``, beta |-> ``:4``] wordsSyntax.word_extract_tm;
-
 (* -------------------------------------------------------------------------- *)
 (* The model is paramaterised by a collection of coprocessor operations       *)
 (* i.e. cdp, mrc, mcr, stc and ldc functions:                                 *)
@@ -141,33 +139,35 @@ val ADD_COPROC = Define`
 (* Returns the coprocessor number from the instruction                        *)
 (* -------------------------------------------------------------------------- *)
 
-val DECODE_CPN_def = Define `DECODE_CPN (w:word32) = ^Rg 11 8 w`;
+val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
+
+val DECODE_CPN_def = Define `DECODE_CPN (w:word32) = (11 >< 8) w`;
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_CDP                                                                 *)
 (* -------------------------------------------------------------------------- *)
 
 val DECODE_CDP_def = Define`
-  DECODE_CDP ireg =
-    (^Rg 23 20 ireg,          (* Cop1 *)
-     ^Rg 19 16 ireg,          (* CRn  *)
-     ^Rg 15 12 ireg,          (* CRd  *)
-     ^Rg 11 8 ireg,           (* CPN  *)
-     ((7 >< 5) ireg):word3,   (* Cop2 *)
-     ^Rg 3 0 ireg)`;          (* CRm  *)
+  DECODE_CDP (w:word32) =
+    ((23 >< 20) w, (* Cop1 *)
+     (19 >< 16) w, (* CRn  *)
+     (15 >< 12) w, (* CRd  *)
+     (11 >< 8) w,  (* CPN  *)
+     (7 >< 5) w,   (* Cop2 *)
+     (3 >< 0) w)`; (* CRm  *)
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_MRC_MCR                                                             *)
 (* -------------------------------------------------------------------------- *)
 
 val DECODE_MRC_MCR_def = Define`
-  DECODE_MRC_MCR (ireg:word32) =
-    (((23 >< 21) ireg):word3, (* Cop1 *)
-     ^Rg 19 16 ireg,          (* CRn  *)
-     ^Rg 15 12 ireg,          (* Rd   *)
-     ^Rg 11 8  ireg,          (* CPN  *)
-     ((07 >< 05) ireg):word3, (* Cop2 *)
-     ^Rg 3 0 ireg)`;          (* CRm  *)
+  DECODE_MRC_MCR (w:word32) =
+    ((23 >< 21) w, (* Cop1 *)
+     (19 >< 16) w, (* CRn  *)
+     (15 >< 12) w, (* Rd   *)
+     (11 >< 8) w,  (* CPN  *)
+     (7 >< 5) w,   (* Cop2 *)
+     (3 >< 0) w)`; (* CRm  *)
 
 (* -------------------------------------------------------------------------- *)
 (* DECODE_CP                                                                  *)
@@ -235,7 +235,7 @@ val RUN_CP_def = Define`
 (*     interrupts (fiq, irq)                                                  *)
 (* -------------------------------------------------------------------------- *)
 
-val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr:word30`;
+val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr`;
 
 val NEXT_ARM_SYS_def = Define`
   NEXT_ARM_SYS bus_op (cp:'a coproc) (state:'a arm_sys_state) =

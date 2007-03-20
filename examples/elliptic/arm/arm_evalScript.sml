@@ -31,7 +31,7 @@ val arith_ss = arith_ss ++ boolSimps.LET_ss;
 val fcp_ss   = armLib.fcp_ss;
 val SIZES_ss = wordsLib.SIZES_ss;
 
-val tt = set_trace "types";
+val _ = Parse.post_process_term := wordsLib.guess_word_lengths;
 
 (* ------------------------------------------------------------------------- *)
 
@@ -439,7 +439,7 @@ val SPSR_WRITE_READ = store_thm("SPSR_WRITE_READ",
 val word_ss = armLib.fcp_ss ++ wordsLib.SIZES_ss ++ ARITH_ss;
 
 val lem = prove(
-  `!w:word32 i. i < 5 ==> (((4 >< 0) w) :word5 %% i = w %% i)`,
+  `!w:word32 i. i < 5 ==> (((4 >< 0) w) %% i = w %% i)`,
   RW_TAC word_ss [word_extract_def,word_bits_def,w2w]);
 
 val w2n_mod = prove(
@@ -855,13 +855,13 @@ val immediate_enc = store_thm("immediate_enc",
     \\ SRW_TAC word_frags []));
 
 val immediate_enc2 = store_thm("immediate_enc2",
-  `!i. ((11 >< 0) (addr_mode2_encode (Dt_immediate i))):word12 = i`,
+  `!i. (11 >< 0) (addr_mode2_encode (Dt_immediate i)) = i`,
   SRW_TAC word_frags [addr_mode2_encode_def,w2w]
     \\ Cases_on `i' < 12` \\ SRW_TAC word_frags []);
 
 val immediate_enc3 = store_thm("immediate_enc3",
-  `(!i. ((11 >< 8) (addr_mode3_encode (Dth_immediate i))):word4 = (7 >< 4) i) /\
-     !i. ((3 >< 0) (addr_mode3_encode (Dth_immediate i))):word4 = (3 >< 0) i`,
+  `(!i. (11 >< 8) (addr_mode3_encode (Dth_immediate i)) = (7 >< 4) i) /\
+     !i. (3 >< 0) (addr_mode3_encode (Dth_immediate i)) = (3 >< 0) i`,
   SRW_TAC word_frags [addr_mode3_encode_def,w2w]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
 
@@ -931,14 +931,14 @@ val shift_register_enc = store_thm("shift_register_enc",
          word_bits_w2w,shift_register_enc_lem,n2w_11]);
 
 val shift_register_enc2 = store_thm("shift_register_enc2",
-  `!r. (3 >< 0) (((11 >< 0) (msr_mode_encode (Msr_register r))):word12) = r`,
+  `!r. (3 >< 0) ((11 >< 0) (msr_mode_encode (Msr_register r))) = r`,
   SRW_TAC (boolSimps.LET_ss::word_frags) [msr_mode_encode_def]);
  
 val shift_immediate_shift_register = store_thm("shift_immediate_shift_register",
   `(!reg m c sh r.
-     ((11 >< 0) (addr_mode1_encode (Dp_shift_register sh r))):word12 %% 4) /\
+     (11 >< 0) (addr_mode1_encode (Dp_shift_register sh r)) %% 4) /\
    (!reg m c sh i.
-     ~(((11 >< 0) (addr_mode1_encode (Dp_shift_immediate sh i))):word12 %% 4))`,
+     ~((11 >< 0) (addr_mode1_encode (Dp_shift_immediate sh i)) %% 4))`,
   NTAC 6 STRIP_TAC \\ Cases_on `sh`
     \\ SRW_TAC word_frags [addr_mode1_encode_def]);
 
