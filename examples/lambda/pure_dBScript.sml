@@ -607,6 +607,7 @@ val dABS_renamed = store_thm(
   ``!M. ~(v IN dFV (dABS M)) ==> ?t0. dABS M = dLAM v t0``,
   SRW_TAC [][dLAM_def] THEN SRW_TAC [ARITH_ss][onto_lemma])
 
+(* conversely, the de Bruijn redexes reduce under dbeta' *)
 val alt_dbeta'_rule = store_thm(
   "alt_dbeta'_rule",
   ``dbeta' (dAPP (dABS t) u) (nsub u 0 t)``,
@@ -708,6 +709,45 @@ val lifts_are_dpms = store_thm(
   Q.EXISTS_TAC `lifting_pm n j` THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
   REPEAT STRIP_TAC THEN RES_TAC THEN DECIDE_TAC);
 
+val dABS_rules_are_dLAM_compatible = store_thm(
+  "dABS_rules_are_dLAM_compatible",
+  ``(!p t u. R (dpm p t) (dpm p u) = R t u) ==>
+    ((!t u. R t u ==> R (dABS t) (dABS u))
+      =
+     !i t u. R t u ==> R (dLAM i t) (dLAM i u))``,
+  STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
+    SRW_TAC [][dLAM_def, fresh_dpm_sub] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
+    Q.SPEC_THEN `t` STRIP_ASSUME_TAC onto_lemma2 THEN
+    Q.SPEC_THEN `u` STRIP_ASSUME_TAC onto_lemma2 THEN
+    Q.ABBREV_TAC `k = if j < j' then j' else j` THEN
+    `(lift t 0 = dpm (lifting_pm 0 k) t) /\
+     (lift u 0 = dpm (lifting_pm 0 k) u)`
+        by (CONJ_TAC THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
+            REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
+            DECIDE_TAC) THEN
+    SRW_TAC [][],
+
+    `?v. ~(v IN dFV (dABS t)) /\ ~(v IN dFV (dABS u))`
+       by (Q_TAC SUFF_TAC `?v. ~(v IN dFV (dAPP (dABS t) (dABS u)))`
+                 THEN1 SRW_TAC [][] THEN
+           METIS_TAC [dfresh_exists]) THEN
+    `?t' u'. (dABS t = dLAM v t') /\ (dABS u = dLAM v u')`
+       by METIS_TAC [dABS_renamed] THEN
+    Q_TAC SUFF_TAC `R t' u'` THEN1 SRW_TAC [][] THEN
+    Q.UNDISCH_THEN `R t u` MP_TAC THEN
+    FULL_SIMP_TAC (srw_ss()) [dLAM_def, fresh_dpm_sub] THEN
+    Q.SPEC_THEN `t'` STRIP_ASSUME_TAC onto_lemma2 THEN
+    Q.SPEC_THEN `u'` STRIP_ASSUME_TAC onto_lemma2 THEN
+    Q.ABBREV_TAC `k = if j < j' then j' else j` THEN
+    `(lift t' 0 = dpm (lifting_pm 0 k) t') /\
+     (lift u' 0 = dpm (lifting_pm 0 k) u')`
+        by (CONJ_TAC THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
+            REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
+            DECIDE_TAC) THEN
+    SRW_TAC [][]
+  ]);
+
 val dbeta'_lift = store_thm(
   "dbeta'_lift",
   ``dbeta' (lift M n) (lift N n) = dbeta' M N``,
@@ -725,15 +765,9 @@ val dbeta_dbeta' = store_thm(
   ``!M N. dbeta M N ==> dbeta' M N``,
   HO_MATCH_MP_TAC dbeta_ind THEN SRW_TAC [][dbeta'_rules] THENL [
     SRW_TAC [][alt_dbeta'_rule],
-    `?v. ~(v IN dFV (dABS s)) /\ ~(v IN dFV (dABS t))`
-       by (Q_TAC SUFF_TAC `?v. ~(v IN dFV (dAPP (dABS s) (dABS t)))`
-                 THEN1 SRW_TAC [][] THEN
-           METIS_TAC [dfresh_exists]) THEN
-    `?s' t'. (dABS s = dLAM v s') /\ (dABS t = dLAM v t')`
-       by METIS_TAC [dABS_renamed] THEN
-    Q_TAC SUFF_TAC `dbeta' s' t'` THEN1 SRW_TAC [][dbeta'_rules] THEN
-    FULL_SIMP_TAC (srw_ss()) [dLAM_def, fresh_dpm_sub,
-                              dbeta'_dpm_calc, dbeta'_lift]
+    Q_TAC SUFF_TAC `!p t u. dbeta' (dpm p t) (dpm p u) = dbeta' t u`
+          THEN1 METIS_TAC [dABS_rules_are_dLAM_compatible, dbeta'_rules] THEN
+    SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.is_perm_inverse]
   ]);
 
 (* nsub must be icky - just look at how it behaves under permutations *)
@@ -795,7 +829,8 @@ val dbeta'_dbeta = store_thm(
   ``!M N. dbeta' M N ==> dbeta M N``,
   HO_MATCH_MP_TAC dbeta'_ind THEN
   SRW_TAC [][dbeta_rules, alt_dbeta_rule] THEN
-  SRW_TAC [][dLAM_def, fresh_dpm_sub, dbeta_rules, dbeta_dpm, dbeta_lift])
+  METIS_TAC [dABS_rules_are_dLAM_compatible, dbeta_rules, dbeta_dpm,
+             nomsetTheory.is_perm_inverse, dpm_is_perm]);
 
 val dbeta_dbeta'_eqn = store_thm(
   "dbeta_dbeta'_eqn",
@@ -906,20 +941,6 @@ val nsub_lift = store_thm(
   Induct_on `t` THEN SRW_TAC [ARITH_ss][]);
 val _ = export_rewrites ["nsub_lift"]
 
-val nipkow_lift_nsub_lemma2 = store_thm(
-  "nipkow_lift_nsub_lemma2",
-  ``!t s j i. j < i + 1 ==>
-              (lift (nsub s j t) i = nsub (lift s i) j (lift t (i + 1)))``,
-  Induct THEN SRW_TAC [ARITH_ss][nipkow_lift_lemma1]);
-
-val dFV_sub = store_thm(
-  "dFV_sub",
-  ``!t i u. j IN dFV (sub u i t) = if i IN dFV t then
-				     j IN dFV u \/ j IN dFV t /\ ~(i = j)
-				   else j IN dFV t``,
-  SIMP_TAC (srw_ss())[EXTENSION, IN_dFV, dFVs_sub] THEN
-  SRW_TAC [][IN_dFV] THEN METIS_TAC []);
-
 val IN_dFV_dpm = store_thm(
   "IN_dFV_dpm",
   ``!t p i. i IN dFV (dpm p t) = s2n (lswapstr (REVERSE p) (n2s i)) IN dFV t``,
@@ -951,30 +972,23 @@ val neta_dpm = store_thm(
   SRW_TAC [][dpm_nsub,nipkow_eta_lemma, IN_dFV_dpm, REVERSE_inc_pm,
 	     lswapstr_inc_pm]);
 
-val neta_lift = store_thm(
-  "neta_lift",
-  ``!t u. neta t u ==> !i. neta (lift t i) (lift u i)``,
-  HO_MATCH_MP_TAC neta_ind THEN SRW_TAC [ARITH_ss][neta_rules] THEN
-  Q.MATCH_ABBREV_TAC `neta (dABS (dAPP tm (dV 0))) tm'` THEN
-  Q_TAC SUFF_TAC `~(0 IN dFV tm) /\ (tm' = nsub u 0 tm)`
+val alt_neta_redex = prove(
+  ``~(i IN dFV t) ==> neta (dLAM i (dAPP t (dV i))) t``,
+  SRW_TAC [][dLAM_def] THEN
+  Q.MATCH_ABBREV_TAC `neta (dABS (dAPP tm (dV 0))) t` THEN
+  Q_TAC SUFF_TAC `~(0 IN dFV tm) /\ (t = nsub (dV 0) 0 tm)`
         THEN1 SRW_TAC [][neta_rules] THEN
-  Q.UNABBREV_ALL_TAC THEN
-  SRW_TAC [ARITH_ss][nipkow_lift_nsub_lemma2, nipkow_eta_lemma]);
+  `~((i + 1) IN dFV (lift t 0))` by SRW_TAC [][] THEN
+  `tm = lift t 0` by METIS_TAC [sub_14b] THEN
+  SRW_TAC [][]);
 
 val eta_neta = store_thm(
   "eta_neta",
   ``!t u. eta t u ==> neta t u``,
   HO_MATCH_MP_TAC eta_ind THEN
-  SRW_TAC [][dLAM_def, neta_rules] THENL [
-    Q.MATCH_ABBREV_TAC `neta (dABS (dAPP tm (dV 0))) t` THEN
-    Q_TAC SUFF_TAC `~(0 IN dFV tm) /\ (t = nsub (dV 0) 0 tm)`
-          THEN1 SRW_TAC [][neta_rules] THEN
-    `~((i + 1) IN dFV (lift t 0))` by SRW_TAC [][] THEN
-    `tm = lift t 0` by METIS_TAC [sub_14b] THEN
-    SRW_TAC [][],
-    MATCH_MP_TAC (last (CONJUNCTS neta_rules)) THEN
-    SRW_TAC [][fresh_dpm_sub, neta_dpm, neta_lift]
-  ]);
+  SRW_TAC [][neta_rules, alt_neta_redex] THEN
+  METIS_TAC [neta_rules, dABS_rules_are_dLAM_compatible, neta_dpm,
+             nomsetTheory.is_perm_inverse, dpm_is_perm]);
 
 val nipkow_free_sub_lemmma = store_thm(
   "nipkow_free_sub_lemmma",
@@ -1001,41 +1015,23 @@ val eta_dpm_eqn = store_thm(
   ``eta (dpm p t) (dpm p u) = eta t u``,
   METIS_TAC [dpm_is_perm, nomsetTheory.is_perm_inverse, eta_dpm]);
 
-val eta_lift = store_thm(
-  "eta_lift",
-  ``eta (lift t n) (lift u n) = eta t u``,
-  Q.SPEC_THEN `t` STRIP_ASSUME_TAC onto_lemma2 THEN
-  Q.SPEC_THEN `u` STRIP_ASSUME_TAC onto_lemma2 THEN
-  Q.ABBREV_TAC `k = if j < j' then j' else j` THEN
-  `(lift t n = dpm (lifting_pm n k) t) /\ (lift u n = dpm (lifting_pm n k) u)`
-     by (CONJ_TAC THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
-         REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
-         DECIDE_TAC) THEN
-  SRW_TAC [][eta_dpm_eqn])
-
+val alt_eta_redex = prove(
+  ``~(0 IN dFV t) ==> eta (dABS (dAPP t (dV 0))) (nsub u 0 t)``,
+  STRIP_TAC THEN
+  `?z. ~(z IN dFV (dABS (dAPP t (dV 0))))`
+     by METIS_TAC [dfresh_exists] THEN
+  `~(z + 1 IN dFV t)` by FULL_SIMP_TAC (srw_ss()) [] THEN
+  `~(z IN dFV (nsub u 0 t))` by SRW_TAC [][nipkow_free_sub_lemmma] THEN
+  Q_TAC SUFF_TAC `dABS (dAPP t (dV 0)) = dLAM z (dAPP (nsub u 0 t) (dV z))`
+        THEN1 SRW_TAC [][eta_rules] THEN
+  SRW_TAC [][dLAM_def] THEN
+  SRW_TAC [][sub_14b, nipkow_eta_lemma, lift_nsub]);
 
 val neta_eta = store_thm(
   "neta_eta",
   ``!t u. neta t u ==> eta t u``,
-  HO_MATCH_MP_TAC neta_ind THEN SRW_TAC [][eta_rules] THENL [
-    `?z. ~(z IN dFV (dABS (dAPP t (dV 0))))`
-       by METIS_TAC [dfresh_exists] THEN
-    `~(z + 1 IN dFV t)` by FULL_SIMP_TAC (srw_ss()) [] THEN
-    `~(z IN dFV (nsub u 0 t))` by SRW_TAC [][nipkow_free_sub_lemmma] THEN
-    Q_TAC SUFF_TAC `dABS (dAPP t (dV 0)) = dLAM z (dAPP (nsub u 0 t) (dV z))`
-          THEN1 SRW_TAC [][eta_rules] THEN
-    SRW_TAC [][dLAM_def] THEN
-    SRW_TAC [][sub_14b, nipkow_eta_lemma, lift_nsub],
-
-    `?z. ~(z IN dFV (dABS t)) /\ ~(z IN dFV (dABS t'))`
-       by (Q_TAC SUFF_TAC `?z. ~(z IN dFV (dAPP (dABS t) (dABS t')))`
-                 THEN1 SRW_TAC [][] THEN METIS_TAC [dfresh_exists]) THEN
-    `?t0 t0'. (dABS t = dLAM z t0) /\ (dABS t' = dLAM z t0')`
-       by METIS_TAC [dABS_renamed] THEN
-    Q_TAC SUFF_TAC `eta t0 t0'` THEN1 SRW_TAC [][eta_rules] THEN
-    FULL_SIMP_TAC (srw_ss())[dLAM_def] THEN
-    FULL_SIMP_TAC (srw_ss()) [fresh_dpm_sub, eta_dpm_eqn, eta_lift]
-  ]);
+  HO_MATCH_MP_TAC neta_ind THEN SRW_TAC [][eta_rules, alt_eta_redex] THEN
+  METIS_TAC [eta_dpm_eqn, dABS_rules_are_dLAM_compatible, eta_rules]);
 
 val neta_eq_eta = store_thm(
   "neta_eq_eta",
