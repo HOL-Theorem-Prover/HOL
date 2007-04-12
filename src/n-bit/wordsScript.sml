@@ -599,6 +599,10 @@ val word_T = store_thm("word_T",
   SIMP_TAC fcp_ss [word_T_def,n2w_def,ONE_COMP_0_THM,DIMINDEX_GT_0,
                    UINT_MAX_def, dimword_def]);
 
+val WORD_MSB_1COMP = store_thm("WORD_MSB_1COMP",
+  `!w. word_msb ~w = ~word_msb w`,
+  SRW_TAC [fcpLib.FCP_ss] [DIMINDEX_GT_0,word_msb_def,word_1comp_def]);
+
 val WORD_ss =
   rewrites [word_1comp_def,word_and_def,word_or_def,word_xor_def,
     word_0,word_T];
