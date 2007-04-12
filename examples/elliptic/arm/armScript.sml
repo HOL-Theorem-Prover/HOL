@@ -343,21 +343,12 @@ val ALU_arith_def = Define`
       ((word_msb res,r = 0,ODD q,
         (word_msb op2 = sign) /\ ~(word_msb res = sign)),res)`;
 
-val ALU_arith_neg_def = Define`
-  ALU_arith_neg op (rn:word32) (op2:word32) =
-    let sign  = word_msb rn
-    and (q,r) = DIVMOD_2EXP 32 (op (w2n rn) (w2n ($- op2))) in
-    let res   = (n2w r):word32 in
-      ((word_msb res,r = 0,ODD q \/ (op2 = 0w),
-      ~(word_msb op2 = sign) /\ ~(word_msb res = sign)),res)`;
-
 val ALU_logic_def = Define`
   ALU_logic (res:word32) = ((word_msb res,res = 0w,F,F),res)`;
 
-val SUB_def = Define`
-  SUB a b c = ALU_arith_neg (\x y.x+y+(if c then 0 else 2 ** 32 - 1)) a b`;
 val ADD_def = Define`
   ADD a b c = ALU_arith (\x y.x+y+(if c then 1 else 0)) a b`;
+val SUB_def = Define`SUB a b c = ADD a (~b) c`;
 val AND_def = Define`AND a b = ALU_logic (a && b)`;
 val EOR_def = Define`EOR a b = ALU_logic (a ?? b)`;
 val ORR_def = Define`ORR a b = ALU_logic (a !! b)`;
@@ -369,10 +360,10 @@ val ALU_def = Define`
     || 1w  -> EOR rn op2
     || 2w  -> SUB rn op2 T
     || 4w  -> ADD rn op2 F
-    || 3w  -> ADD (~rn) op2 T
+    || 3w  -> SUB op2 rn T
     || 5w  -> ADD rn op2 c
     || 6w  -> SUB rn op2 c
-    || 7w  -> ADD (~rn) op2 c
+    || 7w  -> SUB op2 rn c
     || 8w  -> AND rn op2
     || 9w  -> EOR rn op2
     || 10w -> SUB rn op2 T
@@ -661,7 +652,7 @@ val LDM_STM_def = Define`
                     if IS_SOME dabort_t /\ ~(Rn = 15w) then
                       REG_WRITE ldm_reg mode' Rn (REG_READ wb_reg mode' Rn)
                     else ldm_reg;
-                 psr := if S /\ pc_in_list /\ ~IS_SOME dabort_t then
+                 psr := if S /\ pc_in_list /\ IS_NONE dabort_t then
                           CPSR_WRITE r.psr (SPSR_READ r.psr mode)
                         else r.psr |>
            else <| reg := wb_reg; psr := r.psr |>)`;
@@ -923,96 +914,6 @@ val STATE_ARM_def = Define`
 
 val ARM_SPEC_def = Define`
   ARM_SPEC t x = let s = STATE_ARM t x in <| state := s; out := OUT_ARM s |>`;
-
-(* ------------------------------------------------------------------------- *)
-(* UNPREDICTABLE                                                             *)
-(* Test for unpredictable behaviour                                          *)
-(*---------------------------------------------------------------------------*)
-
-val DATA_PROC_UNPREDICTABLE_def = Define`
-  DATA_PROC_UNPREDICTABLE mode ireg =
-    let (I,opcode,S,Rn,Rd,opnd2) = DECODE_DATAP ireg in
-      (Rd = 15w) /\ S /\ ~TEST_OR_COMP opcode /\ USER mode \/
-      ~S /\ TEST_OR_COMP opcode`;
-
-val MUL_MLA_UNPREDICTABLE_def = Define`
-  MUL_MLA_UNPREDICTABLE ireg =
-    let (L,Sgn,A,S,Rd,Rn,Rs,Rm) = DECODE_MLA_MUL ireg in
-      (Rd = 15w) \/ (Rm = 15w) \/ (Rs = 15w) \/ (A \/ L) /\ (Rn = 15w) \/
-      (Rd = Rm) \/ L /\ ((Rd = Rn) \/ (Rn = Rm))`;
-
-val BRANCH_UNPREDICTABLE_def = Define`
-  BRANCH_UNPREDICTABLE reg ireg =
-    let (L,offset) = DECODE_BRANCH ireg
-    and pc = REG_READ reg usr 15w in
-    let x = sw2sw offset << 2 in
-      if 0w <= x then
-        pc + x <+ pc
-      else
-        pc - x <+ pc`;
-
-val MSR_UNPREDICTABLE_def = Define`
-  MSR_UNPREDICTABLE r mode ireg =
-    let (I,R,bit19,bit16,Rm,opnd) = DECODE_MSR ireg in
-    let psrd = if R then SPSR_READ r.psr mode else CPSR_READ r.psr
-    and src = if I then SND (IMMEDIATE F opnd) else REG_READ r.reg mode Rm in
-      R /\ USER mode \/ bit16 /\ ~USER mode /\ ~(src %% 5 = psrd %% 5)`;
-
-val MRS_UNPREDICTABLE_def = Define`
-  MRS_UNPREDICTABLE mode ireg =
-    let (R,Rd) = DECODE_MRS ireg in
-      (Rd = 15w) \/ ~((11 -- 0) ireg = 0w) \/ ~((19 -- 6) ireg = 0w) \/
-      R /\ USER mode`;
-
-val SWP_UNPREDICTABLE_def = Define`
-  SWP_UNPREDICTABLE ireg =
-    let (B,Rn,Rd,Rm) = DECODE_SWP ireg in
-      (Rd = 15w) \/ (Rn = 15w) \/ (Rm = 15w) \/ (Rn = Rm) \/ (Rn = Rd)`;
-
-val LDM_STM_UNPREDICTABLE_def = Define`
-  LDM_STM_UNPREDICTABLE mode ireg =
-    let (P,U,S,W,L,Rn,list) = DECODE_LDM_STM ireg in
-    let pc_in_list = list %% 15
-    and l = REGISTER_LIST list in
-      (Rn = 15w) \/ (list = 0w) \/
-      W /\ (if L then MEM Rn l else ~(Rn = HD l)) \/
-      S /\ W /\ ~(pc_in_list /\ L) \/
-      S /\ USER mode`;
-
-val LDR_STR_UNPREDICTABLE_def = Define`
-  LDR_STR_UNPREDICTABLE reg C mode ireg =
-    let (I,P,U,B,W,L,Rn,Rd,offset) = DECODE_LDR_STR ireg in
-    let addr = FST (ADDR_MODE2 reg mode C I P U Rn offset) in
-      (Rd = 15w) /\ (B \/ ~((1 -- 0) addr = 0w)) \/
-      W /\ (Rd = Rn)`;
-
-val LDRH_STRH_UNPREDICTABLE_def = Define`
-  LDRH_STRH_UNPREDICTABLE reg mode ireg =
-    let (P,U,I,W,L,Rn,Rd,offsetH,S,H,offsetL) = DECODE_LDRH_STRH ireg in
-    let addr = FST (ADDR_MODE3 reg mode I P U Rn offsetH offsetL) in
-      (Rd = 15w) \/ W /\ (Rd = Rn) \/ addr %% 0`;
-
-val UNPREDICTABLE_def = Define`
-  UNPREDICTABLE state =
-    let ireg = state.ireg
-    and reg  = state.regs.reg
-    and cpsr = CPSR_READ state.regs.psr in
-    let (nzcv,i,f,m) = DECODE_PSR cpsr in
-    let mode = DECODE_MODE m in
-    ((31 >< 28) ireg = 4w) \/
-    ~(state.exception = software) /\ CONDITION_PASSED nzcv ireg /\
-    (case DECODE_ARM ireg of
-        data_proc -> DATA_PROC_UNPREDICTABLE mode ireg
-     || mla_mul   -> MUL_MLA_UNPREDICTABLE ireg
-     || br        -> BRANCH_UNPREDICTABLE reg ireg
-     || msr       -> MSR_UNPREDICTABLE state.regs mode ireg
-     || mrs       -> MRS_UNPREDICTABLE mode ireg
-     || swp       -> SWP_UNPREDICTABLE ireg
-     || ldm_stm   -> LDM_STM_UNPREDICTABLE mode ireg
-     || ldr_str   -> LDR_STR_UNPREDICTABLE reg (CARRY nzcv) mode ireg
-     || ldrh_strh -> LDRH_STRH_UNPREDICTABLE reg mode ireg
-     || mcr       -> (15 >< 12) ireg = 15w
-     || _ -> F)`;
 
 (* ------------------------------------------------------------------------- *)
 

@@ -60,9 +60,29 @@ val ALU_ADD = prove(
 
 (* ......................................................................... *)
 
-val n2w_2EXP_32 = (EQT_ELIM o EVAL) ``n2w (dimword (:32)) = 0w:word32``;
+val NOT_MAX_SUC_LT = prove(
+  `!a. ~(a = UINT_MAXw:'a word) ==> w2n a + 1 < dimword(:'a)`,
+  REWRITE_TAC [GSYM w2n_11]
+    \\ RW_TAC std_ss [w2n_lt, DECIDE ``a < b /\ ~(a = b - 1) ==> a + 1 < b``,
+          word_T_def, UINT_MAX_def, ZERO_LT_dimword, w2n_n2w]);
 
-val n2w_sub1 = EVAL ``n2w (dimword (:32) - 1 MOD dimword (:32))``;
+val ALU_SUB_ = prove(
+  `!n n'. n < dimword(:32) ==>
+         (BIT 32 (n + w2n ($- (n2w n') + $- (1w:word32)) + 1) =
+          BIT 32 (n + w2n ($- (n2w n'):word32)) \/ (n2w n' = 0w:word32))`,
+  REPEAT STRIP_TAC
+    \\ REWRITE_TAC [WORD_NEG,GSYM WORD_ADD_ASSOC,WORD_ADD_0,
+         EVAL ``1w + (~1w + 1w):word32``]
+    \\ Cases_on `n2w n' = 0w:word32`
+    << [
+      FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss)
+        [GSYM ADD_ASSOC,BIT_def,BITS_THM,UINT_MAX_def,WORD_NOT_0,
+         ONCE_REWRITE_RULE [ADD_COMM] DIV_MULT_1, word_T_def,w2n_n2w],
+      `~(~n2w n' = UINT_MAXw:word32)` by METIS_TAC [WORD_NOT_0,WORD_NOT_NOT]
+        \\ IMP_RES_TAC NOT_MAX_SUC_LT
+        \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss)
+             [ADD_ASSOC, REWRITE_RULE [GSYM w2n_11, w2n_n2w] word_add_def,
+              EVAL ``w2n (1w:word32)``]]);
 
 val ALU_SUB = prove(
   `!c a b. SUB a b c =
@@ -71,16 +91,19 @@ val ALU_SUB = prove(
          if c then
            a >=+ b
          else
-           BIT 32 (w2n a + w2n ($- b) + (2 ** 32 - 1)) \/ (b = 0w),
+           BIT 32 (w2n a + w2n ~b),
          ~(word_msb a = word_msb b) /\ ~(word_msb a = word_msb r)), r)`,
   REPEAT STRIP_TAC \\ Cases_on_word `a` THEN Cases_on_word `b`
-    \\ RW_TAC arith_ss [word_sub_def,GSYM word_add_n2w,word_2comp_n2w,
-         n2w_mod,w2n_n2w,word_hs_def,WORD_SUB_RZERO,WORD_ADD_SUB,WORD_ADD_0,
-         SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,SBIT_def,GSYM MOD_0,MOD_2EXP_32,
-         nzcv_def,n2w_2EXP_32,MSB_lem,n2w_sub1,
+    \\ RW_TAC arith_ss [SUB_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,WORD_ADD_0,
+         word_hs_def,nzcv_def]
+    \\ RW_TAC std_ss [ADD_ASSOC,GSYM word_add_n2w,w2n_n2w,n2w_w2n,n2w_mod,
+         MOD_2EXP_32,MOD_PLUS,ZERO_LT_TWOEXP,WORD_ADD_0,
+         WORD_NOT,word_sub_def,WORD_NEG_0,MSB_lem,ALU_SUB_,
          (GEN_ALL o SYM o REWRITE_RULE [GSYM MOD_0] o
           INST [`n` |-> `0`] o SPEC_ALL o INST_TYPE [`:'a` |-> `:32`]) n2w_11]
-    \\ METIS_TAC [GSYM dimindex_32,WORD_ADD_ASSOC]);
+    \\ METIS_TAC [GSYM dimindex_32,WORD_MSB_1COMP,
+         GSYM (REWRITE_RULE [word_sub_def] WORD_NOT),
+         WORD_ADD_ASSOC,WORD_ADD_LINV,WORD_ADD_0]);
 
 (* ......................................................................... *)
 
