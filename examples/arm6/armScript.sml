@@ -298,21 +298,13 @@ val ALU_arith_def = Define`
       ((word_msb res,r = 0,ODD q,
         (word_msb op2 = sign) /\ ~(word_msb res = sign)),res)`;
 
-val ALU_arith_neg_def = Define`
-  ALU_arith_neg op (rn:word32) (op2:word32) =
-    let sign  = word_msb rn
-    and (q,r) = DIVMOD_2EXP 32 (op (w2n rn) (w2n ($- op2))) in
-    let res   = (n2w r):word32 in
-      ((word_msb res,r = 0,ODD q \/ (op2 = 0w),
-      ~(word_msb op2 = sign) /\ ~(word_msb res = sign)),res)`;
-
 val ALU_logic_def = Define`
   ALU_logic (res:word32) = ((word_msb res,res = 0w,F,F),res)`;
 
-val SUB_def = Define`
-  SUB a b c = ALU_arith_neg (\x y.x+y+(if c then 0 else 2 ** 32 - 1)) a b`;
 val ADD_def = Define`
   ADD a b c = ALU_arith (\x y.x+y+(if c then 1 else 0)) a b`;
+
+val SUB_def = Define`SUB a b c = ADD a (~b) c`;
 val AND_def = Define`AND a b = ALU_logic (a && b)`;
 val EOR_def = Define`EOR a b = ALU_logic (a ?? b)`;
 val ORR_def = Define`ORR a b = ALU_logic (a !! b)`;
@@ -323,10 +315,10 @@ val ALU_def = Define`
    if (opc = 1w) \/ (opc = 9w)  then EOR rn op2   else
    if (opc = 2w) \/ (opc = 10w) then SUB rn op2 T else
    if (opc = 4w) \/ (opc = 11w) then ADD rn op2 F else
-   if opc = 3w  then ADD (~rn) op2 T              else
+   if opc = 3w  then SUB op2 rn T                 else
    if opc = 5w  then ADD rn op2 c                 else
    if opc = 6w  then SUB rn op2 c                 else
-   if opc = 7w  then ADD (~rn) op2 c              else
+   if opc = 7w  then SUB op2 rn c                 else
    if opc = 12w then ORR rn op2                   else
    if opc = 13w then ALU_logic op2                else
    if opc = 14w then AND rn (~op2)                else

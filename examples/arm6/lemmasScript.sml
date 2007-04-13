@@ -369,14 +369,14 @@ val ALUOUT_ADD_CARRY = store_thm("ALUOUT_ADD_CARRY",
 
 val ALUOUT_SUB = store_thm("ALUOUT_SUB",
   `!a b. SND (SUB a b T) = a - b`,
-  SIMP_TAC arith_ss [SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,
-         word_sub_def,word_add_def]
-    \\ SIMP_TAC bool_ss [n2w_mod32,MOD_2EXP_def]);
+  SIMP_TAC std_ss
+    [SUB_def,ALUOUT_ADD_CARRY,WORD_NOT,GSYM WORD_ADD_SUB_ASSOC,WORD_SUB_ADD]
+    \\ REWRITE_TAC [word_sub_def]);
 
 val NZ_SUB_lem = prove(
   `!c. (!a b. FST (FST (SUB a b c)) = word_msb (SND (SUB a b c))) /\
         !a b. FST (SND (FST (SUB a b c))) = (SND (SUB a b c) = 0w)`,
-  SIMP_TAC (std_ss++SIZES_ss) [SUB_def,ALU_arith_neg_def,DIVMOD_2EXP,
+  SIMP_TAC (std_ss++SIZES_ss) [SUB_def,ADD_def,ALU_arith_def,DIVMOD_2EXP,
     MOD_MOD,MOD_2EXP_def,n2w_11]);
 
 val NZ_SUB = save_thm("NZ_SUB",
