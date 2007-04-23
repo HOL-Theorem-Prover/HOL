@@ -15,12 +15,11 @@ val Rational_def = Define `Rational r = ?p q. ~(q=0) /\ (abs(r) = &p / &q)`;
 (* Trivial lemmas                                                            *)
 (*---------------------------------------------------------------------------*)
 
-val EXP_2 = Q.prove(`!n:num. n**2 = n*n`,
-  REWRITE_TAC [TWO,ONE,EXP] THEN RW_TAC arith_ss []);
+val EXP_2 = Q.prove(`!n:num. n**2 = n*n`, RW_TAC arith_ss []);
 
-val EXP2_LEM = Q.prove(`!x y:num. ((2*x)**2 = 2*(y**2)) = (2*(x**2) = y**2)`,
- REWRITE_TAC [TWO,EXP_2]
- THEN PROVE_TAC [MULT_MONO_EQ,MULT_ASSOC,MULT_SYM]);
+val EXP2_LEM = Q.prove(
+ `!x y:num. ((2*x)**2 = 2*(y**2)) = (2*(x**2) = y**2)`,
+ RW_TAC arith_ss [EXP_BASE_MULT]);
 
 (*---------------------------------------------------------------------------*)
 (* Lemma: squares are not doublings of squares, except trivially.            *)
