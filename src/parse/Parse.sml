@@ -805,6 +805,21 @@ in
   type_grammar_changed := true
 end
 
+(*---------------------------------------------------------------------------*)
+(* Apply a function to its argument. If it fails, revert the grammars        *)
+(*---------------------------------------------------------------------------*)
+
+fun try_grammar_extension f x = 
+ let val (tyG,tmG) = current_grammars()
+     val updates = !grm_updates
+ in
+    f x handle e 
+    => (the_term_grammar := tmG;
+        the_type_grammar := tyG;
+        term_grammar_changed := true;
+        type_grammar_changed := true;
+        grm_updates := updates; raise e)
+ end;
 
 val std_binder_precedence = 0;
 

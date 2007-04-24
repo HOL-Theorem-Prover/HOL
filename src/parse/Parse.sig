@@ -150,6 +150,9 @@ signature Parse = sig
                              paren_style : ParenStyle,
                              block_style : PhraseBlockStyle * block_info}
 
+  val try_grammar_extension : ('a -> 'b) -> 'a -> 'b
+
+
   (* Pretty printing *)
 
   val pp_term : ppstream -> term -> unit
