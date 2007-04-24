@@ -1109,7 +1109,7 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
-fun mk_defn stem eqns =
+fun prim_mk_defn stem eqns =
  let val _ = if Lexis.ok_identifier stem then ()
              else raise ERR "mk_defn"
                    (String.concat[Lib.quote stem," is not alphanumeric"])
@@ -1146,6 +1146,14 @@ fun mk_defn stem eqns =
  end
  handle e => raise wrap_exn "Defn" "mk_defn" e;
 
+(*---------------------------------------------------------------------------*)
+(* Version of mk_defn that restores the term signature and grammar if it     *)
+(* fails.                                                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun mk_defn stem eqns = 
+  Parse.try_grammar_extension
+    (Theory.try_theory_extension (uncurry prim_mk_defn)) (stem,eqns);
 
 fun mk_Rdefn stem R eqs =
   let val defn = mk_defn stem eqs
