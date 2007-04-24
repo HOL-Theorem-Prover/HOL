@@ -418,27 +418,18 @@ fun defnDefine term_tac defn =
  end
 end;
 
-val primDefine = defnDefine PROVE_TERM_TAC
+val primDefine = defnDefine PROVE_TERM_TAC;
 
-fun xDefine stem = Lib.try (#1 o primDefine o Defn.Hol_defn stem);
+(*---------------------------------------------------------------------------*)
+(* Make a definition, giving the name to store things under. If anything     *)
+(* fails in the process, remove any constants introduced by the definition.  *)
+(*---------------------------------------------------------------------------*)
 
-fun tDefine stem q tac =
- let open Defn
-     val defn = Hol_defn stem q
- in 
-   if triv_defn defn
-    then let val def = fetch_eqns defn
-             val bind = stem ^ !Defn.def_suffix
-         in been_stored (bind,def);
-            def
-         end
-    else let val (def,ind) = Lib.with_flag (goalstackLib.chatting,false)
-                                Defn.tprove0(defn,tac)
-         in 
-           Defn.store(stem,def,ind) ;
-           def
-         end
-end;
+fun xDefine stem q = 
+ Parse.try_grammar_extension
+   (Theory.try_theory_extension 
+       (#1 o primDefine o Defn.Hol_defn stem)) q
+  handle e => Raise (wrap_exn "TotalDefn" "xDefine" e);
 
 (*---------------------------------------------------------------------------
      Define
@@ -463,8 +454,37 @@ fun define q =
     #1 (primDefine (Defn.mk_defn bindstem tm))
     handle e => raise (wrap_exn_loc "TotalDefn" "Define" locn e)
  end
-val Define = Lib.try define
+
+fun Define q = 
+ Parse.try_grammar_extension
+    (Theory.try_theory_extension define) q
+ handle e => Raise e
 end;
+
+(*---------------------------------------------------------------------------*)
+(* Version of Define where the termination tactic is explicitly supplied.    *)
+(*---------------------------------------------------------------------------*)
+
+fun tDefine stem q tac =
+ let open Defn
+     fun thunk() = 
+       let val defn = Hol_defn stem q
+       in 
+        if triv_defn defn
+        then let val def = fetch_eqns defn
+                 val bind = stem ^ !Defn.def_suffix
+             in been_stored (bind,def); def
+             end
+        else let val (def,ind) = with_flag (goalstackLib.chatting,false)
+                                         Defn.tprove0(defn,tac)
+             in Defn.store(stem,def,ind) ; def
+             end
+       end
+ in
+  Parse.try_grammar_extension
+    (Theory.try_theory_extension thunk) ()
+  handle e => Raise (wrap_exn "TotalDefn" "tDefine" e)
+ end;
 
 (*---------------------------------------------------------------------------*)
 (* API for Define                                                            *)
