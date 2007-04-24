@@ -835,18 +835,20 @@ fun new_theory str =
 (*---------------------------------------------------------------------------*)
 (* Function f tries to extend current theory. If that fails, or if predicate *)
 (* is_ok (expected to be total) returns false, then revert to previous state *)
-(* and return NONE. Otherwise return SOME y, where y is what (if anything)   *)
+(* and return FAIL. Otherwise return PASS y, where y is what (if anything)   *)
 (* f(x) returned.                                                            *)
 (*                                                                           *)
-(* This code does not track changes to the state used by adjoin_to_theory or *)
+(* We do not (yet) track changes to the state used by adjoin_to_theory or    *)
 (* after_new_theory.                                                         *)
 (*---------------------------------------------------------------------------*)
 
+(* Overly complex definition commented out
 fun attempt_theory_extension is_ok f x = 
-  let open Term
+  let infix ?>
+      open Term
       val tnames1 = map fst (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
-      fun cleanup() = 
+      fun revert _ = 
         let val tnames2 = map fst (types"-")
             val cnames2 = map (fst o dest_const) (constants"-")
             val new_tnames = Lib.set_diff tnames2 tnames1
@@ -855,9 +857,29 @@ fun attempt_theory_extension is_ok f x =
            map delete_const new_cnames; 
            scrub()
         end
-  in case itotal f x
-      of SOME y => if is_ok(y) then SOME y else (cleanup(); NONE)
-       | NONE => (cleanup(); NONE)
+  in 
+    case (verdict f revert x ?> verdict (assert is_ok) revert)
+     of PASS y => PASS y
+      | FAIL((),e) => FAIL (wrap_exn "Theory" "attempt_theory_extension" e)
+  end;
+*)
+
+fun try_theory_extension f x = 
+  let infix ?>
+      open Term
+      val tnames1 = map fst (types"-")
+      val cnames1 = map (fst o dest_const) (constants"-")
+      fun revert _ = 
+        let val tnames2 = map fst (types"-")
+            val cnames2 = map (fst o dest_const) (constants"-")
+            val new_tnames = Lib.set_diff tnames2 tnames1
+            val new_cnames = Lib.set_diff cnames2 cnames1
+        in map delete_type new_tnames; 
+           map delete_const new_cnames; 
+           scrub()
+        end
+  in 
+    f x handle e => (revert(); raise e)
   end;
 
 end (* Theory *)

@@ -49,7 +49,7 @@ sig
   val uptodate_term      : term -> bool
   val uptodate_thm       : thm -> bool
   val scrub              : unit -> unit
-  val attempt_theory_extension : ('b -> bool) -> ('a->'b) -> 'a -> 'b option
+  val try_theory_extension : ('a->'b) -> 'a -> 'b
 
 (* Changing internal bindings of ML-level names to theory objects *)
 

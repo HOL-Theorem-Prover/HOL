@@ -279,7 +279,7 @@ sig
   val set_MLname         : string -> string -> unit
   val store_definition   : string * string list * witness * thm -> thm
   val store_type_definition : string * string * witness * thm -> thm
-  val attempt_theory_extension : ('b -> bool) -> ('a->'b) -> 'a -> 'b option
+  val try_theory_extension : ('a->'b) -> 'a -> 'b
 end
 
 
