@@ -69,9 +69,7 @@ simplifier and ignored.)  Instead, conversions in simpsets are
 accompanied by a term-pattern which specifies the sort of situations
 in which they should be applied.  This facility is used in the
 definition of {bool_ss} to include {ETA_CONV}, but stop it from
-transforming {!x. P x} into {$! P}.  Similarly, if one had a
-conversion for deciding equalities over a certain type {foo}, one
-would add the relevant conversion keyed on terms {``x:foo = y``}.
+transforming {!x. P x} into {$! P}.
 
 AC-rules allow simpsets to be constructed that automatically normalise
 terms involving associative and commutative operators, again according
