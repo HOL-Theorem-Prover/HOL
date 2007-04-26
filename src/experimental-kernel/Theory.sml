@@ -681,21 +681,20 @@ fun new_theory str =
   end;
 
 
-(*---------------------------------------------------------------------------*)
-(* Function f tries to extend current theory. If that fails, or if predicate *)
-(* is_ok (expected to be total) returns false, then revert to previous state *)
-(* and return NONE. Otherwise return SOME y, where y is what (if anything)   *)
-(* f(x) returned.                                                            *)
-(*                                                                           *)
-(* This code does not track changes to the state used by adjoin_to_theory or *)
-(* after_new_theory.                                                         *)
-(*---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Function f tries to extend current theory. If that fails then
+    revert to previous state.
 
-fun attempt_theory_extension is_ok f x =
-  let open Term
+    We do not (yet) track changes to the state used by adjoin_to_theory or
+    after_new_theory.
+   ---------------------------------------------------------------------- *)
+
+fun try_theory_extension f x =
+  let infix ?>
+      open Term
       val tnames1 = map fst (types"-")
       val cnames1 = map (fst o dest_const) (constants"-")
-      fun cleanup() =
+      fun revert _ =
         let val tnames2 = map fst (types"-")
             val cnames2 = map (fst o dest_const) (constants"-")
             val new_tnames = Lib.set_diff tnames2 tnames1
@@ -704,10 +703,8 @@ fun attempt_theory_extension is_ok f x =
            map delete_const new_cnames;
            scrub()
         end
-  in case itotal f x
-      of SOME y => if is_ok(y) then SOME y else (cleanup(); NONE)
-       | NONE => (cleanup(); NONE)
+  in
+    f x handle e => (revert(); raise e)
   end;
-
 
 end (* Theory *)
