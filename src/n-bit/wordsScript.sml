@@ -2369,6 +2369,21 @@ fun mk_index i =
   end;
 
 val _ = ConstMapML.insert ``n2w_itself``;
+
+(*---------------------------------------------------------------------------*)
+(* Ensure that n2w_itself sticks in the ConstMap, by writing some code into  *)
+(* wordsTheory.sml                                                           *)
+(*---------------------------------------------------------------------------*)
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME (fn ppstrm =>
+  let val S = PP.add_string ppstrm
+      fun NL() = PP.add_newline ppstrm
+  in S "val _ = ConstMapML.insert (Term.prim_mk_const{Name=\"n2w_itself\",Thy=\"words\"});";
+     NL(); NL()
+  end)};
+
 val _ = type_pp.pp_num_types := false;
 
 local
