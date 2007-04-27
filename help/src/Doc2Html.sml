@@ -102,7 +102,7 @@ fun html (name,sectionl) ostrm =
        | markout_section (FIELD ("DOC", _)) = ()
        | markout_section (FIELD (tag, ss))
            = (out "<DT><SPAN class = \"FIELD-NAME\">";
-              out tag;
+              out (if tag = "DESCRIBE" then "DESCRIPTION" else tag);
               out "</SPAN></DT>\n";
               out "<DD><DIV class = \"FIELD-BODY\">";
               List.app markout ss;
