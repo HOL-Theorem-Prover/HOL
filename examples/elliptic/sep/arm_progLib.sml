@@ -103,6 +103,47 @@ val HIDE_POST_LEMMA =
 fun HIDE_POST th = 
   MATCH_MP ARM_PROG_HIDE_POST th handle e => MATCH_MP HIDE_POST_LEMMA th;
 
+(* -- move out e.g. ``R a`` will do ``R b y * R a x * R c z`` -> ``R b y * R c z * R a x`` -- *)
+
+fun MOVE_OUT_CONV t tm = let
+  val xs = list_dest_STAR tm
+  fun list_search f [] ys = hd [] 
+    | list_search f (x::xs) ys = if f x then (ys,x,xs) else list_search f xs (ys @ [x])
+  fun is_nil x = (x = [])
+  fun f x = (is_nil o fst o match_term t o fst o dest_comb) x handle e => false
+  val (ys,x,zs) = list_search f xs []
+  val tm' = list_mk_STAR (ys @ zs @ [x])
+  val tm = mk_eq (tm,tm')
+  val th = SIMP_CONV (bool_ss++star_ss) [] tm
+  val th = EQ_MP (GSYM th) TRUTH
+  in th end;
+
+fun MOVE_PRE   t = PRE_CONV_RULE (MOVE_OUT_CONV t);
+fun MOVE_POST  t = POST_CONV_RULE (MOVE_OUT_CONV t);
+fun MOVE_POST1 t = POST1_CONV_RULE (MOVE_OUT_CONV t);
+
+(* -- auto hide methods -- *)
+
+fun GENERIC_AUTO_HIDE r c [] th = th
+  | GENERIC_AUTO_HIDE r c (t::ts) th =
+      GENERIC_AUTO_HIDE r c ts (r (c t th));
+
+val AUTO_HIDE_PRE   = GENERIC_AUTO_HIDE HIDE_PRE   MOVE_PRE;
+val AUTO_HIDE_POST  = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST;
+val AUTO_HIDE_POST1 = GENERIC_AUTO_HIDE HIDE_POST1 MOVE_POST1;
+
+(* -- add exists to pre -- *)
+
+fun parse_in_thm q th = Parse.parse_in_context (free_varsl (concl th::hyp th)) q;
+
+val EXISTS_PRE_LEMMA = MATCH_MP EQ_IMP_IMP (SPEC_ALL ARM_PROG_EXISTS_PRE);
+fun EXISTS_PRE var th = let 
+  val v = parse_in_thm var th 
+  val th = PRE_CONV_RULE (UNBETA_CONV v) th
+  val th = MATCH_MP EXISTS_PRE_LEMMA (GEN v th)   
+  val th = PRE_CONV_RULE (RAND_CONV (ALPHA_CONV v)) th
+  in BETA_RULE th end;
+
 (* -- hide status from anywhere *)
 
 fun ALIGN_VAR tm = let 
@@ -171,6 +212,7 @@ fun FRAME_COMPOSE th1 th2 =
     val th1 = frame Qfill th1
     val th2 = frame Pfill th2
   in ARRANGE_COMPOSE th1 th2 end;
+
 
 (* strengthen, weaken, weaken1 *)
 
@@ -377,7 +419,7 @@ val basic_match_list =
    (arm_LDRB1,"arm_LDRB1"),(arm_LDRB,"arm_LDRB"),(arm_STRB,"arm_STRB")];
 
 val match_list = 
-  [(arm_MOV_PC_GENERAL,"arm_MOV_PC_GENERAL"),(arm_B2,"arm_B2"),
+  [(arm_MOV_PC_GENERAL,"arm_MOV_PC_GENERAL"),(arm_B2,"arm_B2"),(arm_LDR_PC,"arm_LDR_PC"),
    (arm_SWP2_NONALIGNED,"arm_SWP2_NONALIGNED"),(arm_SWP3_NONALIGNED,"arm_SWP3_NONALIGNED"),
    (arm_LDR1_NONALIGNED,"arm_LDR1_NONALIGNED"),(arm_LDR_NONALIGNED,"arm_LDR_NONALIGNED"),
    (arm_STR_NONALIGNED,"arm_STR_NONALIGNED")] @ basic_match_list;
@@ -438,6 +480,7 @@ val (inst_str,thm_name,suffix,indent) = ("add a, b, #34","th","2","  ")
 print_arm_prog2 "ldrb r1, [r2,#35]" "th" "3" "  " 
 print_arm_prog2_list ["add a, b, c","sub b, c, d","mul c, d, e"] "th" 1 "  "
 mk_arm_prog2_string_list ["add a, b, c","sub b, c, d","mul c, d, e"] "th" 1 "  "
+print_arm_prog2 "ldr r15, [r2,#35]" "th" "3" "  " 
 *)
     
 
@@ -528,6 +571,7 @@ fun compose_progs strs name indent = compose_progs' (map (fn st => (st,true)) st
 (*  
 compose_progs ["add a, b, c","sub d, a, d","mul c, d, e"] "th" "  "
 compose_progs' [("cmp a, #1",true),("moveq pc,r14",false)] "th" "  "
+compose_progs ["ldr r15,[a],#4"] "th" "  "
 *)
 
 

@@ -1,8 +1,4 @@
 
-(* 
-  app load ["pred_setTheory","res_quanTheory"];
-*)
-
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory;
 
@@ -26,6 +22,10 @@ val emp_def = Define `emp = \s. (s = {})`;
 val one_def = Define `one x = \s. ({x} = s)`;
 val cond_def = Define `cond c = \s. (s = {}) /\ c`;
 
+val mute_def = Define `mute (x:'a set -> bool) = (x,emp)`;
+val immute_def = Define `immute (x:'a set -> bool) = (emp,x)`;
+val cond2_def = Define `cond2 c = (cond c,emp)`;
+
 val SPLIT_def = Define `SPLIT (s:'a set) (u,v) = (u UNION v = s) /\ DISJOINT u v`;
 val STAR_def = Define `STAR P Q = (\s. ?u v. SPLIT s (u,v) /\ P u /\ Q v)`;
 val SEP_HIDE_def = Define `SEP_HIDE P = \s. ?x. P x s`;
@@ -39,8 +39,10 @@ val SEP_F_def = Define `SEP_F s = F`;
 val SEP_CONJ_def = Define `SEP_CONJ P Q = (\s. P s /\ Q s)`;
 val SEP_DISJ_def = Define `SEP_DISJ P Q = (\s. P s \/ Q s)`;
 val SEP_NOT_def  = Define `SEP_NOT P = (\s. ~((P s):bool))`;
+val SEP_ADD_def = Define `SEP_ADD P Q = SEP_CONJ (STAR P SEP_T) (STAR Q SEP_T)`;
 
 val SEP_IMP_def  = Define `SEP_IMP P Q = !s. P s ==> Q s`;
+val SEP_IMP2_def  = Define `SEP_IMP2 (P,P') (Q,Q') = SEP_IMP P Q /\ SEP_IMP Q Q'`;
 
 val _ = overload_on ("/\\",Term`SEP_CONJ`);
 val _ = overload_on ("\\/",Term`SEP_DISJ`);
@@ -70,6 +72,14 @@ val bijection'_def = Define `
 
 val BIGSTAR_def = Define `
   BIGSTAR Z = \s. ?Q f. BIGSPLIT s Q /\ bijection' f Z Q /\ !z::Z. z (f z)`;
+
+val STAR2_def = Define `
+  STAR2 (P,P') (Q,Q') = (P * Q, SEP_ADD P' Q')`;
+
+val SEP_JOIN_def = Define `
+  SEP_JOIN (P,Q) = P * Q * SEP_T`;
+
+val _ = overload_on ("**",Term`STAR2`);
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -231,22 +241,17 @@ val BIGSPLIT_BIGUNION = prove(
 (* Main theorems                                                                 *)
 (* ----------------------------------------------------------------------------- *)
 
-val STAR_ABS =
-  let 
-    val access = QUANT_CONV o QUANT_CONV o RHS_CONV o ABS_CONV o QUANT_CONV
-    val step1 = UNBETA_CONV ``u:'a set``
-    val step2 = UNBETA_CONV ``v:'a set``
-    val trans = RATOR_CONV o ABS_CONV o QUANT_CONV
-  in
-    CONV_RULE (access (step1 THENC trans step2)) STAR_def
-  end;
+val STAR_ABS = let 
+  val access = QUANT_CONV o QUANT_CONV o RHS_CONV o ABS_CONV o QUANT_CONV
+  val step1 = UNBETA_CONV ``u:'a set``
+  val step2 = UNBETA_CONV ``v:'a set``
+  val trans = RATOR_CONV o ABS_CONV o QUANT_CONV
+  in CONV_RULE (access (step1 THENC trans step2)) STAR_def end;
 
-val STAR_SYM = store_thm("STAR_SYM",
+val STAR_SYM = save_thm("STAR_COMM",store_thm("STAR_SYM",
   ``!P:'a set->bool Q. P * Q = Q * P``,
   REWRITE_TAC [STAR_def,SPLIT_def,DISJOINT_DEF]
-  \\ METIS_TAC [UNION_COMM,INTER_COMM,CONJ_SYM,CONJ_ASSOC]);
-
-val _ = save_thm("STAR_COMM",STAR_SYM);
+  \\ METIS_TAC [UNION_COMM,INTER_COMM,CONJ_SYM,CONJ_ASSOC]));
 
 val STAR_ASSOC = store_thm("STAR_ASSOC",
   ``!P:'a set->bool Q R. P * (Q * R) = (P * Q) * R``,
@@ -256,23 +261,16 @@ val STAR_ASSOC = store_thm("STAR_ASSOC",
   \\ CONV_TAC (BINOP_CONV (RAND_CONV 
          (ABS_CONV (REWRITE_CONV [GSYM STAR_def] THENC REWRITE_CONV [STAR_ABS]))))
   \\ SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM,GSYM LEFT_EXISTS_AND_THM]
-  \\ REWRITE_TAC [IN_DEF] \\ BETA_TAC
-  \\ EQ_TAC << [
-    REPEAT STRIP_TAC
-    \\ Q.EXISTS_TAC `u UNION u'`
-    \\ Q.EXISTS_TAC `v'`
-    \\ Q.EXISTS_TAC `u`
-    \\ Q.EXISTS_TAC `u'`
+  \\ REWRITE_TAC [IN_DEF] \\ BETA_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC << [
+    Q.EXISTS_TAC `u UNION u'` \\ Q.EXISTS_TAC `v'`
+    \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `u'`
     \\ `DISJOINT u u'` by METIS_TAC [SPLIT_SPLIT,SPLIT_SYM]
     \\ `SPLIT (u UNION u') (u,u')` by METIS_TAC [SPLIT_UNION,DISJOINT_SYM]
     \\ ASM_SIMP_TAC std_ss [SPLIT_SPLIT]
     \\ `SPLIT x (v,u)` by METIS_TAC [SPLIT_SYM]
     \\ METIS_TAC [SPLIT_SPLIT_UNION,SPLIT_SYM,UNION_COMM],
-    REPEAT STRIP_TAC
-    \\ Q.EXISTS_TAC `u'`
-    \\ Q.EXISTS_TAC `v' UNION v`
-    \\ Q.EXISTS_TAC `v'`
-    \\ Q.EXISTS_TAC `v`
+    Q.EXISTS_TAC `u'` \\ Q.EXISTS_TAC `v' UNION v` 
+    \\ Q.EXISTS_TAC `v'` \\ Q.EXISTS_TAC `v`
     \\ `DISJOINT v v'` by METIS_TAC [SPLIT_SPLIT,SPLIT_SYM]
     \\ `SPLIT (v' UNION v) (v',v)` by METIS_TAC [SPLIT_UNION,DISJOINT_SYM]
     \\ ASM_SIMP_TAC std_ss [SPLIT_SPLIT]
@@ -282,12 +280,9 @@ val STAR_emp_LEMMA = prove(
   ``!P. P * emp = P``,
   REWRITE_TAC [EXTENSION,IN_DEF] \\ BETA_TAC \\ REPEAT STRIP_TAC
   \\ REWRITE_TAC [STAR_def,emp_def] \\ BETA_TAC
-  \\ EQ_TAC << [
-    METIS_TAC [SPLIT_EMPTY],
-    REPEAT STRIP_TAC
-    \\ Q.EXISTS_TAC `x`
-    \\ Q.EXISTS_TAC `{}`    
-    \\ METIS_TAC [SPLIT_EMPTY]]);
+  \\ EQ_TAC THEN1 METIS_TAC [SPLIT_EMPTY]
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `x` \\ Q.EXISTS_TAC `{}`    
+  \\ METIS_TAC [SPLIT_EMPTY]);
 
 val emp_STAR = store_thm("emp_STAR",
   ``!P. (emp * P = P) /\ (P * emp = P)``,
@@ -390,6 +385,12 @@ val SEP_cond_CLAUSES = store_thm("SEP_cond_CLAUSES",
   \\ SRW_TAC [] [cond_def,STAR_def,SEP_DISJ_def,SEP_CONJ_def,
          IN_DEF,SPLIT_def,DISJOINT_DEF,EMPTY_DEF,emp_def,SEP_F_def]
   \\ SIMP_TAC bool_ss [] \\ METIS_TAC [NOT_IN_EMPTY]);
+
+val T_STAR_T = store_thm("T_STAR_T",
+  ``SEP_T * SEP_T = SEP_T``,
+  SIMP_TAC std_ss [SEP_T_def,STAR_def,FUN_EQ_THM] 
+  \\ STRIP_TAC \\ Q.EXISTS_TAC `{}` \\ Q.EXISTS_TAC `x DIFF {}`
+  \\ MATCH_MP_TAC SPLIT_SUBSET_DIFF \\ REWRITE_TAC [EMPTY_SUBSET]);
 
 val MOVE_IN_LEMMA = prove(
   ``((\s. ?v. P v s) * Q) = (\s. ?v. (P v * Q) s)``,
@@ -507,6 +508,83 @@ val SEP_HIDE_INTRO = store_thm("SEP_HIDE_INTRO",
   ``!P Q x s. SEP_IMP (P * Q x) (P * ~ Q)``,
   SRW_TAC [] [STAR_def,SEP_HIDE_def,SEP_IMP_def] \\ METIS_TAC []); 
 
+
+(* ----------------------------------------------------------------------------- *)
+(* Theorems about SEP_ADD and STAR2                                              *)
+(* ----------------------------------------------------------------------------- *)
+
+val STAR_T_THM = prove(
+  ``(P * SEP_T) s = ?u. u SUBSET s /\ P u``,
+  SIMP_TAC std_ss [STAR_def,SEP_T_def] \\ EQ_TAC \\ REPEAT STRIP_TAC << [ 
+    Q.EXISTS_TAC `u` \\ IMP_RES_TAC SPLIT_SUBSET \\ ASM_REWRITE_TAC [],    
+    Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `s DIFF u` 
+    \\ ASM_SIMP_TAC bool_ss [SPLIT_SUBSET_DIFF]]);
+
+val SEP_ADD_THM = store_thm("SEP_ADD_thm",
+  ``!P Q. SEP_ADD P Q = \s. ?u v. P u /\ Q v /\ u SUBSET s /\ v SUBSET s``,
+  SIMP_TAC std_ss [SEP_ADD_def,FUN_EQ_THM,SEP_CONJ_def,STAR_T_THM] \\ METIS_TAC []);
+  
+val SEP_ADD_STAR_T = store_thm("SEP_ADD_STAR_T",
+  ``!P Q. (SEP_ADD P (Q * SEP_T) = SEP_ADD P Q) /\ ((SEP_ADD P Q) * SEP_T = SEP_ADD P Q)``,
+  REPEAT STRIP_TAC THEN1 REWRITE_TAC [SEP_ADD_def,GSYM STAR_ASSOC,T_STAR_T]
+  \\ SIMP_TAC std_ss [FUN_EQ_THM,STAR_def,SEP_ADD_THM] 
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC << [ 
+    IMP_RES_TAC SPLIT_SUBSET \\ IMP_RES_TAC SUBSET_TRANS
+    \\ Q.EXISTS_TAC `u'` \\ Q.EXISTS_TAC `v'` \\ ASM_REWRITE_TAC [],
+    Q.EXISTS_TAC `x` \\ Q.EXISTS_TAC `{}`
+    \\ REWRITE_TAC [SPLIT_EMPTY,SEP_T_def]
+    \\ Q.EXISTS_TAC `u` \\ Q.EXISTS_TAC `v` \\ ASM_REWRITE_TAC []]);
+
+val SEP_ADD_IDEMPOT = store_thm("SEP_ADD_IDEMPOT",
+  ``!P. SEP_ADD P P = P * SEP_T``,
+  SIMP_TAC std_ss [FUN_EQ_THM,SEP_ADD_def,SEP_CONJ_def]);
+    
+val SEP_ADD_COMM = store_thm("SEP_ADD_COMM",
+  ``!P:'a set->bool Q. SEP_ADD P Q = SEP_ADD Q P``,
+  REWRITE_TAC [SEP_ADD_def,SEP_CONJ_def,Once CONJ_COMM]);
+
+val SEP_ADD_ASSOC = store_thm("SEP_ADD_ASSOC",
+  ``!P:'a set->bool Q R. SEP_ADD P (SEP_ADD Q R) = SEP_ADD (SEP_ADD P Q) R``,
+  REWRITE_TAC [FUN_EQ_THM]
+  \\ ONCE_REWRITE_TAC [SEP_ADD_def]
+  \\ REWRITE_TAC [SEP_ADD_STAR_T]
+  \\ SIMP_TAC std_ss [SEP_ADD_def,SEP_CONJ_def,CONJ_ASSOC]);
+
+val STAR2_COMM = store_thm("STAR2_COMM",
+  ``!P:(('a -> bool) -> bool) # (('b -> bool) -> bool) Q. 
+      P ** Q = Q ** P``,
+  Cases \\ Cases \\ REWRITE_TAC [STAR2_def,Once STAR_SYM,Once SEP_ADD_COMM]);
+  
+val STAR2_ASSOC = store_thm("STAR2_ASSOC",
+  ``!P:(('a -> bool) -> bool) # (('b -> bool) -> bool) Q R. 
+      P ** (Q ** R) = (P ** Q) ** R``,
+  NTAC 3 Cases \\ REWRITE_TAC [STAR2_def,STAR_ASSOC,SEP_ADD_ASSOC]);
+
+val STAR_IMP_ADD = store_thm("STAR_IMP_ADD",
+  ``!F P Q. SEP_IMP (P * Q * F) (SEP_ADD P Q)``,
+  SIMP_TAC std_ss [SEP_IMP_def,STAR_def,SEP_ADD_THM] \\ REPEAT STRIP_TAC 
+  \\ IMP_RES_TAC SPLIT_SUBSET \\ IMP_RES_TAC SUBSET_TRANS
+  \\ Q.EXISTS_TAC `u'` \\ Q.EXISTS_TAC `v'` \\ ASM_REWRITE_TAC []);  
+
+val emp_ADD = store_thm("emp_ADD",
+  ``!P. (SEP_ADD emp P = P * SEP_T) /\ (SEP_ADD P emp = P * SEP_T)``,
+  SIMP_TAC std_ss [STAR_T_THM,FUN_EQ_THM,SEP_ADD_def,SEP_CONJ_def]
+  \\ SIMP_TAC std_ss [emp_def,EMPTY_SUBSET]);
+
+val immute_DUP = store_thm("immute_DUP",
+  ``!P x. immute x ** P = immute x ** immute x ** P``,
+  Cases \\ REWRITE_TAC [immute_def,STAR2_def,emp_STAR,SEP_ADD_ASSOC]
+  \\ ONCE_REWRITE_TAC [SEP_ADD_COMM]
+  \\ REWRITE_TAC [SEP_ADD_IDEMPOT,SEP_ADD_STAR_T]);
+
+val mute_IMP_immute = store_thm("mute_IMP_immute",
+  ``!P x. SEP_IMP (SEP_JOIN (mute x ** P)) (SEP_JOIN (immute x ** P))``,
+  Cases \\ REWRITE_TAC [mute_def,immute_def,STAR2_def,emp_STAR,SEP_JOIN_def]
+  \\ REWRITE_TAC [emp_ADD,GSYM STAR_ASSOC,T_STAR_T] \\ REWRITE_TAC [STAR_ASSOC]
+  \\ REWRITE_TAC [METIS_PROVE [STAR_SYM,STAR_ASSOC] ``x*q*r*t = (x*r)*(q*t):'a set -> bool``] 
+  \\ REWRITE_TAC [METIS_PROVE [STAR_SYM,STAR_ASSOC] ``q*(SEP_ADD x r)*t = (SEP_ADD x r)*(q*t):'a set -> bool``] 
+  \\ STRIP_TAC \\ MATCH_MP_TAC SEP_IMP_FRAME
+  \\ REWRITE_TAC [REWRITE_RULE [emp_STAR] (Q.SPEC `emp` STAR_IMP_ADD)]);
 
 
 (* ----------------------------------------------------------------------------- *)

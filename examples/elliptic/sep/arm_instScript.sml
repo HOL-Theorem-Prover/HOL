@@ -10,8 +10,7 @@ open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory arithmeticTheory;
 open arm_rulesTheory arm_rulesLib arm_evalTheory armTheory instructionTheory; 
 open combinTheory listTheory rich_listTheory pairTheory sortingTheory;
-open relationTheory wordsLib fcpTheory systemTheory;
-
+open relationTheory wordsLib fcpTheory systemTheory bitTheory;
 open set_sepTheory set_sepLib progTheory arm_progTheory;
 
 val _ = new_theory "arm_inst";
@@ -108,6 +107,8 @@ fun ASM_UNABBREV_ALL_RULE th =
     undisch_rest (unabbrev_all th)
   end;
 
+val SET_NO_CP = RW [GSYM NEXT_ARM_MEM_def] o Q.INST [`cp`|->`NO_CP`] o SPEC_ALL;
+
 
 (* ----------------------------------------------------------------------------- *)
 (* Lemmas about registers                                                        *)
@@ -174,10 +175,10 @@ val ADDR_MODE1_VAL_def = Define `
   (ADDR_MODE1_VAL (Imm k) x c = (c,w2w k))`;
 
 val ADDR_MODE1_VAL_THM = prove( 
-  ``!c. ADDR_MODE1 state.registers mode (cpsr %% 29)
+  ``!c. ADDR_MODE1 state.registers mode z
          (IS_DP_IMMEDIATE (ADDR_MODE1_CMD c Rd))
          ((11 >< 0) (addr_mode1_encode (ADDR_MODE1_CMD c Rd))) =
-        ADDR_MODE1_VAL c (REG_READ state.registers mode Rd) (cpsr %% 29)``,
+        ADDR_MODE1_VAL c (REG_READ state.registers mode Rd) z``,
   Cases_on `c`
   \\ REWRITE_TAC [ADDR_MODE1_CMD_def,ADDR_MODE1_VAL_def]
   \\ REWRITE_TAC [IS_DP_IMMEDIATE_def,shift_immediate_shift_register,ADDR_MODE1_def]
@@ -782,7 +783,7 @@ fun simple_clean th tms = let
   val tm2 = ``CONDITION_PASSED2 (status (s:^(ty_antiq arm_state_type))) c``
   val tm3 = ``mem (addr30 p) (s:^(ty_antiq arm_state_type)) = enc cmd``
   val th = PAT_DISCH_LIST ([tm1,tm2,tm3] @ tms) th
-  in th end;
+  in SET_NO_CP th end;
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -1312,17 +1313,17 @@ val reg_values_def = Define `
   reg_values = MAP SND o QSORT (\x y. FST x <=+ FST y)`;
   
 val LDM_PRE_EXPANSION = let
-  val xs = `(15w,SOME x1)::(a,SOME x2)::xs`;
-  val ys = `[xM_seq (b1,[y1]);xM_seq (b3,y3)]`;
-  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(T,g)`);
-  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+  val xs = `(15w,SOME x1)::(a,SOME x2)::xs`
+  val ys = `[xM_seq (b1,[y1]);xM_seq (b3,y3)]`
+  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(T,g)`)
+  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd)
   in th end;
 
 val LDM_POST_EXPANSION = let
-  val xs = `(15w,SOME x1)::(a,SOME x2)::xs`;
-  val ys = `[xM_seq (b1,[y1]);xM_seq (b3,y3)]`;
-  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(F,g)`);
-  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd);
+  val xs = `(15w,SOME x1)::(a,SOME x2)::xs`
+  val ys = `[xM_seq (b1,[y1]);xM_seq (b3,y3)]`
+  val (st,ud,rt,cd) = (`(T,st)`,`(T,ud)`,`(F,rt)`,`(F,g)`)
+  val th = sep_pred_semantics (xs,ys,st,ud,rt,cd)
   in th end;
 
 val LDM_SIMP_LEMMA = prove(
@@ -1628,7 +1629,7 @@ val IMP_ARM_NOP = prove(
       owrt_visible_def,set_status_def,owrt_visible_regs_def,REG_OWRT_ALL,mem_byte_def]);  
 
 fun MAKE_ARM_NOP nop_rule = 
-  MATCH_MP IMP_ARM_NOP ((Q.GEN `state` o Q.GEN `cpsr` o SPEC_ALL) nop_rule);
+  MATCH_MP IMP_ARM_NOP ((Q.GEN `state` o Q.GEN `cpsr` o SPEC_ALL o SET_NO_CP) nop_rule);
 
 val arm_LDM = store_thm("arm_LDM",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
@@ -1641,8 +1642,7 @@ val arm_LDM = store_thm("arm_LDM",
       xR_list (MAP (\x.(FST x,SOME (SND x))) xs) *
       ms (ADDR_MODE4_ADDR a_mode x xs) (reg_values xs) * S (sN,sZ,sC,Sv)
        :^(ty_antiq ARMel_type) set -> bool) {}``,
-  REWRITE_TAC [ARM_PROG2_def,MAKE_ARM_NOP ARM_LDM_NOP]
-  \\ ARM_PROG_INIT_TAC 
+  REWRITE_TAC [ARM_PROG2_def,MAKE_ARM_NOP ARM_LDM_NOP] \\ ARM_PROG_INIT_TAC 
   \\ ASM_MOVE_STAR_TAC `a*xs*mm*st*cd*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud*cd`
   \\ MOVE_STAR_TAC `a*xs*mm*st*cmd*pc*ud` `pc*a*xs*cmd*mm*st*ud`
   \\ FULL_SIMP_TAC bool_ss [R30_def,LDM_PRE_EXPANSION,LDM_POST_EXPANSION,
@@ -2049,6 +2049,33 @@ val set_status_SIMP3 = prove(
   SRW_TAC [] [set_status_def,SET_NZ_def,SET_NZC_def] 
   \\ CONV_TAC PSR_CONV \\ REWRITE_TAC []);
   
+val DIV_EQ_1 = prove(
+  ``!k. 0 < k ==> !n. (n DIV k = 1) = k <= n /\ n < k + k``,
+  SIMP_TAC bool_ss [EQ_LESS_EQ,DIV_LE_X,X_LE_DIV,MULT_CLAUSES,EVAL ``1+1``]
+  \\ DECIDE_TAC);
+  
+val BIT32_LEMMA = prove(
+  ``!x:word32 y:word32. 
+      (BIT 32 (w2n x + w2n y + 1) = 2**32 <= w2n x + w2n y + 1) /\
+      (BIT 32 (w2n x + w2n y) = 2**32 <= w2n x + w2n y)``,
+  wordsLib.Cases_word \\ wordsLib.Cases_word 
+  \\ ASM_SIMP_TAC bool_ss [w2n_n2w,LESS_MOD]
+  \\ REWRITE_TAC [BIT_def,BITS_def,DIV_2EXP_def,MOD_2EXP_def]
+  \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [DIV_MOD_MOD_DIV]
+  \\ `n + n' + 1 < 8589934592 /\ n + n' < 8589934592 /\ 0 < 4294967296` by DECIDE_TAC
+  \\ ASM_SIMP_TAC bool_ss [LESS_MOD]
+  \\ ASM_SIMP_TAC bool_ss [DIV_EQ_1] \\ DECIDE_TAC);
+
+val BIT32_THM = prove(
+  ``!c x:word32 y:word32. 
+      (BIT 32 (w2n x + w2n y) = 2**32 <= w2n x + w2n y) /\ 
+      (BIT 32 (w2n x + w2n y + 1) = 2**32 <= w2n x + w2n y + 1) /\ 
+      (BIT 32 (w2n x + w2n y + (if c then 1 else 0)) = 
+       2**32 <= w2n x + w2n y + (if c then 1 else 0)) /\ 
+      (BIT 32 (w2n x + w2n y + (if c then 0 else 1)) = 
+       2**32 <= w2n x + w2n y + (if c then 0 else 1))``,
+  Cases \\ REWRITE_TAC [BIT32_LEMMA,ADD_0]);
+
 
 (* tactic *)
 
@@ -2057,7 +2084,7 @@ val ARM_PROG_PROVER_ss = rewrites
    REG_READ_WRITE,REG_READ_WRITE_NEQ2,REG_READ_INC_PC,status_SIMP,status_SIMP2,status_SIMP3,
    GSYM mem_byte_def,IN_INSERT,NOT_IN_EMPTY,owrt_visible_def,set_status_SIMP,
    set_status_SIMP2,set_status_SIMP3,owrt_visible_regs_def,REG_OWRT_ALL,
-   REG_WRITE_15,status_def,PAIR_EQ];
+   REG_WRITE_15,status_def,PAIR_EQ,BIT32_THM,EVAL ``2**32``];
 
 fun ARM_PROG2_INIT_TAC nop pre_move pre_move' post_move post_move' =
   REWRITE_TAC [ARM_PROG2_def,MAKE_ARM_NOP nop]
@@ -2445,7 +2472,7 @@ val arm_CMN1 = store_thm("arm_CMN1",
             S
               (word_msb (x + SND (ADDR_MODE1_VAL a_mode x sC)),
                x + SND (ADDR_MODE1_VAL a_mode x sC) = 0w,
-               BIT 32 (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC))),
+               2**32 <= (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC))),
                (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
                ~(word_msb x = word_msb (x + SND (ADDR_MODE1_VAL a_mode x sC))))) {}``,
   ARM_PROG2_INIT_TAC ARM_CMN_NOP
@@ -2463,7 +2490,7 @@ val arm_CMN2 = store_thm("arm_CMN2",
             S
               (word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC)),
                x + SND (ADDR_MODE1_VAL a_mode y sC) = 0w,
-               BIT 32 (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
+               2**32 <= (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
                (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
                ~(word_msb x = word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC))))) {}``,
   ARM_PROG2_INIT_TAC ARM_CMN_NOP
@@ -3014,11 +3041,9 @@ val arm_ADC1 = store_thm("arm_ADC1",
               (if s_flag then
                  (word_msb
                     (x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w)),
-                  x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w) =
-                  0w,
-                  BIT 32
-                    (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)) +
-                     (if sC then 1 else 0)),
+                  x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w) = 0w,
+                  2**32 <=
+                    w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)) + (if sC then 1 else 0),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
                   ~(word_msb x =
                     word_msb
@@ -3043,7 +3068,7 @@ val arm_ADD1 = store_thm("arm_ADD1",
               (if s_flag then
                  (word_msb (x + SND (ADDR_MODE1_VAL a_mode x sC)),
                   x + SND (ADDR_MODE1_VAL a_mode x sC) = 0w,
-                  BIT 32 (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC))),
+                  2**32 <= w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
                   ~(word_msb x = word_msb (x + SND (ADDR_MODE1_VAL a_mode x sC))))
                else
@@ -3145,9 +3170,10 @@ val arm_RSB1 = store_thm("arm_RSB1",
               (if s_flag then
                  (word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x),
                   SND (ADDR_MODE1_VAL a_mode x sC) = x,
-                  BIT 32 (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)) + 1),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
-                  ~(word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x)))
+                  x <=+ SND (ADDR_MODE1_VAL a_mode x sC),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x)))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSB_NOP
@@ -3162,22 +3188,16 @@ val arm_RSC1 = store_thm("arm_RSC1",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
            (R a x * S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV))
            [enc (RSC c_flag s_flag a a (ADDR_MODE1_CMD a_mode a))]
-           (R a (~x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w)) *
+           (R a (SND (ADDR_MODE1_VAL a_mode x sC) - x - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (~x + SND (ADDR_MODE1_VAL a_mode x sC) +
-                     (if sC then 1w else 0w)),
-                   ~x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w) =
-                  0w,
-                  BIT 32
-                    (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)) +
-                     (if sC then 1 else 0)),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
-                  ~(word_msb ~x =
-                    word_msb
-                      (~x + SND (ADDR_MODE1_VAL a_mode x sC) +
-                       (if sC then 1w else 0w))))
+                 (word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x - (if sC then 0w else 1w)),
+                  SND (ADDR_MODE1_VAL a_mode x sC) = (if sC then 0w else 1w) + x,
+                  (if sC then x <=+ SND (ADDR_MODE1_VAL a_mode x sC) 
+                         else 2**32 <= (w2n (SND (ADDR_MODE1_VAL a_mode x sC)) + w2n ~x)),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x - (if sC then 0w else 1w))))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSC_NOP
@@ -3188,27 +3208,6 @@ val arm_RSC1 = store_thm("arm_RSC1",
        (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_RSC)))
   \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
 
-val ARM_SBC_SIMP = prove(
-  ``(if cpsr %% 29 then
-       SND (ADDR_MODE1 state.registers mode T (IS_DP_IMMEDIATE Op2)
-       ((11 >< 0) (addr_mode1_encode Op2))) <=+ fff Rm
-     else
-       BIT 32 (w2n (fff Rm) + w2n ($- (SND (ADDR_MODE1 state.registers mode F
-       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2))))) +
-       4294967295) \/ (SND (ADDR_MODE1 state.registers mode F
-       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2))) = 0w)) =
-    (if cpsr %% 29 then
-       SND (ADDR_MODE1 state.registers mode (cpsr %% 29) (IS_DP_IMMEDIATE Op2)
-       ((11 >< 0) (addr_mode1_encode Op2))) <=+ fff Rm
-     else
-       BIT 32 (w2n (fff Rm) + w2n ($- (SND (ADDR_MODE1 state.registers mode (cpsr %% 29)
-       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2))))) +
-       4294967295) \/ (SND (ADDR_MODE1 state.registers mode (cpsr %% 29)
-       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2))) = 0w))``,
-  SRW_TAC [] []);
-
-val ARM_SBC_ALT = RW [ARM_SBC_SIMP] ARM_SBC;
-
 val arm_SBC1 = store_thm("arm_SBC1",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
            (R a x * S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV))
@@ -3216,29 +3215,21 @@ val arm_SBC1 = store_thm("arm_SBC1",
            (R a (x - SND (ADDR_MODE1_VAL a_mode x sC) - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (x - SND (ADDR_MODE1_VAL a_mode x sC) -
-                     (if sC then 0w else 1w)),
-                   x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode x sC),
-                  (if sC then
-                     SND (ADDR_MODE1_VAL a_mode x T) <=+ x
-                   else
-                     BIT 32
-                       (w2n x + w2n ($- (SND (ADDR_MODE1_VAL a_mode x F))) +
-                       4294967295) \/ (SND (ADDR_MODE1_VAL a_mode x F) = 0w)),
+                 (word_msb (x - SND (ADDR_MODE1_VAL a_mode x sC) - (if sC then 0w else 1w)),
+                  x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode x sC),
+                  (if sC then SND (ADDR_MODE1_VAL a_mode x sC) <=+ x  
+                         else 2**32 <= (w2n x + w2n ~(SND (ADDR_MODE1_VAL a_mode x sC)))),
                   ~(word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
                   ~(word_msb x =
-                    word_msb
-                      (x - SND (ADDR_MODE1_VAL a_mode x sC) -
-                       (if sC then 0w else 1w))))
+                    word_msb (x - SND (ADDR_MODE1_VAL a_mode x sC) - (if sC then 0w else 1w))))
                else
-                 (sN,sZ,sC,sV))) {}``, 
+                 (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_SBC_NOP
       `a*st*cd*cmd*pc*ud` `a*pc*cmd*st*ud*cd`
       `a*st*cmd*pc*ud` `a*pc*cmd*st*ud`
   \\ ARM_PROG2_EXPAND_TAC xR2 xMm
   \\ ASSUME_TAC 
-       (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC_ALT)))
+       (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
   \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
 
 val arm_SUB1 = store_thm("arm_SUB1",
@@ -3275,7 +3266,7 @@ val arm_ADC2 = store_thm("arm_ADC2",
                     (x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w)),
                   x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w) =
                   0w,
-                  BIT 32
+                  2**32 <=
                     (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) +
                      (if sC then 1 else 0)),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
@@ -3302,7 +3293,7 @@ val arm_ADD2 = store_thm("arm_ADD2",
               (if s_flag then
                  (word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC)),
                   x + SND (ADDR_MODE1_VAL a_mode y sC) = 0w,
-                  BIT 32 (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
+                  2**32 <= (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
                   ~(word_msb x = word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC))))
                else
@@ -3404,9 +3395,10 @@ val arm_RSB2 = store_thm("arm_RSB2",
               (if s_flag then
                  (word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x),
                   SND (ADDR_MODE1_VAL a_mode y sC) = x,
-                  BIT 32 (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) + 1),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
-                  ~(word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x)))
+                  x <=+ SND (ADDR_MODE1_VAL a_mode y sC),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x)))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSB_NOP
@@ -3422,22 +3414,16 @@ val arm_RSC2 = store_thm("arm_RSC2",
            (R a x * R b y * S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV))
            [enc (RSC c_flag s_flag b a (ADDR_MODE1_CMD a_mode b))]
            (R a x *
-            R b (~x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w)) *
+            R b (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (~x + SND (ADDR_MODE1_VAL a_mode y sC) +
-                     (if sC then 1w else 0w)),
-                   ~x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w) =
-                  0w,
-                  BIT 32
-                    (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) +
-                     (if sC then 1 else 0)),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
-                  ~(word_msb ~x =
-                    word_msb
-                      (~x + SND (ADDR_MODE1_VAL a_mode y sC) +
-                       (if sC then 1w else 0w))))
+                 (word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w)),
+                  SND (ADDR_MODE1_VAL a_mode y sC) = (if sC then 0w else 1w) + x,
+                  (if sC then x <=+ SND (ADDR_MODE1_VAL a_mode y sC) 
+                         else 2**32 <= (w2n (SND (ADDR_MODE1_VAL a_mode y sC)) + w2n ~x)),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w))))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSC_NOP
@@ -3455,29 +3441,21 @@ val arm_SBC2 = store_thm("arm_SBC2",
            (R a x * R b (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (x - SND (ADDR_MODE1_VAL a_mode y sC) -
-                     (if sC then 0w else 1w)),
-                   x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode y sC),
-                  (if sC then
-                     SND (ADDR_MODE1_VAL a_mode y T) <=+ x
-                   else
-                     BIT 32
-                       (w2n x + w2n ($- (SND (ADDR_MODE1_VAL a_mode y F))) +
-                       4294967295) \/ (SND (ADDR_MODE1_VAL a_mode y F) = 0w)),
+                 (word_msb (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w)),
+                  x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode y sC),
+                  (if sC then SND (ADDR_MODE1_VAL a_mode y sC) <=+ x  
+                         else 2**32 <= (w2n x + w2n ~(SND (ADDR_MODE1_VAL a_mode y sC)))),
                   ~(word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
                   ~(word_msb x =
-                    word_msb
-                      (x - SND (ADDR_MODE1_VAL a_mode y sC) -
-                       (if sC then 0w else 1w))))
+                    word_msb (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w))))
                else
-                 (sN,sZ,sC,sV))) {}``, 
+                 (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_SBC_NOP
       `a*b*st*cd*cmd*pc*ud` `a*b*pc*cmd*st*ud*cd`
       `a*b*st*cmd*pc*ud` `a*b*pc*cmd*st*ud`
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
-       (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC_ALT)))
+       (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
   \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
 
 val arm_SUB2 = store_thm("arm_SUB2",
@@ -3514,7 +3492,7 @@ val arm_ADC2' = store_thm("arm_ADC2'",
                     (x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w)),
                   x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w) =
                   0w,
-                  BIT 32
+                  2**32 <=
                     (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) +
                      (if sC then 1 else 0)),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
@@ -3541,7 +3519,7 @@ val arm_ADD2' = store_thm("arm_ADD2'",
               (if s_flag then
                  (word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC)),
                   x + SND (ADDR_MODE1_VAL a_mode y sC) = 0w,
-                  BIT 32 (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
+                  2**32 <= (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
                   ~(word_msb x = word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC))))
                else
@@ -3643,9 +3621,10 @@ val arm_RSB2' = store_thm("arm_RSB2'",
               (if s_flag then
                  (word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x),
                   SND (ADDR_MODE1_VAL a_mode y sC) = x,
-                  BIT 32 (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) + 1),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
-                  ~(word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x)))
+                  x <=+ SND (ADDR_MODE1_VAL a_mode y sC),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x)))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSB_NOP
@@ -3660,23 +3639,16 @@ val arm_RSC2' = store_thm("arm_RSC2'",
   ``(ARM_PROG2:^(ty_antiq ARM_PROG2_type)) c_flag
            (R a x * R b y * S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV))
            [enc (RSC c_flag s_flag a a (ADDR_MODE1_CMD a_mode b))]
-           (R a (~x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w)) *
-            R b y *
+           (R a (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w)) * R b y *
             S
               (if s_flag then
-                 (word_msb
-                    (~x + SND (ADDR_MODE1_VAL a_mode y sC) +
-                     (if sC then 1w else 0w)),
-                   ~x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w) =
-                  0w,
-                  BIT 32
-                    (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) +
-                     (if sC then 1 else 0)),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
-                  ~(word_msb ~x =
-                    word_msb
-                      (~x + SND (ADDR_MODE1_VAL a_mode y sC) +
-                       (if sC then 1w else 0w))))
+                 (word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w)),
+                  SND (ADDR_MODE1_VAL a_mode y sC) = (if sC then 0w else 1w) + x,
+                  (if sC then x <=+ SND (ADDR_MODE1_VAL a_mode y sC) 
+                         else 2**32 <= (w2n (SND (ADDR_MODE1_VAL a_mode y sC)) + w2n ~x)),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w))))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSC_NOP
@@ -3694,29 +3666,21 @@ val arm_SBC2' = store_thm("arm_SBC2'",
            (R a (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w)) * R b y *
             S
               (if s_flag then
-                 (word_msb
-                    (x - SND (ADDR_MODE1_VAL a_mode y sC) -
-                     (if sC then 0w else 1w)),
-                   x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode y sC),
-                  (if sC then
-                     SND (ADDR_MODE1_VAL a_mode y T) <=+ x
-                   else
-                     BIT 32
-                       (w2n x + w2n ($- (SND (ADDR_MODE1_VAL a_mode y F))) +
-                       4294967295) \/ (SND (ADDR_MODE1_VAL a_mode y F) = 0w)),
+                 (word_msb (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w)),
+                  x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode y sC),
+                  (if sC then SND (ADDR_MODE1_VAL a_mode y sC) <=+ x  
+                         else 2**32 <= (w2n x + w2n ~(SND (ADDR_MODE1_VAL a_mode y sC)))),
                   ~(word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
                   ~(word_msb x =
-                    word_msb
-                      (x - SND (ADDR_MODE1_VAL a_mode y sC) -
-                       (if sC then 0w else 1w))))
+                    word_msb (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w))))
                else
-                 (sN,sZ,sC,sV))) {}``, 
+                 (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_SBC_NOP
       `a*b*st*cd*cmd*pc*ud` `a*b*pc*cmd*st*ud*cd`
       `a*b*st*cmd*pc*ud` `a*b*pc*cmd*st*ud`
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
-       (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC_ALT)))
+       (simple_clean_AM1 [`Rd`|->`a`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
   \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
 
 val arm_SUB2' = store_thm("arm_SUB2'",
@@ -3753,7 +3717,7 @@ val arm_ADC2'' = store_thm("arm_ADC2''",
                     (x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w)),
                   x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w) =
                   0w,
-                  BIT 32
+                  2**32 <=
                     (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)) +
                      (if sC then 1 else 0)),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
@@ -3780,7 +3744,7 @@ val arm_ADD2'' = store_thm("arm_ADD2''",
               (if s_flag then
                  (word_msb (x + SND (ADDR_MODE1_VAL a_mode x sC)),
                   x + SND (ADDR_MODE1_VAL a_mode x sC) = 0w,
-                  BIT 32 (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC))),
+                  2**32 <= (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode x sC))),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
                   ~(word_msb x = word_msb (x + SND (ADDR_MODE1_VAL a_mode x sC))))
                else
@@ -3882,9 +3846,10 @@ val arm_RSB2'' = store_thm("arm_RSB2''",
               (if s_flag then
                  (word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x),
                   SND (ADDR_MODE1_VAL a_mode x sC) = x,
-                  BIT 32 (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)) + 1),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
-                  ~(word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x)))
+                  x <=+ SND (ADDR_MODE1_VAL a_mode x sC),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x)))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSB_NOP
@@ -3900,22 +3865,16 @@ val arm_RSC2'' = store_thm("arm_RSC2''",
            (R a x * R b y * S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV))
            [enc (RSC c_flag s_flag b a (ADDR_MODE1_CMD a_mode a))]
            (R a x *
-            R b (~x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w)) *
+            R b (SND (ADDR_MODE1_VAL a_mode x sC) - x - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (~x + SND (ADDR_MODE1_VAL a_mode x sC) +
-                     (if sC then 1w else 0w)),
-                   ~x + SND (ADDR_MODE1_VAL a_mode x sC) + (if sC then 1w else 0w) =
-                  0w,
-                  BIT 32
-                    (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode x sC)) +
-                     (if sC then 1 else 0)),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
-                  ~(word_msb ~x =
-                    word_msb
-                      (~x + SND (ADDR_MODE1_VAL a_mode x sC) +
-                       (if sC then 1w else 0w))))
+                 (word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x - (if sC then 0w else 1w)),
+                  SND (ADDR_MODE1_VAL a_mode x sC) = (if sC then 0w else 1w) + x,
+                  (if sC then x <=+ SND (ADDR_MODE1_VAL a_mode x sC) 
+                         else 2**32 <= (w2n (SND (ADDR_MODE1_VAL a_mode x sC)) + w2n ~x)),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode x sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode x sC) - x - (if sC then 0w else 1w))))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSC_NOP
@@ -3933,29 +3892,21 @@ val arm_SBC2'' = store_thm("arm_SBC2''",
            (R a x * R b (x - SND (ADDR_MODE1_VAL a_mode x sC) - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (x - SND (ADDR_MODE1_VAL a_mode x sC) -
-                     (if sC then 0w else 1w)),
-                   x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode x sC),
-                  (if sC then
-                     SND (ADDR_MODE1_VAL a_mode x T) <=+ x
-                   else
-                     BIT 32
-                       (w2n x + w2n ($- (SND (ADDR_MODE1_VAL a_mode x F))) +
-                       4294967295) \/ (SND (ADDR_MODE1_VAL a_mode x F) = 0w)),
+                 (word_msb (x - SND (ADDR_MODE1_VAL a_mode x sC) - (if sC then 0w else 1w)),
+                  x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode x sC),
+                  (if sC then SND (ADDR_MODE1_VAL a_mode x sC) <=+ x  
+                         else 2**32 <= (w2n x + w2n ~(SND (ADDR_MODE1_VAL a_mode x sC)))),
                   ~(word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode x sC))) /\
                   ~(word_msb x =
-                    word_msb
-                      (x - SND (ADDR_MODE1_VAL a_mode x sC) -
-                       (if sC then 0w else 1w))))
+                    word_msb (x - SND (ADDR_MODE1_VAL a_mode x sC) - (if sC then 0w else 1w))))
                else
-                 (sN,sZ,sC,sV))) {}``, 
+                 (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_SBC_NOP
       `a*b*st*cd*cmd*pc*ud` `a*b*pc*cmd*st*ud*cd`
       `a*b*st*cmd*pc*ud` `a*b*pc*cmd*st*ud`
   \\ ARM_PROG2_EXPAND_TAC xR3 xMm
   \\ ASSUME_TAC 
-       (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC_ALT)))
+       (simple_clean_AM1 [`Rd`|->`b`,`Rn`|->`a`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
   \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
 
 val arm_SUB2'' = store_thm("arm_SUB2''",
@@ -3992,7 +3943,7 @@ val arm_ADC3 = store_thm("arm_ADC3",
                     (x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w)),
                   x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w) =
                   0w,
-                  BIT 32
+                  2**32 <=
                     (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) +
                      (if sC then 1 else 0)),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
@@ -4019,7 +3970,7 @@ val arm_ADD3 = store_thm("arm_ADD3",
               (if s_flag then
                  (word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC)),
                   x + SND (ADDR_MODE1_VAL a_mode y sC) = 0w,
-                  BIT 32 (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
+                  2**32 <= (w2n x + w2n (SND (ADDR_MODE1_VAL a_mode y sC))),
                   (word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
                   ~(word_msb x = word_msb (x + SND (ADDR_MODE1_VAL a_mode y sC))))
                else
@@ -4121,9 +4072,10 @@ val arm_RSB3 = store_thm("arm_RSB3",
               (if s_flag then
                  (word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x),
                   SND (ADDR_MODE1_VAL a_mode y sC) = x,
-                  BIT 32 (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) + 1),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
-                  ~(word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x)))
+                  x <=+ SND (ADDR_MODE1_VAL a_mode y sC),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x)))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSB_NOP
@@ -4139,22 +4091,16 @@ val arm_RSC3 = store_thm("arm_RSC3",
            (R a x * R b y * R c z * S (sN,sZ,sC,sV) * PASS c_flag (sN,sZ,sC,sV))
            [enc (RSC c_flag s_flag c a (ADDR_MODE1_CMD a_mode b))]
            (R a x * R b y *
-            R c (~x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w)) *
+            R c (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (~x + SND (ADDR_MODE1_VAL a_mode y sC) +
-                     (if sC then 1w else 0w)),
-                   ~x + SND (ADDR_MODE1_VAL a_mode y sC) + (if sC then 1w else 0w) =
-                  0w,
-                  BIT 32
-                    (w2n ~x + w2n (SND (ADDR_MODE1_VAL a_mode y sC)) +
-                     (if sC then 1 else 0)),
-                  (word_msb ~x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
-                  ~(word_msb ~x =
-                    word_msb
-                      (~x + SND (ADDR_MODE1_VAL a_mode y sC) +
-                       (if sC then 1w else 0w))))
+                 (word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w)),
+                  SND (ADDR_MODE1_VAL a_mode y sC) = (if sC then 0w else 1w) + x,
+                  (if sC then x <=+ SND (ADDR_MODE1_VAL a_mode y sC) 
+                         else 2**32 <= (w2n (SND (ADDR_MODE1_VAL a_mode y sC)) + w2n ~x)),
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) = word_msb x) /\
+                  ~(word_msb (SND (ADDR_MODE1_VAL a_mode y sC)) =
+                    word_msb (SND (ADDR_MODE1_VAL a_mode y sC) - x - (if sC then 0w else 1w))))
                else
                  (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_RSC_NOP
@@ -4172,29 +4118,21 @@ val arm_SBC3 = store_thm("arm_SBC3",
            (R a x * R b y * R c (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w)) *
             S
               (if s_flag then
-                 (word_msb
-                    (x - SND (ADDR_MODE1_VAL a_mode y sC) -
-                     (if sC then 0w else 1w)),
-                   x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode y sC),
-                  (if sC then
-                     SND (ADDR_MODE1_VAL a_mode y T) <=+ x
-                   else
-                     BIT 32
-                       (w2n x + w2n ($- (SND (ADDR_MODE1_VAL a_mode y F))) +
-                       4294967295) \/ (SND (ADDR_MODE1_VAL a_mode y F) = 0w)),
+                 (word_msb (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w)),
+                  x = (if sC then 0w else 1w) + SND (ADDR_MODE1_VAL a_mode y sC),
+                  (if sC then SND (ADDR_MODE1_VAL a_mode y sC) <=+ x  
+                         else 2**32 <= (w2n x + w2n ~(SND (ADDR_MODE1_VAL a_mode y sC)))),
                   ~(word_msb x = word_msb (SND (ADDR_MODE1_VAL a_mode y sC))) /\
                   ~(word_msb x =
-                    word_msb
-                      (x - SND (ADDR_MODE1_VAL a_mode y sC) -
-                       (if sC then 0w else 1w))))
+                    word_msb (x - SND (ADDR_MODE1_VAL a_mode y sC) - (if sC then 0w else 1w))))
                else
-                 (sN,sZ,sC,sV))) {}``, 
+                 (sN,sZ,sC,sV))) {}``,
   ARM_PROG2_INIT_TAC ARM_SBC_NOP
       `a*b*c*st*cd*cmd*pc*ud` `a*b*c*pc*cmd*st*ud*cd`
       `a*b*c*st*cmd*pc*ud` `a*b*c*pc*cmd*st*ud`
   \\ ARM_PROG2_EXPAND_TAC xR4 xMm
   \\ ASSUME_TAC 
-       (simple_clean_AM1 [`Rd`|->`c`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC_ALT)))
+       (simple_clean_AM1 [`Rd`|->`c`,`Rn`|->`b`] (Q.INST [`Rm`|->`a`] (SPEC_ALL ARM_SBC)))
   \\ Cases_on `s_flag` \\ ARM_PROG2_HAMMER_TAC);
 
 val arm_SUB3 = store_thm("arm_SUB3",
@@ -4305,7 +4243,7 @@ val arm_b_nop = let
   val th = ASM_UNABBREV_ALL_RULE (UD_ALL th)
   val th = (UNDISCH_ALL o Q.INST [`c`|->`c_flag`] o 
             SIMP_RULE (bool_ss++contract_ss) [] o DISCH_ALL) th
-  in th end;
+  in SET_NO_CP th end;
 
 val arm_B = store_thm("arm_B",
   ``(ARM_PROG:^(ty_antiq ARM_PROG_type)) 

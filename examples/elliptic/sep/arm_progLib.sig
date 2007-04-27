@@ -34,6 +34,7 @@ sig
     val HIDE_POST1          : thm -> thm
     val HIDE_POST           : thm -> thm
     val HIDE_STATUS         : thm -> thm
+    val EXISTS_PRE          : term frag list -> thm -> thm
 
     val AUTO_PRE_HIDE_STATUS   : thm -> thm
     val AUTO_POST1_HIDE_STATUS : thm -> thm

@@ -55,7 +55,7 @@ val mpool_def = Define `
 val wLENGTH_def = Define `wLENGTH cs = n2w (LENGTH cs)`;
 
 val pcSET_def = Define `pcSET x = \p. x:bool**'a`;
-val pcADD_def = Define `pcADD n = \p. n + p`;
+val pcADD_def = Define `pcADD (n:'a word) = \p. n + p`;
 val pcINC_def = Define `pcINC c = pcADD (wLENGTH c)`;
 
 val setAPP_def = Define `setAPP g Z = { (Q,f o g) |(Q,f)| (Q,f) IN Z }`;

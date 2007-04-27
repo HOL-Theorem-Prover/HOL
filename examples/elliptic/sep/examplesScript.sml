@@ -6,9 +6,8 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open pred_setTheory res_quanTheory arithmeticTheory wordsLib wordsTheory bitTheory pairTheory;
-open listTheory rich_listTheory relationTheory pairTheory;
-
+open pred_setTheory res_quanTheory arithmeticTheory wordsLib wordsTheory bitTheory;
+open pairTheory listTheory rich_listTheory relationTheory pairTheory;
 open set_sepTheory set_sepLib progTheory arm_progTheory arm_instTheory arm_progLib;
 
 (*
@@ -383,10 +382,8 @@ val GCD_SYM = prove(
   REPEAT STRIP_TAC
   \\ STRIP_ASSUME_TAC (Q.SPECL [`m`,`n`] LESS_LESS_CASES)
   \\ ASM_REWRITE_TAC [] << [
-    Cases_on `n` THEN1 DECIDE_TAC
-    \\ ASM_SIMP_TAC std_ss [GCD_def,LESS_MOD],
-    Cases_on `m` THEN1 DECIDE_TAC
-    \\ ASM_SIMP_TAC std_ss [GCD_def,LESS_MOD]]);
+    Cases_on `n` THEN1 DECIDE_TAC \\ ASM_SIMP_TAC std_ss [GCD_def,LESS_MOD],
+    Cases_on `m` THEN1 DECIDE_TAC \\ ASM_SIMP_TAC std_ss [GCD_def,LESS_MOD]]);
     
 val GCD_SUB_RIGHT = prove(
   ``!m n. m < n ==> (GCD (m,n-m) = GCD (m,n))``,
@@ -624,8 +621,219 @@ val ARM_GCD_PROGRAM = let
   val th123 = MATCH_MP ARM_PROG_LOOP_MEASURE th123
   val th123 = Q.SPEC `(x,y)` th123
   val th123 = RW [GCD_INV_def] (Q.INST [`x0`|->`x`,`y0`|->`y`] th123)
+  val th123 = RW [GSYM (REWRITE_CONV [SEP_cond_CLAUSES] ``cond x * cond y``),STAR_ASSOC] th123  
 
 in th123 end;
+
+
+
+val GCD_INV_def = Define `
+  GCD_INV a b (x0:word32,y0:word32) (x:word32,y:word32) = 
+    R a x * R b y * ~S * cond ((wGCD(x0,y0) = wGCD(x,y)) /\ ~(x = 0w) /\ ~(y = 0w))`;
+
+val wMAXn_def = Define `wMAXn (x,y) = MAX (w2n x) (w2n y)`;
+
+val wMAXn_LESS = prove(
+  ``!x y. ~(y = 0w) /\ y <+ x ==> wMAXn (x-y,y) < wMAXn (x,y)``,
+  REWRITE_TAC [wMAXn_def,MAX_DEF,GSYM WORD_LO] \\ REPEAT STRIP_TAC
+  \\ `~(x <+ y)` by METIS_TAC [WORD_LO,LESS_ANTISYM]
+  \\ Cases_on `x - y <+ y` \\ ASM_REWRITE_TAC [GSYM WORD_LO]
+  \\ IMP_RES_TAC WORD_LOWER_IMP_LOWER_OR_EQ
+  \\ ASM_SIMP_TAC bool_ss [word_sub_w2n,WORD_LO]
+  \\ FULL_SIMP_TAC bool_ss [word_sub_w2n,WORD_LO,GSYM w2n_eq_0]
+  \\ DECIDE_TAC);
+
+val wMAXn_COMM = prove(
+  ``!x y. wMAXn (x,y) = wMAXn (y,x)``,
+  REWRITE_TAC [wMAXn_def] \\ METIS_TAC [MAX_COMM]);
+
+val ARM_GCD_PROGRAM_BETTER = let
+  val l2 = prove(``1073741824w = 0w:word30``,SIMP_TAC (std_ss++SIZES_ss) [n2w_11])
+  val g = SIMP_RULE (pure_ss++sep2_ss) [WORD_SUB_ADD]
+
+  (*
+  compose_progs'
+  [("subs  a,a,b",true),
+   ("addcc a,a,b",true),
+   ("subcc b,b,a",true),
+   ("bne -12",false)] "th" "  "
+  *)
+
+  (* case: a < b *)
+  val th1 = (*  subs  a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_SUB2') 
+  val th2 = (*  addcc a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2` ] arm_ADD2') 
+  val th3 = (*  subcc b,b,a  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a`|->`b`,`b`|->`a`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_SUB2') 
+  val th4 = (*  bne -12  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(sw2sw (16777211w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`16777211w` ] arm_B2) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(x2 :word32)`|->`(x1 :word32) - (y1 :word32)`,`(y2 :word32)`|->`(y1 :word32)`,`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th2))
+  val th = FRAME_COMPOSE th (Q.INST [`(y3 :word32)`|->`(x1 :word32) - (y1 :word32) + y1`,`(x3 :word32)`|->`(y1 :word32)`,`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th3))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th4))
+  val th = g (AUTO_PRE_HIDE_STATUS (AUTO_POST_HIDE_STATUS th))
+  val lemma1 = prove(``~(y1 <=+ x1) /\ ~(x1 = y1) = x1 <+ y1``,METIS_TAC [GSYM WORD_NOT_LOWER,WORD_LOWER_OR_EQ])
+  val th = RW [lemma1] (RW [CONJ_ASSOC] th)
+  val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
+  val th = APP_FRAME `cond (x1 <+ y1 /\ (wGCD(x0,y0:word32) = wGCD(x1,y1)) /\ ~(x1 = 0w) /\ ~(y1 = 0w))` th  
+  val th = APP_WEAKEN th `GCD_INV a b (x0,y0) (x1,y1-x1)`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_MOVE_COND,wGCD_SUB_RIGHT,GCD_INV_def,WORD_EQ_SUB_ZERO,WORD_LOWER_NOT_EQ] \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  val th = SIMP_RULE bool_ss [l2,pcADD_0,GSYM GCD_INV_def] (DISCH_ALL th)
+  val th = RW [GSYM ARM_PROG_MOVE_COND] th
+  val th = APP_FRAME `cond (x1 <+ (y1:word32))` th
+  val th = SIMP_RULE (std_ss++sep2_ss) [] th
+  val t1 = APP_WEAKEN th `SEP_EXISTS x. GCD_INV a b (x0,y0) x * cond (wMAXn x < wMAXn (x1:word32,y1:word32))`
+    (SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,cond_STAR] \\ REPEAT STRIP_TAC
+     \\ Q.EXISTS_TAC `(x1,y1-x1)` \\ ONCE_REWRITE_TAC [wMAXn_COMM]
+     \\ ASM_REWRITE_TAC [] \\ MATCH_MP_TAC wMAXn_LESS     
+     \\ FULL_SIMP_TAC bool_ss [GCD_INV_def,cond_STAR])
+
+  (* case: b < a *)
+  val th1 = (*  subs  a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_SUB2') 
+  val th2 = (*  addcc a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2` ] arm_ADD2') 
+  val th3 = (*  subcc b,b,a  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a`|->`b`,`b`|->`a`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_SUB2') 
+  val th4 = (*  bne -12  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(sw2sw (16777211w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`16777211w` ] arm_B2) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th2))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th3))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th4))
+  val th = g (AUTO_PRE_HIDE_STATUS (AUTO_POST_HIDE_STATUS th))
+  val lemma1 = prove(``(y1 <=+ x1) /\ ~(x1 = y1) = y1 <+ x1``,METIS_TAC [GSYM WORD_NOT_LOWER,WORD_LOWER_OR_EQ])
+  val th = RW [lemma1] (RW [CONJ_ASSOC] th)
+  val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
+  val th = APP_FRAME `cond (y1 <+ x1 /\ (wGCD(x0,y0:word32) = wGCD(x1,y1)) /\ ~(x1 = 0w) /\ ~(y1 = 0w))` th  
+  val th = APP_WEAKEN th `GCD_INV a b (x0,y0) (x1-y1,y1)`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_MOVE_COND,wGCD_SUB_LEFT,GCD_INV_def,WORD_EQ_SUB_ZERO,WORD_LOWER_NOT_EQ] \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  val th = SIMP_RULE bool_ss [l2,pcADD_0,GSYM GCD_INV_def] (DISCH_ALL th)
+  val th = RW [GSYM ARM_PROG_MOVE_COND] th
+  val th = APP_FRAME `cond (y1 <+ (x1:word32))` th
+  val th = SIMP_RULE (std_ss++sep2_ss) [] th
+  val t2 = APP_WEAKEN th `SEP_EXISTS x. GCD_INV a b (x0,y0) x * cond (wMAXn x < wMAXn (x1:word32,y1:word32))`
+    (SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,cond_STAR] \\ REPEAT STRIP_TAC
+     \\ Q.EXISTS_TAC `(x1-y1,y1)` \\ ASM_REWRITE_TAC [] \\ MATCH_MP_TAC wMAXn_LESS     
+     \\ FULL_SIMP_TAC bool_ss [GCD_INV_def,cond_STAR])
+
+  (* case: a=b *)
+  val th1 = (*  subs  a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_SUB2') 
+  val th2 = (*  addcc a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2` ] arm_ADD2') 
+  val th3 = (*  subcc b,b,a  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a`|->`b`,`b`|->`a`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_SUB2') 
+  val th4 = (*  bne -12  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(sw2sw (16777211w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`16777211w` ] arm_B2) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th2))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th3))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th4))
+  val th = g (AUTO_PRE_HIDE_STATUS (AUTO_POST1_HIDE_STATUS th))
+  val lemma1 = prove(``(y1 <=+ x1) /\ (x1 = y1) = (x1 = y1)``,METIS_TAC [GSYM WORD_NOT_LOWER,WORD_LOWER_OR_EQ])
+  val th = RW [lemma1] (RW [CONJ_ASSOC] th)
+  val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
+  val th = APP_FRAME `cond ((x1 = y1) /\ (wGCD(x0,y0) = wGCD(x1,y1:word32)) /\ ~(x1 = 0w) /\ ~(y1 = 0w))` th  
+  val th = APP_WEAKEN1 th `R a 0w * R b (wGCD (x0,y0)) * ~S`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_MOVE_COND,SEP_IMP_REFL,GSYM AND_IMP_INTRO,wGCD_REFL,WORD_SUB_REFL,WORD_EQ_SUB_ZERO,WORD_LOWER_NOT_EQ])   
+  val th = DISCH_ALL th
+  val th = RW [ARM_PROG_MOVE_COND,AND_IMP_INTRO,CONJ_ASSOC] th
+  val th = RW1 [GSYM ARM_PROG_MOVE_COND] (RW1 [GSYM AND_IMP_INTRO] (RW [GSYM CONJ_ASSOC] th))
+  val th = RW [GSYM GCD_INV_def] th
+
+  (* cases together *)
+  val t12 = APP_MERGE t1 t2
+  val th = APP_MERGE t12 (RW [GSYM ARM_PROG_MOVE_COND] th)
+  val lemma = prove(``(x1 <+ y1 \/ y1 <+ x1) \/ (x1 = y1)``,METIS_TAC [WORD_LOWER_LOWER_CASES])
+  val th = SIMP_RULE (bool_ss++sep_ss) [lemma] th 
+  val th = PAIR_GEN "y" `(x1,y1)` th
+  val th = MATCH_MP ARM_PROG_LOOP_MEASURE th
+  val th = RW [GCD_INV_def] (Q.INST [`x0`|->`x`,`y0`|->`y`] (Q.SPEC `(x0,y0)` th))
+  val th = RW [GSYM (REWRITE_CONV [SEP_cond_CLAUSES] ``cond x * cond y``),STAR_ASSOC] th  
+  
+  in th end;
+
+
+val ARM_GCD_PROGRAM_FIXED = let
+  val l2 = prove(``1073741824w = 0w:word30``,SIMP_TAC (std_ss++SIZES_ss) [n2w_11])
+  val g = SIMP_RULE (pure_ss++sep2_ss) [WORD_SUB_ADD]
+
+  (*
+  compose_progs'
+  [("subs  a,a,b",true),
+   ("addls a,a,b",false),
+   ("subcc b,b,a",false),
+   ("bne -12",true)] "th" "  "
+  *)
+
+  (* case: a < b *)
+  val th1 = (*  subs  a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_SUB2') 
+  val th2 = (*  addls a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`LS`,`s_flag`|->`F`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2` ] arm_ADD2') 
+  val th3 = (*  subcc b,b,a  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a`|->`b`,`b`|->`a`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_SUB2') 
+  val th4 = (*  bne -12  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(sw2sw (16777211w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`16777211w` ] arm_B2) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(x2 :word32)`|->`(x1 :word32) - (y1 :word32)`,`(y2 :word32)`|->`(y1 :word32)`,`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th2))
+  val th = FRAME_COMPOSE th (Q.INST [`(y3 :word32)`|->`(x1 :word32) - (y1 :word32) + y1`,`(x3 :word32)`|->`(y1 :word32)`,`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th3))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th4))
+  val th = g (AUTO_PRE_HIDE_STATUS (AUTO_POST_HIDE_STATUS th))
+  val lemma1 = prove(``((~(y1 <=+ x1) \/ (x1 = y1)) /\ ~(y1 <=+ x1) /\ ~(x1 = y1)) = x1 <+ y1``,METIS_TAC [GSYM WORD_NOT_LOWER,WORD_LOWER_OR_EQ])
+  val th = RW [lemma1] th
+  val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
+  val th = APP_FRAME `cond (x1 <+ y1 /\ (wGCD(x0,y0:word32) = wGCD(x1,y1)) /\ ~(x1 = 0w) /\ ~(y1 = 0w))` th  
+  val th = APP_WEAKEN th `GCD_INV a b (x0,y0) (x1,y1-x1)`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_MOVE_COND,wGCD_SUB_RIGHT,GCD_INV_def,WORD_EQ_SUB_ZERO,WORD_LOWER_NOT_EQ] \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  val th = SIMP_RULE bool_ss [l2,pcADD_0,GSYM GCD_INV_def] (DISCH_ALL th)
+  val th = RW [GSYM ARM_PROG_MOVE_COND] th
+  val th = APP_FRAME `cond (x1 <+ (y1:word32))` th
+  val th = SIMP_RULE (std_ss++sep2_ss) [] th
+  val t1 = APP_WEAKEN th `SEP_EXISTS x. GCD_INV a b (x0,y0) x * cond (wMAXn x < wMAXn (x1:word32,y1:word32))`
+    (SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,cond_STAR] \\ REPEAT STRIP_TAC
+     \\ Q.EXISTS_TAC `(x1,y1-x1)` \\ ONCE_REWRITE_TAC [wMAXn_COMM]
+     \\ ASM_REWRITE_TAC [] \\ MATCH_MP_TAC wMAXn_LESS     
+     \\ FULL_SIMP_TAC bool_ss [GCD_INV_def,cond_STAR])
+
+  (* case: b < a *)
+  val th1 = (*  subs  a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_SUB2') 
+  val th2 = (*  addls a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`LS`,`s_flag`|->`F`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2` ] arm_ADD2') 
+  val th3 = (*  subcc b,b,a  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a`|->`b`,`b`|->`a`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_SUB2') 
+  val th4 = (*  bne -12  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(sw2sw (16777211w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`16777211w` ] arm_B2) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th2))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th3))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th4))
+  val th = g (AUTO_PRE_HIDE_STATUS (AUTO_POST_HIDE_STATUS th))
+  val lemma1 = prove(``(y1 <=+ x1) /\ ~(x1 = y1) = y1 <+ x1``,METIS_TAC [GSYM WORD_NOT_LOWER,WORD_LOWER_OR_EQ])
+  val th = RW [lemma1] (RW [CONJ_ASSOC] th)
+  val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
+  val th = APP_FRAME `cond (y1 <+ x1 /\ (wGCD(x0,y0:word32) = wGCD(x1,y1)) /\ ~(x1 = 0w) /\ ~(y1 = 0w))` th  
+  val th = APP_WEAKEN th `GCD_INV a b (x0,y0) (x1-y1,y1)`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_MOVE_COND,wGCD_SUB_LEFT,GCD_INV_def,WORD_EQ_SUB_ZERO,WORD_LOWER_NOT_EQ] \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  val th = SIMP_RULE bool_ss [l2,pcADD_0,GSYM GCD_INV_def] (DISCH_ALL th)
+  val th = RW [GSYM ARM_PROG_MOVE_COND] th
+  val th = APP_FRAME `cond (y1 <+ (x1:word32))` th
+  val th = SIMP_RULE (std_ss++sep2_ss) [] th
+  val t2 = APP_WEAKEN th `SEP_EXISTS x. GCD_INV a b (x0,y0) x * cond (wMAXn x < wMAXn (x1:word32,y1:word32))`
+    (SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,cond_STAR] \\ REPEAT STRIP_TAC
+     \\ Q.EXISTS_TAC `(x1-y1,y1)` \\ ASM_REWRITE_TAC [] \\ MATCH_MP_TAC wMAXn_LESS     
+     \\ FULL_SIMP_TAC bool_ss [GCD_INV_def,cond_STAR])
+
+  (* case: a=b *)
+  val th1 = (*  subs  a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_SUB2') 
+  val th2 = (*  addls a,a,b  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`LS`,`s_flag`|->`F`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2` ] arm_ADD2') 
+  val th3 = (*  subcc b,b,a  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`CC`,`s_flag`|->`F`,`a`|->`b`,`b`|->`a`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_SUB2') 
+  val th4 = (*  bne -12  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(sw2sw (16777211w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`16777211w` ] arm_B2) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(x2 :word32)`|->`(x1 :word32) - (y1 :word32)`,`(y2 :word32)`|->`(y1 :word32)`,`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (FST_PROG2 th2))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th3))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (y1 :word32))`,`(sZ :bool)`|->`(x1 :word32) = (y1 :word32)`,`(sC :bool)`|->`(y1 :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (y1 :word32)) /\ ~(word_msb x1 = word_msb (x1 - y1))` ] (SND_PROG2 th4))
+  val th = g (AUTO_PRE_HIDE_STATUS (AUTO_POST1_HIDE_STATUS th))
+  val lemma1 = prove(``(~(y1 <=+ x1) \/ (x1 = y1)) /\ y1 <=+ x1 /\ (x1 = y1) = (x1 = y1)``,METIS_TAC [GSYM WORD_NOT_LOWER,WORD_LOWER_OR_EQ])
+  val th = RW [lemma1] th
+  val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
+  val th = APP_FRAME `cond ((x1 = y1) /\ (wGCD(x0,y0) = wGCD(x1,y1:word32)) /\ ~(x1 = 0w) /\ ~(y1 = 0w))` th  
+  val th = APP_WEAKEN1 th `R a (wGCD (x0,y0)) * R b (wGCD (x0,y0)) * ~S`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_MOVE_COND,SEP_IMP_REFL,GSYM AND_IMP_INTRO,wGCD_REFL,WORD_SUB_REFL,WORD_EQ_SUB_ZERO,WORD_LOWER_NOT_EQ])   
+  val th = DISCH_ALL th
+  val th = RW [ARM_PROG_MOVE_COND,AND_IMP_INTRO,CONJ_ASSOC] th
+  val th = RW1 [GSYM ARM_PROG_MOVE_COND] (RW1 [GSYM AND_IMP_INTRO] (RW [GSYM CONJ_ASSOC] th))
+  val th = RW [GSYM GCD_INV_def] th
+
+  (* cases together *)
+  val t12 = APP_MERGE t1 t2
+  val th = APP_MERGE t12 (RW [GSYM ARM_PROG_MOVE_COND] th)
+  val lemma = prove(``(x1 <+ y1 \/ y1 <+ x1) \/ (x1 = y1)``,METIS_TAC [WORD_LOWER_LOWER_CASES])
+  val th = SIMP_RULE (bool_ss++sep_ss) [lemma] th 
+  val th = PAIR_GEN "y" `(x1,y1)` th
+  val th = MATCH_MP ARM_PROG_LOOP_MEASURE th
+  val th = RW [GCD_INV_def] (Q.INST [`x0`|->`x`,`y0`|->`y`] (Q.SPEC `(x0,y0)` th))
+  val th = RW [GSYM (REWRITE_CONV [SEP_cond_CLAUSES] ``cond x * cond y``),STAR_ASSOC] th  
+
+  in th end;
+
 
 
 
@@ -675,6 +883,7 @@ fun EXISTS_PRE var th =
        B      sum            ; loop 
 
 *)
+
 
 val PROG_INST = HIDE_STATUS o HIDE_POST1 o FST_PROG2 o 
                 SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `AL`  
@@ -809,6 +1018,16 @@ val ARM_PROG_EXPAND_STACK = prove(
   \\ MOVE_STAR_TAC `p*(sp*x)` `p*sp*x` 
   \\ ASM_REWRITE_TAC []);
 
+val ARM_PROG_EXPAND_STACK2 = prove(
+  ``ARM_PROG (P * STACK sp xs n) cs C SEP_F {(Q * STACK sp xs n,f)} ==> 
+    !m. ARM_PROG (P * STACK sp xs (MAX n m)) cs C SEP_F {(Q * STACK sp xs (MAX n m),f)}``,
+  REPEAT STRIP_TAC
+  \\ POP_ASSUM (ASSUME_TAC o APP_BASIC_FRAME o SPEC_ALL)
+  \\ STRIP_ASSUME_TAC STACK_EXPAND
+  \\ ASM_SIMP_TAC (std_ss++sep_ss) []
+  \\ MOVE_STAR_TAC `p*(sp*x)` `p*sp*x` 
+  \\ ASM_REWRITE_TAC []);
+
 val ARM_PROC_EXPAND_STACK = prove(
   ``ARM_PROC (P * STACK sp xs n) (Q * STACK sp xs n) C ==>
     !m. ARM_PROC (P * STACK sp xs (MAX n m)) (Q * STACK sp xs (MAX n m)) C``,
@@ -915,29 +1134,27 @@ in (Q.GEN `x` o Q.GEN `xs` o Q.GEN `a` o Q.GEN `n` o Q.GEN `m` o DISCH_ALL) ldr 
 
 
 val SUM_BTREE_SPEC'_def = Define 
-  `SUM_BTREE_SPEC' e a b sum d C' tree =
-      !x s. ARM_PROCS d
-        (R30 a x * ~ R b * bt (x,tree) * R sum s * e) 
-        (~ R a * ~ R b * bt (x,tree) * R sum (s + sumBTree tree)) C'`;
+  `SUM_BTREE_SPEC' e a s d C' tree =
+      !ax sum. ARM_PROCS d
+        (R30 a ax * bt (ax,tree) * R s sum * e) 
+        (~ R a * bt (ax,tree) * R s (sum + sumBTree tree)) C'`;
 
 val SUM_BTREE_SPEC_def = Define 
-  `SUM_BTREE_SPEC e a b sum C' tree = SUM_BTREE_SPEC' e a b sum (2 * depth tree) C' tree`;
+  `SUM_BTREE_SPEC e a s C' tree = SUM_BTREE_SPEC' e a s (2 * depth tree) C' tree`;
 
 val SUM_BTREE_SPEC_TR_def = Define 
-  `SUM_BTREE_SPEC_TR e a b sum C' tree = SUM_BTREE_SPEC' e a b sum (2 * ldepth tree) C' tree`;
+  `SUM_BTREE_SPEC_TR e a s C' tree = SUM_BTREE_SPEC' e a s (2 * ldepth tree) C' tree`;
 
 val SUM_BTREE_SPEC_THM =
   SIMP_CONV (bool_ss++sep_ss) [SUM_BTREE_SPEC_def,SUM_BTREE_SPEC'_def] 
-    ``SUM_BTREE_SPEC emp a b sum C' tree``;
+    ``SUM_BTREE_SPEC emp a s C' tree``;
 
 val SUM_BTREE_SPEC_TR_THM =
   SIMP_CONV (bool_ss++sep_ss) [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC'_def] 
-    ``SUM_BTREE_SPEC_TR emp a b sum C' tree``;
+    ``SUM_BTREE_SPEC_TR emp a s C' tree``;
 
 val A1_TAC = 
-  STRIP_TAC
-  \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `t1`)
-  \\ STRIP_TAC
+  STRIP_TAC \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `t1`) \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [depth_def,MAX_DEF]
   \\ Cases_on `depth t1 < depth t2`
   \\ FULL_SIMP_TAC std_ss [depth_def,MAX_DEF]
@@ -945,9 +1162,7 @@ val A1_TAC =
   \\ FULL_SIMP_TAC std_ss [depth_def,MAX_DEF];
 
 val A2_TAC = 
-  STRIP_TAC
-  \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `t2`)
-  \\ STRIP_TAC
+  STRIP_TAC \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `t2`) \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [depth_def,MAX_DEF]
   \\ Cases_on `depth t1 < depth t2`
   \\ FULL_SIMP_TAC std_ss [depth_def,MAX_DEF]
@@ -955,398 +1170,327 @@ val A2_TAC =
   \\ FULL_SIMP_TAC std_ss [depth_def,MAX_DEF];
     
 val ASSUMPTION1 = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC e a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC e a b sum C' t1``,A1_TAC);
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC e a s C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC e a s C' t1``,A1_TAC);
 
 val ASSUMPTION1_TR = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR e a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR e a b sum C' t1``,A1_TAC);
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR e a s C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR e a s C' t1``,A1_TAC);
 
 val ASSUMPTION2 = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC e a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC e a b sum C' t2``,A2_TAC);
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC e a s C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC e a s C' t2``,A2_TAC);
 
 val ASSUMPTION2_TR = (UNDISCH o UNDISCH o Q.INST [`e`|->`emp`] o prove) (
-  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR e a b sum C' t') ==>
-    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR e a b sum C' t2``,A2_TAC);
+  ``(!t'. depth t' < depth tree ==> SUM_BTREE_SPEC_TR e a s C' t') ==>
+    (tree = Node(t1,y,t2)) ==> SUM_BTREE_SPEC_TR e a s C' t2``,A2_TAC);
 
 val MULT_MAX = prove(
   ``k * MAX m n = MAX (k * m) (k * n)``,
-  Cases_on `k`
-  \\ SIMP_TAC std_ss [MAX_DEF]
-  \\ Cases_on `m < n` \\ ASM_REWRITE_TAC []);
+  Cases_on `k` \\ SIMP_TAC std_ss [MAX_DEF] \\ Cases_on `m < n` \\ ASM_REWRITE_TAC []);
+
 
 (*
-instructionSyntax.dest_instruction NONE 
-  ``(LDR AL F <|Pre := T; Up := T; Wb := F|> b a (Dt_immediate 0w))``
+"cmp a,#0"
+"moveq r15,r14"
+"str a,[r13,#-4]!"
+"str r14,[r13,#-4]!"
+"ldr r14,[a]"
+"add s,s,r14"
+"ldr a,[a,#4]"
+"bl sum"
+"ldr a,[r13,#4]"
+"ldr a,[a,#8]"
+"bl sum"
+"ldr r15,[r13],#8"
 *)
 
-val (ARM_SUM_BTREE_PROCEDURE,ARM_SUM_BTREE_PROCEDURE_TR) = let
+(*
+"cmp a,#0"
+"moveq r15,r14"
+"str a,[r13,#-4]!"
+"str r14,[r13,#-4]!"
+"ldr r14,[a]"
+"add s,s,r14"
+"ldr a,[a,#4]"
+"bl sum"
+"ldr a,[r13,#4]"
+"ldr a,[a,#8]"
+"ldr r14,[r13],#8"
+"b sum"
+*)
 
-  val cmp = FST_PROG2 (SET_AM `Imm 0w` (SET_SC `T` `AL` arm_CMP1))
-  val cmp = RW [GSYM R30_def] (Q.INST [`x`|->`addr32 x`] cmp)
-  val cmp = RW [EVAL ``(w2w (0w:word8)):word32``] cmp
-  val cmp = HIDE_STATUS cmp  
-  val cmp1 = APP_FRAME `cond (addr32 x = 0w)` cmp
-  val cmp2 = APP_FRAME `cond ~(addr32 x = 0w)` cmp
 
-  val mov_pc = SET_SC `T` `EQ` arm_MOV_PC
-  val mov_pc = Q.INST [`a`|->`14w`,`x`|->`lr`] mov_pc
-  val mov_pc1 = HIDE_POST (FST_PROG2 mov_pc)
-  val mov_pc2 = HIDE_POST1 (SND_PROG2 mov_pc)
+val case1 = let
+  (* compose_progs' [("cmp a,#0",true),("moveq r15,r14",true)] "th" "  " *)
+  val th1 = (*  cmp a,#0  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (0w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`a_mode`|->`Imm 0w`,`x`|->`x1` ] arm_CMP1) 
+  val th2 = (*  moveq r15,r14  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`EQ`,`a`|->`14w`,`a_mode`|->`OneReg`,`x`|->`x2` ] arm_MOV_PC_GENERAL) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (0w :word32))`,`(sZ :bool)`|->`(x1 :word32) = (0w :word32)`,`(sC :bool)`|->`(0w :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (0w :word32)) /\ ~(word_msb x1 = word_msb (x1 - (0w :word32)))` ] (FST_PROG2 th2))
+  val th = SIMP_RULE (bool_ss++sep_ss) [] (ALIGN_VARS ["x2"] th)
+  val th = AUTO_PRE_HIDE_STATUS (AUTO_POST_HIDE_STATUS th)
+  in th end;
+
+val case2 = let
+  (* compose_progs' [("cmp a,#0",true),("moveq r15,r14",false),("str a,[r13,#-4]!",true),("str r14,[r13,#-4]!",true),("ldr r14,[a]",true),("add s,s,r14",true),("ldr a,[a,#4]",true)] "th" "  " *)
+  val th1 = (*  cmp a,#0  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (0w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`a_mode`|->`Imm 0w`,`x`|->`x1` ] arm_CMP1) 
+  val th2 = (*  moveq r15,r14  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`EQ`,`a`|->`14w`,`a_mode`|->`OneReg`,`x`|->`x2` ] arm_MOV_PC_GENERAL) 
+  val th3 = (*  str a,[r13,#-4]!  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := F; Wb := T|>`,`b`|->`13w`,`imm`|->`4w`,`x`|->`x3`,`y`|->`y3`,`z`|->`z3` ] arm_STR_NONALIGNED) 
+  val th4 = (*  str r14,[r13,#-4]!  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := F; Wb := T|>`,`a`|->`14w`,`b`|->`13w`,`imm`|->`4w`,`x`|->`x4`,`y`|->`y4`,`z`|->`z4` ] arm_STR_NONALIGNED) 
+  val th5 = (*  ldr r14,[a]  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (0w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := T; Wb := F|>`,`a`|->`14w`,`b`|->`a`,`imm`|->`0w`,`x`|->`x5`,`y`|->`y5`,`z`|->`z5` ] arm_LDR_NONALIGNED) 
+  val th6 = (*  add s,s,r14  *) SIMP_RULE (bool_ss ++ armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`s`,`b`|->`14w`,`a_mode`|->`OneReg`,`x`|->`x6`,`y`|->`y6` ] arm_ADD2') 
+  val th7 = (*  ldr a,[a,#4]  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := T; Wb := F|>`,`b`|->`a`,`imm`|->`4w`,`y`|->`y7`,`z`|->`z7` ] arm_LDR1_NONALIGNED) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (0w :word32))`,`(sZ :bool)`|->`(x1 :word32) = (0w :word32)`,`(sC :bool)`|->`(0w :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (0w :word32)) /\ ~(word_msb x1 = word_msb (x1 - (0w :word32)))` ] (SND_PROG2 th2))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (0w :word32))`,`(sZ :bool)`|->`(x1 :word32) = (0w :word32)`,`(sC :bool)`|->`(0w :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (0w :word32)) /\ ~(word_msb x1 = word_msb (x1 - (0w :word32)))`,`(x3 :word32)`|->`(x1 :word32)` ] (FST_PROG2 th3))
+  val th = FRAME_COMPOSE th (Q.INST [`(y4 :word32)`|->`(y3 :word32) - (4w :word32)`,`(sN :bool)`|->`word_msb ((x1 :word32) - (0w :word32))`,`(sZ :bool)`|->`(x1 :word32) = (0w :word32)`,`(sC :bool)`|->`(0w :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (0w :word32)) /\ ~(word_msb x1 = word_msb (x1 - (0w :word32)))` ] (FST_PROG2 th4))
+  val th = FRAME_COMPOSE th (Q.INST [`(x5 :word32)`|->`(x4 :word32)`,`(sN :bool)`|->`word_msb ((x1 :word32) - (0w :word32))`,`(sZ :bool)`|->`(x1 :word32) = (0w :word32)`,`(sC :bool)`|->`(0w :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (0w :word32)) /\ ~(word_msb x1 = word_msb (x1 - (0w :word32)))`,`(y5 :word32)`|->`(x1 :word32)` ] (FST_PROG2 th5))
+  val th = FRAME_COMPOSE th (Q.INST [`(y6 :word32)`|->`(z5 :word32) #>> ((8 :num) *  w2n (((1 :num) >< (0 :num)) ((x1 :word32) + (0w :word32)) :word2))`,`(sN :bool)`|->`word_msb ((x1 :word32) - (0w :word32))`,`(sZ :bool)`|->`(x1 :word32) = (0w :word32)`,`(sC :bool)`|->`(0w :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (0w :word32)) /\ ~(word_msb x1 = word_msb (x1 - (0w :word32)))` ] (FST_PROG2 th6))
+  val th = FRAME_COMPOSE th (Q.INST [`(sN :bool)`|->`word_msb ((x1 :word32) - (0w :word32))`,`(sZ :bool)`|->`(x1 :word32) = (0w :word32)`,`(sC :bool)`|->`(0w :word32) <=+ (x1 :word32)`,`(sV :bool)`|->`~(word_msb (x1 :word32) = word_msb (0w :word32)) /\ ~(word_msb x1 = word_msb (x1 - (0w :word32)))`,`(y7 :word32)`|->`(x1 :word32)` ] (FST_PROG2 th7))
+  val th = SIMP_RULE (srw_ss()++sep_ss) [] (ALIGN_VARS ["y3","x1","z7"] th)
+  val th = AUTO_PRE_HIDE_STATUS (AUTO_POST1_HIDE_STATUS th)
+  val th = SIMP_RULE (std_ss++sep2_ss) [GSYM WORD_SUB_PLUS,word_add_n2w,GSYM M30_def] th
+  in th end;
+
+val case3 = let
+  (* compose_progs' [("ldr a,[r13,#4]",true),("ldr a,[a,#8]",true)] "th" "  " *)
+  val th1 = (*  ldr a,[r13,#4]  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := T; Wb := F|>`,`b`|->`13w`,`imm`|->`4w`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_LDR_NONALIGNED) 
+  val th2 = (*  ldr a,[a,#8]  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (8w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := T; Up := T; Wb := F|>`,`b`|->`a`,`imm`|->`8w`,`y`|->`y2`,`z`|->`z2` ] arm_LDR1_NONALIGNED) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [`(y2 :word32)`|->`(z1 :word32) #>> ((8 :num) *  w2n (((1 :num) >< (0 :num)) ((y1 :word32) + (4w :word32)) :word2))` ] (FST_PROG2 th2))
+  val th = SIMP_RULE (srw_ss()++sep_ss) [] (ALIGN_VARS ["y1","z1"] th)
+  val th = AUTO_PRE_HIDE_STATUS (AUTO_POST1_HIDE_STATUS th)
+  val th = SIMP_RULE (std_ss++sep2_ss) [GSYM M30_def] th
+  in th end;
+
+val case4 = let
+  val th = (*  ldr r15,[r13],#8  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (8w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := F; Up := T; Wb := T|>`,`a`|->`13w`,`imm`|->`2w`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_LDR_PC) 
+  val th = SIMP_RULE (srw_ss() ++ armINST_ss) [ADDR_MODE2_WB_def,ADDR_MODE2_ADDR_def,GSYM M30_def] th
+  val th = RW [EVAL ``(w2w (2w:word8) << 2):word12``,EVAL ``(w2w (2w:word8)):word30``] th
+  val th = AUTO_PRE_HIDE_STATUS (AUTO_POST_HIDE_STATUS (FST_PROG2 th))
+  in th end;
+
+val case234 = let
+  val g = MATCH_MP ARM_PROG_EXPAND_STACK o
+          MOVE_STAR_RULE `a*b*sum*st*s*lr` `a*b*sum*s*lr*st` o
+          MATCH_MP arm_BL o SPEC_ALL o 
+          RW [SUM_BTREE_SPEC_def,SUM_BTREE_SPEC'_def,ARM_PROCS_def,emp_STAR]
+  val h = RW [GSYM MULT_MAX,STACK_def,ms_def,emp_STAR]
+  val th1 = h (Q.SPEC `2 * depth t2` (g ASSUMPTION1))
+  val th2 = h (Q.SPEC `2 * depth t1` (g ASSUMPTION2))
+  val th = Q.INST [`x1`|->`ax`,`y3`|->`sp`,`x4`|->`lr`,`z5`|->`v`,`x6`|->`sum`] case2
+  val th = HIDE_POST1 (POST1_MOVE_STAR `a*x1*ss*lr*x11*sp*y3*y31*s` `a*x1*ss*x11*sp*y3*y31*s*lr` th)
+  val th' = Q.INST [`ax`|->`z7`,`sum`|->`sum+v`,`sp`|->`sp-2w`] th1
+  val th = FRAME_COMPOSE th th'
+  val th' = HIDE_PRE (PRE_MOVE_STAR `a*sp*y1*z1*s` `sp*y1*z1*s*a` case3)
+  val th' = Q.INST [`y1`|->`sp - 2w`,`z1`|->`ax`] th'
+  val lemma = prove(``x - 2w + 1w = x:word30 - 1w``,EVAL_TAC \\ SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w])  
+  val th = FRAME_COMPOSE th (RW [lemma] th')
+  val th' = Q.INST [`ax`|->`z2`,`sum`|->`sum + v + sumBTree t1`,`sp`|->`sp-2w`,`offset`|->`offset2`] th2
+  val th = RW [lemma,GSYM M30_def] (ALIGN_VARS ["z2"] th)
+  val th' = RW1 [MAX_COMM,lemma] th'
+  val th = FRAME_COMPOSE th th'
+  val th = RW [GSYM M30_def] (ALIGN_VARS ["lr"] th)
+  val th = FRAME_COMPOSE th (Q.INST [`x1`|->`sp-2w`,`y1`|->`lr`] case4)
+  val th = APP_FRAME `cond ((tree = Node (t1,y,t2)) /\ ~(ax:word30 = 0w))` th
+  val th = RW [WORD_SUB_ADD,ms_def,emp_STAR] (Q.INST [`v`|->`y`] th)
+  val th = Q.INST [`offset`|->`0w-9w`,`offset2`|->`0w-12w`] th
+  val th = RW [EVAL ``(7w + (sw2sw (0w - 9w:word24) + 2w)):word30``] th
+  val th = RW [EVAL ``(10w + (sw2sw (0w - 12w:word24) + 2w)):word30``] th
+  val th = RW [UNION_IDEMPOT,setADD_0,EVAL ``0w - 9w:word24``,EVAL ``0w - 12w:word24``] th
+  in th end;
   
-  (* case 1 *)
-
-  val cmp1 = APP_FRAME `R30 14w lr` cmp1
-  val th = APP_FRAME `R30 a x` mov_pc1
-  val th = MOVE_STAR_RULE `x*y1*y2*z` `z*y1*y2*x` th  
-  val th = MATCH_COMPOSE cmp1 th
-  val th = RW [addr32_0] th
-  val th = APP_FRAME `bt (x,tree) * R sum (s + sumBTree tree)` th
-  val th = SIMP_RULE (bool_ss++SEP_cond_ss) [AND_CLAUSES] th
-  val th = DISCH ``tree = Leaf`` th
-  val th = RW [GSYM ARM_PROG_MOVE_COND] th
-  val th = APP_STRENGTHEN th 
-           `R30 a x * ~S * R30 14w lr * bt (x,tree) * R sum s * cond (tree = Leaf)`
-    (SIMP_TAC (std_ss++sep_ss) [SEP_IMP_MOVE_COND,bt_def,sumBTree_def]
-     \\ SIMP_TAC (bool_ss++SEP_cond_ss) []
-     \\ SIMP_TAC (std_ss++star_ss) [WORD_ADD_0,SEP_IMP_REFL])
-  val c1 = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
-  val c1 = APP_FRAME `STACK sp [] n * ~R b` c1
-  val c1 = RW [GSYM ARM_PROG_MOVE_COND] (DISCH_ALL c1)
-  val c1 = PRE_MOVE_STAR `a*s*lr*t*sum*(sp*b)*c` `a*b*t*sum*sp*s*lr*c` c1
-  val c1 = POST_MOVE_STAR `lr*s*a*t*sum*(sp*b)` `b*t*sum*sp*s*lr*a` c1
-  val c1 = RW [GSYM R30_def] (HIDE_POST (RW [R30_def] c1))
-  val case1 = POST_MOVE_STAR `b*t*sum*sp*s*lr*a` `a*b*t*sum*sp*s*lr` c1
- 
-  (* case 2 *)
-
-  val th = (RW [STAR_ASSOC] o RW1 [STAR_COMM] o APP_FRAME `R30 a x`) mov_pc2
-  val th = MATCH_COMPOSE cmp2 th
-  val th = RW [addr32_0] th
-  val th = APP_FRAME `bt (x,tree) * R30 14w lr * R sum s` th
-  val th = DISCH ``tree = Node (t1,y,t2)`` th
-  val th = RW [GSYM ARM_PROG_MOVE_COND] th
-  val th = APP_STRENGTHEN th 
-           `R30 a x * ~S * R30 14w lr * bt (x,tree) * R sum s * cond (tree = Node(t1,y,t2))`
-    (SIMP_TAC (std_ss++sep_ss) [SEP_IMP_MOVE_COND,bt_def,sumBTree_def]
-     \\ SIMP_TAC (bool_ss++SEP_cond_ss) []
-     \\ SIMP_TAC (std_ss++star_ss) [WORD_ADD_0,SEP_IMP_REFL])
-  val th = UNDISCH (RW [ARM_PROG_MOVE_COND] th)
-
-  (* push on to stack *)
-
-  val th = APP_FRAME `STACK sp xs (SUC (SUC n))` th
-  val th = POST1_MOVE_STAR `a*s*(t*lr*sum)*st` `(a*st*s)*(t*lr*sum)` th
-  val th' = RW [GSYM R30_def] (Q.INST [`x`|->`addr32 x`] STACK_PUSH)
-  val th' = APP_FRAME `bt (x,tree) * R30 14w lr * R sum s` th'
-  val th = MATCH_COMPOSE th th'
-  val th = POST1_MOVE_STAR `(a*st*s)*(t*lr*sum)` `(lr*st*s)*(t*a*sum)` th
-  val th' = RW [GSYM R30_def] (Q.INST [`x`|->`addr32 lr`,`a`|->`14w`] STACK_PUSH)
-  val th' = APP_FRAME `bt (x,tree) * R30 a x * R sum s` th'
-  val th = MATCH_COMPOSE th th'
-  val th = MOVE_STAR_RULE `(lr*st*s)*(t*a*sum)` `(st*s)*(t*a*sum)*lr` th
-  val th = HIDE_POST1 (RW [R30_def] th)
-  val th = MOVE_STAR_RULE `(st*s)*(t*a*sum)*lr` `(lr*st*s)*(t*a*sum)` (RW [GSYM R30_def] th)
-    
-  (* open definitions *)
-
-  val th = UNDISCH (SIMP_RULE std_ss [] (DISCH_ALL th))
-  val th = APP_FRAME `~ R b` th
-  val th = POST1_MOVE_STAR `(lr*st*s)*(t*a*sum)*b` `t*(lr*st*s*a*sum*b)` th
-  val case2 = POST1_CONV_RULE (REWRITE_CONV [bt_Node]) th
-  val case2 = RW1 [STACK_EXTRACT] case2
-  val case2 = Q.INST [`xs`|->`[]`] case2
-  val case2 = SIMP_RULE (std_ss++sep_ss) [ms_def,WORD_SUB_ADD,STAR_ASSOC] case2
-
-  (* add *)
-
-  val ldr = SET_AM2 `T` `T` `F` `0w` (PROG_INST arm_LDR)  
-  val ldr = RW [EVAL ``(w2w (0w:word8)):word30``,WORD_ADD_0] ldr
-  val ldr = Q.INST [`a`|->`b`,`b`|->`a`,`y`|->`x`,`x`|->`y`] ldr
-  val ldr = MOVE_STAR_RULE `x*y*z*q` `y*z*q*x` ldr
-  val ldr = RW [ARM_PROG_HIDE_PRE] (Q.GEN `y` ldr)
-  val ldr = APP_FRAME `R sum s` ldr
-  val ldr = MOVE_STAR_RULE `a*x*s*b*sum` `b*sum*s*a*x` ldr
-  val add = PROG_INST (SET_AM `OneReg` arm_ADD2)  
-  val add = Q.INST [`a`|->`b`,`b`|->`sum`] add
-  val add = APP_FRAME `R30 a z * M z q` add
-  val add = MATCH_COMPOSE ldr (RW [STAR_ASSOC] add)
-  val add = RW1 [WORD_ADD_COMM] add
-  val add = MOVE_STAR_RULE `x1*x2*x3*x4*x5` `x2*x3*x4*x5*x1` add
-  val add = Q.INST [`z`|->`y`] (HIDE_POST1 add)
-
-  (* call 1 *)
-  
-  val ldr = PROG_INST (SET_AM2 `T` `T` `F` `1w` arm_LDR1)  
-  val ldr = RW [EVAL ``(w2w (1w:word8)):word30``] ldr
-  val ldr = RW [GSYM R30_def] (Q.INST [`b`|->`a`,`y`|->`x`,`z`|->`addr32 a1`] ldr)
-  val th = ASSUME ``ARM_PROCS n (R30 a x * ~R b * bt (x,t1) * R sum s)
-                                (~R a * ~R b * bt (x,t1) * R sum (s + sumBTree t1)) C'``
-  val th = SPEC_ALL (RW [ARM_PROCS_def] th)
-  val th = MOVE_STAR_RULE `a*b*t*sum*sp*s` `a*b*t*sum*s*sp` th
-  val th = MATCH_MP ARM_PROC_EXPAND_STACK th
-  val th = Q.SPEC `m` th
-  val th = MOVE_STAR_RULE `a*b*t*sum*s*sp` `a*b*t*sum*sp*s` th
-  val th' = Q.INST [`offset`|->`offset1`] arm_BL
-  val th = MATCH_MP th' th
-  val th = Q.INST [`x`|->`a1`] th
-  val th = APP_FRAME `M (x + 1w) (addr32 a1)` th
-  val ldr = APP_FRAME `~R b * bt (a1,t1) * R sum s * STACK sp [] (MAX n m) * ~R 14w` ldr
-  val call1 = ARRANGE_COMPOSE ldr th
-
-  (* load for call 2 *)
-
-  val ldr1 = PROG_INST (SET_AM2 `T` `T` `F` `1w` arm_LDR)  
-  val ldr1 = RW [EVAL ``(w2w (1w:word8)):word30``] ldr1
-  val ldr1 = MOVE_STAR_RULE `a*sp*y*s` `sp*y*s*a` ldr1
-  val ldr1 = HIDE_PRE ldr1
-  val ldr1 = RW [GSYM R30_def] (Q.INST [`b`|->`13w`,`y`|->`sp`,`z`|->`addr32 x`] ldr1)
-  val ldr2 = PROG_INST (SET_AM2 `T` `T` `F` `2w` arm_LDR1)  
-  val ldr2 = RW [EVAL ``(w2w (2w:word8)):word30``] ldr2
-  val ldr2 = RW [GSYM R30_def] (Q.INST [`b`|->`a`,`y`|->`x`,`z`|->`addr32 a2`] ldr2)
-  val ldr1 = APP_FRAME `M (x + 2w) (addr32 a2)` ldr1  
-  val ldr2 = APP_FRAME `R30 13w sp * M (sp + 1w) (addr32 x)` ldr2
-  val ldr12 = ARRANGE_COMPOSE ldr1 ldr2
-  val ldr12 = APP_FRAME `ms sp [] * blank (sp-1w) n` ldr12  
-  val ldr12 = MOVE_STAR_RULE `a*x2*s*(sp*sp1)*(m*b)` `a*x2*s*sp1*(sp*m*b)` ldr12
-  val ldr12 = MOVE_STAR_RULE `sp*sp1*s*a*x2*(m*b)` `sp1*s*a*x2*(sp*m*b)` ldr12
-  val ldr12 = RW [GSYM STACK_def] ldr12
-  val ldr12 = Q.INST [`n`|->`MAX n m`] ldr12
-
-  (* compose: add, call 1 and load for call 2 *)
-
-  val th = FRAME_COMPOSE add (Q.INST [`s`|->`s+y`] call1)
-  val add_call1_ldr = FRAME_COMPOSE th ldr12
-
-  (* === proof of simple version === *)
-
-  (* call 2 and load lr into pc *)
-
-  val th = ASSUMPTION2
-  val th = SPEC_ALL (RW [SUM_BTREE_SPEC_def,SUM_BTREE_SPEC'_def,ARM_PROCS_def] th)
-  val th = MOVE_STAR_RULE `a*b*t*sum*sp*s` `a*b*t*sum*s*sp` th
-  val th = MATCH_MP ARM_PROC_EXPAND_STACK th
-  val th = Q.SPEC `2 * depth t1` th
-  val th = RW [GSYM MULT_MAX] (RW1 [MAX_COMM] th)
-  val th = MOVE_STAR_RULE `a*b*t*sum*s*sp` `a*b*t*sum*sp*s` th
-  val th' = Q.INST [`offset`|->`offset2`] arm_BL
-  val th = MATCH_MP th' th
-  val th = Q.INST [`x`|->`a2`,`sp`|->`sp -1w-1w`] th
-  val call2 = APP_FRAME `M (x + 2w) (addr32 a2)` th
-
-  val ldr = (SET_SC `F` `AL` o SET_AM2 `F` `T` `T` `2w`) arm_LDR_PC
-  val ldr = SIMP_RULE (srw_ss()) [] ldr
-  val ldr = (HIDE_STATUS o HIDE_POST o FST_PROG2) ldr
-  val ldr = Q.INST [`a`|->`13w`,`y`|->`lr`,`x`|->`sp-1w-1w`] ldr
-  val lemma = prove(``x-1w-1w+2w=x:word30``,
-                    REWRITE_TAC [GSYM WORD_SUB_PLUS,EVAL ``1w+1w:word30``,WORD_SUB_ADD])
-  val ldr = RW [EVAL ``(w2w (2w:word8)):word30``,lemma] ldr
-  val ldr = APP_FRAME `ms (sp-1w-1w+1w) (addr32 x::xs) * blank (sp - 1w - 1w - 1w) n` ldr
-  val ldr = MOVE_STAR_RULE `sp*m*s*(mss*b)` `sp*(m*mss)*b*s` ldr
-  val ldr = RW [GSYM ms_def,GSYM STACK_def] ldr
-  val ldr = RW [ms_def] ldr
-  val ldr = MOVE_STAR_RULE `sp*(m*(mm*mss))*b*s` `sp*m*mss*b*s*mm`  ldr
-  val ldr = HIDE_POST ldr
-  val ldr = RW [WORD_SUB_ADD] ldr
-  val ldr = MOVE_STAR_RULE `sp*m*mss*b*s*mm` `sp*mss*(mm*(m*b))*s` ldr
-  val ldr = RW [GSYM blank_def,GSYM STACK_def] ldr
-  val ldr = Q.INST [`n`|->`2 * (MAX (depth t1) (depth t2))`] ldr
-  val ldr = RW [DECIDE ``SUC (SUC (2 * m)) = 2 * SUC m``] ldr
-
-  val ldr = RW1 [STACK_EXTRACT] (Q.INST [`xs`|->`[]`] ldr)
-  val ldr = POST_CONV_RULE (SIMP_CONV (bool_ss++sep_ss) [ms_def]) ldr
-  val th = FRAME_COMPOSE th ldr
-  val th = APP_FRAME 
-     `M x y * M (x + 1w) (addr32 a1) * bt(a1,t1) * cond ~(x = 0w) * M (x + 2w) (addr32 a2)` th
+val case234' = let
+  val th = RW [M30_def] case234
+  val th = HIDE_POST (POST_MOVE_STAR `sp*sp2*s*a*b1*ss*lr*bl*ax2*sp1*bt3*ax1*ax*cc` `sp*sp2*s*a*b1*ss*lr*bl*ax2*bt3*ax1*ax*cc*sp1` th)
   val th = APP_WEAKEN th 
-    `bt(x,Node(t1,y,t2)) * (~R a * ~R b * STACK sp [] (2 * SUC (MAX (depth t1) (depth t2))) * 
-     R sum (s+sumBTree t2) * ~S * ~R 14w)` 
-       (REWRITE_TAC [bt_Node] \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS]
-        \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `a1` \\ Q.EXISTS_TAC `a2` 
-        \\ FULL_SIMP_TAC (std_ss++star_ss) [])
-  val th = RW [STAR_ASSOC] th
-  val ret1 = MOVE_STAR_RULE `tree*a*b*stack*sum*s*lr` `a*b*tree*sum*stack*s*lr` th
+             `~R a * bt (ax,tree) * R s (sum + sumBTree tree) * 
+              R30 13w sp *  blank (sp-1w) (2 * depth tree) * ~R 14w * ~S`
+  (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND,sumBTree_def,depth_def,WORD_ADD_ASSOC,bt_def]
+   \\ REWRITE_TAC [DECIDE ``2 * SUC n = SUC (SUC (2*n))``,blank_def,STAR_ASSOC] 
+   \\ SIMP_TAC std_ss [GSYM WORD_SUB_PLUS,word_add_n2w] 
+   \\ SIMP_TAC (bool_ss++sep2_ss) []
+   \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,M30_def] \\ REPEAT STRIP_TAC
+   \\ Q.EXISTS_TAC `z7` \\ Q.EXISTS_TAC `z2`
+   \\ ONCE_REWRITE_TAC [prove(``s+t1+y+t2=s+y+t1+t2``,METIS_TAC [WORD_ADD_ASSOC,WORD_ADD_COMM])]
+   \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = HIDE_PRE (PRE_MOVE_STAR `a*sp*sp1*lr*sp2*ax*s*ax1*ss*cc*b1*b2*ax2*b3*c` `a*sp*lr*sp2*ax*s*ax1*ss*cc*b1*b2*ax2*b3*c*sp1` th)
+  val th = HIDE_PRE (PRE_MOVE_STAR `a*sp*lr*sp2*ax*s*ax1*ss*cc*b1*b2*ax2*b3*c*sp1` `a*sp*lr*ax*s*ax1*ss*cc*b1*b2*ax2*b3*c*sp1*sp2` th)
+  val th = SIMP_RULE (bool_ss++sep2_ss) [addr32_EQ_0] th
+  val th = EXISTS_PRE `z2` th
+  val th = EXISTS_PRE `z7` th
+  val th = APP_STRENGTHEN th 
+             `R30 a ax * bt (ax,tree) * R s sum * 
+              R30 13w sp *  blank (sp-1w) (2 * depth tree) * R30 14w lr * ~S *
+              cond (tree = Node(t1,y,t2))`
+  (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND,sumBTree_def,depth_def,WORD_ADD_ASSOC,bt_def]
+   \\ REWRITE_TAC [DECIDE ``2 * SUC n = SUC (SUC (2*n))``,blank_def,STAR_ASSOC] 
+   \\ SIMP_TAC std_ss [GSYM WORD_SUB_PLUS,word_add_n2w] 
+   \\ SIMP_TAC (bool_ss++sep2_ss) []
+   \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,M30_def] \\ REPEAT STRIP_TAC
+   \\ Q.EXISTS_TAC `y'` \\ Q.EXISTS_TAC `y''`
+   \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = PAT_DISCH ``tree = Node (t1,y,t2)`` th
+  val th = RW [GSYM ARM_PROG_MOVE_COND] (RW [ARM_PROG_MOVE_COND,AND_IMP_INTRO] th)
+  in th end;
 
-  (* finish proof 1 *)
+val (case1',case1_tr') = let
+  val th = RW [addr32_EQ_0] (ALIGN_VARS ["x1"] case1)
+  val th = Q.INST [`x1`|->`ax`,`x2`|->`lr`] th
+  val th = APP_FRAME `cond (ax:word30 = 0w)` th
+  val th = RW [GSYM bt_def] (SIMP_RULE (bool_ss++sep2_ss) [] th)
+  val th = SIMP_RULE bool_ss [] (DISCH ``Leaf = tree`` th)
+  val th = CONV_RULE ((RATOR_CONV o RAND_CONV) SYM_CONV) th
+  val th = RW [R30_def] (UNDISCH th)
+  val th = HIDE_POST (POST_MOVE_STAR `lr*a*s*b` `lr*s*b*a` th)
+  val th = RW [GSYM R30_def] (POST_MOVE_STAR `lr*s*b*a` `a*lr*s*b` th)
+  val th = APP_FRAME `R s (sum + sumBTree tree) * R30 13w sp * blank (sp - 1w) (2 * g tree)` th
+  val th = MOVE_STAR_RULE `a*lr*s*b*(sum*sp*bl)` `a*b*sum*sp*bl*lr*s` th
+  val th = RW [GSYM ARM_PROG_MOVE_COND] (DISCH_ALL th)
+  val th = APP_STRENGTHEN th 
+             `R30 a ax * bt (ax,tree) * R s sum * 
+              R30 13w sp *  blank (sp-1w) (2 * g tree) * R30 14w lr * ~S *
+              cond (tree = Leaf)`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_MOVE_COND,sumBTree_def,WORD_ADD_0,SEP_IMP_REFL])
+  in (Q.INST [`g`|->`depth`] th, Q.INST [`g`|->`ldepth`] th) end;
 
-  val th1 = Q.INST [`sp`|->`sp-1w-1w`,`n`|->`2 * (depth t1)`,`m`|->`2 * (depth t2)`] add_call1_ldr
-  val th1 = SIMP_RULE (bool_ss++sep_ss) [WORD_SUB_ADD,GSYM MULT_MAX] th1
-  val asm = Q.SPECL [`a1`,`s+y`] (RW [SUM_BTREE_SPEC_THM] ASSUMPTION1)
-  val th1 = Q.SPEC `t2` (MATCH_MP (DISCH_ALL (Q.GEN `t2` th1)) asm)
-  val th2 = Q.INST [`s`|->`s + y + sumBTree t1`] ret1  
-  val th2 = SIMP_RULE (bool_ss++sep_ss) [ms_def,WORD_SUB_ADD] th2
-  val th12 = FRAME_COMPOSE th1 th2
-  val lemma = prove(``s + y + sumBTree t1 + sumBTree t2 = s + sumBTree (Node (t1,y,t2))``,
-                    REWRITE_TAC [sumBTree_def] \\ METIS_TAC [WORD_ADD_ASSOC,WORD_ADD_COMM])
-  val th12 = RW [lemma] th12
-  val th12 = EXISTS_PRE `a2` th12
-  val th12 = EXISTS_PRE `a1` th12
-  val c2 = Q.INST [`n`|->`2 * (MAX (depth t1) (depth t2))`] case2
-  val c2 = RW [DECIDE ``SUC (SUC (2 * m)) = 2 * SUC m``] c2  
-  val th = ARRANGE_COMPOSE c2 th12
-  val th = Q.INST [`offset1`|->`0w-9w`,`offset2`|->`0w-12w`] th
-  val rw1 = EVAL ``4w + (2w + (1w + (sw2sw (0w - 9w:word24) + 2w))):word30``  
-  val rw2 = EVAL ``4w + (6w + (sw2sw (0w - 12w:word24) + 2w)):word30``  
-  val th = RW [rw1,rw2,setADD_0,UNION_IDEMPOT] th
-
-  val th = DISCH ``SUC (MAX (depth t1) (depth t2)) = depth (Node (t1,y,t2))`` th
-  val th = SIMP_RULE std_ss [] th
-  val th = CONV_RULE (RATOR_CONV (REWRITE_CONV [depth_def])) th
-  val th = SIMP_RULE std_ss [] th
-
-  val th = DISCH ``tree = Node (t1,y,t2)`` th
-  val th = RW1 [EQ_SYM_EQ] th
-  val th = SIMP_RULE bool_ss [] th
-  val th = RW [GSYM ARM_PROG_MOVE_COND] th
-  val th = PRE_MOVE_STAR `a*s*lr*t*sum*sp*b*c` `a*b*t*sum*sp*s*lr*c` th
-
-  val th = APP_MERGE (Q.INST [`n`|->`2*depth tree`] case1) th 
-  val th = RW [STAR_OVER_DISJ,SEP_cond_CLAUSES] th
-  val th = RW [ARM_PROG_MOVE_COND] th
-  val th' = CONV_RULE (RAND_CONV (UNBETA_CONV ``tree:BTree``)) th
-  val th' = (Q.GEN `t1` o Q.GEN `y` o Q.GEN `t2`) th'
-
+val case1234' = let 
+  val th = RW [ARM_PROG_MOVE_COND] (APP_MERGE case1' case234')
   val lemma = prove(
-    ``(!t1 x t2. (tree = Leaf) \/ (Node (t1,x,t2) = tree) ==> P tree) ==> P tree``,
-    Cases_on `tree` \\ SIMP_TAC std_ss [] \\ Cases_on `p` \\ Cases_on `r` \\ METIS_TAC [])
+    ``(!t1 y t2. (tree = Leaf) \/ (tree = Node (t1,y,t2)) ==> P) ==> P``,
+    Cases_on `tree` \\ REWRITE_TAC [] \\ Cases_on `p` \\ Cases_on `r` \\ SRW_TAC [] [])
+  val th = (Q.GEN `t1` o Q.GEN `y` o Q.GEN `t2`) th
+  val th = MATCH_MP lemma th
+  in th end;
+
+val ARM_SUM_BTREE_PROCEDURE = let
+  val th = Q.INST [`lr`|->`q`] case1234'
+  val th = MOVE_STAR_RULE `p*q*r` `p*r*q` th
+  val th = (Q.GEN `ax` o Q.GEN `sum` o Q.GEN `sp` o Q.GEN `q`) th
+  val th1 = RW [STACK_def,ms_def,emp_STAR,ARM_PROC_THM,STAR_ASSOC] ARM_PROCS_def
+  val th = RW [GSYM th1] (RW1 [ARM_PROG_EXTRACT_CODE] th)
+  val th2 = RW [emp_STAR] (Q.SPEC `emp` SUM_BTREE_SPEC'_def)
+  val th = RW [GSYM th2,GSYM SUM_BTREE_SPEC_def] th
+  val th = RW1 [INSERT_SING_UNION] th
+  val th = MATCH_MP ARM_PROC_RECURSION ((Q.GEN `tree` o Q.GEN `C'` o DISCH_ALL) th)
+  val th = Q.SPEC `tree` th
+  in RW [SUM_BTREE_SPEC_def,SUM_BTREE_SPEC'_def,emp_STAR] th end;
+
+(* tail rec version *)
+
+val case5 = let
+  (* compose_progs ["ldr r14,[r13],#8","b -44"] "th" "  " *)
+  val th1 = (*  ldr r14,[r13],#8  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(w2w (8w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := F; Up := T; Wb := T|>`,`a`|->`14w`,`b`|->`13w`,`imm`|->`8w`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_LDR_NONALIGNED) 
+  val th2 = (*  b -44  *) SIMP_RULE (bool_ss ++ armINST_ss) [EVAL ``(sw2sw (16777203w :word24) :word30)``] (Q.INST [`c_flag`|->`AL`,`offset`|->`16777203w` ] arm_B2) 
+  val th = FRAME_COMPOSE (FST_PROG2 th1) (Q.INST [ ] (FST_PROG2 th2))
+  val th = AUTO_PRE_HIDE_STATUS (AUTO_POST_HIDE_STATUS th)
+  val th = RW [GSYM M30_def] (ALIGN_VARS ["y1","z1"] th)
+  in th end;
+
+val ARM_PROG_COMPOSE_0 = prove(
+  ``ARM_PROG P cs C SEP_F {(Q,I)} ==> ARM_PROG Q [] C' SEP_F Z ==> 
+    ARM_PROG P cs (C UNION C') SEP_F Z``,
+  REWRITE_TAC [ARM_PROG_THM,pcINC_0,ARM_GPROG_FALSE_POST,ARM_GPROG_EMPTY_CODE] \\ REPEAT STRIP_TAC
+  \\ `ARM_GPROG {(P,I)} ((cs,I) INSERT C) ({} UNION {(Q,I)})` by ASM_REWRITE_TAC [UNION_EMPTY]
+  \\ `ARM_GPROG ({(Q,I)} UNION {}) C' Z` by ASM_REWRITE_TAC [UNION_EMPTY]
+  \\ IMP_RES_TAC ARM_GPROG_COMPOSE \\ FULL_SIMP_TAC bool_ss [UNION_EMPTY,INSERT_UNION_EQ]);
   
-  val th' = BETA_RULE (MATCH_MP lemma th')
-  val th' = RW1 [ARM_PROG_EXTRACT_CODE] th'
-  val th' = RW [GSYM ARM_PROC_THM] (Q.GEN `lr` th')
-  val th' = RW [GSYM ARM_PROCS_def] (Q.GEN `sp` th')
-  val th' = RW [GSYM SUM_BTREE_SPEC_THM] (Q.GEN `x` (Q.GEN `s` th'))
-  val th' = RW1 [INSERT_SING_UNION] th'
-  val th' = Q.GEN `tree` (Q.GEN `C'` (DISCH_ALL th'))
-
-  val th' = MATCH_MP ARM_PROC_RECURSION th'
-  val th' = Q.SPEC `tree` th'  
-  val rws = [EVAL ``(w2w (0w:word8)):word12 << 2``,
-             EVAL ``(w2w (1w:word8)):word12 << 2``,
-             EVAL ``(w2w (2w:word8)):word12 << 2``]
-  val result = RW rws th'
-
-  (* === proof of tail-rec version === *)
-
-  val ARM_PROG_COMPOSE_0 = prove(
-    ``ARM_PROG P cs {} SEP_F {(P',pcADD k)} ==> 
-      ARM_PROG (P'' * P') [] C SEP_F Z ==>
-      ARM_PROG (P'' * P) cs (setADD k C) SEP_F (setADD k Z)``,
-    STRIP_TAC
-    \\ POP_ASSUM (ASSUME_TAC o RW1 [STAR_COMM] o APP_FRAME `P''`)
-    \\ FULL_SIMP_TAC bool_ss [ARM_PROG_THM,ARM_GPROG_FALSE_POST,ARM_GPROG_EMPTY_CODE] 
-    \\ REPEAT STRIP_TAC
-    \\ (CONV_TAC o RATOR_CONV o RAND_CONV) (ONCE_REWRITE_CONV [INSERT_SING_UNION])
-    \\ (ASSUME_TAC o GEN_ALL o Q.SPECL [`Y`,`{}`,`X`,`C`,`C'`,`{}`,`Z`]) ARM_GPROG_COMPOSE
-    \\ FULL_SIMP_TAC bool_ss [UNION_EMPTY,UNION_IDEMPOT]
-    \\ PAT_ASSUM ``!Z:'a. b`` (MATCH_MP_TAC)
-    \\ Q.EXISTS_TAC `setADD k {(P'' * P',I)}` 
-    \\ STRIP_TAC
-    THEN1 ASM_SIMP_TAC (bool_ss++compose_ss) 
-            [prove(``I o f = f``,SRW_TAC [] [FUN_EQ_THM]),setADD_CLAUSES]
-    \\ REWRITE_TAC [setADD_def]
-    \\ METIS_TAC [ARM_GPROG_SHIFT])
-
-  val th1 = RW [MAX_IDEM] (Q.INST [`m`|->`n`] add_call1_ldr)
-  val th1 = Q.INST [`sp`|->`sp-1w-1w`,`n`|->`2 * (ldepth t1)`] th1
-  val th1 = SIMP_RULE (bool_ss++sep_ss) [WORD_SUB_ADD,GSYM MULT_MAX] th1
-  val asm = Q.SPECL [`a1`,`s+y`] (RW [SUM_BTREE_SPEC_TR_THM] ASSUMPTION1_TR)
-  val th1 = MATCH_MP (DISCH_ALL th1) asm
-  val th1 = PRE_MOVE_STAR `sum*s*a*x*b*x1*t1*sp*lr*sp1*x2` 
-                          `sum*s*a*x*b*x1*t1*lr*sp1*x2*sp` th1
-  val th1 = POST1_MOVE_STAR `a*x2*s*sp1*sp*b*t1*sum*lr*x1*x` 
-                            `a*x2*s*sp1*b*t1*sum*lr*x1*x*sp` th1
-  val th1 = Q.SPEC `2 * ldepth t2 - 2` (MATCH_MP ARM_PROG_EXPAND_STACK th1)
-  val th1 = RW [GSYM WORD_SUB_PLUS,EVAL ``1w+1w:word30``] th1
-
-  val ldr = MULTI_POP_STACK  
-  val ldr = Q.SPECL [`addr32 lr`,`[addr32 x]`,`14w`,`2 * (ldepth t1)`,`2 * (ldepth t2)`] ldr
-  val ldr = SIMP_RULE std_ss [LENGTH,DECIDE ``2 * m + 2 = 2 * SUC m``] ldr
-  val ldr = RW [ms_def,emp_STAR,STAR_ASSOC,GSYM R30_def] (RW1 [STACK_EXTRACT] ldr)
-  val ldr = RW [GSYM MULT_MAX] ldr
-  val ldr = DISCH ``MAX (SUC (ldepth t1)) (ldepth t2) = ldepth (Node(t1,y,t2))`` ldr
-  val ldr = SIMP_RULE bool_ss [] ldr
-  val ldr = RW [] (CONV_RULE (RATOR_CONV (RAND_CONV (REWRITE_CONV [ldepth_def]))) ldr)
-  val lemma = prove(``x-2w+1w = x-1w:word30``,
-                    REWRITE_TAC [(GSYM o EVAL) ``1w+1w:word30``,WORD_SUB_PLUS,WORD_SUB_ADD])
-  val ldr = RW [lemma] ldr
-
-  val c2 = RW [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC'_def] ASSUMPTION2_TR
-  val c2 = Q.SPECL [`a2`,`s + y + sumBTree t1`] c2
-  val c2 = Q.SPEC `2 * SUC (ldepth t1)` (MATCH_MP ARM_PROCS_EXPAND_STACK c2)
-  val c2 = RW [GSYM MULT_MAX] (RW1 [MAX_COMM] c2)
-  val c2 = DISCH ``MAX (SUC (ldepth t1)) (ldepth t2) = ldepth (Node(t1,y,t2))`` c2
-  val c2 = SIMP_RULE bool_ss [] c2
-  val c2 = CONV_RULE (RATOR_CONV (RAND_CONV (REWRITE_CONV [ldepth_def]))) c2
-  val c2 = Q.SPECL [`sp`,`lr`] (RW [ARM_PROCS_def,ARM_PROC_THM] c2)
-  val c2 = APP_FRAME `M x y * M (x+1w) (addr32 a1) * M (x+2w) (addr32 a2) * bt (a1,t1) * cond ~(x = 0w)` c2
-  val c2 = APP_WEAKEN c2 `bt (x,Node(t1,y,t2)) * 
-       (~R a * ~R b * R sum (s + sumBTree(Node(t1,y,t2))) *
-        STACK sp [] (2 * ldepth (Node (t1,y,t2))) * ~S * ~R 14w)`
-    (SIMP_TAC std_ss [bt_Node,SEP_IMP_def,SEP_EXISTS,sumBTree_def]
-     \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `a1` \\ Q.EXISTS_TAC `a2`
-     \\ FULL_SIMP_TAC (std_ss++star_ss) [AC WORD_ADD_COMM WORD_ADD_ASSOC])
-  val c2 = POST_MOVE_STAR `t*(a*b*sum*sp*s*lr)` `a*b*t*sum*sp*s*lr` c2
-  val b = (HIDE_STATUS o HIDE_POST o SET_SC `F` `AL`) arm_B
-  val b = MATCH_MP ARM_PROG_COMPOSE_0 b 
-  val c2 = PRE_MOVE_STAR `a*b*t2*sum*sp*s*lr*x*a1*a2*t1*c` 
-                         `a*b*t2*sum*sp*lr*x*a1*a2*t1*c*s` (RW [STAR_ASSOC] c2)
-  val c2 = RW [setADD_CLAUSES,pcSET_ABSORB] (MATCH_MP b c2)
-
-  val c2 = FRAME_COMPOSE ldr c2
-  val c2 = FRAME_COMPOSE th1 c2
-  val call2 = EXISTS_PRE `a2` c2
-  val call2 = EXISTS_PRE `a1` call2
-
-  val c2 = RW [GSYM WORD_SUB_PLUS,EVAL ``1w+1w:word30``] case2
-  val c2 = Q.INST [`n`|->`MAX (2 * ldepth t1) (2 * ldepth t2 - 2)`] c2
-  val c2_call2 = ARRANGE_COMPOSE c2 (RW [emp_STAR] call2)
+val case234_tr = let
+  val g = RW [GSYM MULT_MAX,STACK_def,ms_def,emp_STAR] o
+          MOVE_STAR_RULE `a*b*sum*st*s*lr` `a*b*sum*s*lr*st` o
+          MATCH_MP arm_BL o SPEC_ALL
+  val h = RW [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC'_def,ARM_PROCS_def,emp_STAR]
+  val th1 = (g o h) ASSUMPTION1_TR
+  val th2 = h ASSUMPTION2_TR
+  val th = Q.INST [`x1`|->`ax`,`y3`|->`sp`,`x4`|->`lr`,`z5`|->`v`,`x6`|->`sum`] case2
+  val th = HIDE_POST1 (POST1_MOVE_STAR `a*x1*ss*lr*x11*sp*y3*y31*s` `a*x1*ss*x11*sp*y3*y31*s*lr` th)
+  val th' = Q.INST [`ax`|->`z7`,`sum`|->`sum+v`,`sp`|->`sp-2w`] th1
+  val th = FRAME_COMPOSE th th'
+  val th' = HIDE_PRE (PRE_MOVE_STAR `a*sp*y1*z1*s` `sp*y1*z1*s*a` case3)
+  val th' = Q.INST [`y1`|->`sp - 2w`,`z1`|->`ax`] th'
+  val lemma = prove(``x - 2w + 1w = x:word30 - 1w``,EVAL_TAC \\ SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w])  
+  val th = FRAME_COMPOSE th (RW [lemma] th')
+  val th = Q.INST [`offset`|->`0w-9w`] th
+  val th = RW [EVAL ``(7w + (sw2sw (0w - 9w:word24) + 2w)):word30``] th
+  val th = RW [UNION_IDEMPOT,setADD_0,EVAL ``0w - 9w:word24``,addr32_EQ_0] th
+  val th = RW [GSYM M30_def] (ALIGN_VARS ["lr"] th)
+  val th' = Q.INST [`y1`|->`sp-2w`,`z1`|->`lr`] case5  
+  val th' = HIDE_PRE (PRE_MOVE_STAR `lr*sp*sp2*s` `sp*sp2*s*lr` th')
+  val th = FRAME_COMPOSE th th'
+  val l2 = prove(``1073741824w = 0w:word30``,SIMP_TAC (std_ss++SIZES_ss) [n2w_11])
+  val th = RW [l2,pcADD_0,WORD_SUB_ADD,M30_def] (ALIGN_VARS ["z2"] th)
+  val th = HIDE_POST (POST_MOVE_STAR `lr*sp*sp2*s*a*ax2*sp1*b*sum*bl*ax1*ax` `lr*sp*s*a*ax2*sp1*b*sum*bl*ax1*ax*sp2` th)
+  val th = HIDE_POST (POST_MOVE_STAR `lr*sp*s*a*ax2*sp1*b*sum*bl*ax1*ax*sp2` `lr*sp*s*a*ax2*b*sum*bl*ax1*ax*sp2*sp1` th)
+  val th = POST_MOVE_STAR `lr*sp*s*a*ax2*b*sum*bl*ax1*ax*sp2*sp1` `lr*s*a*ax2*b*sum*ax1*ax*(sp*(sp1*sp2*bl))` th
+  val th = HIDE_PRE (PRE_MOVE_STAR `a*sp*sp1*lr*sp2*ax*sum*ax1*s*cc*b*bl*ax2` `a*sp*lr*sp2*ax*sum*ax1*s*cc*b*bl*ax2*sp1` th)
+  val th = HIDE_PRE (PRE_MOVE_STAR `a*sp*lr*sp2*ax*sum*ax1*s*cc*b*bl*ax2*sp1` `a*sp*lr*ax*sum*ax1*s*cc*b*bl*ax2*sp1*sp2` th)
+  val th = PRE_MOVE_STAR `a*sp*lr*ax*sum*ax1*s*cc*b*bl*ax2*sp1*sp2` `a*lr*ax*sum*ax1*s*cc*b*ax2*(sp*(sp1*sp2*bl))` th
+  val lemma = prove(``~M (sp-1w) * ~M (sp-2w) * blank (sp-2w-1w) n = blank (sp-1w) (SUC (SUC n))``,
+                    SIMP_TAC std_ss [blank_def,GSYM WORD_SUB_PLUS,word_add_n2w,STAR_ASSOC])
+  val th = RW [lemma,GSYM M30_def,GSYM (REWRITE_CONV [STACK_def,ms_def,emp_STAR] ``STACK sp [] n``)] th
+  val th = Q.SPEC `2 * ldepth t2` (MATCH_MP ARM_PROG_EXPAND_STACK2 th)
   val lemma = prove(
-    ``SUC (SUC (MAX (2 * m) (2 * n - 2))) = 2 * (MAX (SUC m) n)``,
-    SRW_TAC [] [MAX_DEF] \\ DECIDE_TAC)
-  val th = RW [lemma] c2_call2
-  val th = DISCH ``MAX (SUC (ldepth t1)) (ldepth t2) = ldepth (Node(t1,y,t2))`` th
-  val th = SIMP_RULE bool_ss [] th
-  val th = RW [] (CONV_RULE (RATOR_CONV (RAND_CONV (REWRITE_CONV [ldepth_def]))) th)
-  val th = PAT_DISCH ``tree = Node(t1,y,t2)`` th
-  val th = CONV_RULE (RATOR_CONV (RAND_CONV (SYM_CONV))) th
-  val th = SIMP_RULE std_ss [lemma] th
-  val th = RW [GSYM ARM_PROG_MOVE_COND] th
-  val th = Q.INST [`offset1`|->`0w-9w`,`offset`|->`0w-13w`] th
-  val rw1 = EVAL ``4w + (2w + (1w + (sw2sw (0w - 9w:word24) + 2w))):word30``
-  val rw2 = EVAL ``4w + (6w + (1w + (sw2sw (0w - 13w:word24) + 2w))):word30``
-  val th = RW [rw1,rw2,setADD_0,UNION_IDEMPOT] th
-  val cNode = PRE_MOVE_STAR `a*s*lr*t*sum*sp*b*c` `a*b*t*sum*sp*s*lr*c` th
-  val cLeaf = Q.INST [`n`|->`2 * ldepth tree`] case1
-  
-  val cTree = APP_MERGE cLeaf cNode
-  val th = RW [STAR_OVER_DISJ,SEP_cond_CLAUSES] cTree
-  val th = RW [ARM_PROG_MOVE_COND] th
-  val th' = CONV_RULE (RAND_CONV (UNBETA_CONV ``tree:BTree``)) th
-  val th' = (Q.GEN `t1` o Q.GEN `y` o Q.GEN `t2`) th'
+  ``MAX (SUC (SUC (2 * n))) (2 * m) = 2 * MAX (SUC n) m``,
+  SIMP_TAC std_ss [ADD1,GSYM ADD_ASSOC,MULT_MAX,
+    GSYM ((SIMP_CONV std_ss [MULT_CLAUSES] THENC ONCE_REWRITE_CONV [ADD_COMM]) ``2 * (SUC n)``)])
+  val th = RW [lemma] th
+  val th' = MOVE_STAR_RULE `a*sum*sp*s*lr` `a*sum*s*lr*sp` (SPEC_ALL (RW [ARM_PROC_THM] th2))
+  val th' = Q.SPEC `2 * (SUC (ldepth t1))` (MATCH_MP ARM_PROG_EXPAND_STACK2 th')
+  val th' = RW [GSYM MULT_MAX] (RW1 [MAX_COMM] th')
+  val th' = Q.INST [`ax`|->`z2`,`q`|->`lr`,`sum`|->`sum + v + sumBTree t1`,`z2`|->`z9`] th'
+  val th' = APP_FRAME `M30 (ax + 2w) z2 * M30 (ax + 1w) z7 * bt (z7,t1) * M ax v` th'
+  val th = APP_FRAME `bt (z2,t2)` th
+  val th = RW [STAR_ASSOC] (SIMP_RULE (bool_ss++star_ss) [] th)  
+  val th' = RW [STAR_ASSOC] (SIMP_RULE (bool_ss++star_ss) [] th')  
+  val th = RW [UNION_IDEMPOT] (MATCH_MP (MATCH_MP ARM_PROG_COMPOSE_0 th) th')
+  val th = APP_FRAME `cond ((tree = Node (t1,y,t2)) /\ ~(ax:word30 = 0w))` th
+  in Q.INST [`v`|->`y`] th end;  
 
+val case234_tr' = let
+  val th = RW [M30_def] case234_tr
+  val th = APP_WEAKEN th 
+             `~R a * bt (ax,tree) * R s (sum + sumBTree tree) * 
+              STACK sp [] (2 * ldepth tree) * ~R 14w * ~S`
+  (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND,sumBTree_def,ldepth_def,WORD_ADD_ASSOC,bt_def]
+   \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,M30_def] \\ REPEAT STRIP_TAC
+   \\ Q.EXISTS_TAC `z7` \\ Q.EXISTS_TAC `z2`
+   \\ ONCE_REWRITE_TAC [prove(``s+t1+y+t2=s+y+t1+t2``,METIS_TAC [WORD_ADD_ASSOC,WORD_ADD_COMM])]
+   \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = EXISTS_PRE `z2` th
+  val th = EXISTS_PRE `z7` th
+  val th = APP_STRENGTHEN th 
+             `R30 a ax * bt (ax,tree) * R s sum * 
+              STACK sp [] (2 * ldepth tree) * R30 14w lr * ~S *
+              cond (tree = Node(t1,y,t2))`
+  (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND,sumBTree_def,ldepth_def,WORD_ADD_ASSOC,bt_def]
+   \\ SIMP_TAC (bool_ss++sep2_ss) []
+   \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS,M30_def] \\ REPEAT STRIP_TAC
+   \\ Q.EXISTS_TAC `y'` \\ Q.EXISTS_TAC `y''` \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = PAT_DISCH ``tree = Node (t1,y,t2)`` th
+  val th = RW [GSYM ARM_PROG_MOVE_COND] (RW [ARM_PROG_MOVE_COND,AND_IMP_INTRO] th)
+  in th end;
+  
+val case1234_tr' = let 
+  val th = PRE_MOVE_STAR `a*b*sum*sp*bl*lr*s*cc` `a*b*sum*(sp*bl)*lr*s*cc` case1_tr'
+  val th = POST_MOVE_STAR `a*b*sum*sp*bl*lr*s` `a*b*sum*(sp*bl)*lr*s` th
+  val th = RW [GSYM (REWRITE_CONV [STACK_def,ms_def,emp_STAR] ``STACK sp [] n``)] th
+  val th = RW [ARM_PROG_MOVE_COND] (APP_MERGE th case234_tr')
   val lemma = prove(
-    ``(!t1 x t2. (tree = Leaf) \/ (Node (t1,x,t2) = tree) ==> P tree) ==> P tree``,
-    Cases_on `tree` \\ SIMP_TAC std_ss [] \\ Cases_on `p` \\ Cases_on `r` \\ METIS_TAC [])
-  
-  val th' = BETA_RULE (MATCH_MP lemma th')
-  val th' = RW1 [ARM_PROG_EXTRACT_CODE] th'
-  val th' = RW [GSYM ARM_PROC_THM] (Q.GEN `lr` th')
-  val th' = RW [GSYM ARM_PROCS_def] (Q.GEN `sp` th')
-  val th' = RW [GSYM SUM_BTREE_SPEC_TR_THM] (Q.GEN `x` (Q.GEN `s` th'))
-  val th' = RW1 [INSERT_SING_UNION] th'
-  val th' = Q.GEN `tree` (Q.GEN `C'` (DISCH_ALL th'))
-  val th' = MATCH_MP ARM_PROC_RECURSION th'
-  val th' = Q.SPEC `tree` th'  
-  val rws = [EVAL ``(w2w (0w:word8)):word12 << 2``,
-             EVAL ``(w2w (1w:word8)):word12 << 2``,
-             EVAL ``(w2w (2w:word8)):word12 << 2``,
-             EVAL ``(2w:word12) << 2``]
-  val result_TR = RW rws th'
- 
-  val rw = RW [SUM_BTREE_SPEC_TR_THM,SUM_BTREE_SPEC_THM]
+    ``(!t1 y t2. (tree = Leaf) \/ (tree = Node (t1,y,t2)) ==> P) ==> P``,
+    Cases_on `tree` \\ REWRITE_TAC [] \\ Cases_on `p` \\ Cases_on `r` \\ SRW_TAC [] [])
+  val th = (Q.GEN `t1` o Q.GEN `y` o Q.GEN `t2`) th
+  val th = MATCH_MP lemma th
+  in th end;
 
-in (rw result,rw result_TR) end;
+val ARM_SUM_BTREE_PROCEDURE_TR = let
+  val th = Q.INST [`lr`|->`q`] case1234_tr'
+  val th = MOVE_STAR_RULE `p*q*r` `p*r*q` th
+  val th = (Q.GEN `ax` o Q.GEN `sum` o Q.GEN `sp` o Q.GEN `q`) th
+  val th1 = RW [ARM_PROC_THM,STAR_ASSOC] ARM_PROCS_def
+  val th = RW [GSYM th1] (RW1 [ARM_PROG_EXTRACT_CODE] th)
+  val th2 = RW [emp_STAR] (Q.SPEC `emp` SUM_BTREE_SPEC'_def)
+  val th = RW [GSYM th2,GSYM SUM_BTREE_SPEC_TR_def] th
+  val th = RW1 [INSERT_SING_UNION] th
+  val th = MATCH_MP ARM_PROC_RECURSION ((Q.GEN `tree` o Q.GEN `C'` o DISCH_ALL) th)
+  val th = Q.SPEC `tree` th
+  in RW [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC'_def,emp_STAR] th end;
   
 
 (* export ready examples *)
@@ -1354,141 +1498,10 @@ in (rw result,rw result_TR) end;
 val _ = save_thm("ARM_FAC1_PROGRAM",ARM_FAC1_PROGRAM);
 val _ = save_thm("ARM_FAC_PROGRAM",ARM_FAC_PROGRAM);
 val _ = save_thm("ARM_GCD_PROGRAM",ARM_GCD_PROGRAM);
+val _ = save_thm("ARM_GCD_PROGRAM_FIXED",ARM_GCD_PROGRAM_FIXED);
+val _ = save_thm("ARM_GCD_PROGRAM_BETTER",ARM_GCD_PROGRAM_BETTER);
 val _ = save_thm("ARM_SUM_BTREE_PROCEDURE",ARM_SUM_BTREE_PROCEDURE);
 val _ = save_thm("ARM_SUM_BTREE_PROCEDURE_TR",ARM_SUM_BTREE_PROCEDURE_TR);
-
-(*
-
-val show_code = ref true
-
-show_code := false
-
-fun print_ARM_PROG sys (gl,gc,gr) d pps t = 
-  let
-    val _ = if !show_code then raise term_pp_types.UserPP_Failed else d
-    open Portable term_pp_types
-    val (P,cs,C,Q,Z) = dest_ARM_PROG t
-    val dgrav = Prec (29,"")
-    val dgravs = (dgrav,dgrav,dgrav)
-  in
-    begin_block pps INCONSISTENT 0;
-    add_string pps "ARM_PROG";
-    add_break pps (1,0);
-    sys dgravs (d - 1) P;
-    add_break pps (1,0);
-    add_string pps "<code>";
-    add_break pps (1,0);
-    sys dgravs (d - 1) Q;
-    add_break pps (1,0);
-    sys (dgrav,dgrav,gr) (d - 1) Z;
-    end_block pps
-  end handle HOL_ERR _ => raise term_pp_types.UserPP_Failed;
-
-temp_add_user_printer ({Tyop = "bool", Thy = "min"}, print_ARM_PROG);
-
-ARM_GCD_PROGRAM;
-ARM_PROG_FRAME;
-
-*)
-
-val ARM_PROG_PUSH_COND = prove(
-  ``ARM_PROG (P * cond c) cs C Q Z ==> ARM_PROG (P * cond c) cs C (Q * cond c) Z``,
-  SIMP_TAC (std_ss++sep_ss) [ARM_PROG_MOVE_COND]);
-
-val PUSH_COND = MATCH_MP ARM_PROG_PUSH_COND;
-
-val DIV_BOUNDS = prove(
-  ``!k. 0 < k ==> !m n. (m DIV k = n) = (n*k <= m /\ m < n*k+k)``,
-  REPEAT STRIP_TAC \\ EQ_TAC \\ STRIP_TAC
-  THEN1 (METIS_TAC [DIVISION,LESS_EQ_ADD,LT_ADD_LCANCEL])
-  \\ `?l. m = n*k+l` by METIS_TAC [LESS_EQ_EXISTS]  
-  \\ FULL_SIMP_TAC bool_ss []
-  \\ FULL_SIMP_TAC std_ss [DIV_MULT,GSYM LT_ADD_LCANCEL]);
-
-val BIT_32_EQ_LE = prove( 
-  ``!x:word32 y:word32. BIT 32 (w2n x + w2n y) = 2**32 <= w2n x + w2n y``,
-  Cases_word
-  \\ Cases_word
-  \\ REWRITE_TAC [BIT_def,BITS_def,MOD_2EXP_def,DIV_2EXP_def]
-  \\ FULL_SIMP_TAC std_ss [w2n_n2w]
-  \\ FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [dimword_def]
-  \\ `0 < 2 /\ 0 < 4294967296` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss [DIV_MOD_MOD_DIV]
-  \\ `n + n' < 8589934592` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss [LESS_MOD,DIV_BOUNDS]);
-  
-val POST_LEMMA = prove(
-  ``!x:word32 y:word32. 
-        (if BIT 32 (w2n x + w2n y) then ~0w else x + y) =
-        n2w (MIN (w2n x + w2n y) (2**32-1))``,
-  Cases_word \\ Cases_word
-  \\ ASM_SIMP_TAC std_ss [w2n_n2w,BIT_32_EQ_LE,EVAL ``~(0w:word32)``,word_add_n2w]
-  \\ REWRITE_TAC [GSYM (EVAL ``SUC 4294967295``),GSYM LESS_EQ,MIN_DEF]
-  \\ Cases_on `4294967295 < n + n'`
-  \\ ASM_REWRITE_TAC [MIN_DEF]
-  THEN1 (`~(n + n' < 4294967295)` by DECIDE_TAC \\ ASM_REWRITE_TAC [])
-  \\ Cases_on `n + n' < 4294967295` \\ ASM_REWRITE_TAC []
-  \\ `n + n' = 4294967295` by DECIDE_TAC \\ ASM_REWRITE_TAC []);
-
-val cut_add_def = Define `cut_add x y = n2w (MIN (w2n x + w2n y) (2 ** 32 - 1))`;
-
-val CUT_ADD_PROGRAM = let
-
-  val adds = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `T` `AL`) arm_ADD2
-  val adds = FST_PROG2 (SET_AM `OneReg` adds)
-  val adds = Q.INST [`a`|->`0w`,`b`|->`1w`] adds
-  val adds1 = APP_FRAME `cond ~(BIT 32 (w2n (x:word32) + w2n (y:word32)))` adds
-  val adds2 = APP_FRAME `cond (BIT 32 (w2n (x:word32) + w2n (y:word32)))` adds
-
-  val movcc = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `CC`) arm_MOV2
-  val movcc = Q.INST [`a`|->`1w`,`b`|->`0w`] (SET_AM `OneReg` movcc)
-  val movcc1 = PUSH_COND (FST_PROG2 movcc)
-  val movcc1 = MOVE_STAR_RULE `b*a*s*c` `a*b*s*c` movcc1
-  val movcc2 = RW [] (PUSH_COND (SND_PROG2 movcc))
-  val movcc2 = RW [STAR_ASSOC] (RW1 [STAR_COMM] (APP_FRAME `R 0w x * R 1w y` movcc2))
-    
-  val mvncs = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `F` `CS`) arm_MVN1
-  val mvncs = (Q.INST [`a`|->`0w`] o SET_AM `Imm 0w`) mvncs
-  val mvncs = SIMP_RULE std_ss [EVAL ``(w2w (0w:word8)):word32``] mvncs
-  val mvncs1 = HIDE_POST1 (SND_PROG2 mvncs)
-  val mvncs1 = APP_FRAME `R 0w x * R 1w y` mvncs1
-  val mvncs1 = RW [STAR_ASSOC] (RW1 [STAR_COMM] mvncs1)
-  val mvncs2 = FST_PROG2 mvncs
-  val mvncs2 = APP_FRAME `R 1w y` (HIDE_POST1 (FST_PROG2 mvncs))
-  val mvncs2 = POST1_MOVE_STAR `x*y*z` `x*z*y` mvncs2
-  val mvncs2 = PRE_MOVE_STAR `x*y*c*z` `x*z*y*c` mvncs2
-
-  val th1 = MATCH_COMPOSE adds1 movcc1
-  val th2 = MATCH_COMPOSE adds2 movcc2
-  val th1 = MATCH_COMPOSE th1 mvncs1
-  val th2 = MATCH_COMPOSE th2 mvncs2
-
-  val lemma = prove(
-    ``ARM_PROG (P * cond ~c) cs C (Q * Q' y) Z ==>
-      ARM_PROG (P * cond c) cs C (Q * Q' x) Z ==>
-      ARM_PROG P cs C (Q * Q' (if c then x else y)) Z``,  
-    Cases_on `c` \\ SIMP_TAC (std_ss++sep_ss) [])
-    
-  val th1 = POST1_MOVE_STAR `x*y*s` `y*s*x` th1
-  val th2 = POST1_MOVE_STAR `x*y*s` `y*s*x` th2
-  val th = MATCH_MP (MATCH_MP lemma th1) th2
-  val th = POST1_MOVE_STAR `y*s*x` `x*y*s` th
-  val th = HIDE_STATUS (RW [POST_LEMMA] th)
-  val th = RW [GSYM cut_add_def] th
-
-  val ret = (SIMP_RULE (srw_ss()++sep_ss) [] o SET_SC `T` `AL`) arm_MOV_PC
-  val ret = (HIDE_STATUS o HIDE_POST o FST_PROG2) ret
-  val ret = Q.INST [`a`|->`14w`,`x`|->`lr`] ret
-  val ret = RW1 [STAR_COMM] ret
-  val ret = APP_FRAME `R 0w x * R 1w y` ret
-  val ret = RW [STAR_ASSOC] (RW1 [STAR_COMM] ret)
-  val th = APP_FRAME `R30 14w lr` th
-
-  val th = MATCH_COMPOSE th ret
-  val th = RW1 [ARM_PROG_EXTRACT_CODE] th
-  val th = RW [GSYM ARM_PROC_THM] (Q.GEN `lr` th)    
-
-in th end;
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -1496,7 +1509,7 @@ in th end;
 (* ----------------------------------------------------------------------------- *)
 
 val th = SET_AM `am4_FA F` arm_STM
-val th = Q.INST [`xs`|->`[(b1,y1);(b2,y2);(b3,y3);(b4,y4)]`] th
+val th = Q.INST [`xs`|->`[(b1,y1);(b2,y2);(b3,y3)]`] th
 val th = REWRITE_RULE  [blank_ms_def,LENGTH,ADDR_MODE4_ADDR_def,ADDR_MODE4_ADDR'_def,
               ADDR_MODE4_WB'_def,ADDR_MODE4_UP_def,MAP,ADDR_MODE4_WB_def,
               ADDR_MODE4_wb_def,xR_list_def,STAR_ASSOC] th
@@ -1504,6 +1517,8 @@ val th = REWRITE_RULE [ADD1,GSYM word_add_n2w,WORD_SUB_PLUS,WORD_SUB_ADD] th
 val th = SIMP_RULE arith_ss [GSYM WORD_SUB_PLUS,word_add_n2w,WORD_SUB_RZERO] th
 val th = SIMP_RULE (std_ss++sep_ss) [MAP,xR_list_def,STAR_ASSOC,ADDR_MODE4_CMD_def,GSYM WORD_ADD_ASSOC,word_add_n2w] th
 
+val th = Q.INST [`b1`|->`0w`,`b2`|->`1w`,`b3`|->`2w`] th
+val th = RW [EVAL ``reg_values [(0w:word4,y1); (1w,y2); (2w,y3)]``,ms_def,STAR_ASSOC,emp_STAR] th
 
 
 
