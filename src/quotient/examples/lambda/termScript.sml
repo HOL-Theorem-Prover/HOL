@@ -84,7 +84,7 @@ val _ = save_thm("term1_cases", term1_cases);
 val MAX =
     new_infixr_definition
     ("MAX",
-     (--`$MAX x y = (x < y => y | x)`--),
+     (--`$MAX x y = (if x < y then y else x)`--),
      450);
 
 
@@ -166,14 +166,14 @@ val subs = ty_antiq( ==`:(var # 'a term1) list`== );
 val SUB1_def = 
     Define
     `(SUB1 (CONS p s) y = let (x, c:'a term1) = p in 
-                                (y = x => c | SUB1 s y)) /\
+                                (if y = x then c else SUB1 s y)) /\
      (SUB1 NIL y = Var1 y)`;
 
 val SUB1 = store_thm
    ("SUB1",
     (--`(!y. SUB1 [] y = (Var1 y :'a term1)) /\
         (!y x (c :'a term1) s.
-          SUB1 ((x,c) :: s) y = (y = x => c | SUB1 s y))`--),
+          SUB1 ((x,c) :: s) y = (if y = x then c else SUB1 s y))`--),
     MP_TAC SUB1_def
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
     THEN CONV_TAC (DEPTH_CONV let_CONV)
@@ -187,7 +187,7 @@ val vsubst1_def =
     xDefine "vsubst1"
        `($// NIL ys = NIL) /\
         ($// (CONS (x:var) xs) ys =
-              (ys = [] => [] |
+              (if ys = [] then [] else
                           CONS (x, (Var1 (HD ys) :'a term1))
                                ($// xs (TL ys))))`;
 
@@ -262,7 +262,7 @@ val SUB_APPEND_vsubst1 = store_thm
     (--`!xs ys xs' ys' x.
          (LENGTH xs = LENGTH ys) ==>
          (SUB1 (APPEND xs xs' // APPEND ys ys') x :'a term1 =
-          ((x IN SL xs) => SUB1 (xs // ys) x | SUB1 (xs' // ys') x))`--),
+          (if (x IN SL xs) then SUB1 (xs // ys) x else SUB1 (xs' // ys') x))`--),
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[SL,IN]
     THENL

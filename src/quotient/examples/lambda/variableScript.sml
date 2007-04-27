@@ -620,7 +620,7 @@ val variant_mk_variant_not_ident = store_thm
 val variant_THM = store_thm
    ("variant_THM",
     (--`!x s. FINITE s ==>
-              (variant x s = (x IN s => variant (mk_variant x 1) s  |  x))`--),
+              (variant x s = (if x IN s then variant (mk_variant x 1) s  else  x))`--),
     REPEAT STRIP_TAC
     THEN COND_CASES_TAC
     THEN MATCH_MP_TAC VAR_EQ_IMP

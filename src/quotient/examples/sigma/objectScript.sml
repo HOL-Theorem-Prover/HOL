@@ -131,7 +131,7 @@ val _ = save_thm ("method1_cases", method1_cases);
 val MAX =
     new_infixr_definition
     ("MAX",
-     (--`$MAX x y = (x < y => y | x)`--),
+     (--`$MAX x y = (if x < y then y else x)`--),
      450);
 
 
@@ -234,13 +234,13 @@ val FINITE_FV_object1 = store_thm
 val SUB1_def = 
     Define
     `(SUB1 (CONS p s) y = let (x,c) = p in 
-                                (y = x => c | SUB1 s y)) /\
+                                (if y = x then c else SUB1 s y)) /\
      (SUB1 NIL y = OVAR1 y)`;
 
 val SUB1 = store_thm
    ("SUB1",
     (--`(!y. SUB1 [] y = OVAR1 y) /\
-        (!y x c s. SUB1 ((x,c) :: s) y = (y = x => c | SUB1 s y))`--),
+        (!y x c s. SUB1 ((x,c) :: s) y = (if y = x then c else SUB1 s y))`--),
     MP_TAC SUB1_def
     THEN ONCE_REWRITE_TAC[GSYM PAIR]
     THEN CONV_TAC (DEPTH_CONV let_CONV)
@@ -254,7 +254,7 @@ val SUB1 = store_thm
 val vsubst1_def =
     xDefine "vsubst1"
        `($// NIL ys = NIL) /\
-        ($// (CONS (x:var) xs) ys = (ys = [] => [] |
+        ($// (CONS (x:var) xs) ys = (if ys = [] then [] else
                                                 CONS (x, OVAR1 (HD ys))
                                                      ($// xs (TL ys))))`;
 
@@ -330,7 +330,7 @@ val SUB_APPEND_vsubst1 = store_thm
     (--`!xs ys xs' ys' x.
          (LENGTH xs = LENGTH ys) ==>
          (SUB1 (APPEND xs xs' // APPEND ys ys') x =
-          ((x IN SL xs) => SUB1 (xs // ys) x | SUB1 (xs' // ys') x))`--),
+          (if (x IN SL xs) then SUB1 (xs // ys) x else SUB1 (xs' // ys') x))`--),
     LIST_INDUCT_TAC
     THEN REWRITE_TAC[SL,IN]
     THENL
@@ -902,8 +902,8 @@ val invoke_method1_def = Define
 
 val invoke_dict1_def = Define
    `(invoke_dict1 (CONS e d) o' lb = let ((l:string), m) = e
-                                      in (l = lb => invoke_method1 m o'
-                                                  | invoke_dict1 d o' lb))  /\
+                                      in (if l = lb then invoke_method1 m o'
+                                                    else invoke_dict1 d o' lb))  /\
     (invoke_dict1 (NIL) o' lb       = obj1_0)`
 handle e => Raise e;
 
@@ -911,8 +911,8 @@ val invoke_dict1 = store_thm
    ("invoke_dict1",
     (--`(!l m d o' lb.
           invoke_dict1 (CONS (l, m) d) o' lb =
-                        (l = lb => invoke_method1 m o'
-                                 | invoke_dict1 d o' lb)) /\
+                        (if l = lb then invoke_method1 m o'
+                                   else invoke_dict1 d o' lb)) /\
         (!o' lb. invoke_dict1 (NIL) o' lb = obj1_0)`--),
     REWRITE_TAC[invoke_dict1_def]
     THEN CONV_TAC (DEPTH_CONV let_CONV)
@@ -934,16 +934,16 @@ val invoke1 = store_thm
 val update_dict1_def = Define
    `(update_dict1 (CONS e d) (lb:string) (mth:method1) =
               let (l,m) = (e:^entry1) in
-                    (l = lb =>          (update_dict1 d lb mth)
-                             |  (CONS e (update_dict1 d lb mth)) ))   /\
+                    (if l = lb then          (update_dict1 d lb mth)
+                               else  (CONS e (update_dict1 d lb mth)) ))   /\
     (update_dict1 (NIL) lb mth      = NIL)`;
 
 val update_dict1 = store_thm
    ("update_dict1",
     (--`(!l m (d:^dict1) lb mth.
           update_dict1 (CONS (l, m) d) lb mth =
-                    (l = lb =>               (update_dict1 d lb mth)
-                             |  (CONS (l, m) (update_dict1 d lb mth)) ))   /\
+                    (if l = lb then               (update_dict1 d lb mth)
+                               else  (CONS (l, m) (update_dict1 d lb mth)) ))   /\
         (!lb mth.
           update_dict1 (NIL) lb mth = NIL)`--),
     REWRITE_TAC[update_dict1_def]
