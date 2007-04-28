@@ -208,6 +208,17 @@ fun mk_set [] = []
  *---------------------------------------------------------------------------*)
 
 local open Defn numSyntax
+(* fun is_word ty = 
+    case total mk_thy_type{Tyop = "cart",Thy="fcp",Args=[bool,alpha]}
+     of SOME pty => Lib.can (match_type pty) ty
+      | NONE => false
+ fun tysize ty = 
+    if is_word ty 
+      then fst(TypeBase.size_of ty)
+      else TypeBasePure.type_size (TypeBase.theTypeBase()) ty
+*)
+ fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
+ fun size_app v = mk_comb(tysize (type_of v),v)
 in
 fun guessR defn =
  if null (tcs_of defn) then []
@@ -216,8 +227,6 @@ fun guessR defn =
    of NONE => []
     | SOME R =>
        let val domty  = fst(dom_rng(type_of R))
-           val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
-           fun size_app v = mk_comb(tysize (type_of v),v)
            val (_,tcs) = Lib.pluck isWFR (tcs_of defn)
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
