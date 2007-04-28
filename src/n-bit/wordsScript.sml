@@ -2368,6 +2368,34 @@ fun mk_index i =
     [EmitML.MLSTRUCT w, EmitML.MLSIG w]
   end;
 
+
+val _ = adjoin_to_theory
+{sig_ps = NONE,
+ struct_ps = SOME
+ (fn ppstrm => let
+   val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
+ in
+   S "val _ = TotalDefn.default_termination_simps := ";
+   S "    WORD_PRED_THM :: !TotalDefn.default_termination_simps";
+   S " ";
+   S "val _ = ";
+   S "  let open Lib boolSyntax numSyntax";
+   S "      val word_type = type_of (fst(dest_forall(concl word_nchotomy)))";
+   S "      val w2n_tm = fst(strip_comb(lhs(snd(dest_forall(concl w2n_def)))))";
+   S "      val w2n_abs = list_mk_abs([mk_var(\"v1\",bool-->num),";
+   S "                                  mk_var(\"v2\",alpha-->num),";
+   S "                                  mk_var(\"v3\",word_type)],";
+   S "                                 mk_comb(w2n_tm,mk_var(\"v3\",word_type)))";
+   S "  in";
+   S "  TypeBase.write";
+   S "  [TypeBasePure.mk_nondatatype_info";
+   S "   (word_type, ";
+   S "     {nchotomy = SOME word_nchotomy,";
+   S "      size = SOME (w2n_abs,CONJUNCT1(Drule.SPEC_ALL boolTheory.AND_CLAUSES)),";
+   S "      encode=NONE})]";
+   S "  end;"
+ end)};
+
 val _ = ConstMapML.insert ``n2w_itself``;
 
 (*---------------------------------------------------------------------------*)
