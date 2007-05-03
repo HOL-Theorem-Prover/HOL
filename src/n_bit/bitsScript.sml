@@ -1000,7 +1000,8 @@ val LOG2 = new_specification ("LOG2", ["LOG2"], LOG2_exists);
 val LOG2_LBOUND = prove(
   `!m. 0 < m ==> 2 ** LOG2 m <= m`,
   REPEAT STRIP_TAC THEN IMP_RES_TAC LOG2 THEN
-  POP_ASSUM (fn th => CONV_TAC (RAND_CONV (K th)))THEN DECIDE_TAC)
+  POP_ASSUM (fn th => CONV_TAC (RAND_CONV (K th))) THEN DECIDE_TAC)
+
 val LOG2_UBOUND = prove(
   `!m. 0 < m ==> m < 2 ** (LOG2 m + 1)`,
   REPEAT STRIP_TAC THEN IMP_RES_TAC LOG2 THEN
@@ -1071,7 +1072,9 @@ val lem4 = prove(
     THEN Cases_on `q` THEN FULL_SIMP_TAC arith_ss []
     THEN `(SUC n + 2 ** SUC n') MOD 2 ** n' < 2 ** n'`
       by ASM_SIMP_TAC arith_ss [MOD_2EXP_LT]
-    THEN FULL_SIMP_TAC arith_ss [ADD1,EXP_ADD]
+    THEN NTAC 2 (POP_ASSUM MP_TAC) 
+    THEN Q.SPEC_TAC (`(SUC n + 2 ** SUC n') MOD 2 ** n'`, `k`)
+    THEN RW_TAC arith_ss [EXP]
 );
 
 val LOG2_UNIQUE = store_thm("LOG2_UNIQUE",
