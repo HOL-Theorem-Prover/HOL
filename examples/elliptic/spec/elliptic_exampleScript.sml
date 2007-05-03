@@ -62,13 +62,6 @@ val Suff = Q_TAC SUFF_TAC;
 (* Extensions to HOL theories to define the ex_ constants.                   *)
 (* ------------------------------------------------------------------------- *)
 
-val w2n_lsr = store_thm ("w2n_lsr",
-  ``(w2n (w >>> m)) = (w2n w DIV 2**m)``,
-  wordsLib.Cases_on_word `w`
-  ++ SIMP_TAC std_ss [ONCE_REWRITE_RULE [GSYM w2n_11] word_lsr_n2w,
-       simpLib.SIMP_PROVE arith_ss [MIN_DEF] ``MIN a (a + b) = a``,
-       word_bits_n2w,w2n_n2w,MOD_DIMINDEX,bitTheory.BITS_COMP_THM2]
-  ++ SIMP_TAC std_ss [bitTheory.BITS_THM2]);
 
 (* ========================================================================= *)
 (* Smallest elliptic curve example to be compiled.                           *)
@@ -188,57 +181,39 @@ val ex1_field_sub_def = Define
   `ex1_field_sub (x : word32, y : word32) =
    ex1_field_add (x, ex1_field_neg y)`;
 
-val (ex1_field_mult_aux_def,ex1_field_mult_aux_ind) = Defn.tprove
-  (Hol_defn "ex1_field_mult_aux"
+val ex1_field_mult_aux_def = 
+ Define 
    `ex1_field_mult_aux (x : word32, y : word32, acc : word32) =
-    if y = 0w then acc
-    else
-      let x' = ex1_field_add (x,x) in
-      let y' = y >>> 1 in
-      let acc' = if y && 1w = 0w then acc else ex1_field_add (acc,x) in
-      ex1_field_mult_aux (x',y',acc')`,
-   WF_REL_TAC `measure (\(x,y,a). w2n y)`
-   ++ RW_TAC arith_ss [w2n_lsr]
-   ++ Know `~(w2n y = 0)` >> METIS_TAC [n2w_w2n]
-   ++ Q.SPEC_TAC (`w2n y`,`n`)
-   ++ POP_ASSUM (K ALL_TAC)
-   ++ RW_TAC arith_ss []
-   ++ Know `2 * (n DIV 2) <= n`
-   >> PROVE_TAC [TWO,DIV_THEN_MULT]
-   ++ DECIDE_TAC);
+     if y = 0w then acc
+     else 
+       let x' = ex1_field_add (x,x) in
+       let y' = y >>> 1 in
+       let acc' = if y && 1w = 0w then acc else ex1_field_add (acc,x) 
+       in
+         ex1_field_mult_aux (x',y',acc')`;
+
 
 val ex1_field_mult_def = Define
-  `ex1_field_mult (x : word32, y : word32) = ex1_field_mult_aux (x,y,0w)`;
+   `ex1_field_mult (x : word32, y : word32) = ex1_field_mult_aux (x,y,0w)`;
 
-val (ex1_field_exp_aux_def,ex1_field_exp_aux_ind) = Defn.tprove
-  (Hol_defn "ex1_field_exp_aux"
+val ex1_field_exp_aux_def = 
+ Define
    `ex1_field_exp_aux (x : word32, n : word32, acc : word32) =
-    if n = 0w then acc
-    else
-      let x' = ex1_field_mult (x,x) in
-      let n' = n >>> 1 in
-      let acc' = if n && 1w = 0w then acc else ex1_field_mult (acc,x) in
-      ex1_field_exp_aux (x',n',acc')`,
-   WF_REL_TAC `measure (\(x,n,a). w2n n)`
-   ++ RW_TAC arith_ss [w2n_lsr]
-   ++ Know `~(w2n n = 0)` >> METIS_TAC [n2w_w2n]
-   ++ Q.SPEC_TAC (`w2n n`,`n`)
-   ++ POP_ASSUM (K ALL_TAC)
-   ++ RW_TAC arith_ss []
-   ++ Know `2 * (n DIV 2) <= n`
-   >> PROVE_TAC [TWO,DIV_THEN_MULT]
-   ++ DECIDE_TAC);
+      if n = 0w then acc
+      else
+        let x' = ex1_field_mult (x,x) in
+        let n' = n >>> 1 in
+        let acc' = if n && 1w = 0w then acc else ex1_field_mult (acc,x) 
+        in ex1_field_exp_aux (x',n',acc')`;
 
 val ex1_field_exp_def = Define
-  `ex1_field_exp (x : word32, n : word32) = ex1_field_exp_aux (x,n,1w)`;
+   `ex1_field_exp (x : word32, n : word32) = ex1_field_exp_aux (x,n,1w)`;
 
 val ex1_field_inv_def = Define
-  `ex1_field_inv (x : word32) =
-   ex1_field_exp (x, n2w (example1_prime - 2))`;
+   `ex1_field_inv (x : word32) = ex1_field_exp (x, n2w (example1_prime - 2))`;
 
 val ex1_field_div_def = Define
-  `ex1_field_div (x : word32, y : word32) =
-   ex1_field_mult (x, ex1_field_inv y)`;
+   `ex1_field_div (x:word32, y:word32) = ex1_field_mult (x, ex1_field_inv y)`;
 
 (* ------------------------------------------------------------------------- *)
 (* Elliptic curve operations in terms of the above field operations.         *)
@@ -253,12 +228,13 @@ val ex1_curve_neg_def = Define
    let $- = CURRY ex1_field_sub in
    let $* = CURRY ex1_field_mult in
    let a1 = ex1_field_elt example1_curve.a1 in
-   let a3 = ex1_field_elt example1_curve.a3 in
-   if (x1,y1) = ex1_curve_zero then ex1_curve_zero
-   else
-     let x = x1 in
-     let y = ~y1 - a1 * x1 - a3 in
-     (x,y)`;
+   let a3 = ex1_field_elt example1_curve.a3 
+   in
+     if (x1,y1) = ex1_curve_zero 
+       then ex1_curve_zero
+       else let x = x1 in
+            let y = ~y1 - a1 * x1 - a3 
+            in (x,y)`;
 
 val ex1_curve_double_def = Define
   `ex1_curve_double (x1,y1) =
@@ -273,17 +249,18 @@ val ex1_curve_double_def = Define
    let a2 = ex1_field_elt example1_curve.a2 in
    let a3 = ex1_field_elt example1_curve.a3 in
    let a4 = ex1_field_elt example1_curve.a4 in
-   let a6 = ex1_field_elt example1_curve.a6 in
-   if (x1,y1) = ex1_curve_zero then ex1_curve_zero
-   else
-     let d = & 2 * y1 + a1 * x1 + a3 in
-     if d = ex1_field_zero then ex1_curve_zero
+   let a6 = ex1_field_elt example1_curve.a6 
+   in
+     if (x1,y1) = ex1_curve_zero then ex1_curve_zero
      else
-       let l = (& 3 * x1 ** 2w + & 2 * a2 * x1 + a4 - a1 * y1) / d in
-       let m = (~(x1 ** 3w) + a4 * x1 + & 2 * a6 - a3 * y1) / d in
-       let x = l ** 2w + a1 * l - a2 - &2 * x1 in
-       let y = ~(l + a1) * x - m - a3 in
-       (x,y)`;
+       let d = & 2 * y1 + a1 * x1 + a3 
+       in if d = ex1_field_zero then ex1_curve_zero
+          else
+            let l = (& 3 * x1 ** 2w + & 2 * a2 * x1 + a4 - a1 * y1) / d in
+            let m = (~(x1 ** 3w) + a4 * x1 + & 2 * a6 - a3 * y1) / d in
+            let x = l ** 2w + a1 * l - a2 - &2 * x1 in
+            let y = ~(l + a1) * x - m - a3 
+            in (x,y)`;
 
 val ex1_curve_add_def = Define
   `ex1_curve_add (x1,y1,x2,y2) =
@@ -312,30 +289,25 @@ val ex1_curve_add_def = Define
        let y = ~(l + a1) * x - m - a3 in
        (x,y)`;
 
-val (ex1_curve_mult_aux_def,ex1_curve_mult_aux_ind) = Defn.tprove
-  (Hol_defn "ex1_curve_mult_aux"
-   `ex1_curve_mult_aux (x : word32, y : word32, n : word32,
+val ex1_curve_mult_aux_def = 
+ Define
+  `ex1_curve_mult_aux (x : word32, y : word32, n : word32,
                        acc_x : word32, acc_y : word32) =
     if n = 0w then (acc_x,acc_y)
     else
       let (x',y') = ex1_curve_double (x,y) in
       let n' = n >>> 1 in
-      let (acc_x',acc_y') = if n && 1w = 0w then (acc_x,acc_y)
-                            else ex1_curve_add (x,y,acc_x,acc_y) in
-      ex1_curve_mult_aux (x',y',n',acc_x',acc_y')`,
-   WF_REL_TAC `measure (\(x,y,n,xa,ya). w2n n)`
-   ++ RW_TAC arith_ss [w2n_lsr]
-   ++ Know `~(w2n n = 0)` >> METIS_TAC [n2w_w2n]
-   ++ Q.SPEC_TAC (`w2n n`,`n`)
-   ++ POP_ASSUM_LIST (K ALL_TAC)
-   ++ RW_TAC arith_ss []
-   ++ Know `2 * (n DIV 2) <= n`
-   >> PROVE_TAC [TWO,DIV_THEN_MULT]
-   ++ DECIDE_TAC);
+      let (acc_x',acc_y') = 
+            if n && 1w = 0w then (acc_x,acc_y)
+            else ex1_curve_add (x,y,acc_x,acc_y) 
+      in 
+        ex1_curve_mult_aux (x',y',n',acc_x',acc_y')`;
 
-val ex1_curve_mult_def = Define
-  `ex1_curve_mult (x : word32, y : word32, n : word32) =
-   ex1_curve_mult_aux (x,y,n,0w,0w)`;
+
+val ex1_curve_mult_def = 
+ Define
+   `ex1_curve_mult (x:word32, y:word32, n:word32) 
+     = ex1_curve_mult_aux (x,y,n,0w,0w)`;
 
 (* ------------------------------------------------------------------------- *)
 (* Elliptic curve encryption and decryption functions.                       *)

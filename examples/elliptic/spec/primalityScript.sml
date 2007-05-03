@@ -62,10 +62,10 @@ val divides_mod_zero = store_thm
 (* Primality prover.                                                         *)
 (* ------------------------------------------------------------------------- *)
 
-val (nat_sqrt_def,nat_sqrt_ind) = Defn.tstore_defn
-  (Defn.Hol_defn "nat_sqrt"
-   `nat_sqrt n k = if n < k * k then k - 1 else nat_sqrt n (k + 1)`,
-   WF_REL_TAC `measure (\(n,k). (n + 1) - k)`
+val nat_sqrt_def = tDefine
+   "nat_sqrt"
+   `nat_sqrt n k = if n < k * k then k - 1 else nat_sqrt n (k + 1)`
+  (WF_REL_TAC `measure (\(n,k). (n + 1) - k)`
    ++ RW_TAC arith_ss [NOT_LESS]
    ++ Suff `k <= n` >> DECIDE_TAC
    ++ Cases_on `k = 0` >> RW_TAC arith_ss []
@@ -75,6 +75,8 @@ val (nat_sqrt_def,nat_sqrt_ind) = Defn.tstore_defn
    ++ CONJ_TAC >> RW_TAC arith_ss []
    ++ RW_TAC bool_ss [LE_MULT_RCANCEL]
    ++ DECIDE_TAC);
+
+val nat_sqrt_ind = fetch "-" "nat_sqrt_ind";
 
 val prime_checker_def = Define
   `prime_checker n i =
