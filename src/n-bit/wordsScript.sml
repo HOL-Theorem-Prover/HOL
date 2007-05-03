@@ -355,7 +355,7 @@ val ONE_LT_dimword = store_thm(
 val _ = export_rewrites ["ONE_LT_dimword"]
 
 val DIMINDEX_LT =
-  (GEN_ALL o CONJUNCT2 o SPEC_ALL o SIMP_RULE std_ss [DIMINDEX_GT_0] o
+  (GEN_ALL o CONJUNCT2 o SPEC_ALL o SIMP_RULE bool_ss [DIMINDEX_GT_0] o
    SPEC `^WL`) DIVISION;
 
 val EXISTS_HB = save_thm("EXISTS_HB",
@@ -492,7 +492,8 @@ val word_1_n2w = store_thm("word_1_n2w",
 val w2n_eq_0 = store_thm("w2n_eq_0",
   `(w2n w = 0) = (w = 0w)`,
   Q.SPEC_THEN `w` STRUCT_CASES_TAC word_nchotomy \\ SRW_TAC [][]);
-val _ = export_rewrites ["w2n_eq_0"]
+
+val _ = export_rewrites ["w2n_eq_0"];
 
 val word_add_n2w = store_thm("word_add_n2w",
   `!m n. n2w m + n2w n = n2w (m + n)`,
@@ -2234,6 +2235,29 @@ val WORD_PRED_THM = store_thm("WORD_PRED_THM",
   `!m:'a word. ~(m = 0w) ==> w2n (m - 1w) < w2n m`,
   REPEAT STRIP_TAC \\ IMP_RES_TAC SUC_WORD_PRED \\ DECIDE_TAC);
 
+val triv_exp = Q.prove
+(`!m. 0 < 2 **  m`,
+  Induct THEN RW_TAC arith_ss [EXP]);
+
+val ONE_LESS_TWO_EXP = Q.prove
+(`!m. 0<m ==> 1 < 2 ** m`,
+Cases THEN RW_TAC arith_ss [EXP] THEN 
+ `0 < 2 ** n` by METIS_TAC [triv_exp] THEN DECIDE_TAC);
+
+val w2n_lsr = store_thm ("w2n_lsr",
+  `!w m. w2n (w >>> m) = (w2n w) DIV (2**m)`,
+  Cases_word THEN 
+  SIMP_TAC std_ss [ONCE_REWRITE_RULE [GSYM w2n_11] word_lsr_n2w,
+       simpLib.SIMP_PROVE arith_ss [MIN_DEF] ``MIN a (a + b) = a``,
+       word_bits_n2w,w2n_n2w,MOD_DIMINDEX,bitTheory.BITS_COMP_THM2] THEN
+  SIMP_TAC std_ss [bitTheory.BITS_THM2]);
+
+val LSR_LESS = store_thm("LSR_LESS",
+  `!m y. ~(y = 0w) /\ 0<m ==> w2n (y >>> m) < w2n y`,
+ RW_TAC arith_ss [w2n_lsr] THEN
+ `~(w2n y = 0)` by METIS_TAC [n2w_w2n] THEN 
+ METIS_TAC [DIV_LESS,ONE_LESS_TWO_EXP, DECIDE ``0<x = ~(x=0)``]);
+
 val word_sub_w2n = store_thm("word_sub_w2n", 
   `!x:'a word y:'a word. y <=+ x ==> (w2n (x - y) = w2n x - w2n y)`,
   Cases_word' \\ Cases_word'
@@ -2284,7 +2308,7 @@ val WORD_ZERO_LT_SUB = prove(
   \\ `(0w < x - y) \/ (0w = x - y)` by ASM_REWRITE_TAC [GSYM WORD_LESS_OR_EQ]
   \\ METIS_TAC [WORD_EQ_SUB_ZERO,WORD_LESS_NOT_EQ]);
 
-val WORD_LT_SUB_UPPER = prove(
+val WORD_LT_SUB_UPPER = store_thm("WORD_LT_SUB_UPPER",
   `!x:'a word y. 0w < y /\ y < x ==> x - y < x`,
   REPEAT STRIP_TAC
   \\ IMP_RES_TAC WORD_LESS_TRANS
@@ -2375,8 +2399,8 @@ val _ = adjoin_to_theory
  (fn ppstrm => let
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
-   S "val _ = TotalDefn.default_termination_simps := ";
-   S "    WORD_PRED_THM :: !TotalDefn.default_termination_simps";
+   S "val _ = TotalDefn.termination_simps := ";
+   S "   LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps";
    S " ";
    S "val _ = ";
    S "  let open Lib boolSyntax numSyntax";
