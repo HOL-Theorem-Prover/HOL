@@ -117,7 +117,7 @@ val DIVISION_TWO = store_thm
    ++ DISCH_THEN (MP_TAC o Q.SPEC `n`)
    ++ RW_TAC std_ss [] <<
    [PROVE_TAC [MULT_COMM],
-    DECIDE_TAC]);
+    `n MOD 2 < 2` by RW_TAC arith_ss [] ++ DECIDE_TAC]);
 
 val DIV_TWO = store_thm
   ("DIV_TWO",
