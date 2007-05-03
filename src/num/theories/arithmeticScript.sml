@@ -1928,7 +1928,6 @@ val DIV_LESS_EQ = store_thm("DIV_LESS_EQ",
     REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
     MATCH_ACCEPT_TAC LESS_EQ_ADD]);
 
-
 (* ---------------------------------------------------------------------*)
 (* Now, show that the quotient and remainder are unique.                *)
 (*                                                                      *)
@@ -2301,6 +2300,10 @@ REWRITE_TAC [ONE] THEN REPEAT STRIP_TAC
     THEN REWRITE_TAC[POS_ADD,POS_MULT] THEN STRIP_TAC THENL
     [DISJ1_TAC THEN RULE_ASSUM_TAC (REWRITE_RULE[LESS_MONO_EQ]), ALL_TAC]
     THEN ASM_REWRITE_TAC[]]);
+
+val MOD_LESS = Q.store_thm("MOD_LESS",
+ `!m n. 0 < n ==> k MOD n < n`,
+ METIS_TAC [DIVISION]);
 
 val ADD_MODULUS = Q.store_thm("ADD_MODULUS",
 `(!n x. 0 < n ==> ((x + n) MOD n = x MOD n)) /\
@@ -2746,6 +2749,7 @@ val expbase_le_mono = prove(
   ASM_REWRITE_TAC [LE_MULT_LCANCEL, EXP_EQ_0, ONE, GSYM LESS_EQ,
                    ZERO_LT_EXP] THEN
   METIS_TAC [ONE, LESS_TRANS, LESS_0])
+
 val expbase_lt_mono = prove(
   ``1 < b /\ m < n ==> b ** m < b ** n``,
   STRIP_TAC THEN

@@ -129,7 +129,7 @@ val arithmetic_rewrites = [
 
    (* mods and divs *)
    X_MOD_Y_EQ_X, DIVMOD_ID, DIV_1, MOD_1, LESS_MOD, ZERO_MOD, MOD_MOD,
-   NUMERAL_MULT_EQ_DIV
+   NUMERAL_MULT_EQ_DIV, MOD_LESS, DIV_LESS
    ]
 end;
 
@@ -145,8 +145,6 @@ val ARITH_RWTS_ss =
 (*---------------------------------------------------------------------------*)
 
 val _ = BasicProvers.augment_srw_ss [REDUCE_ss, ARITH_RWTS_ss]
-
-
 
 
 

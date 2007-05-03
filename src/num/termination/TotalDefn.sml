@@ -5,107 +5,29 @@
 structure TotalDefn :> TotalDefn =
 struct
 
-open HolKernel Parse boolLib pairLib basicSize DefnBase;
+open HolKernel Parse boolLib pairLib basicSize DefnBase numSyntax
+     arithmeticTheory;
 
 val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
 
 (*---------------------------------------------------------------------------*)
-(* proper_subterm t1 t2 iff t1 is a proper subterm of t2                     *)
+(* Misc. stuff that should be in Lib probably                                *)
 (*---------------------------------------------------------------------------*)
-
-fun proper_subterm tm1 tm2 =
-  not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
-
-fun isWFR tm =
- (case dest_thy_const (fst (strip_comb tm))
-   of {Name="WF", Thy="relation",...} => true
-    | otherwise => false)
-  handle HOL_ERR _ => false;
-
-fun foo [] _  = raise ERR "foo" "empty arg."
-  | foo _ []  = raise ERR "foo" "empty arg."
-  | foo [x] Y = [(x,pairSyntax.list_mk_pair Y)]
-  | foo X [y] = [(pairSyntax.list_mk_pair X, y)]
-  | foo (x::rst) (y::rst1) = (x,y)::foo rst rst1;
-
-fun dest tm =
-  let val Ryx = (snd o strip_imp o snd o strip_forall) tm
-      val (Ry, x) = dest_comb Ryx
-      val y = rand Ry
-      open pairSyntax
-  in
-     foo (spine_pair y) (spine_pair x)
-  end;
 
 fun max [] m = m
   | max (h::t) m = max t (if h>m then h else m);
+
+fun take 0 L = []
+  | take n [] = raise ERR "take" "not enough elements"
+  | take n (h::t) = h::take (n-1) t;
 
 fun copies x =
   let fun repl 0 = []
         | repl n = x::repl (n-1)
   in repl
   end;
-
-fun fill n [] = copies false n
-  | fill n (h::t) = h::fill (n-1) t;
-
-fun rectangular L =
- let val lens = map length L
- in case mk_set lens
-     of []  => raise ERR "rectangular" "impossible"
-      | [x] => L
-      |  _  => map (fill (max lens 0)) L
- end;
-
-fun true_col L =
- if all null L then []
- else all I (map (Lib.trye hd) L)::true_col (map (Lib.trye tl) L);
-
-fun fix [] = []
-  | fix (true::t)  = true::map (fn x => false) t
-  | fix (false::t) = false::fix t;
-
-fun transp L =
-      if (all null L) then []
-      else exists I (map (Lib.trye hd) L)::transp (map (Lib.trye tl) L);
-
-fun projects L0 =
-  let val L = rectangular L0
-      val trues = true_col L
-  in
-    if exists I trues then fix trues else transp L
-  end;
-
-fun nth P [] _ N = rev N
-  | nth P (h::t) n N = nth P t (n+1) (if P h then n::N else N);
-
-fun strip_prod_ty [] _ = raise ERR "strip_prod_ty" ""
-  | strip_prod_ty [x] ty = [(x,ty)]
-  | strip_prod_ty (h::t) ty =
-     let val (x,y) = with_exn pairSyntax.dest_prod ty
-                          (ERR "strip_prod_ty" "expected a product type")
-     in  (h,x)::strip_prod_ty t y
-     end
-
-fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
-
-fun list_mk_prod_tyl L =
- let val (front,(b,last)) = front_last L
-     val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
-     val last' = (if b then tysize else K0) last
-     handle e => Raise (wrap_exn "TotalDefn" "last'" e);
-  in
-  itlist (fn (b,ty1) => fn M =>
-     let val x = mk_var("x",ty1)
-         val y = mk_var("y",fst(dom_rng (type_of M)))
-         val blagga = (if b then tysize else K0) ty1
-     in
-       mk_pabs(mk_pair(x,y),
-               numSyntax.mk_plus(mk_comb(blagga,x),mk_comb(M,y)))
-     end) front last'
- end
 
 (*---------------------------------------------------------------------------*)
 (* perms delivers all permutations of a list. By Peter Sestoft.              *)
@@ -119,9 +41,25 @@ local
       | cycle left mid (right as r::rr) tail res = 
         cycle (mid::left) r rr tail (accuperms (left @ right) (mid::tail) res)
 in
-    fun perms xs = accuperms xs [] []
-    fun permsn n = perms (List.tabulate(n, fn x => x+1))
+  fun perms xs = accuperms xs [] []
+  fun permsn n = perms (List.tabulate(n, fn x => x+1))
 end;
+
+(*---------------------------------------------------------------------------*)
+(* Remove duplicates in a set of terms, while keeping original order         *)
+(*---------------------------------------------------------------------------*)
+
+fun rm x [] = []
+  | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
+
+fun mk_term_set [] = []
+  | mk_term_set (h::t) = h::mk_set (rm h t);
+
+fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
+
+(*---------------------------------------------------------------------------*)
+(* Basic syntax for WF relations                                             *)
+(*---------------------------------------------------------------------------*)
 
 val inv_image_tm = prim_mk_const{Thy="relation",Name="inv_image"};
 
@@ -132,13 +70,16 @@ fun mk_inv_image(R,f) =
     list_mk_comb(inst[beta |-> ty1, alpha |-> ty2] inv_image_tm,[R,f])
   end;
 
-fun list_mk_lex []  = raise ERR "list_mk_lex" "empty list"
-  | list_mk_lex [x] = x
-  | list_mk_lex L   = end_itlist (curry pairSyntax.mk_lex) L;
+val WF_tm = prim_mk_const{Name = "WF", Thy="relation"};
 
-val nless_lex = list_mk_lex o copies numSyntax.less_tm;
+val isWFR = same_const WF_tm o fst o strip_comb;
 
-val strip_lex = strip_binop (total pairSyntax.dest_lex);
+fun K0 ty = mk_abs(mk_var("v",ty), numSyntax.zero_tm);
+
+fun get_WF tmlist = 
+   pluck isWFR tmlist
+    handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
+
 
 (*---------------------------------------------------------------------------*)
 (* Takes [v1,...,vn] [i_j,...,i_m], where  1 <= i_j <= i_m <= n and returns  *)
@@ -148,6 +89,12 @@ val strip_lex = strip_binop (total pairSyntax.dest_lex);
 (*                  (size_of(tyi)(vi), ..., size_of(tym)(vm)))               *)
 (*---------------------------------------------------------------------------*)
 
+fun list_mk_lex []  = raise ERR "list_mk_lex" "empty list"
+  | list_mk_lex [x] = x
+  | list_mk_lex L   = end_itlist (curry pairSyntax.mk_lex) L;
+
+val nless_lex = list_mk_lex o copies numSyntax.less_tm;
+
 fun mk_lex_reln argvars sizedlist arrangement = 
   let val lex_comb = nless_lex (length sizedlist)
       val pargvars = list_mk_pair argvars
@@ -155,9 +102,177 @@ fun mk_lex_reln argvars sizedlist arrangement =
      mk_inv_image (lex_comb, mk_pabs(pargvars,list_mk_pair arrangement))
   end;
 
-fun take 0 L = []
-  | take n [] = raise ERR "take" "not enough elements"
-  | take n (h::t) = h::take (n-1) t;
+
+(*---------------------------------------------------------------------------*)
+(* proper_subterm t1 t2 iff t1 is a proper subterm of t2                     *)
+(*---------------------------------------------------------------------------*)
+
+fun proper_subterm tm1 tm2 =
+  not(aconv tm1 tm2) andalso Lib.can (find_term (aconv tm1)) tm2;
+
+(*---------------------------------------------------------------------------*)
+(* Adjustable set of rewrites for doing termination proof.                   *)
+(*---------------------------------------------------------------------------*)
+
+val DIV_LESS_I = Q.prove
+(`!n d. 0 < n /\ 1 < d ==> I(n DIV d) < I(n)`,
+ REWRITE_TAC[DIV_LESS,combinTheory.I_THM]);
+
+val MOD_LESS_I = Q.prove
+(`!m n. 0 < n ==> I(k MOD n) < I(n)`,
+ REWRITE_TAC [MOD_LESS,combinTheory.I_THM]);
+
+val termination_simps =
+     ref [combinTheory.o_DEF,
+          combinTheory.I_THM,
+          prim_recTheory.measure_def,
+          relationTheory.inv_image_def,
+          pairTheory.LEX_DEF,
+          DIV_LESS_I,MOD_LESS_I];
+
+(*---------------------------------------------------------------------------*)
+(* Adjustable set of WF theorems for doing WF proofs.                        *)
+(*---------------------------------------------------------------------------*)
+
+val WF_thms = 
+ let open relationTheory prim_recTheory pairTheory
+ in
+   ref [WF_inv_image, WF_measure, WF_LESS, 
+        WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
+ end;
+
+
+val term_ss = 
+ let open simpLib infix ++
+ in boolSimps.bool_ss 
+    ++ pairSimps.PAIR_ss 
+    ++ numSimps.REDUCE_ss 
+    ++ numSimps.ARITH_RWTS_ss
+ end; 
+
+val term_dp_ss = 
+ let open simpLib infix ++
+ in term_ss ++ numSimps.ARITH_DP_ss
+ end; 
+
+
+(*---------------------------------------------------------------------------*)
+(*                                                                           *)
+(*---------------------------------------------------------------------------*)
+
+local
+fun foo [] _  = raise ERR "foo" "empty arg."
+  | foo _ []  = raise ERR "foo" "empty arg."
+  | foo [x] Y = [(x,pairSyntax.list_mk_pair Y)]
+  | foo X [y] = [(pairSyntax.list_mk_pair X, y)]
+  | foo (x::rst) (y::rst1) = (x,y)::foo rst rst1
+in
+fun dest tm =
+  let val Ryx = (snd o strip_imp o snd o strip_forall) tm
+      val (Ry, x) = dest_comb Ryx
+      val y = rand Ry
+      open pairSyntax
+  in
+     foo (spine_pair y) (spine_pair x)
+  end
+end;
+
+(*---------------------------------------------------------------------------*)
+(* Is a list-of-lists rectangular, filling in with false on short rows       *)
+(*---------------------------------------------------------------------------*)
+
+fun fill n [] = copies false n
+  | fill n (h::t) = h::fill (n-1) t;
+
+fun rectangular L =
+ let val lens = map length L
+ in case Lib.mk_set lens
+     of []  => raise ERR "rectangular" "impossible"
+      | [x] => L
+      |  _  => map (fill (max lens 0)) L
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* For each column, return true if every element is true.                    *)
+(*---------------------------------------------------------------------------*)
+
+fun apply_pred_to_cols P L =
+ if all null L then []
+ else P (map (Lib.trye hd) L)::apply_pred_to_cols P (map (Lib.trye tl) L);
+
+(*---------------------------------------------------------------------------*)
+(* For each column, return true if every element is true.                    *)
+(* For each column, if any entry in the column is true, then return true.    *)
+(*---------------------------------------------------------------------------*)
+
+val all_true_in_cols = apply_pred_to_cols (all I);
+val some_true_in_cols = apply_pred_to_cols (exists I);
+
+(*---------------------------------------------------------------------------*)
+(* After first true in a list, turn everything false.                        *)
+(*---------------------------------------------------------------------------*)
+
+fun fix [] = []
+  | fix (true::t)  = true::map (K false) t
+  | fix (false::t) = false::fix t;
+
+(*---------------------------------------------------------------------------*)
+(* Make L0 rectangular then try to find and mark first column where          *)
+(* predicate holds. If there is such, mark all later cols false. Otherwise,  *)
+(* collect all columns where predicate holds at least once.                  *)
+(*---------------------------------------------------------------------------*)
+
+fun projects L0 =
+  let val L = rectangular L0
+      val col_trues = all_true_in_cols L
+  in
+    if exists I col_trues then fix col_trues else some_true_in_cols L
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Collect all columns where some change happens.                            *)
+(*---------------------------------------------------------------------------*)
+
+fun column_summaries L = some_true_in_cols (rectangular L);
+  
+(*---------------------------------------------------------------------------*)
+(* Identify columns where P holds                                            *)
+(*---------------------------------------------------------------------------*)
+
+fun nth P [] _ N = rev N
+  | nth P (h::t) n N = nth P t (n+1) (if P h then n::N else N);
+
+(*---------------------------------------------------------------------------*)
+(* Take apart a product type with respect to a list of terms                 *)
+(*---------------------------------------------------------------------------*)
+
+fun strip_prod_ty [] _ = raise ERR "strip_prod_ty" ""
+  | strip_prod_ty [x] ty = [(x,ty)]
+  | strip_prod_ty (h::t) ty =
+     let val (x,y) = with_exn pairSyntax.dest_prod ty
+                          (ERR "strip_prod_ty" "expected a product type")
+     in  (h,x)::strip_prod_ty t y
+     end
+
+fun list_mk_prod_tyl L =
+ let val (front,(b,last)) = front_last L
+     val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
+     val last' = (if b then tysize else K0) last
+                 handle e => Raise (wrap_exn "TotalDefn" "last'" e)
+  in
+  itlist (fn (b,ty1) => fn M =>
+     let val x = mk_var("x",ty1)
+         val y = mk_var("y",fst(dom_rng (type_of M)))
+         val blagga = (if b then tysize else K0) ty1
+     in
+       mk_pabs(mk_pair(x,y),
+               numSyntax.mk_plus(mk_comb(blagga,x),mk_comb(M,y)))
+     end) front last'
+ end
+
+(*---------------------------------------------------------------------------*)
+(* Construct all lex combos corresponding to permutations of list            *)
+(*---------------------------------------------------------------------------*)
 
 fun mk_sized_subsets argvars sizedlist = 
  let val permutations = 
@@ -168,55 +283,43 @@ fun mk_sized_subsets argvars sizedlist =
          else perms sizedlist
  in 
   map (mk_lex_reln argvars sizedlist) permutations
+  handle HOL_ERR _ => []
  end;
 
-fun imk_var(i,ty) = mk_var("v"^Int.toString i,ty);
-
-fun simplifyR tm = 
- let open prim_recTheory basicSizeTheory reduceLib
-     val expand = QCONV (REWRITE_CONV 
-                    [measure_def,pair_size_def,bool_size_def,one_size_def])
-     val zero_elim = 
-        QCONV (REWRITE_CONV 
-          [EQT_ELIM (Arith.ARITH_CONV 
-                 ``!x:num. (x + 0 = x) /\ (0 + x = x)``)])
+val simplifyR = 
+ let open prim_recTheory basicSizeTheory reduceLib simpLib
+     val expand = QCONV (SIMP_CONV term_ss
+                    [measure_def,pair_size_def,bool_size_def,
+                     one_size_def, pairTheory.LAMBDA_PROD])
  in
-  rhs (concl 
-   ((expand THENC DEPTH_CONV BETA_CONV THENC zero_elim) tm))
+  rhs o concl o expand
  end;
 
-(* Remove duplicates, while maintaining left-to-right order *)
+(*---------------------------------------------------------------------------*)
+(* "guessR" guesses a list of termination measures. Quite ad hoc.            *)
+(* First guess is trivial, used when function is not recursive. Second guess *)
+(* covers recursions on proper subterms, e.g. prim. recs. Next guesses deal  *)
+(* with lex-combos for Ackermann-style iterated prim. rec. defs. Finally,    *)
+(* generate all lex combinations of arguments that get changed by known      *)
+(* functions, i.e., ones that have corresponding theorems in ref variable    *)
+(* "termination_simps".                                                      *)
+(* Finally, all generated termination relations are simplified and           *)
+(* duplicates are weeded out.                                                *)
+(*---------------------------------------------------------------------------*)
 
-fun rm x [] = []
-  | rm x (h::t) = if aconv x h then rm x t else h::rm x t;
+fun known_fun tm = 
+ let fun dest_order x = dest_less x handle HOL_ERR _ => dest_leq x
+     fun get_lhs th = 
+            rand (fst(dest_order(snd(strip_imp
+                  (snd(strip_forall(concl th)))))))
+     val pats = mapfilter get_lhs (!termination_simps)
+ in 
+    0 < length (mapfilter (C match_term tm) pats)
+ end;
 
-fun mk_set [] = []
-  | mk_set (h::t) = h::mk_set (rm h t);
+fun relevant (tm,_) = known_fun tm;
 
-(*---------------------------------------------------------------------------*
- * The general idea behind this is to try 2 termination measures. The first  *
- * measure takes the size of all subterms meeting the following criteria:    *
- * argument i in a recursive call must be a proper subterm of argument i     *
- * in the head call. For i, if at least one TC meets this criteria, then     *
- * position i will be measured. This measure should catch all primitive      *
- * recursions, and primitive recursive tail recursions. Because of           *
- * various syntactic limitations to the form of primitive recursions in HOL  *
- * e.g. not allowing varstructs, this should be useful. Also, this step      *
- * catches some non-prim.rec tail recursions, see the examples.              *
- *                                                                           *
- * The second measure is just the total size of the arguments.               *
- *---------------------------------------------------------------------------*)
-
-local open Defn numSyntax
-(* fun is_word ty = 
-    case total mk_thy_type{Tyop = "cart",Thy="fcp",Args=[bool,alpha]}
-     of SOME pty => Lib.can (match_type pty) ty
-      | NONE => false
- fun tysize ty = 
-    if is_word ty 
-      then fst(TypeBase.size_of ty)
-      else TypeBasePure.type_size (TypeBase.theTypeBase()) ty
-*)
+local open Defn numSyntax simpLib boolSimps
  fun tysize ty = TypeBasePure.type_size (TypeBase.theTypeBase()) ty
  fun size_app v = mk_comb(tysize (type_of v),v)
 in
@@ -227,7 +330,8 @@ fun guessR defn =
    of NONE => []
     | SOME R =>
        let val domty  = fst(dom_rng(type_of R))
-           val (_,tcs) = Lib.pluck isWFR (tcs_of defn)
+           val (_,tcs0) = Lib.pluck isWFR (tcs_of defn)
+           val tcs = map (rhs o concl o QCONV (SIMP_CONV bool_ss [])) tcs0
            val matrix  = map dest tcs
            val check1  = map (map (uncurry proper_subterm)) matrix
            val chf1    = projects check1
@@ -243,8 +347,8 @@ fun guessR defn =
            val it_prim_rec = [mk_lex_reln argvars_1 subset_1 subset_1]
                               handle HOL_ERR _ => []
            (* deal with other lex. combos *)
-           val check2  = map (map (not o uncurry aconv)) matrix
-           val chf2    = projects check2
+           val check2 = map (map relevant) matrix
+           val chf2   = column_summaries check2
            val domtyl_2 = strip_prod_ty chf2 domty
            val indices = Lib.upto 1 (length domtyl_2)
            val (argvars,subset) = 
@@ -253,9 +357,9 @@ fun guessR defn =
                         in (v::alist, if b then size_app v::slist else slist)
                         end) indices domtyl_2 ([],[])
            val lex_combs = mk_sized_subsets argvars subset
-           val allrels = [mk_cmeasure domty0,mk_cmeasure (tysize domty)]
+           val allrels = [mk_cmeasure domty0, mk_cmeasure (tysize domty)]
                          @ it_prim_rec @ lex_combs
-           val allrels' = mk_set (map simplifyR allrels)
+           val allrels' = mk_term_set (map simplifyR allrels)
        in
          allrels'
        end
@@ -271,49 +375,20 @@ end;
 (* Wellfoundedness prover for combinations of wellfounded relations.         *)
 (*---------------------------------------------------------------------------*)
 
-val default_WF_thms = 
- let open relationTheory prim_recTheory pairTheory
- in
-   ref [WF_inv_image, WF_measure, WF_LESS, 
-        WF_EMPTY_REL, WF_PRED, WF_RPROD, WF_LEX, WF_TC]
- end;
-
 fun BC_TAC th =
   if is_imp (#2 (strip_forall (concl th)))
   then MATCH_ACCEPT_TAC th ORELSE MATCH_MP_TAC th
     else MATCH_ACCEPT_TAC th;
 
 fun PRIM_WF_TAC thl = REPEAT (MAP_FIRST BC_TAC thl ORELSE CONJ_TAC);
-fun WF_TAC g = PRIM_WF_TAC (!default_WF_thms) g;
+fun WF_TAC g = PRIM_WF_TAC (!WF_thms) g;
 
 (*--------------------------------------------------------------------------*)
 (* Basic simplification and proof for remaining termination conditions.     *)
 (*--------------------------------------------------------------------------*)
 
-val default_termination_simps =
-     ref [combinTheory.o_DEF,
-          combinTheory.I_THM,
-          prim_recTheory.measure_def,
-          relationTheory.inv_image_def,
-          pairTheory.LEX_DEF];
-
-val ASM_ARITH_TAC =
- REPEAT STRIP_TAC
-    THEN REPEAT (POP_ASSUM
-         (fn th => if numSimps.is_arith (concl th)
-                   then MP_TAC th else ALL_TAC))
-    THEN CONV_TAC Arith.ARITH_CONV;
-
 fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
-
-val term_ss = 
- let open simpLib infix ++
- in boolSimps.bool_ss 
-    ++ pairSimps.PAIR_ss 
-    ++ numSimps.REDUCE_ss 
-    ++ numSimps.ARITH_RWTS_ss
- end; 
 
 fun PRIM_TC_SIMP_CONV simps tm =
  let open arithmeticTheory 
@@ -325,27 +400,38 @@ fun PRIM_TC_SIMP_CONV simps tm =
   simpLib.SIMP_CONV term_ss (simps@size_defs@case_defs)
  end tm;
 
+fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!termination_simps) tm;
+
+val ASM_ARITH_TAC =
+ REPEAT STRIP_TAC
+    THEN REPEAT (POP_ASSUM
+         (fn th => if numSimps.is_arith (concl th)
+                   then MP_TAC th else ALL_TAC))
+    THEN CONV_TAC Arith.ARITH_CONV;
+
 fun PRIM_TC_SIMP_TAC thl = 
   CONV_TAC (PRIM_TC_SIMP_CONV thl) THEN TRY ASM_ARITH_TAC;
 
-fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!default_termination_simps) tm;
-fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC (!default_termination_simps) g;
+fun TC_SIMP_TAC g = PRIM_TC_SIMP_TAC (!termination_simps) g;
 
-local 
- fun mesg tac (g as (_,tm)) =
-  let in 
-    if !Defn.monitoring then 
-      print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
-      else ()
-   ; tac g
- end
-in
 fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
+
 val STD_TERM_TAC = PRIM_TERM_TAC WF_TAC TC_SIMP_TAC;
-val PROVE_TERM_TAC = 
+
+fun PROVE_TERM_TAC g = 
+ let open combinTheory simpLib
+     fun mesg tac (g as (_,tm)) =
+        (if !Defn.monitoring then 
+          print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
+          else () ; 
+         tac g)
+     val simps = map (REWRITE_RULE [I_THM]) (!termination_simps)
+     val ss = term_dp_ss ++ rewrites simps
+ in
    PRIM_TERM_TAC WF_TAC 
-       (CONV_TAC TC_SIMP_CONV THEN mesg ASM_ARITH_TAC)
-end;
+(*       (CONV_TAC TC_SIMP_CONV THEN mesg ASM_ARITH_TAC) *)
+      (CONV_TAC TC_SIMP_CONV THEN BasicProvers.PRIM_STP_TAC ss NO_TAC)
+ end g;
 
 
 (*---------------------------------------------------------------------------*)
@@ -357,7 +443,6 @@ fun PRIM_WF_REL_TAC q WFthms simps g =
   (Q.EXISTS_TAC q THEN CONJ_TAC THENL 
    [PRIM_WF_TAC WFthms, PRIM_TC_SIMP_TAC simps]) g;
 
-
 fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
 
 
@@ -367,12 +452,6 @@ fun WF_REL_TAC q = Q.EXISTS_TAC q THEN STD_TERM_TAC;
        fails, the definition attempt fails.
  ---------------------------------------------------------------------------*)
  
-val WF_tm = prim_mk_const{Name="WF",Thy="relation"};
-
-fun get_WF tmlist = 
- pluck (same_const WF_tm o rator) tmlist
- handle HOL_ERR _ => raise ERR "get_WF" "unexpected termination condition";
-
 fun reln_is_not_set defn = 
  case Defn.reln_of defn
   of NONE => false

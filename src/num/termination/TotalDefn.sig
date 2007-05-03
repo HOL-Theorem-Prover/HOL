@@ -11,8 +11,8 @@ sig
 
    (* Support for interactive termination proofs *)
 
-   val default_WF_thms : thm list ref
-   val default_termination_simps : thm list ref
+   val WF_thms : thm list ref
+   val termination_simps : thm list ref
 
    val PRIM_WF_TAC        : thm list -> tactic
    val PRIM_TC_SIMP_CONV  : thm list -> conv

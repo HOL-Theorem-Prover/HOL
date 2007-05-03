@@ -871,7 +871,8 @@ val _ =
          numeral_fact,numeral_funpow,numeral_MIN,numeral_MAX,
          WHILE,LEAST_DEF,REWRITE_RULE [TIMES2,GSYM iDUB] findq_thm,
          DIVMOD_THM,div_eqns, mod_eqns,
-         numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp,DIV_2EXP]
+         numeral_div2,REWRITE_RULE [iMOD_2EXP] numeral_imod_2exp,DIV_2EXP,
+         prim_recTheory.measure_thm]
      @
      [MLSIG "val num_size : num -> num",
       MLSIG "val NUMERAL  :num -> num",
