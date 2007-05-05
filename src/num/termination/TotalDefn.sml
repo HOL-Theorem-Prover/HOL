@@ -142,10 +142,28 @@ val WF_thms =
  end;
 
 
+(*---------------------------------------------------------------------------*)
+(* Same as pairSimps.PAIR_ss, except more eager to force paired              *)
+(* beta-reductions. For example, should reduce "(\(x,y). M x y) N" to        *)
+(* "M (FST N) (SND N)"                                                       *)
+(*---------------------------------------------------------------------------*)
+
+val paired_forall_ss =
+ let open simpLib pairTools
+ in
+    conv_ss 
+      {name  = "ELIM_TUPLED_QUANT_CONV (remove paired quantification)",
+       trace = 2,
+       key   = SOME ([],``$! (UNCURRY (f:'a->'b->bool))``),
+       conv  = K (K ELIM_TUPLED_QUANT_CONV)}
+ end;
+
 val term_ss = 
  let open simpLib infix ++
  in boolSimps.bool_ss 
     ++ pairSimps.PAIR_ss 
+    ++ paired_forall_ss
+    ++ rewrites [pairTheory.LAMBDA_PROD]
     ++ numSimps.REDUCE_ss 
     ++ numSimps.ARITH_RWTS_ss
  end; 
@@ -286,20 +304,23 @@ fun mk_sized_subsets argvars sizedlist =
   handle HOL_ERR _ => []
  end;
 
+(*---------------------------------------------------------------------------*)
+(* Simplify guessed relations                                                *)
+(*---------------------------------------------------------------------------*)
+
 val simplifyR = 
  let open prim_recTheory basicSizeTheory reduceLib simpLib
      val expand = QCONV (SIMP_CONV term_ss
-                    [measure_def,pair_size_def,bool_size_def,
-                     one_size_def, pairTheory.LAMBDA_PROD])
+                    [measure_def,pair_size_def,bool_size_def,one_size_def])
  in
   rhs o concl o expand
  end;
 
 (*---------------------------------------------------------------------------*)
 (* "guessR" guesses a list of termination measures. Quite ad hoc.            *)
-(* First guess is trivial, used when function is not recursive. Second guess *)
-(* covers recursions on proper subterms, e.g. prim. recs. Next guesses deal  *)
-(* with lex-combos for Ackermann-style iterated prim. rec. defs. Finally,    *)
+(* First guess covers recursions on proper subterms, e.g. prim. recs. Next   *)
+(* guess measure sum of sizes of all arguments. Next guess generates         *)
+(* lex-combos for Ackermann-style iterated prim. rec. defs. Finally,         *)
 (* generate all lex combinations of arguments that get changed by known      *)
 (* functions, i.e., ones that have corresponding theorems in ref variable    *)
 (* "termination_simps".                                                      *)
@@ -390,15 +411,14 @@ fun WF_TAC g = PRIM_WF_TAC (!WF_thms) g;
 fun get_orig (TypeBasePure.ORIG th) = th
   | get_orig _ = raise ERR "get_orig" "not the original"
 
-fun PRIM_TC_SIMP_CONV simps tm =
- let open arithmeticTheory 
-     val els = TypeBasePure.listItems (TypeBase.theTypeBase())
+fun PRIM_TC_SIMP_CONV simps =
+ let val els = TypeBasePure.listItems (TypeBase.theTypeBase())
      val size_defs = 
-        mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els
+         mapfilter (get_orig o #2 o valOf o TypeBasePure.size_of0) els
      val case_defs = mapfilter TypeBasePure.case_def_of els
  in
   simpLib.SIMP_CONV term_ss (simps@size_defs@case_defs)
- end tm;
+ end;
 
 fun TC_SIMP_CONV tm = PRIM_TC_SIMP_CONV (!termination_simps) tm;
 
@@ -418,20 +438,22 @@ fun PRIM_TERM_TAC wftac tctac = CONJ_TAC THENL [wftac,tctac]
 
 val STD_TERM_TAC = PRIM_TERM_TAC WF_TAC TC_SIMP_TAC;
 
+local
+  fun mesg tac (g as (_,tm)) =
+    (if !Defn.monitoring then 
+      print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
+      else () ; 
+     tac g)
+in
 fun PROVE_TERM_TAC g = 
  let open combinTheory simpLib
-     fun mesg tac (g as (_,tm)) =
-        (if !Defn.monitoring then 
-          print(String.concat["\nCalling ARITH on\n",term_to_string tm,"\n"])
-          else () ; 
-         tac g)
-     val simps = map (REWRITE_RULE [I_THM]) (!termination_simps)
+     val simps = map (PURE_REWRITE_RULE [I_THM]) (!termination_simps)
      val ss = term_dp_ss ++ rewrites simps
  in
    PRIM_TERM_TAC WF_TAC 
-(*       (CONV_TAC TC_SIMP_CONV THEN mesg ASM_ARITH_TAC) *)
       (CONV_TAC TC_SIMP_CONV THEN BasicProvers.PRIM_STP_TAC ss NO_TAC)
- end g;
+ end g
+end;
 
 
 (*---------------------------------------------------------------------------*)
