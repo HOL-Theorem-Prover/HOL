@@ -256,9 +256,9 @@ val is_existential = same_const boolSyntax.existential;
 
 
 local
-  val CONV = Ho_Rewrite.REWRITE_CONV [ELIM_UNCURRY] THENC
+  val CONV = Ho_Rewrite.PURE_REWRITE_CONV [ELIM_UNCURRY] THENC
              DEPTH_CONV BETA_CONV THENC
-             Ho_Rewrite.REWRITE_CONV [ELIM_PEXISTS,ELIM_PFORALL]
+             Ho_Rewrite.PURE_REWRITE_CONV [ELIM_PEXISTS,ELIM_PFORALL]
   fun dest_tupled_quant tm =
     case total dest_comb tm
      of NONE => NONE
@@ -271,7 +271,7 @@ local
 in
 fun ELIM_TUPLED_QUANT_CONV tm =
  case dest_tupled_quant tm
-  of NONE => raise Fail "TUPLED_QUANT_CONV"
+  of NONE => raise PERR "TUPLED_QUANT_CONV" ""
    | SOME (strip_quant, list_mk_quant) =>
      let val V = strip_pair(fst(dest_pabs(rand tm)))
          val thm = CONV tm
@@ -283,4 +283,4 @@ fun ELIM_TUPLED_QUANT_CONV tm =
  end
 end ;
 
-end;
+end
