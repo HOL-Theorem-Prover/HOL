@@ -2480,17 +2480,11 @@ val trivial_field = store_thm
 (* GF(p).                                                                    *)
 (* ------------------------------------------------------------------------- *)
 
-val modexp_def = tDefine
-   "modexp"
+val modexp_def = Define
    `modexp a n m =
     if n = 0 then 1
     else if n MOD 2 = 0 then modexp ((a * a) MOD m) (n DIV 2) m
-    else (a * modexp ((a * a) MOD m) (n DIV 2) m) MOD m`
-  (WF_REL_TAC `measure (\(x,y,z). y)`
-   ++ RW_TAC arith_ss []
-   ++ Know `2 * (n DIV 2) <= n`
-   >> PROVE_TAC [TWO, DIV_THEN_MULT]
-   ++ DECIDE_TAC);
+    else (a * modexp ((a * a) MOD m) (n DIV 2) m) MOD m`;
 
 val modexp_ind = fetch "-" "modexp_ind";
 

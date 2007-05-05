@@ -1201,8 +1201,8 @@ val cyclic_group_alt = store_thm
        ++ ASM_SIMP_TAC std_ss [FUNPOW_ADD]
        ++ SIMP_TAC std_ss [GSYM FUNPOW_ADD]
        ++ MP_TAC (Q.SPEC `k` DIVISION)
-       ++ ASM_SIMP_TAC std_ss []
-       ++ DISCH_THEN (MP_TAC o CONJUNCT2 o Q.SPEC `q`)
+       ++ ASM_REWRITE_TAC []
+       ++ DISCH_THEN (ASSUME_TAC o CONJUNCT2 o Q.SPEC `q`)
        ++ ASM_SIMP_TAC arith_ss [])
    ++ RW_TAC resq_ss
         [cyclic_group_def, combinTheory.K_THM, GSPECIFICATION, EXTENSION]
@@ -1221,7 +1221,7 @@ val cyclic_group_alt = store_thm
                 (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [th])))
            ++ RW_TAC std_ss []
            ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
-           ++ ASM_SIMP_TAC std_ss []
+           ++ ASM_REWRITE_TAC []
            ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
            ++ RW_TAC std_ss []
            ++ MP_TAC (Q.SPEC `k` MOD_MOD)
@@ -1232,6 +1232,7 @@ val cyclic_group_alt = store_thm
                      (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM th])))))
            ++ ASM_SIMP_TAC std_ss [MOD_PLUS]
            ++ Know `i MOD k < k` >> METIS_TAC [DIVISION]
+           ++ STRIP_TAC
            ++ RW_TAC arith_ss [])
        ++ RW_TAC std_ss []
        ++ POP_ASSUM (MP_TAC o Q.SPEC `i`)
@@ -1280,6 +1281,7 @@ val cyclic_group_alt = store_thm
        ++ ASM_REWRITE_TAC []
        ++ DISCH_THEN (fn th => CONV_TAC (ONCE_REWRITE_CONV [th]))
        ++ Know `i MOD k < k` >> METIS_TAC [DIVISION]
+       ++ STRIP_TAC
        ++ RW_TAC arith_ss []
        ++ MP_TAC (Q.SPEC `k` MOD_PLUS)
        ++ ASM_REWRITE_TAC []
