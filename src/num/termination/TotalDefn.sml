@@ -122,13 +122,17 @@ val MOD_LESS_I = Q.prove
 (`!m n. 0 < n ==> I(k MOD n) < I(n)`,
  REWRITE_TAC [MOD_LESS,combinTheory.I_THM]);
 
+val SUB_LESS_I = Q.prove
+(`!m n. 0 < n /\ n <= m ==> I(m - n) < I(m)`,
+ REWRITE_TAC[SUB_LESS,combinTheory.I_THM]);
+
 val termination_simps =
      ref [combinTheory.o_DEF,
           combinTheory.I_THM,
           prim_recTheory.measure_def,
           relationTheory.inv_image_def,
           pairTheory.LEX_DEF,
-          DIV_LESS_I,MOD_LESS_I];
+          SUB_LESS_I,DIV_LESS_I,MOD_LESS_I];
 
 (*---------------------------------------------------------------------------*)
 (* Adjustable set of WF theorems for doing WF proofs.                        *)
