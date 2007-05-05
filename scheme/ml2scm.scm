@@ -153,8 +153,18 @@
     ((list 'DOTSPatRow _)
      `(list ,(gensym) ...))
     ((list 'LOCALStrDec _ locdef boddef)
-     `(local ,(translate locdef)
-        ,(translate boddef)))
+     (let ((body (translate boddef)))
+       (match body
+         ((list 'match-define expr cause)
+          `(match-define ,expr
+                         (let ()
+                           ,(translate locdef)
+                           ,cause)))
+         ;open
+         (else
+          `(let ()
+             ,(translate locdef)
+             ,body)))))
     ((list 'CONPat _ id pat)
      (function-map (translate id)
                    (translate pat)))
@@ -178,6 +188,15 @@
 
 (define improve
   (match-lambda
+    ((list (list 'match-lambda
+                 (list '_ b)) a)
+     (let ((imbroved_b (improve b)))
+       (if (and (pair? imbroved_b)
+                (eq? (car imbroved_b) 'begin))
+           `(begin ,(improve a)
+                   ,@(cdr imbroved_b))
+           `(begin ,(improve a)
+                   ,imbroved_b))))
     ((cons (list 'void) b)
      (improve b))
     ((list 'match-lambda
