@@ -65,6 +65,7 @@ sig
   val rewrites    : thm list -> ssfrag
   val dproc_ss    : Traverse.reducer -> ssfrag
   val ac_ss       : (thm * thm) list -> ssfrag
+  val conv_ss     : convdata -> ssfrag
   val merge_ss    : ssfrag list -> ssfrag
   val type_ssfrag : hol_type -> ssfrag
 

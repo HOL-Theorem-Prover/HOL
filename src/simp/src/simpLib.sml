@@ -93,6 +93,9 @@ fun dproc_ss dproc =
 fun ac_ss aclist =
    SSFRAG {convs=[],rewrs=[],filter=NONE,ac=aclist,dprocs=[],congs=[]};
 
+fun conv_ss conv =
+   SSFRAG {convs=[conv],rewrs=[],filter=NONE,ac=[],dprocs=[],congs=[]};
+
 fun D (SSFRAG s) = s;
 
 fun merge_ss (s:ssfrag list) =
