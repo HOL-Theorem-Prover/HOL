@@ -115,15 +115,15 @@ fun proper_subterm tm1 tm2 =
 (*---------------------------------------------------------------------------*)
 
 val DIV_LESS_I = Q.prove
-(`!n d. 0 < n /\ 1 < d ==> I(n DIV d) < I(n)`,
+(`!n d. 0n < n /\ 1 < d ==> I(n DIV d) < I(n)`,
  REWRITE_TAC[DIV_LESS,combinTheory.I_THM]);
 
 val MOD_LESS_I = Q.prove
-(`!m n. 0 < n ==> I(k MOD n) < I(n)`,
+(`!m n. 0n < n ==> I(k MOD n) < I(n)`,
  REWRITE_TAC [MOD_LESS,combinTheory.I_THM]);
 
 val SUB_LESS_I = Q.prove
-(`!m n. 0 < n /\ n <= m ==> I(m - n) < I(m)`,
+(`!m n. 0n < n /\ n <= m ==> I(m - n) < I(m)`,
  REWRITE_TAC[SUB_LESS,combinTheory.I_THM]);
 
 val termination_simps =
