@@ -3,8 +3,8 @@
 quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
-app load ["numLib", "relationTheory", "arithmeticTheory", "preARMTheory", "pairTheory",
-     "pred_setSimps", "pred_setTheory", "listTheory", "rich_listTheory", "whileTheory", "ARMCompositionTheory", "ILTheory", "wordsTheory"];
+app load ["numLib", "preARMTheory", "pred_setSimps", "pred_setTheory", 
+          "rich_listTheory", "ARMCompositionTheory", "ILTheory", "wordsTheory"];
 
 quietdec := false;
 *)
@@ -15,7 +15,8 @@ open HolKernel Parse boolLib bossLib numLib relationTheory arithmeticTheory preA
 
 
 val _ = new_theory "rules";
-val _ = hide "cond"
+val _ = hide "cond";
+
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *) 
 (*---------------------------------------------------------------------------------*)

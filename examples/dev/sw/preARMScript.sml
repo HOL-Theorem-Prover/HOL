@@ -6,6 +6,9 @@ loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 app load ["numLib", "pred_setSimps", "pred_setTheory",
      "arithmeticTheory", "wordsTheory", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", "fcpLib", "wordsLib"];
 
+open numLib pred_setSimps pred_setTheory arithmeticTheory wordsTheory 
+     pairTheory listTheory whileTheory finite_mapTheory wordsLib;
+
 quietdec := false;
 *)
 
@@ -114,17 +117,18 @@ val _ = type_abbrev("ADDR", Type`:word30`);
 val _ = type_abbrev("DATA", Type`:word32`);
 val _ = type_abbrev("DISTANCE", Type`:num`);
 
-val _ = Hol_datatype `OFFSET = POS of DISTANCE
-               | NEG of DISTANCE
-	       | INR
+val _ = Hol_datatype 
+         `OFFSET = POS of DISTANCE
+                 | NEG of DISTANCE
+	         | INR
              `;
 
-
-val _ = Hol_datatype `EXP = MEM of num # OFFSET			(* (register, offset) *) 
-                  | NCONST of num
-		  | WCONST of word32
-        | REG of num
-		  | WREG of num
+val _ = Hol_datatype 
+         `EXP = MEM of num # OFFSET  (* (register, offset) *) 
+              | NCONST of num
+              | WCONST of word32
+              | REG of num
+              | WREG of num
              `;
 
 val FP_def =
@@ -530,18 +534,15 @@ val UPLOADSEG_LEM = Q.store_thm
 (* Run the instruction in the instruction buffer for n steps                       *)
 (*---------------------------------------------------------------------------------*)
 
-val (run_def,run_ind) =
- Defn.tprove
-  (Hol_defn "run"
-    `run n instB P (pc,cpsr,st) =
-        if n = 0 then (pc,cpsr,st)
+val run_def =
+ Define
+   `run n instB P (pc,cpsr,st) =
+     if n = 0 then (pc,cpsr,st)
         else
 	   if P (pc,cpsr,st) then (pc,cpsr,st)
-           else run (n-1) instB P (decode_cond (pc,cpsr,st) (instB pc))`,
-    WF_REL_TAC `measure FST`);
+           else run (n-1) instB P (decode_cond (pc,cpsr,st) (instB pc))`;
 
-val _ = save_thm("run_def", run_def);
-val _ = save_thm("run_ind", run_ind);
+val run_ind = fetch "-" "run_ind";
 
 val RUN_LEM_1 = Q.store_thm
   ("RUN_LEM_1",
@@ -1284,8 +1285,6 @@ val fupdate_lt_commutes_word4 = let
 val _ = save_thm ("fupdate_lt_commutes_word4", fupdate_lt_commutes_word4);
 
 
-
-
 val ADD_DIV = prove (
 ``!x:num y:num n:num.
 (0 < n) ==>
@@ -1296,9 +1295,6 @@ REPEAT STRIP_TAC THEN
 `(x + y) DIV n = (((y DIV n) * n + (x + (y MOD n))) DIV n)` by METIS_TAC [DIVISION, ADD_COMM, ADD_ASSOC] THEN
 POP_ASSUM (fn thm => ONCE_REWRITE_TAC[thm]) THEN
 ASM_SIMP_TAC arith_ss [ADD_DIV_ADD_DIV])
-
-
-
 
 val SUM_FUN_RANGE = prove (
 ``!n f. SUM n f = SUM n (\m. if (m < n) then f m else 0)``,
@@ -1360,9 +1356,6 @@ Induct_on `m` THENL [
 	]
 ]);
 
-
-
-
 val MEM_ADDR_ADD_CONST = store_thm ("MEM_ADDR_ADD_CONST",
 ``MEM_ADDR(x + n2w y) = MEM_ADDR (x + (n2w (y MOD 4))) + (MEM_ADDR (n2w y))``,
 	ONCE_REWRITE_TAC[GSYM w2n_11] THEN
@@ -1393,7 +1386,6 @@ val MEM_ADDR_ADD_CONST = store_thm ("MEM_ADDR_ADD_CONST",
 	SIMP_TAC std_ss [MOD_PLUS] THEN
 	`0 < 4` by DECIDE_TAC THEN
 	METIS_TAC[ADD_DIV]);
-
 
 val MEM_ADDR_CONST_EVAL = store_thm ("MEM_ADDR_CONST_EVAL",
 ``MEM_ADDR(n2w y) = n2w (y DIV 4)``,

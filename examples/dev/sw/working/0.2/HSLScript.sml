@@ -135,7 +135,7 @@ val CONV_REG_LEM = Q.store_thm (
 (*      Data in memory, Expressions                                                *)
 (*---------------------------------------------------------------------------------*)
 
-val _ = type_abbrev("TSTATE", Type`:(num |-> bool ** i32) # (num |-> bool ** i32)`);
+val _ = type_abbrev("TSTATE", Type`:(num |-> bool ** 32) # (num |-> bool ** 32)`);
 
 val FORALL_TSTATE = Q.store_thm (
     "FORALL_TSTATE",

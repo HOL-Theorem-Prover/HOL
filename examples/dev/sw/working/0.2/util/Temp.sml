@@ -1,4 +1,4 @@
-signature TEMP = 
+signature Temp = 
 sig
   eqtype temp
   val newtemp : unit -> temp
@@ -9,9 +9,7 @@ sig
   val namedlabel : string -> label
 end
 
-(* make this an abstraction sometime *)
-
-structure Temp : TEMP =
+structure Temp :> Temp =
 struct
     type temp = int
     val temps = ref 100

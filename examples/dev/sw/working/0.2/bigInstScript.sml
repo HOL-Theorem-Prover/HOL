@@ -611,7 +611,7 @@ val pop_list_def = Define `
 
 val grow_lt_def = Define `
     grow_lt (x:word32) (k:num) = 
-      w2n x + k < dimword (:i32)`;
+      w2n x + k < dimword (:32)`;
 
 val grow_lt_lem_1 = Q.store_thm (
     "grow_lt_lem_1",

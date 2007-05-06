@@ -8,15 +8,8 @@ show_assums := true
 (*   Simple examples involving function calls                                *)
 (*---------------------------------------------------------------------------*)
 
-
-
-(*---------------------------------------------------------------------------*)
-(*   This is the example 3 in the paper                                      *)
-(*---------------------------------------------------------------------------*)
-
 val def1 = Define `f1 (x:word32) = x + x + 1w`;
 val spec1 = pp_compile def1 true;
-
 
 val def2 = Define `f2 x = x * f1 x`;
 val spec2 = pp_compile def2 false;

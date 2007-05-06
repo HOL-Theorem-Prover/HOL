@@ -350,8 +350,8 @@ val PRE_CALL_PUSH_ARGUMENTS = Q.store_thm (
          IMP_RES_TAC locate_ge_lem_1 THEN
          FULL_SIMP_TAC finmap_ss [read_thm, locate_ge_def, SP_def, FP_def, standard_frame_def] THEN 
          `w2n ((n2w k):word32) = k` by (
-            WORDS_TAC THEN `w2n (regs ' 13) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN
-            `k < dimword (:i32)` by RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN WORDS_TAC THEN RW_TAC arith_ss []) THEN
+            WORDS_TAC THEN `w2n (regs ' 13) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
+            `k < dimword (:32)` by RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN WORDS_TAC THEN RW_TAC arith_ss []) THEN
          Q.PAT_ASSUM `!i.k` (ASSUME_TAC o Q.SPEC `(n2w k):word32`) THEN
          FULL_SIMP_TAC arith_ss [],
 
@@ -391,8 +391,8 @@ val PRE_CALL_SANITY_1 = Q.store_thm (
          IMP_RES_TAC locate_ge_lem_1 THEN
          FULL_SIMP_TAC finmap_ss [read_thm, locate_ge_def, SP_def, FP_def] THEN 
          `w2n ((n2w k):word32) = k` by (
-            WORDS_TAC THEN `w2n (regs ' 13) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN
-            `k < dimword (:i32)` by RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN WORDS_TAC THEN RW_TAC arith_ss []) THEN
+            WORDS_TAC THEN `w2n (regs ' 13) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
+            `k < dimword (:32)` by RW_TAC arith_ss [] THEN POP_ASSUM MP_TAC THEN WORDS_TAC THEN RW_TAC arith_ss []) THEN
          Q.PAT_ASSUM `!i.k` (ASSUME_TAC o Q.SPEC `(n2w k):word32`) THEN
          FULL_SIMP_TAC arith_ss [],
 
@@ -616,7 +616,7 @@ val PRE_CALL_PASS_ARGUMENTS_LEM_1 = Q.store_thm (
        grow_lt (read st' SP) (12 + LENGTH l) /\ locate_ge (read st' SP) (m + 1)`,
   
     RW_TAC list_ss [grow_lt_def, locate_ge_def, saved_regs_list_def] THENL [
-      `w2n (read st SP) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN
+      `w2n (read st SP) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
         RW_TAC arith_ss [],
       WORDS_TAC
     ]
@@ -797,7 +797,7 @@ val locate_ge_lem_3 = Q.store_thm (
     IMP_RES_TAC locate_ge_lem_1 THEN 
     POP_ASSUM (ASSUME_TAC o Q.SPEC `n2w i:word32`) THEN
     FULL_SIMP_TAC std_ss [locate_ge_def] THEN
-    `w2n x < dimword (:i32)` by RW_TAC arith_ss [w2n_lt] THEN
+    `w2n x < dimword (:32)` by RW_TAC arith_ss [w2n_lt] THEN
     `w2n (n2w i:word32) = i` by RW_TAC arith_ss [w2n_n2w] THEN 
     METIS_TAC [MOD_LE, LESS_EQ_TRANS]
   );
@@ -1308,7 +1308,7 @@ val POST_CALL_POP_RESULTS = Q.store_thm (
     RW_TAC std_ss [APPEND, Once RUN_CFL_BLK_APPEND] THEN
     Q.ABBREV_TAC `st1 = run_cfl (BLK (MSUB R13 R11 (MC 11w)::[MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st` THEN
     `locate_ge (read st FP) 11 /\ grow_lt (read st FP) 1` by (
-       `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN
+       `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
        `grow_lt (read st FP) 1` by FULL_SIMP_TAC arith_ss [locate_ge_def, grow_lt_def] THEN
        IMP_RES_TAC grow_lt_lem_1 THEN FULL_SIMP_TAC arith_ss [locate_ge_def, grow_lt_def]) THEN
 
@@ -1319,7 +1319,7 @@ val POST_CALL_POP_RESULTS = Q.store_thm (
     FULL_SIMP_TAC std_ss [] THEN NTAC 7 (POP_ASSUM (K ALL_TAC)) THEN
     
     `grow_lt (read st1 SP) (LENGTH (MAP conv_exp l)) /\ locate_ge (read st1 FP) (12 + m)` by (`w2n (read st1 FP) 
-            < dimword (:i32)` by METIS_TAC [w2n_lt] THEN RW_TAC arith_ss [grow_lt_def, locate_ge_def, LENGTH_MAP]) THEN
+            < dimword (:32)` by METIS_TAC [w2n_lt] THEN RW_TAC arith_ss [grow_lt_def, locate_ge_def, LENGTH_MAP]) THEN
     `w2n (read st1 SP) + LENGTH (MAP conv_exp l) + (12 + m) <= w2n (read st1 FP)` by METIS_TAC [LENGTH_MAP] THEN
 
     IMP_RES_TAC UNIQUE_LIST_11 THEN
@@ -1359,7 +1359,7 @@ val POST_CALL_PASS_RESULTS_LEM = Q.store_thm (
       Q.ABBREV_TAC `st1 = run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o)))):: 
              push_list (MAP conv_exp callee_o))) st` THEN
       `grow_lt (read st IP) (LENGTH (MAP conv_exp callee_o))` by (
-        `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN 
+        `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:32)` by METIS_TAC [w2n_lt] THEN 
            FULL_SIMP_TAC arith_ss [LENGTH_MAP, grow_lt_def]) THEN
       IMP_RES_TAC VALID_TEXP_MEXP THEN
 
@@ -1403,7 +1403,7 @@ val eq_exp_lem_1 = Q.store_thm (
 val tac5 =     
     Q.ABBREV_TAC `st1 = run_cfl (BLK (MSUB R13 R11 (MC 11w)::[MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st` THEN
     `locate_ge (read st FP) 11 /\ grow_lt (read st FP) 1` by (
-       `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN
+       `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
        `grow_lt (read st FP) 1` by FULL_SIMP_TAC arith_ss [locate_ge_def, grow_lt_def] THEN
        IMP_RES_TAC grow_lt_lem_1 THEN FULL_SIMP_TAC arith_ss [locate_ge_def, grow_lt_def]) THEN
     `(!i. st '' (isM i) = st1 '' (isM i)) /\ (w2n (st '' (isM (w2n (read st FP) - 1))) = w2n (read st1 FP)) /\
@@ -1412,7 +1412,7 @@ val tac5 =
          METIS_TAC [rich_listTheory.CONS_APPEND, SIMP_RULE std_ss [LET_THM] POP_SAVED_REGS_LIST_SANITY_1, w2n_11]) THEN
     FULL_SIMP_TAC std_ss [] THEN
     `grow_lt (read st1 SP) (LENGTH (MAP conv_exp l)) /\ locate_ge (read st1 FP) (12 + m)` by (`w2n (read st1 FP) 
-        < dimword (:i32)` by METIS_TAC [w2n_lt] THEN RW_TAC arith_ss [grow_lt_def, locate_ge_def, LENGTH_MAP]) THEN
+        < dimword (:32)` by METIS_TAC [w2n_lt] THEN RW_TAC arith_ss [grow_lt_def, locate_ge_def, LENGTH_MAP]) THEN
     `w2n (read st1 SP) + LENGTH (MAP conv_exp l) + (12 + m) <= w2n (read st1 FP)` by METIS_TAC [LENGTH_MAP]
     ;
 
@@ -1465,7 +1465,7 @@ val POST_CALL_SANITY_2 = Q.store_thm (
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC std_ss [APPEND] THEN
     `locate_ge (read st FP) 11 /\ grow_lt (read st FP) 1` by (
-       `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN
+       `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
        `grow_lt (read st FP) 1` by FULL_SIMP_TAC arith_ss [locate_ge_def, grow_lt_def] THEN
        IMP_RES_TAC grow_lt_lem_1 THEN FULL_SIMP_TAC arith_ss [locate_ge_def, grow_lt_def]) THEN
     FULL_SIMP_TAC std_ss [LET_THM, SIMP_RULE list_ss [LET_THM] POP_SAVED_REGS_LIST_SANITY_1] THEN
@@ -1577,7 +1577,7 @@ val POST_CALL_RESTORED_REGS_LEM = Q.store_thm (
       Q.ABBREV_TAC `st1 = run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o)))):: 
              push_list (MAP conv_exp callee_o))) st` THEN
       `grow_lt (read st IP) (LENGTH (MAP conv_exp callee_o))` by (
-        `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN 
+        `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:32)` by METIS_TAC [w2n_lt] THEN 
            FULL_SIMP_TAC arith_ss [LENGTH_MAP, grow_lt_def]) THEN
       IMP_RES_TAC VALID_TEXP_MEXP THEN
 
@@ -1625,7 +1625,7 @@ val POST_CALL_SANITY_LEM = Q.store_thm (
              push_list (MAP conv_exp callee_o))) st` THEN
 
       `grow_lt (read st IP) (LENGTH (MAP conv_exp callee_o))` by (
-        `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:i32)` by METIS_TAC [w2n_lt] THEN 
+        `w2n (st '' isM (w2n (read st FP) - 1)) < dimword (:32)` by METIS_TAC [w2n_lt] THEN 
            FULL_SIMP_TAC arith_ss [LENGTH_MAP, grow_lt_def]) THEN
       IMP_RES_TAC VALID_TEXP_MEXP THEN
 

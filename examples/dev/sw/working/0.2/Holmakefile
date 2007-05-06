@@ -1,15 +1,6 @@
 # Basic data structures are defined in the "util" sub-directory 
 INCLUDES = util
 
-Symbol.uo: Symbol.sml 
-	HOLMOSMLC -c -toplevel Table.ui Symbol.sml
-
-Temp.uo: Temp.sml Symbol.uo
-	HOLMOSMLC -c -toplevel Table.ui Symbol.ui Temp.sml
-
-Tree.uo: Temp.uo Tree.sml
-	HOLMOSMLC -c -toplevel Temp.ui Tree.sml
-
 Assem.uo: Assem.sml Temp.uo 
 	HOLMOSMLC -c -toplevel Symbol.ui Temp.ui Assem.sml
 
@@ -37,8 +28,8 @@ declFuncs.uo: declFuncs.sml
 funCall.uo: funCall.sml
 	HOLMOSMLC -c -toplevel Table.ui regAllocation.ui IRSyntax.ui annotatedIR.ui declFuncs.ui funCall.sml
 
-backwardReasoning.uo: backwardReasoning.sml IRSyntax.uo preARMSyntax.uo CFLTheory.uo CFL_RulesTheory.uo
-	HOLMOSMLC -c -toplevel IRSyntax.ui annotatedIR.ui CFLTheory.ui funCall.ui preARMSyntax.ui Assem.ui backwardReasoning.sml
+#backwardReasoning.uo: backwardReasoning.sml IRSyntax.uo preARMSyntax.uo CFLTheory.uo CFL_RulesTheory.uo
+#	HOLMOSMLC -c -toplevel IRSyntax.ui annotatedIR.ui CFLTheory.ui funCall.ui preARMSyntax.ui Assem.ui backwardReasoning.sml
 
-interface.uo: interface.sml backwardReasoning.uo
-	HOLMOSMLC -c -toplevel annotatedIR.ui funCall.ui backwardReasoning.ui interface.sml
+#interface.uo: interface.sml backwardReasoning.uo
+#	HOLMOSMLC -c -toplevel annotatedIR.ui funCall.ui backwardReasoning.ui interface.sml

@@ -364,7 +364,7 @@ fun sim_stms blk =
 (*      PSPEC specification and Mechanized Reasoning                               *) 
 (*---------------------------------------------------------------------------------*)
 
-(* Make a PSPEC specification                                                                    *) 
+(* Make a PSPEC specification                                                      *) 
 
 val basic_outL = [IRSyntax.REG 11, IRSyntax.REG 13];               (* fp and sp *)
 
@@ -411,13 +411,13 @@ fun mk_PSPEC ir (pre_st,post_st) (ins,outs) =
      pspec
   end;
 
-(*---------------------------------------------------------------------------------*)
-(*      Symbolic Simulation of Basic Blocks                                        *) 
-(*---------------------------------------------------------------------------------*)
-      
-(* Given an basic block, the charateristic function on inputs and outputs are derived by symbolic simulation *)
-(* and the context about unchanged variables is maintained                                                   *) 
-(* Finally well_formed information is given                                                                  *)
+(*---------------------------------------------------------------------------*)
+(*      Symbolic Simulation of Basic Blocks                                  *) 
+(*                                                                           *)
+(* Given a basic block, the charateristic function on inputs and outputs is  *)
+(* derived by symbolic simulation and the context about unchanged variables  *)
+(* is maintained. Finally well_formed information is given.                  *)
+(*---------------------------------------------------------------------------*)
 (*
 fun extract (annotatedIR.BLK (instL,{ins = ins, outs = outs, context = context, ...})) =
 (instL, ins, outs, context);
@@ -1682,7 +1682,8 @@ fun pp_prepare_compile prog  =
   val prog = def1
   val def = 
   val prog_name = SOME "def1"
-  val prove_equiv = false*)
+  val prove_equiv = false
+*)
 fun pp_compile_proof_opt prog prog_name prove_equiv = 
   let  
       val def = preprocess_def prog;

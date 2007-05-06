@@ -18,3 +18,12 @@ gr_t.uo: gr_t.sml int-binary-map.uo gr.uo UGeneral.uo
 
 Table.uo: Table.sml
 	HOLMOSMLC -c -toplevel Table.sml
+
+Symbol.uo: Symbol.sml Table.uo
+	HOLMOSMLC -c -toplevel Table.ui Symbol.sml
+
+Temp.uo: Temp.sml Symbol.uo
+	HOLMOSMLC -c -toplevel Table.ui Symbol.ui Temp.sml
+
+Tree.uo: Tree.sml Temp.uo
+	HOLMOSMLC -c -toplevel Temp.ui Tree.sml

@@ -47,8 +47,8 @@ val ShiftXor_def =
  Define 
    `ShiftXor (x:word32,s,k0,k1) = ((x << 4) + k0) ?? (x + s) ?? ((x >> 5) + k1)`;
 
-val ShiftXor_comp = pp_compile ShiftXor_def true
-val ShiftXor_spec = #5 ShiftXor_comp
+val ShiftXor_comp = pp_compile ShiftXor_def true;
+val ShiftXor_spec = #5 ShiftXor_comp;
 
 
 (******************************************************************
@@ -80,13 +80,13 @@ val Round_def =
 	((y', z + ShiftXor(y', s', k2, k3)),
 	 (k0,k1,k2,k3), s')`;
 
+(* fails on equiv. proof *)
+pp_compile Round_def true;  
+
 val Round_eval = REWRITE_RULE [DELTA_def, ShiftXor_def] Round_def
 val x = pp_compile Round_eval true
 
-val Round_CORRECT = prove (
-   simT (mk_ARM arm2),
-   SEQ_TAC [DELTA_def]
-  );
+val Round_CORRECT = prove (simT (mk_ARM arm2), SEQ_TAC [DELTA_def]);
 
 (******************************************************************
   printarm arm2;
