@@ -1,5 +1,4 @@
 (*
-
 loadPath := 
             (concat Globals.HOLDIR "/examples/dev/sw") :: 
             (concat Globals.HOLDIR "/examples/elliptic/arm") :: 
@@ -7,60 +6,63 @@ loadPath :=
             (concat Globals.HOLDIR "/examples/sep") ::
             !loadPath;
 
-app load ["relationTheory", "pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory", "listSyntax", 
-          "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIR", "funCall", "preARMTheory", "wordsLib"];
+app load ["pred_setLib","finite_mapTheory","rich_listTheory", "wordsLib",
+          "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIR", 
+          "funCall", "preARMTheory"];
 
 quietdec := true;
-  open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory declFuncs
+open numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax 
+     preARMTheory preARMSyntax Assem pred_setSimps pred_setTheory listTheory 
+     rich_listTheory whileTheory finite_mapTheory declFuncs
      annotatedIR ILTheory rulesTheory wordsLib wordsTheory IRSyntax;
 quietdec := false;
 *)
 
-structure mechReasoning = struct
-  local
-  open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     preARMSyntax Assem pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory declFuncs
-     annotatedIR ILTheory rulesTheory wordsLib wordsTheory IRSyntax
-  in
-
-infix ++ THENC ORELSEC THEN THENL ORELSE |-> ##;
+structure mechReasoning = 
+struct
+local open 
+   HolKernel Parse boolLib bossLib numLib pairLib relationTheory 
+   pairTheory arithmeticTheory listSyntax preARMTheory preARMSyntax 
+   Assem pred_setSimps pred_setTheory listTheory rich_listTheory 
+   whileTheory finite_mapTheory declFuncs annotatedIR ILTheory 
+   rulesTheory wordsLib wordsTheory IRSyntax
+  infix ++ THENC THEN THENL |->
+in
 
 val used_thm_num = ref 1;
 
 fun get_new_thm_name () =
-	let
-		val n = !used_thm_num;
-		val _ = used_thm_num := (n+1);
-	in
-		"lemma_"^(Int.toString n)
-	end
-(*---------------------------------------------------------------------------------*)
-(*      Simplifier on finite maps                                                  *) 
-(*---------------------------------------------------------------------------------*)
+ let val n = !used_thm_num;
+     val _ = used_thm_num := (n+1);
+ in
+   "lemma_"^(Int.toString n)
+ end;
+
+(*---------------------------------------------------------------------------*)
+(*      Simplifier on finite maps                                            *) 
+(*---------------------------------------------------------------------------*)
+
 fun mk_unchanged_set f_name =
-	let
-		val {regs=regs,...} = declFuncs.getFunc f_name;
-		val univ_set = Binaryset.addList (Binaryset.empty Int.compare, [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14])
-		val neg_regs = Binaryset.difference(univ_set,regs)
-	in
-		neg_regs
-	end;
+ let val {regs=regs,...} = declFuncs.getFunc f_name;
+     val univ_set = Binaryset.addList 
+                     (Binaryset.empty Int.compare, 
+                        [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14])
+     val neg_regs = Binaryset.difference(univ_set,regs)
+ in
+   neg_regs
+ end;
 
 fun mk_unchanged_term set =
-	let
-		val int_list = Binaryset.listItems set;
-		val mreg_list = map (fn n => 
-			let 
-				val n_term = term_of_int n 
-			in  
-				rhs (concl (EVAL (mk_comb (Term `from_reg_index`, n_term))))
-			end) int_list;
-		val changed_list = mk_list (mreg_list, Type `:MREG`);
-	in
-		changed_list
-	end;
-
+ let val int_list = Binaryset.listItems set;
+     fun mapper n = 
+       let val n_term = term_of_int n 
+       in rhs (concl (EVAL (mk_comb (Term `from_reg_index`, n_term))))
+       end
+     val mreg_list = map mapper int_list
+     val changed_list = mk_list (mreg_list, Type`:MREG`);
+ in
+   changed_list
+ end;
 
 val fupdate_normalizer =
  let val thm = SPEC_ALL FUPDATE_LT_COMMUTES
@@ -86,7 +88,8 @@ val finmap_conv_frag =
      {convs = [fupdate_normalizer],
       rewrs = [], ac=[],filter=NONE,dprocs=[],congs=[]};
 
-val finmap_ss = std_ss ++ finmap_conv_frag ++  rewrites [FUPDATE_EQ, FAPPLY_FUPDATE_THM];
+val finmap_ss = std_ss ++ finmap_conv_frag ++ 
+                rewrites [FUPDATE_EQ, FAPPLY_FUPDATE_THM];
 
 val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 
@@ -111,80 +114,90 @@ fun mk_vars exp =
 
 (* make mread tuple, e.g. ((st<v0>,st<v1>),st<v2>,...) *)
 
+val mread_tm = prim_mk_const{Name = "mread", Thy="rules"};
+val RR_tm = prim_mk_const{Name = "RR", Thy = "rules"};
+val RM_tm = prim_mk_const{Name = "RM", Thy = "rules"};
+
 fun mk_mreads st (IRSyntax.PAIR (e1,e2)) =
         mk_pair(mk_mreads st e1, mk_mreads st e2)
  |  mk_mreads st (IRSyntax.REG e) =
-      list_mk_comb (Term`mread`, [st, mk_comb (Term`RR`, IRSyntax.convert_reg (IRSyntax.REG e))])
+      list_mk_comb (mread_tm, 
+         [st, mk_comb (RR_tm, IRSyntax.convert_reg (IRSyntax.REG e))])
  |  mk_mreads st (IRSyntax.MEM m) =
-      list_mk_comb (Term`mread`, [st, mk_comb (Term`RM`, IRSyntax.convert_mem (IRSyntax.MEM m))])
+      list_mk_comb (mread_tm, 
+        [st, mk_comb (RM_tm, IRSyntax.convert_mem (IRSyntax.MEM m))])
  |  mk_mreads st _ =
       (print "mk_mreads: invalid incoming expression"; 
        raise ERR "" ("mk_mreads: invalid incoming expression"));
 
 
 fun MEM_ADDR_CONV t =
-	let
-		val (f, args) = dest_comb t;
-		val _ = if same_const (Term `MEM_ADDR`) f then () else Raise (ERR "" "Syntax");
-      val num_term = rand (rand args);
-		val num = dest_numeral num_term;
-		val (c, r) = Arbnum.divmod(num, Arbnum.fromInt 4);
-		val _ = if (r = Arbnum.zero) then () else  Raise (ERR "" "Syntax");
-		val mult_term = mk_mult(mk_numeral c, term_of_int 4);
-		val mult_thm = GSYM (EVAL mult_term);
-		val thm = RAND_CONV (RAND_CONV (REWRITE_CONV [mult_thm])) t
-	in
-		thm
-	end;
+ let val (f, args) = dest_comb t;
+     val _ = if same_const (Term `MEM_ADDR`) f then () 
+             else Raise (ERR "" "Syntax");
+     val num_term = rand (rand args);
+     val num = dest_numeral num_term;
+     val (c, r) = Arbnum.divmod(num, Arbnum.fromInt 4);
+     val _ = if (r = Arbnum.zero) then () else  Raise (ERR "" "Syntax");
+     val mult_term = mk_mult(mk_numeral c, term_of_int 4);
+     val mult_thm = GSYM (EVAL mult_term);
+     val thm = RAND_CONV (RAND_CONV (REWRITE_CONV [mult_thm])) t
+ in
+  thm
+ end;
 
-val word_extract_thm = GSYM ((SIMP_RULE std_ss [w2w_def, combinTheory.o_DEF, FUN_EQ_THM]) word_extract_def);
+val word_extract_thm = 
+ GSYM ((SIMP_RULE std_ss [w2w_def, combinTheory.o_DEF, FUN_EQ_THM]) 
+                         word_extract_def);
 
 
-val SIM_REWRITE_CONV = 
-	REWRITE_CONV ([mdecode_def, write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, index_of_reg_def, WORD_ADD_0, FAPPLY_FUPDATE_THM, word4_distinct,
-	GSYM WORD_ADD_ASSOC, FUPDATE_EQ, fupdate_lt_commutes_word4, word_sub_def]);
-
+val SIM_REWRITE_CONV = REWRITE_CONV 
+  [mdecode_def, write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, 
+   index_of_reg_def, WORD_ADD_0, FAPPLY_FUPDATE_THM, word4_distinct,
+   GSYM WORD_ADD_ASSOC, FUPDATE_EQ, fupdate_lt_commutes_word4, word_sub_def];
 
 val SIM_CONV = 
-		SIM_REWRITE_CONV THENC
-		WORDS_CONV THENC
-		REWRITE_CONV [word_extract_thm, WORD_ADD_0]
+      SIM_REWRITE_CONV THENC
+       WORDS_CONV THENC
+       REWRITE_CONV [word_extract_thm, WORD_ADD_0]
 	
 val SIM_MEM_CONV = 
-		SIM_REWRITE_CONV THENC
-		SIMP_CONV arith_ss [word4_distinct, MEM_ADDR_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
-			WORD_EQ_ADD_LCANCEL] THENC
-		WORDS_CONV THENC
-		REWRITE_CONV [word_extract_thm, WORD_ADD_0]
+      SIM_REWRITE_CONV THENC
+      SIMP_CONV arith_ss [word4_distinct, MEM_ADDR_ADD_CONST_MOD, 
+                          GSYM WORD_ADD_ASSOC, WORD_EQ_ADD_LCANCEL] THENC
+      WORDS_CONV THENC
+      REWRITE_CONV [word_extract_thm, WORD_ADD_0]
 
 val SIM_PUSH_CONV =
-		REWRITE_CONV [mdecode_def, pushL_def, GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH, FOLDL] THENC
-		DEPTH_CONV GEN_BETA_CONV THENC
-		SIM_REWRITE_CONV THENC
-		SIMP_CONV arith_ss [MEM_ADDR_ADD_CONST_MOD] THENC
-		SIM_CONV;
+      REWRITE_CONV [mdecode_def, pushL_def, GSYM MAP_REVERSE, REVERSE_DEF, 
+                    APPEND, MAP, LENGTH, FOLDL] THENC
+      DEPTH_CONV GEN_BETA_CONV THENC
+      SIM_REWRITE_CONV THENC
+      SIMP_CONV arith_ss [MEM_ADDR_ADD_CONST_MOD] THENC
+      SIM_CONV;
 	
 val SIM_POP_CONV =
-		REWRITE_CONV [mdecode_def, popL_def, GSYM MAP_REVERSE, REVERSE_DEF, APPEND, MAP, LENGTH, FOLDL] THENC
-		DEPTH_CONV GEN_BETA_CONV THENC
-		SIM_REWRITE_CONV THENC
-		SIMP_CONV arith_ss [word4_distinct, MEM_ADDR_ADD_CONST_MOD, GSYM WORD_ADD_ASSOC,
-			WORD_EQ_ADD_LCANCEL] THENC
-		SIM_CONV;
+      REWRITE_CONV [mdecode_def, popL_def, GSYM MAP_REVERSE, 
+                    REVERSE_DEF, APPEND, MAP, LENGTH, FOLDL] THENC
+      DEPTH_CONV GEN_BETA_CONV THENC
+      SIM_REWRITE_CONV THENC
+      SIMP_CONV arith_ss [word4_distinct, MEM_ADDR_ADD_CONST_MOD, 
+                          GSYM WORD_ADD_ASSOC, WORD_EQ_ADD_LCANCEL] THENC
+      SIM_CONV;
 
 (* make a list of rules [exp0 <- v0, exp1 <- v1, ...] *)
 fun mk_subst_rules expL =
   let
-    val i = ref (~1);
+    val i = ref (~1)
+    fun new_var() = (i := !i + 1; mk_var ("v"^Int.toString (!i), Type`:DATA`))
   in 
-    List.map (fn exp => (i := !i + 1; {redex = exp, residue = mk_var ("v" ^ (Int.toString (!i)), Type `:DATA`)})) expL
+    List.map (fn exp => (exp |-> new_var())) expL
   end
 
 fun read_one_var s exp =
-  let
-     val v0 = IRSyntax.read_exp s exp;
-	  fun conv (IRSyntax.MEM (b, off)) = SIM_MEM_CONV |
-			conv _ = SIM_CONV
+ let val v0 = IRSyntax.read_exp s exp;
+     fun conv (IRSyntax.MEM (b, off)) = SIM_MEM_CONV
+       | conv _ = SIM_CONV
      val v1 = rhs (concl ((conv exp) v0))
   in
      v1
@@ -195,160 +208,142 @@ fun read_one_var s exp =
 (*      Symbolic Simulation of Instructions                                        *) 
 (*---------------------------------------------------------------------------------*)
 
-val ACCESS_CONV = SIMP_CONV finmap_ss [mread_def, write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, index_of_reg_def];
-val ACCESS_RULE = SIMP_RULE finmap_ss [mread_def, write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, index_of_reg_def];
+val ACCESS_CONV = SIMP_CONV finmap_ss 
+   [mread_def, write_thm, read_thm, toMEM_def, toEXP_def, toREG_def, index_of_reg_def];
 
-(*  Basic RULE for instructions execpt for PUSH and POP                            *) 
+val ACCESS_RULE = CONV_RULE ACCESS_CONV;
 
-
+(*---------------------------------------------------------------------------*)
+(*  Basic RULE for instructions execpt for PUSH and POP                      *) 
+(*---------------------------------------------------------------------------*)
 
 (* Find the first instruction to be simulated next   *)
  
-fun locate_first_inst t = 
-    if type_of t = Type `:DOPER` then true
-    else false;
+val doper_ty = mk_thy_type{Tyop="DOPER",Thy="IL",Args=[]};;
+val mdecode_tm = prim_mk_const{Name = "mdecode", Thy = "IL"};
 
+fun locate_first_inst t = (type_of t = doper_ty);
 
-fun is_mdecode_exp t =
-	(let
-	  val const = #1 (strip_comb t)
-	in
-	  (same_const const (Term `mdecode`))
-   end) handle _ => false;
+fun is_mdecode_exp t = same_const (#1 (strip_comb t)) mdecode_tm
 
 
 fun find_innermost_mdecode t = 	
-	(let
-		val state = (rand (rator t));
-	in
-		if is_mdecode_exp state then find_innermost_mdecode state else t
-	end)
-  handle e => (print "find_innermost_mdecode:syntax error"; Raise e);
+ let val state = rand (rator t)
+ in if is_mdecode_exp state 
+      then find_innermost_mdecode state 
+      else t
+ end
+ handle e as HOL_ERR _ => 
+ (print "find_innermost_mdecode:syntax error"; Raise e);
 
-(* eliminate all "decode"s and get the new state *) 
-(*
-fun step th =
-	let
-		val t1 = concl th
-      val st = if is_imp t1 then rhs (#2 (dest_imp t1)) else rhs t1
-		val t1 = find_term locate_first_inst st;
-      val operator = #1 (strip_comb t1);
-		val t2 = find_innermost_mdecode st;
-		val conv = if same_const operator (Term `MPUSH`) then SIM_PUSH_CONV
-						else if same_const operator (Term `MPOP`) then SIM_POP_CONV
-						else if same_const operator (Term `MLDR`) then SIM_MEM_CONV
-						else if same_const operator (Term `MSTR`) then SIM_MEM_CONV
-						else SIM_CONV 
-		val t2_thm = conv t2;
-	in
-		REWRITE_RULE [t2_thm] th
-	end;
+(*---------------------------------------------------------------------------*)
+(* eliminate all "decode"s and get the new state                             *) 
+(*---------------------------------------------------------------------------*)
 
-val th = th1
+val mpush_tm = prim_mk_const {Name="MPUSH", Thy="IL"};
+val mpop_tm = prim_mk_const {Name="MPOP", Thy="IL"};
+val mldr_tm = prim_mk_const {Name="MLDR", Thy="IL"};
+val mstr_tm = prim_mk_const {Name="MSTR", Thy="IL"};
 
-val th = step th
-*)
 fun elim_decode th = 
-  let val t1 = concl th
-      val st = if is_imp t1 then rhs (#2 (dest_imp t1)) else rhs t1
-  in 
-      if is_pair st then th
-      else
-          let val t1 = find_term locate_first_inst st;
-              val operator = #1 (strip_comb t1);
-              val _ = print ("Simulating a " ^ (#1 (dest_const operator)) ^ " instruction\n");
-				  val t2 = find_innermost_mdecode st;
-				  val conv = if same_const operator (Term `MPUSH`) then SIM_PUSH_CONV
-									else if same_const operator (Term `MPOP`) then SIM_POP_CONV
-									else if same_const operator (Term `MLDR`) then SIM_MEM_CONV
-									else if same_const operator (Term `MSTR`) then SIM_MEM_CONV
-									else SIM_CONV 
-				  val t2_thm = conv t2;
-              val th' =  REWRITE_RULE [t2_thm] th
-          in  elim_decode th'
-          end
-  end
-  handle e => (print "get_blk_spec: errors occur while symbolically simulating a block! "; Raise e);
+ let val t1 = concl th
+     val st = if is_imp t1 then rhs (#2 (dest_imp t1)) else rhs t1
+ in 
+  if is_pair st then th
+  else let val t1 = find_term locate_first_inst st
+           val operator = #1 (strip_comb t1);
+           val _ = print ("Simulating a " ^ 
+                          (#1 (dest_const operator)) ^ " instruction\n")
+           val t2 = find_innermost_mdecode st
+           val conv = if same_const operator mpush_tm then SIM_PUSH_CONV else 
+                      if same_const operator mpop_tm then SIM_POP_CONV else 
+                      if same_const operator mldr_tm then SIM_MEM_CONV else 
+                      if same_const operator mstr_tm then SIM_MEM_CONV 
+                      else SIM_CONV 
+           val t2_thm = conv t2;
+           val th' =  REWRITE_RULE [t2_thm] th
+       in elim_decode th'
+       end
+ end
+ handle e => 
+   (print "get_blk_spec: errors occur while symbolically simulating a block! "; 
+    Raise e);
 
 
-(* Given a list of IR statements, return a theorem indicating the state after symolic simulation *)
-(* pre_spec specifies the pre-conditions before the simulation                                   *)
+(*---------------------------------------------------------------------------*)
+(* Given a list of IR statements, return a theorem indicating the state      *)
+(* after symbolic simulation. Note that pre_spec specifies the               *)
+(* pre-conditions before the simulation                                      *)
+(*---------------------------------------------------------------------------*)
 
-(*
-	val stms = instL*)
+(* val stms = instL *)
+
 fun printProof [] = () |
     printProof (e::l) = (print e;print "\n";printProof l)
 
 fun printProofToFile file_name p =
-	let
-	   val file_st = TextIO.openOut(file_name);
-		val _ = map (fn s => TextIO.output(file_st, s^"\n")) p;
-   	val _ = TextIO.output(file_st, "\n\n");
-      val _ = TextIO.flushOut file_st;
-	   val _ = TextIO.closeOut file_st;
-	in
-		()
-	end;
+ let val file_st = TextIO.openOut(file_name);
+     val _ = map (fn s => TextIO.output(file_st, s^"\n")) p;
+     val _ = TextIO.output(file_st, "\n\n");
+     val _ = TextIO.flushOut file_st;
+     val _ = TextIO.closeOut file_st;
+ in
+     ()
+ end;
 
-fun append_proofs [] = [] |
-	 append_proofs [e] = e |
-	 append_proofs (h::l) = h@[""]@(append_proofs l);
+fun append_proofs [] = [] 
+  | append_proofs [e] = e 
+  | append_proofs (h::l) = h@[""]@(append_proofs l);
 
 val LET_ELIM_RULE = SIMP_RULE std_ss [LET_THM];
-fun SPLIT_SPEC_RULE spec =
-	let
-		val thmL = CONJUNCTS (LET_ELIM_RULE spec)
-	in
-		(el 1 thmL, el 2 thmL, el 3 thmL)
-	end;
 
+fun SPLIT_SPEC_RULE spec =
+ let val thmL = CONJUNCTS (LET_ELIM_RULE spec)
+ in (el 1 thmL, el 2 thmL, el 3 thmL)
+ end;
 
 fun make_proof_string term tac =
-	let
- 	   val name = get_new_thm_name ();
-		val line1 = "val "^name^" = prove (";
-		val line2 = "``"^(term_to_string term)^"``,";
-		val tac' = map (fn s => ("   "^s)) tac;
-	in
-		(name, (line1::line2::tac')@[");"])
-	end
+ let val name = get_new_thm_name ();
+     val line1 = "val "^name^" = prove (";
+     val line2 = "``"^(term_to_string term)^"``,";
+     val tac' = map (fn s => ("   "^s)) tac;
+ in
+   (name, (line1::line2::tac')@[");"])
+ end;
 
 fun cheat_tac (asl,g) = ACCEPT_TAC(ASSUME g) (asl,g);
 
 fun make_assume_string term =
-	let
- 	   val name = get_new_thm_name ();
-		val line1 = "val "^name^" = mk_oracle_thm \"ARM-Compiler\"";
-		val line2 = "([], ``"^(term_to_string term)^"``);";
-	in
-				(name, [line1,line2])
-	end
+ let val name = get_new_thm_name ();
+      val line1 = "val "^name^" = mk_oracle_thm \"ARM-Compiler\"";
+       val line2 = "([], ``"^(term_to_string term)^"``);";
+ in
+    (name, [line1,line2])
+ end;
 
 fun make_proof_split_spec thm_name =
-	let
- 	   val name1 = get_new_thm_name ();
- 	   val name2 = get_new_thm_name ();
- 	   val name3 = get_new_thm_name ();
-
-
-		val line = "val ("^name1^","^name2^","^name3^") = SPLIT_SPEC_RULE "^thm_name^";";
-	in
-		([name1, name2, name3], [line])
-	end
+ let val name1 = get_new_thm_name ();
+     val name2 = get_new_thm_name ();
+     val name3 = get_new_thm_name ();
+     val line = "val ("^name1^","^name2^","^name3^") = SPLIT_SPEC_RULE "
+                ^thm_name^";"
+ in
+     ([name1, name2, name3], [line])
+ end;
 
 fun sim_stms_CONV instance =
-	let
-     val th0 =  REWRITE_CONV [IR_SEMANTICS_BLK] instance;
-     val th1 = SIMP_RULE std_ss [mread_def, toMEM_def, toREG_def, index_of_reg_def, read_thm] th0;
-     val th2 = elim_decode th1              (* symbolically simulate the block *)
-	in
-		th2
-	end;
+ let val th0 =  REWRITE_CONV [IR_SEMANTICS_BLK] instance;
+     val th1 = SIMP_RULE std_ss [mread_def, toMEM_def, toREG_def, 
+                                 index_of_reg_def, read_thm] th0
+     val th2 = elim_decode th1   (* symbolically simulate the block *)
+ in
+    th2
+ end;
 
 fun sim_stms blk = 
-  let
-     val st = mk_pair (mk_var ("regs", Type `:REGISTER |-> DATA`), mk_var ("mem", Type `:ADDR |-> DATA`));
-     val instance = list_mk_comb (Term`run_ir:CTL_STRUCTURE -> DSTATE -> DSTATE`, [blk, st]);
+  let val st = mk_pair (mk_var ("regs", Type `:REGISTER |-> DATA`), 
+                        mk_var ("mem", Type `:ADDR |-> DATA`))
+      val instance = list_mk_comb (Term`run_ir:CTL_STRUCTURE -> DSTATE -> DSTATE`, [blk, st]);
 
 	  val thm = sim_stms_CONV instance;
 	

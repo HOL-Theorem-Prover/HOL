@@ -52,9 +52,9 @@ val main1_def  = Define `
 val Thm1 = Q.store_thm (
   "Thm1",
   `main1 = main`,
-   SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD] THEN
-   RW_TAC std_ss [main1_def, main_def, LET_THM, twice1_def, twice_def, dispatch_def] THEN
-   RW_TAC std_ss [g1'_def, g2'_def]
+ RW_TAC std_ss 
+    [FUN_EQ_THM, FORALL_PROD,main1_def, main_def, LET_THM, twice1_def, 
+     twice_def, dispatch_def,g1'_def, g2'_def]
   );
 
 
