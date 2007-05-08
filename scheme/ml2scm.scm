@@ -7,38 +7,39 @@
     (begin0 (read p)
             (close-input-port p))))
 
-(define (capital-symbol? s)
-  (and (symbol? s)
-       (char-upper-case? (string-ref (symbol->string s) 0))))
+(define function-table
+  (make-immutable-hash-table
+   '((Math.sqrt . sqrt)
+     (:: . cons)
+     (@ . append)
+     (ref . box)
+     (:= . set-box!)
+     (! . unbox)
+     (read_integer . read)
+     (toString . number->string)
+     )))
 
 (define function-map
-  (let ((table
-         (make-immutable-hash-table
-          '((Math.sqrt . sqrt)
-            (:: . cons)
-            (@ . append)
-            (ref . box)
-            (:= . set-box!)
-            (! . unbox)
-            (read_integer . read)
-            (toString . number->string)
-            ))))
-    (match-lambda*
-      ((list (list 'quote (? capital-symbol? s)) arg)
-       `(list (quote ,s) ,arg))
-      ((list f arg)
-       (if (symbol? f)
-           (let ((scheme-f
-                  (hash-table-get table f (lambda () #f))))
-             (if scheme-f
-                 (set! f scheme-f))))
-       (match arg
-         ((list 'list (list 'cons (list 'quote (? number? _)) act-arg) ...)
-          (cons f act-arg))
-         ((list 'RECORDAtExp _)
-          (list f))
-         (else
-          (list f arg)))))))
+  (lambda (f arg)
+    (if (symbol? f)
+        (let ((scheme-f
+               (hash-table-get function-table f (lambda () #f))))
+          (if scheme-f
+              (set! f scheme-f))))
+    (match arg
+      ((list 'list (list 'cons (list 'quote (? number? _)) act-arg) ...)
+       (cons f act-arg))
+      ((list 'RECORDAtExp _)
+       (list f))
+      (else
+       (list f arg)))))
+
+(define (pattern-map f arg)
+  (let ((scheme-f
+         (hash-table-get function-table f (lambda () #f))))
+    (if scheme-f
+        (list scheme-f arg)
+        `(list ',f ,arg))))
 
 (define translate
   (match-lambda
@@ -81,10 +82,8 @@
      #f)
     ((list 'LongVId 'nil)
      '(list))
-    ((list 'LongVId a)
-     (if (char-upper-case? (string-ref (symbol->string a) 0))
-         (list 'quote a)
-         a))
+    ((list (or 'LongVId 'VId) a)
+     a)
     ((list 'ATExp _ p)
      (translate p))
     ((list 'PARAtExp _ p)
@@ -118,8 +117,6 @@
      (translate p))
     ((list 'IDAtExp _ p)
      (translate p))
-    ((list 'VId v)
-     v)
     ((list 'EMPTYStrDec _)
      '(void))
     ((list 'STRINGSCon s)
@@ -166,12 +163,33 @@
              ,(translate locdef)
              ,body)))))
     ((list 'CONPat _ id pat)
-     (function-map (translate id)
-                   (translate pat)))
+     (pattern-map (translate id)
+                  (translate pat)))
     ((list 'DATATYPEDec _ p)
      (translate p))
-    ((list-rest 'DatBind _)
-     '(void))
+    ((list 'DatBind _ _ _ p)
+     (translate p))
+    ((list 'ConBind _ p)
+     (let ((id (translate p)))
+       (list 'define-values (list id)
+             (list 'values (list 'quote id)))))
+    ((list 'ConBind _ p1 (and p2 (list-rest 'ConBind _)))
+     (let ((id (translate p1))
+           (others (translate p2)))
+       (list 'define-values
+             (cons id (cadr others))
+             (list* 'values (list 'quote id) (cdaddr others)))))
+    ((list 'ConBind _ p _)
+     (let ((id (translate p)))
+       `(define-values (,id)
+          (values (lambda arg (cons ',id arg))))))
+    ((list 'ConBind _ p1 _ p2)
+     (let ((id (translate p1))
+           (others (translate p2)))
+       (list 'define-values
+             (cons id (cadr others))
+             (list* 'values `(lambda arg (cons ',id arg))
+                    (cdaddr others)))))
     ((list 'EXCEPTIONDec _ _)
      '(void))
     ((list 'RAISEExp _ p)
