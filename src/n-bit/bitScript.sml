@@ -231,6 +231,15 @@ val BITS_ZEROL = store_thm("BITS_ZEROL",
   `!h a. a < 2 ** SUC h ==> (BITS h 0 a = a)`,
   RW_TAC bool_ss [BITS_ZERO3,LESS_MOD]);
 
+val BITS_LT_LOW = store_thm("BITS_LT_LOW",
+  `!h l n. n < 2 ** l ==> (BITS h l n = 0)`,
+  REPEAT STRIP_TAC
+    \\ Cases_on `h < l` >> ASM_SIMP_TAC bool_ss [BITS_ZERO]
+    \\ `l < SUC h` by DECIDE_TAC
+    \\ IMP_RES_TAC TWOEXP_MONO
+    \\ `n < 2 ** SUC h` by DECIDE_TAC
+    \\ ASM_SIMP_TAC std_ss [BITS_LT_HIGH, LESS_DIV_EQ_ZERO]);
+
 val BIT_ZERO = store_thm("BIT_ZERO",
   `!b. ~BIT b 0`, REWRITE_TAC [BIT_def,BITS_ZERO2,DECIDE ``~(0 = 1)``]);
 

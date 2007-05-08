@@ -8,6 +8,7 @@ sig
 
     val mk_word_size  : int -> unit
 
+    val SIZES_CONV    : conv
     val WORDS_CONV    : conv
     val WORDS_RULE    : rule
     val WORDS_TAC     : tactic

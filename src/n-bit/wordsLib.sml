@@ -122,7 +122,7 @@ val RHS_REWRITE_RULE =
   GEN_REWRITE_RULE (DEPTH_CONV o RAND_CONV) empty_rewrites;
 
 val WORDS_EMIT_RULE =
-  BETA_RULE o PURE_REWRITE_RULE ([literal_case_THM] @ (map GSYM
+  BETA_RULE o PURE_REWRITE_RULE ([BIT_UPDATE, literal_case_THM] @ (map GSYM
     [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,
      word_concat_itself_def, word_extract_itself_def,
      fcpTheory.FCPi_def, fcpTheory.mk_fcp_def])) o
