@@ -923,4 +923,70 @@ val BIT_MODIFY_THM = store_thm("BIT_MODIFY_THM",
 
 (* ------------------------------------------------------------------------- *)
 
+val SUB1_EXP_MOD2 = prove(
+  `!n. ~(n = 0) ==> ((2 ** n - 1) MOD 2 = 1)`,
+  Induct \\ SRW_TAC [] [EXP, DECIDE ``2 * a - 1 = a + (a - 1)``]
+    \\ Cases_on `n` >> EVAL_TAC
+    \\ `2 ** SUC n' + (2 ** SUC n' - 1) = 2 ** n' * 2 + (2 ** SUC n' - 1)`
+    by SIMP_TAC arith_ss [EXP]
+    \\ ASM_SIMP_TAC std_ss [MOD_TIMES]
+    \\ FULL_SIMP_TAC arith_ss []);
+
+val BIT_SIGN_EXTEND = store_thm("BIT_SIGN_EXTEND",
+  `!l h n i. ~(l = 0) ==>
+     (BIT i (SIGN_EXTEND l h n) =
+        if (l <= h) ==> i < l then
+          BIT i (n MOD 2 ** l)
+        else
+          i < h /\ BIT (l - 1) n)`,
+  REPEAT STRIP_TAC
+    \\ SRW_TAC [boolSimps.LET_ss] [IMP_DISJ_THM, SIGN_EXTEND_def]
+    \\ FULL_SIMP_TAC std_ss [NOT_LESS, NOT_LESS_EQUAL, TWOEXP_MONO,
+         DECIDE ``a < b ==> (a - b + c = c:num)``]
+    << [
+      Cases_on `h < l`
+        \\ FULL_SIMP_TAC std_ss [NOT_LESS, TWOEXP_MONO, BIT_def,
+             DECIDE ``a < b ==> (a - b + c = c:num)``]
+        \\ IMP_RES_TAC LESS_EQ_EXISTS
+        \\ ASM_SIMP_TAC arith_ss [EXP_ADD, ZERO_LT_TWOEXP,
+             DECIDE ``0 < b ==> (a * b - a = (b - 1) * a)``]
+        \\ `?q. l = q + SUC i`
+        by (IMP_RES_TAC LESS_ADD_1 \\ EXISTS_TAC `p'` \\ DECIDE_TAC)
+        \\ ASM_SIMP_TAC arith_ss [EXP_ADD, BITS_SUM2],
+      Cases_on `l`
+        \\ FULL_SIMP_TAC arith_ss [GSYM BITS_ZERO3, BIT_def, BITS_COMP_THM2]
+        \\ Cases_on `i < h`
+        \\ FULL_SIMP_TAC arith_ss [NOT_LESS]
+        << [
+          `2 ** i < 2 ** h` by METIS_TAC [TWOEXP_MONO]
+            \\ `2 ** SUC n' <= 2 ** i` by METIS_TAC [TWOEXP_MONO2]
+            \\ `2 ** h MOD 2 ** i = 0`
+            by (`?q. h = q + i` by METIS_TAC [LESS_ADD]
+                \\ ASM_SIMP_TAC std_ss [EXP_ADD, MOD_EQ_0, ZERO_LT_TWOEXP])
+            \\ `2 ** h - 2 ** i = (2 ** (h - i) - 1) * 2 ** i`
+            by ASM_SIMP_TAC arith_ss [RIGHT_SUB_DISTRIB, EXP_SUB, DIV_MULT_THM]
+            \\ `2 ** h - 2 ** SUC n' + BITS n' 0 n =
+                2 ** h - 2 ** i + (2 ** i - 2 ** SUC n' + BITS n' 0 n)`
+            by ASM_SIMP_TAC std_ss
+                 [DECIDE ``l <= i /\ i < h ==>
+                             (h - l + x = h - i + (i - l + x:num))``]
+            \\ SPECL_THEN [`n'`,`0`,`n`]
+                 (ASSUME_TAC o REWRITE_RULE [SUB_0]) BITSLT_THM
+            \\ `~(h - i = 0)` by (NTAC 6 (POP_ASSUM (K ALL_TAC)) \\ DECIDE_TAC)
+            \\ ASM_SIMP_TAC std_ss
+                [BITS_SUM, BITS_ZERO4, BITS_ZERO3, SUB1_EXP_MOD2,
+                 DECIDE ``a <= x /\ b < a ==> x - a + b < x:num``] ,
+          SPECL_THEN [`n'`,`0`,`n`]
+               (ASSUME_TAC o REWRITE_RULE [SUB_0]) BITSLT_THM
+            \\ `2 ** h <= 2 ** i` by METIS_TAC [TWOEXP_MONO2]
+            \\ `2 ** SUC n' <= 2 ** h` by METIS_TAC [TWOEXP_MONO2]
+            \\ `2 ** h - 2 ** SUC n' + BITS n' 0 n < 2 ** i` by DECIDE_TAC
+            \\ ASM_SIMP_TAC std_ss [BITS_LT_LOW]
+        ],
+      Cases_on `l`
+        \\ FULL_SIMP_TAC arith_ss
+             [MIN_DEF, GSYM BITS_ZERO3, BITS_ZERO, BIT_def, BITS_COMP_THM2]]);
+
+(* ------------------------------------------------------------------------- *)
+
 val _ = export_theory();

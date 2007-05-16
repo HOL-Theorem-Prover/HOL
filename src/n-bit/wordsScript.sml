@@ -700,14 +700,30 @@ val w2w = store_thm("w2w",
     \\ Cases_on `i < SUC m`
     \\ ASM_SIMP_TAC (fcp_ss++ARITH_ss) [MIN_DEF,BITS_ZERO]);
 
+val sw2sw = store_thm("sw2sw",
+  `!w:'a word i. i < dimindex(:'b) ==>
+     (sw2sw w :'b word %% i =
+       if i < dimindex (:'a) \/ dimindex(:'b) < dimindex(:'a) then
+         w %% i
+       else
+         word_msb w)`,
+  STRIP_TAC \\ ISPEC_THEN `w` FULL_STRUCT_CASES_TAC ranged_word_nchotomy
+    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [sw2sw_def, w2n_n2w, n2w_def,
+         word_msb_n2w, BIT_SIGN_EXTEND, DIMINDEX_GT_0]
+    \\ FULL_SIMP_TAC arith_ss [dimword_def, BIT_SIGN_EXTEND, DIMINDEX_GT_0]);
+
 val WORD_ss = rewrites [word_extract_def, word_slice_def,word_bits_def,
   word_bit_def,word_lsl_def,word_lsr_def,word_and_def,word_or_def,word_xor_def,
-  word_reverse_def,word_modify_def,n2w_def,w2w,SUC_SUB1,BIT_SLICE_THM4];
+  word_reverse_def,word_modify_def,n2w_def,w2w,sw2sw,word_msb_def,
+  SUC_SUB1,BIT_SLICE_THM4];
 
 val FIELD_WORD_TAC = RW_TAC (fcp_ss++WORD_ss++ARITH_ss) [];
 
 val w2w_id = store_thm("w2w_id",
   `!w:'a word. w2w w:'a word = w`, FIELD_WORD_TAC);
+
+val sw2sw_id = store_thm("sw2sw_id",
+  `!w:'a word. sw2sw w:'a word = w`, FIELD_WORD_TAC);
 
 val w2w_w2w = store_thm("w2w_w2w",
   `!w:'a word. (w2w ((w2w w):'b word)):'c word =
@@ -717,6 +733,37 @@ val w2w_w2w = store_thm("w2w_w2w",
     \\ Cases_on `i < dimindex (:'b)` \\ FIELD_WORD_TAC
     \\ PROVE_TAC [DECIDE ``0 < n /\ ~(i < n) ==> ~(i <= n - 1)``,
          DIMINDEX_GT_0]);
+
+val sw2sw_sw2sw_lem = prove(
+  `!w:'a word. ~(dimindex(:'b) < dimindex(:'a) /\
+                 dimindex(:'b) < dimindex(:'c)) ==>
+       (sw2sw ((sw2sw w):'b word) :'c word = sw2sw w)`,
+  FIELD_WORD_TAC
+    \\ FIELD_WORD_TAC
+    \\ FULL_SIMP_TAC arith_ss [sw2sw,DIMINDEX_GT_0,NOT_LESS]
+    \\ FIELD_WORD_TAC
+    \\ `dimindex (:'b) = dimindex (:'a)` by DECIDE_TAC
+    \\ ASM_REWRITE_TAC []);
+
+val sw2sw_sw2sw_lem2 = prove(
+  `!w:'a word. dimindex(:'b) < dimindex(:'a) /\
+               dimindex(:'b) < dimindex(:'c) ==>
+       (sw2sw ((sw2sw w):'b word) :'c word =
+        sw2sw (w2w w :'b word))`,
+  FIELD_WORD_TAC
+    \\ ASM_SIMP_TAC arith_ss [sw2sw,w2w,DIMINDEX_GT_0,
+         DECIDE ``0 < b ==> (1 + (b - 1) = b) /\ (i <= b - 1 = i < b)``]);
+
+val sw2sw_sw2sw = store_thm("sw2sw_sw2sw",
+  `!w:'a word. (sw2sw ((sw2sw w):'b word)):'c word =
+        if dimindex(:'b) < dimindex(:'a) /\ dimindex(:'b) < dimindex(:'c) then
+          sw2sw (w2w w : 'b word)
+        else
+          sw2sw w`,
+  STRIP_TAC
+    \\ Cases_on `dimindex(:'b) < dimindex(:'a) /\ dimindex(:'b) < dimindex(:'c)`
+    \\ ASM_SIMP_TAC std_ss [sw2sw_sw2sw_lem2]
+    \\ METIS_TAC [sw2sw_sw2sw_lem]);
 
 val word_bit = store_thm("word_bit",
   `!w:'a word b.  b < dimindex (:'a) ==>
@@ -1458,14 +1505,20 @@ val ZERO_SHIFT = store_thm("ZERO_SHIFT",
   `(!n. 0w:'a word << n  = 0w) /\
    (!n. 0w:'a word >> n  = 0w) /\
    (!n. 0w:'a word >>> n = 0w) /\
+   (!n. 0w:'a word #<< n = 0w) /\
    (!n. 0w:'a word #>> n = 0w)`,
   SHIFT_WORD_TAC \\ Cases_on `i + n < ^WL`
     \\ ASM_SIMP_TAC fcp_ss []);
 
+val ROL_ZERO = prove(
+  `!w:'a word. w #<< 0 = w`,
+  SRW_TAC [ARITH_ss] [DIMINDEX_GT_0, word_rol_def,
+    (REWRITE_RULE [MULT_LEFT_1] o SPECL [`w`,`1`]) ROR_CYCLE]);
+
 val SHIFT_ZERO = store_thm("SHIFT_ZERO",
   `(!a. a << 0 = a) /\ (!a. a >> 0 = a) /\
-   (!a. a >>> 0 = a) /\ (!a. a #>> 0 = a)`,
-  SHIFT_WORD_TAC);
+   (!a. a >>> 0 = a) /\ (!a. a #<< 0 = a) /\ (!a. a #>> 0 = a)`,
+  REWRITE_TAC [ROL_ZERO] \\ SHIFT_WORD_TAC);
 
 val LSR_BITWISE = store_thm("LSR_BITWISE",
   `(!n v:'a word w:'a word. w >>> n && v >>> n = ((w && v) >>> n)) /\
