@@ -214,6 +214,25 @@ val subctxt_ctxtFV = store_thm(
   SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF, subctxt_def] THEN
   METIS_TAC [ctxtFV_MEM]);
 
+val hastype_lam_inversion = store_thm(
+  "hastype_lam_inversion",
+  ``~(v IN ctxtFV G) ==> 
+        (G |- (LAM v M) -: Ty = 
+          ?Ty1 Ty2. ((v,Ty1)::G) |- M -: Ty2 /\
+                    (Ty = Ty1 --> Ty2))``,
+  STRIP_TAC THEN 
+  CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hastype_cases])) THEN 
+  SRW_TAC [][LAM_eq_thm] THEN SRW_TAC [][EQ_IMP_THM] THENL [
+    `ctxtswap [(v,x)] ((x,A)::G) |- tpm [(v,x)] m -: B`
+       by SRW_TAC [][hastype_swap] THEN 
+    POP_ASSUM MP_TAC THEN 
+    `valid_ctxt ((x,A)::G)` by METIS_TAC [hastype_valid_ctxt] THEN 
+    `~(x IN ctxtFV G)` by (FULL_SIMP_TAC (srw_ss()) [] THEN 
+                           METIS_TAC [ctxtFV_MEM]) THEN 
+    SRW_TAC [][ctxtswap_fresh],
+    METIS_TAC []
+  ]);
+
 val weakening = store_thm(
   "weakening",
   ``!G m A. G |- m -: A ==> !D. valid_ctxt D /\ G <= D ==> D |- m -: A``,
