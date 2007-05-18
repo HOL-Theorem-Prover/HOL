@@ -429,7 +429,7 @@ that the buffer has already had HOL terms, comments and strings removed."
           ;; next thing to do is to look for open declarations
           (goto-char (point-min))
           ;; search through buffer for open declarations
-          (while (re-search-forward "\\bopen\\b" (point-max) t)
+          (while (re-search-forward "\\s-bopen\\s-" (point-max) t)
             ;; point now after an open, now search forward to end of
             ;; buffer or a semi-colon, or an infix declaration or a
             ;; val or a fun or another open  (as per the regexp defined just
