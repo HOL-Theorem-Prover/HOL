@@ -24,8 +24,15 @@ fun simpl_conv thl =
   in simpl
   end;
 
+fun is_triv_rw tm = 
+  let val (l,r) = dest_eq tm 
+  in aconv l r 
+  end handle HOL_ERR _ => false
+
+fun non_triv thl = gather (not o is_triv_rw o concl) thl
+
 fun simplify thl = 
- let val rewrite = PURE_REWRITE_RULE thl (* PURE_ONCE_REWRITE_RULE *)
+ let val rewrite = PURE_REWRITE_RULE (non_triv thl) (* PURE_ONCE_REWRITE_RULE *)
      fun simpl th =
       let val th' = GEN_BETA_RULE (rewrite th)
           val (_,c1) = dest_thm th
