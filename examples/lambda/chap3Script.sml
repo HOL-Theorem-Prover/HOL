@@ -546,6 +546,19 @@ val corollary3_3_1 = store_thm(
 
 val diamond_TC = relationTheory.diamond_TC_diamond
 
+val bvc_cases = store_thm(
+  "bvc_cases",
+  ``!X. FINITE X ==>
+        !t. (?s. t = VAR s) \/ (?t1 t2. t = t1 @@ t2) \/
+            (?v t0. ~(v IN X) /\ (t = LAM v t0))``,
+  SRW_TAC [][] THEN
+  Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
+  SRW_TAC [][LAM_eq_thm] THEN
+  SRW_TAC [boolSimps.DNF_ss][] THEN
+  SRW_TAC [][Once tpm_eqr] THEN
+  Q_TAC (NEW_TAC "z") `v INSERT X UNION FV t0` THEN
+  METIS_TAC []);
+
 val (grandbeta_rules, grandbeta_ind, grandbeta_cases) =
     Hol_reln`(!M. grandbeta M M) /\
              (!M M' x. grandbeta M M' ==> grandbeta (LAM x M) (LAM x M')) /\
