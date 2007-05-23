@@ -2781,8 +2781,8 @@ val _ = adjoin_to_theory
  (fn ppstrm => let
    val S = (fn s => (PP.add_string ppstrm s; PP.add_newline ppstrm))
  in
-   S "val _ = TotalDefn.default_termination_simps := ";
-   S "    LSR_LESS :: WORD_PRED_THM :: !TotalDefn.default_termination_simps";
+   S "val _ = TotalDefn.termination_simps := ";
+   S "    LSR_LESS :: WORD_PRED_THM :: !TotalDefn.termination_simps";
    S " ";
    S "val _ = ";
    S "  let open Lib boolSyntax";
