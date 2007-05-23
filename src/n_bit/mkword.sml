@@ -51,13 +51,18 @@ val MOSMLC = fullPath [Systeml.MOSMLDIR,"mosmlc"];
 val thy_file = "word" ^ sn ^ "Theory";
 val lib_file = "word" ^ sn ^ "Lib";
 
-val _ =
- Systeml.systeml
-   [MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui", thy_file^ ".sig"];
+fun failonerror f x = if f x = Process.success then ()
+                      else Process.exit Process.failure
 
 val _ =
- Systeml.systeml
-   [MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui", thy_file ^ ".sml"];
+    failonerror
+      Systeml.systeml
+      [MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui", thy_file^ ".sig"];
+
+val _ =
+    failonerror
+      Systeml.systeml
+      [MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui", thy_file ^ ".sml"];
 
 (* --------------------------------------------------------------------- *)
 
@@ -69,8 +74,11 @@ val _ =
       flushOut ostrm ; closeOut ostrm)
   end;
 
-val _ = Systeml.systeml[MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui",
-                        "wordFunctorLib.ui", lib_file ^ ".sml"];
+val _ =
+    failonerror
+      Systeml.systeml
+      [MOSMLC, "-q", "-c", "-I", SIGOBJ_DIR, "Overlay.ui",
+       "wordFunctorLib.ui", lib_file ^ ".sml"];
 
 (* --------------------------------------------------------------------- *)
 
