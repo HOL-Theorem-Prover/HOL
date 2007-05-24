@@ -279,7 +279,6 @@ val _ =
     systeml [compiler, "-c", "internal_functions.sml"];
     systeml [compiler, "-c", "Holmake_types.sig"];
     systeml [compiler, "-c", "Holmake_types.sml"];
-    systeml [compiler, "-c", "Holmake_tokens.sml"];
     systeml [compiler, "-c", "ReadHMF.sig"];
     systeml [compiler, "-c", "ReadHMF.sml"];
     if OS <> "winNT" then
