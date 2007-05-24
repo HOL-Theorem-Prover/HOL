@@ -342,22 +342,11 @@ end
 val hmakefile_toks =
   if exists_readable hmakefile andalso not no_hmakefile
   then let
-      open Holmake_types
-      fun createLexerStream is =
-          Lexing.createLexer
-            (fn buff => fn n => Nonstdio.buff_input is buff 0 n)
-      val strm = BasicIO.open_in hmakefile
-      val lbf = createLexerStream strm
-      val tok = Holmake_tokens.token
-      fun recurse acc =
-          case tok lbf of
-            EOF => List.rev acc
-          | t => recurse (to_token t::acc)
       val () = if debug then
                 print ("Reading additional information from "^hmakefile^"\n")
               else ()
     in
-      recurse []
+      ReadHMF.read hmakefile
     end
   else []
 
