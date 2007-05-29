@@ -288,19 +288,27 @@ the region contains no backquotes, then send region instead."
     (send-string-as-hol-goal (hol-term-at-point)))))
 
 (defun copy-region-as-hol-definition (start end arg)
-  "Send selected region to HOL process as definition/expression."
-  (interactive "r\nP")
-  (let* ((buffer-string (with-hol-locpragma start (buffer-substring start end)))
-         (send-string (if arg
-                         (concat "(" buffer-string ") handle e => Raise e")
-                       buffer-string))
+  "Send selected region to HOL process as definition/expression.  With a
+prefix arg of 4 (hit control-u once), wrap what is sent so that it becomes
+( .. ) handle e => Raise e, allowing HOL_ERRs to be displayed cleanly.
+With a prefix arg of 16 (hit control-u twice), toggle Moscow ML's quiet-dec
+variable before and after the region is sent."
+  (interactive "r\np")
+  (let* ((buffer-string
+            (with-hol-locpragma start (buffer-substring start end)))
+         (send-string
+          (if (= arg 4)
+              (concat "(" buffer-string ") handle e => Raise e")
+            buffer-string))
          (sender (if hol-emit-time-elapsed-p
                      'send-timed-string-to-hol
                    'send-string-to-hol)))
+    (if (= arg 16) (hol-toggle-quietdec))
     (funcall sender send-string hol-echo-commands-p)
     (if (> (length send-string) 300)
         (send-string-to-hol
-         "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))))
+         "val _ = print \"\\n*** Emacs/HOL command completed ***\\n\\n\""))
+    (if (= (prefix-numeric-value arg) 16) (hol-toggle-quietdec))))
 
 (defun hol-name-top-theorem (string arg)
   "Name the top theorem of the goalstackLib.
