@@ -108,4 +108,4 @@ sig
   (* Folding in beta-conversion and a user-given standard simpset *)
   val Simpl : tactic -> thm list -> thm list -> tactic
 *)
-end;
+end

@@ -703,35 +703,61 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val aux_ind = Induction.mk_induction theory1
                        {fconst=faux_const, R=R1,SV=SV,
                         pat_TCs_list=pat_TCs_list}
-     val nested_guards = op_set_diff aconv (hyp rules) (hyp aux_ind)
      val ics = strip_conj(fst(dest_imp(snd(dest_forall(concl aux_ind)))))
      fun dest_ic tm = if is_imp tm then strip_conj (fst(dest_imp tm)) else []
      val ihs = Lib.flatten (map (dest_ic o snd o strip_forall) ics)
      val nested_ihs = filter (can (find_term (aconv faux_const))) ihs
      (* a nested ih is of the form
 
-           c1/\.../\ck ==> R a pat ==> P a
+           !(c1/\.../\ck ==> R a pat ==> P a)
 
         where "aux R N" occurs in "c1/\.../\ck" or "a". In the latter case,
         we have a nested recursion; in the former, there's just a call
         to aux in the context. In both cases, we want to eliminate "R a pat"
-        by assuming "c1/\.../\ck ==> R a pat" and doing some work.
+        by assuming "c1/\.../\ck ==> R a pat" and doing some work. Really, 
+        what we prove is something of the form
+
+          !(c1/\.../\ck ==> R a pat) |- 
+             (!(c1/\.../\ck ==> R a pat ==> P a))
+               = 
+             (!(c1/\.../\ck ==> P a))
+
+        where the c1/\.../\ck might not be there (when there is no
+        context for the recursive call), and where !( ... ) denotes
+        a universal prefix.
      *)
-     fun nested_guard tm =
-         let val ngthm = SPEC_ALL (ASSUME tm)
-         in if is_imp (concl ngthm) then UNDISCH ngthm else ngthm
-         end
-     val ng_thms = map nested_guard nested_guards
-     val nested_ihs' = map (Rules.simpl_conv ng_thms) nested_ihs
-     val nested_ihs''' = nested_ihs'
-(*     fun disch_context thm =
-          if length(hyp thm) = 2
-          then DISCH (fst(dest_imp(lhs (concl thm)))) thm
-          else thm
-     val nested_ihs'' = map disch_context nested_ihs'
-     val nested_ihs''' = map (simplify [imp_elim]) nested_ihs''
-*)
-     val ind0 = simplify nested_ihs''' aux_ind
+     fun simp_nested_ih nih =
+      let val (lvs,tm) = strip_forall nih
+          val (ants,Pa) = strip_imp_only tm
+          val P = rator Pa
+          val vs = op_set_diff aconv (free_varsl ants) [R1,P]
+          val V = op_union aconv lvs vs
+          val has_context = (length ants = 2)
+          val ng = list_mk_forall(V,list_mk_imp (front_last ants))
+          val th1 = SPEC_ALL (ASSUME ng)
+          val th1a = if has_context then UNDISCH th1 else th1
+          val th2 = SPEC_ALL (ASSUME nih)
+          val th2a = if has_context then UNDISCH th2 else th2
+          val Rab = fst(dest_imp(concl th2a))
+          val th3 = MP th2a th1a
+          val th4 = if has_context 
+                    then DISCH (fst(dest_imp(snd(strip_forall ng)))) th3
+                    else th3
+          val th5 = GENL lvs th4
+          val th6 = DISCH nih th5
+          val tha = SPEC_ALL(ASSUME (concl th5))
+          val thb = if has_context then UNDISCH tha else tha
+          val thc = DISCH Rab thb
+          val thd = if has_context 
+                     then DISCH (fst(dest_imp(snd(strip_forall ng)))) thc
+                     else thc
+          val the = GENL lvs thd
+          val thf = DISCH_ALL the
+      in 
+        MATCH_MP (MATCH_MP IMP_ANTISYM_AX th6) thf
+      end
+     val nested_ih_simps = map simp_nested_ih nested_ihs
+     val ind0 = simplify nested_ih_simps aux_ind
      val ind1 = UNDISCH_ALL (SPEC R2 (GEN R1 (DISCH_ALL ind0)))
      val ind2 = simplify [GSYM def1] ind1
      val ind3 = itlist PROVE_HYP (CONJUNCTS TC_choice_thm) ind2
@@ -745,6 +771,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      aux_ind = aux_ind
     }
  end;
+
 
 (*---------------------------------------------------------------------------
       Performs tupling and also eta-expansion.
@@ -1059,9 +1086,9 @@ fun mutrec_defn (facts,stem,eqns) =
  end
 
 
-fun nestrec_defn (fb,(stem,stem'),wfrec_res,untuple) =
+fun nestrec_defn (thy,(stem,stem'),wfrec_res,untuple) =
   let val {rules,ind,SV,R,aux_rules,aux_ind,...}
-         = nestrec fb stem' wfrec_res
+         = nestrec thy stem' wfrec_res
       val (rules', ind') = untuple (rules, ind)
   in NESTREC {eqs=rules', ind=ind', R=R, SV=SV, stem=stem,
               aux=STDREC{eqs=aux_rules, ind=aux_ind,
