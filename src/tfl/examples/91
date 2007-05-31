@@ -2,9 +2,7 @@
            McCarthy's 91 function.
  ---------------------------------------------------------------------------*)
 
-app load ["bossLib", "numLib"];
-
-open TotalDefn bossLib numLib;
+open TotalDefn bossLib numLib prim_recTheory;
 
 val ARITH = DECIDE o Term;
 
@@ -78,7 +76,7 @@ end;
 
 (*1,2*)
 
-val N_defn_1 = Defn.set_reln N_defn (Term `measure \x. 101 - x`);
+val N_defn_1 = Defn.set_reln N_defn ``measure \x. 101 - x``;
 
 (*3*)
 
@@ -87,8 +85,8 @@ val tcs as [tc1,nested,tc2] = Defn.tcs_of N_defn_1;
 (*4*)
 
 val non_nested_tcs = prove
-(mk_conj(tc1,tc2),
- TotalDefn.TC_SIMP_TAC [] []);
+(mk_conj(tc1,tc2), 
+ RW_TAC arith_ss [WF_measure,measure_thm]);
 
 (*5*)
 
@@ -102,12 +100,9 @@ val SOME aux_defn_2 = Defn.aux_defn N_defn_2;
 
 val E0  = DISCH_ALL (hd (Defn.eqns_of aux_defn_2));
 val lem = ARITH `~(x > 100) ==> (101-y < 101-x = x<y)`;
-val lem1 = Q.prove(`measure f x y = f x < f y`, 
-            RW_TAC std_ss [prim_recTheory.measure_def, 
-                           relationTheory.inv_image_def]);
 (*8*)
 
-val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
+val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,measure_thm] E0);
 
 (*---------------------------------------------------------------------------
 
@@ -174,7 +169,8 @@ val E1  = GEN_ALL (simpLib.SIMP_RULE std_ss [lem,lem1] E0);
 val (N,N_INDUCT) = Defn.tprove
 (N_defn_2,
  GEN_TAC THEN measureInduct_on `(\m. 101 - m) x`
-  THEN DISCH_TAC THEN Q.PAT_ASSUM`!y. Q y` MP_TAC THEN RW_TAC std_ss[lem,lem1]
+  THEN DISCH_TAC THEN Q.PAT_ASSUM`!y. Q y` MP_TAC 
+  THEN RW_TAC std_ss[lem,measure_thm]
   THEN MP_TAC (Q.SPEC `x+11` E1) THEN RW_TAC std_ss [ARITH `x < x+11-10`]
   THEN `x+11 < N_aux(measure(\x.101-x)) (x+11+11)` by PROVE_TAC[ARITH`x<x+11`]
   THEN RW_TAC std_ss [] 

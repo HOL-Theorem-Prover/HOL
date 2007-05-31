@@ -1,0 +1,96 @@
+(*---------------------------------------------------------------------------*)
+(* Definition of binary gcd                                                  *)
+(*                                                                           *)
+(* Version from JRH                                                          *)
+(*                                                                           *)
+(* define                                                                    *)
+(*  `(gcd' (2 * u) (2 * v) = if u=0 /\ v=0 then u else 2 * gcd' u v) /\      *)
+(*   (gcd' (2 * u) (2 * v + 1) = gcd' u (2 * v + 1)) /\                      *)
+(*   (gcd' (2 * u + 1) (2 * v) = gcd' (2 * u + 1) v) /\                      *)
+(*   (gcd' (2 * u + 1) (2 * v + 1) =                                         *)
+(*      if u = v then 2 * u + 1                                              *)
+(*        else gcd'(if u <= v then 2*u + 1 else 2*v + 1) (u+v+1))`;;         *) 
+(*---------------------------------------------------------------------------*)
+
+app load ["intLib", "gcdTheory"];
+open arithmeticTheory;
+numLib.prefer_num();
+
+val div2_lem = 
+ intLib.ARITH_PROVE ``(!m. (2*m + 1) DIV 2 = m) /\ (!m. (2*m) DIV 2 = m)``;
+
+val bgcd_def = 
+ tDefine
+  "bgcd"
+  `bgcd x y = 
+     if x = 0 then y else 
+     if y = 0 then x else
+     case (EVEN x, EVEN y)
+      of (T,T) -> if (x=0) /\ (y=0) then x else 2 * bgcd (x DIV 2) (y DIV 2)
+      || (T,F) -> bgcd (x DIV 2) y
+      || (F,T) -> bgcd x (y DIV 2)
+      || (F,F) -> if x=y then x 
+                  else bgcd (if x < y then x else y) (x DIV 2 + y DIV 2 + 1)`
+ (WF_REL_TAC `$< LEX $<` 
+    THEN RW_TAC arith_ss [EVEN_ODD,ODD_EXISTS,div2_lem]
+    THEN intLib.ARITH_TAC);
+
+val bgcd_ind = fetch "-" "bgcd_ind";
+
+(*---------------------------------------------------------------------------*)
+(* Should prove equality with ordinary gcd                                   *)
+(*---------------------------------------------------------------------------*)
+
+g `!x y. gcd x y = bgcd x y`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Alternatively, show that gcd obeys bgcd eqns                              *)
+(*---------------------------------------------------------------------------*)
+
+g `!x y. gcd x y = 
+     if x = 0 then y else if y = 0 then x else
+     case (EVEN x, EVEN y)
+      of (T,T) -> if (x=0) /\ (y=0) then x else 2 * gcd (x DIV 2) (y DIV 2)
+      || (T,F) -> gcd (x DIV 2) y
+      || (F,T) -> gcd x (y DIV 2)
+      || (F,F) -> if x=y then x 
+                  else gcd (if x < y then x else y) (x DIV 2 + y DIV 2 + 1)`;
+
+
+(*---------------------------------------------------------------------------*)
+(* Is it faster to evaluate ordinary gcd or bgcd?                            *)
+(*---------------------------------------------------------------------------*)
+
+val recFib_def = 
+ Define 
+   `recFib n = if n < 2n then 1 else recFib (n-1) + recFib (n-2)`;
+
+val accFib_def = 
+ Define
+   `accFib n a b = if n = 0n then b else accFib (n-1n) b (a+b)`;
+
+val Fib_def = 
+ Define
+   `Fib n = if n<2 then 1 else accFib (n-2) 1n 1n`;
+
+(* tests *)
+Count.apply EVAL ``bgcd (Fib 5) (Fib 6)``;
+Count.apply EVAL ``bgcd (Fib 10) (Fib 11)``;
+
+Count.apply EVAL ``gcd (Fib 5) (Fib 6)``;
+Count.apply EVAL ``gcd (Fib 10) (Fib 11)``;
+
+
+Count.apply EVAL ``bgcd 24 18``;
+Count.apply EVAL ``gcd 1024 18000041``;
+Count.apply EVAL ``bgcd 1024 18000041``;
+Count.apply EVAL ``gcd 24 18``;
+
+
+Count.apply EVAL ``gcd (Fib 50) (Fib 51)``;
+Count.apply EVAL ``bgcd (Fib 50) (Fib 51)``;
+
+Count.apply EVAL ``gcd (Fib 100) (Fib 101)``;
+Count.apply EVAL ``bgcd (Fib 100) (Fib 101)``;
+
