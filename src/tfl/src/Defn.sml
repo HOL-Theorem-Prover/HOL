@@ -1376,8 +1376,9 @@ fun TC_TAC defn =
  let val E = LIST_CONJ (eqns_of defn)
      val I = Option.valOf (ind_of defn)
      val th = CONJ E I
-     val (wfr,rest) = get_WF (hyp th)
-     val hyps' = wfr::rest
+     val asl = hyp th
+     val hyps' = let val (wfr,rest) = get_WF asl
+                 in wfr::rest end handle HOL_ERR _ => asl
      val tac = MATCH_MP_TAC (GEN_ALL (mangle th hyps'))
      val goal = ([],concl th)
  in
