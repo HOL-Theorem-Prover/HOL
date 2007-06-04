@@ -143,6 +143,21 @@ fun ModusPonens th1 th2 =
   handle _ => raise ERR "ModusPonens" "failed";
 
 
+(*---------------------------------------------------------------------------*)
+(* Version of PROVE_HYP that works modulo permuting outer universal quants.  *)
+(*---------------------------------------------------------------------------*)
+
+fun ALPHA_PROVE_HYP th1 th2 = 
+ let val c1 = concl th1
+     val asl = hyp th2
+     val tm = snd(strip_forall c1)
+     val a = Lib.first (fn t => aconv tm (snd(strip_forall t))) asl
+     val V = fst(strip_forall a)
+     val th1' = GENL V (SPEC_ALL th1)
+ in
+   PROVE_HYP th1' th2
+ end;
+
 fun name_of (ABBREV {bind, ...})           = bind
   | name_of (PRIMREC{bind, ...})           = bind
   | name_of (NONREC {eqs, ind, stem, ...}) = stem
@@ -760,7 +775,7 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      val ind0 = simplify nested_ih_simps aux_ind
      val ind1 = UNDISCH_ALL (SPEC R2 (GEN R1 (DISCH_ALL ind0)))
      val ind2 = simplify [GSYM def1] ind1
-     val ind3 = itlist PROVE_HYP (CONJUNCTS TC_choice_thm) ind2
+     val ind3 = itlist ALPHA_PROVE_HYP (CONJUNCTS TC_choice_thm) ind2
  in
     {rules = CONJUNCTS rules,
      ind = ind3,
