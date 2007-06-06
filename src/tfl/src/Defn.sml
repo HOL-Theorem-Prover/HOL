@@ -744,8 +744,8 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
      fun simp_nested_ih nih =
       let val (lvs,tm) = strip_forall nih
           val (ants,Pa) = strip_imp_only tm
-          val P = rator Pa
-          val vs = op_set_diff aconv (free_varsl ants) [R1,P]
+          val P = rator Pa  (* keep R, P, and SV unquantified *)
+          val vs = op_set_diff aconv (free_varsl ants) (R1::P::SV)
           val V = op_union aconv lvs vs
           val has_context = (length ants = 2)
           val ng = list_mk_forall(V,list_mk_imp (front_last ants))
@@ -770,7 +770,8 @@ fun nestrec thy bindstem {proto_def,SV,WFR,pats,extracta} =
           val thf = DISCH_ALL the
       in 
         MATCH_MP (MATCH_MP IMP_ANTISYM_AX th6) thf
-      end
+      end handle e => raise wrap_exn "nestrec.simp_nested_ih" 
+                       "failed while trying to generated nested ind. hyp." e
      val nested_ih_simps = map simp_nested_ih nested_ihs
      val ind0 = simplify nested_ih_simps aux_ind
      val ind1 = UNDISCH_ALL (SPEC R2 (GEN R1 (DISCH_ALL ind0)))
