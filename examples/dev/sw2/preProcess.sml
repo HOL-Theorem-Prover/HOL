@@ -1,4 +1,18 @@
 
+(* structure preProcess  =
+struct
+
+local
+*)
+
+(* quietdec := true; *)
+
+open HolKernel Parse boolSyntax boolLib bossLib pairSyntax;
+
+(* quietdec := false; *)
+
+(* in *)
+
 (*----------------------------------------------------------------------------------*)
 (* Apply the rewrite rules in bool_ss to simplify boolean connectives and           *)
 (*   conditional expressions                                                        *)
@@ -10,37 +24,49 @@
 (* Presburger arithmetic, and to normalise arithmetic expressions                   *)
 (*----------------------------------------------------------------------------------*)
 
-val AND_COND = store_thm (
+(* Conjunction in condtions *)
+val AND_COND = Q.store_thm (
   "AND_COND",
-  ``(if c1 /\ c2 then e1 else e2) = 
-    let x = e2 in
+  `(if c1 /\ c2 then e1 else e2) = 
+     let x = e2 in
       (if c1 then 
          if c2 then e1 else x
-       else x)``,
+       else x)`,
    RW_TAC std_ss [LET_THM] THEN
    METIS_TAC []
   );
 
-val OR_COND = store_thm (
+(* Disjunction in condtions *)
+val OR_COND = Q.store_thm (
   "OR_COND",
-  ``(if c1 \/ c2 then e1 else e2) = 
+  `(if c1 \/ c2 then e1 else e2) = 
     let x = e1 in
       (if c1 then x else
-       if c2 then x else e2)``,
+       if c2 then x else e2)`,
    RW_TAC std_ss [LET_THM] THEN
    METIS_TAC []
   );
 
-val BRANCH_NORM = store_thm (
+(* Normalize the conditions in branches *)
+val BRANCH_NORM = Q.store_thm (
   "BRANCH_NORM",
-  ``((if a > b then x else y) = (if a <= b then y else x)) /\ 
+  `((if a > b then x else y) = (if a <= b then y else x)) /\ 
     ((if a >= b then x else y) = (if b <= a then x else y)) /\
     ((if a < b then x else y) = (if b <= a then y else x))
-  ``,
+  `,
    RW_TAC arith_ss [] THEN
    FULL_SIMP_TAC std_ss [arithmeticTheory.GREATER_DEF, arithmeticTheory.GREATER_EQ,
           arithmeticTheory.NOT_LESS, arithmeticTheory.NOT_LESS_EQUAL] THEN
    METIS_TAC [arithmeticTheory.LESS_EQ_ANTISYM]
   );
 
+(* Pre-processing *)
 val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
+
+(*---------------------------------------------------------------------------*)
+
+(*
+end (* local *)
+
+end (* struct *)
+*)

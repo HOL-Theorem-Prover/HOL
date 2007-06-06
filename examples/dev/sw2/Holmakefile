@@ -1,0 +1,14 @@
+basic.uo: basic.sml
+	HOLMOSMLC -c -toplevel basic.sml
+preProcess.uo: preProcess.sml
+	HOLMOSMLC -c -toplevel preProcess.sml
+Normal.uo: Normal.sml basic.uo preProcess.uo
+	HOLMOSMLC -c -toplevel Normal.sml
+inline.uo: inline.sml basic.uo
+	HOLMOSMLC -c -toplevel inline.sml
+closure.uo: closure.sml basic.uo
+	HOLMOSMLC -c -toplevel closure.sml
+regAlloc.uo: regAlloc.sml basic.uo
+	HOLMOSMLC -c -toplevel regAlloc.sml
+#SALGen.uo: SALGen.sml basic.uo
+#	HOLMOSMLC -c -toplevel SALGen.sml

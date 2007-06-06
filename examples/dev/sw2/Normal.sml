@@ -1,9 +1,24 @@
 
-open HolKernel Parse boolLib bossLib pairLib pairSyntax pairTheory PairRules
+
+(*
+quietdec := true;
+
+app load ["basic", "preProcess"];
+
+open HolKernel Parse boolLib bossLib pairLib pairSyntax pairTheory PairRules basic preProcess;
+
+quietdec := false;
+*)
+
+quietdec := true;
+
+open HolKernel Parse boolLib bossLib pairLib pairSyntax pairTheory PairRules basic; (* preProcess; *)
+
+quietdec := false;
 
 (*---------------------------------------------------------------------------*)
 (* Normalization                                                             *)
-(* This intermediate language is a combination of K-normal forms             *) 
+(* This intermediate language is a combination of K-normal forms             *)
 (* and A-normal forms                                                        *)
 (*---------------------------------------------------------------------------*)
 
@@ -19,34 +34,34 @@ val C_def = Define `
 val atom_def = Define `
     atom = \x.x`;
 
-val C_ATOM_INTRO = store_thm (
+val C_ATOM_INTRO = Q.store_thm (
   "C_ATOM_INTRO",
-  ``!v. C v = C (atom v)``,
+  `!v. C v = C (atom v)`,
   SIMP_TAC std_ss [atom_def, C_def]
  );
 
-val ATOM_ID = store_thm (
+val ATOM_ID = Q.store_thm (
    "ATOM_ID",
-  ``atom x = x``,
+   `atom x = x`,
    SIMP_TAC std_ss [atom_def]
   );
 
-val C_ATOM = store_thm (
+val C_ATOM = Q.store_thm (
   "C_ATOM",
-  ``C (atom v) =
-      \k. k v``,
+  `C (atom v) =
+      \k. k v`,
   SIMP_TAC std_ss [C_def, atom_def]
  );
 
-val C_INTRO = store_thm (
+val C_INTRO = Q.store_thm (
   "C_INTRO",
-  ``!f. f = C f (\x.x)``,
+  `!f. f = C f (\x.x)`,
   SIMP_TAC std_ss [C_def, LET_THM]
  );
 
-val C_2_LET = store_thm (
+val C_2_LET = Q.store_thm (
   "C_2_LET",
-  ``(C e k = let x = e in k x)``,
+  `(C e k = let x = e in k x)`,
   SIMP_TAC std_ss [C_def, atom_def, LET_THM]
  );
 
@@ -55,66 +70,66 @@ val C_2_LET = store_thm (
 (* Theorems used for rewriting                                               *)	
 (*---------------------------------------------------------------------------*)
 
-val C_BINOP = store_thm (
+val C_BINOP = Q.store_thm (
   "C_BINOP",
-  ``(C (e1 + e2) = \k. C e1 (\x. C e2 (\y. C (x + y) k))) /\
+   `(C (e1 + e2) = \k. C e1 (\x. C e2 (\y. C (x + y) k))) /\
     (C (e1 - e2) = \k. C e1 (\x. C e2 (\y. C (x - y) k))) /\
     (C (e1 * e2) = \k. C e1 (\x. C e2 (\y. C (x * y) k))) /\
-    (C (e1 ** e2) = \k. C e1 (\x. C e2 (\y. C (x ** y) k)))``,
+    (C (e1 ** e2) = \k. C e1 (\x. C e2 (\y. C (x ** y) k)))`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
-val C_PAIR = store_thm (
+val C_PAIR = Q.store_thm (
   "C_PAIR",
-  ``C (e1, e2) = \k. C e1 (\x. C e2 (\y. k (x,y)))``,
+  `C (e1, e2) = \k. C e1 (\x. C e2 (\y. k (x,y)))`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
 (*  LET expressions are processed in a way that generate A-normal forms *)
 
-val C_LET = store_thm (
+val C_LET = Q.store_thm (
   "C_LET",
-  ``C (let v = e in f v) = \k. C e (\x. C (f x) (\y. k y))``,
+  `C (let v = e in f v) = \k. C e (\x. C (f x) (\y. k y))`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
 (*  For K-normal forms, use the following for LET expressions *)
 
-val C_LET_K = store_thm (
+val C_LET_K = Q.store_thm (
   "C_LET_K",
-  ``C (let v = e in f v) = \k. C e (\x. C x (\y. C (f y) (\z.k z)))``,
+   `C (let v = e in f v) = \k. C e (\x. C x (\y. C (f y) (\z.k z)))`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
-val C_ABS = store_thm (
+val C_ABS = Q.store_thm (
   "C_ABS",
-  ``C (\v. f v) = C (\v. (C (f v) (\x. x)))``,
+   `C (\v. f v) = C (\v. (C (f v) (\x. x)))`,
    RW_TAC std_ss [C_def, LET_THM]
   );
 
-val C_APP = store_thm (
+val C_APP = Q.store_thm (
   "C_APP",
-  ``C (f e) = \k. C f (\g. C e (\x. C (g x) (\y. k y)))``,
+   `C (f e) = \k. C f (\g. C e (\x. C (g x) (\y. k y)))`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
-val C_ATOM_COND = store_thm (
+val C_ATOM_COND = Q.store_thm (
   "C_ATOM_COND",
-  ``C (if cmpop c1 c2 then e1 else e2) = 
+   `C (if cmpop c1 c2 then e1 else e2) = 
        \k. C c1 (\p. C c2 (\q.
          C (if cmpop p q then C e1 (\x.x) 
-            else C e2 (\y.y)) (\z. k z)))``,
+            else C e2 (\y.y)) (\z. k z)))`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
 (*
-val C_COMPOUND_COND = store_thm (
+val C_COMPOUND_COND = Q.store_thm (
   "C_COMPOUND_COND",
-  ``C (if c1 /\ c2 then e1 else e2) = 
+   `C (if c1 /\ c2 then e1 else e2) = 
        \k. C c1 (\p. C c2 (\q. C e1 (\x. C e2 
            (\y. k (if p then 
                    if q then x else y
-                   else y)))))``,
+                   else y)))))`,
    RW_TAC std_ss [C_def, LET_THM] THEN
    METIS_TAC []
   );
@@ -152,7 +167,7 @@ fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
    end;
 
 fun K_Normalize exp =
-   let val (_, t) = dest_comb exp
+   let val (C, t) = dest_comb exp               (* eliminate the C *)
    in
 
    if is_atom t then 
@@ -173,8 +188,13 @@ fun K_Normalize exp =
     else if is_pabs t then                        (*  exp = \(x...).M *)
       let 
          val (v,M) = dest_pabs t
+	 val (v_type, m_type) = (type_of v, type_of M);
+	 val t1 = mk_comb (inst [alpha |-> m_type] ``C``, M);
+	 val t2 = mk_comb (inst [beta |-> m_type] t1, inst [alpha |-> m_type] ``\x.x``);
+         val t3 = mk_comb (C, mk_pabs(v, t2));
+	 val th1 = prove (mk_eq(exp, t3), SIMP_TAC std_ss [C_def]);
          val th0 = K_Normalize (mk_comb (inst [alpha |-> type_of M] ``C``, M))
-         val th1 = SIMP_CONV bool_ss [Once C_ABS] exp
+
          val th2 = CONV_RULE (RHS_CONV (RAND_CONV (PABS_CONV (
                       RATOR_CONV (ONCE_REWRITE_CONV [th0]))))) th1
          val th3 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th2
@@ -299,9 +319,9 @@ fun identify_atom tm =
     trav tm
   end;
 
-val BETA_REDUCTION = store_thm (
+val BETA_REDUCTION = Q.store_thm (
    "BETA_REDUCTION",
-  ``(let x = atom y in f x) = f y``,
+   `(let x = atom y in f x) = f y`,
    SIMP_TAC std_ss [atom_def, LET_THM]
   );
 
@@ -323,9 +343,9 @@ fun beta_reduction def =
 (* e2, we can replace let x = e1 in e2 just with e2.                         *)
 (*---------------------------------------------------------------------------*)
 
-val ELIM_USELESS_LET = store_thm (
+val ELIM_USELESS_LET = Q.store_thm (
   "ELIM_USELESS_LET",
-  ``(let x = e1 in e2) = e2``,
+   `(let x = e1 in e2) = e2`,
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
@@ -338,9 +358,9 @@ val ELIM_LET_RULE =
 (* e2, we can replace let x = e1 in e2 just with e2.                         *)
 (*---------------------------------------------------------------------------*)
 
-val FLATTEN_LET = store_thm (
+val FLATTEN_LET = Q.store_thm (
   "FLATTEN_LET",
-  ``(let x = (let y = e1 in e2 y) in e3 x) = (let y = e1 in let x = e2 y in e3 x)``,
+   `(let x = (let y = e1 in e2 y) in e3 x) = (let y = e1 in let x = e2 y in e3 x)`,
    SIMP_TAC std_ss [LET_THM]
   );
 
@@ -388,7 +408,8 @@ fun SSA_RULE def =
           if is_comb t1 then dest_comb t1
           else (t1, #1 (dest_pabs t2)) 
       val body = if flag then #2 (dest_pabs t2) else t2 
-      val lem1 = prove (mk_eq (fname, mk_pabs(args,body)), SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, def])
+      val lem1 = prove (mk_eq (fname, mk_pabs(args,body)), 
+		    SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def]);
       val t3 = if flag then t2 else mk_pabs (args,body) 
       val lem2 = SSA_CONV t3;
       val lem3 = ONCE_REWRITE_RULE [lem2] lem1

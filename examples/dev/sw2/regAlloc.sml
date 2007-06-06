@@ -203,11 +203,6 @@ fun g' dest cont regenv exp =
     end
   else NoSpill (exp, regenv)
 
-(*
-  | CallCls(x, ys, zs) as exp -> g'_call dest cont regenv exp 
-       (fun ys zs -> CallCls(find x Type.Int regenv, ys, zs)) ys zs
-  | CallDir(l, ys, zs) as exp -> g'_call dest cont regenv exp (fun ys zs -> CallDir(l, ys, zs)) ys zs
-*)
 and
 
 (* fun *) g'_and_restore dest cont regenv exp =
