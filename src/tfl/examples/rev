@@ -1,0 +1,94 @@
+(*---------------------------------------------------------------------------*)
+(* Tricky recursive definition of list reversal. Doesn't use any other       *)
+(* functions, nor extra arguments. Suggested by Joe Hurd.                    *)
+(*---------------------------------------------------------------------------*)
+
+open TotalDefn listTheory;
+
+val WF_measure = prim_recTheory.WF_measure;
+val measure_thm = prim_recTheory.measure_thm;
+val measure_length = Q.prove
+(`measure LENGTH t (h::t)`, RW_TAC list_ss [measure_thm])
+
+(*---------------------------------------------------------------------------*)
+(* The definition                                                            *)
+(*---------------------------------------------------------------------------*)
+
+val rev_defn = Hol_defn 
+   "rev"
+  `(rev [] = []) /\
+   (rev (x::xs) =
+      case rev xs
+       of [] -> [x]
+       || y::ys -> y :: rev (x::rev ys))`;
+
+(*---------------------------------------------------------------------------*)
+(* Fetch and simplify the auxiliary eqns                                     *)
+(*---------------------------------------------------------------------------*)
+
+val rev_defn1 = Defn.set_reln rev_defn ``measure LENGTH``;
+val SOME rev_aux_defn = Defn.aux_defn rev_defn1;
+val [e1,e2] = Defn.eqns_of rev_aux_defn;
+val rev_empty = SIMP_RULE std_ss [WF_measure] (DISCH_ALL e1);
+val rev_cons  = 
+  SIMP_RULE std_ss [WF_measure,measure_length] (DISCH_ALL e2);
+
+(*---------------------------------------------------------------------------*)
+(* Fetch and simplify the auxiliary induction theorem                        *)
+(*---------------------------------------------------------------------------*)
+
+val SOME rev_aux_ind = Defn.ind_of rev_aux_defn;
+val ind = SIMP_RULE std_ss [WF_measure,measure_length] (DISCH_ALL rev_aux_ind);
+
+(*---------------------------------------------------------------------------*)
+(* Useful invariant                                                          *)
+(*---------------------------------------------------------------------------*)
+
+val REV_AUX_LENGTH = Q.prove
+(`!l. LENGTH (rev_aux (measure LENGTH) l) = LENGTH l`,
+ recInduct ind 
+   THEN RW_TAC list_ss [rev_empty]
+   THEN MP_TAC rev_cons
+   THEN Q.ABBREV_TAC `Rev = rev_aux (measure LENGTH)`
+   THEN CASE_TAC
+   THEN FULL_SIMP_TAC list_ss [measure_thm]);
+
+(*---------------------------------------------------------------------------*)
+(* val rev_def =                                                             *)
+(*  |- (rev [] = []) /\                                                      *)
+(*     (rev (x::xs) =                                                        *)
+(*        case rev xs of [] -> [x] || y::ys -> y::rev (x::rev ys)) : thm     *)
+(*                                                                           *)
+(*  val rev_ind =                                                            *)
+(*   |- !P.                                                                  *)
+(*       P [] /\                                                             *)
+(*       (!x xs.                                                             *)
+(*          (!y ys. (rev xs = y::ys) ==> P ys) /\                            *)
+(*          (!y ys. (rev xs = y::ys) ==> P (x::rev ys)) /\ P xs ==>          *)
+(*          P (x::xs)) ==>                                                   *)
+(*         !v. P v : thm                                                     *)
+(*---------------------------------------------------------------------------*)
+
+val (rev_def, rev_ind) = Defn.tprove
+(rev_defn1,
+ REPEAT CONJ_TAC THENL
+   [METIS_TAC [WF_measure], ALL_TAC, ALL_TAC, RW_TAC list_ss [measure_thm]]
+  THEN Q.ABBREV_TAC `Rev = rev_aux (measure LENGTH)`
+  THEN RW_TAC list_ss [measure_thm]
+  THEN `(LENGTH (Rev xs) = LENGTH xs) /\ (LENGTH (Rev xs) = LENGTH (y::ys))` 
+       by METIS_TAC [REV_AUX_LENGTH]
+  THENL [ALL_TAC, `LENGTH (Rev ys) = LENGTH ys` by METIS_TAC [REV_AUX_LENGTH]]
+  THEN FULL_SIMP_TAC list_ss []);
+
+
+(*---------------------------------------------------------------------------*)
+(* rev = REVERSE                                                             *)
+(*---------------------------------------------------------------------------*)
+
+val rev_REVERSE = Q.prove
+(`rev = REVERSE`,
+ REWRITE_TAC [FUN_EQ_THM] THEN recInduct rev_ind THEN CONJ_TAC THENL 
+ [METIS_TAC [rev_def, REVERSE_DEF], 
+  REPEAT STRIP_TAC THEN RW_TAC list_ss [Once rev_def]
+   THEN CASE_TAC THEN RW_TAC list_ss []]);
+

@@ -54,7 +54,6 @@ val condE =
   SIMP_RULE arith_ss [AND_IMP_INTRO,WF_measure,measure_thm,SUB_LEFT_LESS] 
         (Q.INST [`R` |-> `measure \x. 101-x`] (DISCH_ALL E));
 
-
 (*---------------------------------------------------------------------------*)
 (* Termination. We'll use NA to abbreviate the instantiated auxiliary        *)
 (* function: thus NA = N_aux(measure($- 101)). The proof goes as follows:    *)
@@ -101,7 +100,6 @@ val (N_def,N_ind) = Defn.tprove
     THEN POP_ASSUM MP_TAC
     THEN FULL_SIMP_TAC arith_ss [DECIDE ``x+y < p ==> ((p-y)+y = p)``]);
 
-
 (*---------------------------------------------------------------------------
       Note that the above development is slightly cranky, since
       the partial correctness theorem has constraints remaining. 
@@ -111,15 +109,15 @@ val (N_def,N_ind) = Defn.tprove
       Now try some computations with N.
  ---------------------------------------------------------------------------*)
 
-EVAL (Term `N 0`);
-EVAL (Term `N 10`);
-EVAL (Term `N 11`);
-EVAL (Term `N 12`);
-EVAL (Term `N 40`);
-EVAL (Term `N 89`);
-EVAL (Term `N 90`);
-EVAL (Term `N 99`);
-EVAL (Term `N 100`);
-EVAL (Term `N 101`);
-EVAL (Term `N 102`);
-EVAL (Term `N 127`);
+EVAL ``N 0``;
+EVAL ``N 10``;
+EVAL ``N 11``;
+EVAL ``N 12``;
+EVAL ``N 40``;
+EVAL ``N 89``;
+EVAL ``N 90``;
+EVAL ``N 99``;
+EVAL ``N 100``;
+EVAL ``N 101``;
+EVAL ``N 102``;
+EVAL ``N 127``;
