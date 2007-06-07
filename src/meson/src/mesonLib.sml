@@ -1012,7 +1012,7 @@ fun GEN_MESON_TAC min max step ths g =
 
 
 val max_depth = ref 30;
-val ASM_MESON_TAC = GEN_MESON_TAC 0 (!max_depth) 1;
+fun ASM_MESON_TAC e = GEN_MESON_TAC 0 (!max_depth) 1 e;
 
 fun MESON_TAC ths = POP_ASSUM_LIST (K ALL_TAC) THEN ASM_MESON_TAC ths;
 
