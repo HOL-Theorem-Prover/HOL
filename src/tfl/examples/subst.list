@@ -1,22 +1,26 @@
-(*---------------------------------------------------------------------------
-         Substitution in the named lambda calculus
- ---------------------------------------------------------------------------*)
-
-app load ["bossLib", "stringTheory", "pred_setTheory"]; 
-
-open bossLib listTheory stringTheory pred_setTheory 
-     relationTheory prim_recTheory arithmeticTheory TotalDefn;
-
-
 (*---------------------------------------------------------------------------*)
-(*                                                                           *)
-(*                       DEFINITIONS                                         *)
-(*                                                                           *)
+(*         Substitution in the named lambda calculus                         *)
 (*---------------------------------------------------------------------------*)
 
+app load ["stringLib", "pred_setLib"]; 
+
+quietdec := true;
+open listTheory stringTheory pred_setTheory 
+     relationTheory prim_recTheory arithmeticTheory TotalDefn pred_setSimps;
+quietdec := false;
+
+(*---------------------------------------------------------------------------*)
+(* Useful functionality                                                      *)
+(*---------------------------------------------------------------------------*)
+
+val KMATCH_MP_TAC = MATCH_MP_TAC o 
+   Ho_Rewrite.REWRITE_RULE [AND_IMP_INTRO,
+                            METIS_PROVE [] ``(a ==> !x. b x) = !x. a ==> b x``]; 
+
+val set_ss = list_ss ++ pred_setSimps.PRED_SET_ss;
 
 (*---------------------------------------------------------------------------
-    Define the type of lambda terms
+    The type of lambda terms
  ---------------------------------------------------------------------------*)
 
 Hol_datatype `lam = Var  of string
@@ -24,9 +28,9 @@ Hol_datatype `lam = Var  of string
                   | Abs  of string => lam`;
 
 (*---------------------------------------------------------------------------
-    The system-generated size definition here doesn't work well, 
-    since renaming can increase the size of a term under that 
-    definition. Thus we define our own.
+    The system-generated size definition doesn't work well for subst,
+    since variable renaming can increase the size of a term. Thus we 
+    define our own size definition, in which all variables have zero size.
  ---------------------------------------------------------------------------*)
 
 val lam_count_def = 
@@ -34,15 +38,19 @@ val lam_count_def =
     /\   (lam_count (Comb M N) = 1 + lam_count M + lam_count N)
     /\   (lam_count (Abs _ M) = 1 + lam_count M)`;
 
+val lam_count_Comb = Q.prove
+(`(!x y. lam_count x < lam_count(Comb x y)) /\
+  (!x y. lam_count y < lam_count(Comb x y))`,
+ RW_TAC arith_ss [lam_count_def]);
 
 (*---------------------------------------------------------------------------
      Delete an element from a list at most once.
  ---------------------------------------------------------------------------*)
 
 val DEL1 = 
-   DefineSchema 
-      `(DEL1 [] = []) /\
-       (DEL1 (h::t) = if x=h then t else h::DEL1 t)`;
+   Define
+      `(DEL1 x [] = []) /\
+       (DEL1 x (h::t) = if x=h then t else h::DEL1 x t)`;
 
 (*---------------------------------------------------------------------------
       Free variables of a term, accumulator style.
@@ -58,171 +66,134 @@ val FV =
        Stick a prime on the end of a string.
  ---------------------------------------------------------------------------*)
 
-val PRIME = 
-   Define `PRIME s = STRCAT s "'"`;
+val PRIME = Define `PRIME s = STRCAT s "'"`;
 
 (*---------------------------------------------------------------------------
-     Rename a string so that it isn't a member of a (fixed) list.
+     Rename a string so that it isn't a member of a (fixed) list. 
+     Defer the termination proof.
  ---------------------------------------------------------------------------*)
 
-val AWAY_defn =
-  Hol_defn "AWAY" 
-     `AWAY x = if MEM x L then AWAY (PRIME x) else x`;
+val AWAY_defn = Hol_defn "AWAY" `AWAY x = if MEM x L then AWAY (PRIME x) else x`;
 
 (*---------------------------------------------------------------------------
      The substitution algorithm
  ---------------------------------------------------------------------------*)
 
 val subst_defn =
- try Defn.Hol_Rdefn 
+ Hol_defn 
    "subst"   
-   `measure (lam_count o SND)`
-
-   `(subst (x,Q) (Var v)    = if x=v then Q else Var v)
- /\ (subst (x,Q) (Comb M N) = Comb (subst (x,Q) M) (subst (x,Q) N))
- /\ (subst (x,Q) (Abs v M)  = 
+   `(subst x Q  (Var v)   = if x=v then Q else Var v)
+ /\ (subst x Q (Comb M N) = Comb (subst x Q M) (subst x Q N))
+ /\ (subst x Q (Abs v M)  = 
         if x=v then Abs v M else
         if MEM x (FV M []) /\ MEM v (FV Q [])   (* capture would happen *)
         then let v' = AWAY (FV M (FV Q [])) v
-             in Abs v' (subst (x,Q) (subst (v,Var v') M))
-        else Abs v (subst (x,Q) M))`;
+             in Abs v' (subst x Q (subst v (Var v') M))
+        else Abs v (subst x Q M))`;
+
+(*---------------------------------------------------------------------------*)
+(* Make subst x Q M parse and print like [x |-> Q]M.                         *)
+(*---------------------------------------------------------------------------*)
+
+val _ = add_rule {term_name = "subst", fixity = Parse.Closefix,
+                  pp_elements = [TOK "[", TM, HardSpace 1, TOK "|->",
+                                 BreakSpace(1,0), TM, TOK "]"],
+                  paren_style = OnlyIfNecessary,
+                  block_style = (AroundEachPhrase, (PP.CONSISTENT, 2))};
 
 
 (*---------------------------------------------------------------------------*)
-(*                                                                           *)
-(*                           PROOFS                                          *)
-(*                                                                           *)
+(* Get aux. recn. eqns for subst and instantiate with termination relation.  *)
 (*---------------------------------------------------------------------------*)
 
+val SOME subst_aux_defn = Defn.aux_defn subst_defn;
+val cond_subst_eqns =  
+  map (Q.INST [`R` |-> `measure (lam_count o SND o SND)`] o 
+       REWRITE_RULE [AND_IMP_INTRO] o DISCH_ALL) (Defn.eqns_of subst_aux_defn);
 
-(*---------------------------------------------------------------------------
-     Termination of subst is hard to prove, because of nestedness. One 
-     of the termination conditions to be proved will be the nested 
-     one: this usually needs to be proved by induction, and will require 
-     the use of the constrained recursion equations for subst. The 
-     constraints must be removed before use, so there is a 
-     `back-and-forth' between proving termination constraints and
-     eliminating them from the recursion equations held in the defn.
+val [Var_eqn,Comb_eqn,Abs_eqn] = 
+ map (SIMP_RULE arith_ss [AND_IMP_INTRO,WF_measure,measure_thm,lam_count_def])
+ cond_subst_eqns;
 
-     We proceed as follows:
-
-        1. Fetch all non-nested termination conditions from 
-           the initial defn (defn_0).
-        2. Set up a goalstack and prove them
-        3. Eliminate those conditions from the defn, to get defn_1.
-        4. Set up a goalstack for the proof of the nested termination 
-           condition (assuming there is only one).
-        5. Get the recursion equations for the auxiliary definition.
-           
- ---------------------------------------------------------------------------*)
-
-val subst_tcs as [tc1,tc2,nested_tc,tc4,tc5,tc6] = Defn.tcs_of subst_defn;
-
-(*---------------------------------------------------------------------------
-          Prove non-nested TCs and eliminate them from subst_defn
- ---------------------------------------------------------------------------*)
-
-val non_nested_tcs = prove
-(list_mk_conj [tc1,tc2,tc4,tc5,tc6],
- TotalDefn.TC_SIMP_TAC [] [lam_count_def]);
-
-val subst_defn1 = Defn.elim_tcs subst_defn (CONJUNCTS non_nested_tcs);
-
-(*---------------------------------------------------------------------------
-            Extract the auxiliary rules and simplify them
- ---------------------------------------------------------------------------*)
-
-val SOME aux_defn1 = Defn.aux_defn subst_defn1;
-val [E1,E2,E3] = Defn.eqns_of aux_defn1;
-val [E1a,E2a] = map (CONV_RULE (TC_SIMP_CONV [])) [E1,E2];
-val E3a = CONV_RULE (TC_SIMP_CONV [lam_count_def,DECIDE (Term`x<1+y = x<=y`)])
-                    (DISCH_ALL E3);
+val lemma = Q.prove
+(`(\(p1,p2,p2') (p1',p2'',p2''').lam_count p2' < lam_count p2''') =
+  measure (lam_count o SND o (SND:string#lam#lam->lam#lam))`, 	
+ TC_SIMP_TAC);
 
 
-(*---------------------------------------------------------------------------
-    Finally, the termination proof for the nested TC. In its full 
-    glory, the goal is
-
-    !Q M v x v'.
-      ~(x = v) /\ (MEM x (FV M []) /\ MEM v (FV Q [])) /\
-      (v' = AWAY (FV M (FV Q [])) v) ==>
-      measure (lam_count o SND)
-        ((x,Q),subst_tupled_aux (measure (lam_count o SND)) ((v,Var v'),M))
-        ((x,Q),Abs v M)
-
-    All the antecedents are cruft, and can be generalized away at the 
-    start. That leaves us with trying to prove the more manageable
-
-    !v w.
-      lam_count
-        (subst_tupled_aux (\x y. lam_count (SND x) < lam_count (SND y))
-           ((v,Var w),M)) <= lam_count M
-
-    We proceed by induction on the lam_count of M. The nested call, 
-    since it only replaces a variable by a variable, terminates.
-    In particular, the Var and Comb cases are simple. The Abs case
-    splits into 3 cases determined by the if-then-else structure of
-    the Abs clause. One of these is trivial, since there is no recursive
-    call in it. Another is easy, since we just do a normal recursion. The 
-    final case is where the nested call is made. This is the tricky part.
-    The induction hypothesis proves the constraint on unrolling the 
-    clause, so the nested call is exposed. The goal now (roughly) says
-
-       lam_count (subst s1 (subst s2 l)) <= lam_count l
-
-    and we have the i.h.
-
-       !y. lam_count y <= lam_count l 
-            ==> 
-           !s. lam_count (subst s y) <= y
-
-    Since lam_count l <= lam_count l, we have
-
-       !s. lam_count (subst s l) <= l
-
-    and by using the i.h. one more time, we obtain the goal. This is all
-    wrapped up in an invocation of PROVE_TAC.
-
- ---------------------------------------------------------------------------*)
-
-val (subst_eqns, subst_ind) = Defn.tprove
-(subst_defn1,
-  TC_SIMP_TAC [] [lam_count_def] 
-  THEN RW_TAC std_ss [DECIDE (Term`x<1+y = x<=y`)]
-  THEN REPEAT (WEAKEN_TAC (K true))     (* Generalize *)
-  THEN Q.SPEC_TAC (`AWAY (FV M (FV Q [])) v`, `w`)
-  THEN Q.ID_SPEC_TAC `v`
-  THEN measureInduct_on `lam_count M` 
-  THEN Cases_on `M` THEN POP_ASSUM MP_TAC
-  THEN RW_TAC arith_ss [lam_count_def,
-         DECIDE(Term`x<y+1 = x<=y`), DECIDE (Term`y<p+(q+1) = y<=p+q`)] THENL
-  [RW_TAC arith_ss [lam_count_def,E1a],   (* Var *)
-   RW_TAC arith_ss [lam_count_def, E2a,   (* Comb *)
-           DECIDE (Term`x<=p /\ y<=q ==> x+(y+1) <= p+(q+1)`)],
-   MP_TAC (Q.INST  (* Abs: start with delicate instantiation *)
-      [`M:lam`    |-> `l:lam`,
-       `v:string` |-> `s:string`,
-       `x:string` |-> `v:string`,
-       `Q:lam`    |-> `Var w:lam`] E3a)
-      THEN RW_TAC arith_ss [lam_count_def]
-      THEN REPEAT (WEAKEN_TAC (not o is_forall))
-      THEN PROVE_TAC [LESS_EQ_TRANS,LESS_EQ_REFL]]);
-
-
-(*---------------------------------------------------------------------------
-     Lemmas for proof of termination of AWAY.
- ---------------------------------------------------------------------------*)
-
-val GSPEC_DEF = Q.prove
-(`GSPEC = \f v. ?x. (v,T) = f x`,
- NTAC 2 (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
- PROVE_TAC [GSPECIFICATION,SPECIFICATION]);
+(*---------------------------------------------------------------------------*)
+(* Termination proof.                                                        *)
+(*                                                                           *)
+(* subst terminates because the term being traversed gets smaller, using     *)
+(* lam_count as a measure. Variable renaming makes no difference to          *)
+(* lam_count. After installing the measure, and doing some basic             *)
+(* simplification, the easy TCs are proved and the goal looks like           *)
+(*                                                                           *)
+(*     lam_count                                                             *)
+(*      (subst_tupled_aux (measure (lam_count o SND o SND))                  *)
+(*         (v,Var (AWAY (FV M (FV Q [])) v),M)) < lam_count M + 1            *)
+(*    ------------------------------------                                   *)
+(*      0.  ~(x = v)                                                         *)
+(*      1.  MEM x (FV M [])                                                  *)
+(*      2.  MEM v (FV Q [])                                                  *)
+(*                                                                           *)
+(* This is just the nested termination condition. The assumptions aren't     *)
+(* needed, and we can also generalize the (AWAY ...) subterm. Then we are    *)
+(* left to prove                                                             *)
+(*                                                                           *)
+(*     !v w.                                                                 *)
+(*       lam_count                                                           *)
+(*         (subst_tupled_aux (measure (lam_count o SND o SND)) (v,Var w,M))  *)
+(*        <=                                                                 *)
+(*       lam_count M                                                         *)
+(*                                                                           *)
+(* And this is done by inducting on (lam_count M). We can freely use Var_eqn *)
+(* and Comb_eqn as rewrite rules to dispatch the first two cases. The final  *)
+(* case starts by doing a case analysis on the conditionals in Abs_eqn. The  *)
+(* easy ones are dealt with automatically. The goal now (roughly) says       *)
+(*                                                                           *)
+(*   lam_count (subst s1 (subst s2 l)) <= lam_count l                        *)
+(*                                                                           *)
+(* and we have the i.h.                                                      *)
+(*                                                                           *)
+(*  !y.lam_count y < lam_count (Abs s l) ==> !s.lam_count (subst s y) <= y   *)
+(*                                                                           *)
+(* Since lam_count l <= lam_count l, we have                                 *)
+(*                                                                           *)
+(*       !s. lam_count (subst s l) <= l                                      *)
+(*                                                                           *)
+(* and by using the i.h. one more time, we finish the proof.                 *)
+(*---------------------------------------------------------------------------*)
+ 
+val (subst_eqns,subst_ind) = Defn.tprove
+(subst_defn,
+ WF_REL_TAC `measure (lam_count o SND o SND)` 
+   THEN RW_TAC arith_ss [lam_count_def,lemma,DECIDE ``x < y + 1 = x <= y``]
+   THEN REPEAT (WEAKEN_TAC (K true))
+   THEN Q.SPEC_TAC (`AWAY (FV M (FV Q [])) v`, `w`) THEN Q.ID_SPEC_TAC `v`
+   (* nested TC *)
+   THEN measureInduct_on `lam_count M` THEN Cases_on `M`
+   THEN RW_TAC list_ss [lam_count_def,Var_eqn,Comb_eqn]
+   THEN Q.ABBREV_TAC `Sub = subst_tupled_aux (measure (lam_count o SND o SND))`
+   THENL
+   [`lam_count (Sub (v,Var w,l)) <= lam_count l /\
+     lam_count (Sub (v,Var w,l0)) <= lam_count l0`
+         by METIS_TAC [lam_count_Comb,LESS_IMP_LESS_OR_EQ] THEN DECIDE_TAC,
+    MP_TAC(Q.INST[`x` |->`v`,  `Q` |-> `Var w`, `v` |-> `s`, `M` |-> `l`] Abs_eqn)
+      THEN RW_TAC arith_ss [FV,MEM,lam_count_def,DECIDE``x < y+1 = x<=y``,LET_THM]
+      THEN `lam_count l < lam_count (Abs s l)` by RW_TAC arith_ss [lam_count_def]
+      THEN `lam_count (Sub (s,Var (AWAY (FV l [s]) s),l)) <= lam_count l`
+            by METIS_TAC []
+      THEN `lam_count (Sub (s,Var (AWAY (FV l [s]) s),l)) < lam_count (Abs s l)`
+            by RW_TAC arith_ss []
+      THEN METIS_TAC [LESS_EQ_TRANS]]);
 
 
 (*---------------------------------------------------------------------------
    Termination of AWAY. The function terminates because the set of 
    strings in L that x is a prefix of strictly decreases with each
-   recursive call.
+   recursive call. Could also use the distance between the length of
+   x and the longest string in L, I suppose.
 
      AWAY     = |- AWAY L x = if MEM x L then AWAY L (PRIME x) else x
      AWAY_IND = |- !P. (!x. (MEM x L ==> P (PRIME x)) ==> P x) ==> !v. P v
@@ -231,24 +202,36 @@ val GSPEC_DEF = Q.prove
 
 val (AWAY,AWAY_IND) = Defn.tprove
 (AWAY_defn,
- WF_REL_TAC `measure \x. CARD ((combin$C MEM L) INTER (isPREFIX x))`
-   THEN RW_TAC std_ss [SPECIFICATION,combinTheory.C_DEF]
-   THEN MATCH_MP_TAC (Ho_Rewrite.REWRITE_RULE 
-          [GSYM RIGHT_FORALL_IMP_THM,AND_IMP_INTRO] CARD_PSUBSET) 
-   THEN CONJ_TAC THENL 
-   [MATCH_MP_TAC INTER_FINITE THEN WEAKEN_TAC (K true) 
-      THEN Induct_on `L` THEN RW_TAC list_ss [] THENL
-      [MATCH_ACCEPT_TAC (REWRITE_RULE[EMPTY_DEF]FINITE_EMPTY),
-       `(\y. (y=h) \/ MEM y L) = h INSERT (\y. MEM y L)` 
-           by RW_TAC std_ss [GSPEC_DEF,SPECIFICATION,INSERT_DEF]
-         THEN RW_TAC std_ss [FINITE_INSERT]],
-    RW_TAC std_ss [PSUBSET_DEF,SUBSET_DEF,INTER_DEF,GSPEC_DEF,SPECIFICATION]
-    THENL [POP_ASSUM MP_TAC THEN REPEAT (WEAKEN_TAC (K true))
-            THEN RW_TAC std_ss [isPREFIX,PRIME]
-            THEN Q.EXISTS_TAC `STRCAT "'" s3` 
-            THEN RW_TAC std_ss [STRCAT_ASSOC],
-      CONV_TAC (DEPTH_CONV FUN_EQ_CONV)
-        THEN RW_TAC std_ss [isPREFIX]
-        THEN Q.EXISTS_TAC `x`
-        THEN RW_TAC std_ss [PRIME,GSYM STRCAT_ASSOC,STRCAT_11,STRCAT_ACYCLIC]
-        THEN RW_TAC list_ss [STRCAT,EXPLODE_EQNS,IMPLODE_EQNS]]]);
+ WF_REL_TAC `measure (\x. CARD {s | MEM s L /\ isPREFIX x s})`
+   THEN RW_TAC std_ss [GSPEC_AND] 
+   THEN KMATCH_MP_TAC CARD_PSUBSET THEN CONJ_TAC THENL
+   [POP_ASSUM (K ALL_TAC) THEN KMATCH_MP_TAC INTER_FINITE
+      THEN Induct_on `L` 
+      THEN RW_TAC list_ss 
+            [GSPEC_F,FINITE_EMPTY,GSPEC_OR,GSPEC_EQ,FINITE_UNION,FINITE_SING],
+    RW_TAC set_ss [PSUBSET_DEF,SUBSET_DEF,INTER_DEF,isPREFIX_STRCAT,PRIME,EXTENSION]
+    THENL [METIS_TAC [STRCAT_ASSOC],
+           Q.EXISTS_TAC `x` THEN 
+           RW_TAC set_ss [GSYM STRCAT_ASSOC,STRCAT_ACYCLIC,STRCAT_EQ_EMPTY]]]);
+
+(*---------------------------------------------------------------------------*)
+(* Can be used for calculation in the logic                                  *)
+(*---------------------------------------------------------------------------*)
+
+EVAL ``["z" |-> Var"a"] (Abs "a'" (Abs "a" (Comb (Var "a'") (Var "z"))))``;
+
+(*---------------------------------------------------------------------------*)
+(* Can generate ML code as well.                                             *)
+(*---------------------------------------------------------------------------*)
+
+val _ =
+ let open EmitML combinSyntax
+ in emitML (!Globals.emitMLDir)
+     ("subst",
+      MLSIG "type num = numML.num"   ::
+      OPEN ["num", "list", "string"] ::
+      DATATYPE `lam = Var  of string
+                  | Comb of lam => lam
+                  | Abs  of string => lam` :: 
+      map DEFN [lam_count_def, DEL1,FV,PRIME,AWAY,subst_eqns])
+ end;
