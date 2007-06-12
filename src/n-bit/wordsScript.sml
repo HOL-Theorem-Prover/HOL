@@ -1448,7 +1448,7 @@ val LSL_ADD = store_thm("LSL_ADD",
   SHIFT_WORD_TAC \\ EQ_TAC \\ RW_TAC arith_ss []);
 
 val ASR_LIMIT = store_thm("ASR_LIMIT",
-  `!w:'a word n. ^WL < n ==>
+  `!w:'a word n. ^WL <= n ==>
            (w >> n = if word_msb w then Tw else 0w)`,
   SHIFT_WORD_TAC);
 
@@ -1456,7 +1456,7 @@ val ASR_UINT_MAX = store_thm("ASR_UINT_MAX",
   `!w:'a word n. Tw >> n = Tw`, SHIFT_WORD_TAC);
 
 val LSR_LIMIT = store_thm("LSR_LIMIT",
-  `!w:'a word n. ^WL < n ==> (w >>> n = 0w)`,
+  `!w:'a word n. ^WL <= n ==> (w >>> n = 0w)`,
   SHIFT_WORD_TAC);
 
 val LSL_LIMIT = store_thm("LSL_LIMIT",

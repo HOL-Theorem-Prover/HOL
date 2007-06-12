@@ -11,8 +11,9 @@ open bitTheory numeral_bitTheory wordsTheory wordsSyntax;
 (* ------------------------------------------------------------------------- *)
 
 fun is_fcp_thm s =
-  String.isPrefix "finite_" s orelse String.isPrefix "dimindex_" s orelse
-  String.isPrefix "dimword_" s orelse String.isPrefix "INT_MIN_"s;
+  not (s = "dimword_IS_TWICE_INT_MIN" orelse s = "INT_MIN_SUM") andalso
+  (String.isPrefix "finite_" s orelse String.isPrefix "dimindex_" s orelse
+   String.isPrefix "dimword_" s orelse String.isPrefix "INT_MIN_" s);
 
 val machine_sizes = (map snd o filter (is_fcp_thm o fst) o theorems) "words";
 
