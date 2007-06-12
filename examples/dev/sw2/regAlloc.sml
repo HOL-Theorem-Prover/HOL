@@ -1,15 +1,15 @@
-structure regAlloc =
+structure regAlloc :> regAlloc =
 struct
 
-local open HolKernel Parse boolLib pairLib pairSyntax bossLib PairRules
+open HolKernel Parse boolLib bossLib ;
+open pairLib pairSyntax PairRules NormalTheory Normal basic;
 
 (* --------------------------------------------------------------------*)
 (* --------------------------------------------------------------------*)
 
 structure M = Binarymap
 structure S = Binaryset
-
-in
+val N = numSyntax.num;
 
 (* --------------------------------------------------------------------*)
 (* Datatypes                                                           *)
@@ -25,10 +25,10 @@ datatype alloc_result =
 
 val DEBUG = ref true;
 
-val allregs = [Term `r0:num`, Term `r1:num`, Term `r2:num`, Term `r3:num`, Term `r4:num`, 
-               Term `r5:num`, Term `r6:num`, Term `r7:num`, Term `r8:num`]
-val reg_sp = Term `r13:num` (* stack pointer *)
-val reg_hp = Term `r9:num`  (* heap pointer  *)
+val allregs = map Term [`r0:num`, `r1:num`,  `r2:num`,  `r3:num`,  
+                        `r4:num`, `r5:num`,  `r6:num`,  `r7:num`,  `r8:num`]
+val reg_sp = ``r13:num`` (* stack pointer *)
+val reg_hp = ``r9:num``  (* heap pointer  *)
 
 fun is_reg x = (String.sub (term_to_string x,0) = #"r")
 fun is_mem x = (String.sub (term_to_string x,0) = #"m")
@@ -38,8 +38,8 @@ val mStrm = ref (Lib.mk_istream (fn x => x+1) 0 (num2name "m"))
 val tStrm = Lib.mk_istream (fn x => x+1) 0 (num2name "t")
 
 fun reset_mvar () = mStrm := Lib.mk_istream (fn x => x+1) 0 (num2name "m")
-fun next_mvar () = mk_var (state(next (!mStrm)), Type `:num`)
-fun next_tvar () = mk_var (state(next tStrm), Type `:num`)
+fun next_mvar () = mk_var (state(next (!mStrm)), N)
+fun next_tvar () = mk_var (state(next tStrm), N)
 
 fun fv exp = 
   let val xs = free_vars exp
@@ -307,35 +307,13 @@ fun g'_call dest cont regenv exp constr ys =
    | xs => ToSpill(exp, xs)
 
 (* --------------------------------------------------------------------*)
-(* Administrative terms: save and loc                                  *)
-(* --------------------------------------------------------------------*)
-
-val save_def = Define `
-  save = \x.x`;
-
-val LET_SAVE = store_thm (
-  "LET_SAVE",
-  ``(let x = save y in f x) = f y``,
-   SIMP_TAC std_ss [LET_THM, save_def]
-  );
-
-val loc_def = Define `
-  loc = \x.x`;
-
-val LET_LOC = store_thm (
-  "LET_LOC",
-  ``(let x = loc y in f x) = f y``,
-   SIMP_TAC std_ss [LET_THM, loc_def]
-  );
-
-(* --------------------------------------------------------------------*)
 (* Register Allocation                                                 *)
 (* --------------------------------------------------------------------*)
 
 fun args_env args = 
    let val argL = strip_pair args
        fun assgn_v (v,(i,regenv)) = 
-            (i+1, M.insert (regenv, v, mk_var ("r" ^ Int.toString i, Type `:num`)))
+            (i+1, M.insert (regenv, v, mk_var ("r" ^ Int.toString i, N)))
    in
        #2 (List.foldl assgn_v (0, M.mkDict tvarOrder) argL)
    end
@@ -362,14 +340,14 @@ fun alloc_mem tm =
            in 
               if is_mem v then
                 let val v' = next_mvar ()
-                    val M' = mk_comb (inst [alpha |-> type_of M] (Term `save`), M)
+                    val M' = mk_comb (inst [alpha |-> type_of M] ``save``, M)
                     val env' = M.insert (env, v, v')
                     val N' = trav N env'
                 in
                     mk_plet (v', M', N')
                 end
               else if is_var M andalso is_mem M then
-                let val M' = mk_comb (inst [alpha |-> type_of M] (Term `loc`), M.find (env, M))
+                let val M' = mk_comb (inst [alpha |-> type_of M] ``loc``, M.find (env, M))
                     val N' = trav N env
                 in
                     mk_plet (v, M', N')
@@ -401,7 +379,7 @@ fun reg_alloc def =
     val body2 = alloc_mem body1
 
     val th1 = GSYM (PBETA_RULE (SIMP_CONV pure_ss [LET_SAVE, LET_LOC] body2))
-            handle e => REFL body2
+            handle HOL_ERR _ => REFL body2
     val body3 = lhs (concl (th1))
     val th2 = ALPHA fbody (mk_pabs (args1,body3))
     val th3 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [th1])) th2
@@ -412,7 +390,5 @@ fun reg_alloc def =
   end
 
 (* --------------------------------------------------------------------*)
-
-end
 
 end

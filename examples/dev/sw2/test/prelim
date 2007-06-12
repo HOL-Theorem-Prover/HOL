@@ -1,0 +1,15 @@
+loadPath := HOLDIR^"/examples/dev/sw2/" :: !loadPath;
+app load ["regAlloc", "closure", "inline", "SALGen"];
+
+val normalize = Normal.normalize;
+val SSA_RULE = Normal.SSA_RULE;
+val expand_anonymous = inline.expand_anonymous;
+val expand_named = inline.expand_named;
+val optimize_norm = inline.optimize_norm;
+val close_one_by_one = closure.close_one_by_one;
+val close_al = closure.close_all;
+val closure_convert = closure.closure_convert;
+val regL = regAlloc.regL;
+val reg_alloc = regAlloc.reg_alloc;
+val certified_gen = SALGen.certified_gen;
+val fun_def = NormalTheory.fun_def;

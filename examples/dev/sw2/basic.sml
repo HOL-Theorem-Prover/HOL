@@ -1,11 +1,7 @@
-structure basic  =
+structure basic :> basic =
 struct
 
-local
-
 open HolKernel Parse boolSyntax boolLib bossLib pairSyntax;
-
-in
 
 (*---------------------------------------------------------------------------*)
 (* Common used data structures and functions                                 *)
@@ -27,7 +23,8 @@ fun is_word_literal tm =
 
 (* Is the term an atomic term? *)
 fun is_atom t =
-    is_var t orelse is_word_literal t orelse numSyntax.is_numeral t orelse is_const t orelse
+    is_var t orelse is_word_literal t orelse 
+    numSyntax.is_numeral t orelse is_const t orelse
     is_neg t  (* ~x is considered to be an atom *)
     ;
 
@@ -44,8 +41,9 @@ fun is_cmpop op0 =
     same_const op0 (Term `$<`);
 
 (* Is the operator a logical operator? *)
-fun is_relop op0 =
-    same_const op0 (Term `/\`) orelse same_const op0 (Term `$\/`);
+fun is_relop op0 = 
+    same_const op0 boolSyntax.conjunction orelse 
+    same_const op0 boolSyntax.disjunction;
 
 (* Is the the expression in a condition operator an (atomic) comparison expression? *)
 fun is_atom_cond tm =
@@ -90,10 +88,9 @@ fun abs_fun def =
   in
     th1
   end
-  handle e => def           (* already an abstraction *)
+  handle HOL_ERR _ => def           (* already an abstraction *)
 
 (*---------------------------------------------------------------------------*)
 
-end (* local *)
 
 end (* struct *)

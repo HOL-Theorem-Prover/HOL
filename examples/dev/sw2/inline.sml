@@ -1,22 +1,14 @@
+structure inline :> inline =
+struct
+
+open HolKernel Parse boolLib bossLib NormalTheory Normal
+     pairLib pairSyntax PairRules basic;
+
+
 (*---------------------------------------------------------------------------*)
 (* Inline Expansion                                                          *)
 (* Replace calls to small functions with their bodies                        *)
 (*---------------------------------------------------------------------------*)
-
-val fun_def = Define `
-  fun = \x.x`;
-
-val fun_ID = store_thm (
-  "fun_ID",
-  ``fun f = f``,
-   SIMP_TAC std_ss [fun_def]
-  );
-
-val INLINE_EXPAND = store_thm (
-  "INLINE_EXPAND",
-  ``(let f = fun e1 in e2 f) = e2 e1``,
-   SIMP_TAC std_ss [LET_THM, fun_def]
-  );
 
 val threshold = ref 10;
 
@@ -86,18 +78,19 @@ fun expand_anonymous def =
 val unroll_limit = ref 3;
 
 fun mk_inline_rules env =
-   let 
-     fun unroll defth = 
-       let val (name,body) = dest_eq (concl defth)
-       in 
-        if occurs_in name body then
-          PBETA_RULE (CONV_RULE (RHS_CONV (REWRITE_CONV [Ntimes defth (!unroll_limit)])) defth) (* unroll the function *)
-        else
-          defth
-       end
-   in
+  let fun unroll defth = 
+      let val (name,body) = dest_eq (concl defth)
+      in  if occurs_in name body 
+            then PBETA_RULE  (* unroll the function *)
+                  (CONV_RULE (RHS_CONV 
+                    (REWRITE_CONV 
+                       [Ntimes defth (!unroll_limit)])) defth)
+            else
+              defth
+      end
+  in
       List.map (unroll o abs_fun) env
-   end
+  end
 
 fun expand_named env def = 
   let
@@ -136,3 +129,5 @@ fun optimize_norm env def =
   in
     th6
   end
+
+end (* struct *)

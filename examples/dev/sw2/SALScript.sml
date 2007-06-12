@@ -1,13 +1,18 @@
+(*---------------------------------------------------------------------------*)
+(* SAL - Structured Assembly Language                                        *)
+(*---------------------------------------------------------------------------*)
+
+open HolKernel Parse boolLib bossLib;
+
+val _ = new_theory "SAL";
 
 (*---------------------------------------------------------------------------*)
 (* Labels                                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `
-    LABEL = L of num`;
+val _ = Hol_datatype `LABEL = L of num`;
 
-val inc_def = Define `
-    inc (L i) = L (i + 1)`;
+val inc_def = Define `inc (L i) = L (i + 1)`;
 
 (*---------------------------------------------------------------------------*)
 (* Tail Recursion                                                            *)
@@ -59,12 +64,13 @@ val rec_INTRO = Q.store_thm
 (* Syntax                                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `
-     COMPOSITE =
-        ASG of LABEL => 'a => 'a  => LABEL
-     |  IFGOTO of LABEL => ('a -> bool) => LABEL => LABEL
-     |  GOTO of LABEL => LABEL
-     |  UNION of COMPOSITE => COMPOSITE`;
+val _ = 
+ Hol_datatype 
+   `COMPOSITE 
+      = ASG of LABEL => 'a => 'a  => LABEL
+      | IFGOTO of LABEL => ('a -> bool) => LABEL => LABEL
+      | GOTO of LABEL => LABEL
+      | UNION of COMPOSITE => COMPOSITE`;
 
 val _ = overload_on ("|+", Term`UNION`);
 val _ = set_fixity "|+" (Infixl 650);
@@ -116,17 +122,15 @@ val _ = Hol_datatype `
        Reduce (l1, S1, l2) (VAL(f (g v), g v)))  /\
 *)
 
-val inst_rule = CONJUNCT1 ns_rule;
-val nop_rule = CONJUNCT1 (CONJUNCT2 ns_rule);
-val skip_rule = (CONJUNCT1 o CONJUNCT2 o CONJUNCT2) ns_rule;
-val seq_rule = (CONJUNCT1 o CONJUNCT2 o CONJUNCT2 o CONJUNCT2) ns_rule;
-val ift_rule = (CONJUNCT1 o CONJUNCT2 o CONJUNCT2 o CONJUNCT2 o CONJUNCT2) ns_rule;
+val [inst_rule, nop_rule, skip_rule, seq_rule, 
+     ift_rule, iff_rule, goto_rule, loop_rule] = CONJUNCTS ns_rule;
 
-val ns_rule' = (CONJUNCT2 o CONJUNCT2 o CONJUNCT2 o CONJUNCT2 o CONJUNCT2) ns_rule;
+val _ = map save_thm
+  [("inst_rule",inst_rule), ("nop_rule",nop_rule), 
+   ("skip_rule",skip_rule), ("seq_rule",seq_rule), 
+   ("ift_rule",ift_rule),   ("iff_rule",iff_rule), 
+   ("goto_rule",goto_rule), ("loop_rule",loop_rule)];
 
-val iff_rule = CONJUNCT1 ns_rule';
-val goto_rule = CONJUNCT1 (CONJUNCT2 ns_rule');
-val loop_rule = (CONJUNCT2 o CONJUNCT2) ns_rule';
 
 (* TRANSFER_RULE is a special case of the seq_rule *)
 val TRANSFER_RULE = Q.store_thm (
@@ -241,6 +245,8 @@ val FUN_CALL_RULE = Q.store_thm (
    FULL_SIMP_TAC std_ss [LET_THM]
   );
 
+val _ = export_theory();
+
 (*---------------------------------------------------------------------------*)
 (* Examples                                                                  *)
 (*---------------------------------------------------------------------------*)
@@ -253,3 +259,4 @@ val f = ``\f x. if x = 0 then x else x + f (x - 1)``;
 val f' = ``(\f x. if x = 0 then x else x + f (x - 1)) f x``;
 
 *)
+

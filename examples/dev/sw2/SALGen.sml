@@ -1,11 +1,8 @@
-structure SALGen =
+structure SALGen :> SALGen =
 struct
 
-
-local 
-
-(* load "basic"; *)
-open HolKernel Parse boolLib pairLib pairSyntax bossLib PairRules numSyntax basic;
+open HolKernel Parse boolLib pairLib pairSyntax bossLib 
+     PairRules numSyntax basic SALTheory;
 
 (* --------------------------------------------------------------------*)
 (* Generate SAL code for a FIL program                                 *)
@@ -13,8 +10,7 @@ open HolKernel Parse boolLib pairLib pairSyntax bossLib PairRules numSyntax basi
 
 structure M = Binarymap
 structure S = Binaryset
-
-in
+val N = numSyntax.num;
 
 (* --------------------------------------------------------------------*)
 (* Datatypes, Commonly-used variables and functions                    *)
@@ -159,7 +155,7 @@ fun gen_spec s =
 (* Mechanism for mechanical reasoning                                  *)
 (* --------------------------------------------------------------------*)
 
-(* Single assigment instruction *)
+(* Single assignment instruction *)
 
 fun mk_instr_spec instr =
   let
@@ -167,7 +163,7 @@ fun mk_instr_spec instr =
     val (entry_l, dst, src, exit_l) = (hd args, hd (tl args), hd (tl (tl args)),  hd (tl (tl (tl args))));
     val v = mk_pair (src, dst);
     val s' = list_mk_pair [get_entry_label instr, instr, get_exit_label instr];
-    val spec = list_mk_comb(inst [alpha |-> ``:num``] reduce, [s', v]);
+    val spec = list_mk_comb(inst [alpha |-> N] reduce, [s', v]);
   in
     prove(spec, SIMP_TAC std_ss [inst_rule])
   end
@@ -175,8 +171,7 @@ fun mk_instr_spec instr =
 (* Union of two structures (i.e. sequential composition *)
 
 fun mk_union_spec spec1 spec2 =
-  let
-      val (_, [s1, v1]) = strip_comb (concl spec1);
+  let val (_, [s1, v1]) = strip_comb (concl spec1);
       val (_, [s2, v2]) = strip_comb (concl spec2);
       val [entry_l1, s1', exit_l1] = strip_pair s1;
       val [entry_l2, s2', exit_l2] = strip_pair s2;
@@ -184,12 +179,12 @@ fun mk_union_spec spec1 spec2 =
       val (e2, x2) = dest_pair v2;
 
       (*  s1 |+ s2 *)
-      val t0 = list_mk_comb(inst [alpha |-> ``:num``] union, [s1', s2']);
+      val t0 = list_mk_comb(inst [alpha |-> N] union, [s1', s2']);
       val t1 = list_mk_pair [entry_l1, t0, exit_l2];
       val v = mk_plet (x1, e1,
                       mk_plet (x2, e2, x2));
       val v' = mk_pair(v,x2);
-      val t2 = list_mk_comb(inst [alpha |-> ``:num``] reduce, [t1, v']);
+      val t2 = list_mk_comb(inst [alpha |-> N] reduce, [t1, v']);
 
       val th =  prove (t2,   (* set_goal ([], t2) *)
 		       ASSUME_TAC spec1 THEN
@@ -233,7 +228,7 @@ fun certified_gen def =
     (*
     val spec = gen_spec s;
     val v = mk_pair (fbody, get_output fbody);
-    val t0 = list_mk_comb(inst [alpha |-> ``:num``] reduce, [spec, v]);
+    val t0 = list_mk_comb(inst [alpha |-> N] reduce, [spec, v]);
     *)
   in
     forward_reason s
@@ -243,28 +238,20 @@ fun certified_gen def =
 (* Test Cases                                                          *)
 (* --------------------------------------------------------------------*)
 
+(*
 val f1_def = Define `
     f1 x = let y = x + 1 in let z = x - y in z`;
 
-(* 
    certified_gen f1_def;
-   
-
-*)
-
 val f2_def = Define `
     f2 x = 
       if x = 0 then x 
       else let y = x * x in y`;
 
-(* 
    certified_gen f1_def;
-   
 
 *)
-
 (* --------------------------------------------------------------------*)
 
-end
+end (* struct *)
 
-end

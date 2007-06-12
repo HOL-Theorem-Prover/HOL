@@ -1,11 +1,4 @@
-use "basic.sml";
-use "preProcess.sml";
-use "Normal.sml";
-use "inline.sml";
-use "closure.sml";
-use "regAlloc.sml";
-
-open regAlloc
+use "prelim";
 
 (* --------------------------------------------------------------------------*)
 (*	Test the pre-processing and normalization     	                     *)
@@ -107,7 +100,7 @@ val f3_def = Define
          k9`;
 
 (* 
-- expand_anonymous f3_def;
+- inline.expand_anonymous f3_def;
 > val it =
     |- !k0 k1 k2 k3.
          f3 (k0,k1,k2,k3) =
@@ -119,8 +112,7 @@ val f3_def = Define
 
 (* Inline expansion of named functions stored in env                           *)
 
-val g1_def = Define `
-    g1 (k0,k1) = let k2 = k0 + k1 in k2 * 15`;
+val g1_def = Define `g1 (k0,k1) = let k2 = k0 + k1 in k2 * 15`;
 
 (* factorial function *)
 
@@ -141,7 +133,7 @@ val g3_def = Define `
 val env = [g1_def, g2_def];
 
 (*
-- expand_named env g3_def;
+- inline.expand_named env g3_def;
 > val it =
     |- !k0 k1 k2.
          g3 (k0,k1,k2) =
@@ -203,7 +195,7 @@ val f4_def = Define `
      k7`;
 
 (*
-- close_one_by_one f4_def;
+- closure.close_one_by_one f4_def;
 > val it =
     |- f4 =
        (\(k0,k1,k2,k3).
@@ -222,7 +214,7 @@ val f5_def = Define
         let k8 = k5 k7 in
         k8`;
 (*
- - close_all f5_def
+- closure.close_all f5_def;
   f5 =
        (\(k0,k1,k2,k3).
           (let k4 = k0 + 100 in
@@ -239,7 +231,7 @@ val f5_def = Define
            let k8 = k5 (k1,k2) k7 in
              k8))
 
-- closure_convert f5_def   (* there is a bug in top-leveling *)
+- closure.closure_convert f5_def;   (* there is a bug in top-leveling *)
  |- f5 =
        (\(v1,v2,v3,v4).
           (let v5 = fun (\(v15,v16) v17. (let v18 = v17 + v15 in v16 * v18))
@@ -271,11 +263,11 @@ val f6_def = Define
         k8`;
 (*
 
- (* the case of insufficent registers that are available *)
+(* the case of insufficent registers that are available *)
 
-- regL;
+- regAlloc.regL;
 > val it = ref [``r0``, ``r1``, ``r2``, ``r3``]
-- reg_alloc f6_def;
+- regAlloc.reg_alloc f6_def;
  |- f6 =
        (\(r0,r1,r2,r3).
           (let m1 = r1 in
@@ -293,11 +285,11 @@ val f6_def = Define
 
 (*  the case of enough registers that are available *)
 
-- regL := allregs;
--  !regL;
+- regAlloc.regL := regAlloc.allregs;
+-  !regAlloc.regL;
     [``r0``, ``r1``, ``r2``, ``r3``, ``r4``, ``r5``, ``r6``, ``r7``, ``r8``]
 
-- reg_alloc f6_def;
+- regAlloc.reg_alloc f6_def;
  |- f6 =
        (\(r0,r1,r2,r3).
           (let r4 = r0 - 100 in

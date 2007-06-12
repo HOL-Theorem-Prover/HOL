@@ -1,9 +1,4 @@
-use "basic.sml";
-use "preProcess.sml";
-use "Normal.sml";
-use "inline.sml";
-use "closure.sml";
-use "regAlloc.sml";
+use "prelim";
 
 (*---------------------------------------------------------------------------*)
 (* Front End                                                                 *)
@@ -22,8 +17,9 @@ val f1_def = Define
         in
         z * y`;
 
-(*
 val lem1 = SSA_RULE (SIMP_RULE std_ss [Once LET_THM] (normalize fact_def));
+
+(*
  |- fact =
        (\v1.
           (if v1 = 0 then
@@ -33,10 +29,12 @@ val lem1 = SSA_RULE (SIMP_RULE std_ss [Once LET_THM] (normalize fact_def));
               let v3 = fact v2 in
               let v4 = v1 * v3 in
                 v4)))
+*)
 
 val lem2 = SSA_RULE (normalize f1_def);
 
- |- f1 =
+(*
+|- f1 =
        (\(v1,v2,v3).
           (let v4 = v3 + 100 in
            let v5 (v13,v14) =
@@ -59,10 +57,11 @@ val lem2 = SSA_RULE (normalize f1_def);
            in
            let v8 = v4 * v7 in
              v8)) 
+*)
 
 val env = [lem1];
 val th1 = SSA_RULE (optimize_norm env lem2);
-
+(*
  |- f1 =
        (\(v1,v2,v3).
           (let v4 = v3 + 100 in
@@ -83,6 +82,7 @@ val th1 = SSA_RULE (optimize_norm env lem2);
 (*---------------------------------------------------------------------------*)
 
 val th2 = closure_convert th1;
+(*
  |- f1 =
        (\(v1,v2,v3).
           (let v4 =
@@ -98,9 +98,11 @@ val th2 = closure_convert th1;
            in
            let v9 = v5 * v8 in
              v9))
+*)
 
 val th3 = SSA_RULE (optimize_norm [] (SIMP_RULE std_ss [Once LET_THM, fun_def] th2));
 
+(*
  |- f1 =
        (\(v1,v2,v3).
           (let v4 = v3 + 100 in
@@ -114,16 +116,16 @@ val th3 = SSA_RULE (optimize_norm [] (SIMP_RULE std_ss [Once LET_THM, fun_def] t
            in
            let v8 = v4 * v7 in
              v8))
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Register Allocation                                                       *)
 (*---------------------------------------------------------------------------*)
 
-open regAlloc;
+regL := [``r0:num``, ``r1:num``, ``r2:num``];
+val th4 = reg_alloc th3;
 
 (*
-    regL := [``r0:num``, ``r1:num``, ``r2:num``];
-    val th4 = reg_alloc th3;
 
  |- f1 =
        (\(r0,r1,r2).
@@ -148,11 +150,12 @@ open regAlloc;
            let r1 = m3 in
            let r0 = r1 * r0 in
              r0))
+*)
 
+regL := [``r0:num``, ``r1:num``, ``r2:num``, ``r3:num``, ``r4:num``];
+val th5 = reg_alloc th3;
 
-    regL := [``r0:num``, ``r1:num``, ``r2:num``, ``r3:num``, ``r4:num``];
-    val th5 = reg_alloc th3;
-
+(*
      |- f1 =
        (\(r0,r1,r2).
           (let r3 = r2 + 100 in
@@ -166,5 +169,5 @@ open regAlloc;
            in
            let r0 = r3 * r0 in
              r0))
-  *)
+*)
 

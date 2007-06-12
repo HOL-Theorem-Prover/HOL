@@ -1,20 +1,37 @@
-
-
+structure Normal :> Normal =
+struct
 (*
 quietdec := true;
 
-app load ["basic", "preProcess"];
+app load ["basic"];
 
-open HolKernel Parse boolLib bossLib pairLib pairSyntax pairTheory PairRules basic preProcess;
+open HolKernel Parse boolLib bossLib 
+     pairLib pairSyntax pairTheory PairRules 
+     NormalTheory basic;
 
 quietdec := false;
 *)
 
-quietdec := true;
+open HolKernel Parse boolLib bossLib 
+     pairLib pairSyntax pairTheory PairRules 
+     NormalTheory basic;
 
-open HolKernel Parse boolLib bossLib pairLib pairSyntax pairTheory PairRules basic; (* preProcess; *)
+val _ = (Globals.priming := SOME "");
 
-quietdec := false;
+(*----------------------------------------------------------------------------------*)
+(* Pre-processing. (KLS: not sure where this is used.)                              *)
+(* Apply the rewrite rules in bool_ss to simplify boolean connectives and           *)
+(*   conditional expressions                                                        *)
+(* It contains all of the de Morgan theorems for moving negations in over the       *)
+(* connectives (conjunction, disjunction, implication and conditional expressions). *)
+(* It also contains the rules specifying the behaviour of the connectives when the  *)
+(* constants T and F appear as their arguments.                                     *)
+(* The arith_ss simpset extends std_ss by adding the ability to decide formulas of  *)
+(* Presburger arithmetic, and to normalise arithmetic expressions                   *)
+(*----------------------------------------------------------------------------------*)
+
+val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
+
 
 (*---------------------------------------------------------------------------*)
 (* Normalization                                                             *)
@@ -22,121 +39,10 @@ quietdec := false;
 (* and A-normal forms                                                        *)
 (*---------------------------------------------------------------------------*)
 
-val _ = (Globals.priming := SOME "");
+val C_tm = prim_mk_const{Name="C",Thy="Normal"};
 
 (*---------------------------------------------------------------------------*)
-(* Apply the continuation k to the expression e                              *)
-(*---------------------------------------------------------------------------*)
-
-val C_def = Define `
-    C e = \k. k e`;
-
-val atom_def = Define `
-    atom = \x.x`;
-
-val C_ATOM_INTRO = Q.store_thm (
-  "C_ATOM_INTRO",
-  `!v. C v = C (atom v)`,
-  SIMP_TAC std_ss [atom_def, C_def]
- );
-
-val ATOM_ID = Q.store_thm (
-   "ATOM_ID",
-   `atom x = x`,
-   SIMP_TAC std_ss [atom_def]
-  );
-
-val C_ATOM = Q.store_thm (
-  "C_ATOM",
-  `C (atom v) =
-      \k. k v`,
-  SIMP_TAC std_ss [C_def, atom_def]
- );
-
-val C_INTRO = Q.store_thm (
-  "C_INTRO",
-  `!f. f = C f (\x.x)`,
-  SIMP_TAC std_ss [C_def, LET_THM]
- );
-
-val C_2_LET = Q.store_thm (
-  "C_2_LET",
-  `(C e k = let x = e in k x)`,
-  SIMP_TAC std_ss [C_def, atom_def, LET_THM]
- );
-
-(*---------------------------------------------------------------------------*)
-(* Convert an expression to it continuation format                           *)
-(* Theorems used for rewriting                                               *)	
-(*---------------------------------------------------------------------------*)
-
-val C_BINOP = Q.store_thm (
-  "C_BINOP",
-   `(C (e1 + e2) = \k. C e1 (\x. C e2 (\y. C (x + y) k))) /\
-    (C (e1 - e2) = \k. C e1 (\x. C e2 (\y. C (x - y) k))) /\
-    (C (e1 * e2) = \k. C e1 (\x. C e2 (\y. C (x * y) k))) /\
-    (C (e1 ** e2) = \k. C e1 (\x. C e2 (\y. C (x ** y) k)))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
-  );
-
-val C_PAIR = Q.store_thm (
-  "C_PAIR",
-  `C (e1, e2) = \k. C e1 (\x. C e2 (\y. k (x,y)))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
-  );
-
-(*  LET expressions are processed in a way that generate A-normal forms *)
-
-val C_LET = Q.store_thm (
-  "C_LET",
-  `C (let v = e in f v) = \k. C e (\x. C (f x) (\y. k y))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
-  );
-
-(*  For K-normal forms, use the following for LET expressions *)
-
-val C_LET_K = Q.store_thm (
-  "C_LET_K",
-   `C (let v = e in f v) = \k. C e (\x. C x (\y. C (f y) (\z.k z)))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
-  );
-
-val C_ABS = Q.store_thm (
-  "C_ABS",
-   `C (\v. f v) = C (\v. (C (f v) (\x. x)))`,
-   RW_TAC std_ss [C_def, LET_THM]
-  );
-
-val C_APP = Q.store_thm (
-  "C_APP",
-   `C (f e) = \k. C f (\g. C e (\x. C (g x) (\y. k y)))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
-  );
-
-val C_ATOM_COND = Q.store_thm (
-  "C_ATOM_COND",
-   `C (if cmpop c1 c2 then e1 else e2) = 
-       \k. C c1 (\p. C c2 (\q.
-         C (if cmpop p q then C e1 (\x.x) 
-            else C e2 (\y.y)) (\z. k z)))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
-  );
-
-(*
-val C_COMPOUND_COND = Q.store_thm (
-  "C_COMPOUND_COND",
-   `C (if c1 /\ c2 then e1 else e2) = 
-       \k. C c1 (\p. C c2 (\q. C e1 (\x. C e2 
-           (\y. k (if p then 
-                   if q then x else y
-                   else y)))))`,
-   RW_TAC std_ss [C_def, LET_THM] THEN
-   METIS_TAC []
-  );
-*)
-
-(*---------------------------------------------------------------------------*)
-(* Convert an expression to it continuous form                               *)
+(* Convert an expression to its continuation form                            *)
 (* Algorithm of the conversion                                               *)
 (*---------------------------------------------------------------------------*)
 
@@ -176,8 +82,8 @@ fun K_Normalize exp =
    else if is_let t then                        (*  exp = LET (\v. N) M  *)
      let 
          val (v,M,N) = dest_plet t
-         val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] ``C``, M)), 
-                           K_Normalize (mk_comb (inst [alpha |-> type_of N] ``C``, N)))
+         val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
+                           K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
          val th2 =  SIMP_CONV bool_ss [Once C_LET] exp
          val th3 =  SUBST_2_RULE (th0,th1) th2
          val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
@@ -189,11 +95,12 @@ fun K_Normalize exp =
       let 
          val (v,M) = dest_pabs t
 	 val (v_type, m_type) = (type_of v, type_of M);
-	 val t1 = mk_comb (inst [alpha |-> m_type] ``C``, M);
-	 val t2 = mk_comb (inst [beta |-> m_type] t1, inst [alpha |-> m_type] ``\x.x``);
+	 val t1 = mk_comb (inst [alpha |-> m_type] C_tm, M);
+         val id = let val x = mk_var("x",alpha) in mk_abs(x,x) end
+	 val t2 = mk_comb (inst [beta |-> m_type] t1, inst [alpha |-> m_type] id);
          val t3 = mk_comb (C, mk_pabs(v, t2));
 	 val th1 = prove (mk_eq(exp, t3), SIMP_TAC std_ss [C_def]);
-         val th0 = K_Normalize (mk_comb (inst [alpha |-> type_of M] ``C``, M))
+         val th0 = K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M))
 
          val th2 = CONV_RULE (RHS_CONV (RAND_CONV (PABS_CONV (
                       RATOR_CONV (ONCE_REWRITE_CONV [th0]))))) th1
@@ -205,8 +112,8 @@ fun K_Normalize exp =
     else if is_pair t then                        (*  exp = (M,N) *)
       let 
          val (M,N) = dest_pair t
-         val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] ``C``, M)), 
-                           K_Normalize (mk_comb (inst [alpha |-> type_of N] ``C``, N)))
+         val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
+                           K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
 
          val th2 =  ONCE_REWRITE_CONV [C_PAIR] exp
          val th3 =  SUBST_2_RULE (th0,th1) th2
@@ -224,10 +131,10 @@ fun K_Normalize exp =
               val (op0, xL) = strip_comb J 
               val (P,Q) = (hd xL, hd (tl xL))
               val (lem0, lem1, lem2, lem3) = 
-                 (K_Normalize (mk_comb (inst [alpha |-> type_of P] ``C``, P)),
-                  K_Normalize (mk_comb (inst [alpha |-> type_of Q] ``C``, Q)), 
-                  K_Normalize (mk_comb (inst [alpha |-> type_of M] ``C``, M)), 
-                  K_Normalize (mk_comb (inst [alpha |-> type_of N] ``C``, N)))
+                 (K_Normalize (mk_comb (inst [alpha |-> type_of P] C_tm, P)),
+                  K_Normalize (mk_comb (inst [alpha |-> type_of Q] C_tm, Q)), 
+                  K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
+                  K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
 
               val th4 = Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp
            in
@@ -245,8 +152,8 @@ fun K_Normalize exp =
         if is_binop operator then (* Arithmetic and Logical Operations *)
              let 
                val (d0, d1) =  (hd operands, hd (tl operands))
-               val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of d0] ``C``, d0)),
-                                 K_Normalize (mk_comb (inst [alpha |-> type_of d1] ``C``, d1)))
+               val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of d0] C_tm, d0)),
+                                 K_Normalize (mk_comb (inst [alpha |-> type_of d1] C_tm, d1)))
                val th2 =  ONCE_REWRITE_CONV [C_BINOP] exp
 	       val th3 =  SUBST_2_RULE (th0,th1) th2
                val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
@@ -257,8 +164,8 @@ fun K_Normalize exp =
         else (* Application *)
            let
              val (M,N) = dest_comb t
-             val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] ``C``, M)), 
-                               K_Normalize (mk_comb (inst [alpha |-> type_of N] ``C``, N)))
+             val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
+                               K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
              val th2 = ONCE_REWRITE_CONV [C_APP] exp
              val th3 =  SUBST_2_RULE (th0,th1) th2
              val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
@@ -319,12 +226,6 @@ fun identify_atom tm =
     trav tm
   end;
 
-val BETA_REDUCTION = Q.store_thm (
-   "BETA_REDUCTION",
-   `(let x = atom y in f x) = f y`,
-   SIMP_TAC std_ss [atom_def, LET_THM]
-  );
-
 fun beta_reduction def = 
   let
     val t0 = rhs (concl (SPEC_ALL def))
@@ -343,14 +244,7 @@ fun beta_reduction def =
 (* e2, we can replace let x = e1 in e2 just with e2.                         *)
 (*---------------------------------------------------------------------------*)
 
-val ELIM_USELESS_LET = Q.store_thm (
-  "ELIM_USELESS_LET",
-   `(let x = e1 in e2) = e2`,
-   SIMP_TAC std_ss [C_def, LET_THM]
-  );
-
-val ELIM_LET_RULE = 
-    SIMP_RULE bool_ss [ELIM_USELESS_LET]
+val ELIM_LET_RULE = SIMP_RULE bool_ss [ELIM_USELESS_LET]
 
 (*---------------------------------------------------------------------------*)
 (* Elimination of Unnecessary Definitions                                    *)
@@ -358,14 +252,7 @@ val ELIM_LET_RULE =
 (* e2, we can replace let x = e1 in e2 just with e2.                         *)
 (*---------------------------------------------------------------------------*)
 
-val FLATTEN_LET = Q.store_thm (
-  "FLATTEN_LET",
-   `(let x = (let y = e1 in e2 y) in e3 x) = (let y = e1 in let x = e2 y in e3 x)`,
-   SIMP_TAC std_ss [LET_THM]
-  );
-
-val FLATTEN_LET_RULE = 
-    SIMP_RULE std_ss [FLATTEN_LET]
+val FLATTEN_LET_RULE = SIMP_RULE std_ss [FLATTEN_LET]
 
 (*---------------------------------------------------------------------------*)
 (* Convert the normal form into SSA form                                     *)
@@ -421,3 +308,4 @@ fun SSA_RULE def =
 (* Normalized forms with after a series of optimizations                     *)
 (*---------------------------------------------------------------------------*)
 
+end (* Normal *)

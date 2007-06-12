@@ -1,7 +1,4 @@
-load "basic";
-use "SALScript.sml";
-use "SALGen.sml";
-open SALGen;
+use "prelim";
 
 val f1_def = Define `
     f1 x = let y = x + 1 in let z = x - y in z`;
