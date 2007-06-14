@@ -1,6 +1,7 @@
 open HolKernel boolLib Parse bossLib
 
 open finite_mapTheory
+open boolSimps
 
 val _ = new_theory "hol_dpll"
 
@@ -159,7 +160,7 @@ val exrwt_lemma = prove(
   ``!c v b fm. fm satisfies_clause FILTER ($~ o binds v) c ==>
                fm |+ (v,b) satisfies_clause c``,
   Induct THEN1 SRW_TAC [][satisfies_clause_thm] THEN
-  ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                [pairTheory.FORALL_PROD, satisfies_clause_thm,
                 binds_def, finite_mapTheory.FLOOKUP_DEF,
                 finite_mapTheory.FAPPLY_FUPDATE_THM] THEN
@@ -174,7 +175,7 @@ val extend_rewrite = store_thm(
        fm satisfies rewrite v b cset ==> (fm |+ (v,b)) satisfies cset``,
   Induct_on `cset` THEN SRW_TAC [][satisfies_thm, rewrite_def] THENL [
     Induct_on `h` THEN1 SRW_TAC [][] THEN
-    ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)
+    ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                  [pairTheory.FORALL_PROD, satisfies_clause_thm] THEN
     SRW_TAC [][finite_mapTheory.FLOOKUP_DEF],
     SRW_TAC [][exrwt_lemma]
@@ -216,7 +217,7 @@ val fm_gives_value = prove(
        fm satisfies (rewrite v (fm ' v) cset)``,
   Induct THEN SRW_TAC [][satisfies_thm, rewrite_def] THEN
   Induct_on `h` THEN1 SRW_TAC [][] THEN
-  ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                [pairTheory.FORALL_PROD, binds_def, option_cond,
                 satisfies_clause_thm, finite_mapTheory.FLOOKUP_DEF] THEN
   SRW_TAC [][satisfies_clause_thm, finite_mapTheory.FLOOKUP_DEF] THEN
@@ -230,7 +231,7 @@ val cpos_fm_gives_value = prove(
 val novbind_lemma = prove(
   ``~MEM (v,T) h /\ ~MEM (v,F) h ==> (FILTER ($~ o binds v) h = h)``,
   Induct_on `h` THEN1 SRW_TAC [][] THEN
-  ASM_SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss)
                [pairTheory.FORALL_PROD, binds_def]);
 
 val partial_clause_1 = prove(
@@ -340,5 +341,109 @@ val dpll_unsatisfied = store_thm(
   ]);
 
 val _ = EVAL ``dpll [[(1,T); (2,F); (3,T)]; [(1,F); (2,T)]]``
+
+(* using the DPLL algorithm on HOL's boolean formula's via "reflection" *)
+(* it seems necessary to push the variable type through a substitution,  mapping
+   into a type that will allow the "variables" of the original formula to be
+   compared with each other without worrying about their semantic content *)
+val interpret_clause_def = Define`
+  (interpret_clause f [] = F) /\
+  (interpret_clause f ((h : 'a # bool) :: t) =
+     (f (FST h) = SND h) \/ interpret_clause f t)
+`
+val _ = export_rewrites ["interpret_clause_def"]
+
+val interpret_def = Define`
+  (interpret f [] = T) /\
+  (interpret f (c::cs) = interpret_clause f c /\ interpret f cs)
+`;
+val _ = export_rewrites ["interpret_def"]
+
+val empty_clause_interpret = store_thm(
+  "empty_clause_interpret",
+  ``!cs. MEM [] cs ==> ~interpret f cs``,
+  Induct THEN SRW_TAC [][] THEN SRW_TAC [][]);
+
+val iclause_rewrite = store_thm(
+  "iclause_rewrite",
+  ``!c v. ~MEM (v,f v) c /\ interpret_clause f c ==>
+          interpret_clause f (FILTER ($~ o binds v) c)``,
+  Induct THEN1 SRW_TAC [][] THEN
+  ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [pairTheory.FORALL_PROD, binds_def] THEN
+  SRW_TAC [][] THEN METIS_TAC []);
+
+val interpret_rewrite = store_thm(
+  "interpret_rewrite",
+  ``!cs v b. (f v = b) /\ interpret f cs ==>
+             interpret f (rewrite v b cs)``,
+  Induct THEN SRW_TAC [][rewrite_def] THEN METIS_TAC [iclause_rewrite]);
+
+val interpret_uprop = store_thm(
+  "interpret_uprop",
+  ``(find_uprop cs = SOME (q,r)) ==> ~interpret f (rewrite q (~r) cs)``,
+  Induct_on `cs` THEN SRW_TAC [][find_uprop_def, rewrite_def] THENL [
+    Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
+      Cases_on `r` THEN FULL_SIMP_TAC (srw_ss()) [],
+      Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) []
+    ],
+    Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [binds_def] THEN
+    Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [binds_def]
+  ]);
+
+(* might equally be able to get conclusion from !fm. ~(fm satisfies cs) *)
+val dpll_interpret = store_thm(
+  "dpll_interpret",
+  ``!cs f. (dpll cs = NONE) ==> (interpret f cs = F)``,
+  HO_MATCH_MP_TAC dpll_ind THEN GEN_TAC THEN STRIP_TAC THEN
+  ONCE_REWRITE_TAC [dpll_def] THEN SRW_TAC [][empty_clause_interpret] THEN
+  Cases_on `find_uprop cs` THENL [
+    FULL_SIMP_TAC (srw_ss()) [LET_THM] THEN
+    Cases_on `dpll (rewrite (choose cs) T cs)` THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    Cases_on `dpll (rewrite (choose cs) F cs)` THEN
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    METIS_TAC [interpret_rewrite],
+    FULL_SIMP_TAC (srw_ss()) [] THEN
+    Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    Cases_on `dpll (rewrite q r cs)` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    `~interpret f (rewrite q (~r) cs)` by METIS_TAC [interpret_uprop] THEN
+    Cases_on `r` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
+    METIS_TAC [interpret_rewrite]
+  ]);
+
+val t0 = `` (((~a \/ p /\ ~q \/ ~p /\ q) /\
+                    (~(p /\ ~q \/ ~p /\ q) \/ a)) /\
+                   (~c \/ p /\ q) /\ (~(p /\ q) \/ c)) /\
+                 ~(~(p /\ q) \/ c /\ ~a)``
+val t = rhs (concl
+                 (SIMP_CONV bool_ss [LEFT_OR_OVER_AND, RIGHT_OR_OVER_AND,
+                                     GSYM CONJ_ASSOC, GSYM DISJ_ASSOC,
+                                     DE_MORGAN_THM] t0))
+
+(* t must not only be in CNF, but with boolean operators right associated *)
+fun prove_cnf_unsat t = let
+  val cs = strip_conj t
+  val vars = free_vars t
+  val f = ``\n. EL n ^(listSyntax.mk_list(vars, bool))``
+  fun var2n v = numSyntax.mk_numeral (Arbnum.fromInt (index (aconv v) vars))
+  fun mk_clause c = let
+    val ds = strip_disj c
+    fun mkatom t = if is_neg t then ``(^(var2n (dest_neg t)), F)``
+                   else ``(^(var2n t), T)``
+  in
+    listSyntax.mk_list(map mkatom ds, ``:num # bool``)
+  end
+  val clauses = listSyntax.mk_list (map mk_clause cs, ``:(num # bool) list``)
+  val th1 = SIMP_CONV (srw_ss()) [] ``interpret ^f ^clauses``
+  val _ = aconv t (rhs (concl th1)) orelse raise Fail "translation failed"
+  val th2 = EVAL ``dpll ^clauses``
+in
+  if is_const (rhs (concl th2)) then
+    TRANS (SYM th1) (ISPEC f (MATCH_MP dpll_interpret th2))
+  else raise Fail "formula is propositionally satisfiable"
+end
+
+(* 0.3 seconds *)
+val example = time prove_cnf_unsat t
 
 val _ = export_theory();
