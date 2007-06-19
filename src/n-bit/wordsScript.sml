@@ -60,8 +60,6 @@ val w2n_def = Define`
 val n2w_def = Define`
   (n2w:num->('a word)) n = FCP i. BIT i n`;
 
-val _ = ai := true;
-
 val w2w_def = Define`
   (w2w:'a word -> 'b word) w = n2w (w2n w)`;
 
@@ -74,6 +72,8 @@ val _ = add_bare_numeral_form (#"w", SOME "n2w");
 (* ------------------------------------------------------------------------- *)
 (*  The Boolean operations : definitions                                     *)
 (* ------------------------------------------------------------------------- *)
+
+val _ = ai := true;
 
 val word_T_def = Define`
   word_T = n2w:num->('a word) (UINT_MAX(:'a))`;
@@ -856,6 +856,10 @@ val w2w_n2w = store_thm("w2w_n2w",
 val w2w_0 = store_thm("w2w_0",
   `w2w 0w = 0w`, SRW_TAC [] [BITS_ZERO2, ZERO_LT_dimword, w2w_n2w]);
 
+val word_extract_n2w = save_thm("word_extract_n2w",
+  (SIMP_RULE std_ss [BITS_COMP_THM2, word_bits_n2w, w2w_n2w] o
+   SPECL [`h`,`l`,`n2w n`] o SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def);
+
 val word_extract_w2w = store_thm("word_extract_w2w",
   `!w:'a word. dimindex(:'a) <= dimindex(:'b) ==>
       ((h >< l) (w2w w : 'b word) = (h >< l) w : 'c word)`,
@@ -1044,6 +1048,18 @@ val CONCAT_EXTRACT = store_thm("CONCAT_EXTRACT",
         \\ FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL]
         \\ `i - dimindex (:'c) < dimindex (:'a)` by DECIDE_TAC
         \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [DIMINDEX_GT_0]]);
+
+val EXTRACT_CONCAT = store_thm("EXTRACT_CONCAT",
+  `!v:'a word w:'b word.
+     FINITE (UNIV:'a set) /\ FINITE (UNIV:'b set) /\
+     dimindex(:'a) + dimindex(:'b) <= dimindex(:'c) ==>
+     ((dimindex(:'b) - 1 >< 0)
+         ((v @@ w):'c word) = w) /\
+     ((dimindex(:'a) + dimindex(:'b) - 1 >< dimindex(:'b))
+         ((v @@ w):'c word) = v)`,
+  SRW_TAC [fcpLib.FCP_ss, ARITH_ss, boolSimps.LET_ss]
+    [word_concat_def, word_extract_def, word_bits_def, word_join_def,
+     word_or_def, word_lsl_def, w2w, fcpTheory.index_sum]);
 
 val WORD_SLICE_OVER_BITWISE = store_thm("WORD_SLICE_OVER_BITWISE",
   `(!h l v:'a word w:'a word.
@@ -2666,8 +2682,6 @@ local
   val word_lsr_n2w = SPEC `n2w m` word_lsr_n2w
   val word_rol_n2w = SPEC `n2w m` word_rol_def
   val sw2sw_n2w = SPEC `n2w n` sw2sw_def
-  val word_extract_n2w = (SPECL [`h`,`l`,`n2w n`] o
-                          SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def
 in
   val _ = emitML (!Globals.emitMLDir)
     ("words", OPEN ["sum", "num", "fcp", "bit"]

@@ -117,6 +117,7 @@ struct
 
   fun MOD m n = LargeInt.rem(m, n)
 
+  fun measure f x y = < (f x) (f y)
 
  (*---------------------------------------------------------------------------*)
  (* Supplementary ML, not generated from HOL theorems, aimed at supporting    *)

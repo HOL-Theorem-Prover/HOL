@@ -40,6 +40,10 @@ fun NUM_RULE l n x =
 val MOD_WL = 
   (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (ONCE_REWRITE_CONV [GSYM n2w_mod]))));
 
+val MOD_WL1 = 
+  (CONV_RULE (STRIP_QUANT_CONV (RHS_CONV (RATOR_CONV
+   (ONCE_REWRITE_CONV [GSYM n2w_mod])))));
+
 val thms =
   [numeralTheory.numeral_funpow, pairTheory.UNCURRY_DEF,
    iBITWISE, NUMERAL_BITWISE, LSB_def, BITV_def, SIGN_EXTEND_def, SBIT_def,
@@ -52,7 +56,7 @@ val thms =
    NUM_RULE [NUMERAL_DIV_2EXP,numeralTheory.MOD_2EXP] `n` SLICE_def,
    NUM_RULE [BITS_ZERO2] `n`  BIT_def, INT_MIN_SUM,
    numeral_log2,numeral_ilog2,
-   n2w_11, n2w_w2n, w2n_n2w, w2w_def, sw2sw_def, word_len_def,
+   n2w_11, n2w_w2n, w2n_n2w, MOD_WL1 w2w_n2w, sw2sw_def, word_len_def,
    word_L_def, word_H_def, word_T_def,
    word_join_def, word_concat_def,
    word_reverse_n2w, word_modify_n2w, word_log2_n2w,
@@ -63,8 +67,7 @@ val thms =
    (List.last o CONJUNCTS) SHIFT_ZERO, SPEC ``NUMERAL n`` word_ror_n2w,
    word_rol_def, word_rrx_n2w,
    word_lsb_n2w, word_msb_n2w, word_bit_n2w, word_index_n2w,
-   word_bits_n2w, word_slice_n2w, fcp_n2w,
-   SIMP_RULE std_ss [FUN_EQ_THM] word_extract_def,
+   word_bits_n2w, word_slice_n2w, fcp_n2w, word_extract_n2w,
    word_ge_n2w, word_gt_n2w, word_hi_n2w, word_hs_n2w,
    word_le_n2w, word_lo_n2w, word_ls_n2w, word_lt_n2w];
 
