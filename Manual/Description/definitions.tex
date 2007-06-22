@@ -1950,7 +1950,9 @@ proving the other constraints.
 \index{inductive relations|(}
 
 Inductive definitions are made with the function \ml{Hol\_reln}, found
-in the \ml{bossLib} structure.  The \ml{Hol\_reln} function takes a
+in the \ml{bossLib} structure, and the resulting definitions and 
+theorems are handled with functions defined in the library 
+\ml{IndDefLib}. The \ml{Hol\_reln} function takes a
 term quotation as input and attempts to define the relations there
 specified.  The input term quotation must parse to a term that
 conforms to the following grammar:
@@ -2012,7 +2014,7 @@ So called ``strong'' versions of induction principles (where instances
 of the relation being defined appear as extra hypotheses), can be
 automatically proved with a call to the function
 \[
-\ml{IndDefRules.derive\_strong\_induction : thm * thm -> thm}
+\ml{IndDefLib.derive\_strong\_induction : thm * thm -> thm}
 \]
 The first argument is the rules theorem, and the second is the
 induction theorem.
@@ -2051,7 +2053,7 @@ lists (see Section~\ref{avra_list}), is
 (\holtxt{EVERY}\;P\;\ell \Rightarrow \holtxt{EVERY}\;Q\;\ell)
 \]
 With a monotonicity result available for an operator such as
-\holtxt{EVERY}, it is then possible to write inductive defintions
+\holtxt{EVERY}, it is then possible to write inductive definitions
 where hypotheses include mention of the new relation as arguments to
 the given operators.
 
@@ -2060,7 +2062,7 @@ Monotonicity results that the user derives may be stored in the global
 \ml{the\_monoset} variable by using the \ml{export\_mono} function.
 This function takes a string naming a theorem in the current theory
 segment, and adds that theorem to the monotonicity theorems
-immediately, and in such a way that this situation will obtain when
+immediately, and in such a way that this situation will also obtain when
 the current theory is subsequently reloaded.
 
 \paragraph{Examples}
