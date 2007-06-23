@@ -32,7 +32,6 @@ val _ = (Globals.priming := SOME "");
 
 val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
 
-
 (*---------------------------------------------------------------------------*)
 (* Normalization                                                             *)
 (* This intermediate language is a combination of K-normal forms             *)

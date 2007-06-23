@@ -1,9 +1,7 @@
-
-(* structure preProcess  =
+structure preProcess  =
 struct
 
 local
-*)
 
 (* quietdec := true; *)
 
@@ -11,7 +9,7 @@ open HolKernel Parse boolSyntax boolLib bossLib pairSyntax;
 
 (* quietdec := false; *)
 
-(* in *)
+in
 
 (*----------------------------------------------------------------------------------*)
 (* Apply the rewrite rules in bool_ss to simplify boolean connectives and           *)
@@ -25,9 +23,8 @@ open HolKernel Parse boolSyntax boolLib bossLib pairSyntax;
 (*----------------------------------------------------------------------------------*)
 
 (* Conjunction in condtions *)
-val AND_COND = Q.store_thm (
-  "AND_COND",
-  `(if c1 /\ c2 then e1 else e2) = 
+val AND_COND = Q.prove
+ (`(if c1 /\ c2 then e1 else e2) = 
      let x = e2 in
       (if c1 then 
          if c2 then e1 else x
@@ -37,8 +34,7 @@ val AND_COND = Q.store_thm (
   );
 
 (* Disjunction in condtions *)
-val OR_COND = Q.store_thm (
-  "OR_COND",
+val OR_COND = Q.prove (
   `(if c1 \/ c2 then e1 else e2) = 
     let x = e1 in
       (if c1 then x else
@@ -48,8 +44,7 @@ val OR_COND = Q.store_thm (
   );
 
 (* Normalize the conditions in branches *)
-val BRANCH_NORM = Q.store_thm (
-  "BRANCH_NORM",
+val BRANCH_NORM = Q.prove (
   `((if a > b then x else y) = (if a <= b then y else x)) /\ 
     ((if a >= b then x else y) = (if b <= a then x else y)) /\
     ((if a < b then x else y) = (if b <= a then y else x))
@@ -65,8 +60,6 @@ val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
 
 (*---------------------------------------------------------------------------*)
 
-(*
 end (* local *)
 
 end (* struct *)
-*)
