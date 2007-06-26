@@ -1,0 +1,342 @@
+open HolKernel Parse boolLib bossLib;
+
+(*
+quietdec := true;
+loadPath := 
+            (concat Globals.HOLDIR "/examples/decidable_separationLogic/src") :: 
+            !loadPath;
+
+map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
+   "rich_listTheory", "decidable_separationLogicTheory", "listLib",
+   "decidable_separationLogicLib"];
+show_assums := true;
+*)
+
+open finite_mapTheory relationTheory pred_setTheory congLib sortingTheory
+   listTheory rich_listTheory decidable_separationLogicTheory listLib
+   decidable_separationLogicLib;
+
+
+(*
+quietdec := false;
+*)
+
+
+
+
+val t = ``LIST_DS_ENTAILS ([], []) ((pf_equal e1 e2::pf_unequal dse_nil e2::pf_equal e2 e1::l),[]) ((pf_equal e1 e2::pf_unequal e1 e2::pf_equal e1 e2::l),[])``
+
+
+(*turn the first equation in pf and the second in pf'*)
+val x = ds_TURN_EQUATIONS_CONV [true] [false, true] t;
+
+(*automatically turn constonstants to the right*)
+val x = ds_AUTO_DIRECT_EQUATIONS_CONV t;
+
+
+
+(* The main inferences*)
+
+val t = ``LIST_DS_ENTAILS ([],[(e1,e2);(e3,e3)]) ((pf1::pf_equal e e::pf2::pf_equal e' e'::pf3::l),[(sf_ls f e e)]) ((pf1::pf_equal e e::pf2::pf_equal e' e'::pf3::l),[(sf_bin_tree (f1,f2) dse_nil)])``;
+
+ds_inference_REMOVE_TRIVIAL___CONV t;
+
+
+
+(*all inferences work that way.*)
+
+
+(*A real example form SMALLFOOT debug output on list.sf
+
+0!=z_3 * 0!=x * 0!=z * z_3!=y * z_3!=z * a!=e * x!=y * x!=z * y!=z * z |-> hd:e,tl:y * listseg(tl; y, 0) * listseg(tl; x, z_3) * z_3 |-> tl:z
+|-
+listseg(tl; x, z) * z |-> tl:y * listseg(tl; y, 0)
+
+ist basically says
+
+list x z_3
+z3 |-> z
+z |-> y
+list y dse_nil
+
+==>
+
+list x z
+z |-> y
+list y dse_nil
+
+
+z_3 => var 0
+x   => var 1
+z   => var 2
+y   => var 3
+a   => var 4
+e   => var 5
+*)
+
+val t = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var 0) (dse_nil:(num, num) ds_expression); 
+    pf_unequal (dse_var 1) dse_nil;
+    pf_unequal (dse_var 2) dse_nil;
+    pf_unequal (dse_var 0) (dse_var 3);
+    pf_unequal (dse_var 0) (dse_var 2);
+    pf_unequal (dse_var 4) (dse_var 5);
+    pf_unequal (dse_var 1) (dse_var 3);
+    pf_unequal (dse_var 1) (dse_var 2);
+    pf_unequal (dse_var 3) (dse_var 2)],
+   [sf_points_to (dse_var 2) [("hd",dse_var 5); ("tl", dse_var 3)];
+    sf_ls "tl" (dse_var 3) dse_nil;
+    sf_ls "tl" (dse_var 1) (dse_var 0);
+    sf_points_to (dse_var 0) [("tl", (dse_var 2))]])
+
+   ([],
+    [sf_ls "tl" (dse_var 1) (dse_var 2);
+     sf_points_to (dse_var 2) [("tl", dse_var 3)];
+     sf_ls "tl" (dse_var 3) dse_nil])``
+
+
+(*proves it in 0.2 secs on my maschine*)
+time (ds_inference_FRAME___CONV THENC
+      ds_inference_APPEND_LIST___CONV THENC
+      ds_inference_SIMPLE_UNROLL___CONV THENC
+      ds_inference_REMOVE_TRIVIAL___CONV THENC
+      ds_inference_AXIOM___CONV) t
+
+
+set_goal ([], t);
+
+CONV_TAC ds_inference_FRAME___CONV THEN
+CONV_TAC ds_inference_APPEND_LIST___CONV THEN
+CONV_TAC ds_inference_SIMPLE_UNROLL___CONV THEN
+CONV_TAC ds_inference_REMOVE_TRIVIAL___CONV THEN
+CONV_TAC ds_inference_AXIOM___CONV
+
+
+time ds_DECIDE_CONV t
+
+
+(*more examples*)
+val t2 = ``LIST_DS_ENTAILS ([],[])
+  ([], [sf_ls f (dse_var 0) (dse_nil:(num, num) ds_expression)])
+  ([], [sf_ls f (dse_var 0) dse_nil; sf_ls f (dse_var 0) (dse_var 0)])``
+
+(*no time (0.012 secs)*)
+val t2_thm = time ds_DECIDE t2;
+
+
+
+(*
+0!=t_5 * 0!=x * t_5!=t * t!=x * t_5 |-> tl:t * listseg(tl; t, 0) * listseg(tl; x
+, t_5)
+|-
+listseg(tl; x, t) * listseg(tl; t, 0)
+
+t_5 = var 0
+x = var 1
+t = var 2
+*)
+
+val t3 = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var 0) (dse_nil:(num, num) ds_expression); 
+    pf_unequal (dse_var 1) dse_nil;
+    pf_unequal (dse_var 0) (dse_var 2);
+    pf_unequal (dse_var 2) (dse_var 1)],
+   [sf_points_to (dse_var 0) [("tllllllll", dse_var 2)];
+    sf_ls "tllllllll" (dse_var 2) dse_nil;
+    sf_ls "tllllllll" (dse_var 1) (dse_var 0)])
+
+   ([],
+    [sf_ls "tllllllll" (dse_var 1) (dse_var 2);
+     sf_ls "tllllllll" (dse_var 2) dse_nil])``;
+
+(*0.6 sec*)
+val t3_thm = time ds_DECIDE_CONV t3;
+
+
+
+val t3' = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var 0) (dse_nil:(num, num) ds_expression); 
+    pf_unequal (dse_var 1) dse_nil;
+    pf_unequal (dse_var 0) (dse_var 2);
+    pf_unequal (dse_var 2) (dse_var 1)],
+   [sf_points_to (dse_var 0) [(1, dse_var 2)];
+    sf_ls 1 (dse_var 2) dse_nil;
+    sf_ls 1 (dse_var 1) (dse_var 0)])
+
+   ([],
+    [sf_ls 1 (dse_var 1) (dse_var 2);
+     sf_ls 1 (dse_var 2) dse_nil])``;
+
+(*0.2 sec !!! perhaps one should not use strings! *)
+val t3'_thm = time ds_DECIDE_CONV t3';
+
+
+
+
+
+(*
+listseg(tl; t, 0)
+|-
+listseg(tl; 0, 0) * listseg(tl; t, t) * listseg(tl; t, 0)
+
+t = var 0
+*)
+
+val t4 = ``LIST_DS_ENTAILS ([],[])
+  ([],
+   [sf_ls "tl" (dse_var 0) (dse_nil:(num, num) ds_expression)])
+
+   ([],
+    [sf_ls "tl" dse_nil dse_nil;
+     sf_ls "tl" (dse_var 0) (dse_var 0);
+     sf_ls "tl" (dse_var 0) dse_nil])``;
+
+
+val t4_thm = ds_DECIDE t4;
+
+
+
+(*
+listseg(tl; q, 0) * listseg(tl; p, 0)
+|-
+listseg(tl; p, 0) * listseg(tl; q, 0)
+*)
+
+val t5 = ``LIST_DS_ENTAILS ([],[])
+  ([],
+   [sf_ls "tl" (dse_var 0) (dse_nil:(num, num) ds_expression);
+    sf_ls "tl" (dse_var 1) dse_nil])
+
+   ([],
+    [sf_ls "tl" (dse_var 1) dse_nil;
+     sf_ls "tl" (dse_var 0) dse_nil])``;
+
+val t5_thm = ds_DECIDE t5;
+
+
+
+(*
+0!=s * 0!=t * i!=s * i!=t * ii!=s * ii!=t * j!=s * j!=t * jj!=s * jj!=t * s!=t * s |-> l:ii,r:jj * t |-> l:i,r:j * tree(l,r;ii) * tree(l,r;i) * tree(l,r;jj) * tree(l,r;j)
+|-
+tree(l,r;s) * tree(l,r;t)
+
+
+s  = var 0
+t  = var 1
+i  = var 2
+ii = var 3
+j  = var 4
+jj = var 5
+
+----
+
+l = 0
+r = 1
+*)
+
+val t6 = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var 0) (dse_nil:(num, num) ds_expression);
+    pf_unequal (dse_var 1) dse_nil;
+    pf_unequal (dse_var 2) (dse_var 0);
+    pf_unequal (dse_var 2) (dse_var 1);
+    pf_unequal (dse_var 3) (dse_var 0);
+    pf_unequal (dse_var 3) (dse_var 1);
+    pf_unequal (dse_var 4) (dse_var 0);
+    pf_unequal (dse_var 4) (dse_var 1);
+    pf_unequal (dse_var 5) (dse_var 0);
+    pf_unequal (dse_var 5) (dse_var 1);
+    pf_unequal (dse_var 0) (dse_var 1)],
+   [sf_points_to (dse_var 0) [(0, dse_var 3);  (1, dse_var 5)];
+    sf_points_to (dse_var 1) [(0, dse_var 2);  (1, dse_var 4)];
+    sf_bin_tree (0,1) (dse_var 3);
+    sf_bin_tree (0,1) (dse_var 2);
+    sf_bin_tree (0,1) (dse_var 5);
+    sf_bin_tree (0,1) (dse_var 4)])
+    
+   ([],
+    [sf_bin_tree (0,1) (dse_var 0);
+     sf_bin_tree (0,1) (dse_var 1)])``;
+
+(*0.24 sec*)
+val t6_thm = time ds_DECIDE t6;
+
+
+
+val t6' = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var 0) (dse_nil:(num, num) ds_expression);
+    pf_unequal (dse_var 1) dse_nil;
+    pf_unequal (dse_var 2) (dse_var 0);
+    pf_unequal (dse_var 2) (dse_var 1);
+    pf_unequal (dse_var 3) (dse_var 0);
+    pf_unequal (dse_var 3) (dse_var 1);
+    pf_unequal (dse_var 4) (dse_var 0);
+    pf_unequal (dse_var 4) (dse_var 1);
+    pf_unequal (dse_var 5) (dse_var 0);
+    pf_unequal (dse_var 5) (dse_var 1);
+    pf_unequal (dse_var 0) (dse_var 1)],
+   [sf_points_to (dse_var 0) [("l", dse_var 3);  ("r", dse_var 5)];
+    sf_points_to (dse_var 1) [("l", dse_var 2);  ("r", dse_var 4)];
+    sf_bin_tree ("l","r") (dse_var 3);
+    sf_bin_tree ("l","r") (dse_var 2);
+    sf_bin_tree ("l","r") (dse_var 5);
+    sf_bin_tree ("l","r") (dse_var 4)])
+    
+   ([],
+    [sf_bin_tree ("l","r") (dse_var 0);
+     sf_bin_tree ("l","r") (dse_var 1)])``;
+
+
+(*0.4 sec*)
+val t6'_thm = time ds_DECIDE t6';
+
+
+
+val t6'' = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var "s") (dse_nil:(num, string) ds_expression);
+    pf_unequal (dse_var "t") dse_nil;
+    pf_unequal (dse_var "i") (dse_var "s");
+    pf_unequal (dse_var "i") (dse_var "t");
+    pf_unequal (dse_var "ii") (dse_var "s");
+    pf_unequal (dse_var "ii") (dse_var "t");
+    pf_unequal (dse_var "j") (dse_var "s");
+    pf_unequal (dse_var "j") (dse_var "t");
+    pf_unequal (dse_var "jj") (dse_var "s");
+    pf_unequal (dse_var "jj") (dse_var "t");
+    pf_unequal (dse_var "s") (dse_var "t")],
+   [sf_points_to (dse_var "s") [("l", dse_var "ii");  ("r", dse_var "jj")];
+    sf_points_to (dse_var "t") [("l", dse_var "i");  ("r", dse_var "j")];
+    sf_bin_tree ("l","r") (dse_var "ii");
+    sf_bin_tree ("l","r") (dse_var "i");
+    sf_bin_tree ("l","r") (dse_var "jj");
+    sf_bin_tree ("l","r") (dse_var "j")])
+    
+   ([],
+    [sf_bin_tree ("l","r") (dse_var "s");
+     sf_bin_tree ("l","r") (dse_var "t")])``;
+
+
+(*0.66 sec*)
+val t6''_thm = time ds_DECIDE t6'';
+
+
+
+val t7 = ``LIST_DS_ENTAILS 
+             ([],[])
+             ([], [sf_points_to (dse_var 0) [("tl", dse_var 1)]])
+             ([], [sf_ls "tl" (dse_var 0) (dse_var 1)])``
+
+val thm = ds_DECIDE_CONV t7;
+
+set_goal ([], t7)
+restart()
+CONV_TAC ds_inference_UNROLL_RIGHT_CASES___CONV THEN
+CONJ_TAC THENL [
+   CONV_TAC ds_inference_SIMPLE_UNROLL___CONV THEN
+   CONV_TAC ds_inference_REMOVE_TRIVIAL___CONV THEN
+   CONV_TAC ds_inference_AXIOM___CONV,
+
+   CONV_TAC ds_inference_SUBSTITUTION___CONV THEN
+   CONV_TAC ds_inference_REMOVE_TRIVIAL___CONV THEN
+   CONV_TAC ds_inference_NIL_NOT_LVAL___CONV
+
+end;
