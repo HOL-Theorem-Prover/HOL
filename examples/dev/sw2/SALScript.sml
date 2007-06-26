@@ -72,8 +72,8 @@ val _ =
       | GOTO of LABEL => LABEL
       | UNION of COMPOSITE => COMPOSITE`;
 
-val _ = overload_on ("|+", Term`UNION`);
-val _ = set_fixity "|+" (Infixl 650);
+val _ = overload_on ("|++|", ``SAL$UNION``);
+val _ = set_fixity "|++|" (Infixl 650);
 
 (*---------------------------------------------------------------------------*)
 (* Abstract Assembly Language                                                *)
@@ -89,38 +89,37 @@ val _ = set_fixity "|+" (Infixl 650);
 val (ns_rule, ns_ind, ns_case) =
     Hol_reln `
 
-    (Reduce (l1, ASG l1 v w l2, l2) (w,v)) /\                                  (* inst *)
-
-    (Reduce (l1, S1, l2) (v,v) /\ Reduce (l2, S2, l3) value ==>                (* nop *)
-       Reduce (l1, S1 |+ S2, l3) value) /\
-
-    (Reduce (l1, S1, l2) e1 /\ Reduce (l3, S2, l4) e2 ==>                      (* skip *)
-       Reduce (l1, S1 |+ S2, l2) e1) /\
-
-    (Reduce (l1, S1, l2) (e,v) /\ Reduce (l2, S2, l3) (f v, w) ==> (* seq *)
-       Reduce (l1, S1 |+ S2, l3) ((let v = e in f v), w)) /\
-
-    (c v ==> Reduce (l1, IFGOTO l1 c l2 l3, l2) (v,v)) /\                      (* ift *)
-
-    (~c v ==> Reduce (l1, IFGOTO l1 c l2 l3, l3) (v,v)) /\                     (* iff *)
-
-    (Reduce (l1, GOTO l1 l2, l2) (v,v)) /\                                     (* goto *)
-
-    (Reduce (l1, S1, l1) (g v, v) /\ Reduce (l1, S1, l2) (f (g v), (g v)) ==>  (* loop *)
-       Reduce (l1, S1, l2) (f v, v))
+    (Reduce (l1, ASG l1 v w l2, l2) (w,v))   (* inst *)  /\                  
+    (Reduce (l1, S1, l2) (v,v) /\            (* nop *)
+     Reduce (l2, S2, l3) value ==> Reduce (l1, S1 |++| S2, l3) value) /\
+    (Reduce (l1, S1, l2) e1 /\               (* skip *)
+     Reduce (l3, S2, l4) e2 ==> Reduce (l1, S1 |++| S2, l2) e1) /\
+    (Reduce (l1, S1, l2) (e,v) /\            (* seq *)
+     Reduce (l2, S2, l3) (f v, w) ==> Reduce (l1, S1 |++| S2, l3) 
+                                             ((let v = e in f v), w)) /\
+    (c v ==> (* ift *)
+     Reduce (l1, IFGOTO l1 c l2 l3, l2) (v,v)) /\
+    (~c v ==> (* iff *)
+     Reduce (l1, IFGOTO l1 c l2 l3, l3) (v,v)) /\
+    (Reduce (l1, GOTO l1 l2, l2) (v,v))  (* goto *)  /\
+    (Reduce (l1, S1, l1) (g v, v) /\     (* loop *)
+     Reduce (l1, S1, l2) (f (g v), (g v)) ==> Reduce (l1, S1, l2) (f v, v))
   `;
 
-(*
-val _ = Hol_datatype `
+(*---------------------------------------------------------------------------
+  Not used ...
+
+  val _ = Hol_datatype `
      VALUE = 
            NIL
         |  VAL of num # num`;
 
-    (Reduce (l1, S1, l1) v ==>                                               (* union *)
-       Reduce (l1, S1 |+ S1, l1) v)           /\
-    (Reduce (l1, S1, l2) (VAL(f v, v)) ==>                                   (* args *)
-       Reduce (l1, S1, l2) (VAL(f (g v), g v)))  /\
-*)
+ (Reduce (l1, S1, l1) v ==> (* union *) Reduce (l1, S1 |++| S1, l1) v)
+          /\
+ (Reduce (l1, S1, l2) (VAL(f v, v)) ==> (* args *)
+     Reduce (l1, S1, l2) (VAL(f (g v), g v)))  
+         /\
+ ----------------------------------------------------------------------------*)
 
 val [inst_rule, nop_rule, skip_rule, seq_rule, 
      ift_rule, iff_rule, goto_rule, loop_rule] = CONJUNCTS ns_rule;
@@ -136,7 +135,7 @@ val _ = map save_thm
 val TRANSFER_RULE = Q.store_thm (
   "TRANSFER_RULE",
    `Reduce (l1,S1,l2) (e,v) /\ Reduce (l2,S2,l3) (v,w) ==>
-         Reduce (l1,S1 |+ S2,l3) (e,w)
+         Reduce (l1,S1 |++| S2,l3) (e,w)
    `,
    REPEAT STRIP_TAC THEN
    `Reduce (l2,S2,l3) ((\x.x) v, w)` by RW_TAC std_ss [] THEN
@@ -151,7 +150,7 @@ val TRANSFER_RULE = Q.store_thm (
 val CONDITIONAL_RULE = Q.store_thm (
   "CONDITIONAL_RULE",
    `Reduce (l2, S1, l4) (e1 v, v) /\ Reduce (l3, S2, l4) (e2 v, v) ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |+ S1 |+ S2, l4) (if c v then e1 v else e2 v, v)`,
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| S2, l4) (if c v then e1 v else e2 v, v)`,
    Cases_on `c v` THEN
    RW_TAC std_ss [] THENL [
        METIS_TAC [ift_rule, nop_rule, skip_rule],
@@ -168,7 +167,7 @@ val CONDITIONAL_RULE = Q.store_thm (
 val TR_LEM1 = Q.store_thm (
   "TR_LEM1",
    `Reduce (l3, S1, l4) w /\ c v ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |+ S1 |+ (GOTO l4 l1), l2) (v,v)`,
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (v,v)`,
 
   REPEAT STRIP_TAC THEN
   METIS_TAC [ift_rule, skip_rule, goto_rule]
@@ -180,7 +179,7 @@ val TR_LEM2 = Q.store_thm (
    `(!x. ~(c x) ==> R (f x) x) /\ WF R /\       (* terminated loop *)
     c v /\ Reduce (l3, S1, l4) (f v, v) 
     ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |+ S1 |+ (GOTO l4 l1), l2)
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2)
         (tr c f v, v)`,
 
   RW_TAC std_ss [] THEN
@@ -193,10 +192,10 @@ val TR_LEM2 = Q.store_thm (
 val TR_LEM3 = Q.store_thm (
   "TR_LEM3",
    `~c v /\ Reduce (l3, S1, l4) (f v, v)  ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |+ S1 |+ (GOTO l4 l1), l1) (f v, v)`,
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l1) (f v, v)`,
 
   RW_TAC std_ss [] THEN
-  `Reduce (l1, (IFGOTO l1 c l2 l3) |+ S1, l4) (f v, v)` by METIS_TAC [iff_rule, nop_rule] THEN
+  `Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1, l4) (f v, v)` by METIS_TAC [iff_rule, nop_rule] THEN
   METIS_TAC [goto_rule, TRANSFER_RULE]
   );
 
@@ -205,7 +204,7 @@ val TR_RULE = Q.store_thm (
    `(!x. ~(c x) ==> R (f x) x) /\ WF R ==>
     (!v. (c v ==> Reduce (l3, S1, l4) w) /\
          (~c v ==> Reduce (l3, S1, l4) (f v, v))) ==>
-        !v. Reduce (l1, (IFGOTO l1 c l2 l3) |+ S1 |+ (GOTO l4 l1), l2) (tr c f v, v)`,
+        !v. Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (tr c f v, v)`,
 
   STRIP_TAC THEN STRIP_TAC THEN
   IMP_RES_TAC (DISCH_ALL tr_ind) THEN
@@ -225,7 +224,7 @@ val TR_RULE = Q.store_thm (
 val FUN_CALL_LEM = Q.store_thm (
   "FUN_CALL_LEM",
    `Reduce (l2, S1, l3) (f w1, v1) ==>
-    Reduce (l1, (ASG l1 w1 w2 l2) |+ S1, l3) ((let w1 = w2 in f w1), v1)`,
+    Reduce (l1, (ASG l1 w1 w2 l2) |++| S1, l3) ((let w1 = w2 in f w1), v1)`,
 
    RW_TAC std_ss [] THEN
    METIS_TAC [inst_rule, seq_rule]
@@ -234,7 +233,7 @@ val FUN_CALL_LEM = Q.store_thm (
 val FUN_CALL_RULE = Q.store_thm (
   "FUN_CALL_RULE",
    `Reduce (l2, S1, l3) (f w1, v1) ==>
-    Reduce (l1, (ASG l1 w1 w2 l2) |+ S1 |+ (ASG l3 v2 v1 l4), l4) (f w2, v2)`,
+    Reduce (l1, (ASG l1 w1 w2 l2) |++| S1 |++| (ASG l3 v2 v1 l4), l4) (f w2, v2)`,
 
    RW_TAC std_ss [] THEN
    IMP_RES_TAC FUN_CALL_LEM THEN

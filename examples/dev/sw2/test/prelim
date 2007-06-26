@@ -1,5 +1,6 @@
 loadPath := HOLDIR^"/examples/dev/sw2/" :: !loadPath;
-app load ["regAlloc", "closure", "inline", "SALGen"];
+app load ["regAlloc", "closure", "inline", "SALGen", "wordsLib"];
+numLib.prefer_num();
 
 val normalize = Normal.normalize;
 val SSA_RULE = Normal.SSA_RULE;

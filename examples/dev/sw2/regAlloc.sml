@@ -195,11 +195,13 @@ fun g' dest cont regenv exp =
     end
   else if is_comb exp then
     let val (op0,xs) = strip_comb exp in
-      if is_binop op0 orelse is_cmpop op0 orelse is_relop op0 then
+      if is_binop op0 (* includes orelse is_cmpop op0 orelse is_relop op0 *)
+      then
         let val (x, y) = (hd xs, hd (tl xs))
         in NoSpill (subst (mk_subst_rules [x,y] regenv) exp, regenv)
         end
-      else raise regAlloc ("g': this case hasn't been unimplemented -- " ^ term_to_string exp)
+      else raise regAlloc 
+          ("g': this case hasn't been unimplemented -- " ^ term_to_string exp)
     end
   else NoSpill (exp, regenv)
 
@@ -373,7 +375,7 @@ fun reg_alloc def =
     val (args,body) = dest_pabs fbody
     val regenv = args_env args
     val args1 = assgn_args args regenv
-    val dest = Term `r0:num`
+    val dest = mk_var("r0",numSyntax.num)
     val cont = dest
     val body1 = #1 (g_repeat dest cont regenv body)
     val body2 = alloc_mem body1

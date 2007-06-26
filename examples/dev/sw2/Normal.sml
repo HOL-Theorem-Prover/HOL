@@ -2,33 +2,37 @@ structure Normal :> Normal =
 struct
 (*
 quietdec := true;
-
-app load ["basic"];
-
-open HolKernel Parse boolLib bossLib 
-     pairLib pairSyntax pairTheory PairRules 
-     NormalTheory basic;
-
+app load ["basic","NormalTheory","pairLib"];
+open HolKernel Parse boolLib bossLib;
+open pairLib pairSyntax pairTheory PairRules NormalTheory basic;
 quietdec := false;
 *)
 
-open HolKernel Parse boolLib bossLib 
-     pairLib pairSyntax pairTheory PairRules 
-     NormalTheory basic;
+open HolKernel Parse boolLib bossLib;
+open pairLib pairSyntax pairTheory PairRules NormalTheory basic;
+
+val ERR = mk_HOL_ERR "Normal";
+
+val atom_tm = prim_mk_const{Name="atom",Thy="Normal"};
+
+fun mk_atom tm = 
+  with_exn mk_comb (inst [alpha |-> type_of tm] atom_tm, tm)
+          (ERR "mk_atom" "Non-boolean argument");
 
 val _ = (Globals.priming := SOME "");
 
-(*----------------------------------------------------------------------------------*)
-(* Pre-processing. (KLS: not sure where this is used.)                              *)
-(* Apply the rewrite rules in bool_ss to simplify boolean connectives and           *)
-(*   conditional expressions                                                        *)
-(* It contains all of the de Morgan theorems for moving negations in over the       *)
-(* connectives (conjunction, disjunction, implication and conditional expressions). *)
-(* It also contains the rules specifying the behaviour of the connectives when the  *)
-(* constants T and F appear as their arguments.                                     *)
-(* The arith_ss simpset extends std_ss by adding the ability to decide formulas of  *)
-(* Presburger arithmetic, and to normalise arithmetic expressions                   *)
-(*----------------------------------------------------------------------------------*)
+
+(*---------------------------------------------------------------------------*)
+(* Pre-processing. (KLS: not sure where this is used.)                       *)
+(* Apply the rewrite rules in bool_ss to simplify boolean connectives and    *)
+(* conditional expressions.                                                  *)
+(* It contains all of the de Morgan theorems for moving negations in over    *)
+(* the connectives (conjunction, disjunction, implication and conditional    *)
+(* expressions). It also contains the rules specifying the behaviour of the  *)
+(* connectives when the constants T and F appear as their arguments. The     *)
+(* arith_ss simpset extends std_ss by adding the ability to decide formulas  *)
+(* of Presburger arithmetic, and to normalise arithmetic expressions         *)
+(*---------------------------------------------------------------------------*)
 
 val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
 
@@ -39,6 +43,8 @@ val PRE_PROCESS_RULE = SIMP_RULE arith_ss [AND_COND, OR_COND, BRANCH_NORM];
 (*---------------------------------------------------------------------------*)
 
 val C_tm = prim_mk_const{Name="C",Thy="Normal"};
+fun mk_C tm = mk_comb (inst [alpha |-> type_of tm] C_tm, tm);
+val dest_C = dest_monop C_tm (ERR "dest_C" "");
 
 (*---------------------------------------------------------------------------*)
 (* Convert an expression to its continuation form                            *)
@@ -48,9 +54,10 @@ val C_tm = prim_mk_const{Name="C",Thy="Normal"};
 (* Rewrite the first two components with the obtained theorems *)
 
 fun SUBST_2_RULE (lem1,lem2) = 
-         CONV_RULE (RHS_CONV (PABS_CONV (
-                      RATOR_CONV (REWRITE_CONV [Once lem1]) THENC
-                      RAND_CONV (PABS_CONV (RATOR_CONV (REWRITE_CONV [Once lem2]))))));
+  CONV_RULE (RHS_CONV (PABS_CONV (
+          RATOR_CONV (REWRITE_CONV [Once lem1]) THENC
+                      RAND_CONV (PABS_CONV (RATOR_CONV
+                                     (REWRITE_CONV [Once lem2]))))));
 
 (* Rewrite the four components of atomic branch with the obtained theorems *)
 
@@ -62,7 +69,8 @@ fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
                   RAND_CONV (PABS_CONV (
                     RATOR_CONV (REWRITE_CONV [Once lem1]) THENC
                     RAND_CONV (PABS_CONV (RATOR_CONV (RAND_CONV (
-                      RATOR_CONV (RAND_CONV (RATOR_CONV (REWRITE_CONV [Once lem2]))) THENC 
+                      RATOR_CONV (RAND_CONV (RATOR_CONV 
+                                (REWRITE_CONV [Once lem2]))) THENC 
                       RAND_CONV (RATOR_CONV (REWRITE_CONV [Once lem3]))))))
                     ))
                  ))) th1
@@ -72,56 +80,53 @@ fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
    end;
 
 fun K_Normalize exp =
-   let val (C, t) = dest_comb exp               (* eliminate the C *)
-   in
-
-   if is_atom t then 
+ let val t = dest_C exp               (* eliminate the C *)
+ in
+  if is_atomic t then 
       ISPEC t C_ATOM_INTRO
 
-   else if is_let t then                        (*  exp = LET (\v. N) M  *)
-     let 
-         val (v,M,N) = dest_plet t
-         val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
-                           K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
-         val th2 =  SIMP_CONV bool_ss [Once C_LET] exp
-         val th3 =  SUBST_2_RULE (th0,th1) th2
-         val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
-     in
-         th4
-     end
+  else if is_let t then                        (*  exp = LET (\v. N) M  *)
+    let 
+       val (v,M,N) = dest_plet t
+       val (th0, th1) = (K_Normalize (mk_C M), K_Normalize (mk_C N))
+       val th2 =  SIMP_CONV bool_ss [Once C_LET] exp
+       val th3 =  SUBST_2_RULE (th0,th1) th2
+       val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
+    in
+       th4
+    end
 
-    else if is_pabs t then                        (*  exp = \(x...).M *)
-      let 
-         val (v,M) = dest_pabs t
-	 val (v_type, m_type) = (type_of v, type_of M);
-	 val t1 = mk_comb (inst [alpha |-> m_type] C_tm, M);
-         val id = let val x = mk_var("x",alpha) in mk_abs(x,x) end
-	 val t2 = mk_comb (inst [beta |-> m_type] t1, inst [alpha |-> m_type] id);
-         val t3 = mk_comb (C, mk_pabs(v, t2));
-	 val th1 = prove (mk_eq(exp, t3), SIMP_TAC std_ss [C_def]);
-         val th0 = K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M))
-
-         val th2 = CONV_RULE (RHS_CONV (RAND_CONV (PABS_CONV (
-                      RATOR_CONV (ONCE_REWRITE_CONV [th0]))))) th1
-         val th3 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th2
-      in
-         th3
-      end
+  else if is_pabs t then                        (*  exp = \(x...).M *)
+    let 
+       val (v,M) = dest_pabs t
+       val (v_type, m_type) = (type_of v, type_of M);
+       val t1 = mk_C(M)
+       val id = let val x = mk_var("x",alpha) in mk_abs(x,x) end
+       val t2 = mk_comb (inst [beta |-> m_type] t1, 
+                         inst [alpha |-> m_type] id)
+       val t3 = mk_C (mk_pabs(v, t2))
+       val th0 = K_Normalize t1
+       val th1 = prove (mk_eq(exp, t3), SIMP_TAC std_ss [C_def]);
+       val th2 = CONV_RULE (RHS_CONV (RAND_CONV (PABS_CONV (
+                    RATOR_CONV (ONCE_REWRITE_CONV [th0]))))) th1
+       val th3 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th2
+    in
+       th3
+    end
 
     else if is_pair t then                        (*  exp = (M,N) *)
       let 
          val (M,N) = dest_pair t
-         val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
-                           K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
-
-         val th2 =  ONCE_REWRITE_CONV [C_PAIR] exp
-         val th3 =  SUBST_2_RULE (th0,th1) th2
+         val th0 = K_Normalize (mk_C M) 
+         val th1 = K_Normalize (mk_C N)
+         val th2 = ONCE_REWRITE_CONV [C_PAIR] exp
+         val th3 = SUBST_2_RULE (th0,th1) th2
          val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
       in
          th4
       end
 
-    else if is_cond t then                        (*  exp = if P then M else N *)
+    else if is_cond t then                  (*  exp = if P then M else N *)
       let 
          val (J,M,N) = dest_cond t
       in 
@@ -130,10 +135,10 @@ fun K_Normalize exp =
               val (op0, xL) = strip_comb J 
               val (P,Q) = (hd xL, hd (tl xL))
               val (lem0, lem1, lem2, lem3) = 
-                 (K_Normalize (mk_comb (inst [alpha |-> type_of P] C_tm, P)),
-                  K_Normalize (mk_comb (inst [alpha |-> type_of Q] C_tm, Q)), 
-                  K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
-                  K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
+                 (K_Normalize (mk_C P),
+                  K_Normalize (mk_C Q), 
+                  K_Normalize (mk_C M), 
+                  K_Normalize (mk_C N))
 
               val th4 = Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp
            in
@@ -145,55 +150,52 @@ fun K_Normalize exp =
       end
 
    else if is_comb t then
-      let val (operator, operands) = strip_comb t
+      let fun norm_app (M,N) =
+            let val th0 = K_Normalize (mk_C M) 
+                val th1 = K_Normalize (mk_C N)
+                val th2 = ONCE_REWRITE_CONV [C_APP] exp
+                val th3 =  SUBST_2_RULE (th0,th1) th2
+                val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
+            in
+              th4
+            end
       in
-
-        if is_binop operator then (* Arithmetic and Logical Operations *)
-             let 
-               val (d0, d1) =  (hd operands, hd (tl operands))
-               val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of d0] C_tm, d0)),
-                                 K_Normalize (mk_comb (inst [alpha |-> type_of d1] C_tm, d1)))
-               val th2 =  ONCE_REWRITE_CONV [C_BINOP] exp
-	       val th3 =  SUBST_2_RULE (th0,th1) th2
-               val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
-             in
+       case strip_comb t
+        of (operator,[d0,d1]) =>
+           if is_binop operator then 
+              let val th0 = K_Normalize (mk_C d0)
+                  val th1 = K_Normalize (mk_C d1)
+                  val th2 = ONCE_REWRITE_CONV [C_BINOP,C_WORDS] exp
+                  val th3 = SUBST_2_RULE (th0,th1) th2
+                  val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
+              in
                 th4
-             end
-
-        else (* Application *)
-           let
-             val (M,N) = dest_comb t
-             val (th0, th1) = (K_Normalize (mk_comb (inst [alpha |-> type_of M] C_tm, M)), 
-                               K_Normalize (mk_comb (inst [alpha |-> type_of N] C_tm, N)))
-             val th2 = ONCE_REWRITE_CONV [C_APP] exp
-             val th3 =  SUBST_2_RULE (th0,th1) th2
-             val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
-           in
-             th4
-           end
+              end
+           else norm_app (dest_comb t)
+         | _ => norm_app (dest_comb t)
       end
-
-    else
-     REFL exp
-  end
+   else
+    REFL exp
+ end
 
 (*---------------------------------------------------------------------------*)
 (*   Convert a function to its equivalent KNF                                *)
 (*---------------------------------------------------------------------------*)
 
 fun normalize def = 
-  let 
-    val thm0 = SIMP_RULE arith_ss [] def                     (* Basic simplification *)
-    val thm1 = REWRITE_RULE [AND_COND, OR_COND] thm0         (* Break compound condition jumps *)
-    val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO])) (SPEC_ALL thm1)
-    val exp = #1 (dest_comb (rhs (concl thm2)))
-    val lem3 = K_Normalize exp                               (* Continuation Norm *)
-    val thm4 = REWRITE_RULE [lem3] thm2
-    val thm5 = SIMP_RULE bool_ss [C_2_LET] thm4              (* "Let" Form *)
-    val thm6 = REWRITE_RULE [BRANCH_NORM] thm5       
-  in
-    thm6
-  end
+ let val thm0 = SIMP_RULE arith_ss [] def  (* Basic simplification *)
+     (* Break compound condition jumps *)
+     val thm1 = REWRITE_RULE [AND_COND, OR_COND] thm0
+     val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO])) 
+                          (SPEC_ALL thm1)
+     val exp = #1 (dest_comb (rhs (concl thm2)))
+     val lem3 = K_Normalize exp          (* Continuation Form *)
+     val thm4 = REWRITE_RULE [lem3] thm2
+     val thm5 = SIMP_RULE bool_ss [C_2_LET] thm4 (* "Let" Form *)
+     val thm6 = REWRITE_RULE [BRANCH_NORM] thm5       
+ in
+   thm6
+ end
 
 (*---------------------------------------------------------------------------*)
 (* Beta-Reduction on Let expressions (rule "atom_let")                       *)
@@ -206,8 +208,7 @@ fun identify_atom tm =
      fun trav t = 
        if is_let t then 
            let val (v,M,N) = dest_plet t
-               val M' = if is_atom M then mk_comb (inst [alpha |-> type_of M] (Term `atom`), M) 
-                        else trav M
+               val M' = if is_atomic M then mk_atom M else trav M
            in mk_plet (v, M', trav N)
            end
        else if is_comb t then
@@ -295,7 +296,7 @@ fun SSA_RULE def =
           else (t1, #1 (dest_pabs t2)) 
       val body = if flag then #2 (dest_pabs t2) else t2 
       val lem1 = prove (mk_eq (fname, mk_pabs(args,body)), 
-		    SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def]);
+                    SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def]);
       val t3 = if flag then t2 else mk_pabs (args,body) 
       val lem2 = SSA_CONV t3;
       val lem3 = ONCE_REWRITE_RULE [lem2] lem1

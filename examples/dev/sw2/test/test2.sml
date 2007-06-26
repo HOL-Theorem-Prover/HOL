@@ -5,15 +5,14 @@ use "prelim";
 (*---------------------------------------------------------------------------*)
 
 val fact_def = Define
-   `fact i = if i = 0 then 1
-	else i * fact (i - 1)`;
+   `fact i = if i = 0 then 1 else i * fact (i - 1)`;
 
 val f1_def = Define
    `f1 (k0,k1,k2)  =
         let y = k2 + 100 in
         let g = (\(x,y). y - (x * k0)) in 
         let z = if fact 3 < 10 /\ y + 2 * k1 > k0 then g (k1, k2)
-		else y
+                else y
         in
         z * y`;
 
@@ -100,7 +99,8 @@ val th2 = closure_convert th1;
              v9))
 *)
 
-val th3 = SSA_RULE (optimize_norm [] (SIMP_RULE std_ss [Once LET_THM, fun_def] th2));
+val th3 = SSA_RULE (optimize_norm [] 
+                     (SIMP_RULE std_ss [Once LET_THM, fun_def] th2));
 
 (*
  |- f1 =

@@ -1,6 +1,14 @@
-open HolKernel Parse boolLib bossLib;
+(* Interactive: 
+  load "wordsLib";
+  quietdec := true;
+  open wordsLib arithmeticTheory;
+  quietdec := false;
+*)
 
-val _ = new_theory"Normal";
+open HolKernel Parse boolLib bossLib wordsLib 
+     arithmeticTheory;
+
+val _ = new_theory "Normal";
 
 val C_def = Define `
     C e = \k. k e`;
@@ -44,22 +52,51 @@ val C_2_LET = Q.store_thm (
 (* Theorems used for rewriting                                               *)	
 (*---------------------------------------------------------------------------*)
 
+val ABS_C_BINOP = Q.store_thm
+("ABS_C_BINOP",
+ `!f e1 e2. C (f e1 e2) = \k. C e1 (\x. C e2 (\y. C (f x y) k))`,
+   SIMP_TAC std_ss [C_def, LET_THM]);
+
 val C_BINOP = Q.store_thm (
   "C_BINOP",
-   `(C (e1 + e2) = \k. C e1 (\x. C e2 (\y. C (x + y) k))) /\
-    (C (e1 - e2) = \k. C e1 (\x. C e2 (\y. C (x - y) k))) /\
-    (C (e1 * e2) = \k. C e1 (\x. C e2 (\y. C (x * y) k))) /\
+   `(C (e1 + e2) =  \k. C e1 (\x. C e2 (\y. C (x + y) k))) /\
+    (C (e1 - e2) =  \k. C e1 (\x. C e2 (\y. C (x - y) k))) /\
+    (C (e1 * e2) =  \k. C e1 (\x. C e2 (\y. C (x * y) k))) /\
     (C (e1 ** e2) = \k. C e1 (\x. C e2 (\y. C (x ** y) k)))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
+   METIS_TAC [ABS_C_BINOP]
   );
 
 val C_PAIR = Q.store_thm (
   "C_PAIR",
   `C (e1, e2) = \k. C e1 (\x. C e2 (\y. k (x,y)))`,
-   SIMP_TAC std_ss [C_def, LET_THM]
+   RW_TAC std_ss [C_def]
   );
 
-(*  LET expressions are processed in a way that generate A-normal forms *)
+val C_WORDS = Q.store_thm (
+  "C_WORDS",
+  `!w1 w2 : 'a word.
+    (C (w1 + w2)  = \k. C w1 (\x. C w2 (\y. C (x + y) k))) /\
+    (C (w1 - w2)  = \k. C w1 (\x. C w2 (\y. C (x - y) k))) /\
+    (C (w1 * w2)  = \k. C w1 (\x. C w2 (\y. C (x * y) k))) /\
+    (C (w1 && w2) = \k. C w1 (\x. C w2 (\y. C (x && y) k))) /\
+    (C (w1 ?? w2) = \k. C w1 (\x. C w2 (\y. C (x ?? y) k))) /\
+    (C (w1 !! w2) = \k. C w1 (\x. C w2 (\y. C (x !! y) k))) /\
+    (C (w1 < w2)  = \k. C w1 (\x. C w2 (\y. C (x < y) k))) /\
+    (C (w1 <= w2) = \k. C w1 (\x. C w2 (\y. C (x <= y) k))) /\
+    (C (w1 > w2)  = \k. C w1 (\x. C w2 (\y. C (x > y) k))) /\
+    (C (w1 > w2)  = \k. C w1 (\x. C w2 (\y. C (x > y) k))) /\
+    (C (w1 >> n)  = \k. C w1 (\x. C n (\y. C (x >> y) k))) /\
+    (C (w1 >>> n) = \k. C w1 (\x. C n (\y. C (x >>> y) k))) /\
+    (C (w1 << n)  = \k. C w1 (\x. C n (\y. C (x << y) k))) /\
+    (C (w1 #>> n) = \k. C w1 (\x. C n (\y. C (x #>> y) k))) /\
+    (C (w1 #<< n) = \k. C w1 (\x. C n (\y. C (x #<< y) k)))
+`,
+   METIS_TAC [ABS_C_BINOP]
+  );
+
+(*---------------------------------------------------------------------------*)
+(* LET expressions are processed in a way that generates A-normal forms      *)
+(*---------------------------------------------------------------------------*)
 
 val C_LET = Q.store_thm (
   "C_LET",
@@ -67,7 +104,9 @@ val C_LET = Q.store_thm (
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
-(*  For K-normal forms, use the following for LET expressions *)
+(*---------------------------------------------------------------------------*)
+(* For K-normal forms, use the following for LET expressions                 *)
+(*---------------------------------------------------------------------------*)
 
 val C_LET_K = Q.store_thm (
   "C_LET_K",
@@ -124,7 +163,8 @@ val ELIM_USELESS_LET = Q.store_thm (
 
 val FLATTEN_LET = Q.store_thm (
   "FLATTEN_LET",
-   `(let x = (let y = e1 in e2 y) in e3 x) = (let y = e1 in let x = e2 y in e3 x)`,
+   `(let x = (let y = e1 in e2 y) in e3 x) = 
+    (let y = e1 in let x = e2 y in e3 x)`,
    SIMP_TAC std_ss [LET_THM]
   );
 
@@ -155,14 +195,13 @@ val OR_COND = Q.store_thm (
 (* Normalize the conditions in branches *)
 val BRANCH_NORM = Q.store_thm (
   "BRANCH_NORM",
-  `((if a > b then x else y) = (if a <= b then y else x)) /\ 
+  `((if (a:num) > b then x else y) = (if a <= b then y else x)) /\ 
     ((if a >= b then x else y) = (if b <= a then x else y)) /\
     ((if a < b then x else y) = (if b <= a then y else x))
   `,
    RW_TAC arith_ss [] THEN
-   FULL_SIMP_TAC std_ss [arithmeticTheory.GREATER_DEF, arithmeticTheory.GREATER_EQ,
-          arithmeticTheory.NOT_LESS, arithmeticTheory.NOT_LESS_EQUAL] THEN
-   METIS_TAC [arithmeticTheory.LESS_EQ_ANTISYM]
+   FULL_SIMP_TAC std_ss [GREATER_DEF, GREATER_EQ,NOT_LESS, NOT_LESS_EQUAL] THEN
+   METIS_TAC [LESS_EQ_ANTISYM]
   );
 
 

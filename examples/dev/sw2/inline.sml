@@ -111,8 +111,8 @@ fun expand_named env def =
 (*---------------------------------------------------------------------------*)
 
 fun optimize th =
-  let val lem1 = SIMP_RULE arith_ss [] th                 (* constant folding *)
-      val lem2 = beta_reduction lem1                      (* beta_reduction *)
+  let val lem1 = SIMP_RULE arith_ss [] th              (* constant folding *)
+      val lem2 = beta_reduction lem1                   (* beta_reduction *)
   in
       if concl lem2 = concl th then lem2
       else optimize lem2

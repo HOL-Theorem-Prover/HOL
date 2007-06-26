@@ -110,7 +110,7 @@ val f3_def = Define
             k9) : thm
 *)    
 
-(* Inline expansion of named functions stored in env                           *)
+(* Inline expansion of named functions stored in env                         *)
 
 val g1_def = Define `g1 (k0,k1) = let k2 = k0 + k1 in k2 * 15`;
 
@@ -171,7 +171,8 @@ val env = [g1_def, g2_def];
             k5 - k4) : thm
 *)
 
-(* Optimization on Normal Forms (including inline expansion and other optimizations *)
+(* Optimization on Normal Forms, including inline expansion and 
+   other optimizations *)
 
 (*
 - optimize_norm env g3_def;

@@ -1,17 +1,18 @@
 structure basic :> basic =
 struct
 
-open HolKernel Parse boolSyntax boolLib bossLib pairSyntax;
+open HolKernel Parse boolSyntax boolLib bossLib pairSyntax wordsSyntax;
 
 (*---------------------------------------------------------------------------*)
 (* Common used data structures and functions                                 *)
 (*---------------------------------------------------------------------------*)
 
 (*---------------------------------------------------------------------------*)
-(* (Atomtic) Variables and Operators                                         *)
+(* (Atomic) Variables and Operators                                          *)
 (*---------------------------------------------------------------------------*)
 
 (* Is the term a word? *)
+(*
 fun is_word_literal tm =
   ((is_comb tm) andalso
   let val (c,args) = strip_comb tm
@@ -20,36 +21,120 @@ fun is_word_literal tm =
   end)
   handle HOL_ERR _ => false
   ;
+*)
+
+fun is_word_literal tm = 
+ case total dest_n2w tm
+  of NONE => false
+   | SOME (ntm,wty) => numSyntax.is_numeral ntm;
 
 (* Is the term an atomic term? *)
-fun is_atom t =
+fun is_atomic t =
     is_var t orelse is_word_literal t orelse 
     numSyntax.is_numeral t orelse is_const t orelse
     is_neg t  (* ~x is considered to be an atom *)
     ;
 
-(* Is the operator a binary arithmetic operator? *)
-fun is_binop op0 =
-    same_const op0 (Term `$+`) orelse same_const op0 (Term `$-`) orelse
-    same_const op0 (Term `$*`) orelse same_const op0 (Term `$**`)
-  ;
+fun OR test [] = false
+  | OR test (h::t) = test h orelse OR test t;
 
-(* Is the operator a comparison operator? *)
-fun is_cmpop op0 =
-    same_const op0 (Term `$>`) orelse same_const op0 (Term `$>=`) orelse
-    same_const op0 (Term `$=`) orelse same_const op0 (Term `$<=`) orelse
-    same_const op0 (Term `$<`);
+(*---------------------------------------------------------------------------*)
+(* Is the operator a binary arithmetic operator?                             *)
+(*---------------------------------------------------------------------------*)
 
-(* Is the operator a logical operator? *)
+fun is_num_arithop op0 =
+ let open numSyntax
+ in 
+    OR (same_const op0) [plus_tm,minus_tm,mult_tm,exp_tm]
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Is the operator an arithmetic comparison operator?                        *)
+(*---------------------------------------------------------------------------*)
+
+fun is_num_cmpop op0 =
+ let open numSyntax
+     val equality = inst [alpha |-> num] boolSyntax.equality
+ in
+    OR (same_const op0) [greater_tm, geq_tm,less_tm,equality,leq_tm]
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Is the operator an arithmetic word operator?                              *)
+(*---------------------------------------------------------------------------*)
+
+fun is_word_arithop op0 =
+  let open wordsSyntax
+  in 
+    OR (same_const op0) [word_add_tm,word_sub_tm,word_mul_tm]
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* Is the operator a word comparison operator? Includes equality             *)
+(* comparisons.                                                              *)
+(*---------------------------------------------------------------------------*)
+
+val is_word_equality = 
+   Lib.can (match_term (mk_const("=",``:'a word -> 'a word -> bool``)));
+
+fun is_word_cmpop op0 =
+ let open wordsSyntax
+ in
+    is_word_equality op0 orelse
+    OR (same_const op0) [word_lt_tm,word_le_tm,word_gt_tm,word_ge_tm]
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Is the operator a bitwise word operator?                                  *)
+(*---------------------------------------------------------------------------*)
+
+fun is_word_shiftop op0 =
+ let open wordsSyntax
+ in
+    OR (same_const op0) 
+        [word_ror_tm,word_rol_tm,word_lsl_tm,word_lsr_tm,word_asr_tm]
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Is the operator a bitwise word operator?                                  *)
+(*---------------------------------------------------------------------------*)
+
+fun is_word_bitwiseop op0 =
+ let open wordsSyntax
+ in
+    OR (same_const op0) [word_xor_tm,word_and_tm,word_or_tm]
+ end;
+
+
+(*---------------------------------------------------------------------------*)
+(* Is the operator a logical operator?                                       *)
+(*---------------------------------------------------------------------------*)
+
 fun is_relop op0 = 
-    same_const op0 boolSyntax.conjunction orelse 
-    same_const op0 boolSyntax.disjunction;
+ let open boolSyntax
+ in
+    OR (same_const op0) [conjunction,disjunction]
+ end;
 
-(* Is the the expression in a condition operator an (atomic) comparison expression? *)
+fun is_binop opr = 
+  is_relop opr orelse 
+  is_word_bitwiseop opr orelse
+  is_num_arithop opr orelse
+  is_word_arithop opr orelse
+  is_num_cmpop opr orelse
+  is_word_cmpop opr orelse
+  is_word_shiftop opr;
+
+
+(*---------------------------------------------------------------------------*)
+(* Is the expression in a conditional test an (atomic) comparison?           *)
+(*---------------------------------------------------------------------------*)
+
 fun is_atom_cond tm =
     is_comb tm andalso
-    let val (op0,_) = strip_comb tm in
-      is_cmpop op0
+    let val (op0,_) = strip_comb tm 
+    in
+      is_num_cmpop op0 orelse is_word_cmpop op0
     end;
 
 (*---------------------------------------------------------------------------*)
