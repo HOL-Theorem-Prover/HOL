@@ -55,7 +55,7 @@ fun SIZE n = PURE_REWRITE_RULE [DIMINDEX n]
 val FCP_ss = rewrites [FCP_BETA,FCP_ETA,CART_EQ];
 
 local
-  val L2V_tm = ``L2V``;
+  val L2V_tm = prim_mk_const{Name="L2V",Thy="fcp"}
 
   fun dest_L2V tm =
       let
