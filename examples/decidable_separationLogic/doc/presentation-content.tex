@@ -1,0 +1,620 @@
+\hypersetup{%
+  pdfauthor={Thomas~Tuerk}
+  pdftitle={Deep Embeeding of Separation Logic}
+}
+
+\title[Deep Embeeding of Separation Logic]{A Deep Embedding of a \\Decidable Fragment of Separation Logic in HOL}
+\author[Tuerk, Gordon]{Thomas Tuerk \and Mike Gordon}
+\date{ARG Lunch, 26th June 2006}
+
+\newcommand{\smallfoot}{{\sf Smallfoot}}
+\newcommand{\HOL}{{\sf HOL}}
+\newcommand{\nil}{{\textsf{nil}}}
+\newcommand{\pftrue}{{\textsf{true}}}
+\newcommand{\pfequal}[2]{\ensuremath{#1 \doteq #2}}
+\newcommand{\pfunequal}[2]{\ensuremath{#1 \not\doteq #2}}
+\newcommand{\values}{{\emph{Values}}}
+\newcommand{\valuesnil}{\ensuremath{\values_\nil}}
+\newcommand{\vars}{{\emph{Vars}}}
+\newcommand{\expr}{{\emph{Exp}}}
+\newcommand{\fields}{{\emph{Fields}}}
+\newcommand{\pf}{{\emph{pf}}}
+\newcommand{\sfset}{{\emph{sf}}}
+\newcommand{\modelspf}{{\models_{\textit{pf}}\ }}
+\newcommand{\modelssf}{{\models_{\textit{sf}}\ }}
+\newcommand{\modelsds}{{\models_{\textit{ds}}\ }}
+
+
+\newcommand{\sfemp}{{\textsf{emp}}}
+\newcommand{\sftree}{{\textsf{tree}}}
+\newcommand{\sfpointsto}[2]{#1 \hookrightarrow [#2]}
+\newcommand{\sfbintree}{{\textsf{bin-tree}}}
+\newcommand{\sflist}{{\textsf{ls}}}
+
+\newcommand{\varpf}[1]{\textit{pf}_{#1}}
+\newcommand{\varsf}[1]{\textit{sf}_{#1}}
+\newcommand{\varel}{\eta}
+\newcommand{\varepl}{\pi}
+
+\newcommand{\heapdistinct}{\textit{heap\_distinct}}
+\newcommand{\entailment}[2]{#1\ \vdash\ #2}
+\newcommand{\dom}{{\text{dom}}}
+\newcommand{\tofin}{\xrightarrow{fin}}
+
+\newcommand{\eqinferstyle}{
+\mprset{fraction={={\raisebox{0pt}[5pt][5pt]{=}}=}}}
+
+
+\begin{document}
+
+\frame{\titlepage}
+
+\frame{\frametitle{Overview}\tableofcontents[hideallsubsections]}
+
+\section{Motivation}
+\subsection*{}
+
+\begin{frame}
+\frametitle{Smallfoot}
+\begin{itemize}
+\item "\smallfoot\ is an automatic verification tool which checks separation
+logic specifications of concurrent programs which manipulate
+dynamically-allocated recursive data structures." (\smallfoot\ documentation)
+\item developed by 
+\begin{itemize}
+\item Cristiano Calcagno
+\item Josh Berdine
+\item Peter O'Hearn
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{Smallfoot II}
+
+\begin{exampleblock}{Example from \texttt{list.sf}}
+\begin{semiverbatim}
+list_copy(p) [list(p)] \{
+  local t;
+  t = p;
+  q = NULL;
+  while(t != NULL) [list(q) * lseg(p,t) * list(t)] \{
+    sq = q;
+    q = new();
+    q->tl = sq;
+    t = t->tl;
+  \}
+\} [list(p) * list(q)]
+\end{semiverbatim}
+\end{exampleblock}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Motivation}
+\begin{itemize}
+\item we deeply embedded the fragment of separation logic used by \smallfoot\
+  in \HOL
+\item a decision procedure for entailments has been implemented in \HOL
+\item this formalisation may increase the trust in \smallfoot
+\item it may be used as a basis for non decidable fragments of separation
+  logic and an interactive proof environment
+\item it may be extended to a \HOL\ implementation of \smallfoot 
+\end{itemize}
+\end{frame}
+
+
+\section{Basic Definitions}
+\subsection*{}
+
+\begin{frame}
+\frametitle{Pure Formulae}
+\begin{itemize}
+\item an \alert{expression} is either a constant or a variable
+\item \alert{nil} is a special constant
+\item a \alert{stack} is a variable assignment
+\item \alert{pure formulae} are inductively defined by
+\begin{itemize}
+\item $\pftrue$ 
+\item $\pfequal {e_1} {e_2}$,  $\pfunequal {e_1} {e_2}$ 
+\item $pf_1 \wedge pf_2$
+\end{itemize}
+\item the semantics of pure formulae with respect to a stack are defined in
+  the natural way
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Spatial Formulae}
+\begin{itemize}
+\item a \alert{heap} is finite map $h : (Values \setminus \{nil\}) \tofin Fields \tofin Values$
+\item \alert{spatial formulae} are inductively defined by
+\begin{itemize}
+\item $\sfemp$ 
+\item $\sfpointsto {e} {t_1:e_1, \ldots, t_n : e_n}$
+\item $sf_1 * sf_2$
+\item $\sftree((t_1, \ldots, t_n), es, e)$
+\end{itemize}
+\item list segments and binary trees are defined as syntactic sugar
+\begin{itemize}
+\item $\sfbintree(l, r, e) := \sftree((l,r), nil, e)$
+\item $\sflist(tl, e_1, e_2) := \sftree(tl, e_2, e_1)$
+\end{itemize}
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Spatial Formulae II}
+\begin{columns}[c]
+\begin{column}{0.2\textwidth}
+\begin{pgfpicture}{0cm}{0cm}{1.5 cm}{2cm}
+   \color{black}
+   \color<7->{alert}
+   \pgfcircle[fill]{\pgfxy(1,0)}{0.2 cm}
+   \pgfcircle[fill]{\pgfxy(0,0)}{0.2 cm}
+
+
+
+   \color<6->{alert}
+   \pgfsetendarrow{\pgfarrowtriangle{2pt}}
+
+   \pgfline{\pgfxy(0.6,0.8)}{\pgfxy(0.9,0.2)}
+   \pgfline{\pgfxy(0.4,0.8)}{\pgfxy(0.1,0.2)}
+
+
+   \pgfputat{\pgfxy(0.1,0.6)}{\pgfbox[center,center]{l}}
+   \pgfputat{\pgfxy(0.9,0.6)}{\pgfbox[center,center]{r}}
+
+   \pgfcircle[stroke]{\pgfxy(0.5,1)}{0.2 cm}
+   \pgfputat{\pgfxy(0.5,1)}{\pgfbox[center,center]{2}}
+
+
+   \color<5->{alert}
+   \pgfcircle[fill]{\pgfxy(1.5,1)}{0.2 cm}
+
+
+
+   \color<4->{alert}
+   \pgfputat{\pgfxy(0.6,1.6)}{\pgfbox[center,center]{l}}
+   \pgfputat{\pgfxy(1.4,1.6)}{\pgfbox[center,center]{r}}
+
+   \pgfline{\pgfxy(0.9,1.8)}{\pgfxy(0.6,1.2)}
+   \pgfline{\pgfxy(1.1,1.8)}{\pgfxy(1.4,1.2)}
+
+
+   \pgfcircle[stroke]{\pgfxy(1,2)}{0.2 cm}
+   \pgfputat{\pgfxy(1,2)}{\pgfbox[center,center]{1}}
+
+
+\end{pgfpicture}
+\end{column}
+\begin{column}{0.8\textwidth}
+$s (x_i) := i$\\
+$\alert<7->{h := [\alert<4->{1 \to [l \to 2, r \to nil]}, \alert<6->{2 \to [l \to nil, r \to nil]}]}$
+\end{column}
+\end{columns}
+\bigskip
+\bigskip
+\begin{center}
+\only<1>{{$\sfbintree(l,r,x_1)$}}
+\only<2>{{$\sftree((l,r),\nil,x_1)$}}
+\only<3>{{$\exists e_l, e_r. \ \sfpointsto{x_1} {l:e_l, r:e_r} *
+    \sftree((l,r),\nil,e_l) * \sftree((l,r),\nil,e_r)$}}
+\only<4>{{$\alert{\sfpointsto{x_1} {l:2, r:\nil}} * \sftree((l,r),\nil,2) *
+    \sftree((l,r),\nil,\nil)$}}
+\only<5>{{$\alert{\sfpointsto{x_1} {l:2, r:\nil}} * \sftree((l,r),\nil,2)
+    * \alert{\sftree((l,r),\nil,\nil)}$}}
+\only<6>{{$\alert{\sfpointsto{x_1} {l:2, r:\nil}} * \alert{\sfpointsto{2}
+      {l:\nil, r:\nil}}\ *$ $\sftree((l,r),\nil,\nil) *
+    \sftree((l,r),\nil,\nil) * \alert{\sftree((l,r),\nil,\nil)}$}}
+\only<7>{\alert{$\sfpointsto{x_1} {l:2, r:\nil} * \sfpointsto{2}
+      {l:\nil, r:\nil}\ *$ $\sftree((l,r),\nil,\nil) *
+    \sftree((l,r),\nil,\nil) * \sftree((l,r),\nil,\nil)$}}
+\end{center}
+\end{frame}
+
+\section[Entailments]{A Decision Procedure for Entailments}
+\subsection*{}
+
+\begin{frame}[fragile]
+\frametitle{Entailments}
+
+\begin{itemize}
+\item entailments are important for \smallfoot
+\item example from \texttt{list.sf}
+\[\small\begin{array}{lr}
+\pfunequal {x_0} \nil,\pfunequal {x_1} \nil, \pfunequal {x_2} \nil,
+\pfunequal {x_0} {x_3}, \pfunequal {x_0} {x_2}, \pfunequal {x_4} {x_5},\\
+\pfunequal {x_1} {x_3},
+\pfunequal {x_1} {x_2}, \pfunequal {x_3} {x_2},\\
+\sfpointsto {x_2} {\textit{hd}:x_5, \textit{tl}:x_3},
+\sflist(\textit{tl},x_3,\nil), \sflist(\textit{tl},x_1,x_0),
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash \\
+\sflist(\textit{tl},x_1,x_2), \sfpointsto {x_2} {\textit{tl}:x_3}, \sflist(\textit{tl},x_3,\nil)
+\end{array}
+\]
+\item entailments in this fragment of separation logic are decidable
+\item inferences can be easily combined to form a decision procedure
+\item inferences and decision procedure are presented in 
+\begin{semiverbatim}\small
+Josh Berdine, Cristiano Calcagno, and Peter W. O'Hearn.
+Symbolic Execution with Separation Logic.
+In K. Yi (Ed.): APLAS 2005, LNCS 3780, pp. 52-68, 2005.
+\end{semiverbatim}
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{\textsf{RemoveTrivial}}
+\small\[\begin{array}{l}
+\inferrule[RemoveTrivial-EQ-L]{\entailment{\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\alert{\pfequal e e},\Pi,\Sigma}{\Pi', \Sigma'}}
+\bigskip\\
+\inferrule[RemoveTrivial-EQ-R]{\entailment{\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\Pi,\Sigma}{\alert{\pfequal e e}, \Pi', \Sigma'}}
+\bigskip\\
+\inferrule[RemoveTrivial-EmpTree-L]{\entailment{\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\Pi,\alert{\sftree((t_1, \ldots, t_k),e,e)},\Sigma}{\Pi', \Sigma'}}
+\bigskip\\
+\inferrule[RemoveTrivial-EmpTree-R]{\entailment{\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\Pi,\Sigma}{\Pi',\alert{\sftree((t_1, \ldots, t_k),e,e)}, \Sigma'}}
+\end{array}
+\]
+\end{frame}
+
+
+\begin{frame}
+\frametitle{\textsf{Hypothesis}}
+\small\[
+\inferrule[Hypothesis]{\entailment{\alert{\varpf{}},\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\alert{\varpf{}},\Pi,\Sigma}{\alert{\varpf {}},\Pi', \Sigma'}}
+\]
+\end{frame}
+
+\begin{frame}
+\frametitle{\textsf{Axiom / Inconsistent}}
+\small\[\begin{array}{ll}
+\inferrule[Axiom]{\ }
+{\entailment{\Pi}{\ }}
+\bigskip\\
+\inferrule[Inconsistent-unequal]
+{\ }
+{\entailment{\alert{\pfunequal e e},\Pi,\Sigma}{\Pi',\Sigma'}}
+&
+\inferrule[Inconsistent-pointsto-nil]
+{\ }
+{\entailment{\Pi,\alert{\sfpointsto \nil {\ldots}}, \Sigma}{\Pi',\Sigma'}}
+\end{array}
+\]
+\end{frame}
+
+
+\begin{frame}
+\frametitle{\textsf{Frame}}
+\small
+\[
+\inferrule[Frame-base]{\entailment{\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\Pi,\alert{\varsf{}},\Sigma}{\Pi', \alert{\varsf{}},\Sigma'}}
+\]
+
+\begin{itemize}
+\item problem: this is a real implication, information is lost
+\item thus, order of inference application matters
+\item example: $\entailment{\alert{\sfpointsto e {f:e_1}}, \sfpointsto e
+    {g:e_2}}{\alert{\sfpointsto e {f:e_1}}}$
+\item solution: add additional informations to entailments
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{\textsf{Frame II}}
+\vspace{-1cm}
+\[\small\begin{array}{l}
+\eqinferstyle
+\inferrule[Frame-points\_to]
+{\entailment{\alert{e},\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\alert{\sfpointsto e {t_1:e_1, \ldots,
+      t_n:e_n}},\Sigma}{\Pi', \alert{\sfpointsto e {t_1:e_1, \ldots,
+      t_m:e_m}},\Sigma'}}
+m \leq n
+\bigskip\\
+\eqinferstyle
+\inferrule[Frame-tree]
+{\entailment{\eta,\alert{(e,es)},\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\alert{\sftree((t_1, \ldots, t_k),es,e)},\Sigma}{\Pi', \alert{\sftree((t_1, \ldots, t_k),es,e)},\Sigma'}}
+\end{array}
+\]
+\begin{itemize}
+\item all used inferences are equivalences
+\item order of application does not matter
+\item continued applications of inferences will terminate
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{\textsf{Substitution}}
+\[\small
+\eqinferstyle
+\inferrule[Substitution]{\entailment{\eta[e/x],\pi[e/x],\Pi[e/x],\Sigma[e/x]}{\Pi'[e/x],\Sigma'[e/x]}}
+{\entailment{\eta,\alert{\pfequal x e},\pi,\Pi,\Sigma}{\Pi', \Sigma'}}
+\]
+\end{frame}
+
+\begin{frame}
+\frametitle{\textsf{NIL-NOT-LVAL}}
+\[\small\begin{array}{l}
+\eqinferstyle
+\inferrule[NIL-NOT-LVAL-pointsto]
+{\entailment{\eta,\pi,\alert{\pfunequal e \nil}, \Pi,\alert{\sfpointsto e {\ldots}},\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\alert{\sfpointsto e {\ldots}},\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[NIL-NOT-LVAL-tree]
+{\entailment{\eta,\pi,\alert{\pfunequal e \nil}, \alert{\pfunequal e \textit{es}},\Pi,\alert{\sftree\left(\ldots,\textit{es},e\right)},\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\alert{\pfunequal e \textit{es}},\Pi,\alert{\sftree\left(\ldots,\textit{es},e\right)},\Sigma}{\Pi',\Sigma'}}
+\end{array}
+\]
+\begin{alertblock}{side condition}
+In order to prevent looping only new facts are added.
+\end{alertblock}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{\textsf{Partial}}
+\[\small\begin{array}{l}
+\eqinferstyle
+\inferrule[Partial-pointsto-pointsto]
+{\entailment{\eta,\pi,\alert{\pfunequal {e_1} {e_2}}, \Pi,\alert{\sfpointsto
+      {e_1} {\ldots}},\alert{\sfpointsto {e_2} {\ldots}},\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\alert{\sfpointsto {e_1} {\ldots}},\alert{\sfpointsto {e_2}
+    {\ldots}},\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Partial-pointsto-tree]
+{\entailment{\eta,\pi,\alert{\pfunequal {e_1} {e_2}}, \alert{\pfunequal {e_2} {e_3}},
+    \Pi,\alert{\sfpointsto {e_1} {\ldots}},\alert{\sftree (\ldots, {e_3}, e_2)},\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\alert{\pfunequal {e_2} {e_3}},\Pi,\alert{\sfpointsto {e_1} {\ldots}},\alert{\sftree (\ldots, {e_3}, e_2)},\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\vdots
+\end{array}
+\]
+\begin{alertblock}{side condition}
+In order to prevent looping only new facts are added.
+\end{alertblock}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{\textsf{Simple Unroll}}
+\vspace{-0.5cm}
+\[\small\begin{array}{l}
+\eqinferstyle
+\inferrule[Unroll-right-list]
+{\entailment{\alert{e_1},\eta,\pi,\alert{\pfunequal {e_1} {e_3}}, \Pi,\Sigma}{\Pi',\sflist(\textit{tl}, \alert{e_2}, e_3),\Sigma'}}
+{\entailment{\eta,\pi,\alert{\pfunequal {e_1} {e_3}}, \Pi,\alert{\sfpointsto{e_1}
+    {\textit{tl}:e_2, \ldots}}, \Sigma}{\Pi',\alert{\sflist(\textit{tl}, e_1, e_3)},\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Unroll-right-bintree]
+{\entailment{\alert{e},\eta,\pi, \Pi,\Sigma}{\Pi',\alert{\sfbintree(l,r, e_l)},\alert{\sfbintree(l,r, e_r)},\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\alert{\sfpointsto{e}
+    {l:e_l, r:e_r, \ldots}}, \Sigma}{\Pi',\alert{\sfbintree(l,r,e)},\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Unroll-NilList]
+{\entailment{\eta,\pi,\alert{\pfequal {e} {\nil}}, \Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\alert{\sflist(\textit{tl}, \nil, e)},\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Unroll-precond-list]
+{\entailment{\alert{e_1},\eta,\pi,\alert{\pfequal {e_1} {e_2}}, \Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\alert{e_1},\eta,\pi,\Pi,\alert{\sflist(\textit{tl}, e_1, e_2)},\Sigma}{\Pi',\Sigma'}}
+\end{array}
+\]
+\end{frame}
+
+\begin{frame}
+\frametitle{\textsf{Unroll}}
+\[\small
+\eqinferstyle
+\inferrule[Unroll-list]
+{\entailment{\eta,\pi,\alert{\pfequal {e_1} {e_2}}, \Pi,\Sigma}{\Pi',\Sigma'} \\\\
+ \alert{\forall x.}\ \entailment{\eta,\pi,\alert{\pfunequal {e_1} {e_2}},\alert{\pfunequal {e_2} {x}},
+   \Pi,\alert{\sfpointsto {e_1} {\textit{fl}:x}}, \alert{\sfpointsto {x} {\textit{fl}:e_2}},
+   \Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\alert{\sflist(\textit{tl}, e_1, e_2)},\Sigma}{\Pi',\Sigma'}}
+\]
+\begin{itemize}
+\item logic can not consider the content of a list
+\item therefore, two cases are sufficient
+\item no induction needed!
+\item similar inference exists for arbitrary trees
+\item however, in general useful for decision procedure
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{\textsf{Append-list}}
+\[\small
+\eqinferstyle
+\inferrule[Append-list]
+{\entailment{\eta,(e_1,e_2),\pi,\alert{\pfunequal{e_1}{e_3}},\Pi,\Sigma}{\Pi',\alert{\sflist(\textit{tl},e_2, e_3)},\Sigma'}}
+{\entailment{\eta,\pi,\alert{\pfunequal{e_1}{e_3}},\Pi,\alert{\sflist(\textit{tl},e_1,
+    e_2)},\Sigma}{\Pi',\alert{\sflist(\textit{tl},e_1, e_3)},\Sigma'}}
+\]
+\begin{itemize}
+\item this inference holds under some complicated side condition
+\item it is preferable to unrolling lists
+\item its correctness proof uses unrolling of lists and simple unrolls and the
+  frame inference
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{\textsf{Decision Procedure}}
+\begin{itemize}
+\item these inferences can be easily combined to form a decision procedure for entailments
+\item apply inferences in arbitrary order as long as possible
+\item be careful with \textsf{NIL-NOT-LVAL}, \textsf{Partial},
+  \textsf{Hypothesis} to avoid looping
+\item iff the entailment could not be reduced to true, it is false
+\item remaining entailments are as simple, that a concrete counterexample can
+  be easily constructed
+\end{itemize}
+
+\end{frame}
+
+\section{HOL embedding}
+\subsection*{}
+
+\begin{frame}
+\frametitle{HOL embedding}
+\begin{itemize}
+\item deep embedding in HOL is straight forward except for trees
+\item trees are introduced considering their maximal depth
+\item equivalence with other recursive definition is formally proofed
+\item inferences are implemented as conversions
+\item the decision procedure is implemented as a conversion
+\end{itemize}
+\end{frame}
+
+\begin{frame}
+\frametitle{HOL embedding II}
+
+\begin{tabular}{|l|r|}
+\hline
+  & \textbf{LOC} \\\hline\hline
+deep embedding and inferences & approx. 10\,000 \\
+special versions of inferences for conversions & approx. 2\,500 \\
+conversions and decision procedure & approx. 2\,000 \\\hline
+\end{tabular}
+
+\end{frame}
+
+\section{Example}
+\subsection*{}
+
+\begin{frame}
+\frametitle{example from \texttt{list.sf}}
+\[\small\begin{array}{lr}
+\only<1>{\alert{\pfunequal {x_0} \nil,\pfunequal {x_1} \nil, \pfunequal {x_2} \nil,
+\pfunequal {x_0} {x_3}, \pfunequal {x_0} {x_2}, \pfunequal {x_4} {x_5},}}\\
+\only<1>{\alert{\pfunequal {x_1} {x_3},
+\pfunequal {x_1} {x_2}, \pfunequal {x_3} {x_2}}}
+\only<2>{\Pi},\\
+\sfpointsto {x_2} {\textit{hd}:x_5, \textit{tl}:x_3},
+\sflist(\textit{tl},x_3,\nil), \sflist(\textit{tl},x_1,x_0),
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash \\
+\sflist(\textit{tl},x_1,x_2), \sfpointsto {x_2} {\textit{tl}:x_3}, \sflist(\textit{tl},x_3,\nil)
+\end{array}
+\]
+\end{frame}
+
+\begin{frame}
+\frametitle{example inference application}
+\[\small\begin{array}{llc}
+\Pi,\alert<2>{\sfpointsto {x_2} {\textit{hd}:x_5, \textit{tl}:x_3}},\\
+\alert<2>{\sflist(\textit{tl},x_3,\nil)}, \sflist(\textit{tl},x_1,x_0),
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash & \onslide<2->{\textsc{\tiny Frame}} \\
+\sflist(\textit{tl},x_1,x_2), \alert<2>{\sfpointsto {x_2} {\textit{tl}:x_3}},
+\alert<2>{\sflist(\textit{tl},x_3,\nil)} & & \pause \alert<2>{\Longleftrightarrow} \\
+\\
+
+\alert<2>{x_2},\alert<2>{(x_3,\nil)},\Pi, \alert<3>{\sflist(\textit{tl},x_1,x_0)},
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash & \onslide<3->{\text{\textsc{\tiny Append-List}}} \\
+\alert<3>{\sflist(\textit{tl},x_1,x_2)} & & \pause \alert<3>{\Longleftrightarrow} \\
+\\
+
+
+x_2,(x_3,\nil),\alert<3>{(x_1,x_0)},\Pi,
+\alert<4>{\sfpointsto {x_0} {\textit{tl},x_2}} & \vdash & \onslide<4->{\textsc{\tiny Simple-Unroll}} \\
+\alert<4>{\sflist(\textit{tl},\alert<3>{x_0},x_2)} & & \pause \alert<4>{\Longleftrightarrow} \\
+\\
+
+
+x_2,\alert<4>{x_0},(x_3,\nil),(x_1,x_0),\Pi & \vdash & \onslide<5->{\textsc{\tiny Remove-Trivial}} \\
+\alert<5>{\sflist(\textit{tl},\alert<4>{x_2},x_2)} & & \pause\alert<5>{\Longleftrightarrow} \\
+\\
+
+
+x_2,x_0,(x_3,\nil),(x_1,x_0),\Pi & \vdash & \onslide<6->{\textsc{\tiny Axiom}} \\
+ & & \pause \alert<6>{\Longleftrightarrow} \\
+
+\top
+\end{array}
+\]
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{example HOL}
+\begin{semiverbatim}\scriptsize
+val t = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var 0) dse_nil; 
+    pf_unequal (dse_var 1) dse_nil;
+    pf_unequal (dse_var 2) dse_nil;
+    pf_unequal (dse_var 0) (dse_var 3);
+    pf_unequal (dse_var 0) (dse_var 2);
+    pf_unequal (dse_var 4) (dse_var 5);
+    pf_unequal (dse_var 1) (dse_var 3);
+    pf_unequal (dse_var 1) (dse_var 2);
+    pf_unequal (dse_var 3) (dse_var 2)],
+   [sf_points_to (dse_var 2) [("hd",dse_var 5); ("tl", dse_var 3)];
+    sf_ls "tl" (dse_var 3) dse_nil;
+    sf_ls "tl" (dse_var 1) (dse_var 0);
+    sf_points_to (dse_var 0) [("tl", (dse_var 2))]])
+
+   ([],
+    [sf_ls "tl" (dse_var 1) (dse_var 2);
+     sf_points_to (dse_var 2) [("tl", dse_var 3)];
+     sf_ls "tl" (dse_var 3) dse_nil])``;
+\end{semiverbatim}
+\end{frame}
+
+\begin{frame}[fragile]
+\frametitle{example HOL II}
+\begin{semiverbatim}\scriptsize
+val thm1 = 
+(ds_inference_FRAME___CONV THENC
+ ds_inference_APPEND_LIST___CONV THENC
+ ds_inference_SIMPLE_UNROLL___CONV THENC
+ ds_inference_REMOVE_TRIVIAL___CONV THENC
+ ds_inference_AXIOM___CONV) t;
+
+val thm2 = ds_DECIDE_CONV t;
+\end{semiverbatim}
+\end{frame}
+
+\section{Conclusions and Future Work}
+\subsection*{}
+
+\begin{frame}
+\begin{block}{Conclusions}
+\begin{itemize}
+\item there is a deep embedding of the decidable fragment of separation logic
+  used by \smallfoot
+\item all inferences used by \smallfoot\ have been verified using HOL
+\item a decision procedure for entailments has been implemented
+\end{itemize}
+\end{block}
+
+\begin{block}{Future Work}
+\begin{itemize}
+\item add symbolic execution to build a \smallfoot\ implementation in HOL
+\item extend the logic
+\item try interactive proofs for more complicated fragments of separation logic
+\end{itemize}
+\end{block}
+
+\end{frame}
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: "presentation"
+%%% End: 

@@ -1,0 +1,1266 @@
+\documentclass{scrartcl}
+
+\usepackage{amssymb} 
+\usepackage{amsmath} 
+\usepackage{hyperref} 
+\usepackage{stmaryrd} 
+\usepackage{amsthm}
+\usepackage{mathpartir}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{theorem}[lemma]{Theorem}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{remark}{Remark}
+
+\newcommand{\smallfoot}{{\sf Smallfoot}}
+\newcommand{\HOL}{{\sf HOL}}
+\newcommand{\emp}{{\textsf{emp}}}
+\newcommand{\nil}{{\textsf{nil}}}
+\newcommand{\pftrue}{{\textsf{true}}}
+\newcommand{\pfequal}[2]{\ensuremath{#1 \doteq #2}}
+\newcommand{\pfunequal}[2]{\ensuremath{#1 \not\doteq #2}}
+\newcommand{\values}{{\emph{Values}}}
+\newcommand{\valuesnil}{\ensuremath{\values_\nil}}
+\newcommand{\vars}{{\emph{Vars}}}
+\newcommand{\expr}{{\emph{Exp}}}
+\newcommand{\fields}{{\emph{Fields}}}
+\newcommand{\pf}{{\emph{pf}}}
+\newcommand{\sfset}{{\emph{sf}}}
+\newcommand{\modelspf}{{\models_{\textit{pf}}\ }}
+\newcommand{\modelssf}{{\models_{\textit{sf}}\ }}
+\newcommand{\modelsds}{{\models_{\textit{ds}}\ }}
+
+
+\newcommand{\sfemp}{{\textsf{emp}}}
+\newcommand{\sftree}{{\textsf{tree}}}
+\newcommand{\sfpointsto}[2]{#1 \hookrightarrow [#2]}
+\newcommand{\sfbintree}{{\textsf{bin-tree}}}
+\newcommand{\sflist}{{\textsf{list}}}
+
+\newcommand{\varpf}[1]{\textit{pf}_{#1}}
+\newcommand{\varsf}[1]{\textit{sf}_{#1}}
+\newcommand{\varel}{\eta}
+\newcommand{\varepl}{\pi}
+
+\newcommand{\heapdistinct}{\textit{heap\_distinct}}
+\newcommand{\entailment}[2]{#1 \quad\vdash\quad #2}
+\newcommand{\dom}{{\text{dom}}}
+\newcommand{\tofin}{\xrightarrow{fin}}
+
+\newcommand{\eqinferstyle}{
+\mprset{fraction={={\raisebox{0pt}[5pt][5pt]{=}}=}}}
+
+
+\title{A Deep Embedding of a Decidable Fragment of Separation Logic in \HOL}
+\author{Thomas Tuerk}
+\date{2nd July 2007}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+  \smallfoot\ is a tool to automatically check separation logic specifications
+  of sequential programs. It uses a decidable fragment of separation logic. In
+  this paper, a deep embedding of a slightly different decidable fragment of
+  separation logic inspired by \smallfoot\ is presented. Moreover, a \HOL\ 
+  implementation of a decision procedure for entailments in this logic is
+  described.
+
+  The main focus of this paper is on the introduction of the separation
+  logic at an high level of abstraction and on inference rules for
+  entailments. It is pointed out how these high-level concepts relate to
+  the \HOL\ embedding. However, the \HOL\ embedding is not explained in detail.
+\end{abstract}
+
+
+\tableofcontents 
+
+
+\section{Motivation}
+Separation logic \cite{reynolds02separation} is used to reason about shared
+mutable data structures. It allows one to express light-weight specifications
+about dynamically allocated pointer structures on a heap. For example, one can
+easily express that some pointer is the starting point of a linked list. More
+detailed properties, like e.\,g.\ constraints on the content of the list, are
+not expressible. The main feature of this logic is a special $*$-operator,
+which allows one to reason about disjoint parts of a heap.  Most other logics have
+to express this disjointness explicitly. This usually means adding a number of
+constraints, which is quadratic in the number of resources used. In contrast,
+separation logic specifications are small. Moreover, simple and
+short proofs are possible in separation logic.
+
+\smallfoot~\cite{BerdineCO05} is a tool that uses a decidable fragment of
+separation logic to automatically reason about specifications of programs
+written in a simple, imperative language.  This work aims at formalising 
+separation logic in the interactive theorem prover \HOL~\cite{GoMe93}.
+Additionally, a decision procedure for entailments in the logic used has been
+implemented. As this decision procedure is a major part of \smallfoot, the
+\HOL\ formalisation is likely to increase the trust in \smallfoot.
+
+
+
+\section{Basic Definitions}
+
+The definitions of the fragment of separation logic used here follow mainly the definition in
+\cite{berdine05symbolic}. However, some things have been slightly modified for the
+sake of the embedding.
+
+\begin{definition}[Values]
+  For a given set of values \values\ let \valuesnil\ 
+  denote the extension of \values\ with a special value \nil.
+
+  As \nil\ is used to denote the null-pointer, it's often important that a set
+  does not contain \nil. Thus, we assume without loss of generality that
+  $\values$ does not contain \nil. Moreover, it will be necessary in the
+  following to introduce fresh values. Therefore, let $\values$ denote a large
+  enough set to always provide fresh values, i.\,e.\ let \values\ denote a
+  countable infinite set.
+\end{definition}
+
+\begin{definition}[Expressions]
+  An \emph{expression} $e$ over a set of variables \vars\ and a set of values
+  \values\ is defined to be either
+\begin{itemize}
+\item a constant $c \in \valuesnil$ or
+\item a variable $x \in \vars$.
+\end{itemize}
+%
+The set of all \emph{expressions} over \vars\ and \values\ is denoted by
+$\expr(\vars,\values)$.
+\end{definition}
+
+
+\begin{definition}[Stacks]
+  A \emph{stack} $s$ over a set of variables \vars\ and a set of values
+  \values\ is a function $s: \vars \to \valuesnil$.
+
+  The evaluation $\llbracket e \rrbracket s$ of an expression $e$ in a stack
+  $s$ is given by
+ \begin{itemize}
+\item $\llbracket c \rrbracket s := c$ for all constants $c$ and
+\item $\llbracket x \rrbracket s := s(x)$ for all variables $x$.
+\end{itemize}
+\end{definition}
+
+
+\begin{definition}[Pure Formulae]
+  The set $\pf(\vars,\values)$ of \emph{pure formulae} over \vars\ and
+  \values\ is recursively defined as the smallest set with
+\begin{itemize}
+\item $\pftrue \in \pf(\vars,\values)$
+\item $(\pfequal{e_1}{e_2}) \in \pf(\vars,\values)$ for $e_1, e_2 \in
+  \expr(\vars,\values)$
+\item $(\pfunequal{e_1}{e_2}) \in \pf(\vars,\values)$ for $e_1, e_2 \in \expr(\vars,\values)$
+\item $(\textit{pf}_1 \wedge \textit{pf}_2) \in \pf(\vars,\values)$ for $\textit{pf}_1, \textit{pf}_2 \in \pf(\vars,\values)$.
+\end{itemize}
+\bigskip
+%
+For a stack $s$ the semantics of a pure formula is given by
+\begin{itemize}
+\item $s \modelspf \pftrue$
+\item $s \modelspf \pfequal{e_1}{e_2}$ iff $\llbracket e_1 \rrbracket s =
+  \llbracket e_2 \rrbracket s$
+\item $s \modelspf \pfunequal{e_1}{e_2}$ iff $\llbracket e_1 \rrbracket s \not =
+  \llbracket e_2 \rrbracket s$
+\item $s \modelspf \textit{pf}_1 \wedge \textit{pf}_2$ iff $s \modelspf
+  \textit{pf}_1$ and $s \modelspf \textit{pf}_2$
+\end{itemize}
+\end{definition}
+
+Thus, stacks are variable assignments and pure formula are simple restrictions
+on stacks. These constructs of stacks and pure formula are used to define the
+essential part of the logic: formulae over heaps.
+
+\begin{definition}[Fields]
+To define heaps \emph{fields} have to be introduced first. Fields are defined
+by there usage. Anything may be used as a field. In contrast to values, the set
+of fields may even be finite. In the \HOL\ embedding strings or integers are
+usually used. Here, we will use the constants $l$, $r$, $\textit{tl}$ and $t_i$
+with $i \in \mathbb N_0$, which are assumed to be pairwise distinct.
+\end{definition}
+
+\begin{definition}[Heaps]
+  A \emph{heap} $h$ over a set of values $\values$ and a set of fields
+  $\fields$ is a finite map 
+  $h: \values \tofin (\fields \tofin \valuesnil)$.
+\end{definition}
+
+As heaps are finite maps, a list notation can be used: 
+Let $f := [x_1 \to y_1, \ldots, x_n \to y_n]$ denote the finite map $f : X
+\tofin Y$ with $\dom(f) = \{x_1, \ldots, x_n\}$ and
+$f(x_i) = y_i$ for $1 \leq i \leq n$.
+Furthermore, let $h_1 \cup h_2$ denote the union of two heaps, i.\,e.\ 
+\begin{eqnarray*}
+\dom(h_1 \cup h_2) & := & \dom(h_1) \cup \dom(h_2) \\
+(h_1 \cup h_2)(x) & := & \left\{
+\begin{array}{ll}
+  h_1(x) & \text{iff}\ x \in \dom(h_1)\\
+  h_2(x) & \text{otherwise}
+\end{array}\right. 
+\end{eqnarray*}
+
+Using this definition of heaps and these notations, spatial formulae and their
+semantics can be defined:
+
+\begin{definition}[Spatial Formulae]
+  The set $\sfset(\vars,\values)$ of \emph{spatial formulae} over \vars\ and
+  \values\ is recursively defined as the smallest set with
+\begin{itemize}
+\item $\sfemp \in \sfset(\vars,\values)$
+\item $\sfpointsto{e}{t_1:e_1, \ldots, t_k:e_k} \in \sfset(\vars,\values)$ for 
+  $e, e_1, \ldots, e_k \in  \expr(\vars,\values)$ and $t_1, \ldots, t_k \in \fields$
+\item $\sftree\left((t_1, \ldots, t_k),\textit{es},e\right) \in \sfset(\vars,\values)$
+  for $\textit{es}, e \in \expr(\vars,\values)$ and\\$t_1, \ldots, t_k \in \fields$
+\item $\textit{sf}_1 * \textit{sf}_2 \in \sfset(\vars,\values)$ for
+  $\textit{sf}_1, \textit{sf}_2 \in \sfset(\vars,\values)$.
+\end{itemize}
+\bigskip
+%
+For a stack $s$ and a heap $h$ the semantics of a spatial formula is given by
+\begin{itemize}
+\item $s, h\ \modelssf \sfemp$ iff $h = []$
+\item $s, h\ \modelssf \textit{sf}_1 * \textit{sf}_2$ iff $\exists h_1, h_2.$
+  \begin{itemize}
+  \item $h = h_1 \cup h_2$ and 
+  \item $\dom(h_1) \cap \dom(h_2) = \emptyset$ and
+  \item $s, h_1\ \modelssf \textit{sf}_1$ and
+  \item $s, h_2\ \modelssf \textit{sf}_2$
+  \end{itemize}
+\item $s, h\ \modelssf \sfpointsto{e}{t_1:e_1, \ldots, t_k:e_k}$ iff $\exists r.$
+  \begin{itemize}
+  \item $h = \left[ \llbracket e \rrbracket s \to r \right]$ (i.\,e.\ $h$ is
+    just defined for the value $\llbracket e \rrbracket s$ and maps it to $r$) and
+  \item $\forall\ 1 \leq i \leq k.\ t_i \in \dom(r)$ and
+  \item $\forall\ 1 \leq i \leq k.\ r(t_i) = \llbracket e_i \rrbracket s$
+  \end{itemize}
+\item $s, h\ \modelssf \sftree\left((t_1, \ldots, t_k),\textit{es},e\right)$ iff 
+\begin{itemize}
+  \item $s \modelspf \pfequal{e}{es}$ and $h = []$ or
+  \item $s \modelspf \pfunequal{e}{es}$ and $\exists
+  e_1, \ldots, e_k.\ s, h\ \modelssf \sfpointsto{e}{t_1:e_1, \ldots, t_k:e_k}
+  *$\\$\sftree\left((t_1, \ldots, t_k),\textit{es},e_1\right) * \ldots * \sftree\left((t_1,
+  \ldots, t_k),\textit{es},e_k\right)$ 
+\end{itemize}
+\end{itemize}
+\end{definition}
+
+Notice, that this definition is well founded. This may be difficult to see in
+the case of $\sftree$. However, each recursion that occurs in the definition
+of $\sftree$ removes -- according to the semantics of $\hookrightarrow$ and
+$*$ -- the root of the tree from the heap. Since the heap is by definition
+finite, this recursion has to terminate and the definition is well founded.
+However, in the $\HOL$\ embedding a definition is used that talks explicitly
+about this number of recursions, i.\,e.\ about the height of the tree. Then, it
+is shown that the two definitions are equivalent.
+\bigskip
+
+Spatial formulae are the core of separation logic. They contain the
+$*$-operator, which requires that a heap can be split into disjoint heaps
+that satisfy the subformulas. Additionally, there is a predicate $\sfemp$ to
+describe the empty heap. The remaining predicates may be harder to understand
+intuitively. Therefore, lets introduce some syntactic sugar first, which may
+help to explain the intended semantics:
+
+\begin{itemize}
+\item $\sflist(t,e_1,e_2) := \sftree(t,e_2,e_1)$
+\item $\sfbintree(t_1,t_2,e) := \sftree((t_1,t_2),\nil,e)$
+\end{itemize}
+
+Intuitively, $s, h\ \modelssf \sfbintree(l,r,e)$ means that $h$ contains a 
+binary tree with root $e$. The left child is pointed to by the field
+index $l$, the right child is addressed by $r$. If $e$ evaluates to $\nil$,
+i.\,e.\ if $s \modelspf \pfequal e \nil$ holds, the binary tree is empty and
+the stack should be empty as well. Otherwise, one has to check
+that the root node $e$ points to a left child $e_l$ and a right child $e_r$ such that 
+binary trees exists with these childs as roots. Formally, the expression evaluates to
+$\exists e_l,e_r.\ s, h \modelssf \sfpointsto{e}{l:e_l, r:e_r} *
+\sfbintree(l,r,e_l) * \sfbintree(l,r,e_r)$. This means, that the heap can be
+split into three disjoint parts $h_e$, $h_1$ and $h_2$ with 
+\begin{itemize}
+  \item $s, h_e \modelssf \sfpointsto{e}{l:e_l, r:e_r}$,
+  \item $s, h_l \modelssf \sfbintree(l,r,e_l)$ and
+  \item $s, h_r \modelssf \sfbintree(l,r,e_r)$.
+\end{itemize}
+According to the semantics of spatial formulae, the heap $h_e$ maps $\llbracket e
+\rrbracket s$ to a finite map $f:\fields \tofin \valuesnil$ such that
+$f(l) = \llbracket e_l \rrbracket s$ and $f(r) = \llbracket e_r \rrbracket
+s$ hold. This example illustrates the usage of $\fields$. They are used
+as indexes for different branches of a tree. Notice further, that $\dom(h_e) =
+\{\llbracket e \rrbracket s\}$ holds and that the domains of $h_e$, $h_l$ and $h_r$
+are disjoint. Thus, whole $h$ is used to model the tree and -- except for the
+leaves -- each node occurs just once in the tree. 
+
+Similarly, $\sflist (tl, e_1, e_2)$ describes a single linked, acyclic list
+from $e_1$ to $e_2$ following the pointers indexed by $tl$. Formally, it is
+modeled as an unary tree. For lists it makes
+sense to have arbitrary expressions as end points / leaves, whereas for binary
+trees only $\nil$ is allowed. The predicate $\sftree$ is a generalisation of
+$\sfbintree$ and $\sflist$. It has been introduced mainly because it makes
+modelling of this logic easier in $\HOL$ since properties have to be proven
+just once. However, the logic is now able to talk about trees of arbitrary, but
+fixed width.
+\bigskip
+
+\begin{definition}[Normal Form]
+The operators $\wedge$ and $*$ are both associative and
+commutative. Therefore, a list notation can be used:
+%
+\setlength{\arraycolsep}{2pt}
+\[
+\begin{array}{lll@{\hspace{15pt}}c@{\hspace{15pt}}lll}
+   s & \modelspf & \varpf 1, \ldots, \varpf n & := & s & \modelspf & \varpf 1 \wedge \ldots \wedge
+   \varpf n \wedge \pftrue \\
+   s, h & \modelssf & \varsf 1, \ldots, \varsf n & := & s, h & \modelssf & \varsf 1 * \ldots *
+   \varsf n * \sfemp
+\end{array}
+\]
+%
+In fact, one could even use sets for pure formulae and multisets for spatial
+formulae. However, its been easier to use lists in the $\HOL$ formalisation
+and proof the additional properties of sets and multisets explicitly.
+To be close to the \HOL\ formalisation, a list notation is used here as well.
+
+Notice that the following equivalences hold for a field index $t$
+occurring several times in a spatial formula:
+%
+\[
+\begin{array}{lllr}
+s, h & \modelssf & \sfpointsto e {t_1:e_1, \ldots, t: e_n, \ldots, t:
+  e_m, \ldots, t_k : e_k} & \Longleftrightarrow \\
+s & \modelspf & \pfequal {e_n} {e_m}\ \text{and} \\
+s, h & \modelssf & \sfpointsto e {t_1:e_1, \ldots, t: e_n, \ldots, t_{m-1}:
+  e_{m-1}, t_{m+1}: e_{m+1}, \ldots, t_k : e_k} \\ \\
+
+s, h & \modelssf & \sftree \left((t_1, \ldots, t, \ldots, t, \ldots,
+  t_k),\textit{es},e\right) & \Longleftrightarrow \\
+s & \modelspf & \pfequal {e} {\textit{es}}\ \text{and} \\
+s, h & \modelssf & \sfemp
+\end{array}
+\]
+%
+These equivalences can be easily used to rewrite formulae. Therefore, we will
+just consider formulae such that all field indexes occurring in a $\sftree$ or
+$\hookrightarrow$ subformula are pairwise distinct. Additionally, we assume that
+$\pftrue$ and $\sfemp$ do not occur in the lists. Otherwise they can be easily
+eliminated, since they are the identity.
+
+\noindent
+As a writing convention let in the following 
+\begin{itemize}
+  \item $\varpf {}$ denote a pure formula,
+  \item $\varsf {}$ denote a spatial formula,
+  \item $\Pi$ denote a list of pure formulae and
+  \item $\Sigma$ denote a list of spatial formulae.
+\end{itemize}
+\end{definition}
+\bigskip
+
+These are the semantics of the subset of separation logic that will be
+considered here. We are mainly interested in checking the validity of
+entailments in this logic, i.\,e. we are interested in deciding whether
+statements of the form $\forall s,h.\ \left(s\ \modelspf\ \Pi\right) \wedge
+\left(s,h\ \modelssf\ \Sigma\right) \Rightarrow 
+\left(s\ \modelspf\ \Pi'\right) \wedge \left(s,h\ \modelssf\ \Sigma'\right)$ hold.
+
+However, to keep track of some information during calculations a slightly
+extended notation is introduced: a list of expressions is added such that
+the value of these expressions is not $\nil$ but not in $\dom(h)$. Moreover,
+all values of expressions in this list are pairwise distinct. This extension is
+useful to define the \textsc{frame} rule later. However, sometimes a
+expression should just be added to this list, if it is not equal to a second
+expression in the current stack. Adding a list of pairs of expressions
+for this purpose leads to the following definition:
+
+\begin{definition}[Entailments]
+  Let $\varel := e_1, \ldots, e_n$ be a list of expressions and
+  $\varepl := (e'_1, e''_1), \ldots, (e'_m, e''_m)$ be a list of pairs of
+  expressions. Furthermore, let $s$ be a stack and $h$ a heap. Then the predicate
+  $\heapdistinct (s, h, \varel, \varepl)$ holds for $s$ and $h$
+  iff
+  \begin{itemize}
+  \item for all expressions $e$ with $e \in \varel$ or $\exists e'.\ (e, e')
+    \in \varepl \wedge s\ \modelspf\ \pfunequal {e} {e'}$ the following holds
+    \begin{itemize}
+    \item $\neg \left(\llbracket e \rrbracket s = \nil\right)$ and
+    \item $\neg \left(\llbracket e \rrbracket s \in \dom(h)\right)$
+    \end{itemize}
+  \item all values of expressions $e \in \varel$ and all values of
+    expressions $e'$ with $(e',e'') \in \varepl$ and $s\ \modelspf\ \pfunequal {e'} {e''}$
+    are pairwise distinct:
+    \begin{itemize}
+    \item $\neg (i = j) \wedge 1 \leq i,j \leq n  \Longrightarrow \neg \left(\llbracket e_i \rrbracket s = \llbracket e_j \rrbracket
+        s\right)$ and
+    \item $\neg (i = j) \wedge 1 \leq i,j \leq m \wedge \left(s\ \modelspf\ \pfunequal {e'_i} {e''_i} \wedge \pfunequal {e'_j}
+      {e''_j}\right) \Longrightarrow \\\neg \left(\llbracket e'_i \rrbracket s
+      = \llbracket e'_j \rrbracket s\right)$ and
+    \item $1 \leq i \leq n \wedge 1 \leq j \leq m \wedge \left(s\ \modelspf\ \pfunequal {e'_j}
+      {e''_j}\right) \Longrightarrow \\\neg \left(\llbracket e_i \rrbracket s = \llbracket e'_j \rrbracket s\right)$
+    \end{itemize}  
+  \end{itemize}
+
+  This definition of $\heapdistinct$ is quite technical. It is intended to
+  preserve information, which would otherwise be lost during applications of
+  the frame rule. The idea behind its definition will become more
+  apparent as soon as the frame rule is presented. At the moment it is
+  sufficient to notice, that for the empty list $[]$ and for all stacks $s$
+  and heaps $h$ the statement $\heapdistinct (s, h, [], [])$ holds. Therefore,
+  the following notation is really capable of expressing entailments:
+\[
+\setlength{\arraycolsep}{0pt}
+\begin{array}{ll}
+  \entailment{\varel, \varepl, \Pi, \Sigma}{\Pi', \Sigma'} := \forall s, h.&
+  \heapdistinct(s, h, \varel, \varepl)\ \wedge \\
+  &\left(s\ \modelspf\ \Pi\right)\ \wedge\ 
+\left(s,h\ \modelssf\ \Sigma\right)\ \Longrightarrow \\
+&\left(s\ \modelspf\ \Pi'\right)\ \wedge\ \left(s,h\ \modelssf\ \Sigma'\right)
+\end{array}
+\]
+\end{definition}
+
+
+\section{Comparison to the logic used by \smallfoot}
+
+The subset of separation logic presented here is very similar to the one used by
+\smallfoot. Its definitions follow mainly \cite{berdine05symbolic}. However,
+\cite{berdine05symbolic} just considers lists and binary trees. There is no
+predicate for trees with arbitrary, but fixed width. This predicate $\sftree$
+has been introduced here to help the deep-embedding in $\HOL$. It is a
+generalisation of the predicates for lists and binary trees and helps to keep
+some proofs more succinct. The predicate $\heapdistinct$ is not used
+in \cite{berdine05symbolic}. Otherwise, the logics are identical.
+
+However, \smallfoot\ uses an additional predicate 
+for double linked lists and one for xor linked lists \cite{BerdineCO05}. These
+could be easily added to the logic presented here. For sake of time and
+simplicity they have been omitted. Notice however, that these additions were
+kept in mind during this work. Thus, the extension should be
+straightforward.
+
+
+
+\section{Deep Embedding in $\HOL$}
+
+\texttt{decidable\_separationLogicScript.sml} contains the main part of the
+$\HOL$ embedding. Conversions that implement inference rules and a decision
+procedure for entailments can be found in
+\texttt{decidable\_separationLogicLib.sml}. All other files are not interesting from a high-level point
+of view.
+
+The following is intended to give an overview of the main parts of the
+implementation. This overview should -- combined with some informations
+given in the next section~-- be sufficient to use $\HOL$ to reason about the
+validity of entailments. However, for everything else, one should use this
+short description just as an orientation and have a look
+at the files mentioned themselves.
+\medskip
+
+The sets $\values$, $\fields$ and $\vars$ are modelled as free type variables.
+This leaves the problem that a constraint that the set $\values$ is infinite
+has to be added to the precondition of some theorems. However, it is
+straightforward to define $\valuesnil$ and expressions using these free type
+variables. $\valuesnil$ is modelled by the $\HOL$ datatype 
+\texttt{ds\_value}, expressions by the $\HOL$ datatype
+\texttt{ds\_expression}. Using these basic datatypes, the datatypes \texttt{ds\_pure\_formula} and
+\texttt{ds\_spatial\_formula} are defined for pure and spatial formulae,
+respectively:
+
+\begin{verbatim}
+val _ = Hol_datatype `ds_value =
+     dsv_nil 
+   | dsv_const of 'value` 
+
+val _ = Hol_datatype `ds_expression =
+     dse_const of 'value ds_value
+   | dse_var of 'vars`;
+
+val dse_nil_def = Define `dse_nil = dse_const dsv_nil`
+
+val _ = Hol_datatype `ds_pure_formula =
+     pf_true
+   | pf_equal of ('vars, 'value) ds_expression => 
+                 ('vars, 'value) ds_expression
+   | pf_unequal of ('vars, 'value) ds_expression => 
+                   ('vars, 'value) ds_expression 
+   | pf_and of ds_pure_formula => ds_pure_formula`;
+
+val _ = Hol_datatype `ds_spatial_formula =
+     sf_emp
+   | sf_points_to of ('vars, 'value) ds_expression => 
+                     ('field # ('vars, 'value) ds_expression) list
+   | sf_tree of 'field list => ('vars, 'value) ds_expression => 
+                ('vars, 'value) ds_expression 
+   | sf_star of ds_spatial_formula => ds_spatial_formula`;
+
+val sf_ls_def = Define `sf_ls f e1 e2 = sf_tree [f] e2 e1`;
+
+val sf_bin_tree_def = Define 
+   `sf_bin_tree (f1, f2) e = sf_tree [f1;f2] dse_nil e`;
+\end{verbatim}
+
+The semantics of these formulas are defined by the predicates \texttt{PF\_SEM}
+and \texttt{SF\_SEM}. In order to define these semantics, stacks are modeled
+by functions, heaps are modeled using finite maps. The definition of
+\texttt{PF\_SEM} is straightforward, whereas the definition of
+\texttt{SF\_SEM} is tricky because of trees. It takes some time to prove
+that the recursive definition used in this paper is well founded.  Therefore,
+a predicate \texttt{SF\_SEM\_\_\_sf\_tree\_len}, which recurses over the
+maximal height of the tree, is used instead of the one used here. That
+the resulting semantics of trees is really the intended one, is ensured by
+theorem \texttt{SF\_SEM\_\_\_sf\_tree\_THM}.
+
+After introducing the basic definitions, some basic facts are proved. These
+facts include that $*$ and $\wedge$ are commutative and associative. Using
+this knowledge, list versions of the semantic predicates are introduced:
+\texttt{LIST\_PF\_SEM}, \texttt{LIST\_SF\_SEM} and the combination
+\texttt{LIST\_DS\_SEM}. Using these lists versions and a predicate
+\texttt{HEAP\_DISTINCT} (that corresponds to $\heapdistinct$), the predicate
+\texttt{LIST\_DS\_ENTAILS} is finally defined that represents entailments.
+
+Using these definitions, for example the entailment
+\[\entailment{x_1,(x_3,x_4), \pfequal {x_2} {x_3},
+  \sfpointsto{x_2} {\textit{hd}:x_5, \textit{tl}:x_3},
+  \sflist(\textit{tl}, x_3, x_4)}{\pfequal{x_2} \nil, \sfbintree(l,r,x_5)}\]
+can be encoded in \HOL\ as
+\begin{verbatim}
+val t = ``LIST_DS_ENTAILS ([dse_var 1],[(dse_var 3, dse_var 4)])
+  ([pf_equal (dse_var 2) (dse_var 3)],
+   [sf_points_to (dse_var 2) [("hd",dse_var 5); ("tl", dse_var 3)];
+    sf_ls "tl" (dse_var 3) (dse_var 4)])
+
+   ([pf_equal (dse_var 2) dse_nil],
+    [sf_bin_tree ("l", "r") (dse_var 5)])``;
+\end{verbatim}
+
+
+\section{Proof System for Entailments}
+
+This work is mainly concerned with the validity of
+entailments. To reason about entailments a set of inference rules will be
+given. As usual, the semantics of the inference rule
+%
+\[
+\inferrule[]{A_1 \\ \ldots \\ A_n}{B}
+\]
+%
+is that if all $A_i$ hold, we can conclude that also $B$
+holds. Thus, the semantics can be expressed by $(\bigwedge_{i=1 \ldots n} A_i) \Rightarrow B$.
+Additionally, the notation
+\[
+\eqinferstyle
+\inferrule{A_1 \\ \ldots \\ A_n}{B}
+\]
+will be used to indicate  $(\bigwedge_{i=1 \ldots n} A_i) \Leftrightarrow B$.
+
+In the following these notations are used to present inferences for
+entailments. Then it will be explained how these inferences can be combined
+to form a decision procedure.
+
+\subsection{Inferences for Entailments}
+
+\subsubsection{\texttt{ds\_inference\_REMOVE\_TRIVIAL}}
+
+Using our notations for inferences, one can for example easily express inferences that
+remove trivial parts from an entailment:
+
+\[\begin{array}{ll}
+\eqinferstyle
+\inferrule[RemoveTrivial-EQ-L]{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\pfequal e e,\Pi,\Sigma}{\Pi', \Sigma'}}
+&
+\eqinferstyle
+\inferrule[RemoveTrivial-EQ-R]{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi, \Pi,\Sigma}{\pfequal e e, \Pi', \Sigma'}}
+\bigskip
+\\
+\eqinferstyle
+\inferrule[RemoveTrivial-EmpTree-L]{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sftree((t_1, \ldots, t_k),e,e),\Sigma}{\Pi', \Sigma'}}
+&
+\eqinferstyle
+\inferrule[RemoveTrivial-EmpTree-R]{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\sftree((t_1, \ldots, t_k),e,e), \Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[RemoveTrivial-Precond]{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,(e,e),\pi,\Pi,\Sigma}{\Pi', \Sigma'}}
+\end{array}
+\]
+\bigskip
+
+\noindent
+According to the definition of $\vdash$, the ordering of the lists $\eta$,
+$\pi$, $\Pi$, $\Sigma$, $\Pi'$ and $\Sigma'$ does not matter. Thus, these
+inferences and similar ones should be understood as sets of inferences,
+containing the interesting formulae at arbitrary positions instead of the
+heads of the lists. Similarly, we do not distinguish between some formulae,
+which obviously have the same semantics. So, $\pfequal {e_1} e_2$ and
+$\pfequal {e_2} e_1$ are not distinguished. The same holds for $\pfunequal
+{e_1} e_2$. Additionally, the order, in which fields occur in $\sftree$ and
+$\hookrightarrow$ formulae is not important. Thus, we do for example not
+distinguish between $\sfbintree(l,r,e)$ and $\sfbintree(r,l,e)$ or between 
+$\sfpointsto e {t_1: e_1, t_2:e_2, t_3:e_3}$ and $\sfpointsto e {t_2: e_2,
+  t_3:e_3, t_1:e_1}$.
+\bigskip
+
+The $\HOL$ conversion \texttt{ds\_inference\_REMOVE\_TRIVIAL\_\_\_CONV} is an
+implementation of these \textsf{RemoveTrivial}-inferences. It can also handle $\sflist$ and
+$\sfbintree$. However, since the corresponding inferences are just
+instantiations of the $\sftree$ inference, they won't be explained here.
+Similarly, special inferences for $\sflist$ and $\sfbintree$ won't be
+presented in the following, if they are just instantiations of a corresponding
+$\sftree$ inference.
+
+
+\subsubsection{\texttt{ds\_inference\_AXIOM}}
+
+Another simple example for an inference is:
+\[
+\eqinferstyle
+\inferrule[Axiom]{\ }
+{\entailment{\eta,\pi,\Pi}{\ }}
+\]
+%
+This inference requires, that the lists $\Sigma$, $\Pi'$ and $\Sigma'$ are
+empty. Moreover, there are no preconditions. Therefore, this inference means,
+that its conclusion always holds. Altogether the semantics of this inference
+rule are expressed by:
+\[\begin{array}{ll}
+  \forall \eta,\pi,\Pi.\ \forall s,h. & \left(\heapdistinct (s,h,\eta, \pi)\ \wedge\
+  \left(s\ \modelspf\ \Pi\right)\ \wedge\ \left(s,h\ \modelssf\ \nil \right)
+\right) \ \Longrightarrow \\
+&  \left(s\ \modelspf\ \pftrue \right)\ \wedge\ \left(s,h\ \modelssf\ \nil \right)
+\end{array}
+\]
+This inference is implemented by \texttt{ds\_inference\_AXIOM\_\_\_CONV}.
+
+
+\subsubsection{\texttt{ds\_inference\_SUBSTITUTION}}
+
+A more interesting example is the substitution inference, which does some
+actual work in simplifying an entailment. However, to understand this
+inference the notation $l[e/x]$ needs to be introduced. Informally, it denotes
+the list resulting from replacing every occurrence of the variable $x$ in $l$ with the expression $e$.
+This definition allows to write the following inference rule:
+\[
+\eqinferstyle
+\inferrule[Substitution]{\entailment{\eta[e/x],\pi[e/x],\Pi[e/x],\Sigma[e/x]}{\Pi'[e/x],\Sigma'[e/x]}}
+{\entailment{\eta,\pfequal x e,\pi,\Pi,\Sigma}{\Pi', \Sigma'}}
+\]
+This inference is implemented by \texttt{ds\_inference\_SUBSTITUTION\_\_\_CONV}.
+
+
+\subsubsection{\texttt{ds\_inference\_HYPOTHESIS}}
+
+The hypothesis inference removes pure formulae that occur on the left hand
+side of an entailment from the right hand side. Since some information has
+been moved to the precondition, it has to be used as well to eliminate pure
+formulae.
+\[\begin{array}{ll}
+\eqinferstyle
+\inferrule[Hypothesis-base]{\entailment{\eta,\pi,\varpf{},\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\varpf{},\Pi,\Sigma}{\varpf {},\Pi', \Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Hypothesis-precond-nil-right]{\entailment{e,\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{e,\eta,\pi,\Pi,\Sigma}{\pfunequal e \nil,\Pi', \Sigma'}}
+&
+\eqinferstyle
+\inferrule[Hypothesis-precond-nil-left]{\entailment{e,\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{e,\eta,\pi,\pfunequal e \nil,\Pi,\Sigma}{\Pi', \Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Hypothesis-precond-unequal-right]{\entailment{e_1,e_2,\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{e_1,e_2,\eta,\pi,\Pi,\Sigma}{\pfunequal {e_1} {e_2},\Pi',
+    \Sigma'}}
+&
+\eqinferstyle
+\inferrule[Hypothesis-precond-unequal-left]{\entailment{e_1,e_2,\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{e_1,e_2,\eta,\pi,\pfunequal {e_1} {e_2},\Pi,\Sigma}{\Pi', \Sigma'}}
+
+\end{array}
+\]
+These inferences are implemented by
+\texttt{ds\_inference\_HYPOTHESIS\_\_\_CONV}. Additionally, this conversion
+removes duplicates in $\Pi$ and $\Pi'$.
+
+
+\subsubsection{\texttt{ds\_inference\_FRAME}}
+
+It's much more complicated to remove spatial formulae. There is
+a frame inference that is very similar to the basic hypothesis inference:
+\[
+\inferrule[Frame-base]{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\varsf{},\Sigma}{\Pi', \varsf{},\Sigma'}}
+\]
+However, this inference describes a real implication. This can be shown by the
+following example:
+\[
+\inferrule{\entailment{\sfpointsto e
+    {g:e_2}}{}}
+    {\entailment{\sfpointsto e {f:e_1}, \sfpointsto e
+    {g:e_2}}{\sfpointsto e {f:e_1}}}
+\]
+$\entailment{\sfpointsto e {g:e_2}}{}$ does not hold, since there is
+a heap such that $e$ points to $e_2$ by field index $g$ and since this heap is
+obviously not empty. However, the original
+entailment holds, since no heap can be split into two disjoint heaps such that
+both contain the value of $e$.
+
+Thus, one has to be careful, in which order to apply inferences using this
+basic frame rule. \cite{berdine05symbolic} uses backtracking and ordering of
+the application of inference rules. However, one can use the predicate
+$\heapdistinct$ to record the otherwise lost information and get a real
+equivalence instead of just an implication. A similar method is used by newer
+versions of \smallfoot. However, it is not described in \cite{berdine05symbolic}.
+
+\[\begin{array}{l}
+\eqinferstyle
+\inferrule[Frame-points\_to]
+{\entailment{e,\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sfpointsto e {t_1:e_1, \ldots,
+      t_n:e_n},\Sigma}{\Pi', \sfpointsto e {t_1:e_1, \ldots,
+      t_m:e_m},\Sigma'}}
+\qquad m \leq n
+\bigskip\\
+\eqinferstyle
+\inferrule[Frame-tree]
+{\entailment{\eta,(e,es),\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sftree((t_1, \ldots, t_k),es,e),\Sigma}{\Pi', \sftree((t_1, \ldots, t_k),es,e),\Sigma'}}
+\end{array}
+\]
+
+For $\hookrightarrow$, the expression $e$ is added to $\eta$. This means, that the
+value of $e$ is not in the remaining heap and that it is distinct to the
+values of everything else in $\eta$. These two properties capture the
+properties of the $*$-operation. Additionally, it is stored that $e$ does
+not equal to $\nil$, which captures the properties of the $\hookrightarrow$-operator
+itself. 
+
+For trees, it's very similar. However, the tree may be empty. Therefore,
+$(e,es)$ is added to $\pi$, which has the same effect as adding $e$ to $\pi$
+guarded by the condition that $e$ and $es$ do not evaluate to the same value,
+i.\,e.\ that the tree is not empty.
+
+
+These inferences are implemented by \texttt{ds\_inference\_FRAME\_\_\_CONV}
+for $\hookrightarrow$ and $\sftree$. Notice, that this
+conversion does not apply the general frame inference. Thus, it's a real
+conversion which always results in an equality
+theorem. \texttt{ds\_inference\_FRAME\_\_\_IMPL\_\_\_CONV} applies the general
+frame inference as well and may therefore result in an implication.
+
+
+\subsubsection{\texttt{ds\_inference\_INCONSISTENT}}
+
+If there is no stack and heap that satisfies the left hand side, i.\,e.\ if
+the left hand side is inconsistent, then the whole entailment holds.
+\[\begin{array}{ll}
+\eqinferstyle
+\inferrule[Inconsistent-unequal]
+{\ }
+{\entailment{\eta,\pi,\pfunequal e e,\Pi,\Sigma}{\Pi',\Sigma'}}
+&
+\eqinferstyle
+\inferrule[Inconsistent-pointsto-nil]
+{\ }
+{\entailment{\eta,\pi,\Pi,\sfpointsto \nil {\ldots}, \Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Inconsistent-precond-nil]
+{\ }
+{\entailment{\nil,\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+&
+\eqinferstyle
+\inferrule[Inconsistent-precondition-not-distinct]
+{\ }
+{\entailment{e,e,\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Inconsistent-precond-pointsto]
+{\ }
+{\entailment{e,\eta,\pi,\Pi,\sfpointsto e {\ldots}, \Sigma}{\Pi',\Sigma'}}
+&
+\eqinferstyle
+\inferrule[Inconsistent-precond-bintree]
+{\ }
+{\entailment{e,\eta,\pi,\Pi,\sfbintree(l,r,e), \Sigma}{\Pi',\Sigma'}}
+\end{array}
+\]
+These inference are implemented by
+\texttt{ds\_inference\_INCONSISTENT\_\_\_CONV}. 
+
+
+\subsubsection{\texttt{ds\_inference\_NIL\_NOT\_LVAL}}
+
+According to the semantics of $\hookrightarrow$, $\nil$ cannot point to
+anything. The following inferences make this fact explicit. 
+\[\begin{array}{l}
+\eqinferstyle
+\inferrule[NIL-NOT-LVAL-pointsto]
+{\entailment{\eta,\pi,\pfunequal e \nil, \Pi,\sfpointsto e {\ldots},\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sfpointsto e {\ldots},\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[NIL-NOT-LVAL-tree]
+{\entailment{\eta,\pi,\pfunequal e \nil, \pfunequal e \textit{es},\Pi,\sftree\left(\ldots,\textit{es},e\right),\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\pfunequal e \textit{es},\Pi,\sftree\left(\ldots,\textit{es},e\right),\Sigma}{\Pi',\Sigma'}}
+\end{array}
+\]
+This inference is implemented by
+\texttt{ds\_inference\_NIL\_NOT\_LVAL\_\_\_CONV}. To prevent the inference
+rule and therefore the final decision procedure from looping, only facts are
+added that are not already present in $\Pi$ or $\eta$.
+
+
+\subsubsection{\texttt{ds\_inference\_PARTIAL}}
+This inference makes implicit unequalities explicit.
+\[\begin{array}{l}
+\eqinferstyle
+\inferrule[Partial-pointsto-pointsto]
+{\entailment{\eta,\pi,\pfunequal {e_1} {e_2}, \Pi,\sfpointsto {e_1} {\ldots},\sfpointsto {e_2} {\ldots},\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sfpointsto {e_1} {\ldots},\sfpointsto {e_2}
+    {\ldots},\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Partial-pointsto-tree]
+{\entailment{\eta,\pi,\pfunequal {e_1} {e_2}, \pfunequal {e_2} {e_3},
+    \Pi,\sfpointsto {e_1} {\ldots},\sftree (\ldots, {e_3}, e_2),\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\pfunequal {e_2} {e_3},\Pi,\sfpointsto {e_1} {\ldots},\sftree (\ldots, {e_3}, e_2),\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Partial-tree-tree]
+{\entailment{\eta,\pi,\pfunequal {e_1} {e_2}, \pfunequal {e_1} {e_3}, \pfunequal {e_2} {e_4},
+    \Pi,\sftree (\ldots, {e_3}, e_1),\sftree (\ldots, {e_4}, e_2),\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\pfunequal {e_1} {e_3}, \pfunequal {e_2}
+    {e_4},\Pi,\sftree (\ldots, {e_3}, e_1), \sftree (\ldots, {e_4}, e_2),\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Partial-pointsto-precond]
+{\entailment{e_1,\eta,\pi,\pfunequal {e_1} {e_2}, \Pi,\sfpointsto {e_2} {\ldots},\Sigma}{\Pi',\Sigma'}}
+{\entailment{e_1,\eta,\pi,\Pi,\sfpointsto {e_2} {\ldots},\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Partial-tree-precond]
+{\entailment{e_1,\eta,\pi,\pfunequal {e_1} {e_2}, \pfunequal {e_2} {e_3}, \Pi,\sftree (\ldots, {e_3}, e_2),\Sigma}{\Pi',\Sigma'}}
+{\entailment{e_1,\eta,\pi,\pfunequal {e_2} {e_3},\Pi,\sftree (\ldots, {e_3}, e_2),\Sigma}{\Pi',\Sigma'}}
+\end{array}
+\]
+This inference is implemented by
+\texttt{ds\_inference\_PARTIAL\_\_\_CONV}. To prevent the inference
+rule and therefore the final decision procedure from looping, only facts are
+added that are not already present in $\Pi$ and $\eta$.
+
+
+
+\subsubsection{\texttt{ds\_inference\_SIMPLE\_UNROLL}}
+
+These inferences perform unrolling of lists and binary trees for the simple cases,
+that either it can be deducted that a list is empty or that the head of a list
+/ binary tree is known:
+
+\[\begin{array}{c}
+\eqinferstyle
+\inferrule[Unroll-NilList]
+{\entailment{\eta,\pi,\pfequal {e} {\nil}, \Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sflist(\textit{tl}, \nil, e),\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Unroll-precond-list]
+{\entailment{e_1,\eta,\pi,\pfequal {e_1} {e_2}, \Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{e_1,\eta,\pi,\Pi,\sflist(\textit{tl}, e_1, e_2),\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Unroll-right-list]
+{\entailment{e_1,\eta,\pi,\pfunequal {e_1} {e_3}, \Pi,\Sigma}{\Pi',\sflist(\textit{tl}, e_2, e_3),\Sigma'}}
+{\entailment{\eta,\pi,\pfunequal {e_1} {e_3}, \Pi,\sfpointsto{e_1}
+    {\textit{tl}:e_2, \ldots}, \Sigma}{\Pi',\sflist(\textit{tl}, e_1, e_3),\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Unroll-right-bintree]
+{\entailment{e,\eta,\pi, \Pi,\Sigma}{\Pi',\sfbintree(l,r, e_l),\sfbintree(l,r, e_r),\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sfpointsto{e}
+    {l:e_l, r:e_r, \ldots}, \Sigma}{\Pi',\sfbintree(l,r,e),\Sigma'}}
+\end{array}
+\]
+%
+These inferences are implemented by \texttt{ds\_inference\_SIMPLE\_UNROLL\_\_\_CONV}.
+
+
+
+\subsubsection{\texttt{ds\_inference\_STRENGTHEN\_PRECONDITION}}
+
+The preconditions that result from the elimination of trees contain an
+implicit case split. These inferences are used to eliminate this case split:
+
+\[\begin{array}{ll}
+\eqinferstyle
+\inferrule[Strengthen-precond-unequal]
+{\entailment{e_1,\eta,\pi,\pfunequal {e_1} {e_2},\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,(e_1,e_2),\pi,\pfunequal {e_1}{e_2}, \Pi,\Sigma}{\Pi',\Sigma'}}
+&
+\eqinferstyle
+\inferrule[Strengthen-precond-equal-1]
+{\entailment{\eta,\pi,\pfequal {e_1} {e_2},\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,(e_1,e_2),(e_1,e_2),\pi, \Pi,\Sigma}{\Pi',\Sigma'}}
+\bigskip\\
+
+\eqinferstyle
+\inferrule[Strengthen-precond-equal-2]
+{\entailment{e_1,\eta,\pi,\pfequal {e_1} {e_2},\Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{e_1,\eta,(e_1,e_2),\pi, \Pi,\Sigma}{\Pi',\Sigma'}}
+\end{array}
+\]
+%
+These inferences are implemented by \texttt{ds\_inference\_PRECONDITION\_STRENGTHEN\_\_\_CONV}.
+
+
+\subsubsection{\texttt{ds\_inference\_PRECONDITION\_CASES}}
+
+It is sometimes necessary to do a case analysis on a precondition.
+\[
+\eqinferstyle
+\inferrule[Unroll-left-precond]
+{\entailment{\eta,\pi,\pfequal {e_1} {e_2},\Pi,\Sigma}{\Pi',\Sigma'} \\\\
+{\entailment{e_1,\eta,\pi,\pfunequal {e_1} {e_2},\Pi,\Sigma}{\Pi',\Sigma'}}}
+{\entailment{\eta,(e_1,e_2),\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+\]
+This inference is implemented by \texttt{ds\_inference\_PRECONDITION\_CASES\_\_\_CONV}.
+
+
+\subsubsection{\texttt{ds\_inference\_UNROLL}}
+\[
+\eqinferstyle
+\inferrule[Unroll-list]
+{\entailment{\eta,\pi,\pfequal {e_1} {e_2}, \Pi,\Sigma}{\Pi',\Sigma'} \\\\
+ \forall x.\ \entailment{\eta,\pi,\pfunequal {e_1} {e_2},\pfunequal {e_2} {x},
+   \Pi,\sfpointsto {e_1} {\textit{fl}:x}, \sfpointsto {x} {\textit{fl}:e_2},
+   \Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sflist(\textit{tl}, e_1, e_2),\Sigma}{\Pi',\Sigma'}}
+\]
+This inference does a case analysis on the length of lists. Its interesting to
+note that just two cases are sufficient to cover everything. Thus, it is not necessary
+to do induction for lists. 
+
+The general idea behind the correctness proof of this inference is that the
+logic can just access the two endpoints $e_1$ and $e_2$ of the list. It can
+not look at its internal representation, e.\,g.\ it cannot consider how many
+elements are between the endpoints. Therefore, a case analysis that considers
+the endpoints to be equal or to be unequal and not point at each other is
+sufficient.
+
+This inference is an instance of a more general inference for arbitrary
+trees. However, besides lists, just the instance for binary trees is
+implemented as a $\HOL$ conversion:
+
+\[
+\eqinferstyle
+\inferrule[Unroll-bintree]
+{\entailment{\eta,\pi,\pfequal {e_1} {e_2}, \Pi,\Sigma}{\Pi',\Sigma'} \\\\ \\\\
+ \forall x_1,x_2.\ \eta,\pi,\pfunequal {e} {\nil},\pfunequal {x_l}
+   {\nil},\pfunequal {x_r} {nil}, \Pi,\\\\
+   \entailment{\sfpointsto {e} {l:x_l,r:x_r}, \sfpointsto {x_l} {l:\nil,r:\nil}, \sfpointsto {x_r} {l:\nil,r:\nil},
+   \Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sfbintree(l,r, e),\Sigma}{\Pi',\Sigma'}}
+\]
+
+However, these inferences are applied by the decision procedure as late as
+possible in order to avoid the case split and the introduction of fresh
+variables. Instead, they are used to derive specialised inference rules which
+are more efficient. And they are useful for the proof that the later
+described procedure is really a decision procedure.  \medskip
+
+\texttt{ds\_inference\_UNROLL\_LIST\_\_\_CONV} implements the list
+inference rule. There is a
+version that searches for $\pfunequal {e_1} {e_2}$ in $\Pi$ in order to be able to
+discard the first case:
+\texttt{ds\_inference\_UNROLL\_LIST\_\_\_NON\_EMPTY\_\_\_CONV}.
+The conversion for binary trees is called
+\texttt{ds\_inference\_UNROLL\_BIN\_TREE\_\_\_CONV}.
+
+
+\subsubsection{\texttt{ds\_inference\_UNROLL\_RIGHT\_CASES}}
+
+In general its possible to do a case split, whenever one thinks it is useful:
+\[
+\eqinferstyle
+\inferrule[ExcludedMiddle]
+{\entailment{\eta,\pi,\pfequal {e_1} {e_2}, \Pi,\Sigma}{\Pi',\Sigma'} \\\\
+ \entailment{\eta,\pi,\pfunequal {e_1} {e_2}, \Pi,\Sigma}{\Pi',\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\Sigma'}}
+\]
+
+To really get a decision procedure in the very end, a case split is performed on
+trees on the right hand side:
+\[
+\eqinferstyle
+\inferrule[Unroll-right-Cases]
+{\entailment{\eta,\pi,\pfequal {e_1} {e_2}, \Pi,\Sigma}{\Pi',\sftree((t_1, \ldots, t_k),e_2, e_1),\Sigma'} \\\\
+ \entailment{\eta,\pi,\pfunequal {e_1} {e_2}, \Pi,\Sigma}{\Pi',\sftree((t_1, \ldots, t_k),e_2, e_1),\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\Sigma}{\Pi',\sftree((t_1, \ldots, t_k),e_2, e_1), \Sigma'}}
+\]
+
+This case split is implemented by
+\texttt{ds\_inference\_UNROLL\_RIGHT\_CASES\_\_\_CONV}.
+
+
+\subsubsection{\texttt{ds\_inference\_APPEND\_LIST}}
+A combination of the inferences \texttt{ds\_inference\_UNROLL},
+\texttt{ds\_inference\_SIMPLE\_UNROLL} and \texttt{ds\_inference\_FRAME} leads
+to the following inference rules for lists:
+\[
+\begin{array}{l}
+\eqinferstyle
+\inferrule[Append-list-nil]
+{\entailment{\eta,(e_1,e_2),\pi,\Pi,\Sigma}{\Pi',\sflist(\textit{tl},e_2, \nil),\Sigma'}}
+{\entailment{\eta,\pi,\Pi,\sflist(\textit{tl},e_1, e_2),\Sigma}{\Pi',\sflist(\textit{tl},e_1, \nil),\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Append-list-precond]
+{\entailment{e3,\eta,(e_1,e_2),\pi,\pfunequal{e_1}{e_3},\Pi,\Sigma}{\Pi',\sflist(\textit{tl},e_2, e_3),\Sigma'}}
+{\entailment{e3,\eta,\pi,\pfunequal{e_1}{e_3},\Pi,\sflist(\textit{tl},e_1, e_2),\Sigma}{\Pi',\sflist(\textit{tl},e_1, e_3),\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Append-list-pointsto]
+{\entailment{\eta,(e_1,e_2),\pi,\pfunequal{e_1}{e_3},\Pi,\sfpointsto {e_3} {\ldots},\Sigma}{\Pi',\sflist(\textit{tl},e_2, e_3),\Sigma'}}
+{\entailment{\eta,\pi,\pfunequal{e_1}{e_3},\Pi,\sflist(\textit{tl},e_1,
+    e_2),\sfpointsto {e_3} {\ldots},\Sigma}{\Pi',\sflist(\textit{tl},e_1, e_3),\Sigma'}}
+\bigskip\\
+\eqinferstyle
+\inferrule[Append-list-tree]
+{\entailment{\eta,(e_1,e_2),\pi,\pfunequal{e_1}{e_3},\pfunequal{e_3}{e_4},\Pi,\sftree(\ldots,e_4,e_3),\Sigma}{\Pi',\sflist(\textit{tl},e_2, e_3),\Sigma'}}
+{\entailment{\eta,\pi,\pfunequal{e_1}{e_3},\Pi,\sflist(\textit{tl},e_1,
+    e_2),\sftree(\ldots,e_4,e_3),\Sigma}{\Pi',\sflist(\textit{tl},e_1, e_3),\Sigma'}}
+\end{array}
+\]
+%
+These inferences are implemented by \texttt{ds\_inference\_LIST\_APPEND\_\_\_CONV}.
+
+
+
+\subsection{The decision procedure}
+
+The inferences presented in the previous section can be easily combined to
+form a decision procedure (\texttt{ds\_DECIDE\_CONV}) for entailments not containing the general $\sftree$
+predicate, but just the instantiations $\sflist$ and $\sfbintree$:
+
+\begin{enumerate}
+\item bring the entailment ${\eta,\pi,\Pi,\Sigma}\vdash{\Pi',\Sigma'}$ to
+  normal form, i.\,e.\:
+  \begin{itemize}
+  \item remove all occurrences of $\nil$, $*$, $\pftrue$ and $\wedge$ from
+    $\Pi, \Sigma, \Pi', \Sigma'$ 
+  \item remove multiple occurrences of the same field index from $\Sigma$ and $\Sigma'$
+  \end{itemize}
+\item apply all the equality inferences (all except \textsc{Frame-base}) in an
+  arbitrary order, until no further inference applications are possible
+\item the original entailment holds iff and only iff it has been simplified to $\textit{true}$
+\end{enumerate}
+
+To show that this algorithm is really a decision procedure for entailments,
+notice first that all steps preserve equality with the original entailment due
+to the correctness of the inference and rewrite rules. Moreover, all steps
+terminate. That's obvious for step 1. Step 2 may loop because of applications
+of \textsc{Hypothesis} and \textsc{NIL-NOT-LVAL} / \textsc{Partial}
+inferences. However, the sidecondition that no facts that are already
+explicitly present are added prevents such loops.  Thus, the first two steps
+terminate and transform ${\eta,\pi,\Pi,\Sigma}\vdash{\Pi',\Sigma'}$ to a
+finite list of entailments
+${\eta_i,\pi_i,\Pi_i,\Sigma_i}\vdash{\Pi_i',\Sigma_i'}$ such that the
+following expression folds:
+
+\[\big(\forall \vec{x}. \bigwedge_i
+{\eta_i,\pi_i,\Pi_i,\Sigma_i}\vdash{\Pi_i',\Sigma_i'}\big) \Longleftrightarrow
+{\eta,\pi,\Pi,\Sigma}\vdash{\Pi',\Sigma'}
+\]
+
+
+Thus, if the list of entailments
+${\eta_i,\pi_i,\Pi_i,\Sigma_i}\vdash{\Pi_i',\Sigma_i'}$ is empty, the original
+entailment really holds. If it is not empty, it remains to show that 
+the original entailment does not hold. Let 
+${\eta_x,\pi_x,\Pi_x,\Sigma_x}\vdash{\Pi'_x,\Sigma'_x}$ be an element of the
+list. Then it is sufficient to show, that this element does not hold.
+
+This can be shown by constructing a concrete counterexample: We know that the
+entailment ${\eta_x,\pi_x,\Pi_x,\Sigma_x}\vdash{\Pi'_x,\Sigma'_x}$ is in
+normal form and that no inference rule is applicable. Thus, the following
+holds:
+\begin{itemize}
+\item $\pi_x = []$ because of \textsc{Unroll-left-precond}
+\item $\Pi_x$ contains just disequations $\pfunequal {e_1} {e_2}$ with $e_1
+  \not = e_2$ because of \textsc{Substitution}, \textsc{RemoveTrivial-EQ-L} and \textsc{Inconsistent-unequal}.
+\item $\Sigma_x$ contains just expressions of the form $\sfpointsto e
+  {t_1:e_1, \ldots, t_k:e_k}$ such that $e \not\in \eta_x$, all $t_i$ are
+  distinct and all $e$ are distinct
+\end{itemize}
+
+A case analysis on the exact form of the entailment, combined with the
+knowledge that no inference rule is applicable allows the construction of a
+counterexample for each case. The actual proof is tedious and omitted here.
+
+
+\section{Examples}
+\subsection{Example 1}
+
+The following entailment is proofed  by \smallfoot\ while the example
+specification \texttt{list.sf} is checked:
+%
+\begin{verbatim}
+0!=z_3 * 0!=x * 0!=z * z_3!=y * z_3!=z * a!=e * x!=y * x!=z * y!=z * 
+z |-> hd:e,tl:y * listseg(tl; y, 0) * listseg(tl; x, z_3) * z_3 |-> tl:z 
+|-
+listseg(tl; x, z) * z |-> tl:y * listseg(tl; y, 0)
+\end{verbatim}
+%
+Using the variable renaming $z_3 \to x_0$, $x \to x_1$, $z \to x_2$, $y
+\to x_3$, $a \to x_4$, $e \to x_5$, this can be written as 
+\[\begin{array}{lr}
+\pfunequal {x_0} \nil,\pfunequal {x_1} \nil, \pfunequal {x_2} \nil,
+\pfunequal {x_0} {x_3}, \pfunequal {x_0} {x_2}, \pfunequal {x_4} {x_5},
+\pfunequal {x_1} {x_3},
+\pfunequal {x_1} {x_2}, \pfunequal {x_3} {x_2},\\
+\sfpointsto {x_2} {\textit{hd}:x_5, \textit{tl}:x_3},
+\sflist(\textit{tl},x_3,\nil), \sflist(\textit{tl},x_1,x_0),
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash \\
+\sflist(\textit{tl},x_1,x_2), \sfpointsto {x_2} {\textit{tl}:x_3}, \sflist(\textit{tl},x_3,\nil)
+\end{array}
+\]
+%
+in the syntax of this work. It will now be shown, how the inferences rules can
+be used to show that this entailment holds. To keep things readable, let $\Pi := [\pfunequal {x_0} \nil,\pfunequal {x_1} \nil, \pfunequal {x_2} \nil,
+\pfunequal {x_0} {x_3}, \pfunequal {x_0} {x_2}, \pfunequal {x_4} {x_5},
+\pfunequal {x_1} {x_3},
+\pfunequal {x_1} {x_2}, \pfunequal {x_3} {x_2}]$ be used as an abbreviation.
+
+\[\begin{array}{llc}
+\Pi,\sfpointsto {x_2} {\textit{hd}:x_5, \textit{tl}:x_3},\sflist(\textit{tl},x_3,\nil), \sflist(\textit{tl},x_1,x_0),
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash & \textsc{Frame} \\
+\sflist(\textit{tl},x_1,x_2), \sfpointsto {x_2} {\textit{tl}:x_3},
+\sflist(\textit{tl},x_3,\nil) & & \Longleftrightarrow \\
+\\
+
+x_2,(x_3,\nil),\Pi, \sflist(\textit{tl},x_1,x_0),
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash & \text{\textsc{Append-List}} \\
+\sflist(\textit{tl},x_1,x_2) & & \Longleftrightarrow \\
+\\
+
+x_2,(x_3,\nil),(x_1,x_0),\Pi,
+\sfpointsto {x_0} {\textit{tl},x_2} & \vdash & \textsc{Simple-Unroll} \\
+\sflist(\textit{tl},x_0,x_2) & & \Longleftrightarrow \\
+\\
+
+x_2,x_0,(x_3,\nil),(x_1,x_0),\Pi & \vdash & \textsc{Remove-Trivial} \\
+\sflist(\textit{tl},x_2,x_2) & & \Longleftrightarrow \\
+\\
+
+x_2,x_0,(x_3,\nil),(x_1,x_0),\Pi & \vdash & \textsc{Axiom} \\
+ & & \Longleftrightarrow \\
+
+\top
+\end{array}
+\]
+
+
+Do do the same proof in \HOL, one can either apply single inference rules manually or just
+call the decision procedure:
+\begin{verbatim}
+val t = ``LIST_DS_ENTAILS ([],[])
+  ([pf_unequal (dse_var 0) dse_nil; 
+    pf_unequal (dse_var 1) dse_nil;
+    pf_unequal (dse_var 2) dse_nil;
+    pf_unequal (dse_var 0) (dse_var 3);
+    pf_unequal (dse_var 0) (dse_var 2);
+    pf_unequal (dse_var 4) (dse_var 5);
+    pf_unequal (dse_var 1) (dse_var 3);
+    pf_unequal (dse_var 1) (dse_var 2);
+    pf_unequal (dse_var 3) (dse_var 2)],
+   [sf_points_to (dse_var 2) [("hd",dse_var 5); ("tl", dse_var 3)];
+    sf_ls "tl" (dse_var 3) dse_nil;
+    sf_ls "tl" (dse_var 1) (dse_var 0);
+    sf_points_to (dse_var 0) [("tl", (dse_var 2))]])
+
+   ([],
+    [sf_ls "tl" (dse_var 1) (dse_var 2);
+     sf_points_to (dse_var 2) [("tl", dse_var 3)];
+     sf_ls "tl" (dse_var 3) dse_nil])``;
+
+val thm1 = 
+(ds_inference_FRAME___CONV THENC
+ ds_inference_APPEND_LIST___CONV THENC
+ ds_inference_SIMPLE_UNROLL___CONV THENC
+ ds_inference_REMOVE_TRIVIAL___CONV THENC
+ ds_inference_AXIOM___CONV) t;
+
+val thm2 = ds_DECIDE_CONV t;
+\end{verbatim}
+
+\subsection{Example 2}
+
+Lets now consider an entailment that does not hold:
+
+
+\[\begin{array}{lllc}
+\sfpointsto {x} {\textit{tl}:y} & \vdash & \sflist(\textit{tl},x,y) &
+\stackrel{\sf Unroll-Right-Cases}{\Longleftrightarrow} \\
+\\
+\pfunequal {x} {y},\sfpointsto {x} {\textit{tl}:y} & \vdash &
+  \sflist(\textit{tl},x,y)\ \ \wedge  \\
+\pfequal x y,\sfpointsto {x} {\textit{tl}:y} & \vdash &
+  \sflist(\textit{tl},x,y) & {\Longleftrightarrow}
+\\ 
+& \vdots \\
+\pfequal x y,\sfpointsto {x} {\textit{tl}:y} & \vdash &
+  \sflist(\textit{tl},x,y) & {\stackrel{\sf
+    Substitution}{\Longleftrightarrow}} \\ \\
+\sfpointsto {x} {\textit{tl}:x} & \vdash & \sflist(\textit{tl},x,x) & {\stackrel{\sf
+    Remove-Trivial}{\Longleftrightarrow}} \\ \\
+\sfpointsto {x} {\textit{tl}:x} & \vdash & & {\stackrel{\sf NIL-NOT-LVAL}{\Longleftrightarrow}}\\
+\pfunequal x \nil, \sfpointsto {x} {\textit{tl}:x} & \vdash &
+\end{array}
+\]
+%
+Now, no more inferences are applicable. However, one can easily see, that the
+entailment does not hold.
+
+Inferences to detect false entailments are not implemented in \HOL. 
+Thus, the above reasoning looks in \HOL\ as follows:
+\begin{verbatim}
+> val t = ``LIST_DS_ENTAILS ([],[])
+              ([], [sf_points_to (dse_var 0) [("tl", dse_var 1)]])
+              ([], [sf_ls "tl" (dse_var 0) (dse_var 1)])``;
+
+- val thm = ds_DECIDE_CONV t;
+
+> val thm =
+     []
+    |- LIST_DS_ENTAILS ([],[])
+         ([],[sf_points_to (dse_var 0) [("tl",dse_var 1)]])
+         ([],[sf_ls "tl" (dse_var 0) (dse_var 1)]) =
+       LIST_DS_ENTAILS ([],[])
+         ([pf_unequal (dse_var 0) dse_nil],
+          [sf_points_to (dse_var 0) [("tl",dse_var 0)]]) ([],[]) : thm
+\end{verbatim}
+
+\section{Conclusions and Future Work}
+
+We formalised the subset of separation logic described in
+\cite{berdine05symbolic} in \HOL. This formalisation contains correctness
+proofs for the inferences used in \smallfoot. Thus, the work increases the
+trust in this tool. Moreover, the decision procedure for entailments has been
+implemented in \HOL.
+
+In the future, this formalisation and the decision procedure could be used to
+implement a \HOL\ version of \smallfoot. Another interesting project may be to
+extend the fragment of separation logic used here and explore possibilities to
+interactively prove more complicated statements in this extended logic.
+
+
+\bigskip
+\bigskip
+\bibliographystyle{alpha}
+\bibliography{ds}
+
+\end{document}
+
+
