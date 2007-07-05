@@ -127,7 +127,7 @@ val ALU_MLA = prove(
           GSYM word_mul_def,word_bits_n2w_32,word_bits_def]);
 
 val concat32 = (SIMP_RULE (std_ss++SIZES_ss)
-   [fcpTheory.index_sum,WORD_FULL_EXTRACT] o SPECL [`63`,`31`,`0`] o
+   [fcpTheory.index_sum,w2w_id,EXTRACT_ALL_BITS] o SPECL [`63`,`31`,`0`] o
    INST_TYPE [`:'a` |-> `:64`, `:'b` |-> `:32`,
               `:'c` |-> `:32`, `:'d` |-> `:64`]) CONCAT_EXTRACT;
 

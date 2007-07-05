@@ -348,6 +348,7 @@ val ALU_logic_def = Define`
 
 val ADD_def = Define`
   ADD a b c = ALU_arith (\x y.x+y+(if c then 1 else 0)) a b`;
+
 val SUB_def = Define`SUB a b c = ADD a (~b) c`;
 val AND_def = Define`AND a b = ALU_logic (a && b)`;
 val EOR_def = Define`EOR a b = ALU_logic (a ?? b)`;
