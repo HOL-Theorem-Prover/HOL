@@ -39,9 +39,6 @@ fun WORD_ONLY_RULE n x =
       ((GEN_ALL o INST [n |-> `n2w (NUMERAL n)`]) y)
   end;
 
-val EXTRACT_RULE1 = SIMP_RULE std_ss [w2w_def,word_extract_def];
-val EXTRACT_RULE2 = CONV_RULE (CBV_CONV (wordsLib.words_compset()));
-
 val arm_compset = wordsLib.words_compset();
 
 val _ = Lib.C add_thms arm_compset
@@ -59,8 +56,8 @@ val _ = Lib.C add_thms arm_compset
    APPLY_UPDATE_THM,
 
    SET_NZC_def,NZCV_def,USER_def,mode_num_def,
-   EXTRACT_RULE1 DECODE_IFMODE_SET_NZCV,DECODE_NZCV_SET_NZCV,
-   EXTRACT_RULE1 DECODE_IFMODE_SET_IFMODE,DECODE_NZCV_SET_IFMODE,
+   DECODE_IFMODE_SET_NZCV,DECODE_NZCV_SET_NZCV,
+   DECODE_IFMODE_SET_IFMODE,DECODE_NZCV_SET_IFMODE,
    SET_NZCV_IDEM,SET_IFMODE_IDEM,SET_IFMODE_NZCV_SWP,
    DECODE_PSR_def,DECODE_MODE_def,DECODE_PSR_THM,
    CPSR_READ_def,CPSR_WRITE_def,SPSR_READ_def,SPSR_WRITE_def,
@@ -123,16 +120,14 @@ val _ = Lib.C add_thms arm_compset
    decode_enc_ldm_stm, decode_enc_ldr_str, decode_enc_ldrh_strh,
    decode_enc_mla_mul, decode_enc_mrs, decode_enc_msr, decode_enc_swi,
 
-   decode_br_enc, decode_ldc_stc_enc, EXTRACT_RULE2 decode_mrc_mcr_rd_enc,
+   decode_br_enc, decode_ldc_stc_enc, decode_mrc_mcr_rd_enc,
    decode_data_proc_enc, decode_data_proc_enc2, decode_data_proc_enc3,
    decode_ldm_stm_enc, decode_ldr_str_enc, decode_ldrh_strh_enc,
    decode_mla_mul_enc, decode_mrs_enc, decode_msr_enc, decode_swp_enc,
 
-   EXTRACT_RULE2 immediate_enc, EXTRACT_RULE2 immediate_enc2,
-   EXTRACT_RULE2 immediate_enc3, EXTRACT_RULE2 register_enc3,
-   EXTRACT_RULE2 shift_immediate_enc, EXTRACT_RULE2 shift_immediate_enc2,
-   EXTRACT_RULE2 shift_immediate_shift_register,
-   EXTRACT_RULE2 shift_register_enc, EXTRACT_RULE2 shift_register_enc2,
+   immediate_enc, immediate_enc2, immediate_enc3, register_enc3,
+   shift_immediate_enc, shift_immediate_enc2, shift_immediate_shift_register,
+   shift_register_enc, shift_register_enc2,
 
    CARRY_def,GET_BYTE_def,GET_HALF_def,FORMAT_def,
    SHIFT_IMMEDIATE2_def,SHIFT_REGISTER2_def,
@@ -201,12 +196,13 @@ end;
 val SORT_UPDATE_CONV =
 let open arm_evalTheory fcpTheory
     val compset = add_rws wordsLib.words_compset
-        [o_THM,register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
+        [o_THM,register_EQ_register,register2num_thm,
+         psr_EQ_psr,psr2num_thm,
          SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR,
          SYM FUa_def,FCP_UPDATE_EQ_RULE,FUa_RULE,FUb_RULE,
          LENGTH,SUC_RULE JOIN,BUTFIRSTN_compute,APPEND,
          PURE_REWRITE_RULE [SYM Ua_def] UPDATE_LUPDATE,
-         LUa_RULE,LUb_RULE,GSYM LUa_def]
+         LUa_RULE,LUb_RULE,GSYM LUa_def,o_THM]
 in
   computeLib.CBV_CONV compset
     THENC PURE_REWRITE_CONV [Ua_def,Ub_def,FUa_def,FUb_def,LUa_def,LUb_def]
