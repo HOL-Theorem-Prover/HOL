@@ -22,4 +22,6 @@ sig
     val MOVE_STAR_CONV      : term frag list -> term frag list -> conv
     val MOVE_STAR_RULE      : term frag list -> term frag list -> rule
 
+    val MOVE_OUT_CONV       : term frag list -> conv
+
 end

@@ -1299,7 +1299,7 @@ val case234 = let
   
 val case234' = let
   val th = RW [M30_def] case234
-  val th = HIDE_POST (POST_MOVE_STAR `sp*sp2*s*a*b1*ss*lr*bl*ax2*sp1*bt3*ax1*ax*cc` `sp*sp2*s*a*b1*ss*lr*bl*ax2*bt3*ax1*ax*cc*sp1` th)
+  val th = AUTO_HIDE_POST2 [`M (sp - 2w)`,`M (sp - 1w)`] th
   val th = APP_WEAKEN th 
              `~R a * bt (ax,tree) * R s (sum + sumBTree tree) * 
               R30 13w sp *  blank (sp-1w) (2 * depth tree) * ~R 14w * ~S`
@@ -1491,7 +1491,7 @@ val ARM_SUM_BTREE_PROCEDURE_TR = let
   val th = MATCH_MP ARM_PROC_RECURSION ((Q.GEN `tree` o Q.GEN `C'` o DISCH_ALL) th)
   val th = Q.SPEC `tree` th
   in RW [SUM_BTREE_SPEC_TR_def,SUM_BTREE_SPEC'_def,emp_STAR] th end;
-  
+
 
 (* export ready examples *)
 

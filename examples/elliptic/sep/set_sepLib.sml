@@ -34,12 +34,12 @@ fun MATCH_TYPE_mk_eq (t,t') =
 
 fun MOVE_STAR_THM t t' =
   let 
-    val tm  = (Parse.typedTerm t  ``:'a set->bool`` handle e => Parse.Term t)
-    val tm' = (Parse.typedTerm t' ``:'a set->bool`` handle e => Parse.Term t')
+    val tm  = (Parse.typedTerm t  ``:('a->bool)->bool`` handle e => Parse.Term t)
+    val tm' = (Parse.typedTerm t' ``:('a->bool)->bool`` handle e => Parse.Term t')
     val goal = MATCH_TYPE_mk_eq (tm,tm')  
   in
     prove(goal,
-    SIMP_TAC (bool_ss++star_ss) []
+    SIMP_TAC (bool_ss++star_ss) [emp_STAR]
     THEN METIS_TAC [STAR_ASSOC,STAR_SYM,STAR_OVER_DISJ])    
   end;
 
@@ -180,6 +180,45 @@ fun mk_STAR(t1,t2) = (fst o dest_eq o concl o ISPECL [t1,t2]) STAR_def;
 fun list_mk_STAR [] = raise ERR "list_mk_STAR" "Invalid argument"
   | list_mk_STAR [x] = x
   | list_mk_STAR (x::y::xs) = list_mk_STAR (mk_STAR(x,y)::xs);
+
+
+(* ----------------------------------------------------------------------------- *)
+(* Conversion for pushing a given term to the right                              *)
+(* ----------------------------------------------------------------------------- *)
+
+fun is_SEP_HIDE tm = (fst (dest_const tm) = "SEP_HIDE") handle e => false;
+
+fun extract_domain tm =
+  let val (h,q) = dest_comb tm in
+    (if is_SEP_HIDE h then q else h) end handle e => tm;
+
+fun mk_str_list_quote [] = [QUOTE "emp"] : (term frag) list
+  | mk_str_list_quote (x::xs) =
+     [QUOTE (foldl (fn (i,s) => s^"*i"^int_to_string i) ("i"^int_to_string x) xs)];
+
+fun MOVE_OUT_CONV t tm = let
+  val needle = Parse.parse_in_context (free_vars tm) t
+  val xs = list_dest_STAR tm
+  fun list_nums 0 xs = xs |
+      list_nums i xs = list_nums (i-1) (i::xs)
+  fun find_first n [] i = hd [] |
+      find_first n (x::xs) i =
+        if n = extract_domain x 
+        then map (fn j => j + i) (list_nums (length xs) []) @ [i]
+        else i :: find_first n xs (i+1)
+  val from_list = mk_str_list_quote (list_nums (length(xs)) [])
+  val to_list = mk_str_list_quote (find_first needle xs 1)
+  in (REWRITE_CONV [STAR_ASSOC] THENC MOVE_STAR_CONV from_list to_list) tm end;
+
+(* e.g. 
+
+  MOVE_OUT_CONV `R a` ``R b 4w * R a (x + y) * ~S`` gives
+    |- R b 4w * R a (x + y) * ~S = R b 4w * ~S * R a (x + y) : thm
+
+  MOVE_OUT_CONV `R a` ``R b 4w * ~R a * ~S`` gives
+    |- R b 4w * ~R a * ~S = R b 4w * ~S * ~R a : thm
+
+*)
 
 
 end

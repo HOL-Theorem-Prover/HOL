@@ -9,8 +9,8 @@
 open HolKernel boolLib bossLib Parse;
 open pred_setTheory res_quanTheory wordsTheory wordsLib bitTheory arithmeticTheory;
 open arm_evalTheory armTheory listTheory bsubstTheory pairTheory systemTheory fcpTheory bitTheory; 
-open combinTheory
-open set_sepLib
+open combinTheory rich_listTheory;
+open set_sepLib;
 
 open set_sepTheory progTheory;
 
@@ -29,6 +29,9 @@ infix \\ << >>
 val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
+
+val RW = REWRITE_RULE;
+val RW1 = ONCE_REWRITE_RULE;
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -185,11 +188,8 @@ val add32_addr30 = store_thm("addr32_addr30",
 
 val addr32_ADD = store_thm ("addr32_ADD", 
   ``!v w. (addr32 (v + w)  = addr32 v + addr32 w)``,
-  SIMP_TAC std_ss [addr32_def]
-  \\ wordsLib.WORDS_TAC
-  \\ SIMP_TAC arith_ss 
-       [word_add_def, w2n_n2w, dimword_30, bitTheory.TIMES_2EXP_def,
-        GSYM LEFT_ADD_DISTRIB, MOD_COMMON_FACTOR]);
+  Cases_word \\ Cases_word
+  \\ REWRITE_TAC [addr32_n2w,word_add_n2w,LEFT_ADD_DISTRIB]);
 
 val addr32_NEG = store_thm("addr32_NEG",
   ``!w. addr32 ($- w) = $- (addr32 w)``,
@@ -296,12 +296,22 @@ val addr32_ABSORB_CONST = store_thm("addr32_ABSORB_CONST",
     (addr32 x + 12w = addr32 (x + 3w)) /\ 
     (addr32 x + 16w = addr32 (x + 4w)) /\ 
     (addr32 x + 20w = addr32 (x + 5w)) /\
+    (addr32 x + 24w = addr32 (x + 6w)) /\
+    (addr32 x + 28w = addr32 (x + 7w)) /\
+    (addr32 x + 32w = addr32 (x + 8w)) /\
+    (addr32 x + 36w = addr32 (x + 9w)) /\
+    (addr32 x + 40w = addr32 (x + 10w)) /\
     (addr32 x - 0w  = addr32 (x - 0w)) /\
     (addr32 x - 4w  = addr32 (x - 1w)) /\ 
     (addr32 x - 8w  = addr32 (x - 2w)) /\ 
     (addr32 x - 12w = addr32 (x - 3w)) /\ 
     (addr32 x - 16w = addr32 (x - 4w)) /\ 
-    (addr32 x - 20w = addr32 (x - 5w))``,    
+    (addr32 x - 20w = addr32 (x - 5w)) /\
+    (addr32 x - 24w = addr32 (x - 6w)) /\
+    (addr32 x - 28w = addr32 (x - 7w)) /\
+    (addr32 x - 32w = addr32 (x - 8w)) /\
+    (addr32 x - 36w = addr32 (x - 9w)) /\
+    (addr32 x - 40w = addr32 (x - 10w))``,    
   SIMP_TAC std_ss [addr32_ADD,addr32_SUB,addr32_n2w,WORD_ADD_0]);
 
 val ADDRESS_ROTATE = store_thm("ADDRESS_ROTATE",
@@ -349,9 +359,13 @@ val concat16 =
                 `:'c` |-> `:16`, `:'d` |-> `:24`])
   wordsTheory.CONCAT_EXTRACT;
 
+val WORD_FULL_EXTRACT_32 = 
+  (SIMP_RULE (arith_ss++SIZES_ss) [] o
+   RW [LESS_EQ_REFL,w2w_def,n2w_w2n] o Q.SPEC `dimindex (:32) - 1` o
+  INST_TYPE [``:'b``|->``:32``,``:'a``|->``:32``]) EXTRACT_ALL_BITS;
+
 val concat24 =
-  (SIMP_RULE (std_ss++SIZES_ss)
-    [fcpTheory.index_sum,WORD_FULL_EXTRACT] o
+  (SIMP_RULE (std_ss++SIZES_ss) [fcpTheory.index_sum,WORD_FULL_EXTRACT_32] o
    Q.SPECL [`31`,`23`,`0`] o
    Q.INST_TYPE [`:'a` |-> `:32`, `:'b` |-> `:8`,
                 `:'c` |-> `:24`, `:'d` |-> `:32`])
@@ -1114,11 +1128,14 @@ val blank_ms_def = Define `
   (blank_ms a 0 = emp) /\ 
   (blank_ms a (SUC n) = ~M a * blank_ms (a + 1w) n)`;
 
-val PASS_def = Define `PASS c x = (cond (CONDITION_PASSED2 x c))
-  :'a ARMel set->bool`;
+val blank_def = Define `
+  (blank a 0 = emp) /\
+  (blank a (SUC n) = ~ M a * blank (a-1w) n)`;
 
-val nPASS_def = Define `nPASS c x = (cond ~(CONDITION_PASSED2 x c))
-  :'a ARMel set->bool`;
+val stack_def = Define `stack a xs n = R30 13w a * ms a xs * blank (a - 1w) n`;
+
+val PASS_def = Define `PASS c x = (cond (CONDITION_PASSED2 x c)) :'a ARMel set->bool`;
+val nPASS_def = Define `nPASS c x = (cond ~(CONDITION_PASSED2 x c)) :'a ARMel set->bool`;
 
 val ARMnext_def = Define `ARMnext s = arm2set (NEXT_ARM_MEM (set2arm s))`;
 val ARMi_def    = Define `ARMi (a,x) = M a x`;
@@ -1218,6 +1235,19 @@ val mpool_eq_ms = store_thm("mpool_eq_ms",
   ``!xs (f:word30->word30) a. LENGTH xs <= 2**30 ==> (mpool ARMi a {(xs,f)} = ms (f a) xs)``,
   SIMP_TAC bool_ss [GSYM msequence_eq_ms,ARM_mpool_eq_msequence]);
 
+val blank_ms_SNOC = prove(
+  ``!n a. blank_ms a (SUC n) = blank_ms a n * ~ M (a + n2w n)``,
+  Induct THEN1 REWRITE_TAC [blank_ms_def,WORD_ADD_0,emp_STAR]
+  \\ ONCE_REWRITE_TAC [blank_ms_def]
+  \\ ASM_REWRITE_TAC [RW1[ADD_COMM]ADD1,word_add_n2w,GSYM WORD_ADD_ASSOC,STAR_ASSOC]);
+
+val blank_ms_EQ_blank = store_thm("blank_ms_EQ_blank",
+  ``!n a. blank_ms (a - n2w n) n = blank (a - 1w) n``,
+  Induct THEN1 REWRITE_TAC [blank_ms_def,blank_def]
+  \\ REWRITE_TAC [blank_ms_SNOC,blank_def,RW1[ADD_COMM]ADD1,GSYM word_add_n2w]
+  \\ ASM_REWRITE_TAC [WORD_SUB_PLUS,WORD_SUB_ADD]
+  \\ SIMP_TAC (bool_ss++star_ss) []);
+
 
 (* various lemmas -------------------------------------------------------------- *)
 
@@ -1291,6 +1321,45 @@ val run_arm2set = prove(
   \\ `!k s. run ARMnext (k,ARMnext s) = ARMnext (run ARMnext (k,s))` by 
         (Induct \\ FULL_SIMP_TAC std_ss [run_def])
   \\ ASM_REWRITE_TAC [ARMnext_def,set2arm_arm2set,NEXT_ARM_MEM_def]);
+
+val wLENGTH_CONS = store_thm("wLENGTH_CONS",
+  ``!x xs. wLENGTH (x::xs) = 1w + wLENGTH xs``,
+  REWRITE_TAC [wLENGTH_def,LENGTH,RW1[ADD_COMM]ADD1,word_add_n2w]);
+
+val SNOC_blank_ms = store_thm("SNOC_blank_ms",
+  ``(!a. blank_ms a 0 = emp) /\
+    (!a i. blank_ms a (SUC i) = blank_ms a i * ~M (a + n2w i))``,
+  STRIP_TAC THEN1 REWRITE_TAC [blank_ms_def]
+  \\ Induct_on `i` THEN1 FULL_SIMP_TAC bool_ss [blank_ms_def,emp_STAR,WORD_ADD_0]
+  \\ ONCE_REWRITE_TAC [blank_ms_def] 
+  \\ ASM_REWRITE_TAC [RW1[ADD_COMM]ADD1,word_add_n2w,GSYM WORD_ADD_ASSOC,STAR_ASSOC]);
+
+val SNOC_ms = store_thm("SNOC_ms",
+  ``(!a. ms a [] = emp) /\
+    (!a x xs. ms a (SNOC x xs) = ms a xs * M (a + wLENGTH xs) x)``,
+  STRIP_TAC THEN1 REWRITE_TAC [ms_def] \\ Induct_on `xs`
+  THEN1 FULL_SIMP_TAC bool_ss [wLENGTH_def,LENGTH,WORD_ADD_0,SNOC,ms_def,emp_STAR]
+  \\ ASM_REWRITE_TAC [SNOC,ms_def,STAR_ASSOC,wLENGTH_CONS,WORD_ADD_ASSOC]);
+
+val blank_ms_EQ_ms = store_thm("blank_ms_EQ_ms",
+  ``!a n. blank_ms a n = SEP_EXISTS xs. ms a xs * cond (LENGTH xs = n)``,
+  Induct_on `n`
+  \\ ASM_SIMP_TAC (bool_ss++sep2_ss) [blank_ms_def,LENGTH_NIL,FUN_EQ_THM]
+  \\ SIMP_TAC std_ss [SEP_EXISTS,cond_STAR,ms_def]
+  \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC << [  
+    FULL_SIMP_TAC (bool_ss++sep2_ss) [SEP_HIDE_THM]    
+    \\ FULL_SIMP_TAC std_ss [SEP_EXISTS]
+    \\ Q.EXISTS_TAC `y'::y` \\ ASM_REWRITE_TAC [LENGTH,ADD1,EQ_ADD_RCANCEL,ms_def],    
+    Cases_on `y` \\ FULL_SIMP_TAC bool_ss [LENGTH,ADD1,EQ_ADD_RCANCEL,SEP_HIDE_THM] 
+    THEN1 `F` by DECIDE_TAC \\ Q.EXISTS_TAC `t` \\ ASM_SIMP_TAC (bool_ss++sep2_ss) []
+    \\ FULL_SIMP_TAC bool_ss [ms_def,SEP_EXISTS] \\ Q.EXISTS_TAC `h`
+    \\ ASM_REWRITE_TAC []]);
+
+val SEP_IMP_ms_blank_ms = store_thm("SEP_IMP_ms_blank_ms",
+  ``!xs a. SEP_IMP (ms a xs) (blank_ms a (LENGTH xs))``,
+  Induct \\ FULL_SIMP_TAC std_ss [ms_def,blank_ms_def,LENGTH] THEN1 REWRITE_TAC [SEP_IMP_def]
+  \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC SEP_IMP_STAR \\ ASM_REWRITE_TAC [SEP_HIDE_THM] 
+  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []);
 
 
 (* theorems for ARM_RUN -------------------------------------------------------- *)
@@ -1492,6 +1561,27 @@ val ARM_GPROG_M_11 = store_thm("ARM_GPROG_M_11",
   \\ REWRITE_TAC [INSERT_BIGDISJ_PAIR]
   \\ SIMP_TAC std_ss [SEP_CONJ_OVER_DISJ,ARM_GPROG_11_LEMMA]);
 
+val ARM_GPROG_R15 = prove(
+  ``!P P' C Z. ARM_GPROG ((P * R 15w x,f) INSERT P') C Z = ARM_GPROG P' C Z``,
+  REWRITE_TAC [ARM_GPROG_THM]
+  \\ ONCE_REWRITE_TAC [GSYM 
+      (SIMP_CONV std_ss [] ``(\P' f'. P' * mpool ARMi p C * ARMpc (f' p)) P' f'``)]
+  \\ REWRITE_TAC [INSERT_BIGDISJ_PAIR]
+  \\ SIMP_TAC std_ss [ARMpc_def,R30_def,STAR_ASSOC]
+  \\ ONCE_REWRITE_TAC [ARM_RUN_R_11]
+  \\ REWRITE_TAC [SEP_CONJ_OVER_DISJ]
+  \\ MOVE_STAR_TAC `p*r*q*y*u` `(r*y)*(q*u*p)`
+  \\ REPEAT STRIP_TAC
+  \\ `!x y Q. ((R 15w x * R 15w y) * (Q * P)) /\ 
+           (SEP_FORALL a x y. SEP_NOT (R a x * R a y * SEP_T)) = SEP_F` by ALL_TAC
+  \\ ASM_REWRITE_TAC [SEP_DISJ_CLAUSES]  
+  \\ SIMP_TAC std_ss [FUN_EQ_THM,SEP_CONJ_def,SEP_F_def,SEP_FORALL,SEP_NOT_def]
+  \\ REPEAT STRIP_TAC
+  \\ Cases_on `(R 15w x * R 15w y * (Q * P)) x'`
+  \\ ASM_REWRITE_TAC []
+  \\ Q.EXISTS_TAC `15w` \\ Q.EXISTS_TAC `x` \\ Q.EXISTS_TAC `y`
+  \\ FULL_SIMP_TAC bool_ss [STAR_def,SEP_T_def] \\ METIS_TAC []);
+
 
 (* theorems for ARM_PROG ------------------------------------------------------- *)
 
@@ -1512,6 +1602,7 @@ val _ = save_ARM_PROG "ARM_PROG_MERGE" PROG_MERGE;
 val _ = save_ARM_PROG "ARM_PROG_MERGE_POST" PROG_MERGE_POST;
 val _ = save_ARM_PROG "ARM_PROG_MERGE_CODE" PROG_MERGE_CODE;
 val _ = save_ARM_PROG "ARM_PROG_ABSORB_POST" PROG_ABSORB_POST;
+val _ = save_ARM_PROG "ARM_PROG_FALSE_PRE" PROG_FALSE_PRE;
 val _ = save_ARM_PROG "ARM_PROG_FALSE_POST" PROG_FALSE_POST;
 val _ = save_ARM_PROG "ARM_PROG_STRENGTHEN_PRE" PROG_STRENGTHEN_PRE;
 val _ = save_ARM_PROG "ARM_PROG_WEAKEN_POST" PROG_WEAKEN_POST;
@@ -1524,6 +1615,7 @@ val _ = save_ARM_PROG "ARM_PROG_HIDE_POST1" PROG_HIDE_POST1;
 val _ = save_ARM_PROG "ARM_PROG_HIDE_POST" PROG_HIDE_POST;
 val _ = save_ARM_PROG "ARM_PROG_EXISTS_PRE" PROG_EXISTS_PRE;
 val _ = save_ARM_PROG "ARM_PROG_COMPOSE" PROG_COMPOSE;
+val _ = save_ARM_PROG "ARM_PROG_COMPOSE_0" PROG_COMPOSE_0;
 val _ = save_ARM_PROG "ARM_PROG_LOOP" PROG_LOOP;
 val _ = save_ARM_PROG "ARM_PROG_LOOP_MEASURE" PROG_LOOP_MEASURE;
 val _ = save_ARM_PROG "ARM_PROG_EXTRACT_POST" PROG_EXTRACT_POST;
@@ -1565,6 +1657,79 @@ val ARM_PROG_M_11 = store_thm("ARM_PROG_M_11",
       ARM_PROG P cs C Q Z = 
       ARM_PROG (P /\ SEP_FORALL a x y. SEP_NOT (M a x * M a y * SEP_T)) cs C Q Z``,
   REWRITE_TAC [ARM_PROG_THM,GSYM ARM_GPROG_M_11]);
+
+val ARM_PROG_RR = store_thm("ARM_PROG_RR",
+  ``!a x y P code C Q Z. ARM_PROG (P * R a x * R a y) code C Q Z``,
+  MOVE_STAR_TAC `q*p1*p2` `p1*p2*q` \\ ONCE_REWRITE_TAC [ARM_PROG_R_11]
+  \\ REPEAT STRIP_TAC
+  \\ `(R a x * R a y * P /\ SEP_FORALL a x y. SEP_NOT (R a x * R a y * SEP_T)) = SEP_F`
+        by ALL_TAC \\ ASM_REWRITE_TAC [ARM_PROG_INST PROG_FALSE_PRE]
+  \\ SIMP_TAC std_ss [FUN_EQ_THM,SEP_CONJ_def,SEP_F_def,SEP_FORALL,SEP_NOT_def]
+  \\ REPEAT STRIP_TAC \\ Cases_on `(R a x * R a y * P) x'` \\ ASM_REWRITE_TAC []
+  \\ Q.EXISTS_TAC `a` \\ Q.EXISTS_TAC `x` \\ Q.EXISTS_TAC `y`
+  \\ FULL_SIMP_TAC bool_ss [STAR_def,SEP_T_def] \\ METIS_TAC []);  
+
+val ARM_PROG_R15 = store_thm("ARM_PROG_R15",
+  ``!x P code C Q Z. ARM_PROG (P * R 15w x) code C Q Z``,
+  REWRITE_TAC [ARM_PROG_THM,ARM_GPROG_R15]
+  \\ REWRITE_TAC [ARM_GPROG_THM] \\ REPEAT STRIP_TAC
+  \\ `{P * mpool ARMi p ((code,I) INSERT C) * ARMpc (f p) |(P,f)| (P,f) IN {}} = {}` by 
+       (SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY]  
+        \\ REPEAT STRIP_TAC \\ Cases_on `x'` \\ FULL_SIMP_TAC std_ss [])
+  \\ ASM_REWRITE_TAC [SEP_BIGDISJ_CLAUSES,ARM_RUN_THM,F_STAR]
+  \\ SIMP_TAC std_ss [RES_FORALL,SEP_F_def]);
+
+val ARM_PROG_CONTAINS_M_STAR_M = store_thm("ARM_PROG_CONTAINS_M_STAR_M",
+  ``!xs a P C Q Z.
+      SEP_CONTAINS (M i x * M i y) P ==> (ARM_PROG P code C Q Z = T)``,
+  REWRITE_TAC [SEP_CONTAINS_def] \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC []
+  \\ MATCH_MP_TAC (ARM_PROG_INST PROG_STRENGTHEN_PRE)
+  \\ Q.EXISTS_TAC `M i x * M i y * SEP_T` \\ STRIP_TAC
+  THEN1 (MATCH_MP_TAC (ONCE_REWRITE_RULE[STAR_COMM]SEP_IMP_FRAME)  
+    \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_T_def])
+  \\ ONCE_REWRITE_TAC [ARM_PROG_M_11]
+  \\ MATCH_MP_TAC (ARM_PROG_INST PROG_STRENGTHEN_PRE)
+  \\ Q.EXISTS_TAC `SEP_F` \\ REWRITE_TAC [ARM_PROG_INST PROG_FALSE_PRE]
+  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_FORALL,SEP_CONJ_def,SEP_NOT_def]
+  \\ METIS_TAC []);
+
+val SUC_LE_LENGTH = prove(
+  ``!xs m. SUC m <= LENGTH xs ==> ?ys z zs. (xs = ys ++ z::zs) /\ (LENGTH ys = m)``,
+  Induct \\ REWRITE_TAC [LENGTH,DECIDE ``~(n+1 <= 0)``,ADD1,LE_ADD_RCANCEL]
+  \\ STRIP_TAC \\ Cases \\ STRIP_TAC << [  
+    Q.EXISTS_TAC `[]` \\ Q.EXISTS_TAC `h` \\ Q.EXISTS_TAC `xs`
+    \\ REWRITE_TAC [APPEND_NIL,LENGTH,APPEND],
+    Q.PAT_ASSUM `!x.b` IMP_RES_TAC \\ ASM_REWRITE_TAC []
+    \\ Q.EXISTS_TAC `h::ys` \\ Q.EXISTS_TAC `z` \\ Q.EXISTS_TAC `zs`
+    \\ ASM_REWRITE_TAC [APPEND,LENGTH]]);
+
+val ms_APPEND = store_thm("ms_APPEND",
+  ``!xs ys a. ms a (xs ++ ys) = ms a xs * ms (a + wLENGTH xs) ys``,
+  Induct \\ REWRITE_TAC [APPEND_NIL,ms_def,emp_STAR,wLENGTH_def,LENGTH,WORD_ADD_0]
+  \\ REWRITE_TAC [ONCE_REWRITE_RULE[ADD_COMM]ADD1,
+      GSYM word_add_n2w,WORD_ADD_ASSOC,GSYM STAR_ASSOC]
+  \\ ASM_REWRITE_TAC [APPEND,ms_def,wLENGTH_def]);
+
+val ARM_PROG_CONTAINS_ms = store_thm("ARM_PROG_CONTAINS_ms",
+  ``!xs a P C Q Z.
+      SEP_CONTAINS (ms a xs) P ==>
+      ((LENGTH xs <= 2**30 ==> ARM_PROG P code C Q Z) = ARM_PROG P code C Q Z)``,
+  NTAC 6 STRIP_TAC \\ Cases_on `LENGTH xs <= 2**30` \\ ASM_REWRITE_TAC [] 
+  \\ FULL_SIMP_TAC bool_ss [NOT_LEQ] \\ IMP_RES_TAC SUC_LE_LENGTH
+  \\ Cases_on `ys` THEN1 FULL_SIMP_TAC std_ss [LENGTH]
+  \\ ASM_REWRITE_TAC [ms_APPEND,wLENGTH_def]
+  \\ `n2w (2**30) = 0w:word30` by 
+   (ONCE_REWRITE_TAC [GSYM n2w_mod] \\ REWRITE_TAC [dimword_def]
+    \\ SIMP_TAC (bool_ss++wordsLib.SIZES_ss) []
+    \\ SIMP_TAC bool_ss [DIVMOD_ID,LESS_MOD,EVAL ``0<2**30``])
+  \\ ASM_REWRITE_TAC [WORD_ADD_0]
+  \\ REWRITE_TAC [ms_def]
+  \\ REPEAT STRIP_TAC
+  \\ `SEP_CONTAINS (M a h * M a z) P` by ALL_TAC << [
+    FULL_SIMP_TAC bool_ss [SEP_CONTAINS_def]
+    \\ Q.EXISTS_TAC `ms (a + 1w) t * ms (a + 1w) zs * F'`
+    \\ SIMP_TAC (bool_ss++star_ss) [],
+    IMP_RES_TAC ARM_PROG_CONTAINS_M_STAR_M \\ ASM_REWRITE_TAC []]);
 
 
 (* theorems for ARM_PROC ------------------------------------------------------- *)

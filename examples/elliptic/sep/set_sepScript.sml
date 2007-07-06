@@ -44,6 +44,8 @@ val SEP_ADD_def = Define `SEP_ADD P Q = SEP_CONJ (STAR P SEP_T) (STAR Q SEP_T)`;
 val SEP_IMP_def  = Define `SEP_IMP P Q = !s. P s ==> Q s`;
 val SEP_IMP2_def  = Define `SEP_IMP2 (P,P') (Q,Q') = SEP_IMP P Q /\ SEP_IMP Q Q'`;
 
+val SEP_CONTAINS_def = Define `SEP_CONTAINS P Q = ?F. Q = P * F`;
+
 val _ = overload_on ("/\\",Term`SEP_CONJ`);
 val _ = overload_on ("\\/",Term`SEP_DISJ`);
 
@@ -338,6 +340,21 @@ val SEP_IMP_MOVE_COND = store_thm("SEP_IMP_MOVE_COND",
   \\ REWRITE_TAC [SEP_IMP_def,cond_STAR]
   \\ METIS_TAC []);
 
+val SEP_IMP_emp = store_thm("SEP_IMP_emp",
+  ``!P. SEP_IMP emp P = P {}``,SIMP_TAC std_ss [SEP_IMP_def,emp_def]);
+
+val SEP_IMP_cond = store_thm("SEP_IMP_cond",
+  ``!g h. SEP_IMP (cond g) (cond h) = g ==> h``,
+  SIMP_TAC std_ss [SEP_IMP_def,cond_def]);
+
+val SEP_IMP_STAR = store_thm("SEP_IMP_STAR",
+  ``!P P' Q Q'. SEP_IMP P P' /\ SEP_IMP Q Q' ==> SEP_IMP (P * Q) (P' * Q')``,
+  SIMP_TAC std_ss [SEP_IMP_def,STAR_def] \\ METIS_TAC []);
+
+val SEP_IMP_EQ = store_thm("SEP_IMP_EQ",
+  ``!P Q. (P = Q) = SEP_IMP P Q /\ SEP_IMP Q P``,
+  FULL_SIMP_TAC bool_ss [SEP_IMP_def,FUN_EQ_THM] \\ METIS_TAC []);
+
 val SEP_DISJ_ASSOC = store_thm("SEP_DISJ_ASSOC",
   ``!P Q R. P \/ Q \/ R = (P \/ Q) \/ (R:'a set->bool)``,
   SRW_TAC [] [FUN_EQ_THM,SEP_DISJ_def,DISJ_ASSOC]);
@@ -385,6 +402,9 @@ val SEP_cond_CLAUSES = store_thm("SEP_cond_CLAUSES",
   \\ SRW_TAC [] [cond_def,STAR_def,SEP_DISJ_def,SEP_CONJ_def,
          IN_DEF,SPLIT_def,DISJOINT_DEF,EMPTY_DEF,emp_def,SEP_F_def]
   \\ SIMP_TAC bool_ss [] \\ METIS_TAC [NOT_IN_EMPTY]);
+
+val cond_EMPTY = store_thm("cond_EMPTY",
+  ``!g. cond g {} = g``,SIMP_TAC std_ss [cond_def]);
 
 val T_STAR_T = store_thm("T_STAR_T",
   ``SEP_T * SEP_T = SEP_T``,
@@ -507,6 +527,18 @@ val STAR_OVER_BIGCONJ_LEFT = store_thm("STAR_OVER_BIGCONJ_LEFT",
 val SEP_HIDE_INTRO = store_thm("SEP_HIDE_INTRO",
   ``!P Q x s. SEP_IMP (P * Q x) (P * ~ Q)``,
   SRW_TAC [] [STAR_def,SEP_HIDE_def,SEP_IMP_def] \\ METIS_TAC []); 
+
+val SEP_CONTAINS_STAR = store_thm("SEP_CONTAINS_STAR",
+  ``!P Q. SEP_CONTAINS P (Q * P)``,
+  ONCE_REWRITE_TAC [STAR_SYM] \\ SIMP_TAC bool_ss [SEP_CONTAINS_def]
+  \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `Q` \\ REWRITE_TAC []);
+  
+val SEP_CONTAINS_CLAUSES = store_thm("SEP_CONTAINS_CLAUSES",
+  ``!P Q. SEP_CONTAINS P P /\ SEP_CONTAINS P (P * Q) /\ SEP_CONTAINS P (Q * P)``,
+  REWRITE_TAC [SEP_CONTAINS_def] \\  REPEAT STRIP_TAC
+  THEN1 (Q.EXISTS_TAC `emp` \\ REWRITE_TAC [emp_STAR])
+  THEN1 (Q.EXISTS_TAC `Q` \\ REWRITE_TAC [emp_STAR])
+  THEN1 (Q.EXISTS_TAC `Q` \\ METIS_TAC [STAR_SYM]));
 
 
 (* ----------------------------------------------------------------------------- *)

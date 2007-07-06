@@ -558,6 +558,32 @@ val RUN_LOOP = store_thm("RUN_LOOP",
   \\ Q.EXISTS_TAC `k' + k`
   \\ FULL_SIMP_TAC std_ss [run_ADD]);
 
+val RUN_FRAME_LOOP = store_thm("RUN_FRAME_LOOP",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      (!y. RUN x (P y) (Q y \/ (P (g y) * h y))) ==>
+      (!y s. P y s ==> m (g y) < (m y):num) ==>
+      (!y. SEP_IMP (Q ((g:'d->'d) y) * h y) (Q y)) ==>
+      (!y. RUN x (P y) (Q y))``,
+  INIT_TAC \\ REPEAT STRIP_TAC \\ completeInduct_on `m y` \\ REPEAT STRIP_TAC
+  \\ FULL_SIMP_TAC std_ss [RUN_def,RES_FORALL] \\ REPEAT STRIP_TAC
+  \\ Q.PAT_ASSUM `!y s. s IN set ==> !R. b` (STRIP_ASSUME_TAC o
+       SIMP_RULE std_ss [SEP_DISJ_def] o REWRITE_RULE [GSYM STAR_OVER_DISJ] o 
+       UNDISCH o Q.SPEC `R` o UNDISCH o Q.SPECL [`y`,`s`])
+  THEN1 (Q.EXISTS_TAC `k` \\ ASM_REWRITE_TAC [])
+  \\ `m (g y) < m y` by   
+    (Q.PAT_ASSUM `!y s. b` MATCH_MP_TAC
+     \\ FULL_SIMP_TAC bool_ss [STAR_def] \\ METIS_TAC [])
+  \\ `run n (k,s) IN set` by METIS_TAC [run_IN_set]  
+  \\ Q.PAT_ASSUM `!m'. m' < m y ==> b` (STRIP_ASSUME_TAC o
+     UNDISCH o REWRITE_RULE [STAR_ASSOC,run_ADD] o Q.SPECL [`h (y:'d) * R`] o
+     UNDISCH o Q.SPEC `run n (k,s)` o UNDISCH o REWRITE_RULE [] o
+     Q.SPECL [`m`,`g:'d->'d y`] o UNDISCH o Q.SPEC `m (g:'d->'d y)`)
+  \\ `SEP_IMP (Q (g y) * h y) (Q y)` by METIS_TAC []
+  \\ IMP_RES_TAC SEP_IMP_FRAME
+  \\ Q.PAT_ASSUM `!R. SEP_IMP b (Q y * R)` (STRIP_ASSUME_TAC o UNDISCH o
+       Q.SPEC `run n (k' + k,s)` o REWRITE_RULE [SEP_IMP_def] o Q.SPEC `R`)
+  \\ Q.EXISTS_TAC `k'+k` \\ ASM_REWRITE_TAC []);
+
 val RUN_FRAME' = RES_SPEC' RUN_FRAME;
 val RUN_STRENGTHEN_PRE' = RES_SPEC' RUN_STRENGTHEN_PRE;
 val RUN_WEAKEN_POST' = RES_SPEC' RUN_WEAKEN_POST;
@@ -957,6 +983,18 @@ val PROG_MERGE_POST = store_thm("PROG_MERGE_POST",
   \\ ASM_SIMP_TAC std_ss [GSYM (UNDISCH (GPROG_MERGE_POST'))]
   \\ METIS_TAC [INSERT_COMM]);
 
+val PROG_FALSE_PRE = store_thm("PROG_FALSE_PRE",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      !cs C Q Z. 
+        PROG x SEP_F cs C Q Z = T``,
+  INIT_TAC \\ ASM_SIMP_TAC bool_ss [PROG_def,GPROG_FALSE_PRE'] 
+  \\ REWRITE_TAC [GPROG_def] \\ NTAC 4 STRIP_TAC
+  \\ `!p. {P * mpool i p ((cs,I) INSERT C) * pc (f p) | (P,f) IN {}} = {}` by
+      (STRIP_TAC \\ SIMP_TAC std_ss [GSPECIFICATION,EXTENSION,NOT_IN_EMPTY]
+       \\ STRIP_TAC \\ Cases \\ SIMP_TAC std_ss [])
+  \\ ASM_REWRITE_TAC [SEP_BIGDISJ_CLAUSES]
+  \\ REWRITE_TAC [RUN_def,F_STAR] \\ REWRITE_TAC [SEP_F_def,RES_FORALL]);
+
 val PROG_FALSE_POST = store_thm("PROG_FALSE_POST",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !P cs C f Q Z. 
@@ -1092,6 +1130,19 @@ val PROG_COMPOSE = store_thm("PROG_COMPOSE",
   \\ REWRITE_TAC [setINC_def,setADD_def]  
   \\ MATCH_MP_TAC (UNDISCH GPROG_SHIFT')
   \\ ASM_REWRITE_TAC []);
+
+val PROG_COMPOSE_0 = store_thm("PROG_COMPOSE_0",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      !P Q Q' cs C Z. 
+        PROG x P cs C Q ((Q',pcADD 0w) INSERT Z) /\ PROG x Q' cs C Q Z ==>
+        PROG x P cs C Q Z``,
+  INIT_TAC \\ REWRITE_TAC [PROG_def,pcADD_0,GSYM AND_IMP_INTRO]
+  \\ REWRITE_TAC [prove(``!x y z. x INSERT y INSERT z = (x INSERT z) UNION {y}``, 
+    SIMP_TAC bool_ss [INSERT_UNION_EQ,ONCE_REWRITE_RULE[UNION_COMM]INSERT_UNION_EQ,UNION_EMPTY])]
+  \\ NTAC 7 STRIP_TAC
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [GSYM (Q.ISPEC `{(Q',I)}` (CONJUNCT2 UNION_EMPTY))]))
+  \\ REPEAT STRIP_TAC \\ IMP_RES_TAC GPROG_COMPOSE'
+  \\ FULL_SIMP_TAC bool_ss [UNION_IDEMPOT,UNION_EMPTY]);
 
 val PROG_LOOP = store_thm("PROG_LOOP",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
