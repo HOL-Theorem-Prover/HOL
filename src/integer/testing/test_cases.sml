@@ -247,6 +247,23 @@ val omega_test_terms = [
        i < 2147483648 ==> i < (i + 1) MOD 2147483648``, "MATTHEWS_N2^31")
 ]
 
+val cooper_test_terms = [
+  L (``?s:int e n d m oh r y.
+        0 <= s /\ s <= 9 /\ 0 <= e /\ e <= 9 /\ 0 <= n /\ n <= 9 /\
+        0 <= d /\ d <= 9 /\ 0 <= m /\ m <= 9 /\ 0 <= oh /\ oh <= 9 /\
+        0 <= r /\ r <= 9 /\ 0 <= y /\ y <= 9 /\ ~(s = e) /\ ~(s = n) /\
+        ~(s = d) /\ ~(s = m) /\ ~(s = oh) /\ ~(s = r) /\ ~(s = y) /\
+        ~(e = n) /\ ~(e = d) /\ ~(e = m) /\ ~(e = oh) /\ ~(e = r) /\
+        ~(e = y) /\ ~(n = d) /\ ~(n = m) /\ ~(n = oh) /\ ~(n = r) /\
+        ~(n = y) /\ ~(d = m) /\ ~(d = oh) /\ ~(d = r) /\ ~(d = y) /\
+        ~(m = oh) /\ ~(m = r) /\ ~(m = y) /\ ~(oh = r) /\ ~(oh = y) /\
+        ~(r = y) /\
+        (1000 * s + 100 * e + 10 * n + d + 1000 * m + 100 * oh + 10 * r +
+         e =
+         10000 * m + 1000 * oh + 100 * n + 10 * e + y)``,
+     "SEND_MORE_MONEY")
+]
+
 val goals_to_test = [
   ("van Leeuwen",
    ([``0i <= i``, ``i :int < maxchar``,
@@ -282,5 +299,9 @@ fun perform_tests conv tactic =
 fun perform_omega_tests conv =
     (print "Testing Omega terms\n";
      List.all (test_term conv) omega_test_terms)
+
+fun perform_cooper_tests conv =
+    (print "Testing Cooper terms\n";
+     List.all (test_term conv) cooper_test_terms)
 
 end; (* struct *)

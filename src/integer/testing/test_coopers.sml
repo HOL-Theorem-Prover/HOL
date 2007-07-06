@@ -3,7 +3,9 @@ open HolKernel Parse;
 prim_val catch_interrupt : bool -> unit = 1 "sys_catch_break";
 val _ = catch_interrupt true;
 
-val result = test_cases.perform_tests Cooper.COOPER_CONV Cooper.COOPER_TAC
+val result =
+    test_cases.perform_tests Cooper.COOPER_CONV Cooper.COOPER_TAC andalso
+    test_cases.perform_cooper_tests Cooper.COOPER_CONV
 val _ =
     case CommandLine.arguments() of
       [] => ()
