@@ -249,8 +249,8 @@ val omega_test_terms = [
 
 val cooper_test_terms = [
   L (``?s:int e n d m oh r y.
-        0 <= s /\ s <= 9 /\ 0 <= e /\ e <= 9 /\ 0 <= n /\ n <= 9 /\
-        0 <= d /\ d <= 9 /\ 0 <= m /\ m <= 9 /\ 0 <= oh /\ oh <= 9 /\
+        0 < s /\ s <= 9 /\ 0 <= e /\ e <= 9 /\ 0 <= n /\ n <= 9 /\
+        0 <= d /\ d <= 9 /\ 0 < m /\ m <= 9 /\ 0 <= oh /\ oh <= 9 /\
         0 <= r /\ r <= 9 /\ 0 <= y /\ y <= 9 /\ ~(s = e) /\ ~(s = n) /\
         ~(s = d) /\ ~(s = m) /\ ~(s = oh) /\ ~(s = r) /\ ~(s = y) /\
         ~(e = n) /\ ~(e = d) /\ ~(e = m) /\ ~(e = oh) /\ ~(e = r) /\
