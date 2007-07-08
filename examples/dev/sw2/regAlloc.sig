@@ -7,10 +7,8 @@ sig
      | Spill of term (* spilled variable *)
 
   val DEBUG : bool ref
-  val allregs : term list
-  val reg_sp : term
-  val reg_hp : term
+  val numRegs : int ref
   val regL : term list ref
-  val alloc_mem : term -> term
+  val reset : unit -> unit
   val reg_alloc : thm -> thm
 end
