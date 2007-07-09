@@ -2,7 +2,7 @@
 (* A version of TEA, taken from examples/Crypto/TEA                          *)
 (*---------------------------------------------------------------------------*)
 
-use "prelim";
+use "prelim";  (* use the one under the "sw2" directory *)
 
 (*---------------------------------------------------------------------------*)
 (* Cipher types                                                              *)
@@ -118,6 +118,7 @@ fun pass1 def = SSA_RULE (normalize def);
 val sxor_def = pass1 ShiftXor_def;
 val rnd_def  = pass1 Round_def;
 val rnds_def = pass1 Rounds_def;
+val encrypt_def = pass1 TEAEncrypt_def;
 
 (*---------------------------------------------------------------------------*)
 (* All previous, plus inlining and optimizations                             *)
@@ -176,9 +177,9 @@ fun pass4 def =
 val sxor_fil  = pass4 ShiftXor_def;
 val rnd_fil  = pass4 Round_def;
 val rnds_fil = pass4 Rounds_def;
+val encrypt_fil = pass4 TEAEncrypt_def;
 
 (* results:
-val sxor_fil =
     |- ShiftXor =
        (\(r0,r1,r2,r3).
           (let r4 = r0 << 4 in
@@ -190,7 +191,6 @@ val sxor_fil =
            let r0 = r2 ?? r0 in
              r0)) : thm
 
- val rnd_fil =
     |- Round =
        (\((r0,r1),(r2,r3,r4,r5),r6).
           (let r6 = r6 + DELTA in
@@ -200,7 +200,6 @@ val sxor_fil =
            let r1 = r1 + r7 in
              ((r0,r1),(r2,r3,r4,r5),r6))) : thm
 
-val rnds_fil =
     |- Rounds =
        (\(r0,(r1,r2),(r3,r4,r5,r6),r7).
           (let ((r0,r1),(r2,r3,r4,r5),r6) =
@@ -217,6 +216,14 @@ val rnds_fil =
                        ((r0,r1),(r2,r3,r4,r5),r6)))
            in
              ((r0,r1),(r2,r3,r4,r5),r6))) : thm
+
+ |- TEAEncrypt =
+       (\((r0,r1,r2,r3),r4,r5).
+          (let ((r0,r1),(r2,r3,r4,r5),r6) =
+                 Rounds (2w,(r4,r5),(r0,r1,r2,r3),0w)
+           in
+             (r0,r1))) : thm
+
 *)
 
 
@@ -226,42 +233,124 @@ val rnds_fil =
 (* --------------------------------------------------------------------*)
 
 numRegs := 4;
-reset();
 
 val rnd_fil  = pass4 Round_def;
 val rnds_fil = pass4 Rounds_def;
+val encrypt_fil = pass4 TEAEncrypt_def;
 
 Results:
-|- Round =
+ |- Round =
        (\((r0,r1),(r2,r3,m1,m2),m3).
           (let m4 = r2 in
            let r2 = m3 in
            let r2 = r2 + DELTA in
-           let m5 = r3 in
-           let m6 = r2 in
-           let r3 = ShiftXor (r1,r2,m4,m5) in
+           let m3 = r3 in
+           let r3 = ShiftXor (r1,r2,m4,m3) in
            let r0 = r0 + r3 in
            let r3 = ShiftXor (r0,r2,m1,m2) in
            let r1 = r1 + r3 in
-             ((r0,r1),(m4,m5,m1,m2),r2))) : thm
+             ((r0,r1),(m4,m3,m1,m2),r2))) : thm
 
-val rnds_fil =
-    |- Rounds =
-       (\(r0,(r1,r2),(r3,m7,m8,m9),m10).
-          (let ((r0,r1),(r2,r3,m18,m19),m20) =
+
+ |- Rounds =
+       (\(r0,(r1,r2),(r3,m1,m2,m3),m4).
+          (let ((r0,r1),(r2,r3,m1,m2),m3) =
                  (if r0 = 0w then
-                    ((r1,r2),(r3,m7,m8,m9),m10)
+                    ((r1,r2),(r3,m1,m2,m3),m4)
                   else
                     (let r0 = r0 - 1w in
-                     let ((r1,r2),(r3,m11,m12,m13),m14) =
-                           Round ((r1,r2),(r3,m7,m8,m9),m10)
+                     let ((r1,r2),(r3,m4,m5,m6),m7) =
+                           Round ((r1,r2),(r3,m1,m2,m3),m4)
                      in
-                     let ((r0,r1),(r2,r3,m15,m16),m17) =
-                           Rounds (r0,(r1,r2),(r3,m11,m12,m13),m14)
+                     let ((r0,r1),(r2,r3,m4,m5),m6) =
+                           Rounds (r0,(r1,r2),(r3,m4,m5,m6),m7)
                      in
-                       ((r0,r1),(r2,r3,m15,m16),m17)))
+                       ((r0,r1),(r2,r3,m4,m5),m6)))
            in
-             ((r0,r1),(r2,r3,m18,m19),m20))) : thm
+             ((r0,r1),(r2,r3,m1,m2),m3))) : thm
 
+ |- TEAEncrypt =
+       (\((r0,r1,r2,r3),m1,m2).
+          (let ((r0,r1),(r2,r3,m1,m1),m1) =
+                 Rounds (2w,(m1,m2),(r0,r1,r2,r3),0w)
+           in
+             (r0,r1))) : thm
 *)
 
+(* --------------------------------------------------------------------*)
+(* An extreme configuration:                                           *)
+(* Suppose we have only 2 registers available                          *)
+(* We should have at least 2 registers when binary operations are      *)
+(* presented in the program (e.g. add * * * needs 2-3 registers).      *)
+(* --------------------------------------------------------------------*)
+
+numRegs := 2;
+
+val sxor_fil  = pass4 ShiftXor_def;
+val rnd_fil  = pass4 Round_def;
+val rnds_fil = pass4 Rounds_def;
+val encrypt_fil = pass4 TEAEncrypt_def;
+
+(*
+ |- ShiftXor =
+       (\(r0,r1,m1,m2).
+          (let m3 = r0 in
+           let r0 = m3 in
+           let r0 = r0 << 4 in
+           let m4 = r1 in
+           let r1 = m1 in
+           let r0 = r0 + r1 in
+           let r1 = m3 in
+           let m1 = r0 in
+           let r0 = m4 in
+           let r0 = r1 + r0 in
+           let r1 = m3 in
+           let r1 = r1 >> 5 in
+           let m3 = r0 in
+           let r0 = m2 in
+           let r0 = r1 + r0 in
+           let r1 = m3 in
+           let r0 = r1 ?? r0 in
+           let r1 = m1 in
+           let r0 = r1 ?? r0 in
+             r0)) : thm
+
+ |- Round =
+       (\((r0,r1),(m1,m2,m3,m4),m5).
+          (let m6 = r1 in
+           let r1 = m5 in
+           let r1 = r1 + DELTA in
+           let m5 = r1 in
+           let r1 = ShiftXor (m6,m5,m1,m2) in
+           let r0 = r0 + r1 in
+           let r1 = ShiftXor (r0,m5,m3,m4) in
+           let m7 = r0 in
+           let r0 = m6 in
+           let r0 = r0 + r1 in
+             ((m7,r0),(m1,m2,m3,m4),m5))) : thm
+
+ |- Rounds =
+       (\(r0,(r1,m1),(m2,m3,m4,m5),m6).
+          (let ((r0,r1),(m1,m2,m3,m4),m5) =
+                 (if r0 = 0w then
+                    ((r1,m1),(m2,m3,m4,m5),m6)
+                  else
+                    (let r0 = r0 - 1w in
+                     let ((r1,m6),(m7,m8,m9,m10),m11) =
+                           Round ((r1,m1),(m2,m3,m4,m5),m6)
+                     in
+                     let ((r0,r1),(m6,m7,m8,m9),m10) =
+                           Rounds (r0,(r1,m6),(m7,m8,m9,m10),m11)
+                     in
+                       ((r0,r1),(m6,m7,m8,m9),m10)))
+           in
+             ((r0,r1),(m1,m2,m3,m4),m5))) : thm
+
+ |- TEAEncrypt =
+       (\((r0,r1,m1,m2),m3,m4).
+          (let ((r0,r1),(m1,m1,m1,m1),m1) =
+                 Rounds (2w,(m3,m4),(r0,r1,m1,m2),0w)
+           in
+             (r0,r1))) : thm
+
+*)

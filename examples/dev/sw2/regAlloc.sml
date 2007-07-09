@@ -67,6 +67,7 @@ val tStrm = ref (Lib.mk_istream (fn x => x+1) 0 (num2name "t"))
 
 fun reset_mvar () = mStrm := Lib.mk_istream (fn x => x+1) 0 (num2name "m")
 fun next_mvar () = mk_var (state(next (!mStrm)), !VarType)
+fun cur_mvar() = state(!mStrm)
 fun reset_tvar () = tStrm := Lib.mk_istream (fn x => x+1) 0 (num2name "t")
 fun next_tvar () = mk_var (state(next (!tStrm)), !VarType)
 
@@ -229,7 +230,7 @@ fun list_mem x xs =
 (* --------------------------------------------------------------------*)
 
 fun save x exp regenv =
-  let val v = next_mvar ()
+  let val v = next_mvar()
       val regenv1 = M.insert(regenv, x, v)    (* x is spilled to memory *)
       val _ = if !DEBUG then 
                 print ("saving " ^ term_to_string x ^ " to " ^ term_to_string v ^"\n")
@@ -315,10 +316,18 @@ and
                      let val op_vars = free_vars N
                      in
 		       (if list_mem y op_vars then
-			 ToSpill (exp, [#1 (valOf(List.find (fn (key,value) => 
-					  is_reg value andalso not (list_mem key op_vars)) (M.listItems(env))))])
+                         ToSpill (exp, [#1 (valOf(List.find (fn (key,value) =>
+                                          is_reg value andalso not (list_mem key op_vars)) (M.listItems(env))))])
+                       else ToSpill (exp, [y]))
+                       handle _ => ToSpill (exp, [y])
+(*
+		       (if list_mem y op_vars then
+			 ToSpill (exp, [valOf(List.find (fn t => 
+					  is_reg (M.find(regenv1,t)) andalso not (list_mem t op_vars)
+					  handle _ => false) (free_vars cont'))])
 		       else ToSpill (exp, [y]))
                        handle _ => ToSpill (exp, [y])
+*)
                      end
               |  (Alloc(r), env) => 
 		     let val (exp2,env') = g_repeat dest cont env N
@@ -328,7 +337,7 @@ and
 		   (case (g dest cont env N) of
                      ToSpill(e2, ys) =>
                        if list_mem x ys then
-                          let val (e',regenv') = save x e2 (add x r regenv1)
+                          let val (e',regenv') = save x e2 (add x r regenv1) cont
                               val x_saved = concat exp1 r e' in
                             (case List.filter (fn y => y <> x) ys of
                                   []      => g dest cont regenv' x_saved
@@ -396,6 +405,89 @@ g'_if dest cont regenv exp constr e1 e2 =
 *)
 
 (* --------------------------------------------------------------------*)
+(* Reduce the number of memory slots                                   *)
+(* --------------------------------------------------------------------*)
+
+(* The first available memory slot that doesn't conflict with live "slots" *)
+fun first_avail_slot env cont = 
+  let 
+      fun indexOfSlot s = valOf(Int.fromString(String.substring(s, 1, String.size s - 1)))
+
+      val live = List.foldl (fn (t,ts) => 
+			     let val x = M.find(env,t) in 
+				 if is_mem x then x ::ts else ts end handle _ => ts) [] (free_vars cont)
+      val max_slot = indexOfSlot(state(!mStrm))
+      fun candidate i =  (* the first available register *)
+        if i > max_slot then next_mvar()
+        else
+          let val cur_slot = mk_var("m" ^ Int.toString i, !VarType)
+          in if list_mem cur_slot live then
+	        candidate (i+1)
+             else cur_slot
+          end
+  in
+     candidate 1
+  end
+
+fun alloc_mem (args,body) =
+  let
+     val body' = rhs (concl (SIMP_CONV bool_ss [ELIM_USELESS_LET] body)) handle _ => body
+     val (save,loc) = (mk_const("save", mk_type("fun",[!VarType, !VarType])),
+		       mk_const("loc", mk_type("fun",[!VarType, !VarType])))
+
+     fun trav t env cont =
+       if is_let t then
+           let val (v,M,N) = dest_plet t
+           in 
+              if is_mem v then
+                let val v' = first_avail_slot env (mk_pair(N,cont))
+                    val M' = mk_comb (save, M)
+                    val env' = M.insert (env, v, v')
+                    val N' = trav N env' cont
+                in
+                    mk_plet (v', M', N')
+                end
+              else if is_var M andalso is_mem M then
+                let val M' = mk_comb (loc, M.find (env, M))
+                    val N' = trav N env cont
+                in
+                    mk_plet (v, M', N')
+                end
+              else if is_pair v then 
+		let val cont' = mk_pair(N,cont)
+		    val (v',env') = 
+		        List.foldl (fn (x, (w, env')) => 
+		          if not (is_mem x) then (w,env')
+		          else 
+                            let val x' = first_avail_slot env' cont'
+                            in (subst [x |-> x'] w, M.insert(env', x, x'))
+                            end) (v,env) (strip_pair v)
+                in
+                    mk_plet (v', trav M env' cont', trav N env' cont)
+                end
+              else mk_plet (v, trav M env cont, trav N env cont)
+            end
+       else if is_comb t then
+            let val (M1,M2) = dest_comb t
+                val M1' = trav M1 env cont
+                val M2' = trav M2 env cont
+            in mk_comb(M1',M2')
+            end
+       else if is_mem t then
+           mk_comb (loc, M.find (env, t) handle _ => t)
+       else t
+
+     val memenv = List.foldl (fn (t, m) => if is_mem t then (next_mvar(); M.insert(m,t,t)) else m) (M.mkDict tvarOrder) (strip_pair args)
+     fun move_mindex i = if i = M.numItems memenv then () else (next_mvar();move_mindex (i + 1))
+
+  in
+     (reset_mvar ();
+      move_mindex 0;
+      trav body' memenv ``()``
+     )
+  end;
+
+(* --------------------------------------------------------------------*)
 (* Register Allocation                                                 *)
 (* --------------------------------------------------------------------*)
 
@@ -415,49 +507,11 @@ fun args_env args =
        #2 (List.foldl assgn_v (0, M.mkDict tvarOrder) argL)
    end
 
-fun alloc_mem (args,body) =
-  let
-     fun trav t env =
-       if is_let t then
-           let val (v,M,N) = dest_plet t
-           in 
-              if is_mem v then
-                let val v' = if M.peek(env,v) = NONE then next_mvar () else v
-                    val M' = mk_comb (inst [alpha |-> type_of M] ``save``, M)
-                    val env' = M.insert (env, v, v')
-                    val N' = trav N env'
-                in
-                    mk_plet (v', M', N')
-                end
-              else if is_var M andalso is_mem M then
-                let val M' = mk_comb (inst [alpha |-> type_of M] ``loc``, M.find (env, M))
-                    val N' = trav N env
-                in
-                    mk_plet (v, M', N')
-                end
-              else mk_plet (v, trav M env, trav N env)
-            end
-       else if is_comb t then
-            let val (M1,M2) = dest_comb t
-                val M1' = trav M1 env
-                val M2' = trav M2 env
-            in mk_comb(M1',M2')
-            end
-       else if is_mem t then
-           mk_comb (inst [alpha |-> !VarType] ``loc``, M.find (env, t) handle _ => t)
-       else t
-
-     val _ = reset_mvar ();
-     val memenv = List.foldl (fn (t, m) => if is_mem t then (next_mvar(); M.insert(m,t,t)) else m) (M.mkDict tvarOrder) (strip_pair args)
-  in
-     trav body memenv
-  end;
-
-
 fun reg_alloc def =
   let
     val (fname, fbody) = dest_eq (concl def)
     val (args,body) = dest_pabs fbody
+    val _ = reset()
     val regenv = args_env args
     val args1 = subst (tuple_subst_rules (strip_pair args) regenv) args
     val dest = hd (!regL); (* assgn_exp (last_exp body) *)

@@ -2,8 +2,8 @@
 (* Interactive access to the compiler                                        *)
 (*---------------------------------------------------------------------------*)
 
-app load ["basic", "NormalTheory", "Normal", "inline", "closure", "regAlloc"];
+app load ["NormalTheory", "Normal", "inline", "closure", "regAlloc"];
 
 quietdec := true;
-open HolKernel Parse boolLib bossLib pairLib pairSyntax PairRules basic NormalTheory Normal inline closure regAlloc;
+open HolKernel Parse boolLib bossLib pairLib pairSyntax PairRules NormalTheory Normal inline closure regAlloc;
 quietdec := false;

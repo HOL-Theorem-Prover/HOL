@@ -90,6 +90,13 @@ fun K_Normalize exp =
        val (v,M,N) = dest_plet t
        val (th0, th1) = (K_Normalize (mk_C M), K_Normalize (mk_C N))
        val th2 =  SIMP_CONV bool_ss [Once C_LET] exp
+	          handle _ =>  (* Unchanged due to SIMP_CONV cann't handle the case of let (v1,v2,..) = ... in ... *) 
+		      let val t1 = mk_pabs(v,N)
+                          val th = INST_TYPE [alpha |-> type_of N, beta |-> type_of N, Type `:'c` |-> type_of v] (GEN_ALL C_LET)
+                          val t2 = rhs (concl (SPECL [t1, M] th))
+                      in
+                          prove (mk_eq(exp,t2), SIMP_TAC bool_ss [LET_THM, C_def])
+                      end
        val th3 =  SUBST_2_RULE (th0,th1) th2
        val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
     in
