@@ -2,7 +2,7 @@ structure CooperMath :> CooperMath = struct
 
   local open gcdTheory in end
 
-  open HolKernel Parse boolLib intSyntax integerTheory 
+  open HolKernel Parse boolLib intSyntax integerTheory
        int_arithTheory intSimps CooperThms CooperSyntax
 
   type num = Arbnum.num
@@ -501,7 +501,15 @@ in
 end
 
 
-val my_INT_MUL_LID = SPEC ``c * d : int`` INT_MUL_LID (* used below *)
+val my_INT_MUL_LID = prove(
+  ``(1 * (c * d) = c * d) /\
+    (~1 * (c * d) = ~c * d) /\
+    (1 * (c * d + x) = c * d + x) /\
+    (~1 * (c * d + x) = ~c * d + ~x) /\
+    (~~x = x)``,
+  REWRITE_TAC [INT_MUL_LID, GSYM INT_NEG_MINUS1, INT_NEG_LMUL,
+               INT_NEG_ADD, INT_NEGNEG]);
+
 
 fun BLEAF_CONV connector c tm =
     case bop_characterise tm of
@@ -1029,9 +1037,9 @@ fun simplify_constrained_disjunct tm = let
 
       BINDER_CONV (find_sdivides var elim_sdivides) THENC
       pull_eliminate THENC
-      (* variable was present in form 1 * v; have now just replaced it with
-         things of the form c * v', so now have bunch of terms of form
-         1 * (c * v'); get rid of these *)
+      (* variable was present in form 1 * v or ~1 * v; have now just replaced it
+         with things of the form c * v' [+ c'], so now have bunch of terms of form
+         1 * (c * v' [+ y]) or ~1 * (c * v [+ y]); get rid of these *)
       PURE_REWRITE_CONV [my_INT_MUL_LID]) THENC
       (* have another go at this, recursively, but allow for the fact that
          we may have reduced the term to true or false or whatever *)
