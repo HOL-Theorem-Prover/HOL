@@ -36,18 +36,18 @@ val Round_def =
 (* Arbitrary number of cipher rounds                                         *)
 (*---------------------------------------------------------------------------*)
 
-(*
 val Rounds_def = 
  Define
    `Rounds (n:word32,s:state) = if n=0w then s else Rounds (n-1w, Round s)`;
-*)
 
+(*
 val (Rounds_def, Rounds_ind) = Defn.tprove
  (Hol_defn
    "Rounds"
    `Rounds (n:word32,s:state) = if n=0w then s else Rounds (n-1w, Round s)`,
   WF_REL_TAC `measure (w2n o FST)` THEN
   METIS_TAC [wordsTheory.WORD_PRED_THM]);
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt  (32 rounds)                                                      *)
@@ -80,19 +80,19 @@ val InvRound_def =
 (* Arbitrary number of decipher rounds                                       *)
 (*---------------------------------------------------------------------------*)
 
+(*
 val (InvRounds_def, InvRounds_ind) = Defn.tprove
  (Hol_defn
    "InvRounds"
    `InvRounds (n:word32,s:state) = if n=0w then s else InvRounds (n-1w, InvRound s)`,
   WF_REL_TAC `measure (w2n o FST)` THEN
   METIS_TAC [wordsTheory.WORD_PRED_THM]);
+*)
 
-(*
 val InvRounds_def = 
   Define
    `InvRounds (n:word32,s:state) = 
      if n=0w then s else InvRounds (n-1w, InvRound s)`;
-*)
 
 (*---------------------------------------------------------------------------*)
 (* Decrypt (32 rounds)                                                       *)
