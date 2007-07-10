@@ -25,7 +25,7 @@ val () = quietdec := false;
 *)
 
 (* ------------------------------------------------------------------------- *)
-(* Start a new theory called "elliptic".                                     *)
+(* Start a new theory.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "elliptic_example";

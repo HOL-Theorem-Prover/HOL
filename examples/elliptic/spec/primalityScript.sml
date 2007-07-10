@@ -15,7 +15,7 @@ val () = quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib metisLib;
-open arithmeticTheory dividesTheory gcdTheory;
+open arithmeticTheory dividesTheory gcdTheory TotalDefn;
 
 (*
 val () = quietdec := false;
