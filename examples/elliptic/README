@@ -1,3 +1,3 @@
-Directory to support translation of ECC code to ARM.
-Build all sub-directories by invoking make.elliptic.
+This directory is intended to implement proof-based 
+translation of Elliptic Curve Cryptography to ARM assembly.
 
