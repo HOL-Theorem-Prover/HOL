@@ -1,0 +1,66 @@
+load "elliptic_exampleTheory";
+loadPath := (HOLDIR^"/examples/dev/sw") :: !loadPath;
+use "compiler";
+open Assem BasicProvers elliptic_exampleTheory IRSyntax annotatedIR;
+
+type_abbrev("word32", ``:word32``);   (* undo DATA abbrev *)
+
+(*---------------------------------------------------------------------------*)
+(* To be compiled                                                            *)
+(*                                                                           *)
+(*  ex1_field_neg_alt                                                        *)
+(*  ex1_field_add_alt                                                        *)
+(*  ex1_field_mult_aux_alt                                                   *)
+(*  ex1_field_mult_alt                                                       *)
+(*  ex1_field_exp_aux_alt                                                    *)
+(*  ex1_field_exp_alt                                                        *)
+(*  ex1_field_inv_alt                                                        *)
+(*  ex1_field_div_alt                                                        *)
+(*                                                                           *)
+(*  ex1_curve_neg_alt                                                        *)
+(*  ex1_curve_double_alt                                                     *)
+(*  ex1_curve_add_alt                                                        *)
+(*  ex1_curve_mult_aux_alt                                                   *)
+(*  ex1_curve_mult_alt                                                       *)
+(* The following two need more massaging                                     *)
+(*  ex1_elgamal_encrypt_alt                                                  *)
+(*  ex1_elgamal_decrypt_alt                                                  *)
+(*---------------------------------------------------------------------------*)
+
+
+let open EmitML ellipticTheory
+in 
+  emitML "" 
+  ("ex1", OPEN ["words", "num"] :: 
+    MLSIG "type word32 = wordsML.word32"
+    ::
+    map (DEFN o wordsLib.WORDS_EMIT_RULE)
+   [ex1_field_neg_alt, ex1_field_add_alt, ex1_field_sub_alt,
+    ex1_field_mult_aux_alt, ex1_field_mult_alt, ex1_field_exp_aux_alt,
+    ex1_field_exp_alt, ex1_field_inv_alt,  ex1_field_div_alt,  
+    ex1_curve_neg_alt,  ex1_curve_double_alt, ex1_curve_add_alt,
+    ex1_curve_mult_aux_alt, ex1_curve_mult_alt  
+(*   , affine_case,  ex1_elgamal_encrypt_alt,  ex1_elgamal_decrypt_alt
+*)
+ ])
+end;
+
+
+
+(* Works *)
+pp_compile ex1_field_neg_alt true;
+(* Works *)
+pp_compile ex1_field_add_alt true;
+(* Fails *)
+pp_compile ex1_field_sub_alt true;
+(* Fails *)
+pp_compile ex1_field_mult_aux_alt true;
+(* Fails *)
+pp_compile ex1_curve_neg_alt true;
+(* Fails? *)
+pp_compile ex1_curve_double_alt true;
+(* Fails? *)
+pp_compile ex1_curve_add_alt true;
+
+
+
