@@ -1,0 +1,1 @@
+INCLUDES = $(HOLDIR)/examples/elliptic/arm $(HOLDIR)/tools/mlyacc/mlyacclib
