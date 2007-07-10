@@ -1,7 +1,11 @@
+quietdec :=true;
 loadPath := HOLDIR^"/examples/dev/sw2/" :: !loadPath;
 app load ["regAlloc", "closure", "inline", "SALGen", "wordsLib"];
 numLib.prefer_num();
+open Normal inline closure regAlloc NormalTheory SALGen;
+quietdec := false;
 
+(*
 val normalize = Normal.normalize;
 val SSA_RULE = Normal.SSA_RULE;
 val expand_anonymous = inline.expand_anonymous;
@@ -14,3 +18,73 @@ val regL = regAlloc.regL;
 val reg_alloc = regAlloc.reg_alloc;
 val certified_gen = SALGen.certified_gen;
 val fun_def = NormalTheory.fun_def;
+*)
+
+(*---------------------------------------------------------------------------*)
+(* Organize phases of compilation.                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun defname th = 
+  fst(dest_const(fst(strip_comb(lhs(snd(strip_forall(concl th)))))));
+
+fun compenv comp = 
+ let fun compile (env,[]) = PASS(rev env)
+       | compile (env,h::t) =
+          let val name = defname h
+          in 
+            print ("Compiling "^name^" ... ");
+            case total comp (env,h) 
+             of SOME def1 => (print "succeeded.\n"; compile(def1::env,t))
+              | NONE => (print "failed.\n"; FAIL(env,h::t))
+          end
+ in
+    compile 
+ end;
+
+(*---------------------------------------------------------------------------*)
+(* Compile a list of definitions, accumulating the environment.              *)
+(*---------------------------------------------------------------------------*)
+
+fun complist passes deflist = compenv passes ([],deflist);
+
+(*---------------------------------------------------------------------------*)
+(* Basic flattening via CPS and unique names                                 *)
+(*---------------------------------------------------------------------------*)
+
+fun pass1 def = SSA_RULE (normalize def);
+
+(*---------------------------------------------------------------------------*)
+(* All previous, plus inlining and optimizations                             *)
+(*---------------------------------------------------------------------------*)
+
+fun pass2 (env,def) = 
+  let val def1 = pass1 def
+  in 
+   SSA_RULE (optimize_norm env def1)
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* All previous, and closure conversion.                                     *)
+(*---------------------------------------------------------------------------*)
+
+fun pass3 (env,def) = 
+  let val def1 = pass2 (env,def)
+  in case total closure_convert def1
+      of SOME thm => SSA_RULE (optimize_norm env thm)
+       | NONE => def1
+  end;
+
+(*---------------------------------------------------------------------------*)
+(* All previous, and register allocation.                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun pass4 (env,def) = 
+  let val def1 = pass3 (env,def)
+  in 
+    reg_alloc def1
+  end;
+
+val compile1 = complist (fn (e,d) => pass1 d);
+val compile2 = complist pass2;
+val compile3 = complist pass3;
+val compile4 = complist pass4;

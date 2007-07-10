@@ -7,44 +7,6 @@
 
 use "prelim";
 
-fun compenv comp = 
- let fun compile (env,[]) = PASS(rev env)
-       | compile (env,h::t) =
-          case total comp (env,h) 
-           of SOME def1 => compile(def1::env,t)
-            | NONE => FAIL(env,h::t)
- in
-    compile 
- end;
-
-fun complist comp deflist = compenv comp ([],deflist);
-
-fun pass1 def = SSA_RULE (normalize def);
-
-fun pass2 (env,def) = 
-  let val def1 = pass1 def
-  in 
-   SSA_RULE (optimize_norm env def1)
-  end;
-
-fun pass3 (env,def) = 
-  let val def1 = pass2 (env,def)
-  in case total closure_convert def1
-      of SOME thm => SSA_RULE (optimize_norm env thm)
-       | NONE => def1
-  end;
-
-fun pass4 (env,def) = 
-  let val def1 = pass3 (env,def)
-  in 
-    reg_alloc def1
-  end;
-
-val compile1 = complist (fn (e,d) => pass1 d);
-val compile2 = complist pass2;
-val compile3 = complist pass3;
-val compile4 = complist pass4;
-
 val field_neg_def = 
  Define
    `field_neg (x:word32) = if x = 0w then (0w:word32) else 751w - x`;
@@ -64,10 +26,10 @@ val field_mult_aux_def =
  Define 
    `field_mult_aux (x:word32,y:word32,acc:word32) =
       if y = 0w then acc 
-      else
-       let x' = field_add (x,x) in
-       let y' = y >>> 1 in
-       let acc' = (if y && 1w = 0w then acc else field_add (acc,x))
+      else let 
+        x' = field_add (x,x) in let 
+        y' = y >>> 1         in let 
+        acc' = (if y && 1w = 0w then acc else field_add (acc,x))
         in
           field_mult_aux (x',y',acc')`;
 
@@ -192,7 +154,8 @@ val curve_mult_def =
  Define
    `curve_mult (x,y,n) = curve_mult_aux (x,y,n,0w,0w)`;
 
-(*  Need further massaging ...
+(* Following definitions need further massaging to be compilable:
+
 val field_exp_aux_def = 
  Define
    `elgamal_encrypt (m_x,m_y,k) =
@@ -211,12 +174,28 @@ val field_exp_aux_def =
                             (affine (GF 751) [361; 383]) 91)),k) in
        let (b_x,b_y) = curve_add (t_x,t_y,m_x,m_y) 
        in
-         (a_x,a_y,b_x,b_y)
+         (a_x,a_y,b_x,b_y)`;
+
 
 val field_exp_aux_def = 
  Define
    `elgamal_decrypt (a_x,a_y,b_x,b_y) =
-          (let (t_x,t_y) = curve_neg (curve_mult (a_x,b_x,91w)) in
-             curve_add (t_x,t_y,b_x,b_y))
+       let (t_x,t_y) = curve_neg (curve_mult (a_x,b_x,91w)) 
+        in
+          curve_add (t_x,t_y,b_x,b_y)`;
+
+*)
+
+
+(*---------------------------------------------------------------------------*)
+(* Compile the functions.                                                    *)
+(*---------------------------------------------------------------------------*)
+(*
+compile1 [field_neg_def, field_add_def, field_sub_def, 
+          field_mult_aux_def, field_mult_def, 
+          field_exp_aux_def, field_exp_def, 
+          field_inv_def, field_div_def, curve_neg_def, 
+          curve_double_def, curve_add_def, 
+          curve_mult_aux_def, curve_mult_def];
 
 *)
