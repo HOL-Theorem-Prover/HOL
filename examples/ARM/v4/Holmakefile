@@ -1,9 +1,10 @@
 EXTRA_CLEANS = evalML.uo evalML.ui assemblerML.ui assemblerML.uo\
 	Data.ui Data.uo armParser.lex.sig armParser.lex.sml\
-        armParser.grm.sig armParser.grm.sml armParser.grm.desc
+       	armParser.grm.sig armParser.grm.sml armParser.grm.desc\
+	armParser.grm-sig.sml
 
 CALL_YACC = $(protect $(HOLDIR)/tools/mlyacc/src/mlyacc.exe) $< ; \
-            $(MV) armParser.grm.sig armParser.grm-sig.sml
+	$(MV) armParser.grm.sig armParser.grm-sig.sml
 
 MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
