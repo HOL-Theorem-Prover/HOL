@@ -185,6 +185,19 @@ fun abs_fun def =
   handle HOL_ERR _ => def           (* already an abstraction *)
 
 (*---------------------------------------------------------------------------*)
+(* Sanity check of the source program.                                       *)
+(*---------------------------------------------------------------------------*)
+
+fun pre_check (args,body) = 
+  let
+    val fv = free_vars (mk_pair(args,body))
+    val var_type = type_of (hd (fv))
+    val sane = List.all (fn x => type_of x = var_type) fv
+  in
+    (sane, var_type)
+  end
+
+(*---------------------------------------------------------------------------*)
 
 
 end (* struct *)

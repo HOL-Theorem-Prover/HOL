@@ -15,4 +15,5 @@ sig
   val subst_exp : (term,term) subst -> term -> term
   val occurs_in : term -> term -> bool 
   val abs_fun : thm -> thm
+  val pre_check : term * term -> bool * hol_type
 end

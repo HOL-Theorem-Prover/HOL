@@ -7,6 +7,7 @@ sig
      | Spill of term (* spilled variable *)
 
   val DEBUG : bool ref
+  val VarType : hol_type ref
   val numRegs : int ref
   val regL : term list ref
   val reset : unit -> unit

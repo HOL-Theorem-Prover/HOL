@@ -1,6 +1,7 @@
 signature SALGen =
 sig
  include Abbrev
- val forward_reason : term -> thm
- val certified_gen : thm -> thm
+ val VarType : hol_type ref
+ val printSAL : term -> unit
+ val certified_gen : thm -> {code : term, thm : thm}
 end

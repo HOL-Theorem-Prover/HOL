@@ -2,8 +2,23 @@
 (* Interactive access to the compiler                                        *)
 (*---------------------------------------------------------------------------*)
 
-app load ["NormalTheory", "Normal", "inline", "closure", "regAlloc"];
+app load ["NormalTheory", "Normal", "inline", "closure", "regAlloc", "SALGen"];
 
+(*
 quietdec := true;
-open HolKernel Parse boolLib bossLib pairLib pairSyntax PairRules NormalTheory Normal inline closure regAlloc;
+open HolKernel Parse boolLib bossLib pairLib pairSyntax PairRules 
+     Normal inline closure regAlloc SALGen;
 quietdec := false;
+*)
+
+val normalize = Normal.normalize;
+val SSA_RULE = Normal.SSA_RULE;
+val expand_anonymous = inline.expand_anonymous;
+val expand_named = inline.expand_named;
+val optimize_norm = inline.optimize_norm;
+val close_one_by_one = closure.close_one_by_one;
+val close_all = closure.close_all;
+val closure_convert = closure.closure_convert;
+val reg_alloc = regAlloc.reg_alloc;
+val printSAL = SALGen.printSAL;
+val certified_gen = SALGen.certified_gen;

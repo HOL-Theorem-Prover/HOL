@@ -19,40 +19,24 @@ val ERR = mk_HOL_ERR "SALGen";
 
 structure M = Binarymap
 structure S = Binaryset
-val N = numSyntax.num;
+val VarType = ref (Type `:word32`) (* numSyntax.num *)
 
 (* --------------------------------------------------------------------*)
 (* Datatypes, Commonly-used variables and functions                    *)
 (* --------------------------------------------------------------------*)
 
-val nop = mk_var("NOP",alpha);
+val nop = prim_mk_const{Name="NOP",Thy="SAL"};
 val reduce_tm = prim_mk_const{Name="Reduce",Thy="SAL"};
 val union_tm = prim_mk_const{Name="UNION",Thy="SAL"};
 val asg_tm = prim_mk_const{Name="ASG",Thy="SAL"};
+val ifgoto_tm = prim_mk_const{Name="IFGOTO",Thy="SAL"};
+val goto_tm = prim_mk_const{Name="GOTO",Thy="SAL"};
 
 fun dest_composite ty = 
  case total dest_thy_type ty
   of SOME {Tyop="COMPOSITE",Thy="SAL",Args=[x]} => x
    | other => raise ERR "dest_composite" "";
    
-(*---------------------------------------------------------------------------*)
-(* tm1 and tm2 are assumed to already be of type 'a COMPOSITE                *)
-(*---------------------------------------------------------------------------*)
-
-fun mk_union (tm1,tm2) = 
- list_mk_comb(inst [alpha |-> dest_composite(type_of tm1)] union_tm,[tm1,tm2])
- handle HOL_ERR _ => raise ERR "mk_union" "";
-
-
-fun get_output exp =
-  if is_plet exp then
-     let val (v, M, N) = dest_plet exp
-     in
-         get_output N
-     end
-  else
-     exp
-
 (* --------------------------------------------------------------------*)
 (* Auxiliary functions manipulating labels                             *)
 (* --------------------------------------------------------------------*)
@@ -60,8 +44,11 @@ fun get_output exp =
 val label_tm = prim_mk_const{Name="L",Thy="SAL"};
 
 fun mk_label i = mk_comb(label_tm, term_of_int i);
- 
+
 val label_index = ref 0;
+
+fun reset_label () = label_index := 0
+fun cur_label() = mk_label (!label_index)
 
 fun next_label () = 
   let val _ = label_index := !label_index + 1;
@@ -69,215 +56,267 @@ fun next_label () =
       mk_label (!label_index)
   end;
 
-(* Obtain the entry label and exit label of a structure *)
+(* ---------------------------------------------------------------------*)
+(* Mechanism for mechanical reasoning                                   *)
+(* A specification stores all information about a FIL program including *)
+(* a theorem stating that the SAL code "implements" the FIL program.    *)
+(* The composition of specifications is directed by the syntax of the   *)
+(* program and goes in a bottom-up manner.                              *) 
+(* ---------------------------------------------------------------------*)
 
-fun get_entry_label s = 
-  let 
-    val (combinator, args) = strip_comb s;
-    val comb_str = #1 (dest_const combinator);    
-  in
-    if comb_str = "UNION" then     
-      get_entry_label (hd args) (* from the first sub-structure of the union *)
-    else   (* ASG, IFGOTO, GOTO *)
-      hd args
-  end;
+type spec_type = {body : term, dst : term, entry : term, exit : term, exp : term, thm : thm}
 
-fun get_exit_label s = 
-  let 
-    val (combinator, args) = strip_comb s;
-    val comb_str = #1 (dest_const combinator);    
-  in
-    if comb_str = "UNION" then     
-      get_exit_label (hd (tl args))  
-        (* from the second sub-structure of the union *)
-    else if comb_str = "ASG" orelse comb_str = "GOTO" then
-      last args
-    else
-      raise Fail "Cannot get the exit label of an IFGOTO structure"
-  end;
+(* Make a basic specification for single assignment instruction *)
 
-(* --------------------------------------------------------------------*)
-(* Code generation for conditional structures                          *)
-(* --------------------------------------------------------------------*)
-
-fun gen_cnd_f t =
-  mk_pabs (hd (free_vars t), t) handle e 
-  => raise wrap_exn "gen_cnd_f" 
-      "errors when generating the condition function" e;
-
-(*
-fun gen_conditional (c, s1, s2) = 
- let 
-   val (l2,l4) = (get_entry_label s1, get_exit_label s1);
-   val (l1,l2) = (next_label(), next_label());
-   val stm1 = list_mk_comb (inst [alpha |-> type_of v] (Term`ASG`), 
-                            [l1, v, M, l2])
-    val ifgoto_stm = mk_comb
-*)
-
-(* --------------------------------------------------------------------*)
-(* Code generation                                                     *)
-(* --------------------------------------------------------------------*)
-
-fun gen_code (entry_l, t, exit_l) =
-   if is_atomic t then
-      nop
-
-   else if is_let t then                     (*  exp = LET (\v. N) M  *)
-     let 
-         val (v,M,N) = dest_plet t
-         val union = inst [alpha |-> type_of v] union_tm
-         val new_l = next_label()
-         val stm1 = list_mk_comb (inst [alpha |-> type_of v] asg_tm, 
-                                  [entry_l, v, M, new_l])
-         val stm2 = gen_code (new_l, N, exit_l)
-         val stm3 = if stm2 = nop then stm1
-                    else mk_union (stm1, stm2)
-     in
-         stm3
-     end
-
-    else if is_pair t then                        (*  exp = (M,N) *)
-      raise Fail "unimplemented SAL code generation for tuples"
-
-    (*
-    else if is_cond t then                 (*  exp = if P then M else N *)
-      let
-         val (J,M,N) = dest_cond t
-      in 
-         if is_atom_cond J then
-           let 
-              val (op0, xL) = strip_comb J 
-              val (P,Q) = (hd xL, hd (tl xL))
-              val (lem0, lem1, lem2, lem3) = 
-           in
-              th4
-           end
-      end
-     *)
-
-   else if is_comb t then
-      let val (operator, operands) = strip_comb t
-      in
-
-        if basic.is_binop operator then (* Arith. and Logical Operations *)
-	   raise Fail "No need of generating code for data operations"
-
-        else (* Application *)
-	   raise Fail 
-               "unimplemented SAL code generation for function applications"
-      end
-    else
-      nop
-  ;
-
-fun gen_spec s = 
+fun mk_instr_spec (entry_l,exit_l) (dest,src) =
   let
-    val (l1,l2) = (get_entry_label s, get_exit_label s);
-  in 
-    list_mk_pair [l1, s, l2]
-  end
-
-
-(* --------------------------------------------------------------------*)
-(* Mechanism for mechanical reasoning                                  *)
-(* --------------------------------------------------------------------*)
-
-(* Single assignment instruction *)
-
-fun mk_instr_spec instr =
-  let
-    val (_, args) = strip_comb instr;
-    val (entry_l::dst::src::exit_l::_) = args
-    val v = mk_pair (src, dst)
-    val s' = list_mk_pair [get_entry_label instr, instr, get_exit_label instr]
-    val spec = list_mk_comb(inst [alpha |-> N] reduce_tm, [s', v])
+    val ty = type_of dest
+    val value = mk_pair (src, dest)
+    val instr = list_mk_comb (inst [alpha |-> ty] asg_tm, [entry_l, dest, src, exit_l])
+    val s = list_mk_pair [entry_l, instr, exit_l]
+    val spec = list_mk_comb(inst [alpha |-> ty] reduce_tm, [s, value])
+    val spec_thm = prove(spec, SIMP_TAC std_ss [inst_rule])
   in
-    prove(spec, SIMP_TAC std_ss [inst_rule])
+    {entry = entry_l, exit = exit_l, body = instr, thm = spec_thm, exp = src, dst = dest}
   end
 
 (* Union of two structures (i.e. sequential composition *)
 
-fun mk_union_spec spec1 spec2 =
-  let val (_, [s1, v1]) = strip_comb (concl spec1);
-      val (_, [s2, v2]) = strip_comb (concl spec2);
-      val [entry_l1, s1', exit_l1] = strip_pair s1;
-      val [entry_l2, s2', exit_l2] = strip_pair s2;
-      val (e1, x1) = dest_pair v1;
-      val (e2, x2) = dest_pair v2;
+fun mk_union_spec (spec1:spec_type) (spec2:spec_type) =
+  let (*  s1 |+| s2 *)
+      val union_body = list_mk_comb(inst [alpha |-> !VarType] union_tm, [#body spec1, #body spec2])
+      val exp = mk_plet (#dst spec1, #exp spec1, 
+			 mk_comb(mk_pabs (#dst spec1, #exp spec2), #dst spec1))
+      val value = mk_pair(exp, #dst spec2)
+      val s = list_mk_pair [#entry spec1, union_body, #exit spec2]
+      val spec = list_mk_comb(inst [alpha |-> !VarType] reduce_tm, [s, value])
 
-      (*  s1 |+ s2 *)
-      val t0 = list_mk_comb(inst [alpha |-> N] union_tm, [s1', s2'])
-      val t1 = list_mk_pair [entry_l1, t0, exit_l2]
-      val v = mk_plet (x1, e1,mk_plet (x2, e2, x2))
-      val v' = mk_pair(v,x2)
-      val t2 = list_mk_comb(inst [alpha |-> N] reduce_tm, [t1, v'])
-
-      val th =  prove (t2,   (* set_goal ([], t2) *)
-		       ASSUME_TAC spec1 THEN
-                       ASSUME_TAC spec2 THEN
-                       IMP_RES_TAC seq_rule THEN
-                       FULL_SIMP_TAC std_ss [LET_THM]
-                )
-              (*
+      val spec_lem =  prove (spec,   (* set_goal ([], spec) *)
                        MATCH_MP_TAC seq_rule THEN
-                       EXISTS_TAC post_p1 THEN EXISTS_TAC out_f1 THEN
-                       SIMP_TAC std_ss [spec1, spec2]
-              *)
+                       EXISTS_TAC (#exit spec1) THEN EXISTS_TAC (#dst spec1) THEN
+                       PBETA_TAC THEN 
+		       REWRITE_TAC [#thm spec1, #thm spec2]
+                      )
+     val spec_thm = PBETA_RULE spec_lem   
   in
-      th
+     {entry = #entry spec1, exit = #exit spec2, body = union_body, thm = spec_thm, exp = exp, dst = #dst spec2}
+  end
+
+(* --------------------------------------------------------------------*)
+(* Eliminate the deepest "let" expression. It is for optiomization.    *)
+(* --------------------------------------------------------------------*)
+
+val ELIM_DEEP_LET_CONV =
+   let
+     val elim_deep_let_conv = (fn t => (DEPTH_CONV (SIMP_CONV bool_ss [Once LET_THM])) t)
+   in
+     RATOR_CONV elim_deep_let_conv THENC
+     RAND_CONV elim_deep_let_conv 
+   end;
+
+(* --------------------------------------------------------------------*)
+(* Compose the specifications in a bottom-up manner.                   *)
+(* --------------------------------------------------------------------*)
+
+(* Generate specification for conditional structures.                  *)
+
+fun mk_cond_spec (entry_l,exit_l) (dest,src) args = 
+   let
+       val (J,M1,M2) = dest_cond src
+
+       val args = hd(free_vars J)
+       val c = mk_pabs(args,J)
+       val (l1,l2,l3,l4) = (entry_l,next_label(),next_label(),exit_l)
+       val ifgoto = list_mk_comb(inst [alpha |-> !VarType] ifgoto_tm, [l1, c, l2, l3])
+       val spec1 = gen_code (l2,M1,l4) (args,dest)
+       val spec2 = gen_code (l3,M2,l4) (args,dest)
+
+       val b1 = list_mk_comb(inst [alpha |-> !VarType] union_tm, [ifgoto, #body spec1])
+       val b2 = list_mk_comb(inst [alpha |-> !VarType] union_tm, [b1, #body spec2])
+       val s = list_mk_pair [l1, b2, l4]
+
+       val exp = mk_cond (mk_comb(c,args), 
+			  mk_comb(mk_pabs(args, #exp spec1), args), 
+			  mk_comb(mk_pabs(args, #exp spec2), args))
+       val value = mk_pair(exp, dest)
+       val spec = list_mk_comb(inst [alpha |-> !VarType] reduce_tm, [s, value])
+
+       val spec_lem =  prove (spec,   (* set_goal ([], spec) *)
+			      MATCH_MP_TAC CONDITIONAL_RULE THEN
+			      PBETA_TAC THEN
+                              REWRITE_TAC [#thm spec1, #thm spec2]
+			      )
+       val spec_thm = PBETA_RULE spec_lem
+       val exp' = mk_cond (J, #exp spec1, #exp spec2)
+
+(*     val t = #1 (dest_pair (List.last (#2 (strip_comb (concl spec_lem1)))))
+       val lem = ELIM_DEEP_LET_CONV t handle _ => REFL t
+       val spec_thm = ONCE_REWRITE_RULE [lem] spec_lem1
+*)
+    in
+       {entry = entry_l, exit = exit_l, body = b2, thm = spec_thm, exp = exp', dst = dest}
+    end
+
+and 
+
+(* The composition is syntax directed.             *) 
+
+mk_spec (entry_l,exit_l) (dest,src) args = 
+    if is_atomic src orelse is_pair src then 
+	mk_instr_spec (entry_l,exit_l) (dest,src)
+
+    else if is_cond src then                 (*  t = if P then M else N *)
+	mk_cond_spec (entry_l,exit_l) (dest,src) args
+
+    else if is_comb src then
+      let val (operator, operands) = strip_comb src
+      in
+        if basic.is_binop operator then (* Arith. and Logical Operations *)
+           mk_instr_spec (entry_l,exit_l) (dest,src)
+        else (* Application *)
+	   raise Fail "unimplemented SAL code generation for function applications"
+      end
+    else
+       raise Fail "unimplemented for this structure!"
+
+and 
+
+(*  Code generation (by producing specifications)       *)
+
+gen_code (entry_l, t, exit_l) (input,output) =
+   if is_atomic t orelse is_pair t then
+       if t = output then    (* no copying is required *)
+	    {entry = entry_l, exit = exit_l, body = inst [alpha |-> !VarType] nop, exp = t, dst = t,
+	     thm = dummy_rule}
+       else mk_instr_spec (entry_l,exit_l) (output, t)
+
+   else if is_let t then                     (*  exp = LET (\v. N) M  *)
+     let 
+         val (v,M,N) = dest_plet t
+         val new_l = next_label()
+         val spec1 = mk_spec (entry_l,new_l) (v,M) input
+         val spec2 = gen_code (new_l, N, exit_l) (#dst spec1, output)
+         val spec3 = if #body spec2 = (inst [alpha |-> !VarType] nop) then 
+	                 mk_spec (entry_l,exit_l) (v,M) input       (* make sure the exit label is correct *)
+                     else mk_union_spec spec1 spec2
+     in
+         spec3
+     end
+
+   else
+     {entry = entry_l, exit = exit_l, body = t, thm = mk_thm ([],``T``), exp = t, dst = t}
+  ;
+
+(* --------------------------------------------------------------------*)
+(* Fromat SAL programs for printing.                                   *)
+(* --------------------------------------------------------------------*)
+
+val seperator = ref ("\n")   (* " \n " *)
+val indent = "      "
+
+fun format_label l = 
+  "l" ^ (term_to_string (#2 (dest_comb l))) handle _ => term_to_string l
+
+fun indent_label l = 
+  let val label = format_label(l) 
+  in case (size (label)) of
+      2 => label ^ ":   " |
+      3 => label ^ ":  "  |
+      4 => label ^ ": "   |
+      _ => label ^ ":"
+  end
+
+(* Turn a piece of SAL code into a string *) 
+
+fun formatSAL code =
+  if is_const code andalso #1 (dest_const code) = "NOP" then ""
+  else if is_atomic code orelse is_pair code then term_to_string code
+  else if is_comb code then
+    let val (operator, xs) = strip_comb code
+        val op_s = #1 (dest_const operator)
+    in 
+       if op_s = "UNION" then
+         formatSAL (hd xs) ^ formatSAL (hd (tl xs))
+       else if op_s = "ASG" then
+         let val [entry_l, dest, src, exit_l] = xs
+         in indent_label entry_l ^ term_to_string dest ^ " := " ^ term_to_string src ^ 
+            "  (goto " ^ format_label exit_l ^ ")" ^ !seperator
+         end
+       else if op_s = "IFGOTO" then
+         let val [entry_l, cond, true_l, false_l] = xs
+         in indent_label entry_l ^ "ifgoto " ^ 
+	     term_to_string (#2 (dest_pabs cond)) ^ " " ^ format_label true_l ^
+	      " " ^ format_label false_l ^ !seperator
+         end
+       else if op_s = "GOTO" then
+         let val [entry_l, exit_l] = xs
+         in indent ^ "goto " ^ format_label exit_l ^ !seperator
+         end
+       else
+         term_to_string code
+     end
+  else
+    term_to_string code
+
+(* --------------------------------------------------------------------*)
+(* Pre-processing before code generation                               *)
+(* --------------------------------------------------------------------*)
+
+(* Find the output of an expression      *)
+
+fun find_output t =
+    if is_let t then
+	let val (v,M,N) = dest_plet t
+        in if is_atomic N orelse is_pair N then SOME N
+           else find_output N
+        end
+    else if is_cond t then NONE
+    else if is_pabs t then
+        find_output (#2 (dest_pabs t))
+    else NONE
+
+(* Identify the argument, body and the output of a function *)
+
+fun pre_process def = 
+  let
+    val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
+    val fname = if is_comb fname then #1 (dest_comb fname) else fname
+    val (args,body) = dest_pabs fbody handle _ => (#2 (dest_comb fname), fbody)
+    
+    val (body, output) = 
+      case find_output(body) of 
+        SOME x => (body, x) |
+        NONE => (mk_plet(args, body, args), args)
+  in
+    {body = body, input = args, output = output}
   end
 
 (* --------------------------------------------------------------------*)
 (* Certifing Code Generation                                           *)
 (* --------------------------------------------------------------------*)
 
-fun forward_reason s = 
-  let
-    val (combinator, sL) = strip_comb s;
-    val comb_str = #1 (dest_const combinator);
-  in
-    if comb_str = "UNION" then
-       mk_union_spec (forward_reason (hd sL)) 
-                     (forward_reason (hd (tl sL)))
-    else if comb_str = "ASG" then 
-       mk_instr_spec s
-    else
-       raise Fail "unimplemented for this structure!"
-  end;
-
+val printSAL = print o formatSAL;
 
 fun certified_gen def =
   let
-    val (fname, fbody) = dest_eq (concl (SPEC_ALL def))
-    (* val (args,body) = dest_pabs fbody *)
-    val s = gen_code (next_label(), fbody, next_label());
-    (*
-    val spec = gen_spec s;
-    val v = mk_pair (fbody, get_output fbody);
-    val t0 = list_mk_comb(inst [alpha |-> N] reduce_tm, [spec, v]);
-    *)
+    val rs = pre_process def
+    val (sane,var_type) = pre_check(#input rs, #body rs)
   in
-    forward_reason s
+    if sane then
+      let val _ = (reset_label(); VarType := var_type)
+	  val s = gen_code (next_label(), #body rs, next_label()) (#input rs, #output rs)
+      in
+	  {code = #body s, thm = #thm s}
+      end
+      handle _ =>  
+       ( print("STOP: The source program (FIL) includes structures whose conversion hasn't been implemented!\n");
+         {code = nop, thm = mk_thm ([], Term`T`)}
+       )
+    else 
+      ( print("STOP: The source program (FIL) is invalid! (e.g. all variables are not of the same type)\n");
+        {code = nop, thm = mk_thm ([], Term`T`)}
+      )
   end
-
-(* --------------------------------------------------------------------*)
-(* Test Cases                                                          *)
-(* --------------------------------------------------------------------*)
-
-(*
-val f1_def = Define `
-    f1 x = let y = x + 1 in let z = x - y in z`;
-
-   certified_gen f1_def;
-
-val f2_def = Define `
-    f2 x = 
-      if x = 0 then x 
-      else let y = x * x in y`;
-
-   certified_gen f2_def;
-*)
 
 (* --------------------------------------------------------------------*)
 

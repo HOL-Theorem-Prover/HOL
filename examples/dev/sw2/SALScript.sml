@@ -67,7 +67,8 @@ val rec_INTRO = Q.store_thm
 val _ = 
  Hol_datatype 
    `COMPOSITE 
-      = ASG of LABEL => 'a => 'a  => LABEL
+      = NOP
+      | ASG of LABEL => 'a => 'a  => LABEL
       | IFGOTO of LABEL => ('a -> bool) => LABEL => LABEL
       | GOTO of LABEL => LABEL
       | UNION of COMPOSITE => COMPOSITE`;
@@ -103,32 +104,19 @@ val (ns_rule, ns_ind, ns_case) =
      Reduce (l1, IFGOTO l1 c l2 l3, l3) (v,v)) /\
     (Reduce (l1, GOTO l1 l2, l2) (v,v))  (* goto *)  /\
     (Reduce (l1, S1, l1) (g v, v) /\     (* loop *)
-     Reduce (l1, S1, l2) (f (g v), (g v)) ==> Reduce (l1, S1, l2) (f v, v))
+     Reduce (l1, S1, l2) (f (g v), (g v)) ==> Reduce (l1, S1, l2) (f v, v)) /\
+    (Reduce (l1, NOP, l2) (v,v))
   `;
 
-(*---------------------------------------------------------------------------
-  Not used ...
-
-  val _ = Hol_datatype `
-     VALUE = 
-           NIL
-        |  VAL of num # num`;
-
- (Reduce (l1, S1, l1) v ==> (* union *) Reduce (l1, S1 |++| S1, l1) v)
-          /\
- (Reduce (l1, S1, l2) (VAL(f v, v)) ==> (* args *)
-     Reduce (l1, S1, l2) (VAL(f (g v), g v)))  
-         /\
- ----------------------------------------------------------------------------*)
-
 val [inst_rule, nop_rule, skip_rule, seq_rule, 
-     ift_rule, iff_rule, goto_rule, loop_rule] = CONJUNCTS ns_rule;
+     ift_rule, iff_rule, goto_rule, loop_rule, dummy_rule] = CONJUNCTS ns_rule;
 
 val _ = map save_thm
   [("inst_rule",inst_rule), ("nop_rule",nop_rule), 
    ("skip_rule",skip_rule), ("seq_rule",seq_rule), 
    ("ift_rule",ift_rule),   ("iff_rule",iff_rule), 
-   ("goto_rule",goto_rule), ("loop_rule",loop_rule)];
+   ("goto_rule",goto_rule), ("loop_rule",loop_rule),
+   ("dummy_rule",dummy_rule)];
 
 
 (* TRANSFER_RULE is a special case of the seq_rule *)
@@ -149,8 +137,8 @@ val TRANSFER_RULE = Q.store_thm (
 
 val CONDITIONAL_RULE = Q.store_thm (
   "CONDITIONAL_RULE",
-   `Reduce (l2, S1, l4) (e1 v, v) /\ Reduce (l3, S2, l4) (e2 v, v) ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| S2, l4) (if c v then e1 v else e2 v, v)`,
+   `Reduce (l2, S1, l4) (e1 v, w) /\ Reduce (l3, S2, l4) (e2 v, w) ==>
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| S2, l4) (if c v then e1 v else e2 v, w)`,
    Cases_on `c v` THEN
    RW_TAC std_ss [] THENL [
        METIS_TAC [ift_rule, nop_rule, skip_rule],

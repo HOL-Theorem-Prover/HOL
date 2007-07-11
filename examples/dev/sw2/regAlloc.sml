@@ -23,6 +23,12 @@ datatype alloc_result =
 
 (* --------------------------------------------------------------------*)
 (* Configurable setting                                                *)
+(* The "DEBUG" controls whether debugging information should be print  *)
+(*    out or not.                                                      *)
+(* The "numRegs" stores how many registers are available.              *)
+(* By default the register set contains {r0,r1,...}                    *)
+(* Users can customize this set by specifying the "regL" or modify the *)
+(*   "mk_regs()" function.                                             *) 
 (* --------------------------------------------------------------------*)
 
 val DEBUG = ref true;
@@ -52,6 +58,8 @@ fun tvarOrder (t1:term,t2:term) =
     else LESS
   end;
 
+(* Is an expression a function application? *)
+ 
 fun is_fun exp = 
   (* is_var exp andalso *) 
   (#1 (dest_type (type_of exp)) = "fun")
@@ -59,6 +67,8 @@ fun is_fun exp =
 
 (* --------------------------------------------------------------------*)
 (* make variables                                                      *)
+(* mvar -- memory variables                                            *)
+(* tvar -- tempory variables; used for spilling.                       *)
 (* --------------------------------------------------------------------*)
 
 fun num2name stem i = stem ^ Lib.int_to_string i
@@ -83,6 +93,9 @@ fun fv exp =
 
 (* --------------------------------------------------------------------*)
 (* Attempt to allocate a register                                      *)
+(* "regenv" -- the current allocation scheme;                          *)
+(* "cont" -- the continuation that contains live variables;            *)
+(* "x" -- the variable to be allocated.                                *)
 (* --------------------------------------------------------------------*)
 
 (* allocate a register or spill a variable *)
@@ -130,6 +143,7 @@ fun alloc_one cont regenv x =
 
 (* --------------------------------------------------------------------*)
 (* For Tuple and Function calls                                        *)
+(* Rules for replacing variables with registers or memory slots.       *)
 (* --------------------------------------------------------------------*)
 
 fun find_pos (regenv,x) =
@@ -151,6 +165,11 @@ fun tuple_subst_rules xs regenv =
 
 (* --------------------------------------------------------------------*)
 (* Attempt to allocate registers for a tuple                           *)
+(* If the tuple contains only one variable, we always allocate a       *)
+(* register for it by spilling another variable;                       *)
+(* on the other hand, if the tuple contains several variables, and some*)
+(* of them couldn't be assigned registers, we always spill them into   *)
+(* the memory. (this can be optimized a little)                        *)
 (* --------------------------------------------------------------------*)
 
 fun alloc cont regenv x =
@@ -161,7 +180,7 @@ fun alloc cont regenv x =
         #2(List.foldl 
           (fn (t, (cont', env')) => 
 	     case alloc_one cont' env' t of 
-	        Alloc(r) => (mk_pair(cont', t), M.insert(env', t, r))        (* assign a register *) 
+	        Alloc(r) => (mk_pair(cont', t), M.insert(env', t, r))           (* assign a register *) 
               | Spill(n) => (mk_pair(cont',t), M.insert(env', t, next_mvar()))  (* assign a memory slot *)
 	  ) (cont,regenv) xs
         ) 
@@ -196,7 +215,7 @@ fun find_reg (regenv,x) =
     end
   handle NotFound => raise (NoReg x)
 
-fun mk_subst_rules xs regenv =
+fun mk_subst_rules xs regenv =         (* replace variables with registers *)
     List.foldl
       (fn (x,ys) =>
         if is_var x then (x |-> find_reg (regenv, x)) :: ys
@@ -220,9 +239,8 @@ fun add x r regenv =
   if is_reg x then regenv
   else M.insert(regenv, x, r)
 
-fun list_mem x xs = 
+fun list_mem x xs =  (*  membership in a list   *)
   not ((List.find (fn k => (k = x)) xs) = NONE)
-
 
 (* --------------------------------------------------------------------*)
 (* Spill to memory                                                     *)
@@ -296,6 +314,8 @@ g'_and_restore dest cont regenv exp =
 
 and
 
+(* g deals with the let v = ... in ... structure.  *)
+
  g dest cont regenv exp = 
   if is_let exp then                        (*  exp = LET (\v. N) M  *)
      let
@@ -356,7 +376,7 @@ and
  
 and
 
-g_repeat dest cont regenv exp =
+g_repeat dest cont regenv exp =                  (*  early spilling *)
    case g dest cont regenv exp of
       NoSpill(exp', regenv') => (exp', regenv')
     | ToSpill(exp, xs) =>
@@ -371,7 +391,7 @@ g_repeat dest cont regenv exp =
 
 and
 
-g'_if dest cont regenv exp constr e1 e2 =
+g'_if dest cont regenv exp constr e1 e2 = 
   let 
     val (e1', regenv1) = g_repeat dest cont regenv e1
     val (e2', regenv2) = g_repeat dest cont regenv e2
@@ -405,10 +425,13 @@ g'_if dest cont regenv exp constr e1 e2 =
 *)
 
 (* --------------------------------------------------------------------*)
-(* Reduce the number of memory slots                                   *)
+(* Reduce the number of memory slots by reusing memory variables.      *)
+(* The mechanism is similar to that of allocating registers; but we    *)
+(* unlimited number of memory slots.                                   *)
 (* --------------------------------------------------------------------*)
 
 (* The first available memory slot that doesn't conflict with live "slots" *)
+
 fun first_avail_slot env cont = 
   let 
       fun indexOfSlot s = valOf(Int.fromString(String.substring(s, 1, String.size s - 1)))
@@ -428,6 +451,8 @@ fun first_avail_slot env cont =
   in
      candidate 1
   end
+
+(* reuse memory slots that will be "live" any more *)
 
 fun alloc_mem (args,body) =
   let
@@ -497,6 +522,8 @@ fun reset () =
    reset_tvar()
   )
 
+(* Assign registers to inputs; memory slots will be used when there are too many paramenters *)
+
 fun args_env args = 
    let val argL = strip_pair args
        fun assgn_v (v,(i,regenv)) = 
@@ -507,29 +534,43 @@ fun args_env args =
        #2 (List.foldl assgn_v (0, M.mkDict tvarOrder) argL)
    end
 
+(* step1: configurate the environment;
+   step2: obtain a allocation scheme by term rewriting;
+   step3: prove the correctness of the scheme by showing the result is alpha-equivalent to the source program
+*)
+
 fun reg_alloc def =
   let
     val (fname, fbody) = dest_eq (concl def)
     val (args,body) = dest_pabs fbody
-    val _ = reset()
-    val regenv = args_env args
-    val args1 = subst (tuple_subst_rules (strip_pair args) regenv) args
-    val dest = hd (!regL); (* assgn_exp (last_exp body) *)
-    val cont = dest
-    val body1 = #1 (g_repeat dest cont regenv body)
-    val body2 = alloc_mem(args1,body1)
+    val (sane,var_type) = pre_check(args,body)
+  in
+    if sane then
+      let
+    	val _ = (VarType := var_type; reset())        (* set the variable type according to the given program *)
+    	val regenv = args_env args
+    	val args1 = subst (tuple_subst_rules (strip_pair args) regenv) args
+    	val dest = hd (!regL); (* assgn_exp (last_exp body) *)
+    	val cont = dest
+    	val body1 = #1 (g_repeat dest cont regenv body)
+    	val body2 = alloc_mem(args1,body1)
 
-    val th1 = GSYM (PBETA_RULE (SIMP_CONV pure_ss [LET_SAVE, LET_LOC, loc_def] body2))
+    	val th1 = GSYM (PBETA_RULE (SIMP_CONV pure_ss [LET_SAVE, LET_LOC, loc_def] body2))
             handle _ => REFL body2
-    val body3 = lhs (concl (th1))
-    val th2 = ALPHA fbody (mk_pabs (args1,body3))
+    	val body3 = lhs (concl (th1))
+    	val th2 = ALPHA fbody (mk_pabs (args1,body3))
 	    handle e => (print "the allocation is incomplete or incorrect"; Raise e)
 
-    val th3 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [th1])) th2
-    val th4 = TRANS def th3
-    val th5 = (BETA_RULE o REWRITE_RULE [save_def, loc_def]) th4
-  in
-    th5
+    	val th3 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [th1])) th2
+    	val th4 = TRANS def th3
+    	val th5 = (BETA_RULE o REWRITE_RULE [save_def, loc_def]) th4
+      in
+    	th5
+      end
+    else
+     ( print("The source program is invalid! (e.g. all variables are not of the same type)");
+       def
+     )
   end
 
 (* --------------------------------------------------------------------*)

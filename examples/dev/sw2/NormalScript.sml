@@ -8,7 +8,56 @@
 open HolKernel Parse boolLib bossLib wordsLib 
      arithmeticTheory;
 
-val _ = new_theory "Normal";
+(*---------------------------------------------------------------------------------*)
+(* Theorems used for pre-processing, normalization, normal format optimization,    *)
+(* inlining, closure conversion and register allocation.                           *)
+(* To do: break them into several theories.                                        *)
+(*---------------------------------------------------------------------------------*)
+
+val _ = new_theory "Normal";            (* This name is misleading *)
+
+(*---------------------------------------------------------------------------------*)
+(* Preprocessing                                                                   *)
+(*---------------------------------------------------------------------------------*)
+
+(* Conjunction in condtions *)
+val AND_COND = Q.store_thm (
+  "AND_COND",
+  `(if c1 /\ c2 then e1 else e2) = 
+     let x = e2 in
+      (if c1 then 
+         if c2 then e1 else x
+       else x)`,
+   RW_TAC std_ss [LET_THM] THEN
+   METIS_TAC []
+  );
+
+(* Disjunction in condtions *)
+val OR_COND = Q.store_thm (
+  "OR_COND",
+  `(if c1 \/ c2 then e1 else e2) = 
+    let x = e1 in
+      (if c1 then x else
+       if c2 then x else e2)`,
+   RW_TAC std_ss [LET_THM] THEN
+   METIS_TAC []
+  );
+
+(* Normalize the conditions in branches *)
+val BRANCH_NORM = Q.store_thm (
+  "BRANCH_NORM",
+  `((if (a:num) > b then x else y) = (if a <= b then y else x)) /\ 
+    ((if a >= b then x else y) = (if b <= a then x else y)) /\
+    ((if a < b then x else y) = (if b <= a then y else x))
+  `,
+   RW_TAC arith_ss [] THEN
+   FULL_SIMP_TAC std_ss [GREATER_DEF, GREATER_EQ,NOT_LESS, NOT_LESS_EQUAL] THEN
+   METIS_TAC [LESS_EQ_ANTISYM]
+  );
+
+(*---------------------------------------------------------------------------------*)
+(* Normalization: turn program into normal forms.                                  *)
+(*---------------------------------------------------------------------------------*)
 
 val C_def = Define `
     C e = \k. k e`;
@@ -148,6 +197,9 @@ val C_COMPOUND_COND = Q.store_thm (
   );
 *)
 
+(*---------------------------------------------------------------------------------*)
+(* Optimization of normal forms.                                                   *)
+(*---------------------------------------------------------------------------------*)
 
 val BETA_REDUCTION = Q.store_thm (
    "BETA_REDUCTION",
@@ -167,43 +219,6 @@ val FLATTEN_LET = Q.store_thm (
     (let y = e1 in let x = e2 y in e3 x)`,
    SIMP_TAC std_ss [LET_THM]
   );
-
-
-(* Conjunction in condtions *)
-val AND_COND = Q.store_thm (
-  "AND_COND",
-  `(if c1 /\ c2 then e1 else e2) = 
-     let x = e2 in
-      (if c1 then 
-         if c2 then e1 else x
-       else x)`,
-   RW_TAC std_ss [LET_THM] THEN
-   METIS_TAC []
-  );
-
-(* Disjunction in condtions *)
-val OR_COND = Q.store_thm (
-  "OR_COND",
-  `(if c1 \/ c2 then e1 else e2) = 
-    let x = e1 in
-      (if c1 then x else
-       if c2 then x else e2)`,
-   RW_TAC std_ss [LET_THM] THEN
-   METIS_TAC []
-  );
-
-(* Normalize the conditions in branches *)
-val BRANCH_NORM = Q.store_thm (
-  "BRANCH_NORM",
-  `((if (a:num) > b then x else y) = (if a <= b then y else x)) /\ 
-    ((if a >= b then x else y) = (if b <= a then x else y)) /\
-    ((if a < b then x else y) = (if b <= a then y else x))
-  `,
-   RW_TAC arith_ss [] THEN
-   FULL_SIMP_TAC std_ss [GREATER_DEF, GREATER_EQ,NOT_LESS, NOT_LESS_EQUAL] THEN
-   METIS_TAC [LESS_EQ_ANTISYM]
-  );
-
 
 (*---------------------------------------------------------------------------*)
 (* Definitions used in inline.sml                                            *)
@@ -306,5 +321,6 @@ val LET_LOC = store_thm (
    SIMP_TAC std_ss [LET_THM, loc_def]
   );
 
+(* --------------------------------------------------------------------*)
 
 val _ = export_theory();
