@@ -82,21 +82,23 @@ fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
 fun K_Normalize exp =
  let val t = dest_C exp               (* eliminate the C *)
  in
-  if is_atomic t then 
-      ISPEC t C_ATOM_INTRO
-
-  else if is_let t then                        (*  exp = LET (\v. N) M  *)
-    let 
-       val (v,M,N) = dest_plet t
+  if is_atomic t then ISPEC t C_ATOM_INTRO else 
+  if is_let t then                  (*  exp = LET (\v. N) M  *)
+   let val (v,M,N) = dest_plet t
        val (th0, th1) = (K_Normalize (mk_C M), K_Normalize (mk_C N))
-       val th2 =  SIMP_CONV bool_ss [Once C_LET] exp
-	          handle _ =>  (* Unchanged due to SIMP_CONV cann't handle the case of let (v1,v2,..) = ... in ... *) 
-		      let val t1 = mk_pabs(v,N)
-                          val th = INST_TYPE [alpha |-> type_of N, beta |-> type_of N, Type `:'c` |-> type_of v] (GEN_ALL C_LET)
-                          val t2 = rhs (concl (SPECL [t1, M] th))
-                      in
-                          prove (mk_eq(exp,t2), SIMP_TAC bool_ss [LET_THM, C_def])
-                      end
+       val th2 = SIMP_CONV bool_ss [Once C_LET] exp
+	         handle Conv.UNCHANGED (* case let (v1,v2,..) = ... in ... *) 
+		 => let val t1 = mk_pabs(v,N)
+                        val th = INST_TYPE [alpha |-> type_of N, 
+                                            beta  |-> type_of N, 
+                                            gamma |-> type_of v]
+                                 (GEN_ALL C_LET)
+                         val t2 = rhs (concl (SPECL [t1, M] th))
+                         val theta = match_type (type_of exp) (type_of t2)
+                     in
+                         prove (mk_eq(inst theta exp,t2), 
+                                SIMP_TAC bool_ss [LET_THM, C_def])
+                     end
        val th3 =  SUBST_2_RULE (th0,th1) th2
        val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
     in
@@ -139,8 +141,7 @@ fun K_Normalize exp =
       in 
          if is_atom_cond J then
            let 
-              val (op0, xL) = strip_comb J 
-              val (P,Q) = (hd xL, hd (tl xL))
+              val (op0, [P,Q]) = strip_comb J 
               val (lem0, lem1, lem2, lem3) = 
                  (K_Normalize (mk_C P),
                   K_Normalize (mk_C Q), 
@@ -197,9 +198,9 @@ fun normalize def =
                           (SPEC_ALL thm1)
      val exp = #1 (dest_comb (rhs (concl thm2)))
      val lem3 = K_Normalize exp          (* Continuation Form *)
-     val thm4 = REWRITE_RULE [lem3] thm2
+     val thm4 = PURE_ONCE_REWRITE_RULE [lem3] thm2
      val thm5 = SIMP_RULE bool_ss [C_2_LET] thm4 (* "Let" Form *)
-     val thm6 = REWRITE_RULE [BRANCH_NORM] thm5       
+     val thm6 = REWRITE_RULE [BRANCH_NORM] thm5
  in
    thm6
  end

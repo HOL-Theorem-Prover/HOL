@@ -191,11 +191,16 @@ val field_exp_aux_def =
 (* Compile the functions.                                                    *)
 (*---------------------------------------------------------------------------*)
 (*
-compile1 [field_neg_def, field_add_def, field_sub_def, 
+val fns = [field_neg_def, field_add_def, field_sub_def, 
           field_mult_aux_def, field_mult_def, 
           field_exp_aux_def, field_exp_def, 
           field_inv_def, field_div_def, curve_neg_def, 
           curve_double_def, curve_add_def, 
           curve_mult_aux_def, curve_mult_def];
+
+compile1 fns;
+compile2 fns;  (* takes a long time on curve_double *)
+compile3 fns;
+compile4 fns;
 
 *)
