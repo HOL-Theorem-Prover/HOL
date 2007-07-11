@@ -129,7 +129,7 @@ val WORDS_EMIT_RULE =
   BETA_RULE o PURE_REWRITE_RULE ([BIT_UPDATE, literal_case_THM] @ (map GSYM
     [word_index_def, n2w_itself_def, w2w_itself_def, sw2sw_itself_def,
      word_concat_itself_def, word_extract_itself_def,
-     fcpTheory.FCPi_def, fcpTheory.mk_fcp_def])) o
+     fcpTheory.FCPi_def, fcpTheory.mk_fcp_def, literal_case_DEF])) o
   RHS_REWRITE_RULE [GSYM word_eq_def];
 
 (* ------------------------------------------------------------------------- *)
