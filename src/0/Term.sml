@@ -788,7 +788,7 @@ local
   val tymatch = Type.raw_match_type
 in
 fun RM [] theta = theta
-  | RM (((v as Fv(_,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
+  | RM (((v as Fv(n,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
      = if bound_by_scope scoped tm
        then MERR "variable bound by scope"
        else RM rst
@@ -796,11 +796,18 @@ fun RM [] theta = theta
                of NONE => if v=tm then (tmS,HOLset.add(Id,v))
                                   else ((v |-> tm)::tmS,Id)
                 | SOME tm' => if aconv tm' tm then S1
-                              else MERR "double bind on variable"),
+                              else MERR ("double bind on variable "^
+                                         Lib.quote n)),
              tymatch Ty (type_of tm) tyS)
   | RM ((Const(c1,ty1),Const(c2,ty2),_)::rst) (tmS,tyS)
       = RM rst
-        (if c1 <> c2 then MERR "different constants" else
+        (if c1 <> c2 then 
+          let val n1 = id_to_string c1
+              val n2 = id_to_string c2
+          in 
+           MERR ("different constants: "^n1^" matched against "^n2)
+          end
+         else
          case (ty1,ty2)
           of (GRND _, POLY _) => MERR"ground const vs. polymorphic const"
            | (GRND pat,GRND obj) => if pat=obj then (tmS,tyS)
