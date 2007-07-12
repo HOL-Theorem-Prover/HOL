@@ -10,34 +10,6 @@ val _ = app load ["OS", "Bool", "Time", "Timer", "CommandLine",
 
 (* ------------------------------------------------------------------------- *)
 
-exception Parse;
-
-fun toWord s i = wordsML.n2w_itself(i, fcpML.ITSELF(numML.fromInt s));
-
-fun toWord4 i = toWord 4 (numML.fromInt i): wordsML.word4
-val toWord16 = toWord 16: numML.num -> wordsML.word16;
-val toWord30 = toWord 30: numML.num -> wordsML.word30;
-val toWord32 = toWord 32: numML.num -> wordsML.word32
-
-val num2Arbnum = Arbnum.fromHexString o numML.toHexString;
-
-fun string2num s =
-  case String.explode s of
-    (#"0"::(#"x"::ls)) => numML.fromHexString (String.extract(s,2,NONE))
-  | (#"0"::(#"b"::ls)) => numML.fromBinString (String.extract(s,2,NONE))
-  | (#"0"::ls) => numML.fromOctString (String.extract(s,1,NONE))
-  | ls => numML.fromString s;
-
-fun toHexString_w2n n = "0x" ^ numML.toHexString (wordsML.w2n n);
-
-fun for base top f =
- let fun For i = if i>top then [] else f i::For(i+1) in For base end;
-
-fun for_se base top f =
- let fun For i = if i>top then () else (f i; For(i+1)) in For base end;
-
-(* ------------------------------------------------------------------------- *)
-
 structure memoryML :>
 sig
   type mem
@@ -52,6 +24,9 @@ sig
 end =
 struct
   open numML wordsML armML
+
+  fun toWord s i = n2w_itself(i, fcpML.ITSELF(fromInt s));
+  val toWord32 = toWord 32: num -> word32
 
   type mem = (word30, word32) Redblackmap.dict
 
@@ -111,6 +86,34 @@ struct
         MEM_WRITE_BLOCK (mem_write m a w)
           (word_add a (n2w_itself (ONE,fcpML.ITSELF(numML.fromInt 30)))) l
 end;
+
+(* ------------------------------------------------------------------------- *)
+
+exception Parse;
+
+fun toWord s i = wordsML.n2w_itself(i, fcpML.ITSELF(numML.fromInt s));
+
+fun toWord4 i = toWord 4 (numML.fromInt i): wordsML.word4
+val toWord16 = toWord 16: numML.num -> wordsML.word16;
+val toWord30 = toWord 30: numML.num -> wordsML.word30;
+val toWord32 = toWord 32: numML.num -> wordsML.word32
+
+val num2Arbnum = Arbnum.fromHexString o numML.toHexString;
+
+fun string2num s =
+  case String.explode s of
+    (#"0"::(#"x"::ls)) => numML.fromHexString (String.extract(s,2,NONE))
+  | (#"0"::(#"b"::ls)) => numML.fromBinString (String.extract(s,2,NONE))
+  | (#"0"::ls) => numML.fromOctString (String.extract(s,1,NONE))
+  | ls => numML.fromString s;
+
+fun toHexString_w2n n = "0x" ^ numML.toHexString (wordsML.w2n n);
+
+fun for base top f =
+ let fun For i = if i>top then [] else f i::For(i+1) in For base end;
+
+fun for_se base top f =
+ let fun For i = if i>top then () else (f i; For(i+1)) in For base end;
 
 (* ------------------------------------------------------------------------- *)
 
