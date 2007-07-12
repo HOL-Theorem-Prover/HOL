@@ -76,8 +76,8 @@ src/finite_map
 src/bag
 src/n_bit
 src/n-bit
-!examples/arm6
-!!examples/arm6/correctness
+!examples/ARM/arm6-verification
+!!examples/ARM/arm6-verification/correctness
 src/llist
 src/ring/src
 src/integer
