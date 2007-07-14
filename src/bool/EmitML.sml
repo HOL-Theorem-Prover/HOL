@@ -510,7 +510,8 @@ fun term_to_ML openthys side ppstrm =
 fun pp_term_as_ML openthys side ppstrm M =
     term_to_ML openthys side ppstrm minprec M;
 
-fun same_fn eq1 eq2 = (fst(strip_comb eq1) = fst(strip_comb eq2));
+fun same_fn eq1 eq2 = 
+  same_const (fst(strip_comb(lhs eq1))) (fst(strip_comb(lhs eq2)));
 
 (*---------------------------------------------------------------------------*)
 (* Print a function definition as ML, i.e., fun f ... = ...                  *)
@@ -553,7 +554,7 @@ fun pp_defn_as_ML openthys ppstrm =
            val clauses' = ("fun",hd clauses)::map (pair "and") (tl clauses)
        in begin_block CONSISTENT 0
         ; pr_list pp_clauses (fn () => ())
-                  (fn () => (add_newline(); add_newline())) clauses'
+                  (fn () => (add_newline())) clauses'
         ; end_block()
        end
  in

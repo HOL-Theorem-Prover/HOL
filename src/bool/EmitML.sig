@@ -26,7 +26,8 @@ sig
 
   val pseudo_constructors      : thm list ref
   val reshape_thm_hook         : (thm -> thm) ref
-  val curried_const_equiv_tupled_var : term * int -> thm (* side effects pseudo_constructors *)
+  val curried_const_equiv_tupled_var 
+    : term * int -> thm (* side effects pseudo_constructors *)
 
   datatype side = LEFT | RIGHT
 
