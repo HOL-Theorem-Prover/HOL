@@ -4,7 +4,7 @@
 # ==============================================================
 
 # --- Your compiler flags
-CFLAGS = -g -ansi -Wmissing-prototypes -Wall
+CFLAGS = -g -ansi -Wmissing-prototypes -Wall -fPIC
 
 # --- Where to install the library (directory, no trailing slash)
 LIBDIR = /usr/local/lib
