@@ -34,7 +34,7 @@
 
 \newcommand{\sfemp}{{\textsf{emp}}}
 \newcommand{\sftree}{{\textsf{tree}}}
-\newcommand{\sfpointsto}[2]{#1 \hookrightarrow [#2]}
+\newcommand{\sfpointsto}[2]{#1 \mapsto [#2]}
 \newcommand{\sfbintree}{{\textsf{bin-tree}}}
 \newcommand{\sflist}{{\textsf{list}}}
 
@@ -54,7 +54,7 @@
 
 \title{A Deep Embedding of a Decidable Fragment of Separation Logic in \HOL}
 \author{Thomas Tuerk}
-\date{2nd July 2007}
+\date{16th July 2007}
 
 \begin{document}
 \maketitle
@@ -107,8 +107,8 @@ The definitions of the fragment of separation logic used here follow mainly the 
 sake of the embedding.
 
 \begin{definition}[Values]
-  For a given set of values \values\ let \valuesnil\ 
-  denote the extension of \values\ with a special value \nil.
+  For a given set of values $\values$ let $\valuesnil$ 
+  denote the extension of $\values$ with a special value $\nil$.
 
   As \nil\ is used to denote the null-pointer, it's often important that a set
   does not contain \nil. Thus, we assume without loss of generality that
@@ -247,7 +247,7 @@ For a stack $s$ and a heap $h$ the semantics of a spatial formula is given by
 
 Notice, that this definition is well founded. This may be difficult to see in
 the case of $\sftree$. However, each recursion that occurs in the definition
-of $\sftree$ removes -- according to the semantics of $\hookrightarrow$ and
+of $\sftree$ removes -- according to the semantics of $\mapsto$ and
 $*$ -- the root of the tree from the heap. Since the heap is by definition
 finite, this recursion has to terminate and the definition is well founded.
 However, in the $\HOL$\ embedding a definition is used that talks explicitly
@@ -341,7 +341,7 @@ s, h & \modelssf & \sfemp
 %
 These equivalences can be easily used to rewrite formulae. Therefore, we will
 just consider formulae such that all field indexes occurring in a $\sftree$ or
-$\hookrightarrow$ subformula are pairwise distinct. Additionally, we assume that
+$\mapsto$ subformula are pairwise distinct. Additionally, we assume that
 $\pftrue$ and $\sfemp$ do not occur in the lists. Otherwise they can be easily
 eliminated, since they are the identity.
 
@@ -597,7 +597,7 @@ heads of the lists. Similarly, we do not distinguish between some formulae,
 which obviously have the same semantics. So, $\pfequal {e_1} e_2$ and
 $\pfequal {e_2} e_1$ are not distinguished. The same holds for $\pfunequal
 {e_1} e_2$. Additionally, the order, in which fields occur in $\sftree$ and
-$\hookrightarrow$ formulae is not important. Thus, we do for example not
+$\mapsto$ formulae is not important. Thus, we do for example not
 distinguish between $\sfbintree(l,r,e)$ and $\sfbintree(r,l,e)$ or between 
 $\sfpointsto e {t_1: e_1, t_2:e_2, t_3:e_3}$ and $\sfpointsto e {t_2: e_2,
   t_3:e_3, t_1:e_1}$.
@@ -730,11 +730,11 @@ versions of \smallfoot. However, it is not described in \cite{berdine05symbolic}
 \end{array}
 \]
 
-For $\hookrightarrow$, the expression $e$ is added to $\eta$. This means, that the
+For $\mapsto$, the expression $e$ is added to $\eta$. This means, that the
 value of $e$ is not in the remaining heap and that it is distinct to the
 values of everything else in $\eta$. These two properties capture the
 properties of the $*$-operation. Additionally, it is stored that $e$ does
-not equal to $\nil$, which captures the properties of the $\hookrightarrow$-operator
+not equal to $\nil$, which captures the properties of the $\mapsto$-operator
 itself. 
 
 For trees, it's very similar. However, the tree may be empty. Therefore,
@@ -744,7 +744,7 @@ i.\,e.\ that the tree is not empty.
 
 
 These inferences are implemented by \texttt{ds\_inference\_FRAME\_\_\_CONV}
-for $\hookrightarrow$ and $\sftree$. Notice, that this
+for $\mapsto$ and $\sftree$. Notice, that this
 conversion does not apply the general frame inference. Thus, it's a real
 conversion which always results in an equality
 theorem. \texttt{ds\_inference\_FRAME\_\_\_IMPL\_\_\_CONV} applies the general
@@ -793,7 +793,7 @@ These inference are implemented by
 
 \subsubsection{\texttt{ds\_inference\_NIL\_NOT\_LVAL}}
 
-According to the semantics of $\hookrightarrow$, $\nil$ cannot point to
+According to the semantics of $\mapsto$, $\nil$ cannot point to
 anything. The following inferences make this fact explicit. 
 \[\begin{array}{l}
 \eqinferstyle
