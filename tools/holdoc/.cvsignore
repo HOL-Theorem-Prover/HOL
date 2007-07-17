@@ -1,5 +1,0 @@
-simpledump simpletexdump lts_to_latex mng_to_latex hol_to_latex
-hollex.ml *.cm[iox] .depend Net_hostLTSScript.tex hostlts.ps
-Net_hostLTSScript.errs
-*.output holparse.ml holparse.mli simplemngdump simplemosmldump
-

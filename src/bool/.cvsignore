@@ -1,8 +1,0 @@
-*.uo
-*.ui
-*Theory.sig
-*Theory.sml
-DiskFiles.grm-sig.sml
-DiskFiles.grm.desc
-DiskFiles.grm.sml
-DiskFiles.lex.sml

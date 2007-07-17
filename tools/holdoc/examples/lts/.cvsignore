@@ -1,4 +1,0 @@
-*.ui *.uo *Theory.sig *Theory.sml
-.HOLMK
-Type.imn Value.imn Label.imn StoreLTS.imn *_auto.imn
-*.errs *LTS-doc.ps *LTS-doc.tex *LTS.tex
