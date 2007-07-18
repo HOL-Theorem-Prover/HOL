@@ -7,7 +7,7 @@ struct
 
 open HolKernel Parse boolLib bossLib simpLib metisLib intLib
      integerTheory stringTheory combinTheory listTheory
-     posrealTheory posrealLib expectationTheory wpTheory;
+     posrealTheory posrealLib expectationTheory syntaxTheory wpTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Automatic tool for calculating wlp verification conditions.               *)

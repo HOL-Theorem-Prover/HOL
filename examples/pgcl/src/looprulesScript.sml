@@ -10,16 +10,18 @@ quietdec := true;
 *)
 
 open HolKernel Parse boolLib bossLib intLib realLib metisLib;
-open combinTheory listTheory rich_listTheory stringTheory integerTheory
-     realTheory;
-open posetTheory posrealTheory posrealLib expectationTheory wpTheory valueTheory arithmeticTheory;
+open combinTheory listTheory rich_listTheory stringTheory arithmeticTheory
+     integerTheory realTheory posetTheory
+
+open posrealTheory posrealLib expectationTheory syntaxTheory wpTheory
+     valueTheory;
 
 (*
 quietdec := false;
 *)
 
 (* ------------------------------------------------------------------------- *)
-(* Start a new theory called "simpledc"                                         *)
+(* Start a new theory called "looprules"                                     *)
 (* ------------------------------------------------------------------------- *)
 
 val _ = new_theory "looprules";
