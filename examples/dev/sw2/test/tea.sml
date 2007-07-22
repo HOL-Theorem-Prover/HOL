@@ -1,8 +1,24 @@
 (*---------------------------------------------------------------------------*)
-(* A version of TEA, taken from examples/Crypto/TEA                          *)
+(* TEA, a Tiny Encryption Algorithm                                          *)
+(* TEA routine is a Feistel type routine although addition and subtraction   *)
+(* are used as the reversible operators rather than XOR. The routine relies  *)
+(* on the alternate use of XOR and ADD to provide nonlinearity. A dual shift *)
+(* causes all bits of the key and data to be mixed repeatedly.The number of  *)
+(* rounds before a single bit change of the data or key has spread very      *)
+(* close to 32 is at most six, so that sixteen cycles may suffice and the    *)
+(* authors suggest 32. The key is set at 128 bits.                           *)
+(* See http://www.ftp.cl.cam.ac.uk/ftp/papers/djw-rmn/djw-rmn-tea.html       *)
+(* for more information.                                                     *)
 (*---------------------------------------------------------------------------*)
 
 use "prelim";  
+open wordsTheory wordsLib pairTheory pairLib;
+
+val KMATCH_MP_TAC = 
+  MATCH_MP_TAC o 
+  Ho_Rewrite.REWRITE_RULE [AND_IMP_INTRO,
+           METIS_PROVE [] ``(a ==> !x. b x) = !x. a ==> b x``]; 
+
 
 (*---------------------------------------------------------------------------*)
 (* Cipher types                                                              *)
@@ -41,14 +57,6 @@ val Rounds_def =
    `Rounds (n:word32,s:state) = 
       if n=0w then s else Rounds (n-1w, Round s)`;
 
-(*
-val (Rounds_def, Rounds_ind) = Defn.tprove
- (Hol_defn
-   "Rounds"
-   `Rounds (n:word32,s:state) = if n=0w then s else Rounds (n-1w, Round s)`,
-  WF_REL_TAC `measure (w2n o FST)` THEN
-  METIS_TAC [wordsTheory.WORD_PRED_THM]);
-*)
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt  (32 rounds)                                                      *)
@@ -81,18 +89,8 @@ val InvRound_def =
 (* Arbitrary number of decipher rounds                                       *)
 (*---------------------------------------------------------------------------*)
 
-(*
-val (InvRounds_def, InvRounds_ind) = Defn.tprove
- (Hol_defn
-   "InvRounds"
-   `InvRounds (n:word32,s:state) = 
-      if n=0w then s else InvRounds (n-1w, InvRound s)`,
-  WF_REL_TAC `measure (w2n o FST)` THEN
-  METIS_TAC [wordsTheory.WORD_PRED_THM]);
-*)
-
 val InvRounds_def = 
-  Define
+ Define
    `InvRounds (n:word32,s:state) = 
      if n=0w then s else InvRounds (n-1w, InvRound s)`;
 
@@ -106,7 +104,91 @@ val TEADecrypt_def =
       let (plaintxt,keys,sum) = InvRounds(32w,(txt,keys,DELTA << 5)) in
       plaintxt`;
 
-STOP;
+(*===========================================================================*)
+(* Correctness                                                               *)
+(*===========================================================================*)
+
+(*---------------------------------------------------------------------------*)
+(* Case analysis on a block and a key and a state		             *)
+(*---------------------------------------------------------------------------*)
+
+val WORD_PRED_EXISTS = Q.prove
+(`!w:'a word. ~(w = 0w) ==> ?u. w = u + 1w`,
+  RW_TAC std_ss [] THEN 
+  Q.EXISTS_TAC `w - 1w` THEN 
+  RW_TAC std_ss [WORD_SUB_ADD,WORD_ADD_SUB,WORD_MULT_CLAUSES]);
+
+val FORALL_STATE = Q.prove
+ (`(!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)`,
+    METIS_TAC [PAIR]
+ );
+
+val OneRound_Inversion = Q.store_thm("OneRound_Inversion",
+ `!s:state. InvRound (Round s) = s`,
+ SIMP_TAC std_ss [FORALL_STATE] THEN
+ RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]);
+
+
+val Rounds_ind = fetch "-" "Rounds_ind";
+
+val th = 
+ GEN_ALL(SIMP_RULE std_ss [FORALL_PROD]
+   (GEN_BETA_RULE
+    (Q.ISPEC `\(a:word32,b:state). P (a,FST(b), FST(SND(b)), SND(SND b)):bool` 
+     Rounds_ind)));
+
+val Rounds_ind' = Q.prove
+(`!P. 
+   (!(n:word32) b1 k1 s1. 
+       (~(n = 0w) ==> P (n - 1w,Round(b1,k1,s1))) ==> P (n,(b1,k1,s1))) ==>
+     !i b k s:word32. P (i,b,k,s)`,
+ SIMP_TAC std_ss [FORALL_PROD] THEN GEN_TAC THEN DISCH_TAC THEN 
+ HO_MATCH_MP_TAC th THEN RW_TAC std_ss []);
+
+(*---------------------------------------------------------------------------*)
+(* Main lemmas                                                               *)
+(*---------------------------------------------------------------------------*)
+
+val lemma1 = Q.prove
+(`!b k sum. ?b1. Round (b,k,sum) = (b1,k,sum+DELTA)`,
+ SIMP_TAC std_ss [FORALL_PROD,Round_def,LET_THM]);
+
+val lemma2 = Q.prove
+(`!i b k s. ?b1. Rounds (i,b,k,s) = (b1,k,s + DELTA * i)`,
+ recInduct Rounds_ind' THEN RW_TAC std_ss [] THEN
+  ONCE_REWRITE_TAC [Rounds_def] THEN 
+  RW_TAC arith_ss [WORD_MULT_CLAUSES, WORD_ADD_0] THEN
+  RES_TAC THEN RW_TAC std_ss [] THENL
+  [METIS_TAC [lemma1,FST,SND],
+   `?b2. Round(b1,k1,s1) = (b2,k1,s1+DELTA)` by METIS_TAC [lemma1] THEN
+   RW_TAC arith_ss [WORD_EQ_ADD_LCANCEL,GSYM WORD_ADD_ASSOC] THEN
+   `?m. n = m + 1w` by METIS_TAC [WORD_PRED_EXISTS] THEN 
+   RW_TAC std_ss [WORD_ADD_SUB,WORD_MULT_CLAUSES]]);
+
+val delta_shift = Q.prove
+(`DELTA << 5 = DELTA * 32w`, 
+ REWRITE_TAC [DELTA_def] THEN WORDS_TAC);
+
+val [Round,InvRound,DELTA] = flatten(map decls ["Round", "InvRound", "DELTA"]);
+val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
+
+(*---------------------------------------------------------------------------*)
+(* Basic theorem about encryption/decryption                                 *)
+(*---------------------------------------------------------------------------*)
+
+val TEA_CORRECT = Q.store_thm
+("TEA_CORRECT",
+ `!plaintext keys.
+     TEADecrypt (keys,TEAEncrypt (keys,plaintext)) = plaintext`,
+   RW_TAC list_ss [TEAEncrypt_def, TEADecrypt_def,delta_shift] THEN
+   `(keys1=keys) /\ (sum = DELTA*32w)` 
+     by METIS_TAC[lemma2,WORD_ADD_0,PAIR_EQ]THEN RW_TAC std_ss [] THEN
+   Q.PAT_ASSUM `Rounds x = y` (SUBST_ALL_TAC o SYM) THEN
+   POP_ASSUM MP_TAC THEN RESTR_EVAL_TAC [Round, InvRound, DELTA] THEN 
+   RW_TAC std_ss [OneRound_Inversion]
+ );
+
+
 (*===========================================================================*)
 (*  Compilation                                                              *)
 (*===========================================================================*)
@@ -142,6 +224,7 @@ fun pass4a (env,def) =
   in 
     def2
   end;
+
 val compile4a = complist pass4a;
 
 compile4a teaFns;
