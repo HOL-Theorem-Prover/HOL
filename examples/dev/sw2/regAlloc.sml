@@ -281,13 +281,19 @@ fun g' dest cont regenv exp =
     let val (c,e1,e2) = dest_cond exp
         val (cmpop,ds) = strip_comb c
         val (d0,d1) = (hd ds, hd (tl ds))
-        val c' = list_mk_comb (cmpop, [find_reg (regenv,d0), find_reg (regenv,d1)])
+        (*
+        val (ds0,ds1) = (#2 (strip_comb d0), #2 (strip_comb d1))
+        val c' = list_mk_comb (cmpop, [subst (mk_subst_rules ds0 regenv) d0, subst (mk_subst_rules ds1 regenv) d1])
+        *)
+        val c' = list_mk_comb (cmpop, [find_reg(regenv,d0), find_reg(regenv,d1)])
         fun f e1 e2 = mk_cond(c', e1, e2)
     in
         g'_if dest cont regenv exp f e1 e2
     end
   else if is_pair exp then
       NoSpill (subst (tuple_subst_rules (strip_pair exp) regenv) exp, regenv)
+  else if is_let exp then
+       g dest cont regenv exp
   else if is_comb exp then
     let val (op0,xs) = strip_comb exp in
       if is_binop op0 (* includes orelse is_cmpop op0 orelse is_relop op0 *)
@@ -559,8 +565,7 @@ fun reg_alloc def =
             handle _ => REFL body2
     	val body3 = lhs (concl (th1))
     	val th2 = ALPHA fbody (mk_pabs (args1,body3))
-	    handle e => (print "the allocation is incomplete or incorrect"; Raise e)
-
+		  handle e => (print "the allocation is incomplete or incorrect"; Raise e)
     	val th3 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [th1])) th2
     	val th4 = TRANS def th3
     	val th5 = (BETA_RULE o REWRITE_RULE [save_def, loc_def]) th4

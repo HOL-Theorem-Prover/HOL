@@ -169,6 +169,14 @@ val C_ABS = Q.store_thm (
    RW_TAC std_ss [C_def, LET_THM]
   );
 
+(*
+val C_APP = Q.store_thm (
+  "C_APP",
+   `C (f e) = \k. C f (\g. C e (\x. k (g x)))`,
+   SIMP_TAC std_ss [C_def, LET_THM]
+  );
+*)
+
 val C_APP = Q.store_thm (
   "C_APP",
    `C (f e) = \k. C f (\g. C e (\x. C (g x) (\y. k y)))`,

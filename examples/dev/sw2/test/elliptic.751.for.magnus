@@ -339,3 +339,27 @@ val curve_add_def =
      in
        (r0,r1)`;
 
+val curve_mult_aux_def = Define `
+  curve_mult_aux (r0,r1,r2,r3,r4) =
+       let (r0,r1) =
+          (if r2 = 0w then (r3,r4)
+           else
+               (let (r5,r6) = curve_double (r0,r1)
+                in
+                  let r7 = r2 >>> 1 in
+                  let r2 = r2 && 1w in
+                  let (r0,r1) =
+                    (if r2 = 0w then (r3,r4)
+                     else
+                       (let (r0,r1) = curve_add (r0,r1,r3,r4) in (r0,r1)))
+ 	          in
+                    let (r0,r1) = curve_mult_aux (r5,r6,r7,r0,r1) in
+                    (r0,r1)))
+        in
+        (r0,r1)`;
+
+val curve_mult_def = Define `
+  curve_mult (r0,r1,r2) =
+      let (r0,r1) = curve_mult_aux (r0,r1,r2,0w,0w)
+      in 
+      (r0,r1)`;

@@ -79,30 +79,49 @@ fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
       th3
    end;
 
+(*  for debugging
+fun mk_let_norm (c_thm, th0, th1) =
+  let val t0 = rhs (concl (SPEC_ALL c_thm))
+      val (k, t1) = dest_pabs t0
+      val (c1, ts1) = strip_comb t1 
+      val (x, t2) = dest_pabs (hd (tl ts1))
+      val (c2, ts2) = strip_comb t2 
+      val cont = hd (tl ts2)
+      val (e1, e2) = (rhs (concl th0), rhs (concl th1))
+
+      val cfk = mk_pabs(x, mk_comb(e2, cont))       (* \x. C (f x) (\y. k y) *)
+      val theta = match_type (hd (#2 (dest_type (type_of e1)))) (type_of cfk)
+      val cexp = mk_pabs(k, mk_comb(inst theta e1, cfk))       (* \k. C e (\x. C (f x) (\y. k y)) *)
+  in cexp
+  end
+*)
+
 fun K_Normalize exp =
  let val t = dest_C exp               (* eliminate the C *)
  in
-  if is_atomic t then ISPEC t C_ATOM_INTRO else 
-  if is_let t then                  (*  exp = LET (\v. N) M  *)
+  if is_atomic t then ISPEC t C_ATOM_INTRO
+  else if is_let t then                  (*  exp = LET (\v. N) M  *)
    let val (v,M,N) = dest_plet t
        val (th0, th1) = (K_Normalize (mk_C M), K_Normalize (mk_C N))
-       val th2 = SIMP_CONV bool_ss [Once C_LET] exp
-	         handle Conv.UNCHANGED (* case let (v1,v2,..) = ... in ... *) 
-		 => let val t1 = mk_pabs(v,N)
-                        val th = INST_TYPE [alpha |-> type_of N, 
-                                            beta  |-> type_of N, 
+       val th3 = SIMP_CONV bool_ss [Once C_LET] exp
+	         handle Conv.UNCHANGED (* case let (v1,v2,..) = ... in ... *)
+		 => 
+		     let val t1 = mk_pabs(v,N)
+                         val th = INST_TYPE [alpha |-> type_of N, 
+                                            (* beta  |-> type_of N, *) 
                                             gamma |-> type_of v]
                                  (GEN_ALL C_LET)
                          val t2 = rhs (concl (SPECL [t1, M] th))
-                         val theta = match_type (type_of exp) (type_of t2)
+                         (* val theta = match_type (type_of exp) (type_of t2) *)
+                         val th2 = prove (mk_eq(exp,t2), 
+					  SIMP_TAC bool_ss [LET_THM, C_def])
                      in
-                         prove (mk_eq(inst theta exp,t2), 
-                                SIMP_TAC bool_ss [LET_THM, C_def])
+			 PBETA_RULE th2
                      end
-       val th3 =  SUBST_2_RULE (th0,th1) th2
-       val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
+       val th4 = (SUBST_2_RULE (th0, th1)) th3
+       val th5 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th4
     in
-       th4
+       th5
     end
 
   else if is_pabs t then                        (*  exp = \(x...).M *)
@@ -124,16 +143,20 @@ fun K_Normalize exp =
     end
 
     else if is_pair t then                        (*  exp = (M,N) *)
-      let 
-         val (M,N) = dest_pair t
-         val th0 = K_Normalize (mk_C M) 
-         val th1 = K_Normalize (mk_C N)
-         val th2 = ONCE_REWRITE_CONV [C_PAIR] exp
-         val th3 = SUBST_2_RULE (th0,th1) th2
-         val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
-      in
-         th4
-      end
+(*
+      if List.all is_atomic (strip_pair t) then ISPEC t C_ATOM_INTRO
+      else
+*)
+        let
+          val (M,N) = dest_pair t
+          val th0 = K_Normalize (mk_C M) 
+          val th1 = K_Normalize (mk_C N)
+          val th2 = ONCE_REWRITE_CONV [C_PAIR] exp
+          val th3 = SUBST_2_RULE (th0,th1) th2
+          val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
+        in
+          th4
+        end
 
     else if is_cond t then                  (*  exp = if P then M else N *)
       let 
@@ -184,7 +207,7 @@ fun K_Normalize exp =
       end
    else
     REFL exp
- end
+ end;
 
 (*---------------------------------------------------------------------------*)
 (*   Convert a function to its equivalent KNF                                *)
@@ -193,13 +216,16 @@ fun K_Normalize exp =
 fun normalize def = 
  let val thm0 = SIMP_RULE arith_ss [] def  (* Basic simplification *)
      (* Break compound condition jumps *)
-     val thm1 = REWRITE_RULE [AND_COND, OR_COND] thm0
+     val thm1 = (PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND]) thm0
      val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO])) 
                           (SPEC_ALL thm1)
-     val exp = #1 (dest_comb (rhs (concl thm2)))
+
+     val exp = mk_C (rhs (concl (SPEC_ALL thm1)))
      val lem3 = K_Normalize exp          (* Continuation Form *)
+
      val thm4 = PURE_ONCE_REWRITE_RULE [lem3] thm2
-     val thm5 = SIMP_RULE bool_ss [C_2_LET] thm4 (* "Let" Form *)
+     val thm5 = (SIMP_RULE bool_ss [C_2_LET]) thm4 (* "Let" Form *)
+     (* val thm6 = CONV_RULE (DEPTH_CONV (SIMP_CONV bool_ss [Once LET_THM])) thm5 *)
      val thm6 = REWRITE_RULE [BRANCH_NORM] thm5
  in
    thm6
@@ -216,7 +242,11 @@ fun identify_atom tm =
      fun trav t = 
        if is_let t then 
            let val (v,M,N) = dest_plet t
-               val M' = if is_atomic M then mk_atom M else trav M
+               val M' = if is_atomic M then
+                           mk_atom M
+                        else if is_pair v andalso is_pair M then 
+		           trav M        (* to be revised *)
+                        else trav M
            in mk_plet (v, M', trav N)
            end
        else if is_comb t then
