@@ -7,11 +7,11 @@
 (* ========================================================================= *)
 
 (* interactive use:
-  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "bsubstTheory"];
+  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "updateTheory"];
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory bsubstTheory;
+open Q wordsTheory rich_listTheory updateTheory;
 
 val _ = new_theory "arm";
 

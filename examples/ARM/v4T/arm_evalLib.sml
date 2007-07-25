@@ -11,14 +11,13 @@ struct
 
 (* interactive use:
   app load ["wordsLib", "computeLib", "pred_setSimps", "arm_evalTheory",
-            "systemTheory", "assemblerML", "instructionTheory",
-            "thumbTheory", "instructionSyntax"];
+            "systemTheory", "assemblerML", "thumbTheory", "instructionSyntax"];
 *)
 
 open HolKernel boolLib bossLib;
 open Q Parse computeLib combinTheory pairTheory wordsTheory wordsSyntax
      optionTheory rich_listTheory armTheory arm_evalTheory
-     bsubstTheory systemTheory instructionTheory instructionSyntax assemblerML;
+     updateTheory systemTheory instructionTheory instructionSyntax assemblerML;
 
 (* ------------------------------------------------------------------------- *)
 (* Some conversions *)
@@ -301,19 +300,19 @@ fun mk_word32 n = mk_n2w(numSyntax.mk_numeral n,``:32``);
 fun eval_word t = (numSyntax.dest_numeral o rhsc o FOLD_UPDATE_CONV o mk_w2n) t;
 
 val subst_tm  = prim_mk_const{Name = "UPDATE", Thy = "combin"};
-val bsubst_tm = prim_mk_const{Name = "|:", Thy = "bsubst"};
+val lupdate_tm = prim_mk_const{Name = "|:", Thy = "update"};
 
 fun mk_subst (a,b,m) =
    list_mk_comb(inst[alpha |-> type_of a,beta |-> type_of b] subst_tm,[a,b,m])
    handle HOL_ERR _ => raise ERR "mk_subst" "";
 
-fun mk_bsubst (a,b,m) =
+fun mk_lupdate (a,b,m) =
    list_mk_comb(inst[alpha |-> dim_of a,beta |-> listSyntax.eltype b]
-     bsubst_tm,[a,b,m])
-   handle HOL_ERR _ => raise ERR "mk_bsubst" "";
+     lupdate_tm,[a,b,m])
+   handle HOL_ERR _ => raise ERR "mk_lupdate" "";
 
 val dest_subst  = dest_triop subst_tm  (ERR "dest_word_slice" "");
-val dest_bsubst = dest_triop bsubst_tm (ERR "dest_word_slice" "");
+val dest_lupdate = dest_triop lupdate_tm (ERR "dest_word_slice" "");
 
 fun dest_psr t =
   case (strip_pair o rhsc o ARM_CONV) (mk_comb(``DECODE_PSR``, t)) of
@@ -453,7 +452,7 @@ end;
 
 local
   fun do_dest_subst_mem t a =
-       let val (i,d,m) = dest_bsubst t in
+       let val (i,d,m) = dest_lupdate t in
           do_dest_subst_mem m ((i,fst (listSyntax.dest_list d))::a)
        end handle HOL_ERR _ =>
          let val (i,d,m) = dest_subst t in
@@ -698,7 +697,7 @@ local
   fun assemble_assembler m a = let
     val l = map form_words (do_links a)
     val b = map (fn (m,c) => (mk_word30 m,listSyntax.mk_list(c,``:word32``))) l
-    val t = foldl (fn ((a,c),t) => mk_bsubst(a,c,t)) m b
+    val t = foldl (fn ((a,c),t) => mk_lupdate(a,c,t)) m b
   in
     rhsc (SORT_UPDATE_CONV t)
   end
@@ -746,7 +745,7 @@ in
         val l = List.tabulate(lines, fn i => read_word (data,4 * i + skip))
         val lterm = listSyntax.mk_list(l,``:word32``)
     in
-      rhsc (SORT_UPDATE_CONV (mk_bsubst(mk_word30 top_addr,lterm,m)))
+      rhsc (SORT_UPDATE_CONV (mk_lupdate(mk_word30 top_addr,lterm,m)))
     end
 end;
 

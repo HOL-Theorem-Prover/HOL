@@ -1,6 +1,6 @@
 (* ========================================================================= *)
-(* FILE          : bsubstScript.sml                                          *)
-(* DESCRIPTION   : Block substitution and Memory Operations                  *)
+(* FILE          : updateScript.sml                                          *)
+(* DESCRIPTION   : Function update using lists                               *)
 (*                                                                           *)
 (* AUTHOR        : (c) Anthony Fox, University of Cambridge                  *)
 (* DATE          : 2005-2007                                                 *)
@@ -14,7 +14,7 @@ open HolKernel boolLib bossLib;
 open Parse Q combinTheory arithmeticTheory wordsTheory;
 open listTheory rich_listTheory my_listTheory;
 
-val _ = new_theory "bsubst";
+val _ = new_theory "update";
 
 (* ------------------------------------------------------------------------- *)
 

@@ -13,7 +13,7 @@
 
 open HolKernel boolLib Parse bossLib;
 open Q arithmeticTheory bitTheory wordsTheory wordsLib;
-open bsubstTheory armTheory systemTheory arm_evalTheory;
+open updateTheory armTheory systemTheory arm_evalTheory;
 
 val _ = new_theory "arm_rules";
 

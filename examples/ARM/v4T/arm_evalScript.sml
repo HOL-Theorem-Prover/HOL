@@ -8,12 +8,12 @@
 
 (* interactive use:
   app load ["pred_setSimps", "rich_listTheory", "wordsLib", "wordsSyntax",
-            "armLib", "bsubstTheory", "instructionTheory", "systemTheory"];
+            "armLib", "systemTheory"];
 *)
 
 open HolKernel boolLib Parse bossLib;
 open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open combinTheory bsubstTheory armTheory systemTheory instructionTheory;
+open combinTheory updateTheory armTheory systemTheory instructionTheory;
 
 val _ = new_theory "arm_eval";
 

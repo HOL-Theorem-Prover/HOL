@@ -12,7 +12,7 @@
 *)
 
 open HolKernel boolLib bossLib Parse;
-open Q wordsTheory rich_listTheory bsubstTheory;
+open Q wordsTheory rich_listTheory updateTheory;
 open armTheory instructionTheory;
 
 val _ = new_theory "system";
