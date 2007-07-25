@@ -188,6 +188,10 @@ fun list_mk_STAR [] = raise ERR "list_mk_STAR" "Invalid argument"
 
 fun is_SEP_HIDE tm = (fst (dest_const tm) = "SEP_HIDE") handle e => false;
 
+fun get_sep_domain tm = 
+  if is_SEP_HIDE (fst (dest_comb tm)) 
+  then snd (dest_comb tm) else fst (dest_comb tm) handle e => tm;
+
 fun extract_domain tm =
   let val (h,q) = dest_comb tm in
     (if is_SEP_HIDE h then q else h) end handle e => tm;
@@ -196,8 +200,7 @@ fun mk_str_list_quote [] = [QUOTE "emp"] : (term frag) list
   | mk_str_list_quote (x::xs) =
      [QUOTE (foldl (fn (i,s) => s^"*i"^int_to_string i) ("i"^int_to_string x) xs)];
 
-fun MOVE_OUT_CONV t tm = let
-  val needle = Parse.parse_in_context (free_vars tm) t
+fun MOVE_OUT_TERM_CONV needle tm = let
   val xs = list_dest_STAR tm
   fun list_nums 0 xs = xs |
       list_nums i xs = list_nums (i-1) (i::xs)
@@ -210,6 +213,10 @@ fun MOVE_OUT_CONV t tm = let
   val to_list = mk_str_list_quote (find_first needle xs 1)
   in (REWRITE_CONV [STAR_ASSOC] THENC MOVE_STAR_CONV from_list to_list) tm end;
 
+fun MOVE_OUT_CONV t tm = let
+  val needle = Parse.parse_in_context (free_vars tm) t
+  in MOVE_OUT_TERM_CONV needle tm end;
+
 (* e.g. 
 
   MOVE_OUT_CONV `R a` ``R b 4w * R a (x + y) * ~S`` gives
@@ -217,6 +224,44 @@ fun MOVE_OUT_CONV t tm = let
 
   MOVE_OUT_CONV `R a` ``R b 4w * ~R a * ~S`` gives
     |- R b 4w * ~R a * ~S = R b 4w * ~S * ~R a : thm
+
+*)
+
+fun MOVE_OUT_LIST_TERM_CONV needles tm = let
+  val xs = map (get_sep_domain) (list_dest_STAR tm)
+  fun number (x,(i,xs)) = (i+1,xs @ [(x,i)])  
+  val xs = snd (foldl number (1,[]) xs)
+  fun find_and_delete x [] = hd []
+    | find_and_delete x ((y,i)::ys) = 
+       if x = y then (i,ys) else let
+         val (j,zs) = find_and_delete x ys
+       in (j,(y,i)::zs) end 
+  fun fix (x,(xs,zs)) = let
+    val (i,xs) = find_and_delete x xs
+    in (xs,zs @ [i]) end
+  val (left,zs) = foldl fix (xs,[]) needles
+  fun f i = "x" ^ int_to_string i
+  fun star_separate [] = "emp"
+    | star_separate [x] = x
+    | star_separate (x::xs) = x ^ "*" ^ star_separate xs
+  val zs_str = star_separate (map f zs)
+  val left_str = star_separate (map (f o snd) left)
+  val to_list = if length(left) = 0 then zs_str else "("^left_str ^")*("^ zs_str^")"   
+  val from_list = star_separate (map (f o snd) xs)
+  val to_list = [QUOTE to_list]
+  val from_list = [QUOTE from_list]
+  in (REWRITE_CONV [STAR_ASSOC] THENC MOVE_STAR_CONV from_list to_list) tm end;
+  
+fun MOVE_OUT_LIST_CONV needles tm = let
+  val ctxt = free_vars tm
+  val needles = map (Parse.parse_in_context ctxt) needles
+  in MOVE_OUT_LIST_TERM_CONV needles tm end;
+
+(*
+
+  val needles = [`g`,`rr`,`h 3`]
+  val tm = ``g 1 * rttt 7  * ~k * h 3 4 * rr 6``
+  MOVE_OUT_LIST_CONV needles tm
 
 *)
 

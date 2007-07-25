@@ -55,8 +55,7 @@ val ARM_PROG_POST_CONV = RAND_CONV; (* needs to be smarter *)
 fun PRE_CONV_RULE c = CONV_RULE (ARM_PROG_PRE_CONV c);
 fun CODE_CONV_RULE c = CONV_RULE (ARM_PROG_CODE_CONV c);
 fun POST1_CONV_RULE c = CONV_RULE (ARM_PROG_POST1_CONV c);
-fun POST2_CONV_RULE c = CONV_RULE (ARM_PROG_POST2_CONV c);
-fun POST_CONV_RULE c = CONV_RULE (ARM_PROG_POST_CONV c);
+fun POST_CONV_RULE c = CONV_RULE (ARM_PROG_POST2_CONV c);
 
 fun PRE_MOVE_STAR t1 t2 = CONV_RULE (ARM_PROG_PRE_CONV (MOVE_STAR_CONV t1 t2));
 fun POST_MOVE_STAR t1 t2 = CONV_RULE (ARM_PROG_POST_CONV (MOVE_STAR_CONV t1 t2));
@@ -115,7 +114,6 @@ fun HIDE_POST th =
 fun MOVE_PRE   t = PRE_CONV_RULE (MOVE_OUT_CONV t);
 fun MOVE_POST  t = POST_CONV_RULE (MOVE_OUT_CONV t);
 fun MOVE_POST1 t = POST1_CONV_RULE (MOVE_OUT_CONV t);
-fun MOVE_POST2 t = POST2_CONV_RULE (MOVE_OUT_CONV t);
 
 (* -- auto hide methods -- *)
 
@@ -126,7 +124,6 @@ fun GENERIC_AUTO_HIDE r c [] th = th
 val AUTO_HIDE_PRE   = GENERIC_AUTO_HIDE HIDE_PRE   MOVE_PRE;
 val AUTO_HIDE_POST  = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST;
 val AUTO_HIDE_POST1 = GENERIC_AUTO_HIDE HIDE_POST1 MOVE_POST1;
-val AUTO_HIDE_POST2 = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST2;
 
 (* -- add exists to pre -- *)
 
@@ -353,7 +350,7 @@ fun ABSORB_POST th = let
   val th = CONV_RULE ((RATOR_CONV o RAND_CONV) (SIMP_CONV std_ss [wLENGTH_def,LENGTH])) th
   in RW [] th end;
 
-fun ARM_PROG_CLOSE_LOOP th = let
+fun CLOSE_LOOP th = let
   val th = SIMP_RULE std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w] th
   val (_,_,_,_,q) = dest_ARM_PROG (concl (RW [GSYM WORD_ADD_ASSOC] th))
   val t = (snd o dest_comb o snd o dest_pair o snd o dest_comb o fst o dest_comb) q

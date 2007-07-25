@@ -1727,6 +1727,22 @@ val LENGTH_FST_mw_moninit = store_thm("LENGTH_FST_mw_moninit",
   \\ REWRITE_TAC [mw_moninit_def,MAP] \\ MATCH_MP_TAC LENGTH_FST_mw_monmult5_step 
   \\ FULL_SIMP_TAC bool_ss [ADD1,EQ_ADD_RCANCEL,LENGTH_MAP]);
 
+val LENGTH_mw_monprod6 = store_thm("LENGTH_mw_monprod6",
+  ``~(0 = LENGTH xs) /\ (LENGTH ys = LENGTH xs) /\ (LENGTH zs = LENGTH xs) ==>
+    (LENGTH (mw_monprod6 xs ys zs n) = LENGTH xs)``,
+  Cases_on `xs` THEN1 REWRITE_TAC [LENGTH]
+  \\ REWRITE_TAC [mw_monprod6_def] \\ REPEAT STRIP_TAC
+  \\ `LENGTH (FST (mw_moninit ys zs h n)) = LENGTH ys` by 
+       (MATCH_MP_TAC LENGTH_FST_mw_moninit \\ DECIDE_TAC)
+  \\ Cases_on `mw_moninit ys zs h n` \\ FULL_SIMP_TAC std_ss [LET_DEF,FST]
+  \\ `LENGTH (FST (mw_monmult5 t ys zs n q r)) = LENGTH ys` by 
+       (MATCH_MP_TAC LENGTH_FST_mw_monmult5 \\ DECIDE_TAC)
+  \\ Cases_on `mw_monmult5 t ys zs n q r` \\ FULL_SIMP_TAC std_ss []
+  \\ `LENGTH (FST (mw_sub q' zs T)) = LENGTH q'` by 
+       (MATCH_MP_TAC LENGTH_FST_mw_sub \\ DECIDE_TAC)
+  \\ Cases_on `mw_sub q' zs T` \\ FULL_SIMP_TAC std_ss []
+  \\ Cases_on `SND (single_sub r' 0w r'')` \\ ASM_REWRITE_TAC []);
+
 val mw_monprod6_cases = cases_thm "mw_monprod6_cases" [mw_monprod6_def]
   [``mw_monprod6 (x::xs) ys ns m``]
 
@@ -1741,26 +1757,39 @@ val word_right_shift_n2w = prove(
   \\ Cases_on `dimindex(:'a)` THEN1 `F` by DECIDE_TAC
   \\ ASM_REWRITE_TAC [ADD1,ADD_SUB]);
 
-val (exp_last_def,exp_last_ind) = Defn.tprove(Defn.Hol_defn "exp_last_def" `
-  exp_last f x m n = if x = 0w then m else
-                       let m' = if x && 1w = 0w then m else f m n in
-                         exp_last f (x >>> 1) m' (f n n)`,
-  WF_REL_TAC `measure (w2n o FST o SND)` \\ Cases_word
-  \\ REWRITE_TAC [word_right_shift_n2w,EVAL ``2**1``]  
-  \\ ASM_SIMP_TAC bool_ss [n2w_11,w2n_n2w,LESS_MOD,ZERO_LT_dimword]
-  \\ REPEAT STRIP_TAC \\ `n DIV 2 < n` by 
-       (SIMP_TAC std_ss [DIV_LT_X,RW1[MULT_COMM]TIMES2] \\ DECIDE_TAC)
-  \\ IMP_RES_TAC LESS_TRANS \\ ASM_SIMP_TAC bool_ss [LESS_MOD]);
+val exp_last_def = Define `
+  exp_last f x m n = 
+    if x = 0w then m else
+      let m' = if x && 1w = 0w then m else f n m in
+        exp_last f (x >>> 1) m' (f n n)`;
 
-val (exp_step3_def,exp_step3_ind) = Defn.tprove(Defn.Hol_defn "exp_step3_def" `
+val exp_step3_def = Define `
   exp_step3 f (i:'a word) (x:'a word) (m:'v) n =
     if i = 0w then (m,n) else
-      let m = if x && 1w = 0w then m else f m n in
-        exp_step3 f (i-1w) (x >>> 1) m (f n n)`,
-  WF_REL_TAC `measure (w2n o FST o SND)` \\ REWRITE_TAC [WORD_PRED_THM]);
+      let m = if x && 1w = 0w then m else f n m in
+        exp_step3 f (i-1w) (x >>> 1) m (f n n)`;
 
 val exp_step4_def = Define `
   exp_step4 f x m n = exp_step3 f (n2w (dimindex(:'a))) (x:'a word) (m:'v) n`;
+
+val MONO_exp_step3 = store_thm("MONO_exp_step3",
+  ``!g h (f:'b->'b->'b) (i:'a word) (j:'a word) x y. 
+      (!x y. h x /\ (g x = g y) ==> h y /\ h (f x y) /\ (g y = g (f x y))) ==> 
+      h x ==> (g x = g y) ==>
+      (g (FST (exp_step3 f i j x y)) = g x) /\
+      (g (SND (exp_step3 f i j x y)) = g x)``,
+  STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC \\ Cases_word \\ Induct_on `n`
+  \\ ONCE_REWRITE_TAC [exp_step3_def]
+  THEN1 SIMP_TAC bool_ss [FST,SND]
+  \\ SIMP_TAC bool_ss [n2w_11,LESS_MOD,ZERO_LT_dimword,DECIDE ``~(SUC n = 0)``]      
+  \\ SIMP_TAC std_ss [LET_DEF,ADD1,GSYM word_add_n2w,WORD_ADD_SUB]
+  \\ REPEAT STRIP_TAC \\ `n < dimword(:'a)` by DECIDE_TAC
+  \\ `h (if (j:'a word) && 1w = 0w then x else f y x) /\
+      (g (if (j:'a word) && 1w = 0w then x else f y x) = g (f y y))` by
+   (Cases_on `j && 1w = 0w` \\ ASM_REWRITE_TAC [] \\ METIS_TAC [])
+  \\ Q.PAT_ASSUM `b==>c` (STRIP_ASSUME_TAC o UNDISCH o UNDISCH o UNDISCH o
+    Q.SPECL [`j:'a word >>> 1`,`if j:'a word && 1w = 0w then x else f:'b->'b->'b y x`,`f:'b->'b->'b y y`] o UNDISCH)
+  \\ ASM_REWRITE_TAC [] \\ METIS_TAC []);
 
 val MULT_EXP = prove(
   ``!k m. (k * k) ** m = k ** (2 * m)``,
@@ -1841,6 +1870,7 @@ val exp_last_spec = prove(
   \\ `SUC n' DIV 2 < SUC n'` by (MATCH_MP_TAC DIV_LESS \\ DECIDE_TAC)
   \\ `SUC n' DIV 2 < dimword (:'a)` by DECIDE_TAC
   \\ RES_TAC \\ ASM_REWRITE_TAC [] \\ REPEAT STRIP_TAC
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [MULT_COMM]))
   \\ Cases_on `EVEN (SUC n')` \\ ASM_REWRITE_TAC [MULT_EXP,EVAL ``2**1``] 
   \\ FULL_SIMP_TAC bool_ss [EVEN_ODD]
   \\ ASM_SIMP_TAC bool_ss [GSYM MULT_ASSOC,GSYM EXP,ODD_LEMMA,NOT_ODD_LEMMA]);  
@@ -1867,6 +1897,7 @@ val exp_step3_spec = prove(
   \\ Q.PAT_ASSUM `bbbb ==> bbb` 
         (STRIP_ASSUME_TAC o UNDISCH o Q.SPEC `j DIV 2` o UNDISCH)
   \\ RES_TAC \\ REWRITE_TAC [EVEN_ODD] \\ Cases_on `ODD j` 
+  \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [MULT_COMM]))
   \\ ASM_REWRITE_TAC [MULT_EXP,GSYM EXP,GSYM MULT_ASSOC,PAIR_EQ]
   \\ FULL_SIMP_TAC bool_ss [GSYM EVEN_ODD]
   \\ FULL_SIMP_TAC bool_ss [EVEN_EXISTS,ODD_EXISTS,GSYM EXP]
@@ -1885,11 +1916,24 @@ val exp_step4_spec =
   SIMP_RULE bool_ss [TWO_EXP_w2n_n2w_dimindex,LESS_MOD,w2n_lt,GSYM exp_step4_def] 
     (Q.SPECL [`n2w (dimindex(:'a))`] exp_step3_spec);
 
+val mw_exp_def = Define `
+  (mw_exp f m n [] = (m,n)) /\
+  (mw_exp f m n (x::xs) = 
+     let (m,n) = exp_step4 f x m n in mw_exp f m n xs)`;
+
 val exp_list_def = Define `
   (exp_list f m n [] = (m,n)) /\
   (exp_list f m n (x::xs) = 
      let (m,n) = exp_step4 f x m n in exp_list f m n xs)`;
   
+val exp_list_ind = store_thm("exp_list_ind",
+ ``!P. (!f m n. P f m n []) ==>
+       (!f m n x xs.
+          (!m' n'. ((m',n') = exp_step4 f x m n) ==> P f m' n' xs) ==>
+          P f m n (x::xs)) ==>
+        !f m n xs. P f m n xs``,
+  NTAC 4 STRIP_TAC \\ Induct_on `xs` \\ METIS_TAC []);
+
 val exp_list_spec = prove(
   ``!i n f g m k. 
       (!m n. f (g m) (g n) = g (m * n)) ==>  

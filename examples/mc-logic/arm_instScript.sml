@@ -1,8 +1,9 @@
 (*
   quietdec := true;
-  val armDir = concat Globals.HOLDIR "/examples/elliptic/arm";
-  val yaccDir = concat Globals.HOLDIR "/tools/mlyacc/mlyacclib";
-  loadPath := !loadPath @ [armDir,yaccDir];
+  fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
+  load_path_add "/examples/mc-logic";
+  load_path_add "/examples/ARM/v4";
+  load_path_add "/tools/mlyacc/mlyacclib";
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -164,15 +165,26 @@ val REG_WRITE_READ = prove(
 (* address mode 1 *)
 
 val _ = Hol_datatype `
-  abbrev_addr1 = OneReg | Imm of word8`;
+  abbrev_addr1 = OneReg | Imm of word8 | 
+                 RegLSR of word5 | RegLSL of word5 | RegASR of word5`;
 
 val ADDR_MODE1_CMD_def = Define `
   (ADDR_MODE1_CMD OneReg Rd = Dp_shift_immediate (LSL Rd) 0w) /\
+  (ADDR_MODE1_CMD (RegLSR w) Rd = Dp_shift_immediate (LSR Rd) w) /\
+  (ADDR_MODE1_CMD (RegLSL w) Rd = Dp_shift_immediate (LSL Rd) w) /\
+  (ADDR_MODE1_CMD (RegASR w) Rd = Dp_shift_immediate (ASR Rd) w) /\
   (ADDR_MODE1_CMD (Imm k) Rd = Dp_immediate 0w k)`;
 
 val ADDR_MODE1_VAL_def = Define `
   (ADDR_MODE1_VAL OneReg  x c = (c,x)) /\
-  (ADDR_MODE1_VAL (Imm k) x c = (c,w2w k))`;
+  (ADDR_MODE1_VAL (Imm k) x c = (c,w2w k)) /\
+  (ADDR_MODE1_VAL (RegLSL w) x c = (if w = 0w then c else x %% (32 - w2n w),x << w2n w)) /\
+  (ADDR_MODE1_VAL (RegASR w) x c = 
+     ((if w = 0w then x %% 31 else x %% (w2n w - 1)),
+      (if w = 0w then x >> 32 else x >> w2n w))) /\
+  (ADDR_MODE1_VAL (RegLSR w) x c = 
+     ((if w = 0w then x %% 31 else x %% (w2n w - 1)),
+      (if w = 0w then x >>> 32 else x >>> w2n w)))`;
 
 val ADDR_MODE1_VAL_THM = prove( 
   ``!c. ADDR_MODE1 state.registers mode z
@@ -183,12 +195,36 @@ val ADDR_MODE1_VAL_THM = prove(
   \\ REWRITE_TAC [ADDR_MODE1_CMD_def,ADDR_MODE1_VAL_def]
   \\ REWRITE_TAC [IS_DP_IMMEDIATE_def,shift_immediate_shift_register,ADDR_MODE1_def]
   \\ REWRITE_TAC [immediate_enc,shift_immediate_enc]
-  \\ SRW_TAC [] [ROR_def,w2w_def,LSL_def,word_mul_n2w]);
-
+  THEN1 SRW_TAC [] [ROR_def,w2w_def,LSL_def,LSR_def,word_mul_n2w]
+  THEN1 SRW_TAC [] [ROR_def,w2w_def,LSL_def,LSR_def,word_mul_n2w]
+  \\ Q.SPEC_TAC (`c'`,`c`) \\ Cases_word
+  \\ ASM_SIMP_TAC bool_ss [n2w_11,LESS_MOD,ZERO_LT_dimword,w2w_def,w2n_n2w] << [
+    Cases_on `n = 0` 
+    \\ ASM_REWRITE_TAC [LSR_def,EVAL ``32w:word8 = 0w``,EVAL ``w2n (32w:word8) - 1``] 
+    \\ REWRITE_TAC [WORD_LS,LESS_EQ_REFL,EVAL ``w2n (32w:word8)``]
+    THEN1 SRW_TAC [] [ROR_def,w2w_def,LSL_def,LSR_def,word_mul_n2w]
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,LESS_MOD]    
+    \\ `n < 256 /\ n <= 32` by DECIDE_TAC
+    \\ `~(n2w n = 0w:word8)` by ASM_SIMP_TAC (std_ss++SIZES_ss) [n2w_11,LESS_MOD]    
+    \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,LESS_MOD]    
+    \\ SRW_TAC [] [ROR_def,w2w_def,LSL_def,LSR_def,word_mul_n2w],
+    Cases_on `n = 0` 
+    \\ ASM_REWRITE_TAC [LSL_def,EVAL ``32w:word8 = 0w``,SHIFT_ZERO] THEN1 SRW_TAC [] []
+    \\ FULL_SIMP_TAC (bool_ss++SIZES_ss) [n2w_11,w2n_n2w,LESS_MOD,EVAL ``0 < 256``,WORD_LS]    
+    \\ `n < 256 /\ 32 < 256 /\ n <= 32` by DECIDE_TAC \\ ASM_SIMP_TAC bool_ss [LESS_MOD]
+    \\ SRW_TAC [] [],
+    Cases_on `n = 0` 
+    \\ FULL_SIMP_TAC (bool_ss++SIZES_ss) [ASR_def,EVAL ``32w:word8 = 0w``,SHIFT_ZERO,w2n_n2w,LSL_def]
+    \\ `0 < 256 /\ n < 256 /\ 32 < 256 /\ n <= 32` by DECIDE_TAC 
+    \\ ASM_SIMP_TAC bool_ss [LESS_MOD,EVAL ``MIN 31 (32-1)``] \\ SRW_TAC [] []
+    \\ `~(31 < n - 1)` by DECIDE_TAC \\ REWRITE_TAC [MIN_DEF] 
+    \\ FULL_SIMP_TAC (bool_ss++SIZES_ss) [MIN_DEF,LESS_MOD] \\ METIS_TAC [LESS_MOD]]);
+     
 val FIX_ADDR_MODE1 = 
   RW [ADDR_MODE1_VAL_THM] o
   Q.INST [`Op2`|->`ADDR_MODE1_CMD a_mode Rn`] o
   SPEC_ALL;
+
 
 (* address mode 2 *)
 
@@ -4387,6 +4423,8 @@ val arm_MOV_PC = save_thm("arm_MOV_PC",let
   val th = RW [ADDR_MODE1_VAL_def,ADDR_MODE1_CMD_def,GSYM R30_def,
                addr30_addr32,emp_STAR,addr32_and_3w,SEP_cond_CLAUSES] th
   in th end);
+
+  
 
 (* procedure calls *)
 

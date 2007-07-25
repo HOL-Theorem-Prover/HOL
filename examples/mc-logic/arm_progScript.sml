@@ -1,9 +1,9 @@
 (*
   quietdec := true;
-  val armDir = concat Globals.HOLDIR "/examples/elliptic/arm";
-  val yaccDir = concat Globals.HOLDIR "/tools/mlyacc/mlyacclib";
-  loadPath := !loadPath @ [armDir,yaccDir];
-  loadPath := "/home/mom22/machine-code" :: !loadPath;
+  fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
+  load_path_add "/examples/mc-logic";
+  load_path_add "/examples/ARM/v4";
+  load_path_add "/tools/mlyacc/mlyacclib";
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -1297,6 +1297,27 @@ val PASS_CASES = store_thm("PASS_CASES",
       (nPASS NV (n,z,c,v) = emp)``,
   SRW_TAC [] [CONDITION_PASSED2_def,nPASS_def,PASS_def,SEP_cond_CLAUSES]);
 
+val WORD_CMP_NORMALISE = save_thm("WORD_CMP_NORMALISE",let
+  val rw = METIS_PROVE [] ``!x:'a y z:'b q. ~(x = y) /\ ~(z = q) =  ~(x = y) /\ ~(q = z)``
+  val nzcv_thm = RW1 [rw] nzcv_def
+  val rw = [nzcv_thm,LET_DEF,GSYM word_add_n2w,n2w_w2n,GSYM word_sub_def,WORD_EQ_SUB_ZERO]
+  val f = (GSYM o SIMP_RULE std_ss rw) 
+  val lemma1 = prove(``!a:'a word b. (b <=+ a) /\ ~(a = b) = b <+ a``,
+    REWRITE_TAC [WORD_LOWER_OR_EQ] \\ METIS_TAC [WORD_LOWER_NOT_EQ])
+  val lemma2 = prove(``!a:'a word b. ~(a = b) /\ (b <=+ a) = b <+ a``,
+    REWRITE_TAC [WORD_LOWER_OR_EQ] \\ METIS_TAC [WORD_LOWER_NOT_EQ])
+  val lemma3 = prove(``!a:'a word b. (b <= a) /\ ~(a = b) = b < a``,
+    REWRITE_TAC [WORD_LESS_OR_EQ] \\ METIS_TAC [WORD_LESS_NOT_EQ])
+  val lemma4 = prove(``!a:'a word b. ~(a = b) /\ (b <= a) = b < a``,
+    REWRITE_TAC [WORD_LESS_OR_EQ] \\ METIS_TAC [WORD_LESS_NOT_EQ])
+  val xs = map f [word_gt_def,word_lt_def,word_le_def,word_ge_def]
+  val ys = [WORD_GREATER_EQ,WORD_GREATER,WORD_NOT_LOWER_EQUAL]
+  val zs = [WORD_NOT_LOWER,GSYM WORD_LOWER_OR_EQ,WORD_NOT_LESS,WORD_NOT_LESS_EQUAL] 
+  val qs1 = [GSYM WORD_LESS_OR_EQ, GSYM (RW1 [DISJ_COMM] WORD_LESS_OR_EQ)] 
+  val qs2 = [GSYM WORD_LOWER_OR_EQ, GSYM (RW1 [DISJ_COMM] WORD_LOWER_OR_EQ)] 
+  val ls = [lemma1,lemma2,lemma3,lemma4]
+  in LIST_CONJ (xs @ ys @ zs @ qs1 @ qs2 @ ls) end);
+
 fun QGENL xs th = foldr (uncurry Q.GEN) th xs;
 fun GENL_save_thm (name,vars,th) = save_thm(name,QGENL vars th);
 
@@ -1616,6 +1637,7 @@ val _ = save_ARM_PROG "ARM_PROG_HIDE_POST" PROG_HIDE_POST;
 val _ = save_ARM_PROG "ARM_PROG_EXISTS_PRE" PROG_EXISTS_PRE;
 val _ = save_ARM_PROG "ARM_PROG_COMPOSE" PROG_COMPOSE;
 val _ = save_ARM_PROG "ARM_PROG_COMPOSE_0" PROG_COMPOSE_0;
+val _ = save_ARM_PROG "ARM_PROG_COMPOSE_I" PROG_COMPOSE_I;
 val _ = save_ARM_PROG "ARM_PROG_LOOP" PROG_LOOP;
 val _ = save_ARM_PROG "ARM_PROG_LOOP_MEASURE" PROG_LOOP_MEASURE;
 val _ = save_ARM_PROG "ARM_PROG_EXTRACT_POST" PROG_EXTRACT_POST;

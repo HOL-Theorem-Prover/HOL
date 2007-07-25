@@ -1,6 +1,6 @@
 (*
   quietdec := true;
-  val armDir = concat Globals.HOLDIR "/examples/elliptic/arm";
+  val armDir = concat Globals.HOLDIR "/examples/ARM/v4";
   val yaccDir = concat Globals.HOLDIR "/tools/mlyacc/mlyacclib";
   loadPath := !loadPath @ [armDir,yaccDir];
 *)
@@ -1299,7 +1299,7 @@ val case234 = let
   
 val case234' = let
   val th = RW [M30_def] case234
-  val th = AUTO_HIDE_POST2 [`M (sp - 2w)`,`M (sp - 1w)`] th
+  val th = AUTO_HIDE_POST [`M (sp - 2w)`,`M (sp - 1w)`] th
   val th = APP_WEAKEN th 
              `~R a * bt (ax,tree) * R s (sum + sumBTree tree) * 
               R30 13w sp *  blank (sp-1w) (2 * depth tree) * ~R 14w * ~S`

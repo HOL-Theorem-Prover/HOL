@@ -1144,6 +1144,27 @@ val PROG_COMPOSE_0 = store_thm("PROG_COMPOSE_0",
   \\ REPEAT STRIP_TAC \\ IMP_RES_TAC GPROG_COMPOSE'
   \\ FULL_SIMP_TAC bool_ss [UNION_IDEMPOT,UNION_EMPTY]);
 
+val PROG_COMPOSE_I = store_thm("PROG_COMPOSE_I",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      !P code C Q1 Q2 Q4 Q5 Q6 Z1 Z2.
+        PROG x P code C Q1 ((Q2 * Q5,I) INSERT Z1) ==>
+        PROG x (Q2 * Q6) code C Q4 Z2 ==>
+        SEP_IMP Q5 Q6 ==>
+        PROG x P code C (Q1 \/ Q4) (Z1 UNION Z2)``,
+  INIT_TAC \\ ASM_SIMP_TAC bool_ss [PROG_def,GSYM GPROG_MERGE_POST']
+  \\ ONCE_REWRITE_TAC [INSERT_COMM] \\ REPEAT STRIP_TAC
+  \\ `SEP_IMP (Q2 * Q5) (Q2 * Q6)` by METIS_TAC [SEP_IMP_STAR,SEP_IMP_REFL]
+  \\ IMP_RES_TAC GPROG_WEAKEN_POST'
+  \\ REPEAT (Q.PAT_ASSUM `!g.b` (fn th => ALL_TAC))
+  \\ `!x y. x INSERT y INSERT Z1 UNION Z2 = 
+            (y INSERT Z1) UNION (x INSERT Z2)` by 
+     (REWRITE_TAC [EXTENSION,IN_UNION,IN_INSERT] \\ METIS_TAC [])
+  \\ ASM_REWRITE_TAC []
+  \\ (MATCH_MP_TAC o REWRITE_RULE [UNION_EMPTY,UNION_IDEMPOT] o GEN_ALL o
+      Q.SPECL [`Y`,`{}`,`{x}`,`C`,`C`,`Z1`,`Z2`] o UNDISCH) GPROG_COMPOSE'
+  \\ Q.EXISTS_TAC `(Q2 * Q6,I)` \\ ASM_REWRITE_TAC []
+  \\ ASM_REWRITE_TAC [GSYM (ONCE_REWRITE_RULE [UNION_COMM] INSERT_SING_UNION)]);
+
 val PROG_LOOP = store_thm("PROG_LOOP",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !P Q cs C Z.

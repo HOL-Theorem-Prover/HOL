@@ -1,8 +1,9 @@
 (*
   quietdec := true;
-  val armDir = concat Globals.HOLDIR "/examples/elliptic/arm";
-  val yaccDir = concat Globals.HOLDIR "/tools/mlyacc/mlyacclib";
-  loadPath := !loadPath @ [armDir,yaccDir];
+  fun load_path_add x = loadPath := !loadPath @ [concat Globals.HOLDIR x];
+  load_path_add "/examples/mc-logic";
+  load_path_add "/examples/ARM/v4";
+  load_path_add "/tools/mlyacc/mlyacclib";
 *)
 
 open HolKernel boolLib bossLib Parse;
@@ -24,10 +25,11 @@ val op \\ = op THEN;
 val op << = op THENL;
 val op >> = op THEN1;
 
-fun n_times 0 f x = x | n_times n f x = n_times (n-1) f (f x);
-
 val RW = REWRITE_RULE;
 val RW1 = ONCE_REWRITE_RULE;
+
+fun n_times 0 f x = x | n_times n f x = n_times (n-1) f (f x) ;
+
 
 (* temp *)
 
@@ -59,13 +61,13 @@ val ENCLOSE_STM_LDM = let
   val th = MOVE_STAR_RULE `a*x*mm*ss` `a*mm*ss*x` th
   val th = RW [blank_ms_EQ_blank] th
   val th = FRAME_COMPOSE th1 th
-  val th = MOVE_POST2 `ms (x - n2w (SUC (LENGTH xs)))` th
+  val th = MOVE_POST `ms (x - n2w (SUC (LENGTH xs)))` th
   val th = RW [ADDR_MODE4_CMD_def] th
   val th = APP_PART_WEAKEN th 
     `blank_ms (x - n2w (SUC (LENGTH (xs:(word4 # word32)list)))) (LENGTH (reg_values ((15w,addr32 p)::xs)))`
     (REWRITE_TAC [SEP_IMP_ms_blank_ms])
   val th = RW [blank_ms_EQ_blank,LENGTH_reg_values,LENGTH] th
-  val th = foldl (uncurry MOVE_POST2) th [`R30 a`,`xR_list`,`R 14w`,`blank (x - 1w)`,`S`]  
+  val th = foldl (uncurry MOVE_POST) th [`R30 a`,`xR_list`,`R 14w`,`blank (x - 1w)`,`S`]  
   val th = foldl (uncurry MOVE_PRE) th [`R30 a`,`xR_list`,`R 14w`,`blank (x - 1w)`,`S`]  
   val th = DISCH_ALL (RW [GSYM R30_def] th)
   in th end;
@@ -318,6 +320,7 @@ val arm_add_imp = save_thm("arm_add_imp",let
   val th = (*  adcs a, a, b    *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_ADC2'))) `x1*x2*x3*x4*x5*x6*x7` `(x1*x4*x5)*(x2*x3*x6*x7)` `x1*x2*x3` `(x2*x3*x1)*(emp)`
   val th = (*  str a, [k], #4  *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := F; Up := T; Wb := T|>`,`b`|->`k`,`imm`|->`4w`,`x`|->`x4`,`y`|->`y4`,`z`|->`z4` ] arm_STR_NONALIGNED))) `x1*x2*x3*x4*x5*x6*x7` `(x1*x3)*(x2*x4*x5*x6*x7)` `x1*x2*x3*x4` `(x1*x4)*(x2*x3)`
   val th = ALIGN_VARS ["y4","y2","y1"] th
+  val th = RW [GSYM (EVAL ``2**32``),ADD_ASSOC] th
   val th = AUTO_HIDE_PRE [`R a`,`R b`,`M y4`] (AUTO_HIDE_POST1 [`R a`,`R b`] th)
   val th = MOVE_PRE `S` (MOVE_POST1 `S` th)
   val th = RW [add_thm,addr32_11,GSYM S_carry_def] th
@@ -343,7 +346,7 @@ val arm_add_imp = save_thm("arm_add_imp",let
   val th = (arm_add_SIMP o SPEC_WEAKEN th)
     `arm_add_pre i j k t a b xs ys (SND (single_add x (y:word32) sC)) (ix+1w) (jx+1w) (kx+1w) *
      (M kx (FST (single_add (x:word32) y sC)) * M ix x * M jx y)`
-  val th = ARM_PROG_CLOSE_LOOP th
+  val th = CLOSE_LOOP th
 
   (* step 5: instantiate induction and extract ind hyp *)
   val tm = extract_spec th [(`x::xs`,`xs`),(`y::ys`,`ys`)] [`ix`,`jx`,`kx`] [`xs`,`ys`,`sC`]
@@ -355,7 +358,7 @@ val arm_add_imp = save_thm("arm_add_imp",let
   (* step 6: match step and prove postcondition *)
   val asm = MATCH_MP ARM_PROG_COMPOSE_WEAKEN asm
   val th = arm_add_SIMP (MATCH_MP asm (Q.INST [`sC`|->`c`] th))
-
+ 
   (* step 7: clean up *)
   val th = MATCH_MP th1 (tidy_up th1 th)
   val th = SPEC_ALL (Q.SPECL [`xs`,`ys`,`c`] th)
@@ -389,6 +392,7 @@ val arm_sub_imp = save_thm("arm_sub_imp",let
   val th = (*  sbcs a, a, b    *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a_mode`|->`OneReg`,`x`|->`x3`,`y`|->`y3` ] arm_SBC2'))) `x1*x2*x3*x4*x5*x6*x7` `(x1*x4*x5)*(x2*x3*x6*x7)` `x1*x2*x3` `(x2*x3*x1)*(emp)`
   val th = (*  str a, [k], #4  *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := F; Up := T; Wb := T|>`,`b`|->`k`,`imm`|->`4w`,`x`|->`x4`,`y`|->`y4`,`z`|->`z4` ] arm_STR_NONALIGNED))) `x1*x2*x3*x4*x5*x6*x7` `(x1*x3)*(x2*x4*x5*x6*x7)` `x1*x2*x3*x4` `(x1*x4)*(x2*x3)`
   val th = ALIGN_VARS ["y4","y2","y1"] th
+  val th = RW [GSYM (EVAL ``2**32``),ADD_ASSOC] th
   val th = AUTO_HIDE_PRE [`R a`,`R b`,`M y4`] (AUTO_HIDE_POST1 [`R a`,`R b`] th)
   val th = MOVE_PRE `S` (MOVE_POST1 `S` th)
   val th = RW [sub_thm,addr32_11,GSYM S_carry_def] th
@@ -414,7 +418,7 @@ val arm_sub_imp = save_thm("arm_sub_imp",let
   val th = (arm_sub_SIMP o SPEC_WEAKEN th)
     `arm_sub_pre i j k t a b xs ys (SND (single_sub x (y:word32) sC)) (ix+1w) (jx+1w) (kx+1w) *
      (M kx (FST (single_sub (x:word32) y sC)) * M ix x * M jx y)`
-  val th = ARM_PROG_CLOSE_LOOP th
+  val th = CLOSE_LOOP th
 
   (* step 5: instantiate induction and extract ind hyp *)
   val tm = extract_spec th [(`x::xs`,`xs`),(`y::ys`,`ys`)] [`ix`,`jx`,`kx`] [`xs`,`ys`,`sC`]
@@ -519,7 +523,7 @@ val arm_amm_imp = save_thm("arm_amm_imp",let
        (SND (SND (add_double_mul xx yx px qx cx bx zx))) c 
        (FST (SND (add_double_mul xx yx px qx cx bx zx))) *
      (M izz (FST (add_double_mul xx yx px qx cx bx zx)) * M ixx xx * M iyy yx)`
-  val th = ARM_PROG_CLOSE_LOOP th1
+  val th = CLOSE_LOOP th1
 
   (* step 5: instantiate induction and extract ind hyp *)
   val tm = extract_spec th [(`xx::xs`,`xs`),(`yx::ys`,`ys`),(`zx::zs`,`zs`)] [`ixx`,`iyy`,`izz`] [`xs`,`ys`,`zs`,`px`,`qx`,`cx`,`bx`]
@@ -614,7 +618,7 @@ val arm_amm0_imp = let
        (SND (SND (add_double_mul xx yx px qx cx bx 0w))) c 
        (FST (SND (add_double_mul xx yx px qx cx bx 0w))) *
      (M izz (FST (add_double_mul xx yx px qx cx bx 0w)) * M ixx xx * M iyy yx)`
-  val th = ARM_PROG_CLOSE_LOOP th1
+  val th = CLOSE_LOOP th1
  
   (* step 5: instantiate induction and extract ind hyp *)
   val tm = extract_spec th [(`xx::xs`,`xs`),(`yx::ys`,`ys`)] [`ixx`,`iyy`,`izz`] [`xs`,`ys`,`px`,`qx`,`cx`,`bx`]
@@ -932,7 +936,7 @@ val mw_monmult5_imp = let
      \\ REWRITE_TAC [SEP_IMP_REFL,SEP_IMP_cond] \\ REPEAT STRIP_TAC \\ REPEAT DECIDE_TAC
      \\ ASM_SIMP_TAC bool_ss [LENGTH_FST_mw_monmult5_step] \\ ASM_REWRITE_TAC [LENGTH,ADD1])
   val th = RW [emp_STAR] th 
-  val th = ARM_PROG_CLOSE_LOOP th
+  val th = CLOSE_LOOP th
 
   (* step 5: instantiate induction and extract ind hyp *)
   val tm = extract_spec th [(`ux::us`,`us`),(`xx::xs`,`xs`),(`yx::ys`,`ys`),(`zx::zs`,`zs`)] [`iuu`,`ixx`,`iyy`,`izz`] [`us`,`xs`,`ys`,`px`,`zs`,`z'`]
@@ -1135,7 +1139,7 @@ val mw_monprod6_imp = let
   val th = MATCH_MP th1 th
   val th = RW [APPEND,setADD_CLAUSES,M30_def,wLENGTH_def,addr32_n2w] th
   val th = foldr (uncurry MOVE_PRE) th [`M (sp+1w)`,`M sp`,`M (sp-7w)`,`blank (sp-1w)`,`R30 13w`]
-  val th = foldr (uncurry MOVE_POST2) th [`M (sp+1w)`,`M sp`,`M (sp-7w)`,`blank (sp-1w)`,`R30 13w`]
+  val th = foldr (uncurry MOVE_POST) th [`M (sp+1w)`,`M sp`,`M (sp-7w)`,`blank (sp-1w)`,`R30 13w`]
   val lemma = prove(
     ``P * R30 13w sp * blank (sp - 1w) 6 * ~M (sp - 7w) * M sp x * M (sp + 1w) y =
       P * stack sp [x;y] 7``,
@@ -1176,7 +1180,7 @@ val mw_monprod6_imp = let
     \\ FULL_SIMP_TAC (bool_ss++star_ss) [] \\ METIS_TAC [STAR_ASSOC,STAR_COMM])
 
   (* hide addresses for aliasing version *)
-  val tha = AUTO_HIDE_POST2 [`R iu`] (RW [R30_def] tha)
+  val tha = AUTO_HIDE_POST [`R iu`] (RW [R30_def] tha)
   val tha = APP_WEAKEN tha 
     `Rms ix (mw_monprod6 xs xs ys px) * Rms iy ys * Rblank iz (LENGTH xs) * 
      stack sp [px;n2w (4*LENGTH ys)] 7 * 
@@ -1192,8 +1196,7 @@ val mw_monprod6_imp = let
      stack sp [px;n2w (4*LENGTH ys)] 7 * 
      R v1 x1 * R v2 x2 * R v3 x3 * R v4 x4 * R v5 x5 *
      ~R v6 * ~R v7 * ~R v8 * ~R v9 * R30 14w p * ~S *   
-     cond ((LENGTH us = LENGTH xs) /\ (LENGTH xs = LENGTH (ys:word32 list)) /\ 
-           1 < LENGTH (xs:word32 list))`
+     cond ((LENGTH xs = LENGTH (ys:word32 list)) /\ 1 < LENGTH (xs:word32 list))`
    (SIMP_TAC (bool_ss++sep2_ss) [Rms_def,RRms_def,Rblank_def,R30_def] 
     \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM,cond_STAR] \\ REPEAT STRIP_TAC
     \\ Q.EXISTS_TAC `a''` \\ Q.EXISTS_TAC `a'` \\ Q.EXISTS_TAC `a` 
@@ -1232,21 +1235,480 @@ val (monprod6_spec1,monprod6_spec2) = let
   val th2 = RW [residue_def,GSYM ARM_PROG_MOVE_COND] (RW [AND_IMP_INTRO,GSYM CONJ_ASSOC] th)
   in (save_thm("monprod6_spec1",th1),save_thm("monprod6_spec2",th2)) end;
 
+(* binary exponential *)
 
-(* multiplication implementation *)
+(* prove specs for both proc calls *)
 
-(* implementation: 
-  ldr m, [l], #4
-  add t, i, r
-  mov c, #0
-  adds c, c, c
-  LOOP
-  subs r, r, #1
-  sub i, i, r
-  sub j, j, r
-  sub k, k, r
-  bne
+val mult_if_odd = let
+  val th = fst mw_monprod6_imp
+  val th = MOVE_POST `R 14w` (MOVE_PRE `R30 14w` th)
+  val th = Q.GEN `p` (EXTRACT_CODE th)
+  val th = RW [GSYM ARM_PROC_THM,ARM_PROG_FALSE_POST] th
+  val th = MATCH_MP arm_BL th
+  val th = RW [setADD_CLAUSES] th  
+  val th2 = AUTO_HIDE_PRE [`R v1`] (AUTO_HIDE_POST1 [`R v1`] th)
+  (* make_spec ["mov ix,v1"] *)
+  val th = (*  mov ix,v1  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`b`|->`ix`,`a`|->`v1`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_MOV2))
+  val th = AUTO_HIDE_STATUS th
+  val th = AUTO_HIDE_PRE [`R ix`] th 
+  val th = AUTO_HIDE_POST1 [`R v1`] th 
+  val th = ALIGN_VARS ["x1"] th
+  val th = APP_FRAME `ms x1 xs` th
+  val th = APP_WEAKEN1 th `Rms ix xs * ~R v1 * ~S`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,Rms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `x1` 
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = EXISTS_PRE `x1` th
+  val th1 = APP_STRENGTHEN th `Rms v1 xs * ~R ix * ~S`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,Rms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `y`
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = FRAME_COMPOSE th1 th2
+  val th' = Q.INST [`v1`|->`ix`,`ix`|->`v1`] th1
+  val th1 = FRAME_COMPOSE th (MATCH_INST1 [`Rms ix`] th th')
+  
+  (* make_spec ["tst v2,#1","beq 16"] *)
+  val th = (*  tst v2,#1  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (1w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`a`|->`v2`,`a_mode`|->`Imm 1w`,`x`|->`x1` ] arm_TST1))
+  val th = (*  beq 16     *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(sw2sw (2w :word24) :word30)``] (Q.INST [`c_flag`|->`EQ`,`offset`|->`2w` ] arm_B2))) `x1*x2` `(x2)*(x1)` `x1*x2` `(x1)*(x2)`
+  val th = Q.INST [`x1`|->`x2`] (AUTO_HIDE_STATUS th)
+  val th = SIMP_RULE (arith_ss++pcINC_ss++sep_ss) [wLENGTH_def,LENGTH] th
+  val th = APP_FRAME `Rms v1 (if x2:word32 && 1w = 0w then xs else mw_monprod6 us xs ys px)` th
+  val th = RW1[GSYM STAR_ASSOC](SIMP_RULE (bool_ss++sep2_ss) [] th)
+  val th = APP_PART_STRENGTHEN th `Rms v1 xs * cond (x2 && 1w:word32 = 0w)`
+    (SIMP_TAC (bool_ss++sep_ss) [SEP_IMP_REFL,SEP_IMP_MOVE_COND])
+  val th2 = RW [STAR_ASSOC] th  
+
+  (* make_spec' [("tst v2,#1",true),("beq 16",false)] *)
+  val th = (*  tst v2,#1  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (1w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`a`|->`v2`,`a_mode`|->`Imm 1w`,`x`|->`x1` ] arm_TST1))
+  val th = (*  beq 16     *) MOVE_COMPOSE th (SND_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(sw2sw (2w :word24) :word30)``] (Q.INST [`c_flag`|->`EQ`,`offset`|->`2w` ] arm_B2))) `x1*x2` `(x2)*(x1)` `x1*x2` `(x1)*(x2)`
+  val th = AUTO_HIDE_STATUS th
+  val th3 = UNDISCH (SIMP_RULE (bool_ss++sep2_ss) [ARM_PROG_MOVE_COND] th1)
+  val th = FRAME_COMPOSE (Q.INST [`x1`|->`x2`] th) th3
+  val th = MOVE_POST1 `Rms v1` th
+  val th = APP_FRAME `cond ~(x2 && 1w = 0w:word32)` th
+  val th = RW [SEP_cond_CLAUSES] (RW1[GSYM STAR_ASSOC] th)
+  val th = APP_PART_WEAKEN1 th 
+    `Rms v1 (if x2 && 1w:word32 = 0w then xs else (mw_monprod6 us xs ys px))`
+    (SIMP_TAC bool_ss [SEP_IMP_REFL,SEP_IMP_MOVE_COND])
+  
+  val th3 = APP_FRAME `~R ix * Rms iu us * Rms iy ys *
+          Rblank iz (LENGTH ys) * stack sp [px; n2w (4 * LENGTH ys)] 7 *
+          R v3 x3 * R v4 x4 * R v5 x5 * ~R v6 * ~R v7 * ~R v8 *
+          ~R v9 * ~R 14w` th2
+  val th3 = SIMP_RULE (bool_ss++sep2_ss) [] th3
+  val th = APP_MERGE th3 th
+  val th = RW [STAR_ASSOC] (SIMP_RULE (bool_ss++star_ss) [] th)
+  val th = SIMP_RULE (bool_ss++sep2_ss) [STAR_OVER_DISJ] th
+  val th = RW1 [ARM_PROG_EXTRACT_POST] th
+  val th = SIMP_RULE arith_ss [pcINC_def,wLENGTH_def,LENGTH,word_add_n2w] th
+  val th = RW [ARM_PROG_MERGE_POST] th
+  val th = RW [SEP_DISJ_CLAUSES] (SIMP_RULE (bool_ss++star_ss) [] th)
+  val th = RW [STAR_ASSOC] th
+  val th = ABSORB_POST th
+  val th = RW [GSYM ARM_PROG_MOVE_COND] (DISCH_ALL th)
+  in th end;
+
+val square = let
+  val th = snd mw_monprod6_imp
+  val th = MOVE_POST `R 14w` (MOVE_PRE `R30 14w` th)
+  val th = Q.GEN `p` (EXTRACT_CODE th)
+  val th = RW [GSYM ARM_PROC_THM,ARM_PROG_FALSE_POST] th
+  val th = MATCH_MP arm_BL th
+  val th2 = RW [setADD_CLAUSES] th  
+  (* make_spec ["mov ix,iu"] *)
+  val th = (*  mov ix,iu  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`b`|->`ix`,`a`|->`iu`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_MOV2))
+  val th = AUTO_HIDE_STATUS th
+  val th = AUTO_HIDE_PRE [`R ix`] th 
+  val th = ALIGN_VARS ["x1"] th
+  val th = APP_FRAME `ms x1 xs` th
+  val th = APP_WEAKEN1 th `RRms iu ix xs * ~S`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,RRms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `x1` 
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = EXISTS_PRE `x1` th
+  val th1 = APP_STRENGTHEN th `Rms iu xs * ~R ix * ~S`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,Rms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `y`
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th3 = FRAME_COMPOSE th1 th2
+  (* make_spec ["mov iu,ix"] *)
+  val th = (*  mov iu,ix  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`b`|->`iu`,`a`|->`ix`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1` ] arm_MOV2))
+  val th = AUTO_HIDE_STATUS th
+  val th = AUTO_HIDE_PRE [`R iu`] th 
+  val th = AUTO_HIDE_POST1 [`R ix`] th 
+  val th = ALIGN_VARS ["x1"] th
+  val th = APP_FRAME `ms x1 xs` th
+  val th = APP_WEAKEN1 th `Rms iu xs * ~R ix * ~S`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,Rms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `x1` 
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = EXISTS_PRE `x1` th
+  val th1 = APP_STRENGTHEN th `Rms ix xs * ~R iu * ~S`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,Rms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `y`
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th4 = FRAME_COMPOSE th3 (MATCH_INST1 [`Rms ix`] th3 th1)
+  in th4 end;
+
+val f_assum_def = Define `
+  f_assum f (zs,sz:word32) = cond (!xs ys. mw_monprod6 xs ys zs sz = f xs ys)`;
+
+val arm_el_pre_def = Define `
+  arm_el_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp x2 x3 x4 x5 f us xs = 
+     Rms iu us * Rms v1 xs * Rms iy ys * Rblank iz (LENGTH ys) * 
+     R v2 x2 * R v3 x3 * R v4 x4 * R v5 x5 * 
+     ~R ix * ~R v6 * ~R v7 * ~R v8 * ~R v9 * ~R 14w * ~S * 
+     stack sp [px; n2w (4 * LENGTH ys)] 7 * f_assum f (ys,px) * 
+     cond ((LENGTH us = LENGTH xs) /\ (LENGTH xs = LENGTH ys) /\
+           1 < LENGTH xs) * cond ~(x2 = 0w)`;
+
+val arm_el_post_def = Define `
+  arm_el_post v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp (x2:word32) x3 x4 x5 f us xs = 
+     Rblank iu (LENGTH ys) * Rms v1 (exp_last f x2 xs us) * Rms iy ys * Rblank iz (LENGTH ys) * 
+     R v2 0w * R v3 x3 * R v4 x4 * R v5 x5 * 
+     ~R ix * ~R v6 * ~R v7 * ~R v8 * ~R v9 * ~R 14w * ~S * 
+     stack sp [px; n2w (4 * LENGTH ys)] 7`;
+
+val INTRO_Rms = let
+  val th = SPEC_ALL (ASSUME ``!x1. ARM_PROG (P * R v1 x1) code C SEP_F {(Q * R v1 x1,f)}``)
+  val th = ALIGN_VARS ["x1"] th
+  val th = APP_FRAME `ms x1 xs` th
+  val th = APP_WEAKEN th `Q * Rms v1 xs`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,Rms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `x1`
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = EXISTS_PRE `x1` th
+  val th = APP_STRENGTHEN th `P * Rms v1 xs`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_def,Rms_def]
+    \\ SIMP_TAC std_ss [SEP_EXISTS,SEP_IMP_def]
+    \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `x1`
+    \\ FULL_SIMP_TAC (bool_ss++star_ss) [])
+  val th = DISCH_ALL th  
+  in th end;
+
+val exp_last_pass1 = let
+  (* make_spec ["b -40"] *)
+  val th = (*  b -40  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(sw2sw (16777204w :word24) :word30)``] (Q.INST [`c_flag`|->`AL`,`offset`|->`16777204w` ] arm_B2))
+  val th = AUTO_HIDE_STATUS th
+  val th = Q.INST [`offset`|->`offset5`] (FRAME_COMPOSE square th)
+  val th1 = MOVE_POST `R v1` (MOVE_PRE `R v1` th)
+  val th3 = MATCH_MP INTRO_Rms (Q.GEN `x1` th1)  
+  (* make_spec["movs v2,v2,LSR #1"] make_spec["beq 78"] *)
+  val th1 = (*  movs v2,v2,LSR #1  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a`|->`v2`,`a_mode`|->`RegLSR 1w`,`x`|->`x1` ] arm_MOV1))
+  val th2 = (*  beq k  *) SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`EQ`,`offset`|->`offset2` ] arm_B)
+  val th = FRAME_COMPOSE th1 (MATCH_INST1 [`S`] th1 th2)
+  val th = AUTO_HIDE_STATUS (Q.INST [`x1`|->`x2`] th)
+  val th = RW [EVAL ``1w = 0w:word5``,EVAL ``w2n (1w:word5)``] th
+  val th = FRAME_COMPOSE mult_if_odd th
+  val th3 = MATCH_INST1 [`Rms iu`] th th3
+  val th3 = MATCH_INST1 [`Rms v1`,`R v2`] th th3
+  val th3 = DISCH ``LENGTH (us:word32 list) = LENGTH (ys:word32 list)`` th3
+  val th3 = RW [GSYM ARM_PROG_MOVE_COND] (SIMP_RULE bool_ss [] th3)
+  val th = FRAME_COMPOSE th th3
+  val th = DISCH ``!us xs. mw_monprod6 us xs ys (px:word32) = f us xs`` th
+  val th = SIMP_RULE bool_ss [] th
+  val th = RW [GSYM ARM_PROG_MOVE_COND,GSYM f_assum_def] th
+  val th = RW [INSERT_UNION_EQ,UNION_EMPTY] th
+  val th = APP_FRAME `cond ~(x2:word32 = 0w)` th
+  val th = Q.INST [`offset2`|->`3w`] th
+  val th = RW[EVAL ``sw2sw (3w:word24) + 2w + 1w + 5w:word30``]th
+  val th = ABSORB_POST th
+  val lemma = prove(``n2w(2**30):word30=0w``,
+    ONCE_REWRITE_TAC [GSYM n2w_mod] \\ SIMP_TAC (std_ss++SIZES_ss) [])
+  val th = RW [GSYM(EVAL ``2**30``),lemma,pcADD_0]th
+  (* tidy up *)
+  val th = APP_FRAME `cond ((LENGTH (us:word32 list) = LENGTH (xs:word32 list)) /\ (LENGTH xs = LENGTH (ys:word32 list)) /\ 1 < LENGTH xs) * f_assum f (ys,px)` th
+  val th = APP_STRENGTHEN th
+    `arm_el_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp x2 x3 x4 x5 f us xs`
+   (REWRITE_TAC [arm_el_pre_def,f_assum_def]
+    \\ SIMP_TAC (bool_ss++star_ss) [] \\ SIMP_TAC (bool_ss++sep2_ss) []
+    \\ MATCH_MP_TAC SEP_IMP_STAR
+    \\ REWRITE_TAC [SEP_IMP_cond,SEP_IMP_REFL]
+    \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [] \\ DECIDE_TAC)
+  val th = APP_WEAKEN th
+    `arm_el_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp (x2 >>> 1) x3 x4 x5 f (f us us) (if x2 && 1w = 0w then xs else f us xs) * cond ~(x2 = 0w)`
+   (REWRITE_TAC [arm_el_pre_def,f_assum_def]
+    \\ SIMP_TAC (bool_ss++star_ss) [] \\ SIMP_TAC (bool_ss++sep2_ss) []
+    \\ MATCH_MP_TAC SEP_IMP_STAR
+    \\ REWRITE_TAC [SEP_IMP_cond,SEP_IMP_REFL]
+    \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [] \\ REPEAT DECIDE_TAC
+    \\ Cases_on `x2 && 1w = 0w` \\ ASM_REWRITE_TAC []
+    \\ Q.PAT_ASSUM `!x.b` (fn th => REWRITE_TAC [GSYM th])
+    \\ IMP_RES_TAC (DECIDE ``!n:num. 1 < n ==> ~(0 = n)``)
+    \\ METIS_TAC [LENGTH_mw_monprod6])
+  val th = SIMP_RULE (bool_ss++sep2_ss) [] th
+  val th = APP_PART_WEAKEN1 th 
+    `cond ((x2 >>> 1 = 0w:word32) /\ ~(x2 = 0w)) * cond (LENGTH (us:word32 list) = LENGTH (ys:word32 list))`
+    (REWRITE_TAC [SEP_IMP_cond,SEP_cond_CLAUSES] 
+     \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [])  
+  val th = RW1 [GSYM STAR_ASSOC] (MOVE_POST1 `Rms iu` th)   
+  val th = APP_PART_WEAKEN1 th 
+    `Rblank iu (LENGTH (ys:word32 list))`
+    (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND]
+    \\ SIMP_TAC (bool_ss++sep2_ss) [Rms_def,Rblank_def]
+    \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS] \\ REPEAT STRIP_TAC
+    \\ Q.EXISTS_TAC `y` \\ (IMP_RES_TAC o RW [SEP_IMP_def] o RW1 [STAR_COMM] o 
+          MATCH_MP SEP_IMP_FRAME o Q.SPECL [`us`,`y`]) SEP_IMP_ms_blank_ms
+    \\ METIS_TAC [])
+  val th = APP_WEAKEN1 th
+    `arm_el_post v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp x2 x3 x4 x5 f us xs`
+   (REWRITE_TAC [arm_el_post_def,f_assum_def]
+    \\ SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND]
+    \\ ONCE_REWRITE_TAC [exp_last_def]
+    \\ ONCE_REWRITE_TAC [exp_last_def]
+    \\ SIMP_TAC bool_ss [] \\ SIMP_TAC std_ss [LET_DEF]
+    \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  in th end;
+
+
+val arm_exp_last = let
+
+  val ind = SIMP_RULE bool_ss [] exp_last_ind
+  val th = exp_last_pass1
+
+  (* step 5: instantiate induction and extract ind hyp *)
+  val tm = extract_spec th [] [] [`f`,`x2`,`xs`,`us`]
+  val th1 = ISPEC tm ind
+  val th1 = CONV_RULE (DEPTH_CONV BETA_CONV) th1
+  val asm = extract_assum th1
+  val asm = RW [GSYM ARM_PROG_MOVE_COND] asm
+
+  (* step 6: match step and prove postcondition *)
+  val asm = MATCH_MP ARM_PROG_COMPOSE_WEAKEN asm
+  val th = Q.INST [`us`|->`n`,`xs`|->`m`,`x2`|->`x`] th
+  val th = RW1[GSYM(REWRITE_CONV[SEP_cond_CLAUSES]``cond b * cond b``)]th  
+  val th = MATCH_MP asm (RW [STAR_ASSOC] th)
+  val lemma = prove((fst o dest_imp o concl) th,
+    REWRITE_TAC [arm_el_post_def]
+    \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [exp_last_def]))
+    \\ SIMP_TAC std_ss [SEP_IMP_MOVE_COND,LET_DEF,SEP_IMP_REFL])
+  val th = MATCH_MP th lemma    
+ 
+  (* step 7: clean up *)
+  val th = MATCH_MP th1 (tidy_up th1 th)
+  val th = SPEC_ALL (Q.SPECL [`f`,`x2`,`xs`,`us`] th)
+
+  in th end;
+
+val arm_e3_pre_def = Define `
+  arm_e3_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp x2 x3 x4 x5 f us xs = 
+     Rms iu us * Rms v1 xs * Rms iy ys * Rblank iz (LENGTH ys) * 
+     R v2 x2 * R v3 x3 * R v4 x4 * R v5 x5 * 
+     ~R ix * ~R v6 * ~R v7 * ~R v8 * ~R v9 * ~R 14w * ~S * 
+     stack sp [px; n2w (4 * LENGTH ys)] 7 * f_assum f (ys,px) * 
+     cond ((LENGTH us = LENGTH xs) /\ (LENGTH xs = LENGTH ys) /\
+           1 < LENGTH xs) * cond ~(x3 = 0w)`;
+
+val arm_e3_post_def = Define `
+  arm_e3_post v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp (x2:word32) x3 x4 x5 f us xs = 
+     Rms iu (SND (exp_step3 f x3 x2 xs us)) * Rms v1 (FST (exp_step3 f x3 x2 xs us)) * Rms iy ys * Rblank iz (LENGTH ys) * 
+     ~R v2 * R v3 0w * R v4 x4 * R v5 x5 * 
+     ~R ix * ~R v6 * ~R v7 * ~R v8 * ~R v9 * ~R 14w * ~S * 
+     stack sp [px; n2w (4 * LENGTH ys)] 7`;
+
+
+val exp_step3_pass1 = let
+  (* make_spec["mov v2,v2,lsr #1","subs v3,v3,#1","bne 60"] *)
+  val th = (*  mov v2,v2,lsr #1  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`v2`,`a_mode`|->`RegLSR 1w`,`x`|->`x1` ] arm_MOV1))
+  val th = (*  subs v3,v3,#1     *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (1w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a`|->`v3`,`a_mode`|->`Imm 1w`,`x`|->`x2` ] arm_SUB1))) `x1*x2` `(x2)*(x1)` `x1*x2` `(x2)*(x1)`
+  val th = RW [EVAL ``1w = 0w:word5``,EVAL ``w2n (1w:word5)``] th
+  val tn = (*  bne __            *) SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(sw2sw (13w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`offset6` ] arm_B)
+  val th = FRAME_COMPOSE th (MATCH_INST1 [`S`] th tn)  
+  val th = AUTO_HIDE_STATUS th
+  val th1 = mult_if_odd
+  val th2 = DISCH ``LENGTH (xs:word32 list) = LENGTH (ys:word32 list)`` square
+  val th2 = RW [GSYM ARM_PROG_MOVE_COND] (SIMP_RULE bool_ss [] th2)
+  val th2 = MATCH_INST1 [`Rms iu`] th1 th2  
+  val th2 = Q.GEN `x1` (MOVE_POST1 `R v1` (MOVE_PRE `R v1` th2))
+  val th2 = MATCH_MP INTRO_Rms (RW1 [ARM_PROG_EXTRACT_POST] th2)
+  val th2 = RW [GSYM ARM_PROG_EXTRACT_POST] th2
+  val th3 = FRAME_COMPOSE th1 (MATCH_INST1 [`Rms v1`] th1 th2)
+  val th = FRAME_COMPOSE th3 (MATCH_INST1 [`R v2`,`R v3`] th3 th) 
+  val th = DISCH ``!us xs. mw_monprod6 us xs ys (px:word32) = f us xs`` th
+  val th = SIMP_RULE bool_ss [] th
+  val th = RW [GSYM ARM_PROG_MOVE_COND,GSYM f_assum_def] th
+  val th = APP_FRAME `cond ((LENGTH (us:word32 list) = LENGTH (xs:word32 list)) /\ (LENGTH xs = LENGTH (ys:word32 list)) /\ 1 < LENGTH xs) * f_assum f (ys,px) * cond ~(x3:word32 = 0w)` th
+  val th = APP_STRENGTHEN th
+    `arm_e3_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp x2 x3 x4 x5 f us xs`
+   (REWRITE_TAC [arm_e3_pre_def,f_assum_def]
+    \\ SIMP_TAC (bool_ss++star_ss) [] \\ SIMP_TAC (bool_ss++sep2_ss) []
+    \\ MATCH_MP_TAC SEP_IMP_STAR \\ REWRITE_TAC [SEP_IMP_cond,SEP_IMP_REFL]
+    \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [] \\ DECIDE_TAC)
+  val th = CLOSE_LOOP th
+  val th = APP_WEAKEN th
+    `arm_e3_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp (x2 >>> 1) (x3 - 1w) x4 x5 f (f us us) (if x2 && 1w = 0w then xs else f us xs) * cond ~(x3 = 0w) * cond ~(x3 = 0w)`
+   (REWRITE_TAC [arm_e3_pre_def,f_assum_def]
+    \\ SIMP_TAC (bool_ss++star_ss) [] \\ SIMP_TAC (bool_ss++sep2_ss) []
+    \\ MATCH_MP_TAC SEP_IMP_STAR
+    \\ REWRITE_TAC [SEP_IMP_cond,SEP_IMP_REFL,WORD_EQ_SUB_ZERO]
+    \\ REPEAT STRIP_TAC \\ ASM_REWRITE_TAC [] \\ REPEAT DECIDE_TAC
+    \\ Cases_on `x2 && 1w = 0w` \\ ASM_REWRITE_TAC []
+    \\ Q.PAT_ASSUM `!x.b` (fn th => REWRITE_TAC [GSYM th])
+    \\ IMP_RES_TAC (DECIDE ``!n:num. 1 < n ==> ~(0 = n)``)
+    \\ METIS_TAC [LENGTH_mw_monprod6])
+  val th = AUTO_HIDE_POST1 [`R v2`] th
+  val th = APP_WEAKEN1 th
+    `arm_e3_post v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp x2 x3 x4 x5 f us xs`
+   (REWRITE_TAC [arm_e3_post_def,f_assum_def]
+    \\ SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND,WORD_SUB_REFL]
+    \\ ONCE_REWRITE_TAC [exp_step3_def]
+    \\ ONCE_REWRITE_TAC [exp_step3_def]
+    \\ SIMP_TAC bool_ss [EVAL ``1w = 0w:word32``,WORD_SUB_REFL] 
+    \\ SIMP_TAC std_ss [LET_DEF]
+    \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  in th end;
+
+val arm_exp_step3 = let
+
+  val ind = SIMP_RULE bool_ss [] exp_step3_ind
+  val th = exp_step3_pass1
+
+  (* step 5: instantiate induction and extract ind hyp *)
+  val tm = extract_spec th [] [] [`f`,`x3`,`x2`,`xs`,`us`]
+  val th1 = ISPEC tm ind
+  val th1 = CONV_RULE (DEPTH_CONV BETA_CONV) th1
+  val asm = extract_assum th1
+  val asm = RW [GSYM ARM_PROG_MOVE_COND] asm
+
+  (* step 6: match step and prove postcondition *)
+  val asm = MATCH_MP ARM_PROG_COMPOSE_WEAKEN asm
+  val th = Q.INST [`us`|->`n`,`xs`|->`m`,`x2`|->`x`,`x3`|->`i`] th
+  val th = MATCH_MP asm th
+  val lemma = prove((fst o dest_imp o concl) th,
+    REWRITE_TAC [arm_e3_post_def]
+    \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [exp_step3_def]))
+    \\ SIMP_TAC std_ss [SEP_IMP_MOVE_COND,LET_DEF,SEP_IMP_REFL])
+  val th = MATCH_MP th lemma    
+ 
+  (* step 7: clean up *)
+  val th = MATCH_MP th1 (tidy_up th1 th)
+  val th = SPEC_ALL (Q.SPECL [`f`,`x3`,`x2`,`xs`,`us`] th)
+
+  in th end;
+
+
+val arm_ee_pre_def = Define `
+  arm_ee_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp f us xs ipp ps = 
+     Rms iu us * Rms v1 xs * Rms iy ys * Rblank iz (LENGTH ys) * 
+     R30 v5 ipp * ms ipp ps * 
+     ~R v2 * ~R v3 * R v4 (wLENGTH ps) * 
+     ~R ix * ~R v6 * ~R v7 * ~R v8 * ~R v9 * ~R 14w * ~S * 
+     stack sp [px; n2w (4 * LENGTH ys)] 7 * f_assum f (ys,px) * 
+     cond ((LENGTH us = LENGTH xs) /\ (LENGTH xs = LENGTH ys) /\
+           1 < LENGTH xs) * cond ~(LENGTH ps = 0)`;
+
+val arm_ee_post_def = Define `
+  arm_ee_post' v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp f us xs ipp ps = 
+     Rms iu (SND (exp_list f xs us ps)) * Rms v1 (FST (exp_list f xs us ps)) * Rms iy ys * Rblank iz (LENGTH ys) * 
+     R30 v5 (ipp + wLENGTH ps) * ms ipp ps * 
+     ~R v2 * ~R v3 * ~R v4 *  
+     ~R ix * ~R v6 * ~R v7 * ~R v8 * ~R v9 * ~R 14w * ~S * 
+     stack sp [px; n2w (4 * LENGTH ys)] 7`;
+
+val arm_exp_list = let
+  (* make_spec ["ldr v2,[v5],#4","mov v3,#32"] *)
+  val th = (*  ldr v2,[v5],#4  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (4w :word12) :word32)``] (Q.INST [`c_flag`|->`AL`,`opt`|->`<|Pre := F; Up := T; Wb := T|>`,`a`|->`v2`,`b`|->`v5`,`imm`|->`4w`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_LDR_NONALIGNED))
+  val th = (*  mov v3,#32      *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (32w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`a`|->`v3`,`a_mode`|->`Imm 32w`,`x`|->`x2` ] arm_MOV1))) `x1*x2*x3*x4` `(x4)*(x1*x2*x3)` `x1*x2` `(x2)*(x1)`
+  val th = ALIGN_VARS ["y1"] (AUTO_HIDE_STATUS th)
+  val th = AUTO_HIDE_PRE [`R v3`,`R v2`] th
+  val th = Q.INST [`y1`|->`ipp`,`z1`|->`x2`] th
+  val th = APP_FRAME `ms (ipp+1w) ps` th
+  val th1 = RW [arm_e3_pre_def,arm_e3_post_def] arm_exp_step3
+  val th1 = ALIGN_VARS ["x5"] th1
+  val th = FRAME_COMPOSE th (MATCH_INST1 [`R30 v5`,`R v3`] th th1)
+  val lemma = SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] exp_step4_def)
+  val th = SIMP_RULE (bool_ss++sep_ss) [GSYM lemma,EVAL ``32w = 0w:word32``] th  
+  val th = AUTO_HIDE_POST1 [`R v3`] th
+  val th1 = APP_FRAME `f_assum f (ys,px) * cond ((LENGTH (us:word32 list) = LENGTH xs) /\ (LENGTH xs = LENGTH (ys:word32 list)) /\ 1 < LENGTH (xs:word32 list) /\ ~(LENGTH (x2:word32::ps) = 0))` th
+  (* make_spec ["subs v4,v4,#1"] *)
+  val th = (*  subs v4,v4,#1  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(w2w (1w :word8) :word32)``] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`T`,`a`|->`v4`,`a_mode`|->`Imm 1w`,`x`|->`x1` ] arm_SUB1))
+  val tn = (*  bne __            *) SIMP_RULE (bool_ss++armINST_ss) [EVAL ``(sw2sw (13w :word24) :word30)``] (Q.INST [`c_flag`|->`NE`,`offset`|->`offset7` ] arm_B)
+  val th = FRAME_COMPOSE th (MATCH_INST1 [`S`] th tn)  
+  val th = AUTO_HIDE_STATUS th
+  val th = Q.INST [`x1`|->`x4`] th
+  val th = FRAME_COMPOSE th1 th  
+  val th = Q.INST [`x4`|->`wLENGTH (x2::ps)`] th
+  val th = RW1 [GSYM WORD_EQ_SUB_ZERO] th
+  val th = RW [wLENGTH_CONS,WORD_ADD_SUB2] th
+  val th = DISCH ``LENGTH (ps:word32 list) < 2**30`` th
+  val lemma = prove(``LENGTH xs < 2 ** 30 ==> ((wLENGTH xs = 0w:word32) = (xs = []))``,
+    SIMP_TAC (arith_ss++SIZES_ss) [LESS_MOD,wLENGTH_def,n2w_11,LENGTH_NIL])
+  val th = UNDISCH (SIMP_RULE bool_ss [lemma] th)
+  val th = AUTO_HIDE_POST1 [`R v4`] th
+  val th = APP_WEAKEN1 th
+    `arm_ee_post' v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp f us xs ipp (x2::ps)`
+   (SIMP_TAC (bool_ss++sep2_ss) [SEP_IMP_MOVE_COND,f_assum_def]
+    \\ SIMP_TAC arith_ss [arm_ee_post_def,wLENGTH_def,LENGTH,ms_def,emp_STAR,exp_list_def]
+    \\ Cases_on `exp_step4 f x2 xs us` \\ ASM_SIMP_TAC std_ss [LET_DEF]
+    \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  val th = APP_STRENGTHEN th
+    `arm_ee_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp f us xs ipp (x2::ps)`
+   (SIMP_TAC (bool_ss++sep2_ss) [f_assum_def,arm_ee_pre_def,wLENGTH_CONS,ms_def]
+    \\ MATCH_MP_TAC SEP_IMP_STAR
+    \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL,SEP_IMP_cond,LENGTH])
+  val th = DISCH_ELIM_xs_ASSUM' arm_ee_pre_def `ipp` `x2` `ms ipp` th
+  val th = APP_WEAKEN th
+    `arm_ee_pre v1 v2 v3 v4 v5 v6 v7 v8 v9 iu ix iy iz ys px sp f (SND (exp_step4 f x2 xs us)) (FST (exp_step4 f x2 xs us)) (ipp+1w) ps * M ipp x2`
+   (SIMP_TAC (bool_ss++sep2_ss) [f_assum_def,arm_ee_pre_def,wLENGTH_CONS,ms_def]
+    \\ MATCH_MP_TAC SEP_IMP_STAR
+    \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL,SEP_IMP_cond,LENGTH,GSYM LENGTH_NIL]
+    \\ STRIP_TAC    
+    \\ `!xs zs. (\xs. (LENGTH xs = LENGTH ys)) xs /\ (LENGTH xs = LENGTH zs) ==> 
+                (\xs. (LENGTH xs = LENGTH ys)) zs /\
+                (\xs. (LENGTH xs = LENGTH ys)) (f xs zs) /\
+                (LENGTH zs = LENGTH (f xs zs))` by
+      (REPEAT STRIP_TAC \\ SIMP_TAC std_ss []
+       \\ Q.PAT_ASSUM `!x.b` (fn th => REWRITE_TAC [GSYM th])
+       \\ `~(LENGTH xs = 0)` by DECIDE_TAC \\ METIS_TAC [LENGTH_mw_monprod6])
+    \\ IMP_RES_TAC (INST_TYPE [``:'a``|->``:32``,``:'b``|->``:word32 list``,``:'c``|->``:num``] MONO_exp_step3)
+    \\ FULL_SIMP_TAC std_ss [exp_step4_def] \\ METIS_TAC []) 
+  val th = CLOSE_LOOP th
+
+(*
+  (* step 5: instantiate induction and extract ind hyp *)
+  val tm = extract_spec th [(`x2::ps`,`ps`)] [`ipp`,`f`,`us`,`xs`] [`ps`]
+  val th1 = ISPEC tm (RW [GSYM AND_IMP_INTRO] list_induction)
+  val th1 = CONV_RULE (DEPTH_CONV BETA_CONV) th1
+  val th1 = delete_fst_case [arm_ee_pre_def] th1
+  val asm = extract_assum th1
+
+  (* step 6: match step and prove postcondition *)
+  val asm = MATCH_MP ARM_PROG_COMPOSE_WEAKEN asm
+  val th = MATCH_MP asm th
 *)
+
+  (* step 5: instantiate induction and extract ind hyp *)
+  val tm = extract_spec th [(`x2::ps`,`ps`)] [`ipp`] [`f`,`xs`,`us`,`ps`]
+  val th1 = ISPEC tm (SIMP_RULE bool_ss [EXPAND_PAIR] exp_list_ind)
+  val th1 = CONV_RULE (DEPTH_CONV BETA_CONV) th1
+  val th1 = delete_fst_case [arm_ee_pre_def] th1
+  val asm = extract_assum th1
+
+  (* step 6: match step and prove postcondition *)
+  val asm = MATCH_MP ARM_PROG_COMPOSE_WEAKEN asm
+  val th = Q.INST [`x2`|->`x`,`ps`|->`xs`,`xs`|->`m`,`us`|->`n`] th
+  val th = MATCH_MP asm th handle e => Raise e
+  val lemma = prove((fst o dest_imp o concl) th,
+    REWRITE_TAC [arm_ee_post_def]
+    \\ CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [exp_list_def]))
+    \\ Cases_on `exp_step4 f x m n` \\ ASM_SIMP_TAC std_ss [LET_DEF]
+    \\ REWRITE_TAC [ms_def,wLENGTH_CONS,WORD_ADD_ASSOC]    
+    \\ SIMP_TAC (bool_ss++star_ss) [SEP_IMP_REFL])
+  val th = MATCH_MP th lemma    
+
+  (* step 7: clean up *)
+  val th = MATCH_MP th1 (tidy_up th1 th)
+  val th = SPEC_ALL (Q.SPECL [`f`,`us`,`xs`,`ps`,`ipp`] th)
+   
+  in th end;
+
 
 
 

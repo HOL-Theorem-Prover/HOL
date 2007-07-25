@@ -15,7 +15,6 @@ sig
 
     val PRE_CONV_RULE       : conv -> thm -> thm   
     val POST1_CONV_RULE     : conv -> thm -> thm
-    val POST2_CONV_RULE     : conv -> thm -> thm
     val POST_CONV_RULE      : conv -> thm -> thm
 
     val PRE_MOVE_STAR       : term frag list -> term frag list -> thm -> thm   
@@ -41,13 +40,12 @@ sig
     val EXISTS_PRE          : term frag list -> thm -> thm
 
     val MOVE_PRE            : term frag list -> thm -> thm
-    val MOVE_POST           : term frag list -> thm -> thm
     val MOVE_POST1          : term frag list -> thm -> thm
-    val MOVE_POST2          : term frag list -> thm -> thm
+    val MOVE_POST           : term frag list -> thm -> thm
 
     val AUTO_HIDE_PRE       : (term frag list) list -> thm -> thm
     val AUTO_HIDE_POST1     : (term frag list) list -> thm -> thm
-    val AUTO_HIDE_POST2     : (term frag list) list -> thm -> thm
+    val AUTO_HIDE_POST      : (term frag list) list -> thm -> thm
 
     val AUTO_PRE_HIDE_STATUS   : thm -> thm
     val AUTO_POST1_HIDE_STATUS : thm -> thm
@@ -82,7 +80,7 @@ sig
     val MATCH_INST1         : term frag list list -> thm -> thm -> thm
     val MATCH_INST          : term frag list list -> thm -> thm -> thm
      
-    val ARM_PROG_CLOSE_LOOP : thm -> thm
+    val CLOSE_LOOP          : thm -> thm
     val EXTRACT_CODE        : thm -> thm
     val ABSORB_POST         : thm -> thm
 
