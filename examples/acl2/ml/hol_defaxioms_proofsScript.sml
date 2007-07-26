@@ -1728,25 +1728,30 @@ val list_EXPLODE_coerce =
           [make_character_list_def,coerce_list_to_string_def,
            stringTheory.EXPLODE_EQNS,list_to_sexp_def]);
 
+
+
 val coerce_inverse_1_defaxiom =
  store_thm
   ("coerce_inverse_1_defaxiom",
    ``|= implies
           (character_listp x)
           (equal (coerce (coerce x (csym "STRING")) (csym "LIST")) x)``,
-   Cases_on `x`
-    THEN ACL2_SIMP_TAC
-          [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
-           list_to_sexp_def,EVAL ``EXPLODE ""``]
-    THENL
-     [PROVE_TAC[sexp_11],
-      Cases_on `characterp s = sym "COMMON-LISP" "NIL"`
-       THEN ACL2_FULL_SIMP_TAC[make_character_list_def]
-       THEN Cases_on `s`
-       THEN ACL2_FULL_SIMP_TAC
-             [make_character_list_def,coerce_list_to_string_def,
-              stringTheory.EXPLODE_EQNS,list_to_sexp_def]
-       THEN PROVE_TAC[T_NIL,sexp_11,ACL2_TRUE,list_EXPLODE_coerce,nil_def]]);
+   ONCE_REWRITE_TAC [character_listp_def]
+    THEN RW_TAC std_ss
+     [implies_def,ite_def,ACL2_TRUE,equal_def,atom_def,
+      not_def,if_t_nil,andl_def,if_eq_imp]
+    THEN Cases_on `x`
+    THEN REWRITE_TAC 
+     [consp_def,car_def,cdr_def,nil_def,sexp_distinct,sexp_11,
+      GSYM sexp_distinct,t_def,EVAL ``"T" = "NIL"``,coerce_def,csym_def,
+      COMMON_LISP_def,EVAL ``"STRING" = "LIST"``,coerce_string_to_list_def,
+      stringTheory.EXPLODE_EQNS,list_to_sexp_def]
+    THEN TRY (Cases_on `s'`)
+    THEN TRY (Cases_on `s`)
+    THEN RW_TAC std_ss 
+     [characterp_def,GSYM nil_def,EVAL ``t = nil``,make_character_list_def,
+      coerce_list_to_string_def,stringTheory.EXPLODE_EQNS,list_to_sexp_def] THEN
+    METIS_TAC [ACL2_TRUE,list_EXPLODE_coerce]);
 
 (*
      [oracles: DEFAXIOM ACL2::COERCE-INVERSE-2, DISK_THM] [axioms: ] []
@@ -1840,10 +1845,28 @@ val stringp_symbol_package_name_defaxiom =
 (* val LOOKUP_NIL =                                                          *)
 (*  |- LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL" = "COMMON-LISP"         *)
 (*****************************************************************************)
+
+val slist = map string_EQ_CONV [
+    ``"COMMON-LISP" = "ACL2-USER"``,``"COMMON-LISP" = "ACL2"``,``"COMMON-LISP" = "COMMON-LISP"``,
+    ``"ACL2-INPUT-CHANNEL" = "ACL2-USER"``,``"ACL2-INPUT-CHANNEL" = "ACL2"``,``"ACL2-INPUT-CHANNEL" = "COMMON-LISP"``,
+    ``"ACL2-USER" = "ACL2"``,``"ACL2" = "ACL2"``];
+				
+val pack_rdef = CONV_RULE (DEPTH_CONV (FIRST_CONV (map REWR_CONV [ACL2_CL_def,ACL2_USER_CL_def,ACL2_USER_def]))) ACL2_PACKAGE_ALIST_def;
+
+val lookup_conv = 
+  ONCE_DEPTH_CONV (REWR_CONV pack_rdef) THENC
+  REPEATC (
+    REWR_CONV (CONJUNCT2 LOOKUP_def) THENC
+    RATOR_CONV (
+      RATOR_CONV (RAND_CONV (FORK_CONV (TRY_CONV string_EQ_CONV,TRY_CONV (FIRST_CONV (map REWR_CONV slist) ORELSEC string_EQ_CONV)) THENC
+        PURE_REWRITE_CONV [AND_CLAUSES]))) THENC
+    FIRST_CONV (map REWR_CONV (CONJUNCTS (SPEC_ALL COND_CLAUSES)))) THENC
+  REWR_CONV (CONJUNCT1 LOOKUP_def);
+
 val LOOKUP_NIL = 
  if_save_thm
   ("LOOKUP_NIL",
-   time EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``);
+   time lookup_conv ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``);
 
 val symbolp_intern_in_package_of_symbol_defaxiom =
  store_thm
@@ -1867,13 +1890,13 @@ val LOOKUP_PKG_WITNESS =
  if_store_thm
   ("LOOKUP_PKG_WITNESS",
    ``LOOKUP s ACL2_PACKAGE_ALIST "ACL2-PKG-WITNESS" = s``,
-   CONV_TAC EVAL);
-
+   CONV_TAC (LAND_CONV lookup_conv) THEN REFL_TAC);
+   
 val symbolp_nil =
  if_store_thm
   ("symbolp_nil",
    ``~(symbolp nil = nil)``,
-   CONV_TAC EVAL);
+  RW_TAC std_ss [symbolp_def,nil_def,BASIC_INTERN_def,t_def,COND_EXPAND,sexp_11,LOOKUP_NIL]);
 
 val symbolp_pkg_witness_defaxiom =
  store_thm
@@ -1886,11 +1909,11 @@ val symbolp_pkg_witness_defaxiom =
     THEN SIMP_TAC std_ss 
           [BASIC_INTERN_def,
            symbolp_def,sexp_11,if_t_nil,LOOKUP_PKG_WITNESS]
-    THEN CONV_TAC EVAL
+    THEN CONV_TAC (DEPTH_CONV string_EQ_CONV)
+    THEN REWRITE_TAC []
     THEN Cases_on  `s = ""`
     THEN RW_TAC std_ss [symbolp_nil,GSYM nil_def]
-    THEN CONV_TAC EVAL
-    THEN RW_TAC std_ss []);
+    THEN ASM_REWRITE_TAC [symbolp_def,BASIC_INTERN_def,EVAL ``t = nil``,sexp_11,LOOKUP_PKG_WITNESS]);
 
 (*
      [oracles: DEFAXIOM ACL2::INTERN-IN-PACKAGE-OF-SYMBOL-SYMBOL-NAME,
@@ -1915,14 +1938,12 @@ val intern_in_package_of_symbol_symbol_name_defaxiom =
     THEN ACL2_SIMP_TAC []
     THEN FULL_SIMP_TAC arith_ss 
           [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
-    THEN `~(intern_in_package_of_symbol (str s0) (sym s' s0') = sym s s0)` by METIS_TAC[]
-    THEN ACL2_FULL_SIMP_TAC[]
+    THEN POP_ASSUM MP_TAC
+    THEN RW_TAC std_ss []
+    THEN ACL2_FULL_SIMP_TAC []
     THEN FULL_SIMP_TAC arith_ss 
           [if_t_nil,sexp_11,if_eq_imp,BASIC_INTERN_def,T_NIL]
-    THEN RW_TAC std_ss []
-    THEN TRY(`~(intern_in_package_of_symbol (str "") (sym s' so') = sym s s0)`
-              by METIS_TAC[])
-    THEN TRY(METIS_TAC[]));
+    THEN METIS_TAC []);
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-NAME-PKG-WITNESS] [axioms: ] []
@@ -1940,27 +1961,10 @@ val symbol_name_pkg_witness_defaxiom =
           [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
     THEN FULL_SIMP_TAC arith_ss 
           [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
-    THEN TRY
-          (METIS_TAC
-            [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
-             LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
-             EVAL``"ACL2" = ""``])
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
-    THEN Cases_on `s = ""`
-    THEN FULL_SIMP_TAC std_ss
-          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
-    THEN RW_TAC std_ss []
-    THEN ACL2_FULL_SIMP_TAC[]
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
-           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]
-    THEN ACL2_FULL_SIMP_TAC[]
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
-           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]);
+    THEN REPEAT (POP_ASSUM MP_TAC)
+    THEN RW_TAC std_ss
+          [symbol_name_def,symbolp_def,if_t_nil,BASIC_INTERN_def,
+           LOOKUP_PKG_WITNESS,EVAL ``t = nil``,ite_def]);
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-PACKAGE-NAME-PKG-WITNESS-NAME, DISK_THM]
@@ -1994,27 +1998,10 @@ val symbol_package_name_pkg_witness_name_defaxiom =
           [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
     THEN FULL_SIMP_TAC arith_ss 
           [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
-    THEN TRY
-          (METIS_TAC
-            [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
-             LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
-             EVAL``"ACL2" = ""``])
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS]
-    THEN Cases_on `s = ""`
-    THEN FULL_SIMP_TAC std_ss
-          [if_t_nil,GSYM t_def, GSYM nil_def,BASIC_INTERN_def]
-    THEN RW_TAC std_ss []
-    THEN ACL2_FULL_SIMP_TAC[]
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
-           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]
-    THEN ACL2_FULL_SIMP_TAC[]
-    THEN FULL_SIMP_TAC arith_ss 
-          [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
-           T_NIL,EVAL ``"" = "ACL2-PKG-WITNESS"``,EVAL``"ACL2" = ""``]);
+    THEN REPEAT (POP_ASSUM MP_TAC)
+    THEN RW_TAC std_ss
+          [symbol_name_def,symbolp_def,if_t_nil,BASIC_INTERN_def,
+           symbol_package_name_def,LOOKUP_PKG_WITNESS,EVAL ``t = nil``,ite_def]);
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-NAME-INTERN-IN-PACKAGE-OF-SYMBOL,
@@ -2057,7 +2044,7 @@ val symbol_name_intern_in_package_of_symbol_defaxiom =
 val LOOKUP_INPUT = 
  if_save_thm
   ("LOOKUP_INPUT",
-   time EVAL ``LOOKUP "ACL2-INPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
+   time lookup_conv ``LOOKUP "ACL2-INPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
 val acl2_input_channel_package_defaxiom =
  store_thm
@@ -2093,7 +2080,7 @@ val acl2_input_channel_package_defaxiom =
 val LOOKUP_OUTPUT = 
  if_save_thm
   ("LOOKUP_OUTPUT",
-   time EVAL ``LOOKUP "ACL2-OUTPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
+   time lookup_conv ``LOOKUP "ACL2-OUTPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
 val acl2_output_channel_package_defaxiom =
  store_thm
@@ -2635,8 +2622,18 @@ val pkg_thm_for_initial_pkg_system_lemma =
     THEN RW_TAC list_ss []
     THEN METIS_TAC[]);
 
+fun import_conv1 term = 
+	((REWR_CONV (CONJUNCT2 imported_symbol_names_def) THENC
+	RATOR_CONV (RATOR_CONV (RAND_CONV (FIRST_CONV (map REWR_CONV slist)))) THENC
+	FIRST_CONV [
+		REWR_CONV (CONJUNCT1 (SPEC_ALL COND_CLAUSES)) THENC RAND_CONV import_conv1,
+		REWR_CONV (CONJUNCT2 (SPEC_ALL COND_CLAUSES)) THENC import_conv1]) 
+	ORELSEC
+	(REWR_CONV (CONJUNCT1 imported_symbol_names_def))) term;
+
 val STAR_COMMON_LISP_SYMBOLS_FROM_MAIN_LISP_PACKAGE_STAR = 
- time EVAL ``imported_symbol_names "ACL2" ACL2_PACKAGE_ALIST``;
+ time (ONCE_DEPTH_CONV (REWR_CONV pack_rdef) THENC
+         import_conv1) ``imported_symbol_names "ACL2" ACL2_PACKAGE_ALIST``;
 
 val COMMON_LISP_SYMBOLS =
  if_save_thm
@@ -2680,7 +2677,7 @@ val not_member_symbol_name_MEM =
 val LOOKUP_COMMON_LISP =
  if_save_thm
   ("LOOKUP_COMMON_LISP",
-   EVAL ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST s``);
+   lookup_conv ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST s``);
 
 val symbol_name_csym =
  if_store_thm
@@ -3229,7 +3226,7 @@ val acl2_package_defaxiom =
 (* val LOOKUP_EMPTY = |- LOOKUP "" ACL2_PACKAGE_ALIST s = "" : thm           *)
 (*****************************************************************************)
 val LOOKUP_EMPTY = 
- if_save_thm("LOOKUP_EMPTY", EVAL ``LOOKUP "" ACL2_PACKAGE_ALIST s``);
+ if_save_thm("LOOKUP_EMPTY", lookup_conv ``LOOKUP "" ACL2_PACKAGE_ALIST s``);
 
 (*
      [oracles: DEFAXIOM ACL2::KEYWORD-PACKAGE, DISK_THM] [axioms: ] []
@@ -3244,7 +3241,7 @@ val LOOKUP_EMPTY =
 val LOOKUP_KEYWORD = 
  if_save_thm
   ("LOOKUP_KEYWORD",
-   time EVAL ``LOOKUP "KEYWORD" ACL2_PACKAGE_ALIST s``);
+   time lookup_conv ``LOOKUP "KEYWORD" ACL2_PACKAGE_ALIST s``);
 
 val keyword_package_defaxiom =
  store_thm
@@ -3306,7 +3303,12 @@ val string_is_not_circular_defaxiom =
                                (cons (chr #"N")
                                   (cons (chr #"G") (nat 0))))))))
                 (intern_in_package_of_symbol (nat 0) (nat 0)))``,
-   CONV_TAC EVAL);
+    REWRITE_TAC 
+      [coerce_def,sexp_11,sexp_distinct,make_character_list_def,
+       coerce_list_to_string_def,nat_def,int_def,cpx_def,nil_def,
+       GSYM sexp_distinct,intern_in_package_of_symbol_def,symbolp_def,
+       BASIC_INTERN_def,LOOKUP_NIL,ite_def,equal_def,csym_def,COMMON_LISP_def]
+    THEN RW_TAC std_ss [t_def,ACL2_TRUE,nil_def,LOOKUP_COMMON_LISP]);
 
 (*
      [oracles: DEFAXIOM ACL2::NIL-IS-NOT-CIRCULAR, DISK_THM] [axioms: ] []
@@ -3327,7 +3329,11 @@ val nil_is_not_circular_defaxiom =
                    (cons (chr #"N")
                       (cons (chr #"I") (cons (chr #"L") (nat 0))))
                    (csym "STRING")) (csym "STRING"))``,
-   CONV_TAC EVAL);
+    RW_TAC std_ss [
+      coerce_def,make_character_list_def,coerce_list_to_string_def,
+      csym_def,sexp_11,nat_def,int_def,cpx_def,nil_def,intern_in_package_of_symbol_def,
+      BASIC_INTERN_def,LOOKUP_NIL,COMMON_LISP_def,symbolp_def,equal_def,
+      ite_def,ACL2_TRUE,t_def]);
 
 (*
      [oracles: DEFAXIOM ACL2::CHAR-CODE-LINEAR, DISK_THM] [axioms: ] []
@@ -3910,59 +3916,50 @@ val make_character_list_acl2_make_character_list =
           [characterp_make_character_list,make_character_list_def,
            not_characterp_make_character_list]);
 
+val code_char_zero = 
+ SIMP_CONV std_ss 
+          [code_char_def,nat_def,int_def,cpx_def,IS_INT_EXISTS,sexpTheory.rat_def,
+           ratTheory.rat_0_def,fracTheory.frac_0_def,ratTheory.RAT_EQ,fracTheory.NMR,
+           fracTheory.DNM,integerTheory.INT_LT_01,integerTheory.INT_MUL_REDUCE,
+           integerTheory.INT_MUL_RID,integerTheory.INT_LE_REDUCE,integerTheory.INT_LT_REDUCE,
+           REWRITE_RULE [fracTheory.frac_0_def,ratTheory.rat_0] reduced_nmr_0,
+           integerTheory.NUM_OF_INT]
+  ``code_char (int 0)``;
+
+val coerce_list_coerce_list_list = 
+ prove(``coerce_list_to_string
+            (make_character_list (acl2_make_character_list s0)) = 
+         coerce_list_to_string (make_character_list s0)``,
+  Induct_on `s0`
+    THEN TRY (Cases_on `s0`) 
+    THEN ONCE_REWRITE_TAC [acl2_make_character_list_def]
+    THEN RW_TAC std_ss 
+      [coerce_list_to_string_def,make_character_list_def,nil_def,
+       ite_def,itel_def,cdr_def,car_def,nat_def,code_char_zero,
+       atom_def,not_def,consp_def,characterp_def,t_def]);
+
 val completion_of_coerce_defaxiom =
- time store_thm
+ store_thm
   ("completion_of_coerce_defaxiom",
    ``|= equal (coerce x y)
               (ite
                 (equal y (csym "LIST"))
                 (andl [stringp x; coerce x (csym "LIST")])
                 (coerce (acl2_make_character_list x) (csym "STRING")))``,
-   Cases_on `x` THEN Cases_on `y`
-    THEN ACL2_SIMP_TAC[]
-    THEN FULL_SIMP_TAC std_ss 
-          [GSYM nil_def,GSYM t_def,if_t_nil,sexp_11]
-    THEN FULL_SIMP_TAC std_ss 
-          [sexp_11,if_eq_imp,csym_def,COMMON_LISP_def,t_def,nil_def]
-    THEN RW_TAC std_ss []
-    THEN FULL_SIMP_TAC std_ss [EVAL ``"STRING" = "LIST"``,coerce_if,coerce_def]
-    THEN FULL_SIMP_TAC std_ss [if_eq_imp]
-    THEN TRY(Cases_on `s`)
-    THEN TRY(Cases_on `s0`)
-    THEN FULL_SIMP_TAC intLib.int_ss
-          [COMPLEX_ADD_def,COMPLEX_SUB_def,COMPLEX_MULT_def,
-           complex_rational_11,characterp_def,reduced_nmr_0,
-           sexpTheory.rat_def,sexp_11,
-           GSYM fracTheory.frac_0_def,
-           GSYM ratTheory.rat_0,ratTheory.RAT_MUL_RZERO,
-           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_1,
-           ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,ratTheory.RAT_SUB_ID,
-           ratTheory.RAT_LDISTRIB,ratTheory.RAT_RDISTRIB,
-           ratTheory.RAT_SUB_LDISTRIB,ratTheory.RAT_SUB_RDISTRIB,
-           ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_0,
-           ratTheory.RAT_AINV_ADD,ratTheory.RAT_LES_REF,com_0_def,
-           ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,less_def,
-           GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL,
-           ratTheory.RAT_MUL_LZERO,ratTheory.RAT_MUL_RZERO,
-           ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
-           rationalp_def,integerp_def,numerator_def,denominator_def,
-           int_def,cpx_def,realpart_def,imagpart_def,
-           t_def,nil_def,IS_INT_EXISTS,
-           complex_def,add_def,mult_def,complex_rationalp_def,
-           nat_def,int_def,cpx_def,code_char_def,
-           make_character_list_def,coerce_list_to_string_def,
-           abs_exists_0,acl2_make_character_list,coerce_def,sexp_11,
-           EVAL ``"STRING" = "LIST"``]
-    THEN RW_TAC intLib.int_ss []
-    THEN FULL_SIMP_TAC std_ss [GSYM nil_def]
-    THEN Cases_on `characterp s = nil`
-    THEN FULL_SIMP_TAC std_ss 
-          [characterp_make_character_list,
-           not_characterp_make_character_list,
-           make_character_list_acl2_make_character_list]
-    THEN FULL_SIMP_TAC std_ss 
-          [make_character_list_def,
-           make_character_list_acl2_make_character_list]);
+  RW_TAC std_ss
+   [equal_def,ACL2_TRUE,if_t_nil,ite_def,csym_def,COMMON_LISP_def,EVAL ``t = nil``,andl_def]
+   THEN Cases_on `x`
+   THEN FULL_SIMP_TAC std_ss [stringp_def,coerce_def,EVAL ``t = nil``]
+   THEN ONCE_REWRITE_TAC [acl2_make_character_list_def]
+   THEN REWRITE_TAC 
+    [atom_def,ite_def,consp_def,not_def,itel_def,EVAL ``t = nil``,
+     coerce_def,AP_TERM ``coerce`` nil_def,sexp_11]
+   THEN TRY (Cases_on `s'`)
+   THEN TRY (Cases_on `s`)
+   THEN RW_TAC std_ss 
+    [car_def,cdr_def,characterp_def,nat_def,code_char_zero,coerce_def,
+     make_character_list_def,coerce_list_to_string_def,
+     coerce_list_coerce_list_list,EVAL ``t = nil``]);
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-DENOMINATOR, DISK_THM] [axioms: ]
@@ -4102,16 +4099,21 @@ val bad_atom_less_equal_antisymmetric_defaxiom =
              bad_atom_less_equal x y;
              bad_atom_less_equal y x]) 
          (equal x y)``,
-   Cases_on `x` THEN Cases_on `y`
-    THEN ACL2_SIMP_TAC[]
-    THEN FULL_SIMP_TAC std_ss 
-          [GSYM nil_def, GSYM t_def, if_t_nil,itel_def,ite_def,
-           EVAL ``t = nil``, EVAL ``nil = t``]
-    THEN FULL_SIMP_TAC std_ss 
-          [BASIC_INTERN_def,sexp_11,if_t_nil,
-           SEXP_SYM_LESS_def,SEXP_SYM_LESS_EQ_def]
-    THEN RW_TAC std_ss []
-    THEN IMP_RES_TAC STRING_LESS_SYM);
+    RW_TAC std_ss
+     [implies_def,bad_atom_def,andl_def,ite_def,itel_def,ACL2_TRUE,
+      if_t_nil,t_nil_if,not_def,EVAL ``t = nil``,equal_def]
+     THEN Cases_on `x` 
+     THEN FULL_SIMP_TAC std_ss 
+      [consp_def,symbolp_def,acl2_numberp_def,characterp_def,stringp_def,
+       BASIC_INTERN_def,sexp_11,if_t_nil,EVAL ``t = nil``]
+     THEN Cases_on `y` 
+     THEN FULL_SIMP_TAC std_ss 
+      [consp_def,symbolp_def,acl2_numberp_def,characterp_def,stringp_def,
+       BASIC_INTERN_def,sexp_11,if_t_nil,EVAL ``t = nil``]
+     THEN RW_TAC std_ss 
+      [bad_atom_less_equal_def,EVAL ``t = nil``,
+       SEXP_SYM_LESS_EQ_def,SEXP_SYM_LESS_def]
+     THEN METIS_TAC [STRING_LESS_ANTISYM,STRING_LESS_SYM]);
 
 (*
      [oracles: DEFAXIOM ACL2::BAD-ATOM<=-TRANSITIVE, DISK_THM] [axioms: ] []
@@ -4131,17 +4133,26 @@ val bad_atom_less_equal_transitive_defaxiom =
             bad_atom_less_equal y z;
             bad_atom x; bad_atom y; bad_atom z])
          (bad_atom_less_equal x z)``,
-   Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
-    THEN ACL2_SIMP_TAC[]
-    THEN FULL_SIMP_TAC std_ss 
-          [GSYM nil_def, GSYM t_def, if_t_nil,itel_def,ite_def,
-           EVAL ``t = nil``, EVAL ``nil = t``]
-    THEN FULL_SIMP_TAC std_ss 
-          [BASIC_INTERN_def,sexp_11,if_t_nil,
-           SEXP_SYM_LESS_def,SEXP_SYM_LESS_EQ_def]
-    THEN RW_TAC std_ss []
-    THEN IMP_RES_TAC STRING_LESS_TRANS
-    THEN METIS_TAC[]);
+    RW_TAC std_ss
+     [implies_def,bad_atom_def,andl_def,ite_def,itel_def,ACL2_TRUE,
+      if_t_nil,t_nil_if,not_def,EVAL ``t = nil``]
+     THEN Cases_on `x` 
+     THEN FULL_SIMP_TAC std_ss 
+      [consp_def,symbolp_def,acl2_numberp_def,characterp_def,stringp_def,
+       BASIC_INTERN_def,sexp_11,if_t_nil,EVAL ``t = nil``]
+     THEN Cases_on `y` 
+     THEN FULL_SIMP_TAC std_ss 
+      [consp_def,symbolp_def,acl2_numberp_def,characterp_def,stringp_def,
+       BASIC_INTERN_def,sexp_11,if_t_nil,EVAL ``t = nil``]
+     THEN Cases_on `z` 
+     THEN FULL_SIMP_TAC std_ss 
+      [consp_def,symbolp_def,acl2_numberp_def,characterp_def,stringp_def,
+       BASIC_INTERN_def,sexp_11,if_t_nil,EVAL ``t = nil``]
+     THEN RW_TAC std_ss 
+      [bad_atom_less_equal_def,EVAL ``t = nil``,
+       SEXP_SYM_LESS_EQ_def,SEXP_SYM_LESS_def]
+     THEN METIS_TAC [STRING_LESS_TRANS]);
+
 
 (*
      [oracles: DEFAXIOM ACL2::BAD-ATOM<=-TOTAL, DISK_THM] [axioms: ] []
@@ -4158,19 +4169,22 @@ val bad_atom_less_equal_total_defaxiom =
          (ite (bad_atom_less_equal x y) 
               (bad_atom_less_equal x y)
               (bad_atom_less_equal y x))``,
-   Cases_on `x` THEN Cases_on `y`
-    THEN ACL2_SIMP_TAC[]
-    THEN FULL_SIMP_TAC std_ss 
-          [GSYM nil_def, GSYM t_def, if_t_nil,andl_def,itel_def,ite_def,
-           EVAL ``t = nil``, EVAL ``nil = t``]
-    THEN FULL_SIMP_TAC std_ss 
-          [BASIC_INTERN_def,sexp_11,if_t_nil,
-           SEXP_SYM_LESS_def,SEXP_SYM_LESS_EQ_def]
-    THEN FULL_SIMP_TAC list_ss [if_eq_imp,nil_def]
-    THEN FULL_SIMP_TAC list_ss [sexp_11]
-    THEN RW_TAC std_ss []
-    THEN METIS_TAC
-          [LOOKUP_NIL,STRING_LESS_TRICHOTOMY,STRING_LESS_ANTISYM,
+   RW_TAC std_ss
+     [implies_def,bad_atom_def,andl_def,ite_def,itel_def,ACL2_TRUE,
+      if_t_nil,t_nil_if,not_def,EVAL ``t = nil``,equal_def]
+     THEN Cases_on `x` 
+     THEN FULL_SIMP_TAC std_ss 
+      [consp_def,symbolp_def,acl2_numberp_def,characterp_def,stringp_def,
+       BASIC_INTERN_def,sexp_11,if_t_nil,EVAL ``t = nil``]
+     THEN Cases_on `y` 
+     THEN FULL_SIMP_TAC std_ss 
+      [consp_def,symbolp_def,acl2_numberp_def,characterp_def,stringp_def,
+       BASIC_INTERN_def,sexp_11,if_t_nil,EVAL ``t = nil``]
+     THEN POP_ASSUM MP_TAC
+     THEN RW_TAC std_ss 
+      [bad_atom_less_equal_def,EVAL ``t = nil``,
+       SEXP_SYM_LESS_EQ_def,SEXP_SYM_LESS_def]
+     THEN METIS_TAC [STRING_LESS_TRICHOTOMY,STRING_LESS_ANTISYM,
            EVAL ``"COMMON-LISP" = ""``]);
 
 val _ = export_theory();
