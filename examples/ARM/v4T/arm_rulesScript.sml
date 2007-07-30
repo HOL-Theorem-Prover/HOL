@@ -281,7 +281,7 @@ val ARM_ss = rewrites
  [NEXT_1STAGE_def, NEXT_SYSTEM_def, NEXT_ARM_def, NEXT_CP_def, NEXT_NO_PIPE_def,
   INP_ARM1_def, INP_ARM2_def, INP_CP1_def, INP_CP2_def, INP_MEM_def,
   OUT_ARM_def, OUT_CP_def,
-  RUN_ARM_def, MEM_NO_TRANSFERS, DECODE_PSR_def,
+  RUN_ARM_def, MEM_NO_TRANSFERS, DECODE_PSR_def, NoTransfers_def,
   thumb_enc_, thumbTheory.thumb_to_arm_enc, interrupt2exception_def,
   CARRY_NZCV, n2w_11, word_bits_n2w, w2n_w2w, word_index, BITS_THM, BIT_ZERO,
   FST_COND_RAND, SND_COND_RAND, (GEN_ALL o SPECL [`b`, `NUMERAL n`]) BIT_def,

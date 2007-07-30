@@ -55,15 +55,10 @@ val _ = Hol_datatype `memop = MemRead of word32 | MemWrite of word32=>data`;
 
 val _ = Hol_datatype`
   transfers = MemAccess of (num->word32 list->memop list)
-            | CPWrite of word32 | NoTransfers`;
+            | CPWrite of word32`;
 
 val _ = Hol_datatype`
   arm_output = <| transfers : transfers; cpi : bool; user : bool |>`;
-
-(*
-val _ = Hol_datatype`
-  interrupt = Reset of regs | Prefetch | Dabort of num | Fiq | Irq`;
-*)
 
 val _ = Hol_datatype`
   interrupts = <| Reset : regs option; Prefetch : bool;
@@ -297,7 +292,7 @@ val BRANCH_def = Define`
 val BRANCH_EXCHANGE_def = Define`
   BRANCH_EXCHANGE r t mode (ireg:word32) =
     let Rm = (3 >< 0) ireg in
-    let rm = REG_READ T r.reg mode Rm in
+    let rm = REG_READ t r.reg mode Rm in
       <| reg := REG_WRITE r.reg usr 15w ((31 <> 1) rm);
          psr := CPSR_WRITE r.psr (SET_THUMB (rm %% 0) (CPSR_READ r.psr))
       |>`;
@@ -1068,33 +1063,37 @@ val NEXT_ARM_def = Define`
          exception := interrupt2exception state (PROJ_IF_FLAGS r.psr)
                         inp.interrupts inp.absent inp.ireg |>`;
 
-val OUT_ARM_def = Define`
-  OUT_ARM (state, (n, RESET)) =
-    let r = state.regs in
-    let (nzcv,i,f,t,m) = DECODE_PSR (CPSR_READ r.psr) in
-    let ireg = if t then THUMB_TO_ARM ((15 >< 0) n) else n
-    and mode = DECODE_MODE m in
-      if ~RESET /\ (state.exception = software) /\
-         CONDITION_PASSED nzcv ireg then
-        let ic = DECODE_ARM ireg in
-           <| transfers := 
-               (case ic of
-                   ldr_str   -> OUTL (LDR_STR r t (CARRY nzcv) mode ireg NONE)
-                || ldrh_strh -> OUTL (LDRH_STRH r t mode ireg NONE)
-                || ldm_stm   -> OUTL (LDM_STM r t mode ireg NONE)
-                || swp       -> OUTL (SWP r mode ireg NONE)
-                || ldc_stc   -> OUTL (LDC_STC r mode ireg F)
-                || mcr       -> MCR_OUT r.reg mode ireg
-                || _         -> NoTransfers);
-              cpi := (ic IN {cdp_und; mcr; mrc; ldc_stc});
-              user := USER mode
-           |>
-        else
-           <| transfers := NoTransfers; cpi := F; user := USER mode |>`;
+val NoTransfers_def = Define `NoTransfers = MemAccess (\x y. [])`;
 
-(* The output upon reset is a simplifying assumption - in practice the       *)
-(* output will depend on the timing of the reset i.e. it will be a prefix of *)
-(* the reset-free output.                                                    *)
+val OUT_ARM_def = Define`
+  OUT_ARM (state, x) =
+   let r = state.regs in
+   let (nzcv,i,f,t,m) = DECODE_PSR (CPSR_READ r.psr) in
+   let mode = DECODE_MODE m in
+     case x of
+        NONE -> <| transfers := NoTransfers; cpi := F; user := USER mode |>
+     || SOME n ->
+        let ireg = if t then THUMB_TO_ARM ((15 >< 0) n) else n in
+          if (state.exception = software) /\ CONDITION_PASSED nzcv ireg then
+            let ic = DECODE_ARM ireg in
+              <| transfers := 
+                 (case ic of
+                     ldr_str   -> OUTL (LDR_STR r t (CARRY nzcv) mode ireg NONE)
+                  || ldrh_strh -> OUTL (LDRH_STRH r t mode ireg NONE)
+                  || ldm_stm   -> OUTL (LDM_STM r t mode ireg NONE)
+                  || swp       -> OUTL (SWP r mode ireg NONE)
+                  || ldc_stc   -> OUTL (LDC_STC r mode ireg F)
+                  || mcr       -> MCR_OUT r.reg mode ireg
+                  || _         -> NoTransfers);
+                 cpi := (ic IN {cdp_und; mcr; mrc; ldc_stc});
+                 user := USER mode
+              |>
+          else
+             <| transfers := NoTransfers; cpi := F; user := USER mode |>`;
+
+(* The output upon receiving a reset signal will actually be a prefix of     *)
+(* the "normal" output.  However, as a simplifying mechanism, this is        *)
+(* handled with the x = NONE case.                                           *)
 (* In the ARM6 verification, the ISA reset output is accepted as "correct".  *)
 
 (* ------------------------------------------------------------------------- *)

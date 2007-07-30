@@ -201,7 +201,7 @@ val _ = Lib.C add_thms arm_compset
    THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,
    option_case_ID,option_case_SOME_ID,
    option_case_def,SOME_11,NOT_SOME_NONE,PROJ_IF_FLAGS_def,
-   sumTheory.OUTL, sumTheory.OUTR, thumb_to_arm,
+   sumTheory.OUTL, sumTheory.OUTR, thumb_to_arm, NoTransfers_def,
 
    RUN_ARM, WRITE_MEM_def, READ_MEM_def,
    NEXT_ARM_def, OUT_ARM, INP_ARM1_def, INP_ARM2_def,

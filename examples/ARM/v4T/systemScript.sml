@@ -396,7 +396,8 @@ val OUT_NO_PIPE_def = Define`
 (* -------------------------------------------------------------------------- *)
 
 val INP_ARM1_def = Define`
-  INP_ARM1 (pipe_out:pipe_output, RESET) = (pipe_out.ireg, IS_SOME RESET)`;
+  INP_ARM1 (pipe_out:pipe_output, RESET) =
+    if IS_SOME RESET then NONE else SOME pipe_out.ireg`;
 
 val INP_ARM2_def = Define`
   INP_ARM2 (cp_out, mem_out, pipe_out, RESET, FIQ, IRQ) =
@@ -964,7 +965,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
     :: DATATYPE (`data = Byte of word8 | Half of word16 | Word of word32`)
     :: DATATYPE (`memop = MemRead of word32 | MemWrite of word32=>data`)
     :: DATATYPE (`transfers = MemAccess of (num->word32 list->memop list)
-                            | CPWrite of word32 | NoTransfers`)
+                            | CPWrite of word32`)
     :: DATATYPE
          (`arm_output = <| transfers : transfers; cpi : bool; user : bool |>`)
     :: DATATYPE
@@ -1021,7 +1022,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           SWP_def, MRC_def, MCR_OUT_def, ADDR_MODE5_def, LDC_STC_def,
           CONDITION_PASSED2_def, CONDITION_PASSED_def, THUMB_TO_ARM_def,
           RUN_ARM_def, interrupt2exception_def, PROJ_IF_FLAGS_def,
-          WRITE_MEM_def, READ_MEM_def,
+          WRITE_MEM_def, READ_MEM_def, NoTransfers_def,
           NEXT_ARM_def, OUT_ARM_def, INP_ARM1_def, INP_ARM2_def,
           NEXT_CP_def, OUT_CP_def, INP_CP1_def, INP_CP2_def,
           NEXT_MEM_def, OUT_MEM_def, INP_MEM_def,
