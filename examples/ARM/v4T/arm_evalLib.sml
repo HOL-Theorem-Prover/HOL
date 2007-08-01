@@ -200,7 +200,7 @@ val _ = Lib.C add_thms arm_compset
    SIMP_RULE (std_ss++pred_setSimps.PRED_SET_ss) [] interrupt2exception_def,
    THE_DEF,IS_SOME_DEF,IS_NONE_EQ_NONE,NOT_IS_SOME_EQ_NONE,
    option_case_ID,option_case_SOME_ID,
-   option_case_def,SOME_11,NOT_SOME_NONE,PROJ_IF_FLAGS_def,
+   option_case_def,SOME_11,NOT_SOME_NONE,
    sumTheory.OUTL, sumTheory.OUTR, thumb_to_arm, NoTransfers_def,
 
    RUN_ARM, WRITE_MEM_def, READ_MEM_def,

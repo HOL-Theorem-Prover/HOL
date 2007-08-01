@@ -985,18 +985,20 @@ val DECODE_ARM_def = Define`
       || __ -> cdp_und`;
 
 val RUN_ARM_def = Define`
-  RUN_ARM (state:arm_state) (dabt:num option) data absent n =
+  RUN_ARM (state,inp) =
     let r = state.regs in
     let (nzcv,i,f,t,m) = DECODE_PSR (CPSR_READ r.psr) in
       if ~(state.exception = software) then
         EXCEPTION r t state.exception
       else
-        let ireg = if t then THUMB_TO_ARM ((15 >< 0) n) else n
+        let ireg = if t then THUMB_TO_ARM ((15 >< 0) inp.ireg) else inp.ireg
         and inc_pc x = <| reg := INC_PC t x.reg; psr := x.psr |> in
           if ~CONDITION_PASSED nzcv ireg then
             inc_pc r
           else let mode = DECODE_MODE m
-               and coproc f = if absent then r else f r
+               and coproc f = if inp.absent then r else f r
+               and dabt = inp.interrupts.Dabort
+               and data = inp.data
           in
             case DECODE_ARM ireg of
                data_proc -> DATA_PROCESSING r t (CARRY nzcv) mode ireg
@@ -1023,12 +1025,14 @@ val RUN_ARM_def = Define`
 (* ------------------------------------------------------------------------- *)
 
 val interrupt2exception_def = Define`
-  interrupt2exception state (i',f') irpt absent w =
-    let (flags,i,f,t,m) = DECODE_PSR (CPSR_READ state.regs.psr) in
-    let ireg = if t then THUMB_TO_ARM ((15 >< 0) w) else w in
+  interrupt2exception (state,inp) cpsr' =
+    let (flags,i,f,t,m) = DECODE_PSR (CPSR_READ state.regs.psr)
+    and (flags',i',f',t',m') = DECODE_PSR cpsr' in
+    let ireg = if t then THUMB_TO_ARM ((15 >< 0) inp.ireg) else inp.ireg in
     let pass = (state.exception = software) /\ CONDITION_PASSED flags ireg
     and ic = DECODE_ARM ireg in
-    let old_flags = pass /\ ((ic = mrs) \/ (ic = msr)) in
+    let old_flags = pass /\ ((ic = mrs) \/ (ic = msr))
+    and irpt = inp.interrupts in
       if IS_SOME irpt.Reset then
         reset
       else if IS_SOME irpt.Dabort then
@@ -1039,29 +1043,23 @@ val interrupt2exception_def = Define`
         interrupt
       else if irpt.Prefetch then
         pabort
-      else if pass /\ ic IN {cdp_und; mrc; mcr; ldc_stc} /\ absent then
+      else if pass /\ ic IN {cdp_und; mrc; mcr; ldc_stc} /\ inp.absent then
         undefined
       else
         software`;
-
-val PROJ_IF_FLAGS_def = Define`
-  PROJ_IF_FLAGS psr =
-    let (flags,i,f,t,m) = DECODE_PSR (CPSR_READ psr) in (i,f)`;
 
 (* ------------------------------------------------------------------------- *)
 (* The next state, output and state functions                                *)
 (* ------------------------------------------------------------------------- *)
 
 val NEXT_ARM_def = Define`
-  NEXT_ARM (state, inp) =
+  NEXT_ARM (state,inp) =
     let r = case inp.interrupts.Reset of
                SOME x -> x
-            || NONE -> RUN_ARM state inp.interrupts.Dabort inp.data
-                         inp.absent inp.ireg
+            || NONE -> RUN_ARM (state,inp)
     in
       <| regs := r;
-         exception := interrupt2exception state (PROJ_IF_FLAGS r.psr)
-                        inp.interrupts inp.absent inp.ireg |>`;
+         exception := interrupt2exception (state,inp) (CPSR_READ r.psr) |>`;
 
 val NoTransfers_def = Define `NoTransfers = MemAccess (\x y. [])`;
 

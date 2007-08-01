@@ -285,7 +285,7 @@ val ARM_ss = rewrites
   thumb_enc_, thumbTheory.thumb_to_arm_enc, interrupt2exception_def,
   CARRY_NZCV, n2w_11, word_bits_n2w, w2n_w2w, word_index, BITS_THM, BIT_ZERO,
   FST_COND_RAND, SND_COND_RAND, (GEN_ALL o SPECL [`b`, `NUMERAL n`]) BIT_def,
-  EVAL ``CONDITION_PASSED2 (NZCV x) AL``, PROJ_IF_FLAGS_def, CPSR_WRITE_READ,
+  EVAL ``CONDITION_PASSED2 (NZCV x) AL``, CPSR_WRITE_READ,
   DECODE_IFTM_SET_IFTM, DECODE_IFTM_SET_NZCV, DECODE_IFTM_SET_THUMB,
   cond_pass_enc_data_proc, cond_pass_enc_data_proc2,
   cond_pass_enc_data_proc3, cond_pass_enc_coproc,
