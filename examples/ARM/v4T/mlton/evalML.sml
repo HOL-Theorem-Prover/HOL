@@ -1,5 +1,5 @@
 (* interactive use:
-val HOLDIR = "/local/scratch/acjf3/hol98/";
+val HOLDIR = "/local/scratch/acjf3/HOL/";
 val _ = loadPath := !loadPath @ ".." :: map (fn x => HOLDIR ^ x)
      ["tools/mlyacc/mlyacclib", "tools/mlton/pre",
       "src/portableML", "src/theoryML"];
@@ -52,8 +52,11 @@ struct
   fun MEM_READ m a = SOME (mem_read (m,armML.ADDR30 a))
 
   fun mem_write m a w =
-        (mem_updates := a :: !mem_updates;
-         Redblackmap.insert(m:mem, a, w))
+        (if isSome (List.find (fn b => word_compare(a, b) = EQUAL)
+                              (!mem_updates)) then
+           Redblackmap.insert(m:mem, a, w)
+         else
+           (mem_updates := a :: !mem_updates; m))
 
   fun MEM_WRITE_BYTE mem addr word =
         let val addr30 = ADDR30 addr
@@ -83,7 +86,7 @@ struct
 
   fun MEM_WRITE_BLOCK m a [] = m
     | MEM_WRITE_BLOCK m a (w::l) =
-        MEM_WRITE_BLOCK (mem_write m a w)
+        MEM_WRITE_BLOCK (Redblackmap.insert(m:mem, a, w))
           (word_add a (n2w_itself (ONE,fcpML.ITSELF(numML.fromInt 30)))) l
 end;
 
