@@ -485,7 +485,7 @@ val MEM_MLA_MUL = Count.apply prove(
     \\ ASM_SIMP_TAC bool_ss [SNEXT,FUNPOW]
     \\ MLA_MUL_TAC
     \\ ASM_SIMP_TAC (stdi_ss++ARITH_ss++PBETA_ss) [MULT_ALU6_ZERO,LSL_ZERO,
-         EVAL ``w2w (0w:word4)``,WORD_MULT_CLAUSES,WORD_ADD_0,REGVAL_lem]
+         w2w_0,WORD_MULT_CLAUSES,WORD_ADD_0,REGVAL_lem]
     \\ REWRITE_TAC [IF_NEG,DECIDE ``~a /\ ~b = ~(a \/ b)``]
     \\ SIMP_TAC std_ss []
     \\ RES_MP_TAC [`i` |-> `inp`] MLA_MUL_INVARIANT
@@ -531,7 +531,7 @@ val MLA_MUL = Count.apply prove(
     \\ MLA_MUL_TAC
     \\ ASM_SIMP_TAC (arith_ss++ICLASS_ss++PBETA_ss)
          [FST_COND_RAND,SND_COND_RAND,IF_NEG,LSL_ZERO,MULT_ALU6_ZERO,REGVAL_lem,
-          TO_WRITE_READ6,EVAL ``w2w (0w:word4)``,WORD_MULT_CLAUSES,WORD_ADD_0]
+          TO_WRITE_READ6,w2w_0, WORD_MULT_CLAUSES,WORD_ADD_0]
     \\ REWRITE_TAC [GSYM DE_MORGAN_THM,IF_NEG]
     \\ STRIP_TAC \\ UNABBREV_TAC `s`
     \\ PAT_ABBREV_TAC `s = FUNPOW (SNEXT NEXT_ARM6) w q`

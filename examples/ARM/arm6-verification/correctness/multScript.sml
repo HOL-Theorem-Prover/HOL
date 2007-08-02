@@ -713,8 +713,8 @@ val MLA_MUL_INVARIANT = Count.apply prove(
     >> (SIMP_TAC (arith_ss++armLib.ICLASS_ss++armLib.STATE_INP_ss)
           [state_arm6_11,ctrl_11,io_onestepTheory.state_out_literal_11,FUNPOW,
            BORROW2_def,MSHIFT,RD_INVARIANT_ZERO,MASK_def,WORD_MULT_CLAUSES,
-           DONE_NEQ_ZERO,io_onestepTheory.ADVANCE_ZERO,EVAL ``w2w (0w:word4)``,
-           WORD_ADD_0] \\ SIMP_TAC std_ss [word_extract_def,WORD_BITS_COMP_THM]
+           DONE_NEQ_ZERO,io_onestepTheory.ADVANCE_ZERO,WORD_ADD_0,w2w_0]
+          \\ SIMP_TAC std_ss [word_extract_def,WORD_BITS_COMP_THM]
           \\ METIS_TAC [interrupt_exists])
     \\ REWRITE_TAC [FUNPOW_SUC]
     \\ Cases_on `n = 0`
@@ -738,8 +738,7 @@ val MLA_MUL_INVARIANT = Count.apply prove(
              AREGN1_def,(GSYM o BETA_RULE o ISPEC `\x. x = 0w`) COND_RAND,
              REG_READ_WRITE,TO_WRITE_READ6,REG_WRITE_WRITE,REG_READ_WRITE_PC,
              MSHIFT_ZERO,IF_NEG,RD_INVARIANT_ONE,RD_ONE,WORD_EXTRACT_BITS_COMP,
-             EVAL ``w2w (0w:word4)``,WORD_MULT_CLAUSES,WORD_ADD_0,
-             w2n_w2w,ctrl_11]
+             w2w_0,WORD_MULT_CLAUSES,WORD_ADD_0,w2n_w2w,ctrl_11]
         \\ UNABBREV_TAC `rm` \\ POP_ASSUM_LIST (K ALL_TAC)
         \\ EXISTS_TAC `pipebabt`
         \\ EXISTS_TAC `if dataabt2 \/ ~(cpsr %% 6) /\ ~ooonfq \/ pipebabt \/
