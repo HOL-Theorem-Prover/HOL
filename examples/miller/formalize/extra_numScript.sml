@@ -258,7 +258,7 @@ val DIVISION_TWO = store_thm
    ++ Know `0:num < 2` >> DECIDE_TAC
    ++ DISCH_THEN (fn th => REWRITE_TAC [th])
    ++ DISCH_THEN (MP_TAC o Q.SPEC `n`)
-   ++ RW_TAC std_ss [] <<
+   ++ RW_TAC bool_ss [] <<
    [PROVE_TAC [MULT_COMM],
     DECIDE_TAC]);
 
