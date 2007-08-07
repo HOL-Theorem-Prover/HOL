@@ -288,6 +288,24 @@ val perm_FINITE = Store_Thm(
     SRW_TAC [][is_perm_eql, setpm_is_perm, perm_INSERT]
   ]);
 
+(* options *)
+val optpm_def = Define`
+  (optpm pm pi NONE = NONE) /\
+  (optpm pm pi (SOME x) = SOME (pm pi x))
+`;
+val _ = export_rewrites ["optpm_def"]
+
+val optpm_is_perm = store_thm(
+  "optpm_is_perm",
+  ``is_perm pm ==> is_perm (optpm pm)``,
+  SRW_TAC [][is_perm_def] THENL [
+    Cases_on `x` THEN SRW_TAC [][optpm_def],
+    Cases_on `x` THEN SRW_TAC [][optpm_def],
+    FULL_SIMP_TAC (srw_ss()) [permeq_def, FUN_EQ_THM] THEN GEN_TAC THEN
+    Cases_on `x` THEN SRW_TAC [][optpm_def]
+  ]);
+val _ = export_rewrites ["optpm_is_perm"]
+
 (* pairs *)
 val pairpm_def = Define`
   pairpm (apm:'a pm) (bpm:'b pm) pi (a,b) = (apm pi a, bpm pi b)
@@ -589,6 +607,14 @@ val supp_discrete = Store_Thm(
   "supp_discrete",
   ``supp (K I) x = {}``,
   SRW_TAC [][supp_def, INFINITE_DEF]);
+
+(* options *)
+val supp_optpm = store_thm(
+  "supp_optpm",
+  ``(supp (optpm pm) NONE = {}) /\
+    (supp (optpm pm) (SOME x) = supp pm x)``,
+  SRW_TAC [][supp_def, optpm_def, pred_setTheory.INFINITE_DEF]);
+val _ = export_rewrites ["supp_optpm"]
 
 (* pairs *)
 val supp_pairpm = Store_Thm(
