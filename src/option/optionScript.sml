@@ -307,6 +307,14 @@ val OPTION_JOIN_EQ_SOME = Q.store_thm(
   OPTION_CASES_TAC (--`z:'a option`--) THEN
   ASM_REWRITE_TAC option_rws);
 
+val OPTREL_def = new_definition("OPTREL_def",
+  ``OPTREL R x y = (x = NONE) /\ (y = NONE) \/
+                 ?x0 y0. (x = SOME x0) /\ (y = SOME y0) /\ R x0 y0``);
+
+val OPTREL_MONO = store_thm(
+  "OPTREL_MONO",
+  ``(!x:'a y:'b. P x y ==> Q x y) ==> (OPTREL P x y ==> OPTREL Q x y)``,
+  BasicProvers.SRW_TAC [][OPTREL_def] THEN BasicProvers.SRW_TAC [][SOME_11]);
 
 val option_case_cong =
   save_thm("option_case_cong",
