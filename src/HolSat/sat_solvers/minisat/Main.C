@@ -290,9 +290,9 @@ void checkProof(Proof* proof, ClauseId goal = ClauseId_NULL)
 static const char* doc =
     "USAGE: minisat <input-file> [options]\n"
     "  -r <result file>   Write result (the word \"SAT\" plus model, or just \"UNSAT\") to file.\n"
-    "  -p <proof trace>   Write the proof trace to this file.\n"
-    "  -c                 Check the proof trace by simple (read \"slow\") proof checker.\n"
-    "  -z                 Compress proof.\n"
+    "  -p <proof trace>   Write the trace to this file.\n"
+    "  -c                 Check the trace by simple (read \"slow\") proof checker.\n"
+    "  -x                 Extract proof from trace.\n"
 ;
 
 int main(int argc, char** argv)
@@ -323,7 +323,7 @@ int main(int argc, char** argv)
             case 'c':
                 check = true;
                 break;
-            case 'z':
+            case 'x':
 	        compress = true; 
                 break;
             case 'h':

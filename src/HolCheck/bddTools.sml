@@ -187,7 +187,7 @@ fun mk_sb sb t =
 
 (* return a satisfying assignment for t, as a HOL subst *)
 fun findAss t = 
-    let val th = satProve minisatp (snd(strip_exists(rhs(concl(normalForms.ORACLE_DEF_CNF_CONV t)))))
+    let val th = SAT_PROVE (mk_neg t) handle minisatProve.SAT_cex th => th
 	val t = strip_conj (fst(dest_imp (concl th)))
         val t1 = List.filter (fn v =>  (if is_neg v then not (is_genvar(dest_neg v)) else not (is_genvar v))) t
 	fun ncompx v = not (String.compare(term_to_string v, "x")=EQUAL)
@@ -200,49 +200,6 @@ fun findAss t =
 fun exv l ass = 
 let val t1 = List.map (fn v => subst ass v) l
     in List.map (fn v => if is_var v then T else v) t1 end;
-
-fun smt' t n = 
-let val pt = undup Term.compare (find_terms (fn t => numSyntax.is_leq t orelse is_eq t)  t)
-    val gv = List.foldr (fn (_,l) => (genvar bool)::l) [] (List.tabulate(length pt,I))
-    val gvs = list2set Term.var_compare gv
-    val gvm = listmap Term.var_compare (ListPair.zip(gv,pt))
-    val bs = mk_subst gv pt
-    val t2 = subst (mk_subst pt gv) t
-    val cnfth = normalForms.CNF_CONV t2
-    val ecnf = rhs(concl cnfth)
-    val (cv,cnf) = (strip_exists ecnf) (* remnants from def_cnf usage *)
-    val _ = if Term.compare(cnf,F)=EQUAL then failwith "NO SAT" else ()
-    val th = satProve minisatp cnf handle ex => failwith "NO SAT"
-    val th1 = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [SYM cnfth])) th
-    val (t3,t3') = List.partition (fn t => (is_neg t andalso is_genvar (rand t) andalso Binaryset.member(gvs,rand t))
-					   orelse (is_genvar t andalso Binaryset.member(gvs,t))) 
-				  (strip_conj(land (concl th1)))
-    val t4 = subst bs (list_mk_conj t3)
-    val t5 = list_mk_exists(free_vars t4,t4)
-    val th2 = SOME (DECIDE t5) handle ex => NONE
-    val (th3,th3') = if isSome th2 then let val th4 = valOf th2
-					    val t3b = List.map (fn t => if is_neg t then rand t else t) t3
-					    val th5 = List.foldl (fn (v,t) => SPEC (Binarymap.find(gvm,v)) t)
-								 (GENL t3b th1) t3b
-				 in (th5,th4) end
-	      else let val t6 = subst bs (mk_conj(t,mk_neg(list_mk_conj t3)))
-		       val (th6,th8,bv)  = smt' t6 (n+1)
-		       val (th7,th8) = if n=0 then 
-					   let val ct = concl th6 
-					       val ctr = rand ct
-					       val (c1,c2) = dest_conj ctr
-					   in (CONJUNCT1(PURE_ONCE_REWRITE_RULE [SPECL [land ct,c1,c2] IMP_CONJ_THM] th6),
-					       th8) end
-				 else (th6,th8) 
-		   in (th7,th8) end
-in (th3,th3',t3') end
-
-(* barebones SMT procedure. Will some day be migrated to HolSatLib *)
-fun smt t = 
-    let val (sth,dth,bv) = smt' t 0
-	val (tv,tt) = strip_exists(concl dth)
-    in (METIS_PROVE [dth] (list_mk_exists(tv,mk_imp(list_mk_conj bv,rand(concl sth)))),dth) end
-
               
 (* given an existential goal, 
  replaces all quantified variables with satisfying values (assumes entire goal is propositional)*)

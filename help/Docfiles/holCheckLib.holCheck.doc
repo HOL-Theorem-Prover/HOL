@@ -9,7 +9,7 @@ Basic symbolic model checker.
 User specifies a model by specifying (at least) the initial states, a labelled transition system, and a list of CTL or mu-calculus propertes. This model is then passed to the model checker which returns the model with the results of the checking filled in. These can be recovered by calling get_results on the returned model and are presented as a list of : the BDD semantics of each property, a theorem if the property holds in the model, and a counterexample or witness trace if appropriate.
 
 \FAILURE
-holCheck should not fail, except on malformed input e.g. mu-calculus properties that are not well-formed mu-formulas or a supplied state tuple that does not include all state variables etc. However, abstraction will almost certainly fail if the zchaff SAT solver is not installed in HolSat (see HolSat documentation).
+holCheck should not fail, except on malformed input e.g. mu-calculus properties that are not well-formed mu-formulas or a supplied state tuple that does not include all state variables etc. 
 
 \EXAMPLE
 
@@ -108,7 +108,7 @@ Note that since we did not supply a name for the model (via holCheckLib.set_name
 Note that the theorem component now has no assumptions. Any assumptions to the term_bdd would also have been discharged. 
 
 \COMMENTS
-For more detail, read the section on the HolCheck library in the HOL System Description. From time to time, stable versions of HolCheck will be backported to the latest public release of HOL. Visit www.cl.cam.ac.uk/users/ha227/holcheck.html to check for these. 
+For more detail, read the section on the HolCheck library in the HOL System Description. 
 
 \SEEALSO 
 holCheckLib.empty_model,

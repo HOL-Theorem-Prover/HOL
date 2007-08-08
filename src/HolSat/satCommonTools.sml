@@ -5,10 +5,7 @@ struct
 
 local
 
-open Globals HolKernel Parse 
-
-open boolSyntax Term Drule
-
+open Globals HolKernel Parse boolSyntax Term Drule
 open satTheory
 
 in
@@ -63,7 +60,7 @@ fun NTL_CONJUNCTSR th =
 	in th1::(NTL_CONJUNCTSR th2) end
     else [th]
 
-(* CPS version of NTL_CONJUNCTSL. Does not grow call stack. *)
+(* CPS version of NTL_CONJUNCTSR. Does not grow call stack. *)
 fun CONJUNCTSR th = 
     let fun CPS_CONJUNCTSR th k = 
 	    if is_conj (concl th)
@@ -71,25 +68,6 @@ fun CONJUNCTSR th =
 		 in CPS_CONJUNCTSR th2 (fn ret => k (th1::ret)) end
 	    else k [th]
     in CPS_CONJUNCTSR th I end
-
-fun ERC lt tm =
-    if is_comb lt 
-	then let val ((ltl,ltr),(tml,tmr)) = pair_map dest_comb (lt,tm)
-	     in (ERC ltl tml)@(ERC ltr tmr) end
-    else 
-	if is_var lt
-	    then [lt |-> tm]
-	else []
-
-(* (E)asy REWR_CONV which assumes that the supplied theorem is ground and quantifier free, 
-   so type instantiation and free/bound var checks are not needed *)
-(* no restrictions on the term argument *)
-fun EREWR_CONV th tm = 
-    let 
-	val lt = lhs(concl th)
-	val il = ERC lt tm
-    in INST il th end
-
 
 end
 end

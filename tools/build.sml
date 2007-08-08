@@ -342,13 +342,24 @@ in
   | "minisat" => let
     in case OS of
 	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
-                                      "minisat.exe"])
-                           (fullPath [HOLDIR, "src","HolSat","sat_solvers","minisat", "minisat.exe"])
+					 "minisat.exe"])
+                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","minisat", "minisat.exe"])
 	 | other => if not (Gnumake dir) then
-                   print(String.concat
-                           ["\nMiniSat has NOT been built!! ",
-                            "(continuing anyway).\n\n"])
-                 else ()
+			print(String.concat
+				  ["\nMiniSat has NOT been built!! ",
+				   "(continuing anyway).\n\n"])
+                    else ()
+    end
+  | "zc2hs" => let
+    in case OS of
+	   "winNT" => bincopy (fullPath [HOLDIR, "tools", "win-binaries",
+					 "zc2hs.exe"])
+                              (fullPath [HOLDIR, "src","HolSat","sat_solvers","zc2hs", "zc2hs.exe"])
+	 | other => if not (Gnumake dir) then
+			print(String.concat
+				  ["\nzc2hs has NOT been built!! ",
+				   "(continuing anyway).\n\n"])
+                    else ()
     end
   | _ => Holmake dir
 end

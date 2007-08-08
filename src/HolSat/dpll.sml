@@ -114,7 +114,7 @@ fun mk_model_thm cnfv lfn t f =
 	val model = List.map (fn v => if is_T (f v) then v else mk_neg v) fvs
     in satCheck model (mk_neg t) end
 
-fun DPLL_TAUT t = let 
+fun DPLL_TAUT t = let  
   val (cnfv,cnf_thm,lfn,clauses) = doCNF (mk_neg t) (* cnf_thm is [ci] |- dCNF(~t) *)
 in
   case CoreDPLL cnf_thm of

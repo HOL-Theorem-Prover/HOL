@@ -590,9 +590,9 @@ fun check_ace' atr I1 RTm(*T1*) state Ric astate h n =
 			     (*val cnf = defCNF.DEF_CNF_CONV f*)
 			     val cnf = f 
 			     val _ = dbgTools.DST (dpfx^"ca'_h1") (*DBG*)
-			 in SOME (satProve minisatp cnf) handle ex => NONE end
+			 in SOME (SAT_PROVE (mk_neg cnf) handle minisatProve.SAT_cex th => th) end
 	val _ = dbgTools.DST (dpfx^"ca'_h2") (*DBG*)
-        val ctr = if isSome satth (* return concrete trace if one was found else NONE *)
+        val ctr = if isSome satth andalso is_imp (concl (valOf satth))(* return concrete trace if one was found else NONE *)
 		      then let val l = strip_conj(land(concl (valOf satth)))
 			       val bm = List.foldl (fn (v,bm) => if (is_neg v) then Binarymap.insert(bm,dest_neg v,F)
 								 else Binarymap.insert(bm,v,T)) (Binarymap.mkDict Term.compare) 

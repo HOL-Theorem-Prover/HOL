@@ -6,8 +6,10 @@
 ** {name            (* solver name                                         *)
 **  URL,            (* source for downloading                              *)
 **  executable,     (* path to executable                                  *)
+**  post_exe,       (* path to post_processor executable if any            *)
 **  notime_run,     (* command to invoke solver on a file                  *)
 **  time_run,       (* command to invoke on a file and time                *)
+**  post_run,       (* transform SAT solver output before reading into HOL *)
 **  only_true       (* true if only the true atoms are listed in models    *)
 **  failure_string, (* string whose presence indicates unsatisfiability    *)
 **  start_string,   (* string signalling start of variable assignment      *)
@@ -22,8 +24,10 @@ datatype sat_solver =
   {name           : string,
    URL            : string,
    executable     : string,    
+   post_exe       : string option,    
    notime_run     : string -> string * string -> string,    
-   time_run       : string -> (string * string) * int -> string,      
+   time_run       : string -> (string * string) * int -> string,  
+   post_run       : string -> (string * string) -> string,
    only_true      : bool,
    failure_string : string,
    start_string   : string,  
@@ -31,87 +35,50 @@ datatype sat_solver =
 
 fun getSolverName (SatSolver {name,...}) = name
 fun getSolverExe (SatSolver {executable,...}) = executable
+fun getSolverPostExe (SatSolver {post_exe,...}) = post_exe
 fun getSolverRun (SatSolver {notime_run,...}) = notime_run
+fun getSolverPostRun (SatSolver {post_run,...}) = post_run
 fun getSolverTrue (SatSolver {only_true,...}) = only_true
 fun getSolverFail (SatSolver {failure_string,...}) = failure_string
 fun getSolverStart (SatSolver {start_string,...}) = start_string
 fun getSolverEnd (SatSolver {end_string,...}) = end_string
 
-(*
-val grasp =
- SatSolver
-  {name           = "grasp",
-   URL            = "http://sat.inesc.pt/~jpms/grasp/fgrasp.tar.gz",
-   executable     = "sat_solvers/grasp/sat-grasp.st.linux",
-   notime_run     = (fn ex => fn (infile,outfile) => 
-                     (ex ^ " +V0 +O " ^ infile ^ " > " ^ outfile)),
-   time_run       = (fn ex => fn ((infile,outfile),time) => 
-                      (ex ^ " +V0 +O +T" ^ (Int.toString time) ^ " " ^ infile ^ " > " ^ outfile)),
-   only_true      = false,
-   failure_string = "UNSATISFIABLE INSTANCE",
-   start_string   = "Variable Assignments Satisfying CNF Formula:",
-   end_string     =  "Done searching.... SATISFIABLE INSTANCE"};
-*)
-
 val zchaff =
  SatSolver
   {name           = "zchaff", 
-   URL            =
-    "http://www.ee.princeton.edu/~chaff/zchaff/zchaff.2001.2.17.linux.gz",
-   executable     = "sat_solvers/zchaff/zchaff",
-   notime_run     = (fn ex => fn (infile,outfile) => 
-                      (ex ^ " " ^ infile ^ " > " ^ outfile)),
+   URL            = "http://www.princeton.edu/~chaff/zchaff",
+   executable     = if isSome (Process.getEnv "OS") 
+		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
+		    then Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff.exe"
+		    else Globals.HOLDIR^"/src/HolSat/sat_solvers/zchaff/zchaff",
+   post_exe       = SOME (if isSome (Process.getEnv "OS") 
+		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
+			  then Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs.exe"
+			  else Globals.HOLDIR^"/src/HolSat/sat_solvers/zc2hs/zc2hs"),
+   notime_run     = (fn ex => fn (infile,outfile) => (ex ^ " " ^ infile ^ " > " ^ outfile)),
    time_run       = (fn ex => fn ((infile,outfile),time) => 
                       (ex ^ " " ^ infile ^ " " ^ (Int.toString time) ^ " > " ^ outfile)),
+   post_run        = (fn ex => fn (infile,outfile) => (ex ^ " " ^ infile ^ " -m " ^ outfile ^ 
+						       ".proof -z resolve_trace > zc2hs_trace")),
    only_true      = false,
    failure_string = "UNSAT",
    start_string   = "Instance Satisfiable",
    end_string     = "Random Seed Used"};
 
-(*
-val sato =
- SatSolver
-  {name           = "sato", 
-   URL            = "ftp://cs.uiowa.edu/pub/hzhang/sato/sato.tar.gz",
-   executable     = "sat_solvers/sato/sato3.2.1/sato",
-   notime_run     = (fn ex => fn (infile,outfile) => 
-                      (ex ^ " -f " ^ infile ^ " > " ^ outfile)),
-   time_run       = (fn ex => fn ((infile,outfile),time) => 
-                      (ex ^ " -f -h" ^ (Int.toString time) ^ " " ^ infile ^ " > " ^ outfile)),
-   only_true      = true,
-   failure_string = "The clause set is unsatisfiable",
-   start_string   = "Model #1: (indices of true atoms)",
-   end_string     = "The number of found models"};
-*)
-
-(*
-val minisat =
- SatSolver
-  {name           = "minisat", 
-   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat/cgi/MiniSat_v1.13_linux.cgi",
-   executable     = "sat_solvers/minisat/minisat",
-   notime_run     = (fn ex => fn (infile,outfile) => 
-                      (ex ^ " " ^ infile ^ " > " ^ outfile)),
-   time_run       = (fn ex => fn ((infile,outfile),time) => 
-                      (ex ^ " " ^ infile ^ " " ^ (Int.toString time) ^ " > " ^ outfile)),
-   only_true      = false,
-   failure_string = "UNSAT",
-   start_string   = "v",
-   end_string     = " 0"};
-*)
-
 val minisatp =
  SatSolver
   {name           = "minisatp", 
-   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat/cgi/MiniSat_v1.14_linux.cgi",
+   URL            = "http://www.cs.chalmers.se/Cs/Research/FormalMethods/MiniSat",
    executable     = if isSome (Process.getEnv "OS") 
 		       andalso String.compare(valOf(Process.getEnv "OS"),"Windows_NT")=EQUAL 
-		    then "sat_solvers/minisat/minisat.exe"
-		    else "sat_solvers/minisat/minisat",
+		    then Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat.exe"
+		    else Globals.HOLDIR^"/src/HolSat/sat_solvers/minisat/minisat",
+   post_exe       = NONE,
    notime_run     = (fn ex => fn (infile,outfile) => 
-                      (ex ^ " -r " ^ outfile ^ " -p " ^ outfile ^ ".proof " ^ infile ^ " -z > " ^ outfile ^".stats")),
+                      (ex ^ " -r " ^ outfile ^ " -p " ^ outfile ^ ".proof " ^ infile ^ " -x > " ^ outfile ^".stats")),
    time_run       = (fn ex => fn ((infile,outfile),time) => 
                       (ex ^ " " ^ infile ^ " " ^ (Int.toString time) ^ " > " ^ outfile)),
+   post_run        = (fn _ => fn _ => ""),
    only_true      = false,
    failure_string = "UNSAT",
    start_string   = "SAT",

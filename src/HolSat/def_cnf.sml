@@ -7,7 +7,7 @@ struct
 
 local
 
-open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback boolSyntax tautLib
+open Lib boolLib Globals Parse Term Type Thm Drule Psyntax Conv Feedback boolSyntax
 
 open satCommonTools satTheory
 
@@ -15,19 +15,14 @@ val dpfx = "dcnf_"
 
 in 
 
-val presimp_conv = QCONV (GEN_REWRITE_CONV DEPTH_CONV empty_rewrites
-		[NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES])
+val presimp_conv = QCONV (GEN_REWRITE_CONV REDEPTH_CONV empty_rewrites
+		[NOT_CLAUSES, AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES, COND_EXPAND,
+		 COND_CLAUSES])
 
 (* ------------------------------------------------------------------------- *)
 (* Split up a theorem according to conjuncts, in a general sense.            *)
 (* ------------------------------------------------------------------------- *)
 local
-val [pth_ni1, pth_ni2, pth_no1, pth_no2, pth_an1, pth_an2, pth_nn] = 
-	    (CONJUNCTS o TAUT_PROVE)
-	     ``(~(p ==> q) ==> p)  /\ (~(p ==> q) ==> ~q) 
-	    /\ (~(p \/ q)  ==> ~p) /\ (~(p \/ q)  ==> ~q) 
-	    /\ ((p /\ q)   ==> p)  /\ ((p /\ q)   ==> q) 
-	    /\ ((~ ~p)     ==> p)`` 
 val p_tm = mk_var("p",bool) 
 val q_tm = mk_var("q",bool)
 fun is_literal tm = is_var tm orelse (is_neg tm andalso is_var(rand tm))
@@ -108,6 +103,17 @@ fun localdefs cnfv tm (n,defs,lfn) =
 				  val v3 = propvar cnfv n3 
 		       in (n3,v3,RBM.insert(defs2,tm',v3),RBM.insert(lfn2,v3,tm)) end
 	end
+    else if is_cond tm then
+	let val (opr,args) = strip_comb tm
+	    val (n1,v1,defs1,lfn1) = localdefs cnfv  (List.nth(args,0)) (n,defs,lfn) 
+	    val (n2,v2,defs2,lfn2) = localdefs cnfv  (List.nth(args,1)) (n1,defs1,lfn1) 
+	    val (n3,v3,defs3,lfn3) = localdefs cnfv  (List.nth(args,2)) (n2,defs2,lfn2)
+	    val tm' =  mk_comb(mk_comb(mk_comb(opr,v1),v2),v3)
+	in (n3,rbapply defs3 tm',defs2,lfn3) 
+	   handle NotFound => let val n4 = n3 + 1 
+				  val v4 = propvar cnfv n4 
+		       in (n4,v4,RBM.insert(defs3,tm',v4),RBM.insert(lfn3,v4,tm)) end
+	end
   else (n,rbapply defs tm,defs,lfn)
        handle NotFound => let val n1 = n + 1
 			      val v1 = propvar cnfv n1 
@@ -152,6 +158,7 @@ local
 val p_tm = mk_var("p",bool)
 val q_tm = mk_var("q",bool)
 val r_tm = mk_var("r",bool)
+val s_tm = mk_var("s",bool)
 in
 fun to_cnf' tm = 
     let val (l,r) = dest_eq tm
@@ -162,7 +169,9 @@ fun to_cnf' tm =
 	 | "/\\" => INST [p_tm |-> l, q_tm |-> (hd args),r_tm |-> (last args)] dc_conj
 	 | "==>" => INST [p_tm |-> l, q_tm |-> (hd args),r_tm |-> (last args)] dc_imp
 	 | "=" => INST [p_tm |-> l, q_tm |-> (hd args),r_tm |-> (last args)] dc_eq
-	 | _ => failwith("to_cnf'")
+	 | "COND" => INST [p_tm |-> l, q_tm |-> (hd args), r_tm |-> (hd (tl args)), 
+			   s_tm |-> (last args)] dc_cond	  
+	 | _ => failwith("to_cnf': "^(fst (dest_const opr)))
     end
 end
 

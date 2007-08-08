@@ -1,43 +1,24 @@
 (*****************************************************************************)
 (* FILE          : tautLib.sml                                               *)
-(* DESCRIPTION   : Tautology checking by Boolean case analysis.              *)
+(* DESCRIPTION   : Boolean tautology checking by SAT solver proof replay     *)
+(*                 (replaces 1991 case analysis method by Tom Melham & RJB   *)
 (*                                                                           *)
-(*                 Method suggested by Tom Melham.                           *)
-(*                                                                           *)
-(*                 Simplification done after each variable instantiation.    *)
-(*                                                                           *)
-(*                 Optimised for terms with more than two variables by       *)
-(*                 eliminating some duplicated sub-calls.                    *)
-(*                                                                           *)
-(*                 Optimised for cases when the body simplifies to true or   *)
-(*                 false before all the variables have been analysed.        *)
-(*                                                                           *)
-(*                 Simplification optimised to avoid rebuilding subterms that*)
-(*                 are not changed.                                          *)
-(*                                                                           *)
-(*                 Experiments have been performed with special code for     *)
-(*                 cases when the first argument of AND, OR, IMP and COND    *)
-(*                 simplifies to a value that makes simplification of certain*)
-(*                 other arguments unnecessary. The results suggested that in*)
-(*                 general slightly fewer intermediate theorems are          *)
-(*                 generated, but that due to the overhead of testing, the   *)
-(*                 execution times are slightly longer.                      *)
-(*                                                                           *)
-(* READS FILES   : <none>                                                    *)
-(* WRITES FILES  : <none>                                                    *)
+(* READS FILES   : Temporary files output by SAT solver. Deleted.            *)
+(* WRITES FILES  : Temporary input file to solver. Deleted.                  *)
 (*                                                                           *)
 (* AUTHOR        : R.J.Boulton, University of Cambridge                      *)
 (* DATE          : 9th July 1991                                             *)
-(*                                                                           *)
-(* LAST MODIFIED : R.J.Boulton                                               *)
-(* DATE          : 24th September 1991                                       *)
 (* TRANSLATOR    : Konrad Slind, University of Calgary                       *)
+(*                                                                           *)          
+(* LAST MODIFIED : Hasan Amjad                                               *)
+(* DATE          : 1st August 2007                                           *) 
+(*                                                                           *)
 (*****************************************************************************)
 
 structure tautLib :> tautLib =
 struct
 
-open HolKernel Parse boolLib Abbrev Rsyntax;
+open HolKernel Parse boolLib Abbrev boolSyntax HolSatLib;
 
 val ERR = mk_HOL_ERR "tautLib"
 
@@ -53,8 +34,6 @@ structure Parse = struct
 end
 open Parse
 
-val BOOL_CASES_AX = boolTheory.BOOL_CASES_AX;
-
 
 (*===========================================================================*)
 (* Discriminator functions for T (true) and F (false)                        *)
@@ -62,351 +41,6 @@ val BOOL_CASES_AX = boolTheory.BOOL_CASES_AX;
 
 fun is_T tm = (tm = T)
 and is_F tm = (tm = F);
-
-
-(*===========================================================================*)
-(* Theorems used for Boolean case analysis                                   *)
-(*===========================================================================*)
-
-local open Tactical Rewrite
-in
-val CASES_THM = prove
-(Term`!(b:bool) f. (f b = F) ==> ((!x. f x) = F)`,
- GEN_TAC THEN BOOL_CASES_TAC (Term`b:bool`)
-   THEN REPEAT STRIP_TAC
-   THEN REWRITE_TAC []
-   THEN CONV_TAC NOT_FORALL_CONV
-   THENL [EXISTS_TAC T, EXISTS_TAC F]
-   THEN ASM_REWRITE_TAC[])
-end;
-
-(*---------------------------------------------------------------------------*)
-(* BOOL_CASES_T_F = |- !f. (f T = F) ==> ((!x. f x) = F)                     *)
-(* BOOL_CASES_F_F = |- !f. (f F = F) ==> ((!x. f x) = F)                     *)
-(*---------------------------------------------------------------------------*)
-
-val BOOL_CASES_T_F = SPEC T CASES_THM
-val BOOL_CASES_F_F = SPEC F CASES_THM
-
-(*===========================================================================*)
-(* Conversions for doing Boolean case analysis                               *)
-(*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* BOOL_CASES_BOTH_T_RULE : (thm # thm) -> conv                              *)
-(*                                                                           *)
-(* BOOL_CASES_BOTH_T_RULE (|- f[T] = T, |- f[F] = T) `!x. f[x]` returns the  *)
-(* theorem |- (!x. f[x]) = T.                                                *)
-(*---------------------------------------------------------------------------*)
-
-fun BOOL_CASES_BOTH_T_RULE (thT,thF) tm =
-  let val {Bvar,Body} = dest_forall tm
-      val cases_thm = SPEC Bvar BOOL_CASES_AX
-      val thT' = TRANS(SUBST_CONV
-                        [Bvar |-> ASSUME(mk_eq{lhs=Bvar,rhs=T})] Body Body) thT
-      and thF' = TRANS(SUBST_CONV
-                        [Bvar |-> ASSUME(mk_eq{lhs=Bvar,rhs=F})] Body Body) thF
-      val th = DISJ_CASES cases_thm thT' thF'
-  in (EQT_INTRO o GEN Bvar o EQT_ELIM) th
-  end
-  handle HOL_ERR _ => raise ERR "BOOL_CASES_BOTH_T_RULE" "";
-
-(*---------------------------------------------------------------------------*)
-(* BOOL_CASES_T_F_RULE : thm -> conv                                         *)
-(*                                                                           *)
-(* BOOL_CASES_T_F_RULE (|- f[T] = F) `!x. f[x]` returns the theorem          *)
-(* |- (!x. f[x]) = F.                                                        *)
-(*---------------------------------------------------------------------------*)
-
-val ball = inst [alpha |-> bool] universal;
-
-fun BOOL_CASES_T_F_RULE thT tm =
-  let val (t as {Bvar,Body}) = dest_forall tm
-      val f = mk_abs t
-      val thT' = TRANS (BETA_CONV (mk_comb{Rator=f,Rand=T})) thT
-      and th = AP_TERM ball (ABS Bvar(BETA_CONV(mk_comb{Rator=f,Rand=Bvar})))
-      val th1 = SPEC f BOOL_CASES_T_F
-      val th2 = MP th1 thT'
-  in TRANS (SYM th) th2
-  end
-  handle HOL_ERR _ => raise ERR "BOOL_CASES_T_F_RULE" "";
-
-(*---------------------------------------------------------------------------*)
-(* BOOL_CASES_F_F_RULE : thm -> conv                                         *)
-(*                                                                           *)
-(* BOOL_CASES_F_F_RULE (|- f[F] = F) `!x. f[x]` returns the theorem          *)
-(* |- (!x. f[x]) = F.                                                        *)
-(*---------------------------------------------------------------------------*)
-
-fun BOOL_CASES_F_F_RULE thF tm =
-   let val (t as {Bvar,Body}) = dest_forall tm
-       val f = mk_abs t
-       val thF' = TRANS (BETA_CONV (mk_comb{Rator=f,Rand=F})) thF
-       and th = AP_TERM ball (ABS Bvar(BETA_CONV(mk_comb{Rator=f,Rand=Bvar})))
-       and th1 = SPEC f BOOL_CASES_F_F
-       val th2 = MP th1 thF'
-   in TRANS (SYM th) th2
-   end
-   handle HOL_ERR _ => raise ERR "BOOL_CASES_F_F_RULE" ""
-
-
-(*---------------------------------------------------------------------------*)
-(* RAND_QCONV : conv -> conv                                                 *)
-(* RATOR_QCONV : conv -> conv                                                *)
-(* ABS_QCONV : conv -> conv                                                  *)
-(*                                                                           *)
-(* Sleeker versions of Conv.{RAND,RATOR,ABS}_CONV. All failures propagate.   *)
-(*---------------------------------------------------------------------------*)
-
-fun RAND_QCONV conv tm =
- let val {Rator,Rand} = dest_comb tm in AP_TERM Rator (conv Rand) end;
-
-fun RATOR_QCONV conv tm =
- let val {Rator,Rand} = dest_comb tm in AP_THM (conv Rator) Rand end;
-
-fun ABS_QCONV conv tm =
- let val {Bvar,Body} = dest_abs tm in ABS Bvar (conv Body) end;
-
-(*===========================================================================*)
-(* Theorems used for simplifying Boolean terms                               *)
-(*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* T_REFL = |- T = T                                                         *)
-(* F_REFL = |- F = F                                                         *)
-(*---------------------------------------------------------------------------*)
-
-val T_REFL = REFL T
-and F_REFL = REFL F;
-
-(*===========================================================================*)
-(* Conversions used for simplifying Boolean terms                            *)
-(*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* NOT_CONV : conv                                                           *)
-(*                                                                           *)
-(*    |- !t. ~~t = t                                                         *)
-(*    |- ~T = F                                                              *)
-(*    |- ~F = T                                                              *)
-(*---------------------------------------------------------------------------*)
-
-local val [th1,th2,th3] = CONJUNCTS NOT_CLAUSES
-in
-fun NOT_CONV tm =
-   let val arg = dest_neg tm
-   in if is_T arg then th2 else
-      if is_F arg then th3
-      else SPEC (dest_neg arg) th1
-   end handle HOL_ERR _ => raise ERR "NOT_CONV" ""
-end;
-
-(*---------------------------------------------------------------------------*)
-(* EQ_CONV : conv                                                            *)
-(*                                                                           *)
-(*    |- (t = t) = T                                                         *)
-(*    |- (T = t) = t                                                         *)
-(*    |- (t = T) = t                                                         *)
-(*    |- (F = t) = ~t                                                        *)
-(*    |- (t = F) = ~t                                                        *)
-(*---------------------------------------------------------------------------*)
-
-local val th1 = INST_TYPE [alpha |-> bool] REFL_CLAUSE
-      val [th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL EQ_CLAUSES))
-in
-fun EQ_CONV tm =
-  let val {lhs,rhs} = dest_eq tm
-  in if is_T lhs then SPEC rhs th2 else
-     if is_T rhs then SPEC lhs th3 else
-     if is_F lhs then SPEC rhs th4 else
-     if is_F rhs then SPEC lhs th5 else
-     if lhs=rhs then SPEC lhs th1
-     else raise ERR "EQ_CONV" ""
-  end
-end;
-
-(*---------------------------------------------------------------------------*)
-(* EQ_THEN_NOT_CONV : conv                                                   *)
-(*                                                                           *)
-(* Behaves as for EQ_CONV, then if EQ_CONV generated a top level negation, it*)
-(* tries to apply NOT_CONV.                                                  *)
-(*---------------------------------------------------------------------------*)
-
-fun EQ_THEN_NOT_CONV tm =
-   if is_F (rand (rator tm)) orelse is_F (rand tm)
-   then (EQ_CONV THENC (TRY_CONV NOT_CONV)) tm
-   else EQ_CONV tm;
-
-(*---------------------------------------------------------------------------*)
-(* AND_CONV : conv                                                           *)
-(*                                                                           *)
-(*    |- T /\ t = t                                                          *)
-(*    |- t /\ T = t                                                          *)
-(*    |- F /\ t = F                                                          *)
-(*    |- t /\ F = F                                                          *)
-(*    |- t /\ t = t                                                          *)
-(*---------------------------------------------------------------------------*)
-
-local val [th1,th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL AND_CLAUSES))
-in
-fun AND_CONV tm =
-  let val {conj1,conj2} = dest_conj tm
-  in if is_T conj1 then SPEC conj2 th1 else
-     if is_T conj2 then SPEC conj1 th2 else
-     if is_F conj1 then SPEC conj2 th3 else
-     if is_F conj2 then SPEC conj1 th4 else
-     if conj1=conj2 then SPEC conj1 th5
-     else raise ERR "AND_CONV" ""
-  end
-end;
-
-(*---------------------------------------------------------------------------*)
-(* OR_CONV : conv                                                            *)
-(*                                                                           *)
-(*    |- T \/ t = T                                                          *)
-(*    |- t \/ T = T                                                          *)
-(*    |- F \/ t = t                                                          *)
-(*    |- t \/ F = t                                                          *)
-(*    |- t \/ t = t                                                          *)
-(*---------------------------------------------------------------------------*)
-
-local val [th1,th2,th3,th4,th5] = map GEN_ALL (CONJUNCTS (SPEC_ALL OR_CLAUSES))
-in
-fun OR_CONV tm =
-  let val {disj1,disj2} = dest_disj tm
-  in if is_T disj1 then SPEC disj2 th1 else
-     if is_T disj2 then SPEC disj1 th2 else
-     if is_F disj1 then SPEC disj2 th3 else
-     if is_F disj2 then SPEC disj1 th4 else
-     if disj1=disj2 then SPEC disj1 th5
-     else raise ERR "OR_CONV" ""
-  end
-end;
-
-(*---------------------------------------------------------------------------*)
-(* IMP_CONV : conv                                                           *)
-(*                                                                           *)
-(*    |- T ==> t = t                                                         *)
-(*    |- t ==> T = T                                                         *)
-(*    |- F ==> t = T                                                         *)
-(*    |- t ==> t = T                                                         *)
-(*    |- t ==> F = ~t                                                        *)
-(*---------------------------------------------------------------------------*)
-
-local val [th1,th2,th3,th4,th5] = map GEN_ALL(CONJUNCTS(SPEC_ALL IMP_CLAUSES))
-in
-fun IMP_CONV tm =
-  let val {ant,conseq} = dest_imp tm
-  in if is_neg tm   then raise ERR "IMP_CONV" "" else
-     if is_T ant    then SPEC conseq th1 else
-     if is_T conseq then SPEC ant th2 else
-     if is_F ant    then SPEC conseq th3 else
-     if is_F conseq then SPEC ant th5 else
-     if ant=conseq  then SPEC ant th4 else
-     raise ERR "IMP_CONV" ""
-   end
-end;
-
-(*---------------------------------------------------------------------------*)
-(* IMP_THEN_NOT_CONV : conv                                                  *)
-(*                                                                           *)
-(* Behaves as for IMP_CONV, then if IMP_CONV generated a top level negation, *)
-(* it tries to apply NOT_CONV.                                               *)
-(*---------------------------------------------------------------------------*)
-
-fun IMP_THEN_NOT_CONV tm =
-   if is_F (rand tm)
-   then (IMP_CONV THENC (TRY_CONV NOT_CONV)) tm
-   else IMP_CONV tm;
-
-(*---------------------------------------------------------------------------*)
-(* IF_CONV : conv                                                            *)
-(*                                                                           *)
-(*    |- (T => t1 | t2) = t1                                                 *)
-(*    |- (F => t1 | t2) = t2                                                 *)
-(*---------------------------------------------------------------------------*)
-
-local val theta = [alpha |-> bool]
-      val t1 = mk_var{Name="t1",Ty=bool}
-      val t2 = mk_var{Name="t2",Ty=bool}
-      val [th1,th2] = map (GENL [t1, t2])
-                          (CONJUNCTS (SPEC_ALL (INST_TYPE theta COND_CLAUSES)))
-in
-fun IF_CONV tm =
-  let val {cond,larm,rarm} = dest_cond tm
-  in if is_T cond then SPECL [larm,rarm] th1 else
-     if is_F cond then SPECL [larm,rarm] th2 else
-     raise ERR "IF_CONV" ""
-  end
-end;
-
-(*---------------------------------------------------------------------------*)
-(* SIMP_PROP_CONV : conv                                                     *)
-(*                                                                           *)
-(* Conversion for simplifying propositional terms containing constants,      *)
-(* variables, equality, implication, AND, OR, NOT and conditionals.          *)
-(* Uses failure to avoid rebuilding unchanged subterms.                      *)
-(*---------------------------------------------------------------------------*)
-
-fun SIMP_PROP_CONV tm =
- let val ARGS_QCONV = BINOP_CONV SIMP_PROP_CONV
- in
- if is_const tm orelse is_var tm then ALL_CONV tm else
- if is_neg tm  then (RAND_QCONV SIMP_PROP_CONV THENC TRY_CONV NOT_CONV) tm else
- if is_eq tm   then (ARGS_QCONV THENC TRY_CONV EQ_THEN_NOT_CONV) tm else
- if is_conj tm then (ARGS_QCONV THENC TRY_CONV AND_CONV) tm else
- if is_disj tm then (ARGS_QCONV THENC TRY_CONV OR_CONV) tm else
- if is_imp tm  then (ARGS_QCONV THENC TRY_CONV IMP_THEN_NOT_CONV) tm else
- if is_cond tm then
-   (RATOR_QCONV (RATOR_QCONV (RAND_QCONV SIMP_PROP_CONV) THENC
-                 RAND_QCONV SIMP_PROP_CONV) THENC
-    RAND_QCONV SIMP_PROP_CONV THENC
-    TRY_CONV IF_CONV) tm
- else raise ERR "SIMP_PROP_CONV" ""
- end;
-
-(*===========================================================================*)
-(* Tautology checking                                                        *)
-(*===========================================================================*)
-
-(*---------------------------------------------------------------------------*)
-(* DEPTH_FORALL_QCONV : conv -> conv                                         *)
-(*                                                                           *)
-(* Auxiliary function for applying a conversion inside universal             *)
-(* quantifications.                                                          *)
-(* Uses failure to avoid rebuilding unchanged subterms.                      *)
-(*---------------------------------------------------------------------------*)
-
-fun DEPTH_FORALL_QCONV conv tm =
-  if is_forall tm
-   then RAND_QCONV (ABS_QCONV (DEPTH_FORALL_QCONV conv)) tm
-   else conv tm;
-
-(*---------------------------------------------------------------------------*)
-(* FORALL_T : term list -> thm                                               *)
-(*                                                                           *)
-(* Given a list of variables [`x1`;...;`xn`] (allowed to be empty), this     *)
-(* function returns the theorem |- (!x1 ... xn. T) = T.                      *)
-(*---------------------------------------------------------------------------*)
-
-fun FORALL_T [] = T_REFL
-  | FORALL_T vars =
-     EQT_INTRO (GENL vars TRUTH) handle HOL_ERR _ => raise ERR "FORALL_T" ""
-
-(*---------------------------------------------------------------------------*)
-(* FORALL_F : term list -> thm                                               *)
-(*                                                                           *)
-(* Given a list of variables [`x1`;...;`xn`] (allowed to be empty), this     *)
-(* function returns the theorem |- (!x1 ... xn. F) = F.                      *)
-(*---------------------------------------------------------------------------*)
-
-local val forall_simp = SPEC F (INST_TYPE [alpha |-> bool] FORALL_SIMP)
-in
-fun FORALL_F [] = F_REFL
-  | FORALL_F (h::t) =
-     TRANS (FORALL_EQ h (FORALL_F t)) forall_simp
-     handle HOL_ERR _ => raise ERR "FORALL_F" ""
-end;
 
 (*---------------------------------------------------------------------------*)
 (* TAUT_CHECK_CONV : conv                                                    *)
@@ -419,32 +53,22 @@ end;
 (*    |- (!x1 ... xn. f[x1,...,xn]) = F                                      *)
 (*---------------------------------------------------------------------------*)
 
-fun TAUT_CHECK_CONV tm =
- let val (vars,tm') = strip_forall tm
- in if (is_T tm') then FORALL_T vars else
-    if (is_F tm') then FORALL_F vars
-    else
-    let val {Bvar,Body} = dest_forall tm
-        val tmT = subst [Bvar |-> T] Body
-        val thT1 = QCONV (DEPTH_FORALL_QCONV SIMP_PROP_CONV) tmT
-        val tmT' = rhs (concl thT1)
-        val thT2 = TAUT_CHECK_CONV tmT'
-        val thT3 = TRANS thT1 thT2
-    in if is_F (rhs (concl thT3))
-       then BOOL_CASES_T_F_RULE thT3 tm
-       else let val tmF = subst [Bvar |-> F] Body
-                val thF1 = QCONV (DEPTH_FORALL_QCONV SIMP_PROP_CONV) tmF
-                val tmF' = rhs (concl thF1)
-                val thF2 = if aconv tmF' tmT' then thT2
-                           else TAUT_CHECK_CONV tmF'
-                val thF3 = TRANS thF1 thF2
-            in if is_F (rhs (concl thF3))
-               then BOOL_CASES_F_F_RULE thF3 tm
-               else BOOL_CASES_BOTH_T_RULE (thT3,thF3) tm
-            end
-    end
- end
- handle HOL_ERR _ => raise ERR "TAUT_CHECK_CONV" "";
+fun TAUT_CHECK_CONV tm =     
+    let val (vars,tm') = strip_forall tm
+    in EQT_INTRO (GENL vars (SAT_PROVE tm')) end
+    handle minisatProve.SAT_cex th =>
+	   let val (vars,tm') = strip_forall tm
+	       val g = list_mk_exists(vars,mk_neg tm')		   
+	       val cxm = List.foldl (fn (v,cxm) => 
+					if (is_neg v) then Redblackmap.insert(cxm,dest_neg v,F)
+					else Redblackmap.insert(cxm,v,T))
+				    (Redblackmap.mkDict Term.compare) 
+				    (strip_conj (fst (dest_imp (concl th))))
+	       val cex = List.map (fn v => Redblackmap.find(cxm,v) handle NotFound => T) vars
+	       val th1 = prove(g,MAP_EVERY EXISTS_TAC cex THEN REWRITE_TAC [])
+	       val th2 = CONV_RULE (REPEATC (LAST_EXISTS_CONV EXISTS_NOT_CONV)) th1
+	   in EQF_INTRO th2 end
+    handle ex => raise ERR "TAUT_CHECK_CONV" "";
 
 (*---------------------------------------------------------------------------*)
 (* PTAUT_CONV :conv                                                          *)
@@ -456,8 +80,7 @@ fun TAUT_CHECK_CONV tm =
 (*    |- (!x1 ... xn. f[x1,...,xn]) = T                                      *)
 (*    |- (!x1 ... xn. f[x1,...,xn]) = F                                      *)
 (*                                                                           *)
-(* This conversion tries to simplify before calling TAUT_CHECK_CONV. It also *)
-(* accepts propositional terms that are not fully universally quantified.    *)
+(* It accepts propositional terms that are not fully universally quantified. *)
 (* However, for such a term, the conversion will fail if it is not true.     *)
 (* Consider the term `!x2 ... xn. f[x1,...,xn]`. TAUT_CHECK_CONV proves      *)
 (* one of:                                                                   *)
@@ -493,9 +116,7 @@ fun TAUT_CHECK_CONV tm =
 
 fun PTAUT_CONV tm =
  let val vars = free_vars tm
-     val th =
-       (QCONV (DEPTH_FORALL_QCONV SIMP_PROP_CONV) THENC TAUT_CHECK_CONV)
-       (list_mk_forall (vars,tm))
+     val th = TAUT_CHECK_CONV (list_mk_forall (vars,tm))
  in if null vars then th else
     if is_F (rhs (concl th))
     then raise ERR "PTAUT_CONV" "false for at least one interpretation"
@@ -531,7 +152,9 @@ fun PTAUT_PROVE tm =
     Computes a set of subterms of a term that are either variables or
     Boolean valued non-propositional terms.
    ---------------------------------------------------------------------- *)
-
+local 
+open Rsyntax
+in
 fun non_prop_terms tm = let
   fun non_prop_args acc tmlist =
       case tmlist of
@@ -552,6 +175,7 @@ fun non_prop_terms tm = let
         end
 in
   non_prop_args empty_tmset [tm]
+end
 end
 
 (*---------------------------------------------------------------------------*)
@@ -587,7 +211,7 @@ fun TAUT_CONV tm =
 val TAUT_TAC = CONV_TAC TAUT_CONV;
 
 (*---------------------------------------------------------------------------*)
-(* ASM_TAUT_TAC : tacti                                                      *)
+(* ASM_TAUT_TAC : tactic                                                      *)
 (*                                                                           *)
 (* Same as TAUT_TAC, except that it takes account of the assumptions of the  *)
 (* goal.                                                                     *)

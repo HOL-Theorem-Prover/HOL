@@ -1,13 +1,13 @@
-\DOC SAT_TAUT_PROVE
+\DOC SAT_PROVE
 
-\TYPE {val SAT_TAUT_PROVE : Term.term -> Thm.thm}
+\TYPE {val SAT_PROVE : Term.term -> Thm.thm}
 
 \SYNOPSIS
 
-Proves that the supplied term is a tautology.
+Proves that the supplied term is a tautology, or provides a counterexample.
 
 \DESCRIBE
-The supplied term should be a term of propositional logic. {SAT_TAUT_PROVE} uses the MiniSat SAT solver's proof logging feature to construct a resolution refutation for the negation of the supplied term. 
+The supplied term should be purely propositional, i.e., atoms must be Boolean variables or constants, and conditionals must be Boolean-valued. {SAT_PROVE} uses the MiniSat SAT solver's proof logging feature to construct and verify a resolution refutation for the negation of the supplied term. 
 
 \FAILURE
 Fails if the supplied term is not a tautology. In this case, a theorem providing a satisfying assignment for the negation of the input term is returned, wrapped in an exception.
@@ -17,19 +17,15 @@ Fails if the supplied term is not a tautology. In this case, a theorem providing
 - load "HolSatLib"; open HolSatLib;
 (* output omitted *)
 > val it = () : unit
-- SAT_TAUT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
-> val it = |- (a ==> b) /\ 2(b ==> a) ==> (a = b) : thm
-- SAT_TAUT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))`` 
-	handle minisatProve.Sat_counterexample th => th;
+- SAT_PROVE ``(a ==> b) /\ (b ==> a) ==> (a=b)``;
+> val it = |- (a ==> b) /\ (b ==> a) ==> (a = b) : thm
+- SAT_PROVE ``~((a ==> b) /\ (b ==> a) ==> (a=b))`` 
+	handle minisatProve.SAT_cex th => th;
 > val it = |- ~b /\ a ==> ~~((a ==> b) /\ (b ==> a) ==> (a = b)) : thm
 }
  
 \COMMENTS
- If MiniSat terminates abnormally, or if the MiniSat binary cannot be located or executed, SAT_TAUT_PROVE falls back to a slower propositional tautology prover implemented in ML.
-
-\SEEALSO 
-HolSatLib.satOracle,
-HolSatLib.satProve.
+ If MiniSat terminates abnormally, or if the MiniSat binary cannot be located or executed, SAT_PROVE falls back to a slower propositional tautology prover implemented in SML. For low-level use of SAT solver facilities and other details, see the section on the HolSat library in the HOL Description.
 
 \ENDDOC
 

@@ -177,7 +177,7 @@ val keepers =
      "bword_numTheory.sig","word_bitopTheory.sig",
 
      (* HolSat *)
-     "HolSatLib.sig", "defCNF.sig", "defCNFTheory.sig",
+     "HolSatLib.sig", 
 
      (* simpsets *)
      "optionSimps.sig", "intSimps",

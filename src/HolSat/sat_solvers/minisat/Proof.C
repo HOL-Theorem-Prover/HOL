@@ -19,6 +19,7 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 
 #include "Proof.h"
 #include "Sort.h"
+#include <iostream>
 
 //=================================================================================================
 // Temporary files handling:
@@ -95,7 +96,7 @@ ClauseId Proof::addRoot(vec<Lit>& cl, ClauseId orig_root_id)
 	fp.seek(0, SEEK_END);
 	fp.setMode(WRITE);      
 
-        putUInt(fp, 0 == orig_root_id ? root_counter << 1 : orig_root_id << 1);
+        putUInt(fp, -1 == orig_root_id ? root_counter << 1 : orig_root_id << 1);
         putUInt(fp, index(clause[0]));
         for (int i = 1; i < clause.size(); i++)
             putUInt(fp, index(clause[i]) - index(clause[i-1]));
@@ -111,6 +112,7 @@ void Proof::beginChain(ClauseId start)
     chain_id .clear();
     chain_var.clear();
     chain_id.push(abs(start)); //HA: the abs
+    //std::cout << "B " << abs(start);
 }
 
 void Proof::resolve(ClauseId next, Var x)
@@ -121,10 +123,18 @@ void Proof::resolve(ClauseId next, Var x)
     else chain_var.push((x << 1) | 1); // HA: adding sign info to pivots
 }
 
+void Proof::resolve(ClauseId next, Lit p)
+{
+    assert(next != ClauseId_NULL);
+    chain_id .push(abs(next)); //HA: abs
+    chain_var.push(index(p));
+    //std::cout << " (" << index(p) << "," << next << ")";
+}
+
 ClauseId Proof::endChain()
 {
     assert(chain_id.size() == chain_var.size() + 1);
-
+    //std::cout << std::endl;
     if (chain_id.size() == 1)
         return chain_id[0];
     else{

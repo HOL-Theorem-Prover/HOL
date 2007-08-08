@@ -32,7 +32,7 @@ infix >>
 (* adapted from Minisat-p_v1.14::File::getUInt*)
 (* reads the next int, which may be encoded in 8, 16, 32 or 64 bits*)
 (* FIXME: Currently this is untested and will likely crash on 64 bit archs*)
-fun sat_getint' is = 
+fun sat_getint is = 
  let val  byte0 = sat_getChar is 
  in  if ((byte0 andb (0wx80))=(0wx0)) (* 8 *)
 	then toInt(byte0)
@@ -68,11 +68,6 @@ fun sat_getint' is =
 				     orb (byte6 << (Word.fromInt 8)) orb byte7))
 	    end
         end	
-
-fun sat_getint fin = 
-    let val i = sat_getint' fin
-    in i end
-
 end
 
 (* bitwise rightshift by 1 bit*)
@@ -91,17 +86,18 @@ fun getIntBranch fin id h =
 	val res = loop [] 0
      in res  end
 
-(* parse a resolution chain and add to sr stack as a (clause,var) list *)
+(* parse and resolve a chain : assumes all dependencies already calculated *)
 (* the var component of the first pair is a dummy value ~1 *)
-fun addBranch lfn cl sva fin cc id tc =
-    let 
- 	val (br,brl) = getIntBranch fin id (id-(rshift tc))
+fun addBranch lfn cl sva fin tc id =
+    let val (br,brl) = getIntBranch fin id (id-(rshift tc))
 	val res = if brl=1 (*(tl br = []) *)
-		  then (cc,false) (* delete *)
-		  else (resolveChain lfn sva cl (br,brl) cc;
-		       (cc+1,true)) (* resolve *) 
-     in res
-    end
+		  then false (* delete *)
+		  else 
+		      ((*print "\nB ";print( (int_to_string id)^": "); 
+		       List.app (fn (i,j) => 
+				    print ((int_to_string i)^","^(int_to_string j)^" ")) br; *)
+		      resolveChain lfn sva cl (br,brl) id; true) (* resolve *) 
+    in res end
 
 (* Parse a root clause. Final result is int list of literals *) 
 fun getIntRoot fin idx = 
@@ -120,47 +116,43 @@ fun getIntRoot fin idx =
      efficiently find the corresponding clause term in HOL
    So this is faster (time and space) than building the clause term from the proof log.
 *)
-fun addClause lfn cl svm sva vc cc clauseth fin lit1 = 
-    let  
-         val orc = (rshift lit1)-1 (*-1 because right now orc's in proof log start at 1*)
-	val l = getIntRoot fin (sat_getint fin) 	
-	val res = case l of
-	    []  => failwith ("addClause:Failed parsing clause "^(int_to_string (cc))^"\n")  
-	  | _ => let 
- 		     (*val ll = concl (Array.sub(clauseth,orc)) *)
-		     (*val _ = Dynarray.update(rt2o,cc,orc)
-			 handle Subscript => failwith("addClause"^(int_to_string (cc))^"\n")*)
-		     val _ = prepareRootClause lfn orc clauseth cl cc
-		 in cc+1 end 
-     in res end
+fun addClause lfn cl  sva vc clauseth fin lit1 id = 
+    let val orc = (rshift lit1)-1 (*-1 because right now orc's in proof log start at 1*)
+	val l = getIntRoot fin (sat_getint fin) 
+	(*val _ = (print "\nR ";print((int_to_string orc)^"~"^(int_to_string id)^": "); 
+		 List.app (fn i => print ((int_to_string i)^" ")) l) *)
+    in case l of
+	   []  => failwith ("addClause:Failed parsing clause "^(int_to_string id)^"\n")  
+	 | _ => prepareRootClause lfn orc clauseth cl id
+    end
 
 (* SML equivalent of  C-style eval of v&1=0 *)
 fun isRoot v = Word.compare(Word.andb(Word.fromInt v,Word.fromInt 1),(Word.fromInt 0))=EQUAL
-
-(*cc is clause count (inc learnt) *)
- fun readTrace lfn cl svm sva rt2o vc cc clauseth fin id =
+	       
+fun readTrace lfn cl sva vc clauseth fin id =
     if BinIO.endOfStream fin 
-    then cc
+    then id
     else 
 	let val tmp = sat_getint fin
 	in if isRoot tmp 
-	   then let val cc = addClause lfn cl svm sva vc cc clauseth fin tmp
-		in readTrace lfn cl svm sva rt2o vc cc clauseth fin (id+1) end
-	   else (let val (cc,isch) = addBranch lfn cl sva fin cc id tmp 
+	   then let val _ = addClause lfn cl sva vc clauseth fin tmp id
+		in readTrace lfn cl  sva vc clauseth fin (id+1) end
+	   else (let val isch = addBranch lfn cl sva fin tmp id
 		 in if isch 
-		    then readTrace lfn cl svm sva rt2o vc cc clauseth fin (id+1) (* chain *)
-		    else readTrace lfn cl svm sva rt2o vc cc clauseth fin id end) (* deletion *)
+		    then readTrace lfn cl sva vc clauseth fin (id+1) (* chain *)
+		    else readTrace lfn cl sva vc clauseth fin id end) (* deletion *)
 	end 
  
 exception Trivial 
 
 (*build the clause/chain list *)
-fun parseTrace cl svm sva rt2o nr fname solver vc clauseth lfn = 
+fun parseTrace cl sva nr fname solver vc clauseth lfn proof = 
     let 
- 	val fin = sat_fileopen (fname^"."^(getSolverName solver)^".proof")
-	val cc = readTrace lfn cl svm sva rt2o vc 0 clauseth fin 0 
+ 	val fin = sat_fileopen (if isSome proof then valOf proof 
+				else fname^"."^(getSolverName solver)^".proof")
+	val id = readTrace lfn cl sva vc clauseth fin 0 
 	val _ = sat_fileclose fin 
-     in SOME cc end
+     in SOME id end
 handle Io _ => NONE
 
 (*
@@ -169,11 +161,11 @@ fname: filename of proof log
 vc: number of variables (includes variables added by def CNF conversion)
 clauseth: root clause vector. clauseth[i] is i'th root clause from original problem
 *)
-fun replayMinisatProof svm sva rt2o nr fname solver vc clauseth lfn = 
+fun replayProof sva nr fname solver vc clauseth lfn proof = 
     let val _ = (minisatResolve.counter:=0)
 	val cl = Dynarray.array((Array.length clauseth) * 2,TRUTH)
-    in case parseTrace cl svm sva rt2o nr fname solver vc clauseth lfn of
-	   SOME cc => SOME (Dynarray.sub(cl,cc-1))
+    in case parseTrace cl sva nr fname solver vc clauseth lfn proof of
+	   SOME id => SOME (Dynarray.sub(cl,id-1))
 	 | NONE => NONE
     end
 

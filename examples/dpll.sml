@@ -237,5 +237,5 @@ val example = gen_all (mk_adder_test 3 2)
 (* test them here:
 time DPLL_UNIV example;
 time tautLib.TAUT_PROVE example;
-time HolSatLib.SAT_TAUT_PROVE (#2 (strip_forall example));
+time HolSatLib.SAT_PROVE (#2 (strip_forall example));
 *)

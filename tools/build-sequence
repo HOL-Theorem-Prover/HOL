@@ -28,10 +28,11 @@ src/parse
 src/bool
 src/goalstack
 
-src/taut
-src/HolSat/sat_solvers/minisat
-src/HolSat
 src/compute/src
+src/HolSat/sat_solvers/minisat
+src/HolSat/sat_solvers/zc2hs
+src/HolSat
+src/taut
 src/marker
 src/q
 src/combin
@@ -98,10 +99,4 @@ src/word/src
 src/Boolify/src
 src/float
 src/fxp
-!!examples/miller/ho_prover
-!!examples/miller/subtypes
-!!examples/miller/RSA
-!!examples/miller/formalize
-!!examples/miller/prob
-!!examples/miller/groups
-!!examples/miller/miller
+!!examples/miller

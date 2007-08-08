@@ -60,9 +60,10 @@ public:
     Proof(ProofTraverser& t);       // Online mode -- proof will not be stored.
 
     void     incRootCount () { root_counter++; }
-    ClauseId addRoot   (vec<Lit>& clause, ClauseId orig_root_id = 0);
+    ClauseId addRoot   (vec<Lit>& clause, ClauseId orig_root_id = -1);
     void     beginChain(ClauseId start);
     void     resolve   (ClauseId next, Var x);
+    void     resolve   (ClauseId next, Lit p);
     ClauseId endChain  ();
     void     deleted   (ClauseId gone);
     ClauseId last      () { assert(id_counter != ClauseId_NULL); return id_counter - 1; }

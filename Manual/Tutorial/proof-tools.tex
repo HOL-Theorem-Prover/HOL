@@ -686,7 +686,7 @@ generalisation of the following term, with 29 variables, takes
 \end{hol}
 The truth table implementation in \ml{tautLib} takes over 100 times as
 long to prove the tautology.  (But if you want real speed, the
-\ml{SAT\_TAUT\_PROVE} function in the \ml{HolSatLib} library does the
+\ml{SAT\_PROVE} function in the \ml{HolSatLib} library does the
 above in less than a second, by using an external tool to generate the
 proof of unsatisfiability, and then translating that proof back into
 HOL.)
