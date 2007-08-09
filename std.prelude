@@ -111,6 +111,45 @@ TextIO.output(TextIO.stdOut,
   ^"]\n\n       For introductory HOL help, type: help \"hol\";\n"
   ^"-----------------------------------------------------------------\n\n");
 
+(* ----------------------------------------------------------------------
+    if present, look at a Holmakefile in the current directory to see
+    if we should extend the loadPath
+   ---------------------------------------------------------------------- *)
+
+local
+  open Path
+in
+  val _ = loadPath := concat (HOLDIR, concat ("tools", "Holmake")) :: !loadPath
+  val _ = load "ReadHMF.uo"
+  val _ = loadPath := tl (!loadPath)
+end;
+
+val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
+            open Holmake_types
+            fun base_env s =
+                case s of
+                  "HOLDIR" => [LIT HOLDIR]
+                | "SIGOBJ" => [VREF "HOLDIR", LIT "/sigobj"]
+                | _ => (case Process.getEnv s of
+                          NONE => [LIT ""]
+                        | SOME v => [LIT v])
+            val toks = ReadHMF.read "Holmakefile"
+            val env = extend_env toks base_env
+            fun envlist id =
+                map dequote (tokenize (perform_substitution env [VREF id]))
+            val hmake_includes = envlist "INCLUDES"
+          in
+            case hmake_includes of
+              [] => ()
+            | _ =>
+              (print "[extending loadPath with Holmakefile INCLUDES variable]\n";
+               loadPath := !loadPath @ hmake_includes)
+          end handle e => (print "[bogus Holmakefile in current directory \
+                                 \- ignoring it]\n");
+                           TextIO.flushOut TextIO.stdErr;
+                           ())
+        else ()
+
 (* Local variables: *)
 (* mode: sml *)
 (* end: *)
