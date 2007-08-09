@@ -520,7 +520,8 @@ val bool_monoset =
   ("RTC", MONO_RTC),
   ("TC", MONO_TC),
   ("EQC", MONO_EQC),
-  ("SC", MONO_SC)]
+  ("SC", MONO_SC),
+  ("OPTREL", optionTheory.OPTREL_MONO)]
 
 
 val IMP_REFL = tautLib.TAUT_PROVE (--`!p. p ==> p`--)
