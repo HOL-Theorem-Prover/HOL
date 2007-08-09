@@ -14,7 +14,7 @@ exception SAT_cex of thm
 
 val mk_sat_oracle_thm = mk_oracle_thm "HolSatLib";
 
-fun warn ss = print ("\nHolSat WARNING: "^ss^"\n")
+fun warn ss = if !Globals.interactive then print ("\nHolSat WARNING: "^ss^"\n") else ()
 
 fun replay_proof is_proved sva nr in_name solver vc clauseth lfn ntm proof = 
     if is_proved then 
