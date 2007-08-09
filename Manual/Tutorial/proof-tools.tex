@@ -93,13 +93,8 @@ runtime: 0.147s,    gctime: 0.012s,     systime: 0.000s.
 \end{session}
 
 This is a dreadful algorithm for solving this problem.  The system's
-built-in function, \ml{tautLib.TAUT\_CONV} solves the problem above
-ten times faster, even though it is also using a truth-table
-technique.\footnote{The main difference is that \ml{TAUT\_CONV}
-  simplifies the body of the universally quantified formula after each
-  case-split.  Our function does all of the case-splits and then
-  simplifies.  The simplifier, which works over a term top-down, can't
-  implement \ml{TAUT\_CONV}'s algorithm directly.}  The only real
+built-in function, \ml{tautLib.TAUT\_CONV}, solves the problem above
+much faster.  The only real
 merit in this solution is that it took one line to write.  This is a
 general illustration of the truth that \HOL{}'s high-level tools,
 particularly the simplifier, can provide fast prototypes for a variety
@@ -684,12 +679,9 @@ generalisation of the following term, with 29 variables, takes
    (c_3 = c2_3) /\ (s_0 = s2_0) /\ (s_1 = s2_1) /\ (s_2 = s2_2)
 \end{verbatim}
 \end{hol}
-The truth table implementation in \ml{tautLib} takes over 100 times as
-long to prove the tautology.  (But if you want real speed, the
-\ml{SAT\_PROVE} function in the \ml{HolSatLib} library does the
-above in less than a second, by using an external tool to generate the
-proof of unsatisfiability, and then translating that proof back into
-HOL.)
+(if you want real speed, the built-in function \ml{tautLib.TAUT\_PROVE} does the above 
+in less than a second, by using  an external tool to generate the proof
+ of unsatisfiability, and then translating that proof back into HOL).
 
 \section{Extending our Procedure's Applicability}
 \label{sec:dpll-applicability-extension}
