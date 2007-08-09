@@ -21,148 +21,50 @@ OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWA
 #include <ctime>
 #include <unistd.h>
 #include <signal.h>
-#include <zlib.h>
-#ifdef DEBUG
+#include <iostream>
 #include <fstream>
-#endif
 
 //=================================================================================================
-// BCNF Parser:
+// DIMACS Parser: // Inserts problem into solver.
 
+using namespace std;
 
-#define CHUNK_LIMIT 1048576
-
-static void parse_BCNF(cchar* filename, Solver& S)
-{
-    FILE*   in = fopen(filename, "rb");
-    if (in == NULL) fprintf(stderr, "ERROR! Could not open file: %s\n", filename), exit(1);
-
-    char    header[16];
-    fread(header, 1, 16, in);
-    if (strncmp(header, "BCNF", 4) != 0) fprintf(stderr, "ERROR! Not a BCNF file: %s\n", filename), exit(1);
-    if (*(int*)(header+4) != 0x01020304) fprintf(stderr, "ERROR! BCNF file in unsupported byte-order: %s\n", filename), exit(1);
-
-    int      n_vars    = *(int*)(header+ 8);
-    //int    n_clauses = *(int*)(header+12);
-    int*     buf       = xmalloc<int>(CHUNK_LIMIT);
-    int      buf_sz;
-    vec<Lit> c;
-
-    for (int i = 0; i < n_vars; i++) S.newVar();
-
-    for(;;){
-        int n = fread(&buf_sz, 4, 1, in);
-        if (n != 1) break;
-        assert(buf_sz <= CHUNK_LIMIT);
-        fread(buf, 4, buf_sz, in);
-
-        int* p = buf;
-        while (*p != -1){
-            int size = *p++;
-            c.clear();
-            c.growTo(size);
-            for (int i = 0; i < size; i++)
-                c[i] = toLit(p[i]);
-            p += size;
-
-            S.addClause(c);     // Add clause.
-            if (!S.okay()){
-                xfree(buf); fclose(in);
-                return; }
-        }
-    }
-
-    xfree(buf);
-    fclose(in);
-
+void addLit(int parsed_lit,Solver& S, vec<Lit>& lits) {
+  int var = abs(parsed_lit)-1;
+  while (var >= S.nVars()) S.newVar();
+  lits.push( (parsed_lit > 0) ? Lit(var) : ~Lit(var) );
 }
 
-
-//=================================================================================================
-// DIMACS Parser:
-
-
-class StreamBuffer {
-    gzFile  in;
-    char    buf[CHUNK_LIMIT];
-    int     pos;
-    int     size;
-
-    void assureLookahead() {
-        if (pos >= size) {
-            pos  = 0;
-            size = gzread(in, buf, sizeof(buf)); } }
-
-public:
-    StreamBuffer(gzFile i) : in(i), pos(0), size(0) {
-        assureLookahead(); }
-
-    int  operator *  () { return (pos >= size) ? EOF : buf[pos]; }
-    void operator ++ () { pos++; assureLookahead(); }
-};
-
-//- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-template<class B>
-static void skipWhitespace(B& in) {
-    while ((*in >= 9 && *in <= 13) || *in == 32)
-        ++in; }
-
-template<class B>
-static void skipLine(B& in) {
-    for (;;){
-        if (*in == EOF) return;
-        if (*in == '\n') { ++in; return; }
-        ++in; } }
-
-template<class B>
-static int parseInt(B& in) {
-    int     val = 0;
-    bool    neg = false;
-    skipWhitespace(in);
-    if      (*in == '-') neg = true, ++in;
-    else if (*in == '+') ++in;
-    if (*in < '0' || *in > '9') fprintf(stderr, "PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
-    while (*in >= '0' && *in <= '9')
-        val = val*10 + (*in - '0'),
-        ++in;
-    return neg ? -val : val; }
-
-template<class B>
-static void readClause(B& in, Solver& S, vec<Lit>& lits) {
-    int     parsed_lit, var;
-    lits.clear();
-    for (;;){
-        parsed_lit = parseInt(in);
-        if (parsed_lit == 0) break;
-        var = abs(parsed_lit)-1;
-        while (var >= S.nVars()) S.newVar();
-        lits.push( (parsed_lit > 0) ? Lit(var) : ~Lit(var) );
-    }
+void addClause(Solver& S, vec<Lit>& lits) {
+  /*for (int i=0;i<lits.size();i++)
+    cout << (sign(lits[i]) ? "-" : "") << (var(lits[i])+1) << " ";
+    cout << "#" << endl;*/
+  S.addClause(lits);
+  lits.clear();
 }
 
-template<class B>
-static void parse_DIMACS_main(B& in, Solver& S) {
-    vec<Lit> lits;
-    for (;;){
-        skipWhitespace(in);
-        if (*in == EOF)
-            break;
-        else if (*in == 'c' || *in == 'p')
-            skipLine(in);
-        else
-            readClause(in, S, lits),
-            S.addClause(lits);
+static void parse_DIMACS(char* filename, Solver& S) {
+  ifstream fin(filename);
+  if (fin.fail()) { cerr << "Error opening input file " << filename << endl; exit(1); }  
+  string line,stok;
+  int itok;
+  vec<Lit> lits;
+  while(true) { // skip preamble (must have at least the p line)
+    fin >> stok;
+    if (stok=="c" || stok=="p") getline(fin,line);
+    else break;
+  }
+  addLit(atoi(stok.c_str()),S,lits); // first lit of first clause
+  while (true) {
+    fin >> itok;
+    if (fin.eof()) {
+      if (lits.size()>0) addClause(S,lits); // in case last clause had no trailing 0
+      break;
     }
+    if (itok==0) addClause(S,lits);
+    else addLit(itok,S,lits);          
+  }
 }
-
-// Inserts problem into solver.
-//
-static void parse_DIMACS(gzFile input_stream, Solver& S) {
-    StreamBuffer in(input_stream);
-    parse_DIMACS_main(in, S); }
-
-
 //=================================================================================================
 
 
@@ -338,21 +240,10 @@ int main(int argc, char** argv)
     // Parse input and perform SAT:
     //
     Solver      S;
-    if (proof != NULL || check)
-        S.proof = new Proof();
-
-    if (input != NULL && strlen(input) >= 5 && strcmp(&input[strlen(input)-5], ".bcnf") == 0)
-        parse_BCNF(input, S);
-    else{
-        if (input == NULL)
-            reportf("Reading from standard input... Use '-h' for help.\n");
-
-        gzFile in = (input == NULL) ? gzdopen(0, "rb") : gzopen(input, "rb");
-        if (in == NULL)
-            fprintf(stderr, "ERROR! Could not open file: %s\n", (input == NULL) ? "<stdin>" : input), exit(1);
-        parse_DIMACS(in, S);
-        gzclose(in);
-    }
+    if (proof != NULL || check) S.proof = new Proof();
+    if (input == NULL) { fprintf(stderr, "ERROR! Input file not specified"); exit(1); }
+    parse_DIMACS(input, S);
+   
     FILE*   res = (result != NULL) ? fopen(result, "wb") : NULL;
 
     if (!S.okay()){

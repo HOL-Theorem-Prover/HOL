@@ -9,16 +9,12 @@
 #include <ctime>
 #include <unistd.h>
 #include <signal.h>
-#include <zlib.h>
 #include "Global.h"
 #include "Proof.h"
 #include <fstream>
 #include "Sort.h"
 #include <string>
 #include <sstream> 
-
-// Redfine if you want output to go somewhere else:
-#define reportf(format, args...) ( printf(format , ## args), fflush(stdout) )
 
 using namespace std;
 
@@ -28,8 +24,71 @@ typedef vector<pair<enum_ty,vector<ClauseId> > > parsed_clauses; // if first=0,1
 
 //=================================================================================================
 // DIMACS Parser:
-// DIMACS Parser and proof checker are from MiniSat 1.14p sources (MIT license reproduced below)
-/*****************************************************************************************[Proof.C]
+
+void vi2vl(const vector<int>& vi, vec<Lit>& vl) {
+  int vsz = vi.size();
+  for (int ii=0;ii<vsz;ii++) 
+    vl.push(Lit(vi[ii]>>1,vi[ii]&1));
+} 
+
+void addLit(int parsed_lit,vector<int>& lits, int& numvars) {
+  int var = abs(parsed_lit)-1;
+  while (var >= numvars) numvars++;
+  lits.push_back( (parsed_lit > 0) ? var+var : var+var+1 );
+}
+
+void addClause(vector<int>& lits, vec<vec<Lit> >& roots, parsed_clauses* pclauses, 
+	       map<Lit,ClauseId>& units, int& numclauses) {
+  bool skip = false;
+  sort(lits.begin(),lits.end());
+  lits.erase(unique(lits.begin(),lits.end()),lits.end()); //sortUnique(lits);  
+  for (int i = 0; i < lits.size()-1; i++) // skip trivial clause
+    if (lits[i] == ((lits[i+1])^1)) {
+      skip=true;
+      break;
+    } 
+  if (!skip) {
+    if (lits.size()==1) 
+      units.insert(make_pair(Lit(lits[0]>>1,lits[0]&1),numclauses));
+    pclauses->push_back(make_pair(ROOT,lits));
+    vec<Lit> Lits;
+    vi2vl(lits,Lits);
+    roots.push();
+    Lits.copyTo(roots.last());
+    numclauses++;	  
+  }
+  lits.clear();
+}
+
+void parse_DIMACS(Proof& P, vec<vec<Lit> >& roots, char* filename, parsed_clauses* pclauses,
+			 map<Lit,ClauseId>& units, int& numvars, int& numclauses ) {
+  ifstream fin(filename);
+  if (fin.fail()) { cerr << "Error opening input file " << filename << endl; exit(1); }  
+  string line,stok;
+  int itok;
+  vector<int> lits;
+  while(true) { // skip preamble (must have at least the p line)
+    fin >> stok;
+    if (stok=="c" || stok=="p") getline(fin,line);
+    else break;
+  }
+  addLit(atoi(stok.c_str()),lits,numvars); // first lit of first clause
+  while (true) {
+    fin >> itok;
+    if (fin.eof()) {
+      if (lits.size()>0) addClause(lits,roots,pclauses,units,numclauses); // in case last clause had no trailing 0
+      break;
+    }
+    if (itok==0) addClause(lits,roots,pclauses,units,numclauses);
+    else addLit(itok,lits,numvars);          
+  }
+}
+
+//=========================================================================================================
+// Simplistic proof-checker -- just to illustrate the use of 'ProofTraverser':
+
+// Proof checker is from MiniSat 1.14p sources (MIT license reproduced below)
+/*****************************************************************************************[Main.C]
 MiniSat -- Copyright (c) 2003-2005, Niklas Een, Niklas Sorensson
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
@@ -47,122 +106,6 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FO
 DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 **************************************************************************************************/
-
-#define CHUNK_LIMIT 1048576
-
-const int WORD_LEN      = 64000;
-
-class StreamBuffer {
-    gzFile  in;
-    char    buf[CHUNK_LIMIT];
-    int     pos;
-    int     size;
-
-    void assureLookahead() {
-        if (pos >= size) {
-            pos  = 0;
-            size = gzread(in, buf, sizeof(buf)); } }
-
-public:
-    StreamBuffer(gzFile i) : in(i), pos(0), size(0) {
-        assureLookahead(); }
-
-    int  operator *  () { return (pos >= size) ? EOF : buf[pos]; }
-    void operator ++ () { pos++; assureLookahead(); }
-};
-
-template<class B>
-static void skipWhitespace(B& in) {
-    while ((*in >= 9 && *in <= 13) || *in == 32)
-        ++in; }
-
-template<class B>
-static void skipLine(B& in) {
-    for (;;){
-        if (*in == EOF) return;
-        if (*in == '\n') { ++in; return; }
-        ++in; } }
-
-template<class B>
-static int parseInt(B& in) {
-    int     val = 0;
-    bool    neg = false;
-    skipWhitespace(in);
-    if      (*in == '-') neg = true, ++in;
-    else if (*in == '+') ++in;
-    if (*in < '0' || *in > '9') fprintf(stderr, "PARSE ERROR! Unexpected char: %c\n", *in), exit(3);
-    while (*in >= '0' && *in <= '9')
-        val = val*10 + (*in - '0'),
-        ++in;
-    return neg ? -val : val; }
-
-template<class B>
-static void readClause(B& in, vector<int>& lits, int& numvars) {
-    int     parsed_lit, var;
-    lits.clear();
-    for (;;){
-        parsed_lit = parseInt(in);
-        if (parsed_lit == 0) break;
-        var = abs(parsed_lit)-1;
-        while (var >= numvars) numvars++;
-        lits.push_back( (parsed_lit > 0) ? var+var : var+var+1 );
-    }
-}
-
-void vi2vl(const vector<int>& vi, vec<Lit>& vl) {
-  int vsz = vi.size();
-  for (int ii=0;ii<vsz;ii++) 
-    vl.push(Lit(vi[ii]>>1,vi[ii]&1));
-} 
-
-template<class B>
-static void parse_DIMACS_main(Proof& P, vec<vec<Lit> >& roots, B& in, 
-			      parsed_clauses* pclauses, map<Lit,ClauseId>& units,
-			      int& numvars, int& numclauses) {
-    vector<int> lits;
-    bool skip;
-    for (;;){
-      skip = false;
-        skipWhitespace(in);
-        if (*in == EOF)
-            break;
-        else if (*in == 'c' || *in == 'p')
-            skipLine(in);
-        else {
-	  readClause(in, lits, numvars);
-	  sort(lits.begin(),lits.end());
-	  lits.erase(unique(lits.begin(),lits.end()),lits.end()); //sortUnique(lits);
-	  for (int i = 0; i < lits.size()-1; i++) // skip trivial clause
-	    if (lits[i] == ((lits[i+1])^1)) {
-	      skip=true;
-	      break;
-	    } 
-	  if (!skip) {
-	    if (lits.size()==1) 
-	      units.insert(make_pair(Lit(lits[0]>>1,lits[0]&1),numclauses));
-	    pclauses->push_back(make_pair(ROOT,lits));
-	    vec<Lit> Lits;
-	    vi2vl(lits,Lits);
-	    roots.push();
-	    Lits.copyTo(roots.last());
-	    numclauses++;	  
-	  }
-	}
-    }
-}
-
-// Inserts problem into solver.
-//
-static void parse_DIMACS(Proof& P, vec<vec<Lit> >& roots, gzFile input_stream, 
-			 parsed_clauses* pclauses, map<Lit,ClauseId>& units,
-			 int& numvars, int& numclauses) {
-    StreamBuffer in(input_stream);
-    parse_DIMACS_main(P, roots, in, pclauses, units, numvars, numclauses); 
-}
-
-// Simplistic proof-checker -- just to illustrate the use of 'ProofTraverser':
-
-//#include "Sort.h"
 
 static void resolve(vec<Lit>& main, vec<Lit>& other, Var x)
 {
@@ -307,9 +250,8 @@ void parse_zChaff(char * filename, int& numclauses,
 void printProofStats() {
       double  cpu_time = cpuTime();
       int64   mem_used = memUsed();
-      if (mem_used!= 0) reportf("Memory used     : %.2f MB\n",
-				 (mem_used)/1048576.0);
-      reportf("CPU time        : %g s\n", (cpu_time));
+      if (mem_used!= 0) cout << "Memory used : " <<  ((mem_used)/1048576.0) << " MB" << endl;
+      cout << "CPU time : " <<  cpu_time << " s" << endl;
 }
 
 //==========================================================================================
@@ -475,7 +417,8 @@ class Z2M {
 
 public: 
 
-  Z2M(Proof& P_,vec<vec<Lit> >& clauses_,vec<vec<Lit> >& roots_,map<Lit,ClauseId>& units_, vector<int>& vars_, int numclauses_,
+  Z2M(Proof& P_,vec<vec<Lit> >& clauses_,vec<vec<Lit> >& roots_,
+      map<Lit,ClauseId>& units_, vector<int>& vars_, int numclauses_,
       int numvars_, parsed_clauses& pclauses_) :
     P(P_),
     clauses(clauses_),
@@ -534,7 +477,7 @@ int main(int argc, char** argv) {
 	zchaff = argv[i];
 	break;
       case 'h':
-	reportf("%s", doc);
+	cout << doc;
 	exit(0);
       }
     }
@@ -543,13 +486,11 @@ int main(int argc, char** argv) {
   Proof P;  // minisat proof ADT
   vec<vec<Lit> > clauses; // proof  clause database
   vec<vec<Lit> > roots; // root clauses
-   map<Lit,ClauseId> units; // map literal to corresponding unit clause id, if any
+  map<Lit,ClauseId> units; // map literal to corresponding unit clause id, if any
   int numvars = 0, numclauses = 0, conf_id;
   parsed_clauses* pclauses = new parsed_clauses(); 
   // first read CNF from original file and add to proof
-  gzFile in = (input == NULL) ? gzdopen(0, "rb") : gzopen(input, "rb");
-  parse_DIMACS(P, roots, in, pclauses, units, numvars, numclauses);
-  gzclose(in);
+  parse_DIMACS(P, roots, input, pclauses, units, numvars, numclauses);
 
   // then read resolvents from zchaff trace 
   vector<int> vars(numvars);   // vars[i] is pclauses idx for variable i
@@ -563,7 +504,7 @@ int main(int argc, char** argv) {
   delete pclauses;
   Proof* current = &P;
   if (check) { // quick check
-    reportf("Checking proof...\n");
+    cout << "Checking proof...\n";
     checkProof(current);
   }
   if (proof != NULL) current->save(proof); // save it
@@ -571,4 +512,3 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-//load "HolSatLib"; use "/home/hasan/Research_old/rsat/problems/taut.sml"; HolSatLib.ZSAT_TAUT_PROVE taut.add4_be;

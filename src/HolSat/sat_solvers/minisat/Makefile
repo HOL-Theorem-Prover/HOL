@@ -16,7 +16,7 @@ RCOBJS    = $(addsuffix r,  $(COBJS))
 EXEC      = minisat
 
 CXX       = g++
-CFLAGS    = -Wall -ffloat-store
+CFLAGS    = -Wall -ffloat-store -fno-strict-aliasing
 COPTIMIZE = -O3
 
 
@@ -55,23 +55,23 @@ clean:
 ## Linking rules (standard/profile/debug/release)
 $(EXEC): $(COBJS)
 	@echo Linking $(EXEC)
-	@$(CXX) $(COBJS) -lz -ggdb -Wall -o $@ 
+	@$(CXX) $(COBJS)  -ggdb -Wall -o $@ 
 
 $(EXEC)_profile: $(PCOBJS)
 	@echo Linking $@
-	@$(CXX) $(PCOBJS) -lz -ggdb -Wall -pg -o $@
+	@$(CXX) $(PCOBJS) -ggdb -Wall -pg -o $@
 
 $(EXEC)_debug:	$(DCOBJS)
 	@echo Linking $@
-	@$(CXX) $(DCOBJS) -lz -ggdb -Wall -o $@
+	@$(CXX) $(DCOBJS) -ggdb -Wall -o $@
 
 $(EXEC)_release: $(RCOBJS)
 	@echo Linking $@
-	@$(CXX) $(RCOBJS) -lz -Wall -o $@
+	@$(CXX) $(RCOBJS)  -Wall -o $@
 
 $(EXEC)_static: $(RCOBJS)
 	@echo Linking $@
-	@$(CXX) --static $(RCOBJS) -lz -Wall -o $@
+	@$(CXX) --static $(RCOBJS)  -Wall -o $@
 
 
 ## Make dependencies

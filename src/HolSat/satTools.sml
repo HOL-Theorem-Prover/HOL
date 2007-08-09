@@ -93,6 +93,7 @@ fun invokeSat sat_solver tm vc nr svm sva infile =
         in model3 end
     end
  end
+handle Io _ => NONE
 
 (*
 ** satCheck [l1,...,ln] t 
