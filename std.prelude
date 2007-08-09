@@ -145,7 +145,7 @@ val _ = if FileSys.access ("Holmakefile", [FileSys.A_READ]) then let
               (print "[extending loadPath with Holmakefile INCLUDES variable]\n";
                loadPath := !loadPath @ hmake_includes)
           end handle e => (print "[bogus Holmakefile in current directory \
-                                 \- ignoring it]\n");
+                                 \- ignoring it]\n";
                            TextIO.flushOut TextIO.stdErr;
                            ())
         else ()
