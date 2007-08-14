@@ -23,9 +23,4 @@ sig
   val simpl_conv       : thm list -> term -> thm
   val simplify         : thm list -> thm -> thm
 
-  val CONTEXT_REWRITE_RULE 
-     : term * term * term list * bool ref
-        -> {thms:thm list,congs: thm list, th:thm} 
-        -> thm
-
 end

@@ -492,10 +492,11 @@ fun mk_functional thy eqs =
      val finals = map row_of_pat patts2
      val originals = map (row_of_pat o #2) rows
      val new_rows = length finals - length originals
+     val clause_s = if new_rows = 1 then " clause " else " clauses "
      val _ = if new_rows > 0 
              then (msg ("\n  pattern completion has added "^
-                            Int.toString new_rows^
-                            " clauses to the original specification.");
+                            Int.toString new_rows^clause_s^
+                            "to the original specification.");
                    if !allow_new_clauses then () else 
                    err ("new clauses not allowed under current setting of "^
                         Lib.quote("Functional.allow_new_clauses")^" flag"))

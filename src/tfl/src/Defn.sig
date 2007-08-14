@@ -58,20 +58,4 @@ sig
 
   val SUC_TO_NUMERAL_DEFN_CONV_hook : (term -> thm) ref
 
-  (* Historical relics *)
-
-  val prim_wfrec_definition :
-        thry -> string
-             -> {R:term, functional:term}
-             -> {def:thm, corollary:thm, theory:thry}
-
-   val gen_wfrec_definition :
-         thry -> string
-              -> {R:term, eqs:term}
-              -> {rules : thm,
-                  TCs : term list list,
-                  full_pats_TCs : (term * term list) list,
-                  patterns : Functional.pattern list,
-                  theory:thry}
-
 end

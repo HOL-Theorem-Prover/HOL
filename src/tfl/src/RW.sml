@@ -211,16 +211,17 @@ val empty_simpls = RW{thms = [[]],  congs = [[]],
                       cong_net = Net.empty};
 
 fun dest_simpls (RW{thms, congs,...}) =
-   {rws = rev(flatten thms), congs = rev(flatten congs)};
+   {rws = rev(flatten thms), 
+    congs = rev(flatten congs)};
 
 
 fun add_rws (RW{thms,rw_net,congs, cong_net}) thl =
  RW{thms   = thl::thms,
-    congs  = congs, cong_net = cong_net,
+    congs  = congs, 
+  cong_net = cong_net,
     rw_net = itlist Net.insert
              (map (fn th => let val left = lhs(#2(strip_imp(concl th)))
-                            in  (left,  PRIM_RW_CONV th)
-                            end)
+                            in  (left,  PRIM_RW_CONV th) end)
                   (flatten (map MK_RULES_APART thl)))        rw_net}
  handle HOL_ERR _
  => raise RW_ERR "add_rws" "Unable to deal with input";
@@ -303,8 +304,7 @@ end end
  * a constant, but I don't currently check that.
  *---------------------------------------------------------------------------*)
 
-fun CONG_STEP (RW{cong_net,...}) tm =
-  Lib.trye hd (Net.match tm cong_net) tm;
+fun CONG_STEP (RW{cong_net,...}) tm = Lib.trye hd (Net.match tm cong_net) tm;
 
 
 (*----------------------------------------------------------------------------
@@ -494,32 +494,32 @@ fun simple cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 
 fun complex cnv (cps as {context as (cntxt,b),prover,simpls}) (ant,rst) =
 let val ant_frees = free_vars ant
+    val context_frees = free_varsl (map concl (fst context))
     val (vlist,ceqn) = strip_forall ant
     val (lhs,rhs) = dest_eq(snd(strip_imp ceqn))
     val (f,args) = (I##rev) (dest_combn lhs (length vlist))
     val _ = assert is_pabs f
     val (rhsv,_) = dest_combn rhs (length vlist)
     val vstrl = #1(strip_pabs f)
-    val vstrl1 = vstrl_variants ant_frees vstrl
+    val vstrl1 = vstrl_variants (union ant_frees context_frees) vstrl
     val ceqn' = subst (map (op|->) (zip args vstrl1)) ceqn
     val (L,(lhs,rhs)) = (I##dest_eq) (strip_imp ceqn')
     val outcome =
-     if aconv lhs rhs then NO_CHANGE (L,lhs)
-     else let val lhs_beta_maybe = 
-                     Conv.DEPTH_CONV GEN_BETA_CONV lhs
-                     handle HOL_ERR _ => REFL lhs
-              val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
-              val cps' =
-               case L of []  => cps
-                      |  _   => {context = (map ASSUME L @ cntxt,b),
-                                 prover  = prover,
-                                 simpls  = add_cntxt b simpls (map ASSUME L)}
-          in CHANGE(TRANS lhs_beta_maybe (cnv cps' lhs'))
-             handle HOL_ERR _ => if aconv lhs lhs' then NO_CHANGE (L,lhs)
-                                 else CHANGE lhs_beta_maybe
-                  | UNCHANGED => if aconv lhs lhs' then NO_CHANGE (L,lhs)
-                                 else CHANGE lhs_beta_maybe
-         end
+     if aconv lhs rhs then NO_CHANGE (L,lhs) else
+     let val lhs_beta_maybe = 
+               Conv.DEPTH_CONV GEN_BETA_CONV lhs handle HOL_ERR _ => REFL lhs
+         val lhs' = boolSyntax.rhs(concl lhs_beta_maybe)
+         val cps' = case L of [] => cps
+                    | otherwise => 
+                       {context = (map ASSUME L @ cntxt,b),
+                        prover  = prover,
+                        simpls  = add_cntxt b simpls (map ASSUME L)}
+     in CHANGE(TRANS lhs_beta_maybe (cnv cps' lhs'))
+        handle HOL_ERR _ => if aconv lhs lhs' then NO_CHANGE (L,lhs)
+                            else CHANGE lhs_beta_maybe
+             | UNCHANGED => if aconv lhs lhs' then NO_CHANGE (L,lhs)
+                            else CHANGE lhs_beta_maybe
+     end
 in
  case outcome
   of CHANGE th =>
@@ -528,16 +528,16 @@ in
           val gvstrl1 = list_mk_comb(g,vstrl1)
           val eq = SYM(DEPTH_CONV GEN_BETA_CONV gvstrl1
                        handle HOL_ERR _ => REFL gvstrl1)
-          val thm = TRANS th eq (* f vstrl1 = g vstrl1 *)
+          val th1 = TRANS th eq (* f vstrl1 = g vstrl1 *)
           val pairs = zip args vstrl1
-          fun generalize v th =
+          fun generalize v thm =
                 case assoc1 v pairs
-                 of SOME (_,tup) => pairTools.PGEN v tup th
+                 of SOME (_,tup) => pairTools.PGEN v tup thm
                   | NONE => raise RW_ERR "complex" "generalize"
-      in (CHANGE (itlist generalize vlist (itlist DISCH L thm)),
+      in (CHANGE (itlist generalize vlist (itlist DISCH L th1)),
           map (subst [rhsv |-> g]) rst)
       end
-   | _ => (outcome, map (subst [rhsv |-> f]) rst)
+   | otherwise => (outcome, map (subst [rhsv |-> f]) rst)
 end;
 
 
@@ -577,14 +577,13 @@ fun do_cong cnv cps th =
 fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
  case dest_term tm
   of COMB(Rator,Rand) =>
-     (do_cong cnv cps (CONG_STEP simpls tm)
-      handle UNCHANGED => raise UNCHANGED
-           | HOL_ERR _ =>
-               let val th = cnv cps Rator
-               in  MK_COMB (th, cnv cps Rand)
-                   handle UNCHANGED => AP_THM th Rand
-               end
-               handle UNCHANGED => AP_TERM Rator (cnv cps Rand))
+      (do_cong cnv cps (CONG_STEP simpls tm)
+       handle UNCHANGED => raise UNCHANGED
+          | HOL_ERR _ =>
+              let val th = cnv cps Rator
+              in MK_COMB (th, cnv cps Rand) handle UNCHANGED => AP_THM th Rand
+              end
+              handle UNCHANGED => AP_TERM Rator (cnv cps Rand))
    | LAMB(Bvar,Body) =>
       let val Bth = cnv cps Body
       in ABS Bvar Bth
@@ -598,7 +597,7 @@ fun SUB_QCONV cnv (cps as {context,prover,simpls}) tm =
           in TRANS (TRANS th1 eq_thm') th2
           end
       end
-  | _ => raise UNCHANGED     (* Constants and  variables *);
+   | otherwise => raise UNCHANGED     (* Constants and  variables *);
 
 
 fun DEPTH_QCONV cnv cps tm =

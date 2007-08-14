@@ -441,116 +441,55 @@ fun extraction_thms constset thy =
  in (case_rewrites, case_congs@read_congs())
  end;
 
-fun extract FV context_congs f (proto_def,WFR) =
+(*---------------------------------------------------------------------------
+         Capturing termination conditions.
+ ----------------------------------------------------------------------------*)
+
+
+local fun !!v M = mk_forall(v, M)
+      val mem = Lib.op_mem aconv
+      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
+in
+fun solver (restrf,f,G,nref) _ context tm =
+  let val globals = f::G  (* not to be generalized *)
+      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
+      val rcontext = rev context
+      val antl = case rcontext of [] => []
+                               | _   => [list_mk_conj(map concl rcontext)]
+      val (R,arg,pat) = wfrecUtils.dest_relation tm
+      val TC = genl(list_mk_imp(antl, tm))
+  in
+     if can(find_term (aconv restrf)) arg
+     then (nref := true; raise ERR "solver" "nested function")
+     else let val _ = if can(find_term (aconv f)) TC
+                      then nref := true else ()
+          in case rcontext
+              of [] => SPEC_ALL(ASSUME TC)
+               | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
+          end
+  end
+end;
+
+fun extract FV congs f (proto_def,WFR) =
  let val R = rand WFR
      val CUT_LEM = ISPECL [f,R] relationTheory.RESTRICT_LEMMA
      val restr_fR = rator(rator(lhs(snd(dest_imp (concl (SPEC_ALL CUT_LEM))))))
      fun mk_restr p = mk_comb(restr_fR, p)
  in fn (p,th) =>
     let val nested_ref = ref false
-        val th' = CONTEXT_REWRITE_RULE
-                   (mk_restr p, f,FV@free_vars(concl th), nested_ref)
-                   {thms=[CUT_LEM], congs=context_congs, th=th}
+        open RW
+        val th' = CONV_RULE 
+                   (Rewrite Fully
+                      (Pure [CUT_LEM],
+                       Context ([],DONT_ADD),
+                       Congs congs,
+                       Solver (solver (mk_restr p, f,
+                                       FV@free_vars(concl th), nested_ref))))
+                   th
     in
       (th', Lib.op_set_diff aconv (hyp th') [proto_def,WFR], !nested_ref)
     end
 end;
-
-
-(*---------------------------------------------------------------------------
- * Pair patterns with termination conditions. The full list of patterns for
- * a definition is merged with the TCs arising from the user-given clauses.
- * There can be fewer clauses than the full list, if the user omitted some
- * cases. This routine is used to prepare input for mk_induction.
- *---------------------------------------------------------------------------*)
-
-fun merge full_pats TCs =
-let fun insert (p,TCs) =
-      let fun insrt ((x as (h,[]))::rst) =
-                 if (aconv p h) then (p,TCs)::rst else x::insrt rst
-            | insrt (x::rst) = x::insrt rst
-            | insrt[] = raise ERR"merge.insert" "pat not found"
-      in insrt end
-    fun pass ([],ptcl_final) = ptcl_final
-      | pass (ptcs::tcl, ptcl) = pass(tcl, insert ptcs ptcl)
-in
-  pass (TCs, map (fn p => (p,[])) full_pats)
-end;
-
-
-(*----------------------------------------------------------------------------
-
-                     PRINCIPLES OF DEFINITION
-
- ----------------------------------------------------------------------------*)
-
-
-(*---------------------------------------------------------------------------*
- * This basic principle of definition takes a functional M and a relation R  *
- * and specializes the following theorem                                     *
- *                                                                           *
- *    |- !M R f. (f = WFREC R M) ==> WF R ==> !x. f x = M (f%R,x) x          *
- *                                                                           *
- * to them (getting "th1", say). Then we make the definition "f = WFREC R M" *
- * and instantiate "th1" to the constant "f" (getting th2). Then we use the  *
- * definition to delete the first antecedent to th2. Hence the result in     *
- * the "corollary" field is                                                  *
- *                                                                           *
- *    |-  WF R ==> !x. f x = M (f%R,x) x                                     *
- *                                                                           *
- *---------------------------------------------------------------------------*)
-
-fun prim_wfrec_definition thy name {R, functional} =
- let val (Bvar,_) = dest_abs functional
-     val (Name,_) = dest_var Bvar  (* Intended name of definition *)
-     val cor1 = ISPEC functional relationTheory.WFREC_COROLLARY
-     val cor2 = ISPEC R cor1
-     val f_eq_WFREC_R_M = (fst o dest_imp o snd o dest_forall o concl) cor2
-     val (lhs,rhs) = dest_eq f_eq_WFREC_R_M
-     val (_,Ty) = dest_var lhs
-     val def_term = mk_eq(mk_var(Name,Ty),rhs)
-     val (def_thm,thy1) = make_definition thy name def_term
-     val f = Lib.trye hd (snd (strip_comb (concl def_thm)))
-     val cor3 = ISPEC f cor2
- in
- {theory = thy1, def=def_thm, corollary=MP cor3 def_thm}
- end
- handle HOL_ERR _ => raise ERR"prim_wfrec_definition" "";
-
-
-(*--------------------------------------------------------------------------*
- * This is a wrapper for "prim_wfrec_definition": it builds a functional,   *
- * calls "prim_wfrec_definition", then specializes the result. This gives   *
- * a list of rewrite rules where the right hand sides are quite ugly, so we *
- * simplify to get rid of the case statements. In essence, this function    *
- * performs pre- and post-processing for patterns. As well, after           *
- * simplification, termination conditions are extracted.                    *
- *--------------------------------------------------------------------------*)
-
-fun gen_wfrec_definition thy nm {R, eqs} =
- let val {functional,pats} = mk_functional thy eqs
-     val given_pats = givens pats
-     val {def,corollary,theory} =
-           prim_wfrec_definition thy nm {R=R, functional=functional}
-     val (f,_) = dest_eq(concl def)
-     val WFR         = fst(dest_imp(concl corollary))
-     val corollary'  = UNDISCH corollary  (* put WF R on assums *)
-     val corollaries = map (C SPEC corollary') given_pats
-     val eqs_consts  = find_terms is_const functional
-     val (case_rewrites,context_congs) = extraction_thms eqs_consts thy
-     val corollaries'  = map (simplify case_rewrites) corollaries
-     val Xtract        = extract [] context_congs f (concl def,WFR)
-     val (rules,TCs,_) = unzip3 (map Xtract (zip given_pats corollaries'))
-     val mk_cond_rule  = FILTER_DISCH_ALL(not o aconv WFR)
-     val rules1        = LIST_CONJ(map mk_cond_rule rules)
-     val TCs1          = map (map gen_all) TCs (* for induction *)
- in
-   {theory = theory,   (* holds def, if it's needed *)
-    rules = rules1,
-    full_pats_TCs = merge (map pat_of pats) (zip given_pats TCs1),
-    TCs = TCs1,
-    patterns = pats}
- end;
 
 
 (*---------------------------------------------------------------------------*
@@ -587,20 +526,19 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
      val given_pats = givens pats
      val corollaries = map (C SPEC corollary') given_pats
      val eqns_consts = mk_set(find_terms is_const functional)
-     val (case_rewrites,context_congs) = extraction_thms eqns_consts thy
+     val (case_rewrites,congs) = extraction_thms eqns_consts thy
      val RW = REWRITES_CONV (add_rewrites empty_rewrites 
                              (literal_case_THM::case_rewrites))
      val rule = unprotect_thm o
                 RIGHT_CONV_RULE
                    (LIST_BETA_CONV THENC REPEATC (RW THENC LIST_BETA_CONV))
-(* OLD *) val corollaries' = map rule corollaries
-(* NEW *) val CONST_EQ_RULE = CONV_RULE (DEPTH_CONV const_eq_conv)
+     val corollaries' = map rule corollaries
+     val CONST_EQ_RULE = CONV_RULE (DEPTH_CONV const_eq_conv)
      fun TRIV_PAT_ELIM (x,y,z) = 
          (PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x),y,z)
      fun TPAT_ELIM x = PURE_REWRITE_RULE [bool_case_thm] (CONST_EQ_RULE x)
      val corollaries'' = map TPAT_ELIM corollaries'
-(* NEW val corollaries' = map (CONST_EQ_RULE o rule) corollaries *)
-     val Xtract = extract [R1] context_congs f (proto_def,WFR)
+     val Xtract = extract [R1] congs f (proto_def,WFR)
  in
     {proto_def=proto_def,
      SV=Listsort.sort Term.compare SV,
@@ -610,6 +548,27 @@ fun gen_wfrec_eqns thy const_eq_conv eqns =
  end;
 
 fun wfrec_eqns thy eqns = gen_wfrec_eqns thy (!const_eq_ref) eqns;
+
+
+(*---------------------------------------------------------------------------
+ * Pair patterns with termination conditions. The full list of patterns for
+ * a definition is merged with the TCs arising from the user-given clauses.
+ * There can be fewer clauses than the full list, if the user omitted some
+ * cases. This routine is used to prepare input for mk_induction.
+ *---------------------------------------------------------------------------*)
+
+fun merge full_pats TCs =
+let fun insert (p,TCs) =
+      let fun insrt ((x as (h,[]))::rst) =
+                 if (aconv p h) then (p,TCs)::rst else x::insrt rst
+            | insrt (x::rst) = x::insrt rst
+            | insrt[] = raise ERR"merge.insert" "pat not found"
+      in insrt end
+    fun pass ([],ptcl_final) = ptcl_final
+      | pass (ptcs::tcl, ptcl) = pass(tcl, insert ptcs ptcl)
+in
+  pass (TCs, map (fn p => (p,[])) full_pats)
+end;
 
 (*---------------------------------------------------------------------------*
  * Define the constant after extracting the termination conditions. The      *
@@ -1249,36 +1208,40 @@ fun names_of (AQ(_,tm)) S = union (map (fst o Term.dest_var) (all_vars tm)) S
   | names_of (QIDENT(_,_,_)) S = S
 end;
 
-local val v_vary = vary "v"
-      fun tm_exp tm S =
-        case dest_term tm
-         of VAR(s,Ty) =>
-              if wildcard s
-              then let val (s',S') = v_vary S in (Term.mk_var(s',Ty),S') end
-              else (tm,S)
-         | CONST _  => (tm,S)
-         | COMB(Rator,Rand) =>
-             let val (Rator',S')  = tm_exp Rator S
-                 val (Rand', S'') = tm_exp Rand S
-             in (mk_comb(Rator', Rand'), S'')
-             end
-         | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
-       open Absyn
+local 
+  val v_vary = vary "v"
+  fun tm_exp tm S =
+    case dest_term tm
+    of VAR(s,Ty) => 
+         if wildcard s then 
+           let val (s',S') = v_vary S in (Term.mk_var(s',Ty),S') end
+         else (tm,S)
+     | CONST _  => (tm,S)
+     | COMB(Rator,Rand) =>
+        let val (Rator',S')  = tm_exp Rator S
+            val (Rand', S'') = tm_exp Rand S
+        in (mk_comb(Rator', Rand'), S'')
+        end
+     | LAMB _ => raise ERR "tm_exp" "abstraction in pattern"
+  open Absyn
 in
-fun exp (AQ(locn,tm)) S = let val (tm',S') = tm_exp tm S in (AQ(locn,tm'),S') end
+fun exp (AQ(locn,tm)) S = 
+      let val (tm',S') = tm_exp tm S in (AQ(locn,tm'),S') end
   | exp (IDENT (p as (locn,s))) S =
       if wildcard s
         then let val (s',S') = v_vary S in (IDENT(locn,s'), S') end
         else (IDENT p, S)
   | exp (QIDENT (p as (locn,s,_))) S =
-      if wildcard s then raise ERRloc "exp" locn "wildcard in long id. in pattern"
-      else (QIDENT p, S)
+      if wildcard s 
+       then raise ERRloc "exp" locn "wildcard in long id. in pattern"
+       else (QIDENT p, S)
   | exp (APP(locn,M,N)) S =
       let val (M',S')   = exp M S
           val (N', S'') = exp N S'
       in (APP (locn,M',N'), S'')
       end
-  | exp (TYPED(locn,M,pty)) S = let val (M',S') = exp M S in (TYPED(locn,M',pty),S') end
+  | exp (TYPED(locn,M,pty)) S = 
+      let val (M',S') = exp M S in (TYPED(locn,M',pty),S') end
   | exp (LAM(locn,_,_)) _ = raise ERRloc "exp" locn "abstraction in pattern"
 
 fun expand_wildcards asy (asyl,S) =
@@ -1286,28 +1249,34 @@ fun expand_wildcards asy (asyl,S) =
 end;
 
 
-local fun dest_pvar (Absyn.VIDENT(_,s)) = s
-        | dest_pvar other = raise ERRloc "munge" (Absyn.locn_of_vstruct other) "dest_pvar"
-      fun dest_atom tm = (dest_const tm handle HOL_ERR _ => dest_var tm);
-      fun dest_head (Absyn.AQ(_,tm)) = fst(dest_atom tm)
-        | dest_head (Absyn.IDENT(_,s)) = s
-        | dest_head (Absyn.TYPED(_,a,_)) = dest_head a
-        | dest_head (Absyn.QIDENT(locn,_,_)) = raise ERRloc "dest_head" locn "qual. ident."
-        | dest_head (Absyn.APP(locn,_,_))    = raise ERRloc "dest_head" locn "app. node"
-        | dest_head (Absyn.LAM(locn,_,_))    = raise ERRloc "dest_head" locn "lam. node"
-      fun strip_tyannote0 acc absyn =
-          case absyn of
-            Absyn.TYPED(locn, a, ty) => strip_tyannote0 ((ty,locn)::acc) a
-          | x => (List.rev acc, x)
-      val strip_tyannote = strip_tyannote0 []
-      fun list_mk_tyannote(tyl,a) =
-          List.foldl (fn ((ty,locn),t) => Absyn.TYPED(locn,t,ty)) a tyl
+local 
+  fun dest_pvar (Absyn.VIDENT(_,s)) = s
+    | dest_pvar other = raise ERRloc "munge" (Absyn.locn_of_vstruct other) 
+                                     "dest_pvar"
+  fun dest_atom tm = (dest_const tm handle HOL_ERR _ => dest_var tm);
+  fun dest_head (Absyn.AQ(_,tm)) = fst(dest_atom tm)
+    | dest_head (Absyn.IDENT(_,s)) = s
+    | dest_head (Absyn.TYPED(_,a,_)) = dest_head a
+    | dest_head (Absyn.QIDENT(locn,_,_)) = 
+            raise ERRloc "dest_head" locn "qual. ident."
+    | dest_head (Absyn.APP(locn,_,_)) = 
+            raise ERRloc "dest_head" locn "app. node"
+    | dest_head (Absyn.LAM(locn,_,_)) = 
+            raise ERRloc "dest_head" locn "lam. node"
+  fun strip_tyannote0 acc absyn =
+      case absyn of
+        Absyn.TYPED(locn, a, ty) => strip_tyannote0 ((ty,locn)::acc) a
+      | x => (List.rev acc, x)
+  val strip_tyannote = strip_tyannote0 []
+  fun list_mk_tyannote(tyl,a) =
+      List.foldl (fn ((ty,locn),t) => Absyn.TYPED(locn,t,ty)) a tyl
 in
 fun munge eq (eqs,fset,V) =
  let val (vlist,body) = Absyn.strip_forall eq
      val (lhs0,rhs)   = Absyn.dest_eq body
-     val   _          = if exists wildcard (names_of rhs [])
-                        then raise ERRloc "munge" (Absyn.locn_of_absyn rhs) "wildcards on rhs" else ()
+     val   _          = if exists wildcard (names_of rhs []) then 
+                         raise ERRloc "munge" (Absyn.locn_of_absyn rhs) 
+                                      "wildcards on rhs" else ()
      val (tys, lhs)   = strip_tyannote lhs0
      val (f,pats)     = Absyn.strip_app lhs
      val (pats',V')   = rev_itlist expand_wildcards pats
@@ -1349,12 +1318,13 @@ fun parse_defn absyn0 =
  end;
 
 fun Hol_defn bindstem q =
-    let val absyn0 = Parse.Absyn q
-        val loc = Absyn.locn_of_absyn absyn0
-    in
-        mk_defn bindstem (fst (parse_defn absyn0))
-          handle e => raise (wrap_exn_loc "Defn" "Hol_defn" loc e)
-    end
+ let val absyn0 = Parse.Absyn q
+     val eqns = fst (parse_defn absyn0)
+ in
+  mk_defn bindstem eqns
+  handle e => raise wrap_exn_loc "Defn" "Hol_defn" 
+                       (Absyn.locn_of_absyn absyn0) e
+ end;
 
 fun Hol_Rdefn bindstem Rquote eqs_quote =
   let val defn = Hol_defn bindstem eqs_quote

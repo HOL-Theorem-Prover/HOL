@@ -145,42 +145,4 @@ fun LEFT_EXISTS thm =
   end;
 
 
-(*---------------------------------------------------------------------------
-         Capturing termination conditions.
- ----------------------------------------------------------------------------*)
-
-
-local fun !!v M = mk_forall(v, M)
-      val mem = Lib.op_mem aconv
-      fun set_diff a b = Lib.filter (fn x => not (mem x b)) a
-in
-fun solver (restrf,f,G,nref) simps context tm =
-  let val globals = f::G  (* not to be generalized *)
-      fun genl tm = itlist !! (set_diff (rev(free_vars tm)) globals) tm
-      val rcontext = rev context
-      val antl = case rcontext of [] => []
-                               | _   => [list_mk_conj(map concl rcontext)]
-      val (R,arg,pat) = wfrecUtils.dest_relation tm
-      val TC = genl(list_mk_imp(antl, tm))
-  in
-     if can(find_term (aconv restrf)) arg
-     then (nref := true; raise ERR "solver" "nested function")
-     else let val _ = if can(find_term (aconv f)) TC
-                      then nref := true else ()
-          in case rcontext
-              of [] => SPEC_ALL(ASSUME TC)
-               | _  => MP (SPEC_ALL (ASSUME TC)) (LIST_CONJ rcontext)
-          end
-  end
-end;
-
-
-fun CONTEXT_REWRITE_RULE (restrf,f,G,nr) {thms,congs,th} =
-  let open RW
-  in
-     REWRITE_RULE Fully
-         (Pure thms, Context([],DONT_ADD), Congs congs,
-          Solver(solver (restrf,f,G,nr))) th
-  end;
-
 end (* Rules *)
