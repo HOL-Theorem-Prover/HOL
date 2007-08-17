@@ -1005,40 +1005,78 @@ val PROG_FALSE_POST = store_thm("PROG_FALSE_POST",
 
 val PROG_STRENGTHEN_PRE = store_thm("PROG_STRENGTHEN_PRE",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P P' cs C Q Z.
-        SEP_IMP P' P /\ PROG x P cs C Q Z ==> PROG x P' cs C Q Z``,
+      !P cs C Q Z.
+        PROG x P cs C Q Z ==> 
+        !P'. SEP_IMP P' P ==> PROG x P' cs C Q Z``,
   INIT_TAC \\ REWRITE_TAC [PROG_def] \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC (UNDISCH (GPROG_STRENGTHEN_PRE'))
   \\ Q.EXISTS_TAC `P` \\ ASM_SIMP_TAC std_ss []);
 
+val PROG_PART_STRENGTHEN_PRE = store_thm("PROG_PART_STRENGTHEN_PRE",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      !P P1 cs C Q Z.
+        PROG x (P1 * P) cs C Q Z ==> 
+        !P'. SEP_IMP P' P ==> PROG x (P1 * P') cs C Q Z``,
+  INIT_TAC \\ REPEAT STRIP_TAC
+  \\ (MATCH_MP_TAC o GEN_ALL o REWRITE_RULE [AND_IMP_INTRO] o SPEC_ALL o 
+      CONV_RULE RIGHT_IMP_FORALL_CONV o SPEC_ALL o 
+      UNDISCH o RES_SPEC') PROG_STRENGTHEN_PRE
+  \\ Q.EXISTS_TAC `P1 * P` \\ ASM_REWRITE_TAC []
+  \\ MATCH_MP_TAC SEP_IMP_STAR \\ ASM_REWRITE_TAC [SEP_IMP_REFL]);
+
 val PROG_WEAKEN_POST1 = store_thm("PROG_WEAKEN_POST1",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P cs C Q Q' Z.
-        SEP_IMP Q Q' /\ PROG x P cs C Q Z ==> PROG x P cs C Q' Z``,
+      !P cs C Q Z.
+        PROG x P cs C Q Z ==> 
+        !Q'. SEP_IMP Q Q' ==> PROG x P cs C Q' Z``,
   INIT_TAC \\ REWRITE_TAC [PROG_def] \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC (UNDISCH (GPROG_WEAKEN_POST'))
   \\ Q.EXISTS_TAC `Q` \\ ASM_SIMP_TAC std_ss []);
 
+val PROG_PART_WEAKEN_POST1 = store_thm("PROG_PART_WEAKEN_POST1",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      !P Q1 cs C Q Z.
+        PROG x P cs C (Q1 * Q) Z ==> 
+        !Q'. SEP_IMP Q Q' ==> PROG x P cs C (Q1 * Q') Z``,
+  INIT_TAC \\ REPEAT STRIP_TAC
+  \\ (MATCH_MP_TAC o GEN_ALL o REWRITE_RULE [AND_IMP_INTRO] o SPEC_ALL o 
+      CONV_RULE RIGHT_IMP_FORALL_CONV o SPEC_ALL o 
+      UNDISCH o RES_SPEC') PROG_WEAKEN_POST1
+  \\ Q.EXISTS_TAC `Q1 * Q` \\ ASM_REWRITE_TAC []
+  \\ MATCH_MP_TAC SEP_IMP_STAR \\ ASM_REWRITE_TAC [SEP_IMP_REFL]);
+
 val PROG_WEAKEN_POST = store_thm("PROG_WEAKEN_POST",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !P cs C Q Q' f Z.
-        SEP_IMP Q' Q'' /\ PROG x P cs C Q ((Q',f) INSERT Z) ==> 
-        PROG x P cs C Q ((Q'',f) INSERT Z)``,
+        PROG x P cs C Q ((Q',f) INSERT Z) ==> 
+        !Q''. SEP_IMP Q' Q'' ==> PROG x P cs C Q ((Q'',f) INSERT Z)``,
   INIT_TAC \\ REWRITE_TAC [PROG_def] \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [INSERT_COMM]
   \\ MATCH_MP_TAC (UNDISCH (GPROG_WEAKEN_POST'))
   \\ ONCE_REWRITE_TAC [INSERT_COMM]
   \\ Q.EXISTS_TAC `Q'` \\ ASM_SIMP_TAC std_ss [])
 
+val PROG_PART_WEAKEN_POST = store_thm("PROG_PART_WEAKEN_POST",
+  ``!((x:('a,'b,'c)processor)::PROCESSORS). 
+      !P cs C Q Q' f Z.
+        PROG x P cs C Q ((Q1 * Q',f) INSERT Z) ==> 
+        !Q''. SEP_IMP Q' Q'' ==> PROG x P cs C Q ((Q1 * Q'',f) INSERT Z)``,
+  INIT_TAC \\ REPEAT STRIP_TAC
+  \\ (MATCH_MP_TAC o GEN_ALL o REWRITE_RULE [AND_IMP_INTRO] o SPEC_ALL o 
+      CONV_RULE RIGHT_IMP_FORALL_CONV o SPEC_ALL o 
+      UNDISCH o RES_SPEC') PROG_WEAKEN_POST
+  \\ Q.EXISTS_TAC `Q1 * Q'` \\ ASM_REWRITE_TAC []
+  \\ MATCH_MP_TAC SEP_IMP_STAR \\ ASM_REWRITE_TAC [SEP_IMP_REFL]);
+
 val PROG_HIDE_PRE = store_thm("PROG_HIDE_PRE",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
       !P P' cs C Q Z. 
         (!y:'var. PROG x (P * P' y) cs C Q Z) = PROG x (P * ~ P') cs C Q Z``,
   INIT_TAC
-  \\ SIMP_TAC (bool_ss++sep_ss) [PROG_def,GPROG_def,BIGD_INSERT,BIGD_EMPTY] 
+  \\ SIMP_TAC (bool_ss++sep_ss) 
+      [PROG_def,GPROG_def,BIGD_INSERT,BIGD_EMPTY] 
   \\ MOVE_STAR_TAC `p*p'*m*pp` `p*m*pp*p'`
-  \\ ASM_SIMP_TAC std_ss [GSYM RUN_HIDE_PRE']
-  \\ METIS_TAC []);
+  \\ ASM_SIMP_TAC std_ss [GSYM RUN_HIDE_PRE'] \\ METIS_TAC []);
 
 val PROG_HIDE_POST1 = store_thm("PROG_HIDE_POST1",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
@@ -1146,22 +1184,24 @@ val PROG_COMPOSE_0 = store_thm("PROG_COMPOSE_0",
 
 val PROG_COMPOSE_I = store_thm("PROG_COMPOSE_I",
   ``!((x:('a,'b,'c)processor)::PROCESSORS). 
-      !P code C Q1 Q2 Q4 Q5 Q6 Z1 Z2.
-        PROG x P code C Q1 ((Q2 * Q5,I) INSERT Z1) ==>
-        PROG x (Q2 * Q6) code C Q4 Z2 ==>
+      !P code C1 C2 Q1 Q2 Q4 Q5 Q6 Z1 Z2.
+        PROG x (Q2 * Q6) code C2 Q4 Z2 ==>
+        PROG x P code C1 Q1 ((Q2 * Q5,I) INSERT Z1) ==>
         SEP_IMP Q5 Q6 ==>
-        PROG x P code C (Q1 \/ Q4) (Z1 UNION Z2)``,
+        PROG x P code (C1 UNION C2) (Q1 \/ Q4) (Z1 UNION Z2)``,
   INIT_TAC \\ ASM_SIMP_TAC bool_ss [PROG_def,GSYM GPROG_MERGE_POST']
   \\ ONCE_REWRITE_TAC [INSERT_COMM] \\ REPEAT STRIP_TAC
   \\ `SEP_IMP (Q2 * Q5) (Q2 * Q6)` by METIS_TAC [SEP_IMP_STAR,SEP_IMP_REFL]
   \\ IMP_RES_TAC GPROG_WEAKEN_POST'
   \\ REPEAT (Q.PAT_ASSUM `!g.b` (fn th => ALL_TAC))
+  \\ `!x. x INSERT C1 UNION C2 = (x INSERT C1) UNION (x INSERT C2)` by 
+     (REWRITE_TAC [EXTENSION,IN_UNION,IN_INSERT] \\ METIS_TAC [])
   \\ `!x y. x INSERT y INSERT Z1 UNION Z2 = 
             (y INSERT Z1) UNION (x INSERT Z2)` by 
      (REWRITE_TAC [EXTENSION,IN_UNION,IN_INSERT] \\ METIS_TAC [])
   \\ ASM_REWRITE_TAC []
   \\ (MATCH_MP_TAC o REWRITE_RULE [UNION_EMPTY,UNION_IDEMPOT] o GEN_ALL o
-      Q.SPECL [`Y`,`{}`,`{x}`,`C`,`C`,`Z1`,`Z2`] o UNDISCH) GPROG_COMPOSE'
+      Q.SPECL [`Y`,`{}`,`{x}`,`C1`,`C2`,`Z1`,`Z2`] o UNDISCH) GPROG_COMPOSE'
   \\ Q.EXISTS_TAC `(Q2 * Q6,I)` \\ ASM_REWRITE_TAC []
   \\ ASM_REWRITE_TAC [GSYM (ONCE_REWRITE_RULE [UNION_COMM] INSERT_SING_UNION)]);
 

@@ -3,7 +3,7 @@ struct
 
 (*
   quietdec := true;
-  val armDir = concat Globals.HOLDIR "/examples/elliptic/arm";
+  val armDir = concat Globals.HOLDIR "/examples/ARM/v4";
   val yaccDir = concat Globals.HOLDIR "/tools/mlyacc/mlyacclib";
   loadPath := !loadPath @ [armDir,yaccDir];
 *)
@@ -42,9 +42,13 @@ fun dest_ARM_PROG tm = let
   val (p,P) = dest_comb p
   in (P,c,C,Q,Z) end;
 
-fun pre_ARM_PROG tm   = let val (t,_,_,_,_) = dest_ARM_PROG tm in t end;
-fun post1_ARM_PROG tm = let val (_,_,_,t,_) = dest_ARM_PROG tm in t end;
-fun post_ARM_PROG tm  = let val (_,_,_,_,t) = dest_ARM_PROG tm in t end;
+fun pre_ARM_PROG tm       = let val (t,_,_,_,_) = dest_ARM_PROG tm in t end;
+fun code_ARM_PROG tm      = let val (_,t,_,_,_) = dest_ARM_PROG tm in t end;
+fun code_set_ARM_PROG tm  = let val (_,_,t,_,_) = dest_ARM_PROG tm in t end;
+fun post1_ARM_PROG tm     = let val (_,_,_,t,_) = dest_ARM_PROG tm in t end;
+fun post_ARM_PROG tm      = let val (_,_,_,_,t) = dest_ARM_PROG tm in t end;
+fun post2_ARM_PROG tm = 
+ (fst o dest_pair o snd o dest_comb o fst o dest_comb o post_ARM_PROG) tm;
 
 val ARM_PROG_PRE_CONV = RATOR_CONV o RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV;
 val ARM_PROG_CODE_CONV = RATOR_CONV o RATOR_CONV o RAND_CONV;
@@ -55,6 +59,7 @@ val ARM_PROG_POST_CONV = RAND_CONV; (* needs to be smarter *)
 fun PRE_CONV_RULE c = CONV_RULE (ARM_PROG_PRE_CONV c);
 fun CODE_CONV_RULE c = CONV_RULE (ARM_PROG_CODE_CONV c);
 fun POST1_CONV_RULE c = CONV_RULE (ARM_PROG_POST1_CONV c);
+fun POST2_CONV_RULE c = CONV_RULE (ARM_PROG_POST2_CONV c);
 fun POST_CONV_RULE c = CONV_RULE (ARM_PROG_POST2_CONV c);
 
 fun PRE_MOVE_STAR t1 t2 = CONV_RULE (ARM_PROG_PRE_CONV (MOVE_STAR_CONV t1 t2));
@@ -71,6 +76,10 @@ val SND_PROG2 = snd o SPLIT_PROG2;
 
 (* -- simpsets -- *)
 
+val n2w_x_eq_0w = prove(
+  ``1073741824w = 0w:word30``,
+  ONCE_REWRITE_TAC [GSYM n2w_mod] \\ SIMP_TAC (std_ss++SIZES_ss) []);
+
 val armINST_ss = rewrites 
   [SND,FST,ADDR_MODE1_VAL_def,ADDR_MODE1_CMD_def,ADDR_MODE2_CASES',PASS_CASES,emp_STAR];
 
@@ -82,7 +91,8 @@ val setINC_ss = rewrites
    setINC_def,wLENGTH_def,LENGTH,word_add_n2w,setADD_CLAUSES];
 
 val compose_ss = simpLib.merge_ss [setINC_ss,pcINC_ss,rewrites 
-  [UNION_EMPTY,setINC_CLAUSES,setSTAR_CLAUSES,APPEND,wLENGTH_def,LENGTH,F_STAR]];
+  [UNION_EMPTY,setINC_CLAUSES,setSTAR_CLAUSES,APPEND,
+   wLENGTH_def,LENGTH,F_STAR,n2w_x_eq_0w]];
 
 (* -- frame -- *)
 
@@ -101,19 +111,42 @@ fun HIDE_PRE th = let
 
 val HIDE_POST1_LEMMA = 
   (GEN_ALL o RW [emp_STAR] o Q.INST [`Q`|->`emp`] o SPEC_ALL) ARM_PROG_HIDE_POST1
-fun HIDE_POST1 th = 
-  MATCH_MP ARM_PROG_HIDE_POST1 th handle e => MATCH_MP HIDE_POST1_LEMMA th;
- 
+fun HIDE_POST1 th = let
+  val (_,_,_,q,_) = dest_ARM_PROG (concl th)
+  val (tm,lemma) = (snd (dest_STAR q),ARM_PROG_HIDE_POST1)
+                   handle e =>(q,HIDE_POST1_LEMMA)
+  in if is_SEP_HIDE (fst (dest_comb tm))
+     then raise ERR "HIDE_POST1" "Has '~' already."
+     else MATCH_MP lemma th end;
+
 val HIDE_POST_LEMMA = 
   (GEN_ALL o RW [emp_STAR] o Q.INST [`Q'`|->`emp`] o SPEC_ALL) ARM_PROG_HIDE_POST
-fun HIDE_POST th = 
-  MATCH_MP ARM_PROG_HIDE_POST th handle e => MATCH_MP HIDE_POST_LEMMA th;
+fun HIDE_POST th = let
+  val (_,_,_,_,q) = dest_ARM_PROG (concl th)
+  val q = (fst o dest_pair o snd o dest_comb o fst o dest_comb) q
+  val (tm,lemma) = (snd (dest_STAR q),ARM_PROG_HIDE_POST)
+                   handle e =>(q,HIDE_POST_LEMMA)
+  in if is_SEP_HIDE (fst (dest_comb tm))
+     then raise ERR "HIDE_POST" "Has '~' already."
+     else MATCH_MP lemma th end;
 
 (* -- move out e.g. `R a` will do ``R b y * R a x * R c z`` -> ``R b y * R c z * R a x`` -- *)
 
 fun MOVE_PRE   t = PRE_CONV_RULE (MOVE_OUT_CONV t);
-fun MOVE_POST  t = POST_CONV_RULE (MOVE_OUT_CONV t);
 fun MOVE_POST1 t = POST1_CONV_RULE (MOVE_OUT_CONV t);
+fun MOVE_POST  t = POST2_CONV_RULE (MOVE_OUT_CONV t);
+
+fun MOVE_PREL   t = PRE_CONV_RULE (MOVE_OUT_LIST_CONV t);
+fun MOVE_POST1L t = POST1_CONV_RULE (MOVE_OUT_LIST_CONV t);
+fun MOVE_POSTL  t = POST2_CONV_RULE (MOVE_OUT_LIST_CONV t);
+
+fun MOVE_PRE_TERM   t = PRE_CONV_RULE (MOVE_OUT_TERM_CONV t);
+fun MOVE_POST1_TERM t = POST1_CONV_RULE (MOVE_OUT_TERM_CONV t);
+fun MOVE_POST_TERM  t = POST2_CONV_RULE (MOVE_OUT_TERM_CONV t);
+
+fun MOVE_PREL_TERM   t = PRE_CONV_RULE (MOVE_OUT_LIST_TERM_CONV t);
+fun MOVE_POST1L_TERM t = POST1_CONV_RULE (MOVE_OUT_LIST_TERM_CONV t);
+fun MOVE_POSTL_TERM  t = POST2_CONV_RULE (MOVE_OUT_LIST_TERM_CONV t);
 
 (* -- auto hide methods -- *)
 
@@ -124,6 +157,10 @@ fun GENERIC_AUTO_HIDE r c [] th = th
 val AUTO_HIDE_PRE   = GENERIC_AUTO_HIDE HIDE_PRE   MOVE_PRE;
 val AUTO_HIDE_POST  = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST;
 val AUTO_HIDE_POST1 = GENERIC_AUTO_HIDE HIDE_POST1 MOVE_POST1;
+
+val AUTO_HIDE_PRE_TERM   = GENERIC_AUTO_HIDE HIDE_PRE   MOVE_PRE_TERM;
+val AUTO_HIDE_POST_TERM  = GENERIC_AUTO_HIDE HIDE_POST  MOVE_POST_TERM;
+val AUTO_HIDE_POST1_TERM = GENERIC_AUTO_HIDE HIDE_POST1 MOVE_POST1_TERM;
 
 (* -- add exists to pre -- *)
 
@@ -137,7 +174,7 @@ fun EXISTS_PRE var th = let
   val th = PRE_CONV_RULE (RAND_CONV (ALPHA_CONV v)) th
   in BETA_RULE th end;
 
-(* -- hide status from anywhere *)
+(* -- align variables -- *)
 
 fun ALIGN_VAR tm = let 
   val x32 = mk_var (tm,``:word32``) 
@@ -160,12 +197,9 @@ val STATUS_MOVE = prove(
   ``!P Q x. (S x * P = P * S x) /\ (P * S x * Q = P * Q * S x)``,
   SIMP_TAC (bool_ss++star_ss) []);
 
-val AUTO_PRE_HIDE_STATUS = 
-  HIDE_STATUS o PRE_CONV_RULE (REWRITE_CONV [STATUS_MOVE]);
-val AUTO_POST1_HIDE_STATUS = 
-  HIDE_POST1 o POST1_CONV_RULE (REWRITE_CONV [STATUS_MOVE])
-val AUTO_POST_HIDE_STATUS = 
-  HIDE_POST o POST_CONV_RULE (REWRITE_CONV [STATUS_MOVE])
+val AUTO_PRE_HIDE_STATUS   = HIDE_STATUS o MOVE_PRE `S`;
+val AUTO_POST1_HIDE_STATUS = HIDE_POST1 o MOVE_POST1 `S`;
+val AUTO_POST_HIDE_STATUS  = HIDE_POST o MOVE_POST `S`;
 
 fun AUTO_HIDE_STATUS th = let
   val th = AUTO_POST1_HIDE_STATUS th handle e => th
@@ -231,55 +265,38 @@ fun MOVE_COMPOSE th1 th2 xs1 xs2 ys1 ys2 = let
   val th2 = RW [STAR_ASSOC,emp_STAR] (CONV_RULE c1 th2)
   in th2 end;
 
+val FALSE_COMPOSE_LEMMA = prove(
+  ``ARM_PROG P1 code1 C1 SEP_F Z1 /\ ARM_PROG P2 code2 C Q Z ==>
+    ARM_PROG P1 (code1++code2) C1 SEP_F Z1``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC ARM_PROG_APPEND_CODE \\ ASM_REWRITE_TAC []);
+
+fun FALSE_COMPOSE th1 th2 =
+  (RW_COMPOSE o MATCH_MP FALSE_COMPOSE_LEMMA) (CONJ th1 th2);
+    
 
 (* strengthen, weaken, weaken1 *)
 
-val STRENGTHEN_LEMMA = 
-  (DISCH_ALL o Q.GEN `P'` o UNDISCH o SPEC_ALL o 
-   RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_SYM]) ARM_PROG_STRENGTHEN_PRE;
-
-val PART_STRENGTHEN_LEMMA = prove(
-  ``ARM_PROG (P * P') cs C Q Z ==> !P''. SEP_IMP P'' P' ==> ARM_PROG (P * P'') cs C Q Z``,
-  METIS_TAC [ARM_PROG_STRENGTHEN_PRE,SEP_IMP_FRAME,STAR_SYM]);
-
-val WEAKEN1_LEMMA = 
-  (DISCH_ALL o Q.GEN `Q'` o UNDISCH o SPEC_ALL o 
-   RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_SYM]) ARM_PROG_WEAKEN_POST1;
-
-val PART_WEAKEN1_LEMMA = prove(
-  ``ARM_PROG P cs C (Q * Q') Z ==> !Q''. SEP_IMP Q' Q'' ==> ARM_PROG P cs C (Q * Q'') Z``,
-  METIS_TAC [ARM_PROG_WEAKEN_POST1,SEP_IMP_FRAME,STAR_SYM]);
-
-val WEAKEN_LEMMA = 
-  (DISCH_ALL o Q.GEN `Q''` o UNDISCH o SPEC_ALL o 
-   RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_SYM]) ARM_PROG_WEAKEN_POST;
-
-val PART_WEAKEN_LEMMA = prove(
-  ``ARM_PROG P cs C Q1 ((Q * Q',f) INSERT Z) ==> 
-    !Q''. SEP_IMP Q' Q'' ==> ARM_PROG P cs C Q1 ((Q * Q'',f) INSERT Z)``,
-  METIS_TAC [ARM_PROG_WEAKEN_POST,SEP_IMP_FRAME,STAR_SYM]);
-
 fun APP_X_TERM lemma th t = (fst o dest_imp o concl o Q.SPEC t o MATCH_MP lemma) th;
-val APP_STRENGTHEN_TERM = APP_X_TERM STRENGTHEN_LEMMA;
-val APP_PART_STRENGTHEN_TERM = APP_X_TERM PART_STRENGTHEN_LEMMA;
-val APP_WEAKEN1_TERM = APP_X_TERM WEAKEN1_LEMMA;
-val APP_PART_WEAKEN1_TERM = APP_X_TERM PART_WEAKEN1_LEMMA;
-val APP_WEAKEN_TERM = APP_X_TERM WEAKEN_LEMMA;
-val APP_PART_WEAKEN_TERM = APP_X_TERM PART_WEAKEN_LEMMA;
+val APP_STRENGTHEN_TERM = APP_X_TERM ARM_PROG_STRENGTHEN_PRE;
+val APP_PART_STRENGTHEN_TERM = APP_X_TERM ARM_PROG_PART_STRENGTHEN_PRE;
+val APP_WEAKEN1_TERM = APP_X_TERM ARM_PROG_WEAKEN_POST1;
+val APP_PART_WEAKEN1_TERM = APP_X_TERM ARM_PROG_PART_WEAKEN_POST1;
+val APP_WEAKEN_TERM = APP_X_TERM ARM_PROG_WEAKEN_POST;
+val APP_PART_WEAKEN_TERM = APP_X_TERM ARM_PROG_PART_WEAKEN_POST;
 
 fun APP_X lemma th t tac = let
   val th' = prove(APP_X_TERM lemma th t, tac)
   in MATCH_MP (Q.SPEC t (MATCH_MP lemma th)) th' end;
-val APP_STRENGTHEN = APP_X STRENGTHEN_LEMMA;
-val APP_PART_STRENGTHEN = APP_X PART_STRENGTHEN_LEMMA;
-val APP_WEAKEN1 = APP_X WEAKEN1_LEMMA;
-val APP_PART_WEAKEN1 = APP_X PART_WEAKEN1_LEMMA;
-val APP_WEAKEN = APP_X WEAKEN_LEMMA;
-val APP_PART_WEAKEN = APP_X PART_WEAKEN_LEMMA;
+val APP_STRENGTHEN = APP_X ARM_PROG_STRENGTHEN_PRE;
+val APP_PART_STRENGTHEN = APP_X ARM_PROG_PART_STRENGTHEN_PRE;
+val APP_WEAKEN1 = APP_X ARM_PROG_WEAKEN_POST1;
+val APP_PART_WEAKEN1 = APP_X ARM_PROG_PART_WEAKEN_POST1;
+val APP_WEAKEN = APP_X ARM_PROG_WEAKEN_POST;
+val APP_PART_WEAKEN = APP_X ARM_PROG_PART_WEAKEN_POST;
 
-fun SPEC_STRENGTHEN th tm = Q.SPEC tm (MATCH_MP STRENGTHEN_LEMMA th);
-fun SPEC_WEAKEN1 th tm = Q.SPEC tm (MATCH_MP WEAKEN1_LEMMA th);
-fun SPEC_WEAKEN th tm = Q.SPEC tm (MATCH_MP WEAKEN_LEMMA th);
+fun SPEC_STRENGTHEN th tm = Q.SPEC tm (MATCH_MP ARM_PROG_STRENGTHEN_PRE th);
+fun SPEC_WEAKEN1 th tm = Q.SPEC tm (MATCH_MP ARM_PROG_WEAKEN_POST1 th);
+fun SPEC_WEAKEN th tm = Q.SPEC tm (MATCH_MP ARM_PROG_WEAKEN_POST th);
 fun SEP_IMP_RULE conv = 
   RW [] o (CONV_RULE ((RATOR_CONV o RAND_CONV) 
    (conv THENC SIMP_CONV (bool_ss++star_ss) [SEP_IMP_REFL])));
@@ -299,8 +316,8 @@ fun APP_MERGE th1 th2 =
   let
     val (_,cs1,_,_,_) = dest_ARM_PROG (concl th1) 
     val (_,cs2,_,_,_) = dest_ARM_PROG (concl th2) 
-    val len1 = (length o fst o listSyntax.dest_list) cs1
-    val len2 = (length o fst o listSyntax.dest_list) cs2
+    val len1 = (length o fst o listSyntax.dest_list) cs1 handle e => 0
+    val len2 = (length o fst o listSyntax.dest_list) cs2 handle e => 0
     val diff = abs (len1 - len2)    
     val list = mk_var_list diff ``:word32``
     val (th1,th2) = 
@@ -312,8 +329,22 @@ fun APP_MERGE th1 th2 =
     val (th1,th2) = if len1 < len2 then (INST i (INST_TYPE m th1),th2) else 
                                         (th1,INST i (INST_TYPE m th2))
     val th = MATCH_MP ARM_PROG_MERGE (CONJ th1 th2)
-    val th = SIMP_RULE (pure_ss++sep_ss) [UNION_IDEMPOT,UNION_EMPTY,STAR_OVER_DISJ] th
+    val th = SIMP_RULE (pure_ss++sep_ss) [UNION_IDEMPOT,UNION_EMPTY,
+               STAR_OVER_DISJ,EXCLUDED_MIDDLE,RW1[DISJ_COMM]EXCLUDED_MIDDLE] th
   in th end;
+
+val ARM_PROG_DUPLICATE_COND_LEMMA = prove(
+  ``ARM_PROG (P * cond h) code C Q Z ==>
+    ARM_PROG (P * cond h) code C (Q * cond h) (setSTAR (cond h) Z)``,
+  REPEAT STRIP_TAC \\ POP_ASSUM 
+   (ASSUME_TAC o RW [GSYM STAR_ASSOC,SEP_cond_CLAUSES] o APP_FRAME `cond h`)
+  \\ ASM_REWRITE_TAC [])
+  
+fun DUPLICATE_COND th = let
+  val th = SIMP_RULE (bool_ss++sep2_ss) [] th
+  val th = MATCH_MP ARM_PROG_DUPLICATE_COND_LEMMA th
+  val th = RW [emp_STAR] (APP_FRAME `emp` th)
+  in th end;  
 
 (* in preparation for application of FRAME_COMPOSE *)
 
@@ -360,6 +391,29 @@ fun CLOSE_LOOP th = let
   in (RW [EVAL tm,pcADD_0] o RW [EVAL (subst [x|->tm] t)] o INST [x |-> tm]) th end;
 
 (* others *)
+
+val ARM_PROG_EMPTY_CODE = prove(
+  ``ARM_PROG P cs (([],f) INSERT C) Q Z = ARM_PROG P cs C Q Z``,
+  REWRITE_TAC [ARM_PROG_THM] \\ ONCE_REWRITE_TAC [INSERT_COMM]
+  \\ REWRITE_TAC [ARM_GPROG_EMPTY_CODE]);
+
+fun PROG2PROC lr th = let
+  val th = MOVE_POST `R 14w` (MOVE_POST `S` th)
+  val th = MOVE_PRE `R30 14w` (MOVE_PRE `S` th)
+  val th = Q.GEN lr (EXTRACT_CODE th)
+  val th = RW [ARM_PROG_EMPTY_CODE] th
+  val th = RW [ARM_PROG_FALSE_POST,GSYM ARM_PROC_THM] th
+  in th end;
+
+fun FORCE_PBETA_CONV tm = let
+  val (tm1,tm2) = dest_comb tm
+  val vs = fst (pairSyntax.dest_pabs tm1)
+  fun expand_pair_conv tm = ISPEC tm (GSYM PAIR)
+  fun get_conv vs = let
+    val (x,y) = dest_pair vs
+    in expand_pair_conv THENC (RAND_CONV (get_conv y)) end 
+    handle e => ALL_CONV
+  in (RAND_CONV (get_conv vs) THENC PairRules.PBETA_CONV) tm end;
 
 fun PAT_DISCH pat th = let 
   val tm = hd (filter (can (match_term pat)) (hyp th))
@@ -411,6 +465,15 @@ fun print_enc_inst sys (gl,gc,gr) d pps t =
         val (s1,s2) = ("    ",blank_str (40-size s))
         in 
           begin_block pps INCONSISTENT 0; add_string pps (s1^s^s2); end_block pps
+        end handle e => let
+        val (x,y) = dest_comb (snd (dest_comb t))
+        val t = subst [y|->``0w:word24``] t
+        val s = instructionSyntax.dest_instruction NONE (snd (dest_comb t))
+        val s = hd (String.fields (fn s => if s = #";" then true else false) s) 
+        val s = substring(s,0,size(s)-1) ^ "<" ^ fst (dest_var y) ^ ">"
+        val (s1,s2) = ("    ",blank_str (40-size s))
+        in 
+          begin_block pps INCONSISTENT 0; add_string pps (s1^s^s2); end_block pps
         end 
   end handle e => raise term_pp_types.UserPP_Failed;
 
@@ -422,7 +485,7 @@ val _ = pp_enc();
 (* EXPERIMENTAL PROOF-PRODUCING FUNCTIONS                                        *)
 (* ============================================================================= *)
 
-(* handleing terms *)
+(* handling terms *)
 
 fun TERM_CONV (conv:term->thm) = snd o dest_eq o concl o conv;
 fun TERM_RW thms = TERM_CONV (QCONV (REWRITE_CONV thms));
@@ -540,13 +603,19 @@ fun mk_arm_prog2_str inst_str suffix = let
   val i = if suffix = "" then i else i @ vs 
   val th = INST vs th
   val evals = list_get_term ``(w2w ((n2w n):'qqq word)):'zzz word`` (concl th)  
+  val evals = evals @ list_get_term ``(n2w m) = ((n2w n):'qqq word)`` (concl th)
+  val evals = evals @ list_get_term ``(w2n ((n2w n):'qqq word)):num`` (concl th)  
   val evals = evals @ list_get_term ``(sw2sw ((n2w n):'qqq word)):'zzz word`` (concl th)  
+  val th = RW (map EVAL evals) th
+  val evals = evals @ list_get_term ``(n2w m) + (n2w n):'qqq word`` (concl th)
   val th = RW (map EVAL evals) th
   val s = "EVAL ``" ^ list_to_string term_to_string_show_types evals "``, EVAL ``" ^ "``"
   val s = if evals = [] then "" else s
   val str = "SIMP_RULE (bool_ss++armINST_ss) ["^s^"] (Q.INST "^ 
              subst_to_string_no_types i "  " ^ " " ^ name ^ ")"
   in (th,str) end;
+
+val string_to_prog = mk_arm_prog2_str
 
 fun mk_arm_prog2_string inst_str thm_name suffix indent = let
   val (th,str) = mk_arm_prog2_str inst_str suffix

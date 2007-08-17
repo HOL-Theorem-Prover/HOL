@@ -2,7 +2,11 @@ signature arm_compilerLib =
 sig
     include Abbrev
 
-    val arm_compile         : thm -> thm -> bool -> thm * string list
+    datatype arm_code_format = 
+      InLineCode | SimpleProcedure | PushProcedure of string list * int
+
+    val arm_compile         : thm -> thm -> arm_code_format -> thm * string list
+    val arm_flatten_code    : unit -> thm
     val reset_compiled      : unit -> unit
 
     val optimise_code       : bool ref

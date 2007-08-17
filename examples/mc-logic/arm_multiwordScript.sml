@@ -36,8 +36,9 @@ fun n_times 0 f x = x | n_times n f x = n_times (n-1) f (f x) ;
 val HIDE1_xR_list = prove(
   ``ARM_PROG P code C (Q * xR_list (MAP (\x. (FST x, SOME (SND x))) xs)) Z ==>
     ARM_PROG P code C (Q * xR_list (MAP (\x. (FST x, NONE)) xs)) Z``,
-  MATCH_MP_TAC (RW [GSYM AND_IMP_INTRO] ARM_PROG_WEAKEN_POST1)
-  \\ MATCH_MP_TAC SEP_IMP_STAR \\ REWRITE_TAC [SEP_IMP_REFL]
+  (MATCH_MP_TAC o GEN_ALL o RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_COMM] o 
+   RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH o SPEC_ALL)
+       ARM_PROG_PART_WEAKEN_POST1
   \\ Induct_on `xs` \\ REWRITE_TAC [MAP,SEP_IMP_REFL]
   \\ Cases \\ SIMP_TAC std_ss [MAP,xR_list_def]
   \\ MATCH_MP_TAC SEP_IMP_STAR \\ ASM_REWRITE_TAC []
@@ -131,7 +132,8 @@ val TEQ_BNE2 = let
 
 val ARM_PROG_DROP_COND1 = prove(
   ``ARM_PROG P code C (Q * cond g) Z ==> ARM_PROG P code C Q Z``,
-  REPEAT STRIP_TAC \\ MATCH_MP_TAC ARM_PROG_WEAKEN_POST1
+  REPEAT STRIP_TAC \\ (MATCH_MP_TAC o GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o 
+   SPEC_ALL o UNDISCH o SPEC_ALL) ARM_PROG_WEAKEN_POST1
   \\ Q.EXISTS_TAC `Q * cond g` \\ ASM_REWRITE_TAC [SEP_IMP_REFL,SEP_IMP_MOVE_COND]);
   
 val ONE_EQ_wLENGTH = prove(
@@ -879,9 +881,10 @@ val ARM_PROG_CONTAINS = prove(
 val ARM_PROG_CONTAINS_TAIL = prove(
   ``ARM_PROG P code C Q ((Z * cond (SEP_CONTAINS (ms a (x::xs)) PP),f) INSERT QQ) ==>
     ARM_PROG P code C Q ((Z * cond (SEP_CONTAINS (ms (a+1w) xs) PP),f) INSERT QQ)``,
-  MATCH_MP_TAC (RW [GSYM AND_IMP_INTRO] ARM_PROG_WEAKEN_POST)
-  \\ MATCH_MP_TAC SEP_IMP_STAR \\ REWRITE_TAC [SEP_IMP_REFL,SEP_IMP_cond] 
-  \\ REWRITE_TAC [SEP_CONTAINS_def,ms_def] \\ REPEAT STRIP_TAC
+  (MATCH_MP_TAC o GEN_ALL o RW [GSYM AND_IMP_INTRO] o RW1 [CONJ_COMM] o 
+   RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH o SPEC_ALL)
+       ARM_PROG_PART_WEAKEN_POST
+  \\ REWRITE_TAC [SEP_IMP_cond,SEP_CONTAINS_def,ms_def] \\ REPEAT STRIP_TAC
   \\ Q.EXISTS_TAC `M a x * F'` \\ ASM_SIMP_TAC (bool_ss++star_ss) []);
   
 val mw_monmult5_imp = let
