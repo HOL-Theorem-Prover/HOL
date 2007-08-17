@@ -11,5 +11,6 @@ sig
   val numRegs : int ref
   val regL : term list ref
   val reset : unit -> unit
+  val parallel_move : term -> term -> term -> term
   val reg_alloc : thm -> thm
 end

@@ -14,6 +14,7 @@ val optimize_norm = inline.optimize_norm;
 val close_one_by_one = closure.close_one_by_one;
 val close_all = closure.close_all;
 val closure_convert = closure.closure_convert;
+val parallel_move = regAlloc.parallel_move;
 val reg_alloc = regAlloc.reg_alloc;
 val printSAL = SALGen.printSAL;
 val certified_gen = SALGen.certified_gen;

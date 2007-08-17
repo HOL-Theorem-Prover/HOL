@@ -48,11 +48,18 @@ val BRANCH_NORM = Q.store_thm (
   "BRANCH_NORM",
   `((if (a:num) > b then x else y) = (if a <= b then y else x)) /\ 
     ((if a >= b then x else y) = (if b <= a then x else y)) /\
-    ((if a < b then x else y) = (if b <= a then y else x))
+    ((if a < b then x else y) = (if b <= a then y else x)) /\
+    ((if aw > bw then xw else yw) = (if aw <= bw then yw else xw)) /\ 
+    ((if aw >= bw then xw else yw) = (if bw <= aw then xw else yw)) /\
+    ((if aw < bw then xw else yw) = (if bw <= aw then yw else xw)) /\
+    ((if aw >+ bw then xw else yw) = (if aw <=+ bw then yw else xw)) /\
+    ((if aw >=+ bw then xw else yw) = (if bw <=+ aw then xw else yw)) /\
+    ((if aw <+ bw then xw else yw) = (if bw <=+ aw then yw else xw))
   `,
-   RW_TAC arith_ss [] THEN
-   FULL_SIMP_TAC std_ss [GREATER_DEF, GREATER_EQ,NOT_LESS, NOT_LESS_EQUAL] THEN
-   METIS_TAC [LESS_EQ_ANTISYM]
+   RW_TAC arith_ss [wordsTheory.WORD_LO, wordsTheory.WORD_LS, wordsTheory.WORD_HI, wordsTheory.WORD_HS] THEN
+   FULL_SIMP_TAC std_ss [GREATER_DEF, GREATER_EQ, NOT_LESS, NOT_LESS_EQUAL, wordsTheory.WORD_GREATER,
+              wordsTheory.WORD_GREATER_EQ, wordsTheory.WORD_NOT_LESS_EQUAL] THEN
+   METIS_TAC [LESS_EQ_ANTISYM, wordsTheory.WORD_LESS_EQ_ANTISYM]
   );
 
 (*---------------------------------------------------------------------------------*)
@@ -139,7 +146,7 @@ val C_WORDS = Q.store_thm (
     (C (w1 << n)  = \k. C w1 (\x. C n (\y. C (x << y) k))) /\
     (C (w1 #>> n) = \k. C w1 (\x. C n (\y. C (x #>> y) k))) /\
     (C (w1 #<< n) = \k. C w1 (\x. C n (\y. C (x #<< y) k)))
-`,
+ `,
    METIS_TAC [ABS_C_BINOP]
   );
 
@@ -192,18 +199,15 @@ val C_ATOM_COND = Q.store_thm (
    SIMP_TAC std_ss [C_def, LET_THM]
   );
 
-(*
-val C_COMPOUND_COND = Q.store_thm (
-  "C_COMPOUND_COND",
-   `C (if c1 /\ c2 then e1 else e2) = 
-       \k. C c1 (\p. C c2 (\q. C e1 (\x. C e2 
-           (\y. k (if p then 
-                   if q then x else y
-                   else y)))))`,
-   RW_TAC std_ss [C_def, LET_THM] THEN
-   METIS_TAC []
+val C_ATOM_COND_EX = Q.store_thm (
+  "C_ATOM_COND_EX",
+   `C (if cmpop c1 c2 then e1 else e2) = 
+       \k. C c1 (\p. C c2 (\q.
+         k (if cmpop p q then C e1 (\x.x) 
+            else C e2 (\y.y)
+           )))`,
+   SIMP_TAC std_ss [C_def, LET_THM]
   );
-*)
 
 (*---------------------------------------------------------------------------------*)
 (* Optimization of normal forms.                                                   *)

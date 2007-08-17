@@ -508,7 +508,8 @@ fun alloc_mem (args,body) =
            mk_comb (loc, M.find (env, t) handle _ => t)
        else t
 
-     val memenv = List.foldl (fn (t, m) => if is_mem t then (next_mvar(); M.insert(m,t,t)) else m) (M.mkDict tvarOrder) (strip_pair args)
+     val memenv = List.foldl (fn (t, m) => if is_mem t then (next_mvar(); M.insert(m,t,t)) else m) 
+	 (M.mkDict tvarOrder) (strip_pair args)
      fun move_mindex i = if i = M.numItems memenv then () else (next_mvar();move_mindex (i + 1))
 
   in
@@ -517,6 +518,116 @@ fun alloc_mem (args,body) =
       trav body' memenv ``()``
      )
   end;
+
+(* --------------------------------------------------------------------*)
+(* Refinement for Tail Recursion.                                      *)
+(* --------------------------------------------------------------------*)
+
+fun parallel_move dst src exp =
+  let
+    fun mk_atom tm = mk_comb (inst [alpha |-> type_of tm] (prim_mk_const{Name="atom",Thy="Normal"}), tm)
+
+    val sane = ref true
+    val (dstL, srcL) = (strip_pair dst, strip_pair src)
+    val spotL = !regL @ #1 (List.foldl (fn (_,(l,i)) => 
+         (l @ [mk_var("m" ^ Int.toString i, !VarType)], i+1)) ([],1) (hd srcL :: srcL))
+    fun get_avail_spot l = 
+        let val l' = l @ free_vars exp
+        in valOf (List.find (fn x => List.all (fn y => not (x = y)) l') spotL)
+        end
+
+    val transfer_r = let val r = get_avail_spot (srcL @ dstL) in
+                  if is_mem r then hd spotL 
+                  else r
+                end
+
+    fun move (d,s,r) t =
+        if is_mem s andalso is_mem d then
+          let val real_r = if is_mem r then (sane := false; transfer_r) else r in
+            mk_plet(real_r, mk_atom s, mk_plet(d, mk_atom real_r, t))
+          end
+        else
+          mk_plet(d, mk_atom s, t)
+
+    fun moves (t,[],[]) = t
+     |  moves (t, d::dL, s::sL) = 
+          if d = s then t
+          else
+            if List.exists (curry (op =) d) sL then (* d is still live *)
+              let val spot = get_avail_spot (d :: s :: sL)
+                  val transfer_r = get_avail_spot (spot :: d :: s :: sL)
+                  val t' = move(d,s,transfer_r) (moves(t, dL, 
+                     List.map (fn x => if x = d then spot else if x = s then d else x) sL))
+              in
+                move (spot,d, transfer_r) t' (* d is stored in spot in the beginning *)
+              end
+            else
+              move(d,s,get_avail_spot (d :: s :: sL)) (moves(t, dL, List.map (fn x => if x = s then d else x) sL))
+
+     val exp' = if !sane then moves(exp, dstL, srcL)
+             else
+               (* store the value of the trasfterring register into memory if needed *)
+               let val tmp_m = valOf (List.find (fn x => is_mem x andalso 
+                        List.all (fn y => not (x = y)) (srcL @ dstL)) spotL) in
+                 mk_plet(transfer_r, mk_atom tmp_m,      (* load the transferring register *)
+                   moves(mk_plet(tmp_m, mk_atom transfer_r, exp), dstL, srcL)) (* store the transferring register *)
+               end
+  in
+    exp'
+  end
+
+fun refine_tail_recursion def =
+  let
+    val (fname, fbody) = dest_eq (concl def)
+    val (args,body) = dest_pabs fbody
+    val lem = if is_let body then CONV_RULE (RHS_CONV (SIMP_CONV pure_ss [Once LET_THM])) def
+              else def
+    val body = #2 (dest_pabs (rhs (concl lem))) 
+    val is_recursive = (find_term (curry (op =) fname) body; true) handle _ => false
+    val lems = ref []
+  in
+    if not is_recursive then def
+    else
+      let
+        fun trav t =
+          if is_let t then
+            let val (v,M,N) = dest_plet t
+            in if is_comb M andalso #1(strip_comb M) = fname then
+                 let val _ = lems := PBETA_RULE (SIMP_CONV bool_ss [Once LET_THM] t) :: !lems
+                     val src = #2(dest_comb M)
+                     val exp = subst [src |-> args] (subst [v |-> M] N)
+                 in
+                   parallel_move args src exp
+                 end
+               else
+                 mk_plet (v, M, trav N)
+            end
+          else if is_cond t then
+            let val (v,M,N) = dest_cond t
+            in mk_cond(v, trav M, trav N)
+            end
+          else if is_comb t then
+            let val (M,N) = dest_comb t
+                val M' = trav M
+                val N' = trav N
+            in mk_comb(M',N')
+            end
+          else if is_pabs t then
+            let val (v,M) = dest_pabs t
+            in mk_pabs(v,trav M)
+            end
+          else
+            t
+
+        val body' = trav body
+        val th = prove(mk_eq(fname, mk_pabs(args,body')),
+                   REWRITE_TAC [Once lem] THEN
+                   SIMP_TAC bool_ss ([FUN_EQ_THM, LET_ATOM, ATOM_ID] @ (!lems))
+                 ) handle _ => (print "fail to convert a tail recursion into the expected format!"; def)
+      in
+        REWRITE_RULE [ATOM_ID] th
+      end
+  end
 
 (* --------------------------------------------------------------------*)
 (* Register Allocation                                                 *)
@@ -569,8 +680,9 @@ fun reg_alloc def =
     	val th3 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [th1])) th2
     	val th4 = TRANS def th3
     	val th5 = (BETA_RULE o REWRITE_RULE [save_def, loc_def]) th4
+        val th6 = refine_tail_recursion th5
       in
-    	th5
+    	th6
       end
     else
      ( print("The source program is invalid! (e.g. all variables are not of the same type)");

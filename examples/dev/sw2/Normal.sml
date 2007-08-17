@@ -21,6 +21,7 @@ fun mk_atom tm =
 
 val _ = (Globals.priming := SOME "");
 
+val branch_join = ref false
 
 (*---------------------------------------------------------------------------*)
 (* Pre-processing. (KLS: not sure where this is used.)                       *)
@@ -79,6 +80,25 @@ fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
       th3
    end;
 
+fun Normalize_Atom_Cond_Ex (lem0,lem1,lem2,lem3) exp =
+   let 
+     val th1 =  ONCE_REWRITE_CONV [C_ATOM_COND_EX] exp
+     val th2 =  CONV_RULE (RHS_CONV (PABS_CONV (
+                  RATOR_CONV (REWRITE_CONV [Once lem0]) THENC
+                  RAND_CONV (PABS_CONV (
+                    RATOR_CONV (REWRITE_CONV [Once lem1]) THENC
+                    RAND_CONV (PABS_CONV (RAND_CONV (
+                      RATOR_CONV (RAND_CONV (RATOR_CONV 
+                                (REWRITE_CONV [Once lem2]))) THENC 
+                      RAND_CONV (RATOR_CONV (REWRITE_CONV [Once lem3])))))
+                    ))
+                 ))) th1
+     val th3 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th2
+   in
+      th3
+   end;
+
+
 (*  for debugging
 fun mk_let_norm (c_thm, th0, th1) =
   let val t0 = rhs (concl (SPEC_ALL c_thm))
@@ -99,7 +119,8 @@ fun mk_let_norm (c_thm, th0, th1) =
 fun K_Normalize exp =
  let val t = dest_C exp               (* eliminate the C *)
  in
-  if is_atomic t then ISPEC t C_ATOM_INTRO
+  if is_word_literal t andalso numSyntax.int_of_term (#2 (dest_comb t)) > 255 then REFL exp        (* over 8-bit word constants *) 
+  else if is_atomic t then ISPEC t C_ATOM_INTRO
   else if is_let t then                  (*  exp = LET (\v. N) M  *)
    let val (v,M,N) = dest_plet t
        val (th0, th1) = (K_Normalize (mk_C M), K_Normalize (mk_C N))
@@ -143,10 +164,6 @@ fun K_Normalize exp =
     end
 
     else if is_pair t then                        (*  exp = (M,N) *)
-(*
-      if List.all is_atomic (strip_pair t) then ISPEC t C_ATOM_INTRO
-      else
-*)
         let
           val (M,N) = dest_pair t
           val th0 = K_Normalize (mk_C M) 
@@ -171,7 +188,8 @@ fun K_Normalize exp =
                   K_Normalize (mk_C M), 
                   K_Normalize (mk_C N))
 
-              val th4 = Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp
+              val th4 = if !branch_join then Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp
+                        else Normalize_Atom_Cond_Ex (lem0,lem1,lem2,lem3) exp
            in
               th4
            end
@@ -191,8 +209,8 @@ fun K_Normalize exp =
               th4
             end
       in
-       case strip_comb t
-        of (operator,[d0,d1]) =>
+       case strip_comb t of 
+         (operator,[d0,d1]) =>
            if is_binop operator then 
               let val th0 = K_Normalize (mk_C d0)
                   val th1 = K_Normalize (mk_C d1)
@@ -214,7 +232,7 @@ fun K_Normalize exp =
 (*---------------------------------------------------------------------------*)
 
 fun normalize def = 
- let val thm0 = SIMP_RULE arith_ss [] def  (* Basic simplification *)
+ let val thm0 = SIMP_RULE arith_ss [ELIM_USELESS_LET] def  (* Basic simplification *)
      (* Break compound condition jumps *)
      val thm1 = (PBETA_RULE o REWRITE_RULE [AND_COND, OR_COND]) thm0
      val thm2 = CONV_RULE (RHS_CONV (ONCE_REWRITE_CONV [C_INTRO])) 
