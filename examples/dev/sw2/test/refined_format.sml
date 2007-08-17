@@ -147,15 +147,78 @@ val def2' = (reg_alloc o SSA_RULE o normalize) def2;
 (* Refine the format of virtual instructions for the ARM machine.      *)
 (* --------------------------------------------------------------------*)
 
-val g1_def = Define `
-  g1 (x:word32) = 
-   let x = x * 3w in
-   let y = x + 270w in
-   let z = 70w:word32 << 8 in
-     (x,y,z)`;
+val binop1_def = Define `
+  binop1(x:word32,y) =
+    let z0 = 40w + y in
+    let z1 = 10w - z0 in
+    let z2 = 510w + x * z1 in
+    let z3 = x !! 300w && y ?? z2 in
+    let z4 = (z3 + z2) >>> 3 in
+    (z1,z2,z3,z4)
+  `;
 
 (*
-val g1' = (reg_alloc o SSA_RULE o normalize) g1_def;
-...
+normalize binop1_def;
+ |- binop1 (x,y) =
+       (let z0 = y + 40w in
+        let z1 = rsb z0 10w in
+        let x1 = 510w in
+        let y1 = x * z1 in
+        let z2 = x1 + y1 in
+        let x1 = 300w in
+        let x1 = x1 && y in
+        let y = x1 ?? z2 in
+        let z3 = x !! y in
+        let x = z3 + z2 in
+        let z4 = x >>> 3 in
+          (z1,z2,z3,z4)) : thm
+*)
+
+val mult_def = Define `
+  mult(x:word32,y) =
+    let z1 = x * y in
+    let z2 = x * 10w in
+    let z3 = 100w * x in
+    let z4 = 500w * 6w in
+    (z1,z2,z3,z4)
+  `;
+
+(*
+normalize mult_def;
+ |- mult (x,y) =
+       (let z1 = x * y in
+        let y = 10w in
+        let z2 = x * y in
+        let x1 = 100w in
+        let z3 = x1 * x in
+        let x = 500w in
+        let y = 6w in
+        let z4 = x * y in
+          (z1,z2,z3,z4)) : thm
+
+*)
+
+val g1_def = Define `
+  g1 (x:word32) = 
+   if x > 1w /\ x < 10w then
+     x + 1w
+   else if 20w >+ x \/ x <=+ x then
+     x + 4w
+   else 
+     x
+   `;
+
+(*
+normalize g1_def;
+
+|- g1 x =
+       (let x1 = x + 4w in
+          (if x <= 1w then
+             (if x <+ 20w then x1 else (if x <=+ x then x1 else x))
+           else
+             (if x < 10w then
+                (let x = x + 1w in x)
+              else
+                (if x <+ 20w then x1 else (if x <=+ x then x1 else x))))) : thm
 
 *)

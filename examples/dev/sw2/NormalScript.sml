@@ -47,14 +47,11 @@ val OR_COND = Q.store_thm (
 val BRANCH_NORM = Q.store_thm (
   "BRANCH_NORM",
   `((if (a:num) > b then x else y) = (if a <= b then y else x)) /\ 
-    ((if a >= b then x else y) = (if b <= a then x else y)) /\
-    ((if a < b then x else y) = (if b <= a then y else x)) /\
+    ((if a >= b then x else y) = (if a < b then y else x)) /\
     ((if aw > bw then xw else yw) = (if aw <= bw then yw else xw)) /\ 
-    ((if aw >= bw then xw else yw) = (if bw <= aw then xw else yw)) /\
-    ((if aw < bw then xw else yw) = (if bw <= aw then yw else xw)) /\
+    ((if aw >= bw then xw else yw) = (if aw < bw then yw else xw)) /\
     ((if aw >+ bw then xw else yw) = (if aw <=+ bw then yw else xw)) /\
-    ((if aw >=+ bw then xw else yw) = (if bw <=+ aw then xw else yw)) /\
-    ((if aw <+ bw then xw else yw) = (if bw <=+ aw then yw else xw))
+    ((if aw >=+ bw then xw else yw) = (if aw <+ bw then yw else xw))
   `,
    RW_TAC arith_ss [wordsTheory.WORD_LO, wordsTheory.WORD_LS, wordsTheory.WORD_HI, wordsTheory.WORD_HS] THEN
    FULL_SIMP_TAC std_ss [GREATER_DEF, GREATER_EQ, NOT_LESS, NOT_LESS_EQUAL, wordsTheory.WORD_GREATER,
@@ -122,14 +119,23 @@ val C_BINOP = Q.store_thm (
    METIS_TAC [ABS_C_BINOP]
   );
 
+val C_BINOP_SYM = Q.store_thm (
+  "C_BINOP_SYM",
+   `(C (e1 + e2) =  \k. C e1 (\x. C e2 (\y. C (y + x) k))) /\
+    (C (e1 - e2) =  \k. C e2 (\x. C e1 (\y. C (y - x) k))) /\
+    (C (e1 * e2) =  \k. C e1 (\x. C e2 (\y. C (y * x) k))) /\
+    (C (e1 ** e2) = \k. C e1 (\x. C e2 (\y. C (x ** y) k)))`,
+   SIMP_TAC arith_ss [C_def, LET_THM]
+  );
+
 val C_PAIR = Q.store_thm (
   "C_PAIR",
   `C (e1, e2) = \k. C e1 (\x. C e2 (\y. k (x,y)))`,
    RW_TAC std_ss [C_def]
   );
 
-val C_WORDS = Q.store_thm (
-  "C_WORDS",
+val C_WORDS_BINOP = Q.store_thm (
+  "C_WORDS_BINOP",
   `!w1 w2 : 'a word.
     (C (w1 + w2)  = \k. C w1 (\x. C w2 (\y. C (x + y) k))) /\
     (C (w1 - w2)  = \k. C w1 (\x. C w2 (\y. C (x - y) k))) /\
@@ -137,17 +143,63 @@ val C_WORDS = Q.store_thm (
     (C (w1 && w2) = \k. C w1 (\x. C w2 (\y. C (x && y) k))) /\
     (C (w1 ?? w2) = \k. C w1 (\x. C w2 (\y. C (x ?? y) k))) /\
     (C (w1 !! w2) = \k. C w1 (\x. C w2 (\y. C (x !! y) k))) /\
+
     (C (w1 < w2)  = \k. C w1 (\x. C w2 (\y. C (x < y) k))) /\
     (C (w1 <= w2) = \k. C w1 (\x. C w2 (\y. C (x <= y) k))) /\
-    (C (w1 > w2)  = \k. C w1 (\x. C w2 (\y. C (x > y) k))) /\
-    (C (w1 > w2)  = \k. C w1 (\x. C w2 (\y. C (x > y) k))) /\
+    (C (w1 > w2)  = \k. C w2 (\x. C w1 (\y. C (x < y) k))) /\
+    (C (w1 >= w2) = \k. C w2 (\x. C w1 (\y. C (x <= y) k))) /\
+    (C (w1 <+ w2)  = \k. C w1 (\x. C w2 (\y. C (x <+ y) k))) /\
+    (C (w1 <=+ w2) = \k. C w1 (\x. C w2 (\y. C (x <=+ y) k))) /\
+    (C (w1 >+ w2)  = \k. C w2 (\x. C w1 (\y. C (x <+ y) k))) /\
+    (C (w1 >=+ w2) = \k. C w2 (\x. C w1 (\y. C (x <=+ y) k))) /\
+
     (C (w1 >> n)  = \k. C w1 (\x. C n (\y. C (x >> y) k))) /\
     (C (w1 >>> n) = \k. C w1 (\x. C n (\y. C (x >>> y) k))) /\
     (C (w1 << n)  = \k. C w1 (\x. C n (\y. C (x << y) k))) /\
     (C (w1 #>> n) = \k. C w1 (\x. C n (\y. C (x #>> y) k))) /\
     (C (w1 #<< n) = \k. C w1 (\x. C n (\y. C (x #<< y) k)))
  `,
-   METIS_TAC [ABS_C_BINOP]
+    SIMP_TAC arith_ss [C_def, LET_THM] THEN
+    SIMP_TAC bool_ss [wordsTheory.WORD_GREATER, wordsTheory.WORD_GREATER_EQ,
+      wordsTheory.WORD_HIGHER, wordsTheory.WORD_HIGHER_EQ] 
+  );
+
+val rsb_def = Define `rsb x y = y - x`;
+
+val C_WORDS_BINOP_SYM = Q.store_thm (
+  "C_WORDS_BINOP_SYM",
+  `!w1 w2 : 'a word.
+    (C (w1 + w2)  = \k. C w1 (\x. C w2 (\y. C (y + x) k))) /\
+    (C (w1 - w2)  = \k. C w1 (\x. C w2 (\y. C (rsb y x) k))) /\
+    (C (w1 * w2)  = \k. C w1 (\x. C w2 (\y. C (y * x) k))) /\
+    (C (w1 && w2) = \k. C w1 (\x. C w2 (\y. C (y && x) k))) /\
+    (C (w1 ?? w2) = \k. C w1 (\x. C w2 (\y. C (y ?? x) k))) /\
+    (C (w1 !! w2) = \k. C w1 (\x. C w2 (\y. C (y !! x) k))) /\
+
+    (C (w1 >> n)  = \k. C w1 (\x. C n (\y. C (x >> y) k))) /\
+    (C (w1 >>> n) = \k. C w1 (\x. C n (\y. C (x >>> y) k))) /\
+    (C (w1 << n)  = \k. C w1 (\x. C n (\y. C (x << y) k))) /\
+    (C (w1 #>> n) = \k. C w1 (\x. C n (\y. C (x #>> y) k))) /\
+    (C (w1 #<< n) = \k. C w1 (\x. C n (\y. C (x #<< y) k)))
+ `,
+   SIMP_TAC std_ss [C_def, LET_THM, rsb_def] THEN
+   SIMP_TAC bool_ss [wordsTheory.WORD_ADD_COMM, wordsTheory.WORD_MULT_COMM, wordsTheory.WORD_AND_COMM, 
+     wordsTheory.WORD_XOR_COMM, wordsTheory.WORD_OR_COMM, wordsTheory.WORD_GREATER, wordsTheory.WORD_GREATER_EQ,
+     wordsTheory.WORD_HIGHER, wordsTheory.WORD_HIGHER_EQ]
+  );
+
+val COND_SWAP =  Q.store_thm (
+  "COND_SWAP",
+   `((x : 'a word < y)  = (y > x)) /\
+    ((x <= y)  = (y >= x)) /\
+    ((x > y)  = (y < x)) /\
+    ((x >= y)  = (y <= x)) /\
+    ((x <+ y)  = (y >+ x)) /\
+    ((x <=+ y) = (y >=+ x)) /\
+    ((x >+ y)  = (y <+ x)) /\
+    ((x >=+ y) = (y <=+ x))`,
+    SIMP_TAC bool_ss [wordsTheory.WORD_GREATER, wordsTheory.WORD_GREATER_EQ,
+      wordsTheory.WORD_HIGHER, wordsTheory.WORD_HIGHER_EQ]
   );
 
 (*---------------------------------------------------------------------------*)

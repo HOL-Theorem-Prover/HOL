@@ -60,6 +60,23 @@ fun SUBST_2_RULE (lem1,lem2) =
                       RAND_CONV (PABS_CONV (RATOR_CONV
                                      (REWRITE_CONV [Once lem2]))))));
 
+(* Normalize multiplication expressions *)
+
+fun norm_mult (th0,th1) (d0,d1) exp =
+  if is_8bit_literal d0 then
+    (if is_8bit_literal d1 then       (* const op const *)
+       SUBST_2_RULE (REWRITE_RULE [Once ATOM_ID] th0, REWRITE_RULE [Once ATOM_ID] th1)
+         (ONCE_REWRITE_CONV [C_BINOP,C_WORDS_BINOP] exp)
+     else                        (* const op var *)
+         SUBST_2_RULE (REWRITE_RULE [Once ATOM_ID] th0,th1) (ONCE_REWRITE_CONV [C_BINOP,C_WORDS_BINOP] exp)
+    )
+  else
+    (if is_8bit_literal d1 then       (* var op const *)
+       SUBST_2_RULE (th0, REWRITE_RULE [Once ATOM_ID] th1) (ONCE_REWRITE_CONV [C_BINOP,C_WORDS_BINOP] exp)
+     else                        (* var op var *)
+       SUBST_2_RULE (th0,th1) (ONCE_REWRITE_CONV [C_BINOP,C_WORDS_BINOP] exp)
+    )
+
 (* Rewrite the four components of atomic branch with the obtained theorems *)
 
 fun Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp =
@@ -119,7 +136,7 @@ fun mk_let_norm (c_thm, th0, th1) =
 fun K_Normalize exp =
  let val t = dest_C exp               (* eliminate the C *)
  in
-  if is_word_literal t andalso numSyntax.int_of_term (#2 (dest_comb t)) > 255 then REFL exp        (* over 8-bit word constants *) 
+  if is_word_literal t andalso not (is_8bit_literal t) then REFL exp (* over 8-bit word constants *) 
   else if is_atomic t then ISPEC t C_ATOM_INTRO
   else if is_let t then                  (*  exp = LET (\v. N) M  *)
    let val (v,M,N) = dest_plet t
@@ -190,8 +207,11 @@ fun K_Normalize exp =
 
               val th4 = if !branch_join then Normalize_Atom_Cond (lem0,lem1,lem2,lem3) exp
                         else Normalize_Atom_Cond_Ex (lem0,lem1,lem2,lem3) exp
+              val th5 = if is_8bit_literal P then CONV_RULE (RHS_CONV (PABS_CONV (RAND_CONV (RATOR_CONV (RATOR_CONV (
+                              REWRITE_CONV [Once COND_SWAP])))))) th4 
+                        else th4
            in
-              th4
+              th5
            end
 
         else 
@@ -214,11 +234,23 @@ fun K_Normalize exp =
            if is_binop operator then 
               let val th0 = K_Normalize (mk_C d0)
                   val th1 = K_Normalize (mk_C d1)
-                  val th2 = ONCE_REWRITE_CONV [C_BINOP,C_WORDS] exp
-                  val th3 = SUBST_2_RULE (th0,th1) th2
-                  val th4 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th3
+
+                  val th2 = 
+                        if is_mult_op operator then 
+                          norm_mult (th0,th1) (d0,d1) exp
+                        else if is_8bit_literal d0 then
+                          (if is_8bit_literal d1 then       (* const op const *)
+                             SUBST_2_RULE (REWRITE_RULE [Once ATOM_ID] th0, th1)
+                               (ONCE_REWRITE_CONV [C_BINOP,C_WORDS_BINOP] exp)
+                           else                        (* const op var *)
+                             SUBST_2_RULE (th0,th1) (ONCE_REWRITE_CONV [C_BINOP_SYM,C_WORDS_BINOP_SYM] exp)
+                          )
+                        else (* var op const || var op var *)
+                          SUBST_2_RULE (th0, th1) (ONCE_REWRITE_CONV [C_BINOP,C_WORDS_BINOP] exp)
+
+                  val th3 = (PBETA_RULE o REWRITE_RULE [C_ATOM]) th2
               in
-                th4
+                th3
               end
            else norm_app (dest_comb t)
          | _ => norm_app (dest_comb t)
@@ -243,8 +275,8 @@ fun normalize def =
 
      val thm4 = PURE_ONCE_REWRITE_RULE [lem3] thm2
      val thm5 = (SIMP_RULE bool_ss [C_2_LET]) thm4 (* "Let" Form *)
-     (* val thm6 = CONV_RULE (DEPTH_CONV (SIMP_CONV bool_ss [Once LET_THM])) thm5 *)
      val thm6 = REWRITE_RULE [BRANCH_NORM] thm5
+     (* val thm6 = CONV_RULE (DEPTH_CONV (SIMP_CONV bool_ss [Once LET_THM])) thm5 *)
  in
    thm6
  end

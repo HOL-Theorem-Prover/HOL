@@ -12,21 +12,17 @@ open HolKernel Parse boolSyntax boolLib bossLib pairSyntax wordsSyntax;
 (*---------------------------------------------------------------------------*)
 
 (* Is the term a word? *)
-(*
-fun is_word_literal tm =
-  ((is_comb tm) andalso
-  let val (c,args) = strip_comb tm
-      val {Name,Thy,Ty} = dest_thy_const c
-  in Name = "n2w" andalso numSyntax.is_numeral (hd args)
-  end)
-  handle HOL_ERR _ => false
-  ;
-*)
-
 fun is_word_literal tm = 
  case total dest_n2w tm
   of NONE => false
    | SOME (ntm,wty) => numSyntax.is_numeral ntm;
+
+(* Is the term a word or num literal? *)
+fun is_literal tm =
+ is_word_literal tm orelse numSyntax.is_numeral tm
+
+fun is_8bit_literal tm =
+ is_word_literal tm andalso numSyntax.int_of_term (#2 (dest_comb tm)) < 256
 
 (* Is the term an atomic term? *)
 fun is_atomic t =
@@ -70,6 +66,15 @@ fun is_word_arithop op0 =
   end;
 
 (*---------------------------------------------------------------------------*)
+(* Is the operator a multiplication operator?                                *)
+(*---------------------------------------------------------------------------*)
+
+fun is_mult_op op0 =
+  (op0 = numSyntax.mult_tm) orelse
+  (#1 (dest_const(wordsSyntax.word_mul_tm)) = #1 (dest_const op0) 
+   handle _ => false);
+
+(*---------------------------------------------------------------------------*)
 (* Is the operator a word comparison operator? Includes equality             *)
 (* comparisons.                                                              *)
 (*---------------------------------------------------------------------------*)
@@ -81,7 +86,8 @@ fun is_word_cmpop op0 =
  let open wordsSyntax
  in
     is_word_equality op0 orelse
-    OR (same_const op0) [word_lt_tm,word_le_tm,word_gt_tm,word_ge_tm]
+    OR (same_const op0) [word_lt_tm,word_le_tm,word_gt_tm,word_ge_tm, 
+      word_hi_tm, word_hs_tm, word_lo_tm, word_ls_tm]
  end;
 
 (*---------------------------------------------------------------------------*)

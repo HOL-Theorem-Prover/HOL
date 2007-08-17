@@ -2,9 +2,12 @@ signature basic =
 sig
   include Abbrev
   val is_word_literal : term -> bool
+  val is_literal : term -> bool
+  val is_8bit_literal : term -> bool
   val is_atomic : term -> bool 
   val is_num_arithop : term -> bool 
   val is_word_arithop : term -> bool 
+  val is_mult_op : term -> bool
   val is_num_cmpop : term -> bool 
   val is_word_cmpop : term -> bool 
   val is_word_bitwiseop : term -> bool
