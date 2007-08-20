@@ -45,6 +45,7 @@ fun echo st = if !Globals.interactive andalso !show_echo then print st else ();
 fun print_proof st = if !Globals.interactive andalso !show_proof then print st else ();
 
 
+
 (* ============================================================================== *)
 (* STABLE CORE FUNCTIONS - these ought to be integrated with those of arm_progLib *)
 (* ============================================================================== *)
@@ -56,6 +57,91 @@ val AUTO_HIDE_POST1_TERM = TERMS2Q AUTO_HIDE_POST1
 val MOVE_PREL_TERM = TERMS2Q MOVE_PREL
 val MOVE_POSTL_TERM = TERMS2Q MOVE_POSTL
 val MOVE_POST1L_TERM = TERMS2Q MOVE_POST1L
+
+(* -- abbreviations -- *)
+
+(*
+  make_spec ["add r1,r2,r3","sub r2,r1,r4"]
+
+  val th1 = (*  add r1,r2,r3  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`1w`,`a`|->`2w`,`b`|->`3w`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_ADD3))
+  val th2 = (*  sub r2,r1,r4  *) FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`2w`,`a`|->`1w`,`b`|->`4w`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2`,`z`|->`z2` ] arm_SUB3))
+  val th1 = ABBREV_ALL th1
+  val th2 = ABBREV_ALL th2
+
+  val xs1 = `x1*x2*x3*x4`
+  val xs2 = `(x1*x3*x4)*(x2)`
+  val ys1 = `x1*x2*x3*x4`
+  val ys2 = `(x3*x1*x4)*(x2)`
+  
+  val th = MOVE_COMPOSE th1 th2 `x1*x2*x3*x4` `(x1*x3*x4)*(x2)` `x1*x2*x3*x4` `(x3*x1*x4)*(x2)`
+  val th = ABBREV_ALL th
+  val th = AUTO_HIDE_STATUS th
+  show_assums := true;
+
+  val th = (*  add r1,r2,r3  *) (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`1w`,`a`|->`2w`,`b`|->`3w`,`a_mode`|->`OneReg`,`x`|->`x1`,`y`|->`y1`,`z`|->`z1` ] arm_ADD3))
+  val th = (*  sub r2,r3,r4  *) MOVE_COMPOSE th (FST_PROG2 (SIMP_RULE (bool_ss++armINST_ss) [] (Q.INST [`c_flag`|->`AL`,`s_flag`|->`F`,`c`|->`2w`,`a`|->`3w`,`b`|->`4w`,`a_mode`|->`OneReg`,`x`|->`x2`,`y`|->`y2`,`z`|->`z2` ] arm_SUB3))) `x1*x2*x3*x4` `(x1*x2*x4)*(x3)` `x1*x2*x3*x4` `(x3*x1*x4)*(x2)`
+  val th = AUTO_HIDE_STATUS th
+  val th = ABBREV_POSTS th
+  val th = UNABBREV_ALL th
+*)
+
+fun abbreviate tm th = let
+  val y = mk_eq(tm,genvar(type_of tm))
+  val cc = UNBETA_CONV tm THENC RAND_CONV (fn t => ASSUME y) THENC BETA_CONV
+  val th = CONV_RULE cc th
+  in th end;
+
+fun ABBREV_POSTS th = let
+  val (th,b) = let
+    val xs = (list_dest_STAR o post1_ARM_PROG o concl) th
+    val xs = xs @ (list_dest_STAR o post2_ARM_PROG o concl) th handle e => xs
+    fun abbrevs [] = hd [] 
+      | abbrevs (tm::xs) = let
+      val (x,y) = dest_comb tm
+      in if is_SEP_HIDE x then abbrevs xs
+      else if is_var y then abbrevs xs
+      else if ((fst o dest_const) x = "S" handle e => false) then abbrevs xs
+      else if ((fst o dest_const o fst o dest_comb) y = "n2w" handle e => false) then abbrevs xs
+      else y end
+    val th = abbreviate (abbrevs xs) th     
+    in (th,true) end handle e => (th,false)
+  in if b then ABBREV_POSTS th else th end;
+
+fun ABBREV_ALL th = ABBREV_POSTS th;
+
+fun UNABBREV_ALL th = let
+  val th = DISCH_ALL th
+  fun remove_abbrev th = let
+    val (x,y) = (dest_eq o fst o dest_imp o concl) th
+    in MP (INST [y|->x] th) (REFL x) end handle e => UNDISCH th 
+  in repeat remove_abbrev th end;
+
+(* -- compose new -- *)
+
+val ARM_PROG_COMPOSE_FRAME = prove(
+  ``(b ==> ARM_PROG (Q1 * P2) cs2 cc2 Q3 Z2) ==>
+    ARM_PROG P1 cs1 cc1 (Q1 * Q2) Z1 ==> b ==>
+    ARM_PROG (P1 * P2) (cs1 ++ cs2) 
+      (cc1 UNION setINC cs1 cc2) (Q3 * Q2) 
+      (setSTAR P2 Z1 UNION setINC cs1 (setSTAR Q2 Z2))``,
+  REPEAT STRIP_TAC \\ MATCH_MP_TAC ARM_PROG_COMPOSE
+  \\ Q.PAT_ASSUM `b ==> bbb` IMP_RES_TAC
+  \\ Q.EXISTS_TAC `Q1 * P2 * Q2` \\ STRIP_TAC
+  << [MOVE_STAR_TAC `q*t*p` `(q*p)*t`,ALL_TAC] \\ METIS_TAC [ARM_PROG_FRAME]);
+
+fun MOVE_COMPOSE th1 th2 xs1 xs2 ys1 ys2 = let
+  val th1 = POST1_MOVE_STAR xs1 xs2 th1
+  val th2 = PRE_MOVE_STAR ys1 ys2 th2
+  val th2 = PURE_REWRITE_RULE [AND_IMP_INTRO] (DISCH ``T:bool`` (DISCH_ALL th2))
+  val th2 = MATCH_MP ARM_PROG_COMPOSE_FRAME th2
+  val th2 = MATCH_MP th2 th1
+  val th2 = UNDISCH_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] th2)
+  val rw = REWRITE_CONV [setSTAR_CLAUSES,setINC_CLAUSES,UNION_EMPTY]
+  val c1 = RAND_CONV rw
+  val c1 = c1 THENC (RATOR_CONV o RATOR_CONV o RAND_CONV) rw
+  val c1 = c1 THENC (RATOR_CONV o RATOR_CONV o RATOR_CONV o RAND_CONV) rw
+  val th2 = RW [STAR_ASSOC,emp_STAR] (CONV_RULE c1 th2)
+  in th2 end;
 
 (* -- compose -- *)
 
@@ -391,49 +477,6 @@ fun mk_compose_pass thms name = let
     | h ((name,th),n) = (("FST_PROG2 "^name, FST_PROG2 th) handle e => (name,th))   
   val _ = echo "composing specs: "
   val xs = map h thms
-(*
-  fun compose_next_group group_name [] n = let val _ = print "hi" in hd [] end 
-    | compose_next_group group_name ((prev_name,prev_th)::xs) n =
-     if n <= 1 then (prev_th,xs) else
-     if is_jump prev_th then let
-       val th = prev_th
-       val len = get_jump_length th
-       fun take 0 xs = [] | take n [] = [] | take n (x::xs) = x::take (n-1) xs    
-       fun drop 0 xs = xs | drop n [] = [] | drop n (x::xs) = drop (n-1) xs    
-       val number_of_specs = get_number_of_specs len xs
-       val ys = take number_of_specs xs
-       val _ = map (fn y => echo "-") ys
-       val cs = map (code_ARM_PROG o concl o snd) ys 
-       val th = APPEND_CODE th cs    
-       val s = list_to_string fst ys ","
-       val s = "  val "^group_name^" = APPEND_CODE "^prev_name^" (map (code_ARM_PROG o concl) ["^s^"])\n"
-       val _ = print_proof s
-       val xs = drop number_of_specs xs
-       val n = n - number_of_specs
-     in compose_next_group group_name ((group_name,th)::xs) n end else let
-       val (curr_name,curr_th) = hd xs
-       val (th,s) = find_composition (prev_th,prev_name) (curr_th,"("^curr_name^")")
-       val s = "  val "^group_name^" = "^s^"\n"
-       val _ = print_proof s
-     in compose_next_group group_name ((group_name,th)::tl xs) (n-1) end
-  fun min m n = if m < n then m else (n:int)
-  fun make_groups [] i result = result
-    | make_groups [(name,th)] i result = (result @ [(name,th)])
-    | make_groups thms i result = let
-    val name = "g" ^ int_to_string i
-    val (th,thms) = compose_next_group name thms (min 2 (length thms))
-    in if is_jump th then 
-      make_groups ((name,th)::thms) i (result)
-    else
-      make_groups thms (i+1) (result @ [(name,th)]) end  
-  val groups = make_groups xs 1 []
-  fun compose_groups ((n2,th2),(n1,th1)) = let
-    val (th,s) = find_composition (th1,n1) (th2,"("^n2^")")        
-    val s = "  val "^n1^" = "^s^"\n"
-    val _ = print_proof  s 
-    in (n1,th) end
-  val (name,th) = foldl compose_groups (hd groups) (tl groups)
-*)
   fun find_compositions prev_name prev_th [] = ([],prev_th) 
     | find_compositions prev_name prev_th xs = 
        if is_jump prev_th then let
@@ -457,8 +500,11 @@ fun mk_compose_pass thms name = let
        in (s::ys,th) end
   val (prev_name,prev_th) = hd xs
   val (strs,th) = find_compositions ("("^prev_name^")") prev_th (tl xs) 
-  val _ = echo ".\n" 
   val th = AUTO_HIDE_STATUS th
+ (* val _ = print ("\n\nBefore unabbreviation:\n\n"^(Parse.thm_to_string th)^"\n\n") *)
+  val th = RW [APPEND] (UNABBREV_ALL th)
+ (* val _ = print ("\n\n----\n\n"^(Parse.thm_to_string th)^"\n\n") *)
+  val _ = echo ".\n" 
   in ([],th) end;
 
 fun pad_strings [] = [] | pad_strings (x::xs) = let
@@ -489,6 +535,9 @@ fun make_passes_th code = let
       in ((ys @ [(s,"th"^i,str,th)]),n+1) end
   val xs = pad_strings (map fst code)
   val xs = fst (foldl f ([],1) xs)  
+  fun abbrev_posts (s,name,str,th) = 
+    (s,name,"ABBREV_ALL ("^str^")",ABBREV_ALL th)
+  val xs = map abbrev_posts xs   
   val paths = transpose (map snd code)
   fun to_str (s,i,str,th) = let
     val i = if size(i) < 4 then i ^ " " else i
@@ -1636,9 +1685,9 @@ val n2w_sw2sw_n2w = prove(
   SIMP_TAC bool_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,GSYM word_add_n2w]);
 
 val ARM_PROG_MERGE_CODE_pcADD = prove(
-  ``ARM_PROG P code ((c1,pcADD x) INSERT (c2,pcADD y) INSERT C) Q Z ==>
-    (wLENGTH c1 = y - x) ==>
-    ARM_PROG P code ((c1 ++ c2,pcADD x) INSERT C) Q Z``,
+  ``ARM_PROG P code ((cs1,pcADD x) INSERT (cs2,pcADD y) INSERT C) Q Z ==>
+    (wLENGTH cs1 = y - x) ==>
+    ARM_PROG P code ((cs1 ++ cs2,pcADD x) INSERT C) Q Z``,
   REPEAT STRIP_TAC
   \\ ASM_REWRITE_TAC [GSYM ARM_PROG_MERGE_CODE,pcINC_def,pcADD_pcADD,WORD_SUB_ADD]);
 
