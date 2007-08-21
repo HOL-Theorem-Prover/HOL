@@ -54,7 +54,7 @@ val SYSTEM_def = Define`
           next_cp,  out_cp,  inp_cp1, inp_cp2,
           next_mem, out_mem, inp_mem,
           next_pipe,out_pipe,inp_pipe)
-         (state_arm,state_cp,state_mem,state_pipe,resets,fiqs,irqs) =
+         (state_arm,state_cp,state_mem,state_pipe) (resets,fiqs,irqs) =
   ?arm_in1 arm_in2 cp_in1 cp_in2 mem_in pipe_in arm_out cp_out mem_out pipe_out.
      MUX_2in_1out inp_arm1 (pipe_out,resets,arm_in1) /\
      MUX_2in_1out inp_cp1 (arm_out,pipe_out,cp_in1) /\
@@ -180,7 +180,7 @@ val _ = Hol_datatype`
   cp_input = <| is_usr : bool; cpi : bool; ireg : word32 |>`;
 
 val _ = Hol_datatype`
-  cp_output = <| read : num; data : word32 list; absent : bool |>`;
+  cp_output = <| n_ldc : num; data : word32 list; absent : bool |>`;
 
 (* -------------------------------------------------------------------------- *)
 (* CPN                                                                        *)
@@ -265,7 +265,7 @@ val OUT_CP_def = Define`
     let ireg = cp_in.ireg and is_usr = cp_in.is_usr in
       if cp_in.cpi /\ ireg %% 27 /\ ~cp.absent is_usr ireg then
         let ic = DECODE_CP ireg in
-          <| read :=
+          <| n_ldc :=
                if (ic = ldc_stc) /\ ireg %% 20 then
                  cp.n_ldc state is_usr ireg
                else
@@ -279,7 +279,7 @@ val OUT_CP_def = Define`
                  [];
            absent := F |>
       else
-        <| read := 0; data := []; absent := T |>`;
+        <| n_ldc := 0; data := []; absent := T |>`;
 
 (* -------------------------------------------------------------------------- *)
 (* An Idealistic Memory Model (little-endian)                                 *)
@@ -333,8 +333,8 @@ val _ = Hol_datatype `mem_output = <| data : word32 list; abort : bool |>`;
 
 (* -------------------------------------------------------------------------- *)
 (* NEXT_MEM                                                                   *)
-(* Takes a "write" function, MEM state and the input (memop list)             *)
-(* and returns the next state                                                 *)
+(* Takes read and write functions, the memory state state and the input       *)
+(* (memop list) and returns the next state                                    *)
 (* -------------------------------------------------------------------------- *)
 
 val WRITE_MEM_def = Define`
@@ -343,7 +343,7 @@ val WRITE_MEM_def = Define`
      case memop of
         MemRead a ->
          (case read s a of
-             SOME x -> WRITE_MEM write read s memops
+             SOME (x:word32) -> WRITE_MEM write read s memops
           || NONE   -> s)
      || MemWrite a d ->
          (case write s a d of
@@ -392,7 +392,7 @@ val OUT_NO_PIPE_def = Define`
       || NONE   -> <| ireg := enc (UND AL); abort := T |>`;
 
 (* -------------------------------------------------------------------------- *)
-(* NB. Assumes that there are no hardware interrupts (fiqs, irqs)             *)
+(* Input functions.                                                           *)
 (* -------------------------------------------------------------------------- *)
 
 val INP_ARM1_def = Define`
@@ -417,7 +417,7 @@ val INP_ARM2_def = Define`
 val INP_MEM_def = Define`
   INP_MEM (arm_out:arm_output, cp_out) =
     case arm_out.transfers of
-       MemAccess f -> f cp_out.read cp_out.data
+       MemAccess f -> f cp_out.n_ldc cp_out.data
     || _ -> []`;
 
 val INP_CP1_def = Define`
@@ -430,6 +430,10 @@ val INP_CP2_def = Define`
      case arm_out.transfers of
         CPWrite d -> [d]
      || _ ->  mem_out.data)`;
+
+(* -------------------------------------------------------------------------- *)
+(* Parametrized next state and state function.                                *)
+(* -------------------------------------------------------------------------- *)
 
 val NEXT_1STAGE_def = Define`
   NEXT_1STAGE cp write read =
@@ -445,6 +449,12 @@ val STATE_1STAGE_def = Define`
      NEXT_1STAGE cp write read (STATE_1STAGE cp write read (s,i) t, i t))`;
 
 (* -------------------------------------------------------------------------- *)
+
+val STATE_1STAGE_NUM = save_thm("STATE_1STAGE_NUM",
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV
+    (GEN_ALL (CONJUNCT2 STATE_1STAGE_def)));
+
+val _ = computeLib.add_persistent_funs [("STATE_1STAGE_NUM", STATE_1STAGE_NUM)];
 
 infix \\ << >>
 
@@ -480,12 +490,12 @@ in
   | SOME t => Tactic.EXISTS_TAC (mk_abs(``t:num``,t)) g
 end;
 
-val SYSTEM_THM = prove(
+val SYSTEM_THM = store_thm("SYSTEM_THM",
   `SYSTEM (next_arm, out_arm, inp_arm1, inp_arm2,
            next_cp,  out_cp,  inp_cp1, inp_cp2,
            next_mem, out_mem, inp_mem,
            next_pipe,out_pipe,inp_pipe)
-         (state_arm,state_cp,state_mem,state_pipe,resets,fiqs,irqs) =
+         (state_arm,state_cp,state_mem,state_pipe) (resets,fiqs,irqs) =
    !t. (state_arm(t+1), state_cp(t+1), state_mem(t+1), state_pipe(t+1)) =
        NEXT_SYSTEM
          (next_arm, out_arm, inp_arm1, inp_arm2,
@@ -977,7 +987,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
     :: DATATYPE (`mem_output = <| data : word32 list; abort : bool |>`)
     :: DATATYPE (`cp_input = <| is_usr : bool; cpi : bool; ireg : word32 |>`)
     :: DATATYPE
-         (`cp_output = <| read : num; data : word32 list; absent : bool |>`)
+         (`cp_output = <| n_ldc : num; data : word32 list; absent : bool |>`)
     :: DATATYPE (`pipe_output = <| ireg : word32; abort : bool |>`)
     :: DATATYPE (`coproc =
            <| absent : bool -> word32 -> bool;

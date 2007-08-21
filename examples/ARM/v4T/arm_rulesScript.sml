@@ -227,8 +227,7 @@ val NOP_CONTEXT_def = Define`
     ~(cpsr:word32 %% 5) /\
     (state.exception = software) /\
     ~CONDITION_PASSED (NZCV cpsr) (enc i) /\
-    ~(OUT_NO_PIPE read ((), state, mem:'b)).abort /\
-    ((OUT_NO_PIPE read ((), state, mem:'b)).ireg = enc i)`;
+    (OUT_NO_PIPE read ((), state, mem:'b) = <| ireg := enc i; abort := F |>)`;
 
 val ARM_CONTEXT_def = Define`
   ARM_CONTEXT read state (mem:'b) (Reg,mode,cpsr) i =
@@ -238,8 +237,7 @@ val ARM_CONTEXT_def = Define`
     ~(cpsr:word32 %% 5) /\
     (state.exception = software) /\
     CONDITION_PASSED (NZCV cpsr) (enc i) /\
-    ~(OUT_NO_PIPE read ((), state, mem:'b)).abort /\
-    ((OUT_NO_PIPE read ((), state, mem:'b)).ireg = enc i)`;
+    (OUT_NO_PIPE read ((), state, mem:'b) = <| ireg := enc i; abort := F |>)`;
 
 val PABORT_CONTEXT_def = Define`
   PABORT_CONTEXT read state (mem:'b) cpsr =
@@ -263,8 +261,8 @@ val THUMB_CONTEXT_def = Define`
     Abbrev (Reg = REG_READ T state.regs.reg mode) /\
     cpsr %% 5 /\
     (state.exception = software) /\
-    ~(OUT_NO_PIPE read ((), state, mem:'b)).abort /\
-    ((OUT_NO_PIPE read ((), state, mem:'b)).ireg = (w2w (enc_ i)))`;
+    (OUT_NO_PIPE read ((), state, mem:'b) =
+       <| ireg := w2w (enc_ i); abort := F |>)`;
 
 val CONTXT_ss = rewrites
  [EXCEPTION_CONTEXT_def,NOP_CONTEXT_def,ARM_CONTEXT_def,
@@ -828,7 +826,7 @@ val ADDRESS_LIST_0 = SIMP_CONV (srw_ss())
 val COPROC_ss = rewrites [MRC_def,LDC_STC_def,MCR_OUT_def,
   NEXT_MEM_MemRead, OUT_MEM_MemRead, ADDRESS_LIST_0,
   ISPEC `cp_output_absent` COND_RAND, ISPEC `cp_output_data` COND_RAND,
-  ISPEC `cp_output_read` COND_RAND, ISPEC `regs_psr` COND_RAND,
+  ISPEC `cp_output_n_ldc` COND_RAND, ISPEC `regs_psr` COND_RAND,
   (SIMP_RULE bool_ss [] o ISPEC `\y. y %% n`) COND_RAND,
   ISPEC `CPSR_READ` COND_RAND,
   decode_enc_coproc,decode_cp_enc_coproc,decode_ldc_stc_enc,

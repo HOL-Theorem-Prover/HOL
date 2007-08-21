@@ -951,7 +951,7 @@ end;
 val mem_write = ``BASIC_WRITE``;
 val mem_read  = ``BASIC_READ``;
 val no_irpts  = ``NO_IRPTS``;
-val no_cp     = ``NO_CP``;
+val no_cp     = ``NO_CP:'a coproc``;
 
 fun evaluate_cp(n, x, y) = state (A,pc_ptr) x (init x y) n;
 
@@ -959,12 +959,12 @@ fun eval_cp (n, x, y) = lstate (time,pc_ptr) x [init x y] n;
 
 fun evaluate (n, m, r, s) =
   evaluate_cp(n, (no_cp,mem_write,mem_read,no_irpts),
-   {cp_state = ``cp_state``, pipe = ``()``, exc = ``software``,
+   {cp_state = ``cp_state:'a``, pipe = ``()``, exc = ``software``,
     mem = m, reg = r, psr = s});
 
 fun eval (n, m, r, s) =
   eval_cp(n, (no_cp,mem_write,mem_read,no_irpts),
-   {cp_state = ``cp_state``, pipe = ``()``, exc = ``software``,
+   {cp_state = ``cp_state:'a``, pipe = ``()``, exc = ``software``,
     mem = m, reg = r, psr = s});
 
 (*

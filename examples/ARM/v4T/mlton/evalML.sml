@@ -278,10 +278,8 @@ val toLowerString = String.map Char.toLower;
 val toSpaces = String.map (fn _ => #" ");
 
 val usage_message = let val x = "Usage: " ^ CommandLine.name() in
-  "An ARM emulator (generated from a HOL model of the ARM7's ISA).\n" ^ x ^
-  " [-cycles n] [-rN_m n] [-SPSR_m n] [-N] [-Z] [-C] [-V] [-T] [-M m] [-E]\n" ^
-  toSpaces x ^
-  " [-Wreg] [-Wmem] [-Wmode] [-Wflags] [-Wthumb] [-Wireg] [-Wall] file\n" ^
+  x ^ " [OPTIONS] file\n" ^
+  "An ARM emulator (generated from a HOL model of the ARM v4T ISA).\n\n" ^
   "Options:\n\
   \-cycles n - upper limit on the run length (will be " ^
                Int.toString (valOf Int.maxInt) ^ " by default)\n\
