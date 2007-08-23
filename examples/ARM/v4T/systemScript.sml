@@ -222,9 +222,9 @@ val DECODE_MRC_MCR_def = Define`
 
 val DECODE_CP_def = Define`
   DECODE_CP (w:word32) =
-    if w %% 25 then
-      if w %% 4 /\ w %% 27 then
-        if w %% 20 then
+    if w ' 25 then
+      if w ' 4 /\ w ' 27 then
+        if w ' 20 then
           mrc
         else
           mcr
@@ -241,11 +241,11 @@ val DECODE_CP_def = Define`
 val NEXT_CP_def = Define`
   NEXT_CP cp (state, (cp_in, data)) =
     let ireg = cp_in.ireg and is_usr = cp_in.is_usr in
-      if cp_in.cpi /\ ireg %% 27 /\ ~cp.absent is_usr ireg then
+      if cp_in.cpi /\ ireg ' 27 /\ ~cp.absent is_usr ireg then
         let ic = DECODE_CP ireg in
           if ic = mcr then
             cp.f_mcr state is_usr ireg (HD data)
-          else if (ic = ldc_stc) /\ ireg %% 20 then
+          else if (ic = ldc_stc) /\ ireg ' 20 then
             cp.f_ldc state is_usr ireg data
           else if ic = cdp_und then
             cp.f_cdp state is_usr ireg
@@ -263,17 +263,17 @@ val NEXT_CP_def = Define`
 val OUT_CP_def = Define`
   OUT_CP cp (state, cp_in) =
     let ireg = cp_in.ireg and is_usr = cp_in.is_usr in
-      if cp_in.cpi /\ ireg %% 27 /\ ~cp.absent is_usr ireg then
+      if cp_in.cpi /\ ireg ' 27 /\ ~cp.absent is_usr ireg then
         let ic = DECODE_CP ireg in
           <| n_ldc :=
-               if (ic = ldc_stc) /\ ireg %% 20 then
+               if (ic = ldc_stc) /\ ireg ' 20 then
                  cp.n_ldc state is_usr ireg
                else
                  0;
              data :=
                if ic = mrc then
                  [cp.f_mrc state is_usr ireg]
-               else if (ic = ldc_stc) /\ ~(ireg %% 20) then
+               else if (ic = ldc_stc) /\ ~(ireg ' 20) then
                  cp.f_stc state is_usr ireg
                else
                  [];
@@ -292,16 +292,16 @@ val ADDR30_def = Define `ADDR30 (addr:word32) = (31 >< 2) addr`;
 val SET_BYTE_def = Define`
   SET_BYTE (oareg:word2) (b:word8) (w:word32) =
     word_modify (\i x.
-                  (i < 8) /\ (if oareg = 0w then b %% i else x) \/
-       (8 <= i /\ i < 16) /\ (if oareg = 1w then b %% (i - 8) else x) \/
-      (16 <= i /\ i < 24) /\ (if oareg = 2w then b %% (i - 16) else x) \/
-      (24 <= i /\ i < 32) /\ (if oareg = 3w then b %% (i - 24) else x)) w`;
+                  (i < 8) /\ (if oareg = 0w then b ' i else x) \/
+       (8 <= i /\ i < 16) /\ (if oareg = 1w then b ' (i - 8) else x) \/
+      (16 <= i /\ i < 24) /\ (if oareg = 2w then b ' (i - 16) else x) \/
+      (24 <= i /\ i < 32) /\ (if oareg = 3w then b ' (i - 24) else x)) w`;
 
 val SET_HALF_def = Define`
   SET_HALF (oareg:bool) (hw:word16) (w:word32) =
     word_modify (\i x.
-                 (i < 16) /\ (if ~oareg then hw %% i else x) \/
-      (16 <= i /\ i < 32) /\ (if oareg then hw %% (i - 16) else x)) w`;
+                 (i < 16) /\ (if ~oareg then hw ' i else x) \/
+      (16 <= i /\ i < 32) /\ (if oareg then hw ' (i - 16) else x)) w`;
 
 val MEM_WRITE_BYTE_def = Define`
   MEM_WRITE_BYTE (mem:mem) addr (word:word8) =
@@ -311,7 +311,7 @@ val MEM_WRITE_BYTE_def = Define`
 val MEM_WRITE_HALF_def = Define`
   MEM_WRITE_HALF (mem:mem) addr (word:word16) =
     let addr30 = ADDR30 addr in
-      (addr30 =+ SET_HALF (addr %% 1) word (mem addr30)) mem`;
+      (addr30 =+ SET_HALF (addr ' 1) word (mem addr30)) mem`;
 
 val MEM_WRITE_WORD_def = Define`
   MEM_WRITE_WORD (mem:mem) addr word = (ADDR30 addr =+ word) mem`;
@@ -381,7 +381,7 @@ val NEXT_NO_PIPE_def = Define `NEXT_NO_PIPE ((), (s, m)) = ()`;
 
 val OUT_NO_PIPE_def = Define`
   OUT_NO_PIPE read ((), (s, m)) =
-    let t = (CPSR_READ s.regs.psr) %% 5
+    let t = (CPSR_READ s.regs.psr) ' 5
     and fpc = FETCH_PC s.regs.reg in
       case read m fpc of
          SOME n -> <| ireg := if t then
@@ -752,7 +752,7 @@ val REGISTER_LIST_THM = store_thm("REGISTER_LIST_THM",
 
 val DECODE_ARM_THM = store_thm("DECODE_ARM_THM",
   `!ireg. DECODE_ARM (ireg : word32) =
-    let b n = ireg %% n in
+    let b n = ireg ' n in
       if b 27 then
         if b 26 then
           if b 25 then
@@ -1029,7 +1029,7 @@ val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
           ADDR_MODE3_def, LDRH_STRH_def,spec_word_rule16 REGISTER_LIST_THM,
           ADDRESS_LIST_def, WB_ADDRESS_def, FIRST_ADDRESS_def,
           ADDR_MODE4_def, LDM_LIST_def, STM_LIST_def, STM_DATA_def, LDM_STM_def,
-          SWP_def, MRC_def, MCR_OUT_def, ADDR_MODE5_def, LDC_STC_def,
+          SWP_def, MRC_def, MCR_def, ADDR_MODE5_def, LDC_STC_def,
           CONDITION_PASSED2_def, CONDITION_PASSED_def, THUMB_TO_ARM_def,
           RUN_ARM_def, interrupt2exception_def,
           WRITE_MEM_def, READ_MEM_def, NoTransfers_def,

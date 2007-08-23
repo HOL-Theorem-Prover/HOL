@@ -165,7 +165,7 @@ val the_goal =
     || STMIA_ Rn list ->
          STM AL F <| Pre := F; Up := T; Wb := T |> (w2w Rn) (w2w list)
     || LDMIA_ Rn list ->
-         LDM AL F <| Pre := F; Up := T; Wb := ~(list %% w2n Rn) |>
+         LDM AL F <| Pre := F; Up := T; Wb := ~(list ' w2n Rn) |>
            (w2w Rn) (w2w list)
     || B_1  cond imm8 ->
         (if cond = AL then
@@ -241,13 +241,13 @@ end;
 (* ------------------------------------------------------------------------- *)
 
 val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (:'a) ==> (((n2w n):bool ** 'a) %% i = BIT i n)``;
+  ``!i n. i < dimindex (:'a) ==> (((n2w n):'a word) ' i = BIT i n)``;
 
 val word_index = REWRITE_RULE [BIT_def] word_index;
 
 val extract_out_of_range = prove(
   `!w:'a word i h.
-      (h - l < i) /\ i < dimindex(:'b) ==> ~(((h >< l) w):'b word %% i)`,
+      (h - l < i) /\ i < dimindex(:'b) ==> ~(((h >< l) w):'b word ' i)`,
   SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def,word_bits_def,w2w]
 \\ Cases_on `i < dimindex (:'a)` \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] []);
 
@@ -279,7 +279,7 @@ in
 end;
 
 val condition_encode__lem = prove(
-  `!cond. ~(condition_encode_ cond %% 13)`,
+  `!cond. ~(condition_encode_ cond ' 13)`,
   SRW_TAC [fcpLib.FCP_ss, wordsLib.SIZES_ss, ARITH_ss]
     [condition_encode__def, word_index, w2w, word_lsl_def]);
 
@@ -290,7 +290,7 @@ local
     (SIMP_CONV (srw_ss()++fcpLib.FCP_ss++wordsLib.SIZES_ss++BITS_NUMERAL_ss)
      [COND_RAND, COND_RATOR, thumb_encode,word_index,w2w,extract_out_of_range,
       condition_encode__lem, dimindex_11] o
-     subst [``i:thumb_instruction`` |-> i, ``n:num`` |-> n]) ``(enc_ i) %% n``
+     subst [``i:thumb_instruction`` |-> i, ``n:num`` |-> n]) ``(enc_ i) ' n``
 in
   fun decode_thms nums insts =
      List.concat (map (fn i => map (THUMB_DECODE i) nums) insts);
@@ -389,8 +389,8 @@ val immediate5_times2 = prove(
 
 val BLOCK_lem = prove(
   `!Rd:word3 imm:word8.
-     (51200w:word16 !! w2w Rd << 8 !! w2w imm) %% w2n (w2w Rd : word32) =
-     imm %% w2n Rd`,
+     (51200w:word16 !! w2w Rd << 8 !! w2w imm) ' w2n (w2w Rd : word32) =
+     imm ' w2n Rd`,
   NTAC 2 STRIP_TAC  \\ Cases_on_word `imm`
     \\ SRW_TAC [wordsLib.SIZES_ss,ARITH_ss] [w2n_w2w, w2w_n2w]
     \\ SPEC_THEN `Rd` ASSUME_TAC
@@ -422,17 +422,17 @@ val BLOCK_lem2 = prove(
     \\ SRW_TAC [ARITH_ss] [BITS_LT_LOW]);
 
 val COND_lem = prove(
-  `(!c. (c = NV) = condition_encode_ c %% 11 /\ condition_encode_ c %% 10 /\
-                   condition_encode_ c %% 9 /\ condition_encode_ c %% 8) /\
-   (!c. (c = AL) = condition_encode_ c %% 11 /\ condition_encode_ c %% 10 /\
-                   condition_encode_ c %% 9 /\ ~(condition_encode_ c %% 8))`,
+  `(!c. (c = NV) = condition_encode_ c ' 11 /\ condition_encode_ c ' 10 /\
+                   condition_encode_ c ' 9 /\ condition_encode_ c ' 8) /\
+   (!c. (c = AL) = condition_encode_ c ' 11 /\ condition_encode_ c ' 10 /\
+                   condition_encode_ c ' 9 /\ ~(condition_encode_ c ' 8))`,
   REPEAT STRIP_TAC \\ Cases_on `c` \\ EVAL_TAC \\ SRW_TAC [] []);
 
 val COND_lem2 = prove(
-  `!c. (case condition_encode_ c %% 11 of
-        T -> (case condition_encode_ c %% 10 of
-              T -> (case condition_encode_ c %% 9 of
-                    T -> (case condition_encode_ c %% 8 of
+  `!c. (case condition_encode_ c ' 11 of
+        T -> (case condition_encode_ c ' 10 of
+              T -> (case condition_encode_ c ' 9 of
+                    T -> (case condition_encode_ c ' 8 of
                           T -> x || F -> y)
                  || F -> z)
            || F -> z)
@@ -486,7 +486,7 @@ val thumb_to_arm_enc = Tactical.store_thm("thumb_to_arm_enc",
 (* ------------------------------------------------------------------------- *)
 
 val decode_27_enc_coproc_ = store_thm("decode_27_enc_coproc_",
-  `w2w (enc_ UND_): word32 %% 27 = F`, EVAL_TAC);
+  `w2w (enc_ UND_): word32 ' 27 = F`, EVAL_TAC);
 
 (* ------------------------------------------------------------------------- *)
 

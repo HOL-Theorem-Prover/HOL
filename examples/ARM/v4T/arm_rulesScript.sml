@@ -177,9 +177,9 @@ val WORD_SMULL = store_thm("WORD_SMULL",
 (* ------------------------------------------------------------------------- *)
 
 val word_index = METIS_PROVE [word_index_n2w]
-  ``!i n. i < dimindex (:'a) ==> ((n2w n):'a word %% i = BIT i n)``;
+  ``!i n. i < dimindex (:'a) ==> ((n2w n):'a word ' i = BIT i n)``;
 
-val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x %% 29``;
+val CARRY_NZCV = METIS_PROVE [CARRY_def,NZCV_def] ``CARRY (NZCV x) = x ' 29``;
 
 fun DISCH_AND_IMP t =
   (GEN_ALL o SIMP_RULE std_ss [AND_IMP_INTRO] o
@@ -224,7 +224,7 @@ val EXCEPTION_CONTEXT_def = Define`
 val NOP_CONTEXT_def = Define`
   NOP_CONTEXT read state (mem:'b) cpsr i =
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
-    ~(cpsr:word32 %% 5) /\
+    ~(cpsr:word32 ' 5) /\
     (state.exception = software) /\
     ~CONDITION_PASSED (NZCV cpsr) (enc i) /\
     (OUT_NO_PIPE read ((), state, mem:'b) = <| ireg := enc i; abort := F |>)`;
@@ -234,7 +234,7 @@ val ARM_CONTEXT_def = Define`
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
     Abbrev (mode = DECODE_MODE ((4 >< 0) cpsr)) /\
     Abbrev (Reg = REG_READ F state.regs.reg mode) /\
-    ~(cpsr:word32 %% 5) /\
+    ~(cpsr:word32 ' 5) /\
     (state.exception = software) /\
     CONDITION_PASSED (NZCV cpsr) (enc i) /\
     (OUT_NO_PIPE read ((), state, mem:'b) = <| ireg := enc i; abort := F |>)`;
@@ -242,7 +242,7 @@ val ARM_CONTEXT_def = Define`
 val PABORT_CONTEXT_def = Define`
   PABORT_CONTEXT read state (mem:'b) cpsr =
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
-    ~(cpsr:word32 %% 5) /\
+    ~(cpsr:word32 ' 5) /\
     (state.exception = software) /\
     (OUT_NO_PIPE read ((), state, mem:'b)).abort`;
 
@@ -259,7 +259,7 @@ val THUMB_CONTEXT_def = Define`
     Abbrev (cpsr = CPSR_READ state.regs.psr) /\
     Abbrev (mode = DECODE_MODE ((4 >< 0) cpsr)) /\
     Abbrev (Reg = REG_READ T state.regs.reg mode) /\
-    cpsr %% 5 /\
+    cpsr ' 5 /\
     (state.exception = software) /\
     (OUT_NO_PIPE read ((), state, mem:'b) =
        <| ireg := w2w (enc_ i); abort := F |>)`;
@@ -479,7 +479,7 @@ val DP_ss =
    WORD_HIGHER_EQ,WORD_NEG_cor,WORD_1COMP_ZERO,REG_READ_INC_PC,
    (SIMP_RULE bool_ss [] o ISPEC `\x:iclass. x = y`) COND_RAND,
    (SIMP_RULE bool_ss [] o ISPEC `\r. REG_READ F r m n`) COND_RAND,
-   (SIMP_RULE bool_ss [] o ISPEC `\y. y %% n`) COND_RAND,
+   (SIMP_RULE bool_ss [] o ISPEC `\y. y ' n`) COND_RAND,
    ISPEC `CPSR_READ` COND_RAND,
    PROVE [] ``(if a then (if b then d else c) else c) =
               (if a /\ b then d else c)``,
@@ -488,7 +488,7 @@ val DP_ss =
    decode_enc_data_proc3,decode_data_proc_enc3];
 
 val abbrev_mode1 =
-  `Abbrev (op2 = ADDR_MODE1 state.regs.reg F mode (cpsr %% 29)
+  `Abbrev (op2 = ADDR_MODE1 state.regs.reg F mode (cpsr ' 29)
       (IS_DP_IMMEDIATE Op2) ((11 >< 0) (addr_mode1_encode Op2)))`;
 
 val eval_op = SYMBOLIC_EVAL_CONV [DP_ss] o cntxt [`~(Rm = 15w)`,abbrev_mode1];
@@ -528,7 +528,7 @@ val ARM_MVN = SYMBOLIC_EVAL_CONV [DP_ss] (cntxt [abbrev_mode1]
 
 val MLA_MUL_ss = rewrites [MLA_MUL_def,ALU_multiply_def,SET_NZ_def,SET_NZC_def,
     REG_READ_INC_PC,ALU_MUL,ALU_MLA,WORD_ADD_0,REG_READ_WRITE,
-   (SIMP_RULE bool_ss [] o ISPEC `\y. y %% n`) COND_RAND,
+   (SIMP_RULE bool_ss [] o ISPEC `\y. y ' n`) COND_RAND,
    ISPEC `CPSR_READ` COND_RAND,
     decode_enc_mla_mul,decode_mla_mul_enc];
 
@@ -565,7 +565,7 @@ val LDR_STR_ss =
     decode_ldr_str_enc, decode_ldrh_strh_enc];
 
 val abbrev_mode2 =
-  `Abbrev (addr_mode2 = ADDR_MODE2 state.regs.reg F mode (cpsr %% 29)
+  `Abbrev (addr_mode2 = ADDR_MODE2 state.regs.reg F mode (cpsr ' 29)
                 (IS_DT_SHIFT_IMMEDIATE offset) opt.Pre opt.Up Rn
                 ((11 >< 0) (addr_mode2_encode offset))) /\
    Abbrev (addr = FST addr_mode2) /\
@@ -769,7 +769,7 @@ val FIRSTN_MemRead = SIMP_RULE std_ss [markerTheory.Abbrev_def] FIRSTN_MemRead;
 val LDM_STM_ss =
   rewrites [LDM_STM_def, NEXT_MEM_MemRead, OUT_MEM_MemRead,
     rich_listTheory.FIRSTN_LENGTH_ID, FIRSTN_MemRead,
-    (SIMP_RULE bool_ss [] o ISPEC `\y. y %% n`) COND_RAND,
+    (SIMP_RULE bool_ss [] o ISPEC `\y. y ' n`) COND_RAND,
     ISPEC `CPSR_READ` COND_RAND,
     PROVE [] ``(if a then c else (if b then d else c)) =
                (if a \/ ~b then c else d)``,
@@ -823,11 +823,11 @@ val ARM_MRS =
 val ADDRESS_LIST_0 = SIMP_CONV (srw_ss())
   [ADDRESS_LIST_def,rich_listTheory.GENLIST] ``ADDRESS_LIST x 0``;
 
-val COPROC_ss = rewrites [MRC_def,LDC_STC_def,MCR_OUT_def,
+val COPROC_ss = rewrites [MRC_def,LDC_STC_def,MCR_def,
   NEXT_MEM_MemRead, OUT_MEM_MemRead, ADDRESS_LIST_0,
   ISPEC `cp_output_absent` COND_RAND, ISPEC `cp_output_data` COND_RAND,
   ISPEC `cp_output_n_ldc` COND_RAND, ISPEC `regs_psr` COND_RAND,
-  (SIMP_RULE bool_ss [] o ISPEC `\y. y %% n`) COND_RAND,
+  (SIMP_RULE bool_ss [] o ISPEC `\y. y ' n`) COND_RAND,
   ISPEC `CPSR_READ` COND_RAND,
   decode_enc_coproc,decode_cp_enc_coproc,decode_ldc_stc_enc,
   decode_ldc_stc_20_enc,decode_27_enc_coproc,decode_mrc_mcr_rd_enc];

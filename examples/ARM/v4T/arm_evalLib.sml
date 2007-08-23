@@ -193,7 +193,7 @@ val _ = Lib.C add_thms arm_compset
    LDM_LIST_def,STM_LIST_def,STM_DATA_def,
 
    EXCEPTION_def,BRANCH_def,BRANCH_EXCHANGE_def,DATA_PROCESSING_def,MRS_def,
-   LDR_STR_def,MLA_MUL_def,SWP_def,MRC_def,MCR_OUT_def,MSR_def,LDM_STM_def,
+   LDR_STR_def,MLA_MUL_def,SWP_def,MRC_def,MCR_def,MSR_def,LDM_STM_def,
    LDC_STC_def,LDRH_STRH_def,
 
    empty_memory_def,empty_registers_def,empty_psrs_def,
