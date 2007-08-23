@@ -3,6 +3,7 @@ sig
 
   datatype grammar_rule
     = SUFFIX of string list
+    | ARRAY_SFX 
     | INFIX of {opname : string, parse_string : string} list *
                 HOLgrammars.associativity
 

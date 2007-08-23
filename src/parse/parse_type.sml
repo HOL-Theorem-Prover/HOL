@@ -32,6 +32,8 @@ fun parse_type tyfns allow_unknown_suffixes G = let
      to be an equality type, which is icky *)
   fun is_LParen t = case t of LParen => true | _ => false
   fun is_RParen t = case t of RParen => true | _ => false
+  fun is_LBracket t = case t of LBracket => true | _ => false
+  fun is_RBracket t = case t of RBracket => true | _ => false
   fun is_Comma t = case t of Comma => true | _ => false
   fun itemP P fb = let
     val (adv, (t,locn)) = typetok_of fb (* TODO:KSW: use locn *)
@@ -110,25 +112,11 @@ fun parse_type tyfns allow_unknown_suffixes G = let
   fun n_appls_l ([], t) = raise Fail "parse_type.n_appls_l: can't happen"
     | n_appls_l (op1::ops, xs) = n_appls (ops, apply_tyop op1 xs)
 
-
-
-  fun parse_base_level f fb = let
-    val (advance, (t,locn)) = typetok_of fb
+  fun n_array_sfxs locn (sfxs, ty) = let 
+    fun build (sfx, base) = 
+        qtyop{Thy = "fcp", Tyop = "cart",Locn=locn,Args = [base, sfx]}
   in
-    case t  of
-      TypeVar s => (advance(); pVartype (s,locn))
-    | TypeIdent s => (advance (); apply_tyop (t,locn) [])
-    | QTypeIdent(thy, ty) => (advance ();
-                              qtyop{Thy = thy, Tyop = ty, Locn = locn, Args = []})
-    | AQ x => (advance (); pAQ x)
-    | LParen => let
-        val _ = advance ()
-        val ty = f fb
-        val _ = itemP is_RParen
-      in
-        ty
-      end
-    | _ => raise InternalFailure locn
+    List.foldl build ty sfxs
   end
 
   fun parse_op slist fb = let
@@ -155,6 +143,13 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     | _ => raise InternalFailure locn
   end
 
+  fun parse_asfx prse fb = let 
+    val (llocn, _) = itemP is_LBracket fb 
+    val ty = prse fb
+    val (rlocn, _) = itemP is_RBracket fb
+  in
+    ty
+  end
 
   fun parse_tuple prse fb = let
     val (llocn,_) = itemP is_LParen fb
@@ -171,9 +166,20 @@ fun parse_type tyfns allow_unknown_suffixes G = let
     recurse [ty1]
   end
 
+  fun parse_atom fb = let 
+    val (adv, (t,locn)) = typetok_of fb
+  in
+    case t of 
+      TypeVar s => (adv(); pVartype (s, locn))
+    | AQ x => (adv(); pAQ x)
+    | TypeIdent s => (adv(); apply_tyop(t,locn) []) 
+                     (* should only be a number *)
+    | _ => raise InternalFailure locn
+  end
+
   fun parse_term current strm =
       case current of
-        [] => parse_base_level (parse_term G) strm
+        [] => parse_atom strm 
       | (x::xs) => parse_rule x xs strm
   and parse_rule (r as (level, rule)) rs strm = let
     val next_level = parse_term rs
@@ -203,11 +209,22 @@ fun parse_type tyfns allow_unknown_suffixes G = let
           NONE => ty1
         | SOME opn => apply_tyop opn [ty1, same_level strm]
       end
+    | ARRAY_SFX => let 
+        val llocn = #2 (current strm)
+        val ty1 = next_level strm
+        val asfxs = many (parse_asfx (parse_term G)) strm
+      in
+        n_array_sfxs llocn (asfxs, ty1)
+      end
     | SUFFIX slist => let
       in
         case totalify (parse_tuple (parse_term G)) strm of
           NONE => let
-            val ty1 = next_level strm
+            val ty1 = let 
+              val op1 = parse_op slist strm
+            in 
+              apply_tyop op1 []
+            end handle InternalFailure l => next_level strm
             val ops = many (parse_op slist) strm
           in
             n_appls(ops, ty1)

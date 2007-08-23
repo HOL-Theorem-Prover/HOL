@@ -41,6 +41,13 @@ in
   toString (recurse (one, zero) ty)
 end
 
+fun dest_arraytype ty = let 
+  val {Thy, Tyop, Args} = dest_thy_type ty
+in
+  if Thy = "fcp" andalso Tyop = "cart" then (hd Args, hd (tl Args))
+  else raise ERR "dest_arraytype: not an array type"
+end
+
 fun pp_type0 (G:grammar) = let
   fun lookup_tyop s = let
     fun recurse [] = NONE
@@ -56,6 +63,7 @@ fun pp_type0 (G:grammar) = let
                 NONE => recurse xs
               | SOME r => SOME(p, IR(a,#parse_string r))
             end
+          | (p, ARRAY_SFX) => recurse xs
         end
   in
     recurse (rules G) : (int * single_rule) option
@@ -74,6 +82,14 @@ fun pp_type0 (G:grammar) = let
           val s = dest_numtype ty
         in
           add_string s
+        end handle HOL_ERR _ =>
+        let 
+          val (bty, cty) = dest_arraytype ty 
+        in
+          pr_ty pps bty grav (depth - 1); 
+          add_string "[";
+          pr_ty pps cty Top (depth - 1);
+          add_string "]"
         end handle HOL_ERR _ =>
         let
           val (Tyop, Args) = type_grammar.abb_dest_type G ty

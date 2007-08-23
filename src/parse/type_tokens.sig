@@ -8,6 +8,8 @@ signature type_tokens = sig
       | Comma
       | LParen
       | RParen
+      | LBracket 
+      | RBracket
       | AQ of 'a
       | Error of 'a base_tokens.base_token
 

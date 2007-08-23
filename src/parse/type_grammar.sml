@@ -3,6 +3,7 @@ struct
 
 datatype grammar_rule =
   SUFFIX of string list
+| ARRAY_SFX
 | INFIX of {opname : string, parse_string : string} list *
            HOLgrammars.associativity
 
@@ -51,7 +52,8 @@ val std_suffix_precedence = 100
 
 fun merge r1 r2 =
   case (r1, r2) of
-    (SUFFIX slist1, SUFFIX slist2) => SUFFIX(Lib.union slist1 slist2)
+    (ARRAY_SFX, ARRAY_SFX) => ARRAY_SFX
+  | (SUFFIX slist1, SUFFIX slist2) => SUFFIX(Lib.union slist1 slist2)
   | (INFIX(rlist1, a1), INFIX(rlist2, a2)) => let
     in
       if a1 = a2 then INFIX(Lib.union rlist1 rlist2, a1)
@@ -124,7 +126,9 @@ end
 fun new_tyop (TYG(G,abbrevs,pmap)) name =
   TYG (insert_sorted (std_suffix_precedence, SUFFIX[name]) G, abbrevs, pmap)
 
-val empty_grammar = TYG ([], Binarymap.mkDict String.compare, TypeNet.empty)
+val empty_grammar = TYG ([(99, ARRAY_SFX)], 
+                         Binarymap.mkDict String.compare, 
+                         TypeNet.empty)
 
 fun rules (TYG (G, dict, pmap)) = G
 fun abbreviations (TYG (G, dict, pmap)) = dict
@@ -292,6 +296,7 @@ fun prettyprint_grammar pps (G as TYG (g,abbrevs,pmap)) = let
                 (fn () => add_break(1,0)) sl;
         end_block ()
       end
+    | ARRAY_SFX => add_string "TY  ::=  TY[TY] (array type)"
     | INFIX(oplist, assoc) => let
         val assocstring =
             case assoc of

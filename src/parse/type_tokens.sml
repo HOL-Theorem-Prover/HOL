@@ -9,6 +9,8 @@ datatype 'a type_token
      | Comma
      | LParen
      | RParen
+     | LBracket
+     | RBracket
      | AQ of 'a
      | Error of 'a base_tokens.base_token
 
@@ -38,6 +40,8 @@ in
   else if s0 = #"(" then nadvance 1 LParen
   else if s0 = #")" then nadvance 1 RParen
   else if s0 = #"," then nadvance 1 Comma
+  else if s0 = #"[" then nadvance 1 LBracket
+  else if s0 = #"]" then nadvance 1 RBracket
   else if s0 = #"\"" then ((fn () => advance fb), (Error (BT_Ident s),locn))
   else let
       val (ssl, ssr) =
