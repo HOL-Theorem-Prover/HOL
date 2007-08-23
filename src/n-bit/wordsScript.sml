@@ -46,7 +46,7 @@ val INT_MAX_def  = Define `INT_MAX (:'a) = INT_MIN(:'a) - 1`;
 val dimword_ML = rhs (#2 (strip_forall (concl dimword_def)))
 val INT_MIN_ML = rhs (#2 (strip_forall (concl INT_MIN_def)))
 
-val _ = type_abbrev("word", ``:bool ** 'a``);
+val _ = type_abbrev("word", ``:bool['a]``);
 
 (* ------------------------------------------------------------------------- *)
 (*  Domain transforming maps : definitions                                   *)
@@ -264,9 +264,9 @@ val _ = add_infix("#<<",680,HOLgrammars.LEFT);
 val _ = ai := true;
 
 val word_join_def = Define`
-  (word_join (v:'a word) (w:'b word)):bool ** ('a + 'b) =
-    let cv = (w2w v):bool ** ('a + 'b)
-    and cw = (w2w w):bool ** ('a + 'b)
+  (word_join (v:'a word) (w:'b word)):('a + 'b) word =
+    let cv = (w2w v):('a + 'b) word
+    and cw = (w2w w):('a + 'b) word
     in  (cv << (dimindex (:'b))) !! cw`;
 
 val word_concat_def = Define`
@@ -456,7 +456,7 @@ val n2w_mod = store_thm("n2w_mod",
          [n2w_def,MIN_DEF,BIT_def,GSYM BITS_ZERO3,BITS_COMP_THM2]);
 
 val n2w_11 = store_thm("n2w_11",
-  `!m n. ((n2w m):bool **'a = n2w n) = (m MOD dimword(:'a) = n MOD dimword(:'a))`,
+  `!m n. ((n2w m):'a word = n2w n) = (m MOD dimword(:'a) = n MOD dimword(:'a))`,
   NTAC 2 STRIP_TAC
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ ASM_SIMP_TAC (fcp_ss++WORD_ss) [GSYM BITS_ZERO3,dimword_def]
@@ -466,7 +466,7 @@ val n2w_11 = store_thm("n2w_11",
 val _ = export_rewrites ["n2w_11"]
 
 val ranged_word_nchotomy = store_thm("ranged_word_nchotomy",
-  `!w : bool ** 'a. ?n. (w = n2w n) /\ n < dimword(:'a)`,
+  `!w:'a word. ?n. (w = n2w n) /\ n < dimword(:'a)`,
   STRIP_TAC
     \\ Q.ISPEC_THEN `w` STRUCT_CASES_TAC word_nchotomy
     \\ SIMP_TAC (srw_ss()) [n2w_11]
@@ -2098,7 +2098,7 @@ val WORD_GT = save_thm("WORD_GT",
   ``a:'a word > b``);
 
 val WORD_LE = store_thm("WORD_LE",
-  `!a:bool **'a b. a <= b = (word_msb a = word_msb b) /\ (w2n a <= w2n b) \/
+  `!a:'a word b. a <= b = (word_msb a = word_msb b) /\ (w2n a <= w2n b) \/
                              word_msb a /\ ~word_msb b`,
   SIMP_TAC bool_ss [WORD_LT,GSYM WORD_NOT_LESS,NOT_LESS] \\ DECIDE_TAC);
 
@@ -2583,9 +2583,9 @@ val _ = List.app mk_word_size sizes;
 (* ------------------------------------------------------------------------- *)
 
 val word_index_def = Define `word_index (w:'a word) n = w %% n`;
-val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n):bool ** 'a`;
-val w2w_itself_def = Define `w2w_itself (:'a) w = (w2w w): bool ** 'a`;
-val sw2sw_itself_def = Define `sw2sw_itself (:'a) w = (sw2sw w): bool ** 'a`;
+val n2w_itself_def = Define `n2w_itself (n, (:'a)) = (n2w n): 'a word`;
+val w2w_itself_def = Define `w2w_itself (:'a) w = (w2w w): 'a word`;
+val sw2sw_itself_def = Define `sw2sw_itself (:'a) w = (sw2sw w): 'a word`;
 val word_eq_def = Define `word_eq (v: 'a word) w = (v = w)`;
 
 val word_extract_itself_def = Define`
