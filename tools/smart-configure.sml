@@ -92,13 +92,6 @@ val mosmldir = let
       else ()
   val candidate =
       Path.toString {arcs = arcs' @ ["bin"], isAbs = true, vol = vol}
-  val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"
-  val _ =
-      if FileSys.access (Path.concat(candidate, mosml'), [FileSys.A_EXEC]) then
-        ()
-      else (print ("\nCouldn't find executable mosmlc in "^candidate^"\n");
-            print ("Giving up - please use config-override file to fix\n");
-            Process.exit Process.failure)
 in
   candidate
 end;
@@ -140,6 +133,7 @@ in
 end;
 
 
+
 fun verdict (prompt, value) =
     (print (StringCvt.padRight #" " 20 (prompt^":"));
      print value;
@@ -149,6 +143,16 @@ verdict ("OS", OS);
 verdict ("mosmldir", mosmldir);
 verdict ("holdir", holdir);
 verdict ("dynlib_available", Bool.toString dynlib_available);
+
+val _ = let
+  val mosml' = if OS = "winNT" then "mosmlc.exe" else "mosmlc"
+in
+  if FileSys.access (Path.concat(mosmldir, mosml'), [FileSys.A_EXEC]) then
+    ()
+  else (print ("\nCouldn't find executable mosmlc in "^mosmldir^"\n");
+        print ("Giving up - please use config-override file to fix\n");
+        Process.exit Process.failure)
+end;
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";
