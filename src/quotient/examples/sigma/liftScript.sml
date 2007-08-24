@@ -705,13 +705,11 @@ val SUMVAL_def = xDefine "SUM_VAL"
 
 val _ = Lib.try add_infix("+-+", 450, HOLgrammars.RIGHT)
 
+val PBETA_TAC = PairRules.PBETA_TAC
+val PGEN_TAC = PairRules.PGEN_TAC
+
 (*
 Defn.tgoal object1_hom_def;
-e(WF_REL_TAC `measure (
-           HEIGHT_obj1 o SND o SND o SND o SND o SND o SND o SND o SND
-       +-+ HEIGHT_dict1 o SND o SND o SND o SND o SND o SND o SND o SND
-       +-+ HEIGHT_entry1 o SND o SND o SND o SND o SND o SND o SND o SND
-       +-+ HEIGHT_method1 o SND o SND o SND o SND o SND o SND o SND o SND)`);
 e(WF_REL_TAC `measure (
            HEIGHT_obj1 o FST
        +-+ HEIGHT_dict1 o FST
@@ -721,61 +719,60 @@ e(REPEAT CONJ_TAC);
 (* 8 subgoals *)
 
   e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
+  e(PBETA_TAC);
   e(REWRITE_TAC[HEIGHT1_def]);
   e(REPEAT GEN_TAC);
   e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
   e(REWRITE_TAC[LESS_EQ_REFL]);
 
   e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
+  e(PBETA_TAC);
+  e(REWRITE_TAC[HEIGHT1_def,HEIGHT1_var_subst]);
+  e(REPEAT GEN_TAC);
+  e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
+  e(REWRITE_TAC[LESS_EQ_REFL]);
+
+  e(REWRITE_TAC[SUMVAL_def]);
+  e(PBETA_TAC);
   e(REWRITE_TAC[HEIGHT1_def]);
   e(REPEAT GEN_TAC);
   e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
   e(REWRITE_TAC[LESS_EQ_MAX]);
 
   e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
+  e(PBETA_TAC);
   e(REWRITE_TAC[HEIGHT1_def]);
   e(REPEAT GEN_TAC);
   e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
   e(REWRITE_TAC[LESS_EQ_MAX]);
 
   e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
+  e(PBETA_TAC);
   e(REWRITE_TAC[HEIGHT1_def]);
-  e(REPEAT GEN_TAC);
+  e(REPEAT PGEN_TAC);
   e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
   e(REWRITE_TAC[LESS_EQ_MAX]);
 
   e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
+  e(PBETA_TAC);
   e(REWRITE_TAC[HEIGHT1_def]);
   e(REPEAT GEN_TAC);
   e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
   e(REWRITE_TAC[LESS_EQ_REFL]);
 
   e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
+  e(PBETA_TAC);
   e(REWRITE_TAC[HEIGHT1_def]);
   e(REPEAT GEN_TAC);
   e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
   e(REWRITE_TAC[LESS_EQ_REFL]);
 
   e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
+  e(PBETA_TAC);
   e(REWRITE_TAC[HEIGHT1_def]);
   e(REPEAT GEN_TAC);
   e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
   e(REWRITE_TAC[LESS_EQ_MAX]);
-
-  e(REWRITE_TAC[SUMVAL_def]);
-  e(BETA_TAC);
-  e(REWRITE_TAC[HEIGHT1_var_subst]);
-  e(REWRITE_TAC[HEIGHT1_def]);
-  e(REPEAT GEN_TAC);
-  e(MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC);
-  e(REWRITE_TAC[LESS_EQ_REFL]);
 *)
 
 val (object1_hom_eqns, object1_hom_ind) =
@@ -787,11 +784,11 @@ val (object1_hom_eqns, object1_hom_ind) =
                 +-+ HEIGHT_entry1 o FST
                 +-+ HEIGHT_method1 o FST)`
      THEN REWRITE_TAC[SUMVAL_def]
-     THEN BETA_TAC
+     THEN PBETA_TAC
      THEN REWRITE_TAC[HEIGHT1_var_subst]
      THEN REWRITE_TAC[HEIGHT1_def]
      THEN REPEAT CONJ_TAC
-     THEN REPEAT GEN_TAC
+     THEN REPEAT PGEN_TAC
      THEN MATCH_MP_TAC LESS_EQ_IMP_LESS_SUC
      THEN REWRITE_TAC[LESS_EQ_MAX,LESS_EQ_REFL]
     );
