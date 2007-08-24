@@ -165,7 +165,7 @@ val the_goal =
     || STMIA_ Rn list ->
          STM AL F <| Pre := F; Up := T; Wb := T |> (w2w Rn) (w2w list)
     || LDMIA_ Rn list ->
-         LDM AL F <| Pre := F; Up := T; Wb := ~(list ' w2n Rn) |>
+         LDM AL F <| Pre := F; Up := T; Wb := ~(list ' (w2n Rn)) |>
            (w2w Rn) (w2w list)
     || B_1  cond imm8 ->
         (if cond = AL then
@@ -389,8 +389,8 @@ val immediate5_times2 = prove(
 
 val BLOCK_lem = prove(
   `!Rd:word3 imm:word8.
-     (51200w:word16 !! w2w Rd << 8 !! w2w imm) ' w2n (w2w Rd : word32) =
-     imm ' w2n Rd`,
+     ((51200w:word16 !! w2w Rd << 8 !! w2w imm) ' (w2n (w2w Rd : word32))) =
+     (imm ' (w2n Rd))`,
   NTAC 2 STRIP_TAC  \\ Cases_on_word `imm`
     \\ SRW_TAC [wordsLib.SIZES_ss,ARITH_ss] [w2n_w2w, w2w_n2w]
     \\ SPEC_THEN `Rd` ASSUME_TAC

@@ -15,7 +15,7 @@ open Q wordsTheory rich_listTheory updateTheory;
 
 val _ = new_theory "arm";
 
-val _ = add_infix("'",500,HOLgrammars.LEFT);
+val _ = set_fixity "'" (Infixl 2000);
 val _ = overload_on ("'", Term`$index`);
 
 (* ------------------------------------------------------------------------- *)
@@ -317,7 +317,7 @@ val LSR_def = Define`
 val ASR_def = Define`
   ASR (m:word32) (n:word8) c =
     if n = 0w then LSL m 0w c else
-      (m ' MIN 31 (w2n n - 1), m >> w2n n)`;
+      (m ' (MIN 31 (w2n n - 1)), m >> w2n n)`;
 
 val ROR_def = Define`
   ROR (m:word32) (n:word8) c =
@@ -930,7 +930,7 @@ val THUMB_TO_ARM_def = Define`
       || (T,T,F, F ,_11,_10,_9,_8) ->
 (* LDMIA, STMIA *)
            (let Rn = (10 >< 8) ireg in
-              (21 :+ (_11 ==> ~(ireg ' w2n Rn)))
+              (21 :+ (_11 ==> ~(ireg ' (w2n Rn))))
               ((if _11 then 0xE8900000w else 0xE8A00000w) !!
               Rn << 16 !! (7 >< 0) ireg))
       || (T,T,F, T , T , T , T, F) -> 
