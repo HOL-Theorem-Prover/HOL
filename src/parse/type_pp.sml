@@ -41,7 +41,10 @@ in
   toString (recurse (one, zero) ty)
 end
 
-fun dest_arraytype ty = let 
+val pp_array_types = ref true
+val _ = register_btrace ("pp_array_types", pp_array_types)
+
+fun dest_arraytype ty = let
   val {Thy, Tyop, Args} = dest_thy_type ty
 in
   if Thy = "fcp" andalso Tyop = "cart" then (hd Args, hd (tl Args))
@@ -83,10 +86,15 @@ fun pp_type0 (G:grammar) = let
         in
           add_string s
         end handle HOL_ERR _ =>
-        let 
-          val (bty, cty) = dest_arraytype ty 
+        let
+          val _ = !pp_array_types orelse
+                  raise mk_HOL_ERR "" "" "" (* will be caught below *)
+          val (bty, cty) = dest_arraytype ty
+          (* ignore parenthesis requirements on sub-arguments on assumption that
+             all suffixes, including array bracketting, are tightest binders in grammar
+             and all at the same tightest level. *)
         in
-          pr_ty pps bty grav (depth - 1); 
+          pr_ty pps bty grav (depth - 1);
           add_string "[";
           pr_ty pps cty Top (depth - 1);
           add_string "]"
