@@ -947,6 +947,7 @@ fun mk_word n =
   end;
 
 val _ = type_pp.pp_num_types := false;
+val _ = type_pp.pp_array_types := false;
 
 val _ = let open EmitML in emitML (!Globals.emitMLDir) ("arm",
   OPEN ["num", "option", "set", "fcp", "list", "rich_list", "bit", "words"]
