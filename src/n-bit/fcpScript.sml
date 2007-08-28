@@ -965,6 +965,8 @@ val EXPi  = new_axiom("EXPi", ``EXPi (ITSELF a, ITSELF b) = ITSELF (a ** b)``);
 
 val dimindexi = new_axiom("dimindexi", ``dimindex (ITSELF a) = a``);
 
+val _ = type_pp.pp_array_types := false;
+
 val _ =
  let open EmitML
   in try emitML (!Globals.emitMLDir)

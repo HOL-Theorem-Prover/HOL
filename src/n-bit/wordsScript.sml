@@ -2651,6 +2651,7 @@ val _ = adjoin_to_theory
   end)};
 
 val _ = type_pp.pp_num_types := false;
+val _ = type_pp.pp_array_types := false;
 
 local
   open EmitML numeral_bitTheory
