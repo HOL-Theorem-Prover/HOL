@@ -9,16 +9,27 @@
 (*
 *)
 
-val () = loadPath := [] @ !loadPath;
+val () = loadPath := ["../../miller/ho_prover",
+                      "../../miller/subtypes",
+                      "../../miller/RSA",
+                      "../../miller/formalize",
+                      "../../miller/prob",
+                      "../../miller/groups",
+                      "../../miller/miller",
+                      "../ml"] @ !loadPath;
 val () = app load
-  ["bossLib", "metisLib",
+  ["bossLib", "metisLib", "RealArith",
    "pairTheory", "combinTheory", "listTheory", "arithmeticTheory",
-   "state_transformerTheory","encodeLib"];
+   "state_transformerTheory",
+   "miller_rabinTheory",
+   "encodeLib"];
 val () = quietdec := true;
 
 open HolKernel Parse boolLib bossLib metisLib;
 open pairTheory combinTheory listTheory arithmeticTheory;
-open state_transformerTheory encodeLib;
+open state_transformerTheory;
+open miller_rabinTheory;
+open encodeLib;
 
 (*
 *)
@@ -51,6 +62,7 @@ val Suff = Q_TAC SUFF_TAC;
 (* Helper theorems                                                           *)
 (* ------------------------------------------------------------------------- *)
 
+(***
 val DIV_THEN_MULT = store_thm
   ("DIV_THEN_MULT",
    ``!p q. SUC q * (p DIV SUC q) <= p``,
@@ -71,7 +83,7 @@ val DIVISION_TWO = store_thm
    ++ Know `0:num < 2` >> DECIDE_TAC
    ++ DISCH_THEN (fn th => REWRITE_TAC [th])
    ++ DISCH_THEN (MP_TAC o Q.SPEC `n`)
-   ++ RW_TAC std_ss [] <<
+   ++ RW_TAC bool_ss [] <<
    [PROVE_TAC [MULT_COMM],
     DECIDE_TAC]);
 
@@ -92,12 +104,16 @@ val MOD_TWO = store_thm
     Q.PAT_ASSUM `n = X` MP_TAC
     ++ RW_TAC std_ss []
     ++ PROVE_TAC [ODD_DOUBLE, ODD_EVEN, ADD1]]);
+***)
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions to port to ACL2.                                              *)
 (* ------------------------------------------------------------------------- *)
 
 val (log2_def,log2_ind) =
+    (extra_numTheory.log2_def,extra_numTheory.log2_ind);
+
+(***
     Defn.tprove
       let
         val d =
@@ -117,6 +133,7 @@ val (log2_def,log2_ind) =
 
 val _ = save_thm ("log2_def", log2_def);
 val _ = save_thm ("log2_ind", log2_ind);
+***)
 
 val log2a_def = Define `
 	(log2a 0 _ = 0) /\ 
@@ -132,6 +149,8 @@ val log2a_lemma = prove(``!x y. x <= y ==> (log2 x = log2a y x)``,
 val log2a_proof = store_thm("log2a_proof",``!x. log2 x = log2a x x``,RW_TAC arith_ss [log2a_lemma]);
 
 val (factor_twos_def,factor_twos_ind) =
+    (miller_rabinTheory.factor_twos_def,miller_rabinTheory.factor_twos_ind);
+(***
     Defn.tprove
       let
         val d =
@@ -150,6 +169,10 @@ val (factor_twos_def,factor_twos_ind) =
          >> PROVE_TAC [TWO, DIV_THEN_MULT]
          ++ DECIDE_TAC)
       end;
+
+val _ = save_thm ("factor_twos_def", factor_twos_def);
+val _ = save_thm ("factor_twos_ind", factor_twos_ind);
+***)
 
 val factor_twosa_def = Define `
 	(factor_twosa 0 _ = (0, 0)) /\ 
@@ -170,10 +193,9 @@ val factor_twosa_lemma = prove(``!x y. x <= y ==> (factor_twos x = factor_twosa 
 val factor_twosa_proof = store_thm("factor_twosa_proof",``!x. factor_twos x = factor_twosa x x``,
 	RW_TAC arith_ss [factor_twosa_lemma]);
 
-val _ = save_thm ("factor_twos_def", factor_twos_def);
-val _ = save_thm ("factor_twos_ind", factor_twos_ind);
-
 val (modexp_def,modexp_ind) =
+    (miller_rabinTheory.modexp_def,miller_rabinTheory.modexp_ind);
+(***
     Defn.tprove
       let
         val d =
@@ -195,6 +217,10 @@ val (modexp_def,modexp_ind) =
          ++ DECIDE_TAC)
       end;
 
+val _ = save_thm ("modexp_def", modexp_def);
+val _ = save_thm ("modexp_ind", modexp_ind);
+***)
+
 val modexpa_def = Define `
 	(modexpa 0 n a b = 1) /\
 	(modexpa _ _ _ 0 = 1) /\ 
@@ -215,23 +241,23 @@ val modexpa_lemma = prove(``!x y n a. x <= y ==> (modexp n a x = modexpa y n a x
 val modexpa_proof = store_thm("modexpa_proof",``!n a b. modexp n a b = modexpa b n a b``,
 	RW_TAC arith_ss [modexpa_lemma]);
 
-
-val _ = save_thm ("modexp_def", modexp_def);
-val _ = save_thm ("modexp_ind", modexp_ind);
-
-val witness_tail_def =
+val witness_tail_def = miller_rabinTheory.witness_tail_def;
+(***
     Define
       `(witness_tail 0 n a = ~(a = 1)) /\
        (witness_tail (SUC r) n a =
         let a2 = (a * a) MOD n in
         if a2 = 1 then ~(a = 1) /\ ~(a = n - 1)
         else witness_tail r n a2)`;
+***)
 
-val witness_def =
+val witness_def = miller_rabinTheory.witness_def;
+(***
     Define
       `witness n a =
        let (r, s) = factor_twos (n - 1) in
        witness_tail r n (modexp n a s)`;
+***)
 
 val exists_witness_def = 
     Define
@@ -251,95 +277,289 @@ val miller_rabin_list_def =
        else ~(EXISTS (witness n) l)`;
 
 (* ------------------------------------------------------------------------- *)
-(* Definitions to keep in HOL, since they involve boolean sequences.         *)
-(* ------------------------------------------------------------------------- *)
-
-val shd_def = Define `shd (f : num -> 'a) = f 0`;
-
-val stl_def = Define `stl (f : num -> 'a) n = f (SUC n)`;
-
-val prob_while_cut_def = Define
-  `(prob_while_cut c b 0 a = UNIT a) /\
-   (prob_while_cut c b (SUC n) a =
-    if c a then BIND (b a) (prob_while_cut c b n) else UNIT a)`;
-
-val many_def = Define `many f n = prob_while_cut I (K f) n T`;
-
-val (prob_unif_def,prob_unif_ind) = Defn.tprove
-  let val d = Hol_defn "prob_unif"
-        `(prob_unif 0 s = (0:num, s))
-         /\ (prob_unif n s = let (m, s') = prob_unif (n DIV 2) s
-	                in (if shd s' then 2 * m + 1 else 2 * m, stl s'))`
-      val g = `measure (\(x,y). x)`
-  in (d,
-      WF_REL_TAC g
-      ++ STRIP_TAC
-      ++ Know `2 * (SUC v2 DIV 2) <= SUC v2`
-      >> PROVE_TAC [TWO, DIV_THEN_MULT]
-      ++ DECIDE_TAC)
-  end;
-
-val _ = save_thm ("prob_unif_def", prob_unif_def);
-val _ = save_thm ("prob_unif_ind", prob_unif_ind);
- 
-val prob_uniform_cut_def = Define
-  `(prob_uniform_cut 0 (SUC n) s = (0, s)) /\
-   (prob_uniform_cut (SUC u) (SUC n) s =
-    let (res, s') = prob_unif n s
-    in if res < SUC n then (res, s') else prob_uniform_cut u (SUC n) s')`;
-
-(***
-Must change this to use the new list version.
-
-val miller_rabin_def = Define `miller_rabin n t = many (miller_rabin_1 n) t`;
-***)
-
-(* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val MANY = store_thm
-  ("MANY",
-   ``!f n.
-       (many f 0 = UNIT T) /\
-       (many f (SUC n) = BIND f (\s. if s then many f n else UNIT F))``,
-   RW_TAC std_ss [many_def, prob_while_cut_def, K_THM, I_THM,
-                  BIND_DEF, UNCURRY, o_THM, UNIT_DEF, FUN_EQ_THM]
-   ++ Cases_on `n`
-   ++ RW_TAC std_ss [many_def, prob_while_cut_def, K_THM, I_THM,
-                     BIND_DEF, UNCURRY, o_THM, UNIT_DEF]
-   ++ Cases_on `f x`
-   ++ FULL_SIMP_TAC std_ss []);
+val many_longcircuit_def = Define
+  `(many_longcircuit f b 0 = UNIT b) /\
+   (many_longcircuit f b (SUC n) =
+    BIND f (\b'. many_longcircuit f (b /\ b') n))`;
 
-val PROB_UNIFORM_CUT_MONAD = store_thm
-  ("PROB_UNIFORM_CUT_MONAD",
-   ``(!n. prob_uniform_cut 0 (SUC n) = UNIT 0) /\
-     (!t n.
-        prob_uniform_cut (SUC t) (SUC n) =
-        BIND (prob_unif n)
-        (\m. if m < SUC n then UNIT m else prob_uniform_cut t (SUC n)))``,
-   RW_TAC std_ss [BIND_DEF, UNIT_DEF, o_DEF, prob_uniform_cut_def,
-                  FUN_EQ_THM, LET_DEF, UNCURRY]
-   ++ RW_TAC std_ss []);
+val indep_fn_many_longcircuit = prove
+  (``!f b n. f IN indep_fn ==> many_longcircuit f b n IN indep_fn``,
+   Induct_on `n`
+   ++ RW_TAC std_ss
+        [many_longcircuit_def, probTheory.INDEP_FN_UNIT,
+         probTheory.INDEP_FN_BIND]);
 
-(***
-The top-level specification when the input number is prime
+val many_longcircuit_f = prove
+  (``!f n.
+       f IN indep_fn ==>
+       (prob bern { s | FST (many_longcircuit f F n s)} = 0)``,
+   Induct_on `n`
+   ++ RW_TAC std_ss [many_longcircuit_def, state_transformerTheory.UNIT_DEF,
+                     pred_setTheory.GSPEC_F, probTheory.PROB_BERN_EMPTY]
+   ++ MP_TAC
+        (Q.SPECL
+           [`f`, `\b'. many_longcircuit f F n`,
+            `prob bern (FST o (f : (num -> bool) -> bool # (num -> bool)))`]
+           probTheory.PROB_BERN_BIND_BOOL_BOOL)
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   ++ CONJ_TAC >> RW_TAC std_ss [indep_fn_many_longcircuit]
+   ++ Q.PAT_ASSUM `!f. P f` (MP_TAC o Q.SPEC `f`)
+   ++ Know `!g : (num -> bool) -> bool # (num -> bool).
+              FST o g = { s | FST (g s) }`
+   >> (RW_TAC std_ss [pred_setTheory.EXTENSION]
+       ++ RW_TAC std_ss [pred_setTheory.GSPECIFICATION]
+       ++ RW_TAC std_ss [IN_DEF])
+   ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
+   ++ RW_TAC std_ss [realTheory.REAL_MUL_RZERO, realTheory.REAL_ADD_RID]);
+
+val many_longcircuit_t = prove
+  (``!f n.
+       f IN indep_fn ==>
+       (prob bern {s | FST (many_longcircuit f T n s)} =
+        prob bern {s | FST (many f n s)})``,
+   Induct_on `n`
+   ++ RW_TAC std_ss [probTheory.MANY, many_longcircuit_def]
+   ++ MP_TAC
+        (Q.SPECL
+           [`f`, `\b'. many_longcircuit f b' n`,
+            `prob bern (FST o (f : (num -> bool) -> bool # (num -> bool)))`]
+           probTheory.PROB_BERN_BIND_BOOL_BOOL)
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   ++ CONJ_TAC >> RW_TAC std_ss [indep_fn_many_longcircuit]
+   ++ MP_TAC
+        (Q.SPECL
+           [`f`, `\b'. if b' then many f n else UNIT F`,
+            `prob bern (FST o (f : (num -> bool) -> bool # (num -> bool)))`]
+           probTheory.PROB_BERN_BIND_BOOL_BOOL)
+   ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
+   ++ CONJ_TAC >> RW_TAC std_ss [probTheory.INDEP_FN_MANY,
+                                 probTheory.INDEP_FN_UNIT]
+   ++ Q.PAT_ASSUM `!f. P f` (MP_TAC o Q.SPEC `f`)
+   ++ Know `!g : (num -> bool) -> bool # (num -> bool).
+              FST o g = { s | FST (g s) }`
+   >> (RW_TAC std_ss [pred_setTheory.EXTENSION]
+       ++ RW_TAC std_ss [pred_setTheory.GSPECIFICATION]
+       ++ RW_TAC std_ss [IN_DEF])
+   ++ DISCH_THEN (fn th => RW_TAC std_ss [th])
+   ++ AP_TERM_TAC
+   ++ AP_TERM_TAC
+   ++ RW_TAC std_ss [many_longcircuit_f, state_transformerTheory.UNIT_DEF,
+                     pred_setTheory.GSPEC_F, probTheory.PROB_BERN_EMPTY]);
+
+val miller_rabin_uniform_def = Define
+  `miller_rabin_uniform n =
+   if n <= 2 then UNIT 0
+   else
+     BIND (prob_uniform_cut (2 * log2 (n - 1)) (n - 2)) (\a. UNIT (a + 2n))`;
+
+val miller_rabin_uniform_list_def = Define
+  `(miller_rabin_uniform_list n 0 = UNIT []) /\
+   (miller_rabin_uniform_list n (SUC m) =
+    BIND (miller_rabin_uniform n)
+      (\a. BIND (miller_rabin_uniform_list n m) (\l. UNIT (a :: l))))`;
+
+val miller_rabin_list_empty = prove
+  (``!n.
+       ~(n = 1) /\ ~EVEN n ==>
+       (miller_rabin_list n [] = T)``,
+   RW_TAC std_ss [miller_rabin_list_def, EXISTS_DEF]);
+
+val miller_rabin_list_single = prove
+  (``!n x.
+       ~(n = 1) /\ ~EVEN n ==>
+       (miller_rabin_list n [x] = ~witness n x)``,
+   RW_TAC std_ss [miller_rabin_list_def, EXISTS_DEF]
+   ++ Know `EVEN 2` >> RW_TAC std_ss []
+   ++ METIS_TAC []);
+
+val miller_rabin_list_append = prove
+  (``!n l l'.
+       ~(n = 1) /\ ~EVEN n ==>
+       (miller_rabin_list n (APPEND l l') =
+        miller_rabin_list n l /\ miller_rabin_list n l')``,
+   RW_TAC std_ss []
+   ++ Induct_on `l`
+   ++ RW_TAC std_ss [APPEND, miller_rabin_list_empty]
+   ++ POP_ASSUM MP_TAC
+   ++ RW_TAC std_ss [miller_rabin_list_def, EXISTS_DEF]
+   ++ Know `EVEN 2` >> RW_TAC std_ss []
+   ++ METIS_TAC []);
+
+val indep_fn_miller_rabin_uniform = prove
+  (``!n. miller_rabin_uniform n IN indep_fn``,
+   RW_TAC std_ss [miller_rabin_uniform_def, probTheory.INDEP_FN_UNIT]
+   ++ Cases_on `n - 2`
+   >> (Suff `F` >> PROVE_TAC []
+       ++ DECIDE_TAC)
+   ++ RW_TAC std_ss [probTheory.INDEP_FN_UNIT,
+                     probTheory.INDEP_FN_BIND,
+                     prob_uniformTheory.INDEP_FN_PROB_UNIFORM_CUT]);
+
+val indep_fn_miller_rabin_uniform_list = prove
+  (``!n m. miller_rabin_uniform_list n m IN indep_fn``,
+   Induct_on `m`
+   ++ RW_TAC std_ss [miller_rabin_uniform_list_def,
+                     probTheory.INDEP_FN_BIND,
+                     probTheory.INDEP_FN_UNIT,
+                     indep_fn_miller_rabin_uniform]);
+
+val miller_rabin_list_many_longcircuit = prove
+  (``!n m.
+       ~(n = 1) /\ ~EVEN n ==>
+       (BIND (miller_rabin_uniform_list n m)
+          (\l. UNIT (miller_rabin_list n l)) =
+        many_longcircuit
+          (BIND (miller_rabin_uniform n) (\a. UNIT (~witness n a))) T m)``,
+   RW_TAC std_ss []
+   ++ Suff
+      `!m q. 
+         BIND (miller_rabin_uniform_list n m)
+           (\l. UNIT (miller_rabin_list n (APPEND q l))) =
+         many_longcircuit
+           (BIND (miller_rabin_uniform n)
+             (\a. UNIT (~witness n a))) (miller_rabin_list n q) m`
+   >> (DISCH_THEN (MP_TAC o Q.SPECL [`m`,`[]`])
+       ++ RW_TAC std_ss [APPEND, miller_rabin_list_empty])
+   ++ Induct
+   ++ RW_TAC std_ss [miller_rabin_uniform_list_def, many_longcircuit_def,
+                     state_transformerTheory.BIND_LEFT_UNIT, APPEND_NIL]
+   ++ RW_TAC std_ss [GSYM state_transformerTheory.BIND_ASSOC]
+   ++ AP_TERM_TAC
+   ++ ONCE_REWRITE_TAC [FUN_EQ_THM]
+   ++ RW_TAC std_ss []
+   ++ RW_TAC std_ss [state_transformerTheory.BIND_LEFT_UNIT]
+   ++ Know `!l. q ++ (x :: l) = (q ++ [x]) ++ l`
+   >> (GEN_TAC
+       ++ Induct_on `q`
+       ++ RW_TAC std_ss [APPEND])
+   ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
+   ++ POP_ASSUM (fn th => ONCE_REWRITE_TAC [Q.SPEC `q ++ [x]` th])
+   ++ RW_TAC std_ss [miller_rabin_list_append, miller_rabin_list_single]);
+
+val miller_rabin_equivalence = prove
+  (``!n m.
+       ~(n = 1) /\ ~EVEN n ==>
+       (many (BIND (miller_rabin_uniform n) (\a. UNIT (~witness n a))) m =
+        miller_rabin$miller_rabin n m)``,
+   RW_TAC std_ss [miller_rabinTheory.miller_rabin_def]
+   ++ Induct_on `m`
+   ++ RW_TAC std_ss [probTheory.MANY]
+   ++ POP_ASSUM (K ALL_TAC)
+   ++ AP_THM_TAC
+   ++ ONCE_REWRITE_TAC [FUN_EQ_THM]
+   ++ ONCE_REWRITE_TAC [FUN_EQ_THM]
+   ++ Cases_on `n = 2`
+   >> (RW_TAC std_ss []
+       ++ POP_ASSUM MP_TAC
+       ++ RW_TAC std_ss [])
+   ++ Cases_on `n <= 2`
+   >> (Suff `F` >> DECIDE_TAC
+       ++ Suff `~(n = 0)` >> DECIDE_TAC
+       ++ STRIP_TAC
+       ++ Q.PAT_ASSUM `~EVEN n` MP_TAC
+       ++ RW_TAC std_ss [])
+   ++ RW_TAC std_ss [state_transformerTheory.BIND_DEF,
+                     state_transformerTheory.UNIT_DEF,
+                     miller_rabinTheory.miller_rabin_1_def,
+                     miller_rabin_uniform_def]
+   ++ RW_TAC std_ss [UNCURRY, FST, SND]);
+
+val MILLER_RABIN_COMPOSITE_ERROR = store_thm
+  ("MILLER_RABIN_COMPOSITE_ERROR",
+   ``!n m.
+       ~prime n ==>
+       prob bern {s | FST (BIND (miller_rabin_uniform_list n m)
+                                (\l. UNIT (miller_rabin_list n l)) s)} <=
+       (1 / 2) pow m``,
+   RW_TAC std_ss []
+   ++ Cases_on `n = 1`
+   >> (RW_TAC std_ss [miller_rabin_list_def,
+                      state_transformerTheory.BIND_DEF,
+                      state_transformerTheory.UNIT_DEF, UNCURRY,
+                      pred_setTheory.GSPEC_F, probTheory.PROB_BERN_EMPTY]
+       ++ MATCH_MP_TAC realTheory.POW_POS
+       ++ RW_TAC std_ss [realTheory.REAL_HALF_BETWEEN])
+   ++ Cases_on `EVEN n`
+   >> (Know `~(n = 2)` >> METIS_TAC [extra_arithTheory.PRIME_2]
+       ++ RW_TAC std_ss [miller_rabin_list_def,
+                         state_transformerTheory.BIND_DEF,
+                         state_transformerTheory.UNIT_DEF, UNCURRY,
+                         pred_setTheory.GSPEC_F, probTheory.PROB_BERN_EMPTY]
+       ++ MATCH_MP_TAC realTheory.POW_POS
+       ++ RW_TAC std_ss [realTheory.REAL_HALF_BETWEEN])
+   ++ RW_TAC std_ss [miller_rabin_list_many_longcircuit]
+   ++ RW_TAC std_ss [many_longcircuit_t, probTheory.INDEP_FN_BIND,
+                     probTheory.INDEP_FN_UNIT, indep_fn_miller_rabin_uniform]
+   ++ RW_TAC std_ss [miller_rabin_equivalence]
+   ++ METIS_TAC [MILLER_RABIN_COMPOSITE_UPPER]);
+
+(* The top-level specification when the input number n is prime: *)
+(* whatever the input list l of bases, miller_rabin_list n l will always *)
+(* return true. *)
 
 val MILLER_RABIN_PRIME = store_thm
   ("MILLER_RABIN_PRIME",
-   ``!n t s. prime n ==> FST (miller_rabin n t s) = T``)
-***)
+   ``!n l.
+       prime n /\ EVERY (\a. 0 < a /\ a < n) l ==>
+       (miller_rabin_list n l = T)``,
+   RW_TAC bool_ss [miller_rabin_list_def]
+   ++ Cases_on `EVEN n` >> METIS_TAC [extra_arithTheory.NOT_PRIME_EVEN]
+   ++ Cases_on `n = 1` >> METIS_TAC [dividesTheory.NOT_PRIME_1]
+   ++ RW_TAC bool_ss []
+   ++ DISJ2_TAC
+   ++ Induct_on `l`
+   ++ RW_TAC bool_ss [EXISTS_DEF,EVERY_DEF]
+   ++ METIS_TAC [WITNESS_CORRECT]);
 
-(***
-The top-level specification when the input number is composite
+(* The top-level specification when the input number n is composite: *)
+(* If the input list l consists of m bases chosen uniformly at random, the *)
+(* probability that miller_rabin_list n l returns false is at least *)
+(* 1 - (1/2)^m. *)
 
 val MILLER_RABIN_COMPOSITE = store_thm
   ("MILLER_RABIN_COMPOSITE",
-   ``!n t.
+   ``!n m.
        ~prime n ==>
-        1 - (1 / 2) pow t <= prob bern {s | FST (miller_rabin n t s) = F}``)
-***)
+       1 - (1 / 2) pow m <=
+       prob bern {s | FST (BIND (miller_rabin_uniform_list n m)
+                                (\l. UNIT (miller_rabin_list n l)) s) = F}``,
+   RW_TAC std_ss []
+   ++ Know
+      `{s | ~FST (BIND (miller_rabin_uniform_list n m)
+                       (\l. UNIT (miller_rabin_list n l)) s)} =
+       COMPL (I o FST o BIND (miller_rabin_uniform_list n m)
+                             (\l. UNIT (miller_rabin_list n l)))`
+   >> (ONCE_REWRITE_TAC [pred_setTheory.EXTENSION]
+       ++ RW_TAC std_ss [pred_setTheory.GSPECIFICATION,
+                         pred_setTheory.IN_COMPL]
+       ++ RW_TAC std_ss [pred_setTheory.SPECIFICATION, o_THM, I_THM])
+   ++ DISCH_THEN (fn th => REWRITE_TAC [th])
+   ++ RW_TAC std_ss [probabilityTheory.PROB_COMPL,
+                     probTheory.PROB_SPACE_BERN,
+                     probTheory.INDEP_FN_FST_EVENTS,
+                     probTheory.INDEP_FN_BIND,
+                     probTheory.INDEP_FN_UNIT,
+                     indep_fn_miller_rabin_uniform_list]
+   ++ Know `!a b c : real. c <= b ==> a - b <= a - c`
+   >> RealArith.REAL_ARITH_TAC
+   ++ DISCH_THEN MATCH_MP_TAC
+   ++ MATCH_MP_TAC realTheory.REAL_LE_TRANS
+   ++ Q.EXISTS_TAC
+        `prob bern {s | FST (BIND (miller_rabin_uniform_list n m)
+                                  (\l. UNIT (miller_rabin_list n l)) s)}`
+   ++ REVERSE CONJ_TAC >> METIS_TAC [MILLER_RABIN_COMPOSITE_ERROR]
+   ++ Know `!a b : real. (a = b) ==> a <= b`
+   >> RealArith.REAL_ARITH_TAC
+   ++ DISCH_THEN MATCH_MP_TAC
+   ++ AP_TERM_TAC
+   ++ ONCE_REWRITE_TAC [pred_setTheory.EXTENSION]
+   ++ RW_TAC std_ss [pred_setTheory.GSPECIFICATION]
+   ++ RW_TAC std_ss [pred_setTheory.SPECIFICATION]);
 
+(***
 (* ------------------------------------------------------------------------- *)
 (* Versions of the definitions suitable for exporting to ML                  *)
 (* ------------------------------------------------------------------------- *)
@@ -428,9 +648,6 @@ val WITNESS_ML = save_thm ("WITNESS_ML", witness_def);
 
 val MILLER_RABIN_LIST_ML =
     save_thm ("MILLER_RABIN_LIST_ML", miller_rabin_list_def);
-
-(***
-val MILLER_RABIN_ML = save_thm ("MILLER_RABIN_ML", miller_rabin_def);
 ***)
 
 (* ------------------------------------------------------------------------- *)
