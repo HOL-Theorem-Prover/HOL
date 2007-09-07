@@ -375,6 +375,26 @@ fun SSA_CONV tm =
   end;
 
 fun SSA_RULE def = 
+ let val (t1,t2) = dest_eq (concl (SPEC_ALL def))
+     val (fname,args) = 
+         if is_comb t1 then ((I##single) o dest_comb) t1 else 
+         if is_pabs t1 then (t1, [#1 (dest_pabs t2)]) else (t1,[])
+     val flag = is_pabs t2
+     val body = if flag then #2 (dest_pabs t2) else t2 
+     val lem1 = if flag then def else 
+                prove (mk_eq (fname, list_mk_pabs(args,body)), 
+                       SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def])
+     val t3 = if flag then t2 else list_mk_pabs (args,body)
+     val lem2 = SIMP_CONV std_ss [LAMBDA_PROD] t3 handle UNCHANGED => REFL t3
+     val lem3 = TRANS lem1 lem2 
+     val lem4 = SSA_CONV (rhs (concl lem3))
+     val lem5 = ONCE_REWRITE_RULE [lem4] lem3
+ in
+    lem5
+ end;
+
+(* Original
+fun SSA_RULE def = 
   let 
       val t0 = concl (SPEC_ALL def)
       val (t1,t2) = (lhs t0, rhs t0)
@@ -385,17 +405,18 @@ fun SSA_RULE def =
       val body = if flag then #2 (dest_pabs t2) else t2 
       val lem1 = if flag then def
                  else prove (mk_eq (fname, mk_pabs(args,body)), 
-	           	SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def]);
+	           	SIMP_TAC std_ss [FUN_EQ_THM, FORALL_PROD, Once def])
       val t3 = if flag then t2 else mk_pabs (args,body)
-            
-      val lem2 = SIMP_CONV std_ss [LAMBDA_PROD] t3 handle _ => REFL t3
+      val lem2 = QCONV SIMP_CONV std_ss [LAMBDA_PROD] t3 
+                  (* handle HOL_ERR _ => REFL t3 *)
       val lem3 = TRANS lem1 lem2 
-      val t4 = rhs (concl (GEN_ALL lem3))
+      val t4 = rhs (concl (GEN_ALL lem3))  (* SPEC_ALL? *)
       val lem4 = SSA_CONV t4
       val lem5 = ONCE_REWRITE_RULE [lem4] lem3
   in
     lem5
-  end
+  end;
+*)
 
 (*---------------------------------------------------------------------------*)
 (* Normalized forms with after a series of optimizations                     *)

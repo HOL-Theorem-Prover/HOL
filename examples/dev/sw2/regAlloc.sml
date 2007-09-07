@@ -663,8 +663,8 @@ fun reg_alloc def =
     val (sane,var_type) = pre_check(args,body)
   in
     if sane then
-      let
-    	val _ = (VarType := var_type; reset())        (* set the variable type according to the given program *)
+      let (* set the variable type according to the given program *)
+    	val _ = (VarType := var_type; reset())
     	val regenv = args_env args
     	val args1 = subst (tuple_subst_rules (strip_pair args) regenv) args
     	val dest = hd (!regL); (* assgn_exp (last_exp body) *)

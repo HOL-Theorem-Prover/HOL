@@ -202,5 +202,7 @@ compile1 fns;
 compile2 fns;  (* takes a long time on curve_double *)
 compile3 fns;
 compile4 fns;
+compile4a fns;
+compile5 fns;
 
 *)

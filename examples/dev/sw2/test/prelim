@@ -12,7 +12,7 @@ val expand_anonymous = inline.expand_anonymous;
 val expand_named = inline.expand_named;
 val optimize_norm = inline.optimize_norm;
 val close_one_by_one = closure.close_one_by_one;
-val close_al = closure.close_all;
+val close_all = closure.close_all;
 val closure_convert = closure.closure_convert;
 val regL = regAlloc.regL;
 val reg_alloc = regAlloc.reg_alloc;
@@ -84,7 +84,21 @@ fun pass4 (env,def) =
     reg_alloc def1
   end;
 
+(*---------------------------------------------------------------------------*)
+(* Different pass4, in which some intermediate steps are skipped.            *)
+(*---------------------------------------------------------------------------*)
+
+fun pass4a (env,def) = 
+  let val def1 = pass1 def
+      val def2 = reg_alloc def1
+  in 
+    def2
+  end;
+
 val compile1 = complist (fn (e,d) => pass1 d);
 val compile2 = complist pass2;
 val compile3 = complist pass3;
 val compile4 = complist pass4;
+val compile4a = complist pass4a;
+val compile5 = complist pass5;
+
