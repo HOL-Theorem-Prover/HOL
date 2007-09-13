@@ -651,8 +651,6 @@ val SET_EQ_EXT = store_thm
    RW_TAC std_ss [SPECIFICATION]
    ++ PROVE_TAC [EQ_EXT]);
    
-val COMPL_def = Define `COMPL (s:'a->bool) = UNIV DIFF s`;
-
 val UNION_DEF_ALT = store_thm
   ("UNION_DEF_ALT",
    ``!s t. s UNION t = (\x:'a. s x \/ t x)``,
@@ -697,7 +695,7 @@ val UNION_DISJOINT_SPLIT = store_thm
 val IN_COMPL = store_thm
   ("IN_COMPL",
    ``!(x:'a) s. x IN COMPL s = ~(x IN s)``,
-   RW_TAC std_ss [COMPL_def, IN_DIFF, IN_UNIV]);
+   RW_TAC std_ss [COMPL_DEF, IN_DIFF, IN_UNIV]);
 
 val IN_EMPTY = store_thm
   ("IN_EMPTY",
@@ -713,7 +711,7 @@ val GSPEC_DEF_ALT = store_thm
 val COMPL_COMPL = store_thm
   ("COMPL_COMPL",
    ``!(s:'a->bool). COMPL (COMPL s) = s``,
-   RW_TAC std_ss [SET_EQ_EXT, COMPL_def, UNIV_DEF, DIFF_DEF,
+   RW_TAC std_ss [SET_EQ_EXT, COMPL_DEF, UNIV_DEF, DIFF_DEF,
 		  GSPECIFICATION]
    ++ RW_TAC std_ss [SPECIFICATION]);
 
@@ -721,7 +719,7 @@ val COMPL_CLAUSES = store_thm
   ("COMPL_CLAUSES",
    ``!(s:'a->bool). (COMPL s INTER s = {})
                     /\ (COMPL s UNION s = UNIV)``,
-   RW_TAC std_ss [SET_EQ_EXT, COMPL_def, UNIV_DEF, DIFF_DEF,
+   RW_TAC std_ss [SET_EQ_EXT, COMPL_DEF, UNIV_DEF, DIFF_DEF,
 		  GSPECIFICATION, UNION_DEF, INTER_DEF, EMPTY_DEF]
    ++ RW_TAC std_ss [SPECIFICATION]);   
 
@@ -735,7 +733,7 @@ val INTER_UNION_COMPL = store_thm
   ("INTER_UNION_COMPL",
    ``!(s:'a->bool) t. s INTER t
                       = COMPL (COMPL s UNION COMPL t)``,
-   RW_TAC std_ss [COMPL_def, SET_EQ_EXT, GSPECIFICATION, DIFF_DEF,
+   RW_TAC std_ss [COMPL_DEF, SET_EQ_EXT, GSPECIFICATION, DIFF_DEF,
 		  UNION_DEF, INTER_DEF]
    ++ RW_TAC std_ss [SPECIFICATION, UNIV_DEF]);
 
