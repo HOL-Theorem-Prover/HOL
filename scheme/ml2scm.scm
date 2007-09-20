@@ -1,9 +1,9 @@
 (require (lib "plt-match.ss")
          (lib "pretty.ss"))
 
-(define output-directory "/root/")
+(define output-directory "/root/temp/")
 
-(define name 'test)
+(define name 'Randomset)
 
 (define name-string (symbol->string name))
 
@@ -12,7 +12,7 @@
 ;read in the ML program, as a parsed S-exp (by haMLet)
 (define Program
   (with-input-from-file
-      (string-append "/root/hamlet-1.3.0/"
+      (string-append output-directory
                      name-string
                      ".s")
     (lambda ()
@@ -31,7 +31,7 @@
   (symbol-append id "^"))
 
 
-;function name mapping from ML to Scheme
+;function name mapping from ML to Scheme (need to extend)
 (define function-table
   (make-immutable-hash-table
    '((+ . +)
@@ -46,6 +46,7 @@
      (! . unbox)
      (read_integer . read)
      (toString . number->string)
+     (^ . string-append)
      )))
 
 ;ML's build-in function takes a record as argument
@@ -128,6 +129,7 @@
                   (let ((module-name (string->symbol module-string))
                         (var-name (string->symbol var-string)))
                     (values `((ml-dot ,module-name ,var-name))
+                            ;maybe need to open .data file for that module?
                             defined)))))
            (else
             (values (list (if (memq a defined)
@@ -382,6 +384,13 @@
                    (translate p defined)))
        (values `((struct ,(car translated-p) (content)))
                (cons (car translated-p) new-defined))))
+    ((list 'ASPat _ id pat)
+     (let-values (((translated-id _)
+                   (translate id defined))
+                  ((translated-pat new-defined)
+                   (translate pat defined)))
+       (values `((and ,(car translated-id) ,@translated-pat))
+               new-defined)))
     (else
      (error (car else))
      )))
@@ -390,27 +399,27 @@
   (match body
     ((list 'match-lambda (list (? symbol? literal) body2))
      (beta-redex? (cons literal literals) body2))
-    ((list-rest lamb args)
-     (equal? args (reverse literals)))
+    ((list-rest f args)
+     (and (equal? args (reverse literals))
+          (equal? (car (improve f)) 'lambda)))
     (else
      #f)))
 
-(define (beta-reduct e)
-  (match e
+(define beta-reduct
+  (match-lambda
     ((list 'match-lambda (list (? symbol? literal) body))
      (beta-reduct body))
     (else
-     (beta-reduct-help (improve (car e))))))
+     (curry (improve (car else))))))
 
-(define (beta-reduct-help e)
+(define (curry e)
   (match e
     ((list-rest 'lambda (list-rest arg) body)
      e)
     ((list-rest 'lambda (list-rest arg arg1) body)
      `(lambda (,arg)
-        ,(beta-reduct-help `(lambda ,arg1 ,@body))))
+        ,(curry `(lambda ,arg1 ,@body))))
     (else
-     (display e)
      (error 'beta-reduction))))
 
 (define improve
@@ -425,6 +434,9 @@
                    ,@(cdr improved_b))
            `(begin ,(improve a)
                    ,improved_b))))
+    ;beta reduction (without curry)
+    ((list 'match-lambda (list (? symbol? literal) (list lamb literal)))
+     (improve lamb))
     ;match-lambda -> if
     ((list (list 'match-lambda
                  (list #t then)
@@ -437,8 +449,8 @@
     ;match-lambda -> lambda
     ((list 'match-lambda (list (? symbol? literal) body))
      (if (beta-redex? (list literal) body)
-         ;beta reduction
-         (beta-redect `(match-lambda (,literal) body))
+         ;beta reduction (with curry)
+         (beta-reduct `(match-lambda (,literal ,body)))
          `(lambda (,literal) ,(improve body))))
     ;match-lambda -> lambda, for Records
     ;match-lambda -> match-lambda*
@@ -472,16 +484,16 @@
       (match-lambda ,clause))))
 
 (define (my-write file-name sexp)
-  #;(with-output-to-file file-name
-      (lambda ()
-        (pretty-print sexp)))
-  (pretty-print sexp))
+  (with-output-to-file file-name
+    (lambda ()
+      (pretty-print sexp))))
 
 ;for structure
 (let-values (((code defined)
               (translate Program
                          (with-input-from-file
-                             (string-append output-directory name-string ".data")))))
+                             (string-append output-directory name-string ".data")
+                           read))))
   (my-write (string-append output-directory name-string ".ss")
             `(module ,name (lib "ml.scm" "lang")
                (provide ,(make-str-name name))
@@ -492,15 +504,17 @@
                ,@(improve code))))
 
 ;for signature
-(let-values (((code defined)
-              (translate Program ())))
-  (my-write (string-append output-directory name-string "-sig.ss")
-            `(module ,(symbol-append name "-sig") (lib "ml-sig.scm" "lang")
-               (provide ,(make-sig-name name))
-               (require ,@(map (lambda (id)
-                                 (string-append (symbol->string id) ".ss"))
-                               requires))
-               ,@(improve code)))
-  (my-write (string-append output-directory name-string ".data")
-            defined))
+#;(let-values (((code defined)
+                (translate Program
+                           ;this is ML pre-defined structs (may need to extend)
+                           '(SOME NONE))))
+    (my-write (string-append output-directory name-string "-sig.ss")
+              `(module ,(symbol-append name "-sig") (lib "mlsig.scm" "lang")
+                 (provide ,(make-sig-name name))
+                 (require ,@(map (lambda (id)
+                                   (string-append (symbol->string id) ".ss"))
+                                 requires))
+                 ,@(improve code)))
+    (my-write (string-append output-directory name-string ".data")
+              defined))
 
