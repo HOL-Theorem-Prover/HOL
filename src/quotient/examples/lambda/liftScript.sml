@@ -10,6 +10,10 @@ infixr -->;
 
 val _ = new_theory "lift";
 
+(* In interactive sessions, do:
+val _ = map load ["more_listTheory","more_setTheory","variableTheory","termTheory","alphaTheory"];
+*)
+
 open prim_recTheory;
 open pairTheory;
 open pairLib;
@@ -41,7 +45,7 @@ open Rsyntax;
 val _ = associate_restriction ("?!!",  "RES_EXISTS_EQUIV");
 
 val term = ty_antiq (``:'a term1``);
-val subs = ty_antiq (``:(var # 'a term1) list``); 
+val subs = ty_antiq (``:(var # 'a term1) list``);
 
 
 (* ===================================================================== *)
@@ -905,9 +909,9 @@ val fnlist = [{def_name="Con_def", fname="Con",
              ];
 
 
-val respects = [Con1_ALPHA, Var1_ALPHA, App1_ALPHA, Lam1_ALPHA, Abs1_ALPHA,
+val respects = [(*Con1_ALPHA,*) Var1_ALPHA, App1_ALPHA, Lam1_ALPHA, Abs1_ALPHA,
                 ALPHA_HEIGHT, ALPHA_FV, ALPHA_SUB1, FV_subst_RSP,
-                vsubst1_RSP, SUBt_RSP, ALPHA_subst_RSP]
+                (*vsubst1_RSP,*) SUBt_RSP, ALPHA_subst_RSP]
 
 val polydfs = [BV_subst_PRS,COND_PRS,CONS_PRS,NIL_PRS,COMMA_PRS,FST_PRS,SND_PRS,
                LET_PRS,o_PRS,UNCURRY_PRS,CURRY_PRS,I_PRS,
@@ -1052,6 +1056,8 @@ val LIFT_RULE =
      respects = respects,
      poly_preserves = polydfs,
      poly_respects = polywfs};
+
+LIFT_RULE SUB1;
 
 fun print_thm' th = (print_thm th; print "\n"; th);
 val _ = print "\nLifted theorems:\n";

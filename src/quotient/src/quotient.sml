@@ -20,6 +20,7 @@
 (* one or more existing types with partial equivalence relations defined *)
 (* on them, and creates new types which are isomorphic to the            *)
 (* equivalence classes of the old types.                                 *)
+(*                                                                       *)
 (* In addition to creating the new types, functions are defined in the   *)
 (* HOL logic to translate between the old and new types in both          *)
 (* directions.                                                           *)
@@ -56,6 +57,8 @@ open quotient_optionTheory;
 open Rsyntax;
 
 
+(* In interactive sessions, omit the chatting section below. *)
+
 val chatting = ref false;  (* When chatting is false,
                                  gives no output of lifting.
                               When chatting is true, then
@@ -64,8 +67,10 @@ val chatting = ref false;  (* When chatting is false,
 
 val _ = register_btrace("quotient", chatting);
 
-val caching = ref true; (* should be pure efficiency gain *)
+(* End of chatting section. *)
 
+
+val caching = ref true; (* should be pure efficiency gain *)
 
 
 structure Map = Redblackmap
@@ -666,7 +671,7 @@ fun check_tyop_quotient th =
    handle e => raise HOL_ERR {
                   origin_structure = "quotient",
                   origin_function  = "check_tyop_quotient",
-                  message = "The following does not have the form of a type quotient extension theorem:\n" ^
+                  message = "The following does not have the form of a quotient type extension theorem:\n" ^
                                        thm_to_string th ^ "\n"
                        }
 
@@ -1265,7 +1270,8 @@ fun form_abs_rep_functions quot_ths tyops tyop_simps =
 
       fun tyREL ty =
           let val qth = make_quotient (quot_ths @ tyops) ty
-          in (hd o snd o strip_comb o concl) qth
+              val qth' = REWRITE_RULE tyop_simps qth
+          in (hd o snd o strip_comb o concl) qth'
           end
 
 
@@ -1297,6 +1303,30 @@ fun tyop_rec th =
      end
 
 
+fun check_quotient_ty tys_quot_ths ty =
+   if is_vartype ty then ty
+   else let val {Tyop, Args} = dest_type ty
+         (* val arg_quots = check_quotient_tys Args *)
+            fun is_ty_qth (rty,qth) = CAREFUL_INST_TYPE (match_type rty ty) qth
+                                      (* (#Tyop(dest_type rty) = Tyop) *)
+            val ty_qty = tryfind is_ty_qth tys_quot_ths
+                         handle HOL_ERR e =>
+                          raise HOL_ERR {
+                           origin_structure = "quotient",
+                           origin_function  = "check_quotient_ty",
+                           message = "Could not lift the type `" ^
+                               type_to_string ty ^ "`;\n" ^
+                               "Missing quotient extension theorem for type constructor " ^
+                               "\"" ^ Tyop ^ "\".\n" ^
+                               "Please prove and add to \"tyop_quotients\" inputs for quotient package.\n " (* ^
+                               exn_to_string (HOL_ERR e) *)
+                          }
+         in ty
+         end
+
+and check_quotient_tys tys_quot_ths tys = map (check_quotient_ty tys_quot_ths) tys
+
+
 fun define_quotient_lifted_function quot_ths tyops tyop_simps =
     let
         (* no refls *)
@@ -1312,6 +1342,10 @@ fun define_quotient_lifted_function quot_ths tyops tyop_simps =
         val RELs = map (hd o snd o strip_comb o concl) quot_ths
         val tys = map (hd o #Args o dest_type o type_of) RELs
         val ntys = map (hd o #Args o dest_type o type_of) reps
+
+        val tys_quot_ths = zip tys quot_ths
+        val tyop_tys = map quotient_type tyops
+        val tyop_ty_ths = zip tyop_tys tyops
 
 
         val (is_abs_ty, is_rep_ty, absty, repty, get_abs, get_rep,
@@ -1357,6 +1391,52 @@ fun define_quotient_lifted_function quot_ths tyops tyop_simps =
               val ntyl = map absty tyl
               val rty = end_itlist (fn t1 => fn t2 =>
                                       mk_type{Tyop="fun", Args=[t1,t2]}) ntyl
+
+(*
+        val _ = print "Currently loaded quotient theorems:\n"
+        val _ = map (print_thm o snd) tys_quot_ths
+        val _ = print "\n"
+
+        val _ = print "Currently loaded quotient type extension theorems:\n"
+        val _ = map (print_thm o snd) tyop_ty_ths
+        val _ = print "\n"
+*)
+
+(* The function findtys returns a list of the types in the term
+   which is being lifted.
+*)
+        fun findtys tm =
+           if is_abs tm then
+              let val ty = type_of tm
+                  val {Bvar, Body} = dest_abs tm
+                  val btys = findtys Body
+              in if is_rep_ty ty then insert ty btys else btys
+              end
+           else if is_comb tm then
+              let val (opr, args) = strip_comb tm in
+                 (findtys opr) @ flatten (map findtys args)
+              end
+           else if is_var tm then
+                let val {Name=nm, Ty= ty} = dest_var tm
+                in if is_rep_ty ty then [ty] else []
+                end
+           else let val {Name=nm, Ty= ty} = dest_const tm
+                in if is_rep_ty ty then [ty] else []
+                end
+
+        fun alltys ty =
+           if is_vartype ty then [ty]
+           else let val {Tyop,Args} = dest_type ty
+                    val atys = alltysl Args
+                in ty :: atys
+                end
+        and alltysl [] = []
+          | alltysl (ty::tys) = alltys ty @ alltysl tys
+
+              val tys = mk_set (findtys tm)
+              val tys = mk_set (filter is_rep_ty (alltysl tys))
+              val _ = check_quotient_tys (tys_quot_ths @ tyop_ty_ths) tys
+                      handle HOL_ERR e => Raise (HOL_ERR e)
               val args = wargs (Lib.butlast ntyl)
               val rargs = map mkrep args
               val l = list_mk_comb(mk_var{Name=fname, Ty=rty}, args)
@@ -1511,6 +1591,56 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
         val ntys = map (hd o #Args o dest_type o type_of) reps
         val tys_quot_ths = zip tys quot_ths;
 
+(* Check that for each quotient theorem in "tyops", the corresponding relation *)
+(* and map simplification theorems are present in  "tyop_simps".               *)
+
+        fun check_simp tm = exists (fn th => (Term.match_term tm (concl th); true)
+                                             handle HOL_ERR _ => false
+                               )   tyop_simps
+                            orelse
+                          Raise (HOL_ERR {
+                           origin_structure = "quotient",
+                           origin_function  = "check_simp",
+                           message =
+                               "Missing quotient simplification theorem:\n" ^
+                               with_flag (show_types, true)
+                                   thm_to_string (mk_oracle_thm "quotient" ([],tm)) ^ "\n" ^
+                               "Please prove and add to \"tyop_simps\" inputs for quotient package.\n "
+                          })
+
+        fun check_tyop_simps_present tyop =
+            let val (taus,ksis,Rs,abss,reps,conseq) = strip_QUOTIENT_cond (concl tyop)
+                val Rar = (snd o strip_comb) conseq
+                val REL = hd Rar
+                val abs = hd (tl Rar)
+                val rep = hd (tl (tl Rar))
+                fun strip_comb_list1 [] (tm,args) = (tm,args)
+                  | strip_comb_list1 (x::xs) (tm,args) =
+                       let val (tm',a) = Term.dest_comb tm
+                       in strip_comb_list1 xs (tm', a::args)
+                       end
+                fun strip_comb_list lst tm = strip_comb_list1 lst (tm,[])
+                val (R,Rargs) = strip_comb_list taus REL
+                val eqargs = map (fn Rarg => Term.mk_const("=", type_of Rarg)) Rargs
+                val REL' = list_mk_comb(R,eqargs)
+                val REL_simp = mk_eq{lhs=REL', rhs=Term.mk_const("=", type_of REL')}
+                val _ = check_simp REL_simp
+                val theta = map (op |->) (zip ksis taus)
+                val (amap,aargs) = strip_comb_list taus abs
+                val Iaargs = map (fn tau => Term.mk_const("I", tau --> tau)) taus
+                val abs' = list_mk_comb(inst theta amap, Iaargs)
+                val abs_simp = mk_eq{lhs=abs', rhs=Term.mk_const("I", type_of abs')}
+                val _ = check_simp abs_simp
+                val (rmap,rargs) = strip_comb_list taus rep
+                val Irargs = map (fn tau => Term.mk_const("I", tau --> tau)) taus
+                val rep' = list_mk_comb(inst theta rmap,Irargs)
+                val rep_simp = mk_eq{lhs=rep', rhs=Term.mk_const("I", type_of rep')}
+                val _ = check_simp rep_simp
+            in ()
+            end
+
+        val _ = map check_tyop_simps_present tyops
+
 (* The following functions are created in relation to the given quotient
    theorems and  type operator quotient theorems:
 
@@ -1550,6 +1680,7 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
         end
 
       val funcs = map get_deffunc newdefs
+      val newdeffuncs = funcs
 
 (* For each constant being lifted, check that its respectfulness theorem
    is present.  If not, then if the theorem is trivial, create it.
@@ -1563,7 +1694,29 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
             fun check_not_rep_ty margty = if is_rep_ty margty then raise Match
                                                               else ()
 
-            fun make_missing_respect mfunc =
+            fun fake_respects tm =
+               let val ty = type_of tm
+                   val (margtys,mresty) = strip_fun ty
+                   val xargs = map (fn (n,ty) =>
+                                       mk_var{Name="x"^Int.toString n, Ty=ty})
+                                   (enumerate 1 margtys)
+                   val yargs = map (fn (n,ty) =>
+                                       mk_var{Name="y"^Int.toString n, Ty=ty})
+                                   (enumerate 1 margtys)
+                   val xyargs = zip xargs yargs
+                   val xterm = list_mk_comb(tm,xargs)
+                   val yterm = list_mk_comb(tm,yargs)
+                   val conc  = list_mk_comb (tyREL (type_of xterm), [xterm,yterm])
+                   val hyps  = map (fn (x,y) => list_mk_comb (tyREL (type_of x), [x,y]))
+                                   xyargs
+                   val body  = if length hyps > 0
+                               then mk_imp{ant=list_mk_conj hyps,conseq=conc}
+                               else conc
+               in
+                   List.foldr (fn ((x,y),tm) => list_mk_forall([x,y],tm)) body xyargs
+               end
+
+            fun make_missing_respects mfunc =
                let val (margtys,mresty) = strip_fun (type_of mfunc)
                    val _ = map check_not_rep_ty margtys
                    val margs = map (fn (n,ty) =>
@@ -1576,12 +1729,15 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                end
                handle e => raise HOL_ERR
                             { origin_structure = "quotient",
-                              origin_function  = "add_trivial_respects",
-                              message = "Missing respects theorem for " ^
-                                        term_to_string mfunc ^ ".\n"
+                              origin_function  = "make_missing_respects",
+                              message = "Missing respectfulness theorem for " ^
+                                        term_to_string mfunc ^ ".\n" ^
+                               with_flag (show_types, true)
+                                   thm_to_string (mk_oracle_thm "quotient" ([], fake_respects mfunc)) ^ "\n" ^
+                               "Please prove and add to \"respects\" inputs for quotient package.\n "
                             }
         in
-           map make_missing_respect missing @ respects
+           map make_missing_respects missing @ respects
         end
 
         val all_respects = add_trivial_respects funcs all_equivs
@@ -1871,9 +2027,73 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
           mem (#Name (dest_const opp)) poly_lifted_names
           handle _ => false
 
+(* The function findtys returns a list of the types in the term
+   which is being lifted.
+*)
+        fun findtys tm =
+           if is_abs tm then
+              let val ty = type_of tm
+                  val {Bvar, Body} = dest_abs tm
+                  val btys = findtys Body
+              in if is_rep_ty ty then insert ty btys else btys
+              end
+           else if is_comb tm then
+              let val (opr, args) = strip_comb tm in
+                 (findtys opr) @ flatten (map findtys args)
+              end
+           else if is_var tm then
+                let val {Name=nm, Ty= ty} = dest_var tm
+                in if is_rep_ty ty then [ty] else []
+                end
+           else let val {Name=nm, Ty= ty} = dest_const tm
+                in if is_rep_ty ty then [ty] else []
+                end
+
+        fun alltys ty =
+           if is_vartype ty then [ty]
+           else let val {Tyop,Args} = dest_type ty
+                    val atys = alltysl Args
+                in ty :: atys
+                end
+        and alltysl [] = []
+          | alltysl (ty::tys) = alltys ty @ alltysl tys
+
+        fun findalltys tm = filter is_rep_ty (alltysl (findtys tm))
+
+
 (* The function findops returns a list of the polymorphic operators in the term
    which have types being lifted.
 *)
+     (* val _ = map (fn tm => (print_term tm; print "\n")) (filter is_const RELs) *)
+        val RELnms = map (#Name o dest_const) (filter is_const RELs)
+        fun get_tyop_REL tyop =
+            let val (taus,ksis,Rs,abss,reps,conseq) = strip_QUOTIENT_cond (concl tyop)
+                val Rar = (snd o strip_comb) conseq
+                val REL = hd Rar
+                val abs = hd (tl Rar)
+                val rep = hd (tl (tl Rar))
+                fun strip_comb_list1 [] (tm,args) = (tm,args)
+                  | strip_comb_list1 (x::xs) (tm,args) =
+                       let val (tm',a) = Term.dest_comb tm
+                       in strip_comb_list1 xs (tm', a::args)
+                       end
+                fun strip_comb_list lst tm = strip_comb_list1 lst (tm,[])
+                val (R,Rargs) = strip_comb_list taus REL
+            in R
+            end
+        val tyop_RELs = map get_tyop_REL tyops
+     (* val _ = map (fn tm => (print_term tm; print "\n")) tyop_RELs *)
+        val tyop_RELnms = map (#Name o dest_const) tyop_RELs
+
+        fun match_higher_th tm th = (* where th ranges over ho_polywfs *)
+            let val (taus,ksis,Rs,abss,reps,base) = strip_QUOTIENT_cond (concl th)
+                val opr = fst (strip_comb (rand (rator base)))
+            in #Name(dest_const tm) = #Name (dest_const opr)
+            end
+
+        fun match_higher_df tm = (* where th ranges over polydfs *)
+            mem (#Name(dest_const tm)) poly_lifted_names
+
         fun findops tm =
            if is_abs tm then (findops o #Body o dest_abs) tm
            else if is_comb tm then
@@ -1883,16 +2103,27 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
            else if is_var tm then []
            else let val {Name=nm, Ty= ty} = dest_const tm
                     val (atys,rty) = strip_type ty
+                    val err1 = HOL_ERR {
+                           origin_structure = "quotient",
+                           origin_function  = "findops",
+                           message = "Missing polymorphic respectfulness theorem for `" ^
+                                         term_to_string tm ^ "`.\n" ^
+                               "Please prove and add to \"poly_respects\" inputs for quotient package.\n "
+                        }
+                    val err2 = HOL_ERR {
+                           origin_structure = "quotient",
+                           origin_function  = "findops",
+                           message = "Missing polymorphic preservation theorem for `" ^
+                                         term_to_string tm ^ "`.\n" ^
+                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
+                        }
                 in if is_rep_ty ty
-                   then if poly_liftedf tm
-                        then [tm]
-                        else [] (* if mem tm newdeffuncs then []
-                             else raise HOL_ERR {
-                  origin_structure = "quotient",
-                  origin_function  = "findops",
-                  message = "Missing polymorphic respectfulness theorem for " ^
-                                term_to_string tm ^ ".\n"
-                        } *)
+                   then if mem (#Name(dest_const tm)) ("respects" :: RELnms @ tyop_RELnms)
+                                orelse mem tm newdeffuncs
+                             then []
+                        else      if not (exists (match_higher_th tm) ho_polywfs) then raise err1
+                             else if not (match_higher_df tm) then raise err2
+                             else if poly_liftedf tm then [tm] else []
                    else []
                 end
 
@@ -2025,6 +2256,16 @@ would include
            else get_quotient ty
 
         val get_quotient = get_quotient1
+
+(*
+        val _ = print "Currently loaded quotient theorems:\n"
+        val _ = map (print_thm o snd) tys_quot_ths
+        val _ = print "\n"
+
+        val _ = print "Currently loaded quotient type extension theorems:\n"
+        val _ = map (print_thm o snd) tyop_ty_ths
+        val _ = print "\n"
+*)
 
 (* The function resolve_quotient, given a theorem conditioned on a quotient
    theorem, constructs the appropriate quotient theorem for the type present,
@@ -3099,15 +3340,19 @@ R2 (f[x']) (g[y']).
 (* LIFT_RULE has several phases:                                             *)
 (*    1. Preliminary cleaning by GEN_ALL and tyop_simps;                     *)
 (*    2. Conversion to regularized form by REGULARIZE_RULE;                  *)
-(*    3. Extraction of the operators, abstractions, and applications         *)
+(*    3. Check that all types within the theorem are supported by the        *)
+(*          available quotient type extension theorems, and that all         *)
+(*          operators within the theorem are supported by the available      *)
+(*          respectfulness and preservation theorems.                        *)
+(*    4. Extraction of the operators, abstractions, and applications         *)
 (*          contained within the theorem to be lifted;                       *)
-(*    4. Creation of the preservation theorems for the operators,            *)
+(*    5. Creation of the preservation theorems for the operators,            *)
 (*          abstractions, and applications;                                  *)
-(*    5. Transformation of the regular theorem to its "inflated" form;       *)
+(*    6. Transformation of the regular theorem to its "inflated" form;       *)
 (*          ( This is the phase with the highest failure rate. )             *)
-(*    6. Conversion of R (rep x) (rep y) to (x = y);                         *)
-(*    7. Rewriting by all preservation theorems to collapse inflated forms;  *)
-(*    8. Checking that the result has no remaining lower-level terms.        *)
+(*    7. Conversion of R (rep x) (rep y) to (x = y);                         *)
+(*    8. Rewriting by all preservation theorems to collapse inflated forms;  *)
+(*    9. Checking that the result has no remaining lower-level terms.        *)
 (*                                                                           *)
 (* If anything fails, LIFT_RULE wraps the exception with an error message    *)
 (* containing the actual original theorem which was given to be lifted.      *)
@@ -3118,6 +3363,8 @@ R2 (f[x']) (g[y']).
                                         REWRITE_RULE (FUN_REL_EQ :: tyop_simps)
                                          o GEN_ALL) th
                             val tm = concl thr
+                            val tys = mk_set (findalltys tm)
+                            val _ = check_quotient_tys (tys_quot_ths @ tyop_ty_ths) tys
                             val ops = mk_set (findops tm)
                             val abs = mk_set (findabs tm)
                             val aps = mk_set (findaps tm)
@@ -3325,9 +3572,9 @@ fun enrich_types quot_ths tyops respects =
 
 
 
-(* ----------------------- *)
-(* ALTENATIVE ENTRY POINT. *)
-(* ----------------------- *)
+(* ------------------------ *)
+(* ALTERNATIVE ENTRY POINT. *)
+(* ------------------------ *)
 
 fun define_quotient_types_rule {types, defs,
                                 tyop_equivs, tyop_quotients, tyop_simps,
