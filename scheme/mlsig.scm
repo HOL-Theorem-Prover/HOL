@@ -3,7 +3,8 @@
   (require (lib "plt-match.ss")
            (lib "unit.ss"))
   
-  (provide define-signature
+  (provide struct
+           define-signature
            define-structure
            (rename define-values/invoke-unit/infer ml-open)
            ml-dot
