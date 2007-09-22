@@ -2094,6 +2094,172 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
         fun match_higher_df tm = (* where th ranges over polydfs *)
             mem (#Name(dest_const tm)) poly_lifted_names
 
+        fun orig_const c =
+         let val {Name,Thy,...} = dest_thy_const c
+         in prim_mk_const{Name=Name,Thy=Thy}
+         end
+
+        fun orig_type_of c = type_of (orig_const c)
+
+        fun mk_ksi usedtvs tau =
+          let val used = map dest_vartype usedtvs
+              val nm = dest_vartype tau
+              fun new_name nm =
+                 if mem nm used then new_name (nm ^ "1") else nm
+          in mk_vartype (new_name nm)
+          end
+
+        fun mk_ksis taus =
+           let fun mk_ksis1 usedtvs [] = []
+                 | mk_ksis1 usedtvs (tau::taus) =
+                      let val ksi = mk_ksi usedtvs tau
+                      in ksi :: mk_ksis1 (ksi :: usedtvs) taus
+                      end
+           in mk_ksis1 taus taus
+           end
+
+        fun base_vartype tyv =
+           let val cs = explode (dest_vartype tyv)
+               val _ = assert not (length cs = 0)
+               val _ = assert (curry op = #"'") (hd cs)
+           in implode (tl cs)
+           end
+
+        fun mk_R_tm tau = mk_var {Name="R" ^ base_vartype tau,
+                                  Ty=  tau --> tau --> bool}
+
+        fun mk_abs_tm (tau,ksi) = mk_var {Name="abs" ^ base_vartype tau,
+                                          Ty=  tau --> ksi}
+
+        fun mk_rep_tm (tau,ksi) = mk_var {Name="rep" ^ base_vartype tau,
+                                          Ty=  ksi --> tau}
+
+        val quotient_tm = (fst o strip_comb o lhs o snd o strip_forall o concl) QUOTIENT_def
+
+        fun mk_quotient_tm (tau,ksi) = inst [alpha |-> tau, beta |-> ksi] quotient_tm
+
+        fun mk_quotient_phrase ((tau,ksi),(R,abs,rep)) =
+            list_mk_comb(mk_quotient_tm(tau,ksi), [R,abs,rep])
+            handle HOL_ERR e => Raise (
+                               with_flag (show_types, true)
+                       HOL_ERR {
+                           origin_structure = "quotient",
+                           origin_function  = "mk_quotient_phrase",
+                           message = "Bad types for `" ^
+                                         term_to_string (mk_quotient_tm(tau,ksi)) ^ "`,\n`" ^
+                                         term_to_string R ^ "`,\n`" ^
+                                         term_to_string abs ^ "`,\n`" ^
+                                         term_to_string rep ^ "`.\n" ^
+                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
+                        })
+
+        fun fake_poly_respects tm =
+           let val otm = orig_const tm
+               val ty = type_of otm
+               val taus = type_vars ty
+               val ksis = mk_ksis taus
+               val tau_ksis = zip taus ksis
+               val Rs = map mk_R_tm taus
+               val abss = map mk_abs_tm tau_ksis
+               val reps = map mk_rep_tm tau_ksis
+               val R_abs_reps = map (fn (R,(abs,rep)) => (R,abs,rep)) (zip Rs (zip abss reps))
+               val quot_phrases = map mk_quotient_phrase (zip tau_ksis R_abs_reps)
+               val hyp_quot_ths = map ASSUME quot_phrases
+               val (is_abs_ty, is_rep_ty, absty, repty, get_abs, get_rep,
+                     mkabs, mkrep, tyREL) =
+                            form_abs_rep_functions (hyp_quot_ths @ quot_ths) tyops tyop_simps
+
+               (* form the base of the fake polymorphic respectfulness theorem *)
+               val (margtys,mresty) = strip_fun ty
+               val xargs = map (fn (n,ty) =>
+                                   mk_var{Name="x"^Int.toString n, Ty=ty})
+                               (enumerate 1 margtys)
+               val yargs = map (fn (n,ty) =>
+                                   mk_var{Name="y"^Int.toString n, Ty=ty})
+                               (enumerate 1 margtys)
+               val xyargs = zip xargs yargs
+               val xterm = list_mk_comb(otm,xargs)
+               val yterm = list_mk_comb(otm,yargs)
+               val conc  = list_mk_comb (tyREL (type_of xterm), [xterm,yterm])
+               val hyps  = map (fn (x,y) => list_mk_comb (tyREL (type_of x), [x,y]))
+                               xyargs
+               val body  = if length hyps > 0
+                           then mk_imp{ant=list_mk_conj hyps,conseq=conc}
+                           else conc
+               val base = List.foldr (fn ((x,y),tm) => list_mk_forall([x,y],tm)) body xyargs
+           in (* Add quotient theorem hypotheses *)
+               List.foldr (fn (((R,abs,rep),qtm),tm) =>
+                              list_mk_forall([R,abs,rep], mk_imp{ant=qtm, conseq=tm}))
+                          base (zip R_abs_reps quot_phrases)
+           end
+
+        fun fake_poly_preserves tm =
+           let val otm = orig_const tm
+               val ty = type_of otm
+               val taus = type_vars ty
+               val ksis = mk_ksis taus
+               val tau_ksis = zip taus ksis
+               val Rs = map mk_R_tm taus
+               val abss = map mk_abs_tm tau_ksis
+               val reps = map mk_rep_tm tau_ksis
+               val R_abs_reps = map (fn (R,(abs,rep)) => (R,abs,rep)) (zip Rs (zip abss reps))
+               val quot_phrases = map mk_quotient_phrase (zip tau_ksis R_abs_reps)
+               val hyp_quot_ths = map ASSUME quot_phrases
+               val _ = map (with_flag (show_types, true) print_thm) hyp_quot_ths
+               val (is_abs_ty, is_rep_ty, absty, repty, get_abs, get_rep,
+                     mkabs, mkrep, tyREL) =
+                            form_abs_rep_functions (hyp_quot_ths @ quot_ths) tyops tyop_simps
+
+               (* form the base of the fake polymorphic respectfulness theorem *)
+               val (margtys,mresty) = strip_fun ty
+               val theta = map (op |->) tau_ksis
+               val abs_argtys = map (type_subst theta) margtys
+(* map (fn ty => if is_rep_ty ty then absty ty else ty) margtys *)
+               val xargs = map (fn (n,ty) =>
+                                   mk_var{Name="x"^Int.toString n, Ty=ty})
+                               (enumerate 1 abs_argtys)
+               val rep_args = map (fn tm => mkrep tm handle _ => tm) xargs
+               val repterm = list_mk_comb(otm, rep_args)
+            handle HOL_ERR e => raise (
+                               with_flag (show_types, true)
+                       HOL_ERR {
+                           origin_structure = "quotient",
+                           origin_function  = "fake_poly_preserves(1)",
+                           message = "Bad types for `" ^
+                                         term_to_string (otm) ^ " " ^
+                                         type_to_string (type_of (otm)) ^ "`,\n" ^
+                                         List.foldl (fn (ty,s) => s ^ 
+                               type_to_string ty ^ "`,\n") "" margtys ^
+                                         List.foldl (fn (ty,s) => s ^ 
+                               type_to_string ty ^ "`,\n") "" abs_argtys ^
+                                         List.foldl (fn (x,s) => s ^ "`" ^ term_to_string x ^ " " ^
+                               type_to_string (type_of x) ^ "`,\n") "" xargs ^
+                                         List.foldl (fn (x,s) => s ^ "`" ^ term_to_string x ^ " " ^
+                               type_to_string (type_of x) ^ "`,\n") "" rep_args ^
+                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
+                        })
+               val absterm = mkabs repterm
+               val absdef = list_mk_comb(inst (map (op |->) tau_ksis) otm, xargs)
+            handle HOL_ERR e => raise (
+                       HOL_ERR {
+                           origin_structure = "quotient",
+                           origin_function  = "fake_poly_preserves(2)",
+                           message = "Bad types for `" ^
+                                         term_to_string (inst (map (op |->) tau_ksis) otm) ^ " " ^
+                                         type_to_string (type_of (inst (map (op |->) tau_ksis) otm)) ^ "`,\n" ^
+                                         List.foldl (fn (x,s) => s ^ "`" ^ 
+                               term_to_string x ^ " " ^
+                               type_to_string (type_of x) ^ "`,\n") "" xargs ^
+                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
+                        })
+               val body  = mk_eq{lhs=absdef, rhs=absterm}
+               val base = list_mk_forall(xargs, body)
+           in (* Add quotient theorem hypotheses *)
+               List.foldr (fn (((R,abs,rep),qtm),tm) =>
+                              list_mk_forall([R,abs,rep], mk_imp{ant=qtm, conseq=tm}))
+                          base (zip R_abs_reps quot_phrases)
+           end
+
         fun findops tm =
            if is_abs tm then (findops o #Body o dest_abs) tm
            else if is_comb tm then
@@ -2103,26 +2269,32 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
            else if is_var tm then []
            else let val {Name=nm, Ty= ty} = dest_const tm
                     val (atys,rty) = strip_type ty
-                    val err1 = HOL_ERR {
+                    fun err1 () = HOL_ERR {
                            origin_structure = "quotient",
                            origin_function  = "findops",
                            message = "Missing polymorphic respectfulness theorem for `" ^
                                          term_to_string tm ^ "`.\n" ^
+                               with_flag (show_types, true)
+                                   thm_to_string (mk_oracle_thm "quotient" ([], fake_poly_respects tm)) ^ "\n" ^
                                "Please prove and add to \"poly_respects\" inputs for quotient package.\n "
                         }
-                    val err2 = HOL_ERR {
+                    fun err2 () = HOL_ERR {
                            origin_structure = "quotient",
                            origin_function  = "findops",
                            message = "Missing polymorphic preservation theorem for `" ^
                                          term_to_string tm ^ "`.\n" ^
+(*
+                               with_flag (show_types, true)
+                                   thm_to_string (mk_oracle_thm "quotient" ([], fake_poly_preserves tm)) ^ "\n" ^
+*)
                                "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
                         }
                 in if is_rep_ty ty
                    then if mem (#Name(dest_const tm)) ("respects" :: RELnms @ tyop_RELnms)
                                 orelse mem tm newdeffuncs
                              then []
-                        else      if not (exists (match_higher_th tm) ho_polywfs) then raise err1
-                             else if not (match_higher_df tm) then raise err2
+                        else      if not (exists (match_higher_th tm) ho_polywfs) then raise (err1())
+                             else if not (match_higher_df tm) then raise (err2())
                              else if poly_liftedf tm then [tm] else []
                    else []
                 end
