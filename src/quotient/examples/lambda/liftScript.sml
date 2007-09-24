@@ -913,13 +913,13 @@ val respects = [(*Con1_ALPHA,*) Var1_ALPHA, App1_ALPHA, Lam1_ALPHA, Abs1_ALPHA,
                 ALPHA_HEIGHT, ALPHA_FV, ALPHA_SUB1, FV_subst_RSP,
                 (*vsubst1_RSP,*) SUBt_RSP, ALPHA_subst_RSP]
 
-val polydfs = [BV_subst_PRS,COND_PRS,CONS_PRS,NIL_PRS,COMMA_PRS,FST_PRS,SND_PRS,
-               LET_PRS,o_PRS,UNCURRY_PRS,CURRY_PRS,I_PRS,
+val polydfs = [BV_subst_PRS,COND_PRS,CONS_PRS,NIL_PRS,COMMA_PRS,(*FST_PRS,SND_PRS,*)
+               LET_PRS,o_PRS,UNCURRY_PRS,(*CURRY_PRS,I_PRS,*)
                FORALL_PRS, EXISTS_PRS,
                EXISTS_UNIQUE_PRS, ABSTRACT_PRS];
 
-val polywfs = [BV_subst_RSP,COND_RSP,CONS_RSP,NIL_RSP,COMMA_RSP,FST_RSP,SND_RSP,
-               LET_RSP,o_RSP,UNCURRY_RSP,CURRY_RSP,I_RSP,
+val polywfs = [BV_subst_RSP,COND_RSP,CONS_RSP,NIL_RSP,COMMA_RSP,(*FST_RSP,SND_RSP,*)
+               LET_RSP,o_RSP,UNCURRY_RSP,(*CURRY_RSP,I_RSP,*)
                RES_FORALL_RSP, RES_EXISTS_RSP,
                RES_EXISTS_EQUIV_RSP, RES_ABSTRACT_RSP];
 
@@ -1055,7 +1055,7 @@ val LIFT_RULE =
                    FUN_REL_EQ, FUN_MAP_I],
      respects = respects,
      poly_preserves = polydfs,
-     poly_respects = polywfs};
+     poly_respects = polywfs} handle e => Raise e;
 
 LIFT_RULE SUB1;
 

@@ -1132,12 +1132,19 @@ fun quotient_type th = (hd o tl o #Args o dest_type o type_of
                                      ^ thm_to_string th ^ "\n"
                        }
 
-fun make_quotient quots ty =
-    let val qtys = map quotient_type quots
+fun make_hyp_quotient hyp_quots quots ty =
+    let val hqtys = map quotient_type hyp_quots
+        val hqty_quots = zip hqtys hyp_quots
+        val qtys = map quotient_type quots
+        val qty_quots = zip qtys quots
         fun prim_make_quotient ty =
+            assoc ty hqty_quots
+            handle e =>
             tryfind (fn (rty,qth) => CAREFUL_INST_TYPE (match_type rty ty) qth)
-                    (zip qtys quots)
+                    qty_quots
         fun main_make_quotient ty =
+              (if is_vartype ty then assoc ty hqty_quots
+               else
                let val {Tyop, Args} = dest_type ty
                    val ths = map main_make_quotient Args
                in
@@ -1157,12 +1164,13 @@ fun make_quotient quots ty =
                                                 handle _ => qth)
                                tyop' ths
                      end
-               end
+               end)
                handle _ => identity_quotient ty
     in
        main_make_quotient ty
     end;
 
+fun make_quotient quot_ths ty = make_hyp_quotient [] quot_ths ty
 
 
 (*
@@ -1200,9 +1208,23 @@ fun sub_tys ty =
 fun dest_cons l = (hd l, tl l);
 
 
-fun form_abs_rep_functions quot_ths tyops tyop_simps =
+fun form_hyp_abs_rep_functions hyp_quot_ths quot_ths tyops tyop_simps =
 
-  let val args = map (snd o strip_comb o concl) quot_ths
+  let val hargs = map (snd o strip_comb o concl) hyp_quot_ths
+      val hRELs = map hd hargs
+      val habss = map (hd o tl) hargs
+      val hreps = map (hd o tl o tl) hargs
+      val hratys = map (#Args o dest_type o type_of) habss
+      val hrtys = map hd hratys
+      val hatys = map (hd o tl) hratys
+
+      val hrtys_atys = zip hrtys hatys
+      val hatys_rtys = zip hatys hrtys
+      val hrtys_abss = zip hrtys habss
+      val hatys_reps = zip hatys hreps
+      val hrtys_RELs = zip hrtys hRELs
+
+      val args = map (snd o strip_comb o concl) quot_ths
       val RELs = map hd args
       val abss = map (hd o tl) args
       val reps = map (hd o tl o tl) args
@@ -1215,61 +1237,68 @@ fun form_abs_rep_functions quot_ths tyops tyop_simps =
       val atys_reps = zip atys reps
       val rtys_RELs = zip rtys RELs
 
-      (* we use Type.match_type, Type.type_subst to match types *)
+      (* we use ML op = to match types for hrtys, hatys *)
+      (* we use Type.match_type, Type.type_subst to match types for rtys, atys *)
 
-      fun prim_absty ty = tryfind (fn (rty,aty) =>
+      fun prim_absty ty = assoc ty hrtys_atys
+                          handle _ =>
+                          tryfind (fn (rty,aty) =>
                                       type_subst (match_type rty ty) aty)
                                   rtys_atys
                           handle _ => ty
 
-      fun prim_repty ty = tryfind (fn (rty,aty) =>
+      fun prim_repty ty = assoc ty hatys_rtys
+                          handle _ =>
+                          tryfind (fn (rty,aty) =>
                                       type_subst (match_type aty ty) rty)
                                   rtys_atys
                           handle _ => ty
 
-      fun absty ty = if is_vartype ty then ty
+      fun absty ty = if is_vartype ty then prim_absty ty
                      else
                        let val {Tyop, Args} = dest_type ty
                            val Args' = map absty Args
                        in prim_absty (mk_type{Tyop=Tyop, Args=Args'})
                        end
 
-      fun repty ty = if is_vartype ty then ty
+      fun repty ty = if is_vartype ty then prim_repty ty
                      else
                        let val {Tyop, Args} = dest_type ty
                            val Args' = map repty Args
                        in prim_repty (mk_type{Tyop=Tyop, Args=Args'})
                        end
 
-      fun prim_is_abs_ty ty = (tryfind (C match_type ty) atys; true)
+      fun prim_is_abs_ty ty = mem ty hatys orelse
+                              (tryfind (C match_type ty) atys; true)
                               handle _ => false
 
-      fun prim_is_rep_ty ty = (tryfind (C match_type ty) rtys; true)
+      fun prim_is_rep_ty ty = mem ty hrtys orelse
+                              (tryfind (C match_type ty) rtys; true)
                               handle _ => false
 
-      fun is_abs_ty ty = if is_vartype ty then false
+      fun is_abs_ty ty = if is_vartype ty then mem ty hatys
                          else
                            prim_is_abs_ty ty orelse
                            exists is_abs_ty (#Args (dest_type ty))
 
-      fun is_rep_ty ty = if is_vartype ty then false
+      fun is_rep_ty ty = if is_vartype ty then mem ty hrtys
                          else
                            prim_is_rep_ty ty orelse
                            exists is_rep_ty (#Args (dest_type ty))
 
 
       fun get_abs ty =
-          let val qth = make_quotient (quot_ths @ tyops) ty
+          let val qth = make_hyp_quotient hyp_quot_ths (quot_ths @ tyops) ty
           in (rand o rator o concl o PURE_REWRITE_RULE tyop_simps) qth
           end
 
       fun get_rep ty =
-          let val qth = make_quotient (quot_ths @ tyops) (repty ty)
+          let val qth = make_hyp_quotient hyp_quot_ths (quot_ths @ tyops) (repty ty)
           in (rand o concl o PURE_REWRITE_RULE tyop_simps) qth
           end
 
       fun tyREL ty =
-          let val qth = make_quotient (quot_ths @ tyops) ty
+          let val qth = make_hyp_quotient hyp_quot_ths (quot_ths @ tyops) ty
               val qth' = REWRITE_RULE tyop_simps qth
           in (hd o snd o strip_comb o concl) qth'
           end
@@ -1288,6 +1317,9 @@ fun form_abs_rep_functions quot_ths tyops tyop_simps =
   in
     (is_abs_ty, is_rep_ty, absty, repty, get_abs, get_rep, mkabs, mkrep, tyREL)
   end;
+
+fun form_abs_rep_functions quot_ths tyops tyop_simps =
+    form_hyp_abs_rep_functions [] quot_ths tyops tyop_simps
 
 
 fun tyop_rec th =
@@ -2064,7 +2096,6 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
 (* The function findops returns a list of the polymorphic operators in the term
    which have types being lifted.
 *)
-     (* val _ = map (fn tm => (print_term tm; print "\n")) (filter is_const RELs) *)
         val RELnms = map (#Name o dest_const) (filter is_const RELs)
         fun get_tyop_REL tyop =
             let val (taus,ksis,Rs,abss,reps,conseq) = strip_QUOTIENT_cond (concl tyop)
@@ -2082,7 +2113,6 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
             in R
             end
         val tyop_RELs = map get_tyop_REL tyops
-     (* val _ = map (fn tm => (print_term tm; print "\n")) tyop_RELs *)
         val tyop_RELnms = map (#Name o dest_const) tyop_RELs
 
         fun match_higher_th tm th = (* where th ranges over ho_polywfs *)
@@ -2140,18 +2170,6 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
 
         fun mk_quotient_phrase ((tau,ksi),(R,abs,rep)) =
             list_mk_comb(mk_quotient_tm(tau,ksi), [R,abs,rep])
-            handle HOL_ERR e => Raise (
-                               with_flag (show_types, true)
-                       HOL_ERR {
-                           origin_structure = "quotient",
-                           origin_function  = "mk_quotient_phrase",
-                           message = "Bad types for `" ^
-                                         term_to_string (mk_quotient_tm(tau,ksi)) ^ "`,\n`" ^
-                                         term_to_string R ^ "`,\n`" ^
-                                         term_to_string abs ^ "`,\n`" ^
-                                         term_to_string rep ^ "`.\n" ^
-                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
-                        })
 
         fun fake_poly_respects tm =
            let val otm = orig_const tm
@@ -2205,53 +2223,21 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                val R_abs_reps = map (fn (R,(abs,rep)) => (R,abs,rep)) (zip Rs (zip abss reps))
                val quot_phrases = map mk_quotient_phrase (zip tau_ksis R_abs_reps)
                val hyp_quot_ths = map ASSUME quot_phrases
-               val _ = map (with_flag (show_types, true) print_thm) hyp_quot_ths
                val (is_abs_ty, is_rep_ty, absty, repty, get_abs, get_rep,
                      mkabs, mkrep, tyREL) =
-                            form_abs_rep_functions (hyp_quot_ths @ quot_ths) tyops tyop_simps
+                            form_hyp_abs_rep_functions hyp_quot_ths quot_ths tyops tyop_simps
 
                (* form the base of the fake polymorphic respectfulness theorem *)
                val (margtys,mresty) = strip_fun ty
                val theta = map (op |->) tau_ksis
                val abs_argtys = map (type_subst theta) margtys
-(* map (fn ty => if is_rep_ty ty then absty ty else ty) margtys *)
-               val xargs = map (fn (n,ty) =>
-                                   mk_var{Name="x"^Int.toString n, Ty=ty})
+                             (* map absty margtys *)
+               val xargs = map (fn (n,ty) => mk_var{Name="x"^Int.toString n, Ty=ty})
                                (enumerate 1 abs_argtys)
                val rep_args = map (fn tm => mkrep tm handle _ => tm) xargs
                val repterm = list_mk_comb(otm, rep_args)
-            handle HOL_ERR e => raise (
-                               with_flag (show_types, true)
-                       HOL_ERR {
-                           origin_structure = "quotient",
-                           origin_function  = "fake_poly_preserves(1)",
-                           message = "Bad types for `" ^
-                                         term_to_string (otm) ^ " " ^
-                                         type_to_string (type_of (otm)) ^ "`,\n" ^
-                                         List.foldl (fn (ty,s) => s ^ 
-                               type_to_string ty ^ "`,\n") "" margtys ^
-                                         List.foldl (fn (ty,s) => s ^ 
-                               type_to_string ty ^ "`,\n") "" abs_argtys ^
-                                         List.foldl (fn (x,s) => s ^ "`" ^ term_to_string x ^ " " ^
-                               type_to_string (type_of x) ^ "`,\n") "" xargs ^
-                                         List.foldl (fn (x,s) => s ^ "`" ^ term_to_string x ^ " " ^
-                               type_to_string (type_of x) ^ "`,\n") "" rep_args ^
-                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
-                        })
                val absterm = mkabs repterm
                val absdef = list_mk_comb(inst (map (op |->) tau_ksis) otm, xargs)
-            handle HOL_ERR e => raise (
-                       HOL_ERR {
-                           origin_structure = "quotient",
-                           origin_function  = "fake_poly_preserves(2)",
-                           message = "Bad types for `" ^
-                                         term_to_string (inst (map (op |->) tau_ksis) otm) ^ " " ^
-                                         type_to_string (type_of (inst (map (op |->) tau_ksis) otm)) ^ "`,\n" ^
-                                         List.foldl (fn (x,s) => s ^ "`" ^ 
-                               term_to_string x ^ " " ^
-                               type_to_string (type_of x) ^ "`,\n") "" xargs ^
-                               "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
-                        })
                val body  = mk_eq{lhs=absdef, rhs=absterm}
                val base = list_mk_forall(xargs, body)
            in (* Add quotient theorem hypotheses *)
@@ -2283,10 +2269,8 @@ fun lift_theorem_by_quotients quot_ths equivs all_equivs
                            origin_function  = "findops",
                            message = "Missing polymorphic preservation theorem for `" ^
                                          term_to_string tm ^ "`.\n" ^
-(*
                                with_flag (show_types, true)
                                    thm_to_string (mk_oracle_thm "quotient" ([], fake_poly_preserves tm)) ^ "\n" ^
-*)
                                "Please prove and add to \"poly_preserves\" inputs for quotient package.\n "
                         }
                 in if is_rep_ty ty
