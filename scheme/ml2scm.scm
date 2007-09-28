@@ -71,7 +71,7 @@
            (else
             (list f arg))))))
 
-;ML pattern to Scheme (the old build in function used as pattern should be 'cons
+;ML pattern to Scheme
 (define (pattern-map f arg)
   (let ((scheme-f
          (hash-table-get function-table f (lambda () #f))))
@@ -401,7 +401,8 @@
      (beta-redex? (cons literal literals) body2))
     ((list-rest f args)
      (and (equal? args (reverse literals))
-          (equal? (car (improve f)) 'lambda)))
+          (equal? (car f) 'match-lambda)
+          (null? (cddr f))))
     (else
      #f)))
 
@@ -410,17 +411,27 @@
     ((list 'match-lambda (list (? symbol? literal) body))
      (beta-reduct body))
     (else
-     (curry (improve (car else))))))
+     
+     ;test
+     (pretty-print (car else))
+     (newline)
+     (let ((ans (curry (car else))))
+       (pretty-print ans)
+       (newline)
+       (newline)
+       ans)      
+     
+     #;(curry (car else)))))
 
 (define (curry e)
   (match e
-    ((list-rest 'lambda (list-rest arg) body)
-     e)
-    ((list-rest 'lambda (list-rest arg arg1) body)
-     `(lambda (,arg)
-        ,(curry `(lambda ,arg1 ,@body))))
+    ((list 'match-lambda (list (list (or 'list 'list-no-order) (list 'cons _ arg)) body))
+     `(match-lambda (,arg ,body)))
+    ((list 'match-lambda (list (list-rest (or 'list 'list-no-order) (list 'cons _ arg) args) body))
+     `(match-lambda (,arg
+                     ,(curry `(match-lambda ((list-no-order ,@args) ,body))))))
     (else
-     (error 'beta-reduction))))
+     (error 'beta-reduction e))))
 
 (define improve
   (match-lambda
@@ -450,7 +461,7 @@
     ((list 'match-lambda (list (? symbol? literal) body))
      (if (beta-redex? (list literal) body)
          ;beta reduction (with curry)
-         (beta-reduct `(match-lambda (,literal ,body)))
+         (improve (beta-reduct `(match-lambda (,literal ,body))))
          `(lambda (,literal) ,(improve body))))
     ;match-lambda -> lambda, for Records
     ;match-lambda -> match-lambda*
@@ -507,7 +518,7 @@
 #;(let-values (((code defined)
                 (translate Program
                            ;this is ML pre-defined structs (may need to extend)
-                           '(SOME NONE))))
+                           '(SOME NONE LESS EQUAL GREATER))))
     (my-write (string-append output-directory name-string "-sig.ss")
               `(module ,(symbol-append name "-sig") (lib "mlsig.scm" "lang")
                  (provide ,(make-sig-name name))
@@ -517,4 +528,3 @@
                  ,@(improve code)))
     (my-write (string-append output-directory name-string ".data")
               defined))
-
