@@ -10,6 +10,17 @@
 (define requires null)
 
 ;read in the ML program, as a parsed S-exp (by haMLet)
+(define sigProgram
+  (with-input-from-file
+      (string-append output-directory
+                     name-string
+                     "-sig.s")
+    (lambda ()
+      (read)
+      (read)
+      (read))))
+
+
 (define Program
   (with-input-from-file
       (string-append output-directory
@@ -34,19 +45,57 @@
 ;function name mapping from ML to Scheme (need to extend)
 (define function-table
   (make-immutable-hash-table
-   '((+ . +)
+   '((~ . -)
+     (+ . +)
      (* . *)
      (- . -)
-     (< . <)
      (div . /)
      (:: . cons)
      (@ . append)
      (ref . box)
      (:= . set-box!)
      (! . unbox)
-     (read_integer . read)
-     (toString . number->string)
+     (abs . abs)
+     (app . apply)
+     (ceil . ceiling)
+     (chr . integer->char)
+     (concat . string-concatenate);need to be exported
+     (explode . string->list)
+     (floor . floor)
+     (foldl . foldl);need to be exported
+     (foldr . foldr);need to be exported
+     (hd . car)
+     (help . void)
+     (ignore . void)
+     (implode . list->string)
+     (length . length)
+     (map . map)
+     (not . not)
+     (null . null?)
+     (ord . char->integer)
+     (print . print)
+     ;(read_integer . read)
+     (real . exact->inexact)
+     (rev . reverse)
+     (round . round)
+     (size . string-length)
+     (str . char->string);need to be exported
+     (substring . substring)
+     (tl . cdr)
+     (trunc . inexact->exact);
+     (vector . vector)
+     ;(toString . number->string)
      (^ . string-append)
+     (mod . modulo);or quotient?
+     (@ . append)
+     (= . eqv?)
+     (<> . !=);need to be exported
+     (< . <)
+     (<= . <=)
+     (> . >)
+     (>= . >=)
+     (o . compose);need to be exported
+     (before . begin0)     
      )))
 
 ;ML's build-in function takes a record as argument
@@ -113,6 +162,7 @@
                                     ,@translated-val)
                      translated-another)
                final-defined)))
+    ;build in ML types
     ((list 'LongVId 'true)
      (values '(#t)
              defined))
@@ -499,6 +549,26 @@
     (lambda ()
       (pretty-print sexp))))
 
+;for signature
+(let-values (((code defined)
+                (translate sigProgram
+                           ;this is ML pre-defined (may need to extend)
+                           '(SOME NONE LESS EQUAL GREATER
+                                  QUOTE ANTIQUOTE
+                                  ;exceptions
+                                  Out_of_memory Invalid_argument Graphic
+                                  Interrupt Overflow Fail Ord Match Bind
+                                  Size Div SysErr Subscript Chr Io Domain))))
+    (my-write (string-append output-directory name-string "-sig.ss")
+              `(module ,(symbol-append name "-sig") (lib "mlsig.scm" "lang")
+                 (provide ,(make-sig-name name))
+                 (require ,@(map (lambda (id)
+                                   (string-append (symbol->string id) ".ss"))
+                                 requires))
+                 ,@(improve code)))
+    (my-write (string-append output-directory name-string ".data")
+              defined))
+
 ;for structure
 (let-values (((code defined)
               (translate Program
@@ -513,18 +583,3 @@
                                  (string-append (symbol->string id) ".ss"))
                                requires))
                ,@(improve code))))
-
-;for signature
-#;(let-values (((code defined)
-                (translate Program
-                           ;this is ML pre-defined structs (may need to extend)
-                           '(SOME NONE LESS EQUAL GREATER))))
-    (my-write (string-append output-directory name-string "-sig.ss")
-              `(module ,(symbol-append name "-sig") (lib "mlsig.scm" "lang")
-                 (provide ,(make-sig-name name))
-                 (require ,@(map (lambda (id)
-                                   (string-append (symbol->string id) ".ss"))
-                                 requires))
-                 ,@(improve code)))
-    (my-write (string-append output-directory name-string ".data")
-              defined))
