@@ -3,7 +3,7 @@
 
 (define output-directory "/root/temp/")
 
-(define name 'Randomset)
+(define name 'Binarymap)
 
 (define name-string (symbol->string name))
 
@@ -19,7 +19,6 @@
       (read)
       (read)
       (read))))
-
 
 (define Program
   (with-input-from-file
@@ -59,11 +58,11 @@
      (app . apply)
      (ceil . ceiling)
      (chr . integer->char)
-     (concat . string-concatenate);need to be exported
+     (concat . string-concatenate);from a Scheme lib
      (explode . string->list)
      (floor . floor)
-     (foldl . foldl);need to be exported
-     (foldr . foldr);need to be exported
+     (foldl . foldl);from a Scheme lib
+     (foldr . foldr);from a Scheme lib
      (hd . car)
      (help . void)
      (ignore . void)
@@ -79,7 +78,7 @@
      (rev . reverse)
      (round . round)
      (size . string-length)
-     (str . char->string);need to be exported
+     (str . char->string);not a Scheme primitive
      (substring . substring)
      (tl . cdr)
      (trunc . inexact->exact);
@@ -89,12 +88,12 @@
      (mod . modulo);or quotient?
      (@ . append)
      (= . eqv?)
-     (<> . !=);need to be exported
+     (<> . !=);not a Scheme primitive
      (< . <)
      (<= . <=)
      (> . >)
      (>= . >=)
-     (o . compose);need to be exported
+     (o . compose);from a Scheme lib
      (before . begin0)     
      )))
 
@@ -312,6 +311,13 @@
      (translate p defined))
     ((list 'DatBind _ _ _ p)
      (translate p defined))
+    ((list 'DatBind _ _ _ p1 p2)
+     (let*-values (((translated-p1 middle-defined)
+                    (translate p1 defined))
+                   ((translated-p2 new-defined)
+                    (translate p2 middle-defined)))
+       (values (append! translated-p1 translated-p2)
+               new-defined)))
     ((list 'ConBind _ p)
      (let*-values (((translated-p new-defined)
                     (translate p defined))
@@ -473,12 +479,24 @@
      (error 'beta-reduction e))))
 
 (define (if2and/or s)
-  (cond ((eq? (caddr s) #t)
-         `(or ,(cadr s) ,(cadddr s)))
-        ((eq? (cadddr s) #f)
-         `(and ,(cadr s) ,(caddr s)))
-        (else
-         s)))
+  (let ((r (cadddr s)))
+    ;if -> or
+    (cond ((eq? (caddr s) #t)
+           (if (and (pair? r)
+                    (eq? (car r) 'or))
+               `(or ,(cadr s) ,@(cdr r))
+               `(or ,(cadr s) ,r)))
+          ;if -> and
+          ((eq? r #f)
+           (if (and (pair? r)
+                    (eq? (car r) 'and))
+               `(and ,(cadr s) ,@(cdr r))
+               `(and ,(cadr s) ,r)))
+          ;no else case
+          ((null? r)
+           `(if ,(cadr s) ,(caddr s)))
+          (else
+           s))))
 
 (define improve
   (match-lambda
@@ -549,23 +567,23 @@
 
 ;for signature
 (let-values (((code defined)
-                (translate sigProgram
-                           ;this is ML pre-defined (may need to extend)
-                           '(SOME NONE LESS EQUAL GREATER
-                                  QUOTE ANTIQUOTE
-                                  ;exceptions
-                                  Out_of_memory Invalid_argument Graphic
-                                  Interrupt Overflow Fail Ord Match Bind
-                                  Size Div SysErr Subscript Chr Io Domain))))
-    (my-write (string-append output-directory name-string "-sig.ss")
-              `(module ,(symbol-append name "-sig") (lib "mlsig.scm" "lang")
-                 (provide ,(make-sig-name name))
-                 (require ,@(map (lambda (id)
-                                   (string-append (symbol->string id) ".ss"))
-                                 requires))
-                 ,@(improve code)))
-    (my-write (string-append output-directory name-string ".data")
-              defined))
+              (translate sigProgram
+                         ;this is ML pre-defined (may need to extend)
+                         '(SOME NONE LESS EQUAL GREATER
+                                QUOTE ANTIQUOTE
+                                ;exceptions
+                                Out_of_memory Invalid_argument Graphic
+                                Interrupt Overflow Fail Ord Match Bind
+                                Size Div SysErr Subscript Chr Io Domain))))
+  (my-write (string-append output-directory name-string "-sig.ss")
+            `(module ,(symbol-append name "-sig") (lib "mlsig.scm" "lang")
+               (provide ,(make-sig-name name))
+               (require ,@(map (lambda (id)
+                                 (string-append (symbol->string id) ".ss"))
+                               requires))
+               ,@(improve code)))
+  (my-write (string-append output-directory name-string ".data")
+            defined))
 
 ;for structure
 (let-values (((code defined)
