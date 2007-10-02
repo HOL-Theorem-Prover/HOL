@@ -114,11 +114,7 @@
               (eq? (car f) 'struct))
          `(struct ,(cadr f) (,arg)))
         (else
-         (match arg
-           ((list (or 'list 'list-no-order) (list 'cons (list 'quote (? number? _)) act-arg) ...)
-            (cons f act-arg))
-           (else
-            (list f arg))))))
+         (list f arg))))
 
 ;ML pattern to Scheme
 (define (pattern-map f arg)
@@ -170,7 +166,7 @@
      (values '(#f)
              defined))
     ((list 'LongVId 'nil)
-     (values '((list))
+     (values '(())
              defined))
     ((list (or 'VId 'StrId 'LongVId 'SigId 'LongStrId) a)
      (cond ((regexp-match "([^\\.]*)\\.(.*)" (symbol->string a))
@@ -278,7 +274,7 @@
     ((list (or 'COLONPat 'COLONExp) _ v _)
      (translate v defined))
     ((list 'RECORDAtExp _)
-     (values '((list))
+     (values '(())
              defined))
     ((list 'RECORDAtExp _ p)
      (translate p defined))
@@ -441,6 +437,9 @@
                    (translate pat defined)))
        (values `((and ,(car translated-id) ,@translated-pat))
                new-defined)))
+    ((list 'EMPTYDec _)
+     (values '()
+             defined))
     (else
      (error (car else))
      )))
@@ -449,7 +448,7 @@
   (match body
     ((list 'match-lambda (list (? symbol? literal) body2))
      (beta-redex? (cons literal literals) body2))
-    ((list-rest f args)
+    ((list f (list 'list (list 'cons (list 'quote (? number? _)) args) ...))
      (and (equal? args (reverse literals))
           (equal? (car f) 'match-lambda)
           (null? (cddr f))))
@@ -461,17 +460,7 @@
     ((list 'match-lambda (list (? symbol? literal) body))
      (beta-reduct body))
     (else
-     
-     ;test
-     (pretty-print (car else))
-     (newline)
-     (let ((ans (curry (car else))))
-       (pretty-print ans)
-       (newline)
-       (newline)
-       ans)      
-     
-     #;(curry (car else)))))
+     (curry (car else)))))
 
 (define (curry e)
   (match e
@@ -482,6 +471,14 @@
                      ,(curry `(match-lambda ((list-no-order ,@args) ,body))))))
     (else
      (error 'beta-reduction e))))
+
+(define (if2and/or s)
+  (cond ((eq? (caddr s) #t)
+         `(or ,(cadr s) ,(cadddr s)))
+        ((eq? (cadddr s) #f)
+         `(and ,(cadr s) ,(caddr s)))
+        (else
+         s)))
 
 (define improve
   (match-lambda
@@ -503,10 +500,11 @@
                  (list #t then)
                  (list #f else))
            cond)
-     (list 'if
-           (improve cond)
-           (improve then)
-           (improve else)))
+     (if2and/or
+      (list 'if
+            (improve cond)
+            (improve then)
+            (improve else))))
     ;match-lambda -> lambda
     ((list 'match-lambda (list (? symbol? literal) body))
      (if (beta-redex? (list literal) body)
@@ -515,7 +513,7 @@
          `(lambda (,literal) ,(improve body))))
     ;match-lambda -> lambda, for Records
     ;match-lambda -> match-lambda*
-    ((list 'match-lambda
+    #;((list 'match-lambda
            (list (list 'list-no-order (list 'cons (list 'quote (? number? _)) arg) ...) body) ...)
      (if (and (= (length body) 1)
               (andmap symbol? (car arg)))

@@ -6,17 +6,14 @@
            (only (lib "etc.ss") compose)
            (only (lib "13.ss" "srfi") string-concatenate))
   
-  (provide struct
+  (provide (all-defined)
+           struct
            define-signature
-           define-structure
            (rename define-values/invoke-unit/infer ml-open)
-           ml-dot
            (all-from (lib "plt-match.ss"))
            (all-from (lib "plt-mzscheme.ss" "lang"));to do remove something in Scheme but not in SML
            string-concatenate
            foldl foldr
-           char->string
-           !=
            compose
            )
   
@@ -43,4 +40,28 @@
   
   (define (char->string c)
     (list->string (list c)))
+  
+    (define-struct NONE ())
+  (define-struct SOME (content))
+  (define-struct LESS ())
+  (define-struct EQUAL ())
+  (define-struct GREATER ())
+  (define-struct QUOTE ());?
+  (define-struct ANTIQUOTE ());?
+  (define-struct Out_of_memory ())
+  (define-struct Invalid_argument ())
+  (define-struct Graphic ())
+  (define-struct Interrupt ())
+  (define-struct Overflow ())
+  (define-struct Fail ())
+  (define-struct Ord ())
+  (define-struct Match ());?
+  (define-struct Bind ())
+  (define-struct Size ())
+  (define-struct Div ())
+  (define-struct SysErr ())
+  (define-struct Subscript ())
+  (define-struct Chr ())
+  (define-struct Io ())
+  (define-struct Domain ())
   )
