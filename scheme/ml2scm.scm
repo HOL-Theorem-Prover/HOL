@@ -287,26 +287,25 @@
      (values `((list ,(gensym) ...))
              defined))
     ((list 'LOCALStrDec _ locdef boddef)
-     ;boddef should be translated to be one expression
+     ;boddef should be translated to be list of definition expression
      (let*-values (((translated-locdef middle-defined)
                     (translate locdef defined))
                    ((translated-boddef new-defined)
                     (translate boddef middle-defined)))
-       (let ((body (car translated-boddef)))
-         (match body
-           ((list 'match-define expr cause)
-            (values `((match-define ,expr
-                                    (let ()
-                                      ,@translated-boddef
-                                      ,cause)))
-                    defined))
-           ;open
-           (else
-            (values
-             `((let ()
-                 ,translated-locdef
-                 ,body))
-             defined))))))
+       (match translated-boddef
+         ((list (list 'match-define expr cause) ...)
+          (values `((match-define (list ,@expr)
+                                  (let ()
+                                    ,@translated-locdef
+                                    (list ,@cause))))
+                  defined))
+         ;open
+         (else
+          (values
+           `((let ()
+               ,translated-locdef
+               ,body))
+           defined)))))
     ((list 'DATATYPEDec _ p)
      (translate p defined))
     ((list 'DatBind _ _ _ p)
@@ -532,14 +531,14 @@
     ;match-lambda -> lambda, for Records
     ;match-lambda -> match-lambda*
     #;((list 'match-lambda
-           (list (list 'list-no-order (list 'cons (list 'quote (? number? _)) arg) ...) body) ...)
-     (if (and (= (length body) 1)
-              (andmap symbol? (car arg)))
-         (list* 'lambda (car arg) (improve body))
-         (cons 'match-lambda*
-               (map (lambda (arg body)
-                      (list (cons 'list arg) (improve body)))
-                    arg body))))
+             (list (list 'list-no-order (list 'cons (list 'quote (? number? _)) arg) ...) body) ...)
+       (if (and (= (length body) 1)
+                (andmap symbol? (car arg)))
+           (list* 'lambda (car arg) (improve body))
+           (cons 'match-lambda*
+                 (map (lambda (arg body)
+                        (list (cons 'list arg) (improve body)))
+                      arg body))))
     ;match-define -> define
     ((list 'match-define (? symbol? var) val)
      `(define ,var ,(improve val)))
@@ -565,16 +564,16 @@
     (lambda ()
       (pretty-print sexp))))
 
+(define ml-buildin-datatypes ;including exceptions
+  '(SOME NONE LESS EQUAL GREATER
+        QUOTE ANTIQUOTE
+        Out_of_memory Invalid_argument Graphic
+        Interrupt Overflow Fail Ord Match Bind
+        Size Div SysErr Subscript Chr Io Domain))
+
 ;for signature
 (let-values (((code defined)
-              (translate sigProgram
-                         ;this is ML pre-defined (may need to extend)
-                         '(SOME NONE LESS EQUAL GREATER
-                                QUOTE ANTIQUOTE
-                                ;exceptions
-                                Out_of_memory Invalid_argument Graphic
-                                Interrupt Overflow Fail Ord Match Bind
-                                Size Div SysErr Subscript Chr Io Domain))))
+              (translate sigProgram ml-buildin-datatypes)))
   (my-write (string-append output-directory name-string "-sig.ss")
             `(module ,(symbol-append name "-sig") (lib "mlsig.scm" "lang")
                (provide ,(make-sig-name name))
@@ -587,10 +586,7 @@
 
 ;for structure
 (let-values (((code defined)
-              (translate Program
-                         (with-input-from-file
-                             (string-append output-directory name-string ".data")
-                           read))))
+              (translate Program ml-buildin-datatypes)))
   (my-write (string-append output-directory name-string ".ss")
             `(module ,name (lib "ml.scm" "lang")
                (provide ,(make-str-name name))
